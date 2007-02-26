@@ -234,7 +234,7 @@ l4_ipc_send(l4_threadid_t dest,
 					   ("m") after this point */
      "movl 4(%%esi),%%edi	\n\t"
      "movl  (%%esi),%%esi	\n\t"
-     "movl  $-1,%%ebp		\n\t"
+     "orl   $-1,%%ebp		\n\t"
 
      ToId32_EdiEsi
      FixLongIn
@@ -261,7 +261,7 @@ l4_ipc_send(l4_threadid_t dest,
      "edi", "memory"
      );
   return L4_IPC_ERROR(*result);
-};
+}
 
 L4_INLINE int
 l4_ipc_send_w3(l4_threadid_t dest, 
@@ -279,7 +279,7 @@ l4_ipc_send_w3(l4_threadid_t dest,
      "pushl %%edi		\n\t"
      "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-     "movl  $-1,%%ebp		\n\t"
+     "orl   $-1,%%ebp		\n\t"
 
      IPC_SYSENTER
 
@@ -303,7 +303,7 @@ l4_ipc_send_w3(l4_threadid_t dest,
      "memory"
      );
   return L4_IPC_ERROR(*result);
-};
+}
 
 /*****************************************************************************
  *** wait
@@ -323,7 +323,7 @@ l4_ipc_wait(l4_threadid_t *src,
 					 ("m") after this point */
      "movl  %%ebx,%%ebp		\n\t"
 
-     "movl  $-1,%%eax		\n\t"
+     "orl   $-1,%%eax		\n\t"
      FixLongStackIn
 
      IPC_SYSENTER
@@ -368,7 +368,7 @@ l4_ipc_wait_w3(l4_threadid_t *src,
      "movl  %%edx, %%ebp	\n\t"
 
      "xorl  %%esi, %%esi	\n\t" /* no absolute timeout! */
-     "movl  $-1, %%eax		\n\t"
+     "orl   $-1, %%eax		\n\t"
 
      IPC_SYSENTER
 

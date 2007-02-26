@@ -89,8 +89,7 @@ avlt_init(void);
 
 /* insert new node */
 int
-avlt_insert(avlt_key_t key, 
-	    avlt_data_t data);
+avlt_insert(avlt_key_t key, avlt_data_t data);
 
 /* remove node */
 int 
@@ -98,24 +97,19 @@ avlt_remove(avlt_key_t key);
 
 /* search node */
 int
-avlt_find(avlt_key_t key, 
-	  avlt_data_t * data);
+avlt_find(avlt_key_t key, avlt_data_t * data);
 
 /* DEBUG */
 void
 avlt_show_tree(void);
 
 int
-AVLT_insert(l4_uint32_t start, 
-	    l4_uint32_t end, 
-	    l4_uint32_t data);
+AVLT_insert(l4_uint32_t start, l4_uint32_t end, l4_uint32_t data);
 
 int
-AVLT_remove(l4_uint32_t start, 
-	    l4_uint32_t end);
+AVLT_remove(l4_uint32_t start, l4_uint32_t end);
 
 int 
-AVLT_find(l4_uint32_t start, 
-	  l4_uint32_t end);
+AVLT_find(l4_uint32_t start, l4_uint32_t end);
 
 #endif /* !_L4RM___AVL_TREE_H */ 

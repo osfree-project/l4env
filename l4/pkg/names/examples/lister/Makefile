@@ -6,7 +6,8 @@ SRC_C	= main.c
 TARGET	= names_lister
 MODE	= host
 
-PRIVATE_INCDIR	= $(PKGDIR)/server/include $(L4INCDIR)
-LIBS		= -lnames -lrmgr
+PRIVATE_INCDIR = $(L4INCDIR)
+
+LIBS	= -lnames $(ROOTLIB)
 
 include $(L4DIR)/mk/prog.mk

@@ -3,8 +3,8 @@ PKGDIR          ?= ../../..
 L4DIR           ?= $(PKGDIR)/../..
 
 TARGET           = vscrtest
-LIBS             = -ll4dope -lvscreen -lm -ldata
-DEFAULT_RELOC    = 0x00880000
+LIBS             = -ll4dope -lvscreen -ldata
+DEFAULT_RELOC    = 0x00800000
 
 vpath % $(PKGDIR)/examples/vscrtest/common
 
@@ -19,3 +19,7 @@ SRC_C            = vscrtest.c voxel.c thread.c startup.c \
                    bump.c feedback.c fountain.c 
 
 include $(L4DIR)/mk/prog.mk
+
+ifeq ($(USE_OSKIT),y)
+LIBS		+= -loskit_freebsd_m
+endif

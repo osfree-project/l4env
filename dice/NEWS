@@ -1,3 +1,24 @@
+2.2.9
+ - better support for C++: -BmCPP generates .cc/.hh files and g++ comformant
+   code
+ - support AMD64 for V2 using C Bindings (-Bpamd64)
+ - specify output directory using -o Option
+ - removed optimization (-O) option (unused)
+ - some bug-fixes
+
+2.2.8
+ - replaced Vector and String class by STL implementations
+ - made usage of 'long long' type detectable by configure script
+ - configure checks for existence of 'long long' type and 'atoll' function
+ - added option to align parameters in the message buffer to the size of their
+   type
+ - starting support for L4 V4 (aka X2) ABI
+ - add function attribute [allow_reply_only] for asynchronous servers
+ - add function attribute [noopcode] to not sent opcodes
+ - add function attribute [noexceptions] to not sent exceptions
+ - add option -fno-dispatcher to not generate the dispatcher
+   function
+
 2.2.7
  - split server-loop function into a simpler server-loop
    and a dispatch function

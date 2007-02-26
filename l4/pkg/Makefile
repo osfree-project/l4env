@@ -10,9 +10,8 @@ include $(L4DIR)/mk/Makeconf
 libstdc++.headers: libstdc++.lib
 
 # other (mostly IDL-related) dependencies
-bootmod.headers:	dm_generic.headers
 l4util.lib:		rmgr.headers rmgr.lib
-con.headers:		l4sys.headers dm_generic.headers
+l4con.headers:		l4sys.headers dm_generic.headers
 dm_generic.headers:	l4sys.headers l4env.headers
 dm_mem.headers:		dm_generic.headers
 dm_phys.headers:	dm_mem.headers
@@ -29,24 +28,33 @@ loader.headers:		l4sys.headers dm_generic.headers
 qos_mgr.headers:	l4sys.headers
 qos_quota.headers:	qos_mgr.headers
 qos_rmgr.headers:	qos_mgr.headers
+dm_qos.headers:		qos_rmgr.headers
 qos_user.headers:	l4sys.headers
-loader.lib:		bootmod.lib con.lib dm_generic.lib dm_mem.lib \
+local_socks.headers:	l4vfs.headers
+rt_mon.headers:		l4vfs.headers
+loader.lib:		dm_generic.lib dm_mem.lib \
 			generic_ts.lib l4env.lib l4rm.lib l4util.lib log.lib \
 			names.lib rmgr.lib semaphore.lib slab.lib thread.lib
 usb.bin:		dope.bin
+stpm.lib:		cryptoserver.lib
+cebit04.bin:		nethub.bin
+oshkosh.headers:	dsi.headers
+flips.headers:		l4vfs.headers
+ifeq ($(USE_OSKIT),y)
+ext2fs.bin:		dietlibc.lib
+endif
 
 # The directories/packages of l4env
 L4ENV_SUBDIRS = \
-	bootmod \
-	buffermgr \
-	con \
+	l4con \
 	crtx \
 	cxx \
+	demangle \
 	dm_generic \
 	dm_mem \
 	dm_phys \
 	exec \
-	generic_blk \
+	events \
 	generic_fprov \
 	generic_io \
 	generic_ts \
@@ -63,32 +71,32 @@ L4ENV_SUBDIRS = \
 	names \
 	pci \
 	omega0 \
-	oskit_support \
-	oskit_support_l4env \
-	oskit10_support \
-	oskit10_support_l4env \
-	oskit10_support_l4env_full \
-	oskit10_support_tiny \
 	rmgr \
         semaphore \
+	serial \
 	sigma0 \
 	simple_ts \
 	slab \
 	tftp \
 	thread \
+	x86emu \
 
-L4CONF_FILES = 				\
-	Makeconf			\
-	Makeconf.flick			\
-	Makeconf.lib.rules		\
-	Makeconf.lib.targets		\
-	Makeconf.stdtargets		\
-	Makefile
+ifeq ($(USE_OSKIT),y)
+bootmod.headers: dm_generic.headers
+L4ENV_SUBDIRS += \
+	bootmod \
+	oskit_support \
+	oskit_support_l4env \
+	oskit10_support \
+	oskit10_support_l4env \
+	oskit10_support_l4env_full
+endif
 
 BID_STATE_FILE = BUILD.state
 
 # all our packages
 ALL_SUBDIRS	= $(shell find . -maxdepth 1 -type d ! -name CVS -printf %P\ )
+
 # the broken packages
 BROKEN_SUBDIRS	= $(patsubst %/broken, %, \
 			$(wildcard $(addsuffix /broken,$(ALL_SUBDIRS))))
@@ -102,7 +110,10 @@ BUILD_SUBDIRS	= $(filter-out $(BROKEN_SUBDIRS) $(OBSOLETE_SUBDIRS), \
 L4ENV_BUILD_SUBDIRS = $(filter $(L4ENV_SUBDIRS), $(BUILD_SUBDIRS))
 
 # the makefiles in the subdirs/packages
-PKG_MAKEFILE_SYMLINKS=$(addsuffix /Makefile,$(BUILD_SUBDIRS) $(OBSOLETE_SUBDIRS))
+PKG_MAKEFILE_SYMLINKS = $(addsuffix /Makefile, \
+			   $(BUILD_SUBDIRS) $(OBSOLETE_SUBDIRS))
+
+-include Makefile.transdeps
 
 #####################
 # Rules begin.
@@ -147,7 +158,7 @@ BID_cont_reset:
 	$(VERBOSE)$(RM) $(BID_STATE_FILE)
 BID_SAFE_STATE= @echo 'BID_STATE_DONE+=$@'>>$(BID_STATE_FILE)
 
-.PHONY: all BID_cont_reset cont bin lib headers idl include doc
+.PHONY: all BID_cont_reset cont bin lib headers idl include doc ptest
 .PHONY: l4env l4env-lib l4env-headers l4env-include l4env-idl
 .PHONY: rm-old-links
 
@@ -160,7 +171,8 @@ LIB_MESSAGE=@echo "=== Building lib of \"$(basename $@)\" ==="
 PURGE_INC_MESSAGE=@echo "=== Purging pending links in $(L4DIR)/include ==="
 PURGE_LIB_MESSAGE=@echo "=== Purging pending links in $(L4DIR)/lib ==="
 TEMPLATE_MESSAGE=echo "=== Creating symlinks to Makefile template in $(@D) ==="
-UPDATE_MESSAGE=echo "=== Updating \"$(1)\" ==="
+UPDATE_MESSAGE=echo -e $(EMPHSTART)"=== Updating \"$(1)\" ==="$(EMPHSTOP)
+PTEST_MESSAGE=echo "=== Testing Package \"$(1)\" ==="
 else
 # bash has problems with empty '; ;' sequences
 BIN_MESSAGE=true
@@ -172,33 +184,43 @@ PURGE_INC_MESSAGE=true
 PURGE_LIB_MESSAGE=true
 UPDATE_MESSAGE=true
 TEMPLATE_MESSAGE=true
+PTEST_MESSAGE=true
 endif
 
 $(addsuffix .bin,$(BUILD_SUBDIRS)):%.bin:%/Makefile BID_cont_reset
 	$(BIN_MESSAGE)	
-	$(VERBOSE)$(MAKE) -C $(basename $@) all -o lib -o include -o idl
+	$(VERBOSE)PWD=$(PWD)/$(basename $@) $(MAKE) -C $(basename $@) all -o lib -o include -o idl
 	$(VERBOSE)$(BID_SAFE_STATE)
 
 $(addsuffix .lib,$(BUILD_SUBDIRS)):%.lib:%/Makefile BID_cont_reset
 	$(LIB_MESSAGE)
-	$(VERBOSE)$(MAKE) -C $(basename $@) lib -o include -o idl
+	$(VERBOSE)PWD=$(PWD)/$(basename $@) $(MAKE) -C $(basename $@) lib -o include -o idl
 	$(VERBOSE)$(BID_SAFE_STATE)
 
 $(addsuffix .headers,$(BUILD_SUBDIRS)):%.headers:%/Makefile BID_cont_reset
 	$(HDR_MESSAGE)
-	$(VERBOSE)$(MAKE) -C $(basename $@) idl
+	$(VERBOSE)PWD=$(PWD)/$(basename $@) $(MAKE) -C $(basename $@) idl
 	$(VERBOSE)$(BID_SAFE_STATE)
 
 install:: $(PKG_MAKEFILE_SYMLINKS)
 	$(VERBOSE)set -e; for i in $(BUILD_SUBDIRS); do \
 	  $(call INST_MESSAGE,$(BID_DOLLARQUOTE)$$i); \
-	  $(MAKE) -C $$i $@; \
+	  PWD=$(PWD)/$$i $(MAKE) -C $$i $@; \
 	done
 
 doc: $(PKG_MAKEFILE_SYMLINKS)
 	$(VERBOSE)set -e; for i in $(BUILD_SUBDIRS); do \
 	  $(call DOC_MESSAGE,$(BID_DOLLARQUOTE)$$i); \
-	  $(MAKE) -C $$i $@; \
+	  PWD=$(PWD)/$$i $(MAKE) -C $$i $@; \
+	done
+
+ptest: $(PKG_MAKEFILE_SYMLINKS)
+	$(VERBOSE)set -e; \
+	find $(BUILD_SUBDIRS) -type d -maxdepth 0 | while read d; do \
+	  if [ -n "$$(find $$d -type d -name $@)" ]; then \
+	    $(call PTEST_MESSAGE,$(BID_DOLLARQUOTE)$$d); \
+	    PWD=$(PWD)/$$d $(MAKE) -C $$d $@; \
+	  fi; \
 	done
 
 .PHONY: $(foreach ext, .bin .lib .include .idl .headers,addsuffix $(ext), $(BUILD_SUBDIRS))
@@ -208,7 +230,7 @@ clean cleanall::
 	$(VERBOSE)$(RM) update.log
 	$(VERBOSE)for i in $(BUILD_SUBDIRS) $(OBSOLETE_SUBDIRS); do \
 	  echo "=== Cleaning in package  \"$$i\" ==="; \
-	  if [ -r $$i/Makefile ] ; then $(MAKE) -C $$i $@; fi ; \
+	  if [ -r $$i/Makefile ] ; then PWD=$(PWD)/$$i $(MAKE) -C $$i $@; fi ; \
 	done
 	$(VERBOSE)$(MAKE) rm-old-links
 
@@ -223,9 +245,13 @@ $(PKG_MAKEFILE_SYMLINKS):
 
 rm-old-links:
 	$(PURGE_INC_MESSAGE)
-	$(VERBOSE)test ! -d $(L4DIR)/include || find $(L4DIR)/include -type l -a ! -xtype f -a ! -xtype d -exec rm -v '{}' ';'
+	$(VERBOSE)test ! -d $(L4DIR)/include || \
+	  find $(L4DIR)/include -type l -a ! -xtype f -a ! -xtype d \
+	    -exec rm $(if $(VERBOSE),,-v) '{}' ';'
 	$(PURGE_LIB_MESSAGE)
-	$(VERBOSE)test ! -d $(L4DIR)/lib || find $(L4DIR)/lib -type l -a ! -xtype f -a ! -xtype d -exec rm -v '{}' ';'
+	$(VERBOSE)test ! -d $(L4DIR)/lib || \
+	  find $(L4DIR)/lib -type l -a ! -xtype f -a ! -xtype d \
+	    -exec rm $(if $(VERBOSE),,-v) '{}' ';'
 
 rm-pkg-links:
 	$(VERBOSE)find -mindepth 2 -maxdepth 2 -type l -name Makefile -exec $(RM) -i '{}' ';'
@@ -237,59 +263,69 @@ rm-pkg-links-force:
 # Update Makefile on l4env_update.
 ifneq ($(filter l4env_update update,$(MAKECMDGOALS)),)
 .PHONY: Makefile
-Makefile: update.log
-	cvs up $@ 2>&1 | tee -a update.log
+Makefile Makefile.transdeps: update.log
+	$(CVS) up $@ 2>&1 | tee -a update.log
 endif
 
 .PHONY: update.log
 update.log:
 	$(VERBOSE)$(RM) $@
 
-l4env_update: l4conf_update gcc-wrap_update dice_update BID_cont_reset update.log
+l4env_update: l4conf_update gcc-wrap_update dice_update l4env_tools_update BID_cont_reset update.log
 	$(VERBOSE)set -e; for i in $(L4ENV_SUBDIRS); do \
-	  if [ "$$i" != linux-24-headers -o -d $$i -o \( "$(LINUX24_AVAIL)" = "n" -a "$(LINUX24_GLOBALINC)" = "n" \) ] ; then \
+	  if [ "$$i" != linux-24-headers -o -d $$i -o \( "$(LINUX24_AVAIL)" = "n" \) ] ; then \
 	    $(call UPDATE_MESSAGE,$(BID_DOLLARQUOTE)$$i); \
-	    cvs -q update -d $$i 2>&1 | tee -a update.log; \
+	    $(CVS) update -dP $$i 2>&1 | tee -a update.log; \
 	  fi; \
 	done
-	cvs update pkg.Makefile.tmpl | tee -a update.log
+	$(CVS) update pkg.Makefile.tmpl | tee -a update.log
 
 update: l4env_update update.log
 	$(VERBOSE)set -e ; \
 	  for i in $(filter-out $(L4ENV_SUBDIRS),$(ALL_SUBDIRS)) ; do \
 	    $(call UPDATE_MESSAGE,$(BID_DOLLARQUOTE)$$i); \
-	    cvs -q update -d $$i 2>&1 | tee -a update.log; done
+	    $(CVS) update -dP $$i 2>&1 | tee -a update.log; done
 
 gcc-wrap:
-	$(VERBOSE)$(MAKE) -C $(L4DIR)/tool/gcc-wrap
+	$(VERBOSE)PWD=$(L4DIR)/tool/$@ $(MAKE) -C $(L4DIR)/tool/$@
 
 gcc-wrap_update: update.log
 	$(VERBOSE)if [ -d $(L4DIR)/tool/gcc-wrap ] ; then \
 		$(call UPDATE_MESSAGE,l4/tool/gcc-wrap); \
 		cd $(L4DIR) && \
-		cvs -q update -d tool/gcc-wrap 2>&1 | tee -a update.log; \
+		$(CVS) update -d tool/gcc-wrap 2>&1 | tee -a update.log; \
 	fi
 
 dice_update: update.log
 	$(VERBOSE)if [ -d $(L4DIR)/tool/dice ] ; then \
 		$(call UPDATE_MESSAGE,l4/tool/dice); \
 		cd $(L4DIR) && \
-		cvs -q update -d tool/dice 2>&1 | tee -a update.log; \
+		$(CVS) update -dP tool/dice 2>&1 | tee -a update.log; \
 	fi
+
+l4env_tools_update: update.log
+	$(VERBOSE)if [ -d $(L4DIR)/tool/gen_dopecode ]; then \
+		$(call UPDATE_MESSAGE,l4/tool/gen_dopecode); \
+		cd $(L4DIR) && \
+		$(CVS) update -d tool/gen_dopecode 2>&1 | tee -a update.log; \
+	fi
+	@$(call UPDATE_MESSAGE,l4/tool/bin)
+	$(VERBOSE)cd $(L4DIR) && \
+		$(CVS) update -d tool/bin 2>&1 | tee -a update.log
 
 l4conf_update: update.log
 	@$(call UPDATE_MESSAGE,l4/Make{confs/files})
 	$(VERBOSE)cd .. && \
-		cvs -q update $(L4CONF_FILES) 2>&1 | tee -a update.log
+		$(CVS) update Makefile 2>&1 | tee -a update.log
 	@$(call UPDATE_MESSAGE,l4/mk/)
 	$(VERBOSE)cd ../mk && \
-		cvs -q update -d 2>&1 | tee -a update.log
+		$(CVS) update -dP 2>&1 | tee -a update.log
 
 relocate:
 	@for i in $(BUILD_SUBDIRS); do 					\
 	     if [ -f $$i/server/src/Makefile ]; then			\
 	       echo "=== Building \"$$i\" relocatable ===";		\
-	       $(MAKE) -C $$i/server/src reloc;				\
+	       PWD=$(PWD)/$$i/server/src $(MAKE) -C $$i/server/src reloc;\
 	     else			 				\
 	       echo "( Package \"$$i\" has no server/src dir )"; 	\
 	     fi								\
@@ -299,13 +335,13 @@ relink:
 	@for i in $(BUILD_SUBDIRS); do 					\
 	     if [ -f $$i/server/Makefile ]; then			\
 	       echo "=== Re-linking \"$$i\" server ===";		\
-	       $(MAKE) -C $$i/server relink;				\
+	       PWD=$(PWD)/$$i/server $(MAKE) -C $$i/server relink;	\
 	     else			 				\
 	       echo "( Package \"$$i\" has no server dir )"; 	\
 	     fi;							\
 	     if [ -f $$i/examples/Makefile ]; then			\
 	       echo "=== Re-linking \"$$i\" examples ===";		\
-	       $(MAKE) -C $$i/examples relink;				\
+	       PWD=$(PWD)/$$i/examples $(MAKE) -C $$i/examples relink;	\
 	     else							\
 	       echo "( Package \"$$i\" has no examples dir )";		\
 	     fi;							\

@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEAttribute.cpp
- *	\brief	contains the implementation of the class CBEAttribute
+ *    \file    dice/src/be/BEAttribute.cpp
+ *    \brief   contains the implementation of the class CBEAttribute
  *
- *	\date	01/15/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/15/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -45,20 +46,13 @@
 
 #include "fe/FEFile.h"
 
-IMPLEMENT_DYNAMIC(CBEAttribute);
-
 CBEAttribute::CBEAttribute()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEAttribute, CBEObject);
-
     m_nType = ATTR_NONE;
     m_nMajorVersion = 0;
     m_nMinorVersion = 0;
     m_nAttrClass = ATTR_CLASS_NONE;
     m_nIntValue = 0;
-    m_pExceptions = 0;
-    m_pParameters = 0;
-    m_pPortSpecs = 0;
     m_pPtrDefault = 0;
     m_pType = 0;
 }
@@ -66,49 +60,51 @@ CBEAttribute::CBEAttribute()
 CBEAttribute::CBEAttribute(CBEAttribute & src)
 : CBEObject(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEAttribute, CBEObject);
-
-	// init everything with default values
+    // init everything with default values
     m_nMajorVersion = 0;
     m_nMinorVersion = 0;
     m_nAttrClass = ATTR_CLASS_NONE;
     m_nIntValue = 0;
-    m_pExceptions = 0;
-    m_pParameters = 0;
-    m_pPortSpecs = 0;
     m_pPtrDefault = 0;
     m_pType = 0;
-	// depending on type do specialized init
+    // depending on type do specialized init
     m_nType = src.m_nType;
     switch (m_nType)
     {
-    case ATTR_VERSION:	// version
+    case ATTR_VERSION:    // version
         m_nMajorVersion = src.m_nMajorVersion;
         m_nMinorVersion = src.m_nMinorVersion;
         break;
-    case ATTR_UUID:		// string
-    case ATTR_HELPFILE:	// string
-    case ATTR_HELPSTRING:	// string
+    case ATTR_UUID:        // string
+    case ATTR_HELPFILE:    // string
+    case ATTR_HELPSTRING:    // string
         m_sString = src.m_sString;
         break;
-    case ATTR_LCID:		// int
-    case ATTR_HELPCONTEXT:	// int
+    case ATTR_LCID:        // int
+    case ATTR_HELPCONTEXT:    // int
         m_nIntValue = src.m_nIntValue;
         break;
-    case ATTR_SWITCH_IS:	// Is
-    case ATTR_FIRST_IS:	// IS
-    case ATTR_LAST_IS:	// Is
-    case ATTR_LENGTH_IS:	// Is
-    case ATTR_MIN_IS:	// Is
-    case ATTR_MAX_IS:	// Is
-    case ATTR_SIZE_IS:	// Is
-    case ATTR_IID_IS:	// Is
-        m_pParameters = new Vector(RUNTIME_CLASS(CBEDeclarator));
-		m_pParameters->Add(src.m_pParameters);
-		m_pParameters->SetParentOfElements(this);
+    case ATTR_SWITCH_IS:    // Is
+    case ATTR_FIRST_IS:    // IS
+    case ATTR_LAST_IS:    // Is
+    case ATTR_LENGTH_IS:    // Is
+    case ATTR_MIN_IS:    // Is
+    case ATTR_MAX_IS:    // Is
+    case ATTR_SIZE_IS:    // Is
+    case ATTR_IID_IS:    // Is
+        {
+            vector<CBEDeclarator*>::iterator iter;
+            for (iter = src.m_vParameters.begin();
+                 iter != src.m_vParameters.end(); iter++)
+            {
+                CBEDeclarator* pNew = (CBEDeclarator*)((*iter)->Clone());
+                pNew->SetParent(this);
+                m_vParameters.push_back(pNew);
+            }
+        }
         break;
-    case ATTR_TRANSMIT_AS:	// type
-    case ATTR_SWITCH_TYPE:	// type
+    case ATTR_TRANSMIT_AS:    // type
+    case ATTR_SWITCH_TYPE:    // type
         m_pType = (CBEType*)src.m_pType->Clone();
         break;
     default:
@@ -117,22 +113,22 @@ CBEAttribute::CBEAttribute(CBEAttribute & src)
     }
 }
 
-/**	\brief destructor of this instance */
+/**    \brief destructor of this instance */
 CBEAttribute::~CBEAttribute()
 {
-    if (m_pParameters)
-	{
-        m_pParameters->DeleteAll();
-		delete m_pParameters;
-	}
-	if (m_pType)
-	    delete m_pType;
+    while (!m_vParameters.empty())
+    {
+        delete m_vParameters.back();
+        m_vParameters.pop_back();
+    }
+    if (m_pType)
+        delete m_pType;
 }
 
-/**	\brief prepares this instance for the code generation
- *	\param pFEAttribute the corresponding front-end attribute
- *	\param pContext the context of the code generation
- *	\return true if the code generation was successful
+/**    \brief prepares this instance for the code generation
+ *    \param pFEAttribute the corresponding front-end attribute
+ *    \param pContext the context of the code generation
+ *    \return true if the code generation was successful
  *
  * This implementation only reads the attribute's type from the front-end. It should also contain
  * the different members of the front-end attributes. Because we do not really support those, we ignore
@@ -140,15 +136,19 @@ CBEAttribute::~CBEAttribute()
  */
 bool CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute, CBEContext * pContext)
 {
+    // call CBEObject's CreateBackEnd method
+    if (!CBEObject::CreateBackEnd(pFEAttribute))
+        return false;
+
     m_nType = pFEAttribute->GetAttrType();
     switch (m_nType)
     {
-    case ATTR_VERSION:	// version
+    case ATTR_VERSION:    // version
         m_nAttrClass = ATTR_CLASS_VERSION;
         return CreateBackEndVersion((CFEVersionAttribute *) pFEAttribute, pContext);
         break;
-    case ATTR_UUID:		// string or int
-        if (pFEAttribute->IsKindOf(RUNTIME_CLASS(CFEIntAttribute)))
+    case ATTR_UUID:        // string or int
+        if (dynamic_cast<CFEIntAttribute*>(pFEAttribute))
         {
             m_nAttrClass = ATTR_CLASS_INT;
             return CreateBackEndInt((CFEIntAttribute*)pFEAttribute, pContext);
@@ -159,29 +159,33 @@ bool CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute, CBEContext * pCont
             return CreateBackEndString((CFEStringAttribute *) pFEAttribute, pContext);
         }
         break;
-    case ATTR_HELPFILE:	// string
-    case ATTR_HELPSTRING:	// string
+    case ATTR_HELPFILE:    // string
+    case ATTR_HELPSTRING:    // string
     case ATTR_DEFAULT_FUNCTION: // string
     case ATTR_ERROR_FUNCTION:
+    case ATTR_ERROR_FUNCTION_CLIENT:
+    case ATTR_ERROR_FUNCTION_SERVER:
+    case ATTR_INIT_RCVSTRING_CLIENT: // string
+    case ATTR_INIT_RCVSTRING_SERVER: // string
         m_nAttrClass = ATTR_CLASS_STRING;
         return CreateBackEndString((CFEStringAttribute*)pFEAttribute, pContext);
         break;
-    case ATTR_LCID:		// int
-    case ATTR_HELPCONTEXT:	// int
+    case ATTR_LCID:        // int
+    case ATTR_HELPCONTEXT:    // int
         m_nAttrClass = ATTR_CLASS_INT;
         return CreateBackEndInt((CFEIntAttribute *) pFEAttribute, pContext);
         break;
-    case ATTR_SWITCH_IS:	// Is
-    case ATTR_FIRST_IS:	// IS
-    case ATTR_LAST_IS:	// Is
-    case ATTR_LENGTH_IS:	// Is
-    case ATTR_MIN_IS:	// Is
-    case ATTR_MAX_IS:	// Is
-    case ATTR_SIZE_IS:	// Is
-    case ATTR_IID_IS:	// Is
+    case ATTR_SWITCH_IS:    // Is
+    case ATTR_FIRST_IS:    // IS
+    case ATTR_LAST_IS:    // Is
+    case ATTR_LENGTH_IS:    // Is
+    case ATTR_MIN_IS:    // Is
+    case ATTR_MAX_IS:    // Is
+    case ATTR_SIZE_IS:    // Is
+    case ATTR_IID_IS:    // Is
         m_nAttrClass = ATTR_CLASS_IS;
         // can be Is or Int attribute
-        if (pFEAttribute->IsKindOf(RUNTIME_CLASS(CFEIntAttribute)))
+        if (dynamic_cast<CFEIntAttribute*>(pFEAttribute))
         {
             m_nAttrClass = ATTR_CLASS_INT;
             return CreateBackEndInt((CFEIntAttribute *) pFEAttribute, pContext);
@@ -192,41 +196,42 @@ bool CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute, CBEContext * pCont
             return CreateBackEndIs((CFEIsAttribute *) pFEAttribute, pContext);
         }
         break;
-    case ATTR_TRANSMIT_AS:	// type
-    case ATTR_SWITCH_TYPE:	// type
+    case ATTR_TRANSMIT_AS:    // type
+    case ATTR_SWITCH_TYPE:    // type
         m_nAttrClass = ATTR_CLASS_TYPE;
         return CreateBackEndType((CFETypeAttribute *) pFEAttribute, pContext);
         break;
-    case ATTR_ABSTRACT:	// not supported
-    case ATTR_ENDPOINT:	// not supported
-    case ATTR_EXCEPTIONS:	// not supported
-    case ATTR_LOCAL:		// simple
-    case ATTR_POINTER_DEFAULT:	// not supported
-    case ATTR_OBJECT:	// simple
-    case ATTR_UUID_REP:	// not supported
-    case ATTR_CONTROL:	// simple
-    case ATTR_HIDDEN:	// simple
-    case ATTR_RESTRICTED:	// simple
-    case ATTR_IDEMPOTENT:	// simple
-    case ATTR_BROADCAST:	// simple
-    case ATTR_MAYBE:		// simple
-    case ATTR_REFLECT_DELETIONS:	// simple
-    case ATTR_HANDLE:	// simple
-    case ATTR_IGNORE:	// simple
-    case ATTR_IN:		// simple
-    case ATTR_OUT:		// simple
-    case ATTR_REF:		// simple
-    case ATTR_UNIQUE:	// simple
-    case ATTR_PTR:		// simple
-    case ATTR_STRING:	// simple
-    case ATTR_CONTEXT_HANDLE:	// simple
+    case ATTR_ABSTRACT:    // simple
+    case ATTR_ENDPOINT:    // not supported
+    case ATTR_EXCEPTIONS:    // not supported
+    case ATTR_LOCAL:        // simple
+    case ATTR_POINTER_DEFAULT:    // not supported
+    case ATTR_OBJECT:    // simple
+    case ATTR_UUID_REP:    // not supported
+    case ATTR_CONTROL:    // simple
+    case ATTR_HIDDEN:    // simple
+    case ATTR_RESTRICTED:    // simple
+    case ATTR_IDEMPOTENT:    // simple
+    case ATTR_BROADCAST:    // simple
+    case ATTR_MAYBE:        // simple
+    case ATTR_REFLECT_DELETIONS:    // simple
+    case ATTR_HANDLE:    // simple
+    case ATTR_IGNORE:    // simple
+    case ATTR_IN:        // simple
+    case ATTR_OUT:        // simple
+    case ATTR_REF:        // simple
+    case ATTR_UNIQUE:    // simple
+    case ATTR_PTR:        // simple
+    case ATTR_STRING:    // simple
+    case ATTR_CONTEXT_HANDLE:    // simple
     case ATTR_SERVER_PARAMETER: // simple
-	case ATTR_PREALLOC:     // simple
-	case ATTR_ALLOW_REPLY_ONLY: // simple
+    case ATTR_PREALLOC:     // simple
+    case ATTR_ALLOW_REPLY_ONLY: // simple
+    case ATTR_L4_SCHED_DECEIT: // simple
         m_nAttrClass = ATTR_CLASS_SIMPLE;
         break;
     case ATTR_INIT_RCVSTRING: // simple or string
-        if (pFEAttribute->IsKindOf(RUNTIME_CLASS(CFEStringAttribute)))
+        if (dynamic_cast<CFEStringAttribute*>(pFEAttribute))
         {
             m_nAttrClass = ATTR_CLASS_STRING;
             return CreateBackEndString((CFEStringAttribute*)pFEAttribute, pContext);
@@ -244,10 +249,10 @@ bool CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute, CBEContext * pCont
     return true;
 }
 
-/**	\brief creates a simple attribute
- *	\param nType the attribute type
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief creates a simple attribute
+ *    \param nType the attribute type
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  */
 bool CBEAttribute::CreateBackEnd(int nType, CBEContext * pContext)
 {
@@ -255,10 +260,10 @@ bool CBEAttribute::CreateBackEnd(int nType, CBEContext * pContext)
     return true;
 }
 
-/**	\brief creates the back-end attribute for a type attribute
- *	\param pFETypeAttribute the type attribute to use
- *	\param pContext the context of the code generation
- *	\return true if code generation was successful
+/**    \brief creates the back-end attribute for a type attribute
+ *    \param pFETypeAttribute the type attribute to use
+ *    \param pContext the context of the code generation
+ *    \return true if code generation was successful
  */
 bool CBEAttribute::CreateBackEndType(CFETypeAttribute * pFETypeAttribute, CBEContext * pContext)
 {
@@ -275,21 +280,21 @@ bool CBEAttribute::CreateBackEndType(CFETypeAttribute * pFETypeAttribute, CBECon
     return true;
 }
 
-/**	\brief creates the back-end attribute for a string attribute
- *	\param pFEStringAttribute the respective string attribute
- *	\param pContext the context of the code generation
- *	\return true if the code generation was successful
+/**    \brief creates the back-end attribute for a string attribute
+ *    \param pFEstringAttribute the respective string attribute
+ *    \param pContext the context of the code generation
+ *    \return true if the code generation was successful
  */
-bool CBEAttribute::CreateBackEndString(CFEStringAttribute * pFEStringAttribute, CBEContext * pContext)
+bool CBEAttribute::CreateBackEndString(CFEStringAttribute * pFEstringAttribute, CBEContext * pContext)
 {
-    m_sString = pFEStringAttribute->GetString();
+    m_sString = pFEstringAttribute->GetString();
     return true;
 }
 
-/**	\brief creates the back-end attribute for an IS-attribute
- *	\param pFEIsAttribute the respective front-end IS attribute
- *	\param pContext the context of the code generation
- *	\return true if the code generation was successful
+/**    \brief creates the back-end attribute for an IS-attribute
+ *    \param pFEIsAttribute the respective front-end IS attribute
+ *    \param pContext the context of the code generation
+ *    \return true if the code generation was successful
  *
  * The is parameter usually contain variable name to determine the size of something
  * dynamically. To write this variable later correctly, we search for a reference to
@@ -297,82 +302,84 @@ bool CBEAttribute::CreateBackEndString(CFEStringAttribute * pFEStringAttribute, 
  */
 bool CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute, CBEContext * pContext)
 {
-    VectorElement *pIter = pFEIsAttribute->GetFirstAttrParameter();
+    vector<CFEDeclarator*>::iterator iterAP = pFEIsAttribute->GetFirstAttrParameter();
     CFEDeclarator *pFEDeclarator;
-    while ((pFEDeclarator = pFEIsAttribute->GetNextAttrParameter(pIter)) != 0)
+    while ((pFEDeclarator = pFEIsAttribute->GetNextAttrParameter(iterAP)) != 0)
     {
-		CBEDeclarator *pDeclarator = 0;
-		String sName = pFEDeclarator->GetName();
-		// if this attribute belongs to a parameter of a function, we should get a function here
-		CBETypedDeclarator *pParameter = 0;
-		// check if we can find a parameter of this function with this name
-		if (GetFunction())
-			pParameter = GetFunction()->FindParameter(sName);
-		// if no function or parameter found, check if constructed type
-		if (!pParameter && GetStructType())
-			pParameter = GetStructType()->FindMember(sName);
-		if (!pParameter)
-		{
-			// not found -> the parameter might be declared after its use
-			// -> we search the FE function for the parameter
-			CFEOperation *pOperation = pFEIsAttribute->GetParentOperation();
-			CFEStructType *pFEStruct = (CFEStructType*)pFEIsAttribute->GetParentConstructedType();
-			CFETypedDeclarator *pFEParameter = 0;
-			if (pOperation)
-				pFEParameter = pOperation->FindParameter(sName);
-			if (!pFEParameter && pFEStruct)
-				pFEParameter = pFEStruct->FindMember(sName);
-			// check const if no parameter or struct member found
-			CFEConstDeclarator *pFEConstant = 0;
-			if (!pFEParameter)
-			{
-				// the declarator might be a constant -> search for this one
-				CFEFile *pFERoot = pFEIsAttribute->GetRoot();
-				assert(pFERoot);
-				pFEConstant = pFERoot->FindConstDeclarator(sName);
-			}
-			if (!pFEParameter && !pFEConstant)
-			{
-				// the is attribute has no parameter
-				VERBOSE("%s failed because the IS-attribute's parameter (%s) is no function parameter or constant\n",
-						__PRETTY_FUNCTION__, (const char*)sName);
-				assert(false);
-				return false;
-			}
-			pDeclarator = pContext->GetClassFactory()->GetNewDeclarator();
-			AddIsParameter(pDeclarator);
-			if (!pDeclarator->CreateBackEnd(pFEDeclarator, pContext))
-			{
-				VERBOSE("%s failed because declarator could not be created\n", __PRETTY_FUNCTION__);
-				delete pDeclarator;
-				return false;
-			}
-		}
-		else
-		{
-			pDeclarator = pParameter->FindDeclarator(sName);
-			if (!pDeclarator)
-			{
-				// this cannot happend, because FindParameter uses FindDeclarator
-				// so if pParameter != 0 this should be != 0 too
-				return false;
-			}
-			AddIsParameter(pDeclarator);
-		}
-		if (!pDeclarator)
-		{
-			VERBOSE("Attribute %s is declared in invalid context.\n", (const char*)sName);
-			assert(false);
-			return false;
-		}
+        CBEDeclarator *pDeclarator = 0;
+        string sName = pFEDeclarator->GetName();
+        // if this attribute belongs to a parameter of a function, we should get a function here
+        CBETypedDeclarator *pParameter = 0;
+        // check if we can find a parameter of this function with this name
+        CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+        if (pFunction)
+            pParameter = pFunction->FindParameter(sName);
+        // if no function or parameter found, check if constructed type
+        CBEStructType *pStruct = GetSpecificParent<CBEStructType>();
+        if (!pParameter && pStruct)
+            pParameter = pStruct->FindMember(sName);
+        if (!pParameter)
+        {
+            // not found -> the parameter might be declared after its use
+            // -> we search the FE function for the parameter
+            CFEOperation *pOperation = pFEIsAttribute->GetSpecificParent<CFEOperation>();
+            CFEStructType *pFEStruct = (CFEStructType*)pFEIsAttribute->GetSpecificParent<CFEConstructedType>();
+            CFETypedDeclarator *pFEParameter = 0;
+            if (pOperation)
+                pFEParameter = pOperation->FindParameter(sName);
+            if (!pFEParameter && pFEStruct)
+                pFEParameter = pFEStruct->FindMember(sName);
+            // check const if no parameter or struct member found
+            CFEConstDeclarator *pFEConstant = 0;
+            if (!pFEParameter)
+            {
+                // the declarator might be a constant -> search for this one
+                CFEFile *pFERoot = dynamic_cast<CFEFile*>(pFEIsAttribute->GetRoot());
+                assert(pFERoot);
+                pFEConstant = pFERoot->FindConstDeclarator(sName);
+            }
+            if (!pFEParameter && !pFEConstant)
+            {
+                // the is attribute has no parameter
+                VERBOSE("%s failed because the IS-attribute's parameter (%s) is no function parameter or constant\n",
+                        __PRETTY_FUNCTION__, sName.c_str());
+                assert(false);
+                return false;
+            }
+            pDeclarator = pContext->GetClassFactory()->GetNewDeclarator();
+            AddIsParameter(pDeclarator);
+            if (!pDeclarator->CreateBackEnd(pFEDeclarator, pContext))
+            {
+                VERBOSE("%s failed because declarator could not be created\n", __PRETTY_FUNCTION__);
+                delete pDeclarator;
+                return false;
+            }
+        }
+        else
+        {
+            pDeclarator = pParameter->FindDeclarator(sName);
+            if (!pDeclarator)
+            {
+                // this cannot happend, because FindParameter uses FindDeclarator
+                // so if pParameter != 0 this should be != 0 too
+                return false;
+            }
+            AddIsParameter(pDeclarator);
+        }
+        if (!pDeclarator)
+        {
+            VERBOSE("Attribute %s is declared in invalid context.\n", sName.c_str());
+            assert(false);
+            return false;
+        }
     }
     return true;
 }
 
-/**	\brief creates the back-end attribute for an integer attribute
- *	\param pFEIntAttribute the repective front-end attribute
- *	\param pContext the context of the code generation
- *	\return true if code generation was successful
+/**    \brief creates the back-end attribute for an integer attribute
+ *    \param pFEIntAttribute the repective front-end attribute
+ *    \param pContext the context of the code generation
+ *    \return true if code generation was successful
  */
 bool CBEAttribute::CreateBackEndInt(CFEIntAttribute * pFEIntAttribute, CBEContext * pContext)
 {
@@ -380,10 +387,10 @@ bool CBEAttribute::CreateBackEndInt(CFEIntAttribute * pFEIntAttribute, CBEContex
     return true;
 }
 
-/**	\brief creates the back-end attribute for a version attribute
- *	\param pFEVersionAttribute the respective front-end attribute
- *	\param pContext the context of the code generation
- *	\return true if code generation was successful
+/**    \brief creates the back-end attribute for a version attribute
+ *    \param pFEVersionAttribute the respective front-end attribute
+ *    \param pContext the context of the code generation
+ *    \return true if code generation was successful
  */
 bool CBEAttribute::CreateBackEndVersion(CFEVersionAttribute *pFEVersionAttribute, CBEContext * pContext)
 {
@@ -391,8 +398,8 @@ bool CBEAttribute::CreateBackEndVersion(CFEVersionAttribute *pFEVersionAttribute
     return true;
 }
 
-/**	\brief adds a new parameter to the Is-parameter vector
- *	\param pDecl the declarator, which is the parameter
+/**    \brief adds a new parameter to the Is-parameter vector
+ *    \param pDecl the declarator, which is the parameter
  *
  * This function adds a declarator to the parameter vector in the union. It first checks, whether this is a
  * IS attribute. If not the functionr returns immediately.
@@ -401,60 +408,52 @@ void CBEAttribute::AddIsParameter(CBEDeclarator * pDecl)
 {
     switch (m_nType)
     {
-    case ATTR_SWITCH_IS:	// Is
-    case ATTR_FIRST_IS:	// IS
-    case ATTR_LAST_IS:	// Is
-    case ATTR_LENGTH_IS:	// Is
-    case ATTR_MIN_IS:	// Is
-    case ATTR_MAX_IS:	// Is
-    case ATTR_SIZE_IS:	// Is
-    case ATTR_IID_IS:	// Is
+    case ATTR_SWITCH_IS:    // Is
+    case ATTR_FIRST_IS:    // IS
+    case ATTR_LAST_IS:    // Is
+    case ATTR_LENGTH_IS:    // Is
+    case ATTR_MIN_IS:    // Is
+    case ATTR_MAX_IS:    // Is
+    case ATTR_SIZE_IS:    // Is
+    case ATTR_IID_IS:    // Is
         break;
     default:
         return;
         break;
     }
-    if (!m_pParameters)
+    if (pDecl)
     {
-        m_pParameters = new Vector(RUNTIME_CLASS(CBEDeclarator));
+        m_vParameters.push_back(pDecl);
+        pDecl->SetParent(this);
     }
-    m_pParameters->Add(pDecl);
-    pDecl->SetParent(this);
 }
 
-/**	\brief returns the attribute's type
- *	\return the member m_nType
+/**    \brief returns the attribute's type
+ *    \return the member m_nType
  */
 int CBEAttribute::GetType()
 {
     return m_nType;
 }
 
-/**	\brief retrieves a pointer to the first is attribute's parameter
- *	\return pointer to attribute parameter
+/**    \brief retrieves a pointer to the first is attribute's parameter
+ *    \return pointer to attribute parameter
  */
-VectorElement *CBEAttribute::GetFirstIsAttribute()
+vector<CBEDeclarator*>::iterator CBEAttribute::GetFirstIsAttribute()
 {
-    if (!m_pParameters)
-        return 0;
-    return m_pParameters->GetFirst();
+    return m_vParameters.begin();
 }
 
-/**	\brief gets the next attribute's parameter
- *	\param pIter the pointer to the next parameter
- *	\return reference to next parameter
+/**    \brief gets the next attribute's parameter
+ *    \param iter the pointer to the next parameter
+ *    \return reference to next parameter
  */
-CBEDeclarator *CBEAttribute::GetNextIsAttribute(VectorElement * &pIter)
+CBEDeclarator*
+CBEAttribute::GetNextIsAttribute(vector<CBEDeclarator*>::iterator &iter)
 {
-    if (!m_pParameters)
+    if (iter == m_vParameters.end())
         return 0;
-    if (!pIter)
-        return 0;
-    CBEDeclarator *pRet = (CBEDeclarator *) pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextIsAttribute(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief checks the type of an attribute
@@ -484,11 +483,11 @@ CObject * CBEAttribute::Clone()
  *  \param sName the name of the IS decl
  *  \return a reference to the IS decl
  */
-CBEDeclarator* CBEAttribute::FindIsParameter(String sName)
+CBEDeclarator* CBEAttribute::FindIsParameter(string sName)
 {
-    VectorElement *pIter = GetFirstIsAttribute();
+    vector<CBEDeclarator*>::iterator iter = GetFirstIsAttribute();
     CBEDeclarator *pDecl;
-    while ((pDecl = GetNextIsAttribute(pIter)) != 0)
+    while ((pDecl = GetNextIsAttribute(iter)) != 0)
     {
         if (pDecl->GetName() == sName)
             return pDecl;
@@ -499,15 +498,15 @@ CBEDeclarator* CBEAttribute::FindIsParameter(String sName)
 /** \brief access string value
  *  \return string member if ATTR_CLASS_STRING
  */
-String CBEAttribute::GetString()
+string CBEAttribute::GetString()
 {
     if (m_nAttrClass == ATTR_CLASS_STRING)
         return m_sString;
-    return String();
+    return string();
 }
 
 /** \brief delivers the number of is attributes from the given iterator to the end of the list
- *  \param pIter the iterator pointing to the next Is Attribute
+ *  \param iter the iterator pointing to the next Is Attribute
  *  \return the number of remaining is attributes
  *
  * Since the iterator is no reference parameter we can use it in this function to
@@ -515,11 +514,12 @@ String CBEAttribute::GetString()
  * We simply count the number of times GetNextIsAttribute returns a new IS attribute
  * parameter.
  */
-int CBEAttribute::GetRemainingNumberOfIsAttributes(VectorElement *pIter)
+int
+CBEAttribute::GetRemainingNumberOfIsAttributes(vector<CBEDeclarator*>::iterator iter)
 {
     int nCount = 0;
-	while (GetNextIsAttribute(pIter)) nCount++;
-	return nCount;
+    while (GetNextIsAttribute(iter)) nCount++;
+    return nCount;
 }
 
 /** \brief retrieve reference to the type of a type attribute (such as transmit_as)

@@ -1,5 +1,5 @@
 /*!
- * \file   dietlibc/lib/backends/l4env_base/buddy.c
+ * \file   libc_backends_l4env/lib/buddy_slab_mem/buddy.c
  * \brief  Buddy implementation
  *
  * \date   08/16/2003
@@ -254,6 +254,7 @@ extern inline void* split_and_alloc(unsigned size, unsigned size_ld,
 	assert(b->max_free>=size);
 	list[i] = b;
 
+	LOGd(LOG_BUDDY_ALLOC, "  left=%p right=%p", b->left, b->right);
 	if(b->left){
 	    /* left already exists */
 	    if(b->left->max_free >= size &&
@@ -309,6 +310,8 @@ extern inline void* split_and_alloc(unsigned size, unsigned size_ld,
 	}
     }
     /* b contains an empty buddy having exactly the size we need */
+    LOGd(LOG_BUDDY_ALLOC, "b=%p, b->max_free=%d, size=%d",
+	 b, b->max_free, size);
     assert(b->max_free == size);
     b->max_free = 0;	// bloat
     list[i] = b;	// bloat due to function separation
@@ -433,7 +436,7 @@ extern inline int split_and_free_buddy(void *addr, unsigned off,
 	bp = (off & (1<<(root->size_ld-i-1))) ? &b->right: &b->left;
 	if(!*bp){
 	    /* allocate a new buddy. */
-	    *bp = new_allocated_buddy(root, i, addr);
+	    *bp = new_allocated_buddy(root, i+1, addr);
 	}
 	b = *bp;
     }
@@ -472,7 +475,8 @@ void l4buddy_free(l4buddy_root *root, void*addr){
     size_ld = get_buddy_size_ld(root, off);
     size = 1<<size_ld;
 #if DEBUG_BUDDY
-    if(size_ld == (root->big_pool?255:15)){
+    if(size_ld == (root->big_pool?
+		   255+L4BUDDY_BUDDY_SHIFT:15+L4BUDDY_BUDDY_SHIFT)){
 	LOG_Error("%p: Trying to free already freed portion of memory", addr);
 	return;
     }

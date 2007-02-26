@@ -1,0 +1,9 @@
+.make-links_*
+.qmake.cache
+config.status
+config.tests
+contrib-prep
+bin
+plugins
+qmake
+

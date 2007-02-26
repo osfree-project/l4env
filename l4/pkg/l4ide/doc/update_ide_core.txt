@@ -1,0 +1,41 @@
+In order to update the IDE core it may be neccessary (and is recommended) to
+update DDE2.6 and the block driver, too. However, the following changes have to
+be made to the files of the IDE core:
+
+in ide-disk.c  there is a printk with %llu as argument near line 1659; this
+               isn't supported by our current implementation, so convert this
+	       to %lu or implement it
+
+in ide-dma.c   ide_raw_build_sglist isn't ready for our new approach, but it is
+               only use by taskfiles - so what
+	       ide_build_sglist uses "return pci_map_sg(..." replace this by
+	       "return nents;"
+	       in the future we should change pci_map_sg to do nothing instead
+	       (for ease of maintenance)
+
+in setup-pci.c in ide_pci_enable comment out this device_bars clause - it is
+               not implemented by DDE yet plus it is just a second chance
+	       mechanism for enableing devices
+
+in ide-probe.c in init_irq put in a piece of code which stores the ID of the
+               IRQ handler thread in the drives request queue
+	       this way we can share dataspaces with bio_end_io
+               the following snippet has to be inserted near line 1082 after:
+
+	               printk(KERN_ERR "ide: failed to init %s\n",drive->name);
+	               continue;
+	       }
+
+	       ---snip---
+	       /* We need to know the ID of our IRQ handler thread */
+	       {
+	           l4thread_t irq_thread = get_irq_handler_id(HWIF(drive)->irq);
+		   if (irq_thread != L4THREAD_INVALID_ID)
+		       drive->queue->irq_thread_id = l4thread_l4_id(irq_thread);
+		   else
+		       drive->queue->irq_thread_id = L4_INVALID_ID;
+	       }
+	       ---snip---
+
+in ide-io.c    comment out BUG_ON(!irqs_disabled()) because it isn't
+               implemented at the moment

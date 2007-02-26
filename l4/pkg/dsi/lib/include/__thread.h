@@ -26,7 +26,7 @@ l4_threadid_t
 dsi_create_event_thread(l4thread_fn_t fn);
 
 l4thread_t
-dsi_create_select_thread(l4thread_fn_t fn, void * data);
+dsi_create_select_thread(l4thread_fn_t fn, void * data, int tid, int nr);
 void
 dsi_shutdown_select_thread(l4thread_t thread);
 

@@ -56,30 +56,38 @@ TARGET	+= $(TARGET_PROFILE) $(TARGET_PROFILE_SHARED) $(TARGET_PROFILE_PIC)
 # define some variables different for lib.mk and prog.mk
 LDFLAGS += $(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))
 LDFLAGS += $(addprefix -L, $(L4LIBDIR)) $(LIBCLIBDIR)
-LDFLAGS	+= $(LIBS) $(LDFLAGS_$@)
+LDFLAGS	+= $(LIBS) $(LDFLAGS_$@) $(LDNOSTDLIB)
+
+LDSCRIPT = $(call findfile,main_rel.ld,$(L4LIBDIR))
 
 # install.inc eventually defines rules for every target
 include $(L4DIR)/mk/install.inc
 
 DEPS	+= $(foreach file,$(TARGET), $(dir $(file)).$(notdir $(file)).d)
 
-$(filter-out %.s.so %.o.a, $(TARGET)):%.a: $(OBJS)
+$(filter-out %.s.so %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS)
 	@$(AR_MESSAGE)
 #	$(AR) rvs $@ $(foreach obj, $(OBJS_$@),		\
              $(firstword $(foreach dir, . $(VPATH),	\
                   $(wildcard $(dir)/$(obj)))))
 	$(VERBOSE)$(RM) $@
-	$(VERBOSE)$(AR) rs $@ $(OBJS)
+	$(VERBOSE)$(AR) crs $@ $(OBJS)
 	@$(BUILT_MESSAGE)
 
+LD_GCC_PREFIX:=-Wl,
+
+# shared lib
 $(filter %.s.so, $(TARGET)):%.s.so: $(OBJS) $(LIBDEPS)
 	@$(AR_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,ld) $(LD) -o $@ -shared -nostdlib $(OBJS) $(LDFLAGS)
+	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -o $@ -shared $(addprefix -T,$(LDSCRIPT)) $(CRT0) $(OBJS) $(subst $(LD_GCC_PREFIX),,$(LDFLAGS)) $(call findfile,construction.s.o,$(L4LIBDIR))
 	@$(BUILT_MESSAGE)
 
-$(filter %.o.a, $(TARGET)):%.o.a: $(OBJS) $(LIBDEPS)
+# build an object file (which looks like a lib to a later link-call), which
+# is either later included as a whole or not at all (important for static
+# constructors)
+$(filter %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS) $(LIBDEPS)
 	@$(AR_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,ld) $(LD) -o $@ -r $(OBJS) $(LDFLAGS)
+	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -o $@ -r $(OBJS) $(subst $(LD_GCC_PREFIX),,$(LDFLAGS))
 	@$(BUILT_MESSAGE)
 
 endif	# architecture is defined, really build

@@ -47,6 +47,7 @@ typedef struct l4sem_wq
   l4_threadid_t     thread;  ///< thread waiting on the semaphore
   l4_prio_t         prio;    ///< thread prio
   struct l4sem_wq * next;    ///< next element in wait queue
+  struct l4sem_wq * prev;    ///< prev element in wait queue
 } l4sem_wq_t;
 
 /*****************************************************************************
@@ -57,13 +58,18 @@ typedef struct l4sem_wq
 l4_threadid_t l4semaphore_thread_l4_id  = L4_INVALID_ID;
 static l4thread_t l4semaphore_thread_id = L4THREAD_INVALID_ID;
 
+#ifdef ARCH_x86
 #ifdef L4API_l4x0
 l4_uint32_t l4semaphore_thread_l4_id32 = -1;
+#endif
 #endif
 
 /* wait queue allocation */
 static l4sem_wq_t wq_entries[L4SEMAPHORE_MAX_WQ_ENTRIES];
 static int next_entry = 0;
+
+#define WAKEUP_NOWAIT 1 /* wakeup a thread - do not wait when it is not ready */
+#define WAKEUP_WAIT 0 /* wakeup a thread - wait until it is ready */
 
 /*****************************************************************************
  *** performance measurements
@@ -126,6 +132,11 @@ __free_entry(l4sem_wq_t * wq)
 {
   /* free */
   wq->thread = L4_INVALID_ID;
+
+  if (wq->prev != NULL)
+    wq->prev->next = wq->next;
+  if (wq->next != NULL)
+    wq->next->prev = wq->prev;
 }
 
 /*****************************************************************************
@@ -140,7 +151,7 @@ __free_entry(l4sem_wq_t * wq)
  * \param  t             Thread id
  */
 /*****************************************************************************/ 
-static inline void
+static inline l4sem_wq_t *
 __enqueue_thread(l4semaphore_t * sem, l4_threadid_t t)
 {
 #if L4SEMAPHORE_SORT_WQ
@@ -151,7 +162,14 @@ __enqueue_thread(l4semaphore_t * sem, l4_threadid_t t)
   prio = l4thread_get_prio(l4thread_id(t));
   if (prio < 0)
     {
-      Error("L4Semaphore: failed to get priority for thread "IdFmt,IdStr(t));
+      /* Could not get prio of thread. This could either mean that the thread 
+       * got killed in the meantime or that the semaphore lib was used by a 
+       * thread which is not managed by the thread library. In both cases the 
+       * thread library has no valid tcb for the thread.
+       * Use prio 0, this enqueues thread at the end of the wait queue.
+       */
+      LOG_Error("l4semaphore: failed to get priority of thread "l4util_idfmt \
+                ": %s (%d)", l4util_idstr(t), l4env_errstr(prio), prio);
       prio = 0;
     }
 
@@ -161,12 +179,17 @@ __enqueue_thread(l4semaphore_t * sem, l4_threadid_t t)
   wq->prio = prio;
   wq->next = NULL;
   if (sem->queue == NULL)
-    sem->queue = wq;
+    {
+      wq->prev   = NULL;
+      sem->queue = wq;
+    }
   else
     {
       if (((l4sem_wq_t *)(sem->queue))->prio < prio)
         {
           wq->next = sem->queue;
+          wq->prev = NULL;
+          ((l4sem_wq_t *)sem->queue)->prev = wq;
           sem->queue = wq;
         }
       else
@@ -175,7 +198,10 @@ __enqueue_thread(l4semaphore_t * sem, l4_threadid_t t)
           while ((wp->next != NULL) && (wp->next->prio >= prio))
             wp = wp->next;
 
+          wq->prev = wp;
           wq->next = wp->next;
+          if (wp->next != NULL)
+            wp->next->prev = wq;
           wp->next = wq;
         }
     }
@@ -189,15 +215,20 @@ __enqueue_thread(l4semaphore_t * sem, l4_threadid_t t)
   wq->prio = 0;
   wq->next = NULL;
   if (sem->queue == NULL)
-    sem->queue = wq;
+    {
+      wq->prev   = NULL;
+      sem->queue = wq;
+    }
   else
     {
       wp = sem->queue;
       while (wp->next)
         wp = wp->next;
       wp->next = wq;
+      wq->prev = wp;
     }
 #endif
+  return wq;
 }
 
 /*****************************************************************************/
@@ -209,31 +240,40 @@ __enqueue_thread(l4semaphore_t * sem, l4_threadid_t t)
  * Send reply to blocked thread.
  */
 /*****************************************************************************/ 
-static inline void
-__wakeup_thread(l4_threadid_t t)
+static inline int
+__wakeup_thread(l4_threadid_t t, int nowait)
 {
   int error;
   l4_msgdope_t result;
   l4_timeout_t to;
 
 #if L4SEMAPHORE_RESTART_IPC
-  /* the thread might not wait */
-  to = L4_IPC_NEVER;
+  /* zero send timeout */
+  if (nowait)
+    to = L4_IPC_SEND_TIMEOUT_0;
+  /* wait as long as necessary*/
+  else
+    to = L4_IPC_NEVER;
 #else
   /* zero send timeout */
-  to = L4_IPC_TIMEOUT(0,1,0,0,0,0);
+  to = L4_IPC_SEND_TIMEOUT_0;
 #endif
 
 #if L4SEMAPHORE_SEND_ONLY_IPC
   error = l4_ipc_send(t, (void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK),
                       0, 0, to, &result);
 #else
-  error = l4_ipc_send(t, L4_IPC_SHORT_MSG, 0, 0, to, &result);
+  error = l4_ipc_send(t, (void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK), 0, 0, to, &result);
 #endif
 
-  if ((error) && (error != L4_IPC_SETIMEOUT))
-    Error("L4semaphore: wakeup message failed (0x%02x)!",error);
+  if (error)
+    {
+      if (error != L4_IPC_SETIMEOUT)
+        LOG_Error("L4semaphore: wakeup message failed (0x%02x)!", error);
+      return 0;
+    }
 
+  return 1;
 }
 
 /*****************************************************************************/
@@ -263,17 +303,27 @@ __wakeup_thread(l4_threadid_t t)
 static void 
 l4semaphore_thread(void * data)
 {
-  int error,i;
+  int error,i,datakey,found;
   l4_uint32_t dw0,dw1;
   l4_threadid_t me,src,wakeup;
   l4semaphore_t * sem;
   l4sem_wq_t * wp;
   l4_msgdope_t result;
+  void * vwp;
 
   /* get my L4 id, required to check the sender of a message */
   me = l4thread_l4_id(l4thread_myself());
 
-  LOGdL(DEBUG_INIT,"semaphore thread: "IdFmt,IdStr(me));
+  datakey = l4thread_data_allocate_key();
+  if (datakey==-L4_ENOKEY)
+    {
+      LOG_Error("L4semaphore: can not allocate data key!");
+      /* this should never happen... */
+      Panic("L4semaphore: left semaphore thread!?");
+      return;
+    }
+
+  LOGdL(DEBUG_INIT, "semaphore thread: "l4util_idfmt, l4util_idstr(me));
 
   /* setup wait queue entry allocation */
   for (i = 0; i < L4SEMAPHORE_MAX_WQ_ENTRIES; i++)
@@ -289,8 +339,9 @@ l4semaphore_thread(void * data)
         {
           if (!l4_task_equal(me, src))
             {
-              Error("L4semaphore: ignored request from other task "
-                    "("IdFmt", I'm "IdFmt")!", IdStr(src), IdStr(me));
+              LOG_Error("L4semaphore: ignored request from other task "
+                        "("l4util_idfmt", I'm "l4util_idfmt")!", 
+                        l4util_idstr(src), l4util_idstr(me));
               continue;
             }
 	  
@@ -298,7 +349,7 @@ l4semaphore_thread(void * data)
           sem = (l4semaphore_t *)dw1;
           if (sem == NULL)
             {
-              Error("L4semaphore: invalid request!");
+              LOG_Error("L4semaphore: invalid request!");
               continue;
             }
 	  
@@ -310,53 +361,113 @@ l4semaphore_thread(void * data)
                 {
                   /* we already got the wakeup message, return immediately */
                   sem->pending--;
-                  __wakeup_thread(src);
+                  __wakeup_thread(src,WAKEUP_WAIT);
                 }
-              else
-                __enqueue_thread(sem,src);
+              else 
+                __enqueue_thread(sem, src);
 
               /* done */
               break;
-	      
+            case L4SEMAPHORE_BLOCKTIMED:
+              if (sem->pending > 0)
+	        {
+                  /* we already got the wakeup message, return immediately */
+                  if (__wakeup_thread(src,WAKEUP_NOWAIT))
+                    /* the IPC was received by the waiting thread*/
+                    sem->pending--;
+                    /*else - thread did not wait, because of a time out*/
+		}  
+	      else
+	        {
+                  wp = __enqueue_thread(sem, src);
+                  /* mark thread, set the pointer of the entry in the queue 
+		   * to find it later easily */
+                  l4thread_data_set(l4thread_id(src),datakey,wp);
+                }
+              break;
             case L4SEMAPHORE_RELEASE:
-              /* wakeup thread */
-              if (sem->queue == NULL)
-                {
-                  /* no thread in waitqueue, store wakeup */
-                  sem->pending++;
-                  wakeup = L4_INVALID_ID;
-                }
-              else
-                {
-                  /* remove thread from wait queue */
-                  wp = sem->queue;
-                  sem->queue = wp->next;
-                  wakeup = wp->thread;
-                  __free_entry(wp);
-                }
 
 #if !(L4SEMAPHORE_SEND_ONLY_IPC)
               /* reply */
 #if L4SEMAPHORE_RESTART_IPC
-              l4_ipc_send(src, L4_IPC_SHORT_MSG, 0, 0, L4_IPC_NEVER, &result);
+              l4_ipc_send(src, (void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK), 0, 0, L4_IPC_NEVER, &result);
 #else
-              l4_ipc_send(src, L4_IPC_SHORT_MSG, 0, 0,
-                          L4_IPC_TIMEOUT(0, 1, 0, 0, 0, 0), &result);
+              l4_ipc_send(src, (void *)(L4_IPC_SHORT_MSG | L4_IPC_DECEIT_MASK), 0, 0,
+                          L4_IPC_SEND_TIMEOUT_0, &result);
 #endif
 #endif
+              found = 0; 
+              /* look for a waiting thread*/
+              while (sem->queue != NULL)
+	        {
+                  wp               = sem->queue;
+                  sem->queue       = wp->next;
+                  wakeup           = wp->thread;
+                  /* remove thread from wait queue */
+                  __free_entry(wp);
 
-              if (!l4_is_invalid_id(wakeup))
-                __wakeup_thread(wakeup);
+                  /* thread exists ?*/
+                  if (!l4_is_invalid_id(wakeup))
+		    {
+                      vwp = l4thread_data_get(l4thread_id(wakeup),datakey);
+                      if (vwp != NULL)
+		        {
+                          /* thread, which called semaphore_down_timed*/
+                          /* unmark thread*/
+                          l4thread_data_set(l4thread_id(wakeup),datakey,NULL);
+                          /* try to notify the thread*/
+                          if (__wakeup_thread(wakeup,WAKEUP_NOWAIT))
+			    {
+                              found = 1; /* success, thread wait */
+                              break;
+                            } 
+			  /* else: thread did not wait - forget this thread */
+                        }
+                      else
+		        {
+                          /* thread, which called semaphore_down */
+                          found = 1; /* found a thread*/
+                          __wakeup_thread(wakeup,WAKEUP_WAIT);
+                          break;
+                        }
+		    }
+		  else
+                    LOG_Error("L4semaphore: invalid thread "l4util_idfmt"! \
+			      Maybe not alive ?", l4util_idstr(wakeup));
+                }
 
+              if (!found)
+                sem->pending ++; /* store wakeup  */
               /* done */
               break;
-	      
+            case L4SEMAPHORE_RELEASETIMED:
+              vwp = l4thread_data_get(l4thread_id(src),datakey);
+              /* vwp==NULL - another thread, which called L4SEMAPHORE_RELEASE, 
+                             already dequeued the thread 'src' */
+              if (vwp != NULL)
+	        {
+                  wp  = (l4sem_wq_t *)vwp;
+
+                  if (wp->prev == NULL)
+		    /* the first thread in the queue */
+		    sem->queue = wp->next;
+		  
+                  /* remove thread from wait queue*/
+                  __free_entry(wp);
+                  /* unmark thread */
+                  l4thread_data_set(l4thread_id(src),datakey,NULL);
+                }
+              /* done */
+              break;
             default:
-              Error("L4semaphore: invalid request!");		  
+              LOG_Error("L4semaphore: invalid request!");		  
             }
         }
       else
-        Error("L4semaphore: IPC error 0x%02x!",error);
+        {
+          if (error != L4_IPC_SETIMEOUT) 
+            LOG_Error("L4semaphore: IPC error 0x%02x!", error);
+        }
     }
   
   /* this should never happen... */
@@ -383,15 +494,16 @@ l4semaphore_init(void)
   l4thread_t t;
 
   /* start semaphore thread */
-  t = l4thread_create_long(L4THREAD_INVALID_ID,l4semaphore_thread,
-                           L4THREAD_INVALID_SP,L4SEMAPHORE_THREAD_STACK_SIZE,
-                           L4SEMAPHORE_THREAD_PRIO,NULL,
+  t = l4thread_create_long(L4THREAD_INVALID_ID, l4semaphore_thread,
+  			   ".sem", L4THREAD_INVALID_SP, 
+                           L4SEMAPHORE_THREAD_STACK_SIZE,
+                           L4SEMAPHORE_THREAD_PRIO, NULL,
                            L4THREAD_CREATE_ASYNC | L4THREAD_CREATE_SETUP);
 
   if (t < 0)
     {
-      Error("L4semaphore: failed to create semaphore thread: %s (%d)!",
-            l4env_errstr(t),t);
+      LOG_Error("L4semaphore: failed to create semaphore thread: %s (%d)!",
+                l4env_errstr(t), t);
       return -1;
     }
 
@@ -399,11 +511,13 @@ l4semaphore_init(void)
   l4semaphore_thread_id = t;
   l4semaphore_thread_l4_id = l4thread_l4_id(t);
 
-  LOGdL(DEBUG_INIT,"started semaphore thread (%d,"IdFmt")",t,
-        IdStr(l4semaphore_thread_l4_id));
+  LOGdL(DEBUG_INIT, "started semaphore thread (%d,"l4util_idfmt")", 
+        t, l4util_idstr(l4semaphore_thread_l4_id));
 
+#ifdef ARCH_x86
 #ifdef L4API_l4x0
   l4semaphore_thread_l4_id32 = l4sys_to_id32(l4semaphore_thread_l4_id);
+#endif
 #endif
 
   /* done */
@@ -429,4 +543,63 @@ l4semaphore_set_thread_prio(l4_prio_t prio)
   else
     return -L4_EINVAL;
 }
-  
+
+/*****************************************************************************/
+/**
+ * \brief  Restart semaphore down operation after previous IPC was canceled.
+ * \param  sem	the semaphore
+ *
+ * \return 0 on success, error code if failed.
+ */
+/*****************************************************************************/
+#if L4SEMAPHORE_RESTART_IPC
+void
+l4semaphore_restart_up(l4semaphore_t *sem, l4_msgdope_t result)
+{
+  l4_umword_t dummy;
+
+  while (L4_IPC_ERROR(result) == L4_IPC_SECANCELED)
+    {
+      l4_ipc_call(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG,
+                  L4SEMAPHORE_RELEASE, (l4_umword_t)sem, L4_IPC_SHORT_MSG,
+                  &dummy, &dummy, L4_IPC_NEVER, &result); 
+    }
+
+  while (L4_IPC_ERROR(result) == L4_IPC_RECANCELED)
+    {
+      l4_ipc_receive(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG,
+                     &dummy, &dummy, L4_IPC_NEVER, &result); 
+    }
+}
+#endif
+
+/*****************************************************************************/
+/**
+ * \brief  Restart semaphore up operation after previous IPC was canceled.
+ * \param  sem	the semaphore
+ *
+ * \return 0 on success, error code if failed.
+ */
+/*****************************************************************************/
+#if L4SEMAPHORE_RESTART_IPC
+void
+l4semaphore_restart_down(l4semaphore_t *sem,l4_msgdope_t result)
+{
+  l4_umword_t dummy;
+
+  while (L4_IPC_ERROR(result) == L4_IPC_SECANCELED)
+    {
+      l4_ipc_call(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG, 
+                  L4SEMAPHORE_BLOCK, (l4_umword_t)sem, L4_IPC_SHORT_MSG, 
+                  &dummy, &dummy, L4_IPC_NEVER, &result); 
+    }
+
+#if !(L4SEMAPHORE_SEND_ONLY_IPC)
+  while (L4_IPC_ERROR(result) == L4_IPC_RECANCELED)
+    {
+      l4_ipc_receive(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG,
+                     &dummy, &dummy, L4_IPC_NEVER, &result); 
+    }
+#endif
+}
+#endif

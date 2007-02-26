@@ -11,7 +11,11 @@
  * the terms of the GNU General Public License 2. Please see the
  * COPYING file for details. */
 
+#include <linux/version.h>
 #include <linux/tty.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
+#include <linux/kd.h>
+#endif
 #include <linux/console_struct.h>
 
 #include "comh.h"
@@ -20,8 +24,7 @@
 
 #define SHUTDOWN_SIGS	(sigmask(SIGKILL)|sigmask(SIGINT)|sigmask(SIGTERM))
 
-atomic_t comh_sleep_state = ATOMIC_INIT(0);
-l4_uint32_t  comh_sleep_esp, comh_sleep_eip;
+l4_uint32_t comh_sleep_state = 0;
 
 /* this should be enough */
 static unsigned setjmp_buf[16];
@@ -41,7 +44,7 @@ _comh_fill(comh_fill_t *fill)
 			&fill->rect, 
 			fill->color, 
 			&_env)
-      || (_env.major != CORBA_NO_EXCEPTION))
+      || _env.major != CORBA_NO_EXCEPTION)
     printk("comh.c: pslim_fill failed\n");
 }
 
@@ -57,7 +60,7 @@ _comh_puts(comh_puts_t *puts)
 		  puts->x, 
 		  puts->y,
 		  &_env)
-      || (_env.major != CORBA_NO_EXCEPTION))
+      || _env.major != CORBA_NO_EXCEPTION)
     printk("comh.c: pslim_puts failed\n");
 }
 
@@ -73,7 +76,7 @@ _comh_putc(comh_putc_t *putc)
 		  putc->x,
 		  putc->y,
 		  &_env)
-      || (_env.major != CORBA_NO_EXCEPTION))
+      || _env.major != CORBA_NO_EXCEPTION)
     printk("comh.c: pslim_putc failed\n");
 }
 
@@ -91,7 +94,7 @@ _comh_redraw(comh_redraw_t *redraw)
 			   redraw->x,
 			   redraw->y,
 			   &_env)
-	  || (_env.major != CORBA_NO_EXCEPTION))
+	  || _env.major != CORBA_NO_EXCEPTION)
 	printk("comh.c: pslim_puts failed\n");
 
       redraw->p += dropscon_num_columns;
@@ -110,69 +113,43 @@ _comh_copy(comh_copy_t *copy)
 			copy->dx, 
 			copy->dy,
 			&_env)
-      || (_env.major != CORBA_NO_EXCEPTION))
+      || _env.major != CORBA_NO_EXCEPTION)
     printk("comh.c: pslim_copy failed\n");
 }
 
 void
 comh_thread(void *data)
 {
-#ifdef COMH_KERNEL_THREAD
-  
-  /* release unneeded resources */
-  exit_files(current);
-  daemonize();
-  
-  siginitsetinv(&current->blocked, SHUTDOWN_SIGS);
-  
-  /* set name of thread */
-  strncpy (current->comm, "dropscon", sizeof(current->comm) - 1);
-  current->comm[sizeof(current->comm) - 1] = '\0';
-
-#else
-  
   l4_umword_t dummy;
   l4_msgdope_t result;
 
   /* hand shake with creator */
-  l4_ipc_call(main_l4id,
-		   L4_IPC_SHORT_MSG, 0, 0,
-		   L4_IPC_SHORT_MSG, &dummy, &dummy,
-		   L4_IPC_NEVER, &result);
-  
-#endif
-  
-  while (1)
-    {
-      comh_proto_t *comh = comh_list + tail;
-      
-#ifdef COMH_KERNEL_THREAD
-      
-      /* wait until next element is acknowledged */
-      down_interruptible(&comh->sem);
-      if (signal_pending(current))
-	break;
-      
-#else
+  l4_ipc_call(main_l4id, L4_IPC_SHORT_MSG, 0, 0,
+			 L4_IPC_SHORT_MSG, &dummy, &dummy,
+			 L4_IPC_NEVER, &result);
 
-      /* save return point for wakeup */
-      if (!__builtin_setjmp(&setjmp_buf))
+  for (;;)
+    {
+      comh_proto_t *comh;
+
+      if (__builtin_setjmp(&setjmp_buf))
+	comh_sleep_state = 0;
+
+      comh = comh_list + tail;
+
+      comh_sleep_state = 1;
+      if (!atomic_read(&comh->valid))
 	{
-	  if (!atomic_read(&comh->valid))
-	    {
-	      /* next entry is still not valid -- goto sleep */
-	      l4_umword_t dummy;
-	      l4_msgdope_t result;
-	      
-	      atomic_inc(&comh_sleep_state);
-	      l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
-				  L4_IPC_NEVER, &result);
-	    }
+	  /* next entry is still not valid -- goto sleep */
+	  l4_umword_t dummy;
+	  l4_msgdope_t result;
+
+	  l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
+			 L4_IPC_NEVER, &result);
 	}
+      comh_sleep_state = 0;
 
       atomic_dec(&comh->valid);
-      
-#endif /* COMH_KERNEL_THREAD */
 
       if (stop_comh_thread)
 	goto done;
@@ -201,7 +178,7 @@ comh_thread(void *data)
 	      _comh_copy(&comh->func.copy);
 	      break;
 	    default:
-	      printk("comh.c: unknown function!\n");
+	      printk("comh.c: unknown function %d!\n", comh->ftype);
 	    }
 	}
       
@@ -216,11 +193,7 @@ comh_thread(void *data)
 	  
 	  while (tail != head)
 	    {
-#ifdef COMH_KERNEL_THREAD
-	      atomic_dec(&comh_list[tail].sem.count);
-#else
 	      atomic_dec(&comh_list[tail].valid);
-#endif
 	      tail = (tail + 1) % DROPSCON_COMLIST_SIZE;
 	    }
 	  
@@ -242,4 +215,3 @@ done:
   /* shake hands with main thread */
   up(&exit_notify_sem);
 }
-

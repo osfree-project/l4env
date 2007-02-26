@@ -1,0 +1,9 @@
+mainmenu_name "ORe configuration"
+
+bool 'Build for UX' CONFIG_ORE_UX_ONLY
+
+if [ "$CONFIG_ORE_UX_ONLY" != "y" ]; then
+    bool '  EtherexpressPro/100 support' CONFIG_ORE_EEPRO100
+    bool '  Tulip support'    CONFIG_ORE_TULIP
+    bool '  Intel Pro/1000 support' CONFIG_ORE_PRO1000
+fi

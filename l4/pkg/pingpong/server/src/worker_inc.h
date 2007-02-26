@@ -46,6 +46,19 @@
 
 #endif /* !CALL_ONLY */
 
+#define WHATTODO_SHORT_TO_PING \
+  "sub  %%ebp,%%ebp  \n\t"  \
+  "mov  $0xf4000009,%%ecx  \n\t"  \
+  "sub  %%eax,%%eax  \n\t"  \
+  IPC_SYSENTER
+
+/* IPC operation to use in pong thread - short reply, send timeout 0 */
+#define WHATTODO_SHORT_TO_PONG \
+  "mov  $1,%%ebp     \n\t"  \
+  "mov  $0xf4000009,%%ecx  \n\t"  \
+  "sub  %%eax,%%eax  \n\t"  \
+  IPC_SYSENTER
+
 /* IPC operation to use in ping thread - short send, receive long */
 #define WHATTODO_LONG_PING \
   "sub  %%eax,%%eax  \n\t" \
@@ -129,7 +142,12 @@ extern int PREFIX(l4_ipc_reply_and_wait_asm) (
 
 extern int dont_do_cold;
 
-/** Pong (reply) thread for short IPCs */
+
+/* ------------------------------------------------------------------------- */
+/* Short IPC in Shortcut (Timout Never, Timeout 0) (warm/cold)               */
+/* ------------------------------------------------------------------------- */
+
+/** Pong (reply) thread for short IPCs. */
 void __attribute__((noreturn))
 PREFIX(pong_short_thread)(void)
 {
@@ -143,10 +161,6 @@ PREFIX(pong_short_thread)(void)
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
-
-#if DO_DEBUG
-  hello("pong_short");
-#endif
 
   /* ensure that ping is already created */
   PREFIX(call)(main_id);
@@ -181,7 +195,7 @@ PREFIX(pong_short_thread)(void)
     }
 }
 
-/** Ping (send) thread */
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_short_thread)(void)
 {
@@ -198,13 +212,10 @@ PREFIX(ping_short_thread)(void)
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
 
-#if DO_DEBUG
-  hello("ping_short");
-#endif
   PREFIX(call)(pong_id);
 
   tsc = l4_rdtsc();
-  for (i = ROUNDS; i; i--)
+  for (i = global_rounds; i; i--)
     {
       asm volatile 
 	(
@@ -230,10 +241,11 @@ PREFIX(ping_short_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s/%s: %10u cycles / %6u rounds >> %5u <<\n",
+  printf("  %s%s: %10u cycles / %6u rounds >> %5u <<\n",
          sysenter ? "sysenter" : "   int30",
-	 dont_do_cold ? "" : "warm",
-	 (l4_uint32_t)tsc, 8*ROUNDS, (l4_uint32_t)(tsc/(8*ROUNDS)));
+	 dont_do_cold ? "" : "/warm",
+	 (l4_uint32_t)tsc, 8*global_rounds, 
+	 (l4_uint32_t)(tsc/(8*global_rounds)));
 
   /* tell main that we are finished */
   PREFIX(send)(main_id);
@@ -243,7 +255,7 @@ PREFIX(ping_short_thread)(void)
   l4_sleep_forever();
 }
 
-/** Ping (send) thread */
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_short_cold_thread)(void)
 {
@@ -255,26 +267,25 @@ PREFIX(ping_short_cold_thread)(void)
   register l4_umword_t idlow  = pong_id.lh.low;
   register l4_umword_t idhigh = pong_id.lh.high;
 #endif
-  const l4_umword_t rounds = ROUNDS/100;
+  const l4_umword_t rounds = 10;
   
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
 
-#if DO_DEBUG
-  hello("ping_short");
-#endif
   PREFIX(call)(pong_id);
 
   tsc = l4_rdtsc();
   for (i = rounds; i; i--)
     {
+      tsc -= l4_rdtsc();
       flooder();
+      tsc += l4_rdtsc();
       asm volatile 
 	(
-	 "push  %%ebp   \n\t"
+	 "push  %%ebp   	\n\t"
 	 WHATTODO_SHORT_PING
-	 "pop   %%ebp    \n\t"
+	 "pop   %%ebp    	\n\t"
 	 :
 #if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "S" (id32)
@@ -283,9 +294,9 @@ PREFIX(ping_short_cold_thread)(void)
 	 : "S" (idlow), "D" (idhigh)
 	 : "eax", "ebx", "ecx", "edx"
 #endif	 
-	);      
+	);
     }
-  tsc = l4_rdtsc() - tsc - flooder_costs*rounds;
+  tsc = l4_rdtsc() - tsc;
 
   printf("  %s/cold: %10u cycles / %6u rounds >> %5u <<\n",
          sysenter ? "sysenter" : "   int30",
@@ -299,17 +310,384 @@ PREFIX(ping_short_cold_thread)(void)
   l4_sleep_forever();
 }
 
-/** Pong (reply) thread for short IPCs */
+
+/* ------------------------------------------------------------------------- */
+/* Short IPC, not Shortcut (Timeout 1ms) (warm/cold)                         */
+/* ------------------------------------------------------------------------- */
+
+/** Pong (reply) thread for short IPCs. */
+void __attribute__((noreturn))
+PREFIX(pong_short_to_thread)(void)
+{
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+  l4_umword_t ping_id32 = l4sys_to_id32(ping_id);
+#else
+  register l4_umword_t idlow  = ping_id.lh.low;
+  register l4_umword_t idhigh = ping_id.lh.high;
+#endif
+
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  /* ensure that ping is already created */
+  PREFIX(call)(main_id);
+
+  /* wait for first request from ping thread */
+  PREFIX(recv)(ping_id);
+  PREFIX(call)(ping_id);
+
+  while (1)
+    {
+      asm volatile 
+	(
+	 "push  %%ebp   \n\t"
+	 WHATTODO_SHORT_TO_PONG
+	 WHATTODO_SHORT_TO_PONG
+	 WHATTODO_SHORT_TO_PONG
+	 WHATTODO_SHORT_TO_PONG
+	 WHATTODO_SHORT_TO_PONG
+	 WHATTODO_SHORT_TO_PONG
+	 WHATTODO_SHORT_TO_PONG
+	 WHATTODO_SHORT_TO_PONG
+	 "pop   %%ebp    \n\t"
+	 :
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+	 : "S" (ping_id32)
+	 : "eax", "ebx", "ecx", "edx", "edi"
+#else
+	 : "S" (idlow), "D" (idhigh)
+	 : "eax", "ebx", "ecx", "edx"
+#endif	 
+	 );
+    }
+}
+
+/** Ping (send) thread. */
+void __attribute__((noreturn))
+PREFIX(ping_short_to_thread)(void)
+{
+  int i;
+  l4_cpu_time_t tsc;
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+  register l4_umword_t id32 = l4sys_to_id32(pong_id);
+#else
+  register l4_umword_t idlow  = pong_id.lh.low;
+  register l4_umword_t idhigh = pong_id.lh.high;
+#endif
+  
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  PREFIX(call)(pong_id);
+
+  tsc = l4_rdtsc();
+  for (i = global_rounds; i; i--)
+    {
+      asm volatile 
+	(
+	 "push  %%ebp   \n\t"
+	 WHATTODO_SHORT_TO_PING
+	 WHATTODO_SHORT_TO_PING
+	 WHATTODO_SHORT_TO_PING
+	 WHATTODO_SHORT_TO_PING
+	 WHATTODO_SHORT_TO_PING
+	 WHATTODO_SHORT_TO_PING
+	 WHATTODO_SHORT_TO_PING
+	 WHATTODO_SHORT_TO_PING
+	 "pop   %%ebp    \n\t"
+	 :
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+	 : "S" (id32)
+	 : "eax", "ebx", "ecx", "edx", "edi"
+#else
+	 : "S" (idlow), "D" (idhigh)
+	 : "eax", "ebx", "ecx", "edx"
+#endif	 
+	);      
+    }
+  tsc = l4_rdtsc() - tsc;
+
+  printf("  %s%s: %10u cycles / %6u rounds >> %5u <<\n",
+         sysenter ? "sysenter" : "   int30",
+	 dont_do_cold ? "" : "/warm",
+	 (l4_uint32_t)tsc, 8*global_rounds, 
+	 (l4_uint32_t)(tsc/(8*global_rounds)));
+
+  /* tell main that we are finished */
+  PREFIX(send)(main_id);
+  PREFIX(recv)(main_id);
+
+  /* done, sleep */
+  l4_sleep_forever();
+}
+
+/** Ping (send) thread. */
+void __attribute__((noreturn))
+PREFIX(ping_short_to_cold_thread)(void)
+{
+  int i;
+  l4_cpu_time_t tsc;
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+  register l4_umword_t id32 = l4sys_to_id32(pong_id);
+#else
+  register l4_umword_t idlow  = pong_id.lh.low;
+  register l4_umword_t idhigh = pong_id.lh.high;
+#endif
+  const l4_umword_t rounds = 10;
+  
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  PREFIX(call)(pong_id);
+
+  tsc = l4_rdtsc();
+  for (i = rounds; i; i--)
+    {
+      tsc -= l4_rdtsc();
+      flooder();
+      tsc += l4_rdtsc();
+      asm volatile 
+	(
+	 "push  %%ebp   	\n\t"
+	 WHATTODO_SHORT_TO_PING
+	 "pop   %%ebp		\n\t"
+	 :
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+	 : "S" (id32)
+	 : "eax", "ebx", "ecx", "edx", "edi"
+#else
+	 : "S" (idlow), "D" (idhigh)
+	 : "eax", "ebx", "ecx", "edx"
+#endif	 
+	);      
+    }
+  tsc = l4_rdtsc() - tsc;
+
+  printf("  %s/cold: %10u cycles / %6u rounds >> %5u <<\n",
+         sysenter ? "sysenter" : "   int30",
+	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/rounds));
+
+  /* tell main that we are finished */
+  PREFIX(send)(main_id);
+  PREFIX(recv)(main_id);
+
+  /* done, sleep */
+  l4_sleep_forever();
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* Short IPC with deceit bit                                                 */
+/* ------------------------------------------------------------------------- */
+
+/** Pong (reply) thread for short IPCs. */
+void __attribute__((noreturn))
+PREFIX(pong_short_dc_thread)(void)
+{
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+  l4_umword_t id32 = l4sys_to_id32(main_id);
+#else
+  register l4_umword_t idlow  = main_id.lh.low;
+  register l4_umword_t idhigh = main_id.lh.high;
+#endif
+
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  /* ensure that ping is already created */
+  PREFIX(send)(main_id);
+
+  asm volatile 
+    (
+     "push %%ebp       \n\t"
+     "mov  $1,%%ebp    \n\t"
+     "sub  %%ecx,%%ecx \n\t"
+     "or   $-1,%%eax   \n\t"
+     IPC_SYSENTER
+     "pop  %%ebp       \n\t"
+     :
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+     : "S" (id32)
+     : "eax", "ebx", "ecx", "edx", "edi"
+#else
+     : "S" (idlow), "D" (idhigh)
+     : "eax", "ebx", "ecx", "edx"
+#endif	 
+    );
+
+  for (;;)
+    PREFIX(send)(main_id);
+}
+
+/** Ping (send) thread. */
+void __attribute__((noreturn))
+PREFIX(ping_short_dc_thread)(void)
+{
+  int i;
+  l4_umword_t dummy1, dummy2 __attribute__((unused));
+  l4_cpu_time_t tsc;
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+  register l4_umword_t id32   = l4sys_to_id32(pong_id);
+#else
+  register l4_umword_t idlow  = pong_id.lh.low;
+  register l4_umword_t idhigh = pong_id.lh.high;
+#endif
+  
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  PREFIX(call)(main_id);
+
+  tsc = l4_rdtsc();
+  for (i=0; i<200; i++)
+    {
+      asm volatile 
+	(
+	 "push %%ebp       \n\t"
+	 "or   $-1,%%ebp   \n\t"
+	 "sub  %%ecx,%%ecx \n\t"
+	 "mov  $1,%%eax    \n\t"
+	 IPC_SYSENTER
+	 "pop   %%ebp      \n\t"
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+	 : "=S"(dummy1)
+	 : "S" (id32)
+	 : "eax", "ebx", "ecx", "edx", "edi"
+#else
+	 : "=S"(dummy1), "=D"(dummy2)
+	 : "S" (idlow), "D" (idhigh)
+	 : "eax", "ebx", "ecx", "edx"
+#endif
+	);
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+      id32  += 0x10000;
+#else
+      idlow += 0x20000;
+#endif
+    }
+  tsc = l4_rdtsc() - tsc;
+
+  printf("  %s/nosw: %8u cycles / %6u rounds >> %5u <<\n",
+         sysenter ? "sysenter" : "   int30",
+	 (l4_uint32_t)tsc, 200, 
+	 (l4_uint32_t)(tsc/200));
+
+  /* tell main that we are finished */
+  PREFIX(send)(main_id);
+
+  /* done, sleep */
+  l4_sleep_forever();
+}
+
+/** Pong (reply) thread for short IPCs. */
+void __attribute__((noreturn))
+PREFIX(pong_short_ndc_thread)(void)
+{
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  /* ensure that ping is already created */
+  PREFIX(send)(main_id);
+
+  asm volatile 
+    (
+     "push %%ebp       \n\t"
+     "mov  $1,%%ebp    \n\t"
+     "sub  %%ecx,%%ecx \n\t"
+     "or   $-1,%%eax   \n\t"
+     IPC_SYSENTER
+     "or   $-1,%%ebp   \n\t"
+     "sub  %%ecx,%%ecx \n\t"
+     "sub  %%eax,%%eax \n\t"
+     IPC_SYSENTER
+     "pop  %%ebp       \n\t"
+     :
+     :
+     : "eax", "ebx", "ecx", "edx", "esi", "edi"
+    );
+
+  for (;;)
+    PREFIX(send)(main_id);
+}
+
+/** Ping (send) thread */
+void __attribute__((noreturn))
+PREFIX(ping_short_ndc_thread)(void)
+{
+  int i;
+  l4_umword_t dummy1, dummy2 __attribute__((unused));
+  l4_cpu_time_t tsc;
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+  register l4_umword_t id32   = l4sys_to_id32(pong_id);
+#else
+  register l4_umword_t idlow  = pong_id.lh.low;
+  register l4_umword_t idhigh = pong_id.lh.high;
+#endif
+  
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  PREFIX(call)(main_id);
+
+  tsc = l4_rdtsc();
+  for (i=0; i<200; i++)
+    {
+      asm volatile 
+	(
+	 "push %%ebp       \n\t"
+	 "mov  $1,%%ebp    \n\t"
+	 "sub  %%ecx,%%ecx \n\t"
+	 "sub  %%eax,%%eax \n\t"
+	 IPC_SYSENTER
+	 "pop   %%ebp      \n\t"
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+	 : "=S"(dummy1)
+	 : "S" (id32)
+	 : "eax", "ebx", "ecx", "edx", "edi"
+#else
+	 : "=S"(dummy1), "=D"(dummy2)
+	 : "S" (idlow), "D" (idhigh)
+	 : "eax", "ebx", "ecx", "edx"
+#endif
+	);
+#if defined(L4_API_L4X0) || defined(L4API_l4x0)
+      id32  += 0x10000;
+#else
+      idlow += 0x20000;
+#endif
+    }
+  tsc = l4_rdtsc() - tsc;
+
+  printf("  %s/call: %8u cycles / %6u rounds >> %5u <<\n",
+         sysenter ? "sysenter" : "   int30",
+	 (l4_uint32_t)tsc, 200, 
+	 (l4_uint32_t)(tsc/200));
+
+  /* tell main that we are finished */
+  PREFIX(send)(main_id);
+
+  /* done, sleep */
+  l4_sleep_forever();
+}
+
+/* ------------------------------------------------------------------------- */
+/* Short IPC (warm/cold) using C-Bindings                                    */
+/* ------------------------------------------------------------------------- */
+
+/** Pong (reply) thread for short IPCs. */
 void  __attribute__((noreturn))
 PREFIX(pong_short_c_thread)(void)
 {
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
-
-#if DO_DEBUG
-  hello("pong_short_c");
-#endif
 
   /* ensure that ping is already created */
   PREFIX(call)(main_id);
@@ -326,20 +704,20 @@ PREFIX(pong_short_c_thread)(void)
 
       l4_ipc_reply_and_wait(ping_id, L4_IPC_SHORT_MSG, 2, 1,
 				 &src, L4_IPC_SHORT_MSG, &dummy1, &dummy2,
-				 L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+				 L4_IPC_SEND_TIMEOUT_0, &result);
       l4_ipc_reply_and_wait(ping_id, L4_IPC_SHORT_MSG, 4, 3,
 				 &src, L4_IPC_SHORT_MSG, &dummy1, &dummy2,
-				 L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+				 L4_IPC_SEND_TIMEOUT_0, &result);
       l4_ipc_reply_and_wait(ping_id, L4_IPC_SHORT_MSG, 6, 5,
 				 &src, L4_IPC_SHORT_MSG, &dummy1, &dummy2,
-				 L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+				 L4_IPC_SEND_TIMEOUT_0, &result);
       l4_ipc_reply_and_wait(ping_id, L4_IPC_SHORT_MSG, 8, 7,
 				 &src, L4_IPC_SHORT_MSG, &dummy1, &dummy2,
-				 L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+				 L4_IPC_SEND_TIMEOUT_0, &result);
     }
 }
 
-/** Ping (send) thread */
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_short_c_thread)(void)
 {
@@ -350,13 +728,10 @@ PREFIX(ping_short_c_thread)(void)
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
 
-#if DO_DEBUG
-  hello("ping_short_c");
-#endif
   PREFIX(call)(pong_id);
 
   tsc = l4_rdtsc();
-  for (i = ROUNDS*2; i; i--)
+  for (i = global_rounds*2; i; i--)
     {
       unsigned dummy1, dummy2;
       l4_msgdope_t result;
@@ -380,10 +755,11 @@ PREFIX(ping_short_c_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s/%s: %10u cycles / %6u rounds >> %5u <<\n",
+  printf("  %s%s: %10u cycles / %6u rounds >> %5u <<\n",
          sysenter ? "sysenter" : "   int30",
-	 dont_do_cold ? "" : "warm",
-	 (l4_uint32_t)tsc, 8*ROUNDS, (l4_uint32_t)(tsc/(8*ROUNDS)));
+	 dont_do_cold ? "" : "/warm",
+	 (l4_uint32_t)tsc, 8*global_rounds,
+	 (l4_uint32_t)(tsc/(8*global_rounds)));
 
   /* tell main that we are finished */
   PREFIX(send)(main_id);
@@ -392,21 +768,18 @@ PREFIX(ping_short_c_thread)(void)
   l4_sleep_forever();
 }
 
-/** Ping (send) thread */
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_short_c_cold_thread)(void)
 {
   int i;
   l4_cpu_time_t tsc;
-  l4_umword_t rounds = ROUNDS/100;
+  l4_umword_t rounds = 10;
   
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
 
-#if DO_DEBUG
-  hello("ping_short_c");
-#endif
   PREFIX(call)(pong_id);
 
   tsc = l4_rdtsc();
@@ -415,13 +788,15 @@ PREFIX(ping_short_c_cold_thread)(void)
       unsigned dummy1, dummy2;
       l4_msgdope_t result;
 
+      tsc -= l4_rdtsc();
       flooder();
+      tsc += l4_rdtsc();
       l4_ipc_call(pong_id,
 		       L4_IPC_SHORT_MSG, 1, 2,
 	    	       L4_IPC_SHORT_MSG, &dummy1, &dummy2,
     		       L4_IPC_NEVER, &result);
     }
-  tsc = l4_rdtsc() - tsc - flooder_costs*rounds;
+  tsc = l4_rdtsc() - tsc;
 
   printf("  %s/cold: %10u cycles / %6u rounds >> %5u <<\n",
          sysenter ? "sysenter" : "   int30",
@@ -434,17 +809,18 @@ PREFIX(ping_short_c_cold_thread)(void)
   l4_sleep_forever();
 }
 
-/** Pong (reply) thread for short IPCs */
+
+/* ------------------------------------------------------------------------- */
+/* Short IPC (warm/cold) using Assembler library functions (not inline)      */
+/* ------------------------------------------------------------------------- */
+
+/** Pong (reply) thread for short IPCs. */
 void __attribute__((noreturn))
 PREFIX(pong_short_asm_thread)(void)
 {
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
-
-#if DO_DEBUG
-  hello("pong_short_asm");
-#endif
 
   /* ensure that ping is already created */
   PREFIX(call)(main_id);
@@ -461,20 +837,20 @@ PREFIX(pong_short_asm_thread)(void)
 
       PREFIX(l4_ipc_reply_and_wait_asm)(ping_id, L4_IPC_SHORT_MSG, 2, 1,
 				     &src, L4_IPC_SHORT_MSG, &dummy1, &dummy2,
-				     L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+				     L4_IPC_SEND_TIMEOUT_0, &result);
       PREFIX(l4_ipc_reply_and_wait_asm)(ping_id, L4_IPC_SHORT_MSG, 4, 3,
 				     &src, L4_IPC_SHORT_MSG, &dummy1, &dummy2,
-				     L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+				     L4_IPC_SEND_TIMEOUT_0, &result);
       PREFIX(l4_ipc_reply_and_wait_asm)(ping_id, L4_IPC_SHORT_MSG, 6, 5,
 				     &src, L4_IPC_SHORT_MSG, &dummy1, &dummy2,
-				     L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+				     L4_IPC_SEND_TIMEOUT_0, &result);
       PREFIX(l4_ipc_reply_and_wait_asm)(ping_id, L4_IPC_SHORT_MSG, 8, 7,
 				     &src, L4_IPC_SHORT_MSG, &dummy1, &dummy2,
-				     L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+				     L4_IPC_SEND_TIMEOUT_0, &result);
     }
 }
 
-/** Ping (send) thread */
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_short_asm_thread)(void)
 {
@@ -485,13 +861,10 @@ PREFIX(ping_short_asm_thread)(void)
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
 
-#if DO_DEBUG
-  hello("ping_short_asm");
-#endif
   PREFIX(call)(pong_id);
 
   tsc = l4_rdtsc();
-  for (i = ROUNDS*2; i; i--)
+  for (i = global_rounds*2; i; i--)
     {
       unsigned dummy1, dummy2;
       l4_msgdope_t result;
@@ -515,10 +888,11 @@ PREFIX(ping_short_asm_thread)(void)
     }
   tsc = l4_rdtsc() - tsc;
 
-  printf("  %s/%s: %9u cycles / %6u rounds >> %5u <<\n",
+  printf("  %s%s: %10u cycles / %6u rounds >> %5u <<\n",
          sysenter ? "sysenter" : "   int30",
-	 dont_do_cold ? "" : "warm",
-	 (l4_uint32_t)tsc, 8*ROUNDS, (l4_uint32_t)(tsc/(8*ROUNDS)));
+	 dont_do_cold ? "" : "/warm",
+	 (l4_uint32_t)tsc, 8*global_rounds, 
+	 (l4_uint32_t)(tsc/(8*global_rounds)));
 
   /* tell main that we are finished */
   PREFIX(send)(main_id);
@@ -527,21 +901,18 @@ PREFIX(ping_short_asm_thread)(void)
   l4_sleep_forever();
 }
 
-/** Ping (send) thread */
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_short_asm_cold_thread)(void)
 {
   int i;
   l4_cpu_time_t tsc;
-  l4_umword_t rounds = ROUNDS/100;
+  l4_umword_t rounds = 10;
   
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
 
-#if DO_DEBUG
-  hello("ping_short_asm");
-#endif
   PREFIX(call)(pong_id);
 
   tsc = l4_rdtsc();
@@ -550,15 +921,17 @@ PREFIX(ping_short_asm_cold_thread)(void)
       unsigned dummy1, dummy2;
       l4_msgdope_t result;
 
+      tsc -= l4_rdtsc();
       flooder();
+      tsc += l4_rdtsc();
       PREFIX(l4_ipc_call_asm)(pong_id,
 			   L4_IPC_SHORT_MSG, 1, 2,
 			   L4_IPC_SHORT_MSG, &dummy1, &dummy2,
 			   L4_IPC_NEVER, &result);
     }
-  tsc = l4_rdtsc() - tsc - flooder_costs*rounds;
+  tsc = l4_rdtsc() - tsc;
 
-  printf("  %s/cold: %9u cycles / %6u rounds >> %5u <<\n",
+  printf("  %s/cold: %10u cycles / %6u rounds >> %5u <<\n",
          sysenter ? "sysenter" : "   int30",
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/rounds));
 
@@ -569,7 +942,7 @@ PREFIX(ping_short_asm_cold_thread)(void)
   l4_sleep_forever();
 }
 
-/** Pong (reply) thread */
+/** Pong (reply) thread. */
 void __attribute__((noreturn))
 PREFIX(pong_long_thread)(void)
 {
@@ -581,10 +954,6 @@ PREFIX(pong_long_thread)(void)
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
-
-#if DO_DEBUG
-  hello("pong_long");
-#endif
 
   for (i=0; i<8; i++)
     {
@@ -627,7 +996,12 @@ PREFIX(pong_long_thread)(void)
     }
 }
 
-/** Ping (send) thread */
+
+/* ------------------------------------------------------------------------- */
+/* Long IPC (warm/cold)                                                      */
+/* ------------------------------------------------------------------------- */
+
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_long_thread)(void)
 {
@@ -653,9 +1027,6 @@ PREFIX(ping_long_thread)(void)
       register l4_umword_t idhigh = pong_id.lh.high;
 #endif    
 
-#if DO_DEBUG
-      hello("ping_long");
-#endif
       PREFIX(call)(pong_id);
 
       tsc = l4_rdtsc();
@@ -715,7 +1086,7 @@ PREFIX(ping_long_thread)(void)
   l4_sleep_forever();
 }
 
-/** Ping (send) thread */
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_long_cold_thread)(void)
 {
@@ -739,19 +1110,17 @@ PREFIX(ping_long_cold_thread)(void)
 #else
       register l4_umword_t idlow = pong_id.lh.low;
       register l4_umword_t idhigh = pong_id.lh.high;
-#endif    
-
-#if DO_DEBUG
-      hello("ping_long");
 #endif
       PREFIX(call)(pong_id);
 
-      rounds /= 50;
+      rounds = 10;
       tsc = l4_rdtsc();
       for (i=rounds; i; i--)
 	{
 	  l4_umword_t dummy;
+	  tsc -= l4_rdtsc();
 	  flooder();
+	  tsc += l4_rdtsc();
 	  asm volatile 
 	    (
 	     "push  %%ebp      \n\t"
@@ -769,7 +1138,7 @@ PREFIX(ping_long_cold_thread)(void)
 #endif
 	    );
 	}
-      tsc = l4_rdtsc() - tsc - flooder_costs*rounds;
+      tsc = l4_rdtsc() - tsc;
     }
 
   printf("  cold %4d dwords (%5dB): %10u cycles / %6u rounds >> %5u <<\n",
@@ -783,7 +1152,7 @@ PREFIX(ping_long_cold_thread)(void)
   l4_sleep_forever();
 }
 
-/** Pong (reply) thread */
+/** Pong (reply) thread. */
 void __attribute__((noreturn))
 PREFIX(pong_indirect_thread)(void)
 {
@@ -795,10 +1164,6 @@ PREFIX(pong_indirect_thread)(void)
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
-
-#if DO_DEBUG
-  hello("pong_indirect");
-#endif
 
   for (i=0; i<8; i++)
     {
@@ -857,7 +1222,12 @@ PREFIX(pong_indirect_thread)(void)
     }
 }
 
-/** Ping (send) thread */
+
+/* ------------------------------------------------------------------------- */
+/* Indirect IPC (warm/cold)                                                  */
+/* ------------------------------------------------------------------------- */
+
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_indirect_thread)(void)
 {
@@ -896,9 +1266,6 @@ PREFIX(ping_indirect_thread)(void)
       register l4_umword_t idhigh = pong_id.lh.high;
 #endif    
 
-#if DO_DEBUG
-      hello("ping_indirect");
-#endif
       PREFIX(call)(pong_id);
 
       tsc = l4_rdtsc();
@@ -945,7 +1312,7 @@ PREFIX(ping_indirect_thread)(void)
 }
 
 
-/** Ping (send) thread */
+/** Ping (send) thread. */
 void __attribute__((noreturn))
 PREFIX(ping_indirect_cold_thread)(void)
 {
@@ -984,17 +1351,16 @@ PREFIX(ping_indirect_cold_thread)(void)
       register l4_umword_t idhigh = pong_id.lh.high;
 #endif
 
-#if DO_DEBUG
-      hello("ping_indirect");
-#endif
       PREFIX(call)(pong_id);
 
-      rounds /= 20;
+      rounds = 10;
       tsc = l4_rdtsc();
       for (i=rounds; i; i--)
 	{
 	  l4_umword_t dummy;
+	  tsc -= l4_rdtsc();
 	  flooder();
+	  tsc += l4_rdtsc();
 	  asm volatile 
 	    (
 	     "push  %%ebp      \n\t"
@@ -1012,7 +1378,7 @@ PREFIX(ping_indirect_cold_thread)(void)
 #endif
 	    );
 	}
-      tsc = l4_rdtsc() - tsc - flooder_costs*rounds;
+      tsc = l4_rdtsc() - tsc;
     }
 
   printf("  cold %dx%5d dwords (%5dB): %10u cycles / %6u rounds >> %7u <<\n",
@@ -1027,7 +1393,11 @@ PREFIX(ping_indirect_cold_thread)(void)
 }
 
 
-/** receive fpage thread */
+/* ------------------------------------------------------------------------- */
+/* Fpage IPC (warm/cold)                                                     */
+/* ------------------------------------------------------------------------- */
+
+/** Receive fpage thread. */
 void __attribute__((noreturn))
 PREFIX(pong_fpage_thread)(void)
 {
@@ -1042,10 +1412,6 @@ PREFIX(pong_fpage_thread)(void)
 
   PREFIX(recv)(ping_id);
   PREFIX(call)(ping_id);
-
-#if DO_DEBUG
-  hello("pong_fpage");
-#endif
 
     {
 #if defined(L4_API_L4X0) || defined(L4API_l4x0)
@@ -1085,7 +1451,7 @@ PREFIX(pong_fpage_thread)(void)
     }
 }
 
-/** Send short fpages */
+/** Send short fpages. */
 void __attribute__((noreturn))
 PREFIX(ping_fpage_thread)(void)
 {
@@ -1100,9 +1466,6 @@ PREFIX(ping_fpage_thread)(void)
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
 
-#if DO_DEBUG
-  hello("ping_fpage");
-#endif
   PREFIX(call)(pong_id);
 
   tsc = l4_rdtsc();
@@ -1144,7 +1507,12 @@ PREFIX(ping_fpage_thread)(void)
   l4_sleep_forever();
 }
 
-/** Pong thread replying long fpage messages */
+
+/* ------------------------------------------------------------------------- */
+/* Long Fpage IPC (warm/cold)                                                */
+/* ------------------------------------------------------------------------- */
+
+/** Pong thread replying long fpage messages. */
 void __attribute__((noreturn))
 PREFIX(pong_long_fpage_thread)(void)
 {
@@ -1156,10 +1524,6 @@ PREFIX(pong_long_fpage_thread)(void)
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
-
-#if DO_DEBUG
-  hello("pong_fpage_long");
-#endif
 
   for (i=0; i<rounds; i++)
     {
@@ -1218,7 +1582,7 @@ PREFIX(pong_long_fpage_thread)(void)
     }
 }
 
-/** Ping (send) thread expecting long fpage messages */
+/** Ping (send) thread expecting long fpage messages. */
 void __attribute__((noreturn))
 PREFIX(ping_long_fpage_thread)(void)
 {
@@ -1246,9 +1610,6 @@ PREFIX(ping_long_fpage_thread)(void)
       register l4_umword_t idhigh = pong_id.lh.high;
 #endif    
 
-#if DO_DEBUG
-      hello("ping_fpage_long");
-#endif
       PREFIX(call)(pong_id);
 
       tsc = l4_rdtsc();
@@ -1277,7 +1638,8 @@ PREFIX(ping_long_fpage_thread)(void)
       tsc = l4_rdtsc() - tsc;
     }
 
-  printf("  %s %d fps (%d MB): %u cycles / %u rounds a 1024 fpages >> %u/fp <<\n",
+  printf("  %s %d fps (%d MB): %u cycles / %u rounds a 1024 fpages "
+         ">> %u/fp <<\n",
 	 dont_do_cold ? "" : "warm",
          SCRATCH_MEM_SIZE/L4_PAGESIZE, SCRATCH_MEM_SIZE/(1024*1024),
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/(rounds*1024)));
@@ -1289,7 +1651,7 @@ PREFIX(ping_long_fpage_thread)(void)
   l4_sleep_forever();
 }
 
-/** Ping (send) thread expecting long fpage messages */
+/** Ping (send) thread expecting long fpage messages. */
 void __attribute__((noreturn))
 PREFIX(ping_long_fpage_cold_thread)(void)
 {
@@ -1317,16 +1679,15 @@ PREFIX(ping_long_fpage_cold_thread)(void)
       register l4_umword_t idhigh = pong_id.lh.high;
 #endif    
 
-#if DO_DEBUG
-      hello("ping_fpage_long");
-#endif
       PREFIX(call)(pong_id);
 
       tsc = l4_rdtsc();
       for (i=0; i<rounds; i++)
 	{
 	  l4_umword_t dummy;
+	  tsc -= l4_rdtsc();
 	  flooder();
+	  tsc += l4_rdtsc();
 	  asm volatile 
 	    (
 	     "push %%ebp        \n\t"
@@ -1346,10 +1707,11 @@ PREFIX(ping_long_fpage_cold_thread)(void)
 #endif
 	    );
 	}
-      tsc = l4_rdtsc() - tsc - flooder_costs*rounds;
+      tsc = l4_rdtsc() - tsc;
     }
 
-  printf("  cold %d fps (%d MB): %u cycles / %u rounds a 1024 fpages >> %u/fp <<\n",
+  printf("  cold %d fps (%d MB): %u cycles / %u rounds a 1024 fpages "
+         ">> %u/fp <<\n",
          SCRATCH_MEM_SIZE/L4_PAGESIZE, SCRATCH_MEM_SIZE/(1024*1024),
 	 (l4_uint32_t)tsc, rounds, (l4_uint32_t)(tsc/(rounds*1024)));
 
@@ -1360,7 +1722,12 @@ PREFIX(ping_long_fpage_cold_thread)(void)
   l4_sleep_forever();
 }
 
-/** pager thread */
+
+/* ------------------------------------------------------------------------- */
+/* Pagefault IPC (warm/cold)                                                 */
+/* ------------------------------------------------------------------------- */
+
+/** pager thread. */
 void __attribute__((noreturn))
 PREFIX(pong_pagefault_thread)(void)
 {
@@ -1374,10 +1741,6 @@ PREFIX(pong_pagefault_thread)(void)
   PREFIX(call)(main_id);
 
   PREFIX(recv)(ping_id);
-
-#if DO_DEBUG
-  hello("pong_pager");
-#endif
 
   while (1)
     {
@@ -1435,7 +1798,7 @@ PREFIX(pong_pagefault_thread)(void)
     }
 }
 
-/** Raise pagefaults */
+/** Raise pagefaults. */
 void __attribute__((noreturn))
 PREFIX(ping_pagefault_thread)(void)
 {
@@ -1455,9 +1818,6 @@ PREFIX(ping_pagefault_thread)(void)
 			&preempter, &pager, &dummy, &dummy, &dummy);
     }
 
-#if DO_DEBUG
-  hello("ping_pagefaultee");
-#endif
   PREFIX(call)(pong_id);
 
   tsc = l4_rdtsc();

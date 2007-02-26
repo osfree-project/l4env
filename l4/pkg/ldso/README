@@ -1,0 +1,10 @@
+This package contains a ported ldso of the uClibc 0.9.27 which is
+equivalent to ldso 1.9.11.
+
+The L4 loader loads both the interpreter and the binary into the
+application's address space and passes the control to the interpreter.
+After relocating itself, the interpreter loads the program sections
+(also sometimes called program segments) of all dependent shared
+libraries using mmap(). The location of the program section is then
+passed using the L4env infopage to the application. The region manager
+of the application has to reserve these regions.

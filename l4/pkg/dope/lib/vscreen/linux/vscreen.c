@@ -23,60 +23,48 @@
 
 #define MAX_VSCREENS 32
 
-struct vscr {
-	char *name;
-} vscreens[MAX_VSCREENS];
+struct vscr_region {
+	void *base;
+	int  allocated;
+	long size;
+} vscr_regions[MAX_VSCREENS];
 
 
-/*** ALLOCATE NEW VSCR ID ***/
-static int get_new_index(void) {
+/*** UTILITY: ALLOCATE NEW VSCREEN REGION STRUCT ***/
+static struct vscr_region *alloc_vscr_region(void) {
 	int i;
-	
-	/* find free vscr id */
-	for (i=0;i<MAX_VSCREENS;i++) {
-		if (!vscreens[i].name) break;
+	for (i=0; i<MAX_VSCREENS; i++) {
+		if (!vscr_regions[i].allocated) {
+			vscr_regions[i].allocated = 1;
+			return &vscr_regions[i];
+		}
 	}
-
-	if (i>=MAX_VSCREENS) return -1;
-	return i;
+	return NULL;
 }
 
 
-/*** CHECK IF A GIVEN VSCR ID IS VALID ***/
-static int valid_index(int id) {
-
-	if ((id<0) || (id>=MAX_VSCREENS)) return 0;
-	if (!vscreens[id].name) return 0;
-	return 1;
-}
-
-
-static void release_index(int i) {
-	
-	if (!valid_index(i)) return;
-	vscreens[i].name = NULL;
-}
-
-
-void *vscr_connect_server(char *ident) {
+/*** UTILITY: FREE VSCREEN REGION STRUCT ***/
+static void free_vscr_region(struct vscr_region *r) {
 	int i;
-	
-	if ((i = get_new_index()) <0) return NULL;
-	vscreens[i].name = ident;
-	return (void *)i+1;
+	for (i=0; i<MAX_VSCREENS; i++) {
+
+		/* if specified region is valid, mark it as free */
+		if (r == &vscr_regions[i]) vscr_regions[i].allocated = 0;
+	}
 }
 
 
-void vscr_release_server_id(void *id) {
-	int i = ((int)id) - 1;
-	
-	if (!valid_index(i)) return;
-	
-	/* !!! unmap vscreen memory !!! */
-	release_index(i);
+/*** UTILITY: GET VSCREEN REGION STRUCT BY A SPECIFIED BASE ADDRESS ***/
+static struct vscr_region *get_vscr_region(void *base) {
+	int i;
+	for (i=0; i<MAX_VSCREENS; i++) {
+		if (vscr_regions[i].base == base) return &vscr_regions[i];
+	}
+	return NULL;
 }
 
 
+/*** UTILITY: CONVERT ASCII HEX NUMBER TO UNSIGNED LONG ***/
 static unsigned long hex2u32(char *s) {
 	int i;
 	unsigned long result=0;
@@ -89,20 +77,45 @@ static unsigned long hex2u32(char *s) {
 }
 
 
+/*** INTERFACE: MAP SHARED MEMORY BUFFER INTO LOCAL ADDRESS SPACE ***/
 void *vscr_map_smb(char *smb_ident) {
 	int fh;
-	void *addr;
+	struct vscr_region *vr = alloc_vscr_region();
+	
+	if (!vr) {
+		printf("libVScreen(map_smb): maximum number of %d vscreens reached\n", MAX_VSCREENS);
+		return NULL;
+	}
 	
 	fh = open(smb_ident+21, O_RDWR);
-	addr = mmap(NULL, hex2u32(smb_ident+7), PROT_READ | PROT_WRITE,
-	            MAP_SHARED, fh, 0);
-	printf("libVScreen(get_fb): mmap file %s to addr 0x%x\n", smb_ident+21,
-	                                                          (int)addr);
-	if ((int)addr == -1) return NULL;
-	return addr;
+	vr->size = hex2u32(smb_ident+7);
+	vr->base = mmap(NULL, vr->size, PROT_READ | PROT_WRITE,
+	           MAP_SHARED, fh, 0);
+	printf("libVScreen(map_smb): mmap file %s to addr %p\n",
+	       smb_ident + 21, vr->base);
+	if ((int)vr->base == -1) return NULL;
+	return vr->base;
 }
 
 
-void vscr_server_waitsync(void *id) { }
+/*** INTERFACE: RELEASE VSCREEN BUFFER FROM LOCAL ADDRESS SPACE ***/
+int vscr_free_fb(void *fb_adr) {
+	int ret;
+	struct vscr_region *vr = get_vscr_region(fb_adr);
+	if (!vr) {
+		printf("libVScreen(free_fb): illegal vscreen base address\n");
+		return -1;
+	}
+	ret = munmap(vr->base, vr->size);
+	free_vscr_region(vr);
+	return ret;
+}
+
+
+void vscr_server_waitsync(void *id) {}
 
 void vscr_server_refresh(void *id, int x, int y, int w, int h) { }
+
+void *vscr_connect_server(char *ident) { return NULL; }
+
+void vscr_release_server_id(void *id) {}

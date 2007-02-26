@@ -1,0 +1,10 @@
+The simple_file_server is an example for a simple server implementing
+the L4VFS interface.  It supports both, files linked directly to it
+via 'server/files.lst' and files given as startup argument via grub.
+
+Currently the simple_file_server has limited write access (no new file
+creation; existing files may not grow) and a flat file structure (no
+directories below the root directory are supported).
+
+For an example usage look at the script
+'drops/tools/runux/term_con_test'.

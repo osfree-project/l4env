@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/x0adapt/L4X0aBEReplyFunction.cpp
- *	\brief	contains the implementation of the class CL4X0aBEReplyFunction
+ *    \file    dice/src/be/l4/x0adapt/L4X0aBEReplyFunction.cpp
+ *    \brief   contains the implementation of the class CL4X0aBEReplyFunction
  *
- *	\date	08/15/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    08/15/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,12 +31,9 @@
 #include "be/BEContext.h"
 #include "TypeSpec-Type.h"
 
-IMPLEMENT_DYNAMIC(CL4X0aBEReplyFunction);
-
 CL4X0aBEReplyFunction::CL4X0aBEReplyFunction()
  : CL4BEReplyFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4X0aBEReplyFunction, CL4BEReplyFunction);
 }
 
 /** destroys the reply function object */
@@ -49,15 +47,15 @@ CL4X0aBEReplyFunction::~CL4X0aBEReplyFunction()
  */
 void CL4X0aBEReplyFunction::WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext)
 {
-	CL4BEReplyFunction::WriteVariableDeclaration(pFile, pContext);
-	// check if we use assembler
-	bool bAssembler = ((CL4BEIPC*)m_pComm)->UseAssembler(this, pContext);
+    CL4BEReplyFunction::WriteVariableDeclaration(pFile, pContext);
+    // check if we use assembler
+    bool bAssembler = m_pComm->CheckProperty(this, COMM_PROP_USE_ASM, pContext);
     if (bAssembler)
     {
-		CBENameFactory *pNF = pContext->GetNameFactory();
-		String sDummy = pNF->GetDummyVariable(pContext);
-		String sMWord = pNF->GetTypeName(TYPE_MWORD, false, pContext, 0);
-		pFile->PrintIndent("%s %s;\n", (const char*)sMWord, (const char*)sDummy);
+        CBENameFactory *pNF = pContext->GetNameFactory();
+        string sDummy = pNF->GetDummyVariable(pContext);
+        string sMWord = pNF->GetTypeName(TYPE_MWORD, false, pContext, 0);
+        *pFile << "\t" << sMWord << " " << sDummy << ";\n";
     }
 }
 
@@ -69,5 +67,5 @@ void CL4X0aBEReplyFunction::WriteVariableDeclaration(CBEFile * pFile,  CBEContex
  */
 void CL4X0aBEReplyFunction::WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext)
 {
-	WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
+    WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
 }

@@ -3,13 +3,13 @@
  * Architecture specific floating point unit code
  */
 
-IMPLEMENTATION[ux]:
+IMPLEMENTATION[ux-fpu]:
 
 #include <cassert>
 #include <sys/ptrace.h>
 #include "cpu.h"
 #include "regdefs.h"
-#include "space_context.h"
+#include "space.h"
 
 /**
  * Init FPU. Does nothing here.
@@ -29,10 +29,8 @@ Fpu::save_state (Fpu_state *s)
 {
   assert (s->state_buffer());
 
-  if ((Cpu::features() & FEAT_FXSR))
-    ptrace (PTRACE_GETFPXREGS, Space_context::current()->pid(), NULL, s->state_buffer());
-  else
-    ptrace (PTRACE_GETFPREGS,  Space_context::current()->pid(), NULL, s->state_buffer());
+  ptrace (Cpu::features() & FEAT_FXSR ? PTRACE_GETFPXREGS : PTRACE_GETFPREGS,
+          Space::current()->pid(), NULL, s->state_buffer());
 }
 
 /**
@@ -41,14 +39,12 @@ Fpu::save_state (Fpu_state *s)
  */
 IMPLEMENT
 void
-Fpu::restore_state (Fpu_state *s) {
-
+Fpu::restore_state (Fpu_state *s)
+{
   assert (s->state_buffer());
 
-  if ((Cpu::features() & FEAT_FXSR))  
-    ptrace (PTRACE_SETFPXREGS, Space_context::current()->pid(), NULL, s->state_buffer());
-  else
-    ptrace (PTRACE_SETFPREGS,  Space_context::current()->pid(), NULL, s->state_buffer());
+  ptrace (Cpu::features() & FEAT_FXSR ? PTRACE_SETFPXREGS : PTRACE_SETFPREGS,
+          Space::current()->pid(), NULL, s->state_buffer());
 }
 
 /**

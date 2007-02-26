@@ -5,8 +5,9 @@
 # and change srcdir to the relative path to your fiasco/src.
 #
 
-SAMPLE_CONFIGS := ia32-short ia32-noshort ia32-gcc3-short ia32-ndebug \
-		  ux-short ux-noshort ia32-gcc3-x0 ia32-smas 
+SAMPLE_CONFIGS := ia32-short ia32-noshort ia32-ndebug \
+		  ux-short ux-noshort ux-v4 ia32-x0 ia32-smas ia32-v4 \
+		  arm-x0
 
 srcdir = ../
 
@@ -16,12 +17,18 @@ testconfig:
 	$(foreach cfg,$(SAMPLE_CONFIGS), \
 	  cp globalconfig.out.$(cfg) globalconfig.out ; \
           CONFIG_BANNER_STRING="\"Fiasco - $(cfg)\"" make menuconfig && \
-	  mv globalconfig.out globalconfig.out.$(cfg) && \
-	  mv globalconfig.h globalconfig.h.$(cfg); ) 
+	  mv globalconfig.out globalconfig.out.$(cfg); )
+
+refresh:
+	$(foreach cfg,$(SAMPLE_CONFIGS), \
+	  cp globalconfig.out.$(cfg) globalconfig.out ; \
+          CONFIG_BANNER_STRING="\"Fiasco - $(cfg)\"" make regenconfig && \
+	  mv globalconfig.out globalconfig.out.$(cfg); )
 
 
 %:
 	$(MAKE) -I$(srcdir)  -f $(srcdir)/Makefile \
 	  srcdir=$(srcdir) "$@"
 
+.PHONY: refresh testconfig
 

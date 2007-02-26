@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/lsock/BESocket.h
- *	\brief	contains the declaration of the class CBESocket
+ *    \file    dice/src/be/lsock/BESocket.h
+ *    \brief   contains the declaration of the class CBESocket
  *
- *	\date	08/18/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    08/18/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -38,28 +39,26 @@
  */
 class CBESocket : public CBECommunication
 {
-DECLARE_DYNAMIC(CBESocket);
 
 public:
     /** brief creates a socket object */
     CBESocket();
-    ~CBESocket();
+    virtual ~CBESocket();
 
 public:
-    virtual void CreateSocket(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext);
-	virtual void BindSocket(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext);
-    virtual void CloseSocket(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext);
+    virtual void WriteCall(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
+    virtual void WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
+    virtual void WriteWait(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
 
-	virtual void WriteCall(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext);
-	virtual void WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext);
-	virtual void WriteReplyAndRecv(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext);
-	virtual void WriteWait(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext);
+    virtual void WriteInitialization(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteBind(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteCleanup(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
 
 protected:
     virtual void WriteSocketDescriptor(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext);
-	virtual void WriteZeroMsgBuffer(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
-	virtual void WriteSendTo(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, int nDirection, const char* sFunc, CBEContext* pContext);
-	virtual void WriteReceiveFrom(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, bool bUseMaxSize, const char* sFunc, CBEContext* pContext);
+    virtual void WriteZeroMsgBuffer(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
+    virtual void WriteSendTo(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, int nDirection, const char* sFunc, CBEContext* pContext);
+    virtual void WriteReceiveFrom(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, bool bUseMaxSize, const char* sFunc, CBEContext* pContext);
 };
 
 #endif

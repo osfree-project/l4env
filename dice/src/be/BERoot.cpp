@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BERoot.cpp
- *	\brief	contains the implementation of the class CBERoot
+ *    \file    dice/src/be/BERoot.cpp
+ *    \brief   contains the implementation of the class CBERoot
  *
- *	\date	01/10/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -40,6 +41,7 @@
 #include "be/BEDeclarator.h"
 #include "be/BETestMainFunction.h"
 #include "be/BEImplementationFile.h"
+#include "be/BEHeaderFile.h"
 
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
@@ -48,44 +50,29 @@
 #include "fe/FETypedDeclarator.h"
 #include "fe/FEConstructedType.h"
 
-IMPLEMENT_DYNAMIC(CBERoot);
-
 CBERoot::CBERoot()
-: m_vConstants(RUNTIME_CLASS(CBEConstant)),
-  m_vTypedefs(RUNTIME_CLASS(CBETypedef)),
-  m_vTypeDeclarations(RUNTIME_CLASS(CBEType)),
-  m_vClasses(RUNTIME_CLASS(CBEClass)),
-  m_vNamespaces(RUNTIME_CLASS(CBENameSpace)),
-  m_vGlobalFunctions(RUNTIME_CLASS(CBEFunction))
 {
     m_pClient = 0;
     m_pComponent = 0;
     m_pTestsuite = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBERoot, CBEObject);
 }
 
 CBERoot::CBERoot(CBERoot & src)
-: CBEObject(src),
-  m_vConstants(RUNTIME_CLASS(CBEConstant)),
-  m_vTypedefs(RUNTIME_CLASS(CBETypedef)),
-  m_vTypeDeclarations(RUNTIME_CLASS(CBEType)),
-  m_vClasses(RUNTIME_CLASS(CBEClass)),
-  m_vNamespaces(RUNTIME_CLASS(CBENameSpace)),
-  m_vGlobalFunctions(RUNTIME_CLASS(CBEFunction))
+: CBEObject(src)
 {
     m_pClient = src.m_pClient;
     m_pComponent = src.m_pComponent;
     m_pTestsuite = src.m_pTestsuite;
-    m_vConstants.Add(&src.m_vConstants);
-    m_vClasses.Add(&src.m_vClasses);
-    m_vNamespaces.Add(&src.m_vNamespaces);
-    m_vTypedefs.Add(&src.m_vTypedefs);
-    m_vTypeDeclarations.Add(&src.m_vTypeDeclarations);
-    m_vGlobalFunctions.Add(&src.m_vGlobalFunctions);
-    IMPLEMENT_DYNAMIC_BASE(CBERoot, CBEObject);
+
+    COPY_VECTOR(CBEConstant, m_vConstants, iterC);
+    COPY_VECTOR(CBEClass, m_vClasses, iterCl);
+    COPY_VECTOR(CBENameSpace, m_vNamespaces, iterN);
+    COPY_VECTOR(CBETypedef, m_vTypedefs, iterT);
+    COPY_VECTOR(CBEType, m_vTypeDeclarations, iterTy);
+    COPY_VECTOR(CBEFunction, m_vGlobalFunctions, iterF);
 }
 
-/**	\brief destructor
+/**    \brief destructor
  */
 CBERoot::~CBERoot()
 {
@@ -95,23 +82,26 @@ CBERoot::~CBERoot()
         delete m_pComponent;
     if (m_pTestsuite)
         delete m_pTestsuite;
-    m_vConstants.DeleteAll();
-    m_vClasses.DeleteAll();
-    m_vNamespaces.DeleteAll();
-    m_vTypedefs.DeleteAll();
-    m_vGlobalFunctions.DeleteAll();
+
+    DEL_VECTOR(m_vConstants);
+    DEL_VECTOR(m_vClasses);
+    DEL_VECTOR(m_vNamespaces);
+    DEL_VECTOR(m_vTypedefs);
+    DEL_VECTOR(m_vGlobalFunctions);
 }
 
-/**	\brief creates the back-end structure
- *	\param pFEFile a reference to the corresponding starting point
- *	\param pContext the context of the generated back-end
- *	\return true if generation was successful
+/**    \brief creates the back-end structure
+ *    \param pFEFile a reference to the corresponding starting point
+ *    \param pContext the context of the generated back-end
+ *    \return true if generation was successful
  *
  * This implementation creates the corresponding client, component and testsuite parts. If these parts already exists the old
  * versions are deleted and replaced by the new ones.
  */
 bool CBERoot::CreateBE(CFEFile * pFEFile, CBEContext * pContext)
 {
+    VERBOSE("CBERoot::CreateBE(file: %s) called\n",
+        pFEFile->GetFileName().c_str());
     // clean up
     if (m_pClient)
     {
@@ -173,31 +163,8 @@ bool CBERoot::CreateBE(CFEFile * pFEFile, CBEContext * pContext)
     return true;
 }
 
-/**	\brief optimizes the existing back-end
- *	\param nLevel the level of optimization
- *  \param pContext the context of the optimization
- *	\return success or failure code
- *
- * Currently you can only optimize on a function level. Thus this implementation initiates
- * the optimization process by calling the Optimize function of its members.
- */
-int CBERoot::Optimize(int nLevel, CBEContext *pContext)
-{
-    int nRet = 0;
-    if (m_pClient &&
-	    ((nRet = m_pClient->Optimize(nLevel, pContext)) != 0))
-	    return nRet;
-    if (m_pComponent &&
-	    ((nRet = m_pComponent->Optimize(nLevel, pContext)) != 0))
-	    return nRet;
-    if (m_pTestsuite &&
-	    ((nRet = m_pTestsuite->Optimize(nLevel, pContext)) != 0))
-	    return nRet;
-    return 0;
-}
-
-/**	\brief generates the output files and code
- *	\param pContext the context of the code generation
+/**    \brief generates the output files and code
+ *    \param pContext the context of the code generation
  */
 void CBERoot::Write(CBEContext * pContext)
 {
@@ -209,38 +176,45 @@ void CBERoot::Write(CBEContext * pContext)
         m_pTestsuite->Write(pContext);
 }
 
-/**	\brief tries to find the typedef to the given type-name
- *	\param sTypeName the name of the type to find
- *	\return a reference to the found typedef or 0
+/**    \brief tries to find the typedef to the given type-name
+ *    \param sTypeName the name of the type to find
+ *    \return a reference to the found typedef or 0
  *
  * Since we have all the elements in the containes types, constants,
  * classes and namespaces, we will search for the typedef first in our
  * own typedefs and then in the classes and namespaces.
  */
-CBETypedef *CBERoot::FindTypedef(String sTypeName)
+CBETypedef *CBERoot::FindTypedef(string sTypeName)
 {
-    VectorElement *pIter = GetFirstTypedef();
+    DTRACE("CBERoot::FindTypedef(%s) called\n", sTypeName.c_str());
+    vector<CBETypedef*>::iterator iterT = GetFirstTypedef();
     CBETypedef *pTypedef;
-    while ((pTypedef = GetNextTypedef(pIter)) != 0)
+    while ((pTypedef = GetNextTypedef(iterT)) != 0)
     {
+        DTRACE("CBERoot::FindTypedef check top level typedef %s\n",
+            pTypedef->GetDeclarator()->GetName().c_str());
         if (pTypedef->FindDeclarator(sTypeName))
             return pTypedef;
     }
 
-    pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterCl = GetFirstClass();
     CBEClass *pClass;
     CBETypedDeclarator *pTypedDecl;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterCl)) != 0)
     {
+        DTRACE("CBERoot::FindTypedef checking class %s\n",
+            pClass->GetName().c_str());
         if ((pTypedDecl = pClass->FindTypedef(sTypeName)) != 0)
-            if (pTypedDecl->IsKindOf(RUNTIME_CLASS(CBETypedef)))
+            if (dynamic_cast<CBETypedef*>(pTypedDecl))
                 return (CBETypedef*)pTypedDecl;
     }
 
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
+        DTRACE("CBERoot::FindTypedef checking namespace %s\n",
+            pNameSpace->GetName().c_str());
         if ((pTypedef = pNameSpace->FindTypedef(sTypeName)) != 0)
             return pTypedef;
     }
@@ -248,26 +222,26 @@ CBETypedef *CBERoot::FindTypedef(String sTypeName)
     return 0;
 }
 
-/**	\brief tries to find the function with the given name
- *	\param sFunctionName the name to search for
- *	\return a reference to the function or NUL if not found
+/**    \brief tries to find the function with the given name
+ *    \param sFunctionName the name to search for
+ *    \return a reference to the function or NUL if not found
  *
  * To find a function, we search our classes and namespaces
  */
-CBEFunction *CBERoot::FindFunction(String sFunctionName)
+CBEFunction *CBERoot::FindFunction(string sFunctionName)
 {
     CBEFunction *pFunction;
-    VectorElement *pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if ((pFunction = pClass->FindFunction(sFunctionName)) != 0)
             return pFunction;
     }
 
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pFunction = pNameSpace->FindFunction(sFunctionName)) != 0)
             return pFunction;
@@ -283,18 +257,18 @@ CBEFunction *CBERoot::FindFunction(String sFunctionName)
  * First we search out top-level classes. If we can't find anything we
  * ask the namespaces.
  */
-CBEClass* CBERoot::FindClass(String sClassName)
+CBEClass* CBERoot::FindClass(string sClassName)
 {
-    VectorElement *pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if (pClass->GetName() == sClassName)
             return pClass;
     }
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pClass = pNameSpace->FindClass(sClassName)) != 0)
             return pClass;
@@ -307,7 +281,9 @@ CBEClass* CBERoot::FindClass(String sClassName)
  */
 void CBERoot::AddConstant(CBEConstant *pConstant)
 {
-    m_vConstants.Add(pConstant);
+    if (!pConstant)
+        return;
+    m_vConstants.push_back(pConstant);
     pConstant->SetParent(this);
 }
 
@@ -316,30 +292,36 @@ void CBERoot::AddConstant(CBEConstant *pConstant)
  */
 void CBERoot::RemoveConstant(CBEConstant *pConstant)
 {
-    m_vConstants.Remove(pConstant);
+    if (!pConstant)
+        return;
+    vector<CBEConstant*>::iterator iter;
+    for (iter = m_vConstants.begin(); iter != m_vConstants.end(); iter++)
+    {
+        if (*iter == pConstant)
+        {
+            m_vConstants.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first constant
  *  \return a pointer to the first constant
  */
-VectorElement* CBERoot::GetFirstConstant()
+vector<CBEConstant*>::iterator CBERoot::GetFirstConstant()
 {
-    return m_vConstants.GetFirst();
+    return m_vConstants.begin();
 }
 
 /** \brief retrieves a reference to the next constant
- *  \param pIter the pointer to the next constant
+ *  \param iter the pointer to the next constant
  *  \return a reference to the next constant or 0 if no mor constants
  */
-CBEConstant* CBERoot::GetNextConstant(VectorElement* &pIter)
+CBEConstant* CBERoot::GetNextConstant(vector<CBEConstant*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vConstants.end())
         return 0;
-    CBEConstant *pRet = (CBEConstant*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextConstant(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief tries to find a constant by its name
@@ -349,32 +331,32 @@ CBEConstant* CBERoot::GetNextConstant(VectorElement* &pIter)
  * First we search our own constants, and because all constants are in there, this should
  * be sufficient.
  */
-CBEConstant* CBERoot::FindConstant(String sConstantName)
+CBEConstant* CBERoot::FindConstant(string sConstantName)
 {
-    VectorElement *pIter = GetFirstConstant();
+    vector<CBEConstant*>::iterator iterC = GetFirstConstant();
     CBEConstant *pConstant;
-    while ((pConstant = GetNextConstant(pIter)) != 0)
+    while ((pConstant = GetNextConstant(iterC)) != 0)
     {
         if (pConstant->GetName() == sConstantName)
             return pConstant;
     }
-	// search interfaces
-	pIter = GetFirstClass();
-	CBEClass *pClass;
-	while ((pClass = GetNextClass(pIter)) != 0)
-	{
-	    if ((pConstant = pClass->FindConstant(sConstantName)) != 0)
-		    return pConstant;
-	}
-	// search libraries
-    pIter = GetFirstNameSpace();
-	CBENameSpace *pNameSpace;
-	while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
-	{
-	    if ((pConstant = pNameSpace->FindConstant(sConstantName)) != 0)
-		    return pConstant;
+    // search interfaces
+    vector<CBEClass*>::iterator iterCl = GetFirstClass();
+    CBEClass *pClass;
+    while ((pClass = GetNextClass(iterCl)) != 0)
+    {
+        if ((pConstant = pClass->FindConstant(sConstantName)) != 0)
+            return pConstant;
     }
-	// nothing found
+    // search libraries
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
+    CBENameSpace *pNameSpace;
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
+    {
+        if ((pConstant = pNameSpace->FindConstant(sConstantName)) != 0)
+            return pConstant;
+    }
+    // nothing found
     return 0;
 }
 
@@ -383,7 +365,9 @@ CBEConstant* CBERoot::FindConstant(String sConstantName)
  */
 void CBERoot::AddTypedef(CBETypedef *pTypedef)
 {
-    m_vTypedefs.Add(pTypedef);
+    if (!pTypedef)
+        return;
+    m_vTypedefs.push_back(pTypedef);
     pTypedef->SetParent(this);
 }
 
@@ -392,30 +376,36 @@ void CBERoot::AddTypedef(CBETypedef *pTypedef)
  */
 void CBERoot::RemoveTypedef(CBETypedef *pTypedef)
 {
-    m_vTypedefs.Remove(pTypedef);
+    if (!pTypedef)
+        return;
+    vector<CBETypedef*>::iterator iter;
+    for (iter = m_vTypedefs.begin(); iter != m_vTypedefs.end(); iter++)
+    {
+        if (*iter == pTypedef)
+        {
+            m_vTypedefs.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first typedef
  * \return a pointer to the first typedef
  */
-VectorElement* CBERoot::GetFirstTypedef()
+vector<CBETypedef*>::iterator CBERoot::GetFirstTypedef()
 {
-    return m_vTypedefs.GetFirst();
+    return m_vTypedefs.begin();
 }
 
 /** \brief retrieves a reference to the next typedef
- *  \param pIter the pointer to the next typedef
+ *  \param iter the pointer to the next typedef
  *  \return a reference to the next typedef or 0 if none found
  */
-CBETypedef* CBERoot::GetNextTypedef(VectorElement* &pIter)
+CBETypedef* CBERoot::GetNextTypedef(vector<CBETypedef*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vTypedefs.end())
         return 0;
-    CBETypedef *pTypedef = (CBETypedef*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pTypedef)
-        return GetNextTypedef(pIter);
-    return pTypedef;
+    return *iter++;
 }
 
 /** \brief adds an Class to the back-end
@@ -423,7 +413,9 @@ CBETypedef* CBERoot::GetNextTypedef(VectorElement* &pIter)
  */
 void CBERoot::AddClass(CBEClass *pClass)
 {
-    m_vClasses.Add(pClass);
+    if (!pClass)
+        return;
+    m_vClasses.push_back(pClass);
     pClass->SetParent(this);
 }
 
@@ -432,30 +424,36 @@ void CBERoot::AddClass(CBEClass *pClass)
  */
 void CBERoot::RemoveClass(CBEClass *pClass)
 {
-    m_vClasses.Remove(pClass);
+    if (!pClass)
+        return;
+    vector<CBEClass*>::iterator iter;
+    for (iter = m_vClasses.begin(); iter != m_vClasses.end(); iter++)
+    {
+        if (*iter == pClass)
+        {
+            m_vClasses.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first Class
  *  \return a pointer to the first Class
  */
-VectorElement* CBERoot::GetFirstClass()
+vector<CBEClass*>::iterator CBERoot::GetFirstClass()
 {
-    return m_vClasses.GetFirst();
+    return m_vClasses.begin();
 }
 
 /** \brief retrieves a reference to the next Class
- *  \param pIter the pointer to the next Class
+ *  \param iter the pointer to the next Class
  *  \return a reference to the next Class
  */
-CBEClass* CBERoot::GetNextClass(VectorElement* &pIter)
+CBEClass* CBERoot::GetNextClass(vector<CBEClass*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vClasses.end())
         return 0;
-    CBEClass *pRet = (CBEClass*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextClass(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief adds a namespace to the back-end
@@ -463,7 +461,9 @@ CBEClass* CBERoot::GetNextClass(VectorElement* &pIter)
  */
 void CBERoot::AddNameSpace(CBENameSpace *pNameSpace)
 {
-    m_vNamespaces.Add(pNameSpace);
+    if (!pNameSpace)
+        return;
+    m_vNamespaces.push_back(pNameSpace);
     pNameSpace->SetParent(this);
 }
 
@@ -472,41 +472,47 @@ void CBERoot::AddNameSpace(CBENameSpace *pNameSpace)
  */
 void CBERoot::RemoveNameSpace(CBENameSpace *pNameSpace)
 {
-    m_vNamespaces.Remove(pNameSpace);
+    if (!pNameSpace)
+        return;
+    vector<CBENameSpace*>::iterator iter;
+    for (iter = m_vNamespaces.begin(); iter != m_vNamespaces.end(); iter++)
+    {
+        if (*iter == pNameSpace)
+        {
+            m_vNamespaces.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first namespace
  *  \return the pointer to the first namespace
  */
-VectorElement* CBERoot::GetFirstNameSpace()
+vector<CBENameSpace*>::iterator CBERoot::GetFirstNameSpace()
 {
-    return m_vNamespaces.GetFirst();
+    return m_vNamespaces.begin();
 }
 
 /** \brief returns a reference to the next namespace
- *  \param pIter the pointer to the next namespace
+ *  \param iter the pointer to the next namespace
  *  \return a reference to the next namespace
  */
-CBENameSpace* CBERoot::GetNextNameSpace(VectorElement*&pIter)
+CBENameSpace* CBERoot::GetNextNameSpace(vector<CBENameSpace*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vNamespaces.end())
         return 0;
-    CBENameSpace *pRet = (CBENameSpace*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextNameSpace(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief searches for a namespace with the given name
  *  \param sNameSpaceName the name of the namespace
  *  \return a reference to the namespace or 0 if not found
  */
-CBENameSpace* CBERoot::FindNameSpace(String sNameSpaceName)
+CBENameSpace* CBERoot::FindNameSpace(string sNameSpaceName)
 {
-    VectorElement *pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iter = GetFirstNameSpace();
     CBENameSpace *pNameSpace, *pFoundNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iter)) != 0)
     {
         // check the namespace itself
         if (pNameSpace->GetName() == sNameSpaceName)
@@ -525,50 +531,52 @@ CBENameSpace* CBERoot::FindNameSpace(String sNameSpaceName)
  */
 bool CBERoot::CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext)
 {
+    VERBOSE("%s for %s called\n", __PRETTY_FUNCTION__,
+        pFEFile->GetFileName().c_str());
     // first search included files-> may contain base interfaces we need later
-    VectorElement *pIter = pFEFile->GetFirstChildFile();
+    vector<CFEFile*>::iterator iterF = pFEFile->GetFirstChildFile();
     CFEFile *pFEIncludedFile;
-    while ((pFEIncludedFile = pFEFile->GetNextChildFile(pIter)) != 0)
+    while ((pFEIncludedFile = pFEFile->GetNextChildFile(iterF)) != 0)
     {
         if (!CreateBackEnd(pFEIncludedFile, pContext))
             return false;
     }
     // next search top level consts
-    pIter = pFEFile->GetFirstConstant();
+    vector<CFEConstDeclarator*>::iterator iterC = pFEFile->GetFirstConstant();
     CFEConstDeclarator *pFEConst;
-    while ((pFEConst = pFEFile->GetNextConstant(pIter)) != 0)
+    while ((pFEConst = pFEFile->GetNextConstant(iterC)) != 0)
     {
         if (!CreateBackEnd(pFEConst, pContext))
             return false;
     }
     // next search top level typedefs
-    pIter = pFEFile->GetFirstTypedef();
+    vector<CFETypedDeclarator*>::iterator iterT = pFEFile->GetFirstTypedef();
     CFETypedDeclarator *pFETypedef;
-    while ((pFETypedef = pFEFile->GetNextTypedef(pIter)) != 0)
+    while ((pFETypedef = pFEFile->GetNextTypedef(iterT)) != 0)
     {
         if (!CreateBackEnd(pFETypedef, pContext))
             return false;
     }
     // next search top level type declarations
-    pIter = pFEFile->GetFirstTaggedDecl();
+    vector<CFEConstructedType*>::iterator iterTD = pFEFile->GetFirstTaggedDecl();
     CFEConstructedType *pFETaggedType;
-    while ((pFETaggedType = pFEFile->GetNextTaggedDecl(pIter)) != 0)
+    while ((pFETaggedType = pFEFile->GetNextTaggedDecl(iterTD)) != 0)
     {
         if (!CreateBackEnd(pFETaggedType, pContext))
             return false;
     }
     // next search top level interfaces
-    pIter = pFEFile->GetFirstInterface();
+    vector<CFEInterface*>::iterator iterI = pFEFile->GetFirstInterface();
     CFEInterface *pFEInterface;
-    while ((pFEInterface = pFEFile->GetNextInterface(pIter)) != 0)
+    while ((pFEInterface = pFEFile->GetNextInterface(iterI)) != 0)
     {
         if (!CreateBackEnd(pFEInterface, pContext))
             return false;
     }
     // next search libraries
-    pIter = pFEFile->GetFirstLibrary();
+    vector<CFELibrary*>::iterator iterL = pFEFile->GetFirstLibrary();
     CFELibrary *pFELibrary;
-    while ((pFELibrary = pFEFile->GetNextLibrary(pIter)) != 0)
+    while ((pFELibrary = pFEFile->GetNextLibrary(iterL)) != 0)
     {
         if (!CreateBackEnd(pFELibrary, pContext))
             return false;
@@ -579,16 +587,20 @@ bool CBERoot::CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext)
         // this creates only one main function -> for the top IDL file
         if (pFEFile->IsIDLFile() && !(pFEFile->GetParent()))
         {
-            CBETestMainFunction *pMain = pContext->GetClassFactory()->GetNewTestMainFunction();
+	    CBEClassFactory *pCF = pContext->GetClassFactory();
+            CBETestMainFunction *pMain = pCF->GetNewTestMainFunction();
             AddGlobalFunction(pMain);
             if (!pMain->CreateBackEnd(pFEFile, pContext))
             {
                 RemoveGlobalFunction(pMain);
                 delete pMain;
-                VERBOSE("CBERoot::CreateBackEnd failed because main function could not be created\n");
+                VERBOSE("%s failed because main could not be created\n",
+                    __PRETTY_FUNCTION__);
                 return false;
             }
-		}
+	    // set line number of main
+	    pMain->SetSourceLine(pFEFile->GetSourceLineEnd());
+        }
     }
     return true;
 }
@@ -600,6 +612,8 @@ bool CBERoot::CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext)
  */
 bool CBERoot::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
 {
+    VERBOSE("%s for %s called\n", __PRETTY_FUNCTION__,
+        pFELibrary->GetName().c_str());
     // first check if NameSpace is already there
     CBENameSpace *pNameSpace = FindNameSpace(pFELibrary->GetName());
     if (!pNameSpace)
@@ -611,8 +625,8 @@ bool CBERoot::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
         {
             RemoveNameSpace(pNameSpace);
             delete pNameSpace;
-            VERBOSE("CBERoot::CreateBackEnd failed because namespace %s could not be created\n",
-                     (const char*)pFELibrary->GetName());
+            VERBOSE("%s failed because namespace %s could not be created\n",
+                     __PRETTY_FUNCTION__, pFELibrary->GetName().c_str());
             return false;
         }
     }
@@ -622,8 +636,8 @@ bool CBERoot::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
         if (!pNameSpace->CreateBackEnd(pFELibrary, pContext))
         {
             RemoveNameSpace(pNameSpace);
-            VERBOSE("CBERoot::CreateBackEnd failed because namespace %s could not be re-created\n",
-                    (const char*)pFELibrary->GetName());
+            VERBOSE("%s failed because namespace %s could not be re-created\n",
+                    __PRETTY_FUNCTION__, pFELibrary->GetName().c_str());
             return false;
         }
     }
@@ -637,12 +651,15 @@ bool CBERoot::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
  */
 bool CBERoot::CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext)
 {
+    VERBOSE("%s for %s called\n", __PRETTY_FUNCTION__,
+        pFEInterface->GetName().c_str());
     CBEClass *pClass = pContext->GetClassFactory()->GetNewClass();
     AddClass(pClass);
     if (!pClass->CreateBackEnd(pFEInterface, pContext))
     {
         RemoveClass(pClass);
-        VERBOSE("CBERoot::CreateBackEnd failed because class could not be created\n");
+        VERBOSE("%s failed because class could not be created\n",
+            __PRETTY_FUNCTION__);
         delete pClass;
         return false;
     }
@@ -656,6 +673,8 @@ bool CBERoot::CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext)
  */
 bool CBERoot::CreateBackEnd(CFEConstDeclarator *pFEConstant, CBEContext *pContext)
 {
+    VERBOSE("%s for %s called\n", __PRETTY_FUNCTION__,
+        pFEConstant->GetName().c_str());
     CBEConstant *pConstant = pContext->GetClassFactory()->GetNewConstant();
     AddConstant(pConstant);
     if (!pConstant->CreateBackEnd(pFEConstant, pContext))
@@ -676,20 +695,20 @@ bool CBERoot::CreateBackEnd(CFEConstDeclarator *pFEConstant, CBEContext *pContex
  */
 bool CBERoot::CreateBackEnd(CFETypedDeclarator *pFETypedef, CBEContext *pContext)
 {
+    VERBOSE("%s called\n", __PRETTY_FUNCTION__);
     CBETypedef *pTypedef = pContext->GetClassFactory()->GetNewTypedef();
     AddTypedef(pTypedef);
     if (!pTypedef->CreateBackEnd(pFETypedef, pContext))
     {
         RemoveTypedef(pTypedef);
-        VERBOSE("CBERoot::CreateBackEnd failed because type could not be created\n");
+        VERBOSE("%s failed because type could not be created\n",
+            __PRETTY_FUNCTION__);
         delete pTypedef;
         return false;
     }
 
     return true;
 }
-
-#include "be/BEHeaderFile.h"
 
 /** \brief adds the members of the root to the header file
  *  \param pHeader the header file
@@ -701,42 +720,44 @@ bool CBERoot::CreateBackEnd(CFETypedDeclarator *pFETypedef, CBEContext *pContext
  */
 bool CBERoot::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
 {
+    VERBOSE("CBERoot::AddToFile(header: %s) called\n",
+        pHeader->GetFileName().c_str());
     // constants
-    VectorElement *pIter = GetFirstConstant();
+    vector<CBEConstant*>::iterator iterC = GetFirstConstant();
     CBEConstant *pConstant;
-    while ((pConstant = GetNextConstant(pIter)) != 0)
+    while ((pConstant = GetNextConstant(iterC)) != 0)
     {
         if (!pConstant->AddToFile(pHeader, pContext))
             return false;
     }
     // types
-    pIter = GetFirstTypedef();
+    vector<CBETypedef*>::iterator iterT = GetFirstTypedef();
     CBETypedef *pTypedef;
-    while ((pTypedef = GetNextTypedef(pIter)) != 0)
+    while ((pTypedef = GetNextTypedef(iterT)) != 0)
     {
         if (!pTypedef->AddToFile(pHeader, pContext))
             return false;
     }
-	// tagged declarations
-	pIter = GetFirstTaggedType();
+    // tagged declarations
+    vector<CBEType*>::iterator iterTa = GetFirstTaggedType();
     CBEType *pTaggedType;
-	while ((pTaggedType = GetNextTaggedType(pIter)) != 0)
-	{
-	    if (!pTaggedType->AddToFile(pHeader, pContext))
-		    return false;
-	}
+    while ((pTaggedType = GetNextTaggedType(iterTa)) != 0)
+    {
+        if (!pTaggedType->AddToFile(pHeader, pContext))
+            return false;
+    }
     // Classs
-    pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterCl = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterCl)) != 0)
     {
         if (!pClass->AddToFile(pHeader, pContext))
             return false;
     }
     // libraries
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if (!pNameSpace->AddToFile(pHeader, pContext))
             return false;
@@ -754,26 +775,28 @@ bool CBERoot::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
  */
 bool CBERoot::AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext)
 {
+    VERBOSE("CBERoot::AddToFile(impl: %s) called\n",
+        pImpl->GetFileName().c_str());
     // Classs
-    VectorElement *pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if (!pClass->AddToFile(pImpl, pContext))
             return false;
     }
     // name-spaces
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if (!pNameSpace->AddToFile(pImpl, pContext))
             return false;
     }
     // global functions
-    pIter = GetFirstGlobalFunction();
+    vector<CBEFunction*>::iterator iterF = GetFirstGlobalFunction();
     CBEFunction *pFunction;
-    while ((pFunction = GetNextGlobalFunction(pIter)) != 0)
+    while ((pFunction = GetNextGlobalFunction(iterF)) != 0)
     {
         if (!pFunction->AddToFile(pImpl, pContext))
             return false;
@@ -793,46 +816,47 @@ bool CBERoot::AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext)
  */
 bool CBERoot::AddOpcodesToFile(CBEHeaderFile *pHeader, CFEFile *pFEFile, CBEContext *pContext)
 {
+    VERBOSE("CBERoot::AddOpcodesToFile(header: %s, file: %s) called\n",
+        pHeader->GetFileName().c_str(), pFEFile->GetFileName().c_str());
+    assert(pHeader);
+    assert(pFEFile);
     // if FILE_ALL the included files have to be regarded as well
     // and because they may contain base interfaces, they come first
     if (pContext->IsOptionSet(PROGRAM_FILE_ALL))
     {
-        VectorElement *pIter = pFEFile->GetFirstChildFile();
+        vector<CFEFile*>::iterator iterF = pFEFile->GetFirstChildFile();
         CFEFile *pIncFile;
-        while ((pIncFile = pFEFile->GetNextChildFile(pIter)) != 0)
+        while ((pIncFile = pFEFile->GetNextChildFile(iterF)) != 0)
         {
             if (!AddOpcodesToFile(pHeader, pIncFile, pContext))
                 return false;
         }
     }
-    // get root
-    CBERoot *pRoot = GetRoot();
-    assert(pRoot);
     // classes
-    VectorElement *pIter = pFEFile->GetFirstInterface();
+    vector<CFEInterface*>::iterator iterI = pFEFile->GetFirstInterface();
     CFEInterface *pFEInterface;
-    while ((pFEInterface = pFEFile->GetNextInterface(pIter)) != 0)
+    while ((pFEInterface = pFEFile->GetNextInterface(iterI)) != 0)
     {
-        CBEClass *pClass = pRoot->FindClass(pFEInterface->GetName());
+        CBEClass *pClass = FindClass(pFEInterface->GetName());
         if (!pClass)
         {
             VERBOSE("CBERoot::AddOpcodesToFile failed because class %s could not be found\n",
-                    (const char*)pFEInterface->GetName());
+                    pFEInterface->GetName().c_str());
             return false;
         }
         if (!pClass->AddOpcodesToFile(pHeader, pContext))
             return false;
     }
     // namespaces
-    pIter = pFEFile->GetFirstLibrary();
+    vector<CFELibrary*>::iterator iterL = pFEFile->GetFirstLibrary();
     CFELibrary *pFELibrary;
-    while ((pFELibrary = pFEFile->GetNextLibrary(pIter)) != 0)
+    while ((pFELibrary = pFEFile->GetNextLibrary(iterL)) != 0)
     {
-        CBENameSpace *pNameSpace = pRoot->FindNameSpace(pFELibrary->GetName());
+        CBENameSpace *pNameSpace = FindNameSpace(pFELibrary->GetName());
         if (!pNameSpace)
         {
             VERBOSE("CBERoot::AddOpcodesToFile failed because namespace %s could not be found\n",
-                    (const char*)pFELibrary->GetName());
+                    pFELibrary->GetName().c_str());
             return false;
         }
         if (!pNameSpace->AddOpcodesToFile(pHeader, pContext))
@@ -846,7 +870,9 @@ bool CBERoot::AddOpcodesToFile(CBEHeaderFile *pHeader, CFEFile *pFEFile, CBECont
  */
 void CBERoot::AddGlobalFunction(CBEFunction *pFunction)
 {
-    m_vGlobalFunctions.Add(pFunction);
+    if (!pFunction)
+        return;
+    m_vGlobalFunctions.push_back(pFunction);
     pFunction->SetParent(this);
 }
 
@@ -855,41 +881,47 @@ void CBERoot::AddGlobalFunction(CBEFunction *pFunction)
  */
 void CBERoot::RemoveGlobalFunction(CBEFunction *pFunction)
 {
-    m_vGlobalFunctions.Remove(pFunction);
+    if (!pFunction)
+        return;
+    vector<CBEFunction*>::iterator iter;
+    for (iter = m_vGlobalFunctions.begin(); iter != m_vGlobalFunctions.end(); iter++)
+    {
+        if (*iter == pFunction)
+        {
+            m_vGlobalFunctions.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief returns pointer to first global function
  *  \return a pointer to the first global function
  */
-VectorElement* CBERoot::GetFirstGlobalFunction()
+vector<CBEFunction*>::iterator CBERoot::GetFirstGlobalFunction()
 {
-    return m_vGlobalFunctions.GetFirst();
+    return m_vGlobalFunctions.begin();
 }
 
 /** \brief returns reference to next global function
- *  \param pIter the pointer to the next global function
+ *  \param iter the pointer to the next global function
  *  \return a reference to the next global function
  */
-CBEFunction* CBERoot::GetNextGlobalFunction(VectorElement*&pIter)
+CBEFunction* CBERoot::GetNextGlobalFunction(vector<CBEFunction*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vGlobalFunctions.end())
         return 0;
-    CBEFunction *pRet = (CBEFunction*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextGlobalFunction(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief tries to find a global function
  *  \param sFuncName the name of the function
  *  \return a reference to the found function or 0
  */
-CBEFunction* CBERoot::FindGlobalFunction(String sFuncName)
+CBEFunction* CBERoot::FindGlobalFunction(string sFuncName)
 {
-    VectorElement *pIter = GetFirstGlobalFunction();
+    vector<CBEFunction*>::iterator iter = GetFirstGlobalFunction();
     CBEFunction *pFunc;
-    while ((pFunc = GetNextGlobalFunction(pIter)) != 0)
+    while ((pFunc = GetNextGlobalFunction(iter)) != 0)
     {
         if (pFunc->GetName() == sFuncName)
             return pFunc;
@@ -904,18 +936,18 @@ CBEFunction* CBERoot::FindGlobalFunction(String sFuncName)
  */
 void CBERoot::PrintTargetFiles(FILE *output, int &nCurCol, int nMaxCol)
 {
-	if (m_pClient)
-	{
-		m_pClient->PrintTargetFiles(output, nCurCol, nMaxCol);
-	}
-	if (m_pComponent)
-	{
-		m_pComponent->PrintTargetFiles(output, nCurCol, nMaxCol);
-	}
-	if (m_pTestsuite)
-	{
-		m_pTestsuite->PrintTargetFiles(output, nCurCol, nMaxCol);
-	}
+    if (m_pClient)
+    {
+        m_pClient->PrintTargetFiles(output, nCurCol, nMaxCol);
+    }
+    if (m_pComponent)
+    {
+        m_pComponent->PrintTargetFiles(output, nCurCol, nMaxCol);
+    }
+    if (m_pTestsuite)
+    {
+        m_pTestsuite->PrintTargetFiles(output, nCurCol, nMaxCol);
+    }
 }
 
 /** \brief searches for a type with the given tag
@@ -923,12 +955,12 @@ void CBERoot::PrintTargetFiles(FILE *output, int &nCurCol, int nMaxCol)
  *  \param sTag the tag of the type
  *  \return a reference to the found type
  */
-CBEType* CBERoot::FindTaggedType(int nType, String sTag)
+CBEType* CBERoot::FindTaggedType(int nType, string sTag)
 {
     // search own types
-    VectorElement *pIter = GetFirstTaggedType();
+    vector<CBEType*>::iterator iterT = GetFirstTaggedType();
     CBEType *pTypeDecl;
-    while ((pTypeDecl = GetNextTaggedType(pIter)) != 0)
+    while ((pTypeDecl = GetNextTaggedType(iterT)) != 0)
     {
         int nFEType = pTypeDecl->GetFEType();
         if (nType != nFEType)
@@ -950,18 +982,18 @@ CBEType* CBERoot::FindTaggedType(int nType, String sTag)
         }
     }
     // search classes
-    pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
     CBEType *pType;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if ((pType = pClass->FindTaggedType(nType, sTag)) != 0)
             return pType;
     }
     // search namespaces
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pType = pNameSpace->FindTaggedType(nType, sTag)) != 0)
             return pType;
@@ -974,7 +1006,9 @@ CBEType* CBERoot::FindTaggedType(int nType, String sTag)
  */
 void CBERoot::AddTaggedType(CBEType *pType)
 {
-    m_vTypeDeclarations.Add(pType);
+    if (!pType)
+        return;
+    m_vTypeDeclarations.push_back(pType);
 }
 
 /** \brief removes a tagged type from the root's collection
@@ -982,30 +1016,36 @@ void CBERoot::AddTaggedType(CBEType *pType)
  */
 void CBERoot::RemoveTaggedType(CBEType *pType)
 {
-    m_vTypeDeclarations.Remove(pType);
+    if (!pType)
+        return;
+    vector<CBEType*>::iterator iter;
+    for (iter = m_vTypeDeclarations.begin(); iter != m_vTypeDeclarations.end(); iter++)
+    {
+        if (*iter == pType)
+        {
+            m_vTypeDeclarations.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a reference to the first tagged type
  *  \return a pointer to the first tagged type declaration
  */
-VectorElement* CBERoot::GetFirstTaggedType()
+vector<CBEType*>::iterator CBERoot::GetFirstTaggedType()
 {
-    return m_vTypeDeclarations.GetFirst();
+    return m_vTypeDeclarations.begin();
 }
 
 /** \brief retrieve a reference to the next type declaration
- *  \param pIter the pointer to the next tagged type declaration
+ *  \param iter the pointer to the next tagged type declaration
  *  \return a reference to the next tagged type declaration
  */
-CBEType* CBERoot::GetNextTaggedType(VectorElement* &pIter)
+CBEType* CBERoot::GetNextTaggedType(vector<CBEType*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vTypeDeclarations.end())
         return 0;
-    CBEType *pRet = (CBEType*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextTaggedType(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief creates and stores a new tagged type declaration
@@ -1022,7 +1062,8 @@ bool CBERoot::CreateBackEnd(CFEConstructedType *pFEType, CBEContext *pContext)
     {
         RemoveTaggedType(pType);
         delete pType;
-        VERBOSE("CBERoot::CreateBackEnd failed because tagged type could not be created\n");
+        VERBOSE("%s failed because tagged type could not be created\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
     return true;

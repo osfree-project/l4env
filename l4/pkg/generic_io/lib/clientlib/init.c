@@ -31,22 +31,22 @@
 #include "__macros.h"
 
 /* FIXME: hardcoded io names string */
-char *IO_NAMES_STR = "io";	/**< unique name of io server */
+char *IO_NAMES_STR = "io";  /**< unique name of io server */
 
-static l4io_info_t io_info __attribute__ ((section (".io_info_page")));
-unsigned long jiffies(void) __attribute__((weak, alias("io_info+4")));
-unsigned long HZ(void) __attribute__((weak, alias("io_info+8")));
-unsigned long xtime(void) __attribute__((weak, alias("io_info+12")));
+/* Do we want logging of IO Infopage mapping? */
+#define CONFIG_LOG_INFOPAGE_MAPPING 0
 
-l4_threadid_t io_l4id = L4_INVALID_ID;	/**< io's thread id */
+extern  l4io_info_t io_info;
 
-static int _initialized = 0;	/**< initialization flag */
+l4_threadid_t io_l4id = L4_INVALID_ID;  /**< io's thread id */
+
+static int _initialized = 0;  /**< initialization flag */
 
 /*****************************************************************************/
 /**
  * \brief  Registration wrapper
  *
- * \param  type		driver information
+ * \param  type  driver information
  *
  * \return 0 on success, negative error code otherwise
  */
@@ -63,8 +63,8 @@ static int __io_register(l4_uint32_t * type)
 /*****************************************************************************/
 /** Info page mapping wrapper
  *
- * \param  addr		mapping address
- * \retval addr		actual mapping address
+ * \param  addr  mapping address
+ * \retval addr  actual mapping address
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -76,8 +76,8 @@ static int __io_mapping(l4io_info_t **addr)
   int error;
   CORBA_Environment _env = dice_default_environment;
 
-  l4_fpage_t rfp;		/* receive fpage desc */
-  l4_snd_fpage_t info;		/* received fpage */
+  l4_fpage_t rfp;  /* receive fpage desc */
+  l4_snd_fpage_t info;  /* received fpage */
 
   if (*addr == 0)
     *addr = &io_info;
@@ -88,12 +88,14 @@ static int __io_mapping(l4io_info_t **addr)
   /* XXX who'll get this page afterwards? */
   l4_fpage_unmap(rfp, L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
 
-  DMSG("receiving fpage {0x%08x, 0x%08x}\n", rfp.fp.page << 12, 1 << rfp.fp.size);
+  LOGd(CONFIG_LOG_INFOPAGE_MAPPING,
+       "receiving fpage {0x%08x, 0x%08x}", rfp.fp.page << 12, 1 << rfp.fp.size);
   _env.rcv_fpage = rfp;
 
   error = l4_io_map_info_call(&io_l4id, &info, &_env);
 
-  DMSG("received fpage {0x%08x, 0x%08x}\n",
+  LOGd(CONFIG_LOG_INFOPAGE_MAPPING,
+       "received fpage {0x%08x, 0x%08x}",
        info.fpage.fp.page << 12, 1 << info.fpage.fp.size);
 
   if ((error=DICE_ERR(error, &_env)))
@@ -103,26 +105,29 @@ static int __io_mapping(l4io_info_t **addr)
     {
 #ifdef DEBUG_ERRORS
       l4dm_dataspace_t ds;
-      l4_offs_t offset; 
+      l4_offs_t offset;
       l4_addr_t map_addr;
       l4_size_t map_size;
+      l4_threadid_t dummy;
 
-      ERROR("mapping io info page");
+      LOG_Error("mapping io info page");
 
-      error = l4rm_lookup(*addr,
-			  &ds, &offset, &map_addr, &map_size);
-      if (error)
-	DMSG("  l4rm_lookup for io info page address failed (%s)\n",
-	     l4env_errstr(error));
+      error = l4rm_lookup(*addr, &map_addr, &map_size, &ds, &offset, &dummy);
+      if (error < 0)
+        LOG(" l4rm_lookup for io info page address failed (%s)",
+            l4env_errstr(error));
+      else if (error == L4RM_REGION_DATASPACE)
+        LOG(" io info page: offset=%d addr=%d size=%d",
+            offset, map_addr, map_size);
       else
-	DMSG("  io info page: offset=%d addr=%d size=%d\n",
-	     offset, map_addr, map_size);
+        LOG(" invalid region type for io info page (type %d)", error);
       l4rm_show_region_list();
 #endif
       return -L4_ENOTFOUND;
     }
 
-  DMSG("magic: %08x (%c%c%c%c)\n",
+  LOGd(CONFIG_LOG_INFOPAGE_MAPPING,
+       "magic: %08x (%c%c%c%c)",
        (*addr)->magic,
        ((*addr)->magic) >> 24,
        ((*addr)->magic) >> 16 & 0xff,
@@ -135,15 +140,15 @@ static int __io_mapping(l4io_info_t **addr)
 /*****************************************************************************/
 /** Library initialization
  *
- * \param  io_info_addr desired address for mapping of io info page:
- *			- 0: libio uses dedicated section and provides \a
- *			  jiffies and \a HZ symbols
- *			- -1: no mapping is done at all
- *			- otherwise \a io_info_addr is used; area has to be
- *			  prereserved at RM
- * \param  type		driver class (look into libio.h)
+ * \param  io_info_addr  desired address for mapping of io info page:
+ *                       - 0: libio uses dedicated section and provides \a
+ *                         jiffies and \a HZ symbols
+ *                       - -1: no mapping is done at all
+ *                       - otherwise \a io_info_addr is used; area has to be
+ *                          prereserved at RM
+ * \param  type          driver class (look into libio.h)
  *
- * \retval io_info_addr actual mapping address (or -1 if no mapping)
+ * \retval io_info_addr  actual mapping address (or -1 if no mapping)
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -157,9 +162,7 @@ static int __io_mapping(l4io_info_t **addr)
 int l4io_init(l4io_info_t **io_info_addr, l4io_drv_t type)
 {
   int error;
-
-  if (_initialized)
-    return 0;
+  l4_uint32_t tmp_type;
 
   /* check sanity of param */
   if (!io_info_addr ||
@@ -169,21 +172,23 @@ int l4io_init(l4io_info_t **io_info_addr, l4io_drv_t type)
   /* query for io @ names */
   if (names_waitfor_name(IO_NAMES_STR, &io_l4id, 50000) == 0)
     {
-      ERROR("%s not registered at names", IO_NAMES_STR);
+      LOG_Error("%s not registered at names", IO_NAMES_STR);
       return -L4_ENOTFOUND;
     }
 
   /* register before any other request */
-  if ((error = __io_register((l4_uint32_t *)&type)))
-    {
-      ERROR("while registering at io (%d)", error);
-      return error;
-    }
+  memcpy(&tmp_type, &type, sizeof(tmp_type));
+  if (!_initialized)
+    if ((error = __io_register(&tmp_type)))
+      {
+        LOG_Error("while registering at io (%d)", error);
+        return error;
+      }
 
   /* map info page if requested */
   if ((*io_info_addr != (void*)-1) && (error = __io_mapping(io_info_addr)))
     {
-      ERROR("while mapping io info page (%d)", error);
+      LOG_Error("while mapping io info page (%d)", error);
       return error;
     }
 

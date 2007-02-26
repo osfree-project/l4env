@@ -10,7 +10,7 @@
 #include <l4/log/l4log.h>
 #include <l4/util/util.h>
 #include <l4/sys/kdebug.h>
-#include <l4/con/l4contxt.h>
+#include <l4/l4con/l4contxt.h>
 
 char LOG_tag[9] = "txtdemo";
 l4_ssize_t l4libc_heapsize = 64 * 1024;
@@ -28,7 +28,7 @@ void prompt_test()
   while(1)
     {
       printf("mn3@os:");
-      contxt_read((char *) &in, 100, &ihb);
+      contxt_ihb_read((char *) &in, 100, &ihb);
     }
 }
 
@@ -50,13 +50,13 @@ int main(void)
   int hbs = 11; /* history buffer size in lines */
   
   contxt_init(65536, hbs);
-  contxt_init_ihb(&hb, 50, sizeof(input));
+  contxt_ihb_init(&hb, 50, sizeof(input));
 
   LOGl("contxtdemo started\n");
   while(1)
     {
       printf("enter exit:");
-      contxt_read((char*)&input, sizeof(input),&hb);
+      contxt_ihb_read((char*)&input, sizeof(input),&hb);
       printf("\n");
       if(!strcmp(input,"exit"))
 	break;
@@ -74,7 +74,7 @@ int main(void)
       printf(" 3. Full screen redraw\n");
       printf(" 4. exit\n");
       printf("Choose your test (1,2 or 3): ");
-      LOGl("contxt_read\n");
+      LOGl("contxt_ihb_read\n");
       choice = getchar();
       LOGl("choice: %d\n", choice);
       switch(choice) 

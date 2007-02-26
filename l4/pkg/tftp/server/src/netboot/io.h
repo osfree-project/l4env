@@ -1,5 +1,50 @@
-#ifndef _ASM_IO_H
-#define _ASM_IO_H
+#ifndef	IO_H
+#define IO_H
+
+#include "io_support.h"
+
+
+/* Amount of relocation etherboot is experiencing */
+extern unsigned long virt_offset;
+
+/* Don't require identity mapped physical memory,
+ * osloader.c is the only valid user at the moment.
+ */
+static inline unsigned long virt_to_phys(volatile const void *virt_addr)
+{
+	return ((unsigned long)virt_addr) + virt_offset;
+}
+
+static inline void *phys_to_virt(unsigned long phys_addr)
+{
+	return (void *)(phys_addr - virt_offset);
+}
+
+/* virt_to_bus converts an addresss inside of etherboot [_start, _end]
+ * into a memory access cards can use.
+ */
+#define virt_to_bus virt_to_phys
+
+
+/* bus_to_virt reverses virt_to_bus, the address must be output
+ * from virt_to_bus to be valid.  This function does not work on
+ * all bus addresses.
+ */
+#define bus_to_virt phys_to_virt
+
+/* ioremap converts a random 32bit bus address into something
+ * etherboot can access.
+ */
+static inline void *ioremap(unsigned long bus_addr, unsigned long length)
+{
+  return (void*)io_support_remap(bus_addr, length);
+}
+
+/* iounmap cleans up anything ioremap had to setup */
+static inline void iounmap(void *virt_addr)
+{
+  return io_support_unmap((unsigned)virt_addr);
+}
 
 /*
  * This file contains the definitions for the x86 IO instructions
@@ -25,41 +70,17 @@
  *		Linus
  */
 
-#ifdef SLOW_IO_BY_JUMPING
+#ifdef	SLOW_IO_BY_JUMPING
 #define __SLOW_DOWN_IO __asm__ __volatile__("jmp 1f\n1:\tjmp 1f\n1:")
 #else
 #define __SLOW_DOWN_IO __asm__ __volatile__("outb %al,$0x80")
 #endif
 
-#ifdef REALLY_SLOW_IO
+#ifdef	REALLY_SLOW_IO
 #define SLOW_DOWN_IO { __SLOW_DOWN_IO; __SLOW_DOWN_IO; __SLOW_DOWN_IO; __SLOW_DOWN_IO; }
 #else
 #define SLOW_DOWN_IO __SLOW_DOWN_IO
 #endif
-
-/*
- * Change virtual addresses to physical addresses and vv.
- * These are trivial on the 1:1 Linux/i386 mapping (but if we ever
- * make the kernel segment mapped at 0, we need to do translation
- * on the i386 as well)
- */
-extern inline unsigned long virt_to_phys(volatile void * address);
-extern inline unsigned long virt_to_phys(volatile void * address)
-{
-	return (unsigned long) address;
-}
-
-extern inline void * phys_to_virt(unsigned long address);
-extern inline void * phys_to_virt(unsigned long address)
-{
-	return (void *) address;
-}
-
-/*
- * IO bus memory addresses are also 1:1 with the physical address
- */
-#define virt_to_bus virt_to_phys
-#define bus_to_virt phys_to_virt
 
 /*
  * readX/writeX() are used to access memory mapped devices. On some
@@ -75,22 +96,38 @@ extern inline void * phys_to_virt(unsigned long address)
 #define writew(b,addr) ((*(volatile unsigned short *) (addr)) = (b))
 #define writel(b,addr) ((*(volatile unsigned int *) (addr)) = (b))
 
-#define memset_io(a,b,c)	memset((void *)(a),(b),(c))
 #define memcpy_fromio(a,b,c)	memcpy((a),(void *)(b),(c))
 #define memcpy_toio(a,b,c)	memcpy((void *)(a),(b),(c))
 
 /*
- * Again, i386 does not require mem IO specific function.
+ * Force strict CPU ordering.
+ * And yes, this is required on UP too when we're talking
+ * to devices.
+ *
+ * For now, "wmb()" doesn't actually do anything, as all
+ * Intel CPU's follow what Intel calls a *Processor Order*,
+ * in which all writes are seen in the program order even
+ * outside the CPU.
+ *
+ * I expect future Intel CPU's to have a weaker ordering,
+ * but I'd also expect them to finally get their act together
+ * and add some real memory barriers if so.
+ *
+ * Some non intel clones support out of order store. wmb() ceases to be a
+ * nop for these.
  */
+ 
+#define mb() 	__asm__ __volatile__ ("lock; addl $0,0(%%esp)": : :"memory")
+#define rmb()	mb()
+#define wmb()	mb();
 
-#define eth_io_copy_and_sum(a,b,c,d)	eth_copy_and_sum((a),(void *)(b),(c),(d))
 
 /*
  * Talk about misusing macros..
  */
 
 #define __OUT1(s,x) \
-extern inline void __out##s(unsigned x value, unsigned short port); \
+extern void __out##s(unsigned x value, unsigned short port); \
 extern inline void __out##s(unsigned x value, unsigned short port) {
 
 #define __OUT2(s,s1,s2) \
@@ -102,42 +139,34 @@ __OUT1(s##c,x) __OUT2(s,s1,"") : : "a" (value), "id" (port)); } \
 __OUT1(s##_p,x) __OUT2(s,s1,"w") : : "a" (value), "d" (port)); SLOW_DOWN_IO; } \
 __OUT1(s##c_p,x) __OUT2(s,s1,"") : : "a" (value), "id" (port)); SLOW_DOWN_IO; }
 
-#define __IN1(s) \
-extern inline RETURN_TYPE __in##s(unsigned short port); \
-extern inline RETURN_TYPE __in##s(unsigned short port) { RETURN_TYPE _v;
+#define __IN1(s,x) \
+extern unsigned x __in##s(unsigned short port); \
+extern inline unsigned x __in##s(unsigned short port) { unsigned x _v;
 
 #define __IN2(s,s1,s2) \
 __asm__ __volatile__ ("in" #s " %" s2 "1,%" s1 "0"
 
-#define __IN(s,s1,i...) \
-__IN1(s) __IN2(s,s1,"w") : "=a" (_v) : "d" (port) ,##i ); return _v; } \
-__IN1(s##c) __IN2(s,s1,"") : "=a" (_v) : "id" (port) ,##i ); return _v; } \
-__IN1(s##_p) __IN2(s,s1,"w") : "=a" (_v) : "d" (port) ,##i ); SLOW_DOWN_IO; return _v; } \
-__IN1(s##c_p) __IN2(s,s1,"") : "=a" (_v) : "id" (port) ,##i ); SLOW_DOWN_IO; return _v; }
+#define __IN(s,s1,x,i...) \
+__IN1(s,x) __IN2(s,s1,"w") : "=a" (_v) : "d" (port) ,##i ); return _v; } \
+__IN1(s##c,x) __IN2(s,s1,"") : "=a" (_v) : "id" (port) ,##i ); return _v; } \
+__IN1(s##_p,x) __IN2(s,s1,"w") : "=a" (_v) : "d" (port) ,##i ); SLOW_DOWN_IO; return _v; } \
+__IN1(s##c_p,x) __IN2(s,s1,"") : "=a" (_v) : "id" (port) ,##i ); SLOW_DOWN_IO; return _v; }
 
 #define __INS(s) \
-extern inline void ins##s(unsigned short port, void * addr, unsigned long count); \
+extern void ins##s(unsigned short port, void * addr, unsigned long count); \
 extern inline void ins##s(unsigned short port, void * addr, unsigned long count) \
 { __asm__ __volatile__ ("cld ; rep ; ins" #s \
 : "=D" (addr), "=c" (count) : "d" (port),"0" (addr),"1" (count)); }
 
 #define __OUTS(s) \
-extern inline void outs##s(unsigned short port, const void * addr, unsigned long count); \
+extern void outs##s(unsigned short port, const void * addr, unsigned long  count); \
 extern inline void outs##s(unsigned short port, const void * addr, unsigned long count) \
 { __asm__ __volatile__ ("cld ; rep ; outs" #s \
 : "=S" (addr), "=c" (count) : "d" (port),"0" (addr),"1" (count)); }
 
-#define RETURN_TYPE unsigned char
-/* __IN(b,"b","0" (0)) */
-__IN(b,"")
-#undef RETURN_TYPE
-#define RETURN_TYPE unsigned short
-/* __IN(w,"w","0" (0)) */
-__IN(w,"")
-#undef RETURN_TYPE
-#define RETURN_TYPE unsigned int
-__IN(l,"")
-#undef RETURN_TYPE
+__IN(b,"", char)
+__IN(w,"",short)
+__IN(l,"", long)
 
 __OUT(b,"b",char)
 __OUT(w,"w",short)
@@ -216,4 +245,4 @@ __OUTS(l)
 	__inlc_p(port) : \
 	__inl_p(port))
 
-#endif
+#endif /* ETHERBOOT_IO_H */

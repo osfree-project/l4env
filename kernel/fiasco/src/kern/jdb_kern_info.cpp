@@ -1,6 +1,39 @@
+INTERFACE:
+
+#include "jdb_module.h"
+
+class Jdb_kern_info_module;
+
+/**
+ * 'kern info' module.
+ * 
+ * This module handles the 'k' command, which
+ * prints out various kernel information.
+ */
+class Jdb_kern_info : public Jdb_module
+{
+private:
+  static char                 _subcmd;
+  static Jdb_kern_info_module *_first;
+};
+
+
+class Jdb_kern_info_module
+{
+  friend class Jdb_kern_info;
+  virtual void show(void) = 0;
+
+private:
+  char                 _subcmd;
+  char const           *_descr;
+  Jdb_kern_info_module *_next;
+};
+
+
 IMPLEMENTATION:
 
 #include <cstdio>
+#include "ctype.h"
 
 #include "cpu.h"
 #include "jdb.h"
@@ -14,16 +47,6 @@ IMPLEMENTATION:
 // Std JDB modules
 //===================
 
-class Jdb_kern_info_module
-{
-  friend class Jdb_kern_info;
-  virtual void show(void) = 0;
-
-private:
-  char                 _subcmd;
-  char const           *_descr;
-  Jdb_kern_info_module *_next;
-};
 
 PUBLIC
 Jdb_kern_info_module::Jdb_kern_info_module(char subcmd, char const *descr)
@@ -32,18 +55,6 @@ Jdb_kern_info_module::Jdb_kern_info_module(char subcmd, char const *descr)
   _descr  = descr;
 }
 
-/**
- * @brief 'kern info' module.
- * 
- * This module handles the 'k' command, which
- * prints out various kernel information.
- */
-class Jdb_kern_info : public Jdb_module
-{
-private:
-  static char                 _subcmd;
-  static Jdb_kern_info_module *_first;
-};
 
 char Jdb_kern_info::_subcmd;
 Jdb_kern_info_module *Jdb_kern_info::_first;
@@ -55,7 +66,10 @@ Jdb_kern_info::register_subcmd(Jdb_kern_info_module *m)
   Jdb_kern_info_module *kim = _first;
   Jdb_kern_info_module *kim_last = 0;
 
-  while (kim && kim->_subcmd < m->_subcmd)
+  while (kim && 
+         (tolower(kim->_subcmd)  < tolower(m->_subcmd) ||
+	  (tolower(kim->_subcmd) == tolower(m->_subcmd) &&
+	   kim->_subcmd > m->_subcmd)))
     {
       kim_last = kim;
       kim = kim->_next;
@@ -69,7 +83,7 @@ Jdb_kern_info::register_subcmd(Jdb_kern_info_module *m)
 
 PUBLIC
 Jdb_module::Action_code
-Jdb_kern_info::action( int cmd, void *&args, char const *&, int & )
+Jdb_kern_info::action(int cmd, void *&args, char const *&, int &)
 {
   if(cmd!=0)
     return NOTHING;
@@ -77,8 +91,7 @@ Jdb_kern_info::action( int cmd, void *&args, char const *&, int & )
   char c = *(char*)(args);
   Jdb_kern_info_module *kim;
 
-  kim = _first;
-  while (kim)
+  for (kim=_first; kim; kim=kim->_next)
     {
       if (kim->_subcmd == c)
 	{
@@ -86,15 +99,10 @@ Jdb_kern_info::action( int cmd, void *&args, char const *&, int & )
 	  putchar('\n');
 	  return NOTHING;
 	}
-      kim = kim->_next;
     }
 
-  kim = _first;
-  while (kim)
-    {
-      printf("  k%c   %s\n", kim->_subcmd, kim->_descr);
-      kim = kim->_next;
-    }
+  for (kim=_first; kim; kim=kim->_next)
+    printf("  k%c   %s\n", kim->_subcmd, kim->_descr);
 
   putchar('\n');
   return NOTHING;
@@ -113,8 +121,8 @@ Jdb_kern_info::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd( 0, "k", "k", "%c\n", 
-	   "k\tshow various kernel information (kh=help)", &_subcmd )
+	{ 0, "k", "k", "%c\n", 
+	   "k\tshow various kernel information (kh=help)", &_subcmd }
     };
 
   return cs;

@@ -1,0 +1,41 @@
+/* -*- c -*- */ 
+/**
+ * \file   l4vfs/idl/mmap.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+import <l4/l4vfs/types.h>
+import <l4/dm_generic/types.h>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief interface to support mmap, msync, ...
+     */
+    [uuid(52), abstract]
+    interface mmap
+    {
+        int mmap([out] l4dm_dataspace_t *ds, [in] l4vfs_size_t length,
+                 [in] int prot, [in] int flags,
+                 [in] object_handle_t handle, [in] l4vfs_off_t offset);
+
+        int msync([in] l4dm_dataspace_t *ds, [in] l4_addr_t start,
+                  [in] l4vfs_size_t length, int flags);
+
+	int munmap([in] l4dm_dataspace_t *ds, [in] l4_addr_t start,
+		   [in] l4vfs_size_t length);
+
+        // more to come ...
+        // mremap
+    };
+};

@@ -14,8 +14,10 @@
 
 #include <stdio.h>
 
+#include <l4/rmgr/librmgr.h>
 #include <l4/util/rdtsc.h>
 #include <l4/util/irq.h>
+#include <l4/sys/syscalls.h>
 
 extern l4_uint32_t system_time_offs_rel_1970;
 void get_base_time(void);
@@ -170,6 +172,14 @@ get_base_time(void)
 
   seconds_since_1970        = mktime(year, mon, day, hour, min, sec);
   system_time_offs_rel_1970 = seconds_since_1970 - current_s;
+
+  
+  /* Free I/O space at RMGR (cli/sti mapped L4_WHOLE_IOADDRESS_SPACE) */
+  rmgr_free_fpage(l4_iofpage(0, L4_WHOLE_IOADDRESS_SPACE, 0));
+  /* Unmap I/O space. RMGR should do it but can't because I/O mappings
+   * are not stored in Fiasco's mapping database */
+  l4_fpage_unmap(l4_iofpage(0, L4_WHOLE_IOADDRESS_SPACE, 0),
+			    L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
 
   printf("Date:%02d.%02d.%04d Time:%02d:%02d:%02d\n",
 	  day, mon, year, hour, min, sec);

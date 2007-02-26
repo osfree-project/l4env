@@ -21,6 +21,15 @@
 #include <l4/sys/types.h>
 
 /*****************************************************************************
+ *** Pagefault handling
+ *****************************************************************************/
+
+/**
+ * Do panic on unhandled page fault
+ */
+#define PANIC_ON_UNHANDLED_PF     1
+
+/*****************************************************************************
  *** Memory allocation
  *****************************************************************************/
 
@@ -49,27 +58,12 @@
  */
 #define L4RM_VM_END               0xC0000000
 
-/**
- * Default region area id
- */
-#define L4RM_DEFAULT_REGION_AREA  0
-
 /*****************************************************************************
  *** Service loop
  *****************************************************************************/
 
 /// first valid request id
 #define L4RM_FIRST_REQUEST        0xC0000000
-
-/*****************************************************************************
- *** Pagefaul handling
- *****************************************************************************/
-
-/// allow forwarding of unknown pagefaults to default pager
-#define L4RM_FORWARD_PAGEFAULTS         1
-
-/// forward pagefaults by generating an explicit IPC message
-#define L4RM_FORWARD_PAGEFAULTS_BY_IPC  1
 
 /*****************************************************************************
  *** Prototypes 

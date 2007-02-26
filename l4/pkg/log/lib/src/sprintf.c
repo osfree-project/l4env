@@ -17,28 +17,32 @@
 #include <l4/log/log_printf.h>
 #include "internal.h"
 
+#if !defined(_STDDEF_H) && !defined(USE_UCLIBC)
+#define size_t __flux_size_t
+#endif
+
 int sprintf(char *s, const char*format, ...){
     va_list list;
     int err;
 
     va_start(list, format);
     err=LOG_vsprintf(s, format, list);
-    va_end(args);
+    va_end(list);
     return err;
 }
-int snprintf(char *s, oskit_size_t size, const char*format, ...){
+int snprintf(char *s, size_t size, const char*format, ...){
     va_list list;
     int err;
 
     va_start(list, format);
     err=LOG_vsnprintf(s, size, format, list);
-    va_end(args);
+    va_end(list);
     return err;
 }
-int vsprintf(char *s, const char*format, oskit_va_list list){
+int vsprintf(char *s, const char*format, LOG_va_list list){
     return LOG_vsprintf(s, format, list);
 }
-int vsnprintf(char *s, oskit_size_t size, const char*format,
-              oskit_va_list  list){
+int vsnprintf(char *s, size_t size, const char*format,
+              LOG_va_list  list){
     return LOG_vsnprintf(s, size, format, list);
 }

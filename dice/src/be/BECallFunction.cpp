@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BECallFunction.cpp
- *	\brief	contains the implementation of the class CBECallFunction
+ *    \file    dice/src/be/BECallFunction.cpp
+ *    \brief   contains the implementation of the class CBECallFunction
  *
- *	\date	01/18/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/18/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -37,70 +38,82 @@
 #include "be/BEMsgBufferType.h"
 
 #include "TypeSpec-Type.h"
-#include "fe/FEAttribute.h"
+#include "Attribute-Type.h"
 #include "fe/FEOperation.h"
-
-IMPLEMENT_DYNAMIC(CBECallFunction);
 
 CBECallFunction::CBECallFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBECallFunction, CBEOperationFunction);
 }
 
-CBECallFunction::CBECallFunction(CBECallFunction & src):CBEOperationFunction(src)
+CBECallFunction::CBECallFunction(CBECallFunction & src)
+ : CBEOperationFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CBECallFunction, CBEOperationFunction);
 }
 
-/**	\brief destructor of target class */
+/** \brief destructor of target class */
 CBECallFunction::~CBECallFunction()
 {
 
 }
 
-/**	\brief writes the variable declarations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the variable declarations of this function
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
- * The variable declarations of the call function include the message buffer for send and receive.
- * This implementation should initialize the message buffer and the pointers of the out variables.
- * It sets the return variable (if it exists) to a zero value.
+ * The variable declarations of the call function include the message buffer
+ * for send and receive.  This implementation should initialize the message
+ * buffer and the pointers of the out variables.  It sets the return variable
+ * (if it exists) to a zero value.
  *
- * If we have variable sized array parameters, we need the temp offset variable.
+ * If we have variable sized array parameters, we need the temp offset
+ * variable.
  */
-void CBECallFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
+void 
+CBECallFunction::WriteVariableDeclaration(CBEFile * pFile, 
+    CBEContext * pContext)
 {
+    VERBOSE("CBECallFunction::WriteVariableDeclaration called %s in %s\n",
+        GetName().c_str(), pFile->GetFileName().c_str());
     // declare message buffer
-    assert(m_pMsgBuffer);
-    m_pMsgBuffer->WriteDefinition(pFile, false, pContext);
-	// declare return variable
-	WriteReturnVariableDeclaration(pFile, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteDefinition(pFile, false, pContext);
+    // declare return variable
+    WriteReturnVariableDeclaration(pFile, pContext);
     // check for temp
+    CBENameFactory *pNF = pContext->GetNameFactory();
     if (HasVariableSizedParameters() || HasArrayParameters())
     {
-        String sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-        String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sTmpVar);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sOffsetVar);
+        string sOffsetVar = pNF->GetOffsetVariable(pContext);
+        string sTmpVar = pNF->GetTempOffsetVariable(pContext);
+	*pFile << "\tunsigned " << sTmpVar << " __attribute__ ((unused));\n";
+	*pFile << "\tunsigned " << sOffsetVar << " __attribute__ ((unused));\n";
     }
-	// declare local exception variable
-	WriteExceptionWordDeclaration(pFile, false /* do not init variable*/, pContext);
+    if (!FindAttribute(ATTR_NOEXCEPTIONS))
+        // declare local exception variable
+        WriteExceptionWordDeclaration(pFile, false /* do not init variable*/, 
+	    pContext);
 }
 
-/**	\brief writes the variable initializations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the variable initializations of this function
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  */
-void CBECallFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
+void 
+CBECallFunction::WriteVariableInitialization(CBEFile * pFile, 
+    CBEContext * pContext)
 {
+    VERBOSE("CBECallFunction::WriteVariableInitialization called %s in %s\n",
+        GetName().c_str(), pFile->GetFileName().c_str());
     // init message buffer
-    assert(m_pMsgBuffer);
-    m_pMsgBuffer->WriteInitialization(pFile, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, pContext);
 }
 
-/**	\brief writes the invocation of the message transfer
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the invocation of the message transfer
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
@@ -109,50 +122,70 @@ void CBECallFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 
 }
 
-/**	\brief writes the unmarshalling of the message
- *	\param pFile the file to write to
- *  \param nStartOffset the position in the message buffer to start with unmarshalling
- *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
- *	\param pContext the context of the write operation
+/** \brief writes the unmarshalling of the message
+ *  \param pFile the file to write to
+ *  \param nStartOffset the position in the message buffer to start with 
+ *         unmarshalling
+ *  \param bUseConstOffset true if a constant offset should be used, set it to i
+ *         false if not possible
+ *  \param pContext the context of the write operation
  *
- * This implementation should unpack the out parameters from the returned message structure
+ * This implementation should unpack the out parameters from the returned
+ * message structure
  */
-void CBECallFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
+void 
+CBECallFunction::WriteUnmarshalling(CBEFile * pFile, 
+    int nStartOffset, 
+    bool& bUseConstOffset, 
+    CBEContext * pContext)
 {
+    VERBOSE("CBECallFunction::WriteUnmarshalling(%s) called\n", 
+	GetName().c_str());
+
     // unmarshal exception first
-	nStartOffset += WriteUnmarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
-	// test for exception and return
-	WriteExceptionCheck(pFile, pContext);
-	// unmarshal return variable
+    nStartOffset += WriteUnmarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
+    // test for exception and return
+    WriteExceptionCheck(pFile, pContext); // resets exception
+    // unmarshal return variable
     nStartOffset += WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
     // now unmarshal rest
     CBEOperationFunction::WriteUnmarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
+
+    VERBOSE("CBECallFunction::WriteUnmarshalling(%s) finished\n", GetName().c_str());
 }
 
-/**	\brief clean up the mess
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief clean up the mess
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
  * This implementation cleans up allocated memory inside this function
  */
 void CBECallFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 {
-
+    VERBOSE("CBECallFunction::WriteCleanup(%s) called (finished)\n",
+        GetName().c_str());
 }
 
-/**	\brief creates the call function
- *	\param pFEOperation the front-end operation used as reference
- *	\param pContext the context of the write operation
- *	\return true if successful
+/** \brief creates the call function
+ *  \param pFEOperation the front-end operation used as reference
+ *  \param pContext the context of the write operation
+ *  \return true if successful
  *
  * This implementation only sets the name of the function.
  */
 bool CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
 {
+    VERBOSE("%s for operation %s called\n", __PRETTY_FUNCTION__,
+        pFEOperation->GetName().c_str());
+
+    // call CBEObject's CreateBackEnd method
+    if (!CBEObject::CreateBackEnd(pFEOperation))
+        return false;
+
     pContext->SetFunctionType(FUNCTION_CALL);
     // set target file name
-	SetTargetFileName(pFEOperation, pContext);
-	// set own name
+    SetTargetFileName(pFEOperation, pContext);
+    // set own name
     m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
 
     if (!CBEOperationFunction::CreateBackEnd(pFEOperation, pContext))
@@ -163,6 +196,7 @@ bool CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pC
     if (!AddMessageBuffer(pFEOperation, pContext))
         return false;
 
+    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
     return true;
 }
 
@@ -202,15 +236,26 @@ bool CBECallFunction::DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEC
  * A call function is only written for a client file (it sould not have been
  * created if the attributes (IN,OUT) would not fit).
  */
-bool CBECallFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContext)
+bool CBECallFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
 {
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)))
-		if (!IsTargetFile((CBEHeaderFile*)pFile))
-			return false;
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEImplementationFile)))
-		if (!IsTargetFile((CBEImplementationFile*)pFile))
-			return false;
-	return pFile->IsOfFileType(FILETYPE_CLIENT);
+    if (!IsTargetFile(pFile))
+        return false;
+    return pFile->IsOfFileType(FILETYPE_CLIENT);
+}
+
+/** \brief checks if this function should be written
+ *  \param pFile the target file to write to
+ *  \param pContext the context of this write operation
+ *  \return true if successful
+ *
+ * A call function is only written for a client file (it sould not have been
+ * created if the attributes (IN,OUT) would not fit).
+ */
+bool CBECallFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+{
+    if (!IsTargetFile(pFile))
+        return false;
+    return pFile->IsOfFileType(FILETYPE_CLIENT);
 }
 
 /** \brief calcualtes the size of this function
@@ -222,10 +267,12 @@ int CBECallFunction::GetSize(int nDirection, CBEContext * pContext)
 {
     // get base class' size
     int nSize = CBEOperationFunction::GetSize(nDirection, pContext);
-    if (nDirection & DIRECTION_IN)
+    if ((nDirection & DIRECTION_IN) &&
+        !FindAttribute(ATTR_NOOPCODE))
         nSize += pContext->GetSizes()->GetOpcodeSize();
-    if (nDirection & DIRECTION_OUT)
-	    nSize += pContext->GetSizes()->GetExceptionSize();
+    if ((nDirection & DIRECTION_OUT) &&
+        !FindAttribute(ATTR_NOEXCEPTIONS))
+        nSize += pContext->GetSizes()->GetExceptionSize();
     return nSize;
 }
 
@@ -237,10 +284,12 @@ int CBECallFunction::GetSize(int nDirection, CBEContext * pContext)
 int CBECallFunction::GetFixedSize(int nDirection, CBEContext *pContext)
 {
     int nSize = CBEOperationFunction::GetFixedSize(nDirection, pContext);
-    if (nDirection & DIRECTION_IN)
+    if ((nDirection & DIRECTION_IN) &&
+        !FindAttribute(ATTR_NOOPCODE))
         nSize += pContext->GetSizes()->GetOpcodeSize();
-    if (nDirection & DIRECTION_OUT)
-	    nSize += pContext->GetSizes()->GetExceptionSize();
+    if ((nDirection & DIRECTION_OUT) &&
+        !FindAttribute(ATTR_NOEXCEPTIONS))
+        nSize += pContext->GetSizes()->GetExceptionSize();
     return nSize;
 }
 

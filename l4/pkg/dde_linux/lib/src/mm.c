@@ -26,10 +26,6 @@
  * Malloc functions have to keep track of chunk sizes and store them in the
  * first dword of the chunk.
  *
- * Requirements: (additionally to \ref pg_req)
- *
- * - OSKit lmm library
- *
  * Configuration:
  *
  * - setup #MM_KREGIONS to change number of kernel memory regions (default 1!)
@@ -43,19 +39,20 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/dm_phys/dm_phys.h>
-
+#include <l4/util/list_alloc.h>
 #include <l4/dde_linux/dde.h>
 
 /* Linux */
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 
-/* OSKit */
-#include <oskit/lmm.h>
-
 /* local */
 #include "__config.h"
 #include "internal.h"
+
+/** mm/memory.c */
+
+unsigned long num_physpages = 0;
 
 /** \name Module Variables
  * @{ */
@@ -65,9 +62,7 @@ static int _initialized = 0;
 
 /* kernel memory - kmem */
 /** kmem pool */
-static lmm_t kpool = LMM_INITIALIZER;
-/** kmem regions in pool */
-static lmm_region_t kregion[MM_KREGIONS];
+static l4la_free_t *kpool = L4LA_INITIALIZER;
 /** kmem region size */
 static unsigned int kregion_size;
 /** kmem region counter */
@@ -77,9 +72,7 @@ static l4lock_t klock = L4LOCK_UNLOCKED_INITIALIZER;
 
 /* virtual memory - vmem */
 /** vmem pool */
-static lmm_t vpool = LMM_INITIALIZER;
-/** vmem region in pool */
-static lmm_region_t vregion;
+static l4la_free_t *vpool = L4LA_INITIALIZER;
 /** protect access to vmem pool */
 static l4lock_t vlock = L4LOCK_UNLOCKED_INITIALIZER;
 
@@ -87,7 +80,6 @@ static l4lock_t vlock = L4LOCK_UNLOCKED_INITIALIZER;
 /** Simulated LMM Callback on Memory Shortage (kmem)
  *
  * \param  size   size of memory chunk needed
- * \param  flags  memory type
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -102,9 +94,8 @@ static l4lock_t vlock = L4LOCK_UNLOCKED_INITIALIZER;
  * OSKit implementation's \c MORECORE() macro (\c clientos/mem.c). Hope it's
  * still fully functioning.
  *
- * \todo consider \p flags
  */
-static __inline__ int __more_kcore(l4_size_t size, l4_uint32_t flags)
+static __inline__ int __more_kcore(l4_size_t size)
 {
   int error;
   l4_addr_t kaddr;
@@ -114,13 +105,11 @@ static __inline__ int __more_kcore(l4_size_t size, l4_uint32_t flags)
 
   if (!(kcount) || (size > kregion_size))
     {
-      ERROR("out of memory (kmem)");
+      LOGdL(DEBUG_ERRORS, "Error: out of memory (kmem)");
       return -L4_ENOMEM;
     }
 
-#if DEBUG_MALLOC
-  DMSG("requesting %d bytes (kmem)\n", size);
-#endif
+  LOGd(DEBUG_MALLOC, "requesting %d bytes (kmem)", size);
 
   /* open and attach new dataspace */
   kaddr = (l4_addr_t) \
@@ -129,7 +118,7 @@ static __inline__ int __more_kcore(l4_size_t size, l4_uint32_t flags)
                             "dde kmem");
   if (!kaddr)
     {
-      ERROR("allocating kmem");
+      LOGdL(DEBUG_ERRORS, "Error: allocating kmem");
       return -L4_ENOMEM;
     }
 
@@ -138,20 +127,15 @@ static __inline__ int __more_kcore(l4_size_t size, l4_uint32_t flags)
     {
       if (error>1 || !error)
         Panic("Ouch, what's that?");
-      ERROR("getting physical address (%d)", error);
+      LOGdL(DEBUG_ERRORS, "Error: getting physical address (%d)", error);
       return error;
     }
 
-#if DEBUG_MALLOC
-  DMSG("adding %d Bytes (kmem) @ 0x%08x (phys. 0x%08x) region %d\n",
+  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08x (phys. 0x%08x) region %d",
        size, kaddr, dm_paddr.addr, kcount);
-#endif
 
   /* add new region */
-  lmm_add_region(&kpool, &kregion[kcount--], (void *) kaddr, size, 0, 0);
-
-  /* add free memory area to region/pool */
-  lmm_add_free(&kpool, (void *) kaddr, size);
+  l4la_free(&kpool, (void*)kaddr, size);
 
   /* address info */
   address_add_region(kaddr, dm_paddr.addr, size);
@@ -170,7 +154,7 @@ static __inline__ int __more_kcore(l4_size_t size, l4_uint32_t flags)
  */
 static __inline__ int __more_vcore(l4_size_t size)
 {
-  ERROR("out of memory (vmem)");
+  LOGdL(DEBUG_ERRORS, "Error: out of memory (vmem)");
   return -L4_ENOMEM;
 }
 
@@ -186,33 +170,29 @@ static __inline__ int __more_vcore(l4_size_t size)
  */
 void *kmalloc(size_t size, int gfp)
 {
-  lmm_flags_t lmm_flags = 0;
   l4_uint32_t *chunk;
 
   if (gfp & GFP_DMA)
-    DMSG("Warning: No ISA DMA implemented.\n");
+    LOGd(DEBUG_MSG, "Warning: No ISA DMA implemented.");
 
   /* mutex pool access */
   l4lock_lock(&klock);
 
   size += sizeof(size_t);
-  while (!(chunk = lmm_alloc(&kpool, size, lmm_flags)))
+  while (!(chunk = l4la_alloc(&kpool, size, 0)))
     {
-      if (__more_kcore(size, lmm_flags))
+      if (__more_kcore(size))
         {
 #if DEBUG_MALLOC
-          DMSG("failed to allocate %d bytes (kmem)\n", size);
-          lmm_dump(&kpool);
-          lmm_stats(&kpool);
+          LOG("failed to allocate %d bytes (kmem)", size);
+          l4la_dump(&kpool);
 #endif
           return NULL;
         }
     }
   *chunk = size;
 
-#if DEBUG_MALLOC_EACH
-  DMSG("allocated %d bytes @ %p (kmem)\n", *chunk, chunk);
-#endif
+  LOGd(DEBUG_MALLOC_EACH, "allocated %d bytes @ %p (kmem)", *chunk, chunk);
 
   l4lock_unlock(&klock);
 
@@ -236,11 +216,9 @@ void kfree(const void *addr)
   /* mutex pool access */
   l4lock_lock(&klock);
 
-#if DEBUG_MALLOC_EACH
-  DMSG("freeing %d bytes @ %p (kmem)\n", *chunk, chunk);
-#endif
+  LOGd(DEBUG_MALLOC_EACH, "freeing %d bytes @ %p (kmem)", *chunk, chunk);
 
-  lmm_free(&kpool, chunk, *chunk);
+  l4la_free(&kpool, chunk, *chunk);
 
   l4lock_unlock(&klock);
 }
@@ -256,30 +234,26 @@ void kfree(const void *addr)
  */
 void *vmalloc(unsigned long size)
 {
-  lmm_flags_t lmm_flags = 0;
   l4_uint32_t *chunk;
 
   /* mutex pool access */
   l4lock_lock(&vlock);
 
   size += sizeof(size_t);
-  while (!(chunk = lmm_alloc(&vpool, size, lmm_flags)))
+  while (!(chunk = l4la_alloc(&vpool, size, 0)))
     {
       if (__more_vcore(size))
         {
 #if DEBUG_MALLOC
-          DMSG("failed to allocate %ld bytes (vmem)\n", size);
-          lmm_dump(&vpool);
-          lmm_stats(&vpool);
+          LOG("failed to allocate %ld bytes (vmem)", size);
+          l4la_dump(&vpool);
 #endif
           return NULL;
         }
     }
   *chunk = size;
 
-#if DEBUG_MALLOC_EACH
-  DMSG("allocated %d bytes @ %p (vmem)\n", *chunk, chunk);
-#endif
+  LOGd(DEBUG_MALLOC_EACH, "allocated %d bytes @ %p (vmem)", *chunk, chunk);
 
   l4lock_unlock(&vlock);
 
@@ -303,11 +277,9 @@ void vfree(void *addr)
   /* mutex pool access */
   l4lock_lock(&vlock);
 
-  lmm_free(&vpool, chunk, *chunk);
+  l4la_free(&vpool, chunk, *chunk);
 
-#if DEBUG_MALLOC_EACH
-  DMSG("freed %d bytes @ %p (vmem)\n", *chunk, chunk);
-#endif
+  LOGd(DEBUG_MALLOC_EACH, "freed %d bytes @ %p (vmem)", *chunk, chunk);
 
   l4lock_unlock(&vlock);
 }
@@ -324,26 +296,19 @@ static int __setup_kmem(unsigned int *max, l4_addr_t *addr)
   l4dm_mem_addr_t dm_paddr;
 
   kregion_size = size / MM_KREGIONS;
-#if DEBUG_MALLOC
-  DMSG("size/regions = %d\n", kregion_size);
-#endif
+  LOGd(DEBUG_MALLOC, "size/regions = %d", kregion_size);
 
   kregion_size = (kregion_size + L4_PAGESIZE - 1) & L4_PAGEMASK;
-#if DEBUG_MALLOC
-  DMSG("  rsize (mod PAGESIZE) = %d\n", kregion_size);
-#endif
+  LOGd(DEBUG_MALLOC, "rsize (mod PAGESIZE) = %d", kregion_size);
 
   if (kregion_size * MM_KREGIONS < size)
     {
       kregion_size += L4_PAGESIZE;
-#if DEBUG_MALLOC
-      DMSG("  new rsize = %d\n", kregion_size);
-#endif
+      LOGd(DEBUG_MALLOC, "new rsize = %d\n", kregion_size);
     }
 
-#if DEBUG_MALLOC
-  DMSG("kregion_size = 0x%x regions = %d\n", kregion_size, MM_KREGIONS);
-#endif
+  LOGd(DEBUG_MALLOC, "kregion_size = 0x%x regions = %d", 
+       kregion_size, MM_KREGIONS);
 
   /* open and attach initial dataspace */
   *addr = (l4_addr_t) \
@@ -357,20 +322,15 @@ static int __setup_kmem(unsigned int *max, l4_addr_t *addr)
     {
       if (error>1 || !error)
         Panic("Ouch, what's that?");
-      ERROR("getting physical address (%d)", error);
+      LOGdL(DEBUG_ERRORS, "Error: getting physical address (%d)", error);
       return error;
     }
 
-#if DEBUG_MALLOC
-  DMSG("adding %d Bytes (kmem) @ 0x%08x (phys. 0x%08x) region 0\n",
+  LOGd(DEBUG_MALLOC, "adding %d Bytes (kmem) @ 0x%08x (phys. 0x%08x) region 0",
        kregion_size, *addr, dm_paddr.addr);
-#endif
-
-  /* add initial region 0 */
-  lmm_add_region(&kpool, &kregion[0], (void *) *addr, kregion_size, 0, 0);
-
+  
   /* add free memory area to region/pool */
-  lmm_add_free(&kpool, (void *) *addr, kregion_size);
+  l4la_free(&kpool, (void *) *addr, kregion_size);
 
   /* address info */
   address_add_region(*addr, dm_paddr.addr, kregion_size);
@@ -393,10 +353,8 @@ static int __setup_vmem(unsigned int *max, l4_addr_t *addr)
   *addr = (l4_addr_t) l4dm_mem_allocate_named(size, L4RM_MAP, "dde vmem");
   if (!*addr) return -L4_ENOMEM;
 
-  /* add region to vmem pool */
-  lmm_add_region(&vpool, &vregion, (void *) *addr, size, 0, 0);
   /* add free memory area */
-  lmm_add_free(&vpool, (void *) *addr, size);
+  l4la_free(&vpool, (void *) *addr, size);
 
   *max = size;
   return 0;
@@ -430,16 +388,21 @@ int l4dde_mm_init(unsigned int max_vsize, unsigned int max_ksize)
   /* setup virtual memory pool */
   if ((error=__setup_vmem(&max_vsize, &vaddr)))
     {
-      ERROR("setting up vmem: %d (%s)", error, l4env_strerror(-error));
+      LOGdL(DEBUG_ERRORS, "Error: setting up vmem: %d (%s)", 
+            error, l4env_strerror(-error));
       return error;
     }
 
   /* setup kernel memory pool */
   if ((error=__setup_kmem(&max_ksize, &kaddr)))
     {
-      ERROR("setting up kmem %d (%s)", error, l4env_strerror(-error));
+      LOGdL(DEBUG_ERRORS, "Error: setting up kmem %d (%s)", 
+            error, l4env_strerror(-error));
       return error;
     }
+
+  /* tell memory size in pages */
+  num_physpages = max_ksize / L4_PAGESIZE;
 
   /* print pretty message */
   if (max_vsize > 8 * 1024 * 1024)
@@ -466,9 +429,9 @@ int l4dde_mm_init(unsigned int max_vsize, unsigned int max_ksize)
     }
   else
     ksize_str = "Byte";
-  Msg("Using ...\n"
+  LOG("Using ...\n"
       "  %d %s at 0x%08x (vmem)\n"
-      "  %d %s in %d regions (kmem)\n",
+      "  %d %s in %d regions (kmem)",
       max_vsize, vsize_str, vaddr, max_ksize, ksize_str, MM_KREGIONS);
 
 #if DEBUG_MALLOC
@@ -478,21 +441,47 @@ int l4dde_mm_init(unsigned int max_vsize, unsigned int max_ksize)
     l4_offs_t offset;
     l4_addr_t map_addr;
     l4_size_t map_size;
+    l4_threadid_t dummy;
 
-    debug = l4rm_lookup((void*)vaddr, &ds, &offset, &map_addr, &map_size);
-    if (debug)
+    debug = l4rm_lookup((void*)vaddr, &map_addr, &map_size, &ds, &offset, &dummy);
+    if (debug != L4RM_REGION_DATASPACE)
       Panic("l4rm_lookup failed (%d)", debug);
-    DMSG("vmem: ds={%3u, "IdFmt"} offset=%d map_addr=0x%08x map_size=%d\n",
-         ds.id, IdStr(ds.manager), offset, map_addr, map_size);
-
-    debug = l4rm_lookup((void*)kaddr, &ds, &offset, &map_addr, &map_size);
-    if (debug)
+    LOG("vmem: ds={%3u, "l4util_idfmt"} offset=%d map_addr=0x%08x map_size=%d",
+        ds.id, l4util_idstr(ds.manager), offset, map_addr, map_size);
+    
+    debug = l4rm_lookup((void*)kaddr, &map_addr, &map_size, &ds, &offset, &dummy);
+    if (debug != L4RM_REGION_DATASPACE)
       Panic("l4rm_lookup failed (%d)", debug);
-    DMSG("kmem: ds={%3u, "IdFmt"} offset=%d map_addr=0x%08x map_size=%d\n",
-         ds.id, IdStr(ds.manager), offset, map_addr, map_size);
+    LOG("kmem: ds={%3u, "l4util_idfmt"} offset=%d map_addr=0x%08x map_size=%d",
+        ds.id, l4util_idstr(ds.manager), offset, map_addr, map_size);
   }
 #endif
 
   ++_initialized;
   return 0;
+}
+
+/** Return amount of free kernel memory
+ */
+int l4dde_mm_kmem_avail(void)
+{
+  if (_initialized)
+    return l4la_avail(&kpool);
+
+  return 0;
+}
+
+/** Return begin and end of kmem regions */
+int l4dde_mm_kmem_region(unsigned num, l4_addr_t *start, l4_addr_t *end)
+{
+#if 0
+  if (num >= MM_KREGIONS)
+    return -L4_EINVAL;
+
+  *start = kregion[num].min;
+  *end   = kregion[num].max;
+
+  return 0;
+#endif
+  return -L4_EINVAL;
 }

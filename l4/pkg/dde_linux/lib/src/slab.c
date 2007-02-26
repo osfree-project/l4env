@@ -42,14 +42,32 @@
 #include "__config.h"
 #include "internal.h"
 
+#define CACHE_NAMELEN 20  /** max name length for a slab cache */
+
+/** local kmem_cache to L4 slab_cache mapping */
+struct kmem_cache_s
+{
+  l4slab_cache_t *l4slab_cache;
+
+  spinlock_t spinlock;
+
+  /* constructor func */
+  void (*ctor)(void *, kmem_cache_t *, unsigned long);
+  /* de-constructor func */
+  void (*dtor)(void *, kmem_cache_t *, unsigned long);
+
+  char name[CACHE_NAMELEN];
+};
+
 /** Grow slab cache (allocate new memory for slabs)
  *  - one page (L4_PAGESIZE) will be added
  */
 static void * alloc_grow (l4slab_cache_t * cache, void **data)
 {
   void *memp;
+  kmem_cache_t *kcache = (kmem_cache_t *)l4slab_get_data(cache);
 
-  LOGd_Enter(DEBUG_SLAB);
+  LOGd_Enter(DEBUG_SLAB, "(name=%s)", kcache->name);
 
   if (!(memp = l4dm_mem_allocate (L4_PAGESIZE, L4DM_PINNED | L4RM_MAP)))
     {
@@ -67,22 +85,6 @@ void alloc_release(l4slab_cache_t *cache, void *page, void *data)
 }
 #endif
 
-#define CACHE_NAMELEN 20  /** max name length for a slab cache */
-
-/** local kmem_cache to L4 slab_cache mapping */
-struct kmem_cache_s
-{
-  l4slab_cache_t *l4slab_cache;
-
-  /* constructor func */
-  void (*ctor)(void *, kmem_cache_t *, unsigned long);
-  /* de-constructor func */
-  void (*dtor)(void *, kmem_cache_t *, unsigned long);
-
-  char name[CACHE_NAMELEN];
-};
-
-
 /** Create slab cache
  * \ingroup mod_mm_slab
  *
@@ -99,11 +101,11 @@ kmem_cache_t * kmem_cache_create (const char *name, size_t size,
 {
   kmem_cache_t *kcache;
 
-  LOGd_Enter(DEBUG_SLAB);
+  LOGd_Enter(DEBUG_SLAB, "(name=%s)", name);
 
   if (!name)
     {
-      Error ("kmem_cache name required");
+      LOG_Error ("kmem_cache name required");
       return NULL;
     }
   if(dtor){
@@ -115,11 +117,13 @@ kmem_cache_t * kmem_cache_create (const char *name, size_t size,
   kcache->l4slab_cache = vmalloc (sizeof (l4slab_cache_t));
   if (l4slab_cache_init (kcache->l4slab_cache, size, 0, alloc_grow, NULL))
     {
-      Error ("Couldn't get l4slab_cache");
+      LOG_Error ("Couldn't get l4slab_cache");
       return NULL;
     }
 
-  strcpy (kcache->name, name);
+  l4slab_set_data(kcache->l4slab_cache, (void *)kcache);
+  spin_lock_init(&kcache->spinlock);
+  strncpy (kcache->name, name, CACHE_NAMELEN);
 
   kcache->ctor = ctor;
   kcache->dtor = dtor;
@@ -131,7 +135,7 @@ kmem_cache_t * kmem_cache_create (const char *name, size_t size,
  * \ingroup mod_mm_slab */
 int kmem_cache_destroy (kmem_cache_t * kcache)
 {
-  LOGd_Enter(DEBUG_SLAB);
+  LOGd_Enter(DEBUG_SLAB, "(name=%s)", kcache->name);
 
   l4slab_destroy (kcache->l4slab_cache);
   vfree (kcache->l4slab_cache);
@@ -144,7 +148,11 @@ int kmem_cache_destroy (kmem_cache_t * kcache)
  * \ingroup mod_mm_slab */
 void * kmem_cache_alloc (kmem_cache_t * kcache, int flags)
 {
-  void *p = l4slab_alloc (kcache->l4slab_cache);
+  void *p;
+
+  spin_lock(&kcache->spinlock);
+  p = l4slab_alloc (kcache->l4slab_cache);
+  spin_unlock(&kcache->spinlock);
 
   if (kcache->ctor)
     kcache->ctor(p, kcache, flags);
@@ -156,5 +164,7 @@ void * kmem_cache_alloc (kmem_cache_t * kcache, int flags)
  * \ingroup mod_mm_slab */
 void kmem_cache_free (kmem_cache_t * kcache, void *objp)
 {
+  spin_lock(&kcache->spinlock);
   l4slab_free (kcache->l4slab_cache, objp);
+  spin_unlock(&kcache->spinlock);
 }

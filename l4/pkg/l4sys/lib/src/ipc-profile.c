@@ -148,6 +148,7 @@ l4_ipc_wait_static(l4_threadid_t *src,
 					 ("m") after this point */
 	  "pushl %%esi		\n\t" /* src */
 	  "movl	 %%ebx,%%ebp	\n\t" /* rcv_msg */
+	  "xor   %%edi, %%edi	\n\t" /* edi == 0 */
 	  "int	 $0x30		\n\t"
 	  "popl  %%ebp		\n\t" /* src */
 	  "movl  %%esi,(%%ebp)	\n\t" /* src.low */

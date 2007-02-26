@@ -11,26 +11,9 @@
  */
 /*****************************************************************************/
 /*
- * $Log$
- * Revision 1.1  2003/08/19 13:01:42  adam
- * - moved from generic_fprov/examples
- *
- * Revision 1.1  2003/08/18 16:29:40  adam
- * - fprov for Fiasco/UX
- *
- * Revision 1.2  2002/11/25 03:27:53  reuther
- * - adapted to new L4 integer types
- * - adapted to l4sys/l4util/l4env/dm_generic include changes
- *
- * Revision 1.1  2002/09/24 11:38:33  fm3
- * - moved here from linux subdir
- *
- * Revision 1.2  2002/03/08 08:21:06  fm3
- * - transfer ownership of resulting ds to calling client
- *
- * Revision 1.1  2002/02/18 03:48:13  reuther
- * Emulate some l4env functions.
- *
+ * (c) 2004 Technische Universität Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
  */
 
 #include <l4/sys/types.h>
@@ -47,8 +30,8 @@ LOG_flush(void)
 }
 
 int
-l4rm_lookup(void * addr, l4dm_dataspace_t * ds, l4_offs_t * offset, 
-	    l4_addr_t * map_addr, l4_size_t * map_size)
+l4rm_lookup(void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
+            l4dm_dataspace_t * ds, l4_offs_t * offset, l4_threadid_t * pager)
 {
   return -L4_ENOTSUPP;
 }

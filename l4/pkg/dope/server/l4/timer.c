@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -24,9 +24,9 @@
 
 int init_timer(struct dope_services *d);
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 
 /*** RETURN CURRENT SYSTEM TIME COUNTER IN MICROSECONDS ***/
@@ -56,7 +56,7 @@ static u32 get_time(void) {
 
 
 /*** RETURN DIFFERENCE BETWEEN TWO TIMES ***/
-static u32 get_diff(u32 time1,u32 time2) {
+static u32 get_diff(u32 time1, u32 time2) {
 
 	/* overflow check */
 	if (time1>time2) {
@@ -72,9 +72,9 @@ static void usleep(u32 num_usec) {
 	l4thread_usleep(num_usec);
 }
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct timer_services services = {
 	get_time,
@@ -83,16 +83,15 @@ static struct timer_services services = {
 };
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_timer(struct dope_services *d) {
-
 	u32 scaler;
 
 	if (!(scaler=l4_calibrate_tsc())) Panic("l4_calibrate_tsc: fucked up");
 
-	d->register_module("Timer 1.0",&services);
+	d->register_module("Timer 1.0", &services);
 	return 1;
 }

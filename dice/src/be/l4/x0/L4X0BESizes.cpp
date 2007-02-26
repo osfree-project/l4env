@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/x0/L4X0BESizes.cpp
+ *    \brief   contains the implementation of the class CL4X0BESizes
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -20,20 +27,17 @@
 
 #include "be/l4/x0/L4X0BESizes.h"
 
-IMPLEMENT_DYNAMIC(CL4X0BESizes)
-
 CL4X0BESizes::CL4X0BESizes()
  : CL4BESizes()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4X0BESizes, CL4BESizes);
 }
 
-
+/** destroys the object */
 CL4X0BESizes::~CL4X0BESizes()
 {
 }
 
-/** \brief determines maximum number 
+/** \brief determines maximum number
  *  \param nDirection the direction to get max short IPC size for
  *  \return the number of bytes until which the short IPC is allowed
  *
@@ -45,10 +49,10 @@ int CL4X0BESizes::GetMaxShortIPCSize(int nDirection)
     return 12;
 }
 
-/** \brief 
+/** \brief
  *determine maximum size of an environment type
 */
-int CL4X0BESizes::GetSizeOfEnvType(String sName)
+int CL4X0BESizes::GetSizeOfEnvType(string sName)
 {
     if (sName == "l4_fpage_t")
         return 4; // l4_umword_t
@@ -59,12 +63,14 @@ int CL4X0BESizes::GetSizeOfEnvType(String sName)
     if (sName == "l4_timeout_t")
         return 4; // l4_umword_t
     if (sName == "l4_threadid_t")
-	    return 4;
+        return 4;
     if (sName == "CORBA_Object")
         return 4; // sizeof(l4_threadid_t*)
     if (sName == "CORBA_Object_base")
-	    return 4; // sizeof(l4_threadid_t)
+        return 4; // sizeof(l4_threadid_t)
     if (sName == "CORBA_Environment")
-        return 28; // 4(major+repos_id) + 4(param) + 4(ipc_error) + 4(timeout) + 4(rcv_fpage) + 4(user_data) + 4(malloc ptr)
+        return 24; // 4(major+repos_id) + 4(param+ipc_error) + 4(timeout) + 4(rcv_fpage) + 4(malloc ptr) + 4(free ptr)
+    if (sName == "CORBA_Server_Environment")
+        return 72; // + 4(user_data) + 4(ptrs_count) + 4*DICE_PTRS_MAX(dice_ptrs)
     return CBESizes::GetSizeOfEnvType(sName);
 }

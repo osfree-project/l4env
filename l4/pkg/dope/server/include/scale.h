@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -13,15 +13,15 @@
  * COPYING file for details.
  */
 
+#ifndef _DOPE_SCALE_H_
+#define _DOPE_SCALE_H_
+
+#include "variable.h"
+
 struct scale_methods;
 struct scale_data;
 
 #define SCALE struct scale
-
-#if !defined(VARIABLE)
-struct variable;
-#define VARIABLE struct variable
-#endif
 
 #define SCALE_VER  0x1
 
@@ -32,19 +32,9 @@ struct scale {
 	struct scale_data     *sd;
 };
 
-struct scale_methods {
-	void      (*set_type)  (SCALE *, u32 type);
-	u32       (*get_type)  (SCALE *);
-	void      (*set_value) (SCALE *, float new_value);
-	float     (*get_value) (SCALE *);
-	void      (*set_from)  (SCALE *, float new_from);
-	float     (*get_from)  (SCALE *);
-	void      (*set_to)    (SCALE *, float new_to);
-	float     (*get_to)    (SCALE *);
-	void      (*set_var)   (SCALE *, VARIABLE *v);
-	VARIABLE *(*get_var)   (SCALE *);
-};
-
 struct scale_services {
 	SCALE *(*create) (void);
 };
+
+
+#endif /* _DOPE_SCALE_H_ */

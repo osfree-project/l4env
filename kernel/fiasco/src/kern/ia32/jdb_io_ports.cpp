@@ -6,18 +6,14 @@ IMPLEMENTATION:
 #include "io.h"
 #include "jdb_module.h"
 #include "jdb.h"
+#include "pci.h"
 #include "pic.h"
 #include "static_init.h"
 
-//===================
-// Std JDB modules
-//===================
-
 /**
- * @brief Private IA32-I/O module.
+ * Private IA32-I/O module.
  */
-class Io_m 
-  : public Jdb_module
+class Io_m : public Jdb_module
 {
 public:
 
@@ -32,6 +28,7 @@ private:
   struct Pci_port_buf {
     unsigned bus;
     unsigned dev;
+    unsigned subdev;
     unsigned reg;
     unsigned val;
   };
@@ -54,8 +51,6 @@ static Io_m io_m INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 char               Io_m::porttype;
 Io_m::Input_buffer Io_m::buf;
 
-#define PCI_CONFIG_ADDR	0xcf8
-#define PCI_CONFIG_DATA	0xcfc
 
 PUBLIC
 Jdb_module::Action_code
@@ -63,11 +58,10 @@ Io_m::action( int cmd, void *&args, char const *&fmt, int &)
 {
   static char const *const port_in_fmt    = " addr=%8p";
   static char const *const port_out_fmt   = " addr=%8p, val=%8x";
-  static char const *const pci_in_fmt     = " PCI config:"
-					    " bus=%2x, dev=%2x, reg=%2x";
-  static char const *const pci_out_fmt    = " PCI config:"
-					    " bus=%2x, dev=%2x, reg=%2x,"
-					    " val=%8x";
+  static char const *const pci_in_fmt     = 
+    "\b\b\b\b\b\bPCI conf: bus=%2x, dev=%2x, subdev=%2x, reg=%2x";
+  static char const *const pci_out_fmt    = 
+    "\b\b\b\b\b\bPCI conf: bus=%2x, dev=%2x, subdev=%2x, reg=%2x, val=%8x";
   static char const *const ack_irq_fmt    = " ack IRQ=%2x";
   static char const *const mask_irq_fmt   = " mask IRQ=%2x";
   static char const *const unmask_irq_fmt = " unmask IRQ=%2x";
@@ -177,18 +171,14 @@ Io_m::action( int cmd, void *&args, char const *&fmt, int &)
 	  break;
 
 	case 'p': // pci
-	  Io::out32(0x80000000 | (buf.pci.bus<<16) | (buf.pci.dev<<8) 
-			       | (buf.pci.reg & ~3), PCI_CONFIG_ADDR);
-	  if (cmd==0) // in
-	    {
-	      answer = Io::in32(PCI_CONFIG_DATA);
-	      printf(" => 0x%08x\n", answer);
-	    }
+	  if (cmd == 0)
+	    printf(" => 0x%08x",
+		   Pci::read_cfg32 (buf.pci.bus, buf.pci.dev, buf.pci.subdev, 
+				    buf.pci.reg));
 	  else
-	    {
-	      Io::out32(buf.pci.val, PCI_CONFIG_DATA);
-	      putchar('\n');
-	    }
+	    Pci::write_cfg32 (buf.pci.bus, buf.pci.dev, buf.pci.subdev,
+			      buf.pci.reg, buf.pci.val);
+	  putchar('\n');
 	  break;
 
 	case 'a': // manual acknowledge IRQ at pic
@@ -227,12 +217,12 @@ Jdb_module::Cmd const *const Io_m::cmds() const
 {
   static Cmd cs[] =
     { 
-      Cmd( 0, "i", "in", " type:%c",
+	{ 0, "i", "in", " type:%c",
   	  "i{1|2|4|p}<num>\tin port",
-	  &porttype ),
-      Cmd( 1, "o", "out", " type:%c",
+	  &porttype },
+        { 1, "o", "out", " type:%c",
 	  "o{1|2|4|a|u|m}<num>\tout port, ack/(un)mask/ack irq",
-	  &porttype ),
+	  &porttype },
     };
   return cs;
 }

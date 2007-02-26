@@ -59,6 +59,42 @@ L4_INLINE l4_uint32_t
 l4util_in32(l4_uint16_t port);
 
 /**
+ * \brief Read a block of 8-bit-value from I/O ports
+ * \ingroup port_io
+ *
+ * \param  port	   I/O port address
+ * \param  addr    address of buffer
+ * \param  count   number of I/O operations
+ * \return value
+ */
+L4_INLINE void
+l4util_ins8(l4_uint16_t port, l4_umword_t addr, l4_umword_t count);
+
+/**
+ * \brief Read a block of 16-bit-value from I/O ports
+ * \ingroup port_io
+ *
+ * \param  port	   I/O port address
+ * \param  addr    address of buffer
+ * \param  count   number of I/O operations
+ * \return value
+ */
+L4_INLINE void
+l4util_ins16(l4_uint16_t port, l4_umword_t addr, l4_umword_t count);
+
+/**
+ * \brief Read a block of 32-bit-value from I/O ports
+ * \ingroup port_io
+ *
+ * \param  port	   I/O port address
+ * \param  addr    address of buffer
+ * \param  count   number of I/O operations
+ * \return value
+ */
+L4_INLINE void
+l4util_ins32(l4_uint16_t port, l4_umword_t addr, l4_umword_t count);
+
+/**
  * \brief Write byte to I/O port
  * \ingroup port_io
  *
@@ -124,6 +160,33 @@ l4util_in32(l4_uint16_t port)
   l4_uint32_t value;
   asm volatile ("inl %w1, %0" : "=a" (value) : "Nd" (port));
   return value;
+}
+
+L4_INLINE void
+l4util_ins8(l4_uint16_t port, l4_umword_t addr, l4_umword_t count)
+{
+  l4_umword_t dummy1, dummy2;
+  asm volatile ("rep insb" : "=D"(dummy1), "=c"(dummy2)
+			   : "d" (port), "D" (addr), "c"(count)
+			   : "memory");
+}
+
+L4_INLINE void
+l4util_ins16(l4_uint16_t port, l4_umword_t addr, l4_umword_t count)
+{
+  l4_umword_t dummy1, dummy2;
+  asm volatile ("rep insw" : "=D"(dummy1), "=c"(dummy2)
+			   : "d" (port), "D" (addr), "c"(count)
+			   : "memory");
+}
+
+L4_INLINE void
+l4util_ins32(l4_uint16_t port, l4_umword_t addr, l4_umword_t count)
+{
+  l4_umword_t dummy1, dummy2;
+  asm volatile ("rep insl" : "=D"(dummy1), "=c"(dummy2)
+			   : "d" (port), "D" (addr), "c"(count)
+			   : "memory");
 }
 
 L4_INLINE void

@@ -1,0 +1,12 @@
+FLIPS: FLexible IP-Stack for DROPS
+
+FLIPS provides the standard BSD-socket interface to clients and is thereby a
+full featured TCP/IP network stack supporting TCP, UDP and NETLINK for
+configuration.
+
+FLIPS is based on unmodified Linux 2.4 sources. It utilizes the DROPS Device
+Driver Environment for Linux (dde_linux) and the Socket_Linux Package
+(socket_linux). You need complete Linux sources in LINUX24_DIR as FLIPS does
+not contain any Linux files.
+
+ATTENTION: flips/Makefile does build FLIPS only if a valid LINUX24_DIR is set.

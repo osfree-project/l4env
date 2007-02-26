@@ -1,0 +1,23 @@
+Working on FLIPS, we discovered strange lockups between IRQ and SOFTIRQ threads.
+The idea described here may help to generalize synchronization issues (esp.
+when looking forward to Linux 2.6).
+
+* dde_linux has one virtual CPU per activitiy, i.e. user, tasklet handling and
+  IRQ contexts has its own CPU. Each CPU ist implemented by a L4 thread.
+* With SOFTIRQS there are hard sync issues as softirqs are always processed by
+  the CPU that also executed the corresponding IRQ context.
+* Currently, dde_linux uses the tamed Linux approcach: local CLI/STI are NOPs
+  (global IRQ disabling works like in Linux using a special irq_lock).
+* To support SOFTIRQS, we propose:
+  * local CLI/STI uses a CPU-local lock
+  * IRQ contexts run with the lock held (This will be guarenteed in dde_linux
+    code - irq_handler_guard().)
+  * SOFTIRQ contexts that disable IRQs run with a lock held corresponding to
+    the CPU they are serving. This way, SOFTIRQS logically run on the same CPU.
+
+In Linux 2.4, this bothers only networking code (not even the drivers just the
+stack - FLIPS). Known SOFTIRQS are: HI_SOFTIRQ and TASKLET_SOFTIRQ (handled by
+tasklet threads); NET_TX_SOFTIRQ and NET_RX_SOFTIRQ.
+
+Linux 2.6 knows more real SOFTIRQS: HI_SOFTIRQ, TIMER_SOFTIRQ, NET_TX_SOFTIRQ,
+NET_RX_SOFTIRQ, SCSI_SOFTIRQ, TASKLET_SOFTIRQ.

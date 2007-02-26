@@ -1,7 +1,7 @@
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  . = 0x00070000;
+  . = 0x00090000;
 
   .init :
   {

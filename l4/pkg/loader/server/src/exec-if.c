@@ -14,6 +14,7 @@
 
 #include <l4/names/libnames.h>
 #include <l4/exec/exec.h>
+#include <l4/exec/errno.h>
 #include <l4/exec/exec-client.h>
 #include <l4/env/errno.h>
 #include <l4/dm_phys/dm_phys.h>
@@ -29,6 +30,7 @@ static l4_threadid_t exec_id = L4_INVALID_ID;
 int
 exec_if_get_symbols(app_t *app)
 {
+#ifdef ARCH_x86
   int error;
   l4dm_dataspace_t ds;
   l4_addr_t addr;
@@ -66,26 +68,30 @@ exec_if_get_symbols(app_t *app)
       return -L4_EINVAL;
     }
 
-  app->symbols_ds = ds;   /* needed for transfering ownership to app when
+  app->ds_symbols = ds;   /* needed for transfering ownership to app when
 			   * we know the task_id */
   app->symbols    = addr; /* physical address */
+  app->sz_symbols = psize;
 
   return 0;
+#else
+  return -L4_EINVAL;
+#endif
 }
 
 /** Request line number information of an application by the L4 exec layer */
 int
 exec_if_get_lines(app_t *app)
 {
+#ifdef ARCH_x86
   int error;
   l4dm_dataspace_t ds;
   l4_addr_t addr;
   l4_size_t psize;
   CORBA_Environment _env = dice_default_environment;
   
-  if ((error = l4exec_bin_get_lines_call(&exec_id,
-	                            (long*)app->env,
-				    &ds, &_env))
+  if ((error = l4exec_bin_get_lines_call(&exec_id, (long*)app->env,
+					 &ds, &_env))
       || _env.major != CORBA_NO_EXCEPTION)
     {
       app_msg(app, "Error %d (%s) getting lines", 
@@ -114,11 +120,15 @@ exec_if_get_lines(app_t *app)
       return -L4_EINVAL;
     }
 
-  app->lines_ds = ds;   /* needed for transfering ownership to app when we
+  app->ds_lines = ds;   /* needed for transfering ownership to app when we
 			 * know the task_id */
   app->lines    = addr; /* physical address */
+  app->sz_lines = psize;
 
   return 0;
+#else
+  return -L4_EINVAL;
+#endif
 }
 
 int
@@ -192,24 +202,43 @@ exec_if_close(app_t *app)
 }
 
 int
-exec_if_ftype(l4dm_dataspace_t *ds, l4env_infopage_t *env)
+exec_if_ftype(const l4dm_dataspace_t *ds, l4env_infopage_t *env)
 {
   int error;
   CORBA_Environment _env = dice_default_environment;
 
-  if ((error = l4dm_share(ds, exec_id, L4DM_RO)))
+  if ((error = l4dm_share((l4dm_dataspace_t*)ds, exec_id, L4DM_RO)))
     {
       printf("Error %d (%s) sharing rights to exec\n",
 	     error, l4env_errstr(error));
       return -L4_EINVAL;
     }
 
-  if (((error = l4exec_bin_ftype_call(&exec_id, ds, 
-				     (l4exec_envpage_t*)env, &_env)) < 0)
+  error = l4exec_bin_ftype_call(&exec_id, ds, (l4exec_envpage_t*)env, &_env);
+
+  if (_env.major == CORBA_NO_EXCEPTION &&
+      (error == 0 ||
+       error == -L4_EXEC_INTERPRETER ||
+       error == -L4_EXEC_BADFORMAT))
+    return error;
+
+  printf("Error %d (%s) checking file type at exec server\n",
+      error, l4env_errstr(error));
+  return -L4_EINVAL;
+}
+
+int
+exec_if_get_dsym(const char *symname, l4env_infopage_t *env, l4_addr_t *addr)
+{
+  int error;
+  CORBA_Environment _env = dice_default_environment;
+
+  if ((error =l4exec_bin_get_dsym_call(&exec_id, symname, 
+				       (long*)env, addr, &_env))
       || _env.major != CORBA_NO_EXCEPTION)
     {
-      printf("Error %d (%s) checking filetype at exec server\n",
-	     error, l4env_errstr(error));
+      printf("Error %d (%s) retrieving dynamic symbol from exec server\n",
+	    error, l4env_errstr(error));
       return -L4_EINVAL;
     }
 

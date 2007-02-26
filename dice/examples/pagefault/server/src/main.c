@@ -4,6 +4,8 @@
 #include <l4/rmgr/librmgr.h>
 #include <l4/thread/thread.h>
 #include <l4/util/util.h> // needed for l4_sleep
+#include <l4/util/reboot.h> // needed for reboot
+#include <l4/sys/syscalls.h> // needed for l4_myself
 
 #define STACK_PAGES 6
 #define STACK_PAGE_SIZE (4*2024)
@@ -12,19 +14,20 @@
 static char stack[STACK_SIZE_BYTES];
 static l4_umword_t stack_addr;
 
+char LOG_tag[9] = "fpage";
+
 static
 void test_server(void)
 {
   int i;
   long d;
   l4_umword_t addr;
-  LOG_init("client");
   // poke around stack, which should produce page faults
   for (i=0; i<STACK_PAGES; i++)
     {
       addr = stack_addr+i*STACK_PAGE_SIZE+STACK_PAGE_SIZE/2;
       d = *(long*)addr;
-      LOG("value at %x is %d", addr, d);
+      LOG("value at %x is %ld", addr, d);
     }
   LOG("client finished");
   // sleep forever
@@ -38,7 +41,7 @@ void test_client(CORBA_Object server)
   long status;
 
   handler_check_status_call(server, &status, &env);
-  LOG("returned %d", status);
+  LOG("returned %ld", status);
 }
 
 int main(int argc, char**argv)
@@ -47,7 +50,6 @@ int main(int argc, char**argv)
   l4_taskid_t clnt;
   l4_threadid_t l4srv;
   rmgr_init();
-  LOG_init("fpageS");
   // start pager thread, which runs handler-loop
   srv = l4thread_create(handler_server_loop, NULL, L4THREAD_CREATE_ASYNC);
   l4srv = l4thread_l4_id(srv);
@@ -67,7 +69,7 @@ int main(int argc, char**argv)
   test_client(&l4srv);
   
   l4_sleep(2000);
-  enter_kdebug("*#^pagefault finished");
+  l4util_reboot();
   // finished
   return 0;
 }

@@ -1,6 +1,6 @@
 PKGDIR		= ..
 L4DIR		?= $(PKGDIR)/../..
 
-TARGET		= clientlib serverlib
+TARGET		= clientlib serverlib fprov presenter_exec
 
 include $(L4DIR)/mk/subdir.mk

@@ -114,7 +114,7 @@ add_entry(const Stab_entry *se, const char *se_str)
 {
   const char *se_name = se_str + se->n_strx;
   int se_name_len = strlen(se_name);
-  unsigned se_name_idx;
+  unsigned se_name_idx = 0;
 
   if (se_name_len
       && ((se->n_type == 0x64) || (se->n_type == 0x84)))

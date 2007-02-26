@@ -1,0 +1,158 @@
+/*
+ * \brief   IPC for VERNER's sync component
+ * \date    2004-02-11
+ * \author  Carsten Rietzschel <cr7@os.inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2004  Carsten Rietzschel  <cr7@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the VERNER, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+
+import <l4/dsi/types.h>
+
+interface VideoSyncComponentIntern 
+{
+	/*****************************************************************************/
+	/**
+	* \brief Connnect Sync-Component
+	* 
+	* \param ctrl_ds already allocated control dataspace
+	* \param data_ds already allocated data dataspace
+	* \param component setup dsi_component_t with callback functions and socket_ref
+	*
+	* Attach dataspaces to Sync-Component. The DSI-Socket is created. 
+	* The work_thread also, but it's waiting for the start_signal.
+	*/
+	/*****************************************************************************/ 
+	long connect_UncompressedVideoIn([in] l4dm_dataspace_t ctrl_ds, [in] l4dm_dataspace_t data_ds, [out] dsi_socket_ref_t *socketref);
+	
+	/*****************************************************************************/
+	/**
+	* \brief Start Sync-Component's work thread
+	* 
+	* \param local local socket reference
+	* \param remote remote socket reference
+	*
+	* unlocks a mutex and let the work_thread run.
+	/*****************************************************************************/ 
+	long start_UncompressedVideoIn([in] dsi_socket_ref_t local, [in] dsi_socket_ref_t remote);
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Disconnect Sync-Component
+	 * 
+	 * \param close_socket_flag if !=0 - we close the DSI-socket 
+	 *
+	 * This function ensures work_thread is closed and nobody is working 
+	 * with DSI-sockets. Afterwards the DSI-socket is closed.
+	 * Note: Flag close_socket_flag should only set != 0 in callback function for
+	 * dsi_stream_close.
+	 */
+	/*****************************************************************************/ 
+	long disconnect_UncompressedVideoIn([in] l4_int32_t close_socket_flag);
+
+
+	/*****************************************************************************/
+	/**
+	* \brief Connnect Sync-Component
+	* 
+	* \param ctrl_ds already allocated control dataspace
+	* \param data_ds already allocated data dataspace
+	* \param component setup dsi_component_t with callback functions and socket_ref
+	*
+	* Attach dataspaces to Sync-Component. The DSI-Socket is created. 
+	* The work_thread also, but it's waiting for the start_signal.
+	*/
+	/*****************************************************************************/ 
+	long connect_UncompressedAudioIn([in] l4dm_dataspace_t ctrl_ds, [in] l4dm_dataspace_t data_ds, [out] dsi_socket_ref_t *socketref);
+	
+	/*****************************************************************************/
+	/**
+	* \brief Start Sync-Component's work thread
+	* 
+	* \param local local socket reference
+	* \param remote remote socket reference
+	*
+	* unlocks a mutex and let the work_thread run.
+	/*****************************************************************************/ 
+	long start_UncompressedAudioIn([in] dsi_socket_ref_t local, [in] dsi_socket_ref_t remote);
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Disconnect Sync-Component
+	 * 
+	 * \param close_socket_flag if !=0 - we close the DSI-socket 
+	 *
+	 * This function ensures work_thread is closed and nobody is working 
+	 * with DSI-sockets. Afterwards the DSI-socket is closed.
+	 * Note: Flag close_socket_flag should only set != 0 in callback function for
+	 * dsi_stream_close.
+	 */
+	/*****************************************************************************/ 
+	long disconnect_UncompressedAudioIn([in] l4_int32_t close_socket_flag);
+
+
+
+        /*****************************************************************************/
+        /**
+         * \brief Set period for RT-mode
+         *
+         * \param period  period in microseconds
+         * \param reservation_audio  reservation time for ONE audio chunk [microsecond]
+         * \param reservation_video  reservation time for ONE video frame [microsecond]
+         * \param verbose_preemption_ipc  show each recv. preeption ipc ?
+         */
+        /*****************************************************************************/
+        long setRTparams ([in] unsigned long period,
+                          [in] unsigned long reservation_audio,
+                          [in] unsigned long reservation_video,
+                          [in] int verbose_preemption_ipc);
+
+
+	/*****************************************************************************/
+	/**
+	 * \brief Get current playback position
+	 * 
+	 * \param position  playback position in millisec
+	 */
+	/*****************************************************************************/
+        long getPosition ([out] double *position);
+	
+	/*****************************************************************************/
+	/**
+ 	* \brief Set playback volume
+ 	* 
+ 	* \param left       Volume for left speaker (8bit)
+ 	* \param right      Volume for right speaker (8bit)
+ 	*
+ 	*/
+	/*****************************************************************************/
+	long setVolume ([in] l4_int32_t left, [in] l4_int32_t right);
+	
+	/*****************************************************************************/
+	/**
+ 	* \brief Set playback mode (Pause, Play, FF)
+ 	* 
+ 	* \param mode       Playback command (see arch_globals.h)
+ 	*
+	* To stop playback use  disconnect_Uncompressed[Video/Audio]In.
+ 	*/
+	/*****************************************************************************/
+	long setPlaybackMode ([in] l4_int32_t mode);
+	
+	/*****************************************************************************/
+	/**
+ 	* \brief Set effects plugin (for instance goom)
+ 	* 
+ 	* \param fx_plugin_id       id of effects plugin to use, <0 disables
+ 	*/
+	/*****************************************************************************/
+	long setFxPlugin ([in] l4_int32_t fx_plugin_id);
+
+};

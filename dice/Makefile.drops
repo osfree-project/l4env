@@ -12,18 +12,24 @@ $(error Please fix that error)
 endif
 
 # the ifeq prevents the warning regarding overiding rules for Makefile
-ifeq ($(wildcard Makefile),)
-Makefile:
+ifeq ($(wildcard GNUmakefile),)
+GNUmakefile:
 	@echo "Calling bootstrap..."
 	@./bootstrap
 	@echo "Calling configure..."
-	@CC=$(HOST_CC) CXX=$(HOST_CXX) ./configure \
+	@CC="$(HOST_CC)" CXX="$(HOST_CXX)" ./configure \
 	  $(if $(DROPS_STDDIR),--prefix=$(DROPS_STDDIR) \
 	  --bindir=$(DROPS_STDDIR)/tool/bin --mandir=$(DROPS_STDDIR)/tool/man)
 endif
 
-all:: Makefile
+all:: GNUmakefile
 	$(MAKE) $@
+
+clean:: GNUmakefile
+	$(MAKE) $@
+
+cleanall:: GNUmakefile
+	$(MAKE) clean
 
 install:
 	$(MAKE) install

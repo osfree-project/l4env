@@ -1,0 +1,8 @@
+- also support SOCK_DGRAM (implement sendto(), recvfrom(), ...)
+- address buffer for bind is quite small, define new bind function in net_io.idl?
+- there is no representation in the file system yet (no special file of type 'socket')
+- getsockopt(), setsockopt() (for SO_LINGER)
+- make shutdown(), close() honor SO_LINGER correctly
+- async connect should have a timeout
+- currently receive buffers need to be copied, if some_func_component() sets
+  *_dice_reply = DICE_NOREPLY for asynchronous operation

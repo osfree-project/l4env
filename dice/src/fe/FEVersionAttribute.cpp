@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEVersionAttribute.cpp
- *	\brief	contains the implementation of the class CFEVersionAttribute
+ *  \file   dice/src/fe/FEVersionAttribute.cpp
+ *  \brief  contains the implementation of the class CFEVersionAttribute
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   01/31/2001
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,34 +22,28 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
 #include "fe/FEVersionAttribute.h"
 #include "File.h"
 
-IMPLEMENT_DYNAMIC(CFEVersionAttribute) CFEVersionAttribute::CFEVersionAttribute(int nMajor, int nMinor):CFEAttribute
+CFEVersionAttribute::CFEVersionAttribute(int nMajor, int nMinor):CFEAttribute
     (ATTR_VERSION)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEVersionAttribute, CFEAttribute);
-
     m_nMajor = nMajor;
     m_nMinor = nMinor;
 }
 
 CFEVersionAttribute::CFEVersionAttribute(version_t version):CFEAttribute(ATTR_VERSION)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEVersionAttribute, CFEAttribute);
-
     m_nMajor = version.nMajor;
     m_nMinor = version.nMinor;
 }
 
 CFEVersionAttribute::CFEVersionAttribute(CFEVersionAttribute & src):CFEAttribute(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEVersionAttribute, CFEAttribute);
-
     m_nMajor = src.m_nMajor;
     m_nMinor = src.m_nMinor;
 }
@@ -60,7 +55,7 @@ CFEVersionAttribute::~CFEVersionAttribute()
 }
 
 /** retrieves the version from the attribute
- *	\return a version_t structure containing the version numbers
+ *  \return a version_t structure containing the version numbers
  */
 version_t CFEVersionAttribute::GetVersion()
 {
@@ -71,8 +66,8 @@ version_t CFEVersionAttribute::GetVersion()
 }
 
 /** retrieves the version from the attribute
- *	\param major will receive the major version number
- *	\param minor will receive the minor version number
+ *  \param major will receive the major version number
+ *  \param minor will receive the minor version number
  */
 void CFEVersionAttribute::GetVersion(int &major, int &minor)
 {
@@ -81,7 +76,7 @@ void CFEVersionAttribute::GetVersion(int &major, int &minor)
 }
 
 /** creates a copy of this object
- *	\return a copy of this object
+ *  \return a copy of this object
  */
 CObject *CFEVersionAttribute::Clone()
 {
@@ -89,15 +84,15 @@ CObject *CFEVersionAttribute::Clone()
 }
 
 /** serialize this object
- *	\param pFile the file to serialize to/from
+ *  \param pFile the file to serialize to/from
  */
 void CFEVersionAttribute::Serialize(CFile * pFile)
 {
     if (pFile->IsStoring())
       {
-	  //if ((m_nMajor == 0) && (m_nMinor == 0))
-	  //      return;
-	  pFile->PrintIndent("<attribute>version(%d.%d)</attribute>\n",
-			     m_nMajor, m_nMinor);
+      //if ((m_nMajor == 0) && (m_nMinor == 0))
+      //      return;
+      pFile->PrintIndent("<attribute>version(%d.%d)</attribute>\n",
+                 m_nMajor, m_nMinor);
       }
 }

@@ -21,17 +21,17 @@ public:
   inline int alsoalreadythere();
 
 public:  
-#line 47 "parser.cpp"
+#line 52 "parser.cpp"
   // Try a constructor with weird syntax
   
   Foo();
 
 private:  
-#line 39 "parser.cpp"
+#line 44 "parser.cpp"
   // And add a Foo function
   void func();
   
-#line 43 "parser.cpp"
+#line 48 "parser.cpp"
   // Try default arguments
   void bar(int i = 15, int j = somefunc(0, somefunc(0, 0)));
 };
@@ -63,7 +63,7 @@ somefunc(unsigned (*func1)(),
 //
 
 
-#line 57 "parser.cpp"
+#line 62 "parser.cpp"
 
 inline int 
 Foo::alsoalreadythere()

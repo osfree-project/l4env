@@ -1,38 +1,43 @@
 INTERFACE:
 
 /**
- * @brief Encapsulation of the platforms interrupt controller
+ * Encapsulation of the platforms interrupt controller
  */
 class Pic
 {
 public:
   /**
-   * @brief The type holding the saved Pic state.
+   * The type holding the saved Pic state.
    */
   typedef unsigned Status;
 
   /**
-   * @brief Static initalization of the interrupt controller
+   * Static initalization of the interrupt controller
    */
   static void init();
 
   /**
-   * @brief Disable the given irq.
+   * Disable the given irq.
    */
   static void disable( unsigned irqnum );
 
   /**
-   * @brief Enable the given irq.
+   * Enable the given irq.
    */
-  static void enable ( unsigned irqnum );
+  static void enable(unsigned irqnum, unsigned prio=0);
 
   /**
-   * @brief Acknowledge the given IRQ. 
+   * Acknowledge the given IRQ. 
    */
   static void acknowledge( unsigned irq );
   
   /**
-   * @brief Disable the given irq (without lock protection).
+   * Block the given IRQ til the next ACK. 
+   */
+  static void block(unsigned irq);
+
+  /**
+   * Disable the given irq (without lock protection).
    * @pre The Cpu_lock must be locked (cli'ed)
    *
    * This function must be implemented in the 
@@ -41,29 +46,38 @@ public:
   static void disable_locked( unsigned irqnum );
 
   /**
-   * @brief Enable the given irq (without lock protection).
+   * Enable the given irq (without lock protection).
    * @pre The Cpu_lock must be locked (cli'ed)
    *
    * This function must be implemented in the 
    * architecture specific part (e.g. pic-i8259.cpp).
    */
-  static void enable_locked ( unsigned irqnum );
+  static void enable_locked(unsigned irqnum, unsigned prio = 0);
 
   /**
-   * @brief Disable all IRQ's and and return the old Pic state.
+   * Temporarily block the IRQ til the next ACK. 
+   * @pre The Cpu_lock must be locked (cli'ed)
+   *
+   * This function must be implemented in the 
+   * architecture specific part (e.g. pic-i8259.cpp).
+   */
+  static void block_locked(unsigned irqnum);
+
+  /**
+   * Disable all IRQ's and and return the old Pic state.
    * @pre Must be done with disabled interrupts. 
    */
   static Status disable_all_save();
 
   /**
-   * @brief Restore the IRQ's to the saved state s.
+   * Restore the IRQ's to the saved state s.
    * @pre Must be done with disabled interrupts.
    * @param s, the saved state.
    */
   static void restore_all( Status s );
 
   /**
-   * @brief Acknowledge the given IRQ.
+   * Acknowledge the given IRQ.
    * @pre The Cpu_lock must be locked (cli'ed).
    * @param irq, the irq to acknowledge.
    *
@@ -71,16 +85,12 @@ public:
    * architecture specific part (e.g. pic-i8259.cpp).
    */
   static void acknowledge_locked( unsigned irq );
-
 };
 
 
 IMPLEMENTATION:
 
 #include "processor.h"
-//#include "static_init.h"
-
-//STATIC_INITIALIZE_P(Pic,PIC_INIT_PRIO);
 
 // 
 // Save implementations of disable, enable, and acknowledge.
@@ -96,10 +106,10 @@ void Pic::disable( unsigned irqnum )
 }
 
 IMPLEMENT inline NEEDS["processor.h"]
-void Pic::enable( unsigned irqnum )
+void Pic::enable(unsigned irqnum, unsigned prio)
 {
   Proc::Status s = Proc::cli_save();
-  enable_locked( irqnum );
+  enable_locked(irqnum, prio);
   Proc::sti_restore(s);
 }
 
@@ -110,3 +120,12 @@ void Pic::acknowledge( unsigned irq )
   acknowledge_locked(irq);
   Proc::sti_restore(s);
 }
+
+IMPLEMENT inline NEEDS["processor.h"]
+void Pic::block(unsigned irq)
+{
+  Proc::Status s = Proc::cli_save();
+  block_locked(irq);
+  Proc::sti_restore(s);
+}
+

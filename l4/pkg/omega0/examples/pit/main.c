@@ -7,21 +7,11 @@
 #include <l4/util/rdtsc.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/sys/ipc.h>
+#include "config.h"
+#include "pit.h"
+#include "pic.h"
 
-/* define USE_OMEGA0 if you want to use omega0-server. Dont define it to
-   compare against native implementation.
-*/
-#define USE_OMEGA0
-
-#define MHZ 100000000	// 1Mio*100
-
-extern void outb(int port, unsigned char val);
-extern unsigned char inb(int port);
-void pit_set_freq(int);
-int attach(int, int*);
-void pit(int freq, int time);
-
-int attach(int irq, int*handle){
+static int attach(int irq, int*handle){
 #ifdef USE_OMEGA0
   omega0_irqdesc_t desc;
 
@@ -57,7 +47,7 @@ int attach(int irq, int*handle){
   l4_make_taskid_from_irq(irq, &irq_th);
   
   error = l4_ipc_receive(irq_th, 0, &dummy, &dummy,
-                              L4_IPC_TIMEOUT(0,1,0,1,0,0), &result);
+                         L4_IPC_BOTH_TIMEOUT_0, &result);
 
   if(error!=L4_IPC_RETIMEOUT) return 3;
   *handle = irq+1;
@@ -66,8 +56,7 @@ int attach(int irq, int*handle){
 #endif
 }
 
-int detach(int irq);
-int detach(int irq){
+static int detach(int irq){
 #ifdef USE_OMEGA0
   omega0_irqdesc_t desc;
   int err;
@@ -85,8 +74,7 @@ int detach(int irq){
 #endif
 }
 
-int irq_request(int handle, omega0_request_t request);
-int irq_request(int handle, omega0_request_t request){
+static int irq_request(int handle, omega0_request_t request){
 #ifdef USE_OMEGA0
   return omega0_request(handle, request);
 
@@ -115,19 +103,18 @@ int irq_request(int handle, omega0_request_t request){
 #endif
 }
 
-void pit(int freq, int time){
+static void pit(int freq, int time){
   int handle;
   omega0_request_t request;
   int err;
   l4_umword_t count = 0;
-  unsigned long long until;
+  l4_cpu_time_t until;
 
   if((err=attach(0, &handle))!=0){
     LOGl("error %d attaching to irq %x", err, 0);
     enter_kdebug("!");
     return;
   }
-  LOGl("got irq 0");
   
   pit_set_freq(freq);
   request.s.unmask = 1;
@@ -136,7 +123,7 @@ void pit(int freq, int time){
   request.s.wait = 1;
   request.s.param = 0+1;
   
-  until = l4_rdtsc() + MHZ*time;	// time secs
+  until = l4_rdtsc() + l4_ns_to_tsc(time*1000*1000*1000LL);
   
   for(count=0;;count++){
     err = irq_request(handle, request);
@@ -152,34 +139,22 @@ void pit(int freq, int time){
     
     if( l4_rdtsc() >= until) break;
   }
-  LOG("in %d secs I got %u irqs, freq was %u", time, count, freq);
+  LOG("in %d secs I got %u/%u irqs (%d%%), freq was %u",
+      time, count, freq*time, count*100/(freq*time), freq);
   detach(0);
-}
-
-void start_thread(int thread, void*function, void*stack, int port, int irq);
-void start_thread(int thread, void*function, void*stack, int port, int irq){
-  l4_umword_t dummy;
-  l4_threadid_t pager=L4_INVALID_ID, preempter=L4_INVALID_ID,
-                client;
-  l4_umword_t *esp=(l4_umword_t*)stack;
-  
-  l4_thread_ex_regs(l4_myself(), -1, -1, &preempter, &pager,
-                    &dummy, &dummy, &dummy);
-  client = l4_myself();
-  client.id.lthread = thread;
-  
-  *--esp = irq;
-  *--esp = port;
-  *--esp = 0;
-  l4_thread_ex_regs(client, (l4_umword_t)function, (l4_umword_t)esp, 
-                    &preempter, &pager,
-                    &dummy, &dummy, &dummy);
 }
 
 int main(int argc, char*argv[]){
   rmgr_init();
-  LOG_init("pit");
-  
+  if(l4_tsc_init(L4_TSC_INIT_KERNEL)==0){
+      LOG("Error getting TSC/CPU scalers from kernel.");
+      return 1;
+  }
+#ifdef USE_OMEGA0
+  LOG("Using Omeag0 server.");
+#else
+  LOG("Programmin interrupts myself.");
+#endif
   
   pit(20000, 2);
   pit(50000, 2);

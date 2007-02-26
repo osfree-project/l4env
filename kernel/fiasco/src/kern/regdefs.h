@@ -81,15 +81,26 @@
 #define FEAT_SS		0x08000000	/* Self Snoop			*/
 #define FEAT_HTT	0x10000000	/* Hyper-Threading Technology	*/
 #define FEAT_TM		0x20000000	/* Thermal Monitor		*/
-#define FEAT_SBF	0x80000000	/* Signal Break on FERR		*/
+#define FEAT_PBE	0x80000000	/* Pending Break Enable		*/
 
-/* CPU Extended Feature Flags */
-#define FEATX_PNI	0x00000001	/* Prescott New Instructions	*/
+/* CPU Extended Feature Flags (AMD) */
+#define FEATA_SYSCALL	0x00000800	/* Syscall/Sysret Present	*/
+#define FEATA_MP	0x00080000	/* MP Capable			*/
+#define FEATA_NX	0x00100000	/* No-Execute Page Protection	*/
+#define FEATA_MMXEXT	0x00400000	/* AMD Extensions to MMX	*/
+#define FEATA_LM	0x20000000	/* Long Mode			*/
+#define FEATA_3DNOWEXT	0x40000000	/* AMD 3DNow! extensions	*/
+#define FEATA_PBE	0x80000000	/* 3DNow!			*/
+
+/* CPU Extended Feature Flags (Intel) */
+#define FEATX_SSE3	0x00000001	/* SSE3				*/
 #define FEATX_MONITOR	0x00000008	/* MONITOR/MWAIT Support	*/
 #define FEATX_DSCPL	0x00000010	/* CPL Qualified Debug Store	*/
 #define FEATX_EST	0x00000080	/* Enhanced SpeedStep Techn.	*/
 #define FEATX_TM2	0x00000100	/* Thermal Monitor 2		*/
 #define FEATX_CID	0x00000400	/* L1 Context ID (adapt/shared)	*/
+#define FEATX_CX16	0x00002000	/* CMPXCHG16B Instruction	*/
+#define FEATX_XTPR	0x00004000	/* Disable Task Priority Msgs	*/
 
 /* Page Fault Error Codes */
 /* PF_ERR_REMTADDR and PF_ERR_USERADDR are UX-emulation only */
@@ -104,6 +115,17 @@
 #define SYSENTER_CS_MSR		0x174	/* Kernel Code Segment		*/
 #define SYSENTER_ESP_MSR	0x175	/* Kernel Syscall Entry		*/
 #define SYSENTER_EIP_MSR	0x176	/* Kernel Stack Pointer		*/
+
+/* AMD64 Specific Registers */
+#define EFER_MSR	0xc0000080	/* Extended Feature Enable Register */
+#define STAR_MSR	0xc0000081	/* CS and SS for Syscall/Sysret */
+#define LSTAR_MSR	0xc0000082	/* EIP for Syscall (64Bit-Mode)	*/
+#define CTAR_MSR	0xc0000083	/* EIP for Syscall (Comp-Mode)  */
+#define SFMASK_MSR	0xc0000084	/* RFLAGS for Syscall		*/
+
+#define EFER_SCE_FLAG	0x00000001	/* Syscall Enable Flag		*/
+#define EFER_LME_FLAG	0x00000100	/* Long Mode Enable Flag	*/
+#define EFER_NXE_FLAG	0x00000800	/* Not Executable Flag		*/
 
 #define CPU_FAMILY_386          3
 #define CPU_FAMILY_486          4

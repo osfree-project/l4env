@@ -1,0 +1,24 @@
+L4VFS is a collection of interfaces, servers, and client and server
+libraries.  The name L4VFS is an abbreviation of "L4 virtual file
+system".  It is built around a name_server, which helps when dealing
+with multiple objects in a hierarchical namespace.
+
+
+L4VFS can be used to more easily port posix applications to L4, as the
+client libs provide posix-like functions, that is, the client libs act
+as an libc backend.
+
+Please also look into the documentation in 'l4/pkg/l4vfs/doc' and in
+'l4/pkg/dietlibc/'.
+
+
+FAQ
+===
+
+* I think something is wrong with open(), create(), etc.  Files are
+  opened with wrong access modi or not at all.  What gives?
+
+  In case you are using a mixed setup of oskit-libc/dietlibc servers
+  and clients please make sure you do use the same definition of
+  constants like (O_RDONLY, ...) or you must provide a wrapper
+  (oskit defines O_RDONLY to 1, nearly all other libcs to 0).

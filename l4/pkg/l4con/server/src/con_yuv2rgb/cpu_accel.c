@@ -19,7 +19,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "stdint.h"
+#ifdef USE_OSKIT
+#include "stdint_oskit.h"
+#else
+#include <stdint.h>
+#endif
 #include "mm_accel.h"
 
 static uint32_t x86_accel (void)

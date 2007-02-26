@@ -1,0 +1,43 @@
+Proxygon - an implementation of the DROPS console interface to be used with DOpE
+
+This program enables you to execute arbitrary console programs under DOpE
+without any modifications. It provides the identical interface as the original
+console including the pSLIM protocol.
+
+Anyhow, only a subset of the original console features is provided. Proxygen
+will be enhanced by features on users demand.
+
+
+Supported features
+------------------
+
+* Multiple virtual consoles
+* 16bit color mode
+* pSLIM protocol
+  * fill      - drawing a filled rectangle
+  * bmap      - drawing a bitmap with fore- and background
+  * set       - drawing a color image
+  * puts      - drawing a string
+  * puts_attr - drawing a string with color attributes
+* Textual input
+* Support for the Event server
+  (start Proxygon with the command line option --events)
+* Importing a virtual frame buffer via dataspace
+
+
+Unsupported features
+--------------------
+
+* YUV support
+* Mouse support
+* Mapping of physical frame buffer
+
+
+Tested software
+---------------
+
+* 'con_demo1', 'con_demo2'
+* contxt-based applications such as 'run' and 'con_txtdemo'
+* 'L4Linux' with the original 'linux_stub' from the console
+* l4fb driver for Con (with disabled DOpE support)
+

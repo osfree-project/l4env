@@ -15,12 +15,16 @@
 
 #define LINKER_INTERNAL		100		// linker internal use
 #define MAX_INIT_PRIO		DEPENDS_ON(LINKER_INTERNAL)
-#define STARTUP_INIT_PRIO       DEPENDS_ON(MAX_INIT_PRIO)
+#define STARTUP1_INIT_PRIO      DEPENDS_ON(MAX_INIT_PRIO)
+#define BOOT_CONSOLE_INIT_PRIO  DEPENDS_ON(STARTUP1_INIT_PRIO)
+#define GDB_INIT_PRIO           DEPENDS_ON(BOOT_CONSOLE_INIT_PRIO)
+#define UART_INIT_PRIO		DEPENDS_ON(BOOT_CONSOLE_INIT_PRIO)
+#define STARTUP_INIT_PRIO       DEPENDS_ON(GDB_INIT_PRIO)
 #define PERF_CNT_INIT_PRIO	DEPENDS_ON(STARTUP_INIT_PRIO)
 #define JDB_CATEGORY_INIT_PRIO	DEPENDS_ON(STARTUP_INIT_PRIO)
 #define JDB_MODULE_INIT_PRIO	DEPENDS_ON(JDB_CATEGORY_INIT_PRIO)
 
-#define UART_INIT_PRIO		DEPENDS_ON(STARTUP_INIT_PRIO)
+#define WATCHDOG_INIT		DEPENDS_ON(PERF_CNT_INIT_PRIO)
 #define KDB_INIT_PRIO		DEPENDS_ON(JDB_MODULE_INIT_PRIO)
 #define JDB_INIT_PRIO		DEPENDS_ON(KDB_INIT_PRIO)
 
@@ -95,6 +99,16 @@ static static_init_##va __static_construction_of_##va##__ \
 /// mark class c to be statically initialized via its init function
 #define STATIC_INITIALIZE(c) \
   __STATIC_INITIALIZER(c::init, class_##c)
+
+/** mark class c to be statically initialized via its init 
+ *  function and with priority p
+ */
+#define STATIC_INITIALIZEX_P(c,func,p) \
+  __STATIC_INITIALIZER_P(c::func, class_##c##_##func,p)
+
+/// mark class c to be statically initialized via its init function
+#define STATIC_INITIALIZEX(c,func) \
+  __STATIC_INITIALIZER(c::func, class_##c##_##func)
 //@}
 
 

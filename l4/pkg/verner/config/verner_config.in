@@ -1,0 +1,319 @@
+# -*- Shell-script -*-
+
+mainmenu_name "VERNER configuration"
+
+comment 'General options'
+
+
+mainmenu_option next_comment
+comment 'Realtime support (EXPERIMENTAL)'
+comment 'All values depend on the system/video VERNER is running (on)! So take care :)'
+bool 'Build with Realtime-Support' BUILD_RT_SUPPORT
+if [ "$BUILD_RT_SUPPORT" = "y" ]; then
+  bool 'Use cpu_reserve server for CPU reservation' RT_USE_CPU_RESERVE
+  comment 'Default period lenght for worker threads'
+  int 'default period (microsec)' RT_DEFAULT_PERIOD 
+  comment 'Clock drift between soundcard and system-clock in percent. Value smaller 100 means audio faster than pc.'
+  int 'Clock drift (percent)' RT_CLOCK_FACTOR
+  comment 'Demuxer'
+  int 'video: priority (0-254)' RT_DEMUXER_VIDEO_PRIORITY
+  int '  execution time (microsec)' RT_DEMUXER_VIDEO_EXEC_TIME
+  int 'audio: priority (0-254)' RT_DEMUXER_AUDIO_PRIORITY
+  int '  execution time (microsec)' RT_DEMUXER_AUDIO_EXEC_TIME
+  comment 'Core (video)'
+  int '  priority (0-254)' RT_CORE_VIDEO_PRIORITY
+  int '  execution time - video (microsec)' RT_CORE_VIDEO_EXEC_TIME
+  int '  postproc priority (0-254)' RT_CORE_VIDEO_POSTPROC_PRIORITY
+  int '  execution time - postproc (microsec)' RT_CORE_VIDEO_POSTPROC_EXEC_TIME
+  comment '-- optional parts --'
+  bool '  use optional parts (postprocessing!)' RT_USE_OPTIONAL
+  if [ "$RT_USE_OPTIONAL" = "y" ] ; then
+    choice 'one optional part for ALL or EACH frame' \
+      "ALL  RT_USE_OPTIONAL_FOR_ALL_FRAMES \
+       EACH RT_USE_OPTIONAL_FOR_EACH_FRAME" ALL
+  fi
+  comment '-- QAP --'
+  int '  threshold for number of preemption IPCs allowed to increase QAP (in percent)' RT_CORE_VIDEO_QAP_ALLOWED_PREEMPTIONS_MIN
+  int '  threshold for number of preemption IPCs above which QAP is decreased (in percent)' RT_CORE_VIDEO_QAP_ALLOWED_PREEMPTIONS_MAX
+  comment 'Core (audio)'
+  int '  priority (0-254)' RT_CORE_AUDIO_PRIORITY
+  int '  execution time - audio (microsec)' RT_CORE_AUDIO_EXEC_TIME
+  comment 'Sync'
+  int 'video: priority (0-254)' RT_SYNC_VIDEO_PRIORITY
+  int '  execution time - video (microsec)' RT_SYNC_VIDEO_EXEC_TIME
+  bool '  synchronize with DOpE' RT_SYNC_WITH_DOPE
+  int 'audio: priority (0-254)' RT_SYNC_AUDIO_PRIORITY
+  int '  execution time (microsec)' RT_SYNC_AUDIO_EXEC_TIME
+fi
+bool 'Support for decoding time prediction' PREDICT_DECODING_TIME
+if [ "$PREDICT_DECODING_TIME" = "y" ]; then
+  bool '  Display prediction quality using rt_mon' PREDICT_DECODING_TIME_RTMON
+fi
+endmenu
+
+mainmenu_option next_comment
+comment 'DSI'
+comment 'frames/chunks fitting into buffer between two components'
+int 'PACKETS_IN_BUFFER' PACKETS_IN_BUFFER '5'
+endmenu
+
+mainmenu_option next_comment
+comment 'File-I/O'
+comment 'enable at least one (virtual)filesystem'
+bool 'enable grubfs support (grub://)' VDEMUXER_BUILD_GRUBFS 
+bool 'enable ext2fs support (ext2fs://)' VDEMUXER_BUILD_EXT2FS
+bool 'enable rtns support (rtns://)' VDEMUXER_BUILD_RTNETFS
+string 'default URL(w/o ://)' VDEMUXER_DEFAULT_URL 'grub'
+endmenu
+
+mainmenu_option next_comment
+comment 'Container'
+comment 'enable supported container formats, not codecs!'
+bool 'Avilib' VDEMUXER_BUILD_AVILIB
+bool 'Ogmlib' VDEMUXER_BUILD_OGMLIB
+bool 'MPEG-1/2 (not fully functional)' VDEMUXER_BUILD_MPEG
+bool 'MP3 Audio' VDEMUXER_BUILD_MP3
+bool 'Libavformat (unused)' VDEMUXER_BUILD_LIBAVFORMAT
+endmenu
+
+mainmenu_option next_comment
+comment 'Codecs'
+comment 'Do not violate patents! Inform yourself before using them!'
+comment 'Only one XviD Codec is allowed at once!'
+bool 'XviD 0.9.1 (MPEG-4)' BUILD_xvid09
+bool 'XviD 1.0.x (MPEG-4)' BUILD_xvid10
+bool 'Libmpeg2 (MPEG-1/2)' BUILD_libmpeg2
+bool 'Libavcodec (many for audio and video))' BUILD_libavcodec
+if [ "$BUILD_libavcodec" = "y" ] ; then
+    bool '  encoder (no plugins avail)' BUILD_libavcodec_encoder
+    bool '  decoder' BUILD_libavcodec_decoder
+    bool '  risky (read help!)' BUILD_libavcodec_risky
+fi
+bool 'Mpg123 (mp3 decoder)' BUILD_mpg123
+bool 'LAME (mp3 encoder)' BUILD_lame
+endmenu
+
+
+mainmenu_option next_comment
+comment 'Effects'
+bool 'GOOM plugin (needs SDL!)' BUILD_goom
+endmenu
+
+mainmenu_option next_comment
+comment 'Video output'
+comment 'default video out is DOpE'
+bool 'support CON-output beside DOpE (autodetect)'  VSYNC_BUILD_WITH_CON '0'
+endmenu
+
+mainmenu_option next_comment
+comment 'Audio output'
+comment 'enable at least one or you won''t see/hear anyhing.'
+bool 'no audio support'  VSYNC_NO_AOUT '1'
+bool 'via82cxxx support'  VSYNC_VIA_AOUT '1'
+bool 'es1371 support'  VSYNC_ES1371_AOUT '1'
+bool 'i810 support'  VSYNC_I810_AOUT '1'
+endmenu
+
+
+comment 'component specific'
+
+mainmenu_option next_comment
+comment 'DOpE Controller component'
+int 'heap size (MB)' VCONTROL_HEAP_SIZE '1'
+endmenu
+
+mainmenu_option next_comment
+comment 'Remote Controller component'
+bool 'build (depends on comquad package)' VCONREMOTE_BUILD '1'
+endmenu
+
+mainmenu_option next_comment
+comment 'Demuxer component'
+int 'heap size (MB)' VDEMUXER_HEAP_SIZE '4'
+comment 'to enable debugging for demuxer, see Debug menu'
+endmenu
+
+mainmenu_option next_comment
+comment 'Audio core component'
+int 'heap size (MB)' VCORE_AUDIO_HEAP_SIZE '3'
+comment 'to enable debugging for audio core, see Debug menu'
+endmenu
+
+mainmenu_option next_comment
+comment 'Video core component'
+int 'heap size (MB)' VCORE_VIDEO_HEAP_SIZE '6'
+bool 'enable postproc engine' VCORE_VIDEO_ENABLE_POSTPROC_ENGINE '1'
+comment 'default filter settings (Q1=lowest+fastest and Q3=highest quality, but slowest)'
+string 'Q1' VCORE_VIDEO_DEFAULT_PP_Q1 'h1:a,v1:a'
+string 'Q2' VCORE_VIDEO_DEFAULT_PP_Q2 'fa'
+string 'Q3' VCORE_VIDEO_DEFAULT_PP_Q3 'de'
+bool 'QAP'  VCORE_VIDEO_ENABLE_QAP '1'
+int 'check quality level every n-th frame' VCORE_VIDEO_QAP_CHECKPOINT '50'
+bool 'take always libpostprocess even codec supports QAP' VCORE_VIDEO_FORCE_LIBPOSTPROC
+bool 'stamp if postprocessing was successfull' VCORE_VIDEO_STAMP_POSTPROC
+comment 'to enable debugging for video core, see Debug menu'
+endmenu
+
+mainmenu_option next_comment
+comment 'Sync component'
+int 'heap size (MB)' VSYNC_HEAP_SIZE '3'
+comment 'synchronization'
+int 'hard drop frames' VSYNC_HARD_DROP_FRAMES '2'
+int 'check sync every n-th frame' VSYNC_CHECK_NTH_FRAME '25'
+int 'notify controller when A/V-async > xx msec (unused)' VSYNC_NOTIFY_CTRL_MSEC '0'
+comment 'for OSS drivers'
+int 'vmalloc size (bytes)' VSYNC_VMEM_SIZE '65536'
+int 'kmalloc size (bytes)' VSYNC_KMEM_SIZE '262144'
+comment
+comment 'to enable debugging for synchronizer, see Debug menu'
+endmenu
+
+mainmenu_option next_comment
+comment 'Muxer component (unused)'
+int 'heap size (MB)' MUXER_HEAP_SIZE '6'
+string 'audio target format' VMUXER_AUDIO_TARGET_FORMAT 'AUD_FMT_MP3'
+string 'audio target FOURCC' VMUXER_AUDIO_TARGET_FOURCC '0055'
+string 'video target format' VMUXER_VIDEO_TARGET_FORMAT 'VID_FMT_MPEG4'
+string 'video target FOURCC' VMUXER_VIDEO_TARGET_FOURCC 'XVID'
+string 'video target colorspace' VMUXER_VIDEO_TARGET_COLORSPACE 'VID_YV12'
+bool 'try to compensate framedrops' VMUXER_COMPENSATE_FRAMEDROPS '0'
+endmenu
+
+comment 'Developers'
+
+mainmenu_option next_comment
+comment 'Relocation adresses'
+string 'Demuxer'    VDEMUXER_RELOC  '0x00490000'
+string 'Core-Video' VCORE_VIDEO_RELOC '0x01dd0000'
+string 'Core-Audio' VCORE_AUDIO_RELOC '0x00b56000'
+string 'Controller' VCONTROL_RELOC '0x00433000'
+string 'Sync'       VSYNC_RELOC '0x0033f100'
+string 'Muxer'      VMUXER_RELOC '0x0073f100'
+string 'Webcam'     VWEBCAM_RELOC '0x00800000'
+endmenu
+
+mainmenu_option next_comment
+comment 'Benchmarks'
+comment '- Uses rt_mon. Needs rt_mon_coord server running.'
+comment '- A/V-Sync is NOT disabled while benchmarking!'
+comment 'rt_mon options'
+
+choice '  RT_MON time source' \
+    "fiasco_get_cputime RT_MON_PROCESS \
+     TSC                RT_MON_TSC"       TSC
+comment 'Demuxer component'
+bool 'video demux'  VDEMUXER_VIDEO_BENCHMARK
+if [ "$VDEMUXER_VIDEO_BENCHMARK" = "y" ]; then
+  int 'low'           VDEMUXER_VIDEO_BENCHMARK_LOW
+  int 'high'          VDEMUXER_VIDEO_BENCHMARK_HIGH
+  int 'bins'          VDEMUXER_VIDEO_BENCHMARK_BINS
+fi
+bool 'audio demux'  VDEMUXER_AUDIO_BENCHMARK
+if [ "$VDEMUXER_AUDIO_BENCHMARK" = "y" ]; then
+  int 'low'           VDEMUXER_AUDIO_BENCHMARK_LOW
+  int 'high'          VDEMUXER_AUDIO_BENCHMARK_HIGH
+  int 'bins'          VDEMUXER_AUDIO_BENCHMARK_BINS
+fi
+comment 'Core component'
+bool 'video decoding' VCORE_VIDEO_BENCHMARK
+if [ "$VCORE_VIDEO_BENCHMARK" = "y" ]; then
+  int 'low'           VCORE_VIDEO_BENCHMARK_LOW
+  int 'high'          VCORE_VIDEO_BENCHMARK_HIGH
+  int 'bins'          VCORE_VIDEO_BENCHMARK_BINS
+  int 'low'           VCORE_MANDATORY_BENCHMARK_LOW
+  int 'high'          VCORE_MANDATORY_BENCHMARK_HIGH
+  int 'bins'          VCORE_MANDATORY_BENCHMARK_BINS
+  int 'low'           VCORE_OPTIONAL_BENCHMARK_LOW
+  int 'high'          VCORE_OPTIONAL_BENCHMARK_HIGH
+  int 'bins'          VCORE_OPTIONAL_BENCHMARK_BINS
+fi
+bool 'audio coding' VCORE_AUDIO_BENCHMARK
+if [ "$VCORE_AUDIO_BENCHMARK" = "y" ]; then
+  int 'low'           VCORE_AUDIO_BENCHMARK_LOW
+  int 'high'          VCORE_AUDIO_BENCHMARK_HIGH
+  int 'bins'          VCORE_AUDIO_BENCHMARK_BINS
+fi
+comment 'Sync component'
+bool 'video output' VSYNC_VIDEO_BENCHMARK
+if [ "$VSYNC_VIDEO_BENCHMARK" = "y" ]; then
+  int 'low'           VSYNC_VIDEO_BENCHMARK_LOW
+  int 'high'          VSYNC_VIDEO_BENCHMARK_HIGH
+  int 'bins'          VSYNC_VIDEO_BENCHMARK_BINS
+fi
+bool 'audio output' VSYNC_AUDIO_BENCHMARK
+if [ "$VSYNC_AUDIO_BENCHMARK" = "y" ]; then
+  int 'low'           VSYNC_AUDIO_BENCHMARK_LOW
+  int 'high'          VSYNC_AUDIO_BENCHMARK_HIGH
+  int 'bins'          VSYNC_AUDIO_BENCHMARK_BINS
+fi
+bool 'work-loop roundtrip and output times' VSYNC_INTER_INTRA_BENCHMARK
+bool 'difference between calculated and real wait time' VSYNC_WAIT_TIME_BENCHMARK
+comment 'DSI filllevel'
+bool 'monitor DSI fill-level' RTMON_DSI_BENCHMARK
+endmenu
+
+mainmenu_option next_comment
+comment 'Debug'
+bool 'realtime beahviour' DEBUG_RT
+if [ "$DEBUG_RT" = "y" ]; then
+  bool '  initialization' DEBUG_RT_INIT
+  bool '  preempter' DEBUG_RT_PREEMPT
+  bool '  next-period calls' DEBUG_RT_NEXT_PERIOD
+  bool '  next-reservation calls' DEBUG_RT_NEXT_RESERV
+  bool '  sleeps' DEBUG_RT_SLEEP
+else
+  define_bool DEBUG_RT_INIT "n"
+  define_bool DEBUG_RT_PREEMPT "n"
+  define_bool DEBUG_RT_NEXT_PERIOD "n"
+  define_bool DEBUG_RT_NEXT_RESERV "n"
+  define_bool DEBUG_RT_SLEEP "n"
+fi
+bool 'debug single components' DEBUG_SINGLE_COMPONENTS
+if [ "$DEBUG_SINGLE_COMPONENTS" = "y" ]; then
+  bool '  debug demuxer' DEBUG_DEMUXER
+  bool '  debug audio core' DEBUG_ACORE
+  bool '  debug video core' DEBUG_VCORE
+  bool '  debug synchronizer' DEBUG_SYNC
+  if [ "$DEBUG_SYNC" = "y" ]; then
+    bool '    very verbose' DEBUG_SYNC_HEAVY
+  else
+    define_bool DEBUG_SYNC_HEAVY "n"
+  fi
+else
+  define_bool DEBUG_DEMUXER "y"
+  define_bool DEBUG_ACORE "y"
+  define_bool DEBUG_VCORE "y"
+  define_bool DEBUG_SYNC "y"
+  define_bool DEBUG_SYNC_HEAVY "n"
+fi
+bool 'dataspace allocation' DEBUG_DS
+bool 'thread handling' DEBUG_THREAD 
+bool 'stream flow between components' DEBUG_STREAM
+bool 'file-I/O' DEBUG_FILEIO
+bool 'import plugins and import plugin handling' DEBUG_IMPORT
+bool 'codec plugins and codec plugin handling' DEBUG_CODEC
+bool 'postprocessing engine' DEBUG_POSTPROC
+bool 'export plugins and export plugin handling' DEBUG_EXPORT
+bool 'support for mulitple instances' DEBUG_MINSTANCES
+
+if [ "$DEBUG_SYNC_HEAVY" = "y" ]; then
+  define_bool DEBUG_SYNC "y"
+fi
+endmenu
+
+mainmenu_option next_comment
+comment 'Petze'
+bool 'Demuxer' VDEMUXER_PETZE
+bool 'Core' VCORE_PETZE
+bool 'Sync' VSYNC_PETZE
+bool 'Control' VCONTROL_PETZE
+bool 'ogmlib' OGMLIB_PETZE
+bool 'avilib' AVILIB_PETZE
+bool 'mpg123-lib' MPG123LIB_PETZE
+bool 'goom-lib' GOOM_PETZE
+endmenu 
+
+comment 'Please run "make" to build VERNER after configuration.'
+
+endmenu
+

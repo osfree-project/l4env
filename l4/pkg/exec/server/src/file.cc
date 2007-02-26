@@ -31,7 +31,11 @@ file_t::msg(const char *format, ...)
 
   printf("%s: ", _fname);
   va_start(list, format);
+#ifdef USE_OSKIT
   vprintf(format, (oskit_va_list)list);
+#else
+  vprintf(format, list);
+#endif
   va_end(list);
   printf("\n");
 }
@@ -45,7 +49,11 @@ file_t::check(int error, const char *format, ...)
       
       printf("%s: Error %d (%s) ", _fname, error, l4env_errstr(error));
       va_start(list, format);
+#ifdef USE_OSKIT
       vprintf(format, (oskit_va_list)list);
+#else
+      vprintf(format, list);
+#endif
       va_end(list);
       printf("\n");
     }

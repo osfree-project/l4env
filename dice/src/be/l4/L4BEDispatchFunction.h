@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEDispatchFunction.h
- *	\brief	contains the declaration of the class CL4BEDispatchFunction
+ *  \file   dice/src/be/l4/L4BEDispatchFunction.h
+ *  \brief  contains the declaration of the class CL4BEDispatchFunction
  *
- *	\date	10/10/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   10/10/2003
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,30 +32,29 @@
 
 #include <be/BEDispatchFunction.h>
 
-/**	\class CL4BEDispatchFunction
- *	\ingroup backend
- *	\brief the function class for the back-end
+/** \class CL4BEDispatchFunction
+ *  \ingroup backend
+ *  \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
 class CL4BEDispatchFunction : public CBEDispatchFunction
 {
-DECLARE_DYNAMIC(CL4BEDispatchFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CL4BEDispatchFunction();
-	virtual ~CL4BEDispatchFunction();
+    /** \brief constructor
+     */
+    CL4BEDispatchFunction();
+    virtual ~CL4BEDispatchFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CL4BEDispatchFunction(CL4BEDispatchFunction &src);
+    /** \brief copy constructor */
+    CL4BEDispatchFunction(CL4BEDispatchFunction &src);
 
 protected:
     virtual void WriteSwitch(CBEFile * pFile,  CBEContext * pContext);
-	virtual void WriteSetWrongOpcodeException(CBEFile* pFile,  CBEContext* pContext);
-	virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile* pFile,  CBEContext* pContext);
+    virtual void WriteSetWrongOpcodeException(CBEFile* pFile,  CBEContext* pContext);
+    virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile* pFile,  CBEContext* pContext);
 };
 
 #endif

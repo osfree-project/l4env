@@ -1,3 +1,12 @@
+/*
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the Overlay WM package, which is distributed
+ * under the  terms  of the GNU General Public Licence 2. Please see
+ * the COPYING file for details.
+ */
+
 interface input_listener {
 	void motion([in] int abs_x, [in] int abs_y, [in] int rel_x, [in] int rel_y);
 	void button([in] int type,  [in] int code);

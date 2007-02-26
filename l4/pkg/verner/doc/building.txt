@@ -1,0 +1,45 @@
+                           VERNER - How to build and use
+                                  Carsten Rietzschel
+                               cr7@os.inf.tu-dresden.de
+                                  17 September 2004
+
+
+
+                       ============= dependencies =============
+
+- x86-IA32 compatible plattform :)
+- gcc >=2.95
+- nasm >= 0.98.38
+
+L4 packages:
+ - l4env
+ - dsi
+ - l4io
+ - dde_linux
+ - DOpE
+
+optional L4 packages:
+ - ext2fs
+ - comquad (for remote gui)
+ - rt_mon (for benchmarking components)
+ - usb (webcam)
+
+
+                       ============= configuration & building & running =============
+
+
+Run "make config" in $(PKGDIR) and configure for your needs.
+
+
+                       ============= building =============
+
+
+Just run "make".
+(It takes 3 minutes to compile on my Athlon XP 1800+).
+
+
+                       ============= running =============
+
+
+Look into doc/exmaple-menu.lst how to run.
+

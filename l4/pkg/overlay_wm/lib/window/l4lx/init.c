@@ -10,6 +10,7 @@
 #include <pthread.h>
 
 /*** L4 INCLUDES ***/
+#include <l4/sys/syscalls.h>
 #include <l4/names/libnames.h>
 #include <l4/thread/thread.h>
 
@@ -61,14 +62,6 @@ int ovl_window_init(char *ovl_name) {
 
 	printf("libovlwindow(init): create window event listener thread\n");
 	pthread_create(&listener_pid, NULL, &listener_pthread, NULL);
-//	listener = l4thread_create(window_listener_server_loop,
-//	                           NULL,L4THREAD_CREATE_ASYNC);
-//	listener_tid = l4thread_l4_id(listener);
-//	
-//	printf("libovlwindow(init): register listener ar Overlay Server\n");
-//	overlay_window_listener_call(ovl_window_srv,
-//	                             &listener_tid,
-//	                             &env);
 	return 0;
 }
 

@@ -3,25 +3,47 @@ INTERFACE:
 #include "console.h"
 #include "l4_types.h"
 
-class Thread;
+class Space;
 
 class Push_console : public Console
 {
 private:
   static const Unsigned8 *sequence_str;
   static Mword            sequence_len;
-  static Thread          *sequence_thread;
+  static Space           *sequence_space;
 };
 
 
 IMPLEMENTATION:
 
 #include "keycodes.h"
-#include "thread.h"
+#include "mem_layout.h"
+#include "space.h"
 
-const Unsigned8 *Push_console::sequence_str;
+Unsigned8 const *Push_console::sequence_str;
 Mword            Push_console::sequence_len;
-Thread          *Push_console::sequence_thread;
+Space           *Push_console::sequence_space;
+
+static
+int
+Push_console::get_sequence_byte(Unsigned8 const *s)
+{
+  return (sequence_space == 0) ? *s : sequence_space->peek_user(s);
+}
+
+static
+int
+Push_console::get_sequence_len()
+{
+  Unsigned8 const *s = sequence_str;
+  int len;
+
+  for (len=0; ; len++)
+    if (!get_sequence_byte(s++))
+      break;
+
+  return len;
+}
 
 PUBLIC
 int
@@ -30,19 +52,20 @@ Push_console::getchar(bool /*blocking*/)
   if (sequence_len)
     {
       sequence_len--;
-      return sequence_thread 
-		? sequence_thread->peek_user((Unsigned8*)sequence_str++)
-		: *sequence_str++;
+      int c = get_sequence_byte(sequence_str++);
+      // string must not be auto-terminated with KEY_RETURN
+      if (c == 0xff)
+	sequence_str = 0;
+      return c == '_' ? KEY_RETURN : c;
     }
 
   if (sequence_str)
     {
-      // terminate sequence
-      sequence_str = 0;
-      return KEY_ESC;
+      // auto-terminate sequence with KEY_RETURN
+      return KEY_RETURN;
     }
 
-  return -1; // unknown
+  return -1; // no keystroke available
 }
 
 PUBLIC
@@ -61,11 +84,11 @@ Push_console::write(char const * /*str*/, size_t len)
 
 PUBLIC static
 void
-Push_console::push(Unsigned8 const *str, size_t len, Thread *thread)
+Push_console::push(Unsigned8 const *str, size_t len, Space *space = 0)
 {
   sequence_str    = str;
-  sequence_len    = len;
-  sequence_thread = thread;
+  sequence_space  = space;
+  sequence_len    = len ? len : get_sequence_len();
 }
 
 PUBLIC static
@@ -77,18 +100,9 @@ Push_console::flush(void)
 }
 
 PUBLIC
-char const *
-Push_console::next_attribute (bool restart = false) const
+Mword
+Push_console::get_attributes() const
 {
-  static char const *attribs[] = { "push", "in" };
-  static unsigned int pos = 0;
-
-  if (restart)
-    pos = 0;
-
-  if (pos < sizeof (attribs) / sizeof (*attribs))
-    return attribs[pos++];
-
-  return 0;
+  return PUSH | IN;
 }
 

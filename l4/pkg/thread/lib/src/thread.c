@@ -31,7 +31,7 @@
 /**
  * Thread lib initilialized
  */
-static int l4th_initialized = 0;
+static unsigned l4th_initialized = 0;
 
 /*****************************************************************************
  *** l4thread user API functions
@@ -52,16 +52,16 @@ l4thread_init(void)
   int ret;
 
   /* avoid multiple initializations */
-  if (!l4util_cmpxchg32(&l4th_initialized,0,1))
+  if (!l4util_cmpxchg32(&l4th_initialized, 0, 1))
     return 0;
 
   LOGdL(DEBUG_CONFIG,"l4thread config:\n" \
-        "  max. threads:       %d\n" \
-        "  default stack size: %u\n" \
-        "  max. stack size:    %u\n" \
-        "  default priority:   %d",
-        l4thread_max_threads,l4thread_stack_size,
-        l4thread_max_stack,l4thread_default_prio);
+        " max. threads:       %d\n" \
+        " default stack size: %u\n" \
+        " max. stack size:    %u\n" \
+        " default priority:   %d",
+        l4thread_max_threads, l4thread_stack_size,
+        l4thread_max_stack, l4thread_default_prio);
 
   /* init stacks area */
   ret = l4th_stack_init();
@@ -138,9 +138,9 @@ l4thread_get_parent(void)
   l4th_tcb_t * tcb = l4th_tcb_get_current();
   l4thread_t parent = L4THREAD_INVALID_ID;
 
-  if ((tcb == NULL) || (tcb->state != TCB_ACTIVE))
+  if (tcb == NULL)
     {
-      Error("l4thread: myself not found!");
+      LOG_Error("l4thread: myself not found!");
       return L4THREAD_INVALID_ID;
     }
   

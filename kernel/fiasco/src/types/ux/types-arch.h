@@ -3,9 +3,9 @@
 #define TYPES_ARCH_H__
 
 
-#define L4_PTR_FMT "0x%08x"
-#define L4_PTR_ARG(a) ((Unsigned32)(a)) 
-#define L4_X64_FMT "0x%016llx"
+#define L4_PTR_FMT "%08lx"
+#define L4_PTR_ARG(a) ((Address)(a)) 
+#define L4_X64_FMT "%016llx"
 
 
 /// HACK: Prevent <l4/sys/types.h> from redefining these types.
@@ -22,12 +22,12 @@ typedef unsigned long long int Unsigned64;
 typedef signed long long int   Signed64;
 
 /// machine word
-typedef Signed32 Smword;
-typedef Unsigned32 Mword;
+typedef signed long int Smword;
+typedef unsigned long int Mword;
 #define MWORD_BITS (32)
 
 /// (virtual or physical address) should be addr_t or something
-typedef Unsigned32 Address;
+typedef unsigned long int Address;
 
 typedef Unsigned64 Cpu_time;
 

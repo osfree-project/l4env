@@ -100,23 +100,13 @@ extern int last_pid;
 
 #define __set_task_state(tsk, state_value)		\
 	do { (tsk)->state = (state_value); } while (0)
-#ifdef CONFIG_SMP
 #define set_task_state(tsk, state_value)		\
 	set_mb((tsk)->state, (state_value))
-#else
-#define set_task_state(tsk, state_value)		\
-	__set_task_state((tsk), (state_value))
-#endif
 
 #define __set_current_state(state_value)			\
 	do { current->state = (state_value); } while (0)
-#ifdef CONFIG_SMP
 #define set_current_state(state_value)		\
 	set_mb(current->state, (state_value))
-#else
-#define set_current_state(state_value)		\
-	__set_current_state(state_value)
-#endif
 
 /*
  * Scheduling policies
@@ -168,6 +158,12 @@ extern int schedule_task(struct tq_struct *task);
 extern void flush_scheduled_tasks(void);
 extern int start_context_thread(void);
 extern int current_is_keventd(void);
+
+#if CONFIG_SMP
+extern void set_cpus_allowed(struct task_struct *p, unsigned long new_mask);
+#else
+# define set_cpus_allowed(p, new_mask) do { } while (0)
+#endif
 
 /*
  * The default fd array needs to be at least BITS_PER_LONG,
@@ -283,9 +279,9 @@ struct user_struct {
 };
 
 #define get_current_user() ({ 				\
-	struct user_struct *__user = current->user;	\
-	atomic_inc(&__user->__count);			\
-	__user; })
+	struct user_struct *__tmp_user = current->user;	\
+	atomic_inc(&__tmp_user->__count);		\
+	__tmp_user; })
 
 extern struct user_struct root_user;
 #define INIT_USER (&root_user)
@@ -345,6 +341,7 @@ struct task_struct {
 	/* ??? */
 	unsigned long personality;
 	int did_exec:1;
+	unsigned task_dumpable:1;
 	pid_t pid;
 	pid_t pgrp;
 	pid_t tty_old_pgrp;
@@ -443,9 +440,10 @@ struct task_struct {
 #define PF_DUMPCORE	0x00000200	/* dumped core */
 #define PF_SIGNALED	0x00000400	/* killed by a signal */
 #define PF_MEMALLOC	0x00000800	/* Allocating memory */
-#define PF_MEMDIE	0x00001000	/* Killed for out-of-memory */
+#define PF_MEMDIE      0x00001000       /* Killed for out-of-memory */
 #define PF_FREE_PAGES	0x00002000	/* per process page freeing */
 #define PF_NOIO		0x00004000	/* avoid generating further I/O */
+#define PF_FSTRANS	0x00008000	/* inside a filesystem transaction */
 
 #define PF_USEDFPU	0x00100000	/* task used FPU this quantum (SMP) */
 
@@ -458,6 +456,8 @@ struct task_struct {
 #define PT_DTRACE	0x00000004	/* delayed trace (used on m68k, i386) */
 #define PT_TRACESYSGOOD	0x00000008
 #define PT_PTRACE_CAP	0x00000010	/* ptracer can follow suid-exec */
+
+#define is_dumpable(tsk)    ((tsk)->task_dumpable && (tsk)->mm && (tsk)->mm->dumpable)
 
 /*
  * Limit the stack by to some sane default: root can always
@@ -494,8 +494,8 @@ extern struct exec_domain	default_exec_domain;
     policy:		SCHED_OTHER,					\
     mm:			NULL,						\
     active_mm:		&init_mm,					\
-    cpus_runnable:	-1,						\
-    cpus_allowed:	-1,						\
+    cpus_runnable:	~0UL,						\
+    cpus_allowed:	~0UL,						\
     run_list:		LIST_HEAD_INIT(tsk.run_list),			\
     next_task:		&tsk,						\
     prev_task:		&tsk,						\
@@ -624,6 +624,7 @@ static inline void task_release_cpu(struct task_struct *tsk)
 /* per-UID process charging. */
 extern struct user_struct * alloc_uid(uid_t);
 extern void free_uid(struct user_struct *);
+extern void switch_uid(struct user_struct *);
 
 #include <asm/current.h>
 
@@ -810,7 +811,7 @@ extern struct mm_struct * start_lazy_tlb(void);
 extern void end_lazy_tlb(struct mm_struct *mm);
 
 /* mmdrop drops the mm and the page tables */
-extern inline void FASTCALL(__mmdrop(struct mm_struct *));
+extern void FASTCALL(__mmdrop(struct mm_struct *));
 static inline void mmdrop(struct mm_struct * mm)
 {
 	if (atomic_dec_and_test(&mm->mm_count))
@@ -851,9 +852,14 @@ extern void daemonize(void);
 extern int do_execve(char *, char **, char **, struct pt_regs *);
 extern int do_fork(unsigned long, unsigned long, struct pt_regs *, unsigned long);
 
+extern void set_task_comm(struct task_struct *tsk, char *from);
+extern void get_task_comm(char *to, struct task_struct *tsk);
+
 extern void FASTCALL(add_wait_queue(wait_queue_head_t *q, wait_queue_t * wait));
 extern void FASTCALL(add_wait_queue_exclusive(wait_queue_head_t *q, wait_queue_t * wait));
 extern void FASTCALL(remove_wait_queue(wait_queue_head_t *q, wait_queue_t * wait));
+
+extern long kernel_thread(int (*fn)(void *), void * arg, unsigned long flags);
 
 #define __wait_event(wq, condition) 					\
 do {									\

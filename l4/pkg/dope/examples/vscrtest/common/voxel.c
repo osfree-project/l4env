@@ -260,7 +260,7 @@ int voxel_init(void) {
 	dope_cmd(app_id, "voxvscr=new VScreen()" );
 	dope_cmd(app_id, "voxvscr.setmode(320,200,\"RGB16\")" );
 	dope_cmd(app_id, "voxvscr.set(-framerate 25)" );
-	dope_cmd(app_id, "voxwin.set(-x 500 -y 150 -w 330 -h 227 -fitx yes -fity yes -content voxvscr -background off)" );
+	dope_cmd(app_id, "voxwin.set(-x 500 -y 150 -w 330 -h 227 -content voxvscr -background off)" );
 
 	/* map vscreen buffer to local address space */
 	scr_adr = vscr_get_fb(app_id, "voxvscr");

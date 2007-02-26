@@ -2,7 +2,6 @@ IMPLEMENTATION:
 
 #include <cstdio>
 #include <cstdlib>
-#include <unistd.h>
 #include "simpleio.h"
 
 #include "jdb.h"
@@ -12,6 +11,7 @@ IMPLEMENTATION:
 #include "cpu.h"
 #include "globals.h"
 #include "kernel_console.h"
+#include "keycodes.h"
 
 static int lines, score, current_pos, mode, slice,
            *current_tile, *next_tile, grid[264], next[48];
@@ -42,18 +42,96 @@ static int tiles[] = {	9,      9,      -13,    -12,    1,	4,
 	                22,     7,      -11,    -1,     13,	3 };
 
 static const char *modes[] = { "", "Fiasco Mode", "Lars Mode" };
+static long unsigned int randseed;
+
+IMPLEMENTATION [ux]:
+
+static unsigned slice_to_timeout(unsigned slice)
+{
+  slice /= 50;
+  return slice < 2 ? 2 : slice;
+}
+
+static void show_grid()
+{
+  int i, j;
+
+  printf ("\033[H");
+
+  for (i = j = 0; i < 264; i++)
+    {
+      if (grid[i])
+        printf ("\033[m\033[1;4%d;30m  \033[40m", grid[i]);
+      else
+        putstr ("  ");
+
+      if (i % 12 == 11)
+        {
+          for (; j <= i && j < 48; j++)
+            if (next[j])
+              printf ("\033[m\033[1;4%d;30m  \033[40m", next[j]);
+            else
+              putstr ("\033[m\033[30m  \033[m");
+
+          putchar ('\n');
+        }
+    }  
+
+  printf ("\033[mLines: %d   Score: %d   %s\033[K", lines, score, modes[mode]);
+}
+
+IMPLEMENTATION [!ux]:
+
+static unsigned slice_to_timeout(unsigned slice)
+{
+  return slice;
+}
+
+static void show_grid()
+{
+  int i, j;
+
+  printf ("\033[H");
+
+  for (i = j = 0; i < 264; i++)
+    {
+      if (grid[i])
+        printf ("\033[1;3%dm\333\333", grid[i]);
+      else
+        putstr ("  ");
+
+      if (i % 12 == 11)
+        {
+          for (; j <= i && j < 48; j++)
+            if (next[j])
+              printf ("\033[1;3%dm\333\333", next[j]);
+            else
+              putstr ("  ");
+
+          putchar ('\n');
+        }
+    }  
+
+  printf ("Lines: %d   Score: %d   %s\033[K", lines, score, modes[mode]);
+}
+
+IMPLEMENTATION:
 
 static int getchar_timeout()
 {
   int c;
   static unsigned to = slice;
 
+  to = slice_to_timeout(to);
   while (--to)
     {
       if ((c = Kconsole::console()->getchar (false)) != -1)
-        return c;
+	return c;
 
-      Proc::halt();
+      if (Config::getchar_does_hlt && Config::getchar_does_hlt_works_ok)
+	Proc::halt();
+      else
+	Cpu::busy_wait_ns(1000000ULL);
     }
 
   to = slice;
@@ -72,43 +150,15 @@ static void add_score(int value)
   score += value;
 }
 
-static long unsigned int rand() 
+static long unsigned int myrand() 
 {
-  Unsigned64 tsc = Cpu::rdtsc();
-  return (tsc >> 2);
+  randseed = (randseed * 13561+14000) % 150001;
+  return randseed;
 }
 
 static int *new_tile()
 {
-  return tiles + rand() % (7 + mode) * 6;
-}
-
-static void show_grid()
-{
-  int i, j;
-
-  printf ("\033[H");
-
-  for (i = j = 0; i < 264; i++)
-    {
-      if (grid[i])
-        printf ("\033[1;3%dm%c%c", grid[i], 219, 219);
-      else
-        putstr ("  ");
-
-      if (i % 12 == 11)
-        {
-          for (; j <= i && j < 48; j++)
-            if (next[j])
-              printf ("\033[1;3%dm%c%c", next[j], 219, 219);
-            else
-              putstr ("  ");
-
-          putchar ('\n');
-        }
-    }  
-
-  printf ("Lines: %d   Score: %d   %s\033[K", lines, score, modes[mode]);
+  return tiles + myrand() % (7 + mode) * 6;
 }
 
 static int try_move (int pos, int *tile)
@@ -150,7 +200,7 @@ void show_tile (void)
 }
 
 /**
- * @brief Jdb-tetris module
+ * Jdb-tetris module
  *
  * This module makes fun.
  */
@@ -173,6 +223,10 @@ Jdb_tetris_m::action( int, void *&, char const *&, int & )
 
   lines = score = c = 0;
   slice = 300;
+  randseed= Cpu::rdtsc() & 0xffffffff;
+
+  puts ("\nDisabling output of serial console -- quit Tetris with 'q'!");
+  Kconsole::console()->change_state(Console::UART, 0, ~Console::OUTENABLED, 0);
 
   printf ("\033[H\033[J");
 
@@ -210,11 +264,11 @@ Jdb_tetris_m::action( int, void *&, char const *&, int & )
         }  
 
       // Move left
-      else if (c == 0x34)
+      else if (c == KEY_CURSOR_LEFT)
         try_move (current_pos - 1, current_tile);
 
       // Move right
-      else if (c == 0x36)
+      else if (c == KEY_CURSOR_RIGHT)
         try_move (current_pos + 1, current_tile);
 
       // Drop tile
@@ -226,15 +280,15 @@ Jdb_tetris_m::action( int, void *&, char const *&, int & )
           }
         
       // Left-turn tile
-      else if (c == 0x32)
+      else if (c == KEY_CURSOR_DOWN)
         try_move (current_pos, tiles + 6 ** current_tile);
 
       // Right-turn tile
-      else if (c == 0x38)
+      else if (c == KEY_CURSOR_UP)
         try_move (current_pos, tiles + 6 ** (current_tile+1));
 
       // Quit
-      else if (c == 'q')
+      else if (c == 'q' || c == KEY_ESC)
         break;
 
       else if (c == 'm')
@@ -246,6 +300,7 @@ Jdb_tetris_m::action( int, void *&, char const *&, int & )
       c = getchar_timeout();
     }
 
+  Kconsole::console()->change_state(Console::UART, 0, ~0U, Console::OUTENABLED);
   printf ("\033[0m");
 
   return NOTHING;
@@ -263,9 +318,10 @@ Jdb_module::Cmd const *const
 Jdb_tetris_m::cmds() const
 {
   static Cmd cs[] =
-    { Cmd( 0, "X", "X", "",
+    { 
+	{ 0, "X", "X", "",
 	   "X\tPlay Tetris (cursor keys = left/right/rotate;\n"
-	   "\t[space] = drop; q = quit)", 0 ),
+	   "\t[space] = drop; q = quit)", 0 },
     };
 
   return cs;

@@ -13,13 +13,14 @@ my $FIASCOUX;
 my $L4DIR;
 my $OBJDIR = 'OBJ-x86_586-l4v2';
 
-my $ALARM_TIMEOUT = 120; # in seconds
+my $ALARM_TIMEOUT = 60; # in seconds
 
 my %templs = (
   rmgr     => '%s/pkg/rmgr/server/fiasco_ux_src/%s/rmgr-ux',
+  roottask => '%s/pkg/roottask/server/src/%s/roottask',
   sigma0   => '%s/pkg/sigma0/server/fiasco_ux_src/%s/sigma0-ux',
-  ktest    => '%s/pkg/ktest/server/fiasco_ux_src/%s/ktest-ux',
-  pingpong => '%s/pkg/pingpong/server/fiasco_ux_src/%s/pingpong-ux',
+  ktest    => '%s/pkg/ktest/server/src/%s/ktest',
+  pingpong => '%s/pkg/pingpong/server/src/%s/pingpong',
 );
 
 my $Verbose = 0;
@@ -85,7 +86,7 @@ sub check_for_userland() {
 ##
 # Called if alarm signal received
 sub got_sig_alarm {
-  print "Fiasco/UX timed out after $ALARM_TIMEOUT seconds!\n";
+  print "Fiasco-UX timed out after $ALARM_TIMEOUT seconds!\n";
   exit 1;
 }
 
@@ -110,7 +111,10 @@ sub call_test($) {
   # default
   $results{$name} = '';
 
-  open(F, fiascoux_cmdline." -l $progs{$name} 2>&1|")
+  my $cmdline = fiascoux_cmdline()." -l $progs{$name}";
+  print "Calling: $cmdline" if $Verbose;
+
+  open(F, "$cmdline 2>&1|")
     || die "Can't start Fiasco with $progs{$name}: $!";
   while (<F>) {
     $output{$name} .= $_;
@@ -187,6 +191,7 @@ unless (GetOptions("help|h", sub { usage(); exit(0); },
 		   "objdir|O=s", \$OBJDIR,
 		   "verbose|v!", \$Verbose,
 		   "quiet|q!", \$Quiet,
+		   "roottask!", sub { $templs{rmgr} = $templs{roottask}; },
 		   )) {
   usage();
   exit(1);

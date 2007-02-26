@@ -3,7 +3,7 @@
  * Shared between UX and native IA32.
  */
 
-INTERFACE:
+INTERFACE[ia32,ux]:
 
 EXTENSION class Fpu
 {
@@ -39,7 +39,7 @@ private:
   };
 };
 
-IMPLEMENTATION[ia32-ux]:
+IMPLEMENTATION[ia32,ux]:
 
 #include <cstring>
 #include "cpu.h"

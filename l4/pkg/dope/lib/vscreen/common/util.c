@@ -19,14 +19,15 @@
 
 
 /*** INTERFACE: MAP FRAMEBUFFER OF VSCREEN WIDGET GIVEN BY ITS NAME ***/
-void *vscr_get_fb(int app_id, char *vscr) {
+void *vscr_get_fb(int app_id, const char *vscr) {
 	char retbuf[256];
 	dope_reqf(app_id, retbuf, 256, "%s.map()", vscr);
 	return vscr_map_smb(retbuf);
 }
 
 
-void *vscr_get_server_id(int app_id, char *vscr) {
+/*** INTERFACE: GET VSCREEN SERVER OF THE SPECIFIED WIDGET ***/
+void *vscr_get_server_id(int app_id, const char *vscr) {
 	char retbuf[256];
 	dope_reqf(app_id, retbuf, 256, "%s.getserver()", vscr);
 	return vscr_connect_server(retbuf);

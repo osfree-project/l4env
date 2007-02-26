@@ -4,9 +4,9 @@
 
 #include <l4/util/thread.h>
 
-#ifdef __i386__
+#if defined(__i386__) || defined(ARCH_arm)
 l4_threadid_t
-l4util_create_thread (int thread_no, void (*function)(void), int *stack)
+l4util_create_thread (int thread_no, void (*function)(void), void *stack)
 {
   l4_threadid_t preempter, pager;
   l4_umword_t dummy;
@@ -53,8 +53,7 @@ l4util_attach_interrupt (int irq)
 			     0, /* receive descriptor */
 			     &dummy,
 			     &dummy,
-			     L4_IPC_TIMEOUT(0,0,0,1,0,0), /* rcv = 0,
-							     snd = inf */
+			     L4_IPC_RECV_TIMEOUT_0,
 			     &dummydope);
 
   return ((code != L4_IPC_RETIMEOUT) ? L4_INVALID_ID : irq_id);
@@ -70,8 +69,7 @@ l4util_detach_interrupt (void)
 			     0, /* receive descriptor */
 			     &dummy,
 			     &dummy,
-			     L4_IPC_TIMEOUT(0,0,0,1,0,0), /* rcv = 0,
-							     snd = inf */
+			     L4_IPC_RECV_TIMEOUT_0,
 			     &dummydope);
 }
 
@@ -80,7 +78,7 @@ l4util_detach_interrupt (void)
 
 #ifdef __alpha__
 l4_threadid_t
-l4util_create_thread (int thread_no, void (*function)(void), int *stack)
+l4util_create_thread (int thread_no, void (*function)(void), void *stack)
 {
   l4_threadid_t preempter, pager;
   qword_t dummy;

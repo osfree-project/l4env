@@ -34,6 +34,7 @@ IMPLEMENTATION:
 #include <cstdio>
 #include <cstring>
 #include <cctype>
+#include "keycodes.h"
 
 
 IMPLEMENT 
@@ -91,7 +92,7 @@ int Filter_console::write( char const *str, size_t len )
       if(stop-start)
 	_o->write(start, stop-start);
       if(stop + 2 < str+len) {
-	sprintf(seq, "\033[%d;%dH", stop[1]+1,stop[2]+1);
+	snprintf(seq, sizeof(seq), "\033[%d;%dH", stop[1]+1,stop[2]+1);
 	_o->write(seq,strlen(seq));
       }
       stop += 2;
@@ -203,30 +204,25 @@ int Filter_console::getchar( bool b )
 	  
 	  switch(ch)
 	    {
-	    case 'A': 	  
-	      pos = 0; return 0x38; break; /* cursor up */
-	    case 'B': 
-	      pos = 0; return 0x32; break; /* cursor down */
-	    case 'C': 
-	      pos = 0; return 0x36; break; /* cursor right */
-	    case 'D': 
-	      pos = 0; return 0x34; break; /* cursor left */
-	    case 'H':
-	      pos = 0; return 0x37; break; /* cursor home */
-	    case 'F':
-	      pos = 0; return 0x31; break; /* cursor end */
+	    case 'A': pos = 0; return KEY_CURSOR_UP;
+	    case 'B': pos = 0; return KEY_CURSOR_DOWN;
+	    case 'C': pos = 0; return KEY_CURSOR_RIGHT;
+	    case 'D': pos = 0; return KEY_CURSOR_LEFT;
+	    case 'H': pos = 0; return KEY_CURSOR_HOME;
+	    case 'F': pos = 0; return KEY_CURSOR_END;
 	    case '~':
 	      pos = 0;
 	      switch(args[0])
 		{
-		case 7:
-		case 1: return 0x37; break; /* home */
-		case 2: return 0x30; break; /* insert */
-		case 3: return 0x2e; break; /* delete */
-		case 8:
-		case 4: return 0x31; break; /* end */
-		case 5: return 0x39; break; /* page up */
-		case 6: return 0x33; break; /* page down */
+		case  7:
+		case  1: return KEY_CURSOR_HOME;
+		case  2: return KEY_INSERT;
+		case  3: return KEY_DELETE;
+		case  8:
+		case  4: return KEY_CURSOR_END;
+		case  5: return KEY_PAGE_UP;
+		case  6: return KEY_PAGE_DOWN;
+		case 11: return KEY_F1;
 
 		default:
 		  arg = 0;
@@ -239,8 +235,8 @@ int Filter_console::getchar( bool b )
 		    }
 		  else
 		    return -1;
-		    
 		}
+	    case 'P': return KEY_F1;
 	    default:
 	      state = UNKNOWN_ESC;
 	      break;
@@ -263,9 +259,9 @@ int Filter_console::getchar( bool b )
 
 
 PUBLIC
-char const *Filter_console::next_attribute( bool restart = false ) const
+Mword
+Filter_console::get_attributes() const
 {
-  return _o->next_attribute(restart);
+  return _o->get_attributes();
 }
-
 

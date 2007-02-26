@@ -3,16 +3,14 @@
 
 #include <string.h>
 #include <assert.h>
-#include <flux/machine/types.h>
 #include <l4/sys/compiler.h>
 #include <l4/sys/types.h>
 #include <l4/sys/kernel.h>
 
 #include "globals.h"
 
-#define MEM_MAX (256UL*1024UL*1024UL) /* max RAM we handle */
-#define SUPERPAGE_MAX (1024)	/* no of superpages in the system */
-#define IO_MAX L4_IOPORT_MAX
+#define SUPERPAGE_MAX	 1024		/* no of superpages in the system */
+#define IO_MAX		L4_IOPORT_MAX	/* no of I/O ports in the system */
 
 typedef struct {
   l4_uint16_t free_pages;
@@ -20,44 +18,49 @@ typedef struct {
   l4_uint8_t padding;
 } __attribute__((packed)) __superpage_t;
 
-extern owner_t __memmap[MEM_MAX/L4_PAGESIZE];
-extern __superpage_t __memmap4mb[SUPERPAGE_MAX];
-extern vm_offset_t mem_high;
-extern owner_t __iomap[IO_MAX];
-
-extern l4_kernel_info_t *l4_info;
+extern owner_t		*__memmap;
+extern __superpage_t	*__memmap4mb;
+extern owner_t		*__iomap;
+extern l4_addr_t	mem_high;
+extern l4_kernel_info_t	*l4_info;
+extern l4_addr_t	tbuf_status;
 
 void pager(void) L4_NORETURN;
 
-L4_INLINE void map_init(void);
-L4_INLINE int memmap_free_page(vm_offset_t address, owner_t owner);
-L4_INLINE int memmap_alloc_page(vm_offset_t address, owner_t owner);
-L4_INLINE owner_t memmap_owner_page(vm_offset_t address);
-L4_INLINE int memmap_free_superpage(vm_offset_t address, owner_t owner);
-L4_INLINE int memmap_alloc_superpage(vm_offset_t address, owner_t owner);
-L4_INLINE owner_t memmap_owner_superpage(vm_offset_t address);
-L4_INLINE unsigned memmap_nrfree_superpage(vm_offset_t address);
+L4_INLINE void     memmap_init(void);
+L4_INLINE int      memmap_free_page(l4_addr_t address, owner_t owner);
+L4_INLINE int      memmap_alloc_page(l4_addr_t address, owner_t owner);
+L4_INLINE owner_t  memmap_owner_page(l4_addr_t address);
+L4_INLINE int      memmap_free_superpage(l4_addr_t address, owner_t owner);
+L4_INLINE int      memmap_alloc_superpage(l4_addr_t address, owner_t owner);
+L4_INLINE owner_t  memmap_owner_superpage(l4_addr_t address);
+L4_INLINE unsigned memmap_nrfree_superpage(l4_addr_t address);
+L4_INLINE int      iomap_alloc_port(unsigned port, owner_t owner);
 
-L4_INLINE int iomap_alloc_port(unsigned port, owner_t owner);
 
-
-L4_INLINE void map_init(void)
+L4_INLINE
+void
+memmap_init(void)
 {
   unsigned i;
   __superpage_t *s;
 
-  memset(__memmap, O_RESERVED, MEM_MAX/L4_PAGESIZE);
+  memset(__memmap, O_RESERVED, mem_high/L4_PAGESIZE);
   for (s = __memmap4mb, i = 0; i < SUPERPAGE_MAX; i++, s++)
     *s = (__superpage_t) { 0, O_RESERVED, 0 };
+#ifndef FIASCO_UX
   memset(__iomap, O_FREE, IO_MAX);
+#endif
 }
 
-L4_INLINE int memmap_free_page(vm_offset_t address, owner_t owner)
+L4_INLINE
+int
+memmap_free_page(l4_addr_t address, owner_t owner)
 {
   owner_t *m = __memmap + address/L4_PAGESIZE;
   __superpage_t *s = __memmap4mb + address/L4_SUPERPAGESIZE;
 
-  if ((address & L4_PAGEMASK) >= MEM_MAX)
+  if ((address & L4_PAGEMASK) >= mem_high)
     return 1;
   if (s->owner == O_FREE)
     return 1;			/* already free */
@@ -76,12 +79,14 @@ L4_INLINE int memmap_free_page(vm_offset_t address, owner_t owner)
   return 1;
 }
 
-L4_INLINE int memmap_alloc_page(vm_offset_t address, owner_t owner)
+L4_INLINE
+int
+memmap_alloc_page(l4_addr_t address, owner_t owner)
 {
   owner_t *m = __memmap + address/L4_PAGESIZE;
   __superpage_t *s = __memmap4mb + address/L4_SUPERPAGESIZE;
 
-  if ((address & L4_PAGEMASK) >= MEM_MAX)
+  if ((address & L4_PAGEMASK) >= mem_high)
     return 0;
   if (*m == owner)
     return 1;			/* already allocated */
@@ -98,18 +103,22 @@ L4_INLINE int memmap_alloc_page(vm_offset_t address, owner_t owner)
   return 1;
 }
 
-L4_INLINE owner_t memmap_owner_page(vm_offset_t address)
+L4_INLINE
+owner_t
+memmap_owner_page(l4_addr_t address)
 {
   owner_t *m = __memmap + address/L4_PAGESIZE;
   __superpage_t *s = __memmap4mb + address/L4_SUPERPAGESIZE;
 
-  if ((address & L4_PAGEMASK) >= MEM_MAX)
+  if ((address & L4_PAGEMASK) >= mem_high)
     return O_RESERVED;
 
   return s->owner == O_RESERVED ? *m : s->owner;
 }
 
-L4_INLINE int memmap_free_superpage(vm_offset_t address, owner_t owner)
+L4_INLINE
+int
+memmap_free_superpage(l4_addr_t address, owner_t owner)
 {
   __superpage_t *s = __memmap4mb + address/L4_SUPERPAGESIZE;
 
@@ -126,7 +135,9 @@ L4_INLINE int memmap_free_superpage(vm_offset_t address, owner_t owner)
   return 1;
 }
 
-L4_INLINE int memmap_alloc_superpage(vm_offset_t address, owner_t owner)
+L4_INLINE
+int
+memmap_alloc_superpage(l4_addr_t address, owner_t owner)
 {
   __superpage_t *s = __memmap4mb + address/L4_SUPERPAGESIZE;
 
@@ -137,13 +148,13 @@ L4_INLINE int memmap_alloc_superpage(vm_offset_t address, owner_t owner)
       /* check if all pages inside belong to the new owner already */
 
       owner_t *m, *sm;
-      vm_size_t already_have = 0;
+      l4_size_t already_have = 0;
 
       if (s->owner != O_RESERVED)
 	return 0;
 
       address &= L4_SUPERPAGEMASK;
-      if (address >= MEM_MAX)
+      if (address >= mem_high)
 	return 0;
 
       for (sm = m = __memmap + address/L4_PAGESIZE; 
@@ -166,14 +177,18 @@ L4_INLINE int memmap_alloc_superpage(vm_offset_t address, owner_t owner)
   return 1;
 }
 
-L4_INLINE owner_t memmap_owner_superpage(vm_offset_t address)
+L4_INLINE
+owner_t
+memmap_owner_superpage(l4_addr_t address)
 {
   __superpage_t *s = __memmap4mb + address/L4_SUPERPAGESIZE;
 
   return s->owner;
 }
 
-L4_INLINE unsigned memmap_nrfree_superpage(vm_offset_t address)
+L4_INLINE
+unsigned
+memmap_nrfree_superpage(l4_addr_t address)
 {
   __superpage_t *s = __memmap4mb + address/L4_SUPERPAGESIZE;
 
@@ -183,8 +198,13 @@ L4_INLINE unsigned memmap_nrfree_superpage(vm_offset_t address)
   return 0;
 }
 
-L4_INLINE int iomap_alloc_port(unsigned port, owner_t owner)
+L4_INLINE
+int
+iomap_alloc_port(unsigned port, owner_t owner)
 {
+#ifdef FIASCO_UX
+  return 0;
+#else
   owner_t *p = __iomap + port;
 
   if (*p == owner)
@@ -194,6 +214,7 @@ L4_INLINE int iomap_alloc_port(unsigned port, owner_t owner)
 
   *p = owner;
   return 1;
+#endif
 }
 
 #endif

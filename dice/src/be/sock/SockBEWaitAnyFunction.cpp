@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/SockBEWaitAnyFunction.cpp
- *	\brief	contains the implementation of the class CSockBEWaitAnyFunction
+ *    \file    dice/src/be/sock/SockBEWaitAnyFunction.cpp
+ *    \brief   contains the implementation of the class CSockBEWaitAnyFunction
  *
- *	\date	11/28/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    11/28/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,20 +34,17 @@
 #include "be/BEDeclarator.h"
 #include "be/sock/BESocket.h"
 
-IMPLEMENT_DYNAMIC(CSockBEWaitAnyFunction);
-
-CSockBEWaitAnyFunction::CSockBEWaitAnyFunction()
+CSockBEWaitAnyFunction::CSockBEWaitAnyFunction(bool bOpenWait, bool bReply)
+: CBEWaitAnyFunction(bOpenWait, bReply)
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBEWaitAnyFunction, CBEWaitAnyFunction);
 }
 
 CSockBEWaitAnyFunction::CSockBEWaitAnyFunction(CSockBEWaitAnyFunction & src)
 : CBEWaitAnyFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBEWaitAnyFunction, CBEWaitAnyFunction);
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CSockBEWaitAnyFunction::~CSockBEWaitAnyFunction()
 {
 
@@ -58,11 +56,15 @@ CSockBEWaitAnyFunction::~CSockBEWaitAnyFunction()
  *
  * The socket has to be open already.
  */
-void CSockBEWaitAnyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
+void
+CSockBEWaitAnyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
     // wait for new request
-	assert(m_pComm);
-	((CBESocket*)m_pComm)->WriteWait(pFile, this, true, pContext);
+    assert(m_pComm);
+    if (m_bReply)
+        m_pComm->WriteReplyAndWait(pFile, this, pContext);
+    else
+        m_pComm->WriteWait(pFile, this, pContext);
 }
 
 /** \brief writes additional variable declarations
@@ -73,8 +75,8 @@ void CSockBEWaitAnyFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContex
 {
     CBEWaitAnyFunction::WriteVariableDeclaration(pFile, pContext);
     pFile->PrintIndent("int dice_ret_size;\n");
-    String sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    pFile->PrintIndent("socklen_t dice_fromlen = sizeof(*%s);\n", (const char*)sObj);
+    string sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
+    pFile->PrintIndent("socklen_t dice_fromlen = sizeof(*%s);\n", sObj.c_str());
 }
 
 /** \brief remove references from message buffer
@@ -86,6 +88,8 @@ bool CSockBEWaitAnyFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBECo
 {
     if (!CBEWaitAnyFunction::AddMessageBuffer(pFEInterface, pContext))
         return false;
-    m_pMsgBuffer->GetAlias()->IncStars(-m_pMsgBuffer->GetAlias()->GetStars());
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->GetAlias()->IncStars(-pMsgBuffer->GetAlias()->GetStars());
     return true;
 }

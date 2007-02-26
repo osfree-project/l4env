@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -13,12 +13,12 @@
  * COPYING file for details.
  */
 
+#include "vscr-server.h"
 #include "dopestd.h"
 #include "thread.h"
 #include "timer.h"
 #include "vscreen.h"
 #include "vscr_server.h"
-#include "vscr-server.h"
 
 static struct timer_services  *timer;
 static struct thread_services *thread;
@@ -28,9 +28,9 @@ static s16 thread_started = 0;
 int init_vscr_server(struct dope_services *d);
 
 
-/*****************************/
-/*** VSCREEN WIDGET SERVER ***/
-/*****************************/
+/*****************************
+ *** VSCREEN WIDGET SERVER ***
+ *****************************/
 
 void dope_vscr_waitsync_component(CORBA_Object _dice_corba_obj,
                                         CORBA_Environment *_dice_corba_env) {
@@ -84,24 +84,29 @@ static void vscreen_server_thread(void *arg) {
 
 
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
-static THREAD *start(VSCREEN *vscr_widget) {
-	THREAD *new;
-
+static int start(VSCREEN *vscr_widget) {
+	int result;
 	thread_started = 0;
-	new = thread->create_thread(&vscreen_server_thread, (void *)vscr_widget);
-	while (!thread_started && (timer)) timer->usleep(1000);
-	return new;
+
+	/* start server thread */
+	result = thread->start_thread(NULL, &vscreen_server_thread, (void *)vscr_widget);
+
+	/* shake hands with newly created thread */
+	if (result == 0)
+		while (!thread_started && (timer)) timer->usleep(1000);
+
+	return result;
 }
 
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct vscr_server_services services = {
 	start
@@ -109,9 +114,9 @@ static struct vscr_server_services services = {
 
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 
 int init_vscr_server(struct dope_services *d) {

@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -24,9 +24,9 @@ struct gfx_ds_data {
 
 int init_gfximg32(struct dope_services *d);
 
-/*****************************/
-/*** GFX HANDLER FUNCTIONS ***/
-/*****************************/
+/*****************************
+ *** GFX HANDLER FUNCTIONS ***
+ *****************************/
 
 static s32 img_get_width(struct gfx_ds_data *img) {
 	return img->w;
@@ -48,14 +48,14 @@ static void *img_map(struct gfx_ds_data *img) {
 	return img->pixels;
 }
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 
 static struct gfx_ds_data *create(s32 width, s32 height) {
 	struct gfx_ds_data *new;
-	new = malloc(sizeof(struct gfx_ds_data) + width*height*4);
+	new = zalloc(sizeof(struct gfx_ds_data) + width*height*4);
 	if (!new) return NULL;
 	new->w = width;
 	new->h = height;
@@ -74,9 +74,9 @@ static s32 register_gfx_handler(struct gfx_ds_handler *handler) {
 }
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct gfx_handler_services services = {
 	create,
@@ -84,9 +84,9 @@ static struct gfx_handler_services services = {
 };
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_gfximg32(struct dope_services *d) {
 	d->register_module("GfxImage32 1.0",&services);

@@ -13,41 +13,67 @@
 import <l4/sys/types.h>
 import <l4/dm_generic/types.h>
 
-/** l4 namespace */
+typedef long envpage_t[563];
+
+/** L4 namespace. */
 library l4loader
 {
+  const int MAX_TASK_ID = 16;
+
   /** IDL Interface for the loader module. */
   interface app
     {
-      /** \anchor idl_open
-       * Load application(s) using a config script or by path name.
+      /**
+       * Load application(s) using a config script or by path name. If
+       * img_ds != L4DM_INVALID_DATASPACE then use the dataspace as
+       * binary/script else get the binary/script from the file provider
+       * denoted by fprov.
        * 
        * The loader interpretes the script and executes the included
        * commands. See \ref p_script for a description of the script syntax.
        * If the file can be interpreted by the exec layer it is started
        * directly. If not, it is interpreted as a config script.
        *
-       * \param fname		file name to load or file name of script
-       * \param fprov		id of file provider to use
-       * \param flags		flags (currently unused)
-       * \retval error_msg	error message (helps debugging)
+       * \anchor idl_open
+       *
+       * \param img_ds		Dataspace containing the script or binary.
+       * 			If this parameter is L4DM_INVALID_DATASPACE
+       * 			request file fname from file provider frov.
+       * \param fname		File name. If img_ds is used this parameter
+       * 			is only used for debugging.
+       * \param fprov		id of default file provider.
+       * \param flags		flags, set to
+       * 			 #L4LOADER_STOP if the load process should
+       * 			 stop just before the task is really started.
+       * 			 Use cont() to complete the load process.
+       * \retval task_ids	Task identifiers of started tasks. The
+       *			maximum number of entries is MAX_TASK_ID. 
+       *			The first unused entry of that array 
+       *			contains L4_INVALID_ID.
+       * \retval error_msg	Error message (helps debugging)
        * \return		0 on success */
-      long open([in, string] char* fname, 
-		[in] l4_threadid_t fprov,
-		[in] unsigned long flags, 
+      long open([in] l4dm_dataspace_t img_ds,
+		[in, string] char* fname,
+	     	[in] l4_threadid_t fprov,
+     		[in] unsigned long flags,
+		[out, max_is(MAX_TASK_ID)] l4_taskid_t task_ids[],
 		[out, string, prealloc] char** error_msg);
+
+      /** Continue task which was not completely started.
+       *
+       * \param taskid		ID of the task to continue. */
+      long cont([in] l4_taskid_t taskid);
 
       /** Kill task. 
        * 
-       * The task must have been loaded by the Loader. The
-       * L4 task will be killed and all resources which are occupied inside
-       * loader, names, l4exec, dm_phys and rmgr will be released. This
-       * mechanism will change in future versions of the L4 environment.
+       * The task must have been loaded by the Loader. This function
+       * is called by the event listener thread and must not called by
+       * any other thread.
        *
        * \param task_id	id of task to terminate
        * \param flags		flags
        * \return		0 on success */
-      long kill([in] unsigned long task_id, [in] unsigned long flags);
+      long kill([in] l4_taskid_t task_id, [in] unsigned long flags);
 
       /** Dump task info
        *
@@ -63,7 +89,7 @@ library l4loader
        * 
        * Return an L4 infopage for the specified task.
        *
-       * \param task_id	id of task to get info from
+       * \param task_id		id of task to get info from
        * \param flags		flags
        * \retval fname		application name
        * \retval l4env_page	l4env_infopage of process
@@ -71,6 +97,46 @@ library l4loader
       long info([in] unsigned long task_id, [in] unsigned long flags,
 	        [out, string, init_with_in] char** fname, 
 		[out] l4dm_dataspace_t *l4env_page);
+
+      /** Open a library.
+       *
+       * Get the library image from the file provider, create dataspaces
+       * containing the program sections and map the library at the start.
+       *
+       * \param fname		library name
+       * \param fprov		id of file provider to use
+       * \param flags		flags
+       * \param envpage		l4env_infopage_t describing the program
+       * 			sections of this application.
+       * \return 		0 on success */
+      long lib_open([in, string] char* fname,
+		    [in] l4_threadid_t fprov,
+		    [in] unsigned long flags,
+		    [out] envpage_t *envpage);
+
+      /** Link a library.
+       *
+       * This function must be called as a second step after a library
+       * was loaded to ensure that all open references of the library are
+       * linked.
+       *
+       * \param envpage		l4env_infopage_t describing the program
+       * 			sections of this application (as returned
+       * 			by lib_open).
+       * \return		0 on success */
+      long lib_link([in] envpage_t *envpage);
+
+      /** Return the address of a dynamic loader function.
+       *
+       * \param symname		Name of a symbol of a dynamic object.
+       * \param envpage		l4env_infopage_t describing the program
+       * 			sections of this application (as returned
+       * 			by lib_open).
+       * \retval addr		the address of the symbol
+       * \return 		0 on success */
+      long lib_dsym([in] char *symname,
+		    [in] envpage_t *envpage,
+		    [out] l4_addr_t *addr);
     };
 };
 

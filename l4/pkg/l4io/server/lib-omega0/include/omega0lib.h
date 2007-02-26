@@ -16,7 +16,7 @@
 #ifndef __L4IO_SERVER_LIB_OMEGA0_INCLUDE_OMEGA0LIB_H_
 #define __L4IO_SERVER_LIB_OMEGA0_INCLUDE_OMEGA0LIB_H_
 
-/** OMEGA0lib initialization */
-int OMEGA0_init(void);
+/** OMEGA0lib initialization. */
+int OMEGA0_init(int use_spec);
 
 #endif

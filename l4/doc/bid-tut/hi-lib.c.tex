@@ -3,7 +3,8 @@
 #include <l4/sys/consts.h>
 #include <l4/hiworld/hiworld.h>
 
-static CORBA_Object server_id = L4_INVALID_ID;
+static l4_threadid_t server_id = L4_INVALID_ID;
+static CORBA_Object server = &server_id;
             
 //! Request netserver id at nameserver
 static int check_server(void){
@@ -18,17 +19,16 @@ int hiworld_print(void){
     CORBA_Environment env = dice_default_environment;
 
     if (check_server()) return -L4_EINVAL;
-    hi_print_call(&server_id, &env);
+    hi_print_call(server, &env);
     return -env.ipc_error;
 }
-
 //! get the string
 int hiworld_count(void){
     CORBA_Environment env = dice_default_environment;
     int count;
 
     if (check_server()) return -L4_EINVAL;
-    count=hi_count_call(&server_id, &env);
+    count=hi_count_call(server, &env);
     if(!env.ipc_error) return count;
     return -env.ipc_error;
 }

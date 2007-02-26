@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEMarshalFunction.h
- *	\brief	contains the declaration of the class CL4BEMarshalFunction
+ *    \file    dice/src/be/l4/L4BEMarshalFunction.h
+ *    \brief   contains the declaration of the class CL4BEMarshalFunction
  *
- *	\date	10/10/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    10/10/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -32,31 +33,33 @@
 
 #include <be/BEMarshalFunction.h>
 
-/**	\class CL4BEMarshalFunction
- *	\ingroup backend
- *	\brief the function class for the back-end
+/**    \class CL4BEMarshalFunction
+ *    \ingroup backend
+ *    \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
 class CL4BEMarshalFunction : public CBEMarshalFunction
 {
-DECLARE_DYNAMIC(CL4BEMarshalFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CL4BEMarshalFunction();
-	virtual ~CL4BEMarshalFunction();
+    /**    \brief constructor
+     */
+    CL4BEMarshalFunction();
+    virtual ~CL4BEMarshalFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CL4BEMarshalFunction(CL4BEMarshalFunction &src);
+    /**    \brief copy constructor */
+    CL4BEMarshalFunction(CL4BEMarshalFunction &src);
+
+public:
+    virtual int GetFixedSize(int nDirection,  CBEContext* pContext);
+    virtual int GetSize(int nDirection, CBEContext *pContext);
 
 protected:
-    virtual bool HasVariableSizedParameters();
-    virtual bool DoSortParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext * pContext);
+    virtual bool HasVariableSizedParameters(int nDirection = DIRECTION_IN | DIRECTION_OUT);
+    virtual bool DoExchangeParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext *pContext);
     virtual void WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
-
 };
 
 #endif

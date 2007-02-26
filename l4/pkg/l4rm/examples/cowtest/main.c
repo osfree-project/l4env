@@ -20,6 +20,7 @@
 #include <l4/sys/syscalls.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/rand.h>
+#include <l4/util/macros.h>
 #include <l4/util/rdtsc.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/dm_mem/dm_mem.h>
@@ -27,6 +28,8 @@
 #include <l4/env/env.h>
 
 #include <stdio.h>
+
+char LOG_tag[9]="cowtest";
 
 int main(void)
 {
@@ -37,8 +40,6 @@ int main(void)
   l4_threadid_t dm_id;
   l4_addr_t addr1,addr2,addr3;
 
-  LOG_init("cowtest");
-  
   /***************************************************************************
    * Region mapper test                                                      *
    ***************************************************************************/
@@ -51,7 +52,7 @@ int main(void)
       enter_kdebug("-");
     }
 
-  printf("dm: %x.%x\n",dm_id.id.task,dm_id.id.lthread);
+  printf("dm: "l4util_idfmt"\n",l4util_idstr(dm_id));
 
   /* open new ds 1 */
   if ((ret = l4dm_mem_open(dm_id,1000,0,0,"test",&ds1)))
@@ -59,8 +60,7 @@ int main(void)
       printf("error allocating dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("ds1 = %d at %x.%x\n",
-      ds1.id,ds1.manager.id.task,ds1.manager.id.lthread);
+  printf("ds1 = %d at "l4util_idfmt"\n", ds1.id,l4util_idstr(ds1.manager));
 
   addr1 = 0x10000000;
   if ((ret = l4rm_attach_to_region(&ds1,(void *)addr1,1000,0,L4DM_RW)))
@@ -76,8 +76,7 @@ int main(void)
       printf("error allocating dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("ds2 = %d at %x.%x\n",
-      ds2.id,ds2.manager.id.task,ds2.manager.id.lthread);
+  printf("ds2 = %d at "l4util_idfmt"\n", ds2.id,l4util_idstr(ds2.manager));
 
   addr2 = 0x10010000;
   if ((ret = l4rm_attach_to_region(&ds2,(void *)addr2,1000,0,L4DM_RW)))
@@ -93,8 +92,7 @@ int main(void)
       printf("error allocating dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("ds3 = %d at %x.%x\n",
-      ds3.id,ds3.manager.id.task,ds3.manager.id.lthread);
+  printf("ds3 = %d at "l4util_idfmt"\n", ds3.id,l4util_idstr(ds3.manager));
 
   addr3 = 0x10020000;
   if ((ret = l4rm_attach_to_region(&ds3,(void *)addr3,1000,0,L4DM_RW)))

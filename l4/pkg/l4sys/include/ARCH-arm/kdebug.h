@@ -1,5 +1,5 @@
-#ifndef L4_KDEBUG_H
-#define L4_KDEBUG_H
+#ifndef __L4SYS__INCLUDE__ARCH_ARM__KDEBUG_H__
+#define __L4SYS__INCLUDE__ARCH_ARM__KDEBUG_H__
 
 #include <l4/sys/compiler.h>
 
@@ -15,7 +15,7 @@ __asm__ __volatile__ (				\
     "	b	1f		\n"		\
     "	.ascii	\"" text "\"	\n"		\
     "	.byte	0		\n"		\
-    "	.align	2		\n"		\
+    "	.align	4		\n"		\
     "1:				\n"		\
     :						\
     : "i" (L4_SYSCALL_ENTER_KDEBUG)		\
@@ -24,30 +24,191 @@ __asm__ __volatile__ (				\
 L4_INLINE void 
 outnstring(const char* x, unsigned len);
 
+L4_INLINE void
+outstring(const char *text);
+
+L4_INLINE void
+outchar(char c);
+
+L4_INLINE void
+outdec(int number);
+
+L4_INLINE void
+outhex32(int number);
+
+L4_INLINE void
+outhex20(int number);
+
+L4_INLINE void
+outhex16(int number);
+
+L4_INLINE void
+outhex12(int number);
+
+L4_INLINE void
+outhex8(int number);
+
+L4_INLINE void
+kd_display(char *text);
+
+L4_INLINE int
+l4kd_inchar(void);
+
+L4_INLINE void
+l4_sys_cli(void);
+
+L4_INLINE void
+l4_sys_sti(void);
+
+EXTERN_C long int 
+l4_atomic_add(volatile long int* mem, long int offset) __attribute__((long_call));
+
+EXTERN_C long int 
+l4_atomic_cmpxchg(volatile long int* mem, long int oldval, long int newval) __attribute__((long_call));
+
+EXTERN_C long int 
+l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) __attribute__((long_call));
+
+/*
+ * -------------------------------------------------------------------
+ * Implementations
+ */
+
+#define __KDEBUG_ARM_PARAM_0(nr)				\
+  ({								\
+    register unsigned long r0 asm("r0");			\
+    __asm__ __volatile__					\
+      (								\
+       "stmdb sp!, {r1-r12,lr}	\n\t"				\
+       "mov	lr, pc		\n\t"				\
+       "mov	pc, %1		\n\t"				\
+       "cmp	lr, #" #nr "	\n\t"				\
+       "ldmia sp!, {r1-r12,lr}	\n\t"				\
+       :							\
+       "=r" (r0)						\
+       :							\
+       "i" (L4_SYSCALL_ENTER_KDEBUG)				\
+      );							\
+    r0;								\
+  })
+
+#define __KDEBUG_ARM_PARAM_1(nr, p1)				\
+  ({								\
+    register unsigned long r0 asm("r0") = (unsigned long)(p1);	\
+    __asm__ __volatile__					\
+      (								\
+       "stmdb sp!, {r1-r12,lr}	\n\t"				\
+       "mov	lr, pc		\n\t"				\
+       "mov	pc, %1		\n\t"				\
+       "cmp	lr, #" #nr "	\n\t"				\
+       "ldmia sp!, {r1-r12,lr}	\n\t"				\
+       :							\
+       "=r" (r0)						\
+       :							\
+       "i" (L4_SYSCALL_ENTER_KDEBUG),				\
+       "0" (r0) 						\
+      );							\
+    r0;								\
+  })
+
+#define __KDEBUG_ARM_PARAM_2(nr, p1, p2)			\
+  ({								\
+    register unsigned long r0 asm("r0") = (unsigned long)(p1);	\
+    register unsigned long r1 asm("r1") = (unsigned long)(p2);	\
+    __asm__ __volatile__					\
+      (								\
+       "stmdb sp!, {r2-r12,lr}	\n\t"				\
+       "mov	lr, pc		\n\t"				\
+       "mov	pc, %1		\n\t"				\
+       "cmp	lr, #" #nr "	\n\t"				\
+       "ldmia sp!, {r2-r12,lr}	\n\t"				\
+       :							\
+       "=r" (r0)						\
+       :							\
+       "i" (L4_SYSCALL_ENTER_KDEBUG),				\
+       "0" (r0), 						\
+       "r" (r1) 						\
+      );							\
+    r0;								\
+  })
+
+
 L4_INLINE void 
 outnstring(const char* x, unsigned len)
 {
-  register unsigned r0 asm("r0") = (unsigned)x;
-  register unsigned r1 asm("r1") = len;
-  __asm__ __volatile__ 
-    (
-     "stmdb sp!, {r0-r12,lr} \n\t"
-     "	mov	lr, pc		\n"
-     "	mov	pc, %2		\n"
-     "	cmp	lr, #3		\n"
-     "ldmia sp!, {r0-r12,lr} \n\t"
-     : 
-     "=r"(r0),
-     "=r"(r1)
-     : 
-     "i" (L4_SYSCALL_ENTER_KDEBUG), 
-     "0"(r0), 
-     "1"(r1)
-     : 
-     "r2","r3","r4","r5","r6","r7",
-     "r8","r9","r10","r12","r14"
-     );
+  __KDEBUG_ARM_PARAM_2(3, x, len);
 }
 
+L4_INLINE void
+outstring(const char *text)
+{
+  __KDEBUG_ARM_PARAM_1(2, text);
+}
 
-#endif /* L4_KDEBUG_H */
+L4_INLINE void
+outchar(char c)
+{
+  __KDEBUG_ARM_PARAM_1(1, c);
+}
+
+L4_INLINE void
+outdec(int number)
+{
+  __KDEBUG_ARM_PARAM_1(4, number);
+}
+
+L4_INLINE void
+outhex32(int number)
+{
+  __KDEBUG_ARM_PARAM_1(5, number);
+}
+
+L4_INLINE void
+outhex20(int number)
+{
+  __KDEBUG_ARM_PARAM_1(6, number);
+}
+
+L4_INLINE void
+outhex16(int number)
+{
+  __KDEBUG_ARM_PARAM_1(7, number);
+}
+
+L4_INLINE void
+outhex12(int number)
+{
+  __KDEBUG_ARM_PARAM_1(8, number);
+}
+
+L4_INLINE void
+outhex8(int number)
+{
+  __KDEBUG_ARM_PARAM_1(9, number);
+}
+
+L4_INLINE void
+kd_display(char *text)
+{
+  outstring(text);
+}
+
+L4_INLINE int
+l4kd_inchar(void)
+{
+  return __KDEBUG_ARM_PARAM_0(0xd);
+}
+
+L4_INLINE void
+l4_sys_cli(void)
+{
+  __KDEBUG_ARM_PARAM_0(0x32);
+}
+
+L4_INLINE void
+l4_sys_sti(void)
+{
+  __KDEBUG_ARM_PARAM_0(0x33);
+}
+
+#endif /* ! __L4SYS__INCLUDE__ARCH_ARM__KDEBUG_H__ */

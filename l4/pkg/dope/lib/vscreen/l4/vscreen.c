@@ -13,28 +13,34 @@
  * COPYING file for details.
  */
 
+/*** GENERAL INCLUDES ***/
 #include <stdio.h>
+#include <string.h>
+
+/*** L4 SPECIFIC INCLUDES ***/
 #include <l4/names/libnames.h>
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
+#include <l4/env/errno.h>
 #include <l4/util/util.h>
+#include <l4/util/l4_macros.h>
+#include <l4/l4rm/l4rm.h>
 #include <l4/dm_phys/dm_phys.h>
 #include <l4/dope/vscr-client.h>
 #include <l4/dope/vscreen.h>
 
 #define MAX_VSCREENS 32
+#define DEBUG(x) /* x */
 
-//static sm_exc_t _ev;
 static CORBA_Environment env = dice_default_environment;
 
 struct vscr {
-	char            *name;
-	l4_threadid_t    tid;
+	char          *name;
+	l4_threadid_t  tid;
 } vscreens[MAX_VSCREENS];
 
 
-
-/*** ALLOCATE NEW VSCR ID ***/
+/*** ALLOCATE NEW VSCREEN ID ***/
 static int get_new_index(void) {
 	int i;
 		
@@ -48,7 +54,7 @@ static int get_new_index(void) {
 }
 
 
-/*** CHECK IF A GIVEN VSCR ID IS VALID ***/
+/*** UTILITY: CHECK IF A GIVEN VSCR ID IS VALID ***/
 static int valid_index(int id) {
 
 	if ((id<0) || (id>=MAX_VSCREENS)) return 0;
@@ -57,18 +63,20 @@ static int valid_index(int id) {
 }
 
 
+/*** UTILITY: RELEASE VSCREEN SERVER ID ***/
 static void release_index(int i) {
-	
 	if (!valid_index(i)) return;
 	vscreens[i].name = NULL;    
 }
 
 
+/*** INTERFACE: ESTABLISH CONNECTION TO VSCREEN SERVER ***/
 void *vscr_connect_server(char *ident) {
 	int i;
-	
-	if (ident) printf("libVScr(get_id): ident = %s\n",ident);
+
+	if (ident) DEBUG(printf("libVScr(get_id): ident = %s\n",ident));
 	if ((i = get_new_index()) <0) return NULL;
+	if (!strcmp("<undefined>", ident)) return NULL;
 
 	vscreens[i].name = ident;
 	
@@ -82,17 +90,18 @@ void *vscr_connect_server(char *ident) {
 }
 
 
+/*** INTERFACE: DISCONNECT FROM VSCREEN SERVER ***/
 void vscr_release_server_id(void *id) {
 	int i = ((int)id) - 1;
-	
-	if (!valid_index(i)) return;
-	
-	/* !!! unmap vscreen memory !!! */
 
+	if (!valid_index(i)) return;
+
+	/* !!! unmap vscreen memory !!! */
 	release_index(i);
 }
 
 
+/*** UTILITY: CONVERT STRING WITH HEX NUMBER TO LONG INT ***/
 static unsigned long hex2u32(char *s) {
 	int i;
 	unsigned long result=0;
@@ -105,60 +114,55 @@ static unsigned long hex2u32(char *s) {
 }
 
 
-//static char vscr_ident_buf[256];
-
-   
+/*** LIB-INTERNAL: MAP SHARED MEMORY BLOCK INTO LOCAL ADDRESS SPACE ***/
 void *vscr_map_smb(char *smb_ident) {
 	l4dm_dataspace_t ds;
 	long smb_size = 0;
 	void *fb_adr;
-	
-//  	int i = ((int)id) - 1;
-//  char *vscr_ident = &vscr_ident_buf[0];
-//  	
-//  if (!valid_index(i)) return NULL;
-//  
-//  printf("libVScr(get_fb): dope_vscr_map = %lu\n",(long)
-//  	dope_vscr_map_call(&vscreens[i].tid,&vscr_ident,&env)
-//  );
-//
+	unsigned int res;
 
-	printf("libVScreen(get_fb): smb_ident = %s\n",smb_ident);
-	
+	DEBUG(printf("libVScreen(get_fb): smb_ident = %s\n",smb_ident));
+
 	ds.manager.lh.low  = hex2u32(smb_ident+7);
 	ds.manager.lh.high = hex2u32(smb_ident+16);
 	ds.id              = hex2u32(smb_ident+33);
 	smb_size           = hex2u32(smb_ident+49);
-	
-	printf("hl.low=%x, lh.high=%x, id=%x\n",
-					ds.manager.lh.low,
-					ds.manager.lh.high,
-					ds.id);
-	
-////    printf("libVScr(get_fb): vscr_ident = %s\n",vscr_ident);
-////    printf("libVScr(get_fb): ds.id = %lu\n",(long)vscreens[i].ds.id);
-	printf("libVScr(get_fb): l4rm_attach = %lu\n",
-    	(long)(l4rm_attach(&ds, smb_size, 0, L4DM_RW, (void *)&fb_adr))
-	);
-	printf("libVScr(get_fb): fb_adr = 0x%x\n",(int)fb_adr);
-//  return vscreens[i].bufadr;
+
+	DEBUG(printf("libVScreen(get_fb): DS = " l4util_idfmt " id = 0x%x "
+	             "fb-size = %dKB\n",
+	             (int)l4util_idstr(ds.manager), (int)ds.id, (int)(smb_size >> 10)));
+
+	if ((res = l4rm_attach(&ds, smb_size, 0, L4DM_RW, &fb_adr))) {
+	  printf("libVScr(get_fb): l4rm_attach failed (err: %s(%d))\n",
+	         l4env_errstr(res), res);
+	  return 0;
+	}
+
+	DEBUG(printf("libVScr(get_fb): fb_adr = 0x%lx\n", (unsigned long)fb_adr));
 	return fb_adr;
-	
 }
 
 
+/*** INTERFACE: WAIT FOR END OF CURRENT REDRAW OPERATION ***/
 void vscr_server_waitsync(void *id) {
 	int i = ((int)id) - 1;
 	if (!valid_index(i)) return;
 	dope_vscr_waitsync_call(&vscreens[i].tid,&env);
 	l4_thread_switch(L4_NIL_ID);
-//  l4_sleep(10);
 }
 
 
+/*** INTERFACE: ASYNCHRONOUS REFRESH OF A VSCREEN REGION ***/
 void vscr_server_refresh(void *id, int x, int y, int w, int h) {
 	int i = ((int)id) - 1;
 	if (!valid_index(i)) return;
 	dope_vscr_refresh_call(&vscreens[i].tid, x, y, w, h, &env);
 	l4_thread_switch(L4_NIL_ID);
 }
+
+
+/*** INTERFACE: UNMAP FRAME BUFFER OF VSCREEN WIDGET ***/
+int vscr_free_fb(void *fb) {
+	return l4rm_detach(fb);
+}
+

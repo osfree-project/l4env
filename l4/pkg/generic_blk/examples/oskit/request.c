@@ -84,9 +84,20 @@ __copy_buffer(void * buf, blksrv_buffer_t * ds_buf, int num, int direction)
   for (i = 0; i < num; i++)
     {
       if (direction == COPY_TO)
-        memcpy(ds_buf[i].map_addr, p, ds_buf[i].size);
+        {
+          LOGdL(DEBUG_COPY, "copy to client buffer, " \
+                "0x%08x -> 0x%08x (%u bytes)", (l4_addr_t)p, 
+                (l4_addr_t)ds_buf[i].map_addr, (l4_addr_t)ds_buf[i].size);
+          memcpy(ds_buf[i].map_addr, p, ds_buf[i].size);
+        }
       else
-        memcpy(p, ds_buf[i].map_addr, ds_buf[i].size);
+        {
+          LOGdL(DEBUG_COPY, "copy from client buffer, " \
+                "0x%08x -> 0x%08x (%u bytes)",
+                (l4_addr_t)ds_buf[i].map_addr, (l4_addr_t)p, 
+		(l4_addr_t)ds_buf[i].size); 
+          memcpy(p, ds_buf[i].map_addr, ds_buf[i].size);
+        }
 
       p += ds_buf[i].size;
     }
@@ -115,7 +126,7 @@ __do_request(blksrv_request_t * request)
   if ((request->req.block + request->req.count) > disk_size)
     {
       LOG_Error("access beyond end of device, block %u, %u blocks, " \
-                "disk size %u", request->req.block, request->req.count,
+                "disk size %lu", request->req.block, request->req.count,
                 disk_size);
       blksrv_do_notification(request->driver, request->req.req_handle, 
                              L4BLK_ERROR, -L4_EINVAL);
@@ -168,6 +179,8 @@ __do_request(blksrv_request_t * request)
   /* unmap dataspace buffers */
   for (i = 0; i < request->num; i++)
     l4rm_detach(request->bufs[i].map_addr);  
+
+  //KDEBUG("request done.");
 
   /* notify client */
   blksrv_do_notification(request->driver, request->req.req_handle,
@@ -277,6 +290,9 @@ __request_thread(void * data)
   
   /* request thread started */
   l4thread_started((void *)0);
+  
+  LOG("opened device %s (%s), disk size %lu MB",
+      device_name, (readwrite) ? "rw" : "ro", (unsigned long)(tmp >> 20));
 
   /* request handling loop */
   while (1)
@@ -365,7 +381,7 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
 {
   blksrv_request_t * req;
   blksrv_request_t * rp;
-  int i;
+  int i,j;
   int retval = L4_ENOMEM;
 
   /* enqueue request */
@@ -385,6 +401,7 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
   /* map dataspaces */
   for (i = 0; i < sg_num; i++)
     {
+      /* attach dataspace */
       retval = l4rm_attach((l4dm_dataspace_t *)&sg_list[i].ds, sg_list[i].size, 
                            sg_list[i].offs, L4DM_RW | L4RM_MAP, 
                            &req->bufs[i].map_addr);
@@ -392,18 +409,30 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
         {
           LOG_Error("attach buffer ds failed: %s (%d)", 
                     l4env_errstr(retval), retval);
+          for (j = 0; j < i - 1; j++)
+            l4rm_detach(req->bufs[j].map_addr);
+
           goto error_bufs;
         }
       
       /* we must give the request thread access rights to the dataspace, 
        * it detaches the dataspace */
-      l4dm_share((l4dm_dataspace_t *)&sg_list[i].ds, req_id, L4DM_RW);
-      
+      retval = l4dm_share((l4dm_dataspace_t *)&sg_list[i].ds, req_id, L4DM_RW);
+      if (retval < 0)
+        {
+          LOG_Error("share buffer ds with request thread failed: %s (%d)",
+                    l4env_errstr(retval), retval);
+          for (j = 0; j <= i; j++)
+            l4rm_detach(req->bufs[j].map_addr);
+
+          goto error_bufs;
+        }
+
       req->bufs[i].ds = sg_list[i].ds;
       req->bufs[i].size = sg_list[i].size;
 
-      LOGdL(DEBUG_MAP_DS, "mapped ds %d at "IdFmt" to %p, size %u", 
-            sg_list[i].ds.id, IdStr(sg_list[i].ds.manager), 
+      LOGdL(DEBUG_MAP_DS, "mapped ds %d at "l4util_idfmt" to %p, size %u", 
+            sg_list[i].ds.id, l4util_idstr(sg_list[i].ds.manager), 
             req->bufs[i].map_addr, req->bufs[i].size);
     }
 

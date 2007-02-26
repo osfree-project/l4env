@@ -1,22 +1,25 @@
 /* -*- c -*- */
 
-/* This defines the construction of the kernel's virtual address space */
-/* There are other definitions of addresses defined 
- * as _xxx_addr in src/kern/ia32/kmem-ia32.cpp. Keep this in mind when
- * defining new values.
- */
-_tcbs_1			= 0xc0000000;	/* assumption: 256MB-aligned */
-_syscalls		= 0xeacff000;
-_physmem_1		= 0xf0000000;	/* assumption: 256MB-aligned */
-load_address		= 0x1000;
+_boot_sys_start = 0x300000;
+_kernel_image	= 0xf0000000;	/* kernel link address */
+_load		= 0x1000;	/* skip page 0 to preserve BIOS data */
 
-ENTRY(_start)
+ENTRY(_boot_start)
 
 SECTIONS {
+  . = _boot_sys_start;
+  .text_boot : {
+    *(.bootstrap.text)
+  }
+  
+  . = ALIGN(0x10);
+  .bss_boot : {
+    *(.bootstrap.bss)
+  }
 
-  . = _physmem_1 + load_address;
+  . = _kernel_image + _load;
 
-  .text : {
+  .text : AT (ADDR(.text) - 0xf0000000) {
     crt0.o(.text)
     *(.init)
     *(.text .text.* .gnu.linkonce.t.*)
@@ -29,7 +32,10 @@ SECTIONS {
     . = ALIGN(0x40);
 
     PROVIDE (_etext = .);
+  } = 0x90909090
 
+  . = ALIGN(0x10);
+  .data : AT (ADDR(.data) - 0xf0000000) {
     *(.data .data.* .gnu.linkonce.d.*)
     *(.anno)
 
@@ -54,21 +60,30 @@ SECTIONS {
   }
 
   . = ALIGN(0x10);
-  .bss : {
+  .bss : AT (ADDR(.bss) - 0xf0000000) {
     PROVIDE (_bss_start = .);
-    *(.bss COMMON)
+    *(.bss .gnu.linkonce.b.* COMMON)
     PROVIDE (_bss_end = .);
   }
 
   PROVIDE (_end = .);
 
   . = ALIGN(4096);
-  .initcall : {
-    PROVIDE (_initcall_start = .);
-    *(.initcall.*)
-    . = ALIGN(4096);
-    PROVIDE (_initcall_end = .);
+  PROVIDE (_initcall_start = .);
+  .initcall.text : AT (ADDR(.initcall.text) - 0xf0000000) {
+    *(.initcall.text*)
+  } = 0x90909090
+
+  .initcall.data : AT (ADDR(.initcall.data) - 0xf0000000) {
+    *(.initcall.data*)
+    _initkip_start = .;
+    KEEP(*(.initkip.version))
+    KEEP(*(.initkip.features))
+    KEEP(*(.initkip.features.fini))
+    _initkip_end = .;
   }
+  . = ALIGN(4096);
+  PROVIDE (_initcall_end = .);
 
   /DISCARD/ : {
     *(.note)

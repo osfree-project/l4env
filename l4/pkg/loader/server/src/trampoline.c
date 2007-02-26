@@ -12,26 +12,48 @@
 
 #include <l4/sys/types.h>
 #include <l4/sys/linkage.h>
+#include <l4/util/mb_info.h>
 
 #include "trampoline.h"
 
-#define MULTIBOOT_VALID 0x2BADB002
-
-/** this function is mapped into a new tasks address space to load the
- * registers in a multiboot-compliant way before starting the task's
- * real code */
+/** This function is mapped into a new tasks address space to load the
+ *  registers in a multiboot-compliant way before starting the task's
+ *  real code. Not needed if bootet with libloader.s.so. */
+#ifdef ARCH_x86
 void
-task_trampoline(l4_addr_t entry, void *mbi)
+task_trampoline(l4_addr_t entry, void *mbi, void *env)
 {
-  unsigned dummy1, dummy2, dummy3;
+  unsigned dummy1, dummy2, dummy3, dummy4;
 
   asm volatile("movl %%edx,%%ebx	\n\t"
                "call *%%ecx		\n\t"
                ".globl _task_trampoline_end\n"
 	       "_task_trampoline_end:\n\t"
-	       : "=c" (dummy1), "=d" (dummy2), "=a" (dummy3)
-	       : "0"  (entry),  "1"  (mbi),    "2"   (MULTIBOOT_VALID)
+	       : "=c"(dummy1), "=d"(dummy2), "=a"(dummy3), "=S"(dummy4)
+	       :  "c"(entry), "d"(mbi), "a"(L4UTIL_MB_VALID), "S"(env)
 	       );
   /* NORETURN */
 }
+#endif
 
+/* See also roottask/server/src/trampoline.c */
+#ifdef ARCH_arm
+
+#define _st2(x) #x
+#define _st(x)  _st2(x)
+
+asm (
+".global task_trampoline            \n"
+"task_trampoline:                   \n"
+"	ldr r3, [sp, #4]!           \n" // inc sp, load entry address to r3 sp
+"	ldr r1, [sp, #4]!           \n" // inc sp, load mbi pointer to r1
+"	ldr r2, [sp, #4]!           \n" // inc sp, load env page pointer to r2
+"	ldr r0, .LC_l4util_mb_valid \n" // load MB-Magic to r0
+"	mov pc, r3                  \n" // jump to entry
+".LC_l4util_mb_valid:               \n"
+".word " _st(L4UTIL_MB_VALID) "     \n"
+""
+".global _task_trampoline_end       \n"
+"_task_trampoline_end:              \n");
+
+#endif

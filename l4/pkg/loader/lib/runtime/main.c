@@ -23,17 +23,21 @@
 #include <l4/env/env.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/log/l4log.h>
+#include <l4/log/log_printf.h>
 #include <l4/exec/exec.h>
 #include <l4/loader/loader.h>
 #include <l4/thread/thread.h>
 #include <l4/semaphore/semaphore.h>
 #include <l4/util/mb_info.h>
 #include <l4/util/mbi_argv.h>
+#include <l4/dm_mem/dm_mem.h>
 
 l4env_infopage_t* app_envpage = NULL;
 
 #define MAX_FIXED 32
 static l4rm_vm_range_t fixed[MAX_FIXED];
+static int fixed_type[MAX_FIXED];
+
 static int num_fixed = 0;
 
 l4env_infopage_t *
@@ -42,9 +46,9 @@ l4env_get_infopage(void)
   return app_envpage;
 }
 
-// #define DEBUG_SECTIONS
+//#define DEBUG_ATTACH
 
-/** print error message and go sleeing */
+/** print error message and go sleeping */
 static void __attribute__((noreturn))
 __load_error(const char *format, ...)
 {
@@ -53,12 +57,12 @@ __load_error(const char *format, ...)
   l4_msgdope_t result;
   
   va_start(args, format);
-  vprintf(format, args);
+  LOG_vprintf(format, args);
   va_end(args);
 
   /* send answer to loader server */
   l4_ipc_send(app_envpage->loader_id,
-		   L4_IPC_SHORT_MSG, L4_LOADER_ERROR, 0,
+		   L4_IPC_SHORT_MSG, L4LOADER_ERROR, 0,
 		   L4_IPC_NEVER, &result);
 
   /* sleep forever */
@@ -72,7 +76,7 @@ __load_error(const char *format, ...)
 extern int main(int argc, char *argv[]);
 
 static void
-__startup_main(void)
+__startup_main(void *dummy)
 {
   crt0_construction();
 
@@ -85,21 +89,26 @@ __setup_fixed(void)
   l4exec_section_t *l4exc;
   l4exec_section_t *l4exc_stop;
   
-  /* L4env infopage */
+  /* L4env infopage -- paged by our pager */
   fixed[num_fixed].addr = l4_trunc_page(app_envpage);
   fixed[num_fixed].size = L4_PAGESIZE;
+  fixed_type[num_fixed] = L4RM_REGION_PAGER;
   num_fixed++;
 
-  /* trampoline page */
+  /* trampoline page -- paged by our pager */
   fixed[num_fixed].addr = l4_trunc_page(app_envpage->stack_low);
   fixed[num_fixed].size = l4_round_page(app_envpage->stack_high)
 			- fixed[num_fixed].addr;
+  fixed_type[num_fixed] = L4RM_REGION_PAGER;
   num_fixed++;
 
-  /* system area (video memory, BIOS */
+#ifdef ARCH_x86
+  /* system area (video memory, BIOS -- blocked */
   fixed[num_fixed].addr = 0x0009F000;
   fixed[num_fixed].size = 0x00100000 - 0x0009F000;
+  fixed_type[num_fixed] = L4RM_REGION_PAGER;
   num_fixed++;
+#endif
 
   /* sections which can't be relocated */
   l4exc_stop = app_envpage->section + app_envpage->section_num;
@@ -117,44 +126,49 @@ __setup_fixed(void)
     }
 }
 
-/** attach all sections with known addresses */
+/** Attach all sections with known addresses.
+ * At this time, the region mapper thread is not started yet! */
 static void
 __attach_fixed(void)
 {
   int error;
-  l4_uint32_t area;
   l4_addr_t addr;
   l4_size_t size;
   l4exec_section_t *l4exc;
   l4exec_section_t *l4exc_stop;
 
-  /* fixed region 0 (see __setup_fixed()) */
-  addr = l4_trunc_page(app_envpage);
-  size = L4_PAGESIZE;
-  if ((error=l4rm_direct_area_reserve_region(addr, size, 0, &area)))
+  /* fixed region 0 (see __setup_fixed()), paged by our pager */
+  if ((error = l4rm_direct_area_setup_region(fixed[0].addr, fixed[0].size, 
+					     L4RM_DEFAULT_REGION_AREA, 
+					     fixed_type[0], 0,
+					     L4_INVALID_ID)) < 0)
     {
       __load_error("Error %d reserving infopage at %08x-%08x\n",
-		    error, addr, addr+size);
-    }
-  
-  /* fixed region 1 (see __setup_fixed()) */
-  addr = l4_trunc_page(app_envpage->stack_low);
-  size = l4_round_page(app_envpage->stack_high) - addr;
-  if ((error=l4rm_direct_area_reserve_region(addr, size, 0, &area)))
-    {
-      __load_error("Error %d reserving main stack at %08x-%08x\n",
-		    error, addr, addr+size);
+		    error, fixed[0].addr, fixed[0].addr+fixed[0].size);
     }
 
-  /* fixed region 2 (see __setup_fixed()) */
-  addr = 0x0009F000;
-  size = 0x00100000 - 0x0009F000;
-  if ((error=l4rm_direct_area_reserve_region(addr, size, 0, &area)))
+  /* fixed region 1 (see __setup_fixed()), paged by our pager */
+  if ((error = l4rm_direct_area_setup_region(fixed[1].addr, fixed[1].size, 
+					     L4RM_DEFAULT_REGION_AREA,
+					     fixed_type[1], 0, 
+					     L4_INVALID_ID)) < 0)
+    {
+      __load_error("Error %d reserving main stack at %08x-%08x\n",
+		    error, fixed[0].addr, fixed[0].addr+fixed[0].size);
+    }
+
+#ifdef ARCH_x86
+  /* fixed region 2 (see __setup_fixed()), paged by our pager */
+  if ((error = l4rm_direct_area_setup_region(fixed[2].addr, fixed[2].size, 
+					     L4RM_DEFAULT_REGION_AREA,
+					     fixed_type[2], 0, 
+					     L4_INVALID_ID)) < 0)
     {
       __load_error("Error %d reserving video memory at %08x-%08x\n",
-	  error, addr, addr+size);
+		    error, fixed[0].addr, fixed[0].addr+fixed[0].size);
     }
-	
+#endif
+
   /* sections which can't be relocated */
   l4exc_stop = app_envpage->section + app_envpage->section_num;
   for (l4exc=app_envpage->section; l4exc<l4exc_stop; l4exc++)
@@ -165,21 +179,33 @@ __attach_fixed(void)
 	  /* No => this section is not relocatable */
       	  addr = l4_trunc_page(l4exc->addr);
 	  size = l4_round_page(l4exc->addr+l4exc->size) - addr;
-	  
-	  if (l4exc->info.type & L4_DSTYPE_PAGEME)
+
+	  /* Here we would differ between PAGEME and RESERVEME. The PAGEME
+	   * attribure is not set for initial sections (libloader.s.so,
+	   * ELF executable). Attaching it here allows (1) l4rm_lookup()
+	   * at this address and (2) is a shortcut. If we won't attach
+	   * these dataspaces here, a pagefault from a lthread != 0
+	   * would be sent to our (the application's) pager where it would
+	   * be dispatched and sent to the right dataspace manager. We can
+	   * shorten this procedure --- the pagefault is sent directly to
+	   * the appropriate DS manager. */
+	  if (l4exc->info.type & (L4_DSTYPE_PAGEME | L4_DSTYPE_RESERVEME))
 	    {
-	      /* section should be paged by our region manager */
+	      /* section should be paged by our region mapper */
 	      l4_uint32_t flags = l4exc->info.type & L4_DSTYPE_WRITE 
 			     ? L4DM_RW : L4DM_RO;
 
 #ifdef DEBUG_ATTACH
-	      printf("attaching fixed section %d to %08x-%08x manager %x.%x\n",
+	      LOG("attaching #%d to %08x-%08x manager "l4util_idfmt,
 		  l4exc-app_envpage->section, addr, addr+size,
-		  l4exc->ds.manager.id.task, l4exc->ds.manager.id.lthread);
+		  l4util_idstr(l4exc->ds.manager));
 #endif
 	  
-	      if ((error=l4rm_direct_attach_to_region(&l4exc->ds, (void*)addr, 
-						      size, 0, flags)))
+	      if ((error=
+                   l4rm_direct_area_attach_to_region(&l4exc->ds, 
+                                                     L4RM_DEFAULT_REGION_AREA,
+                                                     (void*)addr, size, 0, 
+                                                     flags)))
 		{
 		  __load_error("Error %d attaching section %d to %08x-%08x\n",
 				error, addr, addr+size);
@@ -187,25 +213,7 @@ __attach_fixed(void)
 
 	      /* section is attached now and will be paged */
 	      l4exc->info.type &= ~L4_DSTYPE_PAGEME;
-	      /* section is known to our region manager */
-	      l4exc->info.type &= ~L4_DSTYPE_RESERVEME;
-	    }
-	  else if (l4exc->info.type & L4_DSTYPE_RESERVEME)
-	    {
-	      /* section will be paged by someone, only reserve region */
-#ifdef DEBUG_ATTACH
-	      printf("reserving fixed section %d to %08x-%08x manager %x.%x\n", 
-		  l4exc-app_envpage->section, addr, addr+size,
-		  l4exc->ds.manager.id.task, l4exc->ds.manager.id.lthread);
-#endif
-	  
-	      if ((error=l4rm_direct_area_reserve_region(addr, size, 0, &area)))
-		{
-		  __load_error("Error %d reserving section %d to %08x-%08x\n",
-				error, addr, addr+size);
-		}
-
-	      /* section is reserved now */
+	      /* section is known to our region mapper */
 	      l4exc->info.type &= ~L4_DSTYPE_RESERVEME;
 	    }
 	}
@@ -213,12 +221,12 @@ __attach_fixed(void)
 }
 
 /** Attach all initial sections which are not yet relocated.
- * 
  * At this time, the region mapper thread is not started yet! */
-static void
-__attach_relocateable(void)
+void
+l4loader_attach_relocateable(void *infopage)
 {
   int error;
+  l4env_infopage_t *env = (l4env_infopage_t*)infopage;
   l4_uint32_t area;
   l4_uint32_t flags;
   l4_addr_t sec_beg, sec_end;
@@ -231,8 +239,8 @@ __attach_relocateable(void)
 
   /* Go through all sections of the L4 environment infopage and attach
    * sections which are not attched yet. */
-  l4exc_stop = app_envpage->section + app_envpage->section_num;
-  for (l4exc=app_envpage->section; l4exc<l4exc_stop; l4exc++)
+  l4exc_stop = env->section + env->section_num;
+  for (l4exc=env->section; l4exc<l4exc_stop; l4exc++)
     {
       /* Has the section still to be attached? */
       if (l4exc->info.type & L4_DSTYPE_PAGEME)
@@ -268,7 +276,7 @@ __attach_relocateable(void)
 	  if (area_beg != 0)
 	    __load_error("Error: Relocatable area starts at %08x\n"
 			 "sections at %p size %08x\n",
-			 area_beg, app_envpage->section, 
+			 area_beg, env->section, 
 			 sizeof(l4exec_section_t));
 
 	  /* reserve area */
@@ -294,9 +302,10 @@ __attach_relocateable(void)
 	      flags = l4exc->info.type & L4_DSTYPE_WRITE ? L4DM_RW : L4DM_RO;
 	    
 #ifdef DEBUG_ATTACH
-	      printf("attaching reloc section %d to %08x-%08x manager %x.%x\n", 
-		  l4exc-app_envpage->section, sec_addr, sec_addr+sec_size,
-		  l4exc->ds.manager.id.task, l4exc->ds.manager.id.lthread);
+	      LOG("attaching reloc section %d to %08x-%08x manager "
+		  l4util_idfmt, 
+		  l4exc-env->section, sec_addr, sec_addr+sec_size,
+		  l4util_idstr(l4exc->ds.manager));
 #endif
 
 	      /* Sections have fixed offsets in the region */
@@ -320,6 +329,7 @@ __attach_relocateable(void)
     }
 }
 
+/** Setup the modules addresses in the multiboot info page. */
 static void
 __fixup_modules(void)
 {
@@ -348,7 +358,7 @@ __fixup_modules(void)
 	}
     }
 }
-
+  
 /**  Shake hands with loader server.
  *
  * After all sections are attached to our region mapper, we ask the loader to
@@ -362,11 +372,11 @@ __complete_load(void)
   l4_msgdope_t result;
   
   l4_ipc_call(app_envpage->loader_id,
-		   L4_IPC_SHORT_MSG, L4_LOADER_COMPLETE, 0,
+		   L4_IPC_SHORT_MSG, L4LOADER_COMPLETE, 0,
 		   L4_IPC_SHORT_MSG, &dw0, &dw1,
 		   L4_IPC_NEVER, &result);
 
-  if (dw0 != L4_LOADER_COMPLETE)
+  if (dw0 != L4LOADER_COMPLETE)
     __load_error("Got illegal message %08x from loader\n", dw0);
 
   return (l4_addr_t)app_envpage->entry_2nd;
@@ -379,8 +389,8 @@ __complete_load(void)
  * page the sections later (after the region mapper pager thread is started.
  *
  * \param infopage	L4 environment infopage */
-void
-l4loader_init(void *infopage)
+static void __attribute__((used))
+__do_l4loader_init(void *infopage)
 {
   l4_addr_t start_addr;
   
@@ -395,17 +405,45 @@ l4loader_init(void *infopage)
 
   /* attach all initial sections (text, data, ...) */
   __attach_fixed();
-  __attach_relocateable();
+  l4loader_attach_relocateable(app_envpage);
   __fixup_modules();
 
   /* shake hands with exec layer and complete load process */
   start_addr = __complete_load();
 
+  /* start_addr should be l4env_init */
+#ifdef ARCH_x86
   asm volatile("push %0 ; ret" : :"r"(start_addr));
+#else
+#ifdef ARCH_arm
+  asm volatile("mov pc, %0" : : "r" (start_addr));
+#else
+#error Unsupported architecture
+#endif
+#endif
 }
 
-/** Second entry point.
- *
+#ifdef ARCH_x86
+void
+l4loader_init(void *infopage)
+{
+  __do_l4loader_init(infopage);
+}
+#endif
+#ifdef ARCH_arm
+/* maybe optimize the r8 register use away, and
+ * the __attribute__((used)) for __do_l4loader_init */
+asm(
+".globl l4loader_init			\n"
+"l4loader_init:				\n"
+"	ldr r0, [sp, #4]!		\n"
+"	ldr r8, .LC_do_l4loader_init	\n"
+"	mov pc, r8			\n"
+".LC_do_l4loader_init: .word __do_l4loader_init	\n"
+);
+#endif
+
+/** Second entry point after returning from loader.
  */
 void
 l4env_init(void)
@@ -413,7 +451,7 @@ l4env_init(void)
   int ret;
 
   /* attach rest of relocated sections which the loader */
-  __attach_relocateable();
+  l4loader_attach_relocateable(app_envpage);
 
   /* init command line parameters */
   l4util_mbi_to_argv(L4UTIL_MB_VALID, 
@@ -423,28 +461,31 @@ l4env_init(void)
   l4thread_init();
 
   /* setup region mapper tcb */
-  if ((ret = l4thread_setup(l4_myself(),
+  if ((ret = l4thread_setup(l4_myself(), ".rm",
 			    (l4_addr_t)app_envpage->stack_low,
 			    (l4_addr_t)app_envpage->stack_high))<0)
     {
-      printf("l4env_init: Setup region mapper tcb failed (%d)\n", ret);
+      LOG("l4env_init: Setup region mapper tcb failed (%d)", ret);
       enter_kdebug("l4env_init");
     }
 
   /* init semaphore lib */
   if ((ret = l4semaphore_init())<0)
     {
-      printf("l4env_init: Setup semaphore lib failed (%d)\n", ret);
+      LOG("l4env_init: Setup semaphore lib failed (%d)", ret);
       enter_kdebug("l4env_init");
     }
 
   /* start thread */
-  if ((ret = l4thread_create((l4thread_fn_t)__startup_main,
-			     (void*)app_envpage->addr_mb_info,
-			    L4THREAD_CREATE_ASYNC | 
-			    L4THREAD_CREATE_SETUP)) < 0)
+  if ((ret = l4thread_create_long(L4THREAD_INVALID_ID,
+				  __startup_main, ".main",
+				  L4THREAD_INVALID_SP,
+				  L4THREAD_DEFAULT_SIZE,
+				  L4THREAD_DEFAULT_PRIO,
+				  0, L4THREAD_CREATE_ASYNC | 
+				     L4THREAD_CREATE_SETUP)) < 0)
     {
-      printf("l4env_init: create main thread failed (%d)!\n",ret);
+      LOG("l4env_init: create main thread failed (%d)!",ret);
       enter_kdebug("PANIC");
     }
 

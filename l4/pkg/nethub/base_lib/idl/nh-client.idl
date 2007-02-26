@@ -1,0 +1,25 @@
+/*
+ * Copyright (C) 2004  Alexander Warg  <alexander.warg@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the nethub package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+#include <l4/sys/types.h>
+#include <l4/nethub/client-types.h>
+
+[uuid(0x30)]
+interface Nh_client
+{
+  int open([in] unsigned niface, 
+           [in, out, ref, prealloc] struct Nh_iface *iface);
+
+  int close([in] unsigned niface);
+
+  int stats([in] unsigned niface, 
+            [out] unsigned *tx, [out] unsigned *txd,
+            [out] unsigned *rx, [out] unsigned *rxd);
+};
+

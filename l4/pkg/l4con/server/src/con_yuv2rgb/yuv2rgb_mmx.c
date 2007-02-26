@@ -26,7 +26,11 @@
 #include <stdlib.h>
 
 #include "yuv2rgb.h"
-#include "stdint.h"
+#ifdef USE_OSKIT
+#include "stdint_oskit.h"
+#else
+#include <stdint.h>
+#endif
 #include "attributes.h"
 #include "mmx.h"
 #include "yuv2rgb_mmx.h"

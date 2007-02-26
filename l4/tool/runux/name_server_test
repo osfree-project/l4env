@@ -1,0 +1,15 @@
+#! /bin/bash
+
+# This is the runux script for the l4vfs name_server testcase
+
+. ${0%/*}/generic.inc
+
+fiasco \
+	-l names              \
+	-l log                \
+	-l dm_phys            \
+	-l rtc-ux             \
+	-l "name_server -e"       \
+	-l static_file_server \
+        -l name_server_test   \
+	-n8 "$@"

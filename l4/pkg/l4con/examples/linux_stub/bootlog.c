@@ -1,7 +1,8 @@
 /* $Id$ */
 /**
  * \file	con/examples/linux_stub/bootlog.c
- * \brief	Buffering of initial output
+ * \brief	Buffering of initial output. This console also replaces the
+ * 		herccons console (in lib/herc_printf.c).
  *
  * \date	01/2002
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
@@ -15,22 +16,28 @@
 #include <linux/tty.h>
 #include <linux/console.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
+#include <asm/l4_debug.h>
+#else
+#include <asm/l4linux/debug.h>
+#endif
 #include <l4/sys/kdebug.h>
 
 #define DROPSCON_BOOTLOG_BUF_LEN	(16384) /* must be a power of 2 */
 #define DROPSCON_BOOTLOG_BUF_MASK	(DROPSCON_BOOTLOG_BUF_LEN-1)
 
 static char dropscon_bootlog_buf[DROPSCON_BOOTLOG_BUF_LEN];
-static unsigned dropscon_bootlog_start = 0;
-static unsigned dropscon_bootlog_tail  = 0;
-static unsigned dropscon_bootlogged_chars = 0;
-
-unsigned dropscon_bootlog_init_done = 0;
+static unsigned dropscon_bootlog_start     = 0;
+static unsigned dropscon_bootlog_tail      = 0;
+static unsigned dropscon_bootlogged_chars  = 0;
+static unsigned dropscon_bootlog_init_done = 0;
 
 static void
 dropscon_bootlog_write(struct console *c, const char *p, unsigned count)
 {
   int i;
+
+  herc_console_write(c, p, count);
 
   for (i=0; i<count; i++, p++)
     {
@@ -41,9 +48,6 @@ dropscon_bootlog_write(struct console *c, const char *p, unsigned count)
 	dropscon_bootlogged_chars++;
       else
 	dropscon_bootlog_start++;
-      if (*p == '\n')
-	outchar('\r');
-      outchar(*p);
     }
 }
 
@@ -82,6 +86,12 @@ dropscon_bootlog_init(void)
 #endif
   
   dropscon_bootlog_init_done = 1;
+}
+
+int
+dropscon_bootlog_initialized(void)
+{
+  return dropscon_bootlog_init_done;
 }
 
 void

@@ -1,0 +1,71 @@
+# module configuration file
+# kernel, sigma0 and the roottask are always loaded automatically
+#
+# add kernel command line arguments with
+#  kernel fiasco arguments...
+# the seconds argument here is the binary name
+# 
+# add sigma command line arguments with
+#  sigma0 sigma0 arguments...
+# the second sigma0 is the binary name
+#
+# add roottask command line arguments with
+#  roottask roottask arguments...
+# the second roottask is the binary name
+# note, 'task modname "foo" module' constructs are generated automatically 
+#
+# modaddr: address where modules start
+#   this statement is either global (before first entry statement)
+#   or per entry
+
+modaddr 0x02000000
+
+entry hello
+kernel fiasco -serial_esc -comport 1 -nowait
+bin hello
+
+entry names
+bin names
+
+entry log
+kernel fiasco -comport 1
+bin names
+bin log
+bin pingpong
+
+entry pingpong
+bin pingpong
+
+entry dope
+roottask roottask task modname "l4dope" boot_priority 0xe3
+bin names
+bin log
+bin dm_phys
+bin l4dope
+bin vscrtest
+
+entry sharedtest
+kernel fiasco -serial -comport 1
+bin names
+bin log
+bin dm_phys -v
+bin simple_ts -t 10
+bin l4exec
+bin bmodfs
+data  libloader.s.so
+data  shared_test
+bin loader --fprov=BMODFS shared_test
+
+entry l4linux
+bin names
+bin log
+bin dm_phys -v
+bin simple_ts -t 10
+bin l4exec
+bin bmodfs
+data  libloader.s.so
+data  shared_test
+data  vmlinuz26.arm
+data  rd
+data  l4linux.cfg
+bin loader --fprov=BMODFS l4linux.cfg

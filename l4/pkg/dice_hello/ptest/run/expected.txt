@@ -1,0 +1,8 @@
+dice_clt| hello is 9.2
+dice_srv| hello: f1: 5
+dice_clt| f1 returned: 50
+dice_srv| hello: f2: 27
+dice_clt| f2 returned 27
+dice_srv| f3: blurf sabbel blabber!!! - und blub
+dice_clt| f3 returned 923756345
+dice_clt| Main function returned.

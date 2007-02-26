@@ -1,0 +1,10 @@
+This backend implements syslog interface and maps it to
+LOG server functions.
+
+If you want to use it in your programs you have to start
+LOG server too.
+
+Because LOG server is just a basic console this backend
+supports only LOG_USER facility. Other facilities are
+mapped to LOG_User.
+

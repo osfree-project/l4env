@@ -24,12 +24,12 @@ l4_fpage_unmap(l4_fpage_t fpage,
 	  "=a" (dummy1),
 	  "=c" (dummy2)
 	 :
-	  "0" (fpage),
-	  "1" (map_mask)
+	  "a" (fpage),
+	  "c" (map_mask)
 	 :
 	  "ebx", "edx", "edi", "esi"
 	 );
-};
+}
 
 /*
  * L4 id myself
@@ -46,10 +46,10 @@ l4_myself(void)
 	  "popl	%%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	  :
-	   "=S" (temp_id.lh.low),	/* ESI, 0 */
-	   "=D" (temp_id.lh.high) 	/* EDI, 1 */
+	   "=S" (temp_id.lh.low),
+	   "=D" (temp_id.lh.high)
 	  :
-	   "0" (0)			/* ESI, nil id (id.low = 0) */
+	   "S" (0)
 	  :
 	   "ebx", "eax", "ecx", "edx"
 	  );
@@ -71,12 +71,12 @@ l4_nchief(l4_threadid_t destination,
 	  "popl	%%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	  :
-	   "=S" (next_chief->lh.low),	/* ESI, 0 */
-	   "=D" (next_chief->lh.high),	/* EDI, 1 */
-	   "=a" (type)			/* EAX, 2 */
+	   "=S" (next_chief->lh.low),
+	   "=D" (next_chief->lh.high),
+	   "=a" (type)
 	  :
-	   "0" (destination.lh.low),	/* ESI, 3 */
-	   "1" (destination.lh.high) 	/* EDI, 4 */
+	   "S" (destination.lh.low),
+	   "D" (destination.lh.high)
 	  :
 	   "ebx", "ecx", "edx"
 	  );
@@ -86,15 +86,15 @@ l4_nchief(l4_threadid_t destination,
 /*
  * L4 lthread_ex_regs
  */
-L4_INLINE void
-l4_thread_ex_regs(l4_threadid_t destination,
-		  l4_umword_t eip,
-		  l4_umword_t esp,
-		  l4_threadid_t *preempter,
-		  l4_threadid_t *pager,
-		  l4_umword_t *old_eflags,
-		  l4_umword_t *old_eip,
-		  l4_umword_t *old_esp)
+static inline void
+__do_l4_thread_ex_regs(l4_umword_t val0,
+                       l4_umword_t eip,
+                       l4_umword_t esp,
+                       l4_threadid_t *preempter,
+                       l4_threadid_t *pager,
+                       l4_umword_t *old_eflags,
+                       l4_umword_t *old_eip,
+                       l4_umword_t *old_esp)
 {
   unsigned dummy1, dummy2;
 
@@ -123,17 +123,17 @@ l4_thread_ex_regs(l4_threadid_t destination,
 	  "popl	%%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	  :
-	   "=a" (*old_eflags),		/* EAX, 0 */
-	   "=c" (*old_esp),		/* ECX, 1 */
-	   "=d" (*old_eip),		/* EDX, 2 */
-	   "=S" (dummy1),		/* ESI, clobbered output operand, 3 */
-	   "=D" (dummy2) 		/* EDI, clobbered output operand, 4 */
+	   "=a" (*old_eflags),
+	   "=c" (*old_esp),
+	   "=d" (*old_eip),
+	   "=S" (dummy1),
+	   "=D" (dummy2)
 	  :
-	   "0" (destination.id.lthread),
-	   "1" (esp),
-	   "2" (eip),
-	   "3" (pager),	 		/* ESI */
-	   "4" (preempter)		/* EDI */
+	   "a" (val0),
+	   "c" (esp),
+	   "d" (eip),
+	   "S" (pager),
+	   "D" (preempter)
 	  :
 	   "ebx", "memory"
 	  );
@@ -153,11 +153,13 @@ l4_thread_switch(l4_threadid_t destination)
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	 :
-	  "=S" (dummy)
+	  "=S" (dummy),
+	  "=a" (dummy)
 	 :
-	  "0" (destination.lh.low)
+	  "S" (destination.lh.low),
+	  "a" (0)			/* Fiasco requirement */
 	 :
-	  "ebx", "eax", "ecx", "edx", "edi"
+	  "ebx", "ecx", "edx", "edi"
 	 );
 }
 
@@ -193,16 +195,16 @@ l4_thread_schedule(l4_threadid_t dest,
 					   ("m") before this point */
 
 	 :
-	  "=a" (*old_param), 		/* EAX, 0 */
-	  "=c" (((l4_low_high_t *)&temp)->low),	/* ECX, 1 */
-	  "=d" (((l4_low_high_t *)&temp)->high),/* EDX, 2 */
-	  "=S" (partner->lh.low),	/* ESI, 3 */
-	  "=D" (partner->lh.high)	/* EDI, 4 */
+	  "=a" (*old_param),
+	  "=c" (((l4_low_high_t *)&temp)->low),
+	  "=d" (((l4_low_high_t *)&temp)->high),
+	  "=S" (partner->lh.low),
+	  "=D" (partner->lh.high)
 	 :
-	  "2" (ext_preempter),   	/* EDX, 2 */
-	  "0" (param),			/* EAX */
-	  "3" (dest.lh.low),		/* ESI */
-	  "4" (dest.lh.high)		/* EDI */
+	  "a" (param),
+	  "d" (ext_preempter),
+	  "S" (dest.lh.low),
+	  "D" (dest.lh.high)
 	 :
 	  "ebx", "memory"
 	 );
@@ -235,21 +237,37 @@ l4_task_new(l4_taskid_t destination,
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	 :
-	  "=S" (dummy0),		/* ESI, 0 */
-	  "=b" (dummy1),		/* EBX, 1 */
-	  "=a" (dummy2),		/* EAX, 2 */
-	  "=c" (dummy3),		/* ECX, 3 */
-	  "=d" (dummy4)			/* EDX, 4 */
+	  "=a" (dummy0),
+	  "=b" (dummy1),
+	  "=c" (dummy2),
+	  "=d" (dummy3),
+	  "=S" (dummy4)
 	 :
-	  "1" (&pager),			/* EBX, 1 */
-	  "2" (mcp_or_new_chief),	/* EAX, 2 */
-	  "3" (esp),			/* ECX, 3 */
-	  "4" (eip),			/* EDX, 4 */
-	  "0" (&destination)		/* ESI, 0 */
+	  "a" (mcp_or_new_chief),
+	  "b" (&pager),
+	  "c" (esp),
+	  "d" (eip),
+	  "S" (&destination)
 	 :
 	 "edi", "memory"
 	 );
   return destination;
+}
+
+L4_INLINE int
+l4_privctrl(l4_umword_t cmd,
+	    l4_umword_t param)
+{
+  int err;
+  unsigned dummy;
+
+  __asm__ __volatile__(
+	 "pushl %%ebp              \n\t"
+	 L4_SYSCALL(privctrl)
+         "popl  %%ebp              \n\t"
+	 :"=a"(err), "=d"(dummy)
+	 :"0"(cmd),"1"(param));
+  return err;
 }
 
 #endif

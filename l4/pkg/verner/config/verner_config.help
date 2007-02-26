@@ -1,0 +1,205 @@
+Build libavcodec
+BUILD_libavcodec
+  If you want to build many codecs, say Y here. :)
+
+  For instance:
+   - MPEG 1/2, MJPEG, MPEG-4, MSMPEG-4, (DivX), ...
+   - DV Audio/Video
+   - AC3
+   - VP3
+   - Realvideo
+   - Windows Media 
+   - some more
+  For details enable and read help.
+
+  Most users will say Y here.
+
+Build libavcodec with decoding support
+BUILD_libavcodec_decoder
+  
+  Build with decoders for:
+   - MPEG-1/-2, MJPEG
+   - DV Audio/Video
+   - VP3
+   - ACE3/ACE6
+   - ASV
+   - Realaudio
+   - some more
+  Most users will say Y here.
+
+Build libavcodec with encoding support
+BUILD_libavcodec_encoder
+  
+  Build with encoders for:
+   - MPEG-1, MJPEG
+   - AC3
+   - ASV1, ASV2
+   - Huffyuv
+   - ...
+  Most users will say N here.
+
+Build libavcodec with risky codecs
+BUILD_libavcodec_risky
+  Risky codecs are codecs that may violate patents in your country.
+  Enable at your own risk!
+
+  Risky codecs are:
+  - MPEG-4 & MSMPEG4V1/2/3 (aka DivX, Div3, Div:)
+  - MPEG-2
+  - WMV1/2 and WMA1/2 (Windows Media)
+  - H263, H263P
+  - FLV1
+  - Realvideo 10 (RV10)
+  - INDEO3
+  - SVQ1/3 (Quicktime)
+
+  Most users will say N here.
+  
+
+Set number of preemption IPCs allowed
+RT_CORE_VIDEO_QAP_ALLOWED_PREEMPTIONS_MIN
+  The video core checks after a set amount of Frames (check Video Core -> QAP option)
+  if it should increase or decrease the QAP level. If build with RT Support
+  the video core can receive preemption IPC if the postprocessing did not complete.
+  Then the QAP should be manipulated to adjust the CPU usage. This
+  threshold defines the number of preemption IPCs which may occure during
+  decoding the given number of frames.
+
+Time source for RT Monitor
+RT_MON_PROCESS
+  Use the fiasco process time as time source, fiasco_get_cputime()
+  This option results in process local times, but has some overheads.
+
+  xor
+
+  Use the time stamp counter as time source, rdtsc()
+  This option results in processor global time, but is fast.
+
+
+Use cpu_reserve Server for CPU time reservation
+RT_USE_CPU_RESERVE
+  To reserve CPU time a central CPU time reservation server (cpu_reserve) is used.
+  This is especially reasonable if there are other real-time applications beside
+  Verner running on the computer.
+  Turn this option off (false) if Verner is the sole real-time application on
+  the computer.
+
+Monitor the DSI fill-level
+RTMON_DSI_BENCHMARK
+  The Drops Streaming Interface (DSI) uses ring-buffers in shared memory to
+  exchange large packets of data (blobs). To shot the fill-level of these 
+  buffers turn this option on. The displayed values are absolute. To set them
+  into relation check other DSI options (PACKETS_IN_BUFFER).
+
+Workloop roundtrip and output times
+VSYNC_INTER_INTRA_BENCHMARK
+  The work-loop eventually calls the output function to either display video
+  or play a sample. If on, this option enables measurements of the output
+  function (intra) and the rest of the work-loop (inter)--a round-trip starting 
+  after the output function, ending just before it. (This option requires RTMon.)
+
+Build with Real-time support
+BUILD_RT_SUPPORT
+  If this option is set, Verner is build with support for Real-time mode. 
+  This requires that Verner is run on Fiasco with real-time extensions. It uses
+  time reservation for its work-loops and get scheduled periodically to 
+  perform work in those loops.
+
+  In Real-time mode, DSI is used in non-blocking mode. That is, the work-loop
+  does not block when acquiring a packet in a DSI buffer. Instead an error
+  is returned and the work-loop can wait for the next period.
+
+Support for decoding time prediction
+PREDICT_DECODING_TIME
+  In addition to normal playback, this will enable two new modes: decoding time
+  learning and decoding time prediction. Currently, only video decoding times
+  are handled. The modes can be activated independently of one another with the
+  following command line options to vtcontrol:
+
+    --silent          all output is disabled (useful for background learning)
+    --learn <file>    learn to predict decoding times by examining played video
+    --predict <file>  predict decoding times
+
+  The data gathered at learning stage, which is necessary for later prediction,
+  is kept inside the given file.
+
+Display prediction quality using rt_mon
+PREDICT_DECODING_TIME_RTMON
+  The quality of the prediction can be monitored using a rt_mon 2D histogram,
+  plotting the prediction time (y-axis) over the real decoding time (x-axis)
+  in the first layer and the prediction overhead (y-axis) over the real
+  decoding time (x-axis) in the second layer.
+  Additional histograms display the prediction overhead and the absolute and
+  relative errors of the prediction.
+
+Postprocess each or all video frames in one optional part
+RT_USE_OPTIONAL_FOR_ALL_FRAMES
+  If running in RT mode, Verner can post-process video frames in an optional
+  time-slice. This can be done using one optional part for each frame in 
+  a period or using one optional part for all frames in a period.
+  (In RT mode, there are more than one frame decoded in one run of the
+   work-loop.)
+
+Synchronize Output with DOpE
+RT_SYNC_WITH_DOPE
+  DOpE provides a callback for its real-time VScreens to synchronize with
+  DOpE's display rate. If this option is set, this callback is used.
+  BUT: This voids the idea of the metronome and is thus contraproductive.
+  And, it is only suitable if the framerate of the video corresponds to
+  the refresh rate of DOpE (which is currently set to 25).
+
+Different Real-Time Debug Options
+DEBUG_RT
+  Allows to select different levels of Real-Time Debug Options.
+
+Debug Real-Time Initialization
+DEBUG_RT_INIT
+  If on, real-time setup information, i.e., time-slice setup, is shown.
+
+Debug Real-Time preempter
+DEBUG_RT_PREEMPT
+  If on, the real-time preempter prints information (preemption counts, etc.).
+
+Debug Real-Time next_period calls
+DEBUG_RT_NEXT_PERIOD
+  If on, calls to next_period are printed on debug output.
+
+Debug Real-Time next_reservation calls
+DEBUG_RT_NEXT_RESERV
+  If on, calls to next_reservation are printed on debug output.
+
+Debug Real-Time sleep calls
+DEBUG_RT_SLEEP
+  If on, calls to sleep functions are printed.
+
+Debug single components
+DEBUG_SINGLE_COMPONENTS
+  If on, debugging can be enabled for single components.
+  If off, all components are debugged.
+
+Debug the demuxer component
+DEBUG_DEMUXER
+  If on, debugging in the demultiplexing component is enabled.
+  If off, no RT debugging in the demultiplexing component is enabled
+
+Debug the audio core component
+DEBUG_ACORE
+  If on, debugging in the audio core component is enabled.
+  If off, no RT debugging is enabled.
+
+Debug the video core component
+DEBUG_VCORE
+  If on, debugging in the video core component is enabled.
+  If off, no RT debugging is enabled.
+
+Debug the Synchronizer component
+DEBUG_SYNC
+  If on, debugging in the synchronizer component is enabled.
+  If off, no debugging is enabled.
+  
+Debug the Synchronizer component very verbose
+DEBUG_SYNC_HEAVY
+  If on, the synchronizer component prints very verbose output.
+  This option implies DEBUG_SYNC.
+
+ 

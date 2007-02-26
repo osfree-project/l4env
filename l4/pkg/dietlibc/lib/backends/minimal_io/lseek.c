@@ -1,3 +1,14 @@
+/**
+ * \file   dietlibc/lib/backends/minimal_io/lseek.c
+ * \brief  
+ *
+ * \date   08/10/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 #include <unistd.h>
 #include <errno.h>
 
@@ -8,11 +19,11 @@ off_t lseek(int fd, off_t offset, int whence) __THROW
 {
     // just accept lseek to stdin, stdout and stderr
     if ((fd != STDIN_FILENO) &&
-        (fd != STDOUT_FILENO) &
+        (fd != STDOUT_FILENO) &&
         (fd != STDERR_FILENO))
     {
         errno = EBADF;
-        return (off_t)-1;
+        return -1;
     }
 
     switch(whence)
@@ -24,13 +35,9 @@ off_t lseek(int fd, off_t offset, int whence) __THROW
             return -1;
         }
         return offset;
-        break;
     case SEEK_CUR:
-        return 0;
-        break;
     case SEEK_END:
         return 0;
-        break;
     default:
         errno = EINVAL;
         return -1;

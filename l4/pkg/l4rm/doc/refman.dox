@@ -38,6 +38,13 @@ address space is managed by which dataspace manager.
 L4RM provides two functionalities:
 
 <dl>
+<dt><i>Virtual memory management</i></dt>
+  <dd>The region mapper is the central instance which must be used to 
+      allocate virtual memory. It provides functions to find suitable 
+      places to assign new dataspaces to the address space or to 
+      reserve regions of the address space for special purposes.
+  </dd>
+
 <dt><i>Pagefault handling</i></dt>
   <dd>L4RM provides the pager for all threads of a task. The pager maps 
       pagefaults caused by threads of the task to map-calls to the
@@ -45,12 +52,6 @@ L4RM provides two functionalities:
       address.  
   </dd>
 
-<dt><i>Virtual memory allocation</i></dt>
-  <dd>The region mapper is the central instance which must be used to 
-      allocate virtual memory. It provides functions to find suitable 
-      places to assign new dataspaces to the address space or to 
-      reserve regions of the address space for special purposes.
-  </dd>
 </dl>
 
 More on the concept of dataspaces and the region mapper can be found in 
@@ -60,23 +61,19 @@ Proc. 6th Australasian Computer Architecture Conference, Gold Coast, Australia,
 Jan. 2001" 
 (ftp://ftp.cse.unsw.edu.au/pub/users/disy/papers/Aron_PJLED_01.ps.gz).
 
-\section use Usage
+\subsection regions Virtual Memory Management
 
-The L4 Region Mapper is a library (libl4rm.a) which must be linked to your 
-applications. To use the library functions, you need to include <l4/l4rm/l4rm.h>. 
-L4RM depends on other L4Env libraries, namely \a l4env, the thread library 
-\a thread, the Memory Dataspace Manager \a dm_mem, the semaphore library 
-\a semaphore and the Logserver \a log.
+Besides the allocation of suitable VM regions to attach dataspaces, L4RM provides
+functions to reserve a region of the virtual address space (\a area) for special 
+purposes (see l4rm_area_reserve()). By reserving an area an application has the 
+possibility to implement its own address management, reserved areas are not used 
+by the region mapper to attach dataspaces. Dataspaces can only be attached to 
+reserved areas using the l4rm_area_attach() function specifying the appropriate 
+area id. 
 
-The L4 Region Mapper library is usually initialized by the L4Env startup code 
-during the setup of a new task, the application does not need to do anything.
-
-See the \htmlonly<a href="group__api.html">\endhtmlonly User API 
-reference\htmlonly</a>\endhtmlonly for a full description of the L4RM 
-functions. Please do also take a look at the L4 Dataspace Manager Client 
-Library, it contains various functions which combine dataspace manager 
-and region mapper functions for common tasks, like allocating and 
-attaching memory dataspaces.
+The reservation of VM areas can also be used to exclude regions of the address
+space which must not be used by the region mapper, e.g. the location of the 
+binary images of the application.
 
 \subsection attach Assigning Dataspaces
 
@@ -95,19 +92,23 @@ A dataspace is removed from the region map by \a detaching it.
 See the documentation for l4rm_attach() / l4rm_detach() for a detailed 
 description how to attach and detach dataspaces.
 
-\subsection regions Virtual Memory Management
+\section use Usage
 
-Besides the allocation of suitable VM regions to attach dataspaces, L4RM provides
-functions to reserve a region of the virtual address space (\a area) for special 
-purposes (see l4rm_area_reserve()). By reserving an area an application has the 
-possibility to implement its own address management, reserved areas are not used 
-by the region mapper to attach dataspaces. Dataspaces can only be attached to 
-reserved areas using the l4rm_area_attach() function specifying the appropriate 
-area id. 
+The L4 Region Mapper is a library (libl4rm.a) which must be linked to your 
+applications. To use the library functions, you need to include <l4/l4rm/l4rm.h>. 
+L4RM depends on other L4Env libraries, namely \a l4env, the thread library 
+\a thread, the Memory Dataspace Manager \a dm_mem, the semaphore library 
+\a semaphore and the Logserver \a log.
 
-The reservation of VM areas can also be used to exclude regions of the address
-space which must not be used by the region mapper, e.g. the location of the 
-binary images of the application.
+The L4 Region Mapper library is usually initialized by the L4Env startup code 
+during the setup of a new task, the application does not need to do anything.
+
+See the \htmlonly<a href="group__api.html">\endhtmlonly User API 
+reference\htmlonly</a>\endhtmlonly for a full description of the L4RM 
+functions. Please do also take a look at the L4 Dataspace Manager Client 
+Library, it contains various functions which combine dataspace manager 
+and region mapper functions for common tasks, like allocating and 
+attaching memory dataspaces.
 
 \subsection config Library Configuration
 

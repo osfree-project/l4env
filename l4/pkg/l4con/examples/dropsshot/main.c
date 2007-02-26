@@ -13,12 +13,13 @@
 #define _GNU_SOURCE
 #include <getopt.h>
 
-#include <l4/con/con-client.h>
+#include <l4/l4con/l4con.h>
+#include <l4/l4con/l4con-client.h>
 #include <l4/names/libnames.h>
-#include <l4/con/l4con.h>
 #include <l4/dm_phys/dm_phys.h>
 #include <l4/sys/syscalls.h>
 #include <l4/dm_mem/dm_mem.h>
+#include <l4/util/l4_macros.h>
 
 #define MY_SBUF_SIZE 65536
 
@@ -252,13 +253,14 @@ static void convert_raw_to_pic(char *filename, char *raw_filename,
   int len;
 
   if (xres == 0 || yres == 0) {
-    fprintf(stderr, "Width or high seems to be wrong.\n");
+    fprintf(stderr, "Width or height seems to be wrong.\n");
     exit(1);
   }
 
-  len = snprintf(exec_str, 260, "convert -depth 8 -size %dx%d rgb:%s %s\n",
+  len = snprintf(exec_str, sizeof(exec_str),
+                 "convert -depth 8 -size %dx%d rgb:%s %s\n",
                  xres, yres, raw_filename, filename);
-  if (len > 260) {
+  if (len > sizeof(exec_str)) {
     fprintf(stderr, "exec string is too big!");
     exit(1);
   }
@@ -330,8 +332,8 @@ static void get_fb(void)
     fprintf(stderr, "PANIC: %s not registered at names", CON_NAMES_STR);
     exit(1);
   }
-  INFO("Found my console through names, it's at %x.%x.\n",
-       con_l4id.id.task, con_l4id.id.lthread);
+  INFO("Found my console through names, it's at "l4util_idfmt".\n",
+       l4util_idstr(con_l4id));
 
   PRINT("Screenshot'ing, please smile... ;-)\n");
   /* get screenshot */
@@ -369,8 +371,9 @@ static void get_fb(void)
     if ((error = l4dm_map_pages(&ds, i*L4_PAGESIZE, L4_PAGESIZE,
 			        (l4_addr_t)map_page, L4_LOG2_PAGESIZE,
 				0, L4DM_RO, &fpage_addr,&fpage_size)) < 0) {
-      fprintf(stderr, "Error %d requesting ds %d at ds_manager %x.%x\n",
-	  error, ds.id, ds.manager.id.task, ds.manager.id.lthread);
+      fprintf(stderr, "Error %d requesting ds %d at ds_manager "
+	      l4util_idfmt"\n",
+	  error, ds.id, l4util_idstr(ds.manager));
       l4dm_close(&ds);
       exit(error);
     }

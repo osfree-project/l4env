@@ -11,9 +11,10 @@
 #include <l4/thread/thread.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/util.h>
+#include <l4/util/l4_macros.h>
 
-#include <l4/con/l4con.h>
-#include <l4/con/con-client.h>
+#include <l4/l4con/l4con.h>
+#include <l4/l4con/l4con-client.h>
 
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>
@@ -80,7 +81,7 @@ int clear_screen()
     }
   if (_env.major != CORBA_NO_EXCEPTION)
     {
-      LOG("pslim_fill returned IPC error: 0x%02x", _env.ipc_error);
+      LOG("pslim_fill returned IPC error: 0x%02x", _env._p.ipc_error);
       _env.major = CORBA_NO_EXCEPTION;
     }
 
@@ -101,7 +102,7 @@ int clear_screen()
     }
   if (_env.major != CORBA_NO_EXCEPTION)
     {
-      LOG("pslim_bmap returned IPC error: 0x%02x", _env.ipc_error);
+      LOG("pslim_bmap returned IPC error: 0x%02x", _env._p.ipc_error);
       _env.major = CORBA_NO_EXCEPTION;
     }
   
@@ -172,7 +173,7 @@ int logo()
 	}
       if (_env.major != CORBA_NO_EXCEPTION)
 	{
-	  LOG("pslim_set returned ipc error: 0x%02x", _env.ipc_error);
+	  LOG("pslim_set returned ipc error: 0x%02x", _env._p.ipc_error);
 	  _env.major = CORBA_NO_EXCEPTION;
 	}
 
@@ -201,8 +202,7 @@ int main(int argc, char *argv[])
   do_args(argc, argv);
   my_l4id = l4thread_l4_id( l4thread_myself() );
 
-  LOG("Hello, I'm running as %x.%02x",
-	 my_l4id.id.task, my_l4id.id.lthread);
+  LOG("Hello, I'm running as "l4util_idfmt, l4util_idstr(my_l4id));
 
   /* ask for 'con' (timeout = 5000 ms) */
   if (names_waitfor_name(CON_NAMES_STR, &con_l4id, 50000) == 0) 
@@ -225,6 +225,13 @@ int main(int argc, char *argv[])
 			 &bytes_per_line, &accel_flags, 
 			 &fn_x, &fn_y, &_env))
     enter_kdebug("Ouch, graph_gmode failed");
+
+  if (bytes_per_pixel != 2)
+    {
+      printf("Graphics mode not 2 bytes/pixel, exiting\n");
+      con_vc_close_call(&vc_l4id, &_env);
+      exit(0);
+    }
 
   if (create_logo())
     enter_kdebug("Ouch, logo creation failed");

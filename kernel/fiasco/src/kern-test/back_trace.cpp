@@ -1,5 +1,5 @@
 INTERFACE:
-#include "space_context.h"
+#include "space.h"
 #include "kmem.h"
 #include "globalconfig.h"
 

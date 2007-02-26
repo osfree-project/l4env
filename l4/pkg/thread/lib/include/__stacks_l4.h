@@ -18,7 +18,7 @@
 #define _THREAD___STACKS_L4_H
 
 /* library includes */
-#include "__asm.h"
+#include <l4/util/stack.h>
 
 /*****************************************************************************/
 /**
@@ -37,7 +37,7 @@ l4th_stack_get_current_id(void)
      * number from stack pointer */
     return -1;
 
-  esp = l4th_get_esp();
+  esp = l4util_stack_get_sp();
   if ((esp >= l4th_stack_area_start) && (esp <= l4th_stack_area_end))
     /* can calculate thread no from stack pointer */
     return (esp - l4th_stack_area_start) / l4thread_max_stack;

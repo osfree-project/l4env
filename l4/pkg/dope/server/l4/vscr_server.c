@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -36,13 +36,12 @@ static s16 thread_started=0;
 int init_vscr_server(struct dope_services *d);
 
 
-/*****************************/
-/*** VSCREEN WIDGET SERVER ***/
-/*****************************/
-
+/*****************************
+ *** VSCREEN WIDGET SERVER ***
+ *****************************/
 
 void dope_vscr_waitsync_component(CORBA_Object _dice_corba_obj,
-                                        CORBA_Environment *_dice_corba_env) {
+                                        CORBA_Server_Environment *_dice_corba_env) {
 	VSCREEN *vs = (VSCREEN *) _dice_corba_env->user_data;
 	vs->vscr->waitsync(vs);
 }
@@ -52,22 +51,22 @@ void dope_vscr_refresh_component(CORBA_Object _dice_corba_obj,
                                  int y,
                                  int w,
                                  int h,
-                                 CORBA_Environment *_dice_corba_env) {
+                                 CORBA_Server_Environment *_dice_corba_env) {
 
 	VSCREEN *vs = (VSCREEN *) _dice_corba_env->user_data;
-	vs->vscr->refresh(vs,x,y,w,h);
+	vs->vscr->refresh(vs, x, y, w, h);
 }
 
 static void vscreen_server_thread(void *arg) {
 	int i;
 	char ident_buf[10];
 	VSCREEN *vs = (VSCREEN *)arg;
-	CORBA_Environment dice_env = dice_default_environment;
+	CORBA_Server_Environment dice_env = dice_default_server_environment;
 
 	dice_env.user_data = vs;
 	INFO(printf("VScreen(server_thread): entered server thread\n"));
 
-	l4thread_set_prio(l4thread_myself(),l4thread_get_prio(l4thread_myself())-5);
+	l4thread_set_prio(l4thread_myself(), l4thread_get_prio(l4thread_myself())-5);
 
 //  INFO(printf("VScreen(server_thread): tid = %lu.%lu\n",
 //              (long)(vs->server_tid.id.task),
@@ -78,7 +77,7 @@ static void vscreen_server_thread(void *arg) {
 	/* find free identifier for this vscreen server */
 	for (i=0;(i<MAX_IDENTS) && (ident_tab[i]);i++);
 	if (i<MAX_IDENTS-1) {
-		sprintf(ident_buf,"Dvs%d",i);
+		sprintf(ident_buf, "Dvs%d", i);
 		ident_tab[i]=1;
 	} else {
 		/* if there are not enough identifiers, exit the server thread */
@@ -87,50 +86,66 @@ static void vscreen_server_thread(void *arg) {
 		return;
 	}
 
-	INFO(printf("VScreen(server_thread): ident_buf=%s\n",ident_buf));
-	if (!names_register(ident_buf)) return;
+	INFO(printf("VScreen(server_thread): ident_buf=%s\n", ident_buf));
+	if (!names_register(ident_buf)) {
+		thread_started = 1;
+		return;
+	}
 
-	vs->vscr->reg_server(vs,ident_buf);
+	vs->vscr->reg_server(vs, ident_buf);
 	thread_started = 1;
 	INFO(printf("VScreen(server_thread): thread successfully started.\n"));
-	dice_env.timeout = L4_IPC_TIMEOUT(250,14,0,0,0,0); /* send timeout 1ms */
+	dice_env.timeout = L4_IPC_TIMEOUT(250, 14, 0, 0, 0, 0); /* send timeout 1ms */
 	dope_vscr_server_loop(&dice_env);
 }
 
 
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
-
-static THREAD *start(VSCREEN *vscr_widget) {
-	THREAD *new;
+/*** START VSCREEN SERVER THREAD ***
+ *
+ * \return 0 on success
+ */
+static int start(VSCREEN *vscr_widget) {
+	int wait_cnt = 0;
+	int wait_max = 10; /* wait 10 iterations for the server thread to come up */
+	int result;
 
 	thread_started = 0;
-	new = thread->create_thread(&vscreen_server_thread, (void *)vscr_widget);
-	while (!thread_started) l4_sleep(1);
-	return new;
+	result = thread->start_thread(NULL, &vscreen_server_thread, (void *)vscr_widget);
+
+	if (result != 0) return result;
+	
+	/* wait some time for shaking hands */
+	while (!thread_started) {
+		l4_usleep(1000*10);
+		wait_cnt++;
+	}
+
+	/* thread refused to shake hands? */
+	if (wait_cnt == wait_max) return -1;
+
+	return 0;
 }
 
 
-
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct vscr_server_services services = {
 	start
 };
 
 
-
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
-
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_vscr_server(struct dope_services *d) {
 	thread = d->get_module("Thread 1.0");
-	d->register_module("VScreenServer 1.0",&services);
+	d->register_module("VScreenServer 1.0", &services);
 	return 1;
 }

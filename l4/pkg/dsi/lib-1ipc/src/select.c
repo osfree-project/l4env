@@ -56,8 +56,8 @@ __select_thread(void * data)
   dsi_select_thread_arg_t * args = (dsi_select_thread_arg_t *)data;
   l4_int32_t mask;
 
-  LOGdL(DEBUG_SELECT,"signalling thread %x.%x",
-        args->socket->event_th.id.task,args->socket->event_th.id.lthread);
+  LOGdL(DEBUG_SELECT,"signalling thread "l4util_idfmt,
+        l4util_idstr(args->socket->event_th));
   LOGdL(DEBUG_SELECT,"socket %d, events 0x%08x",
         args->socket->socket,args->events);
 
@@ -176,7 +176,7 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
 
   if (error)
     {
-      Error("DSI: select error %d",error);
+      LOG_Error("select error %d",error);
       return error;
     }
 
@@ -196,16 +196,15 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
 
 	  LOGdL(DEBUG_SELECT,"events %08x <= %08x", 
                 events[j].events, args[i].mask);
-	  LOGdL(DEBUG_SELECT,"reset 0x%08x at %x.%x",
-                args[i].mask,args[i].socket->event_th.id.task,
-                args[i].socket->event_th.id.lthread);
+	  LOGdL(DEBUG_SELECT,"reset 0x%08x at "l4util_idfmt,
+	        args[i].mask, l4util_idstr(args[i].socket->event_th));
 
 	  /* reset events */
 	  ret = dsi_event_reset(args[i].socket->event_th,
 				args[i].socket->socket,args[i].mask);
 	  if (ret)
 	    {
-	      Error("DSI: reset events failed: %s (%d)",
+	      LOG_Error("reset events failed: %s (%d)",
 		    l4env_errstr(ret),ret);
 	    }
 	  j++;	  

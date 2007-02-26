@@ -13,9 +13,11 @@
  * COPYING file for details. */
 
 /* L4 includes */
-#include <l4/con/l4con.h>
+#include <l4/l4con/l4con.h>
+#include <l4/log/l4log.h>
 #include <l4/thread/thread.h>
 #include <l4/util/thread.h>
+#include <l4/util/l4_macros.h>
 #include <l4/input/libinput.h>
 
 /* DROPS includes */
@@ -27,44 +29,40 @@
 
 /* local includes */
 #include "ev.h"
+#include "main.h"
 #include "vc.h"
 #include "ipc.h"
 #include "con_config.h"
 #include "con_macros.h"
 
-/* in main.c */
-extern int want_vc;
-extern l4_threadid_t ev_partner_l4id;
-extern l4lock_t want_vc_lock;
-extern l4_uint8_t vc_mode;
-
-static int use_omega0 = 0;
+int use_omega0;
+int nomouse;
 
 /** brief Key event handling -> distribution and switch */
 static void
-handle_event(l4input_t *ev)
+handle_event(struct l4input *ev)
 {
-  static int altgr_down = 0;
-  static int shift_down = 0;
-  static int f_key;
+  static int altgr_down;
+  static int shift_down;
 
   static CORBA_Environment env = dice_default_environment;
   static stream_io_input_event_t ev_struct;
+
+  int loop, resend;
 
   if (ev->type == EV_KEY)
     {
       unsigned keycode = ev->code;
       unsigned down    = ev->value;
+
+      if (nomouse && keycode >= BTN_MOUSE && keycode <= BTN_TASK)
+	return;
+
       /* virtual console switching */
-      if (   keycode >= KEY_F1 
-	  && keycode <= KEY_F10
-	  && down
-	  && (altgr_down || shift_down))
+      if (keycode >= KEY_F1 && keycode <= KEY_F10 && 
+	  down && (altgr_down || shift_down))
 	{
-	  f_key = keycode - 58;
-	  l4lock_lock(&want_vc_lock);
-	  want_vc = f_key;
-	  l4lock_unlock(&want_vc_lock);
+	  request_vc(keycode - 58);
 	  return;
 	}
       /* F11/Shift F11: increase/decrase brightness */
@@ -86,13 +84,10 @@ handle_event(l4input_t *ev)
 	  return;
 	}
       if (keycode == KEY_RIGHTALT) 
-	{
-	  altgr_down = down;
-	}
+	altgr_down = down;
+
       if (keycode == KEY_LEFTSHIFT || keycode == KEY_RIGHTSHIFT)
-	{
-	  shift_down = down;
-	}
+	shift_down = down;
 
       /* ev_struct.time is not used */
       ev_struct.type  = EV_KEY;
@@ -102,9 +97,17 @@ handle_event(l4input_t *ev)
   else if (ev->type == EV_REL || ev->type == EV_ABS)
     {
       /* mouse event */
+      if (nomouse)
+	return;
+
       ev_struct.type  = ev->type;
       ev_struct.code  = ev->code;
       ev_struct.value = ev->value;
+    }
+  else if (ev->type == EV_MSC)
+    {
+      // ignored
+      return;
     }
   else
     {
@@ -112,35 +115,54 @@ handle_event(l4input_t *ev)
       return;
     }
 
-  l4lock_lock(&want_vc_lock);
-  if (  (vc_mode & CON_IN)
-      &&!l4_is_nil_id(ev_partner_l4id))
+  for (loop=0, resend=1; resend && loop<10; loop++)
     {
-      /* krishna: Flick is dumb. No Flick client timeouts means a security 
-       * problem here because the untrusted part is the Flick server! */
-      stream_io_push_call(&ev_partner_l4id, &ev_struct, &env);
-//      if (   _ev._type == exc_l4_system_exception
-//	  && _ev._except == (void *)5)
-      if (env.major != CORBA_NO_EXCEPTION)
+      l4lock_lock(&want_vc_lock);
+      if ((vc_mode & CON_IN) && !l4_is_nil_id(ev_partner_l4id))
 	{
-	  printf("handle_key_event: Target thread %x.%x dead?\n",
-	      ev_partner_l4id.id.task, ev_partner_l4id.id.lthread);
-	  /* close current console and switch to another */
-	  want_vc = -2;
+	  env.timeout = EVENT_TIMEOUT;
+	  stream_io_push_call(&ev_partner_l4id, &ev_struct, &env);
+	  if (env.major != CORBA_NO_EXCEPTION)
+	    {
+	      switch (env._p.ipc_error)
+		{
+		case L4_IPC_ENOT_EXISTENT:
+		  /* close current console and switch to another */
+		  LOG("Target thread "l4util_idfmt" dead",
+		      l4util_idstr(ev_partner_l4id));
+		  want_vc = -2;
+		  break;
+		case L4_IPC_SETIMEOUT:
+		case L4_IPC_SECANCELED:
+		  /* send key again */
+		  break;
+		case L4_IPC_RETIMEOUT:
+		case L4_IPC_RECANCELED:
+		  /* assume that the key was successfully delivered */
+		  resend = 0;
+		  break;
+		default:
+		  /* no idea what to do */
+		  LOG("Error %d sending event to "l4util_idfmt,
+		      env._p.ipc_error, l4util_idstr(ev_partner_l4id));
+		  want_vc = -2;
+		  break;
+		}
+	    }
+	  else
+	    resend = 0;
+
+	  /* wait a short time before trying to resend */
+	  if (resend)
+	    l4_sleep(50);
 	}
+      l4lock_unlock(&want_vc_lock);
     }
-  l4lock_unlock(&want_vc_lock);
 }
 
 /** \brief event driver initialization */
-void ev_init()
-{
-  l4input_init(use_omega0, 255, handle_event);
-}
-
 void
-ev_irq_use_omega0(void)
+ev_init()
 {
-  use_omega0 = 1;
+  l4input_init(use_omega0, 254, handle_event);
 }
-

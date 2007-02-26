@@ -40,6 +40,12 @@ typedef unsigned int            l4_umword_t;  /**< Unsigned machine word
  */
 typedef l4_uint64_t l4_cpu_time_t;
 
+/**
+ * Kernel clock type
+ * \ingroup api_types_common
+ */
+typedef l4_uint64_t l4_kernel_clock_t;
+
 #define L4_MWORD_BITS 32
 
 #endif /* !L4_SYS_L4INT_H */

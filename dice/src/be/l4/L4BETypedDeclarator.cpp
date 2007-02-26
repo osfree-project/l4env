@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BETypedDeclarator.cpp
- *	\brief	contains the implementation of the class CL4BETypedDeclarator
+ *    \file    dice/src/be/l4/L4BETypedDeclarator.cpp
+ *    \brief   contains the implementation of the class CL4BETypedDeclarator
  *
- *	\date	Wed Jul 17 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    07/17/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -27,15 +28,12 @@
 
 #include "be/l4/L4BETypedDeclarator.h"
 #include "TypeSpec-Type.h"
-#include "fe/FEAttribute.h"
+#include "Attribute-Type.h"
 #include "be/BEType.h"
 #include "be/BEDeclarator.h"
 
-IMPLEMENT_DYNAMIC(CL4BETypedDeclarator);
-
 CL4BETypedDeclarator::CL4BETypedDeclarator()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BETypedDeclarator, CBETypedDeclarator);
 }
 
 /** destroys the typed declarator object */
@@ -85,3 +83,17 @@ bool CL4BETypedDeclarator::IsFixedSized()
     return true;
 }
 
+/** \brief calculates the max size of the paramater
+ *  \param bGuessSize true if we should guess the size of the parameter
+ *  \param pContext teh context of the size calculation
+ *  \return the size in bytes
+ *
+ * If bGuessSize is false, then this is for message buffer size calculation
+ * and we have to check for [ref] attribute.
+ */
+int CL4BETypedDeclarator::GetMaxSize(bool bGuessSize, CBEContext *pContext)
+{
+    if (!bGuessSize && FindAttribute(ATTR_REF))
+        return 0;
+    return CBETypedDeclarator::GetMaxSize(bGuessSize, pContext);
+}

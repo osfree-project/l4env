@@ -23,7 +23,7 @@ void l4_spin_vga(int x, int y){
   spin_gen((void*)0xb8000, x, y);
 }
 
-static void spin_n_text_gen(void*addr, int x,int y, int len, char*s){
+static void spin_n_text_gen(void*addr, int x,int y, int len, const char*s){
   unsigned char c,*p;
   int i;
   
@@ -52,9 +52,9 @@ static void spin_n_text_gen(void*addr, int x,int y, int len, char*s){
 *  l4_spin_n_text_vga() - same for vga.                                     *
 *                                                                           *
 ****************************************************************************/
-void l4_spin_n_text(int x,int y, int len, char*s){
+void l4_spin_n_text(int x,int y, int len, const char*s){
   spin_n_text_gen((void*)0xb0000, x, y, len, s);
 }
-void l4_spin_n_text_vga(int x,int y, int len, char*s){
+void l4_spin_n_text_vga(int x,int y, int len, const char*s){
   spin_n_text_gen((void*)0xb8000, x, y, len, s);
 }

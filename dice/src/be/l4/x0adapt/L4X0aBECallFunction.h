@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/x0adapt/L4X0aBECallFunction.h
+ *    \brief   contains the declaration of the class CL4X0aBECallFunction
+ *
+ *    \date    01/07/2004
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -32,11 +39,11 @@
  **/
 class CL4X0aBECallFunction : public CL4BECallFunction
 {
-DECLARE_DYNAMIC(CL4X0aBECallFunction);
 
 public:
-  CL4X0aBECallFunction();
-  ~CL4X0aBECallFunction();
+    /** creates a call function object */
+    CL4X0aBECallFunction();
+    virtual ~CL4X0aBECallFunction();
 
 protected:
     virtual void WriteIPC(CBEFile * pFile,  CBEContext * pContext);

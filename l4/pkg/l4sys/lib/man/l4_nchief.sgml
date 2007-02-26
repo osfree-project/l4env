@@ -9,7 +9,7 @@ l4_nchief
 <short> deliver the thread id of the nearest partner of the invoker
 <sect> Synopsis
 
-<verb>#include <syscalls.h></verb>
+<verb>#include <l4/sys/syscalls.h></verb>
 
 <code/static inline int/ <nl>
 <code/l4_nchief(l4_threadid_t /<var/dest/ , 

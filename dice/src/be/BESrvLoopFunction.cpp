@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BESrvLoopFunction.cpp
- *	\brief	contains the implementation of the class CBESrvLoopFunction
+ *    \file    dice/src/be/BESrvLoopFunction.cpp
+ *    \brief   contains the implementation of the class CBESrvLoopFunction
  *
- *	\date	01/21/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/21/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -34,7 +35,6 @@
 #include "be/BEReplyCodeType.h"
 #include "be/BESwitchCase.h"
 #include "be/BEWaitAnyFunction.h"
-#include "be/BEReplyAnyWaitAnyFunction.h"
 #include "be/BEDispatchFunction.h"
 #include "be/BERoot.h"
 #include "be/BEComponent.h"
@@ -48,14 +48,11 @@
 #include "fe/FEOperation.h"
 #include "fe/FEStringAttribute.h"
 
-IMPLEMENT_DYNAMIC(CBESrvLoopFunction);
-
 CBESrvLoopFunction::CBESrvLoopFunction()
 {
     m_pWaitAnyFunction = 0;
     m_pReplyAnyWaitAnyFunction = 0;
-	m_pDispatchFunction = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBESrvLoopFunction, CBEInterfaceFunction);
+    m_pDispatchFunction = 0;
 }
 
 CBESrvLoopFunction::CBESrvLoopFunction(CBESrvLoopFunction & src)
@@ -63,19 +60,18 @@ CBESrvLoopFunction::CBESrvLoopFunction(CBESrvLoopFunction & src)
 {
     m_pWaitAnyFunction = src.m_pWaitAnyFunction;
     m_pReplyAnyWaitAnyFunction = src.m_pReplyAnyWaitAnyFunction;
-	m_pDispatchFunction = src.m_pDispatchFunction;
-    IMPLEMENT_DYNAMIC_BASE(CBESrvLoopFunction, CBEInterfaceFunction);
+    m_pDispatchFunction = src.m_pDispatchFunction;
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CBESrvLoopFunction::~CBESrvLoopFunction()
 {
 }
 
-/**	\brief creates the server loop function for the given interface
- *	\param pFEInterface the respective front-end interface
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief creates the server loop function for the given interface
+ *    \param pFEInterface the respective front-end interface
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
  * A server loop function does usually not return anything. However, it might be possible to return a
  * status code or something similar. As parameters one might use timeouts or similar.
@@ -86,96 +82,99 @@ CBESrvLoopFunction::~CBESrvLoopFunction()
 bool CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
 {
     pContext->SetFunctionType(FUNCTION_SRV_LOOP);
-	// set target file name
-	SetTargetFileName(pFEInterface, pContext);
+    // set target file name
+    SetTargetFileName(pFEInterface, pContext);
     // set name
     m_sName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
 
     if (!CBEInterfaceFunction::CreateBackEnd(pFEInterface, pContext))
         return false;
+    // set source line number to last number of interface
+    SetSourceLine(pFEInterface->GetSourceLineEnd());
 
     // set own message buffer
     if (!AddMessageBuffer(pFEInterface, pContext))
         return false;
 
-	// CORBA_Object should not have any pointers (its a pointer type itself)
-	// set Corba parameters to variables without pointers
-	if (m_pCorbaEnv)
-	{
-		if (!DoUseParameterAsEnv(pContext))
-		{
-			VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-			CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
-			pDecl->IncStars(-pDecl->GetStars());
-		}
-	}
+    // CORBA_Object should not have any pointers (its a pointer type itself)
+    // set Corba parameters to variables without pointers
+    if (m_pCorbaEnv)
+    {
+        if (!DoUseParameterAsEnv(pContext))
+        {
+            vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
+            CBEDeclarator *pDecl = *iterCE;
+            pDecl->IncStars(-pDecl->GetStars());
+        }
+    }
 
-	// no parameters added
+    // no parameters added
 
-    CBERoot *pRoot = GetRoot();
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     // search for wait any function
     int nOldType = pContext->SetFunctionType(FUNCTION_WAIT_ANY);
-    String sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
+    string sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
     pContext->SetFunctionType(nOldType);
     m_pWaitAnyFunction = (CBEWaitAnyFunction*)pRoot->FindFunction(sFuncName);
     assert(m_pWaitAnyFunction);
     if (m_pCorbaObject)
-	{
-	    VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
-		CBEDeclarator *pDecl = m_pCorbaObject->GetNextDeclarator(pIter);
-		m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
-	}
+    {
+        vector<CBEDeclarator*>::iterator iterCO = m_pCorbaObject->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterCO;
+        m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+    }
     if (m_pCorbaEnv)
-	{
-	    VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-		CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
-		m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
-	}
+    {
+        vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterCE;
+        m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+    }
 
-	// search for reply-any-wait-any function
-	nOldType = pContext->SetFunctionType(FUNCTION_REPLY_ANY_WAIT_ANY);
-	sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
-	pContext->SetFunctionType(nOldType);
-	m_pReplyAnyWaitAnyFunction = (CBEReplyAnyWaitAnyFunction*)pRoot->FindFunction(sFuncName);
-	assert(m_pReplyAnyWaitAnyFunction);
-	if (m_pCorbaObject)
-	{
-	    VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
-		CBEDeclarator *pDecl = m_pCorbaObject->GetNextDeclarator(pIter);
-		m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
-	}
-	if (m_pCorbaEnv)
-	{
-	    VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-		CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
-		m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
-	}
+    // search for reply-any-wait-any function
+    nOldType = pContext->SetFunctionType(FUNCTION_REPLY_ANY_WAIT_ANY);
+    sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
+    pContext->SetFunctionType(nOldType);
+    m_pReplyAnyWaitAnyFunction = (CBEWaitAnyFunction*)pRoot->FindFunction(sFuncName);
+    assert(m_pReplyAnyWaitAnyFunction);
+    if (m_pCorbaObject)
+    {
+        vector<CBEDeclarator*>::iterator iterCO = m_pCorbaObject->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterCO;
+        m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+    }
+    if (m_pCorbaEnv)
+    {
+        vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterCE;
+        m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+    }
 
-	// search for dispatch function
-	nOldType = pContext->SetFunctionType(FUNCTION_DISPATCH);
-	sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
-	pContext->SetFunctionType(nOldType);
-	m_pDispatchFunction = (CBEDispatchFunction*)pRoot->FindFunction(sFuncName);
-	assert(m_pDispatchFunction);
-	if (m_pCorbaObject)
-	{
-	    VectorElement *pIter = m_pCorbaObject->GetFirstDeclarator();
-		CBEDeclarator *pDecl = m_pCorbaObject->GetNextDeclarator(pIter);
-		m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
-	}
-	if (m_pCorbaEnv)
-	{
-	    VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-		CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
-		m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
-	}
-	if (m_pMsgBuffer)
-	{
-	    VectorElement *pIter = m_pMsgBuffer->GetFirstDeclarator();
-		CBEDeclarator *pDecl = m_pMsgBuffer->GetNextDeclarator(pIter);
-		m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
-	}
+    // search for dispatch function
+    nOldType = pContext->SetFunctionType(FUNCTION_DISPATCH);
+    sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEInterface, pContext);
+    pContext->SetFunctionType(nOldType);
+    m_pDispatchFunction = (CBEDispatchFunction*)pRoot->FindFunction(sFuncName);
+    assert(m_pDispatchFunction);
+    if (m_pCorbaObject)
+    {
+        vector<CBEDeclarator*>::iterator iterCO = m_pCorbaObject->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterCO;
+        m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+    }
+    if (m_pCorbaEnv)
+    {
+        vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterCE;
+        m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+    }
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    if (pMsgBuffer)
+    {
+        vector<CBEDeclarator*>::iterator iterM = pMsgBuffer->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterM;
+        m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName(), pContext);
+    }
 
     return true;
 }
@@ -206,15 +205,16 @@ void CBESrvLoopFunction::WriteCorbaEnvironmentDeclaration(CBEFile *pFile, CBECon
     {
         pFile->PrintIndent("");
         m_pCorbaEnv->WriteDeclaration(pFile, pContext);
-        if (!DoUseParameterAsEnv(pContext))
+        if (!DoUseParameterAsEnv(pContext) &&
+	    pContext->IsBackEndSet(PROGRAM_BE_C))
             pFile->Print(" = dice_default_server_environment");
         pFile->Print(";\n");
     }
 }
 
-/**	\brief writes the variable declarations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the variable declarations of this function
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * The variable declarations of the call function include the message buffer for send and receive.
  * Variables declared for the server loop include:
@@ -225,47 +225,48 @@ void CBESrvLoopFunction::WriteCorbaEnvironmentDeclaration(CBEFile *pFile, CBECon
 void CBESrvLoopFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
     // write CORBA stuff
-	WriteCorbaObjectDeclaration(pFile, pContext);
-	WriteCorbaEnvironmentDeclaration(pFile, pContext);
+    WriteCorbaObjectDeclaration(pFile, pContext);
+    WriteCorbaEnvironmentDeclaration(pFile, pContext);
     // clean up
 
     // write message buffer
     pFile->PrintIndent("");
-    assert(m_pMsgBuffer);
-    m_pMsgBuffer->WriteDeclaration(pFile, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteDeclaration(pFile, pContext);
     pFile->Print(";\n");
 
-	// write reply code
-	CBEReplyCodeType *pReplyType = pContext->GetClassFactory()->GetNewReplyCodeType();
-	if (!pReplyType->CreateBackEnd(pContext))
-	{
-	    delete pReplyType;
-		return;
-	}
-	String sReply = pContext->GetNameFactory()->GetReplyCodeVariable(pContext);
-	pFile->PrintIndent("");
-	pReplyType->Write(pFile, pContext);
-	pFile->Print(" %s;\n", (const char*)sReply);
-	delete pReplyType;
+    // write reply code
+    CBEReplyCodeType *pReplyType = pContext->GetClassFactory()->GetNewReplyCodeType();
+    if (!pReplyType->CreateBackEnd(pContext))
+    {
+        delete pReplyType;
+        return;
+    }
+    string sReply = pContext->GetNameFactory()->GetReplyCodeVariable(pContext);
+    pFile->PrintIndent("");
+    pReplyType->Write(pFile, pContext);
+    pFile->Print(" %s;\n", sReply.c_str());
+    delete pReplyType;
 
-	// write opcode
+    // write opcode
     CBEOpcodeType *pOpcodeType = pContext->GetClassFactory()->GetNewOpcodeType();
     if (!pOpcodeType->CreateBackEnd(pContext))
     {
         delete pOpcodeType;
         return;
     }
-    String sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
+    string sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
     pFile->PrintIndent("");
     pOpcodeType->Write(pFile, pContext);
-    pFile->Print(" %s;\n", (const char *) sOpcodeVar);
+    pFile->Print(" %s;\n", sOpcodeVar.c_str());
 
     delete pOpcodeType;
 }
 
-/**	\brief writes the variable initializations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the variable initializations of this function
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation should initialize the message buffer and the pointers of the out variables.
  * The CROBA stuff does not need to be set, because it is set by the first wait function.
@@ -278,13 +279,14 @@ void CBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext
     // contain values used to init message buffer
     WriteEnvironmentInitialization(pFile, pContext);
     // init message buffer
-    assert(m_pMsgBuffer);
-    m_pMsgBuffer->WriteInitialization(pFile, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, pContext);
 }
 
-/**	\brief writes the invocation of the message transfer
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the invocation of the message transfer
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
@@ -293,9 +295,9 @@ void CBESrvLoopFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
     pFile->PrintIndent("/* invoke */\n");
 }
 
-/**	\brief clean up the mess
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief clean up the mess
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation cleans up allocated memory inside this function
  */
@@ -304,9 +306,9 @@ void CBESrvLoopFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
     pFile->PrintIndent("/* clean up */\n");
 }
 
-/**	\brief writes the server loop's function body
- *	\param pFile the target file
- *	\param pContext the context of the write operation
+/**    \brief writes the server loop's function body
+ *    \param pFile the target file
+ *    \param pContext the context of the write operation
  */
 void CBESrvLoopFunction::WriteBody(CBEFile * pFile, CBEContext * pContext)
 {
@@ -321,20 +323,20 @@ void CBESrvLoopFunction::WriteBody(CBEFile * pFile, CBEContext * pContext)
     WriteReturn(pFile, pContext);
 }
 
-/**	\brief do not write any additional parameters
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
- *	\return true if a parameter has been written
+/**    \brief do not write any additional parameters
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
+ *    \return true if a parameter has been written
  */
 bool CBESrvLoopFunction::WriteBeforeParameters(CBEFile * pFile, CBEContext * pContext)
 {
     return false;
 }
 
-/**	\brief do not write any additional parameters
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
- *	\param bComma true if we have to write a comma first
+/**    \brief do not write any additional parameters
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
+ *    \param bComma true if we have to write a comma first
  *
  * The server loop has a special parameter, which is a void pointer.
  * If it is NOT NULL, we will cast it to a CORBA_Environment, which
@@ -345,17 +347,17 @@ void CBESrvLoopFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pCon
 {
     if (bComma) // should be false, but who knows...
         pFile->Print(", ");
-    String sServerParam = pContext->GetNameFactory()->GetServerParameterName();
-    pFile->Print("void* %s", (const char*)sServerParam);
+    string sServerParam = pContext->GetNameFactory()->GetServerParameterName();
+    pFile->Print("void* %s", sServerParam.c_str());
 }
 
-/**	\brief writes the loop
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the loop
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  */
 void CBESrvLoopFunction::WriteLoop(CBEFile * pFile, CBEContext * pContext)
 {
-    String sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
+    string sOpcodeVar = pContext->GetNameFactory()->GetOpcodeVariable(pContext);
     pFile->PrintIndent("");
     m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, pContext);
     pFile->Print("\n");
@@ -365,48 +367,58 @@ void CBESrvLoopFunction::WriteLoop(CBEFile * pFile, CBEContext * pContext)
     pFile->IncIndent();
 
     // write switch
-	String sReply = pContext->GetNameFactory()->GetReplyCodeVariable(pContext);
+    string sReply = pContext->GetNameFactory()->GetReplyCodeVariable(pContext);
     if (m_pDispatchFunction)
-	{
-	    pFile->PrintIndent("%s = ", (const char*)sReply);
-	    m_pDispatchFunction->WriteCall(pFile, String(), pContext);
-		pFile->Print("\n");
-	}
+    {
+        pFile->PrintIndent("");
+        m_pDispatchFunction->WriteCall(pFile, sReply, pContext);
+        pFile->Print("\n");
+    }
 
-	// check if we should reply or not
-	pFile->PrintIndent("if (%s == DICE_REPLY)\n", (const char*)sReply);
-	pFile->IncIndent();
-	pFile->PrintIndent("");
-	m_pReplyAnyWaitAnyFunction->WriteCall(pFile, sOpcodeVar, pContext);
-	pFile->Print("\n");
-	pFile->DecIndent();
-    pFile->PrintIndent("else\n");
-	pFile->IncIndent();
-	pFile->PrintIndent("");
-	m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, pContext);
+    // check if we should reply or not
+    pFile->PrintIndent("if (%s == DICE_REPLY)\n", sReply.c_str());
+    pFile->IncIndent();
+    pFile->PrintIndent("");
+    m_pReplyAnyWaitAnyFunction->WriteCall(pFile, sOpcodeVar, pContext);
     pFile->Print("\n");
-	pFile->DecIndent();
+    pFile->DecIndent();
+    pFile->PrintIndent("else\n");
+    pFile->IncIndent();
+    pFile->PrintIndent("");
+    m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, pContext);
+    pFile->Print("\n");
+    pFile->DecIndent();
 
     pFile->DecIndent();
     pFile->PrintIndent("}\n");
 }
 
-/** \brief test fi this function should be written
+/** \brief test if this function should be written
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  *  \return  true if this function should be written
  *
  * A server loop is only written at the component's side.
  */
-bool CBESrvLoopFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContext)
+bool CBESrvLoopFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
 {
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)))
-		if (!IsTargetFile((CBEHeaderFile*)pFile))
-			return false;
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEImplementationFile)))
-		if (!IsTargetFile((CBEImplementationFile*)pFile))
-			return false;
-	return pFile->GetTarget()->IsKindOf(RUNTIME_CLASS(CBEComponent));
+    if (!IsTargetFile(pFile))
+        return false;
+    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
+}
+
+/** \brief test if this function should be written
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *  \return  true if this function should be written
+ *
+ * A server loop is only written at the component's side.
+ */
+bool CBESrvLoopFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+{
+    if (!IsTargetFile(pFile))
+        return false;
+    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
 }
 
 /** \brief determines the direction, the server loop sends to
@@ -441,7 +453,7 @@ bool CBESrvLoopFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBEContex
     // msg buffer not initialized yet
     pMsgBuffer->InitCounts(pClass, pContext);
     // create own message buffer
-    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType();
+    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType(true);
     m_pMsgBuffer->SetParent(this);
     if (!m_pMsgBuffer->CreateBackEnd(pMsgBuffer, pContext))
     {
@@ -479,16 +491,16 @@ void CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile *pFile, CBEConte
 {
     if (DoUseParameterAsEnv(pContext))
     {
-        String sServerParam = pContext->GetNameFactory()->GetServerParameterName();
-        VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-        CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
+        string sServerParam = pContext->GetNameFactory()->GetServerParameterName();
+        vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterCE;
         // if (server-param)
         //   corba-env = (CORBA_Env*)server-param;
-        pFile->PrintIndent("if (%s)\n", (const char*)sServerParam);
+        pFile->PrintIndent("if (%s)\n", sServerParam.c_str());
         pFile->IncIndent();
-        pFile->PrintIndent("%s = (", (const char*)pDecl->GetName());
+        pFile->PrintIndent("%s = (", pDecl->GetName().c_str());
         m_pCorbaEnv->WriteType(pFile, pContext, true);
-        pFile->Print("*)%s;\n", (const char*)sServerParam);
+        pFile->Print("*)%s;\n", sServerParam.c_str());
         pFile->DecIndent();
         // should be set to default environment, but if
         // it is a pointer, we cannot, but have to allocate memory first...
@@ -496,15 +508,22 @@ void CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile *pFile, CBEConte
         pFile->PrintIndent("{\n");
         pFile->IncIndent();
         // corba-env = (CORBA_Env*)malloc(sizeof(CORBA_Env));
-        pFile->PrintIndent("%s = ", (const char*)pDecl->GetName());
+        pFile->PrintIndent("%s = ", pDecl->GetName().c_str());
         m_pCorbaEnv->GetType()->WriteCast(pFile, true, pContext);
         pFile->Print("_dice_alloca(sizeof");
         m_pCorbaEnv->GetType()->WriteCast(pFile, false, pContext);
         pFile->Print(");\n");
-        // *corba-env = dice_default_env;
-        pFile->PrintIndent("*%s = ", (const char*)pDecl->GetName());
-        m_pCorbaEnv->GetType()->WriteCast(pFile, false, pContext);
-        pFile->Print("%s;\n", "dice_default_server_environment");
+	if (pContext->IsBackEndSet(PROGRAM_BE_C))
+	{
+	    pFile->PrintIndent("*%s = ", pDecl->GetName().c_str());
+	    m_pCorbaEnv->GetType()->WriteCast(pFile, false, pContext);
+	    pFile->Print("%s;\n", "dice_default_server_environment");
+	} 
+	else if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+	{
+	    *pFile << "\t" << pDecl->GetName() 
+		<< " = new CORBA_Server_Environment();\n";
+	}
         pFile->DecIndent();
         pFile->PrintIndent("}\n");
     }

@@ -41,31 +41,26 @@
  * \param  owner         Dataspace owner
  * \param  pool          Page pool descriptor
  * \param  addr          Memory area start address 
- *                       (L4DM_MEMPHYS_ANY_ADDR ... find suitable area)
+ *                       (#L4DM_MEMPHYS_ANY_ADDR ... find suitable area)
  * \param  size          Memory area size
  * \param  align         Alignment
  * \param  flags         Flags:
- *                       - \c L4DM_CONTIGUOUS allocate contiguous area, default
- *                                            is to assemble pages from smaller
- *                                            areas
+ *                       - #L4DM_CONTIGUOUS allocate contiguous area, default
+ *                                          is to assemble pages from smaller
+ *                                          areas
  * \param  name          Dataspace name
  * \retval ds            Dataspace descriptor
  *	
  * \return 0 on success (\a ds contains a valid dataspace descriptor), 
  *         error code otherwise:
- *         - \c -L4_ENOHANDLE  could not create dataspace descriptor
- *         - \c -L4_ENOMEM     no memory available
+ *         - -#L4_ENOHANDLE  could not create dataspace descriptor
+ *         - -#L4_ENOMEM     no memory available
  */
 /*****************************************************************************/ 
 static int
-__create_ds(l4_threadid_t owner, 
-	    page_pool_t * pool, 
-	    l4_addr_t addr, 
-	    l4_size_t size, 
-	    l4_addr_t align, 
-	    l4_uint32_t flags, 
-	    const char * name, 
-	    l4dm_dataspace_t * ds)
+__create_ds(l4_threadid_t owner, page_pool_t * pool, l4_addr_t addr, 
+	    l4_size_t size, l4_addr_t align, l4_uint32_t flags, 
+	    const char * name, l4dm_dataspace_t * ds)
 {
   dmphys_dataspace_t * desc;
   page_area_t * pages;
@@ -80,38 +75,39 @@ __create_ds(l4_threadid_t owner,
   else
     align = 1UL << (l4util_bsr(align));
 
-  LOGdL(DEBUG_OPEN,"size %u, pool %u\n  alignment 0x%08x, flags 0x%08x",
-        size,pool->pool,align,flags);
+  LOGdL(DEBUG_OPEN, "size %u, pool %u, alignment 0x%08x, flags 0x%08x",
+        size, pool->pool, align, flags);
 
   /* create dataspace descriptor */
-  desc = dmphys_ds_create(owner,name,flags);
+  desc = dmphys_ds_create(owner, name, flags);
   if (desc == NULL)
     {
-      ERROR("DMphys: dataspace descriptor allocation failed!");
+      LOGdL(DEBUG_ERRORS, "DMphys: dataspace descriptor allocation failed!");
       return -L4_ENOHANDLE;
     }
 
   /* allocate memory */
   if (addr == L4DM_MEMPHYS_ANY_ADDR)
-    ret = dmphys_pages_allocate(pool,size,align,flags,PAGES_USER,&pages);
+    ret = dmphys_pages_allocate(pool, size, align, flags, PAGES_USER, &pages);
   else
-    ret = dmphys_pages_allocate_area(pool,addr,size,PAGES_USER,&pages);
+    ret = dmphys_pages_allocate_area(pool, addr, size, PAGES_USER, &pages);
   if (ret < 0)
     {
       /* allocation failed */
-      ERROR("DMphys: memory allocation failed!");
+      LOGdL(DEBUG_ERRORS, "DMphys: memory allocation failed!");
       dmphys_ds_release(desc);
       return -L4_ENOMEM;
     }
 
   /* add pages to dataspace descriptor, this will also set the size of the 
    * dataspace which is calculated from the page area list. This size might 
-   * differ from the requested size, e.g. if the L4DM_MEMPHYS_4MPAGES flag
-   * is set and dmphys_pages_allocate therefore aligned the size to 4MB */
-  dmphys_ds_add_pages(desc,pages,pool);
+   * differ from the requested size, e.g. if the L4DM_MEMPHYS_SUPERPAGES flag
+   * is set and dmphys_pages_allocate therefore aligned the size to a
+   * superpage */
+  dmphys_ds_add_pages(desc, pages, pool);
 
 #if DEBUG_OPEN
-  LOGL("id %u, memory areas:",dmphys_ds_get_id(desc));
+  LOGL("id %u, memory areas:", dmphys_ds_get_id(desc));
   dmphys_pages_list(pages);
 #endif
 
@@ -137,36 +133,31 @@ __create_ds(l4_threadid_t owner,
  * \param  owner         Dataspace owner
  * \param  pool          Page pool descriptor
  * \param  addr          Memory area start address 
- *                       (L4DM_MEMPHYS_ANY_ADDR ... find suitable area)
+ *                       (#L4DM_MEMPHYS_ANY_ADDR ... find suitable area)
  * \param  size          Memory area size
  * \param  align         Alignment
  * \param  flags         Flags:
- *                       - \c L4DM_CONTIGUOUS allocate contiguous area, default
- *                                            is to assemble pages from smaller
- *                                            areas
+ *                       - #L4DM_CONTIGUOUS allocate contiguous area, default
+ *                                          is to assemble pages from smaller
+ *                                          areas
  * \param  name          Dataspace name
  * \retval ds            Dataspace descriptor
  *	
  * \return 0 on success (\a ds contains a valid dataspace descriptor), 
  *         error code otherwise:
- *         - \c -L4_ENOHANDLE  could not create dataspace descriptor
- *         - \c -L4_ENOMEM     no memory available
+ *         - -#L4_ENOHANDLE  could not create dataspace descriptor
+ *         - -#L4_ENOMEM     no memory available
  *
  * Internal version, used. e.g. in copy.c to create a copy of a dataspace.
  */
 /*****************************************************************************/ 
 int
-dmphys_open(l4_threadid_t owner, 
-	    page_pool_t * pool, 
-	    l4_addr_t addr, 
-	    l4_size_t size, 
-	    l4_addr_t align, 
-	    l4_uint32_t flags, 
-	    const char * name, 
-	    l4dm_dataspace_t * ds)
+dmphys_open(l4_threadid_t owner, page_pool_t * pool, l4_addr_t addr, 
+	    l4_size_t size, l4_addr_t align, l4_uint32_t flags, 
+	    const char * name, l4dm_dataspace_t * ds)
 {
   /* create dataspace */
-  return __create_ds(owner,pool,addr,size,align,flags,name,ds);
+  return __create_ds(owner, pool, addr, size, align, flags, name, ds);
 }
 
 /*****************************************************************************
@@ -177,92 +168,84 @@ dmphys_open(l4_threadid_t owner,
 /**
  * \brief Open new dataspace (generic memory dataspace manager version)
  * 
- * \param  _dice_corba_obj       Flick request structure
- * \param  size          Dataspace size
- * \param  align         Alignment
- * \param  flags         Flags
- *                       - \c L4DM_CONTIGUOUS allocate contiguous memory area
- * \param  name          Dataspace name
- * \retval ds            Dataspace id
- * \retval _ev           Flick exception structure, unused
+ * \param  _dice_corba_obj    Request source
+ * \param  size               Dataspace size
+ * \param  align              Alignment
+ * \param  flags              Flags
+ *                            - #L4DM_CONTIGUOUS allocate contiguous memory area
+ * \param  name               Dataspace name
+ * \param  _dice_corba_env    Server environment
+ * \retval ds                 Dataspace id
  *	
  * \return 0 on success (\a ds contains a valid dataspace descriptor),
  *         error code otherwise:
- *         - \c -L4_ENOHANDLE  no dataspace descriptor available
- *         - \c -L4_ENOMEM     no memory available
+ *         - -#L4_ENOHANDLE  no dataspace descriptor available
+ *         - -#L4_ENOMEM     no memory available
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_mem_open_component(CORBA_Object _dice_corba_obj,
-                           l4_uint32_t size,
-                           l4_uint32_t align,
-                           l4_uint32_t flags,
-                           const char* name,
-                           l4dm_dataspace_t *ds,
-                           CORBA_Environment *_dice_corba_env)
+if_l4dm_mem_open_component(CORBA_Object _dice_corba_obj, l4_uint32_t size,
+                           l4_uint32_t align, l4_uint32_t flags,
+                           const char* name, l4dm_dataspace_t *ds,
+                           CORBA_Server_Environment *_dice_corba_env)
 {
   page_pool_t * p = dmphys_get_default_pool();
 
 #if DEBUG_OPEN
-  LOGL("owner %x.%x",_dice_corba_obj->id.task,
-       _dice_corba_obj->id.lthread);
+  LOGL("owner "l4util_idfmt, l4util_idstr(*_dice_corba_obj));
   if (name != NULL)
-    printf("  name \'%s\', size %u, align 0x%08x, flags 0x%08x\n",
-           name,size,align,flags);
+    LOG_printf(" name \'%s\', size %u, align 0x%08x, flags 0x%08x\n",
+           name, size, align, flags);
   else
-    printf("  size %u, align 0x%08x, flags 0x%08x\n",size,align,flags);
+    LOG_printf(" size %u, align 0x%08x, flags 0x%08x\n", size, align, flags);
 #endif
 
   /* create dataspace */
-  return __create_ds(*_dice_corba_obj,p,L4DM_MEMPHYS_ANY_ADDR,
-		     size,align,flags, name,ds);
+  return __create_ds(*_dice_corba_obj, p, L4DM_MEMPHYS_ANY_ADDR,
+		     size, align, flags, name, ds);
 }
 
 /*****************************************************************************/
 /**
  * \brief Open new dataspace (extended DMphys version)
  * 
- * \param  _dice_corba_obj       Flick request structure
- * \param  pool          Memory pool number
- * \param  addr          Memory area start address
- *                       (L4DM_MEMPHYS_ANY_ADDR ... find suitable area)
- * \param  size          Memory area size
- * \param  align         Memory area alignment
- * \param  flags         Flags
- *                       - \c L4DM_CONTIGUOUS allocate contiguous memory area
- * \param  name          Dataspace name
- * \retval ds            Dataspace id
- * \retval _ev           Flick exception structure, unused
+ * \param  _dice_corba_obj    Request source
+ * \param  pool               Memory pool number
+ * \param  addr               Memory area start address
+ *                            (#L4DM_MEMPHYS_ANY_ADDR ... find suitable area)
+ * \param  size               Memory area size
+ * \param  align              Memory area alignment
+ * \param  flags              Flags
+ *                            - #L4DM_CONTIGUOUS allocate contiguous memory area
+ * \param  name               Dataspace name
+ * \param  _dice_corba_env    Server environment
+ * \retval ds                 Dataspace id
  *	
  * \return 0 on success (\a ds contains a valid dataspace descriptor),
  *         error code otherwise:
- *         - \c -L4_EINVAL     invalid page pool number
- *         - \c -L4_ENOHANDLE  no dataspace descriptor available
- *         - \c -L4_ENOMEM     no memory available
+ *         - -#L4_EINVAL     invalid page pool number
+ *         - -#L4_ENOHANDLE  no dataspace descriptor available
+ *         - -#L4_ENOMEM     no memory available
  */
 /*****************************************************************************/ 
 l4_int32_t 
 if_l4dm_memphys_dmphys_open_component(CORBA_Object _dice_corba_obj,
-                                      l4_uint32_t pool,
-                                      l4_uint32_t addr,
-                                      l4_uint32_t size,
-                                      l4_uint32_t align,
-                                      l4_uint32_t flags,
-                                      const char* name,
+                                      l4_uint32_t pool, l4_uint32_t addr,
+                                      l4_uint32_t size, l4_uint32_t align,
+                                      l4_uint32_t flags, const char* name,
                                       l4dm_dataspace_t *ds,
-                                      CORBA_Environment *_dice_corba_env)
+                                      CORBA_Server_Environment *_dice_corba_env)
 {
   page_pool_t * p = dmphys_get_page_pool(pool);
 
   /* sanity checks */
   if (p == NULL)
     {
-      ERROR("DMphys: invalid page pool (%d)",pool);
+      LOGdL(DEBUG_ERRORS, "DMphys: invalid page pool (%d)", pool);
       return -L4_EINVAL;
     }
 
   /* create dataspace */
-  return __create_ds(*_dice_corba_obj,p,addr,size,align,flags,name,
-		     ds);
+  return __create_ds(*_dice_corba_obj, p, addr, size, align, flags, name, ds);
 }
 

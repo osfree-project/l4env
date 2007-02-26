@@ -16,14 +16,18 @@
 #include "internal.h"
 
 // output a string, but do not add a trailing newline
-static void outs(const char*s){
-  while(*s)outchar(*s++);
+static void outs(const char *s)
+{
+  /* use outchar instead of outstring for latency reasons */
+  while (*s)
+    outchar(*s++);
 }
 
 //void (*LOG_outstring)(const char*) __attribute__ ((weak));
-void (*LOG_outstring)(const char*)=outs;
+void (*LOG_outstring)(const char *) = outs;
 
 /* With the loglib, we just have the stdlog stream */
-void LOG_flush(void){
-    LOG_printf_flush();
+void LOG_flush(void)
+{
+  LOG_printf_flush();
 }

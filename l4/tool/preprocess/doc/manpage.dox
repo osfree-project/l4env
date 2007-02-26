@@ -47,12 +47,13 @@ automatically generates header and implementation files.
 \section SYNOPSIS Synopsis
 
 <code>preprocess -c</code> <var>filename_base</var> 
-  [ <code>-o</code> <var>outfile_base</var> ] 
+  [ <code>-o</code> <var>outfile_base</var> | <code>-s</code>] 
 <br><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code>[ <code>-p</code> <var>prepend</var> ]
 <br><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code>[ <code>-C</code> <var>source_ext</var> ] 
   [ <code>-H</code> <var>header_ext</var> ]
-<br><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code>[ <code>-i</code> ]
-  [ <code>-l</code> | <code>-L</code> ] [ <code>-v</code> ]
+<br><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code>[ <code>-e</code> <var>tag_list</var> ]
+<br><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code>[ <code>-i</code> ] [ <code>-t</code> ]
+  [ <code>-l</code> | <code>-L</code> ] [ <code>-v</code> ] [ <code>-d</code> ]
 <br><code>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</code><var>sources</var>...
 
 \section DESCRIPTION Description
@@ -271,6 +272,12 @@ to ".cc" and ".h" but can be overridden using <code>-C</code> and
   <dt><code>-o </code><var>outfile_base</var>  </dt>
   <dd>Specifies the basename of output files.  It defaults to the
       value of the  <code>-c</code> option.</dd>
+  <dt><code>-s</code></dt>
+  <dd>Generate one implementation file per source file, using the base
+       name of the implementation file as <var>outfile_base</var>, and not one
+       implementation file per <var>suffix</var> specified as
+       arguments to <code>IMPLEMENTATION</code> directives in the
+       source files.</dd>
   <dt><code>-p </code><var>prepend</var>  </dt>
   <dd>Specifies a prefix for all output file names.  This prefix is
        prepended to <var>filename_base</var> and can contain directory
@@ -280,7 +287,19 @@ to ".cc" and ".h" but can be overridden using <code>-C</code> and
        Defaults to ".cc".</dd>      
   <dt><code>-H </code><var>header_ext</var></dt>
   <dd>Specify the extension of generated header files.
-       Defaults to ".h".</dd>      
+       Defaults to ".h".</dd>
+  <dt><code>-e</code> <var>tag_list</var></dt>
+  <dd>Enable conditional compilation using the selectors included in
+       the comma-separated <var>tag_list</var>.  This option is
+       intended to be used in conjunction with the <code>-s</code>
+       option.  See Section
+       \ref CONDITIONAL \if man CONDITIONAL COMPILATION \endif
+       for details on this option.</dd>
+  <dt><code>-t</code> </dt>
+  <dd>Truncate to size 0 output files for which Preprocess generates
+       no output.  This option supresses even <code>\#include</code>
+       directives in generated source files that are otherwise empty,
+       resulting in increased compilation speed for these files.</dd>
   <dt><code>-i</code> </dt>
   <dd>Generate <code>inline</code> code.  If this option is not
        given, all code (including code marked "<code>inline</code>")
@@ -303,6 +322,9 @@ to ".cc" and ".h" but can be overridden using <code>-C</code> and
        do this.) </dd>
   <dt><code>-v</code> </dt>
   <dd>Be verbose: Print results of <code>preprocess</code>' parser pass.</dd>
+  <dt><code>-d</code> </dt>
+  <dd>Be verbose: Print a diagnostic when dropping a section in
+       conditional-compilation mode (Option <code>-e</code>).</dd>
 </dl>
 
 
@@ -317,7 +339,7 @@ behavior.
        declarations found here (``public class'') will be completed
        with member-function declarations for member functions found in
        <code>IMPLEMENTATION</code> sections.
-       \htmlonly <p /> \endhtmlonly
+       \htmlonly <p> \endhtmlonly
        Function definitions are not allowed in this section.
 
   <dt><code>IMPLEMENTATION:</code>
@@ -381,7 +403,8 @@ foo ()
 </code></pre></blockquote>
 </dl>
 
-<h3>Language directives for advanced use</h3>
+\subsection ADVANCED Language directives for advanced use
+
 <dl>       
   <dt><code>IMPLEMENTATION [</code><i>suffix</i><code>]:</code> 
   <dd>Starts an implementation section with code that will be put
@@ -392,6 +415,12 @@ foo ()
        together make up one input module (which are fed to Preprocess
        at the same time and which share one public and one private
        header file).
+
+       (This form of the IMPLEMENTATION directive works only if
+       neither the <code>-s</code> (no-suffix) nor the <code>-e</code>
+       (conditional compilation) options are used.  See Section
+       \ref CONDITIONAL \if man CONDITIONAL COMPILATION \endif
+       for information on conditional compilation.)
 
   <dt><code>EXTENSION class </code><var>classname</var><code> {</code>
        ... <code>};</code>
@@ -413,7 +442,53 @@ foo ()
        Instead, the function definition will end up in the
        implementation file.
 
+  <dt><code>inline ALWAYS_INLINE</code>
+  <dd>specifies a functions that is generated as an inline function
+       even if the <code>-i</code> option is not used.  Use this
+       specifier for functions that absolutely must be inline even in
+       debugging builds.
+
 </dl>
+
+\subsection CONDITIONAL Conditional compilation
+
+Conditional compilation is a Preprocess mode that is enabled by using
+the "<code>-e</code> <var>tag_list</var>" option.
+
+<dl>       
+  <dt><code>INTERFACE [</code><i>tag_expression</i><code>]:</code> </dt>
+  <dt><code>IMPLEMENTATION [</code><i>tag_expression</i><code>]:</code></dt>
+  <dd>A <var>tag_expression</var> is a logical expression with negation (!),
+       conjunction (-), disjunction (,), and one level of parentheses
+       ({ and }), using selector tags as its atoms.  The
+       <code>INTERFACE</code> or <code>IMPLEMENTATION</code> section
+       is included in the output only if it is true using the
+       selectors specified in <var>tag_list</var>.
+       </dd>
+</dl>
+
+Examples:
+
+<pre><code>INTERFACE [a,b]:</code>
+// This section is used whenever a or b is contained in the <var>tag_list</var>
+
+<code>INTERFACE [a-b]: </code>
+// This section is used whenever a and b are contained in the <var>tag_list</var>
+
+<code>INTERFACE [a,b-c]:</code>
+// This section is used whenever a, or b and c are 
+// contained in the <var>tag_list</var>
+
+<code>INTERFACE [!a]:</code>
+// This section is used whenever a is not contained in the <var>tag_list</var>
+
+<code>INTERFACE [{a,b}-c]:</code>
+// This section is used whenever a and c, or b and c are 
+// contained in the <var>tag_list</var>
+
+<code>INTERFACE [!a,b-c]:</code>
+// This section is used whenever a is not contained in the <var>tag_list</var>,
+// or b and c are contained in the <var>tag_list</var></pre>
 
 \section MISC Usage hints
 
@@ -424,7 +499,7 @@ mind.
        classes.  It is possible to use namespaces and nested classes
        defined elsewhere (for example, in a library header file), but
        you cannot define new namespaces and nested classes.
-       \htmlonly <p /> \endhtmlonly
+       \htmlonly <p> \endhtmlonly
   <li>Preprocess copies function declarations for publicly visible
        functions to the public header file.  If you use user-defined
        types in function signatures, you need to "<code>\#include</code>"
@@ -433,13 +508,23 @@ mind.
        inline functions (which might end up in the public header file)
        need to specify their include dependencies in a "<code>NEEDS[]</code>"
        clause.
-       \htmlonly <p /> \endhtmlonly
+       \htmlonly <p> \endhtmlonly
        Also, if you use names declared in an (externally-defined)
        namespace (such as namespace "<code>std</code>"), you must
        specify the fully-qualified name (including the namespace) in
        the function signature (unless you use a "<code>using
        namespace</code>" directive in the "<code>INTERFACE:</code>"
        section, which is not recommended).
+       \htmlonly <p> \endhtmlonly
+  <li>Don't forget to specify inline functions required by other
+       inline functions in the latter's "<code>NEEDS</code>" clause.
+       Otherwise, Preprocess cannot guarantee the correct
+       inline-function order in the output, and you may get compiler
+       warnings like ``inline function is used but not defined.''  This
+       problem is reinforced when using private inline functions,
+       because Preprocess moves them out of the public header file
+       (into the private header file) unless a public function's
+       "<code>NEEDS</code>" clause requires them.
 </ul>
 
 \section MAKEFILE Example Makefile fragment

@@ -72,14 +72,12 @@ struct resource *request_region(unsigned long start, unsigned long n,
 {
   int err;
 
-#if DEBUG_RES_TRACE
-  INFO("io_addr=%p, size=%ld, name=\"%s\"\n", (void*)start, n, name);
-#endif
+  LOGdL(DEBUG_RES_TRACE, "io_addr=%p, size=%ld, name=\"%s\"", (void*)start, n, name);
   err = l4io_request_region((l4_addr_t) start, (l4_size_t) n);
 
   if (err)
     {
-      ERROR("in l4io_request_region(0x%04lx, %ld) (%d)", start, n, err);
+      LOGdL(DEBUG_ERRORS, "Error: in l4io_request_region(0x%04lx, %ld) (%d)", start, n, err);
       return 0;
     }
 
@@ -102,14 +100,13 @@ struct resource *request_mem_region(unsigned long start, unsigned long n,
   l4_addr_t vaddr;
   l4_addr_t offset;
 
-#if DEBUG_RES_TRACE
-  INFO("phys_addr=%p, size=%ld, name=\"%s\"\n", (void*)start, n, name);
-#endif
+  LOGdL(DEBUG_RES_TRACE, "phys_addr=%p, size=%ld, name=\"%s\"", (void*)start, n, name);
   vaddr = l4io_request_mem_region((l4_addr_t) start, (l4_size_t) n, &offset);
 
   if (!vaddr)
     {
-      ERROR("in l4io_request_mem_region(%p, %ld)", (void*)start, n);
+      LOGdL(DEBUG_ERRORS, "Error: in l4io_request_mem_region(%p, %ld)", 
+            (void*)start, n);
       return 0;
     }
   /* keep region info */
@@ -128,13 +125,11 @@ void release_region(unsigned long start, unsigned long n)
 {
   int err;
 
-#if DEBUG_RES_TRACE
-  INFO("io_addr=%p, size=%ld\n", (void*)start, n);
-#endif
+  LOGdL(DEBUG_RES_TRACE, "io_addr=%p, size=%ld", (void*)start, n);
   err = l4io_release_region((l4_addr_t) start, (l4_size_t) n);
 
   if (err)
-    Error("release_region(0x%04lx, %ld) failed (%d)", start, n, err);
+    LOG_Error("release_region(0x%04lx, %ld) failed (%d)", start, n, err);
 }
 
 /** Release I/O memory region.
@@ -147,14 +142,13 @@ void release_mem_region(unsigned long start, unsigned long n)
 {
   int err;
 
-#if DEBUG_RES_TRACE
-  INFO("phys_addr=%p, size=%ld\n", (void*)start, n);
-#endif
+  LOGdL(DEBUG_RES_TRACE, "phys_addr=%p, size=%ld", (void*)start, n);
   err = l4io_release_mem_region((l4_addr_t) start, (l4_size_t) n);
 
   if(err)
     {
-      ERROR("release_mem_region(%p, %ld) failed (%d)", (void*)start, n, err);
+      LOGdL(DEBUG_ERRORS, "Error: release_mem_region(%p, %ld) failed (%d)", 
+            (void*)start, n, err);
       return;
     }
 
@@ -171,7 +165,7 @@ void release_mem_region(unsigned long start, unsigned long n)
  */
 int release_resource(struct resource *res)
 {
-  Error("%s not implemented", __FUNCTION__);
+  LOG_Error("%s not implemented", __FUNCTION__);
 
   return -L4_EINVAL;
 }
@@ -221,9 +215,7 @@ void *ioremap(unsigned long phys_addr, unsigned long size)
   struct dde_region *p;
   void *pp;
 
-#if DEBUG_RES_TRACE
-  INFO("phys_addr=%p, size=%ld\n", (void*)phys_addr, size);
-#endif
+  LOGdL(DEBUG_RES_TRACE, "phys_addr=%p, size=%ld", (void*)phys_addr, size);
 
 #if !LATER
 #warning it is not later
@@ -235,9 +227,7 @@ void *ioremap(unsigned long phys_addr, unsigned long size)
           (p->pa + p->size >= phys_addr + size))
         {
           pp = (void *) (p->va + (phys_addr - p->pa));
-#if DEBUG_RES
-          DMSG("ioremap: %p => %p\n", (void*)phys_addr, pp);
-#endif
+          LOGd(DEBUG_RES, "ioremap: %p => %p", (void*)phys_addr, pp);
           return pp;
         }
       p = p->next;
@@ -245,10 +235,8 @@ void *ioremap(unsigned long phys_addr, unsigned long size)
 #else /* LATER, whatever this means */
   if ((pp=(void*)__va(phys_addr)) && __va(phys_addr+size))
     {
-#if DEBUG_RES
-      DMSG("ioremap: <%p-%p> => <%p-%p>\n",
+      LOGd(DEBUG_RES, "ioremap: <%p-%p> => <%p-%p>",
            phys_addr, phys_addr+size, pp, pp+size);
-#endif
       return pp;
     }
 #endif /* LATER */
@@ -270,9 +258,7 @@ void *ioremap(unsigned long phys_addr, unsigned long size)
  */
 void *ioremap_nocache(unsigned long phys_addr, unsigned long size)
 {
-#if DEBUG_RES_TRACE
-  INFO("phys_addr=%p, size=%ld\n", (void*)phys_addr, size);
-#endif
+  LOGdL(DEBUG_RES_TRACE, "phys_addr=%p, size=%ld\n", (void*)phys_addr, size);
 
   return ioremap(phys_addr, size);
 }
@@ -286,7 +272,5 @@ void *ioremap_nocache(unsigned long phys_addr, unsigned long size)
  */
 void iounmap(void *addr)
 {
-#if DEBUG_RES_TRACE
-  INFO("addr=%p\n", addr);
-#endif
+  LOGdL(DEBUG_RES_TRACE, "addr=%p", addr);
 }

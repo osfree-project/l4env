@@ -1,5 +1,4 @@
 #include <string.h>
-//#include <moddiv.h>
 
 int __lltostr(char *s, int size, unsigned long long i, int base, char UpCase);
 
@@ -7,7 +6,6 @@ int __lltostr(char *s, int size, unsigned long long i, int base, char UpCase)
 {
   char *tmp;
   unsigned int j=0;
-  //_moddiv_t r;
 
   s[--size]=0;
 

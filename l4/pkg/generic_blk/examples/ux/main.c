@@ -9,19 +9,24 @@
  */
 /*****************************************************************************/
 
+#include <stdlib.h>
+
 /* L4 includes */
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
 #include <l4/util/getopt.h>
 #include <l4/names/libnames.h>
+#include <l4/thread/thread.h>
 
 /* private includes */
 #include "blksrv.h"
 
 /* global stuff */
-char LOG_tag[9]="blkux";
+char LOG_tag[9] = "blkux";
 
 const int l4thread_max_threads = 64;
+
+static int do_sleep = 0;
 
 /*****************************************************************************/
 /**
@@ -35,13 +40,14 @@ __parse_cmdline(int argc, char * argv[])
     {
       {"write",  0, 0, 'w'},
       {"file",   1, 0, 'f'},
+      {"sleep",   1, 0, 'e'},
       {0, 0, 0, 0}      
     };
   char c;
 
   while(1)
     {
-      c = getopt_long(argc, argv, "wf:", long_options, NULL);
+      c = getopt_long(argc, argv, "wf:s:", long_options, NULL);
       if (c == -1)
         break;
 
@@ -55,6 +61,12 @@ __parse_cmdline(int argc, char * argv[])
         case 'f':
           /* set file */
           blksrv_dev_set_device(optarg);
+          break;
+
+        case 'e':
+          /* sleep a while befor startup */
+          if (optarg != NULL)
+            do_sleep = atoi(optarg);
           break;
 
         default:
@@ -76,6 +88,9 @@ main(int argc, char * argv[])
   /* parse command line */
   __parse_cmdline(argc,argv);
   
+  if (do_sleep > 0)
+    l4thread_sleep(do_sleep);
+
   /* start request thread, this also initializes the OSKit drivers */
   ret = blksrv_start_request_thread();
   if (ret < 0)

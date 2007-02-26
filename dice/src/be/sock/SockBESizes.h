@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/SockBESizes.h
- *	\brief	contains the declaration of the class CSockBESizes
+ *    \file    dice/src/be/sock/SockBESizes.h
+ *    \brief   contains the declaration of the class CSockBESizes
  *
- *	\date	11/28/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    11/28/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -24,7 +25,7 @@
  * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
- 
+
 #ifndef SOCKBESIZES_H
 #define SOCKBESIZES_H
 
@@ -39,21 +40,20 @@
  */
 class CSockBESizes : public CBESizes
 {
-DECLARE_DYNAMIC(CSockBESizes);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CSockBESizes();
-	virtual ~CSockBESizes();
+    /**    \brief constructor
+     */
+    CSockBESizes();
+    virtual ~CSockBESizes();
 
 protected:
-    /**	\brief copy constructor */
+    /**    \brief copy constructor */
     CSockBESizes(CSockBESizes &src);
 
 public:
     virtual int GetMaxSizeOfType(int nFEType);
-	virtual int GetSizeOfEnvType(String sName);
+    virtual int GetSizeOfEnvType(string sName);
 
 };
 

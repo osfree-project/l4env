@@ -4,7 +4,7 @@ IMPLEMENTATION:
 #include "jdb.h"
 
 /**
- * @brief 'Reg-Dump' module.
+ * 'Reg-Dump' module.
  * 
  * This module handles the 'r' command that
  * dumps the register contents at kernel entry.

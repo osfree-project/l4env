@@ -1,15 +1,17 @@
 INTERFACE:
 
-#include "stack.h"
-
 class Context;
 
 /** A lock that implements priority inheritance.
  */
 class Switch_lock
 {
+  // Warning: This lock's member variables must not need a
+  // constructor.  Switch_lock instances must assume
+  // zero-initialization or be initialized using the initialize()
+  // member function.
+  // Reason: to avoid overwriting the lock in the thread-ctor
   Context *_lock_owner;
-  Stack<Context> _lock_stack; 
 };
 
 
@@ -27,11 +29,14 @@ IMPLEMENTATION:
 // Switch_lock inlines 
 // 
 
-/** Constructor. */
+/** Initialize Switch_lock.  Call this function if you cannot
+    guarantee that your Switch_lock instance is allocated from
+    zero-initialized memory. */
 PUBLIC inline
-Switch_lock::Switch_lock()
-  : _lock_owner(0)
+void
+Switch_lock::initialize()
 {
+  _lock_owner = 0;
 }
 
 /** Lock owner. 
@@ -65,9 +70,7 @@ Switch_lock::try_lock()
 {
   Lock_guard<Cpu_lock> guard (&cpu_lock);
 
-  bool ret = smp_cas(&_lock_owner, 
-		     static_cast<Context*>(0), 
-		     current());
+  bool ret = cas (&_lock_owner, static_cast<Context*>(0), current());
 
   if (ret)
     current()->inc_lock_cnt();	// Do not lose this lock if current is deleted
@@ -83,36 +86,20 @@ PUBLIC
 void
 Switch_lock::lock()
 {
-  Context* locker = current();
-
-  while (! try_lock())
+  while (!try_lock())
     {
-      _lock_stack.insert(locker);
+      // do all the comparisons sequentially, the current owner
+      // might interfere in clear otherwise
+      //
+      // XXX which kind of interference, what about SMP (cpu local lock
+      // or global kernel lock ?)
 
-      for(;;)
-	{
-	  // do all the comparisons sequentially , the current owner
-	  // might interfere in clear otherwise
-	  Lock_guard<Cpu_lock> guard (&cpu_lock);
+      Lock_guard <Cpu_lock> guard (&cpu_lock);
 
-	  // XXX which kind of interference, what about SMP (cpu local lock
-	  // or global kernel lock ?)
-	  if (!test())
-	    {			// surprise: lock is now free
-	      if(_lock_stack.dequeue(locker))
-		{
-		  break;
-		}
-	    }
-	  if (_lock_owner == locker)
-	    {
-	      goto out;
-	    }
-
-	  current()->switch_to(_lock_owner);
-	}
+      // Help lock owner until lock becomes free
+      while (test())
+	current()->switch_exec_locked (_lock_owner, Context::Helping);	
     }
- out:
 
   assert (_lock_owner == current());
 }
@@ -124,7 +111,7 @@ PUBLIC inline NEEDS["globals.h"]
 bool
 Switch_lock::test_and_set()
 {
-  if (_lock_owner == current ())
+  if (_lock_owner == current())
     return true;
 
   lock();
@@ -132,44 +119,38 @@ Switch_lock::test_and_set()
   return false;
 }
 
-/** Free the lock.
-    Return the CPU to helper or next lock owner, whoever has the higher 
-    priority, given that thread's priority is higher that our's.
+/** Free the lock.  
+    Return the CPU to helper if there is one, since it had to have a
+    higher priority to be able to help (priority may be its own, it
+    may run on a donated timeslice or round robin scheduling may have
+    selected a thread on the same priority level as me)
  */
 PUBLIC
 void
 Switch_lock::clear()
 {
-  assert (current() == _lock_owner);
-
   Lock_guard<Cpu_lock> guard (&cpu_lock);
 
-  _lock_owner = _lock_stack.dequeue();
+  assert (current() == _lock_owner);
 
-  if (_lock_owner)
-    _lock_owner->inc_lock_cnt();
+  Context * h = _lock_owner->helper();
+  Context * owner = _lock_owner;
 
-  current()->dec_lock_cnt();
+  _lock_owner = 0;
+  owner->dec_lock_cnt();
 
-  Context* next_to_run = current(); // Whom should we switch to?
+  /*
+   * If someone helped us by lending its time slice to us.
+   * Just switch back to the helper without changing its helping state.
+   */
+  if (h != owner)
+    owner->switch_exec_locked (h, Context::Ignore_Helping);
 
-  // If lock count drops to 0, see if someone has locked us.  (If that
-  // is the case, he wants to delete us.)  Switch to our lock owner.
-  if (current()->lock_cnt() == 0)
-    {
-      Context* owner = current()->donatee();
-      if (owner && owner != current())
-	next_to_run = owner;
-    }
-
-  // Is there a new lock owner?  Has he a higher priority?
-  if (_lock_owner 
-      && _lock_owner->sched()->prio() > next_to_run->sched()->prio())
-    {
-      next_to_run = _lock_owner;
-    }
-
-  if (next_to_run != current())
-    current()->switch_to(next_to_run);
+  /*
+   * Someone apparently tries to delete us. Therefore we aren't
+   * allowed to continue to run and therefore let the scheduler
+   * pick the next thread to execute. 
+   */
+  if (owner->lock_cnt() == 0 && owner->donatee()) 
+    owner->schedule ();
 }
-

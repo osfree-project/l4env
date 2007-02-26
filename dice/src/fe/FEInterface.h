@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEInterface.h 
- *	\brief	contains the declaration of the class CFEInterface
+ *    \file    dice/src/fe/FEInterface.h
+ *    \brief   contains the declaration of the class CFEInterface
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -30,135 +31,147 @@
 #define __DICE_FE_FEINTERFACE_H__
 
 #include "fe/FEFileComponent.h"
-#include "fe/FEAttribute.h" // needed for ATTR_TYPE
-#include "CString.h"
-#include "Vector.h"
+#include "Attribute-Type.h" // needed for ATTR_TYPE
+#include <string>
+#include <vector>
+using namespace std;
 
 class CFEInterface;
 class CFETypedDeclarator;
 class CFEConstDeclarator;
 class CFEIdentifier;
+class CFEAttributeDeclarator;
+class CFEAttribute;
+class CFEInterfaceComponent;
 
 /** \class CFEInterface
- *	\ingroup frontend
- *	\brief the representation of an interface
+ *    \ingroup frontend
+ *    \brief the representation of an interface
  *
  * This class is used to represent an interface
  */
 class CFEInterface : public CFEFileComponent
 {
-DECLARE_DYNAMIC(CFEInterface);
 
 // standard constructor/destructor
 public:
-	/**
-	 *	\brief creates an interface representation
-	 *	\param pIAttributes the attributes of the interface
-	 *	\param sIName the name of the interface
-	 *	\param pIBaseNames the names of the base interfaces
-	 *	\param pComponents the components of the statement
-	 */
-    CFEInterface(Vector *pIAttributes, 
-		String sIName,
-		Vector *pIBaseNames,
-		Vector *pComponents);
+    /**
+     *    \brief creates an interface representation
+     *    \param pIAttributes the attributes of the interface
+     *    \param sIName the name of the interface
+     *    \param pIBaseNames the names of the base interfaces
+     *    \param pComponents the components of the statement
+     */
+    CFEInterface(vector<CFEAttribute*> *pIAttributes,
+        string sIName,
+        vector<CFEIdentifier*> *pIBaseNames,
+        vector<CFEInterfaceComponent*> *pComponents);
     virtual ~CFEInterface();
 
 protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CFEInterface(CFEInterface &src);
+    /**    \brief copy constructor
+     *    \param src the source to copy from
+     */
+    CFEInterface(CFEInterface &src);
 
 // Operations
 public:
     virtual void Serialize(CFile *pFile);
     virtual void Dump();
-    virtual void AddOperation(CFEOperation *pOperation);
+
     virtual CFEAttribute* FindAttribute(ATTR_TYPE nType);
-    virtual CFEAttribute* GetNextAttribute(VectorElement *& iter);
-    virtual VectorElement* GetFirstAttribute();
+    virtual CFEAttribute* GetNextAttribute(vector<CFEAttribute*>::iterator &iter);
+    virtual vector<CFEAttribute*>::iterator GetFirstAttribute();
     virtual CObject* Clone();
 
-    virtual CFEInterface* FindBaseInterface(String sName);
-    virtual CFEIdentifier* GetNextBaseInterfaceName(VectorElement* &iter);
-    virtual VectorElement* GetFirstBaseInterfaceName();
+    virtual CFEInterface* FindBaseInterface(string sName);
+    virtual CFEIdentifier* GetNextBaseInterfaceName(vector<CFEIdentifier*>::iterator &iter);
+    virtual vector<CFEIdentifier*>::iterator GetFirstBaseInterfaceName();
 
     virtual bool CheckConsistency();
 
-    virtual CFETypedDeclarator* FindUserDefinedType(String sName);
-    virtual CFETypedDeclarator* GetNextTypeDef(VectorElement* &iter);
-    virtual VectorElement* GetFirstTypeDef();
-	virtual void AddTypedef(CFETypedDeclarator *pFETypedef);
+    virtual CFETypedDeclarator* FindUserDefinedType(string sName);
+    virtual CFETypedDeclarator* GetNextTypeDef(vector<CFETypedDeclarator*>::iterator &iter);
+    virtual vector<CFETypedDeclarator*>::iterator GetFirstTypeDef();
+    virtual void AddTypedef(CFETypedDeclarator *pFETypedef);
 
-    virtual CFEConstDeclarator* FindConstant(String sName);
-    virtual CFEConstDeclarator* GetNextConstant(VectorElement* &iter);
-    virtual VectorElement* GetFirstConstant();
-	virtual void AddConstant(CFEConstDeclarator *pFEConstant);
+    virtual CFEConstDeclarator* FindConstant(string sName);
+    virtual CFEConstDeclarator* GetNextConstant(vector<CFEConstDeclarator*>::iterator &iter);
+    virtual vector<CFEConstDeclarator*>::iterator GetFirstConstant();
+    virtual void AddConstant(CFEConstDeclarator *pFEConstant);
 
+    virtual void AddOperation(CFEOperation *pOperation);
     virtual int GetOperationCount(bool bCountBase = true);
-    virtual CFEOperation* GetNextOperation(VectorElement* &iter);
-    virtual VectorElement* GetFirstOperation();
+    virtual CFEOperation* GetNextOperation(vector<CFEOperation*>::iterator &iter);
+    virtual vector<CFEOperation*>::iterator GetFirstOperation();
 
     virtual void AddBaseInterface(CFEInterface* pBaseInterface);
-    virtual CFEInterface* GetNextBaseInterface(VectorElement* &iter);
-    virtual VectorElement* GetFirstBaseInterface();
+    virtual CFEInterface* GetNextBaseInterface(vector<CFEInterface*>::iterator &iter);
+    virtual vector<CFEInterface*>::iterator GetFirstBaseInterface();
 
     virtual void AddDerivedInterface(CFEInterface* pDerivedInterface);
-    virtual CFEInterface* GetNextDerivedInterface(VectorElement* &iter);
-    virtual VectorElement* GetFirstDerivedInterface();
+    virtual CFEInterface* GetNextDerivedInterface(vector<CFEInterface*>::iterator &iter);
+    virtual vector<CFEInterface*>::iterator GetFirstDerivedInterface();
 
-    virtual String GetName();
-    
-	virtual void AddTaggedDecl(CFEConstructedType *pFETaggedDecl);
-    virtual CFEConstructedType* GetNextTaggedDecl(VectorElement* &pIter);
-    virtual VectorElement* GetFirstTaggedDecl();
-    virtual CFEConstructedType* FindTaggedDecl(String sName);
-    
+    virtual string GetName();
+
+    virtual void AddTaggedDecl(CFEConstructedType *pFETaggedDecl);
+    virtual CFEConstructedType* GetNextTaggedDecl(vector<CFEConstructedType*>::iterator &iter);
+    virtual vector<CFEConstructedType*>::iterator GetFirstTaggedDecl();
+    virtual CFEConstructedType* FindTaggedDecl(string sName);
+
+    virtual void AddAttributeDeclarator(CFEAttributeDeclarator* pAttrDecl);
+    virtual CFEAttributeDeclarator* GetNextAttributeDeclarator(vector<CFEAttributeDeclarator*>::iterator &iter);
+    virtual vector<CFEAttributeDeclarator*>::iterator GetFirstAttributeDeclarator();
+    virtual CFEAttributeDeclarator* FindAttributeDeclarator(string sName);
+
     virtual bool IsForward();
-    virtual void AddBaseInterfaceNames(Vector *pSrcNames);
-    virtual void AddAttributes(Vector *pSrcAttributes);
-  
+    virtual void AddBaseInterfaceNames(vector<CFEIdentifier*> *pSrcNames);
+    virtual void AddAttributes(vector<CFEAttribute*> *pSrcAttributes);
+
 
 // attributes
 protected:
-    /**	\var Vector* m_pBaseInterfaces
-     *	\brief an array of reference to the base interfaces
+    /** \var vector<CFEInterface*> m_vBaseInterfaces
+     *  \brief an array of reference to the base interfaces
      */
-    Vector* m_pBaseInterfaces;
-    /** \var Vector* m_pDerivedInterfaces
+    vector<CFEInterface*> m_vBaseInterfaces;
+    /** \var vector<CFEInterface*> m_vDerivedInterfaces
      *  \brief an array of references to derived interfaces
      */
-    Vector* m_pDerivedInterfaces;
-    /**	\var String m_sInterfaceName
-     *	\brief holds a reference to the name of the interface
+    vector<CFEInterface*> m_vDerivedInterfaces;
+    /**    \var string m_sInterfaceName
+     *    \brief holds a reference to the name of the interface
      */
-    String m_sInterfaceName;
-    /**	\var Vector *m_pBaseInterfaceNames
-     *	\brief holds the base interface names
+    string m_sInterfaceName;
+    /** \var vector<CFEIdentifier*> m_vBaseInterfaceNames
+     *  \brief holds the base interface names
      */
-    Vector *m_pBaseInterfaceNames;
-    /** \var Vector m_vAttributes
+    vector<CFEIdentifier*> m_vBaseInterfaceNames;
+    /** \var vector<CFEAttributeDeclarator*> m_vAttributeDeclarators
+     *  \brief holds interface attribute member declarators
+     */
+    vector<CFEAttributeDeclarator*> m_vAttributeDeclarators;
+    /** \var vector<CFEAttribute*> m_vAttributes
      *  \brief the interface's attributes
      */
-    Vector m_vAttributes;
-    /** \var Vector m_vConstants
+    vector<CFEAttribute*> m_vAttributes;
+    /** \var vector<CFEConstDeclarator*> m_vConstants
      *  \brief the interface's constants
      */
-    Vector m_vConstants;
-    /** \var Vector m_vTypedefs
+    vector<CFEConstDeclarator*> m_vConstants;
+    /** \var vector<CFETypedDeclarator*> m_vTypedefs
      *  \brief the interface's type definitions
      */
-    Vector m_vTypedefs;
-    /** \var Vector m_vOperations
+    vector<CFETypedDeclarator*> m_vTypedefs;
+    /** \var vector<CFEOperation*> m_vOperations
      *  \brief the interface's operations
      */
-    Vector m_vOperations;
-    /** \var Vector m_vTaggedDeclarators
+    vector<CFEOperation*> m_vOperations;
+    /** \var vector<CFEConstructedType*> m_vTaggedDeclarators
      *  \brief the interface's constructed types
      */
-    Vector m_vTaggedDeclarators;
+    vector<CFEConstructedType*> m_vTaggedDeclarators;
 };
 
 #endif /* __DICE_FE_FEINTERFACE_H__ */
-

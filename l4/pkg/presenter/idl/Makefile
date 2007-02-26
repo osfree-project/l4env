@@ -6,7 +6,7 @@ PKGDIR ?= ..
 L4DIR  ?= $(PKGDIR)/../..
 
 # create an idl file an assign its name to IDL
-IDL	= presenter.idl
+IDL	= presenter.idl presenter_fprov.idl presenter_exec.idl
 # the default idl type is DCE/dice. Uncomment the next line to change this.
 # IDL_TYPE= <your choice>
 

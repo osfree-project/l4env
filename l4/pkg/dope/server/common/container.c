@@ -8,7 +8,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -21,13 +21,15 @@ struct container;
 
 #include "dopestd.h"
 #include "widget_data.h"
-#include "widget.h"
+#include "widget_help.h"
 #include "gfx.h"
 #include "container.h"
 #include "widman.h"
 
 static struct widman_services *widman;
 static struct gfx_services    *gfx;
+
+static struct widget_methods   gen_methods;
 
 
 struct container_data {
@@ -39,26 +41,29 @@ int init_container(struct dope_services *d);
 
 
 
-/******************************/
-/*** GENERAL WIDGET METHODS ***/
-/******************************/
+/******************************
+ *** GENERAL WIDGET METHODS ***
+ ******************************/
 
-static void cont_draw(CONTAINER *c,struct gfx_ds *ds,long x,long y) {
+static int cont_draw(CONTAINER *c, struct gfx_ds *ds, long x, long y, WIDGET *origin) {
 	WIDGET *cw;
+	int ret = 0;
+
+	if (origin == c) return 1;
 
 	if (c) {
 		x += c->wd->x;
 		y += c->wd->y;
 
-		gfx->push_clipping(ds,x,y,c->wd->w,c->wd->h);
-		cw=c->cd->last_elem;
+		gfx->push_clipping(ds, x, y, c->wd->w, c->wd->h);
+		cw = c->cd->last_elem;
 		while (cw) {
-			cw->gen->draw(cw,ds,x,y);
-			cw=cw->gen->get_prev(cw);
+			ret |= cw->gen->draw(cw, ds, x, y, origin);
+			cw = cw->gen->get_prev(cw);
 		}
 		gfx->pop_clipping(ds);
 	}
-
+	return ret;
 }
 
 
@@ -88,12 +93,15 @@ static WIDGET *cont_find(CONTAINER *c,long x,long y) {
 
 
 
-/***********************************/
-/*** CONTAINER SPECIFIC METHODS ***/
-/***********************************/
+/***********************************
+ *** CONTAINER SPECIFIC METHODS ***
+ ***********************************/
 
 static void cont_add(CONTAINER *c,WIDGET *new_element) {
 	if (!c) return;
+
+	/* avoid cyclic parent relationships */
+	if (new_element->gen->related_to(new_element, c)) return;
 
 	new_element->gen->set_next(new_element,c->cd->first_elem);
 	if (c->cd->first_elem) {
@@ -108,35 +116,39 @@ static void cont_add(CONTAINER *c,WIDGET *new_element) {
 
 	new_element->gen->inc_ref(new_element);
 	new_element->gen->force_redraw(new_element);
-
+	
+	gen_methods.update(c);
 }
+
 
 static void cont_remove(CONTAINER *c,WIDGET *element) {
 	WIDGET *cw;
 
 	if (!c) return;
 	if (!element) return;
-	if (element->gen->get_parent(element)!=c) return;
+	if (element->gen->get_parent(element) != c) return;
 
 	/* first widget in our list? */
-	if (element==c->cd->first_elem) {
-		c->cd->first_elem=element->gen->get_next(element);
+	if (element == c->cd->first_elem) {
+		c->cd->first_elem = element->gen->get_next(element);
 	} else {
 
 		/* search in list */
 		cw=c->cd->first_elem;
 		while (cw) {
-			if(cw->gen->get_next(cw)==element) {
-				cw->gen->set_next(cw,element->gen->get_next(element));
+			if(cw->gen->get_next(cw) == element) {
+				cw->gen->set_next(cw, element->gen->get_next(element));
 				break;
 			}
 			cw=cw->gen->get_next(cw);
 		}
 	}
 
-	element->gen->set_next(element,NULL);
-	element->gen->set_parent(element,NULL);
+	element->gen->set_next(element, NULL);
+	element->gen->set_parent(element, NULL);
 	element->gen->dec_ref(element);
+
+	gen_methods.update(c);
 }
 
 
@@ -146,7 +158,6 @@ static WIDGET *cont_get_content(CONTAINER *c) {
 }
 
 
-static struct widget_methods    gen_methods;
 static struct container_methods cont_methods={
 	cont_add,
 	cont_remove,
@@ -155,60 +166,40 @@ static struct container_methods cont_methods={
 
 
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 static CONTAINER *create(void) {
-
-	/* allocate memory for new widget */
-	CONTAINER *new = (CONTAINER *)malloc(sizeof(struct container)
-	            + sizeof(struct widget_data)
-	            + sizeof(struct container_data));
-	if (!new) {
-		INFO(printf("Container(create): out of memory\n"));
-		return NULL;
-	}
-	new->gen  = &gen_methods;   /* pointer to general widget methods */
-	new->cont = &cont_methods;  /* pointer to container specific methods */
-
-	/* set general widget attributes */
-	new->wd = (struct widget_data *)((long)new + sizeof(struct container));
-	new->cd = (struct container_data *)((long)new->wd + sizeof(struct widget_data));
-	widman->default_widget_data(new->wd);
-
-	/* set container specific default attributes */
-	new->cd->first_elem=NULL;
-	new->cd->last_elem=NULL;
-
+	CONTAINER *new = ALLOC_WIDGET(struct container);
+	SET_WIDGET_DEFAULTS(new, struct container, &cont_methods);
 	return new;
 }
 
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct container_services services = {
 	create
 };
 
 
-
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_container(struct dope_services *d) {
 
-	widman  = d->get_module("WidgetManager 1.0");
-	gfx     = d->get_module("Gfx 1.0");
+	widman = d->get_module("WidgetManager 1.0");
+	gfx    = d->get_module("Gfx 1.0");
 
 	/* define general widget functions */
 	widman->default_widget_methods(&gen_methods);
-	gen_methods.draw    = cont_draw;
-	gen_methods.find    = cont_find;
+	gen_methods.draw = cont_draw;
+	gen_methods.find = cont_find;
 
 	d->register_module("Container 1.0",&services);
 	return 1;

@@ -1,0 +1,59 @@
+#! /bin/bash
+
+# This is the runux script to start Qt programs
+
+. ${0%/*}/generic.inc
+
+# 
+[ -n "$UXRES" ] || UXRES=800x600@16
+[ -n "$UXMEM" ] || UXMEM=192
+[ -n "$L4DIR" ] || L4DIR=${0%/*}/../..
+
+# FB_PROVIDER should be set to 'con-ux', 'proxygon', 'l4dope-ux' or
+# 'sdl' (for direct framebuffer access)
+[ -n "$FB_PROVIDER" ] || FB_PROVIDER=con-ux
+
+if [ "$FB_PROVIDER" = "proxygon" ]
+then
+    FB_PROVIDER_EXTRA="l4dope-ux"
+fi
+
+if [ "$FB_PROVIDER" = "sdl" ]
+then
+    FB_PROVIDER=""
+fi
+
+# some paths
+FONTDIR="$L4DIR/pkg/qt3/lib/libqt3/lib/fonts"
+
+if [ -z "$1" ]
+then
+    echo "You must specify at least a Qt binary!"
+    echo " usage: $0 [data files] binary [binaries]"
+    echo "  e.g.: $0 \"-d/home/drops/qt3/qt.png\" qtqttest_widgets"
+    exit 1;
+fi
+
+${0%/*}/fiasco                 \
+	-m$UXMEM               \
+	-G$UXRES               \
+	-n8 -n9                \
+	names                  \
+	log                    \
+	dm_phys                \
+	rtc-ux                 \
+	$FB_PROVIDER           \
+	$FB_PROVIDER_EXTRA     \
+	name_server            \
+	local_socks            \
+	tmpfs                  \
+	"fstab -c/qt3 -c/qt3/lib -c/qt3/lib/fonts -v14 -b/ -m/qt3/lib/fonts -c/tmp -v111 -b/ -m/tmp" \
+	"simple_file_server -v14"          \
+	"-d$FONTDIR/fontdir"               \
+	"-d$FONTDIR/helvetica_100_50.qpf"  \
+	"-d$FONTDIR/helvetica_100_50i.qpf" \
+	"-d$FONTDIR/helvetica_100_75.qpf"  \
+	"-d$FONTDIR/helvetica_180_50.qpf"  \
+	"$@"
+
+

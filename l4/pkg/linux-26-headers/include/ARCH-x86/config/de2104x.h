@@ -1,0 +1,1 @@
+#undef CONFIG_DE2104X

@@ -1,11 +1,12 @@
-INTERFACE:
+INTERFACE[i8259]:
 
 #include "initcalls.h"
 
 EXTENSION class Pic
 {
 public:
-  enum {
+  enum
+  {
     MASTER_PIC_BASE = 0x20,
     SLAVES_PIC_BASE = 0xa0,
     OFF_ICW	    = 0x00,
@@ -87,14 +88,14 @@ public:
     SET_PRIORITY    = 0xc0,
     NO_OPERATION    = 0x40,
     
-    SEND_EOI_IR0    = 0x00,
-    SEND_EOI_IR1    = 0x01,
-    SEND_EOI_IR2    = 0x02,
-    SEND_EOI_IR3    = 0x03,
-    SEND_EOI_IR4    = 0x04,
-    SEND_EOI_IR5    = 0x05,
-    SEND_EOI_IR6    = 0x06,
-    SEND_EOI_IR7    = 0x07,
+    SND_EOI_IR0    = 0x00,
+    SND_EOI_IR1    = 0x01,
+    SND_EOI_IR2    = 0x02,
+    SND_EOI_IR3    = 0x03,
+    SND_EOI_IR4    = 0x04,
+    SND_EOI_IR5    = 0x05,
+    SND_EOI_IR6    = 0x06,
+    SND_EOI_IR7    = 0x07,
  
     /*
     **	OCW3				
@@ -124,9 +125,9 @@ public:
     PICS_ICW3	    = I_AM_SLAVE_2,
     PICS_ICW4	    = (SNF_MODE_DIS | NONBUFD_MODE | NRML_EOI_MOD
 		       | I8086_EMM_MOD),
-
-
   };
+
+  static int special_fully_nested_mode;
 };
 
 IMPLEMENTATION[i8259]:
@@ -136,33 +137,43 @@ IMPLEMENTATION[i8259]:
 
 #include "io.h"
 #include "boot_info.h"
+#include "cmdline.h"
 #include "config.h"
 #include "initcalls.h"
 
+int Pic::special_fully_nested_mode = 1; // be compatible with Jochen's L4
+
 IMPLEMENT FIASCO_INIT
-void Pic::init()
+void
+Pic::init()
 {
   pic_init(0x20,0x28);
 }
 
 
-static FIASCO_INIT bool detect_vmware() 
+static FIASCO_INIT
+bool
+detect_vmware()
 {
   // scan around in the BIOS
-  char const *start = (char *)0xf00c0000;
-  unsigned size = 16 << 10;
+  // first address is for VMWare3, second for VMWare4
+  char const *start[] = { (char *)0xf00c0000, (char *)0xf00e4000 };
   char const *const s = "VMware, Inc.";
 
-  char const *x = start;
-  while( (x = (char*)memchr(x, s[0], size)) )
+  for (unsigned i = 0; i < sizeof(start) / sizeof(start[0]); i++)
     {
-      if(memcmp(x,s,strlen(s))==0)
-	return true;
-      x++;
-      if((unsigned)(x-start)<=size)
-	size -= (x-start);
-      else
-	return false;
+      char const *x = start[i];
+      unsigned size = 4 << 12;
+      while( size && (x = (char*)memchr(x, s[0], size)) )
+	{
+	  if(memcmp(x,s,strlen(s))==0)
+	    return true;
+	  x++;
+	  if((unsigned)(x-start[i])<=size)
+	    size -= (x-start[i]);
+	  else
+	    size = 0;
+	}
     }
   return false;
 }
@@ -179,44 +190,44 @@ static FIASCO_INIT bool detect_vmware()
 //   this way, the timer interrupt on irq 8 always gets thru (even if 
 //   some user irq handler doesn't acknowledge its irq!)
 //
-static FIASCO_INIT void
+static FIASCO_INIT
+void
 Pic::pic_init(unsigned char master_base, unsigned char slave_base)
 {
-
   // disallow all interrupts before we selectively enable them 
   Pic::disable_all_save();
 
-
-  // VMware isn't able to deal with th especial fully nested mode
+  // VMware isn't able to deal with the special fully nested mode
   // correctly so we simply don't use it while running under
   // VMware. Otherwise VMware will barf with 
   // *** VMware Workstation internal monitor error ***
   // BUG F(152):393 bugNr=4388
 
-  if (!detect_vmware())
+  if (strstr (Cmdline::cmdline(), " -nosfn") || 
+      (Config::found_vmware = detect_vmware()))
+    special_fully_nested_mode = 0;
+
+  if (special_fully_nested_mode)
     {
-      printf("Enabling fully special nested mode for pic\n");
+      puts ("Enabling special fully nested mode for PIC");
       /* Initialize the master. */
+
       Io::out8_p(PICM_ICW1, MASTER_ICW);
       Io::out8_p(master_base, MASTER_OCW);
       Io::out8_p(PICM_ICW3, MASTER_OCW);
-      Io::out8_p(SNF_MODE_ENA | I8086_EMM_MOD, MASTER_OCW);
-      
+      Io::out8_p(SNF_MODE_ENA | PICM_ICW4, MASTER_OCW);
+
       /* Initialize the slave. */
       Io::out8_p(PICS_ICW1, SLAVES_ICW);
       Io::out8_p(slave_base, SLAVES_OCW);
       Io::out8_p(PICS_ICW3, SLAVES_OCW);
-      Io::out8_p(SNF_MODE_ENA | I8086_EMM_MOD, SLAVES_OCW);
-      
-      // set initial masks
-      Io::out8_p(0xfb, MASTER_OCW);	// unmask irq2
-      Io::out8_p(0xff, SLAVES_OCW);	// mask everything
+      Io::out8_p(SNF_MODE_ENA | PICS_ICW4, SLAVES_OCW);
 
       // the timer interrupt should have the highest priority so that it
-      // always gets thru 
-      if (! Config::profiling
+      // always gets through
+      if ( ! Config::profiling
 	  && Config::pic_prio_modify
-	  && !Config::scheduling_using_pit)
+	  && Config::scheduler_mode == Config::SCHED_RTC)
 	{
 	  // setting specific rotation (specific priority) 
 	  // -- see Intel 8259A reference manual
@@ -230,8 +241,9 @@ Pic::pic_init(unsigned char master_base, unsigned char slave_base)
     }
   else
     {
-      Config::found_vmware = true;
-      printf("Found VMWare: Using normal pic mode\n");
+      printf ("%sUsing (normal) fully nested PIC mode\n",
+	  Config::found_vmware ? "Found VMware: " : "");
+
       /* Initialize the master. */
       Io::out8_p(PICM_ICW1, MASTER_ICW);
       Io::out8_p(master_base, MASTER_OCW);
@@ -243,8 +255,11 @@ Pic::pic_init(unsigned char master_base, unsigned char slave_base)
       Io::out8_p(slave_base, SLAVES_OCW);
       Io::out8_p(PICS_ICW3, SLAVES_OCW);
       Io::out8_p(PICS_ICW4, SLAVES_OCW);
-
     }
+
+  // set initial masks
+  Io::out8_p(0xfb, MASTER_OCW);	// unmask irq2
+  Io::out8_p(0xff, SLAVES_OCW);	// mask everything
 
   /* Ack any bogus intrs by setting the End Of Interrupt bit. */
   Io::out8_p(NON_SPEC_EOI, MASTER_ICW);
@@ -256,7 +271,8 @@ Pic::pic_init(unsigned char master_base, unsigned char slave_base)
 }
 
 IMPLEMENT inline NEEDS["io.h"]
-void Pic::disable_locked( unsigned irq )
+void
+Pic::disable_locked( unsigned irq )
 {
   if (irq < 8)
     Io::out8(Io::in8(MASTER_OCW) | (1 << irq), MASTER_OCW);
@@ -265,7 +281,8 @@ void Pic::disable_locked( unsigned irq )
 }
 
 IMPLEMENT inline NEEDS["io.h"]
-void Pic::enable_locked( unsigned irq )
+void
+Pic::enable_locked(unsigned irq, unsigned /*prio*/)
 {
   if (irq < 8)
     Io::out8(Io::in8(MASTER_OCW) & ~(1 << irq), MASTER_OCW);
@@ -274,21 +291,25 @@ void Pic::enable_locked( unsigned irq )
 }
 
 IMPLEMENT inline NEEDS["io.h"]
-void Pic::acknowledge_locked( unsigned irq )
+void
+Pic::acknowledge_locked( unsigned irq )
 {
   if (irq >= 8)
     {
       Io::out8(NON_SPEC_EOI, SLAVES_ICW); // EOI slave
-      Io::out8(OCW_TEMPLATE | READ_NEXT_RD | READ_IS_ONRD, SLAVES_ICW);
-      if (Io::in8(SLAVES_ICW))      // slave still active?
-        return;                 // -- don't EOI master
+      if (special_fully_nested_mode)
+	{
+	  Io::out8(OCW_TEMPLATE | READ_NEXT_RD | READ_IS_ONRD, SLAVES_ICW);
+	  if (Io::in8(SLAVES_ICW))      // slave still active?
+	    return;                 // -- don't EOI master
+	}
     }
   Io::out8(NON_SPEC_EOI, MASTER_ICW); // EOI master
 }
 
-
 IMPLEMENT inline NEEDS["io.h"]
-Pic::Status Pic::disable_all_save()
+Pic::Status
+Pic::disable_all_save()
 {
   Status s;
   s  = Io::in8(MASTER_OCW);
@@ -300,7 +321,8 @@ Pic::Status Pic::disable_all_save()
 }
 
 IMPLEMENT inline NEEDS["io.h"]
-void Pic::restore_all( Status s )
+void
+Pic::restore_all( Status s )
 {
   Io::out8( s & 0x0ff, MASTER_OCW );
   Io::out8( (s >> 8) & 0x0ff, SLAVES_OCW );

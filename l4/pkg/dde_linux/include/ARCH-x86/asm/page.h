@@ -157,10 +157,11 @@ static __inline__ int get_order(unsigned long size)
 #undef MAXMEM
 unsigned long __pa(volatile void *vaddr);
 void *__va(unsigned long paddr);
+extern struct page l4dde_dummy_page;
 /* XXX Ohoo, what about this. Maybe each specific DDE lib could kill it, but
    I'm _not_ sure.  It's _sometimes_ (sound) used to set the PG_reserved bit
    for any page. */
-#define virt_to_page(x) (0)
+#define virt_to_page(x) (&l4dde_dummy_page)
 #undef VALID_PAGE
 #endif /* DDE_LINUX */
 

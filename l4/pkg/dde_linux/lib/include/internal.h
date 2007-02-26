@@ -22,6 +22,7 @@
 
 #include <l4/util/macros.h>
 #include <linux/vmalloc.h>
+#include "__config.h"
 
 /* Address Conversion Helpers */
 void address_add_region(l4_addr_t, l4_addr_t, l4_size_t);
@@ -61,7 +62,7 @@ static inline void dde_add_region(struct dde_region **head,
 
   *head = p;
 
-  DMSG("new dde_region [0x%08x, 0x%08x, %d]\n", va, pa, size);
+  LOGd(DEBUG_MSG, "new dde_region [0x%08x, 0x%08x, %d]", va, pa, size);
 }
 
 /** Internal Region Removal
@@ -83,11 +84,11 @@ static inline void dde_remove_region(struct dde_region **head,
                                      l4_addr_t va, l4_addr_t pa, l4_size_t size)
 {
 #if 1
-  INFO("not implemented yet\n");
+  LOGdL(DEBUG_MSG, "not implemented yet");
 #else
   struct dde_region *p = *head;
 
-  DMSG("remove conv_region [0x%08x, %d]\n", va, size);
+  LOGd(DEBUG_MSG, "remove conv_region [0x%08x, %d]", va, size);
 #endif
 }
 

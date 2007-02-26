@@ -1,0 +1,46 @@
+/* -*- c -*- */ 
+/**
+ * \file   l4vfs/idl/common_io_notify.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+import <l4/l4vfs/types.h>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief <fixme>
+     */
+    [uuid(53),abstract]
+    interface common_io_notify
+    {
+        // This function is called by the worker thread after
+        // it has finished a read operation and shall result
+        // in a read answer to the client.
+        [oneway]
+        void read_notify([in] object_handle_t handle,
+                         [in] l4vfs_ssize_t retval,
+                         [in, size_is(count),ref,prealloc] char *buf,
+                         [in] l4vfs_size_t *count,
+                         [in] l4_threadid_t source);
+
+        // This function is called by the worker thread after
+        // it has finished a write operation and shall result
+        // in a write answer to the client.
+        [oneway]
+        void write_notify([in] object_handle_t handle,
+                          [in] l4vfs_ssize_t retval,
+                          [in] l4vfs_size_t *count,
+                          [in] l4_threadid_t source);
+    };
+};

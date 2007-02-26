@@ -34,10 +34,10 @@ extern "C" {
 #include "assert.h"
 #include "check.h"
 
-/** set our log server tag */
+/** set our log server tag. */
 char LOG_tag[9] = "exec";
 
-/** define our heap size */
+/** define our heap size. */
 l4_ssize_t l4libc_heapsize = -HEAP_SIZE;
 
 /** Check if there was an Linker error. We only do that if there was
@@ -79,7 +79,7 @@ l4exec_bin_open_component(CORBA_Object _dice_corba_obj,
 			  const l4dm_dataspace_t *img_ds,
 		      	  l4exec_envpage_t *envpage,
 			  unsigned long flags,
-			  CORBA_Environment *_dice_corba_env)
+			  CORBA_Server_Environment *_dice_corba_env)
 {
   int error;
   unsigned int id;
@@ -88,6 +88,24 @@ l4exec_bin_open_component(CORBA_Object _dice_corba_obj,
   dsc_obj_t **bin_obj_dsc;
   exc_obj_t *exc_obj;
 
+  /* translate exc_obj create flags */
+  int new_flags =  ((flags & L4EXEC_LOAD_SYMBOLS) ? EO_LOAD_SYMBOLS : 0)
+		  |((flags & L4EXEC_LOAD_LINES)   ? EO_LOAD_LINES   : 0)
+		  |((flags & L4EXEC_DIRECT_MAP)   ? EO_DIRECT_MAP   : 0);
+
+  if (flags & L4EXEC_LOAD_LIB)
+    {
+      if (!(bin_obj = static_cast<bin_obj_t*>(bin_objs->lookup(env->id))))
+	{
+	  Error("binary object with id=%d not found\n", env->id);
+	  return -L4_ENOTFOUND;
+	}
+      if ((error = bin_obj->load_lib(fname, env)))
+	return error;
+
+      return 0;
+    }
+
   /* allocate anchor */
   if ((error = check(bin_objs->alloc(&bin_obj_dsc, &id),
 		     "allocating binary descriptor")))
@@ -95,7 +113,7 @@ l4exec_bin_open_component(CORBA_Object _dice_corba_obj,
      * or increase the static allocated array of binary descriptors
      * (EXC_MAXBIN) */
     return error;
-  
+
   /* allocate object */
   if (!(bin_obj = new bin_obj_t(id)))
     {
@@ -109,11 +127,6 @@ l4exec_bin_open_component(CORBA_Object _dice_corba_obj,
  
   /* init L4 environment infopage */
   ::exc_init_env(bin_obj->get_id(), env);
-
-  /* translate exc_obj create flags */
-  int new_flags =  ((flags & L4EXEC_LOAD_SYMBOLS) ? EO_LOAD_SYMBOLS : 0)
-		  |((flags & L4EXEC_LOAD_LINES)   ? EO_LOAD_LINES   : 0)
-		  |((flags & L4EXEC_DIRECT_MAP)   ? EO_DIRECT_MAP   : 0);
 
   if (/* Scan image, create exc_obj according to file format.
        * Image will be loaded regardless if we loaded it earlier. */
@@ -165,7 +178,7 @@ l4exec_bin_open_component(CORBA_Object _dice_corba_obj,
   return error;
 }
 
-/** Test file type
+/** Test file type.
  * 
  * \param _dice_corba_obj	pointer to IDL request structure
  * \param img_ds		dataspace containing the file
@@ -177,7 +190,7 @@ long
 l4exec_bin_ftype_component(CORBA_Object _dice_corba_obj,
 			   const l4dm_dataspace_t *img_ds,
 			   l4exec_envpage_t *envpage,
-			   CORBA_Environment *_dice_corba_env)
+			   CORBA_Server_Environment *_dice_corba_env)
 {
   l4env_infopage_t *env = (l4env_infopage_t*)envpage;
 
@@ -195,17 +208,14 @@ l4exec_bin_ftype_component(CORBA_Object _dice_corba_obj,
 long 
 l4exec_bin_close_component(CORBA_Object _dice_corba_obj,
 			   l4exec_envpage_t *envpage,
-			   CORBA_Environment *_dice_corba_env)
+			   CORBA_Server_Environment *_dice_corba_env)
 {
   l4env_infopage_t *env = (l4env_infopage_t*)envpage;
   bin_obj_t *bin_obj = static_cast<bin_obj_t*>(bin_objs->lookup(env->id));
 
   /* binary object not found */
   if (!bin_obj)
-    {
-      Error("binary object with id=%d not found\n", env->id);
-      return -L4_ENOTFOUND;
-    }
+    return 0;
 
   /* delete binary */
   delete bin_obj;
@@ -227,7 +237,7 @@ l4exec_bin_close_component(CORBA_Object _dice_corba_obj,
 long 
 l4exec_bin_link_component(CORBA_Object _dice_corba_obj,
 			  l4exec_envpage_t *envpage,
-			  CORBA_Environment *_dice_corba_env)
+			  CORBA_Server_Environment *_dice_corba_env)
 {
   int error;
   l4env_infopage_t *env = (l4env_infopage_t*)envpage;
@@ -252,7 +262,7 @@ l4exec_bin_link_component(CORBA_Object _dice_corba_obj,
   return error;
 }
 
-/** Get debug symbols of binary object
+/** Get debug symbols of binary object.
  *
  * \param _dice_corba_obj	pointer to IDL request structure
  * \param envpage		environment page
@@ -264,7 +274,7 @@ long
 l4exec_bin_get_symbols_component(CORBA_Object _dice_corba_obj,
 				 l4exec_envpage_t envpage,
 				 l4dm_dataspace_t *sym_ds,
-				 CORBA_Environment *_dice_corba_env)
+				 CORBA_Server_Environment *_dice_corba_env)
 {
   int error;
   l4env_infopage_t *env = (l4env_infopage_t*)envpage;
@@ -283,7 +293,7 @@ l4exec_bin_get_symbols_component(CORBA_Object _dice_corba_obj,
   return error;
 }
 
-/** Get debug lines of binary object
+/** Get debug lines of binary object.
  *
  * \param _dice_corba_obj	pointer to IDL request structure
  * \param envpage		environment page
@@ -295,7 +305,7 @@ long
 l4exec_bin_get_lines_component(CORBA_Object _dice_corba_obj,
 			       l4exec_envpage_t envpage,
 			       l4dm_dataspace_t *lines_ds,
-			       CORBA_Environment *_dice_corba_env)
+			       CORBA_Server_Environment *_dice_corba_env)
 {
   int error;
   l4env_infopage_t *env = (l4env_infopage_t*)envpage;
@@ -314,7 +324,28 @@ l4exec_bin_get_lines_component(CORBA_Object _dice_corba_obj,
   return error;
 }
 
-/** Main function
+/** Get the address of a symbol of a dynamic loaded object. */
+long
+l4exec_bin_get_dsym_component(CORBA_Object _dice_corba_obj,
+			      const char *symname,
+			      l4exec_envpage_t envpage,
+			      l4_addr_t *addr,
+			      CORBA_Server_Environment *_dice_corba_env)
+{
+  l4env_infopage_t *env = (l4env_infopage_t*)envpage;
+  bin_obj_t *bin_obj = static_cast<bin_obj_t*>(bin_objs->lookup(env->id));
+
+  if (!bin_obj)
+    {
+      Error("binary object with id=%d not found\n", env->id);
+      return -L4_ENOTFOUND;
+    }
+  
+  return bin_obj->find_sym(symname, env, addr);
+}
+
+
+/** Main function.
  * 
  * \param argc		number of program arguments
  * \param argv		program arguments array */
@@ -337,8 +368,7 @@ main (int argc, char **argv)
       return -1;
     }
 
-  l4exec_bin_server_loop(NULL);
+  l4exec_bin_server_loop(0);
 
   return 0;
 }
-

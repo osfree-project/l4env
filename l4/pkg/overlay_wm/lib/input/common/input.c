@@ -4,6 +4,15 @@
  * \author  Norman Feske <nf2@inf.tu-dresden.de>
  */
 
+/*
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the Overlay WM package, which is distributed
+ * under the  terms  of the GNU General Public Licence 2. Please see
+ * the COPYING file for details.
+ */
+
 /*** GENERAL INCLUDES ***/
 #include <stdio.h>
 
@@ -28,8 +37,8 @@ static void (*motion_callback)(int mx, int my);
 void input_listener_button_component(CORBA_Object _dice_corba_obj,
                                      int type,
                                      int code,
-                                     CORBA_Environment *_dice_corba_env) {
-	printf("input_listener_button_component(%d,%d)\n", type, code);
+                                     CORBA_Server_Environment *_dice_corba_env) {
+//	printf("input_listener_button_component(%d,%d)\n", type, code);
 	if (button_callback) button_callback(type, code);
 }
 
@@ -42,8 +51,8 @@ void input_listener_button_component(CORBA_Object _dice_corba_obj,
 void input_listener_motion_component(CORBA_Object _dice_corba_obj,
                                      int abs_x, int abs_y,
                                      int rel_x, int rel_y,
-                                     CORBA_Environment *_dice_corba_env) {
-	printf("input_listener_motion_component(%d,%d,%d,%d)\n",abs_x,abs_y,rel_x,rel_y);
+                                     CORBA_Server_Environment *_dice_corba_env) {
+//	printf("input_listener_motion_component(%d,%d,%d,%d)\n",abs_x,abs_y,rel_x,rel_y);
 	if (motion_callback) motion_callback(abs_x, abs_y);
 }
 

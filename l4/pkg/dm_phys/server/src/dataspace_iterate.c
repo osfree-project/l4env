@@ -50,8 +50,7 @@ static l4_uint32_t         iterate_flags;    ///< Flags
  */
 /*****************************************************************************/ 
 static void
-__wrap_iterator(dsmlib_ds_desc_t * desc, 
-		void * data)
+__wrap_iterator(dsmlib_ds_desc_t * desc, void * data)
 {
   dmphys_dataspace_t * ds = data;
   l4_threadid_t ds_owner;
@@ -64,9 +63,9 @@ __wrap_iterator(dsmlib_ds_desc_t * desc,
   ds_owner = dsmlib_get_owner(desc);
   if (l4_is_invalid_id(restrict_owner)        || 
       ((iterate_flags & L4DM_SAME_TASK) && 
-       (restrict_owner.id.task == ds_owner.id.task)) ||
-      l4_thread_equal(restrict_owner,ds_owner))
-    iterator_fn(ds,iterator_data);
+       (l4_tasknum_equal(restrict_owner, ds_owner))) ||
+      l4_task_equal(restrict_owner, ds_owner))
+    iterator_fn(ds, iterator_data);
 }
 
 /*****************************************************************************
@@ -79,7 +78,7 @@ __wrap_iterator(dsmlib_ds_desc_t * desc,
  * 
  * \param  fn            Function to execute
  * \param  data          Function data pointer
- * \param  owner         Restrict to dataspace owner, if set to L4_INVALID_ID
+ * \param  owner         Restrict to dataspace owner, if set to #L4_INVALID_ID
  *                       use all dataspaces
  * \param  flags         Flags:
  *                       - #L4DM_SAME_TASK  use all dataspaces owned by 
@@ -88,8 +87,7 @@ __wrap_iterator(dsmlib_ds_desc_t * desc,
  */
 /*****************************************************************************/ 
 void
-dmphys_ds_iterate(dmphys_ds_iter_fn_t fn, 
-		  void * data, l4_threadid_t owner,
+dmphys_ds_iterate(dmphys_ds_iter_fn_t fn, void * data, l4_threadid_t owner,
 		  l4_uint32_t flags)
 {
   /* set iterator function / data */
@@ -99,5 +97,5 @@ dmphys_ds_iterate(dmphys_ds_iter_fn_t fn,
   iterate_flags = flags;
 
   /* iterate */
-  dsmlib_dataspaces_iterate(__wrap_iterator,NULL);
+  dsmlib_dataspaces_iterate(__wrap_iterator, NULL);
 }

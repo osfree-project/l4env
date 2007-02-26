@@ -1,0 +1,4 @@
+In this server I use objcopy to wrap arbitrary files in "object"
+format, so that the linker can link them to the binary (see Makefile
+on how to do it).  A linker symbol before the data and one for the
+size make the data accessible to the program.

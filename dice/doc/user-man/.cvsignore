@@ -1,6 +1,7 @@
 Makefile
 Makefile.in
 manual.bbl
+manual.out
 manual.blg
 manual.dvi
 manual.log

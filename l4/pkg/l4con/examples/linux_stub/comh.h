@@ -13,8 +13,8 @@
 #ifndef __CON_EXAMPLES_LINUX_STUB_COMH_H_
 #define __CON_EXAMPLES_LINUX_STUB_COMH_H_
 
-#include <l4/con/l4con_pslim.h>
-#include <l4/con/con-client.h>
+#include <l4/l4con/l4con_pslim.h>
+#include <l4/l4con/l4con-client.h>
 #include <asm/semaphore.h>
 
 #define DROPSCON_COMLIST_SIZE	 128
@@ -75,20 +75,14 @@ typedef struct {
       comh_copy_t copy;
    } func;
    int ftype;
-#ifdef COMH_KERNEL_THREAD
-   struct semaphore sem;
-#else
    atomic_t valid;
-#endif
 } comh_proto_t;
 
 extern comh_proto_t comh_list[DROPSCON_COMLIST_SIZE];
 
 void comh_thread(void*);
 
-#ifndef COMH_KERNEL_THREAD
-extern atomic_t comh_sleep_state;
+extern l4_uint32_t comh_sleep_state;
 extern void comh_wakeup(void);
-#endif
 
 #endif

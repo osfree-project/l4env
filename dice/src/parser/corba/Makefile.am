@@ -4,8 +4,8 @@ noinst_LIBRARIES=	libcorba.a
 libcorba_a_SOURCES=	parser.yy \
 			scanner.ll
 
-LFLAGS=         -Pcorba -d -o$(LEX_OUTPUT_ROOT).c
-YFLAGS=		-pcorba -d -v
+AM_LFLAGS=         -Pcorba -d -o$(LEX_OUTPUT_ROOT).c
+AM_YFLAGS=		-pcorba -d -v
 
 CLEANFILES=             parser.cc $(LEX_OUTPUT_ROOT).c \
 			scanner.cc scanner.h y.output

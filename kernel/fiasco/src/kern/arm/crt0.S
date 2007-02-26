@@ -3,15 +3,10 @@
 #include "asm.h"
 .section .text.init,#alloc,#execinstr
 .type start,#function
-ENTRY(_start)
+ENTRY(_start_kernel)
 ENTRY(start)
      
-     adr r5, __init_data;
-     ldr r6,[r5]
-     mov sp,r6
-     nop
-     nop
-
+     ldr sp, __init_data;
      bl	__main
 
      /* never returns */

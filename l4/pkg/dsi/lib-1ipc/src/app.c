@@ -60,7 +60,8 @@ __allocate_stream(void)
   /* search unused stream descriptor */
   do
     {
-      if (cmpxchg32(&streams[i].flags,DSI_STREAM_UNUSED,DSI_STREAM_USED))
+      if (l4util_cmpxchg32(&streams[i].flags,
+	                   DSI_STREAM_UNUSED, DSI_STREAM_USED))
 	{
 	  /* found */
 	  next_stream = (i + 1) % DSI_MAX_STREAMS;
@@ -140,25 +141,25 @@ dsi_stream_create(dsi_component_t * sender, dsi_component_t * receiver,
   /* sanity checks */
   if (!dsi_is_valid_component(sender))
     {
-      Error("DSI: invalid send component");
+      LOG_Error("invalid send component");
       return -L4_EINVAL;
     }
   
   if (!dsi_is_valid_component(receiver))
     {
-      Error("DSI: invalid receive component");
+      LOG_Error("invalid receive component");
       return -L4_EINVAL;
     }
 
   if (l4dm_is_invalid_ds(ctrl))
     {
-      Error("DSI: invalid control area");
+      LOG_Error("invalid control area");
       return -L4_EINVAL;
     }
 
   if (l4dm_is_invalid_ds(data))
     {
-      Error("DSI: invalid data area");
+      LOG_Error("invalid data area");
       return -L4_EINVAL;
     }
 
@@ -167,7 +168,7 @@ dsi_stream_create(dsi_component_t * sender, dsi_component_t * receiver,
   if (s == NULL)
     {
       /* no stream descriptor available */
-      Error("DSI: no stream descriptor available!");
+      LOG_Error("no stream descriptor available!");
       return -DSI_ENOSTREAM;
     }
 
@@ -175,7 +176,7 @@ dsi_stream_create(dsi_component_t * sender, dsi_component_t * receiver,
   ret = sender->connect(sender,&receiver->socketref);
   if (ret)
     {
-      Error("DSI: connect sender failed: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("connect sender failed: %s (%d)",l4env_errstr(ret),ret);
       s->flags = DSI_STREAM_UNUSED;
       return -DSI_ECONNECT;
     }
@@ -183,7 +184,7 @@ dsi_stream_create(dsi_component_t * sender, dsi_component_t * receiver,
   ret = receiver->connect(receiver,&sender->socketref);
   if (ret)
     {
-      Error("DSI: connect receiver failed: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("connect receiver failed: %s (%d)",l4env_errstr(ret),ret);
       s->flags = DSI_STREAM_UNUSED;
       return -DSI_ECONNECT;
     }
@@ -232,7 +233,7 @@ dsi_stream_start(dsi_stream_t * stream)
       ret = stream->receiver.start(&stream->receiver);
       if (ret)
 	{
-	  Error("DSI: start receiver failed: %s (%d)",
+	  LOG_Error("start receiver failed: %s (%d)",
 		l4env_errstr(ret),ret);
 	  return ret;
 	}
@@ -244,7 +245,7 @@ dsi_stream_start(dsi_stream_t * stream)
       ret = stream->sender.start(&stream->sender);
       if (ret)
 	{
-	  Error("DSI: start sender failed: %s (%d)",
+	  LOG_Error("start sender failed: %s (%d)",
 		l4env_errstr(ret),ret);
 	  return ret;
 	}
@@ -284,7 +285,7 @@ dsi_stream_stop(dsi_stream_t * stream)
 	ret = stream->sender.stop(&stream->sender);
 	if (ret)
 	  {
-	    Error("DSI: stop sender failed: %s (%d)",l4env_errstr(ret),ret);
+	    LOG_Error("stop sender failed: %s (%d)",l4env_errstr(ret),ret);
 	    return ret;
 	  }
     }
@@ -297,7 +298,7 @@ dsi_stream_stop(dsi_stream_t * stream)
 	ret = stream->receiver.stop(&stream->receiver);
 	if (ret)
 	  {
-	    Error("DSI: stop receiver failed: %s (%d)",
+	    LOG_Error("stop receiver failed: %s (%d)",
 		  l4env_errstr(ret),ret);
 	    return ret;
 	  }
@@ -340,12 +341,12 @@ dsi_stream_close(dsi_stream_t * stream)
   // we need at least the close functions for the sockets 
   if (stream->sender.close == NULL)
     {
-      Error("DSI: missing send components close function");
+      LOG_Error("missing send components close function");
       return -L4_EINVAL;
     }
   if (stream->receiver.close == NULL)
     {
-      Error("DSI: missing receive components close function");
+      LOG_Error("missing receive components close function");
       return -L4_EINVAL;
     }
 
@@ -358,7 +359,7 @@ dsi_stream_close(dsi_stream_t * stream)
       ret = stream->sender.stop(&stream->sender);
       if (ret)
 	{
-	  Error("DSI: stop sender's failed: %s (%d)",l4env_errstr(ret),ret);
+	  LOG_Error("stop sender's failed: %s (%d)",l4env_errstr(ret),ret);
 	  error = -DSI_ECOMPONENT;
 	}
       LOGdL(DEBUG_STREAM,"sender stop returned");
@@ -373,7 +374,7 @@ dsi_stream_close(dsi_stream_t * stream)
       ret = stream->receiver.stop(&stream->receiver);
       if (ret)
 	{
-	  Error("DSI: stop receiver's failed: %s (%d)",
+	  LOG_Error("stop receiver's failed: %s (%d)",
 		l4env_errstr(ret),ret);
 	  error = -DSI_ECOMPONENT;
 	}
@@ -387,7 +388,7 @@ dsi_stream_close(dsi_stream_t * stream)
   ret = stream->sender.close(&stream->sender);
   if (ret)
     {    
-      Error("DSI: close sender's socket failed: %s (%d)",
+      LOG_Error("close sender's socket failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       error = -DSI_ECOMPONENT;
     }
@@ -401,7 +402,7 @@ dsi_stream_close(dsi_stream_t * stream)
   ret = stream->receiver.close(&stream->receiver);
   if (ret)
     {
-      Error("DSI: close receiver's socket failed: %s (%d)",
+      LOG_Error("close receiver's socket failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       error = -DSI_ECOMPONENT;
     }

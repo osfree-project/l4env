@@ -4,6 +4,8 @@
 #include <l4/omega0/client.h>
 #include <l4/sys/kdebug.h>
 
+char LOG_tag[9]="serial";
+
 int port1 = 0x3f8;	// com1
 int irq1  = 4;		// irq 4
 int port2 = 0x2f8;	// com2
@@ -63,7 +65,7 @@ void serial_stuff(int port, int irq, int handle){
     request.s.mask = 0;
     err = omega0_request(handle, request);
     if(err<0) LOGl("omega0_request(handle=%d, request=%#x) returned %d",
-                   handle, request, err);
+                   handle, request.i, err);
                    
     do{
       stat = inb(port+2);
@@ -142,8 +144,6 @@ void start_thread(int thread, void*function, void*stack, int port, int irq){
 unsigned char stacks[MAXTHREADS][STACKSIZE];
 
 int main(int argc, char*argv[]){
-  LOG_init("serial");
-  
   LOG("listing of available irqs...\n");
   list();
 

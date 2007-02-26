@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEInterface.cpp
- *	\brief	contains the implementation of the class CFEInterface
+ *    \file    dice/src/fe/FEInterface.cpp
+ *    \brief   contains the implementation of the class CFEInterface
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -38,286 +39,255 @@
 #include "fe/FETaggedStructType.h"
 #include "fe/FETaggedUnionType.h"
 #include "fe/FETaggedEnumType.h"
+#include "fe/FEAttributeDeclarator.h"
+#include "FELibrary.h"
 #include "Compiler.h"
-#include "CString.h"
+#include <string>
 #include "File.h"
+#include <typeinfo>
+using namespace std;
 
 /////////////////////////////////////////////////////////////////////
 // Interface stuff
-IMPLEMENT_DYNAMIC(CFEInterface)
-
-CFEInterface::CFEInterface(Vector * pIAttributes, String sIName, Vector * pIBaseNames, Vector * pComponents)
-: m_vAttributes(RUNTIME_CLASS(CFEAttribute)),
-  m_vConstants(RUNTIME_CLASS(CFEConstDeclarator)),
-  m_vTypedefs(RUNTIME_CLASS(CFETypedDeclarator)),
-  m_vOperations(RUNTIME_CLASS(CFEOperation)),
-  m_vTaggedDeclarators(RUNTIME_CLASS(CFEConstructedType))
+CFEInterface::CFEInterface(vector<CFEAttribute*> * pIAttributes,
+    string sIName,
+    vector<CFEIdentifier*> *pIBaseNames,
+    vector<CFEInterfaceComponent*> *pComponents)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEInterface, CFEFileComponent);
-
     if (pComponents)
     {
-		VectorElement *pIter;
-		for (pIter = pComponents->GetFirst(); pIter; pIter = pIter->GetNext())
-		{
-			if (pIter->GetElement())
-			{
-				if (pIter->GetElement()->IsKindOf(RUNTIME_CLASS(CFEConstDeclarator)))
-				    AddConstant((CFEConstDeclarator*)pIter->GetElement());
-				else if (pIter->GetElement()->IsKindOf(RUNTIME_CLASS(CFETypedDeclarator)))
-					AddTypedef((CFETypedDeclarator*) pIter->GetElement());
-				else if (pIter->GetElement()->IsKindOf(RUNTIME_CLASS(CFEOperation)))
-					m_vOperations.Add(pIter->GetElement());
-				else if (pIter->GetElement()->IsKindOf(RUNTIME_CLASS(CFEConstructedType)))
-					AddTaggedDecl((CFEConstructedType*)pIter->GetElement());
-				else
-				{
-					TRACE("Unknown Interface component: %s\n", pIter->GetElement()->GetClassName());
-					assert(false);
-				}
-			}
-		}
-	}
-    m_pBaseInterfaces = 0;
-    m_pDerivedInterfaces = 0;
+        vector<CFEInterfaceComponent*>::iterator iter;
+        for (iter = pComponents->begin(); iter != pComponents->end(); iter++)
+        {
+            if (!*iter)
+                continue;
+            // parent is set in Add* functions
+            if (dynamic_cast<CFEConstDeclarator*>(*iter))
+                AddConstant((CFEConstDeclarator*)*iter);
+            else if (dynamic_cast<CFETypedDeclarator*>(*iter))
+                AddTypedef((CFETypedDeclarator*) *iter);
+            else if (dynamic_cast<CFEOperation*>(*iter))
+                AddOperation((CFEOperation*)*iter);
+            else if (dynamic_cast<CFEConstructedType*>(*iter))
+                AddTaggedDecl((CFEConstructedType*)*iter);
+            else if (dynamic_cast<CFEAttributeDeclarator*>(*iter))
+                AddAttributeDeclarator((CFEAttributeDeclarator*)*iter);
+            else
+            {
+                TRACE("Unknown Interface component: %s\n", typeid(*(*iter)).name());
+                assert(false);
+            }
+        }
+    }
+
+    m_vBaseInterfaces.clear();
+    m_vDerivedInterfaces.clear();
     m_sInterfaceName = sIName;
-    m_pBaseInterfaceNames = pIBaseNames;
+
+    if (pIBaseNames)
+        m_vBaseInterfaceNames.swap(*pIBaseNames);
+    vector<CFEIdentifier*>::iterator iterB;
+    for (iterB = m_vBaseInterfaceNames.begin();
+         iterB != m_vBaseInterfaceNames.end(); iterB++)
+    {
+        (*iterB)->SetParent(this);
+    }
+
     if (pIAttributes)
-		m_vAttributes.Add(pIAttributes);
+        m_vAttributes.swap(*pIAttributes);
+    vector<CFEAttribute*>::iterator iterA;
+    for (iterA = m_vAttributes.begin(); iterA != m_vAttributes.end(); iterA++)
+    {
+        (*iterA)->SetParent(this);
+    }
 }
 
 CFEInterface::CFEInterface(CFEInterface & src)
-: CFEFileComponent(src),
-  m_vAttributes(RUNTIME_CLASS(CFEAttribute)),
-  m_vConstants(RUNTIME_CLASS(CFEConstDeclarator)),
-  m_vTypedefs(RUNTIME_CLASS(CFETypedDeclarator)),
-  m_vOperations(RUNTIME_CLASS(CFEOperation)),
-  m_vTaggedDeclarators(RUNTIME_CLASS(CFEConstructedType))
+: CFEFileComponent(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEInterface, CFEFileComponent);
-
     m_sInterfaceName = src.m_sInterfaceName;
-    if (src.m_pBaseInterfaces)
-    {
-        m_pBaseInterfaces = src.m_pBaseInterfaces->Clone();
-        //m_pBaseInterfaces->SetParentOfElements(this);
-    }
-    else
-        m_pBaseInterfaces = 0;
-    if (src.m_pDerivedInterfaces)
-        m_pDerivedInterfaces = src.m_pDerivedInterfaces->Clone();
-    else
-        m_pDerivedInterfaces = 0;
-    if (src.m_pBaseInterfaceNames)
-    {
-        m_pBaseInterfaceNames = src.m_pBaseInterfaceNames->Clone();
-        m_pBaseInterfaceNames->SetParentOfElements(this);
-    }
-    else
-        m_pBaseInterfaceNames = 0;
-	m_vAttributes.Add(&src.m_vAttributes);
-	m_vConstants.Add(&src.m_vConstants);
-	m_vTypedefs.Add(&src.m_vTypedefs);
-	m_vOperations.Add(&src.m_vOperations);
-	m_vTaggedDeclarators.Add(&src.m_vTaggedDeclarators);
+
+    COPY_VECTOR_WOP(CFEInterface, m_vBaseInterfaces, iterBI);
+    COPY_VECTOR_WOP(CFEInterface, m_vDerivedInterfaces, iterDI);
+
+    COPY_VECTOR(CFEIdentifier, m_vBaseInterfaceNames, iterBIN);
+    COPY_VECTOR(CFEAttributeDeclarator, m_vAttributeDeclarators, iterAD);
+    COPY_VECTOR(CFEAttribute, m_vAttributes, iterA);
+    COPY_VECTOR(CFEConstDeclarator, m_vConstants, iterC);
+    COPY_VECTOR(CFETypedDeclarator, m_vTypedefs, iterT);
+    COPY_VECTOR(CFEOperation, m_vOperations, iterO);
+    COPY_VECTOR(CFEConstructedType, m_vTaggedDeclarators, iterTD);
 }
 
 /** destructs the interface and all its members */
 CFEInterface::~CFEInterface()
 {
-    if (m_pBaseInterfaceNames)
-        delete m_pBaseInterfaceNames;
-    if (m_pBaseInterfaces)
-        delete m_pBaseInterfaces;
+    DEL_VECTOR(m_vBaseInterfaceNames);
+    DEL_VECTOR(m_vAttributeDeclarators);
+    DEL_VECTOR(m_vAttributes);
+    DEL_VECTOR(m_vConstants);
+    DEL_VECTOR(m_vTypedefs);
+    DEL_VECTOR(m_vOperations);
+    DEL_VECTOR(m_vTaggedDeclarators);
 }
 
 /**
- *	\brief returns the iterator for the first operation
- *	\return the iterator, which points to the first operation
+ *    \brief returns the iterator for the first operation
+ *    \return the iterator, which points to the first operation
  */
-VectorElement *CFEInterface::GetFirstOperation()
+vector<CFEOperation*>::iterator CFEInterface::GetFirstOperation()
 {
-	return m_vOperations.GetFirst();
+    return m_vOperations.begin();
 }
 
 /**
- *	\brief returns the next operations
- *	\param iter the iterator, which points to the next operation
- *	\return a pointer to the next operation
+ *    \brief returns the next operations
+ *    \param iter the iterator, which points to the next operation
+ *    \return a pointer to the next operation
  */
-CFEOperation *CFEInterface::GetNextOperation(VectorElement * &iter)
+CFEOperation *CFEInterface::GetNextOperation(vector<CFEOperation*>::iterator &iter)
 {
-	if (!iter)
-		return 0;
-	CFEOperation *pRet = (CFEOperation*)iter->GetElement();
-	iter = iter->GetNext();
-	if (!pRet)
-		return GetNextOperation(iter);
-	return pRet;
+    if (iter == m_vOperations.end())
+        return 0;
+    return *iter++;
 }
 
 /**
- *	\brief returns the name of the interface
- *	\return the interface's name
+ *    \brief returns the name of the interface
+ *    \return the interface's name
  *
  * This function redirects the request to the interface's header, which contains all
  * names and attributes of the interface.
  */
-String CFEInterface::GetName()
+string CFEInterface::GetName()
 {
     // if we got an identifier get it's name
     return m_sInterfaceName;
 }
 
 /**
- *	\brief retrieves the first type definition
- *	\return an iterator, which points to the first type definition
+ *    \brief retrieves the first type definition
+ *    \return an iterator, which points to the first type definition
  */
-VectorElement *CFEInterface::GetFirstTypeDef()
+vector<CFETypedDeclarator*>::iterator CFEInterface::GetFirstTypeDef()
 {
-	return m_vTypedefs.GetFirst();
+    return m_vTypedefs.begin();
 }
 
 /**
- *	\brief retrieves the next type definition
- *	\param iter the pointer to the next type definition
- *	\return a pointer to the object, containing the type definition
+ *    \brief retrieves the next type definition
+ *    \param iter the pointer to the next type definition
+ *    \return a pointer to the object, containing the type definition
  */
-CFETypedDeclarator *CFEInterface::GetNextTypeDef(VectorElement * &iter)
+CFETypedDeclarator *CFEInterface::GetNextTypeDef(vector<CFETypedDeclarator*>::iterator &iter)
 {
-	if (!iter)
-		return 0;
-	CFETypedDeclarator *pRet = (CFETypedDeclarator*)iter->GetElement();
-	iter = iter->GetNext();
-	if (!pRet)
-		return GetNextTypeDef(iter);
-	return pRet;
+    if (iter == m_vTypedefs.end())
+        return 0;
+    return *iter++;
 }
 
 /**
- *	\brief retrieves a iterator pointing at the first const declarator
- *	\return the iterator pointing at the first const daclarator
+ *    \brief retrieves a iterator pointing at the first const declarator
+ *    \return the iterator pointing at the first const daclarator
  */
-VectorElement *CFEInterface::GetFirstConstant()
+vector<CFEConstDeclarator*>::iterator CFEInterface::GetFirstConstant()
 {
-	return m_vConstants.GetFirst();
+    return m_vConstants.begin();
 }
 
 /**
- *	\brief retrieves the next constant declarator
- *	\param iter the iterator pointing at the next const declarator
- *	\return a pointer to the object containing the next constant declarator
+ *    \brief retrieves the next constant declarator
+ *    \param iter the iterator pointing at the next const declarator
+ *    \return a pointer to the object containing the next constant declarator
  */
-CFEConstDeclarator *CFEInterface::GetNextConstant(VectorElement * &iter)
+CFEConstDeclarator *CFEInterface::GetNextConstant(vector<CFEConstDeclarator*>::iterator &iter)
 {
-	if (!iter)
-		return 0;
-	CFEConstDeclarator *pRet = (CFEConstDeclarator*)iter->GetElement();
-	iter = iter->GetNext();
-	if (!pRet)
-		return GetNextConstant(iter);
-	return pRet;
+    if (iter == m_vConstants.end())
+        return 0;
+    return *iter++;
 }
 
 /**
- *	\brief adds a reference to a base interface
- *	\param pBaseInterface the reference to the base interface
+ *    \brief adds a reference to a base interface
+ *    \param pBaseInterface the reference to the base interface
  *
  * Creates a new array for the references if none exists or adds the given reference
  * to the existing array (m_pBaseInterfaces).
  */
 void CFEInterface::AddBaseInterface(CFEInterface * pBaseInterface)
 {
-    if (!m_pBaseInterfaces)
-        m_pBaseInterfaces = new Vector(RUNTIME_CLASS(CFEInterface));
-    if (pBaseInterface)
-    {
-        m_pBaseInterfaces->Add(pBaseInterface);
-        pBaseInterface->AddDerivedInterface(this);
-    }
+    if (!pBaseInterface)
+        return;
+    m_vBaseInterfaces.push_back(pBaseInterface);
+    pBaseInterface->AddDerivedInterface(this);
 }
 
 /**
- *	\brief retrieves a iterator to the first base interface
- *	\return the iterator pointing at the first base interface
+ *    \brief retrieves a iterator to the first base interface
+ *    \return the iterator pointing at the first base interface
  */
-VectorElement *CFEInterface::GetFirstBaseInterface()
+vector<CFEInterface*>::iterator CFEInterface::GetFirstBaseInterface()
 {
-    if (!m_pBaseInterfaces)
-        return 0;
-    return m_pBaseInterfaces->GetFirst();
+    return m_vBaseInterfaces.begin();
 }
 
 /**
- *	\brief retrieves next base interface
- *	\param iter the iterator pointing at the next base interface
- *	\return a pointer to the object containing the next base interface, 0 if none available
+ *    \brief retrieves next base interface
+ *    \param iter the iterator pointing at the next base interface
+ *    \return a pointer to the object containing the next base interface, 0 if none available
  */
-CFEInterface *CFEInterface::GetNextBaseInterface(VectorElement * &iter)
+CFEInterface *CFEInterface::GetNextBaseInterface(vector<CFEInterface*>::iterator &iter)
 {
-    if (!m_pBaseInterfaces)
+    if (iter == m_vBaseInterfaces.end())
         return 0;
-    if (!iter)
-        return 0;
-    CFEInterface *pRet = (CFEInterface *) (iter->GetElement());
-    iter = iter->GetNext();
-    return pRet;
+    return *iter++;
 }
 
 /**
- *	\brief adds a reference to a derived interface
- *	\param pDerivedInterface the reference to the derived interface
+ *    \brief adds a reference to a derived interface
+ *    \param pDerivedInterface the reference to the derived interface
  *
  * Creates a new array for the references if none exists or adds the given reference
  * to the existing array (m_pDerivedInterfaces).
  */
 void CFEInterface::AddDerivedInterface(CFEInterface * pDerivedInterface)
 {
-    if (!m_pDerivedInterfaces)
-        m_pDerivedInterfaces = new Vector(RUNTIME_CLASS(CFEInterface));
-    if (pDerivedInterface)
-        m_pDerivedInterfaces->Add(pDerivedInterface);
+    if (!pDerivedInterface)
+        return;
+    m_vDerivedInterfaces.push_back(pDerivedInterface);
 }
 
 /**
- *	\brief retrieves a iterator to the first derived interface
- *	\return the iterator pointing at the first derived interface
+ *    \brief retrieves a iterator to the first derived interface
+ *    \return the iterator pointing at the first derived interface
  */
-VectorElement *CFEInterface::GetFirstDerivedInterface()
+vector<CFEInterface*>::iterator CFEInterface::GetFirstDerivedInterface()
 {
-    if (!m_pDerivedInterfaces)
-        return 0;
-    return m_pDerivedInterfaces->GetFirst();
+    return m_vDerivedInterfaces.begin();
 }
 
 /**
- *	\brief retrieves next derived interface
- *	\param iter the iterator pointing at the next derived interface
- *	\return a pointer to the object containing the next derived interface, 0 if none available
+ *    \brief retrieves next derived interface
+ *    \param iter the iterator pointing at the next derived interface
+ *    \return a pointer to the object containing the next derived interface, 0 if none available
  */
-CFEInterface *CFEInterface::GetNextDerivedInterface(VectorElement * &iter)
+CFEInterface *CFEInterface::GetNextDerivedInterface(vector<CFEInterface*>::iterator &iter)
 {
-    if (!m_pDerivedInterfaces)
+    if (iter == m_vDerivedInterfaces.end())
         return 0;
-    if (!iter)
-        return 0;
-    CFEInterface *pRet = (CFEInterface *) (iter->GetElement());
-    iter = iter->GetNext();
-    if (!pRet)
-		return GetNextDerivedInterface(iter);
-    return pRet;
+    return *iter++;
 }
 
 /**
- *	\brief tries to locate a constant declarator by its name
- *	\param sName the name of the constant declarator
- *	\return a reference to the object containing the declarator, 0 if none was found
+ *    \brief tries to locate a constant declarator by its name
+ *    \param sName the name of the constant declarator
+ *    \return a reference to the object containing the declarator, 0 if none was found
  */
-CFEConstDeclarator *CFEInterface::FindConstant(String sName)
+CFEConstDeclarator *CFEInterface::FindConstant(string sName)
 {
     CFEConstDeclarator *pConst;
-    VectorElement *pIterIComponent = GetFirstConstant();
-    while ((pConst = GetNextConstant(pIterIComponent)) != 0)
+    vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
+    while ((pConst = GetNextConstant(iterC)) != 0)
     {
         if (pConst->GetName() == sName)
             return pConst;
@@ -326,9 +296,9 @@ CFEConstDeclarator *CFEInterface::FindConstant(String sName)
 }
 
 /**
- *	\brief calculates the number of operations in this interface
- *	\param bCountBase true if the base interfaces should be counted too
- *	\return the number of operations (functions) in this interface
+ *    \brief calculates the number of operations in this interface
+ *    \param bCountBase true if the base interfaces should be counted too
+ *    \return the number of operations (functions) in this interface
  *
  * This function is used for the enumeration of the operation identifiers, used
  * to identify, which function is called.
@@ -338,16 +308,16 @@ int CFEInterface::GetOperationCount(bool bCountBase)
     int count = 0;
     if (bCountBase)
     {
-        VectorElement *pIterI = GetFirstBaseInterface();
+        vector<CFEInterface*>::iterator iterI = GetFirstBaseInterface();
         CFEInterface *pInterface;
-        while ((pInterface = GetNextBaseInterface(pIterI)) != 0)
+        while ((pInterface = GetNextBaseInterface(iterI)) != 0)
         {
             count += pInterface->GetOperationCount();
         }
     }
     // now count functions
-    VectorElement *pIterO = GetFirstOperation();
-    while (GetNextOperation(pIterO))
+    vector<CFEOperation*>::iterator iterO = GetFirstOperation();
+    while (GetNextOperation(iterO))
     {
         count++;
     }
@@ -355,15 +325,15 @@ int CFEInterface::GetOperationCount(bool bCountBase)
 }
 
 /**
- *	\brief tries to locate a user defined type by its name
- *	\param sName the name of the type
- *	\return a pointer to the object containing the searched type, 0 if not found
+ *    \brief tries to locate a user defined type by its name
+ *    \param sName the name of the type
+ *    \return a pointer to the object containing the searched type, 0 if not found
  */
-CFETypedDeclarator *CFEInterface::FindUserDefinedType(String sName)
+CFETypedDeclarator *CFEInterface::FindUserDefinedType(string sName)
 {
-    VectorElement *pIterT = GetFirstTypeDef();
+    vector<CFETypedDeclarator*>::iterator iterT = GetFirstTypeDef();
     CFETypedDeclarator *pUserType;
-    while ((pUserType = GetNextTypeDef(pIterT)) != 0)
+    while ((pUserType = GetNextTypeDef(iterT)) != 0)
     {
         if (pUserType->FindDeclarator(sName))
             return pUserType;
@@ -372,17 +342,17 @@ CFETypedDeclarator *CFEInterface::FindUserDefinedType(String sName)
 }
 
 /**
- *	\brief tries to find a base interface
- *	\param sName the name of the base interface
- *	\return a reference to the searched interface, 0 if not found
+ *    \brief tries to find a base interface
+ *    \param sName the name of the base interface
+ *    \return a reference to the searched interface, 0 if not found
  */
-CFEInterface *CFEInterface::FindBaseInterface(String sName)
+CFEInterface *CFEInterface::FindBaseInterface(string sName)
 {
-    if (sName.IsEmpty())
+    if (sName.empty())
         return 0;
-    VectorElement *pIter = GetFirstBaseInterface();
+    vector<CFEInterface*>::iterator iter = GetFirstBaseInterface();
     CFEInterface *pInterface;
-    while ((pInterface = GetNextBaseInterface(pIter)) != 0)
+    while ((pInterface = GetNextBaseInterface(iter)) != 0)
     {
         if (pInterface->GetName() == sName)
             return pInterface;
@@ -413,13 +383,25 @@ CFEInterface *CFEInterface::FindBaseInterface(String sName)
 bool CFEInterface::CheckConsistency()
 {
     // set base interfaces
-    CFEFile *pRoot = GetRoot();
+    CFEFile *pRoot = dynamic_cast<CFEFile*>(GetRoot());
     assert(pRoot);
-    VectorElement *pIter = GetFirstBaseInterfaceName();
+    vector<CFEIdentifier*>::iterator iterBIN = GetFirstBaseInterfaceName();
     CFEIdentifier *pBaseName = 0;
-    while ((pBaseName = GetNextBaseInterfaceName(pIter)) != 0)
+    while ((pBaseName = GetNextBaseInterfaceName(iterBIN)) != 0)
     {
-        CFEInterface *pBase = pRoot->FindInterface(pBaseName->GetName());
+        CFEInterface *pBase = NULL;
+        if (pBaseName->GetName().find("::") != string::npos)
+            pBase = pRoot->FindInterface(pBaseName->GetName());
+        else
+        {
+            CFELibrary *pFELibrary = GetSpecificParent<CFELibrary>();
+            // should be in same library
+            if (pFELibrary)
+                pBase = pFELibrary->FindInterface(pBaseName->GetName());
+            else // no library
+                pBase = pRoot->FindInterface(pBaseName->GetName());
+        }
+
         if (pBase)
         {
             // check if interface is already referenced
@@ -428,7 +410,8 @@ bool CFEInterface::CheckConsistency()
         }
         else
         {
-            CCompiler::GccError(this, 0, "Base interface %s not declared.", (const char *) (pBaseName->GetName()));	// 0 character appended by sprintf
+            CCompiler::GccError(this, 0, "Base interface %s not declared.",
+                pBaseName->GetName().c_str());    // 0 character appended by sprintf
             return false;
         }
     }
@@ -447,7 +430,11 @@ bool CFEInterface::CheckConsistency()
             CFETypeSpec *pType = new CFESimpleType(TYPE_BOOLEAN);
             // create operation
             CFEVersionAttribute *pOpAttr = (CFEVersionAttribute *) (pVersionAttr->Clone());
-            CFEOperation *pOperation = new CFEOperation(pType, String("check_version"), 0, new Vector(RUNTIME_CLASS(CFEAttribute), 1, pOpAttr));
+            vector<CFEAttribute*> *pVecAttr = new vector<CFEAttribute*>();
+            pVecAttr->push_back(pOpAttr);
+            CFEOperation *pOperation = new CFEOperation(pType,
+                string("check_version"), 0, pVecAttr);
+            delete pVecAttr;
             pType->SetParent(pOperation);
             pOpAttr->SetParent(pOperation);
             // add operation
@@ -455,25 +442,46 @@ bool CFEInterface::CheckConsistency()
         }
     }
     // check typedefs
-    pIter = GetFirstTypeDef();
+    vector<CFETypedDeclarator*>::iterator iterT = GetFirstTypeDef();
     CFETypedDeclarator *pTypedef;
-    while ((pTypedef = GetNextTypeDef(pIter)) != 0)
+    while ((pTypedef = GetNextTypeDef(iterT)) != 0)
     {
         if (!(pTypedef->CheckConsistency()))
             return false;
     }
     // check constants
-    pIter = GetFirstConstant();
+    vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
     CFEConstDeclarator *pConst;
-    while ((pConst = GetNextConstant(pIter)) != 0)
+    while ((pConst = GetNextConstant(iterC)) != 0)
     {
         if (!(pConst->CheckConsistency()))
             return false;
     }
-    // check operations
-    pIter = GetFirstOperation();
+    /////////////////////////////////////////////////////////////
+    // check if function name is used twice
+    // check done here and not in parser, because we do not have
+    // a simpol table in the parser (yet)
+    vector<CFEOperation*>::iterator iterO = GetFirstOperation();
     CFEOperation *pOp;
-    while ((pOp = GetNextOperation(pIter)) != 0)
+    while ((pOp = GetNextOperation(iterO)) != 0)
+    {
+        vector<CFEOperation*>::iterator iterO2 = iterO;
+        CFEOperation *pOp2;
+        while ((pOp2 = GetNextOperation(iterO2)) != 0)
+        {
+            if ((pOp != pOp2) &&
+                (pOp->GetName() == pOp2->GetName()))
+            {
+                CCompiler::GccWarning(pOp2, 0,
+                    "Function name \"%s\" used before (here: %d)\n",
+                    pOp2->GetName().c_str(), pOp->GetSourceLine());
+                return false;
+            }
+        }
+    }
+    // check operations
+    iterO = GetFirstOperation();
+    while ((pOp = GetNextOperation(iterO)) != 0)
     {
         if (!(pOp->CheckConsistency()))
             return false;
@@ -483,34 +491,28 @@ bool CFEInterface::CheckConsistency()
 }
 
 /**
- *	\brief reutrns a pointer to the first base interface name
- *	\return an iterator, which points to the first base interface name
+ *    \brief reutrns a pointer to the first base interface name
+ *    \return an iterator, which points to the first base interface name
  */
-VectorElement *CFEInterface::GetFirstBaseInterfaceName()
+vector<CFEIdentifier*>::iterator CFEInterface::GetFirstBaseInterfaceName()
 {
-    if (!m_pBaseInterfaceNames)
-        return 0;
-    return m_pBaseInterfaceNames->GetFirst();
+    return m_vBaseInterfaceNames.begin();
 }
 
 /**
- *	\brief return the next base interface name
- *	\param iter the iterator pointing to the next name
- *	\return the next base interface name
+ *    \brief return the next base interface name
+ *    \param iter the iterator pointing to the next name
+ *    \return the next base interface name
  */
-CFEIdentifier *CFEInterface::GetNextBaseInterfaceName(VectorElement * &iter)
+CFEIdentifier *CFEInterface::GetNextBaseInterfaceName(vector<CFEIdentifier*>::iterator &iter)
 {
-    if (!m_pBaseInterfaceNames)
+    if (iter == m_vBaseInterfaceNames.end())
         return 0;
-    if (!iter)
-        return 0;
-    CFEIdentifier *pRet = (CFEIdentifier *) (iter->GetElement());
-    iter = iter->GetNext();
-    return pRet;
+    return *iter++;
 }
 
-/**	creates a copy of this object
- *	\return a copy of this object
+/**    creates a copy of this object
+ *    \return a copy of this object
  */
 CObject *CFEInterface::Clone()
 {
@@ -518,35 +520,33 @@ CObject *CFEInterface::Clone()
 }
 
 /** retrieves a pointer to the first attribute
- *	\return a pointer to the first attribute
+ *    \return a pointer to the first attribute
  */
-VectorElement *CFEInterface::GetFirstAttribute()
+vector<CFEAttribute*>::iterator CFEInterface::GetFirstAttribute()
 {
-	return m_vAttributes.GetFirst();
+    return m_vAttributes.begin();
 }
 
 /** \brief retrieves a reference to the next attribute
  *  \param iter a pointer to the next attribute
  *  \return a reference to the next attribute
  */
-CFEAttribute *CFEInterface::GetNextAttribute(VectorElement * &iter)
+CFEAttribute *CFEInterface::GetNextAttribute(vector<CFEAttribute*>::iterator &iter)
 {
-    if (!iter)
+    if (iter == m_vAttributes.end())
         return 0;
-    CFEAttribute *pRet = (CFEAttribute *) (iter->GetElement());
-    iter = iter->GetNext();
-    return pRet;
+    return *iter++;
 }
 
 /** tries to find an specific attribute
- *	\param nType the type of the attribute to find
- *	\return a reference to the attribute, or 0 if not found
+ *    \param nType the type of the attribute to find
+ *    \return a reference to the attribute, or 0 if not found
  */
 CFEAttribute *CFEInterface::FindAttribute(ATTR_TYPE nType)
 {
-    VectorElement *pIter = GetFirstAttribute();
+    vector<CFEAttribute*>::iterator iterA = GetFirstAttribute();
     CFEAttribute *pAttr;
-    while ((pAttr = GetNextAttribute(pIter)) != 0)
+    while ((pAttr = GetNextAttribute(iterA)) != 0)
     {
         if (pAttr->GetAttrType() == nType)
             return pAttr;
@@ -555,13 +555,13 @@ CFEAttribute *CFEInterface::FindAttribute(ATTR_TYPE nType)
 }
 
 /** adds an operation to the operation vector
- *	\param pOperation the new operation to add
+ *    \param pOperation the new operation to add
  */
 void CFEInterface::AddOperation(CFEOperation * pOperation)
 {
-	if (!pOperation)
-		return;
-	m_vOperations.Add(pOperation);
+    if (!pOperation)
+        return;
+    m_vOperations.push_back(pOperation);
     pOperation->SetParent(this);
 }
 
@@ -569,31 +569,31 @@ void CFEInterface::AddOperation(CFEOperation * pOperation)
 void CFEInterface::Dump()
 {
     printf("Dump: CFEInterface (%s) parent %s at 0x%x\n",
-           (const char *) GetName(), (const char *) GetParent()->GetClassName(),
+           GetName().c_str(), typeid(*GetParent()).name(),
            (unsigned int) GetParent());
-    printf("Dump: CFEInterface (%s): typedefs\n", (const char *) GetName());
-    VectorElement *pIter = GetFirstTypeDef();
+    printf("Dump: CFEInterface (%s): typedefs\n", GetName().c_str());
+    vector<CFETypedDeclarator*>::iterator iterT = GetFirstTypeDef();
     CFEBase *pElement;
-    while ((pElement = GetNextTypeDef(pIter)) != 0)
+    while ((pElement = GetNextTypeDef(iterT)) != 0)
     {
         pElement->Dump();
     }
-    printf("Dump: CFEInterface (%s): constants\n", (const char *) GetName());
-    pIter = GetFirstConstant();
-    while ((pElement = GetNextConstant(pIter)) != 0)
+    printf("Dump: CFEInterface (%s): constants\n", GetName().c_str());
+    vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
+    while ((pElement = GetNextConstant(iterC)) != 0)
     {
         pElement->Dump();
     }
-    printf("Dump: CFEInterface (%s): operations\n", (const char *) GetName());
-    pIter = GetFirstOperation();
-    while ((pElement = GetNextOperation(pIter)) != 0)
+    printf("Dump: CFEInterface (%s): operations\n", GetName().c_str());
+    vector<CFEOperation*>::iterator iterO = GetFirstOperation();
+    while ((pElement = GetNextOperation(iterO)) != 0)
     {
         pElement->Dump();
     }
 }
 
 /** serializes this object to/from a file
- *	\param pFile the file to serialize to/from
+ *    \param pFile the file to serialize to/from
  */
 void CFEInterface::Serialize(CFile * pFile)
 {
@@ -601,36 +601,36 @@ void CFEInterface::Serialize(CFile * pFile)
     {
         pFile->PrintIndent("<interface>\n");
         pFile->IncIndent();
-        pFile->PrintIndent("<name>%s</name>\n", (const char *) GetName());
+        pFile->PrintIndent("<name>%s</name>\n", GetName().c_str());
         // write base interfaces' names
-        VectorElement *pIter = GetFirstBaseInterfaceName();
+        vector<CFEIdentifier*>::iterator iterBIN = GetFirstBaseInterfaceName();
         CFEBase *pElement;
-        while ((pElement = GetNextBaseInterfaceName(pIter)) != 0)
+        while ((pElement = GetNextBaseInterfaceName(iterBIN)) != 0)
         {
             pFile->PrintIndent("<baseinterface>%s</baseinterface>\n",
-                               (const char*)((CFEIdentifier *)pElement)->GetName());
+                               ((CFEIdentifier *)pElement)->GetName().c_str());
         }
         // write attributes
-        pIter = GetFirstAttribute();
-        while ((pElement = GetNextAttribute(pIter)) != 0)
+        vector<CFEAttribute*>::iterator iterA = GetFirstAttribute();
+        while ((pElement = GetNextAttribute(iterA)) != 0)
         {
             pElement->Serialize(pFile);
         }
         // write constants
-        pIter = GetFirstConstant();
-        while ((pElement = GetNextConstant(pIter)) != 0)
+        vector<CFEConstDeclarator*>::iterator iterC = GetFirstConstant();
+        while ((pElement = GetNextConstant(iterC)) != 0)
         {
             pElement->Serialize(pFile);
         }
         // write typedefs
-        pIter = GetFirstTypeDef();
-        while ((pElement = GetNextTypeDef(pIter)) != 0)
+        vector<CFETypedDeclarator*>::iterator iterT = GetFirstTypeDef();
+        while ((pElement = GetNextTypeDef(iterT)) != 0)
         {
             pElement->Serialize(pFile);
         }
         // write operations
-        pIter = GetFirstOperation();
-        while ((pElement = GetNextOperation(pIter)) != 0)
+        vector<CFEOperation*>::iterator iterO = GetFirstOperation();
+        while ((pElement = GetNextOperation(iterO)) != 0)
         {
             pElement->Serialize(pFile);
         }
@@ -644,8 +644,10 @@ void CFEInterface::Serialize(CFile * pFile)
  */
 void CFEInterface::AddTypedef(CFETypedDeclarator *pFETypedef)
 {
-	m_vTypedefs.Add(pFETypedef);
-	pFETypedef->SetParent(this);
+    if (!pFETypedef)
+        return;
+    m_vTypedefs.push_back(pFETypedef);
+    pFETypedef->SetParent(this);
 }
 
 /** \brief adds a new constant to the interface
@@ -653,8 +655,10 @@ void CFEInterface::AddTypedef(CFETypedDeclarator *pFETypedef)
  */
 void CFEInterface::AddConstant(CFEConstDeclarator *pFEConstant)
 {
-	m_vConstants.Add(pFEConstant);
-	pFEConstant->SetParent(this);
+    if (!pFEConstant)
+        return;
+    m_vConstants.push_back(pFEConstant);
+    pFEConstant->SetParent(this);
 }
 
 /** \brief adds a constructed type to the interface
@@ -662,31 +666,29 @@ void CFEInterface::AddConstant(CFEConstDeclarator *pFEConstant)
  */
 void CFEInterface::AddTaggedDecl(CFEConstructedType *pFETaggedDecl)
 {
-	m_vTaggedDeclarators.Add(pFETaggedDecl);
-	pFETaggedDecl->SetParent(this);
+    if (!pFETaggedDecl)
+        return;
+    m_vTaggedDeclarators.push_back(pFETaggedDecl);
+    pFETaggedDecl->SetParent(this);
 }
 
 /** \brief get a pointer to the first tagged type declaration
  *  \return a pointer to the first tagged type decl
  */
-VectorElement* CFEInterface::GetFirstTaggedDecl()
+vector<CFEConstructedType*>::iterator CFEInterface::GetFirstTaggedDecl()
 {
-    return m_vTaggedDeclarators.GetFirst();
+    return m_vTaggedDeclarators.begin();
 }
 
 /** \brief get a reference to the next tagged type declaration
- *  \param pIter the pointer to the next tagged type decl
+ *  \param iter the pointer to the next tagged type decl
  *  \return a reference to the next tagged type decl or 0
  */
-CFEConstructedType* CFEInterface::GetNextTaggedDecl(VectorElement* &pIter)
+CFEConstructedType* CFEInterface::GetNextTaggedDecl(vector<CFEConstructedType*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vTaggedDeclarators.end())
         return 0;
-    CFEConstructedType *pRet = (CFEConstructedType*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextTaggedDecl(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief tests if this is a foward declaration
@@ -696,52 +698,112 @@ CFEConstructedType* CFEInterface::GetNextTaggedDecl(VectorElement* &pIter)
  */
 bool CFEInterface::IsForward()
 {
-    return (m_vAttributes.GetSize() == 0) &&
-           (m_vConstants.GetSize() == 0) &&
-           (m_vOperations.GetSize() == 0) &&
-           (m_vTaggedDeclarators.GetSize() == 0) &&
-           (m_vTypedefs.GetSize() == 0);
+    return (m_vAttributes.size() == 0) &&
+           (m_vConstants.size() == 0) &&
+           (m_vOperations.size() == 0) &&
+           (m_vTaggedDeclarators.size() == 0) &&
+           (m_vTypedefs.size() == 0);
 }
 
 /** \brief adds attributes
  *  \param pSrcAttributes the source of the attributes
  */
-void CFEInterface::AddAttributes(Vector *pSrcAttributes)
+void CFEInterface::AddAttributes(vector<CFEAttribute*> *pSrcAttributes)
 {
-    m_vAttributes.Add(pSrcAttributes);
+    if (!pSrcAttributes)
+        return;
+    vector<CFEAttribute*>::iterator iter = pSrcAttributes->begin();
+    for (; iter != pSrcAttributes->end(); iter++)
+    {
+        CFEAttribute *pNew = (CFEAttribute*)((*iter)->Clone());
+        m_vAttributes.push_back(pNew);
+        pNew->SetParent(this);
+    }
 }
 
 /** \brief adds base interface names
  *  \param pSrcNames the names to add
  */
-void CFEInterface::AddBaseInterfaceNames(Vector *pSrcNames)
+void CFEInterface::AddBaseInterfaceNames(vector<CFEIdentifier*> *pSrcNames)
 {
-    if (!m_pBaseInterfaceNames)
-        m_pBaseInterfaceNames = new Vector(RUNTIME_CLASS(CFEIdentifier));
-    m_pBaseInterfaceNames->Add(pSrcNames);
+    if (!pSrcNames)
+        return;
+    vector<CFEIdentifier*>::iterator iter = pSrcNames->begin();
+    for (; iter != pSrcNames->end(); iter++)
+    {
+        CFEIdentifier *pNew = (CFEIdentifier*)((*iter)->Clone());
+        m_vBaseInterfaceNames.push_back(pNew);
+        pNew->SetParent(this);
+    }
 }
 
 /** \brief search for a tagged decl
  *  \param sName the tag (name) of the tagged decl to search for
  *  \return a reference to the found tagged decl or NULL if none found
  */
-CFEConstructedType* CFEInterface::FindTaggedDecl(String sName)
+CFEConstructedType* CFEInterface::FindTaggedDecl(string sName)
 {
     // own tagged decls
-    VectorElement *pIter = GetFirstTaggedDecl();
+    vector<CFEConstructedType*>::iterator iterTD = GetFirstTaggedDecl();
     CFEConstructedType* pTaggedDecl;
-    while ((pTaggedDecl = GetNextTaggedDecl(pIter)) != 0)
+    while ((pTaggedDecl = GetNextTaggedDecl(iterTD)) != 0)
     {
-        if (pTaggedDecl->IsKindOf(RUNTIME_CLASS(CFETaggedStructType)))
+        if (dynamic_cast<CFETaggedStructType*>(pTaggedDecl))
             if (((CFETaggedStructType*)pTaggedDecl)->GetTag() == sName)
                 return pTaggedDecl;
-        if (pTaggedDecl->IsKindOf(RUNTIME_CLASS(CFETaggedUnionType)))
+        if (dynamic_cast<CFETaggedUnionType*>(pTaggedDecl))
             if (((CFETaggedUnionType*)pTaggedDecl)->GetTag() == sName)
                 return pTaggedDecl;
-        if (pTaggedDecl->IsKindOf(RUNTIME_CLASS(CFETaggedEnumType)))
+        if (dynamic_cast<CFETaggedEnumType*>(pTaggedDecl))
             if (((CFETaggedEnumType*)pTaggedDecl)->GetTag() == sName)
                 return pTaggedDecl;
     }
     // nothing found
+    return 0;
+}
+
+/** \brief add an attribute declarator
+ *  \param pAttrDecl the declarator to add
+ */
+void CFEInterface::AddAttributeDeclarator(CFEAttributeDeclarator* pAttrDecl)
+{
+    if (!pAttrDecl)
+        return;
+    m_vAttributeDeclarators.push_back(pAttrDecl);
+    pAttrDecl->SetParent(this);
+}
+
+/** \brief return a reference to the next attribute declarator
+ *  \param iter the pointer to the next attribute declarator
+ *  \return a reference to the next attribute declarator
+ */
+CFEAttributeDeclarator* CFEInterface::GetNextAttributeDeclarator(vector<CFEAttributeDeclarator*>::iterator &iter)
+{
+    if (iter == m_vAttributeDeclarators.end())
+        return 0;
+    return *iter++;
+}
+
+/** \brief retrun a pointer to the first attribute declarator
+ *  \return a pointer to the first attribute declarator
+ */
+vector<CFEAttributeDeclarator*>::iterator CFEInterface::GetFirstAttributeDeclarator()
+{
+    return m_vAttributeDeclarators.begin();
+}
+
+/** \brief return a reference to the attribute declarator with the given name
+ *  \param sName the name of the declarator to search for
+ *  \return a reference to the attribute declarator found
+ */
+CFEAttributeDeclarator* CFEInterface::FindAttributeDeclarator(string sName)
+{
+    vector<CFEAttributeDeclarator*>::iterator iterAD = GetFirstAttributeDeclarator();
+    CFEAttributeDeclarator *pAttrDecl;
+    while ((pAttrDecl = GetNextAttributeDeclarator(iterAD)) != 0)
+    {
+        if (pAttrDecl->FindDeclarator(sName))
+            return pAttrDecl;
+    }
     return 0;
 }

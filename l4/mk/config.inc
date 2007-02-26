@@ -66,9 +66,12 @@ DROPSCONF_VARDEFS = $(foreach v,TITLE DEFCONFIG CONFIG_IN CONFIG CONFIG_H \
 ifneq ($(DROPSCONF),)
 .o:	$(DROPSCONF_CONFIG_H)
 
+$(DROPSCONF_CONFIG_H): $(DROPSCONF_CONFIG)
+
 $(DROPSCONF_CONFIG_H) $(DROPSCONF_CONFIG):
-	@echo "Create the configuration files"
-	$(VERBOSE)true | $(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_OLD) || \
+	@$(GEN_MESSAGE)
+	$(VERBOSE)true | $(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_OLD) \
+	  $(if $(VERBOSE),>/dev/null,) || \
 	  ( echo -e "\nError: Some defaults for config options are missing." ; \
 	    false )
 

@@ -1,0 +1,9 @@
+import <l4/dm_generic/types.h>
+import <l4/qt3/l4qws_key.h>
+
+interface l4qws_shm
+{
+  int create( [in] l4qws_key_t shm_key, [in] int size, [out] l4dm_dataspace_t *ds);
+  int get(    [in] l4qws_key_t shm_key, [out] l4dm_dataspace_t *ds);  
+  int destroy([in] l4qws_key_t shm_key);
+};

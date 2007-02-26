@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/SockBEMarshalFunction.h
- *	\brief	contains the declaration of the class CSockBEMarshalFunction
+ *  \file   dice/src/be/sock/SockBEMarshalFunction.h
+ *  \brief  contains the declaration of the class CSockBEMarshalFunction
  *
- *	\date	10/14/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   10/14/2003
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -41,20 +42,19 @@
  */
 class CSockBEMarshalFunction : public CBEMarshalFunction
 {
-DECLARE_DYNAMIC(CSockBEMarshalFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CSockBEMarshalFunction();
-	virtual ~CSockBEMarshalFunction();
+    /** \brief constructor
+     */
+    CSockBEMarshalFunction();
+    virtual ~CSockBEMarshalFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CSockBEMarshalFunction(CSockBEMarshalFunction &src);
+    /** \brief copy constructor */
+    CSockBEMarshalFunction(CSockBEMarshalFunction &src);
 
     virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
-	virtual void WriteCallAfterParameters(CBEFile* pFile,  CBEContext* pContext,  bool bComma);
+    virtual void WriteCallAfterParameters(CBEFile* pFile,  CBEContext* pContext,  bool bComma);
 };
 
 #endif

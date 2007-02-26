@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEHeaderFile.cpp
- *	\brief	contains the implementation of the class CL4BEHeaderFile
+ *    \file    dice/src/be/l4/L4BEHeaderFile.cpp
+ *    \brief   contains the implementation of the class CL4BEHeaderFile
  *
- *	\date	03/25/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    03/25/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,58 +32,20 @@
 #include "be/BEClient.h"
 #include "TypeSpec-Type.h"
 
-IMPLEMENT_DYNAMIC(CL4BEHeaderFile);
-
 CL4BEHeaderFile::CL4BEHeaderFile()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEHeaderFile, CBEHeaderFile);
 }
 
-CL4BEHeaderFile::CL4BEHeaderFile(CL4BEHeaderFile & src):CBEHeaderFile(src)
+CL4BEHeaderFile::CL4BEHeaderFile(CL4BEHeaderFile & src)
+: CBEHeaderFile(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEHeaderFile, CBEHeaderFile);
 }
 
-/**	\brief destructor
+/** \brief destructor
  */
 CL4BEHeaderFile::~CL4BEHeaderFile()
 {
 
-}
-
-/**	\brief write the include statements
- *	\param pContext the context of the write operation
- *
- * This implementation adds L4 specific includes
- */
-void CL4BEHeaderFile::WriteIncludesBeforeTypes(CBEContext * pContext)
-{
-    // if testing include thread lib
-    if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
-    {
-        Print("/* needed to create threads */\n");
-        Print("#include <l4/thread/thread.h>\n");
-        Print("/* needed to print error messages  */\n");
-        Print("#include <l4/log/l4log.h>\n");
-        Print("#include <l4/sys/kdebug.h>\n");
-		if (pContext->IsOptionSet(PROGRAM_TESTSUITE_SHUTDOWN_FIASCO) &&
-		    (GetTarget()->IsKindOf(RUNTIME_CLASS(CBEClient))))
-		{
-			Print("/* needed for l4_sleep */\n");
-			Print("#include <l4/util/util.h>\n");
-		}
-		Print("/* needed for printf */\n");
-        Print("#include <stdio.h>\n");
-        Print("\n");
-    }
-	else if (pContext->IsOptionSet(PROGRAM_TRACE_SERVER) ||
-	         pContext->IsOptionSet(PROGRAM_TRACE_CLIENT) ||
-			 pContext->IsOptionSet(PROGRAM_TRACE_MSGBUF))
-	{
-	    Print("#include <l4/log/l4log.h>\n");
-	}
-    // call base class (contains CORBA type defs)
-    CBEHeaderFile::WriteIncludesBeforeTypes(pContext);
 }
 
 /** \brief write the function declaration for the init-recv string function
@@ -95,14 +58,34 @@ void CL4BEHeaderFile::WriteIncludesBeforeTypes(CBEContext * pContext)
  * The init-rcvstring function is:
  * void name(int, l4_umword_t*, l4_umword_t*, CORBA_Environment);
  */
-void CL4BEHeaderFile::WriteFunctions(CBEContext * pContext)
+void CL4BEHeaderFile::WriteHelperFunctions(CBEContext * pContext)
 {
     if (pContext->IsOptionSet(PROGRAM_INIT_RCVSTRING))
     {
-        String sFuncName = pContext->GetNameFactory()->GetString(STR_INIT_RCVSTRING_FUNC, pContext);
-        String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-        PrintIndent("void %s(int, %s*, %s*, CORBA_Environment*);\n\n", (const char*)sFuncName,
-                (const char*)sMWord, (const char*)sMWord);
+        string sEnvType;
+        if (IsOfFileType(FILETYPE_COMPONENT))
+            sEnvType = "CORBA_Server_Environment";
+        else
+            sEnvType = "CORBA_Environment";
+        /* if function-count is zero, then there is no extern "C" written
+         * before calling this function, so write it now.
+         */
+        if (GetFunctionCount() == 0)
+        {
+            Print("#ifdef __cplusplus\n");
+            Print("extern \"C\" {\n");
+            Print("#endif\n\n");
+        }
+        string sFuncName = pContext->GetNameFactory()->GetString(STR_INIT_RCVSTRING_FUNC, pContext);
+        string sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
+        PrintIndent("void %s(int, %s*, %s*, %s*);\n\n", sFuncName.c_str(),
+                sMWord.c_str(), sMWord.c_str(), sEnvType.c_str());
+        if (GetFunctionCount() == 0)
+        {
+            Print("#ifdef __cplusplus\n");
+            Print("}\n");
+            Print("#endif\n\n");
+        }
     }
-    CBEHeaderFile::WriteFunctions(pContext);
+    CBEHeaderFile::WriteHelperFunctions(pContext);
 }

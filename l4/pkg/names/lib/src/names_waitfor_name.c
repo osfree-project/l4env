@@ -5,13 +5,12 @@
  * \date   05/27/2003
  * \author Uwe Dannowski <Uwe.Dannowski@ira.uka.de>
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
- *
+ * \author Adam Lackorzynski <adam@os.inf.tu-dresden.de>
  */
 /* (c) 2003 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
-#include <names.h>
 #include <l4/sys/syscalls.h>
 #include <l4/util/util.h>
 #include <l4/names/libnames.h>
@@ -49,9 +48,10 @@ names_waitfor_name(const char* name, l4_threadid_t* id,
       l4_sleep(to);
 
       rem -= to;
-      if (to < 1024) /* 4s */
+      if (to < 100)
 	to += to;
       if (to > rem)
 	to = rem;
-    } while (486);
-};
+    }
+  while (486);
+}

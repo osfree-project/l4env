@@ -4,9 +4,12 @@ INTERFACE:
 
 class Timeout
 {
+  friend class Jdb_timeout_list;
+  friend class Jdb_list_timeouts;
+
 public:
   /**
-   * @brief Timeout constructor.
+   * Timeout constructor.
    */
   Timeout();
 
@@ -15,12 +18,12 @@ public:
   void reset();
 
   /**
-   * @brief Check if timeout is set.
+   * Check if timeout is set.
    */
   bool is_set();
 
   /**
-   * @brief Check if timeout has hit.
+   * Check if timeout has hit.
    */
   bool has_hit();
 
@@ -28,25 +31,32 @@ public:
 
   void set_again();
 
+  static Timeout* Timeout::get_first_timeout();
+
   /**
    * Return remaining time of timeout.
    */
   Signed64 get_timeout();
 
-private:
-
+protected:
   /**
-   * @brief Default copy constructor (is undefined).
+   * Absolute system time we want to be woken up at.
+   */
+  Unsigned64 _wakeup;
+
+private:
+  /**
+   * Default copy constructor (is undefined).
    */
   Timeout(const Timeout&);
 
   /**
-   * @brief Enqueue a new timeout.
+   * Enqueue a new timeout.
    */
   void enqueue();
 
   /**
-   * @brief Dequeue an expired timeout.
+   * Dequeue an expired timeout.
    * @return true if a reschedule is necessary, false otherwise.
    */
   bool dequeue();
@@ -54,18 +64,14 @@ private:
   virtual bool expired() = 0;
 
   /**
-   * @brief Absolute system time we want to be woken up at.
-   */
-  Unsigned64 _wakeup;
-
-  /**
-   * @brief Next/Previous Timeout in timer list
+   * Next/Previous Timeout in timer list
    */
   Timeout *_next, *_prev;
 
   struct {
-    bool set : 1;
-    bool hit : 1;
+    bool     set  : 1;
+    bool     hit  : 1;
+    unsigned res  : 6; // performance optimization
   } _flags;
 
   static Timeout *first_timeout;
@@ -77,13 +83,15 @@ IMPLEMENTATION:
 #include "cpu_lock.h"
 #include "kip.h"
 #include "lock_guard.h"
+#include "timer.h"
 
 Timeout * Timeout::first_timeout = 0;
 
 IMPLEMENT inline
 Timeout::Timeout()
 {
-  _flags.set = _flags.hit = 0;
+  _flags.set  = _flags.hit = 0;
+  _flags.res  = 0;
 }
 
 IMPLEMENT inline 
@@ -101,6 +109,13 @@ Timeout::has_hit()
 }
 
 IMPLEMENT inline
+Timeout*
+Timeout::get_first_timeout()
+{
+  return first_timeout;
+}
+
+IMPLEMENT inline NEEDS["timer.h"]
 void
 Timeout::enqueue()
 {
@@ -110,6 +125,7 @@ Timeout::enqueue()
     {
       first_timeout = this;
       _prev = _next = 0;
+      Timer::update_timer(_wakeup);
       return;
     }
 
@@ -126,8 +142,10 @@ Timeout::enqueue()
           if (_prev)
             _prev->_next = this;
           else
-            first_timeout = this;
-          
+	    {
+	      first_timeout = this;
+	      Timer::update_timer(_wakeup);
+	    }
           return;
         }
 
@@ -141,7 +159,7 @@ Timeout::enqueue()
 }
 
 IMPLEMENT inline NEEDS [<cassert>, "cpu_lock.h", "lock_guard.h",
-                        Timeout::is_set, Timeout::enqueue]
+			Timeout::enqueue, Timeout::is_set]
 void
 Timeout::set (Unsigned64 clock)
 {
@@ -154,11 +172,11 @@ Timeout::set (Unsigned64 clock)
   enqueue();
 }
 
-IMPLEMENT inline NEEDS ["kip.h"]
+IMPLEMENT inline NEEDS ["timer.h"]
 Signed64
 Timeout::get_timeout()
 {
-  return _wakeup - Kernel_info::kip()->clock;
+  return _wakeup - Timer::system_clock();
 }
 
 IMPLEMENT inline NEEDS [<cassert>, "cpu_lock.h", "lock_guard.h",
@@ -176,7 +194,8 @@ Timeout::set_again()
     }
 }
 
-IMPLEMENT inline NEEDS ["cpu_lock.h", "lock_guard.h", Timeout::is_set]
+IMPLEMENT inline NEEDS ["cpu_lock.h", "lock_guard.h", "timer.h", 
+			Timeout::is_set]
 void 
 Timeout::reset()
 {
@@ -193,7 +212,11 @@ Timeout::reset()
         if (_prev)
   	  _prev->_next = _next;
         else
-  	  first_timeout = _next;
+	  {
+	    first_timeout = _next;
+	    if (_next)
+	      Timer::update_timer(_next->_wakeup);
+	  }
         if (_next)
   	  _next->_prev = _prev;
       }
@@ -218,15 +241,21 @@ Timeout::dequeue()
   return expired();
 }
 
-IMPLEMENT inline NEEDS ["kip.h", Timeout::dequeue]
+IMPLEMENT inline NEEDS ["kip.h", "timer.h", Timeout::dequeue]
 bool 
 Timeout::do_timeouts()
 {
   bool reschedule = false;
 
-  while (first_timeout && Kernel_info::kip()->clock >= first_timeout->_wakeup)
+  // timer interrupt handler synchronized clock before calling 
+  // Thread::handle_timer_interrupt which in turn called us
+  while (first_timeout && (Kip::k()->clock >= first_timeout->_wakeup))
     if (first_timeout->dequeue())
       reschedule = true;
+
+  // After dequeueing all expired timeouts, program next event, if any
+  if (first_timeout)
+    Timer::update_timer (first_timeout->_wakeup);
 
   return reschedule;
 }

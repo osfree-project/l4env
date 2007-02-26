@@ -110,8 +110,7 @@ __release_area_desc(page_area_t * area)
  */
 /*****************************************************************************/ 
 static inline l4_addr_t
-__max_alignment(l4_addr_t addr, 
-		l4_addr_t size)
+__max_alignment(l4_addr_t addr, l4_addr_t size)
 {
   int max = l4util_bsr(size);
   l4_addr_t alignment = (1 << max);
@@ -146,8 +145,7 @@ __max_alignment(l4_addr_t addr,
  */
 /*****************************************************************************/ 
 static inline l4_size_t 
-__aligned_size(page_area_t * area, 
-	       l4_addr_t alignment)
+__aligned_size(page_area_t * area, l4_addr_t alignment)
 {
   l4_addr_t offs;
 
@@ -178,7 +176,7 @@ __get_free_list(l4_size_t size)
   if (i < 0)
     {
       /* this should never happen, size should be at least 4096 */
-      ERROR("DMphys: invalid area size (%u)",size);
+      LOGdL(DEBUG_ERRORS, "DMphys: invalid area size (%u)", size);
       return 0;
     }
 
@@ -204,8 +202,7 @@ __get_free_list(l4_size_t size)
  */
 /*****************************************************************************/ 
 static int
-__add_area(page_pool_t * pool, 
-	   page_area_t * area)
+__add_area(page_pool_t * pool, page_area_t * area)
 {
   page_area_t * pa;
   l4_addr_t start = area->addr;
@@ -242,13 +239,13 @@ __add_area(page_pool_t * pool,
       /* uuh: the new area overlaps an existing area */
 #if DEBUG_ERRORS
       if (pa->area_next)
-	printf("  (0x%08x-0x%08x),(0x%08x-0x%08x),(0x%08x-0x%08x)\n",
-               pa->addr,pa->addr + pa->size,
+	LOG_printf("  (0x%08x-0x%08x),(0x%08x-0x%08x),(0x%08x-0x%08x)\n",
+               pa->addr, pa->addr + pa->size,
                area->addr, area->addr + area->size,
-               pa->area_next->addr,pa->area_next->addr + pa->area_next->size);
+               pa->area_next->addr, pa->area_next->addr + pa->area_next->size);
       else
-	printf("  (0x%08x-0x%08x),(0x%08x-0x%08x)n",pa->addr,
-               pa->addr + pa->size,area->addr, area->addr + area->size);
+	LOG_printf("  (0x%08x-0x%08x),(0x%08x-0x%08x)n", pa->addr,
+               pa->addr + pa->size, area->addr, area->addr + area->size);
       PANIC("DMphys: new area overlaps existing area!");
 #endif
       return -1;
@@ -276,8 +273,7 @@ __add_area(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static int
-__remove_area(page_pool_t * pool, 
-	      page_area_t * area)
+__remove_area(page_pool_t * pool, page_area_t * area)
 {
   if (area == pool->area_list)
     {
@@ -326,8 +322,7 @@ __remove_area(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static int
-__add_free(page_pool_t * pool,
-	   page_area_t * area)
+__add_free(page_pool_t * pool, page_area_t * area)
 {
   page_area_t * pa;
   int num = __get_free_list(area->size);
@@ -382,8 +377,7 @@ __add_free(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static int
-__remove_free(page_pool_t * pool, 
-	      page_area_t * area)
+__remove_free(page_pool_t * pool, page_area_t * area)
 {
   int num = __get_free_list(area->size);
 
@@ -431,14 +425,12 @@ __remove_free(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static int 
-__add_free_area(page_pool_t * pool, 
-		l4_addr_t addr, 
-		l4_size_t size)
+__add_free_area(page_pool_t * pool, l4_addr_t addr, l4_size_t size)
 {
   page_area_t * area;
   
-  LOGdL(DEBUG_PAGES_ADD,"pool %d:\n  area 0x%08x-0x%08x (%6uKB)",
-        pool->pool,addr,addr + size,size >> 10);
+  LOGdL(DEBUG_PAGES_ADD, "pool %d: area 0x%08x-0x%08x (%6uKB)",
+        pool->pool, addr, addr + size, size >> 10);
   
   /* allocate area descriptor */
   area = __alloc_area_desc();
@@ -456,11 +448,11 @@ __add_free_area(page_pool_t * pool,
   SET_AREA_UNUSED(area);
 
   /* add to area list */
-  if (__add_area(pool,area) < 0)
+  if (__add_area(pool, area) < 0)
     return -1;
 
   /* add to free list */
-  if (__add_free(pool,area) < 0)
+  if (__add_free(pool, area) < 0)
     return -1;
 
   /* done */
@@ -483,9 +475,7 @@ __add_free_area(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static int
-__split_area(page_pool_t * pool, 
-	     page_area_t * area,
-	     l4_size_t size, 
+__split_area(page_pool_t * pool, page_area_t * area, l4_size_t size, 
 	     l4_addr_t alignment)
 {
   int at_beginning;
@@ -507,8 +497,8 @@ __split_area(page_pool_t * pool,
   
   ASSERT(sb_addr_e <= (area->addr + area->size));
 
-  sb_max_b = __max_alignment(sb_addr_b,sb_size_b);
-  sb_max_e = __max_alignment(sb_addr_e,sb_size_e);
+  sb_max_b = __max_alignment(sb_addr_b, sb_size_b);
+  sb_max_e = __max_alignment(sb_addr_e, sb_size_e);
   sb_max = (sb_max_b > sb_max_e) ? sb_max_b : sb_max_e;
   sb_size = (sb_size_b > sb_size_e) ? sb_size_b : sb_size_e;
 
@@ -521,8 +511,8 @@ __split_area(page_pool_t * pool,
 
   ASSERT(se_addr_e <= (area->addr + area->size));
 
-  se_max_b = __max_alignment(se_addr_b,se_size_b);
-  se_max_e = __max_alignment(se_addr_e,se_size_e);
+  se_max_b = __max_alignment(se_addr_b, se_size_b);
+  se_max_e = __max_alignment(se_addr_e, se_size_e);
   se_max = (se_max_b > se_max_e) ? se_max_b : se_max_e;
   se_size = (se_size_b > se_size_e) ? se_size_b : se_size_e;
 
@@ -542,27 +532,28 @@ __split_area(page_pool_t * pool,
     }
 
 #if DEBUG_PAGES_SPLIT
-  LOGL("split area 0x%08x-0x%08x",area->addr,area->addr + area->size);
-  printf("  size 0x%08x (%6uKB), alignment 0x%08x\n",size,size >> 10, alignment);
+  LOGL("split area 0x%08x-0x%08x", area->addr, area->addr + area->size);
+  LOG_printf("  size 0x%08x (%6uKB), alignment 0x%08x\n", 
+         size, size >> 10, alignment);
   
-  printf("  split at beginning (0x%08x/0x%08x)\n",sb_size,sb_max);
-  printf("    0x%08x-0x%08x, 0x%08x/0x%08x\n",
-         sb_addr_b,sb_addr_b + sb_size_b,sb_size_b,sb_max_b);
-  printf("    0x%08x-0x%08x\n",addr_sb,addr_sb + size);
-  printf("    0x%08x-0x%08x, 0x%08x/0x%08x\n",
-         sb_addr_e,sb_addr_e + sb_size_e,sb_size_e,sb_max_e);
+  LOG_printf("  split at beginning (0x%08x/0x%08x)\n", sb_size, sb_max);
+  LOG_printf("    0x%08x-0x%08x, 0x%08x/0x%08x\n",
+         sb_addr_b, sb_addr_b + sb_size_b, sb_size_b, sb_max_b);
+  LOG_printf("    0x%08x-0x%08x\n", addr_sb, addr_sb + size);
+  LOG_printf("    0x%08x-0x%08x, 0x%08x/0x%08x\n",
+         sb_addr_e, sb_addr_e + sb_size_e, sb_size_e, sb_max_e);
   
-  printf("  split at end (0x%08x/0x%08x)\n",se_size,se_max);
-  printf("    0x%08x-0x%08x, 0x%08x/0x%08x\n",
-         se_addr_b,se_addr_b + se_size_b,se_size_b,se_max_b);
-  printf("    0x%08x-0x%08x\n",addr_se,addr_se + size);
-  printf("    0x%08x-0x%08x, 0x%08x/0x%08x\n",
-         se_addr_e,se_addr_e + se_size_e,se_size_e,se_max_e);
+  LOG_printf("  split at end (0x%08x/0x%08x)\n", se_size, se_max);
+  LOG_printf("    0x%08x-0x%08x, 0x%08x/0x%08x\n",
+         se_addr_b, se_addr_b + se_size_b, se_size_b, se_max_b);
+  LOG_printf("    0x%08x-0x%08x\n", addr_se, addr_se + size);
+  LOG_printf("    0x%08x-0x%08x, 0x%08x/0x%08x\n",
+         se_addr_e, se_addr_e + se_size_e, se_size_e, se_max_e);
   
   if (at_beginning)
-    printf("  splitting at beginning\n");
+    LOG_printf("  splitting at beginning\n");
   else
-    printf("  splitting at end\n");
+    LOG_printf("  splitting at end\n");
 #endif
 
   if (at_beginning)
@@ -574,7 +565,7 @@ __split_area(page_pool_t * pool,
       /* add remaining areas */
       if (sb_size_b > 0)
 	{
-	  if (__add_free_area(pool,sb_addr_b,sb_size_b) < 0)
+	  if (__add_free_area(pool, sb_addr_b, sb_size_b) < 0)
 	    {
 	      PANIC("DMphys: failed to add free area!");
 	      return -1;
@@ -583,7 +574,7 @@ __split_area(page_pool_t * pool,
 
       if (sb_size_e > 0)
 	{
-	  if (__add_free_area(pool,sb_addr_e,sb_size_e) < 0)
+	  if (__add_free_area(pool, sb_addr_e, sb_size_e) < 0)
 	    {
 	      PANIC("DMphys: failed to add free area!");
 	      return -1;
@@ -599,7 +590,7 @@ __split_area(page_pool_t * pool,
       /* add remaining areas */
       if (se_size_b > 0)
 	{
-	  if (__add_free_area(pool,se_addr_b,se_size_b) < 0)
+	  if (__add_free_area(pool, se_addr_b, se_size_b) < 0)
 	    {
 	      PANIC("DMphys: failed to add free area!");
 	      return -1;
@@ -608,7 +599,7 @@ __split_area(page_pool_t * pool,
 
       if (se_size_e > 0)
 	{
-	  if (__add_free_area(pool,se_addr_e,se_size_e) < 0)
+	  if (__add_free_area(pool, se_addr_e, se_size_e) < 0)
 	    {
 	      PANIC("DMphys: failed to add free area!");
 	      return -1;
@@ -638,8 +629,7 @@ __split_area(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static int
-__release_area(page_pool_t * pool, 
-	       page_area_t * area)
+__release_area(page_pool_t * pool, page_area_t * area)
 {
   page_area_t * pa;
 
@@ -647,8 +637,8 @@ __release_area(page_pool_t * pool,
   SET_AREA_UNUSED(area);
   area->ds_next = NULL;
 
-  LOGdL(DEBUG_PAGES_RELEASE,"pool %d:\n  area 0x%08x-0x%08x",
-        pool->pool,area->addr,area->addr + area->size);
+  LOGdL(DEBUG_PAGES_RELEASE, "pool %d: area 0x%08x-0x%08x",
+        pool->pool, area->addr, area->addr + area->size);
 
   /* try to merge with previous area */
   if (area->area_prev != NULL)
@@ -657,23 +647,23 @@ __release_area(page_pool_t * pool,
       if (IS_UNUSED_AREA(pa) && ((pa->addr + pa->size) == area->addr))
 	{
 	  /* merge, remove previous area from free list */
-	  if (__remove_free(pool,pa) < 0)
+	  if (__remove_free(pool, pa) < 0)
 	    {
 	      PANIC("DMphys: remove previous area from free list failed!");
 	      return -1;
 	    }
 
 	  /* remove previous area from area list */
-	  if (__remove_area(pool,pa) < 0)
+	  if (__remove_area(pool, pa) < 0)
 	    {
 	      PANIC("DMphys: remove previous area from area list failed!");
 	      return -1;
 	    }
 
 #if DEBUG_PAGES_RELEASE
-	  printf("  merge 0x%08x-0x%08x with 0x%08x-0x%08x\n",
-                 pa->addr,pa->addr + pa->size,
-                 area->addr,area->addr + area->size);
+	  LOG_printf(" merge 0x%08x-0x%08x with 0x%08x-0x%08x\n",
+                 pa->addr, pa->addr + pa->size,
+                 area->addr, area->addr + area->size);
 #endif
 
 	  /* add previous area to area */
@@ -681,7 +671,8 @@ __release_area(page_pool_t * pool,
 	  area->size += pa->size;
 
 #if DEBUG_PAGES_RELEASE
-	  printf("  got 0x%08x-0x%08x\n",area->addr,area->addr + area->size);
+	  LOG_printf(" got 0x%08x-0x%08x\n", 
+	      area->addr, area->addr + area->size);
 #endif
 
 	  /* release previous area descriptor */
@@ -696,30 +687,31 @@ __release_area(page_pool_t * pool,
       if (IS_UNUSED_AREA(pa) && ((area->addr + area->size) == pa->addr))
 	{
 	  /* merge, remove next area from free list */
-	  if (__remove_free(pool,pa) < 0)
+	  if (__remove_free(pool, pa) < 0)
 	    {
 	      PANIC("DMphys: remove next area from free list failed!");
 	      return -1;
 	    }
 
 	  /* remove next area from area list */
-	  if (__remove_area(pool,pa) < 0)
+	  if (__remove_area(pool, pa) < 0)
 	    {
 	      PANIC("DMphys: remove next area from area list failed!");
 	      return -1;
 	    }
 
 #if DEBUG_PAGES_RELEASE
-	  printf("  merge 0x%08x-0x%08x with 0x%08x-0x%08x\n",
-                 area->addr,area->addr + area->size,
-                 pa->addr,pa->addr + pa->size);
+	  LOG_printf(" merge 0x%08x-0x%08x with 0x%08x-0x%08x\n",
+                 area->addr, area->addr + area->size,
+                 pa->addr, pa->addr + pa->size);
 #endif
 
 	  /* area next area to area */
 	  area->size += pa->size;
 
 #if DEBUG_PAGES_RELEASE
-	  printf("  got 0x%08x-0x%08x\n",area->addr,area->addr + area->size);
+	  LOG_printf(" got 0x%08x-0x%08x\n", 
+	      area->addr, area->addr + area->size);
 #endif
 	  
 	  /* release next area descriptor */
@@ -728,7 +720,7 @@ __release_area(page_pool_t * pool,
     }
 
   /* add area to free list */
-  if (__add_free(pool,area) < 0)
+  if (__add_free(pool, area) < 0)
     {
       PANIC("DMphys: add area to free list failed!");
       return -1;
@@ -754,15 +746,13 @@ __release_area(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static page_area_t *
-__find_single_area(page_pool_t * pool, 
-		   l4_size_t size, 
-		   l4_addr_t alignment)
+__find_single_area(page_pool_t * pool, l4_size_t size, l4_addr_t alignment)
 {
   int num = __get_free_list(size);
   page_area_t * pa;
 
-  LOGdL(DEBUG_PAGES_FIND_SINGLE,"pool %d:\n  size 0x%08x, alignment 0x%08x",
-        pool->pool,size,alignment);
+  LOGdL(DEBUG_PAGES_FIND_SINGLE, "pool %d: size 0x%08x, alignment 0x%08x",
+        pool->pool, size, alignment);
   
   /* search in free lists */
   while (num < DMPHYS_NUM_FREE_LISTS)
@@ -770,18 +760,18 @@ __find_single_area(page_pool_t * pool,
       pa = pool->free_list[num];
       while (pa != NULL)
 	{
-	  if (__aligned_size(pa,alignment) >= size)
+	  if (__aligned_size(pa, alignment) >= size)
 	    {
 	      /* found an area, remove from free list */
-	      __remove_free(pool,pa);
+	      __remove_free(pool, pa);
 
 #if DEBUG_PAGES_FIND_SINGLE
-	      printf("  using area at 0x%08x-0x%08x (%uKB)\n",
-                     pa->addr,pa->addr + pa->size,pa->size >> 10);
+	      LOG_printf(" using area at 0x%08x-0x%08x (%uKB)\n",
+                     pa->addr, pa->addr + pa->size, pa->size >> 10);
 #endif
 	      /* split area if necessary, this also sets the right 
 	       * address / size in pa */
-	      if (__split_area(pool,pa,size,alignment) < 0)
+	      if (__split_area(pool, pa, size, alignment) < 0)
 		{
 		  PANIC("DMphys: split area failed!");
 		  return NULL;
@@ -815,15 +805,13 @@ __find_single_area(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static page_area_t * 
-__allocate_pages(page_pool_t * pool, 
-		 l4_size_t size, 
-		 int max_areas)
+__allocate_pages(page_pool_t * pool, l4_size_t size, int max_areas)
 {
   int list,n,found;
   page_area_t * pl, * pa;
 
-  LOGdL(DEBUG_PAGES_ALLOCATE,"pool %d:\n  size 0x%x (%uKb)",pool->pool,
-        size,size >> 10);
+  LOGdL(DEBUG_PAGES_ALLOCATE, "pool %d: size 0x%x (%uKb)",
+        pool->pool, size, size >> 10);
 
   n = max_areas;
   pl = NULL;
@@ -833,7 +821,7 @@ __allocate_pages(page_pool_t * pool,
 	{
 	  /* only one entry in area list left, search a single page area of 
 	   * the remaining size */
-	  pa = __find_single_area(pool,size,DMPHYS_PAGESIZE);
+	  pa = __find_single_area(pool, size, DMPHYS_PAGESIZE);
 	  if (pa == NULL)
 	    /* nothing found, stop */
 	    break;
@@ -845,9 +833,9 @@ __allocate_pages(page_pool_t * pool,
 	  size -= pa->size;
 
 #if DEBUG_PAGES_ALLOCATE
-	  printf("  %2d: 0x%08x-0x%08x, 0x%08x remaining\n",
+	  LOG_printf(" %2d: 0x%08x-0x%08x, 0x%08x remaining\n",
                  DMPHYS_MAX_DS_AREAS - max_areas,
-                 pa->addr,pa->addr + pa->size,size);
+                 pa->addr, pa->addr + pa->size, size);
 #endif
 	  /* finished search */
 	  break;
@@ -869,12 +857,12 @@ __allocate_pages(page_pool_t * pool,
 	      if (pa != NULL)
 		{
 		  /* found an area, remove from free list */
-		  __remove_free(pool,pa);
+		  __remove_free(pool, pa);
 
 		  if (pa->size > size)
 		    {
 		      /* area to large, split */
-		      if (__split_area(pool,pa,size,DMPHYS_PAGESIZE) < 0)
+		      if (__split_area(pool, pa, size, DMPHYS_PAGESIZE) < 0)
 			{
 			  PANIC("DMphys: split area failed!");
 			  return NULL;
@@ -891,9 +879,9 @@ __allocate_pages(page_pool_t * pool,
 		  found = 1;
 
 #if DEBUG_PAGES_ALLOCATE
-		  printf("  %2d: 0x%08x-0x%08x, 0x%08x remaining\n",
+		  LOG_printf(" %2d: 0x%08x-0x%08x, 0x%08x remaining\n",
                          DMPHYS_MAX_DS_AREAS - max_areas,
-                         pa->addr,pa->addr + pa->size,size);
+                         pa->addr, pa->addr + pa->size, size);
 #endif
 		}
 	      else
@@ -917,7 +905,7 @@ __allocate_pages(page_pool_t * pool,
 	  pa = pl; 
 	  pl = pl->ds_next;
 
-	  __release_area(pool,pa);
+	  __release_area(pool, pa);
 	}
       return NULL;
     }
@@ -938,16 +926,14 @@ __allocate_pages(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static page_area_t *
-__allocate_area(page_pool_t * pool, 
-		l4_addr_t addr, 
-		l4_size_t size)
+__allocate_area(page_pool_t * pool, l4_addr_t addr, l4_size_t size)
 {
   page_area_t * pa = pool->area_list;
   l4_addr_t ra;
   l4_size_t rs;
 
-  LOGdL(DEBUG_PAGES_ALLOCATE_AREA,"pool %d:\n  area 0x%08x-0x%08x (%uKB)",
-        pool->pool,addr,addr + size,size >> 10);
+  LOGdL(DEBUG_PAGES_ALLOCATE_AREA, "pool %d: area 0x%08x-0x%08x (%uKB)",
+        pool->pool, addr, addr + size, size >> 10);
 
   /* find area */
   while (pa && (addr >= (pa->addr + pa->size)))
@@ -970,11 +956,11 @@ __allocate_area(page_pool_t * pool,
     return NULL;
 
   /* remove area from free list */
-  __remove_free(pool,pa);
+  __remove_free(pool, pa);
 
 #if DEBUG_PAGES_ALLOCATE_AREA
-  printf("  using area at 0x%08x-0x%08x (%uKB)\n",
-         pa->addr,pa->addr + pa->size,pa->size >> 10);
+  LOG_printf(" using area at 0x%08x-0x%08x (%uKB)\n",
+         pa->addr, pa->addr + pa->size, pa->size >> 10);
 #endif
 
   /* resize area */
@@ -984,13 +970,13 @@ __allocate_area(page_pool_t * pool,
       rs = addr - pa->addr;
 
 #if DEBUG_PAGES_ALLOCATE_AREA
-      printf("  free area at beginning: 0x%08x-0x%08x\n",ra,ra + rs);
+      LOG_printf(" free area at beginning: 0x%08x-0x%08x\n", ra, ra + rs);
 #endif
 
       pa->addr = addr;
       pa->size -= rs;
  
-      if (__add_free_area(pool,ra,rs) < 0)
+      if (__add_free_area(pool, ra, rs) < 0)
 	{
 	  PANIC("DMphys: failed to add free area");
 	  return NULL;
@@ -1003,12 +989,12 @@ __allocate_area(page_pool_t * pool,
       rs = (pa->addr + pa->size) - ra;
 
 #if DEBUG_PAGES_ALLOCATE_AREA
-      printf("  free area at end:       0x%08x-0x%08x\n",ra,ra + rs);
+      LOG_printf(" free area at end:       0x%08x-0x%08x\n", ra, ra + rs);
 #endif
 
       pa->size = size;
 
-      if (__add_free_area(pool,ra,rs) < 0)
+      if (__add_free_area(pool, ra, rs) < 0)
 	{
 	  PANIC("DMphys: failed to add free area");
 	  return NULL;
@@ -1034,19 +1020,17 @@ __allocate_area(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 static int
-__enlarge_area(page_pool_t * pool, 
-	       page_area_t * area, 
-	       l4_size_t size)
+__enlarge_area(page_pool_t * pool, page_area_t * area, l4_size_t size)
 {
   page_area_t * pa = area->area_next;
 
-  LOGdL(DEBUG_PAGES_ENLARGE,"\n  area 0x%08x-0x%08x, add 0x%x\n",
-        area->addr,area->addr + area->size,size);
+  LOGdL(DEBUG_PAGES_ENLARGE, "area 0x%08x-0x%08x, add 0x%x\n",
+        area->addr, area->addr + area->size, size);
   
   if (pa == NULL)
     {
 #if DEBUG_PAGES_ENLARGE
-      printf("  no next area!\n");
+      LOG_printf(" no next area!\n");
 #endif
       return -1;
     }
@@ -1056,8 +1040,8 @@ __enlarge_area(page_pool_t * pool,
     return -1;
 
 #if DEBUG_PAGES_ENLARGE
-  printf("  next area 0x%08x-0x%08x, size 0x%x\n",pa->addr,pa->addr + pa->size,
-         pa->size);
+  LOG_printf(" next area 0x%08x-0x%08x, size 0x%x\n", 
+         pa->addr, pa->addr + pa->size, pa->size);
 #endif
 
   if ((area->addr + area->size) != pa->addr)
@@ -1069,13 +1053,13 @@ __enlarge_area(page_pool_t * pool,
     return -1;
 
   /* ok, we can enlarge area, remove next area from area ande free list */
-  if (__remove_free(pool,pa) < 0)
+  if (__remove_free(pool, pa) < 0)
     {
       PANIC("DMphys: remove next area from free list failed!");
       return -1;
     }
 
-  if (__remove_area(pool,pa) < 0)
+  if (__remove_area(pool, pa) < 0)
     {
       PANIC("DMphys: remove next area from free list failed!");
       return -1;
@@ -1085,8 +1069,8 @@ __enlarge_area(page_pool_t * pool,
   area->size += size;
 
 #if DEBUG_PAGES_ENLARGE
-  printf("  enlarged, area 0x%08x-0x%08x, size 0x%x\n",area->addr,
-         area->addr + area->size,area->size);
+  LOG_printf(" enlarged, area 0x%08x-0x%08x, size 0x%x\n", area->addr,
+         area->addr + area->size, area->size);
 #endif
 
   /* re-add rest of next area */
@@ -1095,22 +1079,22 @@ __enlarge_area(page_pool_t * pool,
   if (pa->size > 0)
     {
       /* add to area list */
-      if (__add_area(pool,pa) < 0)
+      if (__add_area(pool, pa) < 0)
 	{
 	  PANIC("DMphys: add remainder of next area to area list failed!");
 	  return -1;
 	}
       
       /* add to free list */
-      if (__add_free(pool,pa) < 0)
+      if (__add_free(pool, pa) < 0)
 	{
 	  PANIC("DMphys: add remainder of next area to free list failed!");
 	  return -1;
 	}
 
 #if DEBUG_PAGES_ENLARGE
-      printf("  remaining next area 0x%08x-0x%08x, size 0x%x\n",pa->addr,
-             pa->addr + pa->size,pa->size);
+      LOG_printf(" remaining next area 0x%08x-0x%08x, size 0x%x\n", pa->addr,
+             pa->addr + pa->size, pa->size);
 #endif
     }
   else
@@ -1119,7 +1103,7 @@ __enlarge_area(page_pool_t * pool,
       __release_area_desc(pa);
 
 #if DEBUG_PAGES_ENLARGE
-      printf("  no next area left\n");
+      LOG_printf(" no next area left\n");
 #endif
     }
 
@@ -1138,67 +1122,63 @@ __enlarge_area(page_pool_t * pool,
  * \param  pool          Page pool
  * \param  size          Requested size
  * \param  alignment     Requested alignment, it is only used if the 
- *                       L4DM_CONTIGUOUS flag is set
+ *                       #L4DM_CONTIGUOUS flag is set
  * \param  flags         Flags:
- *                       - \c L4DM_CONTIGUOUS      allocate contiguous area, 
- *                                                 default is to assemble 
- *                                                 pages from smaller areas
- *                       - \c L4DM_MEMPHYS_4MPAGES allocate 4MB-pages, this
- *                                                 implies \c L4DM_CONTIGUOUS
+ *                       - #L4DM_CONTIGUOUS      allocate contiguous area, 
+ *                                               default is to assemble 
+ *                                               pages from smaller areas
+ *                       - #L4DM_MEMPHYS_SUPERPAGES allocate super-pages, this
+ *                                               implies #L4DM_CONTIGUOUS
  * \param  prio          Allocation priority
  * \retval areas         Allocated areas
  *	
  * \return 0 on success (\a areas contains the list of allocated areas), 
  *         error code otherwise:
- *         - \c -L4_ENOMEM  no memory available
+ *         - -#L4_ENOMEM  no memory available
  */
 /*****************************************************************************/ 
 int
-dmphys_pages_allocate(page_pool_t * pool, 
-		      l4_size_t size, 
-		      l4_addr_t alignment, 
-		      l4_uint32_t flags, 
-		      int prio, 
-		      page_area_t ** areas)
+dmphys_pages_allocate(page_pool_t * pool, l4_size_t size, l4_addr_t alignment, 
+		      l4_uint32_t flags, int prio, page_area_t ** areas)
 {
   page_area_t * pa;
 
   /* check available memory */
   if (pool->free < size)
     {
-      ERROR("DMphys: no memory, size %uKB, left %uKB",
-	    size / 1024,pool->free / 1024);
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB",
+	    size / 1024, pool->free / 1024);
       return -L4_ENOMEM;
     }
 
   if ((prio == PAGES_USER) && ((pool->free - size) < pool->reserved))
     {
-      ERROR("DMphys: no memory, size %uKB, left %uKB, res. %uKB",
-	    size / 1024,pool->free / 1024,pool->reserved / 1024);
-      return -L4_ENOMEM;
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB, res. %uKB",
+	    size / 1024, pool->free / 1024, pool->reserved / 1024);
+      return -L4_ENOMEM ;
     }
 
   /* areas must be at least page-aligned */
   if (alignment < DMPHYS_PAGESIZE)
     alignment = DMPHYS_PAGESIZE;
 
-  if (flags & L4DM_MEMPHYS_4MPAGES)
+  if (flags & L4DM_MEMPHYS_SUPERPAGES)
     {
-      /* 4MB-pages requested, force L4DM_CONTIGUOUS and adapt size and 
+      /* super-pages requested, force L4DM_CONTIGUOUS and adapt size and 
        * alignment */
       flags |= L4DM_CONTIGUOUS;
 
-      if (alignment < DMPHYS_4MPAGESIZE)
-	alignment = DMPHYS_4MPAGESIZE;
+      if (alignment < DMPHYS_SUPERPAGESIZE)
+	alignment = DMPHYS_SUPERPAGESIZE;
 
-      size = (size + DMPHYS_4MPAGESIZE - 1) & ~(DMPHYS_4MPAGESIZE - 1);
+      size = (size + DMPHYS_SUPERPAGESIZE - 1) & ~(DMPHYS_SUPERPAGESIZE - 1);
     }
 
   /* allocate pages */
   if (flags & L4DM_CONTIGUOUS)
-    pa = __find_single_area(pool,size,alignment);
+    pa = __find_single_area(pool, size, alignment);
   else
-    pa = __allocate_pages(pool,size,DMPHYS_MAX_DS_AREAS);
+    pa = __allocate_pages(pool, size, DMPHYS_MAX_DS_AREAS);
 
   *areas = pa;
 
@@ -1222,35 +1202,32 @@ dmphys_pages_allocate(page_pool_t * pool,
  *
  * \return 0 on success (\a areas contains the allocated areas), 
  *         error code otherwise:
- *         - \c -L4_ENOMEM  memory area not available
+ *         - -#L4_ENOMEM  memory area not available
  */
 /*****************************************************************************/ 
 int
-dmphys_pages_allocate_area(page_pool_t * pool, 
-			   l4_addr_t addr, 
-			   l4_size_t size,
-			   int prio, 
-			   page_area_t ** area)
+dmphys_pages_allocate_area(page_pool_t * pool, l4_addr_t addr, l4_size_t size,
+			   int prio, page_area_t ** area)
 {
   page_area_t * pa;
   
   /* check available memory */
   if (pool->free < size)
     {
-      ERROR("DMphys: no memory, size %uKB, left %uKB",
-	    size / 1024,pool->free / 1024);
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB",
+	    size / 1024, pool->free / 1024);
       return -L4_ENOMEM;
     }
   
   if ((prio == PAGES_USER) && ((pool->free - size) < pool->reserved))
     {
-      ERROR("DMphys: no memory, size %uKB, left %uKB, res. %uKB",
-	    size / 1024,pool->free / 1024,pool->reserved / 1024);
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB, res. %uKB",
+	    size / 1024, pool->free / 1024, pool->reserved / 1024);
       return -L4_ENOMEM;
     }
 
   /* allocate area */
-  pa = __allocate_area(pool,addr,size);
+  pa = __allocate_area(pool, addr, size);
 
   *area = pa;
 
@@ -1270,8 +1247,7 @@ dmphys_pages_allocate_area(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 void
-dmphys_pages_release(page_pool_t * pool, 
-		     page_area_t * areas)
+dmphys_pages_release(page_pool_t * pool, page_area_t * areas)
 {
   page_area_t * pa;
 
@@ -1283,7 +1259,7 @@ dmphys_pages_release(page_pool_t * pool,
     {
       pa = areas;
       areas = areas->ds_next;
-      __release_area(pool,pa);
+      __release_area(pool, pa);
     }
 
   /* done */
@@ -1300,14 +1276,12 @@ dmphys_pages_release(page_pool_t * pool,
  *	
  * \return 0 on success (enlarged page area by \a size), 
  *         error code otherwise:
- *         - \c -L4_EINVAL  invalid page area / page pool
- *         - \c -L4_ENOMEM  memory area not available
+ *         - -#L4_EINVAL  invalid page area / page pool
+ *         - -#L4_ENOMEM  memory area not available
  */
 /*****************************************************************************/ 
 int
-dmphys_pages_enlarge(page_pool_t * pool, 
-		     page_area_t * area, 
-		     l4_size_t size,
+dmphys_pages_enlarge(page_pool_t * pool, page_area_t * area, l4_size_t size,
 		     int prio)
 {
   if ((pool == NULL) || (area == NULL))
@@ -1319,15 +1293,15 @@ dmphys_pages_enlarge(page_pool_t * pool,
   /* check available memory */
   if (pool->free < size)
     {
-      ERROR("DMphys: no memory, size %uKB, left %uKB",
-	    size / 1024,pool->free / 1024);
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB",
+	    size / 1024, pool->free / 1024);
       return -L4_ENOMEM;
     }
   
   if ((prio == PAGES_USER) && ((pool->free - size) < pool->reserved))
     {
-      ERROR("DMphys: no memory, size %uKB, left %uKB, res. %uKB",
-	    size / 1024,pool->free / 1024,pool->reserved / 1024);
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB, res. %uKB",
+	    size / 1024, pool->free / 1024, pool->reserved / 1024);
       return -L4_ENOMEM;
     }
 
@@ -1335,7 +1309,7 @@ dmphys_pages_enlarge(page_pool_t * pool,
   Assert(area->ds_next == NULL);
 
   /* try to enlarge */
-  if (__enlarge_area(pool,area,size) < 0)
+  if (__enlarge_area(pool, area, size) < 0)
     return -L4_ENOMEM;
   else
     return 0;
@@ -1351,14 +1325,12 @@ dmphys_pages_enlarge(page_pool_t * pool,
  * \param  prio          Allocation priority
  *	
  * \return 0 on success (added pages to page list), error code otherwise:
- *         - \c -L4_EINVAL  invalid page area / page pool
- *         - \c -L4_ENOMEM  memory area not available
+ *         - -#L4_EINVAL  invalid page area / page pool
+ *         - -#L4_ENOMEM  memory area not available
  */
 /*****************************************************************************/ 
 int
-dmphys_pages_add(page_pool_t * pool, 
-		 page_area_t * pages, 
-		 l4_size_t size,
+dmphys_pages_add(page_pool_t * pool, page_area_t * pages, l4_size_t size,
 		 int prio)
 {
   int num_old,max_new;
@@ -1371,15 +1343,15 @@ dmphys_pages_add(page_pool_t * pool,
   /* check available memory */
   if (pool->free < size)
     {
-      ERROR("DMphys: no memory, size %uKB, left %uKB",
-	    size / 1024,pool->free / 1024);
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB",
+	    size / 1024, pool->free / 1024);
       return -L4_ENOMEM;
     }
   
   if ((prio == PAGES_USER) && ((pool->free - size) < pool->reserved))
     {
-      ERROR("DMphys: no memory, size %uKB, left %uKB, res. %uKB",
-	    size / 1024,pool->free / 1024,pool->reserved / 1024);
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB, res. %uKB",
+	    size / 1024, pool->free / 1024, pool->reserved / 1024);
       return -L4_ENOMEM;
     }
 
@@ -1390,10 +1362,10 @@ dmphys_pages_add(page_pool_t * pool,
   else
     max_new = DMPHYS_MAX_DS_AREAS - num_old;
 
-  LOGdL(DEBUG_PAGES_ALLOCATE_ADD,"add 0x%x, max. %d area(s)",size,max_new);
+  LOGdL(DEBUG_PAGES_ALLOCATE_ADD, "add 0x%x, max. %d area(s)", size, max_new);
 
   /* allocate new pages */
-  new_pages = __allocate_pages(pool,size,max_new);
+  new_pages = __allocate_pages(pool, size, max_new);
   if (new_pages == NULL)
     return -L4_ENOMEM;
 
@@ -1402,8 +1374,8 @@ dmphys_pages_add(page_pool_t * pool,
   pa = new_pages;
   while (pa != NULL)
     {
-      printf("  0x%08x - 0x%08x (%u bytes)\n",
-             pa->addr,pa->addr + pa->size,pa->size);
+      LOG_printf("  0x%08x - 0x%08x (%u bytes)\n",
+             pa->addr, pa->addr + pa->size, pa->size);
       pa = pa->ds_next;
     }
 #endif
@@ -1427,13 +1399,11 @@ dmphys_pages_add(page_pool_t * pool,
  * \param  size          New size
  *	
  * \return 0 on success (shrinked page list), error code otherwise:
- *         - \c -L4_EINVAL invalid page area / page pool / size
+ *         - -#L4_EINVAL invalid page area / page pool / size
  */
 /*****************************************************************************/ 
 int
-dmphys_pages_shrink(page_pool_t * pool, 
-		    page_area_t * pages, 
-		    l4_size_t size)
+dmphys_pages_shrink(page_pool_t * pool, page_area_t * pages, l4_size_t size)
 {
   page_area_t * last, * pa;
   l4_size_t last_size,rs;
@@ -1443,14 +1413,14 @@ dmphys_pages_shrink(page_pool_t * pool,
     return -L4_EINVAL;
 
   /* find new last page area */
-  last = dmphys_pages_find_offset(pages,size - 1,&last_size);
+  last = dmphys_pages_find_offset(pages, size - 1, &last_size);
   if (last == NULL)
     return -L4_EINVAL;
   last_size++;
   
-  LOGdL(DEBUG_PAGES_SHRINK,"new size 0x%x\n" \
-        "  new last area 0x%08x-0x%08x, new size 0x%x",
-        size,last->addr,last->addr + last->size,last_size);
+  LOGdL(DEBUG_PAGES_SHRINK, 
+        "new size 0x%x, new last area 0x%08x-0x%08x, new size 0x%x",
+        size, last->addr, last->addr + last->size, last_size);
 
   /* shrink last page area */
   if (last->size > last_size)
@@ -1459,15 +1429,15 @@ dmphys_pages_shrink(page_pool_t * pool,
       rs = last->size - last_size;
 
       /* unmap freed area */
-      dmphys_unmap_area(ra,rs);
+      dmphys_unmap_area(ra, rs);
 
 #if DEBUG_PAGES_SHRINK
-      printf("  split new last area, free area 0x%08x-0x%08x, size 0x%x\n",
-             ra,ra + rs,rs);
+      LOG_printf(" split new last area, free area 0x%08x-0x%08x, size 0x%x\n",
+             ra, ra + rs, rs);
 #endif
 
       last->size = last_size;
-      if (__add_free_area(pool,ra,rs) < 0)
+      if (__add_free_area(pool, ra, rs) < 0)
 	{
 	  Panic("DMphys: add free page area failed!");
 	  return -L4_EINVAL;
@@ -1480,15 +1450,15 @@ dmphys_pages_shrink(page_pool_t * pool,
       pa = last->ds_next;
       last->ds_next = pa->ds_next;
 #if DEBUG_PAGES_SHRINK
-      printf("  free area 0x%08x-0x%08x, size 0x%x\n",pa->addr,
-             pa->addr + pa->size,pa->size);
+      LOG_printf(" free area 0x%08x-0x%08x, size 0x%x\n", pa->addr,
+             pa->addr + pa->size, pa->size);
 #endif
 
       /* unmap */
-      dmphys_unmap_area(pa->addr,pa->size);
+      dmphys_unmap_area(pa->addr, pa->size);
 
       /* release */
-      __release_area(pool,pa);
+      __release_area(pool, pa);
     }
 
   /* done */
@@ -1512,9 +1482,7 @@ dmphys_pages_shrink(page_pool_t * pool,
  */
 /*****************************************************************************/ 
 int
-dmphys_pages_add_free_area(int pool, 
-			   l4_addr_t addr, 
-			   l4_size_t size)
+dmphys_pages_add_free_area(int pool, l4_addr_t addr, l4_size_t size)
 {
   int ret;
 
@@ -1522,7 +1490,7 @@ dmphys_pages_add_free_area(int pool,
     return -1;
 
   /* add page area */
-  ret = __add_free_area(&page_pools[pool],addr,size);
+  ret = __add_free_area(&page_pools[pool], addr, size);
   if (ret < 0)
     return ret;
 
@@ -1545,12 +1513,12 @@ dmphys_pages_init(void)
   int i,j;
 
   /* initialize page area descriptor slab cache */
-  if (l4slab_cache_init(&area_cache,sizeof(page_area_t),0,
+  if (l4slab_cache_init(&area_cache, sizeof(page_area_t), 0,
 			dmphys_internal_alloc_grow,
 			dmphys_internal_alloc_release) < 0)
     return -1;
 
-  l4slab_set_data(&area_cache,area_cache_name);
+  l4slab_set_data(&area_cache, area_cache_name);
 
   /* init pool descriptors */
   for (i = 0; i < DMPHYS_NUM_POOLS; i++)
@@ -1579,9 +1547,7 @@ dmphys_pages_init(void)
  */
 /*****************************************************************************/ 
 void
-dmphys_pages_init_pool(int pool, 
-		       l4_size_t reserved, 
-		       char * name)
+dmphys_pages_init_pool(int pool, l4_size_t reserved, char * name)
 {
   if ((pool < 0) || (pool >= DMPHYS_NUM_POOLS))
     return;
@@ -1638,7 +1604,7 @@ dmphys_pages_dump_used_pools(void)
   page_pool_t * pool;
   page_area_t * pa;
 
-  printf("DMphys memory pools:\n");
+  LOG_printf("DMphys memory pools:\n");
   for (i = 0; i < DMPHYS_NUM_POOLS; i++)
     {
       if (page_pools[i].size != 0)
@@ -1647,16 +1613,17 @@ dmphys_pages_dump_used_pools(void)
 	  pa = pool->area_list;
   
 	  if ((pool->name != NULL) && (strlen(pool->name) > 0))
-	    printf("  pool %d (%s):\n",pool->pool,pool->name);
+	    LOG_printf("  pool %d (%s):\n", pool->pool, pool->name);
 	  else
-	    printf("  pool %d:\n",pool->pool);
-	  printf("  size: %6uKB total, %6uKB free, %3uKB reserved\n",
-                 pool->size / 1024,pool->free / 1024,pool->reserved / 1024);
+	    LOG_printf("  pool %d:\n", pool->pool);
+	  LOG_printf("  size: %6uKB total, %6uKB free, %3uKB reserved\n",
+                 pool->size / 1024, pool->free / 1024, pool->reserved / 1024);
 
 	  while (pa)
 	    {
-	      printf("    0x%08x-0x%08x (%6uKB)\n",
-                     pa->addr,pa->addr + pa->size,pa->size >> 10);
+	      LOG_printf("    0x%08x-0x%08x (%6uKB, %4uMB)\n",
+                     pa->addr, pa->addr + pa->size, 
+		     (pa->size+(1<<9)-1) >> 10, (pa->size+(1<<19)-1) >> 20);
 	      pa = pa->area_next;
 	    }
 	}	  
@@ -1676,22 +1643,23 @@ dmphys_pages_dump_areas(page_pool_t * pool)
   page_area_t * pa = pool->area_list;
 
   /* dump area list */
-  printf("DMphys memory pool areas:\n");  
+  LOG_printf("DMphys memory pool areas:\n");  
   if ((pool->name != NULL) && (strlen(pool->name) > 0))
-    printf("  pool %d (%s)\n",pool->pool,pool->name);
+    LOG_printf("  pool %d (%s)\n", pool->pool, pool->name);
   else
-    printf("  pool %d\n",pool->pool);
-  printf("  size: %6uKB total, %6uKB free, %3uKB reserved\n",
-         pool->size / 1024,pool->free / 1024,pool->reserved / 1024);
+    LOG_printf("  pool %d\n", pool->pool);
+  LOG_printf("  size: %6uKB total, %6uKB free, %3uKB reserved\n",
+         pool->size / 1024, pool->free / 1024, pool->reserved / 1024);
 
   while (pa)
     {
-      printf("    0x%08x-0x%08x (%6uKB), ",
-             pa->addr,pa->addr + pa->size,pa->size >> 10);
+      LOG_printf("    0x%08x-0x%08x (%6uKB, %4uMB), ",
+             pa->addr, pa->addr + pa->size, 
+	     (pa->size+(1<<9)-1) >> 10, (pa->size+(1<<19)-1) >> 20);
       if (IS_UNUSED_AREA(pa))
-	printf("free\n");
+	LOG_printf("free\n");
       else
-	printf("used\n");
+	LOG_printf("used\n");
       pa = pa->area_next;
     }
 }
@@ -1710,24 +1678,25 @@ dmphys_pages_dump_free(page_pool_t * pool)
   page_area_t * pa;
 
   /* dump free lists */
-  printf("DMphys memory pool free lists:\n");
+  LOG_printf("DMphys memory pool free lists:\n");
   if ((pool->name != NULL) && (strlen(pool->name) > 0))
-    printf("  pool %d (%s)\n",pool->pool,pool->name);
+    LOG_printf("  pool %d (%s)\n", pool->pool, pool->name);
   else
-    printf("  pool %d\n",pool->pool);
-  printf("  size: %6uKB total, %6uKB free, %3uKB reserved\n",
-         pool->size / 1024,pool->free / 1024,pool->reserved / 1024);
+    LOG_printf("  pool %d\n", pool->pool);
+  LOG_printf("  size: %6uKB total, %6uKB free, %3uKB reserved\n",
+         pool->size / 1024, pool->free / 1024, pool->reserved / 1024);
   
   for (i = 0; i < DMPHYS_NUM_FREE_LISTS; i++)
     {
-      printf("    %2d (sizes %6uKB - %6uKB):\n",i,
+      LOG_printf("    %2d (sizes %6uKB - %6uKB):\n",i,
              (1 << (DMPHYS_LOG2_PAGESIZE + i)) >> 10,
              (1 << (DMPHYS_LOG2_PAGESIZE + i + 1)) >> 10);
       pa = pool->free_list[i];
       while (pa)
 	{
-	  printf("       0x%08x-0x%08x (%6uKB)\n",
-                 pa->addr,pa->addr + pa->size,pa->size >> 10);
+	  LOG_printf("       0x%08x-0x%08x (%6uKB, %4uMB)\n",
+                 pa->addr, pa->addr + pa->size,
+		 (pa->size+(1<<9)-1) >> 10, (pa->size+(1<<19)-1) >> 20);
 	  pa = pa->free_next;	  
 	}
     }
@@ -1748,8 +1717,8 @@ dmphys_pages_list(page_area_t * list)
   /* show list dataspace page area list */
   while (area != NULL)
     {
-      printf("    0x%08x - 0x%08x (%uKB)\n",
-             area->addr,area->addr + area->size,area->size / 1024);
+      LOG_printf("    0x%08x - 0x%08x (%uKB)\n",
+             area->addr, area->addr + area->size, area->size / 1024);
       area = area->ds_next;
     }
 }

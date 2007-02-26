@@ -33,6 +33,11 @@ somefunc(unsigned (*func1)(),
 {
 }
 
+// Try function-pointer typedef
+typedef int (* diag_printf_t) (const char *, ...);
+typedef int (**dblfptr) (void);
+typedef int (* arrfptr[20]) (void);
+
 // Try to initialize a nested structure object.
 struct Foo::Bar some_bar = { 1 };
 

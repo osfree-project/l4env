@@ -1,30 +1,25 @@
 /* ARM specific */
 
-INTERFACE:
+INTERFACE [arm]:
 #include "types.h"
 
-
-
-IMPLEMENTATION:
+//---------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
 #include <cstdlib>
 #include <cstdio>
 #include <initfini.h>
 #include "boot_info.h"
-
+#include "terminate.h"
 
 extern "C" int main(void);
 
 void console_init();
 
 extern "C" 
-void __main( void* kip )
+void __main( )
 {
-  Boot_info::set_kip((Kernel_info*)kip);
-
   atexit(&static_destruction);
   static_construction();
-
-  exit(main());
+  terminate(main());
 }
-
 

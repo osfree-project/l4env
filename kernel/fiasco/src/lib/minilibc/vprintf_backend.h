@@ -13,7 +13,7 @@ struct output_op {
 
 __BEGIN_DECLS
 
-int __v_printf(struct output_op* fn, const unsigned char *format, va_list arg_ptr);
+int __v_printf(struct output_op* fn, const char *format, va_list arg_ptr);
 
 __END_DECLS
 

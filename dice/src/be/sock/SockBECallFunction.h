@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/SockBECallFunction.h
- *	\brief	contains the declaration of the class CBESockCallFunction
+ *  \file   dice/src/be/sock/SockBECallFunction.h
+ *  \brief  contains the declaration of the class CBESockCallFunction
  *
- *	\date	11/28/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   11/28/2002
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -40,17 +41,16 @@
  */
 class CSockBECallFunction : public CBECallFunction
 {
-DECLARE_DYNAMIC(CSockBECallFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CSockBECallFunction();
-	virtual ~CSockBECallFunction();
+    /** \brief constructor
+     */
+    CSockBECallFunction();
+    virtual ~CSockBECallFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CSockBECallFunction(CSockBECallFunction &src);
+    /** \brief copy constructor */
+    CSockBECallFunction(CSockBECallFunction &src);
 
     virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);

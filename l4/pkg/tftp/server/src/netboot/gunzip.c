@@ -1,6 +1,5 @@
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 1996  Erich Boleyn  <erich@uruk.org>
  *  Copyright (C) 1999  Free Software Foundation, Inc.
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -124,12 +123,17 @@
       the two sets of lengths.
  */
 
+#ifndef NO_DECOMPRESSION
+
 #include "shared.h"
 #include "filesys.h"
+#include "etherboot.h"
 #include "netboot.h"
 #include "grub_emu.h"
 
-int gunzip_buf = 0;
+unsigned gunzip_buf;
+
+#define grub_read netboot_read
 
 /* so we can disable decompression  */
 int no_decompression = 0;
@@ -165,11 +169,6 @@ static void *
 linalloc (int size)
 {
   linalloc_topaddr = (linalloc_topaddr - size) & ~3;
-  if (linalloc_topaddr < gunzip_buf)
-    {
-      printf("gunzip buffer overflow -- increate GUNZIP_SIZE!\n");
-      return (void *) gunzip_buf;
-    }
   return (void *) linalloc_topaddr;
 }
 
@@ -223,7 +222,7 @@ bad_field (int len)
 	    break;
 	}
     }
-  while ((not_retval = netboot_read (&ch, 1)) == 1);
+  while ((not_retval = grub_read (&ch, 1)) == 1);
 
   return (!not_retval);
 }
@@ -284,7 +283,7 @@ gunzip_test_header (void)
    *  is a compressed file, and simply mark it as such.
    */
   if (no_decompression
-      || netboot_read (buf, 10) != 10
+      || grub_read (buf, 10) != 10
       || ((*((unsigned short *) buf) != GZIP_HDR_LE)
 	  && (*((unsigned short *) buf) != OLD_GZIP_HDR_LE)))
     {
@@ -300,7 +299,7 @@ gunzip_test_header (void)
   if (buf[2] != DEFLATED
       || (buf[3] & UNSUPP_FLAGS)
       || ((buf[3] & EXTRA_FIELD)
-	  && (netboot_read (buf, 2) != 2
+	  && (grub_read (buf, 2) != 2
 	      || bad_field (*((unsigned short *) buf))))
       || ((buf[3] & ORIG_NAME) && bad_field (-1))
       || ((buf[3] & COMMENT) && bad_field (-1)))
@@ -315,7 +314,7 @@ gunzip_test_header (void)
   
   filepos = filemax - 8;
   
-  if (netboot_read (buf, 8) != 8)
+  if (grub_read (buf, 8) != 8)
     {
       if (! errnum)
 	errnum = ERR_BAD_GZIP_HEADER;
@@ -501,7 +500,7 @@ get_byte (void)
   if (filepos == gzip_data_offset || bufloc == INBUFSIZ)
     {
       bufloc = 0;
-      netboot_read (inbuf, INBUFSIZ);
+      grub_read (inbuf, INBUFSIZ);
     }
 
   return inbuf[bufloc++];
@@ -814,7 +813,7 @@ inflate_codes_in_window (void)
 		    : e);
 	      if (w - d >= e)
 		{
-		  grub_memmove (slide + w, slide + d, e);
+		  memmove (slide + w, slide + d, e);
 		  w += e;
 		  d += e;
 		}
@@ -1219,7 +1218,7 @@ gunzip_read (char *buf, int len)
       if (size > len)
 	size = len;
 
-      grub_memmove (buf, srcaddr, size);
+      memmove (buf, srcaddr, size);
 
       buf += size;
       len -= size;
@@ -1238,3 +1237,5 @@ gunzip_read (char *buf, int len)
 
   return ret;
 }
+
+#endif /* ! NO_DECOMPRESSION */

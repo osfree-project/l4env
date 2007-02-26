@@ -1,4 +1,10 @@
 /*
+ * (c) 2004 Technische Universität Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
+/*
  * Header files for lxfuxlc.c
  */
 #ifndef __LXFUXLC_H__
@@ -19,6 +25,8 @@ struct lx_timezone {
 typedef struct {
   unsigned long fds_bits[(1024/(8 * sizeof(unsigned long)))];
 } lx_fd_set;
+
+typedef long unsigned int lx_size_t;
 
 /* -- sys/poll.h */
 
@@ -96,6 +104,45 @@ struct lx_stat {
 #define LX_O_DIRECTORY     0200000 /* must be a directory */
 #define LX_O_NOFOLLOW      0400000 /* don't follow links */
 
+/*
+ * Signal numbers
+ */
+
+#define LX_SIGHUP	1
+#define LX_SIGINT	2
+#define LX_SIGQUIT	3
+#define LX_SIGILL	4
+#define LX_SIGTRAP	5
+#define LX_SIGABRT	6
+#define LX_SIGIOT	6
+#define LX_SIGBUS	7
+#define LX_SIGFPE	8
+#define LX_SIGKILL	9
+#define LX_SIGUSR1	10
+#define LX_SIGSEGV	11
+#define LX_SIGUSR2	12
+#define LX_SIGPIPE	13
+#define LX_SIGALRM	14
+#define LX_SIGTERM	15
+#define LX_SIGSTKFLT	16
+#define LX_SIGCHLD	17
+#define LX_SIGCONT	18
+#define LX_SIGSTOP	19
+#define LX_SIGTSTP	20
+#define LX_SIGTTIN	21
+#define LX_SIGTTOU	22
+#define LX_SIGURG	23
+#define LX_SIGXCPU	24
+#define LX_SIGXFSZ	25
+#define LX_SIGVTALRM	26
+#define LX_SIGPROF	27
+#define LX_SIGWINCH	28
+#define LX_SIGIO	29
+#define LX_SIGPOLL	LX_SIGIO
+#define LX_SIGPWR	30
+#define LX_SIGSYS	31
+#define LX_SIGUNUSED	31
+
 
 /*
  * Syscall functions
@@ -110,6 +157,7 @@ extern long lx_close(unsigned int fd);
 extern lx_pid_t lx_waitpid(lx_pid_t pid, int * wait_stat, int options);
 extern unsigned long lx_lseek(unsigned int fd, unsigned long offset, unsigned int origin);
 extern long lx_getpid(void);
+extern int  lx_kill(lx_pid_t pid, int sig);
 extern int  lx_pipe(int filesdes[2]);
 extern long lx_gettimeofday(struct lx_timeval *tv, struct lx_timezone *tz);
 extern int  lx_stat(const char *filename, struct lx_stat *buf);
@@ -118,6 +166,7 @@ extern int  lx_lstat(const char *filename, struct lx_stat *buf);
 extern int  lx_ipc(unsigned int call, int first, int second, int third, const void *ptr, long fifth);
 extern int  lx_select(int n, lx_fd_set *readfds, lx_fd_set *writefds, lx_fd_set *exceptfds, struct lx_timeval *timeout);
 extern int  lx_poll(struct lx_pollfd *fds, lx_nfds_t nfds, int timeout);
+extern long lx_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg);
 
 /*
  * Wrapper functions
@@ -133,11 +182,37 @@ extern void *lx_shmat(int shmid, const void *shmaddr, int shmflg);
 extern void lx_outchar(unsigned char c);
 extern void lx_outdec32(unsigned int i);
 
+/*
+ * stdio.h
+ */
+
 #ifndef SEEK_SET
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
 #endif
+
+#ifndef LX_EOF
+#define LX_EOF (-1)
+#endif
+
+typedef struct {
+  int fd;
+  int flags;
+  int taken;
+} LX_FILE;
+
+LX_FILE *lx_fopen(const char *filename, const char *mode);
+LX_FILE *lx_fdopen(int fildes, const char *mode);
+int lx_fseek(LX_FILE *f, long offset, int whence);
+lx_size_t lx_fread(void *ptr, lx_size_t size, lx_size_t nmemb, LX_FILE *f);
+lx_size_t lx_fwrite(const void *ptr, lx_size_t size, lx_size_t nmemb, LX_FILE *f);
+long lx_ftell(LX_FILE *f);
+void lx_rewind(LX_FILE *f);
+int lx_fclose(LX_FILE *f);
+int lx_fflush(LX_FILE *f);
+int lx_fputc(int c, LX_FILE *f);
+int lx_fprintf(LX_FILE *f, const char *format, ...);
 
 
 #define SHMAT		21

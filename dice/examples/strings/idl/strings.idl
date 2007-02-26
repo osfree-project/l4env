@@ -100,6 +100,14 @@ library strings
     {
       void f1([in, string] char* str1, [out, ref, string] char** str2);
     };
+
+  /*
+   * Interface ten tries to send an array of strings to the server.
+   */
+  interface ten
+    {
+      void f1([in] int argc, [in, string, size_is(argc), max_is(100)] char *argv[]);
+    };
   
 };
 

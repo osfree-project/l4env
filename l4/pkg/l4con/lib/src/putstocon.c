@@ -20,7 +20,7 @@
  */
 /*****************************************************************************/
 static void
-_putstocon(int x, int y, l4_uint8_t *s, int len)
+_putstocon(int x, int y, l4_int8_t *s, int len)
 {
   CORBA_Environment env = dice_default_environment;
 
@@ -28,5 +28,5 @@ _putstocon(int x, int y, l4_uint8_t *s, int len)
 		   fg_color, bg_color, &env);
 }
 
-void (*putstocon)(int, int, l4_uint8_t *, int) = _putstocon;
+void (*putstocon)(int, int, l4_int8_t *, int) = _putstocon;
 

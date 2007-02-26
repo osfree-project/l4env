@@ -37,4 +37,19 @@ interface simple
    * references should be dereferenced
    */
   void func7([in] int *t71);
+  /**
+   * test doubles
+   */
+  void func8([in] double t81);
+  void func9([out] double *t91);
+  /**
+   * test alignment
+   */
+  void func10([in] short ta1, [in] long ta2);
+
+  /**
+   * test [ignore] attribute
+   */
+  void func11([in, ignore] short tb1, [in] long tb2,
+      [out, ignore] short *tb3, [out] long *tb4);
 };

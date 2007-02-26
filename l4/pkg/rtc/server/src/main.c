@@ -26,7 +26,7 @@ void get_base_time(void);
 int
 l4rtc_if_get_offset_component(CORBA_Object _dice_corba_obj,
 			      l4_uint32_t *offset,
-		    	      CORBA_Environment *_dice_corba_env)
+		    	      CORBA_Server_Environment *_dice_corba_env)
 {
   *offset = system_time_offs_rel_1970;
   return 0;
@@ -35,7 +35,7 @@ l4rtc_if_get_offset_component(CORBA_Object _dice_corba_obj,
 int
 l4rtc_if_get_linux_tsc_scaler_component(CORBA_Object _dice_corba_obj,
 					l4_uint32_t *scaler,
-					CORBA_Environment *_dice_corba_env)
+					CORBA_Server_Environment *_dice_corba_env)
 {
   *scaler = l4_scaler_tsc_linux;
   return 0;

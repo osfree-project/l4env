@@ -24,7 +24,7 @@ static l4_uint32_t s_offs_to_systime;
 static l4_uint32_t linux_scaler;
 
 /* We need to define this scaler here for use with l4_tsc_to_ns */
-static l4_uint32_t l4_scaler_tsc_to_ns;
+l4_uint32_t l4_scaler_tsc_to_ns;
 
 /**
  * A fast and cheap way to calculate without violate the 32-bit range */
@@ -85,6 +85,20 @@ l4rtc_get_seconds_since_1970(l4_uint32_t *seconds)
 
   l4_tsc_to_s_and_ns(l4_rdtsc(), &s, &ns);
   *seconds = s + s_offs_to_systime;
+  return 0;
+}
+
+/**
+ * Deliver the offset between real time and system's uptime in seconds.
+ * Some applications want to compute their time in other ways as done
+ * in l4rtc_get_seconds_since_1970(). */
+int
+l4rtc_get_offset_to_realtime(l4_uint32_t *offset)
+{
+  if (init_done())
+    return -L4_EINVAL;
+
+  *offset = s_offs_to_systime;
   return 0;
 }
 

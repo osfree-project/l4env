@@ -9,16 +9,13 @@ endif
 # sorry for my ignorance #
 XF86TREE        ?= /home/nf2/src/xfree-4.2.1
 
-TARGET           = ovlinput_drv.o
-SRC_C            = ovlinput.c dummy.c
+TARGET           = lxevent_drv.o
+SRC_C            = lxevent.c
 MODE             = host
-LIBS             = -ll4ovlinput -lnames -lthread_linux -lsemaphore -lthread_linux \
-                   -ll4util -lrmgr
-LIBCINCDIR       = $(addprefix -I,$(L4INCDIR))
 LDFLAGS          = -r -nostdlib -nostartfiles
 LDSCRIPT         = $(call findfile,main_rel.ld,$(L4LIBDIR))
 
-CPPFLAGS_ovlinput.c = \
+CPPFLAGS_lxevent.c = \
                  -Dlinux -D__i386__ \
                  -D_POSIX_C_SOURCE=199309L -D_POSIX_SOURCE \
                  -D_XOPEN_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_GNU_SOURCE \
@@ -57,8 +54,11 @@ INSTALLFILE_BIN_LOCAL = $(STRIP) --strip-unneeded $(1) \
 
 include $(L4DIR)/mk/prog.mk
 
+ifeq ($(FORCE_GCC295),yes)
+include $(PKGDIR)/examples/xf86input/Makeconf
+endif
 
 ifneq ($(SYSTEM),)
 all::
-	objcopy -G ovlinputModuleData $(TARGET) $(TARGET)
+	objcopy -G lxeventModuleData $(TARGET) $(TARGET)
 endif

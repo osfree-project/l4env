@@ -1,0 +1,29 @@
+/* -*- c -*- */ 
+/**
+ * \file   l4vfs/idl/connection.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief Interface for connection oriented servers
+     */
+    [uuid(100)]
+    interface connection
+    {
+        l4_threadid_t init_connection(void);
+        void          close_connection([in] l4_threadid_t server);
+    };
+};

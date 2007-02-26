@@ -1,34 +1,27 @@
 INTERFACE:
 
-#include "types.h"
+#include "initcalls.h"
+#include "l4_types.h"
 
-class L4_uid;
 class Tb_entry;
 
 class Jdb_tbuf_output
 {
-public:
-  static int  thread_eip (int e_nr, L4_uid *tid, Mword *eip);
-  static void print_entry(Tb_entry *e, char *buf, int maxlen);
-  static void print_entry(int e_nr, char *buf, int maxlen);
-  static void init();
-  typedef unsigned (Format_entry_fn)(Tb_entry *tb, L4_uid tid, 
-				     char *buf, int maxlen);
-  static void register_ff(Unsigned8 type, Format_entry_fn format_entry_fn);
-
 private:
+  typedef unsigned (Format_entry_fn)(Tb_entry *tb, const char *tidstr,
+				     char *buf, int maxlen);
   static Format_entry_fn *_format_entry_fn[];
 };
 
 IMPLEMENTATION:
 
-#include <cstdarg>
 #include <cstdlib>
 #include <cstdio>
 
 #include "assert.h"
 #include "config.h"
 #include "initcalls.h"
+#include "jdb.h"
 #include "jdb_symbol.h"
 #include "jdb_tbuf.h"
 #include "kdb_ke.h"
@@ -42,10 +35,13 @@ IMPLEMENTATION:
 #include "watchdog.h"
 
 
-#define MAX_TBUF	16
+int jdb_regex_init(const char *searchstr)
+  __attribute__((weak));
 
+int jdb_regex_find(const char *buffer, const char **beg, const char **end)
+  __attribute__((weak));
 
-Jdb_tbuf_output::Format_entry_fn *Jdb_tbuf_output::_format_entry_fn[MAX_TBUF];
+Jdb_tbuf_output::Format_entry_fn *Jdb_tbuf_output::_format_entry_fn[Tbuf_max];
 
 static void
 console_log_entry(Tb_entry *e, const char *)
@@ -55,15 +51,17 @@ console_log_entry(Tb_entry *e, const char *)
   // disable all interrupts to stop other threads
   Watchdog::disable();
   Proc::Status s = Proc::cli_save();
-  
+ 
   Jdb_tbuf_output::print_entry(e, log_message, sizeof(log_message));
   printf("%s\n", log_message);
   
   // do not use getchar here because we ran cli'd 
   // and getchar may do halt
   int c;
+  Jdb::enter_getchar();
   while ((c=Kconsole::console()->getchar(false)) == -1)
     Proc::pause();
+  Jdb::leave_getchar();
   if (c == 'i')
     kdb_ke("LOG");
   if (c == '^')
@@ -76,16 +74,18 @@ console_log_entry(Tb_entry *e, const char *)
 
 PRIVATE static
 unsigned
-Jdb_tbuf_output::dummy_format_entry(Tb_entry *tb, L4_uid, char *buf, int maxlen)
+Jdb_tbuf_output::dummy_format_entry (Tb_entry *tb, const char *,
+				     char *buf, int maxlen)
 {
-  return snprintf(buf, maxlen,
-	 " << no format_entry_fn for type %d registered >>", tb->type());
+  int len = snprintf(buf, maxlen,
+      " << no format_entry_fn for type %d registered >>", tb->type());
+  return len >= maxlen ? maxlen-1 : len;
 }
 
 STATIC_INITIALIZE(Jdb_tbuf_output);
 
-IMPLEMENT FIASCO_INIT
-void
+PUBLIC static
+void FIASCO_INIT
 Jdb_tbuf_output::init()
 {
   unsigned i;
@@ -96,11 +96,11 @@ Jdb_tbuf_output::init()
       _format_entry_fn[i] = dummy_format_entry;
 }
 
-IMPLEMENT
+PUBLIC static
 void
 Jdb_tbuf_output::register_ff(Unsigned8 type, Format_entry_fn format_entry_fn)
 {
-  assert(type < MAX_TBUF);
+  assert(type < Tbuf_max);
 
   if (   (_format_entry_fn[type] != 0)
       && (_format_entry_fn[type] != dummy_format_entry))
@@ -109,24 +109,24 @@ Jdb_tbuf_output::register_ff(Unsigned8 type, Format_entry_fn format_entry_fn)
   _format_entry_fn[type] = format_entry_fn;
 }
 
-// return task+eip of entry <e_nr>
-IMPLEMENT
+// return task+ip of entry <e_nr>
+PUBLIC static
 int
-Jdb_tbuf_output::thread_eip(int e_nr, L4_uid *tid, Mword *eip)
+Jdb_tbuf_output::thread_ip(int e_nr, Global_id *tid, Mword *ip)
 {
   Tb_entry *e = Jdb_tbuf::lookup(e_nr);
 
   if (!e)
     return false;
 
-  Thread *t = Thread::lookup(e->tid());
-  *tid = t ? t->id() : L4_uid(L4_uid::INVALID);
-  *eip = e->eip();
+  Thread *t = Thread::lookup(e->ctx());
+  *tid = t && t->is_valid() ? t->id() : Global_id(L4_uid::Invalid);
+  *ip = e->ip();
 
   return true;
 }
 
-IMPLEMENT
+PUBLIC static
 void
 Jdb_tbuf_output::print_entry(int e_nr, char *buf, int maxlen)
 {
@@ -136,14 +136,25 @@ Jdb_tbuf_output::print_entry(int e_nr, char *buf, int maxlen)
     print_entry(tb, buf, maxlen);
 }
 
-IMPLEMENT
-void Jdb_tbuf_output::print_entry(Tb_entry *tb, char *buf, int maxlen)
+PUBLIC static
+void
+Jdb_tbuf_output::print_entry(Tb_entry *tb, char *buf, int maxlen)
 {
-  assert(tb->type() < MAX_TBUF);
+  assert(tb->type() < Tbuf_max);
 
-  Thread *t  = Thread::lookup(tb->tid());
-  L4_uid tid = t ? t->id() : L4_uid(L4_uid::INVALID);
-  unsigned len = _format_entry_fn[tb->type()](tb, tid, buf, maxlen);
+  char tidstr[16];
+  Thread *t = Thread::lookup(tb->ctx());
+ 
+  if (!t)
+    strcpy(tidstr, "---.---");
+  else
+    {
+      Global_id g((Address)tb->ctx(), Mem_layout::Tcbs,
+		  Config::thread_block_size);
+      snprintf(tidstr, sizeof(tidstr), "%x.%02x", g.d_task(), g.d_thread());
+    }
+
+  unsigned len = _format_entry_fn[tb->type()](tb, tidstr, buf, maxlen);
 
   // terminate string
   buf += maxlen-len;
@@ -152,3 +163,55 @@ void Jdb_tbuf_output::print_entry(Tb_entry *tb, char *buf, int maxlen)
   buf[-1] = '\0';
 }
 
+PUBLIC static
+bool
+Jdb_tbuf_output::set_filter(const char *filter_str, Mword *entries)
+{
+  if (*filter_str && jdb_regex_init != 0 && !jdb_regex_init(filter_str))
+    return false;
+
+  if (!*filter_str)
+    {
+      for (Mword n=0; n<Jdb_tbuf::unfiltered_entries(); n++)
+	Jdb_tbuf::unfiltered_lookup(n)->unhide();
+
+      Jdb_tbuf::disable_filter();
+      if (entries)
+	*entries = Jdb_tbuf::unfiltered_entries();
+      return true;
+    }
+
+  Mword cnt = 0;
+
+  for (Mword n=0; n<Jdb_tbuf::unfiltered_entries(); n++)
+    {
+      Tb_entry *e = Jdb_tbuf::unfiltered_lookup(n);
+      char s[80];
+
+      print_entry(e, s, sizeof(s));
+      if (jdb_regex_find != 0)
+	{
+	  if (jdb_regex_find(s, 0, 0))
+	    {
+	      e->unhide();
+	      cnt++;
+	      continue;
+	    }
+	}
+      else
+	{
+	  if (strstr(s, filter_str))
+	    {
+	      e->unhide();
+	      cnt++;
+	      continue;
+	    }
+	}
+      e->hide();
+    }
+
+  if (entries)
+    *entries = cnt;
+  Jdb_tbuf::enable_filter();
+  return true;
+}

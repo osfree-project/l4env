@@ -3,6 +3,9 @@ INTERFACE:
 // The anonymous slab allocator.  You can specialize this allocator by
 // providing your own initialization functions and your own low-level
 // allocation functions.
+
+class slab;
+
 class slab_cache_anon
 {
 protected:
@@ -181,7 +184,7 @@ void
 slab::free(void *entry)
 {
   slab_entry *e = reinterpret_cast<slab_entry *>
-    (reinterpret_cast<char*>(entry) - offsetof(slab_entry, _entry[0]));
+    (reinterpret_cast<char*>(entry) - offsetof(slab_entry, _entry));
 
   e->_next_free = _data._first_free;
   _data._first_free = e;

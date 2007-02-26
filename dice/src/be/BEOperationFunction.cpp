@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BEOperationFunction.cpp
- *	\brief	contains the implementation of the class CBEOperationFunction
+ *    \file    dice/src/be/BEOperationFunction.cpp
+ *    \brief   contains the implementation of the class CBEOperationFunction
  *
- *	\date	01/14/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/14/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -39,118 +40,150 @@
 
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
-#include "fe/FEAttribute.h"
+#include "Attribute-Type.h"
 #include "fe/FEInterface.h"
 #include "fe/FEStringAttribute.h"
 
-IMPLEMENT_DYNAMIC(CBEOperationFunction);
-
 CBEOperationFunction::CBEOperationFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEOperationFunction, CBEFunction);
 }
 
-CBEOperationFunction::CBEOperationFunction(CBEOperationFunction & src):CBEFunction(src)
+CBEOperationFunction::CBEOperationFunction(CBEOperationFunction & src)
+ : CBEFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEOperationFunction, CBEFunction);
 }
 
-/**	\brief destructor of target class */
+/**  \brief destructor of target class */
 CBEOperationFunction::~CBEOperationFunction()
 {
 
 }
 
-/**	\brief prepares this class for further deployment using the front-end operation
- *	\param pFEOperation the respective front.end operation
- *	\param pContext the context of the code generation
- *	\return true if the code generation was succesful
+/** \brief prepares this class for further deployment using the front-end operation
+ *  \param pFEOperation the respective front.end operation
+ *  \param pContext the context of the code generation
+ *  \return true if the code generation was succesful
  *
- * This implementation adds the attributes, types, parameters, exception, etc. given by the front-end function to
- * this instance of the back-end function.
+ * This implementation adds the attributes, types, parameters, exception, etc.
+ * given by the front-end function to this instance of the back-end function.
  */
-bool CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
+bool 
+CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation, 
+    CBEContext * pContext)
 {
+    assert(pFEOperation);
     // basic init
-    CBEFunction::CreateBackEnd(pContext);
+    CBEFunction::CreateBackEnd(pFEOperation, pContext);
     // add attributes
     if (!AddAttributes(pFEOperation, pContext))
     {
-        VERBOSE("%s failed because attributes could not be added\n", __PRETTY_FUNCTION__);
+        VERBOSE("%s failed because attributes could not be added\n", 
+	    __PRETTY_FUNCTION__);
         return false;
     }
     // add return type
-    String sReturn = pContext->GetNameFactory()->GetReturnVariable(pContext);
+    CBENameFactory *pNF = pContext->GetNameFactory();
+    string sReturn = pNF->GetReturnVariable(pContext);
     if (!SetReturnVar(pFEOperation->GetReturnType(), sReturn, pContext))
     {
-        VERBOSE("CBEOperationFunction::CreateBE failed because return var could not be set\n");
+        VERBOSE("%s failed because return var could not be set\n",
+	    __PRETTY_FUNCTION__);
         return false;
     }
     // add parameters
     if (!AddParameters(pFEOperation, pContext))
     {
-        VERBOSE("%s failed because parameters could not be added\n", __PRETTY_FUNCTION__);
+        VERBOSE("%s failed because parameters could not be added\n", 
+	    __PRETTY_FUNCTION__);
         return false;
     }
     // add exceptions
     if (!AddExceptions(pFEOperation, pContext))
     {
-        VERBOSE("%s failed because exceptions could not be added\n", __PRETTY_FUNCTION__);
+        VERBOSE("%s failed because exceptions could not be added\n", 
+	    __PRETTY_FUNCTION__);
         return false;
     }
     // set opcode name
-    m_sOpcodeConstName = pContext->GetNameFactory()->GetOpcodeConst(pFEOperation, pContext);
+    m_sOpcodeConstName = pNF->GetOpcodeConst(pFEOperation, pContext);
     // set parent
-    CBERoot *pRoot = GetRoot();
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
-    assert(pFEOperation->GetParentInterface());
-    m_pClass = pRoot->FindClass(pFEOperation->GetParentInterface()->GetName());
+    CFEInterface *pFEInterface = 
+	pFEOperation->GetSpecificParent<CFEInterface>();
+    assert(pFEInterface);
+    m_pClass = pRoot->FindClass(pFEInterface->GetName());
     assert(m_pClass);
     // would like to test for class == parent, but this is not the case for
     // switch case: parent = srv-loop function
 
     // check if interface has error function and add its name if available
-    if (pFEOperation->GetParentInterface())
+    if (pFEInterface)
     {
-        if (pFEOperation->GetParentInterface()->FindAttribute(ATTR_ERROR_FUNCTION))
+        if (pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION))
         {
-            CFEStringAttribute *pErrorFunc = (CFEStringAttribute*)(pFEOperation->GetParentInterface()->FindAttribute(ATTR_ERROR_FUNCTION));
+            CFEStringAttribute *pErrorFunc = static_cast<CFEStringAttribute*>
+		(pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION));
+            m_sErrorFunction = pErrorFunc->GetString();
+        }
+        if (pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION_CLIENT) &&
+            !IsComponentSide())
+        {
+            CFEStringAttribute *pErrorFunc = static_cast<CFEStringAttribute*>
+		(pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION_CLIENT));
+            m_sErrorFunction = pErrorFunc->GetString();
+        }
+        if (pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION_SERVER) &&
+            IsComponentSide())
+        {
+            CFEStringAttribute *pErrorFunc = static_cast<CFEStringAttribute*>
+		(pFEInterface->FindAttribute(ATTR_ERROR_FUNCTION_SERVER));
             m_sErrorFunction = pErrorFunc->GetString();
         }
     }
-    
+
     return true;
 }
 
-/**	\brief adds the parameters of a front-end function to this class
- *	\param pFEOperation the front-end function
- *	\param pContext the context of the code generation
- *	\return true if successful
+/** \brief adds the parameters of a front-end function to this class
+ *  \param pFEOperation the front-end function
+ *  \param pContext the context of the code generation
+ *  \return true if successful
  */
-bool CBEOperationFunction::AddParameters(CFEOperation * pFEOperation, CBEContext * pContext)
+bool 
+CBEOperationFunction::AddParameters(CFEOperation * pFEOperation, 
+    CBEContext * pContext)
 {
-    VectorElement *pIter = pFEOperation->GetFirstParameter();
+    VERBOSE("%s called for %s\n", __PRETTY_FUNCTION__,
+        pFEOperation->GetName().c_str());
+    vector<CFETypedDeclarator*>::iterator iter = 
+	pFEOperation->GetFirstParameter();
     CFETypedDeclarator *pFEParameter;
-    while ((pFEParameter = pFEOperation->GetNextParameter(pIter)) != 0)
+    while ((pFEParameter = pFEOperation->GetNextParameter(iter)) != 0)
     {
         if (!AddParameter(pFEParameter, pContext))
             return false;
     }
+    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
     return true;
 }
 
-/**	\brief adds a single parameter to this class
- *	\param pFEParameter the parameter to add
- *	\param pContext the context of the operation
- *	\return true if successful
+/** \brief adds a single parameter to this class
+ *  \param pFEParameter the parameter to add
+ *  \param pContext the context of the operation
+ *  \return true if successful
  */
-bool CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter, CBEContext * pContext)
+bool 
+CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter, 
+    CBEContext * pContext)
 {
-    CBETypedDeclarator *pParameter = pContext->GetClassFactory()->GetNewTypedDeclarator();
+    CBEClassFactory *pCF = pContext->GetClassFactory();
+    CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
     CBEFunction::AddParameter(pParameter);
     if (!pParameter->CreateBackEnd(pFEParameter, pContext))
     {
-        VERBOSE("%s failed because parameter could not be created\n", __PRETTY_FUNCTION__);
+        VERBOSE("%s failed because parameter could not be created\n", 
+	    __PRETTY_FUNCTION__);
         RemoveParameter(pParameter);
         delete pParameter;
         return false;
@@ -159,30 +192,37 @@ bool CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter, CBECo
     return true;
 }
 
-/**	\brief adds exceptions of a front-end function to this class
- *	\param pFEOperation the front-end function
- *	\param pContext the context of the operation
- *	\return true if successful
+/** \brief adds exceptions of a front-end function to this class
+ *  \param pFEOperation the front-end function
+ *  \param pContext the context of the operation
+ *  \return true if successful
  */
-bool CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation,
-					 CBEContext * pContext)
+bool 
+CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation,
+    CBEContext * pContext)
 {
-    VectorElement *pIter = pFEOperation->GetFirstRaisesDeclarator();
+    VERBOSE("%s called for %s\n", __PRETTY_FUNCTION__,
+        pFEOperation->GetName().c_str());
+    vector<CFEIdentifier*>::iterator iter = 
+	pFEOperation->GetFirstRaisesDeclarator();
     CFEIdentifier *pFEException;
-    while ((pFEException = pFEOperation->GetNextRaisesDeclarator(pIter)) != 0)
-      {
-	  if (!AddException(pFEException, pContext))
-	      return false;
-      }
+    while ((pFEException = pFEOperation->GetNextRaisesDeclarator(iter)) != 0)
+    {
+        if (!AddException(pFEException, pContext))
+            return false;
+    }
+    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
     return true;
 }
 
-/**	\brief adds a single exception to this class
- *	\param pFEException the exception to add
- *	\param pContext the context of this code generation
- *	\return true if successful
+/** \brief adds a single exception to this class
+ *  \param pFEException the exception to add
+ *  \param pContext the context of this code generation
+ *  \return true if successful
  */
-bool CBEOperationFunction::AddException(CFEIdentifier * pFEException, CBEContext * pContext)
+bool 
+CBEOperationFunction::AddException(CFEIdentifier * pFEException, 
+    CBEContext * pContext)
 {
     CBEException *pException = pContext->GetClassFactory()->GetNewException();
     CBEFunction::AddException(pException);
@@ -195,29 +235,36 @@ bool CBEOperationFunction::AddException(CFEIdentifier * pFEException, CBEContext
     return true;
 }
 
-/**	\brief adds attributes of a front-end function this this class
- *	\param pFEOperation the front-end operation
- *	\param pContext the context of the code generation
- *	\return true if successful
+/** \brief adds attributes of a front-end function this this class
+ *  \param pFEOperation the front-end operation
+ *  \param pContext the context of the code generation
+ *  \return true if successful
  */
-bool CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation, CBEContext * pContext)
+bool 
+CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation, 
+    CBEContext * pContext)
 {
-    VectorElement *pIter = pFEOperation->GetFirstAttribute();
+    VERBOSE("%s called for %s\n", __PRETTY_FUNCTION__,
+        pFEOperation->GetName().c_str());
+    vector<CFEAttribute*>::iterator iter = pFEOperation->GetFirstAttribute();
     CFEAttribute *pFEAttribute;
-    while ((pFEAttribute = pFEOperation->GetNextAttribute(pIter)) != 0)
+    while ((pFEAttribute = pFEOperation->GetNextAttribute(iter)) != 0)
     {
         if (!AddAttribute(pFEAttribute, pContext))
-        return false;
+            return false;
     }
+    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
     return true;
 }
 
-/**	\brief adds a single attribute to this function
- *	\param pFEAttribute the attribute to add
- *	\param pContext the context of the operation
- *	\return true if successful
+/** \brief adds a single attribute to this function
+ *  \param pFEAttribute the attribute to add
+ *  \param pContext the context of the operation
+ *  \return true if successful
  */
-bool CBEOperationFunction::AddAttribute(CFEAttribute * pFEAttribute, CBEContext * pContext)
+bool
+CBEOperationFunction::AddAttribute(CFEAttribute * pFEAttribute, 
+    CBEContext * pContext)
 {
     CBEAttribute *pAttribute = pContext->GetClassFactory()->GetNewAttribute();
     CBEFunction::AddAttribute(pAttribute);
@@ -233,11 +280,12 @@ bool CBEOperationFunction::AddAttribute(CFEAttribute * pFEAttribute, CBEContext 
 /** \brief returns a reference to the interface belonging to this function
  *  \return a reference to the interface of this function
  *
- * Because we have a hierarchy of libraries, types, consts and interfaces beside the
- * file and function hierarchy, we have to connect them somewhere. This is done using the
- * m_pInterface member. It will be set differently for Operation-function and interface-
- * functions. Anyhow: if a back-end function needs information about its interface it can
- * obtain a reference to this interface using this function
+ * Because we have a hierarchy of libraries, types, consts and interfaces
+ * beside the file and function hierarchy, we have to connect them somewhere.
+ * This is done using the m_pInterface member. It will be set differently for
+ * Operation-function and interface-functions. Anyhow: if a back-end function
+ * needs information about its interface it can obtain a reference to this
+ * interface using this function
  */
 CBEClass* CBEOperationFunction::GetClass()
 {
@@ -253,21 +301,31 @@ CBEClass* CBEOperationFunction::GetClass()
  *
  * This function assumes that it is called before the other parameters
  */
-int CBEOperationFunction::WriteMarshalOpcode(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
+int 
+CBEOperationFunction::WriteMarshalOpcode(CBEFile * pFile, 
+    int nStartOffset, 
+    bool& bUseConstOffset, 
+    CBEContext * pContext)
 {
+    /* if the attribute noopcode is set, do not marshal an opcode */
+    if (FindAttribute(ATTR_NOOPCODE))
+        return 0;
+
     int nSize = 0;
     // opcode type
-    CBEOpcodeType *pType = pContext->GetClassFactory()->GetNewOpcodeType();
+    CBEClassFactory *pCF = pContext->GetClassFactory();
+    CBEOpcodeType *pType = pCF->GetNewOpcodeType();
     pType->SetParent(this);
     if (pType->CreateBackEnd(pContext))
     {
-        CBETypedDeclarator *pConst = pContext->GetClassFactory()->GetNewTypedDeclarator();
+        CBETypedDeclarator *pConst = pCF->GetNewTypedDeclarator();
         pConst->SetParent(this);
         if (pConst->CreateBackEnd(pType, m_sOpcodeConstName, pContext))
         {
-            CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
+            CBEMarshaller *pMarshaller = pCF->GetNewMarshaller(pContext);
             // only if we really did marshal something, set size
-            nSize = pMarshaller->Marshal(pFile, pConst, nStartOffset, bUseConstOffset, m_vParameters.GetSize() == 0, pContext);
+            nSize = pMarshaller->Marshal(pFile, pConst, nStartOffset,
+                bUseConstOffset, m_vParameters.size() == 0, pContext);
             delete pMarshaller;
         }
         delete pConst;
@@ -275,3 +333,4 @@ int CBEOperationFunction::WriteMarshalOpcode(CBEFile * pFile, int nStartOffset, 
     delete pType;
     return nSize;
 }
+

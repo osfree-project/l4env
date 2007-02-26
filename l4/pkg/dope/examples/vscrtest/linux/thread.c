@@ -14,8 +14,8 @@
  */
 
 /*** GENERAL INCLUDES ***/
-#include "stdlib.h"
-#include "pthread.h"
+#include <stdlib.h>
+#include <pthread.h>
 
 /*** LOCAL INCLUDES ***/
 #include "thread.h"

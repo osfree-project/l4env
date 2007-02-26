@@ -9,7 +9,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -22,9 +22,9 @@
 
 int init_tokenizer(struct dope_services *d);
 
-/**********************************/
-/*** FUNCTIONS FOR INTERNAL USE ***/
-/**********************************/
+/**********************************
+ *** FUNCTIONS FOR INTERNAL USE ***
+ **********************************/
 
 /*** RETURNS 1 IF THE SPECIFIED CHARACTER IS A NUMBER-CHARACTER ***/
 static s16 is_number_char(char c) {
@@ -129,9 +129,9 @@ static s32 skip_space(const char *s,u32 offset) {
 
 
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 static s32 parse(const char *s,s32 max_tok,s32 *offbuf,s32 *lenbuf) {
 	s32 num_tok=0;
@@ -153,9 +153,9 @@ static s32 parse(const char *s,s32 max_tok,s32 *offbuf,s32 *lenbuf) {
 
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct tokenizer_services services = {
 	parse,
@@ -164,9 +164,9 @@ static struct tokenizer_services services = {
 
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_tokenizer(struct dope_services *d) {
 

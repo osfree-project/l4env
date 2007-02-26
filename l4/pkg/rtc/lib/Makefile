@@ -1,5 +1,5 @@
 PKGDIR		?= ..
 L4DIR		?= $(PKGDIR)/../..
-TARGET		= client
+TARGET		= client libc_backend
 
 include $(L4DIR)/mk/subdir.mk

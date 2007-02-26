@@ -108,7 +108,7 @@ l4_fpage_unmap(l4_fpage_t fpage,
 		 :
 		 "ebx", "edx", "edi", "esi"
 		 );
-};
+}
 
 L4_INLINE l4_threadid_t
 l4_myself(void)
@@ -198,7 +198,7 @@ l4_thread_ex_regs(l4_threadid_t destination,
 L4_INLINE void
 l4_thread_switch(l4_threadid_t destination)
 {
-  unsigned dummy1;
+  unsigned dummy;
   __asm__ __volatile__(
 		 "pushl	%%ebp	\n\t"		/* save ebp, no memory 
 						   references ("m") after 
@@ -208,12 +208,13 @@ l4_thread_switch(l4_threadid_t destination)
 						   references ("m") before 
 						   this point */
 		 : 
-		 "=S" (dummy1)
-		 /* No output */
+		 "=S" (dummy),
+		 "=a" (dummy)
 		 : 
-		 "0" (destination.dw)
+		 "0" (destination.dw),
+		 "1" (0)			/* Fiasco requirement */
 		 :
-		 "eax", "ebx", "ecx", "edx", "edi"
+		 "ebx", "ecx", "edx", "edi"
 		 );
 }
 
@@ -288,6 +289,22 @@ l4_task_new(l4_taskid_t destination,
 		  "edi"
 		 );
   return temp_id;
+}
+
+L4_INLINE int
+l4_privctrl(l4_umword_t cmd,
+            l4_umword_t param)
+{
+  int err;
+  unsigned dummy;
+
+  __asm__ __volatile__(
+         "pushl %%ebp              \n\t"
+         L4_SYSCALL(privctrl)
+         "popl  %%ebp              \n\t"
+         :"=a"(err), "=d"(dummy)
+         :"0"(cmd),"1"(param));
+  return err;
 }
 
 #endif /* __L4_SYSCALLS_L4X_GCC295_NOPIC_H__ */

@@ -1,31 +1,35 @@
-#ifndef __TIMER_H
-#define __TIMER_H
+/* Defines for routines to implement a low-overhead timer for drivers */
+
+#ifndef	TIMER_H
+#define TIMER_H
 
 #include <l4/util/rdtsc.h>
+#include <l4/util/util.h>
 
-#define TICKS_PER_MS	1000
+/* Timers tick over at this rate */
+#define CLOCK_TICK_RATE	1193180U
+#define	TICKS_PER_MS	(CLOCK_TICK_RATE/1000)
 
-extern l4_cpu_time_t timer2_to;
+/* Ticks must be between 0 and 65535 (0 == 65536)
+   because it is a 16 bit counter */
+extern void load_timer2(unsigned int ticks);
+extern inline int timer2_running(void);
+extern void waiton_timer2(unsigned int ticks);
+extern void __load_timer2(unsigned int ticks);
+
+extern void setup_timers(void);
+extern void ndelay(unsigned int nsecs);
 
 static inline void
-load_timer2(unsigned ticks)
+udelay(unsigned usecs)
 {
-  timer2_to = l4_rdtsc() + l4_ns_to_tsc(ticks*1000LL);
-}
-
-static inline int
-timer2_running(void)
-{
-  return l4_rdtsc() < timer2_to;
+  return l4_busy_wait_us(usecs);
 }
 
 static inline void
-waiton_timer2(unsigned ticks)
+mdelay(unsigned msecs)
 {
-  load_timer2(ticks);
-  while (timer2_running())
-    ;
+  return l4_sleep(msecs);
 }
 
-#endif
-
+#endif	/* TIMER_H */

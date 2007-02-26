@@ -1,0 +1,18 @@
+import <l4/qt3/l4qws_key.h>
+
+typedef int l4qws_qlockid_t;
+
+interface l4qws_qlock
+{
+  int create( [in] l4qws_key_t lock_key, [out] l4qws_qlockid_t *id);
+  int get(    [in] l4qws_key_t lock_key, [out] l4qws_qlockid_t *id);
+  int destroy([in] l4qws_qlockid_t id);
+
+  // separate functions with only one parameter so that dice generates
+  // code using very fast short message IPC
+
+  [allow_reply_only] int lock_read(   [in] l4qws_qlockid_t id);
+  [allow_reply_only] int lock_write(  [in] l4qws_qlockid_t id);
+                     int unlock_read( [in] l4qws_qlockid_t id);
+                     int unlock_write([in] l4qws_qlockid_t id);
+};

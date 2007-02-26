@@ -9,6 +9,15 @@
  * mouse buttons and mouse movements.
  */
 
+/*
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the Overlay WM package, which is distributed
+ * under the  terms  of the GNU General Public Licence 2. Please see
+ * the COPYING file for details.
+ */
+
 /*** GENERAL INCLUDES ***/
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,13 +36,13 @@ static CORBA_Environment env = dice_default_environment;
 static CORBA_Object_base input_event_listener_base;
 static CORBA_Object input_event_listener;
 
+
 /******************************
  * DOPE INPUT EVENT CALLBACKS *
  ******************************/
 
 /*** DOPE PRESS EVENT CALLBACK ***/
 void ovl_input_press_callback(dope_event *e, void *arg) {
-//	printf("vscr press\n");
 	if (!input_event_listener) return;
 	input_listener_button_call(input_event_listener, 1, e->press.code, &env);
 }
@@ -41,7 +50,6 @@ void ovl_input_press_callback(dope_event *e, void *arg) {
 
 /*** DOPE RELEASE EVENT CALLBACK ***/
 void ovl_input_release_callback(dope_event *e, void *arg) {
-//	printf("vscr release\n");
 	if (!input_event_listener) return;
 	input_listener_button_call(input_event_listener, 2, e->release.code, &env);
 }
@@ -49,7 +57,6 @@ void ovl_input_release_callback(dope_event *e, void *arg) {
 
 /*** DOPE MOTION EVENT CALLBACK ***/
 void ovl_input_motion_callback(dope_event *e, void *arg) {
-//	printf("vscr motion\n");
 	if (!input_event_listener) return;
 	input_listener_motion_call(input_event_listener,
 	                           e->motion.abs_x, e->motion.abs_y,
@@ -64,8 +71,8 @@ void ovl_input_motion_callback(dope_event *e, void *arg) {
 
 /*** IDL INTERFACE: REGISTER INPUT EVENT LISTENER THREAD ***/
 void overlay_input_listener_component(CORBA_Object _dice_corba_obj,
-                                      const CORBA_Object listener,
-                                      CORBA_Environment *_dice_corba_env) {
+                                      const_CORBA_Object listener,
+                                      CORBA_Server_Environment *_dice_corba_env) {
 	printf("overlay_input_listener_component: called\n");
 	input_event_listener_base = *listener;
 	input_event_listener = &input_event_listener_base;

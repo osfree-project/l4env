@@ -12,6 +12,7 @@
 /*****************************************************************************/
 
 /* L4 */
+#include <stdlib.h>
 #include <l4/sys/types.h>
 #include <l4/util/macros.h>
 #include <l4/generic_io/libio.h>
@@ -28,6 +29,9 @@
 /* local */
 #include "my_cfg.h"
 
+/* show debug messages */
+#define DEBUG_MSG 0
+
 l4_addr_t sample[4][2];
 int sample_no = 0;
 
@@ -41,7 +45,7 @@ static int init_mods(void)
 {
   int err;
 
-  Msg("%d module(s) (only 4 or less usable):\n",
+  LOG("%d module(s) (only 4 or less usable):",
       l4env_multiboot_info->mods_count);
 
   for (err = 0; err < l4env_multiboot_info->mods_count; err++)
@@ -50,7 +54,7 @@ static int init_mods(void)
         (l4util_mb_mod_t *) (l4env_multiboot_info->mods_addr +
                             (err * sizeof(l4util_mb_mod_t)));
 
-      Msg("  [%d] @ %p\n", err, (void *) mod->mod_start);
+      LOG("  [%d] @ %p", err, (void *) mod->mod_start);
 
       sample[err][0] = mod->mod_start;
       sample[err][1] = mod->mod_end;
@@ -87,17 +91,17 @@ static int cfg_mixer(int choice)
 
   if ((mixer = l4dde_snd_open_mixer(0)) < 0)
     {
-      Error("opening MIXER (%d)", mixer);
+      LOG_Error("opening MIXER (%d)", mixer);
       return 1;
     }
-  Msg("MIXER opened\n");
+  LOG("MIXER opened");
 
   if ((ret = l4dde_snd_ioctl(mixer, SOUND_MIXER_WRITE_PCM, (l4_addr_t)&vol)))
     {
-      Error("ioctl VOLUME (%d)", ret);
+      LOG_Error("ioctl VOLUME (%d)", ret);
       return 1;
     }
-  Msg("volume set to %x\n", vol);
+  LOG("volume set to %x", vol);
 
   l4dde_snd_close(mixer);
 
@@ -112,35 +116,35 @@ static int cfg_card(void)
 
   if ((snddev = l4dde_snd_open_dsp(num)) < 0)
     {
-      Error("opening DSP %d (%d)", num, snddev);
+      LOG_Error("opening DSP %d (%d)", num, snddev);
       return 1;
     }
-  Msg("opened\n");
+  LOG("opened");
 
   arg = (unsigned long) &afmt;
   if ((ret = l4dde_snd_ioctl(snddev, SNDCTL_DSP_SETFMT, arg)))
     {
-      Error("ioctl SETFMT (%d)", ret);
+      LOG_Error("ioctl SETFMT (%d)", ret);
       return 1;
     }
-  Msg("fmt set\n");
+  LOG("fmt set");
 
   arg = (unsigned long) &channels;
   if ((ret = l4dde_snd_ioctl(snddev, SNDCTL_DSP_CHANNELS, arg)))
     {
-      Error("ioctl CHANNELS (%d)", ret);
+      LOG_Error("ioctl CHANNELS (%d)", ret);
       return 1;
     }
-  Msg("chn set\n");
+  LOG("chn set");
   arg = (unsigned long) &rate;
   if ((ret = l4dde_snd_ioctl(snddev, SNDCTL_DSP_SPEED, arg)))
     {
-      Error("ioctl SPEED (%d)", ret);
+      LOG_Error("ioctl SPEED (%d)", ret);
       return 1;
     }
-  Msg("speed set\n");
+  LOG("speed set");
 
-  Msg("AFMT = 0x%x CHANNELS = %d RATE = %d\n", afmt, channels, rate);
+  LOG("AFMT = 0x%x CHANNELS = %d RATE = %d", afmt, channels, rate);
 
   return 0;
 }
@@ -150,7 +154,7 @@ static int close_card(void)
   int ret;
 
   if ((ret = l4dde_snd_close(snddev)))
-    Error("releasing DSP (%d)", ret);
+    LOG_Error("releasing DSP (%d)", ret);
 
   return ret;
 }
@@ -163,7 +167,7 @@ static int play_sound(void)
 #define FRAME 65536
   int count = FRAME;
 
-  Msg("sample 0 is %d bytes\n", fsize);
+  LOG("sample 0 is %d bytes", fsize);
 
   for (;;)
     {
@@ -175,11 +179,11 @@ static int play_sound(void)
       ret = l4dde_snd_write(snddev, (void *) sample[0][0] + fpos, count);
       if (ret < 0)
         {
-          Error("on write (%d)", ret);
+          LOG_Error("on write (%d)", ret);
           return 1;
         }
       if (ret < FRAME)
-        Msg("frame truncated\n");
+        LOG("frame truncated");
 
       fpos += ret;
     }
@@ -196,7 +200,7 @@ void demo(void)
   if (!sample_no)
     return;
 
-  Msg("Playing sample %d times maximum...\n", count);
+  LOG("Playing sample %d times maximum...", count);
 
   for (; count; count--)
     {
@@ -208,7 +212,7 @@ void demo(void)
         enter_kdebug("Play again? Hit g");
     }
 
-  Msg("released, goodbye...\n");
+  LOG("released, goodbye...");
 }
 
 /** main */
@@ -221,51 +225,51 @@ int main(void)
   if (l4io_init(&io_info_addr, L4IO_DRV_INVALID))
     exit(-1);
 
-  ASSERT(io_info_addr);
+  Assert(io_info_addr);
 
   /* initialize all DDE modules required ... */
   if ((err=l4dde_mm_init(VMEM_SIZE, KMEM_SIZE)))
     {
-      Error("initializing mm (%d)", err);
-      exit(-1);
-    }
-  if ((err=l4dde_irq_init(io_info_addr->omega0)))
-    {
-      Error("initializing irqs (%d)", err);
-      exit(-1);
-    }
-  if ((err=l4dde_time_init()))
-    {
-      Error("initializing time (%d)", err);
-      exit(-1);
-    }
-  if ((err=l4dde_softirq_init()))
-    {
-      Error("initializing softirqs (%d)", err);
-      exit(-1);
-    }
-  if ((err=l4dde_pci_init()))
-    {
-      Error("initializing pci (%d)", err);
+      LOG_Error("initializing mm (%d)", err);
       exit(-1);
     }
   if ((err=l4dde_process_init()))
     {
-      Error("initializing process-level (%d)", err);
+      LOG_Error("initializing process-level (%d)", err);
+      exit(-1);
+    }
+  if ((err=l4dde_irq_init(io_info_addr->omega0)))
+    {
+      LOG_Error("initializing irqs (%d)", err);
+      exit(-1);
+    }
+  if ((err=l4dde_time_init()))
+    {
+      LOG_Error("initializing time (%d)", err);
+      exit(-1);
+    }
+  if ((err=l4dde_softirq_init()))
+    {
+      LOG_Error("initializing softirqs (%d)", err);
+      exit(-1);
+    }
+  if ((err=l4dde_pci_init()))
+    {
+      LOG_Error("initializing pci (%d)", err);
       exit(-1);
     }
 
   /* startup */
-  DMSG("starting up sound...\n");
+  LOGd(DEBUG_MSG, "starting up sound...");
 
   if ((err=l4dde_snd_init()))
     {
-      Error("initializing sound (%d)", err);
+      LOG_Error("initializing sound (%d)", err);
       exit(-1);
     }
 
   l4dde_do_initcalls();
-  DMSG("sound initialized\n");
+  LOGd(DEBUG_MSG, "sound initialized");
 
   demo();
 
@@ -274,10 +278,10 @@ int main(void)
          we have to implement them. */
   if ((err=l4dde_snd_exit()))
     {
-      Error("finalizing sound (%d)", err);
+      LOG_Error("finalizing sound (%d)", err);
       exit(-1);
     }
-  DMSG("sound shut down.\n");
+  LOGd(DEBUG_MSG, "sound shut down.");
 
   exit(0);
 }

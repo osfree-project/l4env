@@ -1,4 +1,3 @@
-
 /*
  * ac97_codec.c: Generic AC97 mixer/modem module
  *
@@ -31,6 +30,13 @@
  **************************************************************************
  *
  * History
+ * Feb 25, 2004 Liam Girdwood
+ *  Added support for codecs that require a warm reset to power up.
+ *  Support for WM9713
+ * May 02, 2003 Liam Girdwood <liam.girdwood@wolfsonmicro.com>
+ *	Removed non existant WM9700
+ *	Added support for WM9705, WM9708, WM9709, WM9710, WM9711
+ *	WM9712 and WM9717
  * Mar 28, 2002 Randolph Bentson <bentson@holmsjoen.com>
  *	corrections to support WM9707 in ViewPad 1000
  * v0.4 Mar 15 2000 Ollie Lho
@@ -45,6 +51,7 @@
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/errno.h>
 #include <linux/bitops.h>
@@ -63,9 +70,11 @@ static int ac97_mixer_ioctl(struct ac97_codec *codec, unsigned int cmd, unsigned
 
 static int ac97_init_mixer(struct ac97_codec *codec);
 
-static int wolfson_init00(struct ac97_codec * codec);
 static int wolfson_init03(struct ac97_codec * codec);
 static int wolfson_init04(struct ac97_codec * codec);
+static int wolfson_init05(struct ac97_codec * codec);
+static int wolfson_init11(struct ac97_codec * codec);
+static int wolfson_init13(struct ac97_codec * codec);
 static int tritech_init(struct ac97_codec * codec);
 static int tritech_maestro_init(struct ac97_codec * codec);
 static int sigmatel_9708_init(struct ac97_codec *codec);
@@ -73,9 +82,10 @@ static int sigmatel_9721_init(struct ac97_codec *codec);
 static int sigmatel_9744_init(struct ac97_codec *codec);
 static int ad1886_init(struct ac97_codec *codec);
 static int eapd_control(struct ac97_codec *codec, int);
-static int crystal_digital_control(struct ac97_codec *codec, int mode);
+static int crystal_digital_control(struct ac97_codec *codec, int slots, int rate, int mode);
 static int cmedia_init(struct ac97_codec * codec);
-static int cmedia_digital_control(struct ac97_codec *codec, int mode);
+static int cmedia_digital_control(struct ac97_codec *codec, int slots, int rate, int mode);
+static int generic_digital_control(struct ac97_codec *codec, int slots, int rate, int mode);
 
 
 /*
@@ -96,9 +106,12 @@ static int cmedia_digital_control(struct ac97_codec *codec, int mode);
  
 static struct ac97_ops null_ops = { NULL, NULL, NULL };
 static struct ac97_ops default_ops = { NULL, eapd_control, NULL };
-static struct ac97_ops wolfson_ops00 = { wolfson_init00, NULL, NULL };
+static struct ac97_ops default_digital_ops = { NULL, eapd_control, generic_digital_control};
 static struct ac97_ops wolfson_ops03 = { wolfson_init03, NULL, NULL };
 static struct ac97_ops wolfson_ops04 = { wolfson_init04, NULL, NULL };
+static struct ac97_ops wolfson_ops05 = { wolfson_init05, NULL, NULL };
+static struct ac97_ops wolfson_ops11 = { wolfson_init11, NULL, NULL };
+static struct ac97_ops wolfson_ops13 = { wolfson_init13, NULL, NULL };
 static struct ac97_ops tritech_ops = { tritech_init, NULL, NULL };
 static struct ac97_ops tritech_m_ops = { tritech_maestro_init, NULL, NULL };
 static struct ac97_ops sigmatel_9708_ops = { sigmatel_9708_init, NULL, NULL };
@@ -126,8 +139,9 @@ static const struct {
 	{0x414B4D00, "Asahi Kasei AK4540",	&null_ops},
 	{0x414B4D01, "Asahi Kasei AK4542",	&null_ops},
 	{0x414B4D02, "Asahi Kasei AK4543",	&null_ops},
+	{0x414C4326, "ALC100P",			&null_ops},
 	{0x414C4710, "ALC200/200P",		&null_ops},
-	{0x414C4720, "ALC650",			&null_ops},
+	{0x414C4720, "ALC650",			&default_digital_ops},
 	{0x434D4941, "CMedia",			&cmedia_ops,		AC97_NO_PCM_VOLUME },
 	{0x434D4942, "CMedia",			&cmedia_ops,		AC97_NO_PCM_VOLUME },
 	{0x434D4961, "CMedia",			&cmedia_digital_ops,	AC97_NO_PCM_VOLUME },
@@ -141,6 +155,7 @@ static const struct {
 	{0x43525931, "Cirrus Logic CS4299 rev A", &crystal_digital_ops},
 	{0x43525933, "Cirrus Logic CS4299 rev C", &crystal_digital_ops},
 	{0x43525934, "Cirrus Logic CS4299 rev D", &crystal_digital_ops},
+	{0x43585430, "CXT48",			&default_ops,		AC97_DELUDED_MODEM },
 	{0x43585442, "CXT66",			&default_ops,		AC97_DELUDED_MODEM },
 	{0x44543031, "Diamond Technology DT0893", &default_ops},
 	{0x45838308, "ESS Allegro ES1988",	&null_ops},
@@ -154,15 +169,19 @@ static const struct {
 	{0x54524106, "TriTech TR28026",		&null_ops},
 	{0x54524108, "TriTech TR28028",		&tritech_ops},
 	{0x54524123, "TriTech TR A5",		&null_ops},
-	{0x574D4C00, "Wolfson WM9700A",		&wolfson_ops00},
-	{0x574D4C03, "Wolfson WM9703/WM9707",	&wolfson_ops03},
+	{0x574D4C03, "Wolfson WM9703/07/08/17",	&wolfson_ops03},
 	{0x574D4C04, "Wolfson WM9704M/WM9704Q",	&wolfson_ops04},
+	{0x574D4C05, "Wolfson WM9705/WM9710",   &wolfson_ops05},
+	{0x574D4C09, "Wolfson WM9709",		&null_ops},
+	{0x574D4C12, "Wolfson WM9711/9712",	&wolfson_ops11},
+	{0x574D4C13, "Wolfson WM9713",	&wolfson_ops13, AC97_DEFAULT_POWER_OFF},
 	{0x83847600, "SigmaTel STAC????",	&null_ops},
 	{0x83847604, "SigmaTel STAC9701/3/4/5", &null_ops},
 	{0x83847605, "SigmaTel STAC9704",	&null_ops},
 	{0x83847608, "SigmaTel STAC9708",	&sigmatel_9708_ops},
 	{0x83847609, "SigmaTel STAC9721/23",	&sigmatel_9721_ops},
 	{0x83847644, "SigmaTel STAC9744/45",	&sigmatel_9744_ops},
+	{0x83847652, "SigmaTel STAC9752/53",	&default_ops},
 	{0x83847656, "SigmaTel STAC9756/57",	&sigmatel_9744_ops},
 	{0x83847666, "SigmaTel STAC9750T",	&sigmatel_9744_ops},
 	{0x83847684, "SigmaTel STAC9783/84?",	&null_ops},
@@ -281,6 +300,10 @@ static const unsigned int ac97_oss_rm[] = {
 	[SOUND_MIXER_IGAIN]	= AC97_REC_STEREO,
 	[SOUND_MIXER_PHONEIN] 	= AC97_REC_PHONE
 };
+
+static LIST_HEAD(codecs);
+static LIST_HEAD(codec_drivers);
+static DECLARE_MUTEX(codec_sem);
 
 /* reads the given OSS mixer from the ac97 the caller must have insured that the ac97 knows
    about that given mixer, and should be holding a spinlock for the card */
@@ -709,6 +732,55 @@ static int ac97_check_modem(struct ac97_codec *codec)
 
 
 /**
+ *	ac97_alloc_codec - Allocate an AC97 codec
+ *
+ *	Returns a new AC97 codec structure. AC97 codecs may become
+ *	refcounted soon so this interface is needed. Returns with
+ *	one reference taken.
+ */
+ 
+struct ac97_codec *ac97_alloc_codec(void)
+{
+	struct ac97_codec *codec = kmalloc(sizeof(struct ac97_codec), GFP_KERNEL);
+	if(!codec)
+		return NULL;
+
+	memset(codec, 0, sizeof(*codec));
+	spin_lock_init(&codec->lock);
+	INIT_LIST_HEAD(&codec->list);
+	return codec;
+}
+
+EXPORT_SYMBOL(ac97_alloc_codec);
+
+/**
+ *	ac97_release_codec -	Release an AC97 codec
+ *	@codec: codec to release
+ *
+ *	Release an allocated AC97 codec. This will be refcounted in
+ *	time but for the moment is trivial. Calls the unregister
+ *	handler if the codec is now defunct.
+ */
+ 
+void ac97_release_codec(struct ac97_codec *codec)
+{
+	/* Remove from the list first, we don't want to be
+	   "rediscovered" */
+	down(&codec_sem);
+	list_del(&codec->list);
+	up(&codec_sem);
+	/*
+	 *	The driver needs to deal with internal
+	 *	locking to avoid accidents here. 
+	 */
+	if(codec->driver)
+		codec->driver->remove(codec, codec->driver);
+	kfree(codec);
+}
+
+EXPORT_SYMBOL(ac97_release_codec);
+
+/**
  *	ac97_probe_codec - Initialize and setup AC97-compatible codec
  *	@codec: (in/out) Kernel info for a single AC97 codec
  *
@@ -728,6 +800,9 @@ static int ac97_check_modem(struct ac97_codec *codec)
  *	Currently codec_wait is used to wait for AC97 codec
  *	reset to complete. 
  *
+ *  Some codecs will power down when a register reset is
+ *  performed. We now check for such codecs.
+ *
  *	Returns 1 (true) on success, or 0 (false) on failure.
  */
  
@@ -737,35 +812,21 @@ int ac97_probe_codec(struct ac97_codec *codec)
 	u16 audio;
 	int i;
 	char cidbuf[CODEC_ID_BUFSZ];
+	u16 f;
+	struct list_head *l;
+	struct ac97_driver *d;
 
-	/* probing AC97 codec, AC97 2.0 says that bit 15 of register 0x00 (reset) should 
-	 * be read zero.
-	 *
-	 * FIXME: is the following comment outdated?  -jgarzik 
-	 * Probing of AC97 in this way is not reliable, it is not even SAFE !!
-	 */
-	codec->codec_write(codec, AC97_RESET, 0L);
-
-	/* also according to spec, we wait for codec-ready state */	
+	/* wait for codec-ready state */	
 	if (codec->codec_wait)
 		codec->codec_wait(codec);
 	else
 		udelay(10);
-
-	if ((audio = codec->codec_read(codec, AC97_RESET)) & 0x8000) {
-		printk(KERN_ERR "ac97_codec: %s ac97 codec not present\n",
-		       (codec->id & 0x2) ? (codec->id&1 ? "4th" : "Tertiary") 
-		       : (codec->id&1 ? "Secondary":  "Primary"));
-		return 0;
-	}
-
-	/* probe for Modem Codec */
-	codec->modem = ac97_check_modem(codec);
-	codec->name = NULL;
-	codec->codec_ops = &null_ops;
-
+	
+	/* will the codec power down if register reset ? */
 	id1 = codec->codec_read(codec, AC97_VENDOR_ID1);
 	id2 = codec->codec_read(codec, AC97_VENDOR_ID2);
+	codec->name = NULL;
+	codec->codec_ops = &null_ops;
 	for (i = 0; i < ARRAY_SIZE(ac97_codec_ids); i++) {
 		if (ac97_codec_ids[i].id == ((id1 << 16) | id2)) {
 			codec->type = ac97_codec_ids[i].id;
@@ -775,6 +836,36 @@ int ac97_probe_codec(struct ac97_codec *codec)
 			break;
 		}
 	}
+	codec->model = (id1 << 16) | id2;
+	if ((codec->flags & AC97_DEFAULT_POWER_OFF) == 0) {
+		/* reset codec and wait for the ready bit before we continue */
+		codec->codec_write(codec, AC97_RESET, 0L);
+		if (codec->codec_wait)
+			codec->codec_wait(codec);
+		else
+			udelay(10);
+	}
+	
+	/* probing AC97 codec, AC97 2.0 says that bit 15 of register 0x00 (reset) should 
+	 * be read zero.
+	 *
+	 * FIXME: is the following comment outdated?  -jgarzik 
+	 * Probing of AC97 in this way is not reliable, it is not even SAFE !!
+	 */
+	if ((audio = codec->codec_read(codec, AC97_RESET)) & 0x8000) {
+		printk(KERN_ERR "ac97_codec: %s ac97 codec not present\n",
+		       (codec->id & 0x2) ? (codec->id&1 ? "4th" : "Tertiary") 
+		       : (codec->id&1 ? "Secondary":  "Primary"));
+		return 0;
+	}
+	
+	/* probe for Modem Codec */
+	codec->modem = ac97_check_modem(codec);
+	
+	/* enable SPDIF */
+	f = codec->codec_read(codec, AC97_EXTENDED_STATUS);
+	if((codec->codec_ops == &null_ops) && (f & 4))
+		codec->codec_ops = &default_digital_ops;
 	
 	/* A device which thinks its a modem but isnt */
 	if(codec->flags & AC97_DELUDED_MODEM)
@@ -786,7 +877,30 @@ int ac97_probe_codec(struct ac97_codec *codec)
 		codec->modem ? "Modem" : (audio ? "Audio" : ""),
 	       codec_id(id1, id2, cidbuf), codec->name);
 
-	return ac97_init_mixer(codec);
+	if(!ac97_init_mixer(codec))
+		return 0;
+		
+	/* 
+	 *	Attach last so the caller can override the mixer
+	 *	callbacks.
+	 */
+	 
+	down(&codec_sem);
+	list_add(&codec->list, &codecs);
+
+	list_for_each(l, &codec_drivers) {
+		d = list_entry(l, struct ac97_driver, list);
+		if ((codec->model ^ d->codec_id) & d->codec_mask)
+			continue;
+		if(d->probe(codec, d) == 0)
+		{
+			codec->driver = d;
+			break;
+		}
+	}
+
+	up(&codec_sem);
+	return 1;
 }
 
 static int ac97_init_mixer(struct ac97_codec *codec)
@@ -805,8 +919,6 @@ static int ac97_init_mixer(struct ac97_codec *codec)
 	if (!(cap & 0x10))
 		codec->supported_mixers &= ~SOUND_MASK_ALTPCM;
 
-	if(codec->flags & AC97_NO_PCM_VOLUME)
-		codec->supported_mixers &= ~SOUND_MASK_PCM;
 
 	/* detect bit resolution */
 	codec->codec_write(codec, AC97_MASTER_VOL_STEREO, 0x2020);
@@ -821,11 +933,6 @@ static int ac97_init_mixer(struct ac97_codec *codec)
 	codec->recmask_io = ac97_recmask_io;
 	codec->mixer_ioctl = ac97_mixer_ioctl;
 
-	/* codec specific initialization for 4-6 channel output or secondary codec stuff */
-	if (codec->codec_ops->init != NULL) {
-		codec->codec_ops->init(codec);
-	}
-
 	/* initialize mixer channel volumes */
 	for (i = 0; i < SOUND_MIXER_NRDEVICES; i++) {
 		struct mixer_defaults *md = &mixer_defaults[i];
@@ -835,9 +942,21 @@ static int ac97_init_mixer(struct ac97_codec *codec)
 			continue;
 		ac97_set_mixer(codec, md->mixer, md->value);
 	}
+	
+	/* codec specific initialization for 4-6 channel output or secondary codec stuff */
+	if (codec->codec_ops->init != NULL) {
+		codec->codec_ops->init(codec);
+	}
 
+	/*
+	 *	Volume is MUTE only on this device. We have to initialise
+	 *	it but its useless beyond that.
+	 */
 	if(codec->flags & AC97_NO_PCM_VOLUME)
+	{
+		codec->supported_mixers &= ~SOUND_MASK_PCM;
 		printk(KERN_WARNING "AC97 codec does not have proper volume support.\n");
+	}
 	return 1;
 }
 
@@ -933,53 +1052,68 @@ static int cmedia_init(struct ac97_codec *codec)
 	return 0;
 }
 	
-static int wolfson_init00(struct ac97_codec * codec)
-{
-	/* This initialization is suspect, but not known to be wrong.
-	   It was copied from the initialization for the WM9704Q, but
-	   that same sequence is known to fail for the WM9707.  Thus
-	   this warning may help someone with hardware to test
-	   this code. */
-	codec->codec_write(codec, 0x72, 0x0808);
-	codec->codec_write(codec, 0x74, 0x0808);
-
-	// patch for DVD noise
-	codec->codec_write(codec, 0x5a, 0x0200);
-
-	// init vol as PCM vol
-	codec->codec_write(codec, 0x70,
-		codec->codec_read(codec, AC97_PCMOUT_VOL));
-
-	codec->codec_write(codec, AC97_SURROUND_MASTER, 0x0000);
-	return 0;
-}
-
+#define AC97_WM97XX_FMIXER_VOL 0x72
+#define AC97_WM97XX_RMIXER_VOL 0x74
+#define AC97_WM97XX_TEST 0x5a
+#define AC97_WM9704_RPCM_VOL 0x70
+#define AC97_WM9711_OUT3VOL 0x16
 
 static int wolfson_init03(struct ac97_codec * codec)
 {
 	/* this is known to work for the ViewSonic ViewPad 1000 */
-	codec->codec_write(codec, 0x72, 0x0808);
-	codec->codec_write(codec, 0x20, 0x8000);
+	codec->codec_write(codec, AC97_WM97XX_FMIXER_VOL, 0x0808);
+	codec->codec_write(codec, AC97_GENERAL_PURPOSE, 0x8000);
 	return 0;
 }
 
-
 static int wolfson_init04(struct ac97_codec * codec)
 {
-	codec->codec_write(codec, 0x72, 0x0808);
-	codec->codec_write(codec, 0x74, 0x0808);
+	codec->codec_write(codec, AC97_WM97XX_FMIXER_VOL, 0x0808);
+	codec->codec_write(codec, AC97_WM97XX_RMIXER_VOL, 0x0808);
 
 	// patch for DVD noise
-	codec->codec_write(codec, 0x5a, 0x0200);
+	codec->codec_write(codec, AC97_WM97XX_TEST, 0x0200);
 
 	// init vol as PCM vol
-	codec->codec_write(codec, 0x70,
+	codec->codec_write(codec, AC97_WM9704_RPCM_VOL,
 		codec->codec_read(codec, AC97_PCMOUT_VOL));
 
+	/* set rear surround volume */
 	codec->codec_write(codec, AC97_SURROUND_MASTER, 0x0000);
 	return 0;
 }
 
+/* WM9705, WM9710 */
+static int wolfson_init05(struct ac97_codec * codec)
+{
+	/* set front mixer volume */
+	codec->codec_write(codec, AC97_WM97XX_FMIXER_VOL, 0x0808);
+	return 0;
+}
+
+/* WM9711, WM9712 */
+static int wolfson_init11(struct ac97_codec * codec)
+{
+	/* stop pop's during suspend/resume */
+	codec->codec_write(codec, AC97_WM97XX_TEST, codec->codec_read(codec, AC97_WM97XX_TEST) & 0xffbf);
+
+	/* set out3 volume */
+	codec->codec_write(codec, AC97_WM9711_OUT3VOL, 0x0808);
+	return 0;
+}
+
+/* WM9713 */
+static int wolfson_init13(struct ac97_codec * codec)
+{
+	codec->codec_write(codec, AC97_RECORD_GAIN, 0x00a0);	
+	codec->codec_write(codec, AC97_POWER_CONTROL, 0x0000);
+	codec->codec_write(codec, AC97_EXTENDED_MODEM_ID, 0xDA00);
+	codec->codec_write(codec, AC97_EXTEND_MODEM_STAT, 0x3810);
+	codec->codec_write(codec, AC97_PHONE_VOL, 0x0808);
+	codec->codec_write(codec, AC97_PCBEEP_VOL, 0x0808);
+
+	return 0;
+}
 
 static int tritech_init(struct ac97_codec * codec)
 {
@@ -1040,21 +1174,78 @@ static int eapd_control(struct ac97_codec * codec, int on)
 	return 0;
 }
 
+static int generic_digital_control(struct ac97_codec *codec, int slots, int rate, int mode)
+{
+	u16 reg;
+	
+	reg = codec->codec_read(codec, AC97_SPDIF_CONTROL);
+	
+	switch(rate)
+	{
+		/* Off by default */
+		default:
+		case 0:
+			reg = codec->codec_read(codec, AC97_EXTENDED_STATUS);
+			codec->codec_write(codec, AC97_EXTENDED_STATUS, (reg & ~AC97_EA_SPDIF));
+			if(rate == 0)
+				return 0;
+			return -EINVAL;
+		case 1:
+			reg = (reg & AC97_SC_SPSR_MASK) | AC97_SC_SPSR_48K;
+			break;
+		case 2:
+			reg = (reg & AC97_SC_SPSR_MASK) | AC97_SC_SPSR_44K;
+			break;
+		case 3:
+			reg = (reg & AC97_SC_SPSR_MASK) | AC97_SC_SPSR_32K;
+			break;
+	}
+	
+	reg &= ~AC97_SC_CC_MASK;
+	reg |= (mode & AUDIO_CCMASK) << 6;
+	
+	if(mode & AUDIO_DIGITAL)
+		reg |= 2;
+	if(mode & AUDIO_PRO)
+		reg |= 1;
+	if(mode & AUDIO_DRS)
+		reg |= 0x4000;
+
+	codec->codec_write(codec, AC97_SPDIF_CONTROL, reg);
+
+	reg = codec->codec_read(codec, AC97_EXTENDED_STATUS);
+	reg &= (AC97_EA_SLOT_MASK);
+	reg |= AC97_EA_VRA | AC97_EA_SPDIF | slots;
+	codec->codec_write(codec, AC97_EXTENDED_STATUS, reg);
+	
+	reg = codec->codec_read(codec, AC97_EXTENDED_STATUS);
+	if(!(reg & 0x0400))
+	{
+		codec->codec_write(codec, AC97_EXTENDED_STATUS, reg & ~ AC97_EA_SPDIF);
+		return -EINVAL;
+	}
+	return 0;
+}
+
 /*
- *	Crystal digital audio control (CS4299
+ *	Crystal digital audio control (CS4299)
  */
  
-static int crystal_digital_control(struct ac97_codec *codec, int mode)
+static int crystal_digital_control(struct ac97_codec *codec, int slots, int rate, int mode)
 {
 	u16 cv;
 
-	switch(mode)
+	if(mode & AUDIO_DIGITAL)
+		return -EINVAL;
+		
+	switch(rate)
 	{
 		case 0: cv = 0x0; break;	/* SPEN off */
-		case 1: cv = 0x8004; break;	/* 48KHz digital */
-		case 2: cv = 0x8104; break;	/* 44.1KHz digital */
+		case 48000: cv = 0x8004; break;	/* 48KHz digital */
+		case 44100: cv = 0x8104; break;	/* 44.1KHz digital */
+		case 32768: 			/* 32Khz */
 		default:
-			return -1;		/* Not supported yet(eg AC3) */
+			return -EINVAL;
 	}
 	codec->codec_write(codec, 0x68, cv);
 	return 0;
@@ -1065,16 +1256,19 @@ static int crystal_digital_control(struct ac97_codec *codec, int mode)
  *	Needs more work.
  */
  
-static int cmedia_digital_control(struct ac97_codec *codec, int mode)
+static int cmedia_digital_control(struct ac97_codec *codec, int slots, int rate, int mode)
 {
 	u16 cv;
 
-	switch(mode)
+	if(mode & AUDIO_DIGITAL)
+		return -EINVAL;
+		
+	switch(rate)
 	{
-		case 0: cv = 0x0001; break;	/* SPEN off */
-		case 1: cv = 0x0009; break;	/* 48KHz digital */
+		case 0:		cv = 0x0001; break;	/* SPEN off */
+		case 48000:	cv = 0x0009; break;	/* 48KHz digital */
 		default:
-			return -1;		/* Not supported yet(eg AC3) */
+			return -EINVAL;
 	}
 	codec->codec_write(codec, 0x2A, 0x05c4);
 	codec->codec_write(codec, 0x6C, cv);
@@ -1226,4 +1420,67 @@ int ac97_restore_state(struct ac97_codec *codec)
 
 EXPORT_SYMBOL(ac97_restore_state);
 
+/**
+ *	ac97_register_driver	-	register a codec helper
+ *	@driver: Driver handler
+ *
+ *	Register a handler for codecs matching the codec id. The handler
+ *	attach function is called for all present codecs and will be 
+ *	called when new codecs are discovered.
+ */
+ 
+int ac97_register_driver(struct ac97_driver *driver)
+{
+	struct list_head *l;
+	struct ac97_codec *c;
+	
+	down(&codec_sem);
+	INIT_LIST_HEAD(&driver->list);
+	list_add(&driver->list, &codec_drivers);
+	
+	list_for_each(l, &codecs)
+	{
+		c = list_entry(l, struct ac97_codec, list);
+		if(c->driver != NULL || ((c->model ^ driver->codec_id) & driver->codec_mask))
+			continue;
+		if(driver->probe(c, driver))
+			continue;
+		c->driver = driver;
+	}
+	up(&codec_sem);
+	return 0;
+}
+
+EXPORT_SYMBOL_GPL(ac97_register_driver);
+
+/**
+ *	ac97_unregister_driver	-	unregister a codec helper
+ *	@driver: Driver handler
+ *
+ *	Register a handler for codecs matching the codec id. The handler
+ *	attach function is called for all present codecs and will be 
+ *	called when new codecs are discovered.
+ */
+ 
+void ac97_unregister_driver(struct ac97_driver *driver)
+{
+	struct list_head *l;
+	struct ac97_codec *c;
+	
+	down(&codec_sem);
+	list_del_init(&driver->list);
+	
+	list_for_each(l, &codecs)
+	{
+		c = list_entry(l, struct ac97_codec, list);
+		if(c->driver == driver)
+			driver->remove(c, driver);
+		c->driver = NULL;
+	}
+	
+	up(&codec_sem);
+}
+
+EXPORT_SYMBOL_GPL(ac97_unregister_driver);
+	
 MODULE_LICENSE("GPL");

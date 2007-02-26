@@ -1,9 +1,9 @@
-INTERFACE:
+INTERFACE [arm]:
 
 #include "types.h"
 
-namespace Page {
-  
+namespace Page 
+{
   typedef Unsigned32 Attribs;
 
   enum Attribs_enum {
@@ -19,16 +19,19 @@ namespace Page {
     CACHEABLE     = 0x0c, ///< Cache is enabled
 
     // The next are ARM specific
-    WRITETHROUGH = 0x08, ///< Write throught cached
+    WRITETHROUGH = 0x08, ///< Write through cached
     BUFFERED     = 0x04, ///< Write buffer enabled
 
     MAX_ATTRIBS  = 0x0dec,
   };
-
 };
 
+//---------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
 
-IMPLEMENTATION[arch]:
+PUBLIC static inline
+Mword PF::is_alignment_error(Mword error)
+{ return (error & 0x0d) == 0x01; }
 
 IMPLEMENT inline
 Mword PF::is_translation_error( Mword error )
@@ -39,13 +42,13 @@ Mword PF::is_translation_error( Mword error )
 IMPLEMENT inline
 Mword PF::is_usermode_error( Mword error )
 {
-  return (error & 0x00080000/*PF_USERMODE*/);
+  return (error & 0x00010000/*PF_USERMODE*/);
 }
 
 IMPLEMENT inline
 Mword PF::is_read_error( Mword error )
 {
-  return (error & 0x00100000/*PF_WRITE*/);
+  return (error & 0x00020000/*PF_WRITE*/);
 }
 
 IMPLEMENT inline
@@ -67,3 +70,4 @@ Mword PF::pc_to_msgword1( Address pc, Mword error )
   else 
     return (Mword)-1;
 }
+

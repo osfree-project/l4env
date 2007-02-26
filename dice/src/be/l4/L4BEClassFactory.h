@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEClassFactory.h
- *	\brief	contains the declaration of the class CL4BEClassFactory
+ *    \file    dice/src/be/l4/L4BEClassFactory.h
+ *    \brief   contains the declaration of the class CL4BEClassFactory
  *
- *	\date	02/07/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    02/07/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,9 +32,9 @@
 
 #include "be/BEClassFactory.h"
 
-/**	\class CL4BEClassFactory
- *	\ingroup backend
- *	\brief the class factory for the back-end classes
+/**    \class CL4BEClassFactory
+ *    \ingroup backend
+ *    \brief the class factory for the back-end classes
  *
  * We use seperate functions for each class, because the alternative is to use
  * some sort of identifier to find out which class to generate. This involves
@@ -41,20 +42,19 @@
  */
 class CL4BEClassFactory : public CBEClassFactory
 {
-DECLARE_DYNAMIC(CL4BEClassFactory);
 // Constructor
 public:
-	/**	\brief constructor
-	 *	\param bVerbose true if class should print status output
-	 */
-	CL4BEClassFactory(bool bVerbose = false);
-	virtual ~CL4BEClassFactory();
+    /**    \brief constructor
+     *    \param bVerbose true if class should print status output
+     */
+    CL4BEClassFactory(bool bVerbose = false);
+    virtual ~CL4BEClassFactory();
 
 protected:
-        /**	\brief copy constructor
-         *	\param src the source to copy from
-         */
-        CL4BEClassFactory(CL4BEClassFactory &src);
+    /**    \brief copy constructor
+     *    \param src the source to copy from
+     */
+    CL4BEClassFactory(CL4BEClassFactory &src);
 
 public:
     virtual CBETestMainFunction* GetNewTestMainFunction();
@@ -62,23 +62,23 @@ public:
     virtual CBEHeaderFile* GetNewHeaderFile();
     virtual CBEWaitAnyFunction* GetNewWaitAnyFunction();
     virtual CBEUnmarshalFunction* GetNewUnmarshalFunction();
-    virtual CBEMsgBufferType* GetNewMessageBufferType();
+    virtual CBEMsgBufferType* GetNewMessageBufferType(bool bInterface);
     virtual CBESrvLoopFunction* GetNewSrvLoopFunction();
     virtual CBECallFunction* GetNewCallFunction();
     virtual CBEMarshaller * GetNewMarshaller(CBEContext * pContext);
-    virtual CBETestsuite * GetNewTestsuite();
     virtual CBETestFunction * GetNewTestFunction();
     virtual CBESndFunction * GetNewSndFunction();
-    virtual CBERcvFunction * GetNewRcvFunction();
+    virtual CBEWaitFunction * GetNewRcvFunction();
     virtual CBEWaitFunction * GetNewWaitFunction();
-    virtual CBERcvAnyFunction * GetNewRcvAnyFunction();
+    virtual CBEWaitAnyFunction * GetNewRcvAnyFunction();
     virtual CBETypedDeclarator * GetNewTypedDeclarator();
-    virtual CBEReplyAnyWaitAnyFunction * GetNewReplyAnyWaitAnyFunction();
-	virtual CBEReplyFunction * GetNewReplyFunction();
+    virtual CBEWaitAnyFunction * GetNewReplyAnyWaitAnyFunction();
+    virtual CBEReplyFunction * GetNewReplyFunction();
     virtual CBEClass * GetNewClass();
     virtual CBECommunication* GetNewCommunication();
-	virtual CBEMarshalFunction* GetNewMarshalFunction();
-	virtual CBEDispatchFunction* GetNewDispatchFunction();
+    virtual CBEMarshalFunction* GetNewMarshalFunction();
+    virtual CBEDispatchFunction* GetNewDispatchFunction();
+    virtual CBESwitchCase* GetNewSwitchCase();
 };
 
 #endif // !__DICE_L4BEClassFactory_H__

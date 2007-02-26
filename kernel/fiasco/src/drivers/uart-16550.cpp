@@ -1,16 +1,40 @@
-INTERFACE:
+INTERFACE [16550-ia32]:
+
+EXTENSION class Uart
+{
+public:
+  enum {
+    Base_rate     = 115200,
+    Base_ier_bits = 0,
+  };
+};
+
+
+INTERFACE [16550-pxa]:
+
+EXTENSION class Uart
+{
+public:
+  enum {
+    Base_rate     = 921600,
+    Base_ier_bits = 1 << 6,
+  };
+};
+
+
+INTERFACE[16550]:
 
 #include "types.h"
 
 /**
- * @brief 16550 implementation of the UART interface.
+ * 16550 implementation of the UART interface.
  */
 EXTENSION class Uart
 {
 public:
 
   /**
-   * @brief Start this serial port for I/O.
+   * Start this serial port for I/O.
    * @param port the I/O port base address.
    * @param irq the IRQ assigned to this port, -1 if none.
    */
@@ -166,6 +190,7 @@ bool Uart::valid()
 
   scratch = ier();
   ier(0x00);
+
   Io::iodelay();
 
   scratch2 = ier();
@@ -178,23 +203,26 @@ bool Uart::valid()
   return (scratch2 == 0x00 && scratch3 == 0x0f);
 }
 
-
 IMPLEMENT
-bool Uart::startup(Address _port, int __irq)
+bool Uart::startup(Address _port, int __irq )
 {
   port = _port;
   _irq  = __irq;
+  
+  Proc::Status o = Proc::cli_save();
 
   if (!valid())
-    return false;
+    {
+      Proc::sti_restore(o);
+      return false;
+    }
 
-  Proc::Status o = Proc::cli_save();
-  ier( 0 );    /* disable all rs-232 interrupts */
-  mcr( 0x0b ); /* out2, rts, and dtr enabled */
-  fcr( 1 );    /* enable fifo */
-  fcr( 0x07 ); /* clear rcv xmit fifo */
-  fcr( 1 );    /* enable fifo */
-  lcr( 0 );    /* clear line control register */
+  ier( Base_ier_bits );/* disable all rs-232 interrupts */
+  mcr( 0x0b );         /* out2, rts, and dtr enabled */
+  fcr( 1 );            /* enable fifo */
+  fcr( 0x07 );         /* clear rcv xmit fifo */
+  fcr( 1 );            /* enable fifo */
+  lcr( 0 );            /* clear line control register */
 
   /* clearall interrupts */
   /*read*/ msr(); /* IRQID 0*/
@@ -203,7 +231,6 @@ bool Uart::startup(Address _port, int __irq)
   /*read*/ lsr(); /* IRQID 3*/
 
   while(lsr() & 1/*DATA READY*/) /*read*/ trb();
-  
   Proc::sti_restore(o);
   return true;
 }
@@ -227,7 +254,7 @@ bool Uart::change_mode(TransferMode m, BaudRate r)
   Unsigned8 old_lcr = lcr();
   if(r != BAUD_NC) {
     lcr(old_lcr | 0x80/*DLAB*/);
-    Unsigned16 divisor = 115200/r;
+    Unsigned16 divisor = Base_rate/r;
     trb( divisor & 0x0ff );        /* BRD_LOW  */
     ier( (divisor >> 8) & 0x0ff ); /* BRD_HIGH */
     lcr(old_lcr);
@@ -235,6 +262,7 @@ bool Uart::change_mode(TransferMode m, BaudRate r)
   if( m != MODE_NC ) {
     lcr( m & 0x07f );
   }
+
   Proc::sti_restore(o);
   return true;
 }
@@ -251,7 +279,7 @@ int Uart::write( char const *s, size_t count )
   /* disable uart irqs */
   Unsigned8 old_ier;
   old_ier = ier();
-  ier(0);
+  ier(old_ier & ~0x0f);
 
   /* transmission */
   for(unsigned i =0; i<count; i++) {
@@ -283,7 +311,7 @@ int Uart::getchar( bool blocking )
 
   Unsigned8 old_ier, ch;
   old_ier = ier();
-  ier(0);
+  ier(old_ier & ~0x0f);
   while(!(lsr() & 1 /* DATA READY */));
   ch = trb();
   ier(old_ier);
@@ -309,13 +337,28 @@ int const Uart::irq() const
 }
 
 IMPLEMENT inline NEEDS[Uart::ier]
+void Uart::disable_rcv_irq()
+{
+  ier(ier() & ~1);
+}
+
+
+IMPLEMENTATION [16550-ia32]:
+
+IMPLEMENT inline NEEDS[Uart::ier]
 void Uart::enable_rcv_irq()
 {
   ier(ier() | 1);
 }
 
-IMPLEMENT inline NEEDS[Uart::ier]
-void Uart::disable_rcv_irq()
+
+IMPLEMENTATION [16550-pxa]:
+
+IMPLEMENT inline NEEDS[Uart::mcr,Uart::ier]
+void Uart::enable_rcv_irq()
 {
-  ier(ier() & ~1);
+  //mcr(mcr() & ~0x08); //XScale DOC is WRONG
+  mcr(mcr() | 0x08);
+  ier(ier() | 1);
 }
+

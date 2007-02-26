@@ -189,7 +189,7 @@ static void putpacket(char *buffer)
 }
 #undef SEND
 
-static void bin2hex(unsigned char *in, char *out, int len)
+static void bin2hex(char *in, char *out, int len)
 {
 	while (len--)
 	{
@@ -199,7 +199,7 @@ static void bin2hex(unsigned char *in, char *out, int len)
 	*out = 0;
 }
 
-static int hex2bin(char *in, unsigned char *out, int len)
+static int hex2bin(char *in, char *out, int len)
 {
 	while (len--)
 	{

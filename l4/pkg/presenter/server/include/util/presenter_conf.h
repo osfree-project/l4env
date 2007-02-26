@@ -1,6 +1,6 @@
 
-
 #include <l4/log/l4log.h>
+#include <stdlib.h>
 
 #ifndef NULL
 #define NULL (void *)0

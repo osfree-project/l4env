@@ -5,40 +5,34 @@
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
-
 #include <l4/util/lock.h>
-
-/* we implement this interface: */
 #include <l4/util/queue.h>
 
 #define STACK_SIZE 512
 
-/* globals */
-
-l4_threadid_t l4_queue_id;
-
-/* locals */
+l4_threadid_t l4util_queue_id;
 
 static void *(*queue_malloc)(l4_uint32_t size);
 static l4_uint32_t max_rcv_size;
 
 struct buffer
 {
-  struct l4_buffer_head head;
+  struct l4util_buffer_head head;
   struct buffer *next, *prev;
   l4_uint32_t d1, d2;		/* must come last - just before the
 				   string buffer */
 };
 
 static struct buffer *q_head = 0, *q_tail = 0;
-static l4_simple_lock_t q_lock = 0;
+static l4util_simple_lock_t q_lock = 0;
 
 /* dequeue a message queued by the queue thread */
-int l4_queue_dequeue(struct l4_buffer_head **buffer)
+int
+l4util_queue_dequeue(struct l4util_buffer_head **buffer)
 {
   l4_simple_lock(&q_lock);
 
-  if ((*buffer = (struct l4_buffer_head *) q_head) != 0)
+  if ((*buffer = (struct l4util_buffer_head *) q_head) != 0)
     if ((q_head = q_head->next) == 0)
       {
 	q_tail = 0;
@@ -51,20 +45,23 @@ int l4_queue_dequeue(struct l4_buffer_head **buffer)
 
 /* the queue thread: it takes messages from any sender and queues them. */
 
-static void queue_thread(void) { 
+static void queue_thread(void)
+{ 
   static struct 
-  {
-    l4_fpage_t fpage;
-    l4_msgdope_t dope;
-    l4_msgdope_t snd_dope;
-    l4_umword_t d1, d2;		/* we never fill these in */
-    l4_strdope_t str;
-  } rcv_buffer = 
-    {{fpage: 0}, 
-     {md: {0, 0, 0, 0, 0, 0, 1, 0}}, 
-     {msgdope: 0}, 
-     0, 0,
-     {0, 0, 0, 0}};
+    {
+      l4_fpage_t fpage;
+      l4_msgdope_t dope;
+      l4_msgdope_t snd_dope;
+      l4_umword_t d1, d2;
+      l4_strdope_t str;
+    } rcv_buffer 
+  = 
+    {
+	{fpage: 0}, 
+	{md: {0, 0, 0, 0, 0, 0, 1, 0}}, 
+	{msgdope: 0}, 
+	0, 0, {0, 0, 0, 0}
+    };
 
   int error;
   l4_msgdope_t result;
@@ -75,8 +72,8 @@ static void queue_thread(void) {
     {
       struct buffer *b = queue_malloc(max_rcv_size - 8
 				      + sizeof(struct buffer));
-      b->head.buffer = (char *) 
-	rcv_buffer.str.rcv_str = (l4_umword_t) &b->d1;
+      rcv_buffer.str.rcv_str = (l4_umword_t) &b->d1;
+      b->head.buffer         = (char *)      &b->d1;
 
       error = l4_ipc_wait(&b->head.src, &rcv_buffer,
 			       &b->d1, &b->d2,
@@ -103,7 +100,8 @@ static void queue_thread(void) {
 
 /* initialization */
 
-int l4_queue_init(int queue_threadno,
+int
+l4util_queue_init(int queue_threadno,
 		  void *(*malloc_func)(l4_uint32_t size),
 		  l4_uint32_t max_rcv)
 {
@@ -128,10 +126,10 @@ int l4_queue_init(int queue_threadno,
                     &dummy,
                     &dummy,
                     &dummy);
-  l4_queue_id = me;
-  l4_queue_id.id.lthread = queue_threadno;
+  l4util_queue_id = me;
+  l4util_queue_id.id.lthread = queue_threadno;
 
-  l4_thread_ex_regs(l4_queue_id, (l4_umword_t) queue_thread, 
+  l4_thread_ex_regs(l4util_queue_id, (l4_umword_t) queue_thread, 
                     ((l4_umword_t) th_stack) + STACK_SIZE,
                     &my_preempter,
                     &my_pager,

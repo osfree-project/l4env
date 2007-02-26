@@ -1,0 +1,10 @@
+- DoPE output:
+  when using multiple processes, they do not really share their workspace
+- keyboard input:
+  composite modifiers themselves cannot be displayed:
+  tilde(~), accent backward (`)
+- mouse input:
+  wrong offset handling in Con due to wrong IPC handling? (patch pending...)
+- running on Fiasco/x86:
+  display errors
+

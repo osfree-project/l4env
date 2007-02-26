@@ -83,7 +83,7 @@ __allocate_socket(void)
   /* search unused socket descriptor */
   do
     {
-      if (cmpxchg32(&sockets[i].flags,DSI_SOCKET_UNUSED,DSI_SOCKET_USED))
+      if (l4util_cmpxchg32(&sockets[i].flags,DSI_SOCKET_UNUSED,DSI_SOCKET_USED))
 	{
 	  /* found */
 	  next_socket = (i + 1) % DSI_MAX_SOCKETS;
@@ -166,14 +166,15 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
   /* sanity checks */
   if (l4dm_is_invalid_ds(*data_ds))
     {
-      Error("DSI: invalid data area!");
+      LOG_Error("invalid data area!");
       return -L4_EINVAL;
     }
-  LOGdL(DEBUG_SOCKET,"data_ds: %d at %t\n", data_ds->id, data_ds->manager);
+  LOGdL(DEBUG_SOCKET,"data_ds: %d at "l4util_idfmt"\n", 
+        data_ds->id, l4util_idstr(data_ds->manager));
 
   if (l4_is_invalid_id(work_id))
     {
-      Error("DSI: invalid work thread");
+      LOG_Error("invalid work thread");
       return -L4_EINVAL;
     }
 
@@ -182,7 +183,7 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
   if (sid == -1)
     {
       /* no socket descriptor available */
-      Error("DSI: no socket available");
+      LOG_Error("no socket available");
       return -DSI_ENOSOCKET;
     }
   s = &sockets[sid];
@@ -199,7 +200,7 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
       if (ret)
 	{
 	  /* creation failed, release socket */
-	  Error("DSI: create synchronization thread failed: %s (%d)",
+	  LOG_Error("create synchronization thread failed: %s (%d)",
 		l4env_errstr(ret),ret);
 	  s->flags = DSI_SOCKET_UNUSED;
 	  return ret;
@@ -220,15 +221,15 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
       ret = dsi_create_ctrl_area(s,jcp_stream,cfg);
       if(ret)
 	{
-	  Error("DSI: error creating control area: %s (%d)",
+	  LOG_Error("error creating control area: %s (%d)",
 		l4env_errstr(ret),ret);
 	  return ret;
 	}
       s->flags |= DSI_SOCKET_FREE_CTRL;
       *ctrl_ds = s->ctrl_ds;
 
-      LOGdL(DEBUG_SOCKET,"control dataspace: %d at %t", 
-            ctrl_ds->id, ctrl_ds->manager);
+      LOGdL(DEBUG_SOCKET,"control dataspace: %d at "l4util_idfmt, 
+            ctrl_ds->id, l4util_idstr(ctrl_ds->manager));
     }
   else 
     {
@@ -239,7 +240,7 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
   if (ret)
     {
       /* creation/setup failed, shutdown sync thread, release socket */
-      Error("DSI: create/setup control area failed: %s (%d)",
+      LOG_Error("create/setup control area failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       if (s->flags & DSI_SOCKET_FREE_SYNC)
 	dsi_shutdown_sync_thread(s);
@@ -248,14 +249,14 @@ dsi_socket_create(dsi_jcp_stream_t jcp_stream, dsi_stream_cfg_t cfg,
     }
 
   /* setup data area */
-  LOGdL(DEBUG_SOCKET,"setting data area (%d at %t)...", 
-        data_ds->id, data_ds->manager);
+  LOGdL(DEBUG_SOCKET,"setting data area (%d at "l4util_idfmt")...", 
+        data_ds->id, l4util_idstr(data_ds->manager));
 
   ret = dsi_set_data_area(s,*data_ds);
   if (ret)
     {
       /* setup failed */
-      Error("DSI: setup data area failed: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("setup data area failed: %s (%d)",l4env_errstr(ret),ret);
       if (s->flags & DSI_SOCKET_FREE_SYNC)
 	dsi_shutdown_sync_thread(s);
       if (s->flags & DSI_SOCKET_FREE_CTRL)
@@ -365,14 +366,15 @@ dsi_socket_stop(dsi_socket_t * socket)
  * \see dsi_socket_connect_ref().
  */
 int 
-dsi_socket_connect(dsi_socket_t * socket, dsi_socket_ref_t * remote_socket)
+dsi_socket_connect(dsi_socket_t * socket,
+                   const dsi_socket_ref_t * remote_socket)
 {
   int ret;
 
   /* sanity check */
   if (!dsi_is_valid_socket(socket))
     {
-      Error("DSI: invalid socket");
+      LOG_Error("invalid socket");
       return -L4_EINVAL;
     }
   
@@ -380,18 +382,18 @@ dsi_socket_connect(dsi_socket_t * socket, dsi_socket_ref_t * remote_socket)
       l4_is_invalid_id(remote_socket->sync_th) || 
       !l4_task_equal(remote_socket->work_th,remote_socket->sync_th))
     {
-      printf("work %x.%x, sync %x.%x\n",
-             remote_socket->work_th.id.task,remote_socket->work_th.id.lthread,
-             remote_socket->sync_th.id.task,remote_socket->sync_th.id.lthread);
-      Error("DSI: invalid data in socket descriptor");
+      LOG_printf("work "l4util_idfmt", sync "l4util_idfmt"\n",
+	         l4util_idstr(remote_socket->work_th),
+	         l4util_idstr(remote_socket->sync_th));
+      LOG_Error("invalid data in socket descriptor");
       return -L4_EINVAL;
     }
 
   LOGdL(DEBUG_CONNECT,"connecting socket %d",socket->socket_id);
-  LOGdL(DEBUG_CONNECT,"remote: %d, %x.%x, %x.%x",
+  LOGdL(DEBUG_CONNECT,"remote: %d, "l4util_idfmt", "l4util_idfmt,
        remote_socket->socket,
-       remote_socket->work_th.id.task, remote_socket->work_th.id.lthread,
-       remote_socket->sync_th.id.task, remote_socket->sync_th.id.lthread);
+       l4util_idstr(remote_socket->work_th),
+       l4util_idstr(remote_socket->sync_th));
 
   /* set remote socket */
   socket->remote_socket.socket = remote_socket->socket;
@@ -402,7 +404,7 @@ dsi_socket_connect(dsi_socket_t * socket, dsi_socket_ref_t * remote_socket)
   ret = dsi_start_sync_thread(socket);
   if (ret)
     {
-      Error("DSI: connect: wakeup synchronization thread failed!");
+      LOG_Error("connect: wakeup synchronization thread failed!");
       return ret;
     }
 

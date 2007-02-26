@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEWaitFunction.h
- *	\brief	contains the declaration of the class CL4BEWaitFunction
+ *    \file    dice/src/be/l4/L4BEWaitFunction.h
+ *    \brief   contains the declaration of the class CL4BEWaitFunction
  *
- *	\date	Sat Jun 1 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -39,23 +40,25 @@
  */
 class CL4BEWaitFunction : public CBEWaitFunction
 {
-DECLARE_DYNAMIC(CL4BEWaitFunction);
 
 public:
     /** creates a new object of this class */
-	CL4BEWaitFunction();
-	~CL4BEWaitFunction();
+    CL4BEWaitFunction(bool bOpenWait);
+    virtual ~CL4BEWaitFunction();
 
 public: // Public methods
-    virtual bool CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext);
+    virtual int GetFixedSize(int nDirection,  CBEContext* pContext);
+    virtual int GetSize(int nDirection, CBEContext *pContext);
 
 protected: // Protected methods
+    virtual bool HasVariableSizedParameters(int nDirection = DIRECTION_IN | DIRECTION_OUT);
     virtual void WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteInvocation(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteVariableInitialization(CBEFile* pFile,  CBEContext* pContext);
     virtual void WriteFlexpageOpcodePatch(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-    virtual bool DoSortParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext * pContext);
+    virtual bool DoExchangeParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext *pContext);
     virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);
 
 protected:

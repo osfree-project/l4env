@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/x0/ia32/X0IA32ClassFactory.h
- *	\brief	contains the declaration of the class CX0IA32ClassFactory
+ *    \file    dice/src/be/l4/x0/ia32/X0IA32ClassFactory.h
+ *    \brief   contains the declaration of the class CX0IA32ClassFactory
  *
- *	\date	08/13/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    08/13/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -37,15 +38,13 @@
  */
 class CX0IA32ClassFactory : public CL4X0BEClassFactory
 {
-DECLARE_DYNAMIC(CX0IA32ClassFactory);
 
 public:
     /** creates a new class factory
-	 *  \param bVerbose true if factory should generate verbose output
-	 */
+     *  \param bVerbose true if factory should generate verbose output
+     */
     CX0IA32ClassFactory(bool bVerbose = false);
-
-    ~CX0IA32ClassFactory();
+    virtual ~CX0IA32ClassFactory();
 
 public:
     virtual CBECommunication* GetNewCommunication();

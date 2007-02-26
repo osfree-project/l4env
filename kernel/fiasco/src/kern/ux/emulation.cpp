@@ -5,164 +5,129 @@
 
 INTERFACE:
 
-// Someone should really get rid of this
-#include <flux/x86/seg.h>		// for pseudo_descriptor
 #include <types.h>
-#include "linker_syms.h"
+#include "mem_layout.h"
+
+struct Ldt_user_desc			// work around glibc naming mess
+{
+ unsigned int  entry_number;
+ unsigned long base_addr;   
+ unsigned int  limit;
+ unsigned int  seg_32bit:1;
+ unsigned int  contents:2; 
+ unsigned int  read_exec_only:1;
+ unsigned int  limit_in_pages:1;
+ unsigned int  seg_not_present:1;
+ unsigned int  useable:1;
+};
+
+class Pseudo_descriptor;
 
 class Emulation
 {
-public:
-
-  enum {
-    /*
-     * Physical memory layout
-     */
-    kernel_start_frame	 = 0x1000,	/* Frame 0x0 special-cased by rmgr */
-    multiboot_frame	 = 0x1000,	/* Multiboot info + modules */
-    trampoline_frame	 = 0x2000,	/* Trampoline Page */
-    utcb_address_frame	 = 0x3000,	/* UTCB address page */
-    sigstack_start_frame = 0x4000,	/* Kernel Signal Altstack Start */
-    sigstack_end_frame   = 0xc000,	/* Kernel Signal Altstack End */
-    kernel_end_frame	 = sigstack_end_frame, /* Last Address used by Kernel */
-  };
-
-  static unsigned	get_pdir_addr	(void);
-  static void		set_pdir_addr	(unsigned addr);
-  static unsigned	get_fault_addr	(void);
-  static void		set_fault_addr	(unsigned addr);
-  static void		lidt		(pseudo_descriptor *desc);
-  static Mword		idt_vector	(Mword trap);
-
-  static unsigned short	get_kernel_cs();
-  static unsigned short	get_kernel_ss();
-
-  static void modify_ldt (unsigned entry,
-                          unsigned long base_addr,
-                          unsigned limit);
-
-  static const unsigned trampoline_page  = 
-                        reinterpret_cast<unsigned>(&_trampoline_page);
-  static const unsigned utcb_address_page  = 
-                        reinterpret_cast<unsigned>(&_utcb_address_page);
-
 private:
-  static unsigned	page_dir_addr	asm ("PAGE_DIR_ADDR");
-  static unsigned	page_fault_addr	asm ("PAGE_FAULT_ADDR");
-  static unsigned long	idt_base;
-  static unsigned short	idt_limit;
+  static Address	_page_dir_addr		asm ("PAGE_DIR_ADDR");
+  static Address	_page_fault_addr	asm ("PAGE_FAULT_ADDR");
+  static Address	_idt_base;
+  static unsigned short	_idt_limit;
 };
 
 IMPLEMENTATION:
 
+#include <cassert>
 #include <asm/unistd.h>
+#include "x86desc.h"
 
-// work around stupid glibc header changes
-// this struct must be the same as in asm/ldt.h
-struct user_desc {  
-        unsigned int  entry_number;
-        unsigned long base_addr;   
-        unsigned int  limit;
-        unsigned int  seg_32bit:1;
-        unsigned int  contents:2; 
-	unsigned int  read_exec_only:1;
-	unsigned int  limit_in_pages:1;
-	unsigned int  seg_not_present:1;
-	unsigned int  useable:1;
-};
-
-unsigned 	Emulation::page_dir_addr;
-unsigned 	Emulation::page_fault_addr;
-unsigned long	Emulation::idt_base;
-unsigned short	Emulation::idt_limit;
+Address 	Emulation::_page_dir_addr;
+Address 	Emulation::_page_fault_addr;
+Address		Emulation::_idt_base;
+unsigned short	Emulation::_idt_limit;
 
 /**
  * Return page directory base address (register cr3)
  * @return Page Directory Base Address
  */
-IMPLEMENT inline
-unsigned
-Emulation::get_pdir_addr()
+PUBLIC static inline
+Address
+Emulation::pdir_addr()
 {
-  return page_dir_addr;
+  return _page_dir_addr;
 }
  
 /**
  * Set page directory base address (register cr3)
  * @param addr New Page Directory Base Address   
  */
-IMPLEMENT inline
+PUBLIC static inline
 void
-Emulation::set_pdir_addr (unsigned addr)
+Emulation::set_pdir_addr (Address addr)
 {
-  page_dir_addr = addr;
-}
-
-/**
- * Return page fault address (register cr2)
- * @return Page Fault Address
- */
-IMPLEMENT inline
-unsigned
-Emulation::get_fault_addr()
-{
-  return page_fault_addr;
+  _page_dir_addr = addr;
 }
  
 /**
  * Set page fault address (register cr2)
  * @param addr Page Fault Address   
  */
-IMPLEMENT inline
+PUBLIC static inline
 void
-Emulation::set_fault_addr (unsigned addr)
+Emulation::set_page_fault_addr (Address addr)
 {
-  page_fault_addr = addr;
+  _page_fault_addr = addr;
 }
 
 /**
  * Emulate LIDT instruction
  * @param desc IDT pseudo descriptor
  */
-IMPLEMENT inline
+PUBLIC static inline NEEDS["x86desc.h"]
 void
-Emulation::lidt (pseudo_descriptor *desc)
+Emulation::lidt (Pseudo_descriptor *desc)
 {
-  idt_base  = desc->linear_base;
-  idt_limit = desc->limit;
+  _idt_base  = desc->base();
+  _idt_limit = desc->limit();
 }
 
-IMPLEMENT
+PUBLIC static inline NEEDS["x86desc.h"]
 Mword
-Emulation::idt_vector (Mword trap)
+Emulation::idt_vector (Mword trap, bool user)
 {
-  return *((Mword *) idt_base + (trap << 1))     & 0x0000ffff |
-         *((Mword *) idt_base + (trap << 1) + 1) & 0xffff0000;
+  X86desc *gate = (X86desc *) _idt_base + trap;
+
+  // IDT limit check
+  if (gate >= (X86desc *)(_idt_base + _idt_limit))
+    return 0;
+    
+  // Gate permission check
+  if (user && !(gate->access() & X86desc::Access_user))
+    return 0;
+
+  return gate->idt_entry_offset();
 }
 
-IMPLEMENT inline
-unsigned short
-Emulation::get_kernel_cs()
+PUBLIC static inline
+Mword
+Emulation::kernel_cs()
 {
   unsigned short cs;
   asm volatile ("movw %%cs, %0" : "=g" (cs));
   return cs;
 }
 
-IMPLEMENT inline
-unsigned short
-Emulation::get_kernel_ss()
+PUBLIC static inline
+Mword
+Emulation::kernel_ss()
 {
   unsigned short ss;
   asm volatile ("movw %%ss, %0" : "=g" (ss));
   return ss;
 }
 
-IMPLEMENT
+PUBLIC static inline NEEDS [<asm/unistd.h>]
 void
 Emulation::modify_ldt (unsigned entry, unsigned long base_addr, unsigned limit)
 {
-  struct user_desc ldt;
+  Ldt_user_desc ldt;
 
   ldt.entry_number    = entry;
   ldt.base_addr       = base_addr;
@@ -175,7 +140,61 @@ Emulation::modify_ldt (unsigned entry, unsigned long base_addr, unsigned limit)
   ldt.useable         = 1;
 
   asm volatile ("int $0x80" : : "a" (__NR_modify_ldt),
-                                "b" (1),              
-                                "c" (&ldt),
+                                "b" (1),
+                                "c" (&ldt), "m" (ldt),
                                 "d" (sizeof (ldt)));
+}
+
+PUBLIC static inline NEEDS [<asm/unistd.h>, <cassert>]
+void
+Emulation::thread_area_host (unsigned entry)
+{
+  Ldt_user_desc desc;
+  int result;
+  static int called = 0;
+
+#ifndef __NR_set_thread_area
+#define __NR_set_thread_area 243
+#endif
+#ifndef __NR_get_thread_area
+#define __NR_get_thread_area 244
+#endif
+
+  if (called)
+    return;
+
+  called = 1;
+
+  desc.entry_number    = entry;
+
+  asm volatile ("int $0x80" : "=a" (result)
+                            : "0" (__NR_get_thread_area),
+                              "b" (&desc), "m" (desc));
+
+  if (EXPECT_FALSE(result == -38)) // -ENOSYS
+    {
+      printf("Your kernel does not support the get/set_thread_area system calls!\n"
+	     "The requested feature will not work.\n");
+      return;
+    }
+
+  assert(!result);
+
+  if (!desc.base_addr || !desc.limit)
+    {
+      desc.base_addr       = 2;
+      desc.limit           = 3;
+      desc.seg_32bit       = 1;
+      desc.contents        = 0;
+      desc.read_exec_only  = 0;
+      desc.limit_in_pages  = 0;
+      desc.seg_not_present = 0;
+      desc.useable         = 1;
+    }
+
+  asm volatile ("int $0x80" : "=a" (result)
+                            : "0" (__NR_set_thread_area),
+                              "b" (&desc), "m" (desc));
+
+  assert(!result);
 }

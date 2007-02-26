@@ -1,8 +1,10 @@
 //
-// Framebuffer handling for Fiasco/UX
+// Framebuffer handling for Fiasco-UX
 //
 
 INTERFACE:
+
+#include "multiboot.h"
 
 class Fb
 {
@@ -12,6 +14,8 @@ public:
 
 private:
   static void bootstrap();
+  static void setup_mbi();
+  static void set_color_mapping (Multiboot_vbe_mode *vbi);
 };
 
 IMPLEMENTATION:
@@ -22,6 +26,7 @@ IMPLEMENTATION:
 #include "boot_info.h"
 #include "initcalls.h"
 #include "pic.h"
+#include "warn.h"
 
 IMPLEMENT FIASCO_INIT
 void
@@ -34,7 +39,7 @@ Fb::bootstrap()
   char s_fbaddr[15];
 
   snprintf (s_fd,     sizeof (s_fd),     "%u", Boot_info::fd());
-  snprintf (s_fbaddr, sizeof (s_fbaddr), "%u", Boot_info::fb_phys());
+  snprintf (s_fbaddr, sizeof (s_fbaddr), "%lu", Boot_info::fb_phys());
   snprintf (s_width,  sizeof (s_width),  "%u", Boot_info::fb_width());
   snprintf (s_height, sizeof (s_height), "%u", Boot_info::fb_height());
   snprintf (s_depth,  sizeof (s_depth),  "%u", Boot_info::fb_depth());
@@ -47,11 +52,72 @@ Fb::bootstrap()
 
 IMPLEMENT FIASCO_INIT
 void
+Fb::set_color_mapping(Multiboot_vbe_mode *vbi)
+{
+  switch (Boot_info::fb_depth())
+    {
+    case 15:
+      vbi->red_mask_size   = 5; vbi->red_field_position   = 10;
+      vbi->green_mask_size = 5; vbi->green_field_position = 5;
+      vbi->blue_mask_size  = 5; vbi->blue_field_position  = 0;
+      break;
+    case 16:
+      vbi->red_mask_size   = 5; vbi->red_field_position   = 11;
+      vbi->green_mask_size = 6; vbi->green_field_position = 5;
+      vbi->blue_mask_size  = 5; vbi->blue_field_position  = 0;
+      break;
+    case 32:
+      vbi->red_mask_size   = 8; vbi->red_field_position   = 16;
+      vbi->green_mask_size = 8; vbi->green_field_position = 8;
+      vbi->blue_mask_size  = 8; vbi->blue_field_position  = 0;
+      break;
+    default:
+      WARN("Unknown frame buffer color depth %d.", Boot_info::fb_depth());
+      break;
+    }
+}
+
+
+IMPLEMENT FIASCO_INIT
+void
+Fb::setup_mbi()
+{
+  if (!Boot_info::fb_size())
+    return;
+
+  Multiboot_info *mbi = Boot_info::mbi_virt();
+
+  struct Multiboot_vbe_controller *vbe = reinterpret_cast
+	<Multiboot_vbe_controller *>(Boot_info::mbi_vbe());
+  struct Multiboot_vbe_mode *vbi = reinterpret_cast
+	<Multiboot_vbe_mode *>((char *) vbe + sizeof (*vbe));
+
+  mbi->flags             |= Multiboot_info::Video_info;
+  mbi->vbe_control_info   = Boot_info::mbi_phys()
+                             + ((char *) vbe - (char *) mbi);
+  mbi->vbe_mode_info      = Boot_info::mbi_phys()
+                             + ((char *) vbi - (char *) mbi);
+  vbe->total_memory       = Boot_info::fb_size() >> 16;	/* 2^16 == 1024 * 64 */
+  vbi->phys_base          = Boot_info::fb_virt();
+  vbi->y_resolution       = Boot_info::fb_height();
+  vbi->x_resolution       = Boot_info::fb_width();
+  vbi->bits_per_pixel     = Boot_info::fb_depth();
+  vbi->bytes_per_scanline = Boot_info::fb_width()
+                             * (Boot_info::fb_depth() + 7 >> 3);
+
+  set_color_mapping(vbi);
+}
+
+IMPLEMENT FIASCO_INIT
+void
 Fb::init()
 {
   // Check if frame buffer is available
   if (!Boot_info::fb_depth())
     return;
+
+  // setup multiboot info
+  setup_mbi();
 
   // Setup virtual interrupt
   if (!Pic::setup_irq_prov (Pic::IRQ_CON,

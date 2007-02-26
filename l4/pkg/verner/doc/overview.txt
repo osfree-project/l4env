@@ -1,0 +1,229 @@
+                           VERNER - Overview about Verner
+                                  Carsten Rietzschel
+                               cr7@os.inf.tu-dresden.de
+                                  17 September 2004
+
+
+
+                       ============= Überblick =============
+
+Am Anfang stand das Wort...
+... und es sollte gelesen werden:
+- siehe Diplomarbeit: http://os.inf.tu-dresden.de/papers_ps/rietzschel-diplom.pdf
+- siehe Beleg: http://os.inf.tu-dresden.de/papers_ps/rietzschel-beleg.pdf
+- siehe andere Dateien in /doc
+
+Die wesentlichen Gedanken wurden in der Implementierung entspr. aus den oben angegebenen Werken übernohmen.
+Kurze Zusammenfassung: 
+- Aufteilung der Komponenten erfolgt nach Funktion
+  --> Demuxer: Demuxing der Daten aus den Container-Formaten
+  --> Video-Core: Video-En- und Dekodierung
+  --> Audio-Core: Audio-En- und Dekodierung
+  --> Sync: Synchronisierung der Bild- und Ton-Daten für Wiedergabe
+  --> Controller: Steuerung der anderen Komponenten via GUI (DOpE)
+  --> Muxer: z.Zt. nicht implementiert, Muxen der Audio- u. Videodaten in ein Container-Format
+- einzelene Komponenten sind komplette Tasks
+  Gründe u.a.: - einfacher austauschbar 
+               - nicht alle Komponenten werden immer benötigt (z.B. bei Aufnahme kein Demuxer)
+- Komponenten nutzen (austauschbare) Plugins um spezifische Funktionen auszuführen:
+  (siehe doc/plugins!!!)
+  --> Demuxer: Import-Plugins - Container-Spezifisch, pro Container-Format (OGM, AVI, ...) ein Plugin
+               I/O-Plugins    - Abstraktion der unix-std-calls
+  --> 2x Core: Codec-Plugins  - Codec-Spezifisch, pro Codec (Audio und Video getrennt) ein Plugin
+               Filter-Plugins - Postprocessing (z.Zt. nur Video)
+  --> Sync:    Export-Plugins - Ausgabe spezifisch, z.B. für OSS (Audio), DOpE oder CON (Video) 
+- Plugins greifen meist auf Libraries zu (z.B. AVI-Import-Plugin auf avilib ode XviD-Codec-Plugin 
+  auf XviD)
+- Datenübertragung zwischen Komponenten erfolgt über DSI
+- Alle Daten werden in folgenden Format übertragen - auch und gerade zu den Plugins
+    ---------------------
+    |  Frameheader      |  <-- siehe include/arch_types.h:frame_ctrl_t
+    ---------------------
+    | Daten             |
+    |   Audio od. Video |
+    ---------------------
+
+Dem oben genannten entspr. auch die gegenwärtige Verzeichnis-Struktur:
+
+Documentation:
+doc/
+
+----------
+Libraries:
+
+lib/audio:				für Audio-Verarbeitung
+lib/audio/lame:				Lame (MP3 Enkoder)
+lib/audio/mpg123lib:		Mpg123 (MP3 Dekoder)
+
+lib/de-muxer:			für den Demuxer
+lib/de-muxer/avilib:		Zugriff auf AVIs
+lib/de-muxer/libavformat	für viele Container (unused, Import-Plugin fehlt)
+lib/de-muxer/ogmlib:		Zugriff auf OGMs
+lib/de-muxer/probe:			Probing: Erkennen des Container-Formats
+
+lib/fx:					für Effekte
+lib/fx/goom:				GOOM
+
+lib/include:			Includes der Libraries
+
+lib/io:					für I/O
+lib/io/grubdummyfs:			GrubFS (Art simple Ramdisk): 
+lib/io/l4ext2fs:			Ext2fs
+
+lib/support:			misc
+lib/support/aclib:			Routinen zur Beschleunigung - schnelleres memcpy
+lib/support/libc:			Libc-Dinge die nicht im Oskit sind
+lib/support/libm:			Libc-Dinge  "
+lib/support/x86cpucaps:		Erkennung der CPU und deren Eigenschaften
+
+lib/video:				für Video
+lib/video/libavcodec:		Teil von FFMPEG (viele Enkoder und Dekoder)
+lib/video/libmpeg2:			mpeg2-Video-Dekoder
+lib/video/postproc:			Postproccessing (Deblocking, Deringing, ...)
+lib/video/xvidcore-0.9.1	XviD Version 0.9.1
+lib/video/xvidcore-1.0:		XviD Version 1.0.x
+
+----------
+Plugins: 
+
+plugins/				Plugins
+plugins/codec:				Ansteuerung der Codes (verwendet in Cores)
+plugins/export:				Ausgabe (verwendet in Sync)
+plugins/filter:				Filter/Postprocessing (verwendet in Videocore)
+plugins/fx:					Effekte (verwendet in Sync)
+plugins/import:				Import aus Container (verwendet in Demuxer)
+plugins/io:					Zugriff auf Filesysteme via unix-std-calls (Demuxer)
+
+----------
+Komponenten:
+
+vcontrol:					Controller
+vcontrol-remote:			Comquad - Remote - Controller
+vcore/						Beide Cores (Audio + Video)
+vdemuxer/					Demuxer
+vsync/						Sync-Komponente
+vsync/src/contrib:			Linux-Soundtreiber (siehe DDE)
+                       
+----------
+Konfigurationsdateien
+
+config/
+
+----------
+Globale Includes
+
+include/
+
+
+Es folgt eine kurze Beschreibung, was beim Apspielen eines Videos passiert (inkl. Verweis auf Sourcen).
+Hinweis:
+Pro Streamtype gibt es einen eigenen Work-loop, wobei der Quellcode der gleiche ist
+(d.h: einen Work-loop für Audio, einen für Video und das pro Komponente).
+
+
+
+                       ============= Controller =============
+
+
+- Start des Controllers: Überprüfung ob alle nötigen Komponenten ebenfalls laufen
+- über die GUI oder über Kommandozeile wurden Dateinamen der abzuspielenden Videos übergeben.
+- Auswahl einer Datei 
+- Play-Kommando (vcontrol/src/player-UI.c)
+  --> Probing des Files mit Hilfe des Demuxers (siehe Demuxer)
+  --> wenn gültiges Video-Format, dann allokieren der Dataspaces 
+      (Größe wird bestimmt durch Video-Auflösung bzw. Audio-Samplerate, es wird immer RAW (also unkodiert)
+       angenommen.)
+  --> Connecten der zwei Ketten  (vcontrol/src/helper.c:build_and_connect_[audio/video]_chain() )
+      mit Hilfe der Client-Libraries, ([component]/idl bzw. [component]/lib)
+      Funktionen bennant nach Comquad-Modell (z.B. connectUncompressedVideoOut)
+      Dabei Übergabe der Dataspaces
+          Demuxer <---> Video-Core
+                  <---> Audio-Core  <---> Sync
+  --> Wenn Verbindungen stehen --> Start-Kommandos über dsi_stream_start (vcontrol/src/helper.c:handle_streams() )
+  --> weiteres erfolgt in den Komponenten
+
+- Bei erhalt eines EOS-Signals:
+  --> Beenden der Übertragung des jeweiligen Stromes
+  --> Freigabe des Dataspaces
+  
+
+
+                       ============= Demuxer =============
+
+[Probing:
+  - Erraten des Container-Formates und Bestimmung einiger Video-Eigenschaften (Länge, Auflösung, Anzahl der Audio-
+    bzw. Videoströme)   ( vdemuxer/src/container.c:containerProbeVideoFile() )
+  - Rückgabe der Werte an Controller
+]
+
+[Abspielen]
+- dsi_stream_start sorgt über Callback-Funktionen dafür, das der Work-Loop startet
+    (vdemuxer/src/work_loop.c:work_loop() )
+- im Work-Loop:
+  --> erfolgt Auswahl des Import-Plugins durch erneutes Probing
+     (vdemuxer/src/container.c:determineAndSetupImport() )
+      --> Auswahl des Import-Plugins und setzen der Funktionszeiger für Work-Loop auf enstpr. Funktion
+         des gewählten Import-Plugins
+  --> while(Daten zum Lesen da) 
+      { 
+         dsi_packet_get()
+         importStep() --> Aufruf der step-Funktion des gewählten Import-Plugins
+         dsi_packet_commit()
+      }
+  --> import-Plugin schliessen
+  --> EOS an Demuxer senden
+  --> Work-loop beenden
+
+
+                       ============= Cores (für Audio und Video) =============
+
+
+- dsi_stream_start sorgt über Callback-Funktionen dafür, das der Work-Loop startet
+    (vcore/src/work_loop.c:work_loop() )
+- im Work-Loop:
+  --> erstes Frame vom Demuxer erhalten und in Frameheader schauen, welches Format vorliegt 
+      Dannerfolgt Auswahl des Codec-Plugins.
+     (vcore/src/[audio/video]_codecs.c:determineAndSetupCodec() )
+      --> Auswahl des Codec-Plugins und setzen der Funktionszeiger für Work-Loop auf enstpr. Funktion
+         des gewählten Codec-Plugins
+  --> while(Daten vom Demuxer erhalten) 
+      { 
+         QAP() ---> Einstellung der Video-Qualität abhängig von Last (vcore/src/qap.c)
+         receiver_step() --> Paket vom Demuxer via DSI holen (vcore/src/receiver.c)
+         sender_step()   --> Paket vom Sync via DSI holen (vcore/src/sender.c)
+         codecStep() --> Aufruf der step-Funktion des gewählten Codec-Plugins
+                         Kodierung der Frames vom Demuxer-Paket direkt in Sync-Paket
+         /* für Video */
+         postProcessEngineStep() --> Aufruf des Filter-Plugins (vcore/src/video_postproc.c)
+                                     (Steuerung der Postproccess-Engine erfolgt direkt 
+                                      durch Controller!)
+         sender_commit()   --> Paket für Sync commiten (vcore/src/sender.c)
+         receiver_commit() --> Paket für Demuxer commiten (vcore/src/receiver.c)
+      }
+  --> Codec-Plugin schliessen
+  --> EOS and Controller und Sync senden
+  --> Work-loop beenden
+
+
+                       ============= Sync =============
+
+- dsi_stream_start sorgt über Callback-Funktionen dafür, das der Work-Loop startet
+    (vsync/src/work_loop.c:work_loop() )
+- im Work-Loop:
+  --> erfolgt Auswahl des Export-Plugins 
+      --> Auswahl des Export-Plugins und setzen der Funktionszeiger für Work-Loop auf enstpr. Funktion
+         des gewählten Export-Plugins
+      (Code direkt im work_loop() da einfach !)
+  --> while(Daten vom Kern erhalten) 
+      { 
+         dsi_packet_get()
+         metronome_wait_sync() --> Synchronisation von A/V (vsync/src/metronome.c)
+         exportStep() --> Aufruf der step-Funktion des gewählten Export-Plugins
+         dsi_packet_commit()
+      }
+  --> export-Plugin schliessen
+  --> EOS an Controller senden
+  --> Work-loop beenden
+
+
+	       

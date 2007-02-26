@@ -50,11 +50,17 @@ extern "C" {
 #endif
 
 #include "ansidecl.h"
+#include "globalconfig.h"
 
 /* These two lines get substitutions done by commands in Makefile.in.  */
 #define BFD_VERSION  "2.9.5.0.37"
-#define BFD_ARCH_SIZE 32
+#ifdef CONFIG_IA32
+#define BFD_ARCH_SIZE 64
 #define BFD_HOST_64BIT_LONG 0
+#else
+#define BFD_ARCH_SIZE 64
+#define BFD_HOST_64BIT_LONG 1
+#endif
 #if 0
 #define BFD_HOST_64_BIT 
 #define BFD_HOST_U_64_BIT 
@@ -1362,9 +1368,11 @@ enum bfd_architecture
 #define bfd_mach_mips10000             10000
 #define bfd_mach_mips16                16
   bfd_arch_i386,       /* Intel 386 */
-#define bfd_mach_i386_i386 0
-#define bfd_mach_i386_i8086 1
-#define bfd_mach_i386_i386_intel_syntax 2
+#define bfd_mach_i386_i386 1
+#define bfd_mach_i386_i8086 2
+#define bfd_mach_i386_i386_intel_syntax 3
+#define bfd_mach_x86_64 64
+#define bfd_mach_x86_64_intel_syntax 65
   bfd_arch_we32k,      /* AT&T WE32xxx */
   bfd_arch_tahoe,      /* CCI/Harris Tahoe */
   bfd_arch_i860,       /* Intel 860 */

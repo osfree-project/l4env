@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEMarshalFunction.cpp
- *	\brief	contains the implementation of the class CL4BEMarshalFunction
+ *    \file    dice/src/be/l4/L4BEMarshalFunction.cpp
+ *    \brief   contains the implementation of the class CL4BEMarshalFunction
  *
- *	\date	10/10/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    10/10/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -29,25 +30,21 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
 #include "be/BEFile.h"
-#include "be/BEType.h"
+#include "be/BEUserDefinedType.h"
 #include "be/BEContext.h"
 #include "TypeSpec-Type.h"
-#include "fe/FEAttribute.h"
-
-IMPLEMENT_DYNAMIC(CL4BEMarshalFunction);
+#include "Attribute-Type.h"
 
 CL4BEMarshalFunction::CL4BEMarshalFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEMarshalFunction, CBEMarshalFunction);
 }
 
 CL4BEMarshalFunction::CL4BEMarshalFunction(CL4BEMarshalFunction & src)
 : CBEMarshalFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEMarshalFunction, CBEMarshalFunction);
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CL4BEMarshalFunction::~CL4BEMarshalFunction()
 {
 
@@ -71,60 +68,73 @@ CL4BEMarshalFunction::~CL4BEMarshalFunction()
  */
 void CL4BEMarshalFunction::WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext)
 {
-    bool bSendFpages = ((CL4BEMsgBufferType*)m_pMsgBuffer)->HasSendFlexpages();
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    bool bSendFpages = pMsgBuffer->GetCount(TYPE_FLEXPAGE, GetSendDirection()) > 0;
     if (bSendFpages)
-	{
-        // if (env.major != CORBA_NO_EXCEPTION)
-		//   marshal exception
-		// else
-		//   marhsal flexpages
-		VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-		CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
-		pFile->PrintIndent("if (");
-		pDecl->WriteName(pFile, pContext);
-		if (pDecl->GetStars() > 0)
-		    pFile->Print("->");
-		else
-		    pFile->Print(".");
-		pFile->Print("major != CORBA_NO_EXCEPTION)\n");
+    {
+        // if (env.major == CORBA_NO_EXCEPTION)
+        //   marshal flexpages
+        // else
+        //   marhsal exception
+        string sFreeFunc;
+        if (((CBEUserDefinedType*)m_pCorbaEnv->GetType())->GetName() ==
+            "CORBA_Server_Environment")
+            sFreeFunc = "CORBA_server_exception_free";
+        else
+            sFreeFunc = "CORBA_exception_free";
+        vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterCE;
+        pFile->PrintIndent("if (");
+        pDecl->WriteName(pFile, pContext);
+        if (pDecl->GetStars() > 0)
+            pFile->Print("->");
+        else
+            pFile->Print(".");
+        pFile->Print("major == CORBA_NO_EXCEPTION)\n");
         pFile->PrintIndent("{\n");
-		pFile->IncIndent();
-		WriteMarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
-		// clear exception
-		pFile->PrintIndent("CORBA_exception_free(");
-		if (pDecl->GetStars() == 0)
-		    pFile->Print("&");
-		pDecl->WriteName(pFile, pContext);
-		pFile->Print(");\n");
-		pFile->DecIndent();
-		pFile->PrintIndent("}\n");
-		pFile->PrintIndent("else\n");
-		pFile->PrintIndent("{\n");
-		pFile->IncIndent();
-		CBEOperationFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
-		pFile->DecIndent();
-		pFile->PrintIndent("}\n");
-	}
-	else
-		CBEMarshalFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
-	// set size dope
-	// but first zero it
-    int nSendDirection = GetSendDirection();
-	bool bHasSizeIsParams = (GetParameterCount(ATTR_SIZE_IS, ATTR_REF, nSendDirection) > 0) ||
-	    (GetParameterCount(ATTR_LENGTH_IS, ATTR_REF, nSendDirection) > 0);
-    ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSendDopeInit(pFile, nSendDirection, bHasSizeIsParams, pContext);
-	// if we had send flexpages,we have to set the flexpage bit
-	if (bSendFpages)
-		((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSendFpageDope(pFile, pContext);
+        pFile->IncIndent();
+        pFile->IncIndent();
+        CBEOperationFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
+        pFile->DecIndent();
+        pFile->DecIndent();
+        pFile->PrintIndent("}\n");
+        pFile->PrintIndent("else\n");
+        pFile->PrintIndent("{\n");
+        pFile->IncIndent();
+        WriteMarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
+        // clear exception
+        *pFile << "\t" << sFreeFunc << "(";
+        if (pDecl->GetStars() == 0)
+            pFile->Print("&");
+        pDecl->WriteName(pFile, pContext);
+        pFile->Print(");\n");
+        pFile->DecIndent();
+        pFile->PrintIndent("}\n");
+    }
+    else
+        CBEMarshalFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
+    // set size dope
+    pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SEND, GetSendDirection(), pContext);
+    // if we had send flexpages,we have to set the flexpage bit
+    if (bSendFpages)
+    {
+        pFile->PrintIndent("");
+        pMsgBuffer->WriteMemberAccess(pFile, TYPE_MSGDOPE_SEND, DIRECTION_IN, pContext);
+        pFile->Print(".md.fpage_received = 1;\n");
+    }
 }
 
-/** \brief decides whether two parameters should be exchanged during sort (moving 1st behind 2nd)
+/** \brief decides whether two parameters should be exchanged during sort
  *  \param pPrecessor the 1st parameter
  *  \param pSuccessor the 2nd parameter
- *  \param pContext the context of the sorting
- *  \return true if parameters should be exchanged
+ *    \param pContext the context of the sorting
+ *  \return true if parameters 1st is smaller than 2nd
  */
-bool CL4BEMarshalFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext * pContext)
+bool
+CL4BEMarshalFunction::DoExchangeParameters(CBETypedDeclarator * pPrecessor,
+    CBETypedDeclarator * pSuccessor,
+    CBEContext *pContext)
 {
     if (!(pPrecessor->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
         pSuccessor->GetType()->IsOfType(TYPE_FLEXPAGE))
@@ -134,24 +144,28 @@ bool CL4BEMarshalFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBE
     if ( pPrecessor->GetType()->IsOfType(TYPE_FLEXPAGE) &&
         !pSuccessor->GetType()->IsOfType(TYPE_FLEXPAGE))
         return false;
-    // if the 1st parameter is the return variable, we cannot exchange it, because
-    // we make assumptions about its position in the message buffer
-    String sReturn = pContext->GetNameFactory()->GetReturnVariable(pContext);
-    if (pPrecessor->FindDeclarator(sReturn))
-        return false;
-    // if successor is return variable (should not occur) move it forward
-    if (pSuccessor->FindDeclarator(sReturn))
-        return true;
+    if (m_pReturnVar)
+    {
+        vector<CBEDeclarator*>::iterator iterRet = m_pReturnVar->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterRet;
+        // if the 1st parameter is the return variable, we cannot exchange it, because
+        // we make assumptions about its position in the message buffer
+        if (pPrecessor->FindDeclarator(pDecl->GetName()))
+            return false;
+        // if successor is return variable (should not occur) move it forward
+        if (pSuccessor->FindDeclarator(pDecl->GetName()))
+            return true;
+    }
     // no special case, so use base class' method
-    return CBEMarshalFunction::DoSortParameters(pPrecessor, pSuccessor, pContext);
+    return CBEMarshalFunction::DoExchangeParameters(pPrecessor, pSuccessor, pContext);
 }
 
 /** \brief test if this function has variable sized parameters (needed to specify temp + offset var)
  *  \return true if variable sized parameters are needed
  */
-bool CL4BEMarshalFunction::HasVariableSizedParameters()
+bool CL4BEMarshalFunction::HasVariableSizedParameters(int nDirection)
 {
-    bool bRet = CBEMarshalFunction::HasVariableSizedParameters();
+    bool bRet = CBEMarshalFunction::HasVariableSizedParameters(nDirection);
     bool bFixedNumberOfFlexpages = true;
     CBEClass *pClass = GetClass();
     assert(pClass);
@@ -159,5 +173,44 @@ bool CL4BEMarshalFunction::HasVariableSizedParameters()
     // if no flexpages, return
     if (!bFixedNumberOfFlexpages)
         return true;
+    // if we have indirect strings to marshal then we need the offset vars
+    if (GetParameterCount(ATTR_REF, 0, nDirection))
+        return true;
     return bRet;
+}
+
+/** \brief calculates the size of the function's parameters
+ *  \param nDirection the direction to count
+ *  \param pContext the context of this calculation
+ *  \return the size of the parameters
+ *
+ * If we send flexpages, remove the exception size again, since either the
+ * flexpage or the exception is sent.
+ */
+int CL4BEMarshalFunction::GetFixedSize(int nDirection,  CBEContext* pContext)
+{
+    int nSize = CBEMarshalFunction::GetFixedSize(nDirection, pContext);
+    if ((nDirection & DIRECTION_OUT) &&
+        !FindAttribute(ATTR_NOEXCEPTIONS) &&
+        (GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
+        nSize -= pContext->GetSizes()->GetExceptionSize();
+    return nSize;
+}
+
+/** \brief calculates the size of the function's parameters
+ *  \param nDirection the direction to count
+ *  \param pContext the context of this calculation
+ *  \return the size of the parameters
+ *
+ * If we send flexpages, remove the exception size again, since either the
+ * flexpage or the exception is sent.
+ */
+int CL4BEMarshalFunction::GetSize(int nDirection, CBEContext *pContext)
+{
+    int nSize = CBEMarshalFunction::GetSize(nDirection, pContext);
+    if ((nDirection & DIRECTION_OUT) &&
+        !FindAttribute(ATTR_NOEXCEPTIONS) &&
+        (GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
+        nSize -= pContext->GetSizes()->GetExceptionSize();
+    return nSize;
 }

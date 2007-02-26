@@ -6,8 +6,11 @@
 - \ref bitops
 - \ref port_io
 - \ref rdtsc
+- \ref idt
 - \ref parse_cmd
 - \ref thread
+- \ref kip
+- \ref reboot
 
 
 \section sec_about About this documentation

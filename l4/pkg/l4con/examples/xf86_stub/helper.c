@@ -11,6 +11,7 @@
  * COPYING file for details. */
 
 #include <stdarg.h>
+#include <stddef.h>
 //#include <stdio.h>
 #include <l4/sys/types.h>
 #include <l4/log/l4log.h>
@@ -20,11 +21,14 @@
 #undef size_t
 #undef strcpy
 #undef strncpy
+#undef strlen
+#undef printf
 
-typedef unsigned int size_t;
+//typedef unsigned int size_t;
 
 char* strcpy(char *to, const char *from);
 char* strncpy(char *to, const char *from, size_t count);
+size_t strlen(const char * s);
 
 void
 LOG_flush(void)
@@ -34,6 +38,20 @@ LOG_flush(void)
 void
 LOG_log(const char *function, const char *format, ...)
 {
+}
+
+void
+LOG_logL(const char *file, int line, const char *function,
+	 const char *format, ...)
+{
+}
+
+int printf(const char *format, ...);
+
+int
+printf(const char *format, ...)
+{
+  return 0;
 }
 
 #if 0
@@ -85,3 +103,13 @@ strcpy(char *to, const char *from)
   return ret;
 }
 
+size_t
+strlen(const char *s)
+{
+  int i;
+  if (!s)
+    return 0;
+  for (i=0; *s; s++)
+    i++;
+  return i;
+}

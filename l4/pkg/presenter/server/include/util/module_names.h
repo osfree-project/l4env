@@ -10,3 +10,4 @@
 #define PRESENTER_VIEW_MODULE "Presenter View 1.0"
 #define DATAPROVIDER_MODULE "Dataprovider Server 1.0"
 #define DISPLAY_MODULE "Display Module 1.0"
+#define ENCAPL4X_MODULE "EncapL4x Module 1.0"

@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BEWaitAnyFunction.h
- *	\brief	contains the declaration of the class CBEWaitAnyFunction
+ *    \file    dice/src/be/BEWaitAnyFunction.h
+ *    \brief   contains the declaration of the class CBEWaitAnyFunction
  *
- *	\date	01/21/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/21/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -31,43 +32,56 @@
 
 #include "be/BEInterfaceFunction.h"
 
-/**	\class CBEWaitAnyFunction
- *	\ingroup backend
- *	\brief the wait-any function class for the back-end
+/**    \class CBEWaitAnyFunction
+ *    \ingroup backend
+ *    \brief the wait-any function class for the back-end
  *
  * This class contains the code to write a wait-any function
  */
-class CBEWaitAnyFunction : public CBEInterfaceFunction  
+class CBEWaitAnyFunction : public CBEInterfaceFunction
 {
-DECLARE_DYNAMIC(CBEWaitAnyFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CBEWaitAnyFunction();
-	virtual ~CBEWaitAnyFunction();
+    /** \brief constructor
+     *    \param bOpenWait true if this waiting for any sender
+     *    \param bReply true if we send a reply before waiting
+     */
+    CBEWaitAnyFunction(bool bOpenWait, bool bReply);
+    virtual ~CBEWaitAnyFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CBEWaitAnyFunction(CBEWaitAnyFunction &src);
+    /**    \brief copy constructor */
+    CBEWaitAnyFunction(CBEWaitAnyFunction &src);
 
 public:
-	virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
+    virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
-    virtual bool DoWriteFunction(CBEFile * pFile, CBEContext * pContext);
-    virtual CBETypedDeclarator * FindParameterType(String sTypeName);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
+    virtual CBETypedDeclarator * FindParameterType(string sTypeName);
     virtual int GetReceiveDirection();
     virtual int GetSendDirection();
 
 protected:
-	virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
-	virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteCleanup(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
+    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
     virtual void WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
+    virtual bool WriteBeforeParameters(CBEFile * pFile, CBEContext * pContext);
     virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
+
+protected:
+    /** \var bool m_bOpenWait
+     *  \brief true if this is an open wait function; false if closed wait
+     */
+    bool m_bOpenWait;
+    /** \var bool m_bReply
+     *  \brief true if this is includes a reply before waiting
+     */
+    bool m_bReply;
 };
 
 #endif // !__DICE_BEWAITANYFUNCTION_H__

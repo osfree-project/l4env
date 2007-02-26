@@ -76,9 +76,10 @@ u8* 	decode_rm_byte_register(int reg);
 u16* 	decode_rm_word_register(int reg);
 u32* 	decode_rm_long_register(int reg);
 u16* 	decode_rm_seg_register(int reg);
-unsigned decode_rm00_address(int rm);
-unsigned decode_rm01_address(int rm);
-unsigned decode_rm10_address(int rm);
+u32	decode_rm00_address(int rm);
+u32	decode_rm01_address(int rm);
+u32	decode_rm10_address(int rm);
+u32	decode_sib_address(int sib, int mod);
 
 #ifdef  __cplusplus
 }                       			/* End of "C" linkage for C++   	*/

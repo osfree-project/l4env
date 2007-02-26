@@ -14,43 +14,54 @@
  * COPYING file for details. */
 
 /* L4 includes */
-#include <l4/con/l4con.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/sys/syscalls.h>
-#include <l4/con/l4contxt.h>
+#include <l4/l4con/l4con.h>
+#include <l4/l4con/l4contxt.h>
 #include <l4/env/errno.h>
 #include <l4/env/mb_info.h>
 #include <l4/log/l4log.h>
 #include <l4/util/bitops.h>
+#include <l4/util/l4_macros.h>
+#ifdef ARCH_x86
+#include <l4/util/rdtsc.h>
+#endif
+#include <l4/rmgr/librmgr.h>
 #include <l4/dm_mem/dm_mem.h>
+#include <l4/dm_phys/consts.h>
+#include <l4/dm_phys/dm_phys.h>
+#ifdef ARCH_x86
 #include <l4/generic_io/libio.h>
+#endif
 
-/* OSKit includes */
+#ifdef ARCH_arm
+#include <l4/arm_drivers/lcd.h>
+#endif
+
+/* libc includes */
 #include <stdlib.h>
 #include <string.h>
 
 /* local includes */
 #include "vc.h"
+#include "main.h"
 #include "ipc.h"
+#ifdef ARCH_x86
+#include "int10.h"
+#endif
 #include "pslim_func.h"
 #include "con_macros.h"
 #include "con_config.h"
-#include "con-server.h"
+#include "l4con-server.h"
 #include "con_hw/init.h"
 #include "con_hw/iomem.h"
 #include "con_hw/fourcc.h"
 #include "con_hw/vidix.h"
 #include "con_yuv2rgb/yuv2rgb.h"
 
-void *gr_vmem;		/**< linear video framebuffer */
-void *vis_vmem;		/**< visible video framebuffer */
-
-/* in main.c */
-extern int fg_vc, want_vc, update_id;
-extern l4lock_t want_vc_lock;
-extern int noaccel;
-extern int pan;
-extern int use_l4io;
+l4_uint8_t *gr_vmem;		/**< Linear video framebuffer. */
+l4_uint8_t *vis_vmem;		/**< Visible video framebuffer. */
+l4_uint8_t *vis_offs;		/**< vis_vmem - gr_vmem. */
 
 extern const char _binary_font_psf_start[];
 static unsigned accel_caps  = 0;
@@ -64,22 +75,21 @@ static int vc_font_init(void);
 static int vc_l4io_init(void);
 
 /* dummy function for sync, does nothing */
-static void _nothing_sync(void)
-{
-}
+static void nothing_sync(void)
+{}
 
 con_accel_t hw_accel =
-{ copy: sw_copy, fill:sw_fill, sync:_nothing_sync };
+{ copy:sw_copy, fill:sw_fill, sync:nothing_sync };
 
 pslim_copy_fn fg_do_copy = sw_copy;
 pslim_copy_fn bg_do_copy = sw_copy;
 pslim_fill_fn fg_do_fill = sw_fill;
 pslim_fill_fn bg_do_fill = sw_fill;
-pslim_sync_fn fg_do_sync = _nothing_sync;
-pslim_sync_fn bg_do_sync = _nothing_sync;
+pslim_sync_fn fg_do_sync = nothing_sync;
+pslim_sync_fn bg_do_sync = nothing_sync;
 pslim_drty_fn fg_do_drty = 0;
 
-/** color tables for puts_attr */
+/** Color tables for puts_attr. */
 static const l4con_pslim_color_t color_tab15[16] =
 { 
   0x0000, 0x0015, 0x02a0, 0x02b5, 0x5400, 0x5415, 0x5540, 0x56b5,
@@ -98,19 +108,10 @@ static const l4con_pslim_color_t color_tab32[16] =
   0x00ff5555, 0x00ff55ff, 0x00ffff55, 0x00ffffff
 };
 
-extern l4_uint16_t VESA_XRES;
-extern l4_uint16_t VESA_YRES;
-extern l4_uint8_t VESA_BITS;
-extern l4_uint16_t VESA_BPL;
-       l4_uint8_t VESA_RES;
-extern l4_uint8_t FONT_XRES;
-extern l4_uint8_t FONT_YRES;
-extern struct l4con_vc *vc[];
-
 static void vc_init_gr(void);
 static l4_uint32_t pan_offs_x, pan_offs_y;
 
-/** convert l4con_pslim_color_t into ``drawable'' color */
+/** Convert l4con_pslim_color_t into ``drawable'' color. */
 static inline void
 convert_color(struct l4con_vc *vc, l4con_pslim_color_t *color)
 { 
@@ -197,131 +198,148 @@ vc_init()
 static int
 vc_l4io_init(void)
 {
-  l4io_info_t *io_info_addr = (l4io_info_t*)-1;
+#ifdef ARCH_x86
+  l4io_info_t *io_info_addr = (l4io_info_t*)0;
 
   if (l4io_init(&io_info_addr, L4IO_DRV_INVALID))
     {
       PANIC("Couldn't connect to L4 IO server!");
       return 1;
     }
+#endif
 
   return 0;
 }
 
+#ifdef ARCH_x86
 static int
 vc_detect_hw(l4util_mb_vbe_ctrl_t *vbe, l4util_mb_vbe_mode_t *vbi)
 {
-  if (!noaccel)
+  l4_addr_t vid_mem_addr;
+  l4_size_t vid_mem_size;
+
+  con_hw_set_l4io(use_l4io);
+
+  if (noaccel)
+    return -L4_ENOTFOUND;
+
+  vid_mem_addr = vbi->phys_base;
+  vid_mem_size = vbe->total_memory << 16;
+
+  if (con_hw_init(VESA_XRES, VESA_YRES, &VESA_BITS,
+		  vid_mem_addr, vid_mem_size, &hw_accel, &gr_vmem)<0)
     {
-      l4_addr_t vid_mem_addr = vbi->phys_base;
-      l4_size_t vid_mem_size = 64*1024*vbe->total_memory;
-
-      if (con_hw_init(VESA_XRES, VESA_YRES, &VESA_BITS,
-		      vid_mem_addr, vid_mem_size, use_l4io,
-		      &hw_accel, &gr_vmem)<0)
-	{
-	  printf("No supported accelerated graphics card detected\n");
-	  return -L4_ENOTFOUND;
-	}
-
-      fg_do_copy = hw_accel.copy;
-      fg_do_fill = hw_accel.fill;
-      fg_do_sync = hw_accel.sync;
-      fg_do_drty = hw_accel.drty;
-
-      if (hw_accel.caps & ACCEL_FAST_COPY)
-	accel_caps |= L4CON_FAST_COPY;
-      if (hw_accel.caps & ACCEL_FAST_CSCS_YV12)
-	accel_caps |= L4CON_STREAM_CSCS_YV12;
-      if (hw_accel.caps & ACCEL_FAST_CSCS_YUY2)
-	accel_caps |= L4CON_STREAM_CSCS_YUY2;
-
-      vis_vmem = gr_vmem;
-
-      if (pan && hw_accel.pan)
-	{
-	  unsigned next_super_offs, start;
-
-	  /* hardware support for panning the display */
-	  next_super_offs = L4_SUPERPAGESIZE;
-
-	  /* consider overflow on memory modes with more than 4MB */
-	  if (vbi->y_resolution * vbi->bytes_per_scanline > next_super_offs)
-	    next_super_offs += L4_SUPERPAGESIZE;
-
-	  if (next_super_offs + status_area*vbi->bytes_per_scanline
-		      > vid_mem_size)
-	    {
-	      printf("WARNING: Can't pan display: Only have %dkB video memory "
-		     "need %dkB\n", 
-		     vid_mem_size / 1024, 
-		     (next_super_offs + status_area*vbi->bytes_per_scanline) 
-		     / 1024);
-	    }
-	  else
-	    {
-	      unsigned x, y;
-	      unsigned bpp = (vbi->bits_per_pixel + 1) / 8;
-	      
-	      x = (next_super_offs % vbi->bytes_per_scanline) / bpp;
-	      y = (next_super_offs / vbi->bytes_per_scanline)
-		- vbi->y_resolution + status_area;
-
-	      /* pan graphics card */
-	      hw_accel.pan(&x, &y);
-	      
-	      pan_offs_x = x;
-	      pan_offs_y = y;
-	      
-	      start = y * vbi->bytes_per_scanline + x * bpp;
-	      vis_vmem  = gr_vmem + start;
-	      
-	      printf("Display panned to %d:%d\n", y, x);
-	    }
-	}
-
-      return 0;
+      printf("No supported accelerated graphics card detected\n");
+      return -L4_ENOTFOUND;
     }
 
-  return -L4_ENOTFOUND;
+  fg_do_copy = hw_accel.copy;
+  fg_do_fill = hw_accel.fill;
+  fg_do_sync = hw_accel.sync;
+  fg_do_drty = hw_accel.drty;
+
+  if (hw_accel.caps & ACCEL_FAST_COPY)
+    accel_caps |= L4CON_FAST_COPY;
+  if (hw_accel.caps & ACCEL_FAST_CSCS_YV12)
+    accel_caps |= L4CON_STREAM_CSCS_YV12;
+  if (hw_accel.caps & ACCEL_FAST_CSCS_YUY2)
+    accel_caps |= L4CON_STREAM_CSCS_YUY2;
+  if (hw_accel.caps & ACCEL_POST_DIRTY)
+    accel_caps |= L4CON_POST_DIRTY;
+
+  vis_vmem = gr_vmem;
+
+  if (pan && hw_accel.pan)
+    {
+      l4_addr_t next_super_offs, start;
+
+      /* hardware support for panning the display */
+      next_super_offs = L4_SUPERPAGESIZE;
+
+      /* consider overflow on memory modes with more than 4MB */
+      if (vbi->y_resolution * vbi->bytes_per_scanline > next_super_offs)
+	next_super_offs += L4_SUPERPAGESIZE;
+
+      if (next_super_offs + status_area*vbi->bytes_per_scanline > vid_mem_size)
+	{
+     	  printf("WARNING: Can't pan display: Only have %dkB video memory "
+	         "need %dkB\n", vid_mem_size >> 10, 
+		 (next_super_offs + status_area*vbi->bytes_per_scanline) >> 10);
+	}
+      else
+	{
+	  unsigned x, y;
+	  unsigned bpp = (vbi->bits_per_pixel + 1) / 8;
+	      
+	  x = (next_super_offs % vbi->bytes_per_scanline) / bpp;
+	  y = (next_super_offs / vbi->bytes_per_scanline)
+	    - vbi->y_resolution + status_area;
+
+	  /* pan graphics card */
+    	  hw_accel.pan(&x, &y);
+	      
+	  pan_offs_x = x;
+	  pan_offs_y = y;
+	      
+	  start = y * vbi->bytes_per_scanline + x * bpp;
+	  vis_vmem  = gr_vmem + start;
+	  vis_offs  = (l4_uint8_t*)start;
+
+	  printf("Display panned to %d:%d\n", y, x);
+	}
+    }
+
+  return 0;
 }
+#endif
+
 
 /* init VESA console driver */
 static void 
 vc_init_gr(void)
 {
+  l4_size_t vid_mem_size;
+#ifdef ARCH_x86
   l4util_mb_vbe_mode_t *vbi;
   l4util_mb_vbe_ctrl_t *vbe;
-  l4util_mb_info_t *mbi = l4env_multiboot_info;
-  l4_size_t vid_mem_size;
 
-  if (!(mbi->flags & L4UTIL_MB_VIDEO_INFO) ||
-      !(mbi->vbe_mode_info))
+  if (vbemode == 0 || int10_set_vbemode(vbemode, &vbe, &vbi) != 0)
     {
-      PANIC(           "Did not find VBE info block in multiboot info.\n"
-	    "Perhaps you have to upgrade GRUB, RMGR or oskit10_support.\n"
-	    "GRUB has to set the video mode with the vbeset command.");
+      l4util_mb_info_t *mbi = l4env_multiboot_info;
+      if (!(mbi->flags & L4UTIL_MB_VIDEO_INFO) || !(mbi->vbe_mode_info))
+	{
+	  PANIC(           "Did not find VBE info block in multiboot info.\n"
+	      "Perhaps you have to upgrade GRUB, RMGR or oskit10_support.\n"
+	      "GRUB has to set the video mode with the vbeset command.\n"
+	      "\n"
+	      "Alternatively, try passing the --vbemode=<mode> switch.\n");
+	}
+  
+      vbe = (l4util_mb_vbe_ctrl_t*) mbi->vbe_ctrl_info;
+      vbi = (l4util_mb_vbe_mode_t*) mbi->vbe_mode_info;
     }
-  
-  vbe = (l4util_mb_vbe_ctrl_t*) mbi->vbe_ctrl_info;
-  vbi = (l4util_mb_vbe_mode_t*) mbi->vbe_mode_info;
 
-  vid_mem_size = 64*1024*vbe->total_memory;
-  
-  VESA_YRES = vbi->y_resolution;
-  VESA_XRES = vbi->x_resolution;
-  VESA_BITS = vbi->bits_per_pixel;
-  VESA_BPL  = vbi->bytes_per_scanline;
-  VESA_RES  = 0;
+  vid_mem_size    = vbe->total_memory << 16;
+  VESA_YRES       = vbi->y_resolution;
+  VESA_XRES       = vbi->x_resolution;
+  VESA_BITS       = vbi->bits_per_pixel;
+  VESA_BPL        = vbi->bytes_per_scanline;
+  VESA_RES        = 0;
+  VESA_RED_OFFS   = vbi->red_field_position;
+  VESA_RED_SIZE   = vbi->red_mask_size;
+  VESA_GREEN_OFFS = vbi->green_field_position;
+  VESA_GREEN_SIZE = vbi->green_mask_size;
+  VESA_BLUE_OFFS  = vbi->blue_field_position;
+  VESA_BLUE_SIZE  = vbi->blue_mask_size;
 
-  printf("VESA reports %dx%d@%d (%04x) "
-         "red=%d:%d green=%d:%d blue=%d:%d res=%d:%d [%dKB]\n",
-	 VESA_XRES, VESA_YRES, vbi->bits_per_pixel, vbi->mode_attributes,
+  printf("VESA reports %dx%d@%d %dbpl (%04x) [%dkB]\n"
+         "Color mapping: red=%d:%d green=%d:%d blue=%d:%d res=%d:%d\n",
+	 VESA_XRES, VESA_YRES, vbi->bits_per_pixel, vbi->bytes_per_scanline,
+	 vbi->mode_attributes, vid_mem_size >> 10,
 	 vbi->red_field_position, vbi->red_mask_size,
 	 vbi->green_field_position, vbi->green_mask_size,
 	 vbi->blue_field_position, vbi->blue_mask_size,
-	 vbi->reserved_field_position, vbi->reserved_mask_size,
-	 vid_mem_size >> 10);
+	 vbi->reserved_field_position, vbi->reserved_mask_size);
   
   switch(VESA_BITS) 
     {
@@ -338,16 +356,39 @@ vc_init_gr(void)
     default: 
       PANIC("Video mode with %d bpp not supported!", VESA_BITS); break;
     }
+#endif
+#ifdef ARCH_arm
+
+  enum arm_lcd_types lcd_type = arm_lcd_probe();
+  struct arm_lcd_ops *lcd = arm_lcd_get_ops(lcd_type);
+
+  printf("Using LCD driver: %s\n", lcd->get_info());
+
+  vid_mem_size = lcd->get_video_mem_size();
+  VESA_YRES    = lcd->get_screen_height();
+  VESA_XRES    = lcd->get_screen_width();
+  VESA_BITS    = lcd->get_bpp();
+  VESA_BPL     = lcd->get_bytes_per_line();
+  VESA_RES     = 0;
+
+  gr_vmem      = lcd->get_fb();
+  vis_vmem     = gr_vmem;
+  if (!gr_vmem)
+    Panic("Could not setup video memory");
+
+  lcd->enable();
+#endif
   
+#ifdef ARCH_x86
   if (vc_detect_hw(vbe, vbi)<0)
     {
       /* not known graphics adapter detected -- map video memory */
       l4_addr_t map_addr;
       map_io_mem(vbi->phys_base, vid_mem_size, "video", &map_addr);
-      gr_vmem = (void*)map_addr;
+      gr_vmem  = (void*)map_addr;
+      vis_vmem = gr_vmem;
     }
-
-  vis_vmem = gr_vmem;
+#endif
 
   switch(VESA_XRES)
     {
@@ -371,65 +412,48 @@ vc_init_gr(void)
   yuv2rgb_init(VESA_BITS, MODE_RGB);
 }
 
-/******************************************************************************
- * implementation of service functions                                        *
- *****************************************************************************/
-
-/******************************************************************************
- * open_vc                                                                    *
- *                                                                            *
- * param: vc          ... current information structure                       *
- *        mode        ... CON_OUT, CON_INOUT                                  *
- * ret:   0           ... success                                             *
- *                                                                            *
- * open new virtual console (already set to CON_OPENING)                      *
- *****************************************************************************/
-int
-vc_open(struct l4con_vc *vc, l4_uint32_t mode)
+/**
+ * Open new virtual console (already set to CON_OPENING).
+ *
+ * \param vc     current information structure
+ * \param mode   CON_OUT, CON_INOUT
+ * return 0      success
+ */
+static int
+vc_open(struct l4con_vc *vc, l4_uint32_t mode, l4_threadid_t ev_handler)
 {
   int error;
+  l4_threadid_t e = L4_NIL_ID;
 	
   switch (mode) 
     {
     case CON_INOUT:
-      
-      /* IN specific */
+      e = ev_handler;
+
       if ((error = vc_open_in(vc)) ) 
 	return error;
 
-      /* OUT specific */
-      if ((error = vc_open_out(vc))) 
-	return error;
+      // fall through
 
-      /* switch to new opened vc */
-      vc->mode = CON_INOUT;
-		
-      l4lock_lock(&want_vc_lock);
-      want_vc = vc->vc_number;
-      l4lock_unlock(&want_vc_lock);
-      break;
-      
     case CON_OUT:
+      vc->ev_partner_l4id = e;
+
       if ((error = vc_open_out(vc)))
 	return error;
-		
+
+      vc->mode = mode;
+
       /* switch to new opened vc */
-      vc->mode = CON_OUT;
-      
-      l4lock_lock(&want_vc_lock);
-      want_vc = vc->vc_number;
-      l4lock_unlock(&want_vc_lock);
+      request_vc(vc->vc_number);
       break;
     }
-  
+
   return 0;
 }
 
 static int
 vc_font_init(void)
 {
-  unsigned chars;
-  
   /* all consoles can use puts interface */
   /* check magic number of .psf */
   if ((_binary_font_psf_start[0] != 0x36) ||
@@ -444,11 +468,11 @@ vc_font_init(void)
     {
     case 0:
     case 2:
-      chars = 256;
+      FONT_CHRS = 256;
       break;
     case 1:
     case 3:
-      chars = 512; 
+      FONT_CHRS = 512; 
       break;
     default:
       PANIC("bad psf font file magic %02x!", 
@@ -456,7 +480,7 @@ vc_font_init(void)
     }
   
   printf("Character size is %dx%d, font has %d characters\n", 
-	 FONT_XRES, FONT_YRES, chars);
+	 FONT_XRES, FONT_YRES, FONT_CHRS);
   
   status_area = FONT_YRES + 4;
   
@@ -478,9 +502,7 @@ vc_open_in(struct l4con_vc *vc)
   /* is there an event handler thread */
   /* and is he 'alive' */
   if (!thread_exists(vc->ev_partner_l4id)) 
-    {
-      return -CON_ETHREAD;
-    }
+    return -CON_ETHREAD;
   
   return 0;
 }
@@ -513,7 +535,7 @@ vc_open_out(struct l4con_vc *vc)
   
   vc->bytes_per_pixel = (vc->bpp+7)/8;
   vc->bytes_per_line  = VESA_BPL;
-  vc->vfb_size        = vc->yres * vc->bytes_per_line;
+  vc->vfb_size        = ((vc->yres * vc->bytes_per_line) + 3) & ~3;
   vc->flags           = accel_caps;
 
   vc->do_copy = bg_do_copy;
@@ -536,9 +558,8 @@ vc_open_out(struct l4con_vc *vc)
       char ds_name[32];
       l4dm_dataspace_t ds;
 
-      sprintf(ds_name, "vfb for %x.%x", 
-	     vc->vc_partner_l4id.id.task, 
-	     vc->vc_partner_l4id.id.lthread);
+      sprintf(ds_name, "vfb for "l4util_idfmt, 
+	  l4util_idstr(vc->vc_partner_l4id));
       if ((error = l4dm_mem_open(L4DM_DEFAULT_DSM, vc->vfb_size, 
 				 0, 0, ds_name, &ds)))
 	{
@@ -556,7 +577,7 @@ vc_open_out(struct l4con_vc *vc)
       memset(vc->vfb, 0, vc->vfb_size);
       vc->fb = vc->vfb;
     }
-  
+
   LOG("vc[%d] %dx%d@%d, gmode:0x%x", 
       vc->vc_number,vc->xres, vc->yres,vc->bpp,vc->gmode);
   return 0;
@@ -571,51 +592,50 @@ vc_open_out(struct l4con_vc *vc)
  * close current virtual console                                              *
  *****************************************************************************/
 int 
-vc_close(struct l4con_vc *vc)
+vc_close(struct l4con_vc *this_vc)
 {
   /* XXX notify event thread of partner */
-  
+
+  /* make sure that the main thread cannot access our vfb */
+  l4lock_lock(&this_vc->fb_lock);
   /* temporary mode: no output allowed, but occupied */
-  vc->mode = CON_CLOSING;
-  
-  /* deallocate memory */
-  if (vc->vfb_used && vc->vfb)
+  this_vc->mode = CON_CLOSING;
+  if (this_vc->vfb_used && this_vc->vfb)
     {
-      l4dm_mem_release(vc->vfb);
-      vc->vfb = 0;
+      l4dm_mem_release(this_vc->vfb);
+      this_vc->vfb = 0;
     }
+  this_vc->vfb_used = 0;
+  this_vc->fb = 0;
+  l4lock_unlock(&this_vc->fb_lock);
 
-  vc->fb = 0;
+  if (this_vc->sbuf1)
+    {
+      l4dm_mem_release(this_vc->sbuf1);
+      this_vc->sbuf1 = 0;
+    }
+  if (this_vc->sbuf2)
+    {
+      l4dm_mem_release(this_vc->sbuf2);
+      this_vc->sbuf2 = 0;
+    }
+  if (this_vc->sbuf3)
+    {
+      l4dm_mem_release(this_vc->sbuf3);
+      this_vc->sbuf3 = 0;
+    }
+  
+  this_vc->ev_partner_l4id = L4_NIL_ID;
 
-  if (vc->sbuf1)
-    {
-      l4dm_mem_release(vc->sbuf1);
-      vc->sbuf1 = 0;
-    }
-  if (vc->sbuf2)
-    {
-      l4dm_mem_release(vc->sbuf2);
-      vc->sbuf2 = 0;
-    }
-  if (vc->sbuf3)
-    {
-      l4dm_mem_release(vc->sbuf3);
-      vc->sbuf3 = 0;
-    }
-  
-  vc->ev_partner_l4id = L4_NIL_ID;
-  
-  l4lock_lock(&want_vc_lock);
-  if (vc->vc_number == fg_vc) 
-    want_vc = -1;
+  if (this_vc->vc_number == fg_vc)
+    request_vc(-1);
   else
     update_id = 1;
-  l4lock_unlock(&want_vc_lock);
   
   return 0;
 }
 
-/** render string to screen
+/** Render string to screen.
  * @pre have vc->fb_lock */
 static int
 vc_puts(struct l4con_vc *vc, int from_user,
@@ -627,39 +647,38 @@ vc_puts(struct l4con_vc *vc, int from_user,
   convert_color(vc, &fg_color);
   convert_color(vc, &bg_color);
   
-  if(vc->fb != 0)
-    {
-      for (i=0; i<len; i++, str++)
-	{	
-	  /* optimization: collect spaces */
-	  for (j=0; (i<len) && (*str == ' '); i++, j++, str++)
-	    ;	  
+  if(vc->fb == 0)
+    return 0;
+
+  for (i=0; i<len; i++, str++)
+    {	
+      /* optimization: collect spaces */
+      for (j=0; (i<len) && (*str == ' '); i++, j++, str++)
+	;	  
 	  
-	  if (j>0)
-	    {
-	      l4con_pslim_rect_t rect = { x, y, j*FONT_XRES, FONT_YRES };
+      if (j>0)
+	{
+	  l4con_pslim_rect_t rect = { x, y, j*FONT_XRES, FONT_YRES };
 	      
-	      pslim_fill(vc, from_user, &rect, bg_color);
-	      x += j*FONT_XRES;
-	      i--; str--;
-	    }
-	  else
-	    {
-	      l4con_pslim_rect_t rect = { x, y, FONT_XRES, FONT_YRES };
+	  pslim_fill(vc, from_user, &rect, bg_color);
+	  x += j*FONT_XRES;
+	  i--; str--;
+	}
+      else
+	{
+	  l4con_pslim_rect_t rect = { x, y, FONT_XRES, FONT_YRES };
 	      
-	      pslim_bmap(vc, from_user, 
-			 &rect, fg_color, bg_color, 
-			 (void*) &_binary_font_psf_start[rect.h * (*str)+4],
-			 pSLIM_BMAP_START_MSB);
-	      x += FONT_XRES;
-	    }
+	  pslim_bmap(vc, from_user, &rect, fg_color, bg_color, 
+		     (void*) &_binary_font_psf_start[rect.h * (*str)+4],
+		     pSLIM_BMAP_START_MSB);
+	  x += FONT_XRES;
 	}
     }
 
   return 0;
 }
 
-/** fill rectangle of screen
+/** fill rectangle of screen.
  * @pre have vc->fb_lock */
 static int
 vc_fill(struct l4con_vc *vc, int from_user,
@@ -676,7 +695,7 @@ vc_fill(struct l4con_vc *vc, int from_user,
   return 0;
 }
 
-/** put characters with scale >= 1
+/** Put characters with scale >= 1.
  * @pre have vc->fb_lock */
 static int
 vc_puts_scale(struct l4con_vc *vc, int from_user,
@@ -730,7 +749,7 @@ vc_puts_scale(struct l4con_vc *vc, int from_user,
   return 0;
 }
 
-/** show id of current console at bottom of screen
+/** Show id of current console at bottom of screen.
  * @pre have vc->fb_lock */
 void
 vc_show_id(struct l4con_vc *this_vc)
@@ -747,16 +766,11 @@ vc_show_id(struct l4con_vc *this_vc)
   vc_fill(this_vc, 0, &rect, bgc);
 
   if (this_vc->vc_number != 0)
-    {
-      sprintf(id, "DROPS console: partner %x.%02x   ",
-    	  this_vc->vc_partner_l4id.id.task,
-	  this_vc->vc_partner_l4id.id.lthread);
-    }
+    sprintf(id, "DROPS console: partner "l4util_idfmt"   ",
+	l4util_idstr(this_vc->vc_partner_l4id));
   else
-    {
-      strcpy(id, "DROPS console: (all closed)");
-    }
-  
+    strcpy(id, "DROPS console: (all closed)");
+
   vc_puts(this_vc, 0, id, strlen(id),
           2, this_vc->user_yres+2,
           fgc, bgc);
@@ -789,6 +803,52 @@ vc_show_id(struct l4con_vc *this_vc)
 }
 
 void
+vc_show_dmphys_poolsize(struct l4con_vc *this_vc)
+{
+  const l4con_pslim_color_t fgc = 0x009999FF;
+  const l4con_pslim_color_t bgc = 0x00666666;
+  char  str[32];
+  l4_uint32_t size, free;
+
+  l4dm_memphys_poolsize(L4DM_MEMPHYS_DEFAULT, &size, &free);
+  l4con_pslim_rect_t rect = 
+    { this_vc->xres - 180, this_vc->user_yres,
+      80, this_vc->yres-this_vc->user_yres };
+  vc_fill(this_vc, 0, &rect, bgc);
+  sprintf(str, "%3d/%dMB", free/(1<<20), size/(1<<20));
+  vc_puts(this_vc, 0, str, strlen(str), rect.x, rect.y+2, fgc, bgc);
+}
+
+void
+vc_show_cpu_load(struct l4con_vc *this_vc)
+{
+#ifdef ARCH_x86
+  static l4_uint32_t tsc, pmc;
+  l4_uint32_t new_tsc = l4_rdtsc_32(), new_pmc = l4_rdpmc_32(0);
+
+  if (tsc && pmc)
+    {
+      const l4con_pslim_color_t fgc = 0x009999FF;
+      const l4con_pslim_color_t bgc = 0x00666666;
+      char  str[16];
+      l4_uint32_t load = (new_pmc - pmc) / ((new_tsc - tsc) / 1000);
+      l4con_pslim_rect_t rect = 
+	{ this_vc->xres - 260, this_vc->user_yres,
+	  50, this_vc->yres-this_vc->user_yres };
+      vc_fill(this_vc, 0, &rect, bgc);
+      if (load > 1000)
+	strcpy(str, "---.-%");
+      else
+	sprintf(str, "%3d.%d%%", load/10, load % 10);
+      vc_puts(this_vc, 0, str, strlen(str), rect.x, rect.y+2, fgc, bgc);
+    }
+
+  tsc = new_tsc;
+  pmc = new_pmc;
+#endif
+}
+
+void
 vc_show_drops_cscs_logo(void)
 {
   if (vc[fg_vc]->logo_x != 100000)
@@ -808,7 +868,7 @@ vc_show_drops_cscs_logo(void)
     }
 }
 
-/** clear vc
+/** Clear vc.
  * @pre have vc->fb_lock */
 void
 vc_clear(struct l4con_vc *vc)
@@ -861,23 +921,20 @@ l4_int32_t
 con_vc_smode_component(CORBA_Object _dice_corba_obj,
 		       l4_uint8_t mode,
 		       const l4_threadid_t *ev_handler,
-		       CORBA_Environment *_dice_corba_env)
+		       CORBA_Server_Environment *_dice_corba_env)
 {
-//  struct l4con_vc *vc = (struct l4con_vc *) flick_server_get_local(request);
   struct l4con_vc *vc = (struct l4con_vc*)(_dice_corba_env->user_data);
   
   if (vc->mode == CON_OPENING)
     {
       /* inital state */
-      vc->ev_partner_l4id.lh.low = ev_handler->lh.low;
-      vc->ev_partner_l4id.lh.high = ev_handler->lh.high;
-      return vc_open(vc, mode);
+      vc->ev_partner_l4id = *ev_handler;
+      return vc_open(vc, mode, *ev_handler);
     }
   else 
     { 
       /* set new event handler */
-      vc->ev_partner_l4id.lh.low = ev_handler->lh.low;
-      vc->ev_partner_l4id.lh.high = ev_handler->lh.high;
+      vc->ev_partner_l4id = (mode & CON_IN) ? *ev_handler : L4_NIL_ID;
       return 0;
     }
 }
@@ -898,7 +955,7 @@ con_vc_gmode_component(CORBA_Object _dice_corba_obj,
 		       l4_uint32_t *sbuf_1size,
 		       l4_uint32_t *sbuf_2size,
 		       l4_uint32_t *sbuf_3size,
-		       CORBA_Environment *_dice_corba_env)
+		       CORBA_Server_Environment *_dice_corba_env)
 {
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
 
@@ -921,7 +978,8 @@ con_vc_gmode_component(CORBA_Object _dice_corba_obj,
  *****************************************************************************/
 l4_int32_t 
 con_vc_close_component(CORBA_Object _dice_corba_obj,
-		       CORBA_Environment *_dice_corba_env)
+		       l4_int16_t *_dice_reply,
+		       CORBA_Server_Environment *_dice_corba_env)
 {
   l4_int32_t ret;
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
@@ -929,11 +987,11 @@ con_vc_close_component(CORBA_Object _dice_corba_obj,
   ret = vc_close(vc);
   if (vc->mode == CON_CLOSING)
     {
-      /* send answer */
-      con_vc_close_reply(_dice_corba_obj, ret, _dice_corba_env);
-      
       /* mark vc as free */
       vc->mode = CON_CLOSED;
+      
+      /* send answer */
+      con_vc_close_reply(_dice_corba_obj, ret, _dice_corba_env);
       
       /* stop thread ... there should be no problem 
        * if main_thread races here, since everything 
@@ -959,7 +1017,7 @@ con_vc_close_component(CORBA_Object _dice_corba_obj,
 l4_int32_t 
 con_vc_graph_smode_component(CORBA_Object _dice_corba_obj,
 			     l4_uint8_t g_mode,
-			     CORBA_Environment *_dice_corba_env)
+			     CORBA_Server_Environment *_dice_corba_env)
 {
   return -CON_ENOTIMPL;
 }
@@ -985,7 +1043,7 @@ con_vc_graph_gmode_component(CORBA_Object _dice_corba_obj,
 			     l4_uint32_t *flags,
 			     l4_uint32_t *xtxt,
 			     l4_uint32_t *ytxt,
-			     CORBA_Environment *_dice_corba_env)
+			     CORBA_Server_Environment *_dice_corba_env)
 {
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   
@@ -1001,12 +1059,56 @@ con_vc_graph_gmode_component(CORBA_Object _dice_corba_obj,
   return 0;
 }
 
+/******************************************************************************
+ * con_vc_server_graph_get_rgb                                                *
+ *                                                                            *
+ * in:  _dice_corba_obj ... IDL request structure                             *
+ * out: red_offs        ... offset of red value in pixel                      *
+ *      red_len         ... length of red value in pixel                      *
+ *      green_offs      ... offset of green value in pixel                    *
+ *      green_len       ... length of green value in pixel                    *
+ *      blue_offs       ... offset of blue value in pixel                     *
+ *      blue_len        ... length of blue value in pixel                     *
+ *      _dice_corba_env ... IDL exception (unused)                            *
+ * ret: 0               ... success                                           *
+ *                                                                            *
+ * Get Get RGB pixel values                                                   *
+ *****************************************************************************/
+l4_int32_t
+con_vc_graph_get_rgb_component(CORBA_Object _dice_corba_obj,
+                               l4_uint32_t *red_offs,
+                               l4_uint32_t *red_len,
+                               l4_uint32_t *green_offs,
+                               l4_uint32_t *green_len,
+                               l4_uint32_t *blue_offs,
+                               l4_uint32_t *blue_len,
+                               CORBA_Server_Environment *_dice_corba_env)
+{
+#if ARCH_x86
+  *red_offs   = VESA_RED_OFFS;
+  *red_len    = VESA_RED_SIZE;
+  *green_offs = VESA_GREEN_OFFS;
+  *green_len  = VESA_GREEN_SIZE;
+  *blue_offs  = VESA_BLUE_OFFS;
+  *blue_len   = VESA_BLUE_SIZE;
+#endif
+#ifdef ARCH_arm
+  *red_offs   = 0;
+  *red_len    = 5;
+  *green_offs = 5;
+  *green_len  = 6;
+  *blue_offs  = 11;
+  *blue_len   = 5;
+#endif
+
+  return 0;
+}
 
 l4_int32_t 
 con_vc_graph_mapfb_component(CORBA_Object _dice_corba_obj,
 			     l4_snd_fpage_t *page,
 			     l4_uint32_t *offset,
-			     CORBA_Environment *_dice_corba_env)
+			     CORBA_Server_Environment *_dice_corba_env)
 {
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   l4_addr_t base = (l4_addr_t)vis_vmem & L4_SUPERPAGEMASK;
@@ -1037,7 +1139,7 @@ con_vc_graph_mapfb_component(CORBA_Object _dice_corba_obj,
 l4_int32_t 
 con_vc_ev_sflt_component(CORBA_Object _dice_corba_obj,
 			 l4_uint32_t filter,
-			 CORBA_Environment *_dice_corba_env)
+			 CORBA_Server_Environment *_dice_corba_env)
 {
   return -CON_ENOTIMPL;
 }
@@ -1055,7 +1157,7 @@ con_vc_ev_sflt_component(CORBA_Object _dice_corba_obj,
 l4_int32_t 
 con_vc_ev_gflt_component(CORBA_Object _dice_corba_obj,
 			 l4_uint32_t *filter,
-			 CORBA_Environment *_dice_corba_env)
+			 CORBA_Server_Environment *_dice_corba_env)
 {
   return -CON_ENOTIMPL;
 }
@@ -1079,9 +1181,8 @@ l4_int32_t
 con_vc_pslim_fill_component(CORBA_Object _dice_corba_obj,
 			    const l4con_pslim_rect_t *rect,
 			    l4con_pslim_color_t color,
-			    CORBA_Environment *_dice_corba_env)
+			    CORBA_Server_Environment *_dice_corba_env)
 {
-//  struct l4con_vc *vc = (struct l4con_vc *) flick_server_get_local(request);
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   
   /* need fb_lock for drawing */
@@ -1113,9 +1214,8 @@ con_vc_pslim_copy_component(CORBA_Object _dice_corba_obj,
 			    const l4con_pslim_rect_t *rect,
 			    l4_int16_t dx,
 			    l4_int16_t dy,
-			    CORBA_Environment *_dice_corba_env)
+			    CORBA_Server_Environment *_dice_corba_env)
 {
-//  struct l4con_vc *vc = (struct l4con_vc *) flick_server_get_local(request);
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
 
   if ((vc->mode & CON_OUT)==0)
@@ -1158,7 +1258,7 @@ con_vc_pslim_bmap_component(CORBA_Object _dice_corba_obj,
 			    const l4_uint8_t* bmap,
 			    l4_int32_t bmap_size,
 			    l4_uint8_t bmap_type,
-			    CORBA_Environment *_dice_corba_env)
+			    CORBA_Server_Environment *_dice_corba_env)
 {
   void *map = (void*)bmap;
   struct l4con_vc *vc = (struct l4con_vc*)(_dice_corba_env->user_data);
@@ -1195,7 +1295,7 @@ con_vc_pslim_set_component(CORBA_Object _dice_corba_obj,
 			   const l4con_pslim_rect_t *rect,
 			   const l4_uint8_t* pmap,
 			   l4_int32_t pmap_size,
-			   CORBA_Environment *_dice_corba_env)
+			   CORBA_Server_Environment *_dice_corba_env)
 {
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   void *map = (void*)pmap;
@@ -1237,7 +1337,7 @@ con_vc_pslim_cscs_component(CORBA_Object _dice_corba_obj,
 			    l4_int32_t v_l,
 			    l4_int32_t yuv_type,
 			    l4_int8_t scale,
-			    CORBA_Environment *_dice_corba_env)
+			    CORBA_Server_Environment *_dice_corba_env)
 {
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
 
@@ -1290,7 +1390,7 @@ con_vc_puts_component(CORBA_Object _dice_corba_obj,
 		      l4_int16_t y,
 		      l4con_pslim_color_t fg_color,
 		      l4con_pslim_color_t bg_color,
-		      CORBA_Environment *_dice_corba_env)
+		      CORBA_Server_Environment *_dice_corba_env)
 {
   l4_int32_t ret;
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
@@ -1321,7 +1421,7 @@ con_vc_puts_attr_component(CORBA_Object _dice_corba_obj,
 			   l4_int32_t strattr_size,
 			   l4_int16_t x,
 			   l4_int16_t y,
-			   CORBA_Environment *_dice_corba_env)
+			   CORBA_Server_Environment *_dice_corba_env)
 {
   int i, j;
   l4_uint16_t* str = (l4_uint16_t*) s;
@@ -1372,13 +1472,32 @@ con_vc_puts_attr_component(CORBA_Object _dice_corba_obj,
 l4_int32_t 
 con_vc_direct_update_component(CORBA_Object _dice_corba_obj,
 			       const l4con_pslim_rect_t *rect,
-			       CORBA_Environment *_dice_corba_env)
+			       CORBA_Server_Environment *_dice_corba_env)
 {
-//  struct l4con_vc *vc = (struct l4con_vc *) flick_server_get_local(request);
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   
   if ((vc->mode & CON_OUT)==0)
     return -CON_EPERM;
+
+  if (vc->fb_mapped)
+    {
+      if (hw_accel.caps & ACCEL_POST_DIRTY)
+	{
+	  /* notify the hardware that there was something changed. */
+	  vc->do_drty(rect->x, rect->y, rect->w, rect->h);
+	  return 0;
+	}
+      else
+	{
+	  static int bug;
+	  if (!bug)
+	    {
+	      printf("fb mapped and post dirty probably not necessary "
+		     "by "l4util_idfmt"\n", l4util_idstr(*_dice_corba_obj));
+	      bug++;
+	    }
+	}
+    }
 
   if (vc->vfb == 0)
     {
@@ -1399,12 +1518,11 @@ con_vc_direct_update_component(CORBA_Object _dice_corba_obj,
 l4_int32_t
 con_vc_direct_setfb_component(CORBA_Object _dice_corba_obj,
 			      const l4dm_dataspace_t *data_ds,
-			      CORBA_Environment *_dice_corba_env)
+			      CORBA_Server_Environment *_dice_corba_env)
 {
   int error;
   l4_size_t size;
 
-//  struct l4con_vc *vc = (struct l4con_vc *) flick_server_get_local(request);
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   
   if (vc->vfb_used)
@@ -1426,7 +1544,7 @@ con_vc_direct_setfb_component(CORBA_Object _dice_corba_obj,
     }
   
   if ((error = l4rm_attach((l4dm_dataspace_t*)data_ds, size, 0, L4DM_RO,
-			   &vc->vfb)))
+			   (void*)&vc->vfb)))
     {
       LOG("Error %d attaching data_ds", error);
       return -L4_EINVAL;
@@ -1454,9 +1572,8 @@ con_vc_stream_cscs_component(CORBA_Object _dice_corba_obj,
 			     l4_uint32_t *offs_y,
 			     l4_uint32_t *offs_u,
 			     l4_uint32_t *offs_v,
-			     CORBA_Environment *_dice_corba_env)
+			     CORBA_Server_Environment *_dice_corba_env)
 {
-//  struct l4con_vc *vc = (struct l4con_vc *) flick_server_get_local(request);
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   vidix_playback_t config;
 
@@ -1622,8 +1739,8 @@ vc_brightness_contrast(int diff_brightness, int diff_contrast)
  * inits receive strings (replaces call to flick_server_set_rcvstring)
  */
 void
-con_vc_init_rcvstring(int nb, l4_umword_t* addr, l4_umword_t* size,
-		      CORBA_Environment *env)
+vc_init_rcvstring(int nb, l4_umword_t* addr, l4_umword_t* size,
+		  CORBA_Server_Environment *env)
 {
   struct l4con_vc *vc = (struct l4con_vc *)(env->user_data);
   
@@ -1654,25 +1771,33 @@ con_vc_init_rcvstring(int nb, l4_umword_t* addr, l4_umword_t* size,
 void 
 vc_loop(struct l4con_vc *this_vc)
 {
-  CORBA_Environment env = dice_default_environment;
-  env.timeout = L4_IPC_TIMEOUT(0,1,0,0,0,0);
+  CORBA_Server_Environment env = dice_default_server_environment;
+  env.timeout = L4_IPC_SEND_TIMEOUT_0;
   env.user_data = (void*)this_vc;
 
   l4thread_started(NULL);
-  
-  LOG("vc[%d] running as %x.%02x",
-	this_vc->vc_number, 
-   	l4thread_l4_id(l4thread_myself()).id.task,
-	l4thread_l4_id(l4thread_myself()).id.lthread);
-  
+
+  LOG("vc[%d] running as "l4util_idfmt"",
+	this_vc->vc_number, l4util_idstr(l4thread_l4_id(l4thread_myself())));
+
   con_vc_server_loop(&env);
   
-  PANIC("Flick IPC error occured");
+  PANIC("IDL IPC error occured");
 }
 
 void
-vc_error(l4_msgdope_t result)
+vc_error(l4_msgdope_t result, CORBA_Server_Environment *env)
 {
-  printf("vc error %08x\n", L4_IPC_ERROR(result));
+#if 0
+  if (L4_IPC_ERROR(result) == L4_IPC_ENOT_EXISTENT)
+    {
+      /* application was killed => close vc */
+      LOG("Partner thread killed, closing console %d", this_vc->number);
+      want_vc = this_vc->vc_number |= 0x1000;
+    }
+  else
+#endif
+    LOG("vc error %08x (%s)",
+	L4_IPC_ERROR(result), 
+	l4env_strerror(L4_IPC_ERROR(result)));
 }
-

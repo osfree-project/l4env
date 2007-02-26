@@ -41,7 +41,7 @@
 /**
  * \ingroup api_types_common
  */
-#define L4_SUPERPAGESHIFT	22
+#define L4_SUPERPAGESHIFT	20
 
 /**
  * \ingroup api_types_common

@@ -8,7 +8,10 @@ class Space_registry;
 class Space_index
 {
 public:
-  enum { max_space_number = L4_uid::MAX_TASKS };
+  enum
+  {
+    Max_space_number = L4_uid::Max_tasks
+  };
 
 private:
   // CLASS DATA
@@ -36,6 +39,8 @@ struct Space_registry
       unsigned chief : 31;
     } state;
   };
+
+  operator Mword () { return (Mword)space; }
   
 };
 
@@ -51,7 +56,7 @@ Space_registry::Space_registry()
 // Space_index
 // 
 
-static Space_registry registered_spaces[Space_index::max_space_number];
+static Space_registry registered_spaces[Space_index::Max_space_number];
 Space_registry* Space_index::spaces = registered_spaces;
 
 PUBLIC inline explicit
@@ -86,7 +91,7 @@ Space_index::set_chief(Space_index old_chief, Space_index new_chief)
   Space_registry n;
   n.state.chief = new_chief;
 
-  return smp_cas(&spaces[space_id], o, n);
+  return cas (&spaces[space_id], o, n);
 }
 
 PUBLIC inline NEEDS [Space_index::Space_index, 
@@ -109,20 +114,29 @@ Space_index::add(Space *new_space, unsigned new_number)
   Space_registry n;
   n.space = new_space;
 
-  return smp_cas(&spaces[new_number], o, n);
+  return cas (&spaces[new_number], o, n);
 }
 
-PUBLIC static inline NEEDS[Space_registry]
+
+PUBLIC static inline NEEDS[<cassert>, Space_registry, Space_index::aux_del]
 bool 
 Space_index::del(Space_index number, Space_index chief)
 {
-  assert(number < max_space_number);
+  assert(number < Max_space_number);
   assert(! spaces[number].state.dead);
 
   // when deleting a task, write its owner (chief) into the task register
   spaces[number].state.dead = 1;
   spaces[number].state.chief = chief;
 
+  aux_del(number);
+
   return true;
 }
 
+IMPLEMENTATION [!pl0_hack]:
+
+PUBLIC static inline
+void
+Space_index::aux_del(Space_index /*number*/)
+{}

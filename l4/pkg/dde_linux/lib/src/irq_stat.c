@@ -13,6 +13,7 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
+#include <asm/system.h>
 #include <linux/interrupt.h>
 
 irq_cpustat_t irq_stat[NR_CPUS];

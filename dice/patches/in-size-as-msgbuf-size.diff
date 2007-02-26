@@ -1,0 +1,148 @@
+Index: be/BEFunction.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BEFunction.cpp,v
+retrieving revision 1.42
+diff -u -r1.42 BEFunction.cpp
+--- be/BEFunction.cpp	26 Aug 2003 14:27:02 -0000	1.42
++++ be/BEFunction.cpp	26 Aug 2003 15:23:33 -0000
+@@ -1140,8 +1140,42 @@
+         // tries to find their MAX values. If there is no way to determine
+         // them, it returns a negative value. (should issue a warning)
+         int nParamSize = pParam->GetMaxSize(pContext);
++                VectorElement *pI = pParam->GetFirstDeclarator();
++                CBEDeclarator *pD = pParam->GetNextDeclarator(pI);
++				TRACE("GetMaxSize for %s: param-size: %d\n",
++				    (const char*)pD->GetName(), nParamSize);
+         if (nParamSize < 0)
+         {
++		    // if the parameter has a size/length attribute, which has a
++			// declarator, which is IN and OUT, the message buffer is
++			// variable sized and this declarator is used to determine the
++			// size of the buffer
++			CBEAttribute *pAttr = pParam->FindAttribute(ATTR_SIZE_IS);
++			if (!pAttr)
++			    pAttr = pParam->FindAttribute(ATTR_LENGTH_IS);
++			if (pAttr && pAttr->IsOfType(ATTR_CLASS_IS))
++			{
++			    CBEFunction *pFunction = GetFunction();
++				if (pFunction)
++				{
++				    VectorElement *pItA = pAttr->GetFirstIsAttribute();
++				    CBEDeclarator *pIsA;
++					while ((pIsA = pAttr->GetNextIsAttribute(pItA)) != 0)
++					{
++						CBETypedDeclarator *pSize = pFunction->FindParameter(pIsA->GetName());
++						if (pSize && pSize->FindAttribute(ATTR_IN))
++						{
++						    if (pContext->IsWarningSet(PROGRAM_WARNING_NO_MAXSIZE))
++							{
++							    CCompiler::Warning("Use %s in function %s to determine size of message buffer\n",
++								    (const char*)pIsA->GetName(), (const char*)GetName());
++							}
++						    return -1;
++						}
++					}
++				}
++			}
++			// no size_is attribute
+             if (pContext->IsWarningSet(PROGRAM_WARNING_NO_MAXSIZE))
+             {
+                 VectorElement *pI = pParam->GetFirstDeclarator();
+@@ -1149,7 +1183,6 @@
+                 CCompiler::Warning("%s in %s has no maximum size", (const char*)pD->GetName(), (const char*)GetName());
+             }
+ 			CBEType *pType = pParam->GetType();
+-			CBEAttribute *pAttr;
+ 			if ((pAttr = pParam->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+ 				pType = pAttr->GetAttrType();
+             nSize += pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType());
+Index: be/BETypedDeclarator.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/BETypedDeclarator.cpp,v
+retrieving revision 1.43
+diff -u -r1.43 BETypedDeclarator.cpp
+--- be/BETypedDeclarator.cpp	26 Aug 2003 14:25:08 -0000	1.43
++++ be/BETypedDeclarator.cpp	26 Aug 2003 15:23:33 -0000
+@@ -700,8 +700,12 @@
+ 			 FindAttribute(ATTR_MAX_IS)))
+ 		{
+ 		    int nDimensions = 1;
+-			CBEAttribute *pAttr;
+-			if ((pAttr = FindAttribute(ATTR_SIZE_IS)) != 0)
++			CBEAttribute *pAttr = FindAttribute(ATTR_SIZE_IS);
++			if (!pAttr)
++			    pAttr = FindAttribute(ATTR_LENGTH_IS);
++			if (!pAttr)
++			    pAttr = FindAttribute(ATTR_MAX_IS);
++			if (pAttr)
+ 			{
+ 				if (pAttr->IsOfType(ATTR_CLASS_INT))
+ 				{
+@@ -709,32 +713,23 @@
+                     continue;
+ 				}
+ 				if (pAttr->IsOfType(ATTR_CLASS_IS))
++                {
++				    // check if attribute's parameter is IN and OUT
++					CBEFunction *pFunction = GetFunction();
++					if (pFunction)
++					{
++					    VectorElement *pItA = pAttr->GetFirstIsAttribute();
++						CBEDeclarator *pIsA;
++						while ((pIsA = pAttr->GetNextIsAttribute(pItA)) != 0)
++						{
++						    CBETypedDeclarator *pSize = pFunction->FindParameter(pIsA->GetName());
++							if (pSize &&
++							    pSize->FindAttribute(ATTR_IN) &&
++								pSize->FindAttribute(ATTR_OUT))
++								bVarSized = true;
++						}
++					}
+ 				    nDimensions = pAttr->GetRemainingNumberOfIsAttributes(pAttr->GetFirstIsAttribute());
+-			}
+-			if ((pAttr = FindAttribute(ATTR_LENGTH_IS)) != 0)
+-			{
+-				if (pAttr->IsOfType(ATTR_CLASS_INT))
+-				{
+-					nSize += pAttr->GetIntValue() * nTypeSize;
+-                    continue;
+-				}
+-				if (pAttr->IsOfType(ATTR_CLASS_IS))
+-				{
+-				    int nTmp = pAttr->GetRemainingNumberOfIsAttributes(pAttr->GetFirstIsAttribute());
+-					nDimensions = nDimensions > nTmp ? nDimensions : nTmp;
+-				}
+-			}
+-			if ((pAttr = FindAttribute(ATTR_MAX_IS)) != 0)
+-			{
+-				if (pAttr->IsOfType(ATTR_CLASS_INT))
+-				{
+-					nSize += pAttr->GetIntValue() * nTypeSize;
+-                    continue;
+-				}
+-				if (pAttr->IsOfType(ATTR_CLASS_IS))
+-				{
+-				    int nTmp = pAttr->GetRemainingNumberOfIsAttributes(pAttr->GetFirstIsAttribute());
+-					nDimensions = nDimensions > nTmp ? nDimensions : nTmp;
+ 				}
+ 			}
+             nSize += pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType()) * nDimensions;
+Index: be/l4/L4BEMsgBufferType.cpp
+===================================================================
+RCS file: /home/cvs/l4/tool/dice/src/be/l4/L4BEMsgBufferType.cpp,v
+retrieving revision 1.41
+diff -u -r1.41 L4BEMsgBufferType.cpp
+--- be/l4/L4BEMsgBufferType.cpp	26 Aug 2003 14:24:11 -0000	1.41
++++ be/l4/L4BEMsgBufferType.cpp	26 Aug 2003 15:23:33 -0000
+@@ -391,7 +391,10 @@
+     if ((nTempSend == 0) && (nTempRecv > 0))
+     {
+         int nMaxRecv = pFunction->GetMaxSize(nRecvDir, pContext);// + pFunction->GetFixedSize(nRecvDir, pContext);
+-        m_nFixedCount[nRecvDir-1] = MAX(nMaxRecv, m_nFixedCount[nRecvDir-1]);
++		if (nMaxRecv > 0)
++			m_nFixedCount[nRecvDir-1] = MAX(nMaxRecv, m_nFixedCount[nRecvDir-1]);
++		else
++		    m_nVariableCount[nRecvDir-1] = MAX(nTempRecv, m_nVariableCount[nRecvDir-1]);
+     }
+     // if there are variable sized parameters for send AND recveive
+     // -> add recv max to fixed AND if send max bigger, set var sized of send

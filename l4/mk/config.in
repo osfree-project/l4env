@@ -10,6 +10,8 @@ if [ "$BUILD_SYSTEMS_x86_s" = "y" ] ; then
     string " CPU types" CPU_x86 '586'
     bool '  L4 V2' BUILD_SYSTEMS_x86_l4v2
     bool '  L4 X0' BUILD_SYSTEMS_x86_l4x0
+    bool '  L4 X2' BUILD_SYSTEMS_x86_l4x2
+    bool '  L4 V4' BUILD_SYSTEMS_x86_l4v4
 fi
 bool 'arm' BUILD_SYSTEMS_arm_s
 if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
@@ -17,16 +19,36 @@ if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
     string " CPU types" CPU_arm 'sa'
     bool '  L4 X0' BUILD_SYSTEMS_arm_l4x0
 fi
+bool 'amd64' BUILD_SYSTEMS_amd64_s
+if [ "$BUILD_SYSTEMS_amd64_s" = "y" ] ; then
+    define_string BUILD_SYSTEMS_amd64 "amd64"
+    string " CPU types" CPU_amd64 'k8'
+    bool '  L4 V2' BUILD_SYSTEMS_amd64_l4v2
+    bool '  L4 X2' BUILD_SYSTEMS_amd64_l4x2
+fi
 endmenu
 
 bool 'Build shared libloaders.s.so' 'BUILD_LOADER'
 if [ "$BUILD_LOADER" = "y" ] ; then
-    define_string BUILD_LOADER_PICS 'libl4util.a libnames.a libloaderif.a libcon.a libl4rm.a librmgr.a libbootmod.a libcon.a libconstream-server.a libdm_generic.a libdm_mem.a libgeneric_ts.a liblogserver.a libsemaphore.a libthread.a libslab.a libl4env_err.a'
+    define_string BUILD_LOADER_PICS 'libl4util.a libnames.a libloaderif.a libcon.a libl4rm.a librmgr.a libbootmod.a libcon.a libconstream-server.a libdm_generic.a libdm_mem.a libgeneric_ts.a liblogserver.a liblogserver_capsule.a libsemaphore.a libthread.a libslab.a libgeneric_fprov.a libl4env_err.a libl4env.a libroot.o.a libc_be_l4env_start_stop.a libc_be_minimal_log_io.a libc_be_simple_mem.a libc_be_mmap.a libc_be_mmap_util.a libuclibc_support.a'
+fi
+
+if [ "$USE_UCLIBC" != "y" ]; then
+  bool 'Build system with dietlibc (WIP + EXPERIMENTAL)' USE_DIETLIBC
+fi
+if [ "$USE_DIETLIBC" != "y" ]; then
+  bool 'Build system with uClibc (WIP + EXPERIMENTAL)' USE_UCLIBC
+fi
+if [ "$USE_DIETLIBC" != "y" -a "$USE_UCLIBC" != "y" ]; then
+    bool 'Use roottask instead of RMGR (WIP + EXPERIMENTAL)' USE_ROOTTASK_X86
+else
+  define_bool USE_ROOTTASK_X86 y
 fi
 
 mainmenu_option next_comment
 comment 'Paths and Directories'
 string 'DROPS_STDDIR' DROPS_STDDIR '/home/drops'
+string 'DROPS_INSTDIR' DROPS_INSTDIR '$(DROPS_STDDIR)'
 string 'L4LINUX22_DIR' L4LINUX22_DIR '$(L4DIR)/../linux22'
 define_string L4LINUXDIR '$(error L4LINUXDIR is obsolete, use L4LINUX22_DIR now!)'
 bool 'Linux 2.4 kernel sources available' LINUX24_AVAIL
@@ -34,15 +56,20 @@ if [ "$LINUX24_AVAIL" = "y" ] ; then
   string 'Path to Linux 2.4 sources' LINUX24_DIR '$(L4DIR)/../linux-2.4.20'
   define_string LINUX24_INCDIR $LINUX24_DIR/include
 else
-  bool 'Use Linux headers from DROPS_STDDIR' LINUX24_GLOBALINC
-  if [ "$LINUX24_GLOBALINC" = "y" ] ; then
-    define_string LINUX24_INCDIR '$(DROPS_STDDIR)/include/linux-24'
-  else
-    define_string LINUX24_INCDIR '$(L4DIR)/include/linux-24'
-  fi
+  define_string LINUX24_INCDIR '$(L4DIR)/include/linux-24 $(DROPS_STDDIR)/include/linux-24'
 fi
+bool 'Linux 2.6 kernel sources available' LINUX26_AVAIL
+if [ "$LINUX26_AVAIL" = "y" ]; then
+  string 'Path to Linux 2.6 sources' LINUX26_DIR '$(L4DIR)/../l4linux-2.6'
+  define_string LINUX26_INCDIR $LINUX26_DIR/include
+else
+  define_string LINUX26_INCDIR '$(L4DIR)/include/$(ARCH)/l4/linux-26-headers $(DROPS_STDDIR)/include/$(ARCH)/l4/linux-26-headers $(L4DIR)/include/l4/linux-26-headers $(DROPS_STDDIR)/include/l4/linux-26-headers'
+fi
+
 define_string DDE_LINUX_DIR '$(error DDE_LINUX_DIR is obsolete!)'
-string 'SDL include path' SDL_INCDIR '$(L4DIR)/include/l4/sdl $(DROPS_STDDIR)/include/l4/sdl'
+string 'DDE include path (DDE_INCDIR)' DDE_INCDIR '$(L4DIR)/include/$(ARCH)/l4/dde_linux $(DROPS_STDDIR)/include/$(ARCH)/l4/dde_linux'
+string 'DDE-2.6 include path (DDE26_INCDIR)' DDE26_INCDIR '$(L4DIR)/include/$(ARCH)/l4/dde_linux26 $(DROPS_STDDIR)/include/$(ARCH)/l4/dde_linux26 $(L4DIR)/include/l4/dde_linux26 $(DROPS_STDDIR)/include/l4/dde_linux26'
+string 'SDL include path (SDL_INCDIR)' SDL_INCDIR '$(L4DIR)/include/l4/sdl $(DROPS_STDDIR)/include/l4/sdl'
 endmenu
 
 mainmenu_option next_comment
@@ -75,6 +102,10 @@ if [ "$BIDc_USE_SPECIAL_CC" = "y" ] ; then
         string 'CC_arm' CC_arm '$(SYSTEM_TARGET_arm)gcc'
         string 'CXX_arm' CXX_arm '$(SYSTEM_TARGET_arm)g++'
     fi
+    if [ "$BUILD_SYSTEMS_amd64_s" = "y" ] ; then
+        string 'CC_amd64' CC_amd64 '$(SYSTEM_TARGET_amd64)gcc'
+        string 'CXX_amd64' CXX_amd64 '$(SYSTEM_TARGET_amd64)g++'
+    fi
 else
     define_string HOST_CC  'gcc'
     define_string HOST_CXX 'g++'
@@ -82,7 +113,14 @@ else
     define_string CXX_x86  '$(SYSTEM_TARGET_x86)g++'
     define_string CC_arm   '$(SYSTEM_TARGET_arm)gcc'
     define_string CXX_arm  '$(SYSTEM_TARGET_arm)g++'
+    define_string CC_amd64 '$(SYSTEM_TARGET_amd64)gcc'
+    define_string CXX_amd64 '$(SYSTEM_TARGET_amd64)g++'
 fi
+comment "Tools"
+string 'YACC' YACC byacc
+string 'LEX' LEX flex
+
+comment "Options"
 bool 'System has ld.so (highly recommended if so)' HAVE_LDSO
 if [ "$HAVE_LDSO" = "y" ] ; then
     bool 'Automatically determine internal gcc preprocessor names' INT_CPP_NAME_SWITCH
@@ -96,7 +134,26 @@ if [ "$HAVE_LDSO" = "y" ] ; then
           string 'Internal name of arm g++ preprocessor' INT_CXX_arm_NAME "cpp0"
 	fi
     fi
+    bool 'Automatically determine internal ld names' INT_LD_NAME_SWITCH
+    if [ "$INT_LD_NAME_SWITCH" = "n" ] ; then
+        if [ "$BUILD_SYSTEMS_x86_s" = "y" ] ; then
+          string 'Internal name of x86 gcc/g++ linker' INT_LD_x86_NAME "ld"
+	fi
+        if [ "$BUILD_SYSTEMS_arm_s" = "y" ] ; then
+          string 'Internal name of arm gcc/g++ linker' INT_LD_arm_NAME "ld"
+	fi
+    fi
 fi
 bool 'Strip binaries on install' BID_STRIP_PROGS
+bool 'Generate stabs-compatible debug Infos with gcc-3+' BID_GSTAB_SW
+if [ "$BID_GSTAB_SW" = "y" ] ; then
+    define_string BID_CFLAGS_GSTAB "-gstabs+"
+fi
+bool 'GCC: Omit Frame-pointers' BID_GCC_OMIT_FP
+if [ "$BID_GCC_OMIT_FP" = "y" ] ; then
+    define_string BID_CFLAGS_OMIT_FP "-fomit-frame-pointer"
+fi
+bool 'Generate Map-files for binaries' BID_GENERATE_MAPFILE
+
 
 endmenu

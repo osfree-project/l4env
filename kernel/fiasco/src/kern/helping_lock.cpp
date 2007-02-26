@@ -22,9 +22,17 @@ IMPLEMENTATION:
 
 #include "globals.h"
 #include "panic.h"
+#include "std_macros.h"
 
 /** Threading system activated. */
 bool Helping_lock::threading_system_active = false;
+
+/** Constructor. */
+PUBLIC inline
+Helping_lock::Helping_lock ()
+{
+  _switch_lock.initialize();
+}
 
 /** Acquire the lock with priority inheritance.
     @return true if we owned the lock already.  false otherwise.
@@ -56,10 +64,13 @@ Helping_lock::lock ()
 /** Is lock set?.
     @return true if lock is set.
  */
-PUBLIC inline
+PUBLIC inline NEEDS["std_macros.h"]
 bool
 Helping_lock::test ()
 {
+  if (EXPECT_FALSE( ! threading_system_active) ) // still initializing?
+    return false;
+
   return _switch_lock.test();
 }
 
@@ -67,11 +78,11 @@ Helping_lock::test ()
     Return the CPU to helper or next lock owner, whoever has the higher 
     priority, given that thread's priority is higher that our's.
  */
-PUBLIC 
+PUBLIC inline NEEDS["std_macros.h"]
 void
 Helping_lock::clear()
 {
-  if (! threading_system_active) // still initializing?
+  if (EXPECT_FALSE( ! threading_system_active) ) // still initializing?
     return;
 
   _switch_lock.clear();
@@ -80,9 +91,12 @@ Helping_lock::clear()
 /** Lock owner. 
     @return current owner of the lock.  0 if there is no owner.
  */
-PUBLIC inline
+PUBLIC inline NEEDS["std_macros.h", "globals.h"]
 Context*
 Helping_lock::lock_owner ()
 {
+  if (EXPECT_FALSE( ! threading_system_active) ) // still initializing?
+    return current();
+
   return _switch_lock.lock_owner();
 }

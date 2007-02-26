@@ -34,6 +34,10 @@ typedef union dope_event_union switch(long type) {
 		long code;
 	} release;
 
+	case 5: struct keyrepeat_struct {
+		long code;
+	} keyrepeat;
+
 	default: long type;
 } dope_event_u;
 

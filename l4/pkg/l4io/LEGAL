@@ -1,0 +1,19 @@
+# Format: (all on one line)
+#   Source file : Copyright Owner(s)
+# Please use "TUD" when referring to TU Dresden.
+# If sole owner is TUD, the license field defaults to GPL and can be
+# left empty.
+# Source-file spec can be a directory name or a wildcard like "src/*.c".
+doc : TUD
+examples : TUD
+server/include : TUD
+server/lib-omega0 : TUD
+server/lib-pci/include/pcilib.h : TUD
+server/lib-pci/include/pcilib_pci.h: TUD
+server/lib-pci/include/asm : Linux 2.4, TUD : GPL
+server/lib-pci/include/dummies : TUD
+server/lib-pci/include/linux : Linux 2.4, TUD : GPL
+server/lib-pci/src/glue.c : Linux 2.4, TUD : GPL
+server/lib-pci/src/arch-i386 : Linux 2.4 : GPL
+server/lib-pci/src/pci : Linux 2.4 : GPL
+server/src : TUD

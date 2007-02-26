@@ -12,9 +12,14 @@
 
 #include "fprov-if.h"
 #include "cfg.h"
+#include "global.h"
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#ifdef OSKIT
+#include <malloc.h>
+#endif
 
 #include <l4/env/errno.h>
 #include <l4/names/libnames.h>
@@ -31,68 +36,90 @@ l4_threadid_t tftp_id = L4_INVALID_ID;	     /* tftp server */
 
 /** Get file from file provider.
  *
- * \param fname		file name
- * \param use_modpath	if !=0, expand fname with cfg_modpath
- * \param contiguos	if !=0, ask file provider to create contiguos ds
+ * \param fname_and_arg file name (optional arguments are ignored)
+ * \param search_path	colon delemited paths to try to load the file
+ * \param contiguous	if !=0, ask file provider to create contiguos ds
  * \param fprov_id	id of file provider
- * \param dm_id		id of dataspace manager
+ * \param dsm_id	id of dataspace manager
  * \retval addr		Address the image was loaded to. If NULL, don't attach
  *                      the image to our address space.
  * \retval size		size (in bytes) of the file as returned by fprov
  * \retval ds		associated dataspace
- * \retval rg		associated region of L4 region manager
  * \return		0 on success */
 int
-load_file(const char *fname, l4_threadid_t fprov_id, l4_threadid_t dm_id,
-	  int use_modpath, int contiguous, 
+load_file(const char *fname_and_arg,
+	  l4_threadid_t fprov_id, l4_threadid_t dsm_id,
+	  const char *search_path, int contiguous,
 	  l4_addr_t *addr, l4_size_t *size, l4dm_dataspace_t *ds)
 {
+  DICE_DECLARE_ENV(_env);
+  char *pathname = malloc(MAX_PATHLEN);
+  l4_size_t fname_len = strlen(fname_and_arg);
+  const char *path, *o;
   int error = -L4_ENOTFOUND;
-  CORBA_Environment _env = dice_default_environment;
-  const char *path;
 
-  path = (use_modpath && *fname!='(' && *fname!='/') ? cfg_modpath : "";
-  do 
+  if (!pathname)
     {
-      static char pathname[255];
-      unsigned l, ln;
+      printf("Malloc error\n");
+      return error;
+    }
+
+  if ((o = strchr(fname_and_arg, ' ')))
+    fname_len = o-fname_and_arg;
+
+  if (!fname_len || !fname_and_arg)
+    {
+      printf("Error. No file name given.\n");
+      return error;
+    }
+
+  path = (search_path && *fname_and_arg!='(' && *fname_and_arg!='/')
+	    ? search_path
+	    : "";
+
+  do
+    {
+      l4_size_t l, ln;
       const char *colon;
-      
+
       colon = strchr(path, ':');
       l = colon ? colon-path : strlen(path);
-      if (l > sizeof(pathname)-2)
+      if (l > MAX_PATHLEN-2)
 	{
-	  printf("Skipping long path %*s\n", l, path);
+	  printf("Skipping long path %*.*s\n", l, l, path);
 	  path = colon ? colon+1 : path+l;
 	  continue;
 	}
       memcpy(pathname, path, l);
       path = colon ? colon+1 : path+l;
-      if (l)
+      if (l && pathname[l-1] != '/')
 	pathname[l++]='/';
-      ln = strlen(fname)+1;
-      if(l+ln>sizeof(pathname))
+      ln = fname_len+1;
+      if(l+ln>MAX_PATHLEN)
 	{
-	  printf("Skipping long path+file %s/%s\n",
-		 pathname, fname);
+	  printf("Skipping long path+file %s/%*.*s\n",
+		 pathname, fname_len, fname_len, fname_and_arg);
 	  continue;
 	}
-      memcpy(pathname+l, fname, ln);
+      snprintf(pathname+l, ln, "%s", fname_and_arg);
 
       /* get file image by file provider */
-      if (!(error = l4fprov_file_open_call(&fprov_id, pathname, &dm_id,
+      if (!(error = l4fprov_file_open_call(&fprov_id, pathname, &dsm_id,
 					   contiguous ? L4DM_CONTIGUOUS : 0,
 					   ds, size, &_env)))
 	break;
 
-    } while(*path);
+    } while (*path);
+
+  free(pathname);
 
   if (error)
     {
-      printf("Error %d opening file \"%s\"\n", error, fname);
+      printf("Error %d opening file \"%*.*s\"\n",
+	  error, fname_len, fname_len, fname_and_arg);
       return error;
     }
-  
+
   if (addr)
     {
       /* attach dataspace to region manager */
@@ -105,21 +132,3 @@ load_file(const char *fname, l4_threadid_t fprov_id, l4_threadid_t dm_id,
 
   return 0;
 }
-
-/** init file provider stuff */
-int
-fprov_if_init(void)
-{
-  l4_threadid_t id;
-
-  /* file provider */
-  if (!names_waitfor_name("TFTP", &id, 10000))
-    {
-      printf("TFTP not found\n");
-      return -L4_ENOTFOUND;
-    }
-  tftp_id = id;
-  
-  return 0;
-}
-

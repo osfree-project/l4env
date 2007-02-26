@@ -21,6 +21,7 @@
 
 /* DMgeneric includes */
 #include <l4/dm_generic/dm_generic.h>
+#include "__debug.h"
 
 /*****************************************************************************
  *** helpers
@@ -39,20 +40,16 @@
  * \retval copy          Dataspace id of copy
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EIPC       IPC error calling dataspace manager
- *         - \c -L4_EINVAL     Invalid source dataspace id
- *         - \c -L4_EPERM      Permission denied
- *         - \c -L4_ENOHANDLE  Could not create dataspace descriptor
- *         - \c -L4_ENOMEM     Out of memory creating copy
+ *         - -#L4_EIPC       IPC error calling dataspace manager
+ *         - -#L4_EINVAL     Invalid source dataspace id
+ *         - -#L4_EPERM      Permission denied
+ *         - -#L4_ENOHANDLE  Could not create dataspace descriptor
+ *         - -#L4_ENOMEM     Out of memory creating copy
  */
 /*****************************************************************************/ 
 static int
-__do_copy(l4dm_dataspace_t * ds, 
-	  l4_offs_t src_offs, 
-	  l4_offs_t dst_offs,
-	  l4_size_t num, 
-	  l4_uint32_t flags, 
-	  const char * name, 
+__do_copy(const l4dm_dataspace_t * ds, l4_offs_t src_offs, l4_offs_t dst_offs,
+	  l4_size_t num, l4_uint32_t flags, const char * name, 
 	  l4dm_dataspace_t * copy)
 {
   int ret;
@@ -63,15 +60,16 @@ __do_copy(l4dm_dataspace_t * ds,
 
   /* call dataspace manager */
   if (name != NULL)
-    ret = if_l4dm_generic_copy_call(&(ds->manager),ds->id,src_offs,dst_offs,num,
-                                    flags,name,copy,&_env);
+    ret = if_l4dm_generic_copy_call(&(ds->manager), ds->id, src_offs, dst_offs,
+                                    num, flags, name, copy, &_env);
   else
-    ret = if_l4dm_generic_copy_call(&(ds->manager),ds->id,src_offs,dst_offs,num,
-                                    flags,"",copy,&_env);
+    ret = if_l4dm_generic_copy_call(&(ds->manager), ds->id, src_offs, dst_offs,
+                                    num, flags, "", copy, &_env);
   if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      ERROR("libdm_generic: copy ds %u at %x.%x failed (ret %d, exc %d)",
-	    ds->id,ds->manager.id.task,ds->manager.id.lthread,ret,_env.amjor);
+      LOGdL(DEBUG_ERRORS, "libdm_generic: copy ds %u at "l4util_idfmt \
+            " failed (ret %d, exc %d)", ds->id, l4util_idstr(ds->manager),
+            ret, _env.major);
       if (ret)
         return ret;
       else
@@ -92,30 +90,28 @@ __do_copy(l4dm_dataspace_t * ds,
  * 
  * \param  ds            Source dataspace id
  * \param  flags         Flags:
- *                       - \c L4DM_COW         create copy-on-write copy
- *                       - \c L4DM_PINNED      create copy on pinned memory
- *                       - \c L4DM_CONTIGUOUS  create copy on phys. contiguos 
+ *                       - #L4DM_COW         create copy-on-write copy
+ *                       - #L4DM_PINNED      create copy on pinned memory
+ *                       - #L4DM_CONTIGUOUS  create copy on phys. contiguos 
  *                                             memory
  * \param  name          Copy name
  * \retval copy          Copy dataspace id
  *	
  * \return 0 on success (\a copy contains the id of the created copy),
  *         error code otherwise:
- *         - \c -L4_EIPC       IPC error calling dataspace manager
- *         - \c -L4_EINVAL     Invalid source dataspace id
- *         - \c -L4_EPERM      Permission denied
- *         - \c -L4_ENOHANDLE  Could not create dataspace descriptor
- *         - \c -L4_ENOMEM     Out of memory creating copy
+ *         - -#L4_EIPC       IPC error calling dataspace manager
+ *         - -#L4_EINVAL     Invalid source dataspace id
+ *         - -#L4_EPERM      Permission denied
+ *         - -#L4_ENOHANDLE  Could not create dataspace descriptor
+ *         - -#L4_ENOMEM     Out of memory creating copy
  */
 /*****************************************************************************/ 
 int
-l4dm_copy(l4dm_dataspace_t * ds, 
-	  l4_uint32_t flags, 
-	  const char * name, 
+l4dm_copy(const l4dm_dataspace_t * ds, l4_uint32_t flags, const char * name, 
 	  l4dm_dataspace_t * copy)
 {
   /* create copy */
-  return __do_copy(ds,0,0,L4DM_WHOLE_DS,flags,name,copy);
+  return __do_copy(ds, 0, 0, L4DM_WHOLE_DS, flags, name, copy);
 }
 
 /*****************************************************************************/
@@ -128,30 +124,26 @@ l4dm_copy(l4dm_dataspace_t * ds,
  * \param  num           Number of bytes to copy, set to L4DM_WHOLE_DS to copy 
  *                       the whole dataspace starting at \a src_offs
  * \param  flags         Flags
- *                       - \c L4DM_COW         create copy-on-write copy
- *                       - \c L4DM_PINNED      create copy on pinned memory
- *                       - \c L4DM_CONTIGUOUS  create copy on phys. contiguos 
- *                                             memory
+ *                       - #L4DM_COW         create copy-on-write copy
+ *                       - #L4DM_PINNED      create copy on pinned memory
+ *                       - #L4DM_CONTIGUOUS  create copy on phys. contiguos 
+ *                                           memory
  * \param  name          Copy name
  * \retval copy          Dataspace id of copy
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EIPC       IPC error calling dataspace manager
- *         - \c -L4_EINVAL     Invalid source dataspace id
- *         - \c -L4_EPERM      Permission denied
- *         - \c -L4_ENOHANDLE  Could not create dataspace descriptor
- *         - \c -L4_ENOMEM     Out of memory creating copy
+ *         - -#L4_EIPC       IPC error calling dataspace manager
+ *         - -#L4_EINVAL     Invalid source dataspace id
+ *         - -#L4_EPERM      Permission denied
+ *         - -#L4_ENOHANDLE  Could not create dataspace descriptor
+ *         - -#L4_ENOMEM     Out of memory creating copy
  */
 /*****************************************************************************/ 
 int
-l4dm_copy_long(l4dm_dataspace_t * ds, 
-	       l4_offs_t src_offs, 
-	       l4_offs_t dst_offs,
-	       l4_size_t num, 
-	       l4_uint32_t flags, 
-	       const char * name, 
-	       l4dm_dataspace_t * copy)
+l4dm_copy_long(const l4dm_dataspace_t * ds, l4_offs_t src_offs, 
+               l4_offs_t dst_offs, l4_size_t num, l4_uint32_t flags, 
+               const char * name, l4dm_dataspace_t * copy)
 {
   /* create copy */
-  return __do_copy(ds,src_offs,dst_offs,num,flags,name,copy);
+  return __do_copy(ds, src_offs, dst_offs, num, flags, name, copy);
 }

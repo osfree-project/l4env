@@ -26,6 +26,7 @@
 /* local */
 #include "internal.h"
 #include "__config.h"
+#include "fastcall.h"
 
 /**
  * \name Scheduling Primitives
@@ -52,7 +53,7 @@ static inline int try_to_wake_up(struct task_struct *p, int synchronous)
 
 /** Wake up dedicated user context
  * \ingroup mod_proc */
-inline int wake_up_process(struct task_struct *p)
+inline int FASTCALL(wake_up_process(struct task_struct *p))
 {
   return try_to_wake_up(p, 0);
 }
@@ -67,7 +68,7 @@ static void process_timeout(unsigned long __data)
 
 /** Schedule process but wake me at least after timeout
  * \ingroup mod_proc */
-signed long schedule_timeout(signed long timeout)
+signed long FASTCALL(schedule_timeout(signed long timeout))
 {
   struct timer_list timer;
   unsigned long expire;
@@ -94,8 +95,8 @@ signed long schedule_timeout(signed long timeout)
        */
       if (timeout < 0)
         {
-          Error("schedule_timeout: wrong timeout "
-                "value %lx", timeout);
+          LOG_Error("schedule_timeout: wrong timeout "
+                    "value %lx", timeout);
           current->state = TASK_RUNNING;
           goto out;
         }
@@ -176,7 +177,7 @@ static inline void __wake_up_common(wait_queue_head_t * q, unsigned int mode,
 
 /** Wake up wait queue entries
  * \ingroup mod_proc */
-void __wake_up(wait_queue_head_t * q, unsigned int mode, int nr)
+void FASTCALL(__wake_up(wait_queue_head_t * q, unsigned int mode, int nr))
 {
   if (q)
     {
@@ -189,7 +190,7 @@ void __wake_up(wait_queue_head_t * q, unsigned int mode, int nr)
 
 /** Wake up wait queue entries (sync)
  * \ingroup mod_proc */
-void __wake_up_sync(wait_queue_head_t * q, unsigned int mode, int nr)
+void FASTCALL(__wake_up_sync(wait_queue_head_t * q, unsigned int mode, int nr))
 {
   if (q)
     {
@@ -217,7 +218,7 @@ void __wake_up_sync(wait_queue_head_t * q, unsigned int mode, int nr)
 
 /** Sleep on wait queue (interruptible by signals)
  * \ingroup mod_proc */
-void interruptible_sleep_on(wait_queue_head_t * q)
+void FASTCALL(interruptible_sleep_on(wait_queue_head_t * q))
 {
   SLEEP_ON_VAR current->state = TASK_INTERRUPTIBLE;
 
@@ -227,7 +228,7 @@ void interruptible_sleep_on(wait_queue_head_t * q)
 
 /** Sleep on wait queue (interruptible by signals and timeout)
  * \ingroup mod_proc */
-long interruptible_sleep_on_timeout(wait_queue_head_t * q, long timeout)
+long FASTCALL(interruptible_sleep_on_timeout(wait_queue_head_t * q, long timeout))
 {
   SLEEP_ON_VAR current->state = TASK_INTERRUPTIBLE;
 
@@ -237,7 +238,7 @@ long interruptible_sleep_on_timeout(wait_queue_head_t * q, long timeout)
 
 /** Sleep on wait queue
  * \ingroup mod_proc */
-void sleep_on(wait_queue_head_t * q)
+void FASTCALL(sleep_on(wait_queue_head_t * q))
 {
   SLEEP_ON_VAR current->state = TASK_UNINTERRUPTIBLE;
 
@@ -247,7 +248,7 @@ void sleep_on(wait_queue_head_t * q)
 
 /** Sleep on wait queue (interruptible by timeout)
  * \ingroup mod_proc */
-long sleep_on_timeout(wait_queue_head_t * q, long timeout)
+long FASTCALL(sleep_on_timeout(wait_queue_head_t * q, long timeout))
 {
   SLEEP_ON_VAR current->state = TASK_UNINTERRUPTIBLE;
 
@@ -259,6 +260,24 @@ long sleep_on_timeout(wait_queue_head_t * q, long timeout)
  * resources in one place where it belongs. (dummy)
  * \ingroup mod_proc */
 void daemonize(void) {
-  DMSG("dde: dummy daemonize() call\n");
+  LOGd(DEBUG_MSG, "dde: dummy daemonize() call");
 }
+
+/** ...
+ * \ingroup mod_proc */
+void yield(void)
+{
+  set_current_state(TASK_RUNNING);
+//	sys_sched_yield();
+  schedule();
+}
+
+/** ...
+ * \ingroup mod_proc */
+void __cond_resched(void)
+{
+  set_current_state(TASK_RUNNING);
+  schedule();
+}
+
 /** @} */

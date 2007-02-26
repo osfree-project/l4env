@@ -7,9 +7,9 @@ setjmp:
 .global __setjmp
 .type __setjmp,function
 __setjmp:
-	mov	r1, #0
+	@mov	r1, #0
 	stmia	r0, {r4-r11, sp, lr}
-	sub	r0, r0, #30 /* skipped on longjmp */
+	mov	r0, #0 /* skipped on longjmp */
 	mov	pc, lr
 
 .text
@@ -17,6 +17,6 @@ __setjmp:
 .type longjmp,function
 longjmp:
 	mov	ip, r0
-	mov	r0, r1
+	movs	r0, r1
 	moveq	r0, #1
 	ldmia   ip, {r4-r11, sp, pc}

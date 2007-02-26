@@ -22,12 +22,12 @@ IMPLEMENTATION:
 #include "keyb.h"
 #include "mux_console.h"
 #include "initcalls.h"
+#include "static_init.h"
 #include "vga_console.h"
 
 
 Console *Boot_console::_c;
 
-//STATIC_INITIALIZE_P( Boot_console, MAX_INIT_PRIO );
 
 static Console *vga_console()
 {
@@ -41,6 +41,8 @@ static Console *herc_console()
   return &v;
 }
 
+
+STATIC_INITIALIZE_P(Boot_console, BOOT_CONSOLE_INIT_PRIO);
 
 IMPLEMENT FIASCO_INIT
 void Boot_console::init()

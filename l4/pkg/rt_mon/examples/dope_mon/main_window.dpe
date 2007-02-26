@@ -1,0 +1,20 @@
+win = new Window()
+g1 = new Grid()
+win.set(-content g1 -x 0 -y 350)
+
+g_but = new Grid()
+g_cont = new Grid()
+g1.place(g_but, -column 1 -row 1)
+g1.place(g_cont, -column 1 -row 2)
+
+b_ref = new Button()
+b_ref.set(-text Refresh)
+b_sort = new Button()
+b_sort.set(-text "Name-ordered")
+b_exit = new Button()
+b_exit.set(-text Exit)
+g_but.place(b_ref, -column 1 -row 1)
+g_but.place(b_sort, -column 2 -row 1)
+g_but.place(b_exit, -column 3 -row 1)
+
+win.open()

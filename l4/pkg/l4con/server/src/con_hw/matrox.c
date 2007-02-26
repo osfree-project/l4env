@@ -30,6 +30,8 @@ int is_g400 = 0;
 static unsigned m_dwg_rect = 0;
 static unsigned m_opmode = 0;
 l4_addr_t mga_mmio_vbase = 0;
+static unsigned matrox_pci_bus_id;
+static unsigned matrox_pci_devfn_id;
 
 #define M_DWGCTL	0x1C00
 #define M_MACCESS	0x1C04
@@ -393,9 +395,30 @@ matrox_fill(struct l4con_vc *vc,
   mga_ydstlen(sy, height);
 }
 
+/* Without I/O flexpages, we can't prohibit other L4 tasks to write to I/O
+ * ports. In that case it is possible, that we start X in L4Linux which does
+ * some things with the PCI configuration area of our graphics card so that
+ * it's memory mapped registers are no longer mapped. Test this case here
+ * and get back registers if needed */
+void static
+matrox_test_for_card_disappeared(void)
+{
+  if (mga_inl(M_STATUS) == -1U)
+    {
+      unsigned short tmp;
+
+      printf("Matrox video card disappered -- re-mapping memory mapped "
+	     "registers.\n");
+      PCIBIOS_READ_CONFIG_WORD(matrox_pci_bus_id, matrox_pci_devfn_id, PCI_COMMAND, &tmp);
+      tmp |= PCI_COMMAND_MEMORY;
+      PCIBIOS_WRITE_CONFIG_WORD(matrox_pci_bus_id, matrox_pci_devfn_id, PCI_COMMAND, tmp);
+    }
+}
+
 static void
 matrox_sync(void)
 {
+  matrox_test_for_card_disappeared();
   WaitTillIdle();
 }
 
@@ -411,31 +434,12 @@ matrox_init(int accelID)
 
   switch (hw_bits) 
     {
-    case 8:	
-      maccess = 0x00000000; 
-      mopmode = M_OPMODE_8BPP;
-      break;
-    case 15:
-      maccess = 0xC0000001; 
-      mopmode = M_OPMODE_16BPP;
-      /**hw_bits = 16; don't pass up*/
-      break;
-    case 16:
-      maccess = 0x40000001; 
-      mopmode = M_OPMODE_16BPP;
-      break;
-    case 24:
-      maccess = 0x00000003;
-      mopmode = M_OPMODE_24BPP;
-      break;
-    case 32:
-      maccess = 0x00000002; 
-      mopmode = M_OPMODE_32BPP;
-      break;
-    default:
-      maccess = 0x00000000; 
-      mopmode = 0x00000000;
-      break;
+    case  8: maccess = 0x00000000; mopmode = M_OPMODE_8BPP;  break;
+    case 15: maccess = 0xC0000001; mopmode = M_OPMODE_16BPP; break;
+    case 16: maccess = 0x40000001; mopmode = M_OPMODE_16BPP; break;
+    case 24: maccess = 0x00000003; mopmode = M_OPMODE_24BPP; break;
+    case 32: maccess = 0x00000002; mopmode = M_OPMODE_32BPP; break;
+    default: maccess = 0x00000000; mopmode = 0x00000000;     break;
     }
   mga_fifo(8);
   mga_outl(M_PITCH, mpitch);
@@ -458,24 +462,27 @@ matrox_probe(unsigned int bus, unsigned int devfn,
 {
   struct board_t *b = &matrox_boards[dev->driver_data];
   unsigned char rev;
-  unsigned int addr0, addr1, ctrl_addr, video_addr;
+  unsigned int addr0, addr1, size0, size1, ctrl_addr, video_addr, video_size;
 
   PCIBIOS_READ_CONFIG_BYTE (bus, devfn, PCI_REVISION_ID, &rev);
 
   if (b->rev < rev)
     return -L4_ENOTFOUND;
 
-  PCIBIOS_READ_CONFIG_DWORD (bus, devfn, PCI_BASE_ADDRESS_0, &addr0);
-  PCIBIOS_READ_CONFIG_DWORD (bus, devfn, PCI_BASE_ADDRESS_1, &addr1);
+  pci_resource(bus, devfn, 0, &addr0, &size0);
+  pci_resource(bus, devfn, 1, &addr1, &size1);
+
   if (b->flags & DEVF_SWAPS)
     {
-      ctrl_addr = addr1 & ~0x3FFF;
-      video_addr = addr0 & ~0x7FFFFF;
+      ctrl_addr  = addr1 & ~0x00003FFF;
+      video_addr = addr0 & ~0x007FFFFF;
+      video_size = size0;
     }
   else
     {
-      ctrl_addr = addr0 & ~0x3FFF;
-      video_addr = addr1 & ~0x7FFFFF;
+      ctrl_addr  = addr0 & ~0x00003FFF;
+      video_addr = addr1 & ~0x007FFFFF;
+      video_size = size1;
     }
 
   is_g400 = b->flags & DEVF_SUPPORT32MB;
@@ -486,8 +493,7 @@ matrox_probe(unsigned int bus, unsigned int devfn,
   if (map_io_mem(ctrl_addr, 0x4000, "ctrl", &mga_mmio_vbase)<0)
     return -L4_ENOTFOUND;
 
-  if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, 
-		"video", &hw_map_vid_mem_addr)<0)
+  if (map_io_mem(video_addr, video_size, "video", &hw_map_vid_mem_addr) < 0)
     return -L4_ENOTFOUND;
 
   /* Linux driver comment: select non-DMA memory for PCI_MGA_DATA, otherwise
@@ -507,6 +513,9 @@ matrox_probe(unsigned int bus, unsigned int devfn,
   accel->sync = matrox_sync;
   accel->pan  = matrox_pan;
   accel->caps = ACCEL_FAST_COPY | ACCEL_FAST_FILL;
+
+  matrox_pci_bus_id   = bus;
+  matrox_pci_devfn_id = devfn;
 
   /* has backend scaler which supports 420 mode */
   if (b->flags & DEVF_BES3PLANE)

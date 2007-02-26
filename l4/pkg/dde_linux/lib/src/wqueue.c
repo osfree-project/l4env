@@ -21,6 +21,8 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 
+#include "fastcall.h"
+
 /** \name Wait Queue - List Manipulation
  *
  * <em>This is from kernel/fork.c</em>
@@ -28,7 +30,7 @@
 
 /** Enqueue process in wait queue
  * \ingroup mod_proc */
-void add_wait_queue(wait_queue_head_t * q, wait_queue_t * wait)
+void FASTCALL(add_wait_queue(wait_queue_head_t * q, wait_queue_t * wait))
 {
   unsigned long flags;
 
@@ -40,7 +42,7 @@ void add_wait_queue(wait_queue_head_t * q, wait_queue_t * wait)
 
 /** Enqueue process in wait queue (exclusive flag set)
  * \ingroup mod_proc */
-void add_wait_queue_exclusive(wait_queue_head_t * q, wait_queue_t * wait)
+void FASTCALL(add_wait_queue_exclusive(wait_queue_head_t * q, wait_queue_t * wait))
 {
   unsigned long flags;
 
@@ -52,7 +54,7 @@ void add_wait_queue_exclusive(wait_queue_head_t * q, wait_queue_t * wait)
 
 /** Dequeue process from wait queue
  * \ingroup mod_proc */
-void remove_wait_queue(wait_queue_head_t * q, wait_queue_t * wait)
+void FASTCALL(remove_wait_queue(wait_queue_head_t * q, wait_queue_t * wait))
 {
   unsigned long flags;
 

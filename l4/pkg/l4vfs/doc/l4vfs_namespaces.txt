@@ -1,0 +1,386 @@
+ I/O name-space documentation for dietLibC backends --- L4VFS
+
+ Martin Pohlack
+
+Introduction
+############
+
+This document describes some ideas and concepts about the dietLibC
+port and consequences.  It turned out that porting the basic functions
+(e.g. str*, mem*) is not hard at all.  The main problem is how to map
+libc functionality to the system's basic services, or worse, to
+implement such services.  One of the must complex services is i/o (not
+in the context of port io, rather file io).
+
+Starting points
+###############
+
+* For Linux file descriptors there is no distinction between files and
+  directories at interface level. Therefore it is possible to use
+  readdir on a file descriptor containing a regular file. At runtime
+  this will result in error ENOTDIR.
+  Given that situation it doesn't make sense to model the Linux files
+  using different interfaces.
+* However, it is possible to break down the many Posix functions into
+  groups of functions with special concerns (access right
+  administration, creation of objects, accessing objects, ...).
+* Some Posix functions can not be easily sorted to a specific group
+  as they accomplish several task: creat(), for example creates a
+  file, positions it in the namespace, so that other processes can
+  access it right afterwards and open it, returning a file
+  handle. The positioning in the namespace has the side effect of
+  modifying the parent directory.
+* For the network functions these two functions are separated (socket
+  and bind) as it is often not necessary to position an object in a
+  namespace (client side).
+* Something similar can be seen with temp files, which are created,
+  and thereby opened, and directly unlinked afterwards, which removes
+  them from their parent directory and therewith from the
+  namespace. The creating process itself can refer to the file as
+  long as it keeps a file handle to it open. So, in essence the used
+  operations are: create, insert into namespace, remove from
+  namespace; just because the first two operations are coupled
+  together.
+
+* The distinction between object names and object identity is
+  important. We need a concept somewhat similar to inodes / uuids.
+* Questions: Shall the "current working directory" (cwd) be bound to a
+  path-name, or rather to the id of the directory?  For the second
+  case, it would be necessary to be able to translate the ids back
+  into actual path names.
+  * In Linux:
+    * shell1: cds to /tmp/mp26/test1
+    * shell1: pwd -> /tmp/mp26/test1
+    * shell2: mv /tmp/mp26/test1 /tmp/mp26/test2
+    * shell1: pwd -> /tmp/mp26/test1
+    * shell2: lsof | grep "/tmp/mp26/" -> shell1: /tmp/mp26/temp2/test1
+    * shell1: cd .
+    * shell1: pwd -> /tmp/mp26/test2/test1
+      -> so, in Linux the "cwd" is bound to the inode
+
+* If we want to keep the semantics in this case, we will have to use
+  similar concepts.
+  So, each file-system server needs the following functions:
+  * generate uuid for given name (if valid) -> resolve
+  * find name for given uuid (actually, this is only necessary for
+    directories, cwd can only point to a directory, for every
+    filesystem it should be possible to find the parent dir for a
+    given dir, this should be even possible for the client if it can
+    interate over the directory content of the ancestors of a given
+    dir)
+  * the uuid should be unique, desirably also in time!
+  * the uuid for a given (path) name should be valid for a long time
+    * for persistent file systems: forever? (as long as the
+      directory exist)
+    * for dynamical filesystems (like proc): maybe for lifetime of
+      the server?
+
+Terms
+#####
+
+:uuid: short for "universally unique identifier" -> object_id
+
+:object: "thing" that is located in our namespace. For simplicity
+  you can envisage two very common object types: files and
+  directories, wheras files have operations such as open(), read(),
+  write(), seek(), ...; and directories have operations such as
+  open(), getdents(), seek(), ... .
+
+  But also other object-types are imaginable, possibly offering a
+  extended or completely disjunct set of operations.
+
+  There seem to be some basic properties of objects: if an object has
+  childs or not.
+
+:volume: a set of objects is aggregated in a volume. A volume has a
+  hierarchical namespace for itself. You could imagine it to be
+  something like a partition.
+
+:object_id: is an identifier for an object. It consists of two parts:
+  the volume_id and the local_object_id. -> uuid
+
+:volume_id: must be unique in a system, preferably also over
+  time.  They describe a volume.
+
+:local_object_id: identifies an object in a volume, and should
+  therefore be unique in its object's volume.
+
+Ideas / Concepts
+################
+
+Mounting
+========
+
+"Up" means toward the root of the tree, whereas down means towards the
+tree's leafs. This is convention for trees in computer science (trees
+grow downward in computer science).
+
+The combining of two volume's namespaces should be possible with some
+kind of mount operation.  Therefor, one directory from the second
+volume (the "mounted dir") is attached to one directory from the first
+volume (the "mount dir").  The result is a combined namespace which
+consists of the first volume's namespace except everything below the
+"mount dir" and everything below the "mounted dir" from the second
+namespace. The root of the combined namespace is the root of the
+first volume's namespace. Usually, the "mounted dir" is the root of
+the second namespace, resulting in the second volume's namespace to be
+completely visible in the combined namespace.
+
+It seems logical to store these mount connections based on the
+object_ids of the "mount dir" and the "mounted dir". I will refer to
+these connections as mount points.
+
+A mount point in the combined namespace can be described with two
+object_ids, the "mount dir's" and the "mounted dir's" one. However,
+when implementing the name resolution functions it turned out, that
+only the "mounted dirs" object_id makes sense here and is therefore
+return, when resolving a mount point.
+
+If a name resolving occurs, one has to consider mount point in the
+combined namespace as point, where the name resolution has to be
+transfered to the other member of the mount point, both for downward
+resolutions and upward resolution.
+
+Using this schema it is possible to implement two kinds of mounting
+policy:
+# All mounting operations are executed in the name server's context,
+  all the data is stored there. Consequently, at least some of the
+  name resolving steps have to be executed by the name server.
+  However, no other server has to know about even the concept of
+  mounting and can therefore be simpler.
+
+  The name server cares for all "mount dirs", also these not in its
+  original namespace.
+# The name server only cares for mount points in its namespace. If
+  further mounts are necessary, each server can implement is as it
+  wants to, has to store the data and care for mount-point--crossing
+  name-resolve operations.
+# Actually, both schemes can be combined, if mounting capable servers
+  are able to translate there "mountees" volume_id.
+
+So choosing the first schema we are still able to implement arbitrary
+mount schemata in mounted servers.
+
+
+Name resolving
+==============
+
+Name resolving is the process in which an objects symbolical pathname
+in the hierarchical namespace is translated to an object_id.  With
+the help of this object_id it is possible to determine the
+corresponding server.  The object's local_object_id is then used to
+address the specific object in the volume.
+
+So, the mapping between volume_id and server threads is another task,
+currently held by the name server.  Therefore, object server register
+their volume_ids (one server can serve more than one volume) and
+corresponding server thread_ids at latest at mount time.
+
+In principal, name resolving requests are serviced by the name server,
+which in turn may delegate part-resolve requests to its managed object
+servers. An object server typically has to be able to resolve names in
+its address space. Due to the fact, that mount points may exists also
+below other mount points in the combined namespace it is not always
+possible to delegate complete resolve requests to object servers, but
+in some steps care has to be taken so cope with mount point crossings.
+
+[image root_namespace 90%]
+Example namespace
+
+Global vs. Local namespaces
+============================
+
+One of the first questions that arises when discussing namespaces is
+whether we want global or local ones, that is, whether all processes
+share one common namespace (global) or whether all processes can have
+completely different, maybe disjunct namespaces.  There are different
+things to note here:
+# There is a trend to have global namespaces, even across node
+  boundaries (look at all the directory services).
+# Classical systems (unix, Linux, *dos, windows*) have global
+  namespaces.
+# Newer features in, for instance, Linux introduce something like
+  local namespaces (chroot).  It can be used to virtualize machines,
+  so that multiple distributions could be running side by
+  side.  Another application is the jailing of untrusted applications,
+  but the chroot environment is not totally safe (for now).  If I
+  remember correctly some bsd-flavors have something similar, called
+  jails.
+# Plan 9 is a very prominent example for local namespaces.  The have
+  some kind of mount service for each individual process, so as to
+  construct different namespaces for each process.  These namespace
+  can be handed down to "forked" childs.
+
+Currently we have a small name server, which is separate process and
+supports mounting and name resolving.  However, no one is forced to
+use it as client and no server is forced to attach its namespace.  It
+should be straightforward to convert the server to a library and bind
+this library to each process should one decide want local namespaces.
+It should also be possible to modify the name server (and its client
+library) to be able to run multiple instances, if one wants to
+construct only a small amount of name domains.
+
+
+Library-provided namespaces
+===========================
+
+Closely related to the question of global vs. local namespaces is the
+question, whether all objects in the namespace should be provided from
+a server process. One could also imagine libraries implementing some
+part of the namespace which can be linked to each process
+individually.
+
+Reasonably one would want to position all objects, provided by
+external servers and implemented by a local library, in the same
+namespace.  Consequently we need some concept of combining these two
+namespaces:
+* One could imagine a solution, where the local library's namespace is
+  overlaid, above the global one.  Each name resolve operation would
+  have to be handed to the local library first.  The functionality of
+  mounting would also nearly have to be duplicated.
+* One could think about some kind of prefix for the library's
+  namespace, such as "local://file.xyz".  However, each character in
+  this url-like format is legal in same filesystems (e.g. ext2/ext3)
+  and also used.  It could be possible that in the actual directory
+  exists a directory called "local:".  The two "//" are legal and work
+  like "/./" or "/".  In this directory can be the file "file.xyz".
+  One could not distinguish the url-like name an legal local names.
+  Solutions to this could be;
+  # allow only full qualified names (e.g. starting with "global://",
+    "local://", ...).  I think this solution is not feasible.
+  # Prohibit some characters, such as the ":" in other names.  Also
+    not good as some filesystems have the ":" as path separator
+    (MacOS) and others use it as normal character.
+  # Disallow some filename, such as "local:".  This is also a bad
+    idea.  We end up with a mess like the one DOS left us behind ("con",
+    "lpt", ...).
+  # Just overlay it to some point in the namespace and use a policy to
+    prohibit collisions.
+
+
+Volumes
+=======
+
+Volumes are a set of aggregated objects.  A volume is administrated
+by an object server and the objects within a volume are organized in a
+hierarchical namespace.  However, it is possible for one server to
+administrate several volumes.  Another thing to note is, that the
+mapping of volume_id to server thread_id needs neither be static
+(constant over time) nor valid globally, that is, different clients
+may get different thread_ids for the same volume_id.
+
+Each object server registers an "administration" server thread_id at
+the name server.  A client can contact this server thread if it wishes
+to use objects from its volume.  The server can either return its own
+thread_id if its single threaded or does not want to spawn a new
+thread for the client, or it can return any other thread_id if the
+server wants to service the actual client with another thread.
+
+The client in turn may cache the translation from volume_id to its
+responsible server thread.  However, this mapping may become invalid
+over time (the server may be restarted, exchanged, migrated, updated,
+it may kill some of its threads, ...).  In that case the client should
+contact the name server and get a new mapping.
+
+Note that for all the nice features describe above, the indirection
+from volume_id to (server) thread_id is necessary.  However, one may
+want to abandon all of these features and establish a one-to-one
+mapping between volume_ids and thread_ids (although I would consider
+this a very bad design).  Another consequence from this would be that
+object servers can maximally service one volume, as the volume_id is
+part of the object_id and must be unique.
+
+
+Locations in namespaces
+=======================
+
+For some services it is important to have the concept of a location in
+a namespace.  Imagine a relative path-name resolving request, which is
+of course relative to a location.  In Linux this location is the
+"current working directory", that is, a position is determined by an
+object_id, specifically a directory's object_id.  Another position,
+which is sometimes used in classic systems is the processes root-node
+position, which typically points to the namespace's root, but can be
+changed per process, for example when using a chroot environment (see
+[Global vs. Local namespaces]).
+
+The concept of location is somewhat equivalent to a absolute path
+name.
+
+To go on I have to introduce another type of objects --- links.  In
+classic systems there are two types of links, so called "hard links"
+and so called "soft links".
+:hard links: refer to other objects in the same volume (e.g., can not
+  reference objects on another partition in linux).  The reference is
+  stored using the target's object_id, that is, not a symbolic name.
+  The original object and the hard link look similar from the users
+  perspective.  There should be no difference in the behavior when
+  accessing the object directly or via the hard link.
+
+:soft links: refer to other objects in the same namespace.  The
+  reference is stored using a symbolical name, which can be either
+  relative to the links location or absolute.  This type of link can
+  also refer to objects in other volumes, but the targets identity is
+  not defined, that is, by mounting namespaces, by moving objects, or
+  by other means one can change the link target's identity.
+  Additionally, this type of link can also point to invalid targets.
+  If one wants to access the link's target a name-resolving operation
+  is necessary.
+
+Up to now, namespaces were real trees, and not directed graphs,
+therefore an object_id was sufficient to express a location in the
+namespace.  This changes if one allows hard links to point to
+directories, as there can now be more than one position (i.e. absolute
+pathname) for the same directory object.  Resolving the object_id for
+the relative path ".." to such a directory would be ambiguous  (Hint:
+that might be the reason, why linux normally does not allow hard links to
+directories).  It seems reasonable to follow this convention.
+Consequences for not doing so, would be to not be able to express
+locations in the namespace by using a directory's object_id, instead
+one would have to construct lists of object_ids to represent the path
+to the location, or similar powerful data structures.
+
+When looking at soft links, the problem does not look so hard, as this
+link type can be distinguished from its target by client applications.
+There is a "primary path" and therefore a "primary location" for each
+object.  When resolving upward pointing path names one can easily
+prefer real directories over soft links.  One could also define such
+an order between a real directory and a hard link to it, however, not
+without giving up the transparency (indistinguishability).
+
+
+Remote servers
+==============
+
+It should be possible to also attach remote object server's namespaces
+(i.e. servers running on another node) to a local namespace using a
+proxy.  After some thinking about the problem the proxy would have to
+do the following tasks:
+* It must reserve a volume_id at the local name server and associate
+  it with its service thread_id.  This can possibly be the remote
+  server's volume_id if there is no conflict.
+* If the local proxies volume_id differs from the remote server's,
+  all communication containing such ids must be scanned and the ids
+  must be mapped.
+* The proxy must bridge all communication between local clients and
+  the remote server, tunneling the request through a network
+  connection or something similar.
+
+What remains is the problem of "network transparent IPC", that is, a
+client should remain blocked until the proxy replies with the remote
+server's answer, and not just until the proxy has successfully
+received the client's request.
+
+
+Wrapping Servers
+================
+
+One important question that arises is whether it is possible to attach
+namespaces with different sets of operations (such as the VFS
+namespace of a running L4Linux) and combined namespaces (i.e., the
+combined namespace of another running instance of the name server).
+
+This should be possible to do, using similar techniques as described
+in the Section [Remote servers], that is, by wrapping operations,
+where necessary and by translating all the wrapped volume_ids where
+necessary.

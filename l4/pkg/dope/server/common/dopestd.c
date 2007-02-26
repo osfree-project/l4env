@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -21,15 +21,7 @@
 #include "dopestd.h"
 
 
-/*** CONVERT A FLOAT INTO A STRING ***
- *
- * This function performs zero-termination of the string.
- *
- * \param v       float value to convert
- * \param prec    number of digits after comma
- * \param dst     destination buffer
- * \param max_len destination buffer size
- */
+/*** CONVERT A FLOAT INTO A STRING ***/
 int dope_ftoa(float v, int prec, char *dst, int max_len) {
 	int dig = 0, neg = 0, zero = 0;
 
@@ -71,12 +63,43 @@ int dope_ftoa(float v, int prec, char *dst, int max_len) {
 
 
 /*** DETERMINES IF TWO STRINGS ARE EQUAL ***/
-int dope_streq(char *s1, char *s2, int max_len) {
+int dope_streq(const char *s1, const char *s2, int max_s1) {
 	int i;
 	if (!s1 || !s2) return 0;
-	for (i=0;i<max_len;i++) {
-		if (*(s1) != *(s2++)) return 0;
-		if (*(s1++) == 0) return 1;
+	for (i=0; i<max_s1; i++) {
+		if (*s1 != *s2) return 0;
+		if ((*s1 == 0) && (*s2 == 0)) return 1;
+		s1++; s2++;
 	}
-	return 1;
+
+	/* if s2 has the same length as s1, we are fine */
+	if ((i == max_s1) && (*s2 == 0)) return 1;
+	return 0;
+}
+
+
+/*** DUPLICATE STRING ***/
+u8 *dope_strdup(u8 *s) {
+	u8 *d;
+	u8 *result;
+	s32 strl;
+	if (!s) return NULL;
+	strl = strlen(s);
+	if (strl >= 0) {
+		result = malloc(strl+2);
+		if (!result) return NULL;
+		d = result;
+		while (*s) *(d++) = *(s++);
+		*d = 0;
+		return result;
+	}
+	return NULL;
+}
+
+
+/*** ALLOCATE MEMORY BLOCK AND SET TO ZERO ***/
+void *zalloc(unsigned long size) {
+	void *ret = malloc(size);
+	if (ret) memset(ret, 0, size);
+	return ret;
 }

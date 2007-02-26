@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BENameSpace.cpp
- *	\brief	contains the implementation of the class CBENameSpace
+ *    \file    dice/src/be/BENameSpace.cpp
+ *    \brief   contains the implementation of the class CBENameSpace
  *
- *	\date	Tue Jun 25 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    Tue Jun 25 2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -46,28 +47,19 @@
 #include "fe/FEConstructedType.h"
 #include "fe/FEIdentifier.h"
 
-IMPLEMENT_DYNAMIC(CBENameSpace);
-
 CBENameSpace::CBENameSpace()
-: m_vClasses(RUNTIME_CLASS(CBEClass)),
-  m_vNestedNamespaces(RUNTIME_CLASS(CBENameSpace)),
-  m_vConstants(RUNTIME_CLASS(CBEConstant)),
-  m_vTypedefs(RUNTIME_CLASS(CBETypedef)),
-  m_vTypeDeclarations(RUNTIME_CLASS(CBEType)),
-  m_vAttributes(RUNTIME_CLASS(CBEAttribute))
 {
-    IMPLEMENT_DYNAMIC_BASE(CBENameSpace, CBEObject);
 }
 
 /** destructs the class class */
 CBENameSpace::~CBENameSpace()
 {
-    m_vClasses.DeleteAll();
-    m_vNestedNamespaces.DeleteAll();
-    m_vConstants.DeleteAll();
-    m_vTypedefs.DeleteAll();
-    m_vTypeDeclarations.DeleteAll();
-    m_vAttributes.DeleteAll();
+    DEL_VECTOR(m_vClasses);
+    DEL_VECTOR(m_vNestedNamespaces);
+    DEL_VECTOR(m_vConstants);
+    DEL_VECTOR(m_vTypedefs);
+    DEL_VECTOR(m_vTypeDeclarations);
+    DEL_VECTOR(m_vAttributes);
 }
 
 
@@ -76,7 +68,9 @@ CBENameSpace::~CBENameSpace()
  */
 void CBENameSpace::AddClass(CBEClass *pClass)
 {
-    m_vClasses.Add(pClass);
+    if (!pClass)
+        return;
+    m_vClasses.push_back(pClass);
     pClass->SetParent(this);
 }
 
@@ -85,50 +79,56 @@ void CBENameSpace::AddClass(CBEClass *pClass)
  */
 void CBENameSpace::RemoveClass(CBEClass *pClass)
 {
-    m_vClasses.Remove(pClass);
+    if (!pClass)
+        return;
+    vector<CBEClass*>::iterator iter;
+    for (iter = m_vClasses.begin(); iter != m_vClasses.end(); iter++)
+    {
+        if (*iter == pClass)
+        {
+            m_vClasses.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first Class
  *  \return a pointer to the first Class
  */
-VectorElement* CBENameSpace::GetFirstClass()
+vector<CBEClass*>::iterator CBENameSpace::GetFirstClass()
 {
-    return m_vClasses.GetFirst();
+    return m_vClasses.begin();
 }
 
 /** \brief retrieves the next Class
- *  \param pIter the pointer to the next Class
+ *  \param iter the pointer to the next Class
  *  \return a reference to the Class or 0 if end of collection
  */
-CBEClass* CBENameSpace::GetNextClass(VectorElement* &pIter)
+CBEClass* CBENameSpace::GetNextClass(vector<CBEClass*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vClasses.end())
         return 0;
-    CBEClass *pRet = (CBEClass*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextClass(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief searches for a specific Class
  *  \param sClassName the name of the Class
  *  \return a reference to the Class or 0 if not found
  */
-CBEClass* CBENameSpace::FindClass(String sClassName)
+CBEClass* CBENameSpace::FindClass(string sClassName)
 {
     // first search own Classes
-    VectorElement *pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if (pClass->GetName() == sClassName)
             return pClass;
     }
     // then check nested libs
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNestedNameSpace;
-    while ((pNestedNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNestedNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pClass = pNestedNameSpace->FindClass(sClassName)) != 0)
             return pClass;
@@ -141,7 +141,9 @@ CBEClass* CBENameSpace::FindClass(String sClassName)
  */
 void CBENameSpace::AddNameSpace(CBENameSpace* pNameSpace)
 {
-    m_vNestedNamespaces.Add(pNameSpace);
+    if (!pNameSpace)
+        return;
+    m_vNestedNamespaces.push_back(pNameSpace);
     pNameSpace->SetParent(this);
 }
 
@@ -150,42 +152,48 @@ void CBENameSpace::AddNameSpace(CBENameSpace* pNameSpace)
  */
 void CBENameSpace::RemoveNameSpace(CBENameSpace *pNameSpace)
 {
-    m_vNestedNamespaces.Remove(pNameSpace);
+    if (!pNameSpace)
+        return;
+    vector<CBENameSpace*>::iterator iter;
+    for (iter = m_vNestedNamespaces.begin(); iter != m_vNestedNamespaces.end(); iter++)
+    {
+        if (*iter == pNameSpace)
+        {
+            m_vNestedNamespaces.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first NameSpace
  *  \return a pointer to the first NameSpace
  */
-VectorElement* CBENameSpace::GetFirstNameSpace()
+vector<CBENameSpace*>::iterator CBENameSpace::GetFirstNameSpace()
 {
-    return m_vNestedNamespaces.GetFirst();
+    return m_vNestedNamespaces.begin();
 }
 
 /** \brief retrieves a reference to the next nested NameSpace
- *  \param pIter the pointer to the next NameSpace
+ *  \param iter the pointer to the next NameSpace
  *  \return a reference to the next NameSpace or 0 if no more libraries
  */
-CBENameSpace* CBENameSpace::GetNextNameSpace(VectorElement* &pIter)
+CBENameSpace* CBENameSpace::GetNextNameSpace(vector<CBENameSpace*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vNestedNamespaces.end())
         return 0;
-    CBENameSpace *pRet = (CBENameSpace*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextNameSpace(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief tries to find a NameSpace
  *  \param sNameSpaceName the name of the NameSpace
  *  \return a reference to the NameSpace
  */
-CBENameSpace* CBENameSpace::FindNameSpace(String sNameSpaceName)
+CBENameSpace* CBENameSpace::FindNameSpace(string sNameSpaceName)
 {
     // then check nested libs
-    VectorElement *pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iter = GetFirstNameSpace();
     CBENameSpace *pNestedNameSpace, *pFoundNameSpace;
-    while ((pNestedNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNestedNameSpace = GetNextNameSpace(iter)) != 0)
     {
         if (pNestedNameSpace->GetName() == sNameSpaceName)
             return pNestedNameSpace;
@@ -198,7 +206,7 @@ CBENameSpace* CBENameSpace::FindNameSpace(String sNameSpaceName)
 /** \brief retrieves the name of the NameSpace
  *  \return the name of the lib
  */
-String CBENameSpace::GetName()
+string CBENameSpace::GetName()
 {
     return m_sName;
 }
@@ -213,122 +221,121 @@ String CBENameSpace::GetName()
  */
 bool CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
 {
-    if (!pFELibrary)
-    {
-        VERBOSE("CBENameSpace::CreateBackEnd failed because library is 0\n");
-        return false;
-    }
+    assert(pFELibrary);
     // set target file name
     SetTargetFileName(pFELibrary, pContext);
+    // call base class to set source file information
+    if (!CBEObject::CreateBackEnd(pFELibrary))
+        return false;
     // set own name
     m_sName = pFELibrary->GetName();
     // search for attributes
-    VectorElement *pIter = pFELibrary->GetFirstAttribute();
+    vector<CFEAttribute*>::iterator iterA = pFELibrary->GetFirstAttribute();
     CFEAttribute *pFEAttribute;
-    while ((pFEAttribute = pFELibrary->GetNextAttribute(pIter)) != 0)
+    while ((pFEAttribute = pFELibrary->GetNextAttribute(iterA)) != 0)
     {
         if (!CreateBackEnd(pFEAttribute, pContext))
             return false;
     }
     // search for constants
-    pIter = pFELibrary->GetFirstConstant();
+    vector<CFEConstDeclarator*>::iterator iterC = pFELibrary->GetFirstConstant();
     CFEConstDeclarator *pFEConstant;
-    while ((pFEConstant = pFELibrary->GetNextConstant(pIter)) != 0)
+    while ((pFEConstant = pFELibrary->GetNextConstant(iterC)) != 0)
     {
         if (!CreateBackEnd(pFEConstant, pContext))
             return false;
     }
     // search for types
-    pIter = pFELibrary->GetFirstTypedef();
+    vector<CFETypedDeclarator*>::iterator iterT = pFELibrary->GetFirstTypedef();
     CFETypedDeclarator *pFETypedef;
-    while ((pFETypedef = pFELibrary->GetNextTypedef(pIter)) != 0)
+    while ((pFETypedef = pFELibrary->GetNextTypedef(iterT)) != 0)
     {
         if (!CreateBackEnd(pFETypedef, pContext))
             return false;
     }
     // search for type declarations
-    pIter = pFELibrary->GetFirstTaggedDecl();
+    vector<CFEConstructedType*>::iterator iterCT = pFELibrary->GetFirstTaggedDecl();
     CFEConstructedType *pFETaggedType;
-    while ((pFETaggedType = pFELibrary->GetNextTaggedDecl(pIter)) != 0)
+    while ((pFETaggedType = pFELibrary->GetNextTaggedDecl(iterCT)) != 0)
     {
         if (!CreateBackEnd(pFETaggedType, pContext))
             return false;
     }
-	// search for libraries, which contains base interfaces of our own interfaces
-	// we therefore iterate over the interfaces and try to find their base
-	// interfaces in any nested library
-	// we have to remember those libraries, so we won't initialize them twice
-	Vector vLibraries(RUNTIME_CLASS(CFELibrary));
-	pIter = pFELibrary->GetFirstInterface();
+    // search for libraries, which contains base interfaces of our own interfaces
+    // we therefore iterate over the interfaces and try to find their base
+    // interfaces in any nested library
+    // we have to remember those libraries, so we won't initialize them twice
+    vector<CFELibrary*> vLibraries;
+    vector<CFEInterface*>::iterator iterI = pFELibrary->GetFirstInterface();
     CFEInterface *pFEInterface;
-    while ((pFEInterface = pFELibrary->GetNextInterface(pIter)) != 0)
+    CFELibrary *pNestedLib;
+    while ((pFEInterface = pFELibrary->GetNextInterface(iterI)) != 0)
     {
         // get base interface names
-		VectorElement *pIBaseName = pFEInterface->GetFirstBaseInterfaceName();
-		CFEIdentifier *pFEBaseName;
-		while ((pFEBaseName = pFEInterface->GetNextBaseInterfaceName(pIBaseName)) != 0)
-		{
-			// search for interface
-			CFEInterface *pFEBaseInterface = pFELibrary->FindInterface(pFEBaseName->GetName());
-			if (pFEBaseInterface)
-			{
-			    CFELibrary *pNestedLib = pFEBaseInterface->GetParentLibrary();
-				if (pNestedLib && (pNestedLib != pFELibrary))
-				{
-					// init nested library
-					CBENameSpace *pNameSpace = FindNameSpace(pNestedLib->GetName());
-					if (!pNameSpace)
-					{
-						pNameSpace = pContext->GetClassFactory()->GetNewNameSpace();
-						AddNameSpace(pNameSpace);
-						if (!pNameSpace->CreateBackEnd(pNestedLib, pContext))
-						{
-							RemoveNameSpace(pNameSpace);
-							VERBOSE("CBENameSpace::CreateBE failed because NameSpace %s could not be created\n",
-									(const char*)(pNestedLib->GetName()));
-							return false;
-						}
-					}
-					else
-					{
-						// call create function again to add the interface of the redefined nested lib
-						if (!pNameSpace->CreateBackEnd(pNestedLib, pContext))
-						{
-							VERBOSE("CBENameSpace::CreateBE failed because NameSpace %s could not be re-created in scope of %s\n",
-									(const char*)(pNestedLib->GetName()), (const char*)m_sName);
-							return false;
-						}
-					}
-					vLibraries.Add(pNestedLib);
-				}
-			}
-		}
-	}
+        vector<CFEIdentifier*>::iterator iterBIN = pFEInterface->GetFirstBaseInterfaceName();
+        CFEIdentifier *pFEBaseName;
+        while ((pFEBaseName = pFEInterface->GetNextBaseInterfaceName(iterBIN)) != 0)
+        {
+            // search for interface
+            CFEInterface *pFEBaseInterface = pFELibrary->FindInterface(pFEBaseName->GetName());
+            if (pFEBaseInterface)
+            {
+                pNestedLib = pFEBaseInterface->GetSpecificParent<CFELibrary>();
+                if (pNestedLib && (pNestedLib != pFELibrary))
+                {
+                    // init nested library
+                    CBENameSpace *pNameSpace = FindNameSpace(pNestedLib->GetName());
+                    if (!pNameSpace)
+                    {
+                        pNameSpace = pContext->GetClassFactory()->GetNewNameSpace();
+                        AddNameSpace(pNameSpace);
+                        if (!pNameSpace->CreateBackEnd(pNestedLib, pContext))
+                        {
+                            RemoveNameSpace(pNameSpace);
+                            VERBOSE("CBENameSpace::CreateBE failed because NameSpace %s could not be created\n",
+                                    pNestedLib->GetName().c_str());
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        // call create function again to add the interface of the redefined nested lib
+                        if (!pNameSpace->CreateBackEnd(pNestedLib, pContext))
+                        {
+                            VERBOSE("CBENameSpace::CreateBE failed because NameSpace %s could not be re-created in scope of %s\n",
+                                    pNestedLib->GetName().c_str(), m_sName.c_str());
+                            return false;
+                        }
+                    }
+                    vLibraries.push_back(pNestedLib);
+                }
+            }
+        }
+    }
     // search for interfaces
     // there might be some classes, which have base-classes defined in the libs,
     // which come afterwards.
-    pIter = pFELibrary->GetFirstInterface();
-    while ((pFEInterface = pFELibrary->GetNextInterface(pIter)) != 0)
+    iterI = pFELibrary->GetFirstInterface();
+    while ((pFEInterface = pFELibrary->GetNextInterface(iterI)) != 0)
     {
         if (!CreateBackEnd(pFEInterface, pContext))
             return false;
     }
     // search for libraries
-    pIter = pFELibrary->GetFirstLibrary();
-    CFELibrary *pNestedLib;
-    while ((pNestedLib = pFELibrary->GetNextLibrary(pIter)) != 0)
+    vector<CFELibrary*>::iterator iterL = pFELibrary->GetFirstLibrary();
+    while ((pNestedLib = pFELibrary->GetNextLibrary(iterL)) != 0)
     {
-	    // if we initialized this lib already, skip it
-		bool bSkip = false;
-		VectorElement *pILib = vLibraries.GetFirst();
-		while (pILib && !bSkip)
-		{
-		    if (pILib->GetElement() && (pILib->GetElement() == pNestedLib))
-			    bSkip = true;
-		    pILib = pILib->GetNext();
-		}
-		if (bSkip)
-		    continue;
+        // if we initialized this lib already, skip it
+        bool bSkip = false;
+        vector<CFELibrary*>::iterator iter = vLibraries.begin();
+        while ((iter != vLibraries.end()) && !bSkip)
+        {
+            if (*iter && (*iter == pNestedLib))
+                bSkip = true;
+            iter++;
+        }
+        if (bSkip)
+            continue;
         CBENameSpace *pNameSpace = FindNameSpace(pNestedLib->GetName());
         if (!pNameSpace)
         {
@@ -338,7 +345,7 @@ bool CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
             {
                 RemoveNameSpace(pNameSpace);
                 VERBOSE("CBENameSpace::CreateBE failed because NameSpace %s could not be created\n",
-                        (const char*)(pNestedLib->GetName()));
+                        pNestedLib->GetName().c_str());
                 return false;
             }
         }
@@ -348,7 +355,7 @@ bool CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext)
             if (!pNameSpace->CreateBackEnd(pNestedLib, pContext))
             {
                 VERBOSE("CBENameSpace::CreateBE failed because NameSpace %s could not be re-created in scope of %s\n",
-                        (const char*)(pNestedLib->GetName()), (const char*)m_sName);
+                        pNestedLib->GetName().c_str(), m_sName.c_str());
                 return false;
             }
         }
@@ -366,7 +373,7 @@ bool CBENameSpace::CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContex
 {
     CBEClass *pClass = NULL;
     // check if class already exists
-    CBERoot *pRoot = GetRoot();
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     pClass = pRoot->FindClass(pFEInterface->GetName());
     if (!pClass)
@@ -379,7 +386,7 @@ bool CBENameSpace::CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContex
             RemoveClass(pClass);
             delete pClass;
             VERBOSE("CBENameSpace::CreateBE failed because class %s could not be created\n",
-                (const char*)(pFEInterface->GetName()));
+                pFEInterface->GetName().c_str());
             return false;
         }
     }
@@ -401,7 +408,7 @@ bool CBENameSpace::CreateBackEnd(CFEConstDeclarator *pFEConstant, CBEContext *pC
         RemoveConstant(pConstant);
         delete pConstant;
         VERBOSE("CBENameSpace::CreateBE failed because constant %s could not be created\n",
-                (const char*)pFEConstant->GetName());
+                pFEConstant->GetName().c_str());
         return false;
     }
     return true;
@@ -440,7 +447,8 @@ bool CBENameSpace::CreateBackEnd(CFEAttribute *pFEAttribute, CBEContext *pContex
     {
         RemoveAttribute(pAttribute);
         delete pAttribute;
-        VERBOSE("CBENameSpace::CreateBackEnd failed because attribute could not be created\n");
+        VERBOSE("%s failed because attribute could not be created\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
     return true;
@@ -451,7 +459,9 @@ bool CBENameSpace::CreateBackEnd(CFEAttribute *pFEAttribute, CBEContext *pContex
  */
 void CBENameSpace::AddConstant(CBEConstant *pConstant)
 {
-    m_vConstants.Add(pConstant);
+    if (!pConstant)
+        return;
+    m_vConstants.push_back(pConstant);
     pConstant->SetParent(this);
 }
 
@@ -460,65 +470,71 @@ void CBENameSpace::AddConstant(CBEConstant *pConstant)
  */
 void CBENameSpace::RemoveConstant(CBEConstant *pConstant)
 {
-    m_vConstants.Remove(pConstant);
+    if (!pConstant)
+        return;
+    vector<CBEConstant*>::iterator iter;
+    for (iter = m_vConstants.begin(); iter != m_vConstants.end(); iter++)
+    {
+        if (*iter == pConstant)
+        {
+            m_vConstants.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first constant
  *  \return a pointer to the first constant
  */
-VectorElement* CBENameSpace::GetFirstConstant()
+vector<CBEConstant*>::iterator CBENameSpace::GetFirstConstant()
 {
-    return m_vConstants.GetFirst();
+    return m_vConstants.begin();
 }
 
 /** \brief retrieves a reference to the next constant
- *  \param pIter the pointer to the next const
+ *  \param iter the pointer to the next const
  *  \return a reference to the next const
  */
-CBEConstant* CBENameSpace::GetNextConstant(VectorElement *&pIter)
+CBEConstant* CBENameSpace::GetNextConstant(vector<CBEConstant*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vConstants.end())
         return 0;
-    CBEConstant *pRet = (CBEConstant*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextConstant(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief searches for a constants
  *  \param sConstantName the name of the constants
  *  \return a reference to the constant if found, zero otherwise
  */
-CBEConstant* CBENameSpace::FindConstant(String sConstantName)
+CBEConstant* CBENameSpace::FindConstant(string sConstantName)
 {
-    if (sConstantName.IsEmpty())
+    if (sConstantName.empty())
         return 0;
     // simply scan the namespace for a match
-    VectorElement *pIter = GetFirstConstant();
+    vector<CBEConstant*>::iterator iterCo = GetFirstConstant();
     CBEConstant *pConstant;
-    while ((pConstant = GetNextConstant(pIter)) != 0)
+    while ((pConstant = GetNextConstant(iterCo)) != 0)
     {
         if (pConstant->GetName() == sConstantName)
             return pConstant;
     }
-	// check classes
-	pIter = GetFirstClass();
-	CBEClass *pClass;
-	while ((pClass = GetNextClass(pIter)) != 0)
-	{
-	    if ((pConstant = pClass->FindConstant(sConstantName)) != 0)
-		    return pConstant;
-	}
-	// check namespaces
-	pIter = GetFirstNameSpace();
-	CBENameSpace *pNameSpace;
-	while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
-	{
-	    if ((pConstant = pClass->FindConstant(sConstantName)) != 0)
-		    return pConstant;
-	}
-	// nothing found
+    // check classes
+    vector<CBEClass*>::iterator iterCl = GetFirstClass();
+    CBEClass *pClass;
+    while ((pClass = GetNextClass(iterCl)) != 0)
+    {
+        if ((pConstant = pClass->FindConstant(sConstantName)) != 0)
+            return pConstant;
+    }
+    // check namespaces
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
+    CBENameSpace *pNameSpace;
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
+    {
+        if ((pConstant = pNameSpace->FindConstant(sConstantName)) != 0)
+            return pConstant;
+    }
+    // nothing found
     return 0;
 }
 
@@ -528,7 +544,9 @@ CBEConstant* CBENameSpace::FindConstant(String sConstantName)
  */
 void CBENameSpace::AddTypedef(CBETypedef *pTypedef)
 {
-    m_vTypedefs.Add(pTypedef);
+    if (!pTypedef)
+        return;
+    m_vTypedefs.push_back(pTypedef);
     pTypedef->SetParent(this);
 }
 
@@ -537,30 +555,36 @@ void CBENameSpace::AddTypedef(CBETypedef *pTypedef)
  */
 void CBENameSpace::RemoveTypedef(CBETypedef *pTypedef)
 {
-    m_vTypedefs.Remove(pTypedef);
+    if (!pTypedef)
+        return;
+    vector<CBETypedef*>::iterator iter;
+    for (iter = m_vTypedefs.begin(); iter != m_vTypedefs.end(); iter++)
+    {
+        if (*iter == pTypedef)
+        {
+            m_vTypedefs.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first typedef
  *  \return a pointer to the first typedef
  */
-VectorElement* CBENameSpace::GetFirstTypedef()
+vector<CBETypedef*>::iterator CBENameSpace::GetFirstTypedef()
 {
-    return m_vTypedefs.GetFirst();
+    return m_vTypedefs.begin();
 }
 
 /** \brief retrieves a reference to the next typedef
- *  \param pIter the pointer to the next typedef
+ *  \param iter the pointer to the next typedef
  *  \return a reference to the typedef
  */
-CBETypedef* CBENameSpace::GetNextTypedef(VectorElement *&pIter)
+CBETypedef* CBENameSpace::GetNextTypedef(vector<CBETypedef*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vTypedefs.end())
         return 0;
-    CBETypedef *pRet = (CBETypedef*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextTypedef(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief adds an attribute
@@ -568,7 +592,9 @@ CBETypedef* CBENameSpace::GetNextTypedef(VectorElement *&pIter)
  */
 void CBENameSpace::AddAttribute(CBEAttribute *pAttribute)
 {
-    m_vAttributes.Add(pAttribute);
+    if (!pAttribute)
+        return;
+    m_vAttributes.push_back(pAttribute);
     pAttribute->SetParent(this);
 }
 
@@ -577,30 +603,36 @@ void CBENameSpace::AddAttribute(CBEAttribute *pAttribute)
  */
 void CBENameSpace::RemoveAttribute(CBEAttribute *pAttribute)
 {
-    m_vAttributes.Remove(pAttribute);
+    if (!pAttribute)
+        return;
+    vector<CBEAttribute*>::iterator iter;
+    for (iter = m_vAttributes.begin(); iter != m_vAttributes.end(); iter++)
+    {
+        if (*iter == pAttribute)
+        {
+            m_vAttributes.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves the pointer to the first attribute
  *  \return a pointer to the first attribute
  */
-VectorElement* CBENameSpace::GetFirstAttribute()
+vector<CBEAttribute*>::iterator CBENameSpace::GetFirstAttribute()
 {
-    return m_vAttributes.GetFirst();
+    return m_vAttributes.begin();
 }
 
 /** \brief retrieve a reference to the next attribute
- *  \param pIter the pointer to the next attribute
+ *  \param iter the pointer to the next attribute
  *  \return a reference to the attribute
  */
-CBEAttribute* CBENameSpace::GetNextAttribute(VectorElement *&pIter)
+CBEAttribute* CBENameSpace::GetNextAttribute(vector<CBEAttribute*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vAttributes.end())
         return 0;
-    CBEAttribute *pRet = (CBEAttribute*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextAttribute(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief adds this NameSpace to the target file
@@ -613,9 +645,11 @@ CBEAttribute* CBENameSpace::GetNextAttribute(VectorElement *&pIter)
  */
 bool CBENameSpace::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
 {
+    VERBOSE("CBENameSpace::AddToFile(header: %s) for namespace %s called\n",
+        pHeader->GetFileName().c_str(), GetName().c_str());
     // add this namespace to the file
     if (IsTargetFile(pHeader))
-		pHeader->AddNameSpace(this);
+        pHeader->AddNameSpace(this);
     return true;
 }
 
@@ -626,21 +660,24 @@ bool CBENameSpace::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
  */
 bool CBENameSpace::AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext)
 {
-	// if compiler options for interface or function target file are set
-	// iterate over interfaces and add them
-	if (pContext->IsOptionSet(PROGRAM_FILE_FUNCTION) ||
-		pContext->IsOptionSet(PROGRAM_FILE_INTERFACE))
-	{
-		VectorElement *pIter = GetFirstClass();
-		CBEClass *pClass;
-		while ((pClass = GetNextClass(pIter)) != 0)
-		{
-			pClass->AddToFile(pImpl, pContext);
-		}
-	}
+    VERBOSE("CBENameSpace::AddToFile(impl: %s) for namespace %s called\n",
+        pImpl->GetFileName().c_str(), GetName().c_str());
+    // if compiler options for interface or function target file are set
+    // iterate over interfaces and add them
+    if (pContext->IsOptionSet(PROGRAM_FILE_FUNCTION) ||
+        pContext->IsOptionSet(PROGRAM_FILE_INTERFACE))
+    {
+        vector<CBEClass*>::iterator iter = GetFirstClass();
+        CBEClass *pClass;
+        while ((pClass = GetNextClass(iter)) != 0)
+        {
+            pClass->AddToFile(pImpl, pContext);
+        }
+    }
     // add this namespace to the file
-	if (IsTargetFile(pImpl))
-		pImpl->AddNameSpace(this);
+    // (needed for types, etc.)
+    if (IsTargetFile(pImpl))
+        pImpl->AddNameSpace(this);
     return true;
 }
 
@@ -653,17 +690,17 @@ bool CBENameSpace::AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext)
  */
 bool CBENameSpace::AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if (!pClass->AddOpcodesToFile(pFile, pContext))
             return false;
     }
 
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if (!pNameSpace->AddOpcodesToFile(pFile, pContext))
             return false;
@@ -672,49 +709,86 @@ bool CBENameSpace::AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext)
     return true;
 }
 
-/** \brief tries to optimize the namespace
- *  \param nLevel the optimization level
- *  \param pContext the context of the optimization
- *  \return 0 on success or error code on failure
- */
-int CBENameSpace::Optimize(int nLevel, CBEContext *pContext)
-{
-    // iterate over classes
-    VectorElement *pIter = GetFirstClass();
-    CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
-    {
-        int nRet;
-        if ((nRet = pClass->Optimize(nLevel, pContext)) != 0)
-            return nRet;
-    }
-
-    pIter = GetFirstNameSpace();
-    CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
-    {
-        int nRet;
-        if ((nRet = pNameSpace->Optimize(nLevel, pContext)) != 0)
-            return nRet;
-    }
-
-    return 0;
-}
-
 /** \brief writes the name-space to the header file
  *  \param pFile the header file to write to
  *  \param pContext the context of the operation
  *
  * For the C implementation the name-space simply calls the embedded
  * constants, types, classes, and namespaces.
+ *
+ * Before writing, we create an ordered list of contained element,
+ * depending on their appearance in the source file. Then we iterate
+ * over the generated list and write each element.
  */
 void CBENameSpace::Write(CBEHeaderFile *pFile, CBEContext *pContext)
 {
-    WriteConstants(pFile, pContext);
-    WriteTypedefs(pFile, pContext);
-    WriteTaggedTypes(pFile, pContext);
-    WriteClasses(pFile, pContext);
-    WriteNameSpaces(pFile, pContext);
+    // create ordered list
+    CreateOrderedElementList();
+
+    // for C++ write namespace opening
+    if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+	*pFile << "\tnamespace " << GetName() << "\n";
+	*pFile << "\t{\n";
+	pFile->IncIndent();
+    }
+
+    // write target file
+    vector<CObject*>::iterator iter = m_vOrderedElements.begin();
+    int nLastType = 0, nCurrType = 0;
+    for (; iter != m_vOrderedElements.end(); iter++)
+    {
+        nCurrType = 0;
+        if (dynamic_cast<CBEClass*>(*iter))
+            nCurrType = 1;
+        else if (dynamic_cast<CBENameSpace*>(*iter))
+            nCurrType = 2;
+        else if (dynamic_cast<CBEConstant*>(*iter))
+            nCurrType = 3;
+        else if (dynamic_cast<CBETypedef*>(*iter))
+            nCurrType = 4;
+        else if (dynamic_cast<CBEType*>(*iter))
+            nCurrType = 5;
+        if (nCurrType != nLastType)
+        {
+            *pFile << "\n";
+            nLastType = nCurrType;
+        }
+        // add pre-processor directive to denote source line
+        if (pContext->IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE) &&
+            (nCurrType >= 1) && (nCurrType <= 5))
+        {
+            *pFile << "# " << (*iter)->GetSourceLine() <<  " \"" <<
+                (*iter)->GetSourceFileName() << "\"\n";
+        }
+        switch (nCurrType)
+        {
+        case 1:
+            WriteClass((CBEClass*)(*iter), pFile, pContext);
+            break;
+        case 2:
+            WriteNameSpace((CBENameSpace*)(*iter), pFile, pContext);
+            break;
+        case 3:
+            WriteConstant((CBEConstant*)(*iter), pFile, pContext);
+            break;
+        case 4:
+            WriteTypedef((CBETypedef*)(*iter), pFile, pContext);
+            break;
+        case 5:
+            WriteTaggedType((CBEType*)(*iter), pFile, pContext);
+            break;
+        default:
+            break;
+        }
+    }
+
+    // close namespace for C++
+    if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+	pFile->DecIndent();
+	*pFile << "\t}\n";
+    }
 }
 
 /** \brief writes the name-space to the header file
@@ -726,96 +800,118 @@ void CBENameSpace::Write(CBEHeaderFile *pFile, CBEContext *pContext)
  */
 void CBENameSpace::Write(CBEImplementationFile *pFile, CBEContext *pContext)
 {
-    WriteClasses(pFile, pContext);
-    WriteNameSpaces(pFile, pContext);
-}
+    // create ordered list
+    CreateOrderedElementList();
 
-/** \brief writes the constants to the header file
- *  \param pFile the header file to write to
- *  \param pContext the context of the write operation
- */
-void CBENameSpace::WriteConstants(CBEHeaderFile *pFile, CBEContext *pContext)
-{
-    bool bWrote = false;
-    VectorElement *pIter = GetFirstConstant();
-    CBEConstant *pConstant;
-    while ((pConstant = GetNextConstant(pIter)) != 0)
+    /** only write classes and interfaces if this is not
+     * -fFfunction or -fFinterface (the classes have been added to the file
+     * seperately, and are thus written by CBEFile::WriteClasses...
+     */
+    if (pContext->IsOptionSet(PROGRAM_FILE_FUNCTION) ||
+        pContext->IsOptionSet(PROGRAM_FILE_INTERFACE))
+        return;
+
+    // write target file
+    vector<CObject*>::iterator iter = m_vOrderedElements.begin();
+    int nLastType = 0, nCurrType = 0;
+    for (; iter != m_vOrderedElements.end(); iter++)
     {
-        pConstant->Write(pFile, pContext);
-		bWrote = true;
+        nCurrType = 0;
+        if (dynamic_cast<CBEClass*>(*iter))
+            nCurrType = 1;
+        else if (dynamic_cast<CBENameSpace*>(*iter))
+            nCurrType = 2;
+        if ((nCurrType != nLastType) &&
+            (nCurrType > 0))
+        {
+            *pFile << "\n";
+            nLastType = nCurrType;
+        }
+        // add pre-processor directive to denote source line
+        if (pContext->IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE) &&
+            (nCurrType >= 1) && (nCurrType <= 2))
+        {
+            *pFile << "# " << (*iter)->GetSourceLine() <<  " \"" <<
+                (*iter)->GetSourceFileName() << "\"\n";
+        }
+        switch (nCurrType)
+        {
+        case 1:
+            WriteClass((CBEClass*)(*iter), pFile, pContext);
+            break;
+        case 2:
+            WriteNameSpace((CBENameSpace*)(*iter), pFile, pContext);
+            break;
+        default:
+            break;
+        }
     }
-    if (bWrote)
-	    pFile->Print("\n");
 }
 
-/** \brief writes the typedefs to the header file
+/** \brief write a constant
+ *  \param pClass the constant to write
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  */
-void CBENameSpace::WriteTypedefs(CBEHeaderFile *pFile, CBEContext *pContext)
+void CBENameSpace::WriteConstant(CBEConstant *pConstant, CBEHeaderFile *pFile, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstTypedef();
-    CBETypedef *pTypedef;
-    while ((pTypedef = GetNextTypedef(pIter)) != 0)
-    {
-        pTypedef->WriteDeclaration(pFile, pContext);
-    }
+    assert(pConstant);
+    pConstant->Write(pFile, pContext);
 }
 
-/** \brief writes the classes to the header file
- *  \param pFile the file to write to
- *  \param pContext the context the context of the write operation
- */
-void CBENameSpace::WriteClasses(CBEHeaderFile *pFile, CBEContext *pContext)
-{
-    VectorElement *pIter = GetFirstClass();
-    CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
-    {
-        pClass->Write(pFile, pContext);
-    }
-}
-
-/** \brief writes the classes to the implementation file
+/** \brief write a type definition
+ *  \param pTypedef the typedef to write
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  */
-void CBENameSpace::WriteClasses(CBEImplementationFile *pFile, CBEContext *pContext)
+void CBENameSpace::WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile *pFile, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstClass();
-    CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
-    {
-        pClass->Write(pFile, pContext);
-    }
+    assert(pTypedef);
+    pTypedef->WriteDeclaration(pFile, pContext);
 }
 
-/** \brief writes the nested name-spaces to the header file
+/** \brief write a class
+ *  \param pClass the class to write
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  */
-void CBENameSpace::WriteNameSpaces(CBEHeaderFile *pFile, CBEContext *pContext)
+void CBENameSpace::WriteClass(CBEClass *pClass, CBEImplementationFile *pFile, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstNameSpace();
-    CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
-    {
-        pNameSpace->Write(pFile, pContext);
-    }
+    assert(pClass);
+    pClass->Write(pFile, pContext);
 }
 
-/** \brief write the nested name-spaces to the implementation file
+/** \brief write a class
+ *  \param pClass the class to write
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  */
-void CBENameSpace::WriteNameSpaces(CBEImplementationFile *pFile, CBEContext *pContext)
+void CBENameSpace::WriteClass(CBEClass *pClass, CBEHeaderFile *pFile, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstNameSpace();
-    CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
-    {
-        pNameSpace->Write(pFile, pContext);
-    }
+    assert(pClass);
+    pClass->Write(pFile, pContext);
+}
+
+/** \brief write a nested namespace
+ *  \param pNameSpace the namespace to write
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBENameSpace::WriteNameSpace(CBENameSpace *pNameSpace, CBEImplementationFile *pFile, CBEContext *pContext)
+{
+    assert(pNameSpace);
+    pNameSpace->Write(pFile, pContext);
+}
+
+/** \brief write a nested namespace
+ *  \param pNameSpace the namespace to write
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBENameSpace::WriteNameSpace(CBENameSpace *pNameSpace, CBEHeaderFile *pFile, CBEContext *pContext)
+{
+    assert(pNameSpace);
+    pNameSpace->Write(pFile, pContext);
 }
 
 /** \brief tries to find a function
@@ -825,21 +921,21 @@ void CBENameSpace::WriteNameSpaces(CBEImplementationFile *pFile, CBEContext *pCo
  * Because the namespace does not have functions itself, it searches its classes and
  * netsed namespaces.
  */
-CBEFunction* CBENameSpace::FindFunction(String sFunctionName)
+CBEFunction* CBENameSpace::FindFunction(string sFunctionName)
 {
     CBEFunction *pFunction;
 
-    VectorElement *pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if ((pFunction = pClass->FindFunction(sFunctionName)) != 0)
             return pFunction;
     }
 
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pFunction = pNameSpace->FindFunction(sFunctionName)) != 0)
             return  pFunction;
@@ -852,29 +948,29 @@ CBEFunction* CBENameSpace::FindFunction(String sFunctionName)
  *  \param sTypeName the name of the searched typedef
  *  \return a reference to the found type definition
  */
-CBETypedef* CBENameSpace::FindTypedef(String sTypeName)
+CBETypedef* CBENameSpace::FindTypedef(string sTypeName)
 {
-    VectorElement *pIter = GetFirstTypedef();
+    vector<CBETypedef*>::iterator iterT = GetFirstTypedef();
     CBETypedef *pTypedef;
-    while ((pTypedef = GetNextTypedef(pIter)) != 0)
+    while ((pTypedef = GetNextTypedef(iterT)) != 0)
     {
         if (pTypedef->FindDeclarator(sTypeName) != 0)
             return pTypedef;
     }
 
-    pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
     CBETypedDeclarator *pTypedDecl;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if ((pTypedDecl = pClass->FindTypedef(sTypeName)) != 0)
-            if (pTypedDecl->IsKindOf(RUNTIME_CLASS(CBETypedef)))
+            if (dynamic_cast<CBETypedef*>(pTypedDecl))
                 return (CBETypedef*)pTypedDecl;
     }
 
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pTypedef = pNameSpace->FindTypedef(sTypeName)) != 0)
             return pTypedef;
@@ -892,21 +988,21 @@ CBETypedef* CBENameSpace::FindTypedef(String sTypeName)
  */
 bool CBENameSpace::IsTargetFile(CBEHeaderFile * pFile)
 {
-	VectorElement *pIter = GetFirstClass();
-	CBEClass *pClass;
-	while ((pClass = GetNextClass(pIter)) != 0)
-	{
-		if (pClass->IsTargetFile(pFile))
-			return true;
-	}
-	pIter = GetFirstNameSpace();
-	CBENameSpace *pNameSpace;
-	while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
-	{
-		if (pNameSpace->IsTargetFile(pFile))
-			return true;
-	}
-	return false;
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
+    CBEClass *pClass;
+    while ((pClass = GetNextClass(iterC)) != 0)
+    {
+        if (pClass->IsTargetFile(pFile))
+            return true;
+    }
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
+    CBENameSpace *pNameSpace;
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
+    {
+        if (pNameSpace->IsTargetFile(pFile))
+            return true;
+    }
+    return false;
 }
 
 /** \brief test if the given file is a target file for the namespace
@@ -918,21 +1014,21 @@ bool CBENameSpace::IsTargetFile(CBEHeaderFile * pFile)
  */
 bool CBENameSpace::IsTargetFile(CBEImplementationFile * pFile)
 {
-	VectorElement *pIter = GetFirstClass();
-	CBEClass *pClass;
-	while ((pClass = GetNextClass(pIter)) != 0)
-	{
-		if (pClass->IsTargetFile(pFile))
-			return true;
-	}
-	pIter = GetFirstNameSpace();
-	CBENameSpace *pNameSpace;
-	while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
-	{
-		if (pNameSpace->IsTargetFile(pFile))
-			return true;
-	}
-	return false;
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
+    CBEClass *pClass;
+    while ((pClass = GetNextClass(iterC)) != 0)
+    {
+        if (pClass->IsTargetFile(pFile))
+            return true;
+    }
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
+    CBENameSpace *pNameSpace;
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
+    {
+        if (pNameSpace->IsTargetFile(pFile))
+            return true;
+    }
+    return false;
 }
 
 /** \brief tries to find a type declaration of a tagged type
@@ -940,12 +1036,12 @@ bool CBENameSpace::IsTargetFile(CBEImplementationFile * pFile)
  *  \param sTag the tag of the type
  *  \return a reference to the found type or 0
  */
-CBEType* CBENameSpace::FindTaggedType(int nType, String sTag)
+CBEType* CBENameSpace::FindTaggedType(int nType, string sTag)
 {
     // search own types
-    VectorElement *pIter = GetFirstTaggedType();
+    vector<CBEType*>::iterator iterT = GetFirstTaggedType();
     CBEType *pTypeDecl;
-    while ((pTypeDecl = GetNextTaggedType(pIter)) != 0)
+    while ((pTypeDecl = GetNextTaggedType(iterT)) != 0)
     {
         int nFEType = pTypeDecl->GetFEType();
         if (nType != nFEType)
@@ -967,18 +1063,18 @@ CBEType* CBENameSpace::FindTaggedType(int nType, String sTag)
         }
     }
     // search classes
-    pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
     CBEType *pType;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if ((pType = pClass->FindTaggedType(nType, sTag)) != 0)
             return pType;
     }
     // search nested namespaces
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pType = pNameSpace->FindTaggedType(nType, sTag)) != 0)
             return pType;
@@ -991,7 +1087,10 @@ CBEType* CBENameSpace::FindTaggedType(int nType, String sTag)
  */
 void CBENameSpace::AddTaggedType(CBEType *pType)
 {
-    m_vTypeDeclarations.Add(pType);
+    if (!pType)
+        return;
+    m_vTypeDeclarations.push_back(pType);
+    pType->SetParent(this);
 }
 
 /** \brief removes the tagged type declaration
@@ -999,30 +1098,36 @@ void CBENameSpace::AddTaggedType(CBEType *pType)
  */
 void CBENameSpace::RemoveTaggedType(CBEType *pType)
 {
-    m_vTypeDeclarations.Remove(pType);
+    if (!pType)
+        return;
+    vector<CBEType*>::iterator iter;
+    for (iter = m_vTypeDeclarations.begin(); iter != m_vTypeDeclarations.end(); iter++)
+    {
+        if (*iter == pType)
+        {
+            m_vTypeDeclarations.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief tries to find the first type declaration
  *  \return a pointer to the first tagged type declaration
  */
-VectorElement* CBENameSpace::GetFirstTaggedType()
+vector<CBEType*>::iterator CBENameSpace::GetFirstTaggedType()
 {
-    return m_vTypeDeclarations.GetFirst();
+    return m_vTypeDeclarations.begin();
 }
 
 /** \brief retrieves a reference to the next tagged type declaration
- *  \param pIter the pointer to the next tagged type declaration
+ *  \param iter the pointer to the next tagged type declaration
  *  \return a reference to the next tagged type or 0 if no more
  */
-CBEType* CBENameSpace::GetNextTaggedType(VectorElement* &pIter)
+CBEType* CBENameSpace::GetNextTaggedType(vector<CBEType*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vTypeDeclarations.end())
         return 0;
-    CBEType *pRet = (CBEType*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextTaggedType(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief tries to create the back-end presentation of a type declaration
@@ -1039,35 +1144,33 @@ bool CBENameSpace::CreateBackEnd(CFEConstructedType *pFEType, CBEContext *pConte
     {
         RemoveTaggedType(pType);
         delete pType;
-        VERBOSE("CBENameSpace::CreateBackEnd failed because tagged type could not be created\n");
+        VERBOSE("%s failed because tagged type could not be created\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
     return true;
 }
 
-/** \brief writes the tagged type declarations
+/** \brief write a tagged type declaration
+ *  \param pType the type to write
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  */
-void CBENameSpace::WriteTaggedTypes(CBEHeaderFile *pFile, CBEContext *pContext)
+void CBENameSpace::WriteTaggedType(CBEType *pType, CBEHeaderFile *pFile, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstTaggedType();
-    CBEType *pType;
-    while ((pType = GetNextTaggedType(pIter)) != 0)
-    {
-		String sTag;
-		if (pType->IsKindOf(RUNTIME_CLASS(CBEStructType)))
-		    sTag = ((CBEStructType*)pType)->GetTag();
-		if (pType->IsKindOf(RUNTIME_CLASS(CBEUnionType)))
-		    sTag = ((CBEUnionType*)pType)->GetTag();
-		sTag = pContext->GetNameFactory()->GetTypeDefine(sTag, pContext);
-		pFile->Print("#ifndef %s\n", (const char*)sTag);
-		pFile->Print("#define %s\n", (const char*)sTag);
-        pType->Write(pFile, pContext);
-        pFile->Print(";\n");
-		pFile->Print("#endif /* !%s */\n", (const char*)sTag);
-		pFile->Print("\n");
-    }
+    assert(pType);
+    string sTag;
+    if (dynamic_cast<CBEStructType*>(pType))
+        sTag = ((CBEStructType*)pType)->GetTag();
+    if (dynamic_cast<CBEUnionType*>(pType))
+        sTag = ((CBEUnionType*)pType)->GetTag();
+    sTag = pContext->GetNameFactory()->GetTypeDefine(sTag, pContext);
+    pFile->Print("#ifndef %s\n", sTag.c_str());
+    pFile->Print("#define %s\n", sTag.c_str());
+    pType->Write(pFile, pContext);
+    pFile->Print(";\n");
+    pFile->Print("#endif /* !%s */\n", sTag.c_str());
+    pFile->Print("\n");
 }
 
 /** \brief search for a function with a specific type
@@ -1079,21 +1182,98 @@ void CBENameSpace::WriteTaggedTypes(CBEHeaderFile *pFile, CBEContext *pContext)
  * search own classe, namespaces and function for a function, which has
  * a parameter of that type
  */
-bool CBENameSpace::HasFunctionWithUserType(String sTypeName, CBEFile *pFile, CBEContext *pContext)
+bool CBENameSpace::HasFunctionWithUserType(string sTypeName, CBEFile *pFile, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if (pNameSpace->HasFunctionWithUserType(sTypeName, pFile, pContext))
             return true;
     }
-    pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if (pClass->HasFunctionWithUserType(sTypeName, pFile, pContext))
             return true;
     }
     return false;
+}
+
+/** \brief creates a list of ordered elements
+ *
+ * This method iterates each member vector and inserts their
+ * elements into the ordered element list using bubble sort.
+ * Sort criteria is the source line number.
+ */
+void CBENameSpace::CreateOrderedElementList(void)
+{
+    // clear vector
+    m_vOrderedElements.erase(m_vOrderedElements.begin(), m_vOrderedElements.end());
+    // namespaces
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
+    CBENameSpace *pNS;
+    while ((pNS = GetNextNameSpace(iterN)) != NULL)
+    {
+        InsertOrderedElement(pNS);
+    }
+    // classes
+    vector<CBEClass*>::iterator iterCl = GetFirstClass();
+    CBEClass *pCl;
+    while ((pCl = GetNextClass(iterCl)) != NULL)
+    {
+        InsertOrderedElement(pCl);
+    }
+    // typedef
+    vector<CBETypedef*>::iterator iterT = GetFirstTypedef();
+    CBETypedef *pT;
+    while ((pT = GetNextTypedef(iterT)) != NULL)
+    {
+        InsertOrderedElement(pT);
+    }
+    // tagged types
+    vector<CBEType*>::iterator iterTa = GetFirstTaggedType();
+    CBEType* pTa;
+    while ((pTa = GetNextTaggedType(iterTa)) != NULL)
+    {
+        InsertOrderedElement(pTa);
+    }
+    // consts
+    vector<CBEConstant*>::iterator iterC = GetFirstConstant();
+    CBEConstant *pC;
+    while ((pC = GetNextConstant(iterC)) != NULL)
+    {
+        InsertOrderedElement(pC);
+    }
+}
+
+/** \brief insert one element into the ordered list
+ *  \param pObj the new element
+ *
+ * This is the insert implementation
+ */
+void CBENameSpace::InsertOrderedElement(CObject *pObj)
+{
+    // get source line number
+    int nLine = pObj->GetSourceLine();
+    // search for element with larger number
+    vector<CObject*>::iterator iter = m_vOrderedElements.begin();
+    for (; iter != m_vOrderedElements.end(); iter++)
+    {
+        if ((*iter)->GetSourceLine() > nLine)
+        {
+//             TRACE("Insert element from %s:%d before element from %s:%d\n",
+//                 pObj->GetSourceFileName().c_str(), pObj->GetSourceLine(),
+//                 (*iter)->GetSourceFileName().c_str(),
+//                 (*iter)->GetSourceLine());
+            // insert before that element
+            m_vOrderedElements.insert(iter, pObj);
+            return;
+        }
+    }
+    // new object is bigger that all existing
+//     TRACE("Insert element from %s:%d at end\n",
+//         pObj->GetSourceFileName().c_str(), pObj->GetSourceLine());
+    m_vOrderedElements.push_back(pObj);
 }

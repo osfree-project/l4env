@@ -1,0 +1,14 @@
+--- linux-2.4.23-orig/net/ipv4/fib_frontend.c	2004-02-19 14:12:43.000000000 +0100
++++ linux-2.4.23-ux/net/ipv4/fib_frontend.c	2004-02-19 14:02:14.000000000 +0100
+@@ -230,6 +230,11 @@
+ 
+ 	if (in_dev == NULL)
+ 		goto e_inval;
++	
++	// needed for L4-IPSec
++        // do not check at all if there is rp_filter = 10
++	if (in_dev->cnf.rp_filter==10)
++	        return 0;
+ 
+ 	if (fib_lookup(&key, &res))
+ 		goto last_resort;

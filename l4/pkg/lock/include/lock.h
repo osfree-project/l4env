@@ -42,7 +42,7 @@ __BEGIN_DECLS;
  * Occupy lock, block if lock already owned by someone else.
  */
 /*****************************************************************************/ 
-volatile L4_INLINE void
+L4_INLINE void
 l4lock_lock(l4lock_t * lock);
 
 /*****************************************************************************/
@@ -56,7 +56,7 @@ l4lock_lock(l4lock_t * lock);
  *          thread), 0 if lock owned by someone else
  */
 /*****************************************************************************/ 
-volatile L4_INLINE int
+L4_INLINE int
 l4lock_try_lock(l4lock_t * lock);
 
 /*****************************************************************************/
@@ -67,7 +67,7 @@ l4lock_try_lock(l4lock_t * lock);
  * \param   lock         Lock structure.
  */
 /*****************************************************************************/ 
-volatile L4_INLINE void
+L4_INLINE void
 l4lock_unlock(l4lock_t * lock);
 
 /*****************************************************************************/
@@ -92,7 +92,7 @@ __END_DECLS;
 /*****************************************************************************
  * lock
  *****************************************************************************/
-volatile L4_INLINE void
+L4_INLINE void
 l4lock_lock(l4lock_t * lock)
 {
   l4thread_t me = l4thread_myself();
@@ -119,7 +119,7 @@ l4lock_lock(l4lock_t * lock)
 /*****************************************************************************
  * try lock
  *****************************************************************************/
-volatile L4_INLINE int
+L4_INLINE int
 l4lock_try_lock(l4lock_t * lock)
 {
   l4thread_t me = l4thread_myself();
@@ -152,7 +152,7 @@ l4lock_try_lock(l4lock_t * lock)
 /*****************************************************************************
  * unlock
  *****************************************************************************/
-volatile L4_INLINE void
+L4_INLINE void
 l4lock_unlock(l4lock_t * lock)
 {
   l4thread_t me = l4thread_myself();

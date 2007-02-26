@@ -17,6 +17,7 @@
 #ifndef __DDE_LINUX_INCLUDE_ARCH_X86_CTOR_H_
 #define __DDE_LINUX_INCLUDE_ARCH_X86_CTOR_H_
 
+#include <l4/sys/compiler.h>
 #include <l4/env/cdefs.h>
 
 __BEGIN_DECLS
@@ -26,12 +27,13 @@ typedef void (*l4dde_initcall_t)(void);
 extern l4dde_initcall_t __DDE_CTOR_LIST__, __DDE_CTOR_END__;
 
 #define l4dde_initcall(fn)	\
-	static l4dde_initcall_t __l4dde_initcall_##fn __l4dde_init_call = fn
+	static l4dde_initcall_t \
+	  L4_STICKY(__l4dde_initcall_##fn) __l4dde_init_call = fn
 
 #define __l4dde_init_call 	\
-	__attribute__ ((unused, __section__ (".l4dde_ctors")))
+	__attribute__ ((__section__ (".l4dde_ctors")))
 
-/*!\brief Call the registered initcall functions
+/** Call the registered initcall functions
  *
  * This function calls all functions that registered using the
  * l4env_initcall macro. Do not forget to link using the main_stat.ld linker

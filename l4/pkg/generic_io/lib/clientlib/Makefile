@@ -5,6 +5,7 @@ TARGET		= libio.a
 SYSTEMS		= x86-l4v2 x86-l4x0
 
 SRC_C		= init.c pci.c req_rel.c
+SRC_S		= ARCH-$(ARCH)/io_info.S
 CLIENTIDL	= $(PKGNAME).idl
 PRIVATE_INCDIR	= ../../include
 

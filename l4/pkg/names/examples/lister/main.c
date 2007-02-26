@@ -11,8 +11,8 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 #include <stdio.h>
+
 #include <l4/names/libnames.h>
-#include <names.h>
 
 int main(int argc, char**argv){
     char name[NAMES_MAX_NAME_LEN];
@@ -25,5 +25,6 @@ int main(int argc, char**argv){
 		   id.id.task, id.id.lthread, name);
 	}
     }
+
     return 0;
 }

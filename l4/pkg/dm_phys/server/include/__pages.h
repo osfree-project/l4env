@@ -62,20 +62,22 @@ typedef struct page_area
 #define SET_AREA_USED(a)   ((a)->flags |= AREA_USED)   ///< mark area used
 #define SET_AREA_UNUSED(a) ((a)->flags &= ~AREA_USED)  ///< mark area unused
 
+#define WIN_OFFSET(x)        ((x) & ((1 << DMPHYS_MEMMAP_LOG2_SIZE) - 1))
+
 /**
- * Return map address of area 
+ * Return map address of area
  */
-#define AREA_MAP_ADDR(a)     (DMPHYS_MEMMAP_START + (a)->addr)
+#define AREA_MAP_ADDR(a)     (DMPHYS_MEMMAP_START + WIN_OFFSET((a)->addr))
 
 /**
  * Return map address of phys. address
  */
-#define MAP_ADDR(a)          (DMPHYS_MEMMAP_START + (a))
+#define MAP_ADDR(phys)       (DMPHYS_MEMMAP_START + WIN_OFFSET(phys))
 
 /**
- * Return phys. address of map address 
+ * Return phys. address of map address
  */
-#define PHYS_ADDR(addr)      ((l4_addr_t)(addr) - DMPHYS_MEMMAP_START)
+#define PHYS_ADDR(addr)      ((l4_addr_t)(addr) - DMPHYS_MEMMAP_START + WIN_OFFSET(RAM_BASE))
 
 /**
  * Memory pool descriptor
@@ -108,9 +110,7 @@ dmphys_pages_init(void);
 
 /* setup page pool descriptor */
 void
-dmphys_pages_init_pool(int pool, 
-		       l4_size_t reserved, 
-		       char * name);
+dmphys_pages_init_pool(int pool, l4_size_t reserved, char * name);
 
 /* page pools */
 page_pool_t *
@@ -121,56 +121,40 @@ dmphys_get_default_pool(void);
 
 /* add free area */
 int
-dmphys_pages_add_free_area(int pool, 
-			   l4_addr_t addr, 
-			   l4_size_t size);
+dmphys_pages_add_free_area(int pool, l4_addr_t addr, l4_size_t size);
 
 /* allocate pages */
 int
-dmphys_pages_allocate(page_pool_t * pool, 
-		      l4_size_t size, 
-		      l4_addr_t alignment, 
-		      l4_uint32_t flags, 
-		      int prio, 
-		      page_area_t ** areas);
+dmphys_pages_allocate(page_pool_t * pool, l4_size_t size, l4_addr_t alignment, 
+		      l4_uint32_t flags, int prio, page_area_t ** areas);
 
 /* allocate page area */
 int
-dmphys_pages_allocate_area(page_pool_t * pool, 
-			   l4_addr_t addr, 
-			   l4_size_t size,
-			   int prio, 
-			   page_area_t ** area);
+dmphys_pages_allocate_area(page_pool_t * pool, l4_addr_t addr, l4_size_t size,
+			   int prio, page_area_t ** area);
 
 /* release pages */
 void
-dmphys_pages_release(page_pool_t * pool, 
-		     page_area_t * areas);
+dmphys_pages_release(page_pool_t * pool, page_area_t * areas);
 
 /* try to enlarge page area */
 int
-dmphys_pages_enlarge(page_pool_t * pool, 
-		     page_area_t * area, 
-		     l4_size_t size, 
-		     int prio);
+dmphys_pages_enlarge(page_pool_t * pool, page_area_t * area, 
+		     l4_size_t size, int prio);
 
 /* add more pages to page list */
 int
-dmphys_pages_add(page_pool_t * pool, 
-		 page_area_t * pages, 
-		 l4_size_t size, 
-		 int prio);
+dmphys_pages_add(page_pool_t * pool, page_area_t * pages, 
+		 l4_size_t size, int prio);
 
 /* shrink page list */
 int
-dmphys_pages_shrink(page_pool_t * pool, 
-		    page_area_t * pages, 
+dmphys_pages_shrink(page_pool_t * pool, page_area_t * pages, 
 		    l4_size_t size);
 
 /* find offset in page list */
 L4_INLINE page_area_t *
-dmphys_pages_find_offset(page_area_t * list, 
-			 l4_offs_t offset, 
+dmphys_pages_find_offset(page_area_t * list, l4_offs_t offset, 
 			 l4_offs_t * area_offset);
 
 /* get number of page areas in dataspace list */
@@ -211,8 +195,7 @@ dmphys_pages_list(page_area_t * list);
  */
 /*****************************************************************************/ 
 L4_INLINE page_area_t *
-dmphys_pages_find_offset(page_area_t * list, 
-			 l4_offs_t offset, 
+dmphys_pages_find_offset(page_area_t * list, l4_offs_t offset, 
 			 l4_offs_t * area_offset)
 {
   page_area_t * pa = list;

@@ -1,26 +1,10 @@
-IMPLEMENTATION[arm]:
+IMPLEMENTATION [arm]:
 
 #include "atomic.h"
+#include "config.h"
 #include "initcalls.h"
 #include "irq.h"
 #include "receiver.h"
-
-static char dirq_storage[sizeof(Dirq)* 32]; // 16 device irq's
-
-IMPLEMENT 
-void *Dirq::operator new ( size_t ) 
-{
-  static unsigned first = 0;
-  return reinterpret_cast<Dirq*>(dirq_storage)+(first++);
-}
-
-IMPLEMENT FIASCO_INIT
-void
-Dirq::init()
-{
-  for( unsigned i = 0; i<32; ++i )
-    new Dirq(i);
-}
 
 
 /** Bind a receiver to this device interrupt.
@@ -30,22 +14,20 @@ Dirq::init()
     @return true if the binding could be established
  */
 IMPLEMENT inline NEEDS ["atomic.h"]
-bool Dirq::alloc(Receiver *t, bool ack_in_kernel)
+bool Dirq::alloc(Receiver *t, bool /*ack_in_kernel*/)
 {
-  bool ret = smp_cas(&_irq_thread, reinterpret_cast<Receiver*>(0), t);
+  bool ret = cas (&_irq_thread, reinterpret_cast<Receiver*>(0), t);
 
   if (ret) 
     {
       int irq = id().irq();
-
-      _ack_in_kernel = ack_in_kernel;
       _queued = 0;
-
-      if (_ack_in_kernel)
-	Pic::enable(irq);
+      if ((unsigned long)t != ~0UL)
+	// Assign the receivers prio to the IRQ
+        Pic::enable(irq, t->sched()->prio());
       else
-	Pic::disable(irq);
-
+	// Assign the highes possible IRQ prio to JDB IRQs
+	Pic::enable(irq, ~0U);
     }
 
   return ret;
@@ -59,7 +41,7 @@ bool Dirq::alloc(Receiver *t, bool ack_in_kernel)
 IMPLEMENT inline NEEDS ["receiver.h"]
 bool Dirq::free(Receiver *t)
 {
-  bool ret = smp_cas(&_irq_thread, t, reinterpret_cast<Receiver*>(0));
+  bool ret = cas (&_irq_thread, t, reinterpret_cast<Receiver*>(0));
 
   if (ret) 
     {
@@ -69,3 +51,8 @@ bool Dirq::free(Receiver *t)
 
   return ret;
 }
+
+PUBLIC
+void 
+Dirq::acknowledge()
+{ Pic::acknowledge(id().irq()); }

@@ -5,6 +5,8 @@
 
 #include "hello-client.h"
 
+char LOG_tag[9] = "dice_clt";
+
 int main(void)
 {
   l4_threadid_t hello_id;
@@ -16,7 +18,28 @@ int main(void)
   printf("hello is %x.%x\n", hello_id.id.task, hello_id.id.lthread);
   
   hello_test_f1_call(&hello_id, 5, &tmp, &env);
-  printf("f1 returned: %d\n", tmp);
+  if (env.major != CORBA_NO_EXCEPTION)
+    {
+      printf("Fehler aufgetreten: %d.%d", 
+	  env.major, env.repos_id);
+      if (env.major == CORBA_SYSTEM_EXCEPTION)
+	{
+	  switch (env.repos_id)
+	    {
+	    case CORBA_DICE_EXCEPTION_WRONG_OPCODE:
+	      printf("Server did not recognize the opcode\n");
+	      break;
+	    case CORBA_DICE_EXCEPTION_IPC_ERROR:
+	      printf("IPC error occured (0x%x)\n", env._p.ipc_error);
+	      break;
+	    default:
+	      printf("unrecognized error code (%d)\n", env.repos_id);
+	      break;
+	    }
+	}
+    }
+  else
+    printf("f1 returned: %d\n", tmp);
 
   tmp = hello_test_f2_call(&hello_id, 27, &env);
   printf("f2 returned %d\n", tmp);

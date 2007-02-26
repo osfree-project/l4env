@@ -22,6 +22,7 @@
 
 /* DMgeneric includes */
 #include <l4/dm_generic/dm_generic.h>
+#include "__debug.h"
 
 /*****************************************************************************
  *** libdm_generic API functions
@@ -35,15 +36,14 @@
  * \param  new_owner     New dataspace owner
  *	
  * \return 0 on success (set owner to \a new_owner), error code otherwise:
- *         - \c -L4_EIPC   IPC error calling dataspace manager
- *         - \c -L4_EINVAL Invalid dataspace descriptor
- *         - \c -L4_EPERM  Permission denied, only the current owner can 
+ *         - -#L4_EIPC   IPC error calling dataspace manager
+ *         - -#L4_EINVAL Invalid dataspace descriptor
+ *         - -#L4_EPERM  Permission denied, only the current owner can 
  *                         transfer the ownership
  */
 /*****************************************************************************/ 
 int
-l4dm_transfer(l4dm_dataspace_t * ds, 
-	      l4_threadid_t new_owner)
+l4dm_transfer(const l4dm_dataspace_t * ds, l4_threadid_t new_owner)
 {
   int ret;
   CORBA_Environment _env = dice_default_environment;
@@ -52,14 +52,12 @@ l4dm_transfer(l4dm_dataspace_t * ds,
     return -L4_EINVAL;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_transfer_call(&(ds->manager),ds->id,
-                                      &new_owner,&_env);
+  ret = if_l4dm_generic_transfer_call(&(ds->manager),ds->id, &new_owner, &_env);
   if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      ERROR("libdm_generic: transfer ownership failed, ds %u at %x.%x, "
-	    "new owner %x.%x (ret %d, exc %d)!",ds->id, ds->manager.id.task,
-	    ds->manager.id.lthread,new_owner.id.task,new_owner.id.lthread,
-	    ret,_env.major);
+      LOGdL(DEBUG_ERRORS, "libdm_generic: transfer ownership failed, ds %u at "\
+            l4util_idfmt", new owner "l4util_idfmt" (ret %d, exc %d)!", ds->id, 
+            l4util_idstr(ds->manager), l4util_idstr(new_owner), ret, _env.major);
       if (ret)
 	return ret;
       else

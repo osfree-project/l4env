@@ -159,7 +159,9 @@
 
 #define MAXBUF (sizeof(long int) * 8)		 /* enough for binary */
 
-static char digs[] = "0123456789abcdef";
+static char digits[] = "0123456789abcdef";
+static char capdigits[] = "0123456789ABCDEF";
+static int  capital;
 
 static void
 printnum(register unsigned long u, register int base, 
@@ -169,30 +171,12 @@ printnum(register unsigned long u, register int base,
 	register char *	p = &buf[MAXBUF-1];
 
 	do {
-	    *p-- = digs[u % base];
+	    *p-- = (capital?capdigits:digits)[u % base];
 	    u /= base;
 	} while (u != 0);
 
 	while (++p != &buf[MAXBUF])
 	    (*putc)(putc_arg, *p);
-}
-
-static void
-printnum_16(register unsigned long u,
-	    void (*putc)(char*, char), char *putc_arg)
-{
-    char    buf[8]; /* build number here */
-    register char * p = &buf[7];
-    int i;
-    
-    for(i=0; i<8;i++){
-	*p-- = digs[u & 0x0f];
-	u >>= 4;
-    };
-    
-    for(i=0;i<8;i++){ 
-	(*putc)(putc_arg, buf[i]);
-    }
 }
 
 static int _doprnt_truncates = 0;
@@ -204,7 +188,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 	int		prec;
 	int		ladjust;
 	char		padc;
-	long		n, m;
+	long		n;
 	unsigned long	u;
 	int		plus_sign;
 	int		sign_char;
@@ -292,8 +276,13 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		}
 	    }
 
-	    if (*fmt == 'l'){
-	        longopt = 1;
+	    while (*fmt == 'l'){
+	        longopt++;
+		fmt++;	/* need it if sizeof(int) < sizeof(long) */
+	    }
+
+	    while (*fmt == 'h'){
+	        longopt--;
 		fmt++;	/* need it if sizeof(int) < sizeof(long) */
 	    }
 
@@ -301,6 +290,8 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 #ifdef DOPRNT_FLOATS
 	    float_hack = 0;
 #endif
+
+	    capital = 0;
 
 	    switch(*fmt) {
 		case 'b':
@@ -363,112 +354,6 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		    (*putc)(putc_arg, c);
 		    break;
 
-		case 't':
-		{
-		    typedef struct {
-                        unsigned version_low:10;
-                        unsigned lthread:7;
-                        unsigned task:11;
-                        unsigned version_high:4;
-                        unsigned site:17;
-                        unsigned chief:11;
-                        unsigned nest:4;
-                      } tid_t;
-                    typedef struct {
-                    	unsigned high;
-                    	unsigned low;
-                      } lh_t;
-                    union tid_t {
-                      tid_t id;
-                      lh_t  lh;
-                      } tid;
-
-		    tid = va_arg(args, union tid_t);
-		    
-		    if(longopt){
-		      
-		      if(altfmt){
-		        n = 19;
-		      } else {
-		        n = 17;
-		      }
-		      
-		      if (length > 0 && !ladjust) {
-		        while(n < length){
-		          putc(putc_arg, ' ');
-		          n++;
-		        }
-		      }
-		      if(altfmt) putc(putc_arg, '[');
-		      printnum_16( tid.lh.high, putc, putc_arg);
-		      
-		      putc(putc_arg, ':');
-		      
-		      printnum_16( tid.lh.low, putc, putc_arg);
-		      
-		      if(altfmt) putc(putc_arg, ']');
-		      
-		      if(length > 0 && ladjust) {
-		        while(n < length){
-		          putc(putc_arg, ' ');
-		          n++;
-		        }
-		      }
-		      
-		    } else {
-
-                      if(altfmt){
-                        n = 4;
-                      } else {
-                        n = 2;
-                      }
-
-                      m = 1;
-
-		      m += tid.id.lthread >= 0x10;
-		      n += tid.id.task >= 0x10;
-		      n += tid.id.task >= 0x100;
-		    
-		      if (length > 0 && !ladjust && padc == ' ') {
-			while (n + 2 < length) {
-			    (*putc)(putc_arg, ' ');
-			    n++;
-			}
-                      }
-
-		      if(altfmt) (*putc)(putc_arg, '[');
-		      
-		      if( length > 0 && !ladjust && padc == '0') {
-		        while (n + 2 < length) {
-		          putc(putc_arg, '0');
-		          n++;
-		        }
-		      }
-		      
-		      printnum(tid.id.task, 16, putc, putc_arg);
-                      putc(putc_arg, '.');
-                      
-                      if(length > 0 && !ladjust) {
-                        while (n+m < length){
-                          putc(putc_arg, padc);
-                          n++;
-                        }
-                      }
-                      printnum(tid.id.lthread, 16, putc, putc_arg);
-                      
-                      if(altfmt) putc(putc_arg, ']');
-
-		      if (n + m < length && ladjust) {
-			while (n + m < length) {
-			    (*putc)(putc_arg, ' ');
-			    n++;
-			}
-		      }
-		    }
-
-		    break;
-		}
-
 		case 's':
 		{
 		    register char *p;
@@ -479,8 +364,10 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 
 		    p = va_arg(args, char *);
 
-		    if (p == (char *)0)
-			p = "";
+		    /* Debug helper: Addresses within the first 1K are
+		       treated as errors */
+		    if ((unsigned)p < 1024)
+			p = "(NULL)";
 
 		    if (length > 0 && !ladjust) {
 			n = 0;
@@ -611,6 +498,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		    goto print_unsigned;
 
 		case 'p':
+		    capital = 0;
 		    padc = '0';
 		    length = 8;
 		    /*
@@ -622,30 +510,42 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		    (*putc)(putc_arg, 'x');
 		case 'x':
  		    truncate = _doprnt_truncates;
+		    capital -=1;
 		case 'X':
+		    capital +=1;
 		    base = 16;
 		    goto print_unsigned;
 
 		case 'z':
  		    truncate = _doprnt_truncates;
+		    capital -=1;
 		case 'Z':
+		    capital +=1;
 		    base = 16;
 		    goto print_signed;
 
 		case 'r':
  		    truncate = _doprnt_truncates;
 		case 'R':
+		    capital = 1;
 		    base = radix;
 		    goto print_signed;
 
 		case 'n':
  		    truncate = _doprnt_truncates;
+		    capital-=1;
 		case 'N':
+		    capital+=1;
 		    base = radix;
 		    goto print_unsigned;
 
 		print_signed:
-		    n = va_arg(args, long);
+		    if (longopt>1)
+			n = va_arg(args, long long);
+		    else
+		    	n = va_arg(args, long);
+		    if (longopt<0)
+		    	n &= 0xffff;
 		    if (n >= 0) {
 			u = n;
 			sign_char = plus_sign;
@@ -657,14 +557,18 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		    goto print_num;
 
 		print_unsigned:
-		    u = va_arg(args, unsigned long);
+		    if (longopt>1)
+			u = va_arg(args, unsigned long long);
+		    else
+			u = va_arg(args, unsigned long);
+		    if (longopt<0)
+			n &= 0xffff;
 		    goto print_num;
 
 		print_num:
 		{
 		    char	buf[MAXBUF];	/* build number here */
 		    register char *	p = &buf[MAXBUF-1];
-		    static char digits[] = "0123456789abcdef";
 		    char *prefix = 0;
 
 		    if (truncate) u = (long)((int)(u));
@@ -677,7 +581,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		    }
 
 		    do {
-			*p-- = digits[u % base];
+			*p-- = (capital?capdigits:digits)[u % base];
 			u /= base;
 			prec--;
 		    } while (u != 0);

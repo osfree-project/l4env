@@ -23,6 +23,8 @@
 #include <l4/util/macros.h>
 #include <stdio.h>
 
+char LOG_tag[9]="sem_test";
+
 #define NUM_THREADS 10
 
 #define WAIT_MAX 10000.0
@@ -86,21 +88,17 @@ int main(void)
   l4_threadid_t me = l4_myself();
   l4_threadid_t other = me;
 
-  LOG_init("sem_test");
-
 #if 0
   l4semaphore_init();
 #endif
 
   other.id.lthread = 5;
-  printf("up, me = "IdFmt", other = "IdFmt"\n",IdStr(me),IdStr(other));
+  printf("up, me = "l4util_idfmt", other = "l4util_idfmt"\n",l4util_idstr(me),l4util_idstr(other));
 
   for (i = 0; i < NUM_THREADS; i++)
     l4thread_create(test_fn,NULL,L4THREAD_CREATE_SYNC);
 
-  l4thread_sleep(60000);
-
-  enter_kdebug("done.");
-
+  l4_sleep_forever();
+  
   return 0;
 }

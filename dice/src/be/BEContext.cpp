@@ -1,11 +1,12 @@
 /**
- * \file dice/src/be/BEContext.cpp
- * \brief contains the implementation of the class CBEContext
+ * \file   dice/src/be/BEContext.cpp
+ * \brief  contains the implementation of the class CBEContext
  *
- * \date 01/10/2002
+ * \date   01/10/2002
  * \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -32,21 +33,19 @@
 #include "Compiler.h"
 #include <string.h>
 
-IMPLEMENT_DYNAMIC(CBEContext)
-
 CBEContext::CBEContext(CBEClassFactory * pCF, CBENameFactory * pNF)
 {
     m_pClassFactory = pCF;
     m_pNameFactory = pNF;
     m_pSizes = 0;
-    m_nOptions = PROGRAM_NONE;
     m_nBackEnd = 0;
     m_nFunctionType = 0;
     m_nFileType = 0;
     m_nWarningLevel = 0;
-	m_sSymbols = 0;
-	m_nSymbolCount = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBEContext, CBEObject);
+    m_sSymbols = 0;
+    m_nSymbolCount = 0;
+    for (int i=0; i<PROGRAM_OPTION_GROUPS; i++)
+        m_nOptions[i] = 0;
 }
 
 CBEContext::CBEContext(CBEContext & src):CBEObject(src)
@@ -54,18 +53,18 @@ CBEContext::CBEContext(CBEContext & src):CBEObject(src)
     m_pClassFactory = src.m_pClassFactory;
     m_pNameFactory = src.m_pNameFactory;
     m_pSizes = src.m_pSizes;
-    m_nOptions = src.m_nOptions;
+    for (int i=0; i<PROGRAM_OPTION_GROUPS; i++)
+        m_nOptions[i] = src.m_nOptions[i];
     m_nBackEnd = src.m_nBackEnd;
     m_sFilePrefix = src.m_sFilePrefix;
     m_sIncludePrefix = src.m_sIncludePrefix;
     m_nFunctionType = src.m_nFunctionType;
     m_nFileType = src.m_nFileType;
     m_nWarningLevel = src.m_nWarningLevel;
-	m_nSymbolCount = 0;
-	m_sSymbols = 0;
-	for (int i=0; i<src.m_nSymbolCount-1; i++)
-	    AddSymbol(src.m_sSymbols[i]);
-    IMPLEMENT_DYNAMIC_BASE(CBEContext, CBEObject);
+    m_nSymbolCount = 0;
+    m_sSymbols = 0;
+    for (int i=0; i<src.m_nSymbolCount-1; i++)
+        AddSymbol(src.m_sSymbols[i]);
 }
 
 /** CBEContext destructor */
@@ -74,7 +73,7 @@ CBEContext::~CBEContext()
     if (m_pSizes)
         delete m_pSizes;
     for (int i=0; i<m_nSymbolCount-1; i++)
-	    free(m_sSymbols[i]);
+        free(m_sSymbols[i]);
     free(m_sSymbols);
 }
 
@@ -101,12 +100,27 @@ CBENameFactory *CBEContext::GetNameFactory()
  * \param nAdd the options to add
  * \param nRemove the options to remove
  *
- * The options are usually flags indication which parameters have been used to call
- * the IDL compiler.
+ * The options are usually flags indication which parameters have been used to
+ * call the IDL compiler.
  */
 void CBEContext::ModifyOptions(ProgramOptionType nAdd, ProgramOptionType nRemove)
 {
-    m_nOptions = ((m_nOptions & (~nRemove)) | nAdd);
+    UnsetOption(nRemove.raw);
+    SetOption(nAdd.raw);
+}
+
+/**
+ * \brief changes the options of the context
+ * \param nRawAdd the options to add
+ * \param nRawRemove the options to remove
+ *
+ * The options are usually flags indication which parameters have been used to
+ * call the IDL compiler.
+ */
+void CBEContext::ModifyOptions(unsigned int nRawAdd, unsigned int nRawRemove)
+{
+    UnsetOption(nRawRemove);
+    SetOption(nRawAdd);
 }
 
 /**
@@ -116,7 +130,45 @@ void CBEContext::ModifyOptions(ProgramOptionType nAdd, ProgramOptionType nRemove
  */
 bool CBEContext::IsOptionSet(ProgramOptionType nOption)
 {
-    return (m_nOptions & nOption) > 0;
+    return m_nOptions[nOption._s.group] & nOption._s.option;
+}
+
+/**
+ * \brief check if a specific option is set
+ * \param nRawOption the value of the option to check
+ * \return true if the option is set, false if not
+ */
+bool CBEContext::IsOptionSet(unsigned int nRawOption)
+{
+    return m_nOptions[PROGRAM_OPTION_GROUP_INDEX(nRawOption)] &
+        PROGRAM_OPTION_OPTION(nRawOption);
+}
+
+/**    \brief set an option
+ *    \param nOption the option to set
+ */
+void CBEContext::SetOption(ProgramOptionType nOption)
+{
+    m_nOptions[nOption._s.group] |= nOption._s.option;
+}
+
+/**    \brief set an option
+ *    \param nRawOption the option to be set
+ */
+void CBEContext::SetOption(unsigned int nRawOption)
+{
+    m_nOptions[PROGRAM_OPTION_GROUP_INDEX(nRawOption)] |=
+        PROGRAM_OPTION_OPTION(nRawOption);
+}
+
+
+/**    \brief unset an option
+ *    \param nRawOption the option in raw format
+ */
+void CBEContext::UnsetOption(unsigned int nRawOption)
+{
+    m_nOptions[PROGRAM_OPTION_GROUP_INDEX(nRawOption)] &=
+        ~PROGRAM_OPTION_OPTION(nRawOption);
 }
 
 /**
@@ -125,7 +177,7 @@ bool CBEContext::IsOptionSet(ProgramOptionType nOption)
  */
 bool CBEContext::IsVerbose()
 {
-    return (m_nOptions & PROGRAM_VERBOSE) > 0;
+    return IsOptionSet(PROGRAM_VERBOSE);
 }
 
 /**
@@ -135,7 +187,7 @@ bool CBEContext::IsVerbose()
  * Frees the memory of the old prefix and duplicates the new prefix.
  * Dispose the the new prefix reference yourself.
  */
-void CBEContext::SetFilePrefix(String sFilePrefix)
+void CBEContext::SetFilePrefix(string sFilePrefix)
 {
     m_sFilePrefix = sFilePrefix;
 }
@@ -144,7 +196,7 @@ void CBEContext::SetFilePrefix(String sFilePrefix)
  * \brief return the string of the file prefix
  * \return the m_sFilePrefix pointer
  */
-String CBEContext::GetFilePrefix()
+string CBEContext::GetFilePrefix()
 {
     return m_sFilePrefix;
 }
@@ -152,7 +204,7 @@ String CBEContext::GetFilePrefix()
 /** sets the include prefix for this context
  * \param sIncludePrefix the new prefix string
  */
-void CBEContext::SetIncludePrefix(String sIncludePrefix)
+void CBEContext::SetIncludePrefix(string sIncludePrefix)
 {
     m_sIncludePrefix = sIncludePrefix;
 }
@@ -160,7 +212,7 @@ void CBEContext::SetIncludePrefix(String sIncludePrefix)
 /** returns the string for the include path prefixing
  * \return the include prefix string
  */
-String CBEContext::GetIncludePrefix()
+string CBEContext::GetIncludePrefix()
 {
     return m_sIncludePrefix;
 }
@@ -198,29 +250,14 @@ int CBEContext::SetFileType(int nFileType)
 /** \brief returns the file type
  * \return the file type
  *
- * The file type is used to distinguish the current target file. Because the current file of a function can be a header or
- * implementation file, the function has no way to distinguish between a client-header or component-header file. To allow
- * this distinction we use this file type.
+ * The file type is used to distinguish the current target file. Because the
+ * current file of a function can be a header or implementation file, the
+ * function has no way to distinguish between a client-header or
+ * component-header file. To allow this distinction we use this file type.
  */
 int CBEContext::GetFileType()
 {
     return m_nFileType;
-}
-
-/** \brief Read property of int m_nOptimizeLevel.
- *  \return the current value of m_nOptimizeLevel
- */
-int CBEContext::GetOptimizeLevel()
-{
-    return m_nOptimizeLevel;
-}
-
-/** \brief Write property of int m_nOptimizeLevel.
- *  \param nNewLevel the new optimize level
- */
-void CBEContext::SetOptimizeLevel(int nNewLevel)
-{
-    m_nOptimizeLevel = nNewLevel;
 }
 
 /** \brief Read property of int m_nWarningLevel.
@@ -231,7 +268,7 @@ unsigned long CBEContext::GetWarningLevel()
     return m_nWarningLevel;
 }
 
-/** \brief modifies property of unsigned long m_nOptimizeLevel.
+/** \brief modifies property of unsigned long m_nWarningLevel
  *  \param nAdd the options to add
  *  \param nRemove the options to remove
  */
@@ -292,7 +329,7 @@ void CBEContext::SetOpcodeSize(int nSize)
 /** \brief sets the name of the init-rcv-string function
  *  \param sName the name
  */
-void CBEContext::SetInitRcvStringFunc(String sName)
+void CBEContext::SetInitRcvStringFunc(string sName)
 {
     m_sInitRcvStringFunc = sName;
 }
@@ -300,7 +337,7 @@ void CBEContext::SetInitRcvStringFunc(String sName)
 /** \brief retrieves the name of the init-rcv-string function
  *  \return the name
  */
-String CBEContext::GetInitRcvStringFunc()
+string CBEContext::GetInitRcvStringFunc()
 {
     return m_sInitRcvStringFunc;
 }
@@ -317,6 +354,7 @@ void CBEContext::AddSymbol(const char *sNewSymbol)
     else
         m_nSymbolCount++;
     m_sSymbols = (char **) realloc(m_sSymbols, m_nSymbolCount * sizeof(char *));
+    assert(m_sSymbols);
     m_sSymbols[m_nSymbolCount - 2] = strdup(sNewSymbol);
     m_sSymbols[m_nSymbolCount - 1] = 0;
 }
@@ -324,11 +362,11 @@ void CBEContext::AddSymbol(const char *sNewSymbol)
 /** \brief adds another symbol to the internal list
  *  \param sNewSymbol the symbol to add
  */
-void CBEContext::AddSymbol(String sNewSymbol)
+void CBEContext::AddSymbol(string sNewSymbol)
 {
-    if (sNewSymbol.IsEmpty())
-	    return;
-    AddSymbol((const char*)sNewSymbol);
+    if (sNewSymbol.empty())
+        return;
+    AddSymbol(sNewSymbol);
 }
 
 /** \brief checks if the symbol has been defined
@@ -340,30 +378,30 @@ void CBEContext::AddSymbol(String sNewSymbol)
  */
 bool CBEContext::HasSymbol(const char *sSymbol)
 {
-    String sS1(sSymbol);
-	int nPos = sS1.Find('=');
-	bool bIgnoreValue = true;
-	if (nPos >= 0)
-		bIgnoreValue = false;
+    string sS1(sSymbol);
+    string::size_type nPos = sS1.find('=');
+    bool bIgnoreValue = true;
+    if (nPos != string::npos)
+        bIgnoreValue = false;
     for (int i=0; i<m_nSymbolCount-1; i++)
-	{
-        String sS2(m_sSymbols[i]);
-		if (bIgnoreValue)
-		{
-		    nPos = sS2.Find('=');
-		    if (nPos >= 0)
-    		    sS2 = sS2.Left(nPos);
-	    }
-		if (sS1 == sS2)
-		    return true;
+    {
+        string sS2(m_sSymbols[i]);
+        if (bIgnoreValue)
+        {
+            nPos = sS2.find('=');
+            if (nPos != string::npos)
+                sS2 = sS2.substr(0, nPos);
+        }
+        if (sS1 == sS2)
+            return true;
     }
-	return false;
+    return false;
 }
 
 /** \brief sets the name of the trace function
  *  \param sName the name
  */
-void CBEContext::SetTraceClientFunc(String sName)
+void CBEContext::SetTraceClientFunc(string sName)
 {
     m_sTraceClientFunc = sName;
 }
@@ -371,7 +409,7 @@ void CBEContext::SetTraceClientFunc(String sName)
 /** \brief retrieves the name of the Trace function
  *  \return the name
  */
-String CBEContext::GetTraceClientFunc()
+string CBEContext::GetTraceClientFunc()
 {
     return m_sTraceClientFunc;
 }
@@ -379,7 +417,7 @@ String CBEContext::GetTraceClientFunc()
 /** \brief sets the name of the trace function
  *  \param sName the name
  */
-void CBEContext::SetTraceServerFunc(String sName)
+void CBEContext::SetTraceServerFunc(string sName)
 {
     m_sTraceServerFunc = sName;
 }
@@ -387,7 +425,7 @@ void CBEContext::SetTraceServerFunc(String sName)
 /** \brief retrieves the name of the Trace function
  *  \return the name
  */
-String CBEContext::GetTraceServerFunc()
+string CBEContext::GetTraceServerFunc()
 {
     return m_sTraceServerFunc;
 }
@@ -395,7 +433,7 @@ String CBEContext::GetTraceServerFunc()
 /** \brief sets the name of the trace function
  *  \param sName the name
  */
-void CBEContext::SetTraceMsgBufFunc(String sName)
+void CBEContext::SetTraceMsgBufFunc(string sName)
 {
     m_sTraceMsgBufFunc = sName;
 }
@@ -403,7 +441,7 @@ void CBEContext::SetTraceMsgBufFunc(String sName)
 /** \brief retrieves the name of the Trace function
  *  \return the name
  */
-String CBEContext::GetTraceMsgBufFunc()
+string CBEContext::GetTraceMsgBufFunc()
 {
     return m_sTraceMsgBufFunc;
 }
@@ -438,46 +476,41 @@ int CBEContext::GetTraceMsgBufDwords()
 void CBEContext::WriteMalloc(CBEFile* pFile, CBEFunction* pFunction)
 {
     bool bUseMalloc = !IsOptionSet(PROGRAM_FORCE_CORBA_ALLOC) &&
-	    (pFunction && (!pFunction->IsComponentSide() ||
-		               (pFunction->IsComponentSide() && IsOptionSet(PROGRAM_SERVER_PARAMETER))));
+        (pFunction && (!pFunction->IsComponentSide() ||
+                       (pFunction->IsComponentSide() && IsOptionSet(PROGRAM_SERVER_PARAMETER))));
     bUseMalloc |= IsOptionSet(PROGRAM_FORCE_ENV_MALLOC);
-	if (bUseMalloc)
-	{
-		CBETypedDeclarator* pEnv = pFunction->GetEnvironment();
-		CBEDeclarator *pDecl = 0;
-		if (pEnv)
-		{
-			VectorElement* pIter = pEnv->GetFirstDeclarator();
-			pDecl = pEnv->GetNextDeclarator(pIter);
-		}
-		if (pDecl)
-		{
-			pFile->Print("(%s", (const char*)pDecl->GetName());
-			if (pDecl->GetStars())
-				pFile->Print("->malloc)");
-			else
-				pFile->Print(".malloc)");
-			if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
-				CCompiler::Warning("CORBA_Environment.malloc is used to set receive buffer in %s.",
-				    (const char*)pFunction->GetName());
-		}
-		else
-		{
-		    if (IsOptionSet(PROGRAM_FORCE_ENV_MALLOC))
-				CCompiler::Warning("Using CORBA_alloc because function %s has no environment.",
-				    (const char*)pFunction->GetName());
-			if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
-				CCompiler::Warning("CORBA_alloc is used to set receive buffer in %s.",
-				    (const char*)pFunction->GetName());
-			pFile->Print("CORBA_alloc");
-		}
-	}
-	else
-	{
-		if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
-			CCompiler::Warning("CORBA_alloc is used to set receive buffer in %s.", (const char*)pFunction->GetName());
-		pFile->Print("CORBA_alloc");
-	}
+    if (bUseMalloc)
+    {
+        CBETypedDeclarator* pEnv = pFunction->GetEnvironment();
+        CBEDeclarator *pDecl = (pEnv) ? pEnv->GetDeclarator() : 0;
+        if (pDecl)
+        {
+            pFile->Print("(%s", pDecl->GetName().c_str());
+            if (pDecl->GetStars())
+                pFile->Print("->malloc)");
+            else
+                pFile->Print(".malloc)");
+            if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
+                CCompiler::Warning("CORBA_Environment.malloc is used to set receive buffer in %s.",
+                    pFunction->GetName().c_str());
+        }
+        else
+        {
+            if (IsOptionSet(PROGRAM_FORCE_ENV_MALLOC))
+                CCompiler::Warning("Using CORBA_alloc because function %s has no environment.",
+                    pFunction->GetName().c_str());
+            if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
+                CCompiler::Warning("CORBA_alloc is used to set receive buffer in %s.",
+                    pFunction->GetName().c_str());
+            pFile->Print("CORBA_alloc");
+        }
+    }
+    else
+    {
+        if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
+            CCompiler::Warning("CORBA_alloc is used to set receive buffer in %s.", pFunction->GetName().c_str());
+        pFile->Print("CORBA_alloc");
+    }
 }
 
 /** \brief writes the actual used free function
@@ -487,44 +520,59 @@ void CBEContext::WriteMalloc(CBEFile* pFile, CBEFunction* pFunction)
 void CBEContext::WriteFree(CBEFile* pFile, CBEFunction* pFunction)
 {
     bool bUseFree = !IsOptionSet(PROGRAM_FORCE_CORBA_ALLOC) &&
-	    (pFunction && (!pFunction->IsComponentSide() ||
-		               (pFunction->IsComponentSide() && IsOptionSet(PROGRAM_SERVER_PARAMETER))));
+        (pFunction && (!pFunction->IsComponentSide() ||
+                       (pFunction->IsComponentSide() && IsOptionSet(PROGRAM_SERVER_PARAMETER))));
     bUseFree |= IsOptionSet(PROGRAM_FORCE_ENV_MALLOC);
-	if (bUseFree)
-	{
-		CBETypedDeclarator* pEnv = pFunction->GetEnvironment();
-		CBEDeclarator *pDecl = 0;
-		if (pEnv)
-		{
-			VectorElement* pIter = pEnv->GetFirstDeclarator();
-			pDecl = pEnv->GetNextDeclarator(pIter);
-		}
-		if (pDecl)
-		{
-			pFile->Print("(%s", (const char*)pDecl->GetName());
-			if (pDecl->GetStars())
-				pFile->Print("->free)");
-			else
-				pFile->Print(".free)");
-			if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
-				CCompiler::Warning("CORBA_Environment.free is used to set receive buffer in %s.",
-				    (const char*)pFunction->GetName());
-		}
-		else
-		{
-		    if (IsOptionSet(PROGRAM_FORCE_ENV_MALLOC))
-				CCompiler::Warning("Using CORBA_free because function %s has no environment.",
-				    (const char*)pFunction->GetName());
-			if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
-				CCompiler::Warning("CORBA_free is used to set receive buffer in %s.",
-				    (const char*)pFunction->GetName());
-			pFile->Print("CORBA_free");
-		}
-	}
-	else
-	{
-		if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
-			CCompiler::Warning("CORBA_free is used to set receive buffer in %s.", (const char*)pFunction->GetName());
-		pFile->Print("CORBA_free");
-	}
+    if (bUseFree)
+    {
+        CBETypedDeclarator* pEnv = pFunction->GetEnvironment();
+        CBEDeclarator *pDecl = (pEnv) ? pEnv->GetDeclarator() : 0;
+        if (pDecl)
+        {
+            pFile->Print("(%s", pDecl->GetName().c_str());
+            if (pDecl->GetStars())
+                pFile->Print("->free)");
+            else
+                pFile->Print(".free)");
+            if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
+                CCompiler::Warning("CORBA_Environment.free is used to set receive buffer in %s.",
+                    pFunction->GetName().c_str());
+        }
+        else
+        {
+            if (IsOptionSet(PROGRAM_FORCE_ENV_MALLOC))
+                CCompiler::Warning("Using CORBA_free because function %s has no environment.",
+                    pFunction->GetName().c_str());
+            if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
+                CCompiler::Warning("CORBA_free is used to set receive buffer in %s.",
+                    pFunction->GetName().c_str());
+            pFile->Print("CORBA_free");
+        }
+    }
+    else
+    {
+        if (IsWarningSet(PROGRAM_WARNING_PREALLOC))
+            CCompiler::Warning("CORBA_free is used to set receive buffer in %s.", pFunction->GetName().c_str());
+        pFile->Print("CORBA_free");
+    }
+}
+
+/** \brief returns the output directory
+ *  \return the output directory
+ */
+string CBEContext::GetOutputDir()
+{
+    return m_sOutputDir;
+}
+
+/** \brief set the output directory
+ *  \param sOutputDir the directory
+ */
+void CBEContext::SetOutputDir(string sOutputDir)
+{
+    m_sOutputDir = sOutputDir;
+    if (sOutputDir.empty())
+        return;
+    if (m_sOutputDir[m_sOutputDir.length()-1] != '/')
+        m_sOutputDir += "/";
 }

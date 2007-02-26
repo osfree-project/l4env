@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/SockBEMarshalFunction.cpp
- *	\brief	contains the implementation of the class CSockBEMarshalFunction
+ *  \file   dice/src/be/sock/SockBEMarshalFunction.cpp
+ *  \brief  contains the implementation of the class CSockBEMarshalFunction
  *
- *	\date	10/14/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   10/14/2003
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,20 +32,16 @@
 #include "be/BEMsgBufferType.h"
 #include "be/BEDeclarator.h"
 
-IMPLEMENT_DYNAMIC(CSockBEMarshalFunction);
-
 CSockBEMarshalFunction::CSockBEMarshalFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBEMarshalFunction, CBEMarshalFunction);
 }
 
 CSockBEMarshalFunction::CSockBEMarshalFunction(CSockBEMarshalFunction & src)
 : CBEMarshalFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBEMarshalFunction, CBEMarshalFunction);
 }
 
-/**	\brief destructor of target class */
+/** \brief destructor of target class */
 CSockBEMarshalFunction::~CSockBEMarshalFunction()
 {
 
@@ -59,7 +56,9 @@ bool CSockBEMarshalFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBECo
 {
     if (!CBEMarshalFunction::AddMessageBuffer(pFEInterface, pContext))
         return false;
-    m_pMsgBuffer->GetAlias()->IncStars(-m_pMsgBuffer->GetAlias()->GetStars());
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->GetAlias()->IncStars(-pMsgBuffer->GetAlias()->GetStars());
     return true;
 }
 
@@ -71,5 +70,5 @@ bool CSockBEMarshalFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBECo
 void CSockBEMarshalFunction::WriteCallAfterParameters(CBEFile* pFile,  CBEContext* pContext,  bool bComma)
 {
     m_bCastMsgBufferOnCall = false;
-	CBEMarshalFunction::WriteCallAfterParameters(pFile, pContext, bComma);
+    CBEMarshalFunction::WriteCallAfterParameters(pFile, pContext, bComma);
 }

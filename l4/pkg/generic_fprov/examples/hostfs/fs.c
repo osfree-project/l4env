@@ -218,7 +218,7 @@ fs_file_t* fs_do_open(const char*filename, long long *size){
     }
 
     if((err = oskit_absio_getsize(a, size))!=0){
-	LOG_Error("oskit_absio_getsize(): %#x", l4env_strerror(err));
+	LOG_Error("oskit_absio_getsize(): %s", l4env_strerror(err));
 	oskit_absio_release(a);
 	return 0;
     }
@@ -237,7 +237,7 @@ int fs_do_read(struct fs_file_t *file, long long offset,
 
     if((err = oskit_absio_read(f2oskit(file), addr, offset, count,
 			       &len))!=0){
-	LOG_Error("oskit_absio_read(count=%d, offset=%d): %s",
+	LOG_Error("oskit_absio_read(count=%d, offset=%lld): %s",
 		  count, offset, l4env_strerror(err));
 	return -L4_EIO;
     }

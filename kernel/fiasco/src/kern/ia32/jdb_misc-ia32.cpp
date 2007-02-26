@@ -1,25 +1,24 @@
 IMPLEMENTATION[ia32]:
 
 #include <cstdio>
-#include "console_buffer.h"
 #include "config.h"
 #include "cpu.h"
 #include "jdb.h"
+#include "jdb_ktrace.h"
 #include "jdb_module.h"
-#include "jdb_screen.h"
 #include "jdb_symbol.h"
-#include "jdb_tbuf.h"
+#include "jdb_screen.h"
+#include "jdb_tbuf_events.h"
 #include "static_init.h"
-
+#include "x86desc.h"
 
 class Jdb_misc_general : public Jdb_module
 {
-  static char  first_char;
-  static Mword output_lines;
+  static char first_char;
 };
 
-char  Jdb_misc_general::first_char;
-Mword Jdb_misc_general::output_lines;
+char Jdb_misc_general::first_char;
+
 
 PUBLIC
 Jdb_module::Action_code
@@ -34,12 +33,9 @@ Jdb_misc_general::action(int cmd, void *&, char const *&, int &)
 	  putchar(first_char);
 	  Config::esc_hack = (first_char == '+');
 	  putchar('\n');
+	  return NOTHING;
 	}
-      break;
-    case 1:
-      // output buffer
-      Jdb::console_buffer()->print_buffer(output_lines);
-      break;
+      return ERROR;
     }
 
   return NOTHING;
@@ -51,12 +47,9 @@ Jdb_misc_general::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd (0, "E", "esckey", "%C",
+	{ 0, "E", "esckey", "%C",
 	  "E{+|-}\ton/off enter jdb by pressing <ESC>",
-	  &first_char),
-      Cmd (1, "B", "consolebuffer", "%4d\n",
-	  "B[lines]\tshow console output buffer",
-	  &output_lines),
+	  &first_char },
     };
   return cs;
 }
@@ -65,7 +58,7 @@ PUBLIC
 int const
 Jdb_misc_general::num_cmds() const
 {
-  return 2;
+  return 1;
 }
 
 PUBLIC
@@ -81,24 +74,79 @@ static Jdb_misc_general jdb_misc_general INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
 class Jdb_misc_debug : public Jdb_module
 {
-  static char  first_char;
+  static char     first_char;
+  static Task_num task;
 };
 
-char  Jdb_misc_debug::first_char;
+char     Jdb_misc_debug::first_char;
+Task_num Jdb_misc_debug::task;
 
 static void
 Jdb_misc_debug::show_lbr_entry(const char *str, Address addr)
 {
   char symbol[60];
 
-  printf(str, addr);
-  if (Jdb_symbol::match_eip_to_symbol(addr, 0, symbol, sizeof(symbol)))
+  printf("%s "L4_PTR_FMT" ", str, addr);
+  if (Jdb_symbol::match_addr_to_symbol_fuzzy(&addr, 0, symbol, sizeof(symbol)))
     printf("(%s)", symbol);
 }
 
+
+// ----------------------------------------------------------------------------
+IMPLEMENTATION[ia32-segments]:
+
+static void
+Jdb_misc_debug::show_ldt()
+{
+  Space *s = Space_index(task).lookup();
+  Address addr, size;
+
+  if (!s)
+    {
+      printf(" -- invalid task number");
+      return;
+    }
+
+  addr = s->ldt_addr();
+  size = s->ldt_size();
+
+  if (!size)
+    {
+      printf(" -- no LDT active");
+      return;
+    }
+
+  printf("\nLDT of space %x at %08lx-%08lx\n", task, addr, addr+size-1);
+
+  X86desc *desc = (X86desc*)addr;
+
+  for (; size>=Cpu::Ldt_entry_size; size-=Cpu::Ldt_entry_size, desc++)
+    {
+      X86desc d = s->peek_user(desc);
+      if (d.present())
+	{
+	  printf(" %5d: ", desc-(X86desc*)addr);
+	  d.show();
+	}
+    }
+}
+
+
+// ----------------------------------------------------------------------------
+IMPLEMENTATION[ia32-!segments]:
+static void
+Jdb_misc_debug::show_ldt()
+{
+  printf(" -- support for segments not enabled in config");
+}
+
+
+// ----------------------------------------------------------------------------
+IMPLEMENTATION[ia32]:
+
 PUBLIC
 Jdb_module::Action_code
-Jdb_misc_debug::action(int cmd, void *&, char const *&, int &)
+Jdb_misc_debug::action(int cmd, void *&args, char const *&fmt, int &)
 {
   switch (cmd)
     {
@@ -112,12 +160,27 @@ Jdb_misc_debug::action(int cmd, void *&, char const *&, int &)
 	}
       break;
     case 1:
-      // lbr
+      // ldt
+      if (args == &task)
+	{
+	  show_ldt();
+	  putchar('\n');
+	  return NOTHING;
+	}
+
+      // lbr/ldt
       if (first_char == '+' || first_char == '-')
 	{
 	  Jdb::lbr_active = (first_char == '+');
 	  putchar(first_char);
 	  putchar('\n');
+	}
+      else if (first_char == 'd')
+	{
+	  putchar('d');
+	  fmt   = "%3x";
+	  args  = &task;
+	  return EXTRA_INPUT;
 	}
       else
 	{
@@ -128,9 +191,9 @@ Jdb_misc_debug::action(int cmd, void *&, char const *&, int &)
 	      Unsigned32 branch_tos;
 
 	      msr = Cpu::rdmsr(0x1d7);
-	      show_lbr_entry("\nbefore exc: %08x ", (Unsigned32)msr);
+	      show_lbr_entry("\nbefore exc:", (Unsigned32)msr);
 	      msr = Cpu::rdmsr(0x1d8);
-	      show_lbr_entry("\n         => %08x ", (Unsigned32)msr);
+	      show_lbr_entry("\n         =>", (Unsigned32)msr);
 
 	      msr = Cpu::rdmsr(0x1da);
 	      branch_tos = (Unsigned32)msr;
@@ -139,9 +202,9 @@ Jdb_misc_debug::action(int cmd, void *&, char const *&, int &)
 		{
 		  j = (j+1) & 3;
 		  msr = Cpu::rdmsr(0x1db+j);
-		  show_lbr_entry("\nbranch/exc: %08x ",
+		  show_lbr_entry("\nbranch/exc:",
 		      (Unsigned32)(msr >> 32));
-		  show_lbr_entry("\n         => %08x ",
+		  show_lbr_entry("\n         =>",
 		      (Unsigned32)msr);
 		}
 	    }
@@ -150,18 +213,16 @@ Jdb_misc_debug::action(int cmd, void *&, char const *&, int &)
 	      Unsigned64 msr;
 
 	      msr = Cpu::rdmsr(0x1db);
-	      show_lbr_entry("\nbranch: %08x ", (Unsigned32)msr);
+	      show_lbr_entry("\nbranch:", (Unsigned32)msr);
 	      msr = Cpu::rdmsr(0x1dc);
-	      show_lbr_entry("\n     => %08x ", (Unsigned32)msr);
+	      show_lbr_entry("\n     =>", (Unsigned32)msr);
 	      msr = Cpu::rdmsr(0x1dd);
-	      show_lbr_entry("\n   int: %08x ", (Unsigned32)msr);
+	      show_lbr_entry("\n   int:", (Unsigned32)msr);
 	      msr = Cpu::rdmsr(0x1de);
-	      show_lbr_entry("\n     => %08x ", (Unsigned32)msr);
+	      show_lbr_entry("\n     =>", (Unsigned32)msr);
 	    }
 	  else
-	    {
-	      printf("Last branch recording feature not available");
-	    }
+	    printf("Last branch recording feature not available");
 
 	  Jdb::test_msr = 0;
 	  putchar('\n');
@@ -178,12 +239,13 @@ Jdb_misc_debug::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd (0, "S", "singlestep", "%C",
+	{ 0, "S", "singlestep", "%C",
 	  "S{+|-}\ton/off permanent single step mode",
-	  &first_char),
-      Cmd (1, "L", "lbr", "",
-	  "L\tshow last branch recording information",
-	  &first_char),
+	  &first_char },
+	{ 1, "L", "lbr", "%C",
+	  "L\tshow last branch recording information\n"
+	  "Ld<taskno>\tshow LDT of specific task",
+	  &first_char },
     };
   return cs;
 }
@@ -282,10 +344,9 @@ Jdb_misc_info::action(int cmd, void *&args, char const *&fmt, int &)
 	}
       else if (args == &addr || args == &value64)
 	{
+	  Jdb::test_msr = 1;
 	  if (args == &value64)
-	    {
-	      Cpu::wrmsr(value64, addr);
-	    }
+	    Cpu::wrmsr(value64, addr);
 	  if (first_char == 'w' && (args == &addr))
 	    putstr(" (");
 	  else
@@ -300,6 +361,7 @@ Jdb_misc_info::action(int cmd, void *&args, char const *&fmt, int &)
 	      return EXTRA_INPUT;
 	    }
 	  putchar('\n');
+	  Jdb::test_msr = 0;
 	}
       break;
     }
@@ -313,12 +375,12 @@ Jdb_misc_info::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd (0, "A", "adapter", "%C",
+	{ 0, "A", "adapter", "%C",
 	  "A{r|w}<addr>\tread/write any physical address",
-	  &first_char),
-      Cmd (1, "M", "msr", "%C",
+	  &first_char },
+        { 1, "M", "msr", "%C",
 	  "M{r|w}<addr>\tread/write machine status register",
-	  &first_char),
+	  &first_char },
     };
   return cs;
 }
@@ -337,118 +399,3 @@ Jdb_misc_info::Jdb_misc_info()
 }
 
 static Jdb_misc_info jdb_misc_info INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
-
-
-//---------------------------------------------------------------------------//
-
-class Jdb_misc_monitor : public Jdb_module
-{
-  static int  number;
-  static char dummy;
-  static char enable;
-};
-
-int  Jdb_misc_monitor::number;
-char Jdb_misc_monitor::dummy;
-char Jdb_misc_monitor::enable;
-
-extern void jdb_trace_set_cpath(void) __attribute__((weak));
-
-PUBLIC
-Jdb_module::Action_code
-Jdb_misc_monitor::action(int cmd, void *&args, char const *&fmt, int &)
-{
-  switch (cmd)
-    {
-    case 0:
-#ifdef CONFIG_JDB_LOGGING
-      // special log event
-      if (args == &dummy)
-	{
-     	  if (Jdb::was_last_cmd() != 'O')
-	    {
-	      for (int i=0; i<LOG_EVENT_MAX_EVENTS; i++)
-		if (Jdb_tbuf::log_events[i])
-		  {
-		    printf("\n    [%x] %s:\033[K",
-			i, Jdb_tbuf::log_events[i]->get_name());
-		    Jdb::cursor(Jdb_screen::height(), 29);
-		    printf("%s",
-			Jdb_tbuf::log_events[i]->enabled() ? " ON" : "off");
-		  }
-		else
-		  printf("\n    [%x] <free>", i);
-	      putchar('\n');
-	    }
-
-	  Jdb::cursor(Jdb_screen::height(), 1);
-	  printf("  {0..%01x}{+|-}: ", LOG_EVENT_MAX_EVENTS-1);
-
-	  args = &number;
-	  fmt  = "%1x";
-	  return EXTRA_INPUT;
-	}
-      else if (args == &number && Jdb_tbuf::log_events[number])
-	{
-	  printf(" %s:", Jdb_tbuf::log_events[number]->get_name());
-	  args = &enable;
-	  fmt  = "%C";
-	  return EXTRA_INPUT;
-	}
-      else if (args == &enable)
-	{
-	  if (enable == '+' || enable == '-')
-	    {
-	      putchar(enable);
-	      Jdb::cursor(Jdb_screen::height(), 1);
-	      printf("  {0..%01x}{+|-}: ", LOG_EVENT_MAX_EVENTS-1);
-
-	      if (Jdb_tbuf::log_events[number])
-		{
-		  Jdb_tbuf::log_events[number]->enable(enable=='+');
-		  Jdb::cursor(Jdb_screen::height()-LOG_EVENT_MAX_EVENTS+number, 29);
-		  printf("%s", Jdb_tbuf::log_events[number]->enabled() 
-		      ? " ON" : "off");
-		  if (jdb_trace_set_cpath != 0)
-		    jdb_trace_set_cpath();
-		}
-	    }
-	}
-#else
-      (void)args;
-      (void)fmt;
-      puts(" logging disabled");
-#endif
-    }
-
-  return NOTHING;
-}
-
-PUBLIC
-Jdb_module::Cmd const *const
-Jdb_misc_monitor::cmds() const
-{
-  static Cmd cs[] =
-    {
-      Cmd (0, "O", "monitor", "",
-	  "O<number>{+|-}\ton/off special logging event",
-	  &dummy),
-    };
-  return cs;
-}
-
-PUBLIC
-int const
-Jdb_misc_monitor::num_cmds() const
-{
-  return 1;
-}
-
-PUBLIC
-Jdb_misc_monitor::Jdb_misc_monitor()
-  : Jdb_module("MONITORING")
-{
-}
-
-static Jdb_misc_monitor jdb_misc_monitor INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
-

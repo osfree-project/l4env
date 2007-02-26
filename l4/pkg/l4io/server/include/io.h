@@ -21,37 +21,32 @@
 #include <l4/generic_io/types.h>
 
 /* FIXME !!! see also libio implementation */
-#define IO_NAMES_STR	"io"	/**< I/O names string */
+#define IO_NAMES_STR    "io"    /**< I/O names string */
 
 /** l4io client structure type.
  * \ingroup grp_misc */
 typedef struct io_client
 {
-  struct io_client *next;	/**< next client in list */
-  l4_threadid_t c_l4id;		/**< client thread id */
-  char name[16];		/**< name of client */
-  l4io_drv_t drv;		/**< driver type */
+  struct io_client *next;  /**< next client in list */
+  l4_threadid_t c_l4id;    /**< client thread id */
+  char name[16];           /**< name of client */
+  l4io_drv_t drv;          /**< driver type */
 } io_client_t;
 
-/*****************************************************************************/
-/**
- * \name Global l4io Server Vars
+/** \name Global l4io Server Vars
  *
  * @{ */
-/*****************************************************************************/
 extern l4io_info_t io_info;
 
 /** @} */
-/*****************************************************************************/
 /** Test client equality.
  * \ingroup grp_misc
  *
- * \param  c0		first io client to test
- * \param  c1		second io client to test
+ * \param  c0   first io client to test
+ * \param  c1   second io client to test
  *
  * \return 0 on equality, non-zero on inequality
  */
-/*****************************************************************************/
 extern __inline__ int client_equal(io_client_t *c0, io_client_t *c1);
 
 extern __inline__ int client_equal(io_client_t *c0, io_client_t *c1)

@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BESrvLoopFunction.h
- *	\brief	contains the declaration of the class CL4BESrvLoopFunction
+ *    \file    dice/src/be/l4/L4BESrvLoopFunction.h
+ *    \brief   contains the declaration of the class CL4BESrvLoopFunction
  *
- *	\date	02/10/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    02/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,34 +32,34 @@
 
 #include "be/BESrvLoopFunction.h"
 
-/**	\class CL4BESrvLoopFunction
- *	\ingroup backend
- *	\brief the function class for the back-end
+/**    \class CL4BESrvLoopFunction
+ *    \ingroup backend
+ *    \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
 class CL4BESrvLoopFunction : public CBESrvLoopFunction
 {
-DECLARE_DYNAMIC(CL4BESrvLoopFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CL4BESrvLoopFunction();
-	virtual ~CL4BESrvLoopFunction();
+    /**    \brief constructor
+     */
+    CL4BESrvLoopFunction();
+    virtual ~CL4BESrvLoopFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CL4BESrvLoopFunction(CL4BESrvLoopFunction &src);
+    /**    \brief copy constructor */
+    CL4BESrvLoopFunction(CL4BESrvLoopFunction &src);
 
 public:
     virtual bool CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext);
 
 protected:
     virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma);
     virtual bool DoUseParameterAsEnv(CBEContext * pContext);
+    virtual void WriteServerStartupInfo(CBEFile *pFile, CBEContext *pContext);
 };
 
 #endif // !__DICE_L4BESRVLOOPFUNCTION_H__

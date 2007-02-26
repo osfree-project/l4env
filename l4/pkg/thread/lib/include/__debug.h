@@ -36,5 +36,6 @@
 #define DEBUG_STARTUP           0
 #define DEBUG_SLEEP             0
 #define DEBUG_SANITY		0
+#define DEBUG_THREAD_NAME       0
 
 #endif /* !_THREAD___DEBUG_H */

@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEEnumType.h
- *	\brief	contains the declaration of the class CBEEnumType
+ *    \file    dice/src/be/BEEnumType.h
+ *    \brief   contains the declaration of the class CBEEnumType
  *
- *	\date	Tue Jul 23 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    Tue Jul 23 2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,8 +32,9 @@
 #define BEENUMTYPE_H
 
 #include <be/BEType.h>
-
-class String;
+#include <string>
+#include <vector>
+using namespace std;
 
 /** \class CBEEnumType
  *  \ingroup backend
@@ -40,36 +42,31 @@ class String;
  */
 class CBEEnumType : public CBEType
 {
-DECLARE_DYNAMIC(CBEEnumType);
 public:
-	/** \brief constructs an enum type class */
-	CBEEnumType();
-	~CBEEnumType();
+    /** \brief constructs an enum type class */
+    CBEEnumType();
+    ~CBEEnumType();
 
 public: // Public methods
     virtual int GetMemberCount();
-	virtual String GetMemberAt(int nIndex);
-	virtual void RemoveMember(String sMember);
-	virtual void AddMember(String sMember);
-	virtual bool CreateBackEnd(CFETypeSpec *pFEType, CBEContext *pContext);
-	virtual void WriteZeroInit(CBEFile * pFile, CBEContext * pContext);
-	virtual void Write(CBEFile * pFile, CBEContext * pContext);
-	virtual void WriteCast(CBEFile* pFile,  bool bPointer,  CBEContext* pContext);
-    virtual bool HasTag(String sTag);
+    virtual string GetMemberAt(unsigned int nIndex);
+    virtual void RemoveMember(string sMember);
+    virtual void AddMember(string sMember);
+    virtual bool CreateBackEnd(CFETypeSpec *pFEType, CBEContext *pContext);
+    virtual void WriteZeroInit(CBEFile * pFile, CBEContext * pContext);
+    virtual void Write(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteCast(CBEFile* pFile,  bool bPointer,  CBEContext* pContext);
+    virtual bool HasTag(string sTag);
 
 protected: // Protected attributes
-    /** \var String **m_pMembers
+    /** \var vector<string> m_vMembers
      *  \brief contains the members of the enum type
      */
-    String **m_pMembers;
-    /** \var int m_nMemberCount;
-     *  \brief contains the number of members
+    vector<string> m_vMembers;
+    /**    \var string m_sTag
+     *    \brief the tag if the source is a tagged struct
      */
-    int m_nMemberCount;
-	/**	\var String m_sTag
-	 *	\brief the tag if the source is a tagged struct
-	 */
-	String m_sTag;
+    string m_sTag;
 };
 
 #endif

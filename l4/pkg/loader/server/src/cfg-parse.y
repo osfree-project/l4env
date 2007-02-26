@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <l4/sys/consts.h>
 
@@ -11,15 +12,16 @@
 #undef DEBUG
 
 #define yyparse cfg_parse
+#define yylex_destroy cfg_destroy
 
-unsigned int cfg_verbose = 0;
-unsigned int cfg_fiasco_symbols = 0;
-unsigned int cfg_fiasco_lines = 0;
-char cfg_binpath[L4ENV_MAXPATH] = { 0 };
-char cfg_libpath[L4ENV_MAXPATH] = { 0 };
-char cfg_modpath[L4ENV_MAXPATH] = { 0 };
-int  cfg_binpath_set = 0;
-int  cfg_libpath_set = 0;
+unsigned int cfg_verbose;
+unsigned int cfg_fiasco_symbols = 1;
+unsigned int cfg_fiasco_lines = 1;
+char cfg_binpath[L4ENV_MAXPATH];
+char cfg_libpath[L4ENV_MAXPATH];
+char cfg_modpath[L4ENV_MAXPATH];
+int  cfg_binpath_set;
+int  cfg_libpath_set;
 
 static void
 strcpy_check(char *dest, const char *src, unsigned int size)
@@ -50,11 +52,13 @@ int yyparse(void);
   } interval;
 }
 
-%token <string>  TASK MODULE BINPATH LIBPATH MODPATH
-%token <string>  VERBOSE MEMDUMP SLEEP MEMORY IN IS AT MB KB MS S MIN H
+%token <string>  TASK TEMPLATE MODULE BINPATH LIBPATH MODPATH
+%token <string>  VERBOSE MEMDUMP SLEEP MEMORY IOPORT
+%token <string>  IN IS AT MB KB MS S MIN H POO POOL NOSUPERPAGES
 %token <string>  FIASCO_SYMBOLS FIASCO_LINES
-%token <string>  DIRECT_MAPPED CONTIGUOUS DMAABLE REBOOTABLE NO_VGA PRIORITY
-%token <string>  NO_SIGMA_NULL
+%token <string>  DIRECT_MAPPED CONTIGUOUS DMAABLE REBOOTABLE NO_VGA 
+%token <string>  PRIORITY MCP ALLOW_CLI FILE_PROVIDER DS_MANAGER
+%token <string>  NO_SIGMA0 SHOW_APP_AREAS
 %token <string>  UNSIGNED STRING
 
 %type <number>   number memnumber memmodifier task_flag
@@ -62,6 +66,7 @@ int yyparse(void);
 %type <number>   time timemodifier
 %type <string>   string
 %type <interval> memrange
+%type <interval> iorange
 
 %start file
 
@@ -105,7 +110,7 @@ global_setting	: VERBOSE number
 		| BINPATH string
 			{ 
 			  strcpy_check(cfg_binpath, $2, sizeof(cfg_binpath));
-			  cfg_binpath_set = ($2 && *$2);
+			  cfg_binpath_set = ($2 != NULL);
 			  if (!cfg_libpath_set)
 			    strcpy_check(cfg_libpath, $2, sizeof(cfg_libpath));
 			  if (cfg_verbose>1)
@@ -115,7 +120,7 @@ global_setting	: VERBOSE number
 		| LIBPATH string
 			{
 			  strcpy_check(cfg_libpath, $2, sizeof(cfg_libpath));
-			  cfg_libpath_set = ($2 && *$2);
+			  cfg_libpath_set = ($2 != NULL);
 			  if (cfg_verbose>1)
 			    printf("library path <%s>\n", cfg_libpath);
 			  free($2);
@@ -149,26 +154,58 @@ task_spec	: TASK string string
 			      YYERROR;
 			    }
 			}
+		| TASK TEMPLATE
+			{
+			  cfg_new_task_template();
+			}
 		;
 
 task_constraint	: task_modspec
 		| MEMORY memconstraint
 			{
-			  // MEMORY is a string, therefore we need an empty rule, to avoid return value clashes
-			  // bison assumes, that if no return value is given, the return values of one of the
-			  // rule-elements should be used...
+			  // MEMORY is a string, therefore we need an empty
+			  // rule to avoid return value clashes. bison assumes
+			  // that if no return value is given the return values
+			  // of one of the rule-elements should be used...
+			}
+		| IOPORT ioconstraint
+			{
 			}
 		| PRIORITY number
 			{ 
-			  if (cfg_new_task_prio($2))
+			  if (cfg_task_prio($2))
 			    {
 			      yyerror("Error setting task priority");
 			      YYABORT;
 			    }
 			}
+		| MCP number
+			{
+			  if (cfg_task_mcp($2))
+			    {
+			      yyerror("Error setting task mcp");
+			      YYABORT;
+			    }
+			}
+		| FILE_PROVIDER string
+			{
+			  if (cfg_task_fprov($2))
+			    {
+			      yyerror("Error setting file provider");
+			      YYABORT;
+			    }
+			}
+		| DS_MANAGER string
+			{
+			  if (cfg_task_dsm($2))
+			    {
+			      yyerror("Error setting dataspace manager");
+			      YYABORT;
+			    }
+			}
 		| task_flag
 			{
-			  if (cfg_new_task_flag($1))
+			  if (cfg_task_flag($1))
 			    {
 			      yyerror("Error setting task flag");
 			      YYABORT;
@@ -178,25 +215,31 @@ task_constraint	: task_modspec
 
 task_flag	: DIRECT_MAPPED
 			{ $$ = CFG_F_DIRECT_MAPPED; }
+		| NOSUPERPAGES
+			{ $$ = CFG_F_NOSUPERPAGES; }
 		| REBOOTABLE
 			{ $$ = CFG_F_REBOOT_ABLE; }
 		| NO_VGA
 			{ $$ = CFG_F_NO_VGA; }
-		| NO_SIGMA_NULL
-			{ $$ = CFG_F_NO_SIGMA_NULL; }
+		| NO_SIGMA0
+			{ $$ = CFG_F_NO_SIGMA0; }
+		| ALLOW_CLI
+			{ $$ = CFG_F_ALLOW_CLI; }
+		| SHOW_APP_AREAS
+			{ $$ = CFG_F_SHOW_APP_AREAS; }
 		;
 
-task_modspec	: MODULE string string
+task_modspec	: MODULE string string memrange
 			{ 
-			  if (cfg_new_module($2, $3))
+			  if (cfg_new_module($2, $3, $4.low, $4.high))
 			    {
 			      yyerror("Error adding module");
 			      YYABORT;
 			    }
 			}
-		| MODULE string
+		| MODULE string memrange
 			{ 
-			  if (cfg_new_module($2, NULL))
+			  if (cfg_new_module($2, NULL, $3.low, $3.high))
 			    {
 			      yyerror("Error adding module");
 			      YYABORT;
@@ -239,6 +282,8 @@ memflagspec	: IS '[' memflags ']'
 
 memflags	: memflags memflag
 			{ $$ = $1 | $2; }
+		| memflags POOL number
+			{ $$ = ($1 & 0xffff) | ($3 << 16); }
 		| memflag
 			{ $$ = $1; }
 		;
@@ -249,8 +294,25 @@ memflag		: DMAABLE
 			{ $$ = CFG_M_CONTIGUOUS; }
 		| DIRECT_MAPPED
 			{ $$ = CFG_M_DIRECT_MAPPED; }
+		| NOSUPERPAGES
+			{ $$ = CFG_M_NOSUPERPAGES; }
 		;
 
+ioconstraint	: iorange
+			{
+			  if (cfg_new_ioport($1.low, $1.high))
+			    {
+			      yyerror("Error adding ioport region");
+			      YYABORT;
+			    }
+			}
+		;
+
+iorange		: '[' number ',' number ']'
+			{ $$.low = $2; $$.high = $4; }
+		| number
+			{ $$.low = $$.high = $1; }
+		;
 
 time		: number timemodifier
       			{ $$ = $1*$2; }

@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEExpression.cpp
- *	\brief	contains the implementation of the class CFEExpression
+ *    \file    dice/src/fe/FEExpression.cpp
+ *    \brief   contains the implementation of the class CFEExpression
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,43 +22,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
 #include "fe/FEExpression.h"
-#include "CString.h"
 #include "File.h"
-
-IMPLEMENT_DYNAMIC(CFEExpression) 
+#include <string>
+using namespace std;
 
 CFEExpression::CFEExpression()
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEExpression, CFEBase);
-
     m_nType = EXPR_NONE;
 }
 
 CFEExpression::CFEExpression(EXPR_TYPE nType)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEExpression, CFEBase);
-
     m_nType = nType;
     m_Char = 0x00;
 }
 
 CFEExpression::CFEExpression(EXPR_TYPE nType, char nChar)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEExpression, CFEBase);
-
     m_nType = nType;
     m_Char = nChar;
 }
 
-CFEExpression::CFEExpression(EXPR_TYPE nType, String sString)
+CFEExpression::CFEExpression(EXPR_TYPE nType, string sString)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEExpression, CFEBase);
-
     m_nType = nType;
     m_Char = 0x00;
     m_String = sString;
@@ -65,8 +57,6 @@ CFEExpression::CFEExpression(EXPR_TYPE nType, String sString)
 
 CFEExpression::CFEExpression(CFEExpression & src):CFEBase(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEExpression, CFEBase);
-
     m_Char = src.m_Char;
     m_nType = src.m_nType;
     m_String = src.m_String;
@@ -79,15 +69,15 @@ CFEExpression::~CFEExpression()
 }
 
 /** returns a reference to the string
- *	\return a reference to the string
+ *    \return a reference to the string
  */
-String CFEExpression::GetString()
+string CFEExpression::GetString()
 {
     return m_String;
 }
 
 /** returns the integer value
- *	\return the integer value (boolean values are casted into integer, string returns 0)
+ *    \return the integer value (boolean values are casted into integer, string returns 0)
  */
 long CFEExpression::GetIntValue()
 {
@@ -115,8 +105,8 @@ long CFEExpression::GetIntValue()
 }
 
 /** checks the type of the expression
- *	\param nType the type to check
- *	\return true if this expression is of the requested type.
+ *    \param nType the type to check
+ *    \return true if this expression is of the requested type.
  */
 bool CFEExpression::IsOfType(TYPESPEC_TYPE nType)
 {
@@ -128,13 +118,13 @@ bool CFEExpression::IsOfType(TYPESPEC_TYPE nType)
     case EXPR_TRUE:
     case EXPR_FALSE:
         return ((nType == TYPE_INTEGER)
-		    || (nType == TYPE_LONG)
-		    || (nType == TYPE_BOOLEAN));
+            || (nType == TYPE_LONG)
+            || (nType == TYPE_BOOLEAN));
         break;
     case EXPR_CHAR:
         return ((nType == TYPE_INTEGER)
-		    || (nType == TYPE_LONG)
-		    || (nType == TYPE_CHAR));
+            || (nType == TYPE_LONG)
+            || (nType == TYPE_CHAR));
         break;
     case EXPR_STRING:
         return (nType == TYPE_CHAR_ASTERISK);
@@ -146,7 +136,7 @@ bool CFEExpression::IsOfType(TYPESPEC_TYPE nType)
 }
 
 /** returns the type of the expression
- *	\return the type of the expression
+ *    \return the type of the expression
  */
 EXPR_TYPE CFEExpression::GetType()
 {
@@ -154,7 +144,7 @@ EXPR_TYPE CFEExpression::GetType()
 }
 
 /** retrieves the character of this expression
- *	\return the character of this expression
+ *    \return the character of this expression
  */
 char CFEExpression::GetChar()
 {
@@ -162,7 +152,7 @@ char CFEExpression::GetChar()
 }
 
 /** create a copy of this object
- *	\return a reference to the new object
+ *    \return a reference to the new object
  */
 CObject *CFEExpression::Clone()
 {
@@ -170,7 +160,7 @@ CObject *CFEExpression::Clone()
 }
 
 /** serialize this object
- *	\param pFile the file to serialize from/to
+ *    \param pFile the file to serialize from/to
  */
 void CFEExpression::Serialize(CFile * pFile)
 {
@@ -179,7 +169,7 @@ void CFEExpression::Serialize(CFile * pFile)
         switch (m_nType)
         {
         case EXPR_STRING:
-            pFile->PrintIndent("<expression>%s</expression>\n", (const char *) m_String);
+            pFile->PrintIndent("<expression>%s</expression>\n", m_String.c_str());
             break;
         case EXPR_CHAR:
             pFile->PrintIndent("<expression>%c</expression>\n", m_Char);
@@ -202,29 +192,29 @@ void CFEExpression::Serialize(CFile * pFile)
 /** \brief print the object to a string
  *  \return a string with the content of the object
  */
-String CFEExpression::ToString()
+string CFEExpression::ToString()
 {
-    String ret;
-	switch (m_nType)
-	{
-	case EXPR_STRING:
-		ret = m_String;
-		break;
-	case EXPR_CHAR:
-		ret = String(m_Char);
-		break;
-	case EXPR_NULL:
-	    ret = "null";
-		break;
-	case EXPR_TRUE:
-	    ret = "true";
-		break;
-	case EXPR_FALSE:
-	    ret = "false";
-		break;
-	default:
-		break;
-	}
-	return ret;
+    string ret;
+    switch (m_nType)
+    {
+    case EXPR_STRING:
+        ret = m_String;
+        break;
+    case EXPR_CHAR:
+        ret = string(1, m_Char);
+        break;
+    case EXPR_NULL:
+        ret = "null";
+        break;
+    case EXPR_TRUE:
+        ret = "true";
+        break;
+    case EXPR_FALSE:
+        ret = "false";
+        break;
+    default:
+        break;
+    }
+    return ret;
 }
 

@@ -54,17 +54,16 @@ extern l4slab_cache_t dataspace_cache;
 /**
  * \brief  Show debug information
  * 
- * \param  request       Flick request structure
- * \param  key           Debug key (see include/l4/dm_phys/consts.h)
- * \param  data          Debug data
- * \retval _ev           Flick exception structure, unused
+ * \param  _dice_corba_obj    Request source
+ * \param  key                Debug key (see include/l4/dm_phys/consts.h)
+ * \param  data               Debug data
+ * \param  _dice_corba_env    Server envrionment
  */
 /*****************************************************************************/ 
 void 
 if_l4dm_memphys_dmphys_debug_component(CORBA_Object _dice_corba_obj,
-    l4_uint32_t key,
-    l4_uint32_t data,
-    CORBA_Environment *_dice_corba_env)
+                                       l4_uint32_t key, l4_uint32_t data,
+                                       CORBA_Server_Environment *_dice_corba_env)
 {
   page_pool_t * pool;
 
@@ -87,7 +86,7 @@ if_l4dm_memphys_dmphys_debug_component(CORBA_Object _dice_corba_obj,
       if (pool != NULL)
 	dmphys_pages_dump_areas(pool);
       else
-	Error("DMphys: invalid page pool %u",data);
+	LOG_Error("DMphys: invalid page pool %u", data);
       break;
 
     case L4DM_MEMPHYS_SHOW_POOL_FREE:
@@ -96,23 +95,23 @@ if_l4dm_memphys_dmphys_debug_component(CORBA_Object _dice_corba_obj,
       if (pool != NULL)
 	dmphys_pages_dump_free(pool);
       else
-	Error("DMphys: invalid page pool %u",data);
+	LOG_Error("DMphys: invalid page pool %u", data);
       break;
 
     case L4DM_MEMPHYS_SHOW_SLABS:
       /* show descriptor slab cache information */
-      printf("Memmap descriptor slab cache:\n");
+      LOG_printf("Memmap descriptor slab cache:\n");
       l4slab_dump_cache_free(&memmap_cache);
-      printf("\n");
-      printf("Page area slab cache:\n");
+      LOG_printf("\n"
+                 "Page area slab cache:\n");
       l4slab_dump_cache_free(&area_cache);
-      printf("\n");
-      printf("Dataspace descriptor slab cache:\n");
+      LOG_printf("\n"
+                 "Dataspace descriptor slab cache:\n");
       l4slab_dump_cache_free(&dataspace_cache);
       break;
 
     default:
-      Error("DMphys: invalid debug key: 0x%08x",key);
+      LOG_Error("DMphys: invalid debug key: 0x%08x", key);
     }
 }
 

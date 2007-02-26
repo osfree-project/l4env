@@ -19,12 +19,17 @@
 #include "__error.h"
 #include <l4/dsi/dsi.h>
 
+static int initialized;
+
 /*!\brief Library initialization.
  * \ingroup general
  */
 int
 dsi_init(void)
 {
+  if(initialized) return 0;
+  initialized=1;
+
   /* init error messages */
   dsi_init_error();
 

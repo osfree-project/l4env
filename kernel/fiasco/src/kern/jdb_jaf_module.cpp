@@ -11,7 +11,7 @@ IMPLEMENTATION:
 #include "context.h"
 
 /**
- * @brief Jdb-bsod module
+ * Jdb-bsod module
  *
  * This module makes fun.
  */
@@ -78,9 +78,7 @@ PUBLIC
 Jdb_module::Cmd const *const Bsod_m::cmds() const
 {
   static Cmd cs[] =
-    { Cmd( 0, "t", "t", "\n",
-	   NULL, 0 ),
-    };
+    { { 0, "t", "t", "\n", NULL, 0 }, };
 
   return cs;
 }

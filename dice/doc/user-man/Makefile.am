@@ -20,7 +20,7 @@ NUMB_GREP=	${NUMB}
 
 TEXFILES=       manual.bib manual.tex section1.tex section2.tex \
 		section3.tex appendix1.tex appendix2.tex \
-		appendix3.tex commands.tex version.tex
+		appendix3.tex commands.tex version.tex appendix4.tex
 EXTRA_DIST=     $(TEXFILES)
 SUFFIXES=       .tex .aux .bbl .toc .pdf .dvi .ps
 CLEANFILES=     version.tex

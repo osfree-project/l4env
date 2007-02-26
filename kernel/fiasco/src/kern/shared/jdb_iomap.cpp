@@ -7,6 +7,7 @@ IMPLEMENTATION:
 #include "jdb.h"
 #include "jdb_module.h"
 #include "kmem.h"
+#include "mem_layout.h"
 #include "simpleio.h"
 #include "space.h"
 #include "static_init.h"
@@ -32,64 +33,68 @@ Jdb_iomap::show()
     }
 
   // base addresses of the two IO bitmap pages
-  Address bitmap_1, bitmap_2; 
-  bitmap_1 = s->lookup(Kmem::io_bitmap, 0);
-  bitmap_2 = s->lookup(Kmem::io_bitmap + Config::PAGE_SIZE, 0);
+  Address bitmap_1, bitmap_2;
+  const Address virt = Config::Small_spaces ? Mem_layout::Smas_io_bmap_bak
+					    : Mem_layout::Io_bitmap;
+  bitmap_1 = s->virt_to_phys (virt);
+  bitmap_2 = s->virt_to_phys (virt + Config::PAGE_SIZE);
 
-  Jdb::fancy_clear_screen();
+  Jdb::clear_screen();
   
-  printf("\nIO bitmap for space %03x\n", (unsigned)s->space());
-  if(bitmap_1 == 0xffffffff && bitmap_2 == 0xffffffff)
+  printf("\nIO bitmap for space %03x ", (unsigned)s->id());
+  if(bitmap_1 == ~0UL && bitmap_2 == ~0UL)
     { // no memory mapped for the IO bitmap
-      putstr("No memory mapped");
+      puts("not mapped");
       return;
     }
   else 
     {
-      if(bitmap_1 != 0xffffffff)
-	printf("First page mapped to  %08x; ", bitmap_1);
+      putstr("mapped to [");
+      if (bitmap_1 != ~0UL)
+	printf(L4_PTR_FMT " ", (Address)Kmem::phys_to_virt(bitmap_1));
       else
-	putstr("First page unmapped; ");
+	putstr("   --    ");
 
-      if(bitmap_2 != 0xffffffff)
-	printf("Second page mapped to %08x\n", bitmap_2);
+      if (bitmap_2 != ~0UL)
+	printf("/ "L4_PTR_FMT, (Address)Kmem::phys_to_virt(bitmap_2));
       else
-	puts("Second page unmapped");
+	putstr("/    --   ");
     }
 
-  puts("\nPorts assigned:");
+  puts("]\n\nPorts assigned:");
 
-  bool mapped= false;
+  bool mapped = false, any_mapped = false;
   unsigned count=0;
 
-  for(Mword i = 0; i < L4_fpage::IO_PORT_MAX; i++ )
+  for(unsigned i = 0; i < L4_fpage::Io_port_max; i++ )
     {
       if(s->io_lookup(i) != mapped)
 	{
 	  if(! mapped)
 	    {
-	      mapped = true;
+	      mapped = any_mapped = true;
 	      printf("%04x-", i);
 	    }
 	  else
 	    {
 	      mapped = false;
-	      printf("%04x, ", i-1);
+	      printf("%04x ", i-1);
 	    }
 	}
       if(mapped)
 	count++;
     }
   if(mapped)
-    printf("%04x, ", L4_fpage::IO_PORT_MAX -1);
+    printf("%04x ", L4_fpage::Io_port_max -1);
 
-  printf("\nPort counter: %d ", s->get_io_counter() );
+  if (!any_mapped)
+    putstr("<none>");
+
+  printf("\n\nPort counter: %d ", s->get_io_counter() );
   if(count == s->get_io_counter())
     puts("(correct)");
   else
-    printf(" !! should be %d !!\n", count);
-
-  return;	     
+    printf("%sshould be %d\033[m\n", Jdb::esc_emph, count);
 }
 
 PUBLIC
@@ -123,9 +128,9 @@ Jdb_iomap::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd (0, "r", "iomap", "%C",
+	{ 0, "r", "iomap", "%C",
 	  "r[<taskno>]\tdisplay IO bitmap of current/given task",
-	  &first_char),
+	  &first_char },
     };
   return cs;
 }

@@ -46,7 +46,7 @@ l4th_tcb_allocate(l4th_tcb_t ** tcb)
   for (i = 0; i < l4thread_max_threads; i++)
     {
       /* try to set internal thread number to index in tcb table */
-      if (l4util_cmpxchg16(&l4th_tcbs[i].state,TCB_UNUSED,TCB_SETUP))
+      if (l4util_cmpxchg16(&l4th_tcbs[i].state, TCB_UNUSED, TCB_SETUP))
 	/* found unused tcb */
 	break;
     }
@@ -89,7 +89,7 @@ l4th_tcb_allocate_id(l4thread_t thread, l4th_tcb_t ** tcb)
     return -L4_EINVAL;
 
   /* try to get tcb */
-  if (l4util_cmpxchg16(&l4th_tcbs[thread].state,TCB_UNUSED,TCB_SETUP))
+  if (l4util_cmpxchg16(&l4th_tcbs[thread].state, TCB_UNUSED, TCB_SETUP))
     {
       /* tcb unused */
       l4th_tcbs[thread].id = thread;

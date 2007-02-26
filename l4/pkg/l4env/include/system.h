@@ -158,6 +158,10 @@ typedef struct {
 # define ARCH_IA32
 #endif
 
+#if defined(ARCH_arm)
+# define ARCH_ARM
+#endif
+
 #if defined(ARCH_IA32)
 # include <l4/env/ia32.h>
 #endif
@@ -179,7 +183,7 @@ typedef struct {
 #endif
 
 #if defined(ARCH_ARM)
-# include "arm.h"
+# include <l4/env/arm.h>
 #endif
 
 #if defined(ARCH_PPC)

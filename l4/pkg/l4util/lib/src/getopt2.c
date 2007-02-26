@@ -9,13 +9,13 @@
  * GNU General Public License 2. Please see the COPYING file for details. */
 
 #include <string.h>
+#include <stdio.h>
 
 #include <l4/util/mbi_argv.h>
 #include <l4/crtx/crt0.h>
 
-#define MAXARGC 20
-#define MAXENVC 30
-static char argbuf[1024];
+#define MAXARGC 50
+#define MAXENVC 50
 
 char *l4util_argv[MAXARGC];
 int  l4util_argc = 0;
@@ -26,25 +26,47 @@ static void
 parse_args(char *argbuf)
 {
   char *cp;
+  char quote = 0;
 
   /* make l4util_argc, l4util_argv */
   l4util_argc = 0;
   cp = argbuf;
+
+  /* Note, there's no support for escaping quotes! */
+
   while (*cp && l4util_argc < MAXARGC-1)
     {
+      /* Skip whitespace */
       while (*cp && isspace(*cp))
 	cp++;
 
+      /* New elem? */
       if (*cp)
 	{
+	  /* Start of a quote? */
+	  if (*cp == '"' || *cp == '\'')
+	    {
+	      quote = *cp;
+	      cp++;
+	    }
+
 	  l4util_argv[l4util_argc++] = cp;
-	  while (*cp && !isspace(*cp))
+
+	  /* Forward to next whitespace / quote character */
+	  while (*cp && ((!quote && !isspace(*cp)) || (quote && *cp != quote)))
 	    cp++;
 
+	  /* Terminate array elem */
 	  if (*cp)
 	    *cp++ = '\0';
+
+	  quote = 0;
 	}
     }
+
+  if(*cp && l4util_argc == MAXARGC-1)
+    printf("WARNING: parse_args() truncated at %dth argument!\n", MAXARGC);
+  
   l4util_argv[l4util_argc] = (void*) 0;
 }
 
@@ -53,9 +75,6 @@ arg_init(char* cmdline)
 {
   if (cmdline)
     {
-      strncpy(argbuf, cmdline,
-	      sizeof(argbuf) < strlen(cmdline) ?
-	      sizeof(argbuf) : 1+strlen(cmdline));
       parse_args(cmdline);
     }
 }

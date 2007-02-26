@@ -1,0 +1,12 @@
+freebsd-generic-g++
+linux-arm-g++
+linux-generic-g++
+linux-ipaq-g++
+linux-mips-g++
+linux-sharp-g++
+linux-x86-g++
+macx-generic-g++
+qnx4-cc
+qnx6-generic-cc
+qnx6-generic-g++
+solaris-generic-g++

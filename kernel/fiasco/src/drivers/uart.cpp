@@ -3,19 +3,19 @@ INTERFACE:
 #include "console.h"
 
 /**
- * @brief Platform independent UART stub.
+ * Platform independent UART stub.
  */
 class Uart 
   : public Console
 {
 public:
   /**
-   * @brief Type UART transfer mode (Bits, Stopbits etc.).
+   * Type UART transfer mode (Bits, Stopbits etc.).
    */
   typedef unsigned TransferMode;
 
   /**
-   * @brief Type for baud rate.
+   * Type for baud rate.
    */
   typedef unsigned BaudRate;
 
@@ -54,70 +54,63 @@ public:
   ~Uart();
 
   /**
-   * @brief (abstract) Shutdown the serial port.
+   * (abstract) Shutdown the serial port.
    */
   void shutdown();
 
   /**
-   * @brief (abstract) Get the IRQ assigned to the port.
+   * (abstract) Get the IRQ assigned to the port.
    */
   int const irq() const;
 
   /**
-   * @brief (abstract) Enable rcv IRQ in UART.
+   * (abstract) Enable rcv IRQ in UART.
    */
   void enable_rcv_irq();
 
   /**
-   * @brief (abstract) Disable rcv IRQ in UART.
+   * (abstract) Disable rcv IRQ in UART.
    */
   void disable_rcv_irq();
   
   /**
-   * @brief (abstract) Change transfer mode or speed.
+   * (abstract) Change transfer mode or speed.
    * @param m the new mode for the transfer, or MODE_NC for no mode change.
    * @param r the new baud rate, or BAUD_NC, for no speed change.
    */
   bool change_mode(TransferMode m, BaudRate r);
 
   /**
-   * @brief (abstract) Get the current transfer mode.
+   * (abstract) Get the current transfer mode.
    */
   TransferMode get_mode();
 
   /**
-   * @brief (abstract) Write str.
+   * (abstract) Write str.
    */
   int write( char const *str, size_t len );
 
   /**
-   * @brief (abstract) Read a character.
+   * (abstract) Read a character.
    */
   int getchar( bool blocking = true );
 
   /**
-   * @brief (abstract) Is there anything to read?
+   * (abstract) Is there anything to read?
    */
   int char_avail() const;
   
-  char const *next_attribute( bool restart = false ) const;
-  
+  Mword get_attributes() const;
 };
 
 
 IMPLEMENTATION:
 
 IMPLEMENT
-char const *Uart::next_attribute( bool restart ) const
+Mword
+Uart::get_attributes() const
 {
-  static unsigned current = 0;
-  static char const *attribs[] = { "uart", "in", "out", 0 };
-  if(restart)
-    current = 0;
-  if(current>=4)
-    return 0;
-  else
-    return attribs[current++];
+  return UART | IN | OUT;
 }
 
 

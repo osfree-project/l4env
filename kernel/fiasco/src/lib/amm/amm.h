@@ -48,6 +48,8 @@ typedef struct amm_entry {
 	int		 flags;
 } amm_entry_t;
 
+typedef amm_entry_t Amm_entry;
+
 #define AMM_MINADDR	((vm_offset_t)0)	/* min valid address */
 #define AMM_MAXADDR	((vm_offset_t)~0)	/* max valid address + 1 */
 
@@ -77,7 +79,7 @@ typedef struct amm {
 #ifdef STATS
 	struct amm_stats stats;
 #endif
-} amm_t;
+} Amm;
 
 /* amm_find attributes */
 #define AMM_FORWARD	0	/* search forward for entry */

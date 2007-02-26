@@ -10,9 +10,11 @@ struct public_slide {
 };
 
 struct slide_methods {
-	void 		 (*set_content)		(SLIDE *, l4dm_dataspace_t *content);
-	l4dm_dataspace_t *(*get_content) 	(SLIDE *);
-	l4_addr_t	 (*get_content_addr)	(SLIDE *); 
+	int 		 (*set_content)		(SLIDE *, l4dm_dataspace_t *content);
+	char	        *(*get_content) 	(SLIDE *);
+	void		 (*del_content)		(SLIDE *);
+	l4dm_dataspace_t *(*get_ds)		(SLIDE *);
+	int 		 (*get_content_size)	(SLIDE *);
 };
 
 struct slide_services {

@@ -14,7 +14,7 @@
 #define L4_FP_OTHER_SPACES	0x00	/* Page is flushed in all other */
 					/* address spaces */
 #define L4_FP_ALL_SPACES	0x80000000U
-					/* Page is flushed in own address */ 
+					/* Page is flushed in own address */
 					/* space too */
 
 #define L4_NC_SAME_CLAN		0x00	/* destination resides within the */
@@ -31,14 +31,17 @@
 /*
  * prototypes
  */
-L4_INLINE void 
+L4_INLINE void
 l4_fpage_unmap(l4_fpage_t fpage,
 	       l4_umword_t map_mask);
 
-L4_INLINE l4_threadid_t 
+L4_INLINE l4_threadid_t
 l4_myself(void);
 
-L4_INLINE int 
+L4_INLINE l4_threadid_t
+l4_myself_noprof(void) L4_NOINSTRUMENT;
+
+L4_INLINE int
 l4_nchief(l4_threadid_t destination,
 	  l4_threadid_t *next_chief);
 
@@ -53,6 +56,33 @@ l4_thread_ex_regs(l4_threadid_t destination,
 		  l4_umword_t *old_esp);
 
 L4_INLINE void
+l4_thread_ex_regs_flags(l4_threadid_t destination,
+                        l4_umword_t eip,
+                        l4_umword_t esp,
+                        l4_threadid_t *preempter,
+                        l4_threadid_t *pager,
+                        l4_umword_t *old_eflags,
+                        l4_umword_t *old_eip,
+                        l4_umword_t *old_esp,
+                        unsigned long flags);
+
+enum {
+  L4_THREAD_EX_REGS_ALIEN     = 1 << 29,
+  L4_THREAD_EX_REGS_NO_CANCEL = 1 << 30,
+};
+
+L4_INLINE void
+l4_inter_task_ex_regs(l4_threadid_t destination,
+		      l4_umword_t eip,
+		      l4_umword_t esp,
+		      l4_threadid_t *preempter,
+		      l4_threadid_t *pager,
+		      l4_umword_t *old_eflags,
+		      l4_umword_t *old_eip,
+		      l4_umword_t *old_esp,
+		      unsigned long flags);
+
+L4_INLINE void
 l4_thread_switch(l4_threadid_t destination);
 
 L4_INLINE l4_cpu_time_t
@@ -62,20 +92,26 @@ l4_thread_schedule(l4_threadid_t dest,
 		   l4_threadid_t *partner,
 		   l4_sched_param_t *old_param);
 
-L4_INLINE l4_taskid_t 
+L4_INLINE l4_taskid_t
 l4_task_new(l4_taskid_t destination,
-	    l4_umword_t mcp_or_new_chief, 
+	    l4_umword_t mcp_or_new_chief,
 	    l4_umword_t esp,
 	    l4_umword_t eip,
 	    l4_threadid_t pager);
 
+enum {
+  L4_TASK_NEW_ALIEN = 1 << 31,
+};
+
 L4_INLINE void
 l4_yield (void);
 
-L4_INLINE 
+L4_INLINE
 void *l4_kernel_interface(void);
 
-      
+L4_INLINE int
+l4_privctrl(l4_umword_t cmd,
+            l4_umword_t param);
 
 
 /*
@@ -90,6 +126,7 @@ void *l4_kernel_interface(void);
 # define L4_SYSCALL_thread_schedule	"int $0x34 \n\t"
 # define L4_SYSCALL_lthread_ex_regs	"int $0x35 \n\t"
 # define L4_SYSCALL_task_new		"int $0x36 \n\t"
+# define L4_SYSCALL_privctrl		"int $0x37 \n\t"
 # define L4_SYSCALL(name)		L4_SYSCALL_ ## name
 
 #else
@@ -124,12 +161,78 @@ void *l4_kernel_interface(void);
 #      include "syscalls-l4x0adapt-gcc3-nopic.h"
 #    endif
 #  endif
+L4_INLINE l4_threadid_t
+l4_myself_noprof(void)
+{
+  return l4_myself();
+}
 #endif
+
+/* ================ lthread_ex_regs variants =================== */
+
+/*
+ * L4 lthread_ex_regs without IPC canceling
+ */
+L4_INLINE void
+l4_thread_ex_regs(l4_threadid_t destination,
+		  l4_umword_t eip,
+		  l4_umword_t esp,
+		  l4_threadid_t *preempter,
+		  l4_threadid_t *pager,
+		  l4_umword_t *old_eflags,
+		  l4_umword_t *old_eip,
+		  l4_umword_t *old_esp)
+{
+  __do_l4_thread_ex_regs(destination.id.lthread,
+                         eip, esp, preempter, pager,
+                         old_eflags, old_eip, old_esp);
+}
+
+/*
+ * L4 lthread_ex_regs without IPC canceling
+ */
+L4_INLINE void
+l4_thread_ex_regs_flags(l4_threadid_t destination,
+                        l4_umword_t eip,
+                        l4_umword_t esp,
+                        l4_threadid_t *preempter,
+                        l4_threadid_t *pager,
+                        l4_umword_t *old_eflags,
+                        l4_umword_t *old_eip,
+                        l4_umword_t *old_esp,
+		        unsigned long flags)
+{
+  __do_l4_thread_ex_regs(destination.id.lthread | flags,
+                         eip, esp, preempter, pager,
+                         old_eflags, old_eip, old_esp);
+}
+
+/*
+ * L4 lthread_inter_task_ex_regs
+ */
+L4_INLINE void
+l4_inter_task_ex_regs(l4_threadid_t destination,
+		      l4_umword_t eip,
+		      l4_umword_t esp,
+		      l4_threadid_t *preempter,
+		      l4_threadid_t *pager,
+		      l4_umword_t *old_eflags,
+		      l4_umword_t *old_eip,
+		      l4_umword_t *old_esp,
+		      unsigned long flags)
+{
+  __do_l4_thread_ex_regs(destination.id.lthread
+                          | (destination.id.task << 7) | flags,
+                         eip, esp, preempter, pager,
+                         old_eflags, old_eip, old_esp);
+}
+
+/* ============================================================= */
 
 L4_INLINE void
 l4_yield (void)
 {
-	l4_thread_switch(L4_NIL_ID);
+  l4_thread_switch(L4_NIL_ID);
 }
 
 #endif /* __L4_SYSCALLS_H__ */

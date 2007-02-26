@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BETestFunction.cpp
- *	\brief	contains the implementation of the class CL4BETestFunction
+ *    \file    dice/src/be/l4/L4BETestFunction.cpp
+ *    \brief   contains the implementation of the class CL4BETestFunction
  *
- *	\date	Tue May 28 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    05/28/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -34,11 +35,8 @@
 #include "be/BEType.h"
 #include "TypeSpec-Type.h"
 
-IMPLEMENT_DYNAMIC(CL4BETestFunction);
-
 CL4BETestFunction::CL4BETestFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BETestFunction, CBETestFunction);
 }
 
 /** destroys this class */
@@ -56,7 +54,10 @@ CL4BETestFunction::~CL4BETestFunction()
  *
  * For threads we use the LOG function, with the same output as the printf function.
  */
-void CL4BETestFunction::WriteErrorMessage(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext)
+void
+CL4BETestFunction::WriteErrorMessage(CBEFile * pFile,
+    vector<CDeclaratorStackLocation*> * pStack,
+    CBEContext * pContext)
 {
     if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE_THREAD))
     {
@@ -74,10 +75,13 @@ void CL4BETestFunction::WriteErrorMessage(CBEFile * pFile, CDeclaratorStack * pS
  *  \param pStack the declarator stack
  *  \param pContext the context of the write operation
  */
-void CL4BETestFunction::WriteErrorMessageThread(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext)
+void
+CL4BETestFunction::WriteErrorMessageThread(CBEFile * pFile,
+    vector<CDeclaratorStackLocation*> * pStack,
+    CBEContext * pContext)
 {
     // get target name
-    String sTargetName;
+    string sTargetName;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) || pFile->IsOfFileType(FILETYPE_TESTSUITE))
         sTargetName = " at client side";
     else if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_TEMPLATE))
@@ -85,34 +89,34 @@ void CL4BETestFunction::WriteErrorMessageThread(CBEFile * pFile, CDeclaratorStac
     else
         sTargetName = " at unknown side";
     // get declarator
-    CDeclaratorStackLocation *pHead = pStack->GetTop();
+    CDeclaratorStackLocation *pHead = pStack->back();
     // print error message
-    pFile->PrintIndent("\tLOG(\"WRONG ");
+    *pFile << "\t\tprintf(\"WRONG ";
     // if struct add members
-    pStack->Write(pFile, false, false, pContext);
-	int nIdxCnt = pHead->GetUsedIndexCount();
-	if (nIdxCnt)
-	{
-	    pFile->Print(" (element ");
+    CDeclaratorStackLocation::Write(pFile, pStack, false, false, pContext);
+    int nIdxCnt = pHead->GetUsedIndexCount();
+    if (nIdxCnt)
+    {
+        pFile->Print(" (element ");
         for (int i=0; i<nIdxCnt; i++)
-		{
-		    pFile->Print("[");
-			if (pHead->nIndex[i] >= 0)
-			    pFile->Print("%d", pHead->nIndex[i]);
-			else if (pHead->nIndex[i] == -2)
-			    pFile->Print("%%d");
-			pFile->Print("]");
-		}
-		pFile->Print(")");
-	}
-    pFile->Print("%s\"", (const char *) sTargetName);
-	if (nIdxCnt)
-	{
+        {
+            pFile->Print("[");
+            if (pHead->nIndex[i] >= 0)
+                pFile->Print("%d", pHead->nIndex[i]);
+            else if (pHead->nIndex[i] == -2)
+                pFile->Print("%%d");
+            pFile->Print("]");
+        }
+        pFile->Print(")");
+    }
+    pFile->Print("%s\"", sTargetName.c_str());
+    if (nIdxCnt)
+    {
         for (int i=0; i<nIdxCnt; i++)
-		{
-			if (pHead->nIndex[i] == -2)
-			    pFile->Print(", %s", (const char*)pHead->sIndex[i]);
-		}
+        {
+            if (pHead->nIndex[i] == -2)
+                pFile->Print(", %s", pHead->sIndex[i].c_str());
+        }
     }
     pFile->Print(");\n");
 }
@@ -124,13 +128,17 @@ void CL4BETestFunction::WriteErrorMessageThread(CBEFile * pFile, CDeclaratorStac
  *
  * Because we cannot use the LOG server, we enter the kernel debugger.
  */
-void CL4BETestFunction::WriteErrorMessageTask(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext)
+void
+CL4BETestFunction::WriteErrorMessageTask(CBEFile * pFile,
+    vector<CDeclaratorStackLocation*> * pStack,
+    CBEContext * pContext)
 {
     // get declarator
-    CDeclaratorStackLocation *pHead = pStack->GetTop();
+    CDeclaratorStackLocation *pHead = pStack->back();
     CBEDeclarator *pDecl = (CBEDeclarator*)(pHead->pDeclarator);
-    pFile->PrintIndent("\tenter_kdebug(\"%s: wrong ",(const char*)pDecl->GetFunction()->GetName());
-    pStack->Write(pFile, false, false, pContext);
+    CBEFunction *pFunc = pDecl->GetSpecificParent<CBEFunction>();
+    pFile->PrintIndent("\tenter_kdebug(\"%s: wrong ",pFunc->GetName().c_str());
+    CDeclaratorStackLocation::Write(pFile, pStack, false, false, pContext);
     pFile->Print("\");\n");
 }
 
@@ -139,7 +147,10 @@ void CL4BETestFunction::WriteErrorMessageTask(CBEFile * pFile, CDeclaratorStack 
  *  \param pStack the declarator stack
  *  \param pContext the context of the write operation
  */
-void CL4BETestFunction::WriteSuccessMessage(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext)
+void
+CL4BETestFunction::WriteSuccessMessage(CBEFile * pFile,
+    vector<CDeclaratorStackLocation*> * pStack,
+    CBEContext * pContext)
 {
     if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE_THREAD))
     {
@@ -156,10 +167,13 @@ void CL4BETestFunction::WriteSuccessMessage(CBEFile * pFile, CDeclaratorStack * 
  *  \param pStack the declarator stack
  *  \param pContext the context of the write operation
  */
-void CL4BETestFunction::WriteSuccessMessageThread(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext)
+void
+CL4BETestFunction::WriteSuccessMessageThread(CBEFile *pFile,
+    vector<CDeclaratorStackLocation*> *pStack,
+    CBEContext *pContext)
 {
     // get target name
-    String sTargetName;
+    string sTargetName;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) || pFile->IsOfFileType(FILETYPE_TESTSUITE))
         sTargetName = " at client side";
     else if (pFile->IsOfFileType(FILETYPE_COMPONENT) || pFile->IsOfFileType(FILETYPE_TEMPLATE))
@@ -167,34 +181,34 @@ void CL4BETestFunction::WriteSuccessMessageThread(CBEFile *pFile, CDeclaratorSta
     else
         sTargetName = " at unknown side";
     // get declarator
-    CDeclaratorStackLocation *pHead = pStack->GetTop();
+    CDeclaratorStackLocation *pHead = pStack->back();
     // print error message
-    pFile->PrintIndent("\tLOG(\"correct ");
+    pFile->PrintIndent("\tprintf(\"correct ");
     // if struct add members
-    pStack->Write(pFile, false, false, pContext);
-	int nIdxCnt = pHead->GetUsedIndexCount();
-	if (nIdxCnt)
-	{
-	    pFile->Print(" (element ");
+    CDeclaratorStackLocation::Write(pFile, pStack, false, false, pContext);
+    int nIdxCnt = pHead->GetUsedIndexCount();
+    if (nIdxCnt)
+    {
+        pFile->Print(" (element ");
         for (int i=0; i<nIdxCnt; i++)
-		{
-		    pFile->Print("[");
-			if (pHead->nIndex[i] >= 0)
-			    pFile->Print("%d", pHead->nIndex[i]);
-			else if (pHead->nIndex[i] == -2)
-			    pFile->Print("%%d");
-			pFile->Print("]");
-		}
-		pFile->Print(")");
-	}
-    pFile->Print("%s\"", (const char *) sTargetName);
-	if (nIdxCnt)
-	{
+        {
+            pFile->Print("[");
+            if (pHead->nIndex[i] >= 0)
+                pFile->Print("%d", pHead->nIndex[i]);
+            else if (pHead->nIndex[i] == -2)
+                pFile->Print("%%d");
+            pFile->Print("]");
+        }
+        pFile->Print(")");
+    }
+    pFile->Print("%s\"", sTargetName.c_str());
+    if (nIdxCnt)
+    {
         for (int i=0; i<nIdxCnt; i++)
-		{
-			if (pHead->nIndex[i] == -2)
-			    pFile->Print(", %s", (const char*)pHead->sIndex[i]);
-		}
+        {
+            if (pHead->nIndex[i] == -2)
+                pFile->Print(", %s", pHead->sIndex[i].c_str());
+        }
     }
     pFile->Print(");\n");
 }
@@ -204,13 +218,17 @@ void CL4BETestFunction::WriteSuccessMessageThread(CBEFile *pFile, CDeclaratorSta
  *  \param pStack the declarator stack
  *  \param pContext the context of the write operation
  */
-void CL4BETestFunction::WriteSuccessMessageTask(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext)
+void
+CL4BETestFunction::WriteSuccessMessageTask(CBEFile *pFile,
+    vector<CDeclaratorStackLocation*> *pStack,
+    CBEContext *pContext)
 {
     // get declarator
-    CDeclaratorStackLocation *pHead = pStack->GetTop();
+    CDeclaratorStackLocation *pHead = pStack->back();
     CBEDeclarator *pDecl = (CBEDeclarator*)(pHead->pDeclarator);
-    pFile->PrintIndent("\tenter_kdebug(\"%s: correct ",(const char*)pDecl->GetFunction()->GetName());
-    pStack->Write(pFile, false, false, pContext);
+    CBEFunction *pFunc = pDecl->GetSpecificParent<CBEFunction>();
+    pFile->PrintIndent("\tenter_kdebug(\"%s: correct ",pFunc->GetName().c_str());
+    CDeclaratorStackLocation::Write(pFile, pStack, false, false, pContext);
     pFile->Print("\");\n");
 }
 
@@ -220,23 +238,27 @@ void CL4BETestFunction::WriteSuccessMessageTask(CBEFile *pFile, CDeclaratorStack
  *  \param pStack the declarator stack
  *  \param pContext the context of the operation
  */
-void CL4BETestFunction::CompareDeclarator(CBEFile* pFile,  CBEType* pType,  CDeclaratorStack* pStack,  CBEContext* pContext)
+void
+CL4BETestFunction::CompareDeclarator(CBEFile* pFile,
+    CBEType* pType,
+    vector<CDeclaratorStackLocation*> * pStack,
+    CBEContext* pContext)
 {
     // test for special types
-	if (pType->IsSimpleType())
-	{
-	    switch (pType->GetFEType())
-		{
-		case TYPE_FLEXPAGE:
-		case TYPE_RCV_FLEXPAGE:
-		    CompareFlexpages(pFile, pType, pStack, pContext);
-			return;
-			break;
-		default:
-		    break;
-		}
-	}
-	CBETestFunction::CompareDeclarator(pFile, pType, pStack, pContext);
+    if (pType->IsSimpleType())
+    {
+        switch (pType->GetFEType())
+        {
+        case TYPE_FLEXPAGE:
+        case TYPE_RCV_FLEXPAGE:
+            CompareFlexpages(pFile, pType, pStack, pContext);
+            return;
+            break;
+        default:
+            break;
+        }
+    }
+    CBETestFunction::CompareDeclarator(pFile, pType, pStack, pContext);
 }
 
 /** \brief compares two flexpages
@@ -245,35 +267,46 @@ void CL4BETestFunction::CompareDeclarator(CBEFile* pFile,  CBEType* pType,  CDec
  *  \param pStack the declarator stack
  *  \param pContext the context of the operation
  */
-void CL4BETestFunction::CompareFlexpages(CBEFile* pFile,  CBEType* pType,  CDeclaratorStack* pStack,  CBEContext* pContext)
+void
+CL4BETestFunction::CompareFlexpages(CBEFile* pFile,
+    CBEType* pType,
+    vector<CDeclaratorStackLocation*> * pStack,
+    CBEContext* pContext)
 {
     CBEDeclarator *pDeclarator = 0;
-	if (pType->GetFEType() == TYPE_FLEXPAGE)
-	{
-	    // compare snd_base (l4_umword_t)
-		// create declarators
-		pDeclarator = new CBEDeclarator();
-		pDeclarator->CreateBackEnd(String("snd_base"), 0, pContext);
-		pStack->Push(pDeclarator);
-		WriteComparison(pFile, pStack, pContext);
-		pStack->Pop();
-		// add fpage member (union)
-		pDeclarator->CreateBackEnd(String("fpage"), 0, pContext);
-		pStack->Push(pDeclarator);
-		// fall thru
-	}
-	// compare fpage (l4_umword_t)
-	CBEDeclarator *pDeclarator2 = new CBEDeclarator();
-	pDeclarator2->CreateBackEnd(String("fpage"), 0, pContext);
-	pStack->Push(pDeclarator2);
-	WriteComparison(pFile, pStack, pContext);
-	pStack->Pop();
-	delete pDeclarator2;
+    CDeclaratorStackLocation *pLoc = 0;
+    if (pType->GetFEType() == TYPE_FLEXPAGE)
+    {
+        // compare snd_base (l4_umword_t)
+        // create declarators
+        pDeclarator = new CBEDeclarator();
+        pDeclarator->CreateBackEnd(string("snd_base"), 0, pContext);
+        pLoc = new CDeclaratorStackLocation(pDeclarator);
+        pStack->push_back(pLoc);
+        WriteComparison(pFile, pStack, pContext);
+        pStack->pop_back();
+        delete pLoc;
+        // add fpage member (union)
+        pDeclarator->CreateBackEnd(string("fpage"), 0, pContext);
+        pLoc = new CDeclaratorStackLocation(pDeclarator);
+        pStack->push_back(pLoc);
+        // fall thru
+    }
+    // compare fpage (l4_umword_t)
+    CBEDeclarator *pDeclarator2 = new CBEDeclarator();
+    pDeclarator2->CreateBackEnd(string("fpage"), 0, pContext);
+    CDeclaratorStackLocation *pLoc2 = new CDeclaratorStackLocation(pDeclarator2);
+    pStack->push_back(pLoc2);
+    WriteComparison(pFile, pStack, pContext);
+    pStack->pop_back();
+    delete pLoc2;
+    delete pDeclarator2;
     // cleanup
-	if ((pType->GetFEType() == TYPE_FLEXPAGE) &&
-	    pDeclarator)
-	{
-		pStack->Pop();
-	    delete pDeclarator;
-	}
+    if ((pType->GetFEType() == TYPE_FLEXPAGE) &&
+        pDeclarator)
+    {
+        pStack->pop_back();
+        delete pLoc;
+        delete pDeclarator;
+    }
 }

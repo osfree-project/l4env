@@ -14,7 +14,6 @@
 #include <l4/util/getopt.h>
 #include <l4/generic_io/libio.h>
 #include <l4/thread/thread.h>
-
 #include <l4/dde_linux/dde.h>
 
 /* Linux */
@@ -22,7 +21,7 @@
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
 
-/* OSKit */
+/* LibC */
 #include <stdlib.h>
 
 char LOG_tag[9] = "-DDESRV-\0";
@@ -33,7 +32,7 @@ char LOG_tag[9] = "-DDESRV-\0";
 
 #if 1
 #define PCI_DEV(dev) \
-        Msg("DEBUG:\n" \
+        LOG("DEBUG:\n" \
             "pci_dev  bus:devfn          %x:%02x.%x\n" \
             "         vendor               %04x\n" \
             "         device               %04x\n" \
@@ -41,7 +40,7 @@ char LOG_tag[9] = "-DDESRV-\0";
             "         slotname          %s\n" \
             "         irq                     %x\n" \
             "         res0    %08lx-%08lx (%08lx)\n" \
-            "         res1    %08lx-%08lx (%08lx)\n", \
+            "         res1    %08lx-%08lx (%08lx)", \
             (dev)->bus->number, PCI_SLOT((dev)->devfn), PCI_FUNC((dev)->devfn), \
             (dev)->vendor, (dev)->device, \
             (dev)->class, (dev)->slot_name, (dev)->irq, \
@@ -66,7 +65,7 @@ static void debug_all_pci_devs(void)
     {
       if ((err=l4dde_pci_init()))
         {
-          Error("initializing pci (%d)", err);
+          LOG_Error("initializing pci (%d)", err);
           return;
         }
       ++_pciinit;
@@ -87,14 +86,14 @@ static void debug_all_pci_devs(void)
 /*****************************************************************************/
 static int __es1371_probe(struct pci_dev *pcidev, const struct pci_device_id *pciid)
 {
-  Msg("DEBUG: __es1371_probe called (devid=%x)\n", pcidev->device);
+  LOG("DEBUG: __es1371_probe called (devid=%x)", pcidev->device);
 
   return 0;
 }
 
 static void __es1371_remove(struct pci_dev *dev)
 {
-  Msg("DEBUG: __es1371_remove called\n");
+  LOG("DEBUG: __es1371_remove called");
 }
 
 #ifndef PCI_DEVICE_ID_ENSONIQ_CT5880
@@ -123,23 +122,22 @@ static void debug_pci_module_init(void)
     {
       if ((err=l4dde_pci_init()))
         {
-          Error("initializing pci (%d)", err);
+          LOG_Error("initializing pci (%d)", err);
           return;
         }
       ++_pciinit;
     }
 
-  Msg("DEBUG: version v0.0 time " __TIME__ " " __DATE__ "\n");
+  LOG("DEBUG: version v0.0 time " __TIME__ " " __DATE__ );
   err = pci_module_init(&es1371_driver);
-  Msg("DEBUG: pci_module_init() returns ");
+  LOG("DEBUG: pci_module_init() returns ");
   if (err)
     if (err == -19)
-      Msg("ENODEV");
+      LOG("ENODEV");
     else
-      Msg("%d", err);
+      LOG("%d", err);
   else
-    Msg("OK");
-  Msg("\n");
+   LOG("OK");
 }
 
 /*****************************************************************************/
@@ -150,25 +148,36 @@ static int malloc_flag = 0;
 static void debug_malloc(void)
 {
   void *p0, *p1, *p2;
+  int i;
+  l4_addr_t begin, end;
 
   /* simple malloc/free pairs */
-  Msg("DEBUG: Allocating ...\n");
+  LOG("DEBUG: Allocating ...\n");
+  LOG("DEBUG: (1) %d bytes kmem available", l4dde_mm_kmem_avail());
   p0 = kmalloc(1024, GFP_KERNEL); Assert(p0);
   kfree(p0);
   p0 = kmalloc(128, GFP_KERNEL); Assert(p0);
   p1 = kmalloc(0x2000, GFP_KERNEL); Assert(p1);
+  LOG("DEBUG: (2) %d bytes kmem available", l4dde_mm_kmem_avail());
   kfree(p1);
   kfree(p0);
   p0 = kmalloc(128, GFP_KERNEL); Assert(p0);
   p1 = kmalloc(0x2000, GFP_KERNEL); Assert(p1);
   p2 = kmalloc(100 * 1024, GFP_KERNEL); Assert(p2);
+  LOG("DEBUG: (3) %d bytes kmem available", l4dde_mm_kmem_avail());
   kfree(p2);
   kfree(p1);
   kfree(p0);
+  LOG("DEBUG: (4) %d bytes kmem available", l4dde_mm_kmem_avail());
 
   /* alloc too much */
-  Msg("DEBUG: Trigger Out of Memory ...\n");
+  LOG("DEBUG: Trigger Out of Memory ...");
   p0 = kmalloc(1024*1024, GFP_KERNEL); Assert(p0);
+  LOG("DEBUG: (5) %d bytes kmem available", l4dde_mm_kmem_avail());
+
+  /* test regions */
+  for (i=0; !l4dde_mm_kmem_region(i, &begin, &end); i++)
+    LOG_printf("kregions[%d]: %p-%p\n", i, (void *)begin, (void *)end);
 }
 
 /*****************************************************************************/
@@ -193,7 +202,7 @@ static void debug_irq_handler(int irq, void *id, struct pt_regs *pt)
   /* every 100 IRQs */
   if (!count)
     {
-      Msg("DEBUG: -> 100 (%ld)\n", jiffies - old);
+      LOG("DEBUG: -> 100 (%ld)", jiffies - old);
       count = 100;
       old = jiffies;
       runs--;
@@ -212,13 +221,13 @@ static void debug_irq(void)
      num > 15 Omega0 */
   if ((err=l4dde_irq_init(irq_num & 0x10)))
     {
-      Error("initializing irqs (%d)", err);
+      LOG_Error("initializing irqs (%d)", err);
       return;
     }
 
   err = request_irq(irq_num & 0x0f, debug_irq_handler, 0, "haha", 0);
   if (err)
-    Msg("DEBUG: request_irq failed (%d)\n", err);
+    LOG("DEBUG: request_irq failed (%d)", err);
 
   while (!free_me)
     l4thread_sleep(100);
@@ -233,11 +242,11 @@ static int jiffies_flag = 0;
 static int jiffies_num = 10;
 static void debug_jiffies(void)
 {
-  Msg("DEBUG: HZ = %lu (%p)\n", HZ, &HZ);
+  LOG("DEBUG: HZ = %lu (%p)", HZ, &HZ);
 
   while (jiffies_num)
     {
-      Msg("DEBUG: %lu jiffies (%p) since startup\n", jiffies, &jiffies);
+      LOG("DEBUG: %lu jiffies (%p) since startup", jiffies, &jiffies);
       l4thread_sleep(1000);
       jiffies_num--;
     }
@@ -281,8 +290,8 @@ static void __lock_grabbing(void *sleep)
 
       spin_unlock_irqrestore(&grabme, flags);
 
-      Msg("DEBUG: %6s| from %5ld\n"
-          "       %6s|   to %5ld (%ld jiffies)\n",
+      LOG("DEBUG: %6s| from %5ld\n"
+          "       %6s|   to %5ld (%ld jiffies)",
           child ? "child" : "parent", t0, "", t1, t1 - t0);
 
       if (child) --lock_num;
@@ -331,10 +340,10 @@ static void __timer_func(unsigned long i)
     timers_expired++;
   if (i == TIMER_COOKIE)
     /* bug triggered */
-    Msg("DEBUG: Ouch, found cookie data (0x%lx) @ %ld jiffies\n", i, jiffies);
+    LOG("DEBUG: Ouch, found cookie data (0x%lx) @ %ld jiffies", i, jiffies);
   else
     /* normal processing */
-    Msg("DEBUG: timer_func [%ld] @ %ld jiffies\n", i, jiffies);
+    LOG("DEBUG: timer_func [%ld] @ %ld jiffies", i, jiffies);
 }
 
 static void debug_timers(void)
@@ -344,7 +353,7 @@ static void debug_timers(void)
 
   if ((err=l4dde_time_init()))
     {
-      Error("initializing time (%d)", err);
+      LOG_Error("initializing time (%d)", err);
       return;
     }
 
@@ -365,7 +374,7 @@ static void debug_timers(void)
   t3.expires = jiffies + 400;
   t3.data = 0UL;
 
-  Msg("DEBUG: expiration @ (%ld, %ld, %ld, %ld)\n",
+  LOG("DEBUG: expiration @ (%ld, %ld, %ld, %ld)",
       t0.expires, t1.expires, t2.expires, t3.expires);
 
   add_timer(&t1);
@@ -373,7 +382,7 @@ static void debug_timers(void)
   add_timer(&t0);
   add_timer(&t3);
 
-  Msg("DEBUG: waiting for timer expiration ...\n");
+  LOG("DEBUG: waiting for timer expiration ...");
 
   while (!timers_expired)
     l4thread_sleep(100); /* wait for latest timer expiration as timers
@@ -382,7 +391,7 @@ static void debug_timers(void)
   /* now trigger bug #1 in old dde version:
    * remove last timer while we're waiting for it
    */
-  Msg("\nDEBUG: trigger known bug #1 in old version\n");
+  LOG("\nDEBUG: trigger known bug #1 in old version");
 
   timers_expired = 0;
 
@@ -392,7 +401,7 @@ static void debug_timers(void)
   t0.expires = jiffies + 500;
   t0.data = 0UL;
 
-  Msg("DEBUG: expiration @ (%ld)\n", t0.expires);
+  LOG("DEBUG: expiration @ (%ld)", t0.expires);
 
   add_timer(&t0);
 
@@ -408,14 +417,14 @@ static void debug_timers(void)
   t0.list.prev = &t1.list; /* now the "synthetic" _list entry_
                               is valid again */
 
-  Msg("DEBUG: waiting for timer expiration ... (will wait a while)\n");
+  LOG("DEBUG: waiting for timer expiration ... (will wait a while)");
 
   l4thread_sleep(6000);
 
   /* now trigger bug #2 in old dde version:
    * timer expired before examination
    */
-  Msg("\nDEBUG: trigger known bug #2 in old version\n");
+  LOG("\nDEBUG: trigger known bug #2 in old version");
 
   timers_expired = 0;
 
@@ -425,7 +434,7 @@ static void debug_timers(void)
   t0.expires = jiffies - 2;
   t0.data = 0UL;
 
-  Msg("DEBUG: expiration @ (%ld)\n", t0.expires);
+  LOG("DEBUG: expiration @ (%ld)", t0.expires);
 
   add_timer(&t0);
 
@@ -447,7 +456,7 @@ static void __softirq_func(unsigned long i)
   if (in_irq())
     Panic("DEBUG: in_irq() set in softirq handler");
 
-  Msg("DEBUG: softirq [%ld] @ %ld jiffies (lthread %0x)\n",
+  LOG("DEBUG: softirq [%ld] @ %ld jiffies (lthread %0x)",
       i, jiffies, l4thread_myself());
 }
 
@@ -465,7 +474,7 @@ static void debug_softirq(void)
 
   if ((err=l4dde_softirq_init()))
     {
-      Error("initializing softirqs (%d)", err);
+      LOG_Error("initializing softirqs (%d)", err);
       return;
     }
   /* 3 lo : 1 hi */
@@ -503,7 +512,7 @@ static void debug_softirq(void)
 
   l4thread_sleep(1000);
 
-  Msg("DEBUG: End of debug_softirq\n");
+  LOG("DEBUG: End of debug_softirq");
 }
 
 /*****************************************************************************/
@@ -511,7 +520,7 @@ static void debug_softirq(void)
 /*****************************************************************************/
 static void usage(void)
 {
-  Msg(
+  LOG(
 "usage: dde_debug [OPTION]...\n"
 "Debug dde_linux library functions. (Default is only library initialization.)\n"
 "\n"
@@ -526,7 +535,7 @@ static void usage(void)
 "  --softirq            debug softirq handling\n"
 "  --timer              debug timers\n"
 "\n"
-"  --help               display this help (Doesn't exit immediately!)\n"
+"  --help               display this help (Doesn't exit immediately!)"
 );
 }
 
@@ -624,13 +633,18 @@ int main(int argc, char *argv[])
 
   if ((err=l4dde_mm_init(128*1024, 128*1024)))
     {
-      Error("initializing mm (%d)", err);
+      LOG_Error("initializing mm (%d)", err);
+      exit(-1);
+    }
+  if ((err=l4dde_process_init()))
+    {
+      LOG_Error("initializing process (%d)", err);
       exit(-1);
     }
 
-  Msg("DEBUG: \n"
+  LOG("DEBUG: \n"
       "irq=%c (%d)  jiffies=%c (%d)  lock=%c (%d)  pcidevs=%c  pcimod=%c\n"
-      "malloc=%c  timers=%c  softirqs=%c\n\n",
+      "malloc=%c  timers=%c  softirqs=%c\n",
       irq_flag ? 'y' : 'n', irq_num,
       jiffies_flag ? 'y' : 'n', jiffies_num,
       lock_flag ? 'y' : 'n', lock_num,
@@ -647,9 +661,7 @@ int main(int argc, char *argv[])
   if (timer_flag) debug_timers();
   if (softirq_flag) debug_softirq();
 
-  if (err) goto err;
+  if (err) exit(-1);
 
   exit(0);
- err:
-  exit(-1);
 }

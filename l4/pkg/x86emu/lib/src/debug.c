@@ -38,14 +38,10 @@
 ****************************************************************************/
 
 #include "x86emu/x86emui.h"
+#ifndef NO_SYS_HEADERS
 #include <stdarg.h>
 #include <stdlib.h>
-
-extern u8 __OP1;
-
-char *fgets(char *str, int size, FILE *stream);
-void sscanf(char *s, char *fmt, ...);
-
+#endif
 
 /*----------------------------- Implementation ----------------------------*/
 
@@ -53,7 +49,7 @@ void sscanf(char *s, char *fmt, ...);
 
 static void     print_encoded_bytes (u16 s, u16 o);
 static void     print_decoded_instruction (void);
-static int      parse_line (char *s, int *ps, int *n);
+//static int      parse_line (char *s, int *ps, int *n);
   
 /* should look something like debug's output. */
 void X86EMU_trace_regs (void)
@@ -86,10 +82,11 @@ void x86emu_just_disassemble (void)
 	print_decoded_instruction();
 }
 
-static void disassemble_forward (u16 seg, u16 off, int n)
+static void __attribute__((unused)) disassemble_forward (u16 seg, u16 off, int n)
 {
 	X86EMU_sysEnv tregs;
 	int i;
+	u8 op1;
     /*
      * hack, hack, hack.  What we do is use the exact machinery set up
      * for execution, except that now there is an additional state
@@ -134,8 +131,8 @@ static void disassemble_forward (u16 seg, u16 off, int n)
      * Note the use of a copy of the register structure...
      */
     for (i=0; i<n; i++) {
-		__OP1 = (*sys_rdb)(((u32)M.x86.R_CS<<4) + (M.x86.R_IP++));
-		(x86emu_optab[__OP1])();
+		op1 = (*sys_rdb)(((u32)M.x86.R_CS<<4) + (M.x86.R_IP++));
+		(x86emu_optab[op1])(op1);
     }
     /* end major hack mode. */
 }
@@ -229,6 +226,7 @@ void X86EMU_dump_memory (u16 seg, u16 off, u32 amt)
 	}
 }
 
+#if 0
 void x86emu_single_step (void)
 {
     char s[1024];
@@ -307,8 +305,8 @@ void x86emu_single_step (void)
             }
             break;
           case 'q':
-	      M.x86.debug |= DEBUG_EXIT;
-	      return;
+          M.x86.debug |= DEBUG_EXIT;
+          return;
 	  case 'P':
 	      noDecode = (noDecode)?0:1;
 	      printk("Toggled decoding to %s\n",(noDecode)?"FALSE":"TRUE");
@@ -320,6 +318,7 @@ void x86emu_single_step (void)
         }   
     }
 }
+#endif
 
 int X86EMU_trace_on(void)
 {
@@ -331,6 +330,7 @@ int X86EMU_trace_off(void)
 	return M.x86.debug &= ~(DEBUG_STEP_F | DEBUG_DECODE_F | DEBUG_TRACE_F);
 }
 
+#if 0
 static int parse_line (char *s, int *ps, int *n)
 {
     int cmd;
@@ -359,6 +359,7 @@ static int parse_line (char *s, int *ps, int *n)
 		*n += 1;
 	}
 }
+#endif
 
 #endif /* DEBUG */
 

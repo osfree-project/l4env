@@ -1,17 +1,30 @@
 # -*- makefile -*-
 
-$(CHECKSUM): genchecksum $(KERNEL)
-	@echo "  ... Generating kernel text section checksum"
+
+checksum.ro: genchecksum $(KERNEL) $(BOOT)
+	$(CHKSUM_MESSAGE)"$(BOOT) text section"
 	$(VERBOSE)$(OBJDUMP) \
-	  --start-address=0x`nm $(KERNEL) | grep crt0_start | cut -f1 -d' '` \
+	  --start-address=0x`nm $(KERNEL) | grep "\<_start\>" | cut -f1 -d' '` \
 	  --stop-address=0x`nm $(KERNEL) | grep _etext | cut -f1 -d' '` \
-	  -s $(KERNEL) | cut -f3,4,5,6 -d' ' | ./$< > $@
-	@echo -n " " >> $@
-	@echo "  ... Generating kernel data section checksum"
+	  -s $(BOOT) | cut -f3,4,5,6 -d' ' | ./genchecksum > $@
+
+checksum.rw: genchecksum $(KERNEL) $(BOOT)
+	$(CHKSUM_MESSAGE)"$(BOOT) data section"
 	$(VERBOSE)$(OBJDUMP) \
 	  --start-address=0x`nm $(KERNEL) | grep _etext | cut -f1 -d' '` \
 	  --stop-address=0x`nm $(KERNEL) | grep _edata | cut -f1 -d' '` \
-	  -s $(KERNEL) | cut -f3,4,5,6 -d' ' | ./$< >> $@
+	  -s $(BOOT) | cut -f3,4,5,6 -d' ' | ./genchecksum > $@
+
+$(CHECKSUM): checksum.ro checksum.rw setchecksum $(BOOT)
+	$(PATCH_MESSAGE)"$(BOOT)"
+	$(VERBOSE)./setchecksum $(BOOT) \
+	  "0x$(shell cat checksum.ro)" \
+	  "0x$(shell cat checksum.rw)" && echo done >$@
+	$(call INSTALLFILE_RULE,fiasco,fiasco)
+
+setchecksum: setchecksum.c
+	$(COMP_MESSAGE)
+	$(VERBOSE)$(CC) -O2 -Wall -o $@ $^
 
 genchecksum: $(OBJ_CHECKSUM)
 	$(LINK_MESSAGE)
@@ -23,5 +36,5 @@ $(OBJ_CHECKSUM): %.o: %.cc
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $*.d, .$*.cc.d)
 
 clean-CHECKSUM:
-	rm -f genchecksum
+	rm -f genchecksum setchecksum checksum.ro checksum.rw
 

@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEExceptionAttribute.cpp
- *	\brief	contains the implementation of the class CFEExceptionAttribute
+ *    \file    dice/src/fe/FEExceptionAttribute.cpp
+ *    \brief   contains the implementation of the class CFEExceptionAttribute
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,95 +22,91 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
 #include "fe/FEExceptionAttribute.h"
 #include "fe/FEIdentifier.h"
-#include "Vector.h"
 #include "File.h"
 
-IMPLEMENT_DYNAMIC(CFEExceptionAttribute) 
-
-CFEExceptionAttribute::CFEExceptionAttribute(Vector * pExcepNames)
-:CFEAttribute(ATTR_EXCEPTIONS)
+CFEExceptionAttribute::CFEExceptionAttribute(vector<CFEIdentifier*> *pExcepNames)
+: CFEAttribute(ATTR_EXCEPTIONS)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEExceptionAttribute, CFEAttribute);
-
-    m_pExcepNames = pExcepNames;
+    m_vExcepNames.swap(*pExcepNames);
+    vector<CFEIdentifier*>::iterator iter;
+    for (iter = m_vExcepNames.begin(); iter != m_vExcepNames.end(); iter++)
+        (*iter)->SetParent(this);
 }
 
 CFEExceptionAttribute::CFEExceptionAttribute(CFEExceptionAttribute & src)
-:CFEAttribute(src)
+: CFEAttribute(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEExceptionAttribute, CFEAttribute);
-
-    if (src.m_pExcepNames)
-      {
-	  m_pExcepNames = src.m_pExcepNames->Clone();
-	  m_pExcepNames->SetParentOfElements(this);
-      }
-    else
-	m_pExcepNames = 0;
+    vector<CFEIdentifier*>::iterator iter = src.m_vExcepNames.begin();
+    for (; iter != src.m_vExcepNames.end(); iter++)
+    {
+        CFEIdentifier *pNew = (CFEIdentifier*)((*iter)->Clone());
+        m_vExcepNames.push_back(pNew);
+        pNew->SetParent(this);
+    }
 }
 
 /** clean up the exception attribute (free the exception names */
 CFEExceptionAttribute::~CFEExceptionAttribute()
 {
-    if (m_pExcepNames)
-	delete m_pExcepNames;
+    while (!m_vExcepNames.empty())
+    {
+        delete m_vExcepNames.back();
+        m_vExcepNames.pop_back();
+    }
 }
 
-/**	creates a copy of this object
- *	\return a copy of this object
+/**    creates a copy of this object
+ *    \return a copy of this object
  */
 CObject *CFEExceptionAttribute::Clone()
 {
     return new CFEExceptionAttribute(*this);
 }
 
-/**	returns a pointer to the first exception name
- *	\return a pointer to the first exception name
+/**    returns a pointer to the first exception name
+ *    \return a pointer to the first exception name
  */
-VectorElement *CFEExceptionAttribute::GetFirstExceptionName()
+vector<CFEIdentifier*>::iterator CFEExceptionAttribute::GetFirstExceptionName()
 {
-    if (!m_pExcepNames)
-	return 0;
-    return m_pExcepNames->GetFirst();
+    return m_vExcepNames.begin();
 }
 
 /** \brief returns the next exception's name
  *  \param iter the pointer to the next eception name
  *  \return a reference to the next exception's name
  */
-CFEIdentifier *CFEExceptionAttribute::GetNextExceptionName(VectorElement * &iter)
+CFEIdentifier *CFEExceptionAttribute::GetNextExceptionName(vector<CFEIdentifier*>::iterator &iter)
 {
-    if (!m_pExcepNames)
-	return 0;
-    if (!iter)
-	return 0;
-    CFEIdentifier *pRet = (CFEIdentifier *) (iter->GetElement());
-    iter = iter->GetNext();
-    return pRet;
+    if (iter == m_vExcepNames.end())
+        return 0;
+    return *iter++;
 }
 
 /** serializes this object
- *	\param pFile the file to serialize from/to
+ *    \param pFile the file to serialize from/to
  */
 void CFEExceptionAttribute::Serialize(CFile * pFile)
 {
     if (pFile->IsStoring())
     {
         pFile->PrintIndent("<attribute>exceptions(");
-        VectorElement *pIter = GetFirstExceptionName();
+        vector<CFEIdentifier*>::iterator iter = GetFirstExceptionName();
         CFEIdentifier *pExc;
-        while ((pExc = GetNextExceptionName(pIter)) != 0)
+        bool bFirst = true;
+        while ((pExc = GetNextExceptionName(iter)) != 0)
         {
-            pFile->Print("%s", (const char *) (pExc->GetName()));
-            if (pIter)
-                if (pIter->GetElement())
-                    pFile->Print(", ");
+            if (!bFirst)
+            {
+                *pFile << ", ";
+                bFirst = false;
+            }
+            pFile->Print("%s", pExc->GetName().c_str());
         }
         pFile->Print(")</attribute>\n");
     }

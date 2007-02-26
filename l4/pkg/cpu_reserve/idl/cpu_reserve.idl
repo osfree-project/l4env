@@ -1,0 +1,50 @@
+import <l4/sys/types.h>
+import <l4/dm_mem/dm_mem.h>
+
+interface l4cpu_reserve{
+    int add([in] l4_threadid_t thread,
+	    [in, string, max_is(50)] char *name,
+	    [in] int prio,
+	    [in] int period,
+	    [in,out] int *wcet,
+	    [in] int deadline,
+	    [out] int*id);
+    /* New delayed preemption
+     *
+     * \param thread	thread that can do delayed preemption
+     * \param id	timeslice id, for determining the start prio
+     * \oaram delay	max. preemption. Out: rounded according to kernel supp.
+     */
+    int delayed_preempt([in] l4_threadid_t thread,
+			[in] int id,	/* for determining the start prio */
+			[in] int prio,
+			[in, out] int *delay);
+    int change([in] l4_threadid_t thread,
+	       [in] int id,
+	       [in] int new_prio,
+	       [in,out] int *new_wcet,
+	       [in] int new_deadline);
+    int delete_thread(l4_threadid_t task);
+    int delete_task(l4_threadid_t task);
+    int begin_strictly_periodic([in] l4_threadid_t thread,
+				[in] l4_kernel_clock_t clock);
+    int begin_minimal_periodic([in] l4_threadid_t thread,
+			       [in] l4_kernel_clock_t clock);
+    int end_periodic([in] l4_threadid_t thread);
+    int time_demand([in] l4_threadid_t thread,
+		    [in] int id);
+    int watch([in] l4_threadid_t thread,
+	      [out] l4dm_dataspace_t *ds,
+	      [out] l4_threadid_t *preempter);
+
+    int scheds_count();
+    int scheds_get([in] int idx,
+		   [out, string, max_is(50)] char**name,
+		   [out] l4_threadid_t *thread,
+		   [out] l4_threadid_t *creator,
+		   [out] int *id,
+		   [out] int *prio,
+		   [out] int *period,
+		   [out] int *wcet,
+		   [out] int *deadline);
+};

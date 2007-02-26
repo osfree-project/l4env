@@ -3,8 +3,8 @@
 
 extern void l4_spin(int x,int y);
 extern void l4_spin_vga(int x,int y);
-extern void l4_spin_n_text(int x, int y, int len, char*s);
-extern void l4_spin_n_text_vga(int x, int y, int len, char*s);
+extern void l4_spin_n_text(int x, int y, int len, const char*s);
+extern void l4_spin_n_text_vga(int x, int y, int len, const char*s);
 
 /****************************************************************************
 *                                                                           *

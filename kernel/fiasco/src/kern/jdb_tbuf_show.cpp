@@ -3,7 +3,7 @@ IMPLEMENTATION:
 #include <cstdio>
 #include <cstring>
 
-#include "alloca.h"
+#include "config.h"
 #include "cpu.h"
 #include "jdb.h"
 #include "jdb_input.h"
@@ -12,58 +12,96 @@ IMPLEMENTATION:
 #include "jdb_symbol.h"
 #include "jdb_tbuf.h"
 #include "jdb_tbuf_output.h"
+#include "kern_cnt.h"
 #include "kernel_console.h"
 #include "keycodes.h"
 #include "perf_cnt.h"
 #include "static_init.h"
 #include "thread.h"
-#include "threadid.h"
 
 class Jdb_tbuf_show : public Jdb_module
 {
-  static Mword show_tb_nr;
-  static Mword show_tb_refy;
-  static Mword show_tb_absy;
+  static char  _search_str[40];
+  static char  _filter_str[40];
+  static char  _buffer_str[80];
+  static Mword _status_type;
+  static Mword _absy;
+  static Mword _nr_cur;
+  static Mword _nr_ref;
+  static Mword _nr_pos[10];
 
   enum
-    {
-      INDEX_MODE      = 0,
-      DELTA_TSC_MODE  = 1,
-      REF_TSC_MODE    = 2,
-      START_TSC_MODE  = 3,
-      DELTA_PMC1_MODE = 4,
-      DELTA_PMC2_MODE = 5,
-      REF_PMC1_MODE   = 6,
-      REF_PMC2_MODE   = 7,
-    };
+  {
+    Index_mode        = 0, // number of event
+    Tsc_delta_mode    = 1, // tsc ticks starting from last event
+    Tsc_ref_mode      = 2, // tsc ticks starting from reference event
+    Tsc_start_mode    = 3, // tsc ticks starting from 0
+    Kclock_ref_mode   = 4, // kernel clock units (us) since reference event
+    Kclock_start_mode = 5, // kernel clock units (us) since start of system
+    Pmc1_delta_mode   = 6, // ticks of ctr 1 starting from last event
+    Pmc2_delta_mode   = 7, // ticks of ctr 2 starting from last event
+    Pmc1_ref_mode     = 8, // ticks of ctr 1 starting from reference event
+    Pmc2_ref_mode     = 9, // ticks of ctr 2 starting from reference event
+  };
 
   enum
-    {
-      SHOW_TRACEBUFFER_START = 3,
-    };
+  {
+    Tbuf_start_line   = 3,
+  };
+
+  enum
+  {
+    Status_ok         = 0,
+    Status_redraw     = 1,
+    Status_error      = 2,
+  };
+
+  enum
+  {
+    Nil               = (Mword)-1,
+  };
 };
 
-Mword Jdb_tbuf_show::show_tb_nr;
-Mword Jdb_tbuf_show::show_tb_refy;
-Mword Jdb_tbuf_show::show_tb_absy;
+char  Jdb_tbuf_show::_search_str[40];
+char  Jdb_tbuf_show::_filter_str[40];
+char  Jdb_tbuf_show::_buffer_str[80];
+Mword Jdb_tbuf_show::_status_type;
+Mword Jdb_tbuf_show::_absy;
+Mword Jdb_tbuf_show::_nr_cur;
+Mword Jdb_tbuf_show::_nr_ref;
+Mword Jdb_tbuf_show::_nr_pos[10] = { Nil, Nil, Nil, Nil, Nil,
+				     Nil, Nil, Nil, Nil, Nil };
 
 // available from the jdb_disasm module
 int jdb_disasm_addr_task (Address addr, Task_num task, int level)
   __attribute__((weak));
 
-static int
-Jdb_tbuf_show::get_string(char *string, int size)
+// available from the jdb_regex module
+int jdb_regex_init(const char *searchstr)
+  __attribute__((weak));
+
+int jdb_regex_find(const char *buffer, const char **beg, const char **end)
+  __attribute__((weak));
+
+static void
+Jdb_tbuf_show::error(const char * const msg)
 {
-  for (int pos=strlen(string); ; )
+  Jdb::printf_statline("tbuf", 0, "\033[31;1m=== %s! ===\033[m", msg);
+  _status_type = Status_error;
+}
+
+static int
+Jdb_tbuf_show::get_string(char *string, unsigned size)
+{
+  for (unsigned pos=strlen(string); ; )
     {
-      string[pos] = 0;
-      switch(int c=getchar())
+      switch(int c=Jdb_core::getchar())
 	{
 	case KEY_BACKSPACE:
 	  if (pos)
 	    {
 	      putstr("\b \b");
-	      pos--;
+	      string[--pos] = '\0';
 	    }
 	  break;
 	case KEY_RETURN:
@@ -72,12 +110,13 @@ Jdb_tbuf_show::get_string(char *string, int size)
 	  Jdb::abort_command();
 	  return 0;
 	default:
-	  if (c > ' ')
+	  if (c >= ' ')
     	    {
 	      if (pos < size-1)
 		{
 		  putchar(c);
 		  string[pos++] = c;
+		  string[pos  ] = '\0';
 		}
 	    }
 	}
@@ -88,46 +127,39 @@ static void
 Jdb_tbuf_show::show_perf_event_unit_mask_entry(Mword nr, Mword idx,
 					       Mword unit_mask, int exclusive)
 {
-  char *line = (char*)alloca(80);
   const char *desc;
-  Mword value, sz_desc;
+  Mword value;
 
   Perf_cnt::get_unit_mask_entry(nr, idx, &value, &desc);
   if (!desc || !*desc)
     desc = "(no description?)";
-  if ((sz_desc = strlen(desc)) > 59)
-    sz_desc = 59;
-  sprintf(line, "  %c %02x ",
+  printf("  %c %02lx %.59s\033[K",
       exclusive ? unit_mask == value ? '+' : ' '
-                : unit_mask  & value ? '+' : ' ', 
-      value);
-  memcpy(line+7, desc, sz_desc);
-  line[7+sz_desc] = '\0';
-  printf("%s\033[K", line);
+                : unit_mask  & value ? '+' : ' ',
+      value, desc);
 }
 
 static void
 Jdb_tbuf_show::show_perf_event(Mword nr)
 {
-  char *line = (char*)alloca(84);
   const char *name, *desc;
-  Mword evntsel, sz_name, sz_desc;
+  unsigned evntsel;
+  Mword add_kcnt = Config::Jdb_accounting ? Kern_cnt_max : 0;
 
-  Perf_cnt::get_perf_event(nr, &evntsel, &name, &desc);
+  if (nr < add_kcnt)
+    {
+      const char * const s = Kern_cnt::get_str(nr);
+      printf("   %-26.26s %.49s\033[K", s, "(kernel event counter)");
+      return;
+    }
+
+  Perf_cnt::get_perf_event(nr - add_kcnt, &evntsel, &name, &desc);
   if (!name || !*name)
     name = "(no name?)";
   if (!desc || !*desc)
     desc = "(no description)";
-  if ((sz_name = strlen(name)) > 26)
-    sz_name = 26;
-  if ((sz_desc = strlen(desc)) > 49)
-    sz_desc = 49;
-  sprintf(line, "%02x ", evntsel);
-  memcpy(line+3, name, sz_name);
-  memset(line+3+sz_name, ' ', 27-sz_name);
-  memcpy(line+30, desc, sz_desc);
-  line[30+sz_desc] = '\0';
-  printf("%s\033[K", line);
+
+  printf("%02x %-26.26s %.49s\033[K", evntsel, name, desc);
 }
 
 static Mword
@@ -137,6 +169,7 @@ Jdb_tbuf_show::select_perf_event_unit_mask(Mword nr, Mword unit_mask)
   Mword addy     = 0;
   Mword max_absy = 0;
   Mword lines    = 10;
+  Mword cols	 = 8;
 
   Mword default_value, nvalues, value;
   Perf_cnt::Unit_mask_type type;
@@ -160,11 +193,11 @@ Jdb_tbuf_show::select_perf_event_unit_mask(Mword nr, Mword unit_mask)
   if (nvalues < lines)
     lines = nvalues;
 
-  Jdb::printf_statline("P?%72s", "<Space>=set mask <CR>=done");
+  Jdb::printf_statline("tbuf", "<Space>=set mask <CR>=done", "P?");
 
-  Jdb::cursor(SHOW_TRACEBUFFER_START, 1);
+  Jdb::cursor(Tbuf_start_line, 1);
   putstr("\033[32m");
-  show_perf_event(nr);
+  show_perf_event(nr + (Config::Jdb_accounting ? Kern_cnt_max : 0));
   printf("\033[m\033[K\n"
 	 "\033[K\n"
 	 "  \033[1;32mSelect Event Mask (%s):\033[m\033[K\n"
@@ -174,13 +207,13 @@ Jdb_tbuf_show::select_perf_event_unit_mask(Mword nr, Mword unit_mask)
     {
       Mword i;
 
-      Jdb::cursor(SHOW_TRACEBUFFER_START+4, 1);
+      Jdb::cursor(Tbuf_start_line+4, 1);
       for (i=0; i<lines; i++)
 	{
 	  show_perf_event_unit_mask_entry(nr, i, unit_mask, exclusive);
 	  putchar('\n');
 	}
-      for (; i<Jdb_screen::height()-SHOW_TRACEBUFFER_START-5; i++)
+      for (; i<Jdb_screen::height()-Tbuf_start_line-5; i++)
 	puts("\033[K");
 
       for (bool redraw=false; !redraw; )
@@ -189,36 +222,37 @@ Jdb_tbuf_show::select_perf_event_unit_mask(Mword nr, Mword unit_mask)
 	  const char *dummy;
 	  Mword value;
 
-	  Jdb::cursor(addy+SHOW_TRACEBUFFER_START+4, 1);
-	  putstr("\033[1;33m");
+	  Jdb::cursor(addy+Tbuf_start_line+4, 1);
+	  putstr(Jdb::esc_emph);
 	  show_perf_event_unit_mask_entry(nr, absy+addy, unit_mask, exclusive);
 	  putstr("\033[m");
-	  Jdb::cursor(addy+SHOW_TRACEBUFFER_START+4, 1);
-	  c = getchar();
+	  Jdb::cursor(addy+Tbuf_start_line+4, 1);
+	  c = Jdb_core::getchar();
 	  show_perf_event_unit_mask_entry(nr, absy+addy, unit_mask, exclusive);
 	  Perf_cnt::get_unit_mask_entry(nr, absy+addy, &value, &dummy);
-	  if (!Jdb::std_cursor_key(c, lines, max_absy,
-				   &absy, &addy, 0, &redraw))
-	    {
-	      switch (c)
+
+	  if (Jdb::std_cursor_key(c, cols, lines, max_absy,
+				  &absy, &addy, 0, &redraw))
+	    continue;
+
+	  switch (c)
+    	    {
+	    case ' ':
+	      if (exclusive)
 		{
-		case ' ':
-		  if (exclusive)
-		    {
-		      unit_mask = value;
-		      redraw = true;
-		    }
-		  else
-		    unit_mask ^= value;
-		  break;
-		case KEY_RETURN:
-	      	  return unit_mask;
-		case KEY_ESC:
-		  return (Mword)-1;
-		default:
-		  if (Jdb::is_toplevel_cmd(c)) 
-		    return (Mword)-1;
+		  unit_mask = value;
+		  redraw = true;
 		}
+	      else
+		unit_mask ^= value;
+	      break;
+	    case KEY_RETURN:
+	      return unit_mask;
+	    case KEY_ESC:
+	      return Nil;
+	    default:
+	      if (Jdb::is_toplevel_cmd(c)) 
+		return Nil;
 	    }
 	}
     }
@@ -229,27 +263,39 @@ Jdb_tbuf_show::select_perf_event(Mword event)
 {
   Mword absy     = 0;
   Mword addy     = 0;
-  Mword nevents  = Perf_cnt::get_max_perf_event();
-  Mword lines    = (nevents < 19) ? nevents : 19;
+  Mword add_kcnt = Config::Jdb_accounting ? Kern_cnt_max : 0;
+  Mword nevents  = Perf_cnt::get_max_perf_event() + add_kcnt;
+  Mword lines    = (nevents < Jdb_screen::height()-6) 
+			    ? nevents 
+			    : Jdb_screen::height()-6;
+  Mword cols	 = 8;
   Mword max_absy = nevents-lines;
 
   if (nevents == 0)
     // libperfctr not linked
-    return (Mword)-1;
+    return Nil;
 
-  Mword evntsel, unit_mask;
+  unsigned evntsel;
+  Mword unit_mask;
 
-  Jdb::printf_statline("P?%72s", "<CR>=select");
+  Jdb::printf_statline("tbuf", "<CR>=select", "P?");
 
-  Jdb::cursor(SHOW_TRACEBUFFER_START, 1);
-  puts("\033[1;32mSelect performance counter\033[m\033[K\n"
-       "\033[K");
+  Jdb::cursor(Tbuf_start_line, 1);
+  printf("%sSelect Performance Counter\033[m\033[K\n\033[K", Jdb::esc_emph2);
 
-  Perf_cnt::split_event(event, &evntsel, &unit_mask);
-  addy = Perf_cnt::lookup_event(evntsel);
-  if (addy == (Mword)-1)
-    addy = 0;
-  else if (addy > lines-1)
+  if (event & 0x80000000)
+    addy = event & 0xff;
+  else
+    {
+      Perf_cnt::split_event(event, &evntsel, &unit_mask);
+      addy = Perf_cnt::lookup_event(evntsel);
+      if (addy == Nil)
+	addy = 0;
+      else
+	addy += add_kcnt;
+    }
+
+  if (addy > lines-1)
     {
       absy += (addy-lines+1);
       addy = lines-1;
@@ -259,536 +305,667 @@ Jdb_tbuf_show::select_perf_event(Mword event)
     {
       Mword i;
 
-      Jdb::cursor(SHOW_TRACEBUFFER_START+2, 1);
+      Jdb::cursor(Tbuf_start_line+2, 1);
       for (i=0; i<lines; i++)
 	{
 	  show_perf_event(absy+i);
 	  putchar('\n');
 	}
-      for (; i<Jdb_screen::height()-SHOW_TRACEBUFFER_START-6; i++)
+      for (; i<Jdb_screen::height()-Tbuf_start_line-2; i++)
 	puts("\033[K");
 
       for (bool redraw=false; !redraw; )
 	{
 	  const char *dummy;
 
-	  Jdb::cursor(addy+SHOW_TRACEBUFFER_START+2, 1);
-	  putstr("\033[1;33m");
+	  Jdb::cursor(addy+Tbuf_start_line+2, 1);
+	  putstr(Jdb::esc_emph);
 	  show_perf_event(absy+addy);
 	  putstr("\033[m");
-	  Jdb::cursor(addy+SHOW_TRACEBUFFER_START+2, 1);
-	  int c = getchar();
+	  Jdb::cursor(addy+Tbuf_start_line+2, 1);
+	  int c = Jdb_core::getchar();
 	  show_perf_event(absy+addy);
-	  if (!Jdb::std_cursor_key(c, lines, max_absy, 
-				   &absy, &addy, 0, &redraw))
-	    {
-	      switch (c)
+	  if (Jdb::std_cursor_key(c, cols, lines, max_absy, 
+				  &absy, &addy, 0, &redraw))
+	    continue;
+
+	  switch (c)
+    	    {
+	    case KEY_RETURN:
+	      absy += addy;
+	      if (absy < add_kcnt)
+		return absy | 0x80000000;
+
+	      absy -= add_kcnt;
+	      Perf_cnt::get_perf_event(absy, &evntsel, &dummy, &dummy);
+	      unit_mask = select_perf_event_unit_mask(absy, unit_mask);
+	      if (unit_mask != Nil)
 		{
-		case KEY_RETURN:
-		  Perf_cnt::get_perf_event(absy+addy, &evntsel, &dummy, &dummy);
-		  unit_mask = select_perf_event_unit_mask(absy+addy, unit_mask);
-		  if (unit_mask != (Mword)-1)
-		    {
-		      Perf_cnt::combine_event(evntsel, unit_mask, &event);
-		      return event;
-		    }
-		  // else fall through
-		case KEY_ESC:
-		  return (Mword)-1;
-		default:
-		  if (Jdb::is_toplevel_cmd(c)) 
-		    return (Mword)-1;
+		  Perf_cnt::combine_event(evntsel, unit_mask, &event);
+		  return event;
 		}
+	      // else fall through
+	    case KEY_ESC:
+	      return Nil;
+	    default:
+	      if (Jdb::is_toplevel_cmd(c)) 
+		return Nil;
 	    }
 	}
     }
 }
 
 static void
-Jdb_tbuf_show::show_events(Mword start, Mword ref, Mword count, 
-			   char mode, char time_mode, int long_output)
+Jdb_tbuf_show::show_events(Mword n, Mword ref, Mword count, Unsigned8 mode,
+			   Unsigned8 time_mode, int long_output)
 {
   Unsigned64 ref_tsc;
-  Unsigned32 ref_pmc1, ref_pmc2;
-  Mword dummy;
+  Unsigned32 ref_kclock, ref_pmc1, ref_pmc2;
+  Mword dummy, i;
 
-  Jdb_tbuf::event(ref, &dummy, &ref_tsc, &ref_pmc1, &ref_pmc2);
+  Jdb_tbuf::event(ref, &dummy, &ref_kclock, &ref_tsc, &ref_pmc1, &ref_pmc2);
 
-  for (Mword n=start; n<start+count; n++)
+  for (i=0; i<count; i++)
     {
-      static char buffer[160];
       Mword number;
       Signed64 dtsc;
       Signed32 dpmc;
       Unsigned64 utsc;
-      Unsigned32 upmc1, upmc2;
+      Unsigned32 kclock, upmc1, upmc2;
 
       Kconsole::console()->getchar_chance();
 
-      if (!Jdb_tbuf::event(n, &number, &utsc, &upmc1, &upmc2))
+      if (!Jdb_tbuf::event(n, &number, &kclock, &utsc, &upmc1, &upmc2))
 	break;
 
       if (long_output)
 	{
-	  sprintf(buffer, "%10u.  ", number);
-	  char *p = buffer + 13;
-	  int maxlen = sizeof(buffer)-13, len;
-	  
-	  Jdb_tbuf_output::print_entry(n, p, 72);
-	  p += 71;
-	  *p++ = ' ';	// print_entry terminates with '\0'
-	  maxlen -= 72;
+	  char s_tsc_dc[13], s_tsc_ds[15], s_tsc_sc[13], s_tsc_ss[15], s[3];
+
+	  Jdb_tbuf_output::print_entry(n, _buffer_str, 
+				       72 < sizeof(_buffer_str) ? 72 : sizeof(_buffer_str));
 
 	  if (!Jdb_tbuf::diff_tsc(n, &dtsc))
 	    dtsc = 0;
 	  
-	  len = Jdb::write_ll_dec(dtsc, p, 12, false);
-	  p += len;
-	  *p++ = ' ';
-	  *p++ = '(';
-	  maxlen -= len+2;
-	  len = Jdb::write_tsc_s(dtsc, p, 15, false);
-	  p += len;
-	  *p++ = ')';
-	  *p++ = ' ';
-	  *p++ = ' ';
-	  maxlen -= len+3;
-	  len = snprintf(p, maxlen, "%16lld", utsc);
-	  p += len;
-	  *p++ = ' ';
-	  *p++ = '(';
-	  maxlen -= len+2;
-	  len = Jdb::write_tsc_s(utsc, p, 15, false);
-	  p += len;
-	  *p++ = ')';
-	  *p++ = '\n';
-	  maxlen -= len+2;
+	  Jdb::write_ll_dec(dtsc, s_tsc_dc, sizeof(s_tsc_dc), false);
+	  Jdb::write_tsc_s (dtsc, s_tsc_ds, sizeof(s_tsc_ds), false);
+	  Jdb::write_ll_dec(utsc, s_tsc_sc, sizeof(s_tsc_sc), false);
+	  Jdb::write_tsc_s (utsc, s_tsc_ss, sizeof(s_tsc_ss), false);
 
-	  putstr(buffer);
+	  strcpy(s, "  ");
+	  if (n == ref)
+	    {
+	      s[0] = 'R';
+	      s[1] = ' ';
+	    }
+	  else
+	    {
+	      for (int i=0; i<10; i++)
+		if (number == _nr_pos[i])
+		  {
+		    s[0] = 'M';
+		    s[1] = i+'0';
+		    break;
+		  }
+	    }
+	  printf("%-3s%10lu.  %72.72s %13.13s (%14.14s)  %13.13s (%14.14s)\n", 
+	      s, number, _buffer_str, s_tsc_dc, s_tsc_ds, s_tsc_sc, s_tsc_ss);
 	}
       else
 	{
-	  int maxlen = 12;
-	  char *p = buffer + 80-maxlen;
-	  int len = 0;
+	  char s[13];
+	  const char maxlen = Jdb_screen::width()+1 < sizeof(_buffer_str)
+	                      ? Jdb_screen::width()+1 : sizeof(_buffer_str);
 
-	  if (n == ref)
-	    putstr(Jdb::esc_emph2);
-
-	  Jdb_tbuf_output::print_entry(n, buffer, 80-maxlen);
-	  p[-1] = ' ';	// print_entry terminates with '\0'
-      
+	  Jdb_tbuf_output::print_entry(n, _buffer_str, maxlen);
 	  switch (mode)
 	    {
-	    case INDEX_MODE:
-	      len = snprintf(p, maxlen, "%11u", number);
+	    case Index_mode:
+	      snprintf(s, sizeof(s), "%12lu", number);
 	      break;
-	    case DELTA_TSC_MODE:
+	    case Tsc_delta_mode:
 	      if (!Jdb_tbuf::diff_tsc(n, &dtsc))
 		dtsc = 0;
 	      switch (time_mode)
 		{
-		case 0: len = Jdb::write_ll_hex(dtsc, p, maxlen, false); break;
-		case 1: len = Jdb::write_tsc(dtsc, p, maxlen, false); break;
-		case 2: len = Jdb::write_ll_dec(dtsc, p, maxlen, false); break;
+		case 0: Jdb::write_ll_hex(dtsc, s, sizeof(s), false); break;
+		case 1: Jdb::write_tsc   (dtsc, s, sizeof(s), false); break;
+		case 2: Jdb::write_ll_dec(dtsc, s, sizeof(s), false); break;
 		}
 	      break;
-	    case REF_TSC_MODE:
+	    case Tsc_ref_mode:
 	      dtsc = (n == ref) ? 0 : utsc - ref_tsc;
 	      switch (time_mode)
 		{
-		case 0: len = Jdb::write_ll_hex(dtsc, p, maxlen, true); break;
-		case 1: len = Jdb::write_tsc(dtsc, p, maxlen, true); break;
-		case 2: len = Jdb::write_ll_dec(dtsc, p, maxlen, true); break;
+		case 0: Jdb::write_ll_hex(dtsc, s, sizeof(s), true); break;
+		case 1: Jdb::write_tsc   (dtsc, s, sizeof(s), true); break;
+		case 2: Jdb::write_ll_dec(dtsc, s, sizeof(s), true); break;
 		}
 	      break;
-	    case START_TSC_MODE:
+	    case Tsc_start_mode:
 	      dtsc = utsc;
 	      switch (time_mode)
 		{
-		case 0: len = Jdb::write_ll_hex(dtsc, p, maxlen, true); break;
-		case 1: len = Jdb::write_tsc(dtsc, p, maxlen, false); break;
-		case 2: len = Jdb::write_ll_dec(dtsc, p, maxlen, true); break;
+		case 0: Jdb::write_ll_hex(dtsc, s, sizeof(s), true); break;
+		case 1: Jdb::write_tsc   (dtsc, s, sizeof(s), false); break;
+		case 2: Jdb::write_ll_dec(dtsc, s, sizeof(s), true); break;
 		}
 	      break;
-	    case DELTA_PMC1_MODE:
-	    case DELTA_PMC2_MODE:
-	      if (!Jdb_tbuf::diff_pmc(n, (mode-DELTA_PMC1_MODE), &dpmc))
+	    case Kclock_ref_mode:
+	      if (kclock == ref_kclock)
+		snprintf(s, sizeof(s), "%12u", 0);
+	      else
+		{
+		  if (time_mode != 1)
+		    Jdb::write_ll_hex((Unsigned64)kclock-ref_kclock,
+			              s, sizeof(s), true);
+		  else
+  		    snprintf(s, sizeof(s), "%+12d", kclock-ref_kclock);
+		}
+	      break;
+	    case Kclock_start_mode:
+	      snprintf(s, sizeof(s), time_mode != 1 ? "%012x" : "%12u", 
+		       kclock);
+	      break;
+	    case Pmc1_delta_mode:
+	    case Pmc2_delta_mode:
+	      if (!Jdb_tbuf::diff_pmc(n, (mode-Pmc1_delta_mode), &dpmc))
 		dpmc = 0;
-	      len = Jdb::write_ll_dec((Signed64)dpmc, p, maxlen, false);
+	      Jdb::write_ll_dec((Signed64)dpmc, s, sizeof(s), false);
 	      break;
-	    case REF_PMC1_MODE:
+	    case Pmc1_ref_mode:
 	      dpmc = (n == ref) ? 0 : upmc1 - ref_pmc1;
-	      len = Jdb::write_ll_dec((Signed64)dpmc, p, maxlen, true);
+	      Jdb::write_ll_dec((Signed64)dpmc, s, sizeof(s), true);
 	      break;
-	    case REF_PMC2_MODE:
+	    case Pmc2_ref_mode:
 	      dpmc = (n == ref) ? 0 : upmc2 - ref_pmc2;
-	      len = Jdb::write_ll_dec((Signed64)dpmc, p, maxlen, true);
+	      Jdb::write_ll_dec((Signed64)dpmc, s, sizeof(s), true);
 	      break;
 	    }
-	  
-	  for (int i=len; i<maxlen; i++)
-	    p[i] = ' ';
-	  p[maxlen] = '\0';
-	  putstr(buffer);
+
+	  const char *c = "";
 	  if (n == ref)
-	    putstr("\033[m");
-	  if (count != 1)
-	    putchar('\n');
+	    c = Jdb::esc_emph2;
+	  else
+	    {
+	      for (int i=0; i<10; i++)
+		if (number == _nr_pos[i])
+		  {
+		    c = Jdb::esc_mark;
+		    break;
+		  }
+	    }
+	  printf("%s%-*.*s %12s\033[m%s",
+    	         c, Jdb_screen::width()-13, (int)Jdb_screen::width()-13,
+		 _buffer_str, s, count != 1 ? "\n" : "");
 	}
+       n++;
     }
 }
 
 // search in tracebuffer
 static Mword
-Jdb_tbuf_show::search(Mword start, const char *str, Unsigned8 direction)
+Jdb_tbuf_show::search(Mword start, Mword entries, const char *str, 
+		      Unsigned8 direction)
 {
-  int first = 1;
+  Mword found = Nil;
 
-  if (!Jdb_tbuf::entries())
-    return (Mword)-1;
+  if (!entries)
+    return found;
 
-  if (direction==1)
-    start--;
-  else
-    start++;
+  if (jdb_regex_init != 0 && !jdb_regex_init(str))
+    {
+      error("Error in regular expression");
+      return found;
+    }
 
-  for (Mword n=start; ; (direction==1) ? n-- : n++)
+  for (Mword n=direction==1 ? start-1 : start+1; ; (direction==1) ? n-- : n++)
     {
       static char buffer[120];
 
-      if (first)
-	first = 0;
-      else if (n == start)
+      // don't cycle through entries more than once 
+      // (should not happen due to the following check)
+      if (n == start)
 	break;
+      // don't wrap around
+      if (!Jdb_tbuf::event_valid(n))
+	{
+	  error(direction ? "Begin of tracebuffer reached"
+			  : "End of tracebuffer reached");
+	  return found;
+	}
 
       if (!Jdb_tbuf::event_valid(n))
-	n = (direction==1) ? Jdb_tbuf::entries()-1 : 0;
+	n = (direction==1) ? entries-1 : 0;
 
       Jdb_tbuf_output::print_entry(n, buffer, sizeof(buffer));
-      if (strstr(buffer, str))
-	return n;
+
+      // progress bar
+      if ((n & 0x7f) == 0)
+	{
+	  static int progress;
+	  Jdb::cursor(Jdb_screen::height(), 79);
+	  putchar("|/-\\"[progress++]);
+	  progress &= 3;
+	}
+
+      if (jdb_regex_find != 0 && jdb_regex_find(buffer, 0, 0))
+	{
+     	  found = n;
+	  break;
+	}
+      else if (strstr(buffer, str))
+      	{
+	  found = n;
+	  break;
+	}
     }
 
-  return (Mword)-1;
+  // restore screen
+  Jdb::cursor(Jdb_screen::height(), 79);
+  putchar('t');
+
+  return found;
 }
 
-static int
+static void
 Jdb_tbuf_show::show()
 {
-  static char mode = INDEX_MODE;
-  static char time_mode = 1;
-  static char search_str[40];
+  static Unsigned8 mode      = Index_mode;
+  static Unsigned8 time_mode = 1;
   static Unsigned8 direction = 0;
+  Mword  entries;
 
-  int have_tsc = Cpu::features() & FEAT_TSC;
-  Mword fst_nr = 0;		// nr of first event seen on top of screen
-  Mword absy  = show_tb_absy;	// idx or first event seen on top of screen
-  Mword refy  = show_tb_refy;	// idx of reference event
-  Mword addy  = 0;		// cursor position starting from top of screen
+  Jdb_tbuf_output::set_filter(_filter_str, &entries);
+  Jdb::clear_screen();
+
+restart:
+  Mword refy;                    // idx of reference event
+  Mword posy[10];                // idx of mark{0..9}
+  Mword addy;			 // cursor position starting from top of screen
   Mword lines = Jdb_screen::height()-4;
-  Mword entries = Jdb_tbuf::entries();
+  Mword cols = 8;
+  Mword n;
+  Tb_entry *e;
 
-  if (Config::tbuf_entries < lines)
-    lines = Config::tbuf_entries;
-
+  if (Jdb_tbuf::max_entries() < lines)
+    lines = Jdb_tbuf::max_entries();
   if (entries < lines)
     lines = entries;
   if (lines < 1)
     lines = 1;
-  if (refy > entries-1)
-    refy = entries-1;
 
   Mword max_absy = entries > lines ? entries - lines : 0;
 
-  if (entries)
-    {
-      Jdb_tbuf::event(absy, &fst_nr, 0, 0, 0);
-      addy = fst_nr - show_tb_nr - 1;
-      if ((show_tb_nr == (Mword)-1) || (addy > Jdb_screen::height()-4))
-	addy = 0;
-    }
+  // Search reference element. If not found, use last entry.
+  if ((refy = Jdb_tbuf::search_to_idx(_nr_ref)) >= (Mword)-2)
+    if (entries)
+      refy = entries-1;
+    else
+      refy = Nil;
 
-  Jdb::fancy_clear_screen();
+  // Search mark {0..9}. If not found, set Nil.
+  for (n=0; n<10; n++)
+    posy[n] = Jdb_tbuf::search_to_idx(_nr_pos[n]);
+
+  // Search current position. If beyond buffer, goto first entry.
+  if ((addy = Jdb_tbuf::search_to_idx(_nr_cur)))
+    addy -= _absy;
+  else
+    addy = _absy = 0;
+  if (addy >= lines-1)
+    addy = _absy = 0;
 
   for (;;)
     {
-      if (entries)
-	Jdb_tbuf::event(absy, &fst_nr, 0, 0, 0);
-
-      Mword count, perf_event[2], perf_user[2], perf_kern[2], perf_edge[2];
-      int have_perf=0;
+      Mword count, perf_event[2];
+      Mword perf_user[2] = { 0, 0 };
+      Mword perf_kern[2] = { 0, 0 };
+      Mword perf_edge[2] = { 0, 0 };
       const char *perf_mode[2], *perf_name[2];
 
       for (Mword i=0; i<2; i++)
-	have_perf |= Perf_cnt::perf_mode(i, 
-					 &perf_mode[i],  &perf_name[i],
-				         &perf_event[i], &perf_user[i], 
-					 &perf_kern[i],  &perf_edge[i]);
-
-      Jdb::cursor();
-      printf("%3u%% of %-6u",
-    	      entries*100/Config::tbuf_entries, Config::tbuf_entries);
+	if (Kern_cnt::mode (i, &perf_mode[i], &perf_name[i], &perf_event[i]) ||
+	    Perf_cnt::mode (i, &perf_mode[i], &perf_name[i], &perf_event[i],
+			       &perf_user[i], &perf_kern[i], &perf_edge[i]))
+	  ;
 
       static const char * const mode_str[] =
-	{ "index", "tsc diff", "tsc rel", "tsc start",
-	  "pmc1 diff", "pmc2 diff", "pmc1 rel", "pmc2 rel" };
+	{ "index", "tsc diff", "tsc rel", "tsc start", "kclock rel",
+	  "kclock", "pmc1 diff", "pmc2 diff", "pmc1 rel", "pmc2 rel" };
 
-      if (have_perf)
+      const char *perf_type = Perf_cnt::perf_type();
+
+      Jdb::cursor();
+      printf("%3lu%% of %-6lu Perf:%-4s 1="L4_PTR_FMT
+	     "(%s%s\033[m%s%s%s\033[m)\033[K",
+  	  Jdb_tbuf::unfiltered_entries()*100/Jdb_tbuf::max_entries(), 
+	  Jdb_tbuf::max_entries(),
+  	  perf_type, perf_event[0], Jdb::esc_emph, perf_mode[0], 
+	  perf_name[0] && *perf_name[0] ? ":" : "",
+	  mode==Pmc1_delta_mode || mode==Pmc1_ref_mode ? Jdb::esc_emph : "",
+	  perf_name[0]);
+
+      Jdb::cursor(1, 71);
+      printf("%10s\n"
+             "%24s 2="L4_PTR_FMT"(%s%s\033[m%s%s%s\033[m)\033[K\n",
+	  mode_str[(int)mode], "",
+	  perf_event[1], Jdb::esc_emph, perf_mode[1],
+	  perf_name[1] && *perf_name[1] ? ":" : "", 
+	  mode==Pmc2_delta_mode || mode==Pmc2_ref_mode ? Jdb::esc_emph : "",
+	  perf_name[1]);
+      if (_filter_str[0])
 	{
-	  const char *perf_type = Perf_cnt::perf_type();
-
-     	  printf(" Perf:%-4s,1=%06x(%s%s\033[m:%s)\033[K", perf_type,
-	      perf_event[0], Jdb::esc_emph, perf_mode[0], perf_name[0]);
-	  Jdb::cursor(1, 70);
-      	  printf("%10s\n", mode_str[(int)mode]);
-	  printf("%24s 2=%06x(%s%s\033[m:%s)\033[K\n", "",
-	      perf_event[1], Jdb::esc_emph, perf_mode[1], perf_name[1]);
+	  Jdb::cursor(2, 1);
+	  printf("\033[31m%3lu%% filtered\033[m\n",
+	      entries*100/Jdb_tbuf::max_entries());
 	}
-      else
-	{
-	  printf(" (performance counters not available)\033[K");
-	  Jdb::cursor(1, 70);
-	  printf("%10s\n\033[K", mode_str[(int)mode]);
-	}
-
-      Jdb::cursor(3, 1);
-      for (Mword i=3; i<SHOW_TRACEBUFFER_START; i++)
+      for (Mword i=3; i<Tbuf_start_line; i++)
 	puts("\033[K");
-      
-      show_events(absy, refy, lines, mode, time_mode, 0);
 
-      for (Mword i=SHOW_TRACEBUFFER_START+lines; i<Jdb_screen::height(); i++)
+      show_events(_absy, refy, lines, mode, time_mode, 0);
+
+      for (Mword i=Tbuf_start_line+lines; i<Jdb_screen::height(); i++)
 	puts("\033[K");
+
+      _status_type = Status_redraw;
 
  status_line:
-      Jdb::printf_statline("T%73s",
-       "/=search c=clear n=next r=ref D=dump P=perf <Space>=mode <CR>=select");
-      
       for (bool redraw=false; !redraw;)
 	{
-	  Mword pair_event, pair_y;
+	  Tb_entry *pair_event = 0;
+	  Mword pair_y = 0;
 	  Smword c;
 	  Unsigned8 type;
 	  Unsigned8 d = 0; // default search direction is forward
-	  
-	  // search for paired ipc event
-	  pair_event = Jdb_tbuf::ipc_pair_event(absy+addy, &type);
-	  if (pair_event == (Mword)-1)
-	    // search for paired pagefault event
-	    pair_event = Jdb_tbuf::pf_pair_event(absy+addy, &type);
-	  if (pair_event > fst_nr || pair_event <= fst_nr-lines)
-	    pair_event = (Mword)-1;
-	  pair_y = fst_nr-pair_event;
-	  if (pair_event != (Mword)-1)
+
+	  if (_status_type == Status_redraw)
 	    {
-	      Jdb::cursor(pair_y+SHOW_TRACEBUFFER_START, 1);
-	      putstr(Jdb::esc_emph);
-	      switch (type)
-		{
-		case Jdb_tbuf::RESULT: putstr("+++>"); break;
-		case Jdb_tbuf::EVENT:  putstr("<+++"); break;
-		}
-	      putstr("\033[m");
+	      Jdb::printf_statline("tbuf", "/?nN=search sj=mark c=clear r=ref "
+				   "F=filter D=dump P=perf <CR>=select", "_");
+	      _status_type = Status_ok;
 	    }
-	  Jdb::cursor(addy+SHOW_TRACEBUFFER_START, 1);
+	  else if (_status_type == Status_error)
+	    _status_type = Status_redraw;
+
+	  if (!_filter_str[0])
+	    {
+	      // search for paired ipc event
+	      pair_event = Jdb_tbuf::ipc_pair_event(_absy+addy, &type);
+	      if (!pair_event)
+		// search for paired pagefault event
+		pair_event = Jdb_tbuf::pf_pair_event(_absy+addy, &type);
+	      if (pair_event)
+		{
+		  pair_y = Jdb_tbuf::idx(pair_event);
+		  if (pair_y < _absy || pair_y >= _absy+lines)
+		    pair_event = 0;
+		}
+	      if (pair_event)
+		{
+		  Jdb::cursor(pair_y-_absy+Tbuf_start_line, 1);
+		  putstr(Jdb::esc_emph);
+		  switch (type)
+		    {
+		    case Jdb_tbuf::Result: putstr("+++>"); break;
+		    case Jdb_tbuf::Event:  putstr("<+++"); break;
+		    }
+		  putstr("\033[m");
+		}
+	    }
+
+	  Jdb::cursor(addy+Tbuf_start_line, 1);
 	  putstr(Jdb::esc_emph);
-	  show_events(absy+addy, refy, 1, mode, time_mode, 0);
+	  show_events(_absy+addy, refy, 1, mode, time_mode, 0);
 	  putstr("\033[m");
-	  Jdb::cursor(addy+SHOW_TRACEBUFFER_START, 1);
-	  c=getchar();
-	  show_events(absy+addy, refy, 1, mode, time_mode, 0);
-	  if (pair_event != (Mword)-1)
+	  Jdb::cursor(addy+Tbuf_start_line, 1);
+	  c=Jdb_core::getchar();
+	  show_events(_absy+addy, refy, 1, mode, time_mode, 0);
+	  if (pair_event)
 	    {
-	      Jdb::cursor(pair_y+SHOW_TRACEBUFFER_START, 1);
-	      show_events(absy+pair_y, refy, 1, mode, time_mode, 0);
+	      Jdb::cursor(pair_y-_absy+Tbuf_start_line, 1);
+	      show_events(pair_y, refy, 1, mode, time_mode, 0);
 	    }
-	  if (!Jdb::std_cursor_key(c, lines, max_absy, 
-				   &absy, &addy, 0, &redraw))
+
+	  if (Jdb::std_cursor_key(c, cols, lines, max_absy, 
+				  &_absy, &addy, 0, &redraw))
+	    continue;
+
+	  switch (c)
 	    {
-	      switch (c)
-		{
-		case 'D':
-		  if (Kconsole::console()->gzip_available())
-		    {
-		      // dump to console
-		      Jdb::cursor(Jdb_screen::height(), 17);
-		      Jdb::clear_to_eol();
-		      printf("Count=");
-
-		      if (Jdb_input::get_mword(&count, 7, 10))
-			{
-			  if (count == 0)
-			    count = lines;
-			  Kconsole::console()->gzip_enable();
-			  show_events(absy, refy, count, mode, time_mode, 1);
-			  Kconsole::console()->gzip_disable();
-			}
-		    }
-		  break;
-		case 'P': // set performance counter
-		  if (have_perf)
-		    {
-		      Mword event, e, nr;
-		      int user, kern, edge;
-
-		      Jdb::printf_statline("P%73s", "1..2=select counter");
-		      Jdb::cursor(Jdb_screen::height(), Jdb::LOGO+1);
-		      for (;;)
-			{
-			  nr = getchar();
-			  if (nr == KEY_ESC)
-			    return false;
-			  if (nr >= '1' && nr <= '2')
-			    {
-			      nr -= '1';
-			      break;
-			    }
-			}
-
-		      event = perf_event[nr];
-		      user  = perf_user[nr];
-		      kern  = perf_kern[nr];
-		      edge  = perf_edge[nr];
-
-		      Jdb::printf_statline("P%c%72s", '1'+nr,
-		      "d=duration e=edge u=user k=kern +=both -=none ?=event");
-		      Jdb::cursor(Jdb_screen::height(), Jdb::LOGO+2);
-		      switch(c=getchar())
-			{
-			case '+': user =    kern = 1; break;
-			case '-': user =    kern = 0; break;
-			case 'u': user = 1; kern = 0; break;
-			case 'k': user = 0; kern = 1; break;
-			case 'd': edge = 0;           break;
-			case 'e': edge = 1;           break;
-			case '?':
-			case '_':
-			  if ((e = select_perf_event(event)) == (Mword)-1)
-			    {
-			      redraw = true;
-			      break;
-			    }
-			  event = e;
-			  redraw = true;
-			  break;
-			default:
-			  Jdb_input::get_mword(&event, 4, 16);
-			  break;
-			}
-		  
-		      Perf_cnt::setup_pmc(nr, event, user, kern, edge);
-		      redraw = true;
-		    }
-		  break;
-		case KEY_RETURN:
-		  if (jdb_disasm_addr_task != 0)
-		    {
-		      L4_uid tid;
-		      Mword eip;
-		      if (   Jdb_tbuf_output::thread_eip(absy+addy, &tid, &eip)
-			  && Threadid(&tid).lookup()->is_valid())
-			{
-			  if (!jdb_disasm_addr_task(eip, tid.task(), 1))
-			    goto return_false;
-			  redraw = true;
-			}
-		    }
-		  break;
-		case KEY_CURSOR_LEFT: // mode switch
-		  mode--;
-		  if (mode < 0)
-		    {
-		      if (!have_tsc)
-			mode = INDEX_MODE;
-		      else if (!have_perf)
-			mode = START_TSC_MODE;
-		      else
-			mode = REF_PMC2_MODE;
-		    }
-		  redraw = true;
-		  break;
-		case KEY_CURSOR_RIGHT: // mode switch
-		  mode++;
-		  if (   (!have_tsc  && (mode>INDEX_MODE))
-		      || (!have_perf && (mode>START_TSC_MODE))
-		      || (              (mode>REF_PMC2_MODE)))
-		    mode = INDEX_MODE;
-		  redraw = true;
-		  break;
-		case ' ': // mode switch
-		  if (mode != INDEX_MODE)
-		    {
-		      time_mode = (time_mode+1) % 3;
-		      redraw = true;
-		    }
-		  break;
-		case 'c': // clear tracebuffer
-		  Jdb_tbuf::clear_tbuf();
-		  Jdb::abort_command();
-		  show_tb_absy = 0;
-		  show_tb_refy = 0;
-		  show_tb_nr   = (Mword)-1;
-		  return true;
-		case'r': // set reference entry
-		  refy = absy + addy;
-		  redraw = true;
-		  break;
-		case '?': // search bachward
-		  d = 1;
-		  // fall through
-		case '/': // search forward
-		  direction = d;
-		  // search in tracebuffer events
-		  Jdb::printf_statline("Search=%s", search_str);
-		  Jdb::cursor(Jdb_screen::height(), 13+strlen(search_str));
-		  get_string(search_str, sizeof(search_str)); 
-		  // fall through
-		case 'n': // search next
-		    {
-		      Mword n = search(absy+addy, search_str, direction);
-		      if (n != (Mword)-1)
-			{
-			  // found
-			  if ((n < absy) || (n > absy+lines-1))
-			    {
-			      // screen crossed
-			      addy = 4;
-			      absy = n - addy;
-			      if (n < addy)
-				{
-				  addy = n;
-				  absy = 0;
-				}
-			      if (absy > max_absy)
-				{
-				  absy = max_absy;
-				  addy = n - absy;
-				}
-			      redraw = true;
-			      break;
-			    }
-			  else
-			    addy = n - absy;
-			}
-		    }
+	    case 'F': // filter view by regex
+	      Jdb::printf_statline("tbuf", 0, "Filter(%s)=%s",
+				   jdb_regex_init != 0 ? "regex" : "instr",
+			       	   _filter_str);
+	      _status_type = Status_redraw;
+	      Jdb::cursor(Jdb_screen::height(), 21+strlen(_filter_str));
+	      if (!get_string(_filter_str, sizeof(_filter_str)))
+		goto status_line;
+	      if (!Jdb_tbuf_output::set_filter(_filter_str, &entries))
+    		{
+		  error("Error in regular expression");
 		  goto status_line;
-		case KEY_ESC:
-		  Jdb::abort_command();
-		  goto return_false;
-		default:
-		  if (Jdb::is_toplevel_cmd(c)) 
+		}
+	      _absy   = 0;
+	      _nr_cur = Nil;
+	      goto restart;
+	    case 'D': // dump to console
+	      if (!Kconsole::console()->find_console(Console::GZIP))
+		break;
+    	      Jdb::cursor(Jdb_screen::height(), 10);
+	      Jdb::clear_to_eol();
+	      printf("Count=");
+	      if (Jdb_input::get_mword(&count, 7, 10))
+		{
+		  if (count == 0)
+		    count = lines;
+		  Kconsole::console()->start_exclusive(Console::GZIP);
+		  show_events(_absy, refy, count, mode, time_mode, 1);
+		  Kconsole::console()->end_exclusive(Console::GZIP);
+		  redraw = true;
+		  break;
+		}
+	      _status_type = Status_redraw;
+	      goto status_line;
+	    case 'P': // set performance counter
+		{
+		  Mword event, e;
+		  int user, kern, edge, nr;
+
+		  Jdb::printf_statline("tbuf", "1..2=select counter", "P");
+		  Jdb::cursor(Jdb_screen::height(), 8);
+		  for (;;)
 		    {
-		return_false:
-		      show_tb_absy = absy;
-		      show_tb_refy = refy;
-		      show_tb_nr   = fst_nr-addy-1;
-		      return false;
+		      nr = Jdb_core::getchar();
+		      if (nr == KEY_ESC)
+			goto exit;
+		      if (nr >= '1' && nr <= '2')
+			{
+			  nr -= '1';
+			  break;
+			}
+		    }
+
+		  event = perf_event[nr];
+		  user  = perf_user[nr];
+		  kern  = perf_kern[nr];
+		  edge  = perf_edge[nr];
+		  Jdb::printf_statline("tbuf", "d=duration e=edge u=user "
+   				       "k=kern +=both -=none ?=event",
+			    	       "P%c", (char)'1'+nr);
+
+		  Jdb::cursor(Jdb_screen::height(), 9);
+		  switch(c=Jdb_core::getchar())
+	    	    {
+    		    case '+': user = 1; kern = 1;            break;
+		    case '-': user = 0; kern = 0; event = 0; break;
+		    case 'u': user = 1; kern = 0;            break;
+		    case 'k': user = 0; kern = 1;            break;
+		    case 'd': edge = 0;                      break;
+		    case 'e': edge = 1;                      break;
+		    case '?':
+		    case '_': if ((e = select_perf_event(event)) == Nil)
+				{
+				  redraw = true;
+			    	  break;
+				}
+			      event = e;
+			      redraw = true;
+			      break;
+		    default:  Jdb_input::get_mword(&event, 4, 16, c);
+			      break;
+		    }
+		
+		  if (!Kern_cnt::setup_pmc(nr, event) &&
+	    	      !Perf_cnt::setup_pmc(nr, event, user, kern, edge))
+    		    Tb_entry::set_rdcnt(nr, 0);
+
+		  redraw = true;
+		}
+	      break;
+	    case KEY_RETURN: // disassemble eip of current entry
+	      if (jdb_disasm_addr_task != 0)
+		{
+		  Global_id tid(Global_id::Nil);
+		  Mword eip;
+		  if (Jdb_tbuf_output::thread_ip(_absy+addy, &tid, &eip) &&
+		      Thread::lookup(tid))
+	    	    {
+    		      if (!jdb_disasm_addr_task(eip, tid.d_task(), 1))
+			goto exit;
+		      redraw = true;
 		    }
 		}
+	      break;
+	    case KEY_CURSOR_LEFT: // mode switch
+	      if (mode == 0)
+		mode = Cpu::have_tsc() ? Pmc2_ref_mode : Index_mode;
+	      else
+		mode--;
+	      redraw = true;
+	      break;
+	    case KEY_CURSOR_RIGHT: // mode switch
+	      mode++;
+	      if ((!Cpu::have_tsc() && mode>Index_mode) || mode>Pmc2_ref_mode)
+		mode = Index_mode;
+	      redraw = true;
+	      break;
+	    case ' ': // mode switch
+	      if (mode != Index_mode)
+    		{
+		  time_mode = (time_mode+1) % 3;
+		  redraw = true;
+		}
+	      break;
+	    case 'c': // clear tracebuffer
+	      Jdb_tbuf::clear_tbuf();
+	      _absy   = 0;
+	      _nr_cur = Nil;
+	      _nr_ref = Nil;
+	      entries = 0;
+	      for (n=0; n<10; n++)
+		_nr_pos[n] = Nil;
+	      goto restart;
+	    case 's': // set mark
+	      Jdb::printf_statline("tbuf", 0, "set mark [0-9] ");
+	      _status_type = Status_redraw;
+	      c = Jdb_core::getchar();
+	      if (!entries || c < '0' || c > '9')
+		{
+		  error("Invalid marker");
+		  goto status_line;
+		}
+	      n = c - '0';
+	      posy[n]    = _absy + addy;
+	      _nr_pos[n] = Jdb_tbuf::lookup(_absy+addy)->number();
+	      redraw     = true;
+	      break;
+	    case 'r': // set reference entry
+	      if (!entries)
+		break;
+	      refy       = _absy + addy;
+    	      _nr_ref    = Jdb_tbuf::lookup(_absy+addy)->number();
+	      redraw     = true;
+	      break;
+	    case 'j': // jump to mark or reference element
+	      Jdb::printf_statline("tbuf", 0, "jump to mark [0-9] or ref [r] ");
+	      _status_type = Status_redraw;
+	      c = Jdb_core::getchar();
+	      if ((c < '0' || c > '9') && c != 'r')
+		{
+		  error("Invalid marker");
+		  goto status_line;
+		}
+	      n = (c == 'r') ? refy : posy[c-'0'];
+	      if (n == Nil)
+		{
+		  error("Mark unset");
+		  goto status_line;
+		}
+	      else if (n == (Mword)-2)
+		{
+		  error("Mark not visible within current filter");
+		  goto status_line;
+		}
+	      goto jump_index;
+	    case '?': // search backward
+	      d = 1;
+	      // fall through
+	    case '/': // search forward
+	      direction = d;
+	      // search in tracebuffer events
+	      Jdb::printf_statline("tbuf", 0, "%s=%s",
+				   jdb_regex_init != 0 ? "Regexp" : "Search", 
+			       	   _search_str);
+	      _status_type = Status_redraw;
+	      Jdb::cursor(Jdb_screen::height(), 14+strlen(_search_str));
+	      if (!get_string(_search_str, sizeof(_search_str)) ||
+		  !_search_str[0])
+		goto status_line;
+	      // fall through
+	    case 'n': // search next
+    	    case 'N': // search next reverse
+	      n = search(_absy+addy, entries, _search_str,
+			 c == 'N' ? !direction : direction);
+	      if (n != Nil)
+		{
+	    	  // found
+ jump_index:
+    		  if (n < _absy || n > _absy+lines-1)
+		    {
+		      // screen crossed
+		      addy = 4;
+		      _absy = n - addy;
+		      if (n < addy)
+			{
+			  addy = n;
+			  _absy = 0;
+			}
+		      if (_absy > max_absy)
+			{
+			  _absy = max_absy;
+			  addy = n - _absy;
+			}
+		      redraw = true;
+		      break;
+		    }
+		  else
+		    addy = n - _absy;
+		}
+	      goto status_line;
+	    case KEY_ESC:
+	      Jdb::abort_command();
+	      goto exit;
+	    default:
+	      if (Jdb::is_toplevel_cmd(c)) 
+		goto exit;
 	    }
 	}
     }
+
+ exit:
+  _nr_cur = (e = Jdb_tbuf::lookup(_absy+addy)) ? e->number() : 0;
 }
 
 PUBLIC
@@ -802,11 +979,12 @@ Jdb_tbuf_show::action(int cmd, void *&, char const *&, int &)
       break;
 
     case 1:
-      if (Kconsole::console()->gzip_available())
+      if (Kconsole::console()->find_console(Console::GZIP))
 	{
-	  Kconsole::console()->gzip_enable();
+	  Jdb_tbuf_output::set_filter(_filter_str, 0);
+	  Kconsole::console()->start_exclusive(Console::GZIP);
 	  show_events(0, 0, 1000000, 0, 0, 1);
-	  Kconsole::console()->gzip_disable();
+	  Kconsole::console()->end_exclusive(Console::GZIP);
 	}
       break;
     }
@@ -820,10 +998,10 @@ Jdb_tbuf_show::cmds() const
 {
   static Cmd cs[] =
     { 
-      Cmd(0, "T", "tbuf", "",
+	{ 0, "T", "tbuf", "",
 	  "T{P{+|-|k|u|<event>}}\tenter tracebuffer, on/off/kernel/user perf",
-	  0),
-      Cmd(1, "Tgzip", "", "", 0 /* invisible */, 0),
+	  0 },
+	 { 1, "Tgzip", "", "", 0 /* invisible */, 0 },
     };
 
   return cs;
@@ -842,4 +1020,3 @@ Jdb_tbuf_show::Jdb_tbuf_show()
 {}
 
 static Jdb_tbuf_show jdb_tbuf_show INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
-

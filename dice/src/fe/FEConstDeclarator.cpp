@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEConstDeclarator.cpp
- *	\brief	contains the implementation of the class CFEConstDeclarator
+ *    \file    dice/src/fe/FEConstDeclarator.cpp
+ *    \brief   contains the implementation of the class CFEConstDeclarator
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -32,12 +33,9 @@
 #include "fe/FEFile.h"
 #include "Compiler.h"
 
-IMPLEMENT_DYNAMIC(CFEConstDeclarator)
-    
-CFEConstDeclarator::CFEConstDeclarator(CFETypeSpec * pConstType, String sConstName, CFEExpression * pConstValue)
-{
-    IMPLEMENT_DYNAMIC_BASE(CFEConstDeclarator, CFEInterfaceComponent);
 
+CFEConstDeclarator::CFEConstDeclarator(CFETypeSpec * pConstType, string sConstName, CFEExpression * pConstValue)
+{
     m_pConstType = pConstType;
     m_sConstName = sConstName;
     m_pConstValue = pConstValue;
@@ -46,36 +44,34 @@ CFEConstDeclarator::CFEConstDeclarator(CFETypeSpec * pConstType, String sConstNa
 CFEConstDeclarator::CFEConstDeclarator(CFEConstDeclarator & src)
 :CFEInterfaceComponent(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEConstDeclarator, CFEInterfaceComponent);
-
     m_sConstName = src.m_sConstName;
     if (src.m_pConstType)
       {
-	  m_pConstType = (CFETypeSpec *) (src.m_pConstType->Clone());
-	  m_pConstType->SetParent(this);
+      m_pConstType = (CFETypeSpec *) (src.m_pConstType->Clone());
+      m_pConstType->SetParent(this);
       }
     else
-	m_pConstType = 0;
+    m_pConstType = 0;
     if (src.m_pConstValue)
       {
-	  m_pConstValue = (CFEExpression *) (src.m_pConstValue->Clone());
-	  m_pConstValue->SetParent(this);
+      m_pConstValue = (CFEExpression *) (src.m_pConstValue->Clone());
+      m_pConstValue->SetParent(this);
       }
     else
-	m_pConstValue = 0;
+    m_pConstValue = 0;
 }
 
 /** cleans up the constant declarator (frees all members) */
 CFEConstDeclarator::~CFEConstDeclarator()
 {
     if (m_pConstType)
-	delete m_pConstType;
+    delete m_pConstType;
     if (m_pConstValue)
-	delete m_pConstValue;
+    delete m_pConstValue;
 }
 
 /** returns the type of the constant
- *	\return the type of the constant
+ *    \return the type of the constant
  */
 CFETypeSpec *CFEConstDeclarator::GetType()
 {
@@ -83,23 +79,23 @@ CFETypeSpec *CFEConstDeclarator::GetType()
 }
 
 /** returns the name of the constant
- *	\return the name of the constant
+ *    \return the name of the constant
  */
-String CFEConstDeclarator::GetName()
+string CFEConstDeclarator::GetName()
 {
     return m_sConstName;
 }
 
 /** returns the value (the expression) of the constant
- *	\return the value (the expression) of the constant
+ *    \return the value (the expression) of the constant
  */
 CFEExpression *CFEConstDeclarator::GetValue()
 {
     return m_pConstValue;
 }
 
-/**	\brief creates a copy of this object
- *	\return a copy of this object
+/**    \brief creates a copy of this object
+ *    \return a copy of this object
  */
 CObject *CFEConstDeclarator::Clone()
 {
@@ -114,63 +110,63 @@ CObject *CFEConstDeclarator::Clone()
  */
 bool CFEConstDeclarator::CheckConsistency()
 {
-    CFEFile *pRoot = GetRoot();
+    CFEFile *pRoot = dynamic_cast<CFEFile*>(GetRoot());
     assert(pRoot);
     // try to find me
-    if (GetName().IsEmpty())
-	{
-	  CCompiler::GccError(this, 0, "A constant without a name has been defined.");
-	  return false;
+    if (GetName().empty())
+    {
+      CCompiler::GccError(this, 0, "A constant without a name has been defined.");
+      return false;
       }
     // see if this constant exists somewhere
     if (!(pRoot->FindConstDeclarator(GetName())))
       {
-	  CCompiler::GccError(this, 0,
-			      "The chaining of the front-end classes is wrong - please contact\ndice@os.inf.tu-dresden.de with a description of this error.");
-	  return false;
+      CCompiler::GccError(this, 0,
+                  "The chaining of the front-end classes is wrong - please contact\ndice@os.inf.tu-dresden.de with a description of this error.");
+      return false;
       }
     // check if it is really me
     if (pRoot->FindConstDeclarator(GetName()) != this)
       {
-	  CCompiler::GccError(this, 0, "The constant %s is defined twice.",
-			      (const char *) GetName());
-	  return false;
+      CCompiler::GccError(this, 0, "The constant %s is defined twice.",
+                  GetName().c_str());
+      return false;
       }
     // found me     - now check the type
     CFETypeSpec* pType = GetType();
     while (pType && (pType->GetType() == TYPE_USER_DEFINED))
     {
-        String sTypeName = ((CFEUserDefinedType*)pType)->GetName();
-	CFETypedDeclarator *pTypedef = pRoot->FindUserDefinedType(sTypeName);
-	if (!pTypedef)
-	{
-	    CCompiler::GccError(this, 0, "The type (%s) of expression \"%s\" is not defined.\n", (const char*)sTypeName, (const char*)GetName());
-	    return false;
-	}
-	pType = pTypedef->GetType();
+        string sTypeName = ((CFEUserDefinedType*)pType)->GetName();
+    CFETypedDeclarator *pTypedef = pRoot->FindUserDefinedType(sTypeName);
+    if (!pTypedef)
+    {
+        CCompiler::GccError(this, 0, "The type (%s) of expression \"%s\" is not defined.\n", sTypeName.c_str(), GetName().c_str());
+        return false;
+    }
+    pType = pTypedef->GetType();
     }
     if (!(GetValue()->IsOfType(pType->GetType())))
     {
-	CCompiler::GccError(this, 0, "The expression of %s does not match its type.", (const char *) GetName());
-	return false;
+    CCompiler::GccError(this, 0, "The expression of %s does not match its type.", GetName().c_str());
+    return false;
     }
     // all checks done
     return true;
 }
 
 /** serialize this object
- *	\param pFile the file to serialize to/from
+ *    \param pFile the file to serialize to/from
  */
 void CFEConstDeclarator::Serialize(CFile * pFile)
 {
     if (pFile->IsStoring())
       {
-	  pFile->PrintIndent("<constant>\n");
-	  pFile->IncIndent();
-	  pFile->PrintIndent("<name>%s</name>\n", (const char *) GetName());
-	  GetType()->Serialize(pFile);
-	  GetValue()->Serialize(pFile);
-	  pFile->DecIndent();
-	  pFile->PrintIndent("</constant>\n");
+      pFile->PrintIndent("<constant>\n");
+      pFile->IncIndent();
+      pFile->PrintIndent("<name>%s</name>\n", GetName().c_str());
+      GetType()->Serialize(pFile);
+      GetValue()->Serialize(pFile);
+      pFile->DecIndent();
+      pFile->PrintIndent("</constant>\n");
       }
 }

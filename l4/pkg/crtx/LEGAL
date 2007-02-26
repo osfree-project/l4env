@@ -1,0 +1,16 @@
+# Format: (all on one line)
+#   Source file : Copyright Owner(s) : License
+# Please use "TUD" when referring to TU Dresden.
+# If sole owner is TUD, the license field defaults to GPL and can be
+# left empty.
+# Source-file spec can be a directory name or a wildcard like "src/*.c".
+include : TUD
+lib/src/construction.c : TUD
+lib/src/support.c : TUD
+lib/src/Makefile : TUD
+lib/src/ARCH-x86/main_stat.ld : TUD
+lib/src/ARCH-x86/main_rel.ld : GPL
+lib/src/ARCH-x86/crt0_x.S : TUD
+lib/src/ARCH-arm/main_stat.ld : TUD
+lib/src/ARCH-arm/main_rel.ld : GPL
+lib/src/ARCH-arm/crt0_x.S : TUD

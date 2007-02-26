@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -28,9 +28,9 @@ struct gfx_ds_data {
 
 int init_gfximg16(struct dope_services *d);
 
-/*****************************/
-/*** GFX HANDLER FUNCTIONS ***/
-/*****************************/
+/*****************************
+ *** GFX HANDLER FUNCTIONS ***
+ *****************************/
 
 static s32 img_get_width(struct gfx_ds_data *img) {
 	return img->w;
@@ -62,19 +62,20 @@ static s32 img_get_ident(struct gfx_ds_data *img, char *dst_ident) {
 	return 0;
 }
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 
 static struct gfx_ds_data *create(s32 width, s32 height) {
 	struct gfx_ds_data *new;
-	new = malloc(sizeof(struct gfx_ds_data));
+	new = zalloc(sizeof(struct gfx_ds_data));
 	if (!new) return NULL;
 	new->w = width;
 	new->h = height;
 	new->smb = shmem->alloc(width*height*2);
 	new->pixels = (u16 *)(shmem->get_address(new->smb));
+	if (new->pixels) memset(new->pixels, 0, width*height*2);
 	return new;
 }
 
@@ -90,9 +91,9 @@ static s32 register_gfx_handler(struct gfx_ds_handler *handler) {
 }
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct gfx_handler_services services = {
 	create,
@@ -100,9 +101,9 @@ static struct gfx_handler_services services = {
 };
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_gfximg16(struct dope_services *d) {
 	shmem = d->get_module("SharedMemory 1.0");

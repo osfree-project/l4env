@@ -1,0 +1,6 @@
+:Drag-and-drop:
+  Implement drag-and-drop as described in the Nitpicker paper.
+
+:Donation:
+  Transfer the ownership of client memory to Nitpicker.
+  Nitpicker needs to revoke the access rights from the client.

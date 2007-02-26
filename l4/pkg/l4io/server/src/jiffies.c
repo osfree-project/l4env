@@ -41,7 +41,7 @@ static unsigned long long volatile *kclock; /**< kernel clock reference
 static l4_addr_t kernel_info_addr = 0x1000;
 
 /** Get RMGR pager id.
- * 
+ *
  * \retval pager         RMGR pager thread id
  *
  * Return the thread id of the RMGR pager.
@@ -54,7 +54,7 @@ static void __get_rmgr_pager(l4_threadid_t * pager)
 
   /* get pager/preempter */
   my_preempter = my_pager = L4_INVALID_ID;
-  l4_thread_ex_regs(l4_myself(), (l4_umword_t) - 1, (l4_umword_t) - 1, 
+  l4_thread_ex_regs(l4_myself(), (l4_umword_t) - 1, (l4_umword_t) - 1,
                     &my_preempter, &my_pager, &dummy, &dummy, &dummy);
 
   /* get chief */
@@ -64,7 +64,7 @@ static void __get_rmgr_pager(l4_threadid_t * pager)
 }
 
 /** Map kernel info page.
- *	
+ *
  * \return 0 on success, negative error code otherwise
  *
  * Map L4 kernel info page (L4 kernel timer as time base).
@@ -84,7 +84,7 @@ static int __map_kernel_info_page(void)
                             &kernel_info_addr, &kernel_info_areaid);
   if (error)
     {
-      ERROR("kernel info page area already used!");
+      LOGdL(DEBUG_ERRORS, "kernel info page area already used!");
       return -L4_ENOMAP;
     }
 
@@ -95,7 +95,7 @@ static int __map_kernel_info_page(void)
                            &dummy, &dummy, L4_IPC_NEVER, &result);
   if (error)
     {
-      ERROR("calling pager (0x%02x)", error);
+      LOGdL(DEBUG_ERRORS, "calling pager (0x%02x)", error);
       return -L4_EIPC;
     }
 
@@ -103,11 +103,11 @@ static int __map_kernel_info_page(void)
 
   if (!l4_ipc_fpage_received(result) || (magic != L4_KERNEL_INFO_MAGIC))
     {
-      ERROR("mapping kernel info page");
+      LOGdL(DEBUG_ERRORS, "mapping kernel info page");
       return -L4_ENOTFOUND;
     }
 
-  DMSG("mapped kernel info page @ %p\n", (void*)kernel_info_addr);
+  LOGd(DEBUG_MSG, "mapped kernel info page @ %p\n", (void*)kernel_info_addr);
 
   kclock = &((l4_kernel_info_t *) kernel_info_addr)->clock;
 
@@ -137,7 +137,7 @@ static void jiffies_thread(void *data)
 
   ms = 1000 / IOJIFFIES_HZ;
 
-  ret = micros2l4to(ms * 1000, &to_e, &to_m);
+  ret = l4util_micros2l4to(ms * 1000, &to_m, &to_e);
   if (ret)
     Panic("failed to calculate timeout!\n");
 
@@ -149,7 +149,7 @@ static void jiffies_thread(void *data)
     {
       error = l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG,
                                   &dummy, &dummy,
-                                  L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0), 
+                                  L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0),
                                   &result);
 
       if (error != L4_IPC_RETIMEOUT)
@@ -226,12 +226,13 @@ int io_jiffies_init()
     return error;
 
   /* create jiffies thread */
-  jiffies_tid = l4thread_create((l4thread_fn_t) jiffies_thread,
-				NULL, L4THREAD_CREATE_SYNC);
+  jiffies_tid = l4thread_create_named((l4thread_fn_t) jiffies_thread,
+				      ".jiffies",
+				      0, L4THREAD_CREATE_SYNC);
 
   if (jiffies_tid <= 0)
     {
-      ERROR("create jiffies thread (%d)", jiffies_tid);
+      LOGdL(DEBUG_ERRORS, "create jiffies thread (%d)", jiffies_tid);
       return jiffies_tid;
     }
 

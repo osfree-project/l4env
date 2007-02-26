@@ -12,11 +12,13 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details. */
 
-/* local includes */
-#include "netboot/netboot.h"
-#include "netboot/etherboot.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-/* L4 includes */
+#include "netboot/etherboot.h"
+#include "netboot/netboot.h"
+
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
 #include <l4/sys/consts.h>
@@ -26,12 +28,11 @@
 #include <l4/names/libnames.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/generic_fprov/generic_fprov-server.h>
+#include <l4/thread/thread.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/util/getopt.h>
+#include <l4/util/macros.h>
 #include <l4/generic_io/libio.h>
-
-#include <stdio.h>
-#include <string.h>
 
 // #define DEBUG_LOAD
 // #define DEBUG_REQUEST
@@ -39,6 +40,7 @@
 /* TFTP server address */
 static in_addr tftp_server_addr;
 static int have_tftp_server_addr = 0;
+static char real_main_stack[2*L4_PAGESIZE];
 
 int use_l4io = 0;	/* whether to use L4IO server or not, default no */
 
@@ -84,7 +86,7 @@ __parse_command_line(int argc, char * argv[])
 	  else
 	    {
 	      have_tftp_server_addr = 1;
-	      printf("Using TFTP server %s (0x%08lx)\n",optarg,
+	      printf("Using TFTP server %s (0x%08x)\n",optarg,
 		     tftp_server_addr.s_addr);
 	    }
 
@@ -92,6 +94,7 @@ __parse_command_line(int argc, char * argv[])
 	  break;
 
 	case 'i':
+#if CONFIG_PCI
 	  {
 	    l4io_info_t *io_info_addr = (l4io_info_t*)-1;
 
@@ -104,6 +107,7 @@ __parse_command_line(int argc, char * argv[])
 	    else
 	      use_l4io = 1;
 	  }
+#endif
 	  break;
 
 	default: 
@@ -130,7 +134,7 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
     l4_uint32_t flags,
     l4dm_dataspace_t *ds,
     l4_uint32_t *size,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   int read_size;
   int error;
@@ -141,7 +145,7 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
   if (!netboot_open((char*)fname))
     {
       /* file not found */
-      printf("File not found: %s\n", fname);
+      printf("File not found: \"%s\"\n", fname);
       return -L4_ENOTFOUND;
     }
 
@@ -150,13 +154,13 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
   *size = netboot_filemax;
 
   ptr = strrchr(fname, '/');
-  if(!ptr) ptr=fname;
-    else ptr++;
-  snprintf(buf, L4DM_DS_NAME_MAX_LEN-1, "tftp image: %s", ptr);
-  buf[L4DM_DS_NAME_MAX_LEN-1]=0;
-  	   
+  if (!ptr)
+    ptr=fname;
+  else
+    ptr++;
+  snprintf(buf, L4DM_DS_NAME_MAX_LEN, "tftp image: %s", ptr);
 
-  if (!(addr = l4dm_mem_ds_allocate_named(*size, flags, buf,
+  if (!(addr = l4dm_mem_ds_allocate_named_dsm(*size, flags, buf, *dm,
 					  (l4dm_dataspace_t *)ds)))
     {
       printf("Allocating dataspace of size %d failed\n", *size);
@@ -210,22 +214,20 @@ server_loop(void)
   l4fprov_file_server_loop(NULL);
 }
 
-int
-main (int argc, char **argv)
+/* The only reason to start a new thread here is that we make sure that
+ * out stack is paged by Sigma0/Rmgr and therefore is mapped one-by-one.
+ * Etherboot requires that (network packets as local parameters...) */
+static void
+real_main (void *dummy)
 {
   l4_addr_t netbuf, gunzipbuf;
-
-  LOG_init("tftp");
-
-  /* parse command line */
-  __parse_command_line(argc, argv);
 
   /* get dataspace for the net buffer */
   netbuf = (l4_addr_t)l4dm_mem_allocate_named(NETBUF_SIZE,0,"tftp netbuff");
   if (netbuf == 0)
     {
       printf("Allocate netbuff failed\n");
-      return -1;
+      exit(-1);
     }
 
   /* get dataspace for gunzip allocator buffer */
@@ -233,25 +235,49 @@ main (int argc, char **argv)
   if (gunzipbuf == 0)
     {
       printf("Allocate gunzip buffer failed\n");
-      return -1;
+      exit(-1);
     }
 
-  if (netboot_init(netbuf, gunzipbuf))
+  if (netboot_init(netbuf, gunzipbuf, use_l4io))
     {
       printf("Can't determine network card\n");
-      return -1;
+      exit(-1);
     }
 
   if (!names_register("TFTP"))
     {
-      printf("failed to register TFTP\n");
-      return -1;
+      printf("failed to register at name server\n");
+      exit(-1);
     }
   
   if (have_tftp_server_addr)
     netboot_set_server(tftp_server_addr);
 
   server_loop();
-  return 0;
+}
+
+
+int
+main (int argc, char **argv)
+{
+  int ret;
+
+  __parse_command_line(argc, argv);
+
+  netboot_show_drivers();
+
+  if ((ret = l4thread_create_long (L4THREAD_INVALID_ID, real_main, 
+				  ".real_main",
+				  (unsigned)real_main_stack 
+				    + sizeof(real_main_stack), 
+				  sizeof(real_main_stack),
+				  L4THREAD_DEFAULT_PRIO, 0, 
+				  L4THREAD_CREATE_ASYNC)) < 0)
+    {
+      Panic ("Error %d creating real_main thread", ret);
+    }
+
+  for (;;)
+    l4thread_sleep_forever();
 }
 

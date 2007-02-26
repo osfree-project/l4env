@@ -11,16 +11,13 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
  * the  terms  of the  GNU General Public Licence 2.  Please see the
  * COPYING file for details.
  */
-
-
-#define CACHE struct cache
 
 #include "dopestd.h"
 #include "cache.h"
@@ -45,39 +42,26 @@ int init_cache(struct dope_services *d);
 
 
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 /*** CREATE NEW CACHE ***/
 static CACHE *create(s32 max_entries,s32 max_size) {
 	struct cache *c;
-	struct cache_elem *e;
-	s32 i;
 
 	/* get memory for cache struct and the ring buffer */
-	c= (struct cache *)malloc(sizeof(struct cache)
-	                   + max_entries*sizeof(struct cache_elem));
+	c = (struct cache *)zalloc(sizeof(struct cache)
+	                         + sizeof(struct cache_elem)*max_entries);
 	if (!c) {
 		INFO(printf("Cache(create): out of memory\n");)
 		return NULL;
 	}
 
 	/* set values in cache struct */
-	c->max_entries=max_entries;
-	c->max_size=max_size;
-	c->curr_size=0;
-	c->idxtokill=0;
-	c->idxtoadd=0;
+	c->max_entries = max_entries;
+	c->max_size    = max_size;
 	c->elem = (struct cache_elem *)((long)c + sizeof(struct cache));
-
-	/* clear all ring buffer elements */
-	e=c->elem;
-	for (i=0;i<max_entries;i++) {
-		e->data  = NULL;
-		e->ident = 0;
-		e++;
-	}
 
 	return c;
 }
@@ -199,9 +183,9 @@ static void *get_elem(struct cache *cache,s32 index,s32 ident) {
 
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct cache_services services = {
 	create,
@@ -213,9 +197,9 @@ static struct cache_services services = {
 
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_cache(struct dope_services *d) {
 	d->register_module("Cache 1.0",&services);

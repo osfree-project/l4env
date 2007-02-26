@@ -16,8 +16,11 @@
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
+#include <l4/sys/kernel.h>
 #include <l4/env/env.h>
 #include <l4/util/macros.h>
+#include <l4/util/kip.h>
+#include <l4/util/memdesc.h>
 #include <l4/names/libnames.h>
 
 /* L4RM includes */
@@ -48,7 +51,7 @@ l4rm_get_vm_start(void)
   l4_addr_t vm_start;
 
   /* query environment */
-  if (l4env_request_config_u32(L4ENV_VM_LOW,&vm_start) == 0)
+  if (l4env_request_config_u32(L4ENV_VM_LOW, &vm_start) == 0)
     return vm_start;
   else
     return L4RM_VM_START;
@@ -67,10 +70,19 @@ l4rm_get_vm_end(void)
   l4_addr_t vm_end;
 
   /* query environment */
-  if (l4env_request_config_u32(L4ENV_VM_HIGH,&vm_end) == 0)
+  if (l4env_request_config_u32(L4ENV_VM_HIGH, &vm_end) == 0)
     return vm_end;
   else
+#ifdef ARCH_x86
     return L4RM_VM_END - 1;
+#else
+    {
+      if ((vm_end = l4util_memdesc_vm_high()))
+	return vm_end;
+
+      Panic("No virtual memory descriptor available in the KIP!");
+    }
+#endif
 }
 
 /*****************************************************************************/
@@ -111,7 +123,7 @@ l4rm_get_sigma0(void)
   l4_threadid_t sigma0_id;
 
   /* request sigma0 from environment lib */
-  ret = l4env_request_service(L4ENV_SIGMA0,&sigma0_id);
+  ret = l4env_request_service(L4ENV_SIGMA0, &sigma0_id);
   if (ret < 0)
     {
       /* no id provided by the environment */

@@ -13,51 +13,67 @@
  * COPYING file for details.
  */
 
-#include <pthread.h>
+/*** GENERAL INCLUDES ***/
 #include <stdlib.h>
 #include <string.h>
+
+/*** LINUX INCLUDES ***/
+#include <pthread.h>
+#include <semaphore.h>
+
+/*** LOCAL INCLUDES ***/
 #include "sync.h"
 
-struct dopelib_mutex {
-	pthread_mutex_t m;
-};
+struct dopelib_sem   { sem_t           sem;   };
+struct dopelib_mutex { pthread_mutex_t mutex; };
 
 
-/** CREATE NEW MUTEX
- *
- * \param init_state not implemented yet
- * \return pointer to newly created mutex
- */
-struct dopelib_mutex *dopelib_create_mutex(int init_state) {
+struct dopelib_sem *dopelib_sem_create(int init_state) {
+	struct dopelib_sem *new_sem = malloc(sizeof(struct dopelib_sem));
+	if (!new_sem) return NULL;
+	memset(new_sem, 0, sizeof(struct dopelib_sem));
+	sem_init(&new_sem->sem, 0, !init_state);
+	return new_sem;
+}
+
+
+void dopelib_sem_destroy(struct dopelib_sem *s) {
+	if (!s) return;
+	sem_destroy(&s->sem);
+	free(s);
+}
+
+
+void dopelib_sem_wait(struct dopelib_sem *s) {
+	if (s) sem_wait(&s->sem);
+}
+
+
+void dopelib_sem_post(struct dopelib_sem *s) {
+	if (s) sem_post(&s->sem);
+}
+
+
+struct dopelib_mutex *dopelib_mutex_create(int init_state) {
 	struct dopelib_mutex *new_mutex = malloc(sizeof(struct dopelib_mutex));
 	if (!new_mutex) return NULL;
 	memset(new_mutex, 0, sizeof(struct dopelib_mutex));
-	if (init_state) dopelib_lock_mutex(new_mutex);
+	if (init_state) dopelib_mutex_lock(new_mutex);
 	return new_mutex;
 }
 
 
-/** FREE MUTEX
- */
-void dopelib_destroy_mutex(struct dopelib_mutex *m) {
-	free(m);
+void dopelib_mutex_destroy(struct dopelib_mutex *m) {
+	if (m) free(m);
 }
 
 
-/** LOCK MUTEX
- *
- * \param mutex pointer to mutex which should be locked
- */
-void dopelib_lock_mutex(struct dopelib_mutex *m) {
-	pthread_mutex_lock(&m->m);
+void dopelib_mutex_lock(struct dopelib_mutex *m) {
+	if (m) pthread_mutex_lock(&m->mutex);
 }
 
 
-/** UNLOCK MUTEX
- *
- * \param mutex pointer to mutex which should be unlocked
- */
-void dopelib_unlock_mutex(struct dopelib_mutex *m) {
-	pthread_mutex_unlock(&m->m);
+void dopelib_mutex_unlock(struct dopelib_mutex *m) {
+	if (m) pthread_mutex_unlock(&m->mutex);
 }
 

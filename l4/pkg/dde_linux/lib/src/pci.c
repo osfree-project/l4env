@@ -387,7 +387,7 @@ int pci_enable_device(struct pci_dev *dev)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      ERROR("device %p not found", dev);
+      LOGdL(DEBUG_ERRORS, "device %p not found", dev);
 #endif
       return PCIBIOS_DEVICE_NOT_FOUND;
     }
@@ -396,7 +396,7 @@ int pci_enable_device(struct pci_dev *dev)
 
 #if DEBUG_PCI
   if (err)
-    ERROR("enabling PCI device (%d)", err);
+    LOGdL(DEBUG_ERRORS, "enabling PCI device (%d)", err);
 #endif
 
   return err;
@@ -415,7 +415,7 @@ void pci_disable_device(struct pci_dev *dev)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      ERROR("device %p not found", dev);
+      LOGdL(DEBUG_ERRORS, "device %p not found", dev);
 #endif
       return;
     }
@@ -424,7 +424,7 @@ void pci_disable_device(struct pci_dev *dev)
 
 #if DEBUG_PCI
   if (err)
-    ERROR("disabling PCI device (%d)", err);
+    LOGdL(DEBUG_ERRORS, "disabling PCI device (%d)", err);
 #endif
 }
 
@@ -442,7 +442,7 @@ void pci_set_master(struct pci_dev *dev)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      PANIC("device %p not found", dev);
+      Panic("device %p not found", dev);
 #endif
       return;
     }
@@ -450,6 +450,22 @@ void pci_set_master(struct pci_dev *dev)
   l4io_pci_set_master(pdev);
 }
 
+/** FIXME Dummy (could also go into L4IO */
+int pci_set_mwi(struct pci_dev *dev)
+{
+#if DEBUG_MSG
+  LOG_Enter("%s", dev->name);
+#endif
+  return -EINVAL;
+}
+
+/** FIXME Dummy (should also go into L4IO */
+void pci_clear_mwi(struct pci_dev *dev)
+{
+#if DEBUG_MSG
+  LOG_Enter("%s", dev->name);
+#endif
+}
 /** @} */
 /** \name Power Management related functions
  * @{ */
@@ -469,7 +485,7 @@ int pci_set_power_state(struct pci_dev *dev, int state)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      ERROR("device %p not found", dev);
+      LOGdL(DEBUG_ERRORS, "device %p not found", dev);
 #endif
       return PCIBIOS_DEVICE_NOT_FOUND;
     }
@@ -477,11 +493,141 @@ int pci_set_power_state(struct pci_dev *dev, int state)
   return l4io_pci_set_pm(pdev, state);
 }
 
+/** FIXME Dummy (could also go into L4IO */
+int pci_enable_wake(struct pci_dev *dev, u32 state, int enable)
+{
+#if DEBUG_MSG
+  LOG_Enter("%s", dev->name);
+#endif
+  return -EINVAL;
+}
+
+/** FIXME Dummy (could also go into L4IO */
+int pci_save_state(struct pci_dev *dev, u32 *buffer)
+{
+#if DEBUG_MSG
+  LOG_Enter("%s", dev->name);
+#endif
+  return -EINVAL;
+}
+
 /** @} */
 /** \name PCI device related resources
  *
  * \todo implementation
  * @{ */
+
+/** Release a PCI bar
+ * @pdev: PCI device whose resources were previously reserved by pci_request_region
+ * @bar: BAR to release
+ *
+ * Releases the PCI I/O and memory resources previously reserved by a
+ * successful call to pci_request_region.  Call this function only
+ * after all use of the PCI regions has ceased.
+ */
+void pci_release_region(struct pci_dev *pdev, int bar)
+{
+  if (pci_resource_len(pdev, bar) == 0)
+    return;
+  if (pci_resource_flags(pdev, bar) & IORESOURCE_IO)
+    release_region(pci_resource_start(pdev, bar),
+                                      pci_resource_len(pdev, bar));
+  else
+    if (pci_resource_flags(pdev, bar) & IORESOURCE_MEM)
+      release_mem_region(pci_resource_start(pdev, bar),
+                         pci_resource_len(pdev, bar));
+}
+
+/** Reserve PCI I/O and memory resource
+ * @pdev: PCI device whose resources are to be reserved
+ * @bar: BAR to be reserved
+ * @res_name: Name to be associated with resource.
+ *
+ * Mark the PCI region associated with PCI device @pdev BR @bar as
+ * being reserved by owner @res_name.  Do not access any
+ * address inside the PCI regions unless this call returns
+ * successfully.
+ *
+ * Returns 0 on success, or %EBUSY on error.  A warning
+ * message is also printed on failure.
+ */
+int pci_request_region(struct pci_dev *pdev, int bar, char *res_name)
+{
+  if (pci_resource_len(pdev, bar) == 0)
+    return 0;
+
+  if (pci_resource_flags(pdev, bar) & IORESOURCE_IO)
+    {
+      if (!request_region(pci_resource_start(pdev, bar),
+                          pci_resource_len(pdev, bar), res_name))
+        goto err_out;
+    }
+  else if (pci_resource_flags(pdev, bar) & IORESOURCE_MEM)
+    {
+      if (!request_mem_region(pci_resource_start(pdev, bar),
+                              pci_resource_len(pdev, bar), res_name))
+        goto err_out;
+    }
+
+  return 0;
+
+err_out:
+  printk(KERN_WARNING "PCI: Unable to reserve %s region #%d:%lx@%lx for device %s\n",
+         pci_resource_flags(pdev, bar) & IORESOURCE_IO ? "I/O" : "mem",
+         bar + 1, /* PCI BAR # */
+         pci_resource_len(pdev, bar), pci_resource_start(pdev, bar),
+         pdev->slot_name);
+  return -EBUSY;
+}
+
+
+/** Release reserved PCI I/O and memory resources
+ * @pdev: PCI device whose resources were previously reserved by pci_request_regions
+ *
+ * Releases all PCI I/O and memory resources previously reserved by a
+ * successful call to pci_request_regions.  Call this function only
+ * after all use of the PCI regions has ceased.
+ */
+void pci_release_regions(struct pci_dev *pdev)
+{
+  int i;
+
+  for (i = 0; i < 6; i++)
+    pci_release_region(pdev, i);
+}
+
+/** Reserve PCI I/O and memory resources
+ * @pdev: PCI device whose resources are to be reserved
+ * @res_name: Name to be associated with resource.
+ *
+ * Mark all PCI regions associated with PCI device @pdev as
+ * being reserved by owner @res_name.  Do not access any
+ * address inside the PCI regions unless this call returns
+ * successfully.
+ *
+ * Returns 0 on success, or %EBUSY on error.  A warning
+ * message is also printed on failure.
+ */
+int pci_request_regions(struct pci_dev *pdev, char *res_name)
+{
+  int i;
+
+  for (i = 0; i < 6; i++)
+    if (pci_request_region(pdev, i, res_name))
+      goto err_out;
+  return 0;
+
+err_out:
+  printk(KERN_WARNING "PCI: Unable to reserve %s region #%d:%lx@%lx for device %s\n",
+         pci_resource_flags(pdev, i) & IORESOURCE_IO ? "I/O" : "mem",
+         i + 1, /* PCI BAR # */
+         pci_resource_len(pdev, i), pci_resource_start(pdev, i),
+         pdev->slot_name);
+  while(--i >= 0)
+    pci_release_region(pdev, i);
+
+  return -EBUSY;
+}
 
 /** @} */
 /** \name Hotplugging (not supported yet)
@@ -876,9 +1022,7 @@ void *pci_alloc_consistent(struct pci_dev *hwdev,
       memset(ret, 0, size);
       *dma_handle = virt_to_bus(ret);
     }
-#if DEBUG_PALLOC
-  DMSG("PCI requested pages\n");
-#endif
+  LOGdL(DEBUG_PALLOC, "PCI requested pages");
   return ret;
 }
 
@@ -891,9 +1035,7 @@ void pci_free_consistent(struct pci_dev *hwdev, size_t size,
                          void *vaddr, dma_addr_t dma_handle)
 {
   free_pages((unsigned long) vaddr, get_order(size));
-#if DEBUG_PALLOC
-  DMSG("PCI released pages\n");
-#endif
+  LOGdL(DEBUG_PALLOC, "PCI released pages");
 }
 
 /* XXX think about this */
@@ -926,7 +1068,7 @@ int pci_read_config_byte(struct pci_dev *dev, int pos, l4_uint8_t * val)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      ERROR("device %p not found", dev);
+      LOG_Error("device %p not found", dev);
 #endif
       return PCIBIOS_DEVICE_NOT_FOUND;
     }
@@ -935,7 +1077,7 @@ int pci_read_config_byte(struct pci_dev *dev, int pos, l4_uint8_t * val)
 
 #if DEBUG_PCI
   if (err)
-    ERROR("reading PCI config register (%d)", err);
+    LOG_Error("reading PCI config register (%d)", err);
 #endif
 
   return err ? -EIO : 0;
@@ -958,7 +1100,7 @@ int pci_read_config_word(struct pci_dev *dev, int pos, l4_uint16_t * val)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      ERROR("device %p not found", dev);
+      LOG_Error("device %p not found", dev);
 #endif
       return PCIBIOS_DEVICE_NOT_FOUND;
     }
@@ -967,7 +1109,7 @@ int pci_read_config_word(struct pci_dev *dev, int pos, l4_uint16_t * val)
 
 #if DEBUG_PCI
   if (err)
-    ERROR("reading PCI config register (%d)", err);
+    LOG_Error("reading PCI config register (%d)", err);
 #endif
 
   return err ? -EIO : 0;
@@ -990,7 +1132,7 @@ int pci_read_config_dword(struct pci_dev *dev, int pos, l4_uint32_t * val)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      ERROR("device %p not found", dev);
+      LOG_Error("device %p not found", dev);
 #endif
       return PCIBIOS_DEVICE_NOT_FOUND;
     }
@@ -999,7 +1141,7 @@ int pci_read_config_dword(struct pci_dev *dev, int pos, l4_uint32_t * val)
 
 #if DEBUG_PCI
   if (err)
-    ERROR("reading PCI config register (%d)", err);
+    LOG_Error("reading PCI config register (%d)", err);
 #endif
 
   return err ? -EIO : 0;
@@ -1022,7 +1164,7 @@ int pci_write_config_byte(struct pci_dev *dev, int pos, l4_uint8_t val)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      ERROR("device %p not found", dev);
+      LOG_Error("device %p not found", dev);
 #endif
       return PCIBIOS_DEVICE_NOT_FOUND;
     }
@@ -1031,7 +1173,7 @@ int pci_write_config_byte(struct pci_dev *dev, int pos, l4_uint8_t val)
 
 #if DEBUG_PCI
   if (err)
-    ERROR("writing PCI config register (%d)", err);
+    LOG_Error("writing PCI config register (%d)", err);
 #endif
 
   return err ? -EIO : 0;
@@ -1054,7 +1196,7 @@ int pci_write_config_word(struct pci_dev *dev, int pos, l4_uint16_t val)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      ERROR("device %p not found", dev);
+      LOG_Error("device %p not found", dev);
 #endif
       return PCIBIOS_DEVICE_NOT_FOUND;
     }
@@ -1063,7 +1205,7 @@ int pci_write_config_word(struct pci_dev *dev, int pos, l4_uint16_t val)
 
 #if DEBUG_PCI
   if (err)
-    ERROR("writing PCI config register (%d)", err);
+    LOG_Error("writing PCI config register (%d)", err);
 #endif
 
   return err ? -EIO : 0;
@@ -1086,7 +1228,7 @@ int pci_write_config_dword(struct pci_dev *dev, int pos, l4_uint32_t val)
   if (!(pdev=__pci_get_handle(dev)))
     {
 #if DEBUG_PCI
-      ERROR("device %p not found", dev);
+      LOG_Error("device %p not found", dev);
 #endif
       return PCIBIOS_DEVICE_NOT_FOUND;
     }
@@ -1095,7 +1237,7 @@ int pci_write_config_dword(struct pci_dev *dev, int pos, l4_uint32_t val)
 
 #if DEBUG_PCI
   if (err)
-    ERROR("writing PCI config register (%d)", err);
+    LOG_Error("writing PCI config register (%d)", err);
 #endif
 
   return err ? -EIO : 0;
@@ -1194,7 +1336,7 @@ int l4dde_pci_init()
       if (dev && !(start=__pci_get_handle((struct pci_dev*)dev)))
         {
 #if DEBUG_PCI
-          PANIC("device %p not found -- Maybe you have to setup PCI_DEVICES"
+          Panic("device %p not found -- Maybe you have to setup PCI_DEVICES"
                 "properly (default is 12 devices maximum).", dev);
 #endif
           return -L4_EUNKNOWN;
@@ -1206,7 +1348,7 @@ int l4dde_pci_init()
         {
           if (err == -L4_ENOTFOUND) break;
 #if DEBUG_PCI
-          ERROR("locate PCI device (%d)", err);
+          LOG_Error("locate PCI device (%d)", err);
 #endif
           return err;
         }
@@ -1218,7 +1360,7 @@ int l4dde_pci_init()
       if (i == PCI_DEVICES)
         {
 #if DEBUG_PCI
-          PANIC("all PCI device slots occupied");
+          Panic("all PCI device slots occupied");
 #endif
           return -L4_EUNKNOWN;
         }

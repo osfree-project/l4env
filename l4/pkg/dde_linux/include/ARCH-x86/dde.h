@@ -18,6 +18,8 @@
 
 /* L4 */
 #include <l4/sys/types.h>
+#include <l4/sys/compiler.h>
+#include <l4/omega0/client.h>
 
 /** Configuration for Linux header file usage */
 #ifndef DDE_LINUX
@@ -26,6 +28,8 @@
 #ifndef __KERNEL__
 # define __KERNEL__
 #endif
+
+EXTERN_C_BEGIN
 
 /** Initialize Memory Management.
  *
@@ -37,6 +41,14 @@
  * \return 0 on success, negative error code otherwise
  */
 int l4dde_mm_init(unsigned int vmem_size, unsigned int kmem_size);
+
+/** Return amount of free memory.
+ */
+int l4dde_mm_kmem_avail(void);
+
+/** Return begin and end of kmem regions
+ */
+int l4dde_mm_kmem_region(unsigned num, l4_addr_t *start, l4_addr_t *end);
 
 /** Initialize time module.
  *
@@ -59,11 +71,47 @@ int l4dde_softirq_init(void);
  */
 int l4dde_irq_set_prio(unsigned int irq, unsigned prio);
 
+/** Get IRQ thread number
+ * \ingroup mod_irq
+ *
+ * \param  irq          IRQ number the irq-thread used with request_irq()
+ * \return thread-id    threadid of IRQ thread, or L4_INVALID_ID if not
+ *                      initialized
+ */
+l4_threadid_t l4dde_irq_l4_id(int irq);
+
 /** Initialize IRQ handling.
  *
  * \return 0 on success, negative error code otherwise
  */
 int l4dde_irq_init(int omega0);
+
+/** Set an alien IPC handler for interrupt requests
+ *
+ * \param  handler      new handler, or 0 to disable it.
+ *
+ * \retval -1           special case: Called prior to dde-lib-initialization
+ * \return old value, 0 initially.
+ *
+ * \pre  DDE lib must be initialized already.
+ * \note This call influences future interrupt wait calls. Ongoing IRQ waits
+ *       are closed waits and won't receive alien IPCs.
+ */
+omega0_alien_handler_t l4dde_set_alien_handler(omega0_alien_handler_t handler);
+
+/** Set a deferred irq handler
+ *
+ * \param  irq          IRQ to set deferred handler for, must be allocated
+ *                      with request_irq() already.
+ * \param  def_handler  handler to call after standard handler
+ * \param  dev_def_id   additional argument to def_handler calls
+ *
+ * On occurance of an interrupt, the deferred handler is called after
+ * the standard handler(s), this is after the registered linux handlers.
+ */
+extern int l4dde_set_deferred_irq_handler(unsigned int irq,
+                                          void (*def_handler) (int, void *),
+                                          void *dev_def_id);
 
 int l4dde_pci_init(void);
 
@@ -87,4 +135,14 @@ int l4dde_process_add_worker(void);
  */
 extern void (*dde_BUG)(const char*file, const char*function, int line) __attribute__((noreturn));
 
+/** DDE2.6: Initialize driver classes
+ *
+ * \return 0 on success; negative error code otherwise
+ *
+ * This function is only implemented in DDE 2.6 (and above).
+ */
+int l4dde_driver_classes_init(void);
+
+EXTERN_C_END
 #endif
+

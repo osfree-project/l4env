@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/x0adapt/L4X0aBEWaitAnyFunction.cpp
+ *    \brief   contains the implementation of the class CL4X0aBEWaitAnyFunction
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,15 +37,24 @@
  */
 class CL4X0aBEWaitAnyFunction : public CL4BEWaitAnyFunction
 {
-DECLARE_DYNAMIC(CL4X0aBEWaitAnyFunction);
 
 public:
-	CL4X0aBEWaitAnyFunction();
-	~CL4X0aBEWaitAnyFunction();
+    /** \brief creates a wait function object
+     *  \param bOpenWait true if wait for any sender
+     *  \param bReply true if send reply before wait
+     */
+    CL4X0aBEWaitAnyFunction(bool bOpenWait, bool bReply);
+    virtual ~CL4X0aBEWaitAnyFunction();
+
+protected:
+    /** \brief copy constructor
+     *    \param src the source to copy from
+     */
+    CL4X0aBEWaitAnyFunction(CL4X0aBEWaitAnyFunction &src);
 
 protected:
     virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
-	virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
+    virtual void WriteUnmarshalling(CBEFile* pFile, int nStartOffset, bool& bUseConstOffset, CBEContext* pContext);
 };
 
 #endif

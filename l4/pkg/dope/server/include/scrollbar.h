@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -13,13 +13,15 @@
  * COPYING file for details.
  */
 
+#ifndef _DOPE_SCROLLBAR_H_
+#define _DOPE_SCROLLBAR_H_
+
+#include "widget.h"
+
 struct scrollbar_methods;
 struct scrollbar_data;
 
 #define SCROLLBAR struct scrollbar
-
-#define SCROLLBAR_HOR  0
-#define SCROLLBAR_VER  1
 
 struct scrollbar {
 	struct widget_methods    *gen;
@@ -29,22 +31,28 @@ struct scrollbar {
 };
 
 struct scrollbar_methods {
-	void (*set_type)        (SCROLLBAR *,u32 type);
-	u32  (*get_type)        (SCROLLBAR *);
-	void (*set_slider_x)    (SCROLLBAR *,s32 new_sx);
-	u32  (*get_slider_x)    (SCROLLBAR *);
-	void (*set_slider_y)    (SCROLLBAR *,s32 new_sy);
-	u32  (*get_slider_y)    (SCROLLBAR *);
-	void (*set_real_size)   (SCROLLBAR *,u32 new_real_size);
-	u32  (*get_real_size)   (SCROLLBAR *);
-	void (*set_view_size)   (SCROLLBAR *,u32 new_view_size);
-	u32  (*get_view_size)   (SCROLLBAR *);
-	void (*set_view_offset) (SCROLLBAR *,s32 new_view_offset);
-	u32  (*get_view_offset) (SCROLLBAR *);
-	s32  (*get_arrow_size)  (SCROLLBAR *);
-	void (*reg_scroll_update)(SCROLLBAR *,void (*callback)(void *,u16),void *arg);
+	void  (*set_orient)        (SCROLLBAR *, char *orient);
+	char *(*get_orient)        (SCROLLBAR *);
+	void  (*set_autoview)      (SCROLLBAR *, long av);
+	long  (*get_autoview)      (SCROLLBAR *);
+	void  (*set_slider_x)      (SCROLLBAR *, s32 new_sx);
+	u32   (*get_slider_x)      (SCROLLBAR *);
+	void  (*set_slider_y)      (SCROLLBAR *, s32 new_sy);
+	u32   (*get_slider_y)      (SCROLLBAR *);
+	void  (*set_real_size)     (SCROLLBAR *, u32 new_real_size);
+	u32   (*get_real_size)     (SCROLLBAR *);
+	void  (*set_view_size)     (SCROLLBAR *, u32 new_view_size);
+	u32   (*get_view_size)     (SCROLLBAR *);
+	void  (*set_view_offset)   (SCROLLBAR *, s32 new_view_offset);
+	u32   (*get_view_offset)   (SCROLLBAR *);
+	s32   (*get_arrow_size)    (SCROLLBAR *);
+	void  (*reg_scroll_update) (SCROLLBAR *, void (*callback)(void *), void *arg);
 };
 
 struct scrollbar_services {
 	SCROLLBAR *(*create) (void);
 };
+
+
+#endif /* _DOPE_SCROLLBAR_H_ */
+

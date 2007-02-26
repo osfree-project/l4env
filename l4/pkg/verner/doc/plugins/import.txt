@@ -1,0 +1,116 @@
+                           VERNER - Import-Plugins
+                              Carsten Rietzschel
+                           cr7@os.inf.tu-dresden.de
+                              17 September 2004
+
+
+
+
+                       ============= Generelles =============
+
+
+Pro Container-Format ein Plugin.
+Funktionsnamen fangen mit vid_ für Video bzw. aud_ für Audio an.
+
+
+                       ============= Schnittstellen =============
+
+
+Schnittstellen z.B. für OGM-Video:
+
+/* video functions */
+int vid_import_ogm_init (plugin_ctrl_t * attr, stream_info_t * info);
+
+  Initialisierung des Plugins. 
+  Aufgaben:
+  - öffnen der Datei und prüfen ob Plugin dafür geeignet ist
+  - Initialisierung interne Strukturen und Buffer
+  - ausfüllen bzw. aktualisieren der Stream_info (siehe include/arch_types.h)
+    --> stream_info_t == frame_ctrl_t 
+        Daten wie Auslösung, Samplerate, Framerate, u.a.
+        auch PTS (Presentation Timestamp) für Video
+        (wenn nicht vorhanden, dann wird PTS=frameNummer * frameRate im Sync genutzt)
+        halt alles was bei der Videoverabeitung für alle Komponenten 
+        wichtig ist...
+
+
+
+int vid_import_ogm_step (plugin_ctrl_t * attr, void *addr);
+
+  Step-Funktion 
+  Aufgaben;
+  - Ausfüllen des Frameheaders an addr
+  - Demultimplexen deines Frames bzw. Audiochunks an addr + sizeof(frame_ctrl_t)
+
+  Wichtig:
+  - Bei Änderung, die eine Reinitialisierung des Codecs bzw. der Ausgabe-Plugins notwendig machen,
+    wie z.B. die Auflösung (neuer Vscreen muss geöffnet werden), muss ein 
+     reset_configure_point als Frametype gesetzt werden
+  - Bei Ändeurngen im Stream (Lücken, Packetverlust oder seek) muss ein reset_sync_point als
+    Frametype gesetzt werden, damit sich die Sync-Komponente darauf anpassen kann.
+    Dazu gehört auch die aktuelle Positionsangabe (last_sync_pts) in msec.
+    (siehe dazu:  include/arch_globals.h)
+
+
+
+int vid_import_ogm_commit (plugin_ctrl_t * attr);
+
+  Commit-Funktion
+  Aufgaben:
+  - ggf. dem Import-Plugin bescheid geben, daß die gerade geholten Daten nicht mehr
+    nötig sind
+    (z.Zt. ungenutzt; erlaut einfachere Anbindung an DSI-Ströme)
+
+
+
+int vid_import_ogm_close (plugin_ctrl_t * attr);
+
+  Schliessen des Plugins
+  Aufgaben:
+  - Schliessen des Streams
+  - Freigabe interner Strukturen
+
+
+
+int vid_import_ogm_seek (plugin_ctrl_t * attr, void *addr, double position,
+                         int whence);
+
+  Seeken im Video:
+  Aufgaben:
+  - seek durchführen an position (in millisec), whence = relativ oder absolut
+  - sonst wie step
+
+
+
+Selbige Schnittstellten gibt's auch für Audio.
+
+
+
+
+               ============= Hinzufügen von Import-Plugins  =============
+
+
+- Schreiben des eigentlische Plugins und Ablage incl. Header-File in plugins/import/demux_*.[ch]
+- einfügen in include/arch_plugins.h: 
+  bei static import_plugin_info_t import_plugin_info[] =  {
+     /* Video import plugins */
+     #if VDEMUXER_BUILD_PLUGIN <--- Mit Plugin bauen ?
+     {
+       PLUG_MODE_IMPORT, STREAM_TYPE_VIDEO, PLUG_NAME_OGM,
+       ^^^^              ^^^^               Name des Plugins (vorher definieren!)
+       ^^^^              Audio oder. Video ?
+       Import für Import-Plugins
+      /* import functions */
+      vid_import_ogm_init, vid_import_ogm_commit, <--- Namen der Funktionen im neuen Plugin
+      vid_import_ogm_step, vid_import_ogm_close,
+      vid_import_ogm_seek,
+     },
+     #endif 
+
+     Selbiges für Audio tun.
+
+- Beim Probing bekannt machen: siehe vdemuxer/src/container.c:probeVideoFile()
+- Bei der Auswahl bekannt machen:           -"-              :detemineAndSetupCodec()
+- Makefile anpassen (vdemuxer/src/Makefile) 
+- Unter /config eingbauen, falls konfigurierbar gewünscht.
+

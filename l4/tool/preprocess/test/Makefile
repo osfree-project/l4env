@@ -11,7 +11,8 @@ TOOL_TESTS = mapping mapping_inline random random_inline extern_c static \
   noinline explicit operator template template_inline c-preproc inline \
   parser parser_noinline \
   multifile variable line line_not line_nh interface comment_in_string \
-  default_args
+  default_args drop_single1 drop_single2 drop_single3 drop_multi1 \
+  drop_multi2
 
 mapping_inline_src = mapping
 mapping_inline_flags = -i
@@ -45,6 +46,23 @@ line_nh_flags = -L
 
 interface_missing = interface.h
 interface_extra = interfacepublic.h
+
+drop_single1_src   = dropsection
+drop_single1_flags = -s -e "bax"
+
+drop_single2_src   = dropsection
+drop_single2_flags = -s -e "bax ixbix"
+
+drop_single3_src   = dropsection
+drop_single3_flags = -s -e "bax aba"
+
+drop_multi1_src    = dropsection dropsection-ext
+drop_multi1_flags  = -s -e "bax aba"
+drop_multi1_extra  = drop_multi1-ext.cc
+
+drop_multi2_src    = dropsection dropsection-ext
+drop_multi2_flags  = -s -e "bax aba ext"
+drop_multi2_extra  = drop_multi2-ext.cc
 
 random.cpp: combine.pl
 	perl $< > $@.new

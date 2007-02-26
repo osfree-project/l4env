@@ -147,8 +147,9 @@ remove_virtual_area(l4_addr_t addr)
  * \note We ignore the flags.
  */
 int
-l4rm_attach(l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
-            l4_uint32_t flags, void ** addr){
+l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr, 
+               l4_size_t size, l4_offs_t ds_offs, l4_uint32_t flags)
+{
   struct vm_area *vm;
   unsigned off;
   int err;
@@ -165,7 +166,7 @@ l4rm_attach(l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
   vm = reserve_virtual_area(size);
   if(vm==NULL) return -ENOMEM;
   
-  *addr = vm->addr;
+  *addr = (l4_addr_t)vm->addr;
 
   vm->ds = *ds;
   vm->offs = ds_offs;
@@ -192,17 +193,6 @@ l4rm_attach(l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
     }
   
   return 0;
-}
-
-/*!\brief Pretend to attach a dataspace to a preallocated region.
- *
- * This function actually only calls l4rm_attach().
- */
-int 
-l4rm_area_attach(l4dm_dataspace_t * ds, l4_uint32_t area, l4_size_t size,
-                 l4_offs_t ds_offs, l4_uint32_t flags, void ** addr)
-{
-  return l4rm_attach(ds, size, ds_offs, flags, addr);
 }
 
 /*!\brief Pretend to detach a dataspace from a region.
@@ -235,15 +225,8 @@ l4rm_detach(void * addr){
  * \note This means, areas are comletely ignored!
  */
 int
-l4rm_area_reserve_region(l4_addr_t addr, l4_size_t size, l4_uint32_t flags,
-                         l4_uint32_t * area){
-  *area = 0;
-  return 0;
-}
-
-int
-l4rm_direct_area_reserve_region(l4_addr_t addr, l4_size_t size, 
-                                l4_uint32_t flags, l4_uint32_t * area)
+l4rm_do_reserve(l4_addr_t * addr, l4_size_t size, l4_uint32_t flags, 
+                l4_uint32_t * area)
 {
   *area = 0;
   return 0;
@@ -253,8 +236,8 @@ l4rm_direct_area_reserve_region(l4_addr_t addr, l4_size_t size,
  * \brief Lookup VM address
  */
 int
-l4rm_lookup(void * addr, l4dm_dataspace_t * ds, l4_offs_t * offset, 
-	    l4_addr_t * map_addr, l4_size_t * map_size)
+l4rm_lookup(void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
+            l4dm_dataspace_t * ds, l4_offs_t * offset, l4_threadid_t * pager)
 {
   struct vm_area * vm;
   l4_addr_t a = (l4_addr_t)addr;
@@ -268,7 +251,7 @@ l4rm_lookup(void * addr, l4dm_dataspace_t * ds, l4_offs_t * offset,
   *map_addr = (l4_addr_t)vm->addr;
   *map_size = vm->size;
 
-  return 0;
+  return L4RM_REGION_DATASPACE;
 }
 
 /* more dummies */

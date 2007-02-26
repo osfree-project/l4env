@@ -2,17 +2,26 @@ INTERFACE:
 
 #include "l4_types.h"
 
-class Jdb_symbol
+class Jdb_symbol_info
 {
 private:
-  typedef struct
-    {
-      const char *str;
-      Address    beg;
-      Address    end;
-    } Task_symbol;
-  
-  static Task_symbol task_symbols[L4_uid::MAX_TASKS];
+  Address  _virt;
+  size_t   _size;
+  Address  _beg_sym;
+  Address  _end_sym;
+};
+
+class Jdb_symbol
+{
+public:
+  enum
+  {
+    // don't allow more than 2048 tasks to register their symbols to save space
+    Max_tasks = L4_uid::Max_tasks < 2048 ? L4_uid::Max_tasks : 2048,
+  };
+
+private:
+  static Jdb_symbol_info *_task_symbols;
 };
 
 
@@ -20,14 +29,58 @@ IMPLEMENTATION:
 
 #include <cstdio>
 #include <cstring>
-#include "kmem.h"
+#include "config.h"
+#include "mem_layout.h"
+#include "panic.h"
+#include "warn.h"
+#include "kdb_ke.h"
 
-Jdb_symbol::Task_symbol Jdb_symbol::task_symbols[L4_uid::MAX_TASKS];
+Jdb_symbol_info *Jdb_symbol::_task_symbols;
+
+PUBLIC static
+void
+Jdb_symbol::init (void *mem, Mword pages)
+{
+  if (!mem || pages < (Max_tasks*sizeof(Jdb_symbol_info))>>Config::PAGE_SHIFT)
+    panic("No memory for symbols");
+
+  _task_symbols = (Jdb_symbol_info*)mem;
+  memset(_task_symbols, 0, Max_tasks * sizeof(Jdb_symbol_info));
+}
+
+PUBLIC inline NOEXPORT
+char*
+Jdb_symbol_info::str ()
+{ 
+  return (char*) _virt;
+}
+
+PUBLIC inline
+void
+Jdb_symbol_info::get (Address &virt, size_t &size)
+{
+  virt = _virt;
+  size = _size;
+}
+
+PUBLIC inline
+void
+Jdb_symbol_info::reset ()
+{
+  _virt = 0;
+}
+
+PUBLIC inline NOEXPORT
+bool
+Jdb_symbol_info::in_range (Address addr)
+{
+  return _virt != 0 && _beg_sym <= addr && _end_sym >= addr;
+}
 
 // read address from current position and return its value
-static inline
+PRIVATE static inline NOEXPORT
 Address
-Jdb_symbol::string_to_addr(char *symstr)
+Jdb_symbol_info::string_to_addr (const char *symstr)
 {
   Address addr = 0;
 
@@ -51,75 +104,150 @@ Jdb_symbol::string_to_addr(char *symstr)
   return addr;
 }
 
-// optimize symbol table to speed up address-to-symbol search
-// replace stringified address (8 characters) by 2 dwords of
-// 32 bit: the symbol value and the absolute address of the
-// next symbol (or 0 if end of list)
-static
+// Optimize symbol table to speed up address-to-symbol search.
+// Replace stringified address (8 characters) by 2 dwords of 32 bit: The
+// symbol value and the absolute address of the next symbol (or 0 if end
+// of list)
+PRIVATE
 bool
-Jdb_symbol::set_symbols(Task_num task, Address addr)
+Jdb_symbol_info::transform ()
 {
-  if (addr == 0)
-    {
-      // disable symbols for specific tasks
-      task_symbols[task].str = 0;
-      return false;
-    }
+  char *symstr = str();
+  size_t     s = _size;
 
-  char *symstr = (char*)Kmem::phys_to_virt(addr);
-  task_symbols[task].str = symstr;
-  
   for (int line=0; ; line++)
     {
       char *sym = symstr;
-      
-      while (((*symstr) != '\0') && (*symstr != '\n'))
-	symstr++;
-      
-      if (symstr-sym < 11)
+
+      // set symstr to the end of the current line
+      while (s && (*symstr != '\0') && (*symstr != '\n'))
+	{
+	  symstr++;
+	  s--;
+	}
+
+      if (!s || (symstr-sym < 11))
 	{
 	  if (line == 0)
 	    {
-	      printf("Invalid symbol table of task #%x at line %d "
-	             "-- disabling symbols\n", task, line);
-	      task_symbols[task].str = 0;
+	      WARN("Invalid symbol table at " L4_PTR_FMT
+		   " -- disabling symbols.", (Address)sym);
 	      return false;
 	    }
 
-	  ((Address*)sym)[-1] = 0;  // terminate list
-	  ((Address*)sym)[ 0] = 0;  // terminate list
-	  *symstr = '\0';            // terminate string
+	  ((Address*)sym)[0] = 0; // terminate list
+	  ((Address*)sym)[1] = 0; // terminate list
+	  if (s)
+	    *symstr = '\0';       // terminate string
 	  return true;
 	}
-      
-      // write binary address
+
+      // write binary value of symbol string
       Address addr = string_to_addr(sym);
-      *((Address*)sym)++ = addr;
-      
+      Address *sym_addr = (Address*)sym;
+      *sym_addr = addr;
+
+      sym += sizeof(Address);
+      sym_addr = (Address*)sym;
+
       if (!*symstr || !*(symstr+1))
 	{
-	  *((Address*)sym) = 0;  // terminate list
-	  *symstr = '\0';  // terminate string
+	  *symstr = '\0'; // terminate symbol
+	  *sym_addr = 0;  // terminate list
 	  return true;
 	}
-      
-      // terminate current symbol (overwrite '\n')
+
+      // terminate current symbol -- overwrite '\n'
       *symstr = '\0';
 
-      // link address
-      *((Address*)sym)++ = (Address)(++symstr);
+      // write link address to next symbol
+      *sym_addr = (Address)++symstr;
+      sym += sizeof(Address);
+      s--;
     }
+}
+
+// register symbols for a specific task (called by user mode application)
+PUBLIC
+bool
+Jdb_symbol_info::set (Address virt, size_t size)
+{
+  _virt = virt;
+  _size = size;
+
+  if (! transform())
+    return false;
+
+  if (this == Jdb_symbol::lookup(0))
+    {
+      // kernel symbols are special
+      Address sym_start, sym_end;
+
+      if (  !(sym_start = Jdb_symbol::match_symbol_to_addr("_start", false, 0))
+    	  ||!(sym_end   = Jdb_symbol::match_symbol_to_addr("_end", false, 0)))
+	{
+	  WARN ("Missing \"_start\" or \"_end\" in kernel symbols "
+		"-- disabling kernel symbols");
+	  return false;
+	}
+
+      if (sym_end != (Address)&Mem_layout::end)
+	{
+	  WARN("Fiasco symbol table does not match kernel "
+	       "-- disabling kernel symbols");
+	  return false;
+	}
+
+      _beg_sym = sym_start;
+      _end_sym = sym_end;
+    }
+  else
+    {
+      Address min_addr = ~0UL, max_addr = 0;
+      const char *sym;
+
+      for (sym = str(); sym; sym = *((const char**)sym+1))
+	{
+	  Address addr = *(Address*)sym;
+	  if (addr < min_addr)
+	    min_addr = addr;
+	  if (addr > max_addr)
+	    max_addr = addr;
+	}
+      
+      _beg_sym = min_addr;
+      _end_sym = max_addr;
+    }
+
+  return true;
+}
+
+PUBLIC static
+Jdb_symbol_info*
+Jdb_symbol::lookup (Task_num task)
+{
+  if (task >= Max_tasks)
+    {
+      WARN ("register_symbols: task value #%x out of range (0-%x).",
+	    task, Max_tasks-1);
+      return 0;
+    }
+
+  return _task_symbols + task;
 }
 
 // search symbol in task's symbols, return pointer to symbol name
 static
 const char*
-Jdb_symbol::match_symbol(const char *symbol, bool search_instr, Task_num task)
+Jdb_symbol::match_symbol (const char *symbol, bool search_instr, Task_num task)
 {
   const char *sym, *symnext;
 
+  if (task >= Max_tasks)
+    return 0;
+
   // walk through list of symbols
-  for (sym=task_symbols[task].str; sym; sym=symnext)
+  for (sym=_task_symbols[task].str(); sym; sym=symnext)
     {
       symnext = *((const char**)sym+1);
       
@@ -136,17 +264,17 @@ Jdb_symbol::match_symbol(const char *symbol, bool search_instr, Task_num task)
 // was not found, search in kernel symbols too (if exists)
 PUBLIC static
 Address 
-Jdb_symbol::match_symbol_to_addr(const char *symbol, bool search_instr,
-				 Task_num task)
+Jdb_symbol::match_symbol_to_addr (const char *symbol, bool search_instr,
+				  Task_num task)
 {
   const char *sym;
 
-  if (task >= L4_uid::MAX_TASKS)
+  if (task >= Max_tasks)
     return 0;
 
   for (;;)
     {
-      if (    (task_symbols[task].str == 0)
+      if (   !_task_symbols[task].str()
 	  || !(sym = match_symbol(symbol, search_instr, task)))
 	{
 	  // no symbols for task or symbol not found in symbols
@@ -155,8 +283,7 @@ Jdb_symbol::match_symbol_to_addr(const char *symbol, bool search_instr,
 	      task = 0; // not yet searched in kernel symbols, do it now
 	      continue;
 	    }
-	  else
-	    return 0; // already searched in kernel symbols so we fail
+	  return 0; // already searched in kernel symbols so we fail
 	}
 
       return *(Address*)sym;
@@ -166,7 +293,7 @@ Jdb_symbol::match_symbol_to_addr(const char *symbol, bool search_instr,
 // try to search a possible symbol completion
 PUBLIC static
 bool
-Jdb_symbol::complete_symbol(char *symbol, unsigned size, Task_num task)
+Jdb_symbol::complete_symbol (char *symbol, unsigned size, Task_num task)
 {
   unsigned equal_len = 0xffffffff, symbol_len = strlen(symbol);
   const char *sym, *symnext, *equal_sym = 0;
@@ -175,10 +302,10 @@ Jdb_symbol::complete_symbol(char *symbol, unsigned size, Task_num task)
     return false;
 
 repeat:
-  if ((task <= L4_uid::MAX_TASKS) && (task_symbols[task].str != 0))
+  if (task < Max_tasks && _task_symbols[task].str() != 0)
     {
       // walk through list of symbols
-      for (sym=task_symbols[task].str; sym; sym=symnext)
+      for (sym=_task_symbols[task].str(); sym; sym=symnext)
 	{
 	  symnext = *((const char**)sym+1);
 	  sym += 11;
@@ -213,12 +340,7 @@ repeat:
     {
       if (equal_len > symbol_len)
 	{
-	  // unique completion found, append it to symbol
-	  if (equal_len > size)
-	    equal_len = size;
-      
-	  strncpy(symbol, equal_sym, equal_len);
-	  symbol[equal_len] = '\0';
+	  snprintf(symbol, size < equal_len+1 ? size : equal_len+1, "%s", equal_sym);
 	  return true;
 	}
     }
@@ -248,24 +370,23 @@ repeat:
 // search symbol name that matches for a specific address
 PUBLIC static
 const char*
-Jdb_symbol::match_addr_to_symbol(Address addr, Task_num task)
+Jdb_symbol::match_addr_to_symbol (Address addr, Task_num task)
 {
-  if (task>=L4_uid::MAX_TASKS)
+  if (task >= Max_tasks)
     return 0;
 
-  if (   (task_symbols[task].str != 0)
-      && (task_symbols[task].beg <= addr)
-      && (task_symbols[task].end >= addr))
+  if (! _task_symbols[task].in_range (addr))
+    return 0;
+
+  const char *sym;
+
+  for (sym = _task_symbols[task].str(); sym; sym = *((const char**)sym+1))
     {
-      const char *sym;
-      for (sym = task_symbols[task].str; sym; sym = *((const char**)sym+1))
-	{
-	  if ((*(Address*)sym == addr)
-	      && (memcmp((void*)(sym+11), "Letext", 6))		// ignore
-	      && (memcmp((void*)(sym+11), "patch_log_", 10))	// ignore
-	     )
-	    return sym+11;
-	}
+      if (   (*(Address*)sym == addr)
+	  && (memcmp((void*)(sym+11), "Letext", 6))		// ignore
+	  && (memcmp((void*)(sym+11), "patch_log_", 10))	// ignore
+	 )
+	return sym+11;
     }
 
   return 0;
@@ -274,114 +395,52 @@ Jdb_symbol::match_addr_to_symbol(Address addr, Task_num task)
 // search last symbol before eip
 PUBLIC static
 bool
-Jdb_symbol::match_eip_to_symbol(Address eip, Task_num task, 
-				char *t_symbol, int s_symbol)
+Jdb_symbol::match_addr_to_symbol_fuzzy (Address *addr_ptr, Task_num task, 
+				        char *t_symbol, int s_symbol)
 {
-  if (task>=L4_uid::MAX_TASKS)
+  if (task >= Max_tasks)
     return false;
 
-  if (   (task_symbols[task].str != 0)
-      && (task_symbols[task].beg <= eip)
-      && (task_symbols[task].end >= eip))
+  if (! _task_symbols[task].in_range (*addr_ptr))
+    return false;
+
+  const char *sym, *max_sym = 0;
+  Address max_addr = 0;
+
+  for (sym = _task_symbols[task].str(); sym; sym = *((const char**)sym+1))
     {
-      const char *sym, *max_sym = 0;
-      Address max_addr = 0;
-      
-      for (sym = task_symbols[task].str; sym; sym = *((const char**)sym+1))
+      Address addr = *(Address*)sym;
+      if (   addr > max_addr && addr <= *addr_ptr
+	  && (memcmp((void*)(sym+11), "Letext", 6))		// ignore
+	  && (memcmp((void*)(sym+11), "patch_log_", 10))	// ignore
+	 )
 	{
-	  Address addr = *(Address*)sym;
-	  if (   (addr > max_addr) && (addr <= eip)
-	      && (memcmp((void*)(sym+11), "Letext", 6))		// ignore
-	      && (memcmp((void*)(sym+11), "patch_log_", 10))	// ignore
-	     )
-	    {
-	      max_addr = addr;
-	      max_sym  = sym;
-	    }
+	  max_addr = addr;
+	  max_sym  = sym;
 	}
+    }
       
-      if (max_sym)
+  if (max_sym)
+    {
+      const char *t = max_sym + 11;
+	  
+      t_symbol[--s_symbol] = '\0';
+      while ((*t != '\n') && (*t != '\0') && (s_symbol--))
 	{
-	  const char *t = max_sym + 11;
-	  
-	  t_symbol[--s_symbol] = '\0';
-	  while ((*t != '\n') && (*t != '\0') && (s_symbol--))
-	    {
-	      *t_symbol++ = *t++;
+	  *t_symbol++ = *t++;
 
-	      // print functions with arguments as ()
-	      if (*(t-1) == '(')
-		while (*t != ')' && (*t != '\n') && (*t != '\0')) t++;
-	    }
-	  
-	  // terminate string
-	  if (s_symbol)
-	    *t_symbol = '\0';
-
-	  return true;
+	  // print functions with arguments as ()
+	  if (*(t-1) == '(')
+	    while (*t != ')' && (*t != '\n') && (*t != '\0')) t++;
 	}
+	  
+      // terminate string
+      if (s_symbol)
+	*t_symbol = '\0';
+
+      *addr_ptr = max_addr;
+      return true;
     }
 
   return false;
 }
-
-// register symbols for a specific task (called by user mode application)
-PUBLIC static
-void
-Jdb_symbol::register_symbols(Address addr, Task_num task)
-{
-  // sanity check
-  if (task >= L4_uid::MAX_TASKS)
-    {
-      printf("register_symbols: task value %d out of range (0-%d)\n", 
-	  task, L4_uid::MAX_TASKS-1);
-      return;
-    }
-  
-  if (!set_symbols(task, addr))
-    return;
-
-  if (task == 0)
-    {
-      // kernel symbols are special
-      Address sym_start, sym_end;
-      
-      if (  !(sym_start = match_symbol_to_addr("_start", false, 0))
-    	  ||!(sym_end   = match_symbol_to_addr("_end", false, 0)))
-	{
-	  printf("KERNEL: Missing \"_start\" or \"_end\" in kernel symbols "
-	      "-- disabling kernel symbols\n");
-	  task_symbols[0].str = 0;
-	  return;
-	}
-
-      if (sym_end != (Address)&_end)
-	{
-	  printf("KERNEL: Fiasco symbol table does not match kernel "
- 	      "-- disabling kernel symbols\n");
-     	  task_symbols[0].str = 0;
-	  return;
-	}
-
-      task_symbols[0].beg = sym_start;
-      task_symbols[0].end = sym_end;
-    }
-  else
-    {
-      Address min_addr = 0xffffffff, max_addr = 0;
-      const char *sym;
-
-      for (sym = task_symbols[task].str; sym; sym = *((const char**)sym+1))
-	{
-	  Address addr = *(Address*)sym;
-	  if (addr < min_addr)
-	    min_addr = addr;
-	  if (addr > max_addr)
-	    max_addr = addr;
-	}
-      
-      task_symbols[task].beg = min_addr;
-      task_symbols[task].end = max_addr;
-    }
-}
-

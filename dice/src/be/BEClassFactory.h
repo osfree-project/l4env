@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BEClassFactory.h
- *	\brief	contains the declaration of the class CBEClassFactory
+ *    \file    dice/src/be/BEClassFactory.h
+ *    \brief   contains the declaration of the class CBEClassFactory
  *
- *	\date	01/10/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -40,7 +41,6 @@ class CBEHeaderFile;
 class CBEImplementationFile;
 class CBEOperationFunction;
 class CBESndFunction;
-class CBERcvFunction;
 class CBEWaitFunction;
 class CBEReplyRcvFunction;
 class CBEReplyFunction;
@@ -53,9 +53,7 @@ class CBESwitchCase;
 class CBETestFunction;
 class CBETestServerFunction;
 class CBETestMainFunction;
-class CBERcvAnyFunction;
 class CBEWaitAnyFunction;
-class CBEReplyAnyWaitAnyFunction;
 class CBEDispatchFunction;
 class CBESrvLoopFunction;
 class CBEAttribute;
@@ -78,31 +76,30 @@ class CBEContext;
 class CBESizes;
 class CBECommunication;
 
-/**	\class CBEClassFactory
- *	\ingroup backend
- *	\brief the class factory for the back-end classes
+/**    \class CBEClassFactory
+ *    \ingroup backend
+ *    \brief the class factory for the back-end classes
  *
  * We use seperate functions for each class, because the alternative is to use some sort of identifier to find out
- * which class to generate. This involves writing a big switch statement. 
+ * which class to generate. This involves writing a big switch statement.
  */
-class CBEClassFactory : public CBEObject  
+class CBEClassFactory : public CBEObject
 {
-DECLARE_DYNAMIC(CBEClassFactory);
 // Constructor
 public:
-	/**	\brief constructor
-	 *	\param bVerbose true if class should print status output
-	 */
-	CBEClassFactory(bool bVerbose = false);
-	virtual ~CBEClassFactory();
-	
+    /**    \brief constructor
+     *    \param bVerbose true if class should print status output
+     */
+    CBEClassFactory(bool bVerbose = false);
+    virtual ~CBEClassFactory();
+
     virtual CBETestMainFunction* GetNewTestMainFunction();
     virtual CBETestServerFunction* GetNewTestServerFunction();
     virtual CBETestFunction* GetNewTestFunction();
     virtual CBEOperationFunction* GetNewOperationFunction();
     virtual CBEClass* GetNewClass();
     virtual CBEUserDefinedType* GetNewUserDefinedType();
-    virtual CBEMsgBufferType* GetNewMessageBufferType();
+    virtual CBEMsgBufferType* GetNewMessageBufferType(bool bInterface);
     virtual CBESwitchCase* GetNewSwitchCase();
     virtual CBEComponentFunction* GetNewComponentFunction();
     virtual CBEOpcodeType* GetNewOpcodeType();
@@ -110,7 +107,7 @@ public:
     virtual CBEUnmarshalFunction* GetNewUnmarshalFunction();
     virtual CBEMarshalFunction* GetNewMarshalFunction();
     virtual CBEWaitAnyFunction* GetNewWaitAnyFunction();
-    virtual CBERcvAnyFunction* GetNewRcvAnyFunction();
+    virtual CBEWaitAnyFunction* GetNewRcvAnyFunction();
     virtual CBESrvLoopFunction* GetNewSrvLoopFunction();
     virtual CBEConstant* GetNewConstant();
     virtual CBECallFunction* GetNewCallFunction();
@@ -124,7 +121,7 @@ public:
     virtual CBEAttribute* GetNewAttribute();
     virtual CBEReplyFunction* GetNewReplyFunction();
     virtual CBEWaitFunction* GetNewWaitFunction();
-    virtual CBERcvFunction* GetNewRcvFunction();
+    virtual CBEWaitFunction* GetNewRcvFunction();
     virtual CBESndFunction* GetNewSndFunction();
     virtual CBEImplementationFile* GetNewImplementationFile();
     virtual CBEHeaderFile* GetNewHeaderFile();
@@ -134,22 +131,22 @@ public:
     virtual CBERoot* GetNewRoot();
     virtual CBEMarshaller* GetNewMarshaller(CBEContext *pContext);
     virtual CBENameSpace* GetNewNameSpace();
-    virtual CBEReplyAnyWaitAnyFunction* GetNewReplyAnyWaitAnyFunction();
+    virtual CBEWaitAnyFunction* GetNewReplyAnyWaitAnyFunction();
     virtual CBESizes* GetNewSizes();
-	virtual CBECommunication* GetNewCommunication();
-	virtual CBEDispatchFunction* GetNewDispatchFunction();
+    virtual CBECommunication* GetNewCommunication();
+    virtual CBEDispatchFunction* GetNewDispatchFunction();
 
 protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CBEClassFactory(CBEClassFactory &src);
+    /**    \brief copy constructor
+     *    \param src the source to copy from
+     */
+    CBEClassFactory(CBEClassFactory &src);
 
 protected:
-	/**	\var bool m_bVerbose
-	 *	\brief is true if this class should output verbose stuff
-	 */
-	bool m_bVerbose;
+    /**    \var bool m_bVerbose
+     *    \brief is true if this class should output verbose stuff
+     */
+    bool m_bVerbose;
 };
 
 #endif // !__DICE_BECLASSFACTORY_H__

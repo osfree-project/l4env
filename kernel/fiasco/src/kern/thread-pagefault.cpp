@@ -1,17 +1,18 @@
-IMPLEMENTATION[pagefault]:
+IMPLEMENTATION:
 
 #include <cstdio>
 
+#include "config.h"
 #include "cpu.h"
 #include "kdb_ke.h"
 #include "kmem.h"
+#include "logdefs.h"
 #include "processor.h"
-#include "config.h"
-#include "kdb_ke.h"
 #include "regdefs.h"
 #include "std_macros.h"
 #include "thread.h"
 #include "vmem_alloc.h"
+#include "warn.h"
 
 
 /** 
@@ -27,14 +28,17 @@ IMPLEMENTATION[pagefault]:
  *                    handling fails (i.e., return value would be false),
  *                    but recovery location has been installed           
  */
-IMPLEMENT inline NEEDS[<cstdio>, "regdefs.h", "kdb_ke.h","processor.h","config.h",
-		       "std_macros.h","vmem_alloc.h",Thread::page_fault_log]
-bool Thread::handle_page_fault (Address pfa,
-				Mword error_code,
-				Mword pc)
+IMPLEMENT inline NEEDS[<cstdio>,"regdefs.h", "kdb_ke.h","processor.h",
+		       "config.h","std_macros.h","vmem_alloc.h","logdefs.h",
+		       "warn.h",Thread::page_fault_log]
+bool Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc)
 {
-
-  //  printf("*P[%x,%x,%x]\n", pfa, error_code & 0xffff, pc);
+  if (Config::Log_kernel_page_faults && !PF::is_usermode_error(error_code))
+    {
+      printf("*KP[%lx,", pfa);
+      print_page_fault_error(error_code);
+      printf(",%lx]\n", pc);
+    }
 #if 0
   printf("Translation error ? %x\n"
 	 "  current space has mapping : %08x\n"
@@ -49,9 +53,8 @@ bool Thread::handle_page_fault (Address pfa,
       if (_last_pf_address == pfa && _last_pf_error_code == error_code)
         {
           if (!log_page_fault())
-            printf("*P[%x,%x,%x]\n", pfa, error_code & 0xffff, pc);
-          else
-            putchar('\n');
+            printf("*P[%lx,%lx,%lx]", pfa, error_code & 0xffff, pc);
+	  putchar('\n');
 
           kdb_ke("PF happened twice");
         }
@@ -63,11 +66,13 @@ bool Thread::handle_page_fault (Address pfa,
       //                          and in Thread::handle_slow_trap.)
     }
 
+  CNT_PAGE_FAULT;
+
   // TODO: put this into a debug_page_fault_handler
   if (EXPECT_FALSE (log_page_fault()))
     page_fault_log (pfa, error_code, pc);
 
-  L4_msgdope ipc_code(0);
+  Ipc_err ipc_code(0);
 
   // Check for page fault in user memory area
   if (EXPECT_TRUE (!Kmem::is_kmem_page_fault(pfa, error_code)))
@@ -82,7 +87,7 @@ bool Thread::handle_page_fault (Address pfa,
 	  if(handle_sigma0_page_fault(pfa))
             return true;
 
-          ipc_code.error (L4_msgdope::REMAPFAILED);
+          ipc_code.error (Ipc_err::Remapfailed);
           goto error;
         }
 
@@ -94,7 +99,7 @@ bool Thread::handle_page_fault (Address pfa,
     }
 
   // Check for page fault in small address space
-  else if (EXPECT_FALSE (Kmem::is_smas_page_fault(pfa, error_code)))
+  else if (EXPECT_FALSE (Kmem::is_smas_page_fault(pfa)))
     {
       if (handle_smas_page_fault (pfa, error_code, ipc_code))
         return true;
@@ -103,14 +108,13 @@ bool Thread::handle_page_fault (Address pfa,
     }
   
   // Check for page fault in kernel memory region caused by user mode
-  else if (EXPECT_FALSE(PF::is_usermode_error(error_code)
-			/*(error_code & PF_ERR_USERMODE)*/))
+  else if (EXPECT_FALSE(PF::is_usermode_error(error_code)))
     return false;             // disallow access after mem_user_max
 
   // Check for page fault in IO bit map or in delimiter byte behind IO bitmap
   // assume it is caused by an input/output instruction and fall through to
   // handle_slow_trap
-  else if (EXPECT_FALSE(Kmem::is_io_bitmap_page_fault(pfa, error_code)))
+  else if (EXPECT_FALSE(Kmem::is_io_bitmap_page_fault(pfa)))
     return false;
 
   // We're in kernel code faulting on a kernel memory region
@@ -134,13 +138,12 @@ bool Thread::handle_page_fault (Address pfa,
   else 
 #ifdef CONFIG_ARM
   if (PF::is_translation_error(error_code) &&
-      Space::kernel_space()->lookup((void*)pfa) != (Mword)-1)
+      Space::kernel_space()->lookup((void*)pfa) != (Mword) -1)
 #else
-  if((!(error_code & PF_ERR_PRESENT)) &&
-      Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != 0xffffffff)
+  if (PF::is_translation_error(error_code) &&
+      Kmem::virt_to_phys (reinterpret_cast<void*>(pfa)) != (Mword) -1)
 #endif
     {
-      //puts("Update kernel mappings!!");
       current_space()->kmem_update((void*)pfa);
       return true;
     }
@@ -150,9 +153,10 @@ bool Thread::handle_page_fault (Address pfa,
     {
       if (PF::is_translation_error(error_code))   // page not present
         {
-          // in case of read fault, just map in the shared zero page
-          // otherwise -> allocate
-          if (!Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK), 0,
+	  if (!PF::is_read_error(error_code))
+	    Proc::sti();
+                          
+          if (!Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK),
                                       PF::is_read_error(error_code) ?
 				      Vmem_alloc::ZERO_MAP:
 				      Vmem_alloc::ZERO_FILL)) 
@@ -162,18 +166,20 @@ bool Thread::handle_page_fault (Address pfa,
         { 
           // protection fault
           // this can only be because we have the zero page mapped
-          Vmem_alloc::page_free(reinterpret_cast<void*>(pfa & Config::PAGE_MASK), 0);
-          if (! Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK), 0,  
+	  Proc::sti();
+          Vmem_alloc::page_free
+	    (reinterpret_cast<void*> (pfa & Config::PAGE_MASK));
+          if (! Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK),
                                        Vmem_alloc::ZERO_FILL))
             {
               // error could mean: someone else was faster allocating
               // a page there, or we just don't have any pages left; verify
 #ifdef CONFIG_ARM
-	      if (Space::kernel_space()->lookup((void*)pfa) != (Mword)-1) 
+	      if (Space::kernel_space()->lookup((void*)pfa) != (Mword) -1)
 		panic("can't alloc kernel page");
 #else
               if (Kmem::virt_to_phys(reinterpret_cast<void*>(pfa)) 
-                  == 0xffffffff)
+                  == Mword (-1))
                 panic("can't alloc kernel page");
 #endif
 
@@ -185,9 +191,8 @@ bool Thread::handle_page_fault (Address pfa,
       return true;
     }
 
-     
-  printf ("KERNEL: no page fault handler for 0x%x, error 0x%x, pc %08x\n",
-          pfa, error_code, pc);
+  WARN("No page fault handler for 0x%lx, error 0x%lx, pc "L4_PTR_FMT"",
+        pfa, error_code, pc);
 
   // An error occurred.  Our last chance to recover is an exception
   // handler a kernel function may have set.

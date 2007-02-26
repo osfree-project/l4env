@@ -1,0 +1,12 @@
+#! /bin/sh
+
+[ -n "$DEMOCD" ] || DEMOCD=/tmp/demo-cd.iso
+
+if [ ! -r "$DEMOCD" ];
+then
+  echo "$DEMOCD does not exist!"
+  echo "Usage: DEMOCD=/path/to/image $0 ..."
+  exit 1
+fi
+
+./lx "$@" -bf "$DEMOCD" -bro -a lx/l4linux26.ux-cd.k_\$lx_lang.cfg

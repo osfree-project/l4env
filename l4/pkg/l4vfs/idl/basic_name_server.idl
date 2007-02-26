@@ -1,0 +1,57 @@
+/* -*- c -*- */ 
+/**
+ * \file   l4vfs/idl/basic_name_server.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+import <l4/l4vfs/types.h>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief Basic name server functionality
+     */
+    [uuid(1000), abstract]
+    interface basic_name_server
+    {
+        /* get a new object-id, based on a base and an relativ path
+         * One could implement a special case for absolute pathnames
+         * but this issue can also be solved with one function.
+         */
+        object_id_t   resolve([in] object_id_t base,
+                              [in, string] char * pathname);
+
+        /* Translate an object-id to a symbolic name.
+         * This might be implemented partially. In that case the
+         * parent's object-id is returned, so that the call might be
+         * repeated to another server. The resulting strings can be
+         * concatenated. parent also is an upper bound which is not
+         * crossed by the rev_translating server. So a mount-table
+         * maintaining server, such as the name server, can limit the
+         * translation to the mounted point (which needn't be the root).
+         * The call to the root-name server should return the full
+         * name in one step.
+         *
+         * A return value of NULL indicates an error conndition, usually
+         * because the name was not rev_resolvable.
+         */
+        char *        rev_resolve([in] object_id_t dest,
+                                  [in, out] object_id_t * parent);
+
+        /* Translate a volume-id to a serving thread.
+         *
+         * In case of error a the value L4_INVALID_ID is returned.
+         */
+        l4_threadid_t thread_for_volume([in] volume_id_t volume_id);
+    };
+};

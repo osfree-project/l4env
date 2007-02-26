@@ -44,7 +44,7 @@
  * global vars
  */
 
-/** I/O info page 
+/** I/O info page
  * \ingroup grp_misc */
 l4io_info_t io_info;
 
@@ -56,6 +56,8 @@ l4_ssize_t l4libc_heapsize = 1024 * 1024;
 
 /** max number of threads */
 const int l4thread_max_threads = IO_MAX_THREADS;
+
+int use_spec = 1;
 
 /*
  * module vars
@@ -69,6 +71,9 @@ static io_client_t io_self;
  *\ingroup grp_irq */
 static int io_noirq = 0;
 
+/** Don't list PCI devices at bootup */
+static int nolist = 0;
+
 /** \name Miscellaneous Services (IPC interface)
  *
  * Client registry and special services.
@@ -77,10 +82,10 @@ static int io_noirq = 0;
 /** Client Registration.
  * \ingroup grp_misc
  *
- * \param  _dice_corba_obj	DICE corba object
- * \param  type			client info
+ * \param  _dice_corba_obj  DICE corba object
+ * \param  type             client info
  *
- * \retval _dice_corba_env	corba environment
+ * \retval _dice_corba_env  corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -89,7 +94,7 @@ static int io_noirq = 0;
  */
 l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
                                            l4_io_drv_t type,
-                                           CORBA_Environment *_dice_corba_env)
+                                           CORBA_Server_Environment *_dice_corba_env)
 {
   io_client_t *c, *p;
   l4io_drv_t *drv = (l4io_drv_t *) & type;
@@ -97,7 +102,7 @@ l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
   /* some memory for new list element */
   if (!(c = malloc(sizeof(io_client_t))))
     {
-      ERROR("getting %d bytes of mem", sizeof(io_client_t));
+      LOGdL(DEBUG_ERRORS, "getting %d bytes of mem", sizeof(io_client_t));
       return -L4_ENOMEM;
     }
 
@@ -106,20 +111,18 @@ l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
   c->c_l4id = *_dice_corba_obj;
   c->drv = *drv;
 
-#if DEBUG_REGDRV
-  DMSG("registering "IdFmt" {%x, %x, %x}\n",
-       IdStr(c->c_l4id), (unsigned char) c->drv.src,
+  LOGd(DEBUG_REGDRV, "registering "l4util_idfmt" {%x, %x, %x}",
+       l4util_idstr(c->c_l4id), (unsigned char) c->drv.src,
        (unsigned char) c->drv.dsi, (unsigned char) c->drv.class);
-#endif
 
   p = &io_self;
   for (;;)
     {
       if (!p->next)
-	{
-	  p->next = c;
-	  break;
-	}
+        {
+          p->next = c;
+          break;
+        }
       p = p->next;
     }
 
@@ -129,9 +132,9 @@ l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
 /** Client Unregistering.
  * \ingroup grp_misc
  *
- * \param  _dice_corba_obj	DICE corba object
+ * \param  _dice_corba_obj  DICE corba object
  *
- * \retval _dice_corba_env	corba environment
+ * \retval _dice_corba_env  corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -146,21 +149,20 @@ l4_int32_t l4_io_register_client_component(CORBA_Object _dice_corba_obj,
  * \todo implement if appropriate; otherwise remove from IDL too
  */
 l4_int32_t l4_io_unregister_client_component(CORBA_Object _dice_corba_obj,
-                                             CORBA_Environment *_dice_corba_env)
+                                             CORBA_Server_Environment *_dice_corba_env)
 {
-#if DEBUG_REGDRV
-  DMSG("unregistering "IdFmt"\n", IdStr(*_dice_corba_obj));
-#endif
+  LOGd(DEBUG_REGDRV,
+       "unregistering "l4util_idfmt"\n", l4util_idstr(*_dice_corba_obj));
 
   return -L4_ESKIPPED;
 }
 
 /** Request mapping of I/O's info page.
  *
- * \param  _dice_corba_obj	DICE corba object
+ * \param  _dice_corba_obj  DICE corba object
  *
- * \retval info			L4 fpage for I/O info
- * \retval _dice_corba_env	corba environment
+ * \retval info             L4 fpage for I/O info
+ * \retval _dice_corba_env  corba environment
  *
  * \return 0 on success, negative error code otherwise
  *
@@ -171,7 +173,7 @@ l4_int32_t l4_io_unregister_client_component(CORBA_Object _dice_corba_obj,
  */
 l4_int32_t l4_io_map_info_component(CORBA_Object _dice_corba_obj,
                                     l4_snd_fpage_t *info,
-                                    CORBA_Environment *_dice_corba_env)
+                                    CORBA_Server_Environment *_dice_corba_env)
 {
   io_client_t *c;
 
@@ -180,13 +182,12 @@ l4_int32_t l4_io_map_info_component(CORBA_Object _dice_corba_obj,
   /* mapping _after_ register */
 
   /* build send fpage */
-  info->snd_base = 0;		/* hopefully no hot spot required */
+  info->snd_base = 0;  /* hopefully no hot spot required */
   info->fpage = l4_fpage((l4_addr_t) & io_info,
-			 L4_LOG2_PAGESIZE, L4_FPAGE_RO, L4_FPAGE_MAP);
-#if DEBUG_MAP
-  DMSG("sending info fpage {0x%08x, 0x%08x}\n",
+                         L4_LOG2_PAGESIZE, L4_FPAGE_RO, L4_FPAGE_MAP);
+
+  LOGd(DEBUG_MAP, "sending info fpage {0x%08x, 0x%08x}",
        info->fpage.fp.page << 12, 1 << info->fpage.fp.size);
-#endif
 
   /* done */
   return 0;
@@ -197,8 +198,8 @@ l4_int32_t l4_io_map_info_component(CORBA_Object _dice_corba_obj,
  * \return 0 (at this state no errors may happen)
  *
  * Setup I/O info page values:
- *	- magic number
- *	- jiffies
+ *  - magic number
+ *  - jiffies
  */
 static int io_info_init(void)
 {
@@ -226,7 +227,7 @@ static int io_info_init(void)
  */
 static void io_loop(void)
 {
-  CORBA_Environment _env = dice_default_environment;
+  CORBA_Server_Environment _env = dice_default_environment;
   _env.user_data = (void *) &io_self;
 
   l4_io_server_loop(&_env);
@@ -246,11 +247,13 @@ static void do_args(int argc, char *argv[])
   static struct option long_options[] =
   {
     {"noirq", no_argument, &long_check, 1},
-    {"include", required_argument, &long_check, 2},
-    {"exclude", required_argument, &long_check, 3},
+    {"nolist", no_argument, &long_check, 2},
+    {"nosfn", no_argument, &long_check, 3},
+    {"include", required_argument, &long_check, 4},
+    {"exclude", required_argument, &long_check, 5},
     {0, 0, 0, 0}
   };
-  
+
   /* read command line arguments */
   optind = 0;
   long_optind = 0;
@@ -259,36 +262,42 @@ static void do_args(int argc, char *argv[])
       c = getopt_long_only(argc, argv, "", long_options, &long_optind);
 
       if (c == -1)
-	break;
+        break;
 
       switch (c)
-	{
-	case 0:		/* long option */
-	  switch (long_check)
-	    {
-	    case 1:		/* debug jiffies */
-	      io_noirq = 1;
-	      Msg("Disabling internal IRQ handling.\n");
-	      break;
-	    case 2:
-	      if(add_device_inclusion(optarg)){
-		  Msg("invalid device:vendor string \"%s\"\n", optarg);
-	      }
-	      break;
+        {
+        case 0:  /* long option */
+          switch (long_check)
+            {
+            case 1:  /* debug jiffies */
+              io_noirq = 1;
+              LOG("Disabling internal IRQ handling.");
+              break;
+            case 2:
+              nolist = 1;
+              LOG("Disabling listing of PCI devices.");
+              break;
 	    case 3:
-	      if(add_device_exclusion(optarg)){
-		  Msg("invalid device:vendor string \"%s\"\n", optarg);
-	      }
+	      use_spec = 0;
+	      LOG("Disabling special fully nested mode.");
 	      break;
-	    default:
-	      /* ignore unknown */
-	      break;
-	    }
-	  break;
-	default:
-	  /* ignore unknown */
-	  break;
-	}
+            case 4:
+              if(add_device_inclusion(optarg))
+                LOG("invalid vendor:device string \"%s\"", optarg);
+              break;
+            case 5:
+              if(add_device_exclusion(optarg))
+                LOG("invalid vendor:device string \"%s\"", optarg);
+              break;
+            default:
+              /* ignore unknown */
+              break;
+            }
+          break;
+        default:
+          /* ignore unknown */
+          break;
+        }
     }
 }
 
@@ -308,7 +317,7 @@ int main(int argc, char *argv[])
   /* init I/O info page */
   if ((error = io_info_init()))
     {
-      ERROR("I/O info page initialization failed (%d)", error);
+      LOGdL(DEBUG_ERRORS, "I/O info page initialization failed (%d)", error);
       return error;
     }
 
@@ -321,39 +330,39 @@ int main(int argc, char *argv[])
   /* start jiffies counter */
   if ((error = io_jiffies_init()))
     {
-      ERROR("jiffies initialization failed (%d)", error);
+      LOGdL(DEBUG_ERRORS, "jiffies initialization failed (%d)", error);
       return error;
     }
 
   /* init submodules */
   if ((error = io_res_init(&io_self)))
     {
-      ERROR("res initialization failed (%d)\n", error);
+      LOGdL(DEBUG_ERRORS, "res initialization failed (%d)\n", error);
       return error;
     }
-  if ((error = io_pci_init()))
+  if ((error = io_pci_init(!nolist)))
     {
-      ERROR("pci initialization failed (%d)\n", error);
+      LOGdL(DEBUG_ERRORS, "pci initialization failed (%d)\n", error);
       return error;
     }
   /* skip irq handling on demand */
   if (!io_noirq)
     {
-      if ((error = OMEGA0_init()))
-	{
-	  ERROR("omega0 initialization failed (%d)\n", error);
-	  return error;
-	}
+      if ((error = OMEGA0_init(use_spec)))
+        {
+          LOGdL(DEBUG_ERRORS, "omega0 initialization failed (%d)\n", error);
+          return error;
+        }
       io_info.omega0 = 1;
     }
 
   /* DEBUGGING */
-  //      list_res();
+  //list_res();
 
   /* we are up -> register at names */
   if (!names_register(IO_NAMES_STR))
     {
-      ERROR("can't register at names");
+      LOGdL(DEBUG_ERRORS, "can't register at names");
       return -L4_ENOTFOUND;
     }
 

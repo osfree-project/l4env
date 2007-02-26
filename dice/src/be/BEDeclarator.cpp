@@ -1,11 +1,12 @@
  /**
-  *	\file	dice/src/be/BEDeclarator.cpp
-  *	\brief	contains the implementation of the class CBEDeclarator
+  *    \file    dice/src/be/BEDeclarator.cpp
+  *    \brief   contains the implementation of the class CBEDeclarator
   *
-  *	\date	01/15/2002
-  *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
-  *
-  * Copyright (C) 2001-2003
+  *    \date    01/15/2002
+  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+  */
+ /*
+  * Copyright (C) 2001-2004
   * Dresden University of Technology, Operating Systems Research Group
   *
   * This file contains free software, you can redistribute it and/or modify
@@ -25,92 +26,99 @@
   * <contact@os.inf.tu-dresden.de>.
   */
 
-#include "be/BEDeclarator.h"
-#include "be/BEContext.h"
-#include "be/BEExpression.h"
-#include "be/BEFile.h"
-#include "be/BEFunction.h"
-#include "be/BETarget.h"
-#include "be/BEComponent.h"
-#include "be/BEClient.h"
-#include "be/BETestsuite.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BEType.h"
-#include "be/BEAttribute.h"
-#include "be/BESwitchCase.h"
+#include "BEDeclarator.h"
+#include "BEContext.h"
+#include "BEExpression.h"
+#include "BEFile.h"
+#include "BEFunction.h"
+#include "BETarget.h"
+#include "BEComponent.h"
+#include "BEClient.h"
+#include "BETestsuite.h"
+#include "BETypedDeclarator.h"
+#include "BEType.h"
+#include "BEAttribute.h"
+#include "BESwitchCase.h"
+#include "BEStructType.h"
+#include "BEUnionType.h"
 
-#include "fe/FEAttribute.h"
+#include "Attribute-Type.h"
 #include "fe/FEDeclarator.h"
 #include "fe/FEEnumDeclarator.h"
 #include "fe/FEArrayDeclarator.h"
 #include "fe/FEBinaryExpression.h"
 
-IMPLEMENT_DYNAMIC(CBEDeclarator);
-IMPLEMENT_DYNAMIC(CDeclaratorStackLocation);
-IMPLEMENT_DYNAMIC(CDeclaratorStack);
 
 /** \brief writes the declarator stack
  *  \param pFile the file to write to
+ *  \param pStack the declarator stack to write
  *  \param bUsePointer true if one star should be ignored
  *  \param bFirstIsGlobal true if the first declarator is global
  *  \param pContext the context of the write operation
  */
-void CDeclaratorStack::Write(CBEFile *pFile, bool bUsePointer, bool bFirstIsGlobal, CBEContext *pContext)
+void CDeclaratorStackLocation::Write(CBEFile *pFile,
+    vector<CDeclaratorStackLocation*> *pStack,
+    bool bUsePointer,
+    bool bFirstIsGlobal,
+    CBEContext *pContext)
 {
+    assert(pStack);
+
     CBEFunction *pFunction = NULL;
-    if (GetBottom() && GetBottom()->pDeclarator)
-		pFunction = GetBottom()->pDeclarator->GetFunction();
+    CDeclaratorStackLocation *pLast = pStack->front();
+    if (pLast && pLast->pDeclarator)
+        pFunction = pLast->pDeclarator->GetSpecificParent<CBEFunction>();
     bool bIsFirst = bFirstIsGlobal;
-    for (VectorElement *pIter = vStack.GetLast(); pIter; pIter = pIter->GetPrev())
+
+    vector<CDeclaratorStackLocation*>::iterator iter;
+    for (iter = pStack->begin(); iter != pStack->end(); iter++)
     {
-        CDeclaratorStackLocation *pCurLoc = (CDeclaratorStackLocation*)pIter->GetElement();
-        assert(pCurLoc);
-        CBEDeclarator *pDecl = pCurLoc->pDeclarator;
-		assert(pDecl);
+        CBEDeclarator *pDecl = (*iter)->pDeclarator;
+        assert(pDecl);
         int nStars = pDecl->GetStars();
-		// test for empty array dimensions, which are treated as
-		// stars
-		if (pDecl->GetArrayDimensionCount())
-		{
-		    int nLevel = 0;
-            VectorElement *pIter = pDecl->GetFirstArrayBound();
-			CBEExpression *pExpr;
-			while ((pExpr = pDecl->GetNextArrayBound(pIter)) != 0)
-			{
-			    if (pExpr->IsOfType(EXPR_NONE))
-				{
-				    if (!pCurLoc->HasIndex(nLevel++))
-						nStars++;
-				}
-			}
-		}
-		if (pCurLoc == GetTop())
-		{
-		     // only apply to last element in row
-			if (bUsePointer)
-				nStars--;
-			else
-			{
-				// test for an array, which only has stars as array dimensions
-				if (pCurLoc->HasIndex() && (pDecl->GetArrayDimensionCount() == 0) && (nStars > 0))
-					nStars--;
-			}
-		}
-		if ((pFunction) && (pCurLoc->nIndex[0] != -3))
-		{
-			if (pFunction->HasAdditionalReference(pDecl, pContext))
-				nStars++;
-		}
-		// check if the type is a pointer type
-		if (pFunction)
-		{
-		    CBETypedDeclarator *pParameter = pFunction->FindParameter(pDecl->GetName(), false);
-			// XXX FIXME: transmit_as ?
-			if (pParameter && pParameter->GetType() &&
-			    pParameter->GetType()->IsPointerType() &&
-				!pParameter->IsString())
-			    nStars++;
-		}
+        // test for empty array dimensions, which are treated as
+        // stars
+        if (pDecl->GetArrayDimensionCount())
+        {
+            int nLevel = 0;
+            vector<CBEExpression*>::iterator iterB = pDecl->GetFirstArrayBound();
+            CBEExpression *pExpr;
+            while ((pExpr = pDecl->GetNextArrayBound(iterB)) != 0)
+            {
+                if (pExpr->IsOfType(EXPR_NONE))
+                {
+                    if (!(*iter)->HasIndex(nLevel++))
+                        nStars++;
+                }
+            }
+        }
+        if ((iter + 1)  == pStack->end())
+        {
+             // only apply to last element in row
+            if (bUsePointer)
+                nStars--;
+            else
+            {
+                // test for an array, which only has stars as array dimensions
+                if ((*iter)->HasIndex() && (pDecl->GetArrayDimensionCount() == 0) && (nStars > 0))
+                    nStars--;
+            }
+        }
+        if ((pFunction) && ((*iter)->nIndex[0] != -3))
+        {
+            if (pFunction->HasAdditionalReference(pDecl, pContext))
+                nStars++;
+        }
+        // check if the type is a pointer type
+        if (pFunction)
+        {
+            CBETypedDeclarator *pParameter = pFunction->FindParameter(pDecl->GetName(), false);
+            // XXX FIXME: transmit_as ?
+            if (pParameter && pParameter->GetType() &&
+                pParameter->GetType()->IsPointerType() &&
+                !pParameter->IsString())
+                nStars++;
+        }
         if (!bIsFirst)
         {
             if (nStars > 0)
@@ -123,14 +131,14 @@ void CDeclaratorStack::Write(CBEFile *pFile, bool bUsePointer, bool bFirstIsGlob
         }
         else
             pDecl->WriteGlobalName(pFile, 0, pContext);
-        for (int i=0; i<pCurLoc->GetUsedIndexCount(); i++)
-		{
-			if (pCurLoc->nIndex[i] >= 0)
-				pFile->Print("[%d]", pCurLoc->nIndex[i]);
-			if (pCurLoc->nIndex[i] == -2)
-				pFile->Print("[%s]", (const char*)pCurLoc->sIndex[i]);
-		}
-        if (pIter->GetPrev())
+        for (int i=0; i<(*iter)->GetUsedIndexCount(); i++)
+        {
+            if ((*iter)->nIndex[i] >= 0)
+                pFile->Print("[%d]", (*iter)->nIndex[i]);
+            if ((*iter)->nIndex[i] == -2)
+                pFile->Print("[%s]", (*iter)->sIndex[i].c_str());
+        }
+        if ((iter + 1) != pStack->end())
             pFile->Print(".");
         bIsFirst = false;
     }
@@ -141,56 +149,57 @@ CBEDeclarator::CBEDeclarator()
     m_nStars = 0;
     m_nBitfields = 0;
     m_nType = DECL_NONE;
-    m_pBounds = 0;
     m_pInitialValue = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBEDeclarator, CBEObject);
 }
 
-CBEDeclarator::CBEDeclarator(CBEDeclarator & src):CBEObject(src)
+CBEDeclarator::CBEDeclarator(CBEDeclarator & src)
+: CBEObject(src)
 {
     m_nStars = src.m_nStars;
     m_nBitfields = src.m_nBitfields;
     m_sName = src.m_sName;
     m_nType = src.m_nType;
-	if (src.m_pBounds)
-	{
-	    m_pBounds = new Vector(RUNTIME_CLASS(CBEExpression));
-		m_pBounds->Add(src.m_pBounds);
-		m_pBounds->SetParentOfElements(this);
-	}
-	else
-		m_pBounds = 0;
-	if (src.m_pInitialValue)
-	{
-	    m_pInitialValue = (CBEExpression*)src.m_pInitialValue->Clone();
-		m_pInitialValue->SetParent(this);
-	}
-	else
-		m_pInitialValue = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBEDeclarator, CBEObject);
+    vector<CBEExpression*>::iterator iter;
+    for (iter = src.m_vBounds.begin(); iter != src.m_vBounds.end(); iter++)
+    {
+        CBEExpression *pNew = (CBEExpression*)((*iter)->Clone());
+        m_vBounds.push_back(pNew);
+        pNew->SetParent(this);
+    }
+    if (src.m_pInitialValue)
+    {
+        m_pInitialValue = (CBEExpression*)src.m_pInitialValue->Clone();
+        m_pInitialValue->SetParent(this);
+    }
+    else
+        m_pInitialValue = 0;
 }
 
-/**	\brief destructor of this instance */
+/**    \brief destructor of this instance */
 CBEDeclarator::~CBEDeclarator()
 {
-    if (m_pBounds)
-	{
-	    m_pBounds->DeleteAll();
-		delete m_pBounds;
-	}
-	if (m_pInitialValue)
-	    delete m_pInitialValue;
+    while (!m_vBounds.empty())
+    {
+        delete m_vBounds.back();
+        m_vBounds.pop_back();
+    }
+    if (m_pInitialValue)
+        delete m_pInitialValue;
 }
 
 /** \brief prepares this instance for the code generation
- *	 \param pFEDeclarator the corresponding front-end declarator
- *	 \param pContext the context of the code generation
- *	 \return true if the code generation was successful
+ *     \param pFEDeclarator the corresponding front-end declarator
+ *     \param pContext the context of the code generation
+ *     \return true if the code generation was successful
  *
  * This implementation extracts the name, stars and bitfields from the front-end declarator.
  */
 bool CBEDeclarator::CreateBackEnd(CFEDeclarator * pFEDeclarator, CBEContext * pContext)
 {
+    // call CBEObject's CreateBackEnd method
+    if (!CBEObject::CreateBackEnd(pFEDeclarator))
+        return false;
+
     m_sName = pFEDeclarator->GetName();
     m_nBitfields = pFEDeclarator->GetBitfields();
     m_nStars = pFEDeclarator->GetStars();
@@ -207,24 +216,24 @@ bool CBEDeclarator::CreateBackEnd(CFEDeclarator * pFEDeclarator, CBEContext * pC
     return true;
 }
 
-/**	\brief create a simple declarator using name and number of stars
- *	\param sName the name of the declarator
- *	\param nStars the number of asterisks
- *	\param pContext the context of the code creation
- *	\return true if successful
+/**    \brief create a simple declarator using name and number of stars
+ *    \param sName the name of the declarator
+ *    \param nStars the number of asterisks
+ *    \param pContext the context of the code creation
+ *    \return true if successful
  */
-bool CBEDeclarator::CreateBackEnd(String sName, int nStars, CBEContext * pContext)
+bool CBEDeclarator::CreateBackEnd(string sName, int nStars, CBEContext * pContext)
 {
-    VERBOSE("CBEDeclarator::CreateBE(string: %s)\n", (const char*)sName);
+    VERBOSE("CBEDeclarator::CreateBE(string: %s)\n", sName.c_str());
     m_sName = sName;
     m_nStars = nStars;
     return true;
 }
 
-/**	\brief creates the back-end representation for the enum declarator
- *	\param pFEEnumDeclarator the front-end declarator
- *	\param pContext the context of the code generation
- *	\return true if code generation was successful
+/**    \brief creates the back-end representation for the enum declarator
+ *    \param pFEEnumDeclarator the front-end declarator
+ *    \param pContext the context of the code generation
+ *    \return true if code generation was successful
  */
 bool CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator, CBEContext * pContext)
 {
@@ -245,9 +254,9 @@ bool CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator, CBE
 }
 
 /** \brief creates the back-end representation for the array declarator
- *	 \param pFEArrayDeclarator the respective front-end declarator
- *	 \param pContext the context of the code generation
- *	 \return true if code generation was successful
+ *     \param pFEArrayDeclarator the respective front-end declarator
+ *     \param pContext the context of the code generation
+ *     \return true if code generation was successful
  */
 bool CBEDeclarator::CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator, CBEContext * pContext)
 {
@@ -263,9 +272,9 @@ bool CBEDeclarator::CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator, 
     return true;
 }
 
-/**	\brief writes the declarator to the target file
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the declarator to the target file
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation writes the declarator as is (all stars, bitfields, etc.).
  */
@@ -278,37 +287,37 @@ void CBEDeclarator::WriteDeclaration(CBEFile * pFile, CBEContext * pContext)
     }
     // write stars
     for (int i = 0; i < m_nStars; i++)
-	    pFile->Print("*");
+        pFile->Print("*");
     // write name
-    pFile->Print("%s", (const char *) m_sName);
+    pFile->Print("%s", m_sName.c_str());
     // write bitfields
     if (m_nBitfields > 0)
-	    pFile->Print(":%d", m_nBitfields);
+        pFile->Print(":%d", m_nBitfields);
     // array dimensions
     if (IsArray())
-	    WriteArray(pFile, pContext);
+        WriteArray(pFile, pContext);
 }
 
-/**	\brief only returns a reference to the internal name
- *	\return the name of the declarator (without stars and such)
+/**    \brief only returns a reference to the internal name
+ *    \return the name of the declarator (without stars and such)
  */
-String CBEDeclarator::GetName()
+string CBEDeclarator::GetName()
 {
     return m_sName;
 }
 
-/**	\brief writes an array declarator
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes an array declarator
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation has to write the array dimensions only. This is done by iterating over
  * them and writing them into brackets ('[]').
  */
 void CBEDeclarator::WriteArray(CBEFile * pFile, CBEContext * pContext)
 {
-    VectorElement *pIter = GetFirstArrayBound();
+    vector<CBEExpression*>::iterator iterB = GetFirstArrayBound();
     CBEExpression *pBound;
-    while ((pBound = GetNextArrayBound(pIter)) != 0)
+    while ((pBound = GetNextArrayBound(iterB)) != 0)
     {
         pFile->Print("[");
         pBound->Write(pFile, pContext);
@@ -316,9 +325,9 @@ void CBEDeclarator::WriteArray(CBEFile * pFile, CBEContext * pContext)
     }
 }
 
-/**	\brief write an array declarator
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief write an array declarator
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * The differene to WriteArray is to skip unbound array dimensions.
  * We can determine an unbound array dimension by checking its integer value.
@@ -326,9 +335,9 @@ void CBEDeclarator::WriteArray(CBEFile * pFile, CBEContext * pContext)
  */
 void CBEDeclarator::WriteArrayIndirect(CBEFile * pFile, CBEContext * pContext)
 {
-    VectorElement *pIter = GetFirstArrayBound();
+    vector<CBEExpression*>::iterator iterB = GetFirstArrayBound();
     CBEExpression *pBound;
-    while ((pBound = GetNextArrayBound(pIter)) != 0)
+    while ((pBound = GetNextArrayBound(iterB)) != 0)
     {
         if (pBound->GetIntValue() == 0)
             continue;
@@ -338,9 +347,9 @@ void CBEDeclarator::WriteArrayIndirect(CBEFile * pFile, CBEContext * pContext)
     }
 }
 
-/**	\brief writes an enum declarator
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes an enum declarator
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  */
 void CBEDeclarator::WriteEnum(CBEFile * pFile, CBEContext * pContext)
 {
@@ -404,7 +413,7 @@ CBEExpression *CBEDeclarator::GetArrayDimension(CFEExpression * pLower, CFEExpre
     }
     // create new back-end expression
     CBEExpression *pReturn = pContext->GetClassFactory()->GetNewExpression();
-	pReturn->SetParent(this);
+    pReturn->SetParent(this);
     if (!pReturn->CreateBackEnd(pNew, pContext))
     {
         delete pReturn;
@@ -423,13 +432,12 @@ void CBEDeclarator::AddArrayBound(CBEExpression * pBound)
 {
     if (!pBound)
         return;
-    if (!m_pBounds)
+    if (m_vBounds.empty())
     {
-        m_pBounds = new Vector(RUNTIME_CLASS(CBEExpression));
         m_nOldType = m_nType;
         m_nType = DECL_ARRAY;
     }
-    m_pBounds->Add(pBound);
+    m_vBounds.push_back(pBound);
     pBound->SetParent(this);
 }
 
@@ -440,46 +448,40 @@ void CBEDeclarator::RemoveArrayBound(CBEExpression *pBound)
 {
     if (!pBound)
         return;
-    if (!m_pBounds)
-        return;
-    m_pBounds->Remove(pBound);
-    if (m_pBounds->GetSize() == 0)
+    vector<CBEExpression*>::iterator iter;
+    for (iter = m_vBounds.begin(); iter != m_vBounds.end(); iter++)
     {
-        delete m_pBounds;
-        m_pBounds = 0;
-        m_nType = m_nOldType;
+        if (*iter == pBound)
+        {
+            m_vBounds.erase(iter);
+            break;
+        }
     }
+    if (m_vBounds.empty())
+        m_nType = m_nOldType;
 }
 
 /** \brief retrieves a pointer to the first array bound
  *  \return pointer to first array bound
  */
-VectorElement *CBEDeclarator::GetFirstArrayBound()
+vector<CBEExpression*>::iterator CBEDeclarator::GetFirstArrayBound()
 {
-    if (!m_pBounds)
-        return 0;
-    return m_pBounds->GetFirst();
+    return m_vBounds.begin();
 }
 
 /** \brief retrieves a reference to the next array bound
- *  \param pIter the pointer to the next array boundary
+ *  \param iter the pointer to the next array boundary
  *  \return a reference to the next array boundary
  */
-CBEExpression *CBEDeclarator::GetNextArrayBound(VectorElement * &pIter)
+CBEExpression *CBEDeclarator::GetNextArrayBound(vector<CBEExpression*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vBounds.end())
         return 0;
-    if (!m_pBounds)
-        return 0;
-    CBEExpression *pRet = (CBEExpression *) pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextArrayBound(pIter);
-    return pRet;
+    return *iter++;
 }
 
-/**	\brief calculates the size of the declarator
- *	\return size of the declarator (or -x if pointer, where x is the number of stars)
+/**    \brief calculates the size of the declarator
+ *    \return size of the declarator (or -x if pointer, where x is the number of stars)
  *
  * The size of a declarator is 1. An exception is the array declarator, which's size is
  * calculated from the array dimensions. If the declarator has any stars in front of it,
@@ -509,12 +511,12 @@ int CBEDeclarator::GetSize()
     int nSize = 1;
     int nFakeStars = 0;
 
-    VectorElement *pIter = GetFirstArrayBound();
+    vector<CBEExpression*>::iterator iterB = GetFirstArrayBound();
     CBEExpression *pBound;
-    while ((pBound = GetNextArrayBound(pIter)) != 0)
+    while ((pBound = GetNextArrayBound(iterB)) != 0)
     {
         int nVal = pBound->GetIntValue();
-        if (nVal == 0)	// no integer value
+        if (nVal == 0)    // no integer value
             nFakeStars++;
         else
             nSize *= ((nVal < 0) ? -nVal : nVal);
@@ -539,31 +541,31 @@ int CBEDeclarator::GetMaxSize(CBEContext *pContext)
             return 0;
         return 1;
     }
-	else
-	{
-	    if ((GetArrayDimensionCount() == 0) &&
-		    (m_nStars > 0))
-	    {
-		    // this is a weird situation:
-			// we have an unbound array, but express it
-			// using '*' instead of '[]'
-			// Nonetheless the DECL_ARRAY is set...
-			//
-			// To make the MAX algorithms work, this has to
-			// return a negative value
-			return -(m_nStars);
-	    }
-	}
+    else
+    {
+        if ((GetArrayDimensionCount() == 0) &&
+            (m_nStars > 0))
+        {
+            // this is a weird situation:
+            // we have an unbound array, but express it
+            // using '*' instead of '[]'
+            // Nonetheless the DECL_ARRAY is set...
+            //
+            // To make the MAX algorithms work, this has to
+            // return a negative value
+            return -(m_nStars);
+        }
+    }
 
     int nSize = 1;
     int nFakeStars = 0;
 
-    VectorElement *pIter = GetFirstArrayBound();
+    vector<CBEExpression*>::iterator iterB = GetFirstArrayBound();
     CBEExpression *pBound;
-    while ((pBound = GetNextArrayBound(pIter)) != 0)
+    while ((pBound = GetNextArrayBound(iterB)) != 0)
     {
         int nVal = pBound->GetIntValue();
-        if (nVal == 0)	// no integer value
+        if (nVal == 0)    // no integer value
             nFakeStars++;
         else
             nSize *= ((nVal < 0) ? -nVal : nVal);
@@ -591,27 +593,32 @@ int CBEDeclarator::GetStars()
  * We do not write the pointers and not the bitfields, but the array dimension we write.
  * We skip those array dimensions, which have no boundary.
  */
-void CBEDeclarator::WriteGlobalName(CBEFile * pFile, CDeclaratorStack *pStack, CBEContext * pContext, bool bWriteArray)
+void
+CBEDeclarator::WriteGlobalName(CBEFile * pFile,
+    vector<CDeclaratorStackLocation*> *pStack,
+    CBEContext * pContext,
+    bool bWriteArray)
 {
-    if (GetFunction())
-	{
-		String sGlobalVar = pContext->GetNameFactory()->GetGlobalTestVariable(this, pContext);
-		pFile->Print("%s", (const char *) sGlobalVar);
-		if (IsArray() && bWriteArray)
-			WriteArrayIndirect(pFile, pContext);
-	}
-	else if (GetStructType() || GetUnionType())
-	{
-	    if (pStack)
-		{
-			CDeclaratorStackLocation *pTop = new CDeclaratorStackLocation(*pStack->GetTop());
-			pStack->Pop();
-			pStack->Write(pFile, false, true, pContext);
-			pStack->Push(pTop);
-			pFile->Print(".");
-		}
-		WriteName(pFile, pContext);
-	}
+    if (GetSpecificParent<CBEFunction>())
+    {
+        string sGlobalVar = pContext->GetNameFactory()->GetGlobalTestVariable(this, pContext);
+        pFile->Print("%s", sGlobalVar.c_str());
+        if (IsArray() && bWriteArray)
+            WriteArrayIndirect(pFile, pContext);
+    }
+    else if (GetSpecificParent<CBEStructType>() ||
+             GetSpecificParent<CBEUnionType>())
+    {
+        if (pStack)
+        {
+            CDeclaratorStackLocation *pTop = pStack->back();
+            pStack->pop_back();
+            CDeclaratorStackLocation::Write(pFile, pStack, false, true, pContext);
+            pStack->push_back(pTop);
+            pFile->Print(".");
+        }
+        WriteName(pFile, pContext);
+    }
 }
 
 /** \brief simply prints the name of the declarator
@@ -620,7 +627,7 @@ void CBEDeclarator::WriteGlobalName(CBEFile * pFile, CDeclaratorStack *pStack, C
  */
 void CBEDeclarator::WriteName(CBEFile * pFile, CBEContext * pContext)
 {
-    pFile->Print("%s", (const char *) m_sName);
+    pFile->Print("%s", m_sName.c_str());
 }
 
 /** \brief writes for every pointer an extra declarator without this pointer
@@ -647,15 +654,15 @@ void CBEDeclarator::WriteIndirect(CBEFile * pFile, bool bUsePointer, bool bHasPo
 
     int nFakeStars = GetFakeStars();
     int nStartStars = m_nStars + nFakeStars;
-	// for something like:
-	// 'char *buf' we want a declaration of 'char *buf'
-	//   (m_nStars:1 nFakeStars:0 bUsePointer:true -> nStartStars:1 nFakeStars:1)
-	// 'char buf[]' we want a declaration of 'char *buf'
-	//   (m_nStars:0 nFakeStars:1 bUsePointer:true -> nStartStars:1 nFakeStars:1)
-	// 'char *buf[]' we want a declaration of 'char **buf, *_buf'
-	//   (m_nStars:1 nFakeStars:1 bUsePointer:true -> nStartStars:2 nFakeStars:1)
-	// 'char **buf' we want a declaration of 'char **buf, *_buf'
-	//   (m_nStars:2 nFakeStars:0 bUsePointer:true -> nStartStars:2 nFakeStars:1)
+    // for something like:
+    // 'char *buf' we want a declaration of 'char *buf'
+    //   (m_nStars:1 nFakeStars:0 bUsePointer:true -> nStartStars:1 nFakeStars:1)
+    // 'char buf[]' we want a declaration of 'char *buf'
+    //   (m_nStars:0 nFakeStars:1 bUsePointer:true -> nStartStars:1 nFakeStars:1)
+    // 'char *buf[]' we want a declaration of 'char **buf, *_buf'
+    //   (m_nStars:1 nFakeStars:1 bUsePointer:true -> nStartStars:2 nFakeStars:1)
+    // 'char **buf' we want a declaration of 'char **buf, *_buf'
+    //   (m_nStars:2 nFakeStars:0 bUsePointer:true -> nStartStars:2 nFakeStars:1)
     if (bUsePointer && (nFakeStars == 0) && (m_nStars > 0))
         nFakeStars++;
     bool bComma = false;
@@ -674,7 +681,7 @@ void CBEDeclarator::WriteIndirect(CBEFile * pFile, bool bUsePointer, bool bHasPo
         for (i = 0; i < (nStartStars - nStars); i++)
              pFile->Print("_");
         // write name
-        pFile->Print("%s", (const char *) m_sName);
+        pFile->Print("%s", m_sName.c_str());
         // next please
         bComma = true;
     }
@@ -710,12 +717,12 @@ void CBEDeclarator::WriteIndirectInitialization(CBEFile * pFile, bool bUsePointe
         // write name (one _ less)
         for (i = 0; i < (nStartStars - nStars); i++)
             pFile->Print("_");
-        pFile->Print("%s = ", (const char *) m_sName);
+        pFile->Print("%s = ", m_sName.c_str());
         // write name (one more _)
         pFile->Print("&");
         for (i = 0; i < (nStartStars - nStars) + 1; i++)
             pFile->Print("_");
-        pFile->Print("%s;\n", (const char *) m_sName);
+        pFile->Print("%s;\n", m_sName.c_str());
     }
 }
 
@@ -730,15 +737,16 @@ void CBEDeclarator::WriteIndirectInitialization(CBEFile * pFile, bool bUsePointe
  */
 void CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile, bool bUsePointer, CBEContext * pContext)
 {
+    assert(pFile);
     int nFakeStars = GetFakeStars();
-	int nStartStars = m_nStars + nFakeStars;
+    int nStartStars = m_nStars + nFakeStars;
     if (bUsePointer && (m_nStars > 0) && (nFakeStars == 0))
         nFakeStars++;
     // get function and parameter
-	CBETypedDeclarator *pParameter = 0;
-	CBEFunction *pFunction = GetFunction();
-	if (pFunction)
-	    pParameter = pFunction->FindParameter(m_sName);
+    CBETypedDeclarator *pParameter = 0;
+    CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+    if (pFunction)
+        pParameter = pFunction->FindParameter(m_sName);
     /** now we have to initialize the fake stars (unbound array dimensions).
      * problem is to use an allocation routine appropriate for this. If there is
      * an max_is or upper bound it is used, but we have no upper bound.
@@ -747,52 +755,55 @@ void CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile, bool bUse
      *
      * \todo maybe we can propagate the max size when connecting to the server...
      */
-	for (int i = 0; i < nFakeStars; i++)
-	{
-		CDeclaratorStack vStack;
-		vStack.Push(this);
-		pFile->PrintIndent("");
-		for (i = 0; i < nStartStars - nFakeStars; i++)
-			pFile->Print("_");
-		pFile->Print("%s = ", (const char*)m_sName);
-		pParameter->GetType()->WriteCast(pFile, true, pContext);
-		pContext->WriteMalloc(pFile, pFunction);
-		pFile->Print("(");
-		/**
-		 * if the parameter is out and size parameter, then this
-		 * initialization is done before a call(testsuite) or component function.
-		 * We can use the size parameter only if it is set (it can't just
-		 * before the call, but it is before the component if the size
-		 * parameter is an IN.) So we check if parent func is CBESwitchCase
-		 * and size parameter is IN. Then we can use it to set the size
-		 * otherwise we have to use max.
-		 */
-		bool bUseSize = false;
-		if (pFunction && pFunction->IsKindOf(RUNTIME_CLASS(CBESwitchCase)))
-		{
-		    // get size parameter
-			CBETypedDeclarator *pSizeParam = 0;
-			CBEAttribute *pAttr = pParameter->FindAttribute(ATTR_SIZE_IS);
-			if (!pAttr)
-			    pAttr = pParameter->FindAttribute(ATTR_LENGTH_IS);
-			if (!pAttr)
-			    pAttr = pParameter->FindAttribute(ATTR_MAX_IS);
-			if (pAttr && pAttr->IsOfType(ATTR_CLASS_IS))
-			{
-			    VectorElement *pI = pAttr->GetFirstIsAttribute();
-				CBEDeclarator *pD = pAttr->GetNextIsAttribute(pI);
-				if (pD)
-				    pSizeParam = pFunction->FindParameter(pD->GetName());
-			}
-			if (pSizeParam && pSizeParam->FindAttribute(ATTR_IN))
-			    bUseSize = true;
-		}
-		if (bUseSize)
-			pParameter->WriteGetSize(pFile, &vStack, pContext);
-		else
-			pFile->Print("%d", pParameter->GetMaxSize(pContext));
-		pFile->Print("); /* fake */\n");
-	}
+    for (int i = 0; i < nFakeStars; i++)
+    {
+        vector<CDeclaratorStackLocation*> vStack;
+        CDeclaratorStackLocation *pLoc = new CDeclaratorStackLocation(this);
+        vStack.push_back(pLoc);
+        pFile->PrintIndent("");
+        for (i = 0; i < nStartStars - nFakeStars; i++)
+            pFile->Print("_");
+        pFile->Print("%s = ", m_sName.c_str());
+        pParameter->GetType()->WriteCast(pFile, true, pContext);
+        pContext->WriteMalloc(pFile, pFunction);
+        pFile->Print("(");
+        /**
+         * if the parameter is out and size parameter, then this
+         * initialization is done before a call(testsuite) or component function.
+         * We can use the size parameter only if it is set (it can't just
+         * before the call, but it is before the component if the size
+         * parameter is an IN.) So we check if parent func is CBESwitchCase
+         * and size parameter is IN. Then we can use it to set the size
+         * otherwise we have to use max.
+         */
+        bool bUseSize = false;
+        if (pFunction && dynamic_cast<CBESwitchCase*>(pFunction))
+        {
+            // get size parameter
+            CBETypedDeclarator *pSizeParam = 0;
+            CBEAttribute *pAttr = pParameter->FindAttribute(ATTR_SIZE_IS);
+            if (!pAttr)
+                pAttr = pParameter->FindAttribute(ATTR_LENGTH_IS);
+            if (!pAttr)
+                pAttr = pParameter->FindAttribute(ATTR_MAX_IS);
+            if (pAttr && pAttr->IsOfType(ATTR_CLASS_IS))
+            {
+                vector<CBEDeclarator*>::iterator iterD =
+                    pAttr->GetFirstIsAttribute();
+                CBEDeclarator *pD = pAttr->GetNextIsAttribute(iterD);
+                if (pD)
+                    pSizeParam = pFunction->FindParameter(pD->GetName());
+            }
+            if (pSizeParam && pSizeParam->FindAttribute(ATTR_IN))
+                bUseSize = true;
+        }
+        if (bUseSize)
+            pParameter->WriteGetSize(pFile, &vStack, pContext);
+        else
+            pFile->Print("%d", pParameter->GetMaxSize(true, pContext));
+        pFile->Print("); /* fake */\n");
+        delete pLoc;
+    }
 }
 
 /** \brief writes the cleanup routines for dynamically allocated variables
@@ -803,7 +814,7 @@ void CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile, bool bUse
 void CBEDeclarator::WriteCleanup(CBEFile * pFile, bool bUsePointer, CBEContext * pContext)
 {
     int nFakeStars = GetFakeStars();
-	int nStartStars = m_nStars + nFakeStars;
+    int nStartStars = m_nStars + nFakeStars;
     if (bUsePointer && (m_nStars > 0) && (nFakeStars == 0))
         nFakeStars++;
     /** now we have to free the fake stars (unbound array dimensions).
@@ -812,12 +823,54 @@ void CBEDeclarator::WriteCleanup(CBEFile * pFile, bool bUsePointer, CBEContext *
      */
     for (int i = 0; i < nFakeStars; i++)
     {
-		pFile->PrintIndent("");
-		pContext->WriteFree(pFile, GetFunction());
-		pFile->Print("(");
-		for (i = 0; i < nStartStars - nFakeStars; i++)
-			pFile->Print("_");
-		pFile->Print("%s);\n", (const char*)m_sName);
+        pFile->PrintIndent("");
+        pContext->WriteFree(pFile, GetSpecificParent<CBEFunction>());
+        pFile->Print("(");
+        for (i = 0; i < nStartStars - nFakeStars; i++)
+            pFile->Print("_");
+        pFile->Print("%s);\n", m_sName.c_str());
+    }
+}
+
+/** \brief writes the deferred cleanup, which means that this pointer is only rgistered to be cleaned later
+ *  \param pFile the file to write to
+ *  \param bUsePointer true if variable uses a pointer
+ *  \param pContext the context of the write operation
+ *
+ * Same code as in \ref WriteCleanup but uses dice_set_ptr(Env) instead of Free.
+ */
+void CBEDeclarator::WriteDeferredCleanup(CBEFile* pFile,  bool bUsePointer,  CBEContext* pContext)
+{
+    int nFakeStars = GetFakeStars();
+    int nStartStars = m_nStars + nFakeStars;
+    if (bUsePointer && (m_nStars > 0) && (nFakeStars == 0))
+        nFakeStars++;
+    // get environment
+    CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+    CBEDeclarator *pDecl = 0;
+    if (pFunction)
+    {
+        CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
+        vector<CBEDeclarator*>::iterator iterE = pEnv->GetFirstDeclarator();
+        pDecl = pEnv->GetNextDeclarator(iterE);
+    }
+    if (!pDecl)
+        return;
+
+    /** now we have to free the fake stars (unbound array dimensions).
+     *
+     * \todo maybe we can propagate the max size when connecting to the server...
+     */
+    for (int i = 0; i < nFakeStars; i++)
+    {
+        pFile->PrintIndent("dice_set_ptr(");
+        if (pDecl->GetStars() == 0)
+            pFile->Print("&");
+        pDecl->WriteName(pFile, pContext);
+        pFile->Print(", ");
+        for (i = 0; i < nStartStars - nFakeStars; i++)
+            pFile->Print("_");
+        pFile->Print("%s);\n", m_sName.c_str());
     }
 }
 
@@ -826,7 +879,7 @@ void CBEDeclarator::WriteCleanup(CBEFile * pFile, bool bUsePointer, CBEContext *
  */
 bool CBEDeclarator::IsArray()
 {
-//     TRACE("Test if %s is array (%s)\n", (const char*)m_sName, (m_nType == DECL_ARRAY)?"yes":"no");
+//     TRACE("Test if %s is array (%s)\n", m_sName.c_str(), (m_nType == DECL_ARRAY)?"yes":"no");
     return (m_nType == DECL_ARRAY);
 }
 
@@ -839,9 +892,7 @@ int CBEDeclarator::GetArrayDimensionCount()
 {
     if (!IsArray())
         return 0;
-    if (!m_pBounds)
-        return 0;
-    return m_pBounds->GetSize();
+    return m_vBounds.size();
 }
 
 /** \brief calculates the number of "fake" pointers
@@ -855,9 +906,9 @@ int CBEDeclarator::GetFakeStars()
     if (!IsArray())
         return 0;
     int nFakeStars = 0;
-    VectorElement *pIter = GetFirstArrayBound();
+    vector<CBEExpression*>::iterator iterB = GetFirstArrayBound();
     CBEExpression *pBound;
-    while ((pBound = GetNextArrayBound(pIter)) != 0)
+    while ((pBound = GetNextArrayBound(iterB)) != 0)
     {
         if (pBound->GetIntValue() == 0)
             nFakeStars++;
@@ -890,12 +941,12 @@ CObject * CBEDeclarator::Clone()
 }
 
 /** \brief calculates the number of array bounds from the given iterator to the end
- *  \param pIter the iterator pointing to the next array bounds
+ *  \param iter the iterator pointing to the next array bounds
  *  \return the number of array bounds from the iterator to the end of the vector
  */
-int CBEDeclarator::GetRemainingNumberOfArrayBounds(VectorElement *pIter)
+int CBEDeclarator::GetRemainingNumberOfArrayBounds(vector<CBEExpression*>::iterator iter)
 {
     int nCount = 0;
-	while (GetNextArrayBound(pIter)) nCount++;
-	return nCount;
+    while (GetNextArrayBound(iter)) nCount++;
+    return nCount;
 }

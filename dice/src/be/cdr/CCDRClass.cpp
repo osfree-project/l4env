@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/cdr/CCDRClass.cpp
- *	\brief	contains the implementation of the class CCDRClass
+ *    \file    dice/src/be/cdr/CCDRClass.cpp
+ *    \brief   contains the implementation of the class CCDRClass
  *
- *	\date	10/28/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    10/28/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,14 +34,11 @@
 #include "be/BEDispatchFunction.h"
 
 #include "fe/FEOperation.h"
-#include "fe/FEAttribute.h"
-
-IMPLEMENT_DYNAMIC(CCDRClass);
+#include "Attribute-Type.h"
 
 CCDRClass::CCDRClass()
  : CBEClass()
 {
-    IMPLEMENT_DYNAMIC_BASE(CCDRClass, CBEClass);
 }
 
 /** \brief destroys this class */
@@ -61,6 +59,10 @@ CCDRClass::~CCDRClass()
  */
 bool CCDRClass::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
 {
+    // call CBEObject's CreateBackEnd method
+    if (!CBEObject::CreateBackEnd(pFEOperation))
+        return false;
+
     CFunctionGroup *pGroup = new CFunctionGroup(pFEOperation);
     AddFunctionGroup(pGroup);
 
@@ -77,12 +79,12 @@ bool CCDRClass::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because call function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed, because call function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
 
-		pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
+        pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
         AddFunction(pFunction);
         pFunction->SetComponentSide(false);
         pGroup->AddFunction(pFunction);
@@ -90,12 +92,12 @@ bool CCDRClass::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because unmarshal function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed, because unmarshal function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
 
-		// server side
+        // server side
         pFunction = pContext->GetClassFactory()->GetNewMarshalFunction();
         AddFunction(pFunction);
         pFunction->SetComponentSide(true);
@@ -104,12 +106,12 @@ bool CCDRClass::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because call function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed, because call function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
 
-		pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
+        pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
         AddFunction(pFunction);
         pFunction->SetComponentSide(true);
         pGroup->AddFunction(pFunction);
@@ -117,23 +119,23 @@ bool CCDRClass::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because unmarshal function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed, because unmarshal function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
 
-		pFunction = pContext->GetClassFactory()->GetNewComponentFunction();
-		AddFunction(pFunction);
-		pFunction->SetComponentSide(true);
-		pGroup->AddFunction(pFunction);
-		if (!pFunction->CreateBackEnd(pFEOperation, pContext))
-		{
-			RemoveFunction(pFunction);
-			delete pFunction;
-			VERBOSE("CBEClass::CreateBackEnd failed, because component function could not be created for %s\n",
-					(const char*)pFEOperation->GetName());
-			return false;
-		}
+        pFunction = pContext->GetClassFactory()->GetNewComponentFunction();
+        AddFunction(pFunction);
+        pFunction->SetComponentSide(true);
+        pGroup->AddFunction(pFunction);
+        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        {
+            RemoveFunction(pFunction);
+            delete pFunction;
+            VERBOSE("%s failed, because component function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
+            return false;
+        }
     }
     else
     {
@@ -148,8 +150,8 @@ bool CCDRClass::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because send function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed, because send function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
 
@@ -162,28 +164,42 @@ bool CCDRClass::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because wait function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed, because wait function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
 
-		// if we send oneway to the server we need a component function
-		if (pFEOperation->FindAttribute(ATTR_IN))
-		{
-			pFunction = pContext->GetClassFactory()->GetNewComponentFunction();
-			AddFunction(pFunction);
-			pFunction->SetComponentSide(true);
-			pGroup->AddFunction(pFunction);
-			if (!pFunction->CreateBackEnd(pFEOperation, pContext))
-			{
-				RemoveFunction(pFunction);
-				delete pFunction;
-				VERBOSE("CBEClass::CreateBackEnd failed, because component function could not be created for %s\n",
-						(const char*)pFEOperation->GetName());
-				return false;
-			}
-		}
+        // if we send oneway to the server we need a component function
+        if (pFEOperation->FindAttribute(ATTR_IN))
+        {
+            pFunction = pContext->GetClassFactory()->GetNewComponentFunction();
+            AddFunction(pFunction);
+            pFunction->SetComponentSide(true);
+            pGroup->AddFunction(pFunction);
+            if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+            {
+                RemoveFunction(pFunction);
+                delete pFunction;
+                VERBOSE("%s failed, because component function could not be created for %s\n",
+                        __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
+                return false;
+            }
+        }
     }
+
+    // sort the parameters of the functions
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
+    CBEFunction *pFunction;
+    while ((pFunction = GetNextFunction(iter)) != 0)
+    {
+        if (!pFunction->SortParameters(0, pContext))
+        {
+            VERBOSE("%s failed, because the parameters of function %s could not be sorted\n",
+                __PRETTY_FUNCTION__, pFunction->GetName().c_str());
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -195,12 +211,12 @@ bool CCDRClass::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
 bool CCDRClass::AddInterfaceFunctions(CFEInterface* pFEInterface,  CBEContext* pContext)
 {
     CBEInterfaceFunction *pFunction = pContext->GetClassFactory()->GetNewDispatchFunction();
-	AddFunction(pFunction);
-	pFunction->SetComponentSide(true);
-	if (!pFunction->CreateBackEnd(pFEInterface, pContext))
-	{
-	    RemoveFunction(pFunction);
-		VERBOSE("CBEClass::CreateBackEnd failed because dispatch function could not be created\n");
+    AddFunction(pFunction);
+    pFunction->SetComponentSide(true);
+    if (!pFunction->CreateBackEnd(pFEInterface, pContext))
+    {
+        RemoveFunction(pFunction);
+        VERBOSE("CBEClass::CreateBackEnd failed because dispatch function could not be created\n");
         delete pFunction;
         return false;
     }

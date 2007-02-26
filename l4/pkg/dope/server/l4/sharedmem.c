@@ -8,7 +8,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -34,12 +34,16 @@ struct shared_memory {
 	void             *addr;
 };
 
+struct thread {
+	l4_threadid_t tid;
+};
+
 int init_sharedmem(struct dope_services *d);
 
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 
 /*** ALLOCATE SHARED MEMORY BLOCK OF SPECIFIED SIZE ***/
@@ -49,9 +53,10 @@ static SHAREDMEM *shm_alloc(s32 size) {
 		ERROR(printf("SharedMemory(alloc): out of memory.\n"));
 		return NULL;
 	}
-	new->addr = l4dm_mem_ds_allocate(size,
-	                                 L4DM_CONTIGUOUS | L4RM_LOG2_ALIGNED | L4RM_MAP,
-	                                 &new->ds);
+	new->addr = l4dm_mem_ds_allocate_named(size,
+	                                       L4RM_LOG2_ALIGNED | L4RM_MAP,
+	                                       "DOpE shm",
+	                                       &new->ds);
 	new->size = size;
 	printf("SharedMem(alloc): hl.low=%x, lh.high=%x, id=%x, size=%x\n",
 		new->ds.manager.lh.low,
@@ -73,7 +78,7 @@ static void shm_destroy(SHAREDMEM *sm) {
 /*** RETURN THE ADRESS OF THE SHARED MEMORY BLOCK ***/
 static void *shm_get_adr(SHAREDMEM *sm) {
 	if (!sm) return NULL;
-	printf("SharedMem(get_adr): address = %x\n",(int)sm->addr);
+	printf("SharedMem(get_adr): address = %x\n", (int)sm->addr);
 	return sm->addr;
 }
 
@@ -81,7 +86,7 @@ static void *shm_get_adr(SHAREDMEM *sm) {
 /*** GENERATE A GLOBAL IDENTIFIER FOR THE SPECIFIED SHARED MEMORY BLOCK ***/
 static void shm_get_ident(SHAREDMEM *sm, u8 *dst) {
 	if (!sm) return;
-	sprintf(dst,"t_id=0x%08X,%08X ds_id=0x%08x size=0x%08x",
+	sprintf(dst, "t_id=0x%08X,%08X ds_id=0x%08x size=0x%08x",
 	        sm->ds.manager.lh.low,
 	        sm->ds.manager.lh.high,
 	        sm->ds.id,
@@ -91,25 +96,24 @@ static void shm_get_ident(SHAREDMEM *sm, u8 *dst) {
 
 /*** SHARE MEMORY BLOCK TO ANOTHER THREAD ***/
 static s32 shm_share(SHAREDMEM *sm, THREAD *dst_thread) {
-	l4_threadid_t *tid;
+	int res;
 	if (!sm) return -1;
 
-	INFO(printf("VScreen(map): check_rights = %d\n",
-		l4dm_check_rights(&sm->ds,L4DM_RW)
-	));
+	if ((res = l4dm_check_rights(&sm->ds, L4DM_RW)) != 0)
+		return -1;
 
-	tid = (l4_threadid_t *)dst_thread;
 	INFO(printf("SharedMem(share): share to %x.%x\n",
-	            (int)tid->id.task, (int)tid->id.lthread));
-	l4dm_share(&sm->ds, *tid, L4DM_RW);
+	            dst_thread->tid.id.task, dst_thread->tid.id.lthread));
+
+	if ((res = l4dm_share(&sm->ds, dst_thread->tid, L4DM_RW)) != 0)
+		return -1;
 	return 0;
 }
 
 
-
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct sharedmem_services sharedmem = {
 	shm_alloc,
@@ -121,12 +125,11 @@ static struct sharedmem_services sharedmem = {
 
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_sharedmem(struct dope_services *d) {
-	d->register_module("SharedMemory 1.0",&sharedmem);
+	d->register_module("SharedMemory 1.0", &sharedmem);
 	return 1;
 }
-

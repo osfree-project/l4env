@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -19,8 +19,7 @@ struct label;
 #include "dopestd.h"
 #include "gfx.h"
 #include "widget_data.h"
-#include "event.h"
-#include "widget.h"
+#include "widget_help.h"
 #include "variable.h"
 #include "label.h"
 #include "fontman.h"
@@ -32,166 +31,141 @@ static struct gfx_services     *gfx;
 static struct fontman_services *font;
 static struct script_services  *script;
 
-#define LABEL_UPDATE_TEXT 0x01
-
-#define LABEL_ALIGN_LEFT   0x01
-#define LABEL_ALIGN_RIGHT  0x02
-#define LABEL_ALIGN_TOP    0x04
-#define LABEL_ALIGN_BOTTOM 0x08
-
 struct label_data {
-	long      update_flags;
 	char     *text;
 	s16       font_id;
-	s16      tx,ty;                    /* text position inside the label cell */
-	s16       flags;
+	s16       tx, ty;       /* text position inside the label cell */
+	s16       pad_x, pad_y;
 	VARIABLE *var;
 };
 
 int init_label(struct dope_services *d);
 
-#define BLACK_SOLID GFX_RGBA(0,0,0,255)
+#define BLACK_SOLID GFX_RGBA(0, 0, 0, 255)
 
-/**********************************/
-/*** FUNCTIONS FOR INTERNAL USE ***/
-/**********************************/
 
-static s32 strlength(u8 *s) {
-	s32 result=0;
-	while (*(s++)) result++;
-	return result;
-}
-
-static u8 *strdup(u8 *s) {
-	u8 *d;
-	u8 *result;
-	s32 strl;
-	if (!s) return NULL;
-	strl = strlength(s);
-	if (strl>=0) {
-		result = malloc(strl+2);
-		if (!result) return NULL;
-		d=result;
-		while (*s) *(d++)=*(s++);
-		*d=0;
-		return result;
-	}
-	return NULL;
-}
-
+/**********************************
+ *** FUNCTIONS FOR INTERNAL USE ***
+ **********************************/
 
 static void update_text_pos(LABEL *l) {
-	if ((!l) || (!l->ld) || (!l->ld->text)) return;
-	l->ld->tx = (l->wd->w - font->calc_str_width (l->ld->font_id,l->ld->text))>>1;
-	l->ld->ty = (l->wd->h - font->calc_str_height(l->ld->font_id,l->ld->text))>>1;
+	if (!l->ld->text) return;
+	l->ld->tx = (l->wd->w - font->calc_str_width (l->ld->font_id, l->ld->text))>>1;
+	l->ld->ty = (l->wd->h - font->calc_str_height(l->ld->font_id, l->ld->text))>>1;
 }
 
 
-/******************************/
-/*** GENERAL WIDGET METHODS ***/
-/******************************/
+/******************************
+ *** GENERAL WIDGET METHODS ***
+ ******************************/
 
-static void lab_draw(LABEL *l,struct gfx_ds *ds,long x,long y) {
+static int lab_draw(LABEL *l, struct gfx_ds *ds, long x, long y, WIDGET *origin) {
 	int tx = x + l->wd->x + l->ld->tx;
 	int ty = y + l->wd->y + l->ld->ty;
 
-//  gfx->push_clipping(ds,x+2,y+2,l->wd->w-4,l->wd->h-4);
+	if (origin == l) return 1;
+	if (origin) return 0;
+
+	gfx->push_clipping(ds, x + l->wd->x, y + l->wd->y, l->wd->w, l->wd->h);
 	if (l->ld->text) {
-		gfx->draw_string(ds,tx,ty,BLACK_SOLID,0,l->ld->font_id,l->ld->text);
+		gfx->draw_string(ds, tx, ty, BLACK_SOLID, 0, l->ld->font_id, l->ld->text);
 	}
-//  gfx->pop_clipping(ds);
-}
+	gfx->pop_clipping(ds);
 
-static void (*orig_update) (LABEL *l,u16 redraw_flag);
-
-static void lab_update(LABEL *l,u16 redraw_flag) {
-	s16 redraw_needed = 0;
-
-	if ((!l) || (!l->ld)) return;
-	if (l->wd->update & (WID_UPDATE_FOCUS|WID_UPDATE_STATE)) redraw_needed = 1;
-	if (l->ld->update_flags & LABEL_UPDATE_TEXT) {
-		update_text_pos(l);
-		redraw_needed = 1;
-	}
-	if (l->wd->update & (WID_UPDATE_POS|WID_UPDATE_SIZE)) {
-		update_text_pos(l);
-		redraw_needed = 0;
-	}
-
-	if (redraw_flag && redraw_needed) l->gen->force_redraw(l);
-	orig_update(l,redraw_flag);
-	l->ld->update_flags=0;
+	return 1;
 }
 
 
+/*** DETERMINE MIN/MAX SIZE OF A LABEL WIDGET ***/
+static void lab_calc_minmax(LABEL *l) {
+	if (l->ld->text) {
+		l->wd->min_w = l->wd->max_w = font->calc_str_width (l->ld->font_id, l->ld->text)
+		                            + l->ld->pad_x * 2;
+		l->wd->min_h = l->wd->max_h = font->calc_str_height(l->ld->font_id, l->ld->text)
+		                            + l->ld->pad_y * 2;
+	} else {
+		l->wd->min_w = l->wd->min_h = l->ld->pad_x * 2;
+		l->wd->max_w = l->wd->max_h = l->ld->pad_y * 2;
+	}
+}
 
-/*******************************/
-/*** LABEL SPECIFIC METHODS ***/
-/*******************************/
 
-static void lab_set_text(LABEL *l,char *new_txt) {
+static void (*orig_updatepos) (LABEL *l);
+static void lab_updatepos(LABEL *l) {
+	update_text_pos(l);
+	orig_updatepos(l);
+}
+
+
+/*** FREE LABEL WIDGET DATA ***/
+static void lab_free_data(LABEL *l) {
+	if (l->ld->text) free(l->ld->text);
+}
+
+
+/*** RETURN WIDGET TYPE IDENTIFIER ***/
+static char *lab_get_type(LABEL *l) {
+	return "Label";
+}
+
+
+/*******************************
+ *** LABEL SPECIFIC METHODS ***
+ *******************************/
+
+static void lab_set_text(LABEL *l, char *new_txt) {
 	if ((!l) || (!l->ld)) return;
 	if (l->ld->text) free(l->ld->text);
-	l->ld->text = strdup(new_txt);
-	l->ld->update_flags = l->ld->update_flags | LABEL_UPDATE_TEXT;
+	l->ld->text = dope_strdup(new_txt);
+	l->wd->update |= WID_UPDATE_MINMAX;
 }
 
 
 static char *lab_get_text(LABEL *l) {
-	if ((!l) || (!l->ld)) return 0;
 	return l->ld->text;
 }
 
 
-static void lab_set_font(LABEL *l,s32 font_id) {
-	if ((!l) || (!l->ld)) return;
-	l->ld->font_id=font_id;
-	l->ld->update_flags = l->ld->update_flags | LABEL_UPDATE_TEXT;
-}
-
-
-static s32 lab_get_font(LABEL *l) {
-	if ((!l) || (!l->ld)) return 0;
-	return l->ld->font_id;
-}
-
-
-static void lab_set_align(LABEL *l,char *align) {
-	if ((!l) || (!l->ld) || (!align)) return;
-	l->ld->flags = 0;
-	while (*align) {
-		switch (*(align++)) {
-		case 'l': l->ld->flags |= LABEL_ALIGN_LEFT;   break;
-		case 'r': l->ld->flags |= LABEL_ALIGN_RIGHT;  break;
-		case 't': l->ld->flags |= LABEL_ALIGN_TOP;    break;
-		case 'b': l->ld->flags |= LABEL_ALIGN_BOTTOM; break;
-		}
+/*** SET FONT OF LABEL ***
+ *
+ * Currently, only the font identifiers 'default' and
+ * 'monospaced' are defined.
+ */
+static void lab_set_font(LABEL *l, char *fontname) {
+	if (dope_streq(fontname, "default", 255)) {
+		l->ld->font_id = 0;
+	} else if (dope_streq(fontname, "monospaced", 255)) {
+		l->ld->font_id = 1;
 	}
-	l->ld->update_flags = l->ld->update_flags | LABEL_UPDATE_TEXT;
+	l->wd->update |= WID_UPDATE_MINMAX;
 }
 
 
-static char *lab_get_align(LABEL *l) {
-	static char alignstr[8];
-	char  *d = &alignstr[0];
-
-	if ((!l) || (!l->ld)) return 0;
-
-	if (l->ld->flags & LABEL_ALIGN_LEFT)   *(d++) = 'l';
-	if (l->ld->flags & LABEL_ALIGN_RIGHT)  *(d++) = 'r';
-	if (l->ld->flags & LABEL_ALIGN_TOP)    *(d++) = 't';
-	if (l->ld->flags & LABEL_ALIGN_BOTTOM) *(d++) = 'b';
-	*(d++) = 0;
-
-	return &alignstr[0];
+/*** REQUEST CURRENTLY USED FONT OF A LABEL ***/
+static char *lab_get_font(LABEL *l) {
+	switch (l->ld->font_id) {
+		case 1:  return "monospaced";
+		default: return "default";
+	}
 }
 
 
+/*** CALLBACK ON VARIABLE MODIFICATIONS ***
+ *
+ * This routine is called everytime the variable get assigned
+ * a new value. We just set the label text to the new value.
+ */
 static void lab_var_notify(LABEL *l, VARIABLE *v) {
 	lab_set_text(l, v->var->get_string(v));
-	lab_update(l, WID_UPDATE_REDRAW);
+	l->gen->update(l);
 }
 
+
+/*** CONNECT LABEL TO A VARIABLE ***
+ *
+ * The label will always display the current value of the
+ * variable.
+ */
 static void lab_set_var(LABEL *l, VARIABLE *v) {
 	if (l->ld->var) {
 		l->ld->var->gen->dec_ref((WIDGET *)l->ld->var);
@@ -204,86 +178,68 @@ static void lab_set_var(LABEL *l, VARIABLE *v) {
 		v->var->connect(v, l, lab_var_notify);
 		lab_set_text(l, v->var->get_string(v));
 	} else {
-		lab_set_text(l,"");
+		lab_set_text(l, "");
 	}
+	l->wd->update |= WID_UPDATE_MINMAX;
 }
+
 
 static VARIABLE *lab_get_var(LABEL *l) {
 	return l->ld->var;
 }
 
+
 static struct widget_methods gen_methods;
-static struct label_methods lab_methods={
+static struct label_methods lab_methods = {
 	lab_set_text,
 	lab_get_text,
 	lab_set_font,
 	lab_get_font,
-	lab_set_align,
-	lab_get_align,
 };
 
 
-
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 static LABEL *create(void) {
 
-	/* allocate memory for new widget */
-	LABEL *new = (LABEL *)malloc(sizeof(struct label)
-	                           + sizeof(struct widget_data)
-	                           + sizeof(struct label_data));
-	if (!new) {
-		INFO(printf("Label(create): out of memory\n"));
-		return NULL;
-	}
-	new->gen = &gen_methods;    /* pointer to general widget methods */
-	new->lab = &lab_methods;    /* pointer to label specific methods */
-	new->wd = (struct widget_data *)((long)new + sizeof(struct label));
-	new->ld = (struct label_data *)((long)new->wd + sizeof(struct widget_data));
-
-	/* set general widget attributes */
-	widman->default_widget_data(new->wd);
+	LABEL *new = ALLOC_WIDGET(struct label);
+	SET_WIDGET_DEFAULTS(new, struct label, &lab_methods);
 
 	/* set label specific attributes */
-	new->ld->text = NULL;
-	new->ld->font_id = 0;
-	new->ld->tx=0;
-	new->ld->ty=0;
-	new->ld->flags=0;
+	new->ld->pad_x  = new->ld->pad_y = 2;
+	new->ld->text   = dope_strdup("");
 	update_text_pos(new);
+	gen_methods.update(new);
 
 	return new;
 }
 
 
-
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct label_services services = {
 	create
 };
 
 
-
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 static void build_script_lang(void) {
 	void *widtype;
 
-	widtype = script->reg_widget_type("Label",(void *(*)(void))create);
+	widtype = script->reg_widget_type("Label", (void *(*)(void))create);
 
-	script->reg_widget_attrib(widtype,"string text",lab_get_text,lab_set_text,gen_methods.update);
-	script->reg_widget_attrib(widtype,"string align",lab_get_align,lab_set_align,gen_methods.update);
-	script->reg_widget_attrib(widtype,"long font",lab_get_font,lab_set_font,gen_methods.update);
-	script->reg_widget_attrib(widtype,"Variable variable",lab_get_var,lab_set_var,gen_methods.update);
+	script->reg_widget_attrib(widtype, "string text", lab_get_text, lab_set_text, gen_methods.update);
+	script->reg_widget_attrib(widtype, "string font", lab_get_font, lab_set_font, gen_methods.update);
+	script->reg_widget_attrib(widtype, "Variable variable", lab_get_var, lab_set_var, gen_methods.update);
 
-	widman->build_script_lang(widtype,&gen_methods);
+	widman->build_script_lang(widtype, &gen_methods);
 }
 
 
@@ -296,13 +252,16 @@ int init_label(struct dope_services *d) {
 	/* define general widget functions */
 	widman->default_widget_methods(&gen_methods);
 
-	orig_update=gen_methods.update;
+	orig_updatepos = gen_methods.updatepos;
 
-	gen_methods.draw=lab_draw;
-	gen_methods.update=lab_update;
+	gen_methods.draw        = lab_draw;
+	gen_methods.updatepos   = lab_updatepos;
+	gen_methods.get_type    = lab_get_type;
+	gen_methods.calc_minmax = lab_calc_minmax;
+	gen_methods.free_data   = lab_free_data;
 
 	build_script_lang();
 
-	d->register_module("Label 1.0",&services);
+	d->register_module("Label 1.0", &services);
 	return 1;
 }

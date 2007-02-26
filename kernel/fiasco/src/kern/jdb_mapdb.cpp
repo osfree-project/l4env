@@ -5,7 +5,7 @@ IMPLEMENTATION:
 #include "jdb.h"
 #include "jdb_input.h"
 #include "jdb_screen.h"
-#include "kmem.h"
+#include "kernel_console.h"
 #include "keycodes.h"
 #include "mapdb.h"
 #include "mapdb_i.h"
@@ -27,16 +27,16 @@ Jdb_mapdb::show(Mword page)
 {
   Mapping_tree *t;
   Mapping      *m;
-  Mword        i;
+  unsigned     i, j;
   int          c;
   
-  if (page > Kmem::info()->main_memory_high() / Config::PAGE_SIZE)
+  if (page > Kip::k()->main_memory_high() / Config::PAGE_SIZE)
     {
       puts(" non extisting physical page");
       return;
     }
 
-  Jdb::fancy_clear_screen();
+  Jdb::clear_screen();
   
   for (;;)
     {
@@ -44,9 +44,28 @@ Jdb_mapdb::show(Mword page)
 
       Jdb::cursor();
       printf("\033[K\n"
-	     " mapping tree for page %08x - header at %08x\033[K\n"
+	     " mapping tree for page "L4_PTR_FMT" - header at " 
+	     L4_PTR_FMT"\033[K\n\033[K\n",
+	     page << 12,(Address)t);
+#ifdef NDEBUG
+      // If NDEBUG is active, t->_empty_count is undefined
+      printf(" header info: "
+	     "entries used: %u  free: --  total: %u  lock=%u\033[K\n"
 	     "\033[K\n",
-	     page << 12,(unsigned)t);
+	     t->_count, t->number_of_entries(),
+	     mapdb_instance()->physframe[page].lock.test());
+  
+      if (t->_count > t->number_of_entries())
+	{
+	  printf("\033[K\n"
+		 "\033[K\n"
+		 "  seems to be a wrong tree ! ...exiting");
+	  // clear rest of page
+	  for (i=6; i<Jdb_screen::height(); i++)
+	    printf("\033[K\n");
+	  return;
+	}
+#else
       printf(" header info: "
 	     "entries used: %u  free: %u  total: %u  lock=%u\033[K\n"
 	     "\033[K\n",
@@ -63,19 +82,22 @@ Jdb_mapdb::show(Mword page)
 	    printf("\033[K\n");
 	  return;
 	}
+#endif
 
       m = t->mappings();
 
-      for (i=0; i < t->number_of_entries(); i++, m++)
+      for (i=0, j=1; i < t->_count; i++, j++, m++)
 	{
 	  unsigned indent = m->data()->depth;
 	  if (indent > 10)
 	    indent = 0;
       
-	  printf("%*u: %x  va=%08x  task=%x  size=%u  depth=",
+	  Kconsole::console()->getchar_chance();
+
+	  printf("%*u: %lx  va="L4_PTR_FMT"  task=%x  size=%u  depth=",
 		 indent+3, i+1,
-		 (Address)(m->data()), (Task_num)(m->data()->address << 12),
-		 (Mword)(m->data()->space()), m->data()->size);
+		 (Address)(m->data()), (Address)(m->data()->address << 12),
+		 (Task_num)(m->data()->space), m->data()->size);
       
 	  if (m->data()->depth == Depth_root)
 	    printf("root");
@@ -88,38 +110,39 @@ Jdb_mapdb::show(Mword page)
 	  
 	  puts("\033[K");
 
-	  if (i % 18 == 17)
+	  if (j >= Jdb_screen::height()-6)
 	    {
 	      printf(" any key for next side or <ESC>");
 	      Jdb::cursor(Jdb_screen::height(), 33);
-	      c = getchar();
+	      c = Jdb_core::getchar();
 	      printf("\r\033[K");
 	      if (c == KEY_ESC) 
 		return;
+	      j = 0;
 	      Jdb::cursor(6, 1);
 	    }
 	}
 
-      for (; i<18; i++)
+      for (; j<Jdb_screen::height()-5; j++)
 	puts("\033[K");
 
-      Jdb::printf_statline("m%73s", "n=next p=revious");
+      Jdb::printf_statline("mapdb", "n=next p=revious", "_");
 
       for (bool redraw=false; !redraw; )
 	{
-	  Jdb::cursor(Jdb_screen::height(), Jdb::LOGO+1);
-	  switch (c = getchar()) 
+	  Jdb::cursor(Jdb_screen::height(), 7);
+	  switch (c = Jdb_core::getchar()) 
 	    {
 	    case 'n':
 	    case KEY_CURSOR_DOWN:
-	      if (++page > Kmem::info()->main_memory_high() / Config::PAGE_SIZE)
+	      if (++page > Kip::k()->main_memory_high() / Config::PAGE_SIZE)
       		page = 0;
 	      redraw = true;
 	      break;
 	    case 'p':
 	    case KEY_CURSOR_UP:
-	      if (--page > Kmem::info()->main_memory_high() / Config::PAGE_SIZE)
-      		page =  Kmem::info()->main_memory_high() / Config::PAGE_SIZE;
+	      if (--page > Kip::k()->main_memory_high() / Config::PAGE_SIZE)
+      		page =  Kip::k()->main_memory_high() / Config::PAGE_SIZE;
 	      redraw = true;
 	      break;
 	    case KEY_ESC:
@@ -149,9 +172,9 @@ Jdb_mapdb::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd (0, "m", "mapdb", " phys. frame number=%5x",
+	{ 0, "m", "mapdb", " phys. frame number=%5x",
 	  "m<frameno>\tshow mapping database starting at page",
-	  &pagenum),
+	  &pagenum },
     };
   return cs;
 }

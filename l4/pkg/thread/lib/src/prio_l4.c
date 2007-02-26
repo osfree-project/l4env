@@ -49,16 +49,16 @@ l4th_prio_init(void)
   if (l4thread_default_prio == L4THREAD_DEFAULT_PRIO)
     {
       /* use priority of current thread as default priority */
-      l4_thread_schedule(l4_myself(),L4_INVALID_SCHED_PARAM,&foo,&foo,&p);
+      l4_thread_schedule(l4_myself(), L4_INVALID_SCHED_PARAM, &foo, &foo, &p);
       if (l4_is_invalid_sched_param(p))
 	{
-	  Error("l4thread: failed to get default priority!");
+	  LOG_Error("l4thread: failed to get default priority!");
 	  return -L4_EINVAL;
 	}
       l4thread_default_prio = p.sp.prio;
     }
 
-  LOGdL(DEBUG_PRIO_INIT,"default prio = %d",l4thread_default_prio);
+  LOGdL(DEBUG_PRIO_INIT, "default prio = %d", l4thread_default_prio);
 
   /* done */
   return 0;
@@ -90,13 +90,13 @@ l4th_get_prio(l4th_tcb_t * tcb)
   if ((tcb->prio == L4THREAD_DEFAULT_PRIO) || (do_l4_schedule))
     {
       /* get priority */
-      l4_thread_schedule(tcb->l4_id,L4_INVALID_SCHED_PARAM, 
-			 &foo,&foo,&p);
+      l4_thread_schedule(tcb->l4_id, L4_INVALID_SCHED_PARAM, 
+			 &foo, &foo, &p);
       
       if (l4_is_invalid_sched_param(p))
 	{
 	  /* Whats that? */
-	  Error("l4thread: failed to get priority!");
+	  LOG_Error("l4thread: failed to get priority!");
 	  return -L4_EINVAL;
 	}
       
@@ -129,7 +129,7 @@ l4th_set_prio(l4th_tcb_t * tcb, l4_prio_t prio)
   
   /* get old schedule parameters */
   foo = L4_INVALID_ID;
-  l4_thread_schedule(tcb->l4_id,L4_INVALID_SCHED_PARAM,&foo,&foo,&p);
+  l4_thread_schedule(tcb->l4_id, L4_INVALID_SCHED_PARAM, &foo, &foo, &p);
 
   /* set new priority */
   if (!l4_is_invalid_sched_param(p))
@@ -138,9 +138,11 @@ l4th_set_prio(l4th_tcb_t * tcb, l4_prio_t prio)
       p.sp.prio = prio;
       p.sp.state = 0;
       foo = L4_INVALID_ID;
-      l4_thread_schedule(tcb->l4_id,p,&foo,&foo,&p);
-    }
-
+      l4_thread_schedule(tcb->l4_id, p, &foo, &foo, &p);
+    } 
+  else 
+    LOG_Error("Getting prio of "l4util_idfmt, l4util_idstr(tcb->l4_id));
+  
   /* done */
   if (!l4_is_invalid_sched_param(p))
     {
@@ -148,8 +150,11 @@ l4th_set_prio(l4th_tcb_t * tcb, l4_prio_t prio)
       tcb->prio = prio;
       return 0;
     }
-  else
-    /* error */
-    return -L4_EINVAL;
+  else 
+    {
+      /* error */
+      LOG_Error("Setting prio of "l4util_idfmt, l4util_idstr(tcb->l4_id));
+      return -L4_EINVAL;
+    }
 }
     

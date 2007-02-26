@@ -1,5 +1,10 @@
 Implementation of the Omega0 interrupt management interface
 
+Omega0's current implementation requires to set "Fiasco-->Kernel Options-->ABI
+Extensions-->Deceit bit disables switch" in the Fiasco configuration dialog. If
+not set, you'll encounter the following error on execution: PANIC: deceiving
+ipc.
+
 This package contains a standalone implementation of the Omega0 server. See
 doc/omega0.ps.gz for a paper on the Omega0 interface specification.
 The l4io package sources this package for its multi-server including Omega0.

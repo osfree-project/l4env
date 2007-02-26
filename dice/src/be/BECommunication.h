@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BECommunication.h
- *	\brief	contains the declaration of the class CBECommunication
+ *    \file    dice/src/be/BECommunication.h
+ *    \brief   contains the declaration of the class CBECommunication
  *
- *	\date	08/13/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    08/13/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,13 +31,16 @@
 
 #include <be/BEObject.h>
 
+class CBEFunction;
+class CBEContext;
+
 /** \class CBECommunication
  *  \ingroup backend
  *  \brief is the base class for the communication classes
  */
 class CBECommunication : public CBEObject
 {
-DECLARE_DYNAMIC(CBECommunication);
+
 
 public:
     /** creates a new object of this class */
@@ -44,6 +48,18 @@ public:
     virtual ~CBECommunication();
 
 public:
+    virtual bool CheckProperty(CBEFunction *pFunction, int nProperty, CBEContext *pContext);
+
+    virtual void WriteCall(CBEFile *pFile, CBEFunction* pFunction, CBEContext *pContext);
+    virtual void WriteReceive(CBEFile *pFile, CBEFunction* pFunction, CBEContext *pContext);
+    virtual void WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
+    virtual void WriteWait(CBEFile* pFile, CBEFunction *pFunction, CBEContext* pContext);
+    virtual void WriteSend(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
+    virtual void WriteReply(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext);
+
+    virtual void WriteInitialization(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteBind(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteCleanup(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
 };
 
 #endif

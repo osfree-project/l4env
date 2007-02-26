@@ -1,7 +1,6 @@
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 1996   Erich Boleyn  <erich@uruk.org>
- *  Copyright (C) 1999, 2000   Free Software Foundation, Inc.
+ *  Copyright (C) 1999,2000,2001,2003   Free Software Foundation, Inc.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -109,9 +108,15 @@
 #define PC_SLICE_TYPE_FAT32_LBA		0xc
 #define PC_SLICE_TYPE_FAT16_LBA		0xe
 #define PC_SLICE_TYPE_WIN95_EXTENDED	0xf
+#define PC_SLICE_TYPE_EZD        	0x55
 #define PC_SLICE_TYPE_MINIX		0x80
+#define PC_SLICE_TYPE_LINUX_MINIX	0x81
 #define PC_SLICE_TYPE_EXT2FS       	0x83
 #define PC_SLICE_TYPE_LINUX_EXTENDED	0x85
+#define PC_SLICE_TYPE_VSTAFS		0x9e
+#define PC_SLICE_TYPE_DELL_UTIL		0xde
+#define PC_SLICE_TYPE_LINUX_RAID	0xfd
+
 
 /* For convinience.  */
 /* Check if TYPE is a FAT partition type. Clear the hidden flag before
@@ -123,12 +128,17 @@
      || _type == PC_SLICE_TYPE_FAT16_GT32M \
      || _type == PC_SLICE_TYPE_FAT16_LBA \
      || _type == PC_SLICE_TYPE_FAT32 \
-     || _type == PC_SLICE_TYPE_FAT32_LBA; })
+     || _type == PC_SLICE_TYPE_FAT32_LBA \
+     || _type == PC_SLICE_TYPE_DELL_UTIL; })
 
 #define IS_PC_SLICE_TYPE_EXTENDED(type)	\
   (((type) == PC_SLICE_TYPE_EXTENDED)	\
    || ((type) == PC_SLICE_TYPE_WIN95_EXTENDED)	\
    || ((type) == PC_SLICE_TYPE_LINUX_EXTENDED))
+
+#define IS_PC_SLICE_TYPE_MINIX(type) \
+  (((type) == PC_SLICE_TYPE_MINIX)	\
+   || ((type) == PC_SLICE_TYPE_LINUX_MINIX))
 
 /* these ones are special, as they use their own partitioning scheme
    to subdivide the PC partitions from there.  */
@@ -232,6 +242,10 @@
 #define	FS_HPFS		11	/* OS/2 high-performance file system */
 #define	FS_ISO9660	12	/* ISO 9660, normally CD-ROM */
 #define	FS_BOOT		13	/* partition contains bootstrap */
+#define	FS_ADOS		14	/* AmigaDOS fast file system */
+#define	FS_HFS		15	/* Macintosh HFS */
+#define	FS_FILECORE	16	/* Acorn Filecore Filing System */
+#define	FS_EXT2FS	17	/* Linux Extended 2 file system */
 
 
 #endif /* _PC_SLICE_H */

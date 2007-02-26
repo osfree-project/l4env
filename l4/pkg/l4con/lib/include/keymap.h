@@ -138,7 +138,6 @@ static char keymap[128][2] =
 	{0,	0},		
 	{0,	0},		
 	{0,	0},		
-	{0,	0},
 };
 
 #else /* KEYMAP_DE */

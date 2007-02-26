@@ -1,12 +1,8 @@
-IMPLEMENTATION[ia32-ux]:
+IMPLEMENTATION[ia32,ux]:
 
 #include <cstdio>
 #include <cstring>
 #include "simpleio.h"
-
-//#include "globals.h"
-//#include "space.h"
-//#include "kmem.h"
 
 PUBLIC
 void
@@ -36,7 +32,7 @@ PUBLIC
 void
 Jdb_kern_info_cpu::show_features()
 {
-  const char *const simple[] = 
+  static const char *const simple[] = 
   {
     "fpu (fpu on chip)",
     "vme (virtual-8086 mode enhancements)",
@@ -72,88 +68,56 @@ Jdb_kern_info_cpu::show_features()
     "pbe (pending break enable)",
     (char *)(-1)
   };
-  const char *const extended[] =
+  static const char *const extended[] =
   {
     "pni (prescott new instructions)",
-    NULL,
-    NULL,
+    NULL, NULL,
     "monitor (monitor/mwait instructions)",
     "dscpl (CPL qualified debug store)",
-    NULL,
-    NULL,
+    NULL, NULL,
     "est (enhanced speedstep technology)",
     "tm2 (thermal monitor 2)",
     NULL,
     "cid (L1 context id)",
+    NULL, NULL, NULL,
+    "xtpr (send task priority messages)",
+    (char *)(-1)
+  };
+  static const char *const extended_amd[] =
+  {
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL,
+    "syscall (syscall/sysret instructions)",
+    NULL, NULL, NULL, NULL,
+    NULL, NULL, NULL,
+    "mp (MP capable)",
+    "nx (no-execute page protection)",
+    NULL,
+    "mmxext (AMD extensions to MMX)",
+    NULL, NULL,
+    "fxsr_opt (FXSR optimizations)",
+    NULL, NULL, NULL,
+    "lm (Long mode)",
+    "3dnowext (AMD 3DNow! extenstion)",
+    "3dnow (3DNow! instructions)",
     (char *)(-1)
   };
 
   unsigned position = 5, colon = 0;
-  putstr("     ");
+  putstr("CPU features:\n     ");
   show_f_bits (Cpu::features(), simple, 5, position, colon);
   show_f_bits (Cpu::ext_features(), extended, 5, position, colon);
+  show_f_bits (Cpu::ext_amd_features(), extended_amd, 5, position, colon);
 }
 
-
-class Jdb_kern_info_memory : public Jdb_kern_info_module
-{
-};
-
-static Jdb_kern_info_memory k_m INIT_PRIORITY(JDB_MODULE_INIT_PRIO+1);
-
-PUBLIC
-Jdb_kern_info_memory::Jdb_kern_info_memory()
-  : Jdb_kern_info_module('m', "kmem_alloc::debug_dump")
-{
-  Jdb_kern_info::register_subcmd(this);
-}
-
-PUBLIC
+PRIVATE inline
 void
-Jdb_kern_info_memory::show()
+Jdb_kern_info_misc::show_pdir()
 {
-  Kmem_alloc::allocator()->debug_dump();
+  Space *s = current_space();
+  printf ("pdir: "L4_PTR_FMT" (taskno=%x, chief=%x)\n",
+	  (Address) s,
+	  unsigned (s->id()),
+	  unsigned (s->chief()));
 }
-
-
-class Jdb_kern_info_region : public Jdb_kern_info_module
-{
-};
-
-static Jdb_kern_info_region k_r INIT_PRIORITY(JDB_MODULE_INIT_PRIO+1);
-
-PUBLIC
-Jdb_kern_info_region::Jdb_kern_info_region()
-  : Jdb_kern_info_module('r', "region::debug_dump")
-{
-  Jdb_kern_info::register_subcmd(this);
-}
-
-PUBLIC
-void
-Jdb_kern_info_region::show()
-{
-  region::debug_dump();
-}
-
-
-class Jdb_kern_info_kip : public Jdb_kern_info_module
-{
-};
-
-static Jdb_kern_info_kip k_f INIT_PRIORITY(JDB_MODULE_INIT_PRIO+1);
-
-PUBLIC
-Jdb_kern_info_kip::Jdb_kern_info_kip()
-  : Jdb_kern_info_module('f', "show kernel interface page")
-{
-  Jdb_kern_info::register_subcmd(this);
-}
-
-PUBLIC
-void
-Jdb_kern_info_kip::show()
-{
-  Kmem::info()->print();
-}
-

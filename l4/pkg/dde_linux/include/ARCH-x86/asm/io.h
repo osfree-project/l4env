@@ -197,9 +197,15 @@ extern void bt_iounmap(void *addr, unsigned long size);
 #define __raw_writew writew
 #define __raw_writel writel
 
+#ifndef DDE_LINUX
+#define memset_io(a,b,c)	__memset(__io_virt(a),(b),(c))
+#define memcpy_fromio(a,b,c)	__memcpy((a),__io_virt(b),(c))
+#define memcpy_toio(a,b,c)	__memcpy(__io_virt(a),(b),(c))
+#else
 #define memset_io(a,b,c)	memset(__io_virt(a),(b),(c))
 #define memcpy_fromio(a,b,c)	memcpy((a),__io_virt(b),(c))
 #define memcpy_toio(a,b,c)	memcpy(__io_virt(a),(b),(c))
+#endif
 
 /* XXX DDE_LINUX supports no ISA yet */
 #ifndef DDE_LINUX

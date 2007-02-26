@@ -1,0 +1,5 @@
+ - support more event types
+ - more visualizations in rt_mon_dope
+ - make some functions really inline
+ - Floating Point usage leads to FP exception as fiasco saves the FPU
+   state lazy -> should not use FPU in rt_mon

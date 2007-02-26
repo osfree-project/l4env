@@ -26,8 +26,16 @@
 #include <l4/util/bitops.h>
 
 /* OSKit */
+#ifdef USE_OSKIT
 #include <stdlib.h>
 #include <malloc.h>
+#else
+/* Do not pull in standard libc headers as they collide with the Linux
+ * headers */
+void *malloc(size_t size);
+void free(void *ptr);
+unsigned int strtol(const char *nptr, char **endptr, int base);
+#endif
 
 /* local */
 #include "pcilib.h"
@@ -35,6 +43,9 @@
 /* I/O local */
 #include "io.h"
 #include "res.h"
+
+/* show debug output */
+#define DO_DEBUG 0
 
 #ifndef NO_DOX
 /* fake prototypes */
@@ -44,14 +55,18 @@ void initcall_pci_proc_init(void);
 /* Align PCI memory resources to superpage boundaries (BROKEN) */
 #undef CONFIG_ALIGN_RESOURCES_TO_SUPERPAGE
 
+
+#undef FASTCALL
+#define FASTCALL(x) __attribute__((regparm(3))) x 
+
 /** \name Resource Management Glue for PCIlib
  *
  * Linux' PCI subsystem _expects_ the new, hierarchical resource management
  * system. So it has to be mapped to io's flat allocation scheme:
  *
- *	-# callback requests/releases only for IORESOURCE_BUSY regions
- *	-# announce top-level I/O memory regions (I/O has to initiate mappings
- *	from sigma0 or whomsoever)
+ *  -# callback requests/releases only for IORESOURCE_BUSY regions
+ *  -# announce top-level I/O memory regions (I/O has to initiate mappings
+ *     from sigma0 or whomsoever)
  *
  * Shame: Almost all of this is from Linux 2.4.x.
  *
@@ -65,13 +80,13 @@ struct resource ioport_resource = {
   "PCI IO",
   0x0000, IO_SPACE_LIMIT,
   IORESOURCE_IO
-};				/**< fake port resource (PCIlib glue) */
+};  /**< fake port resource (PCIlib glue) */
 
 struct resource iomem_resource = {
   "PCI mem",
   0x00000000, 0xffffffff,
   IORESOURCE_MEM
-};				/**< fake memory resource (PCIlib glue) */
+};  /**< fake memory resource (PCIlib glue) */
 
 /** map MMIO regions above 2GB */
 unsigned long pci_mem_start = 0x80000000;
@@ -90,16 +105,16 @@ static char * do_resource_list(struct resource *entry, const char *fmt, int offs
       unsigned long from, to;
 
       if ((int) (end-buf) < 80)
-	return buf;
+        return buf;
 
       from = entry->start;
       to = entry->end;
       if (!name)
-	name = "<BAD>";
+        name = "<BAD>";
 
       buf += sprintf(buf, fmt + offset, from, to, name);
       if (entry->child)
-	buf = do_resource_list(entry->child, fmt, offset-2, buf, end);
+        buf = do_resource_list(entry->child, fmt, offset-2, buf, end);
       entry = entry->sibling;
     }
 
@@ -110,7 +125,7 @@ static char * do_resource_list(struct resource *entry, const char *fmt, int offs
  * \ingroup grp_pci
  *
  * \krishna it seems as Linux only sorts resources here;
- *	exception: PCI conf #1 I/O ports
+ *          exception: PCI conf #1 I/O ports
  *
  * \krishna now: top-level announcement and BUSY requests
  *
@@ -118,7 +133,7 @@ static char * do_resource_list(struct resource *entry, const char *fmt, int offs
  * we or the driver servers?
  */
 static struct resource *__request_resource(struct resource *root,
-					   struct resource *new)
+                                           struct resource *new)
 {
   unsigned long start = new->start;
   unsigned long end = new->end;
@@ -135,37 +150,37 @@ static struct resource *__request_resource(struct resource *root,
     {
       tmp = *p;
       if (!tmp || tmp->start > end)
-	{
-	  /* on IORESOURCE_BUSY callback io */
-	  if (new->flags & IORESOURCE_BUSY)
-	    {
-	      struct resource *nr = root;
+        {
+          /* on IORESOURCE_BUSY callback io */
+          if (new->flags & IORESOURCE_BUSY)
+            {
+              struct resource *nr = root;
 
-	      /* find new's root's root?! */
-	      while (nr->parent)
-		nr = nr->parent;
+              /* find new's root's root?! */
+              while (nr->parent)
+                nr = nr->parent;
 
-	      /* request; return root on fail */
-	      if (nr == &ioport_resource)
-		{
-		  if (callback_request_region(start, end - start + 1))
-		    return root;
-		}
-	      else if (nr == &iomem_resource)
-		{
-		  if (callback_request_mem_region(start, end - start + 1))
-		    return root;
-		}
-	    }
+              /* request; return root on fail */
+              if (nr == &ioport_resource)
+                {
+                  if (callback_request_region(start, end - start + 1))
+                    return root;
+                }
+              else if (nr == &iomem_resource)
+                {
+                  if (callback_request_mem_region(start, end - start + 1))
+                    return root;
+                }
+            }
 
-	  new->sibling = tmp;
-	  *p = new;
-	  new->parent = root;
-	  return NULL;
-	}
+          new->sibling = tmp;
+          *p = new;
+          new->parent = root;
+          return NULL;
+        }
       p = &tmp->sibling;
       if (tmp->end < start)
-	continue;
+        continue;
       return tmp;
     }
 }
@@ -177,8 +192,8 @@ static struct resource *__request_resource(struct resource *root,
  * single-threading.
  */
 struct resource *__request_region(struct resource *parent,
-				  unsigned long start, unsigned long n,
-				  const char *name)
+                                  unsigned long start, unsigned long n,
+                                  const char *name)
 {
   struct resource *res = kmalloc(sizeof(*res), GFP_KERNEL);
 
@@ -191,42 +206,42 @@ struct resource *__request_region(struct resource *parent,
       res->flags = IORESOURCE_BUSY;
 
       for (;;)
-	{
-	  struct resource *conflict;
+        {
+          struct resource *conflict;
 
-	  conflict = __request_resource(parent, res);
-	  if (!conflict)
-	    break;
-	  if (conflict != parent)
-	    {
-	      parent = conflict;
-	      if (!(conflict->flags & IORESOURCE_BUSY))
-		continue;
-	    }
+          conflict = __request_resource(parent, res);
+          if (!conflict)
+            break;
+          if (conflict != parent)
+            {
+              parent = conflict;
+              if (!(conflict->flags & IORESOURCE_BUSY))
+                continue;
+            }
 
-	  /* Uhhuh, that didn't work out.. */
-	  kfree(res);
-	  res = NULL;
-	  break;
-	}
+          /* Uhhuh, that didn't work out.. */
+          kfree(res);
+          res = NULL;
+          break;
+        }
     }
   return res;
 }
 
 void __release_region(struct resource *parent,
-		      unsigned long start, unsigned long n)
+                      unsigned long start, unsigned long n)
 {}
 
 /** Generic Find empty slot in the resource tree given range and alignment.
  * \ingroup grp_pci
  */
 static int __find_resource(struct resource *root, struct resource *new,
-			   unsigned long size,
-			   unsigned long min, unsigned long max,
-			   unsigned long align,
-			   void (*alignf) (void *, struct resource *,
-					   unsigned long, unsigned long),
-			   void *alignf_data)
+                           unsigned long size,
+                           unsigned long min, unsigned long max,
+                           unsigned long align,
+                           void (*alignf) (void *, struct resource *,
+                                           unsigned long, unsigned long),
+                           void *alignf_data)
 {
   struct resource *this = root->child;
 
@@ -234,25 +249,25 @@ static int __find_resource(struct resource *root, struct resource *new,
   for (;;)
     {
       if (this)
-	new->end = this->start;
+        new->end = this->start;
       else
-	new->end = root->end;
+        new->end = root->end;
       if (new->start < min)
-	new->start = min;
+        new->start = min;
       if (new->end > max)
-	new->end = max;
+        new->end = max;
       new->start = (new->start + align - 1) & ~(align - 1);
       if (alignf)
-	{
-	  alignf(alignf_data, new, size, align);
-	}
+        {
+          alignf(alignf_data, new, size, align);
+        }
       if (new->start < new->end && new->end - new->start + 1 >= size)
-	{
-	  new->end = new->start + size - 1;
-	  return 0;
-	}
+        {
+          new->end = new->start + size - 1;
+          return 0;
+        }
       if (!this)
-	break;
+        break;
       new->start = this->end + 1;
       this = this->sibling;
     }
@@ -275,10 +290,10 @@ int request_resource(struct resource *root, struct resource *new)
 #ifdef CONFIG_ALIGN_RESOURCES_TO_SUPERPAGE
   int err;
   unsigned long size = new->end - new->start + 1;
-  unsigned long min = pci_mem_start, max = -1;	/* XXX don't know if this always works */
+  unsigned long min = pci_mem_start, max = -1;  /* XXX don't know if this always works */
   unsigned long align;
 
-  DMSG("REQ: <0x%08lx-0x%08lx>\n", new->start, new->end);
+  LOGd(DO_DEBUG, "REQ: <0x%08lx-0x%08lx>", new->start, new->end);
 
   /* align MMIO regions only */
   if (new->flags & IORESOURCE_MEM)
@@ -286,20 +301,20 @@ int request_resource(struct resource *root, struct resource *new)
       align = l4util_bsr(size);
       /* round up */
       if (size > (1UL << align))
-	align++;
+        align++;
 
       if (align < L4_LOG2_SUPERPAGESIZE)
-	align = L4_LOG2_SUPERPAGESIZE;
+        align = L4_LOG2_SUPERPAGESIZE;
       align = 1UL << align;
-      
-      DMSG("ALIGN: for 0x%08lx = 0x%08lx\n", size, align);
+
+      LOGd(DO_DEBUG, "ALIGN: for 0x%08lx = 0x%08lx", size, align);
 
       err = __find_resource(root, new, size, min, max, align, 0, 0);
       if (err)
-	return err;
+        return err;
 
 
-      DMSG("ALIGN: <0x%08lx-0x%08lx>\n", new->start, new->end);
+      LOGd(DO_DEBUG, "ALIGN: <0x%08lx-0x%08lx>", new->start, new->end);
 
       /* update of PCI configuration space deferred */
     }
@@ -316,12 +331,12 @@ int request_resource(struct resource *root, struct resource *new)
  * single-threading.
  */
 int allocate_resource(struct resource *root, struct resource *new,
-		      unsigned long size,
-		      unsigned long min, unsigned long max,
-		      unsigned long align,
-		      void (*alignf) (void *, struct resource *,
+                      unsigned long size,
+                      unsigned long min, unsigned long max,
+                      unsigned long align,
+                      void (*alignf) (void *, struct resource *,
                                       unsigned long, unsigned long),
-		      void *alignf_data)
+                      void *alignf_data)
 {
   int err;
 
@@ -346,7 +361,7 @@ int allocate_resource(struct resource *root, struct resource *new,
  * always succeed because is executed on L4IO startup.
  */
 int request_irq(unsigned int irq, void (*handler) (int, void *, struct pt_regs *),
-		unsigned long flags, const char *name, void *id)
+                unsigned long flags, const char *name, void *id)
 {
   /* always succeeds */
   return 0;
@@ -394,7 +409,7 @@ long simple_strtol(const char *cp, char **endp, unsigned int base)
 }
 
 /** schedule_timeout */
-signed long schedule_timeout(signed long timeout)
+signed long FASTCALL(schedule_timeout(signed long timeout))
 {
   /* FIXME: delay some time */
   return 0;
@@ -418,11 +433,11 @@ void *pci_alloc_consistent(struct pci_dev *hwdev, size_t size,
 void pci_free_consistent(struct pci_dev *hwdev, size_t size,
                          void *vaddr, dma_addr_t dma_handle)
 {}
-void add_wait_queue(wait_queue_head_t *q, wait_queue_t * wait)
+void FASTCALL(add_wait_queue(wait_queue_head_t *q, wait_queue_t * wait))
 {}
-void remove_wait_queue(wait_queue_head_t *q, wait_queue_t * wait)
+void FASTCALL(remove_wait_queue(wait_queue_head_t *q, wait_queue_t * wait))
 {}
-void __wake_up(wait_queue_head_t *q, unsigned int mode, int nr)
+void FASTCALL(__wake_up(wait_queue_head_t *q, unsigned int mode, int nr))
 {}
 /** @} */
 /**
@@ -459,7 +474,7 @@ void kfree(const void *obj)
  *
  * \todo implement __get_free_pages using l4rm?! ... for now it's _not_
  */
-unsigned long __get_free_pages(unsigned int gfp, unsigned int order)
+unsigned long FASTCALL(__get_free_pages(unsigned int gfp, unsigned int order))
 {
   unsigned long something = 0;
 
@@ -474,23 +489,21 @@ unsigned long __get_free_pages(unsigned int gfp, unsigned int order)
  *
  * \todo implement free_pages using l4rm?! ... for now it's _not_
  */
-void free_pages(unsigned long addr, unsigned int order)
+void FASTCALL(free_pages(unsigned long addr, unsigned int order))
 {
-  INFO("(%#08lx, %i)\n", addr, order);
+  LOGdL(DO_DEBUG, "(%#08lx, %i)", addr, order);
 }
 
 /** @} */
 /** \name PCIlib interface
  *
- * \todo /proc fs has to be optional 
- * \todo __pa() and __va() has to be mapped to appropriate functions if really
- * used; defining __PAGE_OFFSET=0 is _not_ enough
+ * \todo /proc fs has to be optional
  *
  * @{ */
 
 /** PCIlib initialization.
  * \ingroup grp_pci */
-int PCI_init()
+int PCI_init(int list)
 {
 #ifdef CONFIG_ALIGN_RESOURCES_TO_SUPERPAGE
   struct list_head *list;
@@ -507,45 +520,51 @@ int PCI_init()
          This fixes a bug detected using USB hubs that allocate their "real"
          IRQs _after_ pci_enable_device(). thanks to gg5@os */
       if ((i = pci_enable_device(p)))
-	Msg("WARNING: initial PCI device activation for %s failed (%d)\n",
+        LOG("WARNING: initial PCI device activation for %s failed (%d)\n",
             p->slot_name, i);
       /* Removed pci_disable_device(p); here because it produced errors with
          non-compliant drivers from grub. */
 
       for (i=0; i<6; i++)
-	{
-	  if (p->resource[i].flags & IORESOURCE_MEM)
-	    {
+        {
+          if (p->resource[i].flags & IORESOURCE_MEM)
+            {
 #ifdef CONFIG_ALIGN_RESOURCES_TO_SUPERPAGE
-	      /* update configuration space of all PCI devices */
-	      pcibios_update_resource(p, &iomem_resource, &p->resource[i], i);
+              /* update configuration space of all PCI devices */
+              pcibios_update_resource(p, &iomem_resource, &p->resource[i], i);
 #endif
 
-	      /* announce memory region */
-	      if(callback_handle_pci_device(p->vendor, p->device)){
-		  callback_announce_mem_region(
-		      p->resource[i].start,
-		      p->resource[i].end-p->resource[i].start+1);
-	      } else {
-		  printf("ignoring memory from %08lx-%08lx for device %04x:%04x\n",
-			 p->resource[i].start,
-			 p->resource[i].end,
-			 p->vendor, p->device);
-	      }
-	    }
-	}
+              /* announce memory region */
+              if(p->resource[i].start < 0x80000000){
+                  printf("WARNING: Cannot handle memory %08lx-%08lx "
+                         "for device %04x:%04x\n",
+                         p->resource[i].start,
+                         p->resource[i].end,
+                         p->vendor, p->device);
+              } else if(callback_handle_pci_device(p->vendor, p->device)){
+                  callback_announce_mem_region(
+                      p->resource[i].start,
+                      p->resource[i].end-p->resource[i].start+1);
+              } else {
+                  printf("Ignoring memory %08lx-%08lx for device %04x:%04x\n",
+                         p->resource[i].start,
+                         p->resource[i].end,
+                         p->vendor, p->device);
+              }
+            }
+        }
     }
 
-  /* XXX DEBUG */
+  if (list)
   {
     char *buf = malloc(4000);
     if (buf)
       {
-	do_resource_list(&iomem_resource, "        %08lx-%08lx : %s\n", 8, buf, &buf[3999]);
-	printf("%s", buf);
-	do_resource_list(&ioport_resource, "        %04lx-%04lx : %s\n", 8, buf, &buf[3999]);
-	printf("%s", buf);
-	free(buf);
+        do_resource_list(&iomem_resource, "        %08lx-%08lx : %s\n", 8, buf, &buf[3999]);
+        printf("%s", buf);
+        do_resource_list(&ioport_resource, "        %04lx-%04lx : %s\n", 8, buf, &buf[3999]);
+        printf("%s", buf);
+        free(buf);
       }
   }
 

@@ -1,7 +1,14 @@
-IMPLEMENTATION [list]:
+IMPLEMENTATION:
 
 #include "cpu_lock.h"
 #include "lock_guard.h"
+
+PUBLIC inline
+Thread *
+Thread::next_present() const
+{
+  return present_next;
+}
 
 /** Is this thread a member of the present list?.
     @return true if thread is in present list

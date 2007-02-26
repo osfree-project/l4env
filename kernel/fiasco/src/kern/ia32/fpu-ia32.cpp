@@ -3,10 +3,9 @@
  * Architecture specific floating point unit code
  */
 
-IMPLEMENTATION[ia32]:
+IMPLEMENTATION [ia32-fpu]:
 
 #include <cassert>
-#include <flux/x86/proc_reg.h>
 #include "cpu.h"
 #include "regdefs.h"
 
@@ -23,7 +22,7 @@ Fpu::init()
   // disable Coprocessor Emulation to allow exception #7/NM on TS
   // enable Numeric Error (exception #16/MF, native FPU mode)
   // enable Monitor Coprocessor
-  set_cr0 ((get_cr0() & ~CR0_EM) | CR0_NE | CR0_MP);
+  Cpu::set_cr0 ((Cpu::get_cr0() & ~CR0_EM) | CR0_NE | CR0_MP);
 }
    
 /*
@@ -77,11 +76,11 @@ Fpu::restore_state (Fpu_state *s)
 /*
  * Mark the FPU busy. The next attempt to use it will yield a trap.
  */
-IMPLEMENT inline NEEDS ["regdefs.h",<flux/x86/proc_reg.h>]
+IMPLEMENT inline NEEDS ["regdefs.h","cpu.h"]
 void
 Fpu::disable()
 {
-  set_cr0 (get_cr0() | CR0_TS);
+  Cpu::set_cr0 (Cpu::get_cr0() | CR0_TS);
 }
 
 /*

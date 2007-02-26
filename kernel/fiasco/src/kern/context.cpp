@@ -1,110 +1,122 @@
 INTERFACE:
 
 #include "types.h"
-
 #include "config.h"
 #include "fpu_state.h"
 #include "sched_context.h"
 
-class Space_context;
-class Thread_lock;
 class Entry_frame;
+class Space;
+class Thread_lock;
 
-/** An execution context.  A context is a runnable, schedulable activity. 
+/** An execution context.  A context is a runnable, schedulable activity.
     It carries along some state used by other subsystems: A lock count,
     and stack-element forward/next pointers.
  */
 class Context
 {
+  friend class Jdb_thread_list;
+
 public:
-  typedef Mword Status;
+
+  /**
+   * Definition of different scheduling modes
+   */
+  enum Sched_mode {
+    Periodic	= 0x1,	///< 0 = Conventional, 1 = Periodic
+    Nonstrict	= 0x2,	///< 0 = Strictly Periodic, 1 = Non-strictly periodic
+  };
+
+  /**
+   * Definition of different helping modes
+   */
+  enum Helping_mode {
+    Helping,
+    Not_Helping,
+    Ignore_Helping
+  };
+
+  /**
+   * Size of a Context (TCB + kernel stack)
+   */
   static const size_t size = Config::thread_block_size;
 
-  Mword switch_to( Context *t );
-  Status state() const;
-  Mword exists() const;
-  Mword state_add( Status );
-  Mword state_del( Status );
-  Mword state_change( Status mask, Status bits );
-  Mword state_change_safely( Status mask, Status bits );
-  void state_change_dirty( Status mask, Status bits );
-  Space_context *space_context() const;
-  Thread_lock *thread_lock() const;
-  unsigned short mcp() const;
-  Entry_frame *regs() const;
-  void inc_lock_cnt();
-  void dec_lock_cnt();
-  int lock_cnt() const;
-  Mword in_ready_list() const;
-  void ready_enqueue();
-  void ready_dequeue();
+  /**
+   * Initialize cpu time of the idle thread.
+   */
+  void init_switch_time();
 
-  void schedule();
-  Context *get_next() const;
-  void set_next( Context * );
-  Context *donatee() const;
-  void set_donatee( Context * );
-  void set_kernel_sp( Mword *sp );
-  Fpu_state *const fpu_state();
+  /**
+   * Return consumed CPU time.
+   * @return Consumed CPU time in usecs
+   */
+  Cpu_time consumed_time();
 
-  void set_sched (Sched_context *sched);
-  Sched_context *sched();
-  Sched_context *timesharing_sched();
+  /**
+   * Get the kernel UTCB pointer.
+   * @return UTCB pointer, or 0 if there is no UTCB
+   */
+  Utcb* utcb() const;
 
-  static Sched_context *current_sched();
-  static void set_current_sched (Sched_context *sched);
-  
-  static void timer_tick (bool reschedule);
-  
+protected:
+  /**
+   * Update consumed CPU time during each context switch and when
+   *        reading out the current thread's consumed CPU time.
+   */
+  void update_consumed_time();
+
+  Mword			_state;
+  Mword   *		_kernel_sp;
+
 private:
   friend class Jdb;
   friend class Jdb_tcb;
 
-  /// low level switching stuff
-  void switchin_context() asm("call_switchin_context");
-  /// low level switching stuff
-  void switch_fpu( Context *t );
-  /// low level switching stuff
-  bool switch_cpu( Context *t );
+  /// low level page table switching stuff
+  void switchin_context() asm ("switchin_context_label") FIASCO_FASTCALL;
 
-  virtual void preemption_event (Sched_context *sched) = 0;
+  /// low level fpu switching stuff
+  void switch_fpu (Context *t);
 
-  Space_context *_space_context;
-  Context *_stack_link;	// Links entries in Stack<>
-  Context *_donatee;
+  /// low level cpu switching stuff
+  void switch_cpu (Context *t);
+
+  Space *		_space;
+  Context *		_donatee;
+  Context *		_helper;
 
   // Lock state
   // how many locks does this thread hold on other threads
   // incremented in Thread::lock, decremented in Thread::clear
   // Thread::kill needs to know
-  int _lock_cnt;
-  Thread_lock *const _thread_lock;
+  int			_lock_cnt;
+  Thread_lock * const	_thread_lock;
 
   // The scheduling parameters.  We would only need to keep an
   // anonymous reference to them as we do not need them ourselves, but
   // we aggregate them for performance reasons.
-  Sched_context	_timesharing_sched;
-  Sched_context *_sched;
-
-  unsigned short _mcp;
+  Sched_context		_sched_context;
+  Sched_context *	_sched;
+  Unsigned64		_period;
+  Sched_mode		_mode;
+  unsigned short	_mcp;
 
   // Pointer to floating point register state
-  Fpu_state _fpu_state;
+  Fpu_state		_fpu_state;
 
-  static Sched_context *_current_sched;
+  // Implementation-specific consumed CPU time (TSC ticks or usecs)
+  Cpu_time		_consumed_time;
 
-  // CLASS DATA
-protected:
-  Status _state;
-  Context *ready_next;
-  Context *ready_prev;
-  Mword   *kernel_sp;
+  Context *		_ready_next;
+  Context *		_ready_prev;
 
-  static Context *prio_first[256] asm ("CONTEXT_PRIO_FIRST");
-  static Context *prio_next[256]  asm ("CONTEXT_PRIO_NEXT");
-  static unsigned prio_highest    asm ("CONTEXT_PRIO_HIGHEST");
-  static int timeslice_ticks_left;
+  static bool		_schedule_in_progress;
+  static Sched_context *_current_sched		asm ("CONTEXT_CURRENT_SCHED");
+  static Cpu_time	_switch_time		asm ("CONTEXT_SWITCH_TIME");
+  static unsigned	_prio_highest		asm ("CONTEXT_PRIO_HIGHEST");
+  static Context *	_prio_next[256]		asm ("CONTEXT_PRIO_NEXT");
 };
+
 
 IMPLEMENTATION:
 
@@ -117,35 +129,41 @@ IMPLEMENTATION:
 #include "lock_guard.h"
 #include "logdefs.h"
 #include "processor.h"
-#include "space_context.h"
+#include "space.h"
 #include "std_macros.h"
 #include "thread_state.h"
+#include "timer.h"
+#include "timeout.h"
 
-Sched_context *	Context::_current_sched;
-int		Context::timeslice_ticks_left;
-Context *	Context::prio_first[256];
-Context *	Context::prio_next[256];
-unsigned	Context::prio_highest;
+Sched_context *		Context::_current_sched;
+bool			Context::_schedule_in_progress;
+Context *		Context::_prio_next[256];
+unsigned		Context::_prio_highest;
+Cpu_time		Context::_switch_time;
 
-/** Initialize a context.  After setup, a switch_to to this context results 
-    in a return to user code using the return registers at regs().  The 
+/** Initialize a context.  After setup, a switch_exec to this context results
+    in a return to user code using the return registers at regs().  The
     return registers are not initialized however; neither is the space_context
     to be used in thread switching (use set_space_context() for that).
-    @pre (kernel_sp == 0)  &&  (* (stack end) == 0)
-    @param thread_lock pointer to lock used to lock this context 
-    @param space_context the space context 
+    @pre (_kernel_sp == 0)  &&  (* (stack end) == 0)
+    @param thread_lock pointer to lock used to lock this context
+    @param space_context the space context
  */
 PUBLIC inline NEEDS ["atomic.h", "entry_frame.h"]
 Context::Context (Thread_lock *thread_lock,
-		  Space_context* space_context,
+		  Space* space,
 		  unsigned short prio,
                   unsigned short mcp,
-		  unsigned short timeslice)
-       : _space_context (space_context),
-         _thread_lock (thread_lock),
-         _timesharing_sched (this, 0, prio, timeslice),
-         _sched (&_timesharing_sched),
-         _mcp (mcp)
+		  Unsigned64 quantum)
+       : _space     (space),
+	 _helper            (this),
+         _thread_lock       (thread_lock),
+         _sched_context     (this, 0, prio, quantum),
+         _sched             (&_sched_context),
+         _period            (0),
+         _mode              (Sched_mode (0)),
+         _mcp               (mcp),
+         _consumed_time     (0)
 {
   // NOTE: We do not have to synchronize the initialization of
   // _space_context because it is constant for all concurrent
@@ -155,15 +173,15 @@ Context::Context (Thread_lock *thread_lock,
   // space_context arguments.
 
   Mword *init_sp = reinterpret_cast<Mword*>
-    (reinterpret_cast<Mword>(this) + size - sizeof(Entry_frame));
+    (reinterpret_cast<Mword>(this) + size - sizeof (Entry_frame));
 
   // don't care about errors: they just mean someone else has already
   // set up the tcb
 
-  smp_cas(&kernel_sp, (Mword*)0, init_sp);
+  cas (&_kernel_sp, (Mword *) 0, init_sp);
 }
 
-/** Destroy context.  
+/** Destroy context.
  */
 PUBLIC virtual
 Context::~Context()
@@ -179,121 +197,100 @@ Context::~Context()
 //@{
 //-
 
-/** State flags.
-    @return context's state flags
+/**
+ * State flags.
+ * @return context's state flags
  */
-IMPLEMENT inline 
-Context::Status Context::state() const
-{ 
-  return _state; 
+PUBLIC inline
+Mword
+Context::state() const
+{
+  return _state;
 }
 
-/** Does the context exist? .
-    @return true if this context has been initialized.
+/**
+ * Does the context exist? .
+ * @return true if this context has been initialized.
  */
-IMPLEMENT inline NEEDS ["thread_state.h"]
+PUBLIC inline NEEDS ["thread_state.h"]
 Mword
 Context::exists() const
-{ 
-  return _state != Thread_invalid; 
-}
-
-/** Atomically add bits to state flags. 
-    @param bits bits to be added to state flags
-    @return true if none of the bits that were added had been set before
- */
-IMPLEMENT inline NEEDS ["atomic.h"]
-Mword Context::state_add( Status bits )
-{ 
-  Mword ret;  
-  Status old;
-  do 
-    {
-      old = _state;
-      ret = (_state & bits) == 0;
-    }
-  while (! smp_cas(&_state, old, old | bits));
-
-  return ret;
-}
-
-/** Atomically delete bits from state flags. 
-    @param bits bits to be removed from state flags
-    @return true if all of the bits that were removed had previously been set
- */
-IMPLEMENT inline NEEDS ["atomic.h"]
-Mword Context::state_del( Status bits )
-{ 
-  Mword ret;  
-  Status old;
-  do 
-    {
-      old = _state;
-      ret = (_state & bits) == bits;
-    }
-  while (! smp_cas(&_state, old, old & ~bits));
-
-  return ret;
-}
-
-/** Atomically add and delete bits from state flags. 
-    @param mask bits not set in mask shall be deleted from state flags
-    @param bits bits to be added to state flags
-    @return true if all of the bits that were removed had previously been set,
-                 and all of the bits that were set previously were clear
- */
-IMPLEMENT inline NEEDS ["atomic.h"]
-Mword Context::state_change( Status mask, Status bits )
 {
-  Mword ret;  
-  Status old;
-  do 
-    {
-      old = _state;
-      ret = ((old & bits & mask) == 0) && ((old & ~mask) == ~mask);
-    }
-  while (! smp_cas(&_state, old, (old & mask) | bits));
-
-  return ret;
+  return _state != Thread_invalid;
 }
 
-/** Atomically add and delete bits from state flags, provided that all
-    of the modified bits actually change.  This method works like
-    state_change, however it only actually modifies the state word if
-    state_change would return true.
- 
-    @param mask bits not set in mask shall be deleted from state flags
-    @param bits bits to be added to state flags
-    @return true if modification was successful (i.e., all modified 
-            bits changed); false if modification was unsuccessful (i.e.,
-	    state word was not changed)
+/**
+ * Atomically add bits to state flags.
+ * @param bits bits to be added to state flags
+ * @return 1 if none of the bits that were added had been set before
  */
-IMPLEMENT inline NEEDS ["atomic.h"] 
-Mword Context::state_change_safely( Status mask, Status bits )
+PUBLIC inline NEEDS ["atomic.h"]
+void
+Context::state_add (Mword const bits)
 {
-  Mword ret;  
-  Status old;
-  do 
-    {
-      old = _state;
-      ret = ((old & bits & mask) == 0) && ((old & ~mask) == ~mask);
-      if (! ret)
-	return false;
-    }
-  while (! smp_cas(&_state, old, (old & mask) | bits));
-
-  return true;
+  atomic_or (&_state, bits);
 }
 
-
-/** Modify state flags.  Unsafe (nonatomic) and fast version -- you must hold
-    kernel lock when you use it.
-    @pre cpu_lock.test() == true
-    @param mask bits not set in mask shall be deleted from state flags
-    @param bits bits to be added to state flags
+/**
+ * Atomically delete bits from state flags.
+ * @param bits bits to be removed from state flags
+ * @return 1 if all of the bits that were removed had previously been set
  */
-IMPLEMENT inline 
-void Context::state_change_dirty( Status mask, Status bits )
+PUBLIC inline NEEDS ["atomic.h"]
+void
+Context::state_del (Mword const bits)
+{
+  atomic_and (&_state, ~bits);
+}
+
+/**
+ * Atomically delete and add bits in state flags, provided the
+ *        following rules apply (otherwise state is not changed at all):
+ *        - Bits that are to be set must be clear in state or clear in mask
+ *        - Bits that are to be cleared must be set in state
+ * @param mask Bits not set in mask shall be deleted from state flags
+ * @param bits Bits to be added to state flags
+ * @return 1 if state was changed, 0 otherwise
+ */
+PUBLIC inline NEEDS ["atomic.h"]
+Mword
+Context::state_change_safely (Mword const mask, Mword const bits)
+{
+  Mword old;
+
+  do
+    {
+      old = _state;
+      if (old & bits & mask | ~old & ~mask)
+        return 0;
+    }
+  while (!cas (&_state, old, old & mask | bits));
+
+  return 1;
+}
+
+/**
+ * Atomically delete and add bits in state flags.
+ * @param mask bits not set in mask shall be deleted from state flags
+ * @param bits bits to be added to state flags
+ */
+PUBLIC inline NEEDS ["atomic.h"]
+Mword
+Context::state_change (Mword const mask, Mword const bits)
+{
+  return atomic_change (&_state, mask, bits);
+}
+
+/**
+ * Delete and add bits in state flags. Unsafe (non-atomic) and
+ *        fast version -- you must hold the kernel lock when you use it.
+ * @pre cpu_lock.test() == true
+ * @param mask Bits not set in mask shall be deleted from state flags
+ * @param bits Bits to be added to state flags
+ */
+PUBLIC inline
+void
+Context::state_change_dirty (Mword const mask, Mword const bits)
 {
   _state &= mask;
   _state |= bits;
@@ -303,38 +300,40 @@ void Context::state_change_dirty( Status mask, Status bits )
 //-
 
 /** Return the space context.
-    @return space context used for this execution context.  
+    @return space context used for this execution context.
             Set with set_space_context().
  */
-IMPLEMENT inline 
-Space_context *Context::space_context() const
-{ 
-  return _space_context; 
+PUBLIC inline
+Space *
+Context::space() const
+{
+  return _space;
 }
 
 /** Thread lock.
     @return the thread lock used to lock this context.
  */
-IMPLEMENT inline 
-Thread_lock *Context::thread_lock() const
-{ 
-  return _thread_lock; 
+PUBLIC inline
+Thread_lock * const
+Context::thread_lock() const
+{
+  return _thread_lock;
 }
 
-
-IMPLEMENT inline
-unsigned short 
+PUBLIC inline
+unsigned short const
 Context::mcp() const
-{ 
-  return _mcp; 
-}       
+{
+  return _mcp;
+}
 
 /** Registers used when iret'ing to user mode.
     @return return registers
  */
-IMPLEMENT inline NEEDS["entry_frame.h"]
-Entry_frame *Context::regs() const
-{ 
+PUBLIC inline NEEDS["entry_frame.h"]
+Entry_frame * const
+Context::regs() const
+{
   return reinterpret_cast<Entry_frame *>
     (reinterpret_cast<Mword>(this) + size - sizeof(Entry_frame));
 }
@@ -348,8 +347,9 @@ Entry_frame *Context::regs() const
 
 /** Increment lock count.
     @post lock_cnt() > 0 */
-IMPLEMENT inline 
-void Context::inc_lock_cnt()
+PUBLIC inline
+void
+Context::inc_lock_cnt()
 {
   _lock_cnt++;
 }
@@ -357,8 +357,9 @@ void Context::inc_lock_cnt()
 /** Decrement lock count.
     @pre lock_cnt() > 0
  */
-IMPLEMENT inline 
-void Context::dec_lock_cnt()
+PUBLIC inline
+void
+Context::dec_lock_cnt()
 {
   _lock_cnt--;
 }
@@ -366,183 +367,262 @@ void Context::dec_lock_cnt()
 /** Lock count.
     @return lock count
  */
-IMPLEMENT inline 
-int Context::lock_cnt() const
+PUBLIC inline
+int const
+Context::lock_cnt() const
 {
   return _lock_cnt;
 }
 
 //@}
 
-
-// 
-// The scheduler
-// 
-
-
-/** The Scheduler. Select a different context for running, and
-    activate that context's time slice.  Save the current context's
-    time slice.  The current context is added or removed to/from the
-    ready list now, if necessary, depending on its state. 
+/**
+ * Switch active timeslice of this Context.
+ * @param next Sched_context to switch to
  */
-IMPLEMENT
+PUBLIC
+void
+Context::switch_sched (Sched_context * const next)
+{
+  // Ensure CPU lock protection
+  assert (cpu_lock.test());
+
+  // If we're leaving the global timeslice, invalidate it
+  // This causes schedule() to select a new timeslice via set_current_sched()
+  if (sched() == current_sched())
+    invalidate_sched();
+
+  // Refill old timeslice
+  sched()->set_left (sched()->quantum());
+
+  // Ensure the new timeslice has a full quantum
+  assert (next->left() == next->quantum());
+
+  if (!in_ready_list())
+    {
+      set_sched (next);
+      ready_enqueue();
+    }
+
+  else if (sched()->prio() != next->prio() || _prio_next[next->prio()] != this)
+    {
+      ready_dequeue();
+      set_sched (next);
+      ready_enqueue();
+    }
+
+  else if (next->prio())
+    {
+      set_sched (next);
+      _prio_next[next->prio()] = _ready_next;
+    }
+}
+
+/**
+ * Select a different context for running and activate it.
+ */
+PUBLIC
 void
 Context::schedule()
 {
-  // Careful!  At this point, we may (due to a context switch) be
-  // dequeued from the ready list but then set ready again, so
-  // that our "ready_next" pointer becomes invalid
-  cpu_lock.lock();
+  Lock_guard <Cpu_lock> guard (&cpu_lock);
 
-  if (in_ready_list())
-    {
-      if (! (state() & Thread_running))
-	ready_dequeue();
-    }
-  else    
-    {
-      // we're not in the ready list.  if we're ready nontheless,
-      // enqueue now so that we can be scheduled correctly
+  CNT_SCHEDULE;
 
-      if (state() & Thread_running)
-	ready_enqueue();
-    }
+  // Ensure only the current thread calls schedule
+  assert (this == current());
 
-  // Global timeslice handling.
-  // 
-  // The timeslice (in timeslice_ticks_left) is independent from who
-  // actually called schedule().  It stays the same across switch_to()'s.
-  // 
-  // Here in schedule() we save the time slice of the thread that is
-  // currently running and reload the time slice of the thread we
-  // activate.  Timeslice bookkeeping is always relative to the thread
-  // which owns the timeslice.
+  // Nested invocations of schedule() are bugs
+  assert (!_schedule_in_progress);
 
-  // Check if the old global timeslice is still valid. It may become
-  // invalid if the owning thread died and the timeslice died with it.
-  if (current_sched())
-    {
-      LOG_SCHED_SAVE;
-
-      // Save remaining timeslice or refill if the timeslice expired.
-      current_sched()->set_ticks_left (timeslice_ticks_left <= 0    ?
-                                       current_sched()->timeslice() :
-                                       timeslice_ticks_left);
-
-      if (timeslice_ticks_left <= 0)			// Timeslice expired
-        {
-          Context *owner = current_sched()->owner();
-
-#ifdef CONFIG_PREEMPTION_IPC
-          // Fire a preemption event
-          current_sched()->set_preemption_time (Kernel_info::kip()->clock);
-          owner->preemption_event (current_sched());
-#endif
-
-          // Check if this is a real-time Sched_context.
-          // Dequeue from old prio, switch timeslice and enqueue with new prio
-          if (current_sched() != owner->timesharing_sched())
-            {
-              owner->ready_dequeue();
-              owner->set_sched (current_sched()->next());
-              owner->ready_enqueue();
-            }
-
-          // Otherwise it is the timesharing Sched_context. No priority change.
-          // If we are ready, activate the next thread of the same priority.
-          else if (owner->in_ready_list())
-            prio_next[current_sched()->prio()] = 
-              owner->ready_next->sched()->prio() == current_sched()->prio() ?
-                owner->ready_next : prio_first[current_sched()->prio()];
-        }
-    }
+  // Enqueue current thread into ready-list to schedule correctly
+  update_ready_list();
 
   // Select a thread for scheduling.
   Context *next_to_run;
 
   for (;;)
     {
-      next_to_run = prio_next[prio_highest];
-      assert (next_to_run);
+      next_to_run = _prio_next[_prio_highest];
 
-      if (next_to_run->state() & Thread_running) 
-	break;
+      // Ensure ready-list sanity
+      assert (next_to_run);
+      
+      if (EXPECT_TRUE (next_to_run->state() & Thread_ready))
+        break;
 
       next_to_run->ready_dequeue();
+ 
+      _schedule_in_progress = true;
 
       cpu_lock.clear();
       Proc::irq_chance();
       cpu_lock.lock();
+
+      _schedule_in_progress = false;
     }
-	
-  // Load new global timeslice
-  set_current_sched (next_to_run->sched());
 
-  LOG_SCHED_LOAD;
-
-  if (next_to_run != this)
-    switch_to (next_to_run);
-
-  cpu_lock.clear();
+  switch_to_locked (next_to_run);
 }
 
 /**
- * Timer tick.
- * Schedule if the timeslice has run out or if this tick has woken up a
- * higher-priority thread (reschedule).
+ * Return if there is currently a schedule() in progress
  */
-IMPLEMENT inline NEEDS ["globals.h"]
-void
-Context::timer_tick (bool reschedule)
+PUBLIC static inline
+bool const
+Context::schedule_in_progress()
 {
-  if (!Config::fine_grained_cputime)
-    current()->sched()->update_cputime();
-
-  // timeslice_ticks_left can become -1 if thread_switch sets ticks_left
-  // to 0 and then a timer interrupt hits before schedule() is called or
-  // if the global timeslice has been invalidated due to a thread kill.
-  if (--timeslice_ticks_left <= 0 || reschedule)
-    current()->schedule();
+  return _schedule_in_progress;
 }
 
-IMPLEMENT inline
-Sched_context *
+/**
+ * Return true if s can preempt the current scheduling context, false otherwise
+ */
+PUBLIC static inline NEEDS ["globals.h"]
+bool const
+Context::can_preempt_current (Sched_context const * const s)
+{
+  // XXX: Workaround for missing priority boost implementation
+  if (current()->sched()->prio() >= s->prio())
+    return false;
+
+  return !current_sched() ||
+          current_sched()->prio() < s->prio() ||
+          current_sched() == s;
+}
+
+/**
+ * Return currently active global Sched_context.
+ */
+PUBLIC static inline
+Sched_context * const
 Context::current_sched()
 {
   return _current_sched;
 }
 
-IMPLEMENT inline
+/**
+ * Set currently active global Sched_context.
+ */
+PROTECTED static
 void
-Context::set_current_sched (Sched_context *sched)
+Context::set_current_sched (Sched_context * const sched)
 {
-  // Reload global ticks_left from this timeslice. If the global timeslice
-  // is being invalidated, also void all remaining ticks.
-  timeslice_ticks_left = sched ? sched->ticks_left() : 0;
+  // Save remainder of previous timeslice or refresh it, unless it had
+  // been invalidated
+  if (_current_sched)
+    {
+      Signed64 left = timeslice_timeout->get_timeout();
+      _current_sched->set_left (left > 0 ? left : _current_sched->quantum ());
+      LOG_SCHED_SAVE;
+    }
+
+  assert (sched);
+
+  // Program new end-of-timeslice timeout
+  timeslice_timeout->reset();
+  timeslice_timeout->set (Timer::system_clock() + sched->left());
 
   // Make this timeslice current
   _current_sched = sched;
+
+  LOG_SCHED_LOAD;
 }
 
-IMPLEMENT inline
+/**
+ * Invalidate (expire) currently active global Sched_context.
+ */
+PROTECTED static
+void
+Context::invalidate_sched()
+{
+  LOG_SCHED_INVALIDATE;
+  _current_sched = 0;
+}
+
+/**
+ * Return Context's Sched_context with id 'id'; return time slice 0 as default.
+ * @return Sched_context with id 'id' or 0
+ */
+PUBLIC inline
 Sched_context *
-Context::sched()
+Context::sched_context (unsigned short const id = 0)
+{
+  if (EXPECT_TRUE (!id))
+    return &_sched_context;
+
+  for (Sched_context *tmp = _sched_context.next();
+      tmp != &_sched_context; tmp = tmp->next())
+    if (tmp->id() == id)
+      return tmp;
+
+  return 0;
+}
+
+/**
+ * Return Context's currently active Sched_context.
+ * @return Active Sched_context
+ */
+PUBLIC inline
+Sched_context *
+Context::sched() const
 {
   return _sched;
 }
 
-IMPLEMENT inline
+/**
+ * Set Context's currently active Sched_context.
+ * @param sched Sched_context to be activated
+ */
+PROTECTED inline
 void
-Context::set_sched (Sched_context *sched)
+Context::set_sched (Sched_context * const sched)
 {
   _sched = sched;
 }
 
-IMPLEMENT inline
-Sched_context *
-Context::timesharing_sched()
+/**
+ * Return Context's real-time period length.
+ * @return Period length in usecs
+ */
+PUBLIC inline
+Unsigned64 const
+Context::period() const
 {
-  return &_timesharing_sched;
+  return _period;
+}
+
+/**
+ * Set Context's real-time period length.
+ * @param period New period length in usecs
+ */
+PROTECTED inline
+void
+Context::set_period (Unsigned64 const period)
+{
+  _period = period;
+}
+
+/**
+ * Return Context's scheduling mode.
+ * @return Scheduling mode
+ */
+PUBLIC inline
+Context::Sched_mode const
+Context::mode() const
+{
+  return _mode;
+}
+
+/**
+ * Set Context's scheduling mode.
+ * @param mode New scheduling mode
+ */
+PUBLIC inline
+void
+Context::set_mode (Context::Sched_mode const mode)
+{
+  _mode = mode;
 }
 
 // queue operations
@@ -550,160 +630,261 @@ Context::timesharing_sched()
 // XXX for now, synchronize with global kernel lock
 //-
 
-/** Context in ready list? .
-    @return true if thread is in ready list
+/**
+ * Enqueue current() if ready to fix up ready-list invariant.
  */
-IMPLEMENT inline
-Mword
-Context::in_ready_list() const
+PRIVATE inline NOEXPORT
+void
+Context::update_ready_list()
 {
-  return ready_next != 0;
+  assert (this == current());
+
+  if (state() & Thread_ready)
+    ready_enqueue();
 }
 
-/** Enqueue context in ready list.
+/**
+ * Check if Context is in ready-list.
+ * @return 1 if thread is in ready-list, 0 otherwise
  */
-IMPLEMENT inline NEEDS [<cassert>, "cpu_lock.h", "lock_guard.h", "std_macros.h"]
+PUBLIC inline
+Mword const
+Context::in_ready_list() const
+{
+  return _ready_next != 0;
+}
+
+/**
+ * Enqueue context in ready-list.
+ */
+PUBLIC
 void
 Context::ready_enqueue()
 {
   Lock_guard <Cpu_lock> guard (&cpu_lock);
 
+  // Don't enqueue threads which are already enqueued
   if (EXPECT_FALSE (in_ready_list()))
+    return;
+
+  // Don't enqueue threads that are not ready or have no own time
+  if (EXPECT_FALSE (!(state() & Thread_ready) || !sched()->left()))
     return;
 
   unsigned short prio = sched()->prio();
 
-  if (!prio_first[prio])	prio_first[prio] = this;
-  if (!prio_next[prio])		prio_next[prio]  = this;
-  if (prio > prio_highest)	prio_highest     = prio;
+  if (prio > _prio_highest)
+    _prio_highest = prio;
 
-  // enqueue as the last tcb of this prio, i.e., just before the
-  // first tcb of the next prio
+  if (!_prio_next[prio])
+    _prio_next[prio] = _ready_next = _ready_prev = this;
 
-  unsigned short i = prio;
-  Context *sibling = 0;
-  
-  do 
+  else
     {
-      if (++i == 256)
-        i = 0;
+      _ready_next = _prio_next[prio];
+      _ready_prev = _prio_next[prio]->_ready_prev;
+      _prio_next[prio]->_ready_prev = _ready_prev->_ready_next = this;
 
-      sibling = prio_first[i];	// find first tcb of next prio
+      // Special care must be taken wrt. the position of current() in the ready
+      // list. Logically current() is the next thread to run at its priority.
+      if (this == current())
+        _prio_next[prio] = this;
     }
-  while (!sibling);		// loop terminates at least at kernel_thread
 
-  ready_next = sibling;
-  ready_prev = sibling->ready_prev;
-  sibling->ready_prev = ready_prev->ready_next = this;
-
-  assert (ready_prev->sched()->prio() <= prio ||
-          ready_prev->sched()->prio() == prio_highest);
+  send_activation (2); // Send unblock message
 }
 
-/** Remove context from ready list. 
+/**
+ * Remove context from ready-list.
  */
-IMPLEMENT inline NEEDS [<cassert>, "cpu_lock.h", "lock_guard.h", "std_macros.h"]
+PUBLIC inline NEEDS ["cpu_lock.h", "lock_guard.h", "std_macros.h"]
 void
 Context::ready_dequeue()
 {
   Lock_guard <Cpu_lock> guard (&cpu_lock);
 
+  // Don't dequeue threads which aren't enqueued
   if (EXPECT_FALSE (!in_ready_list()))
     return;
 
   unsigned short prio = sched()->prio();
 
-  if (prio_first[prio] == this)
-    prio_first[prio] = ready_next->sched()->prio() == prio ?
-      ready_next : 0;
+  if (_prio_next[prio] == this)
+    _prio_next[prio] = _ready_next == this ? 0 : _ready_next;
 
-  if (prio_next[prio] == this)
-    prio_next[prio]  = ready_next->sched()->prio() == prio ?
-      ready_next : prio_first[prio];
+  _ready_prev->_ready_next = _ready_next;
+  _ready_next->_ready_prev = _ready_prev;
+  _ready_next = 0;				// Mark dequeued
 
-  if (!prio_first[prio] && prio_highest == prio)
-    {
-      assert (ready_next->sched()->prio() < prio);
-      assert (ready_prev->sched()->prio() < prio);
-      prio_highest = ready_prev->sched()->prio();
-    }      
+  while (!_prio_next[_prio_highest] && _prio_highest)
+    _prio_highest--;
 
-  ready_prev->ready_next = ready_next;
-  ready_next->ready_prev = ready_prev;
-  ready_next /* = ready_prev */ = 0;		// Mark dequeued
+  send_activation (1); // Send block message
 }
 
-// needed for the Stack implementation
-
-/** Next stack element.  In a stack of contexts (as maintained by
-    switch_lock_t), return the next element. 
-    @return next stack element
- */
-IMPLEMENT inline
-Context *Context::get_next() const
-{ 
-  return _stack_link;
-}
-
-/** Set next stack element.
-    @param next next stack element
- */
-IMPLEMENT inline
-void Context::set_next( Context *next )   
+/** Helper.  Context that helps us by donating its time to us. It is
+    set by switch_exec() if the calling thread says so.
+    @return context that helps us and should be activated after freeing a lock.
+*/
+PUBLIC inline
+Context * const
+Context::helper() const
 {
-  _stack_link = next;
+  return _helper;
+}
+
+PUBLIC inline
+void
+Context::set_helper (enum Helping_mode const mode)
+{
+  switch (mode)
+    {
+    case Helping:
+      _helper = current();
+      break;
+    case Not_Helping:
+      _helper = this;
+      break;
+    case Ignore_Helping:
+      // don't change _helper value
+      break;
+    }
 }
 
 /** Donatee.  Context that receives our time slices, for example
-    because it has locked us. 
-    @return context that should be activated instead of us when we're 
-            switch_to()'ed.
+    because it has locked us.
+    @return context that should be activated instead of us when we're
+            switch_exec()'ed.
 */
-IMPLEMENT inline
-Context *Context::donatee() const
+PUBLIC inline
+Context * const
+Context::donatee() const
 {
   return _donatee;
 }
 
-IMPLEMENT inline
-void Context::set_donatee( Context* donatee )
+PUBLIC inline
+void
+Context::set_donatee (Context * const donatee)
 {
   _donatee = donatee;
 }
 
-IMPLEMENT inline
-void Context::set_kernel_sp(Mword *esp)
+PUBLIC inline
+Mword * const
+Context::get_kernel_sp() const
 {
-  kernel_sp = esp;
+  return _kernel_sp;
 }
 
-IMPLEMENT inline
-Fpu_state * const
+PUBLIC inline
+void
+Context::set_kernel_sp (Mword * const esp)
+{
+  _kernel_sp = esp;
+}
+
+PUBLIC inline
+Fpu_state *
 Context::fpu_state()
 {
   return &_fpu_state;
 }
 
-/** Switch to a specific different context.  If that context is currently
-    locked, switch to its locker instead (except if current() is the locker).
-    @pre current() == this  &&  current() != t
-    @param t thread that shall be activated.  
-    @return false if the context could not be activated, either because it was
-            not runnable or because it was not initialized.
+/**
+ * Add to consumed CPU time.
+ * @param quantum Implementation-specific time quantum (TSC ticks or usecs)
  */
-IMPLEMENT
-Mword
-Context::switch_to(Context *t)
+PUBLIC inline
+void
+Context::consume_time (Cpu_time const quantum)
 {
-  assert (current() != t);
-  assert (current() == this);
+  _consumed_time += quantum;
+}
 
+/**
+ * Switch to scheduling context and execution context while not running under
+ * CPU lock.
+ */
+PUBLIC inline NEEDS [<cassert>]
+void
+Context::switch_to (Context *t)
+{
+  // Call switch_to_locked if CPU lock is already held
+  assert (!cpu_lock.test());
+
+  // Grab the CPU lock
   Lock_guard <Cpu_lock> guard (&cpu_lock);
 
-  // Time-slice lending: if t is locked, switch to it's locker
+  switch_to_locked (t);
+}
+
+/**
+ * Switch scheduling context and execution context.
+ * @param t Destination thread whose scheduling context and execution context
+ *          should be activated.
+ */
+PUBLIC inline NEEDS [<cassert>]
+void
+Context::switch_to_locked (Context *t)
+{
+  // Must be called with CPU lock held
+  assert (cpu_lock.test());
+
+  // Switch to destination thread's scheduling context
+  if (current_sched() != t->sched())
+    set_current_sched (t->sched());
+
+  // XXX: IPC dependency tracking belongs here.
+
+  // Switch to destination thread's execution context, no helping involved
+  if (t != this)
+    switch_exec_locked (t, Not_Helping);
+}
+
+/**
+ * Switch execution context while not running under CPU lock.
+ */
+PUBLIC inline NEEDS [<cassert>]
+void
+Context::switch_exec (Context *t, enum Helping_mode mode)
+{
+  // Call switch_exec_locked if CPU lock is already held
+  assert (!cpu_lock.test());
+
+  // Grab the CPU lock
+  Lock_guard <Cpu_lock> guard (&cpu_lock);
+
+  switch_exec_locked (t, mode);
+}
+
+/**
+ * Switch to a specific different execution context.
+ *        If that context is currently locked, switch to its locker instead
+ *        (except if current() is the locker)
+ * @pre current() == this  &&  current() != t
+ * @param t thread that shall be activated.
+ * @param mode helping mode; we either help, don't help or leave the
+ *             helping state unchanged
+ */
+PUBLIC
+void
+Context::switch_exec_locked (Context *t, enum Helping_mode mode)
+{
+  // Must be called with CPU lock held
+  assert (cpu_lock.test());
+  assert (current() != t);
+  assert (current() == this);
+  assert (timeslice_timeout->is_set());		// Coma check
+
+  // only for logging
+  Context *t_orig = t;
+  (void)t_orig;
+
+  // Time-slice lending: if t is locked, switch to its locker
   // instead, this is transitive
-  while (t->donatee()                   // target thread not locked
-         && t != t->donatee())          // target thread has lock itself
+  while (t->donatee() &&		// target thread not locked
+         t->donatee() != t)		// target thread has lock itself
     {
       // Special case for Thread::kill(): If the locker is
       // current(), switch to the locked thread to allow it to
@@ -714,22 +895,170 @@ Context::switch_to(Context *t)
           if (t->lock_cnt() > 0)
             break;
 
-          return 0;
+          return;
         }
 
       t = t->donatee();
     }
 
-  // Can only switch to running threads!
-  if (! (t->state() & Thread_running))  
-    return false;
+  // Can only switch to ready threads!
+  if (EXPECT_FALSE (!(t->state() & Thread_ready)))
+    return;
+  
+  // Ensure kernel stack pointer is non-null if thread is ready
+  assert (t->_kernel_sp);
 
-  switch_fpu(t);
+  t->set_helper (mode);
 
-  if ((state() & Thread_running) && ! in_ready_list())
-    ready_enqueue();
+  update_ready_list();
 
   LOG_CONTEXT_SWITCH;
+  CNT_CONTEXT_SWITCH;
 
-  return switch_cpu(t);
+  switch_fpu (t);
+  switch_cpu (t);
 }
+
+PUBLIC
+GThread_num
+Context::gthread_calculated()
+{
+  const Mword mask = Config::thread_block_size*Config::max_threads() - 1;
+
+  return (((Address)this - Mem_layout::Tcbs) & mask) /
+	 Config::thread_block_size;
+}
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION:
+
+PUBLIC inline
+LThread_num
+Context::lthread_calculated()
+{
+  return gthread_calculated() % L4_uid::threads_per_task();
+}
+
+PUBLIC inline
+LThread_num
+Context::task_calculated()
+{
+  return gthread_calculated() / L4_uid::threads_per_task();
+}
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [!utcb]:
+
+#include "l4_types.h"
+
+IMPLEMENT inline NEEDS ["l4_types.h"]
+Utcb *
+Context::utcb() const
+{
+  return 0;
+}
+
+//----------------------------------------------------------------------------
+INTERFACE [utcb]:
+
+#include "l4_types.h"
+
+EXTENSION class Context
+{
+public:
+  /**
+   * Get the local ID of the context.
+   */
+  Local_id local_id() const;
+
+  /**
+   * Set the local ID of the context.
+   * Does not touch the kernel UTCB pointer, since
+   * we would need space() to do the address translation.
+   *
+   * After setting the local ID and mapping the UTCB area, use
+   * Thread::utcb_init() to set the kernel UTCB pointer and initialize the
+   * UTCB.
+   */
+  void local_id (Local_id id);
+
+protected:
+  /**
+   * Set the kernel UTCB pointer.
+   * Does NOT keep the value of _local_id in sync.
+   * @see local_id (Local_id id);
+   */
+  void utcb (Utcb *u);
+
+private:
+  Local_id _local_id;
+  Utcb *_utcb;
+};
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [utcb]:
+
+IMPLEMENT inline
+Local_id
+Context::local_id() const
+{
+  return _local_id;
+}
+
+IMPLEMENT inline
+void
+Context::local_id (Local_id id)
+{
+  _local_id = id;
+}
+
+IMPLEMENT inline
+Utcb *
+Context::utcb() const
+{
+  return _utcb;
+}
+
+IMPLEMENT inline
+void
+Context::utcb (Utcb *u)
+{
+  _utcb = u;
+}
+
+
+//----------------------------------------------------------------------------
+INTERFACE [exc_ipc]:
+
+EXTENSION class Context
+{
+protected:
+  void *_utcb_handler;
+};
+
+//----------------------------------------------------------------------------
+INTERFACE[!act_ipc]:
+
+EXTENSION class Context
+{
+protected:
+  // make sure that there is no virtual function
+  void send_activation (unsigned);
+};
+
+IMPLEMENTATION[!act_ipc]:
+
+IMPLEMENT inline
+void
+Context::send_activation (unsigned)
+{}
+
+
+//----------------------------------------------------------------------------
+INTERFACE[act_ipc]:
+
+EXTENSION class Context
+{
+protected:
+  virtual void send_activation (unsigned) = 0;
+};

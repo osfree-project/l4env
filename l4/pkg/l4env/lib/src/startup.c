@@ -30,18 +30,23 @@
 #include <l4/thread/thread.h>
 #include <l4/util/util.h>
 #include <l4/util/mbi_argv.h>
+#include <l4/util/l4_macros.h>
+#include <l4/log/l4log.h>
+#include <l4/exec/exec.h>
 
 /* binary test/data segments from linker script */
-extern char _stext;
-extern char _end;
+extern char _prog_img_start;
+extern char _prog_img_end;
 
 /* exported symbols */
 l4util_mb_info_t *l4env_multiboot_info;
+l4env_infopage_t *l4env_infopage;
 
 /* list of reserved VM regions (binary segments, boot modules, ...) */
 #define MAX_FIXED  32
-static l4rm_vm_range_t fixed[MAX_FIXED];
-static int num_fixed = 0;
+static l4rm_vm_range_t  fixed[MAX_FIXED];
+static int              fixed_type[MAX_FIXED];
+static int              num_fixed;
 
 extern int main(int argc, char *argv[]);
 
@@ -52,6 +57,20 @@ extern int main(int argc, char *argv[]);
 static void
 __startup_main(void)
 {
+  /* The ldso linker normally executes the dynamic_info[DT_INIT] function
+   * of each loaded shared library. Initialization of l4rm and semaphore
+   * is performed _after_ ldso has finished. Therefore we execute these
+   * functions here. */
+  if (l4env_infopage)
+    {
+      unsigned i;
+
+      for (i=0; i<l4env_infopage->num_init_fn; i++)
+	{
+	  ((void(*)(void))(l4env_infopage->init_fn[i]))();
+	}
+    }
+
   /* call constructors, register destructors */
   crt0_construction();
 
@@ -67,19 +86,74 @@ __startup_main(void)
 static void
 __setup_fixed(void)
 {
-  /* program text and data sections */
-  fixed[num_fixed].addr = l4_trunc_page(&_stext);
-  fixed[num_fixed].size = l4_round_page(&_end) - fixed[num_fixed].addr;
-  num_fixed++;
+  if (l4env_infopage)
+    {
+      int i;
 
-  /* RMGR trampoline page */
-  fixed[num_fixed].addr = crt0_tramppage & L4_PAGEMASK;
-  fixed[num_fixed].size = L4_PAGESIZE;
-  num_fixed++;
+#ifdef DEBUG
+      printf("Startup: Found %d sections\n", l4env_infopage->section_num);
+#endif
+      /* Attach all sections passed from the loader */
+      for (i=0; i<l4env_infopage->section_num; i++)
+	{
+	  fixed[num_fixed].addr = l4env_infopage->section[i].addr;
+	  fixed[num_fixed].size = l4env_infopage->section[i].size;
+	  fixed_type[num_fixed] = 
+	    l4dm_is_invalid_ds(l4env_infopage->section[i].ds)
+	       ? L4RM_REGION_PAGER
+	       : L4RM_REGION_DATASPACE;
+#ifdef DEBUG
+	  printf("  %08x-%08x at "l4util_idfmt" type %04x\n",
+	      fixed[num_fixed].addr,
+	      fixed[num_fixed].addr+fixed[num_fixed].size,
+	      l4util_idstr(l4env_infopage->section[i].ds.manager),
+	      l4env_infopage->section[i].info.type);
+#endif
+	  num_fixed++;
+	}
+
+      /* reserve the infopage */
+      fixed[num_fixed].addr = l4_trunc_page(l4env_infopage);
+      fixed[num_fixed].size = L4_PAGESIZE;
+      fixed_type[num_fixed] = L4RM_REGION_PAGER;
+      num_fixed++;
+
+      /* reserve the thread 0 stack */
+      fixed[num_fixed].addr = l4_trunc_page(l4env_infopage->stack_low);
+      fixed[num_fixed].size = l4_round_page(l4env_infopage->stack_high)
+			    - l4_trunc_page(l4env_infopage->stack_low);
+      fixed_type[num_fixed] = L4RM_REGION_PAGER;
+      num_fixed++;
+    }
+  else
+    {
+      /* program text and data sections */
+      fixed[num_fixed].addr = l4_trunc_page(&_prog_img_start);
+      fixed[num_fixed].size = l4_round_page(&_prog_img_end)
+			    - l4_trunc_page(&_prog_img_start);
+      fixed_type[num_fixed] = L4RM_REGION_PAGER;
+      num_fixed++;
+
+      /* RMGR/Loader trampoline page */
+      fixed[num_fixed].addr = l4_trunc_page(crt0_tramppage);
+      fixed[num_fixed].size = L4_PAGESIZE;
+      fixed_type[num_fixed] = L4RM_REGION_PAGER;
+      num_fixed++;
+
+      if (l4_trunc_page(crt0_tramppage) != l4_trunc_page(l4env_multiboot_info))
+	{
+	  /* roottask uses a separate page for multiboot info */
+	  fixed[num_fixed].addr = l4_trunc_page(l4env_multiboot_info);
+	  fixed[num_fixed].size = L4_PAGESIZE;
+	  fixed_type[num_fixed] = L4RM_REGION_PAGER;
+	  num_fixed++;
+	}
+    }
 
   /* adapter area (BIOS, graphics memory) */
   fixed[num_fixed].addr = 0xA0000;
   fixed[num_fixed].size = 0x100000 - 0xA0000;
+  fixed_type[num_fixed] = L4RM_REGION_PAGER;
   num_fixed++;
 
   /* areas where our modules (e.g. files for memfs) live */
@@ -92,7 +166,7 @@ __setup_fixed(void)
 
       for (i=0; i<l4env_multiboot_info->mods_count; i++,m++)
 	{
-	  l4_addr_t addr     = l4_trunc_page(m->mod_start);
+     	  l4_addr_t addr     = l4_trunc_page(m->mod_start);
 	  l4_addr_t end_addr = l4_round_page(m->mod_end);
 	  l4_addr_t size     = end_addr - addr;
 
@@ -105,6 +179,7 @@ __setup_fixed(void)
 
 	  fixed[num_fixed].addr = addr;
 	  fixed[num_fixed].size = size;
+	  fixed_type[num_fixed] = L4RM_REGION_PAGER;
 	  num_fixed++;
 
 	  /* page in module */
@@ -121,16 +196,24 @@ void __main(void);
 void
 __main(void)
 {
-  int ret,i;
-  l4_uint32_t area;
+  int ret, i, j;
   l4_umword_t dummy;
   l4_threadid_t preempter,pager;
+
+  if (crt0_multiboot_flag == ~(L4UTIL_MB_VALID))
+    {
+      crt0_multiboot_flag = L4UTIL_MB_VALID;
+      l4env_infopage = crt0_l4env_infopage;
+    }
 
   /* parse command line and initialize l4util_argc/l4util_argv */
   l4util_mbi_to_argv(crt0_multiboot_flag, crt0_multiboot_info);
 
   /* set pointer to multiboot info */  
   l4env_multiboot_info = (l4util_mb_info_t*) crt0_multiboot_info;
+
+  /* Setup the LOG tag in the log library */
+  LOG_setup_tag();
 
   /* init some internal L4env stuff */
   preempter = pager = L4_INVALID_ID;
@@ -141,23 +224,53 @@ __main(void)
   /* setup fixed VM areas */
   __setup_fixed();
 
-  /* init region mapper, enable L4ENV */
-  if ((ret = l4rm_init(1,fixed,num_fixed)) < 0)
+  /* init region mapper */
+  if ((ret = l4rm_init(1, fixed, num_fixed)) < 0)
     {
       printf("Startup: setup region mapper failed (%d)!\n",ret);
       enter_kdebug("PANIC");
     }
 
   /* reserve VM areas */
-  for (i = 0; i < num_fixed; i++)
+  for (i=0, j=0; i<num_fixed; i++)
     {
-      if ((ret = l4rm_direct_area_reserve_region(fixed[i].addr,fixed[i].size,
-						 L4RM_RESERVE_USED,&area)) < 0)
+      if (fixed_type[i] != L4RM_REGION_DATASPACE)
 	{
-	  printf("Startup: reserve region 0x%08x-0x%08x failed (%d)!\n",
-		 fixed[i].addr,fixed[i].addr + fixed[i].size,ret);
-	  l4rm_show_region_list();
-	  enter_kdebug("PANIC");
+	  if ((ret = l4rm_direct_area_setup_region(fixed[i].addr,
+						   fixed[i].size,
+						   L4RM_DEFAULT_REGION_AREA,
+						   fixed_type[i], 0,
+						   L4_INVALID_ID)) < 0)
+	    {
+	      printf("Startup: setup region 0x%08x-0x%08x failed (%d)!\n",
+		  fixed[i].addr, fixed[i].addr + fixed[i].size, ret);
+    	      l4rm_show_region_list();
+    	      enter_kdebug("PANIC");
+    	    }
+	}
+      else
+	{
+	  while (l4dm_is_invalid_ds(l4env_infopage->section[j].ds))
+	    {
+	      j++;
+	      if (j >= l4env_infopage->section_num)
+		{
+		  printf("Startup: did not found dataspace\n");
+		  enter_kdebug("PANIC");
+		}
+	    }
+
+	  if ((ret = l4rm_direct_attach_to_region(
+		  &l4env_infopage->section[j].ds,
+		  (void*)fixed[i].addr, fixed[i].size, 0, 
+		  l4env_infopage->section[j].info.type & L4_DSTYPE_WRITE
+		    ? L4DM_RW : L4DM_RO)))
+	    {
+	      printf("Startup: attach ds 0x%08x-0x%08x failed (%d)!\n",
+		  fixed[i].addr, fixed[i].addr + fixed[i].size, ret);
+	      enter_kdebug("PANIC");
+	    }
+	  j++;
 	}
     }
 
@@ -165,7 +278,7 @@ __main(void)
   l4thread_init();
 
   /* setup region mapper tcb */
-  if ((ret = l4thread_setup(l4_myself(),(l4_addr_t)&crt0_stack_low,
+  if ((ret = l4thread_setup(l4_myself(), ".rm", (l4_addr_t)&crt0_stack_low,
 					(l4_addr_t)&crt0_stack_high)) < 0)
     {
       printf("Startup: setup region mapper tcb failed (%d)!\n",ret);
@@ -180,8 +293,13 @@ __main(void)
     }
 
   /* start main thread */
-  if ((ret = l4thread_create((l4thread_fn_t)__startup_main, NULL,
-			   L4THREAD_CREATE_ASYNC | L4THREAD_CREATE_SETUP)) < 0)
+  if ((ret = l4thread_create_long(L4THREAD_INVALID_ID,
+                                  (l4thread_fn_t)__startup_main,
+                                  ".main", L4THREAD_INVALID_SP,
+                                  L4THREAD_DEFAULT_SIZE, L4THREAD_DEFAULT_PRIO,
+                                  NULL,
+			          L4THREAD_CREATE_ASYNC |
+			            L4THREAD_CREATE_SETUP)) < 0)
     {
       printf("Startup: create main thread failed (%d)!\n",ret);
       enter_kdebug("PANIC");
@@ -203,7 +321,5 @@ __main(void)
 l4env_infopage_t *
 l4env_get_infopage(void)
 {
-  /* deliver 0 since we have nothing to deliver */
-  return NULL;
+  return l4env_infopage;
 }
-

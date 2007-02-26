@@ -28,32 +28,31 @@ class Jdb_disasm : public Jdb_module
   static char show_lines;
 };
 
-
 char Jdb_disasm::show_intel_syntax;
 char Jdb_disasm::show_lines = 2;
 
 
 // available from the jdb_bp module
-extern int jdb_instruction_bp_at_addr(Address addr)
-  __attribute__((weak));
+extern int jdb_instruction_bp_at_addr(Address addr) __attribute__((weak));
 
-
-static bool
+static
+bool
 Jdb_disasm::disasm_line(char *buffer, int buflen, Address &addr,
 			int show_symbols, Task_num task)
 {
   int len;
 
-  if (task>=L4_uid::MAX_TASKS)
+  if (!Jdb::is_valid_task (task))
     {
       printf("Invalid task %x\n", task);
       addr += 1;
       return false;
     }
 
+  task = Jdb::translate_task(addr, task);
   if ((len = disasm_bytes(buffer, buflen, addr, task, show_symbols, 
-			  show_intel_syntax, Jdb::peek_task,
-			  Jdb_symbol::match_addr_to_symbol)) < 0)
+			  show_intel_syntax, &Jdb::peek_task,
+			  &Jdb_symbol::match_addr_to_symbol)) < 0)
     {
       addr += 1;
       return false;
@@ -63,7 +62,23 @@ Jdb_disasm::disasm_line(char *buffer, int buflen, Address &addr,
   return true;
 }
 
-static Address
+static
+int
+Jdb_disasm::at_symbol(Address addr, Task_num task)
+{
+  return Jdb_symbol::match_addr_to_symbol(addr, task) != 0;
+}
+
+static
+int
+Jdb_disasm::at_line(Address addr, Task_num task)
+{
+  return (show_lines &&
+	  Jdb_lines::match_addr_to_line(addr, task, 0, 0, show_lines==2));
+}
+
+static
+Address
 Jdb_disasm::disasm_offset(Address &start, int offset, Task_num task)
 {
   if (offset>0)
@@ -76,35 +91,40 @@ Jdb_disasm::disasm_offset(Address &start, int offset, Task_num task)
 	      start = addr + offset;
 	      return false;
 	    }
+	  if (at_symbol(addr, task) && !offset--)
+	    break;
+	  if (at_line(addr, task) && !offset--)
+	    break;
 	}
       start = addr;
       return true;
     }
-  else
-    {
-      while (offset++)
-	{
-	  Address addr=start-64, va_start;
-	  for (;;)
-	    {
-	      va_start = addr;
-	      if (!disasm_line(0, 0, addr, 0, task))
-		{
-		  start += (offset-1);
-		  return false;
-		}
-	      if (addr >= start)
-		break;
-	    }
-	  start = va_start;
-	}
 
-      return true;
+  while (offset++)
+    {
+      Address addr = start-64, va_start;
+      for (;;)
+	{
+	  va_start = addr;
+	  if (!disasm_line(0, 0, addr, 0, task))
+	    {
+	      start += offset-1;
+	      return false;
+	    }
+	  if (addr >= start)
+	    break;
+	}
+      start = va_start;
+      if (at_symbol(addr, task) && !offset++)
+	break;
+      if (at_line(addr, task) && !offset++)
+	break;
     }
+  return true;
 }
 
-PUBLIC
-static bool
+PUBLIC static
+bool
 Jdb_disasm::show_disasm_line(int len, Address &addr, 
 			     int show_symbols, Task_num task)
 {
@@ -136,10 +156,11 @@ PUBLIC static
 Jdb_module::Action_code
 Jdb_disasm::show(Address virt, Task_num task, int level)
 {
-  Address enter_addr = virt;
+  Address  enter_addr = virt;
+  Task_num trans_task = Jdb::translate_task(virt, task);
 
   if (level==0)
-    Jdb::fancy_clear_screen();
+    Jdb::clear_screen();
 
   for (;;)
     {
@@ -151,19 +172,16 @@ Jdb_disasm::show(Address virt, Task_num task, int level)
 	{
 	  const char *symbol;
       	  char str[78], *nl;
-	  char stat_str[6];
+	  char stat_str[4] = { "   " };
 
-	  *(unsigned int*  ) stat_str    = 0x20202020;
-	  *(unsigned short*)(stat_str+4) = 0x0020;
+	  Kconsole::console()->getchar_chance();
 
-	  if ((symbol = Jdb_symbol::match_addr_to_symbol(addr, task)))
+	  if ((symbol = Jdb_symbol::match_addr_to_symbol(addr, trans_task)))
 	    {
-	      str[0] = '<';
-    	      strncpy(str+1, symbol, sizeof(str)-3);
-	      str[sizeof(str)-3] = '\0';
-	      
+	      snprintf(str, sizeof(str)-2, "<%s", symbol);
+
 	      // cut symbol at newline
-	      for (nl=str; (*nl!='\0') && (*nl!='\n'); nl++)
+	      for (nl=str; *nl!='\0' && *nl!='\n'; nl++)
 		;
 	      *nl++ = '>';
 	      *nl++ = ':';
@@ -176,7 +194,7 @@ Jdb_disasm::show(Address virt, Task_num task, int level)
 	 
 	  if (show_lines)
 	    {
-	      if (Jdb_lines::match_addr_to_line(addr, task, str, 
+	      if (Jdb_lines::match_addr_to_line(addr, trans_task, str, 
 						sizeof(str)-1, show_lines==2))
 		{
 		  printf("%s%s\033[m\033[K\n", Jdb::esc_line, str);
@@ -195,22 +213,21 @@ Jdb_disasm::show(Address virt, Task_num task, int level)
 		}
 	    }
 
-	  if (addr == enter_addr)
-	    printf("%s%08x\033[m %s", Jdb::esc_emph, addr, stat_str);
-	  else
-	    printf("%08x %s", addr, stat_str);
+	  printf("%s"L4_PTR_FMT" %s%s    ", 
+	         addr == enter_addr ? Jdb::esc_emph : "", addr, stat_str,
+		 addr == enter_addr ? "\033[m" : "");
 	  show_disasm_line(-64, addr, 1, task);
 	}
 
       static char const * const line_mode[] = { "", "[Source]", "[Headers]" };
       static char const * const syntax_mode[] = { "[AT&T]", "[Intel]" };
-      Jdb::printf_statline("u<%08x> task %-3x  %-9s  %-7s%34s",
-		      virt, task, line_mode[(int)show_lines], 
-		      syntax_mode[(int)show_intel_syntax],
-		      "<Space>=lines mode");
+      Jdb::printf_statline("dis", "<Space>=lines mode",
+			   "<"L4_PTR_FMT"> task %-3x  %-9s  %-7s",
+			   virt, task, line_mode[(int)show_lines], 
+			   syntax_mode[(int)show_intel_syntax]);
 
-      Jdb::cursor(Jdb_screen::height(), Jdb::LOGO+1);
-      switch (int c = getchar())
+      Jdb::cursor(Jdb_screen::height(), 6);
+      switch (int c = Jdb_core::getchar())
 	{
 	case KEY_CURSOR_LEFT:
 	  virt -= 1;
@@ -268,13 +285,11 @@ Jdb_disasm::action(int cmd, void *&args, char const *&fmt, int &next_char)
 	  Address addr  = Jdb_input_task_addr::addr;
 	  Task_num task = Jdb_input_task_addr::task;
 	  if (addr == (Address)-1)
-	    addr = Jdb::get_entry_frame()->eip;
-	  return show(addr, Jdb::translate_task(addr, task), 0) 
-		    ? GO_BACK : NOTHING;
+	    addr = Jdb::get_entry_frame()->ip();
+	  return show(addr, task, 0) ? GO_BACK : NOTHING;
 	}
 
-      if (code != LEAVE)
-	return code;
+      return code;
     }
 
   return NOTHING;
@@ -286,9 +301,9 @@ Jdb_disasm::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd (0, "u", "u", "%C",
-	"u[t<taskno>]<addr>\tdisassemble bytes of given/current task addr",
-	&Jdb_input_task_addr::first_char)
+	{ 0, "u", "u", "%C",
+	  "u[t<taskno>]<addr>\tdisassemble bytes of given/current task addr",
+	  &Jdb_input_task_addr::first_char }
     };
 
   return cs;
@@ -297,9 +312,7 @@ Jdb_disasm::cmds() const
 PUBLIC
 int const
 Jdb_disasm::num_cmds() const
-{
-  return 1;
-}
+{ return 1; }
 
 PUBLIC
 Jdb_disasm::Jdb_disasm()
@@ -316,4 +329,3 @@ jdb_disasm_addr_task(Address addr, Task_num task, int level)
 int
 jdb_disasm_one_line(int len, Address &addr, int show_symbols, Task_num task)
 { return Jdb_disasm::show_disasm_line(len, addr, show_symbols, task); }
-

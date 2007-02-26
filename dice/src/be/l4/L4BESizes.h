@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BESizes.h
- *	\brief	contains the declaration of the class CL4BESizes
+ *    \file    dice/src/be/l4/L4BESizes.h
+ *    \brief   contains the declaration of the class CL4BESizes
  *
- *	\date	Thu Oct 10 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    10/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -38,11 +39,10 @@
  */
 class CL4BESizes : public CBESizes
 {
-DECLARE_DYNAMIC(CL4BESizes);
 public:
     /** constructs a sizes object */
-	CL4BESizes();
-	~CL4BESizes();
+    CL4BESizes();
+    virtual ~CL4BESizes();
 
 public: // Public methods
     /** abstract method, which shall determine the maximum number of bytes of

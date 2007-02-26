@@ -1,8 +1,9 @@
 PKGDIR		?= ..
 L4DIR		?= $(PKGDIR)/../..
-TARGET		= dump-l4 fprov-l4 kill-l4 run-l4 run
+TARGET		= dump-l4 fprov-l4 kill-l4 run-l4 run run-kdebug exit
 
 # only build these two examples if we have the libloader.s.so
-TARGET		+= $(if $(filter y,$(BUILD_LOADER)),shared testapp)
+TARGET		+= $(if $(filter y,$(BUILD_LOADER)),\
+		    shared testapp dynamic dynamic-c++)
 
 include $(L4DIR)/mk/subdir.mk

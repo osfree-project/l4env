@@ -21,9 +21,8 @@ _kernel_phys_start = _physmem_1;
 _kernel_phys_end   = 0xffffffff;
 
 
-virt_address       = 0xf0100000;
-phys_offset        = 0xf0100000 - 0xc0100000;
-kernel_load_addr   = 0xc0100000;
+virt_address       = 0xf0000000;
+phys_offset        = virt_address - kernel_load_addr;
 
 
 OUTPUT_FORMAT("elf32-littlearm", "elf32-bigarm",
@@ -35,20 +34,59 @@ SECTIONS {
 
 
   /DISCARD/ : {			/* Exit code and data		*/
-		*(.text.exit)
-		*(.data.exit)
 		*(.exitcall.exit)
 	      }
-  
-  . = virt_address;
+	      
+  . = kernel_load_addr;
+	      
+  .text : {
+    bootstrap*(.init)
+    bootstrap*(.text .text.* .gnu.linkonce.t.*)
+    bootstrap*(.glue_7t) *(.glue_7)
+    bootstrap*(.got .got.*)
+    bootstrap*(.fini)
+    
+    bootstrap*(.rodata .rodata.* .gnu.linkonce.r.* .rodata1)
 
-  .text : AT (kernel_load_addr) {
+    . = ALIGN(0x40);
+    
+    bootstrap*(.data .data.* .gnu.linkonce.d.*)
+    bootstrap*(.anno)
+
+    bootstrap*(.data) 
+    bootstrap*(.gnu.linkonce.d*)
+  }
+
+  PROVIDE(bootstrap_bss_start = .);
+  .bss_bootstrap : {
+    bootstrap*(.bss COMMON .gnu.linkonce.b.*)
+  }
+  PROVIDE(bootstrap_bss_end = .);
+
+  . = ALIGN(4K);
+  end_of_loader = .;
+
+  . = end_of_loader - kernel_load_addr + virt_address;
+
+  .kip : AT (end_of_loader) {
+    *(.kernel_info_page)
+    _initkip_start = .;
+    KEEP(*(.initkip.version))
+    KEEP(*(.initkip.features))
+    KEEP(*(.initkip.features.fini))
+    _initkip_end = .;
+    . = ALIGN(4K);
+  }
+
+  .text_kernel : AT (ADDR(.text_kernel) - phys_offset) {
     crt0.o(.text)
     *(.init)
     *(.text .text.* .gnu.linkonce.t.*)
     *(.glue_7t) *(.glue_7)
     *(.got .got.*)
     *(.fini)
+
+    *(.text.jdb)
      
     PROVIDE (_ecode = .);
 
@@ -64,6 +102,7 @@ SECTIONS {
     *(.data) 
     *(.gnu.linkonce.d*)
     *(.anno)
+    *(.data.jdb)
 
     *(.init.data)
 
@@ -91,7 +130,8 @@ SECTIONS {
   . = ALIGN(4K);
   .bss : AT (ADDR(.bss) - phys_offset) {
     PROVIDE(__bss_start = .);
-    *(.bss COMMON)
+    *(.bss COMMON .gnu.linkonce.b.*)
+    *(.bss.jdb)
     PROVIDE(__bss_end = .);
     . = ALIGN(4K);
   }
@@ -100,6 +140,7 @@ SECTIONS {
   ivt_start = ADDR(.bss) + SIZEOF(.bss) - phys_offset;
   .excp 0xffff0000 : AT (ivt_start) {
     *(.vect .excp.text)
+    *(.vect.extra)
   }
 
   . = __end_of_the_kernel + SIZEOF(.excp);
@@ -108,10 +149,10 @@ SECTIONS {
     
   . = ALIGN(4K);
   .initcall : AT(ADDR(.initcall) - phys_offset) {
-    PROVIDE (_initcall_start = .);
+    _initcall_start = .;
     *(.initcall.*)
     . = ALIGN(4K);
-    PROVIDE (_initcall_end = .);
+    _initcall_end = .;
   } 
 
   /DISCARD/ :{

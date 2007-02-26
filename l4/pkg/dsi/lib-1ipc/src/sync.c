@@ -71,7 +71,7 @@ dsi_sync_thread_send(void * data)
   l4_msgdope_t result;
   l4_threadid_t src;
 
-  LOGdL(DEBUG_SYNC_SEND,"up, parent %x.%x",parent.id.task,parent.id.lthread);
+  LOGdL(DEBUG_SYNC_SEND,"up, parent "l4util_idfmt, l4util_idstr(parent));
 
   /* sanity checks */
   Assert(data != NULL);
@@ -88,10 +88,9 @@ dsi_sync_thread_send(void * data)
   Assert(data == (void *)dw1);
   
   LOGdL(DEBUG_SYNC_SEND,"connected.");
-  LOGdL(DEBUG_SYNC_SEND,"remote socket %d, work %x.%x",
+  LOGdL(DEBUG_SYNC_SEND,"remote socket %d, work "l4util_idfmt,
         socket->remote_socket.socket,
-        socket->remote_socket.work_th.id.task,
-        socket->remote_socket.work_th.id.lthread);
+	l4util_idstr(socket->remote_socket.work_th));
 
   /* snychronization loop */
   while (1)
@@ -101,15 +100,15 @@ dsi_sync_thread_send(void * data)
 
       if (!ret)
 	{
-	  LOGdL(DEBUG_SYNC_SEND,"msg from %x.%x",src.id.task,src.id.lthread);
+	  LOGdL(DEBUG_SYNC_SEND,"msg from "l4util_idfmt, l4util_idstr(src));
 	  LOGdL(DEBUG_SYNC_SEND,"dw0 = %u, dw1 = %u",dw0,dw1);
 
 	  switch (dw0)
 	    {
 	    case DSI_SYNC_COMMITED:
-		LOG_Error("received DSI_SYNC_COMMITED from %x.%x (our worker?)"
-			  ", wrong DSI version?",
-			  src.id.task, src.id.lthread);
+		LOG_Error("received DSI_SYNC_COMMITED from "l4util_idfmt
+		          " (our worker?), wrong DSI version?",
+			  l4util_idstr(src));
 		continue;
 	      if (l4_task_equal(src,socket->work_th))
 	        {
@@ -126,9 +125,8 @@ dsi_sync_thread_send(void * data)
 		  if (packet->flags & DSI_PACKET_RX_WAITING)
 		    {
 		      LOGdL(DEBUG_SYNC_SEND,"receiver already waiting");
-		      LOGdL(DEBUG_SYNC_SEND,"wakeup %x.%x",
-			   socket->remote_socket.work_th.id.task,
-			   socket->remote_socket.work_th.id.lthread);
+		      LOGdL(DEBUG_SYNC_SEND,"wakeup "l4util_idfmt,
+			    l4util_idstr(socket->remote_socket.work_th));
 
 		      if (socket->flags & DSI_SOCKET_MAP ||
 			  socket->flags & DSI_SOCKET_COPY){
@@ -137,7 +135,7 @@ dsi_sync_thread_send(void * data)
 			  /* wakeup */
 			  ret = l4_ipc_send(socket->remote_socket.work_th,
 						 L4_IPC_SHORT_MSG,0,0,
-						 L4_IPC_TIMEOUT(0,1,0,0,0,0),
+						 L4_IPC_SEND_TIMEOUT_0,
 						 &result);
 			  if (ret)
 			    Error("DSI: IPC error in wakeup 0x%02x",ret);
@@ -160,9 +158,9 @@ dsi_sync_thread_send(void * data)
 		} else goto e_inv_sender;
 	      break;
 	    case DSI_SYNC_WAIT:
-	      LOG_Error("received DSI_SYNC_WAIT from %x.%x (remote worker?), "
-			"wrong DSI version?",
-			src.id.task, src.id.lthread);
+	      LOG_Error("received DSI_SYNC_WAIT from "l4util_idfmt
+		        " (remote worker?), wrong DSI version?",
+			l4util_idstr(src));
 	      if (l4_task_equal(src,socket->remote_socket.work_th))
 		{
 		  /**********************************************************
@@ -177,8 +175,8 @@ dsi_sync_thread_send(void * data)
 		  if (packet->flags & DSI_PACKET_RX_PENDING)
 		    {
 		      LOGdL(DEBUG_SYNC_SEND,"notification pending");
-		      LOGdL(DEBUG_SYNC_SEND,"wakeup %x.%x",
-                            src.id.task,src.id.lthread);
+		      LOGdL(DEBUG_SYNC_SEND,"wakeup "l4util_idfmt,
+			    l4util_idstr(src));
 
 		      if (socket->flags & DSI_SOCKET_MAP ||
 			  socket->flags & DSI_SOCKET_COPY){
@@ -188,7 +186,7 @@ dsi_sync_thread_send(void * data)
 			  /* wakeup */
 			  ret = l4_ipc_send(socket->remote_socket.work_th,
 						 L4_IPC_SHORT_MSG,0,0,
-						 L4_IPC_TIMEOUT(0,1,0,0,0,0),
+						 L4_IPC_SEND_TIMEOUT_0,
 						 &result);
 			  if (ret)
 			    Error("DSI: IPC error in reply 0x%02x",ret);
@@ -227,7 +225,7 @@ dsi_sync_thread_send(void * data)
 #if RELEASE_DO_CALL
 		  /* reply */
 		  ret = l4_ipc_send(src,L4_IPC_SHORT_MSG,0,0,
-					 L4_IPC_TIMEOUT(0,1,0,0,0,0),
+					 L4_IPC_SEND_TIMEOUT_0,
 					 &result);
 		  if (ret)
 		    Error("DSI: sync notification reply failed (0x%02x)!",ret);
@@ -236,15 +234,13 @@ dsi_sync_thread_send(void * data)
 	      break;
 
 	    default:
-		Error("DSI: invalid command (%d) from %x.%x! "
-		      "Map and copy not handled"
-		      ,dw0, src.id.task, src.id.lthread);
+		Error("DSI: invalid command (%d) from "l4util_idfmt"! "
+		      "Map and copy not handled", dw0, l4util_idstr(src));
 	    }
 	  continue;
 
 	  e_inv_sender:
-	  Error("DSI: ignoring message from %x.%x",
-		src.id.task,src.id.lthread);
+	  Error("DSI: ignoring message from "l4util_idfmt, l4util_idstr(src));
 
 	} /* if (!ret) */
 
@@ -274,7 +270,7 @@ dsi_sync_thread_receive(void * data)
   l4_msgdope_t result;
   l4_threadid_t src;
 
-  LOGdL(DEBUG_SYNC_RECEIVE,"up, parent %x.%x",parent.id.task,parent.id.lthread);
+  LOGdL(DEBUG_SYNC_RECEIVE,"up, parent "l4util_idfmt, l4util_idstr(parent));
 
   /* sanity checks */
   Assert(data != NULL);
@@ -291,9 +287,9 @@ dsi_sync_thread_receive(void * data)
   Assert(data == (void *)dw1);
   
   LOGdL(DEBUG_SYNC_RECEIVE,"connected.");
-  LOGdL(DEBUG_SYNC_RECEIVE,"remote socket %d, work %x.%x",socket->remote_socket.socket,
-       socket->remote_socket.work_th.id.task,
-       socket->remote_socket.work_th.id.lthread);
+  LOGdL(DEBUG_SYNC_RECEIVE,"remote socket %d, work "l4util_idfmt, 
+        socket->remote_socket.socket, 
+	l4util_idstr(socket->remote_socket.work_th));
 
   /* synchronization thread loop */
   while (1)
@@ -303,15 +299,15 @@ dsi_sync_thread_receive(void * data)
 
       if (!ret)
 	{
-	  LOGdL(DEBUG_SYNC_RECEIVE,"msg from %x.%x",src.id.task,src.id.lthread);
+	  LOGdL(DEBUG_SYNC_RECEIVE,"msg from "l4util_idfmt, l4util_idstr(src));
 	  LOGdL(DEBUG_SYNC_RECEIVE,"dw0 = %u, dw1 = %u",dw0,dw1);
 
 	  switch (dw0)
 	    {
 	    case DSI_SYNC_COMMITED:
-		LOG_Error("received DSI_SYNC_COMMITED from %x.%x (our worker?)"
-			  ", wrong DSI version?",
-			  src.id.task, src.id.lthread);
+		LOG_Error("received DSI_SYNC_COMMITED from "l4util_idfmt
+		          " (our worker?), wrong DSI version?",
+			  l4util_idstr(src));
 	      if (l4_task_equal(src,socket->work_th))
 		{
 		  /*********************************************************
@@ -327,14 +323,13 @@ dsi_sync_thread_receive(void * data)
 		  if (packet->flags & DSI_PACKET_TX_WAITING)
 		    {
 		      LOGdL(DEBUG_SYNC_RECEIVE,"sender already waiting");
-		      LOGdL(DEBUG_SYNC_RECEIVE,"wakeup %x.%x",
-                            socket->remote_socket.work_th.id.task,
-                            socket->remote_socket.work_th.id.lthread);
+		      LOGdL(DEBUG_SYNC_RECEIVE,"wakeup "l4util_idfmt,
+			    l4util_idstr(socket->remote_socket.work_th));
 
 		      /* wakeup */
 		      ret = l4_ipc_send(socket->remote_socket.work_th,
 					     L4_IPC_SHORT_MSG,0,0,
-					     L4_IPC_TIMEOUT(0,1,0,0,0,0),
+					     L4_IPC_SEND_TIMEOUT_0,
 					     &result);
 		      if (ret)
 			Error("DSI: IPC error in wakeup 0x%02x",ret);
@@ -354,9 +349,9 @@ dsi_sync_thread_receive(void * data)
 
 	      break;
 	    case DSI_SYNC_WAIT:
-		LOG_Error("received DSI_SYNC_WAIT from %x.%x (remote worker?)"
-			  ", wrong DSI version?",
-			  src.id.task, src.id.lthread);
+		LOG_Error("received DSI_SYNC_WAIT from "l4util_idfmt
+		          " (remote worker?), wrong DSI version?",
+			  l4util_idstr(src));
 	      if (l4_task_equal(src,socket->remote_socket.work_th))
 		{
 		  /**********************************************************
@@ -371,11 +366,12 @@ dsi_sync_thread_receive(void * data)
 		  if (packet->flags & DSI_PACKET_TX_PENDING)
 		    {
 		      LOGdL(DEBUG_SYNC,"notification pending");
-		      LOGdL(DEBUG_SYNC,"wakeup %x.%x",src.id.task,src.id.lthread);
+		      LOGdL(DEBUG_SYNC,"wakeup "l4util_idfmt, 
+			    l4util_idstr(src));
 
 		      /* receiver already commited packet, reply immediately */
 		      ret = l4_ipc_send(src,L4_IPC_SHORT_MSG,0,0,
-					     L4_IPC_TIMEOUT(0,1,0,0,0,0),
+					     L4_IPC_SEND_TIMEOUT_0,
 					     &result);
 		      if (ret)
 			Error("DSI: IPC error in reply 0x%02x",ret);
@@ -399,14 +395,13 @@ dsi_sync_thread_receive(void * data)
 	      break;
 
 	    default:
-		Error("DSI: invalid command (%d) from %x.%x",
-		      dw0, src.id.task, src.id.lthread);
+		Error("DSI: invalid command (%d) from "l4util_idfmt,
+		      dw0, l4util_idstr(src));
 	    }
 	  continue;
 
 	  e_inv_sender:
-	  Error("ignoring message from %x.%x",
-		src.id.task,src.id.lthread);
+	  Error("ignoring message from "l4util_idfmt, l4util_idstr(src));
 
 	} /* if (!ret) */
 

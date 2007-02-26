@@ -5,20 +5,23 @@
  * and jump to the 'trap_handler' routine.
  */
 
-#define ASSEMBLER
-
-#include <flux/x86/asm.h>
-#include <flux/x86/trap.h>
-#include <flux/x86/seg.h>
-#include <flux/x86/gate_init.h>
-#include <flux/x86/base_trap.h>
-
 #include "config_tcbsize.h"
 #include "config_gdt.h"
 #include "globalconfig.h"
+#include "idt_init.h"
 #include "low_level.h"
 #include "shortcut.h"
 #include "tcboffset.h"
+#include "fixup_code.S"
+/*
+ * to disable the lipc fixup code when an exception occurs,
+ * nice for debugging the lipc code
+*/
+/* #define NO_BREAKPOINT_LIPC_FIXUP */
+/* #define TIMER_NO_FIXUP */
+
+
+#include "asm.h"
 
 /* We make the trap handler an interrupt gate, because for debugging
    purposes, we don't want any interrupts to occur until they're
@@ -29,98 +32,115 @@
  * No error code.  Clear error code and push trap number.
  */
 #define	EXCEPTION(n,name)					\
-	GATE_ENTRY(n,name,ACC_PL_K | ACC_INTR_GATE)		;\
-	P2ALIGN(TEXT_ALIGN)		      	 		;\
-name:								;\
+	GATE_ENTRY(n,entry_##name,ACC_PL_K | ACC_INTR_GATE)	;\
+	.p2align 3			      	 		;\
+entry_##name:							;\
 	pushl	$(0)						;\
 	pushl	$(n)						;\
 	pusha							;\
-	jmp	slowtraps
+	jmp	_slowtraps
 
 /*
  * User-accessible exception.  Otherwise, same as above.
  */
 #define	EXCEP_USR(n,name)					\
-	GATE_ENTRY(n,name,ACC_PL_U | ACC_INTR_GATE)		;\
-	P2ALIGN(TEXT_ALIGN)		      	 		;\
-name:								;\
+	GATE_ENTRY(n,entry_##name,ACC_PL_U | ACC_INTR_GATE)	;\
+	.p2align 3			      	 		;\
+entry_##name:							;\
 	pushl	$(0)						;\
 	pushl	$(n)						;\
 	pusha							;\
-	jmp	slowtraps
+	jmp	_slowtraps
 
 /*
  * Error code has been pushed.  Just push trap number.
  */
 #define	EXCEP_ERR(n,name)					\
-	GATE_ENTRY(n,name,ACC_PL_K | ACC_INTR_GATE)		;\
-	P2ALIGN(TEXT_ALIGN)		      	 		;\
-name:								;\
+	GATE_ENTRY(n,entry_##name,ACC_PL_K | ACC_INTR_GATE)	;\
+	.p2align 3			      	 		;\
+entry_##name:							;\
 	pushl	$(n)						;\
 	pusha							;\
-	jmp	slowtraps
+	jmp	_slowtraps
 
 GATE_INITTAB_BEGIN(idt_init_table)
 
-EXCEPTION(0x00,t_zero_div)
-#ifdef CONFIG_UX
-EXCEPTION(0x01,t_debug)
+EXCEPTION(0x00,vec00_zero_div)
+#ifdef CONFIG_PF_UX
+EXCEPTION(0x01,vec01_debug)
 #else
-/* IA32 has to handle breakpoint exceptions if occured exactly at do_sysenter
-   see ia32/entry-ia32.S */
-GATE_ENTRY(0x01,debug_exception,ACC_PL_K | ACC_INTR_GATE)
+/* IA32 has to handle breakpoint exceptions if occured exactly at 
+   entry_sysenter -- see ia32/entry-ia32.S */
+GATE_ENTRY(0x01,entry_vec01_debug,ACC_PL_K | ACC_INTR_GATE)
 #endif
-/* XXX IA32 has to handle NMI occured exactly at do_sysenter */
-EXCEP_USR(0x02,t_nmi)
-EXCEP_USR(0x03,t_int3)
-EXCEP_USR(0x04,t_into)
-EXCEP_USR(0x05,t_bounds)
-EXCEPTION(0x06,t_invop)
-/* EXCEPTION(0x07,t_nofpu) */
-#ifdef CONFIG_UX
-EXCEP_ERR(0x08,a_dbl_fault)
+/* XXX IA32 has to handle NMI occured exactly at entry_sysenter */
+EXCEP_USR(0x02,vec02_nmi)
+EXCEP_USR(0x03,vec03_breakpoint)
+EXCEP_USR(0x04,vec04_into)
+EXCEP_USR(0x05,vec05_bounds)
+EXCEPTION(0x06,vec06_invop)
+/* EXCEPTION(0x07,nofpu) */
+#ifdef CONFIG_PF_UX
+EXCEP_ERR(0x08,vec08_dbl_fault)
 #else
-/* IA32 has a special handler defined in ia32/entry-ia32.S */
 GATE_ENTRY(0x08, GDT_TSS_DBF, ACC_PL_K | ACC_TASK_GATE)
 #endif
-EXCEPTION(0x09,a_fpu_over)
-/* EXCEP_ERR(0x0a,a_inv_tss) */
-EXCEP_ERR(0x0b,t_segnp)
-EXCEP_ERR(0x0c,t_stack_fault)
-EXCEP_ERR(0x0d,t_gen_prot)
-/* EXCEP_ERR(0x0e,t_page_fault) */
-/* EXCEPTION(0x0f,t_trap_0f) */
-EXCEPTION(0x10,t_fpu_err)
-EXCEP_ERR(0x11,t_align)
-EXCEPTION(0x12,t_trap_12)
-EXCEPTION(0x13,t_trap_13)
-EXCEPTION(0x14,t_trap_14)
-EXCEPTION(0x15,t_trap_15)
-EXCEPTION(0x16,t_trap_16)
-EXCEPTION(0x17,t_trap_17)
-EXCEPTION(0x18,t_trap_18)
-EXCEPTION(0x19,t_trap_19)
-EXCEPTION(0x1a,t_trap_1a)
-EXCEPTION(0x1b,t_trap_1b)
-EXCEPTION(0x1c,t_trap_1c)
-EXCEPTION(0x1d,t_trap_1d)
-EXCEPTION(0x1e,t_trap_1e)
-EXCEPTION(0x1f,t_trap_1f)
+EXCEPTION(0x09,vec09_fpu_ovfl)
+/* EXCEP_ERR(0x0a,vec0a_inv_tss) */
+EXCEP_ERR(0x0b,vec0b_segnp)
+EXCEP_ERR(0x0c,vec0c_stack_fault)
+EXCEP_ERR(0x0d,vec0d_gen_prot)
+/* EXCEP_ERR(0x0e,vec0e_page_fault) */
+/* EXCEPTION(0x0f,vec0f_trap_0f) */
+EXCEPTION(0x10,vec10_fpu_err)
+EXCEP_ERR(0x11,vec11_align)
+EXCEPTION(0x12,vec12_mcheck)
+EXCEPTION(0x13,vec13_simd_err)
 
 
-	P2ALIGN(TEXT_ALIGN)
-	FUNCSYM(slowtraps)
+	.p2align 4
+	.type	slowtraps,@function
 	.globl	slowtraps
+	/* We have to introduce the label _slowtraps besides the label
+	   slowtraps to achive that jmps from exception entry points
+	   are optimized to two-byte jmps. The label slowtraps is visible
+	   from outside. */
+_slowtraps:
 slowtraps:
 
-	pushl	%ds		/* we save the segment regs in the trap   */
-	pushl	%es		/* state, but we do not restore them.  We */
-	pushl	%fs		/* rather reload them using               */
-	pushl	%gs		/* RESET_{KERNEL,USER}_SEGMENTS           */
+	pushl	%fs		/* we save the segment regs in the trap   */
+	pushl	%gs		/* state, but we do not restore them.  We */
+	pushl	%ds		/* rather reload them using               */
+	pushl	%es		/* RESET_{KERNEL,USER}_SEGMENTS           */
 
 	/* Load the kernel's segment registers.  */
 	RESET_KERNEL_SEGMENTS_FORCE_DS_ES /* scratches ecx, edx */
+#if defined(CONFIG_LOCAL_IPC) && !defined(NO_BREAKPOINT_LIPC_FIXUP)
+        /* stack layout:
+	   SS		72
+	   ESP		68
+	   EFLAGS	64
+	   CS		60
+	   EIP		56
+	   0		52
+	   n		48
+	   EAX		44
+	   ECX		40
+	   EDX		36
+	   EBX		32
+	   old ESP	28
+	   EBP		24
+	   ESI		20
+	   EDI		16
+	   FS		12
+	   GS		 8
+	   DS		 4
+	   ES		 0 */
+        FIXUP_KERNEL_STACK_C   60(%esp), 56(%esp), 28(%esp), 24(%esp),\
+				8(%esp), 68(%esp),  4(%esp),  0(%esp)
 
+	COPY_KERNEL_STACK 60(%esp)
+#endif
 	/* Note: we do not use RESET_THREAD_CANCEL_* here as that is
 	   needed only when an I/O-page-fault IPC is sent and when the
 	   thread is killed. Resetting Thread_cancel here could
@@ -130,10 +150,9 @@ slowtraps:
 	   thread.  That's OK, because it is still atomic -- we never
 	   enable IRQs (sti) before that point. */
 
-	movl	%esp,%edx		/* save address of trap_state */
+	movl	%esp,%eax		/* ARG1: address of trap_state */
 #ifndef CONFIG_NO_FRAME_PTR
-	movl    56(%esp),%eax		/* create artificial stack frame */
-	pushl   %eax
+	pushl	56(%esp)		/* create artificial stack frame */
 	pushl	%ebp
 # ifndef CONFIG_PROFILE
 	leal	(%esp),%ebp
@@ -143,17 +162,14 @@ slowtraps:
 #endif
 
         /* Call the C handler function if one has been installed.  */
-	movl	base_trap_handler,%eax
-	orl	%eax,%eax
-	jz	unexpected_trap
-	pushl	%edx			/* push address of trap state */
-	call	*%eax
+	movl	BASE_TRAP_HANDLER, %ecx
+	orl	%ecx,%ecx
+	jz	unexpected_trap_pop
+	call	*%ecx
 in_slowtrap:
 
 #ifndef CONFIG_NO_FRAME_PTR
-	leal	12(%esp),%esp	
-#else
-        popl    %edx
+	leal	8(%esp),%esp
 #endif
 
 	/* If the handler function returned zero (success),
@@ -162,21 +178,30 @@ in_slowtrap:
 	orl	%eax,%eax
 	jnz	unexpected_trap
 
-	RESET_USER_SEGMENTS(60(%esp))	/* scratches cx, dx */
+	CHECK_SANITY 60(%esp)		/* scratches ecx */
+	RESET_USER_SEGMENTS 60(%esp),in_cli  /* scratches ecx */
 
-	addl	$4*4,%esp	/* Pop segment registers from stack */
+	addl	$4*2,%esp		/* Pop ds, es segment registers */
+	popl	%gs
+	popl	%fs			/* Restore segment registers */
 	popa
-	addl	$4*2,%esp	/* Pop trap number and error code */
+	addl	$4*2,%esp		/* Pop trap number and error code */
 	iret
 
+unexpected_trap_pop:
+#ifndef CONFIG_NO_FRAME_PTR
+	leal	8(%esp), %esp
+#endif
+
 unexpected_trap:
-	/* Dump the register state and panic.  */
-	UNEXPECTED_TRAP
+	movw	%ss,%ax
+	movw	%ax,%ds
+	movw	%ax,%es
+	movl	%esp,%eax
+	call	trap_dump_panic
 
+GATE_ENTRY(0x0e,entry_vec0e_page_fault,ACC_PL_K | ACC_INTR_GATE)
 
-/* page fault */
-GATE_ENTRY(0x0e,page_fault,ACC_PL_K | ACC_INTR_GATE)
-	       
 /* we must save %cr2 before we can be preempted -- therefore we're an
    interrupt gate (invoked with interrupts turned off).  Also, we
    don't turn them on again here, but only after checking for
@@ -185,15 +210,16 @@ GATE_ENTRY(0x0e,page_fault,ACC_PL_K | ACC_INTR_GATE)
 
 /* XXX slow version - sets up nice stack frame for debugger */
 
-	P2ALIGN(TEXT_ALIGN)
-	FUNCSYM(page_fault)
-page_fault:
+	.p2align 4
+	.type	entry_vec0e_page_fault,@function
+entry_vec0e_page_fault:
 	pushl	%eax			/* save regs modifiable by C funcs */
 	pushl	%ecx
 	pushl	%edx
-	RESET_KERNEL_SEGMENTS	/* scratches cx, dx */
-	movl    12(%esp),%edx		/* save error code in %edx ... */
-	movl    PAGE_FAULT_ADDR,%eax	/* save page fault address in %eax */
+	RESET_KERNEL_SEGMENTS		/* scratches ecx, edx */
+	LIPC_COPY_STACK_OFS sp, 32
+	movl    12(%esp),%edx		/* save error code in ARG2 ... */
+	movl    PAGE_FAULT_ADDR,%eax	/* save page fault address in ARG1 */
 
 /* We must reset the cancel flag here atomically 
    if we are entering fresh from user mode and an IPC might occur. 
@@ -204,64 +230,80 @@ page_fault:
 	movl    20(%esp),%ecx   /* get CS from stack */
         andb    $3,%cl		/* retrieve current privilege level (CPL) */
 	jz	1f		/* CPL == 0 -> kernel, skip resetting state */
-	ESP_TO_TCB_AT(%ecx)
-	RESET_THREAD_CANCEL_AT(%ecx)
-
+	ESP_TO_TCB_AT %ecx
+	RESET_THREAD_CANCEL_AT %ecx
 1:	movl	%ebp,12(%esp)	/* save frame pointer */
 	leal    12(%esp),%ebp	/* load new frame pointer */
 #ifdef CONFIG_PROFILE
 	call	mcount
 #endif
-     	pushl	%edx		/* push the error code as 2nd argument */
-	pushl	%eax		/* push page fault address as 1st argument */
-	pushl	%esp
+	pushl	%eax		/* save pf address */
+	pushl	%edx		/* save error code */
+	pushl	32(%esp)	/* ARG4: eflags */
+	leal	28(%esp),%ecx	/* ARG5: ptr to Return_frame */
+	pushl	%ecx
+	movl	32(%esp),%ecx	/* ARG3: eip */
 	call	thread_page_fault
-  
-#ifdef CONFIG_SMALL_SPACES 
-in_smas_trampoline_check:
-	movl	28(%esp),%ecx                   /* check if page fault was in */
-	andl	$0xFFFFFF00,%ecx                /* sysexit trampoline page */
-	cmpl	$(0xeac00000 + 0x3000),%ecx
-	jz	page_fault_in_trampoline
-#endif
 in_page_fault:
+
+#ifdef CONFIG_SMALL_SPACES 
+	movl	32(%esp),%ecx			/* check if page fault was in */
+	andl	$0xFFFFFF00,%ecx		/* sysexit trampoline page */
+	cmpl	$VAL__MEM_LAYOUT__SMAS_TRAMPOLINE,%ecx
+	jz	page_fault_in_trampoline
+before_iret_page_fault:
+#endif
 	orl	%eax,%eax
 	jz	bad_page_fault
-	addl	$12,%esp
-	RESET_USER_SEGMENTS(20(%esp))  /* scratches ECX */
+	lea	16(%esp),%esp
+	CHECK_SANITY 20(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 20(%esp),no_cli	/* scratches ecx */
 	popl	%edx
 	popl	%ecx
 	popl	%eax
 	popl	%ebp
 	iret
 
-/* If code or stack from a small address space are not yet mapped
-   in the current page directory we might get a page fault on return
-	from the trampoline page. In this case we cannot return to the 
-	trampoline page after handling the fault because we are already in
-	user mode while the trampoline code is in kernel data space.
-	So instead we change ESP and EIP to point to the address the
-	trampoline wanted to return to and do the normal IRET.
-	*/
+/* If code or stack from a small address space are not yet mapped in the
+   current page directory we might get a page fault on return from the
+   trampoline page. In this case we cannot return to the trampoline page
+   after handling the fault because we are already in user mode (with
+   segment limits below kernel space) while the trampoline code is located
+   in kernel data space. So instead we change ESP and EIP to point to the
+   address the trampoline wanted to return to and do the normal IRET. */
 #ifdef CONFIG_SMALL_SPACES
 page_fault_in_trampoline:
-	movl	40(%esp),%ecx
+	/* don't interrupt us here */
+	cli
+	/* make sure that we use the user-level segment for accessing the
+	   user-level eip */
+	movw	$(GDT_DATA_USER|SEL_PL_U), %cx
+	movl	%ecx,%ds
+	movl	44(%esp),%ecx			/* user esp */
 	movl	(%ecx),%edx
-	movl	%edx,28(%esp)
+	movl	%edx,32(%esp)
 	addl	$16,%ecx
-	movl	%ecx,40(%esp)
-	jmp	in_page_fault
+	movl	%ecx,44(%esp)
+	orl	%eax,%eax
+	jz	bad_page_fault
+	leal	16(%esp),%esp
+	CHECK_SANITY 20(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 20(%esp),in_cli	/* scratches ecx */
+	popl	%edx
+	popl	%ecx
+	popl	%eax
+	popl	%ebp
+	iret
 #endif
 
 /* recover from a bad page fault by invoking the slow_trap handler */
-	P2ALIGN(TEXT_ALIGN)
+	.p2align 4
 bad_page_fault:
 	cli
-	addl	$4,%esp
+	addl	$8,%esp		/* pop ARG4 and ARG5 */
+	movl	(%ebp),%eax	/* old ebp */
+	popl	(%ebp)		/* error code */
 	popl	%edx		/* page fault address */
-	popl	%ecx		/* restore error code */
-	movl	(%ebp),%eax	/* old %ebp */
-	movl	%ecx,(%ebp)
 	movl	%eax,%ebp
 
 	/* we have on stack: error code, eax, ecx, edx
@@ -273,34 +315,31 @@ bad_page_fault:
 	movl	%eax,4(%esp)
 	movl	12(%esp),%eax
 	movl	%eax,8(%esp)
-
-	/* push error code */
-	movl	$0x0e,12(%esp)
-
-	/* push rest of struct trap_state */
-	pushl	%ebx
-	pushl	%edx		/* the page fault address */
+	movl	$0x0e,12(%esp)	/* error code */
+	pushl	%ebx		/* rest of trap state */
+	pushl	%edx		/* page fault address */
 	pushl	%ebp
 	pushl	%esi
 	pushl	%edi
-
 	jmp	slowtraps
 
 
 /* FPU not available in this context. */
-GATE_ENTRY(0x07,fpu_unavail, ACC_PL_K | ACC_INTR_GATE)
+GATE_ENTRY(0x07,entry_vec07_fpu_unavail, ACC_PL_K | ACC_INTR_GATE)
 
 /* do all of this with disabled interrupts */
-	P2ALIGN(TEXT_ALIGN)
-	FUNCSYM(fpu_unavail)
-fpu_unavail:
-	pushl	%eax		/* save registers modifiable by C functions */
+	.p2align 4
+	.type	entry_vec07_fpu_unavail,@function
+entry_vec07_fpu_unavail:
+	pushl	%eax
 	pushl	%ecx
 	pushl	%edx
-	RESET_KERNEL_SEGMENTS	/* scratches cx, dx */
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+	LIPC_COPY_STACK_OFS %esp, 28
 	call	thread_handle_fputrap
 in_handle_fputrap:
-	RESET_USER_SEGMENTS(16(%esp))
+	CHECK_SANITY 16(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 16(%esp),in_cli	/* scratches ecx */
 	popl	%edx
 	popl	%ecx
 	popl	%eax
@@ -308,14 +347,18 @@ in_handle_fputrap:
 
 /* timer interrupt */
 #ifdef CONFIG_SCHED_PIT
-GATE_ENTRY(0x20,timer_interrupt,ACC_PL_K | ACC_INTR_GATE)
-#else
-GATE_ENTRY(0x28,timer_interrupt,ACC_PL_K | ACC_INTR_GATE)
+GATE_ENTRY(0x20,entry_int_timer,ACC_PL_K | ACC_INTR_GATE)
+#endif
+#ifdef CONFIG_SCHED_RTC
+GATE_ENTRY(0x28,entry_int_timer,ACC_PL_K | ACC_INTR_GATE)
+#endif
+#ifdef CONFIG_SCHED_APIC
+GATE_ENTRY(0x3d,entry_int_timer,ACC_PL_K | ACC_INTR_GATE)
 #endif
 
-	P2ALIGN(4)
-	.globl	timer_interrupt
-timer_interrupt:
+	.p2align 4
+	.globl	entry_int_timer
+entry_int_timer:
 #ifndef CONFIG_NO_FRAME_PTR
 	pushl	%ebp
 #ifndef CONFIG_PROFILE
@@ -327,13 +370,54 @@ timer_interrupt:
 	pushl	%eax
 	pushl	%edx
 	pushl	%ecx
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	call	thread_timer_interrupt	/* enter with disabled irqs */
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+#if defined(CONFIG_LOCAL_IPC)  \
+	&& !defined(TIMER_NO_FIXUP) \
+	&& !defined(CONFIG_NO_FRAME_PTR)
+	
+        pushl   %esi
+        pushl   %edi
+        /* stacklayout after this entry  NO_FRAME_PTR*/
+        /*      SS              40		40
+                ESP             36		36
+                EFLAGS          32		32
+                CS              28		28
+                EIP             24		24
+
+                EBP		20		0
+                EAX		16		20
+                EDX		12		16
+                ECX		8		12
+
+                ESI		4		 8
+                EDI		0		 4
+        */
+#ifndef CONFIG_NO_FRAME_PTR
+        FIXUP_KERNEL_STACK   28(%esp), 24(%esp), 16(%esp), 8(%esp),\
+                             20(%esp), 36(%esp),  4(%esp), 0(%esp)
+#else
+	pushl	%ebp
+        FIXUP_KERNEL_STACK   28(%esp), 24(%esp), 20(%esp), 12(%esp),\
+                               (%esp), 36(%esp),  8(%esp),  4(%esp)
+	popl	%epb
+#endif	
+        popl    %edi
+        popl    %esi
+#endif
+do_timer_interrupt:
+#ifdef CONFIG_NO_FRAME_PTR
+	movl	12(%esp), %eax			/* ARG1: eip for logging */
+#else
+	movl	16(%esp), %eax			/* ARG1: eip for logging */
+#endif
+	call	thread_timer_interrupt		/* enter with disabled irqs */
 in_timer_interrupt:
 #ifndef CONFIG_NO_FRAME_PTR
-	RESET_USER_SEGMENTS(20(%esp))	/* scratches cx,dx */
+	CHECK_SANITY 20(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 20(%esp),in_cli	/* scratches ecx */
 #else
-	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
+	CHECK_SANITY 16(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 16(%esp),in_cli	/* scratches ecx */
 #endif
 	popl	%ecx
 	popl	%edx
@@ -343,9 +427,9 @@ in_timer_interrupt:
 #endif
 	iret
 
-	P2ALIGN(4)
-	.globl	timer_interrupt_slow
-timer_interrupt_slow:
+	.p2align 4
+	.globl	entry_int_timer_slow
+entry_int_timer_slow:
 #ifndef CONFIG_NO_FRAME_PTR
 	pushl	%ebp
 #ifndef CONFIG_PROFILE
@@ -357,26 +441,34 @@ timer_interrupt_slow:
 	pushl	%eax
 	pushl	%edx
 	pushl	%ecx
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	call	thread_timer_interrupt_slow /* enter with disabled irqs */
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+#if defined(CONFIG_LOCAL_IPC)  \
+	&& !defined(TIMER_NO_FIXUP) \
+	&& !defined(CONFIG_NO_FRAME_PTR)
+
+        pushl   %esi
+        pushl   %edi
+#ifndef CONFIG_NO_FRAME_PTR
+        FIXUP_KERNEL_STACK   28(%esp), 24(%esp), 16(%esp), 8(%esp),\
+                             20(%esp), 36(%esp), 4(%esp), 0(%esp)
+#else
+	pushl	%ebp
+        FIXUP_KERNEL_STACK   28(%esp), 24(%esp), 20(%esp), 12(%esp),\
+                               (%esp), 36(%esp),  8(%esp),  4(%esp)
+	popl	%epb
+#endif	
+        popl    %edi
+        popl    %esi
+#endif
+
+	call	thread_timer_interrupt_slow	/* enter with disabled irqs */
 in_timer_interrupt_slow:
-#ifndef CONFIG_NO_FRAME_PTR
-	RESET_USER_SEGMENTS(20(%esp))	/* scratches cx,dx */
-#else
-	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
-#endif
-	popl	%ecx
-	popl	%edx
-	popl	%eax
-#ifndef CONFIG_NO_FRAME_PTR
-	popl	%ebp
-#endif
-	iret
+	jmp	do_timer_interrupt
+
 	
-	
-	P2ALIGN(4)
-	.globl	timer_interrupt_stop
-timer_interrupt_stop:
+	.p2align 4
+	.globl	entry_int_timer_stop
+entry_int_timer_stop:
 #ifndef CONFIG_NO_FRAME_PTR
 	pushl	%ebp
 #ifndef CONFIG_PROFILE
@@ -388,12 +480,14 @@ timer_interrupt_stop:
 	pushl	%eax
 	pushl	%edx
 	pushl	%ecx
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	call	thread_timer_interrupt_stop /* enter with disabled irqs */
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+	call	thread_timer_interrupt_stop
 #ifndef CONFIG_NO_FRAME_PTR
-	RESET_USER_SEGMENTS(20(%esp))	/* scratches cx,dx */
+	CHECK_SANITY 20(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 20(%esp),in_cli	/* scratches ecx */
 #else
-	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
+	CHECK_SANITY 16(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 16(%esp),in_cli	/* scratches ecx */
 #endif
 	popl	%ecx
 	popl	%edx
@@ -407,29 +501,29 @@ timer_interrupt_stop:
 /* profiling timer interrupt entry point */
 #ifdef CONFIG_PROFILE
 
-	P2ALIGN(4)
+	.p2align 4
 	.globl profile_interrupt_entry
-	FUNCSYM(profile_interrupt_entry)
+	.type	profile_interrupt_entry,@function
 profile_interrupt_entry:
 #ifndef CONFIG_NO_FRAME_PTR
 	pushl	%ebp
 	movl	%esp,%ebp
 	pushl	%eax
-	movl    8(%esp),%eax	/* %eax = return address */
+	movl    8(%esp),%eax			/* %eax = return address */
 #else
 	pushl	%eax
-	movl    4(%esp),%eax	/* %eax = return address */
+	movl    4(%esp),%eax			/* %eax = return address */
 #endif
 	pushl	%edx
 	pushl	%ecx
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	pushl	%eax		/* pass return address as parameter */
-	call	profile_interrupt	/* enter with disabled irqs */
-	addl	$4,%esp
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+	call	profile_interrupt		/* enter with disabled irqs */
 #ifndef CONFIG_NO_FRAME_PTR
-	RESET_USER_SEGMENTS(20(%esp))	/* scratches cx,dx */
+	CHECK_SANITY 20(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 20(%esp),in_cli	/* scratches ecx */
 #else
-	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
+	CHECK_SANITY 16(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 16(%esp),in_cli	/* scratches ecx */
 #endif
 	popl	%ecx
 	popl	%edx
@@ -443,53 +537,13 @@ profile_interrupt_entry:
 
 /* other interrupts */
 
-#define INTERRUPT(int,entrypoint)				\
-	GATE_ENTRY(int,entry_##entrypoint,ACC_PL_K | ACC_INTR_GATE) ;\
-	P2ALIGN(4)			      	 		;\
-entry_##entrypoint:			      	 		;\
+#define INTERRUPT(int,name)					\
+	GATE_ENTRY(int,entry_##name,ACC_PL_K | ACC_INTR_GATE) 	;\
+	.p2align 3			      	 		;\
+entry_##name:				      	 		;\
 	pushl	%eax						;\
-	pushl	%edx						;\
-	pushl	%ecx						;\
-	pushl	$ (int - 0x20)					;\
+	movl	$ (int - 0x20), %eax	/* ARG1: irqnum */	;\
 	jmp	all_irqs
-
-	P2ALIGN(4)
-	FUNCSYM(all_irqs)
-all_irqs:
-#ifdef CONFIG_APIC_MASK
-	movl	0(%esp), %eax		// get irq number
-	mov	apic_io_base, %ecx
-	cmpl	apic_irq_nr, %eax
-	jnz	1f
-
-	// get current time
-	movl	0x390 (%ecx), %edx
-	movl	%edx, apic_timer_entry
-
-apic_nostore:
-	// save eax
-	movl	%eax, %edx
-
-	// mask all other irqs (except irq3/irq4 for COM1/COM2) to prevent
-	// APIC irq service preemption
-	inb	$0x21, %al
-	movb	%al, apic_irq_mask
-	movb	$0xe7, %al
-	outb	%al, $0x21
-
-	// restore eax
-	movl	%edx, %eax
-	1:
-#endif /* CONFIG_APIC_MASK */
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	call	irq_interrupt	/* enter with disabled irqs */
-in_interrupt:
-	addl	$4,%esp
-	RESET_USER_SEGMENTS(16(%esp))	/* scratches cx,dx */
-	popl	%ecx
-	popl	%edx
-	popl	%eax
-	iret
 
 #ifndef CONFIG_SCHED_PIT
 INTERRUPT(0x20,int0)
@@ -501,7 +555,7 @@ INTERRUPT(0x24,int4)
 INTERRUPT(0x25,int5)
 INTERRUPT(0x26,int6)
 INTERRUPT(0x27,int7)
-#ifdef CONFIG_SCHED_PIT
+#ifndef CONFIG_SCHED_RTC
 INTERRUPT(0x28,int8)
 #endif
 INTERRUPT(0x29,int9)
@@ -512,87 +566,105 @@ INTERRUPT(0x2d,intd)
 INTERRUPT(0x2e,inte)
 INTERRUPT(0x2f,intf)
 
+	.p2align 4
+	.type	all_irqs,@function
+all_irqs:
+	pushl	%edx
+	pushl	%ecx
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+#ifdef CONFIG_LOCAL_IPC
+        pushl   %ebp
+        pushl   %esi
+        pushl   %edi
 
-/* system calls */
+        /* stack layout:
+           SS      44
+           ESP     40
+           EFLAGS  36
+           CS      32
+           EIP     28
+           EAX     24
+           EDX     20
+           ECX     16
+           irq nr  12
+           EBP     8
+           ESI     4
+           EDI     0 */
 
-#define SYSTEM_CALL(int,entrypoint)				\
-	GATE_ENTRY(int,entry_##entrypoint,ACC_PL_U | ACC_INTR_GATE) ;\
-	P2ALIGN(4)		 	     	 		;\
-entry_##entrypoint:			      	 		;\
-	pushl	%eax						;\
-	movl	$(4*(int-0x30)), %eax				;\
-	jmp	all_syscalls
+        FIXUP_KERNEL_STACK      32(%esp), 28(%esp), 24(%esp), 16(%esp),\
+                                 8(%esp), 40(%esp),  4(%esp),  0(%esp) 
 
-	P2ALIGN(4)
-	FUNCSYM(all_syscalls)
-all_syscalls:
-	SAVE_STATE
-	ESP_TO_TCB_AT(%ebx)
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	RESET_THREAD_CANCEL_AT(%ebx)
-	sti
-	call	*syscall_table(%eax)
-	
-ret_from_syscall:
-	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
-	RESTORE_STATE
+        popl    %edi
+        popl    %esi
+        popl    %ebp
+#endif
+	movl	12(%esp), %edx			/* ARG2: eip */
+	call	irq_interrupt			/* enter with disabled irqs */
+in_interrupt:
+	CHECK_SANITY 16(%esp)			/* scratches ecx */
+	RESET_USER_SEGMENTS 16(%esp),in_cli	/* scratches ecx */
+	popl	%ecx
+	popl	%edx
 	popl	%eax
 	iret
 
-#if !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT) || defined(CONFIG_PROFILE)
-GATE_ENTRY(0x30,sys_ipc_entry_c,ACC_PL_U | ACC_INTR_GATE);
+/****************************************************************************/
+/* system calls                                                             */
+/****************************************************************************/
+
+#ifdef CONFIG_ASSEMBLER_IPC_SHORTCUT
+GATE_ENTRY(0x30,entry_sys_ipc,ACC_PL_U | ACC_INTR_GATE);
 #else
-GATE_ENTRY(0x30,sys_ipc_entry,ACC_PL_U | ACC_INTR_GATE);
+GATE_ENTRY(0x30,entry_sys_ipc_c,ACC_PL_U | ACC_INTR_GATE);
 #endif
 
-#if defined (CONFIG_JDB_LOGGING) \
-    || !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT) || defined(CONFIG_PROFILE)
-        P2ALIGN(4)
-	.globl	sys_ipc_entry_c
-sys_ipc_entry_c:
+#if defined (CONFIG_JDB_LOGGING) || !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT)
+        .p2align 4
+	.globl	entry_sys_ipc_c
+entry_sys_ipc_c:
 	pushl	%eax
 	SAVE_STATE
-	ESP_TO_TCB_AT(%ebx)
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	RESET_THREAD_CANCEL_AT(%ebx)
+	ESP_TO_TCB_AT %ebx
+	RESET_KERNEL_SEGMENTS		/* scratches ecx, edx */
+
+	testl	$Thread_alien, KSEG OFS__THREAD__STATE (%ebx)
+	jnz	alien_sys_ipc_c
+sys_ipc_c_alien_ret:
+	LIPC_IPC_COPY_STACK %esp, %ebx
+	RESET_THREAD_CANCEL_AT %ebx
 	call	ipc_short_cut_wrapper
 in_sc_ipc1:
-	ESP_TO_TCB_AT(%ebx)
-	RESET_THREAD_IPC_MASK_AT(%ebx)
-	cmpb    $0,%al
-	jz	shortcut_failed
-	/* ipc_short_cut returned true -> ipc finished */
-	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
-	RESTORE_STATE
-	popl	%eax
-	iret
-
-shortcut_failed:
-	call	sys_ipc_wrapper
-in_slow_ipc3:
-	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
-	RESTORE_STATE
+	LIPC_RELOAD_IP_SP %ebx
+	CHECK_SANITY $3			/* scratches ecx */
+	RESET_USER_SEGMENTS $3,in_cli	/* scratches ecx */
+	RESTORE_STATE_AFTER_IPC
 	popl	%eax
 	iret
 
 	.globl	in_sc_ipc1
-	.globl	in_slow_ipc3
 #endif
 
 #ifdef CONFIG_JDB
 	/* The slow variant of sys_ipc_entry is used when logging IPC */
-        P2ALIGN(4)
-	.globl	sys_ipc_entry_log
-sys_ipc_entry_log:
+        .p2align 4
+	.globl	entry_sys_ipc_log
+entry_sys_ipc_log:
 	pushl	%eax
 	SAVE_STATE
-	ESP_TO_TCB_AT(%ebx)
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	RESET_THREAD_CANCEL_AT(%ebx)
+	ESP_TO_TCB_AT %ebx
+	RESET_KERNEL_SEGMENTS		/* scratches ecx, edx */
+	
+	testl	$Thread_alien, KSEG OFS__THREAD__STATE (%ebx)
+	jnz	alien_sys_ipc_log
+
+	LIPC_IPC_COPY_STACK %esp, %ebx
+	RESET_THREAD_CANCEL_AT %ebx
 	call	*syscall_table
 in_slow_ipc4:
-	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
-	RESTORE_STATE
+	LIPC_RELOAD_IP_SP %ebx
+	CHECK_SANITY $3			/* scratches ecx */
+	RESET_USER_SEGMENTS $3,in_cli	/* scratches ecx */
+	RESTORE_STATE_AFTER_IPC
 	popl	%eax
 	iret
 
@@ -600,12 +672,42 @@ in_slow_ipc4:
 #endif // CONFIG_JDB
 
         // these labels help show_tcb to guess the thread state
+	.globl	in_syscall
 	.globl	in_slowtrap
 	.globl	in_page_fault
 	.globl	in_handle_fputrap
 	.globl	in_interrupt  
 	.globl	in_timer_interrupt
 	.globl	in_timer_interrupt_slow
+
+#define SYSTEM_CALL(int,name)					\
+	GATE_ENTRY(int,entry_##name,ACC_PL_U | ACC_INTR_GATE) 	;\
+	.p2align 3		 	     	 		;\
+entry_##name:				      	 		;\
+	pushl	%eax						;\
+	movl	$(syscall_table+4*(int-0x30)), %eax		;\
+	jmp	all_syscalls
+
+	.p2align 4
+	.type	all_syscalls,@function
+all_syscalls:
+	SAVE_STATE						;\
+	ESP_TO_TCB_AT %ebx
+	RESET_KERNEL_SEGMENTS		/* scratches ecx, edx */
+	testl	$Thread_alien, KSEG OFS__THREAD__STATE (%ebx)
+	jnz	alien_sys_call
+alien_sys_call_ret:
+	LIPC_COPY_STACK %esp, %ebx
+	RESET_THREAD_CANCEL_AT %ebx
+	call	*(%eax)			/* interrupts enabled in wrappers */
+in_syscall:
+
+ret_from_syscall:
+	CHECK_SANITY $3			/* scratches ecx */
+	RESET_USER_SEGMENTS $3,no_cli	/* scratches ecx */
+	RESTORE_STATE
+	popl	%eax
+	iret
 
 /* SYSTEM_CALL(0x30,sys_ipc) */
 SYSTEM_CALL(0x31,sys_id_nearest)
@@ -615,39 +717,140 @@ SYSTEM_CALL(0x34,sys_thread_schedule)
 SYSTEM_CALL(0x35,sys_thread_ex_regs)
 SYSTEM_CALL(0x36,sys_task_new)
 
-#ifndef CONFIG_UX
+#ifdef CONFIG_PL0_HACK
+SYSTEM_CALL(0x37,sys_priv_control)
+
+GATE_ENTRY(0x38,entry_sys_priv_entry,ACC_PL_U | ACC_INTR_GATE)
+	.p2align 3
+entry_sys_priv_entry:
+	pushl	$0
+	pushf
+	pushl	%eax
+	pushl	%edx
+	pushl	%ecx
+
+	lea	16(%esp), %eax
+	call	sys_priv_entry_wrapper
+	orl	%eax, %eax
+	jz	1f
+
+	/* restore registers, diverge to user function */
+	popl	%ecx
+	popl	%edx
+	popl	%eax
+	popfl
+	addl	$4, %esp
+
+	/* Accessing stack beneath the stack pointer is allowed here since we
+	 * are executed with interrupts off and we don't expect any exception
+	 * as well. */
+	jmp	*-4(%esp)
+
+1:	/* no privileges so just return to the user */
+	addl	$20, %esp
+	iret
+#endif
+
+#ifndef CONFIG_PF_UX
 /* these functions are implemented in entry-ia32.S */
-GATE_ENTRY(0x0a,invalid_tss_entry,ACC_PL_K | ACC_INTR_GATE)
-GATE_ENTRY(0x0f,apic_spurious_interrupt_bug_entry,ACC_PL_K | ACC_INTR_GATE)
-GATE_ENTRY(0x3e,apic_error_interrupt_entry,ACC_PL_K | ACC_INTR_GATE)
-GATE_ENTRY(0x3f,apic_spurious_interrupt_entry,ACC_PL_K | ACC_INTR_GATE)
+GATE_ENTRY(0x0a,entry_vec0a_invalid_tss,ACC_PL_K | ACC_INTR_GATE)
+GATE_ENTRY(0x0f,entry_vec0f_apic_spurious_interrupt_bug,ACC_PL_K | ACC_INTR_GATE)
+GATE_ENTRY(0x3e,entry_vec3e_apic_error_interrupt,ACC_PL_K | ACC_INTR_GATE)
+GATE_ENTRY(0x3f,entry_vec3f_apic_spurious_interrupt,ACC_PL_K | ACC_INTR_GATE)
 #endif
 
 GATE_INITTAB_END
 
-	.bss
-	.space	1024
-	.global	dbf_stack_top
-dbf_stack_top:
+#if defined (CONFIG_JDB_LOGGING) || !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT)
+alien_sys_ipc_c:
+	btrl	$17, KSEG OFS__THREAD__STATE (%ebx) /* Thread_dis_alien */
+	jc	1f
+	RESTORE_STATE
+	sub	$2, 4(%esp)                /* Correct EIP to point to insn */
+	popl 	%eax
+	pushl	$(0x30 << 3 | 2) 
+	pushl	$(0xd)
+	pusha					
+	jmp	_slowtraps
+1: 	/* do alien IPC and raise a trap afterwards */	
+	LIPC_IPC_COPY_STACK %esp, %ebx
 
-#ifdef CONFIG_APIC_MASK
-	.bss
-	.globl	apic_timer_entry
-apic_timer_entry:
-	.space	4
-	.globl	apic_irq_mask
-apic_irq_mask:
-	.space	4
-	.globl	apic_irq_waiting
-apic_irq_waiting:
-	.space	4
-apic_irq_late_ptr:
-	.space	4 
-apic_irq_late:    
-	.space	0x40
+	RESET_THREAD_CANCEL_AT %ebx
+	call	ipc_short_cut_wrapper
+	LIPC_RELOAD_IP_SP %ebx
+	CHECK_SANITY $3			/* scratches ecx */
+	RESET_USER_SEGMENTS $3,in_cli	/* scratches ecx */
+	RESTORE_STATE_AFTER_IPC
+	popl	%eax
+	pushl	$(0x30 << 3 | 6) 
+	pushl	$(0xd)
+	pusha					
+	jmp	_slowtraps
 
-	.data
-	.globl	apic_irq_nr
-apic_irq_nr:
-	.long	-2
-#endif /* CONFIG_APIC_MASK */
+#endif
+
+#if defined (CONFIG_JDB)
+alien_sys_ipc_log:
+	btrl	$17, KSEG OFS__THREAD__STATE (%ebx) /* Thread_dis_alien */
+	jc	1f
+	RESTORE_STATE
+	sub	$2, 4(%esp)                /* Correct EIP to point to insn */
+	popl 	%eax
+	pushl	$(0x30 << 3 | 2) 
+	pushl	$(0xd)
+	pusha					
+	jmp	_slowtraps
+1: 	/* do alien IPC and raise a trap afterwards */	
+	LIPC_IPC_COPY_STACK %esp, %ebx
+
+	RESET_THREAD_CANCEL_AT %ebx
+	call	*syscall_table
+	LIPC_RELOAD_IP_SP %ebx
+	CHECK_SANITY $3			/* scratches ecx */
+	RESET_USER_SEGMENTS $3,in_cli	/* scratches ecx */
+	RESTORE_STATE_AFTER_IPC
+	popl	%eax
+	pushl	$(0x30 << 3 | 6) 
+	pushl	$(0xd)
+	pusha					
+	jmp	_slowtraps
+
+#endif
+
+/*
+ * input:  eax: address to syscall function
+ * output: eax: error code
+ */
+.macro SC_ADDR_TO_ERR val
+	sub 	$syscall_table , %eax	/* eax = byte offset to syscall */
+	shr	$2, %eax		/* convert eax to syscall nr */
+	add 	$0x30, %eax		/* convert eax to syscall int nr */
+	shl	$3, %eax		/* construct error code */
+	orl	$\val, %eax		/* -"- */
+.endm
+
+alien_sys_call:
+	btrl	$17, KSEG OFS__THREAD__STATE (%ebx) /* Thread_dis_alien */
+	jc	1f
+	RESTORE_STATE
+	sub	$2, 4(%esp)		/* Correct EIP to point to insn */
+	SC_ADDR_TO_ERR 2
+2:
+	pushl	$0xd
+	xchgl	4(%esp), %eax
+	pusha
+	jmp	_slowtraps
+
+1:	/* do alien syscall and trap mafterwards */
+	LIPC_COPY_STACK %esp, %ebx
+
+	RESET_THREAD_CANCEL_AT %ebx
+	pushl 	%eax
+	call	*(%eax)			/* call with ENABLED interrupts */
+	CHECK_SANITY $3			/* scratches ecx */
+	RESET_USER_SEGMENTS $3,no_cli	/* scratches ecx */
+	popl	%eax
+	RESTORE_STATE
+	SC_ADDR_TO_ERR 6
+	jmp 2b
+

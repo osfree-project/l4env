@@ -1,0 +1,50 @@
+
+#include <l4/sys/types.h>
+
+interface rmgr
+{
+  long init_ping([in] long value, [out] long *not_value);
+
+  long set_small_space([in] l4_threadid_t tid, [in] long num);
+
+  long set_prio([in] l4_threadid_t tid, [in] long prio);
+
+  long get_prio([in] l4_threadid_t tid, [out] long *prio);
+
+  long get_task([in] long num);
+
+  long free_task([in] long num);
+
+  long free_task_all([in] l4_threadid_t tid);
+
+  long task_new([in] l4_taskid_t tid, [in] l4_umword_t mcp_or_chief,
+		[in] l4_umword_t esp, [in] l4_umword_t eip,
+		[in] l4_threadid_t pager, [in] l4_umword_t sched_param,
+		[out] l4_taskid_t *ntid);
+
+  long get_irq([in] int num);
+
+  long free_irq([in] int num);
+
+  long free_irq_all([in] l4_threadid_t tid);
+
+  long free_fpage([in] l4_umword_t fp);
+
+  long free_page([in] l4_addr_t address);
+
+  long dump_mem();
+
+  long reserve_mem([in] l4_addr_t size, [in] l4_addr_t align, [in] int flags,
+		   [in] l4_addr_t low,  [in] l4_addr_t high,
+		   [out] l4_addr_t *addr);
+
+  long free_mem_all([in] l4_threadid_t tid);
+
+  long get_page0([out] fpage *page0);
+
+  long get_task_id([in, string] char* modname, [out] l4_threadid_t *tid);
+
+  long set_task_id([in, string] char *modname, [in] l4_threadid_t tid);
+
+  long privctrl([in] int command, [in] int param);
+};

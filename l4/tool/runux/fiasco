@@ -5,10 +5,9 @@
 for i in "$@"; do
   if [ "${i#-}" = "$i" ];
   then
-   A="$A -l $i"
-  else
-   A="$A $i"
+    A[${#A[*]}]="-l"
   fi
+  A[${#A[*]}]="$i"
 done
 
-fiasco $A
+fiasco "${A[@]}"

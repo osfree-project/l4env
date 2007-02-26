@@ -2,13 +2,10 @@ INTERFACE:
 
 #include "types.h"
 
-#define MAPDB_RAM_ONLY // mapdb_t can only handle RAM physical addresses.
-
 enum Mapping_type { Map_mem = 0, Map_io };
 
 struct Mapping_tree;		// forward decls
 class Mapdb_tree;
-class Mapdb_space;
 class Physframe;
 
 /** Represents one mapping in a mapping tree.
@@ -34,8 +31,8 @@ class Mapping
   Mapping(const Mapping&);	// this constructor is undefined.
 
   // DATA
-  Mapping_entry _data;  
-} __attribute__((packed));
+  Mapping_entry _data __attribute__((packed));
+};
 
 /** The mapping database.
  */
@@ -160,14 +157,13 @@ IMPLEMENTATION:
 
 #include <cassert>
 #include <cstring>
-//#include <flux/x86/paging.h>
 
 #include <auto_ptr.h>
 
 #include "config.h"
 #include "globals.h"
 #include "helping_lock.h"
-#include "kmem_alloc.h"
+#include "mapped_alloc.h"
 #include "kmem_slab.h"
 #include "std_macros.h"
 
@@ -175,11 +171,9 @@ IMPLEMENTATION:
 #define offsetof(TYPE, MEMBER) ((size_t) &((TYPE *)0)->MEMBER)
 #endif
 
-
 // 
 // Mapping_tree
 // 
-
 struct Mapping_tree
 {
   //friend class Mapdb;
@@ -193,12 +187,7 @@ struct Mapping_tree
   unsigned _unused: 1;		// (make this 32 bits to avoid a compiler bug)
  
   Mapping _mappings[0] __attribute__((packed));
-
-} __attribute__((packed));
-
-
-
-
+};
 
 enum Mapping_depth 
 {
@@ -217,6 +206,16 @@ Mapping::data()
   return &_data;
 }
 
+/** Address space.
+    @return the address space into which the frame is mapped. 
+ */
+PUBLIC inline NEEDS [Mapping::data]
+unsigned
+Mapping::space()
+{
+  return data()->space;
+}
+
 /** Virtual address.
     @return the virtual address at which the frame is mapped.
  */
@@ -230,14 +229,13 @@ Mapping::vaddr()
 /** Size of page frame.
     @return the size of the page frame -- 4K or 4M.
  */
-PUBLIC inline NEEDS[Mapping::data, "config.h"]
+PUBLIC inline NEEDS [Mapping::data, "config.h"]
 size_t 
 Mapping::size()
 {
-  if ( data()->size ) 
-    return Config::SUPERPAGE_SIZE;
-  else 
-    return Config::PAGE_SIZE;
+  return data()->size
+         ? Config::SUPERPAGE_SIZE
+         : Config::PAGE_SIZE;
 }
 
 /** Mapping type.
@@ -252,28 +250,26 @@ Mapping::type()
   return Map_mem;
 }
 
-
-
 /** free entry?.
     @return true if this is unused.
  */
-inline NEEDS[Mapping_depth, Mapping::data]
+inline NEEDS [Mapping_depth, Mapping::data]
 bool
 Mapping::unused()
 {
-  return (data()->depth > Depth_subtree);
+  return data()->depth > Depth_subtree;
 }
 
-inline NEEDS[Mapping_depth, Mapping::data]
+inline NEEDS [Mapping_depth, Mapping::data]
 bool
 Mapping::is_end_tag()
 {
-  return (data()->depth == Depth_end);
+  return data()->depth == Depth_end;
 }
 
-inline NEEDS[Mapping::is_end_tag, Mapping::unused]
-Mapping*
-Mapping::next(const Mapping* end_of_tree)
+inline NEEDS [Mapping::is_end_tag, Mapping::unused]
+Mapping *
+Mapping::next (const Mapping* end_of_tree)
 {
   for (Mapping* m = this + 1; 
        m < end_of_tree && ! m->is_end_tag(); 
@@ -342,10 +338,7 @@ PUBLIC Mapping *
 Mapping::parent()
 {
   if (data()->depth <= Depth_root)
-    {
-      // Sigma0 mappings don't have a parent.
-      return 0;
-    }
+    return 0;			// Sigma0 mappings don't have a parent.
 
   // Iterate over mapping entries of this tree backwards until we find
   // an entry with a depth smaller than ours.  (We assume here that
@@ -380,16 +373,16 @@ Mapping::next_iter()
     @param parent Parent mapping
     @return the next child mapping of a given parent mapping
  */
-PUBLIC Mapping *
-Mapping::next_child(Mapping *parent)
+PUBLIC
+Mapping *
+Mapping::next_child (Mapping *parent)
 {
   // Find the next valid entry in the tree structure.
   Mapping *m = next_iter();
 
   // If we didn't find an entry, or if the entry cannot be a child of
   // "parent", return 0
-  if (m == 0
-      || m->data()->depth <= parent->data()->depth)
+  if (m == 0 || m->data()->depth <= parent->data()->depth)
     return 0;
 
   return m;			// Found!
@@ -401,9 +394,10 @@ Mapping::next_child(Mapping *parent)
 // Mapping-tree allocators
 // 
 
-enum Mapping_tree_size { 
+enum Mapping_tree_size
+{
   Size_factor = 4, 
-  Size_id_max = 8 /* can be up to 15 (4 bits) */ 
+  Size_id_max = 8		// can be up to 15 (4 bits)
 };
 
 class mapping_tree_allocators 
@@ -433,7 +427,7 @@ mapping_tree_allocators::mapping_tree_allocators()
 }
 
 PUBLIC inline
-Kmem_slab*
+Kmem_slab *
 mapping_tree_allocators::allocator_for_treesize (int size)
 {
   return _allocator[size].get();
@@ -450,13 +444,11 @@ mapping_tree_allocators::instance()
 }  
 
 static inline
-Kmem_slab*
+Kmem_slab *
 allocator_for_treesize (int size)
 {
   return mapping_tree_allocators::instance().allocator_for_treesize(size);
 }
-
-
 
 PUBLIC inline NEEDS[allocator_for_treesize]
 void*
@@ -469,7 +461,7 @@ PUBLIC inline
 void
 Mapping_tree::operator delete (void* block, size_t)
 {
-  if (! block)
+  if (!block)
     return;
 
   // Try to guess right allocator object -- XXX unportable!
@@ -544,7 +536,8 @@ Mapping_tree::last()
 // This function copies the elements of mapping tree src to mapping
 // tree dst, ignoring empty elements (that is, compressing the
 // source tree.  In-place compression is supported.
-PUBLIC static void 
+PUBLIC static
+void 
 Mapping_tree::copy_compact_tree(Mapping_tree *dst, Mapping_tree *src)
 {
   unsigned src_count = src->_count; // Store in local variable before
@@ -580,8 +573,9 @@ Mapping_tree::copy_compact_tree(Mapping_tree *dst, Mapping_tree *src)
   dst->last()->data()->depth = Depth_end;
 } // copy_compact_tree()
 
-PUBLIC inline void
-Mapping_tree::check_integrity ()
+PUBLIC inline
+void
+Mapping_tree::check_integrity()
 {
 #ifndef NDEBUG
   // Sanity checking
@@ -637,7 +631,7 @@ class Physframe
     //: tree (0)
   {}
 
-  ~Physframe () 
+  ~Physframe()
   {
     assert (! lock.test());
 
@@ -657,26 +651,21 @@ class Physframe
   }
 
   void* operator new [] (size_t size)
-  {
-// XXX: warning We may waste a bit of memory here
-    unsigned order;
-    order = (size + Config::PAGE_SIZE -1) >> Config::PAGE_SHIFT;
-    order = Kmem_alloc::size_to_order(order);
-    void* block = Kmem_alloc::allocator()->alloc(order);
-    if (block) memset(block, 0, size);  // Optimization: See constructor
-    return block;
-  }
+    {
+      size = (size + Config::PAGE_SIZE - 1) >> Config::PAGE_SHIFT;
+      void* block = Mapped_allocator::allocator()->unaligned_alloc (size);
+      if (block)
+	memset(block, 0, size);  // Optimization: See constructor
+      return block;
+    }
 
   void operator delete [] (void* block, size_t size)
-  {
-    if (! block)
-      return;
-
-    unsigned order;
-    order = (size + Config::PAGE_SIZE -1) >> Config::PAGE_SHIFT;
-    order = Kmem_alloc::size_to_order(order);
-    Kmem_alloc::allocator()->free(order, block);
-  }
+    {
+      if (! block)
+	return;
+      size = (size + Config::PAGE_SIZE - 1) >> Config::PAGE_SHIFT;
+      Mapped_allocator::allocator()->unaligned_free (size, block);
+    }
 }; // struct Physframe
 
 // 
@@ -704,7 +693,8 @@ Mapdb::Mapdb(Address start, Address end)
   // create a sigma0 mapping for all physical pages
   for (unsigned page_id = 0; page_id < page_number; page_id++)
     {
-      auto_ptr<Mapping_tree> new_tree (new (0) Mapping_tree (0, page_id + page_offset));
+      auto_ptr<Mapping_tree> new_tree (new (0) Mapping_tree (0, page_id + 
+								page_offset));
       physframe[page_id].tree = new_tree;
     }    
 } // Mapdb()
@@ -733,12 +723,13 @@ Mapdb::~Mapdb()
     @post    All Mapping* pointers pointing into this mapping tree,
              except "parent" and its parents, will be invalidated.
  */
-PUBLIC static Mapping *
-Mapdb::insert(Mapping *parent,
-	      Mapdb_space space, 
-	      Address va, 
-	      size_t size,
-	      Mapping_type type)
+PUBLIC static
+Mapping *
+Mapdb::insert (Mapping *parent,
+	       unsigned space, 
+	       Address va, 
+	       size_t size,
+	       Mapping_type type)
 {
   assert(type == Map_mem);	// we don't yet support Map_io
   (void)type;
@@ -855,7 +846,7 @@ Mapdb::insert(Mapping *parent,
   // found a place to insert new child.
   free->data()->depth = Mapping_depth(parent->data()->depth + 1);
   free->data()->address = va >> Config::PAGE_SHIFT;
-  free->data()->space(space.value);
+  free->data()->space = space;
   free->data()->size = (size == Config::SUPERPAGE_SIZE);
 
   t->check_integrity();
@@ -863,55 +854,49 @@ Mapdb::insert(Mapping *parent,
 } // insert()
 
 
-/** Lookup a mapping and lock the corresponding mapping tree.  The returned
-    mapping pointer, and all other mapping pointers derived from it, remain
-    valid until free() is called on one of them.  We guarantee that at most 
-    one insert() operation succeeds between one lookup()/free() pair of calls 
-    (it succeeds unless the mapping tree is full).
-    @param space Number of virtual address space in which the mapping 
-                 was entered
-    @param va    Virtual address of the mapping
-    @param phys  Physical address of the mapped pag frame
-    @param type  Type of the mapping (Map_mem or Map_io).
-    @return mapping, if found; otherwise, 0
+/** 
+ * Lookup a mapping and lock the corresponding mapping tree.  The returned
+ * mapping pointer, and all other mapping pointers derived from it, remain
+ * valid until free() is called on one of them.  We guarantee that at most 
+ * one insert() operation succeeds between one lookup()/free() pair of calls 
+ * (it succeeds unless the mapping tree is full).
+ * @param space Number of virtual address space in which the mapping 
+ *              was entered
+ * @param va    Virtual address of the mapping
+ * @param phys  Physical address of the mapped pag frame
+ * @param type  Type of the mapping (Map_mem or Map_io).
+ * @return mapping, if found; otherwise, 0
  */
-PUBLIC Mapping *
-Mapdb::lookup(Mapdb_space space,
-	      Address va,
-	      Address phys)	// Mapping_type type
+PUBLIC
+Mapping *
+Mapdb::lookup (unsigned space,
+	       Address va,
+	       Address phys)	// Mapping_type type
 {
   assert (phys >= _start);
   assert (phys != 0xffffffff);	// Protect against naive use of
 				// virt_to_phys on user's part
-
-  Mapping_tree *t;
   phys -= _start;
 
   // get and lock the tree.
   physframe[phys >> Config::PAGE_SHIFT].lock.lock();
   
-  t = physframe[phys >> Config::PAGE_SHIFT].tree.get();
-  assert(t);
+  Mapping_tree *t = physframe[phys >> Config::PAGE_SHIFT].tree.get();
+  
+  assert (t);			// Ensure consistency
 
   Mapping *m;
 
-  for (m = t->mappings();
-       m;
-       m = m->next (t->end()))
-    {
-      if (m->data()->space() == space.value
-	  && m->data()->address == va >> Config::PAGE_SHIFT)
-	{
-	  // found!
-	  return m;
-	}
-    }
+  for (m = t->mappings(); m; m = m->next (t->end()))
+    if (m->data()->space == space &&
+        m->data()->address == va >> Config::PAGE_SHIFT)
+      return m;			// found!
 
   // not found -- unlock tree
   physframe[phys >> Config::PAGE_SHIFT].lock.clear();
 
   return 0;
-} // lookup()
+}
 
 /** Unlock the mapping tree to which the mapping belongs.  Once a tree
     has been unlocked, all Mapping instances pointing into it become
@@ -925,15 +910,17 @@ Mapdb::lookup(Mapdb_space space,
 
     @param mapping_of_tree Any mapping belonging to a mapping tree.
  */
-PUBLIC void 
-Mapdb::free(Mapping* mapping_of_tree)
+PUBLIC
+void 
+Mapdb::free (Mapping* mapping_of_tree)
 {
   Mapping_tree *t = mapping_of_tree->tree();
 
   // We assume that the zeroth mapping of the tree is a sigma0
   // mapping, that is, its virtual address == the page's physical
   // address.
-  Address phys_pno = t->mappings()[0].data()->address - (_start >> Config::PAGE_SHIFT);
+  Address phys_pno = t->mappings()[0].data()->address 
+		   - (_start >> Config::PAGE_SHIFT);
 
   // We are the owner of the tree lock.
   assert (physframe[phys_pno].lock.lock_owner() == current());
@@ -1032,10 +1019,11 @@ Mapdb::free(Mapping* mapping_of_tree)
     @param me_too If true, delete m as well; otherwise, delete only 
            submappings.
  */
-PUBLIC static void 
-Mapdb::flush(Mapping *m, bool me_too)
+PUBLIC static
+void 
+Mapdb::flush (Mapping *m, bool me_too)
 {
-  assert (! m->unused());
+  assert (!m->unused());
 
   // This is easy to do: We just have to iterate over the array
   // encoding the tree.
@@ -1105,9 +1093,48 @@ Mapdb::flush(Mapping *m, bool me_too)
                      transferred to
     @param va Virtual address of the mapping in the new address space
  */
-PUBLIC void 
-Mapdb::grant(Mapping *m, Mapdb_space new_space, Address va)
+PUBLIC
+void 
+Mapdb::grant (Mapping *m, unsigned new_space, Address va)
 {
-  m->data()->space(new_space.value);
+  m->data()->space = new_space;
   m->data()->address = va >> Config::PAGE_SHIFT;
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[!arm]:
+
+#include "config.h"
+#include "kip.h"
+
+PUBLIC static inline NEEDS ["config.h", "kip.h"]
+bool
+Mapdb::valid_address(Address phys)
+{
+  return !Config::Mapdb_ram_only || phys < Kip::k()->main_memory_high();
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[arm]:
+
+#include "config.h"
+#include "kmem.h"
+
+PUBLIC static inline NEEDS ["config.h", "kmem.h"]
+bool
+Mapdb::valid_address(Address phys)
+{
+  return !Config::Mapdb_ram_only ||
+	  (phys >= Kmem::Sdram_phys_base && 
+	   phys <  Kmem::Sdram_phys_base + (64<<20));
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION:
+
+PUBLIC inline NEEDS [Mapping::data, "config.h"]
+bool
+Mapping::space_is_sigma0()
+{
+  return space() == Config::sigma0_taskno;
 }

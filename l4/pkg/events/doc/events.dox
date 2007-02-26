@@ -1,0 +1,192 @@
+/*!
+\mainpage events - DROPS Message Service
+
+\section desc Description
+
+\subsection introduction Introduction
+Events is a message service for DROPS providing asyncronous communcication between tasks. The server is capable of one-to-one, many-to-one, one-to-many and many-to-many communication by using a channel like system.
+
+\subsection channel Channels and Registration
+Every task has to register itself to one or more channels before it can receive messages. On one side a task can register itself for many channels and on the other side a arbitrary number of tasks can itself register for one channel. Every channel has an unique identifier, also called channel-nr. Along with the channel-nr every task has to assign a priority during the registration. (refer to \ref priority)
+\note The distribution and usage of channels is up to the clients. It is recommended
+for common standard channels with a unique semantic to reserve the channel into events.h
+
+\subsection message Messages
+Every message comprises of a fixed length message buffer and is associated with a channel. Due to the message proccessing Events assigns every message a unique message number, called event-nr. This number is returned to the sender and receiver and can be used to give acknowledge after receiving and respectivly to get acknowledge after sending. \ref acknowledge
+\note There is also an implizit definition of a short-message. The length of a short-message depends on the used library (please refer to ::SHORT_BUFFER_SIZE defined in \ref privatelibapi).
+
+\subsection send Sending Events
+The server takes care of incoming messages and puts them into the wait-queue of the registered tasks. If no task is registered for the associated channel a warning is given and the message is discarded.
+
+There are currently two options available for sending messages:
+If ::L4EVENTS_ASYNC is specified Events doesn't try to dispatch the message to the registered tasks first. Instead it replies immediatly to the sender.
+If ::L4EVENTS_SEND_ACK is specified Events gives a confirmation after the message has successful received by all registered tasks. (\ref acknowledge)
+
+\subsection receive Receiving events
+A registered task can try to receive an event. The messages are normally received in FIFO order, with the following two exceptions: 
+1. If a task tries to receive a short-event Events searches for the next short-event in the queue. 
+2. If a task tries to receive an event for a special channel, the server searches for a message of this channel. 
+Both options can be combined.
+
+There are currently two options available for reveiving messages:
+If ::L4EVENTS_SHORT is specified the reiceiver wants only short messages to receive. This a hint for Events to use the Short-IPC-Path.
+If ::L4EVENTS_RECV_ACK is specified the receiver has to send an acknowledge back to Events after processing the message.
+
+If no event is currently pending the receiver blocks and Events sets reminder that a thread is waiting. Events tries to serve the waiting thread with the next incoming event.
+\note The registration acts on task level while receiving is based on thread level. 
+
+\subsection acknowledge Give Acknowledge after receiving and get acknowledge after sending
+If the receiver has the option ::L4EVENTS_RECV_ACK specified, it has itself committed to send a acknowledge back to Events. The receiving task has to hand over the event-nr provided by Events after the receiving call.
+
+If the sender has the option ::L4EVENTS_SEND_ACK specified, it wants to get a confirmation from Events that every registered task has received the message. Events only replies to this call if all registered task have successful received the message otherwise it blocks the sender. The sending task has to hand over the event-nr provided by Events after the send call.
+
+\subsection priority Priorities
+Every receiver has to specify a priority along with the registration for a channel. The higher the priority the earlier has the task the chance to receive the message. If the receiver has a low priority a message is blocked to it until one of the following two conditions occur:
+1. All receivers with higher priorities have received the message and optionally send an acknowledge back to Events
+2. Events gots an internal timeout to set up the next lower priority class. This is a special case to prevent starvation of low priority tasks.
+\note Currently the timeout value is hard coded in the Events-Server and can't be manipulated or configured (\ref limit).
+
+\subsection unregister Unregister after receiving
+If a task no longer wants to receive messages for a channel it simply unregisters itself. After the unregistration all blocked and pending messages are deleted.
+
+\section functions Functions
+
+Events implements the following primitives:
+-# ::l4events_register			- register a task for a channel
+-# ::l4events_unregister		- unregister a task for a channel
+-# ::l4events_unregister_all		- unregister a task for all registered channels
+-# ::l4events_send send			- send a message
+-# ::l4events_receive			- receive a message
+-# ::l4events_wait			- wait for messages in a seperate thread
+-# ::l4events_give_ack			- try to give acknowledge after receiving a message
+-# ::l4events_give_ack_and_receive	- combined give acknowledge and receive call
+-# ::l4events_get_ack			- try to get acknowledge after sending a message
+
+
+\section limit Limitations
+
+The maximum number of bytes in a message is defined by ::L4EVENTS_MAX_BUFFER_SIZE. The maximum number of channels is defined by ::MAX_CHANNELS and number of priorities is currently set to ::MAX_PRIORITY. The number for messages distributed by Events is currently limited to ::MAX_EVENT_NR and after that value an overflow happens.
+
+The events server uses dynamic memory allocation to maintain its data structures. The maximal allocated size is defined ::MALLOC_POOL_SIZE in server.h .
+
+The Timeouts in milliseconds is set to ::TIMEOUT_ValUE multiplied with ::TIMEOUT_TICKS.
+
+\section usage Usage
+
+The DROPS Events Service is implemented as a L4 server. Currently there are the following command line options available:
+
+- ::malloc_pool_addr	-  start adress used for dynamic memory pool
+- ::malloc_pool_size	-  size used for dynamic memory pool
+- ::verbose		-  output level, the higher the number the more the output
+- ::debug_malloc	-  some malloc status information
+
+The library \ref clientlibapi libevents.a provides a convenient way to access
+the DROPS Events Service through a set of C function calls.
+
+\section examples Examples
+
+There are three examples provided with the events package.
+
+\subsection example1 Demo1
+
+The \ref demo1 is a simpe sequential step-by-step program. It shows the basic order of commands while provoking some abnormal situations that can happen.
+
+\subsection example2 Demo2
+
+The \ref demo2 creates 3 tasks that shows the buffered communication feature.
+
+\subsection example3 Demo3
+
+The \ref demo3 is a multi-tasked program to generate some heavy workload for the server. It can simulate one-to-one, on-to-many, many-to-one and many-to-many message transfer. There are different parameters to scale the concrete workload situation.
+
+The example also provides some basic performance measurement for benchmarking.
+
+\section internals Internals
+
+The internal server-library implementing the \ref serverlibapi handles the communication to the client.
+s
+The server-library uses the \ref serverapi to dispatch the requests to the server.
+
+Both, the server-library and the client-library using a \ref privatelibapi for
+for the basic communcication protocol.
+*/
+
+/*!\defgroup clientlibapi client-library API
+ *
+ * \brief Functions the client uses to communicate with the server
+ */
+
+/*!\defgroup demo1 Demo1 for events
+ *
+ * The demo goes through the basic steps:
+ * -# registering some eventid's (also with double registering)
+ * -# sending and receiving an event
+ * -# sending and receiving a short event
+ * -# unregistering events (and loosing some pending events)
+ *
+ * Source in demo1/main.c
+ */
+
+/*!\defgroup demo2 Demo2 for events
+ *
+ * A demo for sending some events between three tasks
+ *
+ * There are three tasks:
+ *
+ * - task1: receiving task
+ * - task2: sending task
+ * - task3: receiving task
+ *
+ * and there is the following scenario:
+ * -# task1 registers for eventtyp 11 and tries to receive an event
+ *    with a short timeout. this fails (of course).
+ * -# task3 registers for eventtyp 11 and waits for an event.
+ * -# task2 sends an event.
+ * -# task3 receives the event successful.
+ * -# task1 tries after some time again to receive an event with success.
+ *
+ * Source in demo2/main.c
+ */
+
+/*!\defgroup demo3 Demo3 for events
+ *
+ * There are two kinds of tasks:
+ * - sending tasks: only sending events
+ * - receiving tasks: only receiving events
+ *
+ * There three parameters for scaling the workload:
+ * - SEND_TASK_COUNT number of sending tasks
+ * - RECV_TASK_COUNT number of receiving tasks
+ * - SEND_EVENT_COUNT number of events to send per sending task
+ *
+ * \note All events are send with the same eventid, so every receiving task,
+ * gets all events from all sending tasks.
+ *
+ * The first receiving task collects also some information for
+ * performance measurements:
+ * -# total time for receiving all events for one task
+ * -# the ratio between INTERshort PINGPONG IPC call and IPC call to
+ *    event-server
+ * -# time of every single IPC call for receiving events
+ *
+ * \note Please, set the correct value for the variable PINGPONG_IPC for your
+ * system to get a meaningful ratio value.
+ *
+ * Source in demo3/main.c
+ */
+
+
+/*!\defgroup serverlibapi server-library API
+ *
+ * \brief Functions the server uses to communicate with the client
+ */
+
+/*!\defgroup serverapi events - server API
+ *
+ * \brief Functions the server implements
+ */
+
+/*!\defgroup privatelibapi private library API
+ *
+ * \brief private definitions and functions the client and the server library uses
+ */

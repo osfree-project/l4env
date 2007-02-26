@@ -4,19 +4,20 @@
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
+#include <l4/sys/ktrace.h>
+#include <l4/util/l4_macros.h>
 
 #include "globals.h"
 #include "config.h"
 
 #include "memmap.h"
 
-owner_t __memmap[MEM_MAX/L4_PAGESIZE];
-__superpage_t __memmap4mb[SUPERPAGE_MAX];
-owner_t __iomap[IO_MAX];
-
-vm_offset_t mem_high;
-
+owner_t		 *__memmap;
+__superpage_t	 *__memmap4mb;
+owner_t		 *__iomap;
+l4_addr_t	 mem_high;
 l4_kernel_info_t *l4_info;
+l4_addr_t        tbuf_status;
 
 static void find_free(l4_umword_t *d1, l4_umword_t *d2, owner_t owner);
 
@@ -44,7 +45,7 @@ pager(void)
 	  
 	  if (debug)
 	    printf("SIGMA0: received d1=0x%x, d2=0x%x "
-		   "from thread=%x.%02x\n", d1, d2, t.id.task, t.id.lthread);
+		   "from thread="l4util_idfmt"\n", d1, d2, l4util_idstr(t));
 
 	  desc = L4_IPC_SHORT_MSG;
 
@@ -81,8 +82,8 @@ pager(void)
 		{
 		  /* kernel info page requested */
 		  d1 = 0;
-		  d2 = l4_fpage((l4_umword_t) l4_info, 
-				L4_LOG2_PAGESIZE, 0, 0).fpage;
+		  d2 = l4_fpage((l4_umword_t) l4_info, L4_LOG2_PAGESIZE, 
+				 L4_FPAGE_RO, L4_FPAGE_MAP).fpage;
 		  desc = L4_IPC_SHORT_FPAGE;
 		}
 	      else if (d1 == 1 && (d2 & 0xff) == 0
@@ -91,6 +92,22 @@ pager(void)
 		  /* kernel requests recommended kernel-internal RAM
                      size (in number of pages) */
 		  d1 = mem_high / 8 / L4_PAGESIZE;
+		}
+	      else if (d1 == 1 && (d2 & 0xff) == 0xff)
+		{
+		  if (tbuf_status == 0x00000000 || 
+		      tbuf_status == (l4_umword_t)-1)
+		    {
+		      d1 = d2 = 0;
+		      desc = L4_IPC_SHORT_MSG;
+		    }
+		  else
+		    {
+		      d1 = 0;
+		      d2 = l4_fpage(tbuf_status, L4_LOG2_PAGESIZE,
+				    L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
+		      desc = L4_IPC_SHORT_FPAGE;
+		    }
 		}
 	      else if (pfa < 0x40000000)
 		{
@@ -101,7 +118,8 @@ pager(void)
 		      if (memmap_alloc_superpage(pfa, t.id.task))
 			{
 			  d1 &= L4_SUPERPAGEMASK;
-			  d2 = l4_fpage(d1, L4_LOG2_SUPERPAGESIZE, 1, 0).fpage;
+			  d2 = l4_fpage(d1, L4_LOG2_SUPERPAGESIZE,
+					L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
 			  desc = L4_IPC_SHORT_FPAGE;
 
 			  /* flush the superpage first so that
@@ -120,7 +138,8 @@ pager(void)
 		  if (memmap_alloc_page(d1, t.id.task))
 		    {
 		      d1 &= L4_PAGEMASK;
-		      d2 = l4_fpage(d1, L4_LOG2_PAGESIZE, 1, 0).fpage;
+		      d2 = l4_fpage(d1, L4_LOG2_PAGESIZE,
+				    L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
 		      desc = L4_IPC_SHORT_FPAGE;
 		    }
 		  else if (pfa >= (l4_info->semi_reserved.low & L4_PAGEMASK)
@@ -128,7 +147,8 @@ pager(void)
 		    {
 		      /* adapter area, page faults are OK */
 		      d1 &= L4_PAGEMASK;
-		      d2 = l4_fpage(d1, L4_LOG2_PAGESIZE, 1, 0).fpage;
+		      d2 = l4_fpage(d1, L4_LOG2_PAGESIZE,
+				    L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
 		      desc = L4_IPC_SHORT_FPAGE;
 		    }
 		}
@@ -152,8 +172,8 @@ pager(void)
                          allow I/O mappings to start with addresses
                          like 0xf0... . */
 		      d2 = l4_fpage(pfa, /* maps pfa + 0x40000000 */
-				    L4_LOG2_SUPERPAGESIZE, 
-				    1, 0).fpage;
+				    L4_LOG2_SUPERPAGESIZE,
+				    L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
 		      desc = L4_IPC_SHORT_FPAGE;
 		    }
 		}
@@ -199,8 +219,8 @@ pager(void)
 	      else 
 		{
 		  printf("SIGMA0: can't handle d1=0x%x, d2=0x%x "
-			 "from thread=%x.%02x\n", 
-			 d1, d2, t.id.task, t.id.lthread);
+			 "from thread="l4util_idfmt"\n", 
+			 d1, d2, l4util_idstr(t));
 
 		  /* unknown request */
 		  d1 = d2 = 0;
@@ -211,12 +231,12 @@ pager(void)
 
 	  if (debug)
 	    printf("SIGMA0: sending d1=0x%x, d2=0x%x "
-		   "to thread=%x.%02x\n", d1, d2, t.id.task, t.id.lthread);
+		   "to thread="l4util_idfmt"\n", d1, d2, l4util_idstr(t));
 
 	  /* send reply and wait for next message */
 	  err = l4_ipc_reply_and_wait(t, desc, d1, d2,
 				      &t, 0, &d1, &d2,
-				      L4_IPC_TIMEOUT(0,1,0,0,0,0), 
+				      L4_IPC_SEND_TIMEOUT_0, 
 				      /* snd timeout = 0 */
 				      &result);
 					   
@@ -231,7 +251,7 @@ static void find_free(l4_umword_t *d1, l4_umword_t *d2, owner_t owner)
      which we later can't allocate because we're out of quota. */
 
   /* for kernel tasks, start looking at the back */
-  vm_offset_t address = owner < ROOT_TASKNO 
+  l4_addr_t address = owner < ROOT_TASKNO 
     ? (mem_high - 1) & L4_SUPERPAGEMASK
     : 0;
 
@@ -245,16 +265,17 @@ static void find_free(l4_umword_t *d1, l4_umword_t *d2, owner_t owner)
 	    {
 	      if (memmap_owner_page(address) != O_FREE)
 		{
-		  if (owner < ROOT_TASKNO) address -= L4_PAGESIZE;
-		  else address += L4_PAGESIZE;
-
+		  if (owner < ROOT_TASKNO)
+		    address -= L4_PAGESIZE;
+		  else
+		    address += L4_PAGESIZE;
 		  continue;
 		}
 	      
 	      /* found! */
 	      *d1 = address;
-	      *d2 = l4_fpage(address, L4_LOG2_PAGESIZE, 1, 0).fpage;
-	      
+	      *d2 = l4_fpage(address, L4_LOG2_PAGESIZE, 
+			     L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
 	      return;
 	    }
 	}

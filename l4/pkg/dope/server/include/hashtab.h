@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -13,14 +13,22 @@
  * COPYING file for details.
  */
 
-#if !defined(HASHTAB)
-#define HASHTAB void
-#endif
+#ifndef _DOPE_HASHTAB_H_
+#define _DOPE_HASHTAB_H_
+
+#define HASHTAB struct hashtab
+struct hashtab;
 
 struct hashtab_services {
-	HASHTAB *(*create)      (u32 tab_size,u32 max_hash_length);
-	void     (*destroy)     (HASHTAB *h);
-	void     (*add_elem)    (HASHTAB *h,char *ident,void *value);
-	void    *(*get_elem)    (HASHTAB *h,char *ident);
-	void     (*remove_elem) (HASHTAB *h,char *ident);
+	HASHTAB *(*create)      (u32 tab_size, u32 max_hash_length);
+	void     (*inc_ref)     (HASHTAB *h);
+	void     (*dec_ref)     (HASHTAB *h);
+	void     (*add_elem)    (HASHTAB *h, char *ident, void *value);
+	void    *(*get_elem)    (HASHTAB *h, char *ident, int max_len);
+	void     (*remove_elem) (HASHTAB *h, char *ident);
+	void    *(*get_first)   (HASHTAB *h);
+	void    *(*get_next)    (HASHTAB *h, void *value);
 };
+
+
+#endif /* _DOPE_HASHTAB_H_ */

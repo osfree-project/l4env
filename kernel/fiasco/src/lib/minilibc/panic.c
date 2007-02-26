@@ -4,23 +4,25 @@
 #include <assert.h>
 #include <panic.h>
 
-void __assert_fail (const char *__assertion, const char *__file,
-		    unsigned int __line, const char *__function)
+void __attribute__((weak)) 
+__assert_fail (const char *__assertion, const char *__file,
+	       unsigned int __line)
 {
-  printf("Assertion failed: %s:%i in function %s '%s'\n",__file,
-	 __line,__function,__assertion);
+  printf("\nAssertion failed: '%s'\n"
+         "  %s:%i at %08x\n",
+         __assertion, __file, __line, (unsigned)__builtin_return_address(0));
 
   exit(1);
 }
 
-void panic (const char *format, ...) {
-
+void __attribute__((weak))
+panic (const char *format, ...)
+{
   va_list args;
   
   va_start (args, format);
   vprintf  (format, args);
   va_end   (args);
-
 
   exit (EXIT_FAILURE);
 }

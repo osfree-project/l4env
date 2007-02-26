@@ -8,20 +8,27 @@ TARGET		= presenter
 DEFAULT_RELOC	= 0x01800000
 
 # list your .c files here
-SRC_C		= main.c slide.c presentation.c presenter.c presmanager.c 
+SRC_C		= main.c slide.c presentation.c presenter.c presmanager.c
 
-# if your server implements the server side of an idl defined in an idl-file
-# of your package, list the idl file name(s) here (no path needed)
-#SERVERIDL	= 
+DEBUG           = 0 
 
-DEBUG          = 1
+include $(L4DIR)/mk/Makeconf
 
-#list additional library paths and libraries here
-LIBS		= -lutil -lcontroller -lview -ll4dope -lvscreen -ldm_phys -ll4env -lgeneric_fprov $(GCCLIB)
+#BUILD_FPROV	= yes
+
+LIBS 		= -lpresenter_controller -lpresenter_view -ll4dope -lvscreen \
+		  -ll4png_wrap -ll4png -ll4z -ldm_phys
+
+ifeq ($(BUILD_FPROV),)
+LIBS 		+= -lpresenter_util_presprov
+else
+LIBS		+= -lpresenter_util_fprov -lgeneric_fprov
+endif
 
 PRIVATE_INCDIR  = $(PKGDIR)/server/include  
 
-PRIVATE_LIBDIR   = $(PKGDIR)/server/src/util/OBJ-$(SYSTEM) $(PKGDIR)/server/src/controller/OBJ-$(SYSTEM) \
+PRIVATE_LIBDIR   = $(PKGDIR)/server/src/util/OBJ-$(SYSTEM) \
+		   $(PKGDIR)/server/src/controller/OBJ-$(SYSTEM) \
 		   $(PKGDIR)/server/src/view/OBJ-$(SYSTEM)
 
 include $(L4DIR)/mk/prog.mk

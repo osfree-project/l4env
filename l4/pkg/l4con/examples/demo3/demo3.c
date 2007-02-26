@@ -15,9 +15,10 @@
 #include <l4/thread/thread.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/util.h>
+#include <l4/util/l4_macros.h>
 
-#include <l4/con/l4con.h>
-#include <l4/con/con-client.h>
+#include <l4/l4con/l4con.h>
+#include <l4/l4con/l4con-client.h>
 
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>
@@ -94,12 +95,7 @@ int draw_bird()
 {
   int ret = 0;
   char buffer[30];
-
   l4con_pslim_rect_t rect;
-  l4_strdope_t bmap;
-  l4_strdope_t bird_y;
-  l4_strdope_t bird_u;
-  l4_strdope_t bird_v;
   CORBA_Environment _env = dice_default_environment;
 
   /*** draw upper-right text ***/
@@ -107,11 +103,6 @@ int draw_bird()
   /* setup vfb area info */
   rect.x = xres-84; rect.y = 0;
   rect.w = 88; rect.h = 25;
-
-  /* setup L4 string dope */
-  bmap.snd_size = 275;
-  bmap.snd_str = (l4_umword_t) cscs_bmap;
-  bmap.rcv_size = 0;
 
   ret = con_vc_pslim_bmap_call(&vc_l4id,
 			  &rect,
@@ -130,19 +121,6 @@ int draw_bird()
   /* setup initial vfb area info */
   rect.x = (xres-128)/2; rect.y = (yres-128)/2;
   rect.w = 128; rect.h = 128;
-
-  /* setup L4 string dopes */
-  bird_y.snd_size = 128*128;
-  bird_y.snd_str = (l4_umword_t) my_yuv;
-  bird_y.rcv_size = 0;
-  
-  bird_u.snd_size = 128*128/4;
-  bird_u.snd_str = (l4_umword_t) my_yuv + 128*128;
-  bird_u.rcv_size = 0;
-
-  bird_v.snd_size = 128*128/4;
-  bird_v.snd_str = (l4_umword_t) my_yuv + 128*128 + 128*128/4;
-  bird_v.rcv_size = 0;
 
   ret = con_vc_pslim_cscs_call(&vc_l4id,
 			  &rect, 
@@ -170,12 +148,10 @@ int draw_bird()
  ******************************************************************************/
 int dismember_bird()
 {
-#define inter_copy_delay 50
+#define inter_copy_delay 20
   int ret = 0, i;
   char buffer[30];
-
   l4con_pslim_rect_t rect;
-  l4_strdope_t bmap;
   CORBA_Environment _env = dice_default_environment;
 
   /*** draw upper-right text ***/
@@ -183,11 +159,6 @@ int dismember_bird()
   /* setup vfb area info */
   rect.x = xres-84; rect.y = 0;
   rect.w = 88; rect.h = 25;
-
-  /* setup L4 string dope */
-  bmap.snd_size = 275;
-  bmap.snd_str = (l4_umword_t) copy_bmap;
-  bmap.rcv_size = 0;
 
   ret = con_vc_pslim_bmap_call(&vc_l4id,
 			  &rect, black, lightsteelblue,
@@ -269,15 +240,15 @@ int dismember_bird()
 int main(int argc, char *argv[])
 {
   int error = 0;
+  int i;
   l4_threadid_t dummy_l4id = L4_NIL_ID;
 
   CORBA_Environment _env = dice_default_environment;
   
   do_args(argc, argv);
-  LOG_init(PROGTAG);
   my_l4id = l4thread_l4_id( l4thread_myself() );
 
-  printf("Howdy, I'm %x.%02x\n", my_l4id.id.task, my_l4id.id.lthread);
+  printf("Howdy, I'm "l4util_idfmt"\n", l4util_idstr(my_l4id));
 
   /* ask for 'con' (timeout = 5000 ms) */
   if (names_waitfor_name(CON_NAMES_STR, &con_l4id, 5000) == 0) 
@@ -303,24 +274,17 @@ int main(int argc, char *argv[])
 			 &fn_x, &fn_y, &_env))
     enter_kdebug("Ouch, graph_gmode failed");
 
-  while (!error) 
+  for (i=0; i<1 && !error; i++)
     {
       if ((error = clear_screen()))
 	enter_kdebug("Ouch, clear_screen failed");
       if ((error = draw_bird()))
 	enter_kdebug("Ouch, draw_bird failed");
-      l4_sleep(2000);
+      l4_sleep(200);
       if ((error = dismember_bird()))
 	enter_kdebug("Ouch, dismemeber_bird failed");
-      l4_sleep(2000);
+      l4_sleep(200);
     }
-  
-  if (con_vc_close_call(&vc_l4id, &_env))
-    enter_kdebug("Ouch, close vc failed?!");
-  printf("closed vc\n");
-  
-  printf("Going to bed ...\n");
-  l4_sleep(-1);
 
   return 0;
 }

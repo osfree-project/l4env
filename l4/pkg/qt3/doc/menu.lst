@@ -1,0 +1,69 @@
+#
+# sample menu.lst for running Qt applications in DROPS
+# 
+# based on Adam's menu.lst from the DROPS demo disk
+#
+#
+# This menu.lst file gives some hints on how to run Qt applications
+# in the DROPS environment. Adapt the paths/devices below as needed.
+#
+
+default 1
+
+color 23 52
+
+set P              := (hd0,2)/v2
+set QT             := (hd0,2)/qt3
+
+set GRUB_COMPORT   ?= 0
+set FIASCO_COMPORT ?= 1
+
+set SERIAL         ?= -noserial
+set WAIT           ?= -nowait
+set FIASCOARGS     ?= "$(SERIAL) $(WAIT) -nokdb"
+
+set VBE_MODE       = 0x114
+
+title ################## Qt/Embedded for DROPS #####################
+echo
+
+title Qt3 client/server test
+kernel $(P)/rmgr -sigma0 task modname "simple_file_server" module modname "fontdir" module modname "helvetica_100_50.qpf"
+module $(P)/main $(FIASCOARGS)
+modaddr 0x03000000
+module $(P)/sigma0
+module $(P)/names
+module $(P)/log --prio 0xA1 --buffer 0
+module $(P)/dm_phys -v
+module $(P)/rtc
+module $(P)/con
+module $(P)/name_server
+module $(P)/local_socks
+module $(P)/simple_file_server -v14
+module $(QT)/fontdir
+module $(QT)/helvetica_100_50.qpf
+module $(P)/fstab -c/qt3 -c/qt3/lib -c/qt3/lib/fonts -v14 -b/ -m/qt3/lib/fonts
+module $(P)/qttest_server -qws -display DROPS:0
+module $(P)/qttest_client -display DROPS:0
+vbeset $(VBE_MODE)
+
+title Qt3 text editor
+kernel $(P)/rmgr -sigma0 task modname "simple_file_server" module modname "fontdir" module modname "helvetica_100_50.qpf"
+module $(P)/main $(FIASCOARGS)
+modaddr 0x03000000
+module $(P)/sigma0
+module $(P)/names
+module $(P)/log --prio 0xA1 --buffer 0
+module $(P)/dm_phys -v
+module $(P)/rtc
+module $(P)/con
+module $(P)/name_server
+module $(P)/local_socks
+module $(P)/simple_file_server -v14
+module $(QT)/fontdir
+module $(QT)/helvetica_100_50.qpf
+module $(P)/fstab -c/qt3 -c/qt3/lib -c/qt3/lib/fonts -v14 -b/ -m/qt3/lib/fonts
+module $(P)/qttest_application -qws -display DROPS:0
+vbeset $(VBE_MODE)
+
+

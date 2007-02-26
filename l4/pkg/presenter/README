@@ -1,9 +1,58 @@
-L4 Slide Presenter.
+L4 Presenter
+============
 
-This package will contain a complete DRM-scenario for L4. The core
-application of this scenario is a slide presenter which is
-included at an early state. It can be tested with
-presenter_test in the example directory.
+This package contains the "Presenter". It is an image-slideshow program
+intended for showing slides at presentations. It uses a file provider running
+on L4Linux to load image data. The supported image format is PNG. The Presenter
+can handle images of different sizes (and scales them when needed),
+shows previews of the images and provides a fullscreen mode.
+It is a DOpE client application.
 
-Current main focus is the connection to DOpE, that means
-to the controller and view. 
+You will need a special configuration file for each presentation.
+Here for example "test.pres":
+
+-------------------------------------------------------------------------------
+
+/[path to presentation]/
+alice.png
+bob.png
+alice.png
+escape.png
+checkpoint.png
+
+-------------------------------------------------------------------------------
+
+The first line contains the path to the directory that contains all image
+files. Then you have to write the name of each image. The order of the image
+names implicates the presentation sequence. The topmost image (here alice.png)
+will be presented at first.
+
+To start the Presenter you need several L4 servers, here is an example
+"menu.lst" entry:
+
+-------------------------------------------------------------------------------
+
+title [ * ] Presenter + L4Linux 2.2
+kernel [your path]/rmgr -sigma0 task modname "dm_phys" boot_priority 0xb0     \
+task modname "l4dope" boot_priority 0xb0 task modname "log" task modname      \
+"presenter" task modname "glinux" irq mask 0xeffd module
+modaddr 0x02000000
+module [your path]/fiasco -nowait -nokdb -tbuf_entries=32768 -serial_esc
+module [your path]/sigma0
+module [your path]/names
+module [your path]/log
+module [your path]/dm_phys --mem=0x04000000,0x01000000,0xffffffff
+module [your path]/l4dope
+module [your path]/presenter
+module [your path]/glinux mem=128M load_ramdisk=1 ramdisk_size=32768          \
+root=/dev/ram [uconfig=/home/...] no-scroll
+module [your path]/drops_os.rd
+vbeset 0x117
+
+-------------------------------------------------------------------------------
+
+The Presenter needs a special file provider running on your L4Linux. You can
+find its source code in server/src/fprov.
+
+To tell the Presenter the path of your configuration file (e.g. "test.pres")
+you can use examples/presentation_loader.

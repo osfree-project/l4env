@@ -1,0 +1,28 @@
+/* -*- c -*- */ 
+import <l4/sys/types.h>
+import <l4/dm_generic/types.h>
+import <l4/rt_mon/rt_mon_reg.idl>
+
+#include <l4/rt_mon/defines.h>
+#include <l4/rt_mon/types.h>
+
+library rt_mon
+{
+    [uuid(2001)]
+    interface coord : reg
+    {
+        /* Request access to one ds to monitor it.
+         */
+        int  request_ds([in] int id,
+                        [out] l4dm_dataspace_t * ds);
+
+        /* Release access to one ds.
+         */
+        int  release_ds([in] int id);
+
+        /* Enumerate all dataspaces available.
+         */
+        void list_ds([out, size_is(count), prealloc] rt_mon_dss * dss[],
+                     [in, out] int * count);
+    };
+};

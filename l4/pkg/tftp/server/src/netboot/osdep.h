@@ -1,17 +1,14 @@
-#ifndef __OSDEP_H__
-#define __OSDEP_H__
+#ifndef	_OSDEP_H
+#define _OSDEP_H
 
-# define ETHERBOOT32
-# include "byteorder.h"
-# include "io.h"
-
-typedef	unsigned long Address;
+#define __unused __attribute__((unused))
+#define __aligned __attribute__((aligned(16)))
 
 /* ANSI prototyping macro */
 #ifdef	__STDC__
-#define	P(x)	x
+#  define	P(x)	x
 #else
-#define	P(x)	()
+#  define	P(x)	()
 #endif
 
 #endif

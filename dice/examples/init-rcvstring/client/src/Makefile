@@ -1,8 +1,8 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../../../..
 
-TARGET		 = $(PKGNAME)_client
-DEFAULT_RELOC	 = 0x01a00000
+TARGET		 = $(PKGNAME)-client
+DEFAULT_RELOC	 = 0x01c00000
 
 SRC_C		 = client.c
 

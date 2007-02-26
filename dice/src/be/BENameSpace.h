@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BENameSpace.h
- *	\brief	contains the declaration of the class CBENameSpace
+ *    \file    dice/src/be/BENameSpace.h
+ *    \brief   contains the declaration of the class CBENameSpace
  *
- *	\date	Tue Jun 25 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    Tue Jun 25 2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,8 +32,9 @@
 #define BENAMESPACE_H
 
 #include <be/BEObject.h>
+#include <vector>
+using namespace std;
 
-#include "Vector.h"
 
 class CBEAttribute;
 class CBEConstant;
@@ -58,63 +60,61 @@ class CFEConstructedType;
  */
 class CBENameSpace : public CBEObject
 {
-DECLARE_DYNAMIC(CBENameSpace);
 public:
     /** creates an instance of the namespace class */
-	CBENameSpace();
-	~CBENameSpace();
+    CBENameSpace();
+    ~CBENameSpace();
 
 public: // Public methods
     virtual bool CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext);
     virtual bool AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext);
     virtual bool AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext);
-    virtual String GetName();
+    virtual string GetName();
 
-    virtual CBEConstant* GetNextConstant(VectorElement *&pIter);
-    virtual VectorElement* GetFirstConstant();
+    virtual CBEConstant* GetNextConstant(vector<CBEConstant*>::iterator &iter);
+    virtual vector<CBEConstant*>::iterator GetFirstConstant();
     virtual void RemoveConstant(CBEConstant *pConstant);
     virtual void AddConstant(CBEConstant *pConstant);
-	virtual CBEConstant* FindConstant(String sConstantName);
+    virtual CBEConstant* FindConstant(string sConstantName);
 
-    virtual CBETypedef* GetNextTypedef(VectorElement *&pIter);
-    virtual VectorElement* GetFirstTypedef();
+    virtual CBETypedef* GetNextTypedef(vector<CBETypedef*>::iterator &iter);
+    virtual vector<CBETypedef*>::iterator GetFirstTypedef();
     virtual void RemoveTypedef(CBETypedef *pTypedef);
     virtual void AddTypedef(CBETypedef *pTypedef);
 
     virtual void AddAttribute(CBEAttribute *pAttribute);
-    virtual CBEAttribute* GetNextAttribute(VectorElement *&pIter);
-    virtual VectorElement* GetFirstAttribute();
+    virtual CBEAttribute* GetNextAttribute(vector<CBEAttribute*>::iterator &iter);
+    virtual vector<CBEAttribute*>::iterator GetFirstAttribute();
     virtual void RemoveAttribute(CBEAttribute *pAttribute);
 
-    virtual CBEClass* GetNextClass(VectorElement* &pIter);
-    virtual VectorElement* GetFirstClass();
+    virtual CBEClass* GetNextClass(vector<CBEClass*>::iterator &iter);
+    virtual vector<CBEClass*>::iterator GetFirstClass();
     virtual void RemoveClass(CBEClass *pClass);
     virtual void AddClass(CBEClass *pClass);
-    virtual CBEClass* FindClass(String sClassName);
+    virtual CBEClass* FindClass(string sClassName);
 
-    virtual CBENameSpace* GetNextNameSpace(VectorElement* &pIter);
-    virtual VectorElement* GetFirstNameSpace();
+    virtual CBENameSpace* GetNextNameSpace(vector<CBENameSpace*>::iterator &iter);
+    virtual vector<CBENameSpace*>::iterator GetFirstNameSpace();
     virtual void RemoveNameSpace(CBENameSpace *pNameSpace);
     virtual void AddNameSpace(CBENameSpace* pNameSpace);
-    virtual CBENameSpace* FindNameSpace(String sNameSpaceName);
+    virtual CBENameSpace* FindNameSpace(string sNameSpaceName);
 
     virtual bool AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual int Optimize(int nLevel, CBEContext *pContext);
 
     virtual void Write(CBEImplementationFile *pFile, CBEContext *pContext);
     virtual void Write(CBEHeaderFile *pFile, CBEContext *pContext);
 
-    virtual CBEFunction* FindFunction(String sFunctionName);
-    virtual CBETypedef* FindTypedef(String sTypeName);
+    virtual CBEFunction* FindFunction(string sFunctionName);
+    virtual CBETypedef* FindTypedef(string sTypeName);
     virtual bool IsTargetFile(CBEImplementationFile * pFile);
     virtual bool IsTargetFile(CBEHeaderFile * pFile);
 
-    virtual CBEType* FindTaggedType(int nType, String sTag);
-    virtual CBEType* GetNextTaggedType(VectorElement* &pIter);
-    virtual VectorElement* GetFirstTaggedType();
+    virtual CBEType* FindTaggedType(int nType, string sTag);
+    virtual CBEType* GetNextTaggedType(vector<CBEType*>::iterator &iter);
+    virtual vector<CBEType*>::iterator GetFirstTaggedType();
     virtual void RemoveTaggedType(CBEType *pType);
     virtual void AddTaggedType(CBEType *pType);
-    virtual bool HasFunctionWithUserType(String sTypeName, CBEFile *pFile, CBEContext *pContext);
+    virtual bool HasFunctionWithUserType(string sTypeName, CBEFile *pFile, CBEContext *pContext);
 
 protected: // Protected methods
     virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
@@ -123,43 +123,50 @@ protected: // Protected methods
     virtual bool CreateBackEnd(CFEConstructedType *pFEType, CBEContext *pContext);
     virtual bool CreateBackEnd(CFEAttribute *pFEAttribute, CBEContext *pContext);
 
-    virtual void WriteConstants(CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void WriteNameSpaces(CBEImplementationFile *pFile, CBEContext *pContext);
-    virtual void WriteNameSpaces(CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void WriteClasses(CBEImplementationFile *pFile, CBEContext *pContext);
-    virtual void WriteClasses(CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void WriteTypedefs(CBEHeaderFile *pFile, CBEContext *pContext);
-    virtual void WriteTaggedTypes(CBEHeaderFile *pFile, CBEContext *pContext);
+    virtual void WriteConstant(CBEConstant *pConstant, CBEHeaderFile *pFile, CBEContext *pContext);
+    virtual void WriteNameSpace(CBENameSpace *pNameSpace, CBEImplementationFile *pFile, CBEContext *pContext);
+    virtual void WriteNameSpace(CBENameSpace *pNameSpace, CBEHeaderFile *pFile, CBEContext *pContext);
+    virtual void WriteClass(CBEClass *pClass, CBEImplementationFile *pFile, CBEContext *pContext);
+    virtual void WriteClass(CBEClass *pClass, CBEHeaderFile *pFile, CBEContext *pContext);
+    virtual void WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile *pFile, CBEContext *pContext);
+    virtual void WriteTaggedType(CBEType *pType, CBEHeaderFile *pFile, CBEContext *pContext);
+
+    virtual void CreateOrderedElementList(void);
+    void InsertOrderedElement(CObject *pObj);
 
 protected: // Protected attributes
-    /** \var Vector m_vClasses
+    /** \var vector<CBEClass*> m_vClasses
      *  \brief contains the classes of this namespace
      */
-    Vector m_vClasses;
-    /** \var Vector m_vNestedNamespaces
+    vector<CBEClass*> m_vClasses;
+    /** \var vector<CBENameSpace*> m_vNestedNamespaces
      *  \brief contains the nested namespaces
      */
-    Vector m_vNestedNamespaces;
-    /** \var Vector m_vConstants
+    vector<CBENameSpace*> m_vNestedNamespaces;
+    /** \var vector<CBEConstant*> m_vConstants
      *  \brief contains the constants of this library
      */
-    Vector m_vConstants;
-    /** \var Vector m_vTypedefs
+    vector<CBEConstant*> m_vConstants;
+    /** \var vector<CBETypedef*> m_vTypedefs
      *  \brief contains the typedefs of this library
      */
-    Vector m_vTypedefs;
-    /** \var Vector m_vTypeDeclarations
+    vector<CBETypedef*> m_vTypedefs;
+    /** \var vector<CBEType*> m_vTypeDeclarations
      *  \brief contains the type declarations
      */
-    Vector m_vTypeDeclarations;
-    /** \var Vector m_vAttributes
+    vector<CBEType*> m_vTypeDeclarations;
+    /** \var vector<CBEAttribute*> m_vAttributes
      *  \brief contains the attributes of this library
      */
-    Vector m_vAttributes;
-    /** \var String m_sName
+    vector<CBEAttribute*> m_vAttributes;
+    /** \var string m_sName
      *  \brief the name of the library
      */
-    String m_sName;
+    string m_sName;
+    /** \var vector<CObject*> m_vOrderedElements
+     *  \brief contains ordered list of elements
+     */
+    vector<CObject*> m_vOrderedElements;
 };
 
 #endif

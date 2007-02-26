@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -19,19 +19,17 @@ struct variable;
 #include "dopestd.h"
 #include "gfx.h"
 #include "widget_data.h"
-#include "event.h"
-#include "widget.h"
+#include "widget_help.h"
 #include "variable.h"
 #include "fontman.h"
 #include "script.h"
 #include "widman.h"
+#include "list_macros.h"
 
 static struct widman_services  *widman;
 static struct gfx_services     *gfx;
 static struct fontman_services *font;
 static struct script_services  *script;
-
-#define VAR_UPDATE_VALUE 0x01
 
 #define VARIABLE_ALIGN_LEFT   0x01
 #define VARIABLE_ALIGN_RIGHT  0x02
@@ -46,7 +44,6 @@ struct variable_connection {
 };
 
 struct variable_data {
-	long   update_flags;
 	char  *text;
 	s16    font_id;
 	s16    flags;
@@ -55,98 +52,70 @@ struct variable_data {
 
 int init_variable(struct dope_services *d);
 
-#define BLACK_SOLID GFX_RGBA(0,0,0,255)
-
-/**********************************/
-/*** FUNCTIONS FOR INTERNAL USE ***/
-/**********************************/
-
-static s32 strlength(u8 *s) {
-	s32 result=0;
-	while (*(s++)) result++;
-	return result;
-}
-
-static u8 *strdup(u8 *s) {
-	u8 *d;
-	u8 *result;
-	s32 strl;
-	if (!s) return NULL;
-	strl = strlength(s);
-	if (strl>=0) {
-		result = malloc(strl+2);
-		if (!result) return NULL;
-		d=result;
-		while (*s) *(d++)=*(s++);
-		*d=0;
-		return result;
-	}
-	return NULL;
-}
+#define BLACK_SOLID GFX_RGBA(0, 0, 0, 255)
 
 
-/******************************/
-/*** GENERAL WIDGET METHODS ***/
-/******************************/
+/******************************
+ *** GENERAL WIDGET METHODS ***
+ ******************************/
 
-static void var_draw(VARIABLE *v,struct gfx_ds *ds,long x,long y) {
+static int var_draw(VARIABLE *v, struct gfx_ds *ds, long x, long y, WIDGET *origin) {
 	int tx = x + v->wd->x + 2;
 	int ty = y + v->wd->y + 2;
 
-//  gfx->push_clipping(ds,x+2,y+2,l->wd->w-4,l->wd->h-4);
+	if (origin == v) return 1;
+	if (origin) return 0;
+
 	if (v->vd->text) {
-		gfx->draw_string(ds,tx,ty,BLACK_SOLID,0,v->vd->font_id,v->vd->text);
+		gfx->draw_string(ds, tx, ty, BLACK_SOLID, 0, v->vd->font_id, v->vd->text);
 	} else {
-		gfx->draw_string(ds,tx,ty,BLACK_SOLID,0,v->vd->font_id,"<no value>");
+		gfx->draw_string(ds, tx, ty, BLACK_SOLID, 0, v->vd->font_id, "<no value>");
 	}
-//  gfx->pop_clipping(ds);
-}
-
-static void (*orig_update) (VARIABLE *v,u16 redraw_flag);
-
-static void var_update(VARIABLE *v,u16 redraw_flag) {
-	s16 newlayout_needed = 0;
-	s16 redraw_done = 0;
-	WIDGET *parent;
-
-	if ((!v) || (!v->vd)) return;
-	if (v->vd->update_flags & VAR_UPDATE_VALUE) {
-		v->wd->update |= WID_UPDATE_SIZE;
-	}
-	if (v->wd->update & (WID_UPDATE_POS|WID_UPDATE_SIZE)) {
-		char *txt = "<no_value>";
-		if (v->vd->text) txt = v->vd->text;
-
-		v->wd->min_w = v->wd->max_w = font->calc_str_width (v->vd->font_id,txt) + 4;
-		v->wd->min_h = v->wd->max_h = font->calc_str_height(v->vd->font_id,txt) + 4;
-		newlayout_needed = 1;
-	}
-
-	orig_update(v,0);
-	v->vd->update_flags=0;
-
-	if (newlayout_needed) {
-		parent = v->gen->get_parent(v);
-		if (parent) {
-			if (parent->gen->do_layout(parent,v,1) == 0) redraw_done = 1;
-		}
-	}
-	if (redraw_flag && !redraw_done) v->gen->force_redraw(v);
+	return 1;
 }
 
 
+/*** DETERMINE MIN/MAX SIZE OF A VARIABLE WIDGET ***/
+static void var_calc_minmax(VARIABLE *v) {
+	char *txt = "<no_value>";
+	if (v->vd->text) txt = v->vd->text;
+	
+	v->wd->min_w = v->wd->max_w = font->calc_str_width (v->vd->font_id, txt) + 4;
+	v->wd->min_h = v->wd->max_h = font->calc_str_height(v->vd->font_id, txt) + 4;
+}
 
-/*******************************/
-/*** VARIABLE SPECIFIC METHODS ***/
-/*******************************/
 
-static void var_set_value(VARIABLE *v,char *new_txt) {
+/*** FREE VARIABLE CONNECTION STRUCT ***
+ *
+ * This function is only called by var_free_data.
+ */
+static void free_var_connection(struct variable_connection *c) {
+	if (c && c->widget) c->widget->gen->dec_ref(c->widget);
+}
+
+
+/*** FREE VARIABLE WIDGET DATA ***/
+static void var_free_data(VARIABLE *v) {
+	FREE_CONNECTED_LIST(struct variable_connection, v->vd->connections, free_var_connection);
+	if (v->vd->text) free(v->vd->text);
+}
+
+
+/*** RETURN WIDGET TYPE IDENTIFIER ***/
+static char *var_get_type(VARIABLE *v) {
+	return "Variable";
+}
+
+
+/*******************************
+ *** VARIABLE SPECIFIC METHODS ***
+ *******************************/
+
+static void var_set_value(VARIABLE *v, char *new_txt) {
 	struct variable_connection *cc;
 
-	if ((!v) || (!v->vd)) return;
 	if (v->vd->text) free(v->vd->text);
-	v->vd->text = strdup(new_txt);
-	v->vd->update_flags = v->vd->update_flags | VAR_UPDATE_VALUE;
+	v->vd->text = dope_strdup(new_txt);
 
 	/* notify all connected widgets */
 	cc = v->vd->connections;
@@ -154,11 +123,12 @@ static void var_set_value(VARIABLE *v,char *new_txt) {
 		cc->notify(cc->widget, v);
 		cc = cc->next;
 	}
+	v->wd->update |= WID_UPDATE_MINMAX;
 }
 
 
 static char *var_get_value(VARIABLE *v) {
-	if ((!v) || (!v->vd) || (!v->vd->text)) return "<undefined>";
+	if (!v->vd->text) return "<undefined>";
 	return v->vd->text;
 }
 
@@ -166,19 +136,21 @@ static char *var_get_value(VARIABLE *v) {
 static void var_connect(VARIABLE *v, WIDGET *w, void (*notify)(WIDGET *w, VARIABLE *v)) {
 	struct variable_connection *new;
 
-	if (!w || !v || !notify) return;
+	if (!w || !notify) return;
 
-	new = (struct variable_connection *)malloc(sizeof(struct variable_connection));
+	w->gen->inc_ref(w);
+
+	new = (struct variable_connection *)zalloc(sizeof(struct variable_connection));
 	new->widget = w;
 	new->notify = notify;
 	new->next = v->vd->connections;
 	v->vd->connections = new;
-	w->gen->inc_ref(w);
 }
+
 
 static void var_disconnect(VARIABLE *v, WIDGET *w) {
-
 }
+
 
 static struct widget_methods gen_methods;
 static struct variable_methods var_methods = {
@@ -190,42 +162,26 @@ static struct variable_methods var_methods = {
 
 
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 static VARIABLE *create(void) {
 
-	/* allocate memory for new widget */
-	VARIABLE *new = (VARIABLE *)malloc(sizeof(struct variable)
-	                                 + sizeof(struct widget_data)
-	                                 + sizeof(struct variable_data));
-	if (!new) {
-		INFO(printf("Variable(create): out of memory\n"));
-		return NULL;
-	}
-	new->gen = &gen_methods;    /* pointer to general widget methods */
-	new->var = &var_methods;    /* pointer to variable specific methods */
-	new->wd = (struct widget_data *)  ((long)new + sizeof(struct variable));
-	new->vd = (struct variable_data *)((long)new->wd + sizeof(struct widget_data));
-
-	/* set general widget attributes */
-	widman->default_widget_data(new->wd);
+	VARIABLE *new = ALLOC_WIDGET(struct variable);
+	SET_WIDGET_DEFAULTS(new, struct variable, &var_methods);
 
 	/* set variable specific attributes */
-	new->vd->text  = NULL;
-	new->vd->flags = 0;
 	new->vd->font_id = 1;
-	new->vd->connections = NULL;
-
+	var_calc_minmax(new);
 	return new;
 }
 
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct variable_services services = {
 	create
@@ -233,18 +189,16 @@ static struct variable_services services = {
 
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 static void build_script_lang(void) {
 	void *widtype;
 
-	widtype = script->reg_widget_type("Variable",(void *(*)(void))create);
-
-	script->reg_widget_attrib(widtype,"string value",var_get_value,var_set_value,gen_methods.update);
-
-	widman->build_script_lang(widtype,&gen_methods);
+	widtype = script->reg_widget_type("Variable", (void *(*)(void))create);
+	script->reg_widget_attrib(widtype, "string value", var_get_value, var_set_value, gen_methods.update);
+	widman->build_script_lang(widtype, &gen_methods);
 }
 
 
@@ -257,13 +211,13 @@ int init_variable(struct dope_services *d) {
 	/* define general widget functions */
 	widman->default_widget_methods(&gen_methods);
 
-	orig_update=gen_methods.update;
-
-	gen_methods.draw=var_draw;
-	gen_methods.update=var_update;
+	gen_methods.get_type    = var_get_type;
+	gen_methods.draw        = var_draw;
+	gen_methods.calc_minmax = var_calc_minmax;
+	gen_methods.free_data   = var_free_data;
 
 	build_script_lang();
 
-	d->register_module("Variable 1.0",&services);
+	d->register_module("Variable 1.0", &services);
 	return 1;
 }

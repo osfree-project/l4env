@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/BESocket.cpp
- *	\brief	contains the declaration of the class CBESocket
+ *    \file    dice/src/be/sock/BESocket.cpp
+ *    \brief   contains the declaration of the class CBESocket
  *
- *	\date	08/18/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    08/18/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,39 +34,16 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
 
-IMPLEMENT_DYNAMIC(CBESocket);
+#include "TypeSpec-Type.h"
 
 CBESocket::CBESocket()
  : CBECommunication()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBESocket, CBECommunication);
 }
 
 /** destroys the socket object */
 CBESocket::~CBESocket()
 {
-}
-
-/** \brief creates the socket before communication
- *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param bUseEnv true if environment variable contains socket descriptor
- *  \param pContext the context of the write operation
- */
-void CBESocket::CreateSocket(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext)
-{
-    pFile->PrintIndent("");
-	WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
-	pFile->Print(" = socket(PF_INET, SOCK_DGRAM, 0);\n");
-    pFile->PrintIndent("if (");
-	WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
-	pFile->Print(" < 0)\n");
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
-    pFile->PrintIndent("perror(\"socket creation\");\n");
-    pFunction->WriteReturn(pFile, pContext);
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
 }
 
 /** \brief writes the sending of the message
@@ -78,36 +56,36 @@ void CBESocket::CreateSocket(CBEFile* pFile, CBEFunction* pFunction, bool bUseEn
  */
 void CBESocket::WriteSendTo(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, int nDirection, const char* sFunc, CBEContext* pContext)
 {
-	String sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+    string sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
+    string sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    string sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
 
-	CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
-	int nSize = pMsgBuffer->GetFixedCount(nDirection);
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    int nSize = pMsgBuffer->GetCount(TYPE_FIXED, nDirection);
 
-	pFile->PrintIndent("dice_ret_size = sendto(");
-	WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
-	pFile->Print(", %s, ", (const char*)sMsgBuffer);
+    pFile->PrintIndent("dice_ret_size = sendto(");
+    WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
+    pFile->Print(", %s, ", sMsgBuffer.c_str());
 
-	if (pMsgBuffer->IsVariableSized(nDirection))
-        pFile->Print("%s", (const char*)sOffset);
+    if (pMsgBuffer->IsVariableSized(nDirection))
+        pFile->Print("%s", sOffset.c_str());
     else
         pFile->Print("%d", nSize);
 
 /*    if (pMsgBuffer->IsVariableSized())
-        pFile->Print("%s", (const char*)sOffset);
+        pFile->Print("%s", sOffset.c_str());
     else
-	    // we cannot use type->cast because this prints a cast to a simple character
-        pFile->Print("sizeof(%s)", (const char*)sMsgBuffer);
+        // we cannot use type->cast because this prints a cast to a simple character
+        pFile->Print("sizeof(%s)", sMsgBuffer.c_str());
  */
-    pFile->Print(", 0, (struct sockaddr*)%s, dice_fromlen);\n", (const char*)sCorbaObj);
+    pFile->Print(", 0, (struct sockaddr*)%s, dice_fromlen);\n", sCorbaObj.c_str());
 
-	pFile->PrintIndent("if (dice_ret_size < ");
-	if (pMsgBuffer->IsVariableSized(nDirection))
-        pFile->Print("%s", (const char*)sOffset);
+    pFile->PrintIndent("if (dice_ret_size < ");
+    if (pMsgBuffer->IsVariableSized(nDirection))
+        pFile->Print("%s", sOffset.c_str());
     else
         pFile->Print("%d", nSize);
-	pFile->Print(")\n");
+    pFile->Print(")\n");
     pFile->PrintIndent("{\n");
     pFile->IncIndent();
     pFile->PrintIndent("perror(\"%s\");\n", sFunc);
@@ -126,26 +104,26 @@ void CBESocket::WriteSendTo(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv
  */
 void CBESocket::WriteReceiveFrom(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, bool bUseMaxSize, const char* sFunc, CBEContext* pContext)
 {
-	String sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-	CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    string sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
+    string sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    string sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
 
-	pFile->PrintIndent("dice_ret_size = recvfrom(");
-	WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
-	pFile->Print(", %s, ", (const char*)sMsgBuffer);
+    pFile->PrintIndent("dice_ret_size = recvfrom(");
+    WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
+    pFile->Print(", %s, ", sMsgBuffer.c_str());
     if (pMsgBuffer->IsVariableSized() && !bUseMaxSize)
-        pFile->Print("%s", (const char*)sOffset);
+        pFile->Print("%s", sOffset.c_str());
     else
-	{
-	    // we cannot use type->cast because this prints a cast to a simple character
+    {
+        // we cannot use type->cast because this prints a cast to a simple character
         pFile->Print("sizeof");
-		if (bUseMaxSize)
-			pMsgBuffer->GetType()->WriteCast(pFile, false, pContext);
-		else
-		    pFile->Print("(%s)", (const char*)sMsgBuffer);
-	}
-    pFile->Print(", 0, (struct sockaddr*)%s, &dice_fromlen);\n", (const char*)sCorbaObj);
+        if (bUseMaxSize)
+            pMsgBuffer->GetType()->WriteCast(pFile, false, pContext);
+        else
+            pFile->Print("(%s)", sMsgBuffer.c_str());
+    }
+    pFile->Print(", 0, (struct sockaddr*)%s, &dice_fromlen);\n", sCorbaObj.c_str());
     pFile->PrintIndent("if (dice_ret_size < 0)\n");
     pFile->PrintIndent("{\n");
     pFile->IncIndent();
@@ -153,19 +131,6 @@ void CBESocket::WriteReceiveFrom(CBEFile* pFile, CBEFunction* pFunction, bool bU
     pFunction->WriteReturn(pFile, pContext);
     pFile->DecIndent();
     pFile->PrintIndent("}\n");
-}
-
-/** \brief writes the code to close the socket
- *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param bUseEnv true if environment contains socket descriptor
- *  \param pContext the context of teh write operation
- */
-void CBESocket::CloseSocket(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext)
-{
-    pFile->PrintIndent("close(");
-	WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
-	pFile->Print(");\n");
 }
 
 /** \brief prints the socket descriptor to the target file
@@ -178,101 +143,61 @@ void CBESocket::WriteSocketDescriptor(CBEFile* pFile, CBEFunction* pFunction, bo
 {
     CBEDeclarator *pEnvDecl = 0;
     if (bUseEnv)
-	{
-	    CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
-		if (pEnv)
-		{
-			VectorElement *pIter = pEnv->GetFirstDeclarator();
-			pEnvDecl = pEnv->GetNextDeclarator(pIter);
-		}
-	}
-	if (pEnvDecl)
-	{
-		if (pEnvDecl->GetStars())
-			pFile->Print("%s->cur_socket", (const char*)pEnvDecl->GetName());
-		else
-			pFile->Print("%s.cur_socket", (const char*)pEnvDecl->GetName());
-	}
-	else
-		pFile->Print("sd");
-}
-
-/** \brief binds the socket to an address
- *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param bUseEnv true if environment contains socket descriptor
- *  \param pContext the context of the write operation
- */
-void CBESocket::BindSocket(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext)
-{
-	String sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-
-	pFile->PrintIndent("if (bind(");
-	WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
-    pFile->Print(", (struct sockaddr*)%s, sizeof(struct sockaddr)) < 0)\n",
-            (const char*)sCorbaObj);
-    pFile->PrintIndent("{\n");
-    pFile->IncIndent();
-    pFile->PrintIndent("perror(\"bind\");\n");
-    pFunction->WriteReturn(pFile, pContext);
-    pFile->DecIndent();
-    pFile->PrintIndent("}\n");
+    {
+        CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
+        if (pEnv)
+        {
+            vector<CBEDeclarator*>::iterator iterE = pEnv->GetFirstDeclarator();
+            pEnvDecl = *iterE;
+        }
+    }
+    if (pEnvDecl)
+    {
+        if (pEnvDecl->GetStars())
+            pFile->Print("%s->cur_socket", pEnvDecl->GetName().c_str());
+        else
+            pFile->Print("%s.cur_socket", pEnvDecl->GetName().c_str());
+    }
+    else
+        pFile->Print("sd");
 }
 
 /** \brief writes the call implementation of the socket layer
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- *  \param bUseEnv true if socket descriptor if part of the environment
  *  \param pContext the context of the write operation
  */
-void CBESocket::WriteCall(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext)
+void CBESocket::WriteCall(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext)
 {
     // send message
-	WriteSendTo(pFile, pFunction, bUseEnv, 0/* both directions*/, "call", pContext);
+    WriteSendTo(pFile, pFunction, false, 0/* both directions*/, "call", pContext);
     // offset might have been overwritten, so it has to be reinitialized
-	CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
     if (pMsgBuffer->IsVariableSized())
         pMsgBuffer->WriteInitialization(pFile, pContext);
-	// zero msgbuffer
-	WriteZeroMsgBuffer(pFile, pFunction, pContext);
+    // zero msgbuffer
+    WriteZeroMsgBuffer(pFile, pFunction, pContext);
     // receive response
-	WriteReceiveFrom(pFile, pFunction, bUseEnv, false, "call", pContext);
-}
-
-/** \brief writes the reply-and-recv implementation of the socket layer
- *  \param pFile the file to write to
- *  \param pFunction the function to write for
- *  \param bUseEnv true if socket descriptor if part of the environment
- *  \param pContext the context of the write operation
- */
-void CBESocket::WriteReplyAndRecv(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext)
-{
-    // send message
-	WriteSendTo(pFile, pFunction, bUseEnv, pFunction->GetSendDirection(), "reply-recv", pContext);
-	// zero msgbuffer
-	WriteZeroMsgBuffer(pFile, pFunction, pContext);
-    // receive response
-	WriteReceiveFrom(pFile, pFunction, bUseEnv, true, "reply-recv", pContext);
+    WriteReceiveFrom(pFile, pFunction, false, false, "call", pContext);
 }
 
 /** \brief writes the reply-and-wait implementation of the socket layer
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- *  \param bUseEnv true if socket descriptor if part of the environment
  *  \param pContext the context of the write operation
  */
-void CBESocket::WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext)
+void CBESocket::WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext)
 {
     // send message
-    WriteSendTo(pFile, pFunction, bUseEnv, pFunction->GetSendDirection(), "reply-wait", pContext);
+    WriteSendTo(pFile, pFunction, true, pFunction->GetSendDirection(), "reply-wait", pContext);
     // reset msg buffer to zeros
-	WriteZeroMsgBuffer(pFile, pFunction, pContext);
+    WriteZeroMsgBuffer(pFile, pFunction, pContext);
     // want to receive from any client again
-	String sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
+    string sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
     pFile->PrintIndent("%s->sin_addr.s_addr = INADDR_ANY;\n",
-        (const char*)sCorbaObj);
+        sCorbaObj.c_str());
     // wait for new request
-	WriteReceiveFrom(pFile, pFunction, bUseEnv, true, "reply-wait", pContext);
+    WriteReceiveFrom(pFile, pFunction, true, true, "reply-wait", pContext);
 }
 
 /** \brief zeros the message buffer
@@ -282,27 +207,88 @@ void CBESocket::WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction, bool b
  */
 void CBESocket::WriteZeroMsgBuffer(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext)
 {
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-	CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    string sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    string sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
     // zero out msg buffer for response
-	// msgbuffer is always a pointer: either variable sized or char[]
-    pFile->PrintIndent("bzero(%s, ", (const char*)sMsgBuffer);
+    // msgbuffer is always a pointer: either variable sized or char[]
+    pFile->PrintIndent("bzero(%s, ", sMsgBuffer.c_str());
     if (pMsgBuffer->IsVariableSized())
-        pFile->Print("%s);\n", (const char*)sOffset);
+        pFile->Print("%s);\n", sOffset.c_str());
     else
-        pFile->Print("sizeof(%s));\n", (const char*)sMsgBuffer);
+        pFile->Print("sizeof(%s));\n", sMsgBuffer.c_str());
 }
 
 /** \brief writes the wait implementation of the socket layer
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- *  \param bUseEnv true if socket descriptor if part of the environment
  *  \param pContext the context of the write operation
  */
-void CBESocket::WriteWait(CBEFile* pFile, CBEFunction* pFunction, bool bUseEnv, CBEContext* pContext)
+void CBESocket::WriteWait(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext)
 {
     WriteZeroMsgBuffer(pFile, pFunction, pContext);
     // wait for new request
-	WriteReceiveFrom(pFile, pFunction, bUseEnv, true, "wait", pContext);
+    WriteReceiveFrom(pFile, pFunction, true, true, "wait", pContext);
+}
+
+/**    \brief writes the initialization
+ *    \param pFile the file to write to
+ *    \param pFunction the funtion to write for
+ *    \param pContext the context of the writing
+ */
+void CBESocket::WriteInitialization(CBEFile *pFile,
+    CBEFunction *pFunction,
+    CBEContext *pContext)
+{
+    bool bUseEnv = pFunction->IsComponentSide();
+    pFile->PrintIndent("");
+    WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
+    pFile->Print(" = socket(PF_INET, SOCK_DGRAM, 0);\n");
+    pFile->PrintIndent("if (");
+    WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
+    pFile->Print(" < 0)\n");
+    pFile->PrintIndent("{\n");
+    pFile->IncIndent();
+    pFile->PrintIndent("perror(\"socket creation\");\n");
+    pFunction->WriteReturn(pFile, pContext);
+    pFile->DecIndent();
+    pFile->PrintIndent("}\n");
+}
+
+/**    \brief writes the assigning of a local name to a communication port
+ *    \param pFile the file to write to
+ *    \param pFunction the funtion to write for
+ *    \param pContext the context of the writing
+ */
+void CBESocket::WriteBind(CBEFile *pFile,
+    CBEFunction *pFunction,
+    CBEContext *pContext)
+{
+    bool bUseEnv = pFunction->IsComponentSide();
+    string sCorbaObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
+
+    pFile->PrintIndent("if (bind(");
+    WriteSocketDescriptor(pFile, pFunction, bUseEnv, pContext);
+    pFile->Print(", (struct sockaddr*)%s, sizeof(struct sockaddr)) < 0)\n",
+            sCorbaObj.c_str());
+    pFile->PrintIndent("{\n");
+    pFile->IncIndent();
+    pFile->PrintIndent("perror(\"bind\");\n");
+    pFunction->WriteReturn(pFile, pContext);
+    pFile->DecIndent();
+    pFile->PrintIndent("}\n");
+}
+
+/**    \brief writes the clean up code
+ *    \param pFile the file to write to
+ *    \param pFunction the funtion to write for
+ *    \param pContext the context of the writing
+ */
+void CBESocket::WriteCleanup(CBEFile *pFile,
+    CBEFunction *pFunction,
+    CBEContext *pContext)
+{
+    pFile->PrintIndent("close(");
+    WriteSocketDescriptor(pFile, pFunction, pFunction->IsComponentSide(), pContext);
+    pFile->Print(");\n");
 }

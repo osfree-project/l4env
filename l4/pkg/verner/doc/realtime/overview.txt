@@ -1,0 +1,118 @@
+                     VERNER - Overview about realtime behavior (german)
+                              Carsten Rietzschel
+                           cr7@os.inf.tu-dresden.de
+  			        3 August 2004
+
+
+
+                       ============= Konzept =============
+
+Mail von Lars:  
+- das Verhalten der Video- / Audio-Cores und des Demultiplexers soll
+  so abgeändert werden dass in einer Periode mehrere Pakete (also
+  Video-Frames und Audio-Pakete) bearbeitet werden. Dadurch kann
+  erreicht werden das alle Komponenten mit der gleichen Periode
+  arbeiten können.
+  Die tatsächliche Anzahl der von den Cores pro Periode zu
+  bearbeitenden Pakete soll beim Initialisieren der
+  Verarbeitungskette festgelegt werden. Das kann z.B. durch die
+  Vorgabe eine festgelegten Periode erfolgen, die Komponenten
+  errechnen dann an Hand der Eigenschaften des Datenstroms die Anzahl
+  zu verarbeitender Pakete.
+- Mit diesem Modell sind mehrere Möglichkeiten für die Abbildung der
+  Verarbeitung auf mandatorische und optionale Teile bei der
+  Video-Dekodierung denkbar. Die Dekodierung der Frames ist für alle
+  in einer Periode bearbeiteten Frames mandatorisch, das
+  Postprcessing kann entweder als ein optionaler Teil für alle Frames
+  oder als je ein einzelner optionaler Teil pro vorhandenem Frame
+  abgebildet werden.
+  Es ist noch nicht ganz klar welche Auswirkungen das auf die
+  Adaptions-Strategie der Qualitätsstufenanpassung hat, daher sollten
+  beide Varianten implementiert werden um entsprechende Experimente
+  durchführen zu können. Hauptfrage dabei ist, ob man die
+  QS-Anpassung sehr feingranular machen will (also pro Frame bzw.
+  Periode entscheiden will) oder grobgranularer.
+- Die Sync-Komponente arbeitet dann natürlich auch mit der größeren
+  Periode, synchronisiert sich allerdings über das Metronom auf die
+  Frame- bzw. Sample-Rate. Das Metronom kann verschiedene Quellen als
+  Zeit-Basis verwenden, z.B. die Sound-Karte, Dope oder die
+  Systemzeit.
+
+Sein Wille geschehe. So ist es nun implementiert :)      
+
+Ergänzung:
+  Die Qualitätsstufen-Anpassung (QAP) erfolgt anhand der Anzahl der empfangen
+  Premmption-IPC innerhalb eines gewissen Zeitraumes: bei Überschreiten
+  eines Thresholds wird die Qualitätsstufe gesenkt, bei Unterschreiten 
+  erhöht.
+  (siehe auch make config --> Video core component)
+
+
+                    ============= Konfiguration =============
+
+
+cd l4/pkg/verner
+make config
+--> Realtime support  
+  (*) Build with Realtime-Support
+  ...
+  --- -- optional parts --
+  [*]   use optional parts (postprocessing!)
+  [*]   one optional part for ALL frames
+  [ ]   one optional for EACH frame
+  --- -- QAP --
+  (10)   threshold for number of preemption IPCs allowed to increase QA
+  (30)   threshold for number of preemption IPCs above which QAP is dec
+  
+  
+                    ============= Implementation =============
+
+
+Die Berechnung, wie viele Videoframes/Audiochunks pro gegebener Periode
+bearbeitet werden sollen, erfolgt in 
+   /include/arch_globals.h:streaminfo2loops()
+Da für ist Vorraussetzung, daß eine gültige Streaminfo (Format,
+Framerate/Samplerate) Übergeben wird. Die Anzahl der Frames/Chunks pro 
+loop wird via ceil() aufgerundet.
+
+In den einzelnen Komponenten ergibt sich damit eine Reservierungszeit von
+anzahl_frames_pro_period * bearbeitungszeit_pro_frame.
+Die bearbeitungszeit_pro_frame kann via make config oder via GUI geändert
+werden.
+Desweiteren wird natürlich nach der Bearbeitung der berechneten Anzahl 
+pro Periode next_period() aufgerufen.
+
+Für den Core (im Gegensatz zu Sync/Demuxer) sind einige Details zu 
+beachten, da es neben mandorischen auch optionale Teile gibt.
+Der workloop ist in etwas so aufgebaut (Auszug aus Source):
+
+   * while(1)
+   * {
+   *   recalculate QAP params
+   *
+   *   mandatory part (DECODE):
+   *   mA) next_period (RT only)
+   *   for(all packets_per_period) (RT only)
+   *   {
+   *     mB) recv_packet_get
+   *     mC) send_packet_get
+   *     mD) decode
+   *     mE) recv_commit
+   *   }
+   *
+   *   optional part (POSTPROC):
+   *   oA1) next_reservation (RT only) (*)
+   *   for(all packets_per_period) (RT only)
+   *   {
+   *     oA2) next_reservation (RT only) (*)
+   *     oB) postproc
+   *     oC) send_commit
+   *   }
+   *
+   * } end while(1)
+   *
+   * (*) depends on compile mode
+   *     Either whole postproc is one optional part or
+   *     postproc for each frame is one
+
+Die konkrete Implementierung ist in /vcore/src/work_loop.c zu finden.

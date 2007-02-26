@@ -1,0 +1,17 @@
+verbose 0
+
+modpath "(nd)/tftpboot/bin/x86_586/l4v2:(nd)/tftpboot/music:(nd)/tftpboot/video"
+libpath "(nd)/tftpboot"
+
+task "l4dope" "--l4io"
+
+task "vtdemuxer"
+  module "music/1.m3" "film"
+  module "video/2.avi" "film"
+task "vtcore_video"
+task "vtcore_audio"
+task "vtsync-es1371"
+#task "vtsync-i810"
+#task "vtsync-noaudio"
+
+task "vtcontrol" 

@@ -1,0 +1,80 @@
+
+import <l4/sys/types.h>
+import <l4/names/libnames.h>
+
+/** IDL interface of the name server. */
+interface names
+{
+   /** Register thread at names.
+    *
+    * \param name	Name of the thread.
+    *
+    * \return 0 on error, != 0 on success
+    */
+   long register([in, string] char *name);
+
+   /** Register arbitrary thread at names.
+    *
+    * \param name	Name of the thread.
+    * \param id         Thread ID of thread to register.
+    *
+    * \return 0 on error, != 0 on success
+    */
+   long register_thread([in, string] char *name,
+                        [in] l4_threadid_t id);
+
+   /** Unregister arbitrary thread at names.
+    *
+    * \param name	Name of the thread.
+    * \param id         Thread ID of thread to unregister.
+    *
+    * \return 0 on error, != 0 on success
+    */
+   long unregister_thread([in, string] char *name,
+                          [in] l4_threadid_t id);      
+
+   /** Unregister all threads of a task at names.
+    *
+    * \param name	Name of the thread.
+    * \param id         Task of threads to unregister.
+    *
+    * \return 0 on error, != 0 on success
+    */
+   long unregister_task([in] l4_threadid_t id);
+
+   /** Query names for an ID by name.
+    *
+    * \param name	Name to query.
+    * \retval id        Thread ID if found.
+    *
+    * \return 0 on error, != 0 on success
+    */
+   long query_name([in, string] char *name,
+                   [out] l4_threadid_t *id);
+
+   /** Query names for a name by ID.
+    *
+    * \param id         ID to query.
+    * \retval name      Name if found.
+    *
+    * \return 0 on error, != 0 on success
+    */
+   long query_id([in] l4_threadid_t id,
+                 [out, string, prealloc, max_is(NAMES_MAX_NAME_LEN)] char **name);
+
+   /** Query names for a name and ID by number.
+    *
+    * \param nr         Number to query.
+    * \retval name      Name if found.
+    * \retval id        ID if found.
+    *
+    * \return 0 on error, != 0 on success
+    */
+   long query_nr([in] int nr,
+                 [out, string, prealloc, max_is(NAMES_MAX_NAME_LEN)] char **name,
+                 [out] l4_threadid_t *id);
+                 
+   /** Requests names to dump its internal database.
+    */
+   void dump();
+};

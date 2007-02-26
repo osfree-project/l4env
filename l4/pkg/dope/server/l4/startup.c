@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -13,23 +13,53 @@
  * COPYING file for details.
  */
 
-void native_startup(int, char **);
+/*** GENERAL INCLUDES ***/
+#include <stdio.h>
+#include <stdlib.h>
 
+/*** L4 INCLUDES ***/
 #include <l4/util/getopt.h>
 #include <l4/util/macros.h>
 #include <l4/log/l4log.h>
 #include <l4/generic_io/libio.h>
-#include <stdio.h>
 
-/* name at logserver */
-char LOG_tag[] = "l4dope";
-l4_ssize_t l4libc_heapsize = 6*1024*1024;
+#if USE_RT_MON
+#include <l4/rt_mon/histogram2d.h>
 
-int use_l4io = 0;  /* whether to use L4IO server or not, default no */
-l4io_info_t *l4io_page = (l4io_info_t*) 0; /* L4IO info page */
+rt_mon_histogram2d_t * hist2dxy;
+#endif
 
-int use_vidfix = 0; /* certain graphic adapter deliver garbage in vesa info */
+/*** L4 SPECIFIC CONFIG VARIABLES ***/
 
+int config_use_l4io     = 0;  /* whether to use L4IO server or not, default no        */
+int config_use_vidfix   = 0;  /* certain graphic adapter deliver garbage in vesa info */
+int config_events       = 0;  /* use Drops events to close DOpE applications          */
+int config_oldresize    = 0;  /* use traditional way to resize windows                */
+int config_adapt_redraw = 1;  /* adapt redraw to runtime measurements                 */
+
+
+/*** PLATFORM INDEPENDENT CONFIG VARIABLES ***/
+
+extern int config_don_scheduler;  /* use donation scheduling    */
+extern int config_transparency;   /* enable transparent windows */
+extern int config_clackcommit;    /* commit on mouse release    */
+extern int config_winborder;      /* size of window border      */
+
+
+/*** GLOBAL L4 SPECIFIC VARIABLES ***/
+
+char LOG_tag[] = "l4dope";                  /* tag that is used for log output */
+l4_ssize_t l4libc_heapsize = 6*1024*1024;   /* heap to waste                   */
+l4io_info_t *l4io_page = (l4io_info_t*) 0;  /* l4io info page                  */
+
+void native_startup(int, char **);
+
+
+/* Make sure that the jiffies symbol is taken from libio.a not libinput.a. */
+asm (".globl jiffies");
+
+
+/*** INIT L4IO ***/
 static int dope_l4io_init(void) {
 
 	if (l4io_init(&l4io_page, L4IO_DRV_INVALID)) {
@@ -40,20 +70,24 @@ static int dope_l4io_init(void) {
 }
 
 
-static void do_args(int argc, char **argv)
-{
+/*** PARSE COMMAND LINE ARGUMENTS AND SET GLOBAL CONFIG VARIABLES ***/
+static void do_args(int argc, char **argv) {
 	char c;
 
-	static struct option long_options[] =
-	{
-		{"l4io",    0, 0, 'i'},
-		{"vidfix",  0, 0, 'f'},
+	static struct option long_options[] = {
+		{"l4io",          0, 0, 'i'},
+		{"vidfix",        0, 0, 'f'},
+		{"donscheduler",  0, 0, 'd'},
+		{"transparency",  0, 0, 't'},
+		{"events",        0, 0, 'e'},
+		{"clackcommit",   0, 0, 'c'},
+		{"oldresize",     0, 0, 'r'},
+		{"winborder",     1, 0, 'b'},
 		{0, 0, 0, 0}
 	};
 
 	/* read command line arguments */
-	while (1)
-	{
+	while (1) {
 		c = getopt_long(argc, argv, "if", long_options, NULL);
 
 		if (c == -1)
@@ -61,24 +95,69 @@ static void do_args(int argc, char **argv)
 
 		switch (c) {
 			case 'i':
-				use_l4io = 1;
+				config_use_l4io = 1;
 				printf("DOpE(init): using L4 IO server\n");
 				break;
 			case 'f':
-				use_vidfix = 1;
+				config_use_vidfix = 1;
 				printf("DOpE(init): using video fix\n");
 				break;
+			case 'd':
+				config_don_scheduler = 1;
+				printf("DOpE(init): using don scheduler\n");
+				break;
+			case 't':
+				config_transparency = 1;
+				printf("DOpE(init): using transparency\n");
+				break;
+			case 'e':
+				config_events = 1;
+				printf("DOpE(init): using events mechanism\n");
+				break;
+			case 'c':
+				config_clackcommit = 1;
+				printf("DOpE(init): commit on mouse release\n");
+				break;
+			case 'r':
+				config_oldresize = 1;
+				printf("DOpE(init): using old way of resizing windows\n");
+				break;
+			case 'b':
+				if (optarg) config_winborder = atol(optarg);
+				printf("DOpE(init): using window border size of %d\n", config_winborder);
 			default:
 				printf("DOpE(init): unknown option!\n");
 		}
 	}
 }
 
+
 void native_startup(int argc, char **argv) {
+#if USE_RT_MON
+	{
+		/* create a 2d histogram for dope repaint actions */
+		double l[2] = {0, 0};         /* start at <0, 0> ...    */
+		double h[2] = {400, 400};     /* ... up to <400, 400>   */
+		int b[2] = {200, 200};        /* 200 bins for each dim */
+
+		/*
+		 * Create histogram with 2 layers and use TSC times.
+		 *   layer 1 are accumulated times
+		 *   layer 2 counts time number of events added together in layer 1
+		 *   -> (layer 1 / layer 2) == average time
+		 *
+		 * Units: x- and y-axis are in pixel, z-axis is time in µsecs
+		 */
+		hist2dxy = rt_mon_hist2d_create(l, h, b, 2,
+		                                "dope/rel_xy_2d",
+		                                "w [px]", "h [px]", "t/px [ns/px]",
+		                                RT_MON_TSC_TIME);
+	}
+#endif
+
 	do_args(argc, argv);
 
-
-	if (use_l4io)
-	  dope_l4io_init();
+	if (config_use_l4io)
+		dope_l4io_init();
 
 }

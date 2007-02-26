@@ -5,6 +5,8 @@
 
 #include "hello-server.h"
 
+char LOG_tag[9] = "dice_srv";
+
 int main(void)
 {
   names_register("dice_hello_server");
@@ -16,25 +18,25 @@ void
 hello_test_f1_component(CORBA_Object _dice_corba_obj,
     l4_uint32_t t1,
     l4_uint32_t *t2,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
-  printf("hello: f1: %x\n", t1);
+  printf("hello: f1: %d\n", t1);
   *t2 = t1 * 10;
 }
 
 l4_uint16_t 
 hello_test_f2_component(CORBA_Object _dice_corba_obj,
     l4_int32_t t1,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
-  printf("hello: f2: %x\n", t1);
+  printf("hello: f2: %d\n", t1);
   return (l4_int16_t)t1;
 }
 
 l4_uint32_t 
 hello_test_f3_component(CORBA_Object _dice_corba_obj,
     const char* s,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   printf("f3: %s\n", s);
   return 923756345;

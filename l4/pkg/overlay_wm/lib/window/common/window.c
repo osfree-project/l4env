@@ -4,6 +4,15 @@
  * \author  Norman Feske <nf2@inf.tu-dresden.de>
  */
 
+/*
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the Overlay WM package, which is distributed
+ * under the  terms  of the GNU General Public Licence 2. Please see
+ * the COPYING file for details.
+ */
+
 /*** GENERAL INCLUDES ***/
 #include <stdio.h>
 
@@ -27,7 +36,7 @@ static void (*wintop_callback)   (int win_id);
 /*** IDL INTERFACE: WINDOW TOP EVENT LISTENER ***/
 void window_listener_top_component(CORBA_Object _dice_corba_obj,
                                    int win_id,
-                                   CORBA_Environment *_dice_corba_env) {
+                                   CORBA_Server_Environment *_dice_corba_env) {
 	if (wintop_callback) wintop_callback(win_id);
 }
 
@@ -36,7 +45,7 @@ void window_listener_top_component(CORBA_Object _dice_corba_obj,
 void window_listener_place_component(CORBA_Object _dice_corba_obj,
                                      int win_id,
                                      int x, int y, int w, int h,
-                                     CORBA_Environment *_dice_corba_env){
+                                     CORBA_Server_Environment *_dice_corba_env){
 	if (winplace_callback) winplace_callback(win_id, x, y, w, h);
 }
 
@@ -44,7 +53,7 @@ void window_listener_place_component(CORBA_Object _dice_corba_obj,
 /*** IDL INTERFACE: WINDOW CLOSE EVENT LISTENER ***/
 void window_listener_close_component(CORBA_Object _dice_corba_obj,
                                      int win_id,
-                                     CORBA_Environment *_dice_corba_env){
+                                     CORBA_Server_Environment *_dice_corba_env){
 	if (winclose_callback) winclose_callback(win_id);
 }
 

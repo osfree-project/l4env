@@ -1,0 +1,10 @@
+title Spin, 13.10.2004   
+  kernel (nd)/tftpboot/jork/bin/x86_586/l4v2/rmgr -sigma0
+  module (nd)/tftpboot/jork/bin/fiasco -nokdb -nowait -serial -serial_esc -watchdog  -comport 1
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/sigma0
+  modaddr 0x02000000
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/spin -d 1
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/spin1 -d 1 -y 1
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/spin2 -d 2 -y 2
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/spin3 -d 4 -y 3
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/spin4 -d 5 -y 4 

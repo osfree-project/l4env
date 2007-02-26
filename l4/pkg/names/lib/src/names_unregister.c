@@ -5,15 +5,17 @@
  * \date   05/27/2003
  * \author Uwe Dannowski <Uwe.Dannowski@ira.uka.de>
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
- *
+ * \author Adam Lackorzynski <adam@os.inf.tu-dresden.de>
  */
 /* (c) 2003 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
-#include <names.h>
 #include <l4/sys/syscalls.h>
-#include <string.h>
+#include <l4/names/libnames.h>
+
+#include "names-client.h"
+#include "__libnames.h"
 
 /*!\brief Unregister a given name.
  * \ingroup clientapi
@@ -28,14 +30,12 @@
 int
 names_unregister(const char* name)
 {
-  message_t message;
-  char	    buffer[NAMES_MAX_NAME_LEN+1];
+  CORBA_Environment env = dice_default_environment;
+  l4_threadid_t *ns_id = names_get_ns_id();
+  l4_threadid_t my_id = l4_myself();
 
-  names_init_message(&message, buffer);
-  
-  message.cmd = NAMES_UNREGISTER;
-  message.id = l4_myself();
-  strncpy(buffer, name, NAMES_MAX_NAME_LEN);
+  if (!ns_id)
+    return 0;
 
-  return names_send_message(&message);
-};
+  return names_unregister_thread_call(ns_id, name, &my_id, &env);
+}

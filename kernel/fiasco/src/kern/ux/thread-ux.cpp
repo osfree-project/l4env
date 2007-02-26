@@ -1,335 +1,341 @@
-INTERFACE:
+INTERFACE [ux]:
 
 #include <sys/types.h>
 
-class trap_state;
+class Trap_state;
 
-IMPLEMENTATION[ux]:
+EXTENSION class Thread
+{
+private:
+  static int (*int3_handler)(Trap_state*);
+};
+
+IMPLEMENTATION [ux]:
 
 #include <cstdio>
 #include <csignal>
-#include "boot_info.h"		// for boot_info
+#include "boot_info.h"
 #include "config.h"		// for page sizes
-#include "cpu.h"		// for cpu
-#include "cpu_lock.h"
 #include "emulation.h"
-#include "fpu_alloc.h"
-#include "kdb_ke.h"		// for kdb_ke
+#include "kdb_ke.h"
 #include "lock_guard.h"
 #include "panic.h"
-#include "processor.h"		// for cli/sti
-#include "regdefs.h"
-#include "sched_context.h"
-#include "vmem_alloc.h"
+#include "utcb_init.h"
 
-/** The global trap handler switch.
-    This function handles CPU-exception reflection, emulation of CPU 
-    instructions (LIDT, WRMSR, RDMSR), int3 debug messages, 
-    kernel-debugger invocation, and thread crashes (if a trap cannot be 
-    handled).
-    @param state trap state
-    @return 0 if trap has been consumed by handler;
-           -1 if trap could not be handled.
- */    
-PUBLIC 
-int
-Thread::handle_slow_trap (trap_state *ts)
+int      (*Thread::int3_handler)(Trap_state*);
+
+IMPLEMENT static inline NEEDS ["emulation.h"]
+Mword const
+Thread::exception_cs()
 {
-  extern unsigned gdb_trap_recover; // in OSKit's gdb_trap.c
-  Address eip;
+  return Emulation::kernel_cs();
+}
 
-  if (EXPECT_FALSE (gdb_trap_recover))
-    goto generic_debug; // we're in the GDB stub -- let generic handler handle it
+/**
+ * The ux specific part of the thread constructor.
+ */
+PRIVATE inline
+void
+Thread::arch_init()
+{
+  // Allocate FPU state now because it indirectly calls current()
+  // save_state runs on a signal stack and current() doesn't work there.
+  Fpu_alloc::alloc_state(fpu_state());
   
-  LOG_TRAP;
+  // clear out user regs that can be returned from the thread_ex_regs
+  // system call to prevent covert channel
+  Entry_frame *r = regs();
+  r->sp(0);
+  r->ip(0);
+  r->cs(Emulation::kernel_cs() & ~1);			// force iret trap
+  r->ss(Emulation::kernel_ss());
 
-  if (EXPECT_FALSE (!((ts->cs & 3) || (ts->eflags & EFLAGS_VM))))
-    goto generic_debug;		// we were in kernel mode -- nothing to emulate
+  if(Config::enable_io_protection)
+    r->flags(EFLAGS_IOPL_K | EFLAGS_IF | 2);
+  else
+    r->flags(EFLAGS_IOPL_U | EFLAGS_IF | 2);		// XXX iopl=kernel
+}
 
-  if (EXPECT_FALSE (ts->trapno == 2))	// NMI?
-    goto generic_debug;			// NMI always enters kernel debugger
+PUBLIC static inline
+void
+Thread::set_int3_handler(int (*handler)(Trap_state *ts))
+{
+  int3_handler = handler;
+}
 
-  if (EXPECT_FALSE (ts->trapno == 0xffffffff))		// debugger interrupt
-    goto generic_debug;         
+PRIVATE inline bool Thread::check_trap13_kernel (Trap_state *, bool)
+{ return 1; }
 
-  // so we were in user mode -- look for something to emulate
+PRIVATE inline void Thread::check_f00f_bug (Trap_state *)
+{}
 
-  // We continue running with interrupts off -- no sti() here.
+PRIVATE inline bool Thread::handle_io_page_fault (Trap_state *, Address, bool)
+{ return false; }
 
-  // Set up exception handling.  If we suffer an un-handled user-space
-  // page fault, kill the thread.
-  jmp_buf pf_recovery;    
-  unsigned error;         
-  if (EXPECT_FALSE ((error = setjmp(pf_recovery)) != 0))
-    {
-      printf ("KERNEL: %x.%x (tcb=0x%x) killed: unhandled page fault, "
-	      "code=0x%x\n",
-	      debug_taskno(), debug_threadno(),
-	      (unsigned) this, error);
-      goto fail_nomsg;    
-    }
+PRIVATE inline bool Thread::handle_sysenter_trap (Trap_state *, Address, bool)
+{ return true; }
 
-  _recover_jmpbuf = &pf_recovery;
+PRIVATE inline bool Thread::trap_is_privileged (Trap_state *)
+{ return true; }
 
-  eip = ts->eip;   
+PRIVATE inline bool Thread::handle_smas_gp_fault ()
+{ return false; }
 
-  // check for "invalid opcode" exception
-  if ((Config::ABI_V4 || Config::X2_LIKE_SYS_CALLS) && ts->trapno == 6)
-    {
-      if (peek_user ((Unsigned16 *) ts->eip) == 0x90f0)	// "lock; nop" opcode
-	{
-	  ts->eip += 2;			// step behind the opcode
-	  ts->eax = space()->kip_address();
-	  goto success;
-	}
-    }
+PRIVATE inline
+void
+Thread::do_wrmsr_in_kernel (Trap_state *)
+{
+  // do "wrmsr (msr[ecx], edx:eax)" in kernel
+  kdb_ke("wrmsr not supported");
+}
 
-  // check for "general protection" exception
-  if (ts->trapno == 13)   
-    {
-      // check for "lidt (%eax)"
-      if ((ts->err & 0xffff) == 0 && eip < Kmem::mem_user_max - 4 &&
-          (peek_user((Mword*)eip) & 0xffffff) == 0x18010f) {
+PRIVATE inline
+void
+Thread::do_rdmsr_in_kernel (Trap_state *)
+{
+  // do "rdmsr (msr[ecx], edx:eax)" in kernel
+  kdb_ke("rdmsr not supported");
+}
 
-        // read descriptor
-        if (ts->eax >= Kmem::mem_user_max - 6)
-          goto fail;    
+PRIVATE inline
+int
+Thread::handle_not_nested_trap (Trap_state *)
+{ return -1; }
 
-        x86_gate *idt = peek_user ((x86_gate **)(ts->eax + 2));
-        vm_size_t limit = Config::backward_compatibility ?
-                          255 : peek_user ((Unsigned16 *) ts->eax);
-
-        if (limit >= Kmem::mem_user_max ||
-            reinterpret_cast<Address>(idt) >= Kmem::mem_user_max - limit - 1)
-          goto fail;
-
-        // OK; store descriptor
-        _idt = idt;     
-        _idt_limit = (limit + 1) / sizeof(x86_gate);
-
-        ts->eip += 3;		          // consume instruction and continue
-        goto success;
-      }
-
-      // check for "wrmsr (%eax)"
-      if ((ts->eflags & EFLAGS_IOPL) == EFLAGS_IOPL_U // only allow priv tasks
-          && (ts->err & 0xffff) == 0
-          && eip < Kmem::mem_user_max - 2
-          && (peek_user((Unsigned16*)eip) ) == 0x300f
-          && (Cpu::features() & FEAT_MSR)       // cpu has MSRs
-         )
-        {
-          // do "wrmsr (msr[ecx], edx:eax)" in kernel
-          unsigned dummy1, dummy2, dummy3;
-
-          asm volatile(".byte 0xf; .byte 0x30\n"        /* wrmsr */
-                      : "=a" (dummy1), "=d" (dummy2), "=c" (dummy3)
-                      : "0" (ts->eax), "1" (ts->edx), "2" (ts->ecx));
-
-          // consume instruction and continue
-          smp_cas(&ts->eip, eip, eip + 2); // ignore errors
-          goto success;   
-        }
-
-      // check for "rdmsr (%eax)"
-      if ((ts->eflags & EFLAGS_IOPL) == EFLAGS_IOPL_U // only allow priv tasks
-          && (ts->err & 0xffff) == 0
-          && eip < Kmem::mem_user_max - 2
-          && (peek_user((Unsigned16*)eip) ) == 0x320f
-          && (Cpu::features() & FEAT_MSR)       // cpu has MSRs
-         )
-        {
-          // do "rdmsr (msr[ecx], edx:eax)" in kernel
-          unsigned dummy; 
-
-          asm volatile(".byte 0xf; .byte 0x32\n"        /* rdmsr */
-                       : "=a" (ts->eax), "=d" (ts->edx), "=c" (dummy)
-                       : "2" (ts->ecx));
-
-          // consume instruction and continue
-          smp_cas(&ts->eip, eip, eip + 2); // ignore errors
-          goto success;   
-        }
-
-      // check for "hlt" -> deliver L4 version
-      if ((ts->eflags & EFLAGS_IOPL) == EFLAGS_IOPL_U // only allow priv tasks
-          && (ts->err & 0xffff) == 0
-          && eip < Kmem::mem_user_max - 1
-          && peek_user ((Unsigned8 *) eip) == 0xf
-         )
-        {
-          // FIXME: What version should Fiasco deliver?
-          ts->eax = 0x00010000;
-
-          // consume instruction and continue
-          smp_cas(&ts->eip, eip, eip + 1); // ignore errors
-          goto success;   
-        }
-    }
-
-  // let's see if we have a trampoline to invoke
-  if (ts->trapno < 0x20 && ts->trapno < _idt_limit)
-    {
-      // translate page fault exceptions to general protection
-      // exception -- users shouldn't have to care about about page
-      // faults (and probably couldn't find out the fault address
-      // anyway as they can't access the %cr2 (page fault address)
-      // register)        
-      if (ts->trapno == 14)
-        {
-          ts->trapno = 13;
-          ts->err = 0;    
-        }
-
-      x86_gate g = peek_user (_idt + ts->trapno);
-
-      if (Config::backward_compatibility // backward compat.: don't check
-          || ((g.word_count & 0xe0) == 0
-              && (g.access & 0x1f) == 0x0f)) // gate descriptor ok?
-        {
-          Address handler = (g.offset_high << 16) | g.offset_low;
-
-          if ((handler != 0 || !Config::backward_compatibility) // bw compat.: != 0?
-              && handler < Kmem::mem_user_max // in user space?
-              && ts->esp <= Kmem::mem_user_max
-              && ts->esp > 4 * 4) // enough space on user stack?
-            {
-              // OK, reflect the trap to user mode
-              Unsigned32 esp = ts->esp;
-
-              if (! raise_exception(ts, handler))
-                {         
-                  // someone interfered and changed our state
-                  check(state_del(Thread_cancel));
-
-                  goto success;
-                }
-
-              esp -= sizeof (Mword);
-              poke_user ((Mword*) esp, ts->eflags);
-	      esp -= sizeof (Mword);
-              poke_user ((Mword*) esp, (Mword) Emulation::get_kernel_cs());
-	      esp -= sizeof (Mword);
-              poke_user ((Mword*) esp, eip);
-
-              /* reset single trap flag to mirror cpu correctly */
-              if (ts->trapno == 1)
-                ts->eflags &= ~EFLAGS_TF;
-
-              // need to push error code?
-              if ((ts->trapno >= 0x0a && ts->trapno <= 0x0e) ||
-                   ts->trapno == 0x08 ||
-                   ts->trapno == 0x11) 
-                {
-	          esp -= sizeof (Mword);
-                  poke_user ((Mword*) esp, ts->err);
-                }
-
-              goto success;		// we've consumed the trap
-            }
-        }
-    }
-
-  // backward compatibility cruft: check for those insane "int3" debug
-  // messaging command sequences
-  if (ts->trapno == 3)
-    goto generic_debug;
-
-  // privileged tasks also may invoke the kernel debugger with a debug
-  // exception
-  if (ts->trapno == 1)
-    goto generic_debug;       
-
-  // can't handle trap -- kill the thread
-
-fail:
-  printf ("KERNEL: %x.%x (tcb=%08x) killed:\n"
-         "\033[1mUnhandled trap\033[m\n",
-	  debug_taskno(), debug_threadno(),
-	  (unsigned) this);
-
-fail_nomsg:
-  trap_dump (ts);
-
-  if (Config::conservative)
-    kdb_ke ("thread killed");
-
-  // Cancel must be cleared on all kernel entry paths. See slowtraps for
-  // why we delay doing it until here.
-  state_del (Thread_cancel);
-
-  // we haven't been re-initialized (cancel was not set) -- so sleep
-  if (state_change_safely (~Thread_running, Thread_cancel | Thread_dead))
-    while (! (state() & Thread_running))
-      schedule();       
-
-success:
-  _recover_jmpbuf = 0;
-  return 0;
-
-generic_debug:
-  _recover_jmpbuf = 0;    
-
-  if (!nested_trap_handler)
-    return -1;
+PRIVATE
+int
+Thread::call_nested_trap_handler (Trap_state *ts)
+{
+  extern int gdb_trap_recover;
 
   // run the nested trap handler on a separate stack
   // equiv of: return nested_trap_handler(ts) == 0 ? true : false;
 
   int ret;
-  static char nested_handler_stack[Config::PAGE_SIZE];
+  static char nested_handler_stack [Config::PAGE_SIZE];
 
   unsigned dummy1, dummy2;
   asm volatile
-    (" movl %%esp,%%eax \n"
-     " orl  %%ebx,%%ebx \n"     // don't set %esp if gdb fault recovery
-     " jz   1f \n"        
-     " movl %%ebx,%%esp \n"
-     "1: pushl %%eax \n"  
-     " pushl %%ecx \n"    
-     " call *%%edx \n"    
-     " addl $4,%%esp \n"  
-     " popl %%esp"        
+    ("movl   %%esp,%%edx	\n\t"
+     "orl    %%ebx,%%ebx	\n\t"    // don't set %esp if gdb fault recovery
+     "jz     1f			\n\t"
+     "movl   %%ebx,%%esp	\n\t"
+     "1:			\n\t"
+     "pushl  %%edx		\n\t"
+     "call   *%5		\n\t"
+     "popl   %%esp		\n\t"
      : "=a" (ret), "=c" (dummy1), "=d" (dummy2)
-     : "b" (gdb_trap_recover ?  // gdb fault recovery?
-            0 : (nested_handler_stack + sizeof(nested_handler_stack))),
-       "1" (ts),          
-       "2" (nested_trap_handler)
-     : "memory");         
+     : "a"(ts), "b" (gdb_trap_recover 
+		? 0 : (nested_handler_stack + sizeof(nested_handler_stack))),
+       "m" (nested_trap_handler)
+     : "memory");
 
   assert (_magic == magic);
 
   // Do shutdown by switching to idle loop, unless we're already there
   if (!running && current() != kernel_thread)
-    current()->switch_to (kernel_thread);
+    current()->switch_to_locked (kernel_thread);
 
   return ret == 0 ? 0 : -1;
 }
 
-PUBLIC inline
-int
-Thread::is_mapped()
+// The "FPU not available" trap entry point
+extern "C" void thread_handle_fputrap (void) { panic ("fpu trap"); }
+
+extern "C" void thread_timer_interrupt_stop() {}
+extern "C" void thread_timer_interrupt_slow() {}
+
+IMPLEMENT
+void
+Thread::user_invoke()
 {
+  Mword dummy;
+
+  asm volatile
+    ("  movl %%ds ,  %0		\n\t"
+     "  movl %0,     %%es	\n\t"
+     "  movl %1   ,  %%gs	\n\t"
+     : "=r"(dummy)
+     : "rm"(Utcb_init::gs_value()));
+
+  user_invoke_generic();
+
+  asm volatile
+    ("	cmpl $2    , %%edx      \n\t"     // Sigma0
+     "	je   1f                 \n\t"
+     "  cmpl $4    , %%edx      \n\t"     // Rmgr
+     "  je   1f                 \n\t"
+     "  xorl %%ebx , %%ebx      \n\t"     // don't pass info if other
+     "  xorl %%ecx , %%ecx      \n\t"     // Sigma0 or Rmgr
+     "1:                        \n\t"
+     "  movl %%eax , %%esp      \n\t"
+     "  xorl %%edx , %%edx      \n\t"
+     "  xorl %%esi , %%esi      \n\t"     // clean out user regs      
+     "  xorl %%edi , %%edi      \n\t"                           
+     "  xorl %%ebp , %%ebp      \n\t"
+     "  xorl %%eax , %%eax      \n\t"
+     "  iret                    \n\t"
+     :                          	// no output
+     : "a" (nonull_static_cast<Return_frame*>(current()->regs())),
+       "b" (Kmem::virt_to_phys(Boot_info::mbi_virt())),
+       "c" (Kmem::virt_to_phys(Kip::k())),
+       "d" ((unsigned) Thread::lookup(current())->id().task()));
+}
+//---------------------------------------------------------------------------
+IMPLEMENTATION [ux-segments]:
+
+#include <feature.h>
+KIP_KERNEL_FEATURE("segments");
+
+#include "gdt.h"
+
+PRIVATE inline NEEDS["gdt.h"]
+bool
+Thread::handle_lldt(Trap_state *ts)
+{
+  Address desc_addr;
+  int size;
+  unsigned int entry_number, task;
+  Space *s;
+  Thread *t;
+
+  if (EXPECT_TRUE
+      (ts->eip >= Kmem::mem_user_max - 4 ||
+       (space()->peek_user((Mword*)ts->eip) & 0xffffff) != 0xd0000f))
+    return 0;
+
+#ifndef GDT_ENTRY_TLS_MIN
+#define GDT_ENTRY_TLS_MIN 6
+#endif
+
+  if (EXPECT_FALSE(ts->ebx == 0)) // size argument
+    {
+      ts->ebx  = GDT_ENTRY_TLS_MIN;
+      ts->eip += 3;
+      return 1;
+    }
+
+  if (0 == tls_setup_emu(ts, &desc_addr, &size, &entry_number, &t))
+    {
+      Mword *trampoline_page = (Mword *) Kmem::phys_to_virt
+			       (Mem_layout::Trampoline_frame);
+
+      while (size >= Cpu::Ldt_entry_size)
+        {
+          Gdt_entry desc(space()->peek_user((Unsigned64 *)desc_addr));
+
+	  if (desc.limit())
+	    {
+              Ldt_user_desc info;
+
+	      info.entry_number    = entry_number + GDT_ENTRY_TLS_MIN;
+	      info.base_addr       =  desc.base();
+	      info.limit           =  desc.limit();
+	      info.seg_32bit       =  desc.seg32();
+	      info.contents        =  desc.contents();
+	      info.read_exec_only  = !desc.writable();
+	      info.limit_in_pages  =  desc.granularity();
+	      info.seg_not_present = !desc.present();
+	      info.useable         =  desc.avl();
+
+	      // Set up data on trampoline
+	      for (unsigned i = 0; i < sizeof(info) / sizeof(Mword); i++)
+		*(trampoline_page + i + 1) = *(((Mword *)&info) + i);
+
+	      s = Space_index(t->id().task()).lookup();
+
+	      // Call set_thread_area for given user process
+	      Trampoline::syscall(s->pid(), 243 /* __NR_set_thread_area */,
+				  Mem_layout::Trampoline_page + sizeof(Mword));
+
+	      // Also set this for the fiasco kernel so that
+	      // segment registers can be set, this is necessary for signal
+	      // handling, esp. for sigreturn to work in the Fiasco kernel
+	      // with the context of the client (gs/fs values).
+	      Emulation::thread_area_host(entry_number + GDT_ENTRY_TLS_MIN);
+	    }
+
+	  size      -= Cpu::Ldt_entry_size;
+	  desc_addr += Cpu::Ldt_entry_size;
+	  entry_number++;
+	}
+
+      return 1;
+    }
+
+  if (lldt_setup_emu(ts, &s, &desc_addr, &size, &entry_number, &task))
+    return 1;
+
+  Mword *trampoline_page = (Mword *) Kmem::phys_to_virt
+			   (Mem_layout::Trampoline_frame);
+
+  while (size >= Cpu::Ldt_entry_size)
+    {
+      Ldt_user_desc info;
+
+      Gdt_entry desc(space()->peek_user((Unsigned64 *)desc_addr));
+
+      info.entry_number    = entry_number;
+      info.base_addr       =  desc.base();
+      info.limit           =  desc.limit();
+      info.seg_32bit       =  desc.seg32();
+      info.contents        =  desc.contents();
+      info.read_exec_only  = !desc.writable();
+      info.limit_in_pages  =  desc.granularity();
+      info.seg_not_present = !desc.present();
+      info.useable         =  desc.avl();
+
+      // Set up data on trampoline
+      for (unsigned i = 0; i < sizeof(info) / sizeof(Mword); i++)
+	*(trampoline_page + i + 1) = *(((Mword *)&info) + i);
+
+      // Call modify_ldt for given user process
+      Trampoline::syscall(s->pid(), __NR_modify_ldt,
+			  1, // write LDT
+			  Mem_layout::Trampoline_page + sizeof(Mword),
+			  sizeof(info));
+
+      // Also set this for the fiasco kernel so that
+      // segment registers can be set, this is necessary for signal
+      // handling, esp. for sigreturn to work in the Fiasco kernel
+      // with the context of the client (gs/fs values).
+      if (handle_lldt_overwrite_local_ldt(*(trampoline_page + 1)))
+	Emulation::modify_ldt(*(trampoline_page + 1), // entry
+			      0,                      // base
+			      1);                     // size
+
+      size      -= Cpu::Ldt_entry_size;
+      desc_addr += Cpu::Ldt_entry_size;
+      entry_number++;
+    }
+
   return 1;
 }
 
-// The "FPU not available" trap entry point
-extern "C" void
-thread_handle_fputrap(void)
-{
-  panic ("fpu trap");
-}
+//---------------------------------------------------------------------------
+IMPLEMENTATION [ux-segments-utcb]:
 
-inline void
-thread_timer_interrupt_arch()
-{
-  LOG_TIMER_IRQ(0);
-}
+/** The UTCB already has entry 0, so do not overwrite it.
+ */
+PRIVATE inline
+bool
+Thread::handle_lldt_overwrite_local_ldt(Mword nr)
+{ return nr; }
 
-extern "C" void
-thread_timer_interrupt_stop()
-{}
+//---------------------------------------------------------------------------
+IMPLEMENTATION [ux-segments-!utcb]:
 
-extern "C" void
-thread_timer_interrupt_slow()
-{}
+/** All entries available, always return ok.
+ */
+PRIVATE inline
+bool
+Thread::handle_lldt_overwrite_local_ldt(Mword)
+{ return 1; }
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [ux-!segments]:
+
+PRIVATE inline
+bool
+Thread::handle_lldt(Trap_state *)
+{ return 0; }

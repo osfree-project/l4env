@@ -1,0 +1,20 @@
+/* -*- c -*- */
+import <l4/sys/types.h>
+import <l4/semaphore/semaphore.h>
+import <l4/l4vfs/select_listener.idl>
+
+interface select_internal: l4vfs::select_listener
+{
+
+    /** Start listening at notify listener thread.
+     *
+     * This function has to be called before select thread sends notify
+     * requests to each l4vfs server */
+
+    int register([in] l4thread_t select_tid,
+                 [in] l4_addr_t fd_set,
+                 [in] l4_addr_t select_sem);
+
+    int deregister([in] l4thread_t select_tid);
+
+};

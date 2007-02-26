@@ -25,7 +25,6 @@
 
 /* library includes */
 #include <l4/thread/thread.h>
-#include "__asm.h"
 #include "__debug.h"
 
 /*****************************************************************************
@@ -72,13 +71,13 @@ __micros2l4to(l4_uint32_t mus, l4_uint32_t * to_e, l4_uint32_t * to_m)
       /* sanity check */
       if ((*to_e > 15) || (*to_m > 255))
 	{
-	  Error("l4thread: invalid timeout (%u), using max. values",mus);
+	  LOG_Error("l4thread: invalid timeout (%u), using max. values", mus);
 	  *to_e = 0;
 	  *to_m = 255;
 	}
     }
 
-  LOGdL(DEBUG_SLEEP,"mus = %u -> e = %u, m = %u",mus,*to_e,*to_m);
+  LOGdL(DEBUG_SLEEP, "mus = %u -> e = %u, m = %u", mus, *to_e, *to_m);
 }
 
 /*****************************************************************************/
@@ -106,22 +105,22 @@ __do_sleep(l4_uint32_t t)
   else
     {
       /* calculate timeout */
-      __micros2l4to(t,&to_e,&to_m);
+      __micros2l4to(t, &to_e, &to_m);
       
       /* sanity check */
       if (to_e && !to_m)
         /* sleep(0us), nothing to do */
         return;
       
-      to = L4_IPC_TIMEOUT(0,0,to_m,to_e,0,0);
+      to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
     }
   
   /* do wait */
-  error = l4_ipc_receive(L4_NIL_ID,L4_IPC_SHORT_MSG,
-                         &dummy,&dummy,to,&result);
+  error = l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG,
+                         &dummy, &dummy, to, &result);
 
   if (error != L4_IPC_RETIMEOUT)
-    Error("l4thread: sleep canceled!");
+    LOG_Error("l4thread: sleep canceled!");
 }
 
 /*****************************************************************************

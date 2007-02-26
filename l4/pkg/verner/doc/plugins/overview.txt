@@ -1,0 +1,48 @@
+                           VERNER - Plugins - Überblick
+                              Carsten Rietzschel
+                           cr7@os.inf.tu-dresden.de
+                              17 September 2004
+
+
+
+                       ============= Konzepte =============
+
+
+Plugins kapseln spezifische Aufgaben, die nicht in den (generell gehaltenen) Work-Loops
+der einzelenen Komponenten ausgeführt werden sollen.
+
+Dazu zählen:
+- IO-Plugins (siehe doc/plugins/io-plugins.txt)
+- Import-Plugins (Container-spezifisch, im Demuxer genutzt)
+- Codec-Plugins  (Codec-spezifisch, in den Kernen genutzt)
+- Filter-Plugins (Postprocessing, in den Kernen genutzt)
+- Export-Plugins (Ausgabe in der Sync-Komponente)
+- FX-Plugins     (Effekte für Audio-only-Streams)
+
+Alles zu finden in /plugins.
+
+Alle Plugins werden angesprochen mit Hilfe des
+plugin_ctrl_t (definiert in include/arch_types.h).
+Dies beinhaltet u.a.:
+- handle (zur Wiedererkennung bei mehrmaliger Verwendung des selbigen Plugins)
+- info   (kurzer Info-String)
+- Alle Daten die wichtige bei der Initialisierung der Plugins sind
+ (Dateiname, Stream-Nummer, Zielformat, ...)
+
+Alle Daten werden in folgenden Format übertragen - auch und gerade zu den Plugins
+    ---------------------
+    |  Frameheader      |  <-- siehe include/arch_types.h:frame_ctrl_t
+    ---------------------
+    | Daten             |
+    |   Audio od. Video |
+    ---------------------
+
+
+Rückgabewerte i.Allg.:
+  <0 = Fehler
+   0 = ok.
+Ausser bei Codec-Plugins. Siehe doc/plugins/codec.txt.)
+
+
+Schnittstellen:
+- siehe doc/plugins/$(type).txt

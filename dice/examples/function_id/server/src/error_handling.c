@@ -1,7 +1,7 @@
 #include "test-server.h"
 
 inline
-int error_handling(CORBA_Object sender, base_msg_buffer_t *buffer, CORBA_Environment *env)
+int error_handling(CORBA_Object sender, base_msg_buffer_t *buffer, CORBA_Server_Environment *env)
 {
   // we could test where that message comes from using 'sender'
   //

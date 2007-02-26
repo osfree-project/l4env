@@ -13,12 +13,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+char LOG_tag[9]=LOG_TAG;
+
 /* We have no prototype exported but know about it. */
 extern FILE *LOG_stdlog;
 
 int main(int argc, char**argv){
-  LOG_init(LOG_TAG);
-  
   /* You do not need the following, but you can use this to redirect
      your log output. */
   if(argc>1){
@@ -40,7 +40,7 @@ int main(int argc, char**argv){
   LOGl("and this is LOGl");
   LOGL("to come to an end, this is LOGL");
 
-  LOG("And finaly, a test with %%n: %n. Ok.", 3);
+  LOG("And finaly, a test with %%n: %n. Ok.", (unsigned*)3);
 
   return 0;
 }

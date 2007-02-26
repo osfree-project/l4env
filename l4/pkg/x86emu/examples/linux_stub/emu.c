@@ -5,8 +5,9 @@
 #include <asm/atomic.h>
 
 #include <l4linux/x86/l4_memory.h>
+#include <l4linux/x86/l4_thread.h>
 
-#include "../../lib/include/x86emu.h"
+#include <l4/x86emu/x86emu.h>
 
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
@@ -30,6 +31,12 @@ static void FASTCALL(my_wrl(u32 addr, u32 val));
 
 static unsigned long v_page[1024*1024/(L4_PAGESIZE)];
 
+static void
+warn(u32 addr, const char *func)
+{
+  printk("\033[31mWARNING: Function %s access %08lx\033[m\n", func, addr);
+}
+
 static u8
 my_inb(X86EMU_pioAddr addr)
 {
@@ -37,6 +44,7 @@ my_inb(X86EMU_pioAddr addr)
   asm volatile ("inb %w1, %b0" : "=a" (r) : "d" (addr));
 #ifdef DBG_IO
   printk("%04x:%04x inb %x -> %x\n", M.x86.R_CS, M.x86.R_IP, addr, r);
+  l4_sleep(10);
 #endif
   return r;
 }
@@ -48,6 +56,7 @@ my_inw(X86EMU_pioAddr addr)
   asm volatile ("inw %w1, %w0" : "=a" (r) : "d" (addr));
 #ifdef DBG_IO
   printk("%04x:%04x inw %x -> %x\n", M.x86.R_CS, M.x86.R_IP, addr, r);
+  l4_sleep(10);
 #endif
   return r;
 }
@@ -58,7 +67,8 @@ my_inl(X86EMU_pioAddr addr)
   u32 r;
   asm volatile ("inl %w1, %0" : "=a" (r) : "d" (addr));
 #ifdef DBG_IO
-  printk("%04x:%04x inl %x -> %x\n", M.x86.R_CS, M.x86.R_IP, addr, r);
+  printk("%04x:%04x inl %x -> %lx\n", M.x86.R_CS, M.x86.R_IP, addr, r);
+  l4_sleep(10);
 #endif
   return r;
 }
@@ -68,6 +78,7 @@ my_outb(X86EMU_pioAddr addr, u8 val)
 {
 #ifdef DBG_IO
   printk("%04x:%04x outb %x -> %x\n", M.x86.R_CS, M.x86.R_IP, val, addr);
+  l4_sleep(10);
 #endif
   asm volatile ("outb %b0, %w1" : "=a" (val), "=d" (addr)
                                 : "a" (val), "d" (addr));
@@ -78,6 +89,7 @@ my_outw(X86EMU_pioAddr addr, u16 val)
 {
 #ifdef DBG_IO
   printk("%04x:%04x outw %x -> %x\n", M.x86.R_CS, M.x86.R_IP, val, addr);
+  l4_sleep(10);
 #endif
   asm volatile ("outw %w0, %w1" : "=a" (val), "=d" (addr)
                                 : "a" (val), "d" (addr));
@@ -87,7 +99,8 @@ static void
 my_outl(X86EMU_pioAddr addr, u32 val)
 {
 #ifdef DBG_IO
-  printk("%04x:%04x outl %x -> %x\n", M.x86.R_CS, M.x86.R_IP, val, addr);
+  printk("%04x:%04x outl %lx -> %x\n", M.x86.R_CS, M.x86.R_IP, val, addr);
+  l4_sleep(10);
 #endif
   asm volatile ("outl %0, %w1" : "=a"(val), "=d" (addr) 
                                : "a" (val), "d" (addr));
@@ -96,10 +109,14 @@ my_outl(X86EMU_pioAddr addr, u32 val)
 static u8
 my_rdb(u32 addr)
 {
+  if (addr > 1 << 20)
+    warn(addr, __FUNCTION__);
+
 #ifdef DBG_MEM
-  printk("readb %08x->%08lx => %02x\n",
+  printk("readb %08lx->%08lx => %02x\n",
       addr, v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE), 
       *(u8*)(v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE)));
+  l4_sleep(10);
 #endif
   return *(u32*)(v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE));
 }
@@ -107,10 +124,14 @@ my_rdb(u32 addr)
 static u16
 my_rdw(u32 addr)
 {
+  if (addr > 1 << 20)
+    warn(addr, __FUNCTION__);
+
 #ifdef DBG_MEM
-  printk("readw %08x->%08lx => %04x\n",
-      addr, v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE), 
+  printk("readw %08lx->%08lx => %04x\n",
+      addr, v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE),
       *(u16*)(v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE)));
+  l4_sleep(10);
 #endif
   return *(u16*)(v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE));
 }
@@ -118,10 +139,14 @@ my_rdw(u32 addr)
 static u32
 my_rdl(u32 addr)
 {
+  if (addr > 1 << 20)
+    warn(addr, __FUNCTION__);
+
 #ifdef DBG_MEM
-  printk("readl %08x->%08lx => %08x\n",
+  printk("readl %08lx->%08lx => %08lx\n",
       addr, v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE), 
       *(u32*)(v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE)));
+  l4_sleep(10);
 #endif
   return *(u32*)(v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE));
 }
@@ -129,9 +154,13 @@ my_rdl(u32 addr)
 static void 
 my_wrb(u32 addr, u8 val)
 {
+  if (addr > 1 << 20)
+    warn(addr, __FUNCTION__);
+
 #ifdef DBG_MEM
-  printk("writeb %08x->%08lx => %02x\n",
+  printk("writeb %08lx->%08lx => %02x\n",
       addr, v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE), val);
+  l4_sleep(10);
 #endif
   *(u8*)(v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE)) = val;
 }
@@ -139,9 +168,13 @@ my_wrb(u32 addr, u8 val)
 static void 
 my_wrw(u32 addr, u16 val)
 {
+  if (addr > 1 << 20)
+    warn(addr, __FUNCTION__);
+
 #ifdef DBG_MEM
-  printk("writew %08x->%08lx => %04x\n",
+  printk("writew %08lx->%08lx => %04x\n",
       addr, v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE), val);
+  l4_sleep(10);
 #endif
   *(u16*)(v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE)) = val;
 }
@@ -149,9 +182,13 @@ my_wrw(u32 addr, u16 val)
 static void 
 my_wrl(u32 addr, u32 val)
 {
+  if (addr > 1 << 20)
+    warn(addr, __FUNCTION__);
+
 #ifdef DBG_MEM
-  printk("writel %08x->%08lx => %08x\n",
+  printk("writel %08lx->%08lx => %08lx\n",
       addr, v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE), val);
+  l4_sleep(10);
 #endif
   *(u32*)(v_page[addr/L4_PAGESIZE] + (addr % L4_PAGESIZE)) = val;
 }
@@ -197,16 +234,18 @@ do_x86_emu(struct vm86_struct *info)
       M.x86.R_SS   = info->regs.ss;
       M.x86.R_FS   = info->regs.fs;
       M.x86.R_GS   = info->regs.gs;
-  
+ 
+#if 0
       printk(">> Before x86 emulator:\n"
 	     "   eax=%08lx ebx=%08lx ecx=%08lx edx=%08lx\n"
 	     "   esi=%08lx edi=%08lx ebp=%08lx esp=%08lx\n"
 	     "   cs=%04x  ds=%04x  es=%04x  ss=%04x\n"
-	     "   eip=%08lx eflags=%08lx\n",
+	     "   eip=%08lx eflags=%08lx v_page=%08x\n",
 	     info->regs.eax, info->regs.ebx, info->regs.ecx, info->regs.edx,
 	     info->regs.esi, info->regs.edi, info->regs.ebp, info->regs.esp,
 	     info->regs.cs,  info->regs.ds,  info->regs.es,  info->regs.ss,
-	     info->regs.eip, info->regs.eflags);
+	     info->regs.eip, info->regs.eflags, (unsigned)v_page);
+#endif
       
       /* The client has mapped the complete 1MB address space */
       for (addr=0; addr<(1024*1024); addr+=L4_PAGESIZE)
@@ -219,15 +258,17 @@ do_x86_emu(struct vm86_struct *info)
       /* execute emulator */
       X86EMU_exec();
   
+#if 0
       printk("<< After x86 emulator:\n"
-	     "   eax=%08x ebx=%08x ecx=%08x edx=%08x\n"
-	     "   esi=%08x edi=%08x ebp=%08x esp=%08x\n"
+	     "   eax=%08lx ebx=%08lx ecx=%08lx edx=%08lx\n"
+	     "   esi=%08lx edi=%08lx ebp=%08lx esp=%08lx\n"
 	     "   cs=%04x  ds=%04x  es=%04x  ss=%04x\n"
-	     "   eip=%08x eflags=%08x\n",
+	     "   eip=%08lx eflags=%08lx\n",
 	     M.x86.R_EAX, M.x86.R_EBX, M.x86.R_ECX, M.x86.R_EDX,
 	     M.x86.R_ESI, M.x86.R_EDI, M.x86.R_EBP, M.x86.R_ESP,
 	     M.x86.R_CS,  M.x86.R_DS,  M.x86.R_ES,  M.x86.R_SS,
 	     M.x86.R_EIP, M.x86.R_EFLG);
+#endif
       
       info->regs.eax    = M.x86.R_EAX;
       info->regs.ebx    = M.x86.R_EBX;
@@ -250,6 +291,8 @@ do_x86_emu(struct vm86_struct *info)
 
       clear_bit(0, &do_x86_emu_lock);
 
+      /* make sure that EIP points to the HLT instruction */
+      info->regs.eip--;
       ret = VM86_UNKNOWN;
     }
   else
@@ -257,7 +300,7 @@ do_x86_emu(struct vm86_struct *info)
       printk("x86 emulator called again\n");
       ret = -EPERM;
     }
-      
+
   /* VM86_UNKNOWN means that we got an exception. This was expected
    * since the code to emulate ends with HLT */
   return ret;
@@ -266,7 +309,7 @@ do_x86_emu(struct vm86_struct *info)
 static int
 init_emu_module(void)
 {
-  M.x86.debug = DEBUG_DECODE_F;
+  M.x86.debug = 0 /*| DEBUG_DECODE_F*/;
   
   X86EMU_setupPioFuncs(&my_pioFuncs);
   X86EMU_setupMemFuncs(&my_memFuncs);

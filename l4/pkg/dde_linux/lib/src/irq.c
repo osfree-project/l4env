@@ -71,9 +71,12 @@ static struct irq_desc
   l4thread_t t;         /**< handler thread */
   void (*handler) (int, void *, struct pt_regs *);
                         /**< ISR */
+  void (*def_handler) (int, void *);
+                        /**< deferred handler */
   unsigned long flags;  /**< flags from request_irq() */
   const char *dev_name; /**< dev_name from request_irq() */
   void *dev_id;         /**< dev_id from request_irq() */
+  void *dev_def_id;     /**< deffered handler id */
 } handlers[NR_IRQS];
 
 /** Usage flag.
@@ -134,7 +137,7 @@ static inline int __omega0_attach(unsigned int irq, int *handle)
  */
 static inline int __omega0_wait(unsigned int irq, int handle, unsigned int flags)
 {
-  omega0_request_t request;
+  omega0_request_t request = { .i=0 };
   int ret;
 
   /* setup omega0 request */
@@ -239,6 +242,8 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
         }
     }
 
+  if (l4dde_process_add_worker())
+    Panic("l4dde_process_add_worker() failed");
   ++local_irq_count(smp_processor_id());
 
   /* we are up */
@@ -248,8 +253,8 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
   if ((ret < 0)|| retval)
     Panic("IRQ thread startup failed!");
 
-  DMSG("dde_irq_thread[%d] "IdFmt" running.\n",
-       irq_desc->num, IdStr(l4thread_l4_id(l4thread_myself())));
+  LOGd(DEBUG_MSG, "dde_irq_thread[%d] "l4util_idfmt" running.",
+       irq_desc->num, l4util_idstr(l4thread_l4_id(l4thread_myself())));
 
   if (!use_omega0)
     __enable_irq(irq);
@@ -260,10 +265,26 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
         error = __omega0_wait(irq, irq_handle, om_flags);
       else
         {
-          /* wait for incoming interrupt */
-          error = l4_ipc_receive(irq_id,
+          if(omega0_alien_handler)
+            {
+              l4_threadid_t alien;
+              while(1)
+                {
+                  error = l4_ipc_wait(&alien,
                                       L4_IPC_SHORT_MSG, &dw0, &dw1,
                                       L4_IPC_NEVER, &result);
+                  if(error || l4_thread_equal(irq_id, alien))
+                    break;
+                  omega0_alien_handler(alien, dw0, dw1);
+                }
+            }
+          else 
+            {
+              /* wait for incoming interrupt */
+              error = l4_ipc_receive(irq_id,
+                                     L4_IPC_SHORT_MSG, &dw0, &dw1,
+                                     L4_IPC_NEVER, &result);
+            }
           __disable_irq(irq);
           __ack_irq(irq);
         }
@@ -271,21 +292,23 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
       switch (error)
         {
         case 0:
-#if DEBUG_IRQ
-        DMSG("got IRQ %d\n", irq);
-#endif
+          LOGd(DEBUG_IRQ, "got IRQ %d\n", irq);
           if (irq_desc->active)
-            irq_desc->handler(irq, irq_desc->dev_id, 0);
+            {
+              irq_desc->handler(irq, irq_desc->dev_id, 0);
+              if(irq_desc->def_handler)
+                irq_desc->def_handler(irq, irq_desc->dev_def_id);
+            }
           if (use_omega0)
             om_flags = 0;
           else
             __enable_irq(irq);
           break;
         case L4_IPC_RETIMEOUT:
-          ERROR("timeout while receiving irq");
+          LOGdL(DEBUG_ERRORS, "Error: timeout while receiving irq");
           break;
         default:
-          ERROR("receiving irq (%d)", error);
+          LOGdL(DEBUG_ERRORS, "Error: receiving irq (%d)", error);
           break;
         }
     }
@@ -309,6 +332,7 @@ int request_irq(unsigned int irq,
                 unsigned long flags, const char *dev_name, void *dev_id)
 {
   l4thread_t irq_tid;
+  char name[16];
 
   if (irq >= NR_IRQS)
     return -EINVAL;
@@ -319,35 +343,38 @@ int request_irq(unsigned int irq,
     {
       if (handlers[irq].active)
         {
-#if DEBUG_IRQ
-          DMSG("XXX attempt to reattach to active irq %d\n", irq);
-#endif
+          LOGd(DEBUG_IRQ, "XXX attempt to reattach to active irq %d", irq);
           return -EBUSY;
         }
       handlers[irq].active = 1;
 
       /* XXX what about handler, flags, ... ? */
 
-#if DEBUG_IRQ
-      DMSG("reattached to irq %d\n", irq);
-#endif
+      LOGd(DEBUG_IRQ, "reattached to irq %d", irq);
       return 0;
     }
 
   handlers[irq].handler = handler;
 
   /* create IRQ handler thread */
-  irq_tid = l4thread_create((l4thread_fn_t) dde_irq_thread,
-                            (void *) &handlers[irq], L4THREAD_CREATE_SYNC);
+  LOG_snprintf(name, 16, ".irq%.2X", irq);
+  irq_tid = l4thread_create_long(L4THREAD_INVALID_ID,
+                                 (l4thread_fn_t) dde_irq_thread,
+                                 name,
+                                 L4THREAD_INVALID_SP,
+                                 L4THREAD_DEFAULT_SIZE,
+                                 L4THREAD_DEFAULT_PRIO,
+                                 (void *) &handlers[irq],
+                                 L4THREAD_CREATE_SYNC);
 
   if (irq_tid<0)
     {
-      ERROR("thread creation failed");
+      LOGdL(DEBUG_ERRORS, "Error: thread creation failed");
       return -EAGAIN;
     }
   if (*(int*)l4thread_startup_return(irq_tid))
     {
-      ERROR("irq not free");
+      LOGdL(DEBUG_ERRORS, "Error: irq not free");
       return -EBUSY;
     }
 
@@ -358,9 +385,7 @@ int request_irq(unsigned int irq,
   handlers[irq].dev_name = dev_name;
   handlers[irq].dev_id = dev_id;
 
-#if DEBUG_IRQ
-  DMSG("attached to irq %d\n", irq);
-#endif
+  LOGd(DEBUG_IRQ, "attached to irq %d", irq);
 
   return 0;
 }
@@ -379,29 +404,41 @@ void free_irq(unsigned int irq, void *dev_id)
 {
   handlers[irq].active = 0;
 
-#if DEBUG_IRQ
-  DMSG("XXX attempt to free irq %d ("IdFmt")\n", irq,
-       IdStr(l4thread_l4_id(handlers[irq].t)));
-#endif
+  LOGd(DEBUG_IRQ, "XXX attempt to free irq %d ("l4util_idfmt")", irq,
+       l4util_idstr(l4thread_l4_id(handlers[irq].t)));
 }
 
+int l4dde_set_deferred_irq_handler(unsigned int irq,
+                                   void (*def_handler) (int, void *),
+                                   void *dev_def_id)
+{
+    if(handlers[irq].active==0)
+      {
+        LOGd(DEBUG_IRQ, "attempt to set deferred handler for free irq %d",
+             irq);
+        return -L4_EINVAL;
+      }
+    handlers[irq].dev_def_id = dev_def_id;
+    handlers[irq].def_handler = def_handler;
+    return 0;
+}
 
 /** \name Undocumented
  * \ingroup mod_irq
  * @{ */
 void disable_irq(unsigned int irq_num)
 {
-  Msg("%s not implemented", __FUNCTION__);
+  LOG("%s not implemented", __FUNCTION__);
 }
 
 void disable_irq_nosync(unsigned int irq_num)
 {
-  Msg("%s not implemented", __FUNCTION__);
+  LOG("%s not implemented", __FUNCTION__);
 }
 
 void enable_irq(unsigned int irq_num)
 {
-  Msg("%s not implemented", __FUNCTION__);
+  LOG("%s not implemented", __FUNCTION__);
 }
 
 /** Old probing of interrupts
@@ -411,7 +448,7 @@ void enable_irq(unsigned int irq_num)
  */
 int probe_irq_on(unsigned long val)
 {
-  Error("%s not implemented", __FUNCTION__);
+  LOG_Error("%s not implemented", __FUNCTION__);
   return 0;
 }
 /** Old probing of interrupts
@@ -421,7 +458,7 @@ int probe_irq_on(unsigned long val)
  */
 int probe_irq_off(unsigned long val)
 {
-  Error("%s not implemented", __FUNCTION__);
+  LOG_Error("%s not implemented", __FUNCTION__);
   return 0;
 }
 
@@ -436,7 +473,7 @@ int probe_irq_off(unsigned long val)
  */
 #ifdef CONFIG_SMP
 void synchronize_irq(void){
-#warning Not implemented.
+#warning synchronize_irq() is not implemented.
 
   /* To implement this, I think it is better not to do a cli()/sti() as Linux
      does, but to wait until each of the current active interrupts was
@@ -471,3 +508,24 @@ int l4dde_irq_init(int omega0)
   ++_initialized;
   return 0;
 }
+
+/** Get IRQ thread number
+ * \ingroup mod_irq
+ *
+ * \param  irq          IRQ number the irq-thread used with request_irq()
+ * \return thread-id    threadid of IRQ thread, or L4_INVALID_ID if not
+ *                      initialized
+ */
+l4_threadid_t l4dde_irq_l4_id(int irq)
+{
+    if(irq >= NR_IRQS) return L4_INVALID_ID;
+    if(!handlers[irq].active) return L4_INVALID_ID;
+    return l4thread_l4_id(handlers[irq].t);
+}
+
+omega0_alien_handler_t l4dde_set_alien_handler(omega0_alien_handler_t handler)
+{
+    if(!_initialized) return (omega0_alien_handler_t)-1;
+    return omega0_set_alien_handler(handler);
+}
+

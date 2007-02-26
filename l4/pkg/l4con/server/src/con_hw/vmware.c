@@ -348,7 +348,7 @@ static int
 vmware_probe(unsigned int bus, unsigned int devfn, 
 	     const struct pci_device_id *dev, con_accel_t *accel)
 {
-  unsigned int addr, l, id;
+  unsigned int addr, size, id;
 
   printf("Found VMware %04x (PCI %02x/%02x)", dev->device, bus, devfn);
 
@@ -359,12 +359,7 @@ vmware_probe(unsigned int bus, unsigned int devfn,
     }
   else
     {
-      PCIBIOS_READ_CONFIG_DWORD(bus, devfn, PCI_BASE_ADDRESS_0, &l);
-      if ((l & PCI_BASE_ADDRESS_SPACE) == PCI_BASE_ADDRESS_SPACE_MEMORY)
-	addr = l & PCI_BASE_ADDRESS_MEM_MASK;
-      else
-	addr = l & PCI_BASE_ADDRESS_IO_MASK;
-
+      pci_resource(bus, devfn, 0, &addr, &size);
       vm_idx = addr + SVGA_INDEX_PORT;
       vm_val = addr + SVGA_VALUE_PORT;
     }
@@ -399,13 +394,18 @@ vmware_probe(unsigned int bus, unsigned int devfn,
   accel->sync = vmwareWaitForFB;
   accel->drty = vmwareSendSVGACmdUpdate;
 
-  hw_vid_mem_addr = vmwareReadReg(SVGA_REG_FB_START)
-		  + vmwareReadReg(SVGA_REG_FB_OFFSET);
+  /* any drawing functions other that fast fill and fast copy have to
+   * call dirty to notify VMware to redraw the screen. */
+  accel->caps |= ACCEL_POST_DIRTY;
+
+  hw_vid_mem_addr = vmwareReadReg(SVGA_REG_FB_START);
   hw_vid_mem_size = vmwareReadReg(SVGA_REG_FB_MAX_SIZE);
 
   if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, 
 		"video", &hw_map_vid_mem_addr)<0)
     return -L4_ENOTFOUND;
+
+  hw_map_vid_mem_addr += vmwareReadReg(SVGA_REG_FB_OFFSET);              
 
   return 0;
 }
@@ -415,4 +415,3 @@ vmware_register(void)
 {
   pci_register(vmware_pci_tbl, vmware_probe);
 }
-

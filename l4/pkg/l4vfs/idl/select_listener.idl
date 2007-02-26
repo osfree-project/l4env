@@ -1,0 +1,39 @@
+/* -*- c -*- */
+/**
+ * \file   l4vfs/idl/select_listener.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>       // fixme: this include seems superfluous
+import <l4/l4vfs/types.h>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief <fixme>
+     */
+    [uuid (71)]
+    interface select_listener
+    {
+        /** Send a notification to listener thread.
+         *
+         * This function has to be called if a notification request
+         * can be granted.  This means that specified operation(s) in
+         * mode will not block on fd.
+         *
+         * /param fd file handle
+         * /param mode considered operation(s)
+         */
+        int send_notification([in] object_handle_t handle,
+                              [in] int mode);
+    };
+};

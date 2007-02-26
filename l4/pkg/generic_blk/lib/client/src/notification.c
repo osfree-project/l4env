@@ -11,6 +11,8 @@
  */
 /*****************************************************************************/
 
+#include <stdio.h>
+
 /* L4/DROPS includes */
 #include <l4/log/l4log.h>
 #include <l4/util/macros.h>
@@ -38,6 +40,10 @@ __notification_thread(void * data)
   l4_uint32_t handle,status;
   int error;
   CORBA_Environment _env = dice_default_environment;
+
+  /* call client setup callback */
+  if (drv->cb != NULL)
+    drv->cb();
 
   /* notification loop */
   while (1)
@@ -69,8 +75,12 @@ int
 blkclient_start_notification_thread(blkclient_driver_t * driver)
 {
   /* start thread */
+  char buf[9];
+  
+  sprintf(buf, ".not-%.3d", driver->handle);
   driver->notify_thread = 
     l4thread_create_long(L4THREAD_INVALID_ID, __notification_thread,
+    			 buf,
 			 L4THREAD_INVALID_SP, BLKCLIENT_NOTIFY_STACK_SIZE,
 			 L4THREAD_DEFAULT_PRIO, driver, L4THREAD_CREATE_ASYNC);
   if (driver->notify_thread < 0)

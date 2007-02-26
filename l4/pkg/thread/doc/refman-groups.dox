@@ -14,8 +14,15 @@ Documentation of the L4 Thread Library user API.
 */
 
 /**
-\defgroup api_exit Exit / shutdown threads
-\ingroup api
+* \defgroup api_exit Exit / shutdown threads
+* \ingroup api
+* \brief When and how threads are deleted ...
+*
+* A thread exits if:
+* -# its thread function returns
+* -# it kills itself using l4thread_shutdown()
+* -# is is killed using l4thread_exit().
+*
 */
 
 /**

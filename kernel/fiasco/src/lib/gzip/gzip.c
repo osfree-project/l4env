@@ -25,7 +25,7 @@ raw_putchar(int c)
 static void
 uu_open(const char *name)
 {
-  raw_write("begin 644 ", 10);
+  raw_write("\nbegin 644 ", 10);
   raw_write(name, strlen(name));
   raw_write("\n", 1);
 }
@@ -186,7 +186,7 @@ gz_open(const char *fname)
       return -1;
     }
   
-  gz_stream.next_out  = gz_out_buffer + 10;
+  gz_stream.next_out  = (Bytef*)(gz_out_buffer + 10);
   gz_stream.avail_out = sizeof(gz_out_buffer) - 10;
   gz_stream.avail_in  = 0;
   gz_crc              = crc32(0L, Z_NULL, 0);
@@ -202,7 +202,7 @@ gz_flush_outbuffer(void)
   if (len > 0)
     {
       uu_write(gz_out_buffer, len);
-      gz_stream.next_out  = gz_out_buffer;
+      gz_stream.next_out  = (Bytef*)gz_out_buffer;
       gz_stream.avail_out = sizeof(gz_out_buffer);
     }
 }

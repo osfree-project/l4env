@@ -5,13 +5,13 @@
 char LOG_tag[9]="hiserver";
 static int count;
 
-CORBA_void hi_print_component(CORBA_Object *_dice_corba_obj,
+CORBA_void hi_print_component(CORBA_Object _dice_corba_obj,
                               CORBA_Environment *_dice_corba_env){
     printf("Hi world\n");
     count++;
 }
 
-CORBA_int hi_count_component(CORBA_Object *_dice_corba_obj,
+CORBA_int hi_count_component(CORBA_Object _dice_corba_obj,
                              CORBA_Environment *_dice_corba_env){
     return count;
 }

@@ -1,0 +1,24 @@
+/* -*- c -*- */ 
+import <l4/sys/types.h>
+import <l4/dm_generic/types.h>
+import <l4/l4vfs/object_server.idl>
+import <l4/rt_mon/rt_mon_reg.idl>
+
+#include <l4/rt_mon/defines.h>
+#include <l4/rt_mon/types.h>
+
+library rt_mon
+{
+    [uuid(2002)]
+    interface l4vfs_coord : reg, l4vfs::object_server
+    {
+        /* Request access to one ds to monitor it.
+         */
+        object_handle_t request_ds([in] object_id_t id,
+                                   [out] l4dm_dataspace_t * ds);
+
+        /* Release access to one ds.
+         */
+        int             release_ds([in] object_handle_t handle);
+    };
+};

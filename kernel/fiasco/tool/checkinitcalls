@@ -4,6 +4,7 @@ use strict;
 use Getopt::Long;
 use Pod::Usage;
 
+my $target       = '';
 my $sym_objdump  = 'nm -nC';
 my $objdump      = 'objdump -drlCj ".text"';
 my $cppfilt      = 'c++filt';
@@ -19,7 +20,8 @@ my $opt = { "kernel"          => \$kernel,
 	    "start-symbol"    => \$start_symbol,
 	    "end-symbol"      => \$end_symbol,
 	    "W"               => \@Wswitch,
-	    "ignore-function" => \@ignore_funcs };
+	    "ignore-function" => \@ignore_funcs,
+	    "target"          => \$target };
 
 Getopt::Long::Configure ('bundling','no_ignore_case','auto_abbrev');
 
@@ -31,6 +33,7 @@ GetOptions( $opt,
 	    "end-symbol=s",
 	    "ignore-function=s@",
 	    "kernel|k=s",
+	    "target|t=s",
 	  );
 
 sub have_warn_opt {
@@ -39,6 +42,9 @@ sub have_warn_opt {
 #  print "W: ".join(" ",@gr)."\n";
   return scalar @gr;
 }
+
+$objdump     = $target . $objdump;
+$sym_objdump = $target . $sym_objdump;
 
 $werror = 1 if have_warn_opt("error");
 push @ignore_funcs, ("__static_initialization_and_destruction_0") 

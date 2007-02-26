@@ -3,10 +3,11 @@
 
 #include <l4/names/libnames.h>
 #include <l4/env/errno.h>
-#include <l4/con/l4contxt.h>
+#include <l4/l4con/l4contxt.h>
 #include <l4/log/l4log.h>
 #include <l4/sys/kdebug.h>
 #include <l4/thread/thread.h>
+#include <l4/util/l4_macros.h>
 
 #define LOG_BUFFERSIZE 81
 #define LOG_NAMESERVER_NAME "stdlogV05"
@@ -51,19 +52,16 @@ get_message(void)
 	{
   	  if ((err=l4_ipc_wait(&msg_sender,
 				    &message, &message.d0, &message.d1,
-				    L4_IPC_TIMEOUT(0,0,0,0,0,0),
-				    &message.result))!=0)
+				    L4_IPC_NEVER, &message.result))!=0)
 	    return err;
 	  break;
 	} 
       else 
 	{
-	  err = l4_ipc_reply_and_wait(
-				    msg_sender, NULL, message.d0, 0,
-				    &msg_sender,
-				    &message, &message.d0, &message.d1,
-				    L4_IPC_TIMEOUT(0,1,0,0,0,0),
-				    &message.result);
+	  err = l4_ipc_reply_and_wait(msg_sender, NULL, message.d0, 0,
+				      &msg_sender,
+				      &message, &message.d0, &message.d1,
+				      L4_IPC_SEND_TIMEOUT_0, &message.result);
 	  if (err & L4_IPC_SETIMEOUT)
 	    msg_sender = L4_INVALID_ID;
 	  else
@@ -152,8 +150,8 @@ main(int argc, char**argv)
       if (err & 0x40)
 	continue;
     
-      printf("logcon | Error %#x getting message from %x.%x.\n", 
-	  err, msg_sender.id.task, msg_sender.id.lthread);
+      printf("logcon | Error %#x getting message from "l4util_idfmt".\n", 
+	  err, l4util_idstr(msg_sender));
       msg_sender = L4_INVALID_ID;
     }
 }

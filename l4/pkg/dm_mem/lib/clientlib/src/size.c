@@ -22,6 +22,7 @@
 /* DMmem includes */
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/dm_mem/dm_mem-client.h>
+#include "__debug.h"
 
 /*****************************************************************************
  *** libdm_mem API functions
@@ -36,14 +37,13 @@
  *	
  * \return 0 on success (\a size contains the dataspace size), 
  *         error code otherwise:
- *         - \c -L4_EIPC    IPC error calling dataspace manager
- *         - \c -L4_EINVAL  invalid dataspace id
- *         - \c -L4_EPERM   Caller is not a client of the dataspace
+ *         - -#L4_EIPC    IPC error calling dataspace manager
+ *         - -#L4_EINVAL  invalid dataspace id
+ *         - -#L4_EPERM   Caller is not a client of the dataspace
  */
 /*****************************************************************************/ 
 int
-l4dm_mem_size(l4dm_dataspace_t * ds, 
-	      l4_size_t * size)
+l4dm_mem_size(const l4dm_dataspace_t * ds, l4_size_t * size)
 {
   int ret;
   CORBA_Environment _env = dice_default_environment;
@@ -52,12 +52,12 @@ l4dm_mem_size(l4dm_dataspace_t * ds,
     return -L4_EINVAL;
 
   /* call dataspace manager */
-  ret = if_l4dm_mem_size_call(&(ds->manager),ds->id,size,&_env);
+  ret = if_l4dm_mem_size_call(&(ds->manager), ds->id, size, &_env);
   if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      ERROR("libdm_mem: get size of dataspace %u at %x.%x failed "
-	    "(ret %d, exc %d)!",ds->id,ds->manager.id.task,
-	    ds->manager.id.lthread,ret,_env.major);
+      LOGdL(DEBUG_ERRORS, "libdm_mem: get size of dataspace %u at " \
+            l4util_idfmt" failed (ret %d, exc %d)!", ds->id,
+            l4util_idstr(ds->manager), ret, _env.major);
       if (ret)
         return ret;
       else

@@ -1,27 +1,5 @@
 
-/* this file defines the construction of the kernel's virtual address
-   space */
-
-
-/*
- * UX Layout
- *
- * 0x00001000-...		Fiasco-UX Text
- *
- * 0x20000000-0x3fffffff	TCB Space
- * 0x50000000-0x5fffffff	Slab Space
- * 0x60000000-0xbffeffff	Physical Memory
- * 0xbfff0000-0xbfffffff	Fiasco-UX Linux Stack
- * 0xc0000000-0xcfffffff	Linux Kernel
- */
-
-_tcbs_1			= 0x20000000;	/* Assumption: 256MB-aligned	*/
-_physmem_1		= 0x60000000;	/* Physical memory mapping	*/
-_syscalls		= 0xeacff000;	/* Absolute Syscall Page	*/
-_utcb_address_page	= 0xbfff0000;	/* UTCB address page		*/
-_trampoline_page	= 0xbfff1000;	/* Task Trampoline Page Address */
-
-load_address		= 0x1000;	/* Kernel Load Address		*/
+_load	= 0x1000;	/* kernel load address */
 
 OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
 OUTPUT_ARCH(i386)
@@ -30,7 +8,7 @@ SEARCH_DIR(/lib); SEARCH_DIR(/usr/lib); SEARCH_DIR(/usr/local/lib);
 
 SECTIONS {
 
-  . = load_address + SIZEOF_HEADERS;
+  . = _load + SIZEOF_HEADERS;
 
   .init : {
     KEEP (*(.init))
@@ -38,7 +16,7 @@ SECTIONS {
   
   .text : {
     *(.text .stub .text.* .gnu.linkonce.t.*)
-  }
+  } = 0x90
 
   PROVIDE (_ecode = .);
 
@@ -97,21 +75,26 @@ SECTIONS {
   PROVIDE (_edata = .);
 
   . = ALIGN(4096);
-  .bss : {
+  .initcall : {
+    PROVIDE (_initcall_start = .);
+    *(.initcall.*)
+    _initkip_start = .;
+    KEEP(*(.initkip.version))
+    KEEP(*(.initkip.features))
+    KEEP(*(.initkip.features.fini))
+    _initkip_end = .;
+    . = ALIGN(4096);
+    PROVIDE (_initcall_end = .);
+  }
+
+  . = ALIGN(4096);
+  .bss : {			/* Linux 2.2 requires BSS to be last */
     *(.dynbss)
     *(.bss .bss.* .gnu.linkonce.b.*)
     *(COMMON)
   }
 
   PROVIDE (_end = .);
-
-  . = ALIGN(4096);
-  .initcall : {
-    PROVIDE (_initcall_start = .);
-    *(.initcall.*)
-    . = ALIGN(4096);
-    PROVIDE (_initcall_end = .);
-  }
 
   /DISCARD/ : {
     *(.note)

@@ -1,4 +1,4 @@
-IMPLEMENTATION[generic]:
+IMPLEMENTATION:
 
 #include "pic.h"
 
@@ -8,7 +8,8 @@ IMPLEMENTATION[generic]:
     XXX We assume here that we have the kernel lock.
  */
 PUBLIC inline NEEDS ["pic.h"]
-void Irq::maybe_acknowledge()
+void
+Irq::maybe_acknowledge()
 {
   if (_ack_in_kernel)
     {
@@ -21,11 +22,13 @@ void Irq::maybe_acknowledge()
  
 /** If this is a kernel-acknowledged IRQ, enable the IRQ with the PIC. */
 PUBLIC inline NEEDS ["pic.h"]
-void Irq::maybe_enable()
+void
+Irq::maybe_enable()
 {
-  if (_ack_in_kernel)
+  if (EXPECT_FALSE(_ack_in_kernel))
     {
       unsigned irqnum = id().irq();
+
       Pic::enable(irqnum);
     }
 }

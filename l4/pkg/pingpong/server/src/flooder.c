@@ -1,8 +1,4 @@
-
-#include <stdio.h>
 #include <l4/sys/ipc.h>
-#include <l4/util/rdtsc.h>
-
 #include "global.h"
 
 #if SCRATCH_MEM_SIZE < 16*1024*1024
@@ -14,25 +10,15 @@
 void
 flooder(void)
 {
-  register int i;
-  asm (".fill 8192,2,0x0075");
-  for (i=0; i<FLOODER_MEM_SIZE; i+=32)
-    asm volatile ("movl  %0,%%eax" : : "r"(scratch_mem + i) : "eax");
+  l4_umword_t dummy;
+
+  asm volatile (".fill 8192,2,0x0075	\n\t"
+	        ".align 8		\n\t"
+		"1:			\n\t"
+		"testl %%eax,(%%edi)	\n\t"
+		"decl  %%ecx		\n\t"
+		"leal  32(%%edi), %%edi	\n\t"
+		"jnz   1b		\n\t"
+		: "=D"(dummy), "=c"(dummy)
+		: "D"(scratch_mem), "c"(FLOODER_MEM_SIZE/32));
 }
-
-void
-test_flooder(void)
-{
-  register int i;
-  l4_cpu_time_t in,out;
-
-  printf("Testing costs for flooder: ");
-  in = l4_rdtsc();
-  for (i=1000; i; i--)
-    flooder();
-  out = l4_rdtsc();
-
-  flooder_costs = (l4_umword_t)((out-in)/1000);
-  printf("%d cycles/turn\n", (l4_uint32_t)flooder_costs);
-}
-

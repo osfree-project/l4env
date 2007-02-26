@@ -1,0 +1,50 @@
+/*
+ * Copyright (C) 2004  Alexander Warg  <alexander.warg@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the nethub package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+#include <l4/sys/types.h>
+#include <l4/nethub/cfg-types.h>
+
+[uuid(0x20)]
+interface Nh_cfg
+{
+  int listen([out] fpage *msg_ring);
+
+  int del_sa([in] struct Nh_sadb_sa_key *key);
+  
+  int add_sa([in, size_is(size)] char *msg, 
+             [in] unsigned size);
+
+  int update_sa([in, size_is(size)] char *msg, 
+                [in] unsigned size);
+  
+  int get_spi([in] l4_uint32_t satype, [in] l4_uint32_t dst_ip, 
+              [in, out] l4_uint32_t *min_spi, [in] l4_uint32_t max_spi);
+#if 0
+  int get_sa([in] struct Nh_sadb_sa_key *key, 
+             [out, ref, prealloc] struct Nh_sadb_sa_msg *msg);
+#endif
+  
+  int del_sp([in] unsigned src_if,
+             [in] struct Nh_sp_address *src, [in] struct Nh_sp_address *dst);
+
+  int add_sp([in] unsigned src_if,
+             [in] struct Nh_sp_address *src, [in] struct Nh_sp_address *dst,
+	     [in] struct Nh_sadb_sa_key *key);
+  
+  int flush_sa();
+
+  int flush_sp();
+
+  int dump_sa();
+
+  int dump_sp();
+
+  int chg_iface([in] unsigned niface, [in] unsigned direction);
+};
+

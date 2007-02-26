@@ -1,5 +1,5 @@
 /*!
- * \file   dietlibc/lib/backends/l4env_base/malloc.c
+ * \file   libc_backends_l4env/lib/buddy_slab_mem/malloc.c
  * \brief  malloc/free implementation
  *
  * \date   08/18/2003
@@ -38,7 +38,7 @@ static l4semaphore_t slab_lock  = L4SEMAPHORE_UNLOCKED;
 #define MAX_SLAB_SIZE_LD (L4BUDDY_BUDDY_SHIFT)		// 1024
 static l4slab_cache_t slabs[MAX_SLAB_SIZE_LD-MIN_SLAB_SIZE_LD+1];
 
-l4_ssize_t l4libc_heapsize __attribute__((weak)) = 0;
+l4_ssize_t l4libc_heapsize __attribute__((weak)) = L4LIBC_HEAPSIZE;
 void l4libc_init_mem(void);
 
 extern inline void set_owner_slab(void *addr);
@@ -51,7 +51,7 @@ static void  slab_release(l4slab_cache_t *slab, void*addr, void*data);
 static int init_malloc(size_t size){
     unsigned size_owner_map;
     int err, i;
-    
+
     baseaddr = l4dm_mem_ds_allocate_named(size, 0, "libc heap",
 					  &malloc_ds);
     if(baseaddr == NULL){
@@ -99,7 +99,7 @@ static int init_malloc(size_t size){
 	}
     }
     return 0;
-	
+
   e_free:
     l4dm_mem_release(baseaddr);
     return err;
@@ -201,6 +201,8 @@ void* malloc(size_t size){
 void free(void *addr){
     LOGd_Enter(LOG_MALLOC_FREE, "addr=%p", addr);
 
+    if(!addr) return;
+
     if(get_owner_slab(addr)){
 	l4slab_cache_t *slab;
 
@@ -219,11 +221,12 @@ void *calloc(size_t nmemb, size_t size) {
     size_t s=size*nmemb;
 
     if (nmemb && s/nmemb!=size) {
-	__set_errno(ENOMEM);
+	errno = ENOMEM;  /* it is not guaranteed that __set_errno() is
+			    globally visible */
 	return 0;
     }
-    addr = malloc(size);
-    if(addr) memset(addr, 0, size);
+    addr = malloc(s);
+    if(addr) memset(addr, 0, s);
     return addr;
 }
 

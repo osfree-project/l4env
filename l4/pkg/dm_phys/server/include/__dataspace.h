@@ -61,9 +61,7 @@ int
 dmphys_ds_init(void);
 
 dmphys_dataspace_t *
-dmphys_ds_create(l4_threadid_t owner, 
-		 const char * name, 
-		 l4_uint32_t flags);
+dmphys_ds_create(l4_threadid_t owner, const char * name, l4_uint32_t flags);
 
 void
 dmphys_ds_release(dmphys_dataspace_t * ds);
@@ -72,34 +70,27 @@ dmphys_dataspace_t *
 dmphys_ds_get(l4_uint32_t ds_id);
 
 int
-dmphys_ds_get_check_owner(l4_uint32_t ds_id, 
-			  l4_threadid_t caller,
+dmphys_ds_get_check_owner(l4_uint32_t ds_id, l4_threadid_t caller,
 			  dmphys_dataspace_t ** ds);
 
 int
-dmphys_ds_get_check_client(l4_uint32_t ds_id, 
-			   l4_threadid_t caller,
+dmphys_ds_get_check_client(l4_uint32_t ds_id, l4_threadid_t caller,
 			   dmphys_dataspace_t ** ds);
 
 int
-dmphys_ds_get_check_rights(l4_uint32_t ds_id, 
-			   l4_threadid_t caller, 
-			   l4_uint32_t rights, 
-			   dmphys_dataspace_t ** ds);
+dmphys_ds_get_check_rights(l4_uint32_t ds_id, l4_threadid_t caller, 
+			   l4_uint32_t rights, dmphys_dataspace_t ** ds);
 
 void
-dmphys_ds_iterate(dmphys_ds_iter_fn_t fn, 
-		  void * data, 
-		  l4_threadid_t owner, 
-		  l4_uint32_t flags);
+dmphys_ds_iterate(dmphys_ds_iter_fn_t fn, void * data, 
+		  l4_threadid_t owner, l4_uint32_t flags);
 
 L4_INLINE l4_uint32_t
 dmphys_ds_get_id(dmphys_dataspace_t * ds);
 
 L4_INLINE void
 dmphys_ds_add_pages(dmphys_dataspace_t * ds, 
-		    page_area_t * pages, 
-		    page_pool_t * pool);
+		    page_area_t * pages, page_pool_t * pool);
 
 L4_INLINE page_area_t * 
 dmphys_ds_get_pages(dmphys_dataspace_t * ds);
@@ -122,16 +113,14 @@ dmphys_ds_set_name(dmphys_dataspace_t * ds,
 
 L4_INLINE page_area_t *
 dmphys_ds_find_page_area(dmphys_dataspace_t * ds, 
-			 l4_offs_t offset, 
-			 l4_offs_t * area_offset);
+			 l4_offs_t offset, l4_offs_t * area_offset);
 
 L4_INLINE int
 dmphys_ds_get_num_page_areas(dmphys_dataspace_t * ds);
 
 L4_INLINE int
 dmphys_ds_add_client(dmphys_dataspace_t * ds, 
-		     l4_threadid_t client,
-		     l4_uint32_t rights);
+		     l4_threadid_t client, l4_uint32_t rights);
 
 L4_INLINE int
 dmphys_ds_remove_client(dmphys_dataspace_t * ds, 
@@ -143,16 +132,13 @@ dmphys_ds_get_rights(dmphys_dataspace_t * ds,
 
 L4_INLINE int
 dmphys_ds_set_rights(dmphys_dataspace_t * ds, 
-		     l4_threadid_t client,
-		     l4_uint32_t rights);
+		     l4_threadid_t client, l4_uint32_t rights);
 
 L4_INLINE void
-dmphys_ds_set_owner(dmphys_dataspace_t * ds, 
-		    l4_threadid_t owner);
+dmphys_ds_set_owner(dmphys_dataspace_t * ds, l4_threadid_t owner);
 
 int
-dmphys_ds_count(l4_threadid_t owner, 
-		l4_uint32_t flags);
+dmphys_ds_count(l4_threadid_t owner, l4_uint32_t flags);
 
 void
 dmphys_ds_show(dmphys_dataspace_t * ds);
@@ -188,8 +174,7 @@ dmphys_ds_get_id(dmphys_dataspace_t * ds)
 /*****************************************************************************/ 
 L4_INLINE void
 dmphys_ds_add_pages(dmphys_dataspace_t * ds, 
-		    page_area_t * pages, 
-		    page_pool_t * pool)
+		    page_area_t * pages, page_pool_t * pool)
 {
   ds->pages = pages;
   ds->pool = pool;
@@ -281,10 +266,9 @@ dmphys_ds_get_name(dmphys_dataspace_t * ds)
  */
 /*****************************************************************************/ 
 L4_INLINE void
-dmphys_ds_set_name(dmphys_dataspace_t * ds, 
-		   const char * name)
+dmphys_ds_set_name(dmphys_dataspace_t * ds, const char * name)
 {
-  dsmlib_set_name(ds->desc,name);
+  dsmlib_set_name(ds->desc, name);
 }
 
 /*****************************************************************************/
@@ -301,11 +285,10 @@ dmphys_ds_set_name(dmphys_dataspace_t * ds,
 /*****************************************************************************/ 
 L4_INLINE page_area_t *
 dmphys_ds_find_page_area(dmphys_dataspace_t * ds, 
-			 l4_offs_t offset, 
-			 l4_offs_t * area_offset)
+			 l4_offs_t offset, l4_offs_t * area_offset)
 {
   ASSERT(ds->pages != NULL);
-  return dmphys_pages_find_offset(ds->pages,offset,area_offset);
+  return dmphys_pages_find_offset(ds->pages, offset, area_offset);
 }
 
 /*****************************************************************************/
@@ -333,16 +316,15 @@ dmphys_ds_get_num_page_areas(dmphys_dataspace_t * ds)
  * \param  rights        Cliient access rights 
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL  invalid dataspace descriptor
- *         - \c -L4_ENOMEM  out of memory allocating client descriptor
+ *         - -#L4_EINVAL  invalid dataspace descriptor
+ *         - -#L4_ENOMEM  out of memory allocating client descriptor
  */
 /*****************************************************************************/ 
 L4_INLINE int
 dmphys_ds_add_client(dmphys_dataspace_t * ds, 
-		     l4_threadid_t client,
-		     l4_uint32_t rights)
+		     l4_threadid_t client, l4_uint32_t rights)
 {
-  return dsmlib_add_client(ds->desc,client,rights);
+  return dsmlib_add_client(ds->desc, client, rights);
 }
 
 /*****************************************************************************/
@@ -353,13 +335,12 @@ dmphys_ds_add_client(dmphys_dataspace_t * ds,
  * \param  client        Client thread id
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL     invalid dataspace descriptor
- *         - \c -L4_ENOTFOUND  client id not found
+ *         - -#L4_EINVAL     invalid dataspace descriptor
+ *         - -#L4_ENOTFOUND  client id not found
  */
 /*****************************************************************************/ 
 L4_INLINE int
-dmphys_ds_remove_client(dmphys_dataspace_t * ds, 
-			l4_threadid_t client)
+dmphys_ds_remove_client(dmphys_dataspace_t * ds, l4_threadid_t client)
 {
   return dsmlib_remove_client(ds->desc,client);
 }
@@ -375,10 +356,9 @@ dmphys_ds_remove_client(dmphys_dataspace_t * ds,
  */
 /*****************************************************************************/ 
 L4_INLINE l4_uint32_t
-dmphys_ds_get_rights(dmphys_dataspace_t * ds, 
-		     l4_threadid_t client)
+dmphys_ds_get_rights(dmphys_dataspace_t * ds, l4_threadid_t client)
 {
-  return dsmlib_get_rights(ds->desc,client);
+  return dsmlib_get_rights(ds->desc, client);
 }
 
 /*****************************************************************************/
@@ -390,16 +370,15 @@ dmphys_ds_get_rights(dmphys_dataspace_t * ds,
  * \param  rights        New access rights
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL     invlaid datatspace descriptor 
- *         - \c -L4_ENOTFOUND  client id not found
+ *         - -#L4_EINVAL     invlaid datatspace descriptor 
+ *         - -#L4_ENOTFOUND  client id not found
  */
 /*****************************************************************************/ 
 L4_INLINE int
 dmphys_ds_set_rights(dmphys_dataspace_t * ds, 
-		     l4_threadid_t client,
-		     l4_uint32_t rights)
+		     l4_threadid_t client, l4_uint32_t rights)
 {
-  return dsmlib_set_rights(ds->desc,client,rights);
+  return dsmlib_set_rights(ds->desc, client, rights);
 }
 
 
@@ -412,10 +391,9 @@ dmphys_ds_set_rights(dmphys_dataspace_t * ds,
  */
 /*****************************************************************************/ 
 L4_INLINE void
-dmphys_ds_set_owner(dmphys_dataspace_t * ds, 
-		    l4_threadid_t owner)
+dmphys_ds_set_owner(dmphys_dataspace_t * ds, l4_threadid_t owner)
 {
-  dsmlib_set_owner(ds->desc,owner);
+  dsmlib_set_owner(ds->desc, owner);
 }
 
 #endif /* !_DM_PHYS___DATASPACE_H */

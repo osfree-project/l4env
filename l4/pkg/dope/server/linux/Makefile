@@ -15,7 +15,8 @@ PRIVATE_LIBDIR   = $(PKGDIR)/server/common/OBJ-$(SYSTEM) \
 
 LIBS             = -lcommon -lgfx -lpthread -lSDL
 
-PRIVATE_INCDIR   = $(PKGDIR)/server/include\
+PRIVATE_INCDIR   = $(PKGDIR)/include \
+                   $(PKGDIR)/server/include \
                    $(L4DIR)/tool/dice/include
 
 SRC_C            = messenger.c dummies.c     \

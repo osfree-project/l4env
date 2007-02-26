@@ -1,0 +1,19 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco \
+	-G $UXRES \
+	-l names \
+	-l log \
+	-l dm_phys \
+	-l simple_ts \
+	-l l4dope-ux \
+	-l fuxfprov \
+	-l l4exec \
+	-l loader \
+    -l name_server \
+    -l vc_server \
+    -l rl_ex \
+	-n9 "$@"\
+

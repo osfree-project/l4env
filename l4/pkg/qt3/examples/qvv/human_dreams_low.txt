@@ -1,0 +1,8 @@
+  author: Anry 
+  email:  <anry@amur.ru> or <anry_nemo@mtu-net.ru>
+  http:   http://anry.design.ru/
+  name:   human_dreams_low.jpg
+  size:   24670 bytes
+  md5:    b2c3cb1e5b1d6049833af82f4ea6395b
+  url:    http://anry.design.ru/pictures/low-res/human_dreams_low.jpg
+

@@ -1,0 +1,3 @@
+/*** CONFIGURATION ***/
+
+#define DEBUG_LIBLX 0

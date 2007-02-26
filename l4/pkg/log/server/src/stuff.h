@@ -17,6 +17,9 @@
 #include <l4/sys/types.h>
 
 
+#define MAXTHREADS 3	/* max number of thread to be created by the
+			 * logserver thread lib. */
+
 /*!\brief Connection descriptor
  *
  * A connection is a unit, related to a client. A connection is bound to a
@@ -58,10 +61,11 @@ extern rcv_message_t message;
 
 extern unsigned buffer_head, buffer_tail, buffer_size;
 extern char buffer_array[];
-extern int flush_local, flush_to_net, flush_muxed;
+extern int flush_local, flush_serial, flush_to_net, flush_muxed;
+extern int serial_esc;
 
-extern void logserver_lock(void);
-extern void logserver_unlock(void);
-extern int thread_create(void(*func)(void*), void*data, l4_threadid_t *id);
+extern int thread_create(void(*func)(void), l4_threadid_t *id,
+			 const char*name);
+int serial_flush(const char*addr, int size);
 
 #endif

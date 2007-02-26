@@ -1,31 +1,21 @@
 Lots of stuff ...
 
  * we need more and better backends
+    - memory management backend for no-l4env
+    - real-time capable memory management (e.g. TLSF)
  * the amount of c-files in the port should be increased (this must
    probably be backed by more / better backends)
- * vfs / name server for filesystem and other object access
  * network functionality, maybe via "flips"?
-   - A recent discussion with Christian Helmuth revealed to me that
-     flips provides a Linux-like interface for network functionality
-     and should therefore be well-suited to be a backend for the
-     dietlibc port.
+   - <in progress>
    - My idea to somewhat unify the interfaces for network-io and
      file-io (open - socket, read - recv, write - send, close -
      shutdown) was found to be tempting but not easy to be realized.
      Additionally, these unified interfaced should never be the only
      access to the backends, as to provide backward compatibility and
-     a base to port programs. So the design and implementation of
+     a base to port programs.  So, the design and implementation of
      these unified interfaces can be arbitrarily deferred.
  * real docu
  * shared lib support
  * adaption of libpthread to l4threads
- * build some more support for startup and shutdown (crt0, crtn, ...)
- * use generic init. callback to establish connections to all backend
-   servers
- * we need a kind of timeserver, providing the difference between the
-   start of the epoch (see 'man 2 time') and the time in the kernel
-   info page, so that a libc-backend can compute the actual time
-   without subsequent calls to the time server.
-    - the time() implementation can be based on gettimeofday() like in
-      oskit
+ * care for/check threadsafeness
  * ...

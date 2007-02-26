@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEUnionType.cpp
- *	\brief	contains the implementation of the class CFEUnionType
+ *    \file    dice/src/fe/FEUnionType.cpp
+ *    \brief   contains the implementation of the class CFEUnionType
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,72 +22,90 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
 #include "fe/FEUnionType.h"
 #include "fe/FETaggedUnionType.h"
 #include "fe/FEUnionCase.h"
-#include "Vector.h"
 #include "Compiler.h"
 #include "File.h"
 
-IMPLEMENT_DYNAMIC(CFEUnionType) CFEUnionType::CFEUnionType(CFETypeSpec * pSwitchType, String sSwitchVar, Vector * pUnionBody, String sUnionName)
+CFEUnionType::CFEUnionType(CFETypeSpec * pSwitchType,
+    string sSwitchVar,
+    vector<CFEUnionCase*> *pUnionBody,
+    string sUnionName)
 : CFEConstructedType(TYPE_UNION)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEUnionType, CFEConstructedType);
-
     m_bNE = false;
+    m_bCORBA = false;
     m_pSwitchType = pSwitchType;
-    m_pUnionBody = pUnionBody;
+    if (pUnionBody)
+        m_vUnionBody.swap(*pUnionBody);
+    else
+        m_bForwardDeclaration = false;
+    vector<CFEUnionCase*>::iterator iter;
+    for (iter = m_vUnionBody.begin(); iter != m_vUnionBody.end(); iter++)
+    {
+        (*iter)->SetParent(this);
+    }
 }
 
-CFEUnionType::CFEUnionType(Vector * pUnionBody)
+CFEUnionType::CFEUnionType(vector<CFEUnionCase*> * pUnionBody)
 : CFEConstructedType(TYPE_UNION)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEUnionType, CFEConstructedType);
-
     m_bNE = true;
+    m_bCORBA = false;
     m_pSwitchType = 0;
-    m_pUnionBody = pUnionBody;
+    if (pUnionBody)
+        m_vUnionBody.swap(*pUnionBody);
+    else
+        m_bForwardDeclaration = true;
+    vector<CFEUnionCase*>::iterator iter;
+    for (iter = m_vUnionBody.begin(); iter != m_vUnionBody.end(); iter++)
+    {
+        (*iter)->SetParent(this);
+    }
 }
 
 CFEUnionType::CFEUnionType(CFEUnionType & src)
 : CFEConstructedType(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEUnionType, CFEConstructedType);
-
     m_bNE = src.m_bNE;
+    m_bCORBA = src.m_bCORBA;
     m_sSwitchVar = src.m_sSwitchVar;
     m_sUnionName = src.m_sUnionName;
     if (src.m_pSwitchType != 0)
-      {
-	  m_pSwitchType = (CFETypeSpec *) (src.m_pSwitchType->Clone());
-	  m_pSwitchType->SetParent(this);
-      }
+    {
+        m_pSwitchType = (CFETypeSpec *) (src.m_pSwitchType->Clone());
+        m_pSwitchType->SetParent(this);
+    }
     else
-	m_pSwitchType = 0;
-    if (src.m_pUnionBody != 0)
-      {
-	  m_pUnionBody = src.m_pUnionBody->Clone();
-	  m_pUnionBody->SetParentOfElements(this);
-      }
-    else
-	m_pUnionBody = 0;
+        m_pSwitchType = 0;
+    vector<CFEUnionCase*>::iterator iter = src.m_vUnionBody.begin();
+    for (; iter != src.m_vUnionBody.end(); iter++)
+    {
+        CFEUnionCase *pNew = (CFEUnionCase*)((*iter)->Clone());
+        m_vUnionBody.push_back(pNew);
+        pNew->SetParent(this);
+    }
 }
 
 /** cleans up a union type object */
 CFEUnionType::~CFEUnionType()
 {
     if (m_pSwitchType)
-	delete m_pSwitchType;
-    if (m_pUnionBody)
-	delete m_pUnionBody;
+        delete m_pSwitchType;
+    while (!m_vUnionBody.empty())
+    {
+        delete m_vUnionBody.back();
+        m_vUnionBody.pop_back();
+    }
 }
 
 /** retrieves the type of the switch variable
- *	\return the type of the switch variable
+ *    \return the type of the switch variable
  */
 CFETypeSpec *CFEUnionType::GetSwitchType()
 {
@@ -94,48 +113,42 @@ CFETypeSpec *CFEUnionType::GetSwitchType()
 }
 
 /** retrieves the name of the switch variable
- *	\return the name of the switch variable
+ *    \return the name of the switch variable
  */
-String CFEUnionType::GetSwitchVar()
+string CFEUnionType::GetSwitchVar()
 {
     return m_sSwitchVar;
 }
 
 /** retrieves the name of the union
- *	\return an identifier containing the name of the union
+ *    \return an identifier containing the name of the union
  */
-String CFEUnionType::GetUnionName()
+string CFEUnionType::GetUnionName()
 {
     return m_sUnionName;
 }
 
 /** retrives a pointer to the first union case
- *	\return an iterator which points to the first union case object
+ *    \return an iterator which points to the first union case object
  */
-VectorElement *CFEUnionType::GetFirstUnionCase()
+vector<CFEUnionCase*>::iterator CFEUnionType::GetFirstUnionCase()
 {
-    if (!m_pUnionBody)
-	return 0;
-    return m_pUnionBody->GetFirst();
+    return m_vUnionBody.begin();
 }
 
 /** \brief retrieves the next union case object
  *  \param iter the iterator, which points to the next union case object
  *  \return the next union case object
  */
-CFEUnionCase *CFEUnionType::GetNextUnionCase(VectorElement * &iter)
+CFEUnionCase *CFEUnionType::GetNextUnionCase(vector<CFEUnionCase*>::iterator &iter)
 {
-    if (!m_pUnionBody)
-	return 0;
-    if (!iter)
-	return 0;
-    CFEUnionCase *pRet = (CFEUnionCase *) (iter->GetElement());
-    iter = iter->GetNext();
-    return pRet;
+    if (iter == m_vUnionBody.end())
+        return 0;
+    return *iter++;
 }
 
 /** checks if this is a non-encapsulated union
- *	\return true if this object is a non-encapsulated union
+ *    \return true if this object is a non-encapsulated union
  */
 bool CFEUnionType::IsNEUnion()
 {
@@ -143,7 +156,7 @@ bool CFEUnionType::IsNEUnion()
 }
 
 /** creates a copy of this object
- *	\return a reference to a new union type object
+ *    \return a reference to a new union type object
  */
 CObject *CFEUnionType::Clone()
 {
@@ -158,14 +171,14 @@ CObject *CFEUnionType::Clone()
  */
 bool CFEUnionType::CheckConsistency()
 {
-    if (!m_pUnionBody)
+    if (m_vUnionBody.empty())
     {
         CCompiler::GccError(this, 0, "A union without members is not allowed.");
         return false;
     }
-    VectorElement *pIter = GetFirstUnionCase();
+    vector<CFEUnionCase*>::iterator iter = GetFirstUnionCase();
     CFEUnionCase *pUnionCase;
-    while ((pUnionCase = GetNextUnionCase(pIter)) != 0)
+    while ((pUnionCase = GetNextUnionCase(iter)) != 0)
     {
         if (!(pUnionCase->CheckConsistency()))
             return false;
@@ -174,55 +187,57 @@ bool CFEUnionType::CheckConsistency()
 }
 
 /** serialize this object
- *	\param pFile the file to serialize to/from
+ *    \param pFile the file to serialize to/from
  */
 void CFEUnionType::Serialize(CFile * pFile)
 {
     if (pFile->IsStoring())
-      {
-	  pFile->PrintIndent("<union_type>\n");
-	  pFile->IncIndent();
-	  if (IsKindOf(RUNTIME_CLASS(CFETaggedUnionType)))
-	    {
-		pFile->PrintIndent("<tag>%s</tag>\n",
-				   (const char *) ((CFETaggedUnionType *)
-						   this)->GetTag());
-	    }
-	  if (!GetUnionName().IsEmpty())
-	      pFile->PrintIndent("<name>%s</name>\n", (const char *) GetUnionName());
-	  if (GetSwitchType() != 0)
-	    {
-		pFile->PrintIndent("<switch_type>\n");
-		pFile->IncIndent();
-		GetSwitchType()->Serialize(pFile);
-		pFile->DecIndent();
-		pFile->PrintIndent("</switch_type>\n");
-	    }
-	  if (!GetSwitchVar().IsEmpty())
-	    {
-		pFile->PrintIndent("<switch_var>%s</switch_var>\n",
-				   (const char *) GetSwitchVar());
-	    }
-	  VectorElement *pIter = GetFirstUnionCase();
-	  CFEBase *pElement;
-	  while ((pElement = GetNextUnionCase(pIter)) != 0)
-	    {
-		pElement->Serialize(pFile);
-	    }
-	  pFile->DecIndent();
-	  pFile->PrintIndent("</union_type>\n");
-      }
+    {
+        pFile->PrintIndent("<union_type>\n");
+        pFile->IncIndent();
+        if (!GetUnionName().empty())
+            pFile->PrintIndent("<name>%s</name>\n", GetUnionName().c_str());
+        if (GetSwitchType() != 0)
+        {
+            pFile->PrintIndent("<switch_type>\n");
+            pFile->IncIndent();
+            GetSwitchType()->Serialize(pFile);
+            pFile->DecIndent();
+            pFile->PrintIndent("</switch_type>\n");
+        }
+        if (!GetSwitchVar().empty())
+        {
+            pFile->PrintIndent("<switch_var>%s</switch_var>\n",
+                    GetSwitchVar().c_str());
+        }
+        SerializeMembers(pFile);
+        pFile->DecIndent();
+        pFile->PrintIndent("</union_type>\n");
+    }
 }
 
-/**	\brief allows to differentiate between CORBA IDL and other IDLs
+/** serialize members of this object
+ *    \param pFile the file to serialize to/from
+ */
+void CFEUnionType::SerializeMembers(CFile *pFile)
+{
+    vector<CFEUnionCase*>::iterator iter = GetFirstUnionCase();
+    CFEBase *pElement;
+    while ((pElement = GetNextUnionCase(iter)) != 0)
+    {
+        pElement->Serialize(pFile);
+    }
+}
+
+/**    \brief allows to differentiate between CORBA IDL and other IDLs
  */
 void CFEUnionType::SetCORBA()
 {
     m_bCORBA = true;
 }
 
-/**	\brief test if this was part of CORBA IDL
- *	\return true if this was part of CORBA IDL
+/**    \brief test if this was part of CORBA IDL
+ *    \return true if this was part of CORBA IDL
  */
 bool CFEUnionType::IsCORBA()
 {

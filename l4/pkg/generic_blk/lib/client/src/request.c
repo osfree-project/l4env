@@ -12,6 +12,7 @@
 /* L4/DROPS includes */
 #include <l4/util/atomic.h>
 #include <l4/log/l4log.h>
+#include <l4/util/macros.h>
 #include <l4/env/errno.h>
 #include <l4/semaphore/semaphore.h>
 
@@ -218,7 +219,9 @@ __send_request(l4blk_request_t * request)
  * \brief Create real-time stream.
  * 
  * \param  driver        Driver handle
+ * \param  device        Device id
  * \param  bandwidth     Stream bandwidth (bytes/s) 
+ * \param  period        Period length (milliseconds)
  * \param  blk_size      Stream block size (bytes)
  * \param  q             Quality parameter 
  * \param  meta_int      Metadata request interval (number of regular 
@@ -234,11 +237,9 @@ __send_request(l4blk_request_t * request)
  */
 /*****************************************************************************/ 
 int
-l4blk_create_stream(l4blk_driver_t driver, 
-		    l4_uint32_t bandwidth, 
-		    l4_uint32_t blk_size,
-		    float q, 
-		    l4_uint32_t meta_int, 
+l4blk_create_stream(l4blk_driver_t driver, l4_uint32_t device,
+                    l4_uint32_t bandwidth,  l4_uint32_t period, 
+                    l4_uint32_t blk_size, float q, l4_uint32_t meta_int, 
 		    l4blk_stream_t * stream)
 {
   blkclient_driver_t * drv;
@@ -257,8 +258,9 @@ l4blk_create_stream(l4blk_driver_t driver,
     }
 
   /* call driver to create new stream */
-  ret = l4blk_cmd_create_stream_call(&drv->cmd_id, drv->handle, bandwidth,
-                                     blk_size, q, meta_int, stream, &_env);
+  ret = l4blk_cmd_create_stream_call(&drv->cmd_id, drv->handle, device, 
+                                     bandwidth, period, blk_size, q, meta_int, 
+                                     stream, &_env);
   if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
       LOG_Error("create stream failed (ret %d, exc %d)\n", 
@@ -286,8 +288,7 @@ l4blk_create_stream(l4blk_driver_t driver,
  */
 /*****************************************************************************/ 
 int
-l4blk_close_stream(l4blk_driver_t driver, 
-		   l4blk_stream_t stream)
+l4blk_close_stream(l4blk_driver_t driver, l4blk_stream_t stream)
 {
   blkclient_driver_t * drv;
   int ret;
@@ -330,10 +331,8 @@ l4blk_close_stream(l4blk_driver_t driver,
  *         - -#L4_EIPC  IPC error calling driver
  */
 /*****************************************************************************/ 
-int l4blk_start_stream(l4blk_driver_t driver, 
-		       l4blk_stream_t stream, 
-		       l4_uint32_t time, 
-		       l4_uint32_t request_no)
+int l4blk_start_stream(l4blk_driver_t driver, l4blk_stream_t stream, 
+		       l4_uint32_t time, l4_uint32_t request_no)
 {
   blkclient_driver_t * drv;
   int ret;

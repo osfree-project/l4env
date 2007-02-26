@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/x0adapt/L4X0aBEReplyFunction.h
- *	\brief	contains the declaration of the class CL4X0aBEReplyFunction
+ *    \file    dice/src/be/l4/x0adapt/L4X0aBEReplyFunction.h
+ *    \brief   contains the declaration of the class CL4X0aBEReplyFunction
  *
- *	\date	08/15/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    08/15/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -37,16 +38,15 @@
  */
 class CL4X0aBEReplyFunction : public CL4BEReplyFunction
 {
-DECLARE_DYNAMIC(CL4X0aBEReplyFunction);
 
 public:
     /** creates the function object */
     CL4X0aBEReplyFunction();
-    ~CL4X0aBEReplyFunction();
+    virtual ~CL4X0aBEReplyFunction();
 
 protected:
     virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
-	virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
+    virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif

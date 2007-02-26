@@ -43,7 +43,7 @@
 static l4env_err_msg_t err_msg[] =
 {
   /* L4Env Errors */
-  { L4_EUNKNOWN,        "unkwon error" },
+  { L4_EUNKNOWN,        "unknown error" },
   { L4_ENOMEM,          "out of memory" },
   { L4_EINVAL,          "invalid argument" },
   { L4_EINVAL_OFFS,     "invalid offset in dataspace" },
@@ -72,6 +72,13 @@ static l4env_err_msg_t err_msg[] =
   { L4_ENODEV,          "no such device" },
   { L4_EMFILE,          "too many open files" },
   { L4_ENOSPC,          "no space left on device"}, 
+  { L4_ETIME,           "timer expired"},
+  { L4_EBADF,           "invalid file descriptor"},
+  { L4_ENFILE,          "file table overflow"},
+  { L4_EROFS,           "read-only file system"},
+  { L4_EINVOFFS,        "invalid file offset"},
+  { L4_EINVSB,          "invalid file system superblock"},
+  { L4_ERES,            "resource reservation failed"}
 };
 
 /**
@@ -184,7 +191,7 @@ l4env_err_register_desc(l4env_err_desc_t * desc)
 {
   if (check_unique(desc->entries, desc->arr)) 
     return -L4_EUSED;
-  
+
   desc->next = descs.next;
   descs.next = desc;
 

@@ -1,0 +1,136 @@
+Index: arch/l4/Makefile
+===================================================================
+RCS file: /public-cvs/l4linux-2.4/arch/l4/Makefile,v
+retrieving revision 1.48
+diff -u -p -r1.48 Makefile
+--- arch/l4/Makefile	22 Feb 2004 16:23:03 -0000	1.48
++++ arch/l4/Makefile	8 Mar 2004 16:17:10 -0000
+@@ -106,7 +106,8 @@ ifdef CONFIG_L4_L4ENV
+                            
+   L4ENV_HEAD	:= $(L4DIR)/lib/$(L4_MK_ARCH)_$(L4_MK_CPU)/crt0.o
+   
+-  LIBS		+= -lloader.s -ldm_phys -lio -lgeneric_fprov
++  LIBS		+= -lnethub -lcxx_io -lcxx_log_io /usr/lib/gcc-lib/i486-linux/3.3.3/libgcc.a \
++              -lloader.s -ldm_phys -lio -lgeneric_fprov
+ 
+   ifdef CONFIG_L4_MK_FIASCO
+    ifdef CONFIG_L4_CALL_SYSCALLS
+Index: drivers/net/Config.in
+===================================================================
+RCS file: /public-cvs/l4linux-2.4/drivers/net/Config.in,v
+retrieving revision 1.1.1.9
+diff -u -p -r1.1.1.9 Config.in
+--- drivers/net/Config.in	21 Feb 2004 12:48:09 -0000	1.1.1.9
++++ drivers/net/Config.in	8 Mar 2004 16:17:10 -0000
+@@ -8,6 +8,7 @@ tristate 'Dummy net driver support' CONF
+ tristate 'Bonding driver support' CONFIG_BONDING
+ tristate 'EQL (serial line load balancing) support' CONFIG_EQUALIZER
+ tristate 'Universal TUN/TAP device driver support' CONFIG_TUN
++tristate 'L4 TUN device driver support' CONFIG_L4TUN
+ if [ "$CONFIG_EXPERIMENTAL" = "y" ]; then
+    tristate 'Ethertap network tap (OBSOLETE)' CONFIG_ETHERTAP
+ fi
+Index: drivers/net/Makefile
+===================================================================
+RCS file: /public-cvs/l4linux-2.4/drivers/net/Makefile,v
+retrieving revision 1.1.1.8
+diff -u -p -r1.1.1.8 Makefile
+--- drivers/net/Makefile	21 Feb 2004 12:48:09 -0000	1.1.1.8
++++ drivers/net/Makefile	8 Mar 2004 16:17:10 -0000
+@@ -235,6 +235,7 @@ obj-$(CONFIG_MACSONIC) += macsonic.o
+ obj-$(CONFIG_MACMACE) += macmace.o
+ obj-$(CONFIG_MAC89x0) += mac89x0.o
+ obj-$(CONFIG_TUN) += tun.o
++obj-$(CONFIG_L4TUN) += l4tun.o
+ obj-$(CONFIG_ETHER00) +=ether00.o
+ obj-$(CONFIG_DL2K) += dl2k.o
+ obj-$(CONFIG_R8169) += r8169.o
+Index: drivers/net/e1000/e1000_main.c
+===================================================================
+RCS file: /public-cvs/l4linux-2.4/drivers/net/e1000/e1000_main.c,v
+retrieving revision 1.1.1.4
+diff -u -p -r1.1.1.4 e1000_main.c
+--- drivers/net/e1000/e1000_main.c	1 Dec 2003 21:41:12 -0000	1.1.1.4
++++ drivers/net/e1000/e1000_main.c	8 Mar 2004 19:47:38 -0000
+@@ -340,6 +340,15 @@ e1000_reset(struct e1000_adapter *adapte
+ 	e1000_phy_get_info(&adapter->hw, &adapter->phy_info);
+ }
+ 
++static unsigned dev_number = 0;
++
++static int __init e1000_k_param( char *attr )
++{
++	dev_number = simple_strtol(attr, 0, 0);
++	return 0;
++}
++__setup("e1000=",e1000_k_param);
++
+ /**
+  * e1000_probe - Device Initialization Routine
+  * @pdev: PCI device information struct
+@@ -366,6 +375,11 @@ e1000_probe(struct pci_dev *pdev,
+ 	int err;
+ 	uint16_t eeprom_data;
+ 
++	if (dev_number != cards_found) {
++		cards_found++;
++		return -ENODEV;
++	}
++	
+ 	if((err = pci_enable_device(pdev)))
+ 		return err;
+ 
+Index: drivers/net/eepro100.c
+===================================================================
+RCS file: /public-cvs/l4linux-2.4/drivers/net/eepro100.c,v
+retrieving revision 1.1.1.7
+diff -u -p -r1.1.1.7 eepro100.c
+--- drivers/net/eepro100.c	28 Aug 2003 15:43:55 -0000	1.1.1.7
++++ drivers/net/eepro100.c	8 Mar 2004 16:17:10 -0000
+@@ -549,6 +549,15 @@ static int speedo_ioctl(struct net_devic
+ static void set_rx_mode(struct net_device *dev);
+ static void speedo_show_state(struct net_device *dev);
+ 
++static unsigned dev_number = 0;
++
++static int __init eepro100_k_param( char *attr )
++{
++	dev_number = simple_strtol(attr, 0, 0);
++	return 0;
++}
++
++__setup("eepro=",eepro100_k_param);
+ 
+ 
+ #ifdef honor_default_port
+@@ -590,6 +599,11 @@ static int __devinit eepro100_init_one (
+ 	if (did_version++ == 0)
+ 		printk(version);
+ #endif
++
++	if (dev_number != cards_found) {
++		cards_found++;
++		return -ENODEV;
++	}
+ 
+ 	/* save power state before pci_enable_device overwrites it */
+ 	pm = pci_find_capability(pdev, PCI_CAP_ID_PM);
+Index: net/ipv4/fib_frontend.c
+===================================================================
+RCS file: /public-cvs/l4linux-2.4/net/ipv4/fib_frontend.c,v
+retrieving revision 1.1.1.4
+diff -u -p -r1.1.1.4 fib_frontend.c
+--- net/ipv4/fib_frontend.c	28 Aug 2003 15:43:49 -0000	1.1.1.4
++++ net/ipv4/fib_frontend.c	8 Mar 2004 16:17:11 -0000
+@@ -230,6 +230,11 @@ int fib_validate_source(u32 src, u32 dst
+ 
+ 	if (in_dev == NULL)
+ 		goto e_inval;
++	
++	// needed for L4-IPSec
++        // do not check at all if there is rp_filter = 10
++	if (in_dev->cnf.rp_filter==10)
++	        return 0;
+ 
+ 	if (fib_lookup(&key, &res))
+ 		goto last_resort;

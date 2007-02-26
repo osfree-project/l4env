@@ -16,7 +16,9 @@ IMPLEMENTATION[ux]:
 #include "boot_info.h"
 #include "fb.h"
 #include "kdb_ke.h"
-#include "linker_syms.h"
+#include "mem_layout.h"
+#include "trap_state.h"
+#include "usermode.h"
 
 int Kernel_thread::free_initcall_section_done;
 
@@ -27,21 +29,25 @@ Kernel_thread::init_done()
   return free_initcall_section_done;
 }
 
-IMPLEMENT inline NEEDS [<unistd.h>, <sys/mman.h>, "linker_syms.h"]
+IMPLEMENT inline NEEDS [<unistd.h>, <sys/mman.h>, "mem_layout.h"]
 void
 Kernel_thread::free_initcall_section()
 {
-  munmap (&_initcall_start, &_initcall_end - &_initcall_start);
+  munmap ((void*)&Mem_layout::initcall_start, 
+          &Mem_layout::initcall_end - &Mem_layout::initcall_start);
   free_initcall_section_done = 1;
 }
 
-IMPLEMENT inline NEEDS ["boot_info.h", "fb.h", "kdb_ke.h"]
+IMPLEMENT inline NEEDS ["boot_info.h", "fb.h", "kdb_ke.h", "usermode.h"]
 void
 Kernel_thread::bootstrap_arch()
 {
   // install slow trap handler
-  nested_trap_handler = base_trap_handler;
-  base_trap_handler = thread_handle_trap;
+  nested_trap_handler      = Trap_state::base_handler;
+  Trap_state::base_handler = thread_handle_trap;
+
+  if (Boot_info::jdb_cmd())
+    kdb_ke_sequence (Boot_info::jdb_cmd());
 
   if (Boot_info::wait())
     kdb_ke ("Wait");

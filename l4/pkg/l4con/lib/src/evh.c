@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <l4/thread/thread.h>
 #include <l4/input/libinput.h>
-#include <l4/con/stream-server.h>
+#include <l4/l4con/stream-server.h>
 
 #include "internal.h"
 #include "evh.h"
@@ -68,12 +68,20 @@ evh_init(void)
   l4thread_t btn_tid;
   
   /* start thread */
-  if ((evh_tid = l4thread_create(evh_loop, NULL, L4THREAD_CREATE_SYNC))<0)
+  if ((evh_tid = l4thread_create_long(L4THREAD_INVALID_ID, evh_loop, 
+				      ".kbd", L4THREAD_INVALID_SP,
+				      L4THREAD_DEFAULT_SIZE,
+				      L4THREAD_DEFAULT_PRIO, 
+				      0, L4THREAD_CREATE_SYNC)) < 0)
     return evh_tid;
 
   evh_l4id = l4thread_l4_id(evh_tid);
 
-  if ((btn_tid = l4thread_create(btn_repeat, NULL, L4THREAD_CREATE_SYNC))<0)
+  if ((btn_tid = l4thread_create_long(L4THREAD_INVALID_ID, btn_repeat,
+				      ".kbdrep", L4THREAD_INVALID_SP,
+				      L4THREAD_DEFAULT_SIZE,
+				      L4THREAD_DEFAULT_PRIO,
+				      0, L4THREAD_CREATE_SYNC)) < 0)
     return btn_tid;
 
   btn_l4id = l4thread_l4_id(btn_tid);
@@ -91,7 +99,7 @@ touch_repeat(unsigned code, unsigned repeat)
   error = l4_ipc_call(btn_l4id, 
 			   L4_IPC_SHORT_MSG, code, repeat,
 			   L4_IPC_SHORT_MSG, &dummy, &dummy,
-			   L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+			   L4_IPC_SEND_TIMEOUT_0, &result);
   if (error)
     {
       key_pending = 1;
@@ -113,9 +121,9 @@ touch_repeat(unsigned code, unsigned repeat)
 void 
 stream_io_push_component(CORBA_Object _dice_corba_obj,
     const stream_io_input_event_t *event,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
-  l4input_t *input_ev = (l4input_t*) event;
+  struct l4input *input_ev = (struct l4input*) event;
 
   switch(input_ev->type)
     {
@@ -171,6 +179,9 @@ stream_io_push_component(CORBA_Object _dice_corba_obj,
 	    }
 	  break;
 	}
+      /* ignore mouse buttons */
+      if(input_ev->code>=BTN_MOUSE && input_ev->code<=BTN_TASK)
+	break;
       if(input_ev->value)
 	{
 	  int gap = OFS_LINES(sb_y-fline);
@@ -202,46 +213,6 @@ evh_loop(void *data)
 {
   l4thread_started(NULL);
   stream_io_server_loop(data);
-#if 0
-  int ret;
-  l4_msgdope_t result;
-  sm_request_t request;
-  l4_ipc_buffer_t ipc_buf;
-
-  l4thread_started(NULL);
-  
-  flick_init_request(&request, &ipc_buf);
-  
-  /* IDL server loop */
-  while (1)
-    {
-      result = flick_server_wait(&request);
-
-      while (!L4_IPC_IS_ERROR(result))
-	{
-	  /* dispatch request */
-	  ret = stream_io_server(&request);
-	  
-	  switch(ret) 
-	    {
-	    case DISPATCH_ACK_SEND:
-	      /* reply and wait for next request */
-	      result = flick_server_reply_and_wait(&request);
-	      break;
-	      
-	    default:
-	      LOGl("Flick dispatch error (%d)!", ret);
-	      /* wait for next request */
-	      result = flick_server_wait(&request);
-	      break;
-	    }
-	} /* !L4_IPC_IS_ERROR(result) */
-      
-      /* Ooops, we got an IPC error -> do something */
-      LOGl(" Flick IPC error (%#x)", L4_IPC_ERROR(result));
-      enter_kdebug("PANIC");
-    }
-#endif
 }
 
 static void
@@ -325,7 +296,7 @@ btn_repeat(void *data)
 	      /* new key or key_up received -- only reply, do not repeat */
 	      error = l4_ipc_send(evh_l4id,
 				       L4_IPC_SHORT_MSG, 0, 0,
-				       L4_IPC_TIMEOUT(0,0,0,0,0,0), &result);
+				       L4_IPC_NEVER, &result);
 	      if (repeat)
 		continue;
 

@@ -1,0 +1,173 @@
+/*
+ * \brief   IPC for VERNER's video core component
+ * \date    2004-02-11
+ * \author  Carsten Rietzschel <cr7@os.inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2004  Carsten Rietzschel  <cr7@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the VERNER, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+
+import <l4/dsi/types.h>
+
+interface VideoCoreComponentIntern 
+{
+	/*****************************************************************************/
+	/**
+	* \brief Connnect Vcore-Component
+	* 
+	* \param ctrl_ds already allocated control dataspace
+	* \param data_ds already allocated data dataspace
+	* \param component setup dsi_component_t with callback functions and socket_ref
+	*
+	* Attach dataspaces to Vcore-Component. The DSI-Socket is created. 
+	* The work_thread also, but it's waiting for the start_signal.
+	*/
+	/*****************************************************************************/ 
+	long connect_UncompressedVideoOut([in] l4dm_dataspace_t ctrl_ds, [in] l4dm_dataspace_t data_ds, [out] dsi_socket_ref_t *socketref);
+	
+	
+	/*****************************************************************************/
+	/**
+	* \brief Start Vcore-Component's work thread
+	* 
+	* \param local local socket reference
+	* \param remote remote socket reference
+	*
+	* unlocks a mutex and let the work_thread run.
+	/*****************************************************************************/ 
+	long start_UncompressedVideoOut([in] dsi_socket_ref_t local, [in] dsi_socket_ref_t remote);
+	
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Disconnect Vcore-Component
+	 * 
+	 * \param close_socket_flag if !=0 - we close the DSI-socket 
+	 *
+	 * This function ensures work_thread is closed and nobody is working 
+	 * with DSI-sockets. Afterwards the DSI-socket is closed.
+	 * Note: Flag close_socket_flag should only set != 0 in callback function for
+	 * dsi_stream_close.
+	 */
+	/*****************************************************************************/ 
+	long disconnect_UncompressedVideoOut([in] l4_int32_t close_socket_flag);
+
+	/*****************************************************************************/
+	/**
+	* \brief Connnect Vcore-Component
+	* 
+	* \param ctrl_ds already allocated control dataspace
+	* \param data_ds already allocated data dataspace
+	* \param component setup dsi_component_t with callback functions and socket_ref
+	*
+	* Attach dataspaces to Vcore-Component. The DSI-Socket is created. 
+	* The work_thread also, but it's waiting for the start_signal.
+	*/
+	/*****************************************************************************/ 
+	long connect_CompressedVideoIn([in] l4dm_dataspace_t ctrl_ds, [in] l4dm_dataspace_t data_ds, [out] dsi_socket_ref_t *socketref);
+	
+	/*****************************************************************************/
+	/**
+	* \brief Start Vcore-Component's work thread
+	* 
+	* \param local local socket reference
+	* \param remote remote socket reference
+	*
+	* unlocks a mutex and let the work_thread run.
+	/*****************************************************************************/ 
+	long start_CompressedVideoIn([in] dsi_socket_ref_t local, [in] dsi_socket_ref_t remote);
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Disconnect Vcore-Component
+	 * 
+	 * \param close_socket_flag if !=0 - we close the DSI-socket 
+	 *
+	 * This function ensures work_thread is closed and nobody is working 
+	 * with DSI-sockets. Afterwards the DSI-socket is closed.
+	 * Note: Flag close_socket_flag should only set != 0 in callback function for
+	 * dsi_stream_close.
+	 */
+	/*****************************************************************************/ 
+	long disconnect_CompressedVideoIn([in] l4_int32_t close_socket_flag);
+
+	
+	
+	
+	
+        /*****************************************************************************/
+        /**
+         * \brief Set period for RT-mode
+         *
+         * \param period  period in microseconds
+         * \param reservation_audio  (unused in video core)
+         * \param reservation_video  reservation time for ONE video frame [microsecond]
+         * \param verbose_preemption_ipc  show each recv. preeption ipc ?
+         */
+        /*****************************************************************************/
+        long setVideoRTparams ([in] unsigned long period,
+                               [in] unsigned long reservation_audio,
+                               [in] unsigned long reservation_video,
+                               [in] int verbose_preemption_ipc);
+
+	/*****************************************************************************/
+	/**
+	 * \brief Set parameter for postprocessing
+	 * 
+	 * \param command Command to send to the postprocessing engine
+	 * \param ppName  Name of the postprocessing code
+	 * \param ppOptions Command to be send to the specific postprocessing code
+	 *
+	 * Using for example in this way:
+	 *  setVideoPostprocessing("add","libpostproc","h1:a,v1:a\0" to add the easiest 
+	 *  filter to processing-chain.
+	 *  Now add another processing option if wanted (add order is filter order!).
+	 *  setVideoPostprocessing("delete","libpostproc","h1:a,v1:a\0") deletes the filter.
+	 *  or
+	 *  setVideoPostprocessing("add","default","1") or  "2" or "3" adds one of the 
+	 *  predefined default deblocking(1,2,3) and deringing(3) filters to the processing-chain.
+	 *  and
+	 *  setVideoPostprocessing("activate","","") activates the processing-chain.
+	 *  setVideoPostprocessing("deactivate","","") deactivates the processing-chain.
+	 */
+	/*****************************************************************************/
+        long setVideoPostprocessing ([in, string] char *command,[in, string] char *ppName,[in, string] char *ppOptions);
+	
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Set parameter for QAP
+	 * 
+	 * \param useQAP   enable or disable qap - disabled means manuall setting of quality level
+	 * \param usePPasQAP enables usage of libpostprocess as QAP-levels while decoding
+	 * \param setQLevel  setting quality level (0..MAX)
+	 * \param currentQLevel returns current level
+	 * \param maxQLevel  returns highest supported quality level (0...MAX)
+	 *
+	 * If useQAP, usePPasQAP or setQLevel <0 it's just ignored as command, for instance 
+	 * usefull to get currentQLevel or maxQLevel without changing anything.
+	 * Attention: maxQLevel might change while working!!!!
+	 */
+	/*****************************************************************************/
+        long changeQAPSettings ([in] l4_int32_t useQAP, [in] l4_int32_t usePPasQAP, [in] l4_int32_t setQLevel, [out] l4_int32_t *currentQLevel, [out] l4_int32_t *maxQLevel);
+	
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Set filenames for learning and predicting decoding times
+	 * 
+	 * \param learnFile  the file to store newly learned decoding time prediction data
+	 * \param predictFile  the file to get previously gathered decoding time prediction data
+	 *
+	 * Either value can be the empty string, which disables learning/prediction respectively.
+	 */
+	/*****************************************************************************/
+	long setPrediction ([in, string] char *learnFile, [in, string] char *predictFile);
+};

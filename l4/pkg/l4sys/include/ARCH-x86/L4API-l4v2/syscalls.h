@@ -96,6 +96,15 @@ L4_INLINE l4_threadid_t
 l4_myself(void);
 
 /**
+ * Get the id of the current thread, non-profile version
+ * \ingroup api_calls_other
+ *
+ * \return  Thread id of the calling thread.
+ */
+L4_INLINE l4_threadid_t
+l4_myself_noprof(void);
+
+/**
  * Get the thread id of the nearest partner of the invoker
  * \ingroup api_calls_other
  *
@@ -158,6 +167,58 @@ l4_thread_ex_regs(l4_threadid_t destination,
 		  l4_umword_t *old_eflags,
 		  l4_umword_t *old_eip,
 		  l4_umword_t *old_esp);
+
+/**
+ * Version of l4_thread_ex_regs() that supports additional flags.
+ * \ingroup api_calls_other
+ *
+ * This version of l4_thread_ex_regs() supports additional flags that
+ * will not interrupt ongoing IPC (L4_THREAD_EX_REGS_NO_CANCEL),
+ * i.e. the effect of l4_thread_ex_regs() will be deferred until the IPC has
+ * finished. Note, that if the corresponding IPC is an exception reply, the
+ * reply overwrites the values set by l4_thread_ex_regs().
+ * The second flag sets the alien bit (L4_THREAD_EX_REGS_ALIEN), i.e. the
+ * thread will trigger exceptions whenever it executes a system call.
+ */
+L4_INLINE void
+l4_thread_ex_regs_flags(l4_threadid_t destination,
+                        l4_umword_t eip,
+                        l4_umword_t esp,
+                        l4_threadid_t *preempter,
+                        l4_threadid_t *pager,
+                        l4_umword_t *old_eflags,
+                        l4_umword_t *old_eip,
+                        l4_umword_t *old_esp,
+		        unsigned long flags);
+
+enum {
+  L4_THREAD_EX_REGS_ALIEN     = 1 << 29,
+  L4_THREAD_EX_REGS_NO_CANCEL = 1 << 30,
+};
+
+/**
+ * Version of l4_thread_ex_regs() working over task boundaries
+ * \ingroup api_calls_other
+ *
+ * The parameters and return values are equal to l4_thread_ex_regs(), except
+ * that the task value of the destination thread id is also considered. Only
+ * the pager task of the destination thread may modify it. The creation of
+ * new threads is limited to the pager task of thread 0 in the destination
+ * task.
+ *
+ * For the no_cancel argument, please refer to the description of
+ * l4_thread_ex_regs_no_cancel().
+ */
+L4_INLINE void
+l4_inter_task_ex_regs(l4_threadid_t destination,
+		      l4_umword_t eip,
+		      l4_umword_t esp,
+		      l4_threadid_t *preempter,
+		      l4_threadid_t *pager,
+		      l4_umword_t *old_eflags,
+		      l4_umword_t *old_eip,
+		      l4_umword_t *old_esp,
+		      unsigned long flags);
 
 /**
  * Release the processor non-preemptively
@@ -304,6 +365,11 @@ l4_thread_schedule(l4_threadid_t dest,
  * A newly created task gets the creator as its chief, i.e. it is created
  * inside the creator's clan. Symmetrically, a task can only be deleted
  * either directly by its chief or indirectly by a higher-level chief.
+ *
+ * The mcp_or_new_chief argument can also be or'ed with the
+ * L4_TASK_NEW_ALIEN flag. This flag sets the alien bit for the newly
+ * created thread which means that it will trigger exception whenever it
+ * executes a system call.
  */
 L4_INLINE l4_taskid_t
 l4_task_new(l4_taskid_t destination,
@@ -311,6 +377,10 @@ l4_task_new(l4_taskid_t destination,
 	    l4_umword_t esp,
 	    l4_umword_t eip,
 	    l4_threadid_t pager);
+enum {
+  L4_TASK_NEW_ALIEN = 1 << 31,
+};
+
 
 /**
  * Return pointer to Kernel Interface Page
@@ -319,6 +389,9 @@ l4_task_new(l4_taskid_t destination,
 L4_INLINE void *
 l4_kernel_interface(void);
 
+L4_INLINE int
+l4_privctrl(l4_umword_t cmd,
+	    l4_umword_t param);
 
 /*****************************************************************************
  *** Implementation
@@ -332,6 +405,7 @@ l4_kernel_interface(void);
 # define L4_SYSCALL_thread_schedule       "int $0x34 \n\t"
 # define L4_SYSCALL_lthread_ex_regs       "int $0x35 \n\t"
 # define L4_SYSCALL_task_new              "int $0x36 \n\t"
+# define L4_SYSCALL_privctrl              "int $0x37 \n\t"
 # define L4_SYSCALL(name)                 L4_SYSCALL_ ## name
 
 #else
@@ -364,7 +438,73 @@ l4_kernel_interface(void);
 #      include "syscalls-l42-gcc3-nopic.h"
 #    endif
 #  endif
-#endif
+L4_INLINE l4_threadid_t
+l4_myself_noprof(void)
+{
+    return l4_myself();
+}
+
+/* ================ lthread_ex_regs variants =================== */
+
+/*
+ * L4 lthread_ex_regs without IPC canceling
+ */
+L4_INLINE void
+l4_thread_ex_regs(l4_threadid_t destination,
+		  l4_umword_t eip,
+		  l4_umword_t esp,
+		  l4_threadid_t *preempter,
+		  l4_threadid_t *pager,
+		  l4_umword_t *old_eflags,
+		  l4_umword_t *old_eip,
+		  l4_umword_t *old_esp)
+{
+  __do_l4_thread_ex_regs(destination.id.lthread,
+                         eip, esp, preempter, pager,
+                         old_eflags, old_eip, old_esp);
+}
+
+/*
+ * L4 lthread_ex_regs without IPC canceling
+ */
+L4_INLINE void
+l4_thread_ex_regs_flags(l4_threadid_t destination,
+                        l4_umword_t eip,
+                        l4_umword_t esp,
+                        l4_threadid_t *preempter,
+                        l4_threadid_t *pager,
+                        l4_umword_t *old_eflags,
+                        l4_umword_t *old_eip,
+                        l4_umword_t *old_esp,
+                        unsigned long flags)
+{
+  __do_l4_thread_ex_regs(destination.id.lthread | flags,
+                         eip, esp, preempter, pager,
+                         old_eflags, old_eip, old_esp);
+}
+
+/*
+ * L4 lthread_inter_task_ex_regs
+ */
+L4_INLINE void
+l4_inter_task_ex_regs(l4_threadid_t destination,
+		      l4_umword_t eip,
+		      l4_umword_t esp,
+		      l4_threadid_t *preempter,
+		      l4_threadid_t *pager,
+		      l4_umword_t *old_eflags,
+		      l4_umword_t *old_eip,
+		      l4_umword_t *old_esp,
+		      unsigned long flags)
+{
+  __do_l4_thread_ex_regs(destination.id.lthread
+                          | (destination.id.task << 7) | flags,
+                         eip, esp, preempter, pager,
+                         old_eflags, old_eip, old_esp);
+}
+/* ============================================================= */
+
+#endif /* ! PROFILE */
 
 L4_INLINE void
 l4_yield(void)

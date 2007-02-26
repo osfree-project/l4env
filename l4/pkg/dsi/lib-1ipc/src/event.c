@@ -88,7 +88,7 @@ __client_wakeup(l4_threadid_t client, l4_uint32_t events, int error)
 
   /* send notification */
   ret = l4_ipc_send(client,L4_IPC_SHORT_MSG,error,events,
-			 L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
+			 L4_IPC_SEND_TIMEOUT_0,&result);
   if ((ret == 0) || (ret == L4_IPC_SETIMEOUT)) 
       return 0;
   else 
@@ -402,11 +402,11 @@ __event_thread(void * data)
 	  if (reply)
 	    ret = l4_ipc_reply_and_wait(src,L4_IPC_SHORT_MSG,error,0,
 					     &src,L4_IPC_SHORT_MSG,&dw0,&dw1,
-					     L4_IPC_TIMEOUT(0,1,0,0,0,0),
+					     L4_IPC_SEND_TIMEOUT_0,
 					     &result);
 	  else
 	    ret = l4_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
-				   L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
+				   L4_IPC_SEND_TIMEOUT_0,&result);
 	}
 
       Error("DSI: event signalling thread IPC error 0x%02x",ret);

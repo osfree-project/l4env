@@ -10,7 +10,7 @@
 
 /* L4 includes */
 #include <l4/util/getopt.h>
-#include <l4/con/l4con.h>
+#include <l4/l4con/l4con.h>
 
 /* OSKit includes */
 #include <stdlib.h>
@@ -30,7 +30,7 @@ l4_uint8_t global_red, global_green, global_blue;
  ******************************************************************************/
 void do_args(int argc, char *argv[])
 {
-	char c;
+	int c;
 	char* endp;
 	l4_uint32_t a;
 

@@ -1,0 +1,16 @@
+# Format: (all on one line)
+#   Source file : Copyright Owner(s) : License
+# Please use "TUD" when referring to TU Dresden.
+# If sole owner is TUD, the license field defaults to GPL and can be
+# left empty.
+# Source-file spec can be a directory name or a wildcard like "src/*.c".
+Makefile : TUD
+examples : TUD
+server/Makefile : TUD
+server/src/Make.rules : TUD
+server/src/Makefile : TUD
+server/src/config.help : TUD
+server/src/config.in : TUD
+server/src/defconfig : TUD
+server/src/main.c : TUD
+server/src/netboot : GPL

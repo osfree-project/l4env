@@ -1,0 +1,3 @@
+embedded: {
+    CONFIG += drops
+}

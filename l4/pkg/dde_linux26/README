@@ -1,0 +1,3 @@
+This package provides the kernel interface expected by Linux device drivers.
+You need properly set DDE26_INCDIR and LINUX26_INCDIR. Standard values from
+'make config' should be perfect.

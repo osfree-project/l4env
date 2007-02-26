@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/x0/L4X0aBEClassFactory.h
- *	\brief	contains the declaration of the class CL4X0aBEClassFactory
+ *    \file    dice/src/be/l4/x0/L4X0aBEClassFactory.h
+ *    \brief   contains the declaration of the class CL4X0aBEClassFactory
  *
- *	\date	12/01/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    12/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -41,20 +42,19 @@
  */
 class CL4X0aBEClassFactory : public CL4BEClassFactory
 {
-DECLARE_DYNAMIC(CL4X0aBEClassFactory);
 // Constructor
 public:
-	/**	\brief constructor
-	 *	\param bVerbose true if class should print status output
-	 */
-	CL4X0aBEClassFactory(bool bVerbose = false);
-	virtual ~CL4X0aBEClassFactory();
+    /**    \brief constructor
+     *    \param bVerbose true if class should print status output
+     */
+    CL4X0aBEClassFactory(bool bVerbose = false);
+    virtual ~CL4X0aBEClassFactory();
 
 protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CL4X0aBEClassFactory(CL4X0aBEClassFactory &src);
+    /**    \brief copy constructor
+     *    \param src the source to copy from
+     */
+    CL4X0aBEClassFactory(CL4X0aBEClassFactory &src);
 
 public: // Public methods
     virtual CBECallFunction* GetNewCallFunction();
@@ -62,10 +62,11 @@ public: // Public methods
     virtual CBEWaitFunction * GetNewWaitFunction();
     virtual CBEWaitAnyFunction * GetNewWaitAnyFunction();
     virtual CBESndFunction * GetNewSndFunction();
-    virtual CBEReplyAnyWaitAnyFunction * GetNewReplyAnyWaitAnyFunction();
-    virtual CBERcvAnyFunction * GetNewRcvAnyFunction();
-	virtual CBECommunication* GetNewCommunication();
-	virtual CBEReplyFunction* GetNewReplyFunction();
+    virtual CBEWaitAnyFunction * GetNewReplyAnyWaitAnyFunction();
+    virtual CBEWaitAnyFunction * GetNewRcvAnyFunction();
+    virtual CBECommunication* GetNewCommunication();
+    virtual CBEReplyFunction* GetNewReplyFunction();
+    virtual CBEWaitFunction* GetNewRcvFunction();
 };
 
 #endif

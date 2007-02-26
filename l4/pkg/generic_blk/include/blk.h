@@ -38,17 +38,21 @@ l4blk_init(void);
 
 /*****************************************************************************/
 /**
- * \brief   Open block device driver.
- * \ingroup api_driver
+ * \brief Open block device driver.
  * 
- * \param   name         Driver name
- * \retval  driver       Driver handle
+ * \param  name          Driver name
+ * \retval driver        Driver handle
+ * \param  cb            Notification thread setup callback function, 
+ *                       if set it will be called by created notification 
+ *                       thread before it enters its work loop
  *	
- * \return  0 on success (\a driver contains a valid handle), error code 
- *          otherwise:
- *          - -#L4_EINVAL     invalid name
- *          - -#L4_ENOTFOUND  driver not found
- *          other error codes depend on the requested driver.
+ * \return 0 on success (\a driver contains a valid handle), error code 
+ *         otherwise:
+ *         - -#L4_EINVAL     invalid name
+ *         - -#L4_ENOTFOUND  driver not found
+ *         - -#L4_ENOMEM     out of memory allocating driver descriptor
+ *         - -#L4_EIPC       error calling driver
+ *         - -#L4_ENOTHREAD  creation of notification thread failed
  *
  * \a l4blk_open_driver does two things:
  * - request the id of the driver at the DROPS nameserver using \a name
@@ -56,8 +60,8 @@ l4blk_init(void);
  */
 /*****************************************************************************/ 
 int
-l4blk_open_driver(const char * name, 
-                  l4blk_driver_t * driver);
+l4blk_open_driver(const char * name, l4blk_driver_t * driver, 
+                  l4blk_setup_notify_callback_fn_t cb);
   
 /*****************************************************************************/
 /**
@@ -94,7 +98,9 @@ l4blk_get_driver_thread(l4blk_driver_t driver);
  * \ingroup api_stream
  * 
  * \param   driver       Driver handle
+ * \param   device       Device id
  * \param   bandwidth    Stream bandwidth (bytes/s) 
+ * \param   period       Period length (milliseconds)
  * \param   blk_size     Stream block size (bytes)
  * \param   q            Quality parameter 
  * \param   meta_int     Metadata request interval (number of regular 
@@ -110,11 +116,9 @@ l4blk_get_driver_thread(l4blk_driver_t driver);
  */
 /*****************************************************************************/ 
 int
-l4blk_create_stream(l4blk_driver_t driver, 
-                    l4_uint32_t bandwidth, 
-                    l4_uint32_t blk_size, 
-                    float q, 
-                    l4_uint32_t meta_int, 
+l4blk_create_stream(l4blk_driver_t driver, l4_uint32_t device,
+                    l4_uint32_t bandwidth, l4_uint32_t period, 
+                    l4_uint32_t blk_size, float q, l4_uint32_t meta_int, 
                     l4blk_stream_t * stream);
 
 /*****************************************************************************/
@@ -131,8 +135,7 @@ l4blk_create_stream(l4blk_driver_t driver,
  */
 /*****************************************************************************/ 
 int
-l4blk_close_stream(l4blk_driver_t driver, 
-                   l4blk_stream_t stream);
+l4blk_close_stream(l4blk_driver_t driver, l4blk_stream_t stream);
 
 /*****************************************************************************/
 /**
@@ -147,10 +150,8 @@ l4blk_close_stream(l4blk_driver_t driver,
  * \return  Time of first period on success, error code otherwise.
  */
 /*****************************************************************************/ 
-int l4blk_start_stream(l4blk_driver_t driver, 
-                       l4blk_stream_t stream, 
-                       l4_uint32_t time, 
-                       l4_uint32_t request_no);
+int l4blk_start_stream(l4blk_driver_t driver, l4blk_stream_t stream, 
+                       l4_uint32_t time, l4_uint32_t request_no);
 
 /*****************************************************************************/
 /**
@@ -246,12 +247,8 @@ l4blk_get_error(l4blk_request_t * request);
  */
 /*****************************************************************************/ 
 int
-l4blk_ctrl(l4blk_driver_t driver, 
-           l4_uint32_t cmd, 
-           void * in, 
-           int in_size, 
-           void * out, 
-           int out_size);
+l4blk_ctrl(l4blk_driver_t driver, l4_uint32_t cmd, void * in, int in_size, 
+           void * out, int out_size);
 
 /*****************************************************************************/
 /**
@@ -279,6 +276,25 @@ l4blk_ctrl_get_num_disks(l4blk_driver_t driver);
 /*****************************************************************************/ 
 int
 l4blk_ctrl_get_disk_size(l4blk_driver_t driver, l4_uint32_t dev);
+
+/*****************************************************************************/
+/**
+ * \brief   Return period for stream requests
+ * \ingroup api_ctrl
+ * 
+ * \param   driver       Driver handle
+ * \param   stream       Stream handle
+ * \retval  period_len   Period length (microseconds)
+ * \retval  period_offs  Period offset 
+ *                       (relative to kernel klock, i.e. period0 % period_len)
+ *	
+ * \return 0 on success, error code if failed
+ */
+/*****************************************************************************/ 
+int
+l4blk_ctrl_get_stream_period(l4blk_driver_t driver, l4blk_stream_t stream, 
+                             l4_uint32_t * period_len, 
+                             l4_uint32_t * period_offs);
 
 __END_DECLS;
 

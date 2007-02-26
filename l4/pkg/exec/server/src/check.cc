@@ -28,7 +28,11 @@ check(int error, const char *format, ...)
       
       printf("Error %d (%s) ", error, l4env_errstr(error));
       va_start(list, format);
+#ifdef USE_OSKIT
       vprintf(format, (oskit_va_list)list);
+#else
+      vprintf(format, list);
+#endif
       va_end(list);
       printf("\n");
     }

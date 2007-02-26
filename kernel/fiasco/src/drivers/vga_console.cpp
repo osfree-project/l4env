@@ -4,7 +4,7 @@ INTERFACE:
 #include "console.h"
 
 /**
- * @brief Console implementation for VGA.
+ * Console implementation for VGA.
  *
  * This console is a output only console for VGA.
  * It implements an ANSI ESC capable output device.
@@ -14,30 +14,30 @@ class Vga_console : public Console
 public:
 
   /**
-   * @brief Clear the screen,
+   * Clear the screen,
    */
   void clear();
 
   /**
-   * @brief Scroll the screen n lines up.
+   * Scroll the screen n lines up.
    * @param n number of lines to scroll.
    */
   void scroll( unsigned n );
 
   /**
-   * @brief Get the base address for the VGA memory.
+   * Get the base address for the VGA memory.
    * @return The base address of the VGA memory.
    */
   Address video_base() const;
 
   /**
-   * @brief Set the base address of the VGA memory.
+   * Set the base address of the VGA memory.
    * @param base the base address of the VGA memory.
    */
   void video_base( Address base );
 
   /**
-   * @brief Create a new instance of a VGA console.
+   * Create a new instance of a VGA console.
    * @param base the base address of the VGA memory.
    * @param width the width of the screen.
    * @param height the height of the screen.
@@ -50,17 +50,17 @@ public:
 	       bool light_white = false, bool use_color = false );
 
   /**
-   * @brief dtor.
+   * dtor.
    */
   ~Vga_console();
 
   /**
-   * @brief Output method.
+   * Output method.
    */
   int write( char const *str, size_t len );
 
   /**
-   * @brief Empty implementation.
+   * Empty implementation.
    */
   int getchar( bool blocking = true );
 
@@ -93,7 +93,7 @@ private:
   bool _is_working;
 
   /**
-   * @brif Set blinking screen cursor
+   * Set blinking screen cursor
    */
   void blink_cursor( unsigned x, unsigned y );
 };
@@ -298,21 +298,28 @@ void Vga_console::ansi_esc_write( char const *str, size_t len, unsigned &i )
     }
     break;
 
+  case 'X': /* clear n characters */
+    for (unsigned i = _x + (_y*_width); i< _x + (_y*_width) + ansi_esc_args[0];
+	 ++i)
+	_video_base[i] = (VChar){ c: 0x20, a: _attribute };
+
+      break;
+
   case 'K': /* Clear line from cursor right */
     switch(ansi_esc_args[0]) {
     default:
     case 0:
-      for( unsigned i = _x + (_y*_width); i< _x + (_y*_width) + (_width-_x);++i)
+      for (unsigned i = _x + (_y*_width); i< (_y*_width) + _width;++i)
 	_video_base[i] = (VChar){ c: 0x20, a: _attribute };
 
       break;
     case 1:
-      for( unsigned i = (_y*_width); i<(_y*_width)+_x;++i)
+      for (unsigned i = (_y*_width); i<(_y*_width)+_x;++i)
 	_video_base[i] = (VChar){ c: 0x20, a: _attribute };
 
       break;
     case 2:
-      for( unsigned i = (_y*_width); i<(_y*_width)+_width;++i)
+      for (unsigned i = (_y*_width); i<(_y*_width)+_width;++i)
 	_video_base[i] = (VChar){ c: 0x20, a: _attribute };
 
       break;
@@ -323,17 +330,17 @@ void Vga_console::ansi_esc_write( char const *str, size_t len, unsigned &i )
     switch(ansi_esc_args[0]) {
     default:
     case 0:
-      for( unsigned i = (_y*_width); i<(_y*_width)+_width*(_height-_y);++i)
+      for (unsigned i = (_y*_width); i<(_y*_width)+_width*(_height-_y);++i)
 	_video_base[i] = (VChar){ c: 0x20, a: _attribute };
 
       break;
     case 1:
-      for( unsigned i = 0; i<_width*_y;++i)
+      for (unsigned i = 0; i<_width*_y;++i)
 	_video_base[i] = (VChar){ c: 0x20, a: _attribute };
 
       break;
     case 2:
-      for( unsigned i = 0; i<_width*_height;++i)
+      for (unsigned i = 0; i<_width*_height;++i)
 	_video_base[i] = (VChar){ c: 0x20, a: _attribute };
 
       break;
@@ -350,9 +357,8 @@ void Vga_console::normal_write( char const *str, size_t len, unsigned &i )
 {
   VChar *const vid = _video_base; 
 
-  for(; i<len; ++i ) {
-
-
+  for(; i<len; ++i )
+    {
     switch(str[i]) {
 #if 0
     case '\b':
@@ -418,13 +424,9 @@ void Vga_console::normal_write( char const *str, size_t len, unsigned &i )
 
 	++_x;
       }
-	 
       break;
     }
-
-    
   }
-
 }
 
 
@@ -458,14 +460,8 @@ bool const Vga_console::is_working()
 }
 
 PUBLIC
-char const *Vga_console::next_attribute( bool restart = false ) const
+Mword Vga_console::get_attributes() const
 {
-  static char const *attribs[] = { "direct", "out", 0 };
-  static unsigned pos = 0;
-  if(restart)
-    pos = 0;
-  if(pos > 2)
-    return 0;
-  else
-    return attribs[pos++];
+  return DIRECT | OUT;
 }
+

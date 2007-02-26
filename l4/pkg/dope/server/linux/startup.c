@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -14,6 +14,10 @@
  */
 
 void native_startup(int argc, char **argv);
+
+int config_oldresize    = 0;  /* use traditional way to resize windows */
+int config_exg_z_y      = 1;  /* exchange z and y keys                 */
+int config_adapt_redraw = 0;  /* do not adapt redraw to duration time  */
 
 void native_startup(int argc, char **argv) {
 	/* there is no system dependent startup action */

@@ -9,9 +9,9 @@
  */
 
 /* OSKit includes */
-#include <malloc.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 /* L4 includes */
 #include <l4/env/errno.h>
@@ -21,6 +21,8 @@
 #include "internal.h"
 #include "keymap.h"
 #include "evh.h"
+
+#undef putchar
 
 
 /**
@@ -126,8 +128,7 @@ _search_ihb(contxt_ihb_t *ihb, int *line, int x0, int maxlen, int *idx)
 	    {
 	      char *buff;
 
-	      if ((ch == 'r')
-		  && __ctrl)
+	      if (ch == 'r' && __ctrl)
 		{
 		  /* search next */
 		  until_l = l;
@@ -193,6 +194,7 @@ _read_ihb(char* retstr, int maxlen, contxt_ihb_t* ihb)
   int len;		/* length of current string */
   int abort = 0;	/* leave loop if != 0 */
   int insert = 1;	/* 0: replace character / 1: insert character */
+  int max_x;		/* maximum number of characters to show */
   unsigned int ch;	/* key */
 
   /* consider terminating zero in retstr */
@@ -257,8 +259,11 @@ _read_ihb(char* retstr, int maxlen, contxt_ihb_t* ihb)
 		}
 	      pos_x -= idx;
 	      sb_x  = pos_x;
+	      max_x = vtc_cols - sb_x - 1;
+	      if (maxlen > max_x)
+		maxlen = max_x;
 	      /* print next previous line in history buffer */
-	      printf("%*s", -maxlen, ihb->buffer + ihb->length*line);
+	      printf("%*.*s", -maxlen, maxlen, ihb->buffer + ihb->length*line);
 	      /* goto end of line */
 	      idx = strlen(ihb->buffer + ihb->length*line);
 	      sb_x = pos_x + idx;
@@ -279,8 +284,11 @@ _read_ihb(char* retstr, int maxlen, contxt_ihb_t* ihb)
 		}
 	      pos_x -= idx;
 	      sb_x  = pos_x;
+	      max_x = vtc_cols - sb_x - 1;
+	      if (maxlen > max_x)
+		maxlen = max_x;
 	      /* print next line in history buffer */
-	      printf("%*s", -maxlen, ihb->buffer + ihb->length*line);
+	      printf("%*.*s", -maxlen, maxlen, ihb->buffer + ihb->length*line);
 	      /* goto end of line */
 	      idx = strlen(ihb->buffer + ihb->length*line);
 	      sb_x = pos_x + idx;
@@ -362,9 +370,7 @@ _read_ihb(char* retstr, int maxlen, contxt_ihb_t* ihb)
 	    {
 	      char *buf = ihb->buffer + ihb->length*ihb->last;
 
-	      if ((ch == 'r') 
-		  && __ctrl
-		  && (ihb->first != ihb->last))
+	      if (ch == 'r' && __ctrl && ihb->first != ihb->last)
 		{
 		  pos_x -= idx;
 		  ch = _search_ihb(ihb, &line, pos_x, maxlen, &idx);
@@ -423,7 +429,6 @@ _read_ihb(char* retstr, int maxlen, contxt_ihb_t* ihb)
  * \param  maxlen          ... maximum length of return string
  *
  * \retval retstr          ... return string
- *
  */
 static void
 _read_noihb(char *retstr, int maxlen)
@@ -477,12 +482,12 @@ _read_noihb(char *retstr, int maxlen)
  * \retval  ihb            ... used input history buffer
  *                             if 0, no input history buffer will be used
  *
- * This function reads a number (maximum maxlen) of character. 
+ * This function reads a number (maximum maxlen) of character.
  */
 void
-contxt_read(char* retstr, int maxlen, contxt_ihb_t* ihb)
+contxt_ihb_read(char* retstr, int maxlen, contxt_ihb_t* ihb)
 { 
-  if((maxlen < 2) || (maxlen > CONTXT_MAXSIZE_EDITBUF))
+  if (maxlen < 2 || maxlen > CONTXT_MAXSIZE_EDITBUF)
     return;
   
   if(ihb) 
@@ -503,7 +508,7 @@ contxt_read(char* retstr, int maxlen, contxt_ihb_t* ihb)
  * history buffer.
  */
 int
-contxt_init_ihb(contxt_ihb_t *ihb, int lines, int length)
+contxt_ihb_init(contxt_ihb_t *ihb, int lines, int length)
 {  
   if (lines < 2)
     lines = 2;
@@ -521,7 +526,7 @@ contxt_init_ihb(contxt_ihb_t *ihb, int lines, int length)
   /* allocate history buffer */
   if (!(ihb->buffer = (char*)(malloc(lines*length))))
     {
-      LOGl("non mem for ihb->head");
+      LOGl("no mem for ihb->head");
       return -L4_ENOMEM;
     }
 
@@ -538,10 +543,12 @@ contxt_init_ihb(contxt_ihb_t *ihb, int lines, int length)
  * \param   s              ... string to add
  */
 void
-contxt_add_ihb(contxt_ihb_t *ihb, const char *s)
+contxt_ihb_add(contxt_ihb_t *ihb, const char *s)
 {
   if (ihb && ihb->buffer)
     {
+      char *ptr = ihb->buffer + ihb->last*ihb->length;
+
       ihb->last++;
       if (ihb->last >= ihb->lines)
 	ihb->last = 0;
@@ -549,8 +556,8 @@ contxt_add_ihb(contxt_ihb_t *ihb, const char *s)
 	ihb->first++;
       if (ihb->first >= ihb->lines)
 	ihb->first = 0;
-      strncpy(ihb->buffer, s, ihb->length-1);
-      ihb->buffer[ihb->length-1] = '\0';
+      strncpy(ptr, s, ihb->length-1);
+      ptr[ihb->length-1] = '\0';
     }
 }
 

@@ -2,6 +2,8 @@
 
 SUBDIRS	= dice
 
+EXTRA_DIST= Makefile.local 
+
 L4DIR	= ${top_srcdir}/@L4DIR@
 
 install-data-local:

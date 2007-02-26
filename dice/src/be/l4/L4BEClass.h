@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEClass.h
- *	\brief	contains the declaration of the class CL4BEClass
+ *    \file    dice/src/be/l4/L4BEClass.h
+ *    \brief   contains the declaration of the class CL4BEClass
  *
- *	\date	01/29/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/29/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -37,19 +38,18 @@
  * \ingroup backend
  *
  * This class contains L4 specific implementations of some of the
- * base class' functions. It especially overloads the WriteFunctions
+ * base class' functions. It especially overloads the WriteHelperFunctions
  * method to write the declarations of L4 specific helper functions
  */
 class CL4BEClass : public CBEClass
 {
-DECLARE_DYNAMIC(CL4BEClass);
 public:
     /** \brief constructor */
     CL4BEClass();
-    ~CL4BEClass();
-    
+    virtual ~CL4BEClass();
+
 protected: // Protected methods
-    virtual void WriteFunctions(CBEHeaderFile * pFile, CBEContext * pContext);
+    virtual void WriteHelperFunctions(CBEHeaderFile * pFile, CBEContext * pContext);
 };
 
 #endif

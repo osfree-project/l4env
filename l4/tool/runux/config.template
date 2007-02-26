@@ -3,14 +3,15 @@
 
 # path to the L4 binaries
 [ "$L4PATH" ]    || L4PATH=/home/user/src/l4/bin/x86_586/l4v2
-# path to your Fiasco/UX build directory (including rmgr-ux, sigma0-ux, ux_con, ...)
+# path to your Fiasco-UX build directory
 [ "$FIASCODIR" ] || FIASCODIR=/home/user/src/l4/kernel/fiasco/build-ux-v2
 # if you need it: path to your loader cfg directory
 [ "$CFGPATH" ]   || CFGPATH=/home/user/boot/l4/cfg
-# optional: logfile for debug messages
-#[ "$LOGFILE" ]   || LOGFILE=/tmp_nonext/user/ux-log
 # optional: set memory
 #[ "$UXMEM" ]     || UXMEM=64
 # optional: predefine ux_con resolution (default is 800x600@16)
 #[ "$UXRES"  ]    || UXRES=1024x768@16
 
+#USE_ROOTTASK=y
+#unset USE_SYMBOLS
+#unset USE_LINES

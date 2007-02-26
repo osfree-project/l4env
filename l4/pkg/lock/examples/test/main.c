@@ -20,6 +20,8 @@
 #include <l4/util/rand.h>
 #include <stdio.h>
 
+char LOG_tag[9]="locktest";
+
 #define NUM_THREADS 10
 #define WAIT_MAX 100.0
 
@@ -64,8 +66,6 @@ test_fn(void * data)
 int main(void)
 {
   int i;
-
-  LOG_init("locktest");
 
   l4semaphore_init();
 

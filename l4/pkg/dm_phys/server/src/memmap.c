@@ -68,7 +68,9 @@ static pool_cfg_t cfg[DMPHYS_NUM_POOLS];
 
 /* pool names */
 static char * default_pool_name = "Default memory pool";
+#ifdef ARCH_x86
 static char * isa_dma_pool_name = "ISA DMA memory pool";
+#endif
 
 /*****************************************************************************
  *** external symbols
@@ -122,7 +124,7 @@ __alloc_memmap_desc(void)
 static inline void
 __release_memmap_desc(memmap_t * desc)
 {
-  l4slab_free(&memmap_cache,desc);
+  l4slab_free(&memmap_cache, desc);
 }
 
 /*****************************************************************************/
@@ -160,8 +162,7 @@ __find_addr(l4_addr_t addr)
  */
 /*****************************************************************************/ 
 static int
-__cut_end(memmap_t * area, 
-	  l4_size_t size)
+__cut_end(memmap_t * area, l4_size_t size)
 {
   memmap_t * mp;
 
@@ -203,8 +204,7 @@ __cut_end(memmap_t * area,
  */
 /*****************************************************************************/ 
 static int
-__cut_begin(memmap_t * area, 
-	    l4_size_t size)
+__cut_begin(memmap_t * area, l4_size_t size)
 {
   memmap_t * mp;
 
@@ -250,17 +250,14 @@ __cut_begin(memmap_t * area,
  */
 /*****************************************************************************/ 
 static int
-__mark_begin(memmap_t * area, 
-	     l4_size_t size, 
-	     l4_uint8_t pool, 
-	     l4_uint8_t pagesize,
-	     l4_uint16_t flags)
+__mark_begin(memmap_t * area, l4_size_t size, l4_uint8_t pool, 
+	     l4_uint8_t pagesize, l4_uint16_t flags)
 {
   memmap_t * mp;
 
 #if DEBUG_MEMMAP_MAP
-  printf("    area 0x%08x-0x%08x, pool %u, ps %u, flags 0x%04x\n",
-         area->addr,area->addr + size,pool,pagesize,flags);
+  LOG_printf("    area 0x%08x-0x%08x, pool %u, ps %u, flags 0x%04x\n",
+         area->addr, area->addr + size, pool, pagesize, flags);
 #endif
 
   if (size == area->size)
@@ -273,7 +270,7 @@ __mark_begin(memmap_t * area,
   else
     {
       /* cut area at beginning */
-      if (__cut_begin(area,size) < 0)
+      if (__cut_begin(area, size) < 0)
 	return -1;
       
       /* set new area attributes */
@@ -303,12 +300,8 @@ __mark_begin(memmap_t * area,
  */
 /*****************************************************************************/ 
 static int
-__map(l4_addr_t low, 
-      l4_addr_t high, 
-      l4_size_t size, 
-      int pool, 
-      int use_4M_pages, 
-      int force)
+__map(l4_addr_t low, l4_addr_t high, l4_size_t size, int pool, 
+      int use_4M_pages, int force)
 {
   memmap_t * mp;
   l4_addr_t addr,area_start;
@@ -320,9 +313,9 @@ __map(l4_addr_t low,
     need = mem_high - mem_low;
   else
     need = size;
-
-  LOGdL(DEBUG_MEMMAP_MAP,"pool %d\n  range 0x%08x-0x%08x, need 0x%08x",
-        pool,low,high,need);
+  
+  LOGdL(DEBUG_MEMMAP_MAP, "pool %d range 0x%08x-0x%08x, need 0x%08x",
+        pool, low, high, need);
 
   /* find area which contains memory range start address */
   mp = __find_addr(addr);
@@ -335,7 +328,7 @@ __map(l4_addr_t low,
       if (MEMMAP_IS_UNUSED(mp))
 	{
 	  /* split area at beginning */	  
-	  if (__cut_begin(mp,addr - mp->addr) < 0)
+	  if (__cut_begin(mp, addr - mp->addr) < 0)
 	    return -1;	  
 	}
       else
@@ -357,7 +350,7 @@ __map(l4_addr_t low,
 	break;
 
 #if DEBUG_MEMMAP_MAP
-      printf("  area 0x%08x-0x%08x\n",mp->addr,mp->addr + mp->size);
+      LOG_printf(" area 0x%08x-0x%08x\n", mp->addr, mp->addr + mp->size);
 #endif
 
       addr = mp->addr;
@@ -367,14 +360,14 @@ __map(l4_addr_t low,
 	s = high - mp->addr;
 
 #if DEBUG_MEMMAP_MAP
-      printf("  trying to map 0x%08x-0x%08x\n",addr,addr + s);
+      LOG_printf(" trying to map 0x%08x-0x%08x\n", addr, addr + s);
 #endif
 
       area_start = addr;
       area_size = 0;
       last_mapped = 0;
       last_4M = 0;
-
+      
       while ((s > 0) && (need > 0))
 	{
 	  /* try to map 4M page */
@@ -391,11 +384,11 @@ __map(l4_addr_t low,
 		      if (area_size > 0)
 			{
 			  if (!last_mapped)
-			    ret = __mark_begin(mp,area_size,
-					       MEMMAP_INVALID_POOL,0,
+			    ret = __mark_begin(mp, area_size,
+					       MEMMAP_INVALID_POOL, 0,
 					       MEMMAP_DENIED);
 			  else
-			    ret = __mark_begin(mp,area_size,pool,
+			    ret = __mark_begin(mp, area_size, pool,
 					       L4_LOG2_PAGESIZE,
 					       MEMMAP_MAPPED);
 			  if (ret < 0)
@@ -431,10 +424,10 @@ __map(l4_addr_t low,
 		  if (area_size > 0)
 		    {
 		      if (!last_mapped)
-			ret = __mark_begin(mp,area_size,MEMMAP_INVALID_POOL,0,
-					   MEMMAP_DENIED);
+			ret = __mark_begin(mp, area_size, MEMMAP_INVALID_POOL, 
+                                           0, MEMMAP_DENIED);
 		      else
-			ret = __mark_begin(mp,area_size,pool,
+			ret = __mark_begin(mp, area_size, pool,
 					   L4_LOG2_SUPERPAGESIZE,
 					   MEMMAP_MAPPED);
 		      if (ret < 0)
@@ -458,7 +451,7 @@ __map(l4_addr_t low,
 	      /* did not get 4KB-page */
 	      if (force)
 		{
-		  Panic("DMphys: failed to map reserved page at 0x%08x!",addr);
+		  Panic("DMphys: failed to map reserved page at 0x%08x!", addr);
 		  return -1;
 		}
 	      
@@ -468,11 +461,12 @@ __map(l4_addr_t low,
 		  if (area_size > 0)
 		    {
 		      if (last_4M)
-			ret = __mark_begin(mp,area_size,pool,
+			ret = __mark_begin(mp, area_size, pool,
 					   L4_LOG2_SUPERPAGESIZE,
 					   MEMMAP_MAPPED);
 		      else
-			ret = __mark_begin(mp,area_size,pool,L4_LOG2_PAGESIZE,
+			ret = __mark_begin(mp, area_size, pool,
+                                           L4_LOG2_PAGESIZE,
 					   MEMMAP_MAPPED);
 		      if (ret < 0)
 			return -1;
@@ -497,15 +491,15 @@ __map(l4_addr_t low,
       if (area_size > 0)
 	{
 	  if (!last_mapped)
-	    ret = __mark_begin(mp,area_size,MEMMAP_INVALID_POOL,0,
+	    ret = __mark_begin(mp, area_size, MEMMAP_INVALID_POOL, 0,
 			       MEMMAP_DENIED);
 	  else
 	    {
 	      if (last_4M)
-		ret = __mark_begin(mp,area_size,pool,L4_LOG2_SUPERPAGESIZE,
+		ret = __mark_begin(mp, area_size, pool, L4_LOG2_SUPERPAGESIZE,
 				   MEMMAP_MAPPED);
 	      else
-		ret = __mark_begin(mp,area_size,pool,L4_LOG2_PAGESIZE,
+		ret = __mark_begin(mp, area_size, pool, L4_LOG2_PAGESIZE,
 				   MEMMAP_MAPPED);
 	    }
 
@@ -518,7 +512,9 @@ __map(l4_addr_t low,
   /* scanned memory range */
   if ((size != -1) && (need > 0))
     {
-      Panic("DMphys: not enough memory found for pool %d",pool);
+      rmgr_init();
+      rmgr_dump_mem();
+      Panic("DMphys: not enough memory found for pool %d", pool);
       return -1;
     }
 
@@ -547,7 +543,7 @@ __allocate_rmgr(int use_4M_pages)
 
   for (i = DMPHYS_NUM_POOLS - 1; i >= 0; i--)
     {
-      LOGdL(DEBUG_MEMMAP_MAP,"pool %d",i);
+      LOGdL(DEBUG_MEMMAP_MAP, "pool %d", i);
 
       if (cfg[i].size != 0)
 	{
@@ -559,30 +555,30 @@ __allocate_rmgr(int use_4M_pages)
 	    }
 
 #if DEBUG_MEMMAP_MAP
-	  printf("  size 0x%08x, range 0x%08x-0x%08x\n",cfg[i].size,
-                 cfg[i].low,cfg[i].high);
+	  LOG_printf(" size 0x%08x, range 0x%08x-0x%08x\n", cfg[i].size,
+                 cfg[i].low, cfg[i].high);
 #endif
 	  
 	  /* request memory area at RMGR (aligned) */
-	  addr = rmgr_reserve_mem(cfg[i].size,l4util_bsr(cfg[i].size),0,
-				  cfg[i].low,cfg[i].high);
+	  addr = rmgr_reserve_mem(cfg[i].size, l4util_bsr(cfg[i].size), 0,
+				  cfg[i].low, cfg[i].high);
 	  if (addr == -1)
 	    {
 	      rmgr_dump_mem();
 	      Panic("DMphys: failed to reserve memory at rmgr "
-		    "(pool %d, size %u)!",i,cfg[i].size);
+		    "(pool %d, size %u)!", i, cfg[i].size);
 	      return -1;
 	    }
 
 #if DEBUG_MEMMAP_MAP
-	  printf("  got area at 0x%08x\n",addr);
+	  LOG_printf(" got area at 0x%08x\n", addr);
 #endif
 
 	  /* map area */
 	  if (__map(addr,addr + cfg[i].size,cfg[i].size,i,use_4M_pages,1) < 0)
 	    {
 	      Panic("DMphys: map region 0x%08x-0x%08x reserved at RMGR "
-		    "failed!",addr,addr + cfg[i].size);
+		    "failed!", addr, addr + cfg[i].size);
 	      return -1;
 	    }
 	}
@@ -611,9 +607,10 @@ __allocate(int use_4M_pages)
     {
       if ((cfg[i].size != 0) && (cfg[i].size != -1))
 	{
-	  if (__map(cfg[i].low,cfg[i].high,cfg[i].size,i,use_4M_pages,0) < 0)
+	  if (__map(cfg[i].low, cfg[i].high, cfg[i].size, i, 
+                    use_4M_pages, 0) < 0)
 	    {
-	      Panic("DMphys: allocation of pool %d failed!",i);
+	      Panic("DMphys: allocation of pool %d failed!", i);
 	      return -1;
 	    }
 	}
@@ -624,9 +621,9 @@ __allocate(int use_4M_pages)
     {
       if (cfg[i].size == -1)
 	{
-	  if (__map(cfg[i].low,cfg[i].high,-1,i,use_4M_pages,0) < 0)
+	  if (__map(cfg[i].low, cfg[i].high, -1, i, use_4M_pages, 0) < 0)
 	    {
-	      Panic("DMphys: allocation of pool %d failed!",i);
+	      Panic("DMphys: allocation of pool %d failed!", i);
 	      return -1;
 	    }	   
 	}
@@ -671,14 +668,14 @@ __setup_pools(void)
 	      mp = mp->next;
 	    }
 
-	  LOGdL(DEBUG_MEMMAP_POOLS,"pool %d\n  add 0x%08x-0x%08x",
-                pool,addr,addr + size);
+	  LOGdL(DEBUG_MEMMAP_POOLS, "pool %d, add 0x%08x-0x%08x",
+                pool, addr, addr + size);
 
 	  /* add memory region to pool */
-	  if (dmphys_pages_add_free_area(pool,addr,size) < 0)
+	  if (dmphys_pages_add_free_area(pool, addr, size) < 0)
 	    {
-	      Panic("DMphys: ad memory area 0x%08x-0x%08x to pool %d failed!",
-		    addr,addr + size,pool);
+	      Panic("DMphys: add memory area 0x%08x-0x%08x to pool %d failed!",
+		    addr, addr + size, pool);
 	      return -1;
 	    }
 	}
@@ -699,13 +696,12 @@ __setup_pools(void)
  */
 /*****************************************************************************/ 
 static int
-__reserve(l4_addr_t addr, 
-	  l4_size_t size)
+__reserve(l4_addr_t addr, l4_size_t size)
 {
   memmap_t * mp, * tmp;
   l4_size_t got,need;
 
-  LOGdL(DEBUG_MEMMAP_RESERVE,"reserve 0x%08x-0x%08x",addr,addr + size);
+  LOGdL(DEBUG_MEMMAP_RESERVE, "reserve 0x%08x-0x%08x", addr, addr + size);
 
   /* find memmap area which contains addr */
   mp = __find_addr(addr);
@@ -728,7 +724,7 @@ __reserve(l4_addr_t addr,
 	    return -1;
 
 	  /* split area */
-	  if (__cut_begin(mp,addr - mp->addr) < 0)
+	  if (__cut_begin(mp, addr - mp->addr) < 0)
 	    return -1;
 	}
     }
@@ -739,8 +735,8 @@ __reserve(l4_addr_t addr,
       need = size - got;
 
 #if DEBUG_MEMMAP_RESERVE
-      printf("  area 0x%08x-0x%08x, flags 0x%04x, need 0x%08x\n",
-             mp->addr,mp->addr + mp->size,mp->flags,need);
+      LOG_printf(" area 0x%08x-0x%08x, flags 0x%04x, need 0x%08x\n",
+             mp->addr, mp->addr + mp->size, mp->flags, need);
 #endif
 
       if (MEMMAP_IS_RESERVED(mp))
@@ -754,7 +750,7 @@ __reserve(l4_addr_t addr,
 	  if (mp->size > need)
 	    {
 	      /* split area */
-	      if (__cut_end(mp,mp->size - need) < 0)
+	      if (__cut_end(mp, mp->size - need) < 0)
 		return -1;
 	    }
 
@@ -806,29 +802,29 @@ __setup_reserved(void)
   /* BIOS page */
   addr = 0;
   size = L4_PAGESIZE;
-  if (__reserve(addr,size) < 0)
+  if (__reserve(addr, size) < 0)
     Panic("DMphys: reserve BIOS page at 0 failed!");
 
   /* lower I/O area */
   addr = 0x000A0000;
   size = 0x00060000;
-  if (__reserve(addr,size) < 0)
+  if (__reserve(addr, size) < 0)
     Panic("DMphys: reserve I/O area at 0x%08x-0x%08x failed!",
-          addr,addr + size);
+          addr, addr + size);
 
   /* DMphys binary */
   addr = l4_trunc_page((l4_addr_t)&_stext);
   size = l4_round_page((l4_addr_t)&_end) - addr;
-  if (__reserve(addr,size) < 0)
+  if (__reserve(addr, size) < 0)
     Panic("DMphys: reserve DMphys binary at 0x%08x-0x%08x failed!",
-          addr,addr + size);
+          addr, addr + size);
   
   /* RMGR trampoline page */
   addr = l4_trunc_page(crt0_tramppage);
   size = l4_round_page(crt0_tramppage + L4_PAGESIZE) - addr;
-  if (__reserve(addr,size) < 0)
+  if (__reserve(addr, size) < 0)
     Panic("DMphys: reserve RMGR trampoline page at 0x%08x-0x%08x failed!",
-          addr,addr + size);
+          addr, addr + size);
 }
 
 /*****************************************************************************/
@@ -855,15 +851,15 @@ __check_assumptions(int use_4M_pages)
 	{
 	  /* does area contain 4MB aligned/sized area? */
 	  next_4M_addr = 
-	    (mp->addr + DMPHYS_4MPAGESIZE - 1) & ~(DMPHYS_4MPAGESIZE - 1);
-	  if ((next_4M_addr + DMPHYS_4MPAGESIZE) <= (mp->addr + mp->size))
+	    (mp->addr + DMPHYS_SUPERPAGESIZE - 1) & ~(DMPHYS_SUPERPAGESIZE - 1);
+	  if ((next_4M_addr + DMPHYS_SUPERPAGESIZE) <= (mp->addr + mp->size))
 	    {
-	      if (mp->pagesize != DMPHYS_LOG2_4MPAGESIZE)
+	      if (mp->pagesize != DMPHYS_LOG2_SUPERPAGESIZE)
 		{
-		  end_addr = (mp->addr + mp->size) & ~(DMPHYS_4MPAGESIZE - 1);
-		  printf("DMphys: area 0x%08x-0x%08x not mapped using "
-                         "4MB-pages!\n",next_4M_addr,end_addr);
-		  printf("Warning: 4MB-page assumptions not met!\n"); 
+		  end_addr = (mp->addr + mp->size) & ~(DMPHYS_SUPERPAGESIZE - 1);
+		  LOG_printf("DMphys: area 0x%08x-0x%08x not mapped using "
+                         "4MB-pages!\n", next_4M_addr, end_addr);
+		  LOG_printf("Warning: 4MB-page assumptions not met!\n"); 
 		}
 	    }
 	}
@@ -890,15 +886,15 @@ dmphys_memmap_init(void)
   pool_cfg_t * pool;
 
   /* initialize memmap descriptor slab cache */
-  if (l4slab_cache_init(&memmap_cache,sizeof(memmap_t),0,
+  if (l4slab_cache_init(&memmap_cache, sizeof(memmap_t), 0,
 			dmphys_internal_alloc_grow,
 			dmphys_internal_alloc_release) < 0)
     return -1;
 
-  l4slab_set_data(&memmap_cache,memmap_cache_name);
+  l4slab_set_data(&memmap_cache, memmap_cache_name);
 
   /* setup initial memory map */
-  phys_mem_low = 0;
+  phys_mem_low = dmphys_kinfo_mem_low();
   phys_mem_high = dmphys_kinfo_mem_high();
 
   mem = __alloc_memmap_desc();
@@ -918,7 +914,7 @@ dmphys_memmap_init(void)
   /* if we skip low memory by default, mark it reserved */
   if (mem_low > phys_mem_low)
     {
-      if (__reserve(phys_mem_low,mem_low - phys_mem_low) < 0)
+      if (__reserve(phys_mem_low, mem_low - phys_mem_low) < 0)
 	Panic("DMphys: reserve unused low memory failed!");
     }
 
@@ -943,12 +939,14 @@ dmphys_memmap_init(void)
   pool->high = DMPHYS_MEM_DEFAULT_HIGH;
   pool->reserved = DMPHYS_MEM_DEFAULT_RESERVED;
 
+#ifdef ARCH_x86
   pool = &cfg[DMPHYS_MEM_ISA_DMA_POOL];
   strcpy(pool->name,isa_dma_pool_name);
   pool->low = DMPHYS_MEM_ISA_DMA_LOW;
   pool->high = DMPHYS_MEM_ISA_DMA_HIGH;
   pool->size = DMPHYS_MEM_ISA_DMA_SIZE;
   pool->reserved = DMPHYS_MEM_ISA_DMA_RESERVED;
+#endif
 
   /* done */
   return 0;
@@ -965,8 +963,7 @@ dmphys_memmap_init(void)
  */
 /*****************************************************************************/ 
 int
-dmphys_memmap_setup_pools(int use_rmgr, 
-			  int use_4M_pages)
+dmphys_memmap_setup_pools(int use_rmgr, int use_4M_pages)
 {
   int ret,i;
 
@@ -996,7 +993,7 @@ dmphys_memmap_setup_pools(int use_rmgr,
 
   /* init page pool descriptors */
   for (i = 0; i < DMPHYS_NUM_POOLS; i++)
-    dmphys_pages_init_pool(i,cfg[i].reserved,cfg[i].name);
+    dmphys_pages_init_pool(i, cfg[i].reserved, cfg[i].name);
   
   /* allocate and map pool areas */
   if (use_rmgr)
@@ -1028,11 +1025,10 @@ dmphys_memmap_setup_pools(int use_rmgr,
  */
 /*****************************************************************************/ 
 int
-dmphys_memmap_reserve(l4_addr_t addr, 
-		      l4_size_t size)
+dmphys_memmap_reserve(l4_addr_t addr, l4_size_t size)
 {
   /* mark reserved */
-  return __reserve(addr,size);
+  return __reserve(addr, size);
 }
 
 /*****************************************************************************/
@@ -1087,10 +1083,8 @@ dmphys_memmap_set_mem_high(l4_addr_t high)
  */
 /*****************************************************************************/ 
 int
-dmphys_memmap_set_pool_config(int pool, 
-			      l4_size_t size, 
-			      l4_addr_t low, 
-			      l4_addr_t high, 
+dmphys_memmap_set_pool_config(int pool, l4_size_t size, 
+			      l4_addr_t low, l4_addr_t high, 
 			      const char * name)
 {
   if ((pool < 0) || (pool >= DMPHYS_NUM_POOLS))
@@ -1104,12 +1098,12 @@ dmphys_memmap_set_pool_config(int pool,
     cfg[pool].high = high;
   if (name != 0)
     {
-      strncpy(cfg[pool].name,name,DMPHYS_MEM_POOL_NAME_LEN);
+      strncpy(cfg[pool].name, name, DMPHYS_MEM_POOL_NAME_LEN);
       cfg[pool].name[DMPHYS_MEM_POOL_NAME_LEN - 1] = 0;
     }
 
-  LOGdL(DEBUG_MEMMAP_POOLS,"pool %d:\n  size 0x%08x, range 0x%08x-0x%08x",
-        pool,size,low,high);
+  LOGdL(DEBUG_MEMMAP_POOLS, "pool %d: size 0x%08x, range 0x%08x-0x%08x",
+        pool, size, low, high);
 
   /* done */
   return 0;
@@ -1128,9 +1122,7 @@ dmphys_memmap_set_pool_config(int pool,
  */
 /*****************************************************************************/ 
 int
-dmphys_memmap_check_pagesize(l4_addr_t addr, 
-			     l4_size_t size, 
-			     int pagesize)
+dmphys_memmap_check_pagesize(l4_addr_t addr, l4_size_t size, int pagesize)
 {
   l4_addr_t  align_mask;
   l4_size_t  got;
@@ -1140,8 +1132,8 @@ dmphys_memmap_check_pagesize(l4_addr_t addr,
       (pagesize < L4_LOG2_PAGESIZE))
     return 0;
 
-  LOGdL(DEBUG_MEMMAP_PAGESIZE,"\n  area 0x%08x-0x%08x, pagesize %d\n",
-        addr,addr + size,pagesize);
+  LOGdL(DEBUG_MEMMAP_PAGESIZE, "area 0x%08x-0x%08x, pagesize %d",
+        addr, addr + size, pagesize);
 
   /* check address / size alignment */
   align_mask = (1UL << pagesize) - 1;
@@ -1150,7 +1142,7 @@ dmphys_memmap_check_pagesize(l4_addr_t addr,
     return 0;
 
 #if DEBUG_MEMMAP_PAGESIZE
-  printf("  addr / size alignment ok\n");
+  LOG_printf(" addr / size alignment ok\n");
 #endif
 
   /* find area in memory map */
@@ -1159,14 +1151,14 @@ dmphys_memmap_check_pagesize(l4_addr_t addr,
   while ((mp != NULL) && (got < size))
     {
 #if DEBUG_MEMMAP_PAGESIZE
-      printf("  area 0x%08x-0x%08x, pagesize %d, flags 0x%04x\n",
-             mp->addr,mp->addr + mp->size,mp->pagesize,mp->flags);
+      LOG_printf(" area 0x%08x-0x%08x, pagesize %d, flags 0x%04x\n",
+             mp->addr, mp->addr + mp->size, mp->pagesize, mp->flags);
 #endif
 
       if (!MEMMAP_IS_MAPPED(mp))
 	{
-	  Error("DMphys: memory area 0x%08x-0x%08x not mapped!",
-		addr, addr + size);
+	  LOG_Error("DMphys: memory area 0x%08x-0x%08x not mapped!",
+                    addr, addr + size);
 	  return 0;
 	}
 
@@ -1180,7 +1172,8 @@ dmphys_memmap_check_pagesize(l4_addr_t addr,
 
   if (got < size)
     {
-      Error("DMphys: memory area 0x%08x-0x%08x not mapped!",addr, addr + size);      
+      LOG_Error("DMphys: memory area 0x%08x-0x%08x not mapped!",
+                addr, addr + size);      
       return 0;
     }
 
@@ -1198,28 +1191,28 @@ dmphys_memmap_show(void)
 {
   memmap_t * mp = mem;
 
-  printf("DMphys memory map:\n");
-  printf("  phys. memory 0x%08x-0x%08x (from L4 kernel info page)\n",
-         phys_mem_low,phys_mem_high);
-  printf("  using 0x%08x-0x%08x\n",mem_low,mem_high);
-  printf("       Memory area      Pool  PS  Flags\n");
+  LOG_printf("DMphys memory map:\n");
+  LOG_printf("  phys. memory 0x%08x-0x%08x (from L4 kernel info page)\n",
+         phys_mem_low, phys_mem_high);
+  LOG_printf("  using 0x%08x-0x%08x\n", mem_low, mem_high);
+  LOG_printf("       Memory area      Pool  PS  Flags\n");
   while (mp != NULL)
     {
       if (MEMMAP_IS_MAPPED(mp))
-	printf("  0x%08x-0x%08x  %2u   %2u  ",mp->addr,mp->addr + mp->size,
-               mp->pool,mp->pagesize);
+	LOG_printf("  0x%08x-0x%08x  %2u   %2u  ",mp->addr, mp->addr + mp->size,
+               mp->pool, mp->pagesize);
       else
-	printf("  0x%08x-0x%08x  --   --  ",mp->addr,mp->addr + mp->size);
+	LOG_printf("  0x%08x-0x%08x  --   --  ", mp->addr, mp->addr + mp->size);
 
       if (mp->flags & MEMMAP_UNUSED)
-	printf("UNUSED ");
+	LOG_printf("UNUSED ");
       if (mp->flags & MEMMAP_MAPPED)
-	printf("MAPPED ");
+	LOG_printf("MAPPED ");
       if (mp->flags & MEMMAP_RESERVED)
-	printf("RESERVED ");
+	LOG_printf("RESERVED ");
       if (mp->flags & MEMMAP_DENIED)
-	printf("DENIED");
-      printf("\n");
+	LOG_printf("DENIED");
+      LOG_printf("\n");
 
       mp = mp->next;
     }

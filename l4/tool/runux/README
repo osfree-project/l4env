@@ -1,11 +1,20 @@
 
-This directory contains shell scripts (or examples) for Fiasco/UX.
+This directory contains shell scripts (or examples) for Fiasco-UX.
 
-Users needs to have a "config.local" file for their configuration, a
+Users need to have a "config.local" file for their configuration, a
 template can be found in the config.template file.
 
-The "fiasco" script is a bit special, it allows to start Fiasco/UX with
-just the binary names as arguments.
+con    - Runs con_demo1 in the console system
+dope   - Runs DOpE with vscrtest, a DOpE sample application
+fiasco - fast starter for Fiasco-UX, use fiasco hello (yes, without -l)
+l4env  - similar to fiasco but always launch some l4env servers
+lx     - Run L4Linux, use lx -h to get some help on this script
+lx_cd  - Run L4Linux and use the Demo CD file system, use:
+             DEMOCD=/path/to/image ./lx_cd ...
+run    - Start the console, the loader and run.
+
+Exit a Fiasco-UX session with Ctrl-C and '^'.
+
 
 
 Adam

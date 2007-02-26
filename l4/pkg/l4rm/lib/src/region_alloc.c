@@ -48,8 +48,7 @@ l4slab_cache_t l4rm_region_cache;
  */
 /*****************************************************************************/ 
 static void *
-__grow(l4slab_cache_t * cache, 
-       void ** data)
+__grow(l4slab_cache_t * cache, void ** data)
 {
   *data = NULL;
   return l4rm_heap_alloc();
@@ -72,8 +71,8 @@ l4rm_region_alloc_init(void)
   int ret;
 
   /* initialize slab cache */
-  ret = l4slab_cache_init(&l4rm_region_cache,sizeof(l4rm_region_desc_t),
-			  1,__grow,NULL);
+  ret = l4slab_cache_init(&l4rm_region_cache, sizeof(l4rm_region_desc_t),
+			  1, __grow, NULL);
   if (ret < 0)
     {
       Panic("L4RM: region descriptor slab cache initialization failed!");

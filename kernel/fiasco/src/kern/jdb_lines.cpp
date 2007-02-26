@@ -2,23 +2,33 @@ INTERFACE:
 
 #include "l4_types.h"
 
-class Jdb_lines
+class Jdb_lines_line
+{
+public:
+  unsigned int   addr __attribute__ ((packed));
+  unsigned short line __attribute__ ((packed));
+};
+
+class Jdb_lines_info
 {
 private:
-  typedef struct
-    {
-      unsigned int   addr;
-      unsigned short line;
-    } __attribute__ ((packed)) Line;
-  
-  typedef struct
-    {
-      Line     *str;
-      Address  beg;
-      Address  end;
-    } Task_lines;
-  
-  static Task_lines task_lines[L4_uid::MAX_TASKS];
+  Address  _virt;
+  size_t   _size;
+  Address  _beg_line;
+  Address  _end_line;
+};
+
+class Jdb_lines
+{
+public:
+  enum
+  {
+    // don't allow more than 2048 tasks to register their lines to save space
+    Max_tasks = L4_uid::Max_tasks < 2048 ? L4_uid::Max_tasks : 2048,
+  };
+
+private:
+  static Jdb_lines_info *_task_lines;
 };
 
 
@@ -26,9 +36,101 @@ IMPLEMENTATION:
 
 #include <cstdio>
 #include <cstring>
-#include "kmem.h"
+#include "panic.h"
+#include "warn.h"
 
-Jdb_lines::Task_lines Jdb_lines::task_lines[L4_uid::MAX_TASKS];
+Jdb_lines_info *Jdb_lines::_task_lines;
+
+PUBLIC static
+void
+Jdb_lines::init (void *mem, Mword pages)
+{
+  if (!mem || pages < (Max_tasks*sizeof(Jdb_lines_info))>>Config::PAGE_SHIFT)
+    panic("No memory for lines");
+
+  _task_lines = (Jdb_lines_info*)mem;
+  memset(_task_lines, 0, Max_tasks * sizeof(Jdb_lines_info));
+}
+
+PUBLIC inline NOEXPORT
+Jdb_lines_line*
+Jdb_lines_info::lin ()
+{
+  return (Jdb_lines_line*)_virt;
+}
+
+PUBLIC inline NOEXPORT
+const char*
+Jdb_lines_info::str ()
+{
+  return (const char*)_virt;
+}
+
+PUBLIC inline
+void
+Jdb_lines_info::get (Address &virt, size_t &size)
+{
+  virt = _virt;
+  size = _size;
+}
+
+PUBLIC inline
+void
+Jdb_lines_info::reset ()
+{
+  _virt = 0;
+}
+
+PUBLIC inline NOEXPORT
+bool
+Jdb_lines_info::in_range (Address addr)
+{
+  return _virt != 0 && _beg_line <= addr && _end_line >= addr;
+}
+
+// register lines for a specific task (called by user mode application)
+PUBLIC
+bool
+Jdb_lines_info::set (Address virt, size_t size)
+{
+  _virt = virt;
+  _size = size;
+
+  Address min_addr = 0xffffffff, max_addr = 0;
+  Jdb_lines_line *l;
+
+  // search lines with lowest / highest address
+  for (l = lin(); l->addr || l->line; l++)
+    {
+      if (l->line < 0xfffd)
+	{
+	  Address addr = l->addr;
+	  if (addr < min_addr)
+	    min_addr = addr;
+	  if (addr > max_addr)
+	    max_addr = addr;
+	}
+    }
+  
+  _beg_line = min_addr;
+  _end_line = max_addr;
+
+  return true;
+}
+
+PUBLIC static
+Jdb_lines_info*
+Jdb_lines::lookup (Task_num task)
+{
+  if (task >= Max_tasks)
+    {
+      WARN ("register_lines: task value #%x out of range (0-%x)",
+	    task, Max_tasks-1);
+      return 0;
+    }
+
+  return _task_lines + task;
+}
 
 // search line name that matches for a specific address
 PUBLIC static
@@ -37,44 +139,40 @@ Jdb_lines::match_addr_to_line(Address addr, Task_num task,
 			      char *line, unsigned line_size,
 			      int show_header_files)
 {
-  if (task>=L4_uid::MAX_TASKS)
+  if (task >= Max_tasks)
     return false;
 
-  const char *str = (const char*)task_lines[task].str;
+  if (! _task_lines[task].in_range (addr))
+    return false;
 
-  if (   (str != 0)
-      && (task_lines[task].beg <= addr)
-      && (task_lines[task].end >= addr))
-    {
-      int show_file = 1;
-      Line *lin;
-      const char *dir="", *file="";
+  int show_file = 1;
+  Jdb_lines_line *lin = _task_lines[task].lin();
+  const char *dir="", *file="", *str = _task_lines[task].str();
       
-      for (lin = task_lines[task].str; lin->addr || lin->line; lin++)
+  for (; lin->addr || lin->line; lin++)
+    {
+      if (lin->line == 0xfffe)
 	{
-	  if (lin->line == 0xfffe)
-	    {
-	      // this is a directory entry
-	      dir = str + lin->addr;
-	    }
-	  else if (lin->line == 0xffff)
-	    {
-	      // this is a file name entry
-	      file = str + lin->addr;
-	      show_file = 1;
-	    }
-	  else if (lin->line == 0xfffd)
-	    {
-	      // this is a header file name entry
-	      file = str + lin->addr;
-	      show_file = show_header_files;
-	    }
-	  else if ((lin->addr == addr) && show_file)
-	    {
-	      // this is a line
-	      sprint_line(dir, file, lin->line, line, line_size);
-	      return true;
-	    }
+	  // this is a directory entry
+	  dir = str + lin->addr;
+	}
+      else if (lin->line == 0xffff)
+	{
+	  // this is a file name entry
+	  file = str + lin->addr;
+	  show_file = 1;
+	}
+      else if (lin->line == 0xfffd)
+	{
+	  // this is a header file name entry
+	  file = str + lin->addr;
+	  show_file = show_header_files;
+	}
+      else if ((lin->addr == addr) && show_file)
+	{
+	  // this is a line
+	  sprint_line(dir, file, lin->line, line, line_size);
+	  return true;
 	}
     }
 
@@ -84,71 +182,73 @@ Jdb_lines::match_addr_to_line(Address addr, Task_num task,
 // search line name that matches for a specific address
 PUBLIC static
 bool
-Jdb_lines::match_address_to_line_fuzzy(Address addr, Task_num task,
-				       char *line, unsigned line_size,
-				       int show_header_files)
+Jdb_lines::match_addr_to_line_fuzzy(Address *addr_ptr, Task_num task,
+				    char *line, unsigned line_size,
+				    int show_header_files)
 {
-  if (task>=L4_uid::MAX_TASKS)
+  if (task >= Max_tasks)
     return false;
 
-  const char *str = (const char*)task_lines[task].str;
+  if (! _task_lines[task].in_range (*addr_ptr))
+    return false;
 
-  if (   (str != 0)
-      && (task_lines[task].beg <= addr)
-      && (task_lines[task].end >= addr))
+  int show_file = 1;
+  Address best_addr = (Address)-1, best_line = 0;
+  Jdb_lines_line *lin = _task_lines[task].lin();
+  const char *dir="", *file="", *best_dir=0, *best_file=0;
+  const char *str=_task_lines[task].str();
+
+  for (; lin->addr || lin->line; lin++)
     {
-      int show_file = 1;
-      Address best_addr = (Address)-1, best_line = 0;
-      Line *lin;
-      const char *dir="", *file="", *best_dir=0, *best_file=0;
+      if (lin->line == 0xfffe)
+	{
+	  // this is a directory entry
+	  dir = str + lin->addr;
+	}
+      else if (lin->line == 0xffff)
+	{
+	  // this is a file name entry
+	  file = str + lin->addr;
+	  show_file = 1;
+	}
+      else if (lin->line == 0xfffd)
+	{
+	  // this is a header file name entry
+	  file = str + lin->addr;
+	  show_file = show_header_files;
+	}
+      else if ((lin->addr <= *addr_ptr)
+	       && (*addr_ptr-lin->addr < best_addr)
+	       && show_file)
+	{
+     	  best_addr = *addr_ptr-lin->addr;
+	  best_dir  = dir;
+	  best_file = file;
+	  best_line = lin->line;
+	}
+    }
 
-      for (lin = task_lines[task].str; lin->addr || lin->line; lin++)
-	{
-	  if (lin->line == 0xfffe)
-	    {
-	      // this is a directory entry
-	      dir = str + lin->addr;
-	    }
-	  else if (lin->line == 0xffff)
-	    {
-	      // this is a file name entry
-	      file = str + lin->addr;
-	      show_file = 1;
-	    }
-	  else if (lin->line == 0xfffd)
-	    {
-	      // this is a header file name entry
-	      file = str + lin->addr;
-	      show_file = show_header_files;
-	    }
-	  else if ((lin->addr <= addr)
-		   && (addr-lin->addr < best_addr)
-		   && show_file)
-	    {
-	      best_addr = addr-lin->addr;
-	      best_dir  = dir;
-	      best_file = file;
-	      best_line = lin->line;
-	    }
-	}
-      if (best_addr < (Address)-1)
-	{
-	  sprint_line(best_dir, best_file, best_line, line, line_size);
-	  return true;
-	}
+  if (best_addr < (Address)-1)
+    {
+      sprint_line(best_dir, best_file, best_line, line, line_size);
+      *addr_ptr -= best_addr;
+      return true;
     }
 
   return false;
 }
 
-// truncate string if its length exceeds str_size and create line
+// truncate string if its length exceeds strsize and create line
 static
 void
 Jdb_lines::sprint_line(const char *dir, const char *fname, unsigned line,
-		       char *str, unsigned str_size)
+		       char *str, size_t strsize)
 {
   unsigned d = strlen(dir);
   unsigned f = strlen(fname);
+
+  if (!str)
+    return;
 
   if (fname[0]=='/')
     d=0;
@@ -165,28 +265,30 @@ Jdb_lines::sprint_line(const char *dir, const char *fname, unsigned line,
       f-=3;
     }
 
-  str_size -= 6;		// for line number
-  
-  if (str_size < 10)
+  if (strsize < 10)
     {
-      *str = '\0';		// sanity check
+      *str = '\0';
+      return;
     }
-  else if ((d+f) > str_size)
+
+  strsize -= 6;	// for line number
+  
+  if ((d+f) > strsize)
     {
       // abbreviate line in a sane way
       memcpy(str, "... ", 4);
-      str      += 4;
-      str_size -= 4;
+      str     += 4;
+      strsize -= 4;
 
-      if (str_size > f)
+      if (strsize > f)
 	{
-	  unsigned dp = str_size-f;
+	  unsigned dp = strsize-f;
 	  memcpy(str, dir+d-dp, dp);
-	  str      += dp;
-	  str_size -= dp;
+	  str     += dp;
+	  strsize -= dp;
 	}
-      memcpy(str, fname+f-str_size, str_size);
-      str += str_size;
+      memcpy(str, fname+f-strsize, strsize);
+      str += strsize;
     }
   else
     {
@@ -195,48 +297,5 @@ Jdb_lines::sprint_line(const char *dir, const char *fname, unsigned line,
       str += d+f;
     }
 
-  sprintf(str, ":%d", line);
+  snprintf(str, strsize, ":%d", line);
 }
-
-// register lines for a specific task (called by user mode application)
-PUBLIC static
-void
-Jdb_lines::register_lines(Address addr, Task_num task)
-{
-  // sanity check
-  if (task >= L4_uid::MAX_TASKS)
-    {
-      printf("register_lines: task value %d out of range (0-%d)\n", 
-	  task, L4_uid::MAX_TASKS-1);
-      return;
-    }
-  
-  if (addr == 0)
-    {
-      // disable lines for specific task
-      task_lines[task].str = 0;
-      return;
-    }
-  
-  task_lines[task].str = (Line*)Kmem::phys_to_virt(addr);
-  
-  Address min_addr = 0xffffffff, max_addr = 0;
-  Line *lin;
-
-  // search lines with lowest / highest address
-  for (lin = task_lines[task].str; lin->addr || lin->line; lin++)
-    {
-      if (lin->line < 0xfffd)
-	{
-	  Address addr = lin->addr;
-	  if (addr < min_addr)
-	    min_addr = addr;
-	  if (addr > max_addr)
-	    max_addr = addr;
-	}
-    }
-  
-  task_lines[task].beg = min_addr;
-  task_lines[task].end = max_addr;
-}
-

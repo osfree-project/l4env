@@ -71,8 +71,7 @@ Print include file tree for file included with '' and compile.
 
 \subsubsection{{\tt --with-cpp=<argument>}}
 Specify your own preprocessor. This will override environment
-variable \verb|CPP| and the preprocessor specified with 
-configure.
+variable \verb|CC| or \verb|CXX|.
 
 Example: \verb|--with-cpp=/usr/bin/cpp-3.0|
 
@@ -108,6 +107,11 @@ the string: \verb|#include "/tmp/dice/<file>-client.h"|.
 Together with \verb|-F| the generated include statement looks like this
 \verb|#include "/tmp/dice/Run1<file>-client.h"|.
 
+\subsubsection{{\tt -o}}
+Specify output directory. All generated files are placed into the 
+given directory. If an invalid directory is given you receive error
+messages stating that files cannot be opened.
+
 \subsubsection{{\tt --create-inline=<mode>, -i<mode>}}
 Generate client stubs as inline. You may specify a mode for
 inline. Use \verb|static| or \verb|extern|. The mode is optional.
@@ -117,60 +121,48 @@ will appear there.
 Example: \verb|-istatic| generates \verb|static inline| functions.
 
 \subsubsection{{\tt -B<argument>}}
-Defines the back-end which is used to generate the
-target code. There are three categories, which define a 
-back end. The first is the {\it target platform}, which is 
-denoted by the {\tt p} suffix to the {\tt -B} option.
-The second is the {\it target kernel interface}, denoted
-by {\tt i}. And last is the {\it target language mapping},
-denoted by {\tt m}.
 
-The target platform can be one of {\tt ia32}, {\tt ia64},
-or {\tt arm}. Currently only {\tt ia32} and {\tt arm} are supported.
-If none of the mentioned
-platforms is chosen, {\tt ia32} is used.
+Defines the back-end which is used to generate the target code. There are
+three categories, which define a back end. The first is the {\it target
+platform}, which is denoted by the {\tt p} suffix to the {\tt -B} option.  The
+second is the {\it target kernel interface}, denoted by {\tt i}. And last is
+the {\it target language mapping}, denoted by {\tt m}.
 
-The {\tt arm} platform is currently only supported with the X0
-kernel interface.
+The target platform can be one of {\tt ia32} {\tt arm}, or {\tt amd64}.  If
+none of the mentioned platforms is chosen, {\tt ia32} is used.
+
+The {\tt arm} platform is currently only supported with the X0 kernel
+interface.
+
+The {\tt amd64} platform is currently only supported with the V2 kernel
+interface.
 
 Example: \verb|-Bpia32|
 
-The target kernel interface can be one of {\tt v2},
-{\tt x0}, {\tt x0adapt}, {\tt v4}, {\tt sock}, or {\tt cdr}. Currently
-{\tt v4} is not supported and {\tt x0} is not fully tested.
-The kernel interface {\tt x0adapt} uses the X0 kernel interface,
-but presents a V2 interface to the user. The difference between
-the kernel interfaces is in the size of the \verb|l4_threadid_t|
-type. Using {\tt x0adapt} you can continue to use your
-applications written for use with a V2 \verb|l4_threadid_t|
-type on top of an X0 kernel.
-The {\tt x0} kernel interface is badly tested, because there
-currently exists no L4Env for native X0.
+The target kernel interface can be one of {\tt v2}, {\tt x0}, {\tt x0adapt},
+{\tt v4}, {\tt sock}, or {\tt cdr}. Currently {\tt v4} is not fully supported.
+The kernel interface {\tt x0adapt} uses the X0 kernel interface, but presents
+a V2 interface to the user. The difference between the kernel interfaces is in
+the size of the \verb|l4_threadid_t| type. Using {\tt x0adapt} you can
+continue to use your applications written for use with a V2
+\verb|l4_threadid_t| type on top of an X0 kernel.  The {\tt x0} kernel
+interface is badly tested, because there currently exists no L4Env for native
+X0.
 
 Example: \verb|-Bix0adapt|
 
-The target language mapping can be one of {\tt C} or
-{\tt CPP} -- for C++. Currently only {\tt C} is supported.
+The target language mapping can be one of {\tt C} or {\tt CPP} -- for C++.
+Using the C++ back-end will generate code that can be compiled with g++. It
+does not contain classes for interfaces yet.
 
 Example: \verb|-BmC|
 
 \subsubsection{{\tt -O<level>}}
 This option sets the optimization level of the back-end.
-Currently the optimization levels 0, 1, and 2 are implemented.
-
-Optimization level 1 uses \verb|memcpy| to copy arrays to
-the message buffer. Level 0 copies the arrays element by element.
-
-Optimization level 2 will enable the generation of inline assembler
-to invoke the IPC.
-
-If no optimization level is specified, the highest level that
-is currently implemented is chosen.
-
-Example: \verb|-O1|
+\emph{deprecated! do not use!}
 
 \subsubsection{{\tt --testsuite, -T}}
-Generates a testsuite for the declared interfaces. The testsuite
+Generates a test-suite for the declared interfaces. The test-suite
 will start an L4 thread with the server, and call all functions
 with random values for the parameters. The \verb|in| parameter
 values are checked at the server for conformance with the values
@@ -316,7 +308,7 @@ generated server loops, which have no \verb|init_rcvstring| attribute.
 
 \dice{} uses by default the function \verb|malloc| of
 the \verb|CORBA_Environment| to dynamically allocate 
-the memory for variable-sized receive parameters. To ienforce
+the memory for variable-sized receive parameters. To enforce
 the usage of the \verb|CORBA_alloc|
 function, specify the option {\tt -fforce-corba-alloc}. The usage of
 \verb|CORBA_alloc| implies that there
@@ -372,7 +364,7 @@ The default function is \verb|printf|.
 
 \subsubsection{{\tt zero-msgbuf}}
 This option lets \dice{} generate server code which zeros and then
-re-initializes the message buffer, just before marshalling the return parameter 
+re-initializes the message buffer, just before marshaling the return parameter 
 in the \verb|wait| or 
 \verb|reply-and-wait| functions. This provides
 the marshaling code with a clean message buffer.
@@ -392,7 +384,7 @@ This option should only be used if you know that \dice{} is invoked with
 the same set of symbols used to compile the generated code.
 
 \subsubsection{{\tt test-no-success-message}}
-The testsuite generally prints a message if a parameter is transmitted 
+The test-suite generally prints a message if a parameter is transmitted 
 correctly and it prints a message if data is not transmitted correctly.
 With this option only error messages are printed.
 
@@ -410,6 +402,20 @@ the include search paths. If you do not wish to set this path, then
 use the {\tt no-l4dir-include-path} option. The L4 tree's root is
 determined by the configure switch \verb|--with-l4dir| which defaults
 to \verb|../..|.
+
+\subsubsection{\tt align-to-type}
+On some architectures (e.g. ARM) it is necessary to align parameters 
+when marshaling to type size (or word size). To turn this feature on,
+use the switch \verb|-falign-to-type|. This may waste some space in the
+message buffer. Since all parameters are sorted by size before marshaling,
+the padding should be minimal.
+
+\subsubsection{\tt generate-line-directive}
+Generates line information in the target code using source file
+information.  So, if a operation was declare on line $10$ in the
+IDL file, the generated functions for this operation will be preceeded
+be a pre-processor statement containing the IDL file's name and
+line number of the original declaration.
 
 \section{Warnings}
 \dice{} will print warnings for different conditions if the respective

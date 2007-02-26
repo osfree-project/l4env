@@ -2,4 +2,25 @@
 
 . ${0%/*}/generic.inc
 
-fiasco -l ktest-ux "$@"
+KTEST=(ktest)
+
+while [ -n "$1" ]; do
+  case "$1" in
+    -t)
+       if [ -z "$testselection" ];
+       then
+         testselection=done
+	 num=$2
+	 shift
+	 [ -z "$num" ] && num=1
+	 KTEST=("ktest -t $num")
+       fi
+    ;;
+    *)
+       args="$args $1"
+    ;;
+  esac
+  shift
+done
+
+fiasco -l "${KTEST[@]}" $args

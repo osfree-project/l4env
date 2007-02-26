@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEExceptionAttribute.h 
- *	\brief	contains the declaration of the class CFEExceptionAttribute
+ *    \file    dice/src/fe/FEExceptionAttribute.h
+ *    \brief   contains the declaration of the class CFEExceptionAttribute
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -30,48 +31,47 @@
 #define __DICE_FE_FEEXCEPTIONATTRIBUTE_H__
 
 #include "fe/FEAttribute.h"
+#include <vector>
+using namespace std;
 
 class CFEIdentifier;
-class Vector;
-class VectorElement;
 
 /** \class CFEExceptionAttribute
- *	\ingroup frontend
- *	\brief represents an exception attribute
+ *    \ingroup frontend
+ *    \brief represents an exception attribute
  *
  * This class is used to represent an exception attribute in the IDL.
  */
 class CFEExceptionAttribute : public CFEAttribute
 {
-DECLARE_DYNAMIC(CFEExceptionAttribute);
 
 // standard constructor/destructor
 public:
-	/** constructs an exception attribute
-	 *	\param pExcepNames the names of the exceptions
-	 */
-	CFEExceptionAttribute(Vector *pExcepNames);
-	virtual ~CFEExceptionAttribute();
+    /** constructs an exception attribute
+     *    \param pExcepNames the names of the exceptions
+     */
+    CFEExceptionAttribute(vector<CFEIdentifier*> *pExcepNames);
+    virtual ~CFEExceptionAttribute();
 
 protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CFEExceptionAttribute(CFEExceptionAttribute &src);
+    /**    \brief copy constructor
+     *    \param src the source to copy from
+     */
+    CFEExceptionAttribute(CFEExceptionAttribute &src);
 
 // Operations
 public:
-	virtual void Serialize(CFile *pFile);
-	virtual CFEIdentifier* GetNextExceptionName(VectorElement *&iter);
-	virtual VectorElement* GetFirstExceptionName();
-	virtual CObject* Clone();
+    virtual void Serialize(CFile *pFile);
+    virtual CFEIdentifier* GetNextExceptionName(vector<CFEIdentifier*>::iterator &iter);
+    virtual vector<CFEIdentifier*>::iterator GetFirstExceptionName();
+    virtual CObject* Clone();
 
 // attributes
 protected:
-	/**	\var Vector *m_pExcepNames
-	 *	\brief contais all the exception's names
-	 */
-	Vector *m_pExcepNames;
+    /**    \var vector<CFEIdentifier*> m_vExcepNames
+     *    \brief contais all the exception's names
+     */
+    vector<CFEIdentifier*> m_vExcepNames;
 };
 
 #endif /* __DICE_FE_FEEXCEPTIONATTRIBUTE_H__ */

@@ -1,0 +1,141 @@
+/* -*- c -*- */ 
+/**
+ * \file   l4vfs/idl/net_io.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+import <l4/l4vfs/types.h>
+import <l4/l4vfs/common_io.idl>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief <fixme>
+     */
+    [uuid(60)]
+    interface net_io : common_io
+    {
+
+        /* because accept could not be mapped one-to-one on ipc
+         * we need an additional parameter - actual_len
+         * actual_len is mapped on accept parameter socklen_t addrlen
+         * if our addr buffer is less than needed we know how
+         * big it has to be with actual_len
+         * and we avoid an DICE specific error in client (buffer overflow)
+         * because server used more bytes then addr has
+         */
+        [allow_reply_only]
+        int accept     ([in] object_handle_t handle,
+                        [in, out, size_is(addrlen), max_is(16)] char addr[],
+                        [in, out] int *addrlen,
+                        [out] int *actual_len);
+
+        int bind       ([in] object_handle_t handle,
+                        [in, size_is(addrlen), max_is(16)] char addr[],
+                        [in] int addrlen);
+
+        [allow_reply_only]
+        int connect    ([in] object_handle_t handle,
+                        [in, size_is(addrlen), max_is(16)] char addr[],
+                        [in] int addrlen);
+
+        int listen     ([in] object_handle_t handle,
+                        [in] int backlog);
+
+        /*** !!! tricky... get away from me !!! ***/
+//        int recvmsg ([in] object_handle_t handle,
+//                     [out] struct idl_msghdr **msg,
+//                     [in] int flags);
+
+        /* we need an additional parameter to map fromlen -> actual_fromlen
+         * this is the same problem described for accept interface
+         * because fromlen is also a value-result parameter
+         */
+        [allow_reply_only]
+        int recvfrom   ([in] object_handle_t handle,
+                        [out,  size_is(len), ref, prealloc] char **buf,
+                        [in, out] int *len,
+                        [in] int flags,
+                        [in, out, size_is(fromlen), max_is(128)] char from[],
+                        [in, out] int *fromlen,
+                        [out] int *actual_fromlen);
+
+        [allow_reply_only]
+        int recv       ([in] object_handle_t handle,
+                        [out, size_is(len), ref, prealloc] char **buf,
+                        [in,out] int *len,
+                        [in] int flags);
+
+        [allow_reply_only]
+        int send       ([in] object_handle_t handle,
+                        [in, ref, size_is(len)] char *msg,
+                        [in] int len,
+                        [in] int flags);
+
+        [allow_reply_only]
+        int sendto     ([in] object_handle_t handle,
+                        [in, ref, size_is(len)] char *msg,
+                        [in] int len,
+                        [in] int flags,
+                        [in, ref, size_is(tolen)] char *to,
+                        [in] int tolen);
+
+        /*
+         * Because of difficulties with DICE and nested structures
+         * we decided to break down msghdr structure
+         * iov_buf of each iovec structure is included in
+         * in msg_iov which has the following design:
+         *        ------------
+         * ------|------------|-------------------------------
+         * iovec_1 | iovec_2 | iovec_1_buffer | iovec_2_buffer
+         * ----------------|-------------------|--------------
+         *                  -------------------
+         * msg_iov_size = mg_iovlen + size of all iovec_buffers
+         */
+        [allow_reply_only]
+        int sendmsg    ([in] object_handle_t handle,
+                        [in, size_is(msg_namelen), max_is(8192)] char msg_name[],
+                        [in] int msg_namelen,
+                        [in, ref, size_is(msg_iov_size)] char *msg_iov,
+                        [in] int msg_iovlen,
+                        [in] int msg_iov_size,
+                        [in, ref, size_is(msg_controllen)] char *msg_control,
+                        [in] int msg_controllen,
+                        [in] int msg_flags,
+                        [in] int flags);
+
+        int shutdown   ([in] object_handle_t handle,
+                        [in] int how);
+
+        int socket     ([in] int domain,
+                        [in] int type,
+                        [in] int protocol);
+
+        int getsockname([in] object_handle_t s,
+                        [out, size_is(len), max_is(4096)] char name[],
+                        [in,out] int *len);
+
+        int setsockopt ([in] object_handle_t s,
+                        [in] int level,
+                        [in] int optname,
+                        [in, ref, size_is(optlen)] char *optval,
+                        [in] int optlen);
+
+        int socketpair ([in] int domain,
+                        [in] int type,
+                        [in] int protocol,
+			[out] object_handle_t *handle0,
+			[out] object_handle_t *handle1);
+
+   };
+};

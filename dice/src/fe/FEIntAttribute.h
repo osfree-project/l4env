@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEIntAttribute.h 
- *	\brief	contains the declaration of the class CFEIntAttribute
+ *  \file   dice/src/fe/FEIntAttribute.h
+ *  \brief  contains the declaration of the class CFEIntAttribute
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   01/31/2001
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -32,41 +33,40 @@
 #include "fe/FEAttribute.h"
 
 /** \class CFEIntAttribute
- *	\ingroup frontend
- *	\brief an integer value attribute
+ *  \ingroup frontend
+ *  \brief an integer value attribute
  *
  * This class is used to represent integer value attributes.
  */
-class CFEIntAttribute : public CFEAttribute  
+class CFEIntAttribute : public CFEAttribute
 {
-DECLARE_DYNAMIC(CFEIntAttribute);
 // Constructor
 public:
-	/** constructs an int attribute
-	 *	\param nType the type of the attribute
-	 *	\param nValue the integer value of the attribute
-	 */
-	CFEIntAttribute(ATTR_TYPE nType, int nValue);
-	virtual ~CFEIntAttribute();
+    /** constructs an int attribute
+     *  \param nType the type of the attribute
+     *  \param nValue the integer value of the attribute
+     */
+    CFEIntAttribute(ATTR_TYPE nType, int nValue);
+    virtual ~CFEIntAttribute();
 
 protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CFEIntAttribute(CFEIntAttribute &src);
+    /** \brief copy constructor
+     *  \param src the source to copy from
+     */
+    CFEIntAttribute(CFEIntAttribute &src);
 
 // Operations
 public:
-	virtual void Serialize(CFile *pFile);
-	virtual CObject* Clone();
-	virtual int GetIntValue();
+    virtual void Serialize(CFile *pFile);
+    virtual CObject* Clone();
+    virtual int GetIntValue();
 
 // Attributes
 protected:
-	/**	\var int m_nIntValue
-	 *	\brief the integer value, which is associated with this attribute
-	 */
-	int m_nIntValue;
+    /** \var int m_nIntValue
+     *  \brief the integer value, which is associated with this attribute
+     */
+    int m_nIntValue;
 };
 
 #endif /* __DICE_FE_FEINTATTRIBUTE_H__ */

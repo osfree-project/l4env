@@ -34,6 +34,8 @@
 /* private lib includes */
 #include "__avl_tree.h"
 
+char LOG_tag[9]="l4rmtest";
+
 #define NUM_NODES 8192
 #define ROUNDS    100000
 
@@ -55,10 +57,7 @@ static double ns_per_cycle;
 
 extern l4slab_cache_t l4rm_avl_node_cache;
 
-void 
-avl_test(void);
-
-void 
+static void 
 avl_test(void)
 {
 #ifdef DEBUG
@@ -150,17 +149,23 @@ avl_test(void)
       printf("\n");
     } 
 #else
-  Error("Debug output must be enabled to run this test...");
+  LOG_Error("Debug output must be enabled to run this test...");
 #endif
 }
 
 /*****************************************************************************
  * Region mapper test
  *****************************************************************************/
-void
-rm_test(void);
+static int
+__pf_callback(l4_addr_t addr, l4_addr_t eip, l4_threadid_t src)
+{
+  printf("pf at 0x%08x, eip 0x%08x, src "l4util_idfmt"\n", 
+         addr, eip, l4util_idstr(src));
+  enter_kdebug("-");
+  return L4RM_REPLY_EXCEPTION;
+}
 
-void
+static void
 rm_test(void)
 {
   int ret;
@@ -169,7 +174,7 @@ rm_test(void)
   volatile l4_uint32_t addr;
   l4_addr_t addr1,addr2;
   void *addr3, *addr4, *addr5, *addr6, *addr7;
-  l4_threadid_t dm_id;
+  l4_threadid_t dm_id, pager;
   l4_uint32_t area;
   l4_addr_t area_addr,a;
   l4_offs_t offset;
@@ -189,7 +194,7 @@ rm_test(void)
       enter_kdebug("-");
     }
 
-  printf("dm: %x.%x\n",dm_id.id.task,dm_id.id.lthread);
+  printf("dm: "l4util_idfmt"\n",l4util_idstr(dm_id));
 
   /* open ds */
   ret = l4dm_mem_open(dm_id,size,0,0,"l4rm_test1",&ds1);
@@ -199,6 +204,34 @@ rm_test(void)
       enter_kdebug("-");
     }
 
+  /***************************************************************************
+   *** pagefault handling
+   ***************************************************************************/
+
+  l4rm_set_unkown_pagefault_callback(__pf_callback);
+
+  *(int *)0 = 1;
+
+  /***************************************************************************
+   *** l4rm_setup*
+   ***************************************************************************/
+
+  ret = l4rm_area_setup(size, L4RM_DEFAULT_REGION_AREA, L4RM_REGION_BLOCKED,
+                        0, L4_INVALID_ID, &addr1);
+  if (ret < 0)
+    printf("l4rm_area_setup failed: %s\n", l4env_errstr(ret));
+  else
+    printf("got area at 0x%08x\n", addr1);
+  l4rm_show_region_list();
+  enter_kdebug("-");
+
+  ret = l4rm_area_clear_region(addr1);
+  if (ret < 0)
+    printf("l4rm_area_clear_region failed: %s\n", l4env_errstr(ret));
+
+  l4rm_show_region_list();
+  enter_kdebug("-");
+  
   /***************************************************************************
    *** l4rm_area_release_addr
    ***************************************************************************/
@@ -238,24 +271,25 @@ rm_test(void)
   for (addr1 = map_addr; addr1 < map_addr + size; addr1 += L4_PAGESIZE)
     *((int *)addr1) = 1;
 
-  printf("ds %d at %x.%x\n",
-	 ds1.id,ds1.manager.id.task,ds1.manager.id.lthread);
+  printf("ds %d at "l4util_idfmt"\n", ds1.id,l4util_idstr(ds1.manager));
   l4rm_show_region_list();
   avlt_show_tree();
   enter_kdebug("attached");
 
   /* lookup address */
   t_start = l4_rdtsc();
-  ret = l4rm_lookup((void *)map_addr + 0x123,&ds2,&offset,&a,&map_size);
+  ret = l4rm_lookup((void *)map_addr + 0x123, &a, &map_size, 
+                    &ds2, &offset, &pager);
   t_end = l4_rdtsc();
-  if (ret)
+  if (ret != L4RM_REGION_DATASPACE)
     {
       printf("address lookup failed (%d)\n",ret);
       enter_kdebug("-");
     }
   cycles = (l4_uint32_t)(t_end - t_start);
-  printf("lookup: ds %d at %x.%x, offset %d, maped to 0x%08x, size %u\n",
-	 ds2.id,ds2.manager.id.task,ds2.manager.id.lthread,offset,a,map_size);
+  printf("lookup: ds %d at "l4util_idfmt
+         ", offset %d, maped to 0x%08x, size %u\n",
+	 ds2.id,l4util_idstr(ds2.manager),offset,a,map_size);
   printf("%u cyles\n",cycles);
   enter_kdebug("lookup");
 
@@ -281,7 +315,7 @@ rm_test(void)
       printf("error allocating dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("ds1 = %d at %x.%x\n",ds1.id,ds1.manager.id.task,ds1.manager.id.lthread);
+  printf("ds1 = %d at "l4util_idfmt"\n",ds1.id,l4util_idstr(ds1.manager));
 
   ret = l4rm_attach(&ds1,10000,0, L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC, &addr7);
   if (ret)
@@ -326,7 +360,7 @@ rm_test(void)
       printf("error allocating dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("ds2 = %d at %x.%x\n",ds2.id,ds2.manager.id.task,ds2.manager.id.lthread);
+  printf("ds2 = %d at "l4util_idfmt"\n",ds2.id,l4util_idstr(ds2.manager));
 
   addr5 = (void*)0x10010000;
   ret = l4rm_attach_to_region(&ds2,addr5,1000,0,0);
@@ -359,7 +393,7 @@ rm_test(void)
       printf("error allocating dataspace: %d\n",ret);
       enter_kdebug("???");
     }
-  printf("ds3 = %d at %x.%x\n",ds3.id,ds3.manager.id.task,ds3.manager.id.lthread);
+  printf("ds3 = %d at "l4util_idfmt"\n",ds3.id,l4util_idstr(ds3.manager));
 
   ret = l4rm_area_attach(&ds3,area,0x100000,0,0,&addr6);
   if (ret)
@@ -441,10 +475,7 @@ release(l4slab_cache_t * cache, void * ptr, void * data)
   printf("release: called, ptr = 0x%08x\n",(unsigned)ptr);
 }
 
-void
-slab_test(void);
-
-void
+static void
 slab_test(void)
 {
   void * ptr, * ptr1, * ptr2;
@@ -481,8 +512,6 @@ main(void)
 {
   double mhz;
 
-  LOG_init("l4rmtest");
-  
   /* init time measuring */
   l4_calibrate_tsc();
   ns_per_cycle = l4_tsc_to_ns(10000000ULL) / 10000000.0;
@@ -495,17 +524,14 @@ main(void)
 
   enter_kdebug("start...");
 
-#if 0
-  avl_test();
-#endif
+  if (0) 
+    avl_test();
 
-#if 1
-  rm_test();
-#endif
+  if (1)
+    rm_test();
 
-#if 0
-  slab_test();
-#endif 
+  if (0)
+    slab_test();
 
   printf("main: done\n");
 

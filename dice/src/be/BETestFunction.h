@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BETestFunction.h
- *	\brief	contains the declaration of the class CBETestFunction
+ *    \file    dice/src/be/BETestFunction.h
+ *    \brief   contains the declaration of the class CBETestFunction
  *
- *	\date	03/08/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    03/08/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,40 +31,43 @@
 #define __DICE_BETESTFUNCTION_H__
 
 #include "be/BEOperationFunction.h"
-#include "be/BEDeclarator.h" // needed for CDeclaratorStack
+#include <vector>
+using namespace std;
 
 class CFEInterface;
 class CFEOperation;
 class CBEContext;
+class CBEExpression;
+class CDeclaratorStackLocation;
 
-/**	\class CBETestFunction
- *	\ingroup backend
- *	\brief the function class for the back-end
+/**    \class CBETestFunction
+ *    \ingroup backend
+ *    \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
 class CBETestFunction : public CBEOperationFunction
 {
-DECLARE_DYNAMIC(CBETestFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CBETestFunction();
-	virtual ~CBETestFunction();
+    /**    \brief constructor
+     */
+    CBETestFunction();
+    virtual ~CBETestFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CBETestFunction(CBETestFunction &src);
+    /**    \brief copy constructor */
+    CBETestFunction(CBETestFunction &src);
 
 public:
-	virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
+    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
     virtual bool DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
     virtual void CompareVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext);
     virtual void InitLocalVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext);
     virtual bool IsTargetFile(CBEImplementationFile * pFile);
-    virtual bool DoWriteFunction(CBEFile * pFile, CBEContext * pContext);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
     virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator, CBEContext * pContext, bool bCall);
 
 protected:
@@ -79,48 +83,74 @@ protected:
     virtual void InitGlobalVariable(CBEFile * pFile, CBETypedDeclarator * pParameter, CBEContext * pContext);
     virtual void InitGlobalDeclarator(CBEFile * pFile, CBEType * pType, CBEContext * pContext);
     virtual void InitGlobalArray(CBEFile *pFile, CBEType *pType, CBEContext *pContext);
-	virtual void InitGlobalConstArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEContext *pContext);
-	virtual void InitGlobalVarArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEAttribute *pSizeAttr, VectorElement *pIAttr, CBEContext *pContext);
+    virtual void InitGlobalConstArray(CBEFile *pFile, CBEType *pType,
+        vector<CBEExpression*>::iterator iter,
+        int nLevel,
+        CBEContext *pContext);
+    virtual void InitGlobalVarArray(CBEFile *pFile, CBEType *pType,
+        vector<CBEExpression*>::iterator iterB,
+        int nLevel,
+        CBEAttribute *pSizeAttr,
+        vector<CBEDeclarator*>::iterator iterAttr,
+        CBEContext *pContext);
     virtual void InitGlobalUnion(CBEFile *pFile, CBEUnionType *pType, CBEContext *pContext);
     virtual void InitGlobalStruct(CBEFile *pFile, CBEStructType *pType, CBEContext *pContext);
     virtual void InitGlobalString(CBEFile * pFile, CBEType * pType, CBEContext * pContext);
 
     virtual void InitLocalDeclarator(CBEFile * pFile, CBEType * pType, CBEContext * pContext);
     virtual void InitLocalArray(CBEFile *pFile, CBEType *pType, CBEContext *pContext);
-	virtual void InitLocalConstArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEContext *pContext);
-	virtual void InitLocalVarArray(CBEFile *pFile, CBEType *pType, VectorElement *pIter, int nLevel, CBEAttribute *pSizeAttr, VectorElement *pIAttr, CBEContext *pContext);
+    virtual void InitLocalConstArray(CBEFile *pFile, CBEType *pType,
+        vector<CBEExpression*>::iterator iter,
+        int nLevel,
+        CBEContext *pContext);
+    virtual void InitLocalVarArray(CBEFile *pFile, CBEType *pType,
+        vector<CBEExpression*>::iterator iterB,
+        int nLevel,
+        CBEAttribute *pSizeAttr,
+        vector<CBEDeclarator*>::iterator iterAttr,
+        CBEContext *pContext);
     virtual void InitLocalUnion(CBEFile *pFile, CBEUnionType *pType, CBEContext *pContext);
     virtual void InitLocalStruct(CBEFile *pFile, CBEStructType *pType, CBEContext *pContext);
 
-	virtual void InitPreallocVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext);
-	virtual void FreePreallocVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext);
+    virtual void InitPreallocVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext);
+    virtual void FreePreallocVariable(CBEFile *pFile, CBETypedDeclarator *pParameter, CBEContext *pContext);
 
-    virtual void CompareDeclarator(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, CBEContext *pContext);
-    virtual void CompareStruct(CBEFile *pFile, CBEStructType *pType, CDeclaratorStack *pStack, CBEContext *pContext);
-    virtual void CompareArray(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, CBEContext *pContext);
-	virtual void CompareConstArray(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, VectorElement *pIter, int nLevel, CBEContext *pContext);
-	virtual void CompareVarArray(CBEFile *pFile, CBEType *pType, CDeclaratorStack *pStack, VectorElement *pIter, int nLevel, CBEAttribute *pSizeAttr, VectorElement *pIAttr, CBEContext *pContext);
-    virtual void CompareUnion(CBEFile *pFile, CBEUnionType *pType, CDeclaratorStack *pStack, CBEContext *pContext);
-    virtual void CompareVariable(CBEFile * pFile, CBETypedDeclarator * pParameter, CDeclaratorStack *pStack, CBEContext * pContext);
-    virtual void CompareString(CBEFile * pFile, CBEType * pType, CDeclaratorStack * pStack, CBEContext * pContext);
+    virtual void CompareDeclarator(CBEFile *pFile, CBEType *pType, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
+    virtual void CompareStruct(CBEFile *pFile, CBEStructType *pType, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
+    virtual void CompareArray(CBEFile *pFile, CBEType *pType, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
+    virtual void CompareConstArray(CBEFile *pFile, CBEType *pType,
+        vector<CDeclaratorStackLocation*> *pStack,
+        vector<CBEExpression*>::iterator iterB,
+        int nLevel,
+        CBEContext *pContext);
+    virtual void CompareVarArray(CBEFile *pFile, CBEType *pType,
+        vector<CDeclaratorStackLocation*> *pStack,
+        vector<CBEExpression*>::iterator iterB,
+        int nLevel,
+        CBEAttribute *pSizeAttr,
+        vector<CBEDeclarator*>::iterator iterAttr,
+        CBEContext *pContext);
+    virtual void CompareUnion(CBEFile *pFile, CBEUnionType *pType, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
+    virtual void CompareVariable(CBEFile * pFile, CBETypedDeclarator * pParameter, vector<CDeclaratorStackLocation*> *pStack, CBEContext * pContext);
+    virtual void CompareString(CBEFile * pFile, CBEType * pType, vector<CDeclaratorStackLocation*> * pStack, CBEContext * pContext);
 
-    virtual void WriteComparison(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext);
-    virtual void WriteErrorMessage(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext);
-	virtual void SetTargetFileName(CFEBase * pFEObject, CBEContext * pContext);
+    virtual void WriteComparison(CBEFile *pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
+    virtual void WriteErrorMessage(CBEFile * pFile, vector<CDeclaratorStackLocation*> * pStack, CBEContext * pContext);
+    virtual void SetTargetFileName(CFEBase * pFEObject, CBEContext * pContext);
     virtual void WriteAbs(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteMarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
     virtual void WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-    virtual void WriteSuccessMessage(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext);
+    virtual void WriteSuccessMessage(CBEFile *pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
 
 protected:
-	/**	\var CBEFunction *m_pFunction
-	 *	\brief a reference to the function we test
-	 */
-	CBEFunction *m_pFunction;
-    /** \var Vector m_vDeclaratorStack
+    /**    \var CBEFunction *m_pFunction
+     *    \brief a reference to the function we test
+     */
+    CBEFunction *m_pFunction;
+    /** \var vector<CDeclaratorStackLocation*> m_vDeclaratorStack
      *  \brief declarator stack - used when intializing global variables
      */
-    CDeclaratorStack m_vDeclaratorStack;
+    vector<CDeclaratorStackLocation*> m_vDeclaratorStack;
     /** \var CBETypedDeclarator m_pParameter
      *  \brief a reference to the currently initialized parameter
      */

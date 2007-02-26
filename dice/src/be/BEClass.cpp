@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEClass.cpp
- *	\brief	contains the implementation of the class CBEClass
+ *    \file    dice/src/be/BEClass.cpp
+ * \brief   contains the implementation of the class CBEClass
  *
- *	\date	Tue Jun 25 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    Tue Jun 25 2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -25,46 +26,44 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEClass.h"
+#include "BEClass.h"
 
-#include "be/BEFunction.h"
-#include "be/BEOperationFunction.h"
-#include "be/BEConstant.h"
-#include "be/BETypedef.h"
-#include "be/BEEnumType.h"
-#include "be/BEMsgBufferType.h"
-#include "be/BEAttribute.h"
-#include "be/BEContext.h"
-#include "be/BERoot.h"
-#include "be/BEComponent.h"
-#include "be/BETestsuite.h"
-#include "be/BETestMainFunction.h"
-#include "be/BEOperationFunction.h"
-#include "be/BEInterfaceFunction.h"
-#include "be/BECallFunction.h"
-#include "be/BEUnmarshalFunction.h"
-#include "be/BEMarshalFunction.h"
-#include "be/BEReplyFunction.h"
-#include "be/BEComponentFunction.h"
-#include "be/BETestFunction.h"
-#include "be/BESndFunction.h"
-#include "be/BEWaitFunction.h"
-#include "be/BERcvFunction.h"
-#include "be/BEWaitAnyFunction.h"
-#include "be/BERcvAnyFunction.h"
-#include "be/BEReplyAnyWaitAnyFunction.h"
-#include "be/BESrvLoopFunction.h"
-#include "be/BEDispatchFunction.h"
-#include "be/BETestServerFunction.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEClient.h"
-#include "be/BEOpcodeType.h"
-#include "be/BEExpression.h"
-#include "be/BENameSpace.h"
-#include "be/BEDeclarator.h"
-#include "be/BEStructType.h"
-#include "be/BEUnionType.h"
+#include "BEFunction.h"
+#include "BEOperationFunction.h"
+#include "BEConstant.h"
+#include "BETypedef.h"
+#include "BEEnumType.h"
+#include "BEMsgBufferType.h"
+#include "BEAttribute.h"
+#include "BEContext.h"
+#include "BERoot.h"
+#include "BEComponent.h"
+#include "BETestsuite.h"
+#include "BETestMainFunction.h"
+#include "BEOperationFunction.h"
+#include "BEInterfaceFunction.h"
+#include "BECallFunction.h"
+#include "BEUnmarshalFunction.h"
+#include "BEMarshalFunction.h"
+#include "BEReplyFunction.h"
+#include "BEComponentFunction.h"
+#include "BETestFunction.h"
+#include "BESndFunction.h"
+#include "BEWaitFunction.h"
+#include "BEWaitAnyFunction.h"
+#include "BESrvLoopFunction.h"
+#include "BEDispatchFunction.h"
+#include "BETestServerFunction.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BEClient.h"
+#include "BEOpcodeType.h"
+#include "BEExpression.h"
+#include "BENameSpace.h"
+#include "BEDeclarator.h"
+#include "BEStructType.h"
+#include "BEUnionType.h"
+#include "BEUserDefinedType.h"
 
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
@@ -76,34 +75,39 @@
 #include "fe/FEUserDefinedType.h"
 #include "fe/FETypedDeclarator.h"
 #include "fe/FEDeclarator.h"
+#include "fe/FEAttributeDeclarator.h"
+#include "fe/FESimpleType.h"
+#include "fe/FEAttribute.h"
+#include "fe/FEFile.h"
 
 #include "Compiler.h"
 
+#include <string>
+using namespace std;
+
+
 // CFunctionGroup IMPLEMENTATION
-IMPLEMENT_DYNAMIC(CFunctionGroup);
 
 CFunctionGroup::CFunctionGroup(CFEOperation *pFEOperation)
-: m_vFunctions(RUNTIME_CLASS(CBEFunction))
 {
-    IMPLEMENT_DYNAMIC_BASE(CFunctionGroup, CObject);
     m_pFEOperation = pFEOperation;
 }
 
 /** \brief destroys a function group object
  *
- * This doesn't really do anything: The String object cleans up itself, and
- * the Vector contains references to objects we do not want to delete. What we have
+ * This doesn't really do anything: The string object cleans up itself, and
+ * the vector contains references to objects we do not want to delete. What we have
  * to remove are the vector-elements.
  */
 CFunctionGroup::~CFunctionGroup()
 {
-    while (m_vFunctions.GetFirst()) m_vFunctions.RemoveFirst();
+    m_vFunctions.clear();
 }
 
 /** \brief retrieves the name of the group
  *  \return the name of the group
  */
-String CFunctionGroup::GetName()
+string CFunctionGroup::GetName()
 {
     return m_pFEOperation->GetName();
 }
@@ -121,122 +125,165 @@ CFEOperation *CFunctionGroup::GetOperation()
  */
 void CFunctionGroup::AddFunction(CBEFunction *pFunction)
 {
-    m_vFunctions.Add(pFunction);
+    if (pFunction)
+        m_vFunctions.push_back(pFunction);
 }
 
 /** \brief returns a pointer to the first function in the group
  *  \return a pointer to the first function in the group
  */
-VectorElement *CFunctionGroup::GetFirstFunction()
+vector<CBEFunction*>::iterator CFunctionGroup::GetFirstFunction()
 {
-    return m_vFunctions.GetFirst();
+    return m_vFunctions.begin();
 }
 
 /** \brief returns a reference to the next function in the group
- *  \param pIter the iterator pointing to the next function
+ *  \param iter the iterator pointing to the next function
  *  \return a reference to the next function
  */
-CBEFunction *CFunctionGroup::GetNextFunction(VectorElement *& pIter)
+CBEFunction *CFunctionGroup::GetNextFunction(vector<CBEFunction*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vFunctions.end())
         return 0;
-    CBEFunction *pRet = (CBEFunction*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextFunction(pIter);
-    return pRet;
+    return *iter++;
 }
 
 
 // CBEClass IMPLEMENTATION
-IMPLEMENT_DYNAMIC(CBEClass);
 
 CBEClass::CBEClass()
-: m_vFunctions(RUNTIME_CLASS(CBEFunction)),
-  m_vConstants(RUNTIME_CLASS(CBEConstant)),
-  m_vTypedefs(RUNTIME_CLASS(CBETypedDeclarator)),
-  m_vTypeDeclarations(RUNTIME_CLASS(CBEType)),
-  m_vAttributes(RUNTIME_CLASS(CBEAttribute)),
-  m_vBaseClasses(RUNTIME_CLASS(CBEClass)),
-  m_vDerivedClasses(RUNTIME_CLASS(CBEClass)),
-  m_vFunctionGroups(RUNTIME_CLASS(CFunctionGroup))
 {
     m_pMsgBuffer = 0;
-    m_sBaseNames = 0;
-    m_nBaseNameSize = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBEClass, CBEObject);
 }
 
-/**	\brief destructor of target class */
+/** \brief destructor of target class */
 CBEClass::~CBEClass()
 {
-    m_vFunctions.DeleteAll();
-    m_vConstants.DeleteAll();
-    m_vTypedefs.DeleteAll();
-    m_vTypeDeclarations.DeleteAll();
-    m_vAttributes.DeleteAll();
-    m_vFunctionGroups.DeleteAll();
+    while (!m_vFunctions.empty())
+    {
+        delete m_vFunctions.back();
+        m_vFunctions.pop_back();
+    }
+    while (!m_vConstants.empty())
+    {
+        delete m_vConstants.back();
+        m_vConstants.pop_back();
+    }
+    while (!m_vTypedefs.empty())
+    {
+        delete m_vTypedefs.back();
+        m_vTypedefs.pop_back();
+    }
+    while (!m_vTypeDeclarations.empty())
+    {
+        delete m_vTypeDeclarations.back();
+        m_vTypeDeclarations.pop_back();
+    }
+    while (!m_vAttributes.empty())
+    {
+        delete m_vAttributes.back();
+        m_vAttributes.pop_back();
+    }
+    while (!m_vFunctionGroups.empty())
+    {
+        delete m_vFunctionGroups.back();
+        m_vFunctionGroups.pop_back();
+    }
     if (m_pMsgBuffer)
         delete m_pMsgBuffer;
-    for (int i=0; i<m_nBaseNameSize; i++)
-        delete m_sBaseNames[i];
-    free(m_sBaseNames);
+    m_vBaseNames.clear();
 }
 
 /** \brief returns the name of the class
  *  \return the name of the class
  */
-String CBEClass::GetName()
+string CBEClass::GetName()
 {
     return m_sName;
 }
 
-/**	\brief adds a new function to the functions vector
- *	\param pFunction the function to add
+/** \brief adds a new function to the functions vector
+ *  \param pFunction the function to add
  */
 void CBEClass::AddFunction(CBEFunction * pFunction)
 {
-    m_vFunctions.Add(pFunction);
+    if (!pFunction)
+        return;
+    m_vFunctions.push_back(pFunction);
     pFunction->SetParent(this);
 }
 
-/**	\brief removes a function from the functions vector
- *	\param pFunction the function to remove
+/** \brief removes a function from the functions vector
+ *  \param pFunction the function to remove
  */
 void CBEClass::RemoveFunction(CBEFunction * pFunction)
 {
-    m_vFunctions.Remove(pFunction);
+    vector<CBEFunction*>::iterator iter;
+    for (iter = m_vFunctions.begin(); iter != m_vFunctions.end(); iter++)
+    {
+        if (*iter == pFunction)
+        {
+            m_vFunctions.erase(iter);
+            return;
+        }
+    }
 }
 
-/**	\brief retrieves a pointer to the first function
- *	\return a pointer to the first function
+/** \brief retrieves a pointer to the first function
+ *  \return a pointer to the first function
  */
-VectorElement *CBEClass::GetFirstFunction()
+vector<CBEFunction*>::iterator CBEClass::GetFirstFunction()
 {
-    return m_vFunctions.GetFirst();
+    return m_vFunctions.begin();
 }
 
-/**	\brief retrieves reference to the next function
- *	\param pIter the pointer to the next function
- *	\return a reference to the next function
+/** \brief retrieves reference to the next function
+ *  \param iter the pointer to the next function
+ *  \return a reference to the next function
  */
-CBEFunction *CBEClass::GetNextFunction(VectorElement * &pIter)
+CBEFunction *CBEClass::GetNextFunction(vector<CBEFunction*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vFunctions.end())
         return 0;
-    CBEFunction *pRet = (CBEFunction *) pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextFunction(pIter);
-    return pRet;
+    return *iter++;
 }
 
+/** \brief returns the number of functions in this class
+ *  \return the number of functions in this class
+ */
+int CBEClass::GetFunctionCount()
+{
+    return m_vFunctions.size();
+}
+
+/** \brief returns the number of functions in this class which are written
+ *  \return the number of functions in this class which are written
+ */
+int CBEClass::GetFunctionWriteCount(CBEFile *pFile, CBEContext *pContext)
+{
+    int nCount = 0;
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
+    CBEFunction *pFunction;
+    while ((pFunction = GetNextFunction(iter)) != 0)
+    {
+        if (dynamic_cast<CBEHeaderFile*>(pFile) &&
+            pFunction->DoWriteFunction((CBEHeaderFile*)pFile, pContext))
+            nCount++;
+        if (dynamic_cast<CBEImplementationFile*>(pFile) &&
+            pFunction->DoWriteFunction((CBEImplementationFile*)pFile, pContext))
+            nCount++;
+    }
+
+    return nCount;
+}
 /** \brief adds an attribute
  *  \param pAttribute the attribute to add
  */
 void CBEClass::AddAttribute(CBEAttribute *pAttribute)
 {
-    m_vAttributes.Add(pAttribute);
+    if (!pAttribute)
+        return;
+    m_vAttributes.push_back(pAttribute);
     pAttribute->SetParent(this);
 }
 
@@ -245,30 +292,34 @@ void CBEClass::AddAttribute(CBEAttribute *pAttribute)
  */
 void CBEClass::RemoveAttribute(CBEAttribute *pAttribute)
 {
-    m_vAttributes.Remove(pAttribute);
+    vector<CBEAttribute*>::iterator iter;
+    for (iter = m_vAttributes.begin(); iter != m_vAttributes.end(); iter++)
+    {
+        if (*iter == pAttribute)
+        {
+            m_vAttributes.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first attribute
  *  \return a pointer to the first attribute
  */
-VectorElement* CBEClass::GetFirstAttribute()
+vector<CBEAttribute*>::iterator CBEClass::GetFirstAttribute()
 {
-    return m_vAttributes.GetFirst();
+    return m_vAttributes.begin();
 }
 
 /** \brief retrieves a reference to the next attribute
- *  \param pIter the pointer to the next attribute
+ *  \param iter the pointer to the next attribute
  *  \return a reference to the next attribute
  */
-CBEAttribute* CBEClass::GetNextAttribute(VectorElement *&pIter)
+CBEAttribute* CBEClass::GetNextAttribute(vector<CBEAttribute*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vAttributes.end())
         return 0;
-    CBEAttribute *pRet = (CBEAttribute*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextAttribute(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief adds a new base Class
@@ -278,9 +329,11 @@ CBEAttribute* CBEClass::GetNextAttribute(VectorElement *&pIter)
  */
 void CBEClass::AddBaseClass(CBEClass *pClass)
 {
-    m_vBaseClasses.Add(pClass);
-	// if we add a base class, we add us to that class' derived classes
-	pClass->AddDerivedClass(this);
+    if (!pClass)
+        return;
+    m_vBaseClasses.push_back(pClass);
+    // if we add a base class, we add us to that class' derived classes
+    pClass->AddDerivedClass(this);
 }
 
 /** \brief removes a base Class
@@ -288,9 +341,17 @@ void CBEClass::AddBaseClass(CBEClass *pClass)
  */
 void CBEClass::RemoveBaseClass(CBEClass *pClass)
 {
-    m_vBaseClasses.Remove(pClass);
-	// we also have to remove us from the derived classes
-	pClass->RemoveDerivedClass(this);
+    vector<CBEClass*>::iterator iter;
+    for (iter = m_vBaseClasses.begin(); iter != m_vBaseClasses.end(); iter++)
+    {
+        if (*iter == pClass)
+        {
+            m_vBaseClasses.erase(iter);
+            break;
+        }
+    }
+    // we also have to remove us from the derived classes
+    pClass->RemoveDerivedClass(this);
 }
 
 /** \brief retrieves a pointer to the first base Class
@@ -299,43 +360,40 @@ void CBEClass::RemoveBaseClass(CBEClass *pClass)
  * If m_vBaseClasses is empty and m_nBaseNameSize is bigger than 0,
  * we have to add the references to the base classes first.
  */
-VectorElement* CBEClass::GetFirstBaseClass()
+vector<CBEClass*>::iterator CBEClass::GetFirstBaseClass()
 {
-    if ((m_vBaseClasses.GetSize() == 0) && (m_nBaseNameSize > 0))
+    if (m_vBaseClasses.empty() && !m_vBaseNames.empty())
     {
-        CBERoot *pRoot = GetRoot();
+        CBERoot *pRoot = GetSpecificParent<CBERoot>();
         assert(pRoot);
-        for (int i=0; i<m_nBaseNameSize; i++)
+        vector<string>::iterator iter;
+        for (iter = m_vBaseNames.begin(); iter != m_vBaseNames.end(); iter++)
         {
             // locate Class
             // if we cannot find class it is not there, because this should be called
             // way after all classes are created
-            CBEClass *pBaseClass = pRoot->FindClass(*(m_sBaseNames[i]));
+            CBEClass *pBaseClass = pRoot->FindClass(*iter);
             if (!pBaseClass)
             {
                 CCompiler::Warning("CBEClass::GetFirstBaseClass failed because base class \"%s\" cannot be found\n",
-                    (const char*)(*(m_sBaseNames[i])));
-                return NULL;
+                    (*iter).c_str());
+                return m_vBaseClasses.end();
             }
             AddBaseClass(pBaseClass);
         }
     }
-    return m_vBaseClasses.GetFirst();
+    return m_vBaseClasses.begin();
 }
 
 /** \brief retrieves a pointer to the next base Class
- *  \param pIter a pointer to the next base Class
+ *  \param iter a pointer to the next base Class
  *  \return a reference to the next base Class
  */
-CBEClass* CBEClass::GetNextBaseClass(VectorElement*&pIter)
+CBEClass* CBEClass::GetNextBaseClass(vector<CBEClass*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vBaseClasses.end())
         return 0;
-    CBEClass *pRet = (CBEClass*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextBaseClass(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief adds a new derived Class
@@ -345,7 +403,9 @@ CBEClass* CBEClass::GetNextBaseClass(VectorElement*&pIter)
  */
 void CBEClass::AddDerivedClass(CBEClass *pClass)
 {
-    m_vDerivedClasses.Add(pClass);
+    if (!pClass)
+        return;
+    m_vDerivedClasses.push_back(pClass);
 }
 
 /** \brief removes a derived Class
@@ -353,30 +413,34 @@ void CBEClass::AddDerivedClass(CBEClass *pClass)
  */
 void CBEClass::RemoveDerivedClass(CBEClass *pClass)
 {
-    m_vDerivedClasses.Remove(pClass);
+    vector<CBEClass*>::iterator iter;
+    for (iter = m_vDerivedClasses.begin(); iter != m_vDerivedClasses.end(); iter++)
+    {
+        if (*iter == pClass)
+        {
+            m_vDerivedClasses.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first derived Class
  *  \return a pointer to the first derived Class
  */
-VectorElement* CBEClass::GetFirstDerivedClass()
+vector<CBEClass*>::iterator CBEClass::GetFirstDerivedClass()
 {
-    return m_vDerivedClasses.GetFirst();
+    return m_vDerivedClasses.begin();
 }
 
 /** \brief retrieves a pointer to the next derived Class
- *  \param pIter a pointer to the next derived Class
+ *  \param iter a pointer to the next derived Class
  *  \return a reference to the next derived Class
  */
-CBEClass* CBEClass::GetNextDerivedClass(VectorElement*&pIter)
+CBEClass* CBEClass::GetNextDerivedClass(vector<CBEClass*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vDerivedClasses.end())
         return 0;
-    CBEClass *pRet = (CBEClass*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextDerivedClass(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief adds another constant
@@ -384,7 +448,9 @@ CBEClass* CBEClass::GetNextDerivedClass(VectorElement*&pIter)
  */
 void CBEClass::AddConstant(CBEConstant *pConstant)
 {
-    m_vConstants.Add(pConstant);
+    if (!pConstant)
+        return;
+    m_vConstants.push_back(pConstant);
     pConstant->SetParent(this);
 }
 
@@ -393,44 +459,48 @@ void CBEClass::AddConstant(CBEConstant *pConstant)
  */
 void CBEClass::RemoveConstant(CBEConstant *pConstant)
 {
-    m_vConstants.Remove(pConstant);
+    vector<CBEConstant*>::iterator iter;
+    for (iter = m_vConstants.begin(); iter != m_vConstants.end(); iter++)
+    {
+        if (*iter == pConstant)
+        {
+            m_vConstants.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief get a pointer to the first constant
  *  \return a pointer to the first constant
  */
-VectorElement* CBEClass::GetFirstConstant()
+vector<CBEConstant*>::iterator CBEClass::GetFirstConstant()
 {
-    return m_vConstants.GetFirst();
+    return m_vConstants.begin();
 }
 
 /** \brief gets a reference to the next constant
- *  \param pIter the pointer to the next constant
+ *  \param iter the pointer to the next constant
  *  \return a reference to the next constant
  */
-CBEConstant* CBEClass::GetNextConstant(VectorElement*&pIter)
+CBEConstant* CBEClass::GetNextConstant(vector<CBEConstant*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vConstants.end())
         return 0;
-    CBEConstant *pRet = (CBEConstant*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextConstant(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief searches for a constant
  *  \param sConstantName the name of the constant to look for
  *  \return a reference to the found constant
  */
-CBEConstant* CBEClass::FindConstant(String sConstantName)
+CBEConstant* CBEClass::FindConstant(string sConstantName)
 {
-    if (sConstantName.IsEmpty())
+    if (sConstantName.empty())
         return 0;
     // simply scan the function for a match
-    VectorElement *pIter = GetFirstConstant();
+    vector<CBEConstant*>::iterator iter = GetFirstConstant();
     CBEConstant *pConstant;
-    while ((pConstant = GetNextConstant(pIter)) != 0)
+    while ((pConstant = GetNextConstant(iter)) != 0)
     {
         if (pConstant->GetName() == sConstantName)
             return pConstant;
@@ -443,7 +513,9 @@ CBEConstant* CBEClass::FindConstant(String sConstantName)
  */
 void CBEClass::AddTypedef(CBETypedef *pTypedef)
 {
-    m_vTypedefs.Add(pTypedef);
+    if (!pTypedef)
+        return;
+    m_vTypedefs.push_back(pTypedef);
     pTypedef->SetParent(this);
 }
 
@@ -452,47 +524,55 @@ void CBEClass::AddTypedef(CBETypedef *pTypedef)
  */
 void CBEClass::RemoveTypedef(CBETypedef *pTypedef)
 {
-    m_vTypedefs.Remove(pTypedef);
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_vTypedefs.begin(); iter != m_vTypedefs.end(); iter++)
+    {
+        if (*iter == pTypedef)
+        {
+            m_vTypedefs.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief gets a pointer to the first typedef
  *  \return a pointer to the first typedef
  */
-VectorElement* CBEClass::GetFirstTypedef()
+vector<CBETypedDeclarator*>::iterator CBEClass::GetFirstTypedef()
 {
-    return m_vTypedefs.GetFirst();
+    return m_vTypedefs.begin();
 }
 
 /** \brief gets a reference to the next typedef
- *  \param pIter the pointer to the next typedef
+ *  \param iter the pointer to the next typedef
  *  \return a reference to the next typedef
  */
-CBETypedDeclarator* CBEClass::GetNextTypedef(VectorElement *&pIter)
+CBETypedDeclarator* CBEClass::GetNextTypedef(vector<CBETypedDeclarator*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vTypedefs.end())
         return 0;
-    CBETypedef *pRet = (CBETypedef*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextTypedef(pIter);
-    return pRet;
+    return *iter++;
 }
 
-/**	\brief creates the members of this class
- *	\param pFEInterface the front-end interface to use as source
- *	\param pContext the context of the code generation
+/** \brief creates the members of this class
+ *  \param pFEInterface the front-end interface to use as source
+ *  \param pContext the context of the code generation
  *  \return true if successful
  */
 bool CBEClass::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
 {
-	// set target file name
-	SetTargetFileName(pFEInterface, pContext);
-	// set own name
+    // call CBEObject's CreateBackEnd method
+    if (!CBEObject::CreateBackEnd(pFEInterface))
+        return false;
+
+    // set target file name
+    SetTargetFileName(pFEInterface, pContext);
+    // set own name
     m_sName = pFEInterface->GetName();
     // add attributes
-    VectorElement *pIter = pFEInterface->GetFirstAttribute();
+    vector<CFEAttribute*>::iterator iterA = pFEInterface->GetFirstAttribute();
     CFEAttribute *pFEAttribute;
-    while ((pFEAttribute = pFEInterface->GetNextAttribute(pIter)) != 0)
+    while ((pFEAttribute = pFEInterface->GetNextAttribute(iterA)) != 0)
     {
         if (!CreateBackEnd(pFEAttribute, pContext))
             return false;
@@ -500,70 +580,81 @@ bool CBEClass::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
     // we can resolve this if we only add the base names now, but when the
     // base classes are first used, add the actual references.
     // add references to base Classes
-    CBERoot *pRoot = GetRoot();
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
-    pIter = pFEInterface->GetFirstBaseInterface();
+    vector<CFEInterface*>::iterator iterBI = pFEInterface->GetFirstBaseInterface();
     CFEInterface *pFEBaseInterface;
-    while ((pFEBaseInterface = pFEInterface->GetNextBaseInterface(pIter)) != 0)
+    while ((pFEBaseInterface = pFEInterface->GetNextBaseInterface(iterBI)) != 0)
     {
         // add the name of the base interface
         AddBaseName(pFEBaseInterface->GetName());
     }
     // add constants
-    pIter = pFEInterface->GetFirstConstant();
+    vector<CFEConstDeclarator*>::iterator iterC = 
+	pFEInterface->GetFirstConstant();
     CFEConstDeclarator *pFEConstant;
-    while ((pFEConstant = pFEInterface->GetNextConstant(pIter)) != 0)
+    while ((pFEConstant = pFEInterface->GetNextConstant(iterC)) != 0)
     {
         if (!CreateBackEnd(pFEConstant, pContext))
             return false;
     }
     // add typedefs
-    pIter = pFEInterface->GetFirstTypeDef();
+    vector<CFETypedDeclarator*>::iterator iterTD = 
+	pFEInterface->GetFirstTypeDef();
     CFETypedDeclarator *pFETypedef;
-    while ((pFETypedef = pFEInterface->GetNextTypeDef(pIter)) != 0)
+    while ((pFETypedef = pFEInterface->GetNextTypeDef(iterTD)) != 0)
     {
         if (!CreateBackEnd(pFETypedef, pContext))
             return false;
     }
     // add tagged decls
-    pIter = pFEInterface->GetFirstTaggedDecl();
+    vector<CFEConstructedType*>::iterator iterT = 
+	pFEInterface->GetFirstTaggedDecl();
     CFEConstructedType *pFETaggedType;
-    while ((pFETaggedType = pFEInterface->GetNextTaggedDecl(pIter)) != 0)
+    while ((pFETaggedType = pFEInterface->GetNextTaggedDecl(iterT)) != 0)
     {
         if (!CreateBackEnd(pFETaggedType, pContext))
             return false;
     }
-    // add types for Class
+    // add types for Class (only for C)
+    if (pContext->IsBackEndSet(PROGRAM_BE_C))
 	if (!CreateAliasForClass(pFEInterface, pContext))
 	    return false;
-    // need msg buffer types
-    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType();
+    // first create operation functions
+    vector<CFEOperation*>::iterator iterO = pFEInterface->GetFirstOperation();
+    CFEOperation *pFEOperation;
+    while ((pFEOperation = pFEInterface->GetNextOperation(iterO)) != 0)
+    {
+        if (!CreateFunctionsNoClassDependency(pFEOperation, pContext))
+            return false;
+    }
+    // create class' message buffer
+    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType(true);
     m_pMsgBuffer->SetParent(this);
     if (!m_pMsgBuffer->CreateBackEnd(pFEInterface, pContext))
     {
-        VERBOSE("CBEClass::CreateBackEnd failed because message buffer type could not be created\n");
+        VERBOSE("%s failed because message buffer type could not be created\n",
+            __PRETTY_FUNCTION__);
         delete m_pMsgBuffer;
         return false;
     }
-    // add functions
-    pIter = pFEInterface->GetFirstOperation();
-    CFEOperation *pFEOperation;
-    while ((pFEOperation = pFEInterface->GetNextOperation(pIter)) != 0)
+    // create interface functions
+    iterO = pFEInterface->GetFirstOperation();
+    while ((pFEOperation = pFEInterface->GetNextOperation(iterO)) != 0)
     {
-        if (!CreateBackEnd(pFEOperation, pContext))
+        if (!CreateFunctionsClassDependency(pFEOperation, pContext))
             return false;
     }
-    // init message buffer sizes, since it needs initialized function for it
-    // we simply call the create function again.
-    m_pMsgBuffer->ZeroCounts();
-    if (!m_pMsgBuffer->CreateBackEnd(pFEInterface, pContext))
+    // add attribute interface members
+    vector<CFEAttributeDeclarator*>::iterator iterAD = pFEInterface->GetFirstAttributeDeclarator();
+    CFEAttributeDeclarator *pFEAttrDecl;
+    while ((pFEAttrDecl = pFEInterface->GetNextAttributeDeclarator(iterAD)) != 0)
     {
-        VERBOSE("CBEClass::CreateBackEnd failed because message buffer type could not be created\n");
-        delete m_pMsgBuffer;
-        return false;
+        if (!CreateBackEnd(pFEAttrDecl, pContext))
+            return false;
     }
     // add functions for interface
-	return AddInterfaceFunctions(pFEInterface, pContext);
+    return AddInterfaceFunctions(pFEInterface, pContext);
 }
 
 /** \brief adds the functions for an interface
@@ -571,78 +662,103 @@ bool CBEClass::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
  *  \param pContext the context of this operation
  *  \return true if successful
  */
-bool CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface, CBEContext* pContext)
+bool 
+CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface, 
+    CBEContext* pContext)
 {
-    CBEInterfaceFunction *pFunction = pContext->GetClassFactory()->GetNewWaitAnyFunction();
+    CBEClassFactory *pCF = pContext->GetClassFactory();
+    CBEInterfaceFunction *pFunction = pCF->GetNewWaitAnyFunction();
     AddFunction(pFunction);
     pFunction->SetComponentSide(true);
     if (!pFunction->CreateBackEnd(pFEInterface, pContext))
     {
         RemoveFunction(pFunction);
-        VERBOSE("CBEClass::CreateBackEnd failed because wait-any function could not be created\n");
+        VERBOSE("%s failed because wait-any function could not be created\n",
+            __PRETTY_FUNCTION__);
         delete pFunction;
         return false;
     }
-    pFunction = pContext->GetClassFactory()->GetNewRcvAnyFunction();
+    pFunction = pCF->GetNewRcvAnyFunction();
     AddFunction(pFunction);
     pFunction->SetComponentSide(true);
     if (!pFunction->CreateBackEnd(pFEInterface, pContext))
     {
         RemoveFunction(pFunction);
-        VERBOSE("CBEClass::CreateBackEnd failed because receive-any function could not be created\n");
+        VERBOSE("%s failed because receive-any function could not be created\n",
+            __PRETTY_FUNCTION__);
         delete pFunction;
         return false;
     }
-    pFunction = pContext->GetClassFactory()->GetNewReplyAnyWaitAnyFunction();
+    pFunction = pCF->GetNewReplyAnyWaitAnyFunction();
     AddFunction(pFunction);
     pFunction->SetComponentSide(true);
     if (!pFunction->CreateBackEnd(pFEInterface, pContext))
     {
         RemoveFunction(pFunction);
-        VERBOSE("CBEClass::CreateBackEnd faile dbecause reply-any-wait-any function could not be created\n");
+        VERBOSE("%s faile dbecause reply-any-wait-any function could not be created\n",
+            __PRETTY_FUNCTION__);
         delete pFunction;
         return false;
     }
-	if (!(pContext->IsOptionSet(PROGRAM_NO_DISPATCHER) &&
-	      pContext->IsOptionSet(PROGRAM_NO_SERVER_LOOP)))
-	{
-		pFunction = pContext->GetClassFactory()->GetNewDispatchFunction();
-		AddFunction(pFunction);
-		pFunction->SetComponentSide(true);
-		if (!pFunction->CreateBackEnd(pFEInterface, pContext))
-		{
-			RemoveFunction(pFunction);
-			VERBOSE("CBEClass::CreateBackEnd failed because dispatch function could not be created\n");
-			delete pFunction;
-			return false;
-		}
-	}
-	if (!pContext->IsOptionSet(PROGRAM_NO_SERVER_LOOP))
-	{
-		pFunction = pContext->GetClassFactory()->GetNewSrvLoopFunction();
-		AddFunction(pFunction);
-		pFunction->SetComponentSide(true);
-		if (!pFunction->CreateBackEnd(pFEInterface, pContext))
-		{
-			RemoveFunction(pFunction);
-			VERBOSE("CBEClass::CreateBackEnd failed because server-loop function could not be created\n");
-			delete pFunction;
-			return false;
-		}
-	}
-
-    if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
+    if (!(pContext->IsOptionSet(PROGRAM_NO_DISPATCHER) &&
+          pContext->IsOptionSet(PROGRAM_NO_SERVER_LOOP)))
     {
-        pFunction = pContext->GetClassFactory()->GetNewTestServerFunction();
+        pFunction = pCF->GetNewDispatchFunction();
         AddFunction(pFunction);
+        pFunction->SetComponentSide(true);
         if (!pFunction->CreateBackEnd(pFEInterface, pContext))
         {
             RemoveFunction(pFunction);
-            VERBOSE("CBEClass::CreateBackEnd failed because test-server function could not be created\n");
+            VERBOSE("%s failed because dispatch function could not be created\n",
+                __PRETTY_FUNCTION__);
             delete pFunction;
             return false;
         }
     }
+    if (!pContext->IsOptionSet(PROGRAM_NO_SERVER_LOOP))
+    {
+        pFunction = pCF->GetNewSrvLoopFunction();
+        AddFunction(pFunction);
+        pFunction->SetComponentSide(true);
+        if (!pFunction->CreateBackEnd(pFEInterface, pContext))
+        {
+            RemoveFunction(pFunction);
+            VERBOSE("%s failed because server-loop function could not be created\n",
+                __PRETTY_FUNCTION__);
+            delete pFunction;
+            return false;
+        }
+    }
+
+    if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
+    {
+        pFunction = pCF->GetNewTestServerFunction();
+        AddFunction(pFunction);
+        if (!pFunction->CreateBackEnd(pFEInterface, pContext))
+        {
+            RemoveFunction(pFunction);
+            VERBOSE("%s failed because test-server function could not be created\n",
+                __PRETTY_FUNCTION__);
+            delete pFunction;
+            return false;
+        }
+	// set line number
+	pFunction->SetSourceLine(pFEInterface->GetSourceLineEnd());
+    }
+
+    // sort the parameters of the functions
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
+    CBEFunction *pF;
+    while ((pF = GetNextFunction(iter)) != 0)
+    {
+        if (!pF->SortParameters(0, pContext))
+        {
+            VERBOSE("%s failed, because the parameters of function %s could not be sorted\n",
+                __PRETTY_FUNCTION__, pF->GetName().c_str());
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -656,26 +772,34 @@ bool CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface, CBEContext* pCo
  */
 bool CBEClass::CreateAliasForClass(CFEInterface *pFEInterface, CBEContext *pContext)
 {
-    // create the FE type
-	CFEDeclarator *pFEName = new CFEDeclarator(DECL_IDENTIFIER, pFEInterface->GetName());
-	CFETypeSpec *pFEType = new CFEUserDefinedType(String("CORBA_Object"));
-    CFETypedDeclarator *pFEAlias = new CFETypedDeclarator(TYPEDECL_TYPEDEF, pFEType, new Vector(RUNTIME_CLASS(CFEDeclarator), 1, pFEName));
-	pFEName->SetParent(pFEAlias);
-	pFEType->SetParent(pFEAlias);
-	if (pFEInterface->GetParent())
-		pFEAlias->SetParent(pFEInterface->GetParent());
-	// create the BE type
+    assert(pFEInterface);
+    // create the BE type
     CBETypedef *pTypedef = pContext->GetClassFactory()->GetNewTypedef();
     AddTypedef(pTypedef);
-    if (!pTypedef->CreateBackEnd(pFEAlias, pContext))
+    // create CORBA_Object type
+    CBEUserDefinedType *pType = (CBEUserDefinedType*)pContext->GetClassFactory()->GetNewType(TYPE_USER_DEFINED);
+    pType->SetParent(pTypedef);
+    if (!pType->CreateBackEnd(string("CORBA_Object"), pContext))
     {
-        RemoveTypedef(pTypedef);
-        VERBOSE("CBEClass::CreateBackEnd failed because typedef could not be created\n");
-		delete pFEAlias;
-        delete pTypedef;
+        delete pType;
+        VERBOSE("%s failed, because alias type could not be created.\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
-	delete pFEAlias;
+    // finally create typedef
+    if (!pTypedef->CreateBackEnd(pType, pFEInterface->GetName(), pFEInterface, pContext))
+    {
+        RemoveTypedef(pTypedef);
+        VERBOSE("%s failed because typedef could not be created\n",
+            __PRETTY_FUNCTION__);
+        delete pTypedef;
+        delete pType;
+        return false;
+    }
+
+    // set source line and file
+    pTypedef->SetSourceLine(pFEInterface->GetSourceLine()-1);
+    pTypedef->SetSourceFileName(pFEInterface->GetSpecificParent<CFEFile>()->GetFileName());
 
     return true;
 }
@@ -693,8 +817,8 @@ bool CBEClass::CreateBackEnd(CFEConstDeclarator *pFEConstant, CBEContext *pConte
     if (!pConstant->CreateBackEnd(pFEConstant, pContext))
     {
         RemoveConstant(pConstant);
-        VERBOSE("CBEClass::CreateBackEnd failed because const %s could not be created\n",
-                (const char*)pFEConstant->GetName());
+        VERBOSE("%s failed because const %s could not be created\n",
+                __PRETTY_FUNCTION__, pFEConstant->GetName().c_str());
         delete pConstant;
         return false;
     }
@@ -710,12 +834,90 @@ bool CBEClass::CreateBackEnd(CFETypedDeclarator *pFETypedef, CBEContext *pContex
 {
     CBETypedef *pTypedef = pContext->GetClassFactory()->GetNewTypedef();
     AddTypedef(pTypedef);
+    pTypedef->SetParent(this);
     if (!pTypedef->CreateBackEnd(pFETypedef, pContext))
     {
         RemoveTypedef(pTypedef);
-        VERBOSE("CBEClass::CreateBackEnd failed because typedef could not be created\n");
+        VERBOSE("%s failed because typedef could not be created\n",
+            __PRETTY_FUNCTION__);
         delete pTypedef;
         return false;
+    }
+    return true;
+}
+
+/** \brief internal function to create a functions for attribute declarator
+ *  \param pFEAttrDecl the respective front-end attribute declarator definition
+ *  \param pContext the context of the create process
+ *  \return true if successful
+ */
+bool CBEClass::CreateBackEnd(CFEAttributeDeclarator *pFEAttrDecl, CBEContext *pContext)
+{
+    if (!pFEAttrDecl)
+    {
+        VERBOSE("%s failed because attribute declarator is NULL\n",
+            __PRETTY_FUNCTION__);
+        return false;
+    }
+    // add function "<param_type_spec> [out]__get_<simple_declarator>();" for each decl
+    // if !READONLY:
+    //   add function "void [in]__set_<simple_declarator>(<param_type_spec> 'first letter of <decl>');" for each decl
+    vector<CFEDeclarator*>::iterator iterD = pFEAttrDecl->GetFirstDeclarator();
+    CFEDeclarator *pFEDecl;
+    while ((pFEDecl = pFEAttrDecl->GetNextDeclarator(iterD)) != 0)
+    {
+        // get function
+        string sName = string("_get_");
+        sName += pFEDecl->GetName();
+        CFETypeSpec *pFEType = (CFETypeSpec*)pFEAttrDecl->GetType()->Clone();
+        CFEOperation *pFEOperation = new CFEOperation(pFEType, sName, NULL);
+        pFEType->SetParent(pFEOperation);
+        // get parent interface
+        CFEInterface *pFEInterface = pFEAttrDecl->GetSpecificParent<CFEInterface>();
+        assert(pFEInterface);
+        pFEInterface->AddOperation(pFEOperation);
+        if (!CreateFunctionsNoClassDependency(pFEOperation, pContext) ||
+            !CreateFunctionsClassDependency(pFEOperation, pContext))
+        {
+            delete pFEOperation;
+            return false;
+        }
+
+        // set function
+        if (!pFEAttrDecl->FindAttribute(ATTR_READONLY))
+        {
+            sName = string("_set_");
+            sName += pFEDecl->GetName();
+            CFEAttribute *pFEAttr = new CFEAttribute(ATTR_IN);
+            vector<CFEAttribute*> *pFEAttributes = new vector<CFEAttribute*>();
+            pFEAttributes->push_back(pFEAttr);
+            pFEType = new CFESimpleType(TYPE_VOID);
+            CFETypeSpec *pFEParamType = (CFETypeSpec*)pFEAttrDecl->GetType()->Clone();
+            CFEDeclarator *pFEParamDecl = new CFEDeclarator(DECL_IDENTIFIER, pFEDecl->GetName().substr(0,1));
+            vector<CFEDeclarator*> *pFEParameters = new vector<CFEDeclarator*>();
+            pFEParameters->push_back(pFEParamDecl);
+            CFETypedDeclarator *pFEParam = new CFETypedDeclarator(TYPEDECL_PARAM,
+                pFEParamType, pFEParameters, pFEAttributes);
+            pFEParamType->SetParent(pFEParam);
+            pFEParamDecl->SetParent(pFEParam);
+            delete pFEAttributes;
+            delete pFEParameters;
+            // create function
+            vector<CFETypedDeclarator*> *pParams = new vector<CFETypedDeclarator*>();
+            pParams->push_back(pFEParam);
+            pFEOperation = new CFEOperation(pFEType, sName, pParams);
+            delete pParams;
+            pFEType->SetParent(pFEOperation);
+            pFEAttr->SetParent(pFEOperation);
+            pFEParam->SetParent(pFEOperation);
+            pFEInterface->AddOperation(pFEOperation);
+            if (!CreateFunctionsNoClassDependency(pFEOperation, pContext) ||
+                !CreateFunctionsClassDependency(pFEOperation, pContext))
+            {
+                delete pFEOperation;
+                return false;
+            }
+        }
     }
     return true;
 }
@@ -725,23 +927,27 @@ bool CBEClass::CreateBackEnd(CFETypedDeclarator *pFETypedef, CBEContext *pContex
  *  \param pContext the context of the create process
  *  \return true if successful
  *
- * A function has to be generated depending on its attributes. If it is a call function,
- * we have to generate different back-end function than for a message passing function.
+ * A function has to be generated depending on its attributes. If it is a call
+ * function, we have to generate different back-end function than for a
+ * message passing function.
  *
- * We depend on the fact, that either the [in] or the [out] attribute are specified.
- * Never both may appear.
+ * We depend on the fact, that either the [in] or the [out] attribute are
+ * specified.  Never both may appear.
+ *
+ * In this method we create functions independant of the class' message buffer
  */
-bool CBEClass::CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext)
+bool CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation, CBEContext *pContext)
 {
     CFunctionGroup *pGroup = new CFunctionGroup(pFEOperation);
     AddFunctionGroup(pGroup);
 
+    vector<CBEFunction*> vFunctionsToSort;
+
     if (!(pFEOperation->FindAttribute(ATTR_IN)) &&
         !(pFEOperation->FindAttribute(ATTR_OUT)))
     {
-        // the call case:
-        // we need the functions call, unmarshal, reply-and-wait, skeleton, reply-and-recv
-        // for client side: call
+	// the call case: we need the functions call, unmarshal,
+	// reply-and-wait, skeleton, reply-and-recv; for client side: call
         CBEOperationFunction *pFunction = pContext->GetClassFactory()->GetNewCallFunction();
         AddFunction(pFunction);
         pFunction->SetComponentSide(false);
@@ -750,37 +956,13 @@ bool CBEClass::CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because call function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s  failed, because call function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
-        // for server side: unmarshal, reply-and-wait, reply-and-recv, skeleton
-        pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
-        AddFunction(pFunction);
-        pFunction->SetComponentSide(true);
-        pGroup->AddFunction(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
-        {
-            RemoveFunction(pFunction);
-            delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because unmarshal function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
-            return false;
-        }
+        vFunctionsToSort.push_back(pFunction);
 
-		pFunction = pContext->GetClassFactory()->GetNewMarshalFunction();
-		AddFunction(pFunction);
-		pFunction->SetComponentSide(true);
-		pGroup->AddFunction(pFunction);
-		if (!pFunction->CreateBackEnd(pFEOperation, pContext))
-		{
-		    RemoveFunction(pFunction);
-			delete pFunction;
-			VERBOSE("CBEClass::CreateBackEnd failed, because marshal function coudl not be created for %s\n",
-			    (const char*)pFEOperation->GetName());
-			return false;
-		}
-
+        // for server side: reply-and-wait, reply-and-recv, skeleton
         pFunction = pContext->GetClassFactory()->GetNewComponentFunction();
         AddFunction(pFunction);
         pFunction->SetComponentSide(true);
@@ -789,26 +971,28 @@ bool CBEClass::CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because component function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed, because component function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
+        vFunctionsToSort.push_back(pFunction);
 
-		if (pFEOperation->FindAttribute(ATTR_ALLOW_REPLY_ONLY))
-		{
-		    pFunction = pContext->GetClassFactory()->GetNewReplyFunction();
-			AddFunction(pFunction);
-			pFunction->SetComponentSide(true);
-			pGroup->AddFunction(pFunction);
-			if (!pFunction->CreateBackEnd(pFEOperation, pContext))
-			{
-			    RemoveFunction(pFunction);
-				delete pFunction;
-				VERBOSE("CBEClass::CreateBackEnd failed, because reply function could not be created for %s\n",
-				    (const char*)pFEOperation->GetName());
-				return false;
-			}
-		}
+        if (pFEOperation->FindAttribute(ATTR_ALLOW_REPLY_ONLY))
+        {
+            pFunction = pContext->GetClassFactory()->GetNewReplyFunction();
+            AddFunction(pFunction);
+            pFunction->SetComponentSide(true);
+            pGroup->AddFunction(pFunction);
+            if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+            {
+                RemoveFunction(pFunction);
+                delete pFunction;
+                VERBOSE("%s failed, because reply function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
+                return false;
+            }
+            vFunctionsToSort.push_back(pFunction);
+        }
 
         if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
         {
@@ -820,16 +1004,17 @@ bool CBEClass::CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext)
             {
                 RemoveFunction(pFunction);
                 delete pFunction;
-                VERBOSE("CBEClass::CreateBackEnd failed because test function could not be created for %s\n",
-                        (const char*)pFEOperation->GetName());
+                VERBOSE("%s failed because test function could not be created for %s\n",
+                        __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
                 return false;
             }
+            vFunctionsToSort.push_back(pFunction);
         }
     }
     else
     {
         // the MP case
-        // we need the functions send, recv, wait, unmarshal
+        // we need the functions send, recv, wait
         bool bComponent = (pFEOperation->FindAttribute(ATTR_OUT));
         // sender: send
         CBEOperationFunction *pFunction = pContext->GetClassFactory()->GetNewSndFunction();
@@ -840,10 +1025,11 @@ bool CBEClass::CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because send function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed, because send function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
+        vFunctionsToSort.push_back(pFunction);
 
         // receiver: wait, recv, unmarshal
         pFunction = pContext->GetClassFactory()->GetNewWaitFunction();
@@ -854,10 +1040,11 @@ bool CBEClass::CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed, because wait function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed, because wait function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
+        vFunctionsToSort.push_back(pFunction);
 
         pFunction = pContext->GetClassFactory()->GetNewRcvFunction();
         AddFunction(pFunction);
@@ -867,42 +1054,31 @@ bool CBEClass::CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext)
         {
             RemoveFunction(pFunction);
             delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed because receive function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
+            VERBOSE("%s failed because receive function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
             return false;
         }
+        vFunctionsToSort.push_back(pFunction);
 
-        pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
-        AddFunction(pFunction);
-        pFunction->SetComponentSide(!bComponent);
-        pGroup->AddFunction(pFunction);
-        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        // if we send oneway to the server we need a component function
+        if (pFEOperation->FindAttribute(ATTR_IN))
         {
-            RemoveFunction(pFunction);
-            delete pFunction;
-            VERBOSE("CBEClass::CreateBackEnd failed because unmarshal function could not be created for %s\n",
-                    (const char*)pFEOperation->GetName());
-            return false;
+            pFunction = pContext->GetClassFactory()->GetNewComponentFunction();
+            AddFunction(pFunction);
+            pFunction->SetComponentSide(true);
+            pGroup->AddFunction(pFunction);
+            if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+            {
+                RemoveFunction(pFunction);
+                delete pFunction;
+                VERBOSE("%s failed, because component function could not be created for %s\n",
+                        __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
+                return false;
+            }
+            vFunctionsToSort.push_back(pFunction);
         }
 
-		// if we send oneway to the server we need a component function
-		if (pFEOperation->FindAttribute(ATTR_IN))
-		{
-			pFunction = pContext->GetClassFactory()->GetNewComponentFunction();
-			AddFunction(pFunction);
-			pFunction->SetComponentSide(true);
-			pGroup->AddFunction(pFunction);
-			if (!pFunction->CreateBackEnd(pFEOperation, pContext))
-			{
-				RemoveFunction(pFunction);
-				delete pFunction;
-				VERBOSE("CBEClass::CreateBackEnd failed, because component function could not be created for %s\n",
-						(const char*)pFEOperation->GetName());
-				return false;
-			}
-		}
-
-		if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
+        if (pContext->IsOptionSet(PROGRAM_GENERATE_TESTSUITE))
         {
             pFunction = pContext->GetClassFactory()->GetNewTestFunction();
             AddFunction(pFunction);
@@ -912,12 +1088,125 @@ bool CBEClass::CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext)
             {
                 RemoveFunction(pFunction);
                 delete pFunction;
-                VERBOSE("CBEClass::CreateBackEnd failed because test function could not be created for %s\n",
-                        (const char*)pFEOperation->GetName());
+                VERBOSE("%s failed because test function could not be created for %s\n",
+                        __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
                 return false;
             }
+            vFunctionsToSort.push_back(pFunction);
         }
     }
+
+    // sort the parameters of the functions
+    vector<CBEFunction*>::iterator iter = vFunctionsToSort.begin();
+    for (; iter != vFunctionsToSort.end(); iter++)
+    {
+        if (!(*iter)->SortParameters(0, pContext))
+        {
+            VERBOSE("%s failed, because the parameters of function %s could not be sorted\n",
+                __PRETTY_FUNCTION__, (*iter)->GetName().c_str());
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/** \brief internal function to create the back-end functions
+ *  \param pFEOperation the respective front-end function
+ *  \param pContext the context of the create process
+ *  \return true if successful
+ *
+ * A function has to be generated depending on its attributes. If it is a call
+ * function, we have to generate different back-end function than for a
+ * message passing function.
+ *
+ * We depend on the fact, that either the [in] or the [out] attribute are
+ * specified.  Never both may appear.
+ *
+ * Here we create functions, which depend on the class' message buffer.
+ */
+bool
+CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation, 
+    CBEContext *pContext)
+{
+    // get function group of pFEOperation (should have been create above)
+    vector<CFunctionGroup*>::iterator iterFG = GetFirstFunctionGroup();
+    CFunctionGroup *pGroup;
+    while ((pGroup = GetNextFunctionGroup(iterFG)) != NULL)
+    {
+        if (pGroup->GetOperation() == pFEOperation)
+            break;
+    }
+    assert(pGroup);
+
+    vector<CBEFunction*> vFunctionsToSort;
+
+    if (!(pFEOperation->FindAttribute(ATTR_IN)) &&
+        !(pFEOperation->FindAttribute(ATTR_OUT)))
+    {
+        // the call case:
+        // we need the functions unmarshal, marshal
+        CBEOperationFunction *pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
+        AddFunction(pFunction);
+        pFunction->SetComponentSide(true);
+        pGroup->AddFunction(pFunction);
+        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        {
+            RemoveFunction(pFunction);
+            delete pFunction;
+            VERBOSE("%s failed, because unmarshal function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
+            return false;
+        }
+        vFunctionsToSort.push_back(pFunction);
+
+        pFunction = pContext->GetClassFactory()->GetNewMarshalFunction();
+        AddFunction(pFunction);
+        pFunction->SetComponentSide(true);
+        pGroup->AddFunction(pFunction);
+        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        {
+            RemoveFunction(pFunction);
+            delete pFunction;
+            VERBOSE("%s failed, because marshal function coudl not be created for %s\n",
+                __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
+            return false;
+        }
+        vFunctionsToSort.push_back(pFunction);
+    }
+    else
+    {
+        // the MP case
+        // we need the functions send, recv, wait, unmarshal
+        bool bComponent = (pFEOperation->FindAttribute(ATTR_OUT));
+
+        CBEOperationFunction *pFunction = pContext->GetClassFactory()->GetNewUnmarshalFunction();
+        AddFunction(pFunction);
+        pFunction->SetComponentSide(!bComponent);
+        pGroup->AddFunction(pFunction);
+        if (!pFunction->CreateBackEnd(pFEOperation, pContext))
+        {
+            RemoveFunction(pFunction);
+            delete pFunction;
+            VERBOSE("%s failed because unmarshal function could not be created for %s\n",
+                    __PRETTY_FUNCTION__, pFEOperation->GetName().c_str());
+            return false;
+        }
+        vFunctionsToSort.push_back(pFunction);
+    }
+
+    // sort the parameters of the functions
+    vector<CBEFunction*>::iterator iter = vFunctionsToSort.begin();
+    for (; iter != vFunctionsToSort.end(); iter++)
+    {
+        if (!(*iter)->SortParameters(0, pContext))
+        {
+            VERBOSE("%s failed, because the parameters of function %s could not be sorted\n",
+                __PRETTY_FUNCTION__, (*iter)->GetName().c_str());
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -933,7 +1222,8 @@ bool CBEClass::CreateBackEnd(CFEAttribute *pFEAttribute, CBEContext *pContext)
     if (!pAttribute->CreateBackEnd(pFEAttribute, pContext))
     {
         RemoveAttribute(pAttribute);
-        VERBOSE("CBEClass::CreateBackEnd failed because attribute could not be created\n");
+        VERBOSE("%s failed because attribute could not be created\n",
+            __PRETTY_FUNCTION__);
         delete pAttribute;
         return false;
     }
@@ -949,9 +1239,11 @@ bool CBEClass::CreateBackEnd(CFEAttribute *pFEAttribute, CBEContext *pContext)
  */
 bool CBEClass::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
 {
+    VERBOSE("CBEClass::AddToFile(header: %s) for class %s called\n",
+        pHeader->GetFileName().c_str(), GetName().c_str());
     // add this class to the file
     if (IsTargetFile(pHeader))
-		pHeader->AddClass(this);
+        pHeader->AddClass(this);
     return true;
 }
 
@@ -966,20 +1258,22 @@ bool CBEClass::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
  */
 bool CBEClass::AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext)
 {
-	// check compiler option
-	if (pContext->IsOptionSet(PROGRAM_FILE_FUNCTION) &&
-	    pImpl->GetTarget()->IsKindOf(RUNTIME_CLASS(CBEClient)))
-	{
-		VectorElement *pIter = GetFirstFunction();
-		CBEFunction *pFunction;
-		while ((pFunction = GetNextFunction(pIter)) != 0)
-		{
-			pFunction->AddToFile(pImpl, pContext);
-		}
-	}
+    VERBOSE("CBEClass::AddToFile(impl: %s) for class %s called\n",
+        pImpl->GetFileName().c_str(), GetName().c_str());
+    // check compiler option
+    if (pContext->IsOptionSet(PROGRAM_FILE_FUNCTION) &&
+        dynamic_cast<CBEClient*>(pImpl->GetTarget()))
+    {
+        vector<CBEFunction*>::iterator iter = GetFirstFunction();
+        CBEFunction *pFunction;
+        while ((pFunction = GetNextFunction(iter)) != 0)
+        {
+            pFunction->AddToFile(pImpl, pContext);
+        }
+    }
     // add this class to the file
     if (IsTargetFile(pImpl))
-		pImpl->AddClass(this);
+        pImpl->AddClass(this);
     return true;
 }
 
@@ -1000,9 +1294,9 @@ int CBEClass::GetParameterCount(int nFEType, bool& bSameCount, int nDirection)
     }
 
     int nCount = 0, nCurr;
-    VectorElement *pIter = GetFirstFunction();
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
     CBEFunction *pFunction;
-    while ((pFunction = GetNextFunction(pIter)) != 0)
+    while ((pFunction = GetNextFunction(iter)) != 0)
     {
         nCurr = pFunction->GetParameterCount(nFEType, nDirection);
          if ((nCount > 0) && (nCurr != nCount) && (nCurr > 0))
@@ -1013,11 +1307,11 @@ int CBEClass::GetParameterCount(int nFEType, bool& bSameCount, int nDirection)
     return nCount;
 }
 
-/**	\brief counts the number of string parameter needed for this interface
- *	\param nDirection the direction to count
+/** \brief counts the number of string parameter needed for this interface
+ *  \param nDirection the direction to count
  *  \param nMustAttrs the attributes which have to be set for the parameters
  *  \param nMustNotAttrs the attributes which must not be set for the parameters
- *	\return the number of strings needed
+ *  \return the number of strings needed
  */
 int CBEClass::GetStringParameterCount(int nDirection, int nMustAttrs, int nMustNotAttrs)
 {
@@ -1030,13 +1324,13 @@ int CBEClass::GetStringParameterCount(int nDirection, int nMustAttrs, int nMustN
 
     int nCount = 0, nCurr;
 
-    VectorElement *pIterG = GetFirstFunctionGroup();
+    vector<CFunctionGroup*>::iterator iterG = GetFirstFunctionGroup();
     CFunctionGroup *pFuncGroup;
-    while ((pFuncGroup = GetNextFunctionGroup(pIterG)) != 0)
+    while ((pFuncGroup = GetNextFunctionGroup(iterG)) != 0)
     {
-        VectorElement *pIterF = pFuncGroup->GetFirstFunction();
+        vector<CBEFunction*>::iterator iterF = pFuncGroup->GetFirstFunction();
         CBEOperationFunction *pFunc;
-        while ((pFunc = (CBEOperationFunction*)(pFuncGroup->GetNextFunction(pIterF))) != 0)
+        while ((pFunc = dynamic_cast<CBEOperationFunction*>(pFuncGroup->GetNextFunction(iterF))) != 0)
         {
             nCurr = pFunc->GetStringParameterCount(nDirection, nMustAttrs, nMustNotAttrs);
             nCount = (nCount > nCurr) ? nCount : nCurr;
@@ -1046,10 +1340,10 @@ int CBEClass::GetStringParameterCount(int nDirection, int nMustAttrs, int nMustN
     return nCount;
 }
 
-/**	\brief calculates the size of the interface function
- *	\param nDirection the direction to count
+/** \brief calculates the size of the interface function
+ *  \param nDirection the direction to count
  *  \param pContext the context of the calculation (needed to test for message buffer)
- *	\return the number of bytes needed to transmit any of the functions
+ *  \return the number of bytes needed to transmit any of the functions
  */
 int CBEClass::GetSize(int nDirection, CBEContext *pContext)
 {
@@ -1062,9 +1356,9 @@ int CBEClass::GetSize(int nDirection, CBEContext *pContext)
 
     int nSize = 0, nCurr;
 
-    VectorElement *pIter = GetFirstFunction();
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
     CBEOperationFunction *pFunc;
-    while ((pFunc = (CBEOperationFunction*)GetNextFunction(pIter)) != 0)
+    while ((pFunc = dynamic_cast<CBEOperationFunction*>(GetNextFunction(iter))) != 0)
     {
         nCurr = pFunc->GetSize(nDirection, pContext);
         nSize = (nSize > nCurr) ? nSize : nCurr;
@@ -1077,14 +1371,14 @@ int CBEClass::GetSize(int nDirection, CBEContext *pContext)
  *  \param sFunctionName the name of the function to search for
  *  \return a reference to the searched class or 0
  */
-CBEFunction* CBEClass::FindFunction(String sFunctionName)
+CBEFunction* CBEClass::FindFunction(string sFunctionName)
 {
-    if (sFunctionName.IsEmpty())
+    if (sFunctionName.empty())
         return 0;
     // simply scan the function for a match
-    VectorElement *pIter = GetFirstFunction();
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
     CBEFunction *pFunction;
-    while ((pFunction = GetNextFunction(pIter)) != 0)
+    while ((pFunction = GetNextFunction(iter)) != 0)
     {
         if (pFunction->GetName() == sFunctionName)
             return pFunction;
@@ -1101,20 +1395,25 @@ CBEFunction* CBEClass::FindFunction(String sFunctionName)
  */
 bool CBEClass::AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext)
 {
+    VERBOSE("CBEClass::AddOpcodesToFile(header: %s) called\n",
+        pFile->GetFileName().c_str());
     // check if the file is really our target file
-	if (!IsTargetFile(pFile))
-	    return true;
-    // first create classes in reverse order, so we can build correct parent relationships
-    CBEConstant *pOpcode = pContext->GetClassFactory()->GetNewConstant();
-    CBEOpcodeType *pType = pContext->GetClassFactory()->GetNewOpcodeType();
+    if (!IsTargetFile(pFile))
+        return true;
+
+    // first create classes in reverse order, so we can build correct parent
+    // relationships
+    CBEClassFactory *pCF = pContext->GetClassFactory();
+    CBEConstant *pOpcode = pCF->GetNewConstant();
+    CBEOpcodeType *pType = pCF->GetNewOpcodeType();
     pType->SetParent(pOpcode);
-    CBEExpression *pBrace = pContext->GetClassFactory()->GetNewExpression();
+    CBEExpression *pBrace = pCF->GetNewExpression();
     pBrace->SetParent(pOpcode);
-    CBEExpression *pInterfaceCode = pContext->GetClassFactory()->GetNewExpression();
+    CBEExpression *pInterfaceCode = pCF->GetNewExpression();
     pInterfaceCode->SetParent(pBrace);
-    CBEExpression *pValue = pContext->GetClassFactory()->GetNewExpression();
+    CBEExpression *pValue = pCF->GetNewExpression();
     pValue->SetParent(pInterfaceCode);
-    CBEExpression *pBits = pContext->GetClassFactory()->GetNewExpression();
+    CBEExpression *pBits = pCF->GetNewExpression();
     pBits->SetParent(pInterfaceCode);
 
     // now call Create functions, which require correct parent relationshsips
@@ -1144,7 +1443,8 @@ bool CBEClass::AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext)
         return false;
     }
     // create shift bits
-    String sShift = pContext->GetNameFactory()->GetInterfaceNumberShiftConstant();
+    CBENameFactory *pNF = pContext->GetNameFactory();
+    string sShift = pNF->GetInterfaceNumberShiftConstant();
     if (!pBits->CreateBackEnd(sShift, pContext))
     {
         delete pOpcode;
@@ -1156,7 +1456,8 @@ bool CBEClass::AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext)
         return false;
     }
     // create value << bits
-    if (!pInterfaceCode->CreateBackEndBinary(pValue, EXPR_LSHIFT, pBits, pContext))
+    if (!pInterfaceCode->CreateBackEndBinary(pValue, EXPR_LSHIFT, pBits, 
+	    pContext))
     {
         delete pOpcode;
         delete pValue;
@@ -1179,10 +1480,11 @@ bool CBEClass::AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext)
     }
     // create constant
     // create opcode name
-    String sName = pContext->GetNameFactory()->GetOpcodeConst(this, pContext);
+    string sName = pContext->GetNameFactory()->GetOpcodeConst(this, pContext);
     // add const to file
     pFile->AddConstant(pOpcode);
-    if (!pOpcode->CreateBackEnd(pType, sName, pBrace, true/* always define*/, pContext))
+    if (!pOpcode->CreateBackEnd(pType, sName, pBrace, true/* always define*/,
+	    pContext))
     {
         pFile->RemoveConstant(pOpcode);
         delete pOpcode;
@@ -1192,9 +1494,9 @@ bool CBEClass::AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext)
     }
 
     // iterate over functions
-    VectorElement *pIter = GetFirstFunctionGroup();
+    vector<CFunctionGroup*>::iterator iter = GetFirstFunctionGroup();
     CFunctionGroup *pFunctionGroup;
-    while ((pFunctionGroup = GetNextFunctionGroup(pIter)) != 0)
+    while ((pFunctionGroup = GetNextFunctionGroup(iter)) != 0)
     {
         if (!AddOpcodesToFile(pFunctionGroup->GetOperation(), pFile, pContext))
             return false;
@@ -1210,12 +1512,14 @@ bool CBEClass::AddOpcodesToFile(CBEHeaderFile *pFile, CBEContext *pContext)
  */
 bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile, CBEContext *pContext)
 {
+    VERBOSE("CBEClass::AddOpcodesToFile(operation: %s) called\n",
+        pFEOperation->GetName().c_str());
     // first create classes, so we can build parent relationship correctly
     CBEConstant *pOpcode = pContext->GetClassFactory()->GetNewConstant();
     CBEOpcodeType *pType = pContext->GetClassFactory()->GetNewOpcodeType();
     pType->SetParent(pOpcode);
-	CBEExpression *pTopBrace = pContext->GetClassFactory()->GetNewExpression();
-	pTopBrace->SetParent(pOpcode);
+    CBEExpression *pTopBrace = pContext->GetClassFactory()->GetNewExpression();
+    pTopBrace->SetParent(pOpcode);
     CBEExpression *pValue = pContext->GetClassFactory()->GetNewExpression();
     pValue->SetParent(pTopBrace);
     CBEExpression *pBrace = pContext->GetClassFactory()->GetNewExpression();
@@ -1231,12 +1535,12 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
 
     // now call the create functions, which require an correct parent relationship
     // get base opcode name
-    String sBase = pContext->GetNameFactory()->GetOpcodeConst(this, pContext);
+    string sBase = pContext->GetNameFactory()->GetOpcodeConst(this, pContext);
     if (!pBase->CreateBackEnd(sBase, pContext))
     {
         delete pOpcode;
         delete pType;
-		delete pTopBrace;
+        delete pTopBrace;
         delete pValue;
         delete pNumber;
         delete pBase;
@@ -1251,7 +1555,7 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
     {
         delete pOpcode;
         delete pType;
-		delete pTopBrace;
+        delete pTopBrace;
         delete pValue;
         delete pNumber;
         delete pBase;
@@ -1261,12 +1565,12 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
         return false;
     }
     // create bitmask
-    String sBitMask =  pContext->GetNameFactory()->GetFunctionBitMaskConstant();
+    string sBitMask =  pContext->GetNameFactory()->GetFunctionBitMaskConstant();
     if (!pBitMask->CreateBackEnd(sBitMask, pContext))
     {
         delete pOpcode;
         delete pType;
-		delete pTopBrace;
+        delete pTopBrace;
         delete pValue;
         delete pNumber;
         delete pBase;
@@ -1280,7 +1584,7 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
     {
         delete pOpcode;
         delete pType;
-		delete pTopBrace;
+        delete pTopBrace;
         delete pValue;
         delete pNumber;
         delete pBase;
@@ -1294,7 +1598,7 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
     {
         delete pOpcode;
         delete pType;
-		delete pTopBrace;
+        delete pTopBrace;
         delete pValue;
         delete pNumber;
         delete pBase;
@@ -1308,7 +1612,7 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
     {
         delete pOpcode;
         delete pType;
-		delete pTopBrace;
+        delete pTopBrace;
         delete pValue;
         delete pNumber;
         delete pBase;
@@ -1317,12 +1621,12 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
         delete pBitMask;
         return false;
     }
-	// create top brace
-	if (!pTopBrace->CreateBackEndPrimary(EXPR_PAREN, pValue, pContext))
-	{
+    // create top brace
+    if (!pTopBrace->CreateBackEndPrimary(EXPR_PAREN, pValue, pContext))
+    {
         delete pOpcode;
         delete pType;
-		delete pTopBrace;
+        delete pTopBrace;
         delete pValue;
         delete pNumber;
         delete pBase;
@@ -1330,13 +1634,13 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
         delete pFuncCode;
         delete pBitMask;
         return false;
-	}
+    }
     // create opcode type
     if (!pType->CreateBackEnd(pContext))
     {
         delete pOpcode;
         delete pType;
-		delete pTopBrace;
+        delete pTopBrace;
         delete pValue;
         delete pNumber;
         delete pBase;
@@ -1346,7 +1650,7 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
         return false;
     }
     // create opcode name
-    String sName = pContext->GetNameFactory()->GetOpcodeConst(pFEOperation, pContext);
+    string sName = pContext->GetNameFactory()->GetOpcodeConst(pFEOperation, pContext);
     // create constant
     ((CBEHeaderFile *) pFile)->AddConstant(pOpcode);
     if (!pOpcode->CreateBackEnd(pType, sName, pTopBrace, true /*always defined*/, pContext))
@@ -1354,7 +1658,7 @@ bool CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile
         ((CBEHeaderFile *) pFile)->RemoveConstant(pOpcode);
         delete pOpcode;
         delete pType;
-		delete pTopBrace;
+        delete pTopBrace;
         delete pValue;
         delete pNumber;
         delete pBase;
@@ -1386,10 +1690,10 @@ int CBEClass::GetClassNumber()
         }
     }
 
-    VectorElement *pIter = GetFirstBaseClass();
+    vector<CBEClass*>::iterator iter = GetFirstBaseClass();
     CBEClass *pBaseClass;
     int nNumber = 1;
-    while ((pBaseClass = GetNextBaseClass(pIter)) != 0)
+    while ((pBaseClass = GetNextBaseClass(iter)) != 0)
     {
         int nBaseNumber = pBaseClass->GetClassNumber();
         if (nBaseNumber >= nNumber)
@@ -1405,7 +1709,7 @@ CBENameSpace* CBEClass::GetNameSpace()
 {
     for (CObject *pParent = GetParent(); pParent; pParent = pParent->GetParent())
     {
-        if (pParent->IsKindOf(RUNTIME_CLASS(CBENameSpace)))
+        if (dynamic_cast<CBENameSpace*>(pParent))
             return (CBENameSpace*)pParent;
     }
     return 0;
@@ -1417,32 +1721,12 @@ CBENameSpace* CBEClass::GetNameSpace()
  */
 CBEAttribute* CBEClass::FindAttribute(int nAttrType)
 {
-    VectorElement *pIter = GetFirstAttribute();
+    vector<CBEAttribute*>::iterator iter = GetFirstAttribute();
     CBEAttribute *pAttr;
-    while ((pAttr = GetNextAttribute(pIter)) != 0)
+    while ((pAttr = GetNextAttribute(iter)) != 0)
     {
         if (pAttr->GetType() == nAttrType)
             return pAttr;
-    }
-    return 0;
-}
-
-/** \brief tries to optimize this class according to the optimization level
- *  \param nLevel the optimization level
- *  \param pContext the context of the optimization
- *  \return success or failure code (zero is no error)
- *
- * Currently we only iterate over the functions of this class and try to optimize them.
- */
-int CBEClass::Optimize(int nLevel, CBEContext *pContext)
-{
-    VectorElement *pIter = GetFirstFunction();
-    CBEFunction *pFunction;
-    while ((pFunction = GetNextFunction(pIter)) != 0)
-    {
-        int nRet;
-        if ((nRet = pFunction->Optimize(nLevel, pContext)) != 0)
-            return nRet;
     }
     return 0;
 }
@@ -1456,10 +1740,140 @@ int CBEClass::Optimize(int nLevel, CBEContext *pContext)
  */
 void CBEClass::Write(CBEHeaderFile *pFile, CBEContext *pContext)
 {
-    WriteConstants(pFile, pContext);
-    WriteTypedefs(pFile, pContext);
-    WriteTaggedTypes(pFile, pContext);
-    WriteFunctions(pFile, pContext);
+    VERBOSE("CBEClass::Write(head, %s) called\n", GetName().c_str());
+
+    // since message buffer is local for this class, the class declaration
+    // wraps the message buffer
+    // per default we derive from CORBA_Object
+    if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+	// CPP TODO: should derive from CORBA_Object, _but_:
+	// then we need to have a declaration of CORBA_Object which is not a
+	// typedef of a pointer to CORBA_Object_base, which in turn messes up
+	// compilation of C++ files including generated header files generated
+	// for C backend... We have to find some other way, such as a dice
+	// local define for C++.
+	*pFile << "\tclass " << GetName() << "\n";
+	*pFile << "\t{\n";
+    }
+    
+    // write message buffer type seperately
+    if (m_pMsgBuffer)
+    {
+	if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+	{
+	    *pFile << "\tprotected:\n";
+	    pFile->IncIndent();
+	}
+	// message buffer is protected
+	
+        // test for client and if type is needed
+        CBETarget *pTarget = pFile->GetTarget();
+        if (!pFile->IsOfFileType(FILETYPE_CLIENT) ||
+            pTarget->HasFunctionWithUserType(
+		m_pMsgBuffer->GetAlias()->GetName(), pContext))
+        {
+            m_pMsgBuffer->WriteDefinition(pFile, true, pContext);
+            pFile->Print("\n");
+        }
+
+	if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+	    pFile->DecIndent();
+    }
+
+    // sort our members/elements depending on source line number
+    // into extra vector
+    CreateOrderedElementList();
+
+    // members are public
+    if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+	*pFile << "\tpublic:\n";
+	pFile->IncIndent();
+    }
+
+    // write target file
+    int nFuncCount = GetFunctionWriteCount(pFile, pContext);
+    vector<CObject*>::iterator iter = m_vOrderedElements.begin();
+    int nLastType = 0, nCurrType = 0;
+    for (; iter != m_vOrderedElements.end(); iter++)
+    {
+        if (dynamic_cast<CBEConstant*>(*iter))
+            nCurrType = 1;
+        else if (dynamic_cast<CBETypedDeclarator*>(*iter))
+            nCurrType = 2;
+        else if (dynamic_cast<CBEType*>(*iter))
+            nCurrType = 3;
+        else if (dynamic_cast<CBEFunction*>(*iter))
+            nCurrType = 4;
+        else
+            nCurrType = 0;
+        // newline when changing types
+        if (nCurrType != nLastType)
+        {
+            // brace functions with extern C
+            if ((nLastType == 4) && (nFuncCount > 0) &&
+		!pContext->IsBackEndSet(PROGRAM_BE_CPP))
+            {
+                *pFile << "#ifdef __cplusplus\n" <<
+                    "}\n" <<
+                    "#endif\n\n";
+            }
+            *pFile << "\n";
+            nLastType = nCurrType;
+            // brace functions with extern C
+            if ((nCurrType == 4) && (nFuncCount > 0) &&
+		!pContext->IsBackEndSet(PROGRAM_BE_CPP))
+            {
+                *pFile << "#ifdef __cplusplus\n" <<
+                    "extern \"C\" {\n" <<
+                    "#endif\n\n";
+            }
+        }
+        // add pre-processor directive to denote source line
+        if (pContext->IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
+        {
+            *pFile << "# " << (*iter)->GetSourceLine() << " \"" <<
+                (*iter)->GetSourceFileName() << "\"\n";
+        }
+        // now really write the element
+        switch (nCurrType)
+        {
+        case 1:
+            WriteConstant((CBEConstant*)(*iter), pFile, pContext);
+            break;
+        case 2:
+            WriteTypedef((CBETypedDeclarator*)(*iter), pFile, pContext);
+            break;
+        case 3:
+            WriteTaggedType((CBEType*)(*iter), pFile, pContext);
+            break;
+        case 4:
+            WriteFunction((CBEFunction*)(*iter), pFile, pContext);
+            break;
+        default:
+            break;
+        }
+    }
+    // brace functions with extern C
+    if ((nLastType == 4) && (nFuncCount > 0) &&
+	!pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+        *pFile << "#ifdef __cplusplus\n" <<
+            "}\n" <<
+            "#endif\n\n";
+    }
+
+    WriteHelperFunctions(pFile, pContext);
+
+    if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+	pFile->DecIndent();
+	*pFile << "\t};\n";
+	*pFile << "\n";
+    }
+
+    VERBOSE("CBEClass::Write(head, %s) finished\n", GetName().c_str());
 }
 
 /** \brief writes the class to the target file
@@ -1471,115 +1885,111 @@ void CBEClass::Write(CBEHeaderFile *pFile, CBEContext *pContext)
  */
 void CBEClass::Write(CBEImplementationFile *pFile, CBEContext *pContext)
 {
-    WriteFunctions(pFile, pContext);
-}
+    VERBOSE("CBEClass::Write(impl, %s) called\n", GetName().c_str());
 
-/** \brief writes the constants to the header file
- *  \param pFile the header file to write them to
- *  \param pContext the context of the write operation
- */
-void CBEClass::WriteConstants(CBEHeaderFile *pFile, CBEContext *pContext)
-{
-    bool bWrote = false;
-    VectorElement *pIter = GetFirstConstant();
-    CBEConstant *pConstant;
-    while ((pConstant = GetNextConstant(pIter)) != 0)
+    // sort our members/elements depending on source line number
+    // into extra vector
+    CreateOrderedElementList();
+
+    int nFuncCount = GetFunctionWriteCount(pFile, pContext);
+    if ((nFuncCount > 0) &&
+	!pContext->IsBackEndSet(PROGRAM_BE_CPP))
     {
-        pConstant->Write(pFile, pContext);
-		bWrote = true;
+        *pFile << "#ifdef __cplusplus\n";
+        *pFile << "extern \"C\" {\n";
+        *pFile << "#endif\n\n";
     }
-	if (bWrote)
-	    pFile->Print("\n");
+    // write target functions in ordered appearance
+    vector<CObject*>::iterator iter = m_vOrderedElements.begin();
+    for (; iter != m_vOrderedElements.end(); iter++)
+    {
+        if (dynamic_cast<CBEFunction*>(*iter))
+        {
+            // add pre-processor directive to denote source line
+            if (pContext->IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
+            {
+                *pFile << "# " << (*iter)->GetSourceLine() << " \"" <<
+                    (*iter)->GetSourceFileName() << "\"\n";
+            }
+            WriteFunction((CBEFunction*)(*iter), pFile, pContext);
+        }
+    }
+    // write helper functions if any
+    WriteHelperFunctions(pFile, pContext);
+    if ((nFuncCount > 0) &&
+	!pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+        *pFile << "#ifdef __cplusplus\n";
+        *pFile << "}\n";
+        *pFile << "#endif\n\n";
+    }
+
+    VERBOSE("CBEClass::Write(impl, %s) finished\n", GetName().c_str());
 }
 
-/** \brief writes the typedefs to the header file
+/** \brief writes a constant
+ *  \param pConstant the constant to write
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
- *
- * Always write message buffer types at server side and at client's side
- * only if needed. The type is needed if any of the client's functions
- * has the message buffer type as a parameter type.
  */
-void CBEClass::WriteTypedefs(CBEHeaderFile *pFile, CBEContext *pContext)
+void CBEClass::WriteConstant(CBEConstant *pConstant,
+    CBEHeaderFile *pFile,
+    CBEContext *pContext)
 {
-    bool bWroteTypedDecls = false;
-    // write message buffer type seperately
-    if (m_pMsgBuffer)
-    {
-        // test for client and if type is needed
-        CBETarget *pTarget = pFile->GetTarget();
-        if (!pTarget->IsKindOf(RUNTIME_CLASS(CBEClient)) ||
-            pTarget->HasFunctionWithUserType(m_pMsgBuffer->GetAlias()->GetName(), pContext))
-        {
-            m_pMsgBuffer->WriteDefinition(pFile, true, pContext);
-            pFile->Print("\n");
-            bWroteTypedDecls = true;
-        }
-    }
-    // write other typedefs
-    VectorElement *pIter = GetFirstTypedef();
-    CBETypedDeclarator *pTypedef;
-    while ((pTypedef = GetNextTypedef(pIter)) != 0)
-    {
-        if (pTypedef->IsKindOf(RUNTIME_CLASS(CBETypedef)))
-            ((CBETypedef*)pTypedef)->WriteDeclaration(pFile, pContext);
-        else
-        {
-            pTypedef->WriteDeclaration(pFile, pContext);
-            pFile->Print(";\n");
-            bWroteTypedDecls = true;
-        }
-    }
-    if (bWroteTypedDecls)
-        pFile->Print("\n");
+    assert(pConstant);
+    pConstant->Write(pFile, pContext);
 }
 
-/** \brief write the functions to the header files
- *  \param pFile the header file to write to
+/** \brief write a type definition
+ *  \param pTypedef the type definition to write
+ *  \param pFile the file to write to
  *  \param pContext the context of the write operation
- *
- * We only have to write the functions  for the respective communication side.
- *
- * We can determine this by checking the type of the function and the target of the file and
- * the directional attribute of the function.
  */
-void CBEClass::WriteFunctions(CBEHeaderFile *pFile, CBEContext *pContext)
+void CBEClass::WriteTypedef(CBETypedDeclarator *pTypedef,
+    CBEHeaderFile *pFile,
+    CBEContext *pContext)
 {
-    assert(pFile->GetTarget());
-    VectorElement *pIter = GetFirstFunction();
-    CBEFunction *pFunction;
-    while ((pFunction = GetNextFunction(pIter)) != 0)
+    assert(pTypedef);
+    if (dynamic_cast<CBETypedef*>(pTypedef))
+        ((CBETypedef*)pTypedef)->WriteDeclaration(pFile, pContext);
+    else
     {
-        if (pFunction->DoWriteFunction(pFile, pContext))
-        {
-            pFunction->Write(pFile, pContext);
-            pFile->Print("\n");
-        }
+        pTypedef->WriteDeclaration(pFile, pContext);
+        *pFile << ";\n";
     }
 }
 
-/** \brief writes the functions to the implementation file
- *  \param pFile the target implementation file
+/** \brief write a function to the header file
+ *  \param pFunction the function to write
+ *  \param pFile the file to write to
  *  \param pContext the context of the write operation
- *
- * Because the class has been added to the target file as whole, we have to
- * check the functions seperately. Since CBEFunction::IsTargetFile only checks a group
- * of files, according to compiler options (It checks if BE functions for
- * specific FE function belong to files -client.[ch] or -server.[ch]), we
- * cannot use this. Instead we use the function DoWriteFunction.
  */
-void CBEClass::WriteFunctions(CBEImplementationFile *pFile, CBEContext *pContext)
+void CBEClass::WriteFunction(CBEFunction *pFunction,
+    CBEHeaderFile *pFile,
+    CBEContext *pContext)
 {
-    assert(pFile->GetTarget());
-    VectorElement *pIter = GetFirstFunction();
-    CBEFunction *pFunction;
-    while ((pFunction = GetNextFunction(pIter)) != 0)
+    assert(pFunction);
+    if (pFunction->DoWriteFunction(pFile, pContext))
     {
-        if (pFunction->DoWriteFunction(pFile, pContext))
-        {
-            pFunction->Write(pFile, pContext);
-            pFile->Print("\n");
-        }
+        pFunction->Write(pFile, pContext);
+        *pFile << "\n";
+    }
+}
+
+/** \brief write a function to the implementation file
+ *  \param pFunction the function to write
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBEClass::WriteFunction(CBEFunction *pFunction,
+    CBEImplementationFile *pFile,
+    CBEContext *pContext)
+{
+    assert(pFunction);
+    if (pFunction->DoWriteFunction(pFile, pContext))
+    {
+        pFunction->Write(pFile, pContext);
+        *pFile << "\n";
     }
 }
 
@@ -1588,7 +1998,9 @@ void CBEClass::WriteFunctions(CBEImplementationFile *pFile, CBEContext *pContext
  */
 void CBEClass::AddFunctionGroup(CFunctionGroup *pGroup)
 {
-    m_vFunctionGroups.Add(pGroup);
+    if (!pGroup)
+        return;
+    m_vFunctionGroups.push_back(pGroup);
 }
 
 /** \brief removes a function group
@@ -1596,30 +2008,34 @@ void CBEClass::AddFunctionGroup(CFunctionGroup *pGroup)
  */
 void CBEClass::RemoveFunctionGroup(CFunctionGroup *pGroup)
 {
-    m_vFunctionGroups.Remove(pGroup);
+    vector<CFunctionGroup*>::iterator iter;
+    for (iter = m_vFunctionGroups.begin(); iter != m_vFunctionGroups.end(); iter++)
+    {
+        if (*iter == pGroup)
+        {
+            m_vFunctionGroups.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first function group
  *  \return a pointer to the first function group
  */
-VectorElement* CBEClass::GetFirstFunctionGroup()
+vector<CFunctionGroup*>::iterator CBEClass::GetFirstFunctionGroup()
 {
-    return m_vFunctionGroups.GetFirst();
+    return m_vFunctionGroups.begin();
 }
 
 /** \brief retrieves a reference to the next function group
- *  \param pIter the pointer to the next function group
+ *  \param iter the pointer to the next function group
  *  \return a reference to the next function group
  */
-CFunctionGroup* CBEClass::GetNextFunctionGroup(VectorElement *& pIter)
+CFunctionGroup* CBEClass::GetNextFunctionGroup(vector<CFunctionGroup*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vFunctionGroups.end())
         return 0;
-    CFunctionGroup *pRet = (CFunctionGroup*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextFunctionGroup(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief calculates the function identifier
@@ -1644,27 +2060,37 @@ CFunctionGroup* CBEClass::GetNextFunctionGroup(VectorElement *& pIter)
  */
 int CBEClass::GetOperationNumber(CFEOperation *pFEOperation, CBEContext *pContext)
 {
-    CFEInterface *pFEInterface = pFEOperation->GetParentInterface();
+    assert(pFEOperation);
+    VERBOSE("CBEClass::GetOperationNumber for %s\n", pFEOperation->GetName().c_str());
+    CFEInterface *pFEInterface = pFEOperation->GetSpecificParent<CFEInterface>();
     int nInterfaceNumber = GetInterfaceNumber(pFEInterface);
     // search for base interfaces with same interface number and collect them
-    Vector vSameInterfaces(RUNTIME_CLASS(CFEInterface));
+    vector<CFEInterface*> vSameInterfaces;
     FindInterfaceWithNumber(pFEInterface, nInterfaceNumber, &vSameInterfaces);
     // now search for predefined numbers
-    Vector vFunctionIDs(RUNTIME_CLASS(CPredefinedFunctionID));
-    vSameInterfaces.Add(pFEInterface); // add this interface too
+    vector<CPredefinedFunctionID> vFunctionIDs;
+    vSameInterfaces.push_back(pFEInterface); // add this interface too
     FindPredefinedNumbers(&vSameInterfaces, &vFunctionIDs, pContext);
-    vSameInterfaces.Remove(pFEInterface);
+    // find pFEInterface in vector
+    vector<CFEInterface*>::iterator iterI = vSameInterfaces.begin();
+    for (; iterI != vSameInterfaces.end(); iterI++)
+    {
+        if (*iterI == pFEInterface)
+        {
+            vSameInterfaces.erase(iterI);
+            break; // stops for loop
+        }
+    }
     // check for Uuid attribute and return its value
     if (HasUuid(pFEOperation))
         return GetUuid(pFEOperation);
     // now there is no Uuid, thus we have to calculate the function id
     // get the maximum function ID of the interfaces with the same number
     int nFunctionID = 0;
-    VectorElement *pIterI = vSameInterfaces.GetFirst();
-    while (pIterI)
+    iterI = vSameInterfaces.begin();
+    while (iterI != vSameInterfaces.end())
     {
-        CFEInterface *pCurrI = (CFEInterface*)pIterI->GetElement();
-        pIterI = pIterI->GetNext();
+        CFEInterface *pCurrI = *iterI++;
         if (!pCurrI)
             continue;
         // we sum the max opcodes, because thy have to be disjunct
@@ -1676,18 +2102,21 @@ int CBEClass::GetOperationNumber(CFEOperation *pFEOperation, CBEContext *pContex
         // interface 1: 1, 2, 3, 4    \_ if sum
         // interface 2: 5, 6, 7, 8, 9 /
         //
-        nFunctionID += GetMaxOpcodeNumber(pCurrI, &vFunctionIDs);
+        nFunctionID += GetMaxOpcodeNumber(pCurrI);
     }
     // now iterate over functions, incrementing a counter, check if new value is predefined and
     // if the checked function is this function, then return the counter value
-    VectorElement *pIter = pFEInterface->GetFirstOperation();
+    vector<CFEOperation*>::iterator iterO = pFEInterface->GetFirstOperation();
     CFEOperation *pCurrOp;
-    while ((pCurrOp = pFEInterface->GetNextOperation(pIter)) != 0)
+    while ((pCurrOp = pFEInterface->GetNextOperation(iterO)) != 0)
     {
         nFunctionID++;
         while (IsPredefinedID(&vFunctionIDs, nFunctionID)) nFunctionID++;
         if (pCurrOp == pFEOperation)
+        {
+            vFunctionIDs.clear();
             return nFunctionID;
+        }
     }
     // something went wrong -> if we are here, the operations parent interface does not
     // have this operation as a child
@@ -1699,16 +2128,12 @@ int CBEClass::GetOperationNumber(CFEOperation *pFEOperation, CBEContext *pContex
  *  \param nNumber the number to test
  *  \return true if number is predefined
  */
-bool CBEClass::IsPredefinedID(Vector *pFunctionIDs, int nNumber)
+bool CBEClass::IsPredefinedID(vector<CPredefinedFunctionID> *pFunctionIDs, int nNumber)
 {
-    VectorElement *pIter = pFunctionIDs->GetFirst();
-    while (pIter)
+    vector<CPredefinedFunctionID>::iterator iter;
+    for (iter = pFunctionIDs->begin(); iter != pFunctionIDs->end(); iter++)
     {
-        CPredefinedFunctionID *pElement = (CPredefinedFunctionID*)pIter->GetElement();
-        pIter = pIter->GetNext();
-        if (!pElement)
-            continue;
-        if (pElement->m_nNumber == nNumber)
+        if ((*iter).m_nNumber == nNumber)
             return true;
     }
     return false;
@@ -1716,7 +2141,6 @@ bool CBEClass::IsPredefinedID(Vector *pFunctionIDs, int nNumber)
 
 /** \brief calculates the maximum function ID
  *  \param pFEInterface the interface to test
- *  \param pFunctionIDs the function IDs to skip
  *  \return the maximum function ID for this interface
  *
  * Theoretically the max opcode count is the number of its operations. This can be
@@ -1724,13 +2148,13 @@ bool CBEClass::IsPredefinedID(Vector *pFunctionIDs, int nNumber)
  * if the interface contains functions with uuid's, which are bigger than the
  * operation count.
  */
-int CBEClass::GetMaxOpcodeNumber(CFEInterface *pFEInterface, Vector *pFunctionIDs)
+int CBEClass::GetMaxOpcodeNumber(CFEInterface *pFEInterface)
 {
     int nMax = pFEInterface->GetOperationCount(false);
     // now check operations
-    VectorElement *pIter = pFEInterface->GetFirstOperation();
+    vector<CFEOperation*>::iterator iter = pFEInterface->GetFirstOperation();
     CFEOperation *pFEOperation;
-    while ((pFEOperation = pFEInterface->GetNextOperation(pIter)) != 0)
+    while ((pFEOperation = pFEInterface->GetNextOperation(iter)) != 0)
     {
         // if this function has uuid, we check if uuid is bigger than count
         if (!HasUuid(pFEOperation))
@@ -1752,7 +2176,7 @@ int CBEClass::GetUuid(CFEOperation *pFEOperation)
     CFEAttribute *pUuidAttr = pFEOperation->FindAttribute(ATTR_UUID);
     if (pUuidAttr)
     {
-        if (pUuidAttr->IsKindOf(RUNTIME_CLASS(CFEIntAttribute)))
+        if (dynamic_cast<CFEIntAttribute*>(pUuidAttr))
         {
             return ((CFEIntAttribute*)pUuidAttr)->GetIntValue();
         }
@@ -1769,7 +2193,7 @@ bool CBEClass::HasUuid(CFEOperation *pFEOperation)
     CFEAttribute *pUuidAttr = pFEOperation->FindAttribute(ATTR_UUID);
     if (pUuidAttr)
     {
-        if (pUuidAttr->IsKindOf(RUNTIME_CLASS(CFEIntAttribute)))
+        if (dynamic_cast<CFEIntAttribute*>(pUuidAttr))
         {
             return true;
         }
@@ -1792,16 +2216,16 @@ int CBEClass::GetInterfaceNumber(CFEInterface *pFEInterface)
     CFEAttribute *pUuidAttr = pFEInterface->FindAttribute(ATTR_UUID);
     if (pUuidAttr)
     {
-        if (pUuidAttr->IsKindOf(RUNTIME_CLASS(CFEIntAttribute)))
+        if (dynamic_cast<CFEIntAttribute*>(pUuidAttr))
         {
             return ((CFEIntAttribute*)pUuidAttr)->GetIntValue();
         }
     }
 
-    VectorElement *pIter = pFEInterface->GetFirstBaseInterface();
+    vector<CFEInterface*>::iterator iterI = pFEInterface->GetFirstBaseInterface();
     CFEInterface *pBaseInterface;
     int nNumber = 1;
-    while ((pBaseInterface = pFEInterface->GetNextBaseInterface(pIter)) != 0)
+    while ((pBaseInterface = pFEInterface->GetNextBaseInterface(iterI)) != 0)
     {
         int nBaseNumber = GetInterfaceNumber(pBaseInterface);
         if (nBaseNumber >= nNumber)
@@ -1819,17 +2243,29 @@ int CBEClass::GetInterfaceNumber(CFEInterface *pFEInterface)
  * produce different client bindings if a base interface is suddenly derived from. Instead, we generate
  * errors in the derived interface, that function id's might overlap.
  */
-int CBEClass::FindInterfaceWithNumber(CFEInterface *pFEInterface, int nNumber, Vector *pCollection)
+int
+CBEClass::FindInterfaceWithNumber(CFEInterface *pFEInterface,
+    int nNumber,
+    vector<CFEInterface*> *pCollection)
 {
+    assert(pCollection);
     int nCount = 0;
     // search base interfaces
-    VectorElement *pIter = pFEInterface->GetFirstBaseInterface();
+    vector<CFEInterface*>::iterator iter = pFEInterface->GetFirstBaseInterface();
     CFEInterface *pFEBaseInterface;
-    while ((pFEBaseInterface = pFEInterface->GetNextBaseInterface(pIter)) != 0)
+    while ((pFEBaseInterface = pFEInterface->GetNextBaseInterface(iter)) != 0)
     {
         if (GetInterfaceNumber(pFEBaseInterface) == nNumber)
         {
-            pCollection->AddUnique(pFEBaseInterface);
+            // check if we already got this interface (use pointer)
+            vector<CFEInterface*>::const_iterator iterI = pCollection->begin();
+            for (; iterI != pCollection->end(); iterI++)
+            {
+                if (*iterI == pFEBaseInterface)
+                    break; // stops for(iterI) loop
+            }
+            if (iterI == pCollection->end()) // no match found
+                pCollection->push_back(pFEBaseInterface);
             nCount++;
         }
         nCount += FindInterfaceWithNumber(pFEBaseInterface, nNumber, pCollection);
@@ -1838,7 +2274,7 @@ int CBEClass::FindInterfaceWithNumber(CFEInterface *pFEInterface, int nNumber, V
 }
 
 /** \brief find predefined function IDs
- *  \param pCollection the Vector containing the interfaces to test
+ *  \param pCollection the vector containing the interfaces to test
  *  \param pNumbers the array containing the numbers
  *  \param pContext the context of this operation
  *  \return number of predefined function IDs
@@ -1849,47 +2285,52 @@ int CBEClass::FindInterfaceWithNumber(CFEInterface *pFEInterface, int nNumber, V
  * number exists already, we print a warning containing both function's names and the
  * function ID.
  */
-int CBEClass::FindPredefinedNumbers(Vector *pCollection, Vector *pNumbers, CBEContext *pContext)
+int
+CBEClass::FindPredefinedNumbers(vector<CFEInterface*> *pCollection,
+    vector<CPredefinedFunctionID> *pNumbers,
+    CBEContext *pContext)
 {
+    assert (pCollection);
+    assert (pNumbers);
     int nCount = 0;
     // iterate over interfaces with same interface number
-    VectorElement *pIter = pCollection->GetFirst();
+    vector<CFEInterface*>::iterator iterI = pCollection->begin();
     CFEInterface *pFEInterface;
-    while (pIter)
+    CPredefinedFunctionID id;
+    while (iterI != pCollection->end())
     {
-        pFEInterface = (CFEInterface*)pIter->GetElement();
-        pIter = pIter->GetNext();
+        pFEInterface = *iterI++;
         if (!pFEInterface)
             continue;
         // iterate over current interface's operations
-        VectorElement *pIterO = pFEInterface->GetFirstOperation();
+        vector<CFEOperation*>::iterator iterO = pFEInterface->GetFirstOperation();
         CFEOperation *pFEOperation;
-        while ((pFEOperation = pFEInterface->GetNextOperation(pIterO)) != 0)
+        while ((pFEOperation = pFEInterface->GetNextOperation(iterO)) != 0)
         {
             // check if operation has Uuid attribute
             if (HasUuid(pFEOperation))
             {
                 int nOpNumber = GetUuid(pFEOperation);
                 // check if this number is already defined somewhere
-                VectorElement *pIter = pNumbers->GetFirst();
-                while (pIter)
+                vector<CPredefinedFunctionID>::iterator iter;
+                for (iter = pNumbers->begin(); iter != pNumbers->end(); iter++)
                 {
-                    CPredefinedFunctionID *pElement = (CPredefinedFunctionID*)pIter->GetElement();
-                    pIter = pIter->GetNext();
-                    if (!pElement)
-                        continue;
-                    if (nOpNumber == pElement->m_nNumber)
+                    if (nOpNumber == (*iter).m_nNumber)
                     {
                         if (pContext->IsWarningSet(PROGRAM_WARNING_IGNORE_DUPLICATE_FID))
                         {
-                            CCompiler::GccWarning(pFEOperation, 0, "Function \"%s\" has same Uuid (%d) as function \"%s\"",
-                                                  (const char*)pFEOperation->GetName(), nOpNumber, (const char*)pElement->m_sName);
+                            CCompiler::GccWarning(pFEOperation, 0,
+                                "Function \"%s\" has same Uuid (%d) as function \"%s\"",
+                                pFEOperation->GetName().c_str(), nOpNumber,
+                                (*iter).m_sName.c_str());
                             break;
                         }
                         else
                         {
-                            CCompiler::GccError(pFEOperation, 0, "Function \"%s\" has same Uuid (%d) as function \"%s\"",
-                                                (const char*)pFEOperation->GetName(), nOpNumber, (const char*)pElement->m_sName);
+                            CCompiler::GccError(pFEOperation, 0,
+                                "Function \"%s\" has same Uuid (%d) as function \"%s\"",
+                                pFEOperation->GetName().c_str(), nOpNumber,
+                                (*iter).m_sName.c_str());
                             exit(1);
                         }
                     }
@@ -1897,8 +2338,9 @@ int CBEClass::FindPredefinedNumbers(Vector *pCollection, Vector *pNumbers, CBECo
                 // check if this number might collide with base interface numbers
                 CheckOpcodeCollision(pFEInterface, nOpNumber, pCollection, pFEOperation, pContext);
                 // add uuid attribute to list
-                CPredefinedFunctionID *pNew = new CPredefinedFunctionID(pFEOperation->GetName(), nOpNumber);
-                pNumbers->Add(pNew);
+                id.m_sName = pFEOperation->GetName();
+                id.m_nNumber = nOpNumber;
+                pNumbers->push_back(id);
                 // incremenet count
                 nCount++;
             }
@@ -1907,19 +2349,24 @@ int CBEClass::FindPredefinedNumbers(Vector *pCollection, Vector *pNumbers, CBECo
     return nCount;
 }
 
- /** \brief checks if the opcode could be used by base interfaces
+/** \brief checks if the opcode could be used by base interfaces
  *  \param pFEInterface the currently investigated interface
  *  \param nOpNumber the opcode to check for
  *  \param pCollection the collection of predefined function ids
  *  \param pFEOperation a reference to the currently tested function
  *  \param pContext contains the current run-time context
  */
-int CBEClass::CheckOpcodeCollision(CFEInterface *pFEInterface, int nOpNumber, Vector *pCollection, CFEOperation *pFEOperation, CBEContext *pContext)
+int
+CBEClass::CheckOpcodeCollision(CFEInterface *pFEInterface,
+    int nOpNumber,
+    vector<CFEInterface*> *pCollection,
+    CFEOperation *pFEOperation,
+    CBEContext *pContext)
 {
-    VectorElement *pIterI = pFEInterface->GetFirstBaseInterface();
+    vector<CFEInterface*>::iterator iterI = pFEInterface->GetFirstBaseInterface();
     CFEInterface *pFEBaseInterface;
     int nBaseNumber = 0;
-    while ((pFEBaseInterface = pFEInterface->GetNextBaseInterface(pIterI)) != 0)
+    while ((pFEBaseInterface = pFEInterface->GetNextBaseInterface(iterI)) != 0)
     {
         // test current base interface only if numbers are identical
         if (GetInterfaceNumber(pFEInterface) != GetInterfaceNumber(pFEBaseInterface))
@@ -1927,19 +2374,19 @@ int CBEClass::CheckOpcodeCollision(CFEInterface *pFEInterface, int nOpNumber, Ve
         // first check the base interface's base interfaces
         nBaseNumber += CheckOpcodeCollision(pFEBaseInterface, nOpNumber, pCollection, pFEOperation, pContext);
         // now check interface's range
-        nBaseNumber += GetMaxOpcodeNumber(pFEBaseInterface, pCollection);
+        nBaseNumber += GetMaxOpcodeNumber(pFEBaseInterface);
         if ((nOpNumber > 0) && (nOpNumber <= nBaseNumber))
         {
             if (pContext->IsWarningSet(PROGRAM_WARNING_IGNORE_DUPLICATE_FID))
             {
                 CCompiler::GccWarning(pFEOperation, 0, "Function \"%s\" has Uuid (%d) which is used by compiler for base interface \"%s\"",
-                                      (const char*)pFEOperation->GetName(), nOpNumber, (const char*)pFEBaseInterface->GetName());
+                                      pFEOperation->GetName().c_str(), nOpNumber, pFEBaseInterface->GetName().c_str());
                 break;
             }
             else
             {
                 CCompiler::GccError(pFEOperation, 0, "Function \"%s\" has Uuid (%d) which is used by compiler for interface \"%s\"",
-                                    (const char*)pFEOperation->GetName(), nOpNumber, (const char*)pFEBaseInterface->GetName());
+                                    pFEOperation->GetName().c_str(), nOpNumber, pFEBaseInterface->GetName().c_str());
                 exit(1);
             }
         }
@@ -1955,14 +2402,14 @@ int CBEClass::CheckOpcodeCollision(CFEInterface *pFEInterface, int nOpNumber, Ve
 CFunctionGroup* CBEClass::FindFunctionGroup(CBEFunction *pFunction)
 {
     // iterate over function groups
-    VectorElement *pIter = GetFirstFunctionGroup();
+    vector<CFunctionGroup*>::iterator iter = GetFirstFunctionGroup();
     CFunctionGroup *pFunctionGroup;
-    while ((pFunctionGroup = GetNextFunctionGroup(pIter)) != 0)
+    while ((pFunctionGroup = GetNextFunctionGroup(iter)) != 0)
     {
         // iterate over its functions
-        VectorElement *pIterF = pFunctionGroup->GetFirstFunction();
+        vector<CBEFunction*>::iterator iterF = pFunctionGroup->GetFirstFunction();
         CBEFunction *pGroupFunction;
-        while ((pGroupFunction = pFunctionGroup->GetNextFunction(pIterF)) != 0)
+        while ((pGroupFunction = pFunctionGroup->GetNextFunction(iterF)) != 0)
         {
             if (pGroupFunction == pFunction)
                 return pFunctionGroup;
@@ -1977,11 +2424,11 @@ CFunctionGroup* CBEClass::FindFunctionGroup(CBEFunction *pFunction)
  *
  * We also have to check the message buffer type (if existent).
  */
-CBETypedDeclarator* CBEClass::FindTypedef(String sTypeName)
+CBETypedDeclarator* CBEClass::FindTypedef(string sTypeName)
 {
-    VectorElement *pIter = GetFirstTypedef();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstTypedef();
     CBETypedDeclarator *pTypedef;
-    while ((pTypedef = GetNextTypedef(pIter)) != 0)
+    while ((pTypedef = GetNextTypedef(iter)) != 0)
     {
         if (pTypedef->FindDeclarator(sTypeName))
             return pTypedef;
@@ -2005,7 +2452,9 @@ CBETypedDeclarator* CBEClass::FindTypedef(String sTypeName)
  */
 void CBEClass::AddTypeDeclaration(CBETypedDeclarator *pTypeDecl)
 {
-    m_vTypedefs.Add(pTypeDecl);
+    if (!pTypeDecl)
+        return;
+    m_vTypedefs.push_back(pTypeDecl);
 }
 
 /** \brief removes a type declaration from the class
@@ -2013,25 +2462,34 @@ void CBEClass::AddTypeDeclaration(CBETypedDeclarator *pTypeDecl)
  */
 void CBEClass::RemoveTypeDeclaration(CBETypedDeclarator *pTypeDecl)
 {
-    m_vTypedefs.Remove(pTypeDecl);
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_vTypedefs.begin(); iter != m_vTypedefs.end(); iter++)
+    {
+        if (*iter == pTypeDecl)
+        {
+            m_vTypedefs.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief test if this class belongs to the file
  *  \param pFile the file to test
  *  \return true if the given file is a target file for the class
  *
- * A file is a target file for the class if its the target file for at least one function.
+ * A file is a target file for the class if its the target file for at least
+ * one function.
  */
 bool CBEClass::IsTargetFile(CBEImplementationFile * pFile)
 {
-	VectorElement *pIter = GetFirstFunction();
-	CBEFunction *pFunction;
-	while ((pFunction = GetNextFunction(pIter)) != 0)
-	{
-		if (pFunction->IsTargetFile(pFile))
-			return true;
-	}
-	return false;
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
+    CBEFunction *pFunction;
+    while ((pFunction = GetNextFunction(iter)) != 0)
+    {
+        if (pFunction->IsTargetFile(pFile))
+            return true;
+    }
+    return false;
 }
 
 /** \brief test if this class belongs to the file
@@ -2042,14 +2500,14 @@ bool CBEClass::IsTargetFile(CBEImplementationFile * pFile)
  */
 bool CBEClass::IsTargetFile(CBEHeaderFile * pFile)
 {
-	VectorElement *pIter = GetFirstFunction();
-	CBEFunction *pFunction;
-	while ((pFunction = GetNextFunction(pIter)) != 0)
-	{
-		if (pFunction->IsTargetFile(pFile))
-			return true;
-	}
-	return false;
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
+    CBEFunction *pFunction;
+    while ((pFunction = GetNextFunction(iter)) != 0)
+    {
+        if (pFunction->IsTargetFile(pFile))
+            return true;
+    }
+    return false;
 }
 
 /** \brief searches for a type using its tag
@@ -2057,11 +2515,11 @@ bool CBEClass::IsTargetFile(CBEHeaderFile * pFile)
  *  \param sTag the tag to search for
  *  \return a reference to the type
  */
-CBEType* CBEClass::FindTaggedType(int nType, String sTag)
+CBEType* CBEClass::FindTaggedType(int nType, string sTag)
 {
-    VectorElement *pIter = GetFirstTaggedType();
+    vector<CBEType*>::iterator iter = GetFirstTaggedType();
     CBEType *pTypeDecl;
-    while ((pTypeDecl = GetNextTaggedType(pIter)) != 0)
+    while ((pTypeDecl = GetNextTaggedType(iter)) != 0)
     {
         int nFEType = pTypeDecl->GetFEType();
         if (nType != nFEType)
@@ -2090,7 +2548,9 @@ CBEType* CBEClass::FindTaggedType(int nType, String sTag)
  */
 void CBEClass::AddTaggedType(CBEType *pType)
 {
-    m_vTypeDeclarations.Add(pType);
+    if (!pType)
+        return;
+    m_vTypeDeclarations.push_back(pType);
 }
 
 /** \brief removes a tagged type declaration
@@ -2098,30 +2558,34 @@ void CBEClass::AddTaggedType(CBEType *pType)
  */
 void CBEClass::RemoveTaggedType(CBEType *pType)
 {
-    m_vTypeDeclarations.Remove(pType);
+    vector<CBEType*>::iterator iter;
+    for (iter = m_vTypeDeclarations.begin(); iter != m_vTypeDeclarations.end(); iter++)
+    {
+        if (*iter == pType)
+        {
+            m_vTypeDeclarations.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief tries to find a pointer to the first tagged type declaration
  *  \return a pointer to the first tagged type declaration
  */
-VectorElement* CBEClass::GetFirstTaggedType()
+vector<CBEType*>::iterator CBEClass::GetFirstTaggedType()
 {
-    return m_vTypeDeclarations.GetFirst();
+    return m_vTypeDeclarations.begin();
 }
 
 /** \brief tries to retrieve a reference to the next type declaration
- *  \param pIter the pointer to the next type declaration
+ *  \param iter the pointer to the next type declaration
  *  \return a reference to the next type declaration
  */
-CBEType* CBEClass::GetNextTaggedType(VectorElement* &pIter)
+CBEType* CBEClass::GetNextTaggedType(vector<CBEType*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vTypeDeclarations.end())
         return 0;
-    CBEType *pRet = (CBEType*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextTaggedType(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief tries to create a new back-end representation of a tagged type declaration
@@ -2138,36 +2602,36 @@ bool CBEClass::CreateBackEnd(CFEConstructedType *pFEType, CBEContext *pContext)
     {
         RemoveTaggedType(pType);
         delete pType;
-        VERBOSE("CBEClass::CreateBackEnd failed because tagged type could not be created\n");
+        VERBOSE("%s failed because tagged type could not be created\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
     return true;
 }
 
-/** \brief writes the tagged type declarations to the target file
+/** \brief writes a tagged type declaration
+ *  \param pType the type to write
  *  \param pFile the file to write to
- *  \param pContext the context of the write process
+ *  \param pContext the context of the write operation
  */
-void CBEClass::WriteTaggedTypes(CBEHeaderFile *pFile, CBEContext *pContext)
+void CBEClass::WriteTaggedType(CBEType *pType,
+    CBEHeaderFile *pFile,
+    CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstTaggedType();
-    CBEType *pType;
-    while ((pType = GetNextTaggedType(pIter)) != 0)
-    {
-	    // get tag
-		String sTag;
-		if (pType->IsKindOf(RUNTIME_CLASS(CBEStructType)))
-		    sTag = ((CBEStructType*)pType)->GetTag();
-		if (pType->IsKindOf(RUNTIME_CLASS(CBEUnionType)))
-		    sTag = ((CBEUnionType*)pType)->GetTag();
-		sTag = pContext->GetNameFactory()->GetTypeDefine(sTag, pContext);
-		pFile->Print("#ifndef %s\n", (const char*)sTag);
-		pFile->Print("#define %s\n", (const char*)sTag);
-        pType->Write(pFile, pContext);
-        pFile->Print(";\n");
-		pFile->Print("#endif /* !%s */\n", (const char*)sTag);
-		pFile->Print("\n");
-    }
+    assert(pType);
+    // get tag
+    string sTag;
+    if (dynamic_cast<CBEStructType*>(pType))
+        sTag = ((CBEStructType*)pType)->GetTag();
+    if (dynamic_cast<CBEUnionType*>(pType))
+        sTag = ((CBEUnionType*)pType)->GetTag();
+    sTag = pContext->GetNameFactory()->GetTypeDefine(sTag, pContext);
+    pFile->Print("#ifndef %s\n", sTag.c_str());
+    pFile->Print("#define %s\n", sTag.c_str());
+    pType->Write(pFile, pContext);
+    pFile->Print(";\n");
+    pFile->Print("#endif /* !%s */\n", sTag.c_str());
+    pFile->Print("\n");
 }
 
 /** \brief searches for a function with the given type
@@ -2178,17 +2642,20 @@ void CBEClass::WriteTaggedTypes(CBEHeaderFile *pFile, CBEContext *pContext)
  *
  * Search functions for a parameter with that type.
  */
-bool CBEClass::HasFunctionWithUserType(String sTypeName, CBEFile *pFile, CBEContext *pContext)
+bool CBEClass::HasFunctionWithUserType(string sTypeName, CBEFile *pFile, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstFunction();
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
     CBEFunction *pFunction;
-    while ((pFunction = GetNextFunction(pIter)) != 0)
+    while ((pFunction = GetNextFunction(iter)) != 0)
     {
-        if (pFunction->DoWriteFunction(pFile, pContext))
-        {
-            if (pFunction->FindParameterType(sTypeName))
-                return true;
-        }
+        if (dynamic_cast<CBEHeaderFile*>(pFile) &&
+            pFunction->DoWriteFunction((CBEHeaderFile*)pFile, pContext) &&
+            pFunction->FindParameterType(sTypeName))
+            return true;
+        if (dynamic_cast<CBEImplementationFile*>(pFile) &&
+            pFunction->DoWriteFunction((CBEImplementationFile*)pFile, pContext) &&
+            pFunction->FindParameterType(sTypeName))
+            return true;
     }
     return false;
 }
@@ -2204,11 +2671,9 @@ CBEMsgBufferType* CBEClass::GetMessageBuffer()
 /** \brief adds a base name to the base name array
  *  \param sName the name to add
  */
-void CBEClass::AddBaseName(String sName)
+void CBEClass::AddBaseName(string sName)
 {
-    m_nBaseNameSize++;
-    m_sBaseNames = (String**)realloc(m_sBaseNames, m_nBaseNameSize*sizeof(String*));
-    m_sBaseNames[m_nBaseNameSize-1] = new String(sName);
+    m_vBaseNames.push_back(sName);
 }
 
 /** \brief count parameters according to their set and not set attributes
@@ -2227,13 +2692,13 @@ int CBEClass::GetParameterCount(int nMustAttrs, int nMustNotAttrs, int nDirectio
     }
 
     int nCount = 0, nCurr;
-    VectorElement *pIterG = GetFirstFunctionGroup();
+    vector<CFunctionGroup*>::iterator iterG = GetFirstFunctionGroup();
     CFunctionGroup *pFuncGroup;
-    while ((pFuncGroup = GetNextFunctionGroup(pIterG)) != 0)
+    while ((pFuncGroup = GetNextFunctionGroup(iterG)) != 0)
     {
-        VectorElement *pIterF = pFuncGroup->GetFirstFunction();
+        vector<CBEFunction*>::iterator iterF = pFuncGroup->GetFirstFunction();
         CBEOperationFunction *pFunc;
-        while ((pFunc = (CBEOperationFunction*)(pFuncGroup->GetNextFunction(pIterF))) != 0)
+        while ((pFunc = dynamic_cast<CBEOperationFunction*>(pFuncGroup->GetNextFunction(iterF))) != 0)
         {
             nCurr = pFunc->GetParameterCount(nMustAttrs, nMustNotAttrs, nDirection);
             nCount = MAX(nCount, nCurr);
@@ -2241,4 +2706,131 @@ int CBEClass::GetParameterCount(int nMustAttrs, int nMustNotAttrs, int nDirectio
     }
 
     return nCount;
+}
+
+/** \brief try to find functions with parameters with the given attributes
+ *  \param nAttribute1 the first attribute
+ *  \param nAttribute2 the second attribute
+ *  \param nAttribute3 the third attribute
+ *  \return true if such function exists
+ */
+bool CBEClass::HasParametersWithAttribute(int nAttribute1, int nAttribute2, int nAttribute3)
+{
+    // check own functions
+    vector<CBEFunction*>::iterator iter = GetFirstFunction();
+    CBEFunction *pFunction;
+    CBETypedDeclarator *pParameter;
+    while ((pFunction = GetNextFunction(iter)) != 0)
+    {
+        if ((pParameter = pFunction->FindParameterAttribute(nAttribute1)) != 0)
+        {
+            if (nAttribute2 == ATTR_NONE)
+                return true;
+            if (pParameter->FindAttribute(nAttribute2))
+            {
+                if (nAttribute3 == ATTR_NONE)
+                    return true;
+                if (pParameter->FindAttribute(nAttribute3))
+                    return true;
+            }
+        }
+    }
+    // check base classes
+    vector<CBEClass*>::iterator iterC = GetFirstBaseClass();
+    CBEClass *pClass;
+    while ((pClass = GetNextBaseClass(iterC)) != 0)
+    {
+        if (pClass->HasParametersWithAttribute(nAttribute1, nAttribute2, nAttribute3))
+            return true;
+    }
+    // nothing found
+    return false;
+}
+
+/** \brief creates a list of ordered elements
+ *
+ * This method iterates each member vector and inserts their
+ * elements into the ordered element list using bubble sort.
+ * Sort criteria is the source line number.
+ */
+void CBEClass::CreateOrderedElementList(void)
+{
+    // clear vector
+    m_vOrderedElements.erase(m_vOrderedElements.begin(), m_vOrderedElements.end());
+    // typedef
+    vector<CBEFunction*>::iterator iterF = GetFirstFunction();
+    CBEFunction *pF;
+    while ((pF = GetNextFunction(iterF)) != NULL)
+    {
+        InsertOrderedElement(pF);
+    }
+    // typedef
+    vector<CBETypedDeclarator*>::iterator iterT = GetFirstTypedef();
+    CBETypedDeclarator *pT;
+    while ((pT = GetNextTypedef(iterT)) != NULL)
+    {
+        InsertOrderedElement(pT);
+    }
+    // tagged types
+    vector<CBEType*>::iterator iterTa = GetFirstTaggedType();
+    CBEType* pTa;
+    while ((pTa = GetNextTaggedType(iterTa)) != NULL)
+    {
+        InsertOrderedElement(pTa);
+    }
+    // consts
+    vector<CBEConstant*>::iterator iterC = GetFirstConstant();
+    CBEConstant *pC;
+    while ((pC = GetNextConstant(iterC)) != NULL)
+    {
+        InsertOrderedElement(pC);
+    }
+}
+
+/** \brief insert one element into the ordered list
+ *  \param pObj the new element
+ *
+ * This is the insert implementation
+ */
+void CBEClass::InsertOrderedElement(CObject *pObj)
+{
+    // get source line number
+    int nLine = pObj->GetSourceLine();
+    // search for element with larger number
+    vector<CObject*>::iterator iter = m_vOrderedElements.begin();
+    for (; iter != m_vOrderedElements.end(); iter++)
+    {
+        if ((*iter)->GetSourceLine() > nLine)
+        {
+//             TRACE("Insert element from %s:%d before element from %s:%d\n",
+//                 pObj->GetSourceFileName().c_str(), pObj->GetSourceLine(),
+//                 (*iter)->GetSourceFileName().c_str(),
+//                 (*iter)->GetSourceLine());
+            // insert before that element
+            m_vOrderedElements.insert(iter, pObj);
+            return;
+        }
+    }
+    // new object is bigger that all existing
+//     TRACE("Insert element from %s:%d at end\n",
+//         pObj->GetSourceFileName().c_str(), pObj->GetSourceLine());
+    m_vOrderedElements.push_back(pObj);
+}
+
+/** \brief write helper functions, if any
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBEClass::WriteHelperFunctions(CBEHeaderFile *pFile,
+    CBEContext *pContext)
+{
+}
+
+/** \brief write helper functions, if any
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBEClass::WriteHelperFunctions(CBEImplementationFile *pFile,
+    CBEContext *pContext)
+{
 }

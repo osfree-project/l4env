@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/v2/L4V2BEIPC.h
- *	\brief	contains the declaration of the class CL4V2BEIPC
+ *    \file    dice/src/be/l4/v2/L4V2BEIPC.h
+ *    \brief   contains the declaration of the class CL4V2BEIPC
  *
- *	\date	08/13/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    08/13/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -37,20 +38,24 @@
  */
 class CL4V2BEIPC : public CL4BEIPC
 {
-DECLARE_DYNAMIC(CL4V2BEIPC);
+
 public:
-	CL4V2BEIPC();
-	virtual ~CL4V2BEIPC();
+    /** create a new IPC object */
+    CL4V2BEIPC();
+    virtual ~CL4V2BEIPC();
 
     virtual bool UseAssembler(CBEFunction* pFunction,  CBEContext* pContext);
-	virtual void WriteCall(CBEFile * pFile,  CBEFunction * pFunction,  CBEContext * pContext);
-	virtual void WriteSend(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext);
+    virtual void WriteCall(CBEFile * pFile,  CBEFunction * pFunction,  CBEContext * pContext);
+    virtual void WriteSend(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext);
+    virtual void WriteReply(CBEFile* pFile,  CBEFunction* pFunction,  CBEContext* pContext);
 
 protected:
-	virtual void WriteAsmLongCall(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
-	virtual void WriteAsmShortCall(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
-	virtual void WriteAsmShortSend(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
-	virtual void WriteAsmLongSend(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteAsmLongCall(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteAsmShortCall(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteAsmShortSend(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteAsmLongSend(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteAsmShortReply(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteAsmLongReply(CBEFile *pFile, CBEFunction *pFunction, CBEContext *pContext);
 };
 
 #endif

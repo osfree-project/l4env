@@ -29,7 +29,7 @@ l4_fpage_unmap(l4_fpage_t fpage,
 	 :
 	  "ebx", "edx", "edi", "esi"
 	 );
-};
+}
 
 /*
  * L4 id myself
@@ -86,15 +86,15 @@ l4_nchief(l4_threadid_t destination,
 /*
  * L4 lthread_ex_regs
  */
-L4_INLINE void
-l4_thread_ex_regs(l4_threadid_t destination,
-		  l4_umword_t eip,
-		  l4_umword_t esp,
-		  l4_threadid_t *preempter,
-		  l4_threadid_t *pager,
-		  l4_umword_t *old_eflags,
-		  l4_umword_t *old_eip,
-		  l4_umword_t *old_esp)
+static inline void
+__do_l4_thread_ex_regs(l4_umword_t val0,
+                       l4_umword_t eip,
+                       l4_umword_t esp,
+                       l4_threadid_t *preempter,
+                       l4_threadid_t *pager,
+                       l4_umword_t *old_eflags,
+                       l4_umword_t *old_eip,
+                       l4_umword_t *old_esp)
 {
   __asm__ __volatile__(
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory  references
@@ -118,7 +118,7 @@ l4_thread_ex_regs(l4_threadid_t destination,
 	   "=S" (pager->lh.low),
 	   "=D" (pager->lh.high)
 	  :
-	   "a" (destination.id.lthread),
+	   "a" (val0),
 	   "c" (esp),
 	   "d" (eip),
 	   "S" (pager->lh.low),
@@ -143,11 +143,13 @@ l4_thread_switch(l4_threadid_t destination)
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	 :
-	  "=S" (dummy)
+	  "=S" (dummy),
+	  "=a" (dummy)
 	 :
-	  "S" (destination.lh.low)
+	  "S" (destination.lh.low),
+	  "a" (0)			/* Fiasco requirement */
 	 :
-	  "ebx", "eax", "ecx", "edx", "edi"
+	  "ebx", "ecx", "edx", "edi"
 	 );
 }
 
@@ -236,6 +238,22 @@ l4_task_new(l4_taskid_t destination,
 	  "D" (destination.lh.high)
 	 );
   return new_task;
+}
+
+L4_INLINE int
+l4_privctrl(l4_umword_t cmd,
+	    l4_umword_t param)
+{
+  int err;
+  unsigned dummy;
+
+  __asm__ __volatile__(
+	 "pushl %%ebp              \n\t"
+	 L4_SYSCALL(privctrl)
+         "popl  %%ebp              \n\t"
+	 :"=a"(err), "=d"(dummy)
+	 :"0"(cmd),"1"(param));
+  return err;
 }
 
 #endif

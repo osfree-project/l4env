@@ -2,15 +2,14 @@
  * Fiasco Syscall-Page Code (absolute addressing)
  */
 
-IMPLEMENTATION[abs-ia32]:
+IMPLEMENTATION [ia32-abs_syscalls]:
 
 #include <cstdio>
 #include "config.h"
 #include "cpu.h"
-#include "kmem.h"
-#include "linker_syms.h"
+#include "mem_layout.h"
 #include "panic.h"
-#include "regdefs.h"
+#include "paging.h"
 #include "space.h"
 #include "types.h"
 #include "vmem_alloc.h"
@@ -28,7 +27,7 @@ IMPLEMENTATION[abs-ia32]:
 extern char sys_call_##sysc, sys_call_##sysc##_end
 
 #define COPY_SYSCALL(sysc) \
-memcpy( &_syscalls + OFFSET_##sysc, &sys_call_##sysc, \
+memcpy( (char*)Mem_layout::Syscalls + OFFSET_##sysc, &sys_call_##sysc, \
         &sys_call_##sysc##_end- &sys_call_##sysc )
 
 
@@ -45,25 +44,25 @@ Sys_call_page::init()
   SYSCALL_SYMS(lthread_ex_regs);
   SYSCALL_SYMS(task_new);
 
-  Kernel_info *ki = Kmem::info();
-
-  if (!Vmem_alloc::page_alloc(&_syscalls, 0, Vmem_alloc::ZERO_FILL,
-                              Space::Page_user_accessible | Kmem::pde_global()))
+  if (!Vmem_alloc::page_alloc((void*)Mem_layout::Syscalls,
+			      Vmem_alloc::ZERO_FILL,
+                              Space::Page_user_accessible | 
+			      Pd_entry::global()))
     panic("FIASCO: can't allocate system-call page.\n");
 
   printf ("Absolute KIP Syscalls using: %s\n",
-          (Cpu::features() & FEAT_SEP) ? "Sysenter" : "int 0x30");
+          Cpu::have_sysenter() ? "Sysenter" : "int 0x30");
 
-  ki->sys_ipc             = (Mword) &_syscalls;
-  ki->sys_id_nearest      = (Mword) &_syscalls + 0x100;
-  ki->sys_fpage_unmap     = (Mword) &_syscalls + 0x200;
-  ki->sys_thread_switch   = (Mword) &_syscalls + 0x300;
-  ki->sys_thread_schedule = (Mword) &_syscalls + 0x400;
-  ki->sys_lthread_ex_regs = (Mword) &_syscalls + 0x500;
-  ki->sys_task_new        = (Mword) &_syscalls + 0x600;
-  ki->kip_sys_calls       = 2;
+  Kip::k()->sys_ipc             = Mem_layout::Syscalls;
+  Kip::k()->sys_id_nearest      = Mem_layout::Syscalls + 0x100;
+  Kip::k()->sys_fpage_unmap     = Mem_layout::Syscalls + 0x200;
+  Kip::k()->sys_thread_switch   = Mem_layout::Syscalls + 0x300;
+  Kip::k()->sys_thread_schedule = Mem_layout::Syscalls + 0x400;
+  Kip::k()->sys_lthread_ex_regs = Mem_layout::Syscalls + 0x500;
+  Kip::k()->sys_task_new        = Mem_layout::Syscalls + 0x600;
+  Kip::k()->kip_sys_calls       = 2;
 
-  if(Cpu::features() & FEAT_SEP)
+  if (Cpu::have_sysenter())
     COPY_SYSCALL(se_ipc);
   else
     COPY_SYSCALL(ipc);
@@ -74,56 +73,4 @@ Sys_call_page::init()
   COPY_SYSCALL(thread_schedule);
   COPY_SYSCALL(lthread_ex_regs);
   COPY_SYSCALL(task_new);
-
 }
-
-asm (FIASCO_ASM_INITDATA
-
-     "sys_call_ipc:                 \n"
-     "int $0x30                     \n"
-     "ret                           \n"
-     "sys_call_ipc_end:             \n"
-
-     "sys_call_id_nearest:          \n"
-     "int $0x31                     \n"
-     "ret                           \n"
-     "sys_call_id_nearest_end:      \n"
-
-     "sys_call_fpage_unmap:         \n"
-     "int $0x32                     \n"
-     "ret                           \n"
-     "sys_call_fpage_unmap_end:     \n"
-
-     "sys_call_thread_switch:       \n"
-     "int $0x33                     \n"
-     "ret                           \n"
-     "sys_call_thread_switch_end:   \n"
-
-     "sys_call_thread_schedule:     \n"
-     "int $0x34                     \n"
-     "ret                           \n"
-     "sys_call_thread_schedule_end: \n"
-
-     "sys_call_lthread_ex_regs:     \n"
-     "int $0x35                     \n"
-     "ret                           \n"
-     "sys_call_lthread_ex_regs_end: \n"
-
-     "sys_call_task_new:            \n"
-     "int $0x36                     \n"
-     "ret                           \n"
-     "sys_call_task_new_end:        \n"
-
-     "sys_call_se_ipc:              \n"
-     "0:                            \n"
-     "push   %ecx                   \n"
-     "subl   $8,%esp                \n"
-     "pushl  $(1f-0b+_syscalls)     \n"
-     "mov    %esp,%ecx              \n"
-     "sysenter                      \n"
-     "mov    %ebp,%edx              \n"
-     "1:                            \n"
-     "ret                           \n"
-     "sys_call_se_ipc_end:          \n"
-
-     FIASCO_ASM_FINI);

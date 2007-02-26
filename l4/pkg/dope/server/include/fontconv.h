@@ -5,13 +5,16 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
  * the  terms  of the  GNU General Public Licence 2.  Please see the
  * COPYING file for details.
  */
+
+#ifndef _DOPE_FONTCONV_H_
+#define _DOPE_FONTCONV_H_
 
 struct fontconv_services {
 	s16  (*probe)               (void *fontadr);
@@ -24,3 +27,7 @@ struct fontconv_services {
 	u32  (*get_image_height)    (void *fontadr);
 	void (*gen_image)           (void *fontadr,u8 *dst_img);
 };
+
+
+#endif /* _DOPE_FONTCONV_H_ */
+

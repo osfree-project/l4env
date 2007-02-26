@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -13,9 +13,10 @@
  * COPYING file for details.
  */
 
-#if !defined(WIDGET)
+#ifndef _DOPE_WINLAYOUT_H_
+#define _DOPE_WINLAYOUT_H_
+
 #include "widget.h"
-#endif
 
 struct winlayout_services {
 	WIDGET *(*create_win_elements) (s32 elem_mask,s32 width,s32 height);
@@ -28,3 +29,5 @@ struct winlayout_services {
 	s32     (*get_top_border)      (s32 elem_mask);
 	s32     (*get_bottom_border)   (s32 elem_mask);
 };
+
+#endif /* _DOPE_WINLAYOUT_H_ */

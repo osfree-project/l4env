@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BETypedDeclarator.h
- *	\brief	contains the declaration of the class CL4BETypedDeclarator
+ *    \file    dice/src/be/l4/L4BETypedDeclarator.h
+ *    \brief   contains the declaration of the class CL4BETypedDeclarator
  *
- *	\date	Wed Jul 17 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    07/17/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -38,15 +39,15 @@
  */
 class CL4BETypedDeclarator : public CBETypedDeclarator
 {
-DECLARE_DYNAMIC(CL4BETypedDeclarator);
 public:
-	/** creates a new object of a typed declarator */
-	CL4BETypedDeclarator();
-	~CL4BETypedDeclarator();
+    /** creates a new object of a typed declarator */
+    CL4BETypedDeclarator();
+    ~CL4BETypedDeclarator();
 
 public: // Public methods
     virtual bool IsVariableSized();
     virtual bool IsFixedSized();
+    virtual int GetMaxSize(bool bGuessSize, CBEContext *pContext);
 };
 
 #endif

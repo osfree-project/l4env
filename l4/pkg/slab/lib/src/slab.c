@@ -19,11 +19,14 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+
 /* L4env includes */
-#include <l4/sys/types.h>
+#include <l4/sys/l4int.h>
 #include <l4/sys/consts.h>
 #include <l4/env/errno.h>
-#include <l4/util/macros.h>
+#include <l4/log/l4log.h>
 
 /* private includes */
 #include <l4/slab/slab.h>
@@ -208,7 +211,8 @@ __shrink_cache(l4slab_cache_t * cache)
       if (slab == NULL)
 	{
 	  /* something's wrong: free counter > 0, but no free slab found */
-	  Panic("L4slab: corrupted slab free list!");
+	    LOG_printf("L4slab: corrupted slab free list!\n");
+	    exit(1);
 	  return;
 	}
 
@@ -534,15 +538,15 @@ l4slab_dump_cache(l4slab_cache_t * cache, int dump_free)
   if (cache == NULL)
     return;
 
-  printf("  L4slab cache list, cache at 0x%08x\n",(unsigned)cache);
-  printf("  object size %u, %u per slab, %d slab(s), %d free\n",
+  LOG_printf("  L4slab cache list, cache at 0x%08x\n",(unsigned)cache);
+  LOG_printf("  object size %u, %u per slab, %d slab(s), %d free\n",
          cache->obj_size,cache->num_objs,cache->num_slabs,
          cache->num_free);
 
   slab = cache->slabs;
   while (slab != NULL)
     {
-      printf("    slab at 0x%08x, %d free object(s):\n",
+      LOG_printf("    slab at 0x%08x, %d free object(s):\n",
 	     (unsigned)slab,slab->num_free);
 
       if (dump_free)
@@ -550,7 +554,7 @@ l4slab_dump_cache(l4slab_cache_t * cache, int dump_free)
 	  p = slab->free_objs;
 	  while (p != NULL)
 	    {
-	      printf("      free at 0x%08x\n",(unsigned)p);
+	      LOG_printf("      free at 0x%08x\n",(unsigned)p);
 	      p = (unsigned int *)*p;
 	    }
 	}
@@ -573,15 +577,15 @@ l4slab_dump_cache_free(l4slab_cache_t * cache)
   if (cache == NULL)
     return;
 
-  printf("  L4slab cache free list, cache at 0x%08x\n",(unsigned)cache);
-  printf("  object size %u, %u per slab, %d slab(s), %d free\n",
+  LOG_printf("  L4slab cache free list, cache at 0x%08x\n",(unsigned)cache);
+  LOG_printf("  object size %u, %u per slab, %d slab(s), %d free\n",
          cache->obj_size,cache->num_objs,cache->num_slabs,
          cache->num_free);
 
   slab = cache->slabs_free;
   while (slab != NULL)
     {
-      printf("    slab at 0x%08x, %3d free object(s)\n",
+      LOG_printf("    slab at 0x%08x, %3d free object(s)\n",
 	     (unsigned)slab,slab->num_free);
       slab = slab->free_next;
     }

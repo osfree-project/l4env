@@ -26,7 +26,7 @@ l4util_irq_acknowledge(unsigned int irq);
 
 /** Disable all interrupts
  */
-void static volatile inline
+static inline void
 l4util_cli (void)
 {
   __asm__ __volatile__ ("cli" : : : "memory");
@@ -34,7 +34,7 @@ l4util_cli (void)
 
 /** Enable all interrupts
  */
-void static volatile inline
+static inline void
 l4util_sti (void)
 {
   __asm__ __volatile__ ("sti" : : : "memory");
@@ -43,7 +43,7 @@ l4util_sti (void)
 /** Save the processor flags. Can be used to save and later restore the
  * interrupt flag 
  */
-void static volatile inline
+static inline void
 l4util_flags_save (unsigned *flags)
 {
   __asm__ __volatile__ ("pushfl ; popl %0 " :"=g" (*flags) : :"memory");
@@ -51,7 +51,7 @@ l4util_flags_save (unsigned *flags)
 
 /** Restore processor flags. Can be used to restore the interrupt flag
  */
-void static volatile inline
+static inline void
 l4util_flags_restore (unsigned *flags)
 {
   __asm__ __volatile__ ("pushl %0 ; popfl" : :"g" (*flags) : "memory");

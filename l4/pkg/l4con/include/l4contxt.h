@@ -1,5 +1,5 @@
 /*!
- * \file	con/include/l4/con/l4contxt.h
+ * \file	con/include/l4/l4con/l4contxt.h
  * \brief	libcontxt client interface
  *
  * \date	2002
@@ -14,7 +14,7 @@
 #define _L4CONTXT_L4CONTXT_H
 
 /* common interface include */
-#include <l4/con/l4contxt_common.h>
+#include <l4/l4con/l4contxt_common.h>
 
 /** \defgroup contxt_if Client Library for Text Output */
 

@@ -1,60 +1,87 @@
+// our own implementation of C++ memory management: disallow dynamic
+// allocation (except where class-specific new/delete functions exist)
+//
+// more specialized memory allocation/deallocation functions follow
+// below in the "Kmem" namespace
 
-INTERFACE:
+INTERFACE [ia32,ux]:
 
+#include "initcalls.h"
+#include "kern_types.h"
 #include "kip.h"
+#include "mem_layout.h"
 
+class Pdir;
+class Tss;
+
+/**
+ * The system's base facilities for kernel-memory management.
+ * The kernel memory is a singleton object.  We access it through a
+ * static class interface.
+ */
 class Kmem
 {
   friend class Jdb;
+  friend class Jdb_dbinfo;
   friend class Jdb_kern_info_misc;
+  friend class Kdb;
+  friend class Profile;
+  friend class Vmem_alloc;
 
 private:
-  static Address stupid_alloc( Address *border );
-  static Address alloc_from_page( Address *from, Address size );
-  static void setup_gs0_page();
-  static void setup_kip_generic (Kernel_info *);
+  Kmem();			// default constructors are undefined
+  Kmem (const Kmem&);
+  static Address mem_max, _himem;
 
 public:
+  enum 
+  {
+    mem_tcbs     = Mem_layout::Tcbs,
+    mem_user_max = Mem_layout::User_max,
+  };
+
   static void init();
-  static Kernel_info *info();
-  static const Pd_entry *dir();
-  static Pd_entry pde_global();
-  static Address himem();
-  static Address volatile *kernel_esp();
-
-  static Address virt_to_phys( const void *addr );
-  static void *linear_virt_to_phys( const void *addr );
-  static void *phys_to_virt( Address addr );
-
-  static Mword is_kmem_page_fault( Mword pfa, Mword error );
-  static Mword is_tcb_page_fault( Mword pfa, Mword error );
-  static Mword is_ipc_page_fault( Mword pfa, Mword error );
-  static Mword is_smas_page_fault( Mword pfa, Mword error );
-  static Mword is_io_bitmap_page_fault( Mword pfa, Mword error );
+  static Mword is_kmem_page_fault(Mword pfa, Mword error);
+  static Mword is_ipc_page_fault(Mword pfa, Mword error);
+  static Mword is_smas_page_fault(Mword pfa);
+  static Mword is_io_bitmap_page_fault(Mword pfa);
+  static Address kcode_start();
+  static Address kcode_end();
+  static Address kmem_base();
+  static Address virt_to_phys(const void *addr);
 };
 
 typedef Kmem Kmem_space;
 
-IMPLEMENTATION[ia32-ux]:
+IMPLEMENTATION [ia32,ux]:
 
-IMPLEMENT inline                                              
-Mword Kmem::is_tcb_page_fault( Address addr, Mword /*error*/ )
+#include <cstdio>
+#include <cstdlib>
+#include <cstddef>		// size_t
+#include <cstring>		// memset
+
+#include "boot_info.h"
+#include "config.h"
+#include "cpu.h"
+#include "gdt.h"
+#include "globals.h"
+#include "paging.h"
+#include "regdefs.h"
+#include "std_macros.h"
+#include "tss.h"
+
+// static class variables
+Address       Kmem::mem_max, Kmem::_himem;
+Pdir         *Kmem::kdir;
+
+PUBLIC static inline                                              
+Mword
+Kmem::is_tcb_page_fault( Address addr, Mword /*error*/ )
 {
-  return (   addr >= Kmem::mem_tcbs
-	  && addr <  Kmem::mem_tcbs
+  return (   addr >= Mem_layout::Tcbs
+	  && addr <  Mem_layout::Tcbs
 		     + (Config::thread_block_size 
-			* Kmem::info()->max_threads()) );
-}
-
-/**
- * Return Kernel info page.
- * @return kernel info page
- */
-IMPLEMENT inline
-Kernel_info *
-Kmem::info()
-{  
-  return Kernel_info::kip();
+			* Config::max_threads()) );
 }
 
 /**
@@ -64,81 +91,19 @@ Kmem::info()
  * upon page fault.
  * @return kernel's global page directory
  */
-IMPLEMENT inline
-const Pd_entry *
-Kmem::dir()
-{
-  return kdir;
-}
+PUBLIC static inline const Pdir* Kmem::dir() { return kdir; }
 
-/**
- * Flags for global page-table and page-directory entries.
- * Global entries are entries that are not automatically flushed when
- * the page-table base register is reloaded. They are intended
- * for kernel data that is shared between all tasks.
- * @return global page-table--entry flags
- */    
-IMPLEMENT inline
-Pd_entry
-Kmem::pde_global()
-{
-  return cpu_global;
-}
- 
-IMPLEMENT inline
-Address
-Kmem::himem()
-{
-  return _himem;
-}
+PUBLIC static inline Address Kmem::get_mem_max() { return mem_max; }
+PUBLIC static inline Address Kmem::himem() { return _himem; }
 
 /**
  * Get a pointer to the CPUs kernel stack pointer
  */
-IMPLEMENT inline NEEDS [<flux/x86/tss.h>]
+PUBLIC static inline NEEDS ["cpu.h", "tss.h"]
 Address volatile *
 Kmem::kernel_esp()
 {
-  return reinterpret_cast<Address volatile *>(&tss->esp0);
-}
-
-/**
- * Compute physical address from a kernel-virtual address.
- * @param addr a virtual address
- * @return corresponding physical address if a mappings exists.
- *         -1 otherwise.
- */
-IMPLEMENT
-Address
-Kmem::virt_to_phys (const void *addr)
-{
-  Address a = reinterpret_cast<Address>(addr);
-
-  if ((a & 0xf0000000) == mem_phys)
-    return a - mem_phys;
-
-  Pd_entry p = kdir[(a >> PDESHIFT) & PDEMASK];
-
-  if (!(p & INTEL_PDE_VALID))
-    return (Address) -1;
-
-  if (p & INTEL_PDE_SUPERPAGE)
-    return (p & Config::SUPERPAGE_MASK) | (a & ~Config::SUPERPAGE_MASK);
-
-  Pt_entry t = reinterpret_cast<Pt_entry *>
-    ((p & Config::PAGE_MASK) + mem_phys)[(a >> PTESHIFT) & PTEMASK];
- 
-  return (t & INTEL_PTE_VALID) ?
-         (t & Config::PAGE_MASK) | (a & ~Config::PAGE_MASK) : (Address) -1;
-}
-
-IMPLEMENT inline
-void * 
-Kmem::linear_virt_to_phys (const void *addr)
-{
-  Address a = reinterpret_cast<Address>(addr);
-
-  return (void*)(a - mem_phys);
+  return reinterpret_cast<Address volatile *>(&Cpu::get_tss()->esp0);
 }
 
 /**
@@ -147,42 +112,33 @@ Kmem::linear_virt_to_phys (const void *addr)
  * physical-memory region.
  * @pre addr <= highest kernel-accessible RAM address
  * @param addr a physical address
- * @return physical address.
+ * @return kernel-virtual address.
  */
-IMPLEMENT inline
+PUBLIC static inline
 void *
 Kmem::phys_to_virt(Address addr)
 {
-  return reinterpret_cast<void *>(addr + mem_phys);
+  return reinterpret_cast<void *>(Mem_layout::phys_to_pmem(addr));
 }
 
-/**
- * Allocate some bytes from a memory page
- */
-IMPLEMENT inline
+/** Allocate some bytes from a memory page */
+PRIVATE static inline
 Address
 Kmem::alloc_from_page(Address *from, Address size)
 {
   Address ret = *from;
-
   *from += (size + 0xf) & ~0xf;
 
   return ret;
 }
 
-/**
- * ABI and ia32/ux generic KIP initialization code
- */
-IMPLEMENT FIASCO_INIT
-void
-Kmem::setup_kip_generic (Kernel_info* kinfo)
+PRIVATE static FIASCO_INIT
+Address
+Kmem::himem_alloc()
 {
-  kinfo->magic		= L4_KERNEL_INFO_MAGIC;
-  kinfo->version	= Config::kernel_version_id;
-  kinfo->frequency_cpu  = Cpu::frequency() / 1000;
+  _himem -= Config::PAGE_SIZE;
+  memset (Kmem::phys_to_virt (_himem), 0, Config::PAGE_SIZE);
 
-  kinfo->offset_version_strings = 0x10;
-  strcpy(reinterpret_cast<char*>(kinfo) 
-	 + (kinfo->offset_version_strings << 4), 
-	 Config::kernel_version_string);
+  return _himem;
 }
+

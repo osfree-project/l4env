@@ -27,6 +27,8 @@
 #include "send-server.h"
 #include "__config.h"
 
+char LOG_tag[9]="send";
+
 /*****************************************************************************
  * Global stuff
  *****************************************************************************/
@@ -120,6 +122,7 @@ send_thread(void * data)
 	    }
 #endif
 
+          LOGdL(DO_DEBUG, "got send packet, round %d, count %lu", i, count);
 #if 0
 	  KDEBUG("got send packet");
 #endif
@@ -153,6 +156,8 @@ send_thread(void * data)
 	      return;
 	    }
 #endif
+          LOGdL(DO_DEBUG, "commited send packet...");
+
 	  addr += PACKET_SIZE;
 	}
     }
@@ -174,8 +179,9 @@ send_thread(void * data)
   /* end measurement */
   t_end = l4_rdtsc();
 
+  LOGL("test done:");
   ns_per_cycle = l4_tsc_to_ns(1000000ULL) / 1000000.0;
-  printf("ns_per_cycle %u.%03u\n",(unsigned)ns_per_cycle,
+  printf(" ns_per_cycle %u.%03u\n",(unsigned)ns_per_cycle,
          (unsigned)((ns_per_cycle - (unsigned)ns_per_cycle) * 1000));
 
   cycles = t_end - t_start;
@@ -184,18 +190,17 @@ send_thread(void * data)
   rate = ((double)count / (double)ms) * 1000;
 
 #if DSI_MAP
-  printf("DSI type: map, %u byte packets\n",PACKET_SIZE);
+  printf(" DSI type: map, %u byte packets\n",PACKET_SIZE);
 #elif DSI_COPY
-  printf("DSI type: copy, %u byte packets\n",PACKET_SIZE);
+  printf(" DSI type: copy, %u byte packets\n",PACKET_SIZE);
 #else
-  printf("DSI type: standard, %u byte packets\n",PACKET_SIZE);
+  printf(" DSI type: standard, %u byte packets\n",PACKET_SIZE);
 #endif
-  printf("send done (%lu packets):\n",count);
-  printf("t = %lums\n",ms);
-  printf("cycles = %lu:%lu (%lu per packet)\n",
+  printf(" send done (%lu packets, %lums total)\n", count, ms);
+  printf(" cycles = %lu:%lu (%lu per packet)\n",
          (unsigned long)(cycles / 0x100000000ULL),(unsigned long)cycles,
          (unsigned long)(cycles / count));
-  printf("rate %u.%03u packets/s\n",(unsigned)rate,
+  printf(" rate %u.%03u packets/s\n",(unsigned)rate,
          (unsigned)((rate - (unsigned)rate) * 1000));
 
   /* signal end of stream */
@@ -234,7 +239,7 @@ dsi_example_send_open_component(CORBA_Object _dice_corba_obj,
                                 dsi_example_send_socket_t *s,
                                 dsi_example_send_dataspace_t *ctrl_ds,
                                 dsi_example_send_dataspace_t *data_ds,
-                                CORBA_Environment *_dice_corba_env)
+                                CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   l4_threadid_t work_id,sync_id;
@@ -254,7 +259,7 @@ dsi_example_send_open_component(CORBA_Object _dice_corba_obj,
     }
 
   /* start work thread */
-  ret = l4thread_create_long(L4THREAD_INVALID_ID,send_thread,
+  ret = l4thread_create_long(L4THREAD_INVALID_ID,send_thread, 0,
 			     L4THREAD_INVALID_SP,L4THREAD_DEFAULT_SIZE,
 			     L4THREAD_DEFAULT_PRIO,NULL,L4THREAD_CREATE_ASYNC);
   if (ret < 0)
@@ -336,7 +341,7 @@ l4_int32_t
 dsi_example_send_connect_component(CORBA_Object _dice_corba_obj,
                                    const dsi_example_send_socket_t *local,
                                    const dsi_example_send_socket_t *remote,
-                                   CORBA_Environment *_dice_corba_env)
+                                   CORBA_Server_Environment *_dice_corba_env)
 {
   dsi_socket_t * s;
   int ret;
@@ -374,7 +379,7 @@ dsi_example_send_connect_component(CORBA_Object _dice_corba_obj,
 l4_int32_t 
 dsi_example_send_start_component(CORBA_Object _dice_corba_obj,
                                  const dsi_example_send_socket_t *local,
-                                 CORBA_Environment *_dice_corba_env)
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   /* start semaphore thread */
   l4semaphore_up(&sem);
@@ -397,7 +402,7 @@ dsi_example_send_start_component(CORBA_Object _dice_corba_obj,
 l4_int32_t 
 dsi_example_send_stop_component(CORBA_Object _dice_corba_obj,
                                 const dsi_example_send_socket_t *local,
-                                CORBA_Environment *_dice_corba_env)
+                                CORBA_Server_Environment *_dice_corba_env)
 {
   LOGL("stopped");
   
@@ -419,7 +424,7 @@ dsi_example_send_stop_component(CORBA_Object _dice_corba_obj,
 l4_int32_t 
 dsi_example_send_close_component(CORBA_Object _dice_corba_obj,
                                  const dsi_example_send_socket_t *local,
-                                 CORBA_Environment *_dice_corba_env)
+                                 CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dsi_socket_t * s;
@@ -446,8 +451,6 @@ dsi_example_send_close_component(CORBA_Object _dice_corba_obj,
 int main(void)
 {
   /* init log lib */
-  LOG_init("send");
-
   /* init DSI lib */
   dsi_init();
 

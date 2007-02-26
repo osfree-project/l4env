@@ -2,6 +2,7 @@
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
 #include <l4/util/util.h>
+#include <l4/util/reboot.h>
 
 #define BUFFER_SIZE 100
 static char buffer[BUFFER_SIZE];
@@ -16,6 +17,8 @@ my_init(int nb,
   *size = BUFFER_SIZE;
 }
 
+char LOG_tag[9] = "rcvstrC";
+
 int
 main(int argc, char** argv)
 {
@@ -23,7 +26,6 @@ main(int argc, char** argv)
   CORBA_Environment env = dice_default_environment;
 
   char *str;
-  LOG_init("rcvstrC");
 
   names_waitfor_name("rcvstrS", &srv, 1000);
 
@@ -35,7 +37,7 @@ main(int argc, char** argv)
       LOG("Error: %d", env.major);
       if (env.major == CORBA_SYSTEM_EXCEPTION)
 	{
-	  LOG("IPC Error: 0x%x", env.ipc_error);
+	  LOG("IPC Error: 0x%x", env._p.ipc_error);
 	}
     }
   LOG("rcvd: %s", str);
@@ -44,7 +46,7 @@ main(int argc, char** argv)
   test_f2_call(&srv, str, &env);
 
   l4_sleep(2000);
-  enter_kdebug("*#^init-rcvstring stopped");
+  l4util_reboot();
 
   return 0;
 }

@@ -53,6 +53,8 @@ typedef struct l4th_tcb
 
   /// thread data pointers
   void *                 data[L4THREAD_MAX_DATA_KEYS];
+
+  char                   name[L4THREAD_NAME_LEN]; ///< name of the thread
  
   /* thread startup */
   l4thread_fn_t          func;          ///< thread function
@@ -117,16 +119,19 @@ L4_INLINE l4th_tcb_t *
 l4th_tcb_get(l4thread_t thread);
 
 L4_INLINE l4th_tcb_t *
-l4th_tcb_get_active(l4thread_t thread);
-
-L4_INLINE l4th_tcb_t *
-l4th_tcb_get_active_locked(l4thread_t thread);
+l4th_tcb_get_locked(l4thread_t thread);
 
 L4_INLINE l4th_tcb_t *
 l4th_tcb_get_current(void);
 
 L4_INLINE l4th_tcb_t *
 l4th_tcb_get_current_locked(void);
+
+L4_INLINE l4th_tcb_t *
+l4th_tcb_get_current_locked_nocheck(void);
+
+L4_INLINE void
+l4th_tcb_lock(l4th_tcb_t * tcb);
 
 L4_INLINE void
 l4th_tcb_unlock(l4th_tcb_t * tcb);
@@ -168,25 +173,7 @@ l4th_tcb_get(l4thread_t thread)
   if ((thread < 0) || (thread >= l4thread_max_threads))
     return NULL;
 
-  return &l4th_tcbs[thread];
-}
-
-/*****************************************************************************/
-/**
- * \brief  Return TCB of thread, test if state == TCB_ACTIVE
- * 
- * \param  thread        Thread id
- *	
- * \return TCB, NULL if invalid thread id or thread not active.
- */
-/*****************************************************************************/ 
-L4_INLINE l4th_tcb_t *
-l4th_tcb_get_active(l4thread_t thread)
-{
-  if ((thread < 0) || (thread >= l4thread_max_threads))
-    return NULL;
-  
-  if (l4th_tcbs[thread].state != TCB_ACTIVE)
+  if (EXPECT_FALSE(l4th_tcbs[thread].state != TCB_ACTIVE))
     return NULL;
   else
     return &l4th_tcbs[thread];
@@ -202,7 +189,7 @@ l4th_tcb_get_active(l4thread_t thread)
  */
 /*****************************************************************************/ 
 L4_INLINE l4th_tcb_t *
-l4th_tcb_get_active_locked(l4thread_t thread)
+l4th_tcb_get_locked(l4thread_t thread)
 {
   if ((thread < 0) || (thread >= l4thread_max_threads))
     return NULL;
@@ -221,9 +208,10 @@ l4th_tcb_get_active_locked(l4thread_t thread)
 
 /*****************************************************************************/
 /**
- * \brief  Return TCB of current thread
+ * \brief  Return TCB of current thread, test if state == TCB_ACTIVE
  *	
- * \return TCB, NULL if current thread not found in TCB table
+ * \return TCB, NULL if current thread not found in TCB table or 
+ *         state not TCB_ACTIVE
  */
 /*****************************************************************************/ 
 L4_INLINE l4th_tcb_t *
@@ -234,14 +222,19 @@ l4th_tcb_get_current(void)
   if ((thread < 0) || (thread >= l4thread_max_threads))
     return NULL;
   
-  return &l4th_tcbs[thread];
+  if (l4th_tcbs[thread].state != TCB_ACTIVE)
+    return NULL;
+  else
+    return &l4th_tcbs[thread];
 }
 
 /*****************************************************************************/
 /**
- * \brief  Return TCB of current thread, lock TCB
+ * \brief  Return TCB of current thread, test if state == TCB_ACTIVE and 
+ *         lock TCB
  *	
- * \return TCB, NULL if current thread not found in TCB table
+ * \return TCB, NULL if current thread not found in TCB table or 
+ *         state not TCB_ACTIVE
  */
 /*****************************************************************************/ 
 L4_INLINE l4th_tcb_t *
@@ -255,7 +248,52 @@ l4th_tcb_get_current_locked(void)
   /* lock TCB */
   l4lock_lock(&l4th_tcbs[thread].lock);
 
+  if (l4th_tcbs[thread].state != TCB_ACTIVE)
+    {
+      l4lock_unlock(&l4th_tcbs[thread].lock);
+      return NULL;
+    }
+  else
+    return &l4th_tcbs[thread];
+}
+
+/*****************************************************************************/
+/**
+ * \brief  Return TCB of current thread without checking state, lock TCB
+ *         (used only in __do_exit())
+ *	
+ * \return TCB, NULL if current thread not found in TCB table
+ */
+/*****************************************************************************/ 
+L4_INLINE l4th_tcb_t *
+l4th_tcb_get_current_locked_nocheck(void)
+{
+  l4thread_t thread = l4th_tcb_get_current_id();
+
+  if ((thread < 0) || (thread >= l4thread_max_threads))
+    return NULL;
+  
+  /* lock TCB */
+  l4lock_lock(&l4th_tcbs[thread].lock);
+
   return &l4th_tcbs[thread];
+}
+
+/*****************************************************************************/
+/**
+ * \brief  Lock TCB
+ * 
+ * \param  tcb           Thread control block
+ */
+/*****************************************************************************/ 
+L4_INLINE void
+l4th_tcb_lock(l4th_tcb_t * tcb)
+{
+  if (tcb == NULL)
+    return;
+
+  /* unlock TCB */
+  l4lock_lock(&tcb->lock);
 }
 
 /*****************************************************************************/

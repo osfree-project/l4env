@@ -6,8 +6,8 @@
  * \ingroup api_types
  */
 /*****************************************************************************/
-#ifndef __L4_TYPES_H__ 
-#define __L4_TYPES_H__ 
+#ifndef __L4_TYPES_H__
+#define __L4_TYPES_H__
 
 #include <l4/sys/compiler.h>
 #include <l4/sys/consts.h>
@@ -23,7 +23,7 @@ typedef struct {
 } l4_low_high_t;
 
 /*****************************************************************************
- *** L4 unique identifiers 
+ *** L4 unique identifiers
  *****************************************************************************/
 
 /**
@@ -93,63 +93,94 @@ typedef union {
 /**
  * \brief   Test if \a id is nil thread id
  * \ingroup api_types_id
- * 
+ *
  * \param   id           Thread id
  * \return  != 0 if \a id is nil thread id, 0 if not
  */
-L4_INLINE int 
+L4_INLINE int
 l4_is_nil_id(l4_threadid_t id);
 
 /**
  * \brief   Test if \a id is invalid thread id
  * \ingroup api_types_id
- * 
+ *
  * \param   id           Thread id
  * \return  != 0 if \a id is invalid thread id, 0 if not
  */
-L4_INLINE int 
+L4_INLINE int
 l4_is_invalid_id(l4_threadid_t id);
+
+/**
+ * \brief   Test if \a id is a IRQ thread id
+ * \ingroup api_types_id
+ *
+ * \param   id           Thread id
+ * \return  != 0 if \a id is IRQ thread id, 0 if not
+ */
+L4_INLINE int
+l4_is_irq_id(l4_threadid_t id);
+
+/**
+ * \brief   Return the IRQ number
+ * \ingroup api_types_id
+ *
+ * \param   id            Thread id
+ * \return  IRQ number
+ */
+L4_INLINE int
+l4_get_irqnr(l4_threadid_t id);
 
 /**
  * \brief   Create task id from thread id
  * \ingroup api_types_id
- * 
+ *
  * \param   t            Thread id
  * \return  Task id
  */
-L4_INLINE l4_threadid_t 
+L4_INLINE l4_threadid_t
 l4_get_taskid(l4_threadid_t t);
 
 /**
  * \brief   Test if two thread ids are equal
  * \ingroup api_types_id
- * 
+ *
  * \param   t1           First thread id
  * \param   t2           Second thread id
  * \return  !=0 if thread ids are equal, 0 if not
  */
-L4_INLINE int 
-l4_thread_equal(l4_threadid_t t1,l4_threadid_t t2);
+L4_INLINE int
+l4_thread_equal(l4_threadid_t t1, l4_threadid_t t2);
 
 /**
  * \brief   Test if two task ids are equal
  * \ingroup api_types_id
- * 
+ *
  * \param   t1           First task id
  * \param   t2           Second task id
  * \return  != 0 if task ids are equal, 0 if not
  */
-L4_INLINE int 
-l4_task_equal(l4_threadid_t t1,l4_threadid_t t2);
+L4_INLINE int
+l4_task_equal(l4_threadid_t t1, l4_threadid_t t2);
+
+/**
+ * \brief   Test if the task numbers of two task ids are equal
+ * \ingroup api_types_id
+ *
+ * \param   t1           First task id
+ * \param   t2           Second task id
+ * \return  != 0 if task numbers are equal, 0 if not
+ */
+L4_INLINE int
+l4_tasknum_equal(l4_threadid_t t1, l4_threadid_t t2);
 
 /**
  * \brief   Create interrupt id
  * \ingroup api_types_id
- * 
+ *
  * \param   irq          Interrupt number
  * \retval  t            Interrupt id
  */
-L4_INLINE void 
+L4_INLINE void
 l4_make_taskid_from_irq(int irq, l4_threadid_t *t);
 
 /*****************************************************************************
@@ -193,7 +224,7 @@ typedef union {
 } l4_fpage_t;
 
 /**
- * Whole address space size 
+ * Whole address space size
  * \ingroup api_types_fpage
  * \hideinitializer
  */
@@ -253,9 +284,9 @@ typedef struct {
 /**
  * \brief   Build flexpage descriptor
  * \ingroup api_types_fpage
- * 
+ *
  * \param   address      Flexpage source address
- * \param   size         Flexpage size (log2), #L4_WHOLE_ADDRESS_SPACE to 
+ * \param   size         Flexpage size (log2), #L4_WHOLE_ADDRESS_SPACE to
  *                       specify the whole address space (with \a address 0)
  * \param   write        Read-write flexpage (#L4_FPAGE_RW) or read-only
  *                       flexpage (#L4_FPAGE_RO)
@@ -270,7 +301,7 @@ l4_fpage(unsigned long address, unsigned int size,
 /**
  * \brief   Build I/O flexpage descriptor
  * \ingroup api_types_fpage
- * 
+ *
  * \param   port         I/O flexpage port base
  * \param   size         I/O flexpage size, #L4_WHOLE_IOADDRESS_SPACE to 
  *                       specify the whole I/O address space (with \a port 0)
@@ -310,6 +341,7 @@ typedef struct {
   unsigned dwords:19;        ///< Number of dwords in message
 } l4_msgdope_struct_t;
 
+
 /**
  * L4 message dope type
  * \ingroup api_types_msg
@@ -317,10 +349,11 @@ typedef struct {
 typedef union {
   l4_umword_t msgdope;       ///< Plain 32 Bit value
   l4_msgdope_struct_t md;    ///< Message dope structure
+  l4_umword_t raw;
 } l4_msgdope_t;
 
 /**
- * L4 string dope 
+ * L4 string dope
  * \ingroup api_types_msg
  */
 typedef struct {
@@ -366,16 +399,16 @@ typedef union {
  * \ingroup api_types_sched
  */
 typedef struct {
-  unsigned prio:8;           /**< System-wide priority of the destination 
-                              **  thread. 255 is the highest and 0 the lowest 
+  unsigned prio:8;           /**< System-wide priority of the destination
+                              **  thread. 255 is the highest and 0 the lowest
                               **  priority.
                               **/
-  unsigned small:8;          /**< Small address space number for destination 
+  unsigned small:8;          /**< Small address space number for destination
                               **  task (see #L4_SMALL_SPACE)
                               **/
-  unsigned state:4;          /**< Thread state (l4_thread_schedule() return 
+  unsigned state:4;          /**< Thread state (l4_thread_schedule() return
                               **  value)
-                              ** 
+                              **
                               **  Values:
                               **  - 0+\a k \a Running. The thread is ready to
                               **    execute at user-level.
@@ -385,33 +418,33 @@ typedef struct {
                               **  - 8+\a k \a Receiving. A user-invoked IPC
                               **    receive operation currently receives an
                               **    incoming message.
-                              **  - 0xC \a Waiting for receive. A user-invoked 
-                              **    receive operation currently waits for an 
+                              **  - 0xC \a Waiting for receive. A user-invoked
+                              **    receive operation currently waits for an
                               **    incoming message.
                               **  - 0xD \a Pending send. A user-invoked send
-                              **    operation currently waits for the 
+                              **    operation currently waits for the
                               **    destination (recipient) to become ready to
                               **    receive.
                               **  - 0xE \a Reserved.
-                              **  - 0xF \a Dead. The thread is unable to 
+                              **  - 0xF \a Dead. The thread is unable to
                               **    execute.
                               **
                               **  - k=0 \a Kernel \a inactive. The kernel does
                               **    not execute an automatic RPC for the thread.
-                              **  - k=1 \a Pager. The kernel executes a 
+                              **  - k=1 \a Pager. The kernel executes a
                               **    pagefault RPC to the thread's pager.
                               **  - k=2 \a Internal \a preempter. The kernel
-                              **    executes a preemption RPC to the thread's 
+                              **    executes a preemption RPC to the thread's
                               **    internal preempter.
                               **  - k=3 \a external \a preempter. The kernel
                               **    executes a preemption RPC to the thread's
                               **    external preempter.
                               **
                               **  If l4_sched_param_struct_t is used as an input
-                              **  argument for l4_thread_schedule(), \a state 
-                              *   must be 0.   
+                              **  argument for l4_thread_schedule(), \a state
+                              *   must be 0.
                               **/
-  unsigned time_exp:4;       ///< Timeslice exponent      
+  unsigned time_exp:4;       ///< Timeslice exponent
   unsigned time_man:8;       ///< Timeslice mantissa
 } l4_sched_param_struct_t;
 
@@ -436,15 +469,15 @@ typedef union {
  * \ingroup api_types_sched
  * \hideinitializer
  *
- * \param   size_mb      Small space size (MB), possible sizes are 
+ * \param   size_mb      Small space size (MB), possible sizes are
  *                       2, 4, 8, ... 256 megabytes
- * \param   nr           Small space number, valid numbers are 
+ * \param   nr           Small space number, valid numbers are
  *                       1 .. (512/\a size_mb)-1.
  *
  * Compute l4_sched_param_struct_t->small argument for
  * l4_thread_schedule(): size_mb is the size of all small address
  * spaces, and nr is the number of the small address space.  See
- * Liedtke: ``L4 Pentium implementation'' 
+ * Liedtke: ``L4 Pentium implementation''
  */
 #define L4_SMALL_SPACE(size_mb, nr) ((size_mb >> 2) + nr * (size_mb >> 1))
 
@@ -480,6 +513,18 @@ l4_is_invalid_id(l4_threadid_t id)
   return id.lh.low == 0xffffffff;
 }
 
+L4_INLINE int
+l4_is_irq_id(l4_threadid_t id)
+{
+  return id.lh.high == 0 && id.lh.low > 0 && id.lh.low <= 255;
+}
+
+L4_INLINE int
+l4_get_irqnr(l4_threadid_t id)
+{
+  return id.lh.low - 1;
+}
+
 L4_INLINE l4_fpage_t
 l4_fpage(unsigned long address, unsigned int size,
          unsigned char write, unsigned char grant)
@@ -511,30 +556,23 @@ l4_get_taskid(l4_threadid_t t)
 }
 
 L4_INLINE int
-l4_thread_equal(l4_threadid_t t1,l4_threadid_t t2)
+l4_thread_equal(l4_threadid_t t1, l4_threadid_t t2)
 {
-  if((t1.lh.low != t2.lh.low) || (t1.lh.high != t2.lh.high))
-    return 0;
-  return 1;
+  return ((t1.lh.low == t2.lh.low) && (t1.lh.high == t2.lh.high));
 }
 
 #define TASK_MASK 0xfffe03ff
 L4_INLINE int
-l4_task_equal(l4_threadid_t t1,l4_threadid_t t2)
+l4_task_equal(l4_threadid_t t1, l4_threadid_t t2)
 {
-  if ( ((t1.lh.low & TASK_MASK) == (t2.lh.low & TASK_MASK)) && 
-       (t1.lh.high == t2.lh.high) )
-    return 1;
-  else
-    return 0;
-  
-/*   t1.id.lthread = 0; */
-/*   t2.id.lthread = 0; */
+  return (((t1.lh.low & TASK_MASK) == (t2.lh.low & TASK_MASK)) &&
+          (t1.lh.high == t2.lh.high));
+}
 
-/*   if((t1.lh.low != t2.lh.low) || (t1.lh.high != t2.lh.high)) */
-/*     return 0; */
-/*   return 1; */
-
+L4_INLINE int
+l4_tasknum_equal(l4_threadid_t t1, l4_threadid_t t2)
+{
+  return (t1.id.task == t2.id.task);
 }
 
 L4_INLINE void

@@ -1,0 +1,22 @@
+What's this?
+------------
+
+This package provides an L4VFS server for Unix domain sockets. It is not
+finished yet, as it only implements SOCK_STREAM. Thus sendto(), recvfrom()
+and recvmsg() are not implemented, as these are normally used in
+conjunction with connection-less sockets like SOCK_DGRAM.
+Most socket options and fcntl() flags are not available atm. However
+blocking and non-blocking modes are supported, as well as select().
+
+
+Requirements:
+-------------
+
+- names
+- dm_phys
+- log
+- l4vfs
+- name_server (from l4vfs)
+- dietlibc
+
+

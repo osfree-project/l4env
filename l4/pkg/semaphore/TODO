@@ -1,0 +1,39 @@
+There are several problems with the current semaphore implementation:
+
+* Priorities (1): Although the list of waiting threads is sorted (as the
+  config option L4SEMAPHORE_SORT_WQ is enabled in CVS) it is possible that
+  the wrong thread is running in the following scenario:
+
+  1. Thread A with a high priority gets the semaphore.
+  2. A blocks (e.g. waiting for an IPC)
+  3. Thread B with a low priority performs down() but blocks since the
+     semaphore is still owned by Thread A.
+  4. Thread A performs up(). The semaphore thread selects the next owner
+     of the semaphore (Thread B) and replies immediately to Thread A.
+  5. Thread A wants to get the semaphore again but must wait for Thread B
+     now because this is the new owner.
+
+  Therefore we cannot emulate the behaviour of disabling/enabling interrupts
+  with this implementation since a thread with the highest priority enabling
+  the interrupts (cli_semaphore::up()) must not be preempted by lower priority
+  thread when it disables the interrupts next time (cli_semaphore::down()).
+
+  The problem of the implementation is that Thread B is selected immediately
+  when Thread A releases the lock. The proposed solution: When the semaphore
+  owner A performs up(), all waiting threads are awakened and have to reapply
+  for the semaphore. The thread with the highest priority gets the semaphore,
+  all other applicants are enqueued into the wait queue again.
+
+  Drawback of the proposed solution: semaphore::up() is the more expensive the
+  more threads apply for the semaphore.
+
+  -- Frank (fm3@os.inf.tu-dresden.de) -- 07/2004
+
+
+* Priorities (2): If the priority of a thread waiting for a semaphore is
+  changed, the position in the wait queue is not changed.
+
+  Proposed solution: See Priorities (1).
+
+  -- Frank (fm3@os.inf.tu-dresden.de) -- 07/2004
+

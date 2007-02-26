@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/CPreProcess.h
- *	\brief	contains the declaration of the class CPreProcess
+ *    \file    dice/src/CPreProcess.h
+ *    \brief   contains the declaration of the class CPreProcess
  *
- *	\date	Mon Jul 28 2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    Mon Jul 28 2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -29,10 +30,12 @@
 #ifndef CPREPROCESS_H
 #define CPREPROCESS_H
 
-#include "CString.h"
+#include <string>
+using namespace std;
 #include "ProgramOptions.h" // needed for ProgramOptionType
 #include <stdlib.h> // needed for malloc
 #include <string.h> // needed for memset
+#include "defines.h"
 
 /** \struct _inc_bookmark_t
  *  \brief helper structure for the parser
@@ -43,31 +46,31 @@
  */
 struct _inc_bookmark_t
 {
-    /** \var String *pFromFile
+    /** \var string *m_pFromFile
      *  \brief contains the filename in which the include/import statement appears
      */
-    String *m_pFromFile;
-    /** \var String *pFilename
+    string *m_pFromFile;
+    /** \var string *m_pFilename
      *  \brief contains the filename of the include/import statement
      */
-    String *m_pFilename;
-    /** \var int nLineNb
+    string *m_pFilename;
+    /** \var int m_nLineNb
      *  \brief contains the line-number at which the statement appeared
      */
     int m_nLineNb;
-    /** \var bool bImport
+    /** \var bool m_bImport
      *  \brief true if this is an import statement
      */
     bool m_bImport;
-    /** \var bool bStandard
+    /** \var bool m_bStandard
      *  \brief true if this is an standard include/import (the ones with < > )
      */
     bool m_bStandard;
-    /** \var struct _inc_bookmark_t *pPrev
+    /** \var struct _inc_bookmark_t *m_pPrev
      *  \brief contains a pointer to the previous bookmark in the "stack"
      */
     struct _inc_bookmark_t *m_pPrev;
-    /** \var struct _inc_bookmark_t *pNext
+    /** \var struct _inc_bookmark_t *m_pNext
      *  \brief contains a pointer to the next bookmark in the "stack"
      */
     struct _inc_bookmark_t *m_pNext;
@@ -105,64 +108,65 @@ inline void del_include_bookmark(inc_bookmark_t* tmp)
 class CPreProcess
 {
 private:
-	/** creates a new preprocessor object */
-	CPreProcess();
+    /** creates a new preprocessor object */
+    CPreProcess();
 public:
-	~CPreProcess();
+    ~CPreProcess();
 
-	char ** GetCPPArguments(); // delete?
-	int AddIncludePath(String sPath); // used by CCompiler
+    char ** GetCPPArguments(); // delete?
+    int AddIncludePath(string sPath); // used by CCompiler
     int AddIncludePath(const char* sNewPath); // used by CCompiler
-	void AddCPPArgument(String sNewArgument); // used by CCompiler
+    void AddCPPArgument(string sNewArgument); // used by CCompiler
     void AddCPPArgument(const char* sNewArgument); // used by CCompiler
-	void SetCPP(const char* sCPP); // used by CCompiler
-	FILE* PreProcess(String sFilename, bool bDefault, bool bVerbose);
-	String GetCurrentIncludePath();
-	String FindPathToFile(String sFilename, int nLineNb); // used by scanner
-	bool AddInclude(String sFile, String sFromFile, int nLineNb, bool bImport, bool bStandard); // used by scanner
-    String GetOriginalIncludeForFile(String sFilename, int nLineNb); // used by scanner
-	bool IsStandardInclude(String sFilename, int nLineNb);
-	FILE* OpenFile(String sName, bool bDefault, bool bVerbose, bool bIgnoreErrors = false);
-	void SetOption(ProgramOptionType nOptionAdd, ProgramOptionType nOptionRemove = 0);
+    bool SetCPP(const char* sCPP); // used by CCompiler
+    FILE* PreProcess(string sFilename, bool bDefault, bool bVerbose);
+    string GetCurrentIncludePath();
+    string FindPathToFile(string sFilename, int nLineNb); // used by scanner
+    bool AddInclude(string sFile, string sFromFile, int nLineNb, bool bImport, bool bStandard); // used by scanner
+    string GetOriginalIncludeForFile(string sFilename, int nLineNb); // used by scanner
+    bool IsStandardInclude(string sFilename, int nLineNb);
+    FILE* OpenFile(string sName, bool bDefault, bool bVerbose, bool bIgnoreErrors = false);
+    void SetOption(unsigned int nOptionAdd, unsigned int nOptionRemove = 0);
 
-	static CPreProcess* GetPreProcessor(); // used by CCompiler, CParser
+    static CPreProcess* GetPreProcessor(); // used by CCompiler, CParser
 
-	inc_bookmark_t* GetFirstIncludeInFile(String sFilename); // used by CFEFile
-    inc_bookmark_t* GetNextIncludeInFile(String sFilename, inc_bookmark_t* pPrev);
+    inc_bookmark_t* GetFirstIncludeInFile(string sFilename); // used by CFEFile
+    inc_bookmark_t* GetNextIncludeInFile(string sFilename, inc_bookmark_t* pPrev);
 
 protected:
     void CPPErrorHandling();
-	int ExecCPP(FILE *fInput, FILE* fOutput);
+    int ExecCPP(FILE *fInput, FILE* fOutput);
     bool TestCPP(const char* sCPP);
-	char* CheckCPPforArguments(const char* sCPP);
-    bool CheckName(String sPathToFile);
-	inc_bookmark_t* FirstIncludeBookmark();
-	inc_bookmark_t* PopIncludeBookmark();
-	void AddIncludeBookmark(inc_bookmark_t* pNew);
-	int FindLineNbOfInclude(String sFilename, String sFromFile);
-	bool IsOptionSet(ProgramOptionType nOption);
+    char* CheckCPPforArguments(const char* sCPP);
+    bool CheckName(string sPathToFile);
+    inc_bookmark_t* FirstIncludeBookmark();
+    inc_bookmark_t* PopIncludeBookmark();
+    void AddIncludeBookmark(inc_bookmark_t* pNew);
+    int FindLineNbOfInclude(string sFilename, string sFromFile);
+
+    bool IsOptionSet(unsigned int nRawOption);
 
 protected:
     /** \var CPreProcess *m_pPreProcessor
-	 *  \brief a reference to the preprocessor
-	 */
+     *  \brief a reference to the preprocessor
+     */
     static CPreProcess *m_pPreProcessor;
-	/**	\var int m_nCPPArgCount
-	 *	\brief the number of cpp arguments
-	 */
+    /**    \var int m_nCPPArgCount
+     *    \brief the number of cpp arguments
+     */
     int m_nCPPArgCount;
-	/**	\var char** m_sCPPArgs
-	 *	\brief the arguments for the cpp preprocessor
-	 */
+    /**    \var char** m_sCPPArgs
+     *    \brief the arguments for the cpp preprocessor
+     */
     char **m_sCPPArgs;
     /** \var char* m_sCPPProgram
      *  \brief the program name of CPP
      */
     char* m_sCPPProgram;
-    /** \var String m_sIncludePaths[MAX_INCLUDE_PATHS]
+    /** \var string m_sIncludePaths[MAX_INCLUDE_PATHS]
      *  \brief contains the include paths
      */
-    String m_sIncludePaths[MAX_INCLUDE_PATHS];
+    string m_sIncludePaths[MAX_INCLUDE_PATHS];
     /** \var int m_nCurrentIncludePath
      *  \brief indicates the currently used include path
      */
@@ -175,10 +179,10 @@ protected:
      *  \brief references a list of include bookmarks
      */
     inc_bookmark_t *m_pBookmarkTail;
-	/** \var ProgramOptionType m_nOptions
-	 *  \brief options set for the preprocessor
-	 */
-	ProgramOptionType m_nOptions;
+    /**    \var unsigned int m_nOptions[PROGRAM_OPTION_GROUPS]
+     *    \brief the options which are specified with the compiler call
+     */
+    unsigned int m_nOptions[PROGRAM_OPTION_GROUPS];
 };
 
 #endif /* !CPREPROCESS_H */

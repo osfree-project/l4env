@@ -1,0 +1,3 @@
+mainmenu_name "Names Configuration"
+
+bool 'Event Support'		CONFIG_EVENT

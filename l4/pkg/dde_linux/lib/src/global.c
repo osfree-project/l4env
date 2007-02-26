@@ -15,18 +15,15 @@
 
 /* L4 */
 #include <l4/lock/lock.h>
-
 #include <l4/dde_linux/dde.h>
 
 /* Linux */
 #include <asm/system.h>
 
-/* OSKit */
-#include <stdlib.h>
-
 /* local */
-#include "__config.h"
 #include "internal.h"
+
+#include <stdlib.h>
 
 /** \name Synchronization
  *
@@ -96,7 +93,7 @@ void __global_restore_flags(unsigned long flags)
       __global_cli();
       break;
     default:
-      DMSG("__global_restore_flags: unknown flags");
+      LOGd(DEBUG_MSG, "__global_restore_flags: unknown flags");
     }
 }
 
@@ -160,4 +157,34 @@ void udelay(unsigned long usecs)
 {
   l4thread_usleep(usecs);
 }
+
+/** Dummy for DDE2.6
+ * \ingroup mod_misc */
+int l4dde_driver_classes_init(void)
+{
+  LOGd(DEBUG_MSG, "l4dde_driver_classes_init() should not be used with DDE2.4\n");
+
+  return 0;
+}
+
+#include <linux/reboot.h>
+/** Dummy ... */
+int register_reboot_notifier(struct notifier_block *arg0)
+{
+#if DEBUG_MSG
+  LOG_Enter();
+#endif
+  return 0;
+}
+
+/** Dummy ... */
+int unregister_reboot_notifier(struct notifier_block *arg0)
+{
+#if DEBUG_MSG
+  LOG_Enter();
+#endif
+  return 0;
+}
+
+
 /** @} */

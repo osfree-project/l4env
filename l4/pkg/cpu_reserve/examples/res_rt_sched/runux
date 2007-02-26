@@ -1,0 +1,9 @@
+# this shows the effect of the cpu_reserved server. When using the
+# reservation server, everything goes well. However, giving "-d" as argument
+# to res_rt_sched results in res_rt_sched trying to do the reservations on
+# its own, which fails due to an insufficient mcp.
+#
+# the "cpu -w 2" just prints the status of cpu_reserved every 2 seconds.
+
+RMGR_ARGS="task modname \"res_rt_sched\" boot_mcp 30" ./l4env "cpu -w 2" \
+	"res_rt_sched " "cpu_reserved -v"

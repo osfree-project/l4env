@@ -27,7 +27,7 @@
 
 /* init sigma0 comm */
 int
-dmhys_sigma0_init(void);
+dmphys_sigma0_init(void);
 
 /* map some page */
 void *

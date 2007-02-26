@@ -23,9 +23,11 @@
 #include <l4/util/macros.h>
 
 /* private includes */
+#include "__debug.h"
 #include "__sigma0.h"
 #include "__config.h"
-#include "__debug.h"
+#include "__pages.h"
+#include "__kinfo.h"
 
 /*****************************************************************************
  *** global data
@@ -35,6 +37,11 @@
  * sigma0 id
  */
 static l4_threadid_t sigma0_id = L4_INVALID_ID;
+
+/**
+ * Start of physical memory
+ */
+l4_addr_t ram_base;
 
 /*****************************************************************************
  *** DMphys internal functions 
@@ -48,7 +55,7 @@ static l4_threadid_t sigma0_id = L4_INVALID_ID;
  */
 /*****************************************************************************/ 
 int
-dmhys_sigma0_init(void)
+dmphys_sigma0_init(void)
 {
   l4_umword_t dummy;
   l4_threadid_t preempter;
@@ -58,8 +65,11 @@ dmhys_sigma0_init(void)
   l4_thread_ex_regs(l4_myself(), (l4_umword_t)-1, (l4_umword_t)-1,
 		    &preempter, &sigma0_id, &dummy, &dummy, &dummy);
 
-  LOGdL(DEBUG_SIGMA0,"Sigma0 = %x.%x\n",
-        sigma0_id.id.task,sigma0_id.id.lthread);
+  LOGdL(DEBUG_SIGMA0, "Sigma0 = "l4util_idfmt, l4util_idstr(sigma0_id));
+
+  dmphys_kinfo_init_ram_base();
+
+  ASSERT(ram_base == RAM_BASE);
 
   /* done */
   return 0;
@@ -81,21 +91,29 @@ dmphys_sigma0_map_any_page(void)
   l4_msgdope_t result;
 
   /* call sigma0 to map a page, the receive window is our whole map area */
-  error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,0xFFFFFFFC,0,
-			   L4_IPC_MAPMSG(DMPHYS_MEMMAP_START, 
-					 DMPHYS_MEMMAP_LOG2_SIZE),
-			   &base,&fpage.fpage,L4_IPC_NEVER,&result);
+  error = l4_ipc_call(sigma0_id, L4_IPC_SHORT_MSG, 0xFFFFFFFC, 0,
+                      L4_IPC_MAPMSG(DMPHYS_MEMMAP_START, 
+                                    DMPHYS_MEMMAP_LOG2_SIZE),
+                      &base, &fpage.fpage, L4_IPC_NEVER, &result);
+
   if ((error) || (!l4_ipc_fpage_received(result)))
     {
-      PANIC("DMphys: map page failed (result 0x%08x)!",result.msgdope);
+      PANIC("DMphys: map page failed (result 0x%08x, err 0x%x)!",
+	    result.msgdope, error);
       return NULL;
     }
 
-  LOGdL(DEBUG_SIGMA0,"got page 0x%05x\n  base 0x%08x, mapped at 0x%08x",
-        fpage.fp.page,base,DMPHYS_MEMMAP_START + base);
-  
+  if (base < RAM_BASE)
+    {
+      PANIC("DMphys: received non-physical memory (%08x)!", base);
+      return NULL;
+    }
+
+  LOGdL(DEBUG_SIGMA0, "got page 0x%05x\n  base 0x%08x, mapped at 0x%08x",
+        fpage.fp.page, base, MAP_ADDR(base));
+
   /* return page map address */
-  return (void *)(DMPHYS_MEMMAP_START + base);
+  return (void *)MAP_ADDR(base);
 }
 
 /*****************************************************************************/
@@ -115,32 +133,26 @@ dmphys_sigma0_map_page(l4_addr_t page)
   l4_fpage_t fpage;
   l4_msgdope_t result;
 
-  LOGdL(DEBUG_SIGMA0,"");
-
   /* call sigma0 to map the page */
   page &= L4_PAGEMASK;
-  error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,page,0,
-			   L4_IPC_MAPMSG(DMPHYS_MEMMAP_START + page, 
-					 L4_LOG2_PAGESIZE),
-			   &base,&fpage.fpage,L4_IPC_NEVER,&result);
+  error = l4_ipc_call(sigma0_id, L4_IPC_SHORT_MSG, page, 0,
+                      L4_IPC_MAPMSG(MAP_ADDR(page), 
+                                    L4_LOG2_PAGESIZE),
+                      &base, &fpage.fpage, L4_IPC_NEVER, &result);
   if (error)
     {
-      PANIC("DMphys: calling sigma0 failed (result 0x%08x)!",result.msgdope);
+      PANIC("DMphys: calling sigma0 failed (result 0x%08x)!", result.msgdope);
       return -1;
     }
 
   if ((fpage.fpage == 0) || (!l4_ipc_fpage_received(result)))
     {
       /* sigma0 denied page */
-#if DEBUG_SIGMA0
-      printf("  requesting 4K-page at 0x%08x: denied\n",page);
-#endif
+      LOGdL(DEBUG_SIGMA0, "requesting 4K-page at 0x%08x: denied", page);
       return -1;
     }
 
-#if DEBUG_SIGMA0
-  printf("  requesting 4K-page at 0x%08x: success\n",page);
-#endif
+  LOGdL(DEBUG_SIGMA0, "requesting 4K-page at 0x%08x: success", page);
 
   /* done */
   return 0;
@@ -156,10 +168,10 @@ dmphys_sigma0_map_page(l4_addr_t page)
 void
 dmphys_sigma0_unmap_page(l4_addr_t page)
 {
-  l4_addr_t map_addr = DMPHYS_MEMMAP_START + page;
+  l4_addr_t map_addr = MAP_ADDR(page);
 
   /* unmap */
-  l4_fpage_unmap(l4_fpage(map_addr,L4_LOG2_PAGESIZE,0,0),
+  l4_fpage_unmap(l4_fpage(map_addr, L4_LOG2_PAGESIZE, 0, 0),
 		 L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
 }
 
@@ -180,28 +192,24 @@ dmphys_sigma0_map_4Mpage(l4_addr_t page)
   l4_fpage_t fpage;
   l4_msgdope_t result;
 
-  LOGdL(DEBUG_SIGMA0,"");
-
   /* call sigma0 to map the page */
   page &= L4_SUPERPAGEMASK;
-  error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,
-			   page | 1, L4_LOG2_SUPERPAGESIZE << 2,
-			   L4_IPC_MAPMSG(DMPHYS_MEMMAP_START + page,
-					 L4_LOG2_SUPERPAGESIZE),
-			   &base,&fpage.fpage,L4_IPC_NEVER,&result);
+  error = l4_ipc_call(sigma0_id, L4_IPC_SHORT_MSG,
+                      page | 1, L4_LOG2_SUPERPAGESIZE << 2,
+                      L4_IPC_MAPMSG(MAP_ADDR(page),
+                                    L4_LOG2_SUPERPAGESIZE),
+                      &base, &fpage.fpage, L4_IPC_NEVER, &result);
 
   if (error)
     {
-      PANIC("DMphys: calling sigma0 failed (result 0x%08x)!",result.msgdope);
+      PANIC("DMphys: calling sigma0 failed (result 0x%08x)!", result.msgdope);
       return -1;
     }
 
   if ((fpage.fpage == 0) || (!l4_ipc_fpage_received(result)))
     {
       /* sigma0 denied page */
-#if DEBUG_SIGMA0
-      printf("  requesting 4M-page at 0x%08x: denied\n",page);
-#endif
+      LOGdL(DEBUG_SIGMA0, "requesting 4M-page at 0x%08x: denied\n",page);
       return -1;
     }
 
@@ -209,21 +217,17 @@ dmphys_sigma0_map_4Mpage(l4_addr_t page)
     {
       /* no 4M-page received, this can happen if the whole 4M-page is not
        * available but the 4K-page at that address */
-#if DEBUG_SIGMA0
-      printf("  requesting 4M-page at 0x%08x: failed (got %d)\n",
-             page,fpage.fp.size);
-#endif
-
+      LOGdL(DEBUG_SIGMA0, "requesting 4M-page at 0x%08x: failed (got %d)",
+            page, fpage.fp.size);
+      
       /* unmap page, the 4K-page must be mapped explicitly */
       fpage.fp.page += (DMPHYS_MEMMAP_START >> L4_LOG2_PAGESIZE);
-      l4_fpage_unmap(fpage,L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
+      l4_fpage_unmap(fpage, L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
 
       return -1;
     }
 
-#if DEBUG_SIGMA0
-  printf("  requesting 4M-page at 0x%08x: success\n",page);
-#endif
+  LOGdL(DEBUG_SIGMA0, "requesting 4M-page at 0x%08x: success", page);
 
   /* done */
   return 0;
@@ -239,10 +243,10 @@ dmphys_sigma0_map_4Mpage(l4_addr_t page)
 void
 dmphys_sigma0_unmap_4Mpage(l4_addr_t page)
 {
-  l4_addr_t map_addr = DMPHYS_MEMMAP_START + page;
+  l4_addr_t map_addr = MAP_ADDR(page);
   
   /* unmap */
-  l4_fpage_unmap(l4_fpage(map_addr,L4_LOG2_SUPERPAGESIZE,0,0),
+  l4_fpage_unmap(l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0),
 		 L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
 }
 
@@ -262,15 +266,15 @@ dmphys_sigma0_kinfo(void)
   l4_msgdope_t result;
 
   /* call sigma0 to map kernel info page */
-  error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,1,1,
-			   L4_IPC_MAPMSG(DMPHYS_KINFO_MAP, L4_LOG2_PAGESIZE),
-			   &base,&fpage.fpage,L4_IPC_NEVER,&result);
+  error = l4_ipc_call(sigma0_id, L4_IPC_SHORT_MSG, 1, 1,
+                      L4_IPC_MAPMSG(DMPHYS_KINFO_MAP, L4_LOG2_PAGESIZE),
+                      &base, &fpage.fpage, L4_IPC_NEVER, &result);
   if ((error) || (!l4_ipc_fpage_received(result)))
     {
-      PANIC("DMphys: map kinfo page failed (result 0x%08x)!",result.msgdope);
+      PANIC("DMphys: map kinfo page failed (result 0x%08x)!", result.msgdope);
       return NULL;
     }
-  
+
   /* return pointer to kinfo page */
   return (l4_kernel_info_t *)DMPHYS_KINFO_MAP;
 }

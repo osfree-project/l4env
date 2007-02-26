@@ -37,6 +37,8 @@
       L4 kernel debugger\htmlonly</a>\endhtmlonly
     - \htmlonly<a href="group__api__calls__fiasco.html">\endhtmlonly
       Fiasco extensions\htmlonly</a>\endhtmlonly
+    - \htmlonly<a href="group__api__calls__rt__sched.html">\endhtmlonly
+      Fiasco real time scheduling extensions\htmlonly</a>\endhtmlonly
 
 \section intro Introduction
 

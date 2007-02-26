@@ -9,7 +9,7 @@ l4_myself
 <short> deliver the id of the current thread
 <sect> Synopsis
 
-<verb>#include <syscalls.h></verb>
+<verb>#include <l4/sys/syscalls.h></verb>
 
 
 <code/static inline volatile l4_threadid_t/ <nl>

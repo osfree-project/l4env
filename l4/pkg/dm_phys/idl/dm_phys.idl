@@ -113,6 +113,23 @@ library if_l4dm
 			   [in] unsigned long pagesize, 
 			   [out] unsigned long *ok);
 
+       /***********************************************************************/
+       /**
+        * \brief   Returns the size of a given pool
+        * \ingroup idl_phys
+        *
+        * \param   pool  The id of the pool
+        * \retval  size  Size of the pool
+	* \retval  free  Amount of unused memory of the pool
+        *
+        * \return  0 on success, error code otherwise:
+        *          - -#L4EINVAL  invalid pool number
+        */
+      /***********************************************************************/
+      long dmphys_poolsize([in] unsigned long pool,
+                           [out] unsigned long *size,
+			   [out] unsigned long *free);
+      
       /***********************************************************************/
       /**
        * \brief   DEBUG: show DMphys debug information

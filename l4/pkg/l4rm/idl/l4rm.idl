@@ -25,14 +25,5 @@ library l4
 
       /* remove entry region tree */
       long remove();
-
-      /* lookup address in region tree */
-      long lookup();
-
-      /* add client for region mapper thread */
-      long add_client();
-
-      /* remove client */
-      long remove_client();
     };
 };

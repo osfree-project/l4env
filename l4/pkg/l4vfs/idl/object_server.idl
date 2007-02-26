@@ -1,0 +1,34 @@
+/* -*- c -*- */
+/**
+ * \file   l4vfs/idl/object_server.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+import <l4/l4vfs/types.h>
+
+import <l4/l4vfs/basic_name_server.idl>
+import <l4/l4vfs/name_space_provider.idl>
+import <l4/l4vfs/extendable.idl>
+import <l4/l4vfs/basic_io.idl>
+import <l4/l4vfs/container_io.idl>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief Usual interface for object servers
+     */
+    [uuid(1004)]
+        interface object_server : basic_name_server, basic_io, container_io
+    {
+    };
+};

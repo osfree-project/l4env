@@ -25,7 +25,7 @@ IMPLEMENTATION:
 
 #include "panic.h"
 #include "config.h"
-#include "kmem_alloc.h"
+#include "mapped_alloc.h"
 
 // We only support slab size == PAGE_SIZE.
 PUBLIC
@@ -88,13 +88,13 @@ Kmem_slab_simple::block_alloc(unsigned long size, unsigned long)
   assert(size == Config::PAGE_SIZE);
   (void)size;
 
-  return Kmem_alloc::allocator()->alloc(0);
+  return Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
 }
 
 virtual void 
 Kmem_slab_simple::block_free(void *block, unsigned long)
 {
-  Kmem_alloc::allocator()->free(0,block);
+  Mapped_allocator::allocator()->free(Config::PAGE_SHIFT,block);
 }
 
 // memory management
@@ -110,7 +110,7 @@ Kmem_slab_simple::operator new(size_t size)
   (void)size; // prevent gcc warning
   if(!slab_mem)
     {
-      slab_mem = Kmem_alloc::allocator()->alloc(0);
+      slab_mem = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
       if(!slab_mem)
 	panic("Out of memory (new Kmem_slab_simple)");
 

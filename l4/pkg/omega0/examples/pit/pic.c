@@ -1,10 +1,11 @@
 #include <l4/util/irq.h>
 #include <l4/log/l4log.h>
 #include "config.h"
+#include "pic.h"
 
 #ifdef USE_LOCKING
-#include "lock.h"
-static wq_lock_queue_base pic_wq = {NULL};
+#include <l4/util/lock_wq.h>
+static l4util_wq_lock_queue_base_t pic_wq = {NULL};
 #endif
 
 #ifdef USE_CLISTI
@@ -15,12 +16,11 @@ static wq_lock_queue_base pic_wq = {NULL};
 #define l4_sti()
 #endif
 
-void irq_mask(int irq);
 void irq_mask(int irq){
 #ifdef USE_LOCKING
-  wq_lock_queue_elem wqe;
+  l4util_wq_lock_queue_elem_t wqe;
 
-  if(wq_lock_lock(&pic_wq, &wqe)) LOGl("error locking pic-waitqueue");
+  if(l4util_wq_lock_lock(&pic_wq, &wqe)) LOGl("error locking pic-waitqueue");
 #endif
 
   l4_cli();
@@ -32,16 +32,16 @@ void irq_mask(int irq){
   l4_sti();
   
 #ifdef USE_LOCKING
-  if(wq_lock_unlock(&pic_wq, &wqe)) LOGl("error unlocking pic-waitqueue");
+  if(l4util_wq_lock_unlock(&pic_wq, &wqe))
+      LOGl("error unlocking pic-waitqueue");
 #endif
 }
 
-void irq_unmask(int irq);
 void irq_unmask(int irq){
 #ifdef USE_LOCKING
-  wq_lock_queue_elem wqe;
+  l4util_wq_lock_queue_elem_t wqe;
 
-  wq_lock_lock(&pic_wq, &wqe);
+  l4util_wq_lock_lock(&pic_wq, &wqe);
 #endif
   
   l4_cli();
@@ -53,45 +53,33 @@ void irq_unmask(int irq){
   l4_sti();
   
 #ifdef USE_LOCKING
-  wq_lock_unlock(&pic_wq, &wqe);
+  l4util_wq_lock_unlock(&pic_wq, &wqe);
 #endif
 }
 
-void irq_ack(int irq);
 void irq_ack(int irq){
 #ifdef USE_LOCKING
-  wq_lock_queue_elem wqe;
-  wq_lock_lock(&pic_wq, &wqe);
+  l4util_wq_lock_queue_elem_t wqe;
+  l4util_wq_lock_lock(&pic_wq, &wqe);
 #endif
   
   l4_cli();
-    if (irq > 7){
-      l4util_out8(0x60|(irq&7),0xA0);
-      l4util_out8(0x0B,0xA0);
-      if (l4util_in8(0xA0) == 0)  l4util_out8(0x62,0x20);
-    }else{
-      l4util_out8(0x60|irq,0x20);
-    }
+  l4util_irq_acknowledge(irq);
   l4_sti();
   
 #ifdef USE_LOCKING
-  wq_lock_unlock(&pic_wq, &wqe);
+  l4util_wq_lock_unlock(&pic_wq, &wqe);
 #endif
 }
 
 /* return the interrupt service register (isr). This register holds the
    irq's which are accepted by the processor and not acknowledged.  if
    master!=0, return master isr, else return slave isr */
-int pic_isr(int master);
 int pic_isr(int master){
-#ifdef USE_LOCKING
-  wq_lock_queue_elem wqe;
-#endif
   int dat;
-
 #ifdef USE_LOCKING
-  wq_lock_queue_elem wqe;
-  wq_lock_lock(&pic_wq, &wqe);
+  l4util_wq_lock_queue_elem_t wqe;
+  l4util_wq_lock_lock(&pic_wq, &wqe);
 #endif
   
   l4_cli();
@@ -105,7 +93,7 @@ int pic_isr(int master){
   l4_sti();
 
 #ifdef USE_LOCKING
-  wq_lock_unlock(&pic_wq, &wqe);
+  l4util_wq_lock_unlock(&pic_wq, &wqe);
 #endif
   
   return dat;
@@ -114,12 +102,11 @@ int pic_isr(int master){
 /* return the interrupt request register (irr). This register holds the
    irq's which are requested by hardware but not delivered to the processor. 
    if master!=0, return master irr, else return slave irr */
-int pic_irr(int master);
 int pic_irr(int master){
   int dat;
 #ifdef USE_LOCKING
-  wq_lock_queue_elem wqe;
-  wq_lock_lock(&pic_wq, &wqe);
+  l4util_wq_lock_queue_elem_t wqe;
+  l4util_wq_lock_lock(&pic_wq, &wqe);
 #endif
   
   l4_cli();
@@ -133,7 +120,7 @@ int pic_irr(int master){
   l4_sti();
 
 #ifdef USE_LOCKING
-  wq_lock_unlock(&pic_wq, &wqe);
+  l4util_wq_lock_unlock(&pic_wq, &wqe);
 #endif
   
   return dat;
@@ -141,15 +128,11 @@ int pic_irr(int master){
 
 /* return the interrupt mask register.
    if master!=0, return master isr, else return slave isr */
-int pic_imr(int master);
 int pic_imr(int master){
-#ifdef USE_LOCKING
-  wq_lock_queue_elem wqe;
-#endif
   int dat;
 #ifdef USE_LOCKING
-  wq_lock_queue_elem wqe;
-  wq_lock_lock(&pic_wq, &wqe);
+  l4util_wq_lock_queue_elem_t wqe;
+  l4util_wq_lock_lock(&pic_wq, &wqe);
 #endif
   
   l4_cli();
@@ -161,7 +144,7 @@ int pic_imr(int master){
   l4_sti();
 
 #ifdef USE_LOCKING
-  wq_lock_unlock(&pic_wq, &wqe);
+  l4util_wq_lock_unlock(&pic_wq, &wqe);
 #endif
   
   return dat;

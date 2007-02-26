@@ -6,12 +6,17 @@
 
 #include <l4/sys/kdebug.h>
 
+#include "globals.h"
+
 int
 putchar(int c)
 {
-  outchar(c);
-  if (c=='\n')
-    outchar('\r');
+  if (!quiet)
+    {
+      outchar(c);
+      if (c=='\n')
+	outchar('\r');
+    }
   return c;
 }
 

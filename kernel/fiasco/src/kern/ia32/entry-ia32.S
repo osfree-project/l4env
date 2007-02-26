@@ -1,23 +1,18 @@
-#define ASSEMBLER
-
-#include <flux/x86/asm.h>
-#include <flux/x86/trap.h>
-#include <flux/x86/seg.h>
-#include <flux/x86/gate_init.h>
-#include <flux/x86/base_trap.h>
 
 #include "config_tcbsize.h"
 #include "config_gdt.h"
 #include "globalconfig.h"
+#include "idt_init.h"
 #include "low_level.h"
+#include "regdefs.h"
 #include "shortcut.h"
 #include "tcboffset.h"
 
-	P2ALIGN(4)
-	.globl	debug_exception
-debug_exception:
+	.p2align 4
+	.globl	entry_vec01_debug
+entry_vec01_debug:
 	pushl	%eax
-	movl	CURRENT_SYSENTER,%eax
+	movl	KSEG CURRENT_SYSENTER,%eax
 	cmpl	%eax,4(%esp)
 	popl	%eax
 	je	2f
@@ -34,66 +29,77 @@ debug_exception:
 	/* copy last three dwords to the current kernel stack */
 	pushl	%eax
 	pushl	%ecx
-	movl	20(%esp),%ecx	// x86_tss.esp0
-	movl	 8(%esp),%eax	// 3rd dword == EIP
-	incl	%eax		// skip ``pop %esp''
+	movl	20(%esp),%ecx			// x86_tss.esp0
+	movl	 8(%esp),%eax			// 3rd dword == EIP
+	incl	%eax				// skip ``pop %esp''
 	movl	%eax,-12(%ecx)
-	movl	12(%esp),%eax	// 2nd dword == CS
+	movl	12(%esp),%eax			// 2nd dword == CS
 	movl	%eax, -8(%ecx)
-	movl	16(%esp),%eax	// 1st dword == EFLAGS
+	movl	16(%esp),%eax			// 1st dword == EFLAGS
 	movl	%eax, -4(%ecx)
 	popl	%ecx
 	popl	%eax
-	movl	12(%esp),%esp	// x86_tss.esp0
-	subl	$12, %esp	// skip entry frame
+	movl	12(%esp),%esp			// x86_tss.esp0
+	subl	$12, %esp			// skip entry frame
 	pushl	$0
 	pushl	$1
 	pusha
 	jmp	slowtraps
 
 
-	.globl	invalid_tss_entry
-invalid_tss_entry:
+	.globl	entry_vec0a_invalid_tss
+entry_vec0a_invalid_tss:
 	andl	$0xffffbfff, 12(%esp)
-	addl	$4, %esp	/* skip error code */
+	addl	$4, %esp			/* skip error code */
 	iret
 
 
-	.globl	dbf_entry
-dbf_entry:
-	call	thread_handle_double_fault
-	jmp	dbf_entry
+	.globl	entry_vec08_dbf
+entry_vec08_dbf:
+	cmpb	$0,CPU_LBR
+	je	thread_handle_double_fault
+	/* disable last branch recording to ensure that the code of the
+	 * fault handler does not flush the LBR buffer */
+	pushl	%eax
+	pushl	%ecx
+	pushl	%edx
+	movl	$0x1d9,%ecx
+	rdmsr
+	andl	$0xfffffffe,%eax
+	wrmsr
+	popl	%edx
+	popl	%ecx
+	popl	%eax
+	jmp	thread_handle_double_fault
 
 
 /* PPro spurious interrupt bug: 
  * See "Pentium Pro Processor Specification Update / January 1999"
  * Erratum "Virtual Wire mode through local APIC may cause int 15"
  * This exception can be silently ignored */
-	P2ALIGN(4)
-	.globl	apic_spurious_interrupt_bug_entry
-apic_spurious_interrupt_bug_entry:
+	.p2align(4)
+	.globl	entry_vec0f_apic_spurious_interrupt_bug
+entry_vec0f_apic_spurious_interrupt_bug:
 	pushl	%ecx
 	pushl	%edx
-	RESET_KERNEL_SEGMENTS	/* scratches cx, dx */
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
 	incl	apic_spurious_interrupt_bug_cnt
-	RESET_USER_SEGMENTS(12(%esp))
+	RESET_USER_SEGMENTS 12(%esp),in_cli	/* scratches ecx */
 	popl	%edx
 	popl	%ecx
 	iret
 
 /* APIC error interrupt */
-	P2ALIGN(4)
-	.globl	apic_error_interrupt_entry
-apic_error_interrupt_entry:
-	pushl	%eax		/* save registers modifiable by C functions */
+	.p2align(4)
+	.globl	entry_vec3e_apic_error_interrupt
+entry_vec3e_apic_error_interrupt:
+	pushl	%eax
 	pushl	%ecx
 	pushl	%edx
-	RESET_KERNEL_SEGMENTS	/* scratches cx, dx */
-	leal	12(%esp), %ecx
-	pushl	%ecx
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+	leal	12(%esp), %eax			/* &Return_frame */
 	call	apic_error_interrupt
-	addl	$4, %esp
-	RESET_USER_SEGMENTS(16(%esp))
+	RESET_USER_SEGMENTS 16(%esp),in_cli	/* scratches ecx */
 	popl	%edx
 	popl	%ecx
 	popl	%eax
@@ -104,27 +110,36 @@ apic_error_interrupt_entry:
  * Spurious Interrupt: "If at the time the INTA cycle is issued, the
  * interupt that was to be dispensed has become masked (programmed by
  * software), the local APIC will deliver a spurious-interrupt vector." */
-	P2ALIGN(4)
-	.globl	apic_spurious_interrupt_entry
-apic_spurious_interrupt_entry:
+	.p2align(4)
+	.globl	entry_vec3f_apic_spurious_interrupt
+entry_vec3f_apic_spurious_interrupt:
 	pushl	%ecx
 	pushl	%edx
-	RESET_KERNEL_SEGMENTS	/* scratches cx, dx */
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
 	incl	apic_spurious_interrupt_cnt
-	RESET_USER_SEGMENTS(12(%esp))
+	RESET_USER_SEGMENTS 12(%esp),in_cli	/* scratches ecx */
 	popl	%edx
 	popl	%ecx
 	iret
 
 #if defined(CONFIG_JDB)
 
-	P2ALIGN(4)
-	.global do_sysenter_log
-do_sysenter_log:
+	.p2align(4)
+	.global entry_sysenter_log
+	.global entry_sys_fast_ipc_log
+entry_sysenter_log:
+entry_sys_fast_ipc_log:
 	pop	%esp
-	pushl	$(GDT_DATA_USER|SEL_PL_U)	/* user ss */
-	subl	$4, %esp			/* room for user esp */
-	pushl	$0x3200				/* fake user eflags */
+	pushl	$(GDT_DATA_USER|SEL_PL_U) /* user ss */
+	subl	$4, %esp		/* room for user esp */
+#ifdef CONFIG_IO_PROT
+	// We must not fake the interrupt flags since we must not
+	// loose the current IOPL of the user task
+	pushf
+#else
+	// Fake user eflags, set IOPL to 3
+	pushl	$EFLAGS_IOPL_U
+#endif
 	// Fake user cs. This cs value is never used with exception
 	// that the thread is ex_regs'd before we leave with sysexit.
 	// lthread_ex_regs has to check user cs for that value. If
@@ -135,59 +150,14 @@ do_sysenter_log:
 	// the thread is ex_regs'd. In that case, we modify the return
 	// value from "call dispatch_syscall" to an alternate exit
 	// path using "iret".
+#if defined(CONFIG_SMALL_SPACES) && defined(CONFIG_IO_PROT)
+	pushl	$(GDT_CODE_USER|SEL_PL_U)	/* user cs */
+#else
 	pushl	$(GDT_CODE_USER|SEL_PL_U|0x80)	/* user cs */
+#endif
 	pushl	(%ecx)				/* user eip */
 
-	pushl	$0x00003000
-	popf
-
-	pushl	%eax			/* SAVE_STATE */
-	pushl	%ebp
-	pushl	%ebx
-	pushl	%edi
-	pushl	%esi
-	pushl	%edx
-	pushl	12(%ecx)		/* save ecx */
-
-	leal	16(%ecx), %edx		/* adapt user esp */
-	movl	%edx, 40(%esp)		/* store user esp */
-
-	ESP_TO_TCB_AT(%ebx)
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	RESET_THREAD_CANCEL_AT(%ebx)
-
-	call	*syscall_table
-in_slow_ipc5:
-
-	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx,dx */
-	SYSEXIT
-
-#endif // CONFIG_JDB
-
-
-#if defined (CONFIG_JDB_LOGGING) \
-    || !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT) || defined(CONFIG_PROFILE)
-	P2ALIGN(4)
-	.global do_sysenter_c
-do_sysenter_c:
-	pop	%esp
-	pushl	$(GDT_DATA_USER|SEL_PL_U)	/* user ss */
-	subl	$4, %esp			/* room for user esp */
-	pushl	$0x3200				/* fake user eflags */
-	// Fake user cs. This cs value is never used with exception
-	// that the thread is ex_regs'd before we leave with sysexit.
-	// lthread_ex_regs has to check user cs for that value. If
-	// it is faked, the thread would leave the kernel by sysexit
-	// and the thread is in the slow ipc path. Sysexit would
-	// adapt the user eip (by subtracting 2) to ensure the user
-	// executes the "mov %ebp,%edx" sequence. This is wrong if
-	// the thread is ex_regs'd. In that case, we modify the return
-	// value from "call dispatch_syscall" to an alternate exit
-	// path using "iret".
-	pushl	$(GDT_CODE_USER|SEL_PL_U|0x80)	/* user cs */
-	pushl	(%ecx)				/* user eip */
-
-	pushl	%eax				/* SAVE_STATE */
+	pushl	%eax
 	pushl	%ebp
 	pushl	%ebx
 	pushl	%edi
@@ -195,53 +165,114 @@ do_sysenter_c:
 	pushl	%edx
 	pushl	12(%ecx)			/* save ecx */
 
-	pushl	$0x00003000
-	popf
+	leal	16(%ecx), %edx			/* adapt user esp */
+	movl	%edx, 40(%esp)			/* store user esp */
 
-	leal	16(%ecx), %edx		/* adapt user esp */
-	movl	%edx,40(%esp)		/* store user esp */
+	ESP_TO_TCB_AT %ebx
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+	RESET_THREAD_CANCEL_AT %ebx
 
-	ESP_TO_TCB_AT(%ebx)
-	RESET_KERNEL_SEGMENTS	/* scratches cx,dx */
-	RESET_THREAD_CANCEL_AT(%ebx)
+	call	*syscall_table
+in_slow_ipc5:
+	DO_SYSEXIT
+
+	.globl	in_slow_ipc5
+
+#endif // CONFIG_JDB
+
+
+#if (defined (CONFIG_JDB_LOGGING) || !defined(CONFIG_ASSEMBLER_IPC_SHORTCUT))
+	.p2align(4)
+	.global entry_sysenter_c
+	.global entry_sys_fast_ipc_c
+entry_sysenter_c:
+entry_sys_fast_ipc_c:
+	pop	%esp
+	pushl	$(GDT_DATA_USER|SEL_PL_U)	/* user ss */
+	subl	$4, %esp			/* room for user esp */
+#ifdef CONFIG_IO_PROT
+	// We must not fake the interrupt flags since we must not
+	// loose the current IOPL of the user task
+	pushf
+#else
+	// Fake user eflags, set IOPL to 3
+	pushl	$EFLAGS_IOPL_U
+#endif
+	// Fake user cs. This cs value is never used with exception
+	// that the thread is ex_regs'd before we leave with sysexit.
+	// lthread_ex_regs has to check user cs for that value. If
+	// it is faked, the thread would leave the kernel by sysexit
+	// and the thread is in the slow ipc path. Sysexit would
+	// adapt the user eip (by subtracting 2) to ensure the user
+	// executes the "mov %ebp,%edx" sequence. This is wrong if
+	// the thread is ex_regs'd. In that case, we modify the return
+	// value from "call dispatch_syscall" to an alternate exit
+	// path using "iret".
+#if defined(CONFIG_SMALL_SPACES) && defined(CONFIG_IO_PROT)
+	pushl	$(GDT_CODE_USER|SEL_PL_U)	/* user cs */
+#else
+	pushl	$(GDT_CODE_USER|SEL_PL_U|0x80)	/* user cs */
+#endif
+	pushl	(%ecx)				/* user eip */
+
+	pushl	%eax
+	pushl	%ebp
+	pushl	%ebx
+	pushl	%edi
+	pushl	%esi
+	pushl	%edx
+	pushl	12(%ecx)			/* save ecx */
+
+	leal	16(%ecx), %edx			/* adapt user esp */
+	movl	%edx,40(%esp)			/* store user esp */
+
+	ESP_TO_TCB_AT %ebx
+	RESET_KERNEL_SEGMENTS			/* scratches ecx, edx */
+	RESET_THREAD_CANCEL_AT %ebx
 	call    ipc_short_cut_wrapper
 in_sc_ipc2:
-	ESP_TO_TCB_AT(%ebx)
-	RESET_THREAD_IPC_MASK_AT(%ebx)
-	cmpb	$0,%al
-	jz	sysenter_shortcut_failed
-	/* ipc_short_cut returned true -> ipc finished */
-	SYSEXIT
+	DO_SYSEXIT
 
-sysenter_shortcut_failed:
-	call	sys_ipc_wrapper
-in_slow_ipc6:
-	SYSEXIT
+	.globl	in_sc_ipc2
 #endif
 
 
-	P2ALIGN(4)
+	.p2align(4)
 	.globl	leave_from_sysenter_by_iret
 leave_from_sysenter_by_iret:
-	ESP_TO_TCB_AT(%ebx)
-	RESET_THREAD_IPC_MASK_AT(%ebx)
-	RESET_USER_SEGMENTS(32(%esp))	/* scratches cx, dx */
-	RESTORE_STATE
+	ESP_TO_TCB_AT %ebx
+	RESET_THREAD_IPC_MASK_AT %ebx
+	RESET_USER_SEGMENTS $3,in_cli		/* scratches ecx */
+	RESTORE_STATE_AFTER_IPC
 	popl    %eax
+	orl	$EFLAGS_IF, 8(%esp)
 	iret
 
 
-	// This code is global visible at the trampoline page for
-	// small address spaces. We need to explicit reload the stack
-	// segment selector and to implicit reload the code segment
-	// selector by the lret instruction. The "$8" parameter of
-	// lret cleans up the stack (see the user-level-ipc bindings
-	// for sysenter)
-	P2ALIGN(4)
+	// This code is globally visible at the trampoline page for small
+	// address spaces. Because sysexit loads 4GB flat segments, we need
+	// to explicit reload the stack segment selector and need to implicit
+	// reload the code segment selector using the lret instruction. The
+	// "$8" parameter of lret cleans up the stack (see the user-level-ipc
+	// bindings for sysenter).
+	//
+	// It is important that we don't receive interrupts while this code
+	// is executed because this code is located beyond the limit of the
+	// user-level code segment. If we are interrupted here, the iret
+	// instruction of the interrupt handler tries to return using the
+	// user-CS which generates a segfault. Therefore sysexit may not be
+	// used if both Small Address Spaces and I/O protection are enabled
+	// (sti is not allowed for userland tasks if their IOPL is 0).
+	//
+	// As an alternative we could introduce many special cases before
+	// leaving the following handlers using iret: Timer IRQ, device IRQs,
+	// pagefault handler, APIC IRQs. Other traps?
+	//
+	.p2align(4)
 	.globl	tramp_small_after_sysexit_func
 tramp_small_after_sysexit_func:
 	movl	%ebp, %edx
-	movl	$ (GDT_DATA_USER|SEL_PL_U), %ebp
+	movl	$(GDT_DATA_USER|SEL_PL_U), %ebp
 	movl	%ebp, %ss
 	sti
 	lret	$8
@@ -250,8 +281,8 @@ tramp_small_after_sysexit_func:
 tramp_small_end:
 
 
-	// these labels help show_tcb to guess the thread state
-	.globl	in_sc_ipc2
-	.globl	in_slow_ipc5
-	.globl	in_slow_ipc6
+	.bss
+	.space	4096
+	.global	dbf_stack_top
+dbf_stack_top:
 

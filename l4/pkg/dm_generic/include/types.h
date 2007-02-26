@@ -66,8 +66,7 @@ __BEGIN_DECLS;
  */
 /*****************************************************************************/ 
 L4_INLINE int
-l4dm_dataspace_equal(l4dm_dataspace_t ds1, 
-		     l4dm_dataspace_t ds2);
+l4dm_dataspace_equal(l4dm_dataspace_t ds1, l4dm_dataspace_t ds2);
 
 /*****************************************************************************/
 /**
@@ -90,10 +89,9 @@ __END_DECLS;
 
 /* l4dm_dataspace_equal */
 L4_INLINE int
-l4dm_dataspace_equal(l4dm_dataspace_t ds1, 
-		     l4dm_dataspace_t ds2)
+l4dm_dataspace_equal(l4dm_dataspace_t ds1, l4dm_dataspace_t ds2)
 {
-  if (l4_thread_equal(ds1.manager,ds2.manager) && (ds1.id == ds2.id))
+  if (l4_thread_equal(ds1.manager, ds2.manager) && (ds1.id == ds2.id))
     return 1;
   else
     return 0;
@@ -104,7 +102,7 @@ L4_INLINE int
 l4dm_is_invalid_ds(l4dm_dataspace_t ds)
 {
   return ((ds.id == L4DM_INVALID_DATASPACE.id) &&
-	  (l4_thread_equal(ds.manager,L4DM_INVALID_DATASPACE.manager)));
+	  (l4_thread_equal(ds.manager, L4DM_INVALID_DATASPACE.manager)));
 }
 
 #endif /* !_L4_DM_GENERIC_TYPES_H */

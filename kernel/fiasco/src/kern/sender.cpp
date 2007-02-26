@@ -14,12 +14,12 @@ public:
       message from that sender.  Senders need to overwrite this interface. */
   virtual void ipc_receiver_ready() = 0;
 
-private:
-  // DATA
+protected:
+  Receiver *  _receiver;
 
-  L4_uid _id;
-  Receiver*   _send_partner;
-  Sender*     sender_next, * sender_prev;
+private:
+  Global_id   _id;
+  Sender *sender_next, *sender_prev;
 
   friend class Jdb;
   friend class Jdb_thread_list;
@@ -36,14 +36,6 @@ IMPLEMENTATION:
 // state requests/manipulation
 //
 
-/** Constructor.
-    @param id user-visible thread ID of the sender
- */
-PROTECTED inline
-Sender::Sender(const L4_uid& id)
-  : _id (id), sender_next (0)
-{}
-
 /** Optimized constructor.  This constructor assumes that the object storage
     is zero-initialized.
     @param id user-visible thread ID of the sender
@@ -53,31 +45,39 @@ Sender::Sender(const L4_uid& id)
  */
 PROTECTED inline
 explicit
-Sender::Sender(const L4_uid& id, int /*ignored*/)
-  : _id (id)
+Sender::Sender (const Global_id& id, int /*ignored*/)
+      : _receiver (0),
+        _id (id)
 {}
 
 /** Sender ID.
     @return user-visible thread ID of the sender
  */
 PUBLIC inline 
-L4_uid Sender::id() const
-{ return _id; }
+Global_id
+Sender::id() const
+{
+  return _id;
+}
 
 /** Current receiver.
     @return receiver this sender is currently trying to send a message to.
  */
 PUBLIC inline 
-Receiver* Sender::receiver() const
-{ return _send_partner; }
+Receiver *
+Sender::receiver() const
+{
+  return _receiver;
+}
 
 /** Set current receiver.
     @param receiver the receiver we're going to send a message to
  */
 PROTECTED inline
-void Sender::set_receiver(Receiver* receiver)
+void
+Sender::set_receiver (Receiver* receiver)
 {
-  _send_partner = receiver;
+  _receiver = receiver;
 }
 
 // 
@@ -123,7 +123,7 @@ Sender::sender_enqueue(Sender **r)
 /** Dequeue from a sender list.
     @param r pointer to sender-list head.
  */
-PROTECTED inline NEEDS ["cpu_lock.h", "lock_guard.h", <cassert>]
+PUBLIC inline NEEDS ["cpu_lock.h", "lock_guard.h", <cassert>]
 void
 Sender::sender_dequeue(Sender **r)
 {
@@ -148,4 +148,82 @@ Sender::sender_dequeue(Sender **r)
 
       sender_next = 0;
     }
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[!lipc]:
+
+/** Constructor.
+    @param id user-visible thread ID of the sender
+ */
+PROTECTED inline
+Sender::Sender(const Global_id& id)
+  : _id (id), sender_next (0)
+{}
+
+
+
+INTERFACE[v2-lipc]:
+
+#include "utcb.h"
+
+class Space;
+
+// MAYBE V4 needs this too, because in V4 you can wait
+// for any local Thread
+
+EXTENSION class Sender
+{
+
+private:
+
+  // Optimization, with some Stack-magic
+  // we can return the values from the Context or Zero
+
+  Space* _snd_space;
+  Local_id	 _snd_local_id;
+};
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[v2-lipc]:
+
+/** Constructor.
+    @param id user-visible thread ID of the sender
+ */
+PROTECTED inline
+Sender::Sender(const Global_id& id)
+    : _id (id),
+      sender_next (0),
+      _snd_space(0),
+      _snd_local_id(0)
+{}
+
+
+PROTECTED inline
+void
+Sender::set_snd_local_id(Local_id lid)
+{
+  _snd_local_id = lid;
+}
+
+PROTECTED inline
+void
+Sender::set_snd_space(Space *space)
+{
+  _snd_space = space;
+}
+
+PUBLIC inline
+Local_id
+Sender::snd_local_id() const
+{
+  return _snd_local_id;
+}
+
+PUBLIC inline
+Space *
+Sender::snd_space() const
+{
+  return _snd_space;
 }

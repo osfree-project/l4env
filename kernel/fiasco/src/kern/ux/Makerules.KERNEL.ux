@@ -1,14 +1,23 @@
 # UX Kernel Makefile
 
 shortcut-ia32-ux.o:	$(TCBOFFSET)
+sighandler.o:		$(TCBOFFSET)
 entry-ia32-ux.o:	$(TCBOFFSET)
+local_ipc-ia32-ux.o:    $(TCBOFFSET)
+
+
+# see libc_support module
+
+WRAP_SYMBOLS := -Wl,-wrap,printf,-wrap,snprintf,-wrap,vsnprintf
+WRAP_SYMBOLS += -Wl,-wrap,puts,-wrap,putchar
+
 
 # Add future prerequisites somewhere among the list of libraries.
 # You really should not have to add anything in the $(CXX) line.
 
-$(KERNEL):	$(srcdir)/kernel.ux.ld $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(LIBLMM) $(KERNEL_EXTRA_LIBS) $(ABI) $(JABI) $(DRIVERS) $(CXXLIB) $(LIBKERN)
+$(KERNEL):	$(srcdir)/kernel.ux.ld $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(KERNEL_EXTRA_LIBS) $(ABI) $(JABI) $(DRIVERS) $(CXXLIB)
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(CXX) -Wl,--gc-sections,-T$< -static -o $@ $(KERNEL_UNRES_SYMS) $(filter-out $<,$+) -lutil
+		$(VERBOSE)$(CXX) -Wl,--gc-sections,-T$< -static -o $@ $(KERNEL_UNRES_SYMS) $(filter-out $<,$+) -lutil $(WRAP_SYMBOLS)
 		chmod 755 $@
 		ln -sf $@ fiasco
 

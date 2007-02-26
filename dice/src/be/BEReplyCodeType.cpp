@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEReplyCodeType.cpp
- *	\brief	contains the implementation of the class CBEReplyCodeType
+ *  \file   dice/src/be/BEReplyCodeType.cpp
+ *  \brief  contains the implementation of the class CBEReplyCodeType
  *
- *	\date	10/10/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   10/10/2003
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,27 +31,23 @@
 
 #include "TypeSpec-Type.h"
 
-IMPLEMENT_DYNAMIC(CBEReplyCodeType);
-
 CBEReplyCodeType::CBEReplyCodeType()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEReplyCodeType, CBEType);
 }
 
 CBEReplyCodeType::CBEReplyCodeType(CBEReplyCodeType & src):CBEType(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEReplyCodeType, CBEType);
 }
 
-/**	\brief destructor of this instance */
+/** \brief destructor of this instance */
 CBEReplyCodeType::~CBEReplyCodeType()
 {
 
 }
 
-/**	\brief creates the back-end structure for a type class for opcodes
- *	\param pContext the context of the code generation
- *	\return true if code generation was successful
+/** \brief creates the back-end structure for a type class for opcodes
+ *  \param pContext the context of the code generation
+ *  \return true if code generation was successful
  *
  * This implementation sets the basic members, but uses special values, specific for opcodes.
  */
@@ -63,8 +60,8 @@ bool CBEReplyCodeType::CreateBackEnd(CBEContext * pContext)
     return true;
 }
 
-/**	\brief generates an exact copy of this class
- *	\return a reference to the new object
+/** \brief generates an exact copy of this class
+ *  \return a reference to the new object
  */
 CObject *CBEReplyCodeType::Clone()
 {

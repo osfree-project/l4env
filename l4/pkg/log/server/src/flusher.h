@@ -14,9 +14,10 @@
 #ifndef __LOG_SERVER_SRC_FLUSHER_H_
 #define __LOG_SERVER_SRC_FLUSHER_H_
 
+extern int flusher_prio;
 extern l4_threadid_t main_thread, flusher_thread;
 
-extern int flusher_init(int prio);
+extern int flusher_init(void);
 extern int flush_buffer(void);
 extern int do_flush_buffer(void);
 

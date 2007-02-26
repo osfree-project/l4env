@@ -49,7 +49,7 @@ exc_obj_stab_t::realloc(l4dm_dataspace_t *ds, void *addr, l4_size_t size)
   if (size > L4_SUPERPAGESIZE)
     {
       printf("stab size limit of 4MB exceeded\n");
-      return NULL;
+      return 0;
     }
 
   if (l4dm_is_invalid_ds(*ds))
@@ -59,19 +59,19 @@ exc_obj_stab_t::realloc(l4dm_dataspace_t *ds, void *addr, l4_size_t size)
       if (l4_is_invalid_id(dsm_id))
 	{
 	  printf("Can't determine default dataspace manager\n");
-	  return NULL;
+	  return 0;
 	}
 
       if ((error = l4dm_mem_open(dsm_id, size, L4_PAGESIZE, 0, name, ds)) < 0)
 	{
 	  printf("Error %d opening stab ds\n", error);
-	  return NULL;
+	  return 0;
 	}
 
       if ((error = l4rm_attach(ds, L4_SUPERPAGESIZE, 0, L4DM_RW, &addr)) < 0)
 	{
 	  printf("Error %d attaching stab ds\n", error);
-	  return NULL;
+	  return 0;
 	}
     }
   else
@@ -79,7 +79,7 @@ exc_obj_stab_t::realloc(l4dm_dataspace_t *ds, void *addr, l4_size_t size)
       if ((error = l4dm_mem_resize(ds, size)) < 0)
 	{
 	  printf("Error %d resizing ds to %08x\n", error, size);
-	  return NULL;
+	  return 0;
 	}
     }
 
@@ -165,7 +165,7 @@ exc_obj_stab_t::add_entry(const stab_entry_t *se, const char *se_str)
 {
   const char *se_name = se_str + se->n_strx;
   int error, se_name_len = strlen(se_name);
-  unsigned se_name_idx;
+  unsigned se_name_idx = 0;
 
   if (se_name_len
       && ((se->n_type == 0x64) || (se->n_type == 0x84)))
@@ -326,7 +326,7 @@ exc_obj_stab_t::get_lines(char **str, stab_line_t **lin)
   memcpy(*str, str_field, str_end*sizeof(*str_field));
   memcpy(*lin, lin_field, lin_end*sizeof(*lin_field));
           *str  += str_end*sizeof(*str_field);
-  (char*)(*lin) += lin_end*sizeof(*lin_field);
+  (char*&)(*lin) += lin_end*sizeof(*lin_field);
   return 0;
 }
 

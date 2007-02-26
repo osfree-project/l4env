@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEHeaderFile.h
- *	\brief	contains the declaration of the class CBEHeaderFile
+ *    \file    dice/src/be/BEHeaderFile.h
+ *    \brief   contains the declaration of the class CBEHeaderFile
  *
- *	\date	01/11/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/11/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,6 +31,8 @@
 #define __DICE_BEHEADERFILE_H__
 
 #include "be/BEFile.h"
+#include <vector>
+using namespace std;
 
 class CFEFile;
 class CFELibrary;
@@ -40,78 +43,83 @@ class CBETypedef;
 class CBEType;
 class CBEConstant;
 
-/**	\class CBEHeaderFile
- *	\ingroup backend
- *	\brief the header file class
+/** \class CBEHeaderFile
+ *  \ingroup backend
+ *  \brief the header file class
  */
 class CBEHeaderFile : public CBEFile
 {
-DECLARE_DYNAMIC(CBEHeaderFile);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CBEHeaderFile();
-	virtual ~CBEHeaderFile();
+    /** \brief constructor
+     */
+    CBEHeaderFile();
+    virtual ~CBEHeaderFile();
 
 protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CBEHeaderFile(CBEHeaderFile &src);
+    /** \brief copy constructor
+     *  \param src the source to copy from
+     */
+    CBEHeaderFile(CBEHeaderFile &src);
 
 public:
-	virtual void Write(CBEContext *pContext);
+    virtual void Write(CBEContext *pContext);
 
-	virtual CBETypedef* GetNextTypedef(VectorElement* &pIter);
-	virtual VectorElement* GetFirstTypedef();
-	virtual void AddTypedef(CBETypedef *pTypedef);
-	virtual void RemoveTypedef(CBETypedef *pTypedef);
-	virtual CBETypedef* FindTypedef(String sTypeName);
+    virtual CBETypedef* GetNextTypedef(vector<CBETypedef*>::iterator &iter);
+    virtual vector<CBETypedef*>::iterator GetFirstTypedef();
+    virtual void AddTypedef(CBETypedef *pTypedef);
+    virtual void RemoveTypedef(CBETypedef *pTypedef);
+    virtual CBETypedef* FindTypedef(string sTypeName);
 
-	virtual CBEConstant* GetNextConstant(VectorElement* &pIter);
-	virtual VectorElement* GetFirstConstant();
-	virtual void AddConstant(CBEConstant *pConstant);
-	virtual void RemoveConstant(CBEConstant *pConstant);
+    virtual CBEConstant* GetNextConstant(vector<CBEConstant*>::iterator &iter);
+    virtual vector<CBEConstant*>::iterator GetFirstConstant();
+    virtual void AddConstant(CBEConstant *pConstant);
+    virtual void RemoveConstant(CBEConstant *pConstant);
 
-	virtual void AddTaggedType(CBEType *pTaggedType);
-	virtual void RemoveTaggedType(CBEType *pTaggedType);
-	virtual VectorElement* GetFirstTaggedType();
-	virtual CBEType* GetNextTaggedType(VectorElement* &pIter);
-	virtual CBEType *FindTaggedType(String sTypeName);
+    virtual void AddTaggedType(CBEType *pTaggedType);
+    virtual void RemoveTaggedType(CBEType *pTaggedType);
+    virtual vector<CBEType*>::iterator GetFirstTaggedType();
+    virtual CBEType* GetNextTaggedType(vector<CBEType*>::iterator &iter);
+    virtual CBEType *FindTaggedType(string sTypeName);
 
-	virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-	virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
-	virtual bool CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext);
-	virtual bool CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext);
-    virtual String GetIncludeFileName();
+    virtual bool CreateBackEnd(CFEOperation *pFEOperation, 
+	CBEContext *pContext);
+    virtual bool CreateBackEnd(CFEInterface *pFEInterface, 
+	CBEContext *pContext);
+    virtual bool CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext);
+    virtual bool CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext);
+    virtual string GetIncludeFileName();
 
-protected:
-    virtual void WriteTaggedTypes(CBEContext *pContext);
-	virtual void WriteTypedefs(CBEContext *pContext);
-	virtual void WriteConstants(CBEContext *pContext);
-	virtual void WriteNameSpaces(CBEContext * pContext);
-	virtual void WriteClasses(CBEContext *pContext);
-	virtual void WriteFunctions(CBEContext * pContext);
-    virtual void WriteIncludesBeforeTypes(CBEContext * pContext);
+    virtual int GetSourceLineEnd();
 
 protected:
-	/**	\var Vector m_vConstants
-	 *	\brief contains the constant declarators of the header file
-	 */
-	Vector m_vConstants;
-	/**	\var Vector m_vTypedefs
-	 *	\brief contains the type definitions of the header file
-	 */
-	Vector m_vTypedefs;
-	/** \var Vector m_vTaggedTypes
-	 *  \brief contains the tagged types of the header files (types without typedef)
-	 */
-	Vector m_vTaggedTypes;
-    /** \var String m_sIncludeName
+    virtual void WriteTaggedType(CBEType *pType, CBEContext *pContext);
+    virtual void WriteTypedef(CBETypedef* pTypedef, CBEContext *pContext);
+    virtual void WriteConstant(CBEConstant *pConstant, CBEContext *pContext);
+    virtual void WriteNameSpace(CBENameSpace *pNameSpace, CBEContext *pContext);
+    virtual void WriteClass(CBEClass *pClass, CBEContext *pContext);
+    virtual void WriteFunction(CBEFunction *pFunction, CBEContext *pContext);
+    virtual void WriteDefaultIncludes(CBEContext * pContext);
+
+    void CreateOrderedElementList(void);
+
+protected:
+    /** \var vector<CBEConstant*> m_vConstants
+     *  \brief contains the constant declarators of the header file
+     */
+    vector<CBEConstant*> m_vConstants;
+    /** \var vector<CBETypedef*> m_vTypedefs
+     *  \brief contains the type definitions of the header file
+     */
+    vector<CBETypedef*> m_vTypedefs;
+    /** \var vector<CBEType*> m_vTaggedTypes
+     *  \brief contains the tagged types of the header files (types without typedef)
+     */
+    vector<CBEType*> m_vTaggedTypes;
+    /** \var string m_sIncludeName
      *  \brief the file name used in include statements
      */
-    String m_sIncludeName;
+    string m_sIncludeName;
 };
 
 #endif // !__DICE_BEHEADERFILE_H__

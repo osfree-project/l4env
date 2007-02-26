@@ -1,0 +1,19 @@
+Brief description of the subdirs:
+---------------------------------
+
+contrib:   original, unmodified Qt/Embedded source (some parts
+           missing, see contrib/README)
+
+libqt3:    build dir for Qt/Embedded, contains modified versions
+           of files from contrib (see contrib/README for details)
+
+backends:  class replacements and other stuff relevant for DROPS
+           port, these require L4-stuff and are built as seperate
+	   libraries using BID
+	   
+drivers:   same as backends, but it contains just graphics and input
+           drivers for Qt/Embedded for DROPS
+	   
+L4-specific headers will be installed to l4/qt3/, the original Qt/Embedded
+headers will be installed in qt3/ (referring to $L4DIR/include/, here).
+

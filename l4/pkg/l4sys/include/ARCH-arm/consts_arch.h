@@ -15,4 +15,13 @@
 #define L4_NC_OUTER_CLAN	0x04	/* destination is outside the */
 					/* invoker's clan */
 
+enum {
+  L4_TASK_NEW_ALIEN = 1 << 31,
+};
+
+enum {
+  L4_THREAD_EX_REGS_ALIEN     = 1 << 29,
+  L4_THREAD_EX_REGS_NO_CANCEL = 1 << 30,
+};
+
 #endif /* L4_CONSTS_ARCH_H */

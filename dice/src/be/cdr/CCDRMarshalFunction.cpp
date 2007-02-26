@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/cdr/CCDRMarshalFunction.cpp
- *	\brief	contains the implementation of the class CCDRMarshalFunction
+ *    \file    dice/src/be/cdr/CCDRMarshalFunction.cpp
+ *    \brief   contains the implementation of the class CCDRMarshalFunction
  *
- *	\date	10/29/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    10/29/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,14 +31,11 @@
 #include "be/BEImplementationFile.h"
 #include "be/BEContext.h"
 
-#include "fe/FEAttribute.h"
-
-IMPLEMENT_DYNAMIC(CCDRMarshalFunction);
+#include "Attribute-Type.h"
 
 CCDRMarshalFunction::CCDRMarshalFunction()
  : CBEMarshalFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CCDRMarshalFunction, CBEMarshalFunction);
 }
 
 /** destroys the object */
@@ -50,23 +48,39 @@ CCDRMarshalFunction::~CCDRMarshalFunction()
  *  \param pContext the context of the write operation
  *  \return true if this function should be written to the given file
  */
-bool CCDRMarshalFunction::DoWriteFunction(CBEFile* pFile,  CBEContext* pContext)
+bool CCDRMarshalFunction::DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext)
 {
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)))
-		if (!IsTargetFile((CBEHeaderFile*)pFile))
-			return false;
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEImplementationFile)))
-		if (!IsTargetFile((CBEImplementationFile*)pFile))
-			return false;
-	if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-		(!FindAttribute(ATTR_OUT)) &&
-		!IsComponentSide())
-		return true;
-	if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-		(!FindAttribute(ATTR_IN)) &&
-		IsComponentSide())
-		return true;
-	return false;
+    if (!IsTargetFile(pFile))
+        return false;
+    if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+        (!FindAttribute(ATTR_OUT)) &&
+        !IsComponentSide())
+        return true;
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+        (!FindAttribute(ATTR_IN)) &&
+        IsComponentSide())
+        return true;
+    return false;
+}
+
+/** \brief test if this function should be written
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *  \return true if this function should be written to the given file
+ */
+bool CCDRMarshalFunction::DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext)
+{
+    if (!IsTargetFile(pFile))
+        return false;
+    if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+        (!FindAttribute(ATTR_OUT)) &&
+        !IsComponentSide())
+        return true;
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+        (!FindAttribute(ATTR_IN)) &&
+        IsComponentSide())
+        return true;
+    return false;
 }
 
 /** \brief writes the marshalling code
@@ -80,7 +94,7 @@ bool CCDRMarshalFunction::DoWriteFunction(CBEFile* pFile,  CBEContext* pContext)
 void CCDRMarshalFunction::WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext)
 {
     if (IsComponentSide())
-		nStartOffset += WriteMarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
+        nStartOffset += WriteMarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
     // now unmarshal rest
     CBEOperationFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
 }

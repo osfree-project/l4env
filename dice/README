@@ -21,6 +21,11 @@ eventually make again to build Dice. If you wish to configure
 Dice manually, run the bootstrap script first to create the 
 configure script.
 
+ If you obtained a tarball or zip file, unpack the compressed
+file. Change into the generated directory (dice-<version>) and
+call './configure', which will test your local build environment
+and generate appropriate Makefiles. Then simply run 'make'.
+
 Compiling for DROPS Environment
 ===============================
  If you have checked out a fresh version from the (remote) CVS,
@@ -31,6 +36,19 @@ which performs the same steps as above, but uses the variable
 DROPS_STDDIR as prefix for configure. DROPS_STDDIR is set in 
 $(L4DIR)/Makeconf.local.
 
+Used Header Files
+=================
+ Dice comes with some header files (include directory), which
+are used to compiler IDL files and in the generated files.
+Typically they are installed into $(L4DIR)/include/dice. If
+no L4 build environment exists, no header files are locally
+installed. When compiling IDL files this may lead to an 
+error:
+"<idlfile>:1: dice/dice-corba-types.h: No such file or directory"
+Add the path to the Dice include to the include paths with
+the -I option.
+(If you have an older version of Dice installed, make sure,
+its header files are not included.)
 
 Thanx for using DICE (let's roll the dice)
 Ronald Aigner
@@ -38,4 +56,4 @@ Ronald Aigner
 send bugs to: ra3@os.inf.tu-dresden.de
 dice mailing list: dice@os.inf.tu-dresden.de
 
-file last modified: 11/24/02
+file last modified: 08/27/04

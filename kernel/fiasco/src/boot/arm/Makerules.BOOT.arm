@@ -10,13 +10,20 @@ $(BOOT): $(BOOT).elf
 	ln -sf $@ fiasco
 	$(call INSTALLFILE_RULE,fiasco,fiasco)
 
+$(BOOT).elf: $(KERNEL)
+	cp $(KERNEL) $(BOOT).elf
+	$(STRIP) $(BOOT).elf
 
-$(BOOT).elf: $(srcdir)/boot.arm.ld $(CRT0) kernel.o $(OBJ_BOOT) $(DRIVERS) $(CXXLIB) $(MINILIBC) 
+
+ifeq (a,b)
+$(BOOT).elf: $(srcdir)/boot.arm.ld $(CRT0) kernel.o $(OBJ_BOOT) $(ABI) $(DRIVERS) $(CXXLIB) $(MINILIBC) 
 	@echo "  ... Building boot image"
 	$(LINK_MESSAGE) 
-	$(VERBOSE)$(LD) -T $< \
+	$(VERBOSE)$(LD) $(LDFLAGS) -T $< -Ttext $(CONFIG_BOOT_LOAD_ADDR) \
+	-o $@.unstripped $(filter-out $< libgluedriverslibc.a, $^) libgluedriverslibc.a $(LIBGCC)
+	$(VERBOSE)$(LD) $(LDFLAGS) -T $< -Ttext $(CONFIG_BOOT_LOAD_ADDR) \
 	-o $@ $(filter-out $< libgluedriverslibc.a, $^) libgluedriverslibc.a $(LIBGCC) -s --gc-sections
-
+endif
 
 %.img.o: %.elf
 	$(OBJCOPY) -S $< $*
@@ -37,5 +44,5 @@ $(BOOT).elf: $(srcdir)/boot.arm.ld $(CRT0) kernel.o $(OBJ_BOOT) $(DRIVERS) $(CXX
 #	#$(RM) -f $@.ex $@.ex.c $@.ex.o
 
 kernel.o: $(KERNEL) 
-	$(OBJCOPY) -S $(KERNEL) $*
-	$(OBJCOPY) -B arm -I binary -O elf32-littlearm $* $@
+	$(OBJCOPY) -S $(KERNEL) $(@:.o=)
+	$(OBJCOPY) -B arm -I binary -O elf32-littlearm $(@:.o=) $@

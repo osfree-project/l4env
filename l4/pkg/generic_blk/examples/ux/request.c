@@ -58,7 +58,7 @@ static unsigned long disk_size;              // disk size (blocks)
 #define COPY_TO    1
 #define COPY_FROM  2
 
-l4_ssize_t l4libc_heapsize = 1 << 20;
+//l4_ssize_t l4libc_heapsize = 1 << 20;
 
 /*****************************************************************************
  *** helpers
@@ -86,9 +86,20 @@ __copy_buffer(void * buf, blksrv_buffer_t * ds_buf, int num, int direction)
   for (i = 0; i < num; i++)
     {
       if (direction == COPY_TO)
-        memcpy(ds_buf[i].map_addr, p, ds_buf[i].size);
+        {
+          LOGdL(DEBUG_COPY, "copy to client buffer, " \
+                "0x%08x -> 0x%08x (%u bytes)", (l4_addr_t)p, 
+                (l4_addr_t)ds_buf[i].map_addr, (l4_addr_t)ds_buf[i].size);
+          memcpy(ds_buf[i].map_addr, p, ds_buf[i].size);
+        }
       else
-        memcpy(p, ds_buf[i].map_addr, ds_buf[i].size);
+        {
+          LOGdL(DEBUG_COPY, "copy from client buffer, " \
+                "0x%08x -> 0x%08x (%u bytes)",
+                (l4_addr_t)ds_buf[i].map_addr, (l4_addr_t)p, 
+		(l4_addr_t)ds_buf[i].size); 
+          memcpy(p, ds_buf[i].map_addr, ds_buf[i].size);
+        }
 
       p += ds_buf[i].size;
     }
@@ -117,13 +128,14 @@ __do_request(blksrv_request_t * request)
   if ((request->req.block + request->req.count) > disk_size)
     {
       LOG_Error("access beyond end of device, block %u, %u blocks, " \
-                "disk size %u", request->req.block, request->req.count,
+                "disk size %lu", request->req.block, request->req.count,
                 disk_size);
       blksrv_do_notification(request->driver, request->req.req_handle, 
                              L4BLK_ERROR, -L4_EINVAL);
       return;
     }
 
+  /* */
   offset = request->req.block * L4BLK_BLKSIZE;
   size =   request->req.count * L4BLK_BLKSIZE;
 
@@ -152,7 +164,7 @@ __do_request(blksrv_request_t * request)
       ret = lx_read(blk_fd, buf, size);
       if ((ret < 0) || (ret != size))
         {
-          LOG_Error("read failed: %x, size %u, got %d", ret, size, ret);
+          LOG_Error("read failed: %x, size %lu, got %d", ret, size, ret);
           retval = -L4_EIO;
         }
 
@@ -168,7 +180,7 @@ __do_request(blksrv_request_t * request)
       ret = lx_write(blk_fd, buf, size);
       if ((ret < 0) || (ret != size))
         {
-          LOG_Error("write failed: %x, size %u, did %d", ret, size, ret);
+          LOG_Error("write failed: %x, size %lu, did %d", ret, size, ret);
           retval = -L4_EIO;
         }
     }
@@ -179,6 +191,8 @@ __do_request(blksrv_request_t * request)
   /* unmap dataspace buffers */
   for (i = 0; i < request->num; i++)
     l4rm_detach(request->bufs[i].map_addr);  
+
+  //KDEBUG("request done.");
 
   /* notify client */
   blksrv_do_notification(request->driver, request->req.req_handle,
@@ -200,8 +214,8 @@ __request_thread(void * data)
 {
   int ret, rw;
   int retval = -L4_EINVAL;
-  blksrv_request_t * req;
   struct lx_stat sbuf;
+  blksrv_request_t * req;
 
   /* check device file */
   if (device_name == NULL)
@@ -214,8 +228,7 @@ __request_thread(void * data)
   rw = (readwrite) ? LX_O_RDWR : LX_O_RDONLY;
   if ((blk_fd = lx_open(device_name, rw, 0)) == -1)
     {
-      LOG_Error("Cannot open device file: %s (errno = %d)!",
-	  device_name, lx_errno);
+      LOG_Error("Cannot open device file: %s (errno = %d)!", device_name, lx_errno);
       retval = -L4_ENODEV;
       goto startup_error;
     }
@@ -223,17 +236,20 @@ __request_thread(void * data)
     LOGdL(DEBUG_OSKIT_STARTUP, "opened device file \'%s\' (%s)", 
           device_name, (readwrite) ? "rw" : "ro");
       
-  /* get file/disk size */
+  /* get disk size */
   if ((ret = lx_fstat(blk_fd, &sbuf)) < 0)
     LOG_Error("get disk size failed: %x", ret);
   else
     disk_size = (unsigned long)(sbuf.st_size / L4BLK_BLKSIZE);
 
   LOGdL(DEBUG_OSKIT_STARTUP, "disk size %lu MB, block size %d bytes", 
-	(unsigned long)(sbuf.st_size >> 20), L4BLK_BLKSIZE);
+        (unsigned long)(sbuf.st_size >> 20), L4BLK_BLKSIZE);
 
   /* request thread started */
   l4thread_started((void *)0);
+
+  LOG("opened device %s (%s), disk size %lu MB",
+      device_name, (readwrite) ? "rw" : "ro", (unsigned long)(sbuf.st_size >> 20));
 
   /* request handling loop */
   while (1)
@@ -322,7 +338,7 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
 {
   blksrv_request_t * req;
   blksrv_request_t * rp;
-  int i;
+  int i, j;
   int retval = L4_ENOMEM;
 
   /* enqueue request */
@@ -342,6 +358,7 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
   /* map dataspaces */
   for (i = 0; i < sg_num; i++)
     {
+      /* attach dataspace */
       retval = l4rm_attach((l4dm_dataspace_t *)&sg_list[i].ds, sg_list[i].size, 
                            sg_list[i].offs, L4DM_RW | L4RM_MAP, 
                            &req->bufs[i].map_addr);
@@ -349,18 +366,30 @@ blksrv_enqueue_request(blksrv_driver_t * driver,
         {
           LOG_Error("attach buffer ds failed: %s (%d)", 
                     l4env_errstr(retval), retval);
+          for (j = 0; j < i - 1; j++)
+            l4rm_detach(req->bufs[j].map_addr);
+
           goto error_bufs;
         }
       
       /* we must give the request thread access rights to the dataspace, 
        * it detaches the dataspace */
-      l4dm_share((l4dm_dataspace_t *)&sg_list[i].ds, req_id, L4DM_RW);
-      
+      retval = l4dm_share((l4dm_dataspace_t *)&sg_list[i].ds, req_id, L4DM_RW);
+      if (retval < 0)
+        {
+          LOG_Error("share buffer ds with request thread failed: %s (%d)",
+                    l4env_errstr(retval), retval);
+          for (j = 0; j <= i; j++)
+            l4rm_detach(req->bufs[j].map_addr);
+
+          goto error_bufs;
+        }
+
       req->bufs[i].ds = sg_list[i].ds;
       req->bufs[i].size = sg_list[i].size;
 
-      LOGdL(DEBUG_MAP_DS, "mapped ds %d at "IdFmt" to %p, size %u", 
-            sg_list[i].ds.id, IdStr(sg_list[i].ds.manager), 
+      LOGdL(DEBUG_MAP_DS, "mapped ds %d at "l4util_idfmt" to %p, size %u", 
+            sg_list[i].ds.id, l4util_idstr(sg_list[i].ds.manager), 
             req->bufs[i].map_addr, req->bufs[i].size);
     }
 
@@ -408,15 +437,7 @@ void
 blksrv_dev_set_device(const char * device)
 {
   if (device)
-    {
-      int len = strlen(device);
-
-      if ((device_name = malloc(len + 1)) == NULL)
-	LOG_Error("Unabled to malloc memory!");
-
-      memcpy(device_name, device, len);
-      device_name[len] = 0;
-    }
+    device_name = strdup(device);
 }
 
 /*****************************************************************************/

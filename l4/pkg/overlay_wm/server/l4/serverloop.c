@@ -4,6 +4,15 @@
  * \author  Norman Feske <nf2@inf.tu-dresden.de>
  */
 
+/*
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the Overlay WM package, which is distributed
+ * under the  terms  of the GNU General Public Licence 2. Please see
+ * the COPYING file for details.
+ */
+
 /*** L4 INCLUDES ***/
 #include <l4/names/libnames.h>
 
@@ -11,10 +20,11 @@
 #include "serverloop.h"
 #include "overlay-server.h"
 
+extern char *overlay_name;
+
 void enter_overlay_server_loop(void *arg) {
-	CORBA_Environment env = dice_default_environment;
-	env.timeout = L4_IPC_TIMEOUT(250,14,0,0,0,0); /* send timeout 1ms */
-	if (!names_register("OvlWM")) {
+	CORBA_Server_Environment env = dice_default_server_environment;
+	if (!names_register(overlay_name)) {
 		return;
 	}
 	overlay_server_loop(&env);

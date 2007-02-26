@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/SockBESrvLoopFunction.h
- *	\brief	contains the declaration of the class CSockBESrvLoopFunction
+ *  \file   dice/src/be/sock/SockBESrvLoopFunction.h
+ *  \brief  contains the declaration of the class CSockBESrvLoopFunction
  *
- *	\date	11/28/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   11/28/2002
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -42,20 +43,19 @@
  */
 class CSockBESrvLoopFunction : public CBESrvLoopFunction
 {
-DECLARE_DYNAMIC(CSockBESrvLoopFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CSockBESrvLoopFunction();
-	virtual ~CSockBESrvLoopFunction();
+    /** \brief constructor
+     */
+    CSockBESrvLoopFunction();
+    virtual ~CSockBESrvLoopFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CSockBESrvLoopFunction(CSockBESrvLoopFunction &src);
+    /** \brief copy constructor */
+    CSockBESrvLoopFunction(CSockBESrvLoopFunction &src);
 
     virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
-	virtual void WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteCleanup(CBEFile * pFile, CBEContext * pContext);
 
 public:

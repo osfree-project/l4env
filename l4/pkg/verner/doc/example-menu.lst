@@ -1,0 +1,26 @@
+title = VERNER - half the goods
+kernel (hd0,0)/l4/l4/bin/x86_586/l4v2/rmgr -sigma0 task modname "l4dope" boot_priority 0xe3 task modname "vtdemuxer" module module
+terminal --timeout=0 serial
+modaddr 0x1000000
+module (hd0,0)/l4/bootdisk/fiasco -serial_esc -nokdb -nowait -VT+ -serial -comport 1
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/sigma0
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/names
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/log
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/dm_phys
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/l4io --noirq
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/l4dope --l4io
+#----- minitop
+#module (hd0,0)/l4/l4/bin/x86_586/l4v2/minitop
+#-----controller
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/vtcontrol
+#-----sync
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/vtsync-es1371
+#----- cores
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/vtcore_video
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/vtcore_audio
+#----- demuxer + videos
+modaddr 0x02500000
+module (hd0,0)/l4/l4/bin/x86_586/l4v2/vtdemuxer
+module (hd0,0)/l4/video/codemonkey.mpg
+module (hd0,0)/l4/video/bully-mp3.ogg film
+vbeset 0x114

@@ -10,33 +10,35 @@ INTERFACE:
     backed by physical memory; mapping in physical memory is the
     client's responsibility.
  */
-class region
+class Region
 {
 };
 
+
 IMPLEMENTATION:
 
-#include "globals.h"
-#include "kmem_slab_simple.h"
-#include "helping_lock.h"
 #include "amm.h"
+#include "globals.h"
+#include "helping_lock.h"
+#include "kmem_slab_simple.h"
 #include "panic.h"
-
-static Address mem_alloc_region;
-static Address mem_alloc_region_end;
-
+  
 // 
 // helpers for the address map library
 // 
 
 static Kmem_slab_simple *amm_entry_cache;
 
-static amm_entry_t *amm_alloc_func(amm_t *, Address, vm_size_t, int)
+static
+Amm_entry *
+amm_alloc_func(Amm *, Address, vm_size_t, int)
 {
-  return reinterpret_cast<amm_entry_t *>(amm_entry_cache->alloc());
+  return reinterpret_cast<Amm_entry *>(amm_entry_cache->alloc());
 }
 
-static void amm_free_func(amm_t *, amm_entry_t *entry)
+static
+void
+amm_free_func(Amm *, Amm_entry *entry)
 {
   amm_entry_cache->free(entry);
 }
@@ -44,9 +46,11 @@ static void amm_free_func(amm_t *, amm_entry_t *entry)
 // 
 // region
 // 
-
-static amm_t region_amm;
-static Address end_of_last_region;
+  
+static Address      mem_alloc_region;
+static Address      mem_alloc_region_end;
+static Amm          region_amm;
+static Address      end_of_last_region;
 static Helping_lock region_lock;
 
 /** Initialize the region manager.  This function is called once at
@@ -54,8 +58,9 @@ static Helping_lock region_lock;
     @param begin begin of the virtual-memory region
     @param end end of the virtual-memory region
  */
-PUBLIC static void
-region::init (Address begin, Address end)
+PUBLIC static
+void
+Region::init (Address begin, Address end)
 {
   mem_alloc_region = begin;
   mem_alloc_region_end = end;
@@ -63,11 +68,11 @@ region::init (Address begin, Address end)
   // Make sure our slab cache only uses single-page slabs (slab_size =
   // PAGE_SIZE).  See note above declaration of amm_entry_cache for
   // more information.
-  amm_entry_cache = new Kmem_slab_simple(sizeof(amm_entry_t), 4);
+  amm_entry_cache = new Kmem_slab_simple(sizeof(Amm_entry), 4);
 
   amm_init_gen(&region_amm, AMM_FREE, 0, amm_alloc_func, amm_free_func, 0, 0);
-  check ( amm_modify(&region_amm, 0, mem_alloc_region, AMM_RESERVED, 0) == 0 );
-  check ( amm_modify(&region_amm, mem_alloc_region_end, 
+  check (amm_modify(&region_amm, 0, mem_alloc_region, AMM_RESERVED, 0) == 0);
+  check (amm_modify(&region_amm, mem_alloc_region_end, 
 		     AMM_MAXADDR - mem_alloc_region_end, 
 		     AMM_RESERVED, 0) == 0 );
 
@@ -82,29 +87,26 @@ region::init (Address begin, Address end)
     @return virtual address of the allocated virtual-memory region, 
             or 0 if an error occurred.
  */
-PUBLIC static Address
-region::reserve_pages(size_t size, unsigned long alignment)
+PUBLIC static
+Address
+Region::reserve_pages(size_t size, unsigned long alignment)
 {
   Helping_lock_guard guard(&region_lock);
 
   Address address = end_of_last_region;
-
   int align_bits = 0;
+
   while ((alignment >>= 1) != 0)
     align_bits++;
 
   if (! amm_find_gen(&region_amm, &address, size, AMM_FREE, -1, align_bits,
 		     0, 0))
-    {
-      return 0;			// nothing found
-    }
+    return 0;			// nothing found
 
   end_of_last_region = address + size;
 
   if (amm_modify(&region_amm, address, size, AMM_ALLOCATED, 0) != 0)
-    {
-      return 0;			// error
-    }
+    return 0;			// error
 
   return address;
 }
@@ -114,8 +116,9 @@ region::reserve_pages(size_t size, unsigned long alignment)
     @param address   virtual address of the allocated virtual memory region.
     @param size      size of the allocated region, in bytes.  
  */
-PUBLIC static void 
-region::return_pages(Address address, size_t size)
+PUBLIC static
+void
+Region::return_pages(Address address, size_t size)
 {
   Helping_lock_guard guard(&region_lock);
 
@@ -125,10 +128,14 @@ region::return_pages(Address address, size_t size)
   check ( amm_modify(&region_amm, address, size, AMM_FREE, 0) != 0);
 }
 
+
+IMPLEMENTATION[debug]:
+
 /** Dump an overview of current allocations to the screen.
  */
-PUBLIC static void
-region::debug_dump()
+PUBLIC static
+void
+Region::debug_dump()
 {
   amm_dump(& region_amm);
 }

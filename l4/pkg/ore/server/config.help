@@ -1,0 +1,7 @@
+Build ORe to run under FiascoUX
+CONFIG_ORE_UX_ONLY
+  Enable this option if you want to run ORe with FiascoUX.
+  This will include no support for real hardware. However,
+  UX applications may use ORe for local communication.
+
+

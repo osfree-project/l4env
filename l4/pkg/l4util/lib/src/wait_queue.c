@@ -14,16 +14,8 @@
 #include <l4/sys/syscalls.h>
 #include <l4/sys/kdebug.h>
 
+#include <l4/util/irq.h>
 #include <l4/util/wait_queue.h>
-
-#define __sti() __asm__ __volatile__ ("sti": : :"memory")
-#define __cli() __asm__ __volatile__ ("cli": : :"memory")
-
-#define __save_flags(x) \
-__asm__ __volatile__("pushfl ; popl %0":"=g" (x): /* no input */ :"memory")
-
-#define __restore_flags(x) \
-__asm__ __volatile__("pushl %0 ; popfl": /* no output */ :"g" (x):"memory")
 
 #define WQ_WAKEUP_MAGIC   0xfee1dead
 #define WQ_WAKEUP_TIMEOUT L4_IPC_TIMEOUT(98,9,0,0,0,0)  /* 100ms */
@@ -66,8 +58,13 @@ extern inline void __wq_suspend_thread(l4_threadid_t wakeup_thread)
 #endif
 
       error = l4_ipc_receive(wakeup_thread,&wq_msg,
+#ifdef ARCH_x86
 				  &wq_msg.new_wait.lh.low,
 				  &wq_msg.new_wait.lh.high,
+#else /* strange v2/x0adapt vs. x0-native check */
+				  &wq_msg.new_wait.raw,
+				  0,
+#endif
 				  L4_IPC_NEVER,&result);
 
 #if 0
@@ -132,8 +129,13 @@ extern inline void __wq_wakeup_thread(l4_threadid_t tid,
   wq_msg.magic = WQ_WAKEUP_MAGIC;
 
   error = l4_ipc_send(tid,&wq_msg,
+#ifdef ARCH_x86
 			   wq_msg.new_wait.lh.low,
 			   wq_msg.new_wait.lh.high,
+#else
+			   wq_msg.new_wait.raw,
+			   0,
+#endif
 			   WQ_WAKEUP_TIMEOUT,&result);
   
   if (error)
@@ -158,12 +160,12 @@ extern inline void __wq_wakeup_thread(l4_threadid_t tid,
  *****************************************************************************/
 inline void l4_wq_lock(l4_wait_queue_t *wq)
 {
-  unsigned long flags;
+  unsigned flags;
   l4_wait_queue_entry_t wqe;
   l4_threadid_t wakeup_thread;
 
-  __save_flags(flags);
-  __cli();
+  l4util_flags_save(&flags);
+  l4util_cli();
   
 #if 0
   outstring("l4_wq_lock: owner ");
@@ -177,7 +179,7 @@ inline void l4_wq_lock(l4_wait_queue_t *wq)
     {
       /* lock free */
       wq->owner = l4_myself();
-      __restore_flags(flags);
+      l4util_flags_restore(&flags);
       return;
     }
 
@@ -185,7 +187,7 @@ inline void l4_wq_lock(l4_wait_queue_t *wq)
     {
       /* I'm the owner */
       outstring("already locked\n\r");
-      __restore_flags(flags);
+      l4util_flags_restore(&flags);
       return;
     }
       
@@ -216,7 +218,7 @@ inline void l4_wq_lock(l4_wait_queue_t *wq)
     {
       outstring("lock: wait queue destroyed!\n\r");
       enter_kdebug("wq_lock");
-      __restore_flags(flags);
+      l4util_flags_restore(&flags);
       return;
     }
 
@@ -225,7 +227,7 @@ inline void l4_wq_lock(l4_wait_queue_t *wq)
     wq->tail = NULL;
 
   /* done */
-  __restore_flags(flags);
+  l4util_flags_restore(&flags);
 }
 
 /*****************************************************************************
@@ -233,11 +235,11 @@ inline void l4_wq_lock(l4_wait_queue_t *wq)
  *****************************************************************************/
 inline void l4_wq_unlock(l4_wait_queue_t *wq)
 {
-  unsigned long flags;
+  unsigned flags;
   l4_threadid_t tid;
 
-  __save_flags(flags);
-  __cli();
+  l4util_flags_save(&flags);
+  l4util_cli();
 
 #if 0
   outstring("l4_wq_unlock: owner ");
@@ -252,7 +254,7 @@ inline void l4_wq_unlock(l4_wait_queue_t *wq)
       outstring("unlock: ");
       outstring("what's that: owner != me\n");
       enter_kdebug("wq_unlock");
-      __restore_flags(flags);
+      l4util_flags_restore(&flags);
       return;
     }
 
@@ -260,7 +262,7 @@ inline void l4_wq_unlock(l4_wait_queue_t *wq)
     {
       /* empty wait queue, release lock */
       wq->owner = L4_INVALID_ID;
-      __restore_flags(flags);
+      l4util_flags_restore(&flags);
       return;
     }
 
@@ -269,7 +271,7 @@ inline void l4_wq_unlock(l4_wait_queue_t *wq)
   __wq_wakeup_thread(tid,L4_INVALID_ID);
 
   /* done */
-  __restore_flags(flags);
+  l4util_flags_restore(&flags);
 }
 
 /*****************************************************************************
@@ -277,18 +279,18 @@ inline void l4_wq_unlock(l4_wait_queue_t *wq)
  *****************************************************************************/
 inline void l4_wq_remove_myself(l4_wait_queue_t *wq)
 {
-  unsigned long flags;
+  unsigned flags;
   l4_threadid_t me = l4_myself();
   l4_wait_queue_entry_t *wqe,*last;
 
-  __save_flags(flags);
-  __cli();
+  l4util_flags_save(&flags);
+  l4util_cli();
 
   if (l4_thread_equal(wq->owner,me))
     {
       outstring("l4_wq_remove_myself: ");
       outstring("I'm the owner\n\r");
-      __restore_flags(flags);
+      l4util_flags_restore(&flags);
       l4_wq_unlock(wq);
       return;
     }
@@ -330,7 +332,7 @@ inline void l4_wq_remove_myself(l4_wait_queue_t *wq)
 	    }
 
 	  /* done */
-	  __restore_flags(flags);
+	  l4util_flags_restore(&flags);
 	  return;
 	}
       else
@@ -344,5 +346,5 @@ inline void l4_wq_remove_myself(l4_wait_queue_t *wq)
   outstring("l4_wq_remove_myself: ");
   outstring("nothing found\n\r");
 
-  __restore_flags(flags);
+  l4util_flags_restore(&flags);
 }

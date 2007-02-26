@@ -1,0 +1,49 @@
+doc : TUD
+Makefile : TUD
+README : TUD
+TODO : TUD
+include/Makefile : TUD
+include/file-table.h : TUD
+include/io.h : TUD
+include/volumes.h : TUD
+lib/backends/Makefile : TUD
+lib/backends/README : TUD
+lib/backends/l4_start_stop/Makefile : TUD
+lib/backends/l4_start_stop/README : TUD
+lib/backends/l4_start_stop/_exit.c : TUD
+lib/backends/l4_start_stop/_exit.h : TUD
+lib/backends/l4_start_stop/abort.c : TUD
+lib/backends/minimal_io/Makefile : TUD
+lib/backends/minimal_io/lseek.c : TUD
+lib/backends/minimal_io/write.c : TUD
+lib/backends/sigma0_mem/Makefile : TUD
+lib/backends/sigma0_mem/README : TUD
+lib/backends/sigma0_mem/getpagesize.c : TUD
+lib/backends/sigma0_mem/mmap.c : TUD
+lib/backends/simple_sleep/Makefile : TUD
+lib/backends/simple_sleep/sleep.c : TUD
+lib/Makefile : TUD
+lib/contrib/dietlibc : Felix von Leitner : GPL
+lib/dietlibc/Makefile : TUD
+lib/dietlibc/abs2rel.sh : D. J. Hawkey Jr., TUD : Free + Notice
+lib/dietlibc/contrib_files.lst : TUD
+lib/dietlibc/dietfeatures.h : Felix von Leitner, TUD : GPL
+lib/dietlibc/dietstdio.h : Felix von Leitner, TUD : GPL
+lib/dietlibc/make_diff.sh : TUD
+lib/dietlibc/include/Makefile : TUD
+lib/dietlibc/include/setjmp.h : Felix von Leitner, TUD : GPL
+lib/dietlibc/include/time.h : Felix von Leitner, TUD : GPL
+lib/dietlibc/include/sys/select.h : Felix von Leitner, TUD : GPL
+lib/dietlibc/lib/longjmp.c : Felix von Leitner, TUD : GPL
+lib/dietlibc/lib/readdir64.c : Felix von Leitner, TUD : GPL
+lib/dietlibc/lib/sigjmp.c : Felix von Leitner, TUD : GPL
+lib/include/Makefile : TUD
+lib/include/cassert : TUD
+lib/include/cctype : TUD
+lib/include/climits : TUD
+lib/include/csetjmp : TUD
+lib/include/cstdarg : TUD
+lib/include/cstddef : TUD
+lib/include/cstdio : TUD
+lib/include/cstdlib : TUD
+lib/include/cstring : TUD 

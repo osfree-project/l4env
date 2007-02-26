@@ -180,8 +180,7 @@ int fountain_init(void) {
 	dope_cmd(app_id, "fntnvscr=new VScreen()" );
 	dope_cmd(app_id, "fntnvscr.setmode(320,200,\"RGB16\")" );
 	dope_cmd(app_id, "fntnvscr.set(-framerate 25)" );
-	dope_cmd(app_id, "fntnwin.set(-x 90 -y 150 -w 330 -h 227 -fitx yes -fity yes -background off -content fntnvscr)" );
-//  dope_cmd(app_id, "fntnwin.open();" );
+	dope_cmd(app_id, "fntnwin.set(-x 90 -y 150 -w 330 -h 227 -background off -content fntnvscr)" );
 
 	dope_bind(app_id,"fntnvscr","motion", motion_callback, (void *)0x123);
 	dope_bind(app_id,"fntnvscr","enter", enter_callback, (void *)0x123);

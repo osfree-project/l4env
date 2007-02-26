@@ -19,6 +19,8 @@ int exec_if_link(app_t *app);
 int exec_if_open(app_t *app, const char *fname, l4dm_dataspace_t *ds, 
 		 int open_flags);
 int exec_if_close(app_t *app);
-int exec_if_ftype(l4dm_dataspace_t *ds, l4env_infopage_t *env);
+int exec_if_ftype(const l4dm_dataspace_t *ds, l4env_infopage_t *env);
+int exec_if_get_dsym(const char *symname, l4env_infopage_t *env, 
+		     l4_addr_t *addr);
 
 #endif

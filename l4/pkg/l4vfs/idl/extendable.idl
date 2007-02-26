@@ -1,0 +1,63 @@
+/* -*- c -*- */
+/**
+ * \file   l4vfs/idl/extendable.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+import <l4/l4vfs/types.h>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief Interface to connect and disconnect name spaces
+     */
+    [uuid(1002), abstract]
+    interface extendable
+    {
+        /** 
+         * @brief mount some dir of a volume to some other point in
+         *        the namespace
+         *
+         * @param volume_id   id of the volume to attach
+         * @param mounted_dir is an absolute path with its root at the
+         *                    volume's root
+         * @param mount_dir   is an absolute path with its root at the
+         *                    name-space's root
+         *
+         * @return 0 on success, errorcode otherwise
+         *         - L4VFS_ENOT_ABS_PATH if a non-absolute path was
+         *           encountered
+         *         - L4VFS_ERESOLVE if a path could not be resolved
+         *         - L4VFS_EVOL_NOT_REG requested volume was not
+         *           registered
+         *         - EBUSY other error like duplicate mounting, any of
+         *           the paths is a mount point or a mounted point
+         *           already
+         *         - ENOMEM propably mount table is full
+         */
+        int attach_namespace([in] volume_id_t volume_id,
+                             [in, string] char * mounted_dir,
+                             [in, string] char * mount_dir);
+
+        /** 
+         * @brief unmount some dir from the namespace
+         *
+         * @param mount_dir is an absolute path in the name_server's
+         *                  name space, should point to a mount point
+         *
+         * @return 0 on succes, otherwise
+         *         - errorcode
+         */
+        int detach_namespace([in, string] char * mount_dir);
+    };
+};

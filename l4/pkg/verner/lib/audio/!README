@@ -1,0 +1,5 @@
+lame and mpg123 are heavily patched to work under DROPS !
+Don't overwrite them with newer versions.
+
+KNOWN BUGS:
+some exit()-calls are replaced with return()-calls. This may crash something else. Good Luck. :)

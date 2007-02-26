@@ -1,0 +1,182 @@
+## main window  ##
+main_win=new Window()
+main_grid=new Grid()
+
+# controls #
+main_grid_ctrl=new Grid()
+
+main_label_info=new Label()
+main_label_info.set(-text "player ready")
+main_grid_ctrl.place(main_label_info,  -column 1 -row 1)
+
+main_label_time=new Label()
+main_label_time.set(-text "")
+main_grid_ctrl.place(main_label_time,  -column 1 -row 2)
+
+main_scale_seek=new Scale()
+main_scale_seek.set(-from 0 -to 100 -value 0)
+main_grid_ctrl.place(main_scale_seek, -column 1 -row 3)
+
+
+# buttons #
+main_grid_btn=new Grid()
+
+main_btn_bw=new Button()
+main_btn_bw.set(-text "<<")
+main_grid_btn.place(main_btn_bw, -column 1 -row 1)
+
+main_btn_stop=new Button()
+main_btn_stop.set(-text "#")
+main_grid_btn.place(main_btn_stop, -column 2 -row 1)
+
+main_btn_play=new Button()
+main_btn_play.set(-text ">")
+main_grid_btn.place(main_btn_play, -column 3 -row 1)
+
+main_btn_pause=new Button()
+main_btn_pause.set(-text "||")
+main_grid_btn.place(main_btn_pause, -column 4 -row 1)
+
+main_btn_fw=new Button()
+main_btn_fw.set(-text ">>")
+main_grid_btn.place(main_btn_fw, -column 5 -row 1)
+
+main_grid_btn.columnconfig(1, -size 26)
+main_grid_btn.columnconfig(2, -size 26)
+main_grid_btn.columnconfig(3, -size 26)
+main_grid_btn.columnconfig(4, -size 26)
+main_grid_btn.columnconfig(5, -size 26)
+main_grid_btn.rowconfig(1, -size 26)
+
+main_grid_ctrl.place(main_grid_btn, -column 1 -row 4)
+
+main_grid.place(main_grid_ctrl, -column 2 -row 1 -padx 5)
+
+
+# volume #
+main_grid_vol=new Grid()
+
+main_scale_vol=new Scale()
+main_scale_vol.set(-from 100 -to 0 -orient vertical)
+main_grid_vol.place(main_scale_vol, -column 1 -row 1 -align "c")
+
+main_btn_mute=new Button()
+main_btn_mute.set(-text "Mute")
+main_grid_vol.place(main_btn_mute, -column 1 -row 2)
+
+main_grid_vol.columnconfig(1, -size 20)
+
+main_grid.place(main_grid_vol, -column 1 -row 1)
+
+
+# subwindows and controls #
+
+main_grid_sub=new Grid()
+
+main_btn_pl=new Button()
+main_btn_pl.set(-text "PL")
+main_grid_sub.place(main_btn_pl, -column 1 -row 1)
+
+main_btn_ec=new Button()
+main_btn_ec.set(-text "EC")
+main_grid_sub.place(main_btn_ec, -column 1 -row 2)
+
+main_btn_rand=new Button()
+main_btn_rand.set(-text "Ra")
+main_grid_sub.place(main_btn_rand, -column 1 -row 3)
+
+main_btn_repeat=new Button()
+main_btn_repeat.set(-text "Re")
+main_grid_sub.place(main_btn_repeat, -column 1 -row 4)
+
+main_grid_sub.columnconfig(1, -size 20)
+main_grid_sub.rowconfig(1, -size 20)
+main_grid_sub.rowconfig(2, -size 20)
+main_grid_sub.rowconfig(3, -size 20)
+main_grid_sub.rowconfig(4, -size 20)
+
+main_grid.place(main_grid_sub, -column 3 -row 1)
+
+main_win.set(-x 100 -y 25 -h 142  -title "Player" -content main_grid)
+
+
+
+## playlist ##
+
+playlist_win=new Window()
+# grid for entering data 
+playlist_static_grid=new Grid()
+# grid for controls 
+playlist_ctrl_grid=new Grid()
+# grid for files
+playlist_grid=new Grid()
+# scrollable frame for filenames
+playlist_frame=new Frame()
+
+playlist_entry=new Entry()
+playlist_ctrl_grid.place(playlist_entry, -column 1 -row 1)
+
+playlist_btn_add=new Button()
+playlist_btn_add.set(-text "+")
+playlist_ctrl_grid.place(playlist_btn_add, -column 2 -row 1)
+
+playlist_btn_rmall=new Button()
+playlist_btn_rmall.set(-text "xa")
+playlist_ctrl_grid.place(playlist_btn_rmall, -column 3 -row 1)
+
+# grid sizes
+playlist_ctrl_grid.columnconfig(1, -size 140)
+playlist_ctrl_grid.columnconfig(2, -size 40)
+playlist_ctrl_grid.columnconfig(3, -size 25)
+playlist_grid.columnconfig(1, -size 120)
+playlist_grid.columnconfig(2, -size 40)
+playlist_grid.columnconfig(3, -size 25)
+
+# dummy to expand list 
+playlist_grid.rowconfig(9999,-weight 1)
+
+# add grid for files to frame grids to main grid 
+playlist_frame.set(-content playlist_grid -scrolly yes)
+playlist_static_grid.place(playlist_ctrl_grid, -column 1 -row 1)
+playlist_static_grid.place(playlist_frame, -column 1 -row 2)
+
+playlist_win.set(-x 275 -y 35 -h 142 -title "Playlist" -content playlist_static_grid)
+
+
+## options ##
+
+extctrl_win = new Window()
+extctrl_grid=new Grid()
+
+a=new Label()
+a.set(-text "QAP:")
+extctrl_grid.place(a, -column 1 -row 1 -align "w")
+
+extctrl_scale_quality=new Scale()
+extctrl_scale_quality.set(-from 0.00 -to 0.00)
+extctrl_grid.place(extctrl_scale_quality, -column 1 -row 2)
+
+extctrl_btn_qap=new Button()
+extctrl_btn_qap.set(-text "Auto")
+extctrl_grid.place(extctrl_btn_qap, -column 2 -row 2)
+
+b=new Label()
+b.set(-text "postproc command:")
+extctrl_grid.place(b, -column 1 -row 3 -align "w")
+
+extctrl_entry_pp=new Entry()
+extctrl_grid.place(extctrl_entry_pp, -column 1 -row 4)
+
+extctrl_btn_ppsend=new Button()
+extctrl_btn_ppsend.set(-text "Send")
+extctrl_grid.place(extctrl_btn_ppsend, -column 2 -row 4)
+
+extctrl_grid.columnconfig(1, -size 120)
+extctrl_grid.columnconfig(2, -size 40)
+extctrl_grid.rowconfig(1, -size 15)
+extctrl_grid.rowconfig(2, -size 22)
+extctrl_grid.rowconfig(3, -size 15)
+extctrl_grid.rowconfig(4, -size 22)
+
+extctrl_win.set(-x 265 -y 35 -title "Options" -content extctrl_grid)
+

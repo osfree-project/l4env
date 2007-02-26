@@ -41,7 +41,7 @@ class dsc_array_t
     l4_uint32_t	unique_id;
 };
 
-/** Describes an object which is identified by an unique identifier */
+/** Describes an object which is identified by an unique identifier. */
 class dsc_obj_t
 {
   public:
@@ -55,7 +55,7 @@ class dsc_obj_t
       { return id; }
 
     virtual inline const char *get_pathname(void)
-      { return (const char*)NULL; }
+      { return 0; }
 
   private:
     dsc_obj_t();
@@ -68,4 +68,3 @@ class dsc_obj_t
 #define UNIQUE_ID_MASK	0x0000ffff
 
 #endif
-

@@ -21,6 +21,7 @@
 
 /* DMgeneric includes */
 #include <l4/dm_generic/dm_generic.h>
+#include "__debug.h"
 
 /*****************************************************************************
  *** libdm_generic API functions 
@@ -33,14 +34,14 @@
  * \param  ds            Dataspace id
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EIPC    IPC error calling dataspace manager
- *         - \c -L4_EINVAL  invalid dataspace id
- *         - \c -L4_EPERM   operation not permitted, only the owner can 
- *                          close a dataspace
+ *         - -#L4_EIPC    IPC error calling dataspace manager
+ *         - -#L4_EINVAL  invalid dataspace id
+ *         - -#L4_EPERM   operation not permitted, only the owner can 
+ *                        close a dataspace
  */
 /*****************************************************************************/ 
 int
-l4dm_close(l4dm_dataspace_t * ds)
+l4dm_close(const l4dm_dataspace_t * ds)
 {
   int ret;
   CORBA_Environment _env = dice_default_environment;
@@ -49,12 +50,12 @@ l4dm_close(l4dm_dataspace_t * ds)
     return -L4_EINVAL;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_close_call(&(ds->manager),ds->id,&_env);
+  ret = if_l4dm_generic_close_call(&(ds->manager), ds->id, &_env);
   if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      ERROR("libdm_generic: close dataspace %u at %x.%x failed "
-	    "(ret %d, exc %d)!",ds->id,
-	    ds->manager.id.task,ds->manager.id.lthread,ret,_env.major);
+      LOGdL(DEBUG_ERRORS, "libdm_generic: close dataspace %u at "l4util_idfmt \
+            " failed (ret %d, exc %d)!",ds->id, l4util_idstr(ds->manager), 
+            ret, _env.major);
       if (ret)
         return ret;
       else
@@ -77,26 +78,23 @@ l4dm_close(l4dm_dataspace_t * ds)
  *                                          \a client.
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL  invalid client thread id
- *         - \c -L4_EPERM   permission denied
- *         - \c -L4_EIPC    IPC error calling dataspace manager
+ *         - -#L4_EINVAL  invalid client thread id
+ *         - -#L4_EPERM   permission denied
+ *         - -#L4_EIPC    IPC error calling dataspace manager
  */
 /*****************************************************************************/ 
 int
-l4dm_close_all(l4_threadid_t dsm_id, 
-	       l4_threadid_t client, 
-	       l4_uint32_t flags)
+l4dm_close_all(l4_threadid_t dsm_id, l4_threadid_t client, l4_uint32_t flags)
 {
   int ret;
   CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_close_all_call(&dsm_id,&client,flags,
-				  &_env);
+  ret = if_l4dm_generic_close_all_call(&dsm_id, &client, flags, &_env);
   if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      ERROR("libdm_generic: close dataspaces failed (ret %d, exc %d)!",
-	    ret,_env.major);
+      LOGdL(DEBUG_ERRORS, "libdm_generic: close dataspaces of "l4util_idfmt \
+            " failed (ret %d, exc %d)!", l4util_idstr(client), ret, _env.major);
       if (ret)
         return ret;
       else

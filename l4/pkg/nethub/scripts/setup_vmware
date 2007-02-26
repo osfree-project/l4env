@@ -1,0 +1,6 @@
+add -4 192.168.2.1 192.168.2.2 esp 0x200 -m tunnel -E 3des-cbc 0x54f119850594ceea3d37893a6be34b67f31eab0d86e4f0dc -A hmac-md5 0xc7b5fa7a132f0868d9dd39cb6607fe35 ;
+
+add -4 192.168.2.2 192.168.2.1 esp 0x200 -m tunnel -E 3des-cbc 0x54f119850594ceea3d37893a6be34b67f31eab0d86e4f0dc -A hmac-md5 0xc7b5fa7a132f0868d9dd39cb6607fe35 ;
+
+spdadd -4 0.0.0.0/0 192.168.10.1 any -P out ipsec esp/tunnel/192.168.2.1-192.168.2.2/default ; 
+

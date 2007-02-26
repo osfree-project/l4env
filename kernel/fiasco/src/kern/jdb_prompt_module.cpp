@@ -1,9 +1,12 @@
 IMPLEMENTATION:
 
 #include <cstdio>
+#include <cstring>
 
 #include "jdb.h"
 #include "jdb_module.h"
+#include "jdb_screen.h"
+#include "kernel_console.h"
 #include "static_init.h"
 
 
@@ -12,10 +15,10 @@ IMPLEMENTATION:
 //===================
 
 /**
- * @brief Jdb-prompt module.
+ * Jdb-prompt module.
  * 
- * This module handles the 'C' command that
- * changes Jdb prompt settings.
+ * This module handles some commands that
+ * change Jdb prompt settings.
  */
 class Jdb_pcm
   : public Jdb_module
@@ -23,23 +26,137 @@ class Jdb_pcm
 public:
 private:
   static char subcmd;
+  static char prompt_color;
+  static char direct_enable;
+  static int  screen_height;
 };
 
 char Jdb_pcm::subcmd;
+char Jdb_pcm::prompt_color;
+char Jdb_pcm::direct_enable;
+int  Jdb_pcm::screen_height;
+
 static Jdb_pcm jdb_pcm INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
-PUBLIC
-Jdb_module::Action_code Jdb_pcm::action( int cmd, void *&args, char const *&,
-					 int &)
+PRIVATE
+int
+Jdb_pcm::get_coords(Console *cons, unsigned &x, unsigned &y)
 {
-  if(cmd!=0)
-    return NOTHING;
-    
-  if(! Jdb::set_prompt_color(*(char*)(args)) )
+  cons->write("\033[6n", 4);
+
+  if (!wait_for_escape(cons))
+    return 0;
+
+  if (cons->getchar(true) != '[')
+    return 0;
+
+  for (y=0; ;)
     {
-      putchar(*(char*)(args));
-      puts(" - color expected (lLrRgGbByYmMcCwW)!");
+      int c = cons->getchar(true);
+      if (c == ';')
+	break;
+      if (c < '0' || c > '9')
+	return 0;
+      y = y*10+c-'0';
     }
+  for (x=0; ;)
+    {
+      int c = cons->getchar(true);
+      if (c == 'R')
+	break;
+      if (c < '0' || c > '9')
+	return 0;
+      x = x*10+c-'0';
+    }
+  return 1;
+}
+
+PRIVATE
+void
+Jdb_pcm::detect_screenheight()
+{
+  unsigned x, y, max_x, max_y;
+  char str[20];
+  Console *uart;
+
+  if (!(uart = Kconsole::console()->find_console(Console::UART)))
+    return;
+
+  while (uart->getchar(false) != -1)
+    ;
+  if (!get_coords(uart, x, y))
+    return;
+  // set scroll region to the max + set cursor to the max
+  uart->write("\033[1;199r\033[199;199H", 18);
+  if (!get_coords(uart, max_x, max_y))
+    return;
+  Jdb_screen::set_height(max_y);
+  // adapt scroll region, restore cursor
+  snprintf(str, sizeof(str), "\033[1;%ur\033[%u;%uH", max_y, y, x);
+  uart->write(str, strlen(str));
+}
+
+PUBLIC
+Jdb_module::Action_code
+Jdb_pcm::action(int cmd, void *&args, char const *&fmt, int &)
+{
+  if (cmd)
+    return NOTHING;
+
+  if (args == &subcmd)
+    {
+      switch (subcmd)
+        {
+        case 'c':
+          fmt  = " promptcolor=%c";
+          args = &prompt_color;
+          return EXTRA_INPUT;
+	case 'd':
+	  fmt = "%c";
+	  args = &direct_enable;
+	  return EXTRA_INPUT;
+        case 'h':
+          fmt  = " screenheight=%d";
+          args = &screen_height;
+          return EXTRA_INPUT;
+	case 'H':
+	  detect_screenheight();
+	  return NOTHING;
+	case 'o':
+	  printf("\nConnected consoles:\n");
+	  Kconsole::console()->list_consoles();
+	  return NOTHING;
+	default:
+	  return ERROR;
+        }
+    }
+  else if (args == &screen_height)
+    {
+      // set screen height
+      if (24 < screen_height && screen_height < 100)
+        Jdb_screen::set_height(screen_height);
+    }
+  else if (args == &prompt_color)
+    {
+      if (!Jdb::set_prompt_color(prompt_color) )
+        {
+          putchar(prompt_color);
+          puts(" - color expected (lLrRgGbByYmMcCwW)!");
+        }
+    }
+  else if (args == &direct_enable)
+    {
+      printf(" Direct console %s\n", 
+	  direct_enable == '+' ? "enabled" : "disabled");
+      Jdb_screen::enable_direct(direct_enable == '+');
+      if (direct_enable == '+')
+	Kconsole::console()->change_state(Console::DIRECT, 0,
+					  ~0U, Console::OUTENABLED);
+      else
+	Kconsole::console()->change_state(Console::DIRECT, 0,
+					  ~Console::OUTENABLED, 0);
+    }
+
   return NOTHING;
 }
 
@@ -53,11 +170,17 @@ PUBLIC
 Jdb_module::Cmd const *const Jdb_pcm::cmds() const
 {
   static Cmd cs[] =
-    { Cmd( 0, "C", "color", " %c\n", 
-	   "C<color>\tset the Jdb prompt color, <color> must be:\n"
+    { 
+	{ 0, "J", "Jdb options", "%c", 
+	   "Jc<color>\tset the Jdb prompt color, <color> must be:\n"
 	   "\tnN: noir(black), rR: red, gG: green, bB: blue,\n"
 	   "\tyY: yellow, mM: magenta, cC: cyan, wW: white;\n"
-	   "\tthe capital letters are for bold text.", &subcmd )
+	   "\tthe capital letters are for bold text.\n"
+	   "Jd{+|-}\ton/off Jdb output to VGA/Hercules console\n"
+	   "Jh\tset Jdb screen height\n"
+	   "JH\tdetect screen height using ESCape sequence ESC [ 6 n\n"
+	   "Jo\tlist attached consoles",
+	   &subcmd }
     };
 
   return cs;
@@ -65,5 +188,48 @@ Jdb_module::Cmd const *const Jdb_pcm::cmds() const
 
 PUBLIC
 Jdb_pcm::Jdb_pcm()
-	: Jdb_module("GENERAL")
+  : Jdb_module("GENERAL")
 {}
+
+
+IMPLEMENTATION[ia32,ux]:
+
+#include "cpu.h"
+
+PRIVATE
+int
+Jdb_pcm::wait_for_escape(Console *cons)
+{
+  Unsigned64 to = Cpu::ns_to_tsc (Cpu::tsc_to_ns (Cpu::rdtsc()) + 200000000);
+
+  // This is just a sanity check to ensure that a tool like minicom is attached
+  // at the other end of the serial line and this tools responds to the magical
+  // escape sequence.
+  for (;;)
+    {
+      int c = cons->getchar(false);
+      if (c == '\033')
+	return 1;
+      if (c != -1 || Cpu::rdtsc() > to)
+	return 0;
+      Proc::pause();
+    }
+}
+
+
+IMPLEMENTATION[arm]:
+
+PRIVATE
+int
+Jdb_pcm::wait_for_escape(Console *cons)
+{
+  for (Mword cnt=100000; ; cnt--)
+    {
+      int c = cons->getchar(false);
+      if (c == '\033')
+	return 1;
+      if (!cnt)
+	return 0;
+      Proc::pause();
+    }
+}

@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BEComponent.cpp
- *	\brief	contains the implementation of the class CBEComponent
+ *    \file    dice/src/be/BEComponent.cpp
+ *    \brief   contains the implementation of the class CBEComponent
  *
- *	\date	01/11/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/11/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -29,13 +30,11 @@
 #include "be/BEFile.h"
 #include "be/BEContext.h"
 #include "be/BESndFunction.h"
-#include "be/BERcvFunction.h"
 #include "be/BEWaitFunction.h"
 #include "be/BESrvLoopFunction.h"
 #include "be/BEUnmarshalFunction.h"
 #include "be/BEComponentFunction.h"
 #include "be/BEWaitAnyFunction.h"
-#include "be/BEReplyAnyWaitAnyFunction.h"
 #include "be/BEHeaderFile.h"
 #include "be/BEImplementationFile.h"
 #include "be/BERoot.h"
@@ -47,27 +46,23 @@
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
 
-IMPLEMENT_DYNAMIC(CBEComponent);
-
 CBEComponent::CBEComponent()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEComponent, CBETarget);
 }
 
 CBEComponent::CBEComponent(CBEComponent & src):CBETarget(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEComponent, CBETarget);
 }
 
-/**	\brief destructor
+/**    \brief destructor
  */
 CBEComponent::~CBEComponent()
 {
 
 }
 
-/**	\brief writes the output
- *	\param pContext the context of the write operation
+/**    \brief writes the output
+ *    \param pContext the context of the write operation
  *
  * The component's write does initiate the write for each of it's files
  */
@@ -77,9 +72,9 @@ void CBEComponent::Write(CBEContext * pContext)
     WriteImplementationFiles(pContext);
 }
 
-/**	\brief sets the current file-type in the context
- *	\param pContext the context to manipulate
- *	\param nHeaderOrImplementation a flag to indicate whether we need a header or implementation file
+/**    \brief sets the current file-type in the context
+ *    \param pContext the context to manipulate
+ *    \param nHeaderOrImplementation a flag to indicate whether we need a header or implementation file
  */
 void CBEComponent::SetFileType(CBEContext * pContext, int nHeaderOrImplementation)
 {
@@ -97,34 +92,37 @@ void CBEComponent::SetFileType(CBEContext * pContext, int nHeaderOrImplementatio
     }
 }
 
-/**	\brief checks whether this interface needs a server loop
- *	\param pFEInterface the interface to check
- *	\param pContext the context of th code generation
- *	\return true if a server loop is needed
+/**    \brief checks whether this interface needs a server loop
+ *    \param pFEInterface the interface to check
+ *    \param pContext the context of th code generation
+ *    \return true if a server loop is needed
  *
- * A server loop is not needed if all functions of the interface and its base interfaces are message passing interfaces.
- * So if at least one of the functions (operations) is any RPC function we need a server loop.
+ * A server loop is not needed if all functions of the interface and its base
+ * interfaces are message passing interfaces.  So if at least one of the
+ * functions (operations) is any RPC function we need a server loop.
  *
  * There is also no server loop needed if the interface is abstract.
  */
-bool CBEComponent::NeedServerLoop(CFEInterface * pFEInterface, CBEContext * pContext)
+bool
+CBEComponent::NeedServerLoop(CFEInterface * pFEInterface, CBEContext * pContext)
 {
     // test astract attribute
-	if (pFEInterface->FindAttribute(ATTR_ABSTRACT))
-	    return false;
-	// test functions
-    VectorElement *pIter = pFEInterface->GetFirstOperation();
+    if (pFEInterface->FindAttribute(ATTR_ABSTRACT))
+        return false;
+    // test functions
+    vector<CFEOperation*>::iterator iterO = pFEInterface->GetFirstOperation();
     CFEOperation *pOperation;
-    while ((pOperation = pFEInterface->GetNextOperation(pIter)) != 0)
+    while ((pOperation = pFEInterface->GetNextOperation(iterO)) != 0)
     {
         if (!(pOperation->FindAttribute(ATTR_IN)) &&
             !(pOperation->FindAttribute(ATTR_OUT)))
         return true;
     }
 
-    pIter = pFEInterface->GetFirstBaseInterface();
+    vector<CFEInterface*>::iterator iterI = 
+	pFEInterface->GetFirstBaseInterface();
     CFEInterface *pBase;
-    while ((pBase = pFEInterface->GetNextBaseInterface(pIter)) != 0)
+    while ((pBase = pFEInterface->GetNextBaseInterface(iterI)) != 0)
     {
         if (NeedServerLoop(pBase, pContext))
             return true;
@@ -138,9 +136,9 @@ bool CBEComponent::NeedServerLoop(CFEInterface * pFEInterface, CBEContext * pCon
  *  \param pContext the context of this operation
  *  \return true if successful
  *
- * We could call the base class' implementation but we need a reference to the header, we
- * then would have to search for. Therefore we simply do what the base class would do and use
- * the local reference to the header file.
+ * We could call the base class' implementation but we need a reference to the
+ * header, we then would have to search for. Therefore we simply do what the
+ * base class would do and use the local reference to the header file.
  */
 bool CBEComponent::CreateBackEndHeader(CFEFile * pFEFile, CBEContext * pContext)
 {
@@ -153,10 +151,12 @@ bool CBEComponent::CreateBackEndHeader(CFEFile * pFEFile, CBEContext * pContext)
     {
         RemoveFile(pHeader);
         delete pHeader;
-        VERBOSE("CBEComponent::CreateBackEndHeader failed because header file could not be created\n");
+        VERBOSE("%s failed because header file could not be created\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
-    GetRoot()->AddToFile(pHeader, pContext);
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
+    pRoot->AddToFile(pHeader, pContext);
     // add include of opcode file to header file
     if (!pContext->IsOptionSet(PROGRAM_NO_OPCODES))
     {
@@ -164,8 +164,8 @@ bool CBEComponent::CreateBackEndHeader(CFEFile * pFEFile, CBEContext * pContext)
         // do not use include file name, since we assume, that opcode
         // file is in same directory
         pContext->SetFileType(FILETYPE_OPCODE);
-        String sOpcode = pContext->GetNameFactory()->GetFileName(pFEFile, pContext);
-        pHeader->AddIncludedFileName(sOpcode, true, false);
+        string sOpcode = pContext->GetNameFactory()->GetFileName(pFEFile, pContext);
+        pHeader->AddIncludedFileName(sOpcode, true, false, pFEFile);
     }
     return true;
 }
@@ -191,25 +191,30 @@ bool CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile, CBEContext * p
     {
         RemoveFile(pImpl);
         delete pImpl;
-        VERBOSE("CBEComponent::CreateBackEndHeader failed because header file could not be created\n");
+        VERBOSE("%s failed because header file could not be created\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
-    GetRoot()->AddToFile(pImpl, pContext);
+
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
+    assert(pRoot);
+    pRoot->AddToFile(pImpl, pContext);
     // if create component function, we use seperate file for this
     if (pContext->IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
     {
-		pImpl = pContext->GetClassFactory()->GetNewImplementationFile();
-		AddFile(pImpl);
-		pImpl->SetHeaderFile(pHeader);
-		pContext->SetFileType(FILETYPE_TEMPLATE);
-		if (!pImpl->CreateBackEnd(pFEFile, pContext))
-		{
-			RemoveFile(pImpl);
-			delete pImpl;
-			VERBOSE("CBEComponent::CreateBackEndImplementation failed because implementation file could not be created\n");
-			return false;
-		}
-		GetRoot()->AddToFile(pImpl, pContext);
-	}
-	return true;
+        pImpl = pContext->GetClassFactory()->GetNewImplementationFile();
+        AddFile(pImpl);
+        pImpl->SetHeaderFile(pHeader);
+        pContext->SetFileType(FILETYPE_TEMPLATE);
+        if (!pImpl->CreateBackEnd(pFEFile, pContext))
+        {
+            RemoveFile(pImpl);
+            delete pImpl;
+            VERBOSE("%s failed because implementation file could not be created\n",
+                __PRETTY_FUNCTION__);
+            return false;
+        }
+        pRoot->AddToFile(pImpl, pContext);
+    }
+    return true;
 }

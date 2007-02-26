@@ -16,20 +16,23 @@
 #include <stdarg.h>
 
 /* Ugly workaround for the different stdarg versions */
-#ifdef __L4__
-typedef oskit_va_list LOG_va_list;
+#ifdef _FLUX_X86_C_STDARG_H_
+typedef __flux_va_list LOG_va_list;
 #else
 typedef va_list LOG_va_list;
 #endif
 
 extern int LOG_vprintf(const char*,LOG_va_list);
-extern int LOG_printf(const char*, ...);
+extern int LOG_printf(const char*, ...) 
+  __attribute__((format (printf, 1, 2)));
 extern int LOG_putchar(int);
 extern int LOG_puts(const char*);  // does append '\n'
 extern int LOG_fputs(const char*); // does not append '\n'
 extern int LOG_putstring(const char*);
-extern int LOG_sprintf(char*, const char*, ...);
-extern int LOG_snprintf(char*, unsigned size, const char*, ...);
+extern int LOG_sprintf(char*, const char*, ...) 
+  __attribute__((format (printf, 2, 3)));
+extern int LOG_snprintf(char*, unsigned size, const char*, ...)
+  __attribute__((format (printf, 3, 4)));
 extern int LOG_vsprintf(char*, const char*, LOG_va_list);
 extern int LOG_vsnprintf(char*, unsigned size, const char*, LOG_va_list);
 

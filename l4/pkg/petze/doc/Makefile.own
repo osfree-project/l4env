@@ -1,0 +1,24 @@
+TXTFILES = petze_de.txt
+TXT2TEX  = ../../../tool/gosh/gosh
+TXT2TEX_OPT =
+
+PDFFILES = $(TXTFILES:.txt=.pdf)
+
+all: $(PDFFILES)
+
+clean:
+	rm -f *.aux *.log
+
+cleanall: clean
+	rm -f $(PDFFILES)
+
+%.tex: %.txt
+	$(TXT2TEX) $(TXT2TEX_OPT) $< > $(@:.pdf=.tex)
+
+%.pdf: %.tex
+	pdflatex $<
+ifeq ("$(USEBIB)", "yes")
+	bibtex $(basename $<)
+endif
+	pdflatex $<
+	pdflatex $<

@@ -1,0 +1,17 @@
+This package builds a library that implements BSD
+socket interface and is based upon Linux 2.4 kernel
+sources. The intention behind this package is to
+have a set of generic code that each Linux network protocol
+needs. It helps to port Linux kernel sources
+of network protocols to L4.
+
+Notes:
+
+1. This lib needs some Linux 2.4 kernel sources.
+2. DDE_Linux package is also needed.
+
+Examples:
+
+1. FLIPS package. It implements a complete TCP/IP stack.
+2. PF_KEY_V2 package. It implementes RFC 2367
+  "PF_KEY Key Management API, Version 2".

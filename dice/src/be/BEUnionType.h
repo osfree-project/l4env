@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEUnionType.h
- *	\brief	contains the declaration of the class CBEUnionType
+ *    \file    dice/src/be/BEUnionType.h
+ *    \brief   contains the declaration of the class CBEUnionType
  *
- *	\date	01/15/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/15/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,83 +31,92 @@
 #define __DICE_BEUNIONTYPE_H__
 
 #include "be/BEType.h"
-#include "Vector.h"
+#include <vector>
+using namespace std;
 
 class CBEContext;
 class CBEUnionCase;
 class CFETypeSpec;
 class CBETypedDeclarator;
 class CBEDeclarator;
-class CDeclaratorStack;
 
-/**	\class CBEUnionType
- *	\ingroup backend
- *	\brief the back-end union type
+/**    \class CBEUnionType
+ *    \ingroup backend
+ *    \brief the back-end union type
  */
 class CBEUnionType:public CBEType
 {
-DECLARE_DYNAMIC(CBEUnionType);
 // Constructor
   public:
-	/**	\brief constructor
-	 */
+    /**    \brief constructor
+     */
     CBEUnionType();
     virtual ~ CBEUnionType();
 
   protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
+    /**    \brief copy constructor
+     *    \param src the source to copy from
+     */
     CBEUnionType(CBEUnionType & src);
 
     virtual int GetFixedSize();
-    virtual void WriteGetMaxSize(CBEFile *pFile, Vector *pMembers, VectorElement *pIter, CDeclaratorStack *pStack, CBEContext *pContext);
-    virtual void WriteGetMemberSize(CBEFile *pFile, CBEUnionCase *pMember, CDeclaratorStack *pStack, CBEContext *pContext);
+    virtual void WriteGetMaxSize(CBEFile *pFile,
+        const vector<CBEUnionCase*> *pMembers,
+        vector<CBEUnionCase*>::iterator iter,
+        vector<CDeclaratorStackLocation*> *pStack,
+        CBEContext *pContext);
+    virtual void WriteGetMemberSize(CBEFile *pFile,
+        CBEUnionCase *pMember,
+        vector<CDeclaratorStackLocation*> *pStack,
+        CBEContext *pContext);
 
 public:
     virtual CObject * Clone();
     virtual void RemoveUnionCase(CBEUnionCase * pCase);
     virtual void Write(CBEFile * pFile, CBEContext * pContext);
-    virtual CBEUnionCase *GetNextUnionCase(VectorElement * &pIter);
-    virtual VectorElement *GetFirstUnionCase();
+    virtual CBEUnionCase *GetNextUnionCase(vector<CBEUnionCase*>::iterator &iter);
+    virtual vector<CBEUnionCase*>::iterator GetFirstUnionCase();
     virtual bool IsCStyleUnion();
-    virtual String GetSwitchVariableName();
+    virtual string GetSwitchVariableName();
     virtual void AddUnionCase(CBEUnionCase * pUnionCase);
     virtual bool CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext);
+    virtual bool CreateBackEnd(string sTag, CBEType *pSwitchType,
+        string sSwitchName, bool bCUnion, string sUnionName,
+        bool bCORBA, CBEContext *pContext);
     virtual int GetSize();
     virtual CBETypedDeclarator* GetSwitchVariable();
     virtual void WriteUnionName(CBEFile *pFile, CBEContext *pContext);
     virtual CBEDeclarator* GetUnionName();
     virtual int GetUnionCaseCount();
     virtual bool IsConstructedType();
-	virtual void WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pContext);
-    virtual bool HasTag(String sTag);
-	virtual String GetTag();
+    virtual void WriteCast(CBEFile * pFile, bool bPointer, CBEContext * pContext);
+    virtual bool HasTag(string sTag);
+    virtual string GetTag();
     virtual void WriteZeroInit(CBEFile * pFile, CBEContext * pContext);
     virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile * pFile, CDeclaratorStack *pStack, CBEContext * pContext);
+    virtual void WriteGetSize(CBEFile * pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext * pContext);
     virtual bool IsSimpleType();
 
   protected:
-	/**	\var String m_sTag
-	 *	\brief the name of the tag if any
-	 */
-     String m_sTag;
+    /**    \var string m_sTag
+     *    \brief the name of the tag if any
+     */
+     string m_sTag;
     /** \var CBETypedDeclarator *m_pSwitchVariable
      *  \brief the switch variable
      */
     CBETypedDeclarator *m_pSwitchVariable;
-	/**	\var CBEDeclarator *m_pUnionName
-	 *	\brief names the union
-	 */
+    /**    \var CBEDeclarator *m_pUnionName
+     *    \brief names the union
+     */
     CBEDeclarator *m_pUnionName;
-	/**	\var Vector m_vUnionCases
-	 *	\brief contains the union's cases
-	 */
-    Vector m_vUnionCases;
-   	/**	\var bool m_bCORBA
-  	 *	\brief true if CORBA compliant union
-   	 */
+    /**    \var vector<CBEUnionCase*> m_vUnionCases
+     *    \brief contains the union's cases
+     */
+    vector<CBEUnionCase*> m_vUnionCases;
+    /** \var bool m_bCORBA
+     *  \brief true if CORBA compliant union
+     */
     bool m_bCORBA;
     /**  \var bool m_bCUnion
      *   \brief true if this union was declared as C style union (without a switch type and var)
@@ -114,4 +124,4 @@ public:
     bool m_bCUnion;
 };
 
-#endif				// !__DICE_BEUNIONTYPE_H__
+#endif                // !__DICE_BEUNIONTYPE_H__

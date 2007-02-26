@@ -1,0 +1,81 @@
+/*
+ * Specifies the Verner Remote Control interface.
+ */
+
+module verner
+{
+  interface remote
+  {
+    /*
+     * start playback
+     */
+    void play();
+
+    /*
+     * stop playback
+     */
+    void stop();
+
+    /*
+     * pause playback
+     */
+    void pause();
+
+    /*
+     * seek to position
+     */
+    void seek(in double position);
+
+    /*
+     * set postprocessing quality
+     *
+     * There are 4 quality levels {0, 1, 2, 3} where 0 means no
+     * postprocessing. Besides that a special postprocessing (QAP Button)
+     * can be turned on, which is represented by quality level 10.
+     */
+    void setPostprocessQuality(in unsigned short quality);
+
+    /*
+     * set volume
+     */
+    void setVolume(in unsigned long volume);
+
+    /*
+     * mute playback
+     */
+    void mute();
+
+    /*
+     * Opens a specific file
+     *
+     * Currently only 4 hard-coded file streams are supported.
+     * Thus, valid filenames are "one", "two", "three" and "four".
+     *
+     * The out parameter is the length of the file stream in milliseconds.
+     *
+     * The return parameter indicates if the open operation was successful.
+     */
+    boolean open(in string filename, out double length);
+
+    /*
+     * registers a thread to receive update events
+     *
+     * The update rate can also be specified in milliseconds and should
+     * be at least 250. (Values smaller than 250 are set to 250.)
+     */
+    void register_gui(in l4_threadid_t gui_thread, 
+	in unsigned long gui_rate);
+
+#if BUILD_RT_SUPPORT
+    void setRTparams(in unsigned long period,
+	in unsigned long demux_video,
+	in unsigned long demux_audio,
+	in unsigned long core_video,
+	in unsigned long core_video_opt,
+	in unsigned long core_audio,
+	in unsigned long sync_video,
+	in unsigned long sync_audio);
+#endif
+  };
+};
+

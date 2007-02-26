@@ -22,6 +22,7 @@
 
 /* DMgeneric includes */
 #include <l4/dm_generic/dm_generic.h>
+#include "__debug.h"
 
 /*****************************************************************************
  *** libdm_generic API functions
@@ -35,24 +36,24 @@
  * \param  name          Dataspace name
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL  invalid dataspace id
- *         - \c -L4_EPERM   caller is not the owner of the dataspace
- *         - \c -L4_EIPC    IPC error calling dataspace manager 
+ *         - -#L4_EINVAL  invalid dataspace id
+ *         - -#L4_EPERM   caller is not the owner of the dataspace
+ *         - -#L4_EIPC    IPC error calling dataspace manager 
  */
 /*****************************************************************************/ 
 int
-l4dm_ds_set_name(l4dm_dataspace_t * ds, 
-		 const char * name)
+l4dm_ds_set_name(const l4dm_dataspace_t * ds, const char * name)
 {
   int ret;
   CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_set_name_call(&(ds->manager),ds->id,name,&_env);
+  ret = if_l4dm_generic_set_name_call(&(ds->manager), ds->id, name, &_env);
   if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      ERROR("libdm_generic: set dataspace name failed (ret %d, exc %d)",
-	    ret,_env.major);
+      LOGdL(DEBUG_ERRORS, "libdm_generic: set name for ds %u at "l4util_idfmt \
+            "failed (ret %d, exc %d)", ds->id, l4util_idstr(ds->manager),
+            ret, _env.major);
       if (ret)
 	return ret;
       else
@@ -71,23 +72,23 @@ l4dm_ds_set_name(l4dm_dataspace_t * ds,
  * \retval name          Dataspace name
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL  invalid dataspace id
- *         - \c -L4_EIPC    IPC error calling dataspace manager 
+ *         - -#L4_EINVAL  invalid dataspace id
+ *         - -#L4_EIPC    IPC error calling dataspace manager 
  */
 /*****************************************************************************/ 
 int
-l4dm_ds_get_name(l4dm_dataspace_t * ds, 
-		 char * name)
+l4dm_ds_get_name(const l4dm_dataspace_t * ds, char * name)
 {
   int ret;
   CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_get_name_call(&(ds->manager),ds->id,&name,&_env);
+  ret = if_l4dm_generic_get_name_call(&(ds->manager), ds->id, &name, &_env);
   if (ret || (_env.major != CORBA_NO_EXCEPTION))
     {
-      ERROR("libdm_generic: get dataspace name failed (ret %d, exc %d)",
-	    ret,_env.major);
+      LOGdL(DEBUG_ERRORS, "libdm_generic: get name for da %u at "l4util_idfmt \
+            "failed (ret %d, exc %d)", ds->id, l4util_idstr(ds->manager),
+	    ret, _env.major);
       if (ret)
 	return ret;
       else
@@ -106,70 +107,17 @@ l4dm_ds_get_name(l4dm_dataspace_t * ds,
  */
 /*****************************************************************************/ 
 void
-l4dm_ds_show(l4dm_dataspace_t * ds)
+l4dm_ds_show(const l4dm_dataspace_t * ds)
 {
   int ret;
   CORBA_Environment _env = dice_default_environment;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_show_ds_call(&(ds->manager),ds->id,&_env);
+  ret = if_l4dm_generic_show_ds_call(&(ds->manager), ds->id, &_env);
   if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
-    ERROR("libdm_generic: show dataspace failed (ret %d, exc %d)",
-	  ret,_env.amjor);
-}
-
-/*****************************************************************************/
-/**
- * \brief  Dump dataspaces
- * 
- * \param  dsm_id        Dataspace manager thread id
- * \param  owner         Dataspace owner, if set to L4_INVALID_ID dump all
- *                       dataspaces
- * \param  flags         Flags:
- *                       - #L4DM_SAME_TASK  dump dataspaces owned by task
- * \retval ds            Dataspace id
- *	
- * \return 0 on success, error code otherwise:
- *         - \c -L4_EIPC       IPC error calling dataspace manager
- *         - \c -L4_ENOHANDLE  could not create dataspace descriptor
- *         - \c -L4_ENOMEM     out of memory
- */
-/*****************************************************************************/ 
-int
-l4dm_ds_dump(l4_threadid_t dsm_id, 
-	     l4_threadid_t owner, 
-	     l4_uint32_t flags,
-	     l4dm_dataspace_t * ds)
-{
-  int ret;
-  CORBA_Environment _env = dice_default_environment;
-
-  if (l4_thread_equal(dsm_id,L4DM_DEFAULT_DSM))
-    {
-      /* request dataspace manager id from L4 environment */
-      dsm_id = l4env_get_default_dsm();
-      if (l4_is_invalid_id(dsm_id))
-	{
-	  ERROR("libdm_generic: no dataspace manager found!");
-	  return -L4_ENODM;
-	}
-    }
-
-  /* call dataspace manager */
-  ret = if_l4dm_generic_dump_call(&dsm_id,&owner,flags,
-                                  ds,&_env);
-  if (ret || (_env.major != CORBA_NO_EXCEPTION))
-    {
-      ERROR("libdm_generic: dump dataspaces failed (ret %d, exc %d)",
-	    ret,_env.major);
-      if (ret)
-	return ret;
-      else
-	return -L4_EIPC;
-    }
-  
-  /* done */
-  return 0;
+    LOGdL(DEBUG_ERRORS, "libdm_generic: show ds %u at "l4util_idfmt \
+          " failed (ret %d, exc %d)", ds->id, l4util_idstr(ds->manager), 
+	  ret, _env.major);
 }
 
 /*****************************************************************************/
@@ -177,38 +125,38 @@ l4dm_ds_dump(l4_threadid_t dsm_id,
  * \brief  List dataspaces
  * 
  * \param  dsm_id        Dataspace manager thread id
- * \param  owner         Dataspace owner, if set to L4_INVALID_ID list
+ * \param  owner         Dataspace owner, if set to #L4_INVALID_ID list
  *                       all dataspaces
  * \param  flags         Flags:
  *                       - #L4DM_SAME_TASK  list dataspaces owned by task
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EIPC IPC error calling dataspace manager
+ *         - -#L4_EIPC IPC error calling dataspace manager
  */
 /*****************************************************************************/ 
 int
-l4dm_ds_list(l4_threadid_t dsm_id, 
-	     l4_threadid_t owner, 
-	     l4_uint32_t flags)
+l4dm_ds_list(l4_threadid_t dsm_id, l4_threadid_t owner, l4_uint32_t flags)
 {
   CORBA_Environment _env = dice_default_environment;
  
-  if (l4_thread_equal(dsm_id,L4DM_DEFAULT_DSM))
+  if (l4_thread_equal(dsm_id, L4DM_DEFAULT_DSM))
     {
       /* request dataspace manager id from L4 environment */
       dsm_id = l4env_get_default_dsm();
       if (l4_is_invalid_id(dsm_id))
 	{
-	  ERROR("libdm_generic: no dataspace manager found!");
+	  LOGdL(DEBUG_ERRORS, "libdm_generic: no dataspace manager found!");
 	  return -L4_ENODM;
 	}
     }
 
   /* call dataspace manager */
-  if_l4dm_generic_list_call(&dsm_id,&owner,flags,&_env);
+  if_l4dm_generic_list_call(&dsm_id, &owner, flags, &_env);
   if (_env.major != CORBA_NO_EXCEPTION)
     {
-      ERROR("libdm_generic: list dataspaces failed (exc %d)",_env.major);
+      LOGdL(DEBUG_ERRORS, "libdm_generic: list dataspaces of "l4util_idfmt \
+            "at "l4util_idfmt" failed (exc %d)",
+            l4util_idstr(owner), l4util_idstr(dsm_id), _env.major);
       return -L4_EIPC;
     }
 
@@ -223,12 +171,12 @@ l4dm_ds_list(l4_threadid_t dsm_id,
  * \param  dsm_id        Dataspace manager id
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EIPC IPC error calling dataspace manager
+ *         - -#L4_EIPC IPC error calling dataspace manager
  */
 /*****************************************************************************/ 
 int
 l4dm_ds_list_all(l4_threadid_t dsm_id)
 {
   /* list all dataspaces at dataspace manager */
-  return l4dm_ds_list(dsm_id,L4_INVALID_ID,0);
+  return l4dm_ds_list(dsm_id, L4_INVALID_ID, 0);
 }

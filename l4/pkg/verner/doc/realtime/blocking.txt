@@ -1,0 +1,61 @@
+                     VERNER - possible blocking points  (german)
+                              Carsten Rietzschel
+                           cr7@os.inf.tu-dresden.de
+  			        15 September 2004
+
+
+
+                    ============= Demuxer  =============
+
+
+vdemuxer/src/work_loop.c:work_loop():
+    - dsi_packet_get() und dsi_packet_commit()
+      --> DSI packet handling (mit BUIILD_RT_SUPPORT DSI wird non-blocking genutzt)
+    
+    - control->import_step()
+      --> Aufruf des import plugin's
+          - plugins/import/demux_ogm.c
+            --> OGM --> lock zum lesenden Zugriff auf ein File (Audio+Video-Threads)
+	  - plugins/import/demux_*.c
+   	    --> AVI, MP3, --> lock frei, es sei den file-I/O blockiert
+	  - plugin/io/*.c
+	    --> file-I/O blockiert (Netzwerk/ext2fs ??, grubfs ist nicht blockierend))
+
+                    ============= Core  =============
+
+
+vcore/src/work_loop.c:work_loop():
+    - receiver_step() und receiver_commit() in vcore/src/receiver.c
+      und
+      sender_step() und sender_commit() in vcore/src/receiver.c
+      --> Daten erhalten bzw. weitergeben
+          - dsi_packet_get() und  dsi_packet_commit()
+            --> DSI packet handling (mit BUIILD_RT_SUPPORT DSI wird non-blocking genutzt)
+
+
+                    ============= Sync  =============
+
+vsync/src/work_loop.c:work_loop():
+    - dsi_packet_get() und dsi_packet_commit()
+      --> DSI packet handling (mit BUIILD_RT_SUPPORT DSI wird non-blocking genutzt)
+
+    - check_player_mode() in vsync/src/playerstatus.c
+      --> Pause (von GUI) über Semaphoren implementiert 
+      --> wartet bis PLAY oder STOP
+
+    - metronome_wait_sync() in vsync/src/metronome.c
+      --> für Video: 
+          - l4thread_sleep um Videoframes zum richtigen Zeitpunkt auszugeben
+	  - get_position()
+	    --> Abfrage der Audioposition für export-Plugin für OSS (wenn Sound vorhanden)
+	        (s. unten)
+	    --> ohne Sound, nicht blockierend
+      --> für Audio + Video:
+          - semaphoren-geschützter Zugriff auf Zeitinformation (wichtig bei timer-reset bei seek/gap etc.)
+   
+    - control->out_step() 
+      --> für Video:
+          - DOpE unblockierend
+      --> für Audio in plugins/export/ao_oss.c
+          - semaphoren-geschützter Zugriff auf Bytecounter der Soundkarte (wichtig für Zeitinfos)
+	    (auch metronome_wait_sync() nutzt dies (s.oben)

@@ -1,21 +1,37 @@
 # -*- Makefile -*-
 
-TARGET		= con con-ux
-DEFAULT_RELOC	= 0x00b00000
+TARGET_x86	= con con-ux
+TARGET_arm	= con
+TARGET		= $(TARGET_$(ARCH))
+DEFAULT_RELOC_x86 = 0x00b00000
+DEFAULT_RELOC_arm = 0x00320000
 
 PRIVATE_INCDIR	= ../../include
-LIBS_ALL	= -L../con_hw/OBJ-$(SYSTEM) -lcon_hw \
-		  -L../con_yuv2rgb/OBJ-$(ARCH)_$(CPU) -lcon_yuv2rgb \
-		  -lpci -lio -lomega0
-LIBS_con	= -linput $(LIBS_ALL)
-LIBS_con-ux	= -linput-ux $(LIBS_ALL)
-SRC_C		= main.c pslim.c ev.c vc.c
-CPPFLAGS	+= -DL4_MAX_RPC_STRING_DOPES=3 -DDEBUG
+LIBS_x86	= -lomega0
+LIBS_ALL	= -L../con_yuv2rgb/OBJ-$(ARCH)_$(CPU) -lcon_yuv2rgb \
+		  $(LIBS_$(ARCH)) -levents -lparsecmdline -ldm_phys
+LIBS_con_x86	= -lio -linput  $(LIBS_ALL) \
+		  -L../con_hw/OBJ-$(SYSTEM) -lcon_hw -lpci -lio -lx86emu
+LIBS_con_arm	= -linput-dummy $(LIBS_ALL) \
+		  -L../con_hw/OBJ-$(SYSTEM) -lcon_hw -larm_lcd
+LIBS_con	= $(LIBS_con_$(ARCH))
+LIBS_con-ux	= -lio -linput-ux $(LIBS_ALL) \
+		  -L../con_hw/OBJ-$(SYSTEM) -lcon_hw-ux -lio
+SRC_C		= main.c pslim.c ev.c vc.c events.c
+SRC_C_con_x86	= int10.c
+SRC_C_con-ux_x86= int10-ux.c
+SRC_C_con	= $(SRC_C_con_$(ARCH))
+SRC_C_con-ux	= $(SRC_C_con-ux_$(ARCH))
+CPPFLAGS	+= -DDEBUG
+CFLAGS_int10.c	= -fomit-frame-pointer
+
+LDFLAGS_arm	= -Wl,--no-warn-mismatch
+LDFLAGS		= $(LDFLAGS_$(ARCH))
 
 OBJS		+= font.o
 
-CLIENTIDL	= con.idl stream.idl
-SERVERIDL	= con.idl
+CLIENTIDL	= l4con.idl stream.idl
+SERVERIDL	= l4con.idl
 
 all::
 

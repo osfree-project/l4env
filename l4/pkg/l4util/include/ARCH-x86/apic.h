@@ -172,7 +172,7 @@ L4_INLINE void
 apic_timer_write(unsigned long value)
 {
   apic_read(APIC_TMICT);
-  apic_write(APIC_TMICT,value/apic_timer_divisor);
+  apic_write(APIC_TMICT,value);
 }
 
 

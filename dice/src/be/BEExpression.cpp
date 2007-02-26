@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEExpression.cpp
- *	\brief	contains the implementation of the class CBEExpression
+ *    \file    dice/src/be/BEExpression.cpp
+ *    \brief   contains the implementation of the class CBEExpression
  *
- *	\date	01/17/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/17/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,6 +32,7 @@
 #include "be/BEType.h"
 #include "be/BERoot.h"
 #include "be/BETypedef.h"
+#include "be/BEConstant.h"
 
 #include "fe/FEExpression.h"
 #include "fe/FEUserDefinedExpression.h"
@@ -40,8 +42,8 @@
 #include "fe/FEConditionalExpression.h"
 #include "fe/FESizeOfExpression.h"
 #include "fe/FETypeSpec.h"
-
-IMPLEMENT_DYNAMIC(CBEExpression);
+#include "fe/FEInterface.h"
+#include "fe/FELibrary.h"
 
 CBEExpression::CBEExpression()
 {
@@ -49,11 +51,10 @@ CBEExpression::CBEExpression()
     m_pCondition = 0;
     m_pOperand1 = 0;
     m_pOperand2 = 0;
-	m_pType = 0;
+    m_pType = 0;
     m_nIntValue = 0;
     m_fFloatValue = 0.0;
     m_nOperator = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBEExpression, CBEObject);
 }
 
 CBEExpression::CBEExpression(CBEExpression & src):CBEObject(src)
@@ -62,59 +63,62 @@ CBEExpression::CBEExpression(CBEExpression & src):CBEObject(src)
     m_nIntValue = src.m_nIntValue;
     m_fFloatValue = src.m_fFloatValue;
     m_cCharValue = src.m_cCharValue;
-	if (src.m_pOperand1)
-	{
-	    m_pOperand1 = (CBEExpression*)src.m_pOperand1->Clone();
-		m_pOperand1->SetParent(this);
-	}
-	else
-	    m_pOperand1 = 0;
+    if (src.m_pOperand1)
+    {
+        m_pOperand1 = (CBEExpression*)src.m_pOperand1->Clone();
+        m_pOperand1->SetParent(this);
+    }
+    else
+        m_pOperand1 = 0;
     m_sStringValue = src.m_sStringValue;
     m_nOperator = src.m_nOperator;
-	if (src.m_pCondition)
-	{
-	    m_pCondition = (CBEExpression*)src.m_pCondition->Clone();
-		m_pCondition->SetParent(this);
-	}
-	else
-	    m_pCondition = 0;
+    if (src.m_pCondition)
+    {
+        m_pCondition = (CBEExpression*)src.m_pCondition->Clone();
+        m_pCondition->SetParent(this);
+    }
+    else
+        m_pCondition = 0;
     if (src.m_pOperand2)
-	{
-	    m_pOperand2 = (CBEExpression*)src.m_pOperand2->Clone();
-		m_pOperand2->SetParent(this);
-	}
-	else
-	    m_pOperand2 = 0;
-	if (src.m_pType)
-	{
-	    m_pType = (CBEType*)src.m_pType->Clone();
-		m_pType->SetParent(this);
-	}
-	else
-	    m_pType = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBEExpression, CBEObject);
+    {
+        m_pOperand2 = (CBEExpression*)src.m_pOperand2->Clone();
+        m_pOperand2->SetParent(this);
+    }
+    else
+        m_pOperand2 = 0;
+    if (src.m_pType)
+    {
+        m_pType = (CBEType*)src.m_pType->Clone();
+        m_pType->SetParent(this);
+    }
+    else
+        m_pType = 0;
 }
 
-/**	\brief destructor of this instance */
+/**    \brief destructor of this instance */
 CBEExpression::~CBEExpression()
 {
     if (m_pOperand1)
-	    delete m_pOperand1;
+        delete m_pOperand1;
     if (m_pOperand2)
-	    delete m_pOperand2;
+        delete m_pOperand2;
     if (m_pCondition)
-	    delete m_pCondition;
+        delete m_pCondition;
     if (m_pType)
-	    delete m_pType;
+        delete m_pType;
 }
 
-/**	\brief creates the back-end representation of an expression
- *	\param pFEExpression the corresponding front-end expression
- *	\param pContext the context of the code generation
- *	\return true if code generation was successful
+/**    \brief creates the back-end representation of an expression
+ *    \param pFEExpression the corresponding front-end expression
+ *    \param pContext the context of the code generation
+ *    \return true if code generation was successful
  */
 bool CBEExpression::CreateBackEnd(CFEExpression * pFEExpression, CBEContext * pContext)
 {
+    // call CBEObject's CreateBackEnd method
+    if (!CBEObject::CreateBackEnd(pFEExpression))
+        return false;
+
     m_nType = pFEExpression->GetType();
     switch (m_nType)
     {
@@ -130,7 +134,30 @@ bool CBEExpression::CreateBackEnd(CFEExpression * pFEExpression, CBEContext * pC
         m_sStringValue = pFEExpression->GetString();
         break;
     case EXPR_USER_DEFINED:
-        m_sStringValue = ((CFEUserDefinedExpression *) pFEExpression)->GetExpName();
+        {
+            m_sStringValue = ((CFEUserDefinedExpression *) pFEExpression)->GetExpName();
+            // might be constant -> check if we have const with that name
+            CFEInterface *pFEInterface = pFEExpression->GetSpecificParent<CFEInterface>();
+            CFEConstDeclarator *pFEConstant = 0;
+            if (pFEInterface)
+                pFEConstant = pFEInterface->FindConstant(m_sStringValue);
+            if (pFEConstant)
+                m_sStringValue = pContext->GetNameFactory()->GetConstantName(pFEConstant, pContext);
+            else
+            {
+                CFELibrary *pFELibrary = pFEExpression->GetSpecificParent<CFELibrary>();
+                while (pFELibrary)
+                {
+                    if ((pFEConstant = pFELibrary->FindConstant(m_sStringValue)) != 0)
+                    {
+                        m_sStringValue = pContext->GetNameFactory()->GetConstantName(pFEConstant, pContext);
+                        pFELibrary = 0;
+                    }
+                    else
+                        pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
+                }
+            }
+        }
         break;
     case EXPR_INT:
         m_nIntValue = ((CFEPrimaryExpression *) pFEExpression)->GetIntValue();
@@ -151,24 +178,25 @@ bool CBEExpression::CreateBackEnd(CFEExpression * pFEExpression, CBEContext * pC
         return CreateBackEndPrimary((CFEPrimaryExpression *) pFEExpression, pContext);
         break;
     case EXPR_SIZEOF:
-	    return CreateBackEndSizeOf((CFESizeOfExpression *) pFEExpression, pContext);
-		break;
+        return CreateBackEndSizeOf((CFESizeOfExpression *) pFEExpression, pContext);
+        break;
     }
     return true;
 }
 
-/**	\brief creates the back-end expression
- *	\param pFEExpression the corresponding front-end expression
- *	\param pContext the context of the code generation
- *	\return true if the code generation was successful
+/**    \brief creates the back-end expression
+ *    \param pFEExpression the corresponding front-end expression
+ *    \param pContext the context of the code generation
+ *    \return true if the code generation was successful
  */
 bool CBEExpression::CreateBackEndConditional(CFEConditionalExpression *pFEExpression, CBEContext * pContext)
 {
     if (!pFEExpression->GetCondition())
-	{
-	    VERBOSE("CBEExpression::CreateBackEndConditional failed because no condition\n");
+    {
+        VERBOSE("%s failed because no condition\n",
+            __PRETTY_FUNCTION__);
         return false;
-	}
+    }
     m_pCondition = pContext->GetClassFactory()->GetNewExpression();
     m_pCondition->SetParent(this);
     if (!m_pCondition->CreateBackEnd(pFEExpression->GetCondition(), pContext))
@@ -180,18 +208,19 @@ bool CBEExpression::CreateBackEndConditional(CFEConditionalExpression *pFEExpres
     return CreateBackEndBinary(pFEExpression, pContext);
 }
 
-/**	\brief creates the back-end expression
- *	\param pFEExpression the corresponding front-end expression
- *	\param pContext the context of the code generation
- *	\return true if the code generation was successful
+/**    \brief creates the back-end expression
+ *    \param pFEExpression the corresponding front-end expression
+ *    \param pContext the context of the code generation
+ *    \return true if the code generation was successful
  */
 bool CBEExpression::CreateBackEndBinary(CFEBinaryExpression * pFEExpression, CBEContext * pContext)
 {
     if (!pFEExpression->GetOperand2())
-	{
-	    VERBOSE("CBEExpression::CreateBackEndBinary failed because no second operand\n");
-		return false;
-	}
+    {
+        VERBOSE("%s failed because no second operand\n",
+            __PRETTY_FUNCTION__);
+        return false;
+    }
     m_pOperand2 = pContext->GetClassFactory()->GetNewExpression();
     m_pOperand2->SetParent(this);
     if (!m_pOperand2->CreateBackEnd(pFEExpression->GetOperand2(), pContext))
@@ -203,10 +232,10 @@ bool CBEExpression::CreateBackEndBinary(CFEBinaryExpression * pFEExpression, CBE
     return CreateBackEndUnary(pFEExpression, pContext);
 }
 
-/**	\brief creates the back-end expression
- *	\param pFEExpression the corresponding front-end expression
- *	\param pContext the context of the code generation
- *	\return true if the code generation was successful
+/**    \brief creates the back-end expression
+ *    \param pFEExpression the corresponding front-end expression
+ *    \param pContext the context of the code generation
+ *    \return true if the code generation was successful
  */
 bool CBEExpression::CreateBackEndUnary(CFEUnaryExpression * pFEExpression, CBEContext * pContext)
 {
@@ -228,21 +257,22 @@ bool CBEExpression::CreateBackEndUnary(int nOperator, CBEExpression *pOperand, C
     return true;
 }
 
-/**	\brief creates the back-end expression
- *	\param pFEExpression the corresponding front-end expression
- *	\param pContext the context of the code generation
- *	\return true if the code generation was successful
+/**    \brief creates the back-end expression
+ *    \param pFEExpression the corresponding front-end expression
+ *    \param pContext the context of the code generation
+ *    \return true if the code generation was successful
  *
  * This function is only called to create an expression for m_pOperand1:
  */
 bool CBEExpression::CreateBackEndPrimary(CFEPrimaryExpression * pFEExpression, CBEContext * pContext)
 {
     CFEExpression *pFEOperand = pFEExpression->GetOperand();
-	if (!pFEOperand)
-	{
-	    VERBOSE("CBEExpression::CreateBackEndPrimary failed because no expression\n");
-		return false;
-	}
+    if (!pFEOperand)
+    {
+        VERBOSE("%s failed because no expression\n",
+            __PRETTY_FUNCTION__);
+        return false;
+    }
     CBEExpression *pExpression = pContext->GetClassFactory()->GetNewExpression();
     pExpression->SetParent(this);
     if (!pExpression->CreateBackEnd(pFEOperand, pContext))
@@ -299,50 +329,52 @@ bool CBEExpression::CreateBackEndPrimary(int nType, CBEExpression *pExpression, 
 }
 
 /** \brief create the size-of expression
- *  \param pExpression the size of expression
+ *  \param pFEExpression the size of expression
  *  \param pContext the context of the create
  *  \return true if successful
  */
 bool CBEExpression::CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression, CBEContext *pContext)
 {
     // can be type
-	CFETypeSpec *pFEType = pFEExpression->GetSizeOfType();
-	if (pFEType)
-	{
-	    CBEType *pType = pContext->GetClassFactory()->GetNewType(pFEType->GetType());
-		pType->SetParent(this);
-		if (!pType->CreateBackEnd(pFEType, pContext))
-		{
-		    delete pType;
-			VERBOSE("CBEExpression::CreateBackEndSizeOf failed because type could not be created.\n");
-			return false;
+    CFETypeSpec *pFEType = pFEExpression->GetSizeOfType();
+    if (pFEType)
+    {
+        CBEType *pType = pContext->GetClassFactory()->GetNewType(pFEType->GetType());
+        pType->SetParent(this);
+        if (!pType->CreateBackEnd(pFEType, pContext))
+        {
+            delete pType;
+            VERBOSE("%s failed because type could not be created.\n",
+                __PRETTY_FUNCTION__);
+            return false;
         }
-		m_pType = pType;
-	    return true;
-	}
-	// can be expression
-	CFEExpression *pFESizeOfExpression = pFEExpression->GetSizeOfExpression();
-	if (pFESizeOfExpression)
-	{
-	    CBEExpression *pExpression = pContext->GetClassFactory()->GetNewExpression();
-		pExpression->SetParent(this);
-		if (!pExpression->CreateBackEnd(pFESizeOfExpression, pContext))
-		{
-		    delete pExpression;
-			VERBOSE("CBEExpression::CreateBackEndSizeOf failed because expression could not be created.\n");
-			return false;
-		}
-		m_pOperand1 = pExpression;
-	    return true;
-	}
-	// then it is a string
+        m_pType = pType;
+        return true;
+    }
+    // can be expression
+    CFEExpression *pFESizeOfExpression = pFEExpression->GetSizeOfExpression();
+    if (pFESizeOfExpression)
+    {
+        CBEExpression *pExpression = pContext->GetClassFactory()->GetNewExpression();
+        pExpression->SetParent(this);
+        if (!pExpression->CreateBackEnd(pFESizeOfExpression, pContext))
+        {
+            delete pExpression;
+            VERBOSE("%s failed because expression could not be created.\n",
+                __PRETTY_FUNCTION__);
+            return false;
+        }
+        m_pOperand1 = pExpression;
+        return true;
+    }
+    // then it is a string
     m_sStringValue = pFEExpression->GetString();
-	return true;
+    return true;
 }
 
-/**	\brief write the content of the expression to the target file
- *	\param pFile the target file to write to
- *	\param pContext the context of the write operation
+/**    \brief write the content of the expression to the target file
+ *    \param pFile the target file to write to
+ *    \param pContext the context of the write operation
  */
 void CBEExpression::Write(CBEFile * pFile, CBEContext * pContext)
 {
@@ -366,16 +398,16 @@ void CBEExpression::Write(CBEFile * pFile, CBEContext * pContext)
         pFile->Print("%c", m_cCharValue);
         break;
     case EXPR_STRING:
-        if (m_sStringValue.IsEmpty())
+        if (m_sStringValue.empty())
             pFile->Print("0");
         else
-            pFile->Print("\"%s\"", (const char *) m_sStringValue);
+            pFile->Print("\"%s\"", m_sStringValue.c_str());
         break;
     case EXPR_USER_DEFINED:
-        if (m_sStringValue.IsEmpty())
+        if (m_sStringValue.empty())
             pFile->Print("0");
         else
-            pFile->Print("%s", (const char *) m_sStringValue);
+            pFile->Print("%s", m_sStringValue.c_str());
         break;
     case EXPR_INT:
         pFile->Print("%d", m_nIntValue);
@@ -400,9 +432,9 @@ void CBEExpression::Write(CBEFile * pFile, CBEContext * pContext)
     }
 }
 
-/**	\brief writes a conditional expression to the target file
- *	\param pFile the target file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes a conditional expression to the target file
+ *    \param pFile the target file to write to
+ *    \param pContext the context of the write operation
  */
 void CBEExpression::WriteConditional(CBEFile * pFile, CBEContext * pContext)
 {
@@ -415,9 +447,9 @@ void CBEExpression::WriteConditional(CBEFile * pFile, CBEContext * pContext)
     pFile->Print(")");
 }
 
-/**	\brief writes a binary expression to the target file
- *	\param pFile the target file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes a binary expression to the target file
+ *    \param pFile the target file to write to
+ *    \param pContext the context of the write operation
  */
 void CBEExpression::WriteBinary(CBEFile * pFile, CBEContext * pContext)
 {
@@ -427,99 +459,99 @@ void CBEExpression::WriteBinary(CBEFile * pFile, CBEContext * pContext)
     switch (m_nOperator)
       {
       case EXPR_MUL:
-	  pFile->Print(" * ");
-	  break;
+      pFile->Print(" * ");
+      break;
       case EXPR_DIV:
-	  pFile->Print(" / ");
-	  break;
+      pFile->Print(" / ");
+      break;
       case EXPR_MOD:
-	  pFile->Print(" % ");
-	  break;
+      pFile->Print(" % ");
+      break;
       case EXPR_PLUS:
-	  pFile->Print(" + ");
-	  break;
+      pFile->Print(" + ");
+      break;
       case EXPR_MINUS:
-	  pFile->Print(" - ");
-	  break;
+      pFile->Print(" - ");
+      break;
       case EXPR_LSHIFT:
-	  pFile->Print(" << ");
-	  break;
+      pFile->Print(" << ");
+      break;
       case EXPR_RSHIFT:
-	  pFile->Print(" >> ");
-	  break;
+      pFile->Print(" >> ");
+      break;
       case EXPR_LT:
-	  pFile->Print(" < ");
-	  break;
+      pFile->Print(" < ");
+      break;
       case EXPR_GT:
-	  pFile->Print(" > ");
-	  break;
+      pFile->Print(" > ");
+      break;
       case EXPR_LTEQU:
-	  pFile->Print(" <= ");
-	  break;
+      pFile->Print(" <= ");
+      break;
       case EXPR_GTEQU:
-	  pFile->Print(" >= ");
-	  break;
+      pFile->Print(" >= ");
+      break;
       case EXPR_EQUALS:
-	  pFile->Print(" == ");
-	  break;
+      pFile->Print(" == ");
+      break;
       case EXPR_NOTEQUAL:
-	  pFile->Print(" != ");
-	  break;
+      pFile->Print(" != ");
+      break;
       case EXPR_BITAND:
-	  pFile->Print(" & ");
-	  break;
+      pFile->Print(" & ");
+      break;
       case EXPR_BITXOR:
-	  pFile->Print(" ^ ");
-	  break;
+      pFile->Print(" ^ ");
+      break;
       case EXPR_BITOR:
-	  pFile->Print(" | ");
-	  break;
+      pFile->Print(" | ");
+      break;
       case EXPR_LOGAND:
-	  pFile->Print(" && ");
-	  break;
+      pFile->Print(" && ");
+      break;
       case EXPR_LOGOR:
-	  pFile->Print(" || ");
-	  break;
+      pFile->Print(" || ");
+      break;
       default:
-	  assert(false);
-	  break;
+      assert(false);
+      break;
       }
     // write second operand
     m_pOperand2->Write(pFile, pContext);
 }
 
-/**	\brief writes a unary expression to the target file
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes a unary expression to the target file
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  */
 void CBEExpression::WriteUnary(CBEFile * pFile, CBEContext * pContext)
 {
     switch (m_nOperator)
       {
       case EXPR_SPLUS:
-	  pFile->Print("+");
-	  break;
+      pFile->Print("+");
+      break;
       case EXPR_SMINUS:
-	  pFile->Print("-");
-	  break;
+      pFile->Print("-");
+      break;
       case EXPR_TILDE:
-	  pFile->Print("~");
-	  break;
+      pFile->Print("~");
+      break;
       case EXPR_EXCLAM:
-	  pFile->Print("!");
-	  break;
+      pFile->Print("!");
+      break;
       default:
-	  assert(false);
-	  break;
+      assert(false);
+      break;
       }
     // write operand
     m_pOperand1->Write(pFile, pContext);
 }
 
-/**	\brief creates expression with integer value
- *	\param nValue the value of the expression
- *	\param pContext the context of the generation
- *	\return true if successful
+/**    \brief creates expression with integer value
+ *    \param nValue the value of the expression
+ *    \param pContext the context of the generation
+ *    \return true if successful
  */
 bool CBEExpression::CreateBackEnd(int nValue, CBEContext * pContext)
 {
@@ -528,24 +560,24 @@ bool CBEExpression::CreateBackEnd(int nValue, CBEContext * pContext)
     return true;
 }
 
-/**	\brief creates expression with string value
- *	\param sValue the string value
- *	\param pContext the context of the generation
- *	\return true if successful
+/**    \brief creates expression with string value
+ *    \param sValue the string value
+ *    \param pContext the context of the generation
+ *    \return true if successful
  */
-bool CBEExpression::CreateBackEnd(String sValue, CBEContext * pContext)
+bool CBEExpression::CreateBackEnd(string sValue, CBEContext * pContext)
 {
     m_nType = EXPR_USER_DEFINED;
     m_sStringValue = sValue;
     return true;
 }
 
-/**	\brief creates binary expression from existing expressions
- *	\param pOperand1 the first operand
- *	\param nOperator the operator
- *	\param pOperand2 the second operand
- *	\param pContext the context of the creation
- *	\return true if successful
+/**    \brief creates binary expression from existing expressions
+ *    \param pOperand1 the first operand
+ *    \param nOperator the operator
+ *    \param pOperand2 the second operand
+ *    \param pContext the context of the creation
+ *    \return true if successful
  */
 bool CBEExpression::CreateBackEndBinary(CBEExpression * pOperand1, int nOperator, CBEExpression * pOperand2, CBEContext * pContext)
 {
@@ -556,72 +588,84 @@ bool CBEExpression::CreateBackEndBinary(CBEExpression * pOperand1, int nOperator
     return true;
 }
 
-/**	\brief calculates the integer value of this expression
- *	\return the integer value of this expression (or 0 if not evaluable)
+/**    \brief calculates the integer value of this expression
+ *    \return the integer value of this expression (or 0 if not evaluable)
  */
 int CBEExpression::GetIntValue()
 {
     int nValue = 0;
 
     switch (m_nType)
-	{
-	case EXPR_NONE:
-	case EXPR_NULL:
-	case EXPR_STRING:
-	case EXPR_USER_DEFINED:
-		break;
-	case EXPR_TRUE:
-		nValue = (int) true;
-		break;
-	case EXPR_FALSE:
-		nValue = (int) false;
-		break;
-	case EXPR_CHAR:
-		nValue = (int) m_cCharValue;
-		break;
-	case EXPR_INT:
-		nValue = m_nIntValue;
-		break;
-	case EXPR_FLOAT:
-		nValue = (int) m_fFloatValue;
-		break;
-	case EXPR_CONDITIONAL:
-		if (m_pCondition->GetBoolValue() == true)
-			nValue = m_pOperand1->GetIntValue();
-		else
-			nValue = m_pOperand2->GetIntValue();
-		break;
-	case EXPR_BINARY:
-		nValue = GetIntValueBinary();
-		break;
-	case EXPR_UNARY:
-		nValue = GetIntValueUnary();
-		break;
-	case EXPR_PAREN:
-		nValue = m_pOperand1->GetIntValue();
-		break;
-	case EXPR_SIZEOF:
-	    if (m_pOperand1)
-		    nValue = m_pOperand1->GetIntValue(); // cause that's what sizeof does
-	    else if (m_pType)
-		    nValue = m_pType->GetSize(); // sizeof(type)
-	    else
-		{
-		    // check for user defined type
-			CBERoot *pRoot = GetRoot();
-			assert(pRoot);
-			CBETypedef *pUserDefined = pRoot->FindTypedef(m_sStringValue);
-			assert(pUserDefined);
-			nValue = pUserDefined->GetSize();
-		}
-		break;
-	}
+    {
+    case EXPR_NONE:
+    case EXPR_NULL:
+    case EXPR_STRING:
+        break;
+    case EXPR_USER_DEFINED:
+        // might be constant
+        {
+            CBERoot *pRoot = GetSpecificParent<CBERoot>();
+            assert(pRoot);
+            CBEConstant *pConst;
+            if ((pConst = pRoot->FindConstant(m_sStringValue)) != 0)
+            {
+                CBEExpression *pValue = pConst->GetValue();
+                nValue = pValue ? pValue->GetIntValue() : 0;
+            }
+        }
+        break;
+    case EXPR_TRUE:
+        nValue = (int) true;
+        break;
+    case EXPR_FALSE:
+        nValue = (int) false;
+        break;
+    case EXPR_CHAR:
+        nValue = (int) m_cCharValue;
+        break;
+    case EXPR_INT:
+        nValue = m_nIntValue;
+        break;
+    case EXPR_FLOAT:
+        nValue = (int) m_fFloatValue;
+        break;
+    case EXPR_CONDITIONAL:
+        if (m_pCondition->GetBoolValue() == true)
+            nValue = m_pOperand1->GetIntValue();
+        else
+            nValue = m_pOperand2->GetIntValue();
+        break;
+    case EXPR_BINARY:
+        nValue = GetIntValueBinary();
+        break;
+    case EXPR_UNARY:
+        nValue = GetIntValueUnary();
+        break;
+    case EXPR_PAREN:
+        nValue = m_pOperand1->GetIntValue();
+        break;
+    case EXPR_SIZEOF:
+        if (m_pOperand1)
+            nValue = m_pOperand1->GetIntValue(); // cause that's what sizeof does
+        else if (m_pType)
+            nValue = m_pType->GetSize(); // sizeof(type)
+        else
+        {
+            // check for user defined type
+            CBERoot *pRoot = GetSpecificParent<CBERoot>();
+            assert(pRoot);
+            CBETypedef *pUserDefined = pRoot->FindTypedef(m_sStringValue);
+            assert(pUserDefined);
+            nValue = pUserDefined->GetSize();
+        }
+        break;
+    }
 
     return nValue;
 }
 
-/**	\brief calculates the integer value for a binary expression
- *	\return the caculated integer expression
+/**    \brief calculates the integer value for a binary expression
+ *    \return the caculated integer expression
  */
 int CBEExpression::GetIntValueBinary()
 {
@@ -630,152 +674,152 @@ int CBEExpression::GetIntValueBinary()
     int nValue = 0;
 
     switch (m_nOperator)
-	{
-	case EXPR_MUL:
-		nValue = nValue1 * nValue2;
-		break;
-	case EXPR_DIV:
-		if (nValue2)
-			nValue = nValue1 / nValue2;
-		break;
-	case EXPR_MOD:
-		if (nValue2)
-			nValue = nValue1 % nValue2;
-		break;
-	case EXPR_PLUS:
-		nValue = nValue1 + nValue2;
-		break;
-	case EXPR_MINUS:
-		nValue = nValue1 - nValue2;
-		break;
-	case EXPR_LSHIFT:
-		nValue = nValue1 << nValue2;
-		break;
-	case EXPR_RSHIFT:
-		nValue = nValue1 >> nValue2;
-		break;
-	case EXPR_LT:
-		nValue = (int) (nValue1 < nValue2);
-		break;
-	case EXPR_GT:
-		nValue = (int) (nValue1 > nValue2);
-		break;
-	case EXPR_LTEQU:
-		nValue = (int) (nValue1 <= nValue2);
-		break;
-	case EXPR_GTEQU:
-		nValue = (int) (nValue1 >= nValue2);
-		break;
-	case EXPR_EQUALS:
-		nValue = (int) (nValue1 == nValue2);
-		break;
-	case EXPR_NOTEQUAL:
-		nValue = (int) (nValue1 != nValue2);
-		break;
-	case EXPR_BITAND:
-		nValue = nValue1 & nValue2;
-		break;
-	case EXPR_BITXOR:
-		nValue = nValue1 ^ nValue2;
-		break;
-	case EXPR_BITOR:
-		nValue = nValue1 | nValue2;
-		break;
-	case EXPR_LOGAND:
-		nValue = (int) (nValue1 && nValue2);
-		break;
-	case EXPR_LOGOR:
-		nValue = (int) (nValue1 || nValue2);
-		break;
-	default:
-		assert(false);
-		break;
-	}
+    {
+    case EXPR_MUL:
+        nValue = nValue1 * nValue2;
+        break;
+    case EXPR_DIV:
+        if (nValue2)
+            nValue = nValue1 / nValue2;
+        break;
+    case EXPR_MOD:
+        if (nValue2)
+            nValue = nValue1 % nValue2;
+        break;
+    case EXPR_PLUS:
+        nValue = nValue1 + nValue2;
+        break;
+    case EXPR_MINUS:
+        nValue = nValue1 - nValue2;
+        break;
+    case EXPR_LSHIFT:
+        nValue = nValue1 << nValue2;
+        break;
+    case EXPR_RSHIFT:
+        nValue = nValue1 >> nValue2;
+        break;
+    case EXPR_LT:
+        nValue = (int) (nValue1 < nValue2);
+        break;
+    case EXPR_GT:
+        nValue = (int) (nValue1 > nValue2);
+        break;
+    case EXPR_LTEQU:
+        nValue = (int) (nValue1 <= nValue2);
+        break;
+    case EXPR_GTEQU:
+        nValue = (int) (nValue1 >= nValue2);
+        break;
+    case EXPR_EQUALS:
+        nValue = (int) (nValue1 == nValue2);
+        break;
+    case EXPR_NOTEQUAL:
+        nValue = (int) (nValue1 != nValue2);
+        break;
+    case EXPR_BITAND:
+        nValue = nValue1 & nValue2;
+        break;
+    case EXPR_BITXOR:
+        nValue = nValue1 ^ nValue2;
+        break;
+    case EXPR_BITOR:
+        nValue = nValue1 | nValue2;
+        break;
+    case EXPR_LOGAND:
+        nValue = (int) (nValue1 && nValue2);
+        break;
+    case EXPR_LOGOR:
+        nValue = (int) (nValue1 || nValue2);
+        break;
+    default:
+        assert(false);
+        break;
+    }
 
     return nValue;
 }
 
-/**	\brief calculates the unary expression
- *	\return the calculated value
+/**    \brief calculates the unary expression
+ *    \return the calculated value
  */
 int CBEExpression::GetIntValueUnary()
 {
     int nValue = m_pOperand1->GetIntValue();
 
     switch (m_nOperator)
-	{
-	case EXPR_SPLUS:
-		nValue = +nValue;
-		break;
-	case EXPR_SMINUS:
-		nValue = -nValue;
-		break;
-	case EXPR_TILDE:
-		nValue = ~nValue;
-		break;
-	case EXPR_EXCLAM:
-		nValue = !nValue;
-		break;
-	default:
-		assert(false);
-		break;
-	}
+    {
+    case EXPR_SPLUS:
+        nValue = +nValue;
+        break;
+    case EXPR_SMINUS:
+        nValue = -nValue;
+        break;
+    case EXPR_TILDE:
+        nValue = ~nValue;
+        break;
+    case EXPR_EXCLAM:
+        nValue = !nValue;
+        break;
+    default:
+        assert(false);
+        break;
+    }
 
     return nValue;
 }
 
-/**	\brief evaluates the expression to a boolean value
- *	\return true or false
+/**    \brief evaluates the expression to a boolean value
+ *    \return true or false
  */
 bool CBEExpression::GetBoolValue()
 {
     bool bValue = false;
 
     switch (m_nType)
-	{
-	case EXPR_NONE:
-	case EXPR_NULL:
-	case EXPR_STRING:
-	case EXPR_USER_DEFINED:
-	case EXPR_SIZEOF:
-		break;
-	case EXPR_TRUE:
-		bValue = true;
-		break;
-	case EXPR_FALSE:
-		bValue = false;
-		break;
-	case EXPR_CHAR:
-		bValue = (bool) m_cCharValue;
-		break;
-	case EXPR_INT:
-		bValue = (bool) m_nIntValue;
-		break;
-	case EXPR_FLOAT:
-		bValue = (bool) m_fFloatValue;
-		break;
-	case EXPR_CONDITIONAL:
-		if (m_pCondition->GetBoolValue() == true)
-			bValue = m_pOperand1->GetBoolValue();
-		else
-			bValue = m_pOperand2->GetBoolValue();
-		break;
-	case EXPR_BINARY:
-		bValue = GetBoolValueBinary();
-		break;
-	case EXPR_UNARY:
-		bValue = GetBoolValueUnary();
-		break;
-	case EXPR_PAREN:
-		bValue = m_pOperand1->GetBoolValue();
-		break;
-	}
+    {
+    case EXPR_NONE:
+    case EXPR_NULL:
+    case EXPR_STRING:
+    case EXPR_USER_DEFINED:
+    case EXPR_SIZEOF:
+        break;
+    case EXPR_TRUE:
+        bValue = true;
+        break;
+    case EXPR_FALSE:
+        bValue = false;
+        break;
+    case EXPR_CHAR:
+        bValue = (bool) m_cCharValue;
+        break;
+    case EXPR_INT:
+        bValue = (bool) m_nIntValue;
+        break;
+    case EXPR_FLOAT:
+        bValue = (bool) m_fFloatValue;
+        break;
+    case EXPR_CONDITIONAL:
+        if (m_pCondition->GetBoolValue() == true)
+            bValue = m_pOperand1->GetBoolValue();
+        else
+            bValue = m_pOperand2->GetBoolValue();
+        break;
+    case EXPR_BINARY:
+        bValue = GetBoolValueBinary();
+        break;
+    case EXPR_UNARY:
+        bValue = GetBoolValueUnary();
+        break;
+    case EXPR_PAREN:
+        bValue = m_pOperand1->GetBoolValue();
+        break;
+    }
 
     return bValue;
 }
 
-/**	\brief calculates the boolean value for the binary expression
- *	\return true or false
+/**    \brief calculates the boolean value for the binary expression
+ *    \return true or false
  */
 bool CBEExpression::GetBoolValueBinary()
 {
@@ -786,71 +830,71 @@ bool CBEExpression::GetBoolValueBinary()
     switch (m_nOperator)
       {
       case EXPR_MUL:
-	  bValue = (bool) ((int) bValue1 * (int) bValue2);
-	  break;
+      bValue = (bool) ((int) bValue1 * (int) bValue2);
+      break;
       case EXPR_DIV:
-	  if ((int) bValue2)
-	      bValue = (bool) ((int) bValue1 / (int) bValue2);
-	  break;
+      if ((int) bValue2)
+          bValue = (bool) ((int) bValue1 / (int) bValue2);
+      break;
       case EXPR_MOD:
-	  if ((int) bValue2)
-	      bValue = (bool) ((int) bValue1 % (int) bValue2);
-	  break;
+      if ((int) bValue2)
+          bValue = (bool) ((int) bValue1 % (int) bValue2);
+      break;
       case EXPR_PLUS:
-	  bValue = (bool) ((int) bValue1 + (int) bValue2);
-	  break;
+      bValue = (bool) ((int) bValue1 + (int) bValue2);
+      break;
       case EXPR_MINUS:
-	  bValue = (bool) ((int) bValue1 - (int) bValue2);
-	  break;
+      bValue = (bool) ((int) bValue1 - (int) bValue2);
+      break;
       case EXPR_LSHIFT:
-	  bValue = (bool) ((int) bValue1 << (int) bValue2);
-	  break;
+      bValue = (bool) ((int) bValue1 << (int) bValue2);
+      break;
       case EXPR_RSHIFT:
-	  bValue = (bool) ((int) bValue1 >> (int) bValue2);
-	  break;
+      bValue = (bool) ((int) bValue1 >> (int) bValue2);
+      break;
       case EXPR_LT:
-	  bValue = bValue1 < bValue2;
-	  break;
+      bValue = bValue1 < bValue2;
+      break;
       case EXPR_GT:
-	  bValue = bValue1 > bValue2;
-	  break;
+      bValue = bValue1 > bValue2;
+      break;
       case EXPR_LTEQU:
-	  bValue = bValue1 <= bValue2;
-	  break;
+      bValue = bValue1 <= bValue2;
+      break;
       case EXPR_GTEQU:
-	  bValue = bValue1 >= bValue2;
-	  break;
+      bValue = bValue1 >= bValue2;
+      break;
       case EXPR_EQUALS:
-	  bValue = bValue1 == bValue2;
-	  break;
+      bValue = bValue1 == bValue2;
+      break;
       case EXPR_NOTEQUAL:
-	  bValue = bValue1 != bValue2;
-	  break;
+      bValue = bValue1 != bValue2;
+      break;
       case EXPR_BITAND:
-	  bValue = bValue1 & bValue2;
-	  break;
+      bValue = bValue1 & bValue2;
+      break;
       case EXPR_BITXOR:
-	  bValue = bValue1 ^ bValue2;
-	  break;
+      bValue = bValue1 ^ bValue2;
+      break;
       case EXPR_BITOR:
-	  bValue = bValue1 | bValue2;
-	  break;
+      bValue = bValue1 | bValue2;
+      break;
       case EXPR_LOGAND:
-	  bValue = bValue1 && bValue2;
-	  break;
+      bValue = bValue1 && bValue2;
+      break;
       case EXPR_LOGOR:
-	  bValue = bValue1 || bValue2;
-	  break;
+      bValue = bValue1 || bValue2;
+      break;
       default:
-	  assert(false);
-	  break;
+      assert(false);
+      break;
       }
 
     return bValue;
 }
 
-/**	\brief calculates the boolean value for the unary expression
- *	\return true or false
+/**    \brief calculates the boolean value for the unary expression
+ *    \return true or false
  */
 bool CBEExpression::GetBoolValueUnary()
 {
@@ -859,24 +903,24 @@ bool CBEExpression::GetBoolValueUnary()
     switch (m_nOperator)
       {
       case EXPR_SPLUS:
-	  bValue = (bool) (+((int) bValue));
-	  break;
+      bValue = (bool) (+((int) bValue));
+      break;
       case EXPR_SMINUS:
-	  bValue = (bool) (-((int) bValue));
-	  break;
+      bValue = (bool) (-((int) bValue));
+      break;
       case EXPR_TILDE:
-	  {
-	      int iValue = (int) bValue;
-	      iValue = ~iValue;
-	      bValue = (bool) iValue;
-	  }
-	  break;
+      {
+          int iValue = (int) bValue;
+          iValue = ~iValue;
+          bValue = (bool) iValue;
+      }
+      break;
       case EXPR_EXCLAM:
-	  bValue = !bValue;
-	  break;
+      bValue = !bValue;
+      break;
       default:
-	  assert(false);
-	  break;
+      assert(false);
+      break;
       }
 
     return bValue;

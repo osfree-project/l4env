@@ -16,16 +16,19 @@
  * don't cacheline collide.
  */
 
-#define ASSEMBLER
+#include "tcboffset.h"
 
 .align	16
 .globl	_task_sighandler_start
 .globl	_task_sighandler_end
 
 _task_sighandler_start:
+	movl	$VAL__MEM_LAYOUT__TRAMPOLINE_PAGE, %ecx
+					// get trampoline page start address
 	movl	12(%esp), %eax		// get context pointer from sighandler
-	andl	$0x0fff, %eax		// calculate offset into trampolinepage
-	movl	$_trampoline_page, %ecx	// get trampoline page start address
+	andl	$0xfff, %eax		// calculate offset into trampolinepage
 	movl	%eax, 0x100(%ecx)	// save offset at trampoline page + 256
-	ret
+	addl	$4, %esp		// consume return address
+	movl	$173, %eax		// rt_sigreturn
+	int	$0x80			// system call
 _task_sighandler_end:

@@ -42,20 +42,20 @@ int l4io_pci_find_slot(unsigned int bus, unsigned int slot, l4io_pci_dev_t * pci
 }
 
 int l4io_pci_find_device(unsigned short vendor, unsigned short device,
-			 l4io_pdev_t start, l4io_pci_dev_t * pci_dev)
+                         l4io_pdev_t start, l4io_pci_dev_t * pci_dev)
 {
   int err;
   CORBA_Environment _env = dice_default_environment;
 
   err = l4_io_pci_find_device_call(&io_l4id, vendor, device, start,
-			      (l4_io_pci_dev_t *) pci_dev, &_env);
+                                   (l4_io_pci_dev_t *) pci_dev, &_env);
 
   /* done */
   return DICE_ERR(err, &_env);
 }
 
 int l4io_pci_find_class(unsigned long class,
-			l4io_pdev_t start, l4io_pci_dev_t * pci_dev)
+                        l4io_pdev_t start, l4io_pci_dev_t * pci_dev)
 {
   int err;
   CORBA_Environment _env = dice_default_environment;

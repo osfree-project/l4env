@@ -1,0 +1,143 @@
+POSIX mmap-Abbildung auf Dataspaces
+-----------------------------------
+
+Im Folgenden soll erläutert werden,
+wie die mmap POSIX Schnittstelle auf Dataspaces abgebildet werden soll.
+
+Memory Mapped I/O blendet eine Datei von einem Hintergrundspeicher
+in den Hauptspeicher ein. Beim Lesezugriff in den entsprechenden Speicherbereich bzw. 
+beim Schreiben sind die korrespondierenden Bytes mit der Datei im Hintergrund identisch.
+Damit erfolgen die I/O Zugriffe ohne Nutzung von read oder write. Ein Vorteil
+ist eine erhöhte Performance, denn Zugriffe via read/write erzeugen erhöhte Kosten.
+Aber auch ein mit mmap benutzter Bereich, der via Share von mehreren Threads 
+benutzt wird, bietet sinnvolle Szenarien für IPC.
+
+Es gibt zwei grundlegene Varianten bei Memory Mapped I/O, anonymer und nicht-anonymer Speicher. Bei
+der ersten Variante hängt keine Datei dahinter, bei der zweiten ist eine Datei
+eingeblendet.
+
+In der L4Env Umgebung wird Speicher weitgehend von einem Dataspace-Manager verwaltet.
+Dataspaces können in verschiedene Adressräume eingeblendet werden und bieten verschiedene
+Rechte an.
+
+In unserem Anwendungsszenario werden die Files von einem Server verwaltet, z.B. könnnen
+sie via GRUB-Bootloader eingebunden worden sein oder von einem Dateisystem 
+geholt werden. Damit ist ein transparenter Zugriff von außen ohne Wissen auf die 
+tatsächliche Herkunft der Daten möglich. Ein Referenzbeispiel ist der Simple-File-Server, 
+er bindet Dateien von GRUB und statisch gelinkte Files an.
+
+Für die einzelnen Memory Mapped I/0 Funktionen sollen nun die notwendigen
+Strukturen und die wichtigsten Interaktionen bezüglich der File-Server und des Dataspace-Managers
+diskutiert werden.
+
+mmap-Funktion
+-------------
+
+Um eine Datei, bzw. Bereiche aus ihr, in den Speicher einzublenden und darauf Lese/Schreibzugriffe
+auszuführen, gibt es die mmap-Funktion. Sie benötigt u.a. einen File-Deskriptor.
+
+Unsere auf Dataspaces basierende POSIX mmap-Funktion bietet eine Weiche an, die entsprechend der
+Variante anonymer Speicher bzw. normalem mmap-Aufruf verzweigt. Die anonyme Implementation
+liegt momentan im Backend simple_mem.
+
+MMAP_NORMAL wird im IO-Backend implementiert und greift von dort auf den entsprechenden Server.
+
+Er erzeugt beim ersten Zugriff einen Dataspace, in dem die Datei kopiert wird, speichert
+die DS-ID lokal und gibt sie an den Client zurück. Bei jedem weiteren Zugriff wird dieses Handle
+weitergegeben, d.h. alle Clients sehen den gleichen Speicher. Der Server besitzt zu jedem
+Dataspace einen Referenz-Counter, der den mmap-Aufrufen entspricht, die auf dem File ausgeführt worden
+sind.
+
+Jeder Client muß, bevor er den Dataspace in seinen Adressraum einblendet, eine Area beim RegionMapper
+anfordern. Das Area-Konzept des RegionMappers bietet die Möglichkeit, einen Adressbereich zu
+markieren, auf den nur der Client Verwaltungsrechte hat, d.h. z.B. Dataspaces einblenden kann.
+
+Nach der Reservierung einer Area wird der Dataspace mit l4rm_area_attach in den
+Adressraum eingeblendet.
+
+Wichtig ist die Unterscheidung von MAP_SHARED bzw. MAP_PRIVATE. Mit PRIVATE wird
+bei einem Schreibvorgang in den Speicherbereich eine Kopie erstellt. Dazu müsste ein
+Dataspace-Manager vorhanden sein, der eine Copy-On-Write Implementierung anbietet, die
+momentan noch nicht vorhanden ist, d.h. MAP_PRIVATE ist z.Zt. nur lesend möglich.
+
+Bei MAP_PRIVATE muß im Client ds_copy ausgeführt werden, diese Funktion braucht
+ein COW-Flag. Lt. Lars Reuter lohnt sich ein Server nicht, der lediglich Copy-On-Write
+anbietet und alles andere dem DM_PHYS weiterreicht, da einige Probleme auftreten können.
+Wenn z.B. in einem DS etwas aktualisiert wird, dann ist es sehr prolematisch mit dieser Lösung,
+die Veränderung in einem mit COW erzeugten DS nicht auftreten zu lassen.
+
+Bei einem COW-DS-Manager benötigt jeder DS eine verzeigerte Struktur, die auf die tatsächlichen 
+Speicherseiten verweisen. Bei einem Schreibzugriff auf den DS muß u.U. eine
+neue Seite erzeugt werden und der Zeiger entsprechend verändert werden.
+
+msync-Funktion
+--------------
+
+Bei mmap mit MAP_SHARED ist ein Schreibvorgang in den Speicher mit einer Aktualisierung der Datei
+auf dem Hintergrundspeicher verbunden. Der Zeitpunkt der Aktualisierung ist aber nicht
+festgelegt. Um ein Schreiben auf das File konkret anzuweisen, gibt es die msync-Funktion.
+
+MSYNC ist in mmap_normal im IO-Backend implementiert. Zu der gegebenen Adresse wird
+der zugehörige Dataspace ermittelt und der Server, der den Dataspace und das File
+verwaltet.
+
+Für diese Informationen wurde die mmap_util Bibliothek eingeführt. Sie enthält
+u.a. zu jedem Dataspace die Thread-ID des entsprechenden Servers.
+
+Nachdem der Server mit Hilfe von mmap_util gefunden wurde, wird er angesprochen 
+und ihm die Informationen übergeben, damit er aus dem Dataspace den entsprechenden
+Bereich auf das File zurückschreibt.
+
+Momentan wird sofort geschrieben, msync in POSIX bietet aber auch asynchrones Schreiben
+an. Darüber ist noch nachzudenken.
+
+munmap-Funktion
+---------------
+
+Um Teile bzw. den gesamten Speicherbereich, der die Datei abbildet, auszublenden, bietet POSIX
+munmap.
+
+Die Umsetzung dieser Funktion mit Hilfe von Dataspaces hat das Problem, das munmap eine feinere
+Granularität als das Konzept der Dataspaces bietet. Sie sind eine Art von Container, der nur
+komplett ausgeblendet werden kann.
+
+Deshalb ist folgendes Vorgehen notwendig:
+
+Im Client-Backend wird der gesamte Dataspace mit l4rm_detach ausgeblendet. Dann 
+werden die entsprechenden Teile, falls munmap einen Bereich betraf, der zwei Restteile
+erzeugt hat, wieder mit l4rm_area_attach_to_region eingeblendet an die vorher zu merkenden Adressen.
+
+Noch zu unterscheiden ist, ob munmap auf einem anonymen Speicherbereich oder einem DS, der
+zu einem anderen Server gehört, ausgeführt wurde. Es ist deshalb die in vorigen Abschnitt
+eingeführte Bibliothek zu befragen, ob der Client selbst der "Besitzer" des DS ist (das ist
+der Fall, wenn die Thread-ID zum DS die eigene ist) oder ein fremder Server. Im zweiten Fall
+und falls außerdem der komplette DS gemeint war, ist der entsprechende Server zu benachrichtigen.
+
+Eine noch zu lösende Frage ist, was passiert, wenn ein Thread gerade in dem Moment in den
+Speicherbereich greift, der schon mit l4rm_detach aus- , die Teilbereiche aber
+noch nicht wieder eingeblendet wurden. 
+
+Für die Lösung des Problems gibt es zwei Ansätze:
+
+1. Der Dataspace-Manager bietet die Möglichkeit an, Teilbereiche eines Dataspaces atomar
+   zu entfernen
+
+2. Der RegionMapper kann auch den Backend, d.h. den Client, der den Dataspace mit l4rm_detach
+   ausgeblendet hat, benachrichtigen, falls ein Pagefault aufgetreten ist
+
+Ohne die Verwendung von des Area-Konzeptes könnte der RegionMapper außerdem zwischen dem Ausblenden 
+des Dataspaces und der Einblendung der entstehenden Teilbereiche die zu erhaltenden Adressbereiche
+einem anderen Thread vergeben. Deshalb ist es unbedingt notwendig, alle mmap-Dataspaces in eine
+Area einzublenden.
+
+Bei mehrmaligem Aufruf von munmap ensteht u.U. eine Partitionierung des Speicherbereiches,
+deshalb wird in mmap_util eine Information benötigt, welche Bereiche noch eingeblendet sind.
+
+mremap
+------
+
+Um die eingeblendete Datei an eine anderen Bereich zu legen, wird in POSIX mremap angeboten.
+Prinzipiell sollte diese Funktion mit Hilfe der vom RegionMapper angebotenen API problemlos
+nachgebildet werden können. Es muß dazu erst ein Area mit dem entsprechenden neuen Adressen
+reserviert werden und der Dataspace dort eingeblendet werden, danach ist der alte Bereich
+auszublenden.

@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/fe/FESizeOfExpression.cpp
+ *    \brief   contains the implementation of the class CFESizeOfExpression
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -17,69 +24,63 @@
  * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
+
 #include "fe/FESizeOfExpression.h"
 #include "fe/FETypeSpec.h"
 #include "File.h"
-
-IMPLEMENT_DYNAMIC(CFESizeOfExpression);
 
 CFESizeOfExpression::CFESizeOfExpression()
  : CFEExpression()
 {
     m_pType = NULL;
-	m_pExpression = NULL;
-    IMPLEMENT_DYNAMIC_BASE(CFESizeOfExpression, CFEExpression);
+    m_pExpression = NULL;
 }
 
 /** destroys this object */
 CFESizeOfExpression::~CFESizeOfExpression()
 {
     if (m_pType)
-	    delete m_pType;
+        delete m_pType;
     if (m_pExpression)
-	    delete m_pExpression;
+        delete m_pExpression;
 }
 
-CFESizeOfExpression::CFESizeOfExpression(String sTypeName)
+CFESizeOfExpression::CFESizeOfExpression(string sTypeName)
  : CFEExpression(EXPR_SIZEOF, sTypeName)
 {
     m_pType = NULL;
-	m_pExpression = NULL;
-    IMPLEMENT_DYNAMIC_BASE(CFESizeOfExpression, CFEExpression);
+    m_pExpression = NULL;
 }
 
 CFESizeOfExpression::CFESizeOfExpression(CFETypeSpec *pType)
  : CFEExpression(EXPR_SIZEOF)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFESizeOfExpression, CFEExpression);
     m_pType = pType;
-	m_pExpression = NULL;
+    m_pExpression = NULL;
 }
 
 CFESizeOfExpression::CFESizeOfExpression(CFEExpression *pExpression)
  : CFEExpression(EXPR_SIZEOF)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFESizeOfExpression, CFEExpression);
-	m_pType = NULL;
-	m_pExpression = pExpression;
+    m_pType = NULL;
+    m_pExpression = pExpression;
 }
 
 CFESizeOfExpression::CFESizeOfExpression(CFESizeOfExpression &src)
  : CFEExpression(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFESizeOfExpression, CFEExpression);
-	if (src.m_pType)
-		m_pType = (CFETypeSpec*)src.m_pType->Clone();
-	else
-	    m_pType = NULL;
-	if (src.m_pExpression)
-	    m_pExpression = (CFEExpression*)src.m_pExpression->Clone();
-	else
-	    m_pExpression = NULL;
+    if (src.m_pType)
+        m_pType = (CFETypeSpec*)src.m_pType->Clone();
+    else
+        m_pType = NULL;
+    if (src.m_pExpression)
+        m_pExpression = (CFEExpression*)src.m_pExpression->Clone();
+    else
+        m_pExpression = NULL;
 }
 
 /** \brief serialize this class to the file
- *  \param the file to write to
+ *  \param pFile the file to write to
  */
 void CFESizeOfExpression::Serialize(CFile *pFile)
 {
@@ -87,9 +88,9 @@ void CFESizeOfExpression::Serialize(CFile *pFile)
     if (m_pType)
         m_pType->Serialize(pFile);
     else if (m_pExpression)
-	    m_pExpression->Serialize(pFile);
+        m_pExpression->Serialize(pFile);
     else
-	    pFile->Print("%s", (const char*)m_String);
+        pFile->Print("%s", m_String.c_str());
     pFile->Print(")</expression>");
 }
 
@@ -120,16 +121,16 @@ CFEExpression* CFESizeOfExpression::GetSizeOfExpression()
 /** \brief print the object to a string
  *  \return a string with the content of the object
  */
-String CFESizeOfExpression::ToString()
+string CFESizeOfExpression::ToString()
 {
-    String ret = "sizeof(";
-	if (m_pType)
-	    ret += m_pType->ToString();
-	else if (m_pExpression)
-	    ret += m_pExpression->ToString();
-	else
-	    ret += m_String;
-	ret += ")";
-	return ret;
+    string ret = "sizeof(";
+    if (m_pType)
+        ret += m_pType->ToString();
+    else if (m_pExpression)
+        ret += m_pExpression->ToString();
+    else
+        ret += m_String;
+    ret += ")";
+    return ret;
 }
 

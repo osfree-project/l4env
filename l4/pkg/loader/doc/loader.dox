@@ -59,8 +59,8 @@ which has to specified when opening the file
 (see the \ref idl_open "Loader IDL interface").
 
 The script or filename can be sent to the Loader either by using the
-L<sup>4</sup>Linux utility \ref r_run_l4 "run-l4" or by using an
-L4 program \ref a_run "run".
+L<sup>4</sup>Linux utility \ref r_run_l4 "run-l4" or by using the
+L4 program "run".
 
 \section p_example Examples
 
@@ -146,7 +146,7 @@ network from a user fm3:
  module (nd)/tftpboot/fm3/sigma0
  module (nd)/tftpboot/fm3/log
  module (nd)/tftpboot/fm3/names
- module (nd)/tftpboot/fm3/dm_phys --pool=1,0x00410000,0x003ff000,0x00800000,linux --isa==0x00400000,0x00700000,0x01000000
+ module (nd)/tftpboot/fm3/dm_phys --pool=1,0x00401000,0x003ff000,0x00800000,linux --isa=0x00400000,0x00800000,0x01000000
  module (nd)/tftpboot/fm3/tftp
  module (nd)/tftpboot/fm3/con
  module (nd)/tftpboot/fm3/simple_ts
@@ -189,6 +189,9 @@ work anymore as soon as L<sup>4</sup>Linux initializes it's own network driver.
 Therefore we can't use the tftp server as file provider in parallel to 
 L<sup>4</sup>Linux. Instead, we have to use an L<sup>4</sup>Linux task for
 this purpose. See next step.
+
+\note Please enable the L4Linux option "Fixup Binary to allocate a full
+4MB page"!
 
 \note To save memory, we could inhibit to load debugging information
 by setting \b fiasco_symbols and \b fiasco_lines to 0. Especially the
@@ -390,6 +393,7 @@ forever.
 
 /*! \page p_script The Loader Script
 
+\anchor p_script
 
 \section s_misc General Control Commands.
 \par verbose <0|1>
@@ -427,8 +431,8 @@ is described by binpath.
 
 \section s_task_desc Task Description
 
-\par task "<task_name>" ["<task_arguments>"] [<task_constraints>] [<task_modules>]
-Start the description of an L4 task. <i><task_name></i> is the logical file
+\par task "\<task_name\>" ["\<task_arguments\>"] [\<task_constraints\>] [\<task_modules\>]
+Start the description of an L4 task. <i>\<task_name\></i> is the logical file
 name of the binary. It will passed as argv[0] to the task. The string
 <i>task_arguments</i> describes the command line to pass to the task as
 argv[1-n]. It may be ommitted. The arguments are stored in the task's
@@ -437,21 +441,21 @@ be quoted.
 
 
 \section s_task_modules Passing additional modules to an L4 task.
-\par module "<module_name>" ["<module_arguments>"]
+\par module "\<module_name\>" ["\<module_arguments\>"] [\<memory_location\>]
 Specify a module that is loaded and passed to the L4 task.
-<i><module_name></i> denotes the logical file name which should be load
+<i>\<module_name\></i> denotes the logical file name which should be load
 using the file provider. If it doesn't contain a directory (that is it
 doesn't start with '<i>(</i>' or '<i>/</i>') then it will be searched in all
 directories of the <i>modpath</i> (see description of <i>modpath</i> above).
 The module name is \b not passed to the module.
 <br>
-The string <i><module arguments></i> is passed completely as command line to
+The string <i>\<module arguments\></i> is passed completely as command line to
 the module. It may contain one ore more arguments separated by spaces. The
 module name and the module arguments has to be quoted.
 <br>
 A task finds additional modules by looking at her multiboot info structure.
 The following information can be find there (see the
-\ref struct_grub_mod_list "grub module info"):
+\ref struct_l4util_mod_list "grub module info"):
 - start address
 - end address
 - address of command line (corresponds to <i>module_arguments</i>)
@@ -460,11 +464,22 @@ The following information can be find there (see the
 
 \section task_constraints Additional Task Constraints
 
+\par priority
+  Define the priority of the first thread of the new task. Default priority
+  is 0x10.
+
+\par mcp
+  Define the maximum controlled priority of the new task. Default mcp is 0xff.
+
 \par direct_mapped
   Only makes sense on Sigma0-style applications.
   <br>
   All loadable program sections of the binary should be loaded direct
   mapped, that is the virtual and the physical addresses are identical.
+
+\par nosuperpages
+  Make sure that the binary is mapped using 4kB pages. Useful for performance
+  comparisons.
 
 \par rebootable
   Allows the application to reboot the machine.
@@ -476,7 +491,7 @@ The following information can be find there (see the
   included a special feature: Before calling BIOS reboot, it releases a
   pagefault  at address 0x3ffff000. This is the signal for the loader that
   L<sup>4</sup>Linux want's to reboot.
- 
+
 \par no_sigma0
   Don't handle sigma0 requests. This is necessary if a task is linked
   to an address above 1GB (0x40000000) because such an address would be
@@ -487,15 +502,40 @@ The following information can be find there (see the
   Don't map the VGA area into the application. Instead map a dummy page
   preventing the application from garbage our screen.
 
-\par memory <size> [ is '[' <mem_flags> ']' ]
+\par allow_cli
+  Permit the task to execute cli/sti. If this flag is not given and the
+  user task runs on IOPL 0 (e.g. Fiasco with enabled I/O protection) the
+  I/O address space is \b not mapped.
+
+\par ioport '[' \<low_port\> ',' \<high_port\> ']'
+  Allow the task to access the specified I/O ports
+
+\par file_provider "<name server ID>"
+  Specify a different file provider for the new application.
+  Default is "TFTP".
+
+\par ds_manager "<name server ID>"
+  Specify a different dataspace manager for the new application.
+  Default is "DM_PHYS".
+
+\par memory \<size\> [\<memory_location\>] [ is '[' \<mem_flags\> ']' ]
   Specifies how much memory the application should retrieve by Sigma0 protocol.
-  Needed to start L<sup>4</sup>Linux. If dmaable is given, the memory should
-  lay below 16 MB.
+  Needed to start L<sup>4</sup>Linux.
+
+\section mem_locatation Memory Location
+
+\par in '[' \<low_address\> ',' \<high_address\> ']'
+  The memory must be located in the area from <i>\<low_address\></i> to 
+  <i>\<high_address\></i>.
+
+\par at \<address\>
+  The memory must be exactly located at <i>\<address\></i>.
+
 
 \section mem_flags Flags for Memory Regions
 
 \par dmaable
-  Ensure that the memory is direct mapped and lays below 16MB.
+  Ensure that the memory is direct mapped and is located below 16MB.
 
 \par contiguous
   Ensure that the memory is physically contiguous. That does not mean
@@ -504,6 +544,11 @@ The following information can be find there (see the
 \par direct_mapped
   Ensure that the memory is direct mapped, that is the physical and the
   virtual addresses are equal.
+
+\par nosuperpages
+  Make sure that the memory is mapped using 4kB pages. Useful for performance
+  comparisons.
+
 
 */
 
@@ -567,7 +612,7 @@ system.
 
 
 \par Requires:
-OSKit 1.0, rmgr, names, l4util, l4sys, Flick, L4 environment
+OSKit 1.0, rmgr, names, l4util, l4sys, DICE, L4 environment
 \author		Frank Mehnert
 */
 

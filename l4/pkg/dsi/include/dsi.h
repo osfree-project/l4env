@@ -57,7 +57,8 @@ int
 dsi_socket_close(dsi_socket_t * socket);
 
 int 
-dsi_socket_connect(dsi_socket_t * socket, dsi_socket_ref_t * remote_socket);
+dsi_socket_connect(dsi_socket_t * socket,
+                   const dsi_socket_ref_t * remote_socket);
 
 int
 dsi_socket_set_sync_callback(dsi_socket_t * socket, 
@@ -135,10 +136,13 @@ dsi_packet_get_nr(dsi_socket_t * socket, unsigned nr, dsi_packet_t ** packet);
  * dataspace management 
  */
 void 
-dsi_set_dataspace_manager(l4_threadid_t id);
+dsi_ds_set_dataspace_manager(l4_threadid_t id);
 
 int 
-dsi_setup_ctrl_dataspace(l4dm_dataspace_t * ds, dsi_stream_cfg_t cfg);
+dsi_ds_setup_ctrl_dataspace(l4dm_dataspace_t * ds, dsi_stream_cfg_t cfg);
+
+int
+dsi_ds_create_ctrl_dataspace(dsi_stream_cfg_t cfg, l4dm_dataspace_t * ds);
 
 /*****************************************************************************
  * application API                                                           *

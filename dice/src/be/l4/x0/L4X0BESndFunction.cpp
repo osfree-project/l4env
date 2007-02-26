@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/x0/L4X0BESndFunction.cpp
+ *    \brief   contains the implementation of the class CL4X0BESndFunction
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -19,23 +26,21 @@
  */
 
 #include "be/l4/x0/L4X0BESndFunction.h"
-#include "be/l4/L4BEMsgBufferType.h"
 #include "be/l4/L4BEIPC.h"
+#include "be/l4/L4BEMsgBufferType.h"
 #include "be/BEFile.h"
 #include "be/BEContext.h"
 #include "be/BEMarshaller.h"
 
 #include "TypeSpec-Type.h"
-
-IMPLEMENT_DYNAMIC(CL4X0BESndFunction);
+#include "Attribute-Type.h"
 
 CL4X0BESndFunction::CL4X0BESndFunction()
  : CL4BESndFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4X0BESndFunction, CL4BESndFunction);
 }
 
-
+/** destroys the send function object */
 CL4X0BESndFunction::~CL4X0BESndFunction()
 {
 }
@@ -46,16 +51,16 @@ CL4X0BESndFunction::~CL4X0BESndFunction()
  */
 void CL4X0BESndFunction::WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext)
 {
-	// check if we use assembler
-	bool bAssembler = ((CL4BEIPC*)m_pComm)->UseAssembler(this, pContext);
+    // check if we use assembler
+    bool bAssembler = m_pComm->CheckProperty(this, COMM_PROP_USE_ASM, pContext);
     if (bAssembler)
-	{
-		CBENameFactory *pNF = pContext->GetNameFactory();
-		String sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
-		String sDummy = pNF->GetDummyVariable(pContext);
-		pFile->PrintIndent("%s %s;\n", (const char*)sMWord, (const char*)sDummy);
-	}
-	CL4BESndFunction::WriteVariableDeclaration(pFile, pContext);
+    {
+        CBENameFactory *pNF = pContext->GetNameFactory();
+        string sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
+        string sDummy = pNF->GetDummyVariable(pContext);
+        *pFile << "\t" << sMWord << " " << sDummy << ";\n";
+    }
+    CL4BESndFunction::WriteVariableDeclaration(pFile, pContext);
 }
 
 /** \brief marshals the parameters of this function
@@ -66,19 +71,22 @@ void CL4X0BESndFunction::WriteVariableDeclaration(CBEFile * pFile,  CBEContext *
  */
 void CL4X0BESndFunction::WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext)
 {
-	// check if we use assembler
-	bool bAssembler = ((CL4BEIPC*)m_pComm)->UseAssembler(this, pContext);
+    // check if we use assembler
+    bool bAssembler = m_pComm->CheckProperty(this, COMM_PROP_USE_ASM, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
     if (!(bAssembler &&
-	    (((CL4BEMsgBufferType*)m_pMsgBuffer)->IsShortIPC(GetSendDirection(), pContext)) ))
-	{
-		CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-		// marshal opcode
-		nStartOffset += WriteMarshalOpcode(pFile, nStartOffset, bUseConstOffset, pContext);
-		// if we have send flexpages, marshal them now
-		nStartOffset += pMarshaller->Marshal(pFile, this, TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
-		// marshal rest
-		pMarshaller->Marshal(pFile, this, -TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
-		delete pMarshaller;
-	}
+        pMsgBuffer->CheckProperty(MSGBUF_PROP_SHORT_IPC, GetSendDirection(), pContext)))
+    {
+        CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
+        // marshal opcode
+        if (!FindAttribute(ATTR_NOOPCODE))
+            nStartOffset += WriteMarshalOpcode(pFile, nStartOffset, bUseConstOffset, pContext);
+        // if we have send flexpages, marshal them now
+        nStartOffset += pMarshaller->Marshal(pFile, this, TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
+        // marshal rest
+        pMarshaller->Marshal(pFile, this, -TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
+        delete pMarshaller;
+    }
 }
 

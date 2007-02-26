@@ -1,2 +1,8 @@
 This backend provides very simple mmap functionality, as such backing
 malloc & co. It uses dm_phys for dataspaces and log for debug output.
+
+This backend is *not* suited for programs, where memory regions are
+freed by other threads than they were allocated, because dm_phys'
+ownership management is thread based and not task based.  Until
+dm_phys right concept is reworked, please use the buddy_slab_mem
+backend for such programs.

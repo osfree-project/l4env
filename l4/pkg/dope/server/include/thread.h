@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -13,20 +13,34 @@
  * COPYING file for details.
  */
 
+#ifndef _DOPE_THREAD_H_
+#define _DOPE_THREAD_H_
+
 #if !defined(THREAD)
-#define THREAD void 
+#define THREAD struct thread
 #endif
 
 #if !defined(MUTEX)
-#define MUTEX void 
+#define MUTEX struct mutex
 #endif
 
+struct thread;
+struct mutex;
+
 struct thread_services {
-	THREAD *(*create_thread) (void (*entry)(void *),void *arg);
+	THREAD *(*alloc_thread)  (void);
+	void    (*free_thread)   (THREAD *);
+	void    (*copy_thread)   (THREAD *src, THREAD *dst);
+	int     (*start_thread)  (THREAD *dst_tid, void (*entry)(void *), void *arg);
 	MUTEX  *(*create_mutex)  (int init_locked);
 	void    (*destroy_mutex) (MUTEX *);
 	void    (*mutex_down)    (MUTEX *);
 	void    (*mutex_up)      (MUTEX *);
 	s8      (*mutex_is_down) (MUTEX *);
-	int     (*ident2thread)  (u8 *thread_ident, THREAD *dst);
+	int     (*ident2thread)  (const u8 *thread_ident, THREAD *dst);
+	int     (*thread_equal)  (THREAD *thread, THREAD *another_thread);
 };
+
+
+#endif /* _DOPE_THREAD_H_ */
+

@@ -11,23 +11,23 @@ unsigned long apic_map_base = 0;
 unsigned long apic_timer_divisor = 1;
 unsigned long l4_scaler_apic_to_ms = 0;
 
+static void
+apic_show_register_block(unsigned int beg, unsigned int len)
+{
+  unsigned int i;
+  outhex16(beg);
+  outchar(':');
+  for (i=beg; i<beg+len; i+=0x10)
+    {
+      outchar(' ');
+      outhex32(apic_read(i));
+    }
+  outstring("\r\n");
+}
+
 void
 apic_show_registers(void)
 {
-  static void
-  apic_show_register_block(unsigned int beg, unsigned int len)
-  {
-    unsigned int i;
-    outhex16(beg);
-    outchar(':');
-    for (i=beg; i<beg+len; i+=0x10)
-      {
-	outchar(' ');
-	outhex32(apic_read(i));
-      }
-    outstring("\r\n");
-  }
-
   if (!apic_map_base)
     return;
 

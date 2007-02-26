@@ -1,0 +1,52 @@
+/* -*- c -*- */ 
+/**
+ * \file   l4vfs/idl/name_server.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+import <l4/l4vfs/types.h>
+
+import <l4/l4vfs/basic_name_server.idl>
+import <l4/l4vfs/name_space_provider.idl>
+import <l4/l4vfs/extendable.idl>
+import <l4/l4vfs/basic_io.idl>
+import <l4/l4vfs/container_io.idl>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief collection of interfaces for a typical name server
+     */
+    [uuid(1003)]
+    interface name_server : extendable, name_space_provider,
+                            basic_name_server, basic_io, container_io
+    {
+        /* Mount a single object in another namespace.
+         *
+         * This has to be supported by the name space provider.
+         * Currently only the name_server does so.
+         *
+         * The idea is to enable more light-weight server, as servers
+         * providing the object don't have to implement all the
+         * directory handling, but only the operation working directly
+         * on an object.
+         *
+         * Note that also the base (which is the directory, the new
+         * object has to be located in) has to be a full object_id_t
+         * including a volume_id as the destination server may serve
+         * several volumes.  It needS to be able to locate the base.
+         */
+        int attach_object([in] object_id_t base, [in, string] char * name,
+                          [in] object_id_t object);
+    };
+};

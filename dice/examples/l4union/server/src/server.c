@@ -9,7 +9,7 @@ char LOG_tag[9] = "dcetst";
 CORBA_long test_event_component(CORBA_Object _dice_corba_obj,
                                             const dope_event *e,
                                             const_CORBA_char_ptr bindarg,
-                                            CORBA_Environment *_dice_corba_env) {
+                                            CORBA_Server_Environment *_dice_corba_env) {
 	printf("Server(event_component): got event (type=%lu, bindarg=%s)\n",e->_d,bindarg);
 	switch(e->_d) {
 	case 1:

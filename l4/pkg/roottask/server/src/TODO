@@ -1,0 +1,33 @@
+currently known bugs:
+- the debug system has to be fixed
+- fiasco ux support has to be fixed
+  --> fiasco support is now enabled 
+  --> -d option for Fiasco-UX doesn't work, because of syntax change for cmdline
+  -configuration, see next point
+- the commandline configuration has to be fixed
+  --> seems to be fixed now, config can be added after -- at the end of standard  options
+- the RMGR-stage2 image debug information can't
+  be extracted (this is because Stage2-Image is not
+  copied with boot-modules by Stage1)
+- the region.c is a hack to provide some sementics
+  for reserved memmory regions, this should be changed 
+  and somehow merged with names.c service
+- when copying MBI (init_noloader) we have to made some memory checks, because 
+  we copy blindly into RMGR-memory
+
+  ...
+
+further development:
+- merging of task server and RMGR-stage2
+
+- move the interface between fiasco - RMGR-stage2 
+  toward the pistacco - roottask interface.
+  
+  NOW: the RMGR-stage1 is copying the MBI
+       directly into the memmory of RMGR-stage2)
+  LATER: RMGR-stage2 gets the loaction of the MBI
+  	 from the KIP. So there is no direct
+	 interaction between RMGR-stage1 and
+	 RMGR-stage2 (this also involves some
+	 fiasco kernel changes)
+  

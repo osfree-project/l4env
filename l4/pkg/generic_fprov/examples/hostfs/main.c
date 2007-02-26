@@ -57,7 +57,7 @@ l4_int32_t l4fprov_file_open_component(CORBA_Object obj,
 				       l4_uint32_t flags,
 				       l4dm_dataspace_t *ds,
 				       l4_uint32_t *size,
-				       CORBA_Environment *env){
+				       CORBA_Server_Environment *env){
     int len;
     int err;
     char *addr;
@@ -75,14 +75,15 @@ l4_int32_t l4fprov_file_open_component(CORBA_Object obj,
     *size = (l4_uint32_t)s;
 
     ptr = strrchr(name, '/');
-    if(!ptr) ptr=name;
-    else ptr++;
-    snprintf(buf, L4DM_DS_NAME_MAX_LEN-1, "hostfs image: %s", ptr);
-    buf[L4DM_DS_NAME_MAX_LEN-1]=0;
-  	   
+    if(!ptr)
+      ptr=name;
+    else
+      ptr++;
+    snprintf(buf, L4DM_DS_NAME_MAX_LEN, "hostfs image: %s", ptr);
+
     if ((addr = l4dm_mem_ds_allocate_named(*size, flags, buf,
 					    (l4dm_dataspace_t *)ds))==0) {
-	LOG_Error("l4dm_mem_ds_allocate_named(size=%d): %s", *size);
+	LOG_Error("l4dm_mem_ds_allocate_named(size=%d)", *size);
 	fs_close(file);
 	return -L4_ENOMEM;
     }

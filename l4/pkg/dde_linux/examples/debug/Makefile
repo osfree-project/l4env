@@ -8,21 +8,12 @@ SYSTEMS     = x86-l4v2
 SRC_C       = debug.c
 
 ### specialties
-PRIVATE_INCDIR = $(PKGDIR)/include/ARCH-$(ARCH) \
-                 $(LINUX24_INCDIR)
+PRIVATE_INCDIR = $(DDE_INCDIR) $(LINUX24_INCDIR)
+LIBCINCDIR  = -nostdinc -I$(GCCINCDIR)
 
-LIBS = -ldde_linux -lio -lomega0
+LIBS        = -ldde_linux -lio -lomega0 -llist_alloc
 
-DEFINES = -D__KERNEL__ -DDDE_LINUX
-WARNINGS = -Wall -Wstrict-prototypes
+DEFINES     = -D__KERNEL__ -DDDE_LINUX
+WARNINGS    = -Wall -Wstrict-prototypes -fno-strict-aliasing
 
-### act the role of ...
 include $(L4DIR)/mk/prog.mk
-
-ifeq ($(LINUX24_INCDIR),)
-  $(error Please set setup path to Linux 2.4.20 headers (LINUX24_INCDIR).)
-endif
-
-ifdef DEBUG
-  DEFINES += -DDEBUG_ERRORS -DDEBUG_ASSERTIONS
-endif

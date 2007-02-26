@@ -1,0 +1,26 @@
+* check BSD conformity of socket interface implementation
+  * accept() was not handling accept(s,NULL,NULL) correctly -> hacked it
+* libflips: client side IPC error detection/handling
+* complete libflips API / flips idl overhaul
+  * consider semantics of BSD socket API
+  * design sane IDL
+* doc/
+  * Makefile
+  * Kurzdoku zu liblinux
+    * SOFTIRQS
+* server/liblinux
+  * Makefile
+    * CFLAGS = -ffunction-sections
+    * CFLAGS += -fno-strict-aliasing
+  * Merge Makefile and Make.rules
+  * Move oshkosh.c (later l4tun.c too) into own libs
+    * Need not to rebuild Liblinux when reconfiguring
+    * The server implementation chooses (dynamically) which backends are used
+  * fix some XXX and FIXMEs
+  * use at least l4util_rand() for get_random_bytes() in liblinux dummy.c
+  * XXX temporarily switched of /proc support because of problems with
+    sequential (virtual) files (fs/seq_file.c)
+* server/src
+  * FLIPS_DEBUG ?
+* make config ?
+* Why do L4Linux sources not work with FLIPS?

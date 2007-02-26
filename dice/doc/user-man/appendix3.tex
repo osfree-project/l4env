@@ -18,7 +18,7 @@ the interface identifier and thus the base opcode is \verb|0xC00|, which
 generates opcodes larger than \verb|0xC000'0000|.
 
 The server loop now ``accepts'' only opcodes larger than \verb|0xC000'0000|.
-To handle the pagefaults, one has to specify a callback function, which is
+To handle the pagefaults, one has to specify a call-back function, which is
 invoked for every ``unknown'' opcode --- which are all opcodes smaller
 than \verb|0xC000'0000|. This is done using the \verb|default_function|
 attribute for interfaces:
@@ -30,7 +30,7 @@ interface pagefault
 ...
 \end{verbatim}
 
-The callback function has to have the format:
+The call-back function has to have the format:
 
 \begin{verbatim}
 CORBA_int pf_handler(CORBA_Object src,
@@ -70,7 +70,7 @@ already includes code for version X.0.
 The first problem is solved ``by accident''. The default function
 is called for every opcode the server loop cannot match to one of its
 own opcodes. Since it only knows opcodes starting with \verb|0xC000'0001|
-and increasing, it does not know opcode 0. Thus it calls the callback
+and increasing, it does not know opcode 0. Thus it calls the call-back
 for this opcode as well.
 
 Therefore you may use the same IDL with the shown adaptations in

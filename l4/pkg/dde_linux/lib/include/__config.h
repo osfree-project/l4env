@@ -32,6 +32,8 @@
  *
  * @{
  */
+#define DEBUG_ERRORS        1 /**< verbose error handling */
+#define DEBUG_MSG           0 /**< show debug messages */
 #define DEBUG_MALLOC        0 /**< debug memory allocations */
 #define DEBUG_MALLOC_EACH   0 /**< debug msg for each alloc/free */
 #define DEBUG_PALLOC        0 /**< debug page allocations */
@@ -50,6 +52,7 @@
 #define DEBUG_SOUND_REG     0 /**< debug sound device registration */
 #define DEBUG_SOUND_WRITE   0 /**< debug sound write */
 #define DEBUG_SOUND_READ    0 /**< debug sound read */
+
 #define DEBUG_SLAB          0 /**< debug slab functions */
 
 /** @} */

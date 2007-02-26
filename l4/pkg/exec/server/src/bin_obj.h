@@ -40,6 +40,7 @@ class bin_obj_t : public dsc_obj_t,
 	return 0;
       }
 
+    int load_lib(const char *fname, l4env_infopage_t *env);
     int load_libs(l4env_infopage_t *env);
     int link_first(l4env_infopage_t *env);
     int mark_startup_library(l4env_infopage_t *env);
@@ -49,8 +50,9 @@ class bin_obj_t : public dsc_obj_t,
     int set_1st_entry(l4env_infopage_t *env);
     int set_2nd_entry(l4env_infopage_t *env);
     int have_dep(exc_obj_t *exc_obj);
-    int find_sym(const char *fname, const char *symname,
+    int find_sym(const char *fname, const char *symname, 
 		 l4env_infopage_t *env, l4_addr_t *addr);
+    int find_sym(const char *symname, l4env_infopage_t *env, l4_addr_t *addr);
     int check_relocated(l4env_infopage_t *env);
 
   protected:

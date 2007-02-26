@@ -261,7 +261,7 @@ l4_ipc_send(l4_threadid_t dest,
      "movl  %%edi,%%ebx		\n\t"
      "movl 4(%%esi),%%edi	\n\t"
      "movl  (%%esi),%%esi	\n\t"
-     "movl  $-1,%%ebp		\n\t"
+     "orl   $-1,%%ebp		\n\t"
 
      ToId32_EdiEsi
      FixLongIn
@@ -289,7 +289,7 @@ l4_ipc_send(l4_threadid_t dest,
      "memory"
      );
   return L4_IPC_ERROR(*result);
-};
+}
 
 L4_INLINE int
 l4_ipc_send_w3(l4_threadid_t dest,
@@ -310,7 +310,7 @@ l4_ipc_send_w3(l4_threadid_t dest,
      "movl  %%edi,%%ebx		\n\t"
      "movl 4(%%edx),%%ebx	\n\t"
      "movl  (%%edx),%%edx	\n\t"
-     "movl  $-1,%%ebp		\n\t"
+     "orl   $-1,%%ebp		\n\t"
 
      IPC_SYSENTER
 
@@ -333,7 +333,7 @@ l4_ipc_send_w3(l4_threadid_t dest,
      "memory"
      );
   return L4_IPC_ERROR(*result);
-};
+}
 
 /*****************************************************************************
  *** wait

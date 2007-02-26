@@ -1,5 +1,6 @@
 #include <l4/names/libnames.h>
 #include <l4/util/util.h> // needed for l4_sleep
+#include <l4/util/reboot.h>
 #include "test-client.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -56,7 +57,7 @@ int main(int argc, char **argv) {
 	printf("*** UNION TEST FINISHED. ***\n\n\n");
 
 	l4_sleep(2000);
-	enter_kdebug("*#^test stopped");
+	l4util_reboot();
 	return 0;
 }
 

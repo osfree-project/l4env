@@ -1,49 +1,46 @@
-INTERFACE:
-
-class Mem_unit
-{
-public:
-  static void write_back_data_cache();
-  static void write_back_data_cache( void * );
-  static void tlb_flush();
-  static void dtlb_flush( void* va );
-};
-
-IMPLEMENTATION:
+INTERFACE [arm]:
 
 #include "kmem.h"
-#include "types.h"
+#include "mmu.h"
 
-IMPLEMENT inline NEEDS["kmem.h","types.h"]
-void Mem_unit::write_back_data_cache()
+class Mem_unit : public Mmu< Kmem::Cache_flush_area >
 {
-  volatile Unsigned32 *base = (Unsigned32*)Kmem::CACHE_FLUSH_AREA;
-  Unsigned32 *const end = (Unsigned32*)(Kmem::CACHE_FLUSH_AREA + 8192);
-  Unsigned32 dummy;
-  do {
-    dummy = *base;  
-    base+=8;
-  } while(base!=end) ;
-}
+public:
+  static void tlb_flush();
+  static void dtlb_flush( void* va );
+  static void dtlb_flush();
+};
 
-
-IMPLEMENT inline
-void Mem_unit::write_back_data_cache( void *addr )
-{
-  asm volatile ( "mcr p15, 0, %0, c7, c10, 1 \n"
-		 :
-		 : "r"(addr)
-	       );
-}
+//---------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
 
 IMPLEMENT inline
 void Mem_unit::tlb_flush()
 {
-  asm volatile ("mcr p15, 0, r0, c8, c7, 0x00 \n" : : : "memory" ); // TLB flush
+  asm volatile (
+      "mcr p15, 0, r0, c8, c7, 0x00 \n" 
+      : 
+      : 
+      : "memory" ); // TLB flush
 }
 
 IMPLEMENT inline
 void Mem_unit::dtlb_flush( void* va )
 {
-  asm volatile ("mcr p15, 0, %0, c8, c6, 0x01 \n" : : "r"(va) : "memory" ); // TLB flush
+  asm volatile (
+      "mcr p15, 0, %0, c8, c6, 0x01 \n" 
+      : 
+      : "r"(va) 
+      : "memory" ); // TLB flush
 }
+
+IMPLEMENT inline
+void Mem_unit::dtlb_flush()
+{
+  asm volatile (
+      "mcr p15, 0, %0, c8, c6, 0x0 \n" 
+      : 
+      : "r"(0) 
+      : "memory" ); // TLB flush
+}
+

@@ -1,0 +1,11 @@
+# -*- makefile -*-
+
+kip.o:		$(VERSION)
+
+CVS_ENTRIES	:= $(shell find $(srcdir) -name Entries)
+
+$(VERSION):	$(CVS_ENTRIES)
+		$(VERBOSE)$(srcdir)/../tool/checkversion $^ > $@
+
+clean-VERSION:
+		rm -f $(VERSION)

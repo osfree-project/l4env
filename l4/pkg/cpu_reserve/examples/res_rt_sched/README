@@ -1,0 +1,6 @@
+This little example demonstrates RT scheduling. It is based on next_res, but
+in contrast to this it makes use of the rt_sched bindings.
+
+It sets up 2 timeslices (mandatory and optional). It adapts the length of
+the mandatory part and the workload of the optional part by monitoring
+itself with the help of preemption ipcs.

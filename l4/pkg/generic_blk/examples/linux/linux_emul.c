@@ -81,7 +81,7 @@ void it_real_fn(unsigned long __data){}
  */
 /*****************************************************************************/ 
 void *
-l4blk_allocate_stack(l4_threadid_t thread)
+l4blk_allocate_stack(void)
 {
   void * tmp, * sp;
 
@@ -95,8 +95,7 @@ l4blk_allocate_stack(l4_threadid_t thread)
 
   /* put thread id on top of the stack */
   sp = tmp + L4LINUX_KERNEL_STACK_SIZE - 4;
-  put_l4_id_to_stack((unsigned)sp, thread);
-  sp -= sizeof(l4_threadid_t);
+  sp -= L4LINUX_RESERVED_STACK_TOP;
 
   /* done */
   return sp;

@@ -56,7 +56,7 @@ typedef struct blksrv_buffer
   l4dm_dataspace_t ds;                   ///< dataspace id
   l4_size_t        size;                 ///< size
 
-  void *           map_addr;             ///< mapp address
+  void *           map_addr;             ///< buffer map address
 } blksrv_buffer_t;
 
 /**

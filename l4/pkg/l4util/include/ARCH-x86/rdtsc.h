@@ -16,6 +16,10 @@
 
 /* interface */
 
+#define L4_TSC_INIT_AUTO             0
+#define L4_TSC_INIT_KERNEL           1
+#define L4_TSC_INIT_CALIBRATE        2
+
 /** \defgroup rdtsc Time Stamp Counter Related Functions */
 
 extern l4_uint32_t l4_scaler_tsc_to_ns;
@@ -28,6 +32,24 @@ extern l4_uint32_t l4_scaler_tsc_linux;
  * \return 64-bit time stamp */
 L4_INLINE l4_cpu_time_t
 l4_rdtsc (void);
+
+/* the same, but only 32 bit. Useful for smaller differences, 
+   needs less cycles. */
+L4_INLINE
+l4_uint32_t l4_rdtsc_32(void);
+
+/** Return current value of CPU-internal performance measurement counter
+ * \ingroup rdtsc
+ * \param  nr		Number of counter (0 or 1)
+ * \return 64-bit PMC */
+L4_INLINE l4_cpu_time_t
+l4_rdpmc (int nr);
+
+/* the same, but only 32 bit. Useful for smaller differences, 
+   needs less cycles. */
+L4_INLINE
+l4_uint32_t l4_rdpmc_32(int nr);
+
 
 /** Convert time stamp counter into ns
  * \ingroup rdtsc
@@ -79,11 +101,37 @@ l4_busy_wait_us (l4_uint64_t us);
 EXTERN_C_BEGIN
 
 /** Determine some scalers to be able to convert between real time and CPU
- * ticks. This test uses channel 0 of the PIT (8254)
+ * ticks. This test uses channel 0 of the PIT (i8254).
+ * Just calls l4_tsc_init(L4_TSC_INIT_AUTO).
  * \ingroup rdtsc
  */
-l4_uint32_t
+L4_INLINE l4_uint32_t
 l4_calibrate_tsc (void);
+
+/** Initialize the scalers needed by l4_tsc_to_ns()/l4_ns_to_tsc() and so on.
+ * Current versions of Fiasco export these scalers from kernel into userland.
+ * The programmer may decide whether he allows to use these scalers or if an
+ * calibration should be performed.
+ * \param   constraint   programmers constraint:
+ *                       - #L4_TSC_INIT_AUTO if the kernel exports the scalers
+ *                         then use them. If not, perform calibration using
+ *                         channel 0 of the PIT (i8254). The latter case may
+ *                         lead into short (unpredictable) periods where
+ *                         interrupts are disabled.
+ *                       - #L4_TSC_INIT_KERNEL depend on retrieving the scalers
+ *                         from kernel. If the scalers are not available,
+ *                         return 0.
+ *                       - #L4_TSC_INIT_CALIBRATE Ignore possible scalers
+ *                         exported by the scaler, instead insist on
+ *                         calibration using the PIT.
+ * \return 0 on error (no scalers exported by kernel, calibrating failed ...)
+ *         otherwise returns (2^32 / (tsc per µsec)). This value has the
+ *         same semantics as the value returned by the calibrate_delay_loop()
+ *         function of the Linux kernel. 
+ * \ingroup rdtsc 
+ */
+l4_uint32_t
+l4_tsc_init (int constraint);
 
 /** Get CPU frequency in Hz
  * \ingroup rdtsc
@@ -95,6 +143,12 @@ l4_get_hz (void);
 EXTERN_C_END
 
 /* implementaion */
+
+L4_INLINE l4_uint32_t
+l4_calibrate_tsc (void)
+{
+  return l4_tsc_init(L4_TSC_INIT_AUTO);
+}
 
 L4_INLINE l4_cpu_time_t
 l4_rdtsc (void)
@@ -115,7 +169,7 @@ l4_rdtsc (void)
 
 /* the same, but only 32 bit. Useful for smaller differences, 
    needs less cycles. */
-static inline 
+L4_INLINE
 l4_uint32_t l4_rdtsc_32(void)
 {
   l4_uint32_t x;
@@ -124,6 +178,37 @@ l4_uint32_t l4_rdtsc_32(void)
        ".byte 0x0f, 0x31\n\t"	// rdtsc
        : "=a" (x)
        :
+       : "edx");
+    
+  return x;
+}
+
+L4_INLINE l4_cpu_time_t
+l4_rdpmc (int nr)
+{
+    l4_cpu_time_t v;
+    
+    __asm__ __volatile__ (
+	 "rdpmc				\n\t"
+	:
+	"=A" (v)
+	: "c" (nr)
+	);
+    
+    return v;
+}
+
+/* the same, but only 32 bit. Useful for smaller differences, 
+   needs less cycles. */
+L4_INLINE
+l4_uint32_t l4_rdpmc_32(int nr)
+{
+  l4_uint32_t x;
+
+  __asm__ __volatile__ (
+       "rdpmc				\n\t"
+       : "=a" (x)
+       : "c" (nr)
        : "edx");
     
   return x;
@@ -157,7 +242,7 @@ L4_INLINE l4_uint64_t
 l4_tsc_to_us (l4_cpu_time_t tsc)
 {
     l4_uint32_t dummy;
-    l4_uint64_t ns;
+    l4_uint64_t us;
     __asm__
 	("				\n\t"
 	 "movl  %%edx, %%ecx		\n\t"
@@ -167,14 +252,12 @@ l4_tsc_to_us (l4_cpu_time_t tsc)
 	 "mull	%3			\n\t"
 	 "addl	%%ecx, %%eax		\n\t"
 	 "adcl	$0, %%edx		\n\t"
-	 "shld	$5, %%eax, %%edx	\n\t"
-	 "shll	$5, %%eax		\n\t"
-	:"=A" (ns),
+	:"=A" (us),
 	 "=&c" (dummy)
 	:"0" (tsc),
 	 "g" (l4_scaler_tsc_to_us)
 	);
-    return ns;
+    return us;
 }
 
 L4_INLINE void

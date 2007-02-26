@@ -22,7 +22,7 @@
  *****************************************************************************/
 
 ///  max. number of simultaneously requests 
-#define BLKCLIENT_MAX_REQUESTS      1024
+#define BLKCLIENT_MAX_REQUESTS      8192
 
 /// max. length of request list in RPC call
 #define BLKCLIENT_MAX_RPC_REQUESTS  8

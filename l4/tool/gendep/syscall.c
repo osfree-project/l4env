@@ -25,6 +25,8 @@
 #include <dlfcn.h>
 #include "gendep.h"
 
+#define VERBOSE 0	/* set to 1 to log open/unlink calls */
+
 /*
   This breaks if we hook gendep onto another library that overrides open(2).
   (zlibc comes to mind)
@@ -32,6 +34,7 @@
 static int
 real_open (const char *fn, int flags, int mode)
 {
+  if(VERBOSE) printf("real_open(%s)\n", fn);
   return (syscall(SYS_open, (fn), (flags), (mode)));
 }
 
@@ -42,6 +45,7 @@ __open (const char *fn, int flags, ...)
   va_list p;
   va_start (p,flags);
     
+  if(VERBOSE) printf("open(%s) called\n", fn);
   rv = real_open (fn, flags, va_arg (p, int));
   if (rv >=0)
     gendep__register_open (fn, flags);
@@ -49,11 +53,40 @@ __open (const char *fn, int flags, ...)
   return rv;    
 }
 
+typedef int(*open64_type)(const char*, int flag, int mode);
+
+static int real_open64(const char*path, int flag, int mode){
+  static open64_type f_open64;
+  
+  if(VERBOSE) printf("real_open64(%s)\n", path);
+  if(f_open64==0){
+    f_open64 = (open64_type)dlsym(RTLD_NEXT, "open64");
+    if(!f_open64){
+      fprintf(stderr, "gendep: Cannot resolve open64()\n");
+      errno=ENOENT;
+      return 0;
+    }
+  }
+  return f_open64(path, flag, mode);
+}
+
+int __open64(const char*path, int flag, int mode){
+  int f;
+
+  if(VERBOSE) printf("open64(%s)\n", path);
+  f = real_open64(path, flag, mode);
+  if(f>=0){
+    gendep__register_open(path, flag);
+  }
+  return f;
+}
+
 typedef FILE* (*fopen_type)(const char*, const char*);
 
 static FILE* real_fopen(const char*path, const char*mode){
   static fopen_type f_fopen;
   
+  if(VERBOSE) printf("real_fopen(%s)\n", path);
   if(f_fopen==0){
     f_fopen = (fopen_type)dlsym(RTLD_NEXT, "fopen");
     if(!f_fopen){
@@ -69,6 +102,7 @@ FILE* __fopen(const char*path, const char*mode){
   FILE *f;
   int binmode;
 
+  if(VERBOSE) printf("fopen(%s)\n", path);
   f = real_fopen(path, mode);
   if(f){
     if(strchr(mode, 'w') || strchr(mode, 'a')){
@@ -84,6 +118,7 @@ FILE* __fopen(const char*path, const char*mode){
 static int
 real_unlink (const char *fn)
 {
+  if(VERBOSE) printf("real_unlink(%s)\n", fn);
   return syscall(SYS_unlink, (fn));
 }
 
@@ -92,6 +127,7 @@ __unlink (const char *fn)
 {
   int rv ;
     
+  if(VERBOSE) printf("unlink(%s)\n", fn);
   rv = real_unlink (fn);
   if (rv >=0)
     gendep__register_unlink (fn);
@@ -99,8 +135,7 @@ __unlink (const char *fn)
   return rv;    
 }
 
-
-
 int open (const char *fn, int flags, ...) __attribute__ ((alias ("__open")));
+int open64 (const char *fn, int flags, ...) __attribute__ ((alias ("__open64")));
 int unlink(const char *fn) __attribute__ ((alias ("__unlink")));
 FILE *fopen (const char *path, const char *mode) __attribute__ ((alias ("__fopen")));

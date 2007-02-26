@@ -82,8 +82,8 @@ load_app(char *fname, l4_threadid_t exec_id, l4env_infopage_t *env)
 	    }
 	 
 	  /* align area address and area size */
-	  area_beg =  area_beg                    & L4_PAGEMASK;
-	  area_end = (area_end + L4_PAGESIZE - 1) & L4_PAGEMASK;
+	  area_beg = l4_trunc_page(area_beg);
+	  area_end = l4_round_page(area_end);
 	  area_size = area_end - area_beg;
 
 	  if (area_beg != 0)
@@ -109,8 +109,8 @@ load_app(char *fname, l4_threadid_t exec_id, l4env_infopage_t *env)
 	      /* align section address and section size */
 	      sec_beg = l4exc->addr;
 	      sec_end = l4exc->size + sec_beg;
-	      sec_beg =  sec_beg                    & L4_PAGEMASK;
-	      sec_end = (sec_end + L4_PAGESIZE - 1) & L4_PAGEMASK;
+	      sec_beg = l4_trunc_page(sec_beg);
+	      sec_end = l4_round_page(sec_end);
 	      sec_addr = sec_beg;
 	      sec_size = sec_end - sec_beg;
 
@@ -155,8 +155,6 @@ main(void)
   l4_threadid_t dm_id, tftp_id, exec_id;
   l4env_infopage_t *env;
   
-  LOG_init("exectst");
-
   if (!names_waitfor_name("TFTP", &tftp_id, 5000))
     {
       printf("TFTP not found\n");

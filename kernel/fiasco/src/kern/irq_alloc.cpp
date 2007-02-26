@@ -8,7 +8,7 @@ class Irq_alloc
 public:
   virtual bool alloc(Receiver *t, bool ack_in_kernel) = 0;
   virtual bool free(Receiver *t) = 0;
-  virtual Receiver *owner() const = 0;
+  virtual void acknowledge() = 0;
 
   static void init();
 
@@ -33,21 +33,37 @@ IMPLEMENTATION:
 
 #include "config.h"
 #include "initcalls.h"
+#include "std_macros.h"
 
-Irq_alloc::Irq_alloc *Irq_alloc::irqs[Config::MAX_NUM_IRQ];
+Irq_alloc::Irq_alloc *Irq_alloc::irqs[Config::Max_num_irqs];
 
-IMPLEMENT FIASCO_INIT 
-void Irq_alloc::init()
+IMPLEMENT FIASCO_INIT FIASCO_NOINLINE 
+void 
+Irq_alloc::init()
 {
-  for ( unsigned i = 0; i<Config::MAX_NUM_IRQ; ++i )
+  for ( unsigned i = 0; i<Config::Max_num_irqs; ++i )
     irqs[i] = 0;
 };
+
+PUBLIC inline
+Receiver *
+Irq_alloc::owner() const
+{ return _irq_thread; }
+
+PUBLIC static
+void 
+Irq_alloc::free_all(Receiver *rcv)
+{
+  for (unsigned i = 0; i < Config::Max_num_irqs; ++i)
+    if (irqs[i] && irqs[i]->owner() == rcv)
+      irqs[i]->free(rcv);
+}
 
 
 IMPLEMENT inline NEEDS["config.h"]
 Irq_alloc *Irq_alloc::lookup( unsigned irq )
 {
-  if(irq < Config::MAX_NUM_IRQ) 
+  if(irq < Config::Max_num_irqs) 
     return irqs[irq];    
   else
     return 0;
@@ -56,9 +72,8 @@ Irq_alloc *Irq_alloc::lookup( unsigned irq )
 IMPLEMENT inline NEEDS["config.h"]
 void Irq_alloc::register_irq( unsigned irq, Irq_alloc *i )
 {
-  if(irq < Config::MAX_NUM_IRQ) {
+  if(irq < Config::Max_num_irqs) 
     irqs[irq] = i;
-  }
 }
 
 IMPLEMENT inline

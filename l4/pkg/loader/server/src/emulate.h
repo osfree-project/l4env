@@ -29,32 +29,35 @@ typedef union
     } emu;
 } emu_addr_t;
 
-struct emu_desc_s_t;
-typedef struct emu_desc_s_t
+typedef struct emu_desc_t
 {
   app_t		*app;
   l4_addr_t	map_addr;
   l4_addr_t	phys_addr;
-  l4_size_t	size;
+  l4_size_t	phys_size;
+  l4_umword_t	irq;
   const char	*name;
-  void          (*init)  (struct emu_desc_s_t *desc);
-  void		(*handle)(struct emu_desc_s_t *desc, 
+  void          (*init)  (struct emu_desc_t *desc);
+  void		(*handle)(struct emu_desc_t *desc, 
 			  emu_addr_t ea, l4_umword_t value, 
 			  l4_umword_t *dw1, l4_umword_t *dw2, void **reply);
-  void		(*spec)  (struct emu_desc_s_t *desc,
+  void		(*spec)  (struct emu_desc_t *desc,
 			  emu_addr_t ea, l4_umword_t value, 
 			  l4_umword_t *dw1, l4_umword_t *dw2, void **reply);
-  void		*private_mem;
-  void		*private_mem_phys;
-  l4_addr_t	private_virt_to_phys;
+  l4_addr_t	private_mem1;
+  l4_addr_t	private_mem2;
+  l4_addr_t	private_mem1_phys;
+  l4_size_t     private_mem1_log2size;
+  l4_size_t     private_mem2_log2size;
+  l4_addr_t	private_virt1_to_phys;
 } emu_desc_t;
 
-int  init_mmio_emu(void);
+void emulate_register(emu_desc_t *desc, int desc_nr);
+int  emulate_init(void);
 int  handle_mmio_emu(app_t *app, emu_addr_t ea, l4_umword_t value,
 		     l4_umword_t *dw1, l4_umword_t *dw2, void **reply);
-void check_mmio_emu (app_t *app, l4_umword_t pfa, 
-		     l4_fpage_struct_t *fp, void *reply)
-  __attribute__((regparm(3)));
+void check_mmio_emu (app_t *app, l4_umword_t pfa, l4_umword_t *dw2, void *reply)
+  fastcall;
 
 extern inline l4_addr_t
 desc_priv_virt_to_phys(emu_desc_t *desc, l4_addr_t addr);
@@ -65,13 +68,13 @@ desc_priv_phys_to_virt(emu_desc_t *desc, l4_addr_t addr);
 extern inline l4_addr_t
 desc_priv_virt_to_phys(emu_desc_t *desc, l4_addr_t addr)
 {
-  return addr + desc->private_virt_to_phys;
+  return addr + desc->private_virt1_to_phys;
 }
 
 extern inline l4_addr_t
 desc_priv_phys_to_virt(emu_desc_t *desc, l4_addr_t addr)
 {
-  return addr - desc->private_virt_to_phys;
+  return addr - desc->private_virt1_to_phys;
 }
 
 #endif

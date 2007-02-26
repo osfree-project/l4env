@@ -1,0 +1,33 @@
+#       Status      Description
+-------------------------------------------------------------------------------
+1                   Resolve performance lacks...
+
+2                   Client-side ORe drivers
+2a                  FLIPS driver
+2b      DONE        L4Linux driver  (thx Adam)
+2c      DONE        TFTP driver
+
+3                   we need a solution using dataspaces instead of string ipc, 
+                    which will hopefully improve performance
+
+4                   incorporate more NIC drivers from Linux
+
+5                   build a version using dde_linux26
+
+6       DONE        special case: packets for local ORe clients need to be 
+                    delivered directly, because they will otherwise never be 
+                    seen again by our NIC and therefore not reach their 
+                    destination.
+
+7       DONE        Adam wants to get the device's IRQ no. ==> client-level
+                    configuration r/w and r/o
+
+8       DONE        Make sure only one can request the original device MAC
+
+9                   Adam: We need to configure which legacy drivers are built 
+                    into ORe, especially we need to be able to have none 
+                    compiled in, so that local instances of ORe clients are
+                    able to communicate in FiascoUX.
+
+10                  Frank: the Tulip driver fails under high load leaving
+                    ORe in an non-working state

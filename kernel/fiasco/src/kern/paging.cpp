@@ -32,8 +32,8 @@ public:
   static Mword is_translation_error( Mword error );
   static Mword is_usermode_error( Mword error );
   static Mword is_read_error( Mword error );
-  static Mword addr_to_msgword0( Mword pfa, Mword error );
-  static Mword pc_to_msgword1( Mword pc, Mword error );
+  static Mword addr_to_msgword0( Address pfa, Mword error );
+  static Mword pc_to_msgword1( Address pc, Mword error );
 };
 
 

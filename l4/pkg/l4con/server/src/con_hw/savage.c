@@ -462,7 +462,7 @@ savage_init(void)
       SavageWaitFifo = savage2000_waitfifo;
     }
 
-  SavageBciMem = (char*)savage_mmio + BCI_BUFFER_OFFSET;
+  SavageBciMem = (unsigned char*)savage_mmio + BCI_BUFFER_OFFSET;
 
   savage_initialize2DEngine();
 

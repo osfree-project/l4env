@@ -38,6 +38,8 @@ namespace Proc {
   void irq_chance();
 
   void stack_pointer( Mword sp );
+
+  Mword program_counter();
   //@}
 };
 

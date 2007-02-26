@@ -17,6 +17,12 @@
 /*********************************************************************/
 
 /*
+  28 Dec 2002	ken_yap@users.sourceforge.net (Ken Yap)
+     Put in virt_to_bus calls to allow Etherboot relocation.
+
+  06 Apr 2001	ken_yap@users.sourceforge.net (Ken Yap)
+     Following email from Hyun-Joon Cha, added a disable routine, otherwise
+     NIC remains live and can crash the kernel later.
 
   4 Feb 2000	espenlaub@informatik.uni-ulm.de (Klaus Espenlaub)
      Shuffled things around, removed the leftovers from the 8129 support
@@ -59,13 +65,7 @@
 #include "etherboot.h"
 #include "nic.h"
 #include "pci.h"
-#include "cards.h"
-#include "currticks.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <l4/pci/libpci.h>
-#include <l4/util/util.h>
+#include "timer.h"
 
 #define RTL_TIMEOUT (1*TICKS_PER_SEC)
 
@@ -76,7 +76,7 @@
 #define RX_DMA_BURST    4       /* Maximum PCI burst, '4' is 256 bytes */
 #define TX_DMA_BURST    4       /* Calculate as 16<<val. */
 #define NUM_TX_DESC     4       /* Number of Tx descriptor registers. */
-#define TX_BUF_SIZE    ETH_MAX_PACKET	/* FCS is added by the chip */
+#define TX_BUF_SIZE	ETH_FRAME_LEN	/* FCS is added by the chip */
 #define RX_BUF_LEN_IDX 0	/* 0, 1, 2 is allowed - 8,16,32K rx buffer */
 #define RX_BUF_LEN (8192 << RX_BUF_LEN_IDX)
 
@@ -161,71 +161,61 @@ static unsigned int cur_rx,cur_tx;
 
 /* The RTL8139 can only transmit from a contiguous, aligned memory block.  */
 static unsigned char tx_buffer[TX_BUF_SIZE] __attribute__((aligned(4)));
-
-/* I know that this is a MEGA HACK, but the tagged boot image specification
- * states that we can do whatever we want below 0x10000 - so we do!  */
-/* But we still give the user the choice of using an internal buffer
-   just in case - Ken */
-#ifdef	USE_INTERNAL_BUFFER
 static unsigned char rx_ring[RX_BUF_LEN+16] __attribute__((aligned(4)));
-#else
-#define rx_ring ((unsigned char *)(0x10000 - (RX_BUF_LEN + 16)))
-#endif
 
-
-struct nic *rtl8139_probe(struct nic *nic, unsigned short *probeaddrs,
-	struct pci_device *pci);
-static int read_eeprom(int location);
+static int rtl8139_probe(struct dev *dev, struct pci_device *pci);
+static int read_eeprom(int location, int addr_len);
 static void rtl_reset(struct nic *nic);
 static void rtl_transmit(struct nic *nic, const char *destaddr,
 	unsigned int type, unsigned int len, const char *data);
 static int rtl_poll(struct nic *nic);
-static void rtl_disable(struct nic*);
+static void rtl_disable(struct dev *);
 
 
-struct nic *rtl8139_probe(struct nic *nic, unsigned short *probeaddrs,
-	struct pci_device *pci)
+static int rtl8139_probe(struct dev *dev, struct pci_device *pci)
 {
+	struct nic *nic = (struct nic *)dev;
 	int i;
 	int speed10, fullduplex;
+	int addr_len;
+	unsigned short *ap = (unsigned short*)nic->node_addr;
 
 	/* There are enough "RTL8139" strings on the console already, so
 	 * be brief and concentrate on the interesting pieces of info... */
-	printf("RTL8139 ");
+	printf(" - ");
 
 	/* Mask the bit that says "this is an io addr" */
-	ioaddr = probeaddrs[0] & ~3;
+	ioaddr = pci->ioaddr & ~3;
+
+	adjust_pci_device(pci);
 
 	/* Bring the chip out of low-power mode. */
 	outb(0x00, ioaddr + Config1);
 
-	if (read_eeprom(0) != 0xffff) {
-		unsigned short *ap = (unsigned short*)nic->node_addr;
-		for (i = 0; i < 3; i++)
-			*ap++ = read_eeprom(i + 7);
-	} else {
-		unsigned char *ap = (unsigned char*)nic->node_addr;
-		for (i = 0; i < ETHER_ADDR_SIZE; i++)
-			*ap++ = inb(ioaddr + MAC0 + i);
-	}
+	addr_len = read_eeprom(0,8) == 0x8129 ? 8 : 6;
+	for (i = 0; i < 3; i++)
+	  *ap++ = read_eeprom(i + 7,addr_len);
 
-	for (i = 0; i < ETHER_ADDR_SIZE; i++) {
-		printf("%02x", nic->node_addr[i] & 0xff);
-		if (i < ETHER_ADDR_SIZE-1) printf(":");
-	}
 	speed10 = inb(ioaddr + MediaStatus) & MSRSpeed10;
 	fullduplex = inw(ioaddr + MII_BMCR) & BMCRDuplex;
-	printf(" %sMbps %s-duplex\n", speed10 ? "10" : "100",
-		fullduplex ? "full" : "half");
+	printf("ioaddr %#hX, %sMbps %s-duplex\n", ioaddr,
+		speed10 ? "10" : "100", fullduplex ? "full" : "half");
+	printf("Ethernet address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+	        nic->node_addr[0], nic->node_addr[1], nic->node_addr[2],
+	        nic->node_addr[3], nic->node_addr[4], nic->node_addr[5]);
 
 	rtl_reset(nic);
 
-	nic->reset = rtl_reset;
-	nic->poll = rtl_poll;
-	nic->transmit = rtl_transmit;
-	nic->disable = rtl_disable;
+	if (inb(ioaddr + MediaStatus) & MSRLinkFail) {
+		printf("Cable not connected or other link failure\n");
+		return(0);
+	}
 
-	return nic;
+	dev->disable  = rtl_disable;
+	nic->poll     = rtl_poll;
+	nic->transmit = rtl_transmit;
+
+	return 1;
 }
 
 /* Serial EEPROM section. */
@@ -247,22 +237,23 @@ struct nic *rtl8139_probe(struct nic *nic, unsigned short *probeaddrs,
 #define eeprom_delay()  inl(ee_addr)
 
 /* The EEPROM commands include the alway-set leading bit. */
-#define EE_WRITE_CMD    (5 << 6)
-#define EE_READ_CMD     (6 << 6)
-#define EE_ERASE_CMD    (7 << 6)
+#define EE_WRITE_CMD    (5)
+#define EE_READ_CMD     (6)
+#define EE_ERASE_CMD    (7)
 
-static int read_eeprom(int location)
+static int read_eeprom(int location, int addr_len)
 {
 	int i;
 	unsigned int retval = 0;
 	long ee_addr = ioaddr + Cfg9346;
-	int read_cmd = location | EE_READ_CMD;
+	int read_cmd = location | (EE_READ_CMD << addr_len);
 
 	outb(EE_ENB & ~EE_CS, ee_addr);
 	outb(EE_ENB, ee_addr);
+	eeprom_delay();
 
 	/* Shift the read command bits out. */
-	for (i = 10; i >= 0; i--) {
+	for (i = 4 + addr_len; i >= 0; i--) {
 		int dataval = (read_cmd & (1 << i)) ? EE_DATA_WRITE : 0;
 		outb(EE_ENB | dataval, ee_addr);
 		eeprom_delay();
@@ -282,9 +273,28 @@ static int read_eeprom(int location)
 
 	/* Terminate the EEPROM access. */
 	outb(~EE_CS, ee_addr);
+	eeprom_delay();
 	return retval;
 }
 
+static const unsigned int rtl8139_rx_config = 
+	(RX_BUF_LEN_IDX << 11) |
+	(RX_FIFO_THRESH << 13) |
+	(RX_DMA_BURST << 8);
+	
+static void set_rx_mode(struct nic *nic) {
+	unsigned int mc_filter[2];
+	int rx_mode;
+	/* !IFF_PROMISC */
+	rx_mode = AcceptBroadcast | AcceptMulticast | AcceptMyPhys;
+	mc_filter[1] = mc_filter[0] = 0xffffffff;
+
+	outl(rtl8139_rx_config | rx_mode, ioaddr + RxConfig);
+
+	outl(mc_filter[0], ioaddr + MAR0 + 0);
+	outl(mc_filter[1], ioaddr + MAR0 + 4);
+}
+	
 static void rtl_reset(struct nic* nic)
 {
 	int i;
@@ -294,10 +304,12 @@ static void rtl_reset(struct nic* nic)
 	cur_rx = 0;
 	cur_tx = 0;
 
-	/* Check that the chip has finished the reset. */
-	l4_sleep(10);
+	/* Give the chip 10ms to finish the reset. */
+	load_timer2(10*TICKS_PER_MS);
+	while ((inb(ioaddr + ChipCmd) & CmdReset) != 0 && timer2_running())
+		/* wait */;
 
-	for (i = 0; i < 6; i++)
+	for (i = 0; i < ETH_ALEN; i++)
 		outb(nic->node_addr[i], ioaddr + MAC0 + i);
 
 	/* Must enable Tx/Rx before setting transfer thresholds! */
@@ -317,17 +329,24 @@ static void rtl_reset(struct nic* nic)
 #ifdef	DEBUG_RX
 	printf("rx ring address is %X\n",(unsigned long)rx_ring);
 #endif
-	outl((unsigned long)rx_ring, ioaddr + RxBuf);
+	outl((unsigned long)virt_to_bus(rx_ring), ioaddr + RxBuf);
 
-	/* Start the chip's Tx and Rx process. */
-	outl(0, ioaddr + RxMissed);
-	/* set_rx_mode */
-	outb(AcceptBroadcast|AcceptMyPhys, ioaddr + RxConfig);
+
+
 	/* If we add multicast support, the MAR0 register would have to be
 	 * initialized to 0xffffffffffffffff (two 32 bit accesses).  Etherboot
 	 * only needs broadcast (for ARP/RARP/BOOTP/DHCP) and unicast.  */
-	outb(CmdRxEnb | CmdTxEnb, ioaddr + ChipCmd);
 
+	outb(CmdRxEnb | CmdTxEnb, ioaddr + ChipCmd);
+	
+	outl(rtl8139_rx_config, ioaddr + RxConfig);
+	
+	/* Start the chip's Tx and Rx process. */
+	outl(0, ioaddr + RxMissed);
+
+	/* set_rx_mode */
+	set_rx_mode(nic);
+	
 	/* Disable all known interrupts by setting the interrupt mask. */
 	outw(0, ioaddr + IntrMask);
 }
@@ -338,24 +357,25 @@ static void rtl_transmit(struct nic *nic, const char *destaddr,
 	unsigned int status, to, nstype;
 	unsigned long txstatus;
 
-	memcpy(tx_buffer, destaddr, ETHER_ADDR_SIZE);
-	memcpy(tx_buffer + ETHER_ADDR_SIZE, nic->node_addr, ETHER_ADDR_SIZE);
+	/* nstype assignment moved up here to avoid gcc 3.0.3 compiler bug */
 	nstype = htons(type);
-	memcpy(tx_buffer + 2 * ETHER_ADDR_SIZE, (char*)&nstype, 2);
-	memcpy(tx_buffer + ETHER_HDR_SIZE, data, len);
+	memcpy(tx_buffer, destaddr, ETH_ALEN);
+	memcpy(tx_buffer + ETH_ALEN, nic->node_addr, ETH_ALEN);
+	memcpy(tx_buffer + 2 * ETH_ALEN, &nstype, 2);
+	memcpy(tx_buffer + ETH_HLEN, data, len);
 
-	len += ETHER_HDR_SIZE;
+	len += ETH_HLEN;
 #ifdef	DEBUG_TX
-	printf("sending %d bytes ethtype %x\n", len, type);
+	printf("sending %d bytes ethtype %hX\n", len, type);
 #endif
 
 	/* Note: RTL8139 doesn't auto-pad, send minimum payload (another 4
 	 * bytes are sent automatically for the FCS, totalling to 64 bytes). */
-	while (len < ETH_MIN_PACKET - 4) {
+	while (len < ETH_ZLEN) {
 		tx_buffer[len++] = '\0';
 	}
 
-	outl((unsigned long)tx_buffer, ioaddr + TxAddr0 + cur_tx*4);
+	outl((unsigned long)virt_to_bus(tx_buffer), ioaddr + TxAddr0 + cur_tx*4);
 	outl(((TX_FIFO_THRESH<<11) & 0x003f0000) | len,
 		ioaddr + TxStatus0 + cur_tx*4);
 
@@ -373,14 +393,14 @@ static void rtl_transmit(struct nic *nic, const char *destaddr,
 	txstatus = inl(ioaddr+ TxStatus0 + cur_tx*4);
 
 	if (status & TxOK) {
-		cur_tx = (cur_tx+1) % NUM_TX_DESC;
+		cur_tx = (cur_tx + 1) % NUM_TX_DESC;
 #ifdef	DEBUG_TX
-		printf("tx done (%d ticks), status %x txstatus %X\n",
+		printf("tx done (%d ticks), status %hX txstatus %X\n",
 			to-currticks(), status, txstatus);
 #endif
 	} else {
 #ifdef	DEBUG_TX
-		printf("tx timeout/error (%d ticks), status %x txstatus %X\n",
+		printf("tx timeout/error (%d ticks), status %hX txstatus %X\n",
 			currticks()-to, status, txstatus);
 #endif
 		rtl_reset(nic);
@@ -402,7 +422,7 @@ static int rtl_poll(struct nic *nic)
 	outw(status & ~(RxFIFOOver | RxOverflow | RxOK), ioaddr + IntrStatus);
 
 #ifdef	DEBUG_RX
-	printf("rtl_poll: int %x ", status);
+	printf("rtl_poll: int %hX ", status);
 #endif
 
 	ring_offs = cur_rx % RX_BUF_LEN;
@@ -411,8 +431,8 @@ static int rtl_poll(struct nic *nic)
 	rx_status &= 0xffff;
 
 	if ((rx_status & (RxBadSymbol|RxRunt|RxTooLong|RxCRCErr|RxBadAlign)) ||
-	    (rx_size < ETH_MIN_PACKET-4) || (rx_size > ETH_MAX_PACKET)) {
-		printf("rx error %x\n", rx_status);
+	    (rx_size < ETH_ZLEN) || (rx_size > ETH_FRAME_LEN + 4)) {
+		printf("rx error %hX\n", rx_status);
 		rtl_reset(nic);	/* this clears all interrupts still pending */
 		return 0;
 	}
@@ -434,7 +454,7 @@ static int rtl_poll(struct nic *nic)
 #endif
 	}
 #ifdef	DEBUG_RX
-	printf(" at %X type %b%b rxstatus %x\n",
+	printf(" at %X type %hhX%hhX rxstatus %hX\n",
 		(unsigned long)(rx_ring+ring_offs+4),
 		nic->packet[12], nic->packet[13], rx_status);
 #endif
@@ -447,10 +467,43 @@ static int rtl_poll(struct nic *nic)
 	return 1;
 }
 
-static void rtl_disable(struct nic *nic)
+static void rtl_disable(struct dev *dev)
 {
-       /* reset the chip */
-       outb(CmdReset, ioaddr + ChipCmd);
-       l4_sleep(10);
+	struct nic *nic = (struct nic *)dev;
+	/* merge reset and disable */
+	rtl_reset(nic);
+
+	/* reset the chip */
+	outb(CmdReset, ioaddr + ChipCmd);
+
+	/* 10 ms timeout */
+	load_timer2(10*TICKS_PER_MS);
+	while ((inb(ioaddr + ChipCmd) & CmdReset) != 0 && timer2_running())
+		/* wait */;
 }
 
+static struct pci_id rtl8139_nics[] = {
+PCI_ROM(0x10ec, 0x8129, "rtl8129",       "Realtek 8129"),
+PCI_ROM(0x10ec, 0x8139, "rtl8139",       "Realtek 8139"),
+PCI_ROM(0x10ec, 0x8138, "rtl8139b",      "Realtek 8139B"),
+PCI_ROM(0x1186, 0x1300, "dfe538",        "DFE530TX+/DFE538TX"),
+PCI_ROM(0x1113, 0x1211, "smc1211-1",     "SMC EZ10/100"),
+PCI_ROM(0x1112, 0x1211, "smc1211",       "SMC EZ10/100"),
+PCI_ROM(0x1500, 0x1360, "delta8139",     "Delta Electronics 8139"),
+PCI_ROM(0x4033, 0x1360, "addtron8139",   "Addtron Technology 8139"),
+PCI_ROM(0x1186, 0x1340, "dfe690txd",     "D-Link DFE690TXD"),
+PCI_ROM(0x13d1, 0xab06, "fe2000vx",      "AboCom FE2000VX"),
+PCI_ROM(0x1259, 0xa117, "allied8139",    "Allied Telesyn 8139"),
+PCI_ROM(0x14ea, 0xab06, "fnw3603tx",     "Planex FNW-3603-TX"),
+PCI_ROM(0x14ea, 0xab07, "fnw3800tx",     "Planex FNW-3800-TX"),
+PCI_ROM(0xffff, 0x8139, "clone-rtl8139", "Cloned 8139"),
+};
+
+struct pci_driver rtl8139_driver = {
+	.type     = NIC_DRIVER,
+	.name     = "RTL8139",
+	.probe    = rtl8139_probe,
+	.ids      = rtl8139_nics,
+	.id_count = sizeof(rtl8139_nics)/sizeof(rtl8139_nics[0]),
+	.class    = 0,
+};

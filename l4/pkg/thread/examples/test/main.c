@@ -18,9 +18,12 @@
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/kdebug.h>
+#include <l4/util/macros.h>
+#include <l4/util/stack.h>
 #include <l4/log/l4log.h>
 #include <l4/thread/thread.h>
 #include <l4/l4rm/l4rm.h>
+#include <l4/env/errno.h>
 
 #include <stdio.h>
 
@@ -38,24 +41,34 @@ char LOG_tag[9] = "th_test";
 void test_fn1(void * data);
 void test_fn1(void * data)
 {
-  l4_addr_t esp,ds_map_addr;
+  l4_addr_t esp,ds_map_addr,low,high;
   l4dm_dataspace_t ds;
   l4_offs_t offs;
   l4_size_t ds_map_size;
   int ret;
   void *addr;
+  l4_threadid_t dummy;
 
-  asm("movl   %%esp, %0\n\t" : "=r" (esp) : );
-  LOGL("stack at 0x%08x",esp);
+  esp = l4util_stack_get_sp();
+  LOG("stack pointer at 0x%08x",esp);
 
-  ret = l4rm_lookup((void *)esp,&ds,&offs,&ds_map_addr,&ds_map_size);
+  ret = l4thread_get_stack(l4thread_myself(), &low, &high);
+  if (ret < 0)
+    Panic("l4thread_get_stack_current failed: %s (%d)", 
+          l4env_errstr(ret), ret);
+
+  LOG("stack at 0x%08x-0x%08x", low, high);
+
+  ret = l4rm_lookup((void *)esp, &ds_map_addr, &ds_map_size,
+                    &ds, &offs, &dummy);
   if(ret < 0)
-    {
-      printf("l4rm_lookup failed (%d)!\n",ret);
-      enter_kdebug("PANIC");
-    }
-  printf("  ds %u at %x.%x, offset 0x%08x, mapped to 0x%08x-0x%08x\n",
-	 ds.id,ds.manager.id.task,ds.manager.id.lthread,offs,
+    Panic("l4rm_lookup failed (%d)!",ret);
+  
+  if (ret != L4RM_REGION_DATASPACE)
+    Panic("invalid region type %d!", ret);
+
+  printf("  ds %u at "l4util_idfmt", offset 0x%08x, mapped to 0x%08x-0x%08x\n",
+	 ds.id, l4util_idstr(ds.manager), offs,
 	 ds_map_addr,ds_map_addr + ds_map_size);
 
   ret = l4rm_attach(&ds,L4_PAGESIZE,0,L4DM_RO,&addr);
@@ -98,8 +111,6 @@ int main(void)
 {
   int ret;
 
-  LOG_init("th_test");
-
   /***************************************************************************
    *** L4RM/DMphys test
    ***************************************************************************/
@@ -124,6 +135,7 @@ int main(void)
   printf("started %d\n",ret);
 
   ret = l4thread_create_long(L4THREAD_INVALID_ID,test_fn,
+  			     0,
 			     L4THREAD_INVALID_SP,4 * 1024 * 1024,
 			     255,(void *)dat,
 			     L4THREAD_CREATE_SYNC);

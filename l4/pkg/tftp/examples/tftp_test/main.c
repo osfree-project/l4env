@@ -33,8 +33,6 @@ main(int argc, char **argv)
   l4_size_t size;
   CORBA_Environment _env = dice_default_environment;
   
-  LOG_init("tftptst");
-  
   if (!names_waitfor_name("TFTP", &tftp_id, 10000))
     {
       printf("TFTP not found\n");
@@ -69,8 +67,8 @@ main(int argc, char **argv)
       return -L4_ENOMEM;
     }
 
-  printf("File %s opened at %08x.\n", argv[1], (unsigned)addr);
+  printf("File %s opened at %08x-%08x.\n", 
+      argv[1], (unsigned)addr, (unsigned)addr+size);
 
   return 1;
 }
-

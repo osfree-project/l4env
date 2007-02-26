@@ -31,6 +31,8 @@ contxt_clrscr(void)
       memset(&vtc_scrbuf[sb_y * vtc_cols], ' ', vtc_cols);
       sb_y = OFS_LINES(sb_y-1);
     }
+
+  sb_y = bob = fline = 0;
 }
 
 /*****************************************************************************/

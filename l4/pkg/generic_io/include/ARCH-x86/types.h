@@ -24,7 +24,7 @@
  * \brief IO driver types.
  * \ingroup grp_misc
  *
- * One dword encoding driver source and type. 
+ * One dword encoding driver source and type.
  *
  * <em>This is a proposal/idea. A final version of driver/server descriptions
  * had to be more extensive and _not_ only for driver servers.</em>
@@ -32,30 +32,29 @@
  * 0x00000000 is reserved.
  *
  * -# src
- *	- 00 ... native L4
- *	- 01 ... Linux
- *	- 10 ... OSKit
- *	- 11 ... others
+ *   - 00 ... native L4
+ *   - 01 ... Linux
+ *   - 10 ... OSKit
+ *   - 11 ... others
  * -# dsi
- *	- 7:4 ... major version
- *	- 3:0 ... minor version
+ *   - 7:4 ... major version
+ *   - 3:0 ... minor version
  * -# blk/class
- *	- 0xxxxxxx ... character device
- *		- x0000000 ... serio
- *		- x0000100 ... snd
- *	- 1xxxxxxx ... block device
+ *   - 0xxxxxxx ... character device
+ *     - x0000000 ... serio
+ *     - x0000100 ... snd
+ *   - 1xxxxxxx ... block device
  */
 /*****************************************************************************/
 typedef struct l4io_drv
 {
-  unsigned src:2;		/**< source of driver */
-  unsigned dsi:8;		/**< DSI version supported */
-  unsigned class:8;		/**< driver class */
-  unsigned padding:14;		/**< place holder */
+  unsigned src:2;        /**< source of driver */
+  unsigned dsi:8;        /**< DSI version supported */
+  unsigned class:8;      /**< driver class */
+  unsigned padding:14;   /**< place holder */
 } l4io_drv_t;
 
-#define L4IO_DRV_INVALID ((l4io_drv_t){0,0,0,0})
-				/**< invalid type */
+#define L4IO_DRV_INVALID ((l4io_drv_t){0,0,0,0})  /**< invalid type */
 
 /*****************************************************************************/
 /**
@@ -65,9 +64,9 @@ typedef struct l4io_drv
 /*****************************************************************************/
 typedef struct l4io_res
 {
-  unsigned long start;		/**< begin of region */
-  unsigned long end;		/**< end of region */
-  unsigned long flags;		/**< flags for PCI resource regions */
+  unsigned long start;  /**< begin of region */
+  unsigned long end;    /**< end of region */
+  unsigned long flags;  /**< flags for PCI resource regions */
 } l4io_res_t;
 
 /*****************************************************************************/
@@ -86,24 +85,24 @@ typedef unsigned short l4io_pdev_t;
 /*****************************************************************************/
 typedef struct l4io_pci_dev
 {
-  unsigned char bus;		/* PCI bus number */
-  unsigned char devfn;		/* encoded device [7:3] & function [2:0] index */
+  unsigned char bus;          /* PCI bus number */
+  unsigned char devfn;        /* encoded device [7:3] & function [2:0] index */
   unsigned short vendor;
   unsigned short device;
   unsigned short sub_vendor;
   unsigned short sub_device;
-  unsigned long class;		/* 3 bytes: (base,sub,prog-if) */
+  unsigned long class;        /* 3 bytes: (base,sub,prog-if) */
 
   unsigned long irq;
-#define L4IO_PCIDEV_RES	12	/**< number of PCI resource regions */
-  l4io_res_t res[L4IO_PCIDEV_RES];	/* resource regions used by device:
-					 * 0-5  standard PCI regions (base addresses)
-					 * 6    expansion ROM
-					 * 7-10 unused for devices */
+#define L4IO_PCIDEV_RES 12    /**< number of PCI resource regions */
+  l4io_res_t res[L4IO_PCIDEV_RES];  /* resource regions used by device:
+                                     * 0-5  standard PCI regions (base addresses)
+                                     * 6    expansion ROM
+                                     * 7-10 unused for devices */
   char name[80];
   char slot_name[8];
 
-  l4io_pdev_t handle;		/* handle for this device */
+  l4io_pdev_t handle;         /* handle for this device */
 } l4io_pci_dev_t;
 
 /*****************************************************************************/
@@ -131,8 +130,8 @@ struct l4io_info
   l4_uint32_t omega0;                   /**< omega0 flag (1 if started) */
 } __attribute__ ((aligned(L4_PAGESIZE)));
 
-typedef struct l4io_info l4io_info_t;	/**< io info page type */
+typedef struct l4io_info l4io_info_t;   /**< io info page type */
 
-#define L4IO_INFO_MAGIC	0x496f6f49	/**< io magic is "IooI" */
+#define L4IO_INFO_MAGIC  0x496f6f49     /**< io magic is "IooI" */
 
 #endif

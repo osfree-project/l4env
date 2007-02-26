@@ -1,0 +1,12 @@
+*.aux
+interfaces.eps
+*.log
+io_namespaces.pdf
+io_namespaces.tex
+*.ps
+object_server1.eps
+object_server1.pdf
+object_server2.eps
+object_server2.pdf
+root_namespace.eps
+root_namespace.pdf

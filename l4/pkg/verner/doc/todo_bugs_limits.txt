@@ -1,0 +1,55 @@
+                           VERNER - todo, known bugs and limitations
+                                        Carsten Rietzschel
+                                  cr7@os.inf.tu-dresden.de
+                                    17 September 2004
+
+
+
+                       ============= todo list =============
+
+- fastforward
+- docu, comment code
+- debug and use libavformat
+- tests ...
+- rewrite for recording support:
+  - rewrite muxer
+  - rewrite import-plugins
+  - build GUI for recording (vcontrol)
+  - support USB-Webcam again
+- soundcard (Vsync & oss-plugins): develop & use soundserver
+- make types non-32bit save (portable?)
+- fix compiler warnings
+- of course: fix known bugs
+- fix all TODO's and FIXME's in source code
+- more gerneric interface to embed plugins into verner
+
+
+
+                      ============= known BUGS =============
+
+
+- Some libs aren't compiled by L4-make system. This can cause compiler
+  problems, for instance, when using gcc-3.x as system compiler and 
+  gcc-2.x for L4.
+- vcontrol: seeking will fail, if (audio xor video) is EOF (in vdemuxer), but vcore 
+  still decodes some buffered bytes. This happens very near the end of the video
+
+
+
+                      ============= limitations =============
+
+for all components:
+- currently only x86-IA32 is supported
+
+vdemuxer:
+- works only file based (unix std calls)
+  (have a look at include/drops-compat.h and at docs/plugins/)
+
+vsync:
+- audio is only availiable for ES1371 cards (vsync-es1371) (some SB16-PCI's),
+  i810-compatible (vsync-i810) and  VIA 82cxxx-based cards (vsync-via) .
+  You'll have to change Vsync (Makefile+contrib) to use it with other
+  ported sound drivers - see also dde_linux/examples/sound.
+- syncronization is only availiable for OSS-Drivers (Open Sound System) without(!)
+  bug in ioctl(SNDCTL_DSP_GETOPTR)
+

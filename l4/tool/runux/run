@@ -4,15 +4,17 @@
 
 . ${0%/*}/generic.inc
 
+RMGR_ARGS="task modname \"run\""
+
 fiasco \
-	-G $UXRES \
-	-R ./rmgr-ux" task modname \"L4Linux task\"" \
-	-l names \
-	-l log \
-	-l dm_phys \
-	-l simple_ts \
-	-l fuxfprov \
-	-l con-ux \
-	-l l4exec \
-	-l loader" $CFGPATH/run" \
-	-n9 "$@"
+	-G $UXRES				\
+	-l names\ --events			\
+	-l log					\
+	-l events				\
+	-l dm_phys\ --events			\
+	-l simple_ts\ --events			\
+	-l fuxfprov -n10			\
+	-l con-ux\ --events			\
+	-l l4exec				\
+	-l loader" --events $L4PATH/run"	\
+	"$@"

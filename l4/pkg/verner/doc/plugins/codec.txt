@@ -1,0 +1,82 @@
+                           VERNER - Codec-Plugins
+                              Carsten Rietzschel
+                           cr7@os.inf.tu-dresden.de
+                              17 September 2004
+
+
+
+
+                       ============= Generelles =============
+
+
+Pro Codec-Format ein Plugin.
+Für Audio und Video getrennt.
+Bei Audio-Codecs beginnen die Pluginnamen mit ac_{codec}.[ch], bei Video
+vc_{codec}.[ch] (ac=audio codec, vc=video codec).
+Funktionsnamen beginnen mit aud_ für Audio und vid_ für Video.
+
+
+                       ============= Schnittstellen =============
+
+Hier z.B. für MP3-Audio-Dekoder:
+
+
+int aud_codec_mp3_init (plugin_ctrl_t * attr, stream_info_t * info);
+
+Initialisierung des Plugins. 
+  Aufgaben:
+  - öffnen der Datei und prüfen ob Plugin dafür geeignet ist
+  - Initialisierung interne Strukturen und Buffer
+  - ausfüllen der Stream_info wie sie nach dem Dekodieren wären !
+    Insbesondere Format-Ämderung (RAW --> MP3).
+    (siehe include/arch_types.h)
+    --> stream_info_t == frame_ctrl_t 
+        Daten wie Auslösung, Samplerate, Framerate, u.a.
+        auch PTS (Presentation Timestamp) für Video
+        (wenn nicht vorhanden, dann wird PTS=frameNummer * frameRate im Sync genutzt)
+        halt alles was bei der Videoverabeitung für alle Komponenten 
+        wichtig ist...
+
+
+
+int aud_codec_mp3_step (plugin_ctrl_t * attr, unsigned char *in_buffer,
+                        unsigned char *out_buffer);
+
+  Step-Funktion 
+  Aufgaben;
+  - Ausfüllen des Frameheaders an out_buffer
+    (Dabei Änderung des Types! z.B. von RAW zu MP3)
+  - Bei Auftreten eines reset_sync_points bzw. eines reset_configure_points (gesetzt 
+    durch import-Plugins des Demuxers, ist ggf. der Codec zu reinitialiseren)
+  - Koderieren der Daten von in_buffer + sizeof(frame_ctrl_t)
+    nach out_buffer + sizeof(frame_ctrl_t)
+
+  Rückgabe-Werte:
+  - CODING_OK = Alles ok.
+  - CODING_NEED_MORE = Mehr Daten benötigt
+  - CODING_HAS_DATA = Habe noch Daten zu verarbeiten
+    ^^^ Werte mit OR verknüpfbar
+  - CODING_ERROR - Fehler
+
+
+
+int aud_codec_mp3_close (plugin_ctrl_t * attr);
+
+  Schliessen des Plugins
+  Aufgaben:
+  - Schliessen der verwendet Lib
+  - Freigabe interner Strukturen
+
+
+Selbige Schnittstellten gibt's auch für Video.
+
+
+
+               ============= Hinzufügen von Codec-Plugins  =============
+
+
+- Schreiben des eigentlische Plugins und Ablage incl. Header-File in plugins/codec/[ac/vc]_*.[ch]
+- Bei der Auswahl bekannt machen: /vcore/src/[audio/video]_codes.c:detemineAndSetupCodec()
+- Makefile anpassen (vcore/src/Makefile) 
+- Bei /config/ eintragen
+

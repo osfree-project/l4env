@@ -6,7 +6,7 @@ MODE             = l4linux
 TARGET           = testovlscreen
 
 SRC_C            = main.c emul_l4rm.c
-LIBS             = -ll4ovlscreen
+LIBS             = -ll4ovlscreen -ldm_generic -llog
 PRIVATE_INCDIR   = $(PKGDIR)/include
 
 vpath main.c $(PKGDIR)/examples/screen_test/common

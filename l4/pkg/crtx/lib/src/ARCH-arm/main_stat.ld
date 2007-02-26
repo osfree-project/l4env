@@ -6,14 +6,18 @@ ENTRY(_start)
 
 SECTIONS
 {
+  /* No program code/data before _stext/_prog_img_start! */
+
   /* Read-only sections, merged into text segment. The start address of
    * the text segment is : */
   .text :
   {
     _stext = .;
+    _prog_img_start = _stext;
     *(.text.init) 
     *(.init)
     *(.text .text.* .gnu.linkonce.t.*)
+    KEEP (*(.text.*personality*))
     *(.glue_7t) *(.glue_7)
     KEEP (*(.fini))
     LONG(0xc3)  /* terminate .fini */
@@ -33,68 +37,74 @@ SECTIONS
   }
   /* exception frames for C++ */
   .eh_frame : 
-  { 
+  {
+    __eh_frame_start__ = .;
     KEEP (*(.eh_frame)) 
     LONG(0) /* terminate .eh_frame */
   }
-  .gcc_except_table : { *(.gcc_except_table) }
+  .gcc_except_table : { KEEP(*(.gcc_except_table)) }
   .dynamic :  { *(.dynamic) }
 
   . = ALIGN(4);
   .ctors :
   {
-    LONG(0)
-    /* traverse this list backwards (see __attribute__((init_priority)) */
-    __CTOR_LIST__ = .;
+    KEEP (*(.mark_beg_l4dde_ctors))
+    KEEP (*(.l4dde_ctors))
+    KEEP (*(.mark_end_l4dde_ctors))
+
+    KEEP (*(.mark_beg_ctors))
     KEEP (*(.ctors))
     KEEP (*(SORT(.ctors.*)))
-    __CTOR_END__ = .;
-    /* traverse this list forwards */
-    __C_CTOR_LIST__ = .;
+    KEEP (*(.mark_end_ctors))
+
+    KEEP (*(.mark_beg_c_ctors))
     KEEP (*(SORT(.c_ctors.?)))
     KEEP (*(SORT(.c_ctors.??)))
-    __C_CTOR_SYS_END__ = .;
     KEEP (*(SORT(.c_ctors.???)))
     KEEP (*(SORT(.c_ctors.????)))
     KEEP (*(SORT(.c_ctors.?????)))
     KEEP (*(.c_ctors))
-    __C_CTOR_END__ = .;
+    KEEP (*(.mark_end_c_ctors))
   }
   . = ALIGN(4);
   .dtors :
   {
-    LONG(0)
-    /* traverse this list backwards (see __attribute__((init_priority)) */
-    __DTOR_LIST__ = .;
+    KEEP (*(.mark_beg_dtors))
     KEEP (*(.dtors))
     KEEP (*(SORT(.dtors.*)))
-    __DTOR_END__ = .;
-    /* traverse this list forwards */
-    __C_DTOR_LIST__ = .;
+    KEEP (*(.mark_end_dtors))
+
+    KEEP (*(.mark_beg_c_sys_dtors))
     KEEP (*(SORT(.c_dtors.?)))
     KEEP (*(SORT(.c_dtors.??)))
-    __C_DTOR_SYS_END__ = .;
+    KEEP (*(.mark_end_c_sys_dtors))
+
+    KEEP (*(.mark_beg_c_dtors))
     KEEP (*(SORT(.c_dtors.???)))
     KEEP (*(SORT(.c_dtors.????)))
     KEEP (*(SORT(.c_dtors.?????)))
     KEEP (*(.c_dtors))
-    __C_DTOR_END__ = .;
+    KEEP (*(.mark_end_c_dtors))
   }
 
   .got : { *(.got.plt) *(.got) }
 
-  _edata  =  .;
+  _edata = .;
   PROVIDE (edata = .); /* don't fail if user defines this symbol */
 
   __bss_start = .;
   .bss :
   {
    *(.dynbss)
-   *(.bss .gnu.linkonce.b.*)
+   *(.bss .bss.* .gnu.linkonce.b.*)
    *(COMMON)
+   _end = .;
+   PROVIDE (end = .); /* don't fail if user defines this symbol */
+   *(.rospace)
   }
-  _end = . ;
-  PROVIDE (end = .); /* don't fail if user defines this symbol */
+
+  /* No code/data beyond this symbol in program image */
+  _prog_img_end = .;
 
   /* Moved here to ensure that these sections are located _after_ the text
    * section. In the other case we would get program sections with a virtual
@@ -103,12 +113,15 @@ SECTIONS
   .dynsym  : { *(.dynsym)  }
   .dynstr  : { *(.dynstr)  }
   .rel.dyn : { *(.rel.dyn) }
+  .rel.bss : { *(.rel.bss) }
+  .rel.plt : { *(.rel.plt) }
 
   /* drop the following sections since we don't need them for DROPS */
   /DISCARD/ : {
     *(.interp)
     *(.comment)
     *(.note)
+    *(.note.*)
   }
 }
 

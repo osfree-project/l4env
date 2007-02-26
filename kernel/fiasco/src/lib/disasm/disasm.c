@@ -15,6 +15,8 @@ static disassemble_info dis_info;
 static Peek_task dis_peek_task;
 static Get_symbol dis_get_symbol;
 
+extern int print_insn_i386 PARAMS ((bfd_vma, disassemble_info*));
+
 /* read <length> bytes starting at memaddr */
 static int
 my_read_memory(bfd_vma memaddr, bfd_byte *myaddr, unsigned length,
@@ -81,6 +83,8 @@ my_printf(void* stream __attribute__ ((unused)), const char *format, ...)
   
       va_start(list, format);
       len = vsnprintf(out_buf, out_len, format, list);
+      if (len >= out_len)
+	len = out_len - 1;
       out_buf += len;
       out_len -= len;
       va_end(list);
@@ -104,7 +108,7 @@ static int
 special_l4_ops(bfd_vma memaddr)
 {
   int len, bytes, i;
-  const unsigned char *op;
+  const char *op;
   bfd_vma str, s;
   
   switch (my_get_data(memaddr))
@@ -123,7 +127,7 @@ special_l4_ops(bfd_vma memaddr)
       str = memaddr+3;
       bytes = 4+len;
     printstr:
-      /* do a qick test if it is really a int3-str function by
+      /* do a quick test if it is really an int3-str function by
        * analyzing the bytes we shall display. */
       for (i=len, s=str; i--; )
 	if (my_get_data(s++) > 126)
@@ -163,6 +167,7 @@ special_l4_ops(bfd_vma memaddr)
 	case 24: op = "fiasco_start_profile()"; break;
 	case 25: op = "fiasco_stop_and_dump()"; break;
 	case 26: op = "fiasco_stop_profile()"; break;
+	case 29: op = "fiasco_tbuf (%eax)"; break;
 	case 30: op = "fiasco_register (%eax, %ecx)"; break;
 	}
       if (op)
@@ -209,9 +214,13 @@ disasm_bytes(char *buffer, unsigned len, Address addr,
   dis_info.buffer = (bfd_byte*)addr;
   dis_info.buffer_length = 99; /* XXX */
   dis_info.buffer_vma = addr;
+#ifdef CONFIG_IA32
+  dis_info.mach = show_intel_syntax ? bfd_mach_i386_i386_intel_syntax
+				    : bfd_mach_i386_i386;
+#else
+  dis_info.mach = show_intel_syntax ? bfd_mach_x86_64_intel_syntax
+				    : bfd_mach_x86_64;
+#endif
 
-  return (show_intel_syntax) 
-    ? print_insn_i386_intel(addr, &dis_info)
-    : print_insn_i386_att(addr, &dis_info);
+  return print_insn_i386 (addr, &dis_info);
 }
-

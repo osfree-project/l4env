@@ -13,25 +13,29 @@
  * COPYING file for details.
  */
 
-#include "dopestd.h"
-#include "dopelib.h"
-#include <dope-client.h>
-#include "app_struct.h"
-#include "sync.h"
-#include "listener.h"
-
+/*** GENERAL INCLUDES ***/
 #include <stdio.h>
 #include <stdarg.h>
 
+/*** LOCAL INCLUDES ***/
+#include "dopelib.h"
+#include <dope-client.h>
+#include "dopestd.h"
+#include "app_struct.h"
+#include "sync.h"
+#include "listener.h"
+#include "events.h"
+#include "init.h"
+
 extern CORBA_Object dope_server;
-extern struct dopelib_mutex *dopelib_cmdf_mutex;
-extern struct dopelib_mutex *dopelib_cmd_mutex;
 
 struct dopelib_app *dopelib_apps[MAX_DOPE_CLIENTS];
 
 static struct dopelib_app first_app;
 
-long dope_init_app(char *app_name) {
+
+/*** INTERFACE: REGISTER NEW DOpE APPLICATION ***/
+long dope_init_app(const char *app_name) {
 	int id;
 	struct dopelib_app *app;
 	char *listener_ident;
@@ -54,13 +58,34 @@ long dope_init_app(char *app_name) {
 		memset(app, 0, sizeof(struct dopelib_app));
 	}
 	dopelib_apps[id] = app;
-	
+
+	/* init event queue that is shared between listener and main thread */
+	if (dopelib_init_eventqueue(id) < 0) return -1;
+
 	listener_ident = dopelib_start_listener(id);
 	INFO(printf("DOpElib(dope_init_app): app_name = %s, listener = %s\n",app_name,listener_ident);)
 	
 	app->app_id = dope_manager_init_app_call(dope_server,app_name,listener_ident,&app->env);
+	INFO(printf("DOpElib(dope_init_app): init_app_call finished. id = %d\n", (int)id));
 	return id;
 }
+
+
+/*** INTERFACE: UNREGISTER DOpE APPLICATION ***/
+long dope_deinit_app(long id) {
+	struct dopelib_app *app = dopelib_apps[id];
+	if (!app) return -1;
+
+	/* notify DOpE to destroy the application's namespace */
+	dope_manager_deinit_app_call(dope_server, app->app_id, &app->env);
+
+	/* free local identifier */
+	dopelib_apps[id] = NULL;
+	if (app != &first_app) free(app);
+	
+	return 0;
+}
+
 
 
 /*** INTERFACE: EXEC DOPE COMMAND AND REQUEST RESULT ***
@@ -70,7 +95,7 @@ long dope_init_app(char *app_name) {
  * \param res_max  maximum length of result
  * \param command  DOpE command to execute
  */
-int dope_req(long id, char *res, int res_max, char *cmd) {
+int dope_req(long id, char *res, int res_max, const char *cmd) {
 	struct dopelib_app *app = dopelib_apps[id];
 	if (!app || !cmd || !dope_server) return -1;
 	return dope_manager_exec_req_call(dope_server, app->app_id,
@@ -79,17 +104,17 @@ int dope_req(long id, char *res, int res_max, char *cmd) {
 
 
 /*** INTERFACE: EXEC DOpE FORMAT STRING COMMAND AND REQUEST RESULT ***/
-int dope_reqf(long app_id, char *res, int res_max, char *format, ...) {
+int dope_reqf(long app_id, char *res, int res_max, const char *format, ...) {
 	int ret;
 	va_list list;
 	static char cmdstr[1024];
 	
-	dopelib_lock_mutex(dopelib_cmdf_mutex);
+	dopelib_mutex_lock(dopelib_cmdf_mutex);
 	va_start(list, format);
 	vsnprintf(cmdstr, 1024, format, list);
 	va_end(list);
 	ret = dope_req(app_id, res, res_max, cmdstr);
-	dopelib_unlock_mutex(dopelib_cmdf_mutex);
+	dopelib_mutex_unlock(dopelib_cmdf_mutex);
 	
 	return ret;
 }
@@ -104,25 +129,27 @@ int dope_reqf(long app_id, char *res, int res_max, char *format, ...) {
  * This function actually receives the result from the DOpE server
  * but does not provide it to the caller.
  */
-int dope_cmd(long id, char *cmd) {
-	struct dopelib_app *app = dopelib_apps[id];
+int dope_cmd(long id, const char *cmd) {
+	struct dopelib_app *app;
+	if (!cmd || (id < 0) || (id >= MAX_DOPE_CLIENTS) || !dopelib_apps[id]) return -1;
+	app = dopelib_apps[id];
 	return dope_manager_exec_cmd_call(dope_server, app->app_id, cmd, &app->env);
 }
 
 
 /*** INTERFACE: EXEC DOpE FORMAT STRING COMMAND ***/
-int dope_cmdf(long app_id, char *format, ...) {
+int dope_cmdf(long app_id, const char *format, ...) {
 	int ret;
 	va_list list;
 	static char cmdstr[1024];
-	
-	dopelib_lock_mutex(dopelib_cmdf_mutex);
+
+	dopelib_mutex_lock(dopelib_cmdf_mutex);
 	va_start(list, format);
 	vsnprintf(cmdstr, 1024, format, list);
 	va_end(list);
 	ret = dope_cmd(app_id, cmdstr);
-	dopelib_unlock_mutex(dopelib_cmdf_mutex);
-	
+	dopelib_mutex_unlock(dopelib_cmdf_mutex);
+
 	return ret;
 }
 

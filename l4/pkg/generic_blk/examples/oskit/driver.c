@@ -12,6 +12,8 @@
 /* L4 includes */
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
+#include <l4/log/l4log.h>
+#include <l4/util/macros.h>
 
 /* generic_blk includes */
 #include <l4/generic_blk/blk.h>
@@ -21,6 +23,7 @@
 #include "types.h"
 #include "blksrv.h"
 #include "config.h"
+#include "debug.h"
 
 /*****************************************************************************
  *** globals
@@ -54,7 +57,7 @@ l4blk_driver_open_component(CORBA_Object _dice_corba_obj,
                             l4blk_driver_id_t * drv,
                             l4_threadid_t * cmd_id,
                             l4_threadid_t * notify_id,
-                            CORBA_Environment * _dice_corba_env)
+                            CORBA_Server_Environment * _dice_corba_env)
 {
   int i,ret;
 
@@ -90,6 +93,10 @@ l4blk_driver_open_component(CORBA_Object _dice_corba_obj,
   /* return driver id */
   *drv = i;
 
+  LOGdL(DEBUG_DRV_OPEN, "opened new driver, id %d, cmd at "l4util_idfmt \
+        " notify at "l4util_idfmt, 
+        i, l4util_idstr(*cmd_id), l4util_idstr(*notify_id));
+
   /* done */
   return 0;
 }
@@ -108,11 +115,13 @@ l4blk_driver_open_component(CORBA_Object _dice_corba_obj,
 l4_int32_t 
 l4blk_driver_close_component(CORBA_Object _dice_corba_obj,
                              l4blk_driver_id_t drv,
-                             CORBA_Environment * _dice_corba_env)
+                             CORBA_Server_Environment * _dice_corba_env)
 {
   if ((drv < 0) || (drv >= BLKSRV_MAX_CLIENTS) ||
       (drivers[drv].driver == L4BLK_INVALID_DRIVER))
     return -L4_EINVAL;
+
+  LOGdL(DEBUG_DRV_CLOSE, "close driver %d", drv);
 
   /* shutdown notification thread */
   blksrv_shutdown_notification_thread(&drivers[drv]);

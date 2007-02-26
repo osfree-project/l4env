@@ -88,21 +88,6 @@ struct trap_state
 
 
 __BEGIN_DECLS
-/*
- * This library routine initializes the trap vectors in the base IDT
- * to point to default trap handler entrypoints
- * which merely push the standard trap saved-state frame above
- * and call the default trap handler routine, 'trap_handler'.
- */
-extern void base_trap_init(void);
-
-/*
- * This gate initialization table is used by base_trap_init
- * to initialize the base IDT to the default trap entrypoint code,
- * which pushes the state frame described above
- * and calls the trap handler, below.
- */
-extern struct gate_init_entry base_trap_inittab[];
 
 /*
  * The default trap entrypoint code checks this function pointer
@@ -114,7 +99,7 @@ extern struct gate_init_entry base_trap_inittab[];
  * if the trap handler function returns nonzero,
  * the trap handler dumps the trap state to the console and panics.
  */
-extern int (*base_trap_handler)(struct trap_state *state);
+extern int (*BASE_TRAP_HANDLER)(struct trap_state *state);
 
 
 /*

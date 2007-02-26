@@ -1,0 +1,34 @@
+#! /bin/sh 
+SPI=0x200
+SRC=141.76.48.93
+DST=141.76.48.19
+SRC_NET=141.76.48.0/24
+DST_NET=141.76.48.0/24
+AALG=hmac-md5
+EALG=3des-cbc
+AKEY=0xc7b5fa7a_132f0868_d9dd39cb_6607fe35
+EKEY=0x54f11985_0594ceea_3d37893a_6be34b67_f31eab0d_86e4f0dc
+
+case $1 in
+vmware)
+  SRC=192.168.2.2
+  DST=192.168.2.1
+  SRC_NET=192.168.0.0/16
+  DST_NET=192.168.0.0/16
+  ;;
+esac 
+
+nh_setkey --flush
+
+nh_setkey --sa-add esp/$SPI/$DST --oface 1 --src $SRC               \
+          --mode tunnel --auth-alg $AALG --auth-key $AKEY \
+	  --enc-alg $EALG --enc-key $EKEY
+	      
+nh_setkey --sa-add esp/$SPI/$SRC --oface 0 --src $DST               \
+          --mode tunnel --auth-alg $AALG --auth-key $AKEY \
+	  --enc-alg $EALG --enc-key $EKEY
+
+nh_setkey --spd-add --src $SRC_NET --dst $DST_NET --sa esp/$SPI/$DST 
+
+nh_setkey --if-mode 1/any
+

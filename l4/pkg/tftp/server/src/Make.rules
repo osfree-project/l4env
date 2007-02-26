@@ -3,13 +3,32 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
-TARGET		= tftp
 DEFAULT_RELOC	= 0x01000000
 
 SRC_C		= main.c
 LIBS		= -lgeneric_fprov-server \
-		  -L../netboot/OBJ-$(SYSTEM) -lnetboot -lpci -lio
+		  -L../netboot/OBJ-$(SYSTEM) -lnetboot
+
+DEFINES		= -DWITHOUT_LIBC_STUBS
+
+all::
+include ../Makeconf
+Makefile.inc: ../Makeconf
 
 ifeq ($(CONFIG_OSHKOSH),y)
+TARGET		= tftp.oshkosh
+endif
+ifeq ($(CONFIG_ORE),y)
+TARGET		= tftp.ore
+else
+TARGET		= tftp
+endif
+ifeq ($(CONFIG_PCI),y)
+LIBS		+= -lpci -lio
+endif
+ifeq ($(CONFIG_OSHKOSH),y)
 LIBS		+= -loshkoshnicdrv -ldsi
+endif
+ifeq ($(CONFIG_ORE),y)
+LIBS		+= -lore
 endif

@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEConditionalExpression.h 
- *	\brief	contains the declaration of the class CFEConditionalExpression
+ *    \file    dice/src/fe/FEConditionalExpression.h
+ *    \brief   contains the declaration of the class CFEConditionalExpression
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -31,9 +32,9 @@
 
 #include "fe/FEBinaryExpression.h"
 
-/**	\class CFEConditionalExpression
- *	\ingroup frontend
- *	\brief represents a conditional expression
+/**    \class CFEConditionalExpression
+ *    \ingroup frontend
+ *    \brief represents a conditional expression
  *
  * This class is used to represent a conditional expression. This
  * kind of expression consits of an expression, which evaluates to a
@@ -46,41 +47,40 @@
  */
 class CFEConditionalExpression : public CFEBinaryExpression
 {
-DECLARE_DYNAMIC(CFEConditionalExpression);
 
 // standard constructor/destructor
 public:
-	/** constructs a conditional expression
-	 *	\param pCondition the expression, which is the condition
-	 *	\param pBranchTrue if the condition is true this expression is valid
-	 *	\param pBranchFalse if the condition is false thsi expression is valid
-	 */
-	CFEConditionalExpression(CFEExpression *pCondition,
-		CFEExpression *pBranchTrue,
-		CFEExpression *pBranchFalse);
-	virtual ~CFEConditionalExpression();
+    /** constructs a conditional expression
+     *    \param pCondition the expression, which is the condition
+     *    \param pBranchTrue if the condition is true this expression is valid
+     *    \param pBranchFalse if the condition is false thsi expression is valid
+     */
+    CFEConditionalExpression(CFEExpression *pCondition,
+        CFEExpression *pBranchTrue,
+        CFEExpression *pBranchFalse);
+    virtual ~CFEConditionalExpression();
 
 protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CFEConditionalExpression(CFEConditionalExpression &src);
+    /**    \brief copy constructor
+     *    \param src the source to copy from
+     */
+    CFEConditionalExpression(CFEConditionalExpression &src);
 
 // Operations
 public:
-	virtual void Serialize(CFile *pFile);
-	virtual String ToString();
-	virtual CObject* Clone();
-	virtual bool IsOfType(TYPESPEC_TYPE nType);
-	virtual long GetIntValue();
-	virtual CFEExpression* GetCondition();
+    virtual void Serialize(CFile *pFile);
+    virtual string ToString();
+    virtual CObject* Clone();
+    virtual bool IsOfType(TYPESPEC_TYPE nType);
+    virtual long GetIntValue();
+    virtual CFEExpression* GetCondition();
 
 // attributes
 protected:
-	/**	\var CFEExpression *m_pCondition
-	 *	\brief the first, boolean expression
-	 */
-	CFEExpression *m_pCondition;
+    /**    \var CFEExpression *m_pCondition
+     *    \brief the first, boolean expression
+     */
+    CFEExpression *m_pCondition;
 };
 
 #endif /* __ILD4_FE_FECONDITIONALEXPRESSION_H__ */

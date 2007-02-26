@@ -133,8 +133,9 @@ dsi_down(dsi_semaphore_t * semaphore, dsi_sync_msg_t msg)
 			     L4_IPC_NEVER,
 			     &result);
       if(dw0!=0xffee3489){
-	  LOG_Error("Received IPC (%x,%x) from %x.%x, expected DSI-1 waktup",
-		    dw0, dw1, msg.work_th.id.task,msg.work_th.id.lthread);
+	  LOG_Error("Received IPC (%x,%x) from "l4util_idfmt
+	            ", expected DSI-1 waktup",
+		    dw0, dw1, l4util_idstr(msg.work_th));
       }
       
       LOGdL(DEBUG_MAP_PACKET,"result 0x%08x",result.msgdope);

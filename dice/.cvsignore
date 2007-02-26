@@ -1,5 +1,5 @@
-Makefile
-Makefile.in
+GNUmakefile
+GNUmakefile.in
 aclocal.m4
 build-stamp
 config.h
@@ -10,3 +10,4 @@ config.status
 configure
 stamp-h1
 stamp-h
+autom4te.cache

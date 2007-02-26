@@ -1,8 +1,5 @@
 /* ARM Dependent Globals! */
-
-INTERFACE:
-
-IMPLEMENTATION[arch]:
+IMPLEMENTATION [arm]:
 
 inline NEEDS [context_of]
 Context *current()
@@ -13,3 +10,4 @@ Context *current()
 
   return context_of (esp);
 }
+

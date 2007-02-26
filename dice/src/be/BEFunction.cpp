@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEFunction.cpp
- *	\brief	contains the implementation of the class CBEFunction
+ *    \file    dice/src/be/BEFunction.cpp
+ *    \brief   contains the implementation of the class CBEFunction
  *
- *	\date	01/11/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/11/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -43,20 +44,13 @@
 #include "be/BEOpcodeType.h"
 #include "be/BEReplyCodeType.h"
 
-#include "fe/FEAttribute.h"
+#include "Attribute-Type.h"
 #include "fe/FEInterface.h"
 #include "fe/FETypeSpec.h"
+
 #include "Compiler.h"
 
-IMPLEMENT_DYNAMIC(CBEFunction);
-
 CBEFunction::CBEFunction()
-: m_vAttributes(RUNTIME_CLASS(CBEAttribute)),
-  m_vParameters(RUNTIME_CLASS(CBETypedDeclarator)),
-  m_vSortedParameters(RUNTIME_CLASS(CBETypedDeclarator)),
-  m_vCallParameters(RUNTIME_CLASS(CBETypedDeclarator)),
-  m_vExceptions(RUNTIME_CLASS(CBEException)),
-  m_vVariables(RUNTIME_CLASS(CBETypedDeclarator))
 {
     m_pReturnVar = 0;
     m_pClass = 0;
@@ -64,104 +58,89 @@ CBEFunction::CBEFunction()
     m_pMsgBuffer = 0;
     m_pCorbaObject = 0;
     m_pCorbaEnv = 0;
-	m_pExceptionWord = 0;
+    m_pExceptionWord = 0;
     m_nParameterIndent = 0;
-    m_vParameters.DeleteAll();
-    m_vSortedParameters.DeleteAll();
-    m_vCallParameters.DeleteAll();
-    m_vExceptions.DeleteAll();
-    m_vAttributes.DeleteAll();
     m_bComponentSide = false;
     m_bCastMsgBufferOnCall = false;
-	m_pComm = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBEFunction, CBEObject);
+    m_pComm = 0;
 }
 
 CBEFunction::CBEFunction(CBEFunction & src)
-: CBEObject(src),
-  m_vAttributes(RUNTIME_CLASS(CBEAttribute)),
-  m_vParameters(RUNTIME_CLASS(CBETypedDeclarator)),
-  m_vSortedParameters(RUNTIME_CLASS(CBETypedDeclarator)),
-  m_vCallParameters(RUNTIME_CLASS(CBETypedDeclarator)),
-  m_vExceptions(RUNTIME_CLASS(CBEException)),
-  m_vVariables(RUNTIME_CLASS(CBETypedDeclarator))
+: CBEObject(src)
 {
     m_sName = src.m_sName;
     m_sOpcodeConstName = src.m_sOpcodeConstName;
-	if (src.m_pReturnVar)
-	{
-	    m_pReturnVar = (CBETypedDeclarator*)src.m_pReturnVar->Clone();
-		m_pReturnVar->SetParent(this);
-	}
-	else
-	    m_pReturnVar = 0;
+    if (src.m_pReturnVar)
+    {
+        m_pReturnVar = (CBETypedDeclarator*)src.m_pReturnVar->Clone();
+        m_pReturnVar->SetParent(this);
+    }
+    else
+        m_pReturnVar = 0;
     m_pClass = src.m_pClass; // don't clone "parent" class -> needs to stay the same
     m_pTarget = src.m_pTarget; // don't clone target side -> needs to stay the same
     if (src.m_pMsgBuffer)
-	{
-	    m_pMsgBuffer = (CBEMsgBufferType*)src.m_pMsgBuffer->Clone();
+    {
+        m_pMsgBuffer = (CBEMsgBufferType*)src.m_pMsgBuffer->Clone();
         m_pMsgBuffer->SetParent(this);
-	}
-	else
-	    m_pMsgBuffer = 0;
+    }
+    else
+        m_pMsgBuffer = 0;
     if (src.m_pCorbaObject)
-	{
-	    m_pCorbaObject = (CBETypedDeclarator*)src.m_pCorbaObject->Clone();
-		m_pCorbaObject->SetParent(this);
-	}
-	else
-	    m_pCorbaObject = 0;
+    {
+        m_pCorbaObject = (CBETypedDeclarator*)src.m_pCorbaObject->Clone();
+        m_pCorbaObject->SetParent(this);
+    }
+    else
+        m_pCorbaObject = 0;
     if (src.m_pCorbaEnv)
-	{
-	    m_pCorbaEnv = (CBETypedDeclarator*)src.m_pCorbaEnv->Clone();
+    {
+        m_pCorbaEnv = (CBETypedDeclarator*)src.m_pCorbaEnv->Clone();
         m_pCorbaEnv->SetParent(this);
-	}
-	else
-	    m_pCorbaEnv = 0;
-	if (src.m_pExceptionWord)
-	{
-	    m_pExceptionWord = (CBETypedDeclarator*)src.m_pExceptionWord->Clone();
-		m_pExceptionWord->SetParent(this);
-	}
-	else
-	    m_pExceptionWord = 0;
-	if (src.m_pComm)
-	{
-	    m_pComm = (CBECommunication*)src.m_pComm->Clone();
-		m_pComm->SetParent(this);
-	}
-	else
-	    m_pComm = 0;
-    m_vAttributes.Add(&(src.m_vAttributes)); // clones the elements
-    m_vAttributes.SetParentOfElements(this);
-    m_vParameters.Add(&(src.m_vParameters)); // clones the elements
-    m_vParameters.SetParentOfElements(this);
-    m_vSortedParameters.Add(&(src.m_vSortedParameters)); // clones the elements
-    m_vSortedParameters.SetParentOfElements(this);
-    m_vCallParameters.Add(&(src.m_vCallParameters)); // clones the elements
-    m_vCallParameters.SetParentOfElements(this);
-    m_vExceptions.Add(&(src.m_vExceptions)); // clones the elements
-    m_vExceptions.SetParentOfElements(this);
+    }
+    else
+        m_pCorbaEnv = 0;
+    if (src.m_pExceptionWord)
+    {
+        m_pExceptionWord = (CBETypedDeclarator*)src.m_pExceptionWord->Clone();
+        m_pExceptionWord->SetParent(this);
+    }
+    else
+        m_pExceptionWord = 0;
+    if (src.m_pComm)
+    {
+        m_pComm = (CBECommunication*)src.m_pComm->Clone();
+        m_pComm->SetParent(this);
+    }
+    else
+        m_pComm = 0;
+
+    COPY_VECTOR(CBEAttribute, m_vAttributes, iterA);
+    COPY_VECTOR(CBETypedDeclarator, m_vParameters, iterP);
+    COPY_VECTOR(CBETypedDeclarator, m_vSortedParameters, iterS);
+    COPY_VECTOR(CBETypedDeclarator, m_vCallParameters, iterC);
+    COPY_VECTOR(CBEException, m_vExceptions, iterE);
+    COPY_VECTOR(CBETypedDeclarator, m_vVariables, iterV);
+
     m_nParameterIndent = src.m_nParameterIndent;
     m_bCastMsgBufferOnCall = src.m_bCastMsgBufferOnCall;
     m_bComponentSide = src.m_bComponentSide;
-	m_vVariables.Add(&(src.m_vVariables)); // clones the elements
-	m_vVariables.SetParentOfElements(this);
-    IMPLEMENT_DYNAMIC_BASE(CBEFunction, CBEObject);
 }
 
-/**	\brief destructor of target class
+/** \brief destructor of target class
  *
  * Do _NOT_ delete the sorted parameters, because they are only references to the "normal" parameters.
  * Thus the sorted parameters are already deleted. The interface is also deleted somewhere else.
  */
 CBEFunction::~CBEFunction()
 {
-    m_vAttributes.DeleteAll();
-    m_vParameters.DeleteAll();
-    m_vCallParameters.DeleteAll();
-    m_vExceptions.DeleteAll();
-	m_vVariables.DeleteAll();
+    DEL_VECTOR(m_vAttributes);
+    DEL_VECTOR(m_vParameters);
+    DEL_VECTOR(m_vSortedParameters);
+    DEL_VECTOR(m_vCallParameters);
+    DEL_VECTOR(m_vExceptions);
+    DEL_VECTOR(m_vVariables);
+
     if (m_pReturnVar)
         delete m_pReturnVar;
     if (m_pMsgBuffer)
@@ -170,24 +149,24 @@ CBEFunction::~CBEFunction()
         delete m_pCorbaObject;
     if (m_pCorbaEnv)
         delete m_pCorbaEnv;
-	if (m_pExceptionWord)
-	    delete m_pExceptionWord;
+    if (m_pExceptionWord)
+        delete m_pExceptionWord;
     if (m_pComm)
-	    delete m_pComm;
+        delete m_pComm;
 }
 
-/**	\brief retrieves the name of the function
- *	\return a reference to the name
+/** \brief retrieves the name of the function
+ *  \return a reference to the name
  *
  * The returned pointer should not be manipulated.
  */
-String CBEFunction::GetName()
+string CBEFunction::GetName()
 {
   return m_sName;
 }
 
-/**	\brief retrieves the return type of the function
- *	\return a reference to the return type
+/** \brief retrieves the return type of the function
+ *  \return a reference to the return type
  *
  * Do not manipulate the returned reference directly!
  */
@@ -198,193 +177,220 @@ CBEType *CBEFunction::GetReturnType()
     return m_pReturnVar->GetType();
 }
 
-/**	\brief sets a new return type
- *	\param pReturnType a reference to the new return type
+/** \brief sets a new return type
+ *  \param pReturnType a reference to the new return type
  */
 void CBEFunction::SetReturnType(CBEType * pReturnType)
 {
     assert(false);
 }
 
-/**	\brief adds a new attribute to the attributes vector
- *	\param pAttribute the new attribute to add
+/** \brief adds a new attribute to the attributes vector
+ *  \param pAttribute the new attribute to add
  */
 void CBEFunction::AddAttribute(CBEAttribute * pAttribute)
 {
     if (!pAttribute)
         return;
-    m_vAttributes.Add(pAttribute);
+    m_vAttributes.push_back(pAttribute);
     pAttribute->SetParent(this);
 }
 
-/**	\brief removes an attribute from the attribute vector
- *	\param pAttribute the attribute to remove
+/** \brief removes an attribute from the attribute vector
+ *  \param pAttribute the attribute to remove
  */
 void CBEFunction::RemoveAttribute(CBEAttribute * pAttribute)
 {
-  if (!pAttribute)
-    return;
-  m_vAttributes.Remove(pAttribute);
+    if (!pAttribute)
+        return;
+    vector<CBEAttribute*>::iterator iter;
+    for (iter = m_vAttributes.begin(); iter != m_vAttributes.end(); iter++)
+    {
+        if (*iter == pAttribute)
+        {
+            m_vAttributes.erase(iter);
+            return;
+        }
+    }
 }
 
-/**	\brief retrieves a pointer to the first attribute
- *	\return a pointer to the first attribute
+/** \brief retrieves a pointer to the first attribute
+ *  \return a pointer to the first attribute
  */
-VectorElement *CBEFunction::GetFirstAttribute()
+vector<CBEAttribute*>::iterator CBEFunction::GetFirstAttribute()
 {
-  return m_vAttributes.GetFirst();
+  return m_vAttributes.begin();
 }
 
-/**	\brief retrieves a reference to the next attribute
- *	\param pIter the pointer to the next attribute element
- *	\return a reference to the next attribute
+/** \brief retrieves a reference to the next attribute
+ *  \param iter the pointer to the next attribute element
+ *  \return a reference to the next attribute
  */
-CBEAttribute *CBEFunction::GetNextAttribute(VectorElement * &pIter)
+CBEAttribute *CBEFunction::GetNextAttribute(vector<CBEAttribute*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vAttributes.end())
         return 0;
-    CBEAttribute *pRet = (CBEAttribute *) pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextAttribute(pIter);
-    return pRet;
+    return *iter++;
 }
 
-/**	\brief adds a new parameter to the parameters vector
- *	\param pParameter a reference to the new parameter
+/** \brief adds a new parameter to the parameters vector
+ *  \param pParameter a reference to the new parameter
  */
 void CBEFunction::AddParameter(CBETypedDeclarator * pParameter)
 {
     if (!pParameter)
         return;
-    m_vParameters.Add(pParameter);
+    m_vParameters.push_back(pParameter);
     pParameter->SetParent(this);
 }
 
-/**	\brief removes a parameter from the parameters vector
- *	\param pParameter the parameter to remove
+/** \brief removes a parameter from the parameters vector
+ *  \param pParameter the parameter to remove
  */
 void CBEFunction::RemoveParameter(CBETypedDeclarator * pParameter)
 {
     if (!pParameter)
         return;
-    m_vParameters.Remove(pParameter);
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_vParameters.begin(); iter != m_vParameters.end(); iter++)
+    {
+        if (*iter == pParameter)
+        {
+            m_vParameters.erase(iter);
+            return;
+        }
+    }
 }
 
-/**	\brief retrieves a pointer to the first parameter
- *	\return a pointer to the first parameter
+/** \brief retrieves a pointer to the first parameter
+ *  \return a pointer to the first parameter
  */
-VectorElement *CBEFunction::GetFirstParameter()
+vector<CBETypedDeclarator*>::iterator CBEFunction::GetFirstParameter()
 {
-    return m_vParameters.GetFirst();
+    return m_vParameters.begin();
 }
 
-/**	\brief retrievs a reference to the next parameter
- *	\param pIter the pointer to the next parameter
- *	\return a reference to the next paramater
+/** \brief retrievs a reference to the next parameter
+ *  \param iter the pointer to the next parameter
+ *  \return a reference to the next paramater
  */
-CBETypedDeclarator *CBEFunction::GetNextParameter(VectorElement * &pIter)
+CBETypedDeclarator *CBEFunction::GetNextParameter(vector<CBETypedDeclarator*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vParameters.end())
         return 0;
-    CBETypedDeclarator *pRet = (CBETypedDeclarator *) pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextParameter(pIter);
-    return pRet;
+    return *iter++;
 }
 
-/**	\brief adds a new sorted parameter to the sorted parameters vector
- *	\param pParameter a reference to the new sorted parameter
+/** \brief adds a new sorted parameter to the sorted parameters vector
+ *  \param pParameter a reference to the new sorted parameter
  */
 void CBEFunction::AddSortedParameter(CBETypedDeclarator * pParameter)
 {
     if (!pParameter)
         return;
-    m_vSortedParameters.Add(pParameter);
+    m_vSortedParameters.push_back(pParameter);
     pParameter->SetParent(this);
 }
 
-/**	\brief removes a parameter from the sorted parameters vector
- *	\param pParameter the sorted parameter to remove
+/** \brief removes a parameter from the sorted parameters vector
+ *  \param pParameter the sorted parameter to remove
  */
 void CBEFunction::RemoveSortedParameter(CBETypedDeclarator * pParameter)
 {
     if (!pParameter)
         return;
-    m_vSortedParameters.Remove(pParameter);
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_vSortedParameters.begin(); iter != m_vSortedParameters.end(); iter++)
+    {
+        if (*iter == pParameter)
+        {
+            m_vSortedParameters.erase(iter);
+            return;
+        }
+    }
 }
 
-/**	\brief retrieves a pointer to the first sorted parameter
- *	\return a pointer to the first sorted parameter
+/** \brief retrieves a pointer to the first sorted parameter
+ *  \return a pointer to the first sorted parameter
  */
-VectorElement* CBEFunction::GetFirstSortedParameter()
+vector<CBETypedDeclarator*>::iterator CBEFunction::GetFirstSortedParameter()
 {
-    return m_vSortedParameters.GetFirst();
+    return m_vSortedParameters.begin();
 }
 
-/**	\brief retrievs a reference to the next sorted parameter
- *	\param pIter the pointer to the next sorted parameter
- *	\return a reference to the next sorted paramater
+/** \brief retrieves a pointer to the last sorted parameter
+ *  \param iter the iterator to check is it is the last one
+ *  \return a pointer to the first sorted parameter
  */
-CBETypedDeclarator* CBEFunction::GetNextSortedParameter(VectorElement * &pIter)
+bool CBEFunction::IsLastSortedParameter(vector<CBETypedDeclarator*>::iterator iter)
 {
-    if (!pIter)
+    if (m_vSortedParameters.empty())
+        return true;
+    return (iter == m_vSortedParameters.end() - 1);
+}
+
+/** \brief retrievs a reference to the next sorted parameter
+ *  \param iter the pointer to the next sorted parameter
+ *  \return a reference to the next sorted paramater
+ */
+CBETypedDeclarator* CBEFunction::GetNextSortedParameter(vector<CBETypedDeclarator*>::iterator &iter)
+{
+    if (iter == m_vSortedParameters.end())
         return 0;
-    CBETypedDeclarator *pRet = (CBETypedDeclarator *) pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextSortedParameter(pIter);
-    return pRet;
+    return *iter++;
 }
 
-/**	\brief adds another exception to the excpetions vector
- *	\param pException the exception to add
+/** \brief adds another exception to the excpetions vector
+ *  \param pException the exception to add
  */
 void CBEFunction::AddException(CBEException * pException)
 {
-  if (!pException)
-    return;
-  m_vExceptions.Add(pException);
-  pException->SetParent(this);
+    if (!pException)
+        return;
+    m_vExceptions.push_back(pException);
+    pException->SetParent(this);
 }
 
-/**	\brief removes an exception from the exceptions vector
- *	\param pException the exception to remove
+/** \brief removes an exception from the exceptions vector
+ *  \param pException the exception to remove
  */
 void CBEFunction::RemoveException(CBEException * pException)
 {
-  if (!pException)
-    return;
-  m_vExceptions.Remove(pException);
+    if (!pException)
+        return;
+    vector<CBEException*>::iterator iter;
+    for (iter = m_vExceptions.begin(); iter != m_vExceptions.end(); iter++)
+    {
+        if (*iter == pException)
+        {
+            m_vExceptions.erase(iter);
+            return;
+        }
+    }
 }
 
-/**	\brief retrieves a pointer to the first exception
- *	\return a pointer to the first exception
+/** \brief retrieves a pointer to the first exception
+ *  \return a pointer to the first exception
  */
-VectorElement *CBEFunction::GetFirstException()
+vector<CBEException*>::iterator CBEFunction::GetFirstException()
 {
-  return m_vExceptions.GetFirst();
+    return m_vExceptions.begin();
 }
 
-/**	\brief retrieves the next exception from the exceptions vector
- *	\param pIter the pointer to the next exception in the vector
- *	\return a reference to the next excpetion
+/** \brief retrieves the next exception from the exceptions vector
+ *  \param iter the pointer to the next exception in the vector
+ *  \return a reference to the next excpetion
  */
-CBEException *CBEFunction::GetNextException(VectorElement * &pIter)
+CBEException *CBEFunction::GetNextException(vector<CBEException*>::iterator &iter)
 {
-  if (!pIter)
-    return 0;
-  CBEException *pRet = (CBEException *) pIter->GetElement();
-  pIter = pIter->GetNext();
-  if (!pRet)
-    return GetNextException(pIter);
-  return pRet;
+    if (iter == m_vExceptions.end())
+        return 0;
+    return *iter++;
 }
 
-/**	\brief writes the content of the function to the target header file
- *	\param pFile the header file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the content of the function to the target header file
+ *  \param pFile the header file to write to
+ *  \param pContext the context of the write operation
  *
  * A function in a header file is usually only a function declaration, except the
  * PROGRAM_GENERATE_INLINE option is set.
@@ -395,34 +401,37 @@ CBEException *CBEFunction::GetNextException(VectorElement * &pIter)
  */
 void CBEFunction::Write(CBEHeaderFile * pFile, CBEContext * pContext)
 {
-  if (!pFile->IsOpen())
-    return;
+    if (!pFile->IsOpen())
+        return;
 
-  if (pContext->IsOptionSet(PROGRAM_GENERATE_INLINE))
-    {
-      // write inline preix
-      WriteInlinePrefix(pFile, pContext);
-      WriteFunctionDefinition(pFile, pContext);
-    }
-  else
-    WriteFunctionDeclaration(pFile, pContext);
+    VERBOSE("CBEFunction::Write %s in %s called\n", GetName().c_str(),
+        pFile->GetFileName().c_str());
+    // write inline preix
+    WriteInlinePrefix(pFile, pContext);
+    if (pContext->IsOptionSet(PROGRAM_GENERATE_INLINE))
+        WriteFunctionDefinition(pFile, pContext);
+    else
+        WriteFunctionDeclaration(pFile, pContext);
 }
 
-/**	\brief writes the content of the function to the target implementation file
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the content of the function to the target implementation file
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  */
 void CBEFunction::Write(CBEImplementationFile * pFile, CBEContext * pContext)
 {
-  if (!pFile->IsOpen())
-    return;
+    if (!pFile->IsOpen())
+        return;
 
-  WriteFunctionDefinition(pFile, pContext);
+    VERBOSE("CBEFunction::Write %s in %s called\n", GetName().c_str(),
+        pFile->GetFileName().c_str());
+    WriteInlinePrefix(pFile, pContext);
+    WriteFunctionDefinition(pFile, pContext);
 }
 
-/**	\brief writes the declaration of a function to the target file
- *	\param pFile the target file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the declaration of a function to the target file
+ *  \param pFile the target file to write to
+ *  \param pContext the context of the write operation
  *
  * A function declaration looks like this:
  *
@@ -430,31 +439,43 @@ void CBEFunction::Write(CBEImplementationFile * pFile, CBEContext * pContext)
  *
  * The &lt;name&gt; of the function is created by the name factory
  */
-void CBEFunction::WriteFunctionDeclaration(CBEFile * pFile, CBEContext * pContext)
+void 
+CBEFunction::WriteFunctionDeclaration(CBEFile * pFile, 
+    CBEContext * pContext)
 {
-  if (!pFile->IsOpen())
-    return;
+    if (!pFile->IsOpen())
+        return;
 
-  m_nParameterIndent = 0;
-  // <return type>
-  WriteReturnType(pFile, pContext);
-  // in the header file we add function attributes
-  WriteFunctionAttributes(pFile, pContext);
-  pFile->Print("\n");
-  // <name> (
-  pFile->Print("%s(", (const char *) m_sName);
-  m_nParameterIndent += m_sName.GetLength() + 1;
+    VERBOSE("CBEFunction::WriteFunctionDeclaration %s in %s called\n",
+        GetName().c_str(), pFile->GetFileName().c_str());
 
-  // <parameter list>
-  WriteParameterList(pFile, pContext);
+    // CPP TODOs:
+    // TODO: component functions at server side could be pure virtual to be 
+    // overloadable
+    // TODO: interface functions and component functions are public,
+    // everything else should be protected
+ 
+    *pFile << "\t";
+    m_nParameterIndent = pFile->GetIndent();
+    // <return type>
+    WriteReturnType(pFile, pContext);
+    // in the header file we add function attributes
+    WriteFunctionAttributes(pFile, pContext);
+    *pFile << "\n";
+    // <name> (
+    *pFile << "\t" << m_sName << " (";
+    m_nParameterIndent += m_sName.length() + 2;
 
-  // ); newline
-  pFile->Print(");\n");
+    // <parameter list>
+    WriteParameterList(pFile, pContext);
+
+    // ); newline
+    *pFile << ");\n";
 }
 
-/**	\brief writes the definition of the function to the target file
- *	\param pFile the target file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the definition of the function to the target file
+ *  \param pFile the target file to write to
+ *  \param pContext the context of the write operation
  *
  * A function definition looks like this:
  *
@@ -464,57 +485,75 @@ void CBEFunction::WriteFunctionDeclaration(CBEFile * pFile, CBEContext * pContex
  * }<br>
  * </code>
  */
-void CBEFunction::WriteFunctionDefinition(CBEFile * pFile, CBEContext * pContext)
+void 
+CBEFunction::WriteFunctionDefinition(CBEFile * pFile, 
+    CBEContext * pContext)
 {
-	if (!pFile->IsOpen())
-		return;
+    if (!pFile->IsOpen())
+        return;
 
-	m_nParameterIndent = 0;
-	// return type
-	WriteReturnType(pFile, pContext);
-    pFile->Print("\n");
-	// <name>(
-	pFile->Print("%s(", (const char *) m_sName);
-	m_nParameterIndent += m_sName.GetLength() + 1;
+    VERBOSE("CBEFunction::WriteFunctionDefinition %s in %s called\n",
+        GetName().c_str(), pFile->GetFileName().c_str());
 
-	// <parameter list>
-	WriteParameterList(pFile, pContext);
+    *pFile << "\t";
+    m_nParameterIndent = pFile->GetIndent();
+    // return type
+    WriteReturnType(pFile, pContext);
+    *pFile << "\n";
+    // <name>(
+    *pFile << "\t";
+    if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+	// get class and write <class>::
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	// test functions do not have a class, but should be global
+	if (pClass)
+	    *pFile << pClass->GetName() << "::";
+    }
+    *pFile << m_sName << " (";
+    m_nParameterIndent += m_sName.length() + 2;
 
-	// ) newline { newline
-	pFile->Print(")\n{\n");
-	pFile->IncIndent();
+    // <parameter list>
+    WriteParameterList(pFile, pContext);
 
-	// writes the body
-	WriteBody(pFile, pContext);
+    // ) newline { newline
+    *pFile << ")\n";
+    *pFile << "\t{\n";
+    pFile->IncIndent();
 
-	// } newline
-	pFile->DecIndent();
-	pFile->Print("}\n\n");
+    // writes the body
+    WriteBody(pFile, pContext);
+
+    // } newline
+    pFile->DecIndent();
+    *pFile << "}\n";
+    *pFile << "\n";
 }
 
-/**	\brief writes the return type of a function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the return type of a function
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
- * Because the return type differs for every kind of function, we use an overloadable function
- * here.
+ * Because the return type differs for every kind of function, we use an
+ * overloadable function here.
  */
 void CBEFunction::WriteReturnType(CBEFile * pFile, CBEContext * pContext)
 {
     CBEType *pRetType = GetReturnType();
     if (!pRetType)
     {
-        pFile->Print("void");
+	*pFile << "void";
         return;
     }
     pRetType->Write(pFile, pContext);
 }
 
-/**	\brief writes the parameter list to the target file
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the parameter list to the target file
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
- * The parameter list contains the parameters of the function,speerated by commas.
+ * The parameter list contains the parameters of the function,speerated by
+ * commas.
  */
 void CBEFunction::WriteParameterList(CBEFile * pFile, CBEContext * pContext)
 {
@@ -522,14 +561,14 @@ void CBEFunction::WriteParameterList(CBEFile * pFile, CBEContext * pContext)
     // write additional parameters
     bool bComma = WriteBeforeParameters(pFile, pContext);
     // write own parameters
-    VectorElement *pIter = GetFirstParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
     CBETypedDeclarator *pParam;
-    while ((pParam = GetNextParameter(pIter)) != 0)
+    while ((pParam = GetNextParameter(iter)) != 0)
     {
         if (bComma)
         {
-            pFile->Print(",\n");
-            pFile->PrintIndent("");
+	    *pFile << ",\n";
+	    *pFile << "\t";
         }
         // print parameter
         WriteParameter(pFile, pParam, pContext);
@@ -542,40 +581,47 @@ void CBEFunction::WriteParameterList(CBEFile * pFile, CBEContext * pContext)
     pFile->DecIndent(m_nParameterIndent);
 }
 
-/**	\brief write a single parameter to the target file
- *	\param pFile the file to write to
- *	\param pParameter the parameter to write
- *	\param pContext the context of the write operation
+/** \brief write a single parameter to the target file
+ *  \param pFile the file to write to
+ *  \param pParameter the parameter to write
+ *  \param bUseConst true if param should be const
+ *  \param pContext the context of the write operation
  *
- * This implementation igets the first declarator of the typed declarator
+ * This implementation gets the first declarator of the typed declarator
  * and writes its names plus type.
  */
-void CBEFunction::WriteParameter(CBEFile * pFile, CBETypedDeclarator * pParameter, CBEContext * pContext)
+void
+CBEFunction::WriteParameter(CBEFile * pFile,
+    CBETypedDeclarator * pParameter,
+    CBEContext * pContext,
+    bool bUseConst)
 {
-    VectorElement *pIter = pParameter->GetFirstDeclarator();
-    CBEDeclarator *pDecl = pParameter->GetNextDeclarator(pIter);
+    CBEDeclarator *pDecl = pParameter->GetDeclarator();
     assert(pDecl);
-    pParameter->WriteType(pFile, pContext);
+    pParameter->WriteType(pFile, pContext, bUseConst);
     pFile->Print(" ");
     WriteParameterName(pFile, pDecl, pContext);
 }
 
-/**	\brief writes the name of a parameter
- *	\param pFile the file to write to
- *	\param pDeclarator the declarator to write
- *	\param pContext the context of the write operation
+/** \brief writes the name of a parameter
+ *  \param pFile the file to write to
+ *  \param pDeclarator the declarator to write
+ *  \param pContext the context of the write operation
  */
-void CBEFunction::WriteParameterName(CBEFile * pFile, CBEDeclarator * pDeclarator, CBEContext * pContext)
+void 
+CBEFunction::WriteParameterName(CBEFile * pFile, 
+    CBEDeclarator * pDeclarator, 
+    CBEContext * pContext)
 {
     if (HasAdditionalReference(pDeclarator, pContext))
         pFile->Print("*");
     pDeclarator->WriteDeclaration(pFile, pContext);
 }
 
-/**	\brief writes additional parameters before the parameter list
- *	\param pFile the file to print to
- *	\param pContext the context of the write operation
- *	\return true if this function wrote something
+/** \brief writes additional parameters before the parameter list
+ *  \param pFile the file to print to
+ *  \param pContext the context of the write operation
+ *  \return true if this function wrote something
  *
  * The CORBA C mapping specifies a CORBA_object to appear as first parameter.
  */
@@ -589,14 +635,18 @@ bool CBEFunction::WriteBeforeParameters(CBEFile * pFile, CBEContext * pContext)
     return false;
 }
 
-/**	\brief writes additional parameters after the parameter list
- *	\param pFile the file to print to
- *	\param pContext the context of th write operation
- *	\param bComma true if this function has to write a comma before writing the parameter.
+/** \brief writes additional parameters after the parameter list
+ *  \param pFile the file to print to
+ *  \param pContext the context of th write operation
+ *  \param bComma true if this function has to write a comma before writing the parameter.
  *
- * The CORBA C mapping specifies a pointer to a CORBA_Environment as last parameter
+ * The CORBA C mapping specifies a pointer to a CORBA_Environment as last
+ * parameter
  */
-void CBEFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
+void 
+CBEFunction::WriteAfterParameters(CBEFile * pFile, 
+    CBEContext * pContext, 
+    bool bComma)
 {
     if (m_pCorbaEnv)
     {
@@ -605,7 +655,7 @@ void CBEFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, b
             pFile->Print(",\n");
             pFile->PrintIndent("");
         }
-        WriteParameter(pFile, m_pCorbaEnv, pContext);
+        WriteParameter(pFile, m_pCorbaEnv, pContext, false /* no const with env */);
     }
     else
     {
@@ -614,9 +664,9 @@ void CBEFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, b
     }
 }
 
-/**	\brief writes the body of the function to the target file
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the body of the function to the target file
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  */
 void CBEFunction::WriteBody(CBEFile * pFile, CBEContext * pContext)
 {
@@ -636,9 +686,9 @@ void CBEFunction::WriteBody(CBEFile * pFile, CBEContext * pContext)
     WriteReturn(pFile, pContext);
 }
 
-/**	\brief writes the declaration of the variables
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the declaration of the variables
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
  * \todo check if this belongs to CBEOperationFunction
  */
@@ -647,9 +697,9 @@ void CBEFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContex
     assert(false);
 }
 
-/**	\brief writes the initialization of the variables
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the initialization of the variables
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
  * \todo check if this belongs to CBEOperationFunction
  */
@@ -658,24 +708,28 @@ void CBEFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pCon
     assert(false);
 }
 
-/**	\brief writes the preparation of the message transfer
- *	\param pFile the file to write to
+/** \brief writes the preparation of the message transfer
+ *  \param pFile the file to write to
  *  \param nStartOffset the offset where the marshalling starts
  *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
- *	\param pContext the context of the write operation
+ *  \param pContext the context of the write operation
  *
  * This function creates a marshaller and lets it marshal this function.
  */
 void CBEFunction::WriteMarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
 {
+    VERBOSE("CBEFunction::WriteMarshalling(%s) called\n", GetName().c_str());
+
     CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
     pMarshaller->Marshal(pFile, this, nStartOffset, bUseConstOffset, pContext);
     delete pMarshaller;
+
+    VERBOSE("CBEFunction::WriteMarshalling(%s) finished\n", GetName().c_str());
 }
 
-/**	\brief writes the invocation of the message transfer
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the invocation of the message transfer
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
  * \todo check if this belongs to CBEOperationFunction
  */
@@ -684,9 +738,9 @@ void CBEFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
     assert(false);
 }
 
-/**	\brief writes the clean up of the function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the clean up of the function
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
  * \todo check if this belongs to CBEOperationFunction
  */
@@ -695,9 +749,9 @@ void CBEFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
   assert(false);
 }
 
-/**	\brief writes the return statement of the function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the return statement of the function
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  *
  * This function writes the return statement using the m_pReturnVar member.
  * Set this member respectively or overload this function if you wish to
@@ -707,19 +761,24 @@ void CBEFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
  */
 void CBEFunction::WriteReturn(CBEFile * pFile, CBEContext * pContext)
 {
-	if (!GetReturnVariable() ||
-	    GetReturnType()->IsVoid())
-	{
-	    pFile->PrintIndent("return;\n");
+    VERBOSE("CBEFunction::WriteReturn(%s) called\n", GetName().c_str());
+
+    if (!GetReturnVariable() ||
+        GetReturnType()->IsVoid())
+    {
+        pFile->PrintIndent("return;\n");
+        VERBOSE("CBEFunction::WriteReturn(%s) finished\n", GetName().c_str());
         return;
-	}
+    }
 
     pFile->PrintIndent("return ");
     // get return var name, which is first declarator
-    VectorElement *pIter = m_pReturnVar->GetFirstDeclarator();
-    CBEDeclarator *pRetVar = m_pReturnVar->GetNextDeclarator(pIter);
+    vector<CBEDeclarator*>::iterator iterR = m_pReturnVar->GetFirstDeclarator();
+    CBEDeclarator *pRetVar = *iterR;
     pRetVar->WriteDeclaration(pFile, pContext);
     pFile->Print(";\n");
+
+    VERBOSE("CBEFunction::WriteReturn(%s) finished\n", GetName().c_str());
 }
 
 /** \brief writes the unmarshlling of the message buffer
@@ -732,69 +791,49 @@ void CBEFunction::WriteReturn(CBEFile * pFile, CBEContext * pContext)
  */
 void CBEFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
 {
+    VERBOSE("CBEFunction::WriteUnmarshalling(%s) called\n", GetName().c_str());
+
     CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
     pMarshaller->Unmarshal(pFile, this, nStartOffset, bUseConstOffset, pContext);
     delete pMarshaller;
+
+    VERBOSE("CBEFunction::WriteUnmarshalling(%s) finished\n", GetName().c_str());
 }
 
-/**	\brief optimizes this function
- *	\param nLevel the optimization level
- *  \param pContext the context of the optimization
- *	\return success or failure code
- *
- * This implementation does different thing for different optimization levels.
- * - For level zero: nothing
- * - For level one: sorting the parameter by size (the smallest first, the variable sized last)
- */
-int CBEFunction::Optimize(int nLevel, CBEContext *pContext)
-{
-    switch (nLevel)
-    {
-    case 0:
-        return 0;
-        break;
-    case 1:
-    case 2:
-        return SortParameters(0, pContext);   // XXX FIXME
-        break;
-    default:
-        return 0;
-        break;
-    }
-
-    return 0;
-}
-
-/**	\brief writes a function call to this function
- *	\param pFile the file to write to
+/** \brief writes a function call to this function
+ *  \param pFile the file to write to
  *  \param sReturnVar the name of the variable, which will be assigned the return value
- *	\param pContext the context of the write operation
+ *  \param pContext the context of the write operation
  *
  * We always assume that a function call uses the same parameter names as the function declaration.
  * This makes it simple to write a function call without actually knowing the variable names. The return
  * variable's name is given to us. If it is 0 the caller wants no return value.
  */
-void CBEFunction::WriteCall(CBEFile * pFile, String sReturnVar, CBEContext * pContext)
+void CBEFunction::WriteCall(CBEFile * pFile, string sReturnVar, CBEContext * pContext)
 {
+    VERBOSE("CBEFunction::WriteCall(%s) called\n", GetName().c_str());
+
     m_nParameterIndent = 0;
     if (GetReturnType())
     {
-        if ((!sReturnVar.IsEmpty()) && (!GetReturnType()->IsVoid()))
+        if ((!sReturnVar.empty()) && (!GetReturnType()->IsVoid()))
         {
-            pFile->Print("%s = ", (const char *) sReturnVar);
-            m_nParameterIndent += sReturnVar.GetLength() + 3;
+            pFile->Print("%s = ", sReturnVar.c_str());
+            m_nParameterIndent += sReturnVar.length() + 3;
         }
     }
 
-    pFile->Print("%s(", (const char *) GetName());
-    m_nParameterIndent += GetName().GetLength() + 1;
+    pFile->Print("%s(", GetName().c_str());
+    m_nParameterIndent += GetName().length() + 1;
     WriteCallParameterList(pFile, pContext);
     pFile->Print(");");
+
+    VERBOSE("CBEFunction::WriteCall(%s) finished\n", GetName().c_str());
 }
 
-/**	\brief writes the parameter list for a function call
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the parameter list for a function call
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  */
 void CBEFunction::WriteCallParameterList(CBEFile * pFile, CBEContext * pContext)
 {
@@ -802,15 +841,12 @@ void CBEFunction::WriteCallParameterList(CBEFile * pFile, CBEContext * pContext)
 
     bool bComma = WriteCallBeforeParameters(pFile, pContext);
 
-    VectorElement *pIter = GetFirstCallParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstCallParameter();
     CBETypedDeclarator *pParam;
-    while ((pParam = GetNextCallParameter(pIter)) != 0)
+    while ((pParam = GetNextCallParameter(iter)) != 0)
     {
         if (bComma)
-        {
-            pFile->Print(",\n");
-            pFile->PrintIndent("");
-        }
+            *pFile << ",\n\t";
         WriteCallParameter(pFile, pParam, pContext);
         bComma = true;
     }
@@ -820,26 +856,25 @@ void CBEFunction::WriteCallParameterList(CBEFile * pFile, CBEContext * pContext)
     pFile->DecIndent(m_nParameterIndent);
 }
 
-/**	\brief writes a single parameter for the function call
- *	\param pFile the file to write to
- *	\param pParameter the parameter to be written
- *	\param pContext the context of the write operation
+/** \brief writes a single parameter for the function call
+ *  \param pFile the file to write to
+ *  \param pParameter the parameter to be written
+ *  \param pContext the context of the write operation
  */
 void CBEFunction::WriteCallParameter(CBEFile * pFile, CBETypedDeclarator * pParameter, CBEContext * pContext)
 {
-    VectorElement *pIter = pParameter->GetFirstDeclarator();
-    CBEDeclarator *pOriginalDecl = pParameter->GetNextDeclarator(pIter);
-    CBEDeclarator *pCallDecl = pParameter->GetNextDeclarator(pIter);
+    CBEDeclarator *pOriginalDecl = pParameter->GetDeclarator();
+    CBEDeclarator *pCallDecl = pParameter->GetCallDeclarator();
     if (!pCallDecl)
         pCallDecl = pOriginalDecl;
     WriteCallParameterName(pFile, pOriginalDecl, pCallDecl, pContext);
 }
 
-/**	\brief writes the name of a parameter
- *	\param pFile the file to write to
- *	\param pInternalDecl the internal parameter
+/** \brief writes the name of a parameter
+ *  \param pFile the file to write to
+ *  \param pInternalDecl the internal parameter
  *  \param pExternalDecl the calling parameter
- *	\param pContext the context of th write operation
+ *  \param pContext the context of th write operation
  *
  * Because the common Write function of CBEDeclarator writes a parameter definition we need something
  * else to write the parameter for a function call. This is simply the name of the parameter.
@@ -866,17 +901,17 @@ void CBEFunction::WriteCallParameterName(CBEFile * pFile, CBEDeclarator * pInter
         pFile->Print("*");
     if (nDiffStars > 0)
         pFile->Print("(");
-    pFile->Print("%s", (const char *) pExternalDecl->GetName());
+    pFile->Print("%s", pExternalDecl->GetName().c_str());
     if (nDiffStars > 0)
         pFile->Print(")");
     for (nCount = nDiffStars+1; nCount < 0; nCount++)
         pFile->Print(")");
 }
 
-/**	\brief writes additional parameters before other parameters for function call
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
- *	\return true if something was written
+/** \brief writes additional parameters before other parameters for function call
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *  \return true if something was written
  *
  * Print the parameter for the CORBA_Object.
  */
@@ -890,10 +925,10 @@ bool CBEFunction::WriteCallBeforeParameters(CBEFile * pFile, CBEContext * pConte
     return false;
 }
 
-/**	\brief write additional parameters after other parameters for function call
- *	\param pFile the file to write to
- *	\param pContext the context of th write operation
- *	\param bComma true if there has to be a comma before the parameter
+/** \brief write additional parameters after other parameters for function call
+ *  \param pFile the file to write to
+ *  \param pContext the context of th write operation
+ *  \param bComma true if there has to be a comma before the parameter
  *
  * Print the parameter for the CORBA_Environment
  */
@@ -910,46 +945,48 @@ void CBEFunction::WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContex
     }
 }
 
-/**	\brief searches for an attribute and returns reference to it
- *	\param nAttrType the type of the searched attribute
- *	\return reference to the attribute or 0 if not found
+/** \brief searches for an attribute and returns reference to it
+ *  \param nAttrType the type of the searched attribute
+ *  \return reference to the attribute or 0 if not found
  */
 CBEAttribute *CBEFunction::FindAttribute(int nAttrType)
 {
-  VectorElement *pIter = GetFirstAttribute();
+  vector<CBEAttribute*>::iterator iter = GetFirstAttribute();
   CBEAttribute *pAttr;
-  while ((pAttr = GetNextAttribute(pIter)) != 0)
+  while ((pAttr = GetNextAttribute(iter)) != 0)
     {
       if (pAttr->GetType() == nAttrType)
-	return pAttr;
+    return pAttr;
     }
   return 0;
 }
 
-/**	\brief writes the inline prefix just before a function definition
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/** \brief writes the inline prefix just before a function definition
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
  */
 void CBEFunction::WriteInlinePrefix(CBEFile * pFile, CBEContext * pContext)
 {
-  String sInline = pContext->GetNameFactory()->GetInlinePrefix(pContext);
-  pFile->Print("%s ", (const char *) sInline);
+    if (!pContext->IsOptionSet(PROGRAM_GENERATE_INLINE))
+        return;
+    string sInline = pContext->GetNameFactory()->GetInlinePrefix(pContext);
+    pFile->Print("%s ", sInline.c_str());
 }
 
-/**	\brief counts the number of string parameters
- *	\param nDirection the direction to count
+/** \brief counts the number of string parameters
+ *  \param nDirection the direction to count
  *  \param nMustAttrs the attributes which have to be set for the parameters
  *  \param nMustNotAttrs the attributes which must not be set for the parameters
- *	\return the number of string parameters
+ *  \return the number of string parameters
  *
  * A string is every parameter, which's function IsString returns true.
  */
 int CBEFunction::GetStringParameterCount(int nDirection, int nMustAttrs, int nMustNotAttrs)
 {
-    VectorElement *pIter = GetFirstParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
     CBETypedDeclarator *pParam;
     int nCount = 0;
-    while ((pParam = GetNextParameter(pIter)) != 0)
+    while ((pParam = GetNextParameter(iter)) != 0)
     {
         // if explicitely ATTR_IN (means only in) and dir is not in or
         // if explicitely ATTR_OUT (means only out) and dir is not out
@@ -983,16 +1020,16 @@ int CBEFunction::GetStringParameterCount(int nDirection, int nMustAttrs, int nMu
     return nCount;
 }
 
-/**	\brief counts number of variable sized parameters
- *	\param nDirection the direction to count
- *	\return the number of variable sized parameters
+/** \brief counts number of variable sized parameters
+ *  \param nDirection the direction to count
+ *  \return the number of variable sized parameters
  */
 int CBEFunction::GetVariableSizedParameterCount(int nDirection)
 {
-    VectorElement *pIter = GetFirstParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
     CBETypedDeclarator *pParam;
     int nCount = 0;
-    while ((pParam = GetNextParameter(pIter)) != 0)
+    while ((pParam = GetNextParameter(iter)) != 0)
     {
          // if explicitely ATTR_IN (means only in) and dir is not in or
          // if explicitely ATTR_OUT (means only out) and dir is not out
@@ -1010,57 +1047,69 @@ int CBEFunction::GetVariableSizedParameterCount(int nDirection)
     return nCount;
 }
 
-/**	\brief calculates the total size of the parameters
- *	\param nDirection the direction to count
+/** \brief calculates the total size of the parameters
+ *  \param nDirection the direction to count
  *  \param pContext the context of this calculation
- *	\return the size of the parameters
+ *  \return the size of the parameters
  *
- * The size of the function's parameters is the sum of the parameter's sizes. The size of a parameter
- * is calculcated by CBETypedDeclarator::GetSize().
+ * The size of the function's parameters is the sum of the parameter's sizes.
+ * The size of a parameter is calculcated by CBETypedDeclarator::GetSize().
  *
- * \todo If member is indirect, we should add size of size-attr instead of size of type
+ * \todo If member is indirect, we should add size of size-attr instead of
+ * size of type
  */
 int CBEFunction::GetSize(int nDirection, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstSortedParameter();
     CBETypedDeclarator *pParam;
     int nSize = 0;
-    while ((pParam = GetNextParameter(pIter)) != 0)
+    while ((pParam = GetNextSortedParameter(iter)) != 0)
     {
         // if direction is in and no ATTR_IN  or
         // if direction is out and no ATTR_OUT
         // then skip
         if (!pParam->IsDirection(nDirection))
             continue;
-        // a function cannot have bitfield parameters, so we don't need to test for those
-        // if size is negative (param is variable sized), then add parameters base type
+        // if attribute IGNORE skip
+        if (pParam->FindAttribute(ATTR_IGNORE))
+            continue;
+	// a function cannot have bitfield parameters, so we don't need to
+	// test for those if size is negative (param is variable sized), then
+	// add parameters base type
         // BTW: do not count message buffer parameter
         if (m_pMsgBuffer)
         {
             if (m_pMsgBuffer->GetAlias())
             {
-                String sMsgBuf = m_pMsgBuffer->GetAlias()->GetName();
+                string sMsgBuf = m_pMsgBuffer->GetAlias()->GetName();
                 if (pParam->FindDeclarator(sMsgBuf))
                     continue;
             }
         }
+
         if (pParam->IsVariableSized())
-		{
-		    CBEAttribute *pAttr = pParam->FindAttribute(ATTR_SIZE_IS);
-			if (!pAttr)
-			    pAttr = pParam->FindAttribute(ATTR_LENGTH_IS);
-			if (!pAttr)
-			    pAttr = pParam->FindAttribute(ATTR_MAX_IS);
-			if (pAttr && pAttr->IsOfType(ATTR_CLASS_INT))
-				nSize += pAttr->GetIntValue();
-			else
-			{
-				CBEType *pType = pParam->GetType();
+        {
+            CBEAttribute *pAttr = pParam->FindAttribute(ATTR_SIZE_IS);
+            if (!pAttr)
+                pAttr = pParam->FindAttribute(ATTR_LENGTH_IS);
+            if (!pAttr)
+                pAttr = pParam->FindAttribute(ATTR_MAX_IS);
+            if (pAttr && pAttr->IsOfType(ATTR_CLASS_INT))
+            {
+                // check alignment
+                int nAttrSize = pAttr->GetIntValue();
+                nSize += nAttrSize + GetParameterAlignment(nSize, nAttrSize, pContext);
+            }
+            else
+            {
+                CBEType *pType = pParam->GetType();
                 if ((pAttr = pParam->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
-					pType = pAttr->GetAttrType();
-				nSize += pType->GetSize();
-			}
-		}
+                    pType = pAttr->GetAttrType();
+                // check alignment
+                int nTypeSize = pType->GetSize();
+                nSize += nTypeSize + GetParameterAlignment(nSize, nTypeSize, pContext);
+            }
+        }
         else
         {
             // GetSize checks for referenced out and struct
@@ -1070,18 +1119,25 @@ int CBEFunction::GetSize(int nDirection, CBEContext *pContext)
             if (nParamSize < 0)
             {
                 // pointer (without size attributes!)
-				CBEType *pType = pParam->GetType();
-				CBEAttribute *pAttr;
+                CBEType *pType = pParam->GetType();
+                CBEAttribute *pAttr;
                 if ((pAttr = pParam->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
-					pType = pAttr->GetAttrType();
-				nSize += pType->GetSize();
+                    pType = pAttr->GetAttrType();
+                // check alignment
+                int nTypeSize = pType->GetSize();
+                nSize += nTypeSize + GetParameterAlignment(nSize , nTypeSize, pContext);
             }
             else
-                nSize += nParamSize;
+            {
+                // check alignment
+                nSize += nParamSize + GetParameterAlignment(nSize, nParamSize, pContext);
+            }
         }
     }
     // add return var's size
-    nSize += GetReturnSize(nDirection, pContext);
+    int nTypeSize = GetReturnSize(nDirection, pContext);
+    nSize += nTypeSize + GetParameterAlignment(nSize, nTypeSize, pContext);
+
     return nSize;
 }
 
@@ -1127,16 +1183,16 @@ int CBEFunction::GetReturnSize(int nDirection, CBEContext *pContext)
 int CBEFunction::GetMaxSize(int nDirection, CBEContext *pContext)
 {
     // get msg buffer's name
-	String sMsgBuf ;
-	if (m_pMsgBuffer)
-	{
-		if (m_pMsgBuffer->GetAlias())
-			sMsgBuf = m_pMsgBuffer->GetAlias()->GetName();
-	}
-    VectorElement *pIter = GetFirstParameter();
+    string sMsgBuf ;
+    if (m_pMsgBuffer)
+    {
+        if (m_pMsgBuffer->GetAlias())
+            sMsgBuf = m_pMsgBuffer->GetAlias()->GetName();
+    }
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstSortedParameter();
     CBETypedDeclarator *pParam;
     int nSize = 0;
-    while ((pParam = GetNextParameter(pIter)) != 0)
+    while ((pParam = GetNextSortedParameter(iter)) != 0)
     {
         // if direction is in and no ATTR_IN  or
         // if direction is out and no ATTR_OUT
@@ -1146,32 +1202,37 @@ int CBEFunction::GetMaxSize(int nDirection, CBEContext *pContext)
         // a function cannot have bitfield parameters, so we don't need to test for those
         // if size is negative (param is variable sized), then add parameters base type
         // BTW: do not count message buffer parameter
-		if (pParam->FindDeclarator(sMsgBuf))
-			continue;
+        if (pParam->FindDeclarator(sMsgBuf))
+            continue;
 
         // GetMaxSize already checks for variable sized params and
         // tries to find their MAX values. If there is no way to determine
         // them, it returns a negative value. (should issue a warning)
-        int nParamSize = pParam->GetMaxSize(pContext);
+        int nParamSize = pParam->GetMaxSize(true, pContext);
         if (nParamSize < 0)
         {
             if (pContext->IsWarningSet(PROGRAM_WARNING_NO_MAXSIZE))
             {
-                VectorElement *pI = pParam->GetFirstDeclarator();
-                CBEDeclarator *pD = pParam->GetNextDeclarator(pI);
-                CCompiler::Warning("%s in %s has no maximum size", (const char*)pD->GetName(), (const char*)GetName());
+                vector<CBEDeclarator*>::iterator iterD = pParam->GetFirstDeclarator();
+                CBEDeclarator *pD = *iterD;
+                CCompiler::Warning("%s in %s has no maximum size",
+                    pD->GetName().c_str(), GetName().c_str());
             }
-			CBEType *pType = pParam->GetType();
-			CBEAttribute *pAttr;
-			if ((pAttr = pParam->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
-				pType = pAttr->GetAttrType();
-            nSize += pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType());
+            CBEType *pType = pParam->GetType();
+            CBEAttribute *pAttr;
+            if ((pAttr = pParam->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+                pType = pAttr->GetAttrType();
+            // check alignment
+            int nTypeSize = pContext->GetSizes()->GetMaxSizeOfType(pType->GetFEType());
+            nSize += nTypeSize + GetParameterAlignment(nSize, nTypeSize, pContext);
         }
         else
-            nSize += nParamSize;
+            nSize += nParamSize + GetParameterAlignment(nSize, nParamSize, pContext);
     }
     // add return var's size
-    nSize += GetMaxReturnSize(nDirection, pContext);
+    int nTypeSize = GetMaxReturnSize(nDirection, pContext);
+    nSize += nTypeSize + GetParameterAlignment(nSize, nTypeSize, pContext);
+
     return nSize;
 }
 
@@ -1190,7 +1251,7 @@ int CBEFunction::GetMaxReturnSize(int nDirection, CBEContext *pContext)
     {
         if (m_pReturnVar->IsDirection(nDirection))
         {
-            int nParamSize = m_pReturnVar->GetMaxSize(pContext);
+            int nParamSize = m_pReturnVar->GetMaxSize(true, pContext);
             if (nParamSize < 0) // cannot issue warning, since return type cannot have attributes defined
                 return pContext->GetSizes()->GetMaxSizeOfType(m_pReturnVar->GetType()->GetFEType());
             else
@@ -1205,22 +1266,27 @@ int CBEFunction::GetMaxReturnSize(int nDirection, CBEContext *pContext)
  *  \param pContext the context of this counting
  *  \return the size in bytes of all fixed sized parameters
  *
- * The difference between this function and the normal GetSize function is, that the
- * above function counts array, which have a fixed upper bound, but also a size_is or
- * length_is parameter, which makes them effectively variable sized parameters.
+ * The difference between this function and the normal GetSize function is,
+ * that the above function counts array, which have a fixed upper bound, but
+ * also a size_is or length_is parameter, which makes them effectively
+ * variable sized parameters.
  */
 int CBEFunction::GetFixedSize(int nDirection, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstSortedParameter();
     CBETypedDeclarator *pParam;
     int nSize = 0;
-    while ((pParam = GetNextParameter(pIter)) != 0)
+    while ((pParam = GetNextSortedParameter(iter)) != 0)
     {
         // if direction is in and no ATTR_IN  or
         // if direction is out and no ATTR_OUT
         // then skip
         if (!pParam->IsDirection(nDirection))
             continue;
+        // skip parameters to ignore
+        if (pParam->FindAttribute(ATTR_IGNORE))
+            continue;
+
         // function cannot have bitfield params, so we dont test for them
         // if param is not variable sized, then add its size
         // BTW: do not count message buffer parameter
@@ -1228,41 +1294,69 @@ int CBEFunction::GetFixedSize(int nDirection, CBEContext *pContext)
         {
             if (m_pMsgBuffer->GetAlias())
             {
-                String sMsgBuf = m_pMsgBuffer->GetAlias()->GetName();
+                string sMsgBuf = m_pMsgBuffer->GetAlias()->GetName();
                 if (pParam->FindDeclarator(sMsgBuf))
                     continue;
             }
         }
-        // only count fixed sized
+
+        // only count fixed sized or with attribute max_is
+        // var-size can be from size_is attribute
         if (pParam->IsFixedSized())
         {
             // pParam->GetSize also tests for referenced OUT
             // and referenced structs and delivers correct size
             // BUT: it does not check for pointered vars, which
             // should be dereferenced
+
             int nParamSize = pParam->GetSize();
             if (nParamSize < 0)
             {
-				CBEType *pType = pParam->GetType();
-				CBEAttribute *pAttr;
+                CBEType *pType = pParam->GetType();
+                CBEAttribute *pAttr;
                 if ((pAttr = pParam->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
-					pType = pAttr->GetAttrType();
+                    pType = pAttr->GetAttrType();
                 // pointer (without size attributes!)
                 if (pType)
-                    nSize += pType->GetSize();
+                {
+                    // check alignment
+                    int nTypeSize = pType->GetSize();
+                    nSize += nTypeSize +
+			GetParameterAlignment(nSize, nTypeSize, pContext);
+                }
                 else
                 {
-                    VectorElement *pI = pParam->GetFirstDeclarator();
-                    CBEDeclarator *pD = pParam->GetNextDeclarator(pI);
-                    CCompiler::Error("%s in %s has no type\n", (const char*)pD->GetName(), (const char*)GetName());
+                    CBEDeclarator *pD = pParam->GetDeclarator();
+                    CCompiler::Error("%s in %s has no type\n", 
+			pD->GetName().c_str(), GetName().c_str());
                 }
             }
             else
-                nSize += nParamSize;
+            {
+                // check alignment
+                nSize += nParamSize +
+		    GetParameterAlignment(nSize, nParamSize, pContext);
+            }
+        }
+        else
+        {
+            // for the L4 backend and [ref, size_is(), max_is()] is NOT fixed,
+            // since it is transmitted using indirect strings, not the fixed
+            // data array. Therefore, CL4BETypedDeclarator has to overload
+            // GetMaxSize to avoid this case.
+
+            // an array with size_is attribute is still fixed in size
+            int nParamSize = pParam->GetMaxSize(false, pContext);
+            if (nParamSize > 0)
+                nSize += nParamSize +
+		    GetParameterAlignment(nSize, nParamSize, pContext);
         }
     }
     // add return var's size
-    nSize += GetFixedReturnSize(nDirection, pContext);
+    // check alignment
+    int nTypeSize = GetFixedReturnSize(nDirection, pContext);
+    nSize += nTypeSize + GetParameterAlignment(nSize, nTypeSize, pContext);
+
     return nSize;
 }
 
@@ -1291,10 +1385,10 @@ int CBEFunction::GetFixedReturnSize(int nDirection, CBEContext *pContext)
     return 0;
 }
 
-/**	\brief adds a reference to the message buffer to the parameter list
- *	\param pFEInterface the responding front-end interface
- *	\param pContext the context of the code generation
- *	\return true if successful
+/** \brief adds a reference to the message buffer to the parameter list
+ *  \param pFEInterface the responding front-end interface
+ *  \param pContext the context of the code generation
+ *  \return true if successful
  *
  * We add a parameter of user defined type (the message buffer type has been declared before) with
  * the message buffer variable name and one asterisk. This way we use the message buffer by reference.
@@ -1306,8 +1400,8 @@ int CBEFunction::GetFixedReturnSize(int nDirection, CBEContext *pContext)
 bool CBEFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext)
 {
     if (m_pMsgBuffer)
-	    delete m_pMsgBuffer;
-    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType();
+        delete m_pMsgBuffer;
+    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType(true);
     m_pMsgBuffer->SetParent(this);
     if (!m_pMsgBuffer->CreateBackEnd(pFEInterface, pContext))
     {
@@ -1325,54 +1419,64 @@ bool CBEFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pCo
  */
 bool CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation, CBEContext * pContext)
 {
-    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType();
+    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType(false);
     m_pMsgBuffer->SetParent(this);
     if (!m_pMsgBuffer->CreateBackEnd(pFEOperation, pContext))
     {
-     	delete m_pMsgBuffer;
+         delete m_pMsgBuffer;
         m_pMsgBuffer = 0;
-   	    return false;
+           return false;
     }
     return true;
 }
 
-/**	\brief marshals the return value
- *	\param pFile the file to write to
- *	\param nStartOffset the offset at which the return value should be marshalled
+/** \brief marshals the return value
+ *  \param pFile the file to write to
+ *  \param nStartOffset the offset at which the return value should be marshalled
  *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
- *	\param pContext the context of the write operation
- *	\return the number of bytes used for the return value
+ *  \param pContext the context of the write operation
+ *  \return the number of bytes used for the return value
  *
  * This function assumes that it is called before the marshalling of the other parameters.
  */
 int CBEFunction::WriteMarshalReturn(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
 {
+    VERBOSE("CBEFunction::WriteMarshalReturn(%s) called\n", GetName().c_str());
+
     if (!m_pReturnVar)
         return 0;
     if (GetReturnType()->IsVoid())
         return 0;
     CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    int nSize = pMarshaller->Marshal(pFile, m_pReturnVar, nStartOffset, bUseConstOffset, m_vParameters.GetSize() == 0, pContext);
+    int nSize = pMarshaller->Marshal(pFile, m_pReturnVar, nStartOffset, bUseConstOffset, m_vParameters.size() == 0, pContext);
     delete pMarshaller;
+
+    VERBOSE("CBEFunction::WriteMarshalReturn(%s) finished\n", GetName().c_str());
+
     return nSize;
 }
 
-/**	\brief unmarshals the return value
- *	\param pFile the file to write to
- *	\param nStartOffset the offset in the message buffer to start unmarshalling
+/** \brief unmarshals the return value
+ *  \param pFile the file to write to
+ *  \param nStartOffset the offset in the message buffer to start unmarshalling
  *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
- *	\param pContext the context of the write operation
- *	\return thr number of bytes unmarshalled
+ *  \param pContext the context of the write operation
+ *  \return thr number of bytes unmarshalled
  */
 int CBEFunction::WriteUnmarshalReturn(CBEFile * pFile, int nStartOffset, bool& bUseConstOffset, CBEContext * pContext)
 {
+    VERBOSE("CBEFunction::WriteUnmarshalReturn(%s) called\n", GetName().c_str());
+
     if (!m_pReturnVar)
         return 0;
     if (GetReturnType()->IsVoid())
         return 0;
     CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    int nSize = pMarshaller->Unmarshal(pFile, m_pReturnVar, nStartOffset, bUseConstOffset, m_vParameters.GetSize() == 0, pContext);
+    int nSize = pMarshaller->Unmarshal(pFile, m_pReturnVar, nStartOffset, bUseConstOffset, m_vParameters.size() == 0, pContext);
     delete pMarshaller;
+
+    VERBOSE("CBEFunction::WriteUnmarshalReturn(%s) finished\n", GetName().c_str());
+
     return nSize;
 }
 
@@ -1392,13 +1496,20 @@ int CBEFunction::WriteUnmarshalReturn(CBEFile * pFile, int nStartOffset, bool& b
  */
 int CBEFunction::WriteMarshalException(CBEFile* pFile, int nStartOffset, bool& bUseConstOffset, CBEContext* pContext)
 {
+    VERBOSE("CBEFunction::WriteMarshalException(%s) called\n", GetName().c_str());
+
+    if (FindAttribute(ATTR_NOEXCEPTIONS))
+        return 0;
     if (!m_pExceptionWord)
-	    return 0;
+        return 0;
     CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-	int nSize = pMarshaller->Marshal(pFile, m_pExceptionWord, nStartOffset, bUseConstOffset,
-	    (m_vParameters.GetSize() == 0) && !m_pReturnVar, pContext);
-	delete pMarshaller;
-	return nSize;
+    int nSize = pMarshaller->Marshal(pFile, m_pExceptionWord, nStartOffset, bUseConstOffset,
+        (m_vParameters.size() == 0) && !m_pReturnVar, pContext);
+    delete pMarshaller;
+
+    VERBOSE("CBEFunction::WriteMarshalException(%s) finished\n", GetName().c_str());
+
+    return nSize;
 }
 
 /** \brief unmarshals the exception
@@ -1410,15 +1521,22 @@ int CBEFunction::WriteMarshalException(CBEFile* pFile, int nStartOffset, bool& b
  */
 int CBEFunction::WriteUnmarshalException(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext)
 {
+    VERBOSE("CBEFunction::WriteUnmarshalException(%s) called\n", GetName().c_str());
+
+    if (FindAttribute(ATTR_NOEXCEPTIONS))
+        return 0;
     if (!m_pExceptionWord)
-	    return 0;
+        return 0;
     CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-	int nSize = pMarshaller->Unmarshal(pFile, m_pExceptionWord, nStartOffset, bUseConstOffset,
-	    (m_vParameters.GetSize() == 0) && !m_pReturnVar, pContext);
-	delete pMarshaller;
-	// extract the exception from the word
-	WriteEnvExceptionFromWord(pFile, pContext);
-	return nSize;
+    int nSize = pMarshaller->Unmarshal(pFile, m_pExceptionWord, nStartOffset, bUseConstOffset,
+        (m_vParameters.size() == 0) && !m_pReturnVar, pContext);
+    delete pMarshaller;
+    // extract the exception from the word
+    WriteEnvExceptionFromWord(pFile, pContext);
+
+    VERBOSE("CBEFunction::WriteUnmarshalException(%s) finished\n", GetName().c_str());
+
+    return nSize;
 }
 
 /** \brief writes the code to exctract the environment values from the exception word
@@ -1427,34 +1545,58 @@ int CBEFunction::WriteUnmarshalException(CBEFile* pFile,  int nStartOffset,  boo
  */
 void CBEFunction::WriteEnvExceptionFromWord(CBEFile* pFile, CBEContext* pContext)
 {
-	// get the environment name
-	VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-	CBEDeclarator *pEnv = m_pCorbaEnv->GetNextDeclarator(pIter);
-	bool bEnvPtr = pEnv->GetStars() > 0;
-	// get the exception variable's name
-	pIter = m_pExceptionWord->GetFirstDeclarator();
-	CBEDeclarator *pException = m_pExceptionWord->GetNextDeclarator(pIter);
-	// now assign the values
-	// env->major = ((dice_CORBA_exception_type)exception).major
-	// env->repos_id = ((dice_CORBA_exception_type)exception).repos_id
-	pFile->PrintIndent("%s%smajor = ((dice_CORBA_exception_type){._raw=%s})._s.major;\n",
-	    (const char*)pEnv->GetName(), bEnvPtr?"->":".", (const char*)pException->GetName());
-	pFile->PrintIndent("%s%srepos_id = ((dice_CORBA_exception_type){._raw=%s})._s.repos_id;\n",
-	    (const char*)pEnv->GetName(), bEnvPtr?"->":".", (const char*)pException->GetName());
+    VERBOSE("CBEFunction::WriteEnvExceptionFromWord(%s) called\n", GetName().c_str());
+
+    if (FindAttribute(ATTR_NOEXCEPTIONS))
+        return;
+    if (!m_pExceptionWord)
+        return;
+    // get the environment name
+    CBEDeclarator *pEnv = m_pCorbaEnv->GetDeclarator();
+    bool bEnvPtr = pEnv->GetStars() > 0;
+    // get the exception variable's name
+    CBEDeclarator *pException = m_pExceptionWord->GetDeclarator();
+    // now assign the values
+    // env->major = ((dice_CORBA_exception_type)exception).major
+    // env->repos_id = ((dice_CORBA_exception_type)exception).repos_id
+
+    if (pContext->IsBackEndSet(PROGRAM_BE_C))
+    {
+	*pFile << "\t" << pEnv->GetName() << (bEnvPtr ? "->" : ".") <<
+	    "major = ((dice_CORBA_exception_type){._raw=" << 
+	    pException->GetName() << "})._s.major;\n";
+	*pFile << "\t" << pEnv->GetName() << (bEnvPtr ? "->" : ".") <<
+	    "repos_id = ((dice_CORBA_exception_type){._raw=" <<
+	    pException->GetName() << "})._s.repos_id;\n";
+    }
+    else if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+	*pFile << "\tdice_CORBA_exception_type _dice_exc_tmp = " <<
+	    "{ _dice_exc_tmp._raw = " << pException->GetName() << "};\n";
+	*pFile << "\t" << pEnv->GetName() << (bEnvPtr ? "->" : ".") <<
+	    "major = _dice_exc_tmp._s.major;\n";
+	*pFile << "\t" << pEnv->GetName() << (bEnvPtr ? "->" : ".") <<
+	    "repos_id = _dice_exc_tmp._s.repos_id;\n";
+    }
+    VERBOSE("CBEFunction::WriteEnvExceptionFromWord(%s) called\n", 
+	GetName().c_str());
 }
 
-/**	\brief initializes and sets the return var to a new value
- *	\param bUnsigned if the new return type should be unsigned
- *	\param nSize the size of the type
- *	\param nFEType the front-end type number
- *	\param sName the new name of the return variable
- *	\param pContext the context of the create process
- *	\return true if successful
+/** \brief initializes and sets the return var to a new value
+ *  \param bUnsigned if the new return type should be unsigned
+ *  \param nSize the size of the type
+ *  \param nFEType the front-end type number
+ *  \param sName the new name of the return variable
+ *  \param pContext the context of the create process
+ *  \return true if successful
  *
- * The type and the name should not be initialized yet. This is all done by this function.
+ * The type and the name should not be initialized yet. This is all done by
+ * this function.
  */
-bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType, String sName, CBEContext * pContext)
+bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType,
+    string sName, CBEContext * pContext)
 {
+    VERBOSE("%s called\n", __PRETTY_FUNCTION__);
     // delete old
     if (m_pReturnVar)
         delete m_pReturnVar;
@@ -1469,6 +1611,8 @@ bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType, String sN
         delete pType;
         delete m_pReturnVar;
         m_pReturnVar = 0;
+        VERBOSE("%s failed because type could not be created\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
     if (!m_pReturnVar->CreateBackEnd(pType, sName, pContext))
@@ -1476,9 +1620,11 @@ bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType, String sN
         delete pType;
         delete m_pReturnVar;
         m_pReturnVar = 0;
+        VERBOSE("%s failed because var could not be created\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
-    delete pType;		// is cloned by typed decl.
+    delete pType;        // is cloned by typed decl.
     // add OUT attribute
     CBEAttribute *pAttr = pContext->GetClassFactory()->GetNewAttribute();
     m_pReturnVar->AddAttribute(pAttr);
@@ -1487,18 +1633,19 @@ bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType, String sN
         m_pReturnVar->RemoveAttribute(pAttr);
         delete pAttr;
     }
+    VERBOSE("%s returns true\n", __PRETTY_FUNCTION__);
     return true;
 }
 
-/**	\brief initializes and sets the return var to a new value
- *	\param pType the new type of the return variable
- *	\param sName the new name of the return variable
- *	\param pContext the context of the code generation
- *	\return true if successful
+/** \brief initializes and sets the return var to a new value
+ *  \param pType the new type of the return variable
+ *  \param sName the new name of the return variable
+ *  \param pContext the context of the code generation
+ *  \return true if successful
  *
  * The type and the name should not be initialized yet. This is all done by this function.
  */
-bool CBEFunction::SetReturnVar(CBEType * pType, String sName, CBEContext * pContext)
+bool CBEFunction::SetReturnVar(CBEType * pType, string sName, CBEContext * pContext)
 {
     // delete old
     if (m_pReturnVar)
@@ -1508,11 +1655,11 @@ bool CBEFunction::SetReturnVar(CBEType * pType, String sName, CBEContext * pCont
     m_pReturnVar = pContext->GetClassFactory()->GetNewTypedDeclarator();
     m_pReturnVar->SetParent(this);
     pType->SetParent(m_pReturnVar);
-	bool bRet = false;
-	if (pType->IsKindOf(RUNTIME_CLASS(CBEOpcodeType)))
-	    bRet = ((CBEOpcodeType*)pType)->CreateBackEnd(pContext);
-	if (pType->IsKindOf(RUNTIME_CLASS(CBEReplyCodeType)))
-	    bRet = ((CBEReplyCodeType*)pType)->CreateBackEnd(pContext);
+    bool bRet = false;
+    if (dynamic_cast<CBEOpcodeType*>(pType))
+        bRet = ((CBEOpcodeType*)pType)->CreateBackEnd(pContext);
+    if (dynamic_cast<CBEReplyCodeType*>(pType))
+        bRet = ((CBEReplyCodeType*)pType)->CreateBackEnd(pContext);
     if (!bRet)
     {
         delete pType;
@@ -1527,7 +1674,7 @@ bool CBEFunction::SetReturnVar(CBEType * pType, String sName, CBEContext * pCont
         m_pReturnVar = 0;
         return false;
     }
-    delete pType;		// is cloned by typed decl
+    delete pType;        // is cloned by typed decl
     // add OUT attribute
     CBEAttribute *pAttr = pContext->GetClassFactory()->GetNewAttribute();
     m_pReturnVar->AddAttribute(pAttr);
@@ -1539,13 +1686,13 @@ bool CBEFunction::SetReturnVar(CBEType * pType, String sName, CBEContext * pCont
     return true;
 }
 
-/**	\brief initializes and sets the return var to a new value
- *	\param pFEType the front-end type to use as reference for the new type
- *	\param sName the name of the variable
- *	\param pContext the context of the code generation
- *	\return true if successful
+/** \brief initializes and sets the return var to a new value
+ *  \param pFEType the front-end type to use as reference for the new type
+ *  \param sName the name of the variable
+ *  \param pContext the context of the code generation
+ *  \return true if successful
  */
-bool CBEFunction::SetReturnVar(CFETypeSpec * pFEType, String sName, CBEContext * pContext)
+bool CBEFunction::SetReturnVar(CFETypeSpec * pFEType, string sName, CBEContext * pContext)
 {
     // delete old
     if (m_pReturnVar)
@@ -1570,7 +1717,7 @@ bool CBEFunction::SetReturnVar(CFETypeSpec * pFEType, String sName, CBEContext *
         m_pReturnVar = 0;
         return false;
     }
-    delete pType;		// cloned by typed declarator
+    delete pType;        // cloned by typed declarator
     // if string, say so
     if (pFEType->GetType() == TYPE_CHAR_ASTERISK)
     {
@@ -1593,18 +1740,18 @@ bool CBEFunction::SetReturnVar(CFETypeSpec * pFEType, String sName, CBEContext *
     return true;
 }
 
-/**	\brief searches for a parameter with the given name
- *	\param sName the name of the parameter
+/** \brief searches for a parameter with the given name
+ *  \param sName the name of the parameter
  *  \param bCall true if an call parameter is searched
- *	\return a reference to the parameter or 0 if not found
+ *  \return a reference to the parameter or 0 if not found
  */
-CBETypedDeclarator *CBEFunction::FindParameter(String sName, bool bCall)
+CBETypedDeclarator *CBEFunction::FindParameter(string sName, bool bCall)
 {
     if (bCall)
     {
-        VectorElement *pIter = GetFirstCallParameter();
+        vector<CBETypedDeclarator*>::iterator iter = GetFirstCallParameter();
         CBETypedDeclarator *pParameter;
-        while ((pParameter = GetNextCallParameter(pIter)) != 0)
+        while ((pParameter = GetNextCallParameter(iter)) != 0)
         {
             if (pParameter->FindDeclarator(sName))
                 return pParameter;
@@ -1612,9 +1759,9 @@ CBETypedDeclarator *CBEFunction::FindParameter(String sName, bool bCall)
     }
     else
     {
-        VectorElement *pIter = GetFirstParameter();
+        vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
         CBETypedDeclarator *pParameter;
-        while ((pParameter = GetNextParameter(pIter)) != 0)
+        while ((pParameter = GetNextParameter(iter)) != 0)
         {
             if (pParameter->FindDeclarator(sName))
                 return pParameter;
@@ -1653,8 +1800,8 @@ bool CBEFunction::DoUnmarshalParameter(CBETypedDeclarator *pParameter, CBEContex
  *  \param bCall true if the parameter is a call parameter
  *  \return true if we need a reference
  *
- * An additional reference might be suitable if the parameter is declared without it, but
- * might be used in multiple places with an reference.
+ * An additional reference might be suitable if the parameter is declared
+ * without it, but might be used in multiple places with an reference.
  *
  * By default a parameter needs no additional reference.
  */
@@ -1666,14 +1813,14 @@ bool CBEFunction::HasAdditionalReference(CBEDeclarator *pDeclarator, CBEContext 
 /** \brief checks if this function has variable sized parameters
  *  \return true if it has
  *
- * Parameters are variable sized if they are variable sized arrays or strings (meaning
- * are associated with a string attribute).
+ * Parameters are variable sized if they are variable sized arrays or strings
+ * (meaning are associated with a string attribute).
  */
 bool CBEFunction::HasVariableSizedParameters(int nDirection)
 {
-    VectorElement *pIter = GetFirstParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
     CBETypedDeclarator *pParameter;
-    while ((pParameter = GetNextParameter(pIter)) != 0)
+    while ((pParameter = GetNextParameter(iter)) != 0)
     {
         if (!pParameter->IsDirection(nDirection))
              continue;
@@ -1681,9 +1828,9 @@ bool CBEFunction::HasVariableSizedParameters(int nDirection)
             return true;
     }
     if (m_pReturnVar && m_pReturnVar->IsDirection(nDirection))
-	{
-		if (m_pReturnVar->IsVariableSized() || m_pReturnVar->IsString())
-			return true;
+    {
+        if (m_pReturnVar->IsVariableSized() || m_pReturnVar->IsString())
+            return true;
     }
     return false;
 }
@@ -1691,44 +1838,59 @@ bool CBEFunction::HasVariableSizedParameters(int nDirection)
 /** \brief sorts the parameters of this function according to the given mode
  *  \param nMode the sorting mode
  *  \param pContext the context of the sorting
- *  \return success status (zero if successful)
+ *  \return true on success status
  *
- * We do something like bubble-sort. We start from the beginning and check whether the
- * parameter after the current is smaller. If it is they are exchanged. We do this as long
- * as there is something to exchange.
+ * We do a insertion sort. We create a second vector, which receives the sorted
+ * parameter list. After sorting the vectors are swapped.
  */
-int CBEFunction::SortParameters(int nMode, CBEContext *pContext)
+bool CBEFunction::SortParameters(int nMode, CBEContext *pContext)
 {
-    bool bDidSomething;
-    do
+    if (m_vSortedParameters.empty())
+        return true;
+
+    // allocate temporary vector to receive sorted parameter list
+    // (do not set size, otherwise push_back and insert won't work)
+    vector<CBETypedDeclarator*> vSorted;
+
+    // insert first parameter into sorted vector
+    vSorted.push_back(m_vSortedParameters.front());
+
+    // iterate over rest and insert it according to value
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = m_vSortedParameters.begin() + 1;
+         iter != m_vSortedParameters.end(); iter++)
     {
-        // reset did something
-        bDidSomething = false;
-        // move one bubble through the stack
-        VectorElement *pIter = GetFirstSortedParameter();
-        CBETypedDeclarator *pParameter;
-        while ((pParameter = GetNextSortedParameter(pIter)) != 0)
+        bool bInserted = false;
+        // search for element in sorted list, which is "larger" than current.
+        // then insert this element before it
+        // if none found, insert at end
+        vector<CBETypedDeclarator*>::iterator iterS;
+        for (iterS = vSorted.begin(); iterS != vSorted.end(); iterS++)
         {
-            // get successor
-            VectorElement *pIterS = pIter;
-            CBETypedDeclarator *pSuccessor = GetNextSortedParameter(pIterS);
-            if (pSuccessor)
+            // DoExchangeParameters returns true if the first parameter
+            // should be exchanged with the second parameter, meaning it
+            // is greater than the second parameter.
+            // so to find out if an element in the sorted list is larger
+            // than the element from the current list, we have to use the
+            // element of the sorted list as first parameter.
+            if (*iter && *iterS &&
+                DoExchangeParameters(*iterS, *iter, pContext))
             {
-                bool bExchange = DoSortParameters(pParameter, pSuccessor, pContext);
-                if (bExchange)
-                {
-                    // iterators stay the same, so the next GetNextParameter will return
-                    // the same parameter. Thus we can push this bubble through the whole
-                    // parameter list
-                    if (!m_vSortedParameters.Exchange(pParameter, pSuccessor))
-                        return 1;
-                    bDidSomething = true;
-                }
+                vSorted.insert(iterS, *iter);
+                bInserted = true;
+                break;
             }
         }
+        // if not inserted anywhere, then iterS is vSorted.end()
+        if (!bInserted)
+            vSorted.push_back(*iter);
     }
-    while (bDidSomething);
-    return 0;
+
+    // now swap vectors
+    m_vSortedParameters.swap(vSorted);
+    vSorted.clear();
+
+    return true;
 }
 
 /** \brief decides whether parameters are exchanged during sorting
@@ -1745,11 +1907,23 @@ int CBEFunction::SortParameters(int nMode, CBEContext *pContext)
  * because parameters of a function cannot contain bitfields we don't need
  * to test for GetSize() == 0.
  */
-bool CBEFunction::DoSortParameters(CBETypedDeclarator *pPrecessor, CBETypedDeclarator *pSuccessor, CBEContext *pContext)
+bool
+CBEFunction::DoExchangeParameters(CBETypedDeclarator *pPrecessor,
+    CBETypedDeclarator *pSuccessor,
+    CBEContext *pContext)
 {
-    return (pPrecessor->IsVariableSized() && !(pSuccessor->IsVariableSized()))
-        || (((!pPrecessor->IsVariableSized()) && (!pSuccessor->IsVariableSized()))
-        && (pPrecessor->GetSize() > pSuccessor->GetSize()));
+/*    DTRACE("DoExchangeParameters(%s, %s) var (%s, %s) size (%d, %d)\n",
+        ()((*pPrecessor->GetFirstDeclarator())->GetName()),
+        ()((*pSuccessor->GetFirstDeclarator())->GetName()),
+        (pPrecessor->IsVariableSized())?"yes":"no",
+        (pSuccessor->IsVariableSized())?"yes":"no",
+        pPrecessor->GetSize(), pSuccessor->GetSize());*/
+    if (pPrecessor->IsVariableSized() && !(pSuccessor->IsVariableSized()))
+        return true;
+    if (!pPrecessor->IsVariableSized() && !pSuccessor->IsVariableSized()
+        && (pPrecessor->GetSize() > pSuccessor->GetSize()))
+        return true;
+    return false;
 }
 
 /** \brief retrieves a pointer to the interface, which owns this function
@@ -1760,7 +1934,7 @@ CBEClass* CBEFunction::GetClass()
     CBEObject *pCurrent = (CBEObject*)GetParent();
     while (pCurrent)
     {
-        if (pCurrent->IsKindOf(RUNTIME_CLASS(CBEClass)))
+        if (dynamic_cast<CBEClass*>(pCurrent))
             return (CBEClass*)pCurrent;
         pCurrent = (CBEObject*)(pCurrent->GetParent());
     }
@@ -1783,17 +1957,17 @@ int CBEFunction::GetParameterCount(int nFEType, int nDirection)
 
     int nCount = 0;
 
-	CBEType *pType;
-	CBEAttribute *pAttr;
-    VectorElement *pIter = GetFirstParameter();
+    CBEType *pType;
+    CBEAttribute *pAttr;
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
     CBETypedDeclarator *pParameter;
-    while ((pParameter = GetNextParameter(pIter)) != 0)
+    while ((pParameter = GetNextParameter(iter)) != 0)
     {
         if (!pParameter->IsDirection(nDirection))
             continue;
-		pType = pParameter->GetType();
-		if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
-			pType = pAttr->GetAttrType();
+        pType = pParameter->GetType();
+        if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+            pType = pAttr->GetAttrType();
         if (pType->IsOfType(nFEType))
             nCount++;
     }
@@ -1807,19 +1981,24 @@ int CBEFunction::GetParameterCount(int nFEType, int nDirection)
  *  \param nDirection the direction to count
  *  \return the number of parameters with or without the specified attributes
  */
-int CBEFunction::GetParameterCount(int nMustAttrs, int nMustNotAttrs, int nDirection)
+int 
+CBEFunction::GetParameterCount(int nMustAttrs, 
+    int nMustNotAttrs, 
+    int nDirection)
 {
     if (nDirection == 0)
     {
-        int nCountIn = GetParameterCount(nMustAttrs, nMustNotAttrs, DIRECTION_IN);
-        int nCountOut = GetParameterCount(nMustAttrs, nMustNotAttrs, DIRECTION_OUT);
+        int nCountIn = GetParameterCount(nMustAttrs, nMustNotAttrs, 
+	    DIRECTION_IN);
+        int nCountOut = GetParameterCount(nMustAttrs, nMustNotAttrs, 
+	    DIRECTION_OUT);
         return MAX(nCountIn, nCountOut);
     }
 
     int nCount = 0;
-    VectorElement *pIter = GetFirstParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
     CBETypedDeclarator *pParameter;
-    while ((pParameter = GetNextParameter(pIter)) != 0)
+    while ((pParameter = GetNextParameter(iter)) != 0)
     {
         if (!pParameter->IsDirection(nDirection))
             continue;
@@ -1829,10 +2008,10 @@ int CBEFunction::GetParameterCount(int nMustAttrs, int nMustNotAttrs, int nDirec
         // test for attributes that it must NOT have (skip count)
         if (pParameter->FindAttribute(nMustNotAttrs))
             continue;
-        // count 
+        // count
         nCount++;
     }
-    return nCount;    
+    return nCount;
 }
 
 /** \brief sets the m_bCastMsgBufferOnCall member
@@ -1851,13 +2030,13 @@ void CBEFunction::SetMsgBufferCastOnCall(bool bCastMsgBufferOnCall)
  *  \param pContext the context of the creation
  *  \return true if successful
  *
- * This function should be overloaded, because the functions should be added to the
- * files depending on their instance and attributes.
+ * This function should be overloaded, because the functions should be added
+ * to the files depending on their instance and attributes.
  */
 bool CBEFunction::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
 {
     if (IsTargetFile(pHeader))
-		pHeader->AddFunction(this);
+        pHeader->AddFunction(this);
     return false;
 }
 
@@ -1886,7 +2065,7 @@ void CBEFunction::SetComponentSide(bool bComponentSide)
 bool CBEFunction::AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext)
 {
     if (IsTargetFile(pImpl))
-		pImpl->AddFunction(this);
+        pImpl->AddFunction(this);
     return false;
 }
 
@@ -1896,15 +2075,14 @@ bool CBEFunction::AddToFile(CBEImplementationFile *pImpl, CBEContext *pContext)
  */
 bool CBEFunction::HasArrayParameters(int nDirection)
 {
-    VectorElement *pIter = GetFirstParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
     CBETypedDeclarator *pParameter;
-    while ((pParameter = GetNextParameter(pIter)) != 0)
+    while ((pParameter = GetNextParameter(iter)) != 0)
     {
          if (!pParameter->IsDirection(nDirection))
              continue;
-        VectorElement *pTestI = pParameter->GetFirstDeclarator();
-        CBEDeclarator *pDecl = pParameter->GetNextDeclarator(pTestI);
-        if (pDecl->IsArray())
+        vector<CBEDeclarator*>::iterator iterD = pParameter->GetFirstDeclarator();
+        if ((*iterD)->IsArray())
         {
             return true;
         }
@@ -1913,9 +2091,8 @@ bool CBEFunction::HasArrayParameters(int nDirection)
     {
         if (m_pReturnVar->IsDirection(nDirection))
         {
-            VectorElement *pTestI = m_pReturnVar->GetFirstDeclarator();
-            CBEDeclarator *pDecl = m_pReturnVar->GetNextDeclarator(pTestI);
-            if (pDecl->IsArray())
+            vector<CBEDeclarator*>::iterator iterD = m_pReturnVar->GetFirstDeclarator();
+            if ((*iterD)->IsArray())
             {
                 return true;
             }
@@ -1931,10 +2108,23 @@ bool CBEFunction::HasArrayParameters(int nDirection)
  *
  * This is a "pure virtual" function, which means it HAS to be overloaded.
  */
-bool CBEFunction::DoWriteFunction(CBEFile *pFile, CBEContext *pContext)
+bool CBEFunction::DoWriteFunction(CBEHeaderFile *pFile, CBEContext *pContext)
 {
-	assert(false);
-	return false;
+    assert(false);
+    return false;
+}
+
+/** \brief tests if this function should be written
+ *  \param pFile the target file this function should be added to
+ *  \param pContext the context of the write operations
+ *  \return true if successful
+ *
+ * This is a "pure virtual" function, which means it HAS to be overloaded.
+ */
+bool CBEFunction::DoWriteFunction(CBEImplementationFile *pFile, CBEContext *pContext)
+{
+    assert(false);
+    return false;
 }
 
 /** \brief tries to find a parameter with a specific type
@@ -1943,14 +2133,14 @@ bool CBEFunction::DoWriteFunction(CBEFile *pFile, CBEContext *pContext)
  *
  * We test the regular parameter and if it exists the message buffer.
  */
-CBETypedDeclarator* CBEFunction::FindParameterType(String sTypeName)
+CBETypedDeclarator* CBEFunction::FindParameterType(string sTypeName)
 {
-    VectorElement *pIter = GetFirstParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
     CBETypedDeclarator *pParameter;
-    while ((pParameter = GetNextParameter(pIter)) != 0)
+    while ((pParameter = GetNextParameter(iter)) != 0)
     {
         CBEType *pType = pParameter->GetType();
-        if (pType->IsKindOf(RUNTIME_CLASS(CBEUserDefinedType)))
+        if (dynamic_cast<CBEUserDefinedType*>(pType))
         {
             if (((CBEUserDefinedType*)pType)->GetName() == sTypeName)
                 return pParameter;
@@ -2001,19 +2191,25 @@ int CBEFunction::GetReceiveDirection()
  *
  * We need to create the CORBA object and environment variables.
  */
-bool CBEFunction::CreateBackEnd(CBEContext *pContext)
+bool CBEFunction::CreateBackEnd(CFEBase *pFEObject, CBEContext *pContext)
 {
+    VERBOSE("%s called\n", __PRETTY_FUNCTION__);
+
+    // call CBEObject's CreateBackEnd method
+    if (!CBEObject::CreateBackEnd(pFEObject))
+        return false;
+
     if (m_pCorbaObject)
         delete m_pCorbaObject;
     if (m_pCorbaEnv)
         delete m_pCorbaEnv;
     // set the communication class (does not require initialization)
     if (m_pComm)
-	    delete m_pComm;
+        delete m_pComm;
     m_pComm = pContext->GetClassFactory()->GetNewCommunication();
     // init CORBA Object
-    String sTypeName("CORBA_Object");
-    String sName = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
+    string sTypeName("CORBA_Object");
+    string sName = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
     m_pCorbaObject = pContext->GetClassFactory()->GetNewTypedDeclarator();
     m_pCorbaObject->SetParent(this);
     if (!m_pCorbaObject->CreateBackEnd(sTypeName, sName, 0, pContext))
@@ -2021,11 +2217,25 @@ bool CBEFunction::CreateBackEnd(CBEContext *pContext)
         delete m_pCorbaObject;
         m_pCorbaObject = 0;
         VERBOSE("%s failed, because CORBA Object could not be created\n",
-		    __PRETTY_FUNCTION__);
+            __PRETTY_FUNCTION__);
         return false;
     }
+    // CORBA_Object is always in
+    CBEAttribute *pAttr = pContext->GetClassFactory()->GetNewAttribute();
+    if (!pAttr->CreateBackEnd(ATTR_IN, pContext))
+    {
+        delete pAttr;
+        VERBOSE("%s failed, because IN attribute for CORBA Object could not be created\n",
+            __PRETTY_FUNCTION__);
+        return false;
+    }
+    m_pCorbaObject->AddAttribute(pAttr);
     // init CORBA Environment
-    sTypeName = "CORBA_Environment";
+    // if function is at server side, this is a CORBA_Server_Environment
+    if (IsComponentSide())
+        sTypeName = "CORBA_Server_Environment";
+    else
+        sTypeName = "CORBA_Environment";
     sName = pContext->GetNameFactory()->GetCorbaEnvironmentVariable(pContext);
     m_pCorbaEnv = pContext->GetClassFactory()->GetNewTypedDeclarator();
     m_pCorbaEnv->SetParent(this);
@@ -2034,31 +2244,32 @@ bool CBEFunction::CreateBackEnd(CBEContext *pContext)
         delete m_pCorbaEnv;
         m_pCorbaEnv = 0;
         VERBOSE("%s failed, because CORBA Environment could not be created\n",
-		    __PRETTY_FUNCTION__);
+            __PRETTY_FUNCTION__);
         return false;
     }
-	// create the exception word variable
-	sName = pContext->GetNameFactory()->GetExceptionWordVariable(pContext);
-	m_pExceptionWord = pContext->GetClassFactory()->GetNewTypedDeclarator();
-	m_pExceptionWord->SetParent(this);
-	// create type
-	CBEType *pWord = pContext->GetClassFactory()->GetNewType(TYPE_MWORD);
-	pWord->SetParent(m_pExceptionWord);
-	if (!pWord->CreateBackEnd(true, 0 /*doesn't matter for mword*/, TYPE_MWORD, pContext))
-	{
-	    delete pWord;
-		VERBOSE("%s failed, because type of local variable %s could not be created\n",
-		    __PRETTY_FUNCTION__, (const char*)sName);
-		return false;
-	}
-	if (!m_pExceptionWord->CreateBackEnd(pWord, sName, pContext))
-	{
-	    delete m_pExceptionWord;
-		m_pExceptionWord = 0;
-		VERBOSE("%s failed, because local variable %s could not be created\n",
-		    __PRETTY_FUNCTION__, (const char*)sName);
-		return false;
-	}
+    // create the exception word variable
+    sName = pContext->GetNameFactory()->GetExceptionWordVariable(pContext);
+    m_pExceptionWord = pContext->GetClassFactory()->GetNewTypedDeclarator();
+    m_pExceptionWord->SetParent(this);
+    // create type
+    CBEType *pWord = pContext->GetClassFactory()->GetNewType(TYPE_MWORD);
+    pWord->SetParent(m_pExceptionWord);
+    if (!pWord->CreateBackEnd(true, 0 /*doesn't matter for mword*/, TYPE_MWORD, pContext))
+    {
+        delete pWord;
+        VERBOSE("%s failed, because type of local variable %s could not be created\n",
+            __PRETTY_FUNCTION__, sName.c_str());
+        return false;
+    }
+    if (!m_pExceptionWord->CreateBackEnd(pWord, sName, pContext))
+    {
+        delete m_pExceptionWord;
+        m_pExceptionWord = 0;
+        VERBOSE("%s failed, because local variable %s could not be created\n",
+            __PRETTY_FUNCTION__, sName.c_str());
+        return false;
+    }
+
     // done
     return true;
 }
@@ -2077,12 +2288,10 @@ CBEMsgBufferType* CBEFunction::GetMessageBuffer()
  *  \param nStars the new number of stars of the second declarator
  *  \param pContext the context of the change
  */
-void CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl, String sNewDeclName, int nStars, CBEContext *pContext)
+void CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl, string sNewDeclName, int nStars, CBEContext *pContext)
 {
     // check if there is already a second declarator
-    VectorElement *pIter = pTypedDecl->GetFirstDeclarator();
-    CBEDeclarator *pSecond = pTypedDecl->GetNextDeclarator(pIter);
-    pSecond = pTypedDecl->GetNextDeclarator(pIter);
+    CBEDeclarator *pSecond = pTypedDecl->GetCallDeclarator();
     if (pSecond)
     {
         pSecond->CreateBackEnd(sNewDeclName, nStars, pContext);
@@ -2119,7 +2328,7 @@ void CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl, String sNewDec
  * declarator. Thus is valid since a parameter should have one declarator only. So the
  * second becomes out calling variable name.
  */
-void CBEFunction::SetCallVariable(String sOriginalName, int nStars, String sCallName, CBEContext *pContext)
+void CBEFunction::SetCallVariable(string sOriginalName, int nStars, string sCallName, CBEContext *pContext)
 {
     // check if Corba variables are meant
     if (m_pCorbaObject)
@@ -2142,12 +2351,20 @@ void CBEFunction::SetCallVariable(String sOriginalName, int nStars, String sCall
     }
 
     // clone existing parameters if not yet done
-    if (m_vCallParameters.GetSize() == 0)
-        m_vCallParameters.Add(&m_vParameters);
+    if (m_vCallParameters.size() == 0)
+    {
+        vector<CBETypedDeclarator*>::iterator iter;
+        for (iter = m_vParameters.begin(); iter != m_vParameters.end(); iter++)
+        {
+            CBETypedDeclarator *pParam = (CBETypedDeclarator*)((*iter)->Clone());
+            m_vCallParameters.push_back(pParam);
+            // parent is already set to us -> skip the call
+        }
+    }
     // search for original name
-    VectorElement *pIter = GetFirstCallParameter();
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstCallParameter();
     CBETypedDeclarator *pCallParam;
-    while ((pCallParam = GetNextCallParameter(pIter)) != 0)
+    while ((pCallParam = GetNextCallParameter(iter)) != 0)
     {
         if (pCallParam->FindDeclarator(sOriginalName))
             break;
@@ -2162,24 +2379,20 @@ void CBEFunction::SetCallVariable(String sOriginalName, int nStars, String sCall
 /** \brief retrieves a pointer to the first call parameter
  *  \return a pointer to the first call parameter
  */
-VectorElement* CBEFunction::GetFirstCallParameter()
+vector<CBETypedDeclarator*>::iterator CBEFunction::GetFirstCallParameter()
 {
-    return m_vCallParameters.GetFirst();
+    return m_vCallParameters.begin();
 }
 
 /** \brief retrieves a reference to the next call parameter
- *  \param pIter the pointer to the next call parameter
+ *  \param iter the pointer to the next call parameter
  *  \return the reference to the next call parameter
  */
-CBETypedDeclarator* CBEFunction::GetNextCallParameter(VectorElement *&pIter)
+CBETypedDeclarator* CBEFunction::GetNextCallParameter(vector<CBETypedDeclarator*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vCallParameters.end())
         return 0;
-    CBETypedDeclarator *pRet = (CBETypedDeclarator*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextCallParameter(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief allow access to m_pReturnVar
@@ -2207,7 +2420,7 @@ CBETypedDeclarator* CBEFunction::GetParameter(CBEDeclarator *pDeclarator, bool b
         if (pParameter->FindDeclarator(pDeclarator->GetName()) != pDeclarator)
             pParameter = 0;
     }
-    if (pDeclarator->GetParent()->IsKindOf(RUNTIME_CLASS(CBEAttribute)) && !pParameter)
+    if (dynamic_cast<CBEAttribute*>(pDeclarator->GetParent()) && !pParameter)
         pParameter = (CBETypedDeclarator *) pDeclarator->GetParent()->GetParent();
     return pParameter;
 }
@@ -2239,7 +2452,7 @@ void CBEFunction::WriteFunctionAttributes(CBEFile* pFile,  CBEContext* pContext)
 /** \brief access to opcode constant names
  *  \return a string conatining the opcode name
  */
-String CBEFunction::GetOpcodeConstName()
+string CBEFunction::GetOpcodeConstName()
 {
     return m_sOpcodeConstName;
 }
@@ -2250,14 +2463,14 @@ String CBEFunction::GetOpcodeConstName()
  */
 CBETypedDeclarator* CBEFunction::FindParameterAttribute(int nAttributeType)
 {
-    VectorElement *pIter = GetFirstParameter();
-	CBETypedDeclarator *pParameter;
-	while ((pParameter = GetNextParameter(pIter)) != 0)
-	{
-	    if (pParameter->FindAttribute(nAttributeType))
-		    return pParameter;
-	}
-	return 0;
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
+    CBETypedDeclarator *pParameter;
+    while ((pParameter = GetNextParameter(iter)) != 0)
+    {
+        if (pParameter->FindAttribute(nAttributeType))
+            return pParameter;
+    }
+    return 0;
 }
 
 /** \brief tries to find a parameter with a specific IS attribute
@@ -2265,41 +2478,37 @@ CBETypedDeclarator* CBEFunction::FindParameterAttribute(int nAttributeType)
  *  \param sAttributeParameter the name of the attributes parameter to look for
  *  \return the first parameter with the given attribute
  */
-CBETypedDeclarator* CBEFunction::FindParameterIsAttribute(int nAttributeType, String sAttributeParameter)
+CBETypedDeclarator* CBEFunction::FindParameterIsAttribute(int nAttributeType, string sAttributeParameter)
 {
-    VectorElement *pIter = GetFirstParameter();
-	CBETypedDeclarator *pParameter;
-	while ((pParameter = GetNextParameter(pIter)) != 0)
-	{
-	    CBEAttribute *pAttr = pParameter->FindAttribute(nAttributeType);
-		if (pAttr && pAttr->FindIsParameter(sAttributeParameter))
-		    return pParameter;
-	}
-	return 0;
+    vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
+    CBETypedDeclarator *pParameter;
+    while ((pParameter = GetNextParameter(iter)) != 0)
+    {
+        CBEAttribute *pAttr = pParameter->FindAttribute(nAttributeType);
+        if (pAttr && pAttr->FindIsParameter(sAttributeParameter))
+            return pParameter;
+    }
+    return 0;
 }
 
 /** \brief constructs the string to initialize the exception variable
  *  \return the init string
  */
-String CBEFunction::GetExceptionWordInitString()
+string CBEFunction::GetExceptionWordInitString()
 {
-	// ((dice_CORBA_exception_type){ _s: { .major = env.major, .repos_id = env.repos_id }})._raw
-	String sInitString = String("((dice_CORBA_exception_type){ _s: { .major = ");
-	// add variable name of envrionment
-	VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-	CBEDeclarator *pDecl = m_pCorbaEnv->GetNextDeclarator(pIter);
-	sInitString += pDecl->GetName();
-	if (pDecl->GetStars() > 0)
-		sInitString += "->";
-	else
-		sInitString += ".";
-	sInitString += "major, .repos_id = ";
-	sInitString += pDecl->GetName();
-	if (pDecl->GetStars() > 0)
-		sInitString += "->";
-	else
-		sInitString += ".";
-	sInitString += "repos_id }})._raw";
+    CBEDeclarator *pDecl = m_pCorbaEnv->GetDeclarator();
+    bool bEnvPtr = pDecl->GetStars() > 0;
+
+    string sInitString;
+    // ((dice_CORBA_exception_type){ _s: { .major = env.major, .repos_id = env.repos_id }})._raw
+    sInitString = "((dice_CORBA_exception_type){ _s: { .major = ";
+    // add variable name of envrionment
+    sInitString += pDecl->GetName();
+    sInitString += (bEnvPtr ? "->" : ".");
+    sInitString += "major, .repos_id = ";
+    sInitString += pDecl->GetName();
+    sInitString += (bEnvPtr ? "->" : ".");
+    sInitString += "repos_id }})._raw";
     return sInitString;
 }
 
@@ -2308,36 +2517,86 @@ String CBEFunction::GetExceptionWordInitString()
  *  \param bInit true if variable should be initialized
  *  \param pContext the context of the write operation
  */
-void CBEFunction::WriteExceptionWordDeclaration(CBEFile* pFile, bool bInit, CBEContext* pContext)
+void 
+CBEFunction::WriteExceptionWordDeclaration(CBEFile* pFile, 
+    bool bInit, 
+    CBEContext* pContext)
 {
+    VERBOSE("CBEFunction::WriteExceptionWordDeclaration(%s) called\n", 
+	GetName().c_str());
+
+    if (FindAttribute(ATTR_NOEXCEPTIONS))
+        return;
     if (!m_pExceptionWord)
-	    return;
+        return;
     if (bInit)
+    {
+	if (pContext->IsBackEndSet(PROGRAM_BE_C))
 	{
-		String sInitString = GetExceptionWordInitString();
-		m_pExceptionWord->WriteInitDeclaration(pFile, sInitString, pContext);
+	    string sInitString = GetExceptionWordInitString();
+	    m_pExceptionWord->WriteInitDeclaration(pFile, sInitString, 
+		pContext);
 	}
-	else
+	else if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
 	{
-		pFile->PrintIndent("");
-	    m_pExceptionWord->WriteDeclaration(pFile, pContext);
-		pFile->Print(";\n");
+	    CBEDeclarator *pDecl = m_pCorbaEnv->GetDeclarator();
+	    bool bEnvPtr = pDecl->GetStars() > 0;
+	    *pFile << "\tdice_CORBA_exception_type _dice_exc_tmp = " <<
+		"{ _dice_exc_tmp._s.major = " << pDecl->GetName() << 
+		(bEnvPtr ? "->" : ".") << 
+		"major, _dice_exc_tmp._s.repos_id = " << pDecl->GetName() << 
+		(bEnvPtr ? "->" : ".") << "repos_id };\n";
+	    m_pExceptionWord->WriteInitDeclaration(pFile, 
+		string("_dice_exc_tmp._raw"), pContext);
 	}
+    }
+    else
+    {
+        pFile->PrintIndent("");
+        m_pExceptionWord->WriteDeclaration(pFile, pContext);
+        pFile->Print(";\n");
+    }
+
+    VERBOSE("CBEFunction::WriteExceptionWordDeclaration(%s) finished\n", 
+	GetName().c_str());
 }
 
 /** \brief writes the initialization of the exception word variable
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  */
-void CBEFunction::WriteExceptionWordInitialization(CBEFile* pFile, CBEContext* pContext)
+void 
+CBEFunction::WriteExceptionWordInitialization(CBEFile* pFile, 
+    CBEContext* pContext)
 {
+    VERBOSE("CBEFunction::WriteExceptionWordInitialization(%s) called\n", 
+	GetName().c_str());
+
+    if (FindAttribute(ATTR_NOEXCEPTIONS))
+        return;
     if (!m_pExceptionWord)
-	    return;
-	String sInitString = GetExceptionWordInitString();
+        return;
+    CBEDeclarator *pDecl = m_pExceptionWord->GetDeclarator();
+    if (pContext->IsBackEndSet(PROGRAM_BE_C))
+    {
+	string sInitString = GetExceptionWordInitString();
 	// get name of exception word
-	VectorElement *pIter = m_pExceptionWord->GetFirstDeclarator();
-	CBEDeclarator *pDecl = m_pExceptionWord->GetNextDeclarator(pIter);
-	pFile->PrintIndent("%s = %s;\n", (const char*)pDecl->GetName(), (const char*)sInitString);
+	*pFile << "\t" << pDecl->GetName() << " = " << sInitString << ";\n";
+    }
+    else if (pContext->IsBackEndSet(PROGRAM_BE_CPP))
+    {
+	CBEDeclarator *pEnv = m_pCorbaEnv->GetDeclarator();
+	bool bEnvPtr = pEnv->GetStars() > 0;
+	*pFile << "\tdice_CORBA_exception_type _dice_exc_tmp = " <<
+	    "{ _dice_exc_tmp._s.major = " << pEnv->GetName() << 
+	    (bEnvPtr ? "->" : ".") << "major, _dice_exc_tmp._s.repos_id = " <<
+	    pEnv->GetName() << (bEnvPtr ? "->" : ".") << "repos_id };\n";
+	m_pExceptionWord->WriteInitDeclaration(pFile, 
+	    string("_dice_exc_tmp._raw"), pContext);
+    }
+
+    VERBOSE("CBEFunction::WriteExceptionWordInitialization(%s) finished\n", 
+	GetName().c_str());
 }
 
 /** \brief writes the check of the exception members of the environment
@@ -2346,11 +2605,17 @@ void CBEFunction::WriteExceptionWordInitialization(CBEFile* pFile, CBEContext* p
  */
 void CBEFunction::WriteExceptionCheck(CBEFile *pFile, CBEContext *pContext)
 {
-    VectorElement *pIter = m_pCorbaEnv->GetFirstDeclarator();
-    CBEDeclarator *pEnv = m_pCorbaEnv->GetNextDeclarator(pIter);
+    /* This test is only relevant if we unmarshalled an exception. */
+    if (FindAttribute(ATTR_NOEXCEPTIONS))
+        return;
+
+    VERBOSE("CBEFunction::WriteExceptionCheck(%s) called\n", GetName().c_str());
+
+    vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
+    CBEDeclarator *pEnv = *iterCE;
 
     // if (env->major != CORBA_NO_EXCEPTION)
-	//   return
+    //   return
     pFile->PrintIndent("if (");
     pEnv->WriteName(pFile, pContext);
     if (pEnv->GetStars())
@@ -2360,9 +2625,11 @@ void CBEFunction::WriteExceptionCheck(CBEFile *pFile, CBEContext *pContext)
     pFile->Print("major != CORBA_NO_EXCEPTION)\n");
     pFile->PrintIndent("{\n");
     pFile->IncIndent();
-	WriteReturn(pFile, pContext);
-	pFile->DecIndent();
-	pFile->PrintIndent("}\n");
+    WriteReturn(pFile, pContext);
+    pFile->DecIndent();
+    pFile->PrintIndent("}\n");
+
+    VERBOSE("CBEFunction::WriteExceptionCheck(%s) finished\n", GetName().c_str());
 }
 
 /** \brief returns a reference to the exception word local variable
@@ -2371,4 +2638,30 @@ void CBEFunction::WriteExceptionCheck(CBEFile *pFile, CBEContext *pContext)
 CBETypedDeclarator* CBEFunction::GetExceptionWord()
 {
     return m_pExceptionWord;
+}
+
+/** \brief returns the bytes to use for padding a parameter to its size
+ *  \param nCurrentOffset the current position in the message buffer
+ *  \param nParamSize the size of the parameter in bytes
+ *  \param pContext the context of the alignemnt operation
+ *  \return the number of bytes to align this parameter in the msgbuf
+ */
+int 
+CBEFunction::GetParameterAlignment(int nCurrentOffset,
+    int nParamSize,
+    CBEContext *pContext)
+{
+    if (!pContext->IsOptionSet(PROGRAM_ALIGN_TO_TYPE))
+        return 0;
+    if (nParamSize == 0)
+        return 0;
+    int nMWordSize = pContext->GetSizes()->GetSizeOfType(TYPE_MWORD);
+    /* always align to word size if type is bigger */
+    if (nParamSize > nMWordSize)
+        nParamSize = nMWordSize;
+    int nAlignment = 0;
+    if (nCurrentOffset % nParamSize)
+        nAlignment = nParamSize - nCurrentOffset % nParamSize;
+    nAlignment = (nAlignment < nMWordSize) ? nAlignment : nMWordSize;
+    return nAlignment;
 }

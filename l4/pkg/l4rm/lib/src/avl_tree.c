@@ -14,6 +14,7 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
+#include <stdio.h>
 #include <string.h>
 
 /* L4 includes */
@@ -76,13 +77,12 @@ avlt_init(void)
  * \param  data          new data
  *	
  * \return 0 on success (new element inserted), error code otherwise:
- *         - \c -AVLT_NO_MEM  out of memory allocation tree node
- *         - \c -AVLT_EXISTS  new key already exists in tree
+ *         - -#AVLT_NO_MEM  out of memory allocation tree node
+ *         - -#AVLT_EXISTS  new key already exists in tree
  */
 /*****************************************************************************/ 
 int
-avlt_insert(avlt_key_t key, 
-	    avlt_data_t data)
+avlt_insert(avlt_key_t key, avlt_data_t data)
 {
   avlt_t * p;   /* search variable */
   avlt_t * q;   /* new node */
@@ -91,8 +91,8 @@ avlt_insert(avlt_key_t key,
   avlt_t * t;   /* parent of s */
   int a;        /* indicates which subtree of s has grown, -1 left, +1 right */
 
-  LOGdL(DEBUG_AVLT_INSERT,"key 0x%08X-0x%08X\n  data = %u",
-        key.start,key.end,(unsigned)data);
+  LOGdL(DEBUG_AVLT_INSERT, "key 0x%08X-0x%08X\n  data = %u",
+        key.start, key.end, (unsigned)data);
 
   /* empty tree */
   if (tree_head.right == NULL)
@@ -103,7 +103,7 @@ avlt_insert(avlt_key_t key,
         return -AVLT_NO_MEM;
 
 #if DEBUG_AVLT_INSERT
-      printf("  new root node, 0x%08x\n",(unsigned)q);
+      LOG_printf("  new root node, 0x%08x\n", (unsigned)q);
 #endif
 
       /* setup node */
@@ -125,7 +125,7 @@ avlt_insert(avlt_key_t key,
 
       while (p != NULL)
 	{
-	  if (AVLT_IS_LOWER(key,p->key))	  
+	  if (AVLT_IS_LOWER(key, p->key))	  
 	    {
 	      /* move left */
 	      q = p->left;
@@ -141,7 +141,7 @@ avlt_insert(avlt_key_t key,
 	    }
 	  else /* key < p->key */
 	    {
-	      if (AVLT_IS_GREATER(key,p->key))
+	      if (AVLT_IS_GREATER(key, p->key))
 		{
 		  /* move right */
 		  q = p->right;
@@ -159,7 +159,7 @@ avlt_insert(avlt_key_t key,
 		{
 		  /* key already exists */
 #if DEBUG_AVLT_INSERT
-		  printf("  key already exists\n");
+		  LOG_printf("  key already exists\n");
 #endif
 		  return -AVLT_EXISTS;
 		}
@@ -186,7 +186,7 @@ avlt_insert(avlt_key_t key,
       q->right = NULL;
 	      
       /* adjust balance factors */
-      if (AVLT_IS_LOWER(key,s->key))
+      if (AVLT_IS_LOWER(key, s->key))
 	{
 	  a = -1;
 	  r = p = s->left;
@@ -200,7 +200,7 @@ avlt_insert(avlt_key_t key,
       /* adjust balance factors down to the new node */
       while (p != q)
 	{
-	  if (AVLT_IS_LOWER(key,p->key))
+	  if (AVLT_IS_LOWER(key, p->key))
 	    {
 	      p->b = -1;
 	      p = p->left;
@@ -237,7 +237,7 @@ avlt_insert(avlt_key_t key,
 	    {
 	      /* single rotation right */
 #if DEBUG_AVLT_INSERT
-	      printf("  single rotation to the right\n");
+	      LOG_printf("  single rotation to the right\n");
 #endif
 	      s->left = r->right;
 	      r->right = s;
@@ -246,7 +246,7 @@ avlt_insert(avlt_key_t key,
 	    {
 	      /* single rotation left */
 #if DEBUG_AVLT_INSERT
-	      printf("  single rotation to the left\n");
+	      LOG_printf("  single rotation to the left\n");
 #endif
 	      s->right = r->left;
 	      r->left = s;
@@ -263,7 +263,7 @@ avlt_insert(avlt_key_t key,
 	    {
 	      /* left-right rotation */
 #if DEBUG_AVLT_INSERT
-	      printf("  double rotation left-right\n");
+	      LOG_printf("  double rotation left-right\n");
 #endif
 	      p = r->right;
 	      r->right = p->left;
@@ -275,7 +275,7 @@ avlt_insert(avlt_key_t key,
 	    {
 	      /* right-left rotation */
 #if DEBUG_AVLT_INSERT
-	      printf("  double rotation rigth-left\n");
+	      LOG_printf("  double rotation rigth-left\n");
 #endif
 	      p = r->left;
 	      r->left = p->right;
@@ -325,8 +325,8 @@ avlt_insert(avlt_key_t key,
  * \param  key           key to remove
  *	
  * \return 0 on success (node removed), error code otherwise:
- *         - \c -AVLT_NOT_FOUND  key not found
- *         - \c -AVLT_INVAL      corrupted AVL tree
+ *         - -#AVLT_NOT_FOUND  key not found
+ *         - -#AVLT_INVAL      corrupted AVL tree
  */
 /*****************************************************************************/ 
 int 
@@ -356,7 +356,7 @@ avlt_remove(avlt_key_t key)
   t = NULL;
   while (q)
     {
-      if (AVLT_IS_EQUAL(key,q->key))
+      if (AVLT_IS_EQUAL(key, q->key))
 	/* found */
 	break;
       
@@ -366,20 +366,20 @@ avlt_remove(avlt_key_t key)
 
       t = p;
       p = q;
-      if (AVLT_IS_LOWER(key,q->key))
+      if (AVLT_IS_LOWER(key, q->key))
 	q = q->left;
-      else if (AVLT_IS_GREATER(key,q->key))
+      else if (AVLT_IS_GREATER(key, q->key))
 	q = q->right;
       else
 	{
-	  ERROR("AVL remove: invalid key range!");
+	  LOG_Error("AVL remove: invalid key range!");
 	  return -AVLT_NOT_FOUND;
 	}
     }
 
   if (q == NULL)
     {
-      ERROR("AVL remove: key not found!");
+      LOG_Error("AVL remove: key not found!");
       return -AVLT_NOT_FOUND;
     }
 
@@ -408,9 +408,9 @@ avlt_remove(avlt_key_t key)
 	}
  
       /* found, replace q */
-      LOGdL(DEBUG_AVLT_REMOVE,"replace\n" \
+      LOGdL(DEBUG_AVLT_REMOVE, "replace\n" \
             "  key 0x%08x-0x%08x with 0x%08x-0x%08x", 
-            q->key.start,q->key.end,r->key.start,r->key.end);
+            q->key.start, q->key.end, r->key.start, r->key.end);
       
       q->key = r->key;
       q->data = r->data;
@@ -425,13 +425,13 @@ avlt_remove(avlt_key_t key)
     {
       /* remove tree head */
 #if DEBUG_AVLT_REMOVE
-      printf("  remove tree head\n");
+      LOG_printf("  remove tree head\n");
 #endif
       if ((q->left == NULL) && (q->right == NULL))
 	{
 	  /* got empty tree */
 #if DEBUG_AVLT_REMOVE
-	  printf("  empty tree\n");
+	  LOG_printf("  empty tree\n");
 #endif
 	  tree_head.right = NULL;
 	  tree_height = 0;
@@ -439,7 +439,7 @@ avlt_remove(avlt_key_t key)
       else 
 	{
 #if DEBUG_AVLT_REMOVE
-	  printf("  new tree head\n");
+	  LOG_printf("  new tree head\n");
 #endif
 	  if (q->right != NULL)
 	    tree_head.right = q->right;
@@ -459,8 +459,8 @@ avlt_remove(avlt_key_t key)
       if (q == p->right)
 	{
 #if DEBUG_AVLT_REMOVE
-	  printf("  remove right successor of key 0x%08x-0x%08x (%d)\n",
-                 p->key.start,p->key.end,avlt_node_index(q));
+	  LOG_printf("  remove right successor of key 0x%08x-0x%08x (%d)\n",
+                 p->key.start, p->key.end, avlt_node_index(q));
 #endif
 	  if (q->left != NULL)
 	    p->right = q->left;
@@ -475,8 +475,8 @@ avlt_remove(avlt_key_t key)
       else
 	{
 #if DEBUG_AVLT_REMOVE
-	  printf("  remove left successor of key 0x%08x-0x%08x (%d)\n",
-                 p->key.start,p->key.end,avlt_node_index(q));
+	  LOG_printf("  remove left successor of key 0x%08x-0x%08x (%d)\n",
+                 p->key.start, p->key.end, avlt_node_index(q));
 #endif
 	  if (q->left != NULL)
 	    p->left = q->left;
@@ -500,23 +500,23 @@ avlt_remove(avlt_key_t key)
        * s points to the last node with balance 0 on the way down to p
        ***********************************************************************/
 #if DEBUG_AVLT_REMOVE
-      printf("  removed node (q): %d\n",avlt_node_index(q));
-      printf("  parent (p): %d\n",avlt_node_index(p));
+      LOG_printf("  removed node (q): %d\n", avlt_node_index(q));
+      LOG_printf("  parent (p): %d\n", avlt_node_index(p));
       if (t != &tree_head)
-	printf("  p's parent (t): %d\n",avlt_node_index(t));
+	LOG_printf("  p's parent (t): %d\n", avlt_node_index(t));
       else
-	printf("  p's parent (t): head\n");
+	LOG_printf("  p's parent (t): head\n");
       if (s != &tree_head)
-	printf("  last balanced node (s): %d\n",avlt_node_index(s));
+	LOG_printf("  last balanced node (s): %d\n", avlt_node_index(s));
       else
-	printf("  last balanced node (s): head\n");
+	LOG_printf("  last balanced node (s): head\n");
 #endif 
       done = 0;
       do 
 	{
 #if DEBUG_AVLT_REMOVE
-	  printf("  rebalance %d, balance %d, change %d\n",
-                 avlt_node_index(p),p->b,a);
+	  LOG_printf("  rebalance %d, balance %d, change %d\n",
+                 avlt_node_index(p), p->b, a);
 #endif
 	  if (a == +1)
 	    {
@@ -524,14 +524,14 @@ avlt_remove(avlt_key_t key)
                * left subtree of p got shorter
                ***************************************************************/
 #if DEBUG_AVLT_REMOVE
-	      printf("  left subtree got shorter\n");
+	      LOG_printf("  left subtree got shorter\n");
 #endif
 	      if (p->b == -1)
 		{
 		  /* p got balanced => the whole tree with head p got shorter,
 		   * must rebalance parent node of p (a.1.) */
 #if DEBUG_AVLT_REMOVE
-		  printf("  new balance 0, rebalance parent\n");
+		  LOG_printf("  new balance 0, rebalance parent\n");
 #endif
 		  p->b = 0;
 		}
@@ -540,7 +540,7 @@ avlt_remove(avlt_key_t key)
 		  /* p got out of balance, but kept its overall height
 		   * => done (a.2.) */
 #if DEBUG_AVLT_REMOVE
-		  printf("  new balance +1, done\n");
+		  LOG_printf("  new balance +1, done\n");
 #endif
 		  p->b = +1;
 		  done = 1;
@@ -555,7 +555,7 @@ avlt_remove(avlt_key_t key)
 		    {
 		      /* single rotation left and done (a.3.1) */
 #if DEBUG_AVLT_REMOVE
-		      printf("  single rotation left, done\n");
+		      LOG_printf("  single rotation left, done\n");
 #endif
 		      p->right = r->left;
 		      r->left = p;
@@ -572,7 +572,7 @@ avlt_remove(avlt_key_t key)
 		      /* single rotation left and rebalance parent node 
 		       * (a.3.2) */
 #if DEBUG_AVLT_REMOVE
-		      printf("  single rotation left, rebalance parent\n");
+		      LOG_printf("  single rotation left, rebalance parent\n");
 #endif
 		      p->right = r->left;
 		      r->left = p;
@@ -589,7 +589,7 @@ avlt_remove(avlt_key_t key)
 		      /* double rotation right - left and rebalance parent 
 		       * node (a.3.3) */
 #if DEBUG_AVLT_REMOVE
-		      printf("  double rotation right - left\n");
+		      LOG_printf("  double rotation right - left\n");
 #endif
 		      o = r->left;
 		      
@@ -632,14 +632,14 @@ avlt_remove(avlt_key_t key)
                * right subtree of p got shorter
                ***************************************************************/
 #if DEBUG_AVLT_REMOVE
-	      printf("  right subtree got shorter\n");
+	      LOG_printf("  right subtree got shorter\n");
 #endif
 	      if (p->b == +1)
 		{
 		  /* p got balanced,  => the whole tree with head p got 
 		   * shorter, must rebalance parent node of p (b.1.) */
 #if DEBUG_AVLT_REMOVE
-		  printf("  new balance 0, rebalance parent\n");
+		  LOG_printf("  new balance 0, rebalance parent\n");
 #endif
 		  p->b = 0;
 		}
@@ -648,7 +648,7 @@ avlt_remove(avlt_key_t key)
 		  /* p got out of balance, but kept its overall height 
 		   * => done (b.2.) */
 #if DEBUG_AVLT_REMOVE
-		  printf("  new balance -1, done\n");
+		  LOG_printf("  new balance -1, done\n");
 #endif
 		  p->b = -1;
 		  done = 1;
@@ -663,7 +663,7 @@ avlt_remove(avlt_key_t key)
 		    {
 		      /* single rotation right and done (b.3.1) */
 #if DEBUG_AVLT_REMOVE
-		      printf("  single rotation right, done\n");
+		      LOG_printf("  single rotation right, done\n");
 #endif
 		      p->left = r->right;
 		      r->right = p;
@@ -680,7 +680,7 @@ avlt_remove(avlt_key_t key)
 		      /* single rotation right and rebalance parent 
 		       * node (b.3.2) */
 #if DEBUG_AVLT_REMOVE
-		      printf("  single rotation right, rebalance parent\n");
+		      LOG_printf("  single rotation right, rebalance parent\n");
 #endif
 		      p->left = r->right;
 		      r->right = p;
@@ -697,7 +697,7 @@ avlt_remove(avlt_key_t key)
 		      /* double rotation left - right and rebalance parent
 		       * node (b.3.3) */
 #if DEBUG_AVLT_REMOVE
-		      printf("  double rotation left - right\n");
+		      LOG_printf("  double rotation left - right\n");
 #endif
 		      o = r->right;
 		      
@@ -754,7 +754,7 @@ avlt_remove(avlt_key_t key)
 		    {
 		      /* whole tree got shorter */
 #if DEBUG_AVLT_REMOVE
-		      printf("  whole tree got shorter\n");
+		      LOG_printf("  whole tree got shorter\n");
 #endif
 		      tree_height--;
 		      done = 1;
@@ -785,7 +785,7 @@ avlt_remove(avlt_key_t key)
 		  while (p && (p != r)) /* r points to t of the prev. round */
 		    {
 		      t = p;
-		      if (AVLT_IS_LOWER(q->key,p->key))
+		      if (AVLT_IS_LOWER(q->key, p->key))
 			p = p->left;
 		      else
 			p = p->right;		       
@@ -830,7 +830,7 @@ avlt_remove(avlt_key_t key)
  *	
  * \return 0 on succes (found key, \a data contains data of node), error
  *         code otherwise:
- *         - \c -AVLT_NOT_FOUND  key not found
+ *         - -#AVLT_NOT_FOUND  key not found
  */
 /*****************************************************************************/ 
 int
@@ -884,7 +884,7 @@ avlt_find(avlt_key_t key,
 #endif 
 
 /* the tree presentation is build in a local buffer first */
-static unsigned char __tree[2 * SHOW_DEPTH][SHOW_WIDTH];
+static char __tree[2 * SHOW_DEPTH][SHOW_WIDTH];
 
 /*****************************************************************************/
 /**
@@ -895,27 +895,28 @@ static void
 __avlt_build_tree(void)
 {
   int num_nodes = (1 << tree_height) - 1;
-  int i,level,row,pos,bits,w;
+  int level,row,pos,bits,w;
+  l4_umword_t i;
   char str[32];
   avlt_t *p;
 #if SHOW_LONG
   char left[16],right[16];
 #endif
   
-  LOGdL(DEBUG_AVLT_SHOW,"num_nodes = %d",num_nodes);
+  LOGdL(DEBUG_AVLT_SHOW, "num_nodes = %d", num_nodes);
   
   i = 1;
   while (i <= num_nodes)
     {
       level = l4util_log2(i);
 
-      LOGdL(DEBUG_AVLT_SHOW,"i = %d, level = %d",i,level);
+      LOGdL(DEBUG_AVLT_SHOW, "i = %d, level = %d", i, level);
 
       bits = level - 1;
       p = tree_head.right;
       while ((bits >= 0) && (p != NULL))
 	{
-	  if (l4util_test_bit(bits,&i))
+	  if (l4util_test_bit(bits, &i))
 	    p = p->right;
 	  else
 	    p = p->left;
@@ -941,32 +942,32 @@ __avlt_build_tree(void)
 #endif
 	  row = 2 * (level + 1);
 
-	  LOGdL(DEBUG_AVLT_SHOW,"node at 0x%08x, level = %d\n" \
-                "  0x%08x - 0x%08x: 0x%08x",(unsigned)p,level,
-                p->key.start,p->key.end,(unsigned)p->data);
+	  LOGdL(DEBUG_AVLT_SHOW, "node at 0x%08x, level = %d\n" \
+                "  0x%08x - 0x%08x: 0x%08x", (unsigned)p, level,
+                p->key.start, p->key.end, (unsigned)p->data);
 	  LOGdL(DEBUG_AVLT_SHOW,"row = %d, pos = %d",row,pos);
 
 #if SHOW_LONG
 	  if (p->left != NULL)
-	    sprintf(left,"%2d",avlt_node_index(p->left));
+	    sprintf(left, "%2d", avlt_node_index(p->left));
 	  else
-	    sprintf(left,"xx");
+	    sprintf(left, "xx");
 
 	  if (p->right != NULL)
-	    sprintf(right,"%2d",avlt_node_index(p->right));
+	    sprintf(right, "%2d", avlt_node_index(p->right));
 	  else
-	    sprintf(right,"xx");
+	    sprintf(right, "xx");
 
-	  sprintf(str," %2x,%2d,%2u,%2s,%2s",avlt_node_index(p),p->b,
-		  (unsigned)p->data,left,right);
-	  memcpy(&__tree[row][pos],str,strlen(str));
-	  sprintf(str,"%08X-%08X",p->key.start,p->key.end);
-	  memcpy(&__tree[row + 1][pos],str,strlen(str));
+	  sprintf(str, " %2x,%2d,%2u,%2s,%2s", avlt_node_index(p), p->b,
+		  (unsigned)p->data, left, right);
+	  memcpy(&__tree[row][pos], str, strlen(str));
+	  sprintf(str, "%08X-%08X", p->key.start, p->key.end);
+	  memcpy(&__tree[row + 1][pos], str, strlen(str));
 #else
-	  sprintf(str,"%2d,%2d",avlt_node_index(p),p->b);
-	  memcpy(&__tree[row][pos],str,strlen(str));
-	  sprintf(str,"%2u-%2u",p->key.start,p->key.end);
-	  memcpy(&__tree[row + 1][pos],str,strlen(str));
+	  sprintf(str, "%2d,%2d", avlt_node_index(p), p->b);
+	  memcpy(&__tree[row][pos], str, strlen(str));
+	  sprintf(str, "%2u-%2u", p->key.start, p->key.end);
+	  memcpy(&__tree[row + 1][pos], str, strlen(str));
 #endif
 	}
 
@@ -995,30 +996,30 @@ avlt_show_tree(void)
   return;
 
   /* init buffer */
-  memset(__tree,' ',2 * SHOW_DEPTH * SHOW_WIDTH);
+  memset(__tree, ' ', 2 * SHOW_DEPTH * SHOW_WIDTH);
 
   /* head node */
   if (tree_head.right != NULL)
-    sprintf(root,"%2d",avlt_node_index(tree_head.right));
+    sprintf(root, "%2d", avlt_node_index(tree_head.right));
   else 
-    sprintf(root,"xx");
+    sprintf(root, "xx");
 
-  sprintf(&__tree[0][SHOW_WIDTH / 2 - 9],"height %2u, root %2s",
-	  tree_height,root);
+  sprintf(&__tree[0][SHOW_WIDTH / 2 - 9], "height %2u, root %2s",
+	  tree_height, root);
 
   /* build tree */
   if (tree_head.right != NULL)
     __avlt_build_tree();
 
   /* show tree */
-  printf("\n\n");
+  LOG_printf("\n\n");
   for (i = 0; i < 2 * (tree_height + 1); i++)
     {
       __tree[i][SHOW_WIDTH - 1] = 0;
-      printf("%s\n",__tree[i]);
+      LOG_printf("%s\n", __tree[i]);
     }
 
-  printf("\n");
+  LOG_printf("\n");
 
 #if 0
   KDEBUG("AVL tree");
@@ -1039,16 +1040,14 @@ avlt_show_tree(void)
  */
 /*****************************************************************************/ 
 int
-AVLT_insert(l4_uint32_t start, 
-	    l4_uint32_t end, 
-	    l4_uint32_t data)
+AVLT_insert(l4_uint32_t start, l4_uint32_t end, l4_uint32_t data)
 {
   avlt_key_t key;
 
   key.start = start;
   key.end = end;
 
-  return avlt_insert(key,(void *)data);
+  return avlt_insert(key, (void *)data);
 }
 
 /*****************************************************************************/
@@ -1064,8 +1063,7 @@ AVLT_insert(l4_uint32_t start,
  */
 /*****************************************************************************/ 
 int
-AVLT_remove(l4_uint32_t start, 
-	    l4_uint32_t end)
+AVLT_remove(l4_uint32_t start, l4_uint32_t end)
 {
   avlt_key_t key;
 
@@ -1087,8 +1085,7 @@ AVLT_remove(l4_uint32_t start,
  */
 /*****************************************************************************/ 
 int 
-AVLT_find(l4_uint32_t start, 
-	  l4_uint32_t end)
+AVLT_find(l4_uint32_t start, l4_uint32_t end)
 {
   avlt_key_t key;
   avlt_data_t data;
@@ -1096,7 +1093,7 @@ AVLT_find(l4_uint32_t start,
   key.start = start;
   key.end = end;
 
-  return avlt_find(key,&data);
+  return avlt_find(key, &data);
 }
 
 #else /* DO_DEBUG_AVLT */

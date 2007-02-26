@@ -25,6 +25,8 @@
 #include "filter-server.h"
 #include "__config.h"
 
+char LOG_tag[9]="filter";
+
 /*****************************************************************************
  * Global stuff
  *****************************************************************************/
@@ -117,7 +119,7 @@ filter_thread(void * data)
 	}
       
       /* commit send packet */
-      ret = ret = dsi_packet_commit(snd_soc,snd_p);
+      ret = dsi_packet_commit(snd_soc,snd_p);
       if (ret)
 	{
 	  Panic("commit send packet failed (%d)",ret);
@@ -185,7 +187,7 @@ dsi_example_filter_open_component(CORBA_Object _dice_corba_obj,
     dsi_example_filter_socket_t *snd_s,
     dsi_example_filter_dataspace_t *snd_ctrl_ds,
     dsi_example_filter_dataspace_t *snd_data_ds,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   l4_threadid_t work_id, rcv_sync_id, snd_sync_id;
@@ -197,7 +199,7 @@ dsi_example_filter_open_component(CORBA_Object _dice_corba_obj,
   l4_size_t size;
 
   /* start work thread */
-  ret = l4thread_create_long(L4THREAD_INVALID_ID,filter_thread,
+  ret = l4thread_create_long(L4THREAD_INVALID_ID,filter_thread, 0,
 			     L4THREAD_INVALID_SP,L4THREAD_DEFAULT_SIZE,
 			     255,NULL,L4THREAD_CREATE_ASYNC);
   if (ret < 0)
@@ -349,7 +351,7 @@ l4_int32_t
 dsi_example_filter_connect_component(CORBA_Object _dice_corba_obj,
     const dsi_example_filter_socket_t *local,
     const dsi_example_filter_socket_t *remote,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   dsi_socket_t * s;
   int ret;
@@ -385,9 +387,6 @@ dsi_example_filter_connect_component(CORBA_Object _dice_corba_obj,
 /*****************************************************************************/ 
 int main(void)
 {
-  /* init log lib */
-  LOG_init("filter");
-
   /* init DSI lib */
   dsi_init();
 

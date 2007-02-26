@@ -8,18 +8,20 @@ INTERFACE:
 EXTENSION class Jdb
 {
 public:
-  static void cursor (unsigned int row=0, unsigned int col=0);
-  static void cursor_save();
-  static void cursor_restore();
-  static void screen_erase();
-  static void screen_scroll (unsigned int start, unsigned int end);
+  enum 
+    {
+      NOFANCY=0, 
+      FANCY=1
+    };
 };
 
-IMPLEMENTATION[ansi]:
+IMPLEMENTATION:
 
 #include <cstdio>
+#include <simpleio.h>
+#include "jdb_screen.h"
 
-IMPLEMENT
+PUBLIC static
 void
 Jdb::cursor (unsigned int row=0, unsigned int col=0)
 {
@@ -29,28 +31,35 @@ Jdb::cursor (unsigned int row=0, unsigned int col=0)
     printf ("\033[%u;%uH", 1, 1);
 }
 
-IMPLEMENT
+PUBLIC static inline NEEDS[<cstdio>]
+void
+Jdb::blink_cursor (unsigned int row, unsigned int col)
+{
+  printf ("\033[%d;%df", row, col);
+}
+
+PUBLIC static inline NEEDS[<simpleio.h>]
 void
 Jdb::cursor_save()
 {
-  printf ("\0337");
+  putstr ("\0337");
 }
 
-IMPLEMENT
+PUBLIC static inline NEEDS[<simpleio.h>]
 void
 Jdb::cursor_restore()
 {
-  printf ("\0338");
+  putstr ("\0338");
 }
 
-IMPLEMENT
+PUBLIC static inline NEEDS[<simpleio.h>]
 void
 Jdb::screen_erase()
 {
-  printf ("\033[2J");
+  putstr ("\033[2J");
 }   
-   
-IMPLEMENT
+
+PUBLIC static
 void
 Jdb::screen_scroll (unsigned int start, unsigned int end)
 {
@@ -58,4 +67,38 @@ Jdb::screen_scroll (unsigned int start, unsigned int end)
     printf ("\033[%u;%ur", start, end);
   else
     printf ("\033[r");
-} 
+}
+
+PUBLIC static inline NEEDS[<simpleio.h>]
+void
+Jdb::clear_to_eol()
+{
+  putstr("\033[K");
+}
+
+// preserve the history of the serial console if fancy != 0
+PUBLIC static
+void
+Jdb::clear_screen(int fancy=FANCY)
+{
+  if (fancy == FANCY)
+    {
+      cursor(Jdb_screen::height(), 1);
+      for (unsigned i=0; i<Jdb_screen::height(); i++)
+	{
+	  putchar('\n');
+	  clear_to_eol();
+	}
+    }
+  else
+    {
+      cursor();
+      for (unsigned i=0; i<Jdb_screen::height()-1; i++)
+	{
+	  clear_to_eol();
+	  putchar('\n');
+	}
+    }
+  cursor();
+}
+

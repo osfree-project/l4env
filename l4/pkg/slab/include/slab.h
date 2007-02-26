@@ -18,7 +18,7 @@
 #define _L4SLAB_SLAB_H
 
 /* L4env includes */
-#include <l4/sys/types.h>
+#include <l4/sys/l4int.h>
 #include <l4/env/cdefs.h>
 
 /*****************************************************************************

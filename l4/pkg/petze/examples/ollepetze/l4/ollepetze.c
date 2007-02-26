@@ -9,33 +9,27 @@
 
 /*** L4 INCLUDES ***/
 #include <l4/log/l4log.h>
-#include <l4/petze/petze-client.h>
-#include <l4/names/libnames.h>
+#include <l4/petze/petzetrigger.h>
 #include <l4/dope/dopelib.h>
 
+l4_ssize_t l4libc_heapsize = 512*1024;
 char LOG_tag[9] = "OllePetze";
-l4_ssize_t l4libc_heapsize = 500*1024;
 
 static long app_id;
-static l4_threadid_t petze_tid;
-static CORBA_Object petze_server = &petze_tid;
-static CORBA_Environment env = dice_default_environment;
-
 
 static void dump_callback(dope_event *e,void *arg) {
-	petze_dump_call(petze_server,&env);
+	printf("--- Olle Petze dump request ---\n");
+	petze_dump();
 }
 
+
 static void reset_callback(dope_event *e,void *arg) {
-	petze_reset_call(petze_server,&env);
+	printf("--- Olle Petze reset ---\n");
+	petze_reset();
 }
 
 
 int main(int argc,char **argv) {
-
-	while (names_waitfor_name("Petze", petze_server, 2000) == 0) {
-		printf("Petze is not registered at names!\n");
-	}
 
 	dope_init();
 	app_id = dope_init_app("Olle Petze");

@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -22,9 +22,7 @@
 #include "gfx_handler.h"
 
 #define RGBA_TO_RGB16(c) (((c&0xf8000000)>>16)|((c&0x00fc0000)>>13)|((c&0x0000f800)>>11))
-
-#define MAX(a,b) (a>b?a:b)
-#define MIN(a,b) (a<b?a:b)
+#define COL16(r, g, b) (r<<11) + (g<<6) + b
 
 static struct scrdrv_services   *scrdrv;
 static struct fontman_services  *fontman;
@@ -33,47 +31,55 @@ static struct cache_services    *cache;
 
 static CACHE *imgcache = NULL;
 
-#define COL16(r,g,b) (r<<11) + (g<<6) + b
-static u16 coltab_16[16] = {
-	COL16( 0, 0, 0),COL16(15, 0, 0),COL16( 0,15, 0),COL16(15,15, 0),
-	COL16( 0, 0,15),COL16(15, 0,15),COL16( 0,15,15),COL16(15,15,15),
-	COL16( 0, 0, 0),COL16(31, 0, 0),COL16( 0,31, 0),COL16(31,31, 0),
-	COL16( 0, 0,31),COL16(31, 0,31),COL16( 0,31,31),COL16(31,31,31),
-};
-
-
 static s32  clip_x1, clip_y1, clip_x2, clip_y2;
 static u16 *scr_adr;
 static s32  scr_width, scr_height, scr_type;
 
 int init_gfxscr16(struct dope_services *d);
 
-/*************************/
-/*** PRIVATE FUNCTIONS ***/
-/*************************/
+#ifdef GFX_ASM
+
+/*** DRAW SOLID BOX ***/
+extern void asm_solid_fill_16(u16 *dst, long line_width,
+                              long width, long height, long color);
+
+/*** DRAW TRANSPARENT BOX ***/
+extern void asm_solid_mixed_16(u16 *dst, long line_width,
+                               long width, long height, long color);
+
+/*** DRAW SCALED IMAGE ***/
+extern void asm_scaled_img_16(u16 *src, u8 *dst, long sx, long sy,
+                              long mx, long my, long src_w, long dst_w,
+                              long w, long h);
+
+#endif
+
+/*************************
+ *** PRIVATE FUNCTIONS ***
+ *************************/
 
 
 /*** DRAW A SOLID HORIZONTAL LINE IN 16BIT COLOR MODE ***/
-static inline void solid_hline_16(short *dst,u32 width,u16 col) {
+static inline void solid_hline_16(short *dst, u32 width, u16 col) {
 	for (;width--;dst++) *dst = col;
 }
 
 
 /*** DRAW A SOLID VERTICAL LINE IN 16BIT COLOR MODE ***/
-static inline void solid_vline_16(u16 *dst,u32 height,u32 scr_w,u16 col) {
+static inline void solid_vline_16(u16 *dst, u32 height, u32 scr_w, u16 col) {
 	for (;height--;dst+=scr_w) *dst = col;
 }
 
 
 /*** DRAW A TRANSPARENT HORIZONTAL LINE IN 16BIT COLOR MODE ***/
-static inline void mixed_hline_16(u16 *dst,u32 width,u16 mixcol) {
+static inline void mixed_hline_16(u16 *dst, u32 width, u16 mixcol) {
 	mixcol=(mixcol&0xf7de)>>1;
 	for (;width--;dst++) *dst = (((*dst)&0xf7de)>>1) + mixcol;
 }
 
 
 /*** DRAW A TRANSPARENT VERTICAL LINE IN 16BIT COLOR MODE ***/
-static inline void mixed_vline_16(u16 *dst,u32 height,u32 scr_w,u16 mixcol) {
+static inline void mixed_vline_16(u16 *dst, u32 height, u32 scr_w, u16 mixcol) {
 	mixcol=(mixcol&0xf7de)>>1;
 	for (;height--;dst+=scr_w) *dst = (((*dst)&0xf7de)>>1) + mixcol;
 }
@@ -81,9 +87,9 @@ static inline void mixed_vline_16(u16 *dst,u32 height,u32 scr_w,u16 mixcol) {
 
 /*** DRAW CLIPPED 16BIT IMAGE TO 16BIT SCREEN ***/
 static inline void paint_img_16(s32 x, s32 y, s32 img_w, s32 img_h, u16 *src) {
-	s32 i,j;
+	s32 i, j;
 	s32 w = img_w, h = img_h;
-	u16 *dst,*s,*d;
+	u16 *dst, *s, *d;
 
 	dst = scr_adr + y*scr_width + x;
 
@@ -100,25 +106,25 @@ static inline void paint_img_16(s32 x, s32 y, s32 img_w, s32 img_h, u16 *src) {
 
 	/* top clipping */
 	if (y < clip_y1) {
-		h   -= (clip_y1-y);
-		src += (clip_y1-y)*img_w;
-		dst += (clip_y1-y)*scr_width;
-		y=clip_y1;
+		h   -= (clip_y1 - y);
+		src += (clip_y1 - y)*img_w;
+		dst += (clip_y1 - y)*scr_width;
+		y    =  clip_y1;
 	}
 
 	/* bottom clipping */
-	if (y+h-1 > clip_y2) h -= (y+h-1 - clip_y2);
+	if (y + h - 1 > clip_y2) h -= (y + h - 1 - clip_y2);
 
 	/* anything left? */
-	if ((w<0) || (h<0)) return;
+	if (w < 0 || h < 0) return;
 
 	/* paint... */
-	for (j=h;j--;) {
+	for (j = h; j--; ) {
 
 		/* copy line from image to screen */
-		for (i=w,s=src,d=dst;i--;*(d++)=*(s++));
-		src+=img_w;
-		dst+=scr_width;
+		for (i = w, s = src, d = dst; i--; *(d++) = *(s++));
+		src += img_w;
+		dst += scr_width;
 	}
 }
 
@@ -126,80 +132,59 @@ static inline void paint_img_16(s32 x, s32 y, s32 img_w, s32 img_h, u16 *src) {
 static s32 scale_xbuf[2000];
 
 /*** DRAW SCALED AND CLIPPED 16BIT IMAGE TO 16BIT SCREEN ***/
-static inline void paint_scaled_img_16(s32 x,s32 y,s32 w,s32 h, s32 img_w, s32 img_h, u16 *src) {
-	float mx,my;
-	long i,j;
-	float sx = 0.0 ,sy = 0.0;
-	u16 *dst,*s,*d;
+static void paint_scaled_img_16(s32 x, s32 y, s32 w, s32 h,
+                                s32 img_w, s32 img_h, u16 *src) {
+	long mx, my;
+	long i, j;
+	long sx = 0, sy = 0;
+	u16 *dst, *s, *d;
 
-	if (w) mx = (float)img_w / (float)w;
-	else mx=0.0;
+	if (w) mx = ((long)img_w<<16) / w;
+	else mx = 0;
 
-	if (h) my = (float)img_h / (float)h;
-	else my=0.0;
+	if (h) my = ((long)img_h<<16) / h;
+	else my = 0;
 
 	dst = scr_adr + y*scr_width + x;
 
 	/* left clipping */
 	if (x < clip_x1) {
-		w   -= (clip_x1-x);
-		sx  += (float)(clip_x1-x) * mx;
-		dst += (clip_x1-x);
+		w   -= (clip_x1 - x);
+		sx  += (clip_x1 - x) * mx;
+		dst += (clip_x1 - x);
 		x    = clip_x1;
 	}
 
 	/* right clipping */
-	if (x+w-1 > clip_x2) w -= (x+w-1 - clip_x2);
+	if (x + w - 1 > clip_x2) w -= (x + w - 1 - clip_x2);
 
 	/* top clipping */
 	if (y < clip_y1) {
-		h   -= (clip_y1-y);
-		sy  += (float)(clip_y1-y) * my;
-		dst += (clip_y1-y)*scr_width;
-		y    = clip_y1;
+		h   -= (clip_y1 - y);
+		sy  += (clip_y1 - y) * my;
+		dst += (clip_y1 - y) * scr_width;
+		y    =  clip_y1;
 	}
 
 	/* bottom clipping */
-	if (y+h-1 > clip_y2) h -= (y+h-1 - clip_y2);
+	if (y + h - 1 > clip_y2) h -= (y + h - 1 - clip_y2);
 
 	/* anything left? */
-	if ((w<0) || (h<0)) return;
+	if (w < 0 || h < 0) return;
 
 	/* calculate x offsets */
-	for (i=w;i--;) {
-		scale_xbuf[i]=(long)sx;
+	for (i = w; i--; ) {
+		scale_xbuf[i] = sx >> 16;
 		sx += mx;
 	}
 
 	/* draw scaled image */
-	for (j=h;j--;) {
-		s=src + ((long)sy*img_w);
-		d=dst;
-		for (i=w;i--;) *(d++) = *(s + scale_xbuf[i]);
-		sy += my;
-		dst+= scr_width;
-	}
-}
-
-/*** CONVERT AN INDEXED 8-BIT IMAGE TO A 16BIT HICOLOR IMAGE ***/
-static u16 coltab[256];
-static void convert_8i_to_16(s32 w,s32 h,u8 *src_idx,u32 *src_col, u16 *dst_pix) {
-	u32 col24;
-	s32 i;
-
-	INFO(printf("GfxImg8i(convert_8i_to_16)\n");)
-
-	/* convert color table from 24bit to 16bit */
-	for (i=0;i<256;i++) {
-		col24=*(src_col++);
-		coltab[i] = ((col24&0xf8000000)>>(16))  |
-		            ((col24&0x00fc0000)>>(8+5)) |
-		            ((col24&0x0000f800)>>(8+3));
-	}
-
-	/* convert pixels using color table */
-	for (i=w*h; i--;) {
-		*(dst_pix++) = coltab[*(src_idx++)];
+	for (j = h; j--; ) {
+		s = src + ((sy>>16)*img_w);
+		d = dst;
+		for (i = w; i--; ) *(d++) = *(s + scale_xbuf[i]);
+		sy  += my;
+		dst += scr_width;
 	}
 }
 
@@ -218,10 +203,10 @@ static const s32 Inverse_Table_6_9[8][4] = {
 };
 
 static u16 tab_16[197 + 2*682 + 256 + 132];
-static void * table_rV[256];
-static void * table_gU[256];
-static int table_gV[256];
-static void * table_bU[256];
+static void *table_rV[256];
+static void *table_gU[256];
+static int   table_gV[256];
+static void *table_bU[256];
 
 #define RGB(i)\
 U = pu_[i];\
@@ -293,12 +278,14 @@ static void convert_yuv420_to_16(int width, int height, u8 *src_yuv420, u16 *dst
 	} while (--height);
 }
 
+
 static int div_r(int dividend, int divisor) {
 	if (dividend > 0)
 		return (dividend + (divisor>>1)) / divisor;
 	else
 		return -((-dividend + (divisor>>1)) / divisor);
 }
+
 
 static int init_yuv2rgb(void) {
 	int i;
@@ -323,142 +310,150 @@ static int init_yuv2rgb(void) {
 	table_g = table_16 + 197 + 2*682;
 
 	for (i = -197; i < 256+197; i++)
-		((u16 *)table_r)[i] = (table_Y[i+384] >> 3) << 11;
+		((u16 *)table_r)[i] = (table_Y[i + 384] >> 3) << 11;
 
 	for (i = -132; i < 256+132; i++)
-		((u16 *)table_g)[i] = (table_Y[i+384] >> 2) << 5;
+		((u16 *)table_g)[i] = (table_Y[i + 384] >> 2) << 5;
 
 	for (i = -232; i < 256+232; i++)
-		((u16 *)table_b)[i] = (table_Y[i+384] >> 3);
+		((u16 *)table_b)[i] = (table_Y[i + 384] >> 3);
 
 	for (i = 0; i < 256; i++) {
-		table_rV[i] = (((u8 *)table_r) + 2 * div_r (crv * (i-128), 76309));
-		table_gU[i] = (((u8 *)table_g) + 2 * div_r (cgu * (i-128), 76309));
+		table_rV[i] = (((u8 *)table_r) + 2 * div_r (crv * (i - 128), 76309));
+		table_gU[i] = (((u8 *)table_g) + 2 * div_r (cgu * (i - 128), 76309));
 		table_gV[i] = 2 * div_r (cgv * (i-128), 76309);
-		table_bU[i] = (((u8 *)table_b) + 2 * div_r (cbu * (i-128), 76309));
+		table_bU[i] = (((u8 *)table_b) + 2 * div_r (cbu * (i - 128), 76309));
 	}
 	return 0;
 }
 
 
-/*****************************/
-/*** GFX HANDLER FUNCTIONS ***/
-/*****************************/
+/*****************************
+ *** GFX HANDLER FUNCTIONS ***
+ *****************************/
 
 static s32 scr_get_width(struct gfx_ds_data *s) {
 	return scr_width;
 }
 
+
 static s32 scr_get_height(struct gfx_ds_data *s) {
 	return scr_height;
 }
+
 
 static s32 scr_get_type(struct gfx_ds_data *s) {
 	return GFX_IMG_TYPE_RGB16;
 }
 
+
 static void scr_destroy(struct gfx_ds_data *s) {
 	scrdrv->restore_screen();
 }
+
 
 static void *scr_map(struct gfx_ds_data *s) {
 	return scr_adr;
 }
 
+
 static void scr_update(struct gfx_ds_data *s, s32 x, s32 y, s32 w, s32 h) {
-	scrdrv->update_area(x, y, x+w-1, y+h-1);
+	scrdrv->update_area(x, y, x + w - 1, y + h - 1);
 }
+
 
 static s32 scr_draw_hline_16(struct gfx_ds_data *s, s16 x, s16 y, s16 w, u32 rgba) {
 	int beg_x, end_x;
 
-	if ((clip_y1>y) || (clip_y2<y)) return 0;
-	beg_x = MAX(x,clip_x1);
-	end_x = MIN(x+w-1,clip_x2);
+	if (clip_y1 > y || clip_y2 < y) return 0;
+	beg_x = MAX(x, clip_x1);
+	end_x = MIN(x + w - 1, clip_x2);
 
 	if (beg_x > end_x) return 0;
 
-	if (GFX_ALPHA(rgba)>127) {
-		solid_hline_16(scr_adr+y*scr_width+beg_x, end_x-beg_x+1, RGBA_TO_RGB16(rgba));
+	if (GFX_A(rgba) > 127) {
+		solid_hline_16(scr_adr + y*scr_width + beg_x, end_x - beg_x + 1, RGBA_TO_RGB16(rgba));
 	} else {
-		mixed_hline_16(scr_adr+y*scr_width+beg_x, end_x-beg_x+1, RGBA_TO_RGB16(rgba));
+		mixed_hline_16(scr_adr + y*scr_width + beg_x, end_x - beg_x + 1, RGBA_TO_RGB16(rgba));
 	}
 	return 0;
 }
 
+
 static s32 scr_draw_vline_16(struct gfx_ds_data *s, s16 x, s16 y, s16 h, u32 rgba) {
 	s32 beg_y, end_y;
 
-	if ((clip_x1>x) || (clip_x2<x)) return 0;
-	beg_y = MAX(y,clip_y1);
-	end_y = MIN(y+h-1,clip_y2);
+	if (clip_x1 > x || clip_x2 < x) return 0;
+	beg_y = MAX(y, clip_y1);
+	end_y = MIN(y + h - 1, clip_y2);
 	if (beg_y > end_y) return 0;
 
-	if (GFX_ALPHA(rgba)>127) {
-		solid_vline_16(scr_adr+beg_y*scr_width+x, end_y-beg_y+1, scr_width, RGBA_TO_RGB16(rgba));
+	if (GFX_A(rgba) > 127) {
+		solid_vline_16(scr_adr + beg_y*scr_width + x, end_y - beg_y + 1, scr_width, RGBA_TO_RGB16(rgba));
 	} else {
-		mixed_vline_16(scr_adr+beg_y*scr_width+x, end_y-beg_y+1, scr_width, RGBA_TO_RGB16(rgba));
+		mixed_vline_16(scr_adr + beg_y*scr_width + x, end_y - beg_y + 1, scr_width, RGBA_TO_RGB16(rgba));
 	}
 	return 0;
 }
 
 static s32 scr_draw_fill_16(struct gfx_ds_data *s, s16 x1, s16 y1, s16 w, s16 h, u32 rgba) {
-	static s16 x,y;
-	static u16 *dst,*dst_line;
+	static s16 x, y;
+	static u16 *dst, *dst_line;
 	static u16 color;
+	static u16 alpha;
 	s16 x2 = x1 + w - 1;
 	s16 y2 = y1 + h - 1;
 
 	/* check clipping */
-	if (x1<clip_x1) x1 = clip_x1;
-	if (y1<clip_y1) y1 = clip_y1;
-	if (x2>clip_x2) x2 = clip_x2;
-	if (y2>clip_y2) y2 = clip_y2;
-	if (x1>x2) return -1;
-	if (y1>y2) return -1;
+	if (x1 < clip_x1) x1 = clip_x1;
+	if (y1 < clip_y1) y1 = clip_y1;
+	if (x2 > clip_x2) x2 = clip_x2;
+	if (y2 > clip_y2) y2 = clip_y2;
+	if (x1 > x2) return -1;
+	if (y1 > y2) return -1;
 
 	color = RGBA_TO_RGB16(rgba);
+	alpha = GFX_A(rgba);
+
+#ifdef GFX_ASM
+
+	/* solid fill */
+	if (alpha & 0x80) {
+		asm_solid_fill_16(scr_adr + scr_width*y1 + x1, scr_width, x2 - x1 + 1, y2 - y1 + 1, color);
+
+	/* mix colors for alpha mode */
+	} else {
+		asm_mixed_fill_16(scr_adr + scr_width*y1 + x1, scr_width, x2 - x1 + 1, y2 - y1 + 1, color);
+	}
+
+#else
 
 	dst_line = scr_adr + scr_width*y1;
-	for (y = y1; y <= y2; y++) {
-		dst=dst_line + x1;
-		for (x = x1; x <= x2; x++) {
-			*(dst++) = color;
+
+	/* solid fill */
+	if (alpha & 0x80) {
+		for (y = y1; y <= y2; y++) {
+			dst=dst_line + x1;
+			for (x = x1; x <= x2; x++) *(dst++) = color;
+			dst_line += scr_width;
 		}
-		dst_line += scr_width;
-	}
-	return 0;
-}
-
-
-static s32 scr_draw_idximg_16(struct gfx_ds_data *s, s16 x, s16 y, s16 w, s16 h,
-                              struct gfx_ds *idximg, struct gfx_ds *pal,
-                              u8 alpha) {
-	s32  img_w  = idximg->handler->get_width(idximg->data);
-	s32  img_h  = idximg->handler->get_height(idximg->data);
-	u8  *pix8i  = idximg->handler->map(idximg->data);
-	u32 *colors = pal->handler->map(pal->data);
-
-	s32  cache_index = pal->cache_idx;
-	s32  cache_ident =  ((idximg->update_cnt<<16) | (pal->update_cnt))
-	                 ^ ((s32)idximg) ^ ((s32)pal);
-
-	u16 *pix16  = cache->get_elem(imgcache,cache_index,cache_ident);
-
-	if (!pix16) {
-		pix16 = malloc(img_w*img_h*2);
-		convert_8i_to_16(img_w,img_h,pix8i,colors,pix16);
-		pal->cache_idx = cache->add_elem(imgcache,pix16,img_w*img_h*2,
-		                    cache_ident, NULL);
-	}
-
-	if ((img_w == w) && (img_h == h)) {
-		paint_img_16(x, y, img_w, img_h, pix16);
+		
+	/* mix colors for alpha mode */
 	} else {
-		paint_scaled_img_16(x, y, w, h, img_w, img_h, pix16);
+		color = (color >> 1) & 0x7bef;    /* 50% alpha mode */
+		for (y = y1; y <= y2; y++) {
+			dst=dst_line + x1;
+			for (x = x1; x <= x2; x++) {
+				*dst = ((*dst >> 1) & 0x7bef) + color;
+				dst++;
+			}
+			dst_line += scr_width;
+		}
 	}
+#endif
 	return 0;
 }
+
 
 static s32 scr_draw_img_16(struct gfx_ds_data *s, s16 x, s16 y, s16 w, s16 h,
                            struct gfx_ds *img, u8 alpha) {
@@ -473,12 +468,12 @@ static s32 scr_draw_img_16(struct gfx_ds_data *s, s16 x, s16 y, s16 w, s16 h,
 		src = img->handler->map(img->data);
 		break;
 	case GFX_IMG_TYPE_YUV420:
-		src = cache->get_elem(imgcache,img->cache_idx,123);
+		src = cache->get_elem(imgcache, img->cache_idx, 123);
 		if (!src) {
 			src = malloc(img_w*img_h*2);
-			img->cache_idx = cache->add_elem(imgcache,src,img_w*img_h*2,123,NULL);
+			img->cache_idx = cache->add_elem(imgcache, src, img_w*img_h*2, 123, NULL);
 		}
-		convert_yuv420_to_16(img_w,img_h,img->handler->map(img->data),src);
+		convert_yuv420_to_16(img_w, img_h, img->handler->map(img->data), src);
 	}
 
 	if (!src) return -1;
@@ -494,214 +489,107 @@ static s32 scr_draw_img_16(struct gfx_ds_data *s, s16 x, s16 y, s16 w, s16 h,
 
 static s32 scr_draw_string_16(struct gfx_ds_data *ds, s16 x, s16 y, s32 fg_rgba, u32 bg_rgba, s32 fnt_id, char *str) {
 	struct font *font = fontman->get_by_id(fnt_id);
-	s32 *wtab=font->width_table;
-	s32 *otab=font->offset_table;
-	s32 img_w=font->img_w;
-	s32 img_h=font->img_h;
+	s32 *wtab = font->width_table;
+	s32 *otab = font->offset_table;
+	s32 img_w = font->img_w;
+	s32 img_h = font->img_h;
 	u16 *dst = scr_adr + y*scr_width + x;
 	u8  *src = font->image;
 	u8  *s;
 	u16 *d;
-	s16 i,j;
+	s16 i, j;
 	s32 w;
 	s32 h = font->img_h;
 	u16 color = RGBA_TO_RGB16(fg_rgba);
 	if (!str) return -1;
 
 	/* check top clipping */
-	if (y<clip_y1) {
-		src += (clip_y1-y)*img_w;   /* skip upper lines in font image */
-		h   -= (clip_y1-y);         /* decrement number of lines to draw */
-		dst += (clip_y1-y)*scr_width;
+	if (y < clip_y1) {
+		src += (clip_y1 - y)*img_w;   /* skip upper lines in font image */
+		h   -= (clip_y1 - y);         /* decrement number of lines to draw */
+		dst += (clip_y1 - y)*scr_width;
 	}
 
 	/* check bottom clipping */
-	if (y+img_h-1 > clip_y2) h-= (y+img_h-1-clip_y2);  /* decr. number of lines to draw */
+	if (y+img_h - 1 > clip_y2)
+		h -= (y + img_h - 1 - clip_y2);  /* decr. number of lines to draw */
 
-	if (h<1) return -1;
+	if (h < 1) return -1;
 
 	/* skip characters that are completely hidden by the left clipping border */
-	while ((*str) && (x+wtab[(int)(*str)] < clip_x1)) {
+	while (*str && (x+wtab[(int)(*str)] < clip_x1)) {
 		x+=wtab[(int)(*str)];
 		dst+=wtab[(int)(*str)];
 		str++;
 	}
 
 	/* draw left cutted character */
-	if ((*str) && (x+wtab[(int)(*str)]-1 <= clip_x2) && (x<clip_x1)) {
-		w=wtab[(int)(*str)] - (clip_x1-x);
-		s=src + otab[(int)(*str)] + (clip_x1-x);
-		d=dst + (clip_x1-x);
-		for (j=0;j<h;j++) {
-			for (i=0;i<w;i++) {
-				if (*(s+i)) *(d+i)=color;
+	if (*str && (x+wtab[(int)(*str)] - 1 <= clip_x2) && (x < clip_x1)) {
+		w = wtab[(int)(*str)] - (clip_x1 - x);
+		s = src + otab[(int)(*str)] + (clip_x1 - x);
+		d = dst + (clip_x1 - x);
+		for (j = 0; j < h; j++) {
+			for (i = 0; i < w; i++) {
+				if (s[i]) d[i] = color;
 			}
-			s=s+img_w;
-			d=d+scr_width;
+			s = s + img_w;
+			d = d + scr_width;
 		}
-		dst+= wtab[(int)(*str)];
-		x+=wtab[(int)(*str)];
+		dst += wtab[(int)(*str)];
+		x   += wtab[(int)(*str)];
 		str++;
 	}
 
 	/* draw horizontally full visible characters */
-	while ((*str) && (x+wtab[(int)(*str)]-1 < clip_x2)) {
-		w=wtab[(int)(*str)];
-		s=src + otab[(int)(*str)];
-		d=dst;
-		for (j=0;j<h;j++) {
-			for (i=0;i<w;i++) {
-				if (*(s+i)) *(d+i)=color;
+	while (*str && (x + wtab[(int)(*str)] - 1 < clip_x2)) {
+		w = wtab[(int)(*str)];
+		s = src + otab[(int)(*str)];
+		d = dst;
+		for (j = 0; j < h; j++) {
+			for (i = 0; i < w; i++) {
+				if (s[i]) d[i] = color;
 			}
-			s=s+img_w;
-			d=d+scr_width;
+			s = s + img_w;
+			d = d + scr_width;
 		}
-		dst+= wtab[(int)(*str)];
-		x+=wtab[(int)(*str)];
+		dst += wtab[(int)(*str)];
+		x   += wtab[(int)(*str)];
 		str++;
 	}
 
 	/* draw right cutted character */
 	if (*str) {
-		w=wtab[(int)(*str)];
-		s=src + otab[(int)(*str)];
-		d=dst;
-		if (x+w-1> clip_x2) {
-			w-= x+w-1 - clip_x2;
+		w = wtab[(int)(*str)];
+		s = src + otab[(int)(*str)];
+		d = dst;
+		if (x + w - 1 > clip_x2) {
+			w -= x + w - 1 - clip_x2;
 		}
-		if (x<clip_x1) {    /* check if character is also left-cutted */
-			w-=(clip_x1-x);
-			s+=(clip_x1-x);
-			d+=(clip_x1-x);
+		if (x < clip_x1) {    /* check if character is also left-cutted */
+			w -= clip_x1 - x;
+			s += clip_x1 - x;
+			d += clip_x1 - x;
 		}
-		for (j=0;j<h;j++) {
-			for (i=0;i<w;i++) {
-				if (*(s+i)) *(d+i)=color;
+		for (j = 0; j < h; j++) {
+			for (i = 0; i < w; i++) {
+				if (s[i]) d[i] = color;
 			}
-			s=s+img_w;
-			d=d+scr_width;
+			s += img_w;
+			d += scr_width;
 		}
 	}
 	return 0;
 }
 
-static s32 scr_draw_ansi_16(struct gfx_ds_data *ds, s16 x, s16 y,
-                         s32 font_id, char *str, u8 *bgfg) {
-	struct font *font = fontman->get_by_id(font_id);
-	s32 *wtab=font->width_table;
-	s32 *otab=font->offset_table;
-	s32 img_w=font->img_w;
-	s32 img_h=font->img_h;
-	u16 *dst = scr_adr + y*scr_width + x;
-	u8  *src = font->image;
-	u8  *s;
-	u16 *d;
-	s16 i,j;
-	s32 w;
-	s32 h = font->img_h;
-	u16 fg_col=-1;
-	u16 bg_col=-1;
-
-	if (!str) return -1;
-
-	/* check top clipping */
-	if (y<clip_y1) {
-		src+= (clip_y1-y)*img_w;    /* skip upper lines in font image */
-		h-= (clip_y1-y);            /* decrement number of lines to draw */
-		dst+= (clip_y1-y)*scr_width;
-	}
-
-	/* check bottom clipping */
-	if (y+img_h-1>clip_y2) {
-		h-= (y+img_h-1-clip_y2);    /* decrement number of lines to draw */
-	}
-
-	if (h<1) return -1;
-
-	/* skip characters that are completely hidden by the left clipping border */
-	while ((*str) && (x+wtab[(int)(*str)] < clip_x1)) {
-		x+=wtab[(int)(*str)];
-		dst+=wtab[(int)(*str)];
-		str++;
-		bgfg++;
-	}
-
-	/* draw left cutted character */
-	if ((*str) && (x+wtab[(int)(*str)]-1 <= clip_x2) && (x<clip_x1)) {
-		w=wtab[(int)(*str)] - (clip_x1-x);
-		s=src + otab[(int)(*str)] + (clip_x1-x);
-		d=dst + (clip_x1-x);
-		fg_col=coltab_16[*bgfg >> 4];
-		bg_col=coltab_16[*bgfg & 0x0f];
-		for (j=0;j<h;j++) {
-			for (i=0;i<w;i++) {
-				if (*(s+i)) *(d+i)=fg_col;
-				else *(d+i)=bg_col;
-			}
-			s=s+img_w;
-			d=d+scr_width;
-		}
-		dst+= wtab[(int)(*str)];
-		x+=wtab[(int)(*str)];
-		str++;
-		bgfg++;
-	}
-
-	/* draw horizontally full visible characters */
-	while ((*str) && (x+wtab[(int)(*str)]-1 < clip_x2)) {
-		w=wtab[(int)(*str)];
-		s= src + otab[(int)(*str)];
-		d=dst;
-		fg_col=coltab_16[*bgfg >> 4];
-		bg_col=coltab_16[*bgfg & 0x0f];
-		for (j=0;j<h;j++) {
-			for (i=0;i<w;i++) {
-				if (*(s+i)) *(d+i)=fg_col;
-				else *(d+i)=bg_col;
-			}
-			s=s+img_w;
-			d=d+scr_width;
-		}
-		dst+= wtab[(int)(*str)];
-		x+=wtab[(int)(*str)];
-		str++;
-		bgfg++;
-	}
-
-	/* draw right cutted character */
-	if (*str) {
-		w=wtab[(int)(*str)];
-		s=src + otab[(int)(*str)];
-		d=dst;
-		fg_col=coltab_16[*bgfg >> 4];
-		bg_col=coltab_16[*bgfg & 0x0f];
-		if (x+w-1> clip_x2) {
-			w-= x+w-1 - clip_x2;
-		}
-		if (x<clip_x1) {    /* check if character is also left-cutted */
-			w-=(clip_x1-x);
-			s+=(clip_x1-x);
-			d+=(clip_x1-x);
-		}
-		for (j=0;j<h;j++) {
-			for (i=0;i<w;i++) {
-				if (*(s+i)) *(d+i)=fg_col;
-				else *(d+i)=bg_col;
-			}
-			s=s+img_w;
-			d=d+scr_width;
-		}
-	}
-	return 0;
-}
 
 static void scr_push_clipping(struct gfx_ds_data *s, s32 x, s32 y, s32 w, s32 h) {
-	clip->push(x, y, x+w-1, y+h-1);
+	clip->push(x, y, x + w - 1, y + h - 1);
 	clip_x1 = clip->get_x1();
 	clip_y1 = clip->get_y1();
 	clip_x2 = clip->get_x2();
 	clip_y2 = clip->get_y2();
 }
+
 
 static void scr_pop_clipping(struct gfx_ds_data *s) {
 	clip->pop();
@@ -711,6 +599,7 @@ static void scr_pop_clipping(struct gfx_ds_data *s) {
 	clip_y2 = clip->get_y2();
 }
 
+
 static void scr_reset_clipping(struct gfx_ds_data *s) {
 	clip->reset();
 	clip_x1 = clip->get_x1();
@@ -719,33 +608,38 @@ static void scr_reset_clipping(struct gfx_ds_data *s) {
 	clip_y2 = clip->get_y2();
 }
 
+
 static s32 scr_get_clip_x(struct gfx_ds_data *s) {
 	return clip_x1;
 }
+
 
 static s32 scr_get_clip_y(struct gfx_ds_data *s) {
 	return clip_y1;
 }
 
+
 static s32 scr_get_clip_w(struct gfx_ds_data *s) {
 	return clip_x2 - clip_x1 + 1;
 }
+
 
 static s32 scr_get_clip_h(struct gfx_ds_data *s) {
 	return clip_y2 - clip_y1 + 1;
 }
 
+
 static void scr_set_mouse_pos(struct gfx_ds_data *s, s32 x, s32 y) {
 	scrdrv->set_mouse_pos(x, y);
 }
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
 
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 static struct gfx_ds_data *create(s32 width, s32 height) {
-	scrdrv->set_screen(width, height ,16);
+	scrdrv->set_screen(width, height, 16);
 	scr_adr    = scrdrv->get_buf_adr();
 	scr_width  = scrdrv->get_scr_width();
 	scr_height = scrdrv->get_scr_height();
@@ -753,39 +647,37 @@ static struct gfx_ds_data *create(s32 width, s32 height) {
 	if (scrdrv->get_scr_depth() == 16) scr_type = GFX_IMG_TYPE_RGB16;
 	else return NULL;
 
-	clip->set_range(0, 0, scr_width-1, scr_height-1);
+	clip->set_range(0, 0, scr_width - 1, scr_height - 1);
 	return (void *)1;
 }
 
 static s32 register_gfx_handler(struct gfx_ds_handler *handler) {
-	handler->get_width = scr_get_width;
-	handler->get_height = scr_get_height;
-	handler->get_type = scr_get_type;
-	handler->destroy = scr_destroy;
-	handler->map = scr_map;
-	handler->update = scr_update;
-	handler->draw_hline = scr_draw_hline_16;
-	handler->draw_vline = scr_draw_vline_16;
-	handler->draw_fill = scr_draw_fill_16;
-	handler->draw_img = scr_draw_img_16;
-	handler->draw_idximg = scr_draw_idximg_16;
-	handler->draw_string = scr_draw_string_16;
-	handler->draw_ansi = scr_draw_ansi_16;
-	handler->push_clipping = scr_push_clipping;
-	handler->pop_clipping = scr_pop_clipping;
+	handler->get_width      = scr_get_width;
+	handler->get_height     = scr_get_height;
+	handler->get_type       = scr_get_type;
+	handler->destroy        = scr_destroy;
+	handler->map            = scr_map;
+	handler->update         = scr_update;
+	handler->draw_hline     = scr_draw_hline_16;
+	handler->draw_vline     = scr_draw_vline_16;
+	handler->draw_fill      = scr_draw_fill_16;
+	handler->draw_img       = scr_draw_img_16;
+	handler->draw_string    = scr_draw_string_16;
+	handler->push_clipping  = scr_push_clipping;
+	handler->pop_clipping   = scr_pop_clipping;
 	handler->reset_clipping = scr_reset_clipping;
-	handler->get_clip_x = scr_get_clip_x;
-	handler->get_clip_y = scr_get_clip_y;
-	handler->get_clip_w = scr_get_clip_w;
-	handler->get_clip_h = scr_get_clip_h;
-	handler->set_mouse_pos = scr_set_mouse_pos;
+	handler->get_clip_x     = scr_get_clip_x;
+	handler->get_clip_y     = scr_get_clip_y;
+	handler->get_clip_w     = scr_get_clip_w;
+	handler->get_clip_h     = scr_get_clip_h;
+	handler->set_mouse_pos  = scr_set_mouse_pos;
 	return 0;
 }
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct gfx_handler_services services = {
 	create,
@@ -793,9 +685,9 @@ static struct gfx_handler_services services = {
 };
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_gfxscr16(struct dope_services *d) {
 
@@ -804,10 +696,10 @@ int init_gfxscr16(struct dope_services *d) {
 	clip    = d->get_module("Clipping 1.0");
 	cache   = d->get_module("Cache 1.0");
 
-	imgcache = cache->create(100,1000*1000);
+	imgcache = cache->create(100, 1000*1000);
 
 	init_yuv2rgb();
 
-	d->register_module("GfxScreen16 1.0",&services);
+	d->register_module("GfxScreen16 1.0", &services);
 	return 1;
 }

@@ -18,8 +18,6 @@ IMPLEMENTATION[ux]:
 #include "irq_alloc.h"
 #include "pic.h"
 
-const char *irq0_path = "irq0";
-
 IMPLEMENT FIASCO_INIT
 void
 Timer::init()
@@ -27,7 +25,7 @@ Timer::init()
   if (Boot_info::irq0_disabled())
     return;
 
-  if (!Pic::setup_irq_prov (Pic::IRQ_TIMER, irq0_path, bootstrap))
+  if (!Pic::setup_irq_prov (Pic::IRQ_TIMER, Boot_info::irq0_path(), bootstrap))
     {
       puts ("Problems setting up timer interrupt!");
       exit (1);
@@ -41,7 +39,7 @@ void
 Timer::bootstrap()
 {
   close (Boot_info::fd());
-  execl (irq0_path, "[I](irq0)", NULL);
+  execl (Boot_info::irq0_path(), "[I](irq0)", NULL);
 }
 
 IMPLEMENT inline
@@ -64,4 +62,11 @@ void
 Timer::disable()
 {
   Pic::disable (Pic::IRQ_TIMER);
+}
+
+IMPLEMENT inline
+void
+Timer::update_timer(Unsigned64)
+{
+  // does nothing in periodic mode
 }

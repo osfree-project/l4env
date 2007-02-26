@@ -31,37 +31,36 @@
 /**
  * \brief  Return dataspace size
  * 
- * \param  request       Flick request structure
- * \param  ds_id         Dataspace id
- * \retval size          Dataspace size
- * \retval _ev           Flick exception structure, unused
+ * \param  _dice_corba_obj    Request source
+ * \param  ds_id              Dataspace id
+ * \retval size               Dataspace size
+ * \retval _dice_corba_env    Server environment
  *	
  * \return 0 on success (\a size contains the dataspace size), 
  *         error code otherwise:
- *         - \c -L4_EINVAL  invalid dataspace id
- *         - \c -L4_EPERM   Caller is not a client of the dataspace
+ *         - -#L4_EINVAL  invalid dataspace id
+ *         - -#L4_EPERM   Caller is not a client of the dataspace
  */
 /*****************************************************************************/ 
 l4_int32_t 
 if_l4dm_mem_size_component(CORBA_Object _dice_corba_obj,
-                           l4_uint32_t ds_id,
-                           l4_uint32_t *size,
-                           CORBA_Environment *_dice_corba_env)
+                           l4_uint32_t ds_id, l4_uint32_t *size,
+                           CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
 
   /* get dataspace descriptor, caller must be a client */
-  ret = dmphys_ds_get_check_client(ds_id,*_dice_corba_obj,&ds);
+  ret = dmphys_ds_get_check_client(ds_id, *_dice_corba_obj, &ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	ERROR("DMphys: invalid dataspace id, id %u, caller %x.%x",
-	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
+	LOGL("DMphys: invalid dataspace id, id %u, caller "l4util_idfmt,
+             ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	ERROR("DMphys: caller %x.%x is not a client of dataspace %d!",
-	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id);
+	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %d!",
+	     l4util_idstr(*_dice_corba_obj), ds_id);
 #endif
       return ret;
     }

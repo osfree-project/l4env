@@ -14,14 +14,14 @@
  * GNU General Public License 2. Please see the COPYING file for details. */
 
 import <l4/dm_generic/types.h>
-import <l4/con/l4con_pslim.h>
+import <l4/l4con/l4con_pslim.h>
 
-/** console interface */
+/** Console interface. */
 library con
 {
-  /** Generic console interface (open/close console)
+  /** Generic console interface (open/close console).
    * \defgroup idl_con_if Console Server Interface */
-  [error_function(switch_vc_on_timer)]
+  [error_function_server(switch_vc_on_timer)]
   interface if
     {
       /** Get and assign first available vc
@@ -47,7 +47,7 @@ library con
 		   [out] l4_threadid_t *vcid,
       		   [in] short vfbmode);
 
-      /** Take screenshot of a virtual console
+      /** Take screenshot of a virtual console.
        * \ingroup idl_con_if
        *
        * \param  vc_nr          Number of console, 0 for current
@@ -64,7 +64,7 @@ library con
 		      [out] unsigned long *yres,
 		      [out] unsigned long *bpp);
 
-      /** Close all vc's of an application
+      /** Close all vc's of an application.
        * \ingroup idl_con_if
        *
        * \param client		task id of client to close vcs
@@ -73,14 +73,14 @@ library con
       long close_all([in] l4_threadid_t client);
     };
 
-  /** virtual console (thread) interface
+  /** virtual console (thread) interface.
    * \defgroup idl_con_vc Virtual Console Interface (with pSLIM)
    */
-  [error_function(vc_error), server_parameter,
-		  init_rcvstring(con_vc_init_rcvstring)]
+  [error_function_server(vc_error), server_parameter,
+   init_rcvstring_server(vc_init_rcvstring)]
   interface vc
     {
-      /** Set vc IN/OUT mode
+      /** Set vc IN/OUT mode.
        * \ingroup idl_con_vc
        *
        * \param  mode		con protocol macro describing vc mode:
@@ -90,7 +90,7 @@ library con
        * \return 0 on success, negative error codes otherwise */
       long smode([in] byte mode, [in] l4_threadid_t ev_handler);
 
-      /** Get IN/OUT mode
+      /** Get IN/OUT mode.
        * \ingroup idl_con_vc
        *
        * \retval mode		con protocol macro describing vc mode
@@ -102,7 +102,7 @@ library con
 		 [out] unsigned long *sbuf_2size,
 		 [out] unsigned long *sbuf_3size);
 
-      /** Close virtual console
+      /** Close virtual console.
        * \ingroup idl_con_vc
        *
        * \return 0 for success */
@@ -254,6 +254,24 @@ library con
 		       [out] unsigned long *flags,
 		       [out] unsigned long *xtxt,
 		       [out] unsigned long *ytxt);
+
+      /** Get RGB values of current virtual console.
+       * \ingroup idl_con_vc
+       *
+       * \retval red_offs	start of red value in pixel
+       * \retval red_len	length of red value in pixel
+       * \retval green_offs	start of green value in pixel
+       * \retval green_len	length of green value in pixel
+       * \retval blue_offs	start of blue value in pixel
+       * \retval blue_len	length of blue value in pixel
+       *
+       * \return 0 for success, negative error codes otherwise */
+      long graph_get_rgb([out] unsigned long *red_offs,
+                         [out] unsigned long *red_len,
+                         [out] unsigned long *green_offs,
+                         [out] unsigned long *green_len,
+                         [out] unsigned long *blue_offs,
+                         [out] unsigned long *blue_len);
 
       /** Map the graphics memory into the client.
        * \ingroup idl_con_vc

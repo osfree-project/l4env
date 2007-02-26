@@ -47,9 +47,8 @@ Irq *Irq::lookup( unsigned irq )
 PUBLIC 
 explicit 
 Irq::Irq(unsigned irqnum)
-  : Irq_alloc(irqnum), Sender (L4_uid::irq(irqnum)), _queued (0)
+  : Irq_alloc (irqnum), Sender (Global_id::irq (irqnum)), _queued (0)
 {}
-
 
 
 /** Consume one interrupt.  
@@ -59,13 +58,20 @@ PRIVATE inline NEEDS ["atomic.h"]
 int
 Irq::consume ()
 {
-  int o;
+  int old;
 
-  do {
-    o = _queued;
-  } while (! smp_cas(&_queued, o, o - 1));
+  do 
+    {
+      old = _queued;
+    }
+  while (!cas (&_queued, old, old - 1));
 
-  return o - 1;
+  return old - 1;
 }
 
-
+PUBLIC inline
+int
+Irq::queued ()
+{
+  return _queued;
+}

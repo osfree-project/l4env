@@ -2,7 +2,6 @@
 #define GLOBALS_H
 
 #include <stdlib.h>
-#include <flux/machine/types.h>
 #include <l4/sys/types.h>
 
 /* globals defined here (when included from globals.c) */
@@ -21,6 +20,7 @@ __EXTERN unsigned small_space_size;
 
 __EXTERN int debug;
 __EXTERN int jochen;		/* be bug-compatible with Jochen's L4 */
+__EXTERN int quiet;
 
 #undef __EXTERN
 

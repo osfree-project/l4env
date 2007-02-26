@@ -9,4 +9,6 @@ extern void check_auto_consume(int irq, client_chain *c);
 /* krishna: exported for separate thread creation */
 void irq_handler(int num);
 
+extern int use_special_fully_nested;
+
 #endif

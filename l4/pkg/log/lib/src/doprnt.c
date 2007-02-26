@@ -176,7 +176,9 @@ typedef int	bool_t;
 
 #define MAXBUF (sizeof(long int) * 8)		 /* enough for binary */
 
-static char digs[] = "0123456789abcdef";
+ static char digits[] = "0123456789abcdef";
+static char capdigits[]= "0123456789ABCDEF";
+static int capital;
 
 static void
 printnum(register unsigned long u, register int base, 
@@ -186,7 +188,7 @@ printnum(register unsigned long u, register int base,
 	register char *	p = &buf[MAXBUF-1];
 
 	do {
-	    *p-- = digs[u % base];
+	    *p-- = (capital?capdigits:digits)[u % base];
 	    u /= base;
 	} while (u != 0);
 
@@ -203,7 +205,7 @@ printnum_16(register unsigned long u,
     int i;
     
     for(i=0; i<8;i++){
-	*p-- = digs[u & 0x0f];
+	*p-- = (capital?capdigits:digits)[u & 0x0f];
 	u >>= 4;
     };
     
@@ -314,10 +316,17 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		fmt++;
 	    }
 
+	    while (*fmt == 'h') {
+		longopt--;
+		fmt++;
+	    }
+
 	    truncate = FALSE;
 #ifdef DOPRNT_FLOATS
 	    float_hack = FALSE;
 #endif
+
+	    capital=0;
 
 	    switch(*fmt) {
 		case 'b':
@@ -401,6 +410,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
                       } tid;
 
 		    tid = va_arg(args, union tid_t);
+		    capital=1;
 		    
 		    if(longopt){
 		      
@@ -630,6 +640,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		    goto print_unsigned;
 
 		case 'p':
+		    capital=0;
 		    padc = '0';
 		    length = 8;
 		    /*
@@ -641,25 +652,32 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		    (*putc)(putc_arg, 'x');
 		case 'x':
  		    truncate = _doprnt_truncates;
+		    capital-=1;
 		case 'X':
+		    capital+=1;
 		    base = 16;
 		    goto print_unsigned;
 
 		case 'z':
  		    truncate = _doprnt_truncates;
+		    capital-=1;
 		case 'Z':
+		    capital+=1;
 		    base = 16;
 		    goto print_signed;
 
 		case 'r':
  		    truncate = _doprnt_truncates;
 		case 'R':
+		    capital=1;
 		    base = radix;
 		    goto print_signed;
 
 		case 'n':
  		    truncate = _doprnt_truncates;
+		    capital-=1;
 		case 'N':
+		    capital=1;
 		    base = radix;
 		    goto print_unsigned;
 
@@ -668,6 +686,8 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 			n = va_arg(args, long long);
 		    else
 			n = va_arg(args, long);
+		    if (longopt<0)
+		    	n &= 0xffff;
 		    if (n >= 0) {
 			u = n;
 			sign_char = plus_sign;
@@ -683,13 +703,14 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 			u = va_arg(args, unsigned long long);
 		    else
 			u = va_arg(args, unsigned long);
+		    if (longopt<0)
+		    	n &= 0xffff;
 		    goto print_num;
 
 		print_num:
 		{
 		    char	buf[MAXBUF];	/* build number here */
 		    register char *	p = &buf[MAXBUF-1];
-		    static char digits[] = "0123456789abcdef";
 		    char *prefix = 0;
 
 		    if (truncate) u = (long)((int)(u));
@@ -702,7 +723,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		    }
 
 		    do {
-			*p-- = digits[u % base];
+			*p-- = (capital?capdigits:digits)[u % base];
 			u /= base;
 			prec--;
 		    } while (u != 0);

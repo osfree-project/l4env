@@ -4,6 +4,11 @@
 \usepackage{graphicx}
 \usepackage{longtable}
 \input{version}
+\usepackage[pdftex,bookmarks,bookmarksopen,bookmarksnumbered,%
+            pdfauthor={Ronald Aigner},pdfhighlight=/P,%
+	    pdftitle={DICE User's Manual (Version \Version)},%
+	    pdfcreator={pdflatex},colorlinks,%
+	    linkcolor=blue,citecolor=blue,urlcolor=darkgreen]{hyperref}
 \input{commands}
 
 % Mehr Toleranz beim zweiten Umbruch
@@ -22,7 +27,7 @@
 Technische Universit\"{a}t Dresden, Germany\\
 Ronald.Aigner@os.inf.tu-dresden.de}
 \title{\dice{} Version \Version\\User's Manual}
-\date{May~2003}
+\date{\today}
 
 \begin{document}
 
@@ -58,6 +63,9 @@ This documentation is still under heavy construction.
 
 % message buffer access macros
 \include{appendix2}
+
+% corba environment structs
+\include{appendix4}
 
 }
 \end{appendix}

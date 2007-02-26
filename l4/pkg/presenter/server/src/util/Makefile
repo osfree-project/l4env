@@ -2,12 +2,16 @@ NOTARGETSTOINSTALL = 1
 
 PKGDIR          ?= ../../..
 L4DIR           ?= $(PKGDIR)/../..
-SYSTEMS          = x86-l4v2 x86-linux x86-l4x0
-TARGET           = libutil.a
+SYSTEMS          = x86-l4v2 x86-l4x0
+TARGET           = libpresenter_util_presprov.a libpresenter_util_fprov.a
 
-DEBUG		= 1
+DEBUG		= 0
 
-SRC_C	= keygenerator.c memory.c pool.c hashtab.c arraylist.c dataprovider.c
+SRC_C_ALL	= keygenerator.c pool.c arraylist.c
+SRC_C_libpresenter_util_presprov.a = $(SRC_C_ALL) dataprovider_presprov.c
+SRC_C_libpresenter_util_fprov.a = $(SRC_C_ALL) dataprovider_fprov.c
+
+CLIENTIDL_libpresenter_util_presprov.a  = presenter_fprov.idl
 
 PRIVATE_INCDIR  = $(PKGDIR)/server/include/util 
 

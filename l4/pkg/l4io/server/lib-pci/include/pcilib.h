@@ -17,7 +17,7 @@
 #define __L4IO_SERVER_LIB_PCI_INCLUDE_PCILIB_H_
 
 /** PCI library initialization */
-int PCI_init(void);
+int PCI_init(int list);
 
 /** dump PCI specific /proc-fs entries */
 void PCI_dump_procfs(void);

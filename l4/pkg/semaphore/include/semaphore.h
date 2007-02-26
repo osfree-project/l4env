@@ -35,7 +35,11 @@
 /**
  * use assembler version of up/down
  */
+#ifdef ARCH_x86
 #define L4SEMAPHORE_ASM               1
+#else
+#define L4SEMAPHORE_ASM               0
+#endif
 
 /**
  * restart canceled block/wakup IPC
@@ -116,8 +120,11 @@ extern l4_threadid_t l4semaphore_thread_l4_id;
 
 /* Semaphore thread IPC commands (dw0), check assembler implementation 
  * if changed! */
-#define L4SEMAPHORE_BLOCK    0x00000001   ///< block calling thread
-#define L4SEMAPHORE_RELEASE  0x00000002   ///< wakeup other threads
+#define L4SEMAPHORE_BLOCK        0x00000001   ///< block calling thread
+#define L4SEMAPHORE_RELEASE      0x00000002   ///< wakeup other threads
+#define L4SEMAPHORE_BLOCKTIMED   0x00000003   ///< block calling thread
+                                              ///  with timeout
+#define L4SEMAPHORE_RELEASETIMED 0x00000004   ///< remove thread that timed out
 
 /*****************************************************************************
  *** prototypes
@@ -164,7 +171,7 @@ l4semaphore_set_thread_prio(l4_prio_t prio);
  * blocks and waits for the release of the semaphore. 
  */
 /*****************************************************************************/
-volatile extern inline void 
+L4_INLINE void 
 l4semaphore_down(l4semaphore_t * sem);
 
 /*****************************************************************************/
@@ -174,7 +181,7 @@ l4semaphore_down(l4semaphore_t * sem);
  * \ingroup api_sem
  *
  * \param   sem          Semaphore structure
- * \param   time         Timeout (in ms)
+ * \param   timeout      Timeout (in ms)
  * \return  0 if semaphore successfully decremented within given time, 
  *          != 0 otherwise.    
  *
@@ -183,8 +190,8 @@ l4semaphore_down(l4semaphore_t * sem);
  * of the semaphore. 
  */
 /*****************************************************************************/
-volatile extern inline int
-l4semaphore_down_timed(l4semaphore_t * sem, unsigned time);
+L4_INLINE int
+l4semaphore_down_timed(l4semaphore_t * sem, unsigned timeout);
 
 /*****************************************************************************/
 /**
@@ -198,7 +205,7 @@ l4semaphore_down_timed(l4semaphore_t * sem, unsigned time);
  * error instead.
  */
 /*****************************************************************************/
-volatile L4_INLINE int
+L4_INLINE int
 l4semaphore_try_down(l4semaphore_t * sem);
 
 /*****************************************************************************/
@@ -212,7 +219,7 @@ l4semaphore_try_down(l4semaphore_t * sem);
  * wakeup the first thread.
  */
 /*****************************************************************************/
-volatile L4_INLINE void
+L4_INLINE void
 l4semaphore_up(l4semaphore_t * sem);
 
 __END_DECLS;

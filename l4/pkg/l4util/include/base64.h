@@ -11,15 +11,19 @@
 #ifndef B64_EN_DECODE
 #define B64_EN_DECODE
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** \defgroup utils_internal Internal functions */
 
 /*!
  * \brief base-64-encode string \a infile
  * \ingroup utils_internal
  *
- * 
  * \param infile string to be encoded
  * \param in_size length of \a infile 
- * \retval outfile the base-64-encoded representation of \infile
+ * \retval outfile the base-64-encoded representation of \a infile
  *
  *  base-64-encode string \a infile adding padding as per spec
  */
@@ -29,13 +33,16 @@ void base64_encode( const char *infile, unsigned int in_size, char **outfile);
  * \brief decode base-64-encoded string \a infile
  * \ingroup utils_internal
  *
- * 
  * \param infile string to be decoded
  * \param in_size length of \a infile 
- * \retval outfile the decoded representation of \infile
+ * \retval outfile the decoded representation of \a infile
  *
  *  base-64-decode string \a infile discarding padding, line breaks and noise
  */
 void base64_decode(const char *infile, unsigned int in_size, char **outfile);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //B64_EN_DECODE

@@ -8,7 +8,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -16,8 +16,8 @@
  * COPYING file for details.
  */
 
-#include "dopestd.h"
 #include "dopeapp-client.h"
+#include "dopestd.h"
 #include "event.h"
 #include "appman.h"
 #include "messenger.h"
@@ -29,9 +29,9 @@ int init_messenger(struct dope_services *d);
 
 
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 static void send_input_event(s32 app_id,EVENT *e,char *bindarg) {
 	dope_event_u de;
@@ -70,13 +70,18 @@ static void send_input_event(s32 app_id,EVENT *e,char *bindarg) {
 		de._u.release.code = e->code;
 		break;
 
+	case EVENT_KEY_REPEAT:
+		de._d = 5;
+		de._u.keyrepeat.code = e->code;
+		break;
+
 	default:
 		return;
 	}
 
 	INFO(printf("Messenger(send_event): event type = %d\n",(int)de._d));
 	INFO(printf("Messenger(send_event): try to deliver event\n");)
-	dopeapp_listener_event_call(listener,&de,bindarg,&env);
+	dopeapp_listener_event_call(listener, &de, bindarg, &env);
 	INFO(printf("Messenger(send_event): oki\n");)
 }
 
@@ -93,9 +98,9 @@ static void send_action_event(s32 app_id,char *action,char *bindarg) {
 }
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct messenger_services services = {
 	send_input_event,
@@ -104,9 +109,9 @@ static struct messenger_services services = {
 
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_messenger(struct dope_services *d) {
 

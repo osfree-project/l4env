@@ -4,28 +4,49 @@
 #include <l4/util/rdtsc.h>
 #include <l4/util/util.h>
 #include <l4/util/rand.h>
+#include <l4/util/idt.h>
 
 #include <stdio.h>
 #include <setjmp.h>
 #include <string.h>
 
 #include "global.h"
-#include "idt.h"
 #include "helper.h"
 
-typedef l4_cpu_time_t (*memcpy_t)(char *dst, char *src, l4_size_t size);
+typedef l4_cpu_time_t (*memcpy_t)(char *dst, char const *src, l4_size_t size);
 
 static unsigned char memcpy_stack[STACKSIZE] __attribute__((aligned(4096)));
 static jmp_buf memcpy_jmp_buf;
 
 
 static l4_cpu_time_t
-memcpy_standard_rep_byte(char *dst, char *src, l4_size_t size)
+memcpy_standard_byte(char *dst, char const *src, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+  register char *d=dst;
+  register const char *s=src;
+
+  printf("   %-38s","memcpy_standard_byte:");
+
+  start = l4_rdtsc();
+  ++size;
+  while (--size)
+    {
+      *d = *s;
+      ++d; ++s;
+    }
+  stop = l4_rdtsc();
+
+  return stop - start;
+}
+
+static l4_cpu_time_t
+memcpy_standard_rep_byte(char *dst, char const *src, l4_size_t size)
 {
   l4_cpu_time_t start, stop;
   l4_mword_t dummy1, dummy2, dummy3;
 
-  printf("  %-38s","memcpy_standard_rep_byte:");
+  printf("   %-38s","memcpy_standard_rep_byte:");
 
   start = l4_rdtsc();
   asm volatile ("repz  movsb %%ds:(%%esi),%%es:(%%edi)\n\t"
@@ -38,12 +59,12 @@ memcpy_standard_rep_byte(char *dst, char *src, l4_size_t size)
 }
 
 static l4_cpu_time_t
-memcpy_standard_rep_word(char *dst, char *src, l4_size_t size)
+memcpy_standard_rep_word(char *dst, char const *src, l4_size_t size)
 {
   l4_cpu_time_t start, stop;
   l4_mword_t dummy1, dummy2, dummy3;
 
-  printf("  %-38s","memcpy_standard_rep_word:");
+  printf("   %-38s","memcpy_standard_rep_word:");
 
   start = l4_rdtsc();
   asm volatile ("repz  movsl %%ds:(%%esi),%%es:(%%edi)\n\t"
@@ -56,12 +77,12 @@ memcpy_standard_rep_word(char *dst, char *src, l4_size_t size)
 }
 
 static l4_cpu_time_t
-memcpy_standard_rep_word_prefetch(char *dst, char *src, l4_size_t size)
+memcpy_standard_rep_word_prefetch(char *dst, char const *src, l4_size_t size)
 {
   l4_cpu_time_t start, stop;
   l4_mword_t dummy1, dummy2, dummy3;
 
-  printf("  %-38s","memcpy_standard_rep_word_prefetch:");
+  printf("   %-38s","memcpy_standard_rep_word_prefetch:");
 
   start = l4_rdtsc();
   asm volatile ("lea    (%%esi,%%edx,8),%%ebx     \n\t"
@@ -87,12 +108,12 @@ memcpy_standard_rep_word_prefetch(char *dst, char *src, l4_size_t size)
 }
 
 static l4_cpu_time_t
-memcpy_standard_word(char *dst, char *src, l4_size_t size)
+memcpy_standard_word(char *dst, char const *src, l4_size_t size)
 {
   l4_cpu_time_t start, stop;
   l4_mword_t dummy1, dummy2, dummy3;
 
-  printf("  %-38s","memcpy_standard_word:");
+  printf("   %-38s","memcpy_standard_word:");
 
   start = l4_rdtsc();
   asm volatile ("sub  %%esi,%%edi                 \n\t"
@@ -113,12 +134,12 @@ memcpy_standard_word(char *dst, char *src, l4_size_t size)
 
 /* fast memcpy without using any special instruction */
 static l4_cpu_time_t
-fast_memcpy_standard(char *dst, char *src, l4_size_t size)
+fast_memcpy_standard(char *dst, const char *src, l4_size_t size)
 {
   l4_cpu_time_t start, stop;
   l4_mword_t dummy;
 
-  printf("  %-38s","memcpy_fast:");
+  printf("   %-38s","memcpy_fast:");
 
   start = l4_rdtsc();
   asm volatile ("lea    (%%esi,%%edx,8),%%esi     \n\t"
@@ -159,12 +180,12 @@ fast_memcpy_standard(char *dst, char *src, l4_size_t size)
 /* fast memcpy using movntq (moving using non-temporal hint)
  * cache line size is 32 bytes */
 static l4_cpu_time_t
-fast_memcpy_mmx2_32(char *dst, char *src, l4_size_t size)
+fast_memcpy_mmx2_32(char *dst, char const *src, l4_size_t size)
 {
   l4_cpu_time_t start, stop;
   l4_mword_t dummy;
 
-  printf("  %-38s","memcpy_fast_mmx2_32:");
+  printf("   %-38s","memcpy_fast_mmx2_32:");
 
   /* don't execute emms in side the timer loop because at this point the
    * fpu state is lazy allocated so we may have a kernel entry here */
@@ -215,12 +236,12 @@ fast_memcpy_mmx2_32(char *dst, char *src, l4_size_t size)
 /* Fast memcpy using movntq (moving using non-temporal hint)
  * cache line size is 64 bytes */
 static l4_cpu_time_t
-fast_memcpy_mmx2_64(char *dst, char *src, l4_size_t size)
+fast_memcpy_mmx2_64(char *dst, char const *src, l4_size_t size)
 {
   l4_cpu_time_t start, stop;
   l4_mword_t dummy;
 
-  printf("  %-38s","memcpy_fast_mmx2_64:");
+  printf("   %-38s","memcpy_fast_mmx2_64:");
 
   /* don't execute emms in side the timer loop because at this point the
    * fpu state is lazy allocated so we may have a kernel entry here */
@@ -270,12 +291,12 @@ fast_memcpy_mmx2_64(char *dst, char *src, l4_size_t size)
 /* Fast memcpy using movntq (moving using non-temporal hint)
  * cache line size is 64 bytes */
 static l4_cpu_time_t
-fast_memcpy_sse(char *dst, char *src, l4_size_t size)
+fast_memcpy_sse(char *dst, char const *src, l4_size_t size)
 {
   l4_cpu_time_t start, stop;
   l4_mword_t dummy;
 
-  printf("  %-38s","memcpy_fast_sse:");
+  printf("   %-38s","memcpy_fast_sse:");
 
   /* don't execute emms in side the timer loop because at this point the
    * fpu state is lazy allocated so we may have a kernel entry here */
@@ -364,24 +385,29 @@ exception6_c_handler(void)
   longjmp(memcpy_jmp_buf, 0);
 }
 
+void exception6_handler(void);
+asm ("exception6_handler:          \n\t"
+     "pusha                        \n\t"
+     "call   exception6_c_handler  \n\t"
+     "popa                         \n\t"
+     "iret                         \n\t");
+
 static void
 test_mem_bandwidth_thread(void)
 {
-  static idt_t idt;
-  int i;
+  static struct
+    {
+      l4util_idt_header_t header;
+      l4util_idt_desc_t   desc[20];
+    } __attribute__((packed)) idt;
 
-  idt.limit = 0x20*8 - 1;
-  idt.base = &idt.desc;
+  l4util_idt_init (&idt.header, 0x20);
+  l4util_idt_entry(&idt.header, 6, exception6_handler);
+  l4util_idt_load (&idt.header);
 
-  for (i=0; i<0x20; i++)
-    MAKE_IDT_DESC(idt, i, 0);
+  printf(">> m: Testing memory bandwidth (CPU %dMHz):\n", mhz);
 
-  MAKE_IDT_DESC(idt, 6, exception6_handler);
-
-  asm volatile ("lidt (%%eax)\n\t" : : "a" (&idt));
-
-  printf("\nTesting memory bandwidth (CPU %dMHz):\n", mhz);
-
+  test_memcpy(memcpy_standard_byte);
   test_memcpy(memcpy_standard_rep_byte);
   test_memcpy(memcpy_standard_rep_word);
   test_memcpy(memcpy_standard_rep_word_prefetch);
@@ -397,8 +423,10 @@ test_mem_bandwidth_thread(void)
 }
 
 void
-test_mem_bandwidth(void)
+test_memory_bandwidth(int nr)
 {
+  sysenter = 0;
+
   create_thread(memcpy_id,(l4_umword_t)test_mem_bandwidth_thread,
  	        (l4_umword_t)memcpy_stack + STACKSIZE,pager_id);
 

@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/SockBEClassFactory.cpp
- *	\brief	contains the implementation of the class CBEClassFactory
+ *    \file    dice/src/be/sock/SockBEClassFactory.cpp
+ *    \brief   contains the implementation of the class CBEClassFactory
  *
- *	\date	01/10/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -25,31 +26,29 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/sock/SockBEClassFactory.h"
+#include "SockBEClassFactory.h"
 
-#include "be/sock/SockBECallFunction.h"
-#include "be/sock/SockBEWaitAnyFunction.h"
-#include "be/sock/SockBEMarshalFunction.h"
-#include "be/sock/SockBESrvLoopFunction.h"
-#include "be/sock/SockBEUnmarshalFunction.h"
-#include "be/sock/SockBESizes.h"
-#include "be/sock/BESocket.h"
+#include "SockBECallFunction.h"
+#include "SockBEWaitAnyFunction.h"
+#include "SockBEMarshalFunction.h"
+#include "SockBESrvLoopFunction.h"
+#include "SockBEUnmarshalFunction.h"
+#include "SockBESizes.h"
+#include "BESocket.h"
+#include "SockBEDispatchFunction.h"
 
-IMPLEMENT_DYNAMIC(CSockBEClassFactory);
 
 CSockBEClassFactory::CSockBEClassFactory(bool bVerbose)
 : CBEClassFactory(bVerbose)
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBEClassFactory, CBEClassFactory);
 }
 
 CSockBEClassFactory::CSockBEClassFactory(CSockBEClassFactory & src)
 : CBEClassFactory(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBEClassFactory, CBEClassFactory);
 }
 
-/**	\brief the destructor of this class */
+/**    \brief the destructor of this class */
 CSockBEClassFactory::~CSockBEClassFactory()
 {
 
@@ -82,7 +81,7 @@ CBEWaitAnyFunction * CSockBEClassFactory::GetNewWaitAnyFunction()
 {
     if (m_bVerbose)
         printf("CSockBEClassFactory: created class CSockBEWaitAnyFunction\n");
-    return new CSockBEWaitAnyFunction();
+    return new CSockBEWaitAnyFunction(true, false);
 }
 
 /** \brief creates a new instance of the class CBESrvLoopFunction
@@ -123,4 +122,25 @@ CBECommunication * CSockBEClassFactory::GetNewCommunication()
     if (m_bVerbose)
         printf("CSockBEClassFactory: created class CBESocket\n");
     return new CBESocket();
+}
+
+/** \brief creates a new instance of the class CBEReplyAnyWaitAnyFunction
+ *  \return a reference to the new object
+ */
+CBEWaitAnyFunction* CSockBEClassFactory::GetNewReplyAnyWaitAnyFunction()
+{
+    if (m_bVerbose)
+        printf("CSockBEClassFactory: created class CSockBEReplyAnyWaitAnyFunction\n");
+    return new CSockBEWaitAnyFunction(true, true);
+}
+
+
+/** \brief creates a new instance of the class CBEDispatchFunction
+ *  \return a reference to the new object
+ */
+CBEDispatchFunction* CSockBEClassFactory::GetNewDispatchFunction()
+{
+    if (m_bVerbose)
+        printf("CSockBEClassFactory: created class CSockBEDispatchFunction\n");
+    return new CSockBEDispatchFunction();
 }

@@ -1,5 +1,5 @@
 #
-# Makefile for the sources of the smart_mpeg library
+# Makefile for the preprocess sources
 #
 
 # scan the L4 global configuration file

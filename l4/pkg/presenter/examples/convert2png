@@ -1,0 +1,86 @@
+#! /bin/sh -e
+
+topdir=/media/present
+
+RES=1024x768
+
+if [ -z "$2" ];
+then
+  echo "Usage: $0 filename.{pdf,ps} presentername"
+  echo " The presentation will be stored in $topdir/$2"
+  echo " All capital letters will be lowered!"
+  exit 1
+fi
+
+#set -x
+
+presentname=$(echo "$2" | tr '[A-Z]' '[a-z]')
+pdir="$topdir/$presentname"
+pres="$pdir/$presentname.pres"
+file="$1"
+mkdir $pdir
+
+suffix=none
+
+if [ "${1%.pdf}" != "$file" ]; then
+  suffix=pdf
+elif [ "${1%.ps}" != "$file" ]; then
+  suffix=ps
+fi
+
+set -x
+
+bn=$(basename "$file" .$suffix)
+
+echo $pdir/ > $pres
+
+if [ $suffix = ps ];
+then
+  i=1
+  while true; do
+    echo -n "Trying $i..."
+    tmpf=$(tempfile -s .ps)
+    if psselect $i "$file" $tmpf 2>&1 | grep -q "Wrote 0";
+    then
+      echo "not available (no more files to convert)."
+      break
+    else
+      tag=$(printf "%03d" $i)
+      convert -density 150x150 -antialias -border 30x30 -bordercolor white \
+	      -rotate 90 -size $RES -scale $RES \
+	      $tmpf $pdir/${presentname}_$tag.png
+      echo "${presentname}_$tag.png" >> $pres
+      echo "converted."
+    fi
+    rm -f $tmpf
+    i=$((i + 1))
+  done
+  rm -f $tmpf
+
+elif [ $suffix = pdf ];
+then
+  # get amount of pages
+  pages=$(pdfinfo "$file" | grep "^Pages:")
+  pages=${pages#Pages:}
+  while [ "$pages" != "${pages# }" ]; do pages=${pages# }; done
+  echo "$file has $pages pages"
+  for i in $(seq $pages); do
+    echo -n "Processing $i... "
+    pdftoppm -f $i -l $i -freetype yes -aa yes "$file" $pdir/$presentname
+    ppmfilename=$(printf "%s-%06d.ppm" $presentname $i)
+    if [ ! -f "$pdir/$ppmfilename" ]; then
+      echo "WARNING: $pdir/$ppmfilename not found?!"
+      continue
+    fi
+    ffsrc="$pdir/$ppmfilename"
+    fftgt="${ffsrc%.ppm}.png"
+    convert -size $RES -scale $RES "$ffsrc" "$fftgt"
+    echo "${ppmfilename%.ppm}.png" >> $pres
+    rm "$ffsrc"
+    echo "done."
+  done
+  echo $pages
+else
+  echo "Invalid file suffix"
+fi
+

@@ -1,5 +1,5 @@
 /*!
- * \file   dietlibc/lib/backends/l4env_base/abort.c
+ * \file   libc_backends_l4env/lib/l4env_start_stop/abort.c
  * \brief  Own abort implementation, as the dietlibc-one relies on signals
  *
  * \date   08/19/2003
@@ -12,7 +12,8 @@
  */
 #include <stdlib.h>
 
-void abort(void) {
+void abort(void)
+{
     /* We do not provide signals, hence no SIGABRT handling here */
     exit(1);
 }

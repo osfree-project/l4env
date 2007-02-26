@@ -1,0 +1,6 @@
+This library (tree_helper) is meant to be used by simple
+object_servers to ease the building of hierarchical object
+structures.
+
+tree_helper will support with resolve, rev_resolve, node creation, and
+directory reading routines.

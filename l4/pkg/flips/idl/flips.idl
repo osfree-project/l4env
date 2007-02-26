@@ -1,0 +1,34 @@
+/*
+ * \brief   IDL interface for FLIPS
+ * \date    2003-07-22
+ * \author  Norman Feske <nf2@inf.tu-dresden.de>
+ * \author  Jens Syckor  <js712688@inf.tu-dresden.de>
+ *
+ * This interface features the socket interface of FLIPS.
+ * It inherites from l4vfs connection and net_io idls.
+ * The implementation of this interface can be found in
+ * server/src/server.c and in examples/l4lx_flips.
+ */
+
+import <l4/sys/types.h>
+
+import  <l4/l4vfs/network_server.idl>
+import  <l4/l4vfs/select_notify.idl>
+
+[error_function(dice_ipc_error)]
+
+interface flips : l4vfs::network_server, l4vfs::select_notify {
+
+	/*** PROC INTERFACE ***/
+	
+	int proc_read  ([in, string] char *path,
+	                [out, size_is(len), max_is(4096)] char dst[],
+	                [in] int offset,
+	                [in, out] int *len);
+	
+	int proc_write ([in, string] char *path,
+	                [in, ref, size_is(len)] char *src,
+	                [in] int len);
+	
+	unsigned int inet_addr_type([in] unsigned int addr);
+};

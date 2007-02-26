@@ -1,13 +1,13 @@
 #ifndef __EXEC___CONFIG_H
 #define __EXEC___CONFIG_H
 
-#define HEAP_SIZE   (2*1024*1024)  /* heap for malloc (in particular for new) */
+#define HEAP_SIZE   (4*1024*1024)  /* heap for malloc (in particular for new) */
 
 #define MAX_PSECS	1024	/* max # of program sections exec can handle */
 
-#define EXC_MAXPSECT	4	/* max # of program sections per ELF object */
+#define EXC_MAXPSECT	6	/* max # of program sections per ELF object */
 #define EXC_MAXHSECT	64	/* max # of header sections per ELF object */
-#define EXC_MAXFNAME	128	/* max # of chars in elf_obj.fname */
+#define EXC_MAXFNAME	4096	/* max # of chars in elf_obj.fname */
 #define EXC_MAXDEP	16	/* max # of dependant libs per ELF object */
 
 #define EXC_MAXBIN	32	/* max # of binary objects */ 

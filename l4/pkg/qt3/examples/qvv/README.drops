@@ -1,0 +1,5 @@
+This is a simple image viewer licensed under GPL (also see README).
+
+It is slightly modified to make it compile under DROPS and I changed
+the default icon set.
+

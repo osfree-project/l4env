@@ -1,0 +1,39 @@
+'qt3.mk' provides all the magic needed to build Qt applications in
+DROPS, including support for 'moc' and 'uic'. 
+
+ATTENTION: Qt applications will be linked against both buddy_slab_mem
+and simple_mem backends.
+
+
+All Makefiles for Qt applications should include this file before
+
+  $(L4DIR)/mk/prog.mk or
+  $(L4DIR)/mk/lib.mk. 
+
+
+The folling additional 'make' variables are available:
+
+SRC_MOC
+        Contains all .h files, that need to be processed by
+        'moc'.
+
+SRC_UI
+        Contains all .ui files to be fed into 'uic'.
+
+SRC_UI_IMG
+        Contains all image files, that should be embedded into the
+        resulting binary.
+
+QT3_IO_BACKEND
+        Set to one of the following :
+          'con':  use l4con driver (works also with proxygon)
+          'dope': use DOpE driver
+          'sdl':  use VESA framebuffer driver
+        Only the 'con' driver provides support for multiple Qt/E
+        processes on one desktop.
+
+DEBUG_LIBQT3
+        Set to '1', if you want to link against a version of
+        libqt3_embedded.a, which has debugging symbols. This will
+        increase link times, however.
+

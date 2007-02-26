@@ -1,0 +1,3 @@
+* MMAP-Region als Ganzes reservieren, danach Teile daraus auf
+  bestimmte DS-Manager legen. Geht das?
+

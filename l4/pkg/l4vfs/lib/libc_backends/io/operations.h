@@ -1,5 +1,16 @@
-#ifndef _OPERATIONS_H_
-#define _OPERATIONS_H_
+/**
+ * \file   dietlibc/lib/backends/io/operations.h
+ * \brief  
+ *
+ * \date   08/10/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+#ifndef __DIETLIBC_LIB_BACKENDS_IO_OPERATIONS_H_
+#define __DIETLIBC_LIB_BACKENDS_IO_OPERATIONS_H_
 
 // these should not be necesarry, as they are defined in libc header
 // files

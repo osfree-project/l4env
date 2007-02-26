@@ -1,31 +1,32 @@
 /* ARM specific boot_info */
 
-INTERFACE:
+INTERFACE [arm]:
 
-class Kernel_info;
+class Kip;
 
 EXTENSION class Boot_info
 {
 public:
-  static void set_kip(Kernel_info *kip);
-  static Kernel_info *kip();
+  static void set_kip(Kip *kip);
+  static Kip *kip();
 };
 
-IMPLEMENTATION[arch]:
+//---------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
 
 #include <cstring>
 #include <cstdio> // for debug printf's
 
-static Kernel_info *boot_info_kip;
+static Kip *boot_info_kip;
 
 IMPLEMENT
-void Boot_info::set_kip(Kernel_info *kip)
+void Boot_info::set_kip(Kip *kip)
 {
   boot_info_kip = kip;
 } 
 
 IMPLEMENT
-Kernel_info *Boot_info::kip()
+Kip *Boot_info::kip()
 {
   return boot_info_kip;
 } 
@@ -53,3 +54,4 @@ void Boot_info::init()
                  static_cast<char*>(phys_to_virt (kmbi.cmdline)) : "");
 #endif
 }
+

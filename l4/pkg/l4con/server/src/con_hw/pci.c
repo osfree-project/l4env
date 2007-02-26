@@ -59,7 +59,7 @@ pci_probe(con_accel_t *accel)
   l4io_pdev_t start = 0;
   l4io_pci_dev_t new;
 
-  if (!use_l4io)
+  if (!con_hw_use_l4io)
     {
       buses = 1;
       for (bus = 0; bus < buses; ++bus)
@@ -70,8 +70,9 @@ pci_probe(con_accel_t *accel)
 	      const struct pci_device_id *dev;
 
 	      if (PCI_FUNC (devfn) == 0)
-		pcibios_read_config_byte (bus, devfn, PCI_HEADER_TYPE, &hdr_type);
-	      else if (!(hdr_type & 0x80))	/* not a multi-function device */
+		pcibios_read_config_byte (bus, devfn, PCI_HEADER_TYPE, 
+					  &hdr_type);
+	      else if (!(hdr_type & 0x80))  /* not a multi-function device */
 		continue;
 
 	      pcibios_read_config_dword (bus, devfn, PCI_VENDOR_ID, &l);
@@ -165,4 +166,35 @@ pci_probe(con_accel_t *accel)
     }
 
   return -L4_ENOTFOUND;
+}
+
+void
+pci_resource(unsigned int bus, unsigned int devfn, 
+	     int num, l4_addr_t *addr, l4_size_t *size)
+{
+  unsigned l, sz, reg;
+
+  switch (num)
+    {
+    case 0:  reg = PCI_BASE_ADDRESS_0; break;
+    case 1:  reg = PCI_BASE_ADDRESS_1; break;
+    default: return;
+    }
+
+  PCIBIOS_READ_CONFIG_DWORD (bus, devfn, reg, &l);
+  PCIBIOS_WRITE_CONFIG_DWORD(bus, devfn, reg, ~0);
+  PCIBIOS_READ_CONFIG_DWORD (bus, devfn, reg, &sz);
+  PCIBIOS_WRITE_CONFIG_DWORD(bus, devfn, reg, l);
+  if ((l & PCI_BASE_ADDRESS_SPACE) == PCI_BASE_ADDRESS_SPACE_MEMORY)
+    {
+      *addr = l & PCI_BASE_ADDRESS_MEM_MASK;
+      sz   &= PCI_BASE_ADDRESS_MEM_MASK;
+      *size = sz & ~(sz - 1);
+    }
+  else
+    {
+      *addr = l & PCI_BASE_ADDRESS_IO_MASK;
+      sz   &= PCI_BASE_ADDRESS_IO_MASK & 0xffff;
+      *size = sz & ~(sz - 1);
+    }
 }

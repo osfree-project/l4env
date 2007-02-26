@@ -1,0 +1,91 @@
+#! /usr/bin/perl -w
+#
+# Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+#
+# Find the latest file in a CVS working repository (note that dates in
+# Entries files are checkout times)
+#
+# - this script fails silently, i.e. should not emit any error messages
+#
+# - if a file was modified locally and merged, it isn't detected although it
+#   could be more recent
+#
+
+use strict;
+
+sub get_release_version() {
+  # this is just fun for now, we need some real solution here
+  open(G, "README") && do {
+    local undef $/;
+    $_ = <G>;
+    close G;
+    return $1 if /Fiasco\s+([\d.-]+)\D/;
+  };
+  'Unknown CVS snapshot';
+}
+
+sub cvs_entries_time($) {
+  my $str = shift;
+  my %months = (
+     Jan => 1, Feb => 2, Mar => 3, Apr => 4,  May =>  5, Jun =>  6,
+     Jul => 7, Aug => 8, Sep => 9, Oct => 10, Nov => 11, Dec => 12,
+  );
+
+  if ($str =~ /(\w+)\s+(\d+)\s+(\d+):(\d+):(\d+)\s+(\d{4})$/) {
+    my $mnr = $months{$1};
+    if (!defined $months{$1}) {
+      $mnr = 0;
+      # Unknown month
+      exit(1);
+    }
+    # a simple calculation which should suffice for ordering
+    return $6         * 12 * 31 * 86400 +
+           ($mnr - 1) *      31 * 86400 +
+	   ($2   - 1)           * 86400 +
+	   $3       * 3600 +
+	   $4       * 60 +
+	   $5;
+  }
+  return 0;
+}
+
+# -------------------------------------------------------------
+
+my %data;
+
+for my $e (@ARGV) {
+  next unless $e =~ m,(.+)/CVS/Entries$,;
+  my $basedir = $1;
+
+  open(E, $e) && do {
+    while ($_ = <E>) {
+      chomp;
+      next unless m,/([^/]+)/([^/]+)/([^/]+),;
+      my $key = "$basedir/$1";
+      my $utime = cvs_entries_time($3);
+      $data{$key}{seqtime}   = (defined $utime) ? $utime : 0;
+      $data{$key}{rev}       = $2;
+      $data{$key}{humandate} = $3;
+      $data{$key}{humandate} =~ s/^Result of merge\+//;
+    }
+    close E;
+  }
+}
+
+# we have the full list here, so we can probably do more than we do now
+# sort descending
+my @sorted = sort { $data{$b}{seqtime} <=> $data{$a}{seqtime} } keys %data;
+
+my $l = $sorted[0];
+
+if (!defined $l) {
+  my $relver = get_release_version();
+  print "#define CODE_RELEASE \"$relver\"\n";
+  print "#define CODE_VERSION \"Unknown\"\n";
+  print "#define CODE_LATEST  \"Unknown\"\n";
+} else {
+  print "#define CODE_VERSION \"$data{$l}{humandate}\"\n";
+  print "#define CODE_LATEST  \"$l (rev $data{$l}{rev})\"\n";
+}
+
+0;

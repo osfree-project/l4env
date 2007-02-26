@@ -15,7 +15,10 @@ struct presentation_methods {
         int 		*(*get_slide_order)      	(PRESENTATION *);
 	SLIDE		*(*get_slide)			(PRESENTATION *, int key);
  	void		 (*add_slide)            	(PRESENTATION *, SLIDE *sl);
-	void	         (*del_slide)			(PRESENTATION *, SLIDE *sl);	
+	void	         (*del_slide)			(PRESENTATION *, int key);	
+	void 		 (*del_all_slides)		(PRESENTATION *);
+	void             (*set_path)			(PRESENTATION *, char *);
+	char		*(*get_path)			(PRESENTATION *);
 };
 
 struct presentation_services {

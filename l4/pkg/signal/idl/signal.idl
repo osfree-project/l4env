@@ -1,0 +1,30 @@
+import <l4/sys/types.h>
+import <signal.h>
+
+library signal
+{
+    interface signal
+    {
+        /* \brief send a signal to the task the thread belongs to */
+        int kill(   [in] l4_threadid_t thread,
+                    [in] siginfo_t signal );
+        
+        /* \brief send a signal to a specific thread */
+        int thread_kill(    [in] l4_threadid_t thread,
+                            [in] siginfo_t signal );
+
+        /* \brief schedule alarm for a specific thread */
+        int alarm(  [in] l4_threadid_t thread,
+                    [in] int seconds );
+
+        /* \brief receive next signal from signal server */
+        [allow_reply_only]
+        siginfo_t receive_signal([out] l4_threadid_t *thread );
+        
+        /* \brief register as signal handler thread */
+        int register_handler();
+
+        /* \brief unregister as signal handler */
+        int unregister_handler();
+    };
+};

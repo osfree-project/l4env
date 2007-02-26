@@ -1,0 +1,206 @@
+# Targets in this Makefile:
+# - all: Run all subsystems' "all" targets
+# - doc: Create doxygen documentation in directory "docs"
+# - DEPS, DEPS.ps, DEPS.a4.ps, DEPS.tred.ps: 
+#	 Create dependency graphs
+# - TAGS, tags: 
+#	 Create editor tags
+# This Makefile is invoked in a sub-Make from the top-level Makefile
+# when globalconfig.out, Modules and .Modules.deps are up-to-date and
+# all `preprocess'd C++ source files have been created.
+
+all: do-all
+
+include $(srcdir)/Makeconf	# also reads srcdir/Makeconf.local
+                                # and        objdir/Makeconf.local
+include $(MODULES_FILE)
+include .Modules.deps
+
+# Compute sets of sources.  From these variables, Makeconf computes
+# $(DEPS) and $(SRC_ALL).  Set them before including Makerules.global.
+SRC_S = $(foreach subsys, $(SUBSYSTEMS), $(ASSRC_$(subsys)))
+SRC_C = $(foreach subsys, $(SUBSYSTEMS), $(CSRC_$(subsys)))
+SRC_CC = $(foreach subsys, $(SUBSYSTEMS), $(CXXSRC_$(subsys)))
+
+include $(srcdir)/Makerules.global # also reads objdir/Makerules.local
+
+include $(foreach subsys, $(SUBSYSTEMS), $(srcdir)/Makerules.$(subsys))
+-include $(DEPS)
+
+# Recompile everything if the compiler configuration has changed.
+OBJS = $(foreach subsys, $(SUBSYSTEMS), $(OBJ_$(subsys)))
+$(OBJS): .Compiler-config
+
+#
+# Subsystem-specific rules and targets
+#
+
+ifeq ("$(CONFIG_MAINTAINER_MODE)","y")
+
+do-all: Checkinitcalls Circular-ok compilertest $(ALL)
+ifeq ($(CONFIG_XARCH),ux)
+do-all: unittest
+endif # UX
+
+else  # ! maintainer mode
+
+do-all: compilertest $(ALL)
+
+endif # ! maintainer mode
+
+compilertest:
+ifeq ($(CCVER_MAJOR),2)
+	@echo -e "\033[31m\n"\
+  "  ERROR: gcc version "$(CCVER_MAJOR).$(CCVER_MINOR)" is not supported for"\
+  "Fiasco -- \n"\
+  "         please update gcc to version 3.{3-4}.\033[m\n"; exit -1
+endif
+ifeq ($(CCVER_MAJOR),3)
+ifeq ($(findstring $(CCVER_MINOR),2 3 4),)
+	@echo -e "\033[31m\n"\
+  "  WARNING: gcc version $(CCVER_MAJOR).$(CCVER_MINOR) is not supported for"\
+  "Fiasco -- please use gcc\n"\
+  "           version 3.{3-4}. Be prepared to observe bugs in this kernel!\n"\
+  "           Don't use this kernel for performance analysis!\033[m\n"
+endif
+endif
+
+Checkinitcalls: kernel.image $(OBJ_KERNEL)
+ifneq ($(shell $(CXX) -dumpversion | cut -d . -f1-2),3.4)
+	@echo "Checking initcalls"
+	$(VERBOSE)$(srcdir)/../tool/checkinitcalls -k kernel.image \
+	  -Werror $(filter-out kernel.image, $^) \
+	  $(if $(SYSTEM_TARGET),-t $(SYSTEM_TARGET)) && \
+	echo "Initcalls OK"
+else
+	@echo "Initcall check disabled due to gcc-3.4"
+endif
+
+doc: docs/stamp-doc.ready
+
+docs/stamp-doc.ready: $(foreach m, $(GENERATED_MODULES), auto/stamp-$(m).ready)
+	@mkdir -p docs
+	@touch $@
+	@doxygen $(srcdir)/doxygen.conf
+
+###
+
+# Make function "makedeps":  Creates (on stdout) a list of Make-like
+# dependencies in a format suitable for $(SHOWDEPS).  Expects a list
+# of source (BASE-suffix.{cpp,cc,c}, BASE[_i].h) files as input and extracts
+# include directives from them.  Dependecies contain only basenames of
+# files (up to the first "-").  Suffixes and extensions are stripped.
+makedeps= implname () { echo $$1 | sed 's|.*/||; s|_i\.h|.h|; s|[.-].*||;'; };\
+	  for i in $(1); \
+	  do \
+	    echo $$(implname $$i): $$(perl -n -e \
+              '/^\s*\#include\s+["<](.*).h[">]/ && print "$$1 "; next;' \
+              $$i); \
+	  done 
+
+DEPS:	$(SRC_ALL) $(foreach idir, $(PRIVATE_INCDIR), $(wildcard $(idir)/*.h))
+	$(call makedeps, $^) | $(SHOWDEPS) > $@.new
+	mv $@.new $@
+
+# Graphical version of DEPS dependency graph.
+
+# XXX DEPS.{dot,ps} only contain dependency graphs for the KERNEL and
+# LIBK subsystem.  Also, we remove a number of top-level and low-level
+# modules from the resulting graph to reduce the overwhelming number
+# of edges; however, `gendotdeps' ensures that modules participating
+# in circular dependencies are never removed.
+
+GENDOT_FLAGS ?= -t1u1
+
+KERNEL_MODULES_CPP = $(foreach mod, $(INTERFACES_KERNEL) $(INTERFACES_LIBK), \
+	$(addsuffix .cpp,$(call eval_impl,$(mod)))) \
+	$(foreach idir, $(srcdir)/kern $(srcdir)/kern/shared \
+	                $(srcdir)/kern/$(CONFIG_XARCH), \
+	  $(wildcard $(idir)/*.h))
+
+DEPS.dot: $(KERNEL_MODULES_CPP)
+	@echo -n > source_files.mkdeps
+	@for f in $^ ; do \
+	   echo $$f >> source_files.mkdeps ; \
+	 done
+	$(srcdir)/../tool/gendotdeps \
+	  $(addprefix -I,$(PRIVATE_INCDIR)) $(GENDOT_FLAGS) \
+	  -v -b $(srcdir)/DEPS.blacklist source_files.mkdeps -o $@ || $(RM) $@
+	@$(RM) source_files.mkdeps
+
+%.ps:	%.dot
+	dot -Tps -Gmclimit=200.0 -Gnslimit=500.0 \
+	  -Gsize=11,10 -Grotate=90 -o $@ $<
+
+%.a4.ps: %.dot
+	dot -Tps -Gmclimit=200.0 -Gnslimit=500.0 \
+	  -Gsize="11,8" -Granksep=0.7 -Grotate=90 -o $@ $<
+
+%.tred.ps: %.dot
+	tred $< | dot -Tps -Gmclimit=200.0 -Gnslimit=500.0 \
+	  -Gsize="11,8" -Granksep=0.7 -Grotate=90 -o $@ 
+
+
+###
+
+# Circular should really be dependent on $(DEPS). However, we cannot
+# enforce that all $(DEPS) are made before this target, because the
+# Makefile contains "-include $(DEPS)" (which can result in Circular
+# being created/updated before all $(DEPS) are).  Therefore, depend on
+# the kernel image and on main (not with Fiasco-UX). Once this is made,
+# we know all $(DEPS) have been updated.
+Circular: $(KERNEL) $(BOOT) $(RUN_TESTS) $(CHECKSUM)
+	@echo "Creating $@"
+	@( \
+	  echo 'Do "make DEPS" for full fine-grained dependency information.';\
+	  for i in $(DEPS); \
+	  do \
+	    $(PREPROCESSDEPS) $$i; \
+	  done | $(SHOWDEPS) | $(CIRCULAR) \
+	) > $@.new
+	@mv $@.new $@
+
+# Check that this build did not introduce circular dependencies.
+.PHONY: Circular-ok
+Circular-ok: Circular
+	@ if [ $$(tail -1 Circular) -gt 0 ]; \
+	  then \
+	    echo "Circular dependencies detected!"; \
+	    cat Circular; \
+	    exit 1; \
+	  fi; \
+	  echo "Circular-dependency check OK."
+
+###
+
+.PHONY: TAGS tags
+
+# Find directories for source and header files.  There may be
+# duplicates, so weed out the list using a tiny Perl script.
+# Additionally we strip off the srcdir from every path because
+# we're probably not starting our editor in a build dir. Instead
+# put the tags file into $(srcdir) (this is suboptimal too but
+# better than the builddir I guess)
+define source-files
+	( find $(shell perl -e '				   \
+		%seen = ();					   \
+		foreach $$i (@ARGV) {				   \
+		    next if ! -e $$i || $$i eq ".";		   \
+		    next if defined $$seen{$$i};		   \
+		    $$seen{$$i} = 1;				   \
+		    print "$$i ";				   \
+		}' $(filter-out auto, $(VPATH) $(PRIVATE_INCDIR))) \
+	  -maxdepth 1 -type f -name '*.cpp' -o -name '*.h' 	   \
+	  -o -name '*.cc' -o -name '*.c' ) |			   \
+	  perl -p -e 's@^$(srcdir)/@@'
+endef
+
+TAGS:
+	$(source-files) | (cd $(srcdir) && \
+	                   etags --members --language=c++ -)
+
+tags:
+	$(source-files) | (cd $(srcdir) && \
+	                   ctags --members --language=c++ -d -w -T -)
+
+

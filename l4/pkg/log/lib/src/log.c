@@ -15,16 +15,16 @@
 #include <l4/log/log_printf.h>
 #include "internal.h"
 
-void LOG_log(const char*function, const char*format,...){
+void LOG_log(const char *function, const char *format, ...)
+{
   va_list list;
+  buffer_t buffer = {0, 0, 0};
 
-  lock_printf;
+  init_buffer(&buffer);
 
-  LOG_printf("%s(): ", function);
-  va_start(list,format);
-  LOG_vprintf(format,list);
+  LOG_printf_buffer(&buffer, "%s(): ", function);
+  va_start(list, format);
+  LOG_vprintf_buffer(&buffer, format, list);
   va_end(list);
-  LOG_putchar('\n');
-
-  unlock_printf;
+  LOG_putchar_buffer(&buffer, '\n');
 }

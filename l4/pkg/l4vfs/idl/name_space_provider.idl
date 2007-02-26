@@ -1,0 +1,60 @@
+/* -*- c -*- */ 
+/**
+ * \file   l4vfs/idl/name_space_provider.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+import <l4/l4vfs/types.h>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief interface to support volume registering
+     */
+    [uuid(1001), abstract]
+    interface name_space_provider
+    {
+        /* Register a server thread at the name server for a specific
+         * volume_id in the given object_id.  Additionally, the
+         * server's root's local object_id is given for the first
+         * resolve, used to determine the oject_id of the
+         * mounted_point.  This could be called several times with
+         * different volume_ids if a server wants to.
+         *
+         * This call might fail, in case someone already registered
+         * for the given volume_id.
+         *
+         * A return value of 0 means ok, in all other cases an error
+         * occured.
+         */
+        int register_volume([in] CORBA_Object server,
+                            [in] object_id_t object_id);
+
+        /* Unregister a thread-volume-mapping at the name server.
+         * This could be called several times with different
+         * volume_ids if a server has registered for different
+         * volume_ids.
+         *
+         * Note that for unregistering the root's object_id is not
+         * necessary.
+         *
+         * This might fail, if no one was registered for the given
+         * volume_id.
+         *
+         * A return value of 0 means ok, in all other cases an error
+         * occured.
+         */
+        int unregister_volume([in] CORBA_Object server,
+                              [in] volume_id_t volume_id);
+    };
+};

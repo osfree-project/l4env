@@ -1,0 +1,21 @@
+/*
+ * \brief   IDL interface for local_sock, a server providing unix domain sockets
+ * \date    2004-08-04
+ * \author  Carsten Weinhold <cw183155@inf.tu-dresden.de>
+ *
+ * This interface inherits from l4vfs connection and net_io idls.
+ */
+
+import <l4/sys/types.h>
+import <l4/l4vfs/network_server.idl>
+import <l4/l4vfs/select_notify.idl>
+
+interface local_socks : l4vfs::network_server, l4vfs::select_notify {
+  
+  [allow_reply_only]
+  void worker_done([in, out] l4_addr_t *job_info);
+
+  [oneway]
+  void worker_done_and_exiting([in] l4_addr_t job_info);
+};
+

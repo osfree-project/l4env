@@ -166,6 +166,27 @@ library if_l4dm
       long unlock([in] unsigned long ds_id, 
 		  [in] unsigned long offset,
 		  [in] unsigned long size);
+
+      /***********************************************************************/
+      /**
+       * \brief   Return information about a dataspace for debugging purposes
+       * \ingroup idl_mem
+       * 
+       * \param   ds_id       Dataspace id
+       * \retval  size        size of dataspace
+       * \retval  owner       dataspace owner
+       * \retval  name        name of dataspace
+       *	
+       * \return  0 on success, error code otherwise:
+       *          - -#L4_EINVAL  invalid dataspace id
+       *          - -#L4_EPERM   operation not permitted
+       */
+      /***********************************************************************/ 
+      long info([in] unsigned long ds_id,
+	        [out] unsigned long *size,
+		[out] l4_threadid_t *owner,
+		[out, string, prealloc] char ** name,
+		[out] unsigned long *next_id);
     };
 };
 

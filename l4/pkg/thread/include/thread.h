@@ -107,6 +107,11 @@ typedef struct l4thread_exit_desc
 					       **/
 #define L4THREAD_CREATE_SETUP  0x80000000     ///< \ingroup api_create 
 
+#define L4THREAD_NAME_LEN      16	      /**< \ingroup api_create
+                                               **  max len of a thread name
+					       **  including '\0'
+                                               **/
+
 /*****************************************************************************
  *** macros
  *****************************************************************************/
@@ -180,6 +185,11 @@ extern const l4_addr_t l4thread_stack_area_addr;
  */
 extern const l4_addr_t l4thread_tcb_table_addr;
 
+/**
+ * default basename for thread creation
+ */
+extern const char *l4thread_basename;
+
 /*****************************************************************************
  *** prototypes
  *****************************************************************************/
@@ -216,12 +226,53 @@ __BEGIN_DECLS;
  * \return  Thread id on success (> 0), error code otherwise:
  *          - -#L4_ENOTHREAD  no thread available
  * 
- * l4_create_thread creates a new thread using the default values for the
- * stack size an priority of the new thread.
+ * l4thread_create() creates a new thread using the default values for the
+ * stack size an priority of the new thread. The name of the thread will
+ * be generated from #l4thread_basename by adding a dot (.) and the 0-padded
+ * id of the generated thread in hex notation.
+ *
+ * When \c func returns, the created thread will exit.
  */
 /*****************************************************************************/ 
 l4thread_t 
 l4thread_create(void (*func)(void *), void * data, l4_uint32_t flags);
+
+/*****************************************************************************/
+/**
+ * \brief   Create new thread with name
+ * \ingroup api_create
+ * 
+ * \param   func         thread function
+ * \param   name         thread name
+ * \param   data         data argument which is passed to the new thread
+ * \param   flags        create flags
+ *                       - #L4THREAD_CREATE_SYNC wait until the new 
+ *                         thread is started, the new thread must confirm its 
+ *                         startup by calling the l4thread_started() function.
+ *                       - #L4THREAD_CREATE_ASYNC return immediately after 
+ *                         creating the thread, the new thread might not be 
+ *                         completely initialized when l4thread_create returns
+ *                       - #L4THREAD_CREATE_PINNED use pinned (non-paged) memory
+ *                         to alloacte stack
+ *                       - #L4THREAD_CREATE_MAP immediately map stack memory
+ *                       - #L4THREAD_CREATE_SETUP use direct calls to 
+ *                         the region mapper.
+ *                         Note: This flag is inteded to be used by the 
+ *                               startup code of a task. It must not be used 
+ *                               by application threads.
+ *
+ * \return  Thread id on success (> 0), error code otherwise:
+ *          - -#L4_ENOTHREAD  no thread available
+ * 
+ * l4thread_create() creates a new thread using the default values for the
+ * stack size and priority of the new thread.
+ *
+ * When \c func returns, the created thread will exit.
+ */
+/*****************************************************************************/ 
+l4thread_t 
+l4thread_create_named(void (*func)(void *), const char*name,
+		      void * data, l4_uint32_t flags);
 
 /*****************************************************************************/
 /**
@@ -231,7 +282,15 @@ l4thread_create(void (*func)(void *), void * data, l4_uint32_t flags);
  * \param   thread       thread id of the new thread, if set to 
  *                       #L4THREAD_INVALID_ID, l4thread_create_long will 
  *                       choose an unused thread.
+ * \param   name         name of the thread. If 0, a name will be generated.
+ *			 If starting with ".", will be padded to basename.
+ *                       Otherwise contents will be copied.
  * \param   func         thread function
+ * \param   name         name of the thread. If 0, a name will be generated.
+ *			 If starting with ".", will be padded to basename.
+ *                       Otherwise contents will be copied. Additionally,
+ *			 one "%d" or "%x" in the string is substituted by
+ *                       sprintf, withh the thread-id as one argument.
  * \param   stack_pointer stack pointer, if set to #L4THREAD_INVALID_SP, 
  *                       a stack will be allocated
  * \param   stack_size   size of the stack (bytes), if set to 
@@ -266,10 +325,13 @@ l4thread_create(void (*func)(void *), void * data, l4_uint32_t flags);
  *          - -#L4_ENOTHREAD  no thread available
  *          - -#L4_ENOMEM     out of memory allocating stack
  *          - -#L4_ENOMAP     no area found to map stack
+ *
+ * When \c func returns, the created thread will exit.
  */
 /*****************************************************************************/ 
 l4thread_t 
 l4thread_create_long(l4thread_t thread, void (*func)(void *), 
+		     const char * name,
 		     l4_addr_t stack_pointer, l4_size_t stack_size,
 		     l4_prio_t prio, void * data, l4_uint32_t flags);
 
@@ -313,20 +375,24 @@ l4thread_startup_return(l4thread_t thread);
  * \ingroup api_create
  * 
  * \param   l4_id        L4 thread id of the thread
+ * \param   name         name of the thread. If 0, a name will be generated.
+ *			 If starting with ".", will be padded to basename.
+ *                       Otherwise contents will be copied. Additionally,
+ *			 one "%d" or "%x" in the string is substituted by
  * \param   stack_low    stack start address
  * \param   stack_high   stack end address
  * 
  * \return  Thread id on success (> 0), error code otherwise:
  *          - -#L4_EINVAL  invalid L4 thread id
  *          - -#L4_EUSED   thread specified by \a l4_id already used by the
- *                         thread lib
+ *                         thread lib, or error registering the new name
  *
  * Setup thread descriptor for thread \a l4_id. It must be used to register 
  * threads which are not created by the thread library.
  */
 /*****************************************************************************/ 
 l4thread_t
-l4thread_setup(l4_threadid_t l4_id, l4_addr_t stack_low, 
+l4thread_setup(l4_threadid_t l4_id,  const char * name, l4_addr_t stack_low,
 	       l4_addr_t stack_high);
 
 /*****************************************************************************
@@ -621,6 +687,10 @@ l4thread_id(l4_threadid_t id);
 l4thread_t 
 l4thread_get_parent(void);
 
+/*****************************************************************************
+ *** lock threads
+ *****************************************************************************/
+
 /*****************************************************************************/
 /**
  * \brief   Lock thread, this avoids manipulations by other threads, 
@@ -674,6 +744,50 @@ l4thread_lock_myself(void);
 /*****************************************************************************/ 
 int
 l4thread_unlock_myself(void);
+
+/*****************************************************************************
+ *** thread stacks
+ *****************************************************************************/
+
+/*****************************************************************************/
+/**
+ * \brief   Return stack address
+ * \ingroup api_misc 
+ * 
+ * \param   thread       Thread id
+ * \retval  stack_low    Stack address low 
+ * \retval  stack_high   Stack address high
+ *	
+ * \return  0 on success, error code otherwise:
+ *          - -#L4_EINVAL  invalid thread id
+ */
+/*****************************************************************************/ 
+int
+l4thread_get_stack(l4thread_t thread, l4_addr_t * low, l4_addr_t * high);
+
+/*****************************************************************************/
+/**
+ * \brief   Return stack address of current thread
+ * \ingroup api_misc 
+ * 
+ * \retval  stack_low    Stack address low 
+ * \retval  stack_high   Stack address high
+ *	
+ * \return  0 on success, error code otherwise:
+ *          - -#L4_EINVAL  current thread not found in thread table
+ */
+/*****************************************************************************/ 
+int
+l4thread_get_stack_current(l4_addr_t * low, l4_addr_t * high);
+
+/*****************************************************************************/
+/**
+ * \brief   Dump threads to stdio
+ * \ingroup api_misc 
+ */
+/*****************************************************************************/ 
+void
+l4thread_dump_threads(void);
 
 /*****************************************************************************
  *** library setup                                                         

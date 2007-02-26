@@ -17,4 +17,10 @@
 /** command thread stack size, dice needs a bit more stack */
 #define BLKSRV_CMD_STACK_SIZE        (256 * 1024)
 
+/** max. scatter-gather list length, 
+ *  we don't have a real limit here since we copy data from/to a temporary 
+ *  buffer 
+ */
+#define BLKSRV_MAX_SG_LEN            64
+
 #endif /* !_BLKSRV_CONFIG_H */

@@ -18,7 +18,7 @@
 
 */
 
-static const char *version = "rhine.c v1.0.0 2000-01-07\n";
+static const char *version = "rhine.c v1.0.1 2003-02-06\n";
 
 /* A few user-configurable values. */
 
@@ -46,10 +46,6 @@ static const char *version = "rhine.c v1.0.0 2000-01-07\n";
 #include "etherboot.h"
 #include "nic.h"
 #include "pci.h"
-#include "cards.h"
-
-#include "currticks.h"
-#include <stdio.h>
 
 /* define all ioaddr */
 
@@ -106,6 +102,11 @@ static const char *version = "rhine.c v1.0.0 2000-01-07\n";
 #define byCFGD				ioaddr + 0x7b
 #define wTallyCntMPA			ioaddr + 0x7c
 #define wTallyCntCRC			ioaddr + 0x7d
+#define bySTICKHW			ioaddr + 0x83
+#define byWOLcrClr			ioaddr + 0xA4
+#define byWOLcgClr			ioaddr + 0xA7
+#define byPwrcsrClr			ioaddr + 0xAC
+
 /*---------------------  Exioaddr Definitions -------------------------*/
 
 /*
@@ -620,9 +621,6 @@ The chip does not pad to minimum transmit length.
 
 */
 
-#define PCI_VENDOR_ID_FET		0x1106
-#define PCI_DEVICE_ID_FET_3043		0x3043
-
 /* The rest of these values should never change. */
 #define NUM_TX_DESC	2	/* Number of Tx descriptor registers. */
 
@@ -655,22 +653,18 @@ static struct rhine_private
 }
 rhine;
 
-static struct nic *rhine_probe1 (struct nic *dev, int ioaddr,
+static void rhine_probe1 (struct nic *nic, int ioaddr,
 				 int chip_id, int options);
 static int QueryAuto (int);
 static int ReadMII (int byMIIIndex, int);
 static void WriteMII (char, char, char, int);
 static void MIIDelay (void);
 static void rhine_init_ring (struct nic *dev);
-static void rhine_disable (struct nic *nic);
+static void rhine_disable (struct dev *dev);
 static void rhine_reset (struct nic *nic);
 static int rhine_poll (struct nic *nic);
 static void rhine_transmit (struct nic *nic, const char *d, unsigned int t,
 			    unsigned int s, const char *p);
-
-/* Linux support functions */
-/*#define virt_to_bus(x) ((unsigned long)x)
-  #define bus_to_virt(x) ((void *)x) */
 
 /* Initialize the Rx and Tx rings, along with various 'dev' bits. */
 static void
@@ -857,26 +851,38 @@ MIIDelay (void)
     }
 }
 
-struct nic *
-rhine_probe (struct nic *nic, unsigned short *probeaddrs,
-	       struct pci_device *pci)
+static int
+rhine_probe (struct dev *dev, struct pci_device *pci)
 {
+    struct nic *nic = (struct nic *)dev;
     if (!pci->ioaddr)
-	return NULL;
-    nic = rhine_probe1 (nic, pci->ioaddr, 0, -1);
+	return 0;
+    rhine_probe1 (nic, pci->ioaddr, pci->dev_id, -1);
 
-   /* if (nic)
-	adjust_pci_device(pci); */
-    nic->poll = rhine_poll;
-    nic->transmit = rhine_transmit;
-    nic->reset = rhine_reset;
-    nic->disable = rhine_disable;
+    adjust_pci_device(pci);
     rhine_reset (nic);
 
-    return nic;
+    dev->disable  = rhine_disable;
+    nic->poll     = rhine_poll;
+    nic->transmit = rhine_transmit;
+
+    return 1;
 }
 
-static struct nic *
+static void set_rx_mode(struct nic *nic __unused) {
+    	struct rhine_private *tp = (struct rhine_private *) nic->priv_data;
+	unsigned char rx_mode;
+    	int ioaddr = tp->ioaddr;
+
+	/* ! IFF_PROMISC */
+	outl(0xffffffff, byMAR0);
+	outl(0xffffffff, byMAR4);
+	rx_mode = 0x0C;
+
+	outb(0x60 /* thresh */ | rx_mode, byRCR );
+}
+
+static void
 rhine_probe1 (struct nic *nic, int ioaddr, int chip_id, int options)
 {
     struct rhine_private *tp;
@@ -888,13 +894,37 @@ rhine_probe1 (struct nic *nic, int ioaddr, int chip_id, int options)
 
     if (rhine_debug > 0 && did_version++ == 0)
 	printf (version);
-    /* Perhaps this should be read from the EEPROM? */
-    printf ("IO address %x Ethernet Address: ", ioaddr);
-    for (i = 0; i < ETH_ALEN; i++) {
-	nic->node_addr[i] = inb (byPAR0 + i);
-	printf ("%x%c",
-	        nic->node_addr[i] & 0xff, (i + 1 == ETH_ALEN) ? '\n' : ':');
+
+    /* D-Link provided reset code (with comment additions) */
+    if((chip_id != 0x3043) && (chip_id != 0x6100)) {
+	unsigned char byOrgValue;
+	
+	if(rhine_debug > 0)
+		printf("Enabling Sticky Bit Workaround for Chip_id: 0x%hX\n"
+				, chip_id);
+	/* clear sticky bit before reset & read ethernet address */
+	byOrgValue = inb(bySTICKHW);
+	byOrgValue = byOrgValue & 0xFC;
+	outb(byOrgValue, bySTICKHW);
+
+	/* (bits written are cleared?) */
+	/* disable force PME-enable */
+	outb(0x80, byWOLcgClr);
+	/* disable power-event config bit */
+	outb(0xFF, byWOLcrClr);
+	/* clear power status (undocumented in vt6102 docs?) */
+	outb(0xFF, byPwrcsrClr);
+	
     }
+
+    /* Perhaps this should be read from the EEPROM? */
+    for (i = 0; i < ETH_ALEN; i++)
+	nic->node_addr[i] = inb (byPAR0 + i);
+    printf ("IO address %hX "
+	    "Ethernet Address: %02X:%02X:%02X:%02X:%02X:%02X\n", 
+	    ioaddr, 
+	    nic->node_addr[0], nic->node_addr[1], nic->node_addr[2],
+	    nic->node_addr[3], nic->node_addr[4], nic->node_addr[5]);
 
     /* restart MII auto-negotiation */
     WriteMII (0, 9, 1, ioaddr);
@@ -926,6 +956,7 @@ rhine_probe1 (struct nic *nic, int ioaddr, int chip_id, int options)
 	}
 #endif
 
+    
     /* query MII to know LineSpeed,duplex mode */
     byMIIvalue = inb (ioaddr + 0x6d);
     LineSpeed = byMIIvalue & MIISR_SPEED;
@@ -977,14 +1008,18 @@ rhine_probe1 (struct nic *nic, int ioaddr, int chip_id, int options)
 	if (tp->default_port)
 	    tp->medialock = 1;
     }
-    return nic;
+    return;
 }
 
-static void
-rhine_disable (struct nic *nic)
+static void 
+rhine_disable (struct dev *dev)
 {
+    struct nic *nic = (struct nic *)dev;
     struct rhine_private *tp = (struct rhine_private *) nic->priv_data;
     int ioaddr = tp->ioaddr;
+
+    /* merge reset and disable */
+    rhine_reset(nic);
 
     printf ("rhine disable\n");
     /* Switch to loopback mode to avoid hardware races. */
@@ -1008,17 +1043,10 @@ rhine_reset (struct nic *nic)
     int rx_bufs_tmp, rx_bufs_tmp1;
     int tx_bufs_tmp, tx_bufs_tmp1;
 
-#ifdef	USE_LOWMEM_BUFFER
-#define buf1 (0x10000 - (RX_RING_SIZE * PKT_BUF_SZ + 32))
-#define buf2 (buf1 - (RX_RING_SIZE * PKT_BUF_SZ + 32))
-#define desc1 (buf2 - (TX_RING_SIZE * sizeof (struct rhine_tx_desc) + 32))
-#define desc2 (desc1 - (TX_RING_SIZE * sizeof (struct rhine_tx_desc) + 32))
-#else
     static char buf1[RX_RING_SIZE * PKT_BUF_SZ + 32];
     static char buf2[RX_RING_SIZE * PKT_BUF_SZ + 32];
     static char desc1[TX_RING_SIZE * sizeof (struct rhine_tx_desc) + 32];
     static char desc2[TX_RING_SIZE * sizeof (struct rhine_tx_desc) + 32];
-#endif
 
     /* printf ("rhine_reset\n"); */
     /* Soft reset the chip. */
@@ -1074,6 +1102,9 @@ rhine_reset (struct nic *nic)
     /*write TD RD Descriptor to MAC */
     outl (virt_to_bus (tp->rx_ring), dwCurrentRxDescAddr);
     outl (virt_to_bus (tp->tx_ring), dwCurrentTxDescAddr);
+
+    /* Setup Multicast */	
+    set_rx_mode(nic);
 
     /* close IMR */
     outw (0x0000, byIMR0);
@@ -1176,11 +1207,31 @@ rhine_transmit (struct nic *nic,
     /*printf("td4=[%X]",inl(dwCurrentTDSE3)); */
 
     outb (CR1bak, byCR1);
+    /* Wait until transmit is finished */
+    while (tp->tx_ring[entry].tx_status.bits.own_bit != 0)
+	;
     tp->cur_tx++;
 
     /*outw(IMRShadow,byIMR0); */
     /*dev_kfree_skb(tp->tx_skbuff[entry], FREE_WRITE); */
     /*tp->tx_skbuff[entry] = 0; */
 }
+
+static struct pci_id rhine_nics[] = {
+PCI_ROM(0x1106, 0x3065, "dlink-530tx",     "VIA 6102"),
+PCI_ROM(0x1106, 0x3106, "via-rhine-6105",  "VIA 6105"),
+PCI_ROM(0x1106, 0x3043, "dlink-530tx-old", "VIA 3043"),		/* Rhine-I 86c100a */
+PCI_ROM(0x1106, 0x3053, "via6105m",        "VIA 6105M"),	
+PCI_ROM(0x1106, 0x6100, "via-rhine-old",   "VIA 86C100A"),	/* Rhine-II */
+};
+
+struct pci_driver rhine_driver = {
+	.type     = NIC_DRIVER,
+	.name     = "VIA 86C100",
+	.probe    = rhine_probe,
+	.ids      = rhine_nics,
+	.id_count = sizeof(rhine_nics)/sizeof(rhine_nics[0]),
+	.class    = 0,
+};
 
 /* EOF via-rhine.c */

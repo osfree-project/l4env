@@ -40,8 +40,34 @@ bool Memmap::free_superpage(l4_addr_t address, char owner)
   return true;
 }
 
-bool Memmap::alloc(l4_addr_t address, char owner)
+char Memmap::alloc_r( unsigned long addr, char owner, unsigned &grain )
 {
+  Region *r = regions->find(addr);
+  if (!r)
+    return 2;
+
+  grain = r->grain();
+  
+  if (r->owner(addr)==owner)
+    return 1;
+  if (r->is_free(addr))
+    {
+      r->owner(owner);
+      return 1;
+    }
+  return 0;
+}
+
+bool Memmap::alloc(l4_addr_t address, char owner, unsigned &grain)
+{ 
+  char ra = alloc_r(address, owner, grain);
+  if (ra==0)
+    return false;
+  else if (ra==1)
+    return true;
+
+  grain = 12; // 4k Pages
+
   Page *p = atop(address);
   SuperPage *s = atos(address);
 
@@ -96,6 +122,10 @@ bool Memmap::alloc_superpage(l4_addr_t address, char owner)
 
 char Memmap::owner(l4_addr_t address) const
 {
+  Region *r = regions->find(address);
+  if (r)
+    return r->owner(address);
+  
   Page const *p = atop(address);
   SuperPage const *s= atos(address);
   if(!p || !s)
@@ -134,8 +164,8 @@ void Memmap::find_free(l4_umword_t *d1, l4_umword_t *d2, char _owner)
 
   /* for kernel tasks, start looking at the back */
   l4_addr_t address = _owner < L4_ROOT_TASKNO 
-    ? (mem_high - 1) & L4_SUPERPAGEMASK
-    : 0;
+    ? (LOWER_LIMIT + mem_high - 1) & L4_SUPERPAGEMASK
+    : LOWER_LIMIT;
 
   for (;;)
     {
@@ -163,13 +193,13 @@ void Memmap::find_free(l4_umword_t *d1, l4_umword_t *d2, char _owner)
 
       if (_owner < L4_ROOT_TASKNO)
         {
-          if (address == 0) break;
+          if (address <= LOWER_LIMIT) break;
           address -= L4_SUPERPAGESIZE;
         }
       else
         {
           address += L4_SUPERPAGESIZE;
-          if (address >= mem_high) break;
+          if (address >= LOWER_LIMIT + mem_high) break;
         }
     }
 

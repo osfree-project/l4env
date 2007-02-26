@@ -1,7 +1,7 @@
 /* $Id$ */
 
 /*!
- * \file	con/include/l4/con/l4con_ev.h
+ * \file	con/include/l4/l4con/l4con_ev.h
  * \brief	con protocol definitions - input event part
  *
  * \date	2001

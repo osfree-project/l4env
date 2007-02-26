@@ -22,6 +22,7 @@
 #include <l4/generic_blk/blk-server.h>
 #include "blksrv.h"
 #include "config.h"
+#include "debug.h"
 
 /*****************************************************************************
  *** globals
@@ -40,13 +41,13 @@ l4_threadid_t blksrv_cmd_id = L4_INVALID_ID;
 static void
 __command_thread(void * data)
 {
-  CORBA_Environment env = dice_default_server_environment;
+  CORBA_Server_Environment env = dice_default_server_environment;
 
   /* setup server environment */
   env.malloc = (dice_malloc_func)malloc;
   env.free = (dice_free_func)free;
   
-  LOGL("command interface thread started.");
+  LOGdL(DEBUG_OSKIT_STARTUP, "command interface thread started.");
 
   /* start server loop */
   l4blk_cmd_server_loop(&env);  
@@ -64,12 +65,14 @@ __command_thread(void * data)
 l4_int32_t 
 l4blk_cmd_create_stream_component(CORBA_Object _dice_corba_obj,
                                   l4blk_driver_id_t drv,
+                                  l4_uint32_t device,
                                   l4_uint32_t bandwidth,
+                                  l4_uint32_t period,
                                   l4_uint32_t blk_size,
                                   float q,
                                   l4_uint32_t meta_int,
                                   l4blk_stream_t * stream,
-                                  CORBA_Environment * _dice_corba_env)
+                                  CORBA_Server_Environment * _dice_corba_env)
 {
   /* not supported */
   return -L4_ENOTSUPP;
@@ -84,7 +87,7 @@ l4_int32_t
 l4blk_cmd_close_stream_component(CORBA_Object _dice_corba_obj,
                                  l4blk_driver_id_t drv,
                                  l4blk_stream_t stream,
-                                 CORBA_Environment * _dice_corba_env)
+                                 CORBA_Server_Environment * _dice_corba_env)
 {
   /* not supported */
   return -L4_ENOTSUPP;
@@ -101,7 +104,7 @@ l4blk_cmd_start_stream_component(CORBA_Object _dice_corba_obj,
                                  l4blk_stream_t stream,
                                  l4_uint32_t time,
                                  l4_uint32_t request_no,
-                                 CORBA_Environment * _dice_corba_env)
+                                 CORBA_Server_Environment * _dice_corba_env)
 {
   /* not supported */
   return -L4_ENOTSUPP;
@@ -133,7 +136,7 @@ l4blk_cmd_put_request_component(CORBA_Object _dice_corba_obj,
                                 l4_int32_t sg_size,
                                 l4_int32_t sg_num,
                                 l4_int32_t sg_type,
-                                CORBA_Environment *_dice_corba_env)
+                                CORBA_Server_Environment *_dice_corba_env)
 {
   blksrv_driver_t * driver = blksrv_get_driver(drv);
 
@@ -177,7 +180,7 @@ l4blk_cmd_ctrl_component(CORBA_Object _dice_corba_obj,
                          l4_int32_t in_size,
                          void ** out_args,
                          l4_int32_t * out_size,
-                         CORBA_Environment * _dice_corba_env)
+                         CORBA_Server_Environment * _dice_corba_env)
 {
   /* default return buffer */
   *out_size = 0;
@@ -191,6 +194,10 @@ l4blk_cmd_ctrl_component(CORBA_Object _dice_corba_obj,
     case L4BLK_CTRL_DISK_SIZE:
       /* return disk size */
       return blksrv_dev_size();
+
+    case L4BLK_CTRL_MAX_SG_LEN:
+      /* return max. scatter-gather list length */
+      return BLKSRV_MAX_SG_LEN;
 
     default: 
       return -L4_EINVAL;
@@ -217,7 +224,7 @@ blksrv_start_command_thread(void)
   l4thread_t t;
 
   /* start thread */
-  t = l4thread_create_long(L4THREAD_INVALID_ID, __command_thread,
+  t = l4thread_create_long(L4THREAD_INVALID_ID, __command_thread, ".cmd",
                            L4THREAD_INVALID_SP, BLKSRV_CMD_STACK_SIZE,
                            L4THREAD_DEFAULT_PRIO, NULL, L4THREAD_CREATE_ASYNC);
   if (t < 0)

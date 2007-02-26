@@ -2,7 +2,9 @@ blk_oskit is an example implementation of the generic_blk interface. It uses
 the OSKit linux device drvers.
 
 Usage:
-module = (nd)/boot/blk_oskit [-i|--ide] [-s|--scsi=<driver>] [-d|--device=<device>] [-w|--write]
+
+module = blk_oskit [-i|--ide] [-s|--scsi=<driver>] [-d|--device=<device>] [-w|--write] [--sleep=<time>]
+
   -i|--ide               use IDE driver
   -s|--scsi=<driver>     use SCSI driver <driver>, currently ncrc8xx and
                          buslogic are supported
@@ -11,3 +13,16 @@ module = (nd)/boot/blk_oskit [-i|--ide] [-s|--scsi=<driver>] [-d|--device=<devic
                          an IDE drive
   -w|--write             open device writeable, default is to open a device
                          read-only
+  --sleep=<time>         sleep for <time> ms before initializing the driver.
+                         This is sometimes necessary to give other drivers 
+                         the chance to allocate their interrupts. The oskit 
+                         drivers do autoprobing of interrupts, i.e. requesting 
+                         all available interrupts at omega0/l4io. This
+                         confuses other drivers.
+
+Example:
+
+  module = blk_oskit --ide --device=hda1 --sleep=2000
+
+  This waits for 2s, starts the ide driver and opens the device 'hda1'
+  read-only.

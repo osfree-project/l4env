@@ -12,7 +12,7 @@ PRIVATE_INCDIR	= ../include .
 
 include $(L4DIR)/mk/lib.mk
 
-WARNINGS	+= -Wno-unused
+WARNINGS	+= -Wno-unused -Wno-trigraphs
 
 names.o: devlist.h classlist.h
 

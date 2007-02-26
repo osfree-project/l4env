@@ -13,11 +13,15 @@
  * COPYING file for details.
  */
 
+#ifndef __DOPE_INCLUDE_DOPELIB_H_
+#define __DOPE_INCLUDE_DOPELIB_H_
+
 #define EVENT_TYPE_UNDEFINED    0
 #define EVENT_TYPE_COMMAND      1
 #define EVENT_TYPE_MOTION       2
 #define EVENT_TYPE_PRESS        3
 #define EVENT_TYPE_RELEASE      4
+#define EVENT_TYPE_KEYREPEAT    5
 
 typedef struct command_event {
 	long  type;                     /* must be EVENT_TYPE_COMMAND */
@@ -40,12 +44,18 @@ typedef struct release_event {
 	long code;                      /* code of key/button that is released */
 } release_event;
 
+typedef struct keyrepeat_event {
+	long type;                      /* must be EVENT_TYPE_KEYREPEAT */
+	long code;                      /* code of key/button that is pressed */
+} keyrepeat_event;
+
 typedef union dopelib_event_union {
 	long type;
 	command_event   command;
 	motion_event    motion;
 	press_event     press;
 	release_event   release;
+	keyrepeat_event keyrepeat;
 } dope_event;
 
 
@@ -62,7 +72,7 @@ extern void  dope_deinit(void);
  * \param appname  name of the DOpE application
  * \return         DOpE application id
  */
-extern long  dope_init_app(char *appname);
+extern long  dope_init_app(const char *appname);
 
 
 /*** UNREGISTER DOpE CLIENT APPLICATION ***
@@ -79,7 +89,7 @@ extern long  dope_deinit_app(long app_id);
  * \param cmd     command to execute
  * \return        0 on success
  */
-extern int dope_cmd(long app_id,char *cmd);
+extern int dope_cmd(long app_id, const char *cmd);
 
 
 /*** EXECUTE DOpE FORMAT STRING COMMAND ***
@@ -88,10 +98,10 @@ extern int dope_cmd(long app_id,char *cmd);
  * \param cmdf    command to execute specified as format string
  * \return        0 on success
  */
-extern int dope_cmdf(long app_id, char *cmdf, ...);
+extern int dope_cmdf(long app_id, const char *cmdf, ...);
 
 
-/*** REQUEST RESULT OF A DOpE COMMAND ***
+/*** EXECUTE DOpE COMMAND AND REQUEST RESULT ***
  *
  * \param app_id    DOpE application id
  * \param dst       destination buffer for storing the result string
@@ -99,7 +109,7 @@ extern int dope_cmdf(long app_id, char *cmdf, ...);
  * \param cmd       command to execute
  * \return          0 on success
  */
-extern int dope_req(long app_id, char *dst, int dst_size, char *cmd);
+extern int dope_req(long app_id, char *dst, int dst_size, const char *cmd);
 
 
 /*** REQUEST RESULT OF A DOpE COMMAND SPECIFIED AS FORMAT STRING ***
@@ -110,7 +120,7 @@ extern int dope_req(long app_id, char *dst, int dst_size, char *cmd);
  * \param cmd       command to execute - specified as format string
  * \return          0 on success
  */
-extern int dope_reqf(long app_id, char *dst, int dst_size, char *cmdf, ...);
+extern int dope_reqf(long app_id, char *dst, int dst_size, const char *cmdf, ...);
 
 
 /*** BIND AN EVENT TO A DOpE WIDGET ***
@@ -121,7 +131,21 @@ extern int dope_reqf(long app_id, char *dst, int dst_size, char *cmdf, ...);
  * \param callback    callback function to be called for incoming events
  * \param arg         additional argument for the callback function
  */
-extern void dope_bind(long app_id,char *var,char *event_type,void (*callback)(dope_event *,void *),void *arg);
+extern void dope_bind(long app_id,const char *var, const char *event_type,
+                      void (*callback)(dope_event *,void *),void *arg);
+
+
+/*** BIND AN EVENT TO A DOpE WIDGET SPECIFIED AS FORMAT STRING ***
+ *
+ * \param app_id      DOpE application id
+ * \param varfmt      widget to bind an event to (format string)
+ * \param event_type  identifier for the event type
+ * \param callback    callback function to be called for incoming events
+ * \param arg         additional argument for the callback function
+ * \param ...         format string arguments
+ */
+extern void dope_bindf(long id, const char *varfmt, const char *event_type,
+                       void (*callback)(dope_event *,void *), void *arg,...);
 
 
 /*** ENTER DOPE EVENTLOOP ***
@@ -129,6 +153,25 @@ extern void dope_bind(long app_id,char *var,char *event_type,void (*callback)(do
  * \param app_id  DOpE application id
  */
 extern void dope_eventloop(long app_id);
+
+
+/*** RETURN NUMBER OF PENDING EVENTS ***
+ *
+ * \param app_id  DOpE application id
+ * \return        number of pending events
+ */
+int dope_events_pending(int app_id);
+
+
+/*** PROCESS ONE SINGLE DOpE EVENT ***
+ *
+ * This function processes exactly one DOpE event. If no event is pending, it
+ * blocks until an event is available. Thus, for non-blocking operation, this
+ * function should be called only if dope_events_pending was consulted before.
+ *
+ * \param app_id  DOpE application id
+ */
+extern void dope_process_event(long app_id);
 
 
 /*** REQUEST KEY OR BUTTON STATE ***
@@ -147,3 +190,5 @@ extern long dope_get_keystate(long app_id, long keycode);
  * \return         ASCII value of the currently pressed key combination
  */
 extern char dope_get_ascii(long app_id, long keycode);
+
+#endif /* __DOPE_INCLUDE_DOPELIB_H_ */

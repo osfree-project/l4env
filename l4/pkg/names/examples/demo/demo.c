@@ -27,27 +27,25 @@ main(int argc, char* argv[])
 {
   l4_threadid_t id;
   char		buffer[1024];
+  int           i;
 
-
-//  rmgr_init();
-  
-  kd_display("Registering ABCGEFG ");
+  outstring("Registering ABCGEFG ");
   if (names_register("ABCGEFG"))
-    kd_display("OK\\r\\n");
+    outstring("OK\r\n");
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!!\r\n");
 
-  kd_display("Registering ABCGEFG ");
+  outstring("Registering ABCGEFG ");
   if (names_register("ABCGEFG"))
-    kd_display("OK\\r\\n");
+    outstring("OK\r\n");
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!! (but expected)\r\n");
 
-  kd_display("Registering ABCGEFG2 ");
+  outstring("Registering ABCGEFG2 ");
   if (names_register("ABCGEFG2"))
-    kd_display("OK\\r\\n");
+    outstring("OK\r\n");
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!!\r\n");
 
 
 
@@ -55,95 +53,120 @@ main(int argc, char* argv[])
 
 
 
-  kd_display("Querying ABCGEFG ");
+  outstring("Querying ABCGEFG ");
   if (names_query_name("ABCGEFG", &id))
     {
-      kd_display(" -> ");
+      outstring(" -> ");
       outdec(id.id.task);
-      kd_display(".");
+      outstring(".");
       outdec(id.id.lthread);
-      kd_display("\\r\\n");
+      outstring("\r\n");
     }
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!!\r\n");
 
 
 
-  kd_display("Querying names ");
+  outstring("Querying names ");
   if (names_query_name("names", &id))
     {
-      kd_display(" -> ");
+      outstring(" -> ");
       outdec(id.id.task);
-      kd_display(".");
+      outstring(".");
       outdec(id.id.lthread);
-      kd_display("\\r\\n");
+      outstring("\r\n");
     }
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!!\r\n");
 
 
-  kd_display("Querying ABCGEFG2 ");
+  outstring("Querying ABCGEFG2 ");
   if (names_query_name("ABCGEFG2", &id))
     {
-      kd_display(" -> ");
+      outstring(" -> ");
       outdec(id.id.task);
-      kd_display(".");
+      outstring(".");
       outdec(id.id.lthread);
-      kd_display("\\r\\n");
+      outstring("\r\n");
     }
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!!\r\n");
 
-  kd_display("Querying 5.0 ");
+  outstring("Querying 5.0 ");
   id = l4_myself(); id.id.task = 5;
   if (names_query_id(id, buffer, sizeof(buffer)))
     {
+      outstring(" -> ");
       outdec(id.id.task);
-      kd_display(".");
+      outstring(".");
       outdec(id.id.lthread);
-      kd_display(" -> ");
+      outchar(' ');
       outstring(buffer);
-      kd_display("\\r\\n");
+      outstring("\r\n");
     }
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!!\r\n");
+
+
+  outstring("Query all: ");
+  for (i = 0; i < NAMES_MAX_ENTRIES; i++)
+    {
+      if (names_query_nr(i, buffer, sizeof(buffer), &id))
+	{
+	  if (i)
+	    outstring(", ");
+	  outstring(buffer);
+	  outstring("(");
+	  outdec(id.id.task);
+	  outstring(".");
+	  outdec(id.id.lthread);
+	  outstring(")");
+	}
+    }
+
+  outstring("\r\n");
 
 
 
 
 
 
-
-  kd_display("Unregistering ABCGEFG ");
+  outstring("Unregistering ABCGEFG ");
   if (names_unregister("ABCGEFG"))
-    kd_display("OK\\r\\n");
+    outstring("OK\r\n");
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!!\r\n");
 
-  kd_display("Querying ABCGEFG ");
+  outstring("Querying ABCGEFG ");
   if (names_query_name("ABCGEFG", &id))
     {
-      kd_display(" -> ");
+      outstring(" -> ");
       outdec(id.id.task);
-      kd_display(".");
+      outstring(".");
       outdec(id.id.lthread);
-      kd_display("\\r\\n");
+      outstring("\r\n");
     }
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!! (but expected)\r\n");
 
-  kd_display("Unregistering ABCGEFG ");
+  outstring("Unregistering ABCGEFG ");
   if (names_unregister("ABCGEFG"))
-    kd_display("OK\\r\\n");
+    outstring("OK\r\n");
   else
-    kd_display("FAILED!!!\\r\\n");
+    outstring("FAILED!!! (but expected)\r\n");
 
-  kd_display(__FILE__" Fertig\\r\\n");
+
+  outstring("Requesting dump from names:\r\n");
+  names_dump();
+
+  
+
+  outstring(__FILE__" Done.\r\n");
   if (names_waitfor_name("DEMO2", &id, 8000))
-    kd_display(__FILE__"waitfor OK\\r\\n");
+    outstring(__FILE__"waitfor OK\r\n");
   else
-    kd_display(__FILE__"waitfor ~OK\\r\\n");
+    outstring(__FILE__"waitfor ~OK\r\n");
   l4_sleep(-1);
-  kd_display(__FILE__" end\\r\\n");
+  outstring(__FILE__" end\r\n");
   return 0;
 };

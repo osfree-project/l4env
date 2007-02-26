@@ -1,6 +1,6 @@
 /* $Id$ */
 /*!
- * \file	con/include/l4/con/l4con.h
+ * \file	con/include/l4/l4con/l4con.h
  * \brief	con protocol definitions.
  *
  * \date	2001
@@ -54,7 +54,7 @@
  * pSLIM specific
  ******************************************************************************/
 //@{
-#include <l4/con/l4con_pslim.h>
+#include <l4/l4con/l4con_pslim.h>
 //@}
 
 /******************************************************************************/
@@ -63,7 +63,7 @@
  * EV specific
  ******************************************************************************/
 //@{
-#include <l4/con/l4con_ev.h>
+#include <l4/l4con/l4con_ev.h>
 //@}
 /******************************************************************************/
 /*!\name Param macros for graph_smode/gmode
@@ -96,6 +96,7 @@
 #define L4CON_FAST_COPY		0x00000001
 #define L4CON_STREAM_CSCS_YV12	0x00000002
 #define L4CON_STREAM_CSCS_YUY2	0x00000004
+#define L4CON_POST_DIRTY	0x00000008
 
 //@}
 

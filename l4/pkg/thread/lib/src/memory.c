@@ -68,13 +68,14 @@ l4th_pages_allocate(l4_size_t size, l4_addr_t map_addr, l4_uint32_t vm_area,
 		    l4th_mem_desc_t * desc)
 {
   int ret;
-  l4_uint32_t attach_flags;
+  l4_uint32_t attach_flags, area_id;
 
   /* allocate memory */
   if (flags & L4THREAD_CREATE_PINNED)
-    ret = l4dm_mem_open(L4DM_DEFAULT_DSM,size,0,L4DM_PINNED,name,&desc->ds);
+    ret = l4dm_mem_open(L4DM_DEFAULT_DSM, size, 0, L4DM_PINNED, name, 
+                        &desc->ds);
   else
-    ret = l4dm_mem_open(L4DM_DEFAULT_DSM,size,0,0,name,&desc->ds);
+    ret = l4dm_mem_open(L4DM_DEFAULT_DSM, size, 0, 0, name, &desc->ds);
   if (ret < 0)
     {
       LOG_Error("l4thread: memory allocation failed: %s (%d)!",
@@ -83,84 +84,61 @@ l4th_pages_allocate(l4_size_t size, l4_addr_t map_addr, l4_uint32_t vm_area,
     }
   desc->size = size;
 
-  LOGdL(DEBUG_MEM_ALLOC,"ds %d at "IdFmt"\n  flags 0x%08x, owner "IdFmt,
-        desc->ds.id,IdStr(desc->ds.manager),flags,IdStr(owner));
+  LOGdL(DEBUG_MEM_ALLOC, 
+        "ds %d at "l4util_idfmt"\n  flags 0x%08x, owner "l4util_idfmt,
+        desc->ds.id,l4util_idstr(desc->ds.manager),flags,l4util_idstr(owner));
 
   /* attach dataspace */
   attach_flags = L4DM_RW;
   if (flags & L4THREAD_CREATE_MAP)
     attach_flags |= L4RM_MAP;
+  area_id = (vm_area == VM_DEFAULT_AREA) ? L4RM_DEFAULT_REGION_AREA : vm_area;
 
   if (map_addr == VM_FIND_REGION)
     {
       /* find suitable region */
-      if (vm_area == VM_DEFAULT_AREA)
-	{
-	  if (flags & L4THREAD_CREATE_SETUP)
-	    ret = l4rm_direct_attach(&desc->ds,size,0,attach_flags,
-				     (void **)&desc->map_addr);
-	  else
-	    ret = l4rm_attach(&desc->ds,size,0,attach_flags,
-			      (void **)&desc->map_addr);
-	}
-      else
-	{
-	  if (flags & L4THREAD_CREATE_SETUP)
-	    ret = l4rm_direct_area_attach(&desc->ds,vm_area,size,0,
-					  attach_flags,
-					  (void **)&desc->map_addr);
-	  else	    
-	    ret = l4rm_area_attach(&desc->ds,vm_area,size,0,
-				   attach_flags,(void **)&desc->map_addr);
-	}
+      if (flags & L4THREAD_CREATE_SETUP)
+        ret = l4rm_direct_area_attach(&desc->ds, area_id, size, 0, attach_flags,
+                                      (void **)&desc->map_addr);
+      else	    
+        ret = l4rm_area_attach(&desc->ds, area_id, size, 0, attach_flags, 
+                               (void **)&desc->map_addr);
     }
   else
     {
       /* map to specified address */
       desc->map_addr = map_addr;
-      if (vm_area == VM_DEFAULT_AREA)
-	{
-	  if (flags & L4THREAD_CREATE_SETUP)
-	    ret = l4rm_direct_attach_to_region(&desc->ds,(void *)map_addr,
-					       size,0,attach_flags);
-	  else
-	    ret = l4rm_attach_to_region(&desc->ds,(void *)map_addr,size,0,
-					attach_flags);
-	}
+      if (flags & L4THREAD_CREATE_SETUP)
+        ret = l4rm_direct_area_attach_to_region(&desc->ds, area_id,
+                                                (void *)map_addr, size, 0,
+                                                attach_flags);
       else
-	{
-	  if (flags & L4THREAD_CREATE_SETUP)
-	    ret = l4rm_direct_area_attach_to_region(&desc->ds,vm_area,
-						    (void *)map_addr,size,0,
-						    attach_flags);
-	  else
-	    ret = l4rm_area_attach_to_region(&desc->ds,vm_area,
-					     (void *)map_addr,size,0,
-					     attach_flags);
-	}
+        ret = l4rm_area_attach_to_region(&desc->ds, area_id, 
+                                         (void *)map_addr, size, 0,
+                                         attach_flags);
     }
 
   if (ret)
     {
       LOG_Error("l4thread: attach dataspace failed: %s (%d)!",
-                l4env_errstr(ret),ret);
+                l4env_errstr(ret), ret);
 
       l4dm_close(&desc->ds);
       return ret;
     }
 
 #if DEBUG_MEM_ALLOC
-  printf("  attached to region at 0x%08x\n",desc->map_addr);
+  LOG_printf("  attached to region at 0x%08x\n", desc->map_addr);
 #endif
 
   if (!l4_is_invalid_id(owner))
     {
       /* set dataspace owner */
-      ret = l4dm_transfer(&desc->ds,owner);
+      ret = l4dm_transfer(&desc->ds, owner);
       if (ret < 0)
 	{
 	  LOG_Error("l4thread: set dataspace owner failed: %s (%d)!",
-                    l4env_errstr(ret),ret);
+                    l4env_errstr(ret), ret);
 
 	  l4rm_detach((void *)desc->map_addr);
 	  l4dm_close(&desc->ds);
@@ -190,18 +168,20 @@ l4th_pages_free(l4th_mem_desc_t * desc)
 {
   int ret;
   
-  LOGdL(DEBUG_MEM_FREE,"free ds %d at "IdFmt"\n  mapped to 0x%08x, size %u",
-        desc->ds.id,IdStr(desc->ds.manager),desc->map_addr,desc->size);
+  LOGdL(DEBUG_MEM_FREE,
+        "free ds %d at "l4util_idfmt"\n  mapped to 0x%08x, size %u",
+        desc->ds.id, l4util_idstr(desc->ds.manager), 
+        desc->map_addr, desc->size);
   
   /* detach vm region */
   ret = l4rm_detach((void *)desc->map_addr);
 
-  LOGdL(DEBUG_MEM_FREE,"detach done (ret %d)",ret);
+  LOGdL(DEBUG_MEM_FREE, "detach done (ret %d)", ret);
 
   /* close dataspace */
   ret = l4dm_close(&desc->ds);
 
-  LOGdL(DEBUG_MEM_FREE,"close done (ret %d)",ret);
+  LOGdL(DEBUG_MEM_FREE,"close done (ret %d)", ret);
 
   /* done */
   return ret;
@@ -234,7 +214,7 @@ l4th_pages_map(l4th_mem_desc_t * desc, l4_offs_t offs)
     return -L4_EINVAL_OFFS;
 
   /* map page */
-  ret = l4dm_map_pages(&desc->ds,offs,L4_PAGESIZE,desc->map_addr + offs,
-		       L4_LOG2_PAGESIZE,0,L4DM_RW,&fp_addr,&fp_size);
+  ret = l4dm_map_pages(&desc->ds, offs, L4_PAGESIZE, desc->map_addr + offs,
+		       L4_LOG2_PAGESIZE, 0, L4DM_RW, &fp_addr, &fp_size);
   return ret;
 }

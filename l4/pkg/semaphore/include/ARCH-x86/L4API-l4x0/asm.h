@@ -44,13 +44,22 @@
 extern l4_uint32_t l4semaphore_thread_l4_id32;
 
 /*****************************************************************************
+ *** external functions
+ *****************************************************************************/
+__BEGIN_DECLS
+/* internal use only */
+void l4semaphore_restart_up(l4semaphore_t *sem,l4_msgdope_t lastresult);
+void l4semaphore_restart_down(l4semaphore_t *sem,l4_msgdope_t lastresult);
+__END_DECLS
+
+/*****************************************************************************
  *** implementation
  *****************************************************************************/
 
 /*****************************************************************************
  * decrement semaphore counter, block if semaphore locked
  *****************************************************************************/
-volatile L4_INLINE void 
+L4_INLINE void 
 l4semaphore_down(l4semaphore_t * sem)
 {
   unsigned dummy;
@@ -108,25 +117,15 @@ l4semaphore_down(l4semaphore_t * sem)
      );
 
 #if L4SEMAPHORE_RESTART_IPC
-  while (L4_IPC_ERROR(result) == L4_IPC_SECANCELED)
-    {
-      l4_ipc_call(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG, 
-                  L4SEMAPHORE_BLOCK, (l4_umword_t)sem, L4_IPC_SHORT_MSG, 
-                  &dummy, &dummy, L4_IPC_NEVER, &result); 
-    }
-
-  while (L4_IPC_ERROR(result) == L4_IPC_RECANCELED)
-    {
-      l4_ipc_receive(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG,
-                     &dummy, &dummy, L4_IPC_NEVER, &result); 
-    }
+  if (EXPECT_FALSE(L4_IPC_ERROR(result)))
+    l4semaphore_restart_down(sem,result);
 #endif
 }
 
 /*****************************************************************************
  * increment semaphore counter, wakeup first thread waiting
  *****************************************************************************/
-volatile L4_INLINE void
+L4_INLINE void
 l4semaphore_up(l4semaphore_t * sem)
 {
   unsigned dummy;
@@ -187,20 +186,8 @@ l4semaphore_up(l4semaphore_t * sem)
      );
 
 #if L4SEMAPHORE_RESTART_IPC
-  while (L4_IPC_ERROR(result) == L4_IPC_SECANCELED)
-    {
-      l4_ipc_call(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG, 
-                  L4SEMAPHORE_RELEASE, (l4_umword_t)sem, L4_IPC_SHORT_MSG, 
-                  &dummy, &dummy, L4_IPC_NEVER, &result); 
-    }
-
-#if !(L4SEMAPHORE_SEND_ONLY_IPC)
-  while (L4_IPC_ERROR(result) == L4_IPC_RECANCELED)
-    {
-      l4_ipc_receive(l4semaphore_thread_l4_id, L4_IPC_SHORT_MSG,
-                     &dummy, &dummy, L4_IPC_NEVER, &result); 
-    }
-#endif
+  if (EXPECT_FALSE(L4_IPC_ERROR(result)))
+    l4semaphore_restart_up(sem,result);
 #endif
 }
 
@@ -208,7 +195,7 @@ l4semaphore_up(l4semaphore_t * sem)
  * decrement semaphore counter, return error if semaphore locked
  * no assambler version
  *****************************************************************************/
-volatile L4_INLINE int
+L4_INLINE int
 l4semaphore_try_down(l4semaphore_t * sem)
 {
   int old,tmp;
@@ -225,7 +212,7 @@ l4semaphore_try_down(l4semaphore_t * sem)
       tmp = old - 1;
     }
   /* retry if someone else also modified the counter */
-  while (!l4util_cmpxchg32((l4_uint32_t *)&sem->counter,old,tmp));
+  while (!l4util_cmpxchg32((l4_uint32_t *)&sem->counter, old, tmp));
 
   /* decremented semaphore counter */
   return 1;
@@ -234,7 +221,7 @@ l4semaphore_try_down(l4semaphore_t * sem)
 /*****************************************************************************
  * decrement semaphore counter, block for a given time if semaphore locked
  *****************************************************************************/
-volatile L4_INLINE int
+L4_INLINE int
 l4semaphore_down_timed(l4semaphore_t * sem, unsigned time)
 {
   int old,tmp,ret;
@@ -248,19 +235,19 @@ l4semaphore_down_timed(l4semaphore_t * sem, unsigned time)
       tmp = old - 1;
     }
   /* retry if someone else also modified the counter */
-  while (!l4util_cmpxchg32((l4_uint32_t *)&sem->counter,old,tmp));
+  while (!l4util_cmpxchg32((l4_uint32_t *)&sem->counter, old ,tmp));
 
   if (tmp < 0)
     {
       int e, m;
       
-      micros2l4to(time*1000, &e, &m);
+      l4util_micros2l4to(time*1000, &m, &e);
       /* we did not get the semaphore, block */
       ret = l4_ipc_call(l4semaphore_thread_l4_id,
-			L4_IPC_SHORT_MSG,L4SEMAPHORE_BLOCK,
+			L4_IPC_SHORT_MSG, L4SEMAPHORE_BLOCK,
 			(l4_umword_t)sem,
-			L4_IPC_SHORT_MSG,&dummy,&dummy,
-			L4_IPC_TIMEOUT(0, 0, m, e, 0, 0),&result);
+			L4_IPC_SHORT_MSG, &dummy, &dummy,
+			L4_IPC_TIMEOUT(0, 0, m, e, 0, 0), &result);
       if (ret != 0)
 	{
           /* we had a timeout, do semaphore_up to compensate */

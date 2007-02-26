@@ -1,30 +1,33 @@
 INTERFACE:
 
-#include "uart.h"
-
-/**
- * @brief Glue between kernel and UART driver.
- */
-class Kernel_uart : public Uart
+class Kernel_uart
 {
 public:
-
   Kernel_uart();
-  
-  static Uart *const uart();
-  static inline void enable_rcv_irq();
+  static void enable_rcv_irq();
+};
 
+INTERFACE [serial]:
+
+#include "uart.h"
+#include "std_macros.h"
+
+/**
+ * Glue between kernel and UART driver.
+ */
+EXTENSION class Kernel_uart : public Uart
+{
 private:
-
   /**
-   * @brief Prototype for the UART specific startup implementation.
+   * Prototype for the UART specific startup implementation.
    * @param uart, the instantiation to start.
    * @param port, the com port number.
    */
   bool startup( unsigned port );
 };
 
-IMPLEMENTATION:
+//---------------------------------------------------------------------------
+IMPLEMENTATION [serial]:
 
 #include <cstring>
 #include <cstdlib>
@@ -36,8 +39,9 @@ IMPLEMENTATION:
 #include "config.h"
 #include "panic.h"
 
-IMPLEMENT
-Uart *const Kernel_uart::uart()
+PUBLIC static FIASCO_CONST
+Uart *const
+Kernel_uart::uart()
 {
   static Kernel_uart c;
   return &c;
@@ -53,17 +57,19 @@ Kernel_uart::Kernel_uart()
   Uart::TransferMode m = Uart::MODE_8N1;
   unsigned p = Config::default_console_uart;
 
-  if ((s = strstr(cmdline, " -comspeed ")))
+  if (  (s = strstr(cmdline, " -comspeed "))
+      ||(s = strstr(cmdline, " -comspeed=")))
     {
       n = strtoul(s + 11, 0, 0);
       if(n>115200) 
 	{
-	  printf("-comspeed bigger than 115200 not supported (use 115200)!\n");
+	  puts ("-comspeed greater than 115200 not supported (use 115200)!");
 	  n = 115200;
 	}
     }
 
-  if ((s = strstr(cmdline, " -comport ")))
+  if (  (s = strstr(cmdline, " -comport "))
+      ||(s = strstr(cmdline, " -comport=")))
     p = strtoul(s + 10, 0, 0);
 
   if(!startup(p))
@@ -71,15 +77,29 @@ Kernel_uart::Kernel_uart()
 
   if(!change_mode(m, n))
     panic("uart_init: somthing is wrong with the baud rate (%d)!\n",n);
-
-  Irq_alloc *i = Irq_alloc::lookup(irq());
-  if (i)
-    i->alloc((Receiver*)-1, true);
 }
 
-IMPLEMENT inline void
+IMPLEMENT
+void
 Kernel_uart::enable_rcv_irq()
 {
+  // we must not allocate the IRQ in the constructor but here 
+  // since the constructor is called before Dirq::Dirq() constructor
+  Irq_alloc *i = Irq_alloc::lookup(uart()->irq());
+  if (i)
+    i->alloc((Receiver*)-1, true);
+
   uart()->enable_rcv_irq();
 }
 
+//---------------------------------------------------------------------------
+IMPLEMENTATION [!serial]: 
+
+IMPLEMENT inline
+Kernel_uart::Kernel_uart()
+{}   
+    
+IMPLEMENT inline
+void
+Kernel_uart::enable_rcv_irq()
+{}

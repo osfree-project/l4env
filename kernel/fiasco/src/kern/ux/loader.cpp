@@ -2,25 +2,28 @@
 INTERFACE:
 
 #include <cstdio>			// for FILE *
-#include <flux/x86/multiboot.h>
 #include "types.h"
+
+class Multiboot_module;
 
 class Loader
 {
 private:
   static unsigned int phys_base;
+  static char * const errors[];
 
 public:
-  static FILE *open_module	(const char * const path);
+  static FILE *open_module (const char * const path);
 
-  static int load_module	(const char * const path,
-				 struct multiboot_module *module,
-				 unsigned long int memsize);
+  static char const * load_module (const char * const path,
+				   Multiboot_module *module,
+				   unsigned long int memsize,
+				   bool quiet);
 
-  static int copy_module	(const char * const path,
-				 struct multiboot_module *module,
-				 Address *load_addr);
-
+  static char const * copy_module (const char * const path,
+				   Multiboot_module *module,
+				   Address *load_addr,
+				   bool quiet);
 };
 
 IMPLEMENTATION:
@@ -33,9 +36,21 @@ IMPLEMENTATION:
 #include <sys/types.h>
 #include "config.h"
 #include "initcalls.h"
-#include "linker_syms.h"
+#include "mem_layout.h"
+#include "multiboot.h"
 
-unsigned int Loader::phys_base = reinterpret_cast<Address>(&_physmem_1);
+unsigned int Loader::phys_base = Mem_layout::Physmem;
+
+char * const Loader::errors[] FIASCO_INITDATA =
+{
+  "Failed to open file",
+  "Failed to load ELF header",
+  "Failed ELF magic check",
+  "Failed ELF version check",
+  "Failed to load program header",
+  "Failed to fit program section into memory",
+  "Failed to load program section from file"
+};
 
 IMPLEMENT FIASCO_INIT
 FILE *
@@ -80,10 +95,11 @@ Loader::open_module (const char * const path)
 }
 
 IMPLEMENT FIASCO_INIT
-int
+char const *
 Loader::load_module (const char * const path,
-                     struct multiboot_module *module,
-                     unsigned long int memsize)
+                     Multiboot_module *module,
+                     unsigned long int memsize,
+		     bool quiet)
 {
   FILE *fp;
   Elf32_Ehdr eh;
@@ -92,27 +108,38 @@ Loader::load_module (const char * const path,
   int i;
 
   if ((fp = open_module (path)) == NULL)
-    return -1;
+    return errors[0];
   
   // Load ELF Header
   if (fread (&eh, sizeof (eh), 1, fp) != 1)
-    goto error;
+    {
+      fclose (fp);
+      return errors[1];
+    }
 
   // Check if valid ELF magic, 32bit, little endian, SysV
   if (*(unsigned *) eh.e_ident != *(unsigned *) ELFMAG ||
       eh.e_ident[EI_CLASS] != ELFCLASS32  ||
       eh.e_ident[EI_DATA]  != ELFDATA2LSB ||
       eh.e_ident[EI_OSABI] != ELFOSABI_SYSV)
-    goto error;
+    {
+      fclose (fp);
+      return errors[2];
+    }
 
   // Check if executable, i386 format, current ELF version
   if (eh.e_type    != ET_EXEC ||
       eh.e_machine != EM_386  ||
       eh.e_version != EV_CURRENT)
-    goto error;
+    {
+      fclose (fp);
+      return errors[3];
+    }
 
   // Record entry point (initial EIP)
-  module->reserved = eh.e_entry;
+  module->reserved  = eh.e_entry;
+  module->mod_start = 0xffffffff;
+  module->mod_end   = 0;
 
   // Load all program sections
   for (i = 0, offset = eh.e_phoff; i < eh.e_phnum; i++) {
@@ -120,74 +147,86 @@ Loader::load_module (const char * const path,
     // Load Program Header
     if (fseek (fp, offset, SEEK_SET) == -1 ||
         fread (&ph, sizeof (ph), 1, fp) != 1)
-      goto error;
+      {
+        fclose (fp);
+        return errors[4];
+      }
 
     offset += sizeof (ph);
 
-    if (ph.p_type != PT_LOAD)
+    // Only consider non-empty load-sections
+    if (ph.p_type != PT_LOAD || !ph.p_memsz)
       continue;
 
     // Check if section fits into memory
     if (ph.p_vaddr + ph.p_memsz > memsize)
-      goto error;
+      {
+        fclose (fp);
+        return errors[5];
+      }
 
-    // Load Section
-    if (fseek (fp, ph.p_offset, SEEK_SET) == -1 ||
-        fread ((void *)(phys_base + ph.p_vaddr), ph.p_filesz, 1, fp) != 1)
-      goto error;
+    // Load Section with non-zero filesize
+    if (ph.p_filesz && (fseek (fp, ph.p_offset, SEEK_SET) == -1 ||
+        fread ((void *)(phys_base + ph.p_vaddr), ph.p_filesz, 1, fp) != 1))
+      {
+        fclose (fp);
+        return errors[6];
+      }
 
     // Zero-pad uninitialized data if filesize < memsize
     if (ph.p_filesz < ph.p_memsz)
       memset ((void *)(phys_base + ph.p_vaddr + ph.p_filesz), 0,
                ph.p_memsz - ph.p_filesz);
 
-    if (i == 0)
+    if (ph.p_vaddr < module->mod_start)
       module->mod_start = ph.p_vaddr;
-    if (i == eh.e_phnum - 1)
+    if (ph.p_vaddr+ph.p_memsz > module->mod_end)
       module->mod_end   = ph.p_vaddr + ph.p_memsz;
   }
 
-  printf ("Loading Module 0x%08x-0x%08x [%s]\n",
-          module->mod_start, module->mod_end, path);
+  if (! quiet)
+    printf ("Loading Module 0x"L4_PTR_FMT"-0x"L4_PTR_FMT" [%s]\n",
+	    module->mod_start, module->mod_end, path);
 
   fclose (fp);
   return 0;
-
-error:
-  fclose (fp);
-  return -1;
 }
 
 IMPLEMENT FIASCO_INIT
-int
+char const *
 Loader::copy_module (const char * const path,
-		     struct multiboot_module *module,
-                     Address *load_addr)
+		     Multiboot_module *module,
+                     Address *load_addr,
+		     bool quiet)
 {
   FILE *fp;
   struct stat s;
-  int ret = -1;
   
   if ((fp = open_module (path)) == NULL)
-    return ret;
+    return errors[0];
 
   if (fstat (fileno (fp), &s) == -1)
-    goto error;
+    {
+      fclose (fp);
+      return errors[0];
+    }
 
   *load_addr -= s.st_size;
   *load_addr &= Config::PAGE_MASK;	// this may not be necessary
 
-  printf ("Copying Module 0x%08x-0x%08lx [%s]\n",
-          *load_addr, *load_addr + s.st_size, path);
-
-  if (fread ((void *)(phys_base + *load_addr), s.st_size, 1, fp) == 1)
+  if (fread ((void *)(phys_base + *load_addr), s.st_size, 1, fp) != 1)
     {
-      module->mod_start = *load_addr;
-      module->mod_end   = *load_addr + s.st_size;
-      ret = 0;
+      fclose (fp);
+      return errors[6];
     }
 
-error:
+  module->mod_start = *load_addr;
+  module->mod_end   = *load_addr + s.st_size;
+
+  if (! quiet)
+    printf ("Copying Module 0x"L4_PTR_FMT"-0x"L4_PTR_FMT" [%s]\n",
+	    module->mod_start, module->mod_end, path);
+
   fclose (fp);
-  return ret;
+  return 0;
 }

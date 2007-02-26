@@ -28,18 +28,18 @@
 #include "assert.h"
 #include "debug.h"
 
-dsc_array_t *bin_objs = (dsc_array_t*)NULL;
+dsc_array_t *bin_objs = 0;
 
-/** constructor */
+/** Constructor. */
 bin_obj_t::bin_obj_t(l4_uint32_t _id)
   : dsc_obj_t(bin_objs, _id)
 {
   free_dep = deps;
   next_dep = deps;
-  *free_dep = (exc_obj_t*)NULL;
+  *free_dep = 0;
 }
 
-/** destructor */
+/** Destructor. */
 bin_obj_t::~bin_obj_t()
 {
   exc_obj_t **exc_obj = deps;
@@ -48,7 +48,7 @@ bin_obj_t::~bin_obj_t()
     (*exc_obj)->remove_reference();
 }
 
-/** add new dependency */
+/** Add new dependency. */
 int
 bin_obj_t::add_to_dep(exc_obj_t *exc_obj)
 {
@@ -71,7 +71,7 @@ bin_obj_t::add_to_dep(exc_obj_t *exc_obj)
       exc_obj->add_reference();
 
       *free_dep++ = exc_obj;
-      *free_dep   = (exc_obj_t*)NULL;
+      *free_dep   = 0;
     }
 
   return 0;
@@ -102,8 +102,8 @@ bin_obj_t::find_exc_obj(const char *fname)
 	return *exc_obj;
     }
 
-  msg("library \"%s\" not found", fname);
-  return (exc_obj_t*)NULL;
+  msg("\"%s\" not in library list", fname);
+  return 0;
 }
 
 exc_obj_t*
@@ -111,7 +111,7 @@ bin_obj_t::get_nextdep(void)
 {
   return (next_dep < free_dep) 
     ? *next_dep++ 
-    : (exc_obj_t*)NULL;
+    : 0;
 }
 
 int
@@ -139,7 +139,28 @@ bin_obj_t::load_libs(l4env_infopage_t *env)
   return 0;
 }
 
-/** sanity check: all sections are still relocated? */
+int
+bin_obj_t::load_lib(const char *fname, l4env_infopage_t *env)
+{
+  int error;
+  exc_obj_t *exc_obj;
+  const l4dm_dataspace_t inv_ds = L4DM_INVALID_DATASPACE;
+
+  if ((error = check(::exc_obj_load_bin(fname, &inv_ds,
+					/*force_load=*/0, 
+					deps[0]->get_client(),
+					/*flags=*/0, &exc_obj, env),
+		     "loading dynamic library \"%s\"", fname)))
+    return error;
+
+  if ((error = exc_obj->add_to_env(env)) ||
+      (error = add_to_dep(exc_obj)))
+    ;
+
+  return error;
+}
+
+/** Sanity check: all sections are still relocated. */
 int
 bin_obj_t::check_relocated(l4env_infopage_t *env)
 {
@@ -177,6 +198,14 @@ bin_obj_t::link_first(l4env_infopage_t *env)
   return 0;
 }
 
+/** Mark sections as "startup" which means that these sections are not
+ * paged by the region mapper but by the applications pager. The sections
+ * of libloader.s.so cannot be paged by the region mapper since the region
+ * mapper cannot page itself. 
+ * 
+ * The region mapper can also not page the sections of the binary cause
+ * of __weak__ symbols of the libloader (e.g. LOG_tag, l4thread pkg
+ * values). */
 int
 bin_obj_t::mark_startup_library(l4env_infopage_t *env)
 {
@@ -186,10 +215,13 @@ bin_obj_t::mark_startup_library(l4env_infopage_t *env)
   if (!(exc_obj = find_exc_obj("libloader.s.so")))
     return -L4_EXEC_NOSTANDARD;
 
+  /* mark libloader.s.so sections as "startup" */
   if ((error = check(exc_obj->set_section_type(L4_DSTYPE_STARTUP, env),
 		     "setting startup flag for libloader")))
     return -L4_EXEC_NOSTANDARD;
 
+  /* mark the binary (the ELF executable) as "startup" since references
+   * are overwritten by external symbols */
   if ((error = check(deps[0]->set_section_type(L4_DSTYPE_STARTUP, env),
 		     "setting startup flag for binary")))
     return -L4_EXEC_NOSTANDARD;
@@ -371,6 +403,20 @@ bin_obj_t::find_sym(const char *fname, const char *symname,
   return (exc_obj->find_sym(symname, env, addr));
 }
 
+int
+bin_obj_t::find_sym(const char *symname, l4env_infopage_t *env, 
+		    l4_addr_t *addr)
+{
+  int ret;
+  for (exc_obj_t **exc_obj = deps; *exc_obj; exc_obj++)
+    {
+      if (!(ret = (*exc_obj)->find_sym(symname, env, addr)))
+	return 0;
+    }
+
+  return -L4_ENOTFOUND;
+}
+
 /** Search for the first entry point: l4loader_init of libloader.
  *
  * \param env		L4 environment infopage
@@ -410,4 +456,3 @@ bin_obj_t::set_2nd_entry(l4env_infopage_t *env)
 
   return 0;
 }
-

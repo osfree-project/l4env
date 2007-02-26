@@ -15,6 +15,10 @@
 /*--- .text (program code) -------------------------*/
 	.text
 
+	/* reference printf to suck in log's version of printf
+	 * (instead of OSKit's) */
+	.globl printf
+
 	/* reference stuff to suck in our (liboskit10_support) version
 	 * (instead of OSKit's) */
         .globl pc_reset
@@ -35,6 +39,10 @@ _start:
 	/* Save the pointer to our multiboot info structure. Normally
 	 * it will point into the trampoline page. */
 	movl	%ebx, crt0_multiboot_info
+
+	/* Save the pointer to the L4env infopage. Only valid if
+	 * crt0_multiboot_flag is ~(L4UTIL_MB_VALID) */
+	movl	%esi, crt0_l4env_infopage
 
 	/* Switch to our own stack.  */
 	movl	$crt0_stack_high,%esp
@@ -58,11 +66,6 @@ _start:
 	.long	0x00000000		/* feature flags */
 	.long	0 - 0x1BADB002		/* checksum */
 
-
-	.globl	dl_iterate_phdr
-dl_iterate_phdr:
-	movl	$-1,%eax
-	ret
 
 /*--- .ctors (array of pointers to constructors) ---*/
 	.section .ctors,"a",@progbits
@@ -106,7 +109,7 @@ __EH_FRAME_BEGIN__:
 	.p2align 4
 	.globl	crt0_stack_low
 crt0_stack_low:
-	.space	(16*1024)
+	.space	8*1024
 	.globl	crt0_stack_high
 crt0_stack_high:
 
@@ -120,5 +123,9 @@ crt0_multiboot_flag:
 
 	.globl	crt0_multiboot_info
 crt0_multiboot_info:
+	.space	4
+
+	.globl	crt0_l4env_infopage
+crt0_l4env_infopage:
 	.space	4
 

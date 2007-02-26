@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BEWaitFunction.h
- *	\brief	contains the declaration of the class CBEWaitFunction
+ *    \file    dice/src/be/BEWaitFunction.h
+ *    \brief   contains the declaration of the class CBEWaitFunction
  *
- *	\date	01/14/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/14/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -31,31 +32,31 @@
 
 #include "be/BEOperationFunction.h"
 
-/**	\class CBEWaitFunction
- *	\ingroup backend
- *	\brief the function class for the back-end
+/**    \class CBEWaitFunction
+ *    \ingroup backend
+ *    \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
-class CBEWaitFunction : public CBEOperationFunction  
+class CBEWaitFunction : public CBEOperationFunction
 {
-DECLARE_DYNAMIC(CBEWaitFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CBEWaitFunction();
-	virtual ~CBEWaitFunction();
+    /**    \brief constructor
+     */
+    CBEWaitFunction(bool bOpenWait);
+    virtual ~CBEWaitFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CBEWaitFunction(CBEWaitFunction &src);
+    /**    \brief copy constructor */
+    CBEWaitFunction(CBEWaitFunction &src);
 
 public:
-	virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
+    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
     virtual bool DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBEContext *pContext);
-    virtual bool DoWriteFunction(CBEFile * pFile, CBEContext * pContext);
+    virtual bool DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext);
+    virtual bool DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext);
     virtual int GetReceiveDirection();
     virtual int GetSendDirection();
 
@@ -65,8 +66,16 @@ protected:
     virtual void WriteVariableInitialization(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteOpcodeCheck(CBEFile *pFile, CBEContext *pContext);
-	virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator, CBEContext * pContext, bool bCall);
-	virtual bool AddParameter(CFETypedDeclarator * pFEParameter, CBEContext * pContext);
+    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator, CBEContext * pContext, bool bCall);
+    virtual bool AddParameter(CFETypedDeclarator * pFEParameter, CBEContext * pContext);
+    virtual int GetSize(int nDirection, CBEContext *pContext);
+    virtual int GetFixedSize(int nDirection, CBEContext *pContext);
+
+protected:
+    /**    \var bool m_bOpenWait
+     *    \brief if true this is a open wait function; if false a closed wait
+     */
+    bool m_bOpenWait;
 };
 
 #endif // !__DICE_BEWAITFUNCTION_H__

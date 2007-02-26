@@ -3,12 +3,16 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= pslim_drv.o
 MODE		= host
-LIBS		= -lcon -ldm_generic -ldm_mem -lnames -ll4util -lrmgr
+LIBS		= -lcon -ldm_generic -ldm_mem -lnames -ll4util $(ROOTLIB)
 LIBCINCDIR	= $(addprefix -I,$(L4INCDIR) $(GCCINCDIR))
 LDFLAGS		= -r -nostdlib -nostartfiles
 LDSCRIPT	= $(call findfile,main_rel.ld,$(L4LIBDIR))
 
+# Set to the XF86 xc directory
 XF86TREE	= ..
+# Set to the Xorg xc directory. You have to invoke "make World" in that
+# directory to make sure that the xc/exports/include directory exists.
+XORGTREE	=
 
 WARNINGS_pslim.o = -Wall -Wpointer-arith -Wstrict-prototypes \
 		  -Wmissing-prototypes -Wmissing-declarations \
@@ -30,8 +34,28 @@ CPPFLAGS_helper.c = -DXFree86LOADER -DIN_MODULE
 # don't include Linux headers!
 CPPFLAGS	= -nostdinc
 
+ifneq ($(XORGTREE),)
+PRIVATE_INCDIR	= .. \
+		  $(XORGTREE)/exports/include \
+		  $(XORGTREE)/exports/include/X11 \
+		  $(XORGTREE)/exports/include/X11/extensions \
+		  $(XORGTREE)/include/fonts \
+		  $(XORGTREE)/programs/Xserver/include \
+		  $(XORGTREE)/programs/Xserver/hw/xfree86/common \
+		  $(XORGTREE)/programs/Xserver/hw/xfree86/os-support \
+		  $(XORGTREE)/programs/Xserver/hw/xfree86/xf24_32bpp \
+		  $(XORGTREE)/programs/Xserver/hw/xfree86/xaa \
+		  $(XORGTREE)/programs/Xserver/hw/xfree86/shadowfb \
+		  $(XORGTREE)/programs/Xserver/fb \
+		  $(XORGTREE)/programs/Xserver/mi \
+		  $(XORGTREE)/programs/Xserver/afb \
+		  $(XORGTREE)/programs/Xserver/mfb \
+		  $(XORGTREE)/programs/Xserver/render \
+		  $(XORGTREE)/programs/Xserver/miext/shadow
+else
 ifeq ($(XF86TREE),..)
-PRIVATE_INCDIR	= ../include \
+PRIVATE_INCDIR	= .. \
+		  ../include \
 		  ../include/X11 \
 		  ../include/fonts \
 		  ../include/xserver \
@@ -41,7 +65,8 @@ PRIVATE_INCDIR	= ../include \
 		  ../include/xserver/os-support \
 		  ../include/xserver/miext \
 		  ../include/xserver/render \
-		  ../include/xserver/xaa
+		  ../include/xserver/xaa \
+		  ../include/xserver/shadowfb
 else
 PRIVATE_INCDIR	= $(XF86TREE)/include \
 		  $(XF86TREE)/include/X11 \
@@ -53,6 +78,7 @@ PRIVATE_INCDIR	= $(XF86TREE)/include \
 		  $(XF86TREE)/programs/Xserver/hw/xfree86/os-support/bus \
 		  $(XF86TREE)/programs/Xserver/hw/xfree86/xf24_32bpp \
 		  $(XF86TREE)/programs/Xserver/hw/xfree86/xaa \
+		  $(XF86TREE)/programs/Xserver/hw/xfree86/shadowfb \
 		  $(XF86TREE)/programs/Xserver/hw/xfree86 \
 		  $(XF86TREE)/programs/Xserver/include \
 		  $(XF86TREE)/programs/Xserver/fb \
@@ -61,6 +87,7 @@ PRIVATE_INCDIR	= $(XF86TREE)/include \
 		  $(XF86TREE)/programs/Xserver/mfb \
 		  $(XF86TREE)/programs/Xserver/render \
 		  $(XF86TREE)/programs/Xserver/miext/shadow
+endif
 endif
 
 SRC_C		= pslim.c helper.c emul_l4rm.c

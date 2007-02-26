@@ -11,9 +11,9 @@
 #ifndef _pSLIM_FUNC_H
 #define _pSLIM_FUNC_H
 
-#include <l4/con/l4con_pslim.h>
+#include <l4/l4con/l4con_pslim.h>
 
-#include "con.h"
+#include "l4con.h"
 
 extern
 void pslim_fill(struct l4con_vc*, int from_user, 

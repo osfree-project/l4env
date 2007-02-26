@@ -1,0 +1,209 @@
+%% LyX 1.3 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[english]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+\setlength\parskip{\medskipamount}
+\setlength\parindent{0pt}
+\usepackage{array}
+\usepackage{rotating}
+\usepackage{graphicx}
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Bold symbol macro for standard LaTeX users
+\newcommand{\boldsymbol}[1]{\mbox{\boldmath $#1$}}
+
+%% Because html converters don't know tabularnewline
+\providecommand{\tabularnewline}{\\}
+
+\usepackage{babel}
+\makeatother
+\begin{document}
+
+\section{Design space of Separated IPSec Implementations}
+
+The design-space problem arises in scenarios where incoming IPSec
+streams need to be securely diverted to different security domains.
+Figure~\ref{fig:Multiplexing-in-Linux} and Figure~\ref{fig:Multiplexing-in-Viaduct}
+show examples for this scenario.
+
+%
+\begin{figure}[tbhp]
+\begin{center}\includegraphics[%
+  width=0.70\columnwidth]{viaduct_mux}\vspace{-4ex}\end{center}
+
+
+\captionbelow{Multiplexing in Linux protocol stubs. The L$^{4}$Linuxes on the
+left side are inside the protected networks. The L$^{4}$Linux on
+the right side is outside of the protected networks. The two inside
+L$^{4}$Linux instances can be in a different security level each,
+where packets of one domain must not be seen in the other domain.
+The routing of incomming packets is done in the outside L$^{4}$Linux,
+which handles only encrypted traffic. \label{fig:Multiplexing-in-Linux}}
+\end{figure}
+
+
+%
+\begin{figure}[tbhp]
+\begin{center}\includegraphics[%
+  width=0.70\textwidth,
+  keepaspectratio]{viaduct_vr}\vspace{-4ex}\end{center}
+
+
+\captionbelow{Multiplexing in Viaduct. Similar to Figure~\ref{fig:Multiplexing-in-Linux}
+the L$^{4}$Linuxes on the left side are inside distinct protected
+networks and the rightside L$^{4}$Linux is outside of the protection
+domains. The diagram inside the Viaduct shows how routing can be done
+inside the Viaduct. \label{fig:Multiplexing-in-Viaduct}}
+\end{figure}
+
+
+
+\subsection{The design space has the following dimensions}
+
+\begin{description}
+\item [Point~of~Multiplexing]Outside Linux, Viaduct, inside Linux
+\item [Multiplexing~Strategy]Broadcast packets to all receivers, route
+packets to designated receiver
+\end{description}
+Table~\ref{tab:Seperated-IPSec-Design} shows the design space with
+pros and cons for the different implementations. The variations where
+the inside Linux, which sees unencrypted traffic, should do the multiplexing
+is nonsense, because Linux is not trustworthy and therefore one Linux
+instance must only see unencrypted traffic of exactly one security
+domain. The variation where broadcasting is implemented in the Viaduct
+is of no use because it adds complexity to the Viaduct with no benefit
+--- broadcasting could be done more simple in the Linux protocol stub. 
+
+Useful are only the variations with broadcasting in the Linux protocol
+stub (LB) and routing either in the Linux protocol (LR) stub or in
+the Viaduct (VR).
+
+%
+\begin{table}[tbhp]
+\begin{center}\begin{tabular}{|l||c>{\raggedright}p{0.25\columnwidth}|c>{\raggedright}p{0.25\columnwidth}|>{\raggedright}p{0.25\columnwidth}|}
+\hline 
+\multicolumn{1}{|l||}{}&
+\multicolumn{2}{l|}{Outside Linux}&
+\multicolumn{2}{l|}{Viaduct}&
+Inside Linux\tabularnewline
+\hline
+\hline 
+\begin{sideways}
+\hspace{-10em}Broadcast%
+\end{sideways}&
+\multicolumn{2}{l|}{LB}&
+\multicolumn{2}{l|}{VB}&
+\tabularnewline
+\cline{2-3} \cline{4-5} 
+\begin{sideways}
+%
+\end{sideways}&
++&
+Simple Viaduct (1-1)&
+--&
+More complex Viaduct&
+Nonsense --- trust moved to Linux\tabularnewline
+&
++&
+Simple Linux protocol stub&
++&
+Simple Linux protocol stub&
+\tabularnewline
+&
+-~-&
+\textsl{n}~SADB lookups (each Viaduct)&
+--&
+\textsl{n}~SADB lookups&
+\tabularnewline
+&
++&
+Simple SA management (each SA in one Viaduct)&
++&
+Simple SA management (each SA in one SADB)&
+\tabularnewline
+\hline 
+\begin{sideways}
+\hspace{-14.5em}Route%
+\end{sideways}&
+\multicolumn{2}{l|}{LR}&
+\multicolumn{2}{l|}{VR}&
+\tabularnewline
+\cline{2-3} \cline{4-5} 
+\begin{sideways}
+%
+\end{sideways}&
++&
+Simple Viaduct (1-1)&
+--&
+More complex Viaduct&
+Nonsense --- trust moved to Linux\tabularnewline
+\begin{sideways}
+%
+\end{sideways}&
+--&
+Complicated Linux protocol stub --- must do routing based on SA-Key
+(needs SADB)&
++&
+Simple Linux protocol stub&
+\tabularnewline
+&
+{*}&
+2~SADB lookups (Linux + Viaduct)&
++&
+1~SADB lookup in Viaduct&
+\tabularnewline
+&
+--&
+Duplicate SA management (same SA in Linux and Viaduct)&
++&
+Simple SA management (each SA in one SADB)&
+\tabularnewline
+\hline
+\end{tabular}\vspace{-3ex}\end{center}
+
+
+\caption{Separated IPSec Design Space\label{tab:Seperated-IPSec-Design}}
+\end{table}
+
+
+
+\subsection{Performance point of view}
+
+\begin{description}
+\item [LB]\textsl{n} times packet header parsing, \textsl{n} times SADB
+lookup (\textsl{n}-1 lookups result in drops) \textsl{(worst)}
+\item [LR]2 times packet header parsing, 2 times SADB lookup
+\item [VR]1 time packet header parsing, 1 SADB lookup \textsl{(best)}
+\end{description}
+
+\subsection{Implementation complexity}
+
+\begin{description}
+\item [LB]Viaduct as it is, implementation of \textsl{n} times packet enqueue
+in Linux protocol stub \textsl{(simple)}
+\item [LR]Viaduct as it is, implementation of simple routing table based
+on SA-Keys in Linux protocol stub \textsl{(complex w.r.t. Linux drivers)}
+\item [VR]Support of multiple interfaces in the Viaduct additional interface
+pointer in each SA, Linux protocol stub as it is \textsl{(complex
+w.r.t Viaduct)}
+\end{description}
+
+\subsection{Conclusion}
+
+Only LR and VR are practicable. Differences between LR and VR are:
+
+\begin{itemize}
+\item The point of routing
+\item Distribution/Locality of SADB and SPD (and the performance implications)
+\item Code complexity in Viaduct (seems to be a minor issue)
+\end{itemize}
+
+\subsection{Questions}
+
+How often are SPIs changed for one connection?
+
+How often are SAs re-keyed (without changing SPIs)?
+\end{document}

@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BESndFunction.cpp
- *	\brief	contains the implementation of the class CL4BESndFunction
+ *    \file    dice/src/be/l4/L4BESndFunction.cpp
+ *    \brief   contains the implementation of the class CL4BESndFunction
  *
- *	\date	Sat Jun 1 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -38,13 +39,10 @@
 #include "be/l4/L4BEIPC.h"
 
 #include "TypeSpec-Type.h"
-#include "fe/FEAttribute.h"
-
-IMPLEMENT_DYNAMIC(CL4BESndFunction);
+#include "Attribute-Type.h"
 
 CL4BESndFunction::CL4BESndFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BESndFunction, CBESndFunction);
 }
 
 /** destructs the send function class */
@@ -62,8 +60,8 @@ void CL4BESndFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pC
     CBESndFunction::WriteVariableDeclaration(pFile, pContext);
 
     // write result variable
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    pFile->PrintIndent("l4_msgdope_t %s = { msgdope: 0 };\n", (const char *) sResult);
+    string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
+    pFile->PrintIndent("l4_msgdope_t %s = { msgdope: 0 };\n", sResult.c_str());
 }
 
 /** \brief writes the invocation code
@@ -72,13 +70,31 @@ void CL4BESndFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pC
  */
 void CL4BESndFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
     // after marshalling set the message dope
-    int nSendDirection = GetSendDirection();
-	bool bHasSizeIsParams = (GetParameterCount(ATTR_SIZE_IS, ATTR_REF, nSendDirection) > 0) ||
-	    (GetParameterCount(ATTR_LENGTH_IS, ATTR_REF, nSendDirection) > 0);
-    ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSendDopeInit(pFile, nSendDirection, bHasSizeIsParams, pContext);
-
+    pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SEND, GetSendDirection(), pContext);
+    // invocate
+    if (!pContext->IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
+    {
+        // sometimes it's possible to abort a call of a client.
+        // but the client wants his call made, so we try until
+        // the call completes
+        *pFile << "\tdo\n";
+        *pFile << "\t{\n";
+        pFile->IncIndent();
+    }
     WriteIPC(pFile, pContext);
+    if (!pContext->IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
+    {
+        // now check if call has been canceled
+        string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
+        pFile->DecIndent();
+        *pFile << "\t} while ((L4_IPC_ERROR(" << sResult <<
+            ") == L4_IPC_SEABORTED) ||\n";
+        *pFile << "\t         (L4_IPC_ERROR(" << sResult <<
+            ") == L4_IPC_SECANCELED));\n";
+    }
     WriteIPCErrorCheck(pFile, pContext);
 }
 
@@ -90,7 +106,38 @@ void CL4BESndFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
  */
 void CL4BESndFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext)
 {
-// should do some error checking here
+    string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
+    vector<CBEDeclarator*>::iterator iterCE = m_pCorbaEnv->GetFirstDeclarator();
+    CBEDeclarator *pDecl = *iterCE;
+
+    *pFile << "\tif (L4_IPC_IS_ERROR(" << sResult << "))\n" <<
+              "\t{\n";
+    pFile->IncIndent();
+    // env.major = CORBA_SYSTEM_EXCEPTION;
+    // env.repos_id = DICE_IPC_ERROR;
+    *pFile << "\tCORBA_exception_set(";
+    if (pDecl->GetStars() == 0)
+        *pFile << "&";
+    pDecl->WriteName(pFile, pContext);
+    *pFile << ",\n";
+    pFile->IncIndent();
+    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
+              "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
+              "\t0);\n";
+    pFile->DecIndent();
+    // env.ipc_error = L4_IPC_ERROR(result);
+    *pFile << "\t";
+    pDecl->WriteName(pFile, pContext);
+    if (pDecl->GetStars())
+        *pFile << "->";
+    else
+        *pFile << ".";
+    *pFile << "_p.ipc_error = L4_IPC_ERROR(" << sResult << ");\n";
+    // return
+    WriteReturn(pFile, pContext);
+    // close }
+    pFile->DecIndent();
+    *pFile << "\t}\n";
 }
 
 /** \brief init message buffer size dope
@@ -100,16 +147,21 @@ void CL4BESndFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext
 void CL4BESndFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
     CBESndFunction::WriteVariableInitialization(pFile, pContext);
-    ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSizeDopeInit(pFile, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SIZE, 0, pContext);
 }
 
-/** \brief decides whether two parameters should be exchanged during sort (moving 1st behind 2nd)
+/** \brief decides whether two parameters should be exchanged during sort
  *  \param pPrecessor the 1st parameter
  *  \param pSuccessor the 2nd parameter
- *  \param pContext the context of the sorting
- *  \return true if parameters should be exchanged
+ *    \param pContext the context of the sorting
+ *  \return true if parameters pPrecessor is smaller than pSuccessor
  */
-bool CL4BESndFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext * pContext)
+bool
+CL4BESndFunction::DoExchangeParameters(CBETypedDeclarator * pPrecessor,
+    CBETypedDeclarator * pSuccessor,
+    CBEContext *pContext)
 {
     if (!(pPrecessor->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
         pSuccessor->GetType()->IsOfType(TYPE_FLEXPAGE))
@@ -119,7 +171,7 @@ bool CL4BESndFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBEType
     if ( pPrecessor->GetType()->IsOfType(TYPE_FLEXPAGE) &&
         !pSuccessor->GetType()->IsOfType(TYPE_FLEXPAGE))
         return false;
-    return CBESndFunction::DoSortParameters(pPrecessor, pSuccessor, pContext);
+    return CBESndFunction::DoExchangeParameters(pPrecessor, pSuccessor, pContext);
 }
 
 /** \brief write the IPC code
@@ -129,5 +181,5 @@ bool CL4BESndFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBEType
 void CL4BESndFunction::WriteIPC(CBEFile *pFile, CBEContext *pContext)
 {
     assert(m_pComm);
-	((CL4BEIPC*)m_pComm)->WriteSend(pFile, this, pContext);
+    m_pComm->WriteSend(pFile, this, pContext);
 }

@@ -1,18 +1,70 @@
 #ifndef LOGDEFS_H
 #define LOGDEFS_H
 
+// ### How to create a tracebuffer entry ###
+//
+// If you only need a temporary debugging aid then you can use one of
+// the standard kernel logging events: 
+// 
+//   LOG_MSG(Context *context, const char *msg)
+//     - context is something like context_of(this) or current_context()
+//       or 0 if there is no context available
+//     - msg should be displayed in the tracebuffer view
+//
+//   LOG_MSG_3VAL(Context *context, const char *msg,
+//                Mword val1, Mword val2, Mword val3)
+//     - context and msg can be used the same way LOG_MSG does
+//     - val1, val2, and val3 are values that will be displayed in
+//       the tracebuffer view as hexadecimal values
+//
+// If you want to create a permanent log event xyz, you have to follow
+// these instructions:
+// - create enum Log_event_xyz (see jdb_ktrace.cpp)
+// - create class Tb_entry_xyz derived from Tb_entry (see tb_entry.cpp)
+//   with an appropriate ::set method and with accessor methods
+// - create function formatter_xyz (see tb_entry_output.cpp) and don't
+//   forget to register it (add an appropriate line to init_formatters)
+// - create macro LOG_XYZ (see the following example)
+//      #define LOG_XYZ
+//        BEGIN_LOG_EVENT(log_xyz)
+//        Lock_guard <Cpu_lock> guard (&cpu_lock);
+//        Tb_entry_xyz *tb =
+//           static_cast<Tb_entry_ctx_sw*>(Jdb_tbuf::new_entry());
+//        tb->set (this, <some log specific variables>)
+//        Jdb_tbuf::commit_entry();
+//        END_LOG_EVENT
+//   (grabbing the cpu_lock isn't necessary if it is still grabbed)
+// - create an empty macro declaration for CONFIG_JDB_LOGGING=n
+// - insert the macro call into the code
+// - WARNING: permanent log events should _not_ be placed into an inline
+//            function!
+// - add
+//     DECLARE_PATCH (lp<nn>, log_xyz);
+//     static Log_event le<mm>(<description for the 'O' command>,
+//                             Log_event_xyz, 1, &lp<nn>);
+//   and create an entry le<mm> for Jdb_tbuf_events::log_events[] 
+//   (see jdb_tbuf_events.cpp)
+
+#include "globalconfig.h"
+
 #if defined(CONFIG_JDB)
 
+#include "globals.h"
 #include "jdb_tbuf.h"
+#include "cpu_lock.h"
+#include "lock_guard.h"
+#include "processor.h"
 
 #define LOG_CONTEXT_SWITCH                                              \
   BEGIN_LOG_EVENT(log_context_switch)                                   \
   Tb_entry_ctx_sw *tb =                                                 \
      static_cast<Tb_entry_ctx_sw*>(Jdb_tbuf::new_entry());              \
-  tb->set(this, regs()->eip, t, (Mword)t->kernel_sp,                    \
+  tb->set(this, Space::current(), regs()->ip(), t, t_orig,      \
+          t_orig->lock_cnt(), current_sched(),                          \
+          current_sched() ? current_sched()->prio() : 0,                \
           (Mword)__builtin_return_address(0));                          \
   Jdb_tbuf::commit_entry();                                             \
-  END_LOG_EVENT(log_context_switch)
+  END_LOG_EVENT
 
 #define LOG_THREAD_EX_REGS                                              \
   BEGIN_LOG_EVENT(log_thread_ex_regs)                                   \
@@ -20,112 +72,205 @@
   Lock_guard <Cpu_lock> guard (&cpu_lock);                              \
   Tb_entry_ex_regs *tb =                                                \
      static_cast<Tb_entry_ex_regs*>(Jdb_tbuf::new_entry());             \
-  tb->set(this, ef->eip, regs, new_thread ? 0 : dst->regs()->esp,       \
-                               new_thread ? 0 : dst->regs()->eip);      \
+  tb->set(this, ef->ip(), regs, new_thread ? 0 : dst->regs()->sp(),     \
+                                new_thread ? 0 : dst->regs()->ip(), 0); \
   Jdb_tbuf::commit_entry();                                             \
-  END_LOG_EVENT(log_thread_ex_regs)
+  END_LOG_EVENT
+
+#define LOG_THREAD_EX_REGS_FAILED                                       \
+  BEGIN_LOG_EVENT(log_thread_ex_regs_failed)                            \
+  Entry_frame *ef = reinterpret_cast<Entry_frame*>(regs);               \
+  Lock_guard <Cpu_lock> guard (&cpu_lock);                              \
+  Tb_entry_ex_regs *tb =                                                \
+     static_cast<Tb_entry_ex_regs*>(Jdb_tbuf::new_entry());             \
+  tb->set(this, ef->ip(), regs, 0, 0, 1);                               \
+  Jdb_tbuf::commit_entry();                                             \
+  END_LOG_EVENT
 
 #define LOG_IRQ(irq)                                                    \
   BEGIN_LOG_EVENT(log_irq)                                              \
   Tb_entry_ipc *tb =                                                    \
      static_cast<Tb_entry_ipc*>(Jdb_tbuf::new_entry());                 \
   Context *_log_current = current();                                    \
-  tb->set_irq(_log_current, _log_current->regs()->eip, irq);            \
+  tb->set_irq(_log_current, ip, irq);           			\
   Jdb_tbuf::commit_entry();                                             \
-  END_LOG_EVENT(log_irq)
+  END_LOG_EVENT
 
 #define LOG_TIMER_IRQ(irq)                                              \
   BEGIN_LOG_EVENT(log_timer_irq)                                        \
   Tb_entry_ipc *tb =                                                    \
      static_cast<Tb_entry_ipc*>(Jdb_tbuf::new_entry());                 \
   Context *_log_current = current();                                    \
-  Mword eip = (Mword)(__builtin_return_address(0));                    \
-  tb->set_irq(_log_current, eip, irq);                                  \
+  tb->set_irq(_log_current, ip, irq);                                   \
   Jdb_tbuf::commit_entry();                                             \
-  END_LOG_EVENT(log_timer_irq)
+  END_LOG_EVENT
 
 #define LOG_SHORTCUT_FAILED_1                                           \
   BEGIN_LOG_EVENT(log_shortcut_failed_1)                                \
   Entry_frame *ef = reinterpret_cast<Entry_frame*>(regs);               \
   Tb_entry_ipc_sfl *tb =                                                \
      static_cast<Tb_entry_ipc_sfl*>(Jdb_tbuf::new_entry());             \
-  tb->set(this, ef->eip, regs->snd_desc(), regs->rcv_desc(),            \
-                regs->timeout(), regs->snd_dest(),                      \
-                _irq!=0, *sender_list()!=0, 0, 0);                      \
+  tb->set(this, ef->ip(), regs->snd_desc(), regs->rcv_desc(),           \
+                regs->timeout(), regs->snd_dst(),                       \
+                _irq!=0, *sender_list()!=0, 0, 0, 0);                   \
   Jdb_tbuf::commit_entry();                                             \
-  END_LOG_EVENT(log_shortcut_failed_1)
+  END_LOG_EVENT
 
 #define LOG_SHORTCUT_FAILED_2                                           \
   BEGIN_LOG_EVENT(log_shortcut_failed_2)                                \
   Entry_frame *ef = reinterpret_cast<Entry_frame*>(regs);               \
   Tb_entry_ipc_sfl *tb =                                                \
      static_cast<Tb_entry_ipc_sfl*>(Jdb_tbuf::new_entry());             \
-  tb->set(this, ef->eip, regs->snd_desc(), regs->rcv_desc(),            \
-                regs->timeout(), regs->snd_dest(), 0, 0,                \
-		!dest->sender_ok(this), dest->thread_lock()->test());   \
+  tb->set(this, ef->ip(), regs->snd_desc(), regs->rcv_desc(),           \
+                regs->timeout(), regs->snd_dst(), 0, 0,                 \
+		!dst->sender_ok(this), dst->thread_lock()->test(),	\
+		can_preempt);                                           \
   Jdb_tbuf::commit_entry();                                             \
-  END_LOG_EVENT(log_shortcut_failed_2)
+  END_LOG_EVENT
 
 #define LOG_SHORTCUT_SUCCESS                                            \
   BEGIN_LOG_EVENT(log_shortcut_succeeded)                               \
   Entry_frame *ef           = reinterpret_cast<Entry_frame*>(regs);     \
   Tb_entry_ipc *tb =                                                    \
      static_cast<Tb_entry_ipc*>(Jdb_tbuf::new_entry());                 \
-  tb->set_sc(this, ef->eip, regs);                                      \
+  tb->set_sc(this, ef->ip(), regs, sched_context()->left());            \
   Jdb_tbuf::commit_entry();                                             \
-  END_LOG_EVENT(log_shortcut_succeeded)
+  END_LOG_EVENT
 
 #define LOG_TRAP                                                        \
   BEGIN_LOG_EVENT(log_trap)                                             \
-  if ((ts->trapno != 1) && (ts->trapno != 3))                           \
+  if (ts->trapno != 1 && ts->trapno != 3)                               \
     {                                                                   \
       Tb_entry_trap *tb =                                               \
          static_cast<Tb_entry_trap*>(Jdb_tbuf::new_entry());            \
-      tb->set(this, ts->eip, ts);                                       \
+      tb->set(this, ts->ip(), ts);                                  \
       Jdb_tbuf::commit_entry();                                         \
     }                                                                   \
-  END_LOG_EVENT(log_trap)
+  END_LOG_EVENT
 
 #define LOG_TRAP_N(n)                                                   \
   BEGIN_LOG_EVENT(log_trap_n)                                           \
   Tb_entry_trap *tb =                                                   \
      static_cast<Tb_entry_trap*>(Jdb_tbuf::new_entry());                \
-  Mword eip = (Mword)(__builtin_return_address(0));                     \
-  tb->set(current(), eip, n);                                           \
+  Mword ip = (Mword)(__builtin_return_address(0));                      \
+  tb->set(current(), ip, n);                                            \
   Jdb_tbuf::commit_entry();                                             \
-  END_LOG_EVENT(log_trap_n)
+  END_LOG_EVENT
 
 #define LOG_PF_RES_USER                                                 \
   BEGIN_LOG_EVENT(log_pf_res)                                           \
   Tb_entry_pf_res *tb =                                                 \
      static_cast<Tb_entry_pf_res*>(Jdb_tbuf::new_entry());              \
-  tb->set(this, regs()->eip, pfa, err, ret);                            \
+  tb->set(this, regs()->ip(), pfa, err, ret);                           \
   Jdb_tbuf::commit_entry();                                             \
-  END_LOG_EVENT(log_pf_res)
+  END_LOG_EVENT
 
 #define LOG_SCHED_SAVE							\
   BEGIN_LOG_EVENT(log_sched_save)					\
   Tb_entry_sched *tb =							\
      static_cast<Tb_entry_sched*>(Jdb_tbuf::new_entry());		\
-  tb->set (current_sched()->owner(), regs()->eip, 0,			\
-           timeslice_ticks_left,					\
+  tb->set (current(), current()->regs()->ip(), 0,			\
+           current_sched()->owner(),					\
            current_sched()->id(),					\
            current_sched()->prio(),					\
-           current_sched()->timeslice());				\
+           current_sched()->left(),					\
+           current_sched()->quantum());					\
   Jdb_tbuf::commit_entry();						\
-  END_LOG_EVENT(log_sched_save)
+  END_LOG_EVENT
 
 #define LOG_SCHED_LOAD							\
   BEGIN_LOG_EVENT(log_sched_load)					\
   Tb_entry_sched *tb =							\
      static_cast<Tb_entry_sched*>(Jdb_tbuf::new_entry());		\
-  tb->set (current_sched()->owner(), regs()->eip, 1,			\
-           timeslice_ticks_left,					\
+  tb->set (current(), current()->regs()->ip(), 1,			\
+           current_sched()->owner(),					\
            current_sched()->id(),					\
            current_sched()->prio(),					\
-           current_sched()->timeslice());				\
+           current_sched()->left(),					\
+           current_sched()->quantum());					\
   Jdb_tbuf::commit_entry();						\
-  END_LOG_EVENT(log_sched_load)
+  END_LOG_EVENT
+
+#define LOG_SCHED_INVALIDATE						\
+  BEGIN_LOG_EVENT(log_sched_invalidate)					\
+  Tb_entry_sched *tb =							\
+     static_cast<Tb_entry_sched*>(Jdb_tbuf::new_entry());		\
+  tb->set (current(), current()->regs()->ip(), 2,			\
+           current_sched()->owner(),					\
+           current_sched()->id(),					\
+           current_sched()->prio(),					\
+           timeslice_timeout->get_timeout(),				\
+           current_sched()->quantum());					\
+  Jdb_tbuf::commit_entry();						\
+  END_LOG_EVENT
+
+#define LOG_SEND_PREEMPTION						\
+  BEGIN_LOG_EVENT(log_preemption)					\
+  Lock_guard <Cpu_lock> guard (&cpu_lock);				\
+  Tb_entry_preemption *tb = 						\
+     static_cast<Tb_entry_preemption*>(Jdb_tbuf::new_entry());		\
+  tb->set (context_of(this), _receiver, current()->regs()->ip());	\
+  Jdb_tbuf::commit_entry();						\
+  END_LOG_EVENT
+
+#define LOG_LIPC_ROLLBACK						\
+  BEGIN_LOG_EVENT(log_lipc_rollback)					\
+  Tb_entry_lipc *tb =							\
+     static_cast<Tb_entry_lipc*>(Jdb_tbuf::new_entry());		\
+  tb->set (current(), current()->regs()->ip(), 				\
+	   1, 0, 0, *global_utcb_ptr);					\
+  Jdb_tbuf::commit_entry();						\
+  END_LOG_EVENT
+
+#define LOG_LIPC_FORWARD						\
+  BEGIN_LOG_EVENT(log_lipc_rollforward)					\
+  Tb_entry_lipc *tb =							\
+     static_cast<Tb_entry_lipc*>(Jdb_tbuf::new_entry());		\
+  tb->set (current(), current()->regs()->ip(), 2,			\
+           src_thread->id(), dst_thread->id(), *global_utcb_ptr);	\
+  Jdb_tbuf::commit_entry();						\
+  END_LOG_EVENT
+
+#define LOG_LIPC_STACK_COPY						\
+  BEGIN_LOG_EVENT(log_lipc_copy)					\
+  Tb_entry_lipc *tb =							\
+     static_cast<Tb_entry_lipc*>(Jdb_tbuf::new_entry());		\
+  tb->set (current(), current()->regs()->ip(), 3,			\
+           0, dst->id(), *global_utcb_ptr);				\
+  Jdb_tbuf::commit_entry();						\
+  END_LOG_EVENT
+
+#define LOG_LIPC_SETUP_IRET_STACK					\
+  BEGIN_LOG_EVENT(log_lipc_setup_iret_stack)				\
+  Tb_entry_lipc *tb =							\
+     static_cast<Tb_entry_lipc*>(Jdb_tbuf::new_entry());		\
+  tb->set (current(), current()->regs()->ip(), 4,			\
+           this->id(), 0, *global_utcb_ptr);				\
+  Jdb_tbuf::commit_entry();						\
+  END_LOG_EVENT
+
+#define LOG_TASK_NEW							\
+  BEGIN_LOG_EVENT(log_task_new)						\
+  Entry_frame *ef = reinterpret_cast<Entry_frame*>(regs);               \
+  Lock_guard <Cpu_lock> guard (&cpu_lock);				\
+  Tb_entry_task_new *tb =						\
+     static_cast<Tb_entry_task_new*>(Jdb_tbuf::new_entry());		\
+  tb->set (this, ef->ip(), regs);					\
+  Jdb_tbuf::commit_entry();						\
+  END_LOG_EVENT
+
+/*
+ * Kernel instrumentation macro used by jw5. Do not remove!
+ */
+#define LOG_JEAN1(context, sched1, sched2)				\
+  do {									\
+    Lock_guard <Cpu_lock> guard (&cpu_lock);				\
+    Tb_entry_jean1 *tb =						\
+      static_cast<Tb_entry_jean1*>(Jdb_tbuf::new_entry());		\
+    tb->set (context, Proc::program_counter(),				\
+	     sched1->owner(), sched2->owner());				\
+    Jdb_tbuf::commit_entry();						\
+  } while (0)
 
 /*
  * Kernel instrumentation macro used by fm3. Do not remove!
@@ -135,39 +280,88 @@
     /* The cpu_lock is needed since virq::hit() depends on it */	\
     Lock_guard <Cpu_lock> guard (&cpu_lock);				\
     Tb_entry_ke *tb = static_cast<Tb_entry_ke*>(Jdb_tbuf::new_entry());	\
-    tb->set_const(context, 0, text);					\
+    tb->set_const(context, Proc::program_counter(), text);		\
     Jdb_tbuf::commit_entry();						\
-  } while(0)
+  } while (0)
 
 /*
  * Kernel instrumentation macro used by fm3. Do not remove!
  */
-#define LOG_MSG_3VAL(context, text, val1, val2, val3)			\
+#define LOG_MSG_3VAL(context, text, v1, v2, v3)				\
   do {									\
     /* The cpu_lock is needed since virq::hit() depends on it */	\
     Lock_guard <Cpu_lock> guard (&cpu_lock);				\
     Tb_entry_ke_reg *tb =						\
        static_cast<Tb_entry_ke_reg*>(Jdb_tbuf::new_entry());		\
-    tb->set_const(context, 0, text, val1, val2, val3);			\
+    tb->set_const(context, Proc::program_counter(), text, v1, v2, v3);	\
     Jdb_tbuf::commit_entry();						\
-  } while(0)
+  } while (0)
 
 #else
 
-#define LOG_CONTEXT_SWITCH	do { } while (0)
-#define LOG_THREAD_EX_REGS	do { } while (0)
-#define LOG_IRQ(irq)		do { } while (0)
-#define LOG_TIMER_IRQ(irq)	do { } while (0)
-#define LOG_SHORTCUT_FAILED_1	do { } while (0)
-#define LOG_SHORTCUT_FAILED_2	do { } while (0)
-#define LOG_SHORTCUT_SUCCESS	do { } while (0)
-#define LOG_TRAP		do { } while (0)
-#define LOG_TRAP_N(n)		do { } while (0)
-#define LOG_PF_RES_USER		do { } while (0)
-#define LOG_SCHED		do { } while (0)
-#define LOG_SCHED_SAVE		do { } while (0)
-#define LOG_SCHED_LOAD		do { } while (0)
+#define LOG_CONTEXT_SWITCH		do { } while (0)
+#define LOG_THREAD_EX_REGS		do { } while (0)
+#define LOG_THREAD_EX_REGS_FAILED	do { } while (0)
+#define LOG_IRQ(irq)			do { } while (0)
+#define LOG_TIMER_IRQ(irq)		do { } while (0)
+#define LOG_SHORTCUT_FAILED_1		do { } while (0)
+#define LOG_SHORTCUT_FAILED_2		do { } while (0)
+#define LOG_SHORTCUT_SUCCESS		do { } while (0)
+#define LOG_TRAP			do { } while (0)
+#define LOG_TRAP_N(n)			do { } while (0)
+#define LOG_PF_RES_USER			do { } while (0)
+#define LOG_SCHED			do { } while (0)
+#define LOG_SCHED_SAVE			do { } while (0)
+#define LOG_SCHED_LOAD			do { } while (0)
+#define LOG_SCHED_INVALIDATE		do { } while (0)
+#define LOG_SEND_PREEMPTION		do { } while (0)
+#define LOG_LIPC_ROLLBACK		do { } while (0)
+#define LOG_LIPC_FORWARD		do { } while (0)
+#define LOG_LIPC_STACK_COPY		do { } while (0)
+#define LOG_LIPC_SETUP_IRET_STACK	do { } while (0)
+#define LOG_TASK_NEW			do { } while (0)
 
-#endif
+#endif // CONFIG_JDB
+
+#if defined(CONFIG_JDB) && defined(CONFIG_JDB_ACCOUNTING)
+
+#define CNT_CONTEXT_SWITCH	\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_context_switch]++;
+#define CNT_ADDR_SPACE_SWITCH	\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_addr_space_switch]++;
+#define CNT_SHORTCUT_FAILED	\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_shortcut_failed]++;
+#define CNT_SHORTCUT_SUCCESS	\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_shortcut_success]++;
+#define CNT_IRQ			\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_irq]++;
+#define CNT_IPC_LONG		\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_ipc_long]++;
+#define CNT_PAGE_FAULT		\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_page_fault]++;
+#define CNT_IO_FAULT		\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_io_fault]++;
+#define CNT_TASK_CREATE		\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_task_create]++;
+#define CNT_SCHEDULE		\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_schedule]++;
+#define CNT_IOBMAP_TLB_FLUSH	\
+  Jdb_tbuf::status()->kerncnts[Kern_cnt_iobmap_tlb_flush]++;
+
+#else
+
+#define CNT_CONTEXT_SWITCH	do { } while (0)
+#define CNT_ADDR_SPACE_SWITCH	do { } while (0)
+#define CNT_SHORTCUT_FAILED	do { } while (0)
+#define CNT_SHORTCUT_SUCCESS	do { } while (0)
+#define CNT_IRQ			do { } while (0)
+#define CNT_IPC_LONG		do { } while (0)
+#define CNT_PAGE_FAULT		do { } while (0)
+#define CNT_IO_FAULT		do { } while (0)
+#define CNT_TASK_CREATE		do { } while (0)
+#define CNT_SCHEDULE		do { } while (0)
+#define CNT_IOBMAP_TLB_FLUSH	do { } while (0)
+
+#endif // CONFIG_JDB && CONFIG_JDB_ACCOUNTING
 
 #endif

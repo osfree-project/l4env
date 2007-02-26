@@ -19,8 +19,7 @@ extern l4_threadid_t app_pager_id;
 
 int is_fiasco(void);
 int start_app_pager(void);
-l4_addr_t addr_app_to_here(app_t *app, l4_addr_t addr)
-  __attribute__((regparm(3)));
+l4_addr_t addr_app_to_here(app_t *app, l4_addr_t addr) fastcall;
 
 #endif
 

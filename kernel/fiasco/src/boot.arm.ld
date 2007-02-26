@@ -1,5 +1,5 @@
 
-load_address = 0xc0000000;
+/*load_address = 0xc0000000;*/
 
 OUTPUT_FORMAT("elf32-littlearm", "elf32-bigarm",
               "elf32-littlearm")
@@ -7,11 +7,9 @@ OUTPUT_ARCH(arm)
 ENTRY(_start)
 
 SECTIONS {
-  . = load_address;
+/*  . = load_address;*/
 
   /DISCARD/ : {			/* Exit code and data		*/
-    *(.text.exit)
-    *(.data.exit)
     *(.exitcall.exit)
   }
 

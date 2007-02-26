@@ -1,9 +1,10 @@
 INTERFACE:
 
 #include <stddef.h>
+#include "l4_types.h"
 
 /**
- * @brief The abstract interface for a text I/O console.
+ * The abstract interface for a text I/O console.
  *
  * This abstract interface can be implemented for virtually every
  * text input or output device.
@@ -12,18 +13,46 @@ class Console
 {
 public:
 
+  enum Console_state
+    {
+      DISABLED    =     0,
+      INENABLED   =     1, ///< output channel of console enabled
+      OUTENABLED  =     2, ///< input channel of console enabled
+    };
+
+  enum Console_attr
+    {
+      // universal attributes
+      INVALID     =     0,
+      OUT         =   0x1, ///< output to console is possible
+      IN          =   0x2, ///< input from console is possible
+      // attributes to identify a specific console
+      DIRECT      =   0x4, ///< output to screen or input from keyboard
+      UART        =   0x8, ///< output to/input from serial serial line
+      UX          =  0x10, ///< filtered input console for UX
+      PUSH        =  0x20, ///< input console
+      GZIP        =  0x40, ///< gzip+uuencode output and sent to uart console
+      BUFFER      =  0x80, ///< ring buffer
+      DEBUG       = 0x100, ///< kdb interface
+    };
+
   /**
-   * @brief Write a string of len chacters to the output.
+   * modify console state
+   */
+  virtual void state( Mword new_state );
+
+  /**
+   * Write a string of len chacters to the output.
    * @param str the string to write (no zero termination is needed)
    * @param len the number of chacters to write.
    *
    * This method must be implemented in every implementation, but
    * can simply do nothing for input only consoles.
    */
-  virtual int write( char const *str, size_t len ) = 0;
+  virtual int write( char const *str, size_t len );
   
   /**
-   * @brief read a charcater from the input.
+   * read a charcater from the input.
    * @param blocking if true getchar blocks til a charcater is available.
    *
    * This method must be implemented in every implementation, but
@@ -32,7 +61,7 @@ public:
   virtual int getchar( bool blocking = true );
 
   /**
-   * @brief Is input available?
+   * Is input available?
    *
    * This method can be implemented.
    * It must return -1 if no information is available, 
@@ -41,17 +70,17 @@ public:
    */
   virtual int char_avail() const;
 
-  char const *first_attribute() const;
-  virtual char const *next_attribute( bool restart = false ) const = 0;
-
-  bool check_attributes( char const *attr ) const;
+  /**
+   * Console attributes.
+   */
+  virtual Mword get_attributes() const;
 
   virtual ~Console();
 
 public:
 
   /**
-   * @brief Disables the stdout, stdin, and stderr console.
+   * Disables the stdout, stdin, and stderr console.
    */
   static void disable_all();
 
@@ -61,6 +90,10 @@ public:
   static Console *stderr;
   /// stdin for libc glue.
   static Console *stdin;
+
+protected:
+
+  Mword  _state;
 };
 
 
@@ -74,14 +107,24 @@ Console *Console::stdout = 0;
 Console *Console::stderr = 0;
 Console *Console::stdin  = 0;
 
-IMPLEMENT 
-char const *Console::first_attribute() const
-{
-  return next_attribute(true);
-}
-
 IMPLEMENT Console::~Console()
 {}
+
+/**
+ * get current console state
+ */
+PUBLIC inline
+Mword
+Console::state() const
+{
+  return _state;
+}
+
+IMPLEMENT
+void Console::state(Mword new_state)
+{
+  _state = new_state;
+}
 
 IMPLEMENT
 void Console::disable_all()
@@ -89,6 +132,12 @@ void Console::disable_all()
   stdout = 0;
   stderr = 0;
   stdin  = 0;
+}
+
+IMPLEMENT
+int Console::write(char const *, size_t len)
+{
+  return len;
 }
 
 IMPLEMENT
@@ -104,49 +153,41 @@ int Console::char_avail() const
 }
 
 IMPLEMENT
-bool Console::check_attributes( char const *attr ) const
+Mword Console::get_attributes() const
 {
-  char const *t = 0;
-  bool negate = false;
-  bool in_attrib = false;
-  if(!*attr)
-    return true;
-
-  do
-    {
-      if(*attr && !isspace(*attr))
-        {
-          if(!in_attrib && *attr=='!')
-            negate = true;
-          else
-            {
-              if(!in_attrib)
-                {
-                  t = attr;
-                  in_attrib = true;
-                }              
-            }
-        }
-      else if(in_attrib)
-        {
-          char const *a = first_attribute();
-          bool found = false;
-          while(a) {
-            if(strncmp(a,t,attr-t)==0)
-              {
-                found = true; 
-                break;
-              }
-            a = next_attribute();
-          }
-          if((found && negate) || (!found && !negate)) {
-            return false;
-          }
-
-          in_attrib = false;
-          negate = false;
-        }
-    }
-  while(*attr++);
-  return true;
+  return 0;
 }
+
+IMPLEMENTATION[debug]:
+
+PUBLIC
+const char*
+Console::str_mode() const
+{
+  static char const * const mode_str[] =
+    { "      ", "Output", "Input ", "InOut " };
+  return mode_str[get_attributes() & (OUT|IN)];
+}
+
+PUBLIC
+const char*
+Console::str_state() const
+{
+  static char const * const state_str[] =
+    { "Disabled       ", "Output disabled",
+      "Input disabled ", "Enabled        " };
+  return state_str[state() & (INENABLED|OUTENABLED)];
+}
+
+PUBLIC
+const char*
+Console::str_attr(Mword bit) const
+{
+  static char const * const attr_str[] =
+    { "Direct", "Uart", "UX", "Push", "Gzip", "Buffer", "Kdb" };
+
+  return (bit < 2 || bit >= (sizeof(attr_str)/sizeof(attr_str[0]))+2)
+    ? "???"
+    : attr_str[bit-2];
+}
+

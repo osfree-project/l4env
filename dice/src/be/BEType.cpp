@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEType.cpp
- *	\brief	contains the implementation of the class CBEType
+ *    \file    dice/src/be/BEType.cpp
+ *    \brief   contains the implementation of the class CBEType
  *
- *	\date	01/15/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/15/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,42 +34,37 @@
 #include "be/BEType.h"
 #include "be/BEExpression.h"
 #include "be/BEHeaderFile.h"
-#include "Vector.h"
 
 #include "TypeSpec-Type.h"
 #include "fe/FESimpleType.h"
 #include "fe/FEUserDefinedType.h"
-
-IMPLEMENT_DYNAMIC(CBEType);
 
 CBEType::CBEType()
 {
     m_bUnsigned = false;
     m_nSize = 0;
     m_nFEType = TYPE_NONE;
-    IMPLEMENT_DYNAMIC_BASE(CBEType, CBEObject);
 }
 
 CBEType::CBEType(CBEType & src)
-: CBEObject(src),
-  m_sName(src.m_sName)
+: CBEObject(src)
 {
     m_bUnsigned = src.m_bUnsigned;
     m_nSize = src.m_nSize;
     m_nFEType = src.m_nFEType;
-    IMPLEMENT_DYNAMIC_BASE(CBEType, CBEObject);
+    m_sName = src.m_sName;
 }
 
-/**	\brief destructor of this instance */
+/**    \brief destructor of this instance */
 CBEType::~CBEType()
 {
 
 }
 
-/**	\brief creates the back-end structure for a type class
- *	\param pFEType the respective front-end type class
- *	\param pContext the context of the code generation
- *	\return true if code generation was successful
+/**    \brief creates the back-end structure for a type class
+ *    \param pFEType the respective front-end type class
+ *    \param pContext the context of the code generation
+ *    \return true if code generation was successful
  *
  * This implementation sets basic values, common for all types. Since this class is also used for simple
  * types, these values have to be set here.
@@ -76,25 +72,25 @@ CBEType::~CBEType()
 bool CBEType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
 {
     VERBOSE("CEBType::CreateBackEnd(front-end type)\n");
-    if (!pFEType)
-    {
-        VERBOSE("CBEType::CreateBE failed because FE type is 0\n");
-        return false;
-    }
+    assert(pFEType);
 
-	// set target file name
+    // call CBEObject's CreateBackEnd method
+    if (!CBEObject::CreateBackEnd(pFEType))
+        return false;
+
+    // set target file name
     SetTargetFileName(pFEType, pContext);
 
-    if (pFEType->IsKindOf(RUNTIME_CLASS(CFESimpleType)))
+    if (dynamic_cast<CFESimpleType*>(pFEType))
     {
         m_bUnsigned = ((CFESimpleType *) pFEType)->IsUnsigned();
         m_nSize = pContext->GetSizes()->GetSizeOfType(pFEType->GetType(), ((CFESimpleType*)pFEType)->GetSize());
     }
 
     m_sName = pContext->GetNameFactory()->GetTypeName(pFEType->GetType(), m_bUnsigned, pContext, m_nSize);
-    if (m_sName.IsEmpty())
+    if (m_sName.empty())
     {
-        // user defined type overloads this function -> m_sName should always be set
+        // user defined type overloads this function -> m_sName.c_str() should always be set
         VERBOSE("CBEType::CreateBE failed because no type name could be assigned for (%d)\n", pFEType->GetType());
         return false;
     }
@@ -103,12 +99,12 @@ bool CBEType::CreateBackEnd(CFETypeSpec * pFEType, CBEContext * pContext)
     return true;
 }
 
-/**	\brief create back-end structure for type class without front-end type
- *	\param bUnsigned true if unsigned type
- *	\param nSize the size of the type in bytes
- *	\param nFEType the type's identifier
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief create back-end structure for type class without front-end type
+ *    \param bUnsigned true if unsigned type
+ *    \param nSize the size of the type in bytes
+ *    \param nFEType the type's identifier
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
  * This implementation is used to generate a back-end type without having a front-end type. This can be used to
  * create additional types.
@@ -122,9 +118,9 @@ bool CBEType::CreateBackEnd(bool bUnsigned, int nSize, int nFEType, CBEContext *
     return true;
 }
 
-/**	\brief write the type to the target file
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief write the type to the target file
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * If this function is called, it is expected to write this current type. Constructed types
  * have their own write function. We use the member name which has been set to a globally correct
@@ -135,24 +131,23 @@ void CBEType::Write(CBEFile * pFile, CBEContext * pContext)
 {
     if (!pFile->IsOpen())
         return;
-
-    pFile->Print("%s", (const char *) m_sName);
+    *pFile << m_sName;
 }
 
-/**	\brief calculates the size of the written string
- *	\return the length of the written string
+/**    \brief calculates the size of the written string
+ *    \return the length of the written string
  */
 int CBEType::GetStringLength()
 {
     int nSize = 0;
     //if (m_bUnsigned)
     //      nSize += 9;
-    nSize += m_sName.GetLength();
+    nSize += m_sName.length();
     return nSize;
 }
 
-/**	\brief checks if this is a void type
- *	\return true if void
+/**    \brief checks if this is a void type
+ *    \return true if void
  *
  * A "void type" is a type which does not use any memory (0 bytes) (e.g. void)
  */
@@ -161,34 +156,34 @@ bool CBEType::IsVoid()
     return ((m_nFEType == TYPE_VOID) || (m_nFEType == TYPE_NONE));
 }
 
-/**	\brief returns the size of this type
- *	\return the member m_nSize
+/**    \brief returns the size of this type
+ *    \return the member m_nSize
  */
 int CBEType::GetSize()
 {
     return m_nSize;
 }
 
-/**	\brief checks the type of the type
- *	\param nFEType the type to compare to
- *	\return true if the same
+/**    \brief checks the type of the type
+ *    \param nFEType the type to compare to
+ *    \return true if the same
  */
 bool CBEType::IsOfType(int nFEType)
 {
     return (m_nFEType == nFEType);
 }
 
-/**	\brief generates an exact copy of this class
- *	\return a reference to the new object
+/**    \brief generates an exact copy of this class
+ *    \return a reference to the new object
  */
 CObject *CBEType::Clone()
 {
     return new CBEType(*this);
 }
 
-/**	\brief write code to initialize a variable of this type with a zero value
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief write code to initialize a variable of this type with a zero value
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This operation simply casts a zero (0) to the appropriate type.
  * We only need this cast if the type is not an integer type
@@ -198,33 +193,33 @@ CObject *CBEType::Clone()
 void CBEType::WriteZeroInit(CBEFile * pFile, CBEContext * pContext)
 {
     switch (m_nFEType)
-	{
-	case TYPE_INTEGER:
-	case TYPE_LONG:
-	case TYPE_BYTE:
+    {
+    case TYPE_INTEGER:
+    case TYPE_LONG:
+    case TYPE_BYTE:
         pFile->Print("0");
-		break;
-	case TYPE_FLOAT:
-	case TYPE_DOUBLE:
-	    pFile->Print("0.0");
-		break;
-	default:
-		WriteCast(pFile, false, pContext);
-		pFile->Print("0");
-		break;
-	}
+        break;
+    case TYPE_FLOAT:
+    case TYPE_DOUBLE:
+        pFile->Print("0.0");
+        break;
+    default:
+        WriteCast(pFile, false, pContext);
+        pFile->Print("0");
+        break;
+    }
 }
 
-/**	\brief allows access to the m_nFEType member
- *	\return the value of m_nFEType
+/**    \brief allows access to the m_nFEType member
+ *    \return the value of m_nFEType
  */
 int CBEType::GetFEType()
 {
     return m_nFEType;
 }
 
-/**	\brief allows access to the m_bUnsigned member
- *	\return the value of m_bUnsigned
+/**    \brief allows access to the m_bUnsigned member
+ *    \return the value of m_bUnsigned
  */
 bool CBEType::IsUnsigned()
 {
@@ -243,7 +238,7 @@ bool CBEType::IsConstructedType()
  *  \param sTag the tag to test
  *  \return true if the same
  */
-bool CBEType::HasTag(String sTag)
+bool CBEType::HasTag(string sTag)
 {
     return false;
 }
@@ -274,15 +269,15 @@ void CBEType::WriteCast(CBEFile *pFile, bool bPointer, CBEContext *pContext)
         default:
             break;
         }
-        String sName = pContext->GetNameFactory()->GetTypeName(nBaseType, false, pContext, nBaseSize);
-        pFile->Print("(%s", (const char*)sName);
+        string sName = pContext->GetNameFactory()->GetTypeName(nBaseType, false, pContext, nBaseSize);
+        pFile->Print("(%s", sName.c_str());
     }
     else
-        pFile->Print("(%s", (const char*)m_sName);
+        pFile->Print("(%s", m_sName.c_str());
     // if type is pointer itself, we need no extra asterisk
     if (bPointer && !IsPointerType())
         pFile->Print("*");
-	pFile->Print(")");
+    pFile->Print(")");
 }
 
 /** \brief searches for a parent, which is a typedef
@@ -293,8 +288,8 @@ CBETypedef* CBEType::GetTypedef()
     CObject *pParent = GetParent();
     while (pParent)
     {
-         if (pParent->IsKindOf(RUNTIME_CLASS(CBETypedef)))
-			 return (CBETypedef*)pParent;
+         if (dynamic_cast<CBETypedef*>(pParent))
+             return (CBETypedef*)pParent;
          pParent = pParent->GetParent();
     }
     return 0;
@@ -308,7 +303,7 @@ CBETypedef* CBEType::GetTypedef()
 bool CBEType::IsPointerType()
 {
     return (m_nFEType == TYPE_CHAR_ASTERISK) ||
-	       (m_nFEType == TYPE_VOID_ASTERISK);
+           (m_nFEType == TYPE_VOID_ASTERISK);
 }
 
 /** \brief checks if this is a type, which has array dimensions
@@ -352,7 +347,9 @@ bool CBEType::DoWriteZeroInit()
  * This function commonly issues an assert. Only types, which really can
  * be variable sized overload this function to print the correct size.
  */
-void CBEType::WriteGetSize(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext)
+void CBEType::WriteGetSize(CBEFile *pFile,
+    vector<CDeclaratorStackLocation*> *pStack,
+    CBEContext *pContext)
 {
     assert(false);
 }
@@ -371,40 +368,42 @@ bool CBEType::IsSimpleType()
  *  \param pFile the file to write to
  *  \param pType the base type of the array type
  *  \param pAlias the decl with the array dimensions
- *  \param pIter the iterator pointing to the next level if there are multiple array dimensions
+ *  \param iterB the iterator pointing to the next level if there are multiple array dimensions
  *  \param pContext the context of this write operation
  */
-void CBEType::WriteZeroInitArray(CBEFile *pFile, CBEType *pType, CBEDeclarator *pAlias, VectorElement *pIter, CBEContext *pContext)
+void CBEType::WriteZeroInitArray(CBEFile *pFile, CBEType *pType, CBEDeclarator *pAlias, vector<CBEExpression*>::iterator iterB, CBEContext *pContext)
 {
-    CBEExpression *pBound = pAlias->GetNextArrayBound(pIter);
-	if (pBound == 0)
-	    return;
-	int nBound = pBound->GetIntValue();
-	if (nBound == 0)
-	    return;
-	pFile->Print("{ ");
-	for (int i=0; i<nBound; i++)
-	{
-	    // if there is another level, we have to step down into it,
-		// if there is no other level, we have to init the elements
-		if (pIter)
-		{
-		    pFile->Print("\n");
-			pFile->IncIndent(2);
-			pFile->PrintIndent("");
-		    WriteZeroInitArray(pFile, pType, pAlias, pIter, pContext);
-			pFile->DecIndent(2);
-		}
-		else
-		    pType->WriteZeroInit(pFile, pContext);
-		if (i < nBound-1)
-		{
-		    pFile->Print(", ");
-			if (pIter)
-			    pFile->Print("\n");
-		}
-	}
-	pFile->Print(" }");
+    CBEExpression *pBound = pAlias->GetNextArrayBound(iterB);
+    if (pBound == 0)
+        return;
+    int nBound = pBound->GetIntValue();
+    if (nBound == 0)
+        return;
+    pFile->Print("{ ");
+    for (int i=0; i<nBound; i++)
+    {
+        // if there is another level, we have to step down into it,
+        // if there is no other level, we have to init the elements
+        vector<CBEExpression*>::iterator iTemp = iterB;
+        if (pAlias->GetNextArrayBound(iTemp))
+        {
+            pFile->Print("\n");
+            pFile->IncIndent(2);
+            pFile->PrintIndent("");
+            WriteZeroInitArray(pFile, pType, pAlias, iterB, pContext);
+            pFile->DecIndent(2);
+        }
+        else
+            pType->WriteZeroInit(pFile, pContext);
+        if (i < nBound-1)
+        {
+            pFile->Print(", ");
+            vector<CBEExpression*>::iterator iTemp = iterB;
+            if (pAlias->GetNextArrayBound(iTemp))
+                pFile->Print("\n");
+        }
+    }
+    pFile->Print(" }");
 }
 
 /** \brief tries to get the maximum array dimension count of this type
@@ -422,8 +421,10 @@ int CBEType::GetArrayDimensionCount()
  */
 bool CBEType::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
 {
+    VERBOSE("CBEType::AddToFile(header: %s) for type %d called\n",
+        pHeader->GetFileName().c_str(), GetFEType());
     if (IsTargetFile(pHeader))
-	    pHeader->AddTaggedType(this);
+        pHeader->AddTaggedType(this);
     return true;
 }
 

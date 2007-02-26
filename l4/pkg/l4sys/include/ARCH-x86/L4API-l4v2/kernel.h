@@ -10,21 +10,20 @@
 #define __L4_KERNEL_H__
 
 #include <l4/sys/types.h>
+#include <l4/sys/compiler.h>
 
 /**
- * L4 Kernel Info Page
+ * L4 Kernel Info Page.
  * \ingroup api_types_kip
  */
 typedef struct
 {
+  /* offset 0x00 */
   l4_umword_t            magic;               /**< Kernel Info Page
-					       **  identifier ("L4킟")
+					       **  identifier ("L4킟").
 					       **/
   l4_umword_t            version;             ///< Kernel version
   l4_uint8_t             offset_version_strings;
-#if 0
-  l4_uint8_t             reserved[7 + 5 * 16];
-#else
   l4_uint8_t             reserved[7];
 
   /* the following stuff is undocumented; we assume that the kernel
@@ -32,29 +31,34 @@ typedef struct
      image so that these declarations are consistent with section 2.9
      of the L4 Reference Manual */
 
+  /* offset 0x10 */
   /* Kernel debugger */
   l4_umword_t            init_default_kdebug; ///< Kdebug init function
   l4_umword_t            default_kdebug_exception; ///< Kdebug exception handler
-  l4_umword_t            __unknown;
+  l4_umword_t            scheduler_granularity; ///< for rounding timeslices
   l4_umword_t            default_kdebug_end;
 
+  /* offset 0x20 */
   /* Sigma0 */
   l4_umword_t            sigma0_esp;          ///< Sigma0 start stack pointer
   l4_umword_t            sigma0_eip;          ///< Sigma0 instruction pointer
   l4_low_high_t          sigma0_memory;       ///< Sigma0 code/data area
 
+  /* offset 0x30 */
   /* Sigma1 */
   l4_umword_t            sigma1_esp;          ///< Sigma1 start stack pointer
   l4_umword_t            sigma1_eip;          ///< Sigma1 instruction pointer
   l4_low_high_t          sigma1_memory;       ///< Sigma1 code/data
 
+  /* offset 0x40 */
   /* Root task */
   l4_umword_t            root_esp;            ///< Root task stack pointer
   l4_umword_t            root_eip;            ///< Root task instruction pointer
   l4_low_high_t          root_memory;         ///< Root task code/data
 
+  /* offset 0x50 */
   /* L4 configuration */
-  l4_umword_t            l4_config;           /**< L4 kernel configuration
+  l4_umword_t            l4_config;           /**< L4 kernel configuration.
 					       **
 					       ** Values:
 					       **  - bits 0-7: set the number
@@ -64,7 +68,7 @@ typedef struct
 					       **    of mapping nodes.
 					       **/
   l4_umword_t            reserved2;
-  l4_umword_t            kdebug_config;       /**< Kernel debugger config
+  l4_umword_t            kdebug_config;       /**< Kernel debugger config.
 					       **
 					       **  Values:
 					       **  - bits 0-7: set the number
@@ -85,7 +89,7 @@ typedef struct
 					       **    serial output should be
 					       **    used
 					       **/
-  l4_umword_t            kdebug_permission;   /**< Kernel debugger permissions
+  l4_umword_t            kdebug_permission;   /**< Kernel debugger permissions.
 					       **
 					       **  Values:
 					       **  - bits 0-7: if 0 all tasks
@@ -110,21 +114,36 @@ typedef struct
 					       **    protocol page faults and
 					       **    IPC
 					       **/
-#endif
 
+  /* offset 0x60 */
   l4_low_high_t          main_memory;         ///< Main memory area
   l4_low_high_t          reserved0;           ///< Reserved memory (kernel code)
   l4_low_high_t          reserved1;           ///< Reserved memory (kernel data)
   l4_low_high_t          semi_reserved;       ///< Reserved memory
   l4_low_high_t          dedicated[4];        ///< Dedicated memory areas
 
+  /* offset 0xA0 */
   volatile l4_cpu_time_t clock;               ///< L4 system clock (탎)
+  volatile l4_cpu_time_t switch_time;         /**< timestamp of last l4 thread
+                                               **  switch (cycles)
+                                               **  - only valid if
+                                               **    FINE_GRAINED_CPU_TIME is
+                                               **    available
+                                               **/
 
-  l4_uint32_t            reserved3[2];
+  /* offset 0xB0 */
   l4_uint32_t            frequency_cpu;       ///< CPU frequency in kHz
   l4_uint32_t            frequency_bus;       ///< Bus frequency
-  l4_uint32_t            reserved4[2];
+  volatile l4_cpu_time_t thread_time;         /**< accumulated thread time for
+                                               ** currently running thread at
+                                               ** last l4 thread switch (in
+                                               ** cycles)
+                                               **  - only valid if
+                                               **    FINE_GRAINED_CPU_TIME is
+                                               **    available
+                                               **/
 
+  /* offset 0xC0 */
   /* System call entries */
   l4_uint32_t            sys_ipc;             ///< ipc syscall entry
   l4_uint32_t            sys_id_nearest;      ///< id_nearest syscall entry
@@ -132,16 +151,47 @@ typedef struct
   l4_uint32_t            sys_thread_switch;   ///< thread_switch syscall entry
   l4_uint32_t            sys_thread_schedule; ///< thread_schedule syscall entry
   l4_uint32_t            sys_lthread_ex_regs; /**< sys_lthread_ex_regs
-					       **  syscall entry
+					       **  syscall entry.
 					       **/
-  l4_uint32_t            sys_task_new;        ///< sys_task_new syscall entry
+  l4_uint32_t            sys_task_new;        ///< sys_task_new syscall entry.
+
+  char  version_strings[512];
+
+  char  sys_calls[256];
+
+  char  pad[288];
+
+  /* ============================================== */
+  char  lipc_code[256];
 
 } l4_kernel_info_t;
 
 /**
- * Kernel Info Page identifier ("L4킟")
+ * Kernel Info Page identifier ("L4킟").
  * \ingroup api_types_kip
  */
 #define L4_KERNEL_INFO_MAGIC (0x4BE6344CL) /* "L4킟" */
+
+/**
+ * \brief Return offset in bytes of version_strings relative to the KIP base.
+ * \ingroup api_types_kip
+ *
+ * \param kip	Pointer to the kernel into page (KIP).
+ *
+ * \return offset of version_strings relative to the KIP base address, in
+ *         bytes.
+ */
+L4_INLINE int l4_kernel_info_version_offset(l4_kernel_info_t *kip);
+
+
+/*************************************************************************
+ * Implementations
+ *************************************************************************/
+
+L4_INLINE int
+l4_kernel_info_version_offset(l4_kernel_info_t *kip)
+{
+  return kip->offset_version_strings << 4;
+}
 
 #endif

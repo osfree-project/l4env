@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEClass.cpp
- *	\brief	contains the implementation of the class CL4BEClass
+ *    \file    dice/src/be/l4/L4BEClass.cpp
+ *    \brief   contains the implementation of the class CL4BEClass
  *
- *	\date	01/29/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/29/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,16 +32,14 @@
 #include "be/BEHeaderFile.h"
 #include "be/l4/L4BENameFactory.h"
 
-#include "fe/FEAttribute.h"
+#include "Attribute-Type.h"
 #include "TypeSpec-Type.h"
-
-IMPLEMENT_DYNAMIC(CL4BEClass);
 
 CL4BEClass::CL4BEClass()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEClass, CBEClass);
 }
 
+/** destroys the object */
 CL4BEClass::~CL4BEClass()
 {
 }
@@ -52,30 +51,57 @@ CL4BEClass::~CL4BEClass()
  * We have to write the function declaration for user-defined functions.
  * - default_function: is written by server-loop, since it is used there
  * - init-rcvstring: void name(int, l4_umword_t*, l4_umword_t*, CORBA_Environment)
- * - error-function: void name(l4_msgdope_t)
+ * - error-function: void name(l4_msgdope_t, CORBA(_Server)_Environment*)
+ * - error-function-client: void name(l4_msgdope_t, CORBA_Environment*)
+ * - error-function-server: void name(l4_msgdope_t, CORBA_Server_Environment*)
  */
-void CL4BEClass::WriteFunctions(CBEHeaderFile * pFile, CBEContext * pContext)
+void CL4BEClass::WriteHelperFunctions(CBEHeaderFile * pFile, CBEContext * pContext)
 {
+    string sEnvName;
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT))
+        sEnvName = "CORBA_Server_Environment";
+    else
+        sEnvName = "CORBA_Environment";
     // init-rcvstring
-    if (FindAttribute(ATTR_INIT_RCVSTRING))
+    if (FindAttribute(ATTR_INIT_RCVSTRING) ||
+        FindAttribute(ATTR_INIT_RCVSTRING_CLIENT) ||
+        FindAttribute(ATTR_INIT_RCVSTRING_SERVER))
     {
-        CBEAttribute *pAttr = FindAttribute(ATTR_INIT_RCVSTRING);
-        String sFuncName = pAttr->GetString();
-        if (sFuncName.IsEmpty())
+        CBEAttribute *pAttr = 0;
+        string sFuncName;
+        if ((pAttr = FindAttribute(ATTR_INIT_RCVSTRING)) != NULL)
+            sFuncName = pAttr->GetString();
+        if (((pAttr = FindAttribute(ATTR_INIT_RCVSTRING_CLIENT)) != NULL) &&
+            pFile->IsOfFileType(FILETYPE_CLIENT))
+            sFuncName = pAttr->GetString();
+        if (((pAttr = FindAttribute(ATTR_INIT_RCVSTRING_SERVER)) != NULL) &&
+            pFile->IsOfFileType(FILETYPE_COMPONENT))
+            sFuncName = pAttr->GetString();
+        if (sFuncName.empty())
             sFuncName = pContext->GetNameFactory()->GetString(STR_INIT_RCVSTRING_FUNC, pContext);
         else
             sFuncName = pContext->GetNameFactory()->GetString(STR_INIT_RCVSTRING_FUNC, pContext, (void*)&sFuncName);
-        String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-        pFile->PrintIndent("void %s(int, %s*, %s*, CORBA_Environment*);\n\n", (const char*)sFuncName,
-                (const char*)sMWord, (const char*)sMWord);
+        string sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
+        *pFile << "\tvoid " << sFuncName << "(int, " << sMWord << "*, " << sMWord << "*, " << sEnvName << "*);\n\n";
     }
-    // error-function
-    if (FindAttribute(ATTR_ERROR_FUNCTION))
+    // error-functions
+    if (FindAttribute(ATTR_ERROR_FUNCTION) ||
+        FindAttribute(ATTR_ERROR_FUNCTION_CLIENT) ||
+        FindAttribute(ATTR_ERROR_FUNCTION_SERVER))
     {
-        CBEAttribute *pAttr = FindAttribute(ATTR_ERROR_FUNCTION);
-        String sFuncName = pAttr->GetString();
-        pFile->PrintIndent("void %s(l4_msgdope_t);\n", (const char*)sFuncName);
+        CBEAttribute *pAttr = 0;
+        string sFuncName;
+        if ((pAttr = FindAttribute(ATTR_ERROR_FUNCTION)) != NULL)
+            sFuncName = pAttr->GetString();
+        if (((pAttr = FindAttribute(ATTR_ERROR_FUNCTION_CLIENT)) != NULL) &&
+            pFile->IsOfFileType(FILETYPE_CLIENT))
+            sFuncName = pAttr->GetString();
+        if (((pAttr = FindAttribute(ATTR_ERROR_FUNCTION_SERVER)) != NULL) &&
+            pFile->IsOfFileType(FILETYPE_COMPONENT))
+            sFuncName = pAttr->GetString();
+        if (!sFuncName.empty())
+            *pFile << "\tvoid " << sFuncName << "(l4_msgdope_t, " << sEnvName << "*);\n\n";
     }
     // call base class
-    CBEClass::WriteFunctions(pFile, pContext);
+    CBEClass::WriteHelperFunctions(pFile, pContext);
 }

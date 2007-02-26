@@ -7,15 +7,24 @@
 PKGDIR  ?= ../..
 L4DIR   ?= $(PKGDIR)/../..
 
-SYSTEMS	= x86-l4v2 x86-l4x0
+SYSTEMS	= x86-l4v2 x86-l4x0 arm-l4x0
 
 TARGET	= lib$(PKGNAME).a
 MODE	= sigma0
+CLIENTIDL = names.idl
 
-CPPFLAGS += -I$(PKGDIR)/server/include
+PRIVATE_INCDIR += ..
 
-SRC_C	= libnames.c names_query_id.c names_query_name.c names_query_nr.c \
-	  names_register.c names_unregister.c names_unregister_task.c \
-	  names_waitfor_name.c
+SRC_C = libnames.c                      \
+        names_dump.c                    \
+        names_query_name.c              \
+        names_query_id.c                \
+        names_query_nr.c                \
+        names_register.c                \
+        names_register_thread.c         \
+        names_unregister.c              \
+        names_unregister_task.c         \
+        names_unregister_thread.c       \
+        names_waitfor_name.c
 
 include $(L4DIR)/mk/lib.mk

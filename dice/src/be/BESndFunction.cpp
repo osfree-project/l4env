@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BESndFunction.cpp
- *	\brief	contains the implementation of the class CBESndFunction
+ *    \file    dice/src/be/BESndFunction.cpp
+ *    \brief   contains the implementation of the class CBESndFunction
  *
- *	\date	01/14/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/14/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -39,61 +40,60 @@
 #include "TypeSpec-Type.h"
 #include "fe/FEOperation.h"
 
-IMPLEMENT_DYNAMIC(CBESndFunction);
-
 CBESndFunction::CBESndFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBESndFunction, CBEOperationFunction);
 }
 
 CBESndFunction::CBESndFunction(CBESndFunction & src):CBEOperationFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CBESndFunction, CBEOperationFunction);
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CBESndFunction::~CBESndFunction()
 {
 
 }
 
-/**	\brief writes the variable declarations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the variable declarations of this function
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * The variable declarations of the call function include the message buffer for send and receive.
  */
 void CBESndFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
     // define message buffer
-    assert(m_pMsgBuffer);
-    m_pMsgBuffer->WriteDefinition(pFile, false, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteDefinition(pFile, false, pContext);
     // check for temp
-    if (HasVariableSizedParameters() || HasArrayParameters())
+    if (HasVariableSizedParameters(GetSendDirection()) ||
+        HasArrayParameters(GetSendDirection()))
     {
-        String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-        String sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sTmpVar);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sOffsetVar);
+        string sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+        string sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", sTmpVar.c_str());
+        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", sOffsetVar.c_str());
     }
 }
 
-/**	\brief writes the variable initializations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the variable initializations of this function
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation should initialize the message buffer and the pointers of the out variables.
  */
 void CBESndFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
     // init message buffer
-    assert(m_pMsgBuffer);
-    m_pMsgBuffer->WriteInitialization(pFile, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, pContext);
 }
 
-/**	\brief writes the invocation of the message transfer
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the invocation of the message transfer
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
@@ -102,9 +102,9 @@ void CBESndFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
     pFile->PrintIndent("/* send */\n");
 }
 
-/**	\brief clean up the mess
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief clean up the mess
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation cleans up allocated memory inside this function
  */
@@ -113,9 +113,9 @@ void CBESndFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
     pFile->PrintIndent("/* clean up */\n");
 }
 
-/**	\brief writes the return statement
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the return statement
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation is empty, because a send function does not return a value.
  */
@@ -124,16 +124,16 @@ void CBESndFunction::WriteReturn(CBEFile * pFile, CBEContext * pContext)
 
 }
 
-/**	\brief creates the back-end send function
- *	\param pFEOperation the corresponding front-end operation
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief creates the back-end send function
+ *    \param pFEOperation the corresponding front-end operation
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  */
 bool CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
 {
     pContext->SetFunctionType(FUNCTION_SEND);
-	// set target file name
-	SetTargetFileName(pFEOperation, pContext);
+    // set target file name
+    SetTargetFileName(pFEOperation, pContext);
     // set name
     m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
 
@@ -151,9 +151,9 @@ bool CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pCo
     CBEType *pOldType = m_pReturnVar->ReplaceType(pReturnType);
     delete pOldType;
 
-	// need a message buffer, don't we?
-	if (!AddMessageBuffer(pFEOperation, pContext))
-	    return false;
+    // need a message buffer, don't we?
+    if (!AddMessageBuffer(pFEOperation, pContext))
+        return false;
 
     return true;
 }
@@ -180,19 +180,35 @@ bool CBESndFunction::DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBECo
  * and at the component's side if the OUT attribute is set. And of course, only
  * if the target file is suitable.
  */
-bool CBESndFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContext)
+bool CBESndFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
 {
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)))
-		if (!IsTargetFile((CBEHeaderFile*)pFile))
-			return false;
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEImplementationFile)))
-		if (!IsTargetFile((CBEImplementationFile*)pFile))
-			return false;
-	if (pFile->IsOfFileType(FILETYPE_CLIENT) && (FindAttribute(ATTR_IN)))
-		return true;
-	if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (FindAttribute(ATTR_OUT)))
-		return true;
-	return false;
+    if (!IsTargetFile(pFile))
+        return false;
+    if (pFile->IsOfFileType(FILETYPE_CLIENT) && (FindAttribute(ATTR_IN)))
+        return true;
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (FindAttribute(ATTR_OUT)))
+        return true;
+    return false;
+}
+
+/** \brief test if this function should be written to the target file
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *  \return true if successful
+ *
+ * A send function is written at the client's side if the IN attribute is set,
+ * and at the component's side if the OUT attribute is set. And of course, only
+ * if the target file is suitable.
+ */
+bool CBESndFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+{
+    if (!IsTargetFile(pFile))
+        return false;
+    if (pFile->IsOfFileType(FILETYPE_CLIENT) && (FindAttribute(ATTR_IN)))
+        return true;
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (FindAttribute(ATTR_OUT)))
+        return true;
+    return false;
 }
 
 /** \brief return the direction, which this functions sends to
@@ -222,7 +238,8 @@ int CBESndFunction::GetSize(int nDirection, CBEContext * pContext)
 {
     // get base class' size
     int nSize = CBEOperationFunction::GetSize(nDirection, pContext);
-    if (nDirection & DIRECTION_IN)
+    if ((nDirection & DIRECTION_IN) &&
+        !FindAttribute(ATTR_NOOPCODE))
         nSize += pContext->GetSizes()->GetOpcodeSize();
     return nSize;
 }
@@ -235,7 +252,8 @@ int CBESndFunction::GetSize(int nDirection, CBEContext * pContext)
 int CBESndFunction::GetFixedSize(int nDirection, CBEContext *pContext)
 {
     int nSize = CBEOperationFunction::GetFixedSize(nDirection, pContext);
-    if (nDirection & DIRECTION_IN)
+    if ((nDirection & DIRECTION_IN) &&
+        !FindAttribute(ATTR_NOOPCODE))
         nSize += pContext->GetSizes()->GetOpcodeSize();
     return nSize;
 }

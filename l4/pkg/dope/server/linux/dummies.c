@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -15,9 +15,8 @@
 
 #include "dopestd.h"
 
-int init_pslim_server(struct dope_services *d);
+int init_don_scheduler(struct dope_services *d);
 
-int init_pslim_server(struct dope_services *d) {
+int init_don_scheduler(struct dope_services *d) {
 	return 1;
 }
-

@@ -4,7 +4,7 @@ TARGET           = ovlwm
 SYSTEMS          = x86-linux
 MODE             = host
 DEFINES         += -DSOCKETAPI -DDICE_DEFAULT_PORT=htons\(\(int\)dice_server_param\)
-LIBS             = -llinuxdope -lpthread -lm -lvscreen -ldata
+LIBS             = -llinuxdope -lpthread -lm -lvscreen
 SRC_C            = main.c startup.c screen.c input.c window.c \
                    thread.c serverloop.c
 

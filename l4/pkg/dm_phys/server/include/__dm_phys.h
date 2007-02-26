@@ -43,8 +43,7 @@ dmphys_server(void);
 
 /* unmap page area */
 void
-dmphys_unmap_area(l4_addr_t addr, 
-		  l4_size_t size);
+dmphys_unmap_area(l4_addr_t addr, l4_size_t size);
 
 /* unmap page area list */
 void
@@ -52,14 +51,9 @@ dmphys_unmap_areas(page_area_t * areas);
 
 /* create new dataspace */
 int
-dmphys_open(l4_threadid_t owner, 
-	    page_pool_t * pool, 
-	    l4_addr_t addr, 
-	    l4_size_t size, 
-	    l4_addr_t align, 
-	    l4_uint32_t flags, 
-	    const char * name, 
-	    l4dm_dataspace_t * ds);
+dmphys_open(l4_threadid_t owner, page_pool_t * pool, l4_addr_t addr, 
+            l4_size_t size, l4_addr_t align, l4_uint32_t flags, 
+	    const char * name, l4dm_dataspace_t * ds);
 
 /* close dataspace */
 int
@@ -67,7 +61,6 @@ dmphys_close(dmphys_dataspace_t * ds);
 
 /* resize dataspace */
 int
-dmphys_resize(dmphys_dataspace_t * ds, 
-	      l4_size_t new_size);
+dmphys_resize(dmphys_dataspace_t * ds, l4_size_t new_size);
 
 #endif /* !_DM_PHYS___DM_PHYS_H */

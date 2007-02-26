@@ -3,7 +3,7 @@
 
 CORBA_int pf_handler(CORBA_Object src, 
     handler_msg_buffer_t* msg_buffer,
-    CORBA_Environment *env)
+    CORBA_Server_Environment *env)
 {
   l4_umword_t pfa, eip;
   l4_snd_fpage_t page;

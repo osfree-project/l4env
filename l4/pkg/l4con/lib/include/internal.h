@@ -5,8 +5,8 @@
 #include <l4/log/l4log.h>
 #include <l4/semaphore/semaphore.h>
 
-#include <l4/con/con-client.h>
-#include <l4/con/l4contxt.h>
+#include <l4/l4con/l4con-client.h>
+#include <l4/l4con/l4contxt.h>
 
 #include "contxt_macros.h"
 
@@ -28,15 +28,15 @@ extern l4con_pslim_color_t	fg_color;
 #define BITX(x)		((x) * fn_x)
 #define BITY(y)		((y) * fn_y)
 
-#define CONTXT_TIMEOUT    5000
+#define CONTXT_TIMEOUT    10000
 
 extern int vtc_cols, vtc_lines;
-extern int sb_x, sb_y;	/* scrbuf position */
-extern int sb_lines;	/* size of screen buffer */
-extern int bob;		/* begin of buffer */
-extern int fline;	/* first visible line */
-extern int scrpos_y;	/* screen y position */
-extern int fn_x, fn_y;	/* font size x, y */
+extern int sb_x, sb_y;		/* scrbuf position */
+extern int sb_lines;		/* size of screen buffer */
+extern int bob;			/* begin of buffer */
+extern int fline;		/* first visible line */
+extern int scrpos_y;		/* screen y position */
+extern l4_uint32_t fn_x, fn_y;	/* font size x, y */
 
 extern l4_uint8_t *vtc_scrbuf;
 extern l4_uint8_t *editbuf;
@@ -56,7 +56,7 @@ extern void _cursor(int);
 extern void _flush(l4_uint8_t*, int, int);
 
 extern void contxt_write(const l4_uint8_t*, int);
-extern void (*putstocon)(int, int, l4_uint8_t *, int);
+extern void (*putstocon)(int, int, l4_int8_t *, int);
 
 #endif
 

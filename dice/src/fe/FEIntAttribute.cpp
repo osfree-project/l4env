@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEIntAttribute.cpp
- *	\brief	contains the implementation of the class CFEIntAttribute
+ *    \file    dice/src/fe/FEIntAttribute.cpp
+ *    \brief   contains the implementation of the class CFEIntAttribute
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,28 +22,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
 #include "fe/FEIntAttribute.h"
 #include "File.h"
 
-IMPLEMENT_DYNAMIC(CFEIntAttribute) 
-
 CFEIntAttribute::CFEIntAttribute(ATTR_TYPE nType, int nValue)
 :CFEAttribute(nType)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEIntAttribute, CFEAttribute);
-
     m_nIntValue = nValue;
 }
 
 CFEIntAttribute::CFEIntAttribute(CFEIntAttribute & src)
 :CFEAttribute(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEIntAttribute, CFEAttribute);
-
     m_nIntValue = src.m_nIntValue;
 }
 
@@ -53,15 +48,15 @@ CFEIntAttribute::~CFEIntAttribute()
 }
 
 /** retrieves the integer values of this attribute
- *	\return  the integer values of this attribute
+ *    \return  the integer values of this attribute
  */
 int CFEIntAttribute::GetIntValue()
 {
     return m_nIntValue;
 }
 
-/**	creates a copy of this object
- *	\return a copy of this object
+/**    creates a copy of this object
+ *    \return a copy of this object
  */
 CObject *CFEIntAttribute::Clone()
 {
@@ -69,7 +64,7 @@ CObject *CFEIntAttribute::Clone()
 }
 
 /** \brief serializes this object
- *	\param pFile the file to serialize from/to
+ *    \param pFile the file to serialize from/to
  */
 void CFEIntAttribute::Serialize(CFile * pFile)
 {

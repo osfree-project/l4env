@@ -11,7 +11,11 @@
  * the terms of the GNU General Public License 2. Please see the
  * COPYING file for details. */
 
+#ifdef USE_OSKIT
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 
 #include <l4/env/errno.h>
 #include <l4/sys/types.h>
@@ -38,7 +42,7 @@ l4_addr_t*
 exc_obj_psec_idx_psec_here(int env_id, int envsec_idx)
 {
   int env_idx = env_id & UNIQUE_ID_MASK;
-  
+
   if (env_idx    < 0 || env_idx    >= EXC_MAXBIN ||
       envsec_idx < 0 || envsec_idx >= L4ENV_MAXSECT)
     {
@@ -178,7 +182,7 @@ exc_obj_psec_t::done_ds(void)
  * 
  * \param env		L4 environment infopage
  * \return 		section the program section resides in 
- * 			NULL on error */
+ * 			0 on error */
 l4exec_section_t*
 exc_obj_psec_t::lookup_env(l4env_infopage_t *env)
 {
@@ -192,7 +196,7 @@ exc_obj_psec_t::lookup_env(l4env_infopage_t *env)
 
   Error("EXC section (id=%d) not found in infopage (%p, %d sects)",
 	l4exc.info.id, env, env->section_num);
-  return (l4exec_section_t*)NULL;
+  return 0;
 }
 
 /** Share the program section psec by copy-on-write.
@@ -257,10 +261,9 @@ exc_obj_psec_t::share_to_env(l4env_infopage_t *env,
       printf("Sharing program section (%08x, %d) to %08x-%08x\n", 
 	      env->id, envsec_idx, new_addr, new_addr+size);
 #endif
-      
+
       *new_l4exc = l4exc;
       new_l4exc->ds = new_ds;
-
     }
   else
     {

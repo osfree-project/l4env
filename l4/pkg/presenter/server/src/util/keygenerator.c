@@ -8,16 +8,18 @@
  */
 
 #define KEYGENERATOR struct keygenerator_struct
-
 #include "presenter_conf.h"
 #include "keygenerator.h"
 #include "module_names.h"
-#include "memory.h"
 
-struct memory_services *mem;
+#define KEYGENERATOR_MAX_KEYS 256
 
 struct keygenerator_struct {
-	int key_intern;
+
+    int released_keys[KEYGENERATOR_MAX_KEYS];
+    int key_intern;
+    int curr_rel_keys;
+    int key_amount;
 };
 
 #define _DEBUG 0
@@ -28,21 +30,46 @@ int init_keygenerator(struct presenter_services *p);
 /*** SERVICE FUNCTIONS ***/
 /*************************/
 
-static KEYGENERATOR *keygenerator_create (void) {
-	struct keygenerator_struct *keygen;
-	
-	keygen = (struct keygenerator_struct *) mem->alloc(sizeof(struct keygenerator_struct));
-	keygen->key_intern=0;
-	
-	return keygen;
+static KEYGENERATOR *keygenerator_create (int number_of_keys) {
+    struct keygenerator_struct *keygen;
+
+    keygen = (struct keygenerator_struct *) malloc(sizeof(struct keygenerator_struct));
+    keygen->key_intern=0;
+    keygen->key_amount=number_of_keys;
+    keygen->curr_rel_keys=0;
+
+    return keygen;
 }
 
 static int keygenerator_get_key (KEYGENERATOR *k) {
-	k->key_intern++;
-	
-	LOGd(_DEBUG,"key==%d",k->key_intern);
-	
-	return k->key_intern;
+    int key;
+
+    if (k->curr_rel_keys > 0) {
+
+        key = k->released_keys[k->curr_rel_keys-1];
+
+        LOGd(_DEBUG,"using released key %d",key);
+
+        k->curr_rel_keys--;
+
+        return key;
+    }
+
+    k->key_intern++;
+
+    LOGd(_DEBUG,"key==%d",k->key_intern);
+
+    return k->key_intern;
+}
+
+static void keygenerator_release_key(KEYGENERATOR *k, int key) {
+
+    k->released_keys[k->curr_rel_keys] = key;
+
+    LOGd(_DEBUG,"released key: %d",k->released_keys[k->curr_rel_keys]);
+
+    k->curr_rel_keys++;
+
 }
 
 /****************************************/
@@ -50,8 +77,9 @@ static int keygenerator_get_key (KEYGENERATOR *k) {
 /****************************************/
 
 static struct keygenerator_services services = {
-        keygenerator_create,
-	keygenerator_get_key,
+    keygenerator_create,
+    keygenerator_get_key,
+    keygenerator_release_key,
 };
 
 
@@ -61,7 +89,6 @@ static struct keygenerator_services services = {
 
 int init_keygenerator(struct presenter_services *p) {
 
-        mem=p->get_module(MEMORY_MODULE);
         p->register_module(KEYGENERATOR_MODULE,&services);
         return 1;
 }

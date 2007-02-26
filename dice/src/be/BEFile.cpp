@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEFile.cpp
- *	\brief	contains the implementation of the class CBEFile
+ *    \file    dice/src/be/BEFile.cpp
+ *    \brief   contains the implementation of the class CBEFile
  *
- *	\date	01/10/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -25,14 +26,15 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEFile.h"
-#include "be/BEContext.h"
-#include "be/BEClass.h"
-#include "be/BENameSpace.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BETarget.h"
-#include "be/BEFunction.h"
+#include "BEFile.h"
+#include "BEContext.h"
+#include "BEClass.h"
+#include "BENameSpace.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BETarget.h"
+#include "BEFunction.h"
+#include "IncludeStatement.h"
 
 #include "fe/FEOperation.h"
 #include "fe/FEInterface.h"
@@ -48,54 +50,34 @@
 extern const char* dice_version;
 //@}
 
-IMPLEMENT_DYNAMIC(IncludeFile);
-
-IncludeFile::IncludeFile()
-{
-    IMPLEMENT_DYNAMIC_BASE(IncludeFile, CObject);
-    bIDLFile = false;
-}
-
-/**	destructor */
-IncludeFile::~IncludeFile()
-{
-}
-
-IMPLEMENT_DYNAMIC(CBEFile);
-
 CBEFile::CBEFile()
-: m_vIncludedFiles(RUNTIME_CLASS(IncludeFile)),
-  m_vClasses(RUNTIME_CLASS(CBEClass)),
-  m_vNameSpaces(RUNTIME_CLASS(CBENameSpace)),
-  m_vFunctions(RUNTIME_CLASS(CBEFunction))
 {
     m_nFileType = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBEFile, CFile);
 }
 
 CBEFile::CBEFile(CBEFile & src)
-: CFile(src),
-  m_vIncludedFiles(RUNTIME_CLASS(IncludeFile)),
-  m_vClasses(RUNTIME_CLASS(CBEClass)),
-  m_vNameSpaces(RUNTIME_CLASS(CBENameSpace)),
-  m_vFunctions(RUNTIME_CLASS(CBEFunction))
+: CFile(src)
 {
     m_nFileType = src.m_nFileType;
-    m_vClasses.Add(&(src.m_vClasses));
-    m_vIncludedFiles.Add(&(src.m_vIncludedFiles));
-    m_vNameSpaces.Add(&(src.m_vNameSpaces));
-    m_vFunctions.Add(&(src.m_vFunctions));
-    IMPLEMENT_DYNAMIC_BASE(CBEFile, CFile);
+
+    COPY_VECTOR(CBEClass, m_vClasses, iterC);
+    COPY_VECTOR(CIncludeStatement, m_vIncludedFiles, iterI);
+    COPY_VECTOR(CBENameSpace, m_vNameSpaces, iterN);
+    COPY_VECTOR(CBEFunction, m_vFunctions, iterF);
 }
 
-/**	\brief class destructor
+/**    \brief class destructor
  */
 CBEFile::~CBEFile()
 {
+    DEL_VECTOR(m_vIncludedFiles);
+    DEL_VECTOR(m_vClasses);
+    DEL_VECTOR(m_vNameSpaces);
+    DEL_VECTOR(m_vFunctions);
 }
 
-/**	\brief writes the header file
- *	\param pContext the context of the write operation
+/**    \brief writes the header file
+ *    \param pContext the context of the write operation
  *
  * This implementation does nothing. It has to be overloaded.
  */
@@ -104,98 +86,77 @@ void CBEFile::Write(CBEContext * pContext)
     assert(false);
 }
 
-/**	\brief writes the functions of the file
- *	\param pContext the context of the write opeation
- *
- * This implementation should be overloaded by the header and implementation file to call the
- * appropriate Write Function of the function.
+/** \brief writes user-defined and helper functions
+ *  \param pContext the context of the write operation
  */
-void CBEFile::WriteFunctions(CBEContext * pContext)
+void CBEFile::WriteHelperFunctions(CBEContext *pContext)
 {
-    assert(false);
 }
 
 /** \brief adds another filename to the list of included files
  *  \param sFileName the new filename
  *  \param bIDLFile true if the file is an IDL file
+ *  \param bIsStandardInclude true if the file was included as standard include
+ *         (using <>)
+ *  \param pRefObj if not NULL, it is used to set source file info
  */
-void CBEFile::AddIncludedFileName(String sFileName, bool bIDLFile, bool bIsStandardInclude)
+void
+CBEFile::AddIncludedFileName(string sFileName,
+    bool bIDLFile,
+    bool bIsStandardInclude,
+    CObject* pRefObj)
 {
-    if (sFileName.IsEmpty())
+    if (sFileName.empty())
         return;
     // first check if we have this name already registered
-	VectorElement *pIter = m_vIncludedFiles.GetFirst();
-	while (pIter)
-	{
-	    if (pIter->GetElement())
-		{
-		    IncludeFile *pElement = (IncludeFile*)pIter->GetElement();
-			if (pElement->sFileName == sFileName)
-			    return;
-		}
-		pIter = pIter->GetNext();
-	}
-	// add new include file
-    IncludeFile *pNew = new IncludeFile();
-    pNew->bIDLFile = bIDLFile;
-	pNew->bIsStandardInclude = bIsStandardInclude;
-    pNew->sFileName = sFileName;
-    m_vIncludedFiles.Add(pNew);
+    vector<CIncludeStatement*>::iterator iter;
+    for (iter = m_vIncludedFiles.begin(); iter != m_vIncludedFiles.end(); iter++)
+    {
+        if ((*iter)->GetIncludedFileName() == sFileName)
+            return;
+    }
+    // add new include file
+    CIncludeStatement *pNewInc = new CIncludeStatement(bIDLFile, bIsStandardInclude, false, sFileName);
+    m_vIncludedFiles.push_back(pNewInc);
+    // set source file info
+    if (pRefObj)
+    {
+        pNewInc->SetSourceLine(pRefObj->GetSourceLine());
+        if (pRefObj->GetSpecificParent<CFEFile>())
+            pNewInc->SetSourceFileName(pRefObj->GetSpecificParent<CFEFile>()->GetSourceFileName());
+    }
 }
 
-/**	\brief retrieves the number of included file names
- *	\return the number of included file names (m_nIncludedFiles)
+/** \brief returns the first incldue statement
+ *  \return an iterator pointng to the first include statement
  */
-int CBEFile::GetIncludedFileNameSize()
+vector<CIncludeStatement*>::iterator
+CBEFile::GetFirstIncludeStatement()
 {
-    return m_vIncludedFiles.GetSize();
+    return m_vIncludedFiles.begin();
 }
 
-/**	\brief retrieves the included file-name at the given index
- *	\param nIndex the index to search for the file-name
- *	\return a reference to the file name if the index is valid (0 otherwise)
+/** \brief return a reference to the next include statement
+ *  \param iter the iterator pointing to the next include statement
+ *  \return a reference to the next include statement
+ */
+CIncludeStatement*
+CBEFile::GetNextIncludeStatement(vector<CIncludeStatement*>::iterator &iter)
+{
+    if (iter == m_vIncludedFiles.end())
+        return 0;
+    return *iter++;
+}
+
+/**    \brief creates the file name of this file
+ *    \param pFEFile the front-end file to use for the file name
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
- * This function returns a reference right into its name array. DO NOT change the pointer handed back.
- */
-String CBEFile::GetIncludedFileName(int nIndex)
-{
-    IncludeFile *pElement = (IncludeFile *) m_vIncludedFiles.GetAt(nIndex);
-    if (pElement)
-        return pElement->sFileName;
-    return String();
-}
-
-/**	\brief returns whether the file with the given index is an IDL file
- *	\param nIndex the index to test
- *	\return true if it is an IDL file
- */
-bool CBEFile::IsIDLFile(int nIndex)
-{
-    IncludeFile *pElement = (IncludeFile *) m_vIncludedFiles.GetAt(nIndex);
-    if (pElement)
-        return pElement->bIDLFile;
-    return false;
-}
-
-/** \brief returns whether the file named at index nIndex has been included as a standard header file
- *  \param nIndex the index in the include table
- *  \return true if the given file was included as a standard include file
- */
-bool CBEFile::IsStandardInclude(int nIndex)
-{
-    IncludeFile *pElement = (IncludeFile *)m_vIncludedFiles.GetAt(nIndex);
-	if (pElement)
-	    return pElement->bIsStandardInclude;
-	return false;
-}
-
-/**	\brief creates the file name of this file
- *	\param pFEFile the front-end file to use for the file name
- *	\param pContext the context of the code generation
- *	\return true if successful
- *
- * This function is not supposed to extract anything else from the front-end file than the file name and included files.
- * the other stuff - constants, types, functions, etc. - is extracted somewhere else and added using the AddXXX functions.
+ * This function is not supposed to extract anything else from the front-end
+ * file than the file name and included files.  the other stuff - constants,
+ * types, functions, etc. - is extracted somewhere else and added using the
+ * AddXXX functions.
  */
 bool CBEFile::CreateBackEnd(CFEFile * pFEFile, CBEContext * pContext)
 {
@@ -203,13 +164,15 @@ bool CBEFile::CreateBackEnd(CFEFile * pFEFile, CBEContext * pContext)
     return true;
 }
 
-/**	\brief creates the file name of this file
- *	\param pFELibrary the front-end lib to use for the file name
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief creates the file name of this file
+ *    \param pFELibrary the front-end lib to use for the file name
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
- * This function is not supposed to extract anything else from the front-end lib than the file name and included files.
- * the other stuff - constants, types, functions, etc. - is extracted somewhere else and added using the AddXXX functions.
+ * This function is not supposed to extract anything else from the front-end
+ * lib than the file name and included files.  the other stuff - constants,
+ * types, functions, etc. - is extracted somewhere else and added using the
+ * AddXXX functions.
  */
 bool CBEFile::CreateBackEnd(CFELibrary * pFELibrary, CBEContext * pContext)
 {
@@ -217,13 +180,15 @@ bool CBEFile::CreateBackEnd(CFELibrary * pFELibrary, CBEContext * pContext)
     return true;
 }
 
-/**	\brief creates the file name of this file
- *	\param pFEInterface the front-end interface to use for the file name
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief creates the file name of this file
+ *    \param pFEInterface the front-end interface to use for the file name
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
- * This function is not supposed to extract anything else from the front-end interface than the file name and included files.
- * the other stuff - constants, types, functions, etc. - is extracted somewhere else and added using the AddXXX functions.
+ * This function is not supposed to extract anything else from the front-end
+ * interface than the file name and included files.  the other stuff -
+ * constants, types, functions, etc. - is extracted somewhere else and added
+ * using the AddXXX functions.
  */
 bool CBEFile::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
 {
@@ -231,13 +196,15 @@ bool CBEFile::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
     return true;
 }
 
-/**	\brief creates the file name of this file
- *	\param pFEOperation the front-end operation to use for the file name
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief creates the file name of this file
+ *    \param pFEOperation the front-end operation to use for the file name
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
- * This function is not supposed to extract anything else from the front-end operation than the file name and included files.
- * the other stuff - constants, types, functions, etc. - is extracted somewhere else and added using the AddXXX functions.
+ * This function is not supposed to extract anything else from the front-end
+ * operation than the file name and included files.  the other stuff -
+ * constants, types, functions, etc. - is extracted somewhere else and added
+ * using the AddXXX functions.
  */
 bool CBEFile::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
 {
@@ -245,77 +212,37 @@ bool CBEFile::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
     return true;
 }
 
-/**	\brief optimizes this file
- *	\param nLevel the optimization level
- *  \param pContext the context of the optimization
- *	\return the success or failure code
- *
- * This implementation iterates over classes and namespace and calls their
- * Optimize functions.
- */
-int CBEFile::Optimize(int nLevel, CBEContext *pContext)
-{
-    VectorElement *pIter = GetFirstClass();
-    CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
-    {
-        int nRet;
-        if ((nRet = pClass->Optimize(nLevel, pContext)) != 0)
-            return nRet;
-    }
-
-    pIter = GetFirstNameSpace();
-    CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
-    {
-        int nRet;
-        if ((nRet = pNameSpace->Optimize(nLevel, pContext)) != 0)
-            return nRet;
-    }
-
-    pIter = GetFirstFunction();
-    CBEFunction *pFunction;
-    while ((pFunction = GetNextFunction(pIter)) != 0)
-    {
-        int nRet;
-        if ((nRet = pFunction->Optimize(nLevel, pContext)) != 0)
-            return nRet;
-    }
-
-    return 0;
-}
-
-/**	\brief tries to find the function with the given name
- *	\param sFunctionName the name to seach for
- *	\return a reference to the function or 0 if not found
+/**    \brief tries to find the function with the given name
+ *    \param sFunctionName the name to seach for
+ *    \return a reference to the function or 0 if not found
  *
  * To find a function, we iterate over the classes and namespaces.
  */
-CBEFunction *CBEFile::FindFunction(String sFunctionName)
+CBEFunction *CBEFile::FindFunction(string sFunctionName)
 {
-    if (sFunctionName.IsEmpty())
+    if (sFunctionName.empty())
         return 0;
 
     // classes
-    VectorElement *pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
     CBEFunction *pFunction = 0;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if ((pFunction = pClass->FindFunction(sFunctionName)) != 0)
             return pFunction;
     }
     // namespaces
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pFunction = pNameSpace->FindFunction(sFunctionName)) != 0)
             return pFunction;
     }
     // search own functions
-    pIter = GetFirstFunction();
-    while ((pFunction = GetNextFunction(pIter)) != 0)
+    vector<CBEFunction*>::iterator iterF = GetFirstFunction();
+    while ((pFunction = GetNextFunction(iterF)) != 0)
     {
         if (pFunction->GetName() == sFunctionName)
             return pFunction;
@@ -324,62 +251,54 @@ CBEFunction *CBEFile::FindFunction(String sFunctionName)
     return 0;
 }
 
-/**	\brief tries to determine the target this file belongs to
- *	\return a reference to the target or 0 if not found
+/**    \brief tries to determine the target this file belongs to
+ *    \return a reference to the target or 0 if not found
  */
 CBETarget *CBEFile::GetTarget()
 {
     CObject *pCur;
     for (pCur = GetParent(); pCur; pCur = pCur->GetParent())
     {
-        if (pCur->IsKindOf(RUNTIME_CLASS(CBETarget)))
+        if (dynamic_cast<CBETarget*>(pCur))
             return (CBETarget *) pCur;
     }
     return 0;
 }
 
-/** \brief writes includes, which have to appear before any type definition
+/** \brief writes includes, which always have to be there
  *  \param pContext the context of the write operation
  */
-void CBEFile::WriteIncludesBeforeTypes(CBEContext *pContext)
+void CBEFile::WriteDefaultIncludes(CBEContext *pContext)
 {
 }
 
-/** \brief writes includes, which can appear after type definitions
- *  \param pContext the context of the write operation
+/** \brief writes one include statement
+ *  \param pInclude the include statement to write
+ *  \param pCOntext the context of the write operation
  */
-void CBEFile::WriteIncludesAfterTypes(CBEContext *pContext)
+void CBEFile::WriteInclude(CIncludeStatement *pInclude, CBEContext *pContext)
 {
-    int nIncludeMax = GetIncludedFileNameSize();
-    String sPrefix = pContext->GetIncludePrefix();
-    for (int i = 0; i < nIncludeMax; i++)
+    string sPrefix = pContext->GetIncludePrefix();
+    string sFileName = pInclude->GetIncludedFileName();
+    if (!sFileName.empty())
     {
-        String sFileName = GetIncludedFileName(i);
-        bool bIDLFile = IsIDLFile(i);
-		bool bIsStandardInclude = IsStandardInclude(i);
-        if (!sFileName.IsEmpty())
+        if (pInclude->IsStdInclude())
+            Print("#include <");
+        else
+            Print("#include \"");
+        if (!pInclude->IsIDLFile() || sPrefix.empty())
         {
-		    if (bIsStandardInclude)
-			    Print("#include <");
-		    else
-			    Print("#include \"");
-            if (!bIDLFile || sPrefix.IsEmpty())
-            {
-                Print("%s", (const char *) sFileName);
-            }
-            else // bIDLFile && !sPrefix.IsEmpty()
-            {
-                Print("%s/%s",(const char *) sPrefix, (const char *) sFileName);
-            }
-			if (bIsStandardInclude)
-			    Print(">\n");
-			else
-			    Print("\"\n");
+            Print("%s", sFileName.c_str());
         }
+        else // bIDLFile && !sPrefix.empty()()
+        {
+            Print("%s/%s", sPrefix.c_str(), sFileName.c_str());
+        }
+        if (pInclude->IsStdInclude())
+            Print(">\n");
+        else
+            Print("\"\n");
     }
-    // pretty print: newline
-    if (nIncludeMax > 0)
-        Print("\n");
 }
 
 /** \brief adds a class to this file's collection
@@ -387,7 +306,9 @@ void CBEFile::WriteIncludesAfterTypes(CBEContext *pContext)
  */
 void CBEFile::AddClass(CBEClass *pClass)
 {
-    m_vClasses.Add(pClass);
+    if (!pClass)
+        return;
+    m_vClasses.push_back(pClass);
 }
 
 /** \brief removes a class from this file's collection
@@ -395,50 +316,54 @@ void CBEFile::AddClass(CBEClass *pClass)
  */
 void CBEFile::RemoveClass(CBEClass *pClass)
 {
-    m_vClasses.Remove(pClass);
+    vector<CBEClass*>::iterator iter;
+    for (iter = m_vClasses.begin(); iter != m_vClasses.end(); iter++)
+    {
+        if (*iter == pClass)
+        {
+            m_vClasses.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first class
  *  \return a pointer to the first class
  */
-VectorElement* CBEFile::GetFirstClass()
+vector<CBEClass*>::iterator CBEFile::GetFirstClass()
 {
-    return m_vClasses.GetFirst();
+    return m_vClasses.begin();
 }
 
 /** \brief returns a reference to the next class
- *  \param pIter the pointer to the next class
+ *  \param iter the pointer to the next class
  *  \return a reference to the next class
  */
-CBEClass* CBEFile::GetNextClass(VectorElement *&pIter)
+CBEClass* CBEFile::GetNextClass(vector<CBEClass*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vClasses.end())
         return 0;
-    CBEClass *pRet = (CBEClass*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextClass(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief tries to find a class using its name
  *  \param sClassName the name of the searched class
  *  \return a reference to the found class or 0 if not found
  */
-CBEClass* CBEFile::FindClass(String sClassName)
+CBEClass* CBEFile::FindClass(string sClassName)
 {
     // first search classes
-    VectorElement *pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if (pClass->GetName() == sClassName)
             return pClass;
     }
     // then search namespaces
-    pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pClass = pNameSpace->FindClass(sClassName)) != 0)
             return pClass;
@@ -452,7 +377,9 @@ CBEClass* CBEFile::FindClass(String sClassName)
  */
 void CBEFile::AddNameSpace(CBENameSpace *pNameSpace)
 {
-    m_vNameSpaces.Add(pNameSpace);
+    if (!pNameSpace)
+        return;
+    m_vNameSpaces.push_back(pNameSpace);
 }
 
 /** \brief removes a namespace
@@ -460,50 +387,54 @@ void CBEFile::AddNameSpace(CBENameSpace *pNameSpace)
  */
 void CBEFile::RemoveNameSpace(CBENameSpace *pNameSpace)
 {
-    m_vNameSpaces.Remove(pNameSpace);
+    vector<CBENameSpace*>::iterator iter;
+    for (iter = m_vNameSpaces.begin(); iter != m_vNameSpaces.end(); iter++)
+    {
+        if (*iter == pNameSpace)
+        {
+            m_vNameSpaces.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves a pointer to the first namespace
  *  \return a pointer to the first namespace
  */
-VectorElement* CBEFile::GetFirstNameSpace()
+vector<CBENameSpace*>::iterator CBEFile::GetFirstNameSpace()
 {
-    return m_vNameSpaces.GetFirst();
+    return m_vNameSpaces.begin();
 }
 
 /** \brief retrieves a reference to the next namespace
- *  \param pIter the pointer to the next namespace
+ *  \param iter the pointer to the next namespace
  *  \return a reference to the next namespace
  */
-CBENameSpace* CBEFile::GetNextNameSpace(VectorElement *&pIter)
+CBENameSpace* CBEFile::GetNextNameSpace(vector<CBENameSpace*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vNameSpaces.end())
         return 0;
-    CBENameSpace *pRet = (CBENameSpace*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextNameSpace(pIter);
-    return pRet;
+    return *iter++;
 }
 
 /** \brief tries to find a namespace using a name
  *  \param sNameSpaceName the name of the searched namespace
  *  \return a reference to the found namespace or 0 if none found
  */
-CBENameSpace* CBEFile::FindNameSpace(String sNameSpaceName)
+CBENameSpace* CBEFile::FindNameSpace(string sNameSpaceName)
 {
     // search the namespace
-    VectorElement *pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if (pNameSpace->GetName() == sNameSpaceName)
             return pNameSpace;
     }
     // search nested namespaces
     CBENameSpace *pFoundNameSpace = 0;
-    pIter = GetFirstNameSpace();
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    iterN = GetFirstNameSpace();
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if ((pFoundNameSpace = pNameSpace->FindNameSpace(sNameSpaceName)) != 0)
             return pFoundNameSpace;
@@ -512,28 +443,14 @@ CBENameSpace* CBEFile::FindNameSpace(String sNameSpaceName)
     return 0;
 }
 
-/** \brief writes the classes belonging to this file
- *  \param pContext the context of this write operation
- */
-void CBEFile::WriteClasses(CBEContext *pContext)
-{
-    assert(false);
-}
-
-/** \brief writes the namespaces of this file
- *  \param pContext the context of the write operation
- */
-void CBEFile::WriteNameSpaces(CBEContext *pContext)
-{
-    assert(false);
-}
-
 /** \brief adds a function to the file
  *  \param pFunction the function to add
  */
 void CBEFile::AddFunction(CBEFunction *pFunction)
 {
-    m_vFunctions.Add(pFunction);
+    if (!pFunction)
+        return;
+    m_vFunctions.push_back(pFunction);
 }
 
 /** \brief removes a function from the file
@@ -541,38 +458,50 @@ void CBEFile::AddFunction(CBEFunction *pFunction)
  */
 void CBEFile::RemoveFunction(CBEFunction *pFunction)
 {
-    m_vFunctions.Remove(pFunction);
+    vector<CBEFunction*>::iterator iter;
+    for (iter = m_vFunctions.begin(); iter != m_vFunctions.end(); iter++)
+    {
+        if (*iter == pFunction)
+        {
+            m_vFunctions.erase(iter);
+            return;
+        }
+    }
 }
 
 /** \brief retrieves pointer to first function
  *  \return a pointer to the first function
  */
-VectorElement* CBEFile::GetFirstFunction()
+vector<CBEFunction*>::iterator CBEFile::GetFirstFunction()
 {
-    return m_vFunctions.GetFirst();
+    return m_vFunctions.begin();
 }
 
 /** \brief retrieves a reference to the next function
- *  \param pIter the iterator pointing to the next function
+ *  \param iter the iterator pointing to the next function
  *  \return a reference to the next function
  */
-CBEFunction* CBEFile::GetNextFunction(VectorElement *&pIter)
+CBEFunction* CBEFile::GetNextFunction(vector<CBEFunction*>::iterator &iter)
 {
-    if (!pIter)
+    if (iter == m_vFunctions.end())
         return 0;
-    CBEFunction *pRet = (CBEFunction*)pIter->GetElement();
-    pIter = pIter->GetNext();
-    if (!pRet)
-        return GetNextFunction(pIter);
-    return pRet;
+    return *iter++;
+}
+
+/**    \brief returns the number of functions in the function vector
+ *    \return the number of functions in the function vector
+ */
+int CBEFile::GetFunctionCount()
+{
+    return m_vFunctions.size();
 }
 
 /** \brief test if the target file is of a certain type
  *  \param nFileType the file type to test for
  *  \return true if the file is of this type
  *
- * A special condition is the test for FILETYPE_CLIENT or FILETYPE_COMPONENT, because
- * they have to test for both, header and implementation file.
+ * A special condition is the test for FILETYPE_CLIENT or FILETYPE_COMPONENT,
+ * because they have to test for both, header and implementation file.
  */
 bool CBEFile::IsOfFileType(int nFileType)
 {
@@ -594,31 +523,34 @@ bool CBEFile::IsOfFileType(int nFileType)
  *  \param pContext the context of this operation
  *  \return true if a parameter of that type is found
  */
-bool CBEFile::HasFunctionWithUserType(String sTypeName, CBEContext *pContext)
+bool CBEFile::HasFunctionWithUserType(string sTypeName, CBEContext *pContext)
 {
-    VectorElement *pIter = GetFirstNameSpace();
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
     CBENameSpace *pNameSpace;
-    while ((pNameSpace = GetNextNameSpace(pIter)) != 0)
+    while ((pNameSpace = GetNextNameSpace(iterN)) != 0)
     {
         if (pNameSpace->HasFunctionWithUserType(sTypeName, this, pContext))
             return true;
     }
-    pIter = GetFirstClass();
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
     CBEClass *pClass;
-    while ((pClass = GetNextClass(pIter)) != 0)
+    while ((pClass = GetNextClass(iterC)) != 0)
     {
         if (pClass->HasFunctionWithUserType(sTypeName, this, pContext))
            return true;
     }
-    pIter = GetFirstFunction();
+    vector<CBEFunction*>::iterator iterF = GetFirstFunction();
     CBEFunction *pFunction;
-    while ((pFunction = GetNextFunction(pIter)) != 0)
+    while ((pFunction = GetNextFunction(iterF)) != 0)
     {
-        if (pFunction->DoWriteFunction(this, pContext))
-        {
-            if (pFunction->FindParameterType(sTypeName))
-                return true;
-        }
+        if (dynamic_cast<CBEHeaderFile*>(this) &&
+            pFunction->DoWriteFunction((CBEHeaderFile*)this, pContext) &&
+            pFunction->FindParameterType(sTypeName))
+            return true;
+        if (dynamic_cast<CBEImplementationFile*>(this) &&
+            pFunction->DoWriteFunction((CBEImplementationFile*)this, pContext) &&
+            pFunction->FindParameterType(sTypeName))
+            return true;
     }
     return false;
 }
@@ -626,23 +558,144 @@ bool CBEFile::HasFunctionWithUserType(String sTypeName, CBEContext *pContext)
 /** \brief writes an introductionary notice
  *  \param pContext the context of the write
  *
- * This method should always be called first when writing into
- * a file.
+ * This method should always be called first when writing into a file.
  */
 void CBEFile::WriteIntro(CBEContext *pContext)
 {
     Print("/*\n");
-	Print(" * This file is auto generated by Dice-%s", dice_version);
-	if (m_nFileType == FILETYPE_TEMPLATE)
-	{
-	    Print(".\n");
-		Print(" *\n");
-		Print(" * Implement the server templates here.\n");
-		Print(" * This file is regenerated with every run of 'dice -t ...'.\n");
-		Print(" * Move it to another location after changing to\n");
-		Print(" * keep your changes!\n");
-	}
-	else
-	    Print(",  DO NOT EDIT!\n");
-	Print(" */\n\n");
+    Print(" * This file is auto generated by Dice-%s", dice_version);
+    if (m_nFileType == FILETYPE_TEMPLATE)
+    {
+        Print(".\n");
+        Print(" *\n");
+        Print(" * Implement the server templates here.\n");
+        Print(" * This file is regenerated with every run of 'dice -t ...'.\n");
+        Print(" * Move it to another location after changing to\n");
+        Print(" * keep your changes!\n");
+    }
+    else
+        Print(",  DO NOT EDIT!\n");
+    Print(" */\n\n");
+}
+
+/** \brief creates a list of ordered elements
+ *
+ * This method iterates each member vector and inserts their elements into the
+ * ordered element list using bubble sort.  Sort criteria is the source line
+ * number.
+ */
+void CBEFile::CreateOrderedElementList(void)
+{
+    // clear vector
+    m_vOrderedElements.erase(m_vOrderedElements.begin(), 
+	m_vOrderedElements.end());
+    // Includes
+    vector<CIncludeStatement*>::iterator iterI = m_vIncludedFiles.begin();
+    for (; iterI != m_vIncludedFiles.end(); iterI++)
+    {
+        InsertOrderedElement(*iterI);
+    }
+    // namespaces
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
+    CBENameSpace *pNS;
+    while ((pNS = GetNextNameSpace(iterN)) != NULL)
+    {
+        InsertOrderedElement(pNS);
+    }
+    // classes
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
+    CBEClass *pC;
+    while ((pC = GetNextClass(iterC)) != NULL)
+    {
+        InsertOrderedElement(pC);
+    }
+    // functions
+    vector<CBEFunction*>::iterator iterF = GetFirstFunction();
+    CBEFunction *pF;
+    while ((pF = GetNextFunction(iterF)) != NULL)
+    {
+        InsertOrderedElement(pF);
+    }
+}
+
+/** \brief insert one element into the ordered list
+ *  \param pObj the new element
+ *
+ * This is the insert implementation
+ */
+void CBEFile::InsertOrderedElement(CObject *pObj)
+{
+    // get source line number
+    int nLine = pObj->GetSourceLine();
+    // search for element with larger number
+    vector<CObject*>::iterator iter = m_vOrderedElements.begin();
+    for (; iter != m_vOrderedElements.end(); iter++)
+    {
+        if ((*iter)->GetSourceLine() > nLine)
+        {
+//             TRACE("Insert element from %s:%d before element from %s:%d\n",
+//                 pObj->GetSourceFileName().c_str(), pObj->GetSourceLine(),
+//                 (*iter)->GetSourceFileName().c_str(),
+//                 (*iter)->GetSourceLine());
+            // insert before that element
+            m_vOrderedElements.insert(iter, pObj);
+            return;
+        }
+    }
+    // new object is bigger that all existing
+//     TRACE("Insert element from %s:%d at end\n",
+//         pObj->GetSourceFileName().c_str(), pObj->GetSourceLine());
+    m_vOrderedElements.push_back(pObj);
+}
+
+/** \brief retrieves the maximum line number in the file
+ *  \return the maximum line number in this file
+ *
+ * If line number is not that, i.e., is zero, then we iterate the elements and
+ * check their end line number. The maximum is out desired maximum line
+ * number.
+ */
+int
+CBEFile::GetSourceLineEnd()
+{
+    if (m_nSourceLineNbEnd != 0)
+	return m_nSourceLineNbEnd;
+
+    // Includes
+    vector<CIncludeStatement*>::iterator iterI = m_vIncludedFiles.begin();
+    for (; iterI != m_vIncludedFiles.end(); iterI++)
+    {
+	int sLine = (*iterI)->GetSourceLine();
+	int eLine = (*iterI)->GetSourceLineEnd();
+	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+    }
+    // namespaces
+    vector<CBENameSpace*>::iterator iterN = GetFirstNameSpace();
+    CBENameSpace *pNS;
+    while ((pNS = GetNextNameSpace(iterN)) != NULL)
+    {
+	int sLine = pNS->GetSourceLine();
+	int eLine = pNS->GetSourceLineEnd();
+	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+    }
+    // classes
+    vector<CBEClass*>::iterator iterC = GetFirstClass();
+    CBEClass *pC;
+    while ((pC = GetNextClass(iterC)) != NULL)
+    {
+	int sLine = pC->GetSourceLine();
+	int eLine = pC->GetSourceLineEnd();
+	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+    }
+    // functions
+    vector<CBEFunction*>::iterator iterF = GetFirstFunction();
+    CBEFunction *pF;
+    while ((pF = GetNextFunction(iterF)) != NULL)
+    {
+	int sLine = pF->GetSourceLine();
+	int eLine = pF->GetSourceLineEnd();
+	m_nSourceLineNbEnd = MAX(sLine, MAX(eLine, m_nSourceLineNbEnd));
+    }
+
+    return m_nSourceLineNbEnd;
 }

@@ -62,14 +62,13 @@ static dsmlib_free_page_fn_t free_page = NULL;
  */
 /*****************************************************************************/ 
 static void *
-__grow(l4slab_cache_t * cache, 
-       void ** data)
+__grow(l4slab_cache_t * cache, void ** data)
 {
   void * page;
 
   page = get_page(data);
 
-  LOGdL(DEBUG_PAGE_ALLOC,"got page at 0x%08x",(unsigned)page);
+  LOGdL(DEBUG_PAGE_ALLOC, "got page at 0x%08x", (unsigned)page);
 
   return page;
 }
@@ -84,11 +83,9 @@ __grow(l4slab_cache_t * cache,
  */
 /*****************************************************************************/ 
 static void
-__release(l4slab_cache_t * cache, 
-	  void * page, 
-	  void * data)
+__release(l4slab_cache_t * cache, void * page, void * data)
 {
-  LOGdL(DEBUG_PAGE_ALLOC,"release page at 0x%08x",(unsigned)page);
+  LOGdL(DEBUG_PAGE_ALLOC, "release page at 0x%08x", (unsigned)page);
 
   free_page(page,data);
 }
@@ -119,17 +116,17 @@ dsmlib_init_desc_alloc(dsmlib_get_page_fn_t get_page_fn,
   free_page = free_page_fn;
 
   /* initialize slab caches */
-  if (l4slab_cache_init(&ds_desc_cache,sizeof(dsmlib_ds_desc_t),0,
-			__grow,__release) < 0)
+  if (l4slab_cache_init(&ds_desc_cache, sizeof(dsmlib_ds_desc_t), 0,
+			__grow, __release) < 0)
     {
-      ERROR("DSMlib: descriptor slab cache init failed!");
+      LOGdL(DEBUG_ERRORS, "DSMlib: descriptor slab cache init failed!");
       return -1;
     }
   
-  if (l4slab_cache_init(&client_desc_cache,sizeof(dsmlib_client_desc_t),
-			0,__grow,__release) < 0)
+  if (l4slab_cache_init(&client_desc_cache, sizeof(dsmlib_client_desc_t),
+			0, __grow, __release) < 0)
     {
-      ERROR("DSMlib: descriptor slab cache init failed!");
+      LOGdL(DEBUG_ERRORS, "DSMlib: descriptor slab cache init failed!");
       l4slab_destroy(&ds_desc_cache);
       return -1;
     }
@@ -187,5 +184,5 @@ dsmlib_alloc_client_desc(void)
 void
 dsmlib_free_client_desc(dsmlib_client_desc_t * desc)
 {
-  l4slab_free(&client_desc_cache,desc);
+  l4slab_free(&client_desc_cache, desc);
 }

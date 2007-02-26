@@ -9,6 +9,7 @@
 
 #include <l4/log/l4log.h>
 #include <stdio.h>
+#include <string.h>
 
 int main(void){
 	char buf[100];

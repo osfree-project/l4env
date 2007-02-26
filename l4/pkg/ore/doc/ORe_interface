@@ -1,0 +1,49 @@
+TODO:
+
+(I) Wir brauchen mindestens 2 Interfaces für ORe:
+    1. Interface: ore_string_ipc
+        --> verwendet zum senden und empfangen von daten
+            string ipc
+        --> einfach zu implementieren
+        --> sicherlich langsam
+
+    2. Interface: ore_shared_mem
+        --> Client und ORe kommunizieren über shared memory
+        --> wahrscheinlich effizient
+        --> evtl. aufwendige Synchronisationsmechanismen
+
+(II) Sende- und Empfangsoperationen zwischen Client und ORe _müssen_
+  asynchron sein. 
+
+(III) Die eigentliche Kommunikation zwischen Client und ORe soll von einer
+  Client-Lib gewrappt werden, die dem Client nach außen hin lediglich
+  eine send() und eine recv() Operation anbietet --> wie send() und
+  recv() implementiert sind, soll für die Anwendung transparent sein.
+  Die jeweilige Client-Lib entscheidet dann, ob sie shared_mem oder
+  string_ipc oder das eine fürs senden und das andere fürs Empfangen
+  benutzt.
+
+(IV) Um (II) zu realisieren, muss die Client-Lib eventuell die Möglichkeit
+  bieten, einen separaten Kommunikations-Thread zu starten. Der Thread-Start
+  sollte _NICHT_ von der Lib gemacht werden, sondern von der Anwendung.
+
+(V) Ggf. soll die Client-Lib blockierende und nicht-blockierende Sende- und
+  Empfangs-Operationen anbieten. In jedem Fall aber non-blocking.
+
+(VI) Was passiert, wenn in ORe ein Puffer überläuft?
+    --> Beim SEND: Fehlercode zurück geben, client versucht es später nochmal.
+    --> Beim RECV: Paket wegwerfen (Alex: "Wenn eine Anwendung mit dem Verlust
+        von Paketen nicht umgehen kann, dann ist sie es nicht wert, die 
+        Netzwerkkarte zu benutzen.")
+
+(VII) Um asynchrone Kommunikation zwischen Clients und ORe zu ermöglichen, auch
+  wenn der Client keinen eigenen Thread erübrigen möchte, sollte es eine
+  poll()-Operation geben.
+
+(VIII) Ein Client sollte in der Lage sein, mit 2 Instanzen von ORe zu 
+  kommunizieren. Szenario hierfür: L4-Anwendung, die zum einen mit realer
+  Hardware arbeitet und zum anderen mit einem L4Linux-Stub kommuniziert, welcher
+  ORe-Funktionalität für Linux-Anwendungen anbietet.
+
+(IX) Wir brauchen in L4Linux einen Treiber/Stub, welcher die ORe-Kommunikation
+  für Linux-Anwendungen ermöglicht. 

@@ -1,0 +1,28 @@
+#! /bin/bash
+
+UXRES=1024x768@16
+
+. ${0%/*}/generic.inc
+
+presentation="$1"
+
+if [ -z "$presentation" ];
+then
+  echo "$0 path/to/presentation.pres"
+  exit 1
+fi
+
+shift
+
+fiasco \
+	-G $UXRES \
+	-R ./rmgr-ux" $RMGR_ARGS task modname \"L4Linux task\"" \
+	-l names\ --events \
+	-l log \
+	-l events \
+	-l dm_phys\ --events \
+	-l fuxfprov -n9 \
+	-l l4dope-ux \
+	-l presenter-ux" $presentation" \
+	"$@"
+

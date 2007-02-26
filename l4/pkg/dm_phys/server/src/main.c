@@ -36,6 +36,7 @@
 #include "__dataspace.h"
 #include "__dm_phys.h"
 #include "__debug.h"
+#include "__events.h"
 
 /*****************************************************************************
  *** Global data
@@ -65,6 +66,11 @@ static int  verbose = 0;
  * Log tag
  */
 char LOG_tag[9] = "DMphys";
+
+/**
+ * Starting the events thread
+ */
+static int using_events = 0;
 
 /*****************************************************************************
  *** helpers
@@ -106,7 +112,7 @@ __get_num(char * input, long * num, char ** nextp)
   *num = strtol(input,&endp,0);
   if (*endp != 0)
     {
-      Error("DMphys: invalid number: \'%s\'!",input);
+      LOG_Error("DMphys: invalid number: \'%s\'!", input);
       return -1;
     }
 
@@ -135,30 +141,30 @@ __pool_config(int pool, char * str)
  
   if (str == NULL)
     {
-      Error("DMphys: invalid memory area description for pool %d",pool);
+      LOG_Error("DMphys: invalid memory area description for pool %d", pool);
       return;
     }
 
-  LOGdL(DEBUG_ARGS,"pool %d = %s:",pool,str);
+  LOGdL(DEBUG_ARGS, "pool %d = %s:", pool, str);
 
   /* pool size */
   if (__get_num(str,&num,&next) < 0)
     {
-      Error("DMphys: invalid size for pool %d: %s!",pool,str);
+      LOG_Error("DMphys: invalid size for pool %d: %s!", pool, str);
       return;
     }
   size = num;
 
   /* memory range low address */
   str = next;
-  if (__get_num(str,&num,&next) == 0)
+  if (__get_num(str, &num, &next) == 0)
     {
       /* memory range high address */
       low = num;
       str = next;
-      if (__get_num(str,&num,&next) < 0)
+      if (__get_num(str, &num, &next) < 0)
 	{
-	  Error("DMphys: invalid memory range for pool %d!",pool);
+	  LOG_Error("DMphys: invalid memory range for pool %d!", pool);
 	  return;
 	}
 
@@ -178,14 +184,14 @@ __pool_config(int pool, char * str)
 
 #if DEBUG_ARGS
   if (name != NULL)
-    printf("  size 0x%08x, low 0x%08x, high 0x%08x, name \'%s\'\n",
-           size,low,high,name);
+    LOG_printf(" size 0x%08x, low 0x%08x, high 0x%08x, name \'%s\'\n",
+           size, low, high, name);
   else
-    printf("  size 0x%08x, low 0x%08x, high 0x%08x\n",size,low,high);
+    LOG_printf(" size 0x%08x, low 0x%08x, high 0x%08x\n", size, low, high);
 #endif
 
   /* set pool memory area */
-  dmphys_memmap_set_pool_config(pool,size,low,high,name);
+  dmphys_memmap_set_pool_config(pool, size, low, high, name);
 }
 
 /*****************************************************************************/
@@ -205,34 +211,34 @@ __reserve(char * str)
   long      num;
 
   /* low address */
-  if (__get_num(str,&num,&nextp) < 0)
+  if (__get_num(str, &num, &nextp) < 0)
     {
-      Error("DMphys: invalid low address for reserve!");
+      LOG_Error("DMphys: invalid low address for reserve!");
       return;
     }
   low = num;
 
   /* high address */
   str = nextp;
-  if (__get_num(str,&num,&nextp) < 0)
+  if (__get_num(str, &num, &nextp) < 0)
     {
-      Error("DMphys: invalid high address for reserve!");
+      LOG_Error("DMphys: invalid high address for reserve!");
       return;
     }
   high = num;
 
   if (low >= high)
     {
-      Error("DMphys: invalid memory range for reserve (0x%08x-0x%08x)!",
-	    low,high);
+      LOG_Error("DMphys: invalid memory range for reserve (0x%08x-0x%08x)!",
+                low, high);
       return;
     }
 
-  LOGdL(DEBUG_ARGS,"reserve 0x%08x-0x%08x",low,high);
+  LOGdL(DEBUG_ARGS, "reserve 0x%08x-0x%08x", low, high);
 
   /* reserve */
   if (dmphys_memmap_reserve(low, high - low) < 0)
-    Error("DMphys: reserve memory area 0x%08x-0x%08x failed!",low,high);
+    LOG_Error("DMphys: reserve memory area 0x%08x-0x%08x failed!", low, high);
     
   /* done */
 }
@@ -265,43 +271,43 @@ __parse_command_line(int argc, char *argv[])
       {"rmgr",        0, 0, 'R'},
       {"no_4M_pages", 0, 0, 'n'},
       {"verbose",     0, 0, 'v'},
+      {"events",      0, 0, 'e'},
       {0, 0, 0, 0}
     };
 
   /* read command line arguments */
   while (1)
     {
-      c = getopt_long(argc,argv,"p:m:i:r:l:h:Rnv",
-		      long_options,NULL);
+      c = getopt_long(argc, argv, "p:m:i:r:l:h:Rnve", long_options, NULL);
       
-      if (c == -1)
+      if (c == (char) -1)
 	break;
 
 #if DEBUG_ARGS
       if (optarg)
-	LOGL("-%c=%s",c,optarg);
+	LOGL("-%c=%s", c, optarg);
       else
-	LOGL("-%c",c);
+	LOGL("-%c", c);
 #endif
 
       switch(c)
 	{
 	case 'p':
 	  /* memory pool configuration */
-	  if (__get_num(optarg,&num,&nextp) < 0)
-	    Error("DMphys: invalid pool number!");
+	  if (__get_num(optarg, &num, &nextp) < 0)
+	    LOG_Error("DMphys: invalid pool number!");
 	  else
-	    __pool_config(num,nextp);
+	    __pool_config(num, nextp);
 	  break;
 
 	case 'm':
 	  /* default memory pool */
-	  __pool_config(DMPHYS_MEM_DEFAULT_POOL,optarg);
+	  __pool_config(DMPHYS_MEM_DEFAULT_POOL, optarg);
 	  break;
 	  
 	case 'i':
 	  /* ISA DMA memory pool */
-	  __pool_config(DMPHYS_MEM_ISA_DMA_POOL,optarg);
+	  __pool_config(DMPHYS_MEM_ISA_DMA_POOL, optarg);
 	  break;
 
 	case 'r':
@@ -311,22 +317,22 @@ __parse_command_line(int argc, char *argv[])
 
 	case 'l':
 	  /* set memory map search low address */
-	  if (__get_num(optarg,&num,&nextp) < 0)
-	    Error("DMphys: invalid low address!");
+	  if (__get_num(optarg, &num, &nextp) < 0)
+	    LOG_Error("DMphys: invalid low address!");
 	  else
 	    {
-	      LOGdL(DEBUG_ARGS,"low address 0x%08x",num);
+	      LOGdL(DEBUG_ARGS, "low address 0x%08lx", num);
 	      dmphys_memmap_set_mem_low(num);
 	    }
 	  break;
 
 	case 'h':
 	  /* set memory map search high address */
-	  if (__get_num(optarg,&num,&nextp) < 0)
-	    Error("DMphys: invalid high address!");
+	  if (__get_num(optarg, &num, &nextp) < 0)
+	    LOG_Error("DMphys: invalid high address!");
 	  else
 	    {
-	      LOGdL(DEBUG_ARGS,"high address 0x%08x",num);
+	      LOGdL(DEBUG_ARGS, "high address 0x%08lx", num);
 	      dmphys_memmap_set_mem_high(num);
 	    }
 	  break;
@@ -339,19 +345,25 @@ __parse_command_line(int argc, char *argv[])
 
 	case 'n':
 	  /* don't use 4M pages */
-	  LOGdL(DEBUG_ARGS,"no 4M pages");
+	  LOGdL(DEBUG_ARGS, "no 4M pages");
 	  use_4M_pages = 0;
 	  break;
 
 	case 'v':
 	  /* verbose startup */
-	  LOGdL(DEBUG_ARGS,"verbose");
+	  LOGdL(DEBUG_ARGS, "verbose");
 	  verbose = 1;
+	  break;
+	  
+	case 'e':
+          /* listen to event server */
+	  LOGdL(DEBUG_ARGS, "events");
+	  using_events = 1;
 	  break;
 
 	default:
 	  /* invalid option */
-	  Error("DMphys: invalid option \'%c\'!",c);
+	  LOG_Error("DMphys: invalid option \'%c\'!", c);
 	}
     }
 }
@@ -367,7 +379,7 @@ static int
 __init(int argc, char **argv)
 {
   /* Sigma0 communication */
-  if (dmhys_sigma0_init() < 0)
+  if (dmphys_sigma0_init() < 0)
     return -1;
 
   /* initialize internal memory allocation */
@@ -386,10 +398,10 @@ __init(int argc, char **argv)
     return -1;
 
   /* parse command line */
-  __parse_command_line(argc,argv);
+  __parse_command_line(argc, argv);
 
   /* setup page pools */
-  if (dmphys_memmap_setup_pools(use_rmgr,use_4M_pages) < 0)
+  if (dmphys_memmap_setup_pools(use_rmgr, use_4M_pages) < 0)
     return -1;
   
   /* initialize internal dataspace descriptor handling */
@@ -400,7 +412,7 @@ __init(int argc, char **argv)
     {
       /* show DMphys information */
       dmphys_memmap_show();
-      printf("\n");
+      LOG_printf("\n");
       dmphys_pages_dump_used_pools();
     }
 
@@ -435,7 +447,11 @@ main(int argc, char **argv)
       Panic("DMphys: can't register at nameserver");
       return -1;
     }
-      
+  
+  /* start thread waiting for exit events */
+  if (using_events)
+    init_events();
+  
   /* start server loop */
   if_l4dm_memphys_server_loop(NULL);
 

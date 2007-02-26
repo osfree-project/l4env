@@ -42,7 +42,7 @@
 /*----------------------------- Implementation ----------------------------*/
 
 /* opcode=0xd8 */
-void x86emuOp_esc_coprocess_d8(void)
+void x86emuOp_esc_coprocess_d8(u8 X86EMU_UNUSED(op1))
 {
     START_OF_INSTR();
     DECODE_PRINTF("ESC D8\n");
@@ -92,11 +92,11 @@ static char *x86emu_fpu_op_d9_tab1[] = {
 #endif /* DEBUG */
 
 /* opcode=0xd9 */
-void x86emuOp_esc_coprocess_d9(void)
+void x86emuOp_esc_coprocess_d9(u8 X86EMU_UNUSED(op1))
 {
     int mod, rl, rh;
-	uint destoffset;
-    u8 stkelem;
+    uint destoffset = 0;
+    u8 stkelem = 0;
 
     START_OF_INSTR();
     FETCH_DECODE_MODRM(mod, rh, rl);
@@ -289,6 +289,9 @@ void x86emuOp_esc_coprocess_d9(void)
             }
         }
     }
+#else
+    (void)destoffset;
+    (void)stkelem;
 #endif /* X86EMU_FPU_PRESENT */
     DECODE_CLEAR_SEGOVR();
     END_OF_INSTR_NO_TRACE();
@@ -319,11 +322,11 @@ char *x86emu_fpu_op_da_tab[] = {
 #endif /* DEBUG */
 
 /* opcode=0xda */
-void x86emuOp_esc_coprocess_da(void)
+void x86emuOp_esc_coprocess_da(u8 X86EMU_UNUSED(op1))
 {
     int mod, rl, rh;
-	uint destoffset;
-    u8 stkelem;
+    uint destoffset = 0;
+    u8 stkelem = 0;
 
     START_OF_INSTR();
     FETCH_DECODE_MODRM(mod, rh, rl);
@@ -379,6 +382,9 @@ void x86emuOp_esc_coprocess_da(void)
             break;
         }
     }
+#else
+    (void)destoffset;
+    (void)stkelem;
 #endif
     DECODE_CLEAR_SEGOVR();
     END_OF_INSTR_NO_TRACE();
@@ -400,10 +406,10 @@ char *x86emu_fpu_op_db_tab[] = {
 #endif /* DEBUG */
 
 /* opcode=0xdb */
-void x86emuOp_esc_coprocess_db(void)
+void x86emuOp_esc_coprocess_db(u8 X86EMU_UNUSED(op1))
 {
     int mod, rl, rh;
-	uint destoffset;
+    uint destoffset = 0;
 
     START_OF_INSTR();
     FETCH_DECODE_MODRM(mod, rh, rl);
@@ -499,6 +505,8 @@ void x86emuOp_esc_coprocess_db(void)
             break;
         }
     }
+#else
+    (void)destoffset;
 #endif
     DECODE_CLEAR_SEGOVR();
     END_OF_INSTR_NO_TRACE();
@@ -527,11 +535,11 @@ char *x86emu_fpu_op_dc_tab[] = {
 #endif /* DEBUG */
 
 /* opcode=0xdc */
-void x86emuOp_esc_coprocess_dc(void)
+void x86emuOp_esc_coprocess_dc(u8 X86EMU_UNUSED(op1))
 {
     int mod, rl, rh;
-	uint destoffset;
-    u8 stkelem;
+    uint destoffset = 0;
+    u8 stkelem = 0;
 
     START_OF_INSTR();
     FETCH_DECODE_MODRM(mod, rh, rl);
@@ -613,6 +621,9 @@ void x86emuOp_esc_coprocess_dc(void)
             break;
         }
     }
+#else
+    (void)destoffset;
+    (void)stkelem;
 #endif
     DECODE_CLEAR_SEGOVR();
     END_OF_INSTR_NO_TRACE();
@@ -637,11 +648,11 @@ static char *x86emu_fpu_op_dd_tab[] = {
 #endif /* DEBUG */
 
 /* opcode=0xdd */
-void x86emuOp_esc_coprocess_dd(void)
+void x86emuOp_esc_coprocess_dd(u8 X86EMU_UNUSED(op1))
 {
     int mod, rl, rh;
-	uint destoffset;
-    u8 stkelem;
+    uint destoffset = 0;
+    u8 stkelem = 0;
 
     START_OF_INSTR();
     FETCH_DECODE_MODRM(mod, rh, rl);
@@ -713,6 +724,9 @@ void x86emuOp_esc_coprocess_dd(void)
             break;
         }
     }
+#else
+    (void)destoffset;
+    (void)stkelem;
 #endif
     DECODE_CLEAR_SEGOVR();
     END_OF_INSTR_NO_TRACE();
@@ -744,11 +758,11 @@ static char *x86emu_fpu_op_de_tab[] =
 #endif /* DEBUG */
 
 /* opcode=0xde */
-void x86emuOp_esc_coprocess_de(void)
+void x86emuOp_esc_coprocess_de(u8 X86EMU_UNUSED(op1))
 {
     int mod, rl, rh;
-	uint destoffset;
-    u8 stkelem;
+    uint destoffset = 0;
+    u8 stkelem = 0;
 
     START_OF_INSTR();
     FETCH_DECODE_MODRM(mod, rh, rl);
@@ -832,6 +846,9 @@ void x86emuOp_esc_coprocess_de(void)
             break;
         }
     }
+#else
+    (void)destoffset;
+    (void)stkelem;
 #endif
     DECODE_CLEAR_SEGOVR();
     END_OF_INSTR_NO_TRACE();
@@ -863,11 +880,11 @@ static char *x86emu_fpu_op_df_tab[] = {
 #endif /* DEBUG */
 
 /* opcode=0xdf */
-void x86emuOp_esc_coprocess_df(void)
+void x86emuOp_esc_coprocess_df(u8 X86EMU_UNUSED(op1))
 {
     int mod, rl, rh;
-	uint destoffset;
-    u8 stkelem;
+    uint destoffset = 0;
+    u8 stkelem = 0;
 
     START_OF_INSTR();
     FETCH_DECODE_MODRM(mod, rh, rl);
@@ -939,6 +956,9 @@ void x86emuOp_esc_coprocess_df(void)
             break;
         }
     }
+#else
+    (void)destoffset;
+    (void)stkelem;
 #endif
     DECODE_CLEAR_SEGOVR();
     END_OF_INSTR_NO_TRACE();

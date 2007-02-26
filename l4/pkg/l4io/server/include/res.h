@@ -25,21 +25,20 @@ void callback_announce_mem_region(unsigned long, unsigned long);
 int callback_handle_pci_device(unsigned short vendor, unsigned short device);
 int add_device_inclusion(const char*s);
 int add_device_exclusion(const char*s);
+int bios_map_area(unsigned long *);
+void * bios_phys_to_virt(unsigned long);
 
 /* IO port space */
-#define MAX_IO_PORTS	0xffff	/**< 64K IO ports */
+#define MAX_IO_PORTS   0xffff  /**< 64K IO ports */
 /* IO memory space */
-#define MAX_IO_MEMORY	0xffffffff	/**< some GB IO memory;
-					 * remember: physically addressed */
+#define MAX_IO_MEMORY  0xffffffff
+                               /**< some GB IO memory;
+                                * remember: physically addressed */
 /* ISA DMA */
-#define MAX_ISA_DMA	8	/**< 8 DMA channels */
+#define MAX_ISA_DMA    8       /**< 8 DMA channels */
 
 #ifndef NO_DOX
-#ifdef DEBUG
 void list_res(void);
-#else
-#define list_res()
-#endif
 #endif
 
 #endif

@@ -56,6 +56,9 @@ class exc_obj_t : public dsc_obj_t,
     inline void set_client(l4_threadid_t client)
       { client_tid = client; }
 
+    inline l4_threadid_t get_client(void)
+      { return client_tid; }
+
     int relocate(l4_addr_t reloc_addr, l4env_infopage_t *env);
     int set_section_type(l4_uint16_t type, l4env_infopage_t *env);
     
@@ -116,7 +119,7 @@ class exc_obj_t : public dsc_obj_t,
 #define EO_SHARE		0x00000004  /**< share sections of exec obj */
 #define EO_LOAD_SYMBOLS		0x00000008  /**< hold symbols */
 #define EO_LOAD_LINES		0x00000010  /**< hold lines */
-#define EO_DIRECT_MAP		0x00000020  /**< program sections direct map'd */
+#define EO_DIRECT_MAP		0x00000020  /**< prog sections direct map'd */
 
     int not_valid;
 

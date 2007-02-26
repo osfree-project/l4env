@@ -13,17 +13,22 @@
  * COPYING file for details.
  */
 
-#include "dopestd.h"
+/*** LINUX INCLUDES ***/
+#include <pthread.h>
+
+/*** DOpE INCLUDES ***/
+#include <dopeapp-server.h>
 #include "dopelib.h"
+
+/*** LOCAL INCLUDES ***/
 #include "listener.h"
 #include "sync.h"
-#include <dopeapp-server.h>
-#include <pthread.h>
+#include "dopestd.h"
 
 extern int get_free_port(void);
 
 static char *listener_ident;
-static struct dopelib_mutex *listener_init_mutex;
+static struct dopelib_sem *listener_init_sem;
 
 static void *listener_thread(void *arg) {
 	char listener_ident_buf[128];
@@ -36,7 +41,7 @@ static void *listener_thread(void *arg) {
 	listener_env.srv_port = listener_port;
 	listener_env.user_data = arg;
 	
-	dopelib_unlock_mutex(listener_init_mutex);
+	dopelib_sem_post(listener_init_sem);
 	dopeapp_listener_server_loop(&listener_env);
 	return NULL;
 }
@@ -46,14 +51,14 @@ char *dopelib_start_listener(long id) {
 	pthread_t listener_tid;
 	
 	/* start action listener */
-	listener_init_mutex = dopelib_create_mutex(1);
+	listener_init_sem = dopelib_sem_create(1);
 	INFO(printf("DOpElib(dopelib_start_listener): creating server thread\n"));
 	pthread_create(&listener_tid,NULL,listener_thread,(void *)id);
 	INFO(printf("DOpElib(dopelib_start_listener): created.\n"));
-	dopelib_lock_mutex(listener_init_mutex);
+	dopelib_sem_wait(listener_init_sem);
 	INFO(printf("DOpElib(dopelib_start_listener): listener_ident = %s\n",listener_ident);)
-	dopelib_destroy_mutex(listener_init_mutex);
-	listener_init_mutex = NULL;
+	dopelib_sem_destroy(listener_init_sem);
+	listener_init_sem = NULL;
 	
 	INFO(printf("DOpElib(dopelib_start_listener): finished.\n");)
 	return listener_ident;

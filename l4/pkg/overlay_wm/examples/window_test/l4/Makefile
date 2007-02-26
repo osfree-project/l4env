@@ -3,7 +3,7 @@ PKGDIR          ?= ../../..
 L4DIR           ?= $(PKGDIR)/../..
 
 TARGET           = testovlwindow
-DEFAULT_RELOC    = 0x00880000
+DEFAULT_RELOC    = 0x00980000
 
 SRC_C            = main.c
 LIBS             = -ll4ovlwindow

@@ -9,20 +9,26 @@
 #include "terminate.h"
 
 
-void __assert_fail (const char *__assertion, const char *__file,
-		    unsigned int __line, const char *__function)
+void
+__assert_fail (const char *__assertion, const char *__file,
+	       unsigned int __line)
 {
-  Kconsole::console()->gzip_disable();
+  // make sure that GZIP mode is off
+  Kconsole::console()->end_exclusive(Console::GZIP);
 
-  printf("Assertion failed: %s:%i in function %s '%s'\n",__file,
-	 __line,__function,__assertion);
+  printf("\nAssertion failed: '%s'\n"
+	 "  in %s:%i\n"
+	 "  at "L4_PTR_FMT"\n",
+	 __assertion, __file, __line, (Address)__builtin_return_address(0));
 
   terminate(1);
 }
 
-void panic (const char *format, ...)
+void
+panic (const char *format, ...)
 {
-  Kconsole::console()->gzip_disable();
+  // make sure that GZIP mode is off
+  Kconsole::console()->end_exclusive(Console::GZIP);
 
   va_list args;
 
@@ -34,4 +40,3 @@ void panic (const char *format, ...)
 
   terminate (EXIT_FAILURE);
 }
-

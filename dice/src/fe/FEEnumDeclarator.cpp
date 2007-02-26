@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEEnumDeclarator.cpp
- *	\brief	contains the implementation of the class CFEEnumDeclarator
+ *    \file    dice/src/fe/FEEnumDeclarator.cpp
+ *    \brief   contains the implementation of the class CFEEnumDeclarator
  *
- *	\date	06/08/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    06/08/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -29,43 +30,35 @@
 #include "fe/FEExpression.h"
 #include "File.h"
 
-IMPLEMENT_DYNAMIC(CFEEnumDeclarator) 
-
 CFEEnumDeclarator::CFEEnumDeclarator(CFEEnumDeclarator & src)
 :CFEDeclarator(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEEnumDeclarator, CFEDeclarator);
-
     m_pInitialValue = (CFEExpression *) (src.m_pInitialValue->Clone());
 }
 
 CFEEnumDeclarator::CFEEnumDeclarator()
-:CFEDeclarator(DECL_ENUM, String())
+:CFEDeclarator(DECL_ENUM, string())
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEEnumDeclarator, CFEDeclarator);
-
     m_pInitialValue = 0;
 }
 
-CFEEnumDeclarator::CFEEnumDeclarator(String sName, CFEExpression * pInitialValue)
+CFEEnumDeclarator::CFEEnumDeclarator(string sName, CFEExpression * pInitialValue)
 :CFEDeclarator(DECL_ENUM, sName)
 {
-    IMPLEMENT_DYNAMIC_BASE(CFEEnumDeclarator, CFEDeclarator);
-
     m_pInitialValue = pInitialValue;
     if (m_pInitialValue)
-	m_pInitialValue->SetParent(this);
+    m_pInitialValue->SetParent(this);
 }
 
 /** cleans up the declarator object */
 CFEEnumDeclarator::~CFEEnumDeclarator()
 {
     if (m_pInitialValue)
-	delete m_pInitialValue;
+    delete m_pInitialValue;
 }
 
-/**	\brief creates a copy of this object
- *	\return a reference to a new object
+/**    \brief creates a copy of this object
+ *    \return a reference to a new object
  */
 CObject *CFEEnumDeclarator::Clone()
 {
@@ -73,7 +66,7 @@ CObject *CFEEnumDeclarator::Clone()
 }
 
 /** serializes this object
- *	\param pFile the file to serialize to/from
+ *    \param pFile the file to serialize to/from
  */
 void CFEEnumDeclarator::Serialize(CFile * pFile)
 {
@@ -81,7 +74,7 @@ void CFEEnumDeclarator::Serialize(CFile * pFile)
     {
         pFile->PrintIndent("<enum_declarator>\n");
         pFile->IncIndent();
-        pFile->PrintIndent("<name>%s</name>\n", (const char *) GetName());
+        pFile->PrintIndent("<name>%s</name>\n", GetName().c_str());
         if (m_pInitialValue)
         {
             pFile->PrintIndent("<value>\n");

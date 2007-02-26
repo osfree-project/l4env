@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/v2/L4V2BECallFunction.cpp
+ *    \brief   contains the implementation of the class CL4V2BECallFunction
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -29,12 +36,10 @@
  **/
 class CL4V2BECallFunction : public CL4BECallFunction
 {
-DECLARE_DYNAMIC(CL4V2BECallFunction);
-
 public:
-    /** creates the call IPC object */
-	CL4V2BECallFunction();
-	~CL4V2BECallFunction();
+    /** creates the call function object */
+    CL4V2BECallFunction();
+    virtual ~CL4V2BECallFunction();
 
 protected:
     virtual void WriteUnmarshalling(CBEFile * pFile,  int nStartOffset,  bool & bUseConstOffset,  CBEContext * pContext);

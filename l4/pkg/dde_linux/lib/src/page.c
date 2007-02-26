@@ -35,11 +35,17 @@
 #include <l4/dde_linux/dde.h>
 
 /* Linux */
+#include <asm/page.h>
 #include <linux/mm.h>
 
 /* local */
 #include "__config.h"
 #include "internal.h"
+
+#include "fastcall.h"
+
+/** XXX Dummy Page structure */
+struct page l4dde_dummy_page;
 
 /** Allocate Free Memory Pages
  * \ingroup mod_mm_p
@@ -53,7 +59,7 @@
  *
  * \todo Physical alignment is not yet ensured.
  */
-unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
+unsigned long FASTCALL(__get_free_pages(unsigned int gfp_mask, unsigned int order))
 {
   int error, pages;
   l4_addr_t page;
@@ -63,14 +69,12 @@ unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
   l4dm_mem_addr_t dm_paddr;
 
   if (gfp_mask & GFP_DMA)
-    DMSG("Warning: No ISA DMA memory zone implemented.\n");
+    LOGd(DEBUG_MSG, "Warning: No ISA DMA memory zone implemented.");
 
   size = L4_PAGESIZE << order;
   pages = 1 << order;
 
-#if DEBUG_PALLOC
-  DMSG("requesting %d page(s) (pages)\n", pages);
-#endif
+  LOGd(DEBUG_PALLOC, "requesting %d page(s) (pages)\n", pages);
 
   /* open and attach new dataspace */
   page = (l4_addr_t) \
@@ -80,7 +84,7 @@ unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
                             "dde pages");
   if (!page)
     {
-      ERROR("allocating pages");
+      LOGdL(DEBUG_ERRORS, "Error: allocating pages");
       return 0;
     }
 
@@ -89,17 +93,15 @@ unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
     {
       if (error>1 || !error)
         Panic("Ouch, what's that?");
-      ERROR("getting physical address (%d)", error);
+      LOGdL(DEBUG_ERRORS, "Error: getting physical address (%d)", error);
       return 0;
     }
 
   /* address info */
   address_add_region(page, dm_paddr.addr, size);
 
-#if DEBUG_PALLOC
-  DMSG("allocated %d pages @ 0x%08x (phys. 0x%08x)\n",
+  LOGd(DEBUG_PALLOC, "allocated %d pages @ 0x%08x (phys. 0x%08x)",
        pages, page, dm_paddr.addr);
-#endif
 
   return (unsigned long) page;
 }
@@ -111,7 +113,7 @@ unsigned long __get_free_pages(unsigned int gfp_mask, unsigned int order)
  *
  * \return 0 on error, start address otherwise
  */
-unsigned long get_zeroed_page(unsigned int gfp_mask)
+unsigned long FASTCALL(get_zeroed_page(unsigned int gfp_mask))
 {
   unsigned long page = __get_free_pages(gfp_mask, 0);
 
@@ -133,7 +135,7 @@ unsigned long get_zeroed_page(unsigned int gfp_mask)
  *
  * \todo implementation
  */
-void free_pages(unsigned long addr, unsigned int order)
+void FASTCALL(free_pages(unsigned long addr, unsigned int order))
 {
-  Error("%s for 2^%d pages not implemented", __FUNCTION__, order);
+  LOG_Error("%s for 2^%d pages not implemented", __FUNCTION__, order);
 }

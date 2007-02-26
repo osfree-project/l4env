@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEMarshaller.h
- *	\brief	contains the declaration of the class CBEMarshaller
+ *    \file    dice/src/be/BEMarshaller.h
+ *    \brief    contains the declaration of the class CBEMarshaller
  *
- *	\date	05/08/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    05/08/2002
+ *    \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,7 +31,8 @@
 #define __DICE_BEMARSHALLER_H__
 
 #include <be/BEObject.h>
-#include <Vector.h>
+#include <vector>
+using namespace std;
 
 #include "be/BEDeclarator.h" // needed for declarator-stack
 
@@ -45,11 +47,10 @@ class CBEType;
  */
 class CBEMarshaller : public CBEObject
 {
-DECLARE_DYNAMIC(CBEMarshaller);
 public:
     /** \brief constructor of marshaller */
-	CBEMarshaller();
-	~CBEMarshaller();
+    CBEMarshaller();
+    virtual ~CBEMarshaller();
 
     virtual int Marshal(CBEFile *pFile, CBEFunction *pFunction, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
     virtual int Marshal(CBEFile *pFile, CBEFunction * pFunction, int nFEType, int nNumber, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
@@ -60,7 +61,7 @@ public:
     virtual int Unmarshal(CBEFile * pFile, CBETypedDeclarator * pParameter, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext * pContext);
     virtual bool MarshalToPosition(CBEFile *pFile, CBEFunction *pFunction, int nPosition, int nPosSize, int nDirection, bool bWrite, CBEContext *pContext);
     virtual bool MarshalToPosition(CBEFile *pFile, CBETypedDeclarator *pParameter,  int nPosition,  int nPosSize,  int nCurSize,  bool bWrite,  CBEContext * pContext);
-	virtual bool TestPositionSize(CBEFunction *pFunction, int nPosSize, int nDirection, bool bAllowSmaller, bool bAllowLarger, int nNumber, CBEContext *pContext);
+    virtual bool TestPositionSize(CBEFunction *pFunction, int nPosSize, int nDirection, bool bAllowSmaller, bool bAllowLarger, int nNumber, CBEContext *pContext);
 
 protected: // Protected attributes
   /** \var CBEFile *m_pFile
@@ -75,10 +76,10 @@ protected: // Protected attributes
    *  \brief the type of the currently marshalled variable
    */
   CBEType *m_pType;
-  /** \var Vector m_vDeclaratorStack
+  /** \var vector<CDeclaratorStackLocation*> m_vDeclaratorStack
    *  \brief the declarator stack for the marshalled parameter
    */
-  CDeclaratorStack m_vDeclaratorStack;
+  vector<CDeclaratorStackLocation*> m_vDeclaratorStack;
   /** \var CBETypedDeclarator *m_pParameter
    *  \brief a reference to the top parameter (used to find attributes)
    */
@@ -91,28 +92,37 @@ protected: // Protected attributes
 protected: // Protected methods
     virtual int MarshalDeclarator(CBEType *pType, int nStartOffset, bool& bUseConstOffset, bool bIncOffsetVariable, bool bLastParameter, CBEContext *pContext);
     virtual int MarshalUnion(CBEUnionType *pType, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext *pContext);
+    virtual int MarshalCUnion(CBEUnionType *pType, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext *pContext);
     virtual int MarshalStruct(CBEStructType *pType, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext *pContext);
     virtual int MarshalArray(CBEType *pType, int nStartOffset, bool& bUseConstOffset, bool bLastParameter, CBEContext *pContext);
-    virtual void WriteBuffer(CBEType *pType, int nStartOffset, bool& bUseConstOffset, bool bDereferencePosition, CBEContext *pContext);
     virtual int MarshalString(CBEType *pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext *pContext);
-	virtual int MarshalConstArray(CBEType *pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, VectorElement *pIter, int nLevel, CBEContext *pContext);
+    virtual int MarshalConstArray(CBEType *pType,
+        int nStartOffset,
+        bool & bUseConstOffset,
+        bool bLastParameter,
+        vector<CBEExpression*>::iterator iter,
+        int nLevel,
+        CBEContext *pContext);
     virtual int MarshalVariableArray(CBEType * pType, int nStartOffset, bool & bUseConstOffset, bool bLastParameter, CBEContext * pContext);
     virtual int MarshalValue(int nBytes, int nValue, int nStartOffset, bool & bUseConstOffset, bool bIncOffsetVariable, CBEContext * pContext);
-	virtual int MarshalBitfieldStruct(CBEStructType * pType, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
-    virtual void WriteBuffer(String sTypeName, int nStartOffset, bool & bUseConstOffset, bool bDereferencePosition, CBEContext * pContext);
+    virtual int MarshalBitfieldStruct(CBEStructType * pType, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext);
+    virtual void WriteBuffer(CBEType *pType, int nStartOffset, bool& bUseConstOffset, bool bDereferencePosition, bool bCast, CBEContext *pContext);
+    virtual void WriteBuffer(string sTypeName, int nStartOffset, bool & bUseConstOffset, bool bDereferencePosition, bool bCast, CBEContext * pContext);
 
     virtual bool MarshalDeclaratorToPosition(CBEType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
-	virtual bool MarshalArrayToPosition(CBEType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
-	virtual bool MarshalConstArrayToPosition(CBEType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, VectorElement *pIter, int nLevel, CBEContext *pContext);
-	virtual bool MarshalStructToPosition(CBEStructType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
-	virtual bool MarshalUnionToPosition(CBEUnionType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
+    virtual bool MarshalArrayToPosition(CBEType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
+    virtual bool MarshalConstArrayToPosition(CBEType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, vector<CBEExpression*>::iterator iter, int nLevel, CBEContext *pContext);
+    virtual bool MarshalStructToPosition(CBEStructType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
+    virtual bool MarshalUnionToPosition(CBEUnionType *pType, int nStartSize, int nPosition, int nPosSize, bool bWrite, CBEContext *pContext);
 
-	virtual bool TestPositionSize(CBETypedDeclarator* pParameter, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
-	virtual bool TestDeclaratorPositionSize(CBEType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
-	virtual bool TestArrayPositionSize(CBEType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
-	virtual bool TestConstArrayPositionSize(CBEType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, VectorElement *pIter, int nLevel, CBEContext *pContext);
-	virtual bool TestStructPositionSize(CBEStructType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
-	virtual bool TestUnionPositionSize(CBEUnionType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
+    virtual bool TestPositionSize(CBETypedDeclarator* pParameter, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
+    virtual bool TestDeclaratorPositionSize(CBEType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
+    virtual bool TestArrayPositionSize(CBEType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
+    virtual bool TestConstArrayPositionSize(CBEType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, vector<CBEExpression*>::iterator iter, int nLevel, CBEContext *pContext);
+    virtual bool TestStructPositionSize(CBEStructType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
+    virtual bool TestUnionPositionSize(CBEUnionType* pType, int nPosSize, bool bAllowSmaller, bool bAllowLarger, CBEContext *pContext);
+
+    virtual void WriteAssignment(CBEType *pType, int nStartOffset, bool &bUseConstOffset, int nAlignment, CBEContext *pContext);
 };
 
 #endif  // !__DICE_BEMARSHALLER_H__

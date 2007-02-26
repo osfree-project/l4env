@@ -7,6 +7,7 @@
 #include <l4/sys/kdebug.h>
 #include <l4/sys/syscalls.h>
 #include <l4/util/util.h>
+#include <l4/util/l4_macros.h>
 
 #include <stdio.h>
 
@@ -19,9 +20,7 @@ main(void)
     {
       l4_threadid_t myself = l4_myself();
       
-      printf("Hello World, I am %x.%x!\n", 
-	  myself.id.task, myself.id.lthread);
-
+      printf("Hello World, I am "l4util_idfmt"!\n", l4util_idstr(myself));
       l4_sleep(2000);
     }
 

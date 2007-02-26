@@ -4,8 +4,8 @@ noinst_LIBRARIES=	libgcc_cxx.a
 libgcc_cxx_a_SOURCES=	parser.yy \
 			scanner.ll 
 
-LFLAGS=         -Pgcc_cxx -d -o$(LEX_OUTPUT_ROOT).c
-YFLAGS=		-pgcc_cxx -d -v
+AM_LFLAGS=         -Pgcc_cxx -d -o$(LEX_OUTPUT_ROOT).c
+AM_YFLAGS=		-pgcc_cxx -d -v
 
 CLEANFILES=             parser.cc $(LEX_OUTPUT_ROOT).cc \
 			scanner.cc scanner.h y.output

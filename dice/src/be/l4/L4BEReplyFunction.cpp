@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/L4BEReplyFunction.cpp
+ *    \brief   contains the implementation of the class CL4BEReplyFunction
+ *
+ *    \date    02/07/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -26,22 +33,19 @@
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BEType.h"
+#include "be/BEDeclarator.h"
 
 #include "TypeSpec-Type.h"
-#include "fe/FEAttribute.h"
-
-IMPLEMENT_DYNAMIC(CL4BEReplyFunction);
+#include "Attribute-Type.h"
 
 CL4BEReplyFunction::CL4BEReplyFunction()
  : CBEReplyFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEReplyFunction, CBEReplyFunction);
 }
 
 CL4BEReplyFunction::CL4BEReplyFunction(CL4BEReplyFunction& src)
 : CBEReplyFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEReplyFunction, CBEReplyFunction);
 }
 
 /** destroy the object */
@@ -49,20 +53,19 @@ CL4BEReplyFunction::~CL4BEReplyFunction()
 {
 }
 
-/**	\brief writes the invocation of the message transfer
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the invocation of the message transfer
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * In L4 this is a send. Do not set size dope, because the size dope is set by
  * the server (wait-any function).
  */
 void CL4BEReplyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
-    int nSendDirection = GetSendDirection();
-	bool bHasSizeIsParams = (GetParameterCount(ATTR_SIZE_IS, ATTR_REF, nSendDirection) > 0) ||
-	    (GetParameterCount(ATTR_LENGTH_IS, ATTR_REF, nSendDirection) > 0);
     // set size and send dopes
-    ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSendDopeInit(pFile, nSendDirection, bHasSizeIsParams, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SEND, GetSendDirection(), pContext);
 
     // invocate
     WriteIPC(pFile, pContext);
@@ -70,9 +73,9 @@ void CL4BEReplyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 }
 
 
-/**	\brief tests if this IPC was successful
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief tests if this IPC was successful
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * The IPC error check tests the result code of the IPC, whether the reply operation had any errors.
  *
@@ -80,13 +83,15 @@ void CL4BEReplyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
  */
 void CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pContext)
 {
-    if (!m_sErrorFunction.IsEmpty())
+    if (!m_sErrorFunction.empty())
     {
-        String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
+        string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
         pFile->PrintIndent("/* test for IPC errors */\n");
-        pFile->PrintIndent("if (L4_IPC_IS_ERROR(%s))\n", (const char *) sResult);
+        pFile->PrintIndent("if (L4_IPC_IS_ERROR(%s))\n", sResult.c_str());
         pFile->IncIndent();
-        pFile->PrintIndent("%s(%s);\n", (const char*)m_sErrorFunction, (const char*)sResult);
+        *pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
+        WriteCallParameter(pFile, m_pCorbaEnv, pContext);
+        *pFile << ");\n";
         pFile->DecIndent();
     }
 }
@@ -98,16 +103,19 @@ void CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile * pFile, CBEContext * pConte
 void CL4BEReplyFunction::WriteIPC(CBEFile *pFile, CBEContext *pContext)
 {
     assert(m_pComm);
-	((CL4BEIPC*)m_pComm)->WriteSend(pFile, this, pContext);
+    m_pComm->WriteReply(pFile, this, pContext);
 }
 
-/** \brief decides whether two parameters should be exchanged during sort (moving 1st behind 2nd)
+/** \brief decides whether two parameters should be exchanged during sort
  *  \param pPrecessor the 1st parameter
  *  \param pSuccessor the 2nd parameter
- *  \param pContext the context of the sorting
- *  \return true if parameters should be exchanged
+ *    \param pContext the context of the sorting
+ *  \return true if parameters 1st is smaller than 2nd
  */
-bool CL4BEReplyFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext * pContext)
+bool
+CL4BEReplyFunction::DoExchangeParameters(CBETypedDeclarator * pPrecessor,
+    CBETypedDeclarator * pSuccessor,
+    CBEContext *pContext)
 {
     if (!(pPrecessor->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
         pSuccessor->GetType()->IsOfType(TYPE_FLEXPAGE))
@@ -119,19 +127,24 @@ bool CL4BEReplyFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBETy
         return false;
     // if the 1st parameter is the return variable, we cannot exchange it, because
     // we make assumptions about its position in the message buffer
-    String sReturn = pContext->GetNameFactory()->GetReturnVariable(pContext);
-    if (pPrecessor->FindDeclarator(sReturn))
-        return false;
-    // if successor is return variable (should not occur) move it forward
-    if (pSuccessor->FindDeclarator(sReturn))
-        return true;
+    if (m_pReturnVar)
+    {
+        vector<CBEDeclarator*>::iterator iterRet = m_pReturnVar->GetFirstDeclarator();
+        CBEDeclarator *pDecl = *iterRet;
+
+        if (pPrecessor->FindDeclarator(pDecl->GetName()))
+            return false;
+        // if successor is return variable (should not occur) move it forward
+        if (pSuccessor->FindDeclarator(pDecl->GetName()))
+            return true;
+    }
     // nothing special, return base class' decision
-    return CBEReplyFunction::DoSortParameters(pPrecessor, pSuccessor, pContext);
+    return CBEReplyFunction::DoExchangeParameters(pPrecessor, pSuccessor, pContext);
 }
 
-/**	\brief writes the variable declarations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the variable declarations of this function
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * The variable declarations of the reply and receive function only contains so-called helper variables.
  * This is the result variable and marshalling helpers (offset or similar).
@@ -142,8 +155,20 @@ void CL4BEReplyFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * 
     CBEReplyFunction::WriteVariableDeclaration(pFile, pContext);
 
     // write result variable
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    pFile->PrintIndent("l4_msgdope_t %s = { msgdope: 0};\n", (const char *) sResult);
+    string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
+    pFile->PrintIndent("l4_msgdope_t %s = { msgdope: 0};\n", sResult.c_str());
+
+    // we might need the offset variables if we transmit [ref] attributes,
+    // because strings are found in message buffer by offset calculation
+    // if message buffer is at server side.
+    if (!HasVariableSizedParameters() && !HasArrayParameters() &&
+        FindParameterAttribute(ATTR_REF))
+    {
+        string sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+        string sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+        *pFile << "\tunsigned " << sTmpVar << " __attribute__ ((unused));\n";
+        *pFile << "\tunsigned " << sOffsetVar << " __attribute__ ((unused));\n";
+    }
 }
 
 /** \brief init message buffer size dope
@@ -153,5 +178,44 @@ void CL4BEReplyFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * 
 void CL4BEReplyFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
     CBEReplyFunction::WriteVariableInitialization(pFile, pContext);
-    ((CL4BEMsgBufferType*)m_pMsgBuffer)->WriteSizeDopeInit(pFile, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, TYPE_MSGDOPE_SIZE, 0, pContext);
+}
+
+/** \brief calculates the size of the function's parameters
+ *  \param nDirection the direction to count
+ *  \param pContext the context of this calculation
+ *  \return the size of the parameters
+ *
+ * If we recv flexpages, remove the exception size again, since either the
+ * flexpage or the exception is sent.
+ */
+int CL4BEReplyFunction::GetSize(int nDirection, CBEContext *pContext)
+{
+    // get base class' size
+    int nSize = CBEReplyFunction::GetSize(nDirection, pContext);
+    if ((nDirection & DIRECTION_OUT) &&
+        !FindAttribute(ATTR_NOEXCEPTIONS) &&
+        (GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
+        nSize -= pContext->GetSizes()->GetExceptionSize();
+    return nSize;
+}
+
+/** \brief calculates the size of the function's fixed-sized parameters
+ *  \param nDirection the direction to count
+ *  \param pContext the context of this calculation
+ *  \return the size of the parameters
+ *
+ * If we recv flexpages, remove the exception size again, since either the
+ * flexpage or the exception is sent.
+ */
+int CL4BEReplyFunction::GetFixedSize(int nDirection, CBEContext *pContext)
+{
+    int nSize = CBEReplyFunction::GetFixedSize(nDirection, pContext);
+    if ((nDirection & DIRECTION_OUT) &&
+        !FindAttribute(ATTR_NOEXCEPTIONS) &&
+        (GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
+        nSize -= pContext->GetSizes()->GetExceptionSize();
+    return nSize;
 }

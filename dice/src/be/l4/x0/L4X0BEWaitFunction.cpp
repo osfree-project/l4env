@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/x0/L4X0BEWaitFunction.cpp
+ *    \brief   contains the implementation of the class CL4X0BEWaitFunction
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -24,14 +31,13 @@
 #include "be/BEContext.h"
 #include "TypeSpec-Type.h"
 
-IMPLEMENT_DYNAMIC(CL4X0BEWaitFunction);
 
-CL4X0BEWaitFunction::CL4X0BEWaitFunction()
- : CL4BEWaitFunction()
+CL4X0BEWaitFunction::CL4X0BEWaitFunction(bool bOpenWait)
+ : CL4BEWaitFunction(bOpenWait)
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4X0BEWaitFunction, CL4BEWaitFunction);
 }
 
+/** destroys the wait function object */
 CL4X0BEWaitFunction::~CL4X0BEWaitFunction()
 {
 }
@@ -43,27 +49,21 @@ CL4X0BEWaitFunction::~CL4X0BEWaitFunction()
 void CL4X0BEWaitFunction::WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext)
 {
     CL4BEWaitFunction::WriteVariableDeclaration(pFile, pContext);
-	// check if we use assembler
-	bool bAssembler = ((CL4BEIPC*)m_pComm)->UseAssembler(this, pContext);
+    // check if we use assembler
+    bool bAssembler = m_pComm->CheckProperty(this, COMM_PROP_USE_ASM, pContext);
     if (bAssembler)
-	{
-		CBENameFactory *pNF = pContext->GetNameFactory();
-		String sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
-		String sDummy = pNF->GetDummyVariable(pContext);
-		pFile->Print("#if defined(__PIC__) && !defined(PROFILE)\n");
-		pFile->PrintIndent("%s %s;\n", (const char*)sMWord, (const char*)sDummy);
-		pFile->Print("#endif\n");
-	}
-}
-
-/** \brief writes the unmarshalling code
- *  \param pFile the file to write to
- *  \param nStartOffset the offset where to start unmarshalling in the message buffer
- *  \param bUseConstOffset true if nStartOffset can be used
- *  \param pContext the context of the write operation
- */
-void CL4X0BEWaitFunction::WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext)
-{
-	WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
+    {
+        CBENameFactory *pNF = pContext->GetNameFactory();
+        string sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
+        string sDummy = pNF->GetDummyVariable(pContext);
+        pFile->Print("#if defined(__PIC__)\n");
+        *pFile << "\t" << sMWord << " " << sDummy << ";\n";
+        pFile->Print("#else\n");
+        pFile->Print("#if !defined(PROFILE)\n");
+        *pFile << "\t" << sMWord << " " << sDummy <<
+            " __attribute__ ((unused));\n";
+        pFile->Print("#endif\n");
+        pFile->Print("#endif\n");
+    }
 }
 

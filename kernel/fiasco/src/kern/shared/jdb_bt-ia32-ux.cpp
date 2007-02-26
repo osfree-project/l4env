@@ -1,31 +1,34 @@
-IMPLEMENTATION[ia32-ux]:
+IMPLEMENTATION[ia32,ux]:
 
 #include <cstdio>
 #include <cctype>
 
 #include "config.h"
 #include "jdb.h"
+#include "jdb_input.h"
 #include "jdb_lines.h"
 #include "jdb_module.h"
 #include "jdb_symbol.h"
+#include "mem_layout.h"
 #include "keycodes.h"
 #include "thread.h"
-#include "threadid.h"
 
-class Jdb_bt : public Jdb_module
+class Jdb_bt : public Jdb_module, public Jdb_input_task_addr
 {
   static char     dummy;
   static char     first_char;
+  static char     first_char_addr;
   static Address  addr;
-  static L4_uid   thread;
+  static Global_id tid;
   static Task_num task;
 };
 
-char     Jdb_bt::dummy;
-char     Jdb_bt::first_char;
-Address  Jdb_bt::addr;
-L4_uid   Jdb_bt::thread;
-Task_num Jdb_bt::task;
+char      Jdb_bt::dummy;
+char      Jdb_bt::first_char;
+char      Jdb_bt::first_char_addr;
+Address   Jdb_bt::addr;
+Global_id Jdb_bt::tid;
+Task_num  Jdb_bt::task;
 
 // determine the user level ebp and eip considering the current thread state
 static void
@@ -38,10 +41,8 @@ Jdb_bt::get_user_eip_ebp(Address &eip, Address &ebp)
       return;
     }
 
-  Thread *t        = Threadid(&thread).lookup();
-  Address ksp      = (Mword) t->kernel_sp;
-  Address tcb_next = (ksp & ~(Config::thread_block_size-1))
-		   + Config::thread_block_size;
+  Thread *t        = Thread::lookup(tid);
+  Address tcb_next = (Address)context_of(t->get_kernel_sp()) + Context::size;
   Mword *ktop      = (Mword *)tcb_next;
   Jdb::Guessed_thread_state state = Jdb::guess_thread_state(t);
 
@@ -94,7 +95,9 @@ Jdb_bt::get_user_eip_ebp(Address &eip, Address &ebp)
 static Mword
 Jdb_bt::get_user_ebp_following_kernel_stack()
 {
-#ifndef CONFIG_NO_FRAME_PTR
+  if (!Config::Have_frame_ptr)
+    return 0;
+
   Mword ebp, dummy;
 
   get_kernel_eip_ebp(dummy, dummy, ebp);
@@ -104,7 +107,6 @@ Jdb_bt::get_user_ebp_following_kernel_stack()
       Mword m1, m2;
 
       if (  (ebp == 0)
-    	  ||(ebp == Kmem::mem_phys)
 	  ||(Jdb::peek_addr_task(ebp,   0 /*kernel*/, &m1) == -1)
 	  ||(Jdb::peek_addr_task(ebp+4, 0 /*kernel*/, &m2) == -1))
 	// invalid ebp -- leaving
@@ -112,7 +114,7 @@ Jdb_bt::get_user_ebp_following_kernel_stack()
 
       ebp = m1;
 
-      if ((m2<(Address)&_start || m2>(Address)&_ecode))
+      if (!Mem_layout::in_kernel_code(m2))
 	{
 	  if (m2 < Kmem::mem_user_max)
 	    // valid user ebp found
@@ -122,83 +124,93 @@ Jdb_bt::get_user_ebp_following_kernel_stack()
 	    return 0;
 	}
     }
-#endif
 
-  // no suitable ebp found
   return 0;
 }
 
-#ifndef CONFIG_NO_FRAME_PTR
 static void
 Jdb_bt::get_kernel_eip_ebp(Mword &eip1, Mword &eip2, Mword &ebp)
 {
-  if (thread == Jdb::get_current_active()->id())
+  if (tid == Jdb::get_current_active()->id())
     {
       ebp  = (Mword)__builtin_frame_address(3);
       eip1 = eip2 = 0;
     }
   else
     {
-      Mword *ksp = (Mword*) Threadid(&thread).lookup()->kernel_sp;
-      Mword tcb  = Kmem::mem_tcbs + thread.gthread()*Context::size;
+      Mword *ksp = (Mword*) Thread::lookup(tid)->get_kernel_sp();
+      Mword tcb  = Mem_layout::Tcbs + tid.gthread()*Context::size;
       Mword tcb_next = tcb + Context::size;
 
       // search for valid ebp/eip
       for (int i=0; (Address)(ksp+i+1)<tcb_next-20; i++)
 	{
-	  if (ksp[i+1] >= (Address)&_start && ksp[i+1] <= (Address)&_ecode &&
-	      ksp[i  ] >= tcb+0x180         && ksp[i  ] <  tcb_next-20 &&
-	      ksp[i  ] > (Address)(ksp+i))
+	  if (Mem_layout::in_kernel_code(ksp[i+1]) &&
+	      ksp[i] >= tcb+0x180 && 
+	      ksp[i] <  tcb_next-20 &&
+	      ksp[i] >  (Address)(ksp+i))
 	    {
 	      // valid frame pointer found
 	      ebp  = ksp[i  ];
 	      eip1 = ksp[i+1];
-	      eip2 = (thread != Jdb::get_current_active()->id()) ? ksp[0] : 0;
+	      eip2 = tid != Jdb::get_current_active()->id() ? ksp[0] : 0;
 	      return;
 	    }
 	}
       ebp = eip1 = eip2 = 0;
     }
 }
-#endif
 
 /** Show one backtrace item we found. Add symbol name and line info */
 static void
 Jdb_bt::show_item(int nr, Address addr, Address_type user)
 {
-  char symbol[60];
+  char buffer[74];
 
-  printf(" %s#%d  %08x", nr<10 ? " ": "", nr, addr);
+  printf(" %s#%d  "L4_PTR_FMT"", nr<10 ? " ": "", nr, addr);
 
-  if (Jdb_symbol::match_eip_to_symbol(addr, user == KERNEL ? 0 : task, 
-				      symbol, sizeof(symbol)))
-    printf(" : %s", symbol);
+  Address sym_addr = addr;
+  if (Jdb_symbol::match_addr_to_symbol_fuzzy(&sym_addr, 
+					     user == ADDR_KERNEL ? 0 : task, 
+				     	     buffer,
+					     60 < sizeof(buffer) ? 60 : sizeof(buffer))
+      // if the previous symbol is to far away assume that there is no
+      // symbol for that entry
+      && (addr-sym_addr < 1024))
+    {
+      printf(" : %s", buffer);
+      if (addr-sym_addr)
+	printf(" %s+ 0x%lx\033[m", Jdb::esc_line, addr-sym_addr);
+    }
 
   // search appropriate line backwards starting from addr-1 because we
   // don't want to see the line info for the next statement after the
   // call but the line info for the call itself
-  if (Jdb_lines::match_address_to_line_fuzzy(addr-1, user == KERNEL ? 0 : task,
-					     symbol, sizeof(symbol)-1, 0))
-    printf("\n%18s%s", "", symbol);
+  Address line_addr = addr-1;
+  if (Jdb_lines::match_addr_to_line_fuzzy(&line_addr, 
+					  user == ADDR_KERNEL ? 0 : task,
+				     	  buffer, sizeof(buffer)-1, 0)
+      // if the previous line is to far away assume that there is no
+      // line for that entry
+      && (addr-line_addr < 128))
+    printf("\n%6s%s%s\033[m", "", Jdb::esc_line, buffer);
 
   putchar('\n');
 }
 
-#ifdef CONFIG_NO_FRAME_PTR
 static void
 Jdb_bt::show_without_ebp()
 {
-  Mword *ksp      = (Mword*) Threadid(&thread).lookup()->kernel_sp;
-  Mword tcb_next  = Kmem::mem_tcbs + (thread.gthread()+1)*Context::size;
+  Mword *ksp      = (Mword*) Thread::lookup(tid)->get_kernel_sp();
+  Mword tcb_next  = Mem_layout::Tcbs + (tid.gthread()+1)*Context::size;
 
   // search for valid eip
   for (int i=0, j=1; (unsigned)(ksp+i)<tcb_next-20; i++)
     {
-      if (ksp[i] >= (unsigned)&_start && ksp[i] <= (unsigned)&_ecode)
-	show_item(j++, ksp[i], KERNEL);
+      if (Mem_layout::in_kernel_code(ksp[i])) 
+	show_item(j++, ksp[i], ADDR_KERNEL);
     }
 }
-#endif
 
 static void
 Jdb_bt::show(Mword ebp, Mword eip1, Mword eip2, Address_type user)
@@ -210,7 +222,6 @@ Jdb_bt::show(Mword ebp, Mword eip1, Mword eip2, Address_type user)
       if (i > 1)
 	{
 	  if (  (ebp == 0)
-	      ||(ebp == Kmem::mem_phys)
 	      ||(Jdb::peek_addr_task(ebp,   task, &m1) == -1)
 	      ||(Jdb::peek_addr_task(ebp+4, task, &m2) == -1))
 	    // invalid ebp -- leaving
@@ -218,8 +229,8 @@ Jdb_bt::show(Mword ebp, Mword eip1, Mword eip2, Address_type user)
 
 	  ebp = m1;
 
-	  if (  (user==KERNEL && (m2<(Mword)&_start || m2>(Mword)&_ecode))
-	      ||(user==USER   && (m2==0             || m2>Kmem::mem_user_max)))
+	  if (  (user==ADDR_KERNEL && !Mem_layout::in_kernel_code(m2))
+	      ||(user==ADDR_USER   && (m2==0 || m2>Kmem::mem_user_max)))
 	    // no valid eip found -- leaving
 	    return;
 	}
@@ -246,10 +257,12 @@ Jdb_bt::action(int cmd, void *&args, char const *&fmt, int &next_char)
 {
   if (cmd == 0)
     {
+      Address eip, ebp;
+
       if (args == &dummy)
 	{
 	  // default value for thread
-	  thread = Jdb::get_current_active()->id();
+	  tid  = Jdb::get_current_active()->id();
 	  fmt  = "%C";
 	  args = &first_char;
 	  return EXTRA_INPUT;
@@ -258,19 +271,21 @@ Jdb_bt::action(int cmd, void *&args, char const *&fmt, int &next_char)
 	{
 	  if (first_char == 't')
 	    {
+	      putstr("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\033[K");
 	      fmt  = " thread=%t";
-	      args = &thread;
+	      args = &tid;
 	      return EXTRA_INPUT;
 	    }
-	  else if (isxdigit(first_char))
+	  else if (first_char == 'a')
 	    {
-	      next_char = first_char;
-	      args = &addr;
-	      fmt  = "%8x";
-	      return EXTRA_INPUT_WITH_NEXTCHAR;
+	      putstr("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\033[K");
+	      fmt  = " addr=%C";
+	      args = &Jdb_input_task_addr::first_char;
+	      return EXTRA_INPUT;
 	    }
 	  else if (first_char != KEY_RETURN && first_char != ' ')
 	    {
+	      // ignore wrong input
 	      fmt  = "%C";
 	      return EXTRA_INPUT;
 	    }
@@ -278,34 +293,58 @@ Jdb_bt::action(int cmd, void *&args, char const *&fmt, int &next_char)
 	    // backtrace from current thread
 	    goto start_backtrace;
 	}
-      else if (args == &thread)
+      else if (args == &tid)
 	{
-	  Address eip, ebp;
-
-	  if (!Threadid(thread).lookup()->is_valid())
+	  if (!Thread::lookup(tid)->is_valid())
 	    {
 	      puts(" Invalid thread");
 	      return NOTHING;
 	    }
 
 start_backtrace:
-	  task = thread.task();
+	  task = Thread::get_task (tid);
 	  get_user_eip_ebp(eip, ebp);
-	  printf("\n\nbacktrace (thread %x.%02x, fp=%08x, pc=%08x):\n",
-	      task, thread.lthread(), ebp, eip);
-	  if (task != 0)
-	    show(ebp, eip, 0, USER);
-#ifdef CONFIG_NO_FRAME_PTR
-	  puts("\n  --kernel-bt-follows-- (don't trust w/o frame pointer!!)");
-	  show_without_ebp();
-#else
-	  Mword eip2;
 
-	  puts("\n --kernel-bt-follows--");
-	  get_kernel_eip_ebp(eip, eip2, ebp);
-	  show(ebp, eip, eip2, KERNEL);
-#endif
+start_backtrace_known_ebp:
+	  printf("\n\nbacktrace (thread %x.%02x, fp="L4_PTR_FMT
+	         ", pc="L4_PTR_FMT"):\n",
+	      task, tid.d_thread(), ebp, eip);
+	  if (task != 0)
+	    show(ebp, eip, 0, ADDR_USER);
+	  if (!Config::Have_frame_ptr)
+	    {
+	      puts("\n --kernel-bt-follows-- "
+		   "(don't trust w/o frame pointer!!)");
+	      task = 0;
+	      show_without_ebp();
+	    }
+	  else
+	    {
+	      Mword eip2;
+	      puts("\n --kernel-bt-follows--");
+	      get_kernel_eip_ebp(eip, eip2, ebp);
+	      task = 0;
+	      show(ebp, eip, eip2, ADDR_KERNEL);
+	    }
 	  putchar('\n');
+	}
+      else 
+	{
+	  Jdb_module::Action_code code;
+	  
+	  switch ((code = Jdb_input_task_addr::action(args, fmt, next_char)))
+	    {
+	    case ERROR:
+	      return ERROR;
+	    case NOTHING:
+	      task = Jdb_input_task_addr::task;
+	      tid.d_task (task);
+	      eip  = 0;
+	      ebp  = Jdb_input_task_addr::addr;
+	      goto start_backtrace_known_ebp;
+	    default:
+	      return code;
+	    }
 	}
     }
   return NOTHING;
@@ -317,10 +356,10 @@ Jdb_bt::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd (0, "bt", "backtrace", "",
+	{ 0, "bt", "backtrace", " [a]ddr/[t]hread",
 	  "bt[t<threadid>][<addr>]\tshow backtrace of current/given "
 	  "thread/addr",
-	  &dummy),
+	  &dummy },
     };
   return cs;
 }

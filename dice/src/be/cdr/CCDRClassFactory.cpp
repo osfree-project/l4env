@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/cdr/CCDRClassFactory.cpp
- *	\brief	contains the implementation of the class CCDRClassFactory
+ *  \file   dice/src/be/cdr/CCDRClassFactory.cpp
+ *  \brief  contains the implementation of the class CCDRClassFactory
  *
- *	\date	02/10/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   02/10/2003
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -32,12 +33,9 @@
 #include "be/cdr/CCDRMarshalFunction.h"
 #include "be/cdr/CCDRUnmarshalFunction.h"
 
-IMPLEMENT_DYNAMIC(CCDRClassFactory);
-
 CCDRClassFactory::CCDRClassFactory(bool bVerbose)
  : CBEClassFactory(bVerbose)
 {
-    IMPLEMENT_DYNAMIC_BASE(CCDRClassFactory, CBEClassFactory);
 }
 
 /** destroys this object */

@@ -7,27 +7,34 @@
  * initialises all needed modules and starts the server.
 */
 
+#include <l4/dm_phys/dm_phys.h>
+
 #include "presenter-server.h"
+#include "util/arraylist.h"
+#include "model/slide.h"
 #include "util/presenter_conf.h"
-#include "util/module_names.h"
 #include "model/presenter.h"
+#include "model/presentation.h"
+#include "util/module_names.h"
 #include "controller/presenter_server.h"
 #include <l4/presenter/presenter_lib.h>
-#include <l4/names/libnames.h>
+
+char LOG_tag[9]=PRESENTER_NAME;
+
+l4_ssize_t l4libc_heapsize = 6*1024*1024;
 
 /*** PROTOTYPES FROM 'MODULES' ***/
-extern int init_memory(struct presenter_services *);
 extern int init_presenter(struct presenter_services *);
 extern int init_presentation(struct presenter_services *);
 extern int init_slide(struct presenter_services *);
 extern int init_keygenerator(struct presenter_services *);
-extern int init_hashtable(struct presenter_services *);
 extern int init_arraylist(struct presenter_services *);
 extern int init_presmanager(struct presenter_services *);
 extern int init_dataprovider(struct presenter_services *);
 extern int init_presenter_server(struct presenter_services *);
 extern int init_presenter_view(struct presenter_services *);
 extern int init_display(struct presenter_services *);
+extern int init_presenter_encapl4x(struct presenter_services *);
 
 /*** PROTOTYPES FROM CONTRIB POOL.C ***/
 extern long  pool_add(char *name, void *structure);
@@ -42,52 +49,46 @@ int _DEBUG = 0;
 struct presenter_server_services *presenter_server;
 
 struct presenter_services presenter_serv = {
-	pool_get,
-	pool_add,
+    pool_get,
+    pool_add,
 };
 
-int main(void) {
+int main(int argc, char **argv) {
+    char *default_path;
 
-	LOG_init(PRESENTER_NAME);
+    default_path = argv[1];
 
-	/*** init modules ***/
+    /*** init modules ***/
 
-	init_memory(&presenter_serv);
+    init_keygenerator(&presenter_serv);
 
-	init_keygenerator(&presenter_serv);
+    init_arraylist(&presenter_serv);
 
-	init_hashtable(&presenter_serv);
+    init_dataprovider(&presenter_serv);
 
-        init_arraylist(&presenter_serv);
+    init_presenter(&presenter_serv);
 
-        init_dataprovider(&presenter_serv);
+    init_presenter_encapl4x(&presenter_serv);
 
-	init_presenter(&presenter_serv);
-	
-	init_slide(&presenter_serv);
+    init_slide(&presenter_serv);
 
-	init_presentation(&presenter_serv);
+    init_presentation(&presenter_serv);
 
-	init_presmanager(&presenter_serv);
+    init_presmanager(&presenter_serv);
 
-	init_display(&presenter_serv);
-	
-	init_presenter_view(&presenter_serv);
+    init_display(&presenter_serv);
 
-	init_presenter_server(&presenter_serv);
-	
-	if (!names_register(PRESENTER_NAME)) {
-		LOG("Presenter: can't register at nameserver\n");
-		return 1;
-	}
+    init_presenter_view(&presenter_serv);
 
-	presenter_server = presenter_serv.get_module(PRESENTER_SERVER_MODULE);
+    init_presenter_server(&presenter_serv);
 
-	LOGd(_DEBUG,"enter presenter_server start");
-	
-	/*** start living... ***/
-	presenter_server->start();	
+    presenter_server = presenter_serv.get_module(PRESENTER_SERVER_MODULE);
 
-	return 0;
+    LOGd(_DEBUG,"enter presenter_server start");
+
+    /*** start living... ***/
+    presenter_server->start(default_path);
+
+    return 0;
 
 }

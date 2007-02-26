@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BEUnmarshalFunction.cpp
- *	\brief	contains the implementation of the class CBEUnmarshalFunction
+ *    \file    dice/src/be/BEUnmarshalFunction.cpp
+ *    \brief   contains the implementation of the class CBEUnmarshalFunction
  *
- *	\date	01/20/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/20/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -46,29 +47,25 @@
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
 
-IMPLEMENT_DYNAMIC(CBEUnmarshalFunction);
-
 CBEUnmarshalFunction::CBEUnmarshalFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEUnmarshalFunction, CBEOperationFunction);
 }
 
 CBEUnmarshalFunction::CBEUnmarshalFunction(CBEUnmarshalFunction & src)
-:CBEOperationFunction(src)
+ : CBEOperationFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEUnmarshalFunction, CBEOperationFunction);
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CBEUnmarshalFunction::~CBEUnmarshalFunction()
 {
 
 }
 
-/**	\brief creates the back-end unmarshal function
- *	\param pFEOperation the corresponding front-end operation
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief creates the back-end unmarshal function
+ *    \param pFEOperation the corresponding front-end operation
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
  * This function should only contain IN parameters if it is on the component's side an
  * OUT parameters if it is on the client's side.
@@ -76,44 +73,44 @@ CBEUnmarshalFunction::~CBEUnmarshalFunction()
 bool CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, CBEContext * pContext)
 {
     pContext->SetFunctionType(FUNCTION_UNMARSHAL);
-	// set target file name
-	SetTargetFileName(pFEOperation, pContext);
+    // set target file name
+    SetTargetFileName(pFEOperation, pContext);
     // set name
     m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
 
     if (!CBEOperationFunction::CreateBackEnd(pFEOperation, pContext))
-	{
+    {
         VERBOSE("%s failed because base function could not be created\n", __PRETTY_FUNCTION__);
-	    return false;
-	}
+        return false;
+    }
 
     // set return type
-	if (IsComponentSide())
-	{
-		CBEType *pReturnType = pContext->GetClassFactory()->GetNewType(TYPE_VOID);
-		pReturnType->SetParent(this);
-		if (!pReturnType->CreateBackEnd(false, 0, TYPE_VOID, pContext))
-		{
-			VERBOSE("%s failed because return var could not be created\n", __PRETTY_FUNCTION__);
-			delete pReturnType;
-			return false;
-		}
-		CBEType *pOldType = m_pReturnVar->ReplaceType(pReturnType);
-		delete pOldType;
-	}
+    if (IsComponentSide())
+    {
+        CBEType *pReturnType = pContext->GetClassFactory()->GetNewType(TYPE_VOID);
+        pReturnType->SetParent(this);
+        if (!pReturnType->CreateBackEnd(false, 0, TYPE_VOID, pContext))
+        {
+            VERBOSE("%s failed because return var could not be created\n", __PRETTY_FUNCTION__);
+            delete pReturnType;
+            return false;
+        }
+        CBEType *pOldType = m_pReturnVar->ReplaceType(pReturnType);
+        delete pOldType;
+    }
     // add parameters
-    if (!AddMessageBuffer(pFEOperation->GetParentInterface(), pContext))
+    if (!AddMessageBuffer(pFEOperation->GetSpecificParent<CFEInterface>(), pContext))
     {
         VERBOSE("%s failed because message buffer could not be created\n", __PRETTY_FUNCTION__);
-	    return false;
-	}
+        return false;
+    }
 
     return true;
 }
 
-/**	\brief writes the variable declarations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the variable declarations of this function
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * The variable declarations contains the return variable if needed. And a temporary variable if
  * we have any variable sized arrays. No message buffer definition (its an parameter).
@@ -122,19 +119,19 @@ void CBEUnmarshalFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext 
 {
     m_pReturnVar->WriteZeroInitDeclaration(pFile, pContext);
     // check for temp
-    int nDirection = IsComponentSide()?DIRECTION_IN:DIRECTION_OUT;
-    if (HasVariableSizedParameters(nDirection) || HasArrayParameters(nDirection))
+    if (HasVariableSizedParameters(GetReceiveDirection()) ||
+        HasArrayParameters(GetReceiveDirection()))
     {
-        String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-        String sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sTmpVar);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sOffsetVar);
+        string sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+        string sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", sTmpVar.c_str());
+        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", sOffsetVar.c_str());
     }
 }
 
-/**	\brief writes the variable initializations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the variable initializations of this function
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation should initialize the pointers of the out variables. Do not
  * initialize the message buffer - this may overwrite the values we try to unmarshal.
@@ -143,9 +140,9 @@ void CBEUnmarshalFunction::WriteVariableInitialization(CBEFile * pFile, CBEConte
 {
 }
 
-/**	\brief writes the invocation of the message transfer
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the invocation of the message transfer
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation does nothing, because the unmarshalling does not contain a
  * message transfer.
@@ -155,11 +152,11 @@ void CBEUnmarshalFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContex
 
 }
 
-/**	\brief writes the unmarshalling of the message
- *	\param pFile the file to write to
+/**    \brief writes the unmarshalling of the message
+ *    \param pFile the file to write to
  *  \param nStartOffset the offset where to start unmarshalling
  *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
- *	\param pContext the context of the write operation
+ *    \param pContext the context of the write operation
  *
  * This implementation iterates over the parameters (except the message buffer itself) and
  * unmarshals them.
@@ -168,17 +165,20 @@ void CBEUnmarshalFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset,
 {
     if (IsComponentSide())
     {
-        // start after opcode
-        CBEOpcodeType *pOpcodeType = pContext->GetClassFactory()->GetNewOpcodeType();
-        pOpcodeType->SetParent(this);
-        if (pOpcodeType->CreateBackEnd(pContext))
-            nStartOffset += pOpcodeType->GetSize();
-        delete pOpcodeType;
+        if (!FindAttribute(ATTR_NOOPCODE))
+        {
+            // start after opcode
+            CBEOpcodeType *pOpcodeType = pContext->GetClassFactory()->GetNewOpcodeType();
+            pOpcodeType->SetParent(this);
+            if (pOpcodeType->CreateBackEnd(pContext))
+                nStartOffset += pOpcodeType->GetSize();
+            delete pOpcodeType;
+        }
     }
     else
     {
-	    // unmarshal exception
-		nStartOffset += WriteUnmarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
+        // unmarshal exception
+        nStartOffset += WriteUnmarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
         // first unmarshl return value
         nStartOffset += WriteUnmarshalReturn(pFile, nStartOffset, bUseConstOffset, pContext);
     }
@@ -186,9 +186,9 @@ void CBEUnmarshalFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset,
     CBEOperationFunction::WriteUnmarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
 }
 
-/**	\brief clean up the mess
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief clean up the mess
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation is empty, because there is nothing to clean up.
  */
@@ -197,10 +197,10 @@ void CBEUnmarshalFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 
 }
 
-/**	\brief adds a single parameter to this function
- *	\param pFEParameter the parameter to add
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief adds a single parameter to this function
+ *    \param pFEParameter the parameter to add
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
  * This function decides, which parameters to add and which don't. The parameters to unmarshal are
  * for client-to-component transfer the IN parameters and for component-to-client transfer the OUT
@@ -284,14 +284,14 @@ bool CBEUnmarshalFunction::HasAdditionalReference(CBEDeclarator * pDeclarator, C
     CBETypedDeclarator *pParameter = GetParameter(pDeclarator, bCall);
     if (!pParameter)
         return false;
-    assert(pParameter->IsKindOf(RUNTIME_CLASS(CBETypedDeclarator)));
+    assert(dynamic_cast<CBETypedDeclarator*>(pParameter));
     if (pParameter->FindAttribute(ATTR_IN))
     {
-		CBEType *pType = pParameter->GetType();
-		CBEAttribute *pAttr;
-		if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
-			pType = pAttr->GetAttrType();
-		int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - pType->GetArrayDimensionCount();
+        CBEType *pType = pParameter->GetType();
+        CBEAttribute *pAttr;
+        if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+            pType = pAttr->GetAttrType();
+        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - pType->GetArrayDimensionCount();
         if ((pDeclarator->GetStars() == 0) && (nArrayDimensions <= 0))
             return true;
         if ((pParameter->FindAttribute(ATTR_STRING)) &&
@@ -315,28 +315,52 @@ bool CBEUnmarshalFunction::HasAdditionalReference(CBEDeclarator * pDeclarator, C
  * An unmarshal function is written if client's side and OUT or if component's side
  * and one of the parameters has an IN.
  */
-bool CBEUnmarshalFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContext)
+bool CBEUnmarshalFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
 {
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)))
-		if (!IsTargetFile((CBEHeaderFile*)pFile))
-			return false;
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEImplementationFile)))
-		if (!IsTargetFile((CBEImplementationFile*)pFile))
-			return false;
-	if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-		(FindAttribute(ATTR_OUT)))
-		return true;
-	if (pFile->GetTarget()->IsKindOf(RUNTIME_CLASS(CBEComponent)))
-	{
-	    VectorElement *pIter = GetFirstParameter();
-		CBETypedDeclarator *pParameter;
-		while ((pParameter = GetNextParameter(pIter)) != 0)
-		{
-		    if (pParameter->FindAttribute(ATTR_IN))
-			    return true;
-		}
-	}
-	return false;
+    if (!IsTargetFile(pFile))
+        return false;
+    if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+        (FindAttribute(ATTR_OUT)))
+        return true;
+    if (dynamic_cast<CBEComponent*>(pFile->GetTarget()))
+    {
+        vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
+        CBETypedDeclarator *pParameter;
+        while ((pParameter = GetNextParameter(iter)) != 0)
+        {
+            if (pParameter->FindAttribute(ATTR_IN))
+                return true;
+        }
+    }
+    return false;
+}
+
+/** \brief test if this function should be written
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *  \return true if should be written
+ *
+ * An unmarshal function is written if client's side and OUT or if component's side
+ * and one of the parameters has an IN.
+ */
+bool CBEUnmarshalFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+{
+    if (!IsTargetFile(pFile))
+        return false;
+    if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+        (FindAttribute(ATTR_OUT)))
+        return true;
+    if (dynamic_cast<CBEComponent*>(pFile->GetTarget()))
+    {
+        vector<CBETypedDeclarator*>::iterator iter = GetFirstParameter();
+        CBETypedDeclarator *pParameter;
+        while ((pParameter = GetNextParameter(iter)) != 0)
+        {
+            if (pParameter->FindAttribute(ATTR_IN))
+                return true;
+        }
+    }
+    return false;
 }
 
 /** \brief writes the message buffer parameter
@@ -346,13 +370,16 @@ bool CBEUnmarshalFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContex
  */
 void CBEUnmarshalFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
 {
-    assert(m_pMsgBuffer);
     if (bComma)
     {
         pFile->Print(",\n");
         pFile->PrintIndent("");
     }
-    WriteParameter(pFile, m_pMsgBuffer, pContext);
+    // write message buffer
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    WriteParameter(pFile, pMsgBuffer, pContext);
+    // base class
     CBEOperationFunction::WriteAfterParameters(pFile, pContext, true);
 }
 
@@ -367,15 +394,19 @@ void CBEUnmarshalFunction::WriteAfterParameters(CBEFile * pFile, CBEContext * pC
  */
 void CBEUnmarshalFunction::WriteCallAfterParameters(CBEFile * pFile, CBEContext * pContext, bool bComma)
 {
-    assert(m_pMsgBuffer);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
     if (bComma)
     {
         pFile->Print(",\n");
         pFile->PrintIndent("");
     }
-	if (m_bCastMsgBufferOnCall)
-		m_pMsgBuffer->GetType()->WriteCast(pFile, true, pContext);
-    WriteCallParameter(pFile, m_pMsgBuffer, pContext);
+    /* this should be unset if the message buffer type stays the
+     * same for derived interfaces (e.g. char[] for socket Backend)
+     */
+    if (m_bCastMsgBufferOnCall)
+        pMsgBuffer->GetType()->WriteCast(pFile, true, pContext);
+    WriteCallParameter(pFile, pMsgBuffer, pContext);
     CBEOperationFunction::WriteCallAfterParameters(pFile, pContext, true);
 }
 
@@ -383,18 +414,19 @@ void CBEUnmarshalFunction::WriteCallAfterParameters(CBEFile * pFile, CBEContext 
  *  \param sTypeName the name of the type
  *  \return a reference to the found parameter
  */
-CBETypedDeclarator * CBEUnmarshalFunction::FindParameterType(String sTypeName)
+CBETypedDeclarator * CBEUnmarshalFunction::FindParameterType(string sTypeName)
 {
-    if (m_pMsgBuffer)
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    if (pMsgBuffer)
     {
-        CBEType *pType = m_pMsgBuffer->GetType();
-        if (pType->IsKindOf(RUNTIME_CLASS(CBEUserDefinedType)))
+        CBEType *pType = pMsgBuffer->GetType();
+        if (dynamic_cast<CBEUserDefinedType*>(pType))
         {
             if (((CBEUserDefinedType*)pType)->GetName() == sTypeName)
-                return m_pMsgBuffer;
+                return pMsgBuffer;
         }
         if (pType->HasTag(sTypeName))
-            return m_pMsgBuffer;
+            return pMsgBuffer;
     }
     return CBEOperationFunction::FindParameterType(sTypeName);
 }
@@ -415,10 +447,12 @@ bool CBEUnmarshalFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBECont
     // get message buffer type
     CBEMsgBufferType *pMsgBuffer = pClass->GetMessageBuffer();
     assert(pMsgBuffer);
+    // we have to sort parameters before the message buffer extracts the sizes
+    SortParameters(0, pContext);
     // msg buffer not yet initialized
     pMsgBuffer->InitCounts(pClass, pContext);
     // create own message buffer
-    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType();
+    m_pMsgBuffer = pContext->GetClassFactory()->GetNewMessageBufferType(true);
     m_pMsgBuffer->SetParent(this);
     if (!m_pMsgBuffer->CreateBackEnd(pMsgBuffer, pContext))
     {

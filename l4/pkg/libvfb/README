@@ -1,0 +1,3 @@
+libvfb -- a small library that provides pixel- and linedrawing
+routines ontop a (DOpE) vscreen or any other framebuffer with a
+similar memory layout.

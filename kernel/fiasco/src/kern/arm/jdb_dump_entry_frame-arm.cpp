@@ -13,7 +13,7 @@ IMPLEMENTATION[arm]:
 //===================
 
 /**
- * @brief 'IRQ' module.
+ * 'IRQ' module.
  * 
  * This module handles the 'e' command that
  * dumps the entry frame.
@@ -57,8 +57,8 @@ PUBLIC
 Jdb_module::Cmd const *const Jdb_dump_ef::cmds() const
 {
   static Cmd cs[] =
-    { Cmd( 0, "e", "entryframe", "\n", 
-	   "e\tdump the JDB entry frame", 0 )
+    {   { 0, "e", "entryframe", "\n", 
+	   "e\tdump the JDB entry frame", 0 }
     };
 
   return cs;

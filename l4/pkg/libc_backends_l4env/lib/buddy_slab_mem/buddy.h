@@ -1,5 +1,5 @@
 /*!
- * \file   dietlibc/lib/backends/l4env_base/buddy.h
+ * \file   libc_backends_l4env/lib/buddy_slab_mem/buddy.h
  * \brief  buddy structures
  *
  * \date   08/18/2003
@@ -10,9 +10,8 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
-#ifndef __DIETLIBC_LIB_BACKENDS_L4ENV_BASE_BUDDY_H_
-#define __DIETLIBC_LIB_BACKENDS_L4ENV_BASE_BUDDY_H_
-
+#ifndef __LIBC_BACKENDS_L4ENV_LIB_BUDDY_SLAB_MEM_H_BUDDY_H_
+#define __LIBC_BACKENDS_L4ENV_LIB_BUDDY_SLAB_MEM_H_BUDDY_H_
 
 // Element-Size is 1K
 #define L4BUDDY_BUDDY_SHIFT 10

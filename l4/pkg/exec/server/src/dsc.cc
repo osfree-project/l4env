@@ -13,13 +13,19 @@
 
 #include "dsc.h"
 
+#ifdef USE_OSKIT
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 #include <string.h>
 #include <l4/env/errno.h>
 
 #include "assert.h"
 
-/** constructor */
+/** Constructor. The id is used to find the relation between a member of
+ *  the dsc_arry_t (dsc_t) and the dsc_array_t itself. When a dsc_t is
+ *  destructed, it frees the related entry in dsc_arry_t. */
 dsc_array_t::dsc_array_t(l4_uint32_t n)
   : entries(n), unique_id(UNIQUE_ID_ADD)
 {
@@ -38,7 +44,7 @@ dsc_array_t::init(void)
   return 0;
 }
 
-/** alloc one descriptor entry */
+/** Alloc one descriptor entry. */
 int
 dsc_array_t::alloc(dsc_obj_t ***dsc_obj, l4_uint32_t *id)
 {
@@ -60,7 +66,7 @@ dsc_array_t::alloc(dsc_obj_t ***dsc_obj, l4_uint32_t *id)
   return -L4_ENOMEM;
 }
 
-/* free a descriptor entry */
+/** Free a descriptor entry. */
 int
 dsc_array_t::free(l4_uint32_t id)
 {
@@ -96,26 +102,26 @@ dsc_array_t::free(l4_uint32_t id)
   return 0;
 }
 
-/** get next unique identifier */
+/** Get next unique identifier. */
 l4_uint32_t
 dsc_array_t::get_next_unique_id(void)
 {
   return (unique_id += UNIQUE_ID_ADD);
 }
 
-
-/** return object pointer */
+/** Return object pointer. */
 dsc_obj_t*
 dsc_array_t::lookup(l4_uint32_t id)
 {
   l4_uint32_t idx = id & UNIQUE_ID_MASK;
   
-  return (idx < 0 || idx >= entries) 
-    ? (dsc_obj_t*)NULL
+  return (idx < 0 || idx >= entries || !*(dsc_objs + idx) || 
+          id != dsc_objs[idx]->get_id())
+    ? 0
     : *(dsc_objs + idx);
 }
 
-/** find object using it's pathname */
+/** Find object using it's pathname. */
 dsc_obj_t*
 dsc_array_t::find(const char *pathname)
 {
@@ -131,6 +137,5 @@ dsc_array_t::find(const char *pathname)
     }
 
   /* not found */
-  return (dsc_obj_t*)NULL;
+  return 0;
 }
-

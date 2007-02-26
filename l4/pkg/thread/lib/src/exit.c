@@ -19,6 +19,8 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
+#include <stdio.h>
+
 /* L4env includes */
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
@@ -26,6 +28,7 @@
 #include <l4/util/atomic.h>
 #include <l4/util/macros.h>
 #include <l4/env/errno.h>
+#include <l4/names/libnames.h>
 
 /* private includes */
 #include <l4/thread/thread.h>
@@ -54,7 +57,7 @@ static l4_uint32_t exit_stack_used = 0;
  * \brief  Acquire exit stack lock. 
  * 
  * Try to set exit_stack_used to 1. If it is already set to 1, poll until
- * it is released. 
+ * it is released, this happens in __do_cleanup_and_block().
  */
 /*****************************************************************************/ 
 static inline void
@@ -64,11 +67,11 @@ __lock_exit_stack(void)
   l4_umword_t dummy;
 
   /* try to get the lock */
-  while (!l4util_cmpxchg32(&exit_stack_used,0,1))
+  while (!l4util_cmpxchg32(&exit_stack_used, 0, 1))
     {
       /* wait 1 ms */
-      l4_ipc_receive(L4_NIL_ID,L4_IPC_SHORT_MSG,&dummy,&dummy,
-		     L4_IPC_TIMEOUT(0,0,250,14,0,0),&result);
+      l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
+		     L4_IPC_TIMEOUT(0, 0, 250, 14, 0, 0), &result);
     }
 }
 
@@ -88,10 +91,15 @@ __do_cleanup_and_block(l4th_tcb_t * tcb)
   if (tcb->flags & TCB_ALLOCATED_STACK)
     l4th_stack_free(&tcb->stack);
 
+  /* cleanup nearly done, wakeup caller of l4thread_shutdown() */
+  if (tcb->startup_data != NULL)
+    l4semaphore_up((l4semaphore_t *)tcb->startup_data);
+
   /* deallocate thread */
   l4th_tcb_deallocate(tcb);
 
   /* do the final cleanup and block */
+#ifdef ARCH_x86
   __asm__ __volatile__(
     "leal  %0,%%eax          \n\t"  /* move address of tcb state to eax */
     "movl  $0,%1             \n\t"  /* unlock exit stack, no stack 
@@ -117,6 +125,21 @@ __do_cleanup_and_block(l4th_tcb_t * tcb)
     "m" (exit_stack_used),          /* 1, exit stack lock */
     "i" (TCB_UNUSED)                /* 2, 'unused' thread state */
     );
+#else
+#ifdef ARCH_arm
+#warning IMPROPER THREAD EXIT FOR ARM!
+    /* unlock exit stack; mark tcp unused */
+#if 0
+  __asm__ __volatile__(
+      :
+      : 
+  );
+#endif
+    l4_sleep_forever();
+#else
+#error Unsupported arch
+#endif
+#endif
 }
 
 /*****************************************************************************/
@@ -135,7 +158,7 @@ __do_exit(void)
   
   /* get TCB, this will never fail, checks are done in l4thread_exit resp.
    * l4thread_shutdown */
-  tcb = l4th_tcb_get_current_locked();
+  tcb = l4th_tcb_get_current_locked_nocheck();
   Assert(tcb != NULL);
 
   /* set thread state to TCB_ACTIVE again, the 'on_exit' functions should see
@@ -154,15 +177,22 @@ __do_exit(void)
 
       /* call function */
       if (exit_fn->fn != NULL)
-	exit_fn->fn(tcb->id,exit_fn->data);
+	exit_fn->fn(tcb->id, exit_fn->data);
     }
 
   /* now really exit */
   tcb->state = TCB_SHUTDOWN;
 
+  /* unregister at names */
+  if (names_unregister_thread(tcb->name, tcb->l4_id) == 0)
+    {
+      LOG_Error("names_unregister_thread (%s, "l4util_idfmt") failed",
+                tcb->name, l4util_idstr(tcb->l4_id));
+    }
+
   /* unlock TCB, the TCB might be locked multiple times, e.g. if a thread 
    * calls l4thread_exit() and has locked itself (l4thread_lock()) */
-  while (l4thread_equal(l4lock_owner(&tcb->lock),tcb->id))
+  while (l4thread_equal(l4lock_owner(&tcb->lock), tcb->id))
     l4lock_unlock(&tcb->lock);
 
   /* set thread to exit stack and call __do_cleanup_and_block to finish exit */
@@ -172,8 +202,8 @@ __do_exit(void)
   *(--sp) = 0;
   
   foo = L4_INVALID_ID;
-  l4_thread_ex_regs(tcb->l4_id,(l4_umword_t)__do_cleanup_and_block,
-		    (l4_umword_t)sp,&foo,&foo,&dummy,&dummy,&dummy);
+  l4_thread_ex_regs(tcb->l4_id, (l4_umword_t)__do_cleanup_and_block,
+		    (l4_umword_t)sp, &foo, &foo, &dummy, &dummy, &dummy);
 }
 
 /*****************************************************************************
@@ -192,11 +222,16 @@ l4thread_exit(void)
 
   /* get TCB */
   tcb = l4th_tcb_get_current_locked();
-  if ((tcb == NULL) || (tcb->state != TCB_ACTIVE))
-    Error("l4thread: myself not found in TCB table!");
+  if (tcb == NULL)
+    LOG_Error("l4thread: myself not found or inactive!");
   else
-    /* do exit */
-    __do_exit();
+    {
+      /* we do not wait for our shutdown ;-) */
+      tcb->startup_data = NULL;
+
+      /* do exit */
+      __do_exit();
+    }
 
   /* avoid compiler warning: 
    * l4thread_exit is declared 'noreturn', but __do_exit is not (__do_exit 
@@ -224,18 +259,21 @@ l4thread_shutdown(l4thread_t thread)
   l4th_tcb_t * tcb, * me;
   l4_threadid_t foo;
   l4_umword_t dummy;
+  l4semaphore_t wait = L4SEMAPHORE_LOCKED;
 
   /* lock myself, this avoids that someone else kills us while we are killing
    * the other thread */
   me = l4th_tcb_get_current_locked();
 
   /* get TCB */
-  tcb = l4th_tcb_get_active_locked(thread);
+  tcb = l4th_tcb_get_locked(thread);
   if (tcb == NULL)
     {
       l4th_tcb_unlock(me);
+      LOG_Error("thread %d not active", thread);
       return -L4_EINVAL;
     }
+  tcb->startup_data = &wait;
 
   /* set thread state to TCB_SHUTDOWN, this makes the thread invisible for 
    * other threads */
@@ -244,13 +282,17 @@ l4thread_shutdown(l4thread_t thread)
   /* unlock TCB, the lock is reclaimed by the thread itself during the final 
    * cleanup in __do_exit, we might hold the lock several times, e.g. if the
    * caller has locked the thread (l4thread_lock()) */
-  while (l4thread_equal(l4lock_owner(&tcb->lock),me->id))
+  while (l4thread_equal(l4lock_owner(&tcb->lock), me->id))
     l4th_tcb_unlock(tcb);
 
   /* set thread to __do_exit */
   foo = L4_INVALID_ID;
-  l4_thread_ex_regs(tcb->l4_id,(l4_umword_t)__do_exit,(l4_umword_t)-1,
-		    &foo,&foo,&dummy,&dummy,&dummy);
+  l4_thread_ex_regs(tcb->l4_id, (l4_umword_t)__do_exit, (l4_umword_t)-1,
+		    &foo, &foo, &dummy, &dummy, &dummy);
+
+
+  /* wait until shutdown is (nearly) done */
+  l4semaphore_down(&wait);
 
   /* unlock myself, we are finished at this point */
   l4th_tcb_unlock(me);

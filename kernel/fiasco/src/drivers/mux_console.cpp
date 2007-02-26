@@ -4,100 +4,28 @@ INTERFACE:
 #include "console.h"
 
 /**
- * @brief Console multiplexer.
+ * Console multiplexer.
  *
  * This implementation of the Console interface can be used to
  * multiplex among some input, output, and in-out consoles.
  */
-class Mux_console 
-  : public Console
+class Mux_console : public Console
 {
 public:
 
-  enum Console_state {
-    DISABLED   = 0,
-    INENABLED  = 1,
-    OUTENABLED = 2,
-  };
-
-
-  enum { 
-    SIZE = 8  ///< The maximum number of consoles to be multiplexed.
-  };
-
-  Mux_console();
+  enum
+    { 
+      SIZE = 8  ///< The maximum number of consoles to be multiplexed.
+    };
 
   int  write( char const *str, size_t len );
   int  getchar( bool blocking = true );
-  void getchar_chance( void );
   int  char_avail() const;
 
-  void change_state( Console *c, Mword mask, Mword bits );
-
-  void change_state( bool has, char const *attribute, Mword mask, Mword bits );
-
-  /**
-   * @brief Register a console to be multiplexed.
-   * @param cons the Console to add.
-   * @param pos the position of the console, normally not needed. It is
-   *        1 by default. The Uart console uses 0 to ensure that the
-   *        gzip output goes to the right console.
-   */
-  bool register_console( Console *cons, int pos = 1 );
-
-  /**
-   * @brief Unregister a console from the multiplexer.
-   * @param cons the console to remove.
-   */
-  bool unregister_console( Console *cons );
-
-  /**
-   * @brief Register a special console which overrides output of
-   *        other consoles if active.
-   */
-  bool register_gzip_console( Console *cons );
-
-  /**
-   * @brief Tell if special gzip console is registered.
-   */
-  bool gzip_available ();
-
-  /**
-   * @brief Tell if special gzip mode is enabled.
-   */
-  bool gzip_enabled();
-
-  /**
-   * @brief Start overriding other console's output.
-   */
-  void gzip_enable ();
-
-  /**
-   * @brief Stop overriding other console's output.
-   */
-  void gzip_disable ();
-
-  /**
-   * @brief function is called by gzip module to write the uuencode data
-   */
-  void gzip_write( char const *str, size_t len );
-
-  char const *next_attribute( bool restart = false ) const;
-
 private:
-
-  
-  struct Centry 
-  {
-    Console *console;
-    Mword    state;
-  };
-
   int     _next_getchar;
   int     _items;
-  int     _gzip_active;
-  Centry _cons[SIZE];
-  Console *_gzip;
+  Console *_cons[SIZE];
 };
 
 
@@ -106,57 +34,25 @@ IMPLEMENTATION:
 #include <cstdio>
 #include "processor.h"
 
-IMPLEMENT
-char const *Mux_console::next_attribute( bool restart ) const
-{
-  static int pos = 0;
-  bool rest = false;
-  if(restart)
-    {
-      pos = 0;
-      rest = true;
-    }
-
-  while(pos<_items)
-    {
-      if(_cons[pos].console)
-        {
-          char const *a = _cons[pos].console->next_attribute(rest);
-          if(a)
-            return a;
-          else
-            {
-              pos++;
-              rest = true;
-              continue;
-            }
-        }
-      else
-        pos++;
-    }
-  return 0;
-}
-
-IMPLEMENT 
+PUBLIC
 Mux_console::Mux_console()
   : _next_getchar(-1), _items(0)
 {}
 
 IMPLEMENT
-int Mux_console::write( char const *str, size_t len )
+int
+Mux_console::write( char const *str, size_t len )
 {
-  if (_gzip_active)
-    return _gzip->write(str, len);
-      
   for(int i=0; i<_items; ++i) 
-    if(_cons[i].console && (_cons[i].state & INENABLED))
-      _cons[i].console->write(str,len);
+    if(_cons[i] && (_cons[i]->state() & OUTENABLED))
+      _cons[i]->write(str,len);
 
   return len;
 }
 
 IMPLEMENT
-int Mux_console::getchar( bool blocking )
+int
+Mux_console::getchar( bool blocking )
 {
   if (_next_getchar != -1)
     {
@@ -169,9 +65,9 @@ int Mux_console::getchar( bool blocking )
   do {
     for(int i=0; i<_items; ++i)
       {
-	if(_cons[i].console && (_cons[i].state & OUTENABLED))
+	if(_cons[i] && (_cons[i]->state() & INENABLED))
 	  {
-	    ret = _cons[i].console->getchar( false );
+	    ret = _cons[i]->getchar( false );
 	    if (ret != -1)
 	      return ret;
 	  }
@@ -183,17 +79,32 @@ int Mux_console::getchar( bool blocking )
   return ret;
 }
 
-IMPLEMENT
-void Mux_console::getchar_chance ()
+/**
+ * deliver attributes of all subconsoles.
+ */
+PUBLIC
+Mword
+Mux_console::get_attributes() const
 {
-  if (_gzip_active)
-    return;
+  Mword attr = 0;
 
+  for (int i=0; i<_items; i++)
+    if(_cons[i])
+      attr |= _cons[i]->get_attributes();
+
+  return attr;
+}
+
+PUBLIC
+void
+Mux_console::getchar_chance ()
+{
   for (int i=0; i<_items; ++i)
     {
-      if (_cons[i].console->char_avail() == 1)
+      if (_cons[i] && (_cons[i]->state() & INENABLED) &&
+	  _cons[i]->char_avail() == 1)
 	{
-	  int c = _cons[i].console->getchar(false);
+	  int c = _cons[i]->getchar(false);
 	  if (c != -1 && _next_getchar == -1)
       	    _next_getchar = c;
 	}
@@ -201,13 +112,14 @@ void Mux_console::getchar_chance ()
 }
 
 IMPLEMENT
-int Mux_console::char_avail() const
+int
+Mux_console::char_avail() const
 {
   int ret = -1;
   for(int i=0; i<_items; ++i) 
-    if(_cons[i].console && (_cons[i].state & INENABLED)) 
+    if(_cons[i] && (_cons[i]->state() & INENABLED)) 
       {
-	int tmp = _cons[i].console->char_avail();
+	int tmp = _cons[i]->char_avail();
 	if(tmp==1) 
 	  return 1;
 	else if(tmp==0)
@@ -216,8 +128,14 @@ int Mux_console::char_avail() const
   return ret;
 }
 
-IMPLEMENT
-bool Mux_console::register_console( Console *c, int pos )
+/**
+ * Register a console to be multiplexed.
+ * @param cons the Console to add.
+ * @param pos the position of the console, normally not needed.
+ */
+PUBLIC virtual
+bool
+Mux_console::register_console( Console *c, int pos = 0)
 {
   if(_items >= SIZE) 
     return false;
@@ -233,17 +151,22 @@ bool Mux_console::register_console( Console *c, int pos )
       _cons[i+1] = _cons[i];
   } 
   _items++;
-  _cons[pos].console = c;
-  _cons[pos].state   = INENABLED | OUTENABLED;
+  _cons[pos] = c;
+  _cons[pos]->state(INENABLED|OUTENABLED);
 
   return true;
 }
 
-IMPLEMENT
-bool Mux_console::unregister_console( Console *c )
+/**
+ * Unregister a console from the multiplexer.
+ * @param cons the console to remove.
+ */
+PUBLIC
+bool
+Mux_console::unregister_console( Console *c )
 {
   int pos;
-  for(pos = 0;pos < _items && _cons[pos].console!=c;++pos)
+  for(pos = 0; pos < _items && _cons[pos]!=c; pos++)
     ;
   if(pos==_items) 
     return false;
@@ -255,76 +178,100 @@ bool Mux_console::unregister_console( Console *c )
   return true;
 }
 
-IMPLEMENT 
-void Mux_console::change_state( Console *c, Mword mask, Mword bits )
+/**
+ * Change the state of a group of consoles specified by
+ *        attributes.
+ * @param any_true   match if console has any of these attributes
+ * @param all_false  match if console doesn't have any of these attributes
+ */
+PUBLIC
+void
+Mux_console::change_state(Mword any_true, Mword all_false,
+			  Mword mask, Mword bits)
 {
-  int pos;
-  for(pos = 0; pos<_items; pos++)
+  for (int i=0; i<_items; i++)
     {
-      if (_cons[pos].console == c)
+      if (_cons[i])
 	{
-	  _cons[pos].state = (_cons[pos].state & mask) | bits;
-	  return;
+	  Mword attr = _cons[i]->get_attributes();
+	  if (   // any bit of the any_true attributes must be set
+	         (!any_true  || (attr & any_true)  != 0)
+	         // all bits of the all_false attributes must be cleared
+	      && (!all_false || (attr & all_false) == 0))
+	    {
+	      _cons[i]->state((_cons[i]->state() & mask) | bits);
+	    }
 	}
     }
 }
 
-IMPLEMENT 
-void Mux_console::change_state( bool has, char const *expr, 
-				Mword mask, Mword bits )
+/**
+ * Find a console with a specific attribute.
+ * @param any_true match to console which has set any bit of this bitmask
+ */
+PUBLIC
+Console*
+Mux_console::find_console(Mword any_true)
 {
-  int pos;
-  for(pos = 0; pos < _items; pos++)
+  for (int i=0; i<_items; i++)
     {
-      if(_cons[pos].console)
-        if(has == _cons[pos].console->check_attributes(expr))
-          _cons[pos].state = (_cons[pos].state & mask) | bits;
+      if (_cons[i] && _cons[i]->get_attributes() & any_true)
+	return _cons[i];
     }
+
+  return 0;
 }
 
-IMPLEMENT inline
-bool Mux_console::register_gzip_console( Console *c )
+/**
+ * Start exclusive mode for a specific console. Only the one
+ *        console which matches to any_true is enabled for input and
+ *        output. All other consoles are disabled.
+ * @param any_true match to console which has set any bit of this bitmask
+ */
+PUBLIC
+void
+Mux_console::start_exclusive(Mword any_true)
 {
-  _gzip = c;
-  return true;
+  // enable exclusive console
+  change_state(any_true, 0, ~0U, (OUTENABLED|INENABLED));
+  // disable all other consoles
+  change_state(0, any_true, ~(OUTENABLED|INENABLED), 0);
 }
 
-IMPLEMENT inline
-bool Mux_console::gzip_available()
+/**
+ * End exclusive mode for a specific console.
+ * @param any_true match to console which has set any bit of this bitmask
+ */
+PUBLIC
+void
+Mux_console::end_exclusive(Mword any_true)
 {
-  return _gzip != 0;
+  // disable exclusive console
+  change_state(any_true, 0, ~(OUTENABLED|INENABLED), 0);
+  // enable all other consoles
+  change_state(0, any_true, ~0U, (OUTENABLED|INENABLED));
 }
 
-IMPLEMENT inline
-bool Mux_console::gzip_enabled()
-{
-  return _gzip_active != 0;
-}
 
-IMPLEMENT
-void Mux_console::gzip_enable()
+IMPLEMENTATION[debug]:
+
+PUBLIC
+void
+Mux_console::list_consoles()
 {
-  if (gzip_available())
+  for (int i=0; i<_items; i++)
     {
-      _gzip_active = 1;
-      _gzip->write("START_GZIP", 10);
-    }
-}
+      if (_cons[i])
+	{
+	  Mword attr = _cons[i]->get_attributes();
 
-IMPLEMENT
-void Mux_console::gzip_disable()
-{
-  if (gzip_available())
-    {
-      _gzip->write("STOP_GZIP", 9);
-      _gzip_active = 0;
+	  printf("  "L4_PTR_FMT"  %s  (%s)  ", 
+	      attr, _cons[i]->str_mode(), _cons[i]->str_state());
+	  for (unsigned bit=2; bit<sizeof(attr)*4; bit++)
+	    if (attr & (1<<bit))
+	      printf("%s ", Console::str_attr(bit));
+	  putchar('\n');
+	}
     }
-}
-
-IMPLEMENT
-void Mux_console::gzip_write( char const *str, size_t len )
-{
-  if(_cons[0].console)
-    _cons[0].console->write(str,len);
 }
 

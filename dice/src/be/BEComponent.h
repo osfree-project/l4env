@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BEComponent.h
- *	\brief	contains the declaration of the class CBEComponent
+ *  \file   dice/src/be/BEComponent.h
+ *  \brief  contains the declaration of the class CBEComponent
  *
- *	\date	01/11/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   01/11/2002
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -36,25 +37,24 @@ class CFEInterface;
 class CFELibrary;
 class CFEFile;
 
-/**	\class CBEComponent
- *	\ingroup backend
- *	\brief the component - a collection of files
+/** \class CBEComponent
+ *  \ingroup backend
+ *  \brief the component - a collection of files
  */
-class CBEComponent : public CBETarget  
+class CBEComponent : public CBETarget
 {
-DECLARE_DYNAMIC(CBEComponent);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CBEComponent();
-	virtual ~CBEComponent();
+    /** \brief constructor
+     */
+    CBEComponent();
+    virtual ~CBEComponent();
 
 protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CBEComponent(CBEComponent &src);
+    /** \brief copy constructor
+     *  \param src the source to copy from
+     */
+    CBEComponent(CBEComponent &src);
 
 public:
     virtual void Write(CBEContext *pContext);

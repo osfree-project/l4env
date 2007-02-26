@@ -121,19 +121,19 @@ Rtc::ack_reset(void)
 {
   // reset irq by reading the cmos port
   // do it fast because we are cli'd
-  asm volatile ("movb $0xc, %al\n\t"
-                "outb %al,$0x70\n\t"
-                "outb %al,$0x80\n\t"
-		"inb  $0x71,%al\n\t");
+  asm volatile ("movb $0xc, %%al\n\t"
+                "outb %%al,$0x70\n\t"
+                "outb %%al,$0x80\n\t"
+		"inb  $0x71,%%al\n\t" : : : "eax");
   
   // acknowledge interrupt
   Pic::acknowledge_locked(8);
   
   // reset irq by reading the cmos port
   // do it fast because we are cli'd
-  asm volatile ("movb $0xc, %al\n\t"
-                "outb %al,$0x70\n\t"
-                "outb %al,$0x80\n\t"
-		"inb  $0x71,%al\n\t");
+  asm volatile ("movb $0xc, %%al\n\t"
+                "outb %%al,$0x70\n\t"
+                "outb %%al,$0x80\n\t"
+		"inb  $0x71,%%al\n\t" : : : "eax");
 }
 

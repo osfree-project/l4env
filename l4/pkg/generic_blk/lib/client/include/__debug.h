@@ -13,5 +13,6 @@
 
 /* 1 enables debug output, 0 disables */
 #define DEBUG_DRIVER_OPEN       0
+#define DEBUG_DRIVER_CLOSE      0
 
 #endif /* !_GENERIC_BLK___DEBUG_H */

@@ -24,13 +24,13 @@
  *
  * @{
  */
-#define IORES_TOO_MUCH_POLICY	0	/**< skip client-check on release */
-#define IOJIFFIES_L4SCSI	0	/**< use L4SCSI jiffies implementation */
-#define IOJIFFIES_HZ		100	/**< jiffies update frequency */
-#define IOJIFFIES_PERIOD	1000000/IOJIFFIES_HZ
-					/**< jiffies period (method no.2) in us */
+#define IORES_TOO_MUCH_POLICY   0   /**< skip client-check on release */
+#define IOJIFFIES_L4SCSI        0   /**< use L4SCSI jiffies implementation */
+#define IOJIFFIES_HZ            100 /**< jiffies update frequency */
+#define IOJIFFIES_PERIOD        1000000/IOJIFFIES_HZ
+                                    /**< jiffies period (method no.2) in us */
 
-#define IO_MAX_THREADS		32	/**< maximum number of threads in l4io */
+#define IO_MAX_THREADS          32  /**< maximum number of threads in l4io */
 /** @} */
 /**
  * \name DEBUG_ Macros
@@ -40,11 +40,14 @@
  *
  * @{
  */
-#define DEBUG_PCI	1	/** debug pci module */
-#define DEBUG_PCI_RW	1	/** debug pci rw config */
-#define DEBUG_RES	1	/** debug res module */
-#define DEBUG_REGDRV	1	/** debug driver registration */
-#define DEBUG_MAP	1	/** debug mappings */
+#define DEBUG_ERRORS    1  /** verbose errror handling */
+#define DEBUG_MSG       0  /** show debug messages */
+
+#define DEBUG_PCI       0  /** debug pci module */
+#define DEBUG_PCI_RW    0  /** debug pci rw config */
+#define DEBUG_RES       0  /** debug res module */
+#define DEBUG_REGDRV    0  /** debug driver registration */
+#define DEBUG_MAP       0  /** debug mappings */
 /** @} */
 
 #endif

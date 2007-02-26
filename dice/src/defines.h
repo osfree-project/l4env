@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/defines.h
- *	\brief	contains basic macros and definitions for all classes
+ *    \file    dice/src/defines.h
+ *    \brief   contains basic macros and definitions for all classes
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,12 +31,12 @@
 #define __DICE_DEFINES_H__
 
 /** defines the maximum number of include paths */
-#define MAX_INCLUDE_PATHS	25
+#define MAX_INCLUDE_PATHS    25
 
 // exceptions
-#define EXCEPTION_TYPE		int		/**< defines an exception type */
-#define EXCEP_BADSIZE		1		/**< defines the bad size exception */
-#define EXCEP_OUTOFMEMORY	2		/**< defines the out of memory exception */
+#define EXCEPTION_TYPE        int        /**< defines an exception type */
+#define EXCEP_BADSIZE        1        /**< defines the bad size exception */
+#define EXCEP_OUTOFMEMORY    2        /**< defines the out of memory exception */
 
 //@{
 /** helper macros */
@@ -52,7 +53,7 @@
 #pragma warning(disable:4786)
 using namespace std;
 #define __PRETTY_FUNCTION__ "(no function name available)"
-#endif				/* _WIN_ */
+#endif                /* _WIN_ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -62,124 +63,54 @@ using namespace std;
 #include <stdarg.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <sys/types.h>
 
 #include "debug.h"
 
-// some dynamic class management stuff
-/**\class CRuntimeClass
- *	\brief Dynamic class management stuff
- *
- * This class is used to allow dynamic class management using the DEFINE_DYNAMIC and
- * IMPLEMENT_DYNAMIC macros. This way it is possible to determine during run-time of
- * the program the class of an object. CRuntimeClass contains also information which
- * can be used during debugging (e.g. print a class name, ...).
+/** \def COPY_VECTOR(type,vec, iter)
+ *  \brief helper macro to copy a vector
  */
-struct CRuntimeClass
-{
-// Attributes
-	/** \var int m_nSize
-	 *	\brief the size of the class
-	 */
-    int m_nSize;
-	/**	\var char *m_sName
-	 *	\brief the name of the class
-	 */
-    const char *m_sName;
-	/** \var CRuntimeClass *m_pBaseClasses
-	 *	\brief a pointer to the base class's CRuntimeClass struct
-	 */
-    const CRuntimeClass **m_pBaseClasses;
-  private:
-	/**	\var int m_nCurArraySize
-	 *	\brief contains the current size of the base class array
-	 */
-    int m_nCurArraySize;
+#define COPY_VECTOR(type, vec, iter) \
+    vector<type*>::iterator iter; \
+    for (iter = src.vec.begin(); iter != src.vec.end(); iter++) \
+    { \
+        type *pNew = (type*)((*iter)->Clone()); \
+        vec.push_back(pNew); \
+        pNew->SetParent(this); \
+    }
 
-  public:
-// Operations
-	/**
-	 *	\brief checks whether object's class is derived from base-class.
-	 *	\param pBaseClass a pointer to a CRuntimeClass struct
-	 *	\return true if derived from base-class, false if not
-	 */
-  bool IsDerivedFrom(const CRuntimeClass * pBaseClass) const
-  {
-      assert(this);
-      assert(pBaseClass);
+/** \def COPY_VECTOR_WOP(type,vec, iter)
+ *  \brief helper macro to copy a vector (without setting parent)
+ */
+#define COPY_VECTOR_WOP(type, vec, iter) \
+    vector<type*>::iterator iter = src.vec.begin(); \
+    for (; iter != src.vec.end(); iter++) \
+    { \
+        type *pNew = (type*)((*iter)->Clone()); \
+        vec.push_back(pNew); \
+    }
 
-      // am I the searched class
-      if (this == pBaseClass)
-          return true;
+/** \def SWAP_VECTOR(type,vec, param)
+ *  \brief helper macro to copy a vector
+ */
+#define SWAP_VECTOR(type, vec, param) \
+    if (param) \
+    { \
+        vec.swap(*param); \
+        vector<type*>::iterator iter; \
+        for (iter = vec.begin(); iter != vec.end(); iter++) \
+            (*iter)->SetParent(this); \
+    }
 
-      // if we don't have base classes return false
-      if (!m_pBaseClasses)
-          return false;
+/** \def DEL_VECTOR(vec)
+ *  \brief helper macro to delete a vector
+ */
+#define DEL_VECTOR(vec) \
+    while (!vec.empty()) \
+    { \
+        delete vec.back(); \
+        vec.pop_back(); \
+    }
 
-      // iterate over base classes and ask each one of them
-      for (int i = 0; i < m_nCurArraySize; i++)
-      {
-          if (m_pBaseClasses[i]->IsDerivedFrom(pBaseClass))
-              return true;
-      }
-      // walked to the top, no match -> return False
-      return false;
-  }
+#endif                /* __DICE_DEFINES_H__ */
 
-  /** \brief adds a base class to this struct
-   *  \param pBaseClass the base class to add
-   */
-  void AddBase(const CRuntimeClass * pBaseClass)
-  {
-      assert(this);
-      assert(pBaseClass);
-
-      // first check if we already have base class registered
-      if (m_pBaseClasses != 0)
-      {
-          for (int i = 0; i < m_nCurArraySize; i++)
-          {
-              if (m_pBaseClasses[i] == pBaseClass)
-                  return;
-          }
-      }
-      // now we can add class
-      m_nCurArraySize++;
-      m_pBaseClasses = (const CRuntimeClass **) realloc(m_pBaseClasses, m_nCurArraySize * sizeof(CRuntimeClass *));
-      m_pBaseClasses[m_nCurArraySize - 1] = pBaseClass;
-  }
-
-  /** \brief creates a runtime object and initializes it
-   *  \param nSize the size of the class
-   *  \param sName the name of the class
-   */
-  CRuntimeClass(int nSize, const char *sName)
-  {
-      m_nSize = nSize;
-      m_sName = sName;
-      m_pBaseClasses = 0;
-      m_nCurArraySize = 0;
-  }
-};
-
-/** casts the class to the static runtime-class member */
-#define RUNTIME_CLASS(class_name) ((CRuntimeClass*)(&class_name::class##class_name))
-
-/** declares common class members */
-#define DECLARE_DYNAMIC(name) \
-public: \
-	static CRuntimeClass class##name; \
-	virtual const char* GetClassName(); \
-	virtual bool IsKindOf(const CRuntimeClass* pClass) const
-
-/** implements the common class members */
-#define IMPLEMENT_DYNAMIC(name) \
-struct CRuntimeClass name::class##name = CRuntimeClass(sizeof(class name), #name); \
-const char* name::GetClassName() { return class##name.m_sName; } \
-bool name::IsKindOf(const CRuntimeClass* pClass) const \
-{ return class##name.IsDerivedFrom(pClass); }
-
-/** implements the common class members for base classes */
-#define IMPLEMENT_DYNAMIC_BASE(name, basename) \
-class##name.AddBase(RUNTIME_CLASS(basename))
-
-#endif				/* __DICE_DEFINES_H__ */

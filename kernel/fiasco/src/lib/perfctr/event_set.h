@@ -78,12 +78,14 @@ extern const struct perfctr_event_set perfctr_mii_event_set;
 extern const struct perfctr_event_set perfctr_wcc6_event_set;
 extern const struct perfctr_event_set perfctr_wc2_event_set;
 extern const struct perfctr_event_set perfctr_vc3_event_set;
-extern const struct perfctr_event_set perfctr_p6_event_set;
+extern const struct perfctr_event_set perfctr_ppro_event_set;
 extern const struct perfctr_event_set perfctr_p2_event_set;
 extern const struct perfctr_event_set perfctr_p3_event_set;
 extern const struct perfctr_event_set perfctr_p4_event_set;
 extern const struct perfctr_event_set perfctr_k7_event_set;
 extern const struct perfctr_event_set perfctr_k8_event_set;
+extern const struct perfctr_event_set perfctr_pentm_event_set;
+extern const struct perfctr_event_set perfctr_p4m3_event_set;
 
 extern const struct perfctr_event_set *perfctr_cpu_event_set(unsigned);
 

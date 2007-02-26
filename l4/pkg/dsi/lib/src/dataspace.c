@@ -84,226 +84,55 @@ __get_dm_id(void)
 
 /*****************************************************************************/
 /**
- * \brief  Setup control area.
- * \ingroup internal
+ * \brief  Calculate control dataspace size
  * 
- * \param  socket        Socket descriptor   
- * \param  cfg           Low level stream configuration
- * 
- * \return 0 on success, error code otherwise:
- *         - \c -L4_ENOMEM  out of memory attaching dataspace
- *         - \c -L4_ENOMAP  no map area available
- *         - \c -L4_EINVAL  invalid argument attaching dataspace
- *
- * Attach dataspace and setup area header.
- */
-/*****************************************************************************/ 
-static int
-__setup_ctrl_ds(dsi_socket_t * socket, dsi_stream_cfg_t cfg)
-{
-  int ret;
-  l4_size_t size;
-  l4_addr_t map_addr;
-
-  /* check map area */
-  ret = l4dm_mem_size(&socket->ctrl_ds,&size);
-  if (ret < 0)
-    {
-      Error("DSI: get dataspace size failed: %s (%d)",l4env_errstr(ret),ret);
-      return -L4_EINVAL;
-    }
-  
-  LOGdL(DEBUG_CTRL_DS,"attaching ctrl dataspace, size %d", size);
-  LOGdL(DEBUG_CTRL_DS,"ds %d at "IdFmt,socket->ctrl_ds.id, 
-        IdStr(socket->ctrl_ds.manager));
-  
-  /* attach dataspace */
-  if (cds_map_area != -1)
-    ret = l4rm_area_attach(&socket->ctrl_ds,cds_map_area,size,0,
-			   L4DM_RW | L4RM_MAP,(void **)&map_addr);
-  else
-    ret = l4rm_attach(&socket->ctrl_ds,size,0,L4DM_RW | L4RM_MAP,
-		      (void **)&map_addr);
-  if (ret < 0)
-    {
-      Error("DSI: attach dataspace failed: %s (%d)",
-	    l4env_errstr(ret),ret);
-      return ret;
-    }
-
-  /* setup socket pointers */
-  socket->header = (dsi_ctrl_header_t *)map_addr;
-  socket->packets = (dsi_packet_t *)(map_addr + sizeof(dsi_ctrl_header_t));
-  socket->sg_lists = (dsi_sg_elem_t *)(map_addr + sizeof(dsi_ctrl_header_t) +
-				       cfg.num_packets * sizeof(dsi_packet_t));
-
-  LOGdL(DEBUG_CTRL_DS,"attached crtl ds to 0x%08x",map_addr);
-  LOGdL(DEBUG_CTRL_DS,"header at 0x%08x",(l4_addr_t)socket->header);
-  LOGdL(DEBUG_CTRL_DS,"packets at 0x%08x",(l4_addr_t)socket->packets);
-  LOGdL(DEBUG_CTRL_DS,"sg_lists at 0x%08x",(l4_addr_t)socket->sg_lists);
-
-  /* done */
-  return 0;
-}
-
-/*****************************************************************************
- * public library stuff
- *****************************************************************************/
-
-/*****************************************************************************/
-/**
- * \brief Allocate and setup control area.
- * \ingroup internal
- * 
- * \param socket         Socket descriptor
- * \param jcp_stream     Stream description
- * \param cfg            Low level stream configuration
+ * \param  cfg           Stream configuration
  *	
- * \return 0 on success, error code otherwise:
- *         - -DSI_ENODSM    dataspace manager not found
- *         - -L4_EIPC    IPC error calling dataspace manager
- *         - -L4_ENOMEM  not enough memory available allocating ctrl area
- *                          or attaching dataspace
- *         - -L4_ENOMAP  no map area avaliable mapping ctrl area
- *         - -L4_EINVAL  invalid argument (can happen if the map area is
- *                          already used by someone else)
+ * \return Control dataspace size
  */
 /*****************************************************************************/ 
-int
-dsi_create_ctrl_area(dsi_socket_t * socket, dsi_jcp_stream_t jcp_stream, 
-		     dsi_stream_cfg_t cfg)
+static inline l4_size_t
+__get_ctrl_ds_size(dsi_stream_cfg_t cfg)
 {
-  int ret,i;
-  l4_size_t size;
-
-  /* sanity checks */
-  Assert(socket != NULL);
-
-  /* check dataspace manager */
-  if (l4_thread_equal(dsi_dm_id,L4_INVALID_ID))
-    {
-      if (__get_dm_id())
-	return -DSI_ENODSM;
-    }
-  ASSERT(!l4_thread_equal(dsi_dm_id,L4_INVALID_ID));
-
-  /* calculate dataspace size */
-  size = sizeof(dsi_ctrl_header_t) + 
+  return sizeof(dsi_ctrl_header_t) + 
     cfg.num_packets * sizeof(dsi_packet_t) +
     cfg.num_packets * cfg.max_sg *  sizeof(dsi_sg_elem_t);
-
-  LOGdL(DEBUG_CTRL_DS,"header size %u",sizeof(dsi_ctrl_header_t));
-  LOGdL(DEBUG_CTRL_DS,"%u packets of size %u",cfg.num_packets,
-        sizeof(dsi_packet_t));
-  LOGdL(DEBUG_CTRL_DS,"%u sg elems of size %u",cfg.num_packets * cfg.max_sg, 
-        sizeof(dsi_sg_elem_t));
-  LOGdL(DEBUG_CTRL_DS,"total size %u",size);
-
-  /* align size to page size */
-  size = (size + L4_PAGESIZE - 1) & L4_PAGEMASK;
-
-  /* allocate dataspace */
-  ret = l4dm_mem_open(dsi_dm_id,size,0,0,"DSI ctrl area",&socket->ctrl_ds);
-  if (ret < 0)
-    {
-      Error("DSI: dataspace allocation failed: %s (%d)",l4env_errstr(ret),ret);
-      return ret;
-    }
-
-  LOGdL(DEBUG_CTRL_DS,"ds %d at %x.%x",socket->ctrl_ds.id,
-        socket->ctrl_ds.manager.id.task,socket->ctrl_ds.manager.id.lthread);
-
-  /* setup dataspace */
-  ret = __setup_ctrl_ds(socket,cfg);
-  if (ret)
-    {
-      /* failed to setup control area, release dataspace */
-      l4dm_close(&socket->ctrl_ds);
-      return ret;
-    }
-
-  /* better to clean it */
-  memset(socket->header,0,size);
-
-  /* finish setup, do things only neccessary for newly allocated area */ 
-  socket->num_packets = socket->header->num_packets 
-    = cfg.num_packets;
-  socket->num_sg_elems = socket->header->num_sg_elems
-    = cfg.num_packets * cfg.max_sg;
-  socket->header->max_sg_len = cfg.max_sg;
-  socket->header->packets_committed = 0;
-
-  /* setup packet descriptors */
-  for (i = 0; i < cfg.num_packets; i++)
-    {
-      socket->packets[i].tx_sem = DSI_SEMAPHORE_UNLOCKED;
-      socket->packets[i].rx_sem = DSI_SEMAPHORE_LOCKED;
-    }
-
-  /* setup scatter gather elements */
-  for (i = 0; i < cfg.num_packets * cfg.max_sg; i++)
-    socket->sg_lists[i].flags = DSI_SG_ELEM_UNUSED;
-
-  /* done */
-
-  return 0;
 }
 
 /*****************************************************************************/
 /**
- * \brief   Setup control dataspace
- * \ingroup general
+ * \brief   Initialize control dataspace
  * 
- * \param   ds           Dataspace id
+ * \param   map_addr     Dataspace map address
+ * \param   size         Dataspace size
  * \param   cfg          Stream configuration
- *	
- * \return  0 on success, error code otherwise:
- *          - -#L4_EINVAL invalid dataspace
  *
- * Setup control dataspace without a socket, it can be used by an application 
- * to create a control dataspace which the application passed to both the
- * send and receive component
+ * Initialize data structures of control dataspace
  */
 /*****************************************************************************/ 
-int 
-dsi_setup_ctrl_dataspace(l4dm_dataspace_t * ds, dsi_stream_cfg_t cfg)
+static void
+__init_ctrl_ds(l4_addr_t map_addr, l4_size_t size, dsi_stream_cfg_t cfg)
 {
-  l4_size_t size, ds_size;
-  int ret, i;
-  void * map_addr;
   dsi_ctrl_header_t * header;
   dsi_packet_t * packets;
   dsi_sg_elem_t * sg_elems;
-
-  /* calculate dataspace size */
-  size = sizeof(dsi_ctrl_header_t) + 
-    cfg.num_packets * sizeof(dsi_packet_t) +
-    cfg.num_packets * cfg.max_sg *  sizeof(dsi_sg_elem_t);
-
-  /* check dataspace size */
-  ret = l4dm_mem_size(ds, &ds_size);
-  if (ret < 0)
-    return ret;
-
-  if (ds_size < size)
-    {
-      LOG_Error("dataspace too small!");
-      return -L4_EINVAL;
-    }
-
-  /* map dataspace */
-  ret = l4rm_attach(ds, size, 0, L4DM_RW | L4RM_MAP, &map_addr);
-  if (ret < 0)
-    {
-      LOG_Error("attach dataspace failed: %s (%d)!", l4env_errstr(ret), ret);
-      return ret;
-    }
-
+  int i;
+  
+  LOGdL(DEBUG_CTRL_DS, "total size %u, header size %u\n" \
+        " %u packets of size %u\n" \
+        " %u sg elems of size %u",
+        size, sizeof(dsi_ctrl_header_t), 
+        cfg.num_packets, sizeof(dsi_packet_t),
+        cfg.num_packets * cfg.max_sg, sizeof(dsi_sg_elem_t));
+  
   /* setup dataspace */
   header = (dsi_ctrl_header_t *)map_addr;
   packets = (dsi_packet_t *)(map_addr + sizeof(dsi_ctrl_header_t));
   sg_elems = (dsi_sg_elem_t *)(map_addr + sizeof(dsi_ctrl_header_t) +
                                cfg.num_packets * sizeof(dsi_packet_t));
+
+  /* clean dataspace */
+  memset(header, 0, size);
 
   /* setup header */
   header->num_packets = cfg.num_packets;
@@ -321,29 +150,167 @@ dsi_setup_ctrl_dataspace(l4dm_dataspace_t * ds, dsi_stream_cfg_t cfg)
   /* setup scatter gather elements */
   for (i = 0; i < cfg.num_packets * cfg.max_sg; i++)
     sg_elems[i].flags = DSI_SG_ELEM_UNUSED;
+}
 
-  /* done, detach dataspace */
-  l4rm_detach(map_addr);
+/*****************************************************************************/
+/**
+ * \brief   Map control dataspace, setup pointers in socket structure
+ * \ingroup internal
+ * 
+ * \param   socket       Socket descriptor   
+ * \param   cfg          Low level stream configuration
+ * 
+ * \return 0 on success, error code otherwise:
+ *         - -#L4_ENOMEM  out of memory attaching dataspace
+ *         - -#L4_ENOMAP  no map area available
+ *         - -#L4_EINVAL  invalid argument attaching dataspace
+ */
+/*****************************************************************************/ 
+static int
+__map_ctrl_ds(dsi_socket_t * socket, dsi_stream_cfg_t cfg)
+{
+  int ret;
+  l4_size_t size;
+  void *map_addr;
 
+  /* check map area */
+  ret = l4dm_mem_size(&socket->ctrl_ds, &size);
+  if (ret < 0)
+    {
+      LOG_Error("DSI: get dataspace size failed: %s (%d)", 
+                l4env_errstr(ret), ret);
+      return -L4_EINVAL;
+    }
+  
+  LOGdL(DEBUG_CTRL_DS,"attaching ctrl dataspace, ds %d at "l4util_idfmt", size %d", 
+        socket->ctrl_ds.id, l4util_idstr(socket->ctrl_ds.manager), size);
+  
+  /* attach dataspace */
+  if (cds_map_area != -1)
+    ret = l4rm_area_attach(&socket->ctrl_ds, cds_map_area, size, 0,
+			   L4DM_RW | L4RM_MAP, &map_addr);
+  else
+    ret = l4rm_attach(&socket->ctrl_ds,size, 0, L4DM_RW | L4RM_MAP,
+		      &map_addr);
+  if (ret < 0)
+    {
+      LOG_Error("DSI: attach dataspace failed: %s (%d)",
+                l4env_errstr(ret), ret);
+      return ret;
+    }
+
+  /* setup socket pointers */
+  socket->header = (dsi_ctrl_header_t *)map_addr;
+  socket->packets = (dsi_packet_t *)((unsigned)map_addr + 
+				      sizeof(dsi_ctrl_header_t));
+  socket->sg_lists = (dsi_sg_elem_t *)((unsigned)map_addr + 
+				       sizeof(dsi_ctrl_header_t) +
+				       cfg.num_packets * sizeof(dsi_packet_t));
+  
+  LOGdL(DEBUG_CTRL_DS, "attached crtl ds to 0x%08x \n" \
+        " header at   0x%08x\n" \
+        " packets at  0x%08x\n" \
+        " sg_lists at 0x%08x",
+        (l4_addr_t)map_addr,(l4_addr_t)socket->header, 
+	(l4_addr_t)socket->packets, (l4_addr_t)socket->sg_lists);
+  
+  /* done */
+  return 0;
+}
+
+/*****************************************************************************
+ * public library stuff
+ *****************************************************************************/
+
+/*****************************************************************************/
+/**
+ * \brief   Allocate and setup control area.
+ * \ingroup internal
+ * 
+ * \param   socket       Socket descriptor
+ * \param   jcp_stream   Stream description
+ * \param   cfg          Low level stream configuration
+ *	
+ * \return  0 on success, error code otherwise:
+ *          - -#DSI_ENODSM  dataspace manager not found
+ *          - -#L4_EIPC     IPC error calling dataspace manager
+ *          - -#L4_ENOMEM   not enough memory available allocating ctrl area
+ *                          or attaching dataspace
+ *          - -#L4_ENOMAP   no map area avaliable mapping ctrl area
+ *          - -#L4_EINVAL   invalid argument (can happen if the map area is
+ *                          already used by someone else)
+ */
+/*****************************************************************************/ 
+int
+dsi_create_ctrl_area(dsi_socket_t * socket, dsi_jcp_stream_t jcp_stream, 
+		     dsi_stream_cfg_t cfg)
+{
+  int ret;
+  l4_size_t size = __get_ctrl_ds_size(cfg);
+
+  /* sanity checks */
+  Assert(socket != NULL);
+
+  /* check dataspace manager */
+  if (l4_thread_equal(dsi_dm_id,L4_INVALID_ID))
+    {
+      if (__get_dm_id())
+	return -DSI_ENODSM;
+    }
+  ASSERT(!l4_thread_equal(dsi_dm_id,L4_INVALID_ID));
+
+  /* align size to page size */
+  size = l4_round_page(size);
+
+  /* allocate dataspace */
+  ret = l4dm_mem_open(dsi_dm_id, size, 0, 0, "DSI ctrl area", 
+                      &socket->ctrl_ds);
+  if (ret < 0)
+    {
+      LOG_Error("DSI: dataspace allocation failed: %s (%d)",
+                l4env_errstr(ret), ret);
+      return ret;
+    }
+
+  LOGdL(DEBUG_CTRL_DS, "ds %d at "l4util_idfmt, 
+        socket->ctrl_ds.id, l4util_idstr(socket->ctrl_ds.manager));
+
+  /* map control dataspace and setup pointers in socket */
+  ret = __map_ctrl_ds(socket, cfg);
+  if (ret)
+    {
+      /* failed to setup control area, release dataspace */
+      l4dm_close(&socket->ctrl_ds);
+      return ret;
+    }
+
+  /* initialize control dataspace structures */
+  __init_ctrl_ds((l4_addr_t)socket->header, size, cfg);
+
+  /* finish setup */ 
+  socket->num_packets = socket->header->num_packets;
+  socket->num_sg_elems = socket->header->num_sg_elems;
+
+  /* done */
   return 0;
 }
 
 /*****************************************************************************/
 /**
- * \brief Attach and setup control area.
+ * \brief   Attach and setup control area.
  * \ingroup internal
  * 
- * \param socket	 Socket descriptor
- * \param ctrl_ds	 Control dataspace
- * \param jcp_stream	 Stream description
- * \param cfg		 Low level stream configuration
+ * \param   socket       Socket descriptor
+ * \param   ctrl_ds      Control dataspace
+ * \param   jcp_stream   Stream description
+ * \param   cfg          Low level stream configuration
  *	
  * \return 0 on success, error code otherwise:
- *         - -L4_EINVAL  invalid dataspace or configuration
- *         - -L4_EPERM   no permissions to access dataspace
- *         - -L4_EIPC    IPC error calling dataspace manager
- *         - -L4_ENOMAP  no map area available to attach dataspace
- *         - -L4_ENOMEM  out of memory attaching dataspace
+ *         - -#L4_EINVAL  invalid dataspace or configuration
+ *         - -#L4_EPERM   no permissions to access dataspace
+ *         - -#L4_EIPC    IPC error calling dataspace manager
+ *         - -#L4_ENOMAP  no map area available to attach dataspace
+ *         - -#L4_ENOMEM  out of memory attaching dataspace
  */
 /*****************************************************************************/ 
 int
@@ -358,18 +325,18 @@ dsi_set_ctrl_area(dsi_socket_t * socket, l4dm_dataspace_t ctrl_ds,
   Assert(socket != NULL);
 
   /* check dataspace */
-  ret = l4dm_check_rights(&ctrl_ds,L4DM_RW);
+  ret = l4dm_check_rights(&ctrl_ds, L4DM_RW);
   if (ret < 0)
     {
-      Error("DSI: invalid dataspace: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("DSI: invalid dataspace: %s (%d)", l4env_errstr(ret), ret);
       return ret;
     }
 
   /* set control dataspace */
   socket->ctrl_ds = ctrl_ds;
 
-  /* setup control area */
-  ret = __setup_ctrl_ds(socket,cfg);
+  /* map control dataspace, setup pointers in socket structure */
+  ret = __map_ctrl_ds(socket, cfg);
   if (ret)
     {
       /* failed to setup control area */
@@ -390,15 +357,14 @@ dsi_set_ctrl_area(dsi_socket_t * socket, l4dm_dataspace_t ctrl_ds,
   if ((cfg.num_packets != socket->num_packets) ||
       (socket->num_sg_elems != cfg.max_sg * socket->num_packets))
     {
-      Error("DSI: configuration mismatch in control area");
+      LOG_Error("DSI: configuration mismatch in control area");
       
       /* check if attached area is big enough */
       size = sizeof(dsi_ctrl_header_t) + 
 	socket->num_packets * sizeof(dsi_packet_t) +
 	socket->num_sg_elems *  sizeof(dsi_sg_elem_t);
-
-      l4dm_mem_size(&socket->ctrl_ds,&s);
-
+      
+      l4dm_mem_size(&socket->ctrl_ds, &s);
       if (size > s)
 	{
 	  Panic("DSI: size mismatch");
@@ -406,7 +372,7 @@ dsi_set_ctrl_area(dsi_socket_t * socket, l4dm_dataspace_t ctrl_ds,
 	}
       
       /* adapt packet / scatter gather list pointer */
-      printf("DSI: adjusting packet / scatter gather list pointers\n");
+      LOG_printf("DSI: adjusting packet / scatter gather list pointers\n");
       map = (l4_addr_t)socket->header;
       socket->packets = (dsi_packet_t *)(map + sizeof(dsi_ctrl_header_t));
       socket->sg_lists = (dsi_sg_elem_t *)
@@ -435,16 +401,15 @@ dsi_release_ctrl_area(dsi_socket_t * socket)
   int ret;
   int error = 0;
   
-  LOGdL(DEBUG_CTRL_DS,"detaching control area (ds %d at %x.%x)",
-        socket->ctrl_ds.id,
-        socket->ctrl_ds.manager.id.task,socket->ctrl_ds.manager.id.lthread);
+  LOGdL(DEBUG_CTRL_DS,"detaching control area (ds %d at "l4util_idfmt")",
+        socket->ctrl_ds.id, l4util_idstr(socket->ctrl_ds.manager));
 
   /* detach control dataspace */
   ret = l4rm_detach(socket->header);
   if (ret < 0)
     {
-      Error("DSI: detach control dataspace failed: %s (%d)",
-	    l4env_errstr(ret),ret);
+      LOG_Error("DSI: detach control dataspace failed: %s (%d)",
+                l4env_errstr(ret), ret);
       error = ret;
     }
 
@@ -454,8 +419,8 @@ dsi_release_ctrl_area(dsi_socket_t * socket)
       ret = l4dm_close(&socket->ctrl_ds);
       if (ret < 0)
 	{
-	  Error("DSI: close control dataspace failed: %s (%d)",
-		l4env_errstr(ret),ret);
+	  LOG_Error("DSI: close control dataspace failed: %s (%d)",
+                    l4env_errstr(ret), ret);
 	  error = ret;
 	}
     }
@@ -498,8 +463,8 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
       ret = l4dm_mem_size(&data_ds,&size);
       if (ret < 0)
 	{
-	  Error("DSI: get dataspace size failed: %s (%d)",
-		l4env_errstr(ret),ret);
+	  LOG_Error("DSI: get dataspace size failed: %s (%d)",
+                    l4env_errstr(ret), ret);
 	  return -L4_EINVAL;
 	}
 
@@ -520,8 +485,8 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
 	ret = l4dm_mem_open(dsi_dm_id,size,0,0,"DSI data",&ds);
       if (ret < 0)
 	{
-	  Error("DSI: dataspace allocation failed: %s (%d)!",
-		l4env_errstr(ret),ret);
+	  LOG_Error("DSI: dataspace allocation failed: %s (%d)!",
+                    l4env_errstr(ret), ret); 
 	  return ret;
 	}
 
@@ -534,21 +499,22 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
       ret = l4dm_check_rights(&data_ds,L4DM_RW);
       if (ret < 0)
 	{
-	  Error("DSI: invalid data dataspace: %s (%d)!",
-		l4env_errstr(ret),ret);
+	  LOG_Error("DSI: invalid data dataspace: %s (%d)!",
+                    l4env_errstr(ret), ret);
 	  return ret;
 	}
       ds = data_ds;
     }
 
-  LOGdL(DEBUG_DATA_DS,"attaching data area");
-  LOGdL(DEBUG_DATA_DS,"ds %d at "IdFmt,data_ds.id,IdStr(data_ds.manager));
+  LOGdL(DEBUG_DATA_DS,"attaching data area, ds %d at "l4util_idfmt,
+        data_ds.id,l4util_idstr(data_ds.manager));
   
   /* get dataspace size */
   ret = l4dm_mem_size(&ds,&size);
   if (ret < 0)
     {
-      Error("DSI: get dataspace size failed: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("DSI: get dataspace size failed: %s (%d)", 
+                l4env_errstr(ret), ret);
       return -L4_EINVAL;
     }
 
@@ -580,8 +546,8 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
     ret = l4rm_attach(&ds,size,0,flags,&map);
   if (ret)
     {
-      Error("DSI: attach data dataspace failed: %s (%d)",
-	    l4env_errstr(ret),ret);
+      LOG_Error("DSI: attach data dataspace failed: %s (%d)",
+                l4env_errstr(ret), ret);
       return ret;
     }
   
@@ -592,7 +558,7 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
   socket->data_map_size = i;
   socket->next_buf = map;
 
-  LOGdL(DEBUG_DATA_DS,"attached data ds to addr 0x%08x",(l4_addr_t)map);
+  LOGdL(DEBUG_DATA_DS, "attached data ds to addr 0x%08x", (l4_addr_t)map);
 
   /* done */
   return 0;
@@ -613,16 +579,15 @@ dsi_release_data_area(dsi_socket_t * socket)
   int ret;
   int error = 0;
 
-  LOGdL(DEBUG_DATA_DS,"detaching data area (ds %d at %x.%x)",
-        socket->data_ds.id,
-        socket->data_ds.manager.id.task,socket->data_ds.manager.id.lthread);
+  LOGdL(DEBUG_DATA_DS, "detaching data area (ds %d at "l4util_idfmt")",
+        socket->data_ds.id, l4util_idstr(socket->data_ds.manager));
 
   /* detach data dataspace */
   ret = l4rm_detach(socket->data_area);
   if (ret < 0)
     {
-      Error("DSI: detach data dataspace failed: %s (%d)",
-	    l4env_errstr(ret),ret);
+      LOG_Error("DSI: detach data dataspace failed: %s (%d)",
+                l4env_errstr(ret), ret);
       error = ret;
     }
 
@@ -632,8 +597,8 @@ dsi_release_data_area(dsi_socket_t * socket)
       ret = l4dm_close(&socket->data_ds);
       if (ret < 0)
 	{
-	  Error("DSI: close data dataspace failed: %s (%d)",
-		l4env_errstr(ret),ret);
+	  LOG_Error("DSI: close data dataspace failed: %s (%d)",
+                    l4env_errstr(ret), ret);
 	  error = ret;
 	}
     }
@@ -658,8 +623,8 @@ dsi_init_dataspaces(void)
 				 0,&cds_map_area);
   if (ret)
     {
-      Error("DSI: failed to reserve map area for control dataspaces: "
-	    "%s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("DSI: failed to reserve map area for control dataspaces: "
+                "%s (%d)", l4env_errstr(ret), ret);
       cds_map_area = -1;
     }
 #endif
@@ -670,8 +635,8 @@ dsi_init_dataspaces(void)
 				 0,&dds_map_area);
   if (ret)
     {
-      Error("DSI: failed to reserve map area for data dataspaces: "
-	    "%s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("DSI: failed to reserve map area for data dataspaces: "
+                "%s (%d)", l4env_errstr(ret), ret);
       dds_map_area = -1;
     }
 #endif
@@ -680,21 +645,6 @@ dsi_init_dataspaces(void)
 /*****************************************************************************
  * API functions
  *****************************************************************************/
-
-/*****************************************************************************/
-/**
- * \brief  Set new dataspace manager.
- * \ingroup general
- * 
- * \param  id            dataspace manager id
- */
-/*****************************************************************************/ 
-void 
-dsi_set_dataspace_manager(l4_threadid_t id)
-{
-  /* set dataspace manager id */
-  dsi_dm_id = id;
-}
 
 /*****************************************************************************/
 /**
@@ -737,4 +687,104 @@ dsi_socket_share_ds(dsi_socket_t * socket, l4_threadid_t client)
 
   /* done */
   return error;
+}
+
+/*****************************************************************************/
+/**
+ * \brief  Set new dataspace manager.
+ * \ingroup general
+ * 
+ * \param  id            dataspace manager id
+ */
+/*****************************************************************************/ 
+void 
+dsi_ds_set_dataspace_manager(l4_threadid_t id)
+{
+  /* set dataspace manager id */
+  dsi_dm_id = id;
+}
+
+/*****************************************************************************/
+/**
+ * \brief   Setup control dataspace
+ * \ingroup general
+ * 
+ * \param   ds           Dataspace id
+ * \param   cfg          Stream configuration
+ *	
+ * \return  0 on success, error code otherwise:
+ *          - -#L4_EINVAL invalid dataspace
+ *
+ * Setup control dataspace without a socket, it can be used by an application 
+ * to create a control dataspace which the application passed to both the
+ * send and receive component
+ */
+/*****************************************************************************/ 
+int 
+dsi_ds_setup_ctrl_dataspace(l4dm_dataspace_t * ds, dsi_stream_cfg_t cfg)
+{
+  l4_size_t size = __get_ctrl_ds_size(cfg);
+  l4_size_t ds_size;
+  int ret;
+  void * map_addr;
+
+  /* check dataspace size */
+  ret = l4dm_mem_size(ds, &ds_size);
+  if (ret < 0)
+    return ret;
+
+  if (ds_size < size)
+    {
+      LOG_Error("dataspace too small!");
+      return -L4_EINVAL;
+    }
+
+  /* map dataspace */
+  ret = l4rm_attach(ds, size, 0, L4DM_RW | L4RM_MAP, &map_addr);
+  if (ret < 0)
+    {
+      LOG_Error("attach dataspace failed: %s (%d)!", l4env_errstr(ret), ret);
+      return ret;
+    }
+
+  /* init control dataspace dataspace */
+  __init_ctrl_ds((l4_addr_t)map_addr, size, cfg);
+
+  /* done, detach dataspace */
+  l4rm_detach(map_addr);
+
+  return 0;
+}
+
+/*****************************************************************************/
+/**
+ * \brief   Create control dataspace
+ * \ingroup general
+ * 
+ * \param   cfg          Stream configuration
+ * \retval  ds           Control dataspace id
+ *	
+ * \return  0 on success, error code otherwise:
+ *          - -#L4_ENOMEM  dataspace allocation failed
+ */
+/*****************************************************************************/ 
+int
+dsi_ds_create_ctrl_dataspace(dsi_stream_cfg_t cfg, l4dm_dataspace_t * ds)
+{
+  l4_size_t size = __get_ctrl_ds_size(cfg);
+  l4_addr_t map_addr;
+
+  /* allocate dataspace */
+  map_addr = (l4_addr_t)l4dm_mem_ds_allocate(size, L4DM_RW | L4RM_MAP, ds);
+  if (map_addr == 0)
+    return -L4_ENOMEM;
+
+  /* init control dataspace */
+  __init_ctrl_ds((l4_addr_t)map_addr, size, cfg);
+
+  /* done, detach dataspace */
+  l4rm_detach((void *)map_addr);
+ 
+  /* done */
+  return 0;
 }

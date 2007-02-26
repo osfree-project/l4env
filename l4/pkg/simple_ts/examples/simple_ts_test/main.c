@@ -11,12 +11,15 @@
 
 /* L4 includes */
 #include <l4/sys/types.h>
+#include <l4/sys/syscalls.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/thread/thread.h>
-#include <l4/generic_ts/generic_ts-client.h>
+#include <l4/generic_ts/generic_ts.h>
+#include <l4/util/stack.h>
+#include <l4/util/l4_macros.h>
 
 /* other includes */
 #include <stdio.h>
@@ -44,8 +47,10 @@ app(int number, l4_threadid_t caller)
   l4_msgdope_t result;
   l4_threadid_t src_id;
   l4_umword_t dummy;
+  char s[64];
 
-  printf("--> App %d: Hello World!\n", number);
+  sprintf(s, "  --> App %d: Hello World!\n", number);
+  outstring(s);
   l4_ipc_call(caller, 
       	      L4_IPC_SHORT_MSG, 0, 0, 
 	      L4_IPC_SHORT_MSG, &dummy, &dummy,
@@ -80,16 +85,16 @@ app_pager(void *unused)
 	{
 	  int appidx;
 
-	  if (src_thread.id.task > MAX_TASK_ID)
+	  if (l4util_idtskstr(src_thread) > MAX_TASK_ID)
 	    {
-	      printf("pagefault at %08x (eip %08x) from unknown task %x.%x\n",
-		     dw1, dw2, src_thread.id.task, src_thread.id.lthread);
+	      printf("pagefault at %08x (eip %08x) from unknown task "
+		     l4util_idfmt"\n", dw1, dw2, l4util_idstr(src_thread));
 	      enter_kdebug("stop");
 	      continue;
 	    }
 
 	  /* implement Sigma0 pagefault protocol */
-	  appidx = task2app[src_thread.id.task];
+	  appidx = task2app[l4util_idtskstr(src_thread)];
 	  reply_type = L4_IPC_SHORT_FPAGE;
 	  if ((dw1 == 1) && ((dw2 & 0xff) == 1))
 	    {
@@ -103,8 +108,8 @@ app_pager(void *unused)
 	    }
 	  else if ((dw1 & 0xfffffffc) == 0)
 	    {
-	      printf("null pointer exception thread %x.%x, (%08x at %08x)\n",
-		     src_thread.id.task, src_thread.id.lthread, dw1, dw2);
+	      printf("null pointer exception thread "l4util_idfmt
+		     ", (%08x at %08x)\n", l4util_idstr(src_thread), dw1, dw2);
 	      enter_kdebug("stop");
 	    }
 	  else if ((dw1 >= (l4_umword_t)&app) &&
@@ -133,9 +138,9 @@ app_pager(void *unused)
 	    }
 	  else
 	    {
-	      printf("unknown pagefault at %08x (eip %08x) from %x.%x\n"
-		     "eip = %08x..%08x  stack = %08x..%08x\n",
-		      dw1, dw2, src_thread.id.task, src_thread.id.lthread,
+	      printf("unknown pagefault at %08x (eip %08x) from "l4util_idfmt
+		     "\neip = %08x..%08x  stack = %08x..%08x\n",
+		      dw1, dw2, l4util_idstr(src_thread),
 		      (unsigned)&app, (unsigned)&task2app,
 		      app_stack[appidx].start, app_stack[appidx].end);
 	      enter_kdebug("stop");
@@ -144,7 +149,7 @@ app_pager(void *unused)
 	  error = l4_ipc_reply_and_wait(src_thread, reply_type, dw1, dw2,
 	      				&src_thread, L4_IPC_SHORT_MSG,
 					&dw1, &dw2, 
-					L4_IPC_TIMEOUT(0, 1, 0, 0, 0, 0),
+					L4_IPC_SEND_TIMEOUT_0,
 					&result);
 	}
 
@@ -156,18 +161,10 @@ int
 main(void)
 {
   int error, i;
-  l4_threadid_t ts_id;
-  l4_threadid_t tid, pager;
-  l4_uint32_t *esp;
+  l4_threadid_t tid, pager, kill_tid;
+  l4_addr_t esp;
   l4_umword_t dummy;
   l4_msgdope_t result;
-  CORBA_Environment _env = dice_default_environment;
-
-  if (!names_waitfor_name("SIMPLE_TS", &ts_id, 5000))
-    {
-      printf("SIMPLE_TS not found\n");
-      return -1;
-    }
 
   l4thread_set_prio(l4thread_myself(), 20);
 
@@ -188,20 +185,19 @@ main(void)
 	}
 
       app_stack[i].end = app_stack[i].start + L4_PAGESIZE - 1;
-      esp = (l4_uint32_t*)(app_stack[i].start+L4_PAGESIZE);
+      esp = app_stack[i].start+L4_PAGESIZE;
 
       /* put app number and myself on top of stack as parameter */
-      *(--((l4_threadid_t*)esp)) = l4_myself();
-      *(--esp) = i;
-      *(--esp) = 0;
+      l4util_stack_push_threadid(&esp, l4_myself());
+      l4util_stack_push_mword   (&esp, i);
+      l4util_stack_push_mword   (&esp, 0);
 
       /* Allocate app number i. We can't allocate and create the task in
        * one step because after creating the task runs immediatly so it
        * may be that the new task's pager doesn't know anything about the
        * new task (because the task already runs before the task create to
        * the task server returns */
-      if ((error = l4_ts_allocate_call(&ts_id, &tid, &_env))
-	  || _env.major != CORBA_NO_EXCEPTION)
+      if ((error = l4ts_allocate_task(&tid)))
 	{
 	  /* most probably we have reached the maximum number of tasks */
 	  printf("Expected error allocating task: %d\n", error);
@@ -210,17 +206,24 @@ main(void)
 
       if (tid.id.task > MAX_TASK_ID)
 	{
-	  printf("task number is %d (greater than %d)\n",
-	        tid.id.task, MAX_TASK_ID);
+	  printf("task number is "l4util_idtskfmt" (greater than "
+		l4util_idtskfmt")\n", l4util_idtskstr(tid), MAX_TASK_ID);
 	  return -1;
 	}
       task2app[tid.id.task] = i;
+      kill_tid = tid;
 
+      printf("kill\n");
+      /* Kill task. */
+      if ((error = l4ts_kill_task(tid, L4TS_KILL_SYNC)))
+	{
+	  printf("Error %d killing task\n", error);
+	  break;
+	}
+      printf("create\n");
       /* Create task. We choose a priority of 19 and an mcp of 0xe0. */
-      if ((error = l4_ts_create_call(&ts_id, &tid, 
-				     (l4_addr_t)app, (l4_addr_t)esp, 0xe0,
-				     &pager, 21, "",  0, &_env))
-	  || _env.major != CORBA_NO_EXCEPTION)
+      if ((error = l4ts_create_task(&tid, (l4_addr_t)app, (l4_addr_t)esp, 
+				    0xe0, &pager, 21, "",  0)))
 	{
 	  printf("Error %d creating task\n", error);
 	  break;
@@ -230,8 +233,8 @@ main(void)
       l4_ipc_receive(tid, 0, &dummy, &dummy, L4_IPC_NEVER, &result);
       l4_ipc_send(tid, 0, 0, 0, L4_IPC_NEVER, &result);
 
-      printf("Task %x.%x (%08x:%08x) stack at %08x..%08x is up\n",
-	     tid.id.task,tid.id.lthread,tid.lh.high,tid.lh.low,
+      printf("Task "l4util_idfmt" stack at %08x..%08x is up\n",
+	     l4util_idstr(tid),
 	     (unsigned)esp & L4_PAGEMASK, 
 	     ((unsigned)esp & L4_PAGEMASK)+L4_PAGESIZE-1);
     }
@@ -239,54 +242,51 @@ main(void)
   /* give summary */
   printf("%d tasks created\n", i);
 
-  if ((error = l4_ts_delete_call(&ts_id, &tid, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+  tid = kill_tid;
+
+  if ((error = l4ts_kill_task(tid, L4TS_KILL_SYNC)))
     {
-      printf("error deleting task %x.%x\n", 
-	     tid.id.task, tid.id.lthread);
+      printf("error killing task "l4util_idfmt"\n", l4util_idstr(tid));
       return -1;
     }
 
-  printf("Task %x.%x killed\n", tid.id.task, tid.id.lthread);
+  printf("Task "l4util_idfmt" killed\n", l4util_idstr(tid));
 
-  if ((error = l4_ts_free_call(&ts_id, &tid, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+  if ((error = l4ts_free_task(&tid)))
     {
-      printf("Error %d freeing task %x.%x\n", 
-	      error, tid.id.task, tid.id.lthread);
+      printf("Error %d freeing task "l4util_idfmt"\n", 
+	  error, l4util_idstr(tid));
       return -1;
     }
   
-  printf("Task %x.%x freed\n", tid.id.task, tid.id.lthread);
+  printf("Task "l4util_idfmt" freed\n", l4util_idstr(tid));
 
-  if ((error = l4_ts_allocate_call(&ts_id, &tid, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+  if ((error = l4ts_allocate_task(&tid)))
     {
-      printf("Error %d allocating task %x.%x\n", 
-	      error, tid.id.task, tid.id.lthread);
+      printf("Error %d allocating task "l4util_idfmt"\n", 
+	      error, l4util_idstr(tid));
       return -1;
     }
 
   if (tid.id.task > MAX_TASK_ID)
     {
-      printf("task number is %d (greater than %d)\n",
-	      tid.id.task, MAX_TASK_ID);
+      printf("task number is "l4util_idtskfmt" (greater than %d)\n",
+	      l4util_idtskstr(tid), MAX_TASK_ID);
       return -1;
     }
   task2app[tid.id.task] = i;
 
-  printf("Task %x.%x (%08x:%08x) with diff. version number re-allocated\n",
-         tid.id.task, tid.id.lthread, tid.lh.high, tid.lh.low);
+  printf("Task "l4util_idfmt" with diff. version number re-allocated\n",
+         l4util_idstr(tid));
 
-  if ((error = l4_ts_create_call(&ts_id, &tid, (l4_addr_t)app, (l4_addr_t)esp, 
-				 0, &pager, -1, "", 0, &_env))
-      || _env.major != CORBA_NO_EXCEPTION)
+  if ((error = l4ts_create_task(&tid, (l4_addr_t)app, (l4_addr_t)esp, 
+				0, &pager, -1, "", 0)))
     {
       printf("Error %d creating new task\n", error);
       return -1;
     }
 
-  printf("Task %x.%x re-created\n", tid.id.task, tid.id.lthread);
+  printf("Task "l4util_idfmt" re-created\n", l4util_idstr(tid));
 
   return 0;
 }

@@ -10,9 +10,9 @@
  * for that.
  */
 
-#include <flux/c/stdio.h>
-#include <flux/c/ctype.h>
-#include <flux/c/string.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
@@ -35,14 +35,9 @@ static void work(void*data){
 
 int main(int argc, char**argv){
   int i;
-  char *name = argc?*argv:"logex_thread", *basename;
   
   l4_uint32_t dummy;
   l4_threadid_t tid, preempter, pager;
-
-  if((basename=strrchr(name, '/'))==0) basename=name;
-    else basename++;
-  LOG_init(basename);
 
   LOG("we are alive, creating other threads now");
   memset(stack,0,sizeof(stack));

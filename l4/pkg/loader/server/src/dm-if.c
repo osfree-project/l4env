@@ -21,12 +21,12 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/dm_mem/dm_mem.h>
 
-l4_threadid_t app_dm_id = L4_INVALID_ID;	/* default dataspace manager */
-l4_threadid_t app_image_dm = L4_INVALID_ID;	/* dm for file image */
-l4_threadid_t app_text_dm = L4_INVALID_ID;	/* dm for text section */
-l4_threadid_t app_data_dm = L4_INVALID_ID;	/* dm for data section */
-l4_threadid_t app_bss_dm = L4_INVALID_ID;	/* dm for bss section */
-l4_threadid_t app_stack_dm = L4_INVALID_ID;	/* dm for stack */
+l4_threadid_t app_dsm_id = L4_INVALID_ID;	/* default dataspace manager */
+l4_threadid_t app_image_dsm = L4_INVALID_ID;	/* dsm for file image */
+l4_threadid_t app_text_dsm = L4_INVALID_ID;	/* dsm for text section */
+l4_threadid_t app_data_dsm = L4_INVALID_ID;	/* dsm for data section */
+l4_threadid_t app_bss_dsm = L4_INVALID_ID;	/* dsm for bss section */
+l4_threadid_t app_stack_dsm = L4_INVALID_ID;	/* dsm for stack */
 
 /** Create a dataspace
  *
@@ -34,7 +34,7 @@ l4_threadid_t app_stack_dm = L4_INVALID_ID;	/* dm for stack */
  * \param size		size of dataspace
  * \retval addr		address of attached dataspace
  * \retval ds		dataspace descriptor
- * \retval rg		l4rm region descriptor
+ * \param dbg_name	name of the dataspace for debugging purposes
  * \return		0 on success
  * 			-L4_ENOMEM if not enough memory available */
 int
@@ -92,6 +92,7 @@ junk_ds(l4dm_dataspace_t * ds, l4_addr_t addr)
 /** Determine physical address of dataspace
  *
  * \param ds		dataspace
+ * \param size		size of the dataspace (to save one server call)
  * \retval phys_addr	physical addr of dataspace
  */
 int
@@ -132,12 +133,12 @@ dm_if_init(void)
       printf("No dataspace manager found!\n");
       return -L4_ENODM;
     }
-  app_image_dm = id;
-  app_text_dm = id;
-  app_data_dm = id;
-  app_bss_dm = id;
-  app_stack_dm = id;
-  app_dm_id = id;
+  app_image_dsm = id;
+  app_text_dsm = id;
+  app_data_dsm = id;
+  app_bss_dsm = id;
+  app_stack_dsm = id;
+  app_dsm_id = id;
 
   return 0;
 }

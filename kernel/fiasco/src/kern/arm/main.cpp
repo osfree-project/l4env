@@ -1,7 +1,8 @@
-INTERFACE:
+INTERFACE [arm]:
 #include <cstddef>
-IMPLEMENTATION:
 
+//---------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
 
 #include <cstdlib>
 #include <cstdio>
@@ -15,27 +16,19 @@ IMPLEMENTATION:
 #include "kdb_ke.h"
 #include "kernel_thread.h"
 #include "kernel_console.h"
-#include "sa_1100.h"
+#include "reset.h"
 #include "space.h"
+#include "terminate.h"
 
 #include "processor.h"
 
 static int exit_question_active = 0;
 
-static void __attribute__ ((noreturn))
-my_pc_reset(void)
-{
-  
-  Sa1100::hw_reg( Sa1100::RSRR_SWR, Sa1100::RSRR );
-
-  for (;;);
-}
-
 extern "C" void __attribute__ ((noreturn))
 _exit(int)
 {
   if(exit_question_active)
-    my_pc_reset();
+    pc_reset();
   else
     while(1) { Proc::halt(); Proc::pause(); }
 }
@@ -45,49 +38,46 @@ static void exit_question()
 {
   exit_question_active = 1;
 
-  while(1) {
-    puts("\nReturn reboots, \"k\" enters L4 kernel debugger...");
+  while(1) 
+    {
+      puts("\nReturn reboots, \"k\" enters L4 kernel debugger...");
 
-    char c = Kconsole::console()->getchar();
-    
-    if (c == 'k' || c == 'K') 
-      {
-	kdb_ke("_exit");
-      }
-    else 
-      {
-	// it may be better to not call all the destruction stuff 
-	// because of unresolved static destructor dependency 
-	// problems.
-	// SO just do the reset at this point.
-	puts("\033[1mRebooting...\033[0m");
-	my_pc_reset();
-	break;
-      }
-  }
+      char c = Kconsole::console()->getchar();
+
+      if (c == 'k' || c == 'K') 
+	{
+	  kdb_ke("_exit");
+	}
+      else 
+	{
+	  // it may be better to not call all the destruction stuff 
+	  // because of unresolved static destructor dependency 
+	  // problems.
+	  // SO just do the reset at this point.
+	  puts("\033[1mRebooting...\033[0m");
+	  pc_reset();
+	  break;
+	}
+    }
 }
 
 
 int main()
 {
-  
   // caution: no stack variables in this function because we're going
   // to change the stack pointer!
 
   // make some basic initializations, then create and run the kernel
   // thread
-  atexit(&exit_question);
+  set_exit_question(&exit_question);
    
-  printf("%s\n", Kip::version_string());
-
-  Kmem_alloc::allocator();
+  printf("%s\n", Kip::k()->version_string());
 
   // disallow all interrupts before we selectively enable them 
   //  pic_disable_all();
   
   // create kernel thread
-  static Kernel_thread *kernel = new (&Config::kernel_id) Kernel_thread;
-  nil_thread = kernel_thread = kernel; // fill public variable
+  static Kernel_thread *kernel = new (Config::kernel_id) Kernel_thread;
   Space::kernel_space( current_space() );
   //  unsigned dummy;
 
@@ -101,6 +91,5 @@ int main()
      "	bl call_bootstrap     \n"
      :	"=m" (boot_stack)
      :	"r" (kernel->init_stack()), "r" (kernel));
-
-
 }
+

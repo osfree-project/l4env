@@ -35,7 +35,7 @@
 #define L4THREAD_MAX_STACK_SIZE      0x00100000  /* 1 MB */
 
 /// size of thread exit stack (see exit.c)
-#define L4THREAD_EXIT_STACK_SIZE     8192
+#define L4THREAD_EXIT_STACK_SIZE     1024
 
 /*****************************************************************************
  *** priorities
@@ -50,7 +50,7 @@
  * we need to get the priority of a thread, otherwise we just can use the 
  * value stored in the tcb.
  */
-#define L4THREAD_PRIO_CALL_SCHEDULE  1
+#define L4THREAD_PRIO_CALL_SCHEDULE  0
 
 /*****************************************************************************
  *** thread data

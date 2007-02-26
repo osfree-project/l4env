@@ -39,6 +39,20 @@ BUILD_SYSTEMS_x86_l4x0
   Most users will say Y here.
 
 
+Build code using L4V4 API
+BUILD_SYSTEMS_x86_l4v4
+  If you want to build L4 programs using the L4 version V4 API (L4 V4)
+  as used in Pistachio, specify Y here.
+  
+  You can build for multiple L4 API versions, the code will be stored
+  in different directories.
+
+  Note that this is work-in-progress. You will find few applications
+  that build for this API.
+
+  Most users will say N here.
+
+
 Build for arm architecture
 BUILD_SYSTEMS_arm_s
   If you want to build code for the arm architecture, say Y here.
@@ -46,8 +60,7 @@ BUILD_SYSTEMS_arm_s
   You can build for multiple architectures, the code will be stored in
   different directories.
 
-  Most users will say Y here.
-
+  Most users will say N here.
 
 CPU-Types for arm architecture
 CPU_arm
@@ -56,7 +69,6 @@ CPU_arm
 
   You can build for multiple CPU types, the code will be stored in
   different directories.
-
 
 Build code using L4X0 API
 BUILD_SYSTEMS_arm_l4x0
@@ -67,6 +79,25 @@ BUILD_SYSTEMS_arm_l4x0
   in different directories.
 
   Most users will say Y here.
+
+Build for amd64 architecture
+BUILD_SYSTEMS_amd64_s
+  If you want to build code for the amd64 architecture, say Y here.
+
+  You can build for multiple architectures, the code will be stored in
+  different directories.
+
+  Most users will say N here.
+
+CPU-Types for amd64 architecture
+CPU_amd64
+  Specify for which amd64 architecture CPU types you want to build code.
+  Specify at least one CPU type.
+
+  You can build for multiple CPU types, the code will be stored in
+  different directories.
+
+
 
 
 Build shared libloaders.s.so
@@ -86,6 +117,16 @@ DROPS_STDDIR
   
   For users at TUD with access to os:/home/drops, this is /home/drops.
   For others, this is usually $(HOME)/src/drops or similar.
+
+
+Final location of the DROPS install tree
+DROPS_INSTDIR
+  In case you are installing into a temporary DROPS_STDDIR subdirectory,
+  which will be moved later, set DROPS_INSTDIR to this final
+  destination.
+  
+  You will normally use the default setting "$(DROPS_STDDIR)".
+  DROPS_INSTDIR is merely used by the daily consitency-check of DROPS.
 
 
 Base directory of the L4Linux 2.2 sources
@@ -120,14 +161,54 @@ LINUX24_DIR
   be unable to compile some packages then.
 
 
-Use Linux headers from DROPS_STDDIR
-LINUX24_GLOBALINC
+Linux 2.6 kernel sources available
+LINUX26_AVAIL
 
-  Some packages need the header files of a Linux version 2.4 kernel. 
-  These headers are provided by the DROPS package linux-24-headers.
+  Some packages need the sources of a Linux version 2.6 kernel. If you
+  have the sources available somewhere in your filesystem, enable this
+  option. You will be asked for the location of the sources then.
   
-  If you have a correctly installed DROPS_STDDIR tree, say Y here. 
-  Otherwise, get the linux-24-headers package and say N here.
+  Some packages only need the header files of a Linux version 2.6
+  kernel.  For those packages, there is a separate DROPS package that
+  provides just the headers. However, if you enable this option, those
+  packages will get their includes from the Linux kernel sources as
+  well.
+  
+  Most users will say N here.
+
+
+Path to Linux 2.6 sources
+LINUX26_DIR
+  The path to the sources of a Linux version 2.6 kernel. If you do not
+  have the sources, disable the LINUX26_AVAIL option. However, you may
+  be unable to compile some packages then.
+
+
+DDE include path
+DDE_INCDIR
+  This is a space-separated list of paths where the DDE-Linux includes
+  can be found.
+  
+  Upon compilation, the DDE-Linux package installs its header files
+  like any other DROPS package into subdirs of $(L4DIR)/include or
+  $(DROPS_STDDIR)/include, respectively. This variable lists these
+  subdirectories.
+  
+  Normally, you do not have to change this value.
+
+
+DDE-2.6 include path
+DDE26_INCDIR
+  This is a space-separated list of paths where the includes of the
+  Linux-2.6 version of the DDE-Linux package (dde_linux26) can be
+  found.
+  
+  Upon compilation, the DDE-Linux 2.6 package installs its header
+  files like any other DROPS package into subdirs of $(L4DIR)/include
+  or $(DROPS_STDDIR)/include, respectively. This variable lists these
+  subdirectories.
+  
+  Normally, you do not have to change this value.
 
 
 SDL include path
@@ -206,6 +287,19 @@ CXX_arm
   The C++ compiler to build arm code.
 
 
+YACC-name
+YACC
+  If you would like to use alternative yacc or lex tools, set those names
+  here. Defaults are 'byacc' and 'flex'. You can also specify cmdline
+  arguments using this option.
+
+LEX-name
+LEX
+  If you would like to use alternative yacc or lex tools, set those names
+  here. Defaults are 'byacc' and 'flex'. You can also specify cmdline
+  arguments using this option.
+
+
 System has ld.so
 HAVE_LDSO
   If your system provides the dynamic linker ld.so, and this is used
@@ -249,7 +343,7 @@ INT_CXX_x86_NAME
 
 
 Internal C preprocessor name
-INT_CPP_x86_NAME
+INT_CPP_arm_NAME
   The command name of the preprocessor your arm C compiler uses.
   Note: It is not necessarily the preprocessor as you would invoke it
   from the command line. gcc uses its own internal names.
@@ -259,7 +353,7 @@ INT_CPP_x86_NAME
 
 
 Internal C++ preprocessor name
-INT_CXX_x86_NAME
+INT_CXX_arm_NAME
   The command name of the preprocessor your arm C++ compiler uses.
   Note: It is not necessarily the preprocessor as you would invoke it
   from the command line. g++ uses its own internal names.
@@ -267,6 +361,25 @@ INT_CXX_x86_NAME
   For g++ versions prior to gcc 2.95.4 it is 'cpp'.
   gcc verssion 2.95.4 uses 'cpp0'. gcc version 3.2 uses 'cc1plus'.
 
+
+Automatically determine LD names
+INT_LD_NAME_SWITCH
+  If you use C/C++ compilers BID does not know so far, there is a
+  chance you have to help BID about the names of the linker binaries.
+  E.g., linker binaries change on cross-compiler environments. The
+  dependency tool used by BID wants to know about these names. 
+  However, if dependencies are generated well, BID already selected the
+  corrects names for you.
+  
+  Most users will say Y here.
+
+Internal linker name
+INT_LD_x86_NAME
+  The command name of the linker your x86 C/C++ compiler uses.
+
+Internal linker name
+INT_LD_arm_NAME
+  The command name of the linker your arm C/C++ compiler uses.
 
 Strip binaries on install
 BID_STRIP_PROGS
@@ -276,3 +389,45 @@ BID_STRIP_PROGS
   debugger), say 'N' here.
   
   If unsure, say 'Y'.
+
+Generate gstabs-compatible debug Infos with gcc-3+
+BID_GSTAB_SW
+  If enabled, gcc will be passed the '-gstabs+' cmdline option. gcc will
+  generate debug information in the stabs format, including GNU
+  specific extensions.
+  
+  Enable this option to show the line information in the fiasco kernel
+  debugger. Disable BID_STRIP_PROGS then.
+  
+  You can safely say 'Y' here.
+
+GCC: Omit Frame-pointers
+BID_GCC_OMIT_FP
+
+  If enabled, gcc will be passed the '-fomit-frame-pointer' cmdline
+  option, adding an additional register to the register set for the
+  generated code. Programs will be faster, but backtraces cannot be
+  done, seriously hindering debugging.
+  
+  If unsure, say 'N'.
+
+Generate Map-files for binaries
+BID_GENERATE_MAPFILE
+
+  Enabling this option will generate map-files together with the binaries.
+  You do not need mapfiles for DROPS to work properly, but you might
+  become handy for debugging purposes. See ld(1) for details on mapfiles.
+  
+  If unsure, say 'N'.
+
+Build system using dietlibc
+USE_DIETLIBC_X86
+  Uses the dietlibc as the main libc instead of the oskit.
+  This is work in progress and not everything will work.
+  Use with caution.
+
+Build system using roottask
+USE_ROOTTASK_X86
+  Use roottask/bootstrap instead of rmgr. This step involves another
+  librmgr.a which is now libroot.o, so nearly everything needs to be
+  relinked.

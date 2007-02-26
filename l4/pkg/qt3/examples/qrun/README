@@ -1,0 +1,5 @@
+This is an application launcher. It uses 'loader' and 'l4exec' an is
+similar to 'launchpad' an 'run'. It currently uses BMODFS as file
+provider (hardcoded), but I will make this configurable in the
+future.
+

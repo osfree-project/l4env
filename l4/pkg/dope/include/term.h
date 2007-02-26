@@ -13,9 +13,12 @@
  * COPYING file for details.
  */
 
+#include <stdarg.h>
+
 extern int  term_init    (char *terminal_name);
 extern void term_deinit  (void);
 extern int  term_printf  (const char *format, ...);
+extern int  term_vprintf (const char *format, va_list ap);
 extern int  term_getchar (void);
 
 struct history;

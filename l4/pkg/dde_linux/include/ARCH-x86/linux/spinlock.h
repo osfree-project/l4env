@@ -5,6 +5,8 @@
 
 #include <linux/config.h>
 
+#include <asm/system.h>
+
 /*
  * These are the generic versions of the spinlocks and read-write
  * locks..
@@ -147,7 +149,7 @@ typedef struct {
 
 #define rwlock_init(lock)	do { } while(0)
 #define read_lock(lock)		(void)(lock) /* Not "unused variable". */
-#define read_unlock(lock)	do { } while(0)
+#define read_unlock(lock)	(void)(lock) /* Not "unused variable". */
 #define write_lock(lock)	(void)(lock) /* Not "unused variable". */
 #define write_unlock(lock)	do { } while(0)
 

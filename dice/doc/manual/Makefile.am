@@ -4,7 +4,7 @@ DOXYGEN=	@DOXYGEN@
 RM_F=		rm -f
 
 DOXFILES=	manpage.dox
-EXTRA_DIST=	$(DOXFILES)
+EXTRA_DIST=	$(DOXFILES) Doxyfile
 SUFFIXES=	.dox
 CLEANFILES=	version.dox
 

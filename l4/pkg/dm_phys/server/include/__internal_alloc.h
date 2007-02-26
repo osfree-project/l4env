@@ -61,14 +61,12 @@ dmphys_internal_alloc_update_free(void);
 
 /* generic slab cache grow callback */
 void *
-dmphys_internal_alloc_grow(l4slab_cache_t * cache, 
-			   void ** data);
+dmphys_internal_alloc_grow(l4slab_cache_t * cache, void ** data);
 
 /* generic slab cache release callback */
 void
-dmphys_internal_alloc_release(l4slab_cache_t * cache, 
-			      void * page, 
-			      void * data);
+dmphys_internal_alloc_release(l4slab_cache_t * cache, void * page, 
+                              void * data);
 
 /* allocate page */
 void *
@@ -76,7 +74,6 @@ dmphys_internal_allocate(void ** data);
 
 /* release page */
 void
-dmphys_internal_release(void * page, 
-			void * data);
+dmphys_internal_release(void * page, void * data);
 
 #endif /* !_DMPHYS___INTERNAL_ALLOC_H */

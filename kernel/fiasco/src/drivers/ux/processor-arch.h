@@ -21,6 +21,14 @@ namespace Proc {
   }
 
   inline
+  Mword program_counter ()
+  {
+    Mword pc;
+    asm volatile ("call 1f ; 1: pop %0" : "=rm"(pc));
+    return pc;
+  }
+
+  inline
   Status processor_state()
   {
     return virtual_processor_state;

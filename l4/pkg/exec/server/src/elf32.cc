@@ -15,11 +15,15 @@
 #include <l4/exec/elf.h>
 #include <l4/exec/exec.h>
 #include <l4/exec/errno.h>
-
 #include <l4/dm_mem/dm_mem.h>
+#include <l4/demangle/demangle.h>
 
 #include <stdio.h>
+#ifdef USE_OSKIT
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 #include <string.h>
 
 #include "elf.h"
@@ -114,8 +118,9 @@ elf32_obj_t::load_libs(l4env_infopage_t *env)
 		   * object. If we still have that EXC object, don't create
 		   * new object but get pointer to the existing object. */
 		  int new_flags = (flags & (EO_LOAD_SYMBOLS | EO_LOAD_LINES));
+		  const l4dm_dataspace_t inv_ds = L4DM_INVALID_DATASPACE;
 		  if ((error = check(::exc_obj_load_bin(strtab+dyn->d_un.d_val,
-							&L4DM_INVALID_DATASPACE,
+							&inv_ds,
 							/*force_load=*/0, 
 							client_tid, 
 							new_flags, &exc_obj,
@@ -166,7 +171,7 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 
   for (i=0, j=0; i<ehdr->e_phnum; i++)
     {
-      psec = (exc_obj_psec_t*)NULL;
+      psec = 0;
       ph = (Elf32_Phdr *)((l4_addr_t)phdr + i*ehdr->e_phentsize);
 
       if (ph->p_type == PT_LOAD)
@@ -191,8 +196,8 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 	      psec_beg = psec->l4exc.addr;
 	      psec_end = psec->l4exc.addr + psec->l4exc.size;
 	      
-	      if (   ((sec_beg > psec_beg) || (sec_end > psec_beg))
-		  && ((sec_beg < psec_end) || (sec_end < psec_end)))
+	      if (   (sec_beg >= psec_beg || sec_end >= psec_beg)
+		  && (sec_beg <  psec_end || sec_end <  psec_end))
 		{
 		  msg("Merging psec %08x-%08x with psec %08x-%08x",
 		      sec_beg, sec_end, 
@@ -203,6 +208,17 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 		    psec_end = sec_end;
 		  psec->l4exc.addr = psec_beg;
 		  psec->l4exc.size = psec_end - psec_beg;
+
+		  // merge types
+		  type = 0;
+		  if (ph->p_flags & PF_R)
+		    type |= L4_DSTYPE_READ;
+		  if (ph->p_flags & PF_W) 
+		    type |= L4_DSTYPE_WRITE;
+		  if (ph->p_flags & PF_X)
+		    type |= L4_DSTYPE_EXECUTE;
+		  psec->l4exc.info.type |= type;
+
 		  found = 1;
 		  break;
 		}
@@ -309,13 +325,8 @@ elf32_obj_t::img_create_psecs(exc_img_t *img, l4env_infopage_t *env)
 			 (flags & EO_DIRECT_MAP),
 			 !(flags & EO_DYNAMIC),
 			 dm_id, dbg_name)))
-	{
-	  // delete all previous allocated dataspaces
-	  for (; i>=0; i--, psec--)
-	    delete psec;
-	  
-	  return -L4_ENOMEM;
-     	}
+	return -L4_ENOMEM; /* don't need to delete psecs since they are
+			      ref-counted */
     }
 
 #ifdef DEBUG_PH_SECTIONS
@@ -352,8 +363,11 @@ elf32_obj_t::img_create_hsecs(exc_img_t *img)
       /* initialize as empty */
       if (i<EXC_MAXHSECT)
 	{
-	  hsec->vaddr = 0;
-	  hsec->psec  = 0;
+	  hsec->vaddr   = 0;
+	  hsec->psec    = 0;
+	  hsec->hs_type = 0;
+	  hsec->hs_link = 0;
+	  hsec->hs_size = 0;
 	}
       
       /* section allocates memory? */
@@ -419,7 +433,7 @@ elf32_obj_t::img_junk_hsecs_on_nodyn(l4env_infopage_t *env)
 int
 elf32_obj_t::img_save_info(exc_img_t *img)
 {
-  int i, j;
+  int i, j, s_link;
   Elf32_Ehdr *ehdr = (Elf32_Ehdr*)img->vaddr;
   exc_obj_hsec_t *hsec;
 
@@ -438,20 +452,22 @@ elf32_obj_t::img_save_info(exc_img_t *img)
 	  dyn_hashtab = (Elf32_Word*)hsec->vaddr;
 	  
 	  /* appropriate symbol table in our address space */
-	  if (!(hsec = lookup_hsec(hsec->hs_link)))
+	  s_link = hsec->hs_link;
+	  if (!(hsec = lookup_hsec(s_link)))
 	    {
 	      msg("Binary corrupt, section link %d=>%d not found", 
-		  i, hsec->hs_link);
+		  i, s_link);
 	      return -L4_EXEC_CORRUPT;
 	    }
 	  dyn_symtab = (Elf32_Sym*)hsec->vaddr;
 	  
 	  /* appropriate symbol string table in our address space */
 	  j = hsec - hsecs;
-	  if (!(hsec = lookup_hsec(hsec->hs_link)))
+	  s_link = hsec->hs_link;
+	  if (!(hsec = lookup_hsec(s_link)))
 	    {
 	      msg("Binary corrupt, section link %d=>%d not found", 
-		  j, hsec->hs_link);
+		  j, s_link);
 	      return -L4_EXEC_CORRUPT;
 	    }
 	  dyn_strtab = (const char*)hsec->vaddr;
@@ -460,7 +476,7 @@ elf32_obj_t::img_save_info(exc_img_t *img)
 	}
     }
 
-  /* warning only, dyn_hashtab is NULL */
+  /* warning only, dyn_hashtab is 0 */
   if (!dyn_symtab)
     msg("Has no dynamic info");
   
@@ -549,7 +565,7 @@ elf32_obj_t::img_fill_psecs(exc_img_t *img)
   return 0;
 }
 
-/** Save symbols of ELF object */
+/** Save symbols of ELF object. */
 int
 elf32_obj_t::img_save_symbols(exc_img_t *img)
 {
@@ -606,12 +622,12 @@ elf32_obj_t::img_save_symbols(exc_img_t *img)
 	}
     }
 
-  /* warning only, sym_symtab is NULL */
+  /* warning only, sym_symtab is 0 */
   msg("Has no symbols");
   return 0;
 }
   
-/** Save lines of ELF object */
+/** Save lines of ELF object. */
 int
 elf32_obj_t::img_save_lines(exc_img_t *img)
 {
@@ -634,14 +650,15 @@ elf32_obj_t::img_save_lines(exc_img_t *img)
       if (!(sh_sym = img_lookup_sh(i, img)))
 	break;
       
-      if (   (sh_sym->sh_type == SHT_PROGBITS)
+      if (   (   sh_sym->sh_type == SHT_PROGBITS
+	      || sh_sym->sh_type == SHT_STRTAB)
 	  && (!strcmp(sh_sym->sh_name + strtab, ".stab")))
 	{
 	  if (!(sh_str = img_lookup_sh(sh_sym->sh_link, img)))
 	    break;
 
 	  char dbg_name[32];
-	  snprintf(dbg_name, sizeof(dbg_name)-1, "stab %s", get_fname());
+	  snprintf(dbg_name, sizeof(dbg_name), "stab %s", get_fname());
 
 	  if ((stab = new exc_obj_stab_t(dbg_name)))
 	    {
@@ -673,7 +690,7 @@ elf32_obj_t::img_save_lines(exc_img_t *img)
 }
 
 
-/** Load ELF file and create appropriate dataspaces
+/** Load ELF file and create appropriate dataspaces.
  *
  * \param img		ELF image
  * \param env		L4 environment infopage
@@ -739,7 +756,7 @@ elf32_obj_t::img_lookup_sh(int i, exc_img_t *img)
   if (i >= ehdr->e_shnum)
     {
       msg("Want to access section %d (have %d)", i, ehdr->e_shnum);
-      return (Elf32_Shdr*)NULL;
+      return 0;
     }
   
   return (Elf32_Shdr*)(img->vaddr + ehdr->e_shoff + i*ehdr->e_shentsize);
@@ -915,10 +932,7 @@ elf32_obj_t::find_sym(const char *symname, l4env_infopage_t *env,
   
   /* find global symbol in ELF object */
   if ((error = find_sym(symname, 1, &sym)))
-    {
-      msg("Error %d localizing symbol \"%s\"", error, symname);
-      return error;
-    }
+    return error;
 
   /* find information about the symbol */
   if (sym_to_reloc_offs(sym, dyn_strtab, env, &reloc_offs))
@@ -989,19 +1003,28 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 
   switch (rel_type)
     {
+#ifdef ARCH_x86
     case R_386_JMP_SLOT:
     case R_386_32:
     case R_386_PC32:
     case R_386_GLOB_DAT:
     case R_386_COPY:
+#endif
+#ifdef ARCH_arm
+    case R_ARM_JUMP_SLOT:
+    case R_ARM_ABS32:
+    case R_ARM_REL32:
+    case R_ARM_GLOB_DAT:
+    case R_ARM_COPY:
+#endif
       /* Dynamic linking: find symbol in binary and dependant libraries 
-       * (if bin_obj!=NULL) or only in the exc_obj itself (if bin_obj==NULL) */
+       * (if bin_obj!=0) or only in the exc_obj itself (if bin_obj==0) */
       if (bin_deps)
 	{
-	  sym              =
-	  sym_weak         = (Elf32_Sym*)NULL;
-	  sym_exc_obj      =
-	  sym_exc_obj_weak = (elf32_obj_t*)NULL;
+	  sym              = 0;
+	  sym_weak         = 0;
+	  sym_exc_obj      = 0;
+	  sym_exc_obj_weak = 0;
 	  /* Search in binary/deps of the binary object */
 	  for (elf32_obj_t **dep=(elf32_obj_t**)bin_deps; *dep; dep++)
 	    {
@@ -1062,12 +1085,23 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 	    }
 	  sym_exc_obj = this;
 	}
-     
+
+      /* Preserve absolute symbols as they are */
+      if (sym->st_shndx == SHN_ABS)
+	{
+	  *target = sym->st_value;
+	  break;
+	}
+
       if (   !(psec = sym_exc_obj->sym_psec(sym, dyn_strtab)) 
 	  || !(l4exc = psec->lookup_env(env)) 
 	  || !(l4exc_reloc = env_reloc_addr(l4exc, env)))
-	/* section of target not found */
-	return -L4_EXEC_CORRUPT;
+	{
+	  /* section of target not found */
+	  msg("Section %d of symbol %s not found in target",
+	      sym->st_shndx, sym->st_name + dyn_strtab);
+	  return -L4_EXEC_CORRUPT;
+	}
 
       if (l4exc->info.type & L4_DSTYPE_RELOCME)
 	{
@@ -1079,7 +1113,12 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 
       switch (rel_type)
 	{
+#ifdef ARCH_x86
 	case R_386_PC32:
+#endif
+#ifdef ARCH_arm
+	case R_ARM_REL32:
+#endif
 	  /* patch relative */
 	  *target += sym->st_value + l4exc_reloc
 		   - rel->r_offset - rel_l4exc_reloc;
@@ -1094,7 +1133,12 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 		   rel->r_offset, rel_l4exc_reloc);
 	  break;
 
+#ifdef ARCH_x86
 	case R_386_COPY:
+#endif
+#ifdef ARCH_arm
+	case R_ARM_COPY:
+#endif
 	  /* copy data associated with shared object's symbol */
 	  if (!(l4exc_vaddr = exc_obj_psec_here(env, l4exc-env->section)))
 	    return -L4_EXEC_CORRUPT;
@@ -1108,6 +1152,7 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 	      printf(" source addr %p = %08x + %08x - %08x\n",
 		  source, l4exc_vaddr, sym->st_value,
 		  psec->l4exc.addr);
+
 	      printf("#%6d: *%p = *%p size %d "
 		     "(%s, %08x, info %x)\n",
        		     sym_nr, target, source, sym->st_size,
@@ -1135,7 +1180,12 @@ elf32_obj_t::link_sym(Elf32_Rel *rel, 		 /* relocation entry */
 		  
       break;
 
+#ifdef ARCH_x86
     case R_386_RELATIVE:
+#endif
+#ifdef ARCH_arm
+    case R_ARM_RELATIVE:
+#endif
       /* Dynamic linking: relative address */
       if (debug)
 	printf("            *%p: %08x => ", target, *target);
@@ -1288,23 +1338,30 @@ elf32_obj_t::get_symbols(l4env_infopage_t *env, char **str)
 { 
   if (sym_strtab && sym_symtab)
     {
-      bool only_size = (*str == 0);
+      const bool only_size = (*str == 0);
       unsigned int i;
       Elf32_Sym *sym;
-      
+
       for (i=0, sym=sym_symtab; i<num_symtab; i++, sym++)
 	{
 	  exc_obj_psec_t *psec;
 	  l4exec_section_t *l4exc;
 	  l4_addr_t l4exc_reloc;
 	  const char *s_name = sym_strtab + sym->st_name;
+	  const char *d      = cplus_demangle(s_name, DMGL_ANSI | DMGL_PARAMS);
+	  if (d)
+	    s_name = d;
 
 	  if (   (sym->st_shndx >= SHN_LORESERVE)   // ignore special symbols
        	      || (sym->st_value == 0)               // ignore NIL symbols
 	      || (*s_name == '\0')                  // ignore unnamed symbols
 	      || (!memcmp(s_name, "Letext", 6))     // ignore Letext symbols
 	      || (!memcmp(s_name, "_stext", 6)))    // ignore _stext symbols
-	    continue;
+	    {
+	      if (d)
+		free((void*)d);
+	      continue;
+	    }
 
 	  if (sym->st_shndx == SHN_UNDEF)
 	    psec = addr_psec(sym->st_value);
@@ -1317,16 +1374,16 @@ elf32_obj_t::get_symbols(l4env_infopage_t *env, char **str)
 		{
 		  if (   !(l4exc = psec->lookup_env(env))
 		      || !(l4exc_reloc = env_reloc_addr(l4exc, env)))
-		    return -L4_EINVAL;
+		    {
+		      if (d)
+			free((void*)d);
+		      return -L4_EINVAL;
+		    }
 
 		  // really make symbol line
-		  int len;
-		  *str  += sprintf(*str, "%08x   ",
-		              l4exc_reloc + sym->st_value - psec->link_addr);
-		  len = snprintf(*str, 100, "%s", s_name);
-		  *str += (len > 99) ? 99 : len;
-		  *(*str)++ = '\n';
-		  *(*str)   = '\0'; // ensure that symbols are terminated!
+		  *str += sprintf(*str, "%08x   %.100s\n",
+		                  l4exc_reloc+sym->st_value-psec->link_addr,
+		                  s_name);
 		}
 	      else
 		{
@@ -1342,7 +1399,11 @@ elf32_obj_t::get_symbols(l4env_infopage_t *env, char **str)
 	      // symbol points to a not allocated header section
 	      // so ignore it silently
 	    }
+	  if (d)
+	    free((void*)d);
 	}
+ 
+      *str++; // terminating '\0'
     }
 
   return 0;
@@ -1408,7 +1469,7 @@ elf32_obj_t::get_lines_size(l4_size_t *str_size, l4_size_t *lin_size)
   return 0;
 }
 
-/** Check if we have a valid ELF32 binary image
+/** Check if we have a valid ELF32 binary image.
  * 
  * \param img		ELF image
  * \param env		L4 environment infopage
@@ -1490,6 +1551,45 @@ elf32_obj_check_ftype(exc_img_t *img, l4env_infopage_t *env, int verbose)
       return -L4_EXEC_CORRUPT;
     }
 
+  return elf32_obj_check_interp(img, verbose);
+}
+
+/** Check if binary contains an interpreter section. 
+ * Must be handled by the interpreter then, not by l4exec.
+ *
+ * \param img		ELF image
+ * \return		0 if binary contains NO interp section
+ * 			-L4_EXEC_INTERPRETER if binary contains interp sect */
+int
+elf32_obj_check_interp(exc_img_t *img, int verbose)
+{
+  int i, j;
+  Elf32_Phdr *ph;
+  Elf32_Ehdr *ehdr = (Elf32_Ehdr*)img->vaddr;
+  Elf32_Phdr *phdr;
+
+  Assert(ehdr);
+
+  phdr = (Elf32_Phdr*)(img->vaddr + ehdr->e_phoff);
+  Assert(phdr);
+
+  /* walk through program sections */
+  for (i=0, j=0; i<ehdr->e_phnum; i++)
+    {
+      ph = (Elf32_Phdr *)((l4_addr_t)phdr + i*ehdr->e_phentsize);
+
+      if (ph->p_type == PT_INTERP)
+	{
+	  const char *interp = (const char*)(img->vaddr + ph->p_offset);
+	  if (verbose)
+	    img->msg("Interpreter section found, contains \"%s\"", interp);
+
+	  /* binaries containing ld-linux.so are interpreted by l4exec */
+	  if (!strcmp(interp, "libld-l4.s.so"))
+	    return -L4_EXEC_INTERPRETER;
+	}
+    }
+
   return 0;
 }
 
@@ -1518,4 +1618,3 @@ elf32_obj_new(exc_img_t *img, exc_obj_t **exc_obj, l4env_infopage_t *env,
 
   return 0;
 }
-

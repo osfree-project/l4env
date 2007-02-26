@@ -13,6 +13,7 @@
 #ifndef __INIT_H_
 #define __INIT_H_
 
+#include <l4/sys/l4int.h>
 #include "vidix.h"
 
 struct l4con_vc;
@@ -36,17 +37,20 @@ typedef struct
   unsigned int caps;
 } con_accel_t;
 
+void
+con_hw_set_l4io(int l4io);
+
 int
 con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits, 
-	    unsigned int vid_mem_addr, unsigned int vid_mem_size, int l4io,
-	    con_accel_t *accel, void **map_vid_mem_addr);
+	    unsigned int vid_mem_addr, unsigned int vid_mem_size,
+	    con_accel_t *accel, l4_uint8_t **map_vid_mem_addr);
 
 extern unsigned int   hw_vid_mem_addr, hw_vid_mem_size;
 extern unsigned int   hw_map_vid_mem_addr;
 extern unsigned short hw_xres, hw_yres;
 extern unsigned char  hw_bits;
 
-extern int use_l4io;
+extern int con_hw_use_l4io;
 
 #define ACCEL_FAST_COPY		0x00000001
 #define ACCEL_FAST_FILL		0x00000002
@@ -59,6 +63,7 @@ extern int use_l4io;
 #define ACCEL_EQ_SATURATION	0x00000080
 #define ACCEL_EQUALIZER		(ACCEL_EQ_BRIGHTNESS|ACCEL_EQ_CONTRAST|\
 				 ACCEL_EQ_SATURATION)
+#define ACCEL_POST_DIRTY	0x00000100
 
 #endif
 

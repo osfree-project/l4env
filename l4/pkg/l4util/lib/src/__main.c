@@ -1,4 +1,5 @@
 
+#include <stdlib.h>
 #include <l4/crtx/crt0.h>
 #include <l4/util/mbi_argv.h>
 

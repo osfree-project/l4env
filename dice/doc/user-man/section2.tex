@@ -64,20 +64,24 @@ environment, which is a collection of information denoting the
 context of the call. For more detailed information about
 the \verb|CORBA_Environment| see Section~\ref{sec:environment}.
 
-If using C as target languag, the name of the function is composed of the 
+If using C as target language, the name of the function is composed of the 
 name of the library or module (\verb|example|), the name of the
 interface (\verb|first|), and the name of the function (\verb|foo|).
 
 \section{Server Code}
 The function template generated for the server looks similar to the client
 side code. The only difference is the function's name. The 
-parameter list is the same as the client side's function.
+parameter list is the same as the client side function.
 
 \begin{verbatim}
 void example_first_foo_component(CORBA_Object _dice_corba_obj,
      int parameter,
      CORBA_Environment *_dice_corba_env);
 \end{verbatim}
+
+At the server side the \verb|CORBA_Object| parameter does not contain the ID
+of the server, but instead the ID of the sender. It can be used to identify
+the sender of a request.
 
 By default the server function is only declared in the server
 header file, but no implementation exists. One of the options
@@ -297,22 +301,13 @@ with the \verb|uuid| attribute.
 \section{CORBA Environment}
 \label{sec:environment}
 
-For the L4 version 2 back-end the CORBA Environment is currently
-declared as follows:
+The CORBA Environment is split into two types.  One environment for the client
+side and one for the server side.  This is done because client wrapper 
+functions often declare the environment on the stack.  To keep the memory
+footprint small, the client side environment is a reduced version of the
+server side environment.
 
-\begin{verbatim}
-typedef struct CORBA_Environment
-{
-  CORBA_exception_type major:4;
-  CORBA_exception_type repos_id:28;
-  void *param;
-  l4_timeout_t timeout;
-  l4_fpage_t rcv_fpage;
-  l4_uint32_t ipc_error;
-  void* user_data;
-  void* (*malloc)(unsigned long);
-} CORBA_Environment;
-\end{verbatim}	    
+The respective definitions can be found in Appendix~\ref{app:corba_env}.
 
 The first elements of the \verb|CORBA_Environment| are defined
 by the CORBA C language mapping. The first is of type 
@@ -335,10 +330,13 @@ An exception can be set using the method \verb|CORBA_exception_set|.
 Functions to manipulate the CORBA Environment are explained
 in the following sections.
 
+This parameter is used disjunct with the IPC error code.  If there
+was an IPC error, no exception could be transmitted.
+
 \subsection{CORBA Environment Functions}
 
 There are a few functions defined by the CORBA C Language 
-mapping \cite{corba-clm} to maipulate the CORBA Environment.
+mapping \cite{corba-clm} to manipulate the CORBA Environment.
 
 \begin{verbatim}
 void CORBA_exception_set(
@@ -396,9 +394,10 @@ and \verb|param| is set to zero.
 \subsection{\dice{} Specific Extensions}
 \label{sec:env-dice}
 
-\dice{} currently adds five members to the environment.
+\dice{} currently adds some members to the environment.
 They are \verb|timeout|, \verb|rcv_fpage|, \verb|ipc_error|,
-\verb|user_data|, and \verb|malloc|.
+\verb|user_data|, \verb|malloc|, \verb|free| and memory
+pointers \verb|ptrs|.
 
 The \verb|timeout| value is used to set the timeout
 of an IPC. It is of type \verb|l4_timeout_t|.
@@ -412,7 +411,7 @@ occurred to the value of \verb|L4_IPCERROR(result)|,
 where \verb|result| is the result variable of the
 IPC\footnote{An L4 IPC returns a result variable,
 which contains information about the transferred number
-of dwords and indirect parts. If there occured an
+of double words and indirect parts. If there occurred an
 error during the IPC, the result variable contains
 further information about the kind of the error.}. 
 If there was no IPC error the value is undefined.
@@ -426,19 +425,31 @@ stubs and not transferred from the client to the server,
 but consistent within the scope of the server loop or
 client stubs.
 
-The \verb|malloc| member is a function pointer of type
+The \verb|malloc| and \verb|free| members are a function pointers
+to memory allocation reoutines of type
 \begin{verbatim}
 void* (*malloc) (unsigned long);
+void (free) (void*);
 \end{verbatim}
-which is used to allocate memory. This function pointer
-is currently used by default.
+which are used to allocate and free memory. These function pointers
+are currently used by default.
 
 When using an \verb|CORBA_Environment| you should always
 initialize it with \verb|dice_default_environment|. This
 ensures, that all members are set to default values.
-Regard that the \verb|malloc| function pointer is not
-set and thus might trigger a null-pointer exception when
-used.
+Regard that the memory function pointers are set to
+default functions, which enter the kernel debugger.
+The default environment of \verb|CORBA_Server_Environment| is
+\verb|dice_default_server_environemnt|.
+
+If you assign the memory function members of the environment new functions,
+some compilers complain about mismatching types.  Simply cast your function
+using \verb|dice_malloc_func| and \verb|dice_free_func| respectively.
+
+\section{Buffer Management}
+
+This section explains the different kinds to manage memory buffers with 
+\dice{}.
 
 \section{Memory Management for Indirect Parts}
 \label{sec:mem-indirect-parts}
@@ -450,7 +461,7 @@ loop. If this member is not set it uses the \verb|CORBA_alloc|
 function. You can force the usage of \verb|CORBA_alloc| by using
 the option {\tt --fforce-corba-alloc} (see Section~\ref{sec:force-corba-alloc}). 
 Another alternative is the use of the \verb|init_rcvstring| 
-attribute (see below for explaination).
+attribute (see below for explanation).
 
 \subsection{{\tt malloc} and {\tt CORBA's alloc}}
 
@@ -464,7 +475,8 @@ Example for \verb|malloc| member of \verb|CORBA_Environment| (the
 IDL file has to be translated using \verb|-fserver-parameter|):
 \begin{verbatim}
 CORBA_Environment env = dice_default_environment;
-env.malloc = malloc;
+env.malloc = (dice_malloc_func)malloc;
+env.free = (dice_free_func)free;
 server_loop(&env);
 \end{verbatim}
 

@@ -15,6 +15,7 @@ HELLODIRS	= pkg/l4sys \
 		  pkg/rmgr \
 		  pkg/l4util \
 		  pkg/oskit_support \
+		  pkg/demangle \
 		  pkg/sigma0 \
 		  pkg/hello
 install-dirs	= tool $(OSKITDIR) $(OSKIT10DIR) kernel pkg doc
@@ -28,7 +29,7 @@ all::
 # config-tool
 
 DROPSCONF 		= y
-DROPSCONF_DEFCONFIG	= $(L4DIR)/mk/defconfig/config.x86
+DROPSCONF_DEFCONFIG	?= $(L4DIR)/mk/defconfig/config.x86
 DROPSCONF_CONFIG_IN	= $(L4DIR)/mk/config.in
 DROPSCONF_CONFIG	= $(L4DIR)/.Makeconf.bid
 DROPSCONF_CONFIG_H	= $(L4DIR)/include/l4/bid_config.h
@@ -38,10 +39,12 @@ DROPSCONF_HELPFILE	= $(L4DIR)/mk/config.help
 
 # separation in "dependent" (ie opts the build output depends on) and
 # "independent" (ie opts the build output does not depend on) opts
-CONFIG_MK_INDEPOPTS	= DEPEND_VERBOSE_SWITCH DEPEND_VERBOSE VERBOSE_SWITCH \
+CONFIG_MK_INDEPOPTS	= BID_GENERATE_MAPFILE\
+			  DEPEND_VERBOSE_SWITCH DEPEND_VERBOSE VERBOSE_SWITCH \
 			  SHOWMESSAGES BID_COLORED_PHASES HAVE_LDSO \
 			  INT_CPP_NAME_SWITCH BID_LIBGENDEP INT_CPP_.*_NAME \
-			  INT_CXX_.*_NAME VERBOSE BID_STRIP_PROGS
+			  INT_CXX_.*_NAME VERBOSE BID_STRIP_PROGS \
+			  INT_LD_NAME_SWITCH INT_LD_.*_NAME
 CONFIG_MK_REAL		= Makeconf.bid.local
 CONFIG_MK_INDEP		= Makeconf.bid.local.indep
 
@@ -72,7 +75,7 @@ doc:	pkgdoc
 kernel: $(DROPSCONF_CONFIG_MK) tool
 
 tool pkg kernel:
-	$(VERBOSE)if [ -r $@/Makefile ]; then $(MAKE) -C $@; fi
+	$(VERBOSE)if [ -r $@/Makefile ]; then PWD=$(PWD)/$@ $(MAKE) -C $@; fi
 
 $(OSKITDIR) $(OSKIT10DIR) $(L4LINUX22_DIR): $(DROPSCONF_CONFIG_MK)
 	$(VERBOSE)if [ -r $@/Makefile.drops ]; then \
@@ -83,16 +86,16 @@ doc:
 		test ! -r $$d/Makefile || $(MAKE) -C $$d $@ ; done
 
 pkgdoc:
-	$(VERBOSE)test ! -r pkg/Makefile || $(MAKE) -C pkg doc
+	$(VERBOSE)test ! -r pkg/Makefile || PWD=$(PWD)/pkg $(MAKE) -C pkg doc
 
 
 # 'Hello World' Server is special: It requires oskit to be present
 hello:	oskit.present $(OSKITDIR)
 	$(VERBOSE)set -e; for i in $(HELLODIRS) ; do \
-	  $(MAKE) -C $$i lib ; \
+	  PWD=$(PWD)/$$i $(MAKE) -C $$i lib ; \
 	done
 	$(VERBOSE)set -e; for i in $(HELLODIRS) ; do \
-	  test $$i = pkg/l4util || $(MAKE) -C $$i ; \
+	  test $$i = pkg/l4util || PWD=$(PWD)/$$i $(MAKE) -C $$i ; \
 	done
 
 oskit.present:
@@ -108,7 +111,7 @@ cleanall::
 clean cleanall install::
 	$(VERBOSE)set -e; for i in $($@-dirs) ; do \
 	  if [ -r $$i/Makefile -o -r $$i/GNUmakefile ] ; then \
-		$(MAKE) -C $$i $@ ; fi ; done
+		PWD=$(PWD)/$$i $(MAKE) -C $$i $@ ; fi ; done
 
 #####################
 # config-rules follow
@@ -137,27 +140,38 @@ Makeconf.bid.local-helper:
 		    $(if $(filter y,$(BUILD_SYSTEMS_$(arch)_$(l4api))),	\
 			$(arch)_$(cpu)-$(l4api)))			\
 		    $(arch)_$(cpu) )))" >>$(DROPSCONF_CONFIG_MK)
-	$(VERBOSE)$(foreach arch, $(ARCHS), \
-		$(foreach v, GCCDIR GCCLIB GCCLIB_EH GCCVERSION,\
-			echo $(v)_$(arch)=$(call $(v)_f,$(arch)) \
+	$(VERBOSE)$(foreach arch, $(ARCHS),				\
+		$(foreach v, GCCDIR GCCLIB GCCLIB_EH GCCVERSION		\
+			GCCMAJORVERSION GCCMINORVERSION GCCSUBVERSION	\
+			LDNOSTDLIB GCCLDNOSTDLIB,			\
+			echo $(v)_$(arch)=$(call $(v)_f,$(arch))	\
 			>>$(DROPSCONF_CONFIG_MK);))
 	$(foreach v, BID_LIBGENDEP, echo $v=$($(v)) >>$(DROPSCONF_CONFIG_MK);)
 	$(VERBOSE)echo 'BUILD_PIC += $$(BUILD_LOADER_PICS)' >>$(DROPSCONF_CONFIG_MK)
 ifeq ($(INT_CPP_NAME_SWITCH), y)
 	$(VERBOSE)$(foreach arch, $(ARCHS), \
-		set -e; X=`tempfile -s .c` ; echo 'int main(void){}'>$$X ; \
+		set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
 		rm -f $$X.out ; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
 		GENDEP_OUTPUT=$$X.out $(CC_$(arch)) -c $$X -o $$X.o; \
 		test -e $$X.out; echo INT_CPP_$(arch)_NAME=`cat $$X.out` \
-			>>$(DROPSCONF_CONFIG_MK); )\
-		rm -f $$X $$X.{c,out}
+			>>$(DROPSCONF_CONFIG_MK); \
+		rm -f $$X $$X.{o,out}; )
 	$(VERBOSE)$(foreach arch, $(ARCHS), \
-		set -e; X=`tempfile -s .cc` ; echo 'int main(void){}'>$$X; \
+		set -e; X="tmp.$$$$$$RANDOM.cc" ; echo 'int main(void){}'>$$X; \
 		rm -f $$X.out; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
 		GENDEP_OUTPUT=$$X.out $(CXX_$(arch)) -c $$X -o $$X.o; \
 		test -e $$X.out; echo INT_CXX_$(arch)_NAME=`cat $$X.out` \
-			>>$(DROPSCONF_CONFIG_MK) ; ) \
-		rm -f $$X $$X.{cc,out}
+			>>$(DROPSCONF_CONFIG_MK); \
+		rm -f $$X $$X.{o,out}; )
+endif
+ifeq ($(INT_LD_NAME_SWITCH), y)
+	$(VERBOSE)$(foreach arch, $(ARCHS), \
+		set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
+		rm -f $$X.out ; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X. \
+		GENDEP_OUTPUT=$$X.out $(CC_$(arch)) $$X -o $$X.; \
+		test -e $$X.out; echo INT_LD_$(arch)_NAME=`cat $$X.out` \
+			>>$(DROPSCONF_CONFIG_MK); \
+		rm -f $$X $$X.{,out}; )
 endif
 	$(VERBOSE)sort <$(DROPSCONF_CONFIG_MK) >$(CONFIG_MK_REAL).tmp
 	$(VERBOSE)echo -e "# Automatically generated. Don't edit\n" >$(CONFIG_MK_INDEP)
@@ -174,4 +188,5 @@ endif
 # If a local libgendep is here, use it. Otherwise, the build process will
 # utilize the global one; or fail if this is not available too.
 try-libgendep:
-	$(VERBOSE)test ! -r tool/gendep/Makefile || $(MAKE) -C tool/gendep
+	$(VERBOSE)test ! -r tool/gendep/Makefile || \
+		PWD=$(PWD)/tool/gendep $(MAKE) -C tool/gendep

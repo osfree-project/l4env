@@ -1,0 +1,2 @@
+- add flockfile(), funlockfile(), ftrylockfile()
+- add openlog(), closelog(), syslog()

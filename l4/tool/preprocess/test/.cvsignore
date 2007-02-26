@@ -23,3 +23,6 @@ line.t.ok line.h line_i.h line.cc
 line_not.t.ok line_not.h line_not_i.h line_not.cc
 line_nh.t.ok line_nh.h line_nh_i.h line_nh.cc
 interface.t.ok interfacepublic.h interface_i.h interface.cc
+default_args.t.ok default_args.h default_args_i.h default_args.cc
+drop_multi* drop_single*
+

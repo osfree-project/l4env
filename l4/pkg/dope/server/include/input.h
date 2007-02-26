@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -13,17 +13,15 @@
  * COPYING file for details.
  */
 
-#if !defined(WIDGET)
-#define WIDGET void
-#endif
+#ifndef _DOPE_INPUT_H_
+#define _DOPE_INPUT_H_
+
+#include "widget.h"
+#include "event.h"
 
 struct input_services {
-	long    (*get_mx)       (void);
-	long    (*get_my)       (void);
-	long    (*get_mb)       (void);
-	void    (*set_pos)      (long x,long y);
-	long    (*get_keystate) (long keycode);
-	char    (*get_ascii)    (long keycode);
-	void    (*update)       (WIDGET *dst);
-	void    (*update_properties)(void);
+	int     (*get_event)    (EVENT *e);
 };
+
+
+#endif /* _DOPE_INPUT_H_ */

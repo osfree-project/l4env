@@ -36,6 +36,10 @@
 
 #define L4_IPC_NEVER			((l4_timeout_t) {timeout: 0})
 #define L4_IPC_NEVER_INITIALIZER	{timeout: 0}
+#define L4_IPC_RECV_TIMEOUT_0		L4_IPC_TIMEOUT(0,0,0,1,0,0)
+#define L4_IPC_SEND_TIMEOUT_0		L4_IPC_TIMEOUT(0,1,0,0,0,0)
+#define L4_IPC_BOTH_TIMEOUT_0		L4_IPC_TIMEOUT(0,1,0,1,0,0)
+
 #define L4_IPC_MAPMSG(address, size)  \
      ((void *)(l4_umword_t)( ((address) & L4_PAGEMASK) | ((size) << 2) \
 			 | (unsigned long)L4_IPC_SHORT_FPAGE)) 

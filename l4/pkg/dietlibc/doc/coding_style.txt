@@ -1,0 +1,99 @@
+This coding style guideline applies for all the non-contribution code
+within this package.
+
+Do not leave trailing whitespaces in source code files.
+
+Tabulator size is 8. Tabulators should not be used in source code,
+except for e.g. Makefiles, where it is required by make.
+  Hint: Use the whitespace-minor-mode in emacs to find wrong whitespaces.
+
+Indentation depth is 4 spaces.
+
+Maximal line length is 80 characters.
+
+There should be a space after each ',' separator.
+  Correct: abc(x, y, z)
+  Wrong:   abc(x,y,z)
+
+There should be no space directly in braces.
+  Correct: abc(x, y, z)
+  Wrong:   abc( x, y, z )
+
+There should be spaces around mathematical operators & co., such as
+'+', '-', '>', ...
+  Correct: if (x + y > z)
+  Wrong:   if(x+y>z)
+
+There should be a space between 'if' and '(...)'.
+The conditional action after if should be on a new line.
+  Correct:
+    if (x + y > z)
+        return a;
+
+  Wrong:
+    if(x+y>z)return a;
+
+
+Hint: In emacs, you should set your c-style to 'bsd' as follows:
+
+  (defun my-c-mode-common-hook ()
+    ;; use bsd (allman) style for all C like languages
+    (c-set-style "bsd")
+    ;; other customizations can go here
+    (setq c-basic-offset 4)
+    )
+  (add-hook 'c-mode-common-hook 'my-c-mode-common-hook)
+
+This will look like:
+
+  Correct:
+    int add_abs(int x, int y)
+    {
+        if (x < 0)
+        {
+            if (y < 0)
+            {
+                return -1 * x + -1 * y;
+            }
+            else
+            {
+                return -1 * x + y;
+            }
+        }
+        else
+        {
+            if (y < 0)
+            {
+                return x + -1 * y;
+            }
+            else
+            {
+                return x + y;
+            }
+        }
+    }
+
+  Wrong:
+    int add_abs(int x,int y){
+        if(x<0){
+          if(y<0){
+            return -1*x+ -1*y;
+          }
+          else{return -1 * x + y;}
+        }
+        else
+          {
+            if (y < 0)
+              {
+                return x + -1 * y;
+              }
+            else
+              {
+                return x + y;
+              }
+          }
+    }
+
+  Even worse (well, at least it doesn't break the line length rule):
+    int add_abs(int x,int y){if(x<0){if(y<0){return -1*x+ -1*y;}else
+      {return -1*x+y;}}else{if(y<0){return x+ -1*y;}else{return x+y;}}}

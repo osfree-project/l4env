@@ -1,0 +1,6 @@
+This coordinator 'l4vfs_coord' does not provide simple lists with all
+available dataspaces as 'coord' does, but organizes his dataspaces in
+a hierarchical namespace accessible via l4vfs.
+
+The interface to the monitored programs is exactly the same as the one
+'coord' uses, such that both server can be used interchangeably.

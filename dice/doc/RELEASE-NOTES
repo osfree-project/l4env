@@ -1,11 +1,82 @@
-	WHAT'S NEW IN DICE 2.2.2 - Jul 17th 2003
-	========================================
+	WHAT'S NEW IN DICE 2.2.9 - Jul 8th 2005
+	=======================================
 
 This is the latest development version of DICE. Please send bug reports
 and suggestions for new features to ra3@os.inf.tu-dresden.de.
 
 New releases are announced on the DICE mailing list. You can subscribe
 to this list at http://os.inf.tu-dresden.de/mailmain/listinfo/dice/.
+
+Changes in 2.2.9
+----------------
+ - better support for C++: -BmCPP generates .cc/.hh files and g++ comformant
+   code
+ - support AMD64 for V2 using C Bindings (-Bpamd64)
+ - specify output directory using -o Option
+ - removed optimization (-O) option (unused)
+ - some bug-fixes
+
+
+Changes in 2.2.8
+----------------
+ - replaced Vector and String class by STL implementations
+ - made usage of 'long long' type detectable by configure script
+ - configure checks for existence of 'long long' type and 'atoll' function
+ - added option to align parameters in the message buffer to the size of their
+   type
+ - starting support for L4 V4 (aka X2) ABI
+ - add function attribute [allow_reply_only] for asynchronous servers
+ - add function attribute [noopcode] to not sent opcodes
+ - add function attribute [noexceptions] to not sent exceptions
+ - add option -fno-dispatcher to not generate the dispatcher
+   function
+	       
+Changes in 2.2.7
+----------------
+ - split server-loop function into a simpler server-loop
+   and a dispatch function
+ - added option to not generate server loop function
+ - added CORBA Common Data Representaion (CDR) back-end
+      
+Changes in 2.2.6
+----------------
+ - type-attributes in C parser
+ - ARM backend for X0
+ - sequence type supported
+ - CORBA string mapping fixed
+ - [in] arrays are const arguments now
+ - exceptions supported for system-exceptions
+   . IPC error
+   . wrong opcode
+ - unified CORBA types into one header
+ - generates only C files for IDL file given as argument
+
+Changes in 2.2.5
+----------------
+ - some more magic for the CORBA types:
+   . configure sets the l4dir and the include path where dice includes are
+     installed to
+   . dice adds them to the include paths with "/dice" added
+     -> thus /usr/include and $(L4DIR)/include are no longer added automatically
+        but /usr/include/dice and $(L4DIR)/include/dice instead
+   . adapted automatic include of "dice/dice-corba-types.h" appropriately
+   . added possibility to mark a file as "privately included" meaning that no
+     #include statement will appear for it in generated files
+     -> "dice-corba-types.h" will not appear in generated files
+
+Changes in 2.2.4
+----------------
+ - bug fix release for 2.2.3
+ - fixes problems introduced with new parser architecture
+ - import and include behave (almost) the same now
+ - smaller fixes for [oneway]
+ - SOCKETAPI -> L4API_linux
+ - some gcc adaption to gcc-c front-end
+      
+Changes in 2.2.3
+----------------
+ - several bug-fixes
+ - enhanced front-end with a seperate C parser
 
 Changes in 2.2.2
 ----------------

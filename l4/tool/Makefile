@@ -1,7 +1,9 @@
 L4DIR ?= ..
 
-TARGET := $(wildcard config/ dice flick-obj gcc-wrap gendep preprocess)
-TARGET_doc := $(wildcard dice gcc-wrap gendep preprocess)
+# Be sure to add a "/" to config to make the target different from
+# BID's "config" target
+TARGET := $(wildcard config/ dice gcc-wrap gendep preprocess checkbiw genlog)
+TARGET_doc := $(wildcard dice gcc-wrap gendep preprocess checkbiw)
 
 all::
 doc:

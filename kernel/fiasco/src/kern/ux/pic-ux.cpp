@@ -19,6 +19,7 @@ public:
                                         const char * const path,
 					void (*bootstrap_func)());
   static void		irq_prov_shutdown();
+  static void           snd_to_irq( unsigned irq, Mword w1, Mword w2 );
 
   enum {
     IRQ_TIMER = 0,
@@ -27,8 +28,8 @@ public:
 
 private:
   static unsigned int	highest_irq;
-  static unsigned int	pids[Config::MAX_NUM_IRQ];
-  static struct pollfd	pfd[Config::MAX_NUM_IRQ];
+  static unsigned int	pids[Config::Max_num_irqs];
+  static struct pollfd	pfd[Config::Max_num_irqs];
 };
 
 IMPLEMENTATION[ux]:
@@ -46,8 +47,8 @@ IMPLEMENTATION[ux]:
 #include "initcalls.h"
 
 unsigned int	Pic::highest_irq;
-unsigned int	Pic::pids[Config::MAX_NUM_IRQ];
-struct pollfd	Pic::pfd[Config::MAX_NUM_IRQ];
+unsigned int	Pic::pids[Config::Max_num_irqs];
+struct pollfd	Pic::pfd[Config::Max_num_irqs];
 
 IMPLEMENT FIASCO_INIT
 void 
@@ -121,9 +122,8 @@ Pic::setup_irq_prov (unsigned irq, const char * const path,
   dup2  (sockets[1], 0);
   close (sockets[0]);
   close (sockets[1]);
-
   bootstrap_func();
-  
+    
   _exit (EXIT_FAILURE);
 } 
 
@@ -136,9 +136,17 @@ Pic::irq_prov_shutdown()
       kill(pids[i], SIGTERM);
 }
 
+IMPLEMENT
+void Pic::snd_to_irq( unsigned irq, Mword w1, Mword w2 )
+{
+  Mword buf[2] = {w1,w2};
+  if(pids[irq])
+    write( pfd[irq].fd, buf, sizeof(buf) );
+}
+
 IMPLEMENT inline NEEDS [<cassert>, <csignal>, <fcntl.h>, "boot_info.h"]
 void
-Pic::enable_locked (unsigned irq)
+Pic::enable_locked (unsigned irq, unsigned /*prio*/)
 {
   int flags;
 

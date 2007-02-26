@@ -29,67 +29,76 @@
 /**
  * \brief  Request I/O memory region.
  *
- * \param  start	begin of mem region
- * \param  len		size of mem region
- * \retval offset	offset within memory region
+ * \param  start    begin of mem region
+ * \param  len      size of mem region
+ * \retval offset   offset within memory region
  *
  * \return virtual address of mapped region; 0 on error
  */
 /*****************************************************************************/
 l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len,
-    				  l4_umword_t *offset)
+                                  l4_umword_t *offset)
 {
   int err;
-
   l4_addr_t vaddr;
   l4_uint32_t area;
   l4_size_t area_len;
-
-  l4_fpage_t rfp;		/* rcv fpage desc */
-  l4_snd_fpage_t region;	/* rcvd fpage */
+  l4_snd_fpage_t region;  /* rcvd fpage */
   CORBA_Environment _env = dice_default_environment;
   unsigned int poss_phys;
 
   /* reserve appropriate area */
-  if (len & L4_SUPERPAGEMASK)
-    {
-      area_len = nLOG2(len);
-    }
-  else
-    area_len = L4_LOG2_SUPERPAGESIZE;
+  area_len = (len & L4_SUPERPAGEMASK) ? nLOG2(len) : L4_LOG2_SUPERPAGESIZE;
 
   /* Double size of memory area to go sure concerning the offset */
   area_len++;
 
   err = l4rm_area_reserve(1 << area_len,
-			  L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC, &vaddr, &area);
+                          L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC, &vaddr, &area);
   if (err)
     {
-      ERROR("area reservation failed (%d)", err);
+      LOG_Error("area reservation failed (%d)", err);
       return 0;
     }
 
   /* request mem region */
-  rfp = l4_fpage(vaddr, area_len, L4_FPAGE_RW, 0);
-  _env.rcv_fpage = rfp;
-
-  err = l4_io_request_mem_region_call(&io_l4id, start, len, &region, offset, &_env);
+  _env.rcv_fpage = l4_fpage(vaddr, area_len, L4_FPAGE_RW, 0);
+  err = l4_io_request_mem_region_call(&io_l4id, start, len, 
+				      &region, offset, &_env);
   if (DICE_ERR(err, &_env))
-    return 0;
+    {
+      l4rm_area_release(area);
+      return 0;
+    }
 
   poss_phys = start - *offset;
-  vaddr += poss_phys - ((poss_phys >> L4_LOG2_SUPERPAGESIZE) << L4_LOG2_SUPERPAGESIZE);
+  vaddr    += poss_phys - l4_trunc_superpage(poss_phys);
 
   /* mapping point of mem region */
   return vaddr;
+}
+
+int l4io_search_mem_region(l4_addr_t addr,
+                           l4_addr_t *start, l4_size_t *len)
+{
+  int err;
+
+  CORBA_Environment _env = dice_default_environment;
+
+  /* request port region */
+  err = l4_io_search_mem_region_call(&io_l4id, addr, start, len, &_env);
+
+  /* done */
+  return DICE_ERR(err, &_env);
+
 }
 
 /*****************************************************************************/
 /**
  * \brief  Request I/O port region.
  *
- * \param  start	begin of port region
- * \param  len		size of port region
+ * \param  start  begin of port region
+ * \param  len    size of port region
  *
  * \return 0 on success; negative error code otherwise
  *
@@ -113,8 +122,8 @@ int l4io_request_region(l4_addr_t start, l4_size_t len)
 /**
  * \brief  Release I/O memory region.
  *
- * \param  start	begin of port region
- * \param  len		size of port region
+ * \param  start  begin of port region
+ * \param  len    size of port region
  *
  * \return 0 on success; negative error code otherwise
  *
@@ -139,8 +148,8 @@ int l4io_release_mem_region(l4_addr_t start, l4_size_t len)
 /**
  * \brief  Release I/O port region.
  *
- * \param  start	begin of port region
- * \param  len		size of port region
+ * \param  start  begin of port region
+ * \param  len    size of port region
  *
  * \return 0 on success; negative error code otherwise
  *
@@ -164,7 +173,7 @@ int l4io_release_region(l4_addr_t start, l4_size_t len)
 /**
  * \brief  Request ISA DMA channel.
  *
- * \param  channel	ISA DMA channel number
+ * \param  channel  ISA DMA channel number
  *
  * \return 0 on success; negative error code otherwise
  *
@@ -180,7 +189,7 @@ int l4io_request_dma(unsigned int channel)
 /**
  * \brief  Release ISA DMA channel.
  *
- * \param  channel	ISA DMA channel number
+ * \param  channel  ISA DMA channel number
  *
  * \return 0 on success; negative error code otherwise
  *

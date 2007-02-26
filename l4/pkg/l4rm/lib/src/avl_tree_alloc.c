@@ -69,7 +69,8 @@ avlt_alloc_init(void)
   int ret;
 
   /* setup slab cache */
-  ret = l4slab_cache_init(&l4rm_avl_node_cache,sizeof(avlt_t),0,__grow,NULL);
+  ret = l4slab_cache_init(&l4rm_avl_node_cache, sizeof(avlt_t), 
+                          0, __grow, NULL);
   if (ret < 0)
     {
       Panic("L4RM: init AVL tree slab cache failed!");

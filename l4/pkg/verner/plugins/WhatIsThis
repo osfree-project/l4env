@@ -1,0 +1,12 @@
+VERNER's plugins used by core-, demuxer-, muxer-, sync- and controller-components
+
+codec used by:
+- core
+import used by: 
+- demuxer
+- core 
+- sync
+io used by:
+- demuxer
+export used by: 
+- sync

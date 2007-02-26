@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEUnmarshalFunction.cpp
- *	\brief	contains the implementation of the class CL4BEUnmarshalFunction
+ *    \file    dice/src/be/l4/L4BEUnmarshalFunction.cpp
+ *    \brief   contains the implementation of the class CL4BEUnmarshalFunction
  *
- *	\date	02/20/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    02/20/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -36,22 +37,18 @@
 #include "be/BEOpcodeType.h"
 
 #include "TypeSpec-Type.h"
-#include "fe/FEAttribute.h"
-
-IMPLEMENT_DYNAMIC(CL4BEUnmarshalFunction);
+#include "Attribute-Type.h"
 
 CL4BEUnmarshalFunction::CL4BEUnmarshalFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEUnmarshalFunction, CBEUnmarshalFunction);
 }
 
 CL4BEUnmarshalFunction::CL4BEUnmarshalFunction(CL4BEUnmarshalFunction & src)
 :CBEUnmarshalFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEUnmarshalFunction, CBEUnmarshalFunction);
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CL4BEUnmarshalFunction::~CL4BEUnmarshalFunction()
 {
 
@@ -79,19 +76,28 @@ void CL4BEUnmarshalFunction::WriteVariableInitialization(CBEFile * pFile, CBECon
 void CL4BEUnmarshalFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset, bool & bUseConstOffset, CBEContext * pContext)
 {
     CBEMarshaller *pMarshaller = pContext->GetClassFactory()->GetNewMarshaller(pContext);
-    if (((CL4BEMsgBufferType*)m_pMsgBuffer)->HasReceiveFlexpages())
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    if (pMsgBuffer->GetCount(TYPE_FLEXPAGE, GetReceiveDirection()) > 0)
     {
         nStartOffset += pMarshaller->Unmarshal(pFile, this, TYPE_FLEXPAGE, 0/*all*/, nStartOffset, bUseConstOffset, pContext);
     }
 
     if (IsComponentSide())
     {
-        // start after opcode
-        CBEOpcodeType *pOpcodeType = pContext->GetClassFactory()->GetNewOpcodeType();
-        pOpcodeType->SetParent(this);
-        if (pOpcodeType->CreateBackEnd(pContext))
-            nStartOffset += pOpcodeType->GetSize();
-        delete pOpcodeType;
+        /* if we set the noopcode option, then there is no opcode in the
+         * message buffer. We have to start immediately after the flexpages
+         * (if any).
+         */
+        if (!FindAttribute(ATTR_NOOPCODE))
+        {
+            // start after opcode
+            CBEOpcodeType *pOpcodeType = pContext->GetClassFactory()->GetNewOpcodeType();
+            pOpcodeType->SetParent(this);
+            if (pOpcodeType->CreateBackEnd(pContext))
+                nStartOffset += pOpcodeType->GetSize();
+            delete pOpcodeType;
+        }
     }
     else
     {
@@ -103,13 +109,16 @@ void CL4BEUnmarshalFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffse
     delete pMarshaller;
 }
 
-/** \brief decides whether two parameters should be exchanged during sort (moving 1st behind 2nd)
+/** \brief decides whether two parameters should be exchanged during sort
  *  \param pPrecessor the 1st parameter
  *  \param pSuccessor the 2nd parameter
- *  \param pContext the context of the sorting
- *  \return true if parameters should be exchanged
+ *    \param pContext the context of the sorting
+ *  \return true if parameters 1st is smaller than 2nd
  */
-bool CL4BEUnmarshalFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext * pContext)
+bool
+CL4BEUnmarshalFunction::DoExchangeParameters(CBETypedDeclarator * pPrecessor,
+    CBETypedDeclarator * pSuccessor,
+    CBEContext *pContext)
 {
     if (!(pPrecessor->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
         pSuccessor->GetType()->IsOfType(TYPE_FLEXPAGE))
@@ -119,7 +128,7 @@ bool CL4BEUnmarshalFunction::DoSortParameters(CBETypedDeclarator * pPrecessor, C
     if ( pPrecessor->GetType()->IsOfType(TYPE_FLEXPAGE) &&
         !pSuccessor->GetType()->IsOfType(TYPE_FLEXPAGE))
         return false;
-    return CBEUnmarshalFunction::DoSortParameters(pPrecessor, pSuccessor, pContext);
+    return CBEUnmarshalFunction::DoExchangeParameters(pPrecessor, pSuccessor, pContext);
 }
 
 /** \brief test if parameter needs additional reference
@@ -143,4 +152,16 @@ bool CL4BEUnmarshalFunction::HasAdditionalReference(CBEDeclarator * pDeclarator,
     if (pParameter->FindAttribute(ATTR_REF))
         return true;
     return false;
+}
+
+/** \brief test if this function has variable sized parameters (needed to specify temp + offset var)
+ *  \return true if variable sized parameters are needed
+ */
+bool CL4BEUnmarshalFunction::HasVariableSizedParameters(int nDirection)
+{
+    bool bRet = CBEUnmarshalFunction::HasVariableSizedParameters(nDirection);
+    // if we have indirect strings to marshal then we need the offset vars
+    if (GetParameterCount(ATTR_REF, 0, nDirection))
+        return true;
+    return bRet;
 }

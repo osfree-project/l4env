@@ -23,6 +23,8 @@
 #include <l4/dsi_example/filter.h>
 #include "__config.h"
 
+char LOG_tag[9]="app";
+
 /*****************************************************************************/
 /**
  * \brief Main.
@@ -44,9 +46,6 @@ int main(void)
   l4dm_dataspace_t data2;
   dsi_stream_t * s2;
 #endif
-
-  /* init log library */
-  LOG_init("app");
 
   /* init DSI library */
   dsi_init();

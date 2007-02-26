@@ -25,8 +25,34 @@ functions of newer x86 processors. Supported graphics cards with \e backend
 
 \section sec_usage Usage
 
-Con expects a Common L4 Environment. The following servers are expected
-at runtime:
+For most purposes, starting con without any arguments should be sufficient.
+Possible command line arguments are:
+<dl>
+<dt><tt> -a | --noaccel </tt></dt>
+  <dd> Disable autodetection of accelerated graphics cards and use
+       none-accelerated mode. Try this if you encounter problems with
+       not/wrong detected graphics cards.</dd>
+
+<dt><tt> -i | --l4io </tt></dt>
+  <dd> Use l4io to scan the PCI bus and to map I/O memory. Use this
+       option if you also load the l4io server.</dd>
+
+<dt><tt> -l | --nolog </tt></dt>
+  <dd> Don't use the logserver as output but use the kernel debugger
+       interface for direct log output. This is useful if the log
+       server is logs to a virtual console itself.</dd>
+
+<dt><tt> -o | --omega0 </tt></dt>
+  <dd> Allocate interrupts using Omega0 server.</dd>
+
+<dt><tt> -p | --pan </tt></dt>
+  <dd> Try to pan the graphics memory so that the status line begins at
+       4MB page granularity. This prevents an application from overwriting
+       the statusline if it has mapped the graphics memory.</dd>
+</dl>
+
+Con expects the Common L4 Environment (L4env). The following servers are
+expected at runtime:
 - \c rmgr (resource manager)
 - \c names (name server)
 - \c log (log server)

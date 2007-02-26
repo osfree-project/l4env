@@ -68,7 +68,7 @@
 # define DEBUG_DISASSEMBLE()   	(M.x86.debug & DEBUG_DISASSEMBLE_F)
 # define DEBUG_BREAK()         	(M.x86.debug & DEBUG_BREAK_F)
 # define DEBUG_SVC()           	(M.x86.debug & DEBUG_SVC_F)
-# define DEBUG_SAVE_IP_CS()     (M.x86.debug & DEBUG_SAVE_CS_IP)
+# define DEBUG_SAVE_IP_CS()     (M.x86.debug & DEBUG_SAVE_IP_CS_F)
 
 # define DEBUG_FS()            	(M.x86.debug & DEBUG_FS_F)
 # define DEBUG_PROC()          	(M.x86.debug & DEBUG_PROC_F)
@@ -141,7 +141,7 @@
 #endif
 
 #ifdef DEBUG
-# define SINGLE_STEP()		if (DEBUG_STEP()) x86emu_single_step()
+# define SINGLE_STEP()		/*if (DEBUG_STEP()) x86emu_single_step()*/
 #else
 # define SINGLE_STEP()
 #endif

@@ -57,13 +57,14 @@ screen. This \c printf() version supports the tag "\%t" to print the
 current threadid. The alternate version of the tag, "\%\#t", surrounds
 the thread-id with squared brackets.
 
-Both L4 libraries can be initialized using the LOG_init() function.
-This initialization sets the LOG-tag, which is prepended to all
-outputs done by the program. The LOG-tag is used to easily distinguish
-between the outputs of different programs and should be 8 characters
-in length. An alternative to calling LOG_init() is to define the symbol
-\ref LOG_tag as a 0-terminated character-field with 9 characters in length, which
-contains the logtag.
+Both L4 libraries need not to be initialized. But it is recommended to set
+the logtag, which is prepended to all outputs done by the program. The
+logtag is used to easily distinguish between the outputs of different
+programs and should be 8 characters in length. Normally, the logtag is set
+automatically at startup to the first 8 characters of the program name
+(argv[0]). Alternatively, you can define the symbol
+\ref LOG_tag as a 0-terminated character-field with 9 characters in length,
+which contains the logtag.
 
 All libraries support the LOG_flush() function. This function ensures
 that all data logged so far is actually printed. If used with the

@@ -1,5 +1,5 @@
 /* $Id$ */
-/*
+/**
  * \file    l4sys/include/ARCH-x86/ipc-invoke.h
  * \brief   L4 IPC System Call Invoking in Assembler
  * \ingroup api_calls
@@ -11,6 +11,17 @@
 #ifndef __L4_IPC_INVOKE_H__
 #define __L4_IPC_INVOKE_H__
 
+/** 
+ * Some words about the sysenter entry frame: Since the sysenter instruction
+ * automatically reloads the instruction pointer (eip) and the stack pointer
+ * (esp) after kernel entry, we have to save both registers preliminary to
+ * that instruction. We use ecx to store the user-level esp and save eip onto
+ * the stack. The ecx register contains the IPC timeout and has to be saved
+ * onto the stack, too. The ebp register is saved for compatibility reasons
+ * with the Hazelnut kernel. Both the esp and the ss register are also pushed
+ * onto the stack to be able to return using the "lret" instruction from the
+ * sysexit trampoline page if Small Address Spaces are enabled.
+ */
 
 #ifndef CONFIG_L4_CALL_SYSCALLS
 
@@ -35,7 +46,7 @@
      "1:                     \n\t"
 #   define IPC_SYSENTER_ASM	\
      push    %ecx		; \
-     push    %epb		; \
+     push    %ebp		; \
      push    $0x1b		; \
      call    0f			; \
      0:				; \
@@ -56,7 +67,7 @@
      "0:                     \n\t"
 #   define IPC_SYSENTER_ASM	\
      push    %ecx		; \
-     push    %epb		; \
+     push    %ebp		; \
      push    $0x1b		; \
      push    $0f		; \
      mov     %esp,%ecx		; \

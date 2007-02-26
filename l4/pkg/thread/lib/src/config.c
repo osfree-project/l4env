@@ -16,6 +16,7 @@
 
 /* L4/L4Env includes */
 #include <l4/sys/types.h>
+#include <l4/log/l4log.h>
 
 /* l4thread includes */
 #include <l4/thread/thread.h>
@@ -46,3 +47,7 @@ const l4_addr_t l4thread_stack_area_addr __attribute__ ((weak)) = -1;
 
 /// TCB table map address, if set to -1 a suitable address is used
 const l4_addr_t l4thread_tcb_table_addr __attribute__ ((weak)) = -1;
+
+/// default basename for threads
+const char *l4thread_basename __attribute__ ((weak))
+  = LOG_tag;

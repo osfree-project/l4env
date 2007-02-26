@@ -6,7 +6,7 @@ INTERFACE:
 #include <flux/x86/multiboot.h> // multiboot_info
 #include <flux/x86/paging.h>	// pd_entry_t
 
-#include "kip.h"	// kernel_info_t
+#include "kip.h"
 
 //#include "config_gdt.h"
 
@@ -83,7 +83,7 @@ private:
 //   static x86_tss *tss;
 //   static x86_desc *gdt;
 
-  static Kernel_info *kinfo;
+  static Kip *kinfo;
 
 //   static multiboot_info kmbi;
 //   static char kcmdline[256];
@@ -120,7 +120,7 @@ IMPLEMENTATION:
 // pd_entry_t *kmem::kdir;
 // pd_entry_t  kmem::cpu_global;
 
-static Kernel_info the_kinfo =
+static Kip the_kinfo =
   {
     /* magic: */ L4_KERNEL_INFO_MAGIC,
     /* version: */ 0x01004444,
@@ -141,7 +141,7 @@ static Kernel_info the_kinfo =
     /* clock: 0 */
   };
 
-Kernel_info *kmem::kinfo = &the_kinfo;
+Kip *kmem::kinfo = &the_kinfo;
 
 vm_offset_t kmem::io_bitmap 
   = reinterpret_cast<vm_offset_t>
@@ -207,7 +207,7 @@ kmem::ipc_window(unsigned win)
 }
 
 PUBLIC static
-inline Kernel_info *kmem::info() // returns the kernel info page
+inline Kip *kmem::info() // returns the kernel info page
 {
   return kinfo;
 }

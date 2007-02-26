@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/cdr/CCDRComponentFunction.h
- *	\brief	contains the declaration of the class CCDRComponentFunction
+ *  \file   dice/src/be/cdr/CCDRComponentFunction.h
+ *  \brief  contains the declaration of the class CCDRComponentFunction
  *
- *	\date	10/28/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   10/28/2003
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -37,7 +38,6 @@
  */
 class CCDRComponentFunction : public CBEComponentFunction
 {
-DECLARE_DYNAMIC(CCDRComponentFunction);
 public:
     /** create a new object */
     CCDRComponentFunction();

@@ -21,6 +21,7 @@
 
 /* DMphys includes */
 #include <l4/dm_phys/dm_phys.h>
+#include "__debug.h"
 
 /*****************************************************************************
  *** global variables
@@ -43,9 +44,9 @@ l4dm_memphys_find_dmphys(void)
 {
   if (l4_is_invalid_id(dmphys_id))
     {
-      if (!names_waitfor_name(L4DM_MEMPHYS_NAME,&dmphys_id,10000))
+      if (!names_waitfor_name(L4DM_MEMPHYS_NAME, &dmphys_id, 10000))
 	{
-	  ERROR("libdm_phys: DMphys not found!");
+	  LOGdL(DEBUG_ERRORS, "libdm_phys: DMphys not found!");
 	  dmphys_id = L4_INVALID_ID;
 	}
     }

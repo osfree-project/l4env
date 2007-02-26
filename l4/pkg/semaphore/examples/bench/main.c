@@ -15,6 +15,7 @@
  */
 
 /* L4/L4Env includes */
+#include <stdio.h>
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
 #include <l4/util/rdtsc.h>
@@ -94,7 +95,7 @@ up_thread(void * data)
       l4semaphore_up(&sem);
       up_out = l4_rdtsc();
 
-      l4thread_sleep(50);
+      l4thread_sleep(5);
 
       //enter_kdebug("done.");
 
@@ -153,28 +154,31 @@ do_test(l4_prio_t up_prio, l4_prio_t down_prio)
   /* start down thread */
 #if DO_DOWN
   down = l4thread_create_long(L4THREAD_INVALID_ID,down_thread,
+                              ".down",
 			      L4THREAD_INVALID_SP,L4THREAD_DEFAULT_SIZE,
 			      down_prio,NULL,L4THREAD_CREATE_ASYNC);
   if (down < 0)
     {
-      Error("start down thread failed: %s (%d)!",l4env_errstr(down),down);
+      LOG_Error("start down thread failed: %s (%d)!", l4env_errstr(down), down);
       return;
     }
-  printf("  down thread %x.%x, prio %u\n",
-         l4thread_l4_id(down).id.task,l4thread_l4_id(down).id.lthread,down_prio);
+  printf("  down thread "l4util_idfmt", prio %u\n",
+         l4util_idstr(l4thread_l4_id(down)),down_prio);
 #endif
 
   /* start up thread */
-  up = l4thread_create_long(L4THREAD_INVALID_ID,up_thread,L4THREAD_INVALID_SP,
+  up = l4thread_create_long(L4THREAD_INVALID_ID,up_thread,
+  			    ".up",
+  			    L4THREAD_INVALID_SP,
 			    L4THREAD_DEFAULT_SIZE,up_prio,NULL,
 			    L4THREAD_CREATE_ASYNC);
   if (up < 0)
     {
-      Error("start up thread failed: %s (%d)!",l4env_errstr(up),up);
+      LOG_Error("start up thread failed: %s (%d)!", l4env_errstr(up), up);
       return;
     }
-  printf("  up thread   %x.%x, prio %u\n",
-         l4thread_l4_id(up).id.task,l4thread_l4_id(up).id.lthread,up_prio);
+  printf("  up thread   "l4util_idfmt", prio %u\n",
+         l4util_idstr(l4thread_l4_id(up)),up_prio);
 
   /* start test */
   l4_ipc_call(l4thread_l4_id(up),L4_IPC_SHORT_MSG,0,0,
@@ -235,7 +239,7 @@ test_rdtsc(void)
       
     }
   
-  LOGL("rdtsc:\n  1-2: %lu/%lu/%lu 2-3: %lu/%lu/%lu, 1-3: %lu/%lu/%lu\n",
+  LOGL("rdtsc:\n  1-2: %llu/%lu/%llu 2-3: %llu/%lu/%llu, 1-3: %llu/%lu/%llu\n",
        min1,(unsigned long)(total1 / TEST_RDTSC_NUM),max1,
        min2,(unsigned long)(total2 / TEST_RDTSC_NUM),max2,
        min3,(unsigned long)(total3 / TEST_RDTSC_NUM),max3);

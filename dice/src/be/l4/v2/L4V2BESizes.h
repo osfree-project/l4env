@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/v2/L4V2BESizes.h
- *	\brief	contains the declaration of the class CL4V2BESizes
+ *    \file    dice/src/be/l4/v2/L4V2BESizes.h
+ *    \brief   contains the declaration of the class CL4V2BESizes
  *
- *	\date	Thu Oct 10 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    10/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -38,15 +39,14 @@
  */
 class CL4V2BESizes : public CL4BESizes
 {
-DECLARE_DYNAMIC(CL4V2BESizes);
 public:
     /** constructs a new object of this class */
-	CL4V2BESizes();
-	~CL4V2BESizes();
+    CL4V2BESizes();
+    virtual ~CL4V2BESizes();
 
 public: // Public methods
     virtual int GetMaxShortIPCSize(int nDirection = 0);
-    virtual int GetSizeOfEnvType(String sName);
+    virtual int GetSizeOfEnvType(string sName);
     virtual int GetMaxSizeOfType(int nFEType);
 };
 

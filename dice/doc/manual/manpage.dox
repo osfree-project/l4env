@@ -50,7 +50,7 @@ loop threads and calls the client stubs.
 \subsection backend Code Generation Options
 --create-inline, --no-opcodes, --create-skeleton, --template, --server-timeout,
 --filename-prefix, --include-prefix, -f, 
---back-end, --client, --server, -O, --testsuite, --message-passing
+--back-end, --client, --server, --testsuite, --message-passing
 
 \section REQUIREMENTS REQUIREMENTS
 This compiler uses 'cpp' for preprocessing its input files. Thus 
@@ -61,9 +61,9 @@ gcc (at least version 2.95) should be installed.
 Most `<b>-W</b>' options have two contrary forms: <b>-W</b>name and
 <b>-Wno-</b>name. Only the non-default forms are shown here.
 
-<DL>
-
 \subsection general2 General Options
+
+<DL>
 
 <DT><b>--help, -h</b></DT>
 <DD>Displays the help for dice, which is a short list of its 
@@ -90,7 +90,11 @@ generate output
 <BR>7 - lets only the parser generate output
 </DD>
 
+</DL>
+
 \subsection preprocess2 Preprocessing Options
+
+<DL>
 
 <DT><b>-E</b></DT>
 <DD>Stops the compiler after preprocessing the input file. The 
@@ -154,7 +158,11 @@ continues with the compilation or generation of intermediate files.</DD>
 <DD>Same as <b>-MD</b> but does skip standard include files, just like
 <b>-MM</b>.</DD>
 
+</DL>
+
 \subsection backend2 Code Generation Options
+
+<DL>
 
 <DT><b>--create-inline, -i &lt;mode&gt;</b></DT>
 <DD>Creates the client stubs as inline functions. No client 
@@ -183,6 +191,10 @@ skeletons.</DD>
 <DT><b>--include-prefix, -p</b> &lt;string&gt;</DT>
 <DD>Prefixes each filename inside an include statement with 
 <i>string</i>.</DD>
+
+<DT><b>-o</b> &lt;string&gt;</DT>
+<DD>Specify output directory. (Each generated filename is prefixed
+with <i>string</i>.)</DD>
 
 <DT><b>-f</b> &lt;string&gt;</DT>
 <DD>Supply flags to the compiler. See the following options for details.
@@ -354,6 +366,12 @@ are printed as <code>#define</code> statements in the generated
 C header files.
 </DD>
 
+<DT><b>-fgenerate-line-directive</b></DT>
+<DD>Generates line directives in target code, which contain
+the source file line information.  This can be used to
+display the corresponding source for errors in target code.
+</DD>
+
 <DT><b>-fno-l4dir-include-path</b></DT>
 <DD>By default '$(L4DIR)/include' is added to the include
 paths to be able to include the file 'dice/dice-corba-types.h',
@@ -373,12 +391,11 @@ This option should be used to debug Dice only.
 <DD>Defines the back-end to use:
 <BR><i>string</i> starts with a letter specifying the platform,
 kernel interface or language mapping.
-<BR><i>p</i> specifies the platform (IA32, IA64, ARM) (default: IA32)
+<BR><i>p</i> specifies the platform (IA32, IA64, ARM, AMD64) (default: IA32)
 <BR><i>i</i> specifies the kernel interface (v2, x0, x0adapt, v4, 
 sock[et], cdr) (default: v2)
 <BR><i>m</i> specifies the language mapping (C, CPP) (default: C)
-<BR>(For language mapping, only the default values is
-currently supported. For kernel interface only v4 is not supported.)
+<BR>(For kernel interface only v4 is not supported.)
 <BR>The kernel interface denotes the ABI used to communicate with
 other threads. The 'x0adapt' kernel interface is a support option
 to allow V2 applications to run on an X0 kernel. The X0 kernel uses
@@ -387,6 +404,7 @@ can transmit one more double word in a short IPC. The x0adapt interface
 maps user-level 64Bit thread IDs to 32Bit X0 thread IDs.
 <BR>example: -Bpia32 -Biv2 -BmC
 <BR>The ARM back-end is currently only supported for the X0 interface.
+<BR>The AMD64 back-end is currently only supported for the V2 interface.
 </DD>
 
 <DT><b>--client, -c</b></DT>
@@ -394,13 +412,6 @@ maps user-level 64Bit thread IDs to 32Bit X0 thread IDs.
 
 <DT><b>--server, -s</b></DT>
 <DD>Generates server side code only.</DD>
-
-<DT><b>-O</b> &lt;level&gt;</DT>
-<DD>Sets the optimization level. Currently level 0 and 1 are implemented.
-Optimization level 0 does not optimize at all (you should use this for
-debugging only). Optimization level 1 currently optimizes marshalling
-of arrays and contructed types. If no <i>level</i> is given or -O is not
-specified, the highest optimization level is chosen.</DD>
 
 <DT><b>--testsuite, -T</b> &lt;<i>thread</i> | <i>task</i>&gt;</DT>
 <DD>Generates a testsuite for the specified IDL file. The compiler 
@@ -417,7 +428,11 @@ speperate tasks. If neither is specified <i>thread</i> is chosen.</DD>
 as well. E.g. is an unmarshal, receive-any and wait-any function
 added for an RPC function at the client's side.</DD>
 
+</DL>
+
 \subsection warnings Warnings
+
+<DL>
 
 <DT><b>-Wall</b></DT>
 <DD>Ignore all warnings. Or rather combines all of the following options.

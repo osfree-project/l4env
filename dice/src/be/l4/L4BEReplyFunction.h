@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/L4BEReplyFunction.h
+ *    \brief   contains the declaration of the class CL4BEReplyFunction
+ *
+ *    \date    02/07/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -28,7 +35,6 @@
  */
 class CL4BEReplyFunction : public CBEReplyFunction
 {
-DECLARE_DYNAMIC(CL4BEReplyFunction);
 protected:
     /** copy constructor */
     CL4BEReplyFunction(CL4BEReplyFunction& src);
@@ -38,13 +44,17 @@ public:
     CL4BEReplyFunction();
     virtual ~CL4BEReplyFunction();
 
+public:
+    virtual int GetFixedSize(int nDirection,  CBEContext* pContext);
+    virtual int GetSize(int nDirection, CBEContext *pContext);
+
 protected:
-	virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteIPCErrorCheck(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
-    virtual bool DoSortParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext * pContext);
+    virtual void WriteIPCErrorCheck(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
+    virtual bool DoExchangeParameters(CBETypedDeclarator * pPrecessor, CBETypedDeclarator * pSuccessor, CBEContext *pContext);
 };
 
 #endif

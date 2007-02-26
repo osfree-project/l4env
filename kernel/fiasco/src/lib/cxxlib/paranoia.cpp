@@ -8,16 +8,16 @@ IMPLEMENTATION:
 #include <stdio.h>
 
 #include "panic.h"
+#include "types.h"
 
 char __dso_handle __attribute__((weak));
 
-extern "C" void __attribute__((weak)) __cxa_pure_virtual() 
+extern "C" void __cxa_pure_virtual() 
 {
   panic("cxa pure virtual function called");
 }
 
-
-extern "C" void  __attribute__((weak)) __pure_virtual()
+extern "C" void __pure_virtual()
 {
   panic("pure virtual function called");
 }
@@ -29,5 +29,6 @@ void operator delete(void *)
   // generate a call to this function (because all destructors of
   // abstract base classes have been are marked abstract virtual), and
   // we wouldn't need to define this.
-  panic("operator delete (aka __builtin_delete) called");
+  panic("operator delete (aka __builtin_delete) called from "L4_PTR_FMT,
+      L4_PTR_ARG(__builtin_return_address(0)));
 }

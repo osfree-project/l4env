@@ -59,11 +59,14 @@
 /** this section is owned by app */
 #define L4_DSTYPE_APP_IS_OWNER	0x1000
 
+/** this section is owned by l4exec */
+#define L4_DSTYPE_EXEC_IS_OWNER	0x2000
+
 
 /* flags for open */
-#define L4EXEC_LOAD_SYMBOLS	0x0001	/* load symbols */
-#define L4EXEC_LOAD_LINES	0x0002	/* load symbols */
-#define L4EXEC_DIRECT_MAP	0x0004	/* program sections direct mapped */
+#define L4EXEC_LOAD_SYMBOLS	0x0001	/**< load symbols */
+#define L4EXEC_LOAD_LINES	0x0002	/**< load symbols */
+#define L4EXEC_DIRECT_MAP	0x0004	/**< program sections direct mapped */
+#define L4EXEC_LOAD_LIB		0x0008  /**< load an additional lib */
 
 #endif /* _L4_EXEC_H */
-

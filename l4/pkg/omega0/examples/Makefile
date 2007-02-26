@@ -3,6 +3,6 @@
 PKGDIR	= ..
 L4DIR	= $(PKGDIR)/../..
 
-TARGET = pit serial irqmeter delay
+TARGET = pit serial irqmeter delay alien
 
 include $(L4DIR)/mk/subdir.mk

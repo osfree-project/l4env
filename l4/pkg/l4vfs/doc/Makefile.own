@@ -1,0 +1,46 @@
+TXTFILES = l4vfs_namespaces.txt Helpme,_I_want_to_write_a_server_and_have_no_clue.txt
+TXT2TEX  = ../../../tool/gosh/gosh
+TXT2TEX_OPT =
+DOTFILES = object_server1.dot object_server2.dot root_namespace.dot
+EPSGRAPHS = $(DOTFILES:.dot=.eps)
+PDFGRAPHS = $(DOTFILES:.dot=.pdf)
+DOT2PS   = dot -Tps
+PS2EPS   = ps2eps -f -q
+
+PDFFILES = $(TXTFILES:.txt=.pdf)
+TMPFILES = $(TXTFILES:.txt=.dvi) $(TXTFILES:.txt=.aux) $(TXTFILES:.txt=.log) \
+           $(TXTFILES:.txt=.blg) $(TXTFILES:.txt=.bbl)
+INFILES  = $(addsuffix .pdf,$(basename $(IMGFILES)))
+
+all: $(PDFFILES) $(EPSGRAPHS) $(PDFGRAPHS)
+
+$(INFILES): $(IMGFILES)
+
+clean:
+	rm -f $(TMPFILES) *~
+
+cleanall: clean
+	rm -f $(PDFFILES)
+
+%.ps: %.dot
+	$(DOT2PS) -o $@ $<
+
+%.eps: %.ps
+	$(PS2EPS) $<
+
+%.pdf: %.gif
+	convert $< $@
+
+%.pdf: %.eps
+	epstopdf --outfile $@ $<
+
+%.tex: %.txt
+	$(TXT2TEX) $(TXT2TEX_OPT) $< > $(@:.pdf=.tex)
+
+%.pdf: %.tex $(INFILES) $(IMGFILES) $(EPSGRAPHS) $(PDFGRAPHS)
+	pdflatex $<
+ifeq ("$(USEBIB)", "yes")
+	bibtex $(basename $<)
+endif
+	pdflatex $<
+	pdflatex $<

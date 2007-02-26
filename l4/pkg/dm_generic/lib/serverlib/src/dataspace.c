@@ -72,7 +72,7 @@ __hash_find_ds(l4_uint32_t id)
   int hash_idx = HASH_IDX(id);
   dsmlib_ds_desc_t * tmp;
 
-  LOGdL(DEBUG_HASH,"id = %u, hash_idx = %d",id,hash_idx);
+  LOGdL(DEBUG_HASH, "id = %u, hash_idx = %d", id, hash_idx);
 
   tmp = dataspaces[hash_idx];
   while ((tmp != NULL) && (tmp->id < id))
@@ -118,7 +118,7 @@ __hash_add_dataspace(dsmlib_ds_desc_t * ds)
       else if (d->id == ds->id)
 	{
 	  /* dataspace id already exists */
-	  ERROR("DSMlib: dataspace %u already exists",ds->id);
+	  LOGdL(DEBUG_ERRORS, "DSMlib: dataspace %u already exists", ds->id);
 	  return -1;
 	}
       else if (tmp == NULL)
@@ -166,7 +166,7 @@ __hash_remove_dataspace(dsmlib_ds_desc_t * ds)
   if (d == NULL)
     {
       /* dataspace not found */
-      ERROR("DSMlib: dataspace %u not found",ds->id);
+      LOGdL(DEBUG_ERRORS, "DSMlib: dataspace %u not found", ds->id);
       return -1;
     }
 
@@ -244,7 +244,7 @@ __find_id(l4_uint32_t * id)
   if (i == last_id)
     return -1;
 
-  LOGdL(DEBUG_DS_ID,"using id %u",i);
+  LOGdL(DEBUG_DS_ID, "using id %u", i);
 
   *id = i;
   last_id = i;
@@ -273,9 +273,10 @@ dsmlib_init(dsmlib_get_page_fn_t get_page_fn,
   int i;
 
   /* initialize descriptor allocation */
-  if (dsmlib_init_desc_alloc(get_page_fn,free_page_fn) < 0)
+  if (dsmlib_init_desc_alloc(get_page_fn, free_page_fn) < 0)
     {
-      ERROR("DSMlib: descriptor allocation initialization failed!");
+      LOGdL(DEBUG_ERRORS, 
+            "DSMlib: descriptor allocation initialization failed!");
       return -1;
     }
 
@@ -305,13 +306,13 @@ dsmlib_create_dataspace(void)
   ds = dsmlib_alloc_ds_desc();
   if (ds == NULL)
     {
-      ERROR("DSMlib: dataspace descriptor allocation failed!");
+      LOGdL(DEBUG_ERRORS, "DSMlib: dataspace descriptor allocation failed!");
       return NULL;
     }
 
   if (__find_id(&id) < 0)
     {
-      ERROR("DSMlib: no dataspace id available!");
+      LOGdL(DEBUG_ERRORS, "DSMlib: no dataspace id available!");
       dsmlib_free_ds_desc(ds);
       return NULL;
     }
@@ -328,7 +329,8 @@ dsmlib_create_dataspace(void)
 
   if (__hash_add_dataspace(ds) < 0)
     {
-      ERROR("DSMlib: add dataspace %u to hash table failed!",ds->id);
+      LOGdL(DEBUG_ERRORS, 
+            "DSMlib: add dataspace %u to hash table failed!", ds->id);
       dsmlib_free_ds_desc(ds);
       return NULL;
     }
@@ -354,7 +356,8 @@ dsmlib_release_dataspace(dsmlib_ds_desc_t * ds)
   /* remove dataspace from hash table */
   if (__hash_remove_dataspace(ds) < 0)
     {
-      ERROR("DSMlib: remove dataspace %u from hash table failed!",ds->id);
+      LOGdL(DEBUG_ERRORS, 
+            "DSMlib: remove dataspace %u from hash table failed!", ds->id);
       return;
     }
 
@@ -392,8 +395,7 @@ dsmlib_get_dataspace(l4_uint32_t id)
  */
 /*****************************************************************************/ 
 void
-dsmlib_set_owner(dsmlib_ds_desc_t * ds, 
-		 l4_threadid_t owner)
+dsmlib_set_owner(dsmlib_ds_desc_t * ds, l4_threadid_t owner)
 {
   if (ds == NULL)
     return;
@@ -407,11 +409,11 @@ dsmlib_set_owner(dsmlib_ds_desc_t * ds,
  * 
  * \param  ds            Dataspace descriptor
  *	
- * \return owner thread id, \c L4_INVALID_ID if invalid dataspace id
+ * \return owner thread id, #L4_INVALID_ID if invalid dataspace id
  */
 /*****************************************************************************/ 
 l4_threadid_t 
-dsmlib_get_owner(dsmlib_ds_desc_t * ds)
+dsmlib_get_owner(const dsmlib_ds_desc_t * ds)
 {
   if (ds == NULL)
     return L4_INVALID_ID;
@@ -430,13 +432,12 @@ dsmlib_get_owner(dsmlib_ds_desc_t * ds)
  */
 /*****************************************************************************/ 
 int
-dsmlib_is_owner(dsmlib_ds_desc_t * ds, 
-		l4_threadid_t client)
+dsmlib_is_owner(const dsmlib_ds_desc_t * ds, l4_threadid_t client)
 {
   if (ds == NULL)
     return 0;
 
-  return l4_thread_equal(ds->owner,client);
+  return l4_task_equal(ds->owner, client);
 }
 
 /*****************************************************************************/
@@ -448,8 +449,7 @@ dsmlib_is_owner(dsmlib_ds_desc_t * ds,
  */
 /*****************************************************************************/ 
 void
-dsmlib_set_name(dsmlib_ds_desc_t * ds, 
-		const char * name)
+dsmlib_set_name(dsmlib_ds_desc_t * ds, const char * name)
 {
   if (ds == NULL)
     return;
@@ -458,7 +458,7 @@ dsmlib_set_name(dsmlib_ds_desc_t * ds,
     ds->name[0] = 0;
   else
     {
-      strncpy(ds->name,name,L4DM_DS_NAME_MAX_LEN);
+      strncpy(ds->name, name, L4DM_DS_NAME_MAX_LEN);
       ds->name[L4DM_DS_NAME_MAX_LEN] = 0;
     }
 }
@@ -490,8 +490,7 @@ dsmlib_get_name(dsmlib_ds_desc_t * ds)
  */
 /*****************************************************************************/ 
 void
-dsmlib_set_dsm_ptr(dsmlib_ds_desc_t * ds, 
-		   void * ptr)
+dsmlib_set_dsm_ptr(dsmlib_ds_desc_t * ds, void * ptr)
 {
   if (ds == NULL)
     return;
@@ -509,7 +508,7 @@ dsmlib_set_dsm_ptr(dsmlib_ds_desc_t * ds,
  */
 /*****************************************************************************/ 
 void *
-dsmlib_get_dsm_ptr(dsmlib_ds_desc_t * ds)
+dsmlib_get_dsm_ptr(const dsmlib_ds_desc_t * ds)
 {
   if (ds == NULL)
     return NULL;
@@ -539,8 +538,7 @@ dsmlib_get_dataspace_list(void)
  */
 /*****************************************************************************/ 
 void
-dsmlib_dataspaces_iterate(dsmlib_iterator_fn_t fn, 
-			  void * data)
+dsmlib_dataspaces_iterate(dsmlib_iterator_fn_t fn, void * data)
 {
   dsmlib_ds_desc_t * pd, * next;
 
@@ -576,17 +574,17 @@ dsmlib_show_ds_hash(void)
   int i;
   dsmlib_ds_desc_t * d;
 
-  printf("Dataspace hash table:\n");
+  LOG_printf("Dataspace hash table:\n");
   for (i = 0; i < DSMLIB_DS_HASH; i++)
     {
-      printf("  Hash idx %d:\n   ",i);
+      LOG_printf("  Hash idx %d:\n   ", i);
       d = dataspaces[i];
       while (d != NULL)
 	{
-	  printf(" %2u",d->id);
+	  LOG_printf(" %2u", d->id);
 	  d = d->next;
 	}
-      printf("\n");
+      LOG_putchar('\n');
     } 
 }
 
@@ -600,12 +598,12 @@ dsmlib_list_ds(void)
 {
   dsmlib_ds_desc_t * d; 
 
-  printf("Dataspace list:");
+  LOG_printf("Dataspace list:");
   d = ds_list;
   while (d != NULL)
     {
-      printf(" %2u",d->id);
+      LOG_printf(" %2u", d->id);
       d = d->ds_next;
     }
-  printf("\n");
+  LOG_putchar('\n');
 }

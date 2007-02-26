@@ -1,0 +1,386 @@
+#! /usr/bin/perl -W
+#
+# Run package tests using Fiasco-UX
+#
+#
+#  Adam Lackorzynski <adam@os.inf.tu-dresden.de>
+#  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+#
+# This script is derived from the autocheck script which can be found in
+# l4/kernel/fiasco/tools. It has been slightly modified to suit the demands of
+# the package tests.
+#
+
+# make it pass for now
+#exit 0;
+
+use strict;
+use Getopt::Long;
+
+my $FIASCOUX;
+my $L4DIR;
+my $OBJDIR = 'OBJ-x86_586-l4v2';
+my $EXPECTED_OUT = 'expected.txt';
+my $TMP_OUT = 'tmp_out.txt';
+my $PKGNAME;
+
+my $ALARM_TIMEOUT = 60; # in seconds
+
+my %templs = (
+  rmgr     => '%s/pkg/rmgr/server/fiasco_ux_src/%s/rmgr-ux',
+  roottask => '%s/pkg/roottask/server/src/%s/roottask',
+  sigma0   => '%s/pkg/sigma0/server/fiasco_ux_src/%s/sigma0-ux',
+);
+
+my $Verbose  = 0;
+my $Quiet    = 0;
+my $Generate = 0;
+my $Memory   = 32;
+
+my %progs;
+my %results;
+my %output;
+my @Baseservers;
+my $Client;
+my $Server;
+
+# filehandle for fiasco output
+my $Input;
+my $Output;
+
+my $exit_code = 0;
+my $pid = 0;
+
+my $filter_state = 0;
+
+sub usage() {
+  print <<EOU;
+$0 [options] -c <client> -s <server>
+
+ --l4dir, -l path         Path to an L4 directory
+ --fiascoux, -f file      Path to the Fiasco-UX binary
+ --memory, -m megabyte    Number of Megabytes used by Fiasco. (default: 32)
+ --objdir, -O objdir      Object dir, currently: $OBJDIR
+ --verbose, -v            Be verbose (e.g. show output of L4 apps)
+ --quiet, -q              Tell nothing, just set the exit code
+ --generate               Generate the output file instead of comparing to it
+ --server, -s file        The server to be tested
+ --client, -c file        The file to run as test-application
+ --base, -b file          Additional base servers required by the application
+                          Can be a comma seperated list. (Only specify the
+			  binary names!) (default: log, names, dm_phys)
+ --timeout, -t timeout    Time in seconds to wait before shooting down a 
+                          runaway fiasco. (default: 60)
+
+ Environment variables:
+  L4DIR                   Path to an L4 directory
+  FIASCOUX                Path to the Fiasco-UX binary
+  EXPECTED_OUT            Filename of the file containing the expected output
+  TMP_OUT                 Filename of the tempfile containing Fiasco's output
+
+ Notes:
+  Environment variables override options!
+EOU
+}
+
+##
+# Check if L4DIR looks like an L4 directory
+sub check_for_l4dir() {
+  unless (-d "$L4DIR/pkg/l4sys/include" ||
+          -d "$L4DIR/kernel/fiasco/src/kern/ux") {
+    die "$L4DIR doesn't look like an L4 directory!";
+  }
+}
+
+##
+# Just check if the supplied binary in $FIASCOUX is really
+# a Fiasco UX version. Native versions will just segfault.
+sub check_for_fiasco_ux() {
+
+  unless ((-x $FIASCOUX && -f $FIASCOUX) ||
+          (-l $FIASCOUX && -x readlink $FIASCOUX && -f readlink $FIASCOUX)) {
+    die "$FIASCOUX: Does not exist or isn't an executable file";
+  }
+  
+  system("$FIASCOUX -h >/dev/null 2>&1");
+  die "$FIASCOUX doesn't seem to be a UX version." if $?;
+
+
+}
+
+# check for user app in binary path of L4
+sub check_user_app {
+  my $app = shift;
+
+  # extract arch and api from OBJ-dir
+  $OBJDIR =~ /OBJ-([^-]*)-(.*)/;
+  my $arch = $1;
+  my $api = $2;
+
+  my $p = sprintf "%s/bin/%s/%s/%s", $L4DIR, $arch, $api, $app;
+  die "There's no $p!" unless -f $p;
+
+  $p;
+}
+
+##
+# Check for userland (rmgr-ux, sigma0-ux, ...)
+sub check_for_userland() {
+  foreach my $t (keys %templs) {
+    my $p = sprintf $templs{$t}, $L4DIR, $OBJDIR;
+    die "There's no $p!" unless -f $p;
+    $progs{$t} = $p;
+  }
+
+  # check for base-servers
+  my @servers = @Baseservers;
+  @Baseservers = {};
+  if (scalar(@servers) eq 0) {
+    @servers = ( "log", "names", "dm_phys" );
+  }
+  
+  # iterate over servers and test if they exist in the bin dir
+  foreach my $s (@servers) {
+    push @Baseservers, check_user_app($s);
+  }
+
+  # test client and server
+  push @Baseservers, check_user_app($Client) if defined($Client);
+  push @Baseservers, check_user_app($Server);
+}
+
+##
+# Does the comparison of the output
+sub run_diff {
+  open(TMP, "diff $EXPECTED_OUT $TMP_OUT|wc -l|") or die "Cannot run diff: $!";
+  my $lines = <TMP>;
+  close TMP;
+  
+  # reset console in interactive mode
+  #if (defined $ENV{PS1}) {
+    system "stty echo";
+  #}
+  
+  # check if there are differences between expected and generated output
+  if ($lines == 0) {
+    print STDERR "Output of test in $PKGNAME ok.\n";
+    return 0;
+  }
+
+  print STDERR "Test in $PKGNAME generated unexpected output.\n";
+  return 1;
+}
+
+##
+# Called if second alarm signal received
+#
+# Now all the output of Fiasco-UX should be through and we can savely kill
+# Fiasco-UX. We then check the generated output and terminate ourselves.
+sub got_sig_alarm_second {
+  print STDERR "Timeout for flushing Fiasco-UX output\n" if $Verbose;
+  print STDERR "Sending SIGKILL to $pid and diff output\n" if $Verbose;
+
+  kill KILL => $pid;
+  alarm 0;
+
+  # some sanity checks
+  if ( $filter_state <= 1 ) {
+    print $Output "\n";
+    print $Output "User tasks did not start. Maybe overlapping modules?\n";
+    print $Output "Run \"" . fiascoux_cmdline() . "\" manually to check.\n";
+  }
+  close $Output;
+
+  # in generate mode, simply return
+  if ($Generate) {
+    system "stty echo";
+    exit 0;
+  }
+  
+  exit run_diff();
+}
+
+##
+# Called if first alarm signal received
+#
+# To flush Fiasco Output we send it a SIGINT (^C). Then we set up a second
+# timeout and return, so the filter can process the output which we forced to
+# be flushed.
+sub got_sig_alarm_first {
+  print STDERR "Timeout for Fiasco-UX hit!\n" if $Verbose;
+  print STDERR "Sending SIGINT to $pid\n" if $Verbose;
+  
+  kill INT => $pid;
+  $SIG{ALRM} = \&got_sig_alarm_second;
+  alarm 2; # time to flush output
+
+  # return to keep on filtering the output of Fiasco
+}
+
+##
+# Runs the timer and kills fiasco if runaway
+#
+# - sets the signal handler
+# - initializes the timeout
+sub set_alarm {
+  $SIG{ALRM} = \&got_sig_alarm_first;
+  alarm $ALARM_TIMEOUT;
+  print STDERR "Set alarm to $ALARM_TIMEOUT seconds\n" if $Verbose;
+}
+
+##
+# Build the fiasco command line
+#
+# Adds the binaries with the appropriate parameters.
+sub fiascoux_cmdline() {
+  (my $p = $FIASCOUX) =~ s/\/[^\/]+$//;
+  my $cmdline = "$FIASCOUX -m $Memory";
+  $cmdline .= " -R $progs{rmgr}"; # -quiet";
+  $cmdline .= " -S $progs{sigma0}"; # --quiet";
+  # when we change this to not cd into Fiasco dir, then
+  # prepend $p to $irq0
+  $cmdline .= " -I ".$p."/irq0";
+  # add -l to base-servers, which already contains client and server
+  for my $s (@Baseservers) {
+    if (ref($s) ne "HASH") { # just checking for Hashes that smuggled in
+      $cmdline .= " -l ".$s;
+    }
+  }
+  $cmdline;
+}
+
+##
+# filters the output of fiasco
+#
+# We want to see everything once roottask or rmgr are finished loading.
+# Therefore, we need some state machine to skip everything before and while
+# roottask (rmgr) is running.
+sub filter_fiasco_out
+{
+  $_ = shift;
+
+  # filter escape sequences
+  s/[[:cntrl:]]\[(\d;)?\d{0,2}m//g;
+  s///g;
+  s/[[:cntrl:]]\[K//g;
+  s/[[:cntrl:]]\[\d+;1H//g;
+
+  # check if we have to change state
+  my $root_start;
+  if ( $templs{rmgr} eq $templs{roottask} ) {
+    $root_start = "^Roottask: Loading \\d+ modules\\.";
+  } else {
+    $root_start = "^RMGR: Starting tasks\\.";
+  }
+  if ( /$root_start/ ) {
+    $filter_state = 1;
+    return undef;
+  }
+  if ( /^$/ && $filter_state eq 1) {
+    $filter_state = 2;
+    return undef;
+  }
+
+  # skip everything before and from roottask/rmgr
+  return undef if $filter_state <= 1;
+
+  # filter empty lines
+  return undef if /^$/;
+
+  # filter JDB warning and prompt
+  return undef if /^Terminal probably too small, should be at least/;
+  return undef if /^\([a-f0-9]\.\d\d\) jdb:/;
+  return undef if /^--.*ESP:.*EIP:.*/;
+
+  # filter memory dump
+  return undef if /^([a-f0-9]){8}:/;
+  
+  $_;
+}
+
+##
+# call_test
+sub run_fiasco {
+  my $cmdline = fiascoux_cmdline();
+  print "Calling: $cmdline\n" if $Verbose;
+
+  $pid = open($Input, "$cmdline|");
+  die "Can't start Fiasco: $!" unless defined $pid;
+  print "Run Fiasco-UX in $pid\n" if $Verbose;
+  
+  # if in generate mode, we redirect output to EXPECTED_OUT
+  # otherwise we redirect stdout to the TMP_OUT file
+  my $filename = $Generate ? $EXPECTED_OUT : $TMP_OUT;
+  open($Output, ">$filename") || die "Cannot open output file $filename";
+  select $Output; $| = 1;
+  print STDERR "Opened $filename, now setting timer\n" if $Verbose;
+
+  # the parent sets up the timer (it will eventually call the run_diff sub)
+  set_alarm();
+
+  my $o;
+  while (<$Input>) {
+    # we have to strip some lines
+    $o = filter_fiasco_out($_);
+    next unless defined $o;
+    print $Output $o;
+  }
+  close $Input;
+  close $Output;
+  # when we drop out of this loop fiasco terminated
+  alarm 0;
+
+  # in generate mode, simply return
+  exit 0 if $Generate;
+  
+  exit run_diff();
+}
+ 
+
+# -------------------------------------------------------------
+
+unless (GetOptions("help|h", sub { usage(); exit(0); },
+                   "l4dir|l=s", \$L4DIR,
+		   "fiascoux|f=s", \$FIASCOUX,
+		   "memory|m=s", \$Memory,
+		   "objdir|O=s", \$OBJDIR,
+		   "verbose|v!", \$Verbose,
+		   "quiet|q!", \$Quiet,
+		   "roottask!", sub { $templs{rmgr} = $templs{roottask}; },
+		   "generate!", \$Generate,
+		   "client|c=s", \$Client,
+		   "server|s=s", \$Server,
+		   "base|b=s", \@Baseservers,
+		   "timeout|t=s", \$ALARM_TIMEOUT,
+		   )) {
+  usage();
+  exit(1);
+}
+
+@Baseservers = split(/,/,join(',',@Baseservers));
+
+$L4DIR = $ENV{L4DIR}       || die "Need an L4DIR set!" unless $L4DIR;
+$FIASCOUX = $ENV{FIASCOUX} || die "Need a Fiasco-UX path!" unless $FIASCOUX;
+if ($ENV{EXPECTED_OUT}) { $EXPECTED_OUT = $ENV{EXPECTED_OUT}; }
+die "Need filename of expected output!" unless $EXPECTED_OUT;
+if ($ENV{TMP_OUT}) { $TMP_OUT = $ENV{TMP_OUT}; }
+die "No valid temporary file set!" unless $TMP_OUT;
+$PKGNAME = $ENV{PKGNAME} || $Server 
+	|| die "No package-name set!" unless $PKGNAME;
+
+check_for_l4dir();
+check_for_fiasco_ux();
+check_for_userland();
+
+##
+# The package test script:
+# This script forks off Fiasco and sets up a timeout. When the timeout
+# strikes, it sends a SIGINT to Fiasco to force a flush of the output buffer.
+# Then it sends a SIGKILL to terminate Fiasco.
+print "Main called by $$.\n" if $Verbose;
+
+# this function forks off fiasco
+run_fiasco();
+
+# when we reach this point, something terribly went wrong
+die "Oops, error in script!\n";

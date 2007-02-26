@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/SockBEClassFactory.h
- *	\brief	contains the declaration of the class CBEClassFactory
+ *    \file    dice/src/be/sock/SockBEClassFactory.h
+ *    \brief   contains the declaration of the class CBEClassFactory
  *
- *	\date	01/10/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,11 +34,10 @@
 
 class CSockBEClassFactory : public CBEClassFactory
 {
-DECLARE_DYNAMIC(CSockBEClassFactory);
 // Constructor
 public:
-    /**	\brief constructor
-     *	\param bVerbose true if class should print status output
+    /**    \brief constructor
+     *    \param bVerbose true if class should print status output
      */
     CSockBEClassFactory(bool bVerbose = false);
     virtual ~CSockBEClassFactory();
@@ -47,12 +47,14 @@ public:
     virtual CBEWaitAnyFunction * GetNewWaitAnyFunction();
     virtual CBESrvLoopFunction * GetNewSrvLoopFunction();
     virtual CBEUnmarshalFunction * GetNewUnmarshalFunction();
-	virtual CBEMarshalFunction* GetNewMarshalFunction();
+    virtual CBEMarshalFunction* GetNewMarshalFunction();
     virtual CBECommunication * GetNewCommunication();
-	
+    virtual CBEWaitAnyFunction* GetNewReplyAnyWaitAnyFunction();
+    virtual CBEDispatchFunction* GetNewDispatchFunction();
+
 protected:
-    /**	\brief copy constructor
-     *	\param src the source to copy from
+    /**    \brief copy constructor
+     *    \param src the source to copy from
      */
     CSockBEClassFactory(CSockBEClassFactory &src);
 };

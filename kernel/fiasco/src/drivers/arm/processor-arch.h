@@ -10,6 +10,14 @@ namespace Proc {
   typedef Mword Status;
 
   inline
+  Mword stack_pointer()
+  {
+    Mword sp;
+    asm volatile ( "mov %0, sp \n" : "=r"(sp) );
+    return sp;
+  }
+  
+  inline
   void stack_pointer( Mword sp )
   {
     asm volatile ( "mov sp, %0 \n" : : "r"(sp) );

@@ -9,11 +9,11 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/util/rdtsc.h>
 #include <l4/util/irq.h>
-#include <l4/con/l4con.h>
+#include <l4/l4con/l4con.h>
 #include <l4/thread/thread.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/dm_phys/dm_phys.h>
-#include <l4/con/con-client.h>
+#include <l4/l4con/l4con-client.h>
 
 char LOG_tag[9] = "conbench";
 
@@ -51,7 +51,7 @@ main(int argc, char **argv)
   if (!(ram = l4dm_mem_allocate(L4_SUPERPAGESIZE,
 				L4DM_CONTIGUOUS|L4DM_PINNED|
 				L4RM_MAP|L4RM_LOG2_ALIGNED|
-				L4DM_MEMPHYS_4MPAGES)))
+				L4DM_MEMPHYS_SUPERPAGES)))
     {
       printf("Error reserving %dMB RAM\n", L4_SUPERPAGESIZE/(1024*1024));
       return -1;

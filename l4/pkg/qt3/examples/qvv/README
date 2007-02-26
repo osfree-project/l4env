@@ -1,0 +1,135 @@
+NAME
+
+  QVV -- Qt-based image viewer
+
+SYNOPSIS
+
+  qvv [image-files...]
+
+  QVV will open all images specified at the command line or will open
+  browser window otherwise.
+
+INSTALL
+
+  type 'make' and wait for the 'qvv' binary -- if you don't succeed
+  try use precompiled qvv pack.
+
+  then take qvv binary and put it somewhere in the $PATH, usually
+  /usr/local/bin/  or  /usr/bin/  are fine.
+ 
+  requirements for compile process:
+ 
+  Qt 3.xx+ -- http://www.troll.no
+  
+  libgpeg6 -- it comes usually with your Linux distribution or can
+                 be found everywhere on Internet
+  
+  zlib     -- used by PNG support
+  
+  libpng   -- PNG images support
+
+KEYBOARD REFERENCE
+
+	Main window:
+	 
+		Up/Down Arrows, PgUp/Down -- navigate through the list
+		Left Arrow                -- change directory to parent ( .. )
+		Backspace                 -- change directory to parent ( .. )
+		Right Arrow or Enter      -- enter directory or show image
+		LeftMouse double click    -- enter directory or show image
+		RightMouse click          -- open menu
+		F3                        -- open new browser window
+		F4                        -- close browser window
+		F5                        -- reload directory list
+		F7                        -- edit image/directory note
+		~                         -- go to user home directory ($HOME)
+		`                         -- change directory (dialog window)
+		ESC                       -- close all view windows
+		[ and ]                   -- view previous/next image
+		Alt+X                     -- exit QVV (and close all image windows)
+		Delete (Del)              -- move current file to trash 
+		                             $HOME/.qvv_trash
+		
+		All plain characters are used to seek to next filename matching
+		the same first charachter.
+	 
+	Image (View) window:
+	
+		Arrows                    -- move window ( pan ) by 16 pixels
+		Space                     -- next image
+		ESC                       -- close image window
+		ENTER                     -- close image window
+		F4                        -- close image window
+		F7                        -- edit image note (image-name.note)
+		TAB                       -- center image window
+		INS                       -- toggle image auto-center feature
+		/                         -- show image in its real size
+		*                         -- scale image to fit the screen size
+		+                         -- zoom in
+		-                         -- zoom out
+		1                         -- scale image to 100%
+		2                         -- scale image to 200%
+		3                         -- scale image to 300%
+		4                         -- scale image to 400%
+		< and >                   -- rotate image left and right by 90 deg.
+		[ and ]                   -- view previous/next image
+		PgUp/Down                 -- view previous/next image
+		LeftMouse click           -- next image
+		RightMouse click          -- previous image
+		MiddleMouse click         -- close image
+		Control+Mouse drag        -- pan image (pixel by pixel)
+		HOME                      -- pan image to upper left corner
+		Delete (Del)              -- move current file to trash 
+		                             $HOME/.qvv_trash
+		z                         -- set desktop background (tiled)
+		Z                         -- set desktop background (fit)
+		
+	Note window:
+	
+		F2                        -- saves note and closes the window
+		F4 or ESC                 -- discards changes and closes the window
+ 
+ENVIRONMENT CONFIG
+
+    QVV_REDUCE_HEIGHT         -- this will reduce actual desktop height by
+                                 given number of pixels (used mainly if you have
+                                 some kind of `task bar', `panel' or something )
+    
+    QVV_FILTERS               -- filters for image files in this format:
+                                 .ext1.ext2.ext3.
+                                 example:
+    
+    QVV_NOAQUA                -- if set QVV will not try to mimic Aqua-like
+                                 interface (colors) style
+    
+    export QVV_FILTERS=.jpg.jpeg.gif.png.xpm.bmp.ppm.
+    (for bash)
+    
+    QVV_FILTERS value is not case sensitive!
+
+
+FEEDBACK
+
+    You can contact author (me) with any notes you have.
+    
+THANKS
+
+	Thanks to the KDE and GNOME projects for the icons.
+	
+	Thanks to the old dos QPV and PVE viewers' authors for the ideas.
+	
+	Thanks to the authors of the libraries I use: Qt, Jpeg, PNG, Zlib...
+	
+	Thanks to Keith Schincke for the Qt2.x patch (QVV ver. before 0.12)!
+
+    Thanks to Carsten Schneider <zcarsten@gmx.net> for the Zaurus port:
+	http://z-soft.z-portal.info/zimage/
+	
+	Thank to all QVV users!
+	
+AUTHOR
+
+	(c) Vladi Shabanski <cade@bis.bg> 2003
+	http://soul.datamax.bg/~cade/qvv
+  
+

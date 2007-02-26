@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <alloca.h>
+#include <string.h>
 #include <l4/util/getopt.h> 
 #include <l4/util/parse_cmd.h>
 
@@ -16,19 +17,35 @@ struct parse_cmdline_struct{
     enum parse_cmd_type type;		// which type (int, switch, string)
     char		shortform;	// short symbol
     const char		*longform;	// long name
-    void		*argptr;	// ptr to variable getting the value
+    union{
+	void		*argptr;	// ptr to variable getting the value
+	parse_cmd_fn_t	fn;		// function to call
+	parse_cmd_fn_arg_t fn_arg;	// function to call with args
+    } arg;
     union{
     	int		switch_to;	// value a switch sets
     	const char*	default_string;	// default string value
     	unsigned	default_int;	// default int value
-    }u;
+    	int		id;		// identifier to pass to function
+    }val;
     const char		*comment;	// a description for the generated help
 };
 	
 #define TRASH(type, val) { type dummy __attribute__ ((unused)) = (val); }
 
-int parse_cmdline(int *argc, const char***argv, char arg0,...){
+int parse_cmdline(int *argc, const char***argv, char arg0, ...){
     va_list va;
+    int err;
+
+    /* calculate the number of argument-descriptors */
+    va_start(va, arg0);
+    err = parse_cmdlinev(argc, argv, arg0, va);
+    va_end(va);
+    return err;
+}
+
+int parse_cmdlinev(int *argc, const char***argv, char arg0, va_list va0){
+    va_list va=va0;
     int c, count, shortform, cur_longopt;
     const char*longform, *comment;
     struct option *longopts, *longptr;
@@ -37,8 +54,7 @@ int parse_cmdline(int *argc, const char***argv, char arg0,...){
     int err;
 
     /* calculate the number of argument-descriptors */
-    va_start(va, arg0);
-    shortform=arg0;
+    shortform = arg0;
     for(count=0; shortform; count++){
 	int type;
 	int standard_int, *int_p;
@@ -62,12 +78,26 @@ int parse_cmdline(int *argc, const char***argv, char arg0,...){
 	    string_p  = va_arg(va, const char**);
 	    *string_p = standard_string;
 	    break;
+	case PARSE_CMD_FN:
+	case PARSE_CMD_FN_ARG:
+	    TRASH(int, va_arg(va, int));
+	    TRASH(parse_cmd_fn_t, va_arg(va, parse_cmd_fn_t));
+	    break;
+	case PARSE_CMD_INC:
+	    standard_int = va_arg(va, int);
+	    int_p = va_arg(va, int*);
+	    *int_p = standard_int;
+	    break;
+	case PARSE_CMD_DEC:
+	    standard_int = va_arg(va, int);
+	    int_p = va_arg(va, int*);
+	    *int_p = standard_int;
+	    break;
 	default:
 	    return -1;
   	}
   	shortform = va_arg(va, int);
     }
-    va_end(va);
 
     /* consider the --help and -h */
     count++;
@@ -84,7 +114,7 @@ int parse_cmdline(int *argc, const char***argv, char arg0,...){
     if(pa==0) return -2;
     
     /* fill in the short options field, longopts and parse args */
-    va_start(va, arg0);
+    va=va0;
     shortform = arg0;
     optptr    = optstring;
     longptr   = longopts;
@@ -120,24 +150,45 @@ int parse_cmdline(int *argc, const char***argv, char arg0,...){
 	    if(shortform!=' ') *optptr++ = ':';
 	    if(pa[c].longform) longptr->has_arg = 1;
 
-	    pa[c].u.default_int = va_arg(va, int);
-	    pa[c].argptr = va_arg(va, int*);
+	    pa[c].val.default_int = va_arg(va, int);
+	    pa[c].arg.argptr = va_arg(va, int*);
 	    break;
 
 	case PARSE_CMD_SWITCH:
 	    if(pa[c].longform) longptr->has_arg = 0;
 
-	    pa[c].u.switch_to = va_arg(va, int);
-	    pa[c].argptr = va_arg(va, int*);
+	    pa[c].val.switch_to = va_arg(va, int);
+	    pa[c].arg.argptr = va_arg(va, int*);
 	    break;
 	case PARSE_CMD_STRING:
 	    if(shortform!=' ') *optptr++ = ':';
 	    if(pa[c].longform) longptr->has_arg = 1;
 
-	    pa[c].u.default_string = va_arg(va, char*);
-	    pa[c].argptr = va_arg(va, char**);
+	    pa[c].val.default_string = va_arg(va, char*);
+	    pa[c].arg.argptr = va_arg(va, char**);
+	    break;
+	case PARSE_CMD_FN:
+	    if(pa[c].longform) longptr->has_arg = 0;
+
+	    pa[c].val.id = va_arg(va, int);
+	    pa[c].arg.fn = va_arg(va, parse_cmd_fn_t);
+	    break;
+	case PARSE_CMD_FN_ARG:
+	    if(shortform!=' ') *optptr++ = ':';
+	    if(pa[c].longform) longptr->has_arg = 1;
+
+	    pa[c].val.id = va_arg(va, int);
+	    pa[c].arg.fn_arg = va_arg(va, parse_cmd_fn_arg_t);
+	    break;
+	case PARSE_CMD_INC:
+	case PARSE_CMD_DEC:
+	    if(pa[c].longform) longptr->has_arg = 0;
+
+	    TRASH(int, va_arg(va, int));
+	    pa[c].arg.argptr = va_arg(va, int*);
 	    break;
   	}
+
 	if(pa[c].longform) longptr++;
 	// next short form
   	shortform = va_arg(va, int);
@@ -152,10 +203,8 @@ int parse_cmdline(int *argc, const char***argv, char arg0,...){
     longptr->flag=0;
     longptr->val=0;
 
-    va_end(va);
-
     err = -3;
-    
+
     /* now, parse the arguments */
     do{
 	int val;
@@ -164,11 +213,18 @@ int parse_cmdline(int *argc, const char***argv, char arg0,...){
 	val = getopt_long_only(*argc, (char**)*argv, optstring, longopts, &idx);
 	switch(val){
 	case ':':
-	case '?':
+	    printf("Option -%c requires an argument\n",optopt);
 	    goto e_help;
+	case '?':
+	    if(opterr){
+	        printf("Unrecognized option: - %c\n", optopt ? optopt : '?');
+		goto e_help;
+	    }
+	    break;
 	case -1:
 	    *argc-=optind;
 	    *argv+=optind;
+	    optind=1;
 	    return 0;
 	default:
 	    /* we got an option. If it is a short option (val!=0),
@@ -189,16 +245,29 @@ int parse_cmdline(int *argc, const char***argv, char arg0,...){
 	    if(idx<count){
 		switch(pa[idx].type){
 		case PARSE_CMD_INT:
-		    *((int*)pa[idx].argptr) = strtol(optarg, 0, 0);
+		    *((int*)pa[idx].arg.argptr) = strtol(optarg, 0, 0);
 		    break;
 		case PARSE_CMD_SWITCH:
-		    *((int*)pa[idx].argptr) = pa[idx].u.switch_to;
+		    *((int*)pa[idx].arg.argptr) = pa[idx].val.switch_to;
 		    break;
 		case PARSE_CMD_STRING:
-		    *((const char**)pa[idx].argptr) = optarg;
+		    *((const char**)pa[idx].arg.argptr) = optarg;
 		    break;
-		}
+		case PARSE_CMD_FN:
+		    pa[idx].arg.fn(pa[idx].val.id);
+		    break;
+		case PARSE_CMD_FN_ARG:
+		    pa[idx].arg.fn_arg(pa[idx].val.id,
+				       optarg, strtol(optarg, 0, 0));
+		    break;
+		case PARSE_CMD_INC:
+		    (*((int*)pa[idx].arg.argptr))++;
+		    break;
+		case PARSE_CMD_DEC:
+		    (*((int*)pa[idx].arg.argptr))--;
+		    break;
 		break;
+		}
 	    }
 	    break;
 	} // switch val
@@ -226,12 +295,41 @@ int parse_cmdline(int *argc, const char***argv, char arg0,...){
 	if(pa[c].comment) printf(" %*s- %s", l<25?25-l:0,
 				 "", pa[c].comment);
 	if(pa[c].type == PARSE_CMD_STRING)
-		printf(" (\"%s\")", pa[c].u.default_string);
+		printf(" (\"%s\")", pa[c].val.default_string);
 	if(pa[c].type == PARSE_CMD_INT)
-		printf(" (%#x)", pa[c].u.default_int);
+		printf(" (%#x)", pa[c].val.default_int);
 	printf("\n");
     }
-
+  optind=1;
   return err;
 }
 
+int parse_cmdline_extra(const char*argv0, const char*line, char delim,
+			char arg0,...){
+    int i, argc_=1;
+    char*s, *line_=0;
+    const char**argv_;
+    va_list va;
+
+    if(line && *line){
+	if((line_ = alloca(strlen(line)))==0) return -2;
+	strcpy(line_, line);
+	argc_++;
+	for(s=line_;*s;s++)if(*s==delim) argc_++;
+    }
+    argv_ = alloca(sizeof(char*)*argc_);
+    argv_[0]=argv0;
+    argc_=1;
+    s=line_;
+    if(line) while(*line){
+	argv_[argc_]=s;
+	while((*s=*line)!=0 && *s!=delim){line++; s++;}
+	*s++=0;
+	if(*line)line++;
+	argc_++;
+    }
+    va_start(va, arg0);
+    i = parse_cmdlinev(&argc_, &argv_, arg0, va);
+    va_end(va);
+    return i;
+}

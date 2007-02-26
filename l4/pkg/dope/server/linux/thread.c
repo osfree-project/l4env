@@ -9,7 +9,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -17,66 +17,110 @@
  * COPYING file for details.
  */
 
-#define THREAD SDL_Thread
-#define MUTEX  SDL_mutex
+//#define THREAD SDL_Thread
+//#define MUTEX  SDL_mutex
 
 #include "SDL/SDL.h"
 #include "SDL/SDL_thread.h"
 #include "dopestd.h"
 #include "thread.h"
 
+struct thread {
+	SDL_Thread *t;
+};
+
+struct mutex {
+	SDL_mutex *m;
+};
+
 int init_thread(struct dope_services *d);
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
-static THREAD *create_thread(void (*entry)(void *),void *arg) {
-	return SDL_CreateThread((int (*)(void *))entry,arg);
+static THREAD *alloc_thread(void) {
+	THREAD *new = (THREAD *)malloc(sizeof(THREAD));
+	memset(new, 0, sizeof(THREAD));
+	return new;
+}
+
+
+static void free_thread(THREAD *t) {
+	if (t) free(t);
+}
+
+
+static void copy_thread(THREAD *src, THREAD *dst) {
+	if (!dst || !src) return;
+	dst->t = src->t;
+}
+
+
+static int start_thread(THREAD *dst_tid, void (*entry)(void *), void *arg) {
+	SDL_Thread *new = SDL_CreateThread((int (*)(void *))entry,arg);
+	if (dst_tid) dst_tid->t = new;
+	return 0;
 }
 
 static MUTEX *create_mutex(int init_locked) {
-	return SDL_CreateMutex();
+	MUTEX *new = (MUTEX *)malloc(sizeof(MUTEX));
+	new->m = SDL_CreateMutex();
+	return new;
 }
 
 static void destroy_mutex(MUTEX *m) {
-	SDL_DestroyMutex(m);
+	if (!m) return;
+	SDL_DestroyMutex(m->m);
+	free(m);
 }
 
 static void lock_mutex(MUTEX *m) {
-	SDL_mutexP(m);
+	SDL_mutexP(m->m);
 }
 
 static void unlock_mutex(MUTEX *m) {
-	SDL_mutexV(m);
+	SDL_mutexV(m->m);
 }
 
 static s8 mutex_is_down(MUTEX *m) {
+	ERROR(printf("Thread(thread_equal): not yet implemented\n"));
 	return 0;
 }
 
-static int ident2thread(u8 *ident, THREAD *t) {
+static int ident2thread(const u8 *ident, THREAD *t) {
+	ERROR(printf("Thread(thread_equal): not yet implemented\n"));
 	return 0;
 }
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+static int thread_equal(THREAD *t1, THREAD *t2) {
+	ERROR(printf("Thread(thread_equal): not yet implemented\n"));
+	return 0;
+}
+
+
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct thread_services services = {
-	create_thread,
+	alloc_thread,
+	free_thread,
+	copy_thread,
+	start_thread,
 	create_mutex,
 	destroy_mutex,
 	lock_mutex,
 	unlock_mutex,
 	mutex_is_down,
 	ident2thread,
+	thread_equal,
 };
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_thread(struct dope_services *d) {
 

@@ -43,7 +43,7 @@
 #include "linux_emul.h"
 
 /* Module stuff */
-MODULE_AUTHOR("Lars Reuther, <reuther@os.inf.tu-dresden.de>");
+MODULE_AUTHOR("Lars Reuther <reuther@os.inf.tu-dresden.de>");
 MODULE_DESCRIPTION("DROPS Block Device Driver Stub");
 
 /* Module arguments */
@@ -245,9 +245,9 @@ __msg(const char * tag, int line, const char * fn, const char * format, ...)
 #  define INFOd(doit,format...)
 #endif
 
-#ifndef IdStr
-#  define IdFmt       "%x.%x"
-#  define IdStr(tid)  (tid).id.task,(tid).id.lthread
+#ifndef l4util_idstr
+#  define l4util_idfmt       "%x.%x"
+#  define l4util_idstr(tid)  (tid).id.task,(tid).id.lthread
 #endif
 
 #define DEBUG_INIT      1
@@ -407,8 +407,8 @@ __l4blk_do_request(void)
         {
           if (MAJOR(req->rq_dev) != 0)
             /* ugly: Linux seems to have a problem with locking, FIXME!!! */
-            Error(IdFmt": invalid device, is 0x%x, should be 0x%x",
-                  IdStr(l4_myself()), MAJOR(req->rq_dev), MAJOR_NR);
+            Error(l4util_idfmt": invalid device, is 0x%x, should be 0x%x",
+                  l4util_idstr(l4_myself()), MAJOR(req->rq_dev), MAJOR_NR);
           
           continue;
         }
@@ -592,7 +592,7 @@ __l4blk_notify_thread(void)
   CORBA_Environment _env = dice_default_environment;
   l4_threadid_t id = get_l4_id_from_stack();
 
-  INFOd(DEBUG_INIT, "started notification thread at "IdFmt, IdStr(id));
+  INFOd(DEBUG_INIT, "started notification thread at "l4util_idfmt, l4util_idstr(id));
   
   while (1)
     {
@@ -614,8 +614,8 @@ __l4blk_notify_thread(void)
       
       if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
         {
-          Error("error waiting for notification (ret %d,  exc %d, ipc 0x%02x)",
-                ret, _env.major, _env.ipc_error);
+          Error("error waiting for notification (ret %d,  exc %d)",
+                ret, _env.major);
           goto notify_error;
         }
       
@@ -947,8 +947,8 @@ l4blk_stub_init(void)
       return -ENODEV;
     }
 
-  INFOd(DEBUG_INIT, "found L4 block driver \'%s\' at "IdFmt, 
-        l4blk_name, IdStr(l4blk_drv_id));
+  INFOd(DEBUG_INIT, "found L4 block driver \'%s\' at "l4util_idfmt, 
+        l4blk_name, l4util_idstr(l4blk_drv_id));
 
   /* open block driver */
   ret = l4blk_driver_open_call(&l4blk_drv_id, &l4blk_drv_handle,
@@ -959,8 +959,8 @@ l4blk_stub_init(void)
       return -ENODEV;
     }
 
-  INFOd(DEBUG_INIT, "driver handle %d, cmd at "IdFmt", notify at "IdFmt,
-        l4blk_drv_handle, IdStr(l4blk_cmd_id), IdStr(l4blk_notify_id));
+  INFOd(DEBUG_INIT, "driver handle %d, cmd at "l4util_idfmt", notify at "l4util_idfmt,
+        l4blk_drv_handle, l4util_idstr(l4blk_cmd_id), l4util_idstr(l4blk_notify_id));
 
   /* get number of disks */
   ret = -ENODEV;
@@ -975,7 +975,7 @@ l4blk_stub_init(void)
 
   if (l4blk_num_disks == 0)
     {
-      Error("not disks found, exiting...\n");
+      Error("no disks found, exiting...\n");
       goto init_error_drv;
     }
 
@@ -995,7 +995,10 @@ l4blk_stub_init(void)
   /* allocate stack for notification thread */
   tid = l4_myself();
   tid.id.lthread = L4BLK_NOTIFY_THREAD;
-  l4blk_notify_stack = l4blk_allocate_stack(tid);
+  l4blk_notify_stack = l4blk_allocate_stack();
+
+  put_l4_id_to_stack((unsigned)l4blk_notify_stack, tid);
+  put_l4_prio_to_stack((unsigned)l4blk_notify_stack, PRIO_IRQ(l4blk_irq));
 
   /* start notification thread */
   sp = l4blk_notify_stack;

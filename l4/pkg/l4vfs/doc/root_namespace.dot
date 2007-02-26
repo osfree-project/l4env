@@ -1,0 +1,115 @@
+digraph "root_namespace" {
+  subgraph clusterobject_root {
+    graph [
+      fontcolor = "black"
+      color = "black"
+    ]
+    node [
+      fontcolor = "black"
+      shape = "ellipse"
+      color = "black"
+    ]
+    edge [
+      fontcolor = "black"
+      color = "black"
+    ]
+  
+    "/" [label = "/\n(0.0)\r",fillcolor = "khaki1", style = "filled"]
+    "a" [label = "\N\n(0.1)\r",fillcolor = "khaki1", style = "filled"]
+    "b" [label = "\N\n(0.2)\r",fillcolor = "khaki1", style = "filled"]
+    "c" [label = "\N\n(0.3)\r",fillcolor = "khaki1", style = "filled"]
+    "d" [label = "\N\n(0.4)\r",fillcolor = "khaki1", style = "filled"]
+    "e" [label = "\N\n(0.5)\r",fillcolor = "khaki1", style = "filled"]
+
+    "/" -> "a"
+    "/" -> "b"
+    "/" -> "c"
+    "b" -> "d"
+    "b" -> "e"
+    label = "root_namespace"
+  }
+
+  subgraph clusterobject_server1 {
+    graph [
+      fontcolor = "black"
+      color = "black"
+    ]
+    node [
+      fontcolor = "black"
+      shape = "ellipse"
+      color = "black"
+  //    fillcolor = "khaki1"
+  //    style = "filled"
+    ]
+    edge [
+      fontcolor = "black"
+      color = "black"
+    ]
+    "o1_/" [label = "/\n(1.0)\r"]
+    "f"    [label = "\N\n(1.1)\r",fillcolor = "khaki1", style = "filled"]
+    "g"    [label = "\N\n(1.2)\r",fillcolor = "khaki1", style = "filled"]
+    "h"    [label = "\N\n(1.3)\r",fillcolor = "khaki1", style = "filled"]
+    "i"    [label = "\N\n(1.4)\r"]
+    "j"    [label = "\N\n(1.5)\r"]
+    "k"    [label = "\N\n(1.6)\r"]
+    "l"    [label = "\N\n(1.7)\r"]
+    "o1_/" -> "f"
+    "o1_/" -> "g"
+    "o1_/" -> "h"
+    "f" -> "i"
+    "f" -> "j"
+    "f" -> "k"
+    "i" -> "l"
+    label = "object_server1"
+  }
+  
+  subgraph clusterobject_server2 {
+    graph [
+      fontcolor = "black"
+      color = "black"
+    ]
+    node [
+      fontcolor = "black"
+      shape = "ellipse"
+      color = "black"
+    ]
+    edge [
+      fontcolor = "black"
+      color = "black"
+    ]
+    "o2_/" [label = "/\n(2.0)\r"]
+    "m"    [label = "\N\n(2.1)\r",fillcolor = "khaki1", style = "filled"]
+    "n"    [label = "\N\n(2.2)\r",fillcolor = "khaki1", style = "filled"]
+    "o"    [label = "\N\n(2.3)\r",fillcolor = "khaki1", style = "filled"]
+    "p"    [label = "\N\n(2.4)\r",fillcolor = "khaki1", style = "filled"]
+    "q"    [label = "\N\n(2.5)\r",fillcolor = "khaki1", style = "filled"]
+    "r"    [label = "\N\n(2.6)\r",fillcolor = "khaki1", style = "filled"]
+    "s"    [label = "\N\n(2.7)\r",fillcolor = "khaki1", style = "filled"]
+    "o2_/" -> "m"
+    "o2_/" -> "n"
+    "o2_/" -> "o"
+    "o" -> "p"
+    "o" -> "q"
+    "o" -> "r"
+    "o" -> "s"
+    label = "object_server2"
+  }
+  
+//  {rank=same; "c"; "o1_/"};
+//  {rank=same; "f"; "o2_/"};
+  "c" -> "o1_/" [dir = none, constraint = true]
+  "f" -> "o2_/" [dir = none, constraint = true]
+
+  "[object name]" [
+    label = "\N\n([volume_id].[local_object_id])\n"
+    fontsize = "10"
+    fontcolor = "blue"
+    color = "blue"
+  ]
+  "[key 1]" [
+    label = "Nodes visible in\n global namespace"
+    fillcolor = "khaki1"
+    style = "filled"
+    fontsize = "10"
+  ]
+}

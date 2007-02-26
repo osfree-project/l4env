@@ -21,22 +21,16 @@
 #include <l4/sys/syscalls.h>
 #include <l4/names/libnames.h>
 #include <l4/env/env.h>
+#include <l4/env/errno.h>
 #include <l4/dm_phys/dm_phys.h>
-
-typedef char l4_page_t[L4_PAGESIZE];
-
-static l4_threadid_t dm_id;
-static l4_page_t map_page __attribute__ ((aligned(L4_PAGESIZE)));
-static char buffer[L4_PAGESIZE+1];
+#include <l4/util/l4_macros.h>
 
 int
 main(int argc, char **argv)
 {
-  int i, error, size, print;
-  unsigned offset = 0;
-  CORBA_Environment env = dice_default_environment;
-  l4dm_dataspace_t ds;
-  l4_snd_fpage_t snd_fpage;
+  int i;
+  l4_threadid_t dm_id;
+  l4dm_dataspace_t ds, next_ds;
 
   if (argc < 2)
     {
@@ -57,15 +51,15 @@ main(int argc, char **argv)
       return -2;
     }
 
-  /* map in map_area and set last byte to zero terminating string */
-  memset(map_page, 0, sizeof(map_page));
-
-  /* parse command line: Kill each task */
+  /* parse command line: dump each task */
   for (i=1; i<argc; i++)
     {
       int task_id = strtol(argv[i], 0, 0);
       l4_threadid_t tid;
-      
+      l4_threadid_t owner;
+      l4_size_t size, total_size;
+      char name[L4DM_DS_NAME_MAX_LEN+1];
+
       if (task_id == 0)
 	tid = L4_INVALID_ID;
       else
@@ -73,65 +67,39 @@ main(int argc, char **argv)
 	  tid.id.task    = task_id;
 	  tid.id.lthread = 0;
 	}
-      
-      error = if_l4dm_generic_dump_call(&dm_id, &tid,L4DM_SAME_TASK,
-			       &ds,&env);
-      if ((error < 0) || (env.major != CORBA_NO_EXCEPTION))
+
+restart:
+      ds         = L4DM_INVALID_DATASPACE;
+      ds.manager = dm_id;
+
+      /* retrieve the first dataspace id */
+      if (l4dm_mem_info(&ds, &size, &owner, name, &ds.id) == -L4_ENOTFOUND)
+	exit(-1);
+
+      for (total_size = 0; 
+	   ds.id != L4DM_INVALID_DATASPACE.id; ds.id = next_ds.id)
 	{
-	  fprintf(stderr, "Error dumping l4 task \"%s\" (error %d, exc %d)\n", 
-		  argv[i],error,env.major);
-	  exit(error);
+	  if (l4dm_mem_info(&ds, &size, &owner, name, &next_ds.id) 
+	        == -L4_ENOTFOUND)
+	    goto restart;
+	  if (!l4_is_invalid_id(tid) && !l4_tasknum_equal(owner, tid))
+	    continue;
+	  printf("%5u: size=%08x (%7uKB,%4uMB) owner="
+	      l4util_idfmt_adjust" name=\"%s\"\n",
+	      ds.id, size, (size+(1<<9)-1)/(1<<10), (size+(1<<19)-1)/(1<<20),
+	      l4util_idstr(owner), name);
+	  total_size += size;
 	}
 
-      error = if_l4dm_mem_size_call(&(ds.manager), ds.id, &size, &env);
-      if ((error < 0) || (env.major != CORBA_NO_EXCEPTION))
+      if (total_size)
 	{
-	  fprintf(stderr, 
-		  "Error determining size of ds %d at ds_manager %x.%x "
-		  "(error %d, exc %d)\n",
-		  ds.id, ds.manager.id.task, ds.manager.id.lthread,
-		  error,env.major);
-	  exit(error);
+	  printf("==========================================================="
+	      "========================\n"
+	      " total size %08x (%7uKB,%4uMB)\n",
+	      total_size, (total_size+(1<<9)-1)/(1<<10), 
+	      (size+(1<<19)-1)/(1<<20));
 	}
-
-      while (size > 0)
-	{
-	  // unmap map area
-	  l4_fpage_unmap(l4_fpage((l4_addr_t)map_page, L4_LOG2_PAGESIZE,
-				   L4_FPAGE_RW, L4_FPAGE_MAP),
-			 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-
-	  // page fault
-	  error = 
-	    if_l4dm_generic_fault_call(&(ds.manager),
-			      ds.id,offset,&snd_fpage, &env);
-	  if ((error < 0) || (env.major != CORBA_NO_EXCEPTION))
-	    {
-	      printf("Error requesting ds %d at ds_manager %x.%x "
-		     "(error %d, exc %d)\n",
-		     ds.id, ds.manager.id.task, ds.manager.id.lthread,
-		     error,env.major);
-	      if_l4dm_generic_close_call(&(ds.manager), ds.id, &env);
-	      return error;
-	    }
-
-	  offset += L4_PAGESIZE;
-	  
-	  print = size;
-	  if (print > L4_PAGESIZE)
-	    print = L4_PAGESIZE;
-	  
-	  memcpy(buffer, map_page, L4_PAGESIZE);
-	  buffer[L4_PAGESIZE]='\0';
-	  
-	  printf("%s", buffer);
-	  
-	  size -= print;
-	}
-      
-      if_l4dm_generic_close_call(&(ds.manager), ds.id, &env);
     }
 
   return 0;
 }
-

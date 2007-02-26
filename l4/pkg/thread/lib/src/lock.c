@@ -41,7 +41,7 @@ int
 l4thread_lock(l4thread_t thread)
 {
   /* lock TCB */
-  if (l4th_tcb_get_active_locked(thread) == NULL)
+  if (l4th_tcb_get_locked(thread) == NULL)
     return -L4_EINVAL;
   else
     return 0;
@@ -63,7 +63,7 @@ l4thread_unlock(l4thread_t thread)
   l4th_tcb_t * tcb;
 
   /* get TCB */
-  tcb = l4th_tcb_get_active(thread);
+  tcb = l4th_tcb_get(thread);
   if (tcb == NULL)
     return -L4_EINVAL;
 
@@ -88,7 +88,7 @@ l4thread_lock_myself(void)
   /* get current TCB locked */
   if (l4th_tcb_get_current_locked() == NULL)
     {
-      Error("l4thread: current thread not found in thread table!");
+      LOG_Error("l4thread: current thread not found in thread table!");
       return -L4_EINVAL;
     }
   else

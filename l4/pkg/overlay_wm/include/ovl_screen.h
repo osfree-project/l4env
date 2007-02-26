@@ -4,6 +4,15 @@
  * \author  Norman Feske <nf2@inf.tu-dresden.de>
  */
 
+/*
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the Overlay WM package, which is distributed
+ * under the  terms  of the GNU General Public Licence 2. Please see
+ * the COPYING file for details.
+ */
+
 
 /*** INIT CONNECTION TO OVERLAY-WM SERVER ***
  *
@@ -11,6 +20,18 @@
  * \return           0 on success
  */
 extern int ovl_screen_init(char *ovl_name);
+
+
+/*** REQUEST WIDTH OF PHYSICAL SCREEN ***/
+extern int ovl_get_phys_width(void);
+
+
+/*** REQUEST HEIGHT OF PHYSICAL SCREEN ***/
+extern int ovl_get_phys_height(void);
+
+
+/*** REQUEST COLOR MODE OF PHYSICAL SCREEN ***/
+extern int ovl_get_phys_mode(void);
 
 
 /***************************

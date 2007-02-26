@@ -16,19 +16,20 @@
 #include <l4/sys/kdebug.h>
 #include <l4/sys/types.h>
 #include <l4/dm_phys/dm_phys.h>
-#include <l4/con/l4con.h>
-#include <l4/con/con-client.h>
+#include <l4/l4con/l4con.h>
+#include <l4/l4con/l4con-client.h>
 #include <l4/names/libnames.h>
+#include <l4/util/l4_macros.h>
 
 #include "ioctls.h"
 
 /* All drivers initialising the SW cursor need this */
 #include "mipointer.h"
+#include "shadowfb.h"
 
 /* Colormap handling */
 #include "micmap.h"
 #include "xf86cmap.h"
-
 #include "xf86Priv.h"
 #include "xf86Bus.h"
 
@@ -59,9 +60,11 @@ static void PSLIMLoadPalette (ScrnInfoPtr pScrn, int numColors, int *indices,
 static void PSLIMUpdate(ScreenPtr pScreen, PixmapPtr pShadow, RegionPtr damage);
 static void PSLIMMapShadowUpdate(ScreenPtr pScreen, PixmapPtr pShadow, 
 				 RegionPtr damage);
+static void PSLIMPostDirtyUpdate(ScrnInfoPtr pScrn, int nboxes, BoxPtr boxPtr);
 #else
 static void PSLIMUpdate(ScreenPtr pScreen, shadowBufPtr pBuf);
 static void PSLIMMapShadowUpdate(ScreenPtr pScreen, shadowBufPtr pBuf);
+static void PSLIMPostDirtyUpdate(ScrnInfoPtr pScrn, int nboxes, BoxPtr boxPtr);
 #endif
 static void PSLIMInitAccel(ScreenPtr pScreen);
 static Bool PSLIMInitSIGIOHandler(ScrnInfoPtr pScrn);
@@ -123,6 +126,11 @@ static const char *fbSymbols[] = {
   NULL
 };
 
+static const char *shadowfbSymbols[] = {
+  "ShadowFBInit2",
+  NULL
+};
+
 static const char *shadowSymbols[] = {
   "shadowAlloc",
   "shadowInit",
@@ -169,10 +177,8 @@ pslimSetup (pointer Module, pointer Options, int *ErrorMajor, int *ErrorMinor)
     {
       Initialised = TRUE;
       xf86AddDriver (&PSLIM, Module, 0);
-      LoaderRefSymLists(fbSymbols,
-			shadowSymbols,
-			xaaSymbols,
-			NULL);
+      LoaderRefSymLists(fbSymbols, shadowSymbols, 
+			shadowfbSymbols, xaaSymbols, NULL);
       return (pointer) TRUE;
     }
 
@@ -295,7 +301,8 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
   pSlim->device = xf86GetDevFromEntity (pScrn->entityList[0],
 					pScrn->entityInstanceList[0]);
 
-  if ((pSlim->dropscon_dev = open("/proc/dropscon", O_RDONLY)) < 0)
+  if ((pSlim->dropscon_dev = open("/proc/dropscon", O_RDONLY)) < 0
+      && (pSlim->dropscon_dev = open("/proc/l4/l4fb_xf86if", O_RDONLY)) < 0)
     {
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 		  "Error opening dropscon device\n");
@@ -311,8 +318,8 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
     }
 
   xf86DrvMsg (pScrn->scrnIndex, X_CONFIG,
-	      "virtual DROPS console at %x.%x\n", 
-	      pSlim->vc_tid.id.task, pSlim->vc_tid.id.lthread);
+	      "virtual DROPS console at "l4util_idfmt"\n", 
+	      l4util_idstr(pSlim->vc_tid));
 
   /* get maximum receive buffer size which was set in dropscon module */
   if (con_vc_gmode_call(&(pSlim->vc_tid), 
@@ -321,7 +328,7 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
     {
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 		  "Error determining sbuf_size from console parameters "
-		  "(exc=%d, %08x)\n", _env.major, _env.ipc_error);
+		  "(exc=%d, %08x)\n", _env.major, _env._p.ipc_error);
       return (FALSE);
     }
 
@@ -334,7 +341,7 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
     {
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 		  "Error determining console parameters (exc=%d, %08x)\n", 
-		  _env.major, _env.ipc_error);
+		  _env.major, _env._p.ipc_error);
       return (FALSE);
     }
   
@@ -359,7 +366,6 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
   pScrn->monitor = pScrn->confScreen->monitor;
   pScrn->progClock = TRUE;
   pScrn->rgbBits = 8;
-
   
   if (!xf86SetDepthBpp (pScrn, 8, 8, 8, 
 	(bits_per_pixel == 32) ? Support32bppFb : Support24bppFb))
@@ -408,13 +414,13 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
   pMode->next = pMode->prev = pMode;
 
   pScrn->modes = pScrn->modePool;
-  pSlim->maxBytesPerScanline = xres * bytes_per_pixel;
+  pSlim->maxBytesPerScanline = bytes_per_line;
 
   pScrn->currentMode = pScrn->modes;
-  pScrn->displayWidth = xres;
+  pScrn->displayWidth = bytes_per_line / bytes_per_pixel;
   pScrn->virtualX = xres;
   pScrn->virtualY = yres;
-  
+
   xf86PrintModes (pScrn);
   
   /* options */
@@ -433,42 +439,47 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
       pSlim->shadowFB = TRUE;
       pSlim->mapShadow = TRUE;
     }
-  
+
+  if (pSlim->shadowFB)
+    {
+      /* we don't access the framebuffer directly -- con translates */
+      pSlim->maxBytesPerScanline = xres * bytes_per_pixel;
+      pScrn->displayWidth = xres;
+    }
+
   if (0) /* mode not supported */
     {
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 		  "Unsupported mode\n");
       return (FALSE);
     }
-  else
-    {
-      mod = "fb";
-      reqSym = "fbScreenInit";
-      pScrn->bitmapBitOrder = BITMAP_BIT_ORDER;
-      xf86LoaderReqSymbols ("fbPictureInit", NULL);
 
-      switch (pScrn->bitsPerPixel)
+  mod = "fb";
+  reqSym = "fbScreenInit";
+  pScrn->bitmapBitOrder = BITMAP_BIT_ORDER;
+  xf86LoaderReqSymbols ("fbPictureInit", NULL);
+
+  switch (pScrn->bitsPerPixel)
+    {
+    case 16:
+    case 32:
+      break;
+    case 24:
+      if (pSlim->pix24bpp == 32)
 	{
-	case 16:
-	case 32:
-	  break;
-	case 24:
-	  if (pSlim->pix24bpp == 32)
-	    {
-	      mod = "xf24_32bpp";
-	      reqSym = "cfb24_32ScreenInit";
-	    }
-	  break;
-	default:
-	  xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-		      "Unsupported bpp: %d", pScrn->bitsPerPixel);
-	  return FALSE;
+	  mod = "xf24_32bpp";
+	  reqSym = "cfb24_32ScreenInit";
 	}
+      break;
+    default:
+      xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
+	  "Unsupported bpp: %d", pScrn->bitsPerPixel);
+      return FALSE;
     }
 
   if (pSlim->shadowFB)
     {
-      /* load shadowFB  module */
+      /* load shadow  module */
       xf86DrvMsg (pScrn->scrnIndex, X_CONFIG,
 		 "Using \"Shadow Framebuffer\"\n");
       if (!xf86LoadSubModule (pScrn, "shadow"))
@@ -476,18 +487,23 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
 	  PSLIMFreeRec (pScrn);
 	  return (FALSE);
 	}
-
       xf86LoaderReqSymLists (shadowSymbols, NULL);
     }
   else
     {
+      if (!xf86LoadSubModule (pScrn, "shadowfb"))
+	{
+	  PSLIMFreeRec (pScrn);
+	  return (FALSE);
+	}
+      xf86LoaderReqSymLists(shadowfbSymbols, NULL);
+
       /* load accel module */
       if (!xf86LoadSubModule (pScrn, "xaa"))
 	{
 	  PSLIMFreeRec (pScrn);
 	  return (FALSE);
 	}
-      
       xf86LoaderReqSymLists (xaaSymbols, NULL);
     }
   
@@ -524,13 +540,12 @@ PSLIMMapFB (ScrnInfoPtr pScrn)
  
   _env.rcv_fpage = l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0);
   /* map framebuffer from con server */
-  if (con_vc_graph_mapfb_call(&(pSlim->vc_tid),
-			 &snd_fpage, &offset, &_env)
+  if (con_vc_graph_mapfb_call(&(pSlim->vc_tid), &snd_fpage, &offset, &_env)
       || (_env.major != CORBA_NO_EXCEPTION))
     {
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 		  "Error mapping framebuffer (exc=%d, %08x)", 
-		  _env.major, _env.ipc_error);
+		  _env.major, _env._p.ipc_error);
       return (FALSE);
     }
 
@@ -538,7 +553,7 @@ PSLIMMapFB (ScrnInfoPtr pScrn)
   pSlim->fbMapped = TRUE;
       
   xf86DrvMsg (pScrn->scrnIndex, X_CONFIG, 
-	      "Framebuffer mapped to %08x\n", pSlim->fbPtr);
+	      "Framebuffer mapped to %08x\n", (unsigned)pSlim->fbPtr);
 
   return (TRUE);
 }
@@ -619,7 +634,7 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	    {
 	      xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 			 "Can't set framebuffer at console (exc=%d, %08x)\n", 
-			 _env.major, _env.ipc_error);
+			 _env.major, _env._p.ipc_error);
 	      return (FALSE);
 	    }
 	  
@@ -748,6 +763,12 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     }
   else
     {
+      if (!ShadowFBInit2(pScreen, NULL, PSLIMPostDirtyUpdate))
+	{
+	  xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+		     "ShadowFB initialization failed\n");
+	  return (FALSE);
+	}
       PSLIMInitAccel(pScreen);
     }
 
@@ -886,10 +907,10 @@ PSLIMUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
   FbBits *shaBase;
   int shaBpp;
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-  int nbox = REGION_NUM_RECTS (damage);
+  int nboxes = REGION_NUM_RECTS (damage);
   BoxPtr pbox = REGION_RECTS (damage);
 #else
-  int nbox = REGION_NUM_RECTS (&pBuf->damage);
+  int nboxes = REGION_NUM_RECTS (&pBuf->damage);
   BoxPtr pbox = REGION_RECTS (&pBuf->damage);
   int shaXoff, shaYoff;
 #endif
@@ -904,7 +925,7 @@ PSLIMUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
 		 shaXoff, shaYoff);
 #endif
   
-  while (nbox--)
+  while (nboxes--)
     {
       l4con_pslim_rect_t rect;
       unsigned stride_width;
@@ -930,7 +951,7 @@ PSLIMUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
 	    {
 	      xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 			 "Error updating region at console (exc=%d, %08x)\n",
-			 _env.major, _env.ipc_error);
+			 _env.major, _env._p.ipc_error);
 	      return;
 	    }
 	  rect.y++;
@@ -949,10 +970,10 @@ PSLIMMapShadowUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
   FbBits *shaBase;
   int shaBpp;
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-  int nbox = REGION_NUM_RECTS (damage);
+  int nboxes = REGION_NUM_RECTS (damage);
   BoxPtr pbox = REGION_RECTS (damage);
 #else
-  int nbox = REGION_NUM_RECTS (&pBuf->damage);
+  int nboxes = REGION_NUM_RECTS (&pBuf->damage);
   BoxPtr pbox = REGION_RECTS (&pBuf->damage);
   int shaXoff, shaYoff;
 #endif
@@ -967,7 +988,7 @@ PSLIMMapShadowUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
 		 shaXoff, shaYoff);
 #endif
   
-  while (nbox--)
+  while (nboxes--)
     {
       l4con_pslim_rect_t rect;
       CORBA_Environment _env = dice_default_environment;
@@ -983,10 +1004,42 @@ PSLIMMapShadowUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
 	{
 	  xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 	 	     "Error updating region at console (exc=%d, %08x)\n", 
-		     _env.major, _env.ipc_error);
+		     _env.major, _env._p.ipc_error);
 	  return;
 	}
       pbox++;
+    }
+}
+
+static void
+PSLIMPostDirtyUpdate(ScrnInfoPtr pScrn, int nboxes, BoxPtr boxPtr)
+{
+  PSLIMPtr pSlim = PSLIMGetRec (pScrn);
+
+  if (!(pSlim->accel_flags & L4CON_POST_DIRTY))
+    /* post dirty not necessary since the fb uses graphics memory */
+    return;
+
+  while (nboxes--)
+    {
+      l4con_pslim_rect_t rect;
+      CORBA_Environment _env = dice_default_environment;
+
+      rect.x = boxPtr->x1;
+      rect.y = boxPtr->y1;
+      rect.w = boxPtr->x2 - boxPtr->x1;
+      rect.h = boxPtr->y2 - boxPtr->y1;
+
+      /* try to send more than one line */
+      if (con_vc_direct_update_call(&(pSlim->vc_tid), &rect, &_env)
+	  || (_env.major != CORBA_NO_EXCEPTION))
+	{
+	  xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
+	 	     "Error updating region at console (exc=%d, %08x)\n", 
+		     _env.major, _env._p.ipc_error);
+	  return;
+	}
+      boxPtr++;
     }
 }
 
@@ -1029,7 +1082,7 @@ PSLIMXaaCopy(ScrnInfoPtr pScrn,
       || (_env.major != CORBA_NO_EXCEPTION))
     xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 		"Error copying region at console (exc=%d, %08x)\n", 
-		_env.major, _env.ipc_error);
+		_env.major, _env._p.ipc_error);
 }
 
 static void
@@ -1057,7 +1110,7 @@ PSLIMXaaFill(ScrnInfoPtr pScrn, int x, int y, int w, int h)
       || (_env.major != CORBA_NO_EXCEPTION))
     xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 		"Error filling region at console (exc=%d, %08x)\n", 
-		_env.major, _env.ipc_error);
+		_env.major, _env._p.ipc_error);
 }
 
 static void
@@ -1168,7 +1221,7 @@ PSLIMInitSIGIOHandler(ScrnInfoPtr pScrn)
   if (!xf86InstallSIGIOHandler (pSlim->dropscon_dev,
 				PSLIMSIGIOHandler, (void*)pScrn))
     {
-      xf86DrvMsg(0, X_CONFIG, "Error connecting Sigio");
+      xf86DrvMsg(0, X_CONFIG, "Error connecting SIGIO");
       return (FALSE);
     }
 

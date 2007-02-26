@@ -22,6 +22,7 @@
 #include <l4/dm_phys/consts.h>
 #include <l4/dm_phys/dm_phys.h>
 #include <l4/dm_phys/dm_phys-client.h>
+#include "__debug.h"
 
 /*****************************************************************************
  *** helpers
@@ -36,8 +37,7 @@
  */
 /*****************************************************************************/ 
 static void
-__debug(l4_uint32_t key, 
-	l4_uint32_t data)
+__debug(l4_uint32_t key, l4_uint32_t data)
 {
   l4_threadid_t dsm_id;
   CORBA_Environment _env = dice_default_environment;
@@ -48,9 +48,9 @@ __debug(l4_uint32_t key,
     return;
 
   /* call DMphys */
-  if_l4dm_memphys_dmphys_debug_call(&(dsm_id),key,data,&_env);
+  if_l4dm_memphys_dmphys_debug_call(&(dsm_id), key, data, &_env);
   if (_env.major != CORBA_NO_EXCEPTION)
-    Error("libdm_phys: IPC erroc calling DMphys (exc %d)!",_env.major);
+    LOG_Error("libdm_phys: IPC erroc calling DMphys (exc %d)!", _env.major);
 }
 
 /*****************************************************************************
@@ -66,7 +66,7 @@ void
 l4dm_memphys_show_memmap(void)
 {
   /* show memmap */
-  __debug(L4DM_MEMPHYS_SHOW_MEMMAP,0);
+  __debug(L4DM_MEMPHYS_SHOW_MEMMAP, 0);
 }
 
 /*****************************************************************************/
@@ -78,7 +78,7 @@ void
 l4dm_memphys_show_pools(void)
 {
   /* show pools */
-  __debug(L4DM_MEMPHYS_SHOW_POOLS,0);
+  __debug(L4DM_MEMPHYS_SHOW_POOLS, 0);
 }
 
 /*****************************************************************************/
@@ -92,7 +92,7 @@ void
 l4dm_memphys_show_pool_areas(int pool)
 {
   /* show pool areas */
-  __debug(L4DM_MEMPHYS_SHOW_POOL_AREAS,pool);
+  __debug(L4DM_MEMPHYS_SHOW_POOL_AREAS, pool);
 }
 
 /*****************************************************************************/
@@ -106,7 +106,7 @@ void
 l4dm_memphys_show_pool_free(int pool)
 {
   /* show pool free lists */
-  __debug(L4DM_MEMPHYS_SHOW_POOL_FREE,pool);
+  __debug(L4DM_MEMPHYS_SHOW_POOL_FREE, pool);
 }
 
 /*****************************************************************************/
@@ -120,5 +120,5 @@ void
 l4dm_memphys_show_slabs(int show_free)
 {
   /* show descriptor slabs */
-  __debug(L4DM_MEMPHYS_SHOW_SLABS,show_free);
+  __debug(L4DM_MEMPHYS_SHOW_SLABS, show_free);
 }

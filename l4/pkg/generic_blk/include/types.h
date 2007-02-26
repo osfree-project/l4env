@@ -34,6 +34,12 @@ typedef l4_uint32_t l4blk_driver_id_t;
 typedef l4_uint32_t l4blk_driver_t;
 
 /**
+ * Notification thread setup callback function
+ * \ingroup api_driver
+ */
+typedef void (* l4blk_setup_notify_callback_fn_t) (void);
+
+/**
  * Stream handle 
  * \ingroup api_stream
  */
@@ -46,7 +52,7 @@ typedef l4_uint32_t l4blk_stream_t;
 typedef struct l4blk_request l4blk_request_t;
 
 /**
- * Callback function prototype.
+ * Request done callback function prototype.
  * \ingroup api_cmd
  *
  * \param request Request descriptor
@@ -128,7 +134,7 @@ struct l4blk_request
                                     **  l4blk_sg_phys_elem_t which contains the
                                     **  phys. addresses of buffers and 
                                     **  l4blk_sg_ds_elem_t which contains 
-                                    **  dataspace regins which describe the 
+                                    **  dataspace regions which describe the 
                                     **  buffer.
                                     **/
   int                 sg_num;      ///< Number of elements in sg_list
@@ -195,25 +201,28 @@ struct l4blk_request
                                              **/
 
 /* dafault ctrls */
-#define L4BLK_CTRL_NUM_DISKS    0x00000001  /**< \ingroup api_ctrl
+#define L4BLK_CTRL_NUM_DISKS     0x00000001 /**< \ingroup api_ctrl
                                              **  Return number of disks 
                                              **/
-#define L4BLK_CTRL_DISK_SIZE    0x00000002  /**< \ingroup api_ctrl
+#define L4BLK_CTRL_DISK_SIZE     0x00000002 /**< \ingroup api_ctrl
                                              **  Return size of disk
                                              **/
-#define L4BLK_CTRL_DISK_GEOM    0x00000003  /**< \ingroup api_ctrl
+#define L4BLK_CTRL_DISK_GEOM     0x00000003 /**< \ingroup api_ctrl
                                              **  Return disk geometry
                                              **/
-#define L4BLK_CTRL_RREAD_PART   0x00000004  /**< \ingroup api_ctrl
+#define L4BLK_CTRL_RREAD_PART    0x00000004 /**< \ingroup api_ctrl
                                              **  Reread partition table
                                              **/
-#define L4BLK_CTRL_MAX_SG_LEN   0x00000005  /**< \ingroup api_ctrl
+#define L4BLK_CTRL_MAX_SG_LEN    0x00000005 /**< \ingroup api_ctrl
                                              **  Return max. length of 
                                              **  scatter gather list
                                              **/
-
+#define L4BLK_CTRL_STREAM_PERIOD 0x00000006 /**< \ingroup api_ctrl
+                                             **  Return disk timings for 
+                                             **  stream requests
+                                             **/
 /* ctrls needed by L4Linux stub */
-#define L4BLK_CTRL_DRV_IRQ      0x00008000  /**< \ingroup api_ctrl
+#define L4BLK_CTRL_DRV_IRQ       0x00008000 /**< \ingroup api_ctrl
                                              **  Return IRQ of block driver
                                              **/
 
@@ -230,5 +239,15 @@ typedef struct l4blk_disk_geometry
                                     **  (if called for partition)
                                     **/
 } l4blk_disk_geometry_t;
+
+/**
+ * Disk timings structure, used by L4BLK_CTRL_DISK_TIMING ctrl
+ * \ingroup api_ctrl
+ */
+typedef struct l4blk_disk_period
+{
+  l4_uint32_t period_len;          ///< period length
+  l4_uint32_t period_offs;         ///< period offset
+} l4blk_disk_period_t;
 
 #endif /* !_GENERIC_BLK_TYPES_H */

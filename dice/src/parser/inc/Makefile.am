@@ -3,7 +3,7 @@
 noinst_LIBRARIES=	libinc.a
 libinc_a_SOURCES=	scanner.ll
 
-LFLAGS=         -Pinc -o$(LEX_OUTPUT_ROOT).c
+AM_LFLAGS=         -Pinc -o$(LEX_OUTPUT_ROOT).c
 
 CLEANFILES=             scanner.cc scanner.h 
 

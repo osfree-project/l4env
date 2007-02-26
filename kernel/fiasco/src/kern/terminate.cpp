@@ -1,19 +1,52 @@
 INTERFACE:
-#include "initcalls.h"
+
+#include "std_macros.h"
 
 IMPLEMENTATION:
 
 #include <cstdio>
 #include <cstdlib>
-
-#include "globals.h"
 #include "helping_lock.h"
+#include "kernel_console.h"
+#include "reset.h"
 
-FIASCO_NORETURN void terminate( int exit_value )
+/**
+ * The exit handler as long as exit_question() is not installed.
+ */
+static
+void
+raw_exit()
+{
+  // make sure that we don't acknowledg the exit question automatically
+  Kconsole::console()->change_state(Console::PUSH, 0, 
+                                    ~Console::INENABLED, 0);
+  puts("\nPress any key to reboot.");
+  Kconsole::console()->getchar();
+  puts("\033[1mRebooting.\033[m");
+  //  Cpu::busy_wait_ns(10000000);
+  pc_reset();
+}
+
+
+static void (*exit_question)(void) = &raw_exit;
+
+void set_exit_question(void (*eq)(void))
+{
+  exit_question = eq;
+}
+
+
+
+FIASCO_NORETURN
+void
+terminate (int exit_value)
 {
   Helping_lock::threading_system_active = false;
 
+  if (exit_question)
+    exit_question();
+
   puts ("\nShutting down...");
 
-  exit ( exit_value );
+  exit (exit_value);
 }

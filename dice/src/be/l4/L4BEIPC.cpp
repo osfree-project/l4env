@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/l4/L4BEIPC.cpp
- *	\brief	contains the implementation of the class CL4BEIPC
+ *    \file    dice/src/be/l4/L4BEIPC.cpp
+ *    \brief   contains the implementation of the class CL4BEIPC
  *
- *	\date	02/25/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    02/25/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -34,15 +35,13 @@
 #include "be/BEDeclarator.h"
 
 #include "TypeSpec-Type.h"
-
-IMPLEMENT_DYNAMIC(CL4BEIPC);
+#include "Attribute-Type.h"
 
 CL4BEIPC::CL4BEIPC()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEIPC, CBECommunication);
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CL4BEIPC::~CL4BEIPC()
 {
 }
@@ -52,77 +51,99 @@ CL4BEIPC::~CL4BEIPC()
  *  \param pFunction the function to write it for
  *  \param pContext the context of the write operation
  */
-void CL4BEIPC::WriteCall(CBEFile *pFile, CBEFunction* pFunction, CBEContext *pContext)
+void 
+CL4BEIPC::WriteCall(CBEFile *pFile, 
+    CBEFunction* pFunction, 
+    CBEContext *pContext)
 {
-    String sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    String sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
-    String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-	CL4BEMsgBufferType *pMsgBuffer = (CL4BEMsgBufferType*)pFunction->GetMessageBuffer();
+    CBENameFactory *pNF = pContext->GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable(pContext);
+    string sResult = pNF->GetString(STR_RESULT_VAR, pContext);
+    string sTimeout = pNF->GetTimeoutClientVariable(pContext);
+    string sScheduling = pNF->GetScheduleClientVariable(pContext);
+    string sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
+    string sMsgBuffer = pNF->GetMessageBufferVariable(pContext);
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    assert(pMsgBuffer);
+    int nDirection = pFunction->GetSendDirection();
+    bool bScheduling = pFunction->FindAttribute(ATTR_L4_SCHED_DECEIT); 
+    /* OR further attributes */
 
-	// XXX FIXME:
-	// not implemented, because X0 adaption has no 3 word bindings
-	// CL4BESizes *pSizes = (CL4BESizes*)pContext->GetSizes();
-	// bool bWord3 = (pSizes->GetMaxShortIPCSize(DIRECTION_IN) / pSizes->GetSizeOfType(TYPE_MWORD)) == 3;
-	// if (bWord3)
-	//   pFile->PrintIndent("l4_ipc_call_w3(*%s,\n");
-	// else
-	//   pFile->PrintIndent("l4_ipc_call(*%s,\n");
+    // XXX FIXME:
+    // not implemented, because X0 adaption has no 3 word bindings
+    // CL4BESizes *pSizes = (CL4BESizes*)pContext->GetSizes();
+    // bool bWord3 = (pSizes->GetMaxShortIPCSize(DIRECTION_IN) / pSizes->GetSizeOfType(TYPE_MWORD)) == 3;
+    // if (bWord3)
+    //   pFile->PrintIndent("l4_ipc_call_w3(*%s,\n");
+    // else
+    //   pFile->PrintIndent("l4_ipc_call(*%s,\n");
 
-    pFile->PrintIndent("l4_ipc_call(*%s,\n", (const char *) sServerID);
+    pFile->PrintIndent("l4_ipc_call(*%s,\n", sServerID.c_str());
     pFile->IncIndent();
     pFile->PrintIndent("");
-    if (pMsgBuffer->HasSendFlexpages())
-        pFile->Print("(%s*)((%s)", (const char*)sMWord, (const char*)sMWord);
-    if (pMsgBuffer->IsShortIPC(pFunction->GetSendDirection(), pContext, 2 /* 2 short IPC parameters*/ /* (bWord3)?3:2 */))
+    if (IsShortIPC(pFunction, pContext, nDirection))
+    {
         pFile->Print("L4_IPC_SHORT_MSG");
+        if (bScheduling)
+            *pFile << " | " << sScheduling;
+    }
     else
     {
+        if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0) || bScheduling)
+            pFile->Print("(%s*)((%s)", sMWord.c_str(), sMWord.c_str());
+
         if (pMsgBuffer->HasReference())
-            pFile->Print("%s", (const char *) sMsgBuffer);
+            pFile->Print("%s", sMsgBuffer.c_str());
         else
-            pFile->Print("&%s", (const char *) sMsgBuffer);
+            pFile->Print("&%s", sMsgBuffer.c_str());
+
+        if (pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0)
+            pFile->Print("|2");
+        if (bScheduling)
+            *pFile << "|" << sScheduling;
+        if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0) || bScheduling)
+            *pFile << ")";
     }
-    if (pMsgBuffer->HasSendFlexpages())
-        pFile->Print("|2)");
     pFile->Print(",\n");
 
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
+    pFile->PrintIndent("*((%s*)(&(", sMWord.c_str());
+    #warning if short send IPC print parameters here
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nDirection, pContext);
     pFile->Print("[0]))),\n");
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
+    pFile->PrintIndent("*((%s*)(&(", sMWord.c_str());
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nDirection, pContext);
     pFile->Print("[4]))),\n");
 
 //  if (bWord3)
-//     pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
+//     pFile->PrintIndent("*((%s*)(&(", sMWord.c_str());
 //     pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
 //     pFile->Print("[8]))),\n");
 
-    if (pMsgBuffer->IsShortIPC(pFunction->GetReceiveDirection(), pContext, 2 /* (bWord3)?3:2 */))
+    nDirection = pFunction->GetReceiveDirection();
+    if (IsShortIPC(pFunction, pContext, nDirection))
         pFile->PrintIndent("L4_IPC_SHORT_MSG,\n");
     else
     {
         if (pMsgBuffer->HasReference())
-            pFile->PrintIndent("%s,\n", (const char *) sMsgBuffer);
+            pFile->PrintIndent("%s,\n", sMsgBuffer.c_str());
         else
-            pFile->PrintIndent("&%s,\n", (const char *) sMsgBuffer);
+            pFile->PrintIndent("&%s,\n", sMsgBuffer.c_str());
     }
 
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
+    pFile->PrintIndent("(%s*)(&(", sMWord.c_str());
+    #warning if short recv IPC print parameter here
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nDirection, pContext);
     pFile->Print("[0])),\n");
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
+    pFile->PrintIndent("(%s*)(&(", sMWord.c_str());
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nDirection, pContext);
     pFile->Print("[4])),\n");
 
 //  if (bWord3)
-//     pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
+//     pFile->PrintIndent("(%s*)(&(", sMWord.c_str());
 //     pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
 //     pFile->Print("[8])),\n");
 
-    pFile->PrintIndent("%s, &%s);\n", (const char *) sTimeout, (const char *) sResult);
+    pFile->PrintIndent("%s, &%s);\n", sTimeout.c_str(), sResult.c_str());
 
     pFile->DecIndent();
 }
@@ -130,44 +151,88 @@ void CL4BEIPC::WriteCall(CBEFile *pFile, CBEFunction* pFunction, CBEContext *pCo
 /** \brief write an IPC receive operation
  *  \param pFile the file to write to
  *  \param pFunction the function to write it for
- *  \param bAllowShortIPC true if short IPC can be used
  *  \param pContext the context of the write operation
  */
-void CL4BEIPC::WriteReceive(CBEFile* pFile,  CBEFunction* pFunction, bool bAllowShortIPC, CBEContext* pContext)
+void CL4BEIPC::WriteReceive(CBEFile* pFile,  CBEFunction* pFunction, CBEContext* pContext)
 {
-	String sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    String sTimeout;
+    string sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
+    string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
+    string sTimeout;
     if (pFunction->IsComponentSide())
         sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
     else
         sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-	CL4BEMsgBufferType *pMsgBuffer = (CL4BEMsgBufferType*)pFunction->GetMessageBuffer();
+    string sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    string sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    assert(pMsgBuffer);
 
-    pFile->PrintIndent("l4_ipc_receive(*%s,\n", (const char *) sServerID);
+    pFile->PrintIndent("l4_ipc_receive(*%s,\n", sServerID.c_str());
     pFile->IncIndent();
 
-    if (pMsgBuffer->IsShortIPC(pFunction->GetReceiveDirection(), pContext, 2) && bAllowShortIPC)
+    if (IsShortIPC(pFunction, pContext, pFunction->GetReceiveDirection()))
         pFile->PrintIndent("L4_IPC_SHORT_MSG,\n ");
     else
     {
         if (pMsgBuffer->HasReference())
-            pFile->PrintIndent("%s,\n", (const char *) sMsgBuffer);
+            pFile->PrintIndent("%s,\n", sMsgBuffer.c_str());
         else
-            pFile->PrintIndent("&%s,\n", (const char *) sMsgBuffer);
+            pFile->PrintIndent("&%s,\n", sMsgBuffer.c_str());
     }
 
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
+    pFile->PrintIndent("(%s*)(&(", sMWord.c_str());
+    #warning if short IPC print parameters here
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pFunction->GetReceiveDirection(), pContext);
     pFile->Print("[0])),\n");
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
+    pFile->PrintIndent("(%s*)(&(", sMWord.c_str());
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pFunction->GetReceiveDirection(), pContext);
     pFile->Print("[4])),\n");
 
-    pFile->PrintIndent("%s, &%s);\n", (const char *) sTimeout, (const char *) sResult);
+    pFile->PrintIndent("%s, &%s);\n", sTimeout.c_str(), sResult.c_str());
 
+    pFile->DecIndent();
+}
+
+/** \brief write an IPC wait operation
+ *  \param pFile the file to write to
+ *  \param pFunction the function to write it for
+ *  \param pContext the context of the write operation
+ */
+void CL4BEIPC::WriteWait(CBEFile* pFile, CBEFunction *pFunction, CBEContext* pContext)
+{
+    string sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
+    string sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
+    string sTimeout;
+    if (pFunction->IsComponentSide())
+        sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
+    else
+        sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
+    string sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    string sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    assert(pMsgBuffer);
+    int nDirection = pFunction->GetReceiveDirection();
+    bool bVarBuffer = pMsgBuffer->IsVariableSized(nDirection) || (pMsgBuffer->GetAlias()->GetStars() > 0);
+
+    pFile->PrintIndent("l4_ipc_wait(%s,\n", sServerID.c_str());
+    pFile->IncIndent();
+    if (IsShortIPC(pFunction, pContext, nDirection))
+        pFile->PrintIndent("L4_IPC_SHORT_MSG,\n");
+    else
+    {
+        if (bVarBuffer)
+            pFile->PrintIndent("%s,\n", sMsgBuffer.c_str());
+        else
+            pFile->PrintIndent("&%s,\n", sMsgBuffer.c_str());
+    }
+    pFile->PrintIndent("(%s*)(&(", sMWord.c_str());
+    #warning if send short IPC print parameter here
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nDirection, pContext);
+    pFile->Print("[0])),\n");
+    pFile->PrintIndent("(%s*)(&(", sMWord.c_str());
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nDirection, pContext);
+    pFile->Print("[4])),\n");
+    pFile->PrintIndent("%s, &%s);\n", sTimeout.c_str(), sResult.c_str());
     pFile->DecIndent();
 }
 
@@ -178,143 +243,153 @@ void CL4BEIPC::WriteReceive(CBEFile* pFile,  CBEFunction* pFunction, bool bAllow
  *  \param bSendShortIPC true if a short IPC should be send (false, if message buffer should determine this)
  *  \param pContext the context of the write operation
  */
-void CL4BEIPC::WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction, bool bSendFlexpage, bool bSendShortIPC, CBEContext* pContext)
+void 
+CL4BEIPC::WriteReplyAndWait(CBEFile* pFile, 
+    CBEFunction* pFunction, 
+    bool bSendFlexpage, 
+    bool bSendShortIPC, 
+    CBEContext* pContext)
 {
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    String sTimeout;
+    CBENameFactory *pNF = pContext->GetNameFactory();
+    string sResult = pNF->GetString(STR_RESULT_VAR, pContext);
+    string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
+        sTimeout = pNF->GetTimeoutServerVariable(pContext);
     else
-        sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
-    String sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-	CL4BEMsgBufferType *pMsgBuffer = (CL4BEMsgBufferType*)pFunction->GetMessageBuffer();
+        sTimeout = pNF->GetTimeoutClientVariable(pContext);
+    string sServerID = pNF->GetComponentIDVariable(pContext);
+    string sMsgBuffer = pNF->GetMessageBufferVariable(pContext);
+    string sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    assert(pMsgBuffer);
 
-    pFile->PrintIndent("l4_ipc_reply_and_wait(*%s,\n", (const char *) sServerID);
+    *pFile << "\tl4_ipc_reply_and_wait(*" << sServerID << ",\n";
     pFile->IncIndent();
-    pFile->PrintIndent("");
-    if (bSendFlexpage)
-        pFile->Print("(%s*)((%s)", (const char*)sMWord, (const char*)sMWord);
+    *pFile << "\t(";
     if (bSendShortIPC)
-        pFile->Print("L4_IPC_SHORT_MSG");
-    else
-        pFile->Print("%s", (const char *) sMsgBuffer);
-    if (bSendFlexpage)
-        pFile->Print("|2)");
-    pFile->Print(",\n");
-
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[0]))),\n");
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4]))),\n");
-
-    pFile->PrintIndent("%s,\n", (const char *) sServerID);
-
-    pFile->PrintIndent("%s,\n", (const char *) sMsgBuffer);
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[0])),\n");
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4])),\n");
-
-    pFile->PrintIndent("%s, &%s);\n", (const char *) sTimeout, (const char *) sResult);
-
-    pFile->DecIndent();
-}
-
-/** \brief write an IPC wait operation
- *  \param pFile the file to write to
- *  \param pFunction the function to write it for
- *  \param pContext the context of the write operation
- */
-void CL4BEIPC::WriteWait(CBEFile* pFile, CBEFunction *pFunction, bool bAllowShortIPC, CBEContext* pContext)
-{
-    String sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    String sTimeout;
-    if (pFunction->IsComponentSide())
-        sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
-    else
-        sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-	CL4BEMsgBufferType *pMsgBuffer = (CL4BEMsgBufferType*)pFunction->GetMessageBuffer();
-    int nDirection = pFunction->GetReceiveDirection();
-    bool bVarBuffer = pMsgBuffer->IsVariableSized(nDirection) || (pMsgBuffer->GetAlias()->GetStars() > 0);
-
-    pFile->PrintIndent("l4_ipc_wait(%s,\n", (const char *) sServerID);
-    pFile->IncIndent();
-    if (pMsgBuffer->IsShortIPC(nDirection, pContext, 2) && bAllowShortIPC)
-        pFile->PrintIndent("L4_IPC_SHORT_MSG,\n");
+    {
+        *pFile << sMWord << "*)(L4_IPC_SHORT_MSG";
+        if (bSendFlexpage)
+            *pFile << "|2";
+    }
     else
     {
-        if (bVarBuffer)
-            pFile->PrintIndent("%s,\n", (const char *) sMsgBuffer);
-        else
-            pFile->PrintIndent("&%s,\n", (const char *) sMsgBuffer);
+        if (bSendFlexpage)
+            *pFile << sMWord << "*)((" << sMWord << ")";
+        *pFile << sMsgBuffer;
+        if (bSendFlexpage)
+            pFile->Print("|2");
     }
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[0])),\n");
-    pFile->PrintIndent("(%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4])),\n");
-    pFile->PrintIndent("%s, &%s);\n", (const char *) sTimeout, (const char *) sResult);
+    pFile->Print("),\n");
+
+    int nRcvDir = pFunction->GetReceiveDirection();
+    *pFile << "\t*((" << sMWord << "*)(&(";
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nRcvDir, pContext);
+    *pFile << "[0]))),\n";
+    *pFile << "\t*((" << sMWord << "*)(&(";
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nRcvDir, pContext);
+    *pFile << "[4]))),\n";
+
+    *pFile << "\t" << sServerID << ",\n";
+    *pFile << "\t" << sMsgBuffer << ",\n";
+
+    *pFile << "\t(" << sMWord << "*)(&(";
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_IN, pContext);
+    *pFile << "[0])),\n";
+    *pFile << "\t(" << sMWord << "*)(&(";
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_IN, pContext);
+    *pFile << "[4])),\n";
+
+    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+
     pFile->DecIndent();
 }
 
 /** \brief write an IPC send operation
  *  \param pFile the file to write to
- *  \param pFunction the function to write it for
+   \param pFunction the function to write it for
  *  \param pContext the context of the write operation
  */
-void CL4BEIPC::WriteSend(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext)
+void 
+CL4BEIPC::WriteSend(CBEFile* pFile, 
+    CBEFunction* pFunction, 
+    CBEContext* pContext)
 {
     int nDirection = pFunction->GetSendDirection();
-    String sServerID = pContext->GetNameFactory()->GetComponentIDVariable(pContext);
-    String sResult = pContext->GetNameFactory()->GetString(STR_RESULT_VAR, pContext);
-    String sTimeout;
+    CBENameFactory *pNF = pContext->GetNameFactory();
+    string sServerID = pNF->GetComponentIDVariable(pContext);
+    string sResult = pNF->GetString(STR_RESULT_VAR, pContext);
+    string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pContext->GetNameFactory()->GetTimeoutServerVariable(pContext);
+        sTimeout = pNF->GetTimeoutServerVariable(pContext);
     else
-        sTimeout = pContext->GetNameFactory()->GetTimeoutClientVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sMWord = pContext->GetNameFactory()->GetTypeName(TYPE_MWORD, true, pContext);
-	CL4BEMsgBufferType *pMsgBuffer = (CL4BEMsgBufferType*)pFunction->GetMessageBuffer();
+        sTimeout = pNF->GetTimeoutClientVariable(pContext);
+    string sMsgBuffer = pNF->GetMessageBufferVariable(pContext);
+    string sMWord = pNF->GetTypeName(TYPE_MWORD, true, pContext);
+    string sScheduling = pNF->GetScheduleClientVariable(pContext);
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    assert(pMsgBuffer);
 
-    pFile->PrintIndent("l4_ipc_send(*%s,\n", (const char *) sServerID);
+    *pFile << "\tl4_ipc_send(*" << sServerID << ",\n";
     pFile->IncIndent();
-    pFile->PrintIndent("");
-    bool bVarBuffer = pMsgBuffer->IsVariableSized(nDirection) || (pMsgBuffer->GetAlias()->GetStars() > 0);
-    if (pMsgBuffer->HasSendFlexpages())
-        pFile->Print("(%s*)((%s)", (const char*)sMWord, (const char*)sMWord);
-    if (pMsgBuffer->IsShortIPC(nDirection, pContext, 2))
-        pFile->Print("L4_IPC_SHORT_MSG");
+    *pFile << "\t";
+    bool bVarBuffer = pMsgBuffer->IsVariableSized(nDirection) ||
+                     (pMsgBuffer->GetAlias()->GetStars() > 0);
+    bool bScheduling = pFunction->FindAttribute(ATTR_L4_SCHED_DECEIT); 
+    /* OR further attributes */
+
+    if (IsShortIPC(pFunction, pContext, nDirection))
+    {
+        *pFile << "L4_IPC_SHORT_MSG";
+        if (bScheduling)
+            *pFile << "|" << sScheduling;
+        if (pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0)
+            *pFile << "|2";
+    }
     else
     {
-        if (bVarBuffer)
-            pFile->Print("%s", (const char *) sMsgBuffer);
-        else
-            pFile->Print("&%s", (const char *) sMsgBuffer);
+        if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0) || 
+	    bScheduling)
+            pFile->Print("(%s*)((%s)", sMWord.c_str(), sMWord.c_str());
+
+        if (!bVarBuffer)
+            *pFile << "&";
+        *pFile << sMsgBuffer;
+
+        if (pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0)
+            pFile->Print(")|2");
+        if (bScheduling)
+            *pFile << "|" << sScheduling;
+        if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0) || 
+	    bScheduling)
+            *pFile << ")";
     }
-    if (pMsgBuffer->HasSendFlexpages())
-        pFile->Print(")|2)");
     pFile->Print(",\n");
 
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[0]))),\n");
-    pFile->PrintIndent("*((%s*)(&(", (const char*)sMWord);
-    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, pContext);
-    pFile->Print("[4]))),\n");
+    *pFile << "\t*((" << sMWord << "*)(&(";
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nDirection, pContext);
+    *pFile << "[0]))),\n";
+    *pFile << "\t*((" << sMWord << "*)(&(";
+    pMsgBuffer->WriteMemberAccess(pFile, TYPE_INTEGER, nDirection, pContext);
+    *pFile << "[4]))),\n";
 
-    pFile->PrintIndent("%s, &%s);\n", (const char *) sTimeout, (const char *) sResult);
+    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
     pFile->DecIndent();
+}
+
+/** \brief write an IPC reply operation
+ *  \param pFile the file to write to
+ *  \param pFunction the function to write it for
+ *  \param pContext the context of the write operation
+ *
+ * In the generic L4 case this is a send operation. We have to be careful though
+ * with ASM code, which can push parameters directly into registers, since the
+ * parameters for reply (exception) are not the same as for send (opcode).
+ */
+void CL4BEIPC::WriteReply(CBEFile* pFile, CBEFunction* pFunction, CBEContext* pContext)
+{
+    WriteSend(pFile, pFunction, pContext);
 }
 
 /** \brief determine if we should use assembler for the IPCs
@@ -341,9 +416,27 @@ bool CL4BEIPC::UseAssembler(CBEFunction *pFunction, CBEContext *pContext)
  */
 bool CL4BEIPC::IsShortIPC(CBEFunction *pFunction, CBEContext *pContext, int nDirection)
 {
-    CL4BEMsgBufferType *pMsgBuf = (CL4BEMsgBufferType*)(pFunction->GetMessageBuffer());
-	if (nDirection == 0)
-	    return IsShortIPC(pFunction, pContext, pFunction->GetSendDirection()) &&
-		       IsShortIPC(pFunction, pContext, pFunction->GetReceiveDirection());
-    return pMsgBuf->IsShortIPC(nDirection, pContext);
+    if (nDirection == 0)
+        return IsShortIPC(pFunction, pContext, pFunction->GetSendDirection()) &&
+               IsShortIPC(pFunction, pContext, pFunction->GetReceiveDirection());
+    CBEMsgBufferType *pMsgBuffer = pFunction->GetMessageBuffer();
+    assert(pMsgBuffer);
+    return  pMsgBuffer->CheckProperty(MSGBUF_PROP_SHORT_IPC, nDirection, pContext);
+}
+
+/**    \brief check if the property is fulfilled for this communication
+ *    \param pFunction the function using the communication
+ *    \param nProperty the property to check
+ *    \param pContext the omnipresent context
+ *    \return true if the property if fulfilled
+ */
+bool CL4BEIPC::CheckProperty(CBEFunction *pFunction, int nProperty, CBEContext *pContext)
+{
+    switch (nProperty)
+    {
+    case COMM_PROP_USE_ASM:
+        return UseAssembler(pFunction, pContext);
+        break;
+    }
+    return false;
 }

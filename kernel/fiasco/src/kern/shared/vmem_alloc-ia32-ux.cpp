@@ -1,49 +1,29 @@
-INTERFACE:
+INTERFACE[ia32,ux]:
 
 EXTENSION class Vmem_alloc
 {
 private:
-  template< typename _Ty >
-  static _Ty *phys_to_virt( P_ptr<_Ty> );
-
-  template< typename _Ty >
-  static P_ptr<_Ty> linear_virt_to_phys( _Ty* );
-
   static P_ptr<void> zero_page;
 };
 
 
-IMPLEMENTATION[ia32-ux]:
+IMPLEMENTATION[ia32,ux]:
 
-#include <flux/x86/paging.h> // Pd_entry
 #include <cassert>
 #include <cstdio>
 #include <cstring>
 #include "config.h"
 #include "kdb_ke.h"
 #include "kmem.h"
-#include "kmem_alloc.h"
+#include "mapped_alloc.h"
+#include "mem_unit.h"
+#include "paging.h"
 #include "static_init.h"
 #include "initcalls.h"
+#include "space.h"
 
 // this static initializer must have a higer priotity than Vmem_alloc::init()
 P_ptr<void> Vmem_alloc::zero_page INIT_PRIORITY(MAX_INIT_PRIO);
-
-IMPLEMENT
-template< typename _Ty > 
-inline
-_Ty *Vmem_alloc::phys_to_virt( P_ptr<_Ty> p )
-{
-  return (_Ty*)(p.get_unsigned() + Kmem::mem_phys);
-}
-
-IMPLEMENT
-template< typename _Ty > 
-inline
-P_ptr<_Ty> Vmem_alloc::linear_virt_to_phys( _Ty *v )
-{
-  return P_ptr<_Ty>((((Address)v) - Kmem::mem_phys));
-}
 
 IMPLEMENT FIASCO_INIT
 void
@@ -51,114 +31,205 @@ Vmem_alloc::init()
 {
   // Allocate a generic zero page
   void *zpage;
-  zpage = Kmem_alloc::allocator()->alloc(0); // 2^0 = 1 pages
-  zero_page = Kmem_alloc::allocator()->virt_to_phys(zpage);
+  zpage = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT); // 2^0 = 1 pages
+  zero_page = P_ptr<void>(Mem_layout::pmem_to_phys((Address)zpage));
   memset (zpage, 0, Config::PAGE_SIZE);
 }
 
 IMPLEMENT
-void *Vmem_alloc::page_alloc( void *address, int order, Zero_fill zf,
-			      Page::Attribs pa )
+void*
+Vmem_alloc::page_alloc (void *address, Zero_fill zf, Page::Attribs pa)
 {
   void *vpage = 0;
-  
+
   if (zf != ZERO_MAP)
     {
-      vpage = Kmem_alloc::allocator()->alloc(0);
+      vpage = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
       if (!vpage)
         {
           kdb_ke("page_alloc: can't alloc new page");
           return 0;
         }
     }
-
  
   // insert page into master page table
-  Pd_entry *p = Kmem::kdir + (((Address)address >> PDESHIFT) & PDEMASK);
+  Pd_entry *p = Kmem::kdir->lookup((Address)address);
   Pt_entry *e;
 
-  if (! (*p & INTEL_PDE_VALID))
+  if (! p->valid())
     {
-      Pt_entry *new_pt = (Pd_entry*)Kmem_alloc::allocator()->alloc(0);
+      Ptab *new_pt = (Ptab*)Mapped_allocator::allocator()
+	->alloc(Config::PAGE_SHIFT);
       if (!new_pt)
         {
           kdb_ke("page_alloc: can't alloc page table");
           goto error;
         }
 
-      P_ptr<Pt_entry> new_ppt = Kmem_alloc::allocator()->virt_to_phys(new_pt);
+      new_pt->clear();
 
-      memset(new_pt, 0, Config::PAGE_SIZE);
-      *p = new_ppt.get_unsigned()
-        | INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_REF
-        | Kmem::pde_global();
+      *p = Kmem::virt_to_phys(new_pt) | Pd_entry::Valid | Pd_entry::Writable
+				      | Pd_entry::Referenced
+				      | Pd_entry::global();
       if (pa != Page::USER_NO)
-        *p |= INTEL_PDE_USER;
-      e = new_pt + (((Address)address >> PTESHIFT) & PTEMASK);
+	p->add_attr(Pd_entry::User);
+
+      e = new_pt->lookup((Address)address);
     }
-  else if ((*p & INTEL_PDE_SUPERPAGE)
-           || (e = Kmem_alloc::allocator()->phys_to_virt(P_ptr<Pt_entry>((Pt_entry*)(*p & Config::PAGE_MASK)))
-                   + (((Address)address >> PTESHIFT) & PTEMASK),
-               *e & INTEL_PTE_VALID))
+  else if ((p->superpage()) 
+	   || (e = p->ptab()->lookup((Address)address), e->valid()))
     {
       kdb_ke("page_alloc: address already mapped");
-      goto error;               // there's already mapped something there...
+      goto error;
     }
      
   if (zf == ZERO_FILL)
     memset(vpage, 0, Config::PAGE_SIZE);
 
   if (zf == ZERO_MAP)
-  {
-    *e = zero_page.get_unsigned() |
-         INTEL_PTE_VALID | INTEL_PTE_REF | Kmem::pde_global();
-    page_map (address, order, zf, zero_page.get_unsigned());
+    {
+      *e = zero_page.get_unsigned() 
+	 | Pt_entry::Valid | Pt_entry::Referenced | Pt_entry::global();
+      page_map (address, 0, zf, zero_page.get_unsigned());
+    }
+  else
+    {
+      P_ptr<void> page = P_ptr<void>(Mem_layout::pmem_to_phys((Address)vpage));
 
-  } else
-  {
-    P_ptr<void> page = Kmem_alloc::allocator()->virt_to_phys(vpage);
-
-    *e = page.get_unsigned() | INTEL_PTE_WRITE | INTEL_PTE_MOD |
-         INTEL_PTE_VALID | INTEL_PTE_REF | Kmem::pde_global();
-    page_map (address, order, zf, page.get_unsigned());
-  }
+      *e = page.get_unsigned() | Pt_entry::Writable | Pt_entry::Dirty 
+	 | Pt_entry::Valid | Pt_entry::Referenced | Pt_entry::global();
+      page_map (address, 0, zf, page.get_unsigned());
+    }
 
   if (pa != Page::USER_NO)   
-    *e |= INTEL_PTE_USER;
+    e->add_attr(Pt_entry::User);
 
   return address;
 
 error:
   if (zf != ZERO_MAP)
-    Kmem_alloc::allocator()->free(0, vpage); // 2^0 = 1 page
+    Mapped_allocator::allocator()->free(Config::PAGE_SHIFT, vpage); // 2^0 = 1 page
   return 0;
-
 }
 
-IMPLEMENT			   
-inline NEEDS[<flux/x86/paging.h>,"config.h"]
-void Vmem_alloc::page_free( void *page, int order )
+IMPLEMENT inline NEEDS ["paging.h", "config.h", "kmem.h", "mapped_alloc.h",
+			"mem_unit.h"]
+void
+Vmem_alloc::page_free (void *page)
 {
   Address phys = Kmem::virt_to_phys(page);
 
-  if (phys == 0xffffffff)
+  if (phys == (Address) -1)
     return;
 
   // convert back to virt (do not use "page") to get canonic mapping
   if (phys != zero_page.get_unsigned())
-    Kmem_alloc::allocator()->free(0, page); // 2^0=1 pages
+    Mapped_allocator::allocator()->free(Config::PAGE_SHIFT, page); // 2^0=1 pages
 
   Address va = reinterpret_cast<Address>(page);
 
-  if (va < Kmem::mem_phys)
+  if (va < Mem_layout::Vmem_end)
     {
       // clean out pgdir entry
-      (phys_to_virt(P_ptr<Pd_entry>((Pd_entry*)(
-         Kmem::kdir[(va >> PDESHIFT) & PDEMASK] 
-	 & Config::PAGE_MASK))))[(va >> PTESHIFT) & PTEMASK] = 0;
+      *(Kmem::kdir->lookup(va)->ptab()->lookup(va)) = 0;
+      page_unmap (page, 0);
+      Mem_unit::tlb_flush(va);
+    }
+}
 
-      page_unmap (page, order);
 
-      Kmem::tlb_flush(va);
+IMPLEMENT
+void*
+Vmem_alloc::page_attr (void *address, Page::Attribs pa)
+{
+  Pd_entry *p = Kmem::kdir->lookup((Address)address);
+  Pt_entry *e;
+
+  if (!p->valid() || p->superpage())
+    return 0;
+
+  e = p->ptab()->lookup((Address)address);
+  if (!e->valid())
+    return 0;
+
+  e->del_attr(Page::MAX_ATTRIBS);
+  e->add_attr(pa);
+  return address;
+}
+
+/** Allocate size pages of kernel memory and map it sequentially
+    to the given address space, starting at  virt_addr.
+    @param space Target address space.
+    @param virt_addr Virtual start address.
+    @param size Size in pages.
+    @param page_attributes Page table attributes per allocated page.
+    @see local_free()
+ */
+PUBLIC static
+bool
+Vmem_alloc::local_alloc(Space *space,
+		        Address virt_addr, 
+			int size,
+		//	char fill,  
+			unsigned int page_attributes)
+{
+  assert((virt_addr & (Config::PAGE_SIZE -1)) == 0);
+  (void)page_attributes;
+  
+  Address va = virt_addr;
+  int i;
+
+  for (i=0; i<size; i++) 
+    {
+      void *page = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
+
+      if(!page)
+	break;
+    
+      check(space->v_insert(Kmem::virt_to_phys(page), va, Config::PAGE_SIZE, 
+			    page_attributes) == Space::Insert_ok);
+
+      memset(page, 0, Config::PAGE_SIZE);
+
+      va += Config::PAGE_SIZE;
+    }
+  
+  if(i == size) 
+    return true;
+
+  /* kdb_ke ("Vmem_alloc::local_alloc() failed");  */
+  /* cleanup */
+  local_free(space, virt_addr, i);
+
+  return false;
+}
+
+
+/** Free the sequentially mapped memory in the given address space,
+    starting at  virt_addr.
+    The page table in the address space is not deleted. 
+    @param space Target address space.
+    @param virt_addr Virtual start address.
+    @param size Size in pages.
+    @see local_alloc()
+ */
+PUBLIC static
+void 
+Vmem_alloc::local_free(Space *space, Address virt_addr, int size)
+{
+  assert((virt_addr & (Config::PAGE_SIZE -1)) == 0);
+
+  Address va = virt_addr;
+  
+  for (int i=0; i<size; i++)
+    {
+      Address phys; 
+      if (!space->v_lookup (va, &phys))
+        kdb_ke ("not mapped");
+
+      space->v_delete (va, Config::PAGE_SIZE); 
+      Mapped_allocator::allocator()
+	->free(Config::PAGE_SHIFT, Kmem::phys_to_virt (phys));
+      va += Config::PAGE_SIZE;
     }
 }

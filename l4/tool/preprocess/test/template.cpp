@@ -198,3 +198,39 @@ create_stack<bool>()
   return new stack<bool>();
 }
 
+// 
+// Member templates
+// 
+
+class Foo
+{
+  template <typename T> T* goo(T* t);
+};
+
+template <class Bar>
+class TFoo
+{
+};
+
+PUBLIC
+template <typename T>
+T*
+Foo::bar (T* t)
+{
+}
+
+IMPLEMENT
+template <typename T>
+T*
+Foo::goo (T* t)
+{
+}
+
+PUBLIC
+template <class Bar>
+template <typename T>
+T*
+TFoo::baz (T* t)
+{
+}
+

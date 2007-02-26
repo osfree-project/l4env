@@ -46,7 +46,7 @@ ENTRY(gdb_pc_com_intr)
 	cld
 
 	pushl	%esp
-	call	*EXT(base_trap_handler)
+	call	*BASE_TRAP_HANDLER
 	popl	%edx
 
 	/* acknowledge the interrupt */

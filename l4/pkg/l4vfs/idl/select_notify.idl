@@ -1,0 +1,56 @@
+/* -*- c -*- */
+/**
+ * \file   l4vfs/idl/select_notify.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>       // fixme: this include seems superfluous
+import <l4/l4vfs/types.h>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief <fixme>
+     */
+     [uuid (70)]
+     interface select_notify
+     {
+
+         /** Send notification request.
+          *
+          * This function sends a notification request.
+          * Notification request is granted if server is
+          * non-blocking on fd in specified operation(s) mode.
+          *
+          * /param fd file handle
+          * /param mode considered operations
+          * /param notif_tid thread id of notification listener
+          */
+         [oneway]
+         void request([in] object_handle_t handle,
+                      [in] int mode,
+                      [in] l4_threadid_t notif_tid);
+
+         /** Clear notification.
+          *
+          * Use this function to clear a notification request.
+          *
+          * /param fd file handle
+          * /param mode considered operations
+          * /param notif_tid thread id of notification listener
+          */
+         [oneway]
+         void clear([in] object_handle_t handle,
+                    [in] int mode,
+                    [in] l4_threadid_t notif_tid);
+     };
+};

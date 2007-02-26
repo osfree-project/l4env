@@ -1,0 +1,11 @@
+For DROPS we do not provide the final 'qmake.conf' here. Instead
+we generate it during the build process from 'qmake.conf.template'
+to specify the appropriate compiler binaries and #include paths from
+the L4 build environment. 
+
+See the $L4DIR/pkg/qt3/lib/libqt3/Makefile and
+$L4DIR/pkg/qt3/lib/libqt3/scripts/make-qmake-conf.sh for details.
+
+
+
+

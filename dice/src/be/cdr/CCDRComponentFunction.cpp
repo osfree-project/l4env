@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/cdr/CCDRComponentFunction.cpp
- *	\brief	contains the implementation of the class CCDRComponentFunction
+ *    \file    dice/src/be/cdr/CCDRComponentFunction.cpp
+ *    \brief   contains the implementation of the class CCDRComponentFunction
  *
- *	\date	10/28/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    10/28/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -32,12 +33,9 @@
 
 #include "fe/FEOperation.h"
 
-IMPLEMENT_DYNAMIC(CCDRComponentFunction);
-
 CCDRComponentFunction::CCDRComponentFunction()
  : CBEComponentFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CCDRComponentFunction, CBEComponentFunction);
 }
 
 /** destroys this object */
@@ -45,36 +43,40 @@ CCDRComponentFunction::~CCDRComponentFunction()
 {
 }
 
-/**	\brief creates the call function
- *	\param pFEOperation the front-end operation used as reference
- *	\param pContext the context of the write operation
- *	\return true if successful
+/**    \brief creates the call function
+ *    \param pFEOperation the front-end operation used as reference
+ *    \param pContext the context of the write operation
+ *    \return true if successful
  *
  * This implementation only sets the name of the function. And it stores a reference to
  * the client side function in case this implementation is tested.
  */
 bool CCDRComponentFunction::CreateBackEnd(CFEOperation* pFEOperation,  CBEContext* pContext)
 {
+    // call CBEObject's CreateBackEnd method
+    if (!CBEObject::CreateBackEnd(pFEOperation))
+        return false;
+
     pContext->SetFunctionType(FUNCTION_TEMPLATE);
-	// set target file name
-	SetTargetFileName(pFEOperation, pContext);
+    // set target file name
+    SetTargetFileName(pFEOperation, pContext);
     // get own name
     m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
 
     if (!CBEOperationFunction::CreateBackEnd(pFEOperation, pContext))
         return false;
 
-    CBERoot *pRoot = GetRoot();
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
 
     // check the attribute
-	pContext->SetFunctionType(FUNCTION_MARSHAL);
-    String sFunctionName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
+    pContext->SetFunctionType(FUNCTION_MARSHAL);
+    string sFunctionName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
     m_pFunction = pRoot->FindFunction(sFunctionName);
     if (!m_pFunction)
     {
         VERBOSE("CBEComponentFunction::CreateBackEnd failed because component's function (%s) could not be found\n",
-                (const char*)sFunctionName);
+                sFunctionName.c_str());
         return false;
     }
 

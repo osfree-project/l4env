@@ -69,7 +69,7 @@
 #undef  CONFIG_PCI_GOBIOS
 #undef  CONFIG_PCI_GODIRECT
 #define CONFIG_PCI_GOANY 1
-#define CONFIG_PCI_BIOS 1	/* arch-i386/pci-irq.c
+#undef  CONFIG_PCI_BIOS	/* arch-i386/pci-irq.c
 				 * arch-i386/pci-pc.c */
 #define CONFIG_PCI_DIRECT 1	/* arch-i386/pci-pc.c */
 #define CONFIG_PCI_NAMES 1	/* pci/names.c */

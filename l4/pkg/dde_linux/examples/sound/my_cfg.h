@@ -11,10 +11,6 @@
  */
 /*****************************************************************************/
 
-/** Tag for debug logging at logserver
- * PUT your desired server log tag here. Only 8 characters allowed! */
-char LOG_tag[9] = "snd-foo ";
-
 /** \name Configuration
  * PUT your desired values here
  * @{ */

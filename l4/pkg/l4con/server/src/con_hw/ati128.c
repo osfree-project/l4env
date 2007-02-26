@@ -403,6 +403,7 @@ ati128_probe(unsigned int bus, unsigned int devfn,
 	     const struct pci_device_id *dev, con_accel_t *accel)
 {
   unsigned int addr;
+  unsigned int vid_addr;
   unsigned short tmp;
 
   PCIBIOS_READ_CONFIG_DWORD (bus, devfn, PCI_BASE_ADDRESS_0, &addr);
@@ -412,7 +413,7 @@ ati128_probe(unsigned int bus, unsigned int devfn,
   if (!addr)
     return -L4_ENOTFOUND;
 
-  addr &= PCI_BASE_ADDRESS_MEM_MASK;
+  vid_addr = addr & PCI_BASE_ADDRESS_MEM_MASK;
 
   PCIBIOS_READ_CONFIG_WORD(bus, devfn, PCI_COMMAND, &tmp);
   if (!(tmp & PCI_COMMAND_MEMORY)) 
@@ -435,7 +436,7 @@ ati128_probe(unsigned int bus, unsigned int devfn,
   if (map_io_mem(addr, 0x2000, "ctrl", &ati128_regbase)<0)
     return -L4_ENOTFOUND;
 
-  if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, "video",
+  if (map_io_mem(vid_addr, hw_vid_mem_size, "video",
 		 &hw_map_vid_mem_addr)<0)
     return -L4_ENOTFOUND;
 

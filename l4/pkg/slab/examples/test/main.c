@@ -15,6 +15,7 @@
  */
 
 /* L4/L4Env includes */
+#include <stdio.h>
 #include <l4/slab/slab.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/l4rm/l4rm.h>
@@ -48,7 +49,7 @@ __grow_simple(l4slab_cache_t * cache, void ** data)
   // allocate and map page
   page = l4dm_mem_allocate(L4_PAGESIZE,L4RM_MAP | L4RM_LOG2_ALIGNED);
   if (page == NULL)
-    Error("__grow_simple: page allocation failed!\n");
+    LOG_Error("__grow_simple: page allocation failed!\n");
 
   printf("__grow_simple: got page at %p\n",page);
 
@@ -89,8 +90,8 @@ simple_heap(void)
   ret = l4slab_cache_init(&slab,OBJ_SIZE,0,__grow_simple,__release_simple);
   if (ret < 0)
     {
-      Error("simple_heap: slab cache initializstion failed: %s (%d)\n",
-	    l4env_errstr(ret),ret);
+      LOG_Error("simple_heap: slab cache initializstion failed: %s (%d)",
+                l4env_errstr(ret),ret);
       return;
     }
 
@@ -178,8 +179,8 @@ grow_only_heap(void)
 		      "Heap", &heap_ds);
   if (ret < 0)
     {
-      Error("grow_only_heap: heap allocation failed: %s (%d)\n",
-	    l4env_errstr(ret),ret);
+      LOG_Error("grow_only_heap: heap allocation failed: %s (%d)",
+                l4env_errstr(ret),ret);
       return;
     }
 
@@ -187,8 +188,8 @@ grow_only_heap(void)
   ret = l4rm_attach(&heap_ds, MAX_HEAP_SIZE, 0, L4DM_RW, &heap);
   if (ret < 0)
     {
-      Error("grow_only_heap: attach heap dataspace failed: %s (%d)\n",
-	    l4env_errstr(ret),ret);
+      LOG_Error("grow_only_heap: attach heap dataspace failed: %s (%d)",
+                l4env_errstr(ret),ret);
       l4dm_close(&heap_ds);
       return;
     }
@@ -202,8 +203,8 @@ grow_only_heap(void)
   ret = l4slab_cache_init(&slab,OBJ_SIZE,0,__grow,NULL);
   if (ret < 0)
     {
-      Error("grow_only_heap: slab cache initialization failed: %s (%d)\n",
-	    l4env_errstr(ret),ret);
+      LOG_Error("grow_only_heap: slab cache initialization failed: %s (%d)",
+                l4env_errstr(ret),ret);
       return;
     }
 

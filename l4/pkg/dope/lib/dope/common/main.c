@@ -13,71 +13,97 @@
  * COPYING file for details.
  */
 
-#include "dopestd.h"
+/*** GENERIC INCLUDES ***/
+#include <stdio.h>
+#include <stdarg.h>
+
+/*** DOPE INCLUDES ***/
 #include <dopelib.h>
+#include "dopestd.h"
+
+/*** LOCAL INCLUDES ***/
 #include "listener.h"
 #include "sync.h"
 #include "events.h"
+#include "init.h"
 
-extern struct dopelib_mutex *dopelib_cmd_mutex;
 
-
-/*** BIND AN EVENT TO A DOpE WIDGET ***/
-void dope_bind(long id,char *var,char *event_type,
-               void (*callback)(dope_event *,void *),void *arg) {
+/*** INTERFACE: BIND AN EVENT TO A DOpE WIDGET ***/
+void dope_bind(long id, const char *var, const char *event_type,
+               void (*callback)(dope_event *,void *), void *arg) {
 	static char cmdbuf[257];
-	snprintf(cmdbuf,256,"%s.bind(\"%s\",\"#! %lx %lx\")",
-	         var,event_type, (u32)callback, (u32)arg);
+
+	dopelib_mutex_lock(dopelib_cmdf_mutex);
+	snprintf(cmdbuf, 256, "%s.bind(\"%s\",\"#! %lx %lx\")",
+	         var, event_type, (u32)callback, (u32)arg);
 	dope_cmd(id,cmdbuf);
+	dopelib_mutex_unlock(dopelib_cmdf_mutex);
 }
 
 
-/*** HANDLE EVENTLOOP OF A DOpE CLIENT ***/
-void dope_eventloop(long id) {
+/*** INTERFACE: BIND AN EVENT TO A DOpE WIDGET SPECIFIED AS FORMAT STRING ***/
+void dope_bindf(long id, const char *varfmt, const char *event_type,
+                void (*callback)(dope_event *,void *), void *arg,...) {
+	static char cmdbuf[257];
+	static char varstr[1024];
+	va_list list;
+
+	dopelib_mutex_lock(dopelib_cmdf_mutex);
+	va_start(list, arg);
+	vsnprintf(varstr, 1024, varfmt, list);
+	va_end(list);
+
+	snprintf(cmdbuf, 256, "%s.bind(\"%s\",\"#! %lx %lx\")",
+	 varstr,event_type, (u32)callback, (u32)arg);
+	dope_cmd(id, cmdbuf);
+	dopelib_mutex_unlock(dopelib_cmdf_mutex);
+}
+
+
+/*** INTERFACE: PROCESS SINGLE DOpE EVENT ***/
+void dope_process_event(long id) {
 	dope_event *e;
-	char  *bindarg;
-	while (1) {
-		dopelib_wait_event(id, &e, &bindarg);
+	char *bindarg, *s;
+	u32 num1 = 0, num2 = 0;
 
-		/* test if cookie is valid */
-		if ((bindarg[0]=='#') && (bindarg[1]=='!')) {
-		
-			/* determine callback adress and callback argument */
-			u32 num1 = 0;
-			u32 num2 = 0;
-			char  *s = bindarg + 3;
-			
-			while (*s == ' ') s++;
-			while ((*s != 0) && (*s != ' ')) {
-				num1 = (num1<<4) + (*s & 15);
-				if (*(s++)>'9') num1+=9;
-			}
-			if (*(s++) == 0) return;
-			while ((*s != 0) && (*s != ' ')) {
-				num2 = (num2<<4) + (*s&15);
-				if (*(s++)>'9') num2+=9;
-			}
-			
-			/* call callback routine */
-			if (num1) ((void (*)(dope_event *,void *))num1)(e,(void *)num2);
-		}
+	dopelib_wait_event(id, &e, &bindarg);
+
+	/* test if cookie is valid */
+	if ((bindarg[0] != '#') || (bindarg[1] != '!')) return;
+
+	/* determine callback adress and callback argument */
+	s = bindarg + 3;
+	while (*s == ' ') s++;
+	while ((*s != 0) && (*s != ' ')) {
+		num1 = (num1 << 4) + (*s & 15);
+		if (*(s++) > '9') num1 += 9;
 	}
+	if (*(s++) == 0) return;
+	while ((*s != 0) && (*s != ' ')) {
+		num2 = (num2 << 4) + (*s&15);
+		if (*(s++) > '9') num2 += 9;
+	}
+
+	/* call callback routine */
+	if (num1) ((void (*)(dope_event *, void *))num1)(e, (void *)num2);
+
 }
 
 
-/*** UNREGISTER DOpE APPLICATION */
-long dope_deinit_app(long id) {
-	return 0;
+/*** INTERFACE: HANDLE EVENTLOOP OF A DOpE CLIENT ***/
+void dope_eventloop(long id) {
+	while (1) dope_process_event(id);
 }
 
 
-/*** WAIT FOR THE FINISHING OF THE CURRENT COMMAND AND BLOCK NET COMMANDS ***/
-void dope_deinit(void) {
-	dopelib_lock_mutex(dopelib_cmd_mutex);
-}
+/*** INTERFACE: DISCONNECT FROM DOpE ***
+ *
+ * FIXME: wait for the finishing of the current command and block net commands
+ */
+void dope_deinit(void) {}
+
 
 void *CORBA_alloc(unsigned long size);
-
 void *CORBA_alloc(unsigned long size) {
 	return malloc(size);
 }

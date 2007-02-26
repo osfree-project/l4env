@@ -13,9 +13,9 @@
 #ifndef __CON_EXAMPLES_LINUX_STUB_BOOTLOG_H_
 #define __CON_EXAMPLES_LINUX_STUB_BOOTLOG_H_
 
-extern unsigned dropscon_bootlog_init_done;
 extern char dropscon_bootlog_read(void);
 extern void dropscon_bootlog_done(void);
+extern int  dropscon_bootlog_initialized(void);
 
 #endif
 

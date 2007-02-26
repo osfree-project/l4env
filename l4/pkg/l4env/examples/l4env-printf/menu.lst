@@ -1,0 +1,20 @@
+# enable the following two lines if you have a terminal attached to the
+# serial interface of your test machine:
+#serial --unit=1 --speed=115200
+#terminal --timeout=0 serial,console
+
+default=0
+
+title printf
+  kernel (nd)/tftpboot/jork/bin/rmgr -sigma0 
+  module (nd)/tftpboot/jork/bin/fiasco -comport 2 -nokdb -esc -nowait -serial -serial_esc
+  module (nd)/tftpboot/jork/bin/sigma0
+  modaddr 0x02000000
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/log
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/names -verbose 2
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/dm_phys
+  module (nd)/tftpboot/jork/bin/x86_586/l4v2/l4env_pr
+
+title=Reload Configfile
+configfile=(nd)/tftpboot/jork/menu.lst
+

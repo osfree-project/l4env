@@ -1,4 +1,4 @@
-IMPLEMENTATION[ipc]:
+IMPLEMENTATION:
 
 #include "entry_frame.h"
 #include "globalconfig.h"
@@ -12,32 +12,21 @@ IMPLEMENTATION[ipc]:
     when an interrupt occurs, even when the receiver was already
     waiting. 
  */
-#ifdef CONFIG_APIC_MASK
-extern "C" unsigned apic_timer_entry;
-extern "C" unsigned apic_irq_mask;
-extern "C" unsigned apic_irq_nr;
-#endif
 PUBLIC 
 virtual void 
 Irq::ipc_receiver_ready()
 {
   assert(current() == _irq_thread);
 
-  if (_queued && _irq_thread->ipc_try_lock(nonull_static_cast<Sender*>(this)) == 0)
+  if (_queued &&
+      _irq_thread->ipc_try_lock(nonull_static_cast<Sender*>(this)) == 0)
     {
-      _irq_thread->receive_regs()->msg_dope(0);	// state = OK
-
-#ifdef CONFIG_APIC_MASK
-      if (id().irq() == apic_irq_nr)
-	{
-	  _irq_thread->receive_regs()->set_msg_word(0, apic_timer_entry);
-	  _irq_thread->receive_regs()->set_msg_word(1, apic_irq_mask);
-	}
-#endif
-
-      _irq_thread->state_change(~(Thread_waiting | Thread_receiving
-				  | Thread_busy  | Thread_ipc_in_progress),
-				Thread_running);
+      _irq_thread->ipc_init (nonull_static_cast<Sender*>(this));
+      _irq_thread->rcv_regs()->msg_dope(0);	// state = OK
+      _irq_thread->state_change(~(Thread_receiving | Thread_busy  
+				  | Thread_ipc_in_progress),
+				Thread_ready);
+      _irq_thread->deny_lipc();
 
       // XXX receiver should also get a fresh timeslice
       if (consume() < 1)	// last interrupt in queue?

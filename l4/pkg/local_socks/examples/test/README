@@ -1,0 +1,11 @@
+This small example consists of two programs:
+
+local_socks-test-server - listens on '/tmp/sock' for a message and sends an answer
+local_socks-test-client - send a request to the server listening on '/tmp/sock' and
+                          wait for a reply
+
+They require local_socks to be running; this is how to start it under Fiasco/UX:
+
+shell> $L4DIR/tool/runux/fiasco names log dm_phys name_server local_socks \
+                                local_socks-test-server local_socks-test-client
+

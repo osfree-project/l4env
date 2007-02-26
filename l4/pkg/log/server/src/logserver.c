@@ -19,6 +19,7 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -28,9 +29,9 @@
 #include <l4/sys/syscalls.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/names/libnames.h>
-#include <l4/env/errno.h>
 #include <l4/log/l4log.h>
-#include <assert.h>
+#include <l4/util/parse_cmd.h>
+#include <l4/util/l4_macros.h>
 
 #include "../include/log_comm.h"
 #include "stuff.h"
@@ -58,6 +59,8 @@ l4_threadid_t msg_sender = L4_INVALID_ID;
 char LOG_tag[9]="log";
 
 int	flush_local=1;
+int	flush_serial;
+int	serial_esc;
 
 #if CONFIG_USE_TCPIP
 bin_conn_t bin_conns[MAX_BIN_CONNS];
@@ -67,7 +70,6 @@ int	flush_muxed=1;		/* should we use multiplexed mode on
 #endif
 
 int prio = 0x20;
-int flusher_prio = 0x20;
 
 char buffer_array[OUTPUT_BUFFER_SIZE];
 
@@ -142,127 +144,49 @@ static void print_buffered(const char*data){
 	  assert(buffer_head<buffer_size);
       }
   } else {
-      const char *x=data;
-      
-      while(*x)outchar(*x++);
+      if(flush_local){
+	  outstring(data);
+      }
+#if CONFIG_USE_SERIAL
+      if(flush_serial) serial_flush(data, strlen(data));
+#endif
   }
 }
 
-static void parse_args(int argc,char**argv){
-  argc--;argv++;
-  
-  while(argc>0){
-    if(!strcmp(argv[0],"--verbose")){
-      verbose=1;
-      argc--;
-      argv++;
-    }else if(!strcmp(argv[0],"--net")){
-      argc--;
-      argv++;
+static void parse_args(int argc, const char**argv){
+    parse_cmdline(&argc, &argv,
+		  'v', "verbose", "verbose mode",
+		  PARSE_CMD_SWITCH, 1, &verbose,
 #if CONFIG_USE_TCPIP
-      flush_to_net=1;
-#else
-      LOG_Error("Logging to the network requested by commandline, but not compiled in!\n");
+		  ' ', "net", "use TCP/IP network connections",
+		  PARSE_CMD_SWITCH, 1, &flush_to_net,
+		  ' ', "nonet", "do not use TCP/IP network connections",
+		  PARSE_CMD_SWITCH, 0, &flush_to_net,
+		  'm', "muxed", "flush in muxed mode to TCP/IP",
+		  PARSE_CMD_SWITCH, 1, &flush_muxed,
+		  'M', "nomuxed", "do not flush in muxed mode",
+		  PARSE_CMD_SWITCH, 0, &flush_muxed,
+		  ' ', "ip", "IP address to use",
+		  PARSE_CMD_STRING, "", &ip_addr,
 #endif
-    }else if(!strcmp(argv[0],"--nonet")){
-      argc--;
-      argv++;
-#if CONFIG_USE_TCPIP
-      flush_to_net=0;
+		  'l', "local", "flush to local console",
+		  PARSE_CMD_SWITCH, 1, &flush_local,
+		  'L' ,"nolocal", "do not flush to local console",
+		  PARSE_CMD_SWITCH, 0, &flush_local,
+#if CONFIG_USE_SERIAL
+		  's' ,"comport", "flush to specified serial interface",
+		  PARSE_CMD_INT, 0, &flush_serial,
+		  'e', "serial-esc", "enter kdebug on esc on serial",
+		  PARSE_CMD_SWITCH, 1, &serial_esc,
 #endif
-    }else if(!strcmp(argv[0],"--local")){
-      argc--;
-      argv++;
-      flush_local=1;
-    }else if(!strcmp(argv[0],"--nolocal")){
-      argc--;
-      argv++;
-      flush_local=0;
-    }else if(!strcmp(argv[0],"--buffer")){
-      argc--;
-      argv++;
-      if(argc>0){
-	char*eptr;
+		  'b', "buffer", "buffered mode",
+		  PARSE_CMD_INT, 0, &buffer_size,
+		  ' ', "flushprio", "priority of flusher thread",
+		  PARSE_CMD_INT, 0x20, &flusher_prio,
+		  'p', "prio", "priority of main thread",
+		  PARSE_CMD_INT, 0x20, &prio,
+		  0);
 
-	buffer_size = strtoul(*argv, &eptr, 0);
-	if(*eptr){
-	  LOG_Error("invalid numerical argument to --buffer: %s\n",
-		*argv);
-	  buffer_size = 0;
-	}
-	argc--;
-	argv++;
-      } else {
-	LOG_Error("no argument to --buffer\n");
-      }
-    }else if(!strcmp(argv[0],"--muxded")){
-      argc--;
-      argv++;
-#if CONFIG_USE_TCPIP
-      flush_muxed=1;
-#else
-      LOG_Error("Flushing in muxed mode requested by commandline, but not compiled in!\n");
-#endif
-    }else if(!strcmp(argv[0],"--nomuxded")){
-      argc--;
-      argv++;
-#if CONFIG_USE_TCPIP
-      flush_muxed=0;
-#endif
-    }else if(!strcmp(argv[0],"--flushprio")){
-      argc--;
-      argv++;
-      if(argc>0){
-	char*eptr;
-
-	flusher_prio = strtoul(*argv, &eptr, 0);
-	if(*eptr){
-	  LOG_Error("invalid numerical argument to --flushprio: %s\n",
-		*argv);
-	  flusher_prio = 0x20;
-	}
-	argc--;
-	argv++;
-      } else {
-	LOG_Error("no argument to --flushprio\n");
-      }
-    }else if(!strcmp(argv[0],"--prio")){
-      argc--;
-      argv++;
-      if(argc>0){
-	char*eptr;
-
-	prio = strtoul(*argv, &eptr, 0);
-	if(*eptr){
-	  LOG_Error("invalid numerical argument to --prio: %s\n",
-		*argv);
-	  prio = 0x20;
-	}
-	argc--;
-	argv++;
-      } else {
-	LOG_Error("no argument to --prio\n");
-      }
-    } else if(!strcmp(argv[0],"--ip")){
-      argc--;
-      argv++;
-      if(argc>0){
-#if CONFIG_USE_TCPIP
-	ip_addr=argv[0];
-	if(netmask==NULL) netmask="255.255.255.0";
-#else
-	LOG_Error("IP-Addr specified on command-line, but no network support compiled in!\n");
-#endif
-	argc--;
-	argv++;
-      } else {
-	LOG_Error("no argument to --ip\n");
-      }
-    }else{
-      LOG_Error("unknown cmd-arg %s\n",argv[0]);
-      argc--;argv++;
-    }
-  }
 }
 
 /* answer the last and get a new message via ipc, we use long ipc.
@@ -287,15 +211,14 @@ static int get_message(void){
   	if(l4_thread_equal(msg_sender, L4_INVALID_ID)){
 		if((err=l4_ipc_wait(&msg_sender,
                            &message, &message.d0, &message.d1,
-			   L4_IPC_TIMEOUT(0,0,0,0,0,0),
-			   &message.result))!=0)
+			   L4_IPC_NEVER, &message.result))!=0)
 		    return err;
 		 break;
 	} else {
 		err = l4_ipc_reply_and_wait(
-			msg_sender, NULL, message.d0, 0,
+		        msg_sender, 0, message.d0, 0,
 			&msg_sender, &message, &message.d0, &message.d1,
-			L4_IPC_TIMEOUT(0,1,0,0,0,0),
+			L4_IPC_SEND_TIMEOUT_0,
 			&message.result);
 		if(err & L4_IPC_SETIMEOUT){
 			msg_sender = L4_INVALID_ID;
@@ -316,25 +239,31 @@ static int get_message(void){
 static void print_message(void){
   if(verbose && message_buffer[0]){
       char buf[10];
-      sprintf(buf, "%03X.%02X:",msg_sender.id.task,msg_sender.id.lthread);
+      sprintf(buf, l4util_idfmt_adjust":", l4util_idstr(msg_sender));
       print_buffered(buf);
   }
   print_buffered(message_buffer);
   if(strstr(message_buffer, "***")) flush_buffer();
 }
 
-int main(int argc,char**argv){
+int main(int argc, const char**argv){
   int err;
-
-  /*we do not use the log-lib, because this would cause in an additional
-    trailer of each line we output from clients. */
-  //LOG_init(LOG_TAG);
 
   parse_args(argc,argv);
 
   init_buffer();
   
-  rmgr_set_prio(l4_myself(), prio);
+  rmgr_init();
+  err = rmgr_set_prio(l4_myself(), prio);
+  if(err){
+      LOG_Error("rmgr_set_prio(%d): %d", prio, err);
+      return 1;
+  }
+
+  err = flusher_init();
+  if(err){
+      LOG_Error("Serious problems initalizing the flusher.\n");
+  }
 
   if(names_register(LOG_NAMESERVER_NAME)==0){
     LOG_Error("Cannot register at nameserver, falling asleep\n");
@@ -344,19 +273,17 @@ int main(int argc,char**argv){
       printf("Server started and registered as \"%s\"\n",
 	      LOG_NAMESERVER_NAME);
 #if CONFIG_USE_TCPIP
-    printf("Logging to: %s%s\n",
-	    flush_local?"console ":"",
-	    flush_to_net?"network":""
+    printf("Logging to: %s%s%s\n",
+	   flush_local?"console ":"",
+	   flush_to_net?"network ":"",
+	   flush_serial?"serial ":""
 	);
 #else
-    printf("Logging to: %s\n", flush_local?"kdebug ":"");
+    printf("Logging to: %s%s\n",
+	   flush_local?"kdebug ":"",
+	   flush_serial?"serial":"");
 #endif
     printf("Buffersize: %d\n", buffer_size);
-  }
-
-  err = flusher_init(flusher_prio);
-  if(err){
-      LOG_Error("Serious problems initalizing the flusher.\n");
   }
 
   strcpy(message_buffer+LOG_BUFFERSIZE,"...\n");
@@ -379,7 +306,7 @@ int main(int argc,char**argv){
 		    continue;
 		  }
 #endif
-		    message.d0 = -L4_EINVAL;
+		    message.d0 = -1;
 		    continue;
 		}
 		print_message();
@@ -389,7 +316,7 @@ int main(int argc,char**argv){
 #if CONFIG_USE_TCPIP
 	    case LOG_COMMAND_CHANNEL_WRITE:
 		if(message.result.md.dwords!=4){
-		    message.d0 = -L4_EINVAL;
+		    message.d0 = -1;
 		    continue;
 		}
 		message.d0 = channel_write();
@@ -410,7 +337,7 @@ int main(int argc,char**argv){
 #endif
 	}
 	/* We have an invalid request. Signal this to the caller. */
-	message.d0 = -L4_EINVAL;
+	message.d0 = -1;
 	continue;
     } // no error during request receive
 

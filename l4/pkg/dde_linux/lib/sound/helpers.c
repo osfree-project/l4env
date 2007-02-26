@@ -53,11 +53,11 @@ static struct devs
 /** show file operation pointers */
 static inline void show_fops(struct file_operations* f)
 {
-  DMSG("  open @ %p\n", f->open);
-  DMSG(" close @ %p\n", f->release);
-  DMSG("  read @ %p\n", f->read);
-  DMSG(" write @ %p\n", f->write);
-  DMSG(" ioctl @ %p\n", f->ioctl);
+  LOGd(DEBUG_MSG, "  open @ %p\n", f->open);
+  LOGd(DEBUG_MSG, " close @ %p\n", f->release);
+  LOGd(DEBUG_MSG, "  read @ %p\n", f->read);
+  LOGd(DEBUG_MSG, " write @ %p\n", f->write);
+  LOGd(DEBUG_MSG, " ioctl @ %p\n", f->ioctl);
 }
 
 /**************************************************/
@@ -84,14 +84,12 @@ static int snd_open_dev(int type, int num)
 
   if ((ret=fops->open(inode, file)))
     {
-      ERROR("fops->open returned %d", ret);
+      LOGdL(DEBUG_ERRORS, "Error: fops->open returned %d", ret);
       return -L4_EOPEN;
     }
 
 #if DEBUG_SOUND
-  DMSG("%s%d opened\n",
-      type ? "mixer" : "dsp",
-      num);
+  LOGd(DEBUG_MSG, "%s%d opened", type ? "mixer" : "dsp", num);
   show_fops(fops);
 #endif
 
@@ -125,7 +123,7 @@ int l4dde_snd_close(int dev)
   struct file *file;
   struct inode *inode;
 
-  ASSERT(fops);
+  Assert(fops);
   if (!fops)
     return -L4_ESKIPPED;
 
@@ -136,9 +134,7 @@ int l4dde_snd_close(int dev)
   if (fops->release)
     ret = fops->release(inode, file);
 
-#if DEBUG_SOUND
-  DMSG("device closed (%d)\n", ret);
-#endif
+  LOGd(DEBUG_SOUND, "device closed (%d)", ret);
 
   return 0;
 }
@@ -153,7 +149,7 @@ int l4dde_snd_read(int dev, void *buf, int count)
   struct file_operations* fops = d[dev].fops;
   struct file *file;
 
-  ASSERT(fops);
+  Assert(fops);
   if (!fops)
     return -L4_ESKIPPED;
 
@@ -164,9 +160,7 @@ int l4dde_snd_read(int dev, void *buf, int count)
   else
     ret = -L4_EINVAL;
 
-#if DEBUG_SOUND_READ
-  DMSG("read from device (%d)\n", ret);
-#endif
+  LOGd(DEBUG_SOUND_READ, "read from device (%d)", ret);
 
   return ret;
 }
@@ -181,7 +175,7 @@ int l4dde_snd_write(int dev, const void *buf, int count)
   struct file_operations* fops = d[dev].fops;
   struct file *file;
 
-  ASSERT(fops);
+  Assert(fops);
   if (!fops)
     return -L4_ESKIPPED;
 
@@ -192,9 +186,7 @@ int l4dde_snd_write(int dev, const void *buf, int count)
   else
     ret = -L4_EINVAL;
 
-#if DEBUG_SOUND_WRITE
-  DMSG("write on device (%d)\n", ret);
-#endif
+  LOGd(DEBUG_SOUND_WRITE, "write on device (%d)", ret);
 
   return ret;
 }
@@ -210,7 +202,7 @@ int l4dde_snd_ioctl(int dev, int req, l4_addr_t arg)
   struct file *file;
   struct inode *inode;
 
-  ASSERT(fops);
+  Assert(fops);
   if (!fops)
     return -L4_ESKIPPED;
 
@@ -222,9 +214,7 @@ int l4dde_snd_ioctl(int dev, int req, l4_addr_t arg)
   else
     ret = -L4_EINVAL;
 
-#if DEBUG_SOUND
-  DMSG("ioctl on device (%d)\n", ret);
-#endif
+  LOGd(DEBUG_SOUND, "ioctl on device (%d)", ret);
 
   return ret;
 }

@@ -6,7 +6,7 @@
 #include "vprintf_backend.h"
 
 struct str_data {
-  unsigned char* str;
+  char* str;
   size_t len;
   size_t size;
 };

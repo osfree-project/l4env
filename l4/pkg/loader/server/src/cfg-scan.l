@@ -1,10 +1,10 @@
 
 %option never-interactive
+%option noyywrap
 
 %{
 
 int yylex(void);
-static int yywrap(void);
 static void count(void);
 
 /* we use a memory-based input buffer */
@@ -39,6 +39,7 @@ NEWLINE		\n
 #			BEGIN COMMENT;
 <COMMENT>.*$		BEGIN 0;
 task			{ count(); return TASK; }
+template		{ count(); return TEMPLATE; }
 module			{ count(); return MODULE; }
 binpath			{ count(); return BINPATH; }
 libpath			{ count(); return LIBPATH; }
@@ -49,6 +50,7 @@ fiasco_lines		{ count(); return FIASCO_LINES; }
 memdump			{ count(); return MEMDUMP; }
 sleep			{ count(); return SLEEP; }
 memory			{ count(); return MEMORY; }
+ioport			{ count(); return IOPORT; }
 kb|Kb|kB|KB		{ count(); return KB; }
 mb|Mb|mB|MB		{ count(); return MB; }
 s			{ count(); return S; }
@@ -62,17 +64,26 @@ direct_mapped		{ count(); return DIRECT_MAPPED; }
 contiguous		{ count(); return CONTIGUOUS; }
 reboot_able		{ count(); return REBOOTABLE; }
 rebootable		{ count(); return REBOOTABLE; }
-no_sigma0		{ count(); return NO_SIGMA_NULL; }
+no_sigma0		{ count(); return NO_SIGMA0; }
 no_vga			{ count(); return NO_VGA; }
 dma_able		{ count(); return DMAABLE; }
 dmaable			{ count(); return DMAABLE; }
+pool			{ count(); return POOL; }
+nosuperpages		{ count(); return NOSUPERPAGES; }
 priority		{ count(); return PRIORITY; }
+file_provider		{ count(); return FILE_PROVIDER; }
+ds_manager		{ count(); return DS_MANAGER; }
+mcp			{ count(); return MCP; }
+allow_cli		{ count(); return ALLOW_CLI; }
+show_app_areas		{ count(); return SHOW_APP_AREAS; }
 ('[^']*'|\"[^\"]*\") 	{ count(); yylval.string = yytext; return STRING; }
 (0[xX]{HEXDIGIT}+|{DIGIT}+) { count(); 
 				   yylval.string = yytext; return UNSIGNED; }
 {SPACE}			{ count(); }
 {NEWLINE}		{ count(); }
-.			{ count(); return yytext[0]; }
+.			{ count();
+			  return yytext[0];
+			}
 
 %%
 
@@ -87,11 +98,19 @@ static const char *myinput=0, *myinputptr=0, *myinputlim=0;
 static int
 my_yyinput(char *buf, int max_size)
 {
-  int n=min(max_size, myinputlim-myinputptr);
+  int have_size = myinputlim-myinputptr;
+  int n = min(max_size, have_size+1);
   
-  if (n>0)
+  if (n > 0)
     {
-      memcpy(buf, myinputptr, n);
+      if (n > have_size)
+        {
+	  /* make sure that the script is terminated */
+          memcpy(buf, myinputptr, n-1);
+	  buf[n-1] = '\n';
+	}
+      else
+        memcpy(buf, myinputptr, n);
       myinputptr += n;
     }
   return n;
@@ -127,18 +146,17 @@ void
 cfg_setup_input(const char *cfg_buffer, int size)
 {
   myinput = myinputptr = cfg_buffer;
-  myinputlim = cfg_buffer + size - 1;
-  
-  line = 1; col = 1;
-
+  myinputlim = cfg_buffer + size;
+  line = 1;
+  col = 1;
   yy_init = 1;
   yy_start = 0;
 }
 
-static int
-yywrap(void)
+void
+cfg_done(void)
 {
-  return 1;
+  yy_delete_buffer(YY_CURRENT_BUFFER);
 }
 
 static void

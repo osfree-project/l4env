@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BEMsgBufferType.cpp
- *	\brief	contains the implementation of the class CBEMsgBufferType
+ *    \file    dice/src/be/BEMsgBufferType.cpp
+ *    \brief   contains the implementation of the class CBEMsgBufferType
  *
- *	\date	02/13/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    02/13/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -42,41 +43,36 @@
 #include "fe/FEOperation.h"
 #include "fe/FEArrayDeclarator.h"
 
-IMPLEMENT_DYNAMIC(CBEMsgBufferType);
-
 CBEMsgBufferType::CBEMsgBufferType()
 {
-    m_nFixedCount[0] = m_nFixedCount[1] = 0;
-    m_nVariableCount[0] = m_nVariableCount[1] = 0;
-    m_nStringCount[0] = m_nStringCount[1] = 0;
     m_pAliasType = 0;
-	m_bCountAllVarsAsMax = false;
-    IMPLEMENT_DYNAMIC_BASE(CBEMsgBufferType, CBETypedef);
+    m_bCountAllVarsAsMax = false;
+    m_pFunction = 0;
+    m_vCounts[0].clear();
+    m_vCounts[1].clear();
 }
 
 CBEMsgBufferType::CBEMsgBufferType(CBEMsgBufferType & src)
 : CBETypedef(src)
 {
-    m_nFixedCount[0] = src.m_nFixedCount[0];
-    m_nFixedCount[1] = src.m_nFixedCount[1];
-    m_nVariableCount[0] = src.m_nVariableCount[0];
-    m_nVariableCount[1] = src.m_nVariableCount[1];
-    m_nStringCount[0] = src.m_nStringCount[0];
-    m_nStringCount[1] = src.m_nStringCount[1];
+    m_vCounts[0] = src.m_vCounts[0];
+    m_vCounts[1] = src.m_vCounts[1];
     m_pAliasType = src.m_pAliasType;
-	m_bCountAllVarsAsMax = src.m_bCountAllVarsAsMax;
-    IMPLEMENT_DYNAMIC_BASE(CBEMsgBufferType, CBETypedef);
+    m_pFunction = src.m_pFunction;
+    m_bCountAllVarsAsMax = src.m_bCountAllVarsAsMax;
 }
 
-/**	\brief destructor of this instance */
+/** \brief destructor of this instance */
 CBEMsgBufferType::~CBEMsgBufferType()
 {
+    m_vCounts[0].clear();
+    m_vCounts[1].clear();
 }
 
-/**	\brief creates the message buffer type
- *	\param pFEInterface the respective front-end interface
- *	\param pContext the context of the code creation
- *	\return true if successful
+/** \brief creates the message buffer type
+ *  \param pFEInterface the respective front-end interface
+ *  \param pContext the context of the code creation
+ *  \return true if successful
  *
  * This function creates, depending of the members of the interface a new message buffer for
  * that interface. This message buffer is then used as parameter to wait-any and unmarshal functions
@@ -87,30 +83,34 @@ CBEMsgBufferType::~CBEMsgBufferType()
  */
 bool CBEMsgBufferType::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * pContext)
 {
+    VERBOSE("CBEMsgBufferType::CreateBackEnd(interface %s)\n", (pFEInterface)?pFEInterface->GetName().c_str():"nil");
     // init counts first, because GetMsgBufferType may access them
-    CBERoot *pRoot = GetRoot();
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     CBEClass *pClass = pRoot->FindClass(pFEInterface->GetName());
     assert(pClass);
     InitCounts(pClass, pContext);
 
     // create declarator
-    String sName = pContext->GetNameFactory()->GetMessageBufferTypeName(pContext); // interface name is added be typedef::CB
+    string sName = pContext->GetNameFactory()->GetMessageBufferTypeName(pContext); // interface name is added be typedef
     CFEDeclarator *pMemDecl = new CFEDeclarator(DECL_IDENTIFIER, sName);
     // create type
     CFETypeSpec *pMemType = GetMsgBufferType(pFEInterface, pMemDecl, pContext);
     // create vector here, because pMemDecl might be manipulated inside GetMsgBufferType
-    Vector *pMemDecls = new Vector(RUNTIME_CLASS(CFEDeclarator), 1, pMemDecl);
+    vector<CFEDeclarator*> *pMemDecls = new vector<CFEDeclarator*>();
+    pMemDecls->push_back(pMemDecl);
     // create typedef
     CFETypedDeclarator *pTypedef = new CFETypedDeclarator(TYPEDECL_TYPEDEF, pMemType, pMemDecls);
     pMemDecl->SetParent(pTypedef);
     pMemType->SetParent(pTypedef);
     pTypedef->SetParent(pFEInterface);
+    delete pMemDecls;
     // call base class' create function
     bool bRet = CBETypedef::CreateBackEnd(pTypedef, pContext);
     // clean up
     delete pTypedef;
     // return status
+    VERBOSE("CBEMsgBufferType::CreateBackEnd(interface) return %s\n", bRet?"true":"false");
     return bRet;
 }
 
@@ -121,28 +121,34 @@ bool CBEMsgBufferType::CreateBackEnd(CFEInterface * pFEInterface, CBEContext * p
  */
 bool CBEMsgBufferType::CreateBackEnd(CFEOperation *pFEOperation, CBEContext * pContext)
 {
+    VERBOSE("CBEMsgBufferType::CreateBackEnd(operation %s)\n", (pFEOperation)?pFEOperation->GetName().c_str():"nil");
     // init counts first, because GetMsgBufferType may access them
-    assert(GetParent()->IsKindOf(RUNTIME_CLASS(CBEFunction)));
-    CBEFunction *pFunction = (CBEFunction*)GetParent();
+    assert(GetParent());
+    assert(dynamic_cast<CBEFunction*>(GetParent()));
+    CBEFunction *pFunction = dynamic_cast<CBEFunction*>(GetParent());
     InitCounts(pFunction, pContext);
 
     // create declarator
-    String sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    string sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
     CFEDeclarator *pMemDecl = new CFEDeclarator(DECL_IDENTIFIER, sName);
     // create type
     CFETypeSpec *pMemType = GetMsgBufferType(pFEOperation, pMemDecl, pContext);
+    assert(pMemType);
     // create vector here, because pMemDecl might be manipulated inside GetMsgBufferType
-    Vector *pMemDecls = new Vector(RUNTIME_CLASS(CFEDeclarator), 1, pMemDecl);
+    vector<CFEDeclarator*> *pMemDecls = new vector<CFEDeclarator*>();
+    pMemDecls->push_back(pMemDecl);
     // create typedef
     CFETypedDeclarator *pTypedef = new CFETypedDeclarator(TYPEDECL_TYPEDEF, pMemType, pMemDecls);
     pMemDecl->SetParent(pTypedef);
     pMemType->SetParent(pTypedef);
     pTypedef->SetParent(pFEOperation);
+    delete pMemDecls;
     // call base class' create function
     bool bRet = CBETypedDeclarator::CreateBackEnd(pTypedef, pContext);
     // clean up
     delete pTypedef;
     // return status
+    VERBOSE("CBEMsgBufferType::CreateBackEnd(operation) return %s\n", bRet?"true":"false");
     return bRet;
 }
 
@@ -162,7 +168,7 @@ bool CBEMsgBufferType::CreateBackEnd(CBEMsgBufferType *pMsgBuffer, CBEContext *p
     // init counts
     InitCounts(pMsgBuffer, pContext);
     // create name
-    String sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    string sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
     // set alias type
     m_pAliasType = pMsgBuffer;
     // only add an additional reference if type is not a ptr type
@@ -171,11 +177,11 @@ bool CBEMsgBufferType::CreateBackEnd(CBEMsgBufferType *pMsgBuffer, CBEContext *p
     return CBETypedDeclarator::CreateBackEnd(pMsgBuffer->GetAlias()->GetName(), sName, nRef, pContext);
 }
 
-/**	\brief creates the type of the message buffer
- *	\param pFEInterface the corresponding front-end interface
- *	\param pFEDeclarator the name of the type
- *	\param pContext the context of the code creation
- *	\return the new type of the message buffer
+/** \brief creates the type of the message buffer
+ *  \param pFEInterface the corresponding front-end interface
+ *  \param pFEDeclarator the name of the type
+ *  \param pContext the context of the code creation
+ *  \return the new type of the message buffer
  *
  * This function receives the name of the type as a parameter to perform possible adaptations.
  *
@@ -186,18 +192,18 @@ bool CBEMsgBufferType::CreateBackEnd(CBEMsgBufferType *pMsgBuffer, CBEContext *p
  */
 CFETypeSpec *CBEMsgBufferType::GetMsgBufferType(CFEInterface *pFEInterface, CFEDeclarator *&pFEDeclarator, CBEContext * pContext)
 {
-    if ((GetStringCount() > 0) || (GetVariableCount() > 0))
+    if ((GetCount(TYPE_STRING) > 0) || (GetCount(TYPE_VARSIZED) > 0))
         pFEDeclarator->SetStars(1);
     else
     {
-        long nSize = GetFixedCount();
+        long nSize = GetCount(TYPE_FIXED);
         CFEPrimaryExpression *pBound = new CFEPrimaryExpression(EXPR_INT, nSize);
         CFEArrayDeclarator *pNewDecl = new CFEArrayDeclarator(pFEDeclarator);
         pNewDecl->AddBounds(NULL, pBound);
         delete pFEDeclarator;
         pFEDeclarator = pNewDecl;
     }
-        
+
     return new CFESimpleType(TYPE_CHAR);
 }
 
@@ -209,11 +215,11 @@ CFETypeSpec *CBEMsgBufferType::GetMsgBufferType(CFEInterface *pFEInterface, CFED
  */
 CFETypeSpec *CBEMsgBufferType::GetMsgBufferType(CFEOperation *pFEOperation, CFEDeclarator* &pFEDeclarator, CBEContext * pContext)
 {
-    if ((GetStringCount() > 0) || (GetVariableCount() > 0))
+    if ((GetCount(TYPE_STRING) > 0) || (GetCount(TYPE_VARSIZED) > 0))
         pFEDeclarator->SetStars(1);
     else
     {
-        long nSize = GetFixedCount();
+        long nSize = GetCount(TYPE_FIXED);
         CFEPrimaryExpression *pBound = new CFEPrimaryExpression(EXPR_INT, nSize);
         CFEArrayDeclarator *pNewDecl = new CFEArrayDeclarator(pFEDeclarator);
         pNewDecl->AddBounds(NULL, pBound);
@@ -237,14 +243,14 @@ CFETypeSpec *CBEMsgBufferType::GetMsgBufferType(CFEOperation *pFEOperation, CFED
 void CBEMsgBufferType::WriteDeclaration(CBEFile *pFile, CBEContext *pContext)
 {
     if (m_pType)
-		m_pType->Write(pFile, pContext);
+        m_pType->Write(pFile, pContext);
     pFile->Print(" ");
     // print variable name
     CBEDeclarator *pDecl = GetAlias();
     for (int i=0; i<pDecl->GetStars(); i++)
         pFile->Print("*");
-    String sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    pFile->Print("%s", (const char*)sName);
+    string sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    pFile->Print("%s", sName.c_str());
 }
 
 /** \brief writes the variable definition
@@ -259,7 +265,7 @@ void CBEMsgBufferType::WriteDeclaration(CBEFile *pFile, CBEContext *pContext)
  */
 void CBEMsgBufferType::WriteDefinition(CBEFile *pFile, bool bTypedef, CBEContext *pContext)
 {
-    if (bTypedef && pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)))
+    if (bTypedef && dynamic_cast<CBEHeaderFile*>(pFile))
         CBETypedef::WriteDeclaration((CBEHeaderFile*)pFile, pContext);
     else
     {
@@ -277,238 +283,55 @@ void CBEMsgBufferType::WriteDefinition(CBEFile *pFile, bool bTypedef, CBEContext
  */
 void CBEMsgBufferType::WriteInitialization(CBEFile *pFile, CBEContext *pContext)
 {
-    String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    string sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+    string sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
 
     if (IsVariableSized())
     {
-        int nBufferSize = MAX(m_nFixedCount[DIRECTION_IN-1], m_nFixedCount[DIRECTION_OUT-1]);
+        int nBufferSize = GetCount(TYPE_FIXED);
         // declare constant size
-        pFile->PrintIndent("%s = %d", (const char *) sOffset, nBufferSize);
+        pFile->PrintIndent("%s = %d", sOffset.c_str(), nBufferSize);
         WriteInitializationVarSizedParameters(pFile, pContext);
         pFile->Print(";\n");
         // allocate message data structure
-        pFile->PrintIndent("%s = ", (const char *) sMsgBuffer);
+        pFile->PrintIndent("%s = ", sMsgBuffer.c_str());
         m_pType->WriteCast(pFile, true, pContext);
-        pFile->Print("_dice_alloca(%s);\n", (const char *) sOffset);
+        pFile->Print("_dice_alloca(%s);\n", sOffset.c_str());
     }
 }
 
-/** \brief initializes the internal counts with the values of the interface
- *  \param pClass the class to count
- *  \param pContext the context of the init operation
- *
- * Since the message buffer of an interface has to accept messages from base-classes
- * we have to count their values as well.
- *
- * Then we count each function of the class. Since we build maxima of the count values
- * it is o.k. to count all the BE functions for one FE operation (call, send, recv, ...).
- * It's a bit more work, but guarantees more accuracy.
- */
-void CBEMsgBufferType::InitCounts(CBEClass *pClass, CBEContext *pContext)
-{
-    assert(pClass);
-    m_bCountAllVarsAsMax = true;
-    // base classes
-    VectorElement *pIter = pClass->GetFirstBaseClass();
-    CBEClass *pBaseClass;
-    while ((pBaseClass = pClass->GetNextBaseClass(pIter)) != 0)
-    {
-        InitCounts(pBaseClass, pContext);
-        m_bCountAllVarsAsMax = true; // is set to false, when leaving this function
-    }
-    // functions
-    pIter = pClass->GetFirstFunction();
-    CBEFunction *pFunction;
-    while ((pFunction = pClass->GetNextFunction(pIter)) != 0)
-    {
-        InitCounts(pFunction, pContext);
-    }
-
-    m_bCountAllVarsAsMax = false;
-}
-
-/** \brief initializes the internal counts with the values of the operation
- *  \param pFunction the function to count
- *  \param pContext the context of the initial counting
- *
- * This method uses the BE function's methods to set the counts. To allow the use of this
- * method for classes with multiple functions as well, we use temporary variables and determine
- * maximum values.
- */
-void CBEMsgBufferType::InitCounts(CBEFunction *pFunction, CBEContext *pContext)
-{
-    assert(pFunction);
-    int nSendDir = pFunction->GetSendDirection();
-    int nRecvDir = pFunction->GetReceiveDirection();
-    // count parameters
-    int nTempSend = pFunction->GetFixedSize(nSendDir, pContext);
-    int nTempRecv = pFunction->GetFixedSize(nRecvDir, pContext);
-    m_nFixedCount[nSendDir-1] = MAX(nTempSend, m_nFixedCount[nSendDir-1]);
-    m_nFixedCount[nRecvDir-1] = MAX(nTempRecv, m_nFixedCount[nRecvDir-1]);
-    // get var sized
-    nTempSend = pFunction->GetVariableSizedParameterCount(nSendDir);
-    nTempRecv = pFunction->GetVariableSizedParameterCount(nRecvDir);
-    // add strings, since they are var-sized as well
-    nTempSend += pFunction->GetStringParameterCount(nSendDir);
-    nTempRecv += pFunction->GetStringParameterCount(nRecvDir);
-    // if there are variable sized parameters for send and NOT for receive
-    // -> add var of send to var sized count
-    if ((nTempSend > 0) && (nTempRecv == 0))
-    {
-        if (m_bCountAllVarsAsMax)
-        {
-            int nMaxSend = pFunction->GetMaxSize(nSendDir, pContext) + pFunction->GetFixedSize(nSendDir, pContext);
-            m_nFixedCount[nSendDir-1] = MAX(nMaxSend, m_nFixedCount[nSendDir-1]);
-        }
-        else
-            m_nVariableCount[nSendDir-1] = MAX(nTempSend, m_nVariableCount[nSendDir-1]);
-    }
-    // if there are variable sized parameters for recv and NOT for send
-    // -> get max of receive (dont't forget "normal" fixed) and max with fixed
-    if ((nTempSend == 0) && (nTempRecv > 0))
-    {
-        int nMaxRecv = pFunction->GetMaxSize(nRecvDir, pContext) + pFunction->GetFixedSize(nRecvDir, pContext);
-        m_nFixedCount[nRecvDir-1] = MAX(nMaxRecv, m_nFixedCount[nRecvDir-1]);
-    }
-    // if there are variable sized parameters for send AND recveive
-    // -> add recv max to fixed AND if send max bigger, set var sized of send
-    if ((nTempSend > 0) && (nTempRecv > 0))
-    {
-        int nMaxSend = pFunction->GetMaxSize(nSendDir, pContext) + pFunction->GetFixedSize(nSendDir, pContext);
-        int nMaxRecv = pFunction->GetMaxSize(nRecvDir, pContext) + pFunction->GetFixedSize(nRecvDir, pContext);
-        m_nFixedCount[nRecvDir-1] = MAX(nMaxRecv, m_nFixedCount[nRecvDir-1]);
-        if (nMaxSend > nMaxRecv)
-        {
-            if (m_bCountAllVarsAsMax)
-                m_nFixedCount[nSendDir-1] = MAX(nMaxSend, m_nFixedCount[nSendDir-1]);
-            else
-                m_nVariableCount[nSendDir-1] = MAX(nTempSend, m_nVariableCount[nSendDir-1]);
-        }
-    }
-
-//    m_nVariableCount[nSendDir-1] = MAX(nTempSendVar, m_nVariableCount[nSendDir-1]);
-//    m_nVariableCount[nRecvDir-1] = MAX(nTempRecvVar, m_nVariableCount[nRecvDir-1]);
-//
-//    m_nStringCount[nSendDir-1] = MAX(nTempSend, m_nStringCount[nSendDir-1]);
-//    m_nStringCount[nRecvDir-1] = MAX(nTempRecv, m_nStringCount[nRecvDir-1]);
-}
-
-/** \brief initializes own counters with the counters of alias type
- *  \param pMsgBuffer the alias type
- *  \param pContext the context of the init operation
- */
-void CBEMsgBufferType::InitCounts(CBEMsgBufferType *pMsgBuffer, CBEContext *pContext)
-{
-    assert(pMsgBuffer);
-    m_nFixedCount[0] = pMsgBuffer->m_nFixedCount[0];
-    m_nFixedCount[1] = pMsgBuffer->m_nFixedCount[1];
-    m_nStringCount[0] = pMsgBuffer->m_nStringCount[0];
-    m_nStringCount[1] = pMsgBuffer->m_nStringCount[1];
-    m_nVariableCount[0] = pMsgBuffer->m_nVariableCount[0];
-    m_nVariableCount[1] = pMsgBuffer->m_nVariableCount[1];
-}
-
-/** \brief test if this message buffer is variable sized for a particular direction
- *  \param nDirection the direction to test
- *  \return true if it is variable sized
- */
-bool CBEMsgBufferType::IsVariableSized(int nDirection)
-{
-    if (nDirection == 0)
-        return  IsVariableSized(DIRECTION_OUT) || IsVariableSized(DIRECTION_IN);
-    return (m_nVariableCount[nDirection-1] > 0);
-}
-
-/** \brief init counters with zeros
- *  \param nDirection the direction to zero out
- */
-void CBEMsgBufferType::ZeroCounts(int nDirection)
-{
-    if (nDirection == 0)
-    {
-        ZeroCounts(DIRECTION_IN);
-        ZeroCounts(DIRECTION_OUT);
-        return;
-    }
-    m_nFixedCount[nDirection-1] = 0;
-    m_nStringCount[nDirection-1] = 0;
-    m_nVariableCount[nDirection-1] = 0;
-}
-
-/** \brief returns the fixed count
- *  \param nDirection the direction to count
- *  \return the size of fixed size parameters (in bytes)
- */
-int CBEMsgBufferType::GetFixedCount(int nDirection)
-{
-    if (nDirection == 0)
-        return MAX(m_nFixedCount[DIRECTION_IN-1], m_nFixedCount[DIRECTION_OUT-1]);
-    return m_nFixedCount[nDirection-1];
-}
-
-/** \brief returns the number of strings
- *  \param nDirection the direction to count
- *  \return the number of strings (not their size)
- */
-int CBEMsgBufferType::GetStringCount(int nDirection)
-{
-    if (nDirection == 0)
-        return MAX(m_nStringCount[DIRECTION_IN-1], m_nStringCount[DIRECTION_OUT-1]);
-    return m_nStringCount[nDirection-1];
-}
-
-/** \brief returns the number of variable sized parameters
- *  \param nDirection the direction to count
- *  \return the number of variable sized parameters (not their size)
- */
-int CBEMsgBufferType::GetVariableCount(int nDirection)
-{
-    if (nDirection == 0)
-        return MAX(m_nVariableCount[DIRECTION_IN-1], m_nVariableCount[DIRECTION_OUT-1]);
-    return m_nVariableCount[nDirection-1];
-}
-
-/** \brief writes the string used to access a member of the message buffer
+/** \brief initializes members of the message buffer
  *  \param pFile the file to write to
- *  \param nMemberType the type of the member to access
- *  \param pContext the context of the write operation
- *  \param sOffset the offset if the access to the member has to be done using a cast of another member
+ *  \param nType the type of the member to initialize
+ *  \param nDirection the direction of the type to initialize
+ *  \param pContext the context of the writing
  *
- * This is used to access the members correctly.
- * A member access is usually '&lt;msg buffer&gt;(->|.)&lt;member&gt;' if the message buffer is a
- * constructed type. If it is simple then it is only '&lt;msg buffer&gt;'.
+ * This implementation does nothing
  */
-void CBEMsgBufferType::WriteMemberAccess(CBEFile *pFile, int nMemberType, CBEContext *pContext, String sOffset)
+void
+CBEMsgBufferType::WriteInitialization(CBEFile *pFile,
+    unsigned int nType,
+    int nDirection,
+    CBEContext *pContext)
 {
-    // print variable name
-    // because this implementation uses a simple type, we only write the name.
-    String sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    pFile->Print("%s", (const char*)sName);
-}
-
-/** \brief creates a new instance of this class */
-CObject * CBEMsgBufferType::Clone()
-{
-    return new CBEMsgBufferType(*this);
 }
 
 /** \brief writes the size initialization of variable sized parameters
  *  \param pFile the file to write to
  *  \param pContext the context of the write operation
  */
-void CBEMsgBufferType::WriteInitializationVarSizedParameters(CBEFile *pFile, CBEContext *pContext)
+void
+CBEMsgBufferType::WriteInitializationVarSizedParameters(CBEFile *pFile,
+    CBEContext *pContext)
 {
     // iterate over variable sized parameters
-    CBEFunction *pFunction = 0;
-    if (GetParent()->IsKindOf(RUNTIME_CLASS(CBEFunction)))
-        pFunction = (CBEFunction*)GetParent();
+    CBEFunction *pFunction = dynamic_cast<CBEFunction*>(GetParent());
     if (pFunction)
     {
         int nRecvDir = pFunction->GetReceiveDirection();
-        VectorElement *pIter = pFunction->GetFirstSortedParameter();
+        vector<CBETypedDeclarator*>::iterator iter = pFunction->GetFirstSortedParameter();
         CBETypedDeclarator *pParameter;
-        while ((pParameter = pFunction->GetNextSortedParameter(pIter)) != 0)
+        while ((pParameter = pFunction->GetNextSortedParameter(iter)) != 0)
         {
             if (!pParameter->IsVariableSized())
                 continue;
@@ -521,16 +344,20 @@ void CBEMsgBufferType::WriteInitializationVarSizedParameters(CBEFile *pFile, CBE
                 pParameter->IsString() &&
                 (pParameter->FindAttribute(ATTR_MAX_IS) == 0))
             {
-                pFile->Print("+%d",pContext->GetSizes()->GetMaxSizeOfType(TYPE_CHAR_ASTERISK));
+                *pFile << "+" <<
+                    pContext->GetSizes()->GetMaxSizeOfType(TYPE_CHAR_ASTERISK);
             }
             else
             {
                 pFile->Print("+(");
+		if (pParameter->IsString() && 
+		    pContext->IsOptionSet(PROGRAM_ALIGN_TO_TYPE))
+		    *pFile << "(";
                 pParameter->WriteGetSize(pFile, NULL, pContext);
-				CBEType *pType = pParameter->GetType();
-				CBEAttribute *pAttr;
-				if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
-					pType = pAttr->GetAttrType();
+                CBEType *pType = pParameter->GetType();
+                CBEAttribute *pAttr;
+                if ((pAttr = pParameter->FindAttribute(ATTR_TRANSMIT_AS)) != 0)
+                    pType = pAttr->GetAttrType();
                 if ((pType->GetSize() > 1) && !(pParameter->IsString()))
                 {
                     pFile->Print("*sizeof");
@@ -544,12 +371,278 @@ void CBEMsgBufferType::WriteInitializationVarSizedParameters(CBEFile *pFile, CBE
                             pParameter->HasSizeAttr(ATTR_LENGTH_IS) ||
                             pParameter->HasSizeAttr(ATTR_MAX_IS);
                     if (!bHasSizeAttr)
-                        pFile->Print("+%d", pContext->GetSizes()->GetSizeOfType(TYPE_INTEGER));
+                        pFile->Print("+%d", 
+			    pContext->GetSizes()->GetSizeOfType(TYPE_INTEGER));
+		    if (pContext->IsOptionSet(PROGRAM_ALIGN_TO_TYPE))
+			*pFile << "+3)&~3";
                 }
                 pFile->Print(")");
             }
         }
     }
+}
+
+/** \brief initializes the internal counts with the values of the interface
+ *  \param pClass the class to count
+ *  \param pContext the context of the init operation
+ *
+ * Since the message buffer of an interface has to accept messages from
+ * base-classes we have to count their values as well.
+ *
+ * Then we count each function of the class. Since we build maxima of the
+ * count values it is o.k. to count all the BE functions for one FE operation
+ * (call, send, recv, ...).  It's a bit more work, but guarantees more
+ * accuracy.
+ */
+void CBEMsgBufferType::InitCounts(CBEClass *pClass, CBEContext *pContext)
+{
+    assert(pClass);
+    m_bCountAllVarsAsMax = true;
+    // base classes
+    vector<CBEClass*>::iterator iter = pClass->GetFirstBaseClass();
+    CBEClass *pBaseClass;
+    while ((pBaseClass = pClass->GetNextBaseClass(iter)) != 0)
+    {
+        InitCounts(pBaseClass, pContext);
+        m_bCountAllVarsAsMax = true; // is set to false, when leaving this function
+    }
+    // functions
+    vector<CBEFunction*>::iterator iterF = pClass->GetFirstFunction();
+    CBEFunction *pFunction;
+    while ((pFunction = pClass->GetNextFunction(iterF)) != 0)
+    {
+        InitCounts(pFunction, pContext);
+    }
+    // reset member function, since this message buffer belongs to a class
+    m_pFunction = 0;
+
+    m_bCountAllVarsAsMax = false;
+}
+
+/** \brief returns the iterator to the counter of a specific type and direction
+ *  \param nType the type of the counter
+ *  \param nDirection the direction of the counter
+ *  \return an iterator to the respective element
+ *
+ * A new (empty) element with the respective type is created if none has been
+ * found.
+ */
+vector<struct CBEMsgBufferType::TypeCount>::iterator
+CBEMsgBufferType::GetCountIter(unsigned int nType, int nDirection)
+{
+    vector<struct TypeCount>::iterator iter;
+    for (iter = m_vCounts[nDirection-1].begin();
+         iter != m_vCounts[nDirection-1].end(); iter++)
+    {
+        if ((*iter).nType == nType)
+            break;
+    }
+    if (iter == m_vCounts[nDirection-1].end())
+    {
+        struct TypeCount sCount;
+        sCount.nType = nType;
+        sCount.nCount = 0;
+        m_vCounts[nDirection-1].push_back(sCount);
+        iter = m_vCounts[nDirection-1].end()-1;
+    }
+
+    return iter;
+}
+
+/** \brief initializes the internal counts with the values of the operation
+ *  \param pFunction the function to count
+ *  \param pContext the context of the initial counting
+ *
+ * This method uses the BE function's methods to set the counts. To allow the
+ * use of this method for classes with multiple functions as well, we use
+ * temporary variables and determine maximum values.
+ */
+void CBEMsgBufferType::InitCounts(CBEFunction *pFunction, CBEContext *pContext)
+{
+    assert(pFunction);
+    int nSendDir = pFunction->GetSendDirection();
+    int nRecvDir = pFunction->GetReceiveDirection();
+    // count parameters
+
+    // fixed
+    vector<struct TypeCount>::iterator iterSend, iterRecv;
+    iterSend = GetCountIter(TYPE_FIXED, DIRECTION_IN);
+    iterRecv = GetCountIter(TYPE_FIXED, DIRECTION_OUT);
+
+    unsigned int nTempSend = pFunction->GetFixedSize(nSendDir, pContext);
+    unsigned int nTempRecv = pFunction->GetFixedSize(nRecvDir, pContext);
+    (*iterSend).nCount = MAX(nTempSend, (*iterSend).nCount);
+    (*iterRecv).nCount = MAX(nTempRecv, (*iterRecv).nCount);
+
+    // get var sized
+    nTempSend = pFunction->GetVariableSizedParameterCount(nSendDir);
+    nTempRecv = pFunction->GetVariableSizedParameterCount(nRecvDir);
+    // add strings, since they are var-sized as well
+    nTempSend += pFunction->GetStringParameterCount(nSendDir);
+    nTempRecv += pFunction->GetStringParameterCount(nRecvDir);
+    // if there are variable sized parameters for send and NOT for receive
+    // -> add var of send to var sized count
+    if ((nTempSend > 0) && (nTempRecv == 0))
+    {
+        if (m_bCountAllVarsAsMax)
+        {
+            unsigned int nMaxSend = pFunction->GetMaxSize(nSendDir, pContext) +
+                           pFunction->GetFixedSize(nSendDir, pContext);
+            (*iterSend).nCount = MAX(nMaxSend, (*iterSend).nCount);
+        }
+        else
+        {
+            vector<struct TypeCount>::iterator iter =
+                GetCountIter(TYPE_VARSIZED, DIRECTION_IN);
+            (*iter).nCount = MAX(nTempSend, (*iter).nCount);
+        }
+    }
+    // if there are variable sized parameters for recv and NOT for send
+    // -> get max of receive (dont't forget "normal" fixed) and max with fixed
+    if ((nTempSend == 0) && (nTempRecv > 0))
+    {
+        unsigned int nMaxRecv = pFunction->GetMaxSize(nRecvDir, pContext) +
+                       pFunction->GetFixedSize(nRecvDir, pContext);
+        (*iterRecv).nCount = MAX(nMaxRecv, (*iterRecv).nCount);
+    }
+    // if there are variable sized parameters for send AND recveive
+    // -> add recv max to fixed AND if send max bigger, set var sized of send
+    if ((nTempSend > 0) && (nTempRecv > 0))
+    {
+        unsigned int nMaxSend = pFunction->GetMaxSize(nSendDir, pContext) +
+            pFunction->GetFixedSize(nSendDir, pContext);
+        unsigned int nMaxRecv = pFunction->GetMaxSize(nRecvDir, pContext) +
+            pFunction->GetFixedSize(nRecvDir, pContext);
+        (*iterRecv).nCount = MAX(nMaxRecv, (*iterRecv).nCount);
+        if (nMaxSend > nMaxRecv)
+        {
+            if (m_bCountAllVarsAsMax)
+                (*iterSend).nCount = MAX(nMaxSend, (*iterSend).nCount);
+            else
+            {
+                iterSend = GetCountIter(TYPE_VARSIZED, DIRECTION_OUT);
+                (*iterSend).nCount = MAX(nTempSend, (*iterSend).nCount);
+            }
+        }
+    }
+
+    // assign member as reference to function
+    m_pFunction = pFunction;
+}
+
+/** \brief initializes own counters with the counters of alias type
+ *  \param pMsgBuffer the alias type
+ *  \param pContext the context of the init operation
+ */
+void CBEMsgBufferType::InitCounts(CBEMsgBufferType *pMsgBuffer, CBEContext *pContext)
+{
+    assert(pMsgBuffer);
+    m_vCounts[0] = pMsgBuffer->m_vCounts[0];
+    m_vCounts[1] = pMsgBuffer->m_vCounts[1];
+    // reset reference to function
+    m_pFunction = pMsgBuffer->m_pFunction;
+}
+
+/** \brief test if this message buffer is variable sized for a particular direction
+ *  \param nDirection the direction to test
+ *  \return true if it is variable sized
+ */
+bool CBEMsgBufferType::IsVariableSized(int nDirection)
+{
+    if (nDirection == 0)
+        return  IsVariableSized(DIRECTION_OUT) || IsVariableSized(DIRECTION_IN);
+    // look for member of type TYPE_VARSIZED
+    vector<struct TypeCount>::iterator iter;
+    for (iter = m_vCounts[nDirection-1].begin();
+         iter != m_vCounts[nDirection-1].end(); iter++)
+    {
+        if ((*iter).nType == TYPE_VARSIZED)
+            return ((*iter).nCount > 0);
+    }
+    return false;
+}
+
+/** \brief init counters with zeros
+ *  \param nDirection the direction to zero out
+ */
+void CBEMsgBufferType::ZeroCounts(int nDirection)
+{
+    if (nDirection == 0)
+    {
+        ZeroCounts(DIRECTION_IN);
+        ZeroCounts(DIRECTION_OUT);
+        return;
+    }
+    m_vCounts[nDirection-1].clear();
+}
+
+/** \brief returns the count of parameters of a specific type
+ *  \param nType the type of the counted parameters
+ *  \param nDirection the direction to check
+ *  \return the number of parameters (NOT the size)
+ */
+unsigned int CBEMsgBufferType::GetCount(unsigned int nType, int nDirection)
+{
+    if (nDirection == 0)
+        return MAX(GetCount(nType, DIRECTION_IN), GetCount(nType, DIRECTION_OUT));
+
+    string sName = (m_pFunction)?(m_pFunction->GetName()):string("noname");
+    // check all members of the vector with the given type
+    vector<struct TypeCount>::iterator iter;
+    unsigned int nCount = 0;
+    for (iter = m_vCounts[nDirection-1].begin();
+         iter != m_vCounts[nDirection-1].end(); iter++)
+    {
+        if ((*iter).nType == nType)
+            nCount += (*iter).nCount;
+    }
+    return nCount;
+}
+
+/** \brief writes the string used to access a member of the message buffer
+ *  \param pFile the file to write to
+ *  \param nMemberType the type of the member to access
+ *  \param nDirection the direction of the message
+ *  \param pContext the context of the write operation
+ *  \param sOffset the offset if the access to the member has to be done using a cast of another member
+ *
+ * This is used to access the members correctly.
+ * A member access is usually '&lt;msg buffer&gt;(->|.)&lt;member&gt;' if the message buffer is a
+ * constructed type. If it is simple then it is only '&lt;msg buffer&gt;'.
+ */
+void CBEMsgBufferType::WriteMemberAccess(CBEFile *pFile, int nMemberType, int nDirection, CBEContext *pContext, string sOffset)
+{
+    // print variable name
+    // because this implementation uses a simple type, we only write the name.
+    *pFile << pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+}
+
+/** \brief writes the string used to access a member of the message buffer
+ *  \param pFile the file to write to
+ *  \param pParameter the parameter to access
+ *  \param nDirection the direction of the message
+ *  \param pContext the context of the write operation
+ *  \param sOffset the offset if the access to the member has to be done using a cast of another member
+ *
+ * This is used to access the members correctly.
+ * A member access is usually '&lt;msg buffer&gt;(->|.)&lt;member&gt;' if the message buffer is a
+ * constructed type. If it is simple then it is only '&lt;msg buffer&gt;'.
+ */
+void CBEMsgBufferType::WriteMemberAccess(CBEFile *pFile,
+    CBETypedDeclarator *pParameter,
+    int nDirection,
+    CBEContext *pContext,
+    string sOffset)
+{
+    // print variable name
+    // because this implementation uses a simple type, we only write the name.
+    *pFile << pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+}
+
+/** \brief creates a new instance of this class */
+CObject * CBEMsgBufferType::Clone()
+{
+    return new CBEMsgBufferType(*this);
 }
 
 /** \brief test if we need to cast the message buffer
@@ -560,6 +653,83 @@ void CBEMsgBufferType::WriteInitializationVarSizedParameters(CBEFile *pFile, CBE
 bool CBEMsgBufferType::NeedCast(int nFEType, CBEContext *pContext)
 {
     if (nFEType == TYPE_CHAR)
-	    return false;
+        return false;
     return true;
+}
+
+/** \brief writes a dumper function for the message buffer
+ *  \param pFile the file to write to
+ *  \param sResult the result dope string (if empty the send dope is used)
+ *  \param pContext the context if the write operation
+ */
+void CBEMsgBufferType::WriteDump(CBEFile *pFile, string sResult, CBEContext *pContext)
+{
+    string sFunc = pContext->GetTraceMsgBufFunc();
+    if (sFunc.empty())
+        sFunc = string("printf");
+
+    *pFile << "for (_i=0; _i<";
+    if (pContext->IsOptionSet(PROGRAM_TRACE_MSGBUF_DWORDS))
+        *pFile << pContext->GetTraceMsgBufDwords()*4;
+    else
+        *pFile << sResult;
+    *pFile << "; _i++)\n\t{\n";
+    pFile->IncIndent();
+    *pFile << "\tif (_i%%4 == 0)\n";
+    pFile->IncIndent();
+    *pFile << "\t" << sFunc << "(\"dwords[%%d]:\", _i/4);\n";
+    pFile->DecIndent();
+    *pFile << "\t" << sFunc << "(\"%%02x \", ";
+    WriteMemberAccess(pFile, TYPE_INTEGER, DIRECTION_IN, pContext);
+    *pFile << "[_i]);\n";
+    *pFile << "\tif (_i%%4 == 3)\n";
+    pFile->IncIndent();
+    *pFile << "\t" << sFunc << "(\"\\n\");\n";
+    pFile->DecIndent();
+    pFile->DecIndent();
+    *pFile << "\t}\n";
+
+}
+
+/** \brief fills the message buffer with zeros
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ */
+void CBEMsgBufferType::WriteSetZero(CBEFile *pFile, CBEContext *pContext)
+{
+    pFile->PrintIndent("memset(");
+    CBEDeclarator *pDecl = GetAlias();
+    if ((pDecl->GetStars() == 0) && !IsVariableSized())
+        pFile->Print("&");
+    string sName = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    pFile->Print("%s, 0, sizeof", sName.c_str());
+    m_pType->WriteCast(pFile, false, pContext);
+    pFile->Print(");\n");
+}
+
+/** \brief fills the message buffer with zeros
+ *  \param pFile the file to write to
+ *  \param nType the type of the member to initialize with zero
+ *  \param nDirection the direction of the message
+ *  \param pContext the context of the write operation
+ */
+void
+CBEMsgBufferType::WriteSetZero(CBEFile *pFile,
+    unsigned int nType,
+    int nDirection,
+    CBEContext *pContext)
+{
+}
+
+/** \brief checks if this message buffer fulfills a specific property
+ *  \param nProperty the property to check for
+ *  \param nDirection the direction to check for
+ *  \param pContext the omnipresent context
+ *  \return true if the property is available
+ */
+bool CBEMsgBufferType::CheckProperty(int nProperty,
+    int nDirection,
+    CBEContext *pContext)
+{
+    return false;
 }

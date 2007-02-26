@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -13,12 +13,18 @@
  * COPYING file for details.
  */
 
+#ifndef _DOPE_DOPESTD_H_
+#define _DOPE_DOPESTD_H_
 
-/*** TYPES USED BY DOpE ***
- *
- * Within DOpE the following fixed-width types should be
- * used.
- */
+#define SHOW_INFOS  0
+#define SHOW_ERRORS 1
+
+#include <string.h>
+
+
+/**************************
+ *** TYPES USED BY DOpE ***
+ **************************/
 
 #define u8  unsigned char
 #define s8    signed char
@@ -33,34 +39,67 @@
 #endif
 
 
-/*** STANDARD FUNCTIONS USED BY DOPE ***
- *
+/***************************************
+ *** STANDARD FUNCTIONS USED BY DOPE ***
+ ***************************************/
+
+/*
  * Normally, these functions are provided by the underlying
  * libC but they can also be implemented in a dopestd.c file.
  * This way DOpE can easily be ported even to platforms with
  * no libC.
  */
 
-#if !defined(PETZE_POOLNAME)
 void  *malloc(unsigned int size);
+void  *zalloc(unsigned long size);
 void   free(void *addr);
-#endif
-
-/*** RELYING ON LIBC (SOMEDAY I WILL KICK THEM OUT) ***/
 int    snprintf(char *str, unsigned int size, const char *format, ...);
-int    strcmp(const char *s1, const char *s2);
+long   strtol(const char *nptr, char **endptr, int base);
 double strtod(const char *nptr, char **endptr);
-void  *memmove(void *dest, const void *src, unsigned int n);
-void  *memcpy(void *dest, const void *src, unsigned int n);
-void  *memset(void *s, int c, unsigned int n);
 int    printf( const char *format, ...);
+long   atol(const char *nptr);
 
-/*** IMPLEMENTED IN DOPESTD.C ***/
-extern int dope_ftoa(float v, int prec, char *dst, int max_len);
-extern int dope_streq(char *s1, char *s2, int max_len);
 
-/*** DEBUG MACROS USED IN DOPE ***
+/********************************
+ *** IMPLEMENTED IN DOPESTD.C ***
+ ********************************/
+
+/*** CONVERT A FLOAT INTO A STRING ***
  *
+ * This function performs zero-termination of the string.
+ *
+ * \param v       float value to convert
+ * \param prec    number of digits after comma
+ * \param dst     destination buffer
+ * \param max_len destination buffer size
+ */
+extern int dope_ftoa(float v, int prec, char *dst, int max_len);
+
+
+/*** CHECK IF TWO STRINGS ARE EQUAL ***
+ *
+ * This function compares two strings s1 and s2. The length of string s1 can
+ * be defined via max_s1.  If max_s1 characters are identical and strlen(s2)
+ * equals max_s1, the two strings are considered to be equal. This way, s2
+ * can be compared against a substring without null-termination.
+ *
+ * \param s1      string (length is bounded by max_s1)
+ * \param s2      null-terminated second string
+ * \param max_s1  max length of string s1
+ * \return        1 if the two strings are equal.
+ */
+extern int dope_streq(const char *s1, const char *s2, int max_len);
+
+
+/*** DUPLICATE STRING ***/
+extern u8 *dope_strdup(u8 *s);
+
+
+/*********************************
+ *** DEBUG MACROS USED IN DOPE ***
+ *********************************/
+
+/*
  * Within the code of DOpE the following macros for filtering
  * debug output are used.
  *
@@ -90,14 +129,29 @@ extern int dope_streq(char *s1, char *s2, int max_len);
 #endif
 
 
-/*** DOPE SERVICE STRUCTURE ***
- *
+#ifndef MAX
+#define MAX(a,b) ((a)>(b)?(a):(b))
+#endif
+
+#ifndef MIN
+#define MIN(a,b) ((a)<(b)?(a):(b))
+#endif
+
+/******************************
+ *** DOPE SERVICE STRUCTURE ***
+ ******************************/
+
+/*
  * DOpE provides the following service structure to all
  * its components. Via this structure components can
  * access functionality of other components or make an
  * interface available to other components.
  */
+
 struct dope_services {
 	void *(*get_module)      (char *name);
 	long  (*register_module) (char *name,void *services);
 };
+
+#endif /* _DOPE_DOPESTD_H_ */
+

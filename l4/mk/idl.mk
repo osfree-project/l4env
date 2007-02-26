@@ -84,58 +84,40 @@ all:: $(IDL_FILES)
 # the dependencies for the generated files
 DEPS		+= $(IDL_DEP)
 
-ifneq (,$(filter-out corba dice flick, $(IDL_TYPE)))
-$(error IDL_TYPE is neither <dice> nor <corba> nor <flick>)
+ifneq (,$(filter-out corba dice, $(IDL_TYPE)))
+$(error IDL_TYPE is neither <dice> nor <corba>)
 endif
 
 # the IDL file is found one directory up
 vpath %.idl ..
 
-ifeq ($(IDL_TYPE),flick)
-# Flick mode
-IDL_FLAGS+= -c "$(CPPFLAGS)"
-FLICK_FE  = $(FLICK_BIN_DIR)/flick-fe-newcorba
-FLICK_PFE = $(FLICK_BIN_DIR)/flick-c-pfe-l4
-FLICK_PBE = $(FLICK_BIN_DIR)/flick-c-pbe-l4
-
-STUB_INCLUDE_PREFIX = $(if $(IDL_EXPORT_STUB),\
-	$(addsuffix /,$(ARCH))$(addsuffix /,$(L4API))l4/$(PKGNAME)/)
-SKELETON_INCLUDE_PREFIX = $(if $(IDL_EXPORT_SKELETON),\
-	$(addsuffix /,$(ARCH))$(addsuffix /,$(L4API))l4/$(PKGNAME)/)
-
-# the sys-file is found one directory up in flick-mode
-vpath %-sys.h ..
-
-$(IDL:.idl=.aoi):%.aoi: %.idl .general.d %-sys.h
-	@$(GEN_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(FLICK_CPP_NAME),,.$(<F).d) $(FLICK_FE) -o $@ $(IDL_FLAGS) $<
-	$(VERBOSE)$(CP) $(<:.idl=-sys.h) .
-
-%-client.prc: %.aoi
-	@$(GEN_MESSAGE)
-	$(VERBOSE)$(FLICK_PFE) --interface_include_file_fmt $(STUB_INCLUDE_PREFIX)$(<:.aoi=-sys.h) -o $@ $<
-
-%-server.prc: %.aoi
-	@$(GEN_MESSAGE)
-	$(VERBOSE)$(FLICK_PFE) -s --interface_include_file_fmt $(SKELETON_INCLUDE_PREFIX)$(<:.aoi=-sys.h) -o $@ $<
-
-%.c %.h: %.prc
-	@$(GEN_MESSAGE)
-	$(VERBOSE)$(FLICK_PBE) -i -n -s $<
-
-else
-
 # DICE mode
-IDL_FLAGS	+= $(addprefix -P, $(DEFINES)) $(filter -I%,$(CPPFLAGS))
+IDL_FLAGS	+= $(addprefix -P,$(CPPFLAGS))
 
 # XXX just commented this out as long as dice does not support native x0
 # say dice if we want to build sources for L4X0 API.
 ifeq ($(L4API),l4x0)
+ifeq ($(ARCH),arm)
+IDL_FLAGS	+= -Bix0
+else
 IDL_FLAGS	+= -Bix0adapt
+endif
+endif
+
+ifeq ($(L4API),l4v4)
+IDL_FLAGS	+= -Biv4
+endif
+
+ifeq ($(L4API),l4x2)
+IDL_FLAGS	+= -Bix2
 endif
 
 ifeq ($(L4API),linux)
 IDL_FLAGS	+= -Bisock
+endif
+
+ifeq ($(ARCH),arm)
+IDL_FLAGS	+= -Bparm
 endif
 
 ifeq ($(IDL_TYPE),corba)
@@ -144,16 +126,17 @@ endif
 
 %-server.c %-server.h %-client.c %-client.h %-sys.h: %.idl .general.d
 	@$(GEN_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,dice,"$(call IDL_FILES_EXPAND,$<)",.$(<F).d) CC=$(CC_$(ARCH)) $(DICE) $(IDL_FLAGS) $<
-	$(DEPEND_VERBOSE)$(ECHO) "$(call IDL_FILES_EXPAND,$<): $(DICE)" >>.$(<F).d
-	$(DEPEND_VERBOSE)$(ECHO) "$(DICE):" >>.$(<F).d
+	$(VERBOSE)$(call MAKEDEP,$(DICE_CPP_NAME),"$(call IDL_FILES_EXPAND,$<)",.$(<F).d) CC=$(CC_$(ARCH)) $(DICE) $(IDL_FLAGS) $<
+	$(DEPEND_VERBOSE)$(ECHO) "$(call IDL_FILES_EXPAND,$<): $(DICE) $<" >>.$(<F).d
+	$(DEPEND_VERBOSE)$(ECHO) "$(DICE) $<:" >>.$(<F).d
 
-
-endif
 
 clean cleanall::
 	$(VERBOSE)$(RM) $(wildcard $(addprefix $(INSTALLDIR_LOCAL)/, $(IDL_FILES)))
 	$(VERBOSE)$(RM) $(wildcard $(IDL_FILES) *.aoi *.prc)
+
+# include install.inc to define install rules
+include $(L4DIR)/mk/install.inc
 
 else
 #####################################################
@@ -165,16 +148,18 @@ else
 # we install the IDL-files specified in IDL_EXPORT_IDL
 INSTALL_TARGET = $(filter $(IDL_EXPORT_IDL), $(IDL))
 
+# include install.inc to define install rules
+include $(L4DIR)/mk/install.inc
+
+# install idl-files before going down to subdirs
+$(foreach arch,$(TARGET_SYSTEMS), OBJ-$(arch)): $(addprefix $(INSTALLDIR_LOCAL)/,$(INSTALL_TARGET))
+
 endif	# architecture is defined, really build
 #####################################################
 #
 # Common part
 #
 #####################################################
-
-# include install.inc to define install rules
-include $(L4DIR)/mk/install.inc
-
 
 -include $(DEPSVAR)
 .PHONY: all clean cleanall config help install oldconfig reloc txtconfig

@@ -1,0 +1,17 @@
+
+                            Backdrop for DOpE
+
+                               Norman Feske
+
+This is an application that creates a background image for DOpE. The image used
+is linked against the executable and must be named background.png. The image is
+scaled to the screen size. Thus, it is recommended to use an image with the
+same resolution as the used with DOpE. The image will be dithered and may have
+artifacts when scaled. As indicated by the file extension, the image format
+should be png.
+
+This example is not build by default because it has external dependencies to
+libpng, libz and libpng_wrap.
+
+To use your own image, create an Makeconf.local and define a variable PICTURE
+to point to your PNG file.

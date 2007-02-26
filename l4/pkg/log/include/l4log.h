@@ -15,11 +15,13 @@
 
 #if defined L4API_l4v2 || defined L4API_l4x0
 #include <l4/log/server.h>
+#include <l4/sys/ktrace.h>
 #endif
+#include <l4/sys/compiler.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+EXTERN_C_BEGIN
+
+#include <l4/log/log_printf.h>
 
 /*!\brief Symbol defining the logtag.
  *
@@ -36,6 +38,7 @@ extern "C" {
  */
 extern char LOG_tag[9];
 
+#if 0
 /*!\brief Initialize the lib.
  *
  * \param tag	the logtag
@@ -46,6 +49,12 @@ extern char LOG_tag[9];
  * \see  LOG_tag.
  */
 extern void LOG_init(const char *tag);
+#else
+#define LOG_init(arg) LOG_init_is_deprecated=0
+/* LOG_setup_tag is called by setup code, don't call this from your program. */
+extern void LOG_setup_tag(void);
+#endif
+
 
 /*!\brief variable containing the text output function
  *
@@ -55,6 +64,13 @@ extern void LOG_init(const char *tag);
  * be used.
  */
 extern void (*LOG_outstring)(const char*log_message);
+
+/*!\brief Log-output function printing to the fiasco tracebuffer
+ *
+ * This specific version of a text output function uses the fiasco
+ * tracebuffer as output channel.
+ */
+extern void LOG_outstring_fiasco_tbuf(const char*log_message);
 
 /*!\brief flush all buffered data.
  *
@@ -72,6 +88,9 @@ extern void LOG_flush(void);
 #endif
 
 #if 1
+/* format_check: just for the compiler to check the format & args */
+extern void LOG_format_check(const char*format,...)
+  __attribute__((format(printf,1,2)));
 
 extern void LOG_log(const char*function, const char*format,...);
 extern void LOG_logl(const char*file, int line, const char*function,
@@ -83,37 +102,59 @@ extern void LOG_logL(const char*file, int line, const char*function,
 #define LINE_PRESCAN_SUBST(ln)		STRINGIFY_HELPER(ln)
 #define __LINE_STR__			LINE_PRESCAN_SUBST(__LINE__)
 
-#define LOG(a...)	\
-  LOG_log(__FUNCTION__, a)
+#define LOG(a...) do {				\
+  if(0)LOG_format_check(a);			\
+  LOG_log(__FUNCTION__, a);			\
+} while(0)
 
-#define LOGl(a...)	\
-  LOG_logl(__FILE__,__LINE__,__FUNCTION__, a)
+#define LOGl(a...) do {				\
+  if(0)LOG_format_check(a);			\
+  LOG_logl(__FILE__,__LINE__,__FUNCTION__, a);	\
+} while(0)
 
-#define LOGL(a...)	\
-  LOG_logL(__FILE__,__LINE__,__FUNCTION__, a)
+#define LOGL(a...) do {				\
+  if(0)LOG_format_check(a);			\
+  LOG_logL(__FILE__,__LINE__,__FUNCTION__, a);	\
+} while(0)
 
-#define LOG_Enter(a...)	\
-  LOG_log(__FUNCTION__, "called "a)
+#define LOG_Enter(a...) do {			\
+  if(0)LOG_format_check("called "a);		\
+  LOG_log(__FUNCTION__, "called "a);		\
+} while(0)
+
+#define LOGk(a...) do {				\
+  if(0)LOG_format_check(a);			\
+  LOG_logk(a);					\
+} while(0)
 
 #define LOGd_Enter(doit, msg...) if(doit) LOG_Enter(msg)
 #define LOGd(doit, msg...) if(doit) LOG(msg)
 #define LOGdl(doit,msg...) if(doit) LOGl(msg)
 #define LOGdL(doit,msg...) if(doit) LOGL(msg)
+#define LOGdk(doit,msg...) if(doit) LOGk(msg)
 #define LOG_Error(msg...) LOGL("Error: " msg)
 
 #else
 #define LOG(a...)
 #define LOGl(a...)
 #define LOGL(a...)
+#define LOGk(a...)
 #define LOG_Enter(a...)
 #define LOGd_Enter(doit, msg...)
 #define LOGd(doit, msg...)
 #define LOGdl(doit,msg...)
 #define LOGdL(doit,msg...)
+#define LOGdk(doit,msg...)
 #define LOG_Error(msg...)
 #endif
 
-#ifdef __cplusplus
-}
-#endif
+#if defined L4API_l4v2 || defined L4API_l4x0
+#define LOG_logk(format...) do{				\
+    char buf[50];					\
+    LOG_snprintf(buf,sizeof(buf),format);		\
+    fiasco_tbuf_log(buf);				\
+}while(0)
+#endif /* defined L4API_l4v2 || defined L4API_l4x0 */
+
+EXTERN_C_END
 #endif

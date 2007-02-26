@@ -32,9 +32,16 @@
  *****************************************************************************/
 
 /* generate L4 thread id printf string */
-#ifndef IdStr
-#  define IdFmt       "%x.%x"
-#  define IdStr(tid)  (tid).id.task,(tid).id.lthread
+#ifndef l4util_idstr
+#  define l4util_idfmt         "%X.%02X"
+#  define l4util_idfmt_adjust  "%3X.%02X"
+#  define l4util_idstr(tid)    (tid).id.task,(tid).id.lthread
+#endif
+
+/* generate printf string of the task number of an L4 thread id */
+#ifndef l4util_idtskstr
+#  define l4util_idtskfmt      "#%X"
+#  define l4util_idtskstr(tid) (tid).id.task
 #endif
 
 #endif /* !_L4UTIL_L4_MACROS_H */

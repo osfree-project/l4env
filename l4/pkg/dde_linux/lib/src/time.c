@@ -33,6 +33,7 @@
 #include <l4/thread/thread.h>
 #include <l4/lock/lock.h>
 #include <l4/util/util.h>
+#include <l4/env/errno.h>
 
 #include <l4/dde_linux/dde.h>
 
@@ -85,13 +86,14 @@ static inline void __restart_timer_thread(void)
     {
       err = l4_ipc_send(timer_l4id,
                         L4_IPC_SHORT_MSG, 0, 0,
-                        L4_IPC_TIMEOUT(0,1,0,0,0,0), &result);
+                        L4_IPC_SEND_TIMEOUT_0, &result);
 
       if (err == L4_IPC_SETIMEOUT)
         break;
 
       if (err)
-        ERROR("IPC error 0x%02x in __restart()", L4_IPC_ERROR(result));
+        LOGdL(DEBUG_ERRORS, "Error: IPC error 0x%02x in __restart()", 
+              L4_IPC_ERROR(result));
     }
   while (err);
 }
@@ -115,26 +117,22 @@ static inline void __internal_add_timer(struct timer_list *timer)
   list_add_tail(&timer->list, tmp);
 
 #if DEBUG_TIMER
-  DMSG("ADDED timer (current list follows)\n");
+  LOG("ADDED timer (current list follows)");
   list_for_each(tmp, &timer_list)
   {
     struct timer_list *tp = list_entry(tmp, struct timer_list, list);
-    DMSG("  [%p] expires %lu, data = %lu\n", tmp, tp->expires, tp->data);
+    LOG("  [%p] expires %lu, data = %lu", tmp, tp->expires, tp->data);
   }
 #endif
 
   /* do we need to restart the timer thread? */
   if (timer->list.prev == &timer_list)
     {
-#if DEBUG_TIMER
-      DMSG("  ... RESTART timer thread\n");
-#endif
+      LOGd(DEBUG_TIMER, "  ... RESTART timer thread");
       __restart_timer_thread();
     }
 
-#if DEBUG_TIMER
-  DMSG("\n");
-#endif
+  LOGd(DEBUG_TIMER, " ");
 }
 
 /** Removing One-Shot Timer From List Helper */
@@ -150,21 +148,21 @@ static inline int __internal_detach_timer(struct timer_list *timer)
   if (!timer_pending(timer))
     {
 #if DEBUG_TIMER
-//      DMSG("Oops, attempt to detach not pending timer.\n");
+//      LOG("Oops, attempt to detach not pending timer.\n");
 #endif
       return 0;
     }
   list_del(&timer->list);
 
 #if DEBUG_TIMER
-  DMSG("DETACHED timer (current list follows)\n");
+  LOG("DETACHED timer (current list follows)");
   list_for_each(tmp, &timer_list)
   {
     struct timer_list *tp = list_entry(tmp, struct timer_list, list);
-    DMSG("  [%p] expires %lu, data = %lu\n",
+    LOG("  [%p] expires %lu, data = %lu",
            tmp, tp->expires, tp->data);
   }
-  DMSG("\n");
+  LOG("");
 #endif
   return 1;
 }
@@ -184,7 +182,7 @@ void add_timer(struct timer_list *timer)
   return;
 bug:
   l4lock_unlock(&timerlist_lock);
-  Error("kernel timer added twice.");
+  LOG_Error("kernel timer added twice.");
 }
 
 /** Modify One-Shot Timer
@@ -255,7 +253,7 @@ int del_timer_sync(struct timer_list *timer)
 #ifdef CONFIG_SMP
 void sync_timers(void)
 {
-#warning not implemented
+#warning sync_timers() is not implemented
   LOG_Error("Not implemented");
 }
 #endif /* !CONFIG_SMP */
@@ -293,7 +291,7 @@ static inline int __timer_sleep(l4_timeout_t to)
 
       if (err)
         {
-          Error("in IPC (0x%02x)", L4_IPC_ERROR(result));
+          LOG_Error("in IPC (0x%02x)", L4_IPC_ERROR(result));
           any = L4_INVALID_ID;
         }
     }
@@ -328,7 +326,8 @@ static void dde_timer_thread(void)
   int to_us;
 
   timer_tid = l4thread_myself();
-  l4dde_process_add_worker();
+  if ((err = l4dde_process_add_worker())!=0)
+     Panic("l4dde_process_add_worker() failed: %s", l4env_strerror(-err));
 
   ++local_bh_count(smp_processor_id());
 
@@ -336,8 +335,8 @@ static void dde_timer_thread(void)
   if (l4thread_started(NULL))
     goto ret;
 
-  DMSG("dde_timer_thread "IdFmt" running.\n",
-       IdStr(l4thread_l4_id(l4thread_myself())));
+  LOGd(DEBUG_MSG, "dde_timer_thread "l4util_idfmt" running.",
+       l4util_idstr(l4thread_l4_id(l4thread_myself())));
 
   /* acquire lock */
   l4lock_lock(&timerlist_lock);
@@ -345,9 +344,7 @@ static void dde_timer_thread(void)
   /* timer loop */
   while (1)
     {
-#if DEBUG_TIMER
-      DMSG("begin of timer_loop\n");
-#endif
+      LOGd(DEBUG_TIMER, "begin of timer_loop");
       curr = head->next;
       curr_jiffies = jiffies;
 
@@ -364,24 +361,22 @@ static void dde_timer_thread(void)
       tp = list_entry(curr, struct timer_list, list);
       diff = tp->expires - curr_jiffies;
 
-#if DEBUG_TIMER
-      DMSG("timer_loop: jiffies = %lu, tp->expires = %lu, diff = %ld\n",
+      LOGd(DEBUG_TIMER, 
+           "timer_loop: jiffies = %lu, tp->expires = %lu, diff = %ld",
            curr_jiffies, tp->expires, diff);
-#endif
-
+      
       /* wait for next timer? */
       if (diff > 0)
         {
           to_us = diff * (1000000 / HZ);
-          if ((err = micros2l4to(to_us, &to_e, &to_m)))
+          if ((err = l4util_micros2l4to(to_us, &to_m, &to_e)))
             {
               Panic("error on timeout calculation (us = %d)", to_us);
               continue;
             }
-#if DEBUG_TIMER
-          DMSG("timer_loop: to_us = %d, to_e = %d, to_m = %d\n",
+          LOGd(DEBUG_TIMER, 
+               "timer_loop: to_us = %d, to_e = %d, to_m = %d",
                to_us, to_e, to_m);
-#endif
 
           to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
 
@@ -392,9 +387,8 @@ static void dde_timer_thread(void)
 
       /* detach from timer list */
       __internal_detach_timer(tp);
-#if DEBUG_TIMER
-      DMSG("timer_loop: run timer %p\n", tp);
-#endif
+      LOGd(DEBUG_TIMER, "timer_loop: run timer %p", tp);
+
       /* release lock */
       l4lock_unlock(&timerlist_lock);
 
@@ -404,10 +398,8 @@ static void dde_timer_thread(void)
       /* reaquire lock */
       l4lock_lock(&timerlist_lock);
 
-#if DEBUG_TIMER
-      DMSG("timer_loop: jiffies = %lu, next = %p (head = %p)\n",
+      LOGd(DEBUG_TIMER, "timer_loop: jiffies = %lu, next = %p (head = %p)",
            curr_jiffies, head->next, head);
-#endif
     }
 
  ret:
@@ -428,8 +420,14 @@ int l4dde_time_init()
   int err;
 
   /* create timer thread */
-  err = l4thread_create((l4thread_fn_t) dde_timer_thread,
-                        0, L4THREAD_CREATE_SYNC);
+  err = l4thread_create_long(L4THREAD_INVALID_ID,
+                             (l4thread_fn_t)dde_timer_thread,
+                             ".timer",
+                             L4THREAD_INVALID_SP,
+                             L4THREAD_DEFAULT_SIZE,
+                             L4THREAD_DEFAULT_PRIO,
+                             (void *) 0,
+                             L4THREAD_CREATE_SYNC);
 
   if (err < 0)
     return err;

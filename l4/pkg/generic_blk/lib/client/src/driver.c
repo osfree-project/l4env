@@ -79,6 +79,9 @@ blkclient_get_driver(l4blk_driver_t driver)
  * 
  * \param  name          Driver name
  * \retval driver        Driver handle
+ * \param  cb            Notification thread setup callback function, 
+ *                       if set it will be called by created notification 
+ *                       thread before it enters its work loop
  *	
  * \return 0 on success (\a driver contains a valid handle), error code 
  *         otherwise:
@@ -94,8 +97,8 @@ blkclient_get_driver(l4blk_driver_t driver)
  */
 /*****************************************************************************/ 
 int
-l4blk_open_driver(const char * name, 
-		  l4blk_driver_t * driver)
+l4blk_open_driver(const char * name, l4blk_driver_t * driver, 
+                  l4blk_setup_notify_callback_fn_t cb)
 {
   int d,ret;
   blkclient_driver_t * drv;
@@ -139,10 +142,12 @@ l4blk_open_driver(const char * name,
 	return -L4_EIPC;
     }
 
-  LOGdL(DEBUG_DRIVER_OPEN, "\n  opened driver %d, cmd "IdFmt", notify "IdFmt,
-        drv->handle, IdStr(drv->cmd_id), IdStr(drv->notify_id));
+  LOGdL(DEBUG_DRIVER_OPEN, "opened driver %d, cmd "l4util_idfmt \
+        ", notify "l4util_idfmt, drv->handle, l4util_idstr(drv->cmd_id), 
+        l4util_idstr(drv->notify_id));
 
   /* create notification thread */
+  drv->cb = cb;
   ret = blkclient_start_notification_thread(drv);
   if (ret)
     {
@@ -151,8 +156,8 @@ l4blk_open_driver(const char * name,
       return -L4_ENOTHREAD;
     }
 
-  LOGdL(DEBUG_DRIVER_OPEN, "notification wait thread "IdFmt,
-        IdStr(l4thread_l4_id(drv->notify_thread)));
+  LOGdL(DEBUG_DRIVER_OPEN, "notification wait thread "l4util_idfmt,
+        l4util_idstr(l4thread_l4_id(drv->notify_thread)));
 
   *driver = d;
 
@@ -179,10 +184,25 @@ l4blk_close_driver(l4blk_driver_t driver)
   CORBA_Environment _env = dice_default_environment;  
   
   /* check driver handle */
-  if ((driver < 0) || (driver >= BLKCLIENT_MAX_DRIVERS) ||
-      (drivers[driver].notify_thread == -1))
-    return -L4_EINVAL;
+  if ((driver < 0) || (driver >= BLKCLIENT_MAX_DRIVERS))
+    {
+      LOG_Error("invalid driver handle %d", driver);
+      return -L4_EINVAL;
+
+    }
+
+  if (drivers[driver].notify_thread == -1)
+    {
+      LOG_Error("unused driver handle %d", driver);
+      return -L4_EINVAL;
+    }
+
   drv = &drivers[driver];
+
+  LOGdL(DEBUG_DRIVER_CLOSE, 
+        "closing driver %d, notification thread %d ("l4util_idfmt")", 
+        driver, drv->notify_thread, 
+        l4util_idstr(l4thread_l4_id(drv->notify_thread)));
 
   /* shutdown notification thread */
   blkclient_shutdown_notification_thread(drv);

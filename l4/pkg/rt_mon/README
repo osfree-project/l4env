@@ -1,0 +1,41 @@
+rt_mon --- runtime monitoring
+
+This package contains libraries providing histograms and event lists,
+corresponding support, output, transformation, and sharing functions
+to enable asynchronous runtime monitoring of any kind of events.
+
+Furthermore, there is a central coordination server, where all to be
+shared dataspaces are registered.  Monitoring servers request data at
+the coordinator.
+
+There are currently two coordination server implemented: rt_mon_coord
+(see server/coord) and rt_mon_l4vfs_coord (see server/l4vfs_coord).
+
+There are currently two monitoring clients implemented: rt_mon_dope
+(see examples/dope_mon), which works together with rt_mon_coord, and
+rt_l4vfs_dope_mon (see examples/l4vfs_dope_mon), which works together
+with l4vfs_coord.
+
+There are currently two example applications generating runtime data:
+rt_mon_hist_demo and rt_mon_list_demo (see examples/[lh]ist_demo), and
+one benchmark application dope_bench, which triggers many requests in
+a rt_mon-enabled dope server.
+
+
+Application areas contain: performance monitoring in resource servers
+such as DOpE, scsi, network, ..., and application resource monitoring
+such as video decoding times in verner, ...
+
+
+FAQ
+===
+
+Q1: How should I choose the name of my sensor?
+
+A1: You should use a hierarchical form like
+    "<component>/<subcomponent>/<local_sensor>" or something similar.
+    This has the advantages of avoiding collisions between sensor
+    names in independent applications (remember that the sensors name
+    space is global as there is only one coordinator) and that
+    rt_mon_l4vfs_coord can provide sensors in a hierarchical namespace
+    (therefor the '/' is necessary as hierarchy delimiter).

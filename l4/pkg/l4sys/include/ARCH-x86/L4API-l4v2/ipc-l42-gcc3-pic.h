@@ -17,21 +17,21 @@ l4_ipc_call(l4_threadid_t dest,
             l4_timeout_t timeout, 
             l4_msgdope_t *result)
 {
-  unsigned dummy1, dummy2;
+  unsigned dummy1, dummy2, ebx;
 
   __asm__ __volatile__
-    ("pushl  %%ebx		\n\t"
+    ("movl   %%ebx,%11		\n\t"
+     "movl   %7,%%ebx		\n\t"
      "pushl  %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-     "movl   %7,%%ebx	\n\t"
-     "movl	  %10,%%ebp	\n\t"
-     "movl   4(%%esi),%%edi\n\t"
-     "movl    (%%esi),%%esi\n\t"
+     "movl   %10,%%ebp		\n\t"
+     "movl   4(%%esi),%%edi	\n\t"
+     "movl    (%%esi),%%esi	\n\t"
      IPC_SYSENTER
-     "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
+     "popl   %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
-     "movl  %%ebx,%%ecx	\n\t"
-     "popl  %%ebx		\n\t"
+     "movl   %%ebx,%%ecx	\n\t"
+     "movl   %11,%%ebx		\n\t"
      : 
      "=a" (*result),
      "=d" (*rcv_dword0),
@@ -44,7 +44,8 @@ l4_ipc_call(l4_threadid_t dest,
      "g" (snd_dword1),
      "c" (timeout),
      "S" (&dest),
-     "g" (((int)rcv_msg) & (~L4_IPC_OPEN_IPC))
+     "ir"(((int)rcv_msg) & (~L4_IPC_OPEN_IPC)),
+     "m" (ebx)
      :
      "memory"
      );
@@ -63,20 +64,22 @@ l4_ipc_reply_and_wait(l4_threadid_t dest,
                       l4_timeout_t timeout, 
                       l4_msgdope_t *result)
 {
+  l4_umword_t ebx;
+
   __asm__ __volatile__
-    ("pushl  %%ebx		\n\t"
+    ("movl   %%ebx,%11		\n\t"
+     "movl   %7,%%ebx		\n\t"
      "pushl  %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-     "movl   %7,%%ebx	\n\t"
-     "movl	  %10,%%ebp	\n\t" 	/* rmsg desc -> ebp */
-     "movl   4(%%esi),%%edi\n\t"
-     "movl    (%%esi),%%esi\n\t"
+     "movl  %10,%%ebp		\n\t" 	/* rmsg desc -> ebp */
+     "movl   4(%%esi),%%edi	\n\t"
+     "movl    (%%esi),%%esi	\n\t"
      IPC_SYSENTER
 
-     "popl	  %%ebp		\n\t"	/* restore ebp, no memory references 
+     "popl   %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
      "movl   %%ebx,%%ecx	\n\t"
-     "popl   %%ebx		\n\t"
+     "movl   %11,%%ebx		\n\t"
      : 
      "=a" (*result),
      "=d" (*rcv_dword0),
@@ -89,7 +92,8 @@ l4_ipc_reply_and_wait(l4_threadid_t dest,
      "g" (snd_dword1),
      "c" (timeout),
      "S" (&dest),
-     "g" (((int)rcv_msg) | L4_IPC_OPEN_IPC)
+     "ir"(((int)rcv_msg) | L4_IPC_OPEN_IPC),
+     "m" (ebx)
      :
      "memory"
      );
@@ -105,18 +109,18 @@ l4_ipc_send(l4_threadid_t dest,
             l4_timeout_t timeout, 
             l4_msgdope_t *result)
 {
-  unsigned dummy1, dummy2, dummy3, dummy4;
+  unsigned dummy1, dummy2, dummy3, dummy4, ebx;
 
   __asm__ __volatile__
-    ("pushl %%ebx		\n\t"
+    ("movl  %%ebx,%11		\n\t"
+     "movl  %7,%%ebx		\n\t"
      "pushl %%ebp		\n\t"	/* save ebp, no memory references
 					   ("m") after this point */
-     "movl  %7,%%ebx	\n\t"
-     "movl	 $-1,%%ebp	\n\t"	/* L4_IPC_NIL_DESCRIPTOR */
+     "movl  $-1,%%ebp		\n\t"	/* L4_IPC_NIL_DESCRIPTOR */
      IPC_SYSENTER
-     "popl	 %%ebp		\n\t"	/* restore ebp, no memory references
+     "popl  %%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
-     "popl  %%ebx		\n\t"
+     "movl  %11,%%ebx		\n\t"
      :
      "=a" (*result),
      "=d" (dummy1),
@@ -129,10 +133,13 @@ l4_ipc_send(l4_threadid_t dest,
      "g" (snd_dword1),
      "c" (timeout),
      "S" (dest.lh.low),
-     "D" (dest.lh.high)
+     "D" (dest.lh.high),
+     "m" (ebx)
+     :
+     "memory" /* necessary to ensure that writes to snd_msg aren't ignored */
      );
   return L4_IPC_ERROR(*result);
-};
+}
 
 
 
@@ -148,11 +155,11 @@ l4_ipc_wait(l4_threadid_t *src,
     ("pushl %%ebx		\n\t"
      "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-     "movl  %7, %%ebp	\n\t"
-     "xorl  %%edi, %%edi	\n\t"	/* no absolute timeout !! */
+     "movl  %%edx,%%ebp		\n\t"
+     "xorl  %%edi,%%edi		\n\t"	/* no absolute timeout !! */
      IPC_SYSENTER
-     "movl  %%ebx,%%ecx	\n\t"
-     "popl	 %%ebp		\n\t"	/* restore ebp, no memory
+     "movl  %%ebx,%%ecx		\n\t"
+     "popl  %%ebp		\n\t"	/* restore ebp, no memory
 					   references ("m") before this point */
      "popl  %%ebx		\n\t"
      : 
@@ -164,7 +171,7 @@ l4_ipc_wait(l4_threadid_t *src,
      :
      "a" (L4_IPC_NIL_DESCRIPTOR),
      "c" (timeout),
-     "g" (((int)rcv_msg) | L4_IPC_OPEN_IPC)
+     "d" (((int)rcv_msg) | L4_IPC_OPEN_IPC)
      :
      "memory"
      );
@@ -183,10 +190,10 @@ l4_ipc_receive(l4_threadid_t src,
     ("pushl  %%ebx		\n\t"
      "pushl  %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
-     "movl	  %7,%%ebp	\n\t" 
+     "movl   %%edx,%%ebp	\n\t"
      IPC_SYSENTER
      "movl   %%ebx,%%ecx	\n\t"
-     "popl	  %%ebp		\n\t"	/* restore ebp, no memory references 
+     "popl   %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
      "popl   %%ebx		\n\t"
      : 
@@ -196,9 +203,9 @@ l4_ipc_receive(l4_threadid_t src,
      :
      "a" (L4_IPC_NIL_DESCRIPTOR),
      "c" (timeout),
+     "d" (((int)rcv_msg) & (~L4_IPC_OPEN_IPC)),
      "S" (src.lh.low),
-     "D" (src.lh.high),
-     "g" (((int)rcv_msg) & (~L4_IPC_OPEN_IPC))
+     "D" (src.lh.high)
      :
      "memory"
      );

@@ -1,0 +1,118 @@
+\chapter{CORBA Environment}
+\label{app:corba_env}
+
+\section{L4 version 2 and experimental version X.0}
+
+\subsubsection{Client side environment}
+\begin{verbatim}
+typedef struct CORBA_Environment
+{
+  CORBA_exception_type major:4;
+  CORBA_exception_type repos_id:28;
+  union
+  {
+    void *param;
+    l4_uint32_t ipc_error;
+  } _p;
+
+  l4_timeout_t timeout;
+  l4_fpage_t rcv_fpage;
+  dice_malloc_func malloc;
+  dice_free_func free;
+} CORBA_Environment;
+\end{verbatim}
+
+\subsubsection{Server side environment}
+\begin{verbatim}
+typedef struct CORBA_Server_Environment
+{
+  CORBA_exception_type major:4;
+  CORBA_exception_type repos_id:28;
+  union
+  {
+    void *param;
+    l4_uint32_t ipc_error;
+  } _p;
+
+  l4_timeout_t timeout;
+  l4_fpage_t rcv_fpage;
+  dice_malloc_func malloc;
+  dice_free_func free;
+  
+  // server specific
+  void* user_data;
+  void* ptrs[DICE_PTRS_MAX];
+  unsigned short ptrs_cur;
+} CORBA_Server_Environment;
+\end{verbatim}
+
+\section{L4 experimental version X.2}
+
+\subsubsection{Client side environment}
+\begin{verbatim}
+typedef struct CORBA_Environment
+{
+  CORBA_exception_type major:4;
+  CORBA_exception_type repos_id:28;
+  union          
+  {
+    void *param;
+    L4_Word32_t ipc_error;
+  } _p;
+  
+  L4_Time_t timeout;
+  L4_Fpage_t rcv_fpage;
+  dice_malloc_func malloc;
+  dice_free_func free;
+} CORBA_Environment;
+\end{verbatim}
+
+\subsubsection{Server side environment}
+\begin{verbatim}
+typedef struct CORBA_Server_Environment
+{
+  CORBA_exception_type major:4;
+  CORBA_exception_type repos_id:28;
+  union
+  {
+    void *param;
+    L4_Word32_t ipc_error;
+  } _p;
+  
+  L4_Time_t timeout;
+  L4_Fpage_t rcv_fpage;
+  dice_malloc_func malloc;
+  dice_free_func free;
+  
+  // server specific
+  void* user_data;
+  void* ptrs[DICE_PTRS_MAX];
+  unsigned short ptrs_cur;
+} CORBA_Server_Environment;
+\end{verbatim}
+
+\section{Linux sockets}
+
+\subsubsection{Client side environment}
+\begin{verbatim}
+typedef struct CORBA_Environment
+{
+  CORBA_exception_type major:4;
+  CORBA_exception_type repos_id:28;
+  void *param;
+
+  in_port_t srv_port;
+  int cur_socket;
+  void* user_data;
+  dice_malloc_func malloc;
+  dice_free_func free;
+  void* ptrs[DICE_PTRS_MAX];
+  unsigned short ptrs_cur;
+} CORBA_Environment;		    
+\end{verbatim}
+
+\subsubsection{Server side environment}
+\begin{verbatim}
+#define CORBA_Server_Environment CORBA_Environment
+\end{verbatim}
+

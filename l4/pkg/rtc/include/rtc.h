@@ -22,6 +22,13 @@
 extern int l4rtc_get_seconds_since_1970(l4_uint32_t *seconds);
 
 /**
+ * Deliver the offset between real time and system's uptime in seconds.
+ * Some applications want to compute their time in other ways as done
+ * in l4rtc_get_seconds_since_1970(). */
+int
+l4rtc_get_offset_to_realtime(l4_uint32_t *offset);
+
+/**
  * Deliver the scaler 2^32 / (tsc clocks per usec). This value is needed by
  * Linux. */
 extern int l4rtc_get_linux_tsc_scaler(l4_uint32_t *scaler);

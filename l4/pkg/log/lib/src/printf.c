@@ -7,7 +7,7 @@
  *
  * This file implements: printf, fprintf, vprintf, vfprintf, putchar,
  *			 puts, fputs
- * 
+ *
  */
 /* (c) 2003 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
@@ -18,56 +18,78 @@
 #include <l4/log/log_printf.h>
 #include "internal.h"
 
-int vprintf(const char*format, oskit_va_list list){
-    return LOG_vprintf(format, list);
+int vprintf(const char *format, LOG_va_list list)
+{
+  return LOG_vprintf(format, list);
 }
 
-int vfprintf(FILE *stream, const char*format, oskit_va_list list){
-    return LOG_vprintf(format, list);
+int vfprintf(FILE *stream, const char *format, LOG_va_list list)
+{
+  return LOG_vprintf(format, list);
 }
 
-int printf(const char *format, ...){
-    va_list list;
-    int err;
+int printf(const char *format, ...)
+{
+  va_list list;
+  int err;
 
-    va_start(list, format);
-    err=LOG_vprintf(format, list);
-    va_end(args);
-    return err;
+  va_start(list, format);
+  err = LOG_vprintf(format, list);
+  va_end(list);
+  return err;
 }
 
-int fprintf(FILE *__stream, const char *format, ...){
-    va_list list;
-    int err;
+int fprintf(FILE *__stream, const char *format, ...)
+{
+  va_list list;
+  int err;
 
-    va_start(list, format);
-    err=LOG_vprintf(format, list);
-    va_end(args);
-    return err;
+  va_start(list, format);
+  err = LOG_vprintf(format, list);
+  va_end(list);
+  return err;
 }
 
-#ifndef putc
-int putc(int c, FILE*stream){
-    LOG_putchar(c);
-    return c;
+#if 0
+/* conflicts with oskit10_freebsd environment */
+int fflush(FILE *__stream);
+int fflush(FILE *__stream)
+{
+  LOG_flush();
+  return 0;
 }
 #endif
 
-int putchar(int c){
-    LOG_putchar(c);
-    return c;
+#ifndef putc
+int putc(int c, FILE *stream)
+{
+  LOG_putchar(c);
+  return c;
+}
+#endif
+
+/* disable dietlibc putchar preprocessor convertion */
+#undef putchar
+int putchar(int c)
+{
+  LOG_putchar(c);
+  return c;
 }
 
-int fputc(int c, FILE*stream){
-    LOG_putchar(c);
-    return c;
+#undef fputc
+int fputc(int c, FILE *stream)
+{
+  LOG_putchar(c);
+  return c;
 }
 
-int puts(const char*s){
-    return LOG_puts(s);
+int puts(const char *s)
+{
+  return LOG_puts(s);
 }
 
-int fputs(const char*s, FILE*stream){
-    return LOG_fputs(s);
+int fputs(const char *s, FILE *stream)
+{
+  return LOG_fputs(s);
 }
 

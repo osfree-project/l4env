@@ -7,10 +7,14 @@
  * Thanks to Frank for his valuable help!
  */
 
-/*** L4 INCLUDES ***/
-#include <l4/names/libnames.h>
-#include <l4/overlay_wm/overlay-client.h>
-
+/*
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the Overlay WM package, which is distributed
+ * under the  terms  of the GNU General Public Licence 2. Please see
+ * the COPYING file for details.
+ */
 
 /*** XFREE HEADERS ***/
 #include "mipointer.h"      /* for initializing the software cursor */
@@ -29,7 +33,7 @@
 #include "mfb.h"
 #include "cfb24_32.h"
 
-//#include "ovl_screen.h"
+#include "ovl_screen.h"
 
 #define OVLSCREEN_VERSION        4000
 #define OVLSCREEN_NAME           "OVLSCREEN"
@@ -45,14 +49,10 @@ struct ovlscreen {
 	int height;
 	int depth;
 	void *fb_adr;
-	l4_threadid_t ovl_srv;
 	CloseScreenProcPtr CloseScreen;
 };
 
 #undef ALLOW_OFFSCREEN_PIXMAPS
-
-/*** FROM LIBL4OVLSCREEN: MAP SHARED MEMORY BLOCK INTO LOCAL ADDRESS SPACE ***/
-void *ovl_screen_get_framebuffer(char *smb_ident);
 
 /*** MANDATORY FUNCTIONS WHICH MUST BE PROVIDED TO THE X-SERVER ***/
 static const OptionInfoRec *OVLSCREENAvailableOptions(int chipid, int busid);
@@ -68,13 +68,6 @@ static Bool OVLSCREENSwitchMode(int scrnIndex, DisplayModePtr pMode, int flags);
 static void OVLSCREENAdjustFrame(int scrnIndex, int x, int y, int flags);
 static void OVLSCREENFreeScreen(int scrnIndex, int flags);
 static void OVLSCREENFreeRec(ScrnInfoPtr scrinfo);
-
-//#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-//static void update_screenarea(ScreenPtr pScreen, PixmapPtr pShadow,
-//                            RegionPtr damage);
-//#else
-//static void update_screenarea(ScreenPtr pScreen, shadowBufPtr pBuf);
-//#endif
 
 
 /*** DRIVER INFORMATION STRUCTURES ***
@@ -278,40 +271,32 @@ static Bool OVLSCREENPreInit(ScrnInfoPtr scrinfo, int flags) {
 	DisplayModePtr dispmode;
 	Gamma gzeros = { 0.0, 0.0, 0.0 };
 	rgb rzeros = { 0, 0, 0 };
-	char *ovl_name = "OvlWM";
-	char *ds_ident;
-	CORBA_Environment env = dice_default_environment;
 
 	if (flags & PROBE_DETECT) return (FALSE);
 
+	ovl_screen_init(NULL);
+
 	ovlscr = get_private_data(scrinfo);
-	ovlscr->width  = 1024;
-	ovlscr->height = 768;
-	ovlscr->depth  = 16;
+	ovlscr->width  = ovl_get_phys_width();  //1024;
+	ovlscr->height = ovl_get_phys_height(); //768;
+	ovlscr->depth  = ovl_get_phys_mode();
 
-//	ovl_screen_init(NULL);
-//	ovl_screen_open(ovlscr->width, ovlscr->height, ovlscr->depth);
-	
-	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG, "query Overlay Server at names\n");
+	ovl_screen_open(ovlscr->width, ovlscr->height, ovlscr->depth);
 
-	if (names_waitfor_name(ovl_name, &(ovlscr->ovl_srv), 2000) == 0) {
-		xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG,"%s is not registered at names!\n",ovl_name);
-		return (FALSE);
-	}
-	
-	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG, "open overlay screen\n");
-	overlay_open_screen_call(&(ovlscr->ovl_srv), ovlscr->width,
-	                          ovlscr->height, ovlscr->depth, &env);
-	
-	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG, "map overlay screen into local address space\n");
-	overlay_map_screen_call(&(ovlscr->ovl_srv), &ds_ident, &env);
-	ovlscr->fb_adr = ovl_screen_get_framebuffer(ds_ident);
-//	ovlscr->fb_adr = ovl_screen_map();
-	
+	ovlscr->fb_adr = ovl_screen_map();
+
 	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG,
 	            "Overlay Screen is %dx%d@%d\n",
 	            ovlscr->width, ovlscr->height, ovlscr->depth);
 
+	/* clear screen */
+	if (ovlscr->depth == 16) {
+		short *dst = (short *)ovlscr->fb_adr;
+		int n = ovlscr->width*ovlscr->height;
+		for (;n--;) *(dst++) = 0;
+	}
+	ovl_screen_refresh(0, 0, ovlscr->width, ovlscr->height);
+	
 	/* hack: override config entry */
 	scrinfo->bitsPerPixel = ovlscr->depth;
 	scrinfo->confScreen->defaultdepth = ovlscr->depth;
@@ -408,48 +393,22 @@ static Bool OVLSCREENPreInit(ScrnInfoPtr scrinfo, int flags) {
  */
 #if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
 static void update_screenarea(ScreenPtr pScreen, PixmapPtr pShadow, RegionPtr damage) {
-#else
-static void update_screenarea(ScreenPtr pScreen, shadowBufPtr pBuf) {
-#endif
-	FbBits *shaBase;
-	int shaBpp;
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
 	int nbox = REGION_NUM_RECTS(damage);
 	BoxPtr pbox = REGION_RECTS(damage);
 #else
+static void update_screenarea(ScreenPtr pScreen, shadowBufPtr pBuf) {
 	int nbox = REGION_NUM_RECTS(&pBuf->damage);
 	BoxPtr pbox = REGION_RECTS(&pBuf->damage);
-	int shaXoff, shaYoff;
 #endif
-	FbStride shaStride;
-	CORBA_Environment env = dice_default_environment;
-	ScrnInfoPtr scrinfo = xf86Screens[pScreen->myNum];
-	struct ovlscreen *ovlscr = get_private_data(scrinfo);
-//	l4_threadid_t mytid = l4_myself();
-//	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG, "screen update called\n");
-
-//#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-//	fbGetDrawable(&pShadow->drawable, shaBase, shaStride, shaBpp);
-//#else
-//	fbGetDrawable(&pBuf->pPixmap->drawable, shaBase, shaStride, shaBpp,
-//	               shaXoff, shaYoff);
-//#endif
-
-//	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG, "update screenarea, tid=%x.%x\n",
-//	 (int)mytid.id.task, (int)mytid.id.lthread);
 	while (nbox--) {
 		int rx,ry,rw,rh;
 		rx = pbox->x1;
 		ry = pbox->y1;
 		rw = pbox->x2 - pbox->x1 + 1;
 		rh = pbox->y2 - pbox->y1 + 1;
-//		ovl_screen_refresh(rx,ry,rw,rh);
-	overlay_refresh_screen_call(&(ovlscr->ovl_srv), rx, ry, rw, rh,&env);
-//	overlay_bla_call(&(ovlscr->ovl_srv),&env);
+		ovl_screen_refresh(rx,ry,rw,rh);
 		pbox++;
 	}
-//	ovl_screen_refresh(0,0,500,400);
-//	overlay_refresh_screen_call(&(ovlscr->ovl_srv), 0,0,500,400,&env);
 }
 
 
@@ -571,11 +530,9 @@ static void OVLSCREENLeaveVT(int scrnIndex, int flags) {
 static Bool OVLSCREENCloseScreen(int scrnIndex, ScreenPtr pScreen) {
 	ScrnInfoPtr scrinfo = xf86Screens[scrnIndex];
 	struct ovlscreen *ovlscr = get_private_data(scrinfo);
-	CORBA_Environment env = dice_default_environment;
 	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG, "close screen called\n");
 
-	overlay_close_screen_call(&ovlscr->ovl_srv, &env);
-//	ovl_screen_close();
+	ovl_screen_close();
 
 	pScreen->CloseScreen = ovlscr->CloseScreen;
 	return pScreen->CloseScreen(scrnIndex, pScreen);

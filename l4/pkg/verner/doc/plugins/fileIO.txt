@@ -1,0 +1,91 @@
+                           VERNER - File-I/O-Plugins
+                              Carsten Rietzschel
+                           cr7@os.inf.tu-dresden.de
+                                22 March 2004
+
+
+
+                       ============= Concept =============
+
+File-I/O-Plugins provide an mechanism to access files via unixstd-calls:
+ open
+ close
+ read
+ write
+ lseek
+ fstat
+ ftruncate
+ 
+When opening an file the filename is prefixed by an URL:// string which
+is necessary to determine the file provider and setup other functions
+for instance read, write and so on.
+If no URL:// string is found at beginning of filename we use an default.
+
+Currently supported URL:// strings are
+ grub://    - using an dummy-filesystem to read/write files loaded with 
+              the help of grub or l4loader
+ ext2fs://  - using the ext2fs file-provider (l4/pkg/ext2fs)
+
+
+
+                    ============= Configuration =============
+
+
+cd l4/pkg/verner
+make config
+
+
+
+                    ============= Implementation =============
+
+
+All libraries (avilib,ogmlib,...), demuxer-plugins and all VERNER-code 
+using file-I/O calling fileops_(open/read/write/close/..) instead of 
+unixstd-calls.
+
+Either the "include/drops_compat.h" header is include into existing libs
+or function calls are changed manually.
+The file "include/libs/fileops.h" should also be included to avoid warnings
+and it declares fileops_* functions.
+
+The file "common/fileops.c" is the implementation of fileops.h. 
+Usually all file access begins with open() which is now fileops_open().
+This function checks for the URL:// string or the default and sets up all
+fileops_* functions to the found I/O-Plugin calls. Then it of course 
+call the selected I/O-plugin's open().
+
+I/O-Plugins are located in "plugins/io/*" and implments the special function
+to access file via grubfs or ext2fs for example.
+
+
+
+
+               ============= Adding new I/O plugin  =============
+
+
+Add your plugin to "plugins/io/" and just look into existing plugins.
+Just create implementations for open, close, read, write, lseek, ftruncate 
+and fstat. But take care of function parameters and types.
+
+For example: 
+
+int io_{filesystem_name}_open(const char *__name, int __mode, ...);
+int io_{filesystem_name}_close(int __fd);
+unsigned long io_{filesystem_name}_read(int __fd, void *__buf, unsigned long __n);
+unsigned long io_{filesystem_name}_write(int __fd, void *__buf, unsigned long __n);
+unsigned long io_{filesystem_name}_lseek(int __fd, unsigned long __offset, int __whence);
+int io_{filesystem_name}_ftruncate(int __fd, unsigned long __offset);
+int io_{filesystem_name}_fstat(int filedes, struct stat *buf);
+
+Note: not all function might be supported, so just return error.
+
+Then add your plugin and it's selection via URL://-string into 
+"common/fileops.c".
+
+If you want to make it configurable change "config/verner_config.in".
+
+
+
+
+Have fun,
+Carsten

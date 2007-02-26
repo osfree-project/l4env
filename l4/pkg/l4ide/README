@@ -1,0 +1,6 @@
+To compile L4IDE just type make. In order to use it all that has to be done is
+to load the l4ide binary after you have loaded sigma0, names, log, omega0, l4io
+and dm_phys. It's that easy.
+
+Anyway, in case of having problems to use it contact the author
+(Marek Menzer, mm19@os.inf.tu-dresden.de).

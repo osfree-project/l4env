@@ -1,0 +1,18 @@
+# -*- makefile -*-
+
+# 'date -r' doesn't work on BSDs, so we use stat there
+filedate = $(shell if date --version 2>&1 | grep -q "Free Software F"; then  \
+                      date -r $(1);                                          \
+		    else                                                     \
+		      stat -f '%Sm' $(1);                                    \
+		    fi)
+
+$(GBLCFG): globalconfig.out
+	$(VERBOSE)grep "CONFIG_.*=[^n].*$$" globalconfig.out | cut -f2- -d'_' > $@.txt
+	$(VERBOSE)echo $(call filedate,globalconfig.out) >> $@.txt
+	$(VERBOSE)ld -r --oformat default -b binary -o $@ $@.txt
+	$(VERBOSE)$(RM) $@.txt
+
+clean-GBLCFG:
+	rm -f $(GBLCFG)
+

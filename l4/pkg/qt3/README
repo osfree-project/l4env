@@ -1,0 +1,38 @@
+What is this?
+-------------
+
+This is Qt/Embedded for DROPS. The port is still work in progress,
+basic functionality is already there, however. 
+
+
+Requirements:
+-------------
+
+The following L4Env components are required:
+
+- Fiasco/Fiasco-UX
+- log
+- dm_phys
+- names
+- name_server
+- L4VFS file server (e.g. simple_file_server)
+- fstab (for mounting the file server's filesystem)
+- rtc
+- con (or dope)
+- local_socks
+- thread
+- semaphore
+- zlib
+
+You might want to have a look at $L4DIR/tool/runux/qt3_app_{con|dope} and
+there are also application specific 'run.sh' scripts in pkg/qt3/examples/*.
+These scripts can be used to start the examples in Fiasco-UX.
+
+Additionally you may need some of the tools provides by Trolltech,
+namely 'moc' and 'uic'. If you want to use Qt-Designer for GUI modeling
+or Qt-Linguist for internationalization, you need to install those as
+well. Debian users just need to apt-get them:
+
+  apt-get update
+  apt-get install qt3-dev-tools qt3-designer qt3-linguist
+

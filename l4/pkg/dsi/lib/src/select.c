@@ -56,8 +56,8 @@ __select_thread(void * data)
   dsi_select_thread_arg_t * args = (dsi_select_thread_arg_t *)data;
   l4_int32_t mask;
   
-  LOGdL(DEBUG_SELECT,"signalling thread %x.%x",
-        args->socket->event_th.id.task,args->socket->event_th.id.lthread);
+  LOGdL(DEBUG_SELECT,"signalling thread "l4util_idfmt,
+        l4util_idstr(args->socket->event_th));
   LOGdL(DEBUG_SELECT,"socket %d, events 0x%08x",
         args->socket->socket,args->events);
 
@@ -130,6 +130,7 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
   l4thread_t threads[num_sockets];
   l4semaphore_t sem = L4SEMAPHORE_LOCKED;
   int i,j,error,ret;
+  l4thread_t me = l4thread_myself();
 
   /* setup thread arguments */
   for (i = 0; i < num_sockets; i++)
@@ -150,7 +151,8 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
   /* start threads */
   for (i = 0; i < num_sockets; i++)
     {
-      threads[i] = dsi_create_select_thread(__select_thread,&args[i]);
+      threads[i] = dsi_create_select_thread(__select_thread, &args[i],
+      					    me ,i);
       if (threads[i] == L4THREAD_INVALID_ID)
 	{
 	  /* start thread failed, cleanup */
@@ -176,7 +178,7 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
 
   if (error)
     {
-      Error("DSI: select error %d",error);
+      LOG_Error("DSI: select error %d",error);
       return error;
     }
 
@@ -195,17 +197,16 @@ dsi_stream_select(dsi_select_socket_t *sockets, const int num_sockets,
 	  events[j].events = args[i].mask;
 
 	  LOGdL(DEBUG_SELECT,"events %08x <= %08x", events[j].events, args[i].mask);
-	  LOGdL(DEBUG_SELECT,"reset 0x%08x at %x.%x",
-                args[i].mask,args[i].socket->event_th.id.task,
-                args[i].socket->event_th.id.lthread);
+	  LOGdL(DEBUG_SELECT,"reset 0x%08x at "l4util_idfmt,
+	        args[i].mask, l4util_idstr(args[i].socket->event_th));
           
 	  /* reset events */
 	  ret = dsi_event_reset(args[i].socket->event_th,
 				args[i].socket->socket,args[i].mask);
 	  if (ret)
 	    {
-	      Error("DSI: reset events failed: %s (%d)",
-		    l4env_errstr(ret),ret);
+	      LOG_Error("DSI: reset events failed: %s (%d)",
+                        l4env_errstr(ret),ret);
 	    }
 	  j++;	  
 	}	  

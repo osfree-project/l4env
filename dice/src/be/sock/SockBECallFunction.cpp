@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/sock/SockBECallFunction.cpp
- *	\brief	contains the implementation of the class CSockBECallFunction
+ *    \file    dice/src/be/sock/SockBECallFunction.cpp
+ *    \brief   contains the implementation of the class CSockBECallFunction
  *
- *	\date	11/28/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    11/28/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -32,20 +33,16 @@
 #include "be/BEMsgBufferType.h"
 #include "be/sock/BESocket.h"
 
-IMPLEMENT_DYNAMIC(CSockBECallFunction);
-
 CSockBECallFunction::CSockBECallFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBECallFunction, CBECallFunction);
 }
 
 CSockBECallFunction::CSockBECallFunction(CSockBECallFunction & src)
 : CBECallFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBECallFunction, CBECallFunction);
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CSockBECallFunction::~CSockBECallFunction()
 {
 
@@ -64,14 +61,12 @@ CSockBECallFunction::~CSockBECallFunction()
  */
 void CSockBECallFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
-    assert(m_pComm);
-    CBESocket *pSocket = (CBESocket*)m_pComm;
     // create socket
-	pSocket->CreateSocket(pFile, this, false, pContext);
-	// call
-	pSocket->WriteCall(pFile, this, false, pContext);
+    m_pComm->WriteInitialization(pFile, this, pContext);
+    // call
+    m_pComm->WriteCall(pFile, this, pContext);
     // close socket
-	pSocket->CloseSocket(pFile, this, false, pContext);
+    m_pComm->WriteCleanup(pFile, this, pContext);
 }
 
 /** \brief writes varaible declarations
@@ -88,8 +83,8 @@ void CSockBECallFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext *
     // write this directly, because we know this runs on Linux
     pFile->PrintIndent("int sd, dice_ret_size;\n");
     // needed for receive
-    String sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
-    pFile->PrintIndent("socklen_t dice_fromlen = sizeof(*%s);\n", (const char*)sObj);
+    string sObj = pContext->GetNameFactory()->GetCorbaObjectVariable(pContext);
+    pFile->PrintIndent("socklen_t dice_fromlen = sizeof(*%s);\n", sObj.c_str());
 }
 
 /** \brief writes the marshaling of the message
@@ -115,14 +110,16 @@ void CSockBECallFunction::WriteMarshalling(CBEFile * pFile, int nStartOffset, bo
 void CSockBECallFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
     CBECallFunction::WriteVariableInitialization(pFile, pContext);
-    String sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
-    String sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-	// msgbuffer is always pointer: either variable sized or char[]
-    pFile->PrintIndent("bzero(%s, ", (const char*)sMsgBuffer);
-    if (m_pMsgBuffer->IsVariableSized())
+    string sMsgBuffer = pContext->GetNameFactory()->GetMessageBufferVariable(pContext);
+    string sOffset = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+    // msgbuffer is always pointer: either variable sized or char[]
+    pFile->PrintIndent("bzero(%s, ", sMsgBuffer.c_str());
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    if (pMsgBuffer->IsVariableSized())
     {
-        pFile->Print("%s);\n", (const char*)sOffset);
+        pFile->Print("%s);\n", sOffset.c_str());
     }
     else
-        pFile->Print("sizeof(%s));\n", (const char*)sMsgBuffer);
+        pFile->Print("sizeof(%s));\n", sMsgBuffer.c_str());
 }

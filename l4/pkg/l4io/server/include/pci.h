@@ -16,6 +16,6 @@
 #ifndef __L4IO_SERVER_INCLUDE_PCI_H_
 #define __L4IO_SERVER_INCLUDE_PCI_H_
 
-int io_pci_init(void);
+int io_pci_init(int list);
 
 #endif

@@ -1,4 +1,4 @@
-/* $Id$ */
+#/* $Id$ */
 /*****************************************************************************/
 /**
  * \file   loader/linux/fprov-l4/l4env_dummies.c
@@ -10,6 +10,15 @@
 /*****************************************************************************/
 /*
  * $Log$
+ * Revision 1.5  2004/08/16 15:51:58  reuther
+ * - adapted to changes in l4rm
+ *
+ * Revision 1.4  2004/08/13 15:51:15  reuther
+ * - adapted to changes of l4rm_lookup()
+ *
+ * Revision 1.3  2004/02/18 22:34:15  reuther
+ * - use LOG* macros instead of the obsolete macros from l4util
+ *
  * Revision 1.2  2002/11/25 03:27:53  reuther
  * - adapted to new L4 integer types
  * - adapted to l4sys/l4util/l4env/dm_generic include changes
@@ -33,14 +42,9 @@
 #include <l4/dm_phys/dm_phys.h>
 #include <l4/names/libnames.h>
 
-void 
-LOG_flush(void)
-{
-}
-
 int
-l4rm_lookup(void * addr, l4dm_dataspace_t * ds, l4_offs_t * offset, 
-	    l4_addr_t * map_addr, l4_size_t * map_size)
+l4rm_lookup(const void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
+            l4dm_dataspace_t * ds, l4_offs_t * offset, l4_threadid_t * pager)
 {
   return -L4_ENOTSUPP;
 }

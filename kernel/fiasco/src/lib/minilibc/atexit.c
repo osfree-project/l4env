@@ -1,32 +1,50 @@
 #include <stdlib.h>
 
-typedef void (*function)(void);
+typedef struct
+{
+  void (*func)(void*, int);
+  void *arg;
+} atexit_t;
 
-#define NUM_ATEXIT	128
+#define NUM_ATEXIT	80
 
-static function __atexitlist[NUM_ATEXIT];
-static volatile int atexit_counter;
+static atexit_t __atexitlist[NUM_ATEXIT];
+static int atexit_counter;
 
-int atexit(function t) {
+int
+atexit(void (*func)(void))
+{
+  if (atexit_counter >= NUM_ATEXIT)
+    return -1;
 
-  if (atexit_counter<NUM_ATEXIT) {
-    __atexitlist[atexit_counter++]=t;
-    return 0;
-  }
-  return -1;
+  __atexitlist[atexit_counter].func = (void(*)(void*, int))func;
+  __atexitlist[atexit_counter].arg  = 0;
+  atexit_counter++;
+  return 0;
+}
+
+int
+__cxa_atexit(void (*func)(void*), void *arg, void *dso_handle)
+{
+  if (atexit_counter>=NUM_ATEXIT)
+    return -1;
+
+  __atexitlist[atexit_counter].func = (void(*)(void*, int))func;
+  __atexitlist[atexit_counter].arg  = arg;
+  (void)dso_handle;
+  atexit_counter++;
+  return 0;
 }
 
 extern void _exit(int code) __attribute__((noreturn));
 
-//#include <stdio.h>
-
-void exit(int code) {
-  //printf("Run %d atexits\n",i);
-  while(atexit_counter) {
-    //printf(" @%p\n",__atexitlist[i-1]);
-    if(__atexitlist[--atexit_counter])
-      __atexitlist[atexit_counter]();
-  }
-  //  puts("run _exit");
+void exit(int code) 
+{
+  while (atexit_counter)
+    {
+      atexit_t *a = __atexitlist + (--atexit_counter);
+      if (a->func)
+	a->func(a->arg, code);
+    }
   _exit(code);
 }

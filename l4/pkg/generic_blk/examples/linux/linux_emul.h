@@ -14,7 +14,7 @@
 /* prototypes */
 
 extern void *
-l4blk_allocate_stack(l4_threadid_t thread);
+l4blk_allocate_stack(void);
 
 extern void
 l4blk_release_stack(void * sp);

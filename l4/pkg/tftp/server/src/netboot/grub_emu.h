@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <oskit/x86/multiboot.h>
 
 #define grub_sprintf	sprintf
 #define grub_printf	printf
@@ -14,6 +13,7 @@
 #define grub_strlen	strlen
 #define grub_strcpy	strcpy
 #define grub_putchar	putchar
+#define grub_isspace	isspace
 
 extern inline int getkey(int wait);
 extern inline void *memmove(void * dest, const void * src, unsigned int n);

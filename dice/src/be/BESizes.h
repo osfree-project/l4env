@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BESizes.h
- *	\brief	contains the declaration of the class CBESizes
+ *    \file    dice/src/be/BESizes.h
+ *    \brief   contains the declaration of the class CBESizes
  *
- *	\date	Wed Oct 9 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    Wed Oct 9 2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -38,18 +39,17 @@
  */
 class CBESizes : public CBEObject
 {
-DECLARE_DYNAMIC(CBESizes);
 public:
     /** \brief constructor for class CBESizes */
-	CBESizes();
-	virtual ~CBESizes();
+    CBESizes();
+    virtual ~CBESizes();
 
 public:  // Public methods
     virtual int GetSizeOfType(int nFEType, int nFEType = 0);
-    virtual int GetSizeOfEnvType(String sName);
+    virtual int GetSizeOfEnvType(string sName);
     virtual int GetMaxSizeOfType(int nFEType);
     virtual int GetOpcodeSize();
-	virtual int GetExceptionSize();
+    virtual int GetExceptionSize();
     virtual void SetOpcodeSize(int nSize);
 
 protected: // Protected attributes

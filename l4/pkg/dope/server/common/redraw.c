@@ -10,7 +10,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -24,12 +24,11 @@ struct private_widget;
 #include "dopestd.h"
 #include "widget_data.h"
 #include "widget.h"
-#include "winman.h"
+#include "screen.h"
 #include "thread.h"
 #include "redraw.h"
 #include "timer.h"
 
-static struct winman_services   *winman;
 static struct thread_services   *thread;
 static struct timer_services    *timer;
 
@@ -41,35 +40,27 @@ WIDGET {
 
 #define REDRAW_QUEUE_SIZE 5000
 
-#define ACTION_TYPE_DRAW_AREA   0
-
 struct action {
-	u16 type;       /* action type (redraw, move..) */
-	WIDGET *wid;        /* associated widget */
-	s32 x1,y1,x2,y2; /* area in screen */
+	WIDGET *wid;             /* associated widget */
+	s32     x1, y1, x2, y2;  /* area on screen    */
 };
 
 static struct action action_queue[REDRAW_QUEUE_SIZE];
-static s32 first=0;
-static s32 last=0;
-static float pix_per_usec_avr = 8.0;
-static float pix_per_usec_min = 100000.0;
+static s32 first = 0;
+static s32 last  = 0;
 
-static MUTEX *queue_mutex;
+extern int config_adapt_redraw;  /* from startup.c */
 
 int init_redraw(struct dope_services *d);
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
 
-#define MAX(a,b) a>b?a:b
-#define MIN(a,b) a<b?a:b
-
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 /*** RETURN THE NUMBER OF CURRENTRY QUEUED ELEMENTS ***/
 static u32 get_noque(void) {
-	return (first+REDRAW_QUEUE_SIZE-last)%REDRAW_QUEUE_SIZE;
+	return (first + REDRAW_QUEUE_SIZE - last) % REDRAW_QUEUE_SIZE;
 }
 
 
@@ -78,106 +69,32 @@ static s32 is_queued(WIDGET *w) {
 	s32 cmp_idx = last;
 	while (cmp_idx!=first) {
 		if (action_queue[cmp_idx].wid == w) return 1;
-		cmp_idx = (cmp_idx+1)%REDRAW_QUEUE_SIZE;
+		cmp_idx = (cmp_idx + 1) % REDRAW_QUEUE_SIZE;
 	}
 	return 0;
 }
 
-/*
-static void old_add_redraw_action(WIDGET *w,long x1,long y1,long x2,long y2,long cmp_idx) {
-	long next_idx;
-	long cx1,cy1,cx2,cy2;
-	long top_cut,bottom_cut;
 
-//  if (get_noque()>4) {
-//      printf("redraw queue length > 20, ignore request\n");
-//      return;
-//  }
-//
-	if ((x1>x2) || (y1>y2)) return;
+static void add_redraw_action(WIDGET *w, long x1, long y1, long x2, long y2, long curr_idx) {
+	if (x1 > x2 || y1 > y2) return;
 
-	while ((cmp_idx!=first) && (action_queue[cmp_idx].wid!=w)) {
-		cmp_idx = (cmp_idx+1)%REDRAW_QUEUE_SIZE;
-	}
-
-	if (cmp_idx==first) {
-//      printf("add redraw action: %lu,%lu,%lu,%lu w=%lu h=%lu\n",x1,y1,x2,y2,x2-x1,y2-y1);
-		action_queue[first].type = ACTION_TYPE_DRAW_AREA;
-		action_queue[first].wid  = w;
-		action_queue[first].x1   = x1;
-		action_queue[first].y1   = y1;
-		action_queue[first].x2   = x2;
-		action_queue[first].y2   = y2;
-		first = (first+1)%REDRAW_QUEUE_SIZE;
-		return;
-	}
-
-	cx1=action_queue[cmp_idx].x1;
-	cy1=action_queue[cmp_idx].y1;
-	cx2=action_queue[cmp_idx].x2;
-	cy2=action_queue[cmp_idx].y2;
-
-	next_idx = (cmp_idx+1)%REDRAW_QUEUE_SIZE;
-
-	top_cut=y1;
-	bottom_cut=y2;
-
-//  if ((MAX(x1,cx1) <= MIN(x2,cx2)) && (MAX(y1,cy1) <= MIN(y2,cy2))) {
-	if ((x1>cx2) || (y1>cy2) || (x2<cx1) || (y2<cy1)) {
-//  if ((x1>cx2) || (y1>cy2) || (x2<cx1) || (y2<cy1) || ((x2-x1)*(y2-y1)<80*80)) {
-		add_redraw_action(w,x1,y1,x2,y2,next_idx);
-//      printf("lull!\n");
-		return;
-	}
-
-	if (y1 < cy1) {
-//      printf("new area on top\n");
-		top_cut = MIN(y2,cy1-1);
-		add_redraw_action(w,x1,y1,x2,top_cut,next_idx);
-	}
-
-	if (y2 > cy2) {
-//      printf("new area on bottom\n");
-		bottom_cut = MAX(y1,cy2+1);
-		add_redraw_action(w,x1,bottom_cut,x2,y2,next_idx);
-	}
-
-	if (x1 < cx1) {
-//      printf("new area on left\n");
-		add_redraw_action(w,x1,top_cut,MIN(x2,cx1-1),bottom_cut,next_idx);
-	}
-
-	if (x2 > cx2) {
-//      printf("new area on right\n");
-		add_redraw_action(w,MAX(x1,cx2+1),top_cut,x2,bottom_cut,next_idx);
-	}
-
-}
-*/
-
-
-static void add_redraw_action(WIDGET *w,long x1,long y1,long x2,long y2,long curr_idx) {
-//  long curr_idx = cmp_idx;
-
-	if ((x1>x2) || (y1>y2)) return;
-
-	curr_idx++;if (curr_idx>first) curr_idx=first;
+	curr_idx++;
+	if (curr_idx > first) curr_idx = first;
 
 	/* search for queue entry that affect the same widget */
-	while ((curr_idx!=first) && (action_queue[curr_idx].wid!=w)) {
-		curr_idx = (curr_idx+1)%REDRAW_QUEUE_SIZE;
+	while (curr_idx != first && action_queue[curr_idx].wid != w) {
+		curr_idx = (curr_idx + 1) % REDRAW_QUEUE_SIZE;
 	}
 
 	/* if there are no queue entries left to check - add the action */
-	if (curr_idx==first) {
-//      printf("add redraw action: %lu,%lu,%lu,%lu w=%lu h=%lu\n",x1,y1,x2,y2,x2-x1,y2-y1);
-		action_queue[first].type = ACTION_TYPE_DRAW_AREA;
-		action_queue[first].wid  = w;
-		action_queue[first].x1   = x1;
-		action_queue[first].y1   = y1;
-		action_queue[first].x2   = x2;
-		action_queue[first].y2   = y2;
-		first = (first+1)%REDRAW_QUEUE_SIZE;
+	if (curr_idx == first) {
+		w->gen->inc_ref(w);
+		action_queue[first].wid = w;
+		action_queue[first].x1  = x1;
+		action_queue[first].y1  = y1;
+		action_queue[first].x2  = x2;
+		action_queue[first].y2  = y2;
+		first = (first + 1) % REDRAW_QUEUE_SIZE;
 		return;
 	}
 
@@ -189,245 +106,189 @@ static void add_redraw_action(WIDGET *w,long x1,long y1,long x2,long y2,long cur
 }
 
 
-
-
 /*** PUT NEW REDRAW-ACTION INTO QUEUE ***/
-static void draw_area(WIDGET *w,long x1,long y1,long x2,long y2) {
+static void draw_area(WIDGET *cw, long cx1, long cy1, long cx2, long cy2) {
 
-//  printf("draw_area: %lu,%lu,%lu,%lu w=%lu h=%lu\n",x1,y1,x2,y2,x2-x1,y2-y1);
+	/* the parent of a window is a screen, the screen has no parent */
+	while (cw && cw->wd->parent && cw->wd->parent->wd->parent) {
 
-	thread->mutex_down(queue_mutex);
-	add_redraw_action(w,x1,y1,x2,y2,last);
-//  printf("redraw-queue: first=%lu last%lu\n",first,last);
-//  printf("redraw-queue-size: %lu\n",first-last);
+		/* increment position by relative widget position */
+		cx1 += cw->wd->x;
+		cy1 += cw->wd->y;
+		cx2 += cw->wd->x;
+		cy2 += cw->wd->y;
 
-	thread->mutex_up(queue_mutex);
-	return;
-	action_queue[first].type = ACTION_TYPE_DRAW_AREA;
-	action_queue[first].wid  = w;
-	action_queue[first].x1   = x1;
-	action_queue[first].y1   = y1;
-	action_queue[first].x2   = x2;
-	action_queue[first].y2   = y2;
-	first = (first+1)%REDRAW_QUEUE_SIZE;
+		cw = cw->wd->parent;
 
+		/* shink current area to parent view area */
+		if (cx1 < 0) cx1 = 0;
+		if (cy1 < 0) cy1 = 0;
+		if (cx2 > cw->wd->w - 1) cx2 = cw->wd->w - 1;
+		if (cy2 > cw->wd->h - 1) cy2 = cw->wd->h - 1;
+	}
+
+	if (cw) add_redraw_action(cw, cx1, cy1, cx2, cy2, last);
 }
 
 
 /*** GENERATE ACTION TO REDRAW A SPECIFIED WIDGET ***/
 static void draw_widget(WIDGET *cw) {
-	long cx1,cy1,cx2,cy2;
-	WIDGET *win=NULL;
-
-	/* widget area relative to its parent */
-	cx1 = cw->wd->x;
-	cy1 = cw->wd->y;
-	cx2 = cx1 + cw->wd->w - 1;
-	cy2 = cy1 + cw->wd->h - 1;
-
-	cw=cw->wd->parent;
-//  printf("draw widget!\n");
-	while ((cw!=NULL) && (cw!=(WIDGET *)'#')) {
-
-		/* shink current area to parent view area */
-		if (cx1 < 0) cx1 = 0;
-		if (cy1 < 0) cy1 = 0;
-		if (cx2 > cw->wd->w - 1) cx2=cw->wd->w - 1;
-		if (cy2 > cw->wd->h - 1) cy2=cw->wd->h - 1;
-
-		cx1+=cw->wd->x;
-		cy1+=cw->wd->y;
-		cx2+=cw->wd->x;
-		cy2+=cw->wd->y;
-
-		win=cw;
-		cw=cw->wd->parent;
-	}
-
-	/* is the parent the windowmanager? */
-	if (cw) {
-		draw_area(win,cx1,cy1,cx2,cy2);
-	}
+	draw_area(cw, 0, 0, cw->wd->w - 1, cw->wd->h - 1);
 }
-
 
 
 /*** GENERATE ACTION TO REDRAW AN AREA OF A SPECIFIED WIDGET ***/
-static void draw_widgetarea(WIDGET *cw,s32 rx1,s32 ry1,s32 rx2,s32 ry2) {
-	long cx1,cy1,cx2,cy2;
-	WIDGET *win=NULL;
-
-	/* determine 'dirty area' inside the widget */
-	cx1 = MAX(cw->wd->x + rx1,cw->wd->x);
-	cy1 = MAX(cw->wd->y + ry1,cw->wd->y);
-	cx2 = MIN(cw->wd->x + rx2,cw->wd->x + cw->wd->w - 1);
-	cy2 = MIN(cw->wd->y + ry2,cw->wd->y + cw->wd->h - 1);
-
-	if ((cx1>cx2) || (cy1>cy2)) return;
-
-	cw=cw->wd->parent;
-//  printf("draw widget!\n");
-	while ((cw!=NULL) && (cw!=(WIDGET *)'#')) {
-
-		/* shink current area to parent view area */
-		if (cx1 < 0) cx1 = 0;
-		if (cy1 < 0) cy1 = 0;
-		if (cx2 > cw->wd->w - 1) cx2=cw->wd->w - 1;
-		if (cy2 > cw->wd->h - 1) cy2=cw->wd->h - 1;
-
-		cx1+=cw->wd->x;
-		cy1+=cw->wd->y;
-		cx2+=cw->wd->x;
-		cy2+=cw->wd->y;
-
-		win=cw;
-		cw=cw->wd->parent;
-	}
-
-	/* is the parent the windowmanager? */
-	if (cw) {
-		draw_area(win,cx1,cy1,cx2,cy2);
-	}
+static void draw_widgetarea(WIDGET *cw, s32 rx1, s32 ry1, s32 rx2, s32 ry2) {
+	draw_area(cw, rx1, ry1, rx2, ry2);
 }
 
 
+/*** ADAPT AVERAGE PIXEL PER USEC RATIO ***
+ *
+ * \param value   old average ratio to adopt
+ * \param pixels  processed pixels
+ * \param usec    time needed to process the pixels
+ * \return        new average ratio
+ */
+static inline float adapt_pix_per_usec(float value, int pixels, float usec) {
+	float pix_usec_ratio = (float)pixels / usec;
+	return 0.95 * value + 0.05 * pix_usec_ratio;
+}
 
-long pt;    /* !!! temporary debugging stuff */
-long pn;
-long bf;
-long af;
 
-/*** EXECUTE ACTION QUEUE ***/
-static s32 exec_redraw(s32 max_time) {
-	s32 w,h,cut_h;
-	s32 x1,y1,x2,y2;
-	s32 pix_cnt=0;
-	s32 cnt=0;
-	float pix_usec_ratio;
-	s32 num_pixels;
-	u32 start_time,end_time,used_time;
+/*** PROCESS THE REDRAW OF THE SPECIFIED AMOUNT OF PIXELS ***
+ *
+ * \param max_pixels   max amount of pixels to process
+ * \return             number of actually processed pixels
+ *
+ * This function takes redraw requests from the queue and executes them.
+ * If a request is bigger than max_pixels, only a fraction of the
+ * request is executed and the remaining part stays at the queue.
+ */
+static inline s32 process_pixels(s32 max_pixels) {
+	WIDGET *cw;
+	int x, y, w, h, cut_h;
+	int processed_pixels = 0;
 
-	thread->mutex_down(queue_mutex);
+	while (last != first && max_pixels > 0) {
+		
+		/* get pending redraw request */
+		cw = action_queue[last].wid;
+		x  = action_queue[last].x1;
+		y  = action_queue[last].y1;
+		w  = action_queue[last].x2 - x + 1;
+		h  = action_queue[last].y2 - y + 1;
+		
+		/* calc fraction of request to be processed */
+		cut_h = max_pixels / w;
+		cut_h = (cut_h < h) ? cut_h : h;
 
-//  if (last!=first) printf("exec redraw %lu pixels\n",max_pixels);
-//  if (first!=last) printf("first: %lu, last: %lu, first-last: %lu\n",first,last,first-last);
+		if (cut_h == 0) break;
+
+		/* process redraw */
+		if (cw && w > 0 && cut_h > 0) {
+			cw->gen->lock(cw);
+			cw->gen->drawarea(cw, cw, x, y, w, cut_h);
+			cw->gen->unlock(cw);
+			max_pixels       -= w * cut_h;
+			processed_pixels += w * cut_h;
+		}
+
+		/* shrink request by the processed area */
+		action_queue[last].y1 += cut_h;
+
+		/* kick request out of the queue if it is completed */
+		if (cut_h >= h) {
+			WIDGET *w;
+			if ((w = action_queue[last].wid))
+				w->gen->dec_ref(w);
+			last = (last + 1) % REDRAW_QUEUE_SIZE;
+		}
+	}
+	return processed_pixels;
+}
+
+
+/*** EXECUTE REDRAW REQUEST QUEUE ***
+ *
+ * \param avail_time   time available for executing redraw requests
+ */
+static s32 exec_redraw(s32 avail_time) {
+	static float pix_per_usec = 8.0;   /* average number of pixels per usec    */
+	int used_time = 0;                 /* time used for the iteration          */
+	int pix_cnt   = 0;                 /* number of overall processed pixels   */
+	int min_pix   = 1000;              /* minimal number of pixels to process  */
+	int num_pix   = 0;                 /* number of currently processed pixels */
+	u32 start_time;                    /* start time of drawing                */
 
 	start_time = timer->get_time();
-	max_time -= 500;
-	used_time = 0;
-	bf=0;af=0;
-	while ((last != first) && (used_time < max_time)) {
-		cnt++;
 
-		pt=used_time;
+	/* process pixels as long as there are due redraw requests and there is time left */
+	while (last != first && used_time < avail_time) {
 
-		x1=action_queue[last].x1;
-		y1=action_queue[last].y1;
-		x2=action_queue[last].x2;
-		y2=action_queue[last].y2;
+		/* determine number of pixels that can be processed in the available time */
+		num_pix = (avail_time - used_time) * pix_per_usec;
 
-		w=x2-x1;
-		h=y2-y1;
+		/* sanity check */
+		if (num_pix < 0) break;
 
-/* !!!!!! */
-      num_pixels = ((s32)max_time - (s32)used_time) * pix_per_usec_avr;
-//num_pixels = 10000000;
-		pn=num_pixels;
+		/* process num_pix pixels */
+		pix_cnt += process_pixels(num_pix);
 
-		if (num_pixels < 100) break;
-
-		if (w*h > num_pixels) {
-
-			/* subdivide last action */
-			cut_h = num_pixels / w;
-
-			if (cut_h>1) {
-
-			/* reduce size of current queue element */
-			action_queue[last].y1 += cut_h;
-
-//          printf("exec_redraw: max_pixels=%lu w=%lu cut_h=%lu\n",max_pixels,w,cut_h);
-
-			/* draw the cutted part */
-
-			bf = timer->get_time();
-			winman->draw((WINDOW *)action_queue[last].wid,x1,y1,x2,y1+cut_h-1);
-//          winman->draw(NULL,x1,y1,x2,y1+cut_h-1);
-			bf = timer->get_diff(bf,timer->get_time());
-			af = cut_h;
-			}
-		} else {
-			af=0;bf=0;
-			/* the last queue element can be processed completely */
-			bf = timer->get_time();
-			winman->draw((WINDOW *)action_queue[last].wid,x1,y1,x2,y2);
-//          winman->draw(NULL,x1,y1,x2,y2);
-			bf = timer->get_diff(bf,timer->get_time());
-			last = (last+1)%REDRAW_QUEUE_SIZE;
-		}
-		pix_cnt += w*h;
-		used_time = timer->get_diff(start_time,timer->get_time());
+		used_time = timer->get_diff(start_time, timer->get_time());
 	}
 
-	end_time = timer->get_time();
+	/* adapt the pix_per_usec ratio */
+	if (config_adapt_redraw && num_pix > 10000)
+		pix_per_usec = adapt_pix_per_usec(pix_per_usec, pix_cnt, used_time);
 
-	if (pix_cnt>5000) {
-		used_time = timer->get_diff(start_time,end_time);
+	/*
+	 * Clamp the pix/usec ratio to a lower border. In some situation
+	 * (for example if someone switches off interrupts for some time),
+	 * the measurement of drawing duration times may be messed up.
+	 * This could cause DOpE to adapt to these timing constrains in a
+	 * way that only a few pixels are drawn for each period, which
+	 * raises the overhead of traversing widget structures and clipping
+	 * an never allows DOpE to recover from that situation. Thus,
+	 * limiting the adaption to a lower border is needed to preserve
+	 * robustness even in such bad situations.
+	 */
+	if (pix_per_usec < 8.0) pix_per_usec = 8.0;
 
-		if (used_time> 100) {
-			pix_usec_ratio = (float)pix_cnt / (float)used_time;
-			pix_per_usec_avr = 0.95*pix_per_usec_avr +
-							   0.05*pix_usec_ratio;
-			if (pix_usec_ratio < pix_per_usec_min)
-				pix_per_usec_min = pix_usec_ratio;
+	/*
+	 * If there was not enough time to process min_pix pixels
+	 * draw min_pix pixels to keep the user interface alive.
+	 */
+	if (pix_cnt < min_pix) process_pixels(min_pix);
 
-		}
-	}
-	if (last==first) {
-		thread->mutex_up(queue_mutex);
-		return 0;
-	}
-	thread->mutex_up(queue_mutex);
 	return 1;
 }
 
 
-static float get_avr_ppt(void) {
-	return pix_per_usec_avr;
-}
-
-static float get_min_ppt(void) {
-	return pix_per_usec_min;
-}
-
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct redraw_services services = {
 	draw_area,
 	draw_widget,
 	draw_widgetarea,
 	exec_redraw,
+	process_pixels,
 	get_noque,
 	is_queued,
-	get_avr_ppt,
-	get_min_ppt,
 };
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_redraw(struct dope_services *d) {
 
-	winman  =   d->get_module("WindowManager 1.0");
 	thread  =   d->get_module("Thread 1.0");
 	timer   =   d->get_module("Timer 1.0");
 
-	queue_mutex = thread->create_mutex(0);
-
-	d->register_module("RedrawManager 1.0",&services);
+	d->register_module("RedrawManager 1.0", &services);
 	return 1;
 }

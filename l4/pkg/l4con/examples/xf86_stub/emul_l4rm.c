@@ -136,8 +136,9 @@ remove_virtual_area(l4_addr_t addr)
  * \note We ignore the flags.
  */
 int
-l4rm_attach(l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
-            l4_uint32_t flags, void ** addr){
+l4rm_do_attach(const l4dm_dataspace_t * ds, l4_uint32_t area, l4_addr_t * addr, 
+               l4_size_t size, l4_offs_t ds_offs, l4_uint32_t flags)
+{
   struct vm_area_struct *vm;
   unsigned off;
   int err;
@@ -145,7 +146,7 @@ l4rm_attach(l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
   l4_addr_t fpage_size;
 
   /* align size */
-  size = (size + L4_PAGESIZE - 1) & L4_PAGEMASK;
+  size = l4_round_page(size);
 
   /* sanity checks */
   if (l4dm_is_invalid_ds(*ds))
@@ -154,7 +155,7 @@ l4rm_attach(l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
   vm = reserve_virtual_area(size);
   if(vm==NULL) return -ENOMEM;
   
-  *addr = vm->addr;
+  *addr = (l4_addr_t)vm->addr;
 
   vm->ds = *ds;
   vm->offs = ds_offs;
@@ -162,15 +163,15 @@ l4rm_attach(l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
   a = (l4_addr_t)vm->addr;
   for (off = 0; off < size; off += L4_PAGESIZE)
     {
-      err = l4dm_map_pages(ds,ds_offs,L4_PAGESIZE,(a + off) & L4_PAGEMASK,
+      err = l4dm_map_pages(ds,ds_offs, L4_PAGESIZE, l4_trunc_page(a + off),
 			   L4_LOG2_PAGESIZE,0,L4DM_RW,&fpage_addr,&fpage_size);
       if (err < 0)
 	{
 	  int i;
 	  for(i = 0; i < off; i += L4_PAGESIZE)
 	    {
-	      l4_fpage_unmap(l4_fpage((a + i) & L4_PAGEMASK,
-				      L4_LOG2_PAGESIZE,0,0),
+	      l4_fpage_unmap(l4_fpage(l4_trunc_page(a + i),
+				      L4_LOG2_PAGESIZE, 0, 0),
 			     L4_FP_FLUSH_PAGE); 
 	    }
 
@@ -183,23 +184,12 @@ l4rm_attach(l4dm_dataspace_t * ds, l4_size_t size, l4_offs_t ds_offs,
   return 0;
 }
 
-/*!\brief Pretend to attach a dataspace to a preallocated region.
- *
- * This function actually only calls l4rm_attach().
- */
-int 
-l4rm_area_attach(l4dm_dataspace_t * ds, l4_uint32_t area, l4_size_t size,
-                 l4_offs_t ds_offs, l4_uint32_t flags, void ** addr)
-{
-  return l4rm_attach(ds, size, ds_offs, flags, addr);
-}
-
 /*!\brief Pretend to detach a dataspace from a region.
  *
  * Actually, this function flushes the pages and frees the vm-area.
  */
 int
-l4rm_detach(void * addr){
+l4rm_detach(const void * addr){
   struct vm_area_struct *vm;
   int off;
   
@@ -208,7 +198,7 @@ l4rm_detach(void * addr){
     return -EINVAL;
   
   for(off=0; off<vm->size; off+=L4_PAGESIZE){
-    l4_fpage_unmap(l4_fpage(((unsigned)vm->addr+off)&L4_PAGEMASK,
+    l4_fpage_unmap(l4_fpage(l4_trunc_page((unsigned)vm->addr+off),
                             L4_LOG2_PAGESIZE,0,0),
     	       L4_FP_FLUSH_PAGE);
   }
@@ -224,15 +214,8 @@ l4rm_detach(void * addr){
  * \note This means, areas are comletely ignored!
  */
 int
-l4rm_area_reserve_region(l4_addr_t addr, l4_size_t size, l4_uint32_t flags,
-                         l4_uint32_t * area){
-  *area = 0;
-  return 0;
-}
-
-int
-l4rm_direct_area_reserve_region(l4_addr_t addr, l4_size_t size, 
-                                l4_uint32_t flags, l4_uint32_t * area)
+l4rm_do_reserve(l4_addr_t * addr, l4_size_t size, l4_uint32_t flags, 
+                l4_uint32_t * area)
 {
   *area = 0;
   return 0;
@@ -242,8 +225,8 @@ l4rm_direct_area_reserve_region(l4_addr_t addr, l4_size_t size,
  * \brief Lookup VM address
  */
 int
-l4rm_lookup(void * addr, l4dm_dataspace_t * ds, l4_offs_t * offset, 
-	    l4_addr_t * map_addr, l4_size_t * map_size)
+l4rm_lookup(const void * addr, l4_addr_t * map_addr, l4_size_t * map_size,
+            l4dm_dataspace_t * ds, l4_offs_t * offset, l4_threadid_t * pager)
 {
   struct vm_area_struct * vm;
   l4_addr_t a = (l4_addr_t)addr;
@@ -257,7 +240,7 @@ l4rm_lookup(void * addr, l4dm_dataspace_t * ds, l4_offs_t * offset,
   *map_addr = (l4_addr_t)vm->addr;
   *map_size = vm->size;
 
-  return 0;
+  return L4RM_REGION_DATASPACE;
 }
 
 /* more dummies */

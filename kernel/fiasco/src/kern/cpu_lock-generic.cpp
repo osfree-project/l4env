@@ -1,4 +1,4 @@
-IMPLEMENTATION[generic]:
+IMPLEMENTATION:
 /**
  * Generic implementation of the CPU lock. 
  * This implementation uses Proc::cli and

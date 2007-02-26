@@ -14,10 +14,13 @@
 #include <l4/sys/syscalls.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/util/macros.h>
+#ifdef ARCH_x86
 #include <l4/generic_io/libio.h>
+#endif
 
-#include "init.h"
 #include "iomem.h"
+
+extern int con_hw_use_l4io;
 
 static l4_threadid_t my_task_pager_id = L4_INVALID_ID;
 
@@ -45,7 +48,7 @@ map_io_mem(l4_addr_t addr, l4_size_t size, const char *id, l4_addr_t *vaddr)
   l4_msgdope_t result;
   l4_offs_t offset;
 
-  if (!use_l4io)
+  if (!con_hw_use_l4io)
     {
       offset = addr - (addr & L4_SUPERPAGEMASK);
       size   = (size + offset + L4_SUPERPAGESIZE-1) & L4_SUPERPAGEMASK;
@@ -55,7 +58,7 @@ map_io_mem(l4_addr_t addr, l4_size_t size, const char *id, l4_addr_t *vaddr)
 	Panic("Error %d reserving region size=%dMB for %s mem",
 	    error, size>>20, id);
 
-      printf("Mapping I/O %s mem %08x => %08x+%06x [%dkB]\n",
+      LOG_printf("Mapping I/O %s mem %08x => %08x+%06x [%dkB]\n",
 	  id, addr+offset, *vaddr, offset, size>>10);
 
       /* check here for curious video buffer, one candidate is VMware */
@@ -92,11 +95,15 @@ map_io_mem(l4_addr_t addr, l4_size_t size, const char *id, l4_addr_t *vaddr)
     }
   else /* use l4io */
     {
+#ifdef ARCH_x86
       if ((*vaddr = l4io_request_mem_region(addr, size, &offset)) == 0)
 	Panic("Can't request mem region from l4io.");
 
-      printf("Mapped I/O %s mem %08x => %08x+%06x [%dkB] via l4io\n",
-	  id, addr + offset, *vaddr, offset, size >> 10);
+      LOG_printf("Mapped I/O %s mem %08x => %08x+%06x [%dkB] via l4io\n",
+	  id, addr, *vaddr, offset, size >> 10);
+#else
+      Panic("Use of l4io not supported.");
+#endif
     }
 
   *vaddr += offset;
@@ -107,7 +114,7 @@ map_io_mem(l4_addr_t addr, l4_size_t size, const char *id, l4_addr_t *vaddr)
 void
 unmap_io_mem(l4_addr_t addr, l4_size_t size, const char *id, l4_addr_t vaddr)
 {
-  if (!use_l4io)
+  if (!con_hw_use_l4io)
     {
       l4_addr_t vend   = vaddr + size;
       l4_addr_t vaddr1 = vaddr;
@@ -124,16 +131,20 @@ unmap_io_mem(l4_addr_t addr, l4_size_t size, const char *id, l4_addr_t vaddr)
 	Panic("Error releasing region %08x-%08x", 
 	    vaddr1, vaddr1+size);
 
-      printf("Unmapped I/O %s mem\n", id);
+      LOG_printf("Unmapped I/O %s mem\n", id);
     }
   else
     {
+#ifdef ARCH_x86
       int error;
 
       if ((error = l4io_release_mem_region(addr, size)) < 0)
 	Panic("Error %d releasing region %08x-%08x at l4io", 
 	    error, addr, addr+size);
-      printf("Unmapped I/O %s mem via l4io\n", id);
+      LOG_printf("Unmapped I/O %s mem via l4io\n", id);
+#else
+      Panic("Use of l4io not supported.");
+#endif
     }
 }
 

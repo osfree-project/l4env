@@ -16,10 +16,6 @@
 #include <linux/compiler.h>
 #include <asm/byteorder.h>
 
-#ifdef DDE_LINUX
-#include <stdio.h>	/* OSKit does standard stuff */
-#endif
-
 /* Optimization barrier */
 /* The "volatile" is due to gcc bugs */
 #define barrier() __asm__ __volatile__("": : :"memory")
@@ -68,8 +64,10 @@ extern int console_printk[];
 
 #ifdef __i386__
 #define FASTCALL(x)	x __attribute__((regparm(3)))
+#define fastcall	__attribute__((regparm(3)))
 #else
 #define FASTCALL(x)	x
+#define fastcall
 #endif
 
 struct completion;
@@ -86,18 +84,22 @@ extern unsigned long simple_strtoul(const char *,char **,unsigned int);
 extern long simple_strtol(const char *,char **,unsigned int);
 extern unsigned long long simple_strtoull(const char *,char **,unsigned int);
 extern long long simple_strtoll(const char *,char **,unsigned int);
-#ifndef DDE_LINUX
+
+//#ifndef DDE_LINUX
 extern int sprintf(char * buf, const char * fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
-extern int vsprintf(char *buf, const char *, va_list);
+extern int vsprintf(char *buf, const char *, va_list)
+	__attribute__ ((format (printf, 2, 0)));
 extern int snprintf(char * buf, size_t size, const char * fmt, ...)
 	__attribute__ ((format (printf, 3, 4)));
-extern int vsnprintf(char *buf, size_t size, const char *fmt, va_list args);
+extern int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
+	__attribute__ ((format (printf, 3, 0)));
 
 extern int sscanf(const char *, const char *, ...)
-	__attribute__ ((format (scanf,2,3)));
-extern int vsscanf(const char *, const char *, va_list);
-#endif /* DDE_LINUX */
+	__attribute__ ((format (scanf, 2, 3)));
+extern int vsscanf(const char *, const char *, va_list)
+	__attribute__ ((format (scanf, 2, 0)));
+//#endif /* DDE_LINUX */
 
 extern int get_option(char **str, int *pint);
 extern char *get_options(char *str, int nints, int *ints);
@@ -130,7 +132,8 @@ extern const char *print_tainted(void);
 
 extern void dump_stack(void);
 #else /* DDE_LINUX */  
-#define printk printf
+#include <l4/log/l4log.h>
+#define printk LOG_printf
 #endif /* DDE_LINUX */
 
 #if DEBUG
@@ -222,5 +225,12 @@ struct sysinfo {
 };
 
 #define BUG_ON(condition) do { if (unlikely((condition)!=0)) BUG(); } while(0)
+
+#define WARN_ON(condition) do { \
+	if (unlikely((condition)!=0)) { \
+		printk("Badness in %s at %s:%d\n", __FUNCTION__, __FILE__, __LINE__); \
+		dump_stack(); \
+	} \
+} while (0)
 
 #endif /* _LINUX_KERNEL_H */

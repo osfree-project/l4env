@@ -1,0 +1,38 @@
+/* Automatically generated from README, via Makefile.am */
+static char goom_readme[] =
+  "TAB or F - enter/leave Fullscreen\n"
+  "D - double pix (faster)\n"
+  "Numpad +/- - Change resolution\n"
+  "F1-F8 - force goom to change the current FX\n" "\n";
+
+static char goom_big_readme[] =
+  "*****************************\n"
+  "* What a GOOM! version 1.99 *\n"
+  "*****************************\n"
+  "by Jeko\n"
+  "\n"
+  "\n"
+  "The incredible trippy visualization plugin !!\n"
+  "\n"
+  "\n"
+  "\n"
+  "    where to get Goom ?\n"
+  "\n"
+  "You can find the last version on the website of\n"
+  "iOS software :\n"
+  "http://ios.free.fr\n"
+  "\n"
+  "\n"
+  "\n"
+  "    thanks\n"
+  "\n"
+  "Skal for the code of IFS\n"
+  "\n"
+  "Burkhard for the initial fullscreen patch\n"
+  "         and for vizualizer4esd\n"
+  "\n"
+  "Gyom for the iTunes version\n"
+  "         and some of the main work\n"
+  "\n"
+  "Fred for the Windows version and a lot of\n"
+  "         other Goom Stuff\n" "\n" "\n" "\n" "\n" "Enjoy !";

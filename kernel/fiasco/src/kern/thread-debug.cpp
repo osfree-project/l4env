@@ -1,43 +1,125 @@
-INTERFACE:
-
-EXTENSION class Thread
-{
-};
-
-
-IMPLEMENTATION[debug]:
+IMPLEMENTATION [debug]:
 
 #include <cstdio>
+#include "config.h"
+#include "kmem.h"
+#include "mem_layout.h"
 #include "simpleio.h"
 
-PUBLIC void Thread::print_send_partner(int task_format=0)
+IMPLEMENTATION [{ia32,ux}-debug]:
+// Note that we don't want to check for Thread_invalid since we don't want
+// to raise page faults from inside the kernel debugger
+PUBLIC inline
+int
+Thread::is_mapped()
 {
-  Thread::lookup(context_of(receiver()))->print_uid(task_format);
+  return Kmem::virt_to_phys((void*)this) != (Address)-1;
 }
 
-PUBLIC void Thread::print_partner(int task_format=0)
+IMPLEMENTATION [!{ia32,ux}-debug]:
+
+PUBLIC inline
+int
+Thread::is_mapped()
+{ 
+  return !Kmem::virt_to_phys((void*)this).is_null();
+} 
+
+IMPLEMENTATION [debug]:
+
+// check if thread is valid (i.e. valid address, thread mapped)
+PUBLIC
+int
+Thread::is_valid()
 {
-  if(partner() && (state() & (Thread_receiving | Thread_busy | 
-                              Thread_rcvlong_in_progress)))
+  return    this != 0
+	 && Kmem::is_tcb_page_fault((Address)this, 0)
+	 && ((Address)this & (Config::thread_block_size-1)) == 0
+	 && is_mapped()
+	 && state() != Thread_invalid;
+}
+
+PUBLIC
+void
+Thread::print_snd_partner(int task_format=0)
+{
+  if (state() & Thread_send_in_progress)
+    lookup(static_cast<Thread*>(receiver()))->print_uid(task_format);
+  else
+    // receiver() not valid
+    putstr("       ");
+}
+
+// Be robust if partner is invalid
+PUBLIC
+void
+Thread::print_partner(int task_format=0)
+{
+  if (!(state() & (Thread_receiving | Thread_busy |
+		   Thread_rcvlong_in_progress)))
+    {
+      printf("%*s    ", task_format, " ");
+      return;
+    }
+
+  if (!partner())
+    {
+      printf("%*s.** ", task_format, "*");
+      return;
+    }
+
+  if (Kmem::is_tcb_page_fault((Address)partner(), 0))
+    {
+      Thread *p = lookup (context_of (partner()));
+      char flag = partner() == p->preemption() ? 'P' : ' ';
+      p->print_uid(task_format);
+      putchar(flag);
+      return;
+    }
+
+#if 0
+  // does not work with ARM
+  if (Kmem::virt_to_phys((void*)partner()) != (Address)-1)
+    // IRQ thread
     partner()->id().print(task_format);
   else
-    putstr("---.--");
+    // not mapped => bogus
+    putstr("\033[31;1m???.??\033[m");
+#else
+  partner()->id().print(task_format);
+#endif
+  putchar(' ');
 }
 
-PUBLIC void Thread::print_uid(int task_format=0)
+// Be robust if this object is invalid
+PUBLIC
+void
+Thread::print_uid(int task_format=0)
 {
-  if (this)
+  if (!this)
     {
-      if (is_valid())
-	id().print(task_format);
-      else
-	{
-	  putstr("\033[31;1m");
-	  putstr("???.??\033[m");
-	}
+      putstr("---.--");
+      return;
     }
-  else
-    putstr("---.--");
+
+  if (is_valid())
+    {
+      id().print(task_format);
+      return;
+    }
+
+  if (!Kmem::is_tcb_page_fault((Address)this, 0)
+      || ((Address)this & (Config::thread_block_size-1)))
+    {
+      putstr("\033[31;1m???.??\033[m");
+      return;
+    }
+
+  // address inside tcb
+  putstr("\033[31;1m");
+  Global_id (reinterpret_cast<Address>(this), Mem_layout::Tcbs,
+ 	     Config::thread_block_size).print (task_format);
+  putstr("\033[m");
 }
 
 PUBLIC
@@ -46,11 +128,10 @@ Thread::print_state_long (unsigned cut_on_len = 0)
 {
   static char * const state_names[] = 
     { 
-      "ready", "wait", "receiving", "polling", 
-      "ipc_in_progress", "send_in_progress", "busy", "",
-      "cancel", "dead", "polling_long", "busy_long",
-      "", "", "rcvlong_in_progress", "",
-      "fpu_owner"
+      "ready", "utcb", "rcv", "poll",
+      "ipc_progr", "snd_progr", "busy", "lipc_ok",
+      "cancel", "dead", "poll_long", "busy_long", "rcvlong_progr",
+      "delayed_deadl", "delayed_ipc", "fpu", "alien", "dealien",
     };
 
   Mword i, comma=0, chars=0, bits=state();
@@ -77,3 +158,8 @@ Thread::print_state_long (unsigned cut_on_len = 0)
       comma = 1;
     }
 }
+
+PUBLIC static inline
+Task_num
+Thread::get_task (Global_id id)
+{ return id.task(); }

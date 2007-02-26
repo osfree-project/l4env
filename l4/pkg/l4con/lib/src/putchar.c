@@ -7,6 +7,8 @@
  *
  */
 
+#include <stdio.h>
+
 /* intern */
 #include "internal.h"
 #include <l4/log/log_printf.h>
@@ -22,6 +24,7 @@
  * This function writes a character. (libc)
  */
 /*****************************************************************************/
+#undef putchar
 int
 putchar(int c)
 {
@@ -29,7 +32,6 @@ putchar(int c)
     return contxt_putchar(c);
 
   return LOG_putchar(c);
-
 }
 
 /*****************************************************************************/
@@ -48,7 +50,7 @@ contxt_putchar(int c)
 {
   if (__init)
     {
-      char str[1] = { c };
+      l4_uint8_t str[1] = { c };
       contxt_write(str, 1);
     }
   else

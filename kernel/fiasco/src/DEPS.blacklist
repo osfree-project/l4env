@@ -3,9 +3,7 @@
 # lines starting with ':' are black lists for dependents
 
 # KERNEL
-*jdb globals config.* kmem boot_info kern_types atomic
-*undef_oskit l4_types types static_init initcalls regdefs
-*globalconfig panic linker_syms std_macros
+*globals config.* l4_types types globalconfig
 
 # LIBC
 *.?stdlib .?assert .?stdio .?stdarg .?string __main _exit initfini
@@ -13,5 +11,3 @@
 *sys_wait sys_types sys_ptrace sys_user .?errno asm_unistd sys_stat
 *sys_mman fcntl sys_poll sys_ucontext simpleio keycodes
 
-# OSKIT
-*flux.* amm lmm

@@ -1,0 +1,22 @@
+Demon - An evil supernatural being
+
+Compared to the infernal perils of a demon, dmon is mostly harmless. Dmon provides
+a convenient DOpE-based interface to several debug information of L4 servers:
+names, dm_phys, events, loader, ...
+
+Dmon is also an improved dopelog - logserver replacement - that utilizes
+VTextScreen and provides history with scrolling.
+
+To run dmon you should patch your grub menu.lst like this:
+
+--- 1.lst       2005-02-16 13:54:40.000000000 +0100
++++ 2.lst       2005-02-16 13:54:48.000000000 +0100
+@@ -4,6 +4,6 @@
+  module (nd)/fiasco -nokdb -nowait
+  module (nd)/sigma0
+  module (nd)/names -verbose 1
+- module (nd)/log
++ module (nd)/dmon
+  module (nd)/dm_phys
+  module (nd)/my_hello
+

@@ -1,0 +1,46 @@
+/*! \mainpage CPU Reservation Server
+
+This server keeps track of CPU reservations in DROPS. If a client wants to
+do a reservation, it asks the CPU reservation server to do so. Parameters of
+a reservation are the periority p, the period T, the WCET C and the optional
+deadline D. The server checks whether the reservations made so far will meet
+their deadlines given the new reservation would be admitted, and checks
+whether this holds for the new one. Therefore, the server performs a
+response-time analysis on the existing reservations with priorities less or
+equal to p. For the new reservation, reservations with priorities higher or
+equal are used for the analysis.
+
+If no deadline is specified, the reservation is made, but no guarantees are
+given to the specified thread. That is, the thread may consume the given CPU
+time C without violating others reservations, but it is not shure that the
+thread will actually be scheduled within any time. This is the preferred
+mode for optional parts of the QaS scheduling, where an external admission
+scheme ensures a certain quality of service.
+
+The CPU reservation server does not assign priorities. It is the
+responibility of the caller to use some external priority assignment scheme.
+The CPU reservation ensures that the threads having a reservation will
+indeed get the amount of CPU they requested before the dealine approaches.
+
+\section s_api API's
+- \ref api
+- \ref dp
+*/
+
+/*!\defgroup api CPU reservation API
+ *
+ * \brief Functions to manage reservations
+ *
+ * The function-prototypes can be found in <l4/cpu_reserve/sched.h>
+ *
+ * The API implementation can be found in the \a libcpu_reserve.a library.
+ */
+/*!\defgroup dp CPU delayed preemption API
+ *
+ * \brief Functions to manage delayed preemptions (DP)
+ *
+ * The function-prototypes can be found in <l4/cpu_reserve/sched.h>
+ *
+ * The API implementation can be found in the \a libcpu_reserve.a library.
+ */
+  

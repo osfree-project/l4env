@@ -1,0 +1,8 @@
+Lots of stuff ...
+
+ * real docu
+ * Impl. a file server, which provides the filesystem of a running L4Linux
+ * Servers need to have more internal parallelism, maybe using DICE's
+   [allow_reply_only]
+ * generalize error codes
+ * ...

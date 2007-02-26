@@ -7,10 +7,9 @@ SRC_C =		main.c driver.c command.c notification.c request.c
 
 # target
 TARGET =	blk-ux
-MODE =		l4env
+MODE =		l4env_freebsd
 LIBS =		-lgeneric_blk-server -lclxfux.o
-LIBCINCDIR = 	-I../../oskit
-DEFAULT_RELOC = 0x00500000
+DEFAULT_RELOC = 0x00550000
 SYSTEMS =       x86-l4v2 x86-l4x0
 
 vpath %.c ../../oskit
@@ -18,3 +17,4 @@ vpath %.c ../../oskit
 # include prog role
 include $(L4DIR)/mk/prog.mk
 
+LIBCINCDIR	+= -I../../oskit

@@ -33,7 +33,8 @@ typedef struct blkclient_driver
   l4_threadid_t     notify_id; 
 
   /* library stuff */
-  l4thread_t        notify_thread;
+  l4thread_t                        notify_thread;
+  l4blk_setup_notify_callback_fn_t  cb;
 } blkclient_driver_t;
 
 /* prototypes */

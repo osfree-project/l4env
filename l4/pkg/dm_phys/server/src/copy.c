@@ -15,6 +15,7 @@
  */
 
 /* Standard includes */
+#include <stdio.h>     /* sprintf */
 #include <string.h>    /* memcpy / memset */
 
 /* L4/L4Env includes */
@@ -56,17 +57,10 @@
  */
 /*****************************************************************************/ 
 static int
-__create_copy(dmphys_dataspace_t * src, 
-	      l4_threadid_t owner, 
-	      page_pool_t * pool, 
-	      l4_addr_t dst_addr, 
-	      l4_size_t dst_size,
-	      l4_addr_t dst_align, 
-	      l4_offs_t src_offs, 
-	      l4_offs_t dst_offs, 
-	      l4_size_t num, 
-	      l4_uint32_t flags, 
-	      const char * name, 
+__create_copy(dmphys_dataspace_t * src, l4_threadid_t owner, 
+	      page_pool_t * pool, l4_addr_t dst_addr, l4_size_t dst_size,
+	      l4_addr_t dst_align, l4_offs_t src_offs, l4_offs_t dst_offs, 
+	      l4_size_t num, l4_uint32_t flags, const char * name, 
 	      l4dm_dataspace_t * copy)
 {
   int ret;
@@ -85,16 +79,18 @@ __create_copy(dmphys_dataspace_t * src,
     }
 
   /* create destination dataspace */
-  ret = dmphys_open(owner,pool,dst_addr,dst_size,dst_align,flags,name,copy);
+  ret = dmphys_open(owner, pool, dst_addr, dst_size, dst_align, 
+                    flags, name, copy);
   if (ret < 0)
     {
-      ERROR("DMphys: create destination dataspace failed: %d!",ret);
+      LOGdL(DEBUG_ERRORS, 
+            "DMphys: create destination dataspace failed: %d!", ret);
       return ret;
     }
   dst = dmphys_ds_get(copy->id);
 
-  LOGdL(DEBUG_COPY,"copy ds: %u at %x.%x",copy->id,
-        copy->manager.id.task,copy->manager.id.lthread);
+  LOGdL(DEBUG_COPY,"copy ds: %u at "l4util_idfmt, 
+        copy->id, l4util_idstr(copy->manager));
   
   d_offs = 0;
   if (dst_offs > 0)
@@ -103,7 +99,7 @@ __create_copy(dmphys_dataspace_t * src,
       fill = dst_offs;
       while (fill > 0)
 	{
-	  d_area = dmphys_ds_find_page_area(dst,d_offs,&d_area_offs);
+	  d_area = dmphys_ds_find_page_area(dst, d_offs, &d_area_offs);
 	  ASSERT(d_area != NULL);
 
 	  d_addr = AREA_MAP_ADDR(d_area) + d_area_offs;
@@ -113,9 +109,10 @@ __create_copy(dmphys_dataspace_t * src,
 	    n = fill;
 
 #if DEBUG_COPY
-	  printf("  fill 0x%08x-0x%08x, 0x%x bytes\n",d_addr,d_addr + n - 1,n);
+	  LOG_printf(" fill 0x%08x-0x%08x, 0x%x bytes\n", 
+                 d_addr, d_addr + n - 1, n);
 #endif
-	  memset((void *)d_addr,0,n);
+	  memset((void *)d_addr, 0, n);
 
 	  d_offs += n;
 	  fill -= n;
@@ -126,8 +123,8 @@ __create_copy(dmphys_dataspace_t * src,
   while (num > 0)
     {
       /* copy dataspace */
-      d_area = dmphys_ds_find_page_area(dst,d_offs,&d_area_offs);
-      s_area = dmphys_ds_find_page_area(src,s_offs,&s_area_offs);
+      d_area = dmphys_ds_find_page_area(dst, d_offs, &d_area_offs);
+      s_area = dmphys_ds_find_page_area(src, s_offs, &s_area_offs);
       ASSERT((d_area != NULL) && (s_area != NULL));
 
       d_addr = AREA_MAP_ADDR(d_area) + d_area_offs;
@@ -141,11 +138,11 @@ __create_copy(dmphys_dataspace_t * src,
 	n = num;
 
 #if DEBUG_COPY
-      printf("  copy 0x%08x-0x%08x -> 0x%08x-0x%08x (0x%x)\n",
-             s_addr,s_addr + n - 1,d_addr,d_addr + n - 1,n);
+      LOG_printf(" copy 0x%08x-0x%08x -> 0x%08x-0x%08x (0x%x)\n",
+             s_addr, s_addr + n - 1, d_addr, d_addr + n - 1, n);
 #endif
 
-      memcpy((void *)d_addr,(void *)s_addr,n);
+      memcpy((void *)d_addr, (void *)s_addr, n);
 
       d_offs += n;
       s_offs += n;
@@ -158,7 +155,7 @@ __create_copy(dmphys_dataspace_t * src,
       fill = dst_size - d_offs;
       while (fill > 0)
 	{
-	  d_area = dmphys_ds_find_page_area(dst,d_offs,&d_area_offs);
+	  d_area = dmphys_ds_find_page_area(dst, d_offs, &d_area_offs);
 	  ASSERT(d_area != NULL);
 
 	  d_addr = AREA_MAP_ADDR(d_area) + d_area_offs;
@@ -168,9 +165,10 @@ __create_copy(dmphys_dataspace_t * src,
 	    n = fill;
 
 #if DEBUG_COPY
-	  printf("  fill 0x%08x-0x%08x, 0x%x bytes\n",d_addr,d_addr + n - 1,n);
+	  LOG_printf(" fill 0x%08x-0x%08x, 0x%x bytes\n", 
+                 d_addr, d_addr + n - 1, n);
 #endif
-	  memset((void *)d_addr,0,n);
+	  memset((void *)d_addr, 0, n);
 
 	  d_offs += n;
 	  fill -= n;
@@ -192,37 +190,34 @@ __create_copy(dmphys_dataspace_t * src,
 /**
  * \brief  Create a copy of the dataspace (DMgeneric version)
  * 
- * \param  request       Flick request structure
- * \param  ds_id         Source dataspace id
- * \param  src_offs      Offset in source dataspace
- * \param  dst_offs      Offset in destination dataspace
- * \param  num           Number of bytes to copy
- * \param  flags         Flags:
- *                       - \c L4DM_CONTIGUOUS        allocate contiguous 
- *                                                   memory area
- *                       - \c L4DM_MEMPHYS_SAME_POOL use same pool than sorce
- *                                                   dataspace to allocate copy
- * \param  name          Copy name
- * \retval copy          Dataspace id of copy
- * \retval _ev           Flick exception structure, unused
+ * \param  _dice_corba_obj    Request source
+ * \param  ds_id              Source dataspace id
+ * \param  src_offs           Offset in source dataspace
+ * \param  dst_offs           Offset in destination dataspace
+ * \param  num                Number of bytes to copy
+ * \param  flags              Flags:
+ *                            - #L4DM_CONTIGUOUS        allocate contiguous 
+ *                                                      memory area
+ *                            - #L4DM_MEMPHYS_SAME_POOL use same pool than 
+ *                                                      source dataspace to 
+ *                                                      allocate copy
+ * \param  name               Copy name
+ * \param  _dice_corba_env    Server environment
+ * \retval copy               Dataspace id of copy
  *	
  * \return 0 on success (created dataspace copy), error code otherwise:
- *         - \c -L4_EINVAL     Invalid source dataspace id
- *         - \c -L4_EPERM      Permission denied
- *         - \c -L4_ENOHANDLE  Could not create dataspace descriptor
- *         - \c -L4_ENOMEM     Out of memory creating copy
+ *         - -#L4_EINVAL     Invalid source dataspace id
+ *         - -#L4_EPERM      Permission denied
+ *         - -#L4_ENOHANDLE  Could not create dataspace descriptor
+ *         - -#L4_ENOMEM     Out of memory creating copy
  */
 /*****************************************************************************/ 
 l4_int32_t 
-if_l4dm_generic_copy_component(CORBA_Object _dice_corba_obj,
-                               l4_uint32_t ds_id,
-                               l4_uint32_t src_offs,
-                               l4_uint32_t dst_offs,
-                               l4_uint32_t num,
-                               l4_uint32_t flags,
-                               const char* name,
-                               l4dm_dataspace_t *copy,
-                               CORBA_Environment *_dice_corba_env)
+if_l4dm_generic_copy_component(CORBA_Object _dice_corba_obj, l4_uint32_t ds_id,
+                               l4_uint32_t src_offs, l4_uint32_t dst_offs,
+                               l4_uint32_t num, l4_uint32_t flags,
+                               const char* name, l4dm_dataspace_t *copy,
+                               CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
@@ -230,20 +225,20 @@ if_l4dm_generic_copy_component(CORBA_Object _dice_corba_obj,
   l4_size_t num_copy;
   page_pool_t * pool;
   
-  LOGdL(DEBUG_COPY,"ds %u, caller %x.%x",ds_id,
-        _dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
+  LOGdL(DEBUG_COPY, "ds %u, caller "l4util_idfmt, 
+        ds_id, l4util_idstr(*_dice_corba_obj));
 
   /* get source dataspace descriptor, caller must be a client */
-  ret = dmphys_ds_get_check_client(ds_id,*_dice_corba_obj,&ds);
+  ret = dmphys_ds_get_check_client(ds_id, *_dice_corba_obj, &ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	ERROR("DMphys: invalid dataspace id, id %u, caller %x.%x",
-	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
+	LOGL("DMphys: invalid dataspace id, id %u, caller "l4util_idfmt,
+	     ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	ERROR("DMphys: caller %x.%x is not a client of dataspace %d!",
-	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id);
+	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %d!",
+	     l4util_idstr(*_dice_corba_obj), ds_id);
 #endif
       return ret;
     }
@@ -259,8 +254,9 @@ if_l4dm_generic_copy_component(CORBA_Object _dice_corba_obj,
   if (src_offs >= src_size)
     {
       /* offset points beyound the end of the dataspace */
-      ERROR("DMphys: invalid source offset 0x%08x, dataspace size 0x%08x\n",
-	    src_offs,src_size);
+      LOGdL(DEBUG_ERRORS, 
+            "DMphys: invalid source offset 0x%08x, dataspace size 0x%08x\n",
+	    src_offs, src_size);
       return -L4_EINVAL_OFFS; 
     }
 
@@ -280,61 +276,60 @@ if_l4dm_generic_copy_component(CORBA_Object _dice_corba_obj,
     dst_size = num + dst_offs;
   dst_size = (dst_size + DMPHYS_PAGESIZE - 1) & DMPHYS_PAGEMASK;
 
-  LOGdL(DEBUG_COPY,"copy %u bytes\n" \
+  LOGdL(DEBUG_COPY, "copy %u bytes\n" \
         "  source size 0x%08x, offset 0x%08x\n" \
         "  destination size 0x%08x, offset 0x%08x, num 0x%08x",
-        num_copy,src_size,src_offs,dst_size,dst_offs,num);
+        num_copy, src_size, src_offs, dst_size, dst_offs, num);
 
   /* create copy */
-  return __create_copy(ds,*_dice_corba_obj,pool,L4DM_MEMPHYS_ANY_ADDR,dst_size,
-		       DMPHYS_PAGESIZE,src_offs,dst_offs,num_copy,flags,
-		       name,copy);
+  return __create_copy(ds, *_dice_corba_obj, pool, L4DM_MEMPHYS_ANY_ADDR,
+                       dst_size, DMPHYS_PAGESIZE, src_offs, dst_offs, 
+                       num_copy, flags, name, copy);
 }
  
 /*****************************************************************************/
 /**
  * \brief  Create a copy of the dataspace (extended DMphys version)
  * 
- * \param  request       Flick request structure
- * \param  ds_id         Source dataspace id
- * \param  src_offs      Offset in source dataspace
- * \param  dst_offs      Offset in destination dataspace
- * \param  num           Number of bytes to copy
- * \param  dst_pool      Memory pool to use to allocate destination dataspace
- * \param  dst_addr      Phys. address of destination dataspace
- *                       (L4DM_MEMPHYS_ANY_ADDR ... find suitable area)
- * \param  dst_size      Size of destination dataspace
- * \param  dst_align     Alignment of destination dataspace
- * \param  flags         Flags:
- *                       - \c L4DM_CONTIGUOUS        allocate contiguous 
- *                                                   memory area
- *                       - \c L4DM_MEMPHYS_SAME_POOL use same pool than sorce
- *                                                   dataspace to allocate copy
- * \param  name          Copy name
- * \retval copy          Dataspace id of copy
- * \retval _ev           Flick exception structure, unused
+ * \param  _dice_corba_obj    Request source
+ * \param  ds_id              Source dataspace id
+ * \param  src_offs           Offset in source dataspace
+ * \param  dst_offs           Offset in destination dataspace
+ * \param  num                Number of bytes to copy
+ * \param  dst_pool           Memory pool to use to allocate destination 
+ *                            dataspace
+ * \param  dst_addr           Phys. address of destination dataspace
+ *                            (#L4DM_MEMPHYS_ANY_ADDR ... find suitable area)
+ * \param  dst_size           Size of destination dataspace
+ * \param  dst_align          Alignment of destination dataspace
+ * \param  flags              Flags:
+ *                            - #L4DM_CONTIGUOUS        allocate contiguous 
+ *                                                      memory area
+ *                            - #L4DM_MEMPHYS_SAME_POOL use same pool than 
+ *                                                      source dataspace to 
+ *                                                      allocate copy
+ * \param  name               Copy name
+ * \param  _dice_corba_env    Server environment
+ * \retval copy               Dataspace id of copy
  *	
  * \return 0 on success (created dataspace copy), error code otherwise:
- *         - \c -L4_EINVAL     Invalid argument
- *         - \c -L4_EPERM      Permission denied
- *         - \c -L4_ENOHANDLE  Could not create dataspace descriptor
- *         - \c -L4_ENOMEM     Out of memory creating copy
+ *         - -#L4_EINVAL     Invalid argument
+ *         - -#L4_EPERM      Permission denied
+ *         - -#L4_ENOHANDLE  Could not create dataspace descriptor
+ *         - -#L4_ENOMEM     Out of memory creating copy
  */
 /*****************************************************************************/ 
 l4_int32_t 
 if_l4dm_memphys_dmphys_copy_component(CORBA_Object _dice_corba_obj,
-                                      l4_uint32_t ds_id,
-                                      l4_uint32_t src_offs,
-                                      l4_uint32_t dst_offs,
-                                      l4_uint32_t num,
-                                      l4_uint32_t dst_pool,
+                                      l4_uint32_t ds_id, l4_uint32_t src_offs,
+                                      l4_uint32_t dst_offs, l4_uint32_t num,
+                                      l4_uint32_t dst_pool, 
                                       l4_uint32_t dst_addr,
                                       l4_uint32_t dst_size,
                                       l4_uint32_t dst_align,
-                                      l4_uint32_t flags,
-                                      const char* name,
+                                      l4_uint32_t flags, const char* name,
                                       l4dm_dataspace_t *copy,
-                                      CORBA_Environment *_dice_corba_env)
+                                      CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
@@ -343,16 +338,16 @@ if_l4dm_memphys_dmphys_copy_component(CORBA_Object _dice_corba_obj,
   page_pool_t * pool;
 
   /* get source dataspace descriptor, caller must be a client */
-  ret = dmphys_ds_get_check_client(ds_id,*_dice_corba_obj,&ds);
+  ret = dmphys_ds_get_check_client(ds_id, *_dice_corba_obj, &ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	ERROR("DMphys: invalid dataspace id, id %u, caller %x.%x",
-	      ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
+	LOGL("DMphys: invalid dataspace id, id %u, caller "l4util_idfmt,
+	     ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	ERROR("DMphys: caller %x.%x is not a client of dataspace %d!",
-	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id);
+	LOGL("DMphys: caller "l4util_idfmt" is not a client of dataspace %d!",
+	     l4util_idstr(*_dice_corba_obj), ds_id);
 #endif
       return ret;
     }
@@ -365,7 +360,7 @@ if_l4dm_memphys_dmphys_copy_component(CORBA_Object _dice_corba_obj,
       pool = dmphys_get_page_pool(dst_pool);
       if (pool == NULL)
 	{
-	  ERROR("DMphys: invalid page pool %d!",dst_pool);
+	  LOGdL(DEBUG_ERRORS, "DMphys: invalid page pool %d!", dst_pool);
 	  return -L4_EINVAL;
 	}
     }
@@ -375,8 +370,9 @@ if_l4dm_memphys_dmphys_copy_component(CORBA_Object _dice_corba_obj,
   if (src_offs >= src_size)
     {
       /* offset points beyound the end of the dataspace */
-      ERROR("DMphys: invalid source offset 0x%08x, dataspace size 0x%08x",
-	    src_offs,src_size);
+      LOGdL(DEBUG_ERRORS, 
+            "DMphys: invalid source offset 0x%08x, dataspace size 0x%08x",
+	    src_offs, src_size);
       return -L4_EINVAL_OFFS; 
     }
       
@@ -393,16 +389,17 @@ if_l4dm_memphys_dmphys_copy_component(CORBA_Object _dice_corba_obj,
   if (dst_size > dst_ds_size)
     dst_ds_size = dst_size;
 
-  LOGdL(DEBUG_COPY,"\n  ds %u, caller %x.%x, copy %u bytes\n" \
-        "  source size 0x%08x, offset 0x%08x\n" \
-        "  destination offset 0x%08x, num 0x%08x\n" \
-        "  destination size 0x%08x (caller 0x%08x)\n" \
-        "  destination at 0x%08x, align 0x%08x",ds_id,
-        _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,num_copy,
-        src_size,src_offs,dst_offs,num,dst_ds_size,dst_size,dst_addr,
-        dst_align);
+  LOGdL(DEBUG_COPY, "ds %u, caller "l4util_idfmt", copy %u bytes\n" \
+        " source size 0x%08x, offset 0x%08x\n" \
+        " destination offset 0x%08x, num 0x%08x\n" \
+        " destination size 0x%08x (caller 0x%08x)\n" \
+        " destination at 0x%08x, align 0x%08x",
+        ds_id, l4util_idstr(*_dice_corba_obj), num_copy,
+        src_size, src_offs, dst_offs, num, dst_ds_size, dst_size, 
+        dst_addr, dst_align);
 
   /* create copy */
-  return __create_copy(ds,*_dice_corba_obj,pool,dst_addr,dst_ds_size,dst_align,
-                       src_offs,dst_offs,num_copy,flags,name,copy);
+  return __create_copy(ds, *_dice_corba_obj, pool, dst_addr, dst_ds_size,
+                       dst_align, src_offs, dst_offs, num_copy, flags,
+                       name, copy);
 }

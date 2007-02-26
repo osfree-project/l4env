@@ -26,9 +26,6 @@
 #ifndef _L4UTIL_MACROS_H
 #define _L4UTIL_MACROS_H
 
-/* standard / OSKit includes */
-#include <stdio.h>
-
 /* L4 includes */
 #include <l4/sys/types.h>
 #include <l4/sys/kdebug.h>
@@ -40,62 +37,47 @@
  *** generic macros
  *****************************************************************************/
 
-/* print message */
-#ifndef Msg
-#  define Msg(format, args...)   printf(format, ## args)
-#endif
-
-/* print error message */
-#ifndef Error
-#  define Error(format, args...) do                                      \
-                                   {                                     \
-                                     printf("[%s:%d] in function %s:\n", \
-                                            __FILE__, __LINE__,          \
-                                            __FUNCTION__);               \
-                                     printf("Error: " format, ## args);  \
-                                     printf("\n");                       \
-                                     LOG_flush();                        \
-                                   }                                     \
-                                 while (0)
-#endif
-
 /* print message and enter kernel debugger */
 #ifndef Panic
-#  define Panic(format, args...) do                                      \
-                                   {                                     \
-                                     printf("[%s:%d] in function %s:\n", \
-                                            __FILE__, __LINE__,          \
-                                            __FUNCTION__);               \
-                                     printf(format, ## args);            \
-                                     printf("\n");                       \
-                                     LOG_flush();                        \
-                                     enter_kdebug("PANIC");              \
-                                   }                                     \
-                                 while (0)
+
+// Don't include <stdlib.h> here, leads to trouble.
+// Don't use exit() here since we want to terminate ASAP.
+// We might be executed in context of the region manager.
+EXTERN_C_BEGIN
+void _exit(int status) __attribute__ ((__noreturn__));
+EXTERN_C_END
+
+#  define Panic(args...) do                                      \
+                           {                                     \
+                             LOGL(args);                         \
+                             LOG_flush();                        \
+                             enter_kdebug("PANIC, 'g' for exit");\
+                             _exit(-1);                          \
+                           }                                     \
+                         while (1)
 #endif
 
 /* assertion */
 #ifndef Assert
-#  define Assert(expr) do                                                \
-                         {                                               \
-                           if (!(expr))                                  \
-                             {                                           \
-                               printf(#expr);                            \
-                               printf("\n");                             \
-                               Panic("Assertion failed");                \
-                             }                                           \
-                         }                                               \
+#  define Assert(expr) do                                        \
+                         {                                       \
+                           if (!(expr))                          \
+                             {                                   \
+                               LOG_printf(#expr "\n");           \
+                               Panic("Assertion failed");        \
+                             }                                   \
+                         }                                       \
                        while (0)
 #endif
 
 /* enter kernel debugger */
 #ifndef Kdebug
-#  define Kdebug(args...)  do                                            \
-                             {                                           \
-                               LOGL(args);                               \
-                               LOG_flush();                              \
-                               enter_kdebug("KD");                       \
-                             }                                           \
+#  define Kdebug(args...)  do                                    \
+                             {                                   \
+                               LOGL(args);                       \
+                               LOG_flush();                      \
+                               enter_kdebug("KD");               \
+                             }                                   \
                            while (0)
 #endif
 
@@ -104,20 +86,11 @@
  *****************************************************************************/
 
 /* we use our own debug macros */
-#ifdef DMSG
-#  undef DMSG
-#endif
-#ifdef INFO
-#  undef INFO
-#endif
 #ifdef KDEBUG
 #  undef KDEBUG
 #endif
 #ifdef ASSERT
 #  undef ASSERT
-#endif
-#ifdef ERROR
-#  undef ERROR
 #endif
 #ifdef PANIC
 #  undef PANIC
@@ -125,23 +98,9 @@
 
 #ifdef DEBUG
 
-#define DMSG(args...)   printf( args)
-
-//#define INFO(args...)   LOGL( args)
-#define INFO(args...)   do                                   \
-                          {                                  \
-			    printf("%s:%d (%s,"IdFmt"): ",   \
-                                   __FILE__,__LINE__,        \
-		                   __FUNCTION__,             \
-		                   IdStr(l4_myself()));      \
-			           printf( args);            \
-	                  }                                  \
-                        while (0)
-
 #define KDEBUG(args...) do                                   \
                           {                                  \
-                            INFO( args);                     \
-                            printf("\n");                    \
+                            LOGL(args);                      \
                             LOG_flush();                     \
                             enter_kdebug("KD");              \
                           }                                  \
@@ -154,20 +113,15 @@
 #endif
 
 #ifdef DEBUG_ERRORS
-#  define ERROR(format, args...) Error(format, ## args)
 #  define PANIC(format, args...) Panic(format, ## args)
 #else
-#  define ERROR(args...)  do {} while (0)
 #  define PANIC(args...)  do {} while (0)
 #endif
 
 #else /* !DEBUG */
 
-#define DMSG(args...)   do {} while (0)
-#define INFO(args...)   do {} while (0)
 #define KDEBUG(args...) do {} while (0)
 #define ASSERT(expr)    do {} while (0)
-#define ERROR(args...)  do {} while (0)
 #define PANIC(args...)  do {} while (0)
 
 #endif /* !DEBUG */

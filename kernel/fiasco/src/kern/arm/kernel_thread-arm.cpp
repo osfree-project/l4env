@@ -1,10 +1,8 @@
-IMPLEMENTATION[arm]:
+IMPLEMENTATION [arm]:
 
 #include "boot_info.h"
 #include "config.h"
 #include "irq_alloc.h"
-#include "linker_syms.h"
-//#include "pic.h"
 
 IMPLEMENT inline
 void
@@ -18,6 +16,5 @@ Kernel_thread::free_initcall_section()
 IMPLEMENT FIASCO_INIT
 void
 Kernel_thread::bootstrap_arch()
-{
-  Proc::sti();
-}
+{ Proc::sti(); }
+

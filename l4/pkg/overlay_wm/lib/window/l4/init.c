@@ -4,6 +4,15 @@
  * \author  Norman Feske <nf2@inf.tu-dresden.de>
  */
 
+/*
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the Overlay WM package, which is distributed
+ * under the  terms  of the GNU General Public Licence 2. Please see
+ * the COPYING file for details.
+ */
+
 /*** GENERAL INCLUDES ***/
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,12 +31,6 @@ static l4_threadid_t ovl_tid;
 CORBA_Object ovl_window_srv = &ovl_tid;
 
 
-/*** DICE MEMORY ALLOCATION FUNCTION ***/
-void *CORBA_alloc(unsigned long size) {
-	return malloc(size);
-}
-
-
 /*** INTERFACE: INIT OVERLAY WINDOW LIBRARY ***/
 int ovl_window_init(char *ovl_name) {
 	l4thread_t listener;
@@ -37,12 +40,14 @@ int ovl_window_init(char *ovl_name) {
 	l4thread_init();
 	
 	if (!ovl_name) ovl_name = "OvlWM";
+	
 	printf("libovlwindow(init): ask names for %s\n",ovl_name);
 	while (names_waitfor_name(ovl_name, ovl_window_srv, 2000) == 0) {
 		printf("libovlwindow(init): %s is not registered at names!\n",ovl_name);
 	}
 
 	printf("libovlwindow(init): create window event listener thread\n");
+
 	/* start window event listener and tell the overlay server about it */
 	listener = l4thread_create(window_listener_server_loop,
 	                           NULL,L4THREAD_CREATE_ASYNC);

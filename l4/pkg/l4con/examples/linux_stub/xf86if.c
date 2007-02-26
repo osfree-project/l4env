@@ -10,17 +10,16 @@
  * the terms of the GNU General Public License 2. Please see the
  * COPYING file for details. */
 
+#include <l4/util/l4_macros.h>
+
 #include <linux/version.h>
 #include <linux/poll.h>
 #include <linux/proc_fs.h>
 
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
-#include <l4linux/x86/sched.h>
-#else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,0)
 #include <linux/module.h>
-#include <asm/l4linux/sched.h>
 #endif
 
 #include "dropscon.h"
@@ -94,14 +93,12 @@ xf86if_f_read(struct file *f, char *buf, size_t count, loff_t *ppos)
   if (!(page = (char*)__get_free_page(GFP_KERNEL)))
     return -ENOMEM;
   
-  length = sprintf(page, "server: %x.%x\n"
-			 "vc: %x.%x\n"
+  length = sprintf(page, "server: "l4util_idfmt"\n"
+			 "vc: "l4util_idfmt"\n"
 			 "flags: %08x\n"
 			 "open: %d\n",
-			 con_l4id.id.task,
-			 con_l4id.id.lthread,
-			 dropsvc_l4id.id.task,
-			 dropsvc_l4id.id.lthread,
+			 l4util_idstr(con_l4id),
+			 l4util_idstr(dropsvc_l4id),
 			 accel_flags,
 			 xf86used-1 /* because open before read is possible */
 		   );
@@ -158,6 +155,9 @@ xf86if_f_async(int fd, struct file *filp, int on)
       fa->magic = FASYNC_MAGIC;
       fa->fa_file = filp;
       fa->fa_fd = fd;
+#ifdef L4L24
+#warning Bah, this looks suspicious for 2.4 too (think UX) (+ same below)
+#endif
       save_flags(flags);
       cli();
       fa->fa_next = fasync;
@@ -251,13 +251,13 @@ xf86if_init(void)
 #else
   struct proc_dir_entry *d =
       create_proc_entry("dropscon", S_IRUGO | S_IFREG, &proc_root);
-  if (d) {
-	d->proc_fops = &xf86if_fops;
-  }
+  if (d)
+    d->proc_fops = &xf86if_fops;
 #endif
 
   return 0;
 }
+
 
 void
 xf86if_done(void)
@@ -268,4 +268,3 @@ xf86if_done(void)
   remove_proc_entry("dropscon", &proc_root);
 #endif
 }
-

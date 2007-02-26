@@ -1,0 +1,46 @@
+/* -*- c -*- */ 
+/**
+ * \file   l4vfs/idl/common_io.idl
+ * \brief  
+ *
+ * \date   11/18/2004
+ * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+import <l4/sys/types.h>
+import <l4/l4vfs/types.h>
+
+/**
+ * @brief L4 virtual file system interface
+ */
+library l4vfs
+{
+    /**
+     * @brief Collection of some basic functions common for many other interfaces
+     */
+    [uuid(51), abstract]
+    interface common_io
+    {
+        [allow_reply_only]
+        l4vfs_ssize_t read([in] object_handle_t handle,
+                           [out, size_is(count), ref, prealloc] char **buf,
+                           [in, out] l4vfs_size_t *count);
+        [allow_reply_only]
+        l4vfs_ssize_t write([in] object_handle_t handle,
+                            [in, prealloc, ref, size_is(count)] char *buf,
+                            [in, out] l4vfs_size_t *count);
+        l4_int32_t    close([in] object_handle_t handle);
+
+        l4_int32_t    ioctl([in] object_handle_t handle,
+                            [in] int cmd,
+                            [in, out, prealloc, ref, size_is(count)] char **arg,
+                            [in, out] l4vfs_size_t *count );
+
+        l4_int32_t    fcntl([in] object_handle_t handle,
+                            [in] int cmd,
+                            [in, out] long *arg);
+    };
+};

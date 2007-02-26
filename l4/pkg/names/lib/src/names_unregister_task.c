@@ -5,15 +5,16 @@
  * \date   05/27/2003
  * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
- *
+ * \author Adam Lackorzynski <adam@os.inf.tu-dresden.de>
  */
 /* (c) 2003 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
-#include <names.h>
-#include <l4/sys/syscalls.h>
-#include <string.h>
+#include <l4/names/libnames.h>
+
+#include "names-client.h"
+#include "__libnames.h"
 
 /*!\brief Unregister all names registered for a given task.
  * \ingroup clientapi
@@ -30,13 +31,11 @@
 int
 names_unregister_task(l4_threadid_t tid)
 {
-  message_t message;
-  char	    buffer[NAMES_MAX_NAME_LEN+1];
+  CORBA_Environment env = dice_default_environment;
+  l4_threadid_t *ns_id = names_get_ns_id();
 
-  names_init_message(&message, buffer);
-  
-  message.cmd = NAMES_UNREGISTER_TASK;
-  message.id  = tid;
+  if (!ns_id)
+    return 0;
 
-  return names_send_message(&message);
-};
+  return names_unregister_task_call(ns_id, &tid, &env);
+}

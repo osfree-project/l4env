@@ -50,22 +50,22 @@
 /**
  * page size -> smallest dataspace size
  */
-#define DMPHYS_PAGESIZE               0x00001000
+#define DMPHYS_PAGESIZE               L4_PAGESIZE
 
 /**
  * page log2 size -> smallest alignment 
  */
-#define DMPHYS_LOG2_PAGESIZE          12
+#define DMPHYS_LOG2_PAGESIZE          L4_LOG2_PAGESIZE
 
 /**
  * 4MB-page size 
  */
-#define DMPHYS_4MPAGESIZE             0x00400000
+#define DMPHYS_SUPERPAGESIZE          L4_SUPERPAGESIZE
 
 /**
  * 4MB-page log2 size
  */
-#define DMPHYS_LOG2_4MPAGESIZE        22
+#define DMPHYS_LOG2_SUPERPAGESIZE     L4_LOG2_SUPERPAGESIZE
 
 /** 
  * address space log2 size

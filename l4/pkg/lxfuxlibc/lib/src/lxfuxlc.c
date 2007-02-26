@@ -1,8 +1,14 @@
 /*
+ * (c) 2004 Technische Universität Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
+/*
  * Some very minor system calls for Linux.
  */
 
-#include <lxfuxlc.h>
+#include <l4/lxfuxlibc/lxfuxlc.h>
 
 /* unistd.h stuff */
 #define __NR_exit		1
@@ -14,7 +20,9 @@
 #define __NR_waitpid		7
 #define __NR_lseek		19
 #define __NR_getpid		20
+#define __NR_kill		37
 #define __NR_pipe		42
+#define __NR_ioctl		54
 #define __NR_gettimeofday	78
 #define __NR_stat		106
 #define __NR_lstat		107
@@ -140,6 +148,7 @@ __lx_syscall1(long, close, unsigned int, fd)
 __lx_syscall3(lx_pid_t, waitpid, lx_pid_t, pid, int *, wait_stat, int, options)
 __lx_syscall3(unsigned long, lseek, unsigned int, fd, unsigned long, offset, unsigned int, origin)
 __lx_syscall0(long, getpid)
+__lx_syscall2(int, kill, lx_pid_t, pid, int, sig)
 __lx_syscall1(int, pipe, int *, filedes)
 __lx_syscall2(long, gettimeofday, struct lx_timeval *, tv, struct lx_timezone *, tz)
 __lx_syscall2(int, stat, const char *, filename, struct lx_stat *, buf)
@@ -148,6 +157,7 @@ __lx_syscall2(int, lstat, const char *, filename, struct lx_stat *, buf)
 __lx_syscall6(int, ipc, unsigned int, call, int, first, int, second, int, third, const void *, ptr, long, fifth)
 __lx_syscall5(int, select, int, n, lx_fd_set *, readfds, lx_fd_set *, writefds, lx_fd_set *, exceptfds, struct lx_timeval *, timeout)
 __lx_syscall3(int, poll, struct lx_pollfd *, fds, lx_nfds_t, nfds, int, timeout)
+__lx_syscall3(long, ioctl, unsigned int, fd, unsigned int, cmd, unsigned long, arg)
 
 
 /* ========================================================================

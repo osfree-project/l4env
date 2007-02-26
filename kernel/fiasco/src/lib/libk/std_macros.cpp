@@ -10,5 +10,33 @@ INTERFACE:
 #  define EXPECT_FALSE(exp)	(exp)
 #endif
 
+#define barrier()		__asm__ __volatile__("": : :"memory")
+
+// Use this for functions which do not examine any values except their
+// arguments and have no effects except the return value. Note that a
+// function that has pointer arguments and examines the data pointed to
+// must _not_ be declared `const'.  Likewise, a function that calls a
+// non-`const' function usually must not be `const'.  It does not make
+// sense for a `const' function to return `void'.
+#define FIASCO_CONST		__attribute__ ((const))
+
+#ifdef __i386__
+#define FIASCO_FASTCALL		__attribute__ ((regparm(3)))
+#else
+#define FIASCO_FASTCALL
+#endif
+
+#if (__GNUC__<3)
+# define MARK_AS_DEPRECATED	/* empty */
+# define ALWAYS_INLINE		/* empty */
+# define FIASCO_NOINLINE
+#else
+# define MARK_AS_DEPRECATED	__attribute__ ((deprecated))
+# define ALWAYS_INLINE		__attribute__ ((always_inline))
+# define FIASCO_NOINLINE        __attribute__ ((noinline))
+#endif
+
+#define FIASCO_NORETURN         __attribute__ ((noreturn))
+
 IMPLEMENTATION:
 //-

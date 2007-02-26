@@ -101,7 +101,7 @@ Jdb_input_task_addr::action(void *&args, char const *&fmt, int &next_char)
 	{
 	  task = (Task_num)-1;
 	  puts(" invalid task");
-	  return Jdb_module::LEAVE;
+	  return Jdb_module::ERROR;
 	}
 
       args = &first_char_have_task;
@@ -120,7 +120,7 @@ Jdb_input_task_addr::action(void *&args, char const *&fmt, int &next_char)
 	{
 	  addr = (Address)-1;
 	  puts(" not found");
-	  return Jdb_module::LEAVE;
+	  return Jdb_module::ERROR;
 	}
     }
 
@@ -131,7 +131,7 @@ PUBLIC static
 int
 Jdb_input::get_mword(Mword *mword, int digits, int base, int first_char = 0)
 {
-  unsigned val=0;
+  Mword val=0;
   
   for(int digit=0; digit<digits; ) 
     {

@@ -4,13 +4,14 @@
 #include <cdefs.h>
 #include <stddef.h>
 
+#include <memcpy.h>
+
 __BEGIN_DECLS
 
 char *strcpy(char *dest, const char *src);
 char *strncpy(char *dest, const char *src, size_t n);
 
 void *memccpy(void *dest, const void *src, int c, size_t n);
-void *memcpy(void *dest, const void *src, size_t n);
 void *memmove(void *dest, const void *src, size_t n);
 
 int memccmp(const void *s1, const void *s2, int c, size_t n);

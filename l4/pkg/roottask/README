@@ -1,0 +1,17 @@
+The L4 Root task.
+
+Currently almost identical to the Basic Resource Manager (RMGR).
+
+RMGR is a very old package with functionality more and more replaced by the
+L4 environment. Nevertheless, we still depend on some features of that good
+old dog. The roottask handles the following resources
+
+- physical memory
+- interrupts
+- tasks
+- small address spaces
+
+Furthermore, the roottask is responsible for starting the basic servers of
+the L4 environment, among them the L4 loader.
+
+Note: In your menu.lst load sigma0 first and than roottask.

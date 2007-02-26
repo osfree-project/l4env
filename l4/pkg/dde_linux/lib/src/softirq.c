@@ -183,9 +183,7 @@ static void tasklet_action(void)
 {
   struct tasklet_struct *list;
 
-#if DEBUG_SOFTIRQ
-  DMSG("low prio tasklet exec entrance\n");
-#endif
+  LOGd(DEBUG_SOFTIRQ, "low prio tasklet exec entrance");
 
   cli();
   list = tasklet_vec[0].list;
@@ -230,9 +228,7 @@ static int tasklet_hi_action(void)
     /* no tasks */
     return 0;
 
-#if DEBUG_SOFTIRQ
-  DMSG("hi prio tasklet exec entrance\n");
-#endif
+  LOGd(DEBUG_SOFTIRQ, "hi prio tasklet exec entrance");
 
   cli();
   list = tasklet_hi_vec[0].list;
@@ -433,14 +429,17 @@ static void dde_softirq_thread(int num)
 {
   softirq_tid[num] = l4thread_myself();
 
+  if (l4dde_process_add_worker())
+      Panic("l4dde_process_add_worker() failed");
+
   ++local_bh_count(smp_processor_id());
 
   /* we are up */
   if (l4thread_started(NULL)<0)
     Panic("softirq thread startup failed!");
 
-  DMSG("dde_softirq_thread[%d] "IdFmt" running.\n", num,
-       IdStr(l4thread_l4_id(l4thread_myself())));
+  LOGd(DEBUG_MSG, "dde_softirq_thread[%d] "l4util_idfmt" running.", num,
+       l4util_idstr(l4thread_l4_id(l4thread_myself())));
 
   /* softirq loop */
   while (1)
@@ -473,9 +472,15 @@ int l4dde_softirq_init()
   if (_initialized)
     return 0;
 
-  /* create soft thread */
-  err = l4thread_create((l4thread_fn_t) dde_softirq_thread,
-                        0, L4THREAD_CREATE_SYNC);
+  /* create softirq thread */
+  err = l4thread_create_long(L4THREAD_INVALID_ID,
+                             (l4thread_fn_t) dde_softirq_thread,
+                             ".softirq",
+                             L4THREAD_INVALID_SP,
+                             L4THREAD_DEFAULT_SIZE,
+                             L4THREAD_DEFAULT_PRIO,
+                             (void *) 0,
+                             L4THREAD_CREATE_SYNC);
 
   if (err < 0)
     return err;

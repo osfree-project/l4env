@@ -4,18 +4,20 @@ INTERFACE:
 
 #include "l4_types.h"
 
+#include "activation.h"
 #include "config.h"
+#include "deadline_timeout.h"
+#include "mem_layout.h"
 #include "preemption.h"
 #include "receiver.h"
-#include "sched_timeout.h"
 #include "sender.h"
 #include "space.h"		// Space_index
 #include "thread_lock.h"
-#include "threadid.h"
 
 class Irq_alloc;
 class Return_frame;
 class Syscall_frame;
+class Task;
 
 /** A thread.  This class is the driver class for most kernel functionality.
  */
@@ -26,40 +28,103 @@ class Thread : public Receiver, public Sender
   friend class Jdb_tcb;
   friend class Jdb_thread_list;
   friend class Jdb_list_threads;
+  friend class Jdb_list_timeouts;
+  friend class Jdb_tbuf_show;
 
 public:
+
+  typedef void (Utcb_copy_func)(Thread *sender, Thread *receiver);
+
+  /**
+   * Constructor.
+   *
+   * @param task the task the thread should reside in.
+   * @param id user-visible thread ID of the sender.
+   * @param init_prio initial priority.
+   * @param mcp maximum controlled priority.
+   *
+   * @post state() != Thread_invalid.
+   */
+  Thread (Task* task, Global_id id,
+	  unsigned short init_prio, unsigned short mcp);
+
   void sys_ipc();
   void sys_fpage_unmap();
   void sys_thread_switch();
   void sys_thread_schedule();
   void sys_task_new();
+  void sys_id_nearest();
+  void sys_thread_ex_regs();
 
-  template < typename T > 
-  void copy_from_user( T *kdst, T const *usrc, size_t n );
-  template < typename T > 
-  void copy_to_user  ( T *udst, T const *ksrc, size_t n );
-  template < typename T > 
-  T peek_user( T const *addr );
-  template < typename T > 
-  void poke_user( T *addr, T value );
+  bool handle_page_fault (Address pfa, Mword error, Mword pc);
 
-  bool handle_page_fault( Address pfa, Mword error, Mword pc );
+  /**
+   * Task number for debugging purposes.
+   * May be changed to show sth. more useful for the debugger.
+   * Do not rely on this method in kernel code.
+   * @see: d_threadno()
+   */
+  Task_num Thread::d_taskno();
 
-  static void handle_timer_interrupt();
+  /**
+   * Thread number for debugging purposes.
+   * @see: d_taskno()
+   */
+  LThread_num Thread::d_threadno();
 
 private:
   Thread(const Thread&);	///< Default copy constructor is undefined
   void *operator new(size_t);	///< Default new operator undefined
 
-  void preemption_event(Sched_context *sched);
-  bool handle_sigma0_page_fault( Address pfa );
-  bool handle_smas_page_fault( Address pfa, Mword error,
-			       L4_msgdope &ipc_code );
+  bool handle_sigma0_page_fault (Address pfa);
+  bool handle_smas_page_fault (Address pfa, Mword error, Ipc_err &ipc_code);
 
+  /**
+   * Additional things to do before killing, when using small spaces.
+   */
   void kill_small_space();
+
+  /**
+   * Return small address space the task is in.
+   */
   Mword small_space();
-  void set_small_space(Mword nr);
-  
+
+  /**
+   * Move the task this thread belongs to to the given small address space
+   */
+  void set_small_space (Mword nr);
+
+  /**
+   * Return to user.
+   *
+   * This function is the default routine run if a newly
+   * initialized context is being switch_exec()'ed.
+   */
+  static void user_invoke();
+
+  /**
+   * Receive startup message.
+   *
+   * Wait for startup IPC from pager and set ip and sp.
+   */
+  void rcv_startup_msg();
+
+  bool Thread::associate_irq(Irq_alloc *irq);
+  void Thread::disassociate_irq(Irq_alloc *irq);
+
+public:
+  /**
+   * Calculate TCB pointer from thread ID.
+   *
+   * @param id thread ID.
+   * @param s space, needed if ID is local.
+   * @return thread pointer if the ID was valid, 0 otherwise.
+   */
+  static Thread * Thread::lookup (L4_uid id, Space *s);
+
+  static Mword pagein_tcb_request(Address pc);
+  Mword is_tcb_mapped() const;
+
 protected:
   // implementation details follow...
 
@@ -67,25 +132,28 @@ protected:
 
   // Preemption IPC sender role
   Preemption _preemption;
-  
-  // Scheduler Timeout
-  Sched_timeout _sched_timeout;
+
+  // Deadline Timeout
+  Deadline_timeout _deadline_timeout;
+
+  // Activation IPC sender role
+  Activation _activation;
 
   // Another critical TCB cache line:
-  Space*       _space;
+  Task*        _task;
   Thread_lock  _thread_lock;
 
   // More ipc state
-  Thread *_pager, *_preempter, *_ext_preempter;
+  Thread *_pager, *_ext_preempter;
   Thread *present_next, *present_prev;
-  Irq_alloc *_irq;
+//  Irq_alloc *_irq;
 
   // long ipc state
   L4_rcv_desc _target_desc;	// ipc buffer in receiver's address space
   unsigned _pagein_status_code;
 
   Address _vm_window0, _vm_window1; // data windows for the
-  				// IPC partner's address space (for long IPC)
+				// IPC partner's address space (for long IPC)
   jmp_buf *_recover_jmpbuf;	// setjmp buffer for page-fault recovery
   L4_timeout _pf_timeout;	// page-fault timeout specified by partner
 
@@ -97,15 +165,33 @@ protected:
   static const unsigned magic = 0xf001c001;
 
   // Constructor
-  Thread (Space* space, L4_uid id);
+  Thread (Task* task, L4_uid id);
 
   // Thread killer
   void kill_all();
 };
 
+// ----------------------------------------------------------------------------
+INTERFACE [!multi_irq_attach]:
+EXTENSION class Thread
+{
+protected:
+  Irq_alloc *_irq;
+};
+
+// ----------------------------------------------------------------------------
+INTERFACE [multi_irq_attach]:
+
+EXTENSION class Thread
+{
+protected:
+  unsigned _irq;
+};
+
+
 IMPLEMENTATION:
 
-#include <cstdio>
+#include <cassert>
 #include <cstdlib>		// panic()
 #include "atomic.h"
 #include "entry_frame.h"
@@ -113,14 +199,13 @@ IMPLEMENTATION:
 #include "globals.h"
 #include "irq_alloc.h"
 #include "kdb_ke.h"
-#include "kmem.h"
-#include "kmem_alloc.h"
 #include "logdefs.h"
 #include "map_util.h"
 #include "sched_context.h"
+#include "space_index_util.h"
+#include "std_macros.h"
 #include "thread_state.h"
-#include "thread_util.h"
-#include "timer.h"
+#include "timeout.h"
 
 /** Class-specific allocator.
     This allocator ensures that threads are allocated at a fixed virtual
@@ -128,21 +213,21 @@ IMPLEMENTATION:
     @param id thread ID
     @return address of new thread control block
  */
-PUBLIC inline 
+PUBLIC inline
 void *
-Thread::operator new(size_t, Threadid id)
+Thread::operator new(size_t, L4_uid id)
 {
   // Allocate TCB in TCB space.  Actually, do not allocate anything,
   // just return the address.  Allocation happens on the fly in
   // Thread::handle_page_fault().
-  return static_cast<void*>(id.lookup());
+  return static_cast <void*>(lookup (id));
 }
 
 /** Deallocator.  This function currently does nothing: We do not free up
     space allocated to thread-control blocks.
  */
 PUBLIC inline
-void 
+void
 Thread::operator delete(void *)
 {
   // XXX should check if all thread blocks on a given page are free
@@ -158,17 +243,14 @@ Thread::operator delete(void *)
     @param id user-visible thread ID of the sender
  */
 IMPLEMENT
-Thread::Thread (Space* space, L4_uid id)
-      : Receiver    (&_thread_lock, space,
-                     Config::kernel_prio, Config::kernel_mcp,
-                     Config::default_time_slice),
-        Sender         (id),
-        _preemption    (id),
-        _sched_timeout (this),
-        _space         (space),
-        _magic         (magic)
+Thread::Thread(Task* task, L4_uid id)
+  : Receiver(&_thread_lock, task,
+	     Config::kernel_prio, Config::kernel_mcp,
+	     Config::default_time_slice),
+    Sender(id), _preemption(id), _deadline_timeout(&_preemption),
+    _activation(id), _task(task), _magic(magic)
 {
-  *reinterpret_cast<void(**)()>(--kernel_sp) = user_invoke;
+  *reinterpret_cast<void(**)()>(--_kernel_sp) = user_invoke;
 
   if (Config::stack_depth)
     std::memset((char*)this + sizeof(Thread), '5',
@@ -179,7 +261,7 @@ Thread::Thread (Space* space, L4_uid id)
     @pre current() == thread_lock()->lock_owner()
          && state() == Thread_dead
     @pre lock_cnt() == 0
-    @post (kernel_sp == 0)  &&  (* (stack end) == 0)  &&  !exists()
+    @post (_kernel_sp == 0)  &&  (* (stack end) == 0)  &&  !exists()
  */
 PUBLIC virtual
 Thread::~Thread()		// To be called in locked state.
@@ -191,25 +273,13 @@ Thread::~Thread()		// To be called in locked state.
   unsigned long *init_sp = reinterpret_cast<unsigned long*>
     (reinterpret_cast<unsigned long>(this) + size - sizeof(Entry_frame));
 
-  kernel_sp = 0;
+  _kernel_sp = 0;
   *--init_sp = 0;
   state_change (0, Thread_invalid);
   Fpu_alloc::free_state(fpu_state());
-
-  // If the global timeslice on the CPU belongs to this dying thread,
-  // we must invalidate it and force the selection of a new timeslice.
-  if (current_sched() == sched())
-    set_current_sched(0);
-
-  thread_lock()->clear();
-
-  // NOTE: It is possible that current() (this's locker) is deleted
-  // right now (after it has cleared the lock), prior to invoking
-  // Context's destructor.  Make sure all superclass destructors are
-  // empty!  They might never be called!
 }
 
-/** Lookup function: Find Thread instance that owns a given Context. 
+/** Lookup function: Find Thread instance that owns a given Context.
     @param c a context
     @return the thread that owns the context
  */
@@ -225,23 +295,23 @@ Thread::lookup (Context* c)
  */
 inline
 Thread*
-current_thread ()
+current_thread()
 {
-  return Thread::lookup(current ());
+  return Thread::lookup(current());
 }
 
 //
 // state requests/manipulation
 //
 
-/** Address space.
-    @return pointer to thread's address space.
+/** Task.
+    @return pointer to thread's task.
  */
-PUBLIC inline 
-Space *
-Thread::space() const
-{ 
-  return _space; 
+PUBLIC inline NEEDS["task.h"]
+Task *
+Thread::task() const
+{
+  return _task;
 }
 
 /** Thread lock.
@@ -249,32 +319,635 @@ Thread::space() const
     equivalent, but more efficient version.
     @return lock used to synchronize accesses to the thread.
  */
-PUBLIC inline 
+PUBLIC inline
 Thread_lock *
 Thread::thread_lock()
-{ 
-  return &_thread_lock; 
+{
+  return &_thread_lock;
 }
 
-IMPLEMENT inline NEEDS ["timer.h"]
+PUBLIC inline
+Preemption *
+Thread::preemption()
+{
+  return &_preemption;
+}
+
+PUBLIC inline NEEDS ["config.h", "timeout.h"]
 void
 Thread::handle_timer_interrupt()
-{  
-  // Advance system clock
-  Timer::update_system_clock();
+{
+  // XXX: This assumes periodic timers (i.e. bogus in one-shot mode)
+  if (!Config::fine_grained_cputime)
+    consume_time (Config::scheduler_granularity);
 
   // Check if we need to reschedule due to timeouts or wakeups
-  bool reschedule = Timeout::do_timeouts();
+  if (Timeout::do_timeouts() && !Context::schedule_in_progress())
+    {
+      schedule();
+      assert (timeslice_timeout->is_set());	// Coma check
+    }
+}
 
-  Timer::acknowledge();
+/**
+ * Calculate TCB pointer from global thread ID.
+ *
+ * @param id the thread ID.
+ * @return TCB pointer if the ID was valid, 0 otherwise.
+ */
+PUBLIC static inline NEEDS ["config.h", "mem_layout.h"]
+Thread *
+Thread::lookup (Global_id id)
+{
+  return reinterpret_cast <Thread *>
+    (id.is_invalid() || id.gthread() >= Config::max_threads() ?
+     0 : Mem_layout::Tcbs + (id.gthread() * Config::thread_block_size));
+}
 
-  // Timeslice handling for current thread
-  Context::timer_tick (reschedule);
+PUBLIC
+void
+Thread::halt()
+{
+  // Cancel must be cleared on all kernel entry paths. See slowtraps for
+  // why we delay doing it until here.
+  state_del (Thread_cancel);
+
+  // we haven't been re-initialized (cancel was not set) -- so sleep
+  if (state_change_safely (~Thread_ready, Thread_cancel | Thread_dead))
+    while (! (state() & Thread_ready))
+      schedule();
+}
+
+PUBLIC static
+void
+Thread::halt_current ()
+{
+  for (;;)
+    {
+      current_thread()->halt();
+      kdb_ke("Thread not halted");
+    }
+}
+
+PRIVATE static inline
+void
+Thread::user_invoke_generic()
+{
+  assert (current()->state() & Thread_ready);
+
+  // release CPU lock explicitly, because
+  // * the context that switched to us holds the CPU lock
+  // * we run on a newly-created stack without a CPU lock guard
+  cpu_lock.clear();
+
+  current_thread()->rcv_startup_msg();		// set sp and ip
+}
+
+IMPLEMENT inline
+Thread *
+Thread::lookup (L4_uid id, Space*)
+{ return lookup ((Global_id) id); }
+
+/**
+ * Return first thread in an address space.
+ */
+PUBLIC static inline
+Thread *
+Thread::lookup_first_thread (unsigned space)
+{ return lookup (Global_id (space, 0)); }
+
+/** Thread's space index.
+    @return thread's space index.
+ */
+PUBLIC inline
+Space_index
+Thread::space_index() const
+{ return Space_index (id().task()); }
+
+/** Chief's space index.
+    @return thread's chief's space index.
+ */
+PUBLIC inline
+Space_index
+Thread::chief_index() const
+{ return Space_index (id().chief()); }
+
+/** Kill this thread.  If this thread has local number 0, kill its
+    address space (task) as well.  This function does not handle
+    recursion.
+    @return false if thread does not exists or has already
+            been killed.  Otherwise, true.
+ */
+PRIVATE
+bool
+Thread::kill()
+{
+  assert (current() == thread_lock()->lock_owner());
+
+  if (state() == Thread_invalid)
+    return false;
+
+  assert(in_present_list());
+
+  // If sending another request, finish it before killing this thread
+  if (lock_cnt() > 0)
+    {
+      assert (state() & Thread_ready);
+
+      while (lock_cnt() > 0)
+        {
+          current()->switch_exec (this, Helping);
+
+          // Thread "this" will switch back to us ("current()") as
+          // soon as its lock count drops to 0.
+          //
+          // XXX This is not true anymore, either the thread will
+          // switch back because we have helped it or because it
+          // detected that someone is trying to kill it and therefore
+          // called schedule which in turn switched back to us.
+        }
+    }
+
+  unset_utcb_ptr();
+
+  if (id().lthread() == 0)
+    {
+      //
+      // Flush our address space
+      //
+
+      // It might be faster to flush our address space before actually
+      // deleting the subtasks: Under the assumption that child tasks
+      // got many of their mappings from this task, flushing mappings
+      // early will flush their mappings as well and speed up their
+      // deletion.  However, this would yield increased uglyness
+      // because subtasks could still be scheduled and do page faults.
+      // XXX check /how/ ugly...
+
+      fpage_unmap(space(), L4_fpage(0,0,L4_fpage::Whole_space,0), true, false);
+
+      //for small spaces...
+      kill_small_space();
+
+      //
+      //  Delete our address space
+      //
+      delete _task;
+    }
+
+  //
+  // Kill this thread
+  //
+
+  // But first prevent it from being woken up by asynchronous events
+
+  // if attached to irqs, detach
+  if (_irq)
+    Irq_alloc::free_all(this);
+
+  // if IPC timeout active, reset it
+  if (_timeout)
+    _timeout->reset();
+
+  {
+    Lock_guard <Cpu_lock> guard (&cpu_lock);
+
+    // Reset deadline timeout
+    _deadline_timeout.reset();
+
+    // Switch to time-sharing mode
+    set_mode (Sched_mode (0));
+
+    // Switch to time-sharing scheduling context
+    if (sched() != sched_context())
+      switch_sched (sched_context());
+  }
+
+  state_change (0, Thread_dead);
+
+  // if other threads want to send me IPC messages, abort these
+  // operations
+
+  // XXX that's quite difficult: how to traverse a list that may
+  // change at all times?
+
+  // if engaged in IPC operation, stop it
+  if (receiver())
+    sender_dequeue (receiver()->sender_list());
+
+  // if engaged in PIPC operation, stop it
+  preemption()->set_pending (0);
+  if (preemption()->receiver())
+    preemption()->sender_dequeue (preemption()->receiver()->sender_list());
+
+  // Deallocate all reservation scheduling contexts
+  Sched_context *s, *tmp;
+  for (s = sched_context()->next(); s != sched_context(); tmp = s,
+       s = s->next(), tmp->dequeue(), delete tmp);
+
+  // dequeue from system queues
+  assert (in_present_list());
+  present_dequeue();
+  ready_dequeue();
+
+  return true;
+}
+
+/** Kill a subtask of this thread's task.
+    This must be executed on thread 0 of the chief of the task to be killed.
+    @param subtask a task number
+    @return false if this thread does not exists or has been
+            killed already.  Otherwise, true.
+    @pre id().id.lthread == 0
+         && Space_index_util::chief(subtask) == space_index()
+ */
+PUBLIC
+bool
+Thread::kill_task(Space_index subtask)
+{
+  Lock_guard <Thread_lock> guard (thread_lock());
+
+  if (state() == Thread_invalid)
+    return false;
+
+  // "this" is thread 0 of the chief of the task to be killed.
+  assert(id().lthread() == 0);
+  assert(Space_index_util::chief(subtask) == space_index());
+
+  // Traverse the tree of threads that need to be deleted.  Lock them
+  // preorder and delete them post-order.
+
+  // Only threads with local thread number 0 ("0-threads") are
+  // considered to have children, and they are traversed in the
+  // following order: First, all the other threads of the given
+  // 0-thread's task need to be traversed (locked and killed;
+  // according to this rule, they have no children) so that they
+  // cannot create new subtasks.  Second, the 0-threads of the
+  // subtasks need to be traversed.
+
+  class kill_iter		// Iterator class -- also handles locking.
+  {
+  private:
+    Thread* _top;
+    Thread* _thread_0;
+    Thread* _thread;
+
+    static Thread* next_sibling (Thread* thread_0)
+    {
+      // Find threads belonging to the same task.  We assume here that
+      // new threads of the same task are always enqueued /after/
+      // thread 0.
+      if (thread_0->present_next != thread_0
+	  && thread_0->present_next->space() == thread_0->space())
+	{
+	  return thread_0->present_next;
+	}
+
+      return 0;
+    }
+
+    static Thread* next_child (Thread* parent)
+    {
+      // We assume here that subtasks of a task are always enqueued
+      // /before/ thread 0 of a task.
+      if (parent->present_prev != parent
+	  && parent->present_prev->chief_index() == parent->space_index())
+	{
+	  return parent->present_prev;
+	}
+
+      return 0;
+    }
+
+    void advance_to_next()
+    {
+      if (_thread == _top)
+	{
+	  _thread = 0;
+	  return;
+	}
+
+      for (;;)
+	{
+	  _thread = next_sibling (_thread_0);
+	  if (_thread)
+	    {
+	      _thread->thread_lock()->lock();
+	      return;
+	    }
+
+	  _thread = next_child (_thread_0);
+	  if (_thread)
+	    {
+	      _thread_0 = _thread;
+	      _thread_0->thread_lock()->lock();
+	      continue;
+	    }
+
+	  // _thread_0 has no siblings and no children.  Return it next.
+	  _thread = _thread_0;
+
+	  // Move up to parent: next candidate for returning.
+	  if (_thread != _top)
+	    _thread_0 = lookup_first_thread(_thread->chief_index());
+
+	  return;
+	}
+    }
+
+  public:
+    kill_iter (Thread* top)
+      : _top (top), _thread_0 (top), _thread (0)
+    {
+      _top->thread_lock()->lock();
+      advance_to_next();
+    }
+
+    Thread* operator->() const
+    { return _thread; }
+
+    operator Thread* () const
+    { return _thread; }
+
+    kill_iter& operator++ ()
+    {
+      advance_to_next();
+      return *this;
+    }
+  }; // class kill_iter
+
+  // Back to the main proper of the function: Use the iterator we just
+  // defined to kill the task.
+
+  for (kill_iter next_to_kill (lookup_first_thread(subtask));
+       next_to_kill;
+       ++next_to_kill)
+    {
+      if (next_to_kill->kill())	// Turn in in locked state
+        delete next_to_kill;
+
+      next_to_kill->thread_lock()->clear();
+    }
+
+  return true;
 }
 
 IMPLEMENT inline
 void
-Thread::preemption_event (Sched_context *sched)
+Thread::kill_all()
 {
-  _preemption.send (_preempter, sched);
-};
+  kill_task (Space_index (Config::boot_id.task()));
+}
+
+IMPLEMENT inline Task_num Thread::d_taskno() { return space_index(); }
+IMPLEMENT inline LThread_num Thread::d_threadno() { return id().lthread(); }
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [exc_ipc]:
+
+#include "cpu.h"
+#include <feature.h>
+
+KIP_KERNEL_FEATURE("exception_ipc");
+
+
+PRIVATE static
+void
+Thread::copy_utcb_to_utcb(Thread *snd, Thread *rcv)
+{
+  unsigned m = snd->utcb()->snd_size;
+  unsigned s = rcv->utcb()->rcv_size;
+
+  // check for m == 0 not necessary
+  Cpu::memcpy_mwords (rcv->utcb()->values, snd->utcb()->values, s < m ? s : m);
+}
+
+PRIVATE static
+void
+Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
+{
+  Trap_state *ts = (Trap_state*)rcv->_utcb_handler;
+  unsigned m     = snd->utcb()->snd_size;
+  Unsigned32 cs  = ts->cs;
+
+  // check for m == 0 not necessary
+  Cpu::memcpy_mwords (&ts->gs, snd->utcb()->values, m > 16 ? 16 : m);
+
+  // sanitize eflags
+  if (!rcv->trap_is_privileged(0))
+    {
+      ts->eflags &= ~0x7000; // IOPL, NT
+      ts->eflags |=   0x200; // IF
+    }
+
+  // don't allow to overwrite the code selector!
+  ts->cs = cs;
+}
+
+PRIVATE static
+void
+Thread::copy_ts_to_utcb(Thread *snd, Thread *rcv)
+{
+  Trap_state *ts = (Trap_state*)snd->_utcb_handler;
+  unsigned m     = rcv->utcb()->rcv_size;
+
+    {
+      Lock_guard <Cpu_lock> guard (&cpu_lock);
+
+      // check for m == 0 not necessary
+      Cpu::memcpy_mwords (rcv->utcb()->values, &ts->gs, m > 16 ? 16 : m);
+    }
+}
+
+PRIVATE static inline
+Thread::Utcb_copy_func *
+Thread::get_utcb_copy(Thread *s, Thread *r)
+{
+  // we cannot copy trap state to trap state!
+  assert(!s->_utcb_handler || !r->_utcb_handler);
+  if (EXPECT_FALSE(s->_utcb_handler != 0))
+    return &copy_ts_to_utcb;
+  else if (EXPECT_FALSE(r->_utcb_handler != 0))
+    return &copy_utcb_to_ts;
+  else
+    return &copy_utcb_to_utcb;
+}
+
+PRIVATE
+void
+Thread::copy_utcb_to(Thread* receiver)
+{
+  Utcb_copy_func *f = get_utcb_copy(this, receiver);
+
+  f(this, receiver);
+}
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [!exc_ipc]:
+
+PRIVATE inline
+void
+Thread::copy_utcb_to(Thread*)
+{}
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [!log]:
+
+#include <cstring>
+
+PUBLIC inline
+unsigned Thread::sys_ipc_log(Syscall_frame *)
+{ return 0; }
+
+PUBLIC inline
+unsigned Thread::sys_ipc_trace(Syscall_frame *)
+{ return 0; }
+
+static inline
+void Thread::page_fault_log(Address, unsigned, unsigned)
+{}
+
+PUBLIC static inline
+int Thread::log_page_fault()
+{ return 0; }
+
+PUBLIC inline
+unsigned Thread::sys_fpage_unmap_log(Syscall_frame *)
+{ return 0; }
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [!smas]:
+
+IMPLEMENT inline
+bool Thread::handle_smas_page_fault( Address, Mword, Ipc_err & )
+{ return false; }
+
+IMPLEMENT inline
+void Thread::kill_small_space (void)
+{}
+
+IMPLEMENT inline
+Mword Thread::small_space( void )
+{ return 0; }
+
+IMPLEMENT inline
+void Thread::set_small_space( Mword /*nr*/)
+{}
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [v2]:
+
+/**
+ * Return nesting level.
+ * @return nesting level of thread's clan
+ */
+PUBLIC inline
+unsigned
+Thread::nest() const
+{
+  return id().nest();
+}
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [!io]:
+
+PUBLIC inline
+bool
+Thread::has_privileged_iopl()
+{
+  return false;
+}
+
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION[!utcb]:
+
+PUBLIC inline
+void
+Thread::unset_utcb_ptr() {}
+
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION[utcb]:
+
+/** Clears the utcb pointer of the Thread
+ *  Reason: To avoid a stole pointer after unmapping and deallocating
+ *  the UTCB. Without this the Thread_lock::clear will access the UTCB
+ *  after the unmapping the UTCB -> POOFFF.
+ */
+PUBLIC inline
+void
+Thread::unset_utcb_ptr()
+{
+  utcb(0);
+  local_id(0);
+}
+
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [!multi_irq_attach]:
+
+IMPLEMENT
+bool
+Thread::associate_irq(Irq_alloc *irq)
+{
+  if (irq->alloc(this, Config::irq_ack_in_kernel))
+    {
+      if (_irq)
+	_irq->free(this);
+
+      _irq = irq;
+      return true;
+    }
+  return false;
+}
+
+IMPLEMENT
+void
+Thread::disassociate_irq(Irq_alloc *)
+{
+  if (_irq)
+    _irq->free(this);
+
+  _irq = 0;
+}
+
+// ----------------------------------------------------------------------------
+IMPLEMENTATION [multi_irq_attach]:
+
+#include <feature.h>
+KIP_KERNEL_FEATURE("multi_irq");
+
+IMPLEMENT
+bool
+Thread::associate_irq(Irq_alloc *irq)
+{
+  if (irq->alloc(this, Config::irq_ack_in_kernel))
+    {
+      ++_irq;
+      return true;
+    }
+  return false;
+}
+
+IMPLEMENT
+void
+Thread::disassociate_irq(Irq_alloc *irq)
+{
+  if (irq->free(this))
+    --_irq;
+}
+
+// ----------------------------------------------------------------------------
+IMPLEMENTATION [act_ipc]:
+PROTECTED void Thread::send_activation (unsigned a) { _activation.send (a); }
+
+
+IMPLEMENTATION [!pl0_hack]:
+PUBLIC static void
+Thread::privilege_initialization()
+{
+}

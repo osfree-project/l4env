@@ -1,0 +1,38 @@
+################################################################################
+#	options	                                                               #
+################################################################################
+default 1
+timeout 5
+color light-blue/black white/blue
+
+setkey parenleft asterisk
+setkey parenright parenleft
+setkey equal parenright
+setkey slash ampersand
+setkey z y
+setkey y z
+setkey minus slash
+setkey colon greater
+setkey semicolon less
+setkey question underscore
+setkey underscore question
+
+# okay let's go serial
+serial --unit=0 --speed=115200
+
+title Verner via Loader
+kernel (nd)/tftpboot//bin/x86_586/l4v2/rmgr -sigma0
+modaddr 0x02000000
+module (nd)/tftpboot/fiasco-k7-rt -nokdb -nowait -VT+ -serial -comport 1
+module (nd)/tftpboot//bin/x86_586/l4v2/sigma0
+module (nd)/tftpboot//bin/x86_586/l4v2/log
+module (nd)/tftpboot//bin/x86_586/l4v2/names
+module (nd)/tftpboot//bin/x86_586/l4v2/dm_phys
+module (nd)/tftpboot//bin/x86_586/l4v2/l4io --noirq
+module (nd)/tftpboot//bin/x86_586/l4v2/tftp --l4io
+module (nd)/tftpboot//bin/x86_586/l4v2/simple_ts
+module (nd)/tftpboot//bin/x86_586/l4v2/l4exec
+module (nd)/tftpboot//bin/x86_586/l4v2/loader (nd)/tftpboot/cfg_verner
+terminal --timeout=0 serial
+vbeset 0x114
+

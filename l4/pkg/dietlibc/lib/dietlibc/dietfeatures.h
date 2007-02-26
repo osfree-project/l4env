@@ -7,6 +7,7 @@
 #define WANT_FLOATING_POINT_IN_SCANF
 #define WANT_CHARACTER_CLASSES_IN_SCANF
 #define WANT_NULL_PRINTF
+/* #define WANT_ERROR_PRINTF */
 #define WANT_LONGLONG_PRINTF
 #define WANT_LONGLONG_SCANF
 
@@ -27,6 +28,9 @@
 /* make the startcode, etc. dynamic aware ({con,de}structors) */
 /* #define WANT_DYNAMIC */
 
+/* GDB support in the dynamic linker */
+#define WANT_LD_SO_GDB_SUPPORT
+
 /* do you want smaller or faster string routines? */
 /* #define WANT_FASTER_STRING_ROUTINES */
 
@@ -34,14 +38,12 @@
  * string */
 /* #define WANT_FULL_POSIX_COMPAT */
 
-/* read the comment in lib/strncat.c for an explanation */
-/* #define WANT_NON_COMPLIANT_STRNCAT */
-
 /* on i386, Linux has an alternate syscall method since 2002/12/16 */
 /* on my Athlon XP, it is twice as fast, but it's only in kernel 2.5 */
+/* 20040118: enabling this breaks User Mode Linux!  It's their fault. */
 #define WANT_SYSENTER
 
-#define WANT_LINKER_WARNINGS
+//#define WANT_LINKER_WARNINGS
 
 /* you need to define this if you want to run your programs with large
  * file support on kernel 2.2 or 2.0 */
@@ -49,7 +51,7 @@
 
 /* do you want localtime(3) to read /etc/localtime?
  * Needed for daylight saving time etc. */
-#define WANT_TZFILE_PARSER
+//#define WANT_TZFILE_PARSER
 
 /* do you want the DNS routines to parse and use "domain" and "search"
  * lines from /etc/resolv.conf?  Normally not used on boot floppies and
@@ -79,12 +81,25 @@
  * against glibc fail?  This may fail with older binutils. */
 #define WANT_SAFEGUARD
 
-/* dy you want that malloc(0) return a pointer to a "zero-length" object
+/* This enables zeroconf DNS aka Rendezvous aka Bonjour. */
+/* This code will try zeroconf DNS if you ask for host.local or if you
+ * ask for an unqualified hostname */
+#define WANT_PLUGPLAY_DNS
+
+/* do you want that malloc(0) return a pointer to a "zero-length" object
  * that is realloc-able; means realloc(..,size) gives a NEW object (like a
  * call to malloc(size)).
  * WARNING: this violates C99 */
 /* #define WANT_MALLOC_ZERO */
 
+/* This enables a stack gap.  Basically, the start code does not run
+ * main but stackgap, which then does alloca(random()) and calls main.
+ * The effect is that buffer overflow exploits will no longer be able to
+ * know the address of the buffer.  Cost: 62 bytes code on x86. */
+/* WARNING: this appears to break with some binutils versions.  Works
+ * for me with binutils 2.15.  The symptom is an error message that
+ * `main' can not be found. */
+/* #define WANT_STACKGAP */
 
 /* stop uncommenting here ;-) */
 #ifndef WANT_FASTER_STRING_ROUTINES

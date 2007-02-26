@@ -4,8 +4,8 @@ noinst_LIBRARIES=	libdce.a
 libdce_a_SOURCES=	parser.yy \
 			scanner.ll 
 
-LFLAGS=         -Pdce -d -o$(LEX_OUTPUT_ROOT).c
-YFLAGS=		-pdce -d -v
+AM_LFLAGS=         -Pdce -d -o$(LEX_OUTPUT_ROOT).c
+AM_YFLAGS=		-pdce -d -v
 
 CLEANFILES=             parser.cc $(LEX_OUTPUT_ROOT).cc \
 			scanner.cc scanner.h y.output

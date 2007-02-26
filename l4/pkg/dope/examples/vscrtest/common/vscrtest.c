@@ -86,13 +86,13 @@ int main(int argc,char **argv) {
 	/* create menu window with one button for each effect */
 	dope_cmd(app_id,"mainwin = new Window()");
 	dope_cmd(app_id,"mg = new Grid()");
-	dope_cmd(app_id,"mainwin.set(-content mg -fitx yes -fity yes)");
+	dope_cmd(app_id,"mainwin.set(-content mg)");
 	dope_cmd(app_id,"mainwin.set(-w 100 -h 120)");
 
 	for (i=0;i<NUM_EFX;i++) {
 		dope_cmdf(app_id, "b%d = new Button()",i);
 		dope_cmdf(app_id, "b%d.set(-text \"%s\")",i,efxwin[i].but_text);
-		dope_cmdf(app_id, "mg.place(b%d,-column 1 -row %d -padx 2 -pady 2)",i,i);
+		dope_cmdf(app_id, "mg.place(b%d,-column 1 -row %d)",i,i);
 		sprintf(strbuf,"b%d",i);
 		dope_bind(app_id,strbuf,"press", press_callback, (void *)i);
 	}

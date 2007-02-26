@@ -1,0 +1,53 @@
+digraph "object_server2" {
+	graph [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		bb = "0,0,420.977444,418.807615"
+		color = "black"
+	]
+	node [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		shape = "ellipse"
+		color = "black"
+	]
+	edge [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"/" [
+		label = "\N\n(2.0)\r"
+	]
+	"m" [
+		label = "\N\n(2.1)\r"
+	]
+	"n" [
+		label = "\N\n(2.2)\r"
+	]
+	"o" [
+		label = "\N\n(2.3)\r"
+	]
+	"p" [
+		label = "\N\n(2.4)\r"
+	]
+	"q" [
+		label = "\N\n(2.5)\r"
+	]
+	"r" [
+		label = "\N\n(2.6)\r"
+	]
+	"s" [
+		label = "\N\n(2.7)\r"
+	]
+	"/" -> "m"
+	"/" -> "n"
+	"/" -> "o"
+	"o" -> "p"
+	"o" -> "q"
+	"o" -> "r"
+	"o" -> "s"
+}

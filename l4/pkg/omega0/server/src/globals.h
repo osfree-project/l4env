@@ -2,8 +2,9 @@
 #define __OMEGA0_SERVER_GLOBALS_H
 
 #include <l4/sys/types.h>
+#include <l4/util/lock_wq.h>
+#include <l4/omega0/client.h>
 #include "config.h"
-#include "lock.h"
 
 #define IRQ_NUMS 16	// 16 at standard-x86-pc architecture 
 #define STACKSIZE 4096	// 4KB of stack per irq handler
@@ -14,10 +15,12 @@ typedef struct client_chain{
   int		waiting;	// client is in blocking state
   int		in_service;	// this irq is in service by this client
   unsigned      last_irq_num;	// last irq num handled by this client
+  omega0_request_t last_request;/* last request of the client, successful
+				 * operations deleted */
   struct client_chain*next;
 } client_chain;
 
-typedef wq_lock_queue_base mutex_t;
+typedef l4util_wq_lock_queue_base_t mutex_t;
 
 typedef struct{
   int		available;		// available to omega0
@@ -39,15 +42,14 @@ typedef struct{
 
 extern irq_description_t irqs[IRQ_NUMS];
 
-static inline void aquire_mutex(mutex_t *wq, wq_lock_queue_elem *elem){
-    wq_lock_lock(wq, elem);
+static inline void aquire_mutex(mutex_t *wq,
+				l4util_wq_lock_queue_elem_t *elem){
+    l4util_wq_lock_lock(wq, elem);
 }
 
-static inline void release_mutex(mutex_t *wq, wq_lock_queue_elem *elem){
-    wq_lock_unlock(wq, elem);
+static inline void release_mutex(mutex_t *wq,
+				 l4util_wq_lock_queue_elem_t *elem){
+    l4util_wq_lock_unlock(wq, elem);
 }
-
-//void aquire_mutex(mutex_t*);
-//void release_mutex(mutex_t*);
 
 #endif

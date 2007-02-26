@@ -6,7 +6,7 @@ PKGDIR ?= ../..
 L4DIR  ?= $(PKGDIR)/../..
 
 TARGET	= l4env_pr
-DEFAULT_RELOC = 0x00940000
+DEFAULT_RELOC = 0x009b0000
 SRC_C	= l4env.c
 
 # our link libraries seem do be broken

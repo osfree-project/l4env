@@ -1,6 +1,6 @@
 PKGDIR		?= ..
 L4DIR		?= $(PKGDIR)/../..
-SYSTEMS		= x86-l4v2 x86-l4x0
+SYSTEMS		= x86-l4v2 x86-l4x0 arm-l4x0
 IDL 		= exec.idl
 IDL_FLAGS	= -fctypes
 

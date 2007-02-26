@@ -1,4 +1,4 @@
-IMPLEMENTATION[ia32-ux]:
+IMPLEMENTATION[ia32,ux]:
 
 inline NEEDS [context_of]
 Context *current()

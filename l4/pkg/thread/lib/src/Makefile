@@ -11,7 +11,7 @@ DEFINES = 	-DTHREAD_L4
 
 # targets
 TARGET =	libthread.a 
-SYSTEMS =	x86-l4v2 x86-l4x0
+SYSTEMS =	x86-l4v2 x86-l4x0 arm-l4x0
 
 # include lib role
 include $(L4DIR)/mk/lib.mk

@@ -51,12 +51,18 @@ TARGET_PROFILE := $(addsuffix .pr,$(filter $(BUILD_PROFILE),$(TARGET)))
 TARGET	+= $(TARGET_$(OSYSTEM)) $(TARGET_PROFILE)
 
 # define some variables different for lib.mk and prog.mk
+ifeq ($(BID_GENERATE_MAPFILE),y)
+LDFLAGS+=-Wl,-Map -Wl,$(strip $@).map
+endif
 LDFLAGS += $(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))
 LDFLAGS += $(addprefix -L, $(L4LIBDIR)) $(LIBCLIBDIR)
 LDFLAGS	+= $(addprefix -T,$(LDSCRIPT)) $(LIBS) $(L4LIBS) $(LIBCLIBS) $(LDFLAGS_$@)
 
 ifeq ($(notdir $(LDSCRIPT)),main_stat.ld)
+# ld denies -gc-section when linking against shared libraries
+ifeq ($(findstring FOO,$(patsubst -l%.s,FOO,$(LIBS) $(L4LIBS) $(LIBCLIBS))),)
 LDFLAGS += -Wl,-gc-sections
+endif
 endif
 
 include $(L4DIR)/mk/install.inc
@@ -92,9 +98,15 @@ endif
 
 DEPS	+= $(foreach file,$(TARGET), $(dir $(file)).$(notdir $(file)).d)
 
+# Link C++ programs with g++ (esp. in l4linux mode)
+LINK_PROGRAM := $(CC)
+ifneq ($(SRC_CC),)
+LINK_PROGRAM := $(CXX)
+endif
+
 $(TARGET): $(OBJS) $(LIBDEPS) $(CRT0) $(CRTN)
 	@$(LINK_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(LD)) $(CC) -o $@ $(CRT0) $(OBJS) $(LDFLAGS) $(CRTN)
+	$(VERBOSE)$(call MAKEDEP,$(INT_LD_NAME)) $(LINK_PROGRAM) -o $@ $(CRT0) $(OBJS) $(LDFLAGS) $(CRTN)
 	@$(BUILT_MESSAGE)
 
 endif	# architecture is defined, really build

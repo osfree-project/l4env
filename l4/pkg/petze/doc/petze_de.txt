@@ -1,46 +1,69 @@
 
                     Petze - Minidokumentation
 
-                           Norman Feske
+                 Norman Feske, Christian Helmuth
 
 Abstract
 ########
 
 Petze ist ein simples Debug-Werkzeug zum Untersuchen von Programmen
-nach Memory-Leaks. Jeder #malloc()# und #free()# Aufruf wird zusammen
-mit zusätzlichen Informationen (Name der Quelldatei, Größe, Adresse)
-geloggt und kann und kann mit einem unabhängig laufenden Diagnosetool
-ausgewertet werden.
+nach Memory-Leaks. Aufrufe der folgenden Funktionen werden "accounted":
+
+* #malloc()#
+* #free()#
+* #realloc()#
+* #calloc()#
+
+Jeder Aufruf wird zusammen mit zusätzlichen Informationen (Größe, Adresse)
+geloggt und kann mit einem unabhängig laufenden Diagnosetool ausgewertet
+werden.
+In der Standardkonfiguration wird als Poolname die Rücksprungadresse verwendet.
+Außerdem besteht die Möglichkeit den Poolnamen für eine Menge von Aufrufen
+selbst zu bestimmen, wobei alle Aufrufe einer Datei den gleichen Poolnamen
+verwenden.
 
 Ziel
 ####
 
 * Quelltext des zu untersuchenden Programmes darf nicht verändert werden
-* möglichst wenig Compiler-Magie
+* möglichst wenig Compiler-Magie (was wir wohl nicht ganz eingehalten haben :-)
 
 Wie petzt Petze?
 ################
 
+Standard-Konfiguration:
+
+# Einbeziehen von #libpetze.a# beim Linken
+# Wrapping aller Aurufe für Speicherallokation via Linker-Parameter
+
+Alternativ-Konfiguration:
+
+# Wie Standardkonfiguration
 # Einbinden von #<stdlib.h># als Compiler-Option
-# Definition von PETZE_POOLNAME als Compiler-Option (z.B. der Name der Quelldatei)
+# Definition von #PETZE_POOLNAME# als Compiler-Option (z.B. der Name der
+  Quelldatei)
 # Einbinden von #<petze.h>#
   * #malloc(a)# wird mit Makro #petz_malloc(PETZE_POOLNAME,a)# überdefiniert
   * #petz_malloc(char *,unsigned int)# wird deklariert
 # Der eigentliche Quellcode wird compiliert. Des Einbinden von #<stdlib.h>#
   in der Quelldatei wird ignoriert da #<stdlib.h># bereits eingebunden ist.
 
+Durch Verwendung der Linker-Parameter werden auch Allokationen in verwendeten
+Bibliotheken accounted.
+
 Was muß ein Anwender von Petze tun?
 ###################################
 
-* für jede interessante Quelldatei im Makefile ein DEFINES_<filename> definieren. z.B.:
+* für jede interessante Quelldatei im Makefile ein #DEFINES_<filename>#
+  definieren. z.B.:
   !DEFINES_buggy.c = -include stdlib.h \
   !                  -D'PETZE_POOLNAME="buggy.c"' \
   !                  -include petze.h
-* libpetze dazulinken
-oder einfach in das Makefile des zu untersuchenden Programmes folgende Zeile
-vor dem Einbinden des role.mk eintragen:
-!include $(L4DIR)/pkg/petze/mk/petze.mk
-In diesem Fall wird für alle Quelldateien, die in $(SRC_C) aufgeführt sind, gepetzt.
+* einfach in das Makefile des zu untersuchenden Programmes folgende Zeile vor
+  dem Einbinden des #role.mk# eintragen:
+  !include $(L4DIR)/pkg/petze/mk/petze.mk
+
+Siehe auch in #petze/mk/petze.mk# für einen passenden Copy/Paste-Eintrag.
 
 Wie kommt man an die geloggten Daten?
 #####################################
@@ -59,7 +82,6 @@ um entsprechende Ausgabe-Funktionen und coole Analyse-Features erweitert werden.
 ToDo
 ####
 
-* #calloc()#
 * nettes Visualisierungstool für DOpE natürlich (mit Diff-Funktion)
 * Erweiterung des IDL-Interfaces durch gezielte Abfragefunktionen
-
+* Offline-Tool für Adresse->Funktionsname+File+Zeile

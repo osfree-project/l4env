@@ -13,7 +13,15 @@ namespace Proc {
   inline
   void stack_pointer( Mword sp )
   {
-    asm volatile ( "movl %0, %%esp \n" : : "r"(sp) );
+    asm volatile ("movl %0, %%esp \n" : : "r"(sp) );
+  }
+
+  inline
+  Mword program_counter ()
+  {
+    Mword pc;
+    asm volatile ("call 1f ; 1: pop %0" : "=rm"(pc));
+    return pc;
   }
 
   inline

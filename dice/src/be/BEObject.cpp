@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BEObject.cpp
- *	\brief	contains the implementation of the class CBEObject
+ *    \file    dice/src/be/BEObject.cpp
+ *    \brief   contains the implementation of the class CBEObject
  *
- *	\date	02/13/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    02/13/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -42,11 +43,12 @@
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
+#include <typeinfo>
+using namespace std;
 
 /////////////////////////////////////////////////////////////////////////////
 // Base class
 
-IMPLEMENT_DYNAMIC(CBEObject)
 
 CBEObject::CBEObject(CObject * pParent)
 : CObject(pParent),
@@ -54,7 +56,6 @@ CBEObject::CBEObject(CObject * pParent)
   m_sTargetImplementation(),
   m_sTargetTestsuite()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEObject, CObject);
 }
 
 CBEObject::CBEObject(CBEObject & src)
@@ -63,7 +64,6 @@ CBEObject::CBEObject(CBEObject & src)
   m_sTargetImplementation(src.m_sTargetImplementation),
   m_sTargetTestsuite(src.m_sTargetTestsuite)
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEObject, CObject);
 }
 
 /** cleans up the base object */
@@ -72,112 +72,49 @@ CBEObject::~CBEObject()
 
 }
 
-/**	\brief tries to find the root class
- *	\return a reference to the root class or 0
- *
- * The root class should be at the top of the parent-relationship tree. So iterating over the
- * parents of this class and checking their type should be sufficient.
- */
-CBERoot *CBEObject::GetRoot()
-{
-	CObject *pCurr = this;
-	while (pCurr)
-	{
-		if (pCurr->IsKindOf(RUNTIME_CLASS(CBERoot)))
-			return (CBERoot *) pCurr;
-		pCurr = pCurr->GetParent();
-	}
-	return 0;
-}
-
-/**	\brief tries to find the function an object belongs to
- *	\return a reference to the function or 0 if search failed
- */
-CBEFunction *CBEObject::GetFunction()
-{
-    CObject *pCur = this;
-    while (pCur)
-	{
-		if (pCur->IsKindOf(RUNTIME_CLASS(CBEFunction)))
-			return (CBEFunction *) pCur;
-		pCur = pCur->GetParent();
-	}
-    return 0;
-}
-
-/**	\brief tries to find a parent of type CBEStructType
- *	\return a reference to the struct type or 0 is search failed
- */
-CBEStructType *CBEObject::GetStructType()
-{
-    CObject *pCur = this;
-    while (pCur)
-      {
-	  if (pCur->IsKindOf(RUNTIME_CLASS(CBEStructType)))
-	      return (CBEStructType *) pCur;
-	  pCur = pCur->GetParent();
-      }
-    return 0;
-}
-
-/**	\brief tries to find a parent of type CBEUnioneType
- *	\return a reference to the union type or 0 if search failed
- */
-CBEUnionType *CBEObject::GetUnionType()
-{
-    CObject *pCur = this;
-    while (pCur)
-      {
-	  if (pCur->IsKindOf(RUNTIME_CLASS(CBEUnionType)))
-	      return (CBEUnionType *) pCur;
-	  pCur = pCur->GetParent();
-      }
-    return 0;
-}
-
 /** \brief sets the target file name
  *  \param pFEObject the front-end object to use for the target file generation
  *  \param pContext the context of this operation (contains the compiler options)
  */
 void CBEObject::SetTargetFileName(CFEBase *pFEObject, CBEContext *pContext)
 {
-	if (pContext->IsOptionSet(PROGRAM_FILE_IDLFILE) ||
-		pContext->IsOptionSet(PROGRAM_FILE_ALL))
-	{
-		if (!(pFEObject->IsKindOf(RUNTIME_CLASS(CFEFile))))
-			pFEObject = pFEObject->GetFile();
-	}
-	else if (pContext->IsOptionSet(PROGRAM_FILE_MODULE))
-	{
-	    if (!(pFEObject->IsKindOf(RUNTIME_CLASS(CFELibrary))) &&
-			!(pFEObject->IsKindOf(RUNTIME_CLASS(CFEInterface))) &&
-			(pFEObject->GetParentLibrary()))
-			pFEObject = pFEObject->GetParentLibrary();
-	}
-	else if (pContext->IsOptionSet(PROGRAM_FILE_INTERFACE))
-	{
-		if (!(pFEObject->IsKindOf(RUNTIME_CLASS(CFEInterface))) &&
-			!(pFEObject->IsKindOf(RUNTIME_CLASS(CFELibrary))) &&
-			(pFEObject->GetParentInterface()))
-			pFEObject = pFEObject->GetParentInterface();
-	}
-	else if (pContext->IsOptionSet(PROGRAM_FILE_FUNCTION))
-	{
-		if (!(pFEObject->IsKindOf(RUNTIME_CLASS(CFEOperation))) &&
-			!(pFEObject->IsKindOf(RUNTIME_CLASS(CFEInterface))) &&
-			!(pFEObject->IsKindOf(RUNTIME_CLASS(CFELibrary))) &&
-			(pFEObject->GetParentOperation()))
-			pFEObject = pFEObject->GetParentOperation();
-	}
-	pContext->SetFileType(FILETYPE_CLIENTIMPLEMENTATION);
-	m_sTargetImplementation = pContext->GetNameFactory()->GetFileName(pFEObject, pContext);
-	pContext->SetFileType(FILETYPE_CLIENTHEADER);
-	if (pFEObject)
-	{
-		if (!(pFEObject->IsKindOf(RUNTIME_CLASS(CFEFile))))
-			pFEObject = pFEObject->GetFile();
-	}
-	m_sTargetHeader = pContext->GetNameFactory()->GetFileName(pFEObject, pContext);
+    if (pContext->IsOptionSet(PROGRAM_FILE_IDLFILE) ||
+        pContext->IsOptionSet(PROGRAM_FILE_ALL))
+    {
+        if (!(dynamic_cast<CFEFile*>(pFEObject)))
+            pFEObject = pFEObject->GetSpecificParent<CFEFile>(0);
+    }
+    else if (pContext->IsOptionSet(PROGRAM_FILE_MODULE))
+    {
+        if (!(dynamic_cast<CFELibrary*>(pFEObject)) &&
+            !(dynamic_cast<CFEInterface*>(pFEObject)) &&
+            (pFEObject->GetSpecificParent<CFELibrary>()))
+            pFEObject = pFEObject->GetSpecificParent<CFELibrary>();
+    }
+    else if (pContext->IsOptionSet(PROGRAM_FILE_INTERFACE))
+    {
+        if (!(dynamic_cast<CFEInterface*>(pFEObject)) &&
+            !(dynamic_cast<CFELibrary*>(pFEObject)) &&
+            (pFEObject->GetSpecificParent<CFEInterface>()))
+            pFEObject = pFEObject->GetSpecificParent<CFEInterface>();
+    }
+    else if (pContext->IsOptionSet(PROGRAM_FILE_FUNCTION))
+    {
+        if (!(dynamic_cast<CFEOperation*>(pFEObject)) &&
+            !(dynamic_cast<CFEInterface*>(pFEObject)) &&
+            !(dynamic_cast<CFELibrary*>(pFEObject)) &&
+            (pFEObject->GetSpecificParent<CFEOperation>()))
+            pFEObject = pFEObject->GetSpecificParent<CFEOperation>();
+    }
+    pContext->SetFileType(FILETYPE_CLIENTIMPLEMENTATION);
+    m_sTargetImplementation = pContext->GetNameFactory()->GetFileName(pFEObject, pContext);
+    pContext->SetFileType(FILETYPE_CLIENTHEADER);
+    if (pFEObject)
+    {
+        if (!(dynamic_cast<CFEFile*>(pFEObject)))
+            pFEObject = pFEObject->GetSpecificParent<CFEFile>(0);
+    }
+    m_sTargetHeader = pContext->GetNameFactory()->GetFileName(pFEObject, pContext);
 }
 
 /** \brief checks if the target header file is the calculated target file
@@ -193,22 +130,44 @@ void CBEObject::SetTargetFileName(CFEBase *pFEObject, CBEContext *pContext)
  */
 bool CBEObject::IsTargetFile(CBEHeaderFile *pFile)
 {
-    DTRACE("IsTargetFile(%s) m_sTargetHeader=%s\n", (const char*)pFile->GetFileName(), (const char*)m_sTargetHeader);
-	if (m_sTargetHeader.Right(9) != "-client.h")
-		return false;
-	String sBaseLocal = m_sTargetHeader.Left(m_sTargetHeader.GetLength()-9);
-	String sBaseTarget = pFile->GetFileName();
-	int nPos = 0;
-	if ((sBaseTarget.Right(9) == "-client.h") || (sBaseTarget.Right(9) == "-server.h"))
-		nPos = 9;
-	if (sBaseTarget.Right(6) == "-sys.h")
-		nPos = 6;
-	if (nPos == 0)
-		return false;
-	sBaseTarget = sBaseTarget.Left(sBaseTarget.GetLength()-nPos);
-	if (sBaseTarget == sBaseLocal)
-		return true;
-	return false;
+    DTRACE("IsTargetFile(head: %s) m_sTargetHeader=%s\n",
+        pFile->GetFileName().c_str(), m_sTargetHeader.c_str());
+    long length = m_sTargetHeader.length();
+    if (length <= 9)
+        return false;
+    if ((m_sTargetHeader.substr(length-9) != "-client.h") &&
+	(m_sTargetHeader.substr(length-10) != "-client.hh"))
+        return false;
+    string sBaseTarget = pFile->GetFileName();
+    int nPos = 0;
+    length = sBaseTarget.length();
+    DTRACE("IsTargetFile(head: %s) sBaseTarget=%s\n",
+        pFile->GetFileName().c_str(), sBaseTarget.c_str());
+    if ((length > 9) &&
+        ((sBaseTarget.substr(length - 9) == "-client.h") ||
+         (sBaseTarget.substr(length - 9) == "-server.h")))
+        nPos = 9;
+    if ((length > 10) &&
+        ((sBaseTarget.substr(length - 10) == "-client.hh") ||
+         (sBaseTarget.substr(length - 10) == "-server.hh")))
+        nPos = 10;
+    if ((length > 6) &&
+        (sBaseTarget.substr(length - 6) == "-sys.h"))
+        nPos = 6;
+    if ((length > 7) &&
+        (sBaseTarget.substr(length - 7) == "-sys.hh"))
+        nPos = 7;
+    DTRACE("IsTargetFile(head: %s) pos = %d\n", pFile->GetFileName().c_str(), nPos);
+    if (nPos == 0)
+        return false;
+    sBaseTarget = sBaseTarget.substr(0, length-nPos);
+    string sBaseLocal = m_sTargetHeader.substr(0, sBaseTarget.length());
+    DTRACE("IsTargetFile(head: %s) sBaseTarget=%s sBaseLocal=%s\n",
+        pFile->GetFileName().c_str(), sBaseTarget.c_str(),
+        sBaseLocal.c_str());
+    if (sBaseTarget == sBaseLocal)
+        return true;
+    return false;
 }
 
 /** \brief checks if the target implementation file is the calculated target file
@@ -224,32 +183,49 @@ bool CBEObject::IsTargetFile(CBEHeaderFile *pFile)
  */
 bool CBEObject::IsTargetFile(CBEImplementationFile *pFile)
 {
-	if (m_sTargetImplementation.Right(9) != "-client.c")
-		return false;
-	String sBaseTarget = pFile->GetFileName();
-	if (pFile->IsOfFileType(FILETYPE_CLIENT) && (sBaseTarget.Right(9) != "-client.c"))
-		return false;
-	if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (sBaseTarget.Right(9) != "-server.c"))
-		return false;
-	sBaseTarget = sBaseTarget.Left(sBaseTarget.GetLength()-9);
-//	String sBaseLocal = m_sTargetImplementation.Left(m_sTargetImplementation.GetLength()-9);
-	String sBaseLocal = m_sTargetImplementation.Left(sBaseTarget.GetLength());
-	if (sBaseTarget == sBaseLocal)
-		return true;
-	return false;
+    DTRACE("IsTargetFile(impl: %s) m_sTargetImplementation=%s\n",
+        pFile->GetFileName().c_str(), m_sTargetImplementation.c_str());
+    long length = m_sTargetImplementation.length();
+    if (length <= 9)
+        return false;
+    if ((m_sTargetImplementation.substr(length-9) != "-client.c") &&
+	(m_sTargetImplementation.substr(length-10) != "-client.cc"))
+        return false;
+    string sBaseTarget = pFile->GetFileName();
+    DTRACE("IsTargetFile(impl: %s) sBaseTarget=%s\n",
+        pFile->GetFileName().c_str(), sBaseTarget.c_str());
+    length = sBaseTarget.length();
+    if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+        (sBaseTarget.substr(length-9) != "-client.c") &&
+	(sBaseTarget.substr(length-10) != "-client.cc"))
+        return false;
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+        (sBaseTarget.substr(length-9) != "-server.c") &&
+	(sBaseTarget.substr(length-10) != "-server.cc"))
+        return false;
+    // with(.cc) or without(.c) '-':
+    sBaseTarget = sBaseTarget.substr(0, length-9); 
+    string sBaseLocal = m_sTargetImplementation.substr(0, sBaseTarget.length());
+    DTRACE("IsTargetFile(impl: %s) sBaseTarget=%s sBaseLocal=%s\n",
+        pFile->GetFileName().c_str(), sBaseTarget.c_str(),
+        sBaseLocal.c_str());
+    if (sBaseTarget == sBaseLocal)
+        return true;
+    return false;
 }
 
 /** \brief creates a new instance of itself */
 CObject * CBEObject::Clone()
 {
-    TRACE("Clone() not implemented for %s. Fallback to CBEObject::Clone().\n", (const char*)GetClassName());
+    TRACE("Clone() not implemented for %s. Fallback to CBEObject::Clone().\n",
+        typeid(*this).name());
     return new CBEObject(*this);
 }
 
 /** \brief returns the name of the target header file
  *  \return the name of the target header file name
  */
-String CBEObject::GetTargetHeaderFileName()
+string CBEObject::GetTargetHeaderFileName()
 {
     return m_sTargetHeader;
 }
@@ -257,7 +233,27 @@ String CBEObject::GetTargetHeaderFileName()
 /** \brief return the name of the target implementation file
  *  \return the name of the target implementation file
  */
-String CBEObject::GetTargetImplementationFileName()
+string CBEObject::GetTargetImplementationFileName()
 {
     return m_sTargetImplementation;
+}
+
+/** \brief sets source file information
+ *  \param pFEObject the front-end object to use to extract information
+ *  \return true on success
+ */
+bool CBEObject::CreateBackEnd(CFEBase* pFEObject)
+{
+    m_nSourceLineNb = pFEObject->GetSourceLine();
+    // get file, which this object belongs to
+    // (or if it is file, itself)
+    CFEFile *pFEFile = pFEObject->GetSpecificParent<CFEFile>(0);
+    if (pFEFile)
+        m_sSourceFileName = pFEFile->GetFileName();
+
+//     TRACE("Setting source in %s to %s:%d from %s\n",
+//         typeid(*this).name(), m_sSourceFileName.c_str(),
+//         m_nSourceLineNb, typeid(*pFEObject).name());
+
+    return true;
 }

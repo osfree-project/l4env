@@ -10,6 +10,7 @@
 #include <linux/config.h>
 #include <linux/threads.h>
 #include <linux/ptrace.h>
+#include <linux/kernel.h>
 #endif
 
 #ifdef CONFIG_X86_LOCAL_APIC
@@ -41,7 +42,7 @@ extern int cpu_sibling_map[];
 
 extern void smp_flush_tlb(void);
 extern void smp_message_irq(int cpl, void *dev_id, struct pt_regs *regs);
-extern void smp_send_reschedule(int cpu);
+extern void fastcall smp_send_reschedule(int cpu);
 extern void smp_invalidate_rcv(void);		/* Process an NMI */
 extern void (*mtrr_hook) (void);
 extern void zap_low_mappings (void);
@@ -91,13 +92,11 @@ extern void smp_store_cpu_info(int id);		/* Store per CPU info (like the initial
 static inline int smp_processor_id(void)
 {
   int id = l4thread_myself();
-#ifdef DEBUG
   if (id < 0)
     panic("Error in l4thread_myself()");
   if (id >= NR_CPUS)
     panic("dde_linux supports only %d threads. You created at least %d.",
-	  NR_CPUS, id);
-#endif
+          NR_CPUS, id);
   return id;
 }
 #endif /* DDE_LINUX */

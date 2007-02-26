@@ -5,7 +5,7 @@
 
 #include "vprintf_backend.h"
 
-static inline unsigned int skip_to(const unsigned char *format) {
+static inline unsigned int skip_to(const char *format) {
   int unsigned nr;
   for (nr=0; format[nr] && (format[nr]!='%'); ++nr);
   return nr;
@@ -25,7 +25,7 @@ static inline int write_pad(struct output_op* fn, int len, int padwith) {
   return nr;
 }
 
-int __v_printf(struct output_op* fn, const unsigned char *format, va_list arg_ptr)
+int __v_printf(struct output_op* fn, const char *format, va_list arg_ptr)
 {
   int len=0;
 
@@ -38,7 +38,7 @@ int __v_printf(struct output_op* fn, const unsigned char *format, va_list arg_pt
     if (*format=='%') {
       char buf[128];
 
-      unsigned char ch, padwith=' ';
+      char ch, padwith=' ';
       char *s;
 
       char flag_in_sign=0;

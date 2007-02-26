@@ -1,0 +1,120 @@
+
+This directory contains flow charts describing the the control
+flow of fiascos ipc path. The charts are in sync with the x86,v2
+implementation in the ipc_model_check branch. I added "// loc ?"
+annotations to the source code to describe the correspondence
+between the charts and the sources. The charts are used in
+Endrawaty Endrawaty master thesis on modelchecking fiascos ipc
+path.
+
+The charts are actually an abstraction of the sources:
+- flexpages and mapping is abstracted away
+- no actual data, the charts describe only the rendevous
+- the charts assume infinetely many CPUs, so there is no context
+  switching; idle looping is used instead
+
+For the charts I used dias FS and Flowchart predefined objects
+and arrows. I appreciate any dia explanation on how to
+- use layers (to hide parts of a chart)
+- add connection points to FLOW arrows
+- change the color of the FLOW arrows
+- store the diagrams uncompressed to enable cvs diffs (*dia is
+  gzipped xml)
+
+The ps versions (which are hopefully consistent with the dia
+versions) are there to ease printing.
+
+The various boxes have the following semantics:
+
+     +-----------+
+     |		 |             atomic action
+     |		 |
+     +-----------+
+
+	 /\
+	/  \
+       /    \		       decision
+       \    /
+       	\  /
+	 \/
+
+     +-----------+
+     | |       | |	       aquire or release lock
+     | |       | |
+     +-----------+
+
+        --------------
+      -/              \-
+     /                  \
+    (                    )     start or end of procedure
+     \                  /      (with round corners left and right)
+      -\              /-
+        --------------
+
+        --------------
+       /              \
+      /                \
+     <                  >      procedure / function call
+      \                /       (angular corners left and right)
+       \              /
+        --------------
+
+        /-------------+
+       /              |
+      /               |        comment
+      |               |
+      +---------------+
+
+	-----------
+	 \ 	 /
+	  \ 	/              begin loop
+	   \   /
+	    \ /
+	     v
+
+	     ^
+	    / \
+	   /   \
+	  /     \              end loop
+	 /       \
+	-----------
+
+
+
+
+Location numbers
+
+commit_ipc_failure:   70 - 72
+commit_ipc_success:   80 - 81
+           do_send:    1 - 33
+        do_receive:  250 - 284
+ipc_receiver_ready:  290 - 294
+      ipc_snd_regs:  150 - 190
+      ipc_try_lock:  220 - 227
+   prepare_receive:   50 - 56
+         sender_ok:  240 - 248
+           sys_ipc:   90 - 136
+     wake_receiver:  200 - 206
+
+Still missing:
+
+ipc_init
+handle_page_fault_pager
+ipc_continue
+do_send_long
+fpage_map (?)
+
+
+Enjoy!
+
+
+Hendrik Tews (tews@tcs.inf.tu-dresden.de)
+
+
+
+;;; Local Variables: ***
+;;; mode: indented-text ***
+;;; version-control: t ***
+;;; kept-new-versions: 10 ***
+;;; delete-old-versions: t ***
+;;; End: ***

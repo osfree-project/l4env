@@ -88,12 +88,12 @@ __client_wakeup(l4_threadid_t client, l4_uint32_t events, int error)
 
   /* send notification */
   ret = l4_ipc_send(client,L4_IPC_SHORT_MSG,error,events,
-			 L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
+			 L4_IPC_SEND_TIMEOUT_0,&result);
   if ((ret == 0) || (ret == L4_IPC_SETIMEOUT)) 
     return 0;
   else 
     {
-      Error("DSI: send event notification failed (0x%02x)",ret);
+      LOG_Error("DSI: send event notification failed (0x%02x)",ret);
       return -L4_EIPC;
     }
 }
@@ -128,7 +128,7 @@ __set_event(dsi_socketid_t id, l4_uint32_t events)
   ret = dsi_socket_get_descriptor(id,&s);
   if (ret)
     {
-      Error("DSI: invalid socket id (%d)",id);
+      LOG_Error("DSI: invalid socket id (%d)",id);
       return -L4_EINVAL;
     }
 
@@ -210,7 +210,7 @@ __reset_event(l4_threadid_t client, dsi_socketid_t id, l4_uint32_t events)
   ret = dsi_socket_get_descriptor(id,&s);
   if (ret)
     {
-      Error("DSI: invalid socket id (%d)",id);
+      LOG_Error("DSI: invalid socket id (%d)",id);
       return -L4_EINVAL;
     }
 
@@ -224,7 +224,7 @@ __reset_event(l4_threadid_t client, dsi_socketid_t id, l4_uint32_t events)
 	    s->events[i]--;
 	  else
 	    {
-	      Error("DSI: event 0x%08x not set",1U << i);
+	      LOG_Error("DSI: event 0x%08x not set",1U << i);
 	      error = -L4_EINVAL;
 	    }
 	}
@@ -264,7 +264,7 @@ __wait_for_events(l4_threadid_t client, dsi_socketid_t id, l4_uint32_t events)
   ret = dsi_socket_get_descriptor(id,&s);
   if (ret)
     {
-      Error("DSI: invalid socket id (%d)",id);
+      LOG_Error("DSI: invalid socket id (%d)",id);
       return -L4_EINVAL;
     }
   
@@ -394,22 +394,22 @@ __event_thread(void * data)
 
 	    default:
 	      /* invalid request */
-	      Error("DSI: event signalling thread: invalid request 0x%08x",
-		    dw0);
+	      LOG_Error("DSI: event signalling thread: invalid request 0x%08x",
+                        dw0);
 	      error = -L4_EINVAL;
 	    }
 
 	  if (reply)
 	    ret = l4_ipc_reply_and_wait(src,L4_IPC_SHORT_MSG,error,0,
 					     &src,L4_IPC_SHORT_MSG,&dw0,&dw1,
-					     L4_IPC_TIMEOUT(0,1,0,0,0,0),
+					     L4_IPC_SEND_TIMEOUT_0,
 					     &result);
 	  else
 	    ret = l4_ipc_wait(&src,L4_IPC_SHORT_MSG,&dw0,&dw1,
-				   L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
+				   L4_IPC_SEND_TIMEOUT_0,&result);
 	}
 
-      Error("DSI: event signalling thread IPC error 0x%02x",ret);
+      LOG_Error("DSI: event signalling thread IPC error 0x%02x",ret);
     }
 
   /* this should never happen */
@@ -447,7 +447,7 @@ dsi_event_set(dsi_socketid_t socket_id, l4_uint32_t events)
 			 L4_IPC_NEVER,&result);
   if (ret)
     {
-      Error("DSI: error calling event signalling thread (0x%02x)!",ret);
+      LOG_Error("DSI: error calling event signalling thread (0x%02x)!",ret);
       return -L4_EIPC;
     }
  
@@ -503,8 +503,8 @@ dsi_event_reset(l4_threadid_t event_thread, dsi_socketid_t socket_id,
 			 L4_IPC_NEVER,&result);
   if (ret)
     {
-      Error("DSI: error calling components event signalling thread (0x%02x)!",
-	    ret);
+      LOG_Error("DSI: error calling components event signalling thread (0x%02x)!",
+                ret);
       return -L4_EIPC;
     }
 
@@ -546,8 +546,8 @@ dsi_event_wait(l4_threadid_t event_thread, dsi_socketid_t socket_id,
 			 L4_IPC_NEVER,&result);
   if (ret)
     {
-      Error("DSI: error calling components event signalling thread (0x%02x)!",
-	    ret);
+      LOG_Error("DSI: error calling components event signalling thread (0x%02x)!",
+                ret);
       return -L4_EIPC;
     }
      

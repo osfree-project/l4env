@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/x0adapt/L4X0aBEReplyFunction.h
- *	\brief	contains the declaration of the class CL4X0aBEReplyFunction
+ *    \file    dice/src/be/l4/x0/L4X0BEReplyFunction.h
+ *    \brief   contains the declaration of the class CL4X0BEReplyFunction
  *
- *	\date	08/15/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    08/15/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,22 +32,21 @@
 
 #include <be/l4/L4BEReplyFunction.h>
 
-/** \class CL4X0aBEReplyFunction
+/** \class CL4X0BEReplyFunction
  *  \ingroup backend
  *  \brief encloses the initialisation for X0 backend's reply function
  */
 class CL4X0BEReplyFunction : public CL4BEReplyFunction
 {
-DECLARE_DYNAMIC(CL4X0BEReplyFunction);
 
 public:
     /** creates a reply function object */
     CL4X0BEReplyFunction();
-    ~CL4X0BEReplyFunction();
+    virtual ~CL4X0BEReplyFunction();
 
 protected:
     virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
-	virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
+    virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif

@@ -42,7 +42,7 @@
 #include "internal.h"
 
 /** thread data key for "current" data */
-static int _key;
+static int _key = -L4_ENOKEY;
 
 /** initial task structure */
 static struct task_struct _data = INIT_TASK(_data);
@@ -61,7 +61,7 @@ static int _initialized = 0;
 struct task_struct * get_current()
 {
   void *p = l4thread_data_get_current(_key);
-  ASSERT(p);
+  Assert(p);
   return (struct task_struct *) p;
 }
 
@@ -77,6 +77,10 @@ int l4dde_process_add_worker()
   int err;
   void *data;
 
+  /* thread data key allocation failed */
+  if (_key < 0)
+    return _key;
+
   /* we need a current struct */
   data = vmalloc(sizeof(struct task_struct));
   if (!data)
@@ -87,7 +91,7 @@ int l4dde_process_add_worker()
     return err;
 
 #if DEBUG_PROCESS
-  DMSG("additional task struct @ %p\n", data);
+  LOG("additional task struct @ %p\n", data);
 #endif
 
   return 0;
@@ -124,7 +128,7 @@ int l4dde_process_init()
     return err;
 
 #if DEBUG_PROCESS
-  DMSG("task struct @ %p\n", data);
+  LOG("task struct @ %p\n", data);
 #endif
 
   ++_initialized;
@@ -155,7 +159,7 @@ static void __start_kernel_thread(struct kernel_thread_data *data)
 
 /** Create kernel thread
  * \ingroup mod_proc */
-int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
+long kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
 {
   int err;
   struct kernel_thread_data *data;
@@ -164,12 +168,22 @@ int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
   data->fn = fn;
   data->arg = arg;
 
-  err = l4thread_create((l4thread_fn_t)__start_kernel_thread, data,
-                        L4THREAD_CREATE_SYNC);
+  err = l4thread_create_long(L4THREAD_INVALID_ID,
+                             (l4thread_fn_t) __start_kernel_thread,
+                             ".kthread%.2X",
+                             L4THREAD_INVALID_SP,
+                             L4THREAD_DEFAULT_SIZE,
+                             L4THREAD_DEFAULT_PRIO,
+                             (void *) data,
+                             L4THREAD_CREATE_SYNC);
 
-  if ( err == -L4_ENOTHREAD )
-    return err;
+#if 0
+  if ( err < 0 )
+    /* XXX Is this the correct value? */
+    return -EAGAIN;
 
   /* XXX take care of pid values ? */
-  return 0;
+  /* XXX What about err==0 ? */
+#endif
+  return err;
 }

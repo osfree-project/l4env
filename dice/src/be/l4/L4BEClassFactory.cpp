@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEClassFactory.cpp
- *	\brief	contains the implementation of the class CL4BEClassFactory
+ *    \file    dice/src/be/l4/L4BEClassFactory.cpp
+ *    \brief   contains the implementation of the class CL4BEClassFactory
  *
- *	\date	02/07/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    02/07/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -25,53 +26,46 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/l4/L4BEClassFactory.h"
+#include "L4BEClassFactory.h"
 
-#include "be/l4/L4BECallFunction.h"
-#include "be/l4/L4BESrvLoopFunction.h"
-#include "be/l4/L4BEUnmarshalFunction.h"
-#include "be/l4/L4BEWaitAnyFunction.h"
-#include "be/l4/L4BEReplyFunction.h"
-#include "be/l4/L4BESndFunction.h"
-#include "be/l4/L4BERcvFunction.h"
-#include "be/l4/L4BEWaitFunction.h"
-#include "be/l4/L4BEMsgBufferType.h"
-#include "be/l4/L4BEHeaderFile.h"
-#include "be/l4/L4BETestServerFunction.h"
-#include "be/l4/L4BETestMainFunction.h"
-#include "be/l4/L4BEO1Marshaller.h"
-#include "be/l4/L4BETestsuite.h"
-#include "be/l4/L4BETestFunction.h"
-#include "be/l4/L4BEReplyAnyWaitAnyFunction.h"
-#include "be/l4/L4BERcvAnyFunction.h"
-#include "be/l4/L4BEMarshalFunction.h"
-#include "be/l4/L4BETypedDeclarator.h"
-#include "be/l4/L4BEClass.h"
-#include "be/l4/L4BEIPC.h"
-#include "be/l4/L4BEDispatchFunction.h"
+#include "L4BECallFunction.h"
+#include "L4BESrvLoopFunction.h"
+#include "L4BEUnmarshalFunction.h"
+#include "L4BEWaitAnyFunction.h"
+#include "L4BEReplyFunction.h"
+#include "L4BESndFunction.h"
+#include "L4BEWaitFunction.h"
+#include "L4BEMsgBufferType.h"
+#include "L4BEHeaderFile.h"
+#include "L4BETestServerFunction.h"
+#include "L4BETestMainFunction.h"
+#include "L4BEMarshaller.h"
+#include "L4BETestFunction.h"
+#include "L4BEMarshalFunction.h"
+#include "L4BETypedDeclarator.h"
+#include "L4BEClass.h"
+#include "L4BEIPC.h"
+#include "L4BEDispatchFunction.h"
+#include "L4BESwitchCase.h"
 
 #include "be/BEContext.h"
 
-IMPLEMENT_DYNAMIC(CL4BEClassFactory);
-
 CL4BEClassFactory::CL4BEClassFactory(bool bVerbose):CBEClassFactory(bVerbose)
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEClassFactory, CBEClassFactory);
 }
 
 CL4BEClassFactory::CL4BEClassFactory(CL4BEClassFactory & src):CBEClassFactory(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4BEClassFactory, CBEClassFactory);
 }
 
-/**	\brief the destructor of this class */
+/**    \brief the destructor of this class */
 CL4BEClassFactory::~CL4BEClassFactory()
 {
 
 }
 
-/**	\brief creates a new instance of the class CBECallFunction
- *	\return a reference to the new instance
+/**    \brief creates a new instance of the class CBECallFunction
+ *    \return a reference to the new instance
  */
 CBECallFunction *CL4BEClassFactory::GetNewCallFunction()
 {
@@ -80,8 +74,8 @@ CBECallFunction *CL4BEClassFactory::GetNewCallFunction()
     return new CL4BECallFunction();
 }
 
-/**	\brief creates a new instance of the class CBESrvLoopFunction
- *	\return a reference to the new instance
+/**    \brief creates a new instance of the class CBESrvLoopFunction
+ *    \return a reference to the new instance
  */
 CBESrvLoopFunction *CL4BEClassFactory::GetNewSrvLoopFunction()
 {
@@ -90,18 +84,19 @@ CBESrvLoopFunction *CL4BEClassFactory::GetNewSrvLoopFunction()
     return new CL4BESrvLoopFunction();
 }
 
-/**	\brief creates a new instance of the class CBEMsgBufferType
- *	\return a reference to the new instance
+/**    \brief creates a new instance of the class CBEMsgBufferType
+ *    \param bInterface true if msgbuf for interface, otherwise msgbuf for function
+ *  \return a reference to the new instance
  */
-CBEMsgBufferType *CL4BEClassFactory::GetNewMessageBufferType()
+CBEMsgBufferType *CL4BEClassFactory::GetNewMessageBufferType(bool bInterface)
 {
     if (m_bVerbose)
         printf("CL4BEClassFactory: created class CL4BEMsgBufferType\n");
     return new CL4BEMsgBufferType();
 }
 
-/**	\brief creates a new instance of the class CBEUnmarshalFunction
- *	\return a reference to the new instance
+/**    \brief creates a new instance of the class CBEUnmarshalFunction
+ *    \return a reference to the new instance
  */
 CBEUnmarshalFunction *CL4BEClassFactory::GetNewUnmarshalFunction()
 {
@@ -110,18 +105,18 @@ CBEUnmarshalFunction *CL4BEClassFactory::GetNewUnmarshalFunction()
     return new CL4BEUnmarshalFunction();
 }
 
-/**	\brief creates a new instance of the class CBEWaitAnyFunction
- *	\return a reference to the new instance
+/**    \brief creates a new instance of the class CBEWaitAnyFunction
+ *    \return a reference to the new instance
  */
 CBEWaitAnyFunction *CL4BEClassFactory::GetNewWaitAnyFunction()
 {
     if (m_bVerbose)
         printf("CL4BEClassFactory: created class CL4BEWaitAnyFunction\n");
-    return new CL4BEWaitAnyFunction();
+    return new CL4BEWaitAnyFunction(true, false);
 }
 
-/**	\brief creates a new instance of the class CBEHeaderFile
- *	\return a reference to the new instance
+/**    \brief creates a new instance of the class CBEHeaderFile
+ *    \return a reference to the new instance
  */
 CBEHeaderFile *CL4BEClassFactory::GetNewHeaderFile()
 {
@@ -130,8 +125,8 @@ CBEHeaderFile *CL4BEClassFactory::GetNewHeaderFile()
     return new CL4BEHeaderFile();
 }
 
-/**	\brief creates a new instance of the class CBETestServerFunction
- *	\return a reference to the new instance
+/**    \brief creates a new instance of the class CBETestServerFunction
+ *    \return a reference to the new instance
  */
 CBETestServerFunction *CL4BEClassFactory::GetNewTestServerFunction()
 {
@@ -140,8 +135,8 @@ CBETestServerFunction *CL4BEClassFactory::GetNewTestServerFunction()
     return new CL4BETestServerFunction();
 }
 
-/**	\brief creates a new instance of the class CBETestMainFunction
- *	\return a reference to the new instance
+/**    \brief creates a new instance of the class CBETestMainFunction
+ *    \return a reference to the new instance
  */
 CBETestMainFunction *CL4BEClassFactory::GetNewTestMainFunction()
 {
@@ -156,30 +151,9 @@ CBETestMainFunction *CL4BEClassFactory::GetNewTestMainFunction()
  */
 CBEMarshaller * CL4BEClassFactory::GetNewMarshaller(CBEContext * pContext)
 {
-    CBEMarshaller *pRet = 0;
-    switch (pContext->GetOptimizeLevel())
-    {
-    case 1:
-    case 2:
-        pRet = new CL4BEO1Marshaller();
-        break;
-    default:
-        pRet = CBEClassFactory::GetNewMarshaller(pContext);
-        break;
-    }
-    if ((m_bVerbose) && (pRet))
-        printf("CL4BEClassFactory: created class %s\n", pRet->GetClassName());
-    return pRet;
-}
-
-/** \brief generates a new testsuite
- *  \return a reference to a new testsuite
- */
-CBETestsuite * CL4BEClassFactory::GetNewTestsuite()
-{
     if (m_bVerbose)
-        printf("CL4BEClassFactory: created class CL4BETestsuite\n");
-    return new CL4BETestsuite();
+        printf("CL4BEClassFactory: created class CL4BEMarshaller\n");
+    return new CL4BEMarshaller();
 }
 
 /** \brief creates a new instance of a test-fuinction class
@@ -205,11 +179,11 @@ CBESndFunction * CL4BEClassFactory::GetNewSndFunction()
 /** \brief creates a new receive function
  *  \return a reference to the new receive function
  */
-CBERcvFunction * CL4BEClassFactory::GetNewRcvFunction()
+CBEWaitFunction * CL4BEClassFactory::GetNewRcvFunction()
 {
     if (m_bVerbose)
-        printf("CL4BEClassFactory: created class CL4BERcvFunction\n");
-    return new CL4BERcvFunction();
+        printf("CL4BEClassFactory: created class CL4BEWaitFunction\n");
+    return new CL4BEWaitFunction(false);
 }
 
 /** \brief creates a new wait function
@@ -219,27 +193,27 @@ CBEWaitFunction * CL4BEClassFactory::GetNewWaitFunction()
 {
     if (m_bVerbose)
         printf("CL4BEClassFactory: created class CL4BEWaitFunction\n");
-    return new CL4BEWaitFunction();
+    return new CL4BEWaitFunction(true);
 }
 
 /** \brief creates a new reply-and-wait function
  *  \return a reference to the new instance
  */
-CBEReplyAnyWaitAnyFunction * CL4BEClassFactory::GetNewReplyAnyWaitAnyFunction()
+CBEWaitAnyFunction * CL4BEClassFactory::GetNewReplyAnyWaitAnyFunction()
 {
     if (m_bVerbose)
         printf("CL4BEClassFactory: created class CL4BEReplyAnyWaitAnyFunction\n");
-    return new CL4BEReplyAnyWaitAnyFunction();
+    return new CL4BEWaitAnyFunction(true, true);
 }
 
 /** \brief creates a new rcv-any function
  *  \return a reference to the new instance
  */
-CBERcvAnyFunction * CL4BEClassFactory::GetNewRcvAnyFunction()
+CBEWaitAnyFunction * CL4BEClassFactory::GetNewRcvAnyFunction()
 {
     if (m_bVerbose)
-        printf("CL4BEClassFactory: created class CL4BERcvAnyFunction\n");
-    return new CL4BERcvAnyFunction();
+        printf("CL4BEClassFactory: created class CL4BEWaitAnyFunction\n");
+    return new CL4BEWaitAnyFunction(false, false);
 }
 
 /** \brief creates a new typed declarator
@@ -268,7 +242,7 @@ CBEClass * CL4BEClassFactory::GetNewClass()
 CBECommunication* CL4BEClassFactory::GetNewCommunication()
 {
     if (m_bVerbose)
-	    printf("CL4BEClassFactory: created class CL4BEIPC\n");
+        printf("CL4BEClassFactory: created class CL4BEIPC\n");
     return new CL4BEIPC();
 }
 
@@ -300,4 +274,14 @@ CBEDispatchFunction* CL4BEClassFactory::GetNewDispatchFunction()
     if (m_bVerbose)
         printf("CL4BEClassFactory: created class CL4BEDispatchFunction\n");
     return new CL4BEDispatchFunction();
+}
+
+/** \brief creates a new switch case function
+ *  \return a reference to the new instance
+ */
+CBESwitchCase* CL4BEClassFactory::GetNewSwitchCase()
+{
+    if (m_bVerbose)
+        printf("CL4BEClassFactory: created class CL4BESwitchCase\n");
+    return new CL4BESwitchCase();
 }

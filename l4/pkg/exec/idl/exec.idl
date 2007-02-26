@@ -14,13 +14,13 @@
 import <l4/sys/types.h>
 import <l4/dm_generic/types.h>
 
-/** l4 namespace */
+/** l4 namespace. */
 library l4exec
 {
-  /** structure that is exchanged by the interface */
+  /** structure that is exchanged by the interface. */
   typedef long envpage_t[563];
 
-  /** exec interface */
+  /** exec interface. */
   interface bin
     {
       /** Open the binary file.
@@ -30,11 +30,13 @@ library l4exec
       long open([in, string] char* fname, [in] l4dm_dataspace_t *img_ds,
 		[in, out] envpage_t *envpage, [in] unsigned long flags);
 
-      /** Test file type of image. Returns > 0 if interpreter knows how to
-       * handle it */
+      /** Test file type of image.
+       * \return   0 if interpreter knows how to handle it.
+       * 	 -L4_EXEC_INTERPRETER if image contains an interpreter section
+       * 	 -L4_EXEC_BADFORMAT if image format is unknown. */
       long ftype([in] l4dm_dataspace_t *img_ds, [in] envpage_t *envpage);
 
-      /** Close binary */
+      /** Close binary. Release all related memory. */
       long close([in, out] envpage_t *envpage);
 
       /** Relocate/link the binary described by envpage. */
@@ -49,6 +51,10 @@ library l4exec
        * The dataspace is contiguous. */
       long get_lines([in] envpage_t envpage,
 		     [out] l4dm_dataspace_t *lines_ds);
+
+      /** Get the address of a symbol. */
+      long get_dsym([in] char *symname,
+		    [in] envpage_t envpage,
+		    [out] l4_addr_t *addr);
     };
 };
-

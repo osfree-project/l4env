@@ -83,7 +83,9 @@ library l4blk
        * \ingroup idl_cmd
        *
        * \param   drv         Driver handle
-       * \param   bandwidth   Bandwidht of stream (bytes/s)
+       * \param   device      Device id
+       * \param   bandwidth   Bandwidth of stream (bytes/s)
+       * \param   period      Period length (milliseconds)
        * \param   blk_size    Blocksize (bytes)
        * \param   q           Quality parameter
        * \param   meta_int    Metadata request interval (number of regular 
@@ -96,7 +98,9 @@ library l4blk
        */
       /***********************************************************************/ 
       int create_stream([in] l4blk_driver_id_t drv, 
+                        [in] unsigned long device,
                         [in] unsigned long bandwidth,
+                        [in] unsigned long period,
                         [in] unsigned long blk_size, 
                         [in] float q,
                         [in] unsigned long meta_int, 

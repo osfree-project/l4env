@@ -1,45 +1,160 @@
 #! /bin/bash
 
 [ -z "$UXMEM" ] && { 
-  echo "overriding memory!"
-  UXMEM=128
+  UXMEM=256
 }
 
-[ -n "$LOADERAPP" ] || LOADERAPP=linux.l4env
+lx_lang_def=us
+lx_lang=$lx_lang_def
+[ -z "$LOADERAPP_TEMPL" ] && LOADERAPP_TEMPL=l4linux26.ux
+
+gen_loader_appname() {
+  LOADERAPP=$(eval echo $LOADERAPP_TEMPL)
+}
+
+[ -n "$BLK_FILE"  ] || BLK_FILE="/tmp/set_me_to_something_existing"
 
 . ${0%/*}/generic.inc
 
-case "$1" in
+fprov_task=9
+rtc_task=10
+blk_task=11
+con_task=12
+
+use_events=0
+events_param=
+
+blk_write="-w"
+
+con_inc() {
+  true $((con_task++))
+}
+fprov_inc() {
+  true $((fprov_task++))
+}
+rtc_inc() {
+  true $((rtc_task++))
+}
+blk_inc() {
+  true $((blk_task++))
+}
+
+while [ -n "$1" ]; do
+  case "$1" in
+    --events|-events|-e)
+      use_events=1
+      events_param=--events
+      EVENTS=(-l events)
+      fprov_inc
+      rtc_inc
+      con_inc
+      blk_inc
+      EVENTS=(-l events)
+    ;;
+    --blk|-blk|-b)
+      use_blk=1
+      con_inc
+    ;;
+    --block-ro|-bro)
+      blk_write=""
+    ;;
+    --block-file|-bf)
+      shift
+      BLK_FILE=$1
+      if [ "$use_blk" != "1" ]; then
+        use_blk=1
+	con_inc
+      fi
+    ;;
+    --loaderapp|--loadapp|-a)
+      shift
+      LOADERAPP_TEMPL=$1
+    ;;
+    --lang|-l)
+      shift
+      lx_lang=$1
+    ;;
+    --mem|-m)
+      shift
+      UXMEM=$1
+    ;;
+    *)
+      if [ -z "$cmd" ]; then
+	cmd=$1
+      else
+        args[${#args[*]}]="$1"
+      fi
+    ;;
+  esac
+  shift
+done
+
+# construct command line after all vars have been set up
+if [ -n "$use_blk" ];
+then
+  BLK=(-l "blk-ux $blk_write -f $BLK_FILE" -n$blk_task)
+fi
+
+gen_loader_appname
+if [ ! -e "$CFGPATH/$LOADERAPP" ]; then
+  [ "$lx_lang" != "$lx_lang_def" ] && \
+     lang_text=" (choose another language?)"
+  echo "There's no $CFGPATH/$LOADERAPP script!$lang_text"
+  exit 1
+fi
+
+case "$cmd" in
   bare|plain|text|t)
+  	LOG=(-l log)
   	;;
   dope|d)
-	RES="-G 1024x768@16"
-	CON="-l l4dope-ux"
+	RES="-G 800x600@16"
+	CON=(-l l4dope-ux)
+	RUN="$L4PATH/proxygon $L4PATH/run"
+	LOG=(-l dmon)
+	LAUNCHPAD=(-l $L4PATH/launchpad" -a $CFGPATH/$LOADERAPP -n L4Linux -a $L4PATH/vscrtest -s")
   	;;
   con|c)
 	RES="-G 640x480@16"
-	CON="-l con-ux"
-	RUN="$L4PATH/cfg/run"
+	CON=(-l "con-ux $events_param" -n$con_task)
+	RUN="$L4PATH/run"
+  	LOG=(-l log)
   	;;
   *)
-  	echo "Unknown mode, you can choose: text, dope, con"
+  	echo "Usage: $0 {text,dope,con} [options]"
+	echo ""
+	echo "--lang, -l x               Choose language (de, us, fr, it, ...)"
+	echo "--loadapp, -a              Loader app/script"
+	echo "--block-file, -bf file     File to use for blk-ux"
+	echo "--block-ro, -bro           Read-only access for blk-ux"
+	echo "--blk, -b                  Use blk-ux (envvar BLK_FILE has the file)"
+	echo "--events, -e               Use events"
+	echo "--mem, -m x                Use that much memory"
+	echo ""
+	case "$cmd" in
+	  help|--help|-h)
+	    exit 0
+	    ;;
+	esac
 	exit 1
   	;;
 esac
 
-shift
+RMGR_ARGS="$RMGR_ARGS task modname \"L4Linux task\""
 
-fiasco \
+fiasco -t 32768 \
 	$RES \
-	-R ./rmgr-ux" task modname \"L4Linux task\"" \
-	-l names \
-	-l log \
-	-l dm_phys \
-	-l simple_ts \
-	-l fuxfprov \
-	-l rtc-ux \
-	-l l4exec \
-	$CON \
-	-l loader" $RUN $CFGPATH/$LOADERAPP" \
-	-n9 -n10 "$@"
+	"${EVENTS[@]}"                  \
+	-l names\ $events_param         \
+	"${LOG[@]}"                     \
+	-l dm_phys\ $events_param       \
+	-l simple_ts\ $events_param     \
+	-l fuxfprov -n$fprov_task       \
+	-l rtc-ux   -n$rtc_task         \
+	"${BLK[@]}"                     \
+	-l l4exec                       \
+	"${CON[@]}"                     \
+	"${LAUNCHPAD[@]}"		\
+	-l loader" $events_param $RUN $CFGPATH/$LOADERAPP" \
+	"${args[@]}"
 

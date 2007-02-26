@@ -1,0 +1,45 @@
+TARGET = liblinux.o.a
+INSTALL_TARGET =
+
+SRC_C = dummy.c softirq.c notifier.c init.c timer.c proc.c sysctl.c \
+        util.c core_dev.c select.c brlock.c #seq_file.c
+
+### DEVICES
+SRC_C += lo.c #oshkosh.c
+
+PRIVATE_INCDIR = $(PKGDIR)/server/lib-linux/include $(PKGDIR)/server/include \
+                 $(DDE_INCDIR) $(LINUX24_INCDIR)
+DEFINES = -D__KERNEL__ -DDDE_LINUX -DHZ=100
+WARNINGS = -Wall -Wstrict-prototypes -Wno-unused
+
+CFLAGS = -ffunction-sections
+
+#DEBUG = 1
+
+include $(L4DIR)/mk/Makeconf
+ifeq ($(LINUX24_AVAIL),n)
+  $(error FLIPS needs Linux-2.4 sources! Enable LINUX24_AVAIL via "make config".)
+endif
+
+vpath %.c $(LINUX24_DIR)
+vpath %.S $(LINUX24_DIR)
+
+### Linux network code
+NET_C += net/sysctl_net.c
+NET_C += $(addprefix net/802/, p8023.c sysctl_net_802.c)
+NET_C += $(addprefix net/core/, dev_mcast.c dst.c neighbour.c \
+           rtnetlink.c utils.c ethtool.c sysctl_net_core.c)
+NET_C += $(addprefix net/ethernet/, eth.c sysctl_net_ether.c)
+NET_C += $(addprefix net/ipv4/, af_inet.c arp.c devinet.c fib_frontend.c \
+           fib_hash.c fib_semantics.c icmp.c igmp.c inetpeer.c ip_forward.c \
+           ip_fragment.c ip_input.c ip_options.c ip_output.c ip_sockglue.c \
+           proc.c protocol.c raw.c route.c tcp.c tcp_diag.c tcp_input.c \
+           tcp_ipv4.c tcp_minisocks.c tcp_output.c tcp_timer.c udp.c utils.c \
+           sysctl_net_ipv4.c)
+NET_C += net/netlink/af_netlink.c
+NET_C += net/sched/sch_generic.c
+NET_C += drivers/net/net_init.c drivers/net/setup.c
+
+### Now put it all together
+SRC_C += $(NET_C) $(LIB_C) $(FS_C)
+SRC_S += $(NET_S) $(FS_S)

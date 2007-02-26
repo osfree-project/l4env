@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BESizes.cpp
- *	\brief	contains the implementation of the class CBESizes
+ *    \file    dice/src/be/BESizes.cpp
+ *    \brief   contains the implementation of the class CBESizes
  *
- *	\date	Wed Oct 9 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    Wed Oct 9 2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -28,12 +29,13 @@
 #include "be/BESizes.h"
 #include "TypeSpec-Type.h"
 
-IMPLEMENT_DYNAMIC(CBESizes);
+#if defined(HAVE_CONFIG_H)
+#include "config.h"
+#endif
 
 CBESizes::CBESizes()
 {
     m_nOpcodeSize = sizeof(long);
-    IMPLEMENT_DYNAMIC_BASE(CBESizes, CBEObject);
 }
 
 /** \brief destroys the object of class CBESizes
@@ -54,7 +56,7 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
     switch (nFEType)
     {
     case TYPE_INTEGER:
-	case TYPE_LONG:
+    case TYPE_LONG:
         {
             switch (nFESize)
             {
@@ -68,7 +70,11 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
                 nSize = sizeof(int);
                 break;
             case 8:
+#if SIZEOF_LONG_LONG > 0
                 nSize = sizeof(long long);
+#else
+                nSize = sizeof(long);
+#endif
                 break;
             default:
                 nSize = sizeof(int);
@@ -107,13 +113,13 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
         nSize = sizeof(char *);
         break;
     case TYPE_ERROR_STATUS_T:
-        nSize = 4;	// define error_status_t as unsigned int (4 bytes)
+        nSize = 4;    // define error_status_t as unsigned int (4 bytes)
         break;
     case TYPE_FLEXPAGE:
-        nSize = 8;	// a flexpage needs 2 dwords to be transmitted
+        nSize = 8;    // a flexpage needs 2 dwords to be transmitted
         break;
     case TYPE_RCV_FLEXPAGE:
-        nSize = 0;	// is not send, simple helper type
+        nSize = 0;    // is not send, simple helper type
         break;
     case TYPE_STRING:
         nSize = sizeof(char);
@@ -127,7 +133,7 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
     case TYPE_ISO_LATIN_1:
     case TYPE_ISO_MULTILINGUAL:
     case TYPE_ISO_UCS:
-        nSize = 1;	// I don't know how big this should be -> use only one byte
+        nSize = 1;    // I don't know how big this should be -> use only one byte
         break;
     default:
         break;
@@ -145,7 +151,7 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
  *
  * This implementation does not know any specific environment types.
  */
-int CBESizes::GetSizeOfEnvType(String sName)
+int CBESizes::GetSizeOfEnvType(string sName)
 {
     return 0;
 }
@@ -186,5 +192,5 @@ void CBESizes::SetOpcodeSize(int nSize)
 int CBESizes::GetExceptionSize()
 {
     // currently only the first word of the exception is transmitted
-	return 4;
+    return 4;
 }

@@ -1,0 +1,147 @@
+ Helpme, I want to write a L4VFS-server and have no clue
+
+ Martin Pohlack
+
+Note: Please also read and understand (!) 'l4vfs_namespaces.txt'.
+
+Types of functions
+##################
+
+L4VFS defines some functions which should enable clients and servers
+to communicate and understand each other.
+
+These functions typically address objects either via their object_id
+(e.g., in case for 'open()', 'unlink()', 'stat()'), or via a handle
+the client obtained earlier (e.g., 'read()', 'write()', 'close()').
+Object_ids are unique in the whole L4VFS name space, whereas handles
+are only valid for a corresponding server.
+
+Additionally there are functions, which deal with symbolic names,
+usually to determine a corresponding object_id.
+
+
+A use case scenario
+###################
+
+A typical use case scenaria looks like this:
+
+# The clients wishes to work with a certain object, known to it under
+  the symbolic name '/etc/hosts'.  It asks the name_server to resolve
+  this name to an object_id.  The name_server itself delegates this
+  request to the responsible server and returns the answer to the
+  client (an object_id or an error).
+
+# The client now wants to do something with the object (probably a
+  file in this case), lets say, read its content.  It asks the
+  name_server for a thread to talk to, using the volume_id part in the
+  object_id.  The name_server returns a thread belonging to the server
+  managing '/etc/hosts'.  Now the client asks the server thread
+  responsible for '/etc/hosts' to open it, addressing the object using
+  the object_id.  The server in turn could create a client state and
+  return a handle to the client, such that every further function call
+  regarding the file '/etc/hosts' can be associated to this open()
+  request.
+
+# The client can now read from this file using the handle.
+
+For this simple scenario the server must implement some functions from
+the L4VFS interfaces.  It must implement 'open()' and create some kind
+of client state, furthermore 'read()' must be implemented to interact
+with the created client state to update the seek pointer and so on.
+The server also must support the resolve function, such that the
+name_server can resolve the symbolic name '/etc/object_id' to an
+object_id.
+
+There are many more functions which could be implemented, such as
+'getdents()', to enable a client to list directory contents,
+'rev_resolve()' to enable a pwd-like functionality if only the
+object_id of a directory is known, ...
+
+You may look into l4vfs/idl to get an idea of all the functions.
+Please note, that most of the functions correspond to a posix
+counterpart.  As a rule of thumb: where posix would address a file via
+its name, L4VFS does address an object via an object_id.  Additionally
+, in L4VFS the client has to resolve the name first.  Many posix
+syscalls return -1 on error and provide the error number in 'errno'
+(at least the libc wrapper behaves so).  L4VFS usually returns the
+error code as negative return value.  As a consequence you will see
+many places with code like this in the server:
+
+!  function_x()
+!  {
+!    ...
+!    error = some_internal_function_y();
+!    if (error)
+!    {
+!      return -error;
+!    }
+!    ...
+!  }
+
+and in the libc wrapper in the client side:
+
+!  ...
+!  ret = call_x();
+!  if (ret < 0)
+!  {
+!    errno = - ret;
+!    return -1;
+!  }
+!  ...
+
+
+Some helpers
+############
+
+Many tasks are quite common for servers and should not be re-invented
+again and again.  Currently there exist two libraries to help server
+writers, which will be discussed in the following.  Furthermore,
+example servers are available.
+
+
+l4vfs_*-server.a
+================
+
+Have a look into l4vfs/lib/server.  The libs built there comprise all
+the idl stubs necessary and additionally contain some weak (in the
+sense of a linker symbol) dummy implementations for functions which
+are required by the interface, but which you may not want to implement
+(e.g., 'fsync()').  You have to choose the right lib depending on the
+kind of server you want to write.
+
+
+libl4vfs_tree_helper.a
+======================
+
+This library is located in l4vfs/lib/treehelper and contains some
+convenience functions for tree handling, like traversing, directory
+scanning, and data type conversion functions.
+
+
+Example servers
+===============
+
+For a start look into the simple_file_server and l4vfs_log.
+
+
+Your server structure
+#####################
+
+If you just write a simple server you would typically do the
+following:
+
+# Initialize your local data structures
+# Create a root node (?) which will be mounted somewhere in the L4VFS
+  namespace
+# Register your volume_id at the name_server
+# Call the dice server loop
+
+
+This loop in turn calls back for the functions external clients call,
+e.g.:
+
+!object_handle_t
+!l4vfs_basic_io_open_component(CORBA_Object _dice_corba_obj,
+!                              const object_id_t *object_id,
+!                              l4_int32_t flags,
+!                              CORBA_Server_Environment *_dice_corba_env)

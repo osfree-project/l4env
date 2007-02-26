@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/x0/L4X0BEWaitFunction.h
+ *    \brief   contains the implementation of the class CL4X0BEWaitFunction
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,15 +37,14 @@
  **/
 class CL4X0BEWaitFunction : public CL4BEWaitFunction
 {
-DECLARE_DYNAMIC(CL4X0BEWaitFunction);
 
 public:
-	CL4X0BEWaitFunction();
-	~CL4X0BEWaitFunction();
+    /** creates a wait function object */
+    CL4X0BEWaitFunction(bool bOpenWait);
+    virtual ~CL4X0BEWaitFunction();
 
 protected:
     virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
-	virtual void WriteUnmarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif

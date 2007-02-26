@@ -6,7 +6,7 @@
 
 .SH " Synopsis"
 .nf
-\fB#include <syscalls.h>\fP
+\fB#include <l4/sys/syscalls.h>\fP
 .fi
 .PP
 \fBstatic inline volatile l4_threadid_t\fP 

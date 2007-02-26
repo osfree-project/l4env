@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEFile.h
- *	\brief	contains the declaration of the class CBEFile
+ *    \file    dice/src/be/BEFile.h
+ *    \brief   contains the declaration of the class CBEFile
  *
- *	\date	01/10/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,7 +31,8 @@
 #define __DICE_BEFILE_H__
 
 #include "File.h"
-#include "Vector.h"
+#include <vector>
+using namespace std;
 
 class CBEContext;
 class CBEFunction;
@@ -42,98 +44,119 @@ class CFEOperation;
 class CFEInterface;
 class CFELibrary;
 class CFEFile;
+class CIncludeStatement;
 
-/**	\class CBEFile
- *	\ingroup backend
- *	\brief the output file class for the back-end classes
+/**    \class CBEFile
+ *    \ingroup backend
+ *    \brief the output file class for the back-end classes
  *
  * This class unifies the common properties of the class CBEHeaderFile and CBEImplementationFile. These common
  * properties are that both contain functions and include files.
  */
 class CBEFile : public CFile
 {
-DECLARE_DYNAMIC(CBEFile);
 // Constructor
 public:
-	virtual void Write(CBEContext *pContext);
-	/**	\brief constructor
-	 */
-	CBEFile();
-	virtual ~CBEFile();
+    /**    \brief constructor
+     */
+    CBEFile();
+    virtual ~CBEFile();
 
 protected:
-	/**	\brief copy constructor */
-	CBEFile(CBEFile &src);
+    /**    \brief copy constructor */
+    CBEFile(CBEFile &src);
 
 public:
     virtual CBETarget* GetTarget();
 
-    virtual int Optimize(int nLevel, CBEContext *pContext);
+    virtual void Write(CBEContext *pContext);
 
-    virtual bool CreateBackEnd(CFEOperation *pFEOperation, CBEContext *pContext);
-    virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
+    virtual bool CreateBackEnd(CFEOperation *pFEOperation, 
+	CBEContext *pContext);
+    virtual bool CreateBackEnd(CFEInterface *pFEInterface, 
+	CBEContext *pContext);
     virtual bool CreateBackEnd(CFELibrary *pFELibrary, CBEContext *pContext);
     virtual bool CreateBackEnd(CFEFile *pFEFile, CBEContext *pContext);
 
-    virtual CBEFunction* FindFunction(String sFunctionName);
+    virtual CBEFunction* FindFunction(string sFunctionName);
 
-    virtual CBEClass* FindClass(String sClassName);
-    virtual CBEClass* GetNextClass(VectorElement *&pIter);
-    virtual VectorElement* GetFirstClass();
+    virtual CBEClass* FindClass(string sClassName);
+    virtual CBEClass* GetNextClass(vector<CBEClass*>::iterator &iter);
+    virtual vector<CBEClass*>::iterator GetFirstClass();
     virtual void RemoveClass(CBEClass *pClass);
     virtual void AddClass(CBEClass *pClass);
 
-    virtual CBENameSpace* FindNameSpace(String sNameSpaceName);
-    virtual CBENameSpace* GetNextNameSpace(VectorElement *&pIter);
-    virtual VectorElement* GetFirstNameSpace();
+    virtual CBENameSpace* FindNameSpace(string sNameSpaceName);
+    virtual CBENameSpace* GetNextNameSpace(
+	vector<CBENameSpace*>::iterator &iter);
+    virtual vector<CBENameSpace*>::iterator GetFirstNameSpace();
     virtual void RemoveNameSpace(CBENameSpace *pNameSpace);
     virtual void AddNameSpace(CBENameSpace *pNameSpace);
 
-    virtual String GetIncludedFileName(int nIndex);
-    virtual bool IsIDLFile(int nIndex);
-	virtual bool IsStandardInclude(int nIndex);
-    virtual int GetIncludedFileNameSize();
-    virtual void AddIncludedFileName(String sFileName, bool bIDLFile, bool bIsStandardInclude);
-    virtual CBEFunction* GetNextFunction(VectorElement *&pIter);
-    virtual VectorElement* GetFirstFunction();
+    virtual void AddIncludedFileName(string sFileName, bool bIDLFile, 
+	bool bIsStandardInclude, CObject* pRefObj = 0);
+    virtual vector<CIncludeStatement*>::iterator GetFirstIncludeStatement();
+    virtual CIncludeStatement* GetNextIncludeStatement(
+	vector<CIncludeStatement*>::iterator & iter);
+
+    virtual CBEFunction* GetNextFunction(vector<CBEFunction*>::iterator &iter);
+    virtual vector<CBEFunction*>::iterator GetFirstFunction();
     virtual void RemoveFunction(CBEFunction *pFunction);
     virtual void AddFunction(CBEFunction *pFunction);
+
     virtual bool IsOfFileType(int nFileType);
-    virtual bool HasFunctionWithUserType(String sTypeName, CBEContext *pContext);
+    virtual bool HasFunctionWithUserType(string sTypeName, 
+	CBEContext *pContext);
+
+    virtual int GetSourceLineEnd();
 
 protected:
-    virtual void WriteFunctions(CBEContext *pContext);
-    virtual void WriteIncludesAfterTypes(CBEContext *pContext);
-    virtual void WriteIncludesBeforeTypes(CBEContext *pContext);
-    virtual void WriteNameSpaces(CBEContext *pContext);
-    virtual void WriteClasses(CBEContext *pContext);
-	virtual void WriteIntro(CBEContext *pContext);
+    virtual void WriteFunction(CBEFunction *pFunction, 
+	CBEContext *pContext) = 0;
+    virtual void WriteDefaultIncludes(CBEContext *pContext);
+    virtual void WriteInclude(CIncludeStatement* pInclude, 
+	CBEContext *pContext);
+    virtual void WriteNameSpace(CBENameSpace *pNameSpace, 
+	CBEContext *pContext) = 0;
+    virtual void WriteClass(CBEClass *pClass, CBEContext *pContext) = 0;
+    virtual void WriteIntro(CBEContext *pContext);
+    virtual int GetFunctionCount(void);
+
+    virtual void WriteHelperFunctions(CBEContext *pContext);
+
+    virtual void CreateOrderedElementList(void);
+    void InsertOrderedElement(CObject *pObj);
 
 protected:
-    /**	\var Vector m_vIncludedFiles
-     *	\brief contains the names of the included files
+    /** \var vector<CIncludeStatement*> m_vIncludedFiles
+     *  \brief contains the names of the included files
      *
-     * This is an array of strings, because a file may not only include CBEFile-represented files, but also other
-     * files. For instance C-header files. Therefore it is more convenient to store the names of the files, than to
-     * create CBEFiles for the C-header files as well.
+     * This is an array of strings, because a file may not only include
+     * CBEFile-represented files, but also other files. For instance C-header
+     * files. Therefore it is more convenient to store the names of the files,
+     * than to create CBEFiles for the C-header files as well.
      */
-    Vector m_vIncludedFiles;
-    /**	\var Vector m_vClasses
-     *	\brief contains all classes, which belong to this file
+    vector<CIncludeStatement*> m_vIncludedFiles;
+    /** \var vector<CBEClass*> m_vClasses
+     *  \brief contains all classes, which belong to this file
      */
-    Vector m_vClasses;
-    /** \var Vector m_vNameSpaces
+    vector<CBEClass*> m_vClasses;
+    /** \var vector<CBENameSpace*> m_vNameSpaces
      *  \brief contains all namespaces, which belong to this file
      */
-    Vector m_vNameSpaces;
-    /** \var Vector m_vFunctions
+    vector<CBENameSpace*> m_vNameSpaces;
+    /** \var vector<CBEFunction*> m_vFunctions
      *  \brief contains the functions, which belong to this file
      */
-    Vector m_vFunctions;
+    vector<CBEFunction*> m_vFunctions;
     /** \var int m_nFileType
      *  \brief contains the type of the file
      */
     int m_nFileType;
+    /** \var vector<CObject*> m_vOrderedElements
+     *  \brief contains ordered list of elements
+     */
+    vector<CObject*> m_vOrderedElements;
 };
 
 #endif // !__DICE_BEFILE_H__

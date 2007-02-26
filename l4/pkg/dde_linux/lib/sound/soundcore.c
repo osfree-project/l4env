@@ -105,7 +105,7 @@ static void __sound_remove_unit(struct sound_unit **list, int unit)
         }
       list = &(p->next);
     }
-  Error("Sound device %d went missing!\n", unit);
+  LOG_Error("Sound device %d went missing!", unit);
 }
 
 /** look */
@@ -177,7 +177,7 @@ int register_sound_dsp(struct file_operations *fops, int dev)
   if (dev != -1)
     {
 #if DEBUG_SOUND
-      DMSG("dev has to be -1 (dev=%d)\n", dev);
+      LOGd(DEBUG_MSG, "dev has to be -1 (dev=%d)\n", dev);
 #endif
       return -EINVAL;
     }
@@ -185,7 +185,7 @@ int register_sound_dsp(struct file_operations *fops, int dev)
   dev = sound_insert_unit(&dsp, fops, "dsp", TYPE_DSP);
 
 #if DEBUG_SOUND
-  DMSG("register dsp node %d\n", dev);
+  LOGd(DEBUG_MSG, "register dsp node %d\n", dev);
 #endif
 
   return dev;
@@ -206,7 +206,7 @@ int register_sound_mixer(struct file_operations *fops, int dev)
   if (dev != -1)
     {
 #if DEBUG_SOUND
-      DMSG("dev has to be -1 (dev=%d)\n", dev);
+      LOGd(DEBUG_MSG, "dev has to be -1 (dev=%d)\n", dev);
 #endif
       return -EINVAL;
     }
@@ -214,7 +214,7 @@ int register_sound_mixer(struct file_operations *fops, int dev)
   dev = sound_insert_unit(&mixer, fops, "mixer", TYPE_MIXER);
 
 #if DEBUG_SOUND
-  DMSG("register mixer node %d\n", dev);
+  LOGd(DEBUG_MSG, "register mixer node %d\n", dev);
 #endif
 
   return dev;
@@ -233,7 +233,7 @@ int register_sound_midi(struct file_operations *fops, int dev)
   if (dev != -1)
     {
 #if DEBUG_SOUND
-      DMSG("dev has to be -1 (dev=%d)\n", dev);
+      LOGd(DEBUG_MSG, "dev has to be -1 (dev=%d)\n", dev);
 #endif
       return -EINVAL;
     }
@@ -241,7 +241,7 @@ int register_sound_midi(struct file_operations *fops, int dev)
   dev = sound_insert_unit(&midi, fops, "midi", TYPE_MIDI);
 
 #if DEBUG_SOUND
-  DMSG("register midi node %d\n", dev);
+  LOGd(DEBUG_MSG, "register midi node %d\n", dev);
 #endif
 
   return dev;
@@ -317,7 +317,7 @@ int register_sound_special(struct file_operations *fops, int unit)
       break;
     }
 #if DEBUG_SOUND
-  DMSG("register special node \"%s\" not supported\n", name);
+  LOGd(DEBUG_MSG, "register special node \"%s\" not supported\n", name);
 #endif
   return -ENOENT;
 }
@@ -336,7 +336,7 @@ int register_sound_special(struct file_operations *fops, int unit)
 int register_sound_synth(struct file_operations *fops, int dev)
 {
 #if DEBUG_SOUND
-  DMSG("register synth node not supported\n");
+  LOGd(DEBUG_MSG, "register synth node not supported\n");
 #endif
   return -ENOENT;
 }
@@ -351,7 +351,7 @@ void unregister_sound_dsp(int unit)
   sound_remove_unit(&dsp, unit);
 
 #if DEBUG_SOUND
-  DMSG("unregister dsp node %d\n", unit);
+  LOGd(DEBUG_MSG, "unregister dsp node %d\n", unit);
 #endif
 }
 
@@ -365,7 +365,7 @@ void unregister_sound_mixer(int unit)
   sound_remove_unit(&mixer, unit);
 
 #if DEBUG_SOUND
-  DMSG("unregister mixer node %d\n", unit);
+  LOGd(DEBUG_MSG, "unregister mixer node %d\n", unit);
 #endif
 }
 
@@ -381,7 +381,7 @@ void unregister_sound_midi(int unit)
 #endif /* 0 */
 
 #if DEBUG_SOUND
-  DMSG("unregister midi node %d\n", unit);
+  LOGd(DEBUG_MSG, "unregister midi node %d\n", unit);
 #endif
 }
 
@@ -396,7 +396,7 @@ void unregister_sound_midi(int unit)
 void unregister_sound_special(int unit)
 {
 #if DEBUG_SOUND
-  DMSG("unregister special node %d not supported\n", unit);
+  LOGd(DEBUG_MSG, "unregister special node %d not supported\n", unit);
 #endif
 }
 
@@ -411,7 +411,7 @@ void unregister_sound_special(int unit)
 void unregister_sound_synth(int unit)
 {
 #if DEBUG_SOUND
-  DMSG("unregister synth node %d not supported\n", unit);
+  LOGd(DEBUG_MSG, "unregister synth node %d not supported\n", unit);
 #endif
 }
 

@@ -1,0 +1,29 @@
+What is here?
+-------------
+The directory 'qt-embedded-free' contains parts of the Qt/Embedded source
+distribution. Some directories, e.g. examples and tutorials, were not
+included in L4 CVS, because of there size. You can download the original
+source archive from http://www.trolltech.com/, if you want to have a look
+at those missing things.
+Also note, that tools like Qt Designer are not built here. Instead it is
+recommended, that you use the ones from your Linux distribution (same for
+the Qt-API documentation).
+You can download the source from Trolltech as mentioned above. Debian
+users can apt-get the tools:
+
+  apt-get update
+  apt-get install qt3-doc qt3-dev-tools qt3-designer
+
+
+For building Qt/Embedded on DROPS, all unmodified files are linked to
+../libqt3/. Some links, which were in the original tarball but could not
+be included in CVS, are recreated there, too. This will happen
+automatically, when you run 'make' for the first time.
+
+IMPORTANT NOTE:
+---------------
+You should not modify any files here. Instead you should copy the file you
+wish to change into the corresponding directory in ../libqt3/, as this is
+the place, where building is done. You may need to delete the link in
+../libqt3/ before.
+

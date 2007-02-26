@@ -1,0 +1,21 @@
+import <l4/sys/types.h>
+import <l4/dm_generic/types.h>
+
+interface presenter_fprov {
+
+int     open   ([in, string] char *pathname, [in] int flags);
+int     close  ([in] int fd);
+int 	read   ([in] int fd, 
+		[in] l4_threadid_t *dm,
+		[in] long count,
+		[out] l4dm_dataspace_t *ds
+		); 
+long 	write  ([in] int fd,
+            	[in] l4dm_dataspace_t *ds,		
+            	[in] unsigned long count);
+
+int  	lseek	([in] int fildes, 
+		 [in] int offset, 
+		 [in] int whence);
+
+};

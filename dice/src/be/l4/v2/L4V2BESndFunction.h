@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/v2/L4V2BESndFunction.h
+ *    \brief   contains the decalration of the class CL4V2BESndFunction
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -29,8 +36,6 @@
  */
 class CL4V2BESndFunction : public CL4BESndFunction
 {
-DECLARE_DYNAMIC(CL4V2BESndFunction);
-
 public:
     /** constructs a new send function */
     CL4V2BESndFunction();
@@ -38,7 +43,7 @@ public:
 
 protected:
     virtual void WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
-	virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
+    virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
 };
 
 #endif

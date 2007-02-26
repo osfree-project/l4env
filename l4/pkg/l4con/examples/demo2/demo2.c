@@ -15,9 +15,10 @@
 #include <l4/sys/kdebug.h>
 #include <l4/util/util.h>
 #include <l4/util/getopt.h>
+#include <l4/util/l4_macros.h>
 
-#include <l4/con/l4con.h>
-#include <l4/con/con-client.h>
+#include <l4/l4con/l4con.h>
+#include <l4/l4con/l4con-client.h>
 
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>
@@ -209,10 +210,9 @@ int main(int argc, char *argv[])
   CORBA_Environment _env = dice_default_environment;
 
   do_args(argc, argv);
-  LOG_init(PROGTAG);
   my_l4id = l4thread_l4_id( l4thread_myself() );
 
-  printf("Hello there, I am %x.%02x.\n", my_l4id.id.task, my_l4id.id.lthread);
+  printf("Hello there, I am "l4util_idfmt".\n", l4util_idstr(my_l4id));
 
   /* ask for 'con' (timeout = 5000 ms) */
   if (names_waitfor_name(CON_NAMES_STR, &con_l4id, 5000) == 0) 

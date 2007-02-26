@@ -1,6 +1,6 @@
 /* $Id$ */
 /**
- * \file	con/examples/linux_stub/kbd.c
+ * \file	l4con/examples/linux_stub/kbd.c
  * \brief	event handling
  *
  * \date	01/2002
@@ -16,6 +16,7 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/kernel.h>
+#include <l4/util/l4_macros.h>
 
 typedef l4_uint32_t dword_t;
 
@@ -40,10 +41,23 @@ typedef l4_uint32_t dword_t;
 
 // prevent compiler warning
 #undef ABS_MAX
+#undef KEY_F13
+#undef KEY_F14
+#undef KEY_F15
+#undef KEY_F16
+#undef KEY_F17
+#undef KEY_F18
+#undef KEY_F19
+#undef KEY_F20
+#undef KEY_F21
+#undef KEY_F22
+#undef KEY_F23
+#undef KEY_F24
+#undef KEY_KPCOMMA
 
 // L4 includes
-#include <l4/con/stream-server.h>
-#include <l4/con/l4con_ev.h>
+#include <l4/l4con/stream-server.h>
+#include <l4/l4con/l4con_ev.h>
 #include <l4/input/libinput.h>
 
 #include "dropscon.h"
@@ -56,13 +70,13 @@ static struct input_dev *mouse_dev = 0;
 
 void 
 stream_io_push_component(CORBA_Object _dice_corba_obj,
-    const stream_io_input_event_t *event,
-    CORBA_Environment *_dice_corba_env)
+			 const stream_io_input_event_t *event,
+			 CORBA_Server_Environment *_dice_corba_env)
 {
-  l4input_t *input_ev = (l4input_t*) event;
+  struct l4input *input_ev = (struct l4input*) event;
   static unsigned short last_code;
-  static unsigned char last_down = 0;
-  
+  static unsigned char  last_down = 0;
+
   switch(input_ev->type) 
     {
     case EV_KEY:
@@ -70,11 +84,9 @@ stream_io_push_component(CORBA_Object _dice_corba_obj,
 #warning "Enable CONFIG_INPUT_KEYBDEV to get keyboard events"
 #endif
       /* filter out repeat keys */
-      if (   last_down
-      	  && input_ev->value
-	  && (last_code == input_ev->code))
+      if (last_down && input_ev->value && last_code == input_ev->code)
 	return;
-      
+
       last_code = input_ev->code;
       last_down = input_ev->value;
       
@@ -94,15 +106,18 @@ stream_io_push_component(CORBA_Object _dice_corba_obj,
       switch(input_ev->code) 
 	{
 	case EV_CON_REDRAW:
-	  if (init_done)
+	  foreground = 1;
+	  if (!init_done)
 	    {
-	      if (!xf86if_handle_redraw_event())
-		dropscon_redraw_all();
+	      redraw_pending = 1;
+	      break;
 	    }
-	  else
-	    redraw_pending = 1;
+	  if (!xf86if_handle_redraw_event())
+    	    dropscon_redraw_all();
  	  break;
+
 	case EV_CON_BACKGROUND:
+	  foreground = 0;
 	  /* turn of key repeat mode */
 	  del_timer(&kbd_dev->timer);
 	  xf86if_handle_background_event();
@@ -129,8 +144,7 @@ ev_loop(void *data)
 		   L4_IPC_SHORT_MSG, &dummy, &dummy,
 		   L4_IPC_NEVER, &result);
 
-  printk("kbd.o: serving events as %x.%02x\n",
-	   ev_l4id.id.task, ev_l4id.id.lthread);
+  printk("kbd.o: serving events as "l4util_idfmt"\n", l4util_idstr(ev_l4id));
 
   stream_io_server_loop(NULL);
 }
@@ -157,11 +171,9 @@ con_kbd_init()
       printk("kbd.o: can't alloc stack page for service thread\n");
       return -ENOMEM;
     }
-
   memset((void*)stack_page, 'S', 8192);
 
-  esp = (unsigned int*)(stack_page + 2*PAGE_SIZE - sizeof(l4_threadid_t));
-
+  esp = (unsigned*)(stack_page + 2*PAGE_SIZE - L4LINUX_RESERVED_STACK_TOP);
   *--((l4_threadid_t*)esp) = me;
   *--esp = 0;
 
@@ -175,7 +187,8 @@ con_kbd_init()
       return -EBUSY;
     }
 
-  put_l4_id_to_stack((unsigned int)esp, ev_l4id);
+  put_l4_id_to_stack((unsigned)esp, ev_l4id);
+  put_l4_prio_to_stack((unsigned)esp, 129);
 
   /* the following is needed because we want to do "current->need_resched=1" */
 #ifdef need_resched
@@ -222,10 +235,17 @@ con_kbd_init()
   kbd_dev->private = 0;
   
   kbd_dev->name = "con_kbd";
+#ifdef L4LX26
+  kbd_dev->id.bustype = BUS_USB;
+  kbd_dev->id.vendor = 0;
+  kbd_dev->id.product = 0;
+  kbd_dev->id.version = 0;
+#else
   kbd_dev->idbus = BUS_USB;
   kbd_dev->idvendor = 0;
   kbd_dev->idproduct = 0;
   kbd_dev->idversion = 0;
+#endif
 
   input_register_device(kbd_dev);
 
@@ -242,10 +262,17 @@ con_kbd_init()
 
   mouse_dev->private = 0;
   mouse_dev->name = "con_mouse";
+#ifdef L4LX26
+  mouse_dev->id.bustype = BUS_USB;
+  mouse_dev->id.vendor = 0;
+  mouse_dev->id.product = 0;
+  mouse_dev->id.version = 0;
+#else
   mouse_dev->idbus = BUS_USB;
   mouse_dev->idvendor = 0;
   mouse_dev->idproduct = 0;
   mouse_dev->idversion = 0;
+#endif
 
   input_register_device(mouse_dev);
 

@@ -141,19 +141,21 @@ l4_thread_ex_regs_static(l4_threadid_t destination, l4_umword_t eip, l4_umword_t
 extern void
 l4_thread_switch_static(l4_threadid_t destination)
 {
-  long dummy;
+  long dummy1, dummy2;
   __asm__ __volatile__(
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references 
 					   ("m") after this point */
 	  "int   $0x33		\n\t"
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references 
 					   ("m") before this point */
+	 :
+	  "=a" (dummy1),
+	  "=S" (dummy2)
 	 : 
-	  "=S" (dummy)
-	 : 
-	  "0" (destination.lh.low)
+	  "a" (0),			/* Fiasco requirement */
+	  "S" (destination.lh.low)
 	 :  
-	  "ebx", "eax", "ecx", "edx", "edi"
+	  "ebx", "ecx", "edx", "edi"
 	 );
 }
 

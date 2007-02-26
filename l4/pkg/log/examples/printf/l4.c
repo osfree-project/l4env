@@ -18,6 +18,10 @@ int main(void){
   
   for(loop=0;;loop++){
     printf("Hi, thats printf (#%d)\n", loop);
+    printf("numbers:\n");
+    printf("%%d %d\n",0xabc);
+    printf("%%x %x\n",0xabc);
+    printf("%%X %X\n",0xabc);
     printf("Ok, here we present a fairly long string, which should be broken "
            "from the logging library. The printf-implementation uses "
            "a buffer, and if it is filled the message is flushed.\n");

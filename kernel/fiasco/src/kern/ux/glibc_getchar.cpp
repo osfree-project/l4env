@@ -25,33 +25,17 @@ Glibc_getchar::write( char const * /*str*/, size_t /*len*/ )
 }
 
 PUBLIC
-char const *
-Glibc_getchar::next_attribute (bool restart = false) const
+Mword
+Glibc_getchar::get_attributes() const
 {
-  static char const *attribs[] = { "ux", "in" };
-  static unsigned int pos = 0;
-  
-  if (restart)
-    pos = 0;
-  
-  if (pos < sizeof (attribs) / sizeof (*attribs))
-    return attribs[pos++];
-    
-  return 0;
-}
-
-PUBLIC static
-Console* const
-Glibc_getchar::instance()
-{
-  static Glibc_getchar c;
-  return &c;
+  return UX | IN;
 }
 
 static void
 glibc_flt_getchar_init()
 {
-  static Filter_console fcon(Glibc_getchar::instance(), 0);
+  static Glibc_getchar c;
+  static Filter_console fcon(&c, 0);
 
   Kconsole::console()->register_console(&fcon);
 }

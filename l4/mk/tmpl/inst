@@ -8,6 +8,6 @@ set -e
 
 SRCDIR="${0%/*}"
 TARGETDIR="`pwd`"
-TOINSTALL="MAINTAINER Makefile idl include lib server examples doc"
+TOINSTALL="MAINTAINER Makefile idl include lib server examples doc ptest"
 
 tar c -C $SRCDIR -f- --exclude=CVS $TOINSTALL | tar xvf -

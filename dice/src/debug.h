@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/debug.h
- *	\brief	contains basic macros and definitions for debugging
+ *  \file   dice/src/debug.h
+ *  \brief  contains basic macros and definitions for debugging
  *
- *	\date	05/06/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   05/06/2003
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -37,15 +38,15 @@
 #define GLOBAL_DEBUG_TRACE
 
 extern int nGlobalDebug;
-#define DTRACE(s, args...)	if (nGlobalDebug == 1) printf(s, ## args)
-#define DTRACE_ON			nGlobalDebug = 1
-#define DTRACE_OFF			nGlobalDebug = 0
+#define DTRACE(s, args...)  if (nGlobalDebug == 1) printf(s, ## args)
+#define DTRACE_ON           nGlobalDebug = 1
+#define DTRACE_OFF          nGlobalDebug = 0
 
-#endif				/* GLOBAL_DEBUG_TRACE */
+#endif              /* GLOBAL_DEBUG_TRACE */
 //@}
 
 /** print debug information */
-#define TRACE(s, args...)	do { printf(s, ## args); fflush(stdout); } while(0)
+#define TRACE(s, args...)   do { printf(s, ## args); fflush(stdout); } while(0)
 
 #else
 

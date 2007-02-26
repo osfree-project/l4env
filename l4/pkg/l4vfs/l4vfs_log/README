@@ -1,0 +1,18 @@
+This server provides simply output channels in l4vfs manner, which are
+forwarded to log.  As such it wraps log's output features, but
+provides its functionality trough a simple open()/write()/close()
+interface.
+
+On startup the servers provides just a empty directory in the l4vfs
+name space.  Files are created dynamically if they are resolved, that
+is, each program can direct its output to another channel.
+
+A typical use case would be to use the --stdout and --stderr
+parameter, which are interpreted by the io-backend to open up fd 1 and
+2 on this server.
+
+Example usage:
+
+  ./fiasco -lname_server -l"fstab -c /server -c /server/log -v10 -b/   \
+      -m/server/log" -ll4vfs_log -l"my_prog1 --stdout                  \
+      /server/log/my_prog_channel"

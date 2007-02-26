@@ -10,6 +10,6 @@ CFLAGS		= -fno-defer-pop
 CPPFLAGS	= -DCPU_P6
 SRC_C		= p6.c
 MODE		= sigma0
-L4LIBS          = -static -lmain -ll4util -lrmgr
+L4LIBS          = -static -lmain -ll4util
 
 include $(L4DIR)/mk/prog.mk

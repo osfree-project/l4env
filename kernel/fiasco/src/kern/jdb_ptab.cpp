@@ -6,6 +6,7 @@ IMPLEMENTATION:
 #include "jdb.h"
 #include "jdb_module.h"
 #include "jdb_screen.h"
+#include "jdb_table.h"
 #include "kernel_console.h"
 #include "kmem.h"
 #include "keycodes.h"
@@ -13,212 +14,195 @@ IMPLEMENTATION:
 #include "static_init.h"
 #include "types.h"
 
-class Jdb_ptab : public Jdb_module
+class Jdb_ptab_m : public Jdb_module
 {
-  enum
-    {
-      PD_MODE      = 'e',		// page directory
-      PT_MODE      = 'f'		// page table
-    };
-
-  static char     first_char;
-  static char     dump_raw;
-  static Task_num task;
+  Task_num task;
+  static char first_char;
 };
 
-char     Jdb_ptab::first_char;
-char     Jdb_ptab::dump_raw;
-Task_num Jdb_ptab::task;
+class Jdb_ptab : public Jdb_table
+{
+  Address base;
+  Address virt_base;
+  int level;
+  Task_num task;
+  unsigned entries;
+  unsigned char cur_pt_level;
+  char dump_raw;
+  
+  static unsigned max_pt_level;
 
-typedef Mword Pt_entry;			// shoud be replaced by
+  static unsigned entry_valid(Mword entry, unsigned level);
+  static unsigned entry_is_pt_ptr(Mword entry, unsigned level,
+                                  unsigned *entries, unsigned *next_level);
+  static Address entry_phys(Mword entry, unsigned level);
+  static unsigned first_level_entries();
+  
+  void print_entry(Mword entry, unsigned level);
+
+};
+
+char Jdb_ptab_m::first_char;
+//Task_num Jdb_ptab::task;
+
+typedef Mword My_pte;			// shoud be replaced by
 					// arch-dependent type
+					
+PUBLIC 
+Jdb_ptab::Jdb_ptab(void *pt_base, Task_num task,
+                   unsigned char pt_level = 0, 
+                   unsigned entries = 0, Address virt_base = 0,
+		   int level = 0)
+: base((Address)pt_base), virt_base(virt_base), level(level), task(task),
+  entries(entries), cur_pt_level(pt_level), dump_raw(0)
+{
+  if (!pt_level && entries == 0)
+    this->entries = first_level_entries();
+}
+
+PUBLIC
+unsigned 
+Jdb_ptab::col_width(unsigned) const 
+{ return 8; }
+
+PUBLIC
+unsigned
+Jdb_ptab::cols() const
+{ return 9; }
+
 
 // available from the jdb_dump module
 int jdb_dump_addr_task(Address addr, Task_num task, int level)
   __attribute__((weak));
 
-// We assume that we can touch into the virtual memory to read
-// a page table entry. This is at least true for IA32 and UX where
-// the current page table is synchronized with the kernel page table
-// on kernel debugger entry.
-static
-Jdb_module::Action_code
-Jdb_ptab::dump(char dump_type, Address ptab_base, Address disp_virt,
-	       Task_num task, int level)
+
+PUBLIC
+void 
+Jdb_ptab::draw_entry(unsigned row, unsigned col)
 {
-  Address addx = 0;			// current cursor x
-  Address addy = 0;			// current cursor y
-  Address absy = 0;			// absolute y relative to entry_base
-  Address lines = Jdb_screen::height()-1;// # lines to display
-  Address max_absy;			// number of lines
-  Address ptab_entry, old_entry = 0;
-  bool old_entry_set = false;
-  Mword line_offs = 32;
-  Mword line_page = Config::PAGE_SIZE / line_offs;
-
-  if (level==0)
-    Jdb::fancy_clear_screen();
-
-  Space *s = Jdb::lookup_space(task);
-  if (!s)
-    return NOTHING;
-
-  max_absy = line_page - lines;
-
-  if (dump_type==PD_MODE)
+  if (col==0)
     {
-      if (!(ptab_base = (Address)s->dir()))
-	return NOTHING;
-      disp_virt = 0;
+      printf(""L4_PTR_FMT"", virt(row, 1));
+      return;
+    }
+
+  print_entry(*(My_pte*)(virt(row,col)), cur_pt_level);
+}
+
+PRIVATE
+unsigned 
+Jdb_ptab::disp_virt_to_r(Address v)
+{
+  if (cur_pt_level == 0)
+    v >>= Config::SUPERPAGE_SHIFT;
+  else
+    v >>= Config::PAGE_SHIFT;
+
+  return v / (cols()-1);
+}
+
+PRIVATE
+unsigned 
+Jdb_ptab::disp_virt_to_c(Address v)
+{
+  if (cur_pt_level == 0)
+    v >>= Config::SUPERPAGE_SHIFT;
+  else
+    v >>= Config::PAGE_SHIFT;
+
+  return (v % (cols()-1)) + 1;
+}
+
+PRIVATE
+Address 
+Jdb_ptab::disp_virt(unsigned row, unsigned col)
+{
+  unsigned e = (col-1) + (row * (cols()-1));
+  if (cur_pt_level == 0)
+    return e * Config::SUPERPAGE_SIZE;
+  else
+    return e * Config::PAGE_SIZE + virt_base;
+}
+
+PRIVATE
+Address
+Jdb_ptab::virt(unsigned row, unsigned col)
+{
+  unsigned e = (col-1) + (row * (cols()-1));
+  return base + e * sizeof(Mword);
+}
+
+PUBLIC
+void
+Jdb_ptab::print_statline(unsigned row, unsigned col)
+{
+  if (cur_pt_level<max_pt_level)
+    {
+      Jdb::printf_statline("ptab", "<Space>=mode <CR>=goto ptab/superpage",
+	  "<"L4_PTR_FMT"> task %-3x", disp_virt(row,col), task);
     }
   else // PT_MODE
     {
-      ptab_base &= Config::PAGE_MASK;
-      disp_virt &= Config::PAGE_MASK;
-    }
-
-
- screen:
-
-  Jdb::cursor();
-  dump_ptab(lines, ptab_base + absy*line_offs);
-
-  for (bool redraw=false; ; )
-    {
-      ptab_entry = ptab_base + (absy+addy)*line_offs + addx*sizeof(Pt_entry);
-
-      if (old_entry_set && (ptab_entry != old_entry))
-	{
-	  switch (dump_type)
-	    {
-	    case PD_MODE:
-	      disp_virt += (ptab_entry-old_entry)
-			    *(Config::SUPERPAGE_SIZE/sizeof(Pt_entry));
-	      break;
-	    case PT_MODE:
-	      disp_virt += (ptab_entry-old_entry)
-			    *(Config::PAGE_SIZE/sizeof(Pt_entry));
-	      break;
-	    }
-	}
-      old_entry     = ptab_entry;
-      old_entry_set = true;
-
-      if (dump_type==PD_MODE)
-	{
-	  Jdb::printf_statline("p<%08x> task %-3x %53s",
-			       disp_virt, task,
-			       "<Space>=mode <CR>=goto ptab/superpage");
-	}
-      else // PT_MODE
-	{
-	  Jdb::printf_statline("p<%08x> task %-3x %53s",
-	 		       disp_virt, task, 
-			       "<Space>=mode <CR>=goto page");
-	}
-
-      // mark next value
-      Jdb::cursor(addy+1, (2*sizeof(Pt_entry)+1)*addx + 2*sizeof(Address) + 2);
-      int c = Kconsole::console()->getchar();
-
-      switch (c)
-	{
-	case KEY_CURSOR_HOME: // return to previous or go home
-	  if (level == 0)
-	    {
-	      Mword old_absy = absy;
-	      absy = addx = addy = 0;
-	      if (absy != old_absy)
-		goto screen;
-	      continue;
-	    }
-	  return GO_BACK;
-
-	case KEY_CURSOR_END:
-	    {
-	      Mword old_absy = absy;
-	      absy = max_absy;
-	      addx = 7;
-	      addy = lines-1;
-	      if (absy != old_absy)
-		goto screen;
-	      continue;
-	    }
-	}
-
-      if (!Jdb::std_cursor_key(c, lines, max_absy,
-			       &absy, &addy, &addx, &redraw))
-	{
-	  switch(c)
-	    {
-	    case ' ':
-	      dump_raw ^= 1;
-	      redraw = true;
-	      break;
-
-	    case KEY_RETURN:	// goto ptab/address under cursor
-	      if (level<=7)
-		{
-		  Pt_entry pt_entry = *(Pt_entry*)ptab_entry;
-
-		  if (!Jdb::pt_entry_valid(pt_entry))
-		    break;
-
-		  Address pd_virt = (Address)
-		    Kmem::phys_to_virt(Jdb::pt_entry_phys(pt_entry));
-
-		  if (dump_type==PD_MODE
-		      && Jdb::pd_entry_is_ptr_to_pt(pt_entry))
-		    {
-		      if (!dump(PT_MODE, pd_virt, disp_virt, task, level+1))
-			return NOTHING;
-		      redraw = true;
-		    }
-		  else if (jdb_dump_addr_task != 0)
-		    {
-		      if (!jdb_dump_addr_task(disp_virt, task, level+1))
-			return NOTHING;
-		      redraw = true;
-		    }
-		}
-	      break;
-
-	    case KEY_ESC:
-	      Jdb::abort_command();
-	      return NOTHING;
-
-	    default:
-	      if (Jdb::is_toplevel_cmd(c)) 
-		return NOTHING;
-	    }
-	}
-      if (redraw)
-	goto screen;
-    }
-}
-
-static void
-Jdb_ptab::dump_ptab(Mword lines, Address virt)
-{
-  for (Mword i=0; i<lines; i++, virt += 32)
-    {
-      Kconsole::console()->getchar_chance();
-      printf("%08x", virt);
-      for (Mword x=0; x<32/sizeof(Pt_entry); x++)
-	{
-	  putchar(x == 0 ? ':' : ' ');
-	  if (dump_raw)
-	    printf("%08x", *(Pt_entry*)(virt + x*sizeof(Pt_entry)));
-	  else
-	    Jdb::dump_pt_entry(*(Pt_entry*)(virt + x*sizeof(Pt_entry)));
-	}
-      putchar('\n');
+      Jdb::printf_statline("ptab", "<Space>=mode <CR>=goto page",
+	  "<"L4_PTR_FMT"> task %-3x", disp_virt(row,col), task);
     }
 }
 
 PUBLIC
+unsigned 
+Jdb_ptab::key_pressed(int c, unsigned &row, unsigned &col)
+{
+  switch (c)
+    {
+    default:
+      return Nothing;
+      
+    case KEY_CURSOR_HOME: // return to previous or go home
+      if (level == 0)
+	return Nothing;
+      return Back;
+    
+    case ' ':
+      dump_raw ^= 1;
+      return Redraw;
+
+    case KEY_RETURN:	// goto ptab/address under cursor
+      if (level<=7)
+	{
+	  My_pte pt_entry = *(My_pte*)virt(row,col);
+	  if (!entry_valid(pt_entry, cur_pt_level))
+	    break;
+
+	  Address pd_virt = (Address)
+	    Mem_layout::phys_to_pmem(entry_phys(pt_entry, cur_pt_level));
+
+	  unsigned next_level, entries;
+
+	  if (cur_pt_level < max_pt_level
+	      && entry_is_pt_ptr(pt_entry, cur_pt_level, &entries, &next_level))
+	    {
+	      Jdb_ptab pt_view((void *)pd_virt, task, next_level, entries,
+		               disp_virt(row,col),level +1);
+	      if (!pt_view.show(0,1))
+		return Exit;
+	      return Redraw;
+	    }
+	  else if (jdb_dump_addr_task != 0)
+	    {
+	      if (!jdb_dump_addr_task(disp_virt(row,col), task, level+1))
+		return Exit;
+	      return Redraw;
+	    }
+	}
+      break;
+    }
+  
+  return Handled;
+}
+
+PUBLIC
 Jdb_module::Action_code
-Jdb_ptab::action(int cmd, void *&args, char const *&fmt, int &next_char)
+Jdb_ptab_m::action(int cmd, void *&args, char const *&fmt, int &next_char)
 {
   if (cmd == 0)
     {
@@ -246,8 +230,19 @@ Jdb_ptab::action(int cmd, void *&args, char const *&fmt, int &next_char)
 	}
       else
 	return NOTHING;
+      
+      Space *s = Jdb::lookup_space(task);
+      if (!s)
+	return Jdb_module::NOTHING;
 
-      dump(PD_MODE, 0, 0, task, 0);
+      void *ptab_base;
+      if (!(ptab_base = (void*)((Address)s->dir())))
+	return Jdb_module::NOTHING;
+
+      Jdb::clear_screen();
+      Jdb_ptab pt_view(ptab_base, task);
+      pt_view.show(0,1);
+	
     }
 
   return NOTHING;
@@ -255,28 +250,28 @@ Jdb_ptab::action(int cmd, void *&args, char const *&fmt, int &next_char)
 
 PUBLIC
 Jdb_module::Cmd const *const
-Jdb_ptab::cmds() const
+Jdb_ptab_m::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd (0, "p", "ptab", "%C",
+	{ 0, "p", "ptab", "%C",
 	  "p[<taskno>]\tshow pagetable of current/given task",
-	  &first_char),
+	  &first_char },
     };
   return cs;
 }
 
 PUBLIC
 int const
-Jdb_ptab::num_cmds() const
+Jdb_ptab_m::num_cmds() const
 {
   return 1;
 }
 
 PUBLIC
-Jdb_ptab::Jdb_ptab()
+Jdb_ptab_m::Jdb_ptab_m()
   : Jdb_module("INFO")
 {}
 
-static Jdb_ptab jdb_ptab INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
+static Jdb_ptab_m jdb_ptab_m INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 

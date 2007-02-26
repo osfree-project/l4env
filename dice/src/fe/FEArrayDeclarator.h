@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEArrayDeclarator.h 
- *	\brief	contains the declaration of the class CFEArrayDeclarator
+ *    \file    dice/src/fe/FEArrayDeclarator.h
+ *    \brief   contains the declaration of the class CFEArrayDeclarator
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -30,61 +31,61 @@
 #define __DICE_FE_FEARRAYDECLARATOR_H__
 
 #include "fe/FEDeclarator.h"
-#include "Vector.h"
+#include <vector>
+using namespace std;
 
 class CFEExpression;
 
 /** \class CFEArrayDeclarator
- *	\ingroup frontend
- *	\brief represents an array declarator (such as "int t1[]")
+ *    \ingroup frontend
+ *    \brief represents an array declarator (such as "int t1[]")
  *
  * This class is created to represent an array declarator, which is a simple
  * declarator with array dimensions specified.
  */
 class CFEArrayDeclarator : public CFEDeclarator
 {
-DECLARE_DYNAMIC(CFEArrayDeclarator);
 // standard constructor/destructor
   public:
-	/** constructs an array declarator
-	 *	\param pDecl the declarator the array bounds are added to */
+    /** constructs an array declarator
+     *    \param pDecl the declarator the array bounds are added to */
     CFEArrayDeclarator(CFEDeclarator * pDecl);
-	/** constructs an array declarator
-	 *	\param sName the name of the declarator
-	 *	\param pUpper its boundary
-	 */
-    CFEArrayDeclarator(String sName, CFEExpression * pUpper = 0);
+    /** constructs an array declarator
+     *    \param sName the name of the declarator
+     *    \param pUpper its boundary
+     */
+    CFEArrayDeclarator(string sName, CFEExpression * pUpper = 0);
     virtual ~ CFEArrayDeclarator();
 
   protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
+    /**    \brief copy constructor
+     *    \param src the source to copy from
+     */
     CFEArrayDeclarator(CFEArrayDeclarator & src);
 
 // Methods
   public:
-    virtual void ReplaceUpperBound(int nIndex, CFEExpression * pUpper);
-    virtual void ReplaceLowerBound(int nIndex, CFEExpression * pLower);
+    virtual void ReplaceUpperBound(unsigned int nIndex, CFEExpression * pUpper);
+    virtual void ReplaceLowerBound(unsigned int nIndex, CFEExpression * pLower);
     virtual bool IsReference();
     virtual void Serialize(CFile * pFile);
-    virtual void RemoveBounds(int nIndex);
+    virtual void RemoveBounds(unsigned int nIndex);
     CObject *Clone();
-    virtual int GetDimensionCount();
+    virtual unsigned int GetDimensionCount();
     virtual int AddBounds(CFEExpression * pLower, CFEExpression * pUpper);
-    virtual CFEExpression *GetUpperBound(int nDimension = 0);
-    virtual CFEExpression *GetLowerBound(int nDimension = 0);
+    virtual CFEExpression *GetUpperBound(unsigned int nDimension = 0);
+    virtual CFEExpression *GetLowerBound(unsigned int nDimension = 0);
 
 // attributes
   protected:
-	/** \var Vector m_vLowerBounds
-	 *	\brief contains the lower bounds of the array definitions
-	 */
-     Vector m_vLowerBounds;
-	/** \var Vector m_vUpperBounds
-	 *	\brief contains the upper bound of the array definitions
-	 */
-    Vector m_vUpperBounds;
+    /** \var vector<CFEExpression*> m_vLowerBounds
+     *    \brief contains the lower bounds of the array definitions
+     */
+     vector<CFEExpression*> m_vLowerBounds;
+    /** \var vector<CFEExpression*> m_vUpperBounds
+     *    \brief contains the upper bound of the array definitions
+     */
+    vector<CFEExpression*> m_vUpperBounds;
 };
 
-#endif				/* __DICE_FE_FEARRAYDECLARATOR_H__ */
+#endif                /* __DICE_FE_FEARRAYDECLARATOR_H__ */

@@ -1,0 +1,22 @@
+To update this package do something like the following:
+
+ mkdir foo
+ cd foo
+ tar xzf linux-2.4.xx.tar.gz
+ cd linux-2.4.xx
+ make oldconfig
+ make dep
+ cd include
+
+ For now we only need i386 headers, so remove all "asm-" subdirs
+ except "asm-i386" and "asm-generic". (Also remove linux/modules!)
+
+ cvs -d $CVSROOT import -I '!' -ko -m "Linux 2.4.xx headers" l4/pkg/linux-24-headers/include LINUX LINUX_2_4_xx
+
+ Since we started to modify files in the include directory there'll
+ be conflicts on imports now, some poor guy has to fix them...
+
+ cd ../..
+ cvs -d $CVSROOT checkout -jLINUX:yesterday -jLINUX l4/pkg/linux-24-headers/include
+
+ Check for merging conflicts, solve them and commit your changes.

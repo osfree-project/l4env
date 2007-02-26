@@ -21,8 +21,19 @@
  *** prototypes
  *****************************************************************************/
 
+/* return min. memory address */
+l4_addr_t
+dmphys_kinfo_mem_low(void);
+
 /* return max. memory address */
 l4_addr_t
 dmphys_kinfo_mem_high(void);
+
+/* initialise ram_base */
+void
+dmphys_kinfo_init_ram_base(void);
+
+/* ram_base variable */
+extern l4_addr_t ram_base;
 
 #endif /* !_DM_PHYS___KINFO_H */

@@ -1,0 +1,30 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco \
+        -G $UXRES                                                      \
+        -l names                                                       \
+        -l log                                                         \
+        -l dm_phys                                                     \
+        -l simple_ts                                                   \
+        -l fuxfprov                                                    \
+        -l l4dope-ux                                                   \
+        -l l4exec                                                      \
+        -l loader                                                      \
+        -l name_server" -ep"                                           \
+        -l "fstab -c /server -c /server/sfs -c /proc/ -c /proc/rt_mon  \
+            -c /server/log -v100 -b/ -m/proc/rt_mon                    \
+            -v14 -b/ -m/server/sfs -v10 -b/ -m/server/log"             \
+        -l simple_file_server                                          \
+        -l rt_mon_hist_demo                                            \
+        -l rt_mon_list_demo                                            \
+        -l rt_mon_shared_list_demo                                     \
+        -l rt_mon_scalar_demo                                          \
+        -l rt_mon_l4vfs_coord                                          \
+        -l l4vfs_log                                                   \
+        -l "rt_l4vfs_dope_mon --stdout /server/log/L4VFS_DMon"         \
+        -l dope_bench                                                  \
+        -n9 "$@"
+
+

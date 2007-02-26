@@ -10,35 +10,36 @@ struct private_slide;
 #define SLIDE struct private_slide
 #define PRESENTER SLIDE
 
-#include <l4/dm_phys/dm_phys.h>
+#include <errno.h>
+
+#include <l4/env/errno.h>
+#include <l4/dm_mem/dm_mem.h>
 
 #include "util/presenter_conf.h"
 #include "model/presenter.h"
 #include "model/slide.h"
 #include "util/module_names.h"
-#include "util/memory.h"
 
-#include <l4/env/errno.h>
+#define SLIDE_STD_NAME "slide"
 
-#define _DEBUG 0
+extern l4_threadid_t presenter_thread_id;
 
-static struct memory_services *mem;
 static struct presenter_general_services *presenter;
 
 SLIDE {
-	/* all general methods */
-	struct presenter_methods *gen;
+    /* all general methods */
+    struct presenter_methods *gen;
 
-	/* all special methods of each slide */
-	struct slide_methods *sld;
+    /* all special methods of each slide */
+    struct slide_methods *sld;
 
-	/* all general data */
-	struct presenter_data *pdat;
+    /* all general data */
+    struct presenter_data *pdat;
 
-	/* now the private data */
-	l4dm_dataspace_t *content;
-	l4_addr_t	content_addr;
-	l4_size_t	ds_size;
+    /* now the private data */
+    char *content;
+
+    l4dm_dataspace_t *ds;
 };
 
 int init_slide(struct presenter_services *);
@@ -49,73 +50,110 @@ static struct presenter_methods gen_methods;
 /*** SLIDE SPECIFIC METHODS   ***/
 /********************************/
 
-static void slide_set_content (SLIDE *sl, l4dm_dataspace_t *ds) {
-	l4_int32_t error;
-	l4_size_t ds_size;
+static int slide_set_content (SLIDE *sl, l4dm_dataspace_t *ds_old) {
+    l4_int32_t err;
+    l4_size_t ds_size;
+    l4_addr_t content_addr;
 
-	if (!sl) return;
+    if (!sl || !ds_old) return -1;
 
-	l4dm_mem_size(ds,&ds_size);
+    err = l4dm_copy(ds_old,0,SLIDE_STD_NAME,sl->ds);
 
-	error=l4rm_attach(ds,ds_size,0,L4DM_RW,(void *)&sl->content_addr);
+    if (err) {
+        LOG("Error (%d) on copy dataspace...", err);
+        return err;
+    }
+
+    l4dm_mem_size(sl->ds,&ds_size);
+
+    err=l4rm_attach(sl->ds,ds_size,0,L4DM_RW,(void *)&content_addr);
+
+    if (err) {
+        LOG("Error (%d) attaching dataspace...", err);
+        l4dm_close(ds_old);
+        return err;
+    }
+
+    sl->content = (char *) content_addr;
+
+    err = l4dm_close(ds_old);
+
+    if (err != 0) {
+        LOG("Error (%d) closing dataspace...", err);
+        return err;
+    }
+
+    return 0;
+}
+
+static char * slide_get_content (SLIDE *sl) {
+    if (!sl) return NULL;
+    return sl->content;
+}
+
+static void slide_del_content (SLIDE *sl) {
+    l4_int32_t error;
+
+    if (sl->content)
+    {
+        l4rm_detach(sl->content);
+        error = l4dm_close(sl->ds);
 
         if (error != 0) {
-                LOG("error attaching dataspace...");
-                LOG("error: %d",error);
-                if (error==-L4_EUSED) LOG("L4_EUSED");
-                return;
-        }  
-	else {
-                LOGd(_DEBUG,"attached ds at dezimal address %d",sl->content_addr);
-        } 
+            LOG("Error (%d) closing dataspace...", error);
+            return;
+        }
+    }
 
-	sl->content = ds;
-	sl->ds_size = ds_size;
+    free(sl->ds);
 }
 
-static l4dm_dataspace_t * slide_get_content (SLIDE *sl) {
-	if (!sl) return NULL; 
-	return sl->content;
+static l4dm_dataspace_t * slide_get_ds(SLIDE *sl) {
+    return sl->ds;
 }
 
-static l4_addr_t slide_get_content_addr (SLIDE *sl) {
-	if (!sl) return 0;
-	return sl->content_addr;
-}	
+static int slide_get_content_size(SLIDE *sl) {
+    l4_size_t ds_size;
+
+    l4dm_mem_size(sl->ds,&ds_size);
+
+    return (int) ds_size;
+}
 
 static struct slide_methods sld_methods = {
-        slide_set_content,
-        slide_get_content,
-	slide_get_content_addr,
+    slide_set_content,
+    slide_get_content,
+    slide_del_content,
+    slide_get_ds,
+    slide_get_content_size,
 };
 
 static SLIDE *create(void) {
 
-	SLIDE *new = (SLIDE *)mem->alloc(sizeof(SLIDE)+sizeof(struct presenter_data));
+    SLIDE *new = (SLIDE *)malloc(sizeof(SLIDE)+sizeof(struct presenter_data));
 
-	new->pdat = (struct presenter_data *)((long)new + sizeof(SLIDE));	
+    new->pdat = (struct presenter_data *)((long)new + sizeof(SLIDE));
 
-	presenter->default_presenter_methods(&gen_methods);
+    presenter->default_presenter_methods(&gen_methods);
 
-	new->gen = &gen_methods; /* pointer to general methods */
-	new->sld = &sld_methods; /* pointer to slide specific methods */
-	new->content  = NULL;
-	new->content_addr = -1;
+    new->gen = &gen_methods; /* pointer to general methods */
+    new->sld = &sld_methods; /* pointer to slide specific methods */
+    new->content  = NULL;
+    new->ds = (l4dm_dataspace_t *) malloc(sizeof(l4dm_dataspace_t));
 
-	return new;
-
+    return new;
 }
 
 
 static struct slide_services services = {
-	create,
+    create,
 };
 
 int init_slide(struct presenter_services *p) {
-	mem = p->get_module(MEMORY_MODULE);
-	presenter = p->get_module(PRESENTER_MODULE);
 
-	p->register_module(SLIDE_MODULE,&services);	
+    presenter = p->get_module(PRESENTER_MODULE);
 
-	return 1;
+    p->register_module(SLIDE_MODULE,&services); 
+
+    return 1;
 }

@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -30,6 +30,22 @@
 extern void *vscr_map_smb(char *smb_ident);
 
 
+/*** RETURN LOCAL ADDRESS OF THE FRAMEBUFFER OF THE SPECIFIED VSCREEN ***
+ *
+ * \param app_id     DOpE application id to which the VScreen widget belongs
+ * \param vscr_name  name of the VScreen widget
+ * \return           address of the VScreen buffer in the local address space
+ */
+extern void *vscr_get_fb(int app_id, const char *vscr_name);
+
+
+/*** RELEASE VSCREEN BUFFER FROM LOCAL ADDRESS SPACE ***
+ *
+ * \param fb_adr   start address of the vscreen buffer
+ * \return         0 on success
+ */
+extern int vscr_free_fb(void *fb_adr);
+
 
 /*************************
  * HANDLE VSCREEN SERVER *
@@ -41,6 +57,15 @@ extern void *vscr_map_smb(char *smb_ident);
  * \return            id to be used for the vscr_server-functions
  */
 extern void *vscr_connect_server(char *vscr_ident);
+
+
+/*** GET SERVER ID OF THE SPECIFIED VSCREEN WIDGET ***
+ *
+ * \param app_id     DOpE application id to which the VScreen widget belongs
+ * \param vscr_name  name of the VScreen widget
+ * \return           id to be used for the vscr_server-functions
+ */
+extern void *vscr_get_server_id(int app_id, const char *vscr_name);
 
 
 /*** CLOSE CONNECTION TO VSCREEN SERVER ***
@@ -67,27 +92,4 @@ extern void  vscr_server_waitsync(void *vscr_server_id);
  */
 extern void  vscr_server_refresh(void *vscr_server_id, int x, int y, int w, int h);
 
-
-
-/*****************************
- * VSCREEN UTILITY FUNCTIONS *
- *****************************/
-
-
-/*** RETURN LOCAL ADDRESS OF THE FRAMEBUFFER OF THE SPECIFIED VSCREEN ***
- *
- * \param app_id     DOpE application id to which the VScreen widget belongs
- * \param vscr_name  name of the VScreen widget
- * \return           address of the VScreen buffer in the local address space
- */
-extern void *vscr_get_fb(int app_id, char *vscr_name);
-
-
-/*** GET SERVER ID OF THE SPECIFIED VSCREEN WIDGET ***
- *
- * \param app_id     DOpE application id to which the VScreen widget belongs
- * \param vscr_name  name of the VScreen widget
- * \return           id to be used for the vscr_server-functions
- */
-extern void *vscr_get_server_id(int app_id, char *vscr_name);
 

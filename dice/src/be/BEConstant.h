@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BEConstant.h
- *	\brief	contains the declaration of the class CBEConstant
+ *    \file    dice/src/be/BEConstant.h
+ *    \brief   contains the declaration of the class CBEConstant
  *
- *	\date	01/18/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/18/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -40,53 +41,52 @@ class CBEFile;
 class CBEHeaderFile;
 class CBEImplementationFile;
 
-/**	\class CBEConstant
- *	\ingroup backend
- *	\brief the back-end constant
+/**    \class CBEConstant
+ *    \ingroup backend
+ *    \brief the back-end constant
  */
 class CBEConstant : public CBEObject
 {
-DECLARE_DYNAMIC(CBEConstant);
 public:
 // Constructor
-	/**	\brief constructor
-	 */
-	CBEConstant();
-	virtual ~CBEConstant();
+    /**    \brief constructor
+     */
+    CBEConstant();
+    virtual ~CBEConstant();
 
 protected:
-	/**	\brief copy constructor
-	 *	\param src the source to copy from
-	 */
-	CBEConstant(CBEConstant &src);
+    /**    \brief copy constructor
+     *    \param src the source to copy from
+     */
+    CBEConstant(CBEConstant &src);
 
 public:
-	virtual void Write(CBEHeaderFile *pFile, CBEContext *pContext);
-	virtual bool CreateBackEnd(CBEType* pType, String sName, CBEExpression* pValue, bool bAlwaysDefine, CBEContext *pContext);
-	virtual bool CreateBackEnd(CFEConstDeclarator *pFEConstDeclarator, CBEContext *pContext);
+    virtual void Write(CBEHeaderFile *pFile, CBEContext *pContext);
+    virtual bool CreateBackEnd(CBEType* pType, string sName, CBEExpression* pValue, bool bAlwaysDefine, CBEContext *pContext);
+    virtual bool CreateBackEnd(CFEConstDeclarator *pFEConstDeclarator, CBEContext *pContext);
     virtual bool AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext);
-    virtual String GetName();
-	virtual CBEExpression *GetValue();
+    virtual string GetName();
+    virtual CBEExpression *GetValue();
 
 protected:
     /** \var bool m_bAlwaysDefine
-	 *  \brief true if this const has to be printed as define always
-	 */
-	 bool m_bAlwaysDefine;
-	/**	\var String m_sName
-	 *	\brief the name of the constant
-	 */
-	String m_sName;
-	/**	\var CBEType *m_pType
-	 *	\brief the type of the constant
-	 *
-	 * A C constant usually does not have a type, but to be able to check integrity later on, we keep it.
-	 */
-	CBEType *m_pType;
-	/**	\var CBEExpression *m_pValue
-	 *	\brief the value of the constant
-	 */
-	CBEExpression *m_pValue;
+     *  \brief true if this const has to be printed as define always
+     */
+     bool m_bAlwaysDefine;
+    /**    \var string m_sName
+     *    \brief the name of the constant
+     */
+    string m_sName;
+    /**    \var CBEType *m_pType
+     *    \brief the type of the constant
+     *
+     * A C constant usually does not have a type, but to be able to check integrity later on, we keep it.
+     */
+    CBEType *m_pType;
+    /**    \var CBEExpression *m_pValue
+     *    \brief the value of the constant
+     */
+    CBEExpression *m_pValue;
 };
 
 #endif // !__DICE_BECONSTANT_H__

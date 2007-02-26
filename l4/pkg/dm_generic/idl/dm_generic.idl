@@ -253,7 +253,7 @@ library if_l4dm
 
       /***********************************************************************/
       /**
-       * \brief   DEBUG: show information about dataspace
+       * \brief   DEBUG: show information about dataspace on debug console
        * \ingroup idl_generic
        * 
        * \param   ds_id       Dataspace id
@@ -266,26 +266,7 @@ library if_l4dm
 
       /***********************************************************************/
       /**
-       * \brief   DEBUG: dump description of all dataspaces of a client 
-       * \ingroup idl_generic
-       * 
-       * \param   owner       Owner of the dataspaces
-       * \param   flags       Flags
-       * \retval  dump_ds     Dataspace id
-       *	
-       * \return  0 on success, error code otherwise.
-       *
-       * Create a dataspace which contains a description of all dataspaces 
-       * owned by \a client. 
-       */
-      /***********************************************************************/ 
-      long dump([in] l4_threadid_t owner, 
-	        [in] unsigned long flags, 
-		[out] l4dm_dataspace_t *dump_ds);
-
-      /***********************************************************************/
-      /**
-       * \brief   DEBUG: List dataspaces of a client
+       * \brief   DEBUG: List dataspaces of a client on debug console
        * \ingroup idl_generic
        * 
        * \param   owner       Owner of the dataspaces
@@ -300,4 +281,3 @@ library if_l4dm
 	        [in] unsigned long flags);
     };
 };
-

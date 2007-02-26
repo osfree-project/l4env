@@ -5,7 +5,7 @@
  *
  * \date	08/18/2000
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de>
- * 
+ *
  * Many structs from
  *   "Executable and Linkable Format (ELF)",
  *    Portable Formats Specification, Version 1.1
@@ -26,11 +26,11 @@
 
 /* map ELF types to L4 types */
 
-typedef l4_uint32_t 	Elf32_Addr;		/* size 4 align 4 */
-typedef l4_uint32_t 	Elf32_Off;		/* size 4 align 4 */
-typedef l4_uint16_t 	Elf32_Half;		/* size 2 align 2 */
-typedef l4_uint32_t 	Elf32_Word;		/* size 4 align 4 */
-typedef l4_int32_t 	Elf32_Sword;		/* size 4 align 4 */
+typedef l4_uint32_t	Elf32_Addr;		/* size 4 align 4 */
+typedef l4_uint32_t	Elf32_Off;		/* size 4 align 4 */
+typedef l4_uint16_t	Elf32_Half;		/* size 2 align 2 */
+typedef l4_uint32_t	Elf32_Word;		/* size 4 align 4 */
+typedef l4_int32_t	Elf32_Sword;		/* size 4 align 4 */
 
 typedef l4_uint64_t	Elf64_Addr;		/* size 8 align 8 */
 typedef	l4_uint64_t	Elf64_Off;		/* size 8 align 8 */

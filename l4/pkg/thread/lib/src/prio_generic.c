@@ -43,7 +43,7 @@ l4thread_get_prio(l4thread_t thread)
   l4th_tcb_t * tcb;
 
   /* get tcb */
-  tcb = l4th_tcb_get_active(thread);
+  tcb = l4th_tcb_get(thread);
   if (tcb == NULL)
     /* invalid thread */
     return -L4_EINVAL;
@@ -72,13 +72,13 @@ l4thread_set_prio(l4thread_t thread, l4_prio_t prio)
   int ret;
   
   /* get tcb */
-  tcb = l4th_tcb_get_active_locked(thread);
+  tcb = l4th_tcb_get_locked(thread);
   if (tcb == NULL)
     /* invalid thread */
     return -L4_EINVAL;
 
   /* set priority */
-  ret = l4th_set_prio(tcb,prio);
+  ret = l4th_set_prio(tcb, prio);
   l4th_tcb_unlock(tcb);
 
   /* done */

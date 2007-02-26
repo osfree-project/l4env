@@ -14,19 +14,24 @@ BUILD_SYSTEMS_arm_s=y
 BUILD_SYSTEMS_arm='arm'
 CPU_arm='sa'
 BUILD_SYSTEMS_arm_l4x0=y
+BUILD_SYSTEMS_amd64_s=n
 BUILD_LOADER=y
-BUILD_LOADER_PICS='libl4util.a libnames.a libloaderif.a libcon.a libl4rm.a librmgr.a libbootmod.a libcon.a libconstream-server.a libdm_generic.a libdm_mem.a libgeneric_ts.a liblogserver.a libsemaphore.a libthread.a libslab.a libl4env_err.a'
+BUILD_LOADER_PICS='libl4util.a libnames.a libloaderif.a libcon.a libl4rm.a librmgr.a libbootmod.a libcon.a libconstream-server.a libdm_generic.a libdm_mem.a libgeneric_ts.a liblogserver.a libsemaphore.a libthread.a libslab.a libl4env_err.a libroot.o.a libdiet_be_l4env_start_stop.a libdiet_be_minimal_log_io.a'
+USE_UCLIBC=n
 
 #
 # Paths and Directories
 #
-DROPS_STDDIR='/home/drops'
+DROPS_INSTDIR='$(DROPS_STDDIR)'
 L4LINUX22_DIR='$(L4DIR)/../linux22'
 L4LINUXDIR='$(error L4LINUXDIR is obsolete, use L4LINUX22_DIR now!)'
 LINUX24_AVAIL=n
-LINUX24_GLOBALINC=n
-LINUX24_INCDIR='$(L4DIR)/include/linux-24'
+LINUX24_INCDIR='$(L4DIR)/include/linux-24 $(DROPS_STDDIR)/include/linux-24'
+LINUX26_AVAIL=n
+LINUX26_INCDIR='$(L4DIR)/include/$(ARCH)/l4/linux-26-headers $(DROPS_STDDIR)/include/$(ARCH)/l4/linux-26-headers $(L4DIR)/include/l4/linux-26-headers $(DROPS_STDDIR)/include/l4/linux-26-headers'
 DDE_LINUX_DIR='$(error DDE_LINUX_DIR is obsolete!)'
+DDE_INCDIR='$(L4DIR)/include/$(ARCH)/l4/dde_linux $(DROPS_STDDIR)/include/$(ARCH)/l4/dde_linux'
+DDE26_INCDIR='$(L4DIR)/include/$(ARCH)/l4/dde_linux26 $(DROPS_STDDIR)/include/$(ARCH)/l4/dde_linux26 $(L4DIR)/include/l4/dde_linux26 $(DROPS_STDDIR)/include/l4/dde_linux26'
 SDL_INCDIR='$(L4DIR)/include/l4/sdl $(DROPS_STDDIR)/include/l4/sdl'
 
 #
@@ -48,6 +53,11 @@ CC_x86='$(SYSTEM_TARGET_x86)gcc'
 CXX_x86='$(SYSTEM_TARGET_x86)g++'
 CC_arm='$(SYSTEM_TARGET_arm)gcc'
 CXX_arm='$(SYSTEM_TARGET_arm)g++'
+CC_amd64='$(SYSTEM_TARGET_amd64)gcc'
+CXX_amd64='$(SYSTEM_TARGET_amd64)g++'
+YACC='byacc'
+LEX='flex'
 HAVE_LDSO=y
 INT_CPP_NAME_SWITCH=y
+INT_LD_NAME_SWITCH=y
 BID_STRIP_PROGS=y

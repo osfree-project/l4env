@@ -34,6 +34,8 @@ char LOG_tag[] = "petze";
 #define PETZ_BLOCK_FREE      0
 #define PETZ_BLOCK_ALLOCATED 1
 
+#define PETZ_POOL_FREE      0
+#define PETZ_POOL_ALLOCATED 1
 
 struct petz_block;
 struct petz_block {
@@ -44,15 +46,16 @@ struct petz_block {
 };
 
 struct petz_pool;
-struct petz_pool {
+static struct petz_pool {
 	struct petz_block *first_block;
 	struct petz_pool  *next;
+	int  flags;
 	s32  sum_bytes;
 	s32  num_blocks;
 	char ident[LEN_POOL_IDENT];
 } petz_pool[MAX_PETZ_POOLS];
 
-struct petz_client {
+static struct petz_client {
 	l4_threadid_t tid;
 	struct petz_pool *first_pool;
 } petz_client[MAX_PETZ_CLIENTS];
@@ -185,7 +188,7 @@ static void dequeue_block(struct petz_client *client, struct petz_block *block) 
 	if (!client || !block) return;
 	
 	block_size = block->size;
-	curr_pool = client->first_pool;
+	curr_pool  = client->first_pool;
 	while (curr_pool) {
 		curr_block = curr_pool->first_block;
 		
@@ -208,6 +211,7 @@ static void dequeue_block(struct petz_client *client, struct petz_block *block) 
 		}
 		curr_pool = curr_pool->next;
 	}
+	printf("Petze(dequeue block): block not found!\n");
 }
 
 
@@ -219,8 +223,7 @@ static void dequeue_block(struct petz_client *client, struct petz_block *block) 
 static struct petz_client *petz_get_client(l4_threadid_t *tid) {
 	int i;
 	for (i=0; i<MAX_PETZ_CLIENTS; i++) {
-		if ((tid->id.task == petz_client[i].tid.id.task) &&
-		    (tid->id.lthread == petz_client[i].tid.id.lthread)) {
+		if (tid->id.task == petz_client[i].tid.id.task) {
 			return &petz_client[i];
 		}
 	}
@@ -266,7 +269,7 @@ static struct petz_pool *petz_get_pool(struct petz_client *client, const char *p
 	printf("Petze(get_pool): create new pool %s\n",poolname);
 	
 	for (i=0; i<MAX_PETZ_POOLS; i++) {
-		if (!petz_pool[i].first_block) break;
+		if (petz_pool[i].flags == PETZ_POOL_FREE) break;
 	}
 
 	if (i >= MAX_PETZ_POOLS) {
@@ -274,6 +277,7 @@ static struct petz_pool *petz_get_pool(struct petz_client *client, const char *p
 		return NULL;
 	}
 
+	petz_pool[i].flags = PETZ_POOL_ALLOCATED;
 	petz_pool[i].first_block = NULL;
 	strncpy(&petz_pool[i].ident[0], poolname, LEN_POOL_IDENT-1);
 	petz_pool[i].next = client->first_pool;
@@ -290,7 +294,7 @@ void petze_malloc_component(CORBA_Object _dice_corba_obj,
                             const char* poolname,
                             int address,
                             int size,
-                            CORBA_Environment *_dice_corba_env)
+                            CORBA_Server_Environment *_dice_corba_env)
 {
 	struct petz_client *client = petz_get_client(_dice_corba_obj);
 	struct petz_pool   *pool   = petz_get_pool(client, poolname);
@@ -324,7 +328,7 @@ void petze_malloc_component(CORBA_Object _dice_corba_obj,
 void petze_free_component(CORBA_Object _dice_corba_obj,
                           const char* poolname,
                           int address,
-                          CORBA_Environment *_dice_corba_env)
+                          CORBA_Server_Environment *_dice_corba_env)
 {
 	struct petz_client *client = petz_get_client(_dice_corba_obj);
 	struct petz_block  *block  = petz_get_block(client, address);
@@ -344,7 +348,7 @@ void petze_free_component(CORBA_Object _dice_corba_obj,
 
 /*** DUMP CURRENT STATISTICS VIA PRINTF ***/
 void petze_dump_component(CORBA_Object _dice_corba_obj,
-                          CORBA_Environment *_dice_corba_env)
+                          CORBA_Server_Environment *_dice_corba_env)
 {
 	int client_idx = 0;
 	struct petz_pool *curr_pool;
@@ -370,7 +374,7 @@ void petze_dump_component(CORBA_Object _dice_corba_obj,
 
 /*** RESET INTERNAL SERVER STATE ***/
 void petze_reset_component(CORBA_Object _dice_corba_obj,
-                          CORBA_Environment *_dice_corba_env)
+                          CORBA_Server_Environment *_dice_corba_env)
 {
 	struct petz_chunk *curr_chunk, *next_chunk;
 	

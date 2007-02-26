@@ -32,7 +32,8 @@ amm_dump(struct amm *amm)
 	       amm->stats.lookups, amm->stats.hits, amm->stats.entriesscanned);
 #endif
 	for (entry = amm->nodes; entry; entry = entry->next)
-		printf("\t%p: %c[0x%x - 0x%x]: flags=0x%x\n",
+		printf("\t%p: %c[0x"L4_PTR_FMT" - 0x"L4_PTR_FMT
+		       "]: flags=0x%08x\n",
 		       entry, *amm->hint == entry ? '*' : ' ',
 		       entry->start, entry->end, entry->flags);
 }

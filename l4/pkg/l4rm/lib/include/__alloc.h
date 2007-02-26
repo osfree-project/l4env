@@ -25,20 +25,12 @@
  *****************************************************************************/
 
 int
-l4rm_heap_init(int have_l4env, 
-	       l4rm_vm_range_t used[], 
-	       int num_used);
+l4rm_heap_init(int have_l4env, l4rm_vm_range_t used[], int num_used);
 
 int
 l4rm_heap_register(void);
 
 void *
 l4rm_heap_alloc(void);
-
-void
-l4rm_heap_add_client(l4_threadid_t client);
-
-void
-l4rm_heap_remove_client(l4_threadid_t client);
 
 #endif /* !_L4RM___ALLOC_H */

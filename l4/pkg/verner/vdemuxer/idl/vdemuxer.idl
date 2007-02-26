@@ -1,0 +1,190 @@
+/*
+ * \brief   IPC for VERNER's demuxer component
+ * \date    2004-02-11
+ * \author  Carsten Rietzschel <cr7@os.inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2004  Carsten Rietzschel  <cr7@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the VERNER, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+
+import <l4/dsi/types.h>
+import <arch_types.h> 
+
+interface VideoDemuxerComponentIntern
+{
+	/*****************************************************************************/
+	/**
+	* \brief Connnect Demuxer-Component
+	* 
+	* \param ctrl_ds already allocated control dataspace
+	* \param data_ds already allocated data dataspace
+	* \param component setup dsi_component_t with callback functions and socket_ref
+	*
+	* Attach dataspaces to Demuxer-Component. The DSI-Socket is created. 
+	* The work_thread also, but it's waiting for the start_signal.
+	*/
+	/*****************************************************************************/
+  long connect_CompressedVideoOut ([in] l4dm_dataspace_t ctrl_ds,
+				   [in] l4dm_dataspace_t data_ds,
+				   [out] dsi_socket_ref_t * socketref);
+
+
+	/*****************************************************************************/
+	/**
+	* \brief Start Demuxer-Component's work thread
+	* 
+	* \param local local socket reference
+	* \param remote remote socket reference
+	*
+	* unlocks a mutex and let the work_thread run.
+	/*****************************************************************************/
+  long start_CompressedVideoOut ([in] dsi_socket_ref_t local,
+				 [in] dsi_socket_ref_t remote);
+
+
+	/*****************************************************************************/
+	/**
+	 * \brief Disconnect Demuxer-Component
+	 * 
+	 * \param close_socket_flag if !=0 - we close the DSI-socket 
+	 *
+	 * This function ensures work_thread is closed and nobody is working 
+	 * with DSI-sockets. Afterwards the DSI-socket is closed.
+	 * Note: Flag close_socket_flag should only set != 0 in callback function for
+	 * dsi_stream_close.
+	 */
+	/*****************************************************************************/
+  long disconnect_CompressedVideoOut ([in] l4_int32_t close_socket_flag);
+
+
+	/*****************************************************************************/
+	/**
+	* \brief Connnect Demuxer-Component
+	* 
+	* \param ctrl_ds already allocated control dataspace
+	* \param data_ds already allocated data dataspace
+	* \param component setup dsi_component_t with callback functions and socket_ref
+	*
+	* Attach dataspaces to Demuxer-Component. The DSI-Socket is created. 
+	* The work_thread also, but it's waiting for the start_signal.
+	*/
+	/*****************************************************************************/
+  long connect_CompressedAudioOut ([in] l4dm_dataspace_t ctrl_ds,
+				   [in] l4dm_dataspace_t data_ds,
+				   [out] dsi_socket_ref_t * socketref);
+
+
+	/*****************************************************************************/
+	/**
+	* \brief Start Demuxer-Component's work thread
+	* 
+	* \param local local socket reference
+	* \param remote remote socket reference
+	*
+	* unlocks a mutex and let the work_thread run.
+	/*****************************************************************************/
+  long start_CompressedAudioOut ([in] dsi_socket_ref_t local,
+				 [in] dsi_socket_ref_t remote);
+
+
+	/*****************************************************************************/
+	/**
+	 * \brief Disconnect Demuxer-Component
+	 * 
+	 * \param close_socket_flag if !=0 - we close the DSI-socket 
+	 *
+	 * This function ensures work_thread is closed and nobody is working 
+	 * with DSI-sockets. Afterwards the DSI-socket is closed.
+	 * Note: Flag close_socket_flag should only set != 0 in callback function for
+	 * dsi_stream_close.
+	 */
+	/*****************************************************************************/
+  long disconnect_CompressedAudioOut ([in] l4_int32_t close_socket_flag);
+
+
+	
+	
+	
+	
+
+	/*****************************************************************************/
+	/**
+	 * \brief Set period for RT-mode
+	 * 
+	 * \param period  period in microseconds
+	 * \param reservation_audio  reservation time for ONE audio chunk [microsecond]
+	 * \param reservation_video  reservation time for ONE video frame [microsecond]
+	 * \param verbose_preemption_ipc  show each recv. preeption ipc ?
+	 */
+	/*****************************************************************************/
+  long setRTparams ([in] unsigned long period,
+		    [in] unsigned long reservation_audio,
+		    [in] unsigned long reservation_video,
+		    [in] int verbose_preemption_ipc);
+	
+	
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Probe file content
+	 * 
+	 * \param filename File to probe
+	 * \param videoTrackNo Noof video stream within file to probe
+	 * \param audioTrackNo Noof audio stream within file to probe
+	 * \retval videoTracks Noof video streams the file contains
+	 * \retval audioTracks Noof audio streams the file contains
+	 * \retval streaminfo  information about probed streams
+	 *
+	 */
+	/*****************************************************************************/
+  long probeVideoFile ([in, string] char *filename,
+		       [in] long videoTrackNo,
+		       [in] long audioTrackNo,
+		       [out] long *videoTracks,
+		       [out] long *audioTracks,
+		       [out] stream_info_t * streaminfo);
+
+
+	/*****************************************************************************/
+	/**
+	 * \brief Set parameter for demuxing a specific file
+	 * 
+	 * \param videoFilename File to demux video from
+	 * \param audioFilename File to demux video from
+	 * \param videoTrackNo Noof video stream within file to demux (-1 ignore!)
+	 * \param audioTrackNo Noof audio stream within file to demux (-1 ignore!)
+	 * \param videoPlugin  Name of video import plugin
+	 * \param audioPlugin  Name of audio import plugin
+	 *
+	 */
+	/*****************************************************************************/
+  long setVideoFileParam ([in, string] char *videoFilename,[in, string] char *audioFilename,
+			  [in] int videoTrackNo,[in] int audioTrackNo,
+			  [in, string] char *videoPlugin,[in, string] char *audioPlugin);
+
+
+	/*****************************************************************************/
+	/**
+	 * \brief Set position to seek to
+	 * 
+	 * \param seekVideo Demux video stream ? =1 set it
+	 * \param seekAudio Demux audio stream ? =1 set it
+	 * \param position Position in stream in millisec to seek to
+	 * \param fileoffset Bytepos in file 
+	 * \param whence SEEK_RELATIVE seek to (current_position + position)
+	 *               SEEK_ABSOLUTE seek to (start_of_file + position)
+	 */
+	/*****************************************************************************/
+  long setSeekPosition ([in] int seekVideo,
+			[in] int seekAudio,
+			[in] double position,
+			[in] long fileoffset,
+			[in] int whence);
+};

@@ -38,3 +38,9 @@ struct proc_dir_entry *create_proc_entry(const char *name, mode_t mode,
 void remove_proc_entry(const char *name, struct proc_dir_entry *parent)
 {
 }
+
+struct proc_dir_entry *proc_mkdir(const char *name,
+                                  struct proc_dir_entry *parent)
+{
+  return (struct proc_dir_entry *) 0;
+}

@@ -2,80 +2,11 @@
 INTERFACE:
 
 #include <csignal>				// for siginfo_t
+#include "initcalls.h"
 #include "types.h"
 
-class Thread;
-
 class Usermode
-{
-public:
-  static void	init();
-  static void	set_signal		(int sig, bool ignore);
-
-private:
-  static const Address	magic_page;
-
-  static void	emu_handler		(int signal, siginfo_t *, void *ctx);
-  static void	int_handler		(int signal, siginfo_t *, void *ctx);
-  static void	jdb_handler		(int signal, siginfo_t *, void *ctx);
-
-  static void	iret_to_user_mode	(struct ucontext *context, Mword *kesp);
-  static void	iret_to_kern_mode	(struct ucontext *context, Mword *kesp);
-  static void	iret			(struct ucontext *context);
-
-  static Mword	peek_at_addr		(pid_t pid, Address eip, unsigned n);
-
-
-  static void	kernel_entry		(struct ucontext *context,
-	                                 Mword trap,
-					 Mword xss,
-					 Mword esp,
-					 Mword efl,
-					 Mword xcs,
-					 Mword eip,
-					 Mword err,
-					 Mword cr2);
-
-  /**
-   * @brief Wait for host process to stop.
-   * @param pid process id to wait for.
-   * @return signal the host process stopped with.
-   */
-  static int wait_for_stop (pid_t pid);
-
-  /**
-   * @brief Set emulated internal processor interrupt state.
-   * @param mask signal mask to modify
-   * @param eflags processor flags register
-   */
-  static void sync_interrupt_state (sigset_t *mask, Mword eflags);
-
-  /**
-   * @brief Cancel a native system call in the host.
-   * @param pid process id of the host process.
-   * @param regs register set at the time of the system call.
-   */
-  static void cancel_syscall (pid_t pid, struct user_regs_struct *regs);
-
-public:
-  /**
-   * @brief Read debug register
-   * @param pid process id of the host process.
-   * @param reg number of debug register (0..7)
-   * @param value reference to register value
-   * @return 0 is ok
-   */
-  static int read_debug_register (pid_t pid, Mword reg, Mword &value);
-
-  /**
-   * @brief Write debug register
-   * @param pid process id of the host process.
-   * @param reg number of debug register (0..7)
-   * @param value register value to be written.
-   * @return 0 is ok
-   */
-  static int write_debug_register (pid_t pid, Mword reg, Mword value);
-};
+{};
 
 IMPLEMENTATION:
 
@@ -86,6 +17,7 @@ IMPLEMENTATION:
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
+#include <limits.h>
 #include <panic.h>
 #include <signal.h>
 #include <ucontext.h>
@@ -101,79 +33,53 @@ IMPLEMENTATION:
 #include "boot_info.h"
 #include "config.h"
 #include "config_tcbsize.h"
+#include "context.h"
 #include "emulation.h"
 #include "fpu.h"
 #include "globals.h"
-#include "initcalls.h"
-#include "linker_syms.h"
+#include "mem_layout.h"
 #include "pic.h"
 #include "processor.h"
 #include "regdefs.h"
-#include "thread.h"
-#include "thread_util.h"
+#include "task.h"
 
-const Address Usermode::magic_page =
-     (Address) Kmem::phys_to_virt (Emulation::trampoline_frame);
-
-Proc::Status volatile Proc::virtual_processor_state = 0;
-
-IMPLEMENT
+PRIVATE static
 Mword
-Usermode::peek_at_addr (pid_t pid, Address eip, unsigned n)
+Usermode::peek_at_addr (pid_t pid, Address addr, unsigned n)
 {
   Mword val;
-
-  switch (n)
-    {
-      case 1:
-        switch (eip & 3)
-          {
-            case 0:  val = ptrace (PTRACE_PEEKTEXT, pid, eip & ~3, NULL); break;
-            case 1:  val = ptrace (PTRACE_PEEKTEXT, pid, eip & ~3, NULL) >> 8; break;
-            case 2:  val = ptrace (PTRACE_PEEKTEXT, pid, eip & ~3, NULL) >> 16; break;
-            default: val = ptrace (PTRACE_PEEKTEXT, pid, eip & ~3, NULL) >> 24; break;
-          }
-        return val & 0xff;
-
-      case 2:
-        switch (eip & 3)
-          {
-            case 0:  val = ptrace (PTRACE_PEEKTEXT, pid, eip & ~3, NULL); break;
-            case 1:  val = ptrace (PTRACE_PEEKTEXT, pid, eip & ~3, NULL) >> 8; break;
-            case 2:  val = ptrace (PTRACE_PEEKTEXT, pid, eip & ~3, NULL) >> 16; break;
-            default: val = ptrace (PTRACE_PEEKTEXT, pid, eip, NULL); break;
-          }
-        return val & 0xffff;
-
-      case 3:
-        switch (eip & 3)
-          {
-            case 0:  val = ptrace (PTRACE_PEEKTEXT, pid, eip & ~3, NULL); break;
-            case 1:  val = ptrace (PTRACE_PEEKTEXT, pid, eip & ~3, NULL) >> 8; break;
-            default: val = ptrace (PTRACE_PEEKTEXT, pid, eip, NULL); break;
-          }
-        return val & 0xffffff;
-
-      default:
-        return ptrace (PTRACE_PEEKTEXT, pid, eip, NULL);
-    }
+  
+  if ((addr & sizeof (Mword) - 1) + n > sizeof (Mword))
+    val = ptrace (PTRACE_PEEKTEXT, pid, addr, NULL);
+  else
+    val = ptrace (PTRACE_PEEKTEXT, pid, addr & ~(sizeof (Mword) - 1), NULL) >>
+          CHAR_BIT * (addr & sizeof (Mword) - 1);
+    
+  return val & (Mword) -1 >> CHAR_BIT * (sizeof (Mword) - n);
 }
 
-IMPLEMENT inline NEEDS [<cassert>, <sys/types.h>, <sys/wait.h>]
+/**
+ * Wait for host process to stop.
+ * @param pid process id to wait for.
+ * @return signal the host process stopped with.
+ */
+PRIVATE static inline NOEXPORT
 int
 Usermode::wait_for_stop (pid_t pid)
 {
   int status;
-  pid_t p;
-  
-  p = waitpid (pid, &status, 0);
 
-  assert (p == pid && WIFSTOPPED (status));
+  check (waitpid (pid, &status, 0) == pid && WIFSTOPPED (status));
 
   return WSTOPSIG (status);
 }
 
-IMPLEMENT
+/**
+ * Set emulated internal processor interrupt state.
+ * @param mask signal mask to modify
+ * @param eflags processor flags register
+ */
+PRIVATE static inline NOEXPORT
 void
 Usermode::sync_interrupt_state (sigset_t *mask, Mword eflags)
 {
@@ -183,18 +89,17 @@ Usermode::sync_interrupt_state (sigset_t *mask, Mword eflags)
     return;
 
   if (eflags & EFLAGS_IF)
-    { 
-      sigdelset (mask, SIGIO);
-      sigdelset (mask, SIGINT);
-    }
+    sigdelset (mask, SIGIO);
   else
-    {
-      sigaddset (mask, SIGIO);
-      sigaddset (mask, SIGINT);
-    }
+    sigaddset (mask, SIGIO);
 }
 
-IMPLEMENT inline NEEDS [<sys/ptrace.h>, <sys/user.h>, "undef_page.h"]
+/**
+ * Cancel a native system call in the host.
+ * @param pid process id of the host process.
+ * @param regs register set at the time of the system call.
+ */
+PRIVATE static inline NOEXPORT
 void
 Usermode::cancel_syscall (pid_t pid, struct user_regs_struct *regs)
 {
@@ -207,32 +112,50 @@ Usermode::cancel_syscall (pid_t pid, struct user_regs_struct *regs)
   ptrace (PTRACE_POKEUSER, pid, offsetof (struct user, regs.eax), regs->eax);
 }
 
-IMPLEMENT
+/**
+ * Read debug register
+ * @param pid process id of the host process.
+ * @param reg number of debug register (0..7)
+ * @param value reference to register value
+ * @return 0 is ok
+ */
+PUBLIC static
 int
 Usermode::read_debug_register (pid_t pid, Mword reg, Mword &value)
 {
   if (reg > 7)
     return 0;
 
-  int ret = ptrace (PTRACE_PEEKUSER, pid, 
-		    offsetof (struct user, u_debugreg[reg]), NULL);
+  int ret = ptrace (PTRACE_PEEKUSER, pid,
+                   ((struct user *) 0)->u_debugreg + reg, NULL);
+
   if (ret == -1 && errno == -1)
     return 0;
 
   value = ret;
+
   return 1;
 }
 
-IMPLEMENT
+/**
+ * Write debug register
+ * @param pid process id of the host process.
+ * @param reg number of debug register (0..7)
+ * @param value register value to be written.
+ * @return 0 is ok
+ */
+PUBLIC static
 int
 Usermode::write_debug_register (pid_t pid, Mword reg, Mword value)
 {
   if (reg > 7)
     return 0;
 
-  int ret = ptrace (PTRACE_POKEUSER, pid,
-		    offsetof (struct user, u_debugreg[reg]), value);
-  return ret == -1 ? 0 : 1;
+  if (ptrace (PTRACE_POKEUSER, pid,
+             ((struct user *) 0)->u_debugreg + reg, value) == -1)
+    return 0;
+
+  return 1;
 }
 
 /**
@@ -255,7 +178,7 @@ Usermode::write_debug_register (pid_t pid, Mword reg, Mword value)
  * @param err Error Code
  * @param cr2 Page Fault Address (if applicable)
  */
-IMPLEMENT
+PRIVATE static
 void
 Usermode::kernel_entry (struct ucontext *context,
                         Mword trap,
@@ -271,12 +194,25 @@ Usermode::kernel_entry (struct ucontext *context,
               ? (Mword *) *Kmem::kernel_esp() - 5
               : (Mword *) context->uc_mcontext.gregs[REG_ESP] - 3;
 
+  if (!Kmem::is_tcb_page_fault((Mword) kesp, 0))
+    printf ("KERNEL BUG at EIP:%08x ESP:%08x -- PFA:%08lx\n",
+             context->uc_mcontext.gregs[REG_EIP],
+             context->uc_mcontext.gregs[REG_ESP],
+             context->uc_mcontext.cr2);
+
   // Make sure the kernel stack is sane
-  assert ((Mword) kesp >= Kmem::mem_tcbs &&
-          (Mword) kesp <  Kmem::mem_tcbs + (Config::thread_block_size << 18));
+  assert (Kmem::is_tcb_page_fault((Mword) kesp, 0));
 
   // Make sure the kernel stack has enough space
-  assert ((Mword) kesp % THREAD_BLOCK_SIZE > THREAD_BLOCK_SIZE / 4);
+  if ((Mword) kesp % THREAD_BLOCK_SIZE <= 512)
+    {
+      Global_id gid((Address)kesp, Mem_layout::Tcbs, THREAD_BLOCK_SIZE);
+      printf("KERNEL BUG: Kernel stack of thread ");
+      gid.print();
+      panic(" exceeded. As a workaround, please\n"
+	    "            make sure that you built Fiasco-UX with enabled "
+	    "CONTEXT_4K.");
+    }
 
   efl &= ~EFLAGS_IF;
 
@@ -295,7 +231,7 @@ Usermode::kernel_entry (struct ucontext *context,
   switch (trap)
     {
       case 0xe:					// Page Fault
-        Emulation::set_fault_addr (cr2);
+        Emulation::set_page_fault_addr (cr2);
       case 0x8:					// Double Fault
       case 0xa:					// Invalid TSS
       case 0xb:					// Segment Not Present
@@ -306,12 +242,173 @@ Usermode::kernel_entry (struct ucontext *context,
     }
 
   context->uc_mcontext.gregs[REG_ESP] = (Mword) kesp;
-  context->uc_mcontext.gregs[REG_EIP] = Emulation::idt_vector (trap);
+  context->uc_mcontext.gregs[REG_EIP] = Emulation::idt_vector (trap, false);
   context->uc_mcontext.gregs[REG_EFL] = efl;
   sync_interrupt_state (&context->uc_sigmask, efl);
 
   // Make sure interrupts are off
   assert (!Proc::interrupts());
+}
+
+PRIVATE static inline NOEXPORT
+Mword
+Usermode::kip_syscall (Address eip)
+{
+  if ((eip & Config::PAGE_MASK) != Mem_layout::Syscalls || eip & 0xff)
+    return 0;
+
+  Mword trap = 0x30 + (eip - Mem_layout::Syscalls >> 8);
+
+  return Emulation::idt_vector (trap, true) ? trap : 0;
+}
+
+PRIVATE static inline NOEXPORT
+Mword
+Usermode::l4_syscall (Mword opcode)
+{
+  if (EXPECT_FALSE ((opcode & 0xff) != 0xcd))
+    return 0;
+
+  Mword trap = opcode >> 8;
+
+  return Emulation::idt_vector (trap, true) ? trap : 0;
+}
+
+PRIVATE static inline NOEXPORT
+bool
+Usermode::user_exception (pid_t pid, struct ucontext *context,
+                          struct user_regs_struct *regs)
+{
+  Mword trap, error = 0, addr = 0;
+
+  if (EXPECT_FALSE ((trap = kip_syscall (regs->eip))))
+    {
+      regs->eip  = peek_at_addr (pid, regs->esp, 4);
+      regs->esp += 4;
+    }
+
+  else if ((trap = l4_syscall (peek_at_addr (pid, regs->eip, 2))))
+    regs->eip += 2;
+
+  else
+    {
+      struct ucontext *exception_context;
+
+      memcpy ((void *) Mem_layout::kernel_trampoline_page,
+              (void *) &Mem_layout::task_sighandler_start,
+              &Mem_layout::task_sighandler_end -
+              &Mem_layout::task_sighandler_start);
+
+      ptrace (PTRACE_CONT, pid, NULL, SIGSEGV);
+
+      wait_for_stop (pid);
+
+      // See corresponding code in sighandler.S
+      exception_context = reinterpret_cast<struct ucontext *>
+                          (Mem_layout::kernel_trampoline_page +
+                         *reinterpret_cast<Address *>
+                          (Mem_layout::kernel_trampoline_page + 0x100));
+
+      addr  = exception_context->uc_mcontext.cr2;
+      trap  = exception_context->uc_mcontext.gregs[REG_TRAPNO];
+      error = exception_context->uc_mcontext.gregs[REG_ERR];
+
+      switch (trap)
+        {
+          case 0xd:
+            switch (peek_at_addr (pid, regs->eip, 1))
+              {
+                case 0xfa:	// cli
+                  Pic::set_owner (Boot_info::pid());
+                  regs->eip++;
+                  regs->eflags &= ~EFLAGS_IF;
+                  sync_interrupt_state (0, regs->eflags);
+                  ptrace (PTRACE_SETREGS, pid, NULL, regs);
+                  return false;
+
+                case 0xfb:	// sti
+                  Pic::set_owner (pid);
+                  regs->eip++;
+                  regs->eflags |= EFLAGS_IF;
+                  sync_interrupt_state (0, regs->eflags);
+                  ptrace (PTRACE_SETREGS, pid, NULL, regs);
+                  return false;
+              }
+            break;
+
+          case 0xe:
+            error |= PF_ERR_USERADDR;
+            break;
+        }
+    }
+
+  kernel_entry (context, trap,
+                regs->xss,		/* XSS */
+                regs->esp,		/* ESP */
+                regs->eflags,		/* EFL */
+                2,			/* XCS */
+                regs->eip,		/* EIP */
+                error,			/* ERR */
+                addr);			/* CR2 */
+
+  return true;
+}
+
+PRIVATE static inline NOEXPORT
+bool
+Usermode::user_emulation (int stop, pid_t pid, struct ucontext *context,
+                          struct user_regs_struct *regs)
+{
+  Mword trap, error = 0;
+
+  switch (stop)
+    {
+      case SIGSEGV:
+        return user_exception (pid, context, regs);
+
+      case SIGIO:
+        int irq_pend;
+        if ((irq_pend = Pic::irq_pending()) == -1)
+          return false;
+        Pic::eat (irq_pend);
+        trap = Pic::map_irq_to_gate (irq_pend);
+        break;
+
+      case SIGTRAP:
+        if (peek_at_addr (pid, regs->eip - 2, 2) == 0x80cd)
+          {
+            cancel_syscall (pid, regs);
+            trap       = 0xd;
+            error      = 0x80 << 3 | 2;
+            regs->eip -= 2;
+            break;
+          }
+        trap = 0x3;
+        break;
+
+      case SIGILL:
+        trap = 0x6;
+        break;
+
+      case SIGFPE:
+        trap = 0x10;
+        break;
+
+      default:
+        trap = 0x1;
+        break;
+    }
+
+  kernel_entry (context, trap,
+                regs->xss,		/* XSS */
+                regs->esp,		/* ESP */
+                regs->eflags,		/* EFL */
+                2,			/* XCS */
+                regs->eip,		/* EIP */
+                error,			/* ERR */
+                0);			/* CR2 */
+
+  return true;
 }
 
 /**
@@ -320,17 +417,14 @@ Usermode::kernel_entry (struct ucontext *context,
  * Additionally all register values are transferred to the task's register set.
  * @param ctx Kern context during iret
  */
-IMPLEMENT
+PRIVATE static inline NOEXPORT
 void
 Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
 {
   struct user_regs_struct regs;
-  struct ucontext *task_context;
-  unsigned int trap, error, fault;
-  long int opcode;
   int stop, irq_pend;
-  Thread *t = Thread::lookup (context_of (kesp));
-  pid_t pid = t->space_context()->pid();
+  Context *t = context_of (kesp);
+  pid_t pid = t->space()->pid();
 
   Pic::set_owner (pid);
 
@@ -339,28 +433,24 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
    * but let it enter kernel immediately. Any interrupts occuring beyond this
    * point will go directly to the task.
    */
-  if ((irq_pend = Pic::irq_pending()) != -1) {
+  if ((irq_pend = Pic::irq_pending()) != -1)
+    {
+      Pic::eat (irq_pend);
 
-    Pic::eat (irq_pend);
+      Pic::set_owner (Boot_info::pid());
 
-    Pic::set_owner (Boot_info::pid());
+      kernel_entry (context,
+                    Pic::map_irq_to_gate (irq_pend),
+                    *(kesp + 4),	/* XSS */
+                    *(kesp + 3),	/* ESP */
+                    *(kesp + 2),	/* EFL */
+                    2,			/* XCS */
+                    *(kesp + 0),	/* EIP */
+                    0,			/* ERR */
+                    0);			/* CR2 */
+      return;
+    }
 
-    kernel_entry (context,
-	          Pic::map_irq_to_gate (irq_pend),
-                  *(kesp + 4),			/* XSS */
-                  *(kesp + 3),			/* ESP */
-                  *(kesp + 2),			/* EFL */
-                  2,				/* XCS */
-                  *(kesp + 0),			/* EIP */
-                  0,				/* ERR */
-                  0);				/* CR2 */
-    return;
-  }
-
-#if 0
-   memset ((void *) magic_page, 0, Config::PAGE_SIZE);
-#endif      
-  
   // Restore these from the kernel stack (iret context)
   regs.eip    = *(kesp + 0);
   regs.xcs    = *(kesp + 1);
@@ -381,188 +471,25 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
   regs.xfs    = context->uc_mcontext.gregs[REG_FS];
   regs.xgs    = context->uc_mcontext.gregs[REG_GS];
 
-  if (ptrace (PTRACE_SETREGS, pid, NULL, &regs) == -1)
-    perror ("ptrace/SETREGS");
+  ptrace (PTRACE_SETREGS, pid, NULL, &regs);
 
   Fpu::restore_state (t->fpu_state());
 
-  while (1) {
-  
-    ptrace (Boot_info::is_native (t->id().task())
-            ? PTRACE_CONT 
-            : PTRACE_SYSCALL, pid, NULL, NULL);
+  for (;;)
+    {
+      ptrace (Boot_info::is_native (t->space()->id())
+	      ? PTRACE_CONT :  PTRACE_SYSCALL, pid, NULL, NULL);
 
-    stop = wait_for_stop (pid);
+      stop = wait_for_stop (pid);
 
-    ptrace (PTRACE_GETREGS, pid, NULL, &regs);
-
-    if (stop == SIGWINCH || stop == SIGTERM || stop == SIGINT)
-      continue;
-
-    else if (stop == SIGSEGV) {
-
-      if (regs.eip >= (int) &_syscalls &&
-          regs.eip <  (int) &_syscalls + 0x700 &&
-          (regs.eip & 0xff) == 0) {
-
-        trap  = 0x30 + ((regs.eip - (int) &_syscalls) >> 8);
-        error = 0;
-        fault = 0;
-
-        // Get call return address from stack and adjust stack
-        regs.eip = peek_at_addr (pid, regs.esp, 4);
-        regs.esp += 4;
-
-      } else if (((opcode = peek_at_addr (pid, regs.eip, 2)) & 0xff) == 0xcd &&
-                  (trap = (opcode >> 8) & 0xff) >= 0x30 && trap <= 0x36) {
- 
-        error = 0;
-        fault = 0;
-        regs.eip += 2;
-
-      } else {
-
-        /* Setup task sighandler code */
-        memcpy ((void *) magic_page, &_task_sighandler_start,
-             &_task_sighandler_end - &_task_sighandler_start);
-
-        ptrace (PTRACE_CONT, pid, NULL, SIGSEGV);
-
-        wait_for_stop (pid);
-
-        // See corresponding code in sighandler.S
-        task_context = reinterpret_cast<struct ucontext *>
-                   (magic_page + *reinterpret_cast<Address *>(magic_page + 0x100));
-
-        trap  = task_context->uc_mcontext.gregs[REG_TRAPNO];	/* trapno */
-        error = task_context->uc_mcontext.gregs[REG_ERR];	/* error_code */
-        fault = task_context->uc_mcontext.cr2;			/* fault addr */
-
-        switch (trap) {
-
-          case 0xe:				/* Usermode Page Fault */
-            error |= PF_ERR_USERADDR;
-            break;
-
-          case 0xd:				/* Usermode Protection Fault */
-            switch (peek_at_addr (pid, regs.eip, 1)) {
-
-              case 0xfa:	/* cli */
-		Pic::set_owner (Boot_info::pid());
-                regs.eip++;
-                regs.eflags &= ~EFLAGS_IF;
-                sync_interrupt_state (0, regs.eflags);
-                if (ptrace (PTRACE_SETREGS, pid, NULL, &regs) == -1)
-                  perror ("ptrace/SETREGS");
-                continue;
-
-              case 0xfb:	/* sti */
-		Pic::set_owner (pid);
-                regs.eip++;
-                regs.eflags |= EFLAGS_IF;
-                sync_interrupt_state (0, regs.eflags);
-                if (ptrace (PTRACE_SETREGS, pid, NULL, &regs) == -1)
-                  perror ("ptrace/SETREGS");
-                continue;
-            }
-            /* Fall through */
-
-          default:				/* Usermode Exception */
-            break;
-        }
-      }
-
-      kernel_entry (context, trap,
-                    regs.xss,		/* XSS */
-                    regs.esp,		/* ESP */
-                    regs.eflags,	/* EFL */
-                    2,			/* XCS */
-                    regs.eip,		/* EIP */
-                    error,		/* ERR */
-                    fault);		/* CR2 */
-                    
-      break;
-
-    } else if (stop == SIGTRAP) {
-    
-      if (peek_at_addr (pid, regs.eip - 2, 2) == 0x80cd)
-        {
-          cancel_syscall (pid, &regs);
-
-          kernel_entry (context, 0xd,
-                        regs.xss,		/* XSS */
-                        regs.esp,		/* ESP */
-                        regs.eflags,		/* EFL */
-                        2,			/* XCS */
-                        regs.eip - 2,		/* EIP */
-                        0x80 << 3 | 2,		/* ERR */
-                        0);			/* CR2 */
-        }
-      else
-        {
-          kernel_entry (context, 0x3,
-                        regs.xss,		/* XSS */
-                        regs.esp,		/* ESP */
-                        regs.eflags,		/* EFL */
-                        2,			/* XCS */
-                        regs.eip,		/* EIP */
-                        0,			/* ERR */
-                        0);			/* CR2 */
-        }
-      break;
-
-    } else if (stop == SIGILL) {
-      
-      kernel_entry (context, 0x6,
-                    regs.xss,		/* XSS */
-                    regs.esp,		/* ESP */
-                    regs.eflags,	/* EFL */
-                    2,			/* XCS */
-                    regs.eip,		/* EIP */
-                    0,			/* ERR */
-                    0);			/* CR2 */
-                    
-      break;
-
-    } else if (stop == SIGFPE) {
-      
-      kernel_entry (context, 0x10,
-                    regs.xss,		/* XSS */
-                    regs.esp,		/* ESP */
-                    regs.eflags,	/* EFL */
-                    2,			/* XCS */
-                    regs.eip,		/* EIP */
-                    0,			/* ERR */
-                    0);			/* CR2 */
-                    
-      break;
-
-    } else if (stop == SIGIO) {
-
-      /*
-       * Interrupts that were trapped on the task are silently discared.
-       * Restart task.
-       */
-      if ((irq_pend = Pic::irq_pending()) == -1)
+      if (EXPECT_FALSE (stop == SIGWINCH || stop == SIGTERM || stop == SIGINT))
         continue;
 
-      Pic::eat (irq_pend);
+      ptrace (PTRACE_GETREGS, pid, NULL, &regs);
 
-      kernel_entry (context,
-	            Pic::map_irq_to_gate (irq_pend),
-                    regs.xss,		/* XSS */
-                    regs.esp,		/* ESP */
-                    regs.eflags,	/* EFL */
-                    2,			/* XCS */
-                    regs.eip,		/* EIP */
-                    0,			/* ERR */
-                    0);			/* CR2 */
-                    
-      break;
-
-    } else
-      printf ("Unexpected signal %d to pid %d\n", stop, pid);
-  }
+      if (EXPECT_TRUE (user_emulation (stop, pid, context, &regs)))
+        break;
+    }
 
   Pic::set_owner (Boot_info::pid());
 
@@ -581,7 +508,7 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
   context->uc_mcontext.gregs[REG_FS]  = regs.xfs;
   context->uc_mcontext.gregs[REG_GS]  = regs.xgs;
 
-  Fpu::save_state(t->fpu_state());
+  Fpu::save_state (t->fpu_state());
 }
 
 /**
@@ -592,7 +519,7 @@ Usermode::iret_to_user_mode (struct ucontext *context, Mword *kesp)
  * 3 words, thus clearing the context from the stack.
  * @param ctx Kern context during iret
  */
-IMPLEMENT
+PRIVATE static inline NOEXPORT
 void
 Usermode::iret_to_kern_mode (struct ucontext *context, Mword *kesp)
 {
@@ -607,7 +534,7 @@ Usermode::iret_to_kern_mode (struct ucontext *context, Mword *kesp)
  * we return to kernel mode (CPL == 0) or user mode (CPL == 2).
  * @param ctx Kern context during iret
  */
-IMPLEMENT
+PRIVATE static inline NOEXPORT
 void
 Usermode::iret (struct ucontext *context)
 {
@@ -627,18 +554,19 @@ Usermode::iret (struct ucontext *context)
     }
 }
 
-IMPLEMENT
+PRIVATE static
 void
 Usermode::emu_handler (int, siginfo_t *, void *ctx)
 {
   struct ucontext *context = reinterpret_cast<struct ucontext *>(ctx);
   unsigned int trap = context->uc_mcontext.gregs[REG_TRAPNO];
-  unsigned char opcode;
 
   if (trap == 0xd)	/* General protection fault */
     {
-      switch (opcode = *reinterpret_cast<unsigned char *>
-             (context->uc_mcontext.gregs[REG_EIP]))
+      unsigned char opcode = *reinterpret_cast<unsigned char *>
+                             (context->uc_mcontext.gregs[REG_EIP]);
+
+      switch (opcode)
         {
           case 0xfa:					/* cli */
             context->uc_mcontext.gregs[REG_EIP]++;
@@ -670,7 +598,7 @@ Usermode::emu_handler (int, siginfo_t *, void *ctx)
                 context->uc_mcontext.cr2);
 }
 
-IMPLEMENT
+PRIVATE static
 void
 Usermode::int_handler (int, siginfo_t *, void *ctx)
 {
@@ -693,11 +621,14 @@ Usermode::int_handler (int, siginfo_t *, void *ctx)
                 0);					/* CR2 */
 }
 
-IMPLEMENT
+PRIVATE static
 void
 Usermode::jdb_handler (int sig, siginfo_t *, void *ctx)
 {
   struct ucontext *context = reinterpret_cast<struct ucontext *>(ctx);
+
+  if (!Kmem::is_tcb_page_fault (context->uc_mcontext.gregs[REG_ESP], 0))
+    return;
 
   /*
    * If a SIGSEGV is pending at the same time as SIGINT, i.e. because
@@ -706,8 +637,9 @@ Usermode::jdb_handler (int sig, siginfo_t *, void *ctx)
    * will then hit an innocent instruction elsewhere with fatal consequences.
    * Therefore a pending SIGSEGV must be cancelled - it will later reoccur.
    */
-   
-  set_signal (SIGSEGV, true);
+ 
+  signal (SIGSEGV, SIG_IGN);  		// Cancel signal
+  set_signal (SIGSEGV);			// Reinstall handler
 
   kernel_entry (context, sig == SIGTRAP ? 3 : 1,
                 context->uc_mcontext.gregs[REG_SS],	/* XSS */
@@ -719,59 +651,52 @@ Usermode::jdb_handler (int sig, siginfo_t *, void *ctx)
                 0);					/* CR2 */
 }
 
-IMPLEMENT
+PUBLIC static
 void
-Usermode::set_signal (int sig, bool ignore)
+Usermode::set_signal (int sig)
 {
   void (*func)(int, siginfo_t *, void *);
-  
+  struct sigaction action;
+
   switch (sig)
     {
-      case SIGINT:
-      case SIGTRAP:
-      case SIGTERM:
-      case SIGXCPU:	func = jdb_handler;	break;
       case SIGIO:	func = int_handler;	break;
       case SIGSEGV:	func = emu_handler;	break;
-      
-      case SIGWINCH:
-      case SIGPROF:
-      case SIGHUP:
-      case SIGUSR1:
-      case SIGUSR2:	ignore = true;		// fall through
-      
-      default:		func = 0;		break;
+      default:		func = jdb_handler;	break;
     }
 
-  if (ignore)			// Cancel a signal by ignoring it and then
-    signal (sig, SIG_IGN);	// reinstalling the handler. See POSIX 3.3.1.3
-  
-  if (func)
-    {
-      struct sigaction action;
+  sigfillset (&action.sa_mask);		/* No other signals while we run */
+  action.sa_sigaction = func;
+  action.sa_flags     = SA_RESTART | SA_ONSTACK | SA_SIGINFO;
 
-      sigfillset (&action.sa_mask);	/* No other signals while we run */
-      action.sa_sigaction = func;
-      action.sa_flags     = SA_RESTART | SA_ONSTACK | SA_SIGINFO;
-
-      check (sigaction (sig, &action, NULL) == 0);
-    }
+  check (sigaction (sig, &action, NULL) == 0);
 }
 
-IMPLEMENT FIASCO_INIT
+PUBLIC static FIASCO_INIT
 void
 Usermode::init()
 {
-  int i;
   stack_t stack;
 
   /* We want signals, aka interrupts to be delivered on an alternate stack */
-  stack.ss_sp    = Kmem::phys_to_virt (Emulation::sigstack_start_frame);
-  stack.ss_size  = Emulation::sigstack_end_frame - Emulation::sigstack_start_frame;
+  stack.ss_sp    = (void *) Mem_layout::phys_to_pmem
+                   (Mem_layout::Sigstack_start_frame);
+  stack.ss_size  =  Mem_layout::Sigstack_end_frame -
+                    Mem_layout::Sigstack_start_frame;
   stack.ss_flags = 0;
+
   check (sigaltstack (&stack, NULL) == 0);
 
-  /* Setup signal handlers */
-  for (i = 0; i < SIGRTMIN; i++)
-    set_signal (i, false);
+  signal (SIGWINCH, SIG_IGN);
+  signal (SIGPROF,  SIG_IGN);
+  signal (SIGHUP,   SIG_IGN);
+  signal (SIGUSR1,  SIG_IGN);
+  signal (SIGUSR2,  SIG_IGN);
+
+  set_signal (SIGSEGV);
+  set_signal (SIGIO);
+  set_signal (SIGINT);
+  set_signal (SIGTRAP);
+  set_signal (SIGTERM);
+  set_signal (SIGXCPU);
 }

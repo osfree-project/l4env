@@ -1,5 +1,5 @@
-#ifndef _LINKAGE_H
-#define _LINKAGE_H
+#ifndef __L4__SYS__ARCH_X86__LINKAGE_H__
+#define __L4__SYS__ARCH_X86__LINKAGE_H__
 
 #ifdef __ASSEMBLY__
 
@@ -9,7 +9,10 @@
   .p2align(2); \
   name:
 
-#endif
 #endif /* ! ENTRY */
+#endif /* __ASSEMBLY__ */
 
-#endif /* _LINKAGE_H */
+#define FASTCALL(x)	x __attribute__((regparm(3)))
+#define fastcall	__attribute__((regparm(3)))
+
+#endif /* ! __L4__SYS__ARCH_X86__LINKAGE_H__ */

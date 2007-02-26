@@ -55,10 +55,15 @@ $(TARGET): .general.d
 ####################################################################
 DOXY_FLAGS += $(DOXY_FLAGS_$@)
 
+# we refer to %/html sometimes. However, make fails on a rule of the form
+# "% %/html:%.cfg", thus the workaround (others than static-pattern-rules
+# won't work)
+$(addsuffix /html,$(TARGET_DOX)):%/html:%
+
 # We can give an internal rule for doxygen, as the directory specified
 # in the config-file should be the name of the config file with the
 # .cfg removed.
-%:%.cfg
+% %/html:%.cfg
         #generate the flags-file
 	$(VERBOSE)$(ECHO) '@INCLUDE=$<;$(DOXY_FLAGS)' | $(TR) \; \\n >$@.flags
 	$(VERBOSE)$(call MAKEDEP,doxygen) doxygen $@.flags
@@ -142,7 +147,7 @@ install:: $(addprefix $(INSTALLDIR)/,$(addsuffix .title,$(INSTALL_TARGET_DOX)))
 %.dvi:%.tex  .general.d
 	$(VERBOSE)$(call MAKEDEP,$(LATEX)) $(LATEX) $<
 	$(VERBOSE)if grep -q '\indexentry' $*.idx; then makeindex $*; fi
-	$(VERBISE)if grep -q '\citation' $*.aux; then bibtex $*; fi
+	$(VERBOSE)if grep -q '\citation' $*.aux; then bibtex $*; fi
         # Do we really need to call latex unconditionally again? Isn't it
         # sufficient to check the logfile for the "rerun" text?
 	$(VERBOSE)$(LATEX) $<
@@ -165,7 +170,7 @@ VIEWERREFRESH_PS  ?= killall -q -HUP gv || true
 
 
 dvi:	$(SHOWDVI)
-showdvi: dvi
+show showdvi: dvi
 	$(VERBOSE)$(VIEWER_DVI) $(SHOWDVI) &
 
 ps:	$(SHOWPS)
@@ -184,7 +189,7 @@ cleanall:: clean
 	$(VERBOSE)$(RM) $(wildcard $(SRC_TEX:.tex=.ps) $(SRC_TEX:.tex=.pdf))
 
 .PHONY: all clean cleanall config help install oldconfig reloc txtconfig
-.PHONY: ps dvi showps showdvi
+.PHONY: ps dvi showps showdvi show
 
 help::
 	@echo "Specify a target:"

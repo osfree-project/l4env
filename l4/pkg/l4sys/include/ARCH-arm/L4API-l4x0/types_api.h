@@ -4,16 +4,21 @@
 #include <l4/sys/compiler.h>
 #include <l4/sys/l4int.h>
 
+/**
+ * L4 thread id structure
+ */
+typedef struct {
+  l4_umword_t version :10;
+  l4_umword_t lthread :6;
+  l4_umword_t task    :8;
+  l4_umword_t chief   :8;
+} l4_threadid_struct_t;
+
 /* 
  * L4 unique identifiers 
  */
 typedef union {
-  struct {
-    l4_umword_t version :10;
-    l4_umword_t lthread :6;
-    l4_umword_t task    :8;
-    l4_umword_t chief   :8;
-  } id;
+  l4_threadid_struct_t id;
   l4_umword_t raw;
 } l4_threadid_t;
 
@@ -38,6 +43,8 @@ L4_INLINE l4_threadid_t l4_get_taskid             (l4_threadid_t t);
 L4_INLINE int           l4_thread_equal           (l4_threadid_t t1,l4_threadid_t t2);
 L4_INLINE int           l4_task_equal             (l4_threadid_t t1,l4_threadid_t t2);
 L4_INLINE void          l4_make_taskid_from_irq   (int irq, l4_threadid_t *t);
+
+#define l4_tasknum_equal(t1, t2) l4_task_equal(t1, t2)
 
 /*-----------------------------------------------------------------------------
  * IMPLEMENTATION

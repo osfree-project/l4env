@@ -26,6 +26,9 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
+/* standard */
+#include <stdio.h>
+
 /* L4 includes */
 #include <l4/sys/types.h>
 #include <l4/sys/consts.h>
@@ -38,6 +41,7 @@
 #include <l4/thread/thread.h>
 #include "__stacks.h"
 #include "__memory.h"
+#include "__tcb.h"
 #include "__debug.h"
 
 /*****************************************************************************
@@ -79,9 +83,9 @@ l4th_stack_init(void)
   /* get stack area size */
   area_size = l4thread_max_threads * l4thread_max_stack;
 
-  LOGdL(DEBUG_STACK_INIT,"stack setup:\n  %d threads\n" \
-        "  stack max. %u bytes\n  stack area size 0x%08x",
-        l4thread_max_threads,l4thread_max_stack,area_size);
+  LOGdL(DEBUG_STACK_INIT, "stack setup:\n" \
+        " %d threads, stack max. %u bytes, stack area size 0x%08x",
+        l4thread_max_threads, l4thread_max_stack, area_size);
 
   if (l4thread_stack_area_addr == -1)
     {
@@ -91,11 +95,11 @@ l4th_stack_init(void)
        * the whole tcb table. */
       ret = l4rm_direct_area_reserve(area_size,
 				     L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC,
-				     &area_addr,&l4th_stack_area_id);
+				     &area_addr, &l4th_stack_area_id);
       if (ret < 0)
 	{
 	  /* failed to reserve stack area */
-	  printf("l4thread: Warning, stack area not available!\n");
+	  LOG_printf("l4thread: Warning, stack area not available!\n");
 	  l4th_have_stack_area = 0;
 	  l4th_stack_area_start = L4_MAX_ADDRESS;
 	  l4th_stack_area_end = L4_MAX_ADDRESS;
@@ -108,25 +112,25 @@ l4th_stack_init(void)
 	  l4th_stack_area_end = area_addr + area_size - 1;
 	  
 #if DEBUG_STACK_INIT
-	  printf("  using stack area <0x%08x-0x%08x>\n",
-                 l4th_stack_area_start,l4th_stack_area_end);
+	  LOG_printf(" using stack area <0x%08x-0x%08x>\n",
+                 l4th_stack_area_start, l4th_stack_area_end);
 #endif
 	}
     }
   else
     {
 #if DEBUG_STACK_INIT
-      printf("  trying area at 0x%08x\n",l4thread_stack_area_addr);
+      LOG_printf(" trying area at 0x%08x\n", l4thread_stack_area_addr);
 #endif
 
       /* reserve given stack map area */
-      ret = l4rm_direct_area_reserve_region(l4thread_stack_area_addr,area_size,
+      ret = l4rm_direct_area_reserve_region(l4thread_stack_area_addr, area_size,
 					    L4RM_LOG2_ALIGNED | L4RM_LOG2_ALLOC,
 					    &l4th_stack_area_id);
       if (ret < 0)
 	{
 	  Panic("l4thread: specified stack area not available "\
-		"(0x%08x-0x%08x)!",l4thread_stack_area_addr,
+		"(0x%08x-0x%08x)!", l4thread_stack_area_addr,
 		l4thread_stack_area_addr + area_size);
 	  return -1;
 	}
@@ -138,8 +142,8 @@ l4th_stack_init(void)
 	  l4th_stack_area_end = l4thread_stack_area_addr + area_size - 1;
 	  
 #if DEBUG_STACK_INIT
-	  printf("  using stack area <0x%08x-0x%08x>\n",
-                 l4th_stack_area_start,l4th_stack_area_end);
+	  LOG_printf(" using stack area <0x%08x-0x%08x>\n",
+                 l4th_stack_area_start, l4th_stack_area_end);
 #endif
 	}
     }
@@ -169,7 +173,7 @@ l4th_stack_allocate(int index, l4_size_t size, l4_uint32_t flags,
   int ret;
 
   /* align stack size to page size */
-  size = (size + L4_PAGESIZE - 1) & L4_PAGEMASK;
+  size = l4_round_page(size);
 
   if (l4th_have_stack_area && (size <= l4thread_max_stack)) 
     {
@@ -180,26 +184,28 @@ l4th_stack_allocate(int index, l4_size_t size, l4_uint32_t flags,
       map_addr = l4th_stack_area_start + 
 	index * l4thread_max_stack + (l4thread_max_stack - size);
 
-      LOGdL(DEBUG_STACK_ALLOC,"allocating in stack area\n" \
-            "  index %d, addr 0x%08x, size %u",index,map_addr,size);
+      LOGdL(DEBUG_STACK_ALLOC, 
+            "allocating in stack area, index %d, addr 0x%08x, size %u",
+            index, map_addr, size);
 
-      ret = l4th_pages_allocate(size,map_addr,l4th_stack_area_id,owner,
-				"L4thread stack",flags,desc);
+      ret = l4th_pages_allocate(size, map_addr, l4th_stack_area_id, owner,
+				"L4thread stack", flags,desc);
     }
   else
     {
       /* allocating stack somewhere */
-      LOGdL(DEBUG_STACK_ALLOC,"allocating stack somewhere\n  size %u",size);
+      LOGdL(DEBUG_STACK_ALLOC,
+            "allocating stack somewhere, size %u", size);
       
-      ret = l4th_pages_allocate(size,VM_FIND_REGION,VM_DEFAULT_AREA,owner,
-				"L4thread stack",flags,desc);
+      ret = l4th_pages_allocate(size, VM_FIND_REGION, VM_DEFAULT_AREA,
+                                owner, "L4thread stack", flags, desc);
     }
 
 #if DEBUG_STACK_ALLOC
   if (ret < 0)
-    LOGL("error allocating stack (%d)!",ret);
+    LOGL("error allocating stack (%d)!", ret);
   else
-    LOGL("stack at 0x%08x",desc->map_addr);
+    LOGL("stack at 0x%08x", desc->map_addr);
 #endif
 
   /* done */
@@ -221,4 +227,68 @@ l4th_stack_free(l4th_mem_desc_t * desc)
   /* free stack */
   l4th_pages_free(desc);
 }
+
+/*****************************************************************************
+ *** API functions
+ *****************************************************************************/
+
+/*****************************************************************************/
+/**
+ * \brief   Return stack address
+ * 
+ * \param   thread       Thread id
+ * \retval  stack_low    Stack address low 
+ * \retval  stack_high   Stack address high
+ *	
+ * \return  0 on success, error code otherwise:
+ *          - -#L4_EINVAL  invalid thread id
+ */
+/*****************************************************************************/ 
+int
+l4thread_get_stack(l4thread_t thread, l4_addr_t * low, l4_addr_t * high)
+{
+  l4th_tcb_t * tcb;
+
+  /* get tcb */
+  tcb = l4th_tcb_get(thread);
+  if (tcb == NULL)
+    /* invalid thread */
+    return -L4_EINVAL;
+
+  *low = tcb->stack.map_addr;
+  *high = tcb->stack.map_addr + tcb->stack.size - 1;
+
+  /* done */
+  return 0;
+}
+
+/*****************************************************************************/
+/**
+ * \brief   Return stack address of current thread
+ * 
+ * \retval  stack_low    Stack address low 
+ * \retval  stack_high   Stack address high
+ *	
+ * \return  0 on success, error code otherwise:
+ *          - -#L4_EINVAL  current thread not found in thread table
+ */
+/*****************************************************************************/ 
+int
+l4thread_get_stack_current(l4_addr_t * low, l4_addr_t * high)
+{
+  l4th_tcb_t * tcb;
+
+  /* get TCB */
+  tcb = l4th_tcb_get_current();
+  if (tcb == NULL)
+    /* current not found */
+    return -L4_EINVAL;
+
+  *low = tcb->stack.map_addr;
+  *high = tcb->stack.map_addr + tcb->stack.size - 1;
+
+  /* done */
+  return 0;
+}
+
 

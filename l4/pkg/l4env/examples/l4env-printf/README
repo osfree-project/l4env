@@ -1,0 +1,11 @@
+This is an example for the usage of the logserver with printf and l4env.
+
+Do not forget to load "dm_phys", as l4env currently (January 2003) requires
+this for stack allocation. You should also load the "log" server. The
+"names" server is essentioal for finding the other servers and must be
+loaded. See the menu.lst file for an example that is working with the
+current CVS.
+
+Jork Loeser
+15.01.2003
+

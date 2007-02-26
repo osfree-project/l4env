@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BEWaitAnyFunction.h
- *	\brief	contains the declaration of the class CL4BEWaitAnyFunction
+ *    \file    dice/src/be/l4/L4BEWaitAnyFunction.h
+ *    \brief   contains the declaration of the class CL4BEWaitAnyFunction
  *
- *	\date	03/07/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    03/07/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,43 +32,44 @@
 
 #include "be/BEWaitAnyFunction.h"
 
-/**	\class CL4BEWaitAnyFunction
- *	\ingroup backend
- *	\brief the function class for the back-end
+/** \class CL4BEWaitAnyFunction
+ *  \ingroup backend
+ *  \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
 class CL4BEWaitAnyFunction : public CBEWaitAnyFunction
 {
-DECLARE_DYNAMIC(CL4BEWaitAnyFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CL4BEWaitAnyFunction();
-	virtual ~CL4BEWaitAnyFunction();
+    /** \brief constructor
+     *    \param bOpenWait true if wait is for any sender
+     *    \param bReply true if reply is sent before wait
+     */
+    CL4BEWaitAnyFunction(bool bOpenWait, bool bReply);
+    virtual ~CL4BEWaitAnyFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CL4BEWaitAnyFunction(CL4BEWaitAnyFunction &src);
-
-public:
-
-protected:
+    /** \brief copy constructor
+     *    \param src the source to copy from
+     */
+    CL4BEWaitAnyFunction(CL4BEWaitAnyFunction &src);
 
 protected:
-	virtual void WriteIPCErrorCheck(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteExceptionCheck(CBEFile * pFile, CBEContext * pContext);
-	virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
-	virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteIPCErrorCheck(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteExceptionCheck(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteUnmarshalling(CBEFile *pFile, int nStartOffset, bool& bUseConstOffset, CBEContext *pContext);
+    virtual void WriteInvocation(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteFlexpageOpcodePatch(CBEFile *pFile, CBEContext *pContext);
     virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteIPC(CBEFile *pFile, CBEContext *pContext);
-
-
-
-
+    virtual void WriteIPCReplyWait(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteLongIPC(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteLongFlexpageIPC(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteShortIPC(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteShortFlexpageIPC(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteReleaseMemory(CBEFile *pFile, CBEContext *pContext);
 };
 
 #endif // !__DICE_L4BEWAITANYFUNCTION_H__

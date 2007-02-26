@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/v2/L4V2BESizes.cpp
- *	\brief	contains the implementation of the class CL4V2BESizes
+ *    \file    dice/src/be/l4/v2/L4V2BESizes.cpp
+ *    \brief   contains the implementation of the class CL4V2BESizes
  *
- *	\date	Thu Oct 10 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    10/10/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -29,11 +30,8 @@
 
 #include "TypeSpec-Type.h"
 
-IMPLEMENT_DYNAMIC(CL4V2BESizes);
-
 CL4V2BESizes::CL4V2BESizes()
 {
-    IMPLEMENT_DYNAMIC_BASE(CL4V2BESizes, CL4BESizes);
 }
 
 /** \brief destroys object of this class */
@@ -45,7 +43,7 @@ CL4V2BESizes::~CL4V2BESizes()
  *  \param nDirection the direction to check
  *  \return the max size in bytes
  *
- * The size of the opcode is deglected, because its added by the functions themselves
+ * The size of the opcode is neglected, because its added by the functions themselves
  * (sometimes no opcode is necessary).
  */
 int CL4V2BESizes::GetMaxShortIPCSize(int nDirection)
@@ -62,7 +60,7 @@ int CL4V2BESizes::GetMaxShortIPCSize(int nDirection)
  * - l4_msgdope_t
  * - l4_strdope_t
  */
-int CL4V2BESizes::GetSizeOfEnvType(String sName)
+int CL4V2BESizes::GetSizeOfEnvType(string sName)
 {
     if (sName == "l4_fpage_t")
         return 4; // l4_umword_t
@@ -73,13 +71,15 @@ int CL4V2BESizes::GetSizeOfEnvType(String sName)
     if (sName == "l4_timeout_t")
         return 4; // l4_umword_t
     if (sName == "l4_threadid_t")
-	    return 8;
+        return 8;
     if (sName == "CORBA_Object")
         return 4; // sizeof(l4_threadid_t*)
     if (sName == "CORBA_Object_base")
-	    return 8; // sizeof(l4_threadid_t)
+        return 8; // sizeof(l4_threadid_t)
     if (sName == "CORBA_Environment")
-        return 28; // 4(major+repos_id) + 4(param) + 4(ipc_error) + 4(timeout) + 4(rcv_fpage) + 4(user_data) + 4(malloc ptr)
+        return 24; // 4(major+repos_id) + 4(param+ipc_error) + 4(timeout) + 4(rcv_fpage) + 4(malloc ptr) + 4(free ptr)
+    if (sName == "CORBA_Server_Environment")
+        return 72; // + 4(user_data) + 4(ptrs_count) + 4*DICE_PTRS_MAX(dice_ptrs)
     return CBESizes::GetSizeOfEnvType(sName);
 }
 

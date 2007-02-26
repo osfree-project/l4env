@@ -1,0 +1,11 @@
+This is a slightly modified example program from the
+qt-embedded-free-3.3.3.tar.bz2 tarball. You can find it in the
+examples/application subdirectory.
+
+It is a small text editor, useful to debug keyboard support and
+file/directory stuff.
+
+The only modification (apart from renaming the files from *.cpp to
+*.cc) is, that I disabled the printer stuff, because it is not supported
+by the library at the moment.
+

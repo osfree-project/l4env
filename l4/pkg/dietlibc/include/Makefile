@@ -1,5 +1,5 @@
-PKGDIR	?= ..
-L4DIR	?= $(PKGDIR)/../..
+PKGDIR  ?= ..
+L4DIR   ?= $(PKGDIR)/../..
 
 # All haeder files found in this directory tree will be automatically
 # installed in a way that they can be included with

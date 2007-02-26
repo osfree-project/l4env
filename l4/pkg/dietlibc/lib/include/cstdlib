@@ -1,10 +1,19 @@
+/**
+ * \file   dietlibc/lib/include/cstdlib
+ * \brief  
+ *
+ * \date   05/19/2004
+ * \author Alexander Warg  <alexander.warg@os.inf.tu-dresden.de>
+ */
+/* (c) 2004 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
 /* -*- c++ -*- */
 
 #ifndef CSTDLIB_INCLUDE
 #define CSTDLIB_INCLUDE
 
-// I love Feve, who likes to ignore things 
-// behind its horizon. (C++ really exists)
 extern "C" {
 #include <stdlib.h>
 }

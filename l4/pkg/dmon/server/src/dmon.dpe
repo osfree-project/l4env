@@ -1,0 +1,85 @@
+### DMON MAIN WINDOW
+w = new Window()
+g = new Grid()
+g_header = new Grid()
+b_dumper = new Button(-text "Dumper")
+b_reboot = new Button(-text "Reboot computer")
+l_mhz = new Label()
+l_time = new Label()
+
+
+# LOGGER SCREEN
+logger_vts = new VTextScreen()
+logger_sb = new Scrollbar(-autoview off -orient vertical)
+
+
+### DMON MAIN WINDOW PLACEMENTS
+
+g_header.place(b_dumper, -column 10 -row 1)
+g_header.place(b_reboot, -column 30 -row 1)
+g_header.columnconfig(50, -weight 0.7)
+g_header.place(l_mhz, -column 70 -row 1)
+g_header.place(l_time, -column 80 -row 1)
+g_header.columnconfig(90, -weight 0.7)
+
+g.place(g_header,   -column 1 -row 1)
+g.place(logger_vts, -column 1 -row 10)
+g.place(logger_sb,  -column 2 -row 10)
+w.set(-content g)
+
+#################################################################
+
+### DUMPER WINDOW
+
+dumper = new Window()
+dumper_grid = new Grid()
+dumper.set(-content dumper_grid)
+
+dumper_l_title = new Label(-text "Dump statistics")
+dumper_l_error = new Label(-text "No Error")
+
+# BODY
+dumper_g_body = new Grid()
+dumper_g_body.columnconfig(15, -size 50)
+
+dumper_b_dm = new Button(-text "dataspaces")
+dumper_l_dm = new Label(-text "Thread ID:")
+dumper_e_dm = new Entry(-text "*.*")
+dumper_l_dm_help = new Label(-text "(e.g. 1f.*)")
+dumper_g_body.place(dumper_b_dm, -column 10 -row 100)
+dumper_g_body.place(dumper_e_dm, -column 15 -row 100)
+dumper_g_body.place(dumper_l_dm, -column 14 -row 100)
+dumper_g_body.place(dumper_l_dm_help, -column 16 -row 100)
+
+dumper_b_events = new Button(-text "events")
+dumper_g_body.place(dumper_b_events, -column 10 -row 200)
+
+dumper_b_loader = new Button(-text "loader")
+dumper_l_loader = new Label(-text "Thread ID:")
+dumper_e_loader = new Entry(-text "*.*")
+dumper_l_loader_help = new Label(-text "(e.g. 1f.*)")
+dumper_g_body.place(dumper_b_loader, -column 10 -row 300)
+dumper_g_body.place(dumper_e_loader, -column 15 -row 300)
+dumper_g_body.place(dumper_l_loader, -column 14 -row 300)
+dumper_g_body.place(dumper_l_loader_help, -column 16 -row 300)
+
+dumper_b_names = new Button(-text "names")
+dumper_g_body.place(dumper_b_names, -column 10 -row 400)
+
+dumper_b_petze = new Button(-text "petze")
+dumper_g_body.place(dumper_b_petze, -column 10 -row 500)
+
+dumper_b_rmgr = new Button(-text "rmgr")
+dumper_g_body.place(dumper_b_rmgr, -column 10 -row 600)
+
+dumper_b_ts = new Button(-text "tasks")
+dumper_g_body.place(dumper_b_ts, -column 10 -row 700)
+
+dumper_b_tmpfs = new Button(-text "tmpfs")
+dumper_g_body.place(dumper_b_tmpfs, -column 10 -row 800)
+
+### DUMPER WINDOW PLACEMENTS
+
+dumper_grid.place(dumper_l_title, -column 10 -row 1)
+dumper_grid.place(dumper_l_error, -column 10 -row 999)
+dumper_grid.place(dumper_g_body, -column 10 -row 2)

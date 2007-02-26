@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/fe/FEFileComponent.h 
- *	\brief	contains the declaration of the class CFEFileComponent
+ *  \file   dice/src/fe/FEFileComponent.h
+ *  \brief  contains the declaration of the class CFEFileComponent
  *
- *	\date	02/22/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   02/22/2001
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -30,25 +31,26 @@
 #define __DICE_FE_FEFILECOMPONENT_H__
 
 #include "fe/FEBase.h"
+#include <vector>
+using namespace std;
 
-/**	\class CFEFileComponent
- *	\ingroup frontend
- *	\brief describes the file's components (is base class for interface, lib, etc.)
+/** \class CFEFileComponent
+ *  \ingroup frontend
+ *  \brief describes the file's components (is base class for interface, lib, etc.)
  */
 class CFEFileComponent : public CFEBase
 {
-DECLARE_DYNAMIC(CFEFileComponent);
 
 // standard constructor/destructor
 public:
-	CFEFileComponent();
-	virtual ~CFEFileComponent();
+    CFEFileComponent();
+    virtual ~CFEFileComponent();
 
 protected:
-	/**	\brief copy consrtructor
-	 *	\param src the source to copy from
-	 */
-	CFEFileComponent(CFEFileComponent &src);
+    /** \brief copy consrtructor
+     *  \param src the source to copy from
+     */
+    CFEFileComponent(CFEFileComponent &src);
 
 // Operations
 public:

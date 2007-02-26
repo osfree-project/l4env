@@ -12,7 +12,11 @@
  * COPYING file for details. */
 
 #include <stdio.h>
+#ifdef USE_OSKIT
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 
 #include "exc.h"
 #include "assert.h"
@@ -25,7 +29,7 @@ exc_init_env(int id, l4env_infopage_t *env)
   env->section_num = 0;
 }
 
-/** libstdc++ new emulator */
+/** libstdc++ new emulator. */
 void*
 operator new(unsigned int size)
 {
@@ -36,7 +40,7 @@ operator new(unsigned int size)
   return ptr;
 }
 
-/** libstdc++ delete emulator */
+/** libstdc++ delete emulator. */
 void
 operator delete(void *addr)
 {
@@ -45,14 +49,14 @@ operator delete(void *addr)
 
 #ifdef __GNUC__
 #if __GNUC__ < 3
-/** libstdc++ __pure_virtual backcall */
+/** libstdc++ __pure_virtual backcall. */
 extern "C" void
 __pure_virtual(void)
 {
   Panic("Pure virtual method called");
 }
 #else
-/** libstdc++ __pure_virtual backcall */
+/** libstdc++ __pure_virtual backcall. */
 extern "C" void
 __cxa_pure_virtual(void)
 {

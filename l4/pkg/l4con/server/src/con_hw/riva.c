@@ -981,48 +981,16 @@ static int
 riva_probe(unsigned int bus, unsigned int devfn, 
 	   const struct pci_device_id *device,  con_accel_t *accel)
 {
-  unsigned int l, sz;
   unsigned addr0, size0, addr1, size1;
   struct riva_chip_info *rci;
-  unsigned ctrl_base, fb_base;
+  unsigned ctrl_base;
   unsigned char rev;
 
   PCIBIOS_READ_CONFIG_BYTE (bus, devfn, PCI_REVISION_ID, &rev);
   rci = &riva_chip_info[device->driver_data];
 
-  PCIBIOS_READ_CONFIG_DWORD (bus, devfn, PCI_BASE_ADDRESS_0, &l);
-  PCIBIOS_WRITE_CONFIG_DWORD(bus, devfn, PCI_BASE_ADDRESS_0, ~0);
-  PCIBIOS_READ_CONFIG_DWORD (bus, devfn, PCI_BASE_ADDRESS_0, &sz);
-  PCIBIOS_WRITE_CONFIG_DWORD(bus, devfn, PCI_BASE_ADDRESS_0, l);
-  if ((l & PCI_BASE_ADDRESS_SPACE) == PCI_BASE_ADDRESS_SPACE_MEMORY)
-    {
-      addr0 = l & PCI_BASE_ADDRESS_MEM_MASK;
-      sz &= PCI_BASE_ADDRESS_MEM_MASK;
-      size0 = sz & ~(sz - 1);
-    }
-  else
-    {
-      addr0 = l & PCI_BASE_ADDRESS_IO_MASK;
-      sz &= PCI_BASE_ADDRESS_IO_MASK & 0xffff;
-      size0 = sz & ~(sz - 1);
-    }
-
-  PCIBIOS_READ_CONFIG_DWORD (bus, devfn, PCI_BASE_ADDRESS_1, &l);
-  PCIBIOS_WRITE_CONFIG_DWORD(bus, devfn, PCI_BASE_ADDRESS_1, ~0);
-  PCIBIOS_READ_CONFIG_DWORD (bus, devfn, PCI_BASE_ADDRESS_1, &sz);
-  PCIBIOS_WRITE_CONFIG_DWORD(bus, devfn, PCI_BASE_ADDRESS_1, l);
-  if ((l & PCI_BASE_ADDRESS_SPACE) == PCI_BASE_ADDRESS_SPACE_MEMORY)
-    {
-      addr1 = l & PCI_BASE_ADDRESS_MEM_MASK;
-      sz &= PCI_BASE_ADDRESS_MEM_MASK;
-      size1 = sz & ~(sz - 1);
-    }
-  else
-    {
-      addr1 = l & PCI_BASE_ADDRESS_IO_MASK;
-      sz &= PCI_BASE_ADDRESS_IO_MASK & 0xffff;
-      size1 = sz & ~(sz - 1);
-    }
+  pci_resource(bus, devfn, 0, &addr0, &size0);
+  pci_resource(bus, devfn, 1, &addr1, &size1);
 
   riva_hw.Architecture = rci->arch_rev;
 
@@ -1036,12 +1004,16 @@ riva_probe(unsigned int bus, unsigned int devfn,
   if (map_io_mem(addr0, size0, "ctrl", &ctrl_base)<0)
     return -L4_ENOTFOUND;
 
-  /* map framebuffer again for PRAMIN on NV3 */
-  if (map_io_mem(addr1, size1, "video", &fb_base)<0)
-    return -L4_ENOTFOUND;
+  if (addr1 != hw_vid_mem_addr)
+    {
+      printf("addr1 != hw_vid_mem_addr!\n");
+      return -L4_ENOTFOUND;
+    }
 
-  if (map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, "video",
-		 &hw_map_vid_mem_addr)<0)
+  if (size1 < hw_vid_mem_size)
+    size1 = hw_vid_mem_size;
+
+  if (map_io_mem(hw_vid_mem_addr, size1, "video", &hw_map_vid_mem_addr)<0)
     return -L4_ENOTFOUND;
 
   riva_hw.EnableIRQ = 0;
@@ -1063,7 +1035,7 @@ riva_probe(unsigned int bus, unsigned int devfn,
   switch (riva_hw.Architecture) 
     {
     case NV_ARCH_03:
-      riva_hw.PRAMIN = (unsigned *)(fb_base + 0x00C00000);
+      riva_hw.PRAMIN = (unsigned *)(hw_map_vid_mem_addr + 0x00C00000);
       break;
     case NV_ARCH_04:
     case NV_ARCH_10:

@@ -17,49 +17,31 @@
 
 /* L4 includes */
 #include <l4/sys/ipc.h>
-#include <l4/util/util.h>
 
-/*
- * some words about timeouts ...
- *
- * L4_IPC_TIMEOUT(sman, sexp, rman, rexp, spflt, rpflt)
- *
- * - timeout = man * 4^(15-exp) (µs)
- * - there are send (s*), receive (r*) and pagefault (spflt, rpflt) timeouts
- * - "Note that for efficiency reasons the highest bit of any mantissa 'man'
- *    must be 1, ..." (L4 RefMan)
- *
- * e.g.: 10 ms send timeout     -> L4_IPC_TIMEOUT(156,12,0,0,0,0),
- *       250 µs receive timeout -> L4_IPC_TIMEOUT(0,0,250,15,0,0)
+/* We assume that a client does l4_ipc_call for requests => snd to 0.
+ * We want to leave the main loop from time to time      => rcv to 50ms */
+#define REQUEST_TIMEOUT		L4_IPC_TIMEOUT(0,1,195,11,0,0)
+
+/* We want to push an event to a client. 
+ * The event handler may be busy handling the last event => snd to 50ms.
+ * The handler needs some time to process the new event  => rcv to 50ms. */
+#define EVENT_TIMEOUT		L4_IPC_TIMEOUT(195,11,195,11,0,0)
+
+/**
+ * Check if thread does exist.
  */
-
-#define WAIT_TIMEOUT		L4_IPC_TIMEOUT(0,1,128,11,0,0)	
-				/* rcv timeout: 33 ms, snd timeout 0 */
-#define FIRSTWAIT_TIMEOUT	L4_IPC_NEVER
-#define REPLY_TIMEOUT		L4_IPC_NEVER
-#define RECEIVE_TIMEOUT		L4_IPC_NEVER
-#define REPRCV_TIMEOUT		L4_IPC_NEVER
-
-/******************************************************************************
- * check if thread is existent                                                *
- ******************************************************************************/
-/* we really need this */
-/* it's a useful util function - maybe for pkg/l4util? */
 static inline int
 thread_exists(l4_threadid_t thread)
 {
-  l4_umword_t dw0=0, dw1=0;
+  l4_umword_t dw0, dw1;
   l4_msgdope_t result;
   int error;
 
   error = l4_ipc_receive(thread, 
-			      L4_IPC_SHORT_MSG, 
-		  	      &dw0, &dw1, 
-	  		      L4_IPC_TIMEOUT(0, 0, 0, 1, 0, 0), 
-  			      &result);
+			 L4_IPC_SHORT_MSG, &dw0, &dw1, 
+			 L4_IPC_RECV_TIMEOUT_0, &result);
 
   return (error != L4_IPC_ENOT_EXISTENT);
 }
 
-#endif /* !_IPC_H */
-
+#endif

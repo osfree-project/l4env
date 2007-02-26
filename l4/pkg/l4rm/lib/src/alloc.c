@@ -81,14 +81,14 @@ __sigma0_allocate(int page)
   l4_msgdope_t result;
 
   LOGdL(DEBUG_ALLOC_PAGE,
-        "L4RM heap (sigma0):\n  heap page %d at 0x%08x",page,addr);
+        "L4RM heap (sigma0):\n  heap page %d at 0x%08x", page, addr);
   
   if (!pages[page])
     {
       /* call pager to allocate new page */
-      error = l4_ipc_call(sigma0_id,L4_IPC_SHORT_MSG,0xFFFFFFFC,0,
-			       L4_IPC_MAPMSG(addr, L4_LOG2_PAGESIZE),
-			       &base,&fp.fpage,L4_IPC_NEVER,&result);
+      error = l4_ipc_call(sigma0_id, L4_IPC_SHORT_MSG, 0xFFFFFFFC, 0,
+                          L4_IPC_MAPMSG(addr, L4_LOG2_PAGESIZE),
+                          &base, &fp.fpage, L4_IPC_NEVER, &result);
       if (error)
 	{
 	  Panic("L4RM heap: error calling task pager (result 0x%08x)!",
@@ -104,7 +104,7 @@ __sigma0_allocate(int page)
 	}
       
 #if DEBUG_ALLOC_PAGE
-      printf("  got page at 0x%08x\n",fp.fp.page << L4_LOG2_PAGESIZE);
+      LOG_printf("  got page at 0x%08x\n", fp.fp.page << L4_LOG2_PAGESIZE);
 #endif
     }
 
@@ -132,20 +132,20 @@ __l4env_allocate(int page)
   int ret;
   
   LOGdL(DEBUG_ALLOC_PAGE,
-        "L4RM heap (L4Env):\n  heap page %d at 0x%08x",page,addr);
+        "L4RM heap (L4Env):\n  heap page %d at 0x%08x", page, addr);
   
   if (!pages[page])
     {
       /* resize heap dataspace */
 #if DEBUG_ALLOC_PAGE
-      printf("  resize heap dataspace, new size 0x%08x\n",new_size);
+      LOG_printf("  resize heap dataspace, new size 0x%08x\n", new_size);
 #endif
       
       ret = l4dm_mem_resize(&heap_ds,new_size);
       if (ret < 0)
 	{
 	  Panic("L4RM heap: resize heap dataspace failed: %s (%d)!",
-		l4env_errstr(ret),ret);
+		l4env_errstr(ret), ret);
 	  return NULL;
 	}
       pages[page] = 1;
@@ -157,14 +157,14 @@ __l4env_allocate(int page)
   
   /* map page */
 #if DEBUG_ALLOC_PAGE
-  printf("  map page, ds offset 0x%08x\n",offs);
+  LOG_printf("  map page, ds offset 0x%08x\n", offs);
 #endif
-  ret = l4dm_map_pages(&heap_ds,offs,L4_PAGESIZE,addr,L4_LOG2_PAGESIZE,
-		       0,L4DM_RW,&fpage_addr,&fpage_size);
+  ret = l4dm_map_pages(&heap_ds, offs, L4_PAGESIZE, addr, L4_LOG2_PAGESIZE,
+		       0, L4DM_RW, &fpage_addr, &fpage_size);
   if (ret < 0)
     {
       Panic("L4RM heap: map dataspace page failed: %s (%d)",
-	    l4env_errstr(ret),ret);
+	    l4env_errstr(ret), ret);
       return NULL;
     }
 
@@ -216,9 +216,10 @@ l4rm_heap_init(int have_l4env,
     {
       /* search for suitable map address */ 
 #if DEBUG_ALLOC_INIT
-      LOGL("\n  testing vm range 0x%08x-0x%08x\n  used areas:",addr,test_end);
+      LOGL("testing vm range 0x%08x-0x%08x\n used areas:", addr, test_end);
       for (i = 0; i < num_used; i++)
-	printf("    0x%08x-0x%08x\n",used[i].addr,used[i].addr + used[i].size);
+	LOG_printf("    0x%08x-0x%08x\n", used[i].addr, 
+               used[i].addr + used[i].size);
 #endif
       
       found = 0;
@@ -235,9 +236,9 @@ l4rm_heap_init(int have_l4env,
 		  ((used[i].addr <= addr) && (used_end >= end)))
 		{
 		  /* area overlaps used area */
-		  LOGdL(DEBUG_ALLOC_INIT,"heap 0x%08x-0x%08x\n" \
+		  LOGdL(DEBUG_ALLOC_INIT, "heap 0x%08x-0x%08x\n" \
                         "  overlaps used area at 0x%08x-0x%08x",
-                        addr,end,used[i].addr,used_end);
+                        addr, end, used[i].addr, used_end);
 		  
 		  found = 0;
 		  addr = used_end;
@@ -252,8 +253,8 @@ l4rm_heap_init(int have_l4env,
       addr = l4rm_heap_start_addr;
       end = addr + size;
 
-      LOGdL(DEBUG_ALLOC_INIT,"\n  testing heap map area 0x%08x-0x%08x",
-            addr,end);
+      LOGdL(DEBUG_ALLOC_INIT, "\n  testing heap map area 0x%08x-0x%08x",
+            addr, end);
       
       found = 1;
       for (i = 0; i < num_used; i++)
@@ -264,8 +265,8 @@ l4rm_heap_init(int have_l4env,
 	      ((used[i].addr <= addr) && (used_end >= end)))
 	    {
 	      /* area overlaps used area */
-	      printf("heap 0x%08x-0x%08xoverlaps used area at 0x%08x-0x%08x\n",
-                     addr,end,used[i].addr,used_end);
+	      LOG_printf("L4RM: heap 0x%08x-0x%08x overlaps used area " \
+                     "at 0x%08x-0x%08x\n", addr, end, used[i].addr, used_end);
 	      
 	      found = 0;
 	      addr = used_end;
@@ -295,12 +296,12 @@ l4rm_heap_init(int have_l4env,
       dsm_id = l4rm_get_dsm();
       
       /* open heap dataspace */
-      ret = l4dm_mem_open(dsm_id,L4RM_HEAP_DS_INIT_PAGES * L4_PAGESIZE,
-			  L4_PAGESIZE,L4DM_PINNED,"L4RM heap",&heap_ds);
+      ret = l4dm_mem_open(dsm_id, L4RM_HEAP_DS_INIT_PAGES * L4_PAGESIZE,
+			  L4_PAGESIZE, L4DM_PINNED, "L4RM heap", &heap_ds);
       if (ret < 0)
 	{
-	  Panic("L4RM heap: open dataspace at %x.%x failed: %s (%d)!",
-                dsm_id.id.task,dsm_id.id.lthread,l4env_errstr(ret),ret);
+	  Panic("L4RM heap: open dataspace at "l4util_idfmt" failed: %s (%d)!",
+                l4util_idstr(dsm_id), l4env_errstr(ret), ret);
 	  return -1;
 	}
 
@@ -315,13 +316,13 @@ l4rm_heap_init(int have_l4env,
     }
 
 #if DEBUG_ALLOC_INIT
-  LOGL("\n  heap at 0x%08x, max %d pages",heap_start,NUM_PAGES);
+  LOGL("\n  heap at 0x%08x, max %d pages", heap_start, NUM_PAGES);
   if (have_l4env)
-    printf("  L4Env mode, heap dataspace %u at %x.%x\n",heap_ds.id,
-           heap_ds.manager.id.task,heap_ds.manager.id.lthread);
+    LOG_printf("  L4Env mode, heap dataspace %u at "l4util_idfmt"\n",
+           heap_ds.id, l4util_idstr(heap_ds.manager));
   else
-    printf("  sigma0 mode, sigma0 at %x.%x\n",sigma0_id.id.task,
-           sigma0_id.id.lthread);
+    LOG_printf("  sigma0 mode, sigma0 at "l4util_idfmt"\n",
+           l4util_idstr(sigma0_id));
 #endif
 
   return 0;
@@ -341,17 +342,20 @@ l4rm_heap_init(int have_l4env,
 int
 l4rm_heap_register(void)
 {
-  int ret,area;
+  int ret;
+  l4_uint32_t area;
 
   if (use_l4env)
     {
       /* attach heap dataspace */
-      ret = l4rm_direct_attach_to_region(&heap_ds,(void *)heap_start,
-					 L4RM_MAX_HEAP_SIZE,0,L4DM_RW);
+      ret = l4rm_direct_area_attach_to_region(&heap_ds, 
+                                              L4RM_DEFAULT_REGION_AREA,
+                                              (void *)heap_start,
+                                              L4RM_MAX_HEAP_SIZE, 0, L4DM_RW);
       if (ret < 0)
 	{
 	  Panic("L4RM heap: attach heap dataspace failed: %s (%d)!",
-		l4env_errstr(ret),ret);
+		l4env_errstr(ret), ret);
 	  return -1;
 	}
 
@@ -362,12 +366,12 @@ l4rm_heap_register(void)
   else
     {
       /* reserve heap area */
-      ret = l4rm_direct_area_reserve_region(heap_start,L4RM_MAX_HEAP_SIZE,
-					    0,&area);
+      ret = l4rm_direct_area_reserve_region(heap_start, L4RM_MAX_HEAP_SIZE,
+					    0, &area);
       if (ret < 0)
 	{
 	  Panic("L4RM heap: reserve heap area failed: %s (%d)!",
-		l4env_errstr(ret),ret);
+		l4env_errstr(ret), ret);
 	  return -1;
 	}
     }
@@ -394,7 +398,7 @@ l4rm_heap_alloc(void)
 
   if (page >= NUM_PAGES)
     {
-      ERROR("L4RM: heap overflow!");
+      LOG_Error("L4RM: heap overflow!");
       return NULL;
     }
   heap_next_page++;
@@ -404,36 +408,4 @@ l4rm_heap_alloc(void)
     return __l4env_allocate(page);
   else
     return __sigma0_allocate(page);
-}
-
-/*****************************************************************************/
-/**
- * \brief  Add thread to heap clients
- * 
- * \param  thread        Thread id
- */
-/*****************************************************************************/ 
-void
-l4rm_heap_add_client(l4_threadid_t client)
-{
-  int ret;
-
-  /* share dataspace */
-  ret = l4dm_share(&heap_ds,client,L4DM_RW | L4DM_RESIZE);
-  if (ret < 0)
-    Error("L4RM heap: add thread %x.%x to heap dataspace clients failed: "
-	  "%s (%d)!",client.id.task,client.id.lthread,l4env_errstr(ret),ret);
-}
-
-/*****************************************************************************/
-/**
- * \brief  Remove client from heap clients
- * 
- * \param  thread        Thread id
- */
-/*****************************************************************************/ 
-void
-l4rm_heap_remove_client(l4_threadid_t client)
-{
-  l4dm_revoke(&heap_ds,client,L4DM_ALL_RIGHTS);
 }

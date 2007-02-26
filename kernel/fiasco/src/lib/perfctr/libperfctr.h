@@ -21,6 +21,8 @@
 #define PERFCTR_X86_INTEL_P4	11	/* model 0 and 1 */
 #define PERFCTR_X86_INTEL_P4M2	12	/* model 2 and above */
 #define PERFCTR_X86_AMD_K8	13
+#define PERFCTR_X86_INTEL_PENTM	14	/* Pentium M */
+#define PERFCTR_X86_INTEL_P4M3  16	/* model 3 and above */
 
 /*
  * Descriptions of the events available for different processor types.

@@ -8,7 +8,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -18,7 +18,6 @@
 
 #include "dopestd.h"
 #include "button.h"
-#include "widget.h"
 #include "winlayout.h"
 #include "window.h"
 #include "userstate.h"
@@ -34,27 +33,33 @@
 static struct button_services       *but;
 static struct userstate_services    *userstate;
 
-static s32 bsize=5;     /* border size */
-static s32 tsize=17;    /* title size */
+static s32 bsize = 5;     /* border size */
+static s32 tsize = 17;    /* title size */
 
 int init_winlayout(struct dope_services *d);
 
-/************************/
-/*** HELPER FUNCTIONS ***/
-/************************/
+/************************
+ *** HELPER FUNCTIONS ***
+ ************************/
 
 static WIDGET *new_button(WIDGET *next,long x,long y,long w,long h,char *txt,void *clic,long context) {
 	BUTTON *nb = but->create();
-	nb->gen->set_x((WIDGET *)nb,x);
-	nb->gen->set_y((WIDGET *)nb,y);
-	nb->gen->set_w((WIDGET *)nb,w);
-	nb->gen->set_h((WIDGET *)nb,h);
-	nb->gen->set_context((WIDGET *)nb,(void *)context);
-	nb->gen->set_next((WIDGET *)nb,next);
-	nb->but->set_click(nb,clic);
-	nb->but->set_text(nb,txt);
-	nb->but->set_font(nb,2);
-	nb->but->set_style(nb,0);
+	nb->gen->set_x((WIDGET *)nb, x);
+	nb->gen->set_y((WIDGET *)nb, y);
+	nb->gen->set_w((WIDGET *)nb, w);
+	nb->gen->set_h((WIDGET *)nb, h);
+	nb->gen->set_evforward((WIDGET *)nb, 0);
+	nb->gen->set_context((WIDGET *)nb, (void *)context);
+	nb->gen->set_next((WIDGET *)nb, next);
+	nb->gen->set_selectable((WIDGET *)nb, 0);
+	nb->but->set_click(nb, clic);
+	nb->but->set_text(nb, txt);
+	nb->but->set_font(nb, 2);
+	nb->but->set_style(nb, 0);
+	nb->but->set_free_w(nb, 1);
+	nb->but->set_free_h(nb, 1);
+	nb->but->set_pad_x(nb, 0);
+	nb->but->set_pad_y(nb, 0);
 	return (WIDGET *)nb;
 }
 
@@ -75,9 +80,9 @@ static void move_callback(BUTTON *b) {
 	w->win->handle_move(w,(WIDGET *)b);
 }
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 
 static WIDGET *create_win_elements(s32 elements,s32 width,s32 height) {
@@ -145,42 +150,42 @@ static void resize_win_elements(WIDGET *elem,s32 elem_mask,s32 width,s32 height)
 
 		case WE_L:
 			elem->gen->set_h(elem,height-bsize-bsize);
-			elem->gen->update(elem,0);
+			elem->gen->updatepos(elem);
 			break;
 		case WE_O:
 			elem->gen->set_w(elem,width-2*bsize);
-			elem->gen->update(elem,0);
+			elem->gen->updatepos(elem);
 			break;
 		case WE_R+WE_O:
 			elem->gen->set_x(elem,width-bsize);
-			elem->gen->update(elem,0);
+			elem->gen->updatepos(elem);
 			break;
 		case WE_R:
 			elem->gen->set_x(elem,width-bsize);
 			elem->gen->set_h(elem,height-2*bsize);
-			elem->gen->update(elem,0);
+			elem->gen->updatepos(elem);
 			break;
 		case WE_R+WE_U:
 			elem->gen->set_x(elem,width-bsize);
 			elem->gen->set_y(elem,height-bsize);
-			elem->gen->update(elem,0);
+			elem->gen->updatepos(elem);
 			break;
 		case WE_U:
 			elem->gen->set_w(elem,width-2*bsize);
 			elem->gen->set_y(elem,height-bsize);
-			elem->gen->update(elem,0);
+			elem->gen->updatepos(elem);
 			break;
 		case WE_L+WE_U:
 			elem->gen->set_y(elem,height-bsize);
-			elem->gen->update(elem,0);
+			elem->gen->updatepos(elem);
 			break;
 		case WE_FULLER:
 			elem->gen->set_x(elem,width-b-tsize);
-			elem->gen->update(elem,0);
+			elem->gen->updatepos(elem);
 			break;
 		case WE_TITLE:
 			elem->gen->set_w(elem,tw);
-			elem->gen->update(elem,0);
+			elem->gen->updatepos(elem);
 			break;
 		}
 		elem=elem->gen->get_next(elem);
@@ -192,7 +197,7 @@ static void set_win_state(WIDGET *elem,s32 state) {
 	while (elem) {
 		if (state) ((BUTTON *)elem)->but->set_style((BUTTON *)elem,2);
 		else ((BUTTON *)elem)->but->set_style((BUTTON *)elem,0);
-		elem->gen->update(elem,1);
+		elem->gen->update(elem);
 		elem=elem->gen->get_next(elem);
 	}
 }
@@ -202,7 +207,7 @@ static void set_win_title(WIDGET *elem,char *new_title) {
 	while (elem) {
 		if ((s32)elem->gen->get_context(elem) == WE_TITLE) {
 			((BUTTON *)elem)->but->set_text((BUTTON *)elem,new_title);
-			((BUTTON *)elem)->gen->update((WIDGET *)elem,1);
+			((BUTTON *)elem)->gen->update((WIDGET *)elem);
 			return;
 		}
 		elem=elem->gen->get_next(elem);
@@ -249,9 +254,9 @@ static s32 get_bottom_border(s32 elem_mask) {
 }
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct winlayout_services services = {
 	create_win_elements,
@@ -266,14 +271,20 @@ static struct winlayout_services services = {
 };
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
+
+extern int config_winborder;
 
 int init_winlayout(struct dope_services *d) {
 
 	but       = d->get_module("Button 1.0");
 	userstate = d->get_module("UserState 1.0");
+
+	bsize = config_winborder;
+	if (bsize < 4)  bsize = 4;
+	if (bsize > 16) bsize = 16;
 
 	d->register_module("WinLayout 1.0",&services);
 	return 1;

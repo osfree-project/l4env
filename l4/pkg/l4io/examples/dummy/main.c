@@ -22,7 +22,7 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/thread/thread.h>
 
-#include <l4/util/rdtsc.h>	/* read time-stamp counter */
+#include <l4/util/rdtsc.h>  /* read time-stamp counter */
 #include <l4/util/macros.h>
 
 #include <l4/generic_io/libio.h>
@@ -71,7 +71,7 @@ static void measure_jiffies(unsigned int num)
 
       diff -= stamp0;
 
-      Msg("period = %lu jiffies (%u ms) ... xtime = {%ld, %ld}\n",
+      LOG("period = %lu jiffies (%u ms) ... xtime = {%ld, %ld}",
           HZ, ((l4_uint32_t) l4_tsc_to_ns(diff)) / 1000000,
           io_info_addr->xtime.tv_sec, io_info_addr->xtime.tv_usec);
     }
@@ -82,19 +82,19 @@ int main(void)
   int error;
   l4io_drv_t drv = L4IO_DRV_INVALID;
 
-  Msg("Hello World! io_dummy is up ...\n");
+  LOG("Hello World! io_dummy is up ...");
 
   if ((error = l4io_init(&io_info_addr, drv)))
     {
-      Error("initalizing libio: %d (%s)", error, l4env_strerror(-error));
+      LOG_Error("initalizing libio: %d (%s)", error, l4env_strerror(-error));
       exit(1);
     }
 
-  Msg("libio was initialized. ");
+  LOG("libio was initialized.");
   if (io_info_addr->omega0)
-    Msg("L4IO is running an omega0.\n");
+    LOG("L4IO is running an omega0.");
   else
-    Msg("L4IO doesn't handle Interrupts.\n");
+    LOG("L4IO doesn't handle Interrupts.");
 
 #if (MY_INFO_ADDR != -1)
   measure_jiffies(100);

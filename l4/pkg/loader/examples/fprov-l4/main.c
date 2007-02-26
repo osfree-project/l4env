@@ -29,6 +29,7 @@
 #include <l4/generic_fprov/generic_fprov-server.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/env/env.h>
+#include <l4/util/macros.h>
 
 typedef char l4_page_t[L4_PAGESIZE];
 
@@ -70,7 +71,7 @@ linux_enter_kdebug(void)
 
 /**
  * Return a new dataspace including the image of a L4 module
- * 
+ *
  * \param request	pointer to Flick request structure
  * \param fname		requested module filename
  * \param dm		dataspace manager for allocating the image dataspace
@@ -78,16 +79,16 @@ linux_enter_kdebug(void)
  * \retval ds		dataspace including the file image
  * \retval size		size of file
  * \retval _ev		Flick exception structure (unused)
- * \return 		0 on success
- * 			-L4_ENOMEM if allocation failed */
-l4_int32_t 
+ * \return		0 on success
+ *			-L4_ENOMEM if allocation failed */
+l4_int32_t
 l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
     const char* fname,
     const l4_threadid_t *dm,
     l4_uint32_t flags,
     l4dm_dataspace_t *ds,
     l4_uint32_t *size,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   int error;
   gzFile fd;
@@ -112,15 +113,15 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
   else
     fname_name++;
 
-  printf("  open \"%s\" by %x.%x\n", 
-      fname, _dice_corba_obj->id.task, _dice_corba_obj->id.lthread);
-      
+  printf("  open \"%s\" by " l4util_idfmt "\n",
+      fname, l4util_idstr(*_dice_corba_obj));
+
   if ((fd = gzopen(fname, "r")) == NULL)
     {
       fprintf(stderr, "Can't open \"%s\"\n", fname);
       return -L4_ENOTFOUND;
     }
-      
+
   /* Get the size of the _uncompressed_ file */
   while (1)
     {
@@ -138,10 +139,10 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
 
   gzseek(fd, 0, SEEK_SET);
 
-  if ((error = l4dm_mem_open(dm_id, fsize_rounded, 0, 0, fname_name, 
+  if ((error = l4dm_mem_open(dm_id, fsize_rounded, 0, 0, fname_name,
 			     (l4dm_dataspace_t *)ds)))
     {
-      fprintf(stderr, "Can't allocate dataspace with size %d (error %d)\n", 
+      fprintf(stderr, "Can't allocate dataspace with size %d (error %d)\n",
 	  (unsigned)fsize_rounded, error);
       gzclose(fd);
       return -L4_ENOMEM;
@@ -172,7 +173,7 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
       l4_fpage_unmap(l4_fpage((l4_umword_t)map_page, L4_LOG2_PAGESIZE,
 			       L4_FPAGE_RW, L4_FPAGE_MAP),
 		     L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-  
+
       /* map page of dataspace */
       error = l4dm_map_pages((l4dm_dataspace_t *)ds,offs,L4_PAGESIZE,
 			     (l4_addr_t)map_page,L4_LOG2_PAGESIZE,0,L4DM_RW,
@@ -180,10 +181,8 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
       if (error < 0)
 	{
 	  fprintf(stderr, "Error %d requesting offset %08x "
-		  "at ds_manager %x.%x\n", 
-		  error, offs, 
-		  ((l4dm_dataspace_t*)ds)->manager.id.task, 
-		  ((l4dm_dataspace_t*)ds)->manager.id.lthread);
+		  "at ds_manager " l4util_idfmt "\n",
+		  error, offs, l4util_idstr(((l4dm_dataspace_t*)ds)->manager));
 	  l4dm_close((l4dm_dataspace_t *)ds);
 	  gzclose(fd);
 	  return -L4_EINVAL;
@@ -202,16 +201,10 @@ l4fprov_file_open_component(CORBA_Object _dice_corba_obj,
       l4dm_close((l4dm_dataspace_t*)ds);
       return -L4_EINVAL;
     }
-  
+
   *size = fsize;
 
   return 0;
-}
-
-static void
-server_loop(void)
-{
-  l4fprov_file_server_loop(NULL);
 }
 
 int
@@ -232,12 +225,12 @@ main(int argc, char **argv)
     fname = argv[0];
   else
     fname++;
-  
+
   if (argc > 1)
     {
       fprintf(stderr, "L4 file provider\n"
 	              "Usage:\n"
-	              "  %s (no arguments)\n", 
+	              "  %s (no arguments)\n",
 		      fname);
       return -1;
     }
@@ -259,16 +252,14 @@ main(int argc, char **argv)
       return -2;
     }
 
-  printf("File provider started, registered as %x.%x\n",
-      me.id.task, me.id.lthread);
+  printf("File provider started, registered as " l4util_idfmt "\n",
+         l4util_idstr(me));
 
 //  signal(SIGSEGV, signal_handler);
-  signal(SIGKILL, signal_handler);
+  signal(SIGTERM, signal_handler);
   signal(SIGINT,  signal_handler);
 
   /* go into server mode */
-  server_loop();
-
+  l4fprov_file_server_loop(NULL);
   return 0;
 }
-

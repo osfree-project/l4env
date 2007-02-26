@@ -36,10 +36,6 @@
  * helpers
  *****************************************************************************/
 
-static void do_socket_longjmp(dsi_socket_t *socket){
-    _longjmp(socket->packet_get_abort_env, 1);
-}
-
 /*****************************************************************************/
 /**
  * \brief Check if packet points to a valid packet descriptor of socket.
@@ -121,9 +117,8 @@ __send_release_notification(dsi_socket_t * socket, dsi_packet_t * packet)
 #endif
 
   LOGdL(DEBUG_RECEIVE_PACKET,"packet %d",packet->no);
-  LOGdL(DEBUG_RECEIVE_PACKET,"remote sync %x.%x",
-        socket->remote_socket.sync_th.id.task,
-        socket->remote_socket.sync_th.id.lthread);
+  LOGdL(DEBUG_RECEIVE_PACKET,"remote sync "l4util_idfmt,
+        l4util_idstr(socket->remote_socket.sync_th));
   
   /* get packet index */
   p = __get_packet_index(socket,packet);
@@ -153,7 +148,7 @@ __send_release_notification(dsi_socket_t * socket, dsi_packet_t * packet)
 
   if (ret)
     {
-      Error("DSI: error sending release notification (0x%02x)!",ret);
+      LOG_Error("error sending release notification (0x%02x)!",ret);
       return -L4_EIPC;
     }
 
@@ -186,8 +181,8 @@ __get_sg_elem(dsi_socket_t * socket, int * sg_elem)
   /* search packet */
   do
     {
-      if (cmpxchg32(&socket->sg_lists[i].flags,
-		    DSI_SG_ELEM_UNUSED,DSI_SG_ELEM_USED))
+      if (l4util_cmpxchg32(&socket->sg_lists[i].flags,
+		           DSI_SG_ELEM_UNUSED,DSI_SG_ELEM_USED))
 	{
 	  /* found */
 	  socket->next_sg_elem = (i + 1) % socket->header->num_sg_elems;
@@ -253,7 +248,7 @@ __get_send_packet(dsi_socket_t * socket, int * packet)
 	     sees the sync_callback or the DSI_SOCKET_BLOCKING_IN_GET
 	     flag set. */
 
-	  if(_setjmp(socket->packet_get_abort_env)) goto e_eeos;
+	  if(l4_thread_setjmp(socket->packet_get_abort_env)) goto e_eeos;
 
 	  /* Tell our threads we are blocking */
 	  set_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
@@ -369,7 +364,7 @@ __get_receive_packet(dsi_socket_t * socket, int * packet)
 	  } else
 	      msg.rcv = L4_IPC_SHORT_MSG;
 
-	  if(_setjmp(socket->packet_get_abort_env)) goto e_eeos;
+	  if(l4_thread_setjmp(socket->packet_get_abort_env)) goto e_eeos;
 
 	  /* Tell our threads we are blocking */
 	  set_socket_flag(socket, DSI_SOCKET_BLOCKING_IN_GET);
@@ -599,7 +594,7 @@ dsi_packet_get(dsi_socket_t * socket, dsi_packet_t ** packet)
 
   if (ret && (ret != -DSI_ENOPACKET) && ret!=-DSI_EEOS)
     {
-      Error("DSI: get packet failed: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("get packet failed: %s (%d)",l4env_errstr(ret),ret);
       return ret;
     }
 
@@ -665,18 +660,8 @@ dsi_packet_get_abort(dsi_socket_t * socket)
 
   if(socket->flags & DSI_SOCKET_BLOCKING_IN_GET){
       /* it is actually inside a packet get. The longjmp-environment is
-	 therefore valid. ex-regs the thread to the longjump-function.
-      */
-      l4_threadid_t preempter = L4_INVALID_ID, pager=L4_INVALID_ID;
-      l4_umword_t	*stack = socket->abort_stack+sizeof(socket->abort_stack);
-      l4_umword_t	dummy;
-
-      *--stack=(l4_umword_t)socket;	// the argument
-      *--stack=0;	// faked return address
-      
-      l4_thread_ex_regs(socket->work_th, (l4_umword_t)do_socket_longjmp,
-			(l4_umword_t)stack, &preempter, &pager,
-			&dummy, &dummy, &dummy);
+       * therefore valid. ex-regs the thread to the longjump-function. */
+      l4_thread_longjmp(socket->work_th, socket->packet_get_abort_env, 1);
       return 0;
   }
 
@@ -756,13 +741,13 @@ dsi_packet_commit(dsi_socket_t * socket, dsi_packet_t * packet)
     ret = __commit_receive_packet(socket,packet);
   else
     {
-      Error("DSI: invalid socket");
+      LOG_Error("invalid socket");
       return -L4_EINVAL;
     }
   
   if (ret)
     {
-      Error("DSI: commit packet failed: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("commit packet failed: %s (%d)",l4env_errstr(ret),ret);
       return ret;
     }
 
@@ -818,7 +803,7 @@ dsi_packet_add_data(dsi_socket_t * socket, dsi_packet_t * packet,
   if (packet->sg_len >= socket->header->max_sg_len)
     {
       /* exceeded max scatter gather list length */
-      Error("DSI: scatter gather list too long (%d)",packet->sg_len + 1);
+      LOG_Error("scatter gather list too long (%d)",packet->sg_len + 1);
       return -DSI_ESGLIST;
     }
 
@@ -835,7 +820,7 @@ dsi_packet_add_data(dsi_socket_t * socket, dsi_packet_t * packet,
 	  (size == 0))
 	{
 	  /* invalid data area */
-	  Error ("DSI: invalid data area (addr 0x%08x, size %u)",
+	  LOG_Error ("invalid data area (addr 0x%08x, size %u)",
 		 (l4_addr_t)addr,size);
 	  return -L4_EINVAL;
 	}

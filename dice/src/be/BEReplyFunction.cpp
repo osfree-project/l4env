@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/BEReplyFunction.cpp
+ *    \brief   contains the implementation of the class CBEReplyFunction
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -28,29 +35,26 @@
 #include "be/BEDeclarator.h"
 
 #include "fe/FEOperation.h"
+#include "fe/FETypedDeclarator.h"
 #include "TypeSpec-Type.h"
-
-IMPLEMENT_DYNAMIC(CBEReplyFunction);
 
 CBEReplyFunction::CBEReplyFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEReplyFunction, CBEOperationFunction);
 }
 
 CBEReplyFunction::CBEReplyFunction(CBEReplyFunction & src)
 : CBEOperationFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CBEReplyFunction, CBEOperationFunction);
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CBEReplyFunction::~CBEReplyFunction()
 {
 }
 
-/**	\brief writes the variable declarations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the variable declarations of this function
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * The variable declarations of the reply-only function includes the
  * message buffer, which is a parameter, DON'T declare it here!
@@ -58,23 +62,25 @@ CBEReplyFunction::~CBEReplyFunction()
 void CBEReplyFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext)
 {
     // define message buffer
-    assert(m_pMsgBuffer);
-    m_pMsgBuffer->WriteDefinition(pFile, false, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteDefinition(pFile, false, pContext);
     // check for temp
     if (HasVariableSizedParameters() || HasArrayParameters())
     {
-        String sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
-        String sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sTmpVar);
-        pFile->PrintIndent("unsigned %s __attribute__ ((unused));\n", (const char*)sOffsetVar);
+        string sTmpVar = pContext->GetNameFactory()->GetTempOffsetVariable(pContext);
+        string sOffsetVar = pContext->GetNameFactory()->GetOffsetVariable(pContext);
+        *pFile << "\tunsigned " << sTmpVar << " __attribute__ ((unused));\n";
+        *pFile << "\tunsigned " << sOffsetVar << " __attribute__ ((unused));\n";
     }
-	// declare local exception variable
-	WriteExceptionWordDeclaration(pFile, true, pContext);
+    if (!FindAttribute(ATTR_NOEXCEPTIONS))
+        // declare local exception variable
+        WriteExceptionWordDeclaration(pFile, true, pContext);
 }
 
-/**	\brief writes the variable initializations of this function
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the variable initializations of this function
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation cannot initialize the message buffer, because we might
  * overwrite preset values, such as the specific communication partner.
@@ -82,13 +88,14 @@ void CBEReplyFunction::WriteVariableDeclaration(CBEFile * pFile, CBEContext * pC
 void CBEReplyFunction::WriteVariableInitialization(CBEFile * pFile, CBEContext * pContext)
 {
     // init message buffer
-    assert(m_pMsgBuffer);
-    m_pMsgBuffer->WriteInitialization(pFile, pContext);
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->WriteInitialization(pFile, pContext);
 }
 
-/**	\brief writes the invocation of the message transfer
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the invocation of the message transfer
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
@@ -96,11 +103,11 @@ void CBEReplyFunction::WriteInvocation(CBEFile * pFile, CBEContext * pContext)
 {
 }
 
-/**	\brief writes the unmarshalling of the message
- *	\param pFile the file to write to
+/**    \brief writes the unmarshalling of the message
+ *    \param pFile the file to write to
  *  \param nStartOffset the offset where to start unmarshalling
  *  \param bUseConstOffset true if a constant offset should be used, set it to false if not possible
- *	\param pContext the context of the write operation
+ *    \param pContext the context of the write operation
  *
  * This implementation unmarshals nothing because we expect no answer.
  */
@@ -108,9 +115,9 @@ void CBEReplyFunction::WriteUnmarshalling(CBEFile * pFile, int nStartOffset, boo
 {
 }
 
-/**	\brief clean up the mess
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief clean up the mess
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * This implementation cleans up allocated memory inside this function
  */
@@ -118,10 +125,10 @@ void CBEReplyFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 {
 }
 
-/**	\brief creates the back-end reply only function
- *	\param pFEOperation the corresponding front-end operation
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief creates the back-end reply only function
+ *    \param pFEOperation the corresponding front-end operation
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
  * The base class has to be called first, because:
  * - it sets the return type to the return type of the function
@@ -134,8 +141,8 @@ void CBEReplyFunction::WriteCleanup(CBEFile * pFile, CBEContext * pContext)
 bool CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation, CBEContext* pContext)
 {
     pContext->SetFunctionType(FUNCTION_REPLY);
-	// set target file name
-	SetTargetFileName(pFEOperation, pContext);
+    // set target file name
+    SetTargetFileName(pFEOperation, pContext);
     // set name
     m_sName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
 
@@ -157,12 +164,12 @@ bool CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation, CBEContext* pCo
     CBEType *pOldType = m_pReturnVar->ReplaceType(pReturnType);
     delete pOldType;
 
-	// need a message buffer, don't we?
-	if (!AddMessageBuffer(pFEOperation, pContext))
-	{
+    // need a message buffer, don't we?
+    if (!AddMessageBuffer(pFEOperation, pContext))
+    {
         VERBOSE("%s failed because message buffer could not be created\n", __PRETTY_FUNCTION__);
-	    return false;
-	}
+        return false;
+    }
 
     return true;
 }
@@ -201,15 +208,25 @@ bool CBEReplyFunction::DoUnmarshalParameter(CBETypedDeclarator * pParameter, CBE
  *
  * A reply-only function is written at the component's side only.
  */
-bool CBEReplyFunction::DoWriteFunction(CBEFile * pFile, CBEContext * pContext)
+bool CBEReplyFunction::DoWriteFunction(CBEHeaderFile * pFile, CBEContext * pContext)
 {
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEHeaderFile)))
-		if (!IsTargetFile((CBEHeaderFile*)pFile))
-			return false;
-	if (pFile->IsKindOf(RUNTIME_CLASS(CBEImplementationFile)))
-		if (!IsTargetFile((CBEImplementationFile*)pFile))
-			return false;
-	return pFile->GetTarget()->IsKindOf(RUNTIME_CLASS(CBEComponent));
+    if (!IsTargetFile(pFile))
+        return false;
+    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
+}
+
+/** \brief test if this function should be written
+ *  \param pFile the file to write to
+ *  \param pContext the context of the write operation
+ *  \return true if should be written
+ *
+ * A reply-only function is written at the component's side only.
+ */
+bool CBEReplyFunction::DoWriteFunction(CBEImplementationFile * pFile, CBEContext * pContext)
+{
+    if (!IsTargetFile(pFile))
+        return false;
+    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
 }
 
 /** \brief gets the direction this function sends data to
@@ -234,10 +251,10 @@ int CBEReplyFunction::GetReceiveDirection()
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
 
-/**	\brief adds the parameters of a front-end function to this function
- *	\param pFEOperation the front-end function
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief adds the parameters of a front-end function to this function
+ *    \param pFEOperation the front-end function
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
  * This implementation adds the return value to the parameter list. The return value is the
  * value returned by the component-function.
@@ -263,8 +280,8 @@ bool CBEReplyFunction::AddParameters(CFEOperation * pFEOperation, CBEContext * p
 void CBEReplyFunction::WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext)
 {
     nStartOffset += WriteMarshalException(pFile, nStartOffset, bUseConstOffset, pContext);
-	// marshal rest
-	CBEOperationFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
+    // marshal rest
+    CBEOperationFunction::WriteMarshalling(pFile, nStartOffset, bUseConstOffset, pContext);
 }
 
 /** \brief get the size of fixed size parameters
@@ -275,9 +292,10 @@ void CBEReplyFunction::WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool
 int CBEReplyFunction::GetFixedSize(int nDirection,  CBEContext* pContext)
 {
     int nSize = CBEOperationFunction::GetFixedSize(nDirection, pContext);
-	if (nDirection & DIRECTION_OUT)
-	    nSize += pContext->GetSizes()->GetExceptionSize();
-	return nSize;
+    if ((nDirection & DIRECTION_OUT) &&
+        !FindAttribute(ATTR_NOEXCEPTIONS))
+        nSize += pContext->GetSizes()->GetExceptionSize();
+    return nSize;
 }
 
 /** \brief get the size of parameters
@@ -288,7 +306,25 @@ int CBEReplyFunction::GetFixedSize(int nDirection,  CBEContext* pContext)
 int CBEReplyFunction::GetSize(int nDirection,  CBEContext* pContext)
 {
     int nSize = CBEOperationFunction::GetSize(nDirection, pContext);
-	if (nDirection & DIRECTION_OUT)
-	    nSize += pContext->GetSizes()->GetExceptionSize();
-	return nSize;
+    if ((nDirection & DIRECTION_OUT) &&
+        !FindAttribute(ATTR_NOEXCEPTIONS))
+        nSize += pContext->GetSizes()->GetExceptionSize();
+    return nSize;
+}
+
+
+/** \brief adds a single parameter to this function
+ *  \param pFEParameter the parameter to add
+ *  \param pContext the context of the code generation
+ *  \return true if successful
+ *
+ * This function decides, which parameters to add and which not. The parameters to reply are
+ * for component-to-client reply the OUT parameters.
+ */
+bool CBEReplyFunction::AddParameter(CFETypedDeclarator * pFEParameter, CBEContext * pContext)
+{
+    if (!(pFEParameter->FindAttribute(ATTR_OUT)))
+        // skip adding a parameter if it has no OUT
+        return true;
+    return CBEOperationFunction::AddParameter(pFEParameter, pContext);
 }

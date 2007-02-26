@@ -19,21 +19,21 @@
 #include "listener.h"
 
 
-char *listener_ident; /* !!! protection by mutex needed! */
+char *listener_ident; /* !!! protection by sem needed! */
 
 
 static void listener_thread(void *arg) {
 	char listener_ident_buf[128];
 	l4_threadid_t listener_tid;
-	CORBA_Environment dice_env = dice_default_environment;
+	CORBA_Server_Environment dice_env = dice_default_server_environment;
 	
 	dice_env.user_data = arg;
 	
 	listener_tid = l4thread_l4_id( l4thread_myself() );
-	snprintf(listener_ident_buf,127,"%lu %lu",(unsigned long)listener_tid.lh.high,
-	                                          (unsigned long)listener_tid.lh.low);
+	snprintf(listener_ident_buf, 127, "t_id=0x%08X,%08X",
+	                                  (int)listener_tid.lh.low,
+	                                  (int)listener_tid.lh.high);
 	listener_ident = &listener_ident_buf[0];
-	INFO(printf("%s\n",listener_ident_buf));
 	l4thread_started(NULL);
 	INFO(printf("DOpElib(listener_thread): entering server loop\n");)
 	dopeapp_listener_server_loop(&dice_env);
@@ -43,7 +43,7 @@ static void listener_thread(void *arg) {
 char *dopelib_start_listener(long id) {
 	
 	INFO(printf("DOpElib(dope_init): start listener.\n");)
-	l4thread_create(listener_thread,(void *)id,L4THREAD_CREATE_SYNC);
+	l4thread_create_named(listener_thread,".listener",(void *)id,L4THREAD_CREATE_SYNC);
 	
 	INFO(printf("DOpElib(dope_init): listener_ident = %s\n",listener_ident);)
 	INFO(printf("DOpElib(dope_init): dope_init finished.\n");)

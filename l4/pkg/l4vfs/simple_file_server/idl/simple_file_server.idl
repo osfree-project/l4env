@@ -1,0 +1,7 @@
+import <l4/sys/types.h>
+import <l4/l4vfs/mmap_object_server.idl>
+import <l4/l4vfs/select_notify.idl>
+
+interface simple_file_server: l4vfs::mmap_object_server, l4vfs::select_notify
+{
+};

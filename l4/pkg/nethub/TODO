@@ -1,0 +1,5 @@
+- Transport Ports in Viaduct?
+  - opaque selector may be insecure
+
+- SA lifetimes in seconds
+- Push event on IKE notification EXPIRE and ACQUIRE

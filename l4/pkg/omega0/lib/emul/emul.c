@@ -46,7 +46,7 @@ int omega0_attach(omega0_irqdesc_t desc){
   l4_make_taskid_from_irq(irq, &irq_th);
   
   error = l4_ipc_receive(irq_th, 0, &dummy, &dummy,
-                              L4_IPC_TIMEOUT(0,1,0,1,0,0), &result);
+                         L4_IPC_BOTH_TIMEOUT_0, &result);
 
   if(error!=L4_IPC_RETIMEOUT) return -3;
   handle = irq+1;

@@ -111,6 +111,7 @@ typedef struct {
 typedef union {
   l4_umword_t msgdope;
   l4_msgdope_struct_t md;
+  l4_umword_t raw;
 } l4_msgdope_t;
 
 /*
@@ -174,14 +175,17 @@ typedef union {
 L4_INLINE int l4_is_invalid_sched_param(l4_sched_param_t sp);
 L4_INLINE int l4_is_nil_id(l4_threadid_t id);
 L4_INLINE int l4_is_invalid_id(l4_threadid_t id);
+L4_INLINE int l4_is_irq_id(l4_threadid_t id);
+L4_INLINE int l4_get_irqnr(l4_threadid_t id);
 L4_INLINE l4_fpage_t l4_fpage(unsigned long address, unsigned int size, 
 			      unsigned char write, unsigned char grant);
 L4_INLINE l4_fpage_t l4_iofpage(unsigned port, unsigned int size, 
 				unsigned char grant);
 L4_INLINE int l4_is_io_page_fault(unsigned address);
 L4_INLINE l4_threadid_t l4_get_taskid(l4_threadid_t t);
-L4_INLINE int l4_thread_equal(l4_threadid_t t1,l4_threadid_t t2);
-L4_INLINE int l4_task_equal(l4_threadid_t t1,l4_threadid_t t2);
+L4_INLINE int l4_thread_equal(l4_threadid_t t1, l4_threadid_t t2);
+L4_INLINE int l4_task_equal(l4_threadid_t t1, l4_threadid_t t2);
+L4_INLINE int l4_tasknum_equal(l4_threadid_t t1, l4_threadid_t t2);
 L4_INLINE void l4_make_taskid_from_irq(int irq, l4_threadid_t *t);
 
 L4_INLINE int l4_is_invalid_sched_param(l4_sched_param_t sp)
@@ -195,6 +199,14 @@ L4_INLINE int l4_is_nil_id(l4_threadid_t id)
 L4_INLINE int l4_is_invalid_id(l4_threadid_t id)
 {
   return id.lh.low == 0xffffffff;
+}
+L4_INLINE int l4_is_irq_id(l4_threadid_t id)
+{
+  return id.lh.high == 0 && id.lh.low > 0 && id.lh.low <= 255;
+}
+L4_INLINE int l4_get_irqnr(l4_threadid_t id)
+{
+  return id.lh.low - 1;
 }
 L4_INLINE l4_fpage_t l4_fpage(unsigned long address, unsigned int size, 
 			      unsigned char write, unsigned char grant)
@@ -224,30 +236,23 @@ l4_get_taskid(l4_threadid_t t)
 }
 
 L4_INLINE int
-l4_thread_equal(l4_threadid_t t1,l4_threadid_t t2)
+l4_thread_equal(l4_threadid_t t1, l4_threadid_t t2)
 {
-  if((t1.lh.low != t2.lh.low) || (t1.lh.high != t2.lh.high))
-    return 0;
-  return 1;
+  return ((t1.lh.low == t2.lh.low) && (t1.lh.high == t2.lh.high));
 }
 
 #define TASK_MASK 0xfffe03ff
 L4_INLINE int
-l4_task_equal(l4_threadid_t t1,l4_threadid_t t2)
+l4_task_equal(l4_threadid_t t1, l4_threadid_t t2)
 {
-  if ( ((t1.lh.low & TASK_MASK) == (t2.lh.low & TASK_MASK)) && 
-       (t1.lh.high == t2.lh.high) )
-    return 1;
-  else
-    return 0;
-  
-/*   t1.id.lthread = 0; */
-/*   t2.id.lthread = 0; */
+  return (((t1.lh.low & TASK_MASK) == (t2.lh.low & TASK_MASK)) && 
+          (t1.lh.high == t2.lh.high));
+}
 
-/*   if((t1.lh.low != t2.lh.low) || (t1.lh.high != t2.lh.high)) */
-/*     return 0; */
-/*   return 1; */
-
+L4_INLINE int
+l4_tasknum_equal(l4_threadid_t t1, l4_threadid_t t2)
+{
+  return (t1.id.task == t2.id.task);
 }
 
 L4_INLINE void

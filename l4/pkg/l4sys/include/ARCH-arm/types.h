@@ -8,7 +8,10 @@
 #include <l4/sys/l4int.h>
 #include <l4/sys/compiler.h>
 #include <l4/sys/consts.h>
+
+#if defined(L4API_l4x0)
 #include <l4/sys/types_api.h>
+#endif
 
 /*
  * L4 flex pages
@@ -22,6 +25,7 @@ typedef union {
     l4_umword_t page  :20;
   } fp;
   l4_umword_t raw;
+  l4_umword_t fpage;
 } l4_fpage_t;
 
 
@@ -48,7 +52,7 @@ typedef union {
     l4_umword_t snd_error      : 1;
     l4_umword_t error_code     : 3;
     l4_umword_t strings        : 5;
-    l4_umword_t words          :19;
+    l4_umword_t dwords         :19;
   } md;
   l4_umword_t msgdope;
   l4_umword_t raw;
@@ -111,6 +115,10 @@ typedef struct {
   l4_umword_t  word[1];
 } l4_msg_t;
 
+
+typedef struct {
+  l4_umword_t low, high;
+} l4_low_high_t;
 
 /*
  * Some useful operations and test functions for id's and types

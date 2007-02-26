@@ -39,7 +39,7 @@
 /**
  * Region mapper lib initialized
  */
-static int l4rm_initialized = 0;
+static unsigned l4rm_initialized = 0;
 
 /**
  * region mapper service thread
@@ -96,13 +96,11 @@ __get_pager(void)
  */
 /*****************************************************************************/ 
 int
-l4rm_init(int have_l4env, 
-	  l4rm_vm_range_t used[], 
-	  int num_used)
+l4rm_init(int have_l4env, l4rm_vm_range_t used[], int num_used)
 {
   int ret;
 
-  if (l4util_cmpxchg32(&l4rm_initialized,0,1))
+  if (l4util_cmpxchg32(&l4rm_initialized, 0, 1))
     {
       /* service thread id */
       l4rm_service_id = l4_myself();
@@ -111,7 +109,7 @@ l4rm_init(int have_l4env,
       __get_pager();
 
       /* setup descriptor heap */
-      ret = l4rm_heap_init(have_l4env,used,num_used);
+      ret = l4rm_heap_init(have_l4env, used,num_used);
       if (ret < 0)
 	{
 	  Panic("L4RM: heap init failed!");

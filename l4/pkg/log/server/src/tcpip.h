@@ -28,7 +28,7 @@ extern oskit_socket_factory_t *socket_create;
 extern int net_init(int argc, char **argv);
 extern int net_wait_for_client(void);
 extern int net_receive_check(void);
-extern int net_flush_buffer(char*addr, int size);
+extern int net_flush_buffer(const char*addr, int size);
 #endif
 
 #endif

@@ -25,6 +25,8 @@
 #include "receive-server.h"
 #include "__config.h"
 
+char LOG_tag[9]="receive";
+
 /*****************************************************************************
  * Global stuff
  *****************************************************************************/
@@ -69,6 +71,8 @@ receive_thread(void * data)
   count = 0;
   while(1)
     {
+      LOGdL(DO_DEBUG, "waiting for packet...");
+
       /* get packet */
       ret = dsi_packet_get(soc,&p);
 #if DO_SANITY
@@ -98,6 +102,8 @@ receive_thread(void * data)
 	  return;
 	}
 #endif
+
+      LOGdL(DO_DEBUG, "got packet, no %u", num);
 
       /* get packet data */
       ret = dsi_packet_get_data(soc,p,&addr,&size);
@@ -172,7 +178,7 @@ dsi_example_receive_open_component(CORBA_Object _dice_corba_obj,
     const dsi_example_receive_dataspace_t *ctrl_ds,
     const dsi_example_receive_dataspace_t *data_ds,
     dsi_example_receive_socket_t *s,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   l4_threadid_t work_id, sync_id;
@@ -185,7 +191,7 @@ dsi_example_receive_open_component(CORBA_Object _dice_corba_obj,
 #endif
 
   /* start work thread */
-  ret = l4thread_create_long(L4THREAD_INVALID_ID,receive_thread,
+  ret = l4thread_create_long(L4THREAD_INVALID_ID,receive_thread, 0,
 			     L4THREAD_INVALID_SP,L4THREAD_DEFAULT_SIZE,
 			     L4THREAD_DEFAULT_PRIO,NULL,L4THREAD_CREATE_ASYNC);
   if (ret < 0)
@@ -267,7 +273,7 @@ l4_int32_t
 dsi_example_receive_connect_component(CORBA_Object _dice_corba_obj,
     const dsi_example_receive_socket_t *local,
     const dsi_example_receive_socket_t *remote,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   dsi_socket_t * s;
   int ret;
@@ -304,9 +310,6 @@ dsi_example_receive_connect_component(CORBA_Object _dice_corba_obj,
 /*****************************************************************************/ 
 int main(void)
 {
-  /* init log lib */
-  LOG_init("receive");
-
   /* init DSI lib */
   dsi_init();
 

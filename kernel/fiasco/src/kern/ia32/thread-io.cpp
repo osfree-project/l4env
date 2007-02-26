@@ -1,7 +1,7 @@
-INTERFACE:
-
 IMPLEMENTATION [io]:
 
+#include <feature.h>
+KIP_KERNEL_FEATURE("io_prot");
 
 // 
 // disassamble IO statements to compute the port address and 
@@ -18,11 +18,13 @@ IMPLEMENTATION [io]:
 */
 
 bool
-Thread::get_ioport(Address eip, trap_state * ts, 
+Thread::get_ioport(Address eip, Trap_state * ts, 
 		     unsigned * port, unsigned * size)
 {
+  int from_user = ts->cs & 3;
+
   // handle 1 Byte IO
-  switch( * reinterpret_cast<unsigned char *>(eip))
+  switch(space()->peek((Unsigned8*)eip, from_user))
     {
     case 0xec:			// in dx, al
     case 0x6c:			// insb
@@ -37,13 +39,13 @@ Thread::get_ioport(Address eip, trap_state * ts,
     case 0x6f:			// outd
       *size = 2;
       *port = ts->edx & 0xffff;
-      if (*port +4 <= L4_fpage::IO_PORT_MAX)
+      if (*port +4 <= L4_fpage::Io_port_max)
 	return true;
       else		   // Access beyond L4_IOPORT_MAX
 	return false;
     case 0xfa:			// cli
     case 0xfb:			// sti
-      *size = L4_fpage::WHOLE_IO_SPACE;
+      *size = L4_fpage::Whole_io_space;
       *port = 0;
       return true;
     }
@@ -52,24 +54,21 @@ Thread::get_ioport(Address eip, trap_state * ts,
   if(! (eip < Kmem::mem_user_max -1))
     return false;
 
-  switch( * reinterpret_cast<unsigned char *>(eip))
+  switch(space()->peek((Unsigned8*)eip, from_user))
     {
     case 0xe4:			// in imm8, al
     case 0xe6:			// out al, imm8 
       *size = 0;
-      *port = * reinterpret_cast<unsigned char *>(eip + 1);
+      *port = space()->peek((Unsigned8*)(eip+1), from_user);
       return true;
     case 0xe5:			// in imm8, eax
     case 0xe7:			// out eax, imm8
       *size = 2;
-      *port = * reinterpret_cast<unsigned char *>(eip + 1);
-      if (*port +4 <= L4_fpage::IO_PORT_MAX)
-	return true;
-      else		   // Access beyond L4_IOPORT_MAX
-	return false;
+      *port = space()->peek((Unsigned8*)(eip+1), from_user);
+      return *port +4 <= L4_fpage::Io_port_max ? true : false;
 
     case 0x66:			// operand size override
-      switch( * reinterpret_cast<unsigned char *>(eip +1))
+      switch(space()->peek((Unsigned8*)(eip+1), from_user))
 	{
 	case 0xed:			// in dx, ax
 	case 0xef:			// out ax, dx
@@ -77,22 +76,22 @@ Thread::get_ioport(Address eip, trap_state * ts,
 	case 0x6f:			// outw
 	  *size = 1;
 	  *port = ts->edx & 0xffff;
-	  if (*port +2 <= L4_fpage::IO_PORT_MAX)
+	  if (*port +2 <= L4_fpage::Io_port_max)
 	    return true;
 	  else		   // Access beyond L4_IOPORT_MAX
 	    return false;
 	case 0xe5:			// in imm8, ax
 	case 0xe7:			// out ax,imm8
 	  *size = 1;
-	  *port = *reinterpret_cast<unsigned char*>(eip + 2);
-	  if (*port +2 <= L4_fpage::IO_PORT_MAX)
+	  *port = space()->peek((Unsigned8*)(eip + 2), from_user);
+	  if (*port +2 <= L4_fpage::Io_port_max)
 	    return true;
 	  else
 	    return false;
 	}
 
     case 0xf3:			// REP
-      switch( * reinterpret_cast<unsigned char *>(eip +1))
+      switch(space()->peek((Unsigned8*)(eip +1), from_user))
 	{
 	case 0x6c:			// REP insb
 	case 0x6e:			// REP outb
@@ -103,7 +102,7 @@ Thread::get_ioport(Address eip, trap_state * ts,
 	case 0x6f:			// REP outd
 	  *size = 2;
 	  *port = ts->edx & 0xffff;
-	  if(*port +4 <= L4_fpage::IO_PORT_MAX)
+	  if(*port +4 <= L4_fpage::Io_port_max)
 	    return true;
 	  else		   // Access beyond L4_IOPORT_MAX
 	    return false;
@@ -114,16 +113,17 @@ Thread::get_ioport(Address eip, trap_state * ts,
   if(! (eip < Kmem::mem_user_max -2))
     return false;
 
-  if((* reinterpret_cast<Unsigned16 *>(eip) == 0x66f3 ) || // sizeoverride REP
-     (* reinterpret_cast<Unsigned16 *>(eip) == 0xf366 )) // REP sizeoverride
+  Unsigned16 w = space()->peek((Unsigned16*)eip, from_user);
+  if (w == 0x66f3 || // sizeoverride REP
+      w == 0xf366)   // REP sizeoverride
     {
-      switch( * reinterpret_cast<unsigned char *>(eip +2))
+      switch(space()->peek((Unsigned8*)(eip +2), from_user))
 	{
 	case 0x6d:			// REP insw
 	case 0x6f:			// REP outw
 	  *size = 1;
 	  *port = ts->edx & 0xffff;
-	  if(*port +2 <= L4_fpage::IO_PORT_MAX)
+	  if(*port +2 <= L4_fpage::Io_port_max)
 	    return true;
 	  else		   // Access beyond L4_IOPORT_MAX
 	    return false;
@@ -133,4 +133,11 @@ Thread::get_ioport(Address eip, trap_state * ts,
 
   // nothing appropriate found
   return false;
+}
+
+PUBLIC inline
+bool
+Thread::has_privileged_iopl()
+{
+  return (regs()->flags() & EFLAGS_IOPL) == EFLAGS_IOPL_U;
 }

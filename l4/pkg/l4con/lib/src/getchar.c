@@ -7,10 +7,13 @@
  *
  */
 
+#include <stdio.h>
+
 /* intern */
 #include "internal.h"
 #include "keymap.h"
 #include "evh.h"
+#include <stdio.h>
 
 
 /*****************************************************************************/
@@ -80,6 +83,7 @@ contxt_trygetchar(void)
  * This function reads a character. (libc) 
  */
 /*****************************************************************************/
+#undef getchar
 int 
 getchar(void)
 {

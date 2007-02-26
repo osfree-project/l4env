@@ -2,6 +2,9 @@ INTERFACE:
 
 EXTENSION class Jdb_bp
 {
+private:
+  static int		Jdb_bp::test_log_only();
+  static int		Jdb_bp::test_break(char *errbuf, size_t bufsize);
 };
 
 
@@ -25,7 +28,7 @@ Breakpoint::set(Address _addr, Mword _len, Mode _mode, Log _log)
 {
   addr = _addr;
   mode = _mode;
-  user = USER;   // we don't allow breakpoints in kernel space
+  user = ADDR_USER;   // we don't allow breakpoints in kernel space
   log  = _log;
   len  = _len;
 }
@@ -57,21 +60,7 @@ Jdb_bp::write_debug_register(int reg, Mword val, Task_num task)
   pid_t pid = task ? Space_index(task).lookup()->pid()
 		   : Boot_info::pid();
   if (!Usermode::write_debug_register(pid, reg, val))
-    printf("[write %08x to debugreg #%d task %02x failed]\n", val, reg, task);
-}
-
-PUBLIC static inline
-Mword 
-Jdb_bp::get_debug_status_register(Task_num task)
-{
-  return read_debug_register(6, task);
-}
-
-PUBLIC static inline
-void 
-Jdb_bp::reset_debug_status_register(Task_num task)
-{
-  write_debug_register(6, 0, task);
+    printf("[write %08lx to debugreg #%d task %02x failed]\n", val, reg, task);
 }
 
 PUBLIC static inline
@@ -137,14 +126,58 @@ Jdb_bp::clr_debug_address_register(int num)
 
 IMPLEMENT
 void
-Jdb_bp::at_jdb_enter(Thread *)
+Jdb_bp::at_jdb_enter()
+{}
+
+IMPLEMENT
+void
+Jdb_bp::at_jdb_leave()
 {
+  if (Jdb::get_current_active() 
+      && Jdb::get_current_active()->d_taskno() != 0)
+    write_debug_register(6, 0, Jdb::get_current_active()->d_taskno());
+}
+
+IMPLEMENT
+int
+Jdb_bp::test_log_only()
+{
+  Task_num t = Jdb::get_thread()->d_taskno();
+  Mword dr6  = read_debug_register(6, t);
+
+  if (dr6 & 0x0000000f)
+    {
+      test_log(dr6);
+      write_debug_register(6, dr6, t);
+      if (!(dr6 & 0x0000e00f))
+	// don't enter jdb, breakpoints only logged
+	return 1;
+    }
+  // enter jdb
+  return 0;
+}
+
+/** @return 1 if breakpoint occured */
+IMPLEMENT
+int
+Jdb_bp::test_break(char *errbuf, size_t bufsize)
+{
+  Task_num t = Jdb::get_thread()->d_taskno();
+  Mword dr6  = read_debug_register(6, t);
+
+  if (!(dr6 & 0x000000f))
+    return 0;
+
+  test_break(dr6, errbuf, bufsize);
+  write_debug_register(6, dr6 & ~0x0000000f, t);
+  return 1;
 }
 
 IMPLEMENT
 void
-Jdb_bp::at_jdb_leave(Thread *t)
+Jdb_bp::init_arch()
 {
-  reset_debug_status_register(t->id().task());
+  Jdb::bp_test_log_only = test_log_only;
+  Jdb::bp_test_break    = test_break;
 }
 

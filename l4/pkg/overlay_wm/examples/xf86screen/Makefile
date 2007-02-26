@@ -58,7 +58,11 @@ INSTALLFILE_BIN_LOCAL = $(STRIP) --strip-unneeded $(1) \
 
 include $(L4DIR)/mk/prog.mk
 
+ifeq ($(FORCE_GCC295),yes)
+include $(PKGDIR)/examples/xf86input/Makeconf
+endif
+
 ifneq ($(SYSTEM),)
 all::
-	objcopy -G ovlscreenModuleData $(TARGET) $(TARGET)
+#	objcopy -G ovlscreenModuleData $(TARGET) $(TARGET)
 endif

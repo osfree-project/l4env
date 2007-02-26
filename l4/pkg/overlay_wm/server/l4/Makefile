@@ -4,7 +4,7 @@ L4DIR           ?= $(PKGDIR)/../..
 
 TARGET           = l4ovlwm
 LIBS             = -ll4dope -lvscreen 
-DEFAULT_RELOC    = 0x00b00000
+DEFAULT_RELOC    = 0x00b40000
 
 PRIVATE_INCDIR   = $(L4DIR)/pkg/dope/include \
                    $(PKGDIR)/include \

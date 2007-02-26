@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/cdr/CCDRClient.cpp
- *	\brief	contains the implementation of the class CCDRClient
+ *    \file    dice/src/be/cdr/CCDRClient.cpp
+ *    \brief   contains the implementation of the class CCDRClient
  *
- *	\date	10/28/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    10/28/2003
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,15 +32,12 @@
 #include "be/BEImplementationFile.h"
 #include "be/BERoot.h"
 
-#include "fe/FEAttribute.h"
+#include "Attribute-Type.h"
 #include "fe/FEOperation.h"
-
-IMPLEMENT_DYNAMIC(CCDRClient);
 
 CCDRClient::CCDRClient()
  : CBEClient()
 {
-    IMPLEMENT_DYNAMIC_BASE(CCDRClient, CBEClient);
 }
 
 /** destroys this object */
@@ -55,7 +53,7 @@ CCDRClient::~CCDRClient()
 bool CCDRClient::CreateBackEndFunction(CFEOperation* pFEOperation,  CBEContext* pContext)
 {
     // get root
-    CBERoot *pRoot = GetRoot();
+    CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     // find appropriate header file
     CBEHeaderFile *pHeader = FindHeaderFile(pFEOperation, pContext);
@@ -70,7 +68,8 @@ bool CCDRClient::CreateBackEndFunction(CFEOperation* pFEOperation,  CBEContext* 
     {
         RemoveFile(pImpl);
         delete pImpl;
-        VERBOSE("CBEClient::CreateBackEndFunction failed because file could not be created\n");
+        VERBOSE("%s failed because file could not be created\n",
+            __PRETTY_FUNCTION__);
         return false;
     }
     // add the functions to the file
@@ -79,7 +78,7 @@ bool CCDRClient::CreateBackEndFunction(CFEOperation* pFEOperation,  CBEContext* 
     // if attribute == OUT, we need unmarshal
     // if attribute == empty, we need marshal and unmarshal
     int nOldType;
-    String sFuncName;
+    string sFuncName;
     CBEFunction *pFunction;
     if (pFEOperation->FindAttribute(ATTR_IN))
     {
@@ -89,8 +88,8 @@ bool CCDRClient::CreateBackEndFunction(CFEOperation* pFEOperation,  CBEContext* 
         pFunction = pRoot->FindFunction(sFuncName);
         if (!pFunction)
         {
-            VERBOSE("CBEClient::CreateBackEndFunction failed because function %s could not be found\n",
-                    (const char*)sFuncName);
+            VERBOSE("%s failed because function %s could not be found\n",
+                    __PRETTY_FUNCTION__, sFuncName.c_str());
             return false;
         }
         pFunction->AddToFile(pImpl, pContext);
@@ -103,8 +102,8 @@ bool CCDRClient::CreateBackEndFunction(CFEOperation* pFEOperation,  CBEContext* 
         pFunction = pRoot->FindFunction(sFuncName);
         if (!pFunction)
         {
-            VERBOSE("CBEClient::CreateBackEndFunction failed because function %s could not be found\n",
-                    (const char*)sFuncName);
+            VERBOSE("%s failed because function %s could not be found\n",
+                    __PRETTY_FUNCTION__, sFuncName.c_str());
             return false;
         }
         pFunction->AddToFile(pImpl, pContext);
@@ -117,23 +116,23 @@ bool CCDRClient::CreateBackEndFunction(CFEOperation* pFEOperation,  CBEContext* 
         pFunction = pRoot->FindFunction(sFuncName);
         if (!pFunction)
         {
-            VERBOSE("CBEClient::CreateBackEndFunction failed because function %s could not be found\n",
-                    (const char*)sFuncName);
+            VERBOSE("%s failed because function %s could not be found\n",
+                    __PRETTY_FUNCTION__, sFuncName.c_str());
             return false;
         }
         pFunction->AddToFile(pImpl, pContext);
 
-		nOldType = pContext->SetFunctionType(FUNCTION_UNMARSHAL);
-		sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
-		pContext->SetFunctionType(nOldType);
-		pFunction = pRoot->FindFunction(sFuncName);
-		if (!pFunction)
-		{
-			VERBOSE("CBEClient::CreateBackEndFunction failed because function %s could not be found\n",
-					(const char*)sFuncName);
-			return false;
-		}
-		pFunction->AddToFile(pImpl, pContext);
+        nOldType = pContext->SetFunctionType(FUNCTION_UNMARSHAL);
+        sFuncName = pContext->GetNameFactory()->GetFunctionName(pFEOperation, pContext);
+        pContext->SetFunctionType(nOldType);
+        pFunction = pRoot->FindFunction(sFuncName);
+        if (!pFunction)
+        {
+            VERBOSE("%s failed because function %s could not be found\n",
+                    __PRETTY_FUNCTION__, sFuncName.c_str());
+            return false;
+        }
+        pFunction->AddToFile(pImpl, pContext);
     }
     return true;
 }

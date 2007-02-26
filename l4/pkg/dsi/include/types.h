@@ -13,9 +13,9 @@
 
 /* DROPS/L4 includes */
 #include <l4/sys/types.h>
+#include <l4/util/setjmp.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/thread/thread.h>
-#include <setjmp.h>
 
 /*****************************************************************************
  * generic types                                                             *
@@ -62,7 +62,7 @@ typedef volatile l4_int8_t dsi_semaphore_t;
 typedef struct dsi_packet
 {
   l4_uint32_t      no;      //!< packet number
-  l4_uint16_t      flags;   //!< packet flags
+  volatile l4_uint16_t      flags;   //!< packet flags
   dsi_semaphore_t  tx_sem;  //!< send semaphore counter (__get_send_packet())
   dsi_semaphore_t  rx_sem;  /**< receive semaphore counter 
 			       (__get_receive_packet()) */
@@ -271,9 +271,7 @@ struct dsi_socket
 						  **  waiting */
   dsi_event_client_t *      clients;             ///< client wait queue
   
-  /* packet_get abort data */
-  l4_uint32_t		    abort_stack[20];	// more than enought
-  jmp_buf		    packet_get_abort_env;/*!< used when aborting a
+  l4_thread_jmp_buf	    packet_get_abort_env;/*!< used when aborting a
 						      dsi_packet_get() */
   
 };

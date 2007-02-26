@@ -159,8 +159,8 @@ int bump_init(void) {
 	dope_cmd(app_id, "bumpwin=new Window()" );
 	dope_cmd(app_id, "bumpvscr=new VScreen()" );
 	dope_cmd(app_id, "bumpvscr.setmode(320,240,\"RGB16\")" );
-	dope_cmd(app_id, "bumpvscr.set(-framerate 25 -mousemode grab)");
-	dope_cmd(app_id, "bumpwin.set(-x 500 -y 460 -w 330 -h 267 -fitx yes -fity yes -background off -content bumpvscr)" );
+	dope_cmd(app_id, "bumpvscr.set(-framerate 25 -grabmouse on)");
+	dope_cmd(app_id, "bumpwin.set(-x 500 -y 460 -w 330 -h 267 -background off -content bumpvscr)" );
 
 	dope_bind(app_id,"bumpvscr","motion", motion_callback, (void *)0x123);
 	dope_bind(app_id,"bumpvscr","enter", enter_callback, (void *)0x123);

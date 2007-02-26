@@ -1,0 +1,54 @@
+/* -*- c -*- */ 
+import <l4/sys/types.h>
+import <l4/dm_generic/types.h>
+
+#include <l4/rt_mon/defines.h>
+#include <l4/rt_mon/types.h>
+
+library rt_mon
+{
+    [uuid(2000)]
+    interface reg
+    {
+        /** 
+         * @brief Publically announce one sensor dataspace, containing
+         *        data to be monitored by an external monitor
+         * 
+         * @param ds   dataspace to be shared
+         * @param name name to publish ds under
+         * 
+         * @return id of the senors (>= 0),
+         *         - -1 in case of error
+         */
+        int register_ds([in] l4dm_dataspace_t ds, [in] char * name);
+
+        /** 
+         * @brief Revoke one monitorable sensor dataspace
+         * 
+         * @param id id of the sensor dataspace to revoke
+         * 
+         * @return 0 on success,
+         *         - -1 errorcode otherwise (< 0)
+         */
+        int unregister_ds([in] int id);
+
+        /**
+         * @brief Ask coordinator for a dataspace with a specified
+         *        size, used for sensors with multiple producers
+         * 
+         * @retval ds       will contain the dataspace identifier
+         * @param  length   number of bytes to allocate
+         * @param  name     name to publish ds sensor under
+         * @retval instance instance number of caller, should be used
+         *                  by the client to mark certain memory areas
+         *                  in the sensor as * acquired
+         * 
+         * @return id of the sensor (>= 0),
+         *         - -1 in case of error
+         */
+        int request_shared_ds([out] l4dm_dataspace_t * ds,
+                              [in] int length,
+                              [in] char * name,
+                              [out] int * instance);
+    };
+};

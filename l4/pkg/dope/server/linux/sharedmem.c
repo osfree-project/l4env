@@ -8,7 +8,7 @@
  */
 
 /*
- * Copyright (C) 2002-2003  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -42,9 +42,9 @@ struct shared_memory {
 int init_sharedmem(struct dope_services *d);
 
 
-/*************************/
-/*** SERVICE FUNCTIONS ***/
-/*************************/
+/*************************
+ *** SERVICE FUNCTIONS ***
+ *************************/
 
 
 /*** ALLOCATE SHARED MEMORY BLOCK OF SPECIFIED SIZE ***/
@@ -97,9 +97,9 @@ static s32 shm_share(SHAREDMEM *sm, THREAD *dst_thread) {
 
 
 
-/****************************************/
-/*** SERVICE STRUCTURE OF THIS MODULE ***/
-/****************************************/
+/****************************************
+ *** SERVICE STRUCTURE OF THIS MODULE ***
+ ****************************************/
 
 static struct sharedmem_services sharedmem = {
 	shm_alloc,
@@ -111,13 +111,12 @@ static struct sharedmem_services sharedmem = {
 
 
 
-/**************************/
-/*** MODULE ENTRY POINT ***/
-/**************************/
+/**************************
+ *** MODULE ENTRY POINT ***
+ **************************/
 
 int init_sharedmem(struct dope_services *d) {
 
 	d->register_module("SharedMemory 1.0",&sharedmem);
 	return 1;
 }
-

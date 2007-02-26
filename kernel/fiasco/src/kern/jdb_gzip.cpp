@@ -14,14 +14,27 @@ IMPLEMENTATION:
 class Jdb_gzip : public Console
 {
   static const unsigned heap_pages = 34;
-  char active;
-  char init_done;
+  char   active;
+  char   init_done;
+  static Console *uart;
 };
+
+Console *Jdb_gzip::uart;
+
+Jdb_gzip::Jdb_gzip()
+{
+  _state = (Mword)-1;
+  char *heap = (char*)Kmem_alloc::allocator()->unaligned_alloc(heap_pages);
+  if (!heap)
+    panic("No memory for gzip heap");
+  gz_init(heap, heap_pages * Config::PAGE_SIZE, raw_write);
+}
 
 static void
 Jdb_gzip::raw_write(const char *s, size_t len)
 {
-  Kconsole::console()->gzip_write(s, len);
+  if (uart)
+    uart->write(s, len);
 }
 
 PUBLIC inline NOEXPORT
@@ -30,10 +43,8 @@ Jdb_gzip::enable()
 {
   if (!init_done)
     {
-      char *heap = (char*)Kmem_alloc::allocator()->unaligned_alloc(heap_pages);
-      if (!heap)
-	panic("No memory for gzip heap");
-      gz_init(heap, heap_pages * Config::PAGE_SIZE, raw_write);
+      uart = Kconsole::console()->find_console(Console::UART);
+      init_done = 1;
     }
 
   gz_open("jdb.gz");
@@ -51,17 +62,32 @@ Jdb_gzip::disable()
     }
 }
 
+PUBLIC void
+Jdb_gzip::state(Mword new_state)
+{
+  if (_state == (Mword)-1)
+    {
+      // Console is off by default
+      _state = 0;
+      return;
+    }
+
+  if ((_state ^ new_state) & OUTENABLED)
+    {
+      if (new_state & OUTENABLED)
+	enable();
+      else
+	disable();
+    }
+
+  _state = new_state;
+}
+
 PUBLIC
 int
 Jdb_gzip::write(char const *str, size_t len)
 {
-  if (len == 10 && !memcmp(str, "START_GZIP", 10))
-    enable();
-  else if (len == 9 && !memcmp(str, "STOP_GZIP", 10))
-    disable();
-  else if (active)
-    gz_write(str, len);
-
+  gz_write(str, len);
   return len;
 }
 
@@ -73,27 +99,18 @@ Jdb_gzip::console()
   return &c;
 }
 
-
 PUBLIC
-char const *Jdb_gzip::next_attribute( bool restart = false ) const
+Mword
+Jdb_gzip::get_attributes() const
 {
-  static char const *attribs[] = { "gzip", "out", 0 };
-  static unsigned pos = 0;
-  if(restart)
-    pos = 0;
-  
-  if(pos < 2)
-    return attribs[pos++];
-  else
-    return 0;
+  return GZIP | OUT;
 }
 
-
-static void
-jdb_gzip_init()
+PUBLIC static FIASCO_INIT
+void
+Jdb_gzip::init()
 {
-  Kconsole::console()->register_gzip_console(Jdb_gzip::console());
+  Kconsole::console()->register_console(console());
 }
 
-STATIC_INITIALIZER_P(jdb_gzip_init, UART_INIT_PRIO);
-
+STATIC_INITIALIZE(Jdb_gzip);

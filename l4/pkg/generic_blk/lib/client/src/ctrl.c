@@ -112,3 +112,36 @@ l4blk_ctrl_get_disk_size(l4blk_driver_t driver, l4_uint32_t dev)
 {  
   return l4blk_ctrl(driver,L4BLK_CTRL_DISK_SIZE,&dev,sizeof(dev),NULL,0);
 }
+
+/*****************************************************************************/
+/**
+ * \brief   Return period for stream requests
+ * \ingroup api_ctrl
+ * 
+ * \param   driver       Driver handle
+ * \param   dev          Device id
+ * \retval  period_len   Period length (microseconds)
+ * \retval  period_offs  Period offset 
+ *                       (relative to kernel klock, i.e. period0 % period_len)
+ *	
+ * \return 0 on success, error code if failed
+ */
+/*****************************************************************************/ 
+int
+l4blk_ctrl_get_stream_period(l4blk_driver_t driver, l4_uint32_t dev, 
+                             l4_uint32_t * period_len, 
+                             l4_uint32_t * period_offs)
+{
+  l4blk_disk_period_t args;
+  int ret;
+  
+  ret = l4blk_ctrl(driver, L4BLK_CTRL_STREAM_PERIOD, &dev, sizeof(dev),
+                   &args, sizeof(l4blk_disk_period_t));
+  if (ret < 0)
+    return ret;
+
+  *period_len = args.period_len;
+  *period_offs = args.period_offs;
+
+  return 0;
+}

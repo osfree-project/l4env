@@ -18,16 +18,22 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/console.h>
+#include <linux/selection.h>
 #include <linux/tty.h>
 #include <linux/vt_kern.h>
 #include <linux/vt_buffer.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
 #include <linux/console_struct.h>
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,4,0)
 
 #include <l4linux/x86/ids.h>
 #include <l4linux/x86/rmgr.h>
 #include <l4linux/x86/l4_thread.h>
+
+#include <asm/l4_debug.h>
 
 #else /* kernel version >= 2.4 */
 
@@ -40,7 +46,7 @@
 #include <l4/names/libnames.h>
 #include <l4/sys/l4int.h>
 #include <l4/util/atomic.h>
-#include <l4/con/l4con.h>
+#include <l4/l4con/l4con.h>
 
 /* local includes */
 #include "dropscon.h"
@@ -57,16 +63,17 @@ l4_threadid_t dropsvc_l4id;
 l4_threadid_t con_l4id;
 l4_threadid_t main_l4id;
 comh_proto_t comh_list[DROPSCON_COMLIST_SIZE];
-unsigned int init_done = 0;
-unsigned int redraw_pending = 0;
+unsigned int init_done                = 0;
+unsigned int redraw_pending           = 0;
+unsigned int foreground               = 1;
 
 static unsigned int dropscon_cursor_x = 0;
 static unsigned int dropscon_cursor_y = 0;
-static int cursor_erased = 0;
-static int module_init_done = 0;
+static int          cursor_erased     = 0;
+static int          module_init_done  = 0;
 
-int flush_comh_requests = 0;
-volatile int stop_comh_thread = 0;
+int flush_comh_requests               = 0;
+volatile int stop_comh_thread         = 0;
 
 DECLARE_MUTEX_LOCKED(exit_notify_sem);
 
@@ -103,12 +110,10 @@ static int  dropscon_font_op  (struct vc_data *conp,
 static int  dropscon_set_palette(struct vc_data *conp, unsigned char *table);
 static int  dropscon_scrolldelta(struct vc_data *conp, int lines);
 
-static void dropscon_redraw(unsigned int x, unsigned int y,
-			    unsigned int w, unsigned int h);
+static void dropscon_redraw   (unsigned int x, unsigned int y,
+			       unsigned int w, unsigned int h);
 
-#ifndef COMH_KERNEL_THREAD
 static l4_threadid_t comh_l4id;
-#endif
 
 static const char *
 dropscon_startup(void)
@@ -123,8 +128,6 @@ static void
 dropscon_init(struct vc_data *c, 
 	      int init) 
 {   
-  struct vc_data *vc;
-  
   c->vc_complement_mask = 0x7700;
   c->vc_can_do_color = 1;
   c->vc_display_fg = &dropscon_display_fg;
@@ -135,62 +138,65 @@ dropscon_init(struct vc_data *c,
       c->vc_rows = dropscon_num_lines;
     } 
   else 
+#ifdef L4LX26
+    vc_resize(c->vc_num, dropscon_num_columns, dropscon_num_lines);
+#else
     vc_resize_con(dropscon_num_lines, dropscon_num_columns, c->vc_num);
+#endif
       
   if (dropscon_display_fg == NULL)
     dropscon_display_fg = c;
 
-  vc = dropscon_display_fg;
-
-  if (dropscon_bootlog_init_done)
+  if (init == 0)
     {
-      char c;
-      int x=0, y=0;
-      
-      dropscon_bootlog_done();
-
-      /* clear console */
-      scr_memsetw(vc->vc_screenbuf, 0x0720, vc->vc_rows*vc->vc_cols*2);
-      
-      /* print out logged text before we was initialized */
-      while ((c = dropscon_bootlog_read()))
+      if (dropscon_bootlog_initialized())
 	{
-	  switch (c)
+	  char ch;
+	  int x=0, y=0;
+      
+	  /* clear console */
+	  scr_memsetw(c->vc_screenbuf, 0x0720, c->vc_rows*c->vc_cols*2);
+      
+	  /* print out logged text before we was initialized */
+	  while ((ch = dropscon_bootlog_read()))
 	    {
-	    case '\n':
-	      if (y >= dropscon_num_lines-1)
-      		dropscon_scroll(vc, 0, vc->vc_rows, SM_UP, 1);
-	      else
-		y++;
-	      // fall through
-	    case '\r':
-	      x = 0;
-	      break;
-	    default:
-	      if (x > vc->vc_cols)
+	      switch (ch)
 		{
+		case '\n':
+		  if (y >= dropscon_num_lines-1)
+		    dropscon_scroll(c, 0, c->vc_rows, SM_UP, 1);
+		  else
+		    y++;
+		  // fall through
+		case '\r':
 		  x = 0;
-		  y++;
-		  /* XXX more than 25 lines? */
+		  break;
+		default:
+		  if (x > c->vc_cols)
+		    {
+		      x = 0;
+		      y++;
+		      /* XXX more than 25 lines? */
+		    }
+		  c->vc_screenbuf[y*dropscon_num_columns + x] = ch | 0x700;
+		  x++;
+		  break;
 		}
-	      vc->vc_screenbuf[y*dropscon_num_columns + x] = c | 0x700;
-	      x++;
-	      break;
 	    }
+	  c->vc_pos = c->vc_visible_origin + y*dropscon_num_columns + x;
+	  c->vc_x   = x;
+	  c->vc_y   = y;
 	}
-      vc->vc_pos = vc->vc_visible_origin + y*dropscon_num_columns + x;
-      vc->vc_x   = x;
-      vc->vc_y   = y;
-    }
-  else
-    {
-      /* In case the screenbuffer does nothing contain when clear it. This
-       * depends on the graphics card */
-      if (   (vc->vc_screenbuf[ 0] == 0xffff)
-	  && (vc->vc_screenbuf[ 1] == 0xffff)
-	  && (vc->vc_screenbuf[20] == 0xffff)
-	  && (vc->vc_screenbuf[21] == 0xffff))
-	scr_memsetw(vc->vc_screenbuf, 0x0720, vc->vc_rows*vc->vc_cols*2);
+      else
+	{
+	  /* In case the screenbuffer does nothing contain when clear it. This
+	   * depends on the graphics card */
+	  if (   (c->vc_screenbuf[ 0] == 0xffff)
+	      && (c->vc_screenbuf[ 1] == 0xffff)
+	      && (c->vc_screenbuf[20] == 0xffff)
+	      && (c->vc_screenbuf[21] == 0xffff))
+	    scr_memsetw(c->vc_screenbuf, 0x0720, c->vc_rows*c->vc_cols*2);
+	}
     }
 
   MOD_INC_USE_COUNT;
@@ -212,10 +218,6 @@ dropscon_deinit(struct vc_data *c)
 
   MOD_DEC_USE_COUNT;
 }
-
-/**************************************************************
- ****  dropscon_XXX routines - interface used by the world ****
- **************************************************************/
 
 /* must not block !! */
 static comh_proto_t*
@@ -244,7 +246,7 @@ get_comh_req(void)
 	}
     
       /* try to write new index; if failed, retry */
-    } while (! l4util_cmpxchg32(&head, old, new));
+    } while (!l4util_cmpxchg32(&head, old, new));
 
   return comh_list + old;
 }
@@ -253,33 +255,18 @@ get_comh_req(void)
 static void
 ack_comh_req(comh_proto_t *comh)
 {
-#ifdef COMH_KERNEL_THREAD
- 
-  up(&comh->sem);
-
-#else
-  int state;
-
   atomic_inc(&comh->valid);
 
   /* wakeup comh thread? */
-  while ((state = atomic_read(&comh_sleep_state)) > 0)
+  if (xchg(&comh_sleep_state, 0) != 0)
     {
-      if (l4util_cmpxchg32((l4_uint32_t*)&comh_sleep_state, state, state-1))
-	{
-	  l4_threadid_t preempter, pager;
-	  unsigned old_flags, old_eip, old_esp;
-	  
-	  preempter = pager = L4_INVALID_ID;
-	  l4_thread_ex_regs(comh_l4id,
-			    (l4_umword_t)comh_wakeup, -1,
-			    &preempter, &pager,
-			    &old_flags, &old_eip, &old_esp);
-	  break;
-	}
+      l4_threadid_t foo = L4_INVALID_ID;
+      unsigned dummy;
+
+      l4_thread_ex_regs(comh_l4id,
+			(l4_umword_t)comh_wakeup, -1,
+		    	&foo, &foo, &dummy, &dummy, &dummy);
     }
-  
-#endif
 }
 
 
@@ -292,7 +279,10 @@ dropscon_clear(struct vc_data *conp,
 {
   l4con_pslim_rect_t _rect;
   comh_proto_t *comh;
-         
+  
+  if (console_blanked || !foreground)
+    return;
+
   if (!height || !width)
     return;
    
@@ -318,7 +308,10 @@ dropscon_putc(struct vc_data *conp,
 	      int x)
 {
   comh_proto_t *comh;
-  
+
+  if (console_blanked || !foreground)
+    return;
+
   if ((comh = get_comh_req()))
     {
       comh->func.putc.ch = c;
@@ -340,7 +333,10 @@ dropscon_putcs(struct vc_data *conp,
   /* we have to copy here because until the request is served in
    * comh_thread, the screen buffer could be changed */
   int size;
-  
+
+  if (console_blanked || !foreground)
+    return;
+
   /* make sure we fit into request size */
   for (; count; count -= size/2, s += size/2, x += size/2)
     {
@@ -407,10 +403,13 @@ dropscon_scroll(struct vc_data *c,
 {
   register u16 *p;
   register u32 n;
-  
+ 
   if (!lines)
     return 0;
    
+  if (console_blanked || !foreground)
+    return 0;
+
   if (lines > c->vc_rows)   /* maximum realistic size */
     lines = c->vc_rows;
 
@@ -526,6 +525,9 @@ dropscon_bmove(struct vc_data *conp,
 	       int height, 
 	       int width)
 {
+  if (console_blanked || !foreground)
+    return;
+
   if (accel_flags & L4CON_FAST_COPY)
     {
       /* copy is faster than redraw */
@@ -599,7 +601,7 @@ dropscon_blank(struct vc_data *conp,
       rect.w = xres;
       
       if (con_vc_pslim_fill_call(&dropsvc_l4id, &rect, black, &_env)
-	  || (_env.major != CORBA_NO_EXCEPTION))
+	  || _env.major != CORBA_NO_EXCEPTION)
 	{
 	  printk("dropscon.o: blank fill failed\n");
 	  return 0;
@@ -724,6 +726,12 @@ dropscon_redraw_all(void)
 }
 
 int
+dropsconsole_init_successful(void)
+{
+  return module_init_done == 1;
+}
+
+int
 dropsconsole_init(void)
 {
   comh_proto_t *comh;
@@ -741,7 +749,7 @@ dropsconsole_init(void)
   main_l4id = l4_myself();
 
   /* ask for 'con' (timeout = 5000 ms) */
-  if (!names_waitfor_name(CON_NAMES_STR, &con_l4id, 5000)) 
+  if (!names_waitfor_name(CON_NAMES_STR, &con_l4id, 2000)) 
     {
       printk("dropscon.o: con not registered at names\n");
       goto fail3;
@@ -749,9 +757,13 @@ dropsconsole_init(void)
   
   /* open con console, string buffer is 65536 bytes */
   if (con_if_openqry_call(&con_l4id, DROPSCON_MAX_SBUF_SIZE,  0, 0,
+#ifdef L4LX26
+                     PRIO_KERNEL_THREADS,
+#else
 		     PRIO_KERNEL /*from linux22/include/l4linux/x86/config.h*/,
+#endif
 		     &dropsvc_l4id, CON_NOVFB, &_env)
-      || (_env.major != CORBA_NO_EXCEPTION))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printk("dropscon.o: open vc failed\n");
       goto fail3;
@@ -776,28 +788,15 @@ dropsconsole_init(void)
 			 &bits_per_pixel, &bytes_per_pixel,
 			 &bytes_per_line, &accel_flags, 
 			 &fn_x, &fn_y, &_env)
-      || (_env.major != CORBA_NO_EXCEPTION))
+      || _env.major != CORBA_NO_EXCEPTION)
     {
       printk("dropscon.o: get graph_gmode failed\n");
       goto fail1;
     }
 
   dropscon_num_columns = xres / fn_x;
-  dropscon_num_lines = yres / fn_y;
+  dropscon_num_lines   = yres / fn_y;
 
-#ifdef COMH_KERNEL_THREAD
-  
-  /* empty event list */
-  for (comh = comh_list; 
-       comh < comh_list + DROPSCON_COMLIST_SIZE; 
-       comh++)
-    init_MUTEX_LOCKED(&comh->sem);
-
-  /* startup kernel thread for command handling */
-  kernel_thread(comh_thread, NULL, 0);
-  
-#else
-  
   /* empty event list */
   for (comh = comh_list;
        comh < comh_list + DROPSCON_COMLIST_SIZE;
@@ -820,24 +819,26 @@ dropsconsole_init(void)
       if (!(stack_page = __get_free_pages(GFP_KERNEL, 1)))
 	{
 	  printk("dropscon.o: Can't alloc stack for comh thread\n");
-	  return -ENOMEM;
+	  goto fail1;
 	}
 
       memset((void*)stack_page, 0, 2*PAGE_SIZE);
 
-      esp = (unsigned*)(stack_page+(2*PAGE_SIZE)-sizeof(l4_threadid_t));
-
+      esp = (unsigned*)(stack_page + 2*PAGE_SIZE - L4LINUX_RESERVED_STACK_TOP);
       *--esp = 0; /* param */
       *--esp = 0; /* fake return address */
 
       comh_l4id = create_thread(LTHREAD_NO_KERNEL_ANY,
 			       (void (*)(void))comh_thread, esp);
 
+      put_l4_id_to_stack((unsigned)esp, comh_l4id);
+      put_l4_prio_to_stack((unsigned)esp, 144);
+
       if (rmgr_set_prio(comh_l4id, 144 /*127*/))
 	{
 	  destroy_thread(ev_l4id.id.lthread);
 	  printk("kbd.o: error setting priority of service thread\n");
-	  return -EBUSY;
+	  goto fail1;
 	}
 
 #else /* kernel version >= 2.4 */
@@ -860,8 +861,6 @@ dropsconsole_init(void)
 			  L4_IPC_NEVER, &result);
     }
   
-#endif /* ! COMH_KERNEL_THREAD */
-  
   /* allocate inital consoles, make our module default for new consoles */
   take_over_console(&drops_con, first_vc, last_vc, 1);
 
@@ -877,6 +876,9 @@ fail2:
   con_vc_close_call(&dropsvc_l4id, &_env);
 
 fail3:
+  /* don't init a second time */
+  module_init_done = -1;
+
   return -EINVAL;
 }
 
@@ -900,11 +902,6 @@ dropsconsole_exit(void)
 
   printk("dropscon.o: stopping dropscon thread\n");
   stop_comh_thread = 1;
-
-#ifdef COMH_KERNEL_THREAD
-  /* ask dropscon kernel thread to terminate */
-  up(&comh_list[tail].sem);
-#endif
 
   /* wait until kernel thread is terminated */
   down(&exit_notify_sem);

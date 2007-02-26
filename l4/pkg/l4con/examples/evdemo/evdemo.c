@@ -16,11 +16,12 @@
 #include <l4/thread/thread.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/util.h>
+#include <l4/util/l4_macros.h>
 #include <l4/input/libinput.h>
 
-#include <l4/con/l4con.h>
-#include <l4/con/con-client.h>
-#include <l4/con/stream-server.h>
+#include <l4/l4con/l4con.h>
+#include <l4/l4con/l4con-client.h>
+#include <l4/l4con/stream-server.h>
 
 #include <l4/names/libnames.h>
 #include <l4/log/l4log.h>
@@ -97,9 +98,9 @@ char *released = "released";
 void 
 stream_io_push_component(CORBA_Object _dice_corba_obj,
     const stream_io_input_event_t *event,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
-	l4input_t *input_ev = (l4input_t*) event;
+	struct l4input *input_ev = (struct l4input*) event;
 
 	static unsigned short code;
 	static unsigned char down = 0;
@@ -138,48 +139,6 @@ void ev_loop()
 {
   l4thread_started(NULL);
   stream_io_server_loop(NULL);
-#if 0
-	int ret;
-	l4_msgdope_t result;
-	sm_request_t request;
-  	l4_ipc_buffer_t ipc_buf;
-
-	printf("Serving events as %x.%02x\n",
-	       ev_l4id.id.task, ev_l4id.id.lthread);
-
-	flick_init_request(&request, &ipc_buf);
-
-	/* tell creator that we are running */
-	l4thread_started(NULL);
-
-	/* IDL server loop */
-	while (1) {
-		result = flick_server_wait(&request);
-
-		while (!L4_IPC_IS_ERROR(result)) {
-			/* dispatch request */
-			ret = stream_io_server(&request);
-
-			switch(ret) {
-			case DISPATCH_ACK_SEND:
-				/* reply and wait for next request */
-				result = flick_server_reply_and_wait(&request);
-				break;
-				
-			default:
-				printf("Flick dispatch error (%d)!\n", ret);
-				
-				/* wait for next request */
-				result = flick_server_wait(&request);
-				break;
-			}
-		} /* !L4_IPC_IS_ERROR(result) */
-
-		/* Ooops, we got an IPC error -> do something */
-		printf(" Flick IPC error (%#x)", L4_IPC_ERROR(result));
-		enter_kdebug("PANIC");
-	}
-#endif
 }
 
 /******************************************************************************
@@ -192,11 +151,10 @@ int main(int argc, char *argv[])
 	CORBA_Environment _env = dice_default_environment;
 
 	/* init */
-	LOG_init(PROGTAG);
 	my_l4id = l4thread_l4_id( l4thread_myself() );
 
-	printf("How are you? I'm running as %x.%02x\n", 
-	       my_l4id.id.task, my_l4id.id.lthread);
+	printf("How are you? I'm running as "l4util_idfmt"\n", 
+	       l4util_idstr(my_l4id));
 
 	/* ask for 'con' (timeout = 5000 ms) */
 	if (names_waitfor_name(CON_NAMES_STR, &con_l4id, 50000) == 0) {

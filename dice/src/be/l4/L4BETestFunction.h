@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/L4BETestFunction.h
- *	\brief	contains the declaration of the class CL4BETestFunction
+ *    \file    dice/src/be/l4/L4BETestFunction.h
+ *    \brief   contains the declaration of the class CL4BETestFunction
  *
- *	\date	Tue May 28 2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    05/28/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -32,8 +33,6 @@
 
 #include <be/BETestFunction.h>
 
-class CDeclaratorStack;
-
 /** \class CL4BETestFunction
  *  \ingroup backend
  *  \brief implements L4 specifica of the test-function methods
@@ -41,21 +40,20 @@ class CDeclaratorStack;
 
 class CL4BETestFunction : public CBETestFunction
 {
-DECLARE_DYNAMIC(CL4BETestFunction);
 public:
     /** creates a new object of this class */
-	CL4BETestFunction();
-	~CL4BETestFunction();
+    CL4BETestFunction();
+    ~CL4BETestFunction();
 
 protected: // Protected methods
-    virtual void WriteErrorMessage(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext);
-    virtual void WriteErrorMessageThread(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext);
-    virtual void WriteErrorMessageTask(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext);
-    virtual void WriteSuccessMessageTask(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext);
-    virtual void WriteSuccessMessageThread(CBEFile *pFile, CDeclaratorStack *pStack, CBEContext *pContext);
-    virtual void WriteSuccessMessage(CBEFile * pFile, CDeclaratorStack * pStack, CBEContext * pContext);
-	virtual void CompareDeclarator(CBEFile* pFile,  CBEType* pType,  CDeclaratorStack* pStack,  CBEContext* pContext);
-	virtual void CompareFlexpages(CBEFile* pFile,  CBEType* pType,  CDeclaratorStack* pStack,  CBEContext* pContext);
+    virtual void WriteErrorMessage(CBEFile * pFile, vector<CDeclaratorStackLocation*> * pStack, CBEContext * pContext);
+    virtual void WriteErrorMessageThread(CBEFile * pFile, vector<CDeclaratorStackLocation*> * pStack, CBEContext * pContext);
+    virtual void WriteErrorMessageTask(CBEFile * pFile, vector<CDeclaratorStackLocation*> * pStack, CBEContext * pContext);
+    virtual void WriteSuccessMessageTask(CBEFile *pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
+    virtual void WriteSuccessMessageThread(CBEFile *pFile, vector<CDeclaratorStackLocation*> *pStack, CBEContext *pContext);
+    virtual void WriteSuccessMessage(CBEFile * pFile, vector<CDeclaratorStackLocation*> * pStack, CBEContext * pContext);
+    virtual void CompareDeclarator(CBEFile* pFile,  CBEType* pType,  vector<CDeclaratorStackLocation*> * pStack,  CBEContext* pContext);
+    virtual void CompareFlexpages(CBEFile* pFile,  CBEType* pType,  vector<CDeclaratorStackLocation*> * pStack,  CBEContext* pContext);
 };
 
 #endif

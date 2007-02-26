@@ -23,7 +23,7 @@
 class exc_img_t : public file_t 
 {
   public:
-    exc_img_t(const char *fname, const l4dm_dataspace_t *ds, 
+    exc_img_t(const char *fname, l4dm_dataspace_t *ds, int sticky,
 	      l4env_infopage_t *env);
     ~exc_img_t();
    
@@ -47,6 +47,9 @@ class exc_img_t : public file_t
   protected:
     /** Full pathname of ELF object, not known until successfully loaded */
     char		pathname[EXC_MAXFNAME];
+
+    /** kill of dataspace if set */
+    int			sticky_ds;
 };
 
 #endif /* __L4_EXEC_SERVER_EXC_IMG_H */

@@ -1,0 +1,16 @@
+*.aux
+interfaces.eps
+*.log
+l4vfs_namespaces.pdf
+l4vfs_namespaces.tex
+Helpme,_I_want_to_write_a_server_and_have_no_clue.pdf
+*.ps
+object_server1.eps
+object_server1.pdf
+object_server2.eps
+object_server2.pdf
+root_namespace.eps
+root_namespace.pdf
+l4vfs
+l4vfs.flags
+l4vfs.title

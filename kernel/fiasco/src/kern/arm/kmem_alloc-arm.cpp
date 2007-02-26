@@ -1,83 +1,61 @@
-IMPLEMENTATION[arm]:
+IMPLEMENTATION [arm]:
 
 #include <cstdio>
+#include <cassert>
 
 #include "config.h"
 #include "helping_lock.h"
 #include "kip_init.h"
 #include "kmem.h"
-#include "lmm.h"
 #include "panic.h"
-
-static lmm_region_t lmm_region_all;
-
-IMPLEMENT
-Kmem_alloc::Kmem_alloc()
-{
-  size_t mem_size = Kip::kip()->total_ram * Config::kernel_mem_per_cent / 100;
-  mem_size &= ~(Config::PAGE_SIZE -1);
-  
-  printf("Kmem_alloc::Kmem_alloc() [lmm=%p]\n", lmm);
-
-  lmm_init((lmm_t*)lmm);
-  lmm_add_region((lmm_t*)lmm, &lmm_region_all, (void*)0, (vm_size_t)-1, 0, 0);
-
-  Kernel_memory_desc *md = Kip::mem_descs();
-  Kernel_memory_desc *amd = md;
-  while(md->size_type) md++;
-  assert(md != amd);
-  do {
-    md--;
-    if((md->size_type & L4_MEMORY_DESC_TYPE_MASK) == L4_MEMORY_DESC_AVAIL) {
-      size_t s = md->size_type & L4_MEMORY_DESC_SIZE_MASK;
-      char *virt = Kmem::phys_to_virt(P_ptr<char>((char*)md->base));
-      if(s >= mem_size) {
-	lmm_add_free((lmm_t*)lmm, virt + ( s - mem_size ), mem_size );
-	mem_size = 0;
-	break;
-      } else {
-	lmm_add_free((lmm_t*)lmm, virt , s );
-	mem_size -= s;
-      }
-    }
-  } while(md!=amd && mem_size > 0);
-  if(mem_size > 0)
-    panic("Could not get the memory necessary for the kernel\n");
-
-  printf("Kmem_alloc() finished!\n"
-	 "  avail mem = %d Kbytes\n", lmm_avail((lmm_t*)lmm,0)>>10);
- 
-}
-
-
-IMPLEMENT
-void *Kmem_alloc::_phys_to_virt( void *phys ) const
-{
-  return (char*)phys + (Kmem::PHYS_MAP_BASE - Kmem::PHYS_SDRAM_BASE);
-}
-
-IMPLEMENT
-void *Kmem_alloc::_virt_to_phys( void *virt ) const
-{
-  return (char*)virt - (Kmem::PHYS_MAP_BASE - Kmem::PHYS_SDRAM_BASE);
-
-}
 
 PUBLIC
 void Kmem_alloc::debug_dump()
 {
-  Helping_lock_guard guard(&lmm_lock);
+  a->dump();
+}
 
-  lmm_dump((lmm_t*)lmm);
-  vm_size_t free = lmm_avail((lmm_t*)lmm, 0);
-  vm_size_t orig_free = 1000; /*Kmem::info()->reserved1.high 
-				- Kmem::info()->reserved1.low;*/
-  printf("Used 0x%x/0x%x bytes (%d%%, %d/%dkB) of kmem\n", 
-	 orig_free - free, 
-	 orig_free,
-	 (Unsigned32)(100LL*(orig_free-free)/orig_free),
-	 (orig_free - free + 1023)/1024,
-	 (orig_free        + 1023)/1024);
+//----------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
+
+IMPLEMENT
+Kmem_alloc::Kmem_alloc()
+{
+  Mword kmem_size = 8*1024*1024;
+  Mword alloc_size = kmem_size;
+
+  
+  a->init();
+
+  for (;alloc_size > 0;)
+    {
+      Mem_region r = Kip::k()->last_free();
+      if (r.start > r.end)
+	  panic("Corrupt memory descscriptor in KIP...");
+      
+      if (r.start == r.end)
+	{
+	  panic("not enough kernel memory");
+	}
+      Mword size = r.end - r.start + 1;
+      if (size <= alloc_size)
+	{
+	  Kip::k()->add_mem_region(Mem_desc(r.start, r.end, 
+		                                Mem_desc::Reserved));
+	  // printf("ALLOC: [%08x; %08x]\n", r.start, r.end);
+	  a->free((void*)Mem_layout::phys_to_pmem(r.start), size);
+	  alloc_size -= size;
+	}
+      else 
+	{
+	  r.start += (size - alloc_size);
+	  Kip::k()->add_mem_region(Mem_desc(r.start, r.end, 
+		                                Mem_desc::Reserved));
+	  // printf("ALLOC: [%08x; %08x]\n", r.start, r.end);
+	  a->free((void*)Mem_layout::phys_to_pmem(r.start), alloc_size);
+	  alloc_size = 0;
+	}
+    }
 }
 
 

@@ -1,0 +1,64 @@
+% Command Definitions for paper
+% These need to be in a package for keyval access to work
+\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\ProvidesPackage{commands}
+\DeclareOption{unknownkeysallowed}
+  {\PassOptionsToPackage\CurrentOption{keyval}}
+\ProcessOptions
+\RequirePackage{keyval,ifthen,graphicx}
+
+% Figures always look like this
+  \graphicspath{{images/}}
+
+  % Define argument set FIG
+    % label - define a label to be used in references
+    \newcommand{\FIG@label}{}
+    \define@key{FIG}{label}{\renewcommand{\FIG@label}{#1}}
+    
+    % caption - caption to be printed in text
+    \newcommand{\FIG@caption}{}
+    \define@key{FIG}{caption}{\renewcommand{\FIG@caption}{#1}}
+    
+    % short_caption - text to be shown in list of figures, defaults to caption if omitted.
+    \newcommand{\FIG@shortCaption}{}
+    \define@key{FIG}{short_caption}%
+        {\renewcommand{\FIG@shortCaption}{#1}}
+        
+    % angle - rotation angle if needed
+    \newcommand{\FIG@angle}{}
+    \define@key{FIG}{angle}{\renewcommand{\FIG@angle}{#1}}
+    
+    % targetwidth - width the image should have after scaling. 
+    % defaults to \textwidth
+    \newcommand{\FIG@targetwidth}{}
+    \define@key{FIG}{targetwidth}{\renewcommand{\FIG@targetwidth}{#1}}
+    
+  % The actual command for inserting figures.
+  % args: image file, key-value list of parameters
+  % default label is "figure:"<image file>
+  \newcommand{\insertFigure}[2][]{
+    \renewcommand{\FIG@label}{no_label}
+    \renewcommand{\FIG@caption}{no_caption}
+    \renewcommand{\FIG@shortCaption}{no_caption}
+    \renewcommand{\FIG@angle}{0}
+    \renewcommand{\FIG@targetwidth}{\textwidth}
+    \setkeys{FIG}{#1}
+    
+    \begin{figure}[tp]%[htbp]
+      \begin{center}
+        \includegraphics[width=\FIG@targetwidth, draft=false, angle=\FIG@angle]{#2}
+        \ifthenelse{\equal{\FIG@caption}{no_caption}}%
+                   {}%
+                   {\ifthenelse{\equal{\FIG@shortCaption}%
+                                      {no_caption}}%
+                               {\caption{\FIG@caption}}%
+                               {\caption[\FIG@shortCaption]%
+                                        {\FIG@caption}}´
+                   }                               
+        \ifthenelse{\equal{\FIG@label}{no_label}}%
+                   {\label{figure:#2}}%
+                   {\label{\FIG@label}}
+      \end{center}
+    \end{figure}
+  }  
+\endinput

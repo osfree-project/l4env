@@ -39,12 +39,11 @@
  */
 /*****************************************************************************/ 
 static inline dsmlib_client_desc_t *
-__find_client(dsmlib_ds_desc_t * ds, 
-	      l4_threadid_t client)
+__find_client(const dsmlib_ds_desc_t * ds, l4_threadid_t client)
 {
   dsmlib_client_desc_t * c = ds->clients;
 
-  while ((c != NULL) && !l4_thread_equal(client,c->client))
+  while ((c != NULL) && !l4_task_equal(client, c->client))
     c = c->next;
 
   return c;
@@ -63,17 +62,16 @@ __find_client(dsmlib_ds_desc_t * ds,
  * \param  rights        Rights bit mask
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL  invalid dataspace descriptor
- *         - \c -L4_ENOMEM  out of memory allocating client descriptor
+ *         - -#L4_EINVAL  invalid dataspace descriptor
+ *         - -#L4_ENOMEM  out of memory allocating client descriptor
  *
  * Add client to the client list of the dataspace. If the client already 
  * exists, the rights are added to the client descriptor.
  */
 /*****************************************************************************/ 
 int
-dsmlib_add_client(dsmlib_ds_desc_t * ds, 
-		  l4_threadid_t client, 
-		  l4_uint32_t rights)
+dsmlib_add_client(dsmlib_ds_desc_t * ds, l4_threadid_t client, 
+                  l4_uint32_t rights)
 {
   dsmlib_client_desc_t * c;
 
@@ -81,14 +79,14 @@ dsmlib_add_client(dsmlib_ds_desc_t * ds,
     return -L4_EINVAL;
 
   /* try to find client */
-  c = __find_client(ds,client);
+  c = __find_client(ds, client);
   if (c == NULL)
     {
       /* add new client descriptor */
       c = dsmlib_alloc_client_desc();
       if (c == NULL)
 	{
-	  ERROR("DSMlib: client descriptor allocation failed!");
+	  LOGdL(DEBUG_ERRORS, "DSMlib: client descriptor allocation failed!");
 	  return -L4_ENOMEM;
 	}
 
@@ -116,15 +114,14 @@ dsmlib_add_client(dsmlib_ds_desc_t * ds,
  * \param  client        Client thread id
  *
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL     invalid dataspace descriptor
- *         - \c -L4_ENOTFOUND  client id not found
+ *         - -#L4_EINVAL     invalid dataspace descriptor
+ *         - -#L4_ENOTFOUND  client id not found
  *
  * Remove client from the client list of the dataspace.
  */
 /*****************************************************************************/ 
 int
-dsmlib_remove_client(dsmlib_ds_desc_t * ds, 
-		     l4_threadid_t client)
+dsmlib_remove_client(dsmlib_ds_desc_t * ds, l4_threadid_t client)
 {
   dsmlib_client_desc_t * c, * tmp;
 
@@ -134,7 +131,7 @@ dsmlib_remove_client(dsmlib_ds_desc_t * ds,
   c = ds->clients;
   tmp = NULL;
 
-  while ((c != NULL) && !l4_thread_equal(client,c->client))
+  while ((c != NULL) && !l4_task_equal(client, c->client))
     {
       tmp = c;
       c = c->next;
@@ -162,7 +159,7 @@ dsmlib_remove_client(dsmlib_ds_desc_t * ds,
  * \param  ds            Dataspace descriptor
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL     invalid dataspace descriptor
+ *         - -#L4_EINVAL     invalid dataspace descriptor
  */
 /*****************************************************************************/ 
 int
@@ -197,14 +194,13 @@ dsmlib_remove_all_clients(dsmlib_ds_desc_t * ds)
  */
 /*****************************************************************************/ 
 int
-dsmlib_is_client(dsmlib_ds_desc_t * ds, 
-		 l4_threadid_t client)
+dsmlib_is_client(const dsmlib_ds_desc_t * ds, l4_threadid_t client)
 {
   if (ds == NULL)
     return 0;
 
   /* find client */
-  if (__find_client(ds,client) == NULL)
+  if (__find_client(ds, client) == NULL)
     return 0;
   else
     return 1;
@@ -219,16 +215,15 @@ dsmlib_is_client(dsmlib_ds_desc_t * ds,
  * \param  rights        Rights bit mask 
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL     invlaid datatspace descriptor 
- *         - \c -L4_ENOTFOUND  client id not found
+ *         - -#L4_EINVAL     invlaid datatspace descriptor 
+ *         - -#L4_ENOTFOUND  client id not found
  *
  * Set rights for \a client to \a rights.
  */
 /*****************************************************************************/ 
 int
-dsmlib_set_rights(dsmlib_ds_desc_t * ds, 
-		  l4_threadid_t client, 
-		  l4_uint32_t rights)
+dsmlib_set_rights(const dsmlib_ds_desc_t * ds, l4_threadid_t client, 
+                  l4_uint32_t rights)
 {
   dsmlib_client_desc_t * c;
 
@@ -236,7 +231,7 @@ dsmlib_set_rights(dsmlib_ds_desc_t * ds,
     return -L4_EINVAL;
 
   /* find client */
-  c = __find_client(ds,client);
+  c = __find_client(ds, client);
   if (c == NULL)
     return -L4_ENOTFOUND;
   else
@@ -263,8 +258,7 @@ dsmlib_set_rights(dsmlib_ds_desc_t * ds,
  */
 /*****************************************************************************/ 
 l4_uint32_t 
-dsmlib_get_rights(dsmlib_ds_desc_t * ds, 
-		  l4_threadid_t client)
+dsmlib_get_rights(const dsmlib_ds_desc_t * ds, l4_threadid_t client)
 {
   dsmlib_client_desc_t * c;
 
@@ -272,7 +266,7 @@ dsmlib_get_rights(dsmlib_ds_desc_t * ds,
     return 0;
 
   /* find client */
-  c = __find_client(ds,client);
+  c = __find_client(ds, client);
   if (c == NULL)
     return 0;
   else
@@ -296,8 +290,7 @@ dsmlib_get_rights(dsmlib_ds_desc_t * ds,
  */
 /*****************************************************************************/ 
 int
-dsmlib_check_rights(dsmlib_ds_desc_t * ds, 
-		    l4_threadid_t client,
+dsmlib_check_rights(const dsmlib_ds_desc_t * ds, l4_threadid_t client,
 		    l4_uint32_t rights)
 {
   dsmlib_client_desc_t * c;
@@ -306,7 +299,7 @@ dsmlib_check_rights(dsmlib_ds_desc_t * ds,
     return 0;
 
   /* find client */
-  c = __find_client(ds,client);
+  c = __find_client(ds, client);
   if (c == NULL)
     return 0;
   else
@@ -325,7 +318,7 @@ dsmlib_check_rights(dsmlib_ds_desc_t * ds,
  */
 /*****************************************************************************/ 
 void
-dsmlib_list_ds_clients(dsmlib_ds_desc_t * ds)
+dsmlib_list_ds_clients(const dsmlib_ds_desc_t * ds)
 {
   dsmlib_client_desc_t * pc;
 
@@ -336,8 +329,7 @@ dsmlib_list_ds_clients(dsmlib_ds_desc_t * ds)
   pc = ds->clients;
   while (pc != NULL)
     {
-      printf("%x.%x (0x%x) ",pc->client.id.task,pc->client.id.lthread,
-             pc->rights);
+      LOG_printf(l4util_idfmt" (0x%x) ", l4util_idstr(pc->client), pc->rights);
       pc = pc->next;
     } 
 }

@@ -1,11 +1,11 @@
-INTERFACE:
+INTERFACE [ia32-watchdog]:
 
 #include "types.h"
+#include "initcalls.h"
 
 class Watchdog
 {
 public:
-  static void init();
   static void (*touch)(void);
   static void (*enable)(void);
   static void (*disable)(void);
@@ -25,7 +25,7 @@ private:
 };
 
 
-IMPLEMENTATION[ia32]:
+IMPLEMENTATION [ia32-watchdog]:
 
 #include <cstdio>
 #include <cstdlib>
@@ -33,8 +33,9 @@ IMPLEMENTATION[ia32]:
 #include "apic.h"
 #include "config.h"
 #include "cpu.h"
-#include "initcalls.h"
+#include "panic.h"
 #include "perf_cnt.h"
+#include "static_init.h"
 
 #define WATCHDOG_TIMEOUT_S	2
 
@@ -46,14 +47,17 @@ Watchdog::Watchdog_flags Watchdog::flags;
 
 static void
 Watchdog::do_nothing()
-{
-}
+{}
 
 static void
 Watchdog::perf_enable()
 {
   if (flags.active && flags.user_active)
-    Perf_cnt::start_watchdog();
+    {
+      Perf_cnt::touch_watchdog();
+      Perf_cnt::start_watchdog();
+      Apic::set_perf_nmi();
+    }
 }
 
 static void
@@ -92,29 +96,27 @@ Watchdog::user_disable()
 PUBLIC static inline
 void
 Watchdog::user_takeover_control()
-{
-  flags.no_user_control = 0;
-}
+{ flags.no_user_control = 0; }
 
 // user gives back control of Watchdog
 PUBLIC static inline
 void
 Watchdog::user_giveback_control()
-{
-  flags.no_user_control = 0;
-}
+{ flags.no_user_control = 0; }
 
-IMPLEMENT FIASCO_INIT
-void
+STATIC_INITIALIZE_P(Watchdog, WATCHDOG_INIT);
+
+PUBLIC static
+void FIASCO_INIT
 Watchdog::init()
 {
+  if (!Config::watchdog)
+    return;
+
   if (   !Apic::is_present()
       || !Apic::have_pcint()
       || !Perf_cnt::have_watchdog())
-    {
-      Config::watchdog = false;
-      return;
-    }
+    panic("Cannot initialize watchdog (no/bad Local APIC)");
 
   // attach performance counter interrupt tom NMI
   Apic::set_perf_nmi();

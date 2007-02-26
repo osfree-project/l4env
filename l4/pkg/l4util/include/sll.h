@@ -16,13 +16,13 @@ typedef struct slist_t
 /*
  * function prototypes
  */
-slist_t*
+static inline slist_t*
 list_new_entry(void *data);
 
-slist_t*
+static inline slist_t*
 list_append(slist_t *list, slist_t *new_node);
 
-slist_t*
+static inline slist_t*
 list_remove(slist_t *list, slist_t *node);
 
 static inline void    
@@ -31,13 +31,13 @@ list_free_entry(slist_t **list);
 static inline unsigned char  
 list_is_empty(slist_t *list);
 
-slist_t*
+static inline slist_t*
 list_get_at(slist_t *list, int n);
 
-slist_t*
+static inline slist_t*
 list_add(slist_t *list, slist_t *new_node);
 
-void
+static inline void
 list_insert_after(slist_t *after, slist_t *new_node);
 
 static inline int 
@@ -55,7 +55,7 @@ list_elements(slist_t *head);
  *  NULL otherwise
  *
  */
-slist_t*
+static inline slist_t*
 list_new_entry(void *data)
 {
   slist_t *sll;
@@ -82,7 +82,7 @@ list_new_entry(void *data)
  *  the new list
  *
  */
-slist_t* 
+static inline slist_t* 
 list_append(slist_t *head, slist_t *new_node)
 {
   slist_t *ret = head;
@@ -107,7 +107,7 @@ list_append(slist_t *head, slist_t *new_node)
  *  the new list
  *
  */
-slist_t* 
+static inline slist_t* 
 list_add(slist_t *head, slist_t *new_node)
 {
   if (!new_node)
@@ -128,7 +128,7 @@ list_add(slist_t *head, slist_t *new_node)
  *  the new list
  *
  */
-void 
+static inline void 
 list_insert_after(slist_t *after, slist_t *new_node)
 {
   if (!new_node)
@@ -170,7 +170,7 @@ list_is_empty(slist_t *list)
  *  none
  *
  */
-slist_t* 
+static inline slist_t* 
 list_remove(slist_t *head, slist_t *node)
 {
   slist_t *ret = head;
@@ -230,7 +230,7 @@ list_free_entry(slist_t **list)
  *  NULL if there's no such node at posion n
  *
  */
-slist_t*
+static inline slist_t*
 list_get_at(slist_t *list, int n)
 {
   int j=0;

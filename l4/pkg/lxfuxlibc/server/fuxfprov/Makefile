@@ -2,14 +2,12 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= fuxfprov
-MODE		= sigma0
-DEFAULT_RELOC	= 0x01000000
+MODE		= l4env
+DEFAULT_RELOC	= 0x00500000
 SYSTEMS		= x86-l4v2 x86-l4x0
 
-L4LIBS		= -lmain -lgeneric_fprov-server -ldm_generic -ldm_mem \
-		  -ll4env_err -ll4sys -lnames -lrmgr -ll4util
-SRC_C		= main.c l4env_dummies.c
-LIBS		= -lclxfux.o
+SRC_C		= main.c
+LIBS		= -lclxfux.o -ll4z -lstdio_zlib_ux -lgeneric_fprov-server
 
 include $(L4DIR)/mk/prog.mk
 

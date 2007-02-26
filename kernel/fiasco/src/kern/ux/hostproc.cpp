@@ -1,23 +1,16 @@
 
 /*
- * Fiasco-UX (v2 and x0)
+ * Fiasco-UX
  * Functions for setting up host processes implementing tasks
  */
 
 INTERFACE:
 
 class Hostproc
-{
-public:
-  static unsigned	create	(unsigned int taskno);
-
-private:
-  static void		setup	(unsigned int taskno);
-};
+{};
 
 IMPLEMENTATION:
 
-#include <flux/x86/multiboot.h>
 #include <asm/unistd.h>
 #include <sys/mman.h>
 #include <sys/ptrace.h>
@@ -31,21 +24,18 @@ IMPLEMENTATION:
 #include "boot_info.h"
 #include "config.h"
 #include "cpu_lock.h"
-#include "emulation.h"
 #include "globals.h"
-#include "kmem.h"
 #include "lock_guard.h"
+#include "mem_layout.h"
+#include "panic.h"
 #include "trampoline.h"
 
-IMPLEMENT
+PRIVATE static
 void
-Hostproc::setup (unsigned int taskno) {
-
-  sigset_t fullmask;
-  stack_t stack;
+Hostproc::setup (unsigned int taskno)
+{
   char **args = Boot_info::args();
   size_t arglen = 0;
-  int status;
 
   // Zero all args, making ps output pretty
   do arglen += strlen (*args) + 1; while (*++args);
@@ -58,64 +48,45 @@ Hostproc::setup (unsigned int taskno) {
   fclose (stdout);
   fclose (stderr);
 
-  sigfillset  (&fullmask);
-  sigprocmask (SIG_UNBLOCK, &fullmask, NULL);
+  sigset_t mask;
+  sigfillset (&mask);
+  check (!sigprocmask (SIG_UNBLOCK, &mask, NULL));
 
-  stack.ss_sp    = (void *) Emulation::trampoline_page;
+  stack_t stack;
+  stack.ss_sp    = (void *) Mem_layout::Trampoline_page;
   stack.ss_size  = Config::PAGE_SIZE;
   stack.ss_flags = 0;
-  status = sigaltstack (&stack, NULL);
-  assert (!status);
+  check (!sigaltstack (&stack, NULL));
 
-  /*
-   * Install signal handlers the hard way
-   * to avoid glibc's restorer code games
-   */
+  struct sigaction action;
+  sigfillset (&action.sa_mask);
+  action.sa_flags     = SA_ONSTACK | SA_SIGINFO;
+  action.sa_restorer  = (void (*)()) 0xDEADC0DE;
+  action.sa_sigaction = (void (*)(int,siginfo_t*,void*)) 
+			    Mem_layout::Trampoline_page;
+  check (!sigaction (SIGSEGV, &action, NULL));
 
-  struct kernel_sigaction {
-    __sighandler_t      handler;
-    unsigned long       flags;  
-    void (*restorer) (void);    
-    sigset_t            mask;   
-  } action;
-
-  action.handler = (__sighandler_t) Emulation::trampoline_page;
-  action.flags     = SA_ONSTACK | SA_SIGINFO;
-  action.restorer  = 0;
-  sigfillset (&action.mask);
-
-  asm volatile ("int $0x80" : "=a"(status) : "a"(__NR_rt_sigaction), "b"(SIGSEGV), "c"(&action), "d"(0), "S"(_NSIG / 8));
-  asm volatile ("int $0x80" : "=a"(status) : "a"(__NR_rt_sigaction), "b"(SIGTRAP), "c"(&action), "d"(0), "S"(_NSIG / 8));
-
-  /*
-   * Map the magic pages
-   */
-  mmap ((void *) Emulation::trampoline_page, Config::PAGE_SIZE,
+  // Map trampoline page
+  mmap ((void *) Mem_layout::Trampoline_page, Config::PAGE_SIZE,
 	PROT_READ | PROT_WRITE | PROT_EXEC, MAP_SHARED | MAP_FIXED,
-	Boot_info::fd(), Emulation::trampoline_frame);
-
-  mmap ((void *) Emulation::utcb_address_page, Config::PAGE_SIZE,
-	PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED,
-	Boot_info::fd(), Emulation::utcb_address_frame);
+	Boot_info::fd(), Mem_layout::Trampoline_frame);
 
   ptrace (PTRACE_TRACEME, 0, NULL, NULL);
 
-  raise (SIGSTOP);
+  raise (SIGUSR1);
 }
 
-IMPLEMENT
+PUBLIC static
 unsigned
-Hostproc::create (unsigned int taskno) {
-
-  Lock_guard<Cpu_lock> guard (&cpu_lock);
+Hostproc::create (unsigned int taskno)
+{
+  Lock_guard <Cpu_lock> guard (&cpu_lock);
 
   static pid_t pid;
   static unsigned esp;
   static unsigned number;
-  int status;
 
-  /* We need a variable which is not on the stack */
-  number = taskno;
+  number = taskno;	// non-stack variable
 
   /*
    * Careful with local variables here because we are changing the
@@ -123,42 +94,29 @@ Hostproc::create (unsigned int taskno) {
    * child gets its own COW stack rather than running on the parent
    * stack.
    */      
-  asm volatile ("movl %%esp, %0 \n\t"
-                "movl %1, %%esp" : "=m" (esp), "=m" (boot_stack));
+  asm volatile ("movl %%esp, %0; movl %1, %%esp" :
+                "=m" (esp), "=m" (boot_stack));
 
-  /*
-   * Make sure the child doesn't inherit any of our unflushed output
-   */
+  // Make sure the child doesn't inherit any of our unflushed output
   fflush (NULL);
 
-  switch (pid = fork ()) {
-  
-    case -1:                            // Failed
-      return 0;
-  
-    case 0:                             // Child
-    
-      /*
-       * number resides on the old parent stack. It is safe to read
-       * it here, because the parent is waitpid'ing for us and hasn't
-       * cleared the stackframe yet
-       */
-
-      setup (number);
-
-      _exit (1);                        // unreached
+  switch (pid = fork())
+    {
+      case -1:                            // Failed
+        return 0;
       
-    default:                            // Parent
-
-      asm volatile ("movl %0, %%esp" : : "m" (esp));
-
-      while (waitpid (pid, &status, 0) != pid)
-        ;
-         
-      assert (WIFSTOPPED (status) && WSTOPSIG (status) == SIGSTOP);
-
-      Trampoline::munmap (pid, 0, Emulation::utcb_address_page);
-
-      return pid;
-  }
+      case 0:                             // Child
+        setup (number);
+        _exit (1);                        // unreached
+        
+      default:                            // Parent
+        asm volatile ("movl %0, %%esp" : : "m" (esp));
+      
+        int status;
+        check (waitpid (pid, &status, 0) == pid);
+        assert (WIFSTOPPED (status) && WSTOPSIG (status) == SIGUSR1);
+      
+        Trampoline::syscall (pid, __NR_munmap, 0, Mem_layout::Trampoline_page);
+        return pid;
+    }
 }  

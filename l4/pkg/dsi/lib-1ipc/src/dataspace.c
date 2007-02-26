@@ -109,12 +109,13 @@ __setup_ctrl_ds(dsi_socket_t * socket, dsi_stream_cfg_t cfg)
   ret = l4dm_mem_size(&socket->ctrl_ds,&size);
   if (ret < 0)
     {
-      Error("DSI: get dataspace size failed: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("get dataspace size failed: %s (%d)",l4env_errstr(ret),ret);
       return -L4_EINVAL;
     }
 
   LOGdL(DEBUG_CTRL_DS,"attaching ctrl dataspace, size %d", size);
-  LOGdL(DEBUG_CTRL_DS,"ds %d at %t",socket->ctrl_ds.id, socket->ctrl_ds.manager);
+  LOGdL(DEBUG_CTRL_DS,"ds %d at "l4util_idfmt, 
+        socket->ctrl_ds.id, l4util_idstr(socket->ctrl_ds.manager));
   
   /* attach dataspace */
   if (cds_map_area != -1)
@@ -125,8 +126,7 @@ __setup_ctrl_ds(dsi_socket_t * socket, dsi_stream_cfg_t cfg)
 		      (void **)&map_addr);
   if (ret < 0)
     {
-      Error("DSI: attach dataspace failed: %s (%d)",
-	    l4env_errstr(ret),ret);
+      LOG_Error("attach dataspace failed: %s (%d)", l4env_errstr(ret),ret);
       return ret;
     }
 
@@ -199,18 +199,18 @@ dsi_create_ctrl_area(dsi_socket_t * socket, dsi_jcp_stream_t jcp_stream,
   LOGdL(DEBUG_CTRL_DS,"total size %u",size);
 
   /* align size to page size */
-  size = (size + L4_PAGESIZE - 1) & L4_PAGEMASK;
+  size = l4_round_page(size);
 
   /* allocate dataspace */
   ret = l4dm_mem_open(dsi_dm_id,size,0,0,"DSI ctrl area",&socket->ctrl_ds);
   if (ret < 0)
     {
-      Error("DSI: dataspace allocation failed: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("dataspace allocation failed: %s (%d)",l4env_errstr(ret),ret);
       return ret;
     }
 
-  LOGdL(DEBUG_CTRL_DS,"ds %d at %x.%x",socket->ctrl_ds.id,
-        socket->ctrl_ds.manager.id.task,socket->ctrl_ds.manager.id.lthread);
+  LOGdL(DEBUG_CTRL_DS,"ds %d at "l4util_idfmt, socket->ctrl_ds.id,
+        l4util_idstr(socket->ctrl_ds.manager));
 
   /* setup dataspace */
   ret = __setup_ctrl_ds(socket,cfg);
@@ -280,7 +280,7 @@ dsi_set_ctrl_area(dsi_socket_t * socket, l4dm_dataspace_t ctrl_ds,
   ret = l4dm_check_rights(&ctrl_ds,L4DM_RW);
   if (ret < 0)
     {
-      Error("DSI: invalid dataspace: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("invalid dataspace: %s (%d)",l4env_errstr(ret),ret);
       return ret;
     }
 
@@ -309,7 +309,7 @@ dsi_set_ctrl_area(dsi_socket_t * socket, l4dm_dataspace_t ctrl_ds,
   if ((cfg.num_packets != socket->num_packets) ||
       (socket->num_sg_elems != cfg.max_sg * socket->num_packets))
     {
-      Error("DSI: configuration mismatch in control area");
+      LOG_Error("configuration mismatch in control area");
       
       /* check if attached area is big enough */
       size = sizeof(dsi_ctrl_header_t) + 
@@ -325,7 +325,7 @@ dsi_set_ctrl_area(dsi_socket_t * socket, l4dm_dataspace_t ctrl_ds,
 	}
       
       /* adapt packet / scatter gather list pointer */
-      printf("DSI: adjusting packet / scatter gather list pointers\n");
+      LOG_printf("DSI: adjusting packet / scatter gather list pointers\n");
       map = (l4_addr_t)socket->header;
       socket->packets = (dsi_packet_t *)(map + sizeof(dsi_ctrl_header_t));
       socket->sg_lists = (dsi_sg_elem_t *)
@@ -354,15 +354,14 @@ dsi_release_ctrl_area(dsi_socket_t * socket)
   int ret;
   int error = 0;
   
-  LOGdL(DEBUG_CTRL_DS,"detaching control area (ds %d at %x.%x)",
-        socket->ctrl_ds.id,
-        socket->ctrl_ds.manager.id.task,socket->ctrl_ds.manager.id.lthread);
+  LOGdL(DEBUG_CTRL_DS,"detaching control area (ds %d at "l4util_idfmt")",
+        socket->ctrl_ds.id, l4util_idstr(socket->ctrl_ds.manager));
 
   /* detach control dataspace */
   ret = l4rm_detach(socket->header);
   if (ret < 0)
     {
-      Error("DSI: detach control dataspace failed: %s (%d)",
+      LOG_Error("detach control dataspace failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       error = ret;
     }
@@ -373,7 +372,7 @@ dsi_release_ctrl_area(dsi_socket_t * socket)
       ret = l4dm_close(&socket->ctrl_ds);
       if (ret < 0)
 	{
-	  Error("DSI: close control dataspace failed: %s (%d)",
+	  LOG_Error("close control dataspace failed: %s (%d)",
 		l4env_errstr(ret),ret);
 	  error = ret;
 	}
@@ -417,7 +416,7 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
       ret = l4dm_mem_size(&data_ds,&size);
       if (ret < 0)
 	{
-	  Error("DSI: get dataspace size failed: %s (%d)",
+	  LOG_Error("get dataspace size failed: %s (%d)",
 		l4env_errstr(ret),ret);
 	  return -L4_EINVAL;
 	}
@@ -439,7 +438,7 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
 	ret = l4dm_mem_open(dsi_dm_id,size,0,0,"DSI data",&ds);
       if (ret < 0)
 	{
-	  Error("DSI: dataspace allocation failed: %s (%d)!",
+	  LOG_Error("dataspace allocation failed: %s (%d)!",
 		l4env_errstr(ret),ret);
 	  return ret;
 	}
@@ -453,7 +452,7 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
       ret = l4dm_check_rights(&data_ds,L4DM_RW);
       if (ret < 0)
 	{
-	  Error("DSI: invalid data dataspace: %s (%d)!",
+	  LOG_Error("invalid data dataspace: %s (%d)!",
 		l4env_errstr(ret),ret);
 	  return ret;
 	}
@@ -461,13 +460,14 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
     }
 
   LOGdL(DEBUG_DATA_DS,"attaching data area");
-  LOGdL(DEBUG_DATA_DS,"ds %d at %#t",data_ds.id,data_ds.manager);
+  LOGdL(DEBUG_DATA_DS,"ds %d at "l4util_idfmt, 
+         data_ds.id, l4util_idstr(data_ds.manager));
   
   /* get dataspace size */
   ret = l4dm_mem_size(&ds,&size);
   if (ret < 0)
     {
-      Error("DSI: get dataspace size failed: %s (%d)",l4env_errstr(ret),ret);
+      LOG_Error("get dataspace size failed: %s (%d)",l4env_errstr(ret),ret);
       return -L4_EINVAL;
     }
 
@@ -503,7 +503,7 @@ dsi_set_data_area(dsi_socket_t * socket, l4dm_dataspace_t data_ds)
     ret = l4rm_attach(&ds,size,0,flags,&map);
   if (ret)
     {
-      Error("DSI: attach data dataspace failed: %s (%d)",
+      LOG_Error("attach data dataspace failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       return ret;
     }
@@ -536,15 +536,14 @@ dsi_release_data_area(dsi_socket_t * socket)
   int ret;
   int error = 0;
 
-  LOGdL(DEBUG_DATA_DS,"detaching data area (ds %d at %x.%x)",
-        socket->data_ds.id,
-        socket->data_ds.manager.id.task,socket->data_ds.manager.id.lthread);
+  LOGdL(DEBUG_DATA_DS,"detaching data area (ds %d at "l4util_idfmt")",
+        socket->data_ds.id, l4util_idstr(socket->data_ds.manager));
 
   /* detach data dataspace */
   ret = l4rm_detach(socket->data_area);
   if (ret < 0)
     {
-      Error("DSI: detach data dataspace failed: %s (%d)",
+      LOG_Error("detach data dataspace failed: %s (%d)",
 	    l4env_errstr(ret),ret);
       error = ret;
     }
@@ -555,7 +554,7 @@ dsi_release_data_area(dsi_socket_t * socket)
       ret = l4dm_close(&socket->data_ds);
       if (ret < 0)
 	{
-	  Error("DSI: close data dataspace failed: %s (%d)",
+	  LOG_Error("close data dataspace failed: %s (%d)",
 		l4env_errstr(ret),ret);
 	  error = ret;
 	}
@@ -581,7 +580,7 @@ dsi_init_dataspaces(void)
 				 0,&cds_map_area);
   if (ret)
     {
-      Error("DSI: failed to reserve map area for control dataspaces: "
+      LOG_Error("failed to reserve map area for control dataspaces: "
 	    "%s (%d)",l4env_errstr(ret),ret);
       cds_map_area = -1;
     }
@@ -593,7 +592,7 @@ dsi_init_dataspaces(void)
 				 0,&dds_map_area);
   if (ret)
     {
-      Error("DSI: failed to reserve map area for data dataspaces: "
+      LOG_Error("failed to reserve map area for data dataspaces: "
 	    "%s (%d)",l4env_errstr(ret),ret);
       dds_map_area = -1;
     }

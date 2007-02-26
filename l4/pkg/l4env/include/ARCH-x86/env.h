@@ -95,15 +95,15 @@ typedef struct
   l4env_version_info_t  ver_info;		///< kernel info (ver, arch)
   l4_uint32_t		num_threads;		///< # of threads used by task
   l4_uint32_t		stack_size;		///< size of stack
-  l4_addr_t             vm_low;                 ///< virtual memory start address
+  l4_addr_t             vm_low;                 ///< virtual memory start addr
   l4_addr_t             vm_high;                ///< virtual memory end address
-  
+
   l4_threadid_t	        names_id;		///< root name server
   l4_threadid_t	        memserv_id;		///< default memory server
   l4_threadid_t	        taskserv_id;		///< default task server
   l4_threadid_t	        fprov_id;		///< file provider (tftp...)
   l4_threadid_t	        loader_id;		///< loader
-  
+
   /* these entries are provided by the loader to define which dataspace
    * manager should be used for getting memory for a specific section */
   l4_threadid_t	        image_dm_id;		///< dm for file image 
@@ -128,9 +128,16 @@ typedef struct
   /* default path for loading binary objects if no path is given */
   char		        binpath[L4ENV_MAXPATH];	///< default bin path
   char		        libpath[L4ENV_MAXPATH];	///< default lib path
-  
+
   l4_addr_t		addr_mb_info;		///< pointer to mb_info
-  
+
+  /* the following fields are used by the ld-l4.s.so interpreter */
+  l4_addr_t		interp;			///< pointer to interpreter
+  l4_addr_t		phdr;			///< pointer to program headers
+  l4_uint32_t		phnum;			///< number of program headers
+  int			num_init_fn;
+  l4_addr_t		init_fn[64];		///< dynamic[DT_INIT] of shlibs
+
 } l4env_infopage_t;
 
 

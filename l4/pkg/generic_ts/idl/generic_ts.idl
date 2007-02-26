@@ -3,6 +3,7 @@
  *
  * \date   06/04/2000
  * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
+ *         Torsten Frenzel <frenzel@os.inf.tu-dresden.de>
  *
  * \brief Generic task server interface
  */
@@ -13,6 +14,7 @@ import <l4/sys/types.h>
 library l4
 {
   /** generic task server interface */
+  [error_function(dice_server_error)]
   interface ts
     {
       /** Allocate a new task id. Returns -L4_ENOTASK if no task is available.
@@ -40,11 +42,10 @@ library l4
        * \param  prio		Priority of first thread
        * \param  resname	Module name as reserved in RMGR.
        * \param  flags		Flags */
-      long create([in,out] l4_taskid_t *taskid,
-		  [in] l4_addr_t entry,   [in] l4_addr_t stack,
-	          [in] unsigned long mcp, [in] l4_taskid_t pager,
-		  [in] long prio,
-		  [in, string] char* resname, [in] unsigned long flags);
+      long create([in,out] l4_taskid_t *taskid, [in] l4_addr_t entry,
+		  [in] l4_addr_t stack,         [in] unsigned long mcp,
+		  [in] l4_taskid_t pager,       [in] long prio,
+		  [in, string] char* resname,   [in] unsigned long flags);
 
       /**
        * Free previously allocated task id.
@@ -56,18 +57,39 @@ library l4
 
       /** Terminate task. 
        *
-       * \param  taskid		Id of task to kill */
-      long delete([in] l4_taskid_t taskid);
+       * \param taskid		Task ID of task to kill 
+       * \param options
+       **/
+      [allow_reply_only]
+      long kill([in] l4_taskid_t taskid, [in] l4_uint8_t options);
 
-      /** terminate all tasks owned by caller */
-      long delete_all();
+      /** Terminate all tasks owned tasknr recursivly!
+       *
+       * \param taskid		Task ID of task to start from */
+      long kill_recursive([in] l4_taskid_t taskid);
 
-      /** transmit right to create a task to the caller
-       * E.g. L4Linux depends on it. */
-      long get_task([in] unsigned long taskno);
+      /** Transfer ownership of a task.
+       *
+       * \param taskid		Task ID of task which ownership to transfer
+       * \param owner		Task ID of the owner of the task. IF set to
+       * 			L4_NIL_ID, the owner is not checked. */
+      long owner([in] l4_taskid_t taskid,
+		 [in] l4_taskid_t owner);
 
-      /** transmit right to create a task back to the server */
-      long free_task([in] unsigned long taskno);
+      /** Deliver the corresponding task id
+       *
+       * \param tasknr		Task number */
+      long taskno_to_taskid([in] unsigned long tasknr, 
+			    [out] l4_taskid_t *taskid);
+
+      /** Terminate the caller */
+      [allow_reply_only]
+      long exit(void);
+
+      /** Dump list of all allocated tasks */
+      void dump();
+
+      /** INTERNAL, used by events thread */
+      void do_kill_reply([in] l4_threadid_t client);
     };
 };
-

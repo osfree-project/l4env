@@ -27,7 +27,7 @@ int omega0_init(void){
  *          0  ... RPC to management thread of omega0 task
  *          !0 ... local request RPC partner in omega0 task */
 int omega0_call(int handle, omege0_request_descriptor type,
-                l4_umword_t param){
+                l4_umword_t param, l4_timeout_t timeout){
   int error;
 #ifdef OMEGA0_LIB_MEASURE_CALL
   l4_umword_t t;
@@ -42,13 +42,42 @@ int omega0_call(int handle, omege0_request_descriptor type,
 
   error = l4_ipc_call(server, L4_IPC_SHORT_MSG, type, param,
                            L4_IPC_SHORT_MSG, &dw0, &dw1,
-                           L4_IPC_NEVER, &result);
+                           timeout, &result);
   if(error) return -error;
 #ifdef OMEGA0_LIB_MEASURE_CALL
   t = (unsigned)(l4_rdtsc().ll);
   LOGl("timediff is %u\n", t-dw1);
 #endif
   return dw0;
+}
+  
+/* krishna: handle values
+ *          0  ... RPC to management thread of omega0 task
+ *          !0 ... local request RPC partner in omega0 task */
+int omega0_open_call(int handle, omege0_request_descriptor type,
+                     l4_umword_t param, l4_timeout_t timeout,
+                     l4_threadid_t *alien, l4_umword_t *d0,
+                     l4_umword_t *d1){
+  int error;
+#ifdef OMEGA0_LIB_MEASURE_CALL
+  l4_umword_t t;
+#endif
+  l4_msgdope_t result;
+  l4_threadid_t server = omega0_management_thread;
+
+/* krishna: talk to `omega0_management_thread' if handle is 0 */
+  if(handle)
+    server.id.lthread = handle;
+
+  error = l4_ipc_reply_and_wait(server, L4_IPC_SHORT_MSG, type, param,
+                                alien, L4_IPC_SHORT_MSG, d0, d1,
+                                timeout, &result);
+  if(error) return -error;
+#ifdef OMEGA0_LIB_MEASURE_CALL
+  t = (unsigned)(l4_rdtsc().ll);
+  LOGl("timediff is %u\n", t-dw1);
+#endif
+  return error;
 }
   
 /* krishna: handle values

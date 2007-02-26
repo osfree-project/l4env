@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/l4/x0/arm/X0ArmClassFactory.h
- *	\brief	contains the declaration of the class CX0ArmClassFactory
+ *  \file   dice/src/be/l4/x0/arm/X0ArmClassFactory.cpp
+ *  \brief  contains the declaration of the class CX0ArmClassFactory
  *
- *	\date	08/13/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   08/13/2002
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -29,12 +30,10 @@
 
 #include "be/l4/x0/arm/X0ArmIPC.h"
 
-IMPLEMENT_DYNAMIC(CX0ArmClassFactory);
 
 CX0ArmClassFactory::CX0ArmClassFactory(bool bVerbose)
  : CL4X0BEClassFactory(bVerbose)
 {
-    IMPLEMENT_DYNAMIC_BASE(CX0ArmClassFactory, CL4X0BEClassFactory);
 }
 
 /** destroy class factory */

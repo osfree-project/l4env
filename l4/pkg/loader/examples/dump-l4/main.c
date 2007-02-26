@@ -2,7 +2,7 @@
 /**
  * \file	loader/linux/dump-l4/main.c
  * \brief	L4Linux program to dump information about an application
- * 		which was started by the L4 loader.
+ *		which was started by the L4 loader.
  *
  * \date	06/10/2001
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
@@ -20,6 +20,7 @@
 
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
+#include <l4/util/l4_macros.h>
 #include <l4/names/libnames.h>
 #include <l4/loader/loader-client.h>
 #include <l4/env/env.h>
@@ -42,24 +43,24 @@ static void
 dump_l4env_infopage(l4env_infopage_t *env)
 {
   int i, j, k, pos=0;
-  
-  static char *type_names_on[] = 
+
+  static char *type_names_on[] =
     {"r", "w", "x", " reloc", " link", " page", " reserve",
       " share", " beg", " end", " errlink" };
   static char *type_names_off[] =
     {"-", "-", "-", "", "", "", "", "", "", "", "" };
-  
+
   for (i=0; i<env->section_num; i++)
     {
       l4exec_section_t *l4exc = env->section + i;
       char pos_str[8]="   ";
-      
+
       if (l4exc->info.type & L4_DSTYPE_OBJ_BEGIN)
 	{
 	  sprintf(pos_str, "%3d", pos);
 	  pos++;
 	}
-      
+
       printf("  %s ds %3d: %08x-%08x ",
 	   pos_str, l4exc->ds.id, l4exc->addr, l4exc->addr+l4exc->size);
       for (j=1, k=0; j<=L4_DSTYPE_ERRLINK; j<<=1, k++)
@@ -82,9 +83,9 @@ dump_task_info(unsigned int task)
   l4dm_dataspace_t ds;
   l4_addr_t fpage_addr;
   l4_size_t fpage_size;
-  CORBA_Environment env = dice_default_environment;
+  DICE_DECLARE_ENV(env);
 
-  if ((error = l4loader_app_info_call(&loader_id, task, 0, &fname, 
+  if ((error = l4loader_app_info_call(&loader_id, task, 0, &fname,
 				      &ds, &env)))
     {
       printf("Error %d dumping l4 task %x\n", error, task);
@@ -92,7 +93,7 @@ dump_task_info(unsigned int task)
     }
 
   printf("Task \"%s\", #%x\n", fname, task);
-  
+
   /* unmap memory */
   l4_fpage_unmap(l4_fpage((l4_umword_t)map_page, L4_LOG2_PAGESIZE,
 			  L4_FPAGE_RW, L4_FPAGE_MAP),
@@ -103,8 +104,8 @@ dump_task_info(unsigned int task)
 			 L4_LOG2_PAGESIZE,0,L4DM_RO,&fpage_addr,&fpage_size);
   if (error < 0)
     {
-      printf("Error %d requesting ds %d at ds_manager %x.%x\n",
-  	  error, ds.id, ds.manager.id.task, ds.manager.id.lthread);
+      printf("Error %d requesting ds %d at ds_manager "l4util_idfmt"\n",
+	  error, ds.id, l4util_idstr(ds.manager));
       l4dm_close(&ds);
       return error;
     }
@@ -139,8 +140,8 @@ main(int argc, char **argv)
 	fname = argv[0];
       else
 	fname++;
-      
-      fprintf(stderr, 
+
+      fprintf(stderr,
 	  "Dump information of an L4 task which was loaded by the L4 loader\n"
 	  "Usage:\n"
 	  "  %s <l4-server> ... dump information about a specific L4 task\n"
@@ -172,7 +173,7 @@ main(int argc, char **argv)
 	  l4_addr_t fpage_addr;
 	  l4_addr_t fpage_size;
 	  CORBA_Environment env = dice_default_environment;
-	  
+
 	  if ((error = l4loader_app_info_call(&loader_id, 0, 0, &fname,
 					      &ds, &env)))
 	    {
@@ -191,8 +192,8 @@ main(int argc, char **argv)
 				 &fpage_addr,&fpage_size);
 	  if (error < 0)
 	    {
-	      printf("Error %d requesting ds %d at ds_manager %x.%x\n",
-		  error, ds.id, ds.manager.id.task, ds.manager.id.lthread);
+	      printf("Error %d requesting ds %d at ds_manager "l4util_idfmt"\n",
+		  error, ds.id, l4util_idstr(ds.manager));
 	      l4dm_close(&ds);
 	      return error;
 	    }

@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/cdr/CCDRClassFactory.h
- *	\brief	contains the declaration of the class CCDRClassFactory
+ *  \file   dice/src/be/cdr/CCDRClassFactory.h
+ *  \brief  contains the declaration of the class CCDRClassFactory
  *
- *	\date	02/10/2003
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   02/10/2003
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -37,20 +38,19 @@
  */
 class CCDRClassFactory : public CBEClassFactory
 {
-DECLARE_DYNAMIC(CCDRClassFactory);
 public:
     /** \brief create the CDR class factory object
-	 *  \param bVerbose true if the class factory should produce verbose output
-	 */
+     *  \param bVerbose true if the class factory should produce verbose output
+     */
     CCDRClassFactory(bool bVerbose);
     virtual ~CCDRClassFactory();
 
 public:
     virtual CBEClient* GetNewClient();
-	virtual CBEClass* GetNewClass();
-	virtual CBEComponentFunction* GetNewComponentFunction();
-	virtual CBEMarshalFunction* GetNewMarshalFunction();
-	virtual CBEUnmarshalFunction* GetNewUnmarshalFunction();
+    virtual CBEClass* GetNewClass();
+    virtual CBEComponentFunction* GetNewComponentFunction();
+    virtual CBEMarshalFunction* GetNewMarshalFunction();
+    virtual CBEUnmarshalFunction* GetNewUnmarshalFunction();
 };
 
 #endif

@@ -14,9 +14,14 @@
 
 #include <l4/env/errno.h>
 #include <l4/exec/exec.h>
+#include <l4/exec/errno.h>
 
 #include <stdio.h>
+#ifdef USE_OSKIT
 #include <malloc.h>
+#else
+#include <stdlib.h>
+#endif
 #include <string.h>
 
 #include "exc_obj.h"
@@ -26,15 +31,15 @@
 #include "check.h"
 
 static int exc_obj_sect = 1;
-dsc_array_t * exc_objs = 0;
+dsc_array_t *exc_objs;
     
-/** constructor */
+/** Constructor. */
 exc_obj_t::exc_obj_t(exc_img_t *img, l4_uint32_t _id)
   : dsc_obj_t(exc_objs, _id), 
     hsecs_num(0), psecs_num(0), stab(0), deps_num(0), textreloc_num(0), 
     flags(0), not_valid(0)
 {
-  deps[0] = (exc_obj_t*)NULL;
+  deps[0] = 0;
   strncpy(pathname, img->get_pathname(), sizeof(pathname)-1);
   pathname[sizeof(pathname)-1] = '\0';
 
@@ -44,7 +49,7 @@ exc_obj_t::exc_obj_t(exc_img_t *img, l4_uint32_t _id)
     not_valid = 1;
 }
 
-/** destructor */
+/** Destructor. */
 exc_obj_t::~exc_obj_t()
 {
   exc_obj_psec_t **psec;
@@ -60,19 +65,19 @@ exc_obj_t::~exc_obj_t()
   /* junk our program sections */
   for (psec=psecs; psec<psecs+psecs_num; psec++)
     {
-      Assert (*psec!=NULL);
+      Assert (*psec!=0);
       (*psec)->remove_reference();
     }
   
   /* decrease references to dependant exc_objs */
   for (exc_obj=deps; exc_obj<deps+deps_num; exc_obj++)
     {
-      Assert (*exc_obj!=NULL);
+      Assert (*exc_obj!=0);
       (*exc_obj)->remove_reference();
     }
 }
 
-/** free header sections
+/** Free header sections.
  * 
  * \return 0 on success */
 int
@@ -84,11 +89,11 @@ exc_obj_t::junk_hsecs(void)
   return 0;
 }
 
-/** return pointer to the nth header section
+/** Return pointer to the nth header section.
  * 
  * \param idx		index
  * \return		pointer to header section on success
- * 			NULL on failure */
+ * 			0 on failure */
 exc_obj_hsec_t*
 exc_obj_t::lookup_hsec(int idx)
 {
@@ -105,7 +110,7 @@ exc_obj_t::lookup_hsec(int idx)
   return hsecs + idx;
 }
 
-/** Add all sections of exc_obj to the L4 environment page
+/** Add all sections of exc_obj to the L4 environment page.
  * 
  * \param env		L4 environment info page
  * \return		0 on success
@@ -138,12 +143,15 @@ exc_obj_t::add_to_env(l4env_infopage_t *env)
       if (i==psecs_num-1)
 	/* last section: mark end of sections in envpage of an EXC object */
 	envsec->info.type |= L4_DSTYPE_OBJ_END;
+
+      /* prevent removing of that section by the loader */
+      envsec->info.type |= L4_DSTYPE_EXEC_IS_OWNER;
     }
-  
+
   return 0;
 }
 
-/** Add the exec object new_exc_obj as dependancy
+/** Add the exec object new_exc_obj as dependancy.
  * 
  * \param new_exc_obj	exec object to add
  * \return		0 on success */
@@ -171,7 +179,7 @@ exc_obj_t::add_to_dep(exc_obj_t *new_exc_obj)
  * \param addr		address
  * \param size		size
  * \return		associated header section
- * 			NULL on error */
+ * 			0 on error */
 exc_obj_psec_t*
 exc_obj_t::range_psec(l4_addr_t addr, l4_size_t size)
 {
@@ -207,7 +215,7 @@ exc_obj_t::range_psec(l4_addr_t addr, l4_size_t size)
  * \param l4exc		exec object program section
  * \param env		L4 environment infopage
  * \return		accociated program section
- * 			NULL otherwise */
+ * 			0 otherwise */
 l4_addr_t
 exc_obj_t::env_reloc_addr(l4exec_section_t *l4exc, l4env_infopage_t *env)
 {
@@ -316,21 +324,19 @@ exc_obj_load_bin(const char *fname, const l4dm_dataspace_t *img_ds,
   if (   force_load
       || !(*exc_obj = static_cast<exc_obj_t*>(exc_objs->find(fname))))
     {
-      exc_img_t img(fname, img_ds, env);
-      l4_uint32_t  id;
-      
+      /* A passed dataspace as argument belongs to us */
+      exc_img_t img(fname, (l4dm_dataspace_t*)img_ds, /*sticky=*/0, env);
+      l4_uint32_t id;
+
+      /* get image from file provider */
+      if ((error = img.load(env)))
+	return error;
+
       /* Do we still have enough exc_obj entries? */
       if ((error = check(exc_objs->alloc(&dsc_obj, &id),
 			 "allocating object descriptor")))
 	return error;
 
-      /* get image from file provider */
-      if ((error = img.load(env)))
-	{
-	  exc_objs->free(id);
-	  return error;
-	}
-      
       if (!(error = ::elf32_obj_new(&img, exc_obj, env, id)) ||
 	  !(error = ::elf64_obj_new(&img, exc_obj, env, id)))
 	{
@@ -350,6 +356,7 @@ exc_obj_load_bin(const char *fname, const l4dm_dataspace_t *img_ds,
 
       if (error)
 	{
+	  img.msg("Cannot handle");
 	  /* free exc_obj descriptor */
 	  delete *exc_obj;
 	}
@@ -364,17 +371,27 @@ int elf32_obj_check_ftype(exc_img_t *img, l4env_infopage_t *env, int verbose);
 // don't include elf64.h here to prevent circular dependencies */
 int elf64_obj_check_ftype(exc_img_t *img, l4env_infopage_t *env, int verbose);
 
+/** Check the file type of an ELF image.
+ * \returns	0 if binary type is known (ELF32)
+ * 		-L4_EXEC_INTERPRETER if a valid ELF image containing an
+ * 		 interpreter section was found
+ * 		-L4_EXEC_BADFORMAT if image format is unknown */
 int
 exc_obj_check_ftype(const l4dm_dataspace_t *ds, l4env_infopage_t *env)
 {
-  exc_img_t img("dummy", ds, env);
+  int error;
 
-  if (   !::elf32_obj_check_ftype(&img, env, /*verbose=*/0)
-      || !::elf64_obj_check_ftype(&img, env, /*verbose=*/0))
-    /* valid ELF object found */
-    return 1;
+  /* Make sure that the passed dataspace is not closed */
+  exc_img_t img("dummy", (l4dm_dataspace_t*)ds, /*sticky*/1, env);
+
+  error = ::elf32_obj_check_ftype(&img, env, /*verbose=*/0);
+  if (!error || error == -L4_EXEC_INTERPRETER)
+    return error;
+
+  error = ::elf64_obj_check_ftype(&img, env, /*verbose=*/0);
+  if (!error || error == -L4_EXEC_INTERPRETER)
+    return error;
 
   /* not valid ELF object found */
-  return 0;
+  return error;
 }
-

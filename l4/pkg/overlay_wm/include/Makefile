@@ -1,5 +1,6 @@
-PKGDIR	= ..
-L4DIR	?= $(PKGDIR)/../..
+PKGDIR        = ..
+L4DIR        ?= $(PKGDIR)/../..
+SYSTEMS      := x86-l4v2 x86-l4x0
 
 # All haeder files found in this directory tree will be automatically
 # installed in a way that they can be included with

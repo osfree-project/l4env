@@ -1,0 +1,214 @@
+16 September 2004
+- leaving OS-team today :/
+  Many thanks!
+  Especially to Norman, Christian and Lars.
+- Please take care of VERNER :)
+  (and add something to Changelog as well, I know you'll forget it.)
+
+until 16 September 2004
+- small updates to GOOM and SDL at last.
+- Jork added his support for RTNETFS - Verner can now play videos over network
+  ;-)
+- rewrote ogmlib, no with less seeking and less memory wastage and with a seek-less
+  streaming mode
+- rewrote ogm import-plugin to use ogmlib's streaming interface
+- merged import-plugins into one file per container
+- made playlist scrollable (and better looking)
+- updated XviD to 1.0.2 (bugfix release)
+- synced i810 sound driver with linux 2.4.27
+- use rt_mon to measure times for workloop's
+- updated docu
+- fixes:
+  --> running on Intel P3 machines (aclib used femms instead of emms)
+  --> fixed a possible null pointer access in mp3 decode plugin
+  --> avoid a possible overflow in x86cpucaps
+  --> increased DOpE conformance
+  --> many small fixes all over
+- much more I can't remember ...
+
+until 30 July 2004
+- update all componentes to use the same period
+- updated core for using 
+  a) one optional part for ALL frames/chunks per loop
+  b) one optional part for EACH frame/chunk
+- add options to manipulate reservation times and periods to GUI
+- bumped XviD to 1.0.1 (memleaks, encoder fixes)
+- moved RT-QAP (preemption-ipc triggered) to qap.c
+- many cleanups in workloop's
+- fixes:
+  --> deadlock in vsync caused by vdemuxer when closing a video only stream
+  --> out-of-sync-bug in RT-MODE in metronome/vsync (hope I got it 8-)
+  --> failure when using GOOM with text-only gui
+  --> init preempt_count in vcore correct
+- WARNING:
+  currently no benchmark option is avail in vcore  
+
+31 May 2004
+- added the famous GOOM as visualisation plugin for audio
+- grubfs now supports up to 32 files (default)
+  --> names are "1", "2" and so on ("one" to "four" still works)
+- fixes:
+  --> many memleaks with the help of (olle)petze :)
+  --> annoying crash in vsync caused by vcore
+      disable_export = 0 instead of disable_export = 1 :/ Arrghhh.
+  --> crash vdemuxer w/ unsupported files
+  --> playback of mp3 files ID3Tag Version2
+      (but still some more work has to be done)
+  --> LAME and demux_mpg compilation
+- DOpE export plugin supports now changes in video resolution while playing (mpeg1/2)
+
+20 May 2004
+- major vcontrol rewrite:
+ --> playlist support incl. random/repeat in vcontrol
+ --> forward/backward in playlist
+ --> extended controls to set user-filters (deinterlace etc.) in video-core
+- ID3Tag v1 support for MP3s
+- DOpE output can now be controlled via keyboard and mouse
+- OSD support (DOpE export only)
+- fixed illegal opcode on old Durons and Athlons in aclib
+- fixed fileops and io-plugins to return correct size and 
+  make lseek work correct(?)
+- many small fixes 
+- unused code removed 
+- and lats but not least: updated XviD to version 1.0.0
+
+until 28 April 2004
+- improved RT-Support (demuxer + sync, core)
+
+15 April 2004
+- change benchmarks to use fiasco kernel extensions
+- fixed a bug within the postprocessing engine
+
+13 April 2004
+- update avilib to new version (now w/ support for DML and less seeking)
+- seek support for AVIs w/ audio (yes, it's still not useable)
+- plugin updates
+  for instance update mp3-codec-plugin to flush buffers if we seek
+- many small improvements
+- fixed a few warnings
+
+02 April 2004
+- kicked limitation of filename length for better ext2fs-support
+
+31 March 2004
+- change reloc addr to work w/o loader
+- removed panic for an legal failure in vsync 
+  (works now again w/ only one core)
+- added command line optione --Q[0-3] and --QAP for "vcontrol --nogui"
+  --> enables QAP (default is off!)
+  --> set quality level from 0 to 3
+- disabled sync when benchmarking
+- small fixes for building w/o QAP and benchmarking
+- enabled postprocessing and vsync benchmarking
+
+25 March 2004
+- build fix
+
+23 March 2004
+- Makefile fixes
+- very, very EXPERIMENTAL RT-Support for Demuxer only 
+
+19 March 2004
+- added I/O-Plugins to support URL://-string as filename 
+  (currently only grub:// and ext2fs://)
+- added CON video out support (not well tested!)
+- added vcontrol command line args:
+   vcontrol --nogui filename1 [filename,...} plays files without GUI
+   (usefull for CON ouput)
+- updated "config"-target with many new options
+
+12 March 2004
+- "make config" target is now supported, all configuration is done w/ it
+  Feel free to test and debug :)
+- filesize for vcore's can be cut down w/ configuration  
+- added ext2fs support in vdemuxer (disabled by default, use make config)
+  It was written by Lars :)
+- a few smaller updates
+
+25 February 2004
+- added support for via82cxx-audio chipsets in vsync
+
+24 February 2004
+- fixed some bugs and deadlocks in stream handling
+- changed some types, checking more return values and 
+  fixed a few warnings found w/ splint
+- remember volume settings for next file we play
+  
+18 February 2004
+- fixed a few Makefiles for l4check
+- small GUI-fixes
+- XviD 1.0 codec plugin supports QAP (via internal postprocessing)
+
+17 February 2004
+- support for running multiple instances at once (playing two videos is cool)
+
+16 February 2004
+- uptodate w/ l4env
+- fixed:
+   vsync: pause and seeking with video w/o sound
+   vcore/vcontrol: manual selection of default filters
+   xvid: fixed(?) Makefile
+
+11 February 2004
+- Comquad-Interface implemented
+- general code-rewrite :) (yes, I'm still learning)
+- new plugin-types (export, filter) and interface changes
+- reacting when streaminfo has changes (for instance when MPEG's width
+  or height has changed) 
+  (but sill problematic with dataspaces/dsi!)
+- X86-cpufeatures autodectect (no compile-option necassary)
+- Demuxer:
+   - libavformat (10+ container formats, still buggy)
+   - about 30% speedup
+- Core:
+   - filter-chain possible (f.e. : deinterlace-->deblock-->dering)
+   - XviD 1.0rc2 (0.9.1 also included)
+   - libavcodec 0.4.8 update
+   - general speedup about 10% 
+   - XviD speedup 5%
+- Sync:
+   - faster :)
+   - easier & better(?)  A/V-Sync (Metronome)
+- Code cleanups, rename, ...
+- aclib (fastmemcpy)
+- many many small improvements
+
+
+07 December 2003
+- Updated xvidcore to xvid-1.0-beta2
+
+04 December 2003
+- vcontrol, vsync and both vcore's use ComQuad CM.
+- removed x86_l4x0 targets in all Makefiles to avoid confusing ;)
+
+03 December 2003
+- decoding MPEG-1/-2 now supported (video only, ES + PS streams)!
+  + added libmpeg2 
+  + added plugins/codec/vid_codec_mpeg.c and plugins/import/vid_import_mpeg.c 
+  ! not ready to use. the frame order isn't correct.
+  - changed probelib (mpeg-detection)
+  - changed vdemuxer/container.c
+  - changeg include/arch_plugins.h and arch_types.h
+
+01 December 2003
+- added initial support for COMQUAD Component Model ready
+  + can be enable in config/comquad_cfg.h
+  + import_plugin *_import_comquad and currently used by vsync
+- fixed a pp-filter-bug (to high quality results now in filtering w/ higest filterlevel)
+- UI-callback rewrites (player-UI only)
+
+27 November 2003
+- updated xvidcore-cvs to todays version
+- updated vid_codec_xvid_10.c (enabled encoding - not tested yet)
+- fixed vid_codec_xvid.c
+- fixed some benchmarking options (vdemuxer,vsync,vcores)
+
+23 November 2003
+- fixed Makefiles
+- added benchmark support (vdemuxer)
+- added benchmark support (vsync)
+- fixed keybindings for fullscreen and zoom levels (vsync)
+- fixed a sync problem (vsync)
+
+12 November 2003
+- initial checkin (cr7).

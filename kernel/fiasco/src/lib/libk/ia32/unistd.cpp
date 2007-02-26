@@ -22,29 +22,14 @@ IMPLEMENTATION:
 
 #include "kmem_alloc.h"
 #include "config.h"
-#include "uuencode.h"
-
-#if 0
-static bool old_kdb_conn, old_use_serial;
-#endif
+#include "kernel_console.h"
 
 int 
-creat(const char* fname, int mode)
+creat(const char* fname, int)
 {
   printf("starting to output: %s.uu -- hit Return\n", fname);
-#warning why disconnecting the kdb? and fiddle around with serial.
-#if 0 
-  old_kdb_conn = kdb::connected();
-  old_use_serial = console::use_serial;
-  kdb::disconnect();
-
-  console::use_serial = false;
-#endif
-  getchar();
-#if 0
-  console::use_serial = true;
-#endif
-  uu_open(fname, mode);
+//  Kconsole::console()->getchar();
+  Kconsole::console()->start_exclusive(Console::GZIP);
 
   return 6; 
 }
@@ -56,15 +41,10 @@ perror(const char *s)
 }
 
 ssize_t 
-write(int fd, const void *buf, size_t size)
+write(int, const char *buf, size_t size)
 {
-  if (fd == 6)
-    uu_write((char*) buf, size);
-  else if (fd == 2)
-    printf((char*) buf);
-  else
-    panic("assertion failed in gmon.c:write()");
-
+  for (size_t i=0; i<size; i++)
+    putchar(*buf++);
   return size;
 }
 
@@ -74,13 +54,7 @@ close(int fd)
   assert(fd == 6);
   (void)fd;
 
-  uu_close();
-#warning why disconnecting the kdb? and fiddle around with serial.
-#if 0 
-  console::use_serial = old_use_serial;
-  if (old_kdb_conn) 
-    kdb::reconnect();
-#endif
+  Kconsole::console()->end_exclusive(Console::GZIP);
 
   return 0;
 }
@@ -88,7 +62,8 @@ close(int fd)
 void *
 sbrk(size_t size)
 {
-  void *ret = Kmem_alloc::allocator()->alloc((size+Config::PAGE_SIZE-1)/Config::PAGE_SIZE);
+  void *ret = Kmem_alloc::allocator()
+    ->unaligned_alloc((size+Config::PAGE_SIZE-1)/Config::PAGE_SIZE);
   if (ret == 0) 
     ret = (void*)-1;
   else
@@ -98,9 +73,10 @@ sbrk(size_t size)
 }
 
 void 
-sbrk_free(void* buf, size_t len)
+sbrk_free(void* buf, size_t size)
 {
-  Kmem_alloc::allocator()->free((len+Config::PAGE_SIZE-1)/Config::PAGE_SIZE, buf);
+  Kmem_alloc::allocator()
+    ->unaligned_free((size+Config::PAGE_SIZE-1)/Config::PAGE_SIZE, buf);
 }
 
 char *pr_base;
@@ -111,9 +87,9 @@ size_t pr_scale;
 int
 profil(char *samples, size_t size, Address offset, size_t scale)
 {
-  pr_base = samples;
-  pr_size = size;
-  pr_off = offset;
+  pr_base  = samples;
+  pr_size  = size;
+  pr_off   = offset;
   pr_scale = scale;
 
   return 0;

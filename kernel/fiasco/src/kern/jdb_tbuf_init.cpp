@@ -13,79 +13,92 @@ public:
 IMPLEMENTATION:
 
 #include <cassert>
+#include <cstdlib>
+#include <cstring>
 #include <panic.h>
 
-#include "vmem_alloc.h"
-#include "config.h"
 #include "boot_info.h"
+#include "cmdline.h"
+#include "config.h"
 #include "cpu.h"
+#include "jdb_ktrace.h"
+#include "jdb_tbuf_events.h"
+#include "mem_layout.h"
+#include "vmem_alloc.h"
 
 // init trace buffer
 IMPLEMENT FIASCO_INIT
 void Jdb_tbuf_init::init(Observer *o)
 {
   observer = o;
+  static int init_done;
 
-  if (!tbuf)
+  if (!init_done)
     {
-      assert (sizeof(Tb_entry_fit64) == 64);
+      assert (sizeof(Tb_entry_fit) == Tb_entry::Tb_entry_size);
+      init_done = 1;
 
+      const char *c;
       unsigned n;
+      unsigned want_entries = Config::tbuf_entries;
+
+      if (  (c = strstr(Cmdline::cmdline(), " -tbuf_entries="))
+	  ||(c = strstr(Cmdline::cmdline(), " -tbuf_entries ")))
+	want_entries = strtol(c+15, 0, 0);
       
       // minimum: 8kB (  2 pages)
       // maximum: 2MB (512 pages)
       // must be a power of 2 (for performance reasons)
-      for (n = 128;
-	   n < Config::tbuf_entries && n*sizeof(Tb_entry_fit64)<0x200000;
+      for (n = Config::PAGE_SIZE/sizeof(Tb_entry_fit);
+	   n < want_entries && n*sizeof(Tb_entry_fit)<0x200000;
 	   n<<=1)
 	;
-      
-      Config::tbuf_entries = n;
 
-      unsigned size = n*sizeof(Tb_entry_fit64);
-      
-      if (! Vmem_alloc::page_alloc((void*)Kmem::tbuf_status_page, 0,
+      if (n < want_entries)
+	panic("Cannot allocate more than %d entries for tracebuffer\n", n);
+
+      max_entries(n);
+      unsigned size = n*sizeof(Tb_entry_fit);
+
+      if (! Vmem_alloc::page_alloc((void*) status(),
 				   Vmem_alloc::ZERO_FILL, Page::USER_RW))
-	panic("jdb_tbuf: alloc status page at %08x failed", 
-	      Kmem::tbuf_status_page);
+	panic("jdb_tbuf: alloc status page at "L4_PTR_FMT" failed", 
+	      (Address)Mem_layout::Tbuf_status_page);
 
-      Address va = Kmem::tbuf_buffer_area;
+      Address va = (Address) buffer();
       for (unsigned i=0; i<size/Config::PAGE_SIZE; i++)
 	{
-	  if (! Vmem_alloc::page_alloc((void*)va, 0, 
+	  if (! Vmem_alloc::page_alloc((void*)va, 
 				       Vmem_alloc::ZERO_FILL, Page::USER_RW))
-	    panic("jdb_tbuf: alloc buffer at %08x failed", va);
+	    panic("jdb_tbuf: alloc buffer at "L4_PTR_FMT" failed", va);
 	  
 	  va += Config::PAGE_SIZE;
 	}
 
-      status = (Tracebuffer_status *) Kmem::tbuf_status_page;
-      status->tracebuffer0 = Kmem::tbuf_buffer_area;
-      status->tracebuffer1 = Kmem::tbuf_buffer_area + size / 2;
-      status->size0        =
-      status->size1        = size / 2;
-      status->version0     =
-      status->version1     = 0;
+      status()->tracebuffer0 = (Address)buffer();
+      status()->tracebuffer1 = (Address)buffer() + size / 2;
+      status()->size0        =
+      status()->size1        = size / 2;
+      status()->version0     =
+      status()->version1     = 0;
 
-      for (register int i = 0; i < LOG_EVENT_MAX_EVENTS; i++)
+      for (register int i = 0; i < Log_event_max; i++)
 	{
-#ifndef CONFIG_JDB_LOGGING
-	  status->logevents[i] = 0;
-#else
-	  // Note: constructors are called later, so don't try
-	  // to validate here using log_events[i]->get_type() !
-	  status->logevents[i] = (log_events[i]) ? 1 : 0;
-#endif
+	  if (Config::Jdb_logging)
+	    // Note: constructors are called later, so don't try
+	    // to validate here using log_events[i]->get_type() !
+	    status()->logevents[i] = (Jdb_tbuf_events::log_events[i]) ? 1 : 0;
+	  else
+	    status()->logevents[i] = 0;
 	}
 
-      status->scaler_tsc_to_ns = Cpu::get_scaler_tsc_to_ns();
-      status->scaler_tsc_to_us = Cpu::get_scaler_tsc_to_us();
-      status->scaler_ns_to_tsc = Cpu::get_scaler_ns_to_tsc();
+      status()->scaler_tsc_to_ns = Cpu::get_scaler_tsc_to_ns();
+      status()->scaler_tsc_to_us = Cpu::get_scaler_tsc_to_us();
+      status()->scaler_ns_to_tsc = Cpu::get_scaler_ns_to_tsc();
 
-      tbuf        = (Tb_entry_fit64*) Kmem::tbuf_buffer_area;
-      tbuf_max    = tbuf + Config::tbuf_entries;
-      count_mask1 =  Config::tbuf_entries    - 1;
-      count_mask2 = (Config::tbuf_entries)/2 - 1;
+      tbuf_max    = buffer() + max_entries();
+      count_mask1 =  max_entries()    - 1;
+      count_mask2 = (max_entries())/2 - 1;
 
       clear_tbuf();
     }

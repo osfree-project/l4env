@@ -1,5 +1,5 @@
 /*!
- * \file	con/include/l4/con/l4contxt_common.h
+ * \file	con/include/l4/l4con/l4contxt_common.h
  * \brief	libcontxt common client interface (intern)
  *
  * \date	2002
@@ -14,7 +14,7 @@
 #define _L4CONTXT_COMMON_L4CONTXT_COMMON_H
 
 /* con includes */
-#include <l4/con/l4con.h>
+#include <l4/l4con/l4con.h>
 
 /** input history buffer */
 typedef struct contxt_ihb
@@ -36,7 +36,7 @@ typedef struct contxt_ihb
  * This is the init-function of the input history buffer. The history
  * buffer has to be already allocated. See the \b run example of the
  * loader. */
-int contxt_init_ihb(contxt_ihb_t* ihb, int count, int length);
+int contxt_ihb_init(contxt_ihb_t* ihb, int count, int length);
 
 /** Add string to history buffer
  * \ingroup contxt_if
@@ -44,7 +44,7 @@ int contxt_init_ihb(contxt_ihb_t* ihb, int count, int length);
  * \param   ihb            ... input history buffer structure
  * \param   s              ... string to add
  */
-void contxt_add_ihb(contxt_ihb_t* ihb, const char *s);
+void contxt_ihb_add(contxt_ihb_t* ihb, const char *s);
 
 /** Reads a maximum amount of count of characters from keyboard
  * \ingroup contxt_if
@@ -56,7 +56,7 @@ void contxt_add_ihb(contxt_ihb_t* ihb, const char *s);
  *                             if 0, no input history buffer will be used
  *
  * This function reads a number (maximum maxlen) of character. */
-void contxt_read(char* retstr, int maxlen, contxt_ihb_t* ihb);
+void contxt_ihb_read(char* retstr, int maxlen, contxt_ihb_t* ihb);
 
 /** Read a character from keyboarde
  * \ingroup contxt_if
@@ -64,6 +64,7 @@ void contxt_read(char* retstr, int maxlen, contxt_ihb_t* ihb);
  * \return  a character
  *
  * This function reads a character. (libc) */
+#undef getchar /* dietlibc/uClibc define getchar as macro */
 int getchar(void);
 
 /** Try to get next character. Return -1 if no character is available */
@@ -100,6 +101,7 @@ int direct_cons_trygetchar(void);
  * \return  a character
  *
  * This function writes a character. (libc) */
+#undef putchar /* dietlibc/uClibc define putchar as macro */
 int putchar(int c);
 
 /** Write a character

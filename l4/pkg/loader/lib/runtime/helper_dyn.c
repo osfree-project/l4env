@@ -18,6 +18,7 @@
 #include <l4/sys/kdebug.h>
 #include <l4/util/util.h>
 
+#ifdef ARCH_x86
 void
 *memcpy(void *dest, const void *src, unsigned int n)
 {
@@ -37,6 +38,7 @@ void
       : "memory");
   return dest;
 }
+#endif
 
 int
 memcmp(const void *dst, const void *src, unsigned count)
@@ -78,6 +80,15 @@ strncmp(const char *s1, const char *s2, unsigned int n)
     }
 
   return 0;
+}
+
+int
+strcmp(const char *s1, const char *s2)
+{
+  while (*s1 == *s2++)
+    if (*s1++ == 0)
+      return 0;
+  return *s1 - *(s2 - 1);
 }
 
 char*
@@ -140,3 +151,38 @@ strstr(const char *haystack, const char *needle)
   return 0;
 }
 
+char*
+strchr(const char *s, int c)
+{
+  while (1)
+    {
+      if (*s == c)
+	return (char *)s;
+      if (!*s)
+	return 0;
+      s++;
+    }
+}
+
+#ifdef USE_OSKIT
+#include <l4/crtx/crt0.h>
+#include <l4/generic_ts/generic_ts.h>
+void _exit(int code);
+void _exit(int code)
+{
+  if (code)
+    printf("\nExiting with %d\n", code);
+  else
+    printf("Main function returned.\n");
+
+  if (! l4ts_connected())
+  {
+    printf("SIMPLE_TS not found -- cannot send exit event");
+    crt0_sys_destruction();
+    l4_sleep_forever();
+  }
+
+  crt0_sys_destruction();
+  l4ts_exit();
+}
+#endif

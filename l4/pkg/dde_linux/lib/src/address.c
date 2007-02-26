@@ -19,13 +19,14 @@
  * Linux' %__va()/%__pa() macro replacements.
  *
  * We look in our local table(s) to save IPC costs. If this fails nasty things
- * are going on and we PANIC.
+ * are going on and we Panic.
  *
  * The current implementation is \e slow, iteration based. Optimization is
  * possible and should be done soon using a \e hashing-like scheme.
  *
  * Another straight-forward solution was mentioned by Jork: configure only one
- * big kmem region and save traversing a list. This can be done be setting \c KMEM_RSIZE
+ * big kmem region and save traversing a list. This can be done be setting
+ * \c KMEM_RSIZE.
  *
  * \todo error handling
  *
@@ -95,14 +96,14 @@ void *__va(volatile unsigned long paddr)
         {
           pp = (void *) (p->va + (paddr - p->pa));
 #if DEBUG_ADDRESS
-          DMSG("__va(0x%lx) => %p\n", paddr, pp);
+          LOG("__va(0x%lx) => %p\n", paddr, pp);
 #endif
           return pp;
         }
       p = p->next;
     }
 
-  PANIC("no virtual address found for 0x%lx", paddr);
+  Panic("no virtual address found for 0x%lx", paddr);
   return NULL;
 }
 
@@ -127,13 +128,13 @@ unsigned long __pa(volatile void *vaddr)
         {
           pp = p->pa + (addr - p->va);
 #if DEBUG_ADDRESS
-          DMSG("__pa(0x%lx) => 0x%lx\n", addr, pp);
+          LOG("__pa(0x%lx) => 0x%lx\n", addr, pp);
 #endif
           return pp;
         }
       p = p->next;
     }
 
-  PANIC("no physical address found for %p", vaddr);
+  Panic("no physical address found for %p", vaddr);
   return 0;
 }

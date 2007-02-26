@@ -4,7 +4,7 @@ INTERFACE:
 #include "jdb_module.h"
 
 /**
- * @brief The core of the modularized Jdb.
+ * The core of the modularized Jdb.
  * @see Jdb_module
  * @see Jdb_category
  *
@@ -17,7 +17,7 @@ class Jdb_core
 public:
 
   /**
-   * @brief The command structure for Jdb_core.
+   * The command structure for Jdb_core.
    * 
    * This structure consists of a pointer to the Jdb_module
    * and a Jdb_module::Cmd structure. It is used in exec_cmd()
@@ -26,12 +26,12 @@ public:
   struct Cmd
   {
     /**
-     * @brief Pointer to the module providing this command.
+     * Pointer to the module providing this command.
      */
     Jdb_module            *mod;
 
     /**
-     * @brief The Jdb_module::Cmd structure, describing the 
+     * The Jdb_module::Cmd structure, describing the 
      *        command.
      *
      * If this is a null pointer the command is invalid.
@@ -41,7 +41,7 @@ public:
     Jdb_module::Cmd const *cmd;
 
     /**
-     * @brief Create a Jdb_core::Cmd.
+     * Create a Jdb_core::Cmd.
      * @param _mod the Jdb_module providing the command.
      * @param _cmd the command structure (see Jdb_module::Cmd).
      */
@@ -51,7 +51,7 @@ public:
   };
 
   /**
-   * @brief Get the command structure accoring to the given name.
+   * Get the command structure accoring to the given name.
    * @param cmd the command to look for.
    * @return A valid Cmd structure if cmd was found, or a
    *         Cmd structure where Cmd::cmd is a null pointer if
@@ -60,12 +60,13 @@ public:
   static Cmd has_cmd( char const *cmd );
 
   /**
-   * @brief Execute the command according to cmd.
+   * Execute the command according to cmd.
    * @param cmd the command structure (see Jdb_core::Cmd), which
    *        describes the command to execute.
-   * @return 1 if the input was aborted or the Jdb_module::action() 
-   *         method returned NOTHING. 0 if the Jdb_module::action() 
-   *         method returned LEAVE. 2 if we got KEY_HOME.
+   * @return 0 if Jdb_module::action() returned LEAVE
+   *         1 if Jdb_module::action() returned NOTHING 
+   *         2 if Jdb_module::action() returned GO_BACK (KEY_HOME entered)
+   *         3 if the input was aborted (KEY_ESC entered) or was invalid
    *
    * This method is actually responsible for reading the input
    * with respect to the commands format string and calling
@@ -75,16 +76,28 @@ public:
   static int exec_cmd( Cmd const cmd, int push_next_char = -1 );
 
   /**
-   * @brief Overwritten getchar() to be able to handle next_char.
+   * Overwritten getchar() to be able to handle next_char.
    */
   static int getchar( void );
+  
+  /**
+   * Call this function every time a `\n' is written to the
+   *        console and it stops output when the screen is full.
+   * @return 0 if user wants to abort the output (escape or 'q' pressed)
+   */
+  static int new_line( unsigned &line );
+
+  static void prompt_start();
+  static void prompt_end();
+  static void prompt();
+  static void update_prompt();
+  static int set_prompt_color( char v );
+
+  static char esc_prompt[];
 
 private:
-
-  static Jdb_module *_first;
   static bool short_mode;
   static int  next_char;
-
 };
 
 
@@ -95,15 +108,79 @@ IMPLEMENTATION:
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
+#include <simpleio.h>
+
+#include "div32.h"
 #include "l4_types.h"
 #include "kernel_console.h"
 #include "keycodes.h"
-#include "simpleio.h"
+#include "jdb_prompt_ext.h"
+#include "jdb_screen.h"
 
 bool Jdb_core::short_mode = true;
-
-Jdb_module *Jdb_core::_first = 0;
 int  Jdb_core::next_char  = -1;
+char Jdb_core::esc_prompt[32] = "\033[32m";
+
+IMPLEMENT
+void Jdb_core::update_prompt()
+{
+  Jdb_prompt_ext::update_all();
+}
+
+IMPLEMENT
+void Jdb_core::prompt_start()
+{
+  putstr(esc_prompt);
+}
+
+IMPLEMENT
+void Jdb_core::prompt_end()
+{
+  putstr("\033[m");
+}
+
+IMPLEMENT
+void Jdb_core::prompt()
+{
+  Jdb_prompt_ext::do_all();
+  putstr("jdb: ");
+}
+
+IMPLEMENT
+int Jdb_core::set_prompt_color(char x)
+{
+  unsigned pc = 32;
+  unsigned ph = 0;
+ 
+  switch(x) 
+    {
+    case 'N': ph = 1;
+    case 'n': pc = 30; break;
+    case 'R': ph = 1;
+    case 'r': pc = 31; break;
+    case 'G': ph = 1;
+    case 'g': pc = 32; break;
+    case 'Y': ph = 1;
+    case 'y': pc = 33; break;
+    case 'B': ph = 1;
+    case 'b': pc = 34; break;
+    case 'M': ph = 1;
+    case 'm': pc = 35; break;
+    case 'C': ph = 1;
+    case 'c': pc = 36; break;
+    case 'W': ph = 1;
+    case 'w': pc = 37; break;
+    default:  return 0;
+    }
+
+  if(ph>0)
+    snprintf(esc_prompt,sizeof(esc_prompt)-1,"\033[%d;%dm",pc,ph);
+  else
+    snprintf(esc_prompt,sizeof(esc_prompt)-1,"\033[%dm",pc);
+
+  return 1;
+
+}
 
 IMPLEMENT
 Jdb_core::Cmd Jdb_core::has_cmd( char const *cmd )
@@ -135,7 +212,7 @@ int Jdb_core::getchar( void )
 }
 
 IMPLEMENT
-int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
+int Jdb_core::exec_cmd(Cmd const cmd, int push_next_char = -1)
 {
   char const* f = cmd.cmd->fmt;
   char const* f1;
@@ -149,10 +226,10 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
     MULTI,
   } num_mode;
 
-  int num_pos = 0;
   int num_base = 10;
-  int max_len = 0;
-  int c,cv;
+  int num_pos = 0, num_digit = 0;
+  int max_len = 0, max_digit = 0;
+  int c, cv;
   char fm;
 
   next_char = push_next_char;
@@ -246,11 +323,23 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 		  goto input_num;
 
 		input_num:
-		  num_pos = 0;
+		  num_pos = num_digit = 0;
+		  max_digit = 0;
+		  if (num_base == 16)
+		    {
+		      if (long_fmt == -1)
+			max_digit = 2*sizeof(short int);
+		      else if (long_fmt == 0)
+			max_digit = 2*sizeof(int);
+		      else if (long_fmt == 1)
+			max_digit = 2*sizeof(long int);
+		      else
+			max_digit = 2*sizeof(long long int);
+		    }
 		  while((c = getchar()) != ' ' && c!=KEY_RETURN)
 		    {
 		      if(c==KEY_ESC)
-			return 1;
+			return 3;
 		      
 		      if(c==KEY_BACKSPACE && num_pos>0)
 			{
@@ -262,7 +351,10 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 			  else if(num_pos==2 && num_mode==MULTI && num_base==16)
 			    num_base = 8;
 			  else
-			    val = val / num_base;
+			    {
+			      val = div32(val, num_base);
+			      num_digit--;
+			    }
 
 			  num_pos--;
 			  continue;
@@ -293,6 +385,7 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 			{
 			  // ignore 0x to allow direct pasting of addresses
 			  num_pos--;
+			  num_digit--;
 			  putstr("\b \b");
 			  continue;
 			}
@@ -310,12 +403,16 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 		      if(cv < num_base)
 			{
 			  num_pos++;
+			  num_digit++;
 			  putchar(c);
 			  val = val * num_base + cv;
-			  if ((max_len != 0) && (num_pos >= max_len))
+			  if ((max_len   != 0 && num_pos   >= max_len) ||
+			      (max_digit != 0 && num_digit >= max_digit))
 			    break;
 			}
 		    }
+		  if (num_pos == 0)
+		    return 3;
 		  goto int_done;
 
 		case 't':
@@ -323,13 +420,13 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 		      int digits[2] = {0, 0};
 		      int state     = 0;
 		      Mword num     = 0;
-		      L4_uid tid;
+		      Global_id tid(Global_id::Nil);
 		      while((c = getchar()) != ' ' && c!=KEY_RETURN)
 			{
 			  cv = -1;
 
 			  if(c==KEY_ESC)
-			    return 1;
+			    return 3;
 
 			  if(c==KEY_BACKSPACE)
 			    {
@@ -341,7 +438,7 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 			      else if (state)
 				{
 				  state--;
-				  num = tid.task();
+				  num = tid.d_task();
 				}
 			      else
 				continue;
@@ -374,7 +471,7 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 			    {
 			      if (digits[0] < 4 && digits[0] > 0 && c == '.')
 				{
-				  tid.task(num);
+				  tid.d_task(num);
 				  num = digits[1] = 0;
 				  state++;
 				  putchar('.');
@@ -384,20 +481,22 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 			    }
 			}
 		      if (state)
-			tid.lthread(num);
+			tid.d_thread(num);
 		      else
 			{
 			  if (digits[0] > 3)
 			    tid = num;
 			  else if (digits[0] > 0)
 			    {
-			      tid.task(num);
-			      tid.lthread(0);
+			      tid.d_task(num);
+			      tid.d_thread(0);
 			    }
 			  else
-			    tid = L4_uid::INVALID;
+			    tid = L4_uid::Invalid;
 			}
-		      *(((L4_uid*)next_arg)++) = tid;
+		      Global_id *n = (Global_id*) next_arg;
+		      *n = tid;
+		      next_arg += sizeof(Global_id);
 		    }
 		  continue;
 
@@ -406,7 +505,7 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 		  {
 		    int c = getchar();
 		    if(c==KEY_ESC)
-		      return 1;
+		      return 3;
 
 		    if(fm == 'c' && isprint(c))
 		      putchar(c);
@@ -424,7 +523,7 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 		  while((c = getchar()) != KEY_RETURN && c!=' ')
 		    {
 		      if(c==KEY_ESC)
-			return 1;
+			return 3;
 
 		      if(c==KEY_BACKSPACE && num_pos)
 			{
@@ -436,12 +535,14 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 			  putchar(c);
 			  next_arg[num_pos++] = c;
 			}
+
+		      next_arg[num_pos] = '\0';
+
 		      if (fm=='S')
 			{
 			  int oldlen = num_pos;
-			  next_arg[num_pos] = '\0';
 			  (**(Jdb_module::Gotkey**)(next_arg+max_len))
-			    (next_arg, max_len-1, c);
+			    (next_arg, max_len, c);
 			  int newlen = strlen(next_arg);
 			  if (newlen > oldlen)
 			    printf("%s", next_arg + oldlen);
@@ -451,13 +552,14 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 			  num_pos = newlen;
 			}
 		    }
+		  next_arg[num_pos] = '\0';
 		  next_arg[max_len-1] = 0;
 		  next_arg += max_len;
 		  continue;
 
 		default:
 		  puts(" unknown format! ");
-		  return 1;
+		  return 3;
 		}
 
 	  int_done:
@@ -467,16 +569,32 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 	      switch(long_fmt)
 		{
 		default:
-		  *(((int*)next_arg)++) = val;
+		    {
+		      int *v = (int*)next_arg;
+		      *v = val;
+		      next_arg += sizeof(int);
+		    }
 		  break;
 		case 1:
-		  *(((long int*)next_arg)++) = val;
+		    {
+		      long int *v = (long int*)next_arg;
+		      *v = val;
+		      next_arg += sizeof(long int);
+		    }
 		  break;
 		case 2:
-		  *(((long long int*)next_arg)++) = val;
+		    {
+		      long long int *v = (long long int*)next_arg;
+		      *v = val;
+		      next_arg += sizeof(long long int);
+		    }
 		  break;
 		case -1:
-		  *(((short int*)next_arg)++) = val;
+		    {
+		      short int *v = (short int*)next_arg;
+		      *v = val;
+		      next_arg += sizeof(short int);
+		    }
 		  break;
 		}
 	  }
@@ -489,22 +607,56 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
     switch(cmd.mod->action( cmd.cmd->id, (void*&)argbuf, f, next_char ))
       {
       case Jdb_module::EXTRA_INPUT:
+	// more input expected
 	next_char = -1;
 	// fall through
       case Jdb_module::EXTRA_INPUT_WITH_NEXTCHAR:
+	// more input expected, also consider previously entered key
 	break;
       case Jdb_module::LEAVE:
+	// leave kernel debugger
 	return 0;
       case Jdb_module::GO_BACK:
+	// user entered KEY_HOME
 	return 2;
       case Jdb_module::NOTHING:
-      default:
+	// finished successfully
 	return 1;
+      default:
+	// there was an error
+	return 3;
       }
   } while(1);
 
 }
 
+IMPLEMENT
+int
+Jdb_core::new_line( unsigned &line )
+{
+  if (line++ > Jdb_screen::height()-3)
+    {
+      putstr("--- CR: line, SPACE: page, ESC: abort ---");
+      int a = Kconsole::console()->getchar();
+      putstr("\r\033[K");
+
+      switch (a)
+	{
+	case KEY_ESC:
+	case 'q':
+	case '^':
+	  putchar('\n');
+	  return 0;
+	case KEY_RETURN:
+	  line--;
+	  return 1;
+	default:
+	  line=0;
+	  return 1;
+	}
+    }
+  return 1;
+}
 
 
 //===================
@@ -513,7 +665,7 @@ int Jdb_core::exec_cmd( Cmd const cmd, int push_next_char = -1 )
 
 
 /**
- * @brief Private 'go' module.
+ * Private 'go' module.
  * 
  * This module handles the 'go' or 'g' command 
  * that continues normal program execution.
@@ -548,9 +700,10 @@ PUBLIC
 Jdb_module::Cmd const *const Go_m::cmds() const
 {
   static Cmd cs[] =
-    { Cmd( 0, "g", "go", "\n",
+    { 
+	{ 0, "g", "go", "\n",
 	   "g\tleave kernel debugger\n"
-	   "Return\tshow debug message", 0 ),
+	   "Return\tshow debug message", 0 },
     };
 
   return cs;
@@ -558,7 +711,7 @@ Jdb_module::Cmd const *const Go_m::cmds() const
 
 
 /**
- * @brief Private 'help' module.
+ * Private 'help' module.
  * 
  * This module handles the 'help' or 'h' command and 
  * prints out a help screen.
@@ -598,11 +751,11 @@ Jdb_module::Action_code Help_m::action( int, void *&, char const *&, int & )
 	  if(first) 
 	    {
 	      putchar('\n');
-	      if(!new_line(line))
+	      if(!Jdb_core::new_line(line))
 		return NOTHING;
 	      printf("\033[1m[%s]\033[0m %s", c->name(), c->description());
 	      putchar('\n');
-	      if(!new_line(line))
+	      if(!Jdb_core::new_line(line))
 		return NOTHING;
 	      first = false;
 	    }
@@ -624,7 +777,7 @@ Jdb_module::Action_code Help_m::action( int, void *&, char const *&, int & )
 		    {
 		    case '\n': 
 		      putchar('\n');
-		      if(!new_line(line))
+		      if(!Jdb_core::new_line(line))
 			return NOTHING;
 		      putstr("  ");
 		      xpos = 2;
@@ -651,7 +804,7 @@ Jdb_module::Action_code Help_m::action( int, void *&, char const *&, int & )
 							
 	      putstr(descr); 
 	      putchar('\n');
-	      if(!new_line(line))
+	      if(!Jdb_core::new_line(line))
 		return NOTHING;
 	    }
 	}
@@ -675,8 +828,8 @@ Jdb_module::Cmd const *const Help_m::cmds() const
 {
   static Cmd cs[] =
     {
-      Cmd( 0, "h", "help", "\n", "h\tShow this help screen.", 0 ),
-      Cmd( 0, "?", "help", "\n", 0, 0 ),
+	{ 0, "h", "help", "\n", "h\tShow this help screen.", 0 },
+	{ 0, "?", "help", "\n", 0, 0 },
     };
 
   return cs;

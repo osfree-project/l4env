@@ -77,8 +77,7 @@ dmphys_memmap_init(void);
 
 /* mark memory area reserved for internal use */
 int
-dmphys_memmap_reserve(l4_addr_t addr, 
-		      l4_size_t size);
+dmphys_memmap_reserve(l4_addr_t addr, l4_size_t size);
 
 /* set memory map search low address */
 void
@@ -90,22 +89,16 @@ dmphys_memmap_set_mem_high(l4_addr_t high);
 
 /* set memory pool configuration */
 int
-dmphys_memmap_set_pool_config(int pool, 
-			      l4_size_t size, 
-			      l4_addr_t low, 
-			      l4_addr_t high, 
-			      const char * name);
+dmphys_memmap_set_pool_config(int pool, l4_size_t size, l4_addr_t low, 
+			      l4_addr_t high, const char * name);
 
 /* setup memory pools */
 int
-dmphys_memmap_setup_pools(int use_rmgr, 
-			  int use_4M_pages);
+dmphys_memmap_setup_pools(int use_rmgr, int use_4M_pages);
 
 /* check pagesize */
 int
-dmphys_memmap_check_pagesize(l4_addr_t addr, 
-			     l4_size_t size, 
-			     int pagesize);
+dmphys_memmap_check_pagesize(l4_addr_t addr, l4_size_t size, int pagesize);
 
 /* DEBUG: show memory map */
 void

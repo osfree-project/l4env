@@ -60,5 +60,6 @@
 #define DEBUG_LOCK                 0
 #define DEBUG_RESIZE               0
 #define DEBUG_PAGESIZE             0
+#define DEBUG_EVENTS               0
 
 #endif /* !_DM_PHYS___DEBUG_H */

@@ -1,0 +1,8 @@
+This library collection implements many dummy functions necessary to
+run a l4vfs server.  I noticed that many l4vfs servers do not need all
+functions, if you do not want to reinvent the (dummy) wheel, just link
+one of these libs.
+
+Please note, that all functions in these libs are 'weak', that is, you
+can replace functionality from this lib peace by peace in your own
+server.

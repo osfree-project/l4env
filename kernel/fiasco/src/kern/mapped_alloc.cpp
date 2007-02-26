@@ -8,64 +8,47 @@ INTERFACE:
 class Mapped_allocator
 {
 public:
-  static size_t size_to_order( size_t size );
-
   /// allocate s bytes size-aligned
-  virtual void *alloc( size_t order ) = 0;
+  virtual void *alloc(size_t order) = 0;
 
   /// free s bytes previously allocated with alloc(s)
-  virtual void free( size_t order, void *p ) = 0;
+  virtual void free(size_t order, void *p) = 0;
 
-  /// free s bytes previously allocated with alloc(s) 
-  /// and converted to phys address via virt_to_phys.
-  void free( size_t order, P_ptr<void> p );
-
-  template< typename _Ty >
-  _Ty *phys_to_virt( P_ptr< _Ty > ) const;
-
-  template< typename _Ty >
-  P_ptr< _Ty > virt_to_phys( _Ty * ) const;
-
-protected:
-
-  virtual void *_phys_to_virt( void* ) const = 0;
-  virtual void *_virt_to_phys( void* ) const = 0;
-
-
+  virtual void *unaligned_alloc(int pages) = 0;
+  virtual void unaligned_free(int pages, void *p) = 0;
+private:
+  static Mapped_allocator *_alloc;
 };
 
 
 IMPLEMENTATION:
 
-IMPLEMENT inline
-size_t Mapped_allocator::size_to_order( size_t size )
+#include <cassert>
+
+#include "mem_layout.h"
+
+Mapped_allocator *Mapped_allocator::_alloc;
+
+PUBLIC static
+Mapped_allocator *
+Mapped_allocator::allocator()
 {
-  size_t h, x=1;
-  for(h=0; x<size; ++h, x <<= 1);
-  return h;
+  assert (_alloc /* uninitialized use of Mapped_allocator */);
+  return _alloc;
 }
 
-
-IMPLEMENT inline
-void Mapped_allocator::free( size_t s, P_ptr<void> p )
+PROTECTED static
+void
+Mapped_allocator::allocator(Mapped_allocator *a)
 {
-  void *va = phys_to_virt(p);
+  _alloc=a;
+}
+
+PUBLIC inline NEEDS["mem_layout.h"]
+void Mapped_allocator::free_phys(size_t s, P_ptr<void> p)
+{
+  void *va = (void*)Mem_layout::phys_to_pmem(p.get_unsigned());
   if(va)
     free(s, va);
-}
-
-
-IMPLEMENT inline
-template< typename _Ty >
-_Ty *Mapped_allocator::phys_to_virt( P_ptr< _Ty > p ) const 
-{
-  return (_Ty*)_phys_to_virt( (void*)p.get_raw() );
-}
-
-IMPLEMENT /*inline*/
-template< typename _Ty >
-P_ptr<_Ty> Mapped_allocator::virt_to_phys( _Ty *v ) const
-{
-  return (_Ty*)_virt_to_phys( (void*)v );
 }
 

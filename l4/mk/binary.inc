@@ -74,8 +74,14 @@ BID_ORIG_SYSTEM = $(shell echo $(2)|$(AWKP) '\
 			    {t=s;sub("-.*","",t);\
                              if(t=="$(1)"){print $$i;exit}}}}')
 
+ifeq ($(ROLE),idl.mk)
+TARGET_SYSTEMS := $(sort $(foreach sys,$(sort \
+	$(shell echo $(BUILD_SYSTEMS)|$(SED) -e 's/_[^- ]*\(-\)\?/\1/g')), \
+	$(call FILTER_SYSTEM,$(sys),$(SYSTEMS))))
+else
 TARGET_SYSTEMS := $(sort $(foreach sys,$(BUILD_SYSTEMS),\
 			$(call FILTER_SYSTEM,$(sys),$(SYSTEMS))))
+endif
 
 DIR_FROM_SUB = $(firstword $(addprefix ../,$(patsubst /%,,$(1))) $(1))
 SYSTEM_TO_ARCH = $(shell echo $(1)|$(SED) -e 's/[_-].*//')
@@ -98,20 +104,28 @@ $(foreach sys,$(TARGET_SYSTEMS),OBJ-$(sys)/$(BID_OBJ_Makefile)):OBJ-%/$(BID_OBJ_
 	$(VERBOSE)echo 'vpath %.y ..'>>$@
 	$(VERBOSE)echo 'vpath %.l ..'>>$@
 	$(VERBOSE)echo 'vpath %.ld ..'>>$@
+	$(VERBOSE)echo 'vpath %.dpe ..'>>$@
 	$(VERBOSE)echo '.general.d: ../$(if $(wildcard Make.rules),Make.rules,Makefile)'>>$@
 	$(VERBOSE)echo 'include ../$(if $(wildcard Make.rules),Make.rules,Makefile)'>>$@
 	$(VERBOSE)echo 'include $$(L4DIR)/mk/$(ROLE)'>>$@
 
-all install relink reloc scrub:: $(foreach arch,$(TARGET_SYSTEMS),\
+install relink reloc scrub:: $(foreach arch,$(TARGET_SYSTEMS),\
                                           OBJ-$(arch)/$(BID_OBJ_Makefile))
 	$(if $(TARGET_SYSTEMS),  $(VERBOSE)set -e ; \
 	    for d in $(TARGET_SYSTEMS) ; do \
-	    	$(MAKE) -C OBJ-$$d -f $(BID_OBJ_Makefile) $@ ; done )
+	    	PWD=$(PWD)/OBJ-$$d $(MAKE) -C OBJ-$$d -f $(BID_OBJ_Makefile) \
+			$@ ; done )
+
+all:: $(foreach arch,$(TARGET_SYSTEMS), OBJ-$(arch))
+.PHONY: $(foreach arch,$(TARGET_SYSTEMS), OBJ-$(arch))
+$(foreach arch,$(TARGET_SYSTEMS), OBJ-$(arch)):%:%/$(BID_OBJ_Makefile)
+	$(VERBOSE)PWD=$(PWD)/$@ $(MAKE) -C $@ -f $(BID_OBJ_Makefile)
 
 clean::
 	$(if $(wildcard OBJ-*), $(VERBOSE)set -e ; \
 	    for d in $(wildcard OBJ-*) ; do \
-	        $(MAKE) -C $$d -f $(BID_OBJ_Makefile) $@ ; done )
+	        PWD=$(PWD)/OBJ-$$d $(MAKE) -C $$d -f $(BID_OBJ_Makefile) $@; \
+	    done )
 
 cleanall::
 	$(VERBOSE)$(RM) -r $(wildcard OBJ-* .general.d)
@@ -129,6 +143,8 @@ all::		$(TARGET)
 
 L4INCDIR ?=	$(addprefix $(L4DIR)/include/$(ARCH)/,$(L4API)) \
                 $(addprefix $(DROPS_STDDIR)/include/$(ARCH)/,$(L4API)) \
+                $(addprefix $(L4DIR)/include/,$(L4API)) \
+                $(addprefix $(DROPS_STDDIR)/include/,$(L4API)) \
                 $(L4DIR)/include/$(ARCH) \
                 $(DROPS_STDDIR)/include/$(ARCH) \
                 $(L4DIR)/include \
@@ -201,12 +217,13 @@ LDSCRIPT   ?= $(call BID_mode_var,LDSCRIPT)
 LIBS	+= $(strip $(LIBS_$(OSYSTEM)) $(LIBS_$@) $(LIBS_$@_$(OSYSTEM)))
 
 
-#LDFLAGS	+= $(strip $(LDFLAGS_$(OSYSTEM)) $(LDFLAGS_$@)  $(LDFLAGS_$@_$(OSYSTEM)))
+LDFLAGS	+= $(strip $(LDFLAGS_$(OSYSTEM)) $(LDFLAGS_$(ARCH)) $(LDFLAGS_$@)  $(LDFLAGS_$@_$(OSYSTEM)))
 
-OPTS	?= -g -O2 $(CARCHFLAGS_$(ARCH)_$(CPU))
+OPTS	?= -g -O2 -fno-strict-aliasing $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 WARNINGS?= -Wall -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations $(WARNINGS_$@)
 
-CFLAGS_$(CLIENTIDL:.idl=-client.c) += -ffunction-sections
+$(CLIENTIDL:.idl=-client.o): CFLAGS += -ffunction-sections
+CFLAGS	+= $(BID_CFLAGS_GSTAB) $(BID_CFLAGS_OMIT_FP)
 CFLAGS	+= $(CFLAGS_$(OSYSTEM)) $(CFLAGS_$(<F)) $(CFLAGS_$(<F)_$(OSYSTEM))
 CFLAGS	+= $(OPTS) $(WARNINGS)
 DEFINES += $(DEFINES_$(OSYSTEM)) $(DEFINES_$(<F)) $(DEFINES_$(<F)_$(OSYSTEM))
@@ -226,22 +243,23 @@ CPPFLAGS+= $(addprefix -I, $(L4INCDIR))
 endif
 CPPFLAGS+= $(LIBCINCDIR)
 
+CXXFLAGS+= $(BID_CFLAGS_GSTAB) $(BID_CFLAGS_OMIT_FP)
 CXXFLAGS+= $(CXXFLAGS_$(OSYSTEM)) $(CXXFLAGS_$(@:.o=.cc)) $(CXXFLAGS_$(@:.o=.cc)_$(OSYSTEM))
-CXXFLAGS+= $(OPTS) $(filter-out -Wmissing-declarations,$(WARNINGS))
+CXXFLAGS+= $(OPTS) $(filter-out -Wmissing-declarations -Wstrict-prototypes -Wmissing-prototypes,$(WARNINGS))
 
 ASFLAGS+= $(ASFLAGS_$(OSYSTEM)) $(ASFLAGS_$(@:.o=.S)) $(ASFLAGS_$(@:.o=.S)_$(OSYSTEM))
 OBJS	+= $(strip $(OBJS_$(OSYSTEM)) $(OBJS_$@) $(OBJS_$@_$(OSYSTEM)))
 ALLOBJS	= $(OBJS) $(foreach target,$(TARGET) $(TARGET_$(OSYSTEM)),\
 		$(OBJS_$(target)) $(OBJS_$(target)_$(OSYSTEM)))
+ALLDPI = $(sort $(foreach obj,$(ALLOBJS),$(patsubst %.dpe,%.dpi,\
+		$(DPE_$(obj:.o=.c)))))
 
 # implementation of $(CLIENTIDL) and $(SERVERIDL)
 IDL_TYPE ?= dice
-IDL_PATH ?= $(PKGDIR)/idl/OBJ-$(SYSTEM)
+IDL_PATH ?= $(PKGDIR)/idl/OBJ-$(ARCH)-$(L4API)
 ifneq ($(IDL_TYPE), dice)
 ifneq ($(IDL_TYPE), corba)
-ifneq ($(IDL_TYPE), flick)
 $(error IDL_TYPE "$(IDL_TYPE)" not supported.)
-endif
 endif
 endif
 
@@ -312,6 +330,7 @@ $(BID_OBJ_Makefile).inc: .general.d
 		\n$(BID_OBJ_Makefile).inc: IDL_SRC_C_$(target)=))'>>$@_
         # write the object declaration variables
         # TARGET_{STANDARD, PIC, SHARED} contain the appropriate targets
+        # TARGET_PROFILE_{STANDARD, PIC, SHARED} as well
 	@$(ECHO) -en '$(strip $(foreach target,$(TARGET_STANDARD),	\
 		\nOBJS_$(target) += $(call targetobjs,$(target),)))' >>$@_
 	@$(ECHO) -en '$(strip $(foreach target,$(TARGET_PIC)		\
@@ -323,9 +342,25 @@ $(BID_OBJ_Makefile).inc: .general.d
 				$(TARGET_PROFILE_SHARED),		\
 		\nOBJS_$(target) += $(call targetobjs,$(target),.pr.s)))' >>$@_
         #
+        # write the dpe-dependencies
+	@$(ECHO) -e '$(foreach obj,$(sort 				\
+		$(foreach t,$(TARGET_STANDARD),$(call targetobjs,$t))	\
+		$(foreach t,$(TARGET_PIC) $(TARGET_SHARED),		\
+			$(call targetobjs,$t,.s))			\
+		$(foreach t,$(TARGET_PROFILE),$(call targetobjs,$t,.pr)) \
+		$(foreach t,$(TARGET_PROFILE_PIC) $(TARGET_PROFILE_SHARED),\
+			$(call targetobjs,$t,.pr.s))),$(strip		\
+		$(addprefix \n$(obj): ,$(patsubst %.dpe,%.dpi,		\
+		$(DPE_$(obj:.o=.c)) $(DPE_$(obj:.o=.cc))		\
+		$(DPE_$(obj:.s.o=.c)) $(DPE_$(obj:.s.o=.cc))		\
+		$(DPE_$(obj:.pr.o=.c)) $(DPE_$(obj:.pr.o=.cc))		\
+		$(DPE_$(obj:.pr.s.o=.c)) $(DPE_$(obj:.pr.s.o=.cc))	\
+		))))' >>$@_
+        #
         # create the object-dirs
 	$(if $(OBJDIRS), $(VERBOSE)set -e; for d in $(OBJDIRS); do	\
 		$(MKDIR) $$d; done )
+
         #
         # write the object-dependencies for the targets
 	@$(ECHO) -e '$(foreach target,$(TARGET),$(strip\
@@ -377,7 +412,7 @@ endif
 endif
 	@mv $@_ $@
 
-ifeq ($(filter scrub clean cleanall help,$(MAKECMDGOALS)),)
+ifeq ($(filter scrub help,$(MAKECMDGOALS)),)
 -include $(BID_OBJ_Makefile).inc
 endif
 
@@ -423,7 +458,7 @@ DEPEND_EXTEND_CMD = $(AWKP) '			\
 		$$0=$$0 " " nextline		\
 	}					\
 	split($$0,field,": ");			\
-	sub("^$(*F).o","$*.s $*.E $@",field[1]);	\
+	sub("^$(*F).o","$*.s $*.i $@",field[1]);	\
 	nr=split(field[2],deps) ;		\
 	for(i=1;i<=nr;){			\
 	  printf("ifeq ($$(shell test y \\\n");	\
@@ -444,7 +479,7 @@ DEPEND_EXTEND_FUNC = ( $(DEPEND_EXTEND_CMD) < $(1) > $(2).new && rm -f $(1) && m
 DEPEND_FLAG = -MD
 
 .PHONY: FORCE
-endif
+endif # HAVE_LDSO empty
 
 %.o:	%.cc
 	@$(COMP_MESSAGE)
@@ -508,43 +543,55 @@ endif
 
 %.c:	%.y
 	@$(GEN_MESSAGE)
-	$(VERBOSE)$(YACC) $(call absfilename,$<)
+	$(VERBOSE)$(YACC) $(YFLAGS) $(call absfilename,$<)
 	$(VERBOSE)mv -f y.tab.c $@
+	$(VERBOSE)if [ -f y.tab.h ]; then mv -f y.tab.h $(@:.c=.h); fi
 
 %.c:	%.l
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(LEX) -t $(call absfilename,$<) > $@
+	$(VERBOSE)$(LEX) -o$@ $(call absfilename,$<)
 
-%.E:	%.c
+%.i:	%.c
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(CC) -E $(CPPFLAGS) $(CFLAGS) $(call absfilename,$<) -o $@
+	$(VERBOSE)$(CC) -E -H -dD $(CPPFLAGS) $(CFLAGS) $(call absfilename,$<) -o $@
 	$(VERBOSE)$(INDENT) -o $@ $@
 
-%.E:	%.cc
+%.s.i:	%.c
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(CXX) -E $(CPPFLAGS) $(CXXFLAGS) $(call absfilename,$<) -o $@
+	$(VERBOSE)$(CC) -E -H -dD $(CPPFLAGS) $(CFLAGS) -fPIC $(call absfilename,$<) -o $@
+	$(VERBOSE)$(INDENT) -o $@ $@
+
+%.i:	%.cc
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(CXX) -E -H -dD $(CPPFLAGS) $(CXXFLAGS) $(call absfilename,$<) -o $@
 	$(VERBOSE)$(INDENT) -sob -o $@ $@
 
-%.E:	%.S
+%.s.i:	%.cc
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(CC) -E $(CPPFLAGS) $(ASFLAGS) $(call absfilename,$<) -o $@
+	$(VERBOSE)$(CXX) -E -H -dD $(CPPFLAGS) $(CXXFLAGS) -fPIC $(call absfilename,$<) -o $@
+	$(VERBOSE)$(INDENT) -sob -o $@ $@
+
+%.i:	%.S
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(CC) -E -H -dD $(CPPFLAGS) $(ASFLAGS) $(call absfilename,$<) -o $@
 	$(VERBOSE)$(INDENT) -sob -o $@ $@
 
 %.S:	%.c
 	@$(COMP_MESSAGE)
 	$(VERBOSE)$(CC) -S $(CFLAGS) $(CPPFLAGS) $(call absfilename,$<) -o $@
 
+%.dpi:	%.dpe
+	@$(GEN_MESSAGE)
+	$(VERBOSE)$(call MAKEDEP,perl) $(GEN_DOPECODE) $< >$@
+
 DEPS	+= $(foreach file,$(ALLOBJS), $(dir $(file)).$(notdir $(file)).d)
+DEPS	+= $(foreach file,$(ALLDPI), $(dir $(file)).$(notdir $(file)).d)
 
 # Common clean Rules
 
-# scrub: delete temporary editor files and stuff like this
-#        can be extended by lokals
-scrub cleanall::
-	$(VERBOSE)$(SCRUB)
-
 clean cleanall::
-	$(VERBOSE)$(RM) $(filter-out $(KEEP_ON_CLEAN),$(wildcard *.o) $(OBJS))
+	$(VERBOSE)$(RM) $(strip $(filter-out $(KEEP_ON_CLEAN),\
+		$(wildcard *.dpi) $(wildcard *.o) $(ALLOBJS) $(DEL_ON_CLEAN)))
 
 # clean: delete all temporary editor files, objects, binaries
 #        and most generated files
@@ -554,4 +601,11 @@ cleanall::
 .PHONY: scrub clean cleanall
 
 endif	# $(SYSTEM) is defined
+
+# General rules
+
+# scrub: delete temporary editor files and stuff like this
+#        can be extended by lokals
+scrub cleanall::
+	$(VERBOSE)$(SCRUB)
 

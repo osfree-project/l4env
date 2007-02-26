@@ -1,0 +1,118 @@
+/*
+ * \brief   IPC for VERNER's audio core component
+ * \date    2004-02-11
+ * \author  Carsten Rietzschel <cr7@os.inf.tu-dresden.de>
+ */
+
+/*
+ * Copyright (C) 2004  Carsten Rietzschel  <cr7@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the VERNER, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+
+import <l4/dsi/types.h>
+
+interface VideoCoreComponentIntern 
+{
+	/*****************************************************************************/
+	/**
+	* \brief Connnect Vcore-Component
+	* 
+	* \param ctrl_ds already allocated control dataspace
+	* \param data_ds already allocated data dataspace
+	* \param component setup dsi_component_t with callback functions and socket_ref
+	*
+	* Attach dataspaces to Vcore-Component. The DSI-Socket is created. 
+	* The work_thread also, but it's waiting for the start_signal.
+	*/
+	/*****************************************************************************/ 
+	long connect_UncompressedAudioOut([in] l4dm_dataspace_t ctrl_ds, [in] l4dm_dataspace_t data_ds, [out] dsi_socket_ref_t *socketref);
+	
+	
+	/*****************************************************************************/
+	/**
+	* \brief Start Vcore-Component's work thread
+	* 
+	* \param local local socket reference
+	* \param remote remote socket reference
+	*
+	* unlocks a mutex and let the work_thread run.
+	/*****************************************************************************/ 
+	long start_UncompressedAudioOut([in] dsi_socket_ref_t local, [in] dsi_socket_ref_t remote);
+	
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Disconnect Vcore-Component
+	 * 
+	 * \param close_socket_flag if !=0 - we close the DSI-socket 
+	 *
+	 * This function ensures work_thread is closed and nobody is working 
+	 * with DSI-sockets. Afterwards the DSI-socket is closed.
+	 * Note: Flag close_socket_flag should only set != 0 in callback function for
+	 * dsi_stream_close.
+	 */
+	/*****************************************************************************/ 
+	long disconnect_UncompressedAudioOut([in] l4_int32_t close_socket_flag);
+
+	/*****************************************************************************/
+	/**
+	* \brief Connnect Vcore-Component
+	* 
+	* \param ctrl_ds already allocated control dataspace
+	* \param data_ds already allocated data dataspace
+	* \param component setup dsi_component_t with callback functions and socket_ref
+	*
+	* Attach dataspaces to Vcore-Component. The DSI-Socket is created. 
+	* The work_thread also, but it's waiting for the start_signal.
+	*/
+	/*****************************************************************************/ 
+	long connect_CompressedAudioIn([in] l4dm_dataspace_t ctrl_ds, [in] l4dm_dataspace_t data_ds, [out] dsi_socket_ref_t *socketref);
+	
+	/*****************************************************************************/
+	/**
+	* \brief Start Vcore-Component's work thread
+	* 
+	* \param local local socket reference
+	* \param remote remote socket reference
+	*
+	* unlocks a mutex and let the work_thread run.
+	/*****************************************************************************/ 
+	long start_CompressedAudioIn([in] dsi_socket_ref_t local, [in] dsi_socket_ref_t remote);
+	
+	/*****************************************************************************/
+	/**
+	 * \brief Disconnect Vcore-Component
+	 * 
+	 * \param close_socket_flag if !=0 - we close the DSI-socket 
+	 *
+	 * This function ensures work_thread is closed and nobody is working 
+	 * with DSI-sockets. Afterwards the DSI-socket is closed.
+	 * Note: Flag close_socket_flag should only set != 0 in callback function for
+	 * dsi_stream_close.
+	 */
+	/*****************************************************************************/ 
+	long disconnect_CompressedAudioIn([in] l4_int32_t close_socket_flag);
+
+
+
+        /*****************************************************************************/
+        /**
+         * \brief Set period for RT-mode
+         *
+         * \param period  period in microseconds
+         * \param reservation_audio  reservation time for ONE audio chunk [microsecond]
+         * \param reservation_video  (unused for audio core)
+         * \param verbose_preemption_ipc  show each recv. preeption ipc ?
+         */
+        /*****************************************************************************/
+        long setAudioRTparams ([in] unsigned long period,
+                               [in] unsigned long reservation_audio,
+                               [in] unsigned long reservation_video,
+                               [in] int verbose_preemption_ipc);
+
+};

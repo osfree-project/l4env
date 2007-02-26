@@ -1,33 +1,41 @@
-INTERFACE:
+INTERFACE[profile]:
 
 #include "types.h"
 
-class profile
+class Profile
 {
   static unsigned long ticks;
   static bool exit;
 };
 
-IMPLEMENTATION:
+
+INTERFACE[!profile]:
+
+class Profile
+{
+};
+
+
+IMPLEMENTATION[profile]:
 
 #include <cstdlib>
-#include <flux/x86/asm.h>
 
 #include "config.h"
-#include "kmem.h"
-#include "pic.h"
-#include "gmon.h"
-#include "unistd.h"		// pr_base, pr_off, pr_size, pr_scale
-#include "entry.h"		// profile_interrupt_entry
-#include "thread.h"		// for stack checking
 #include "globals.h"
-#include "pit.h"
+#include "gmon.h"
 #include "idt.h"
+#include "mem_layout.h"
+#include "pic.h"
+#include "pit.h"
+#include "unistd.h"		// pr_base, pr_off, pr_size, pr_scale
+#include "thread.h"		// for stack checking
 
-unsigned long profile::ticks = 0;
-bool profile::exit = false;
+unsigned long Profile::ticks = 0;
+bool          Profile::exit  = false;
 
 static bool profile_active = false;
+
+extern "C" void profile_interrupt_entry();
 
 static void
 dump_if_active()
@@ -42,23 +50,22 @@ dump_if_active()
 // set up profiling and initialize profiling interrupt
 PUBLIC static 
 void
-profile::init()
+Profile::init()
 {
   atexit(dump_if_active);
-
-  Idt::set_vector (0x20 + Config::profile_irq,
+  Idt::set_entry (0x20 + Config::profile_irq,
                   (unsigned) profile_interrupt_entry, false);
 }
 
 PUBLIC static 
 void
-profile::start()
+Profile::start()
 {
   if (! profile_active)
     {
-      monstartup(&_start, &_end, Config::profiling_rate);
+      monstartup((char*)&Mem_layout::start, (char*)&Mem_layout::end, 
+		 Config::profiling_rate);
       profile_active = true;
-      
       Pit::init(Config::profiling_rate);
       Pic::enable(Config::profile_irq);
     }
@@ -66,12 +73,11 @@ profile::start()
 
 PUBLIC static 
 void
-profile::stop()
+Profile::stop()
 {
   if (profile_active)
     {
       Pic::disable(Config::profile_irq);
-      
       moncontrol(0);
       profile_active = false;
     }
@@ -79,12 +85,11 @@ profile::stop()
 
 PUBLIC static 
 void
-profile::stop_and_dump()
+Profile::stop_and_dump()
 {
   if (profile_active)
     {
       Pic::disable(Config::profile_irq);
-      
       _mcleanup();
       profile_active = false;
     }
@@ -101,13 +106,11 @@ profile::stop_and_dump()
         ((Address)(((unsigned long long)((pc) - (off)) *	\
 		(unsigned long long)((scale))) >> 16) & ~1)
 
-PUBLIC static 
-inline NOEXPORT
+PUBLIC static inline NOEXPORT
 void
-profile::handle_profile_interrupt(Address pc)
+Profile::handle_profile_interrupt(Address pc)
 {
   // runs with disabled irqs
-
   Pic::disable_locked(Config::profile_irq);
   Pic::acknowledge_locked(Config::profile_irq);
   Pic::enable_locked(Config::profile_irq);
@@ -129,14 +132,16 @@ profile::handle_profile_interrupt(Address pc)
     ::exit(0);
 }
 
-extern "C" void
+extern "C" FIASCO_FASTCALL
+void
 profile_interrupt(Address pc)
 {
-  profile::handle_profile_interrupt(pc);
+  Profile::handle_profile_interrupt(pc);
 }
 
 extern "C" 
-void profile_mcount_wrap(unsigned short *frompcindex, char *selfpc )
+void
+profile_mcount_wrap(unsigned short *frompcindex, char *selfpc )
 {
   // For lack of a better place, so stack checking here:
 
@@ -145,7 +150,7 @@ void profile_mcount_wrap(unsigned short *frompcindex, char *selfpc )
     {
       Address sp;
       asm("movl %%esp, %0" : "=r" (sp));
-      if ((sp & 0xf8000000) == Kmem::mem_tcbs
+      if ((sp & 0xf8000000) == Mem_layout::Tcbs
 	  && ((Address)current()) + sizeof(Thread) + 0x20 > sp)
 	{
 	  overrun = true;
@@ -169,7 +174,9 @@ void profile_mcount_wrap(unsigned short *frompcindex, char *selfpc )
 #define __STR(x) #x
 #define STR(x) __STR(x)
 
-asm(".p2align " STR(TEXT_ALIGN) "; .globl mcount; mcount:"
+asm(".p2align 4			\n\t"
+    ".globl mcount		\n\t"
+"mcount:			\n\t"
     "pushl %eax			\n\t"
     "pushl %ecx			\n\t"
     "pushl %edx			\n\t"
@@ -179,7 +186,7 @@ asm(".p2align " STR(TEXT_ALIGN) "; .globl mcount; mcount:"
     "pushl %eax			\n\t"
     "pushl %ecx			\n\t"
 
-    "call " STR(EXT(profile_mcount_wrap)) "\n\t"
+    "call " STR(profile_mcount_wrap) "\n\t"
     "addl $8,%esp		\n\t"
 
     "popl %edx			\n\t"
@@ -187,3 +194,11 @@ asm(".p2align " STR(TEXT_ALIGN) "; .globl mcount; mcount:"
     "popl %eax			\n\t"
     "ret");
 
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[!profile]:
+
+PUBLIC static inline void Profile::init() {}
+PUBLIC static inline void Profile::start() {}
+PUBLIC static inline void Profile::stop() {}
+PUBLIC static inline void Profile::stop_and_dump() {}

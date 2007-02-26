@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/fe/FEUnionType.h
- *	\brief	contains the declaration of the class CFEUnionType
+ *    \file    dice/src/fe/FEUnionType.h
+ *    \brief   contains the declaration of the class CFEUnionType
  *
- *	\date	01/31/2001
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/31/2001
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,85 +31,85 @@
 #define __DICE_FE_FEUNIONTYPE_H__
 
 #include "fe/FEConstructedType.h"
-#include "CString.h"
+#include <string>
+#include <vector>
+using namespace std;
 
-class Vector;
-class VectorElement;
 class CFEUnionCase;
 
-/**	\class CFEUnionType
- *	\ingroup frontend
- *	\brief represents a union
+/**    \class CFEUnionType
+ *    \ingroup frontend
+ *    \brief represents a union
  */
 class CFEUnionType : public CFEConstructedType
 {
-DECLARE_DYNAMIC(CFEUnionType);
 
 // standard constructor/destructor
 public:
-	/** \brief constructor for object of union type
-	 *  \param pSwitchType the tyoe of the switch variable
-	 *  \param sSwitchVar the name of the switch variable
-	 *  \param pUnionBody the "real" union
-	 *  \param sUnionName the name of the union
-	 */
-	CFEUnionType(CFETypeSpec *pSwitchType,
-		String sSwitchVar,
-		Vector *pUnionBody,
-		String sUnionName = "");
-	/** \brief constructor for object of union type
-	 *  \param pUnionBody the elements of the union
+    /** \brief constructor for object of union type
+     *  \param pSwitchType the tyoe of the switch variable
+     *  \param sSwitchVar the name of the switch variable
+     *  \param pUnionBody the "real" union
+     *  \param sUnionName the name of the union
+     */
+    CFEUnionType(CFETypeSpec *pSwitchType,
+        string sSwitchVar,
+        vector<CFEUnionCase*> *pUnionBody,
+        string sUnionName = "");
+    /** \brief constructor for object of union type
+     *  \param pUnionBody the elements of the union
         *
-	 * This is a "non-encapsulated" union, which does not have a switch argument in
-	 * the union statement, but receives the switch type and variable via attributes.
-	 */
-	CFEUnionType(Vector *pUnionBody); // n_e Type
-	virtual ~CFEUnionType();
+     * This is a "non-encapsulated" union, which does not have a switch argument in
+     * the union statement, but receives the switch type and variable via attributes.
+     */
+    CFEUnionType(vector<CFEUnionCase*> *pUnionBody); // n_e Type
+    virtual ~CFEUnionType();
 
 // Operations
 public:
-	bool IsCORBA();
-	void SetCORBA();
-	virtual void Serialize(CFile *pFile);
-	virtual bool CheckConsistency();
-	virtual CObject* Clone();
-	virtual bool IsNEUnion();
-	virtual CFEUnionCase* GetNextUnionCase(VectorElement* &iter);
-	virtual VectorElement* GetFirstUnionCase();
-	virtual String GetUnionName();
-	virtual String GetSwitchVar();
-	virtual CFETypeSpec* GetSwitchType();
+    bool IsCORBA();
+    void SetCORBA();
+    virtual void Serialize(CFile *pFile);
+    virtual bool CheckConsistency();
+    virtual CObject* Clone();
+    virtual bool IsNEUnion();
+    virtual CFEUnionCase* GetNextUnionCase(vector<CFEUnionCase*>::iterator &iter);
+    virtual vector<CFEUnionCase*>::iterator GetFirstUnionCase();
+    virtual string GetUnionName();
+    virtual string GetSwitchVar();
+    virtual CFETypeSpec* GetSwitchType();
 
 protected:
-	/** a copy construtor used for the tagged union class */
-	CFEUnionType(CFEUnionType& src); // copy constructor for tagged union
+    /** a copy construtor used for the tagged union class */
+    CFEUnionType(CFEUnionType& src); // copy constructor for tagged union
+    virtual void SerializeMembers(CFile *pFile);
 
 // attribute
 protected:
-	/**	\var bool m_bNE
-	 *	\brief shows if this is a NE union (slightly different syntax)
-	 */
-	bool m_bNE;
-	/**	\var bool m_bCORBA
-	 *	\brief true if the class was part of CORBA IDL
-	 */
-	bool m_bCORBA;
-	/**	\var CFETypeSpec *m_pSwitchType
-	 *	\brief the type of the switch argument
-	 */
-	CFETypeSpec *m_pSwitchType;
-	/**	\var String m_sSwitchVar
-	 *	\brief the name of the switch variable
-	 */
-	String m_sSwitchVar;
-	/**	\var String m_sUnionName
-	 *	\brief the name of the union
-	 */
-	String m_sUnionName;
-	/**	\var Vector *m_pUnionBody
-	 *	\brief the elements of the union (it's body)
-	 */
-	Vector *m_pUnionBody;
+    /**    \var bool m_bNE
+     *    \brief shows if this is a NE union (slightly different syntax)
+     */
+    bool m_bNE;
+    /**    \var bool m_bCORBA
+     *    \brief true if the class was part of CORBA IDL
+     */
+    bool m_bCORBA;
+    /**    \var CFETypeSpec *m_pSwitchType
+     *    \brief the type of the switch argument
+     */
+    CFETypeSpec *m_pSwitchType;
+    /**    \var string m_sSwitchVar
+     *    \brief the name of the switch variable
+     */
+    string m_sSwitchVar;
+    /**    \var string m_sUnionName
+     *    \brief the name of the union
+     */
+    string m_sUnionName;
+    /**    \var vector<CFEUnionCase*> m_vUnionBody
+     *    \brief the elements of the union (it's body)
+     */
+    vector<CFEUnionCase*> m_vUnionBody;
 };
 
 #endif /* __DICE_FE_FEUNIONTYPE_H__ */

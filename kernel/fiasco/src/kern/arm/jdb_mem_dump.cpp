@@ -13,7 +13,7 @@ IMPLEMENTATION:
 //===================
 
 /**
- * @brief 'Mem-Dump' module.
+ * 'Mem-Dump' module.
  * 
  * This module handles the 'd' command that
  * dumps the memory at the specified address.
@@ -50,8 +50,8 @@ PUBLIC
 Jdb_module::Cmd const *const Jdb_mem_dump::cmds() const
 {
   static Cmd cs[] =
-    { Cmd( 0, "d", "dump", " address: %x", 
-	   "d\tdump memory at specific address", (void*)&address )
+    {  { 0, "d", "dump", " address: %x", 
+	   "d\tdump memory at specific address", (void*)&address }
     };
 
   return cs;

@@ -21,32 +21,32 @@ public:
   inline Cpu_lock();
 
   /**
-   * @brief Test if the lock is already held.
+   * Test if the lock is already held.
    * @return 0 if the lock is not held, not 0 if it already is held.
    */
   Status test() const;
 
   /**
-   * @brief Acquire the CPU lock.
+   * Acquire the CPU lock.
    * The CPU lock disables IRQ's it should be held only for a very 
    * short amount of time.
    */
   void lock();
 
   /**
-   * @brief Release the CPU lock.
+   * Release the CPU lock.
    */
   void clear();
 
   /**
-   * @brief Acquire the CPU lock and return the old status.
+   * Acquire the CPU lock and return the old status.
    * @return something else that 0 if the lock was already held and
    *   0 if it was not held. 
    */
   Status test_and_set();
 
   /**
-   * @brief Set the CPU lock according to the given status.
+   * Set the CPU lock according to the given status.
    * @param state the state to set (0 clear, else lock).
    */
   void set(Status state);

@@ -4,7 +4,7 @@
 
 typedef void (*scp_t)(void);
 
-static void __L4sys_lib_init(void) __attribute__ ((unused));
+L4_STICKY(static void __L4sys_lib_init(void));
 
 #define DEFINE_SYSCALL(syscall)               \
 void __L4sys_##syscall##_init(void);          \

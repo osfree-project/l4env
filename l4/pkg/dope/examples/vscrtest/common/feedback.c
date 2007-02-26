@@ -17,6 +17,7 @@
 #include "dopestd.h"
 #include <dopelib.h>
 #include <vscreen.h>
+#include <keycodes.h>
 
 /*** LOCAL INCLUDES ***/
 #include "feedback.h"
@@ -24,9 +25,6 @@
 /*** DECLARATIONS FROM STANDARD MATH LIB ***/
 double sin(double x);
 double cos(double x);
-
-#define BTN_LEFT  0x110
-#define BTN_RIGHT 0x111
 
 #define SCR_W 256                   /* size of virtual screen */
 #define SCR_H 256
@@ -137,7 +135,7 @@ static void sindist(u16 *src,u16 *dst) {
 static void plot(int x,int y,u16 color,u16 *dst) {
 	dst += SCR_W*(y-15) + x - 15;
 	for (y=31;y--;) {
-		for (x=31;x--;) dst[x] |= (ball_gfx[y][x] & color);
+		for (x=31; x--; ) dst[x] |= (ball_gfx[y][x] & color);
 		dst += SCR_W;
 	}
 }
@@ -148,7 +146,7 @@ static void plot(int x,int y,u16 color,u16 *dst) {
 static void clear(int x,int y,u16 color,u16 *dst) {
 	dst += SCR_W*(y-15) + x - 15;
 	for (y=31;y--;) {
-		for (x=31;x--;) dst[x] &= (ball_gfx[y][x] ^ color);
+		for (x=31; x--; ) dst[x] &= (ball_gfx[y][x] ^ color);
 		dst += SCR_W;
 	}
 }
@@ -156,11 +154,11 @@ static void clear(int x,int y,u16 color,u16 *dst) {
 
 
 static void enter_callback(dope_event *e,void *arg) {
-	pflag=1;
+	pflag = 1;
 }
 
 static void leave_callback(dope_event *e,void *arg) {
-	pflag=0;
+	pflag = 0;
 }
 
 static void motion_callback(dope_event *e,void *arg) {
@@ -169,9 +167,13 @@ static void motion_callback(dope_event *e,void *arg) {
 	if (e->type == EVENT_TYPE_MOTION) {
 		x = e->motion.abs_x;
 		y = e->motion.abs_y;
+
+		//printf("vscrtest: motion abs=%d,%d rel=%d,%d\n",
+		//       (int)e->motion.abs_x, (int)e->motion.abs_y,
+		//       (int)e->motion.rel_x, (int)e->motion.rel_y);
 	}
 	
-	if (dope_get_keystate(app_id, BTN_LEFT)) {
+	if (dope_get_keystate(app_id, DOPE_BTN_LEFT)) {
 		mx = (float)x/3;
 		my = (float)y/3;
 	}
@@ -187,7 +189,7 @@ int feedback_init(void) {
 	dope_cmd(app_id, "feedvscr=new VScreen()" );
 	dope_cmd(app_id, "feedvscr.setmode(256,256,\"RGB16\")" );
 	dope_cmd(app_id, "feedvscr.set(-framerate 25 -grabmouse yes)");
-	dope_cmd(app_id, "feedwin.set(-x 100 -y 450 -w 266 -h 283 -fitx yes -fity yes -background off -content feedvscr)" );
+	dope_cmd(app_id, "feedwin.set(-x 100 -y 450 -w 266 -h 283 -background off -content feedvscr)" );
 	
 	dope_bind(app_id,"feedvscr","motion", motion_callback, (void *)0x123);
 	dope_bind(app_id,"feedvscr","press", motion_callback, (void *)0x123);

@@ -1,0 +1,4 @@
+'fstab' is a small program to prepare the l4vfs namespace by creating
+directories and mounting several fileservers at the name_server.  It
+is named after the 'fstab' file used in Unix-like operating systems
+used to define system setup in terms of mount points.

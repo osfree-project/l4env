@@ -68,7 +68,7 @@ l4rm_area_release(l4_uint32_t area)
  */
 /*****************************************************************************/ 
 int
-l4rm_area_release_addr(void * ptr)
+l4rm_area_release_addr(const void * ptr)
 {
   l4rm_region_desc_t * rp;
 

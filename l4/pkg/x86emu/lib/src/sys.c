@@ -40,21 +40,22 @@
 *
 ****************************************************************************/
 
-#include "x86emu.h"
-#include "x86emu/regs.h"
+#include "x86emu/x86emui.h"
 #include "x86emu/debug.h"
 #include "x86emu/prim_ops.h"
+#ifndef NO_SYS_HEADERS
 #include <string.h>
-
+#endif                                                                                           
 /*------------------------- Global Variables ------------------------------*/
 
 X86EMU_sysEnv		_X86EMU_env;		/* Global emulator machine state */
 X86EMU_intrFuncs	_X86EMU_intrTab[256];
 
 /*----------------------------- Implementation ----------------------------*/
-#ifdef __alpha__
+#if defined(__alpha__) || defined(__alpha)
 /* to cope with broken egcs-1.1.2 :-(((( */
 
+#define ALPHA_UALOADS
 /*
  * inline functions to do unaligned accesses
  * from linux/include/asm-alpha/unaligned.h
@@ -65,7 +66,7 @@ X86EMU_intrFuncs	_X86EMU_intrTab[256];
  * packed structures to talk about such things with.
  */
 
-#if __GNUC__ > 2 || __GNUC_MINOR__ >= 91
+#if defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC_MINOR__ >= 91))
 struct __una_u64 { unsigned long  x __attribute__((packed)); };
 struct __una_u32 { unsigned int   x __attribute__((packed)); };
 struct __una_u16 { unsigned short x __attribute__((packed)); };
@@ -73,7 +74,7 @@ struct __una_u16 { unsigned short x __attribute__((packed)); };
 
 static __inline__ unsigned long ldq_u(unsigned long * r11)
 {
-#if __GNUC__ > 2 || __GNUC_MINOR__ >= 91
+#if defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC_MINOR__ >= 91))
 	const struct __una_u64 *ptr = (const struct __una_u64 *) r11;
 	return ptr->x;
 #else
@@ -92,7 +93,7 @@ static __inline__ unsigned long ldq_u(unsigned long * r11)
 
 static __inline__ unsigned long ldl_u(unsigned int * r11)
 {
-#if __GNUC__ > 2 || __GNUC_MINOR__ >= 91
+#if defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC_MINOR__ >= 91))
 	const struct __una_u32 *ptr = (const struct __una_u32 *) r11;
 	return ptr->x;
 #else
@@ -111,7 +112,7 @@ static __inline__ unsigned long ldl_u(unsigned int * r11)
 
 static __inline__ unsigned long ldw_u(unsigned short * r11)
 {
-#if __GNUC__ > 2 || __GNUC_MINOR__ >= 91
+#if defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC_MINOR__ >= 91))
 	const struct __una_u16 *ptr = (const struct __una_u16 *) r11;
 	return ptr->x;
 #else
@@ -134,7 +135,7 @@ static __inline__ unsigned long ldw_u(unsigned short * r11)
 
 static __inline__ void stq_u(unsigned long r5, unsigned long * r11)
 {
-#if __GNUC__ > 2 || __GNUC_MINOR__ >= 91
+#if defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC_MINOR__ >= 91))
 	struct __una_u64 *ptr = (struct __una_u64 *) r11;
 	ptr->x = r5;
 #else
@@ -159,7 +160,7 @@ static __inline__ void stq_u(unsigned long r5, unsigned long * r11)
 
 static __inline__ void stl_u(unsigned long r5, unsigned int * r11)
 {
-#if __GNUC__ > 2 || __GNUC_MINOR__ >= 91
+#if defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC_MINOR__ >= 91))
 	struct __una_u32 *ptr = (struct __una_u32 *) r11;
 	ptr->x = r5;
 #else
@@ -184,7 +185,7 @@ static __inline__ void stl_u(unsigned long r5, unsigned int * r11)
 
 static __inline__ void stw_u(unsigned long r5, unsigned short * r11)
 {
-#if __GNUC__ > 2 || __GNUC_MINOR__ >= 91
+#if defined(__GNUC__) && ((__GNUC__ > 2) || (__GNUC_MINOR__ >= 91))
 	struct __una_u16 *ptr = (struct __una_u16 *) r11;
 	ptr->x = r5;
 #else
@@ -207,7 +208,9 @@ static __inline__ void stw_u(unsigned long r5, unsigned short * r11)
 #endif
 }
 
-#elif defined (__ia64__)
+#elif defined(__GNUC__) && ((__GNUC__ < 3)) && \
+             (defined (__ia64__) || defined (ia64__))
+#define IA64_UALOADS
 /*
  * EGCS 1.1 knows about arbitrary unaligned loads.  Define some
  * packed structures to talk about such things with.
@@ -219,43 +222,43 @@ struct __una_u16 { unsigned short x __attribute__((packed)); };
 static __inline__ unsigned long
 __uldq (const unsigned long * r11)
 {
-	const struct __una_u64 *ptr = (const struct __una_u64 *) r11;
-	return ptr->x;
+    const struct __una_u64 *ptr = (const struct __una_u64 *) r11;
+    return ptr->x;
 }
 
 static __inline__ unsigned long
 uldl (const unsigned int * r11)
 {
-	const struct __una_u32 *ptr = (const struct __una_u32 *) r11;
-	return ptr->x;
+    const struct __una_u32 *ptr = (const struct __una_u32 *) r11;
+    return ptr->x;
 }
 
 static __inline__ unsigned long
 uldw (const unsigned short * r11)
 {
-	const struct __una_u16 *ptr = (const struct __una_u16 *) r11;
-	return ptr->x;
+    const struct __una_u16 *ptr = (const struct __una_u16 *) r11;
+    return ptr->x;
 }
 
 static __inline__ void
 ustq (unsigned long r5, unsigned long * r11)
 {
-	struct __una_u64 *ptr = (struct __una_u64 *) r11;
-	ptr->x = r5;
+    struct __una_u64 *ptr = (struct __una_u64 *) r11;
+    ptr->x = r5;
 }
 
 static __inline__ void
 ustl (unsigned long r5, unsigned int * r11)
 {
-	struct __una_u32 *ptr = (struct __una_u32 *) r11;
-	ptr->x = r5;
+    struct __una_u32 *ptr = (struct __una_u32 *) r11;
+    ptr->x = r5;
 }
 
 static __inline__ void
 ustw (unsigned long r5, unsigned short * r11)
 {
-	struct __una_u16 *ptr = (struct __una_u16 *) r11;
-	ptr->x = r5;
+    struct __una_u16 *ptr = (struct __una_u16 *) r11;
+    ptr->x = r5;
 }
 
 #endif
@@ -276,7 +279,7 @@ u8 X86API rdb(
 	u8 val;
 
 	if (addr > M.mem_size - 1) {
-		DB(printk("mem_read: address %#x out of range!\n", addr);)
+		DB(printk("mem_read: address %#lx out of range!\n", addr);)
 		HALT_SYS();
 		}
 	val = *(u8*)(M.mem_base + addr);
@@ -301,7 +304,7 @@ u16 X86API rdw(
 	u16 val = 0;
 
 	if (addr > M.mem_size - 2) {
-		DB(printk("mem_read: address %#x out of range!\n", addr);)
+		DB(printk("mem_read: address %#lx out of range!\n", addr);)
 		HALT_SYS();
 		}
 #ifdef __BIG_ENDIAN__
@@ -311,10 +314,10 @@ u16 X86API rdw(
 		}
 	else
 #endif
-#ifdef __alpha__
+#if defined(ALPHA_UALOADS)
 		val = ldw_u((u16*)(M.mem_base + addr));
-#elif defined (__ia64__)
-	  val = uldw((u16*)(M.mem_base + addr));
+#elif  defined(IA64_UALOADS)
+      val = uldw((u16*)(M.mem_base + addr));
 #else
 		val = *(u16*)(M.mem_base + addr);
 #endif
@@ -338,7 +341,7 @@ u32 X86API rdl(
 	u32 val = 0;
 
 	if (addr > M.mem_size - 4) {
-		DB(printk("mem_read: address %#x out of range!\n", addr);)
+		DB(printk("mem_read: address %#lx out of range!\n", addr);)
 		HALT_SYS();
 		}
 #ifdef __BIG_ENDIAN__
@@ -350,10 +353,10 @@ u32 X86API rdl(
 		}
 	else
 #endif
-#ifdef __alpha__
+#if defined(ALPHA_UALOADS)
 		val = ldl_u((u32*)(M.mem_base + addr));
-#elif defined (__ia64__)
-		val = uldl((u32*)(M.mem_base + addr));
+#elif  defined(IA64_UALOADS)
+        val = uldl((u32*)(M.mem_base + addr));
 #else
 		val = *(u32*)(M.mem_base + addr);
 #endif
@@ -377,7 +380,7 @@ void X86API wrb(
 DB(	if (DEBUG_MEM_TRACE())
 		printk("%#08x 1 <- %#x\n", addr, val);)
     if (addr > M.mem_size - 1) {
-		DB(printk("mem_write: address %#x out of range!\n", addr);)
+		DB(printk("mem_write: address %#lx out of range!\n", addr);)
 		HALT_SYS();
 		}
 	*(u8*)(M.mem_base + addr) = val;
@@ -398,7 +401,7 @@ void X86API wrw(
 DB(	if (DEBUG_MEM_TRACE())
 		printk("%#08x 2 <- %#x\n", addr, val);)
 	if (addr > M.mem_size - 2) {
-		DB(printk("mem_write: address %#x out of range!\n", addr);)
+		DB(printk("mem_write: address %#lx out of range!\n", addr);)
 		HALT_SYS();
 		}
 #ifdef __BIG_ENDIAN__
@@ -408,10 +411,10 @@ DB(	if (DEBUG_MEM_TRACE())
 		}
 	else
 #endif
-#ifdef __alpha__
+#if defined(ALPHA_UALOADS)
 	 stw_u(val,(u16*)(M.mem_base + addr));
-#elif defined (__ia64__)
-	 ustw(val,(u16*)(M.mem_base + addr));
+#elif defined(IA64_UALOADS)
+     ustw(val,(u16*)(M.mem_base + addr));
 #else
 	 *(u16*)(M.mem_base + addr) = val;
 #endif
@@ -432,7 +435,7 @@ void X86API wrl(
 DB(	if (DEBUG_MEM_TRACE())
 		printk("%#08x 4 <- %#x\n", addr, val);)
 	if (addr > M.mem_size - 4) {
-		DB(printk("mem_write: address %#x out of range!\n", addr);)
+		DB(printk("mem_write: address %#lx out of range!\n", addr);)
 		HALT_SYS();
 		}
 #ifdef __BIG_ENDIAN__
@@ -444,10 +447,10 @@ DB(	if (DEBUG_MEM_TRACE())
 		}
 	else
 #endif
-#ifdef __alpha__
+#if defined(ALPHA_UALOADS)
 	 stl_u(val,(u32*)(M.mem_base + addr));
-#elif defined (__ia64__)
-	 ustl(val,(u32*)(M.mem_base + addr));
+#elif defined(IA64_UALOADS)
+     ustl(val,(u32*)(M.mem_base + addr));
 #else
 	 *(u32*)(M.mem_base + addr) = val;
 #endif
@@ -551,18 +554,18 @@ DB(	if (DEBUG_IO_TRACE())
 
 /*------------------------- Global Variables ------------------------------*/
 
-u8  	FASTCALL((X86APIP sys_rdb)(u32 addr))		            = rdb;
-u16 	FASTCALL((X86APIP sys_rdw)(u32 addr))		            = rdw;
-u32 	FASTCALL((X86APIP sys_rdl)(u32 addr))		            = rdl;
-void 	FASTCALL((X86APIP sys_wrb)(u32 addr,u8 val))	            = wrb;
-void 	FASTCALL((X86APIP sys_wrw)(u32 addr,u16 val)) 	            = wrw;
-void 	FASTCALL((X86APIP sys_wrl)(u32 addr,u32 val)) 	            = wrl;
-u8  	FASTCALL((X86APIP sys_inb)(X86EMU_pioAddr addr))            = p_inb;
-u16 	FASTCALL((X86APIP sys_inw)(X86EMU_pioAddr addr))            = p_inw;
-u32 	FASTCALL((X86APIP sys_inl)(X86EMU_pioAddr addr))            = p_inl;
-void 	FASTCALL((X86APIP sys_outb)(X86EMU_pioAddr addr, u8 val))   = p_outb;
-void 	FASTCALL((X86APIP sys_outw)(X86EMU_pioAddr addr, u16 val))  = p_outw;
-void 	FASTCALL((X86APIP sys_outl)(X86EMU_pioAddr addr, u32 val))  = p_outl;
+u8  	(X86APIP sys_rdb)(u32 addr) 			            = rdb;
+u16 	(X86APIP sys_rdw)(u32 addr) 			            = rdw;
+u32 	(X86APIP sys_rdl)(u32 addr) 			            = rdl;
+void 	(X86APIP sys_wrb)(u32 addr,u8 val) 		            = wrb;
+void 	(X86APIP sys_wrw)(u32 addr,u16 val) 	            = wrw;
+void 	(X86APIP sys_wrl)(u32 addr,u32 val) 	            = wrl;
+u8  	(X86APIP sys_inb)(X86EMU_pioAddr addr)	            = p_inb;
+u16 	(X86APIP sys_inw)(X86EMU_pioAddr addr)	            = p_inw;
+u32 	(X86APIP sys_inl)(X86EMU_pioAddr addr)              = p_inl;
+void 	(X86APIP sys_outb)(X86EMU_pioAddr addr, u8 val) 	= p_outb;
+void 	(X86APIP sys_outw)(X86EMU_pioAddr addr, u16 val)	= p_outw;
+void 	(X86APIP sys_outl)(X86EMU_pioAddr addr, u32 val)	= p_outl;
 
 /*----------------------------- Setup -------------------------------------*/
 
@@ -578,7 +581,7 @@ and hook them out as necessary for their application.
 void X86EMU_setupMemFuncs(
 	X86EMU_memFuncs *funcs)
 {
-	sys_rdb = funcs->rdb;
+    sys_rdb = funcs->rdb;
     sys_rdw = funcs->rdw;
     sys_rdl = funcs->rdl;
     sys_wrb = funcs->wrb;

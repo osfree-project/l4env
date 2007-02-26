@@ -95,6 +95,7 @@ class elf32_obj_t: public exc_obj_t
 
 
 int elf32_obj_check_ftype(exc_img_t *img, l4env_infopage_t *env, int verbose);
+int elf32_obj_check_interp(exc_img_t *img, int verbose);
 int elf32_obj_new(exc_img_t *img, exc_obj_t **exc_obj, l4env_infopage_t *env,
 		  l4_uint32_t _id);
 

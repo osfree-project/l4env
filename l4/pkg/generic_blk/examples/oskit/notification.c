@@ -1,7 +1,7 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file   generic_blk/examples/oskit/notisfication.c
+ * \file   generic_blk/examples/oskit/notification.c
  * \brief  OSKit block driver, notification interface
  *
  * \date   09/13/2003
@@ -42,7 +42,7 @@
 static void 
 __notification_thread(void * data)
 {
-  CORBA_Environment env = dice_default_server_environment;
+  CORBA_Server_Environment env = dice_default_server_environment;
 
   /* the driver descriptor is passed to the component function using the
    * user_data pointer in the sever environment */
@@ -76,16 +76,20 @@ l4blk_notify_wait_component(CORBA_Object _dice_corba_obj,
                             l4_uint32_t * req_handle,
                             l4_uint32_t * status,
                             l4_int32_t * error,
-                            CORBA_Environment * _dice_corba_env)
+                            CORBA_Server_Environment * _dice_corba_env)
 {
   blksrv_driver_t * driver = (blksrv_driver_t *)_dice_corba_env->user_data;
   blksrv_notification_t * notification = NULL;
 
-  LOGdL(DEBUG_NOTIFY, "wait from "IdFmt", driver %d", 
-        IdStr(*_dice_corba_obj), drv);
+  LOGdL(DEBUG_NOTIFY, "wait from "l4util_idfmt", driver %d", 
+        l4util_idstr(*_dice_corba_obj), drv);
 
   if ((driver == NULL) || (driver->driver != drv))
-    return -L4_EINVAL;
+    {
+      LOG_Error("invalid driver %d, waiting for %d",
+                drv, (driver != NULL) ? driver->driver : -1);
+      return -L4_EINVAL;
+    }
 
   /* wait for notification */
   do

@@ -18,7 +18,7 @@
 #include <l4/sys/kdebug.h>
 
 /* local includes */
-#include "con.h"
+#include "l4con.h"
 #include "pslim_func.h"
 #include "con_macros.h"
 #include "con_hw/init.h"
@@ -33,6 +33,8 @@ struct pslim_offset
   l4_uint32_t endskip_x;	/**< skip pixels at end of line */
 /* word_t endskip_y; */	/* snip lines */
 };
+
+extern l4_uint8_t *vis_offs;
 
 static inline void _bmap16msb(l4_uint8_t*, l4_uint8_t*, l4_uint32_t, 
 			      l4_uint32_t, l4_uint32_t, l4_uint32_t, 
@@ -449,12 +451,12 @@ _bmap32lsb(l4_uint8_t *vfb,
    for (i = 0; i < h; i++) {
       nobits += offset->preskip_x;
       for (j = 0; j < w; j++, nobits++) {
+	 l4_uint32_t *dest = (l4_uint32_t*)&vfb[4*j];
 	 k = nobits>>3;
 	 kmod = (nobits)%8;
-	 if ( bmap[k] & (0x01 << kmod) )
-	    (l4_uint32_t) (vfb[4*j]) = (l4_uint32_t) (fgc & 0xffffffff);
-	 else
-	    (l4_uint32_t) (vfb[4*j]) = (l4_uint32_t) (bgc & 0xffffffff);
+	 *dest = (bmap[k] & (0x01 << kmod))
+	    ? fgc & 0xffffffff
+	    : bgc & 0xffffffff;
       }
       vfb += bwidth;
    }
@@ -505,11 +507,17 @@ _set16(l4_uint8_t *vfb,
   
   for (i = 0; i < h; i++) 
     {
-      unsigned dummy;
       pmap += bytepp * offset->preskip_x;
-      asm volatile ("cld ; rep movsw"
-		   :"=S"(dummy), "=D"(dummy), "=c"(dummy)
-		   :"0"(pmap), "1"(vfb), "2"(w));
+#ifdef ARCH_x86
+      {
+	unsigned dummy;
+	asm volatile ("cld ; rep movsw"
+		     :"=S"(dummy), "=D"(dummy), "=c"(dummy)
+		     :"0"(pmap), "1"(vfb), "2"(w));
+      }
+#else
+      memcpy(vfb, pmap, w);
+#endif
       vfb  += bwidth;
       pmap += pwidth;
     }
@@ -528,11 +536,17 @@ _set24(l4_uint8_t *vfb,
    
   for (i = 0; i < h; i++) 
     {
-      unsigned dummy;
       pmap += bytepp * offset->preskip_x;
-      asm volatile ("cld ; rep movsb" 
-		   :"=S"(dummy), "=D"(dummy), "=c"(dummy)
-		   :"0"(pmap), "1"(vfb), "2"(3*w));
+#ifdef ARCH_x86
+      {
+	unsigned dummy;
+	asm volatile ("cld ; rep movsb" 
+		     :"=S"(dummy), "=D"(dummy), "=c"(dummy)
+		     :"0"(pmap), "1"(vfb), "2"(3*w));
+      }
+#else
+      memcpy(vfb, pmap, w*3);
+#endif
       vfb  += bwidth;
       pmap += pwidth;
     }
@@ -551,11 +565,17 @@ _set32(l4_uint8_t *vfb,
    
   for (i = 0; i < h; i++) 
     {
-      unsigned dummy;
       pmap += bytepp * offset->preskip_x;
-      asm volatile ("cld ; rep movsl" 
-		   :"=S"(dummy), "=D"(dummy), "=c"(dummy)
-		   :"0"(pmap), "1"(vfb), "2"(w));
+#ifdef ARCH_x86
+      {
+	unsigned dummy;
+	asm volatile ("cld ; rep movsl" 
+		     :"=S"(dummy), "=D"(dummy), "=c"(dummy)
+		     :"0"(pmap), "1"(vfb), "2"(w));
+      }
+#else
+      memcpy(vfb, pmap, w);
+#endif
       vfb  += bwidth;
       pmap += pwidth;
    }
@@ -711,13 +731,23 @@ _fill16(l4_uint8_t *vfb,
 	l4_uint32_t color,
 	l4_uint32_t bwidth)
 {
-  int i,dummy;
+  int i;
    
   for (i = 0; i < h; i++) 
     {
+#ifdef ARCH_x86
+      int dummy;
       asm volatile ("cld ; rep stosw" 
 		   :"=D"(dummy), "=c"(dummy)
 		   :"0"(vfb), "1"(w), "a"(color));
+#else
+      int j;
+      for (j = 0; j < w; j++)
+        {
+	  vfb[j * 2]     = color & 0xff;
+	  vfb[j * 2 + 1] = (color >> 8) & 0xff;
+	}
+#endif
       vfb += bwidth;
     }
 }
@@ -851,7 +881,7 @@ sw_set(struct l4con_vc *vc, l4_int16_t x, l4_int16_t y, l4_uint32_t w,
       /* copy from direct mapped framebuffer of client */
       /* bwidth may be different from xres*bytepp: e.g. VMware */
       pwidth = vc->xres*bytepp;
-      pmap   = vc->vfb + y*pwidth + x*bytepp;
+      pmap   = vc->vfb + y*pwidth + x*bytepp - (l4_addr_t)vis_offs;
     }
   else
     {
@@ -1028,4 +1058,3 @@ pslim_cscs(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
   sw_cscs(vc, rect->x+vc->xofs, rect->y+vc->yofs, rect->w, rect->h,
 	      y, u, v, scale, &offset, mode);
 }
-

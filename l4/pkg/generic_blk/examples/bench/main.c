@@ -135,8 +135,8 @@ alloc_buffer(l4_size_t size, req_desc_t * req)
               l4env_errstr(ret), ret);
 #endif
 
-  LOGdL(DEBUG_BUFFER, "ds %d at "IdFmt", phys 0x%08x, map %p, size %u", 
-        req->ds.id, IdStr(req->ds.manager), req->p_addr, req->buf, size);
+  LOGdL(DEBUG_BUFFER, "ds %d at "l4util_idfmt", phys 0x%08x, map %p, size %u", 
+        req->ds.id, l4util_idstr(req->ds.manager), req->p_addr, req->buf, size);
 
   /* done */
   return 0;
@@ -245,11 +245,11 @@ done(l4blk_request_t * request, int status, int error)
     case L4BLK_SKIPPED:
     case L4BLK_ERROR:
     case L4BLK_UNPROCESSED:
-      Error("request failed (status %02x, error %d)!",status,error);
+      LOG_Error("request failed (status %02x, error %d)!",status,error);
       break;
       
     default:
-      Error("invalid request status: %08x",status);
+      LOG_Error("invalid request status: %08x",status);
     }
   
 #if MEASURE_SINGLE
@@ -366,13 +366,13 @@ main(int argc, char *argv[])
   l4_calibrate_tsc();
   ns_per_cycle = l4_tsc_to_ns(10000000ULL) / 10000000.0;
   mhz = 1000.0 / ns_per_cycle;
-  printf("running on a %u.%02u MHz machine (%u.%03u ns/cycle)\n",
+  LOG_printf("running on a %u.%02u MHz machine (%u.%03u ns/cycle)\n",
          (unsigned)mhz,(unsigned)((mhz - (unsigned)mhz) * 100),
          (unsigned)ns_per_cycle,
          (unsigned)((ns_per_cycle - (unsigned)ns_per_cycle) * 1000));
   
   /* open driver */
-  ret = l4blk_open_driver(DRIVER_NAME, &driver);
+  ret = l4blk_open_driver(DRIVER_NAME, &driver, NULL);
   if (ret < 0)
     {
       Panic("failed to open driver (%d)\n",ret);

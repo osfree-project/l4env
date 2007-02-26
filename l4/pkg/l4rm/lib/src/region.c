@@ -17,6 +17,7 @@
 /* L4 includes */
 #include <l4/sys/types.h>
 #include <l4/sys/consts.h>
+#include <l4/sys/syscalls.h>
 #include <l4/env/errno.h>
 #include <l4/lock/lock.h>
 #include <l4/util/bitops.h>
@@ -60,18 +61,20 @@ l4lock_t region_list_lock = L4LOCK_UNLOCKED_INITIALIZER;
  *                       inserted
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_NOMEM  out of memory allocating region descriptor
+ *         - -#L4_NOMEM  out of memory allocating region descriptor
  *
  * Insert region into region list at the place described by rp.
  */
 /*****************************************************************************/ 
 static int
-__insert_region(l4rm_region_desc_t * region, 
-		l4rm_region_desc_t * rp)
+__insert_region(l4rm_region_desc_t * region, l4rm_region_desc_t * rp)
 {
   l4rm_region_desc_t * tmp;
 
-  Assert(!FLAGS_EQUAL(region,rp));
+  Assert(!FLAGS_EQUAL(region, rp));
+
+  LOGdL(DEBUG_REGION_INSERT, "insert 0x%08x-0x%08x into 0x%08x-0x%08x",
+        region->start, region->end, rp->start, rp->end);
 
   /* insert */
   if (rp->start == region->start) 
@@ -173,31 +176,30 @@ __insert_region(l4rm_region_desc_t * region,
  */
 /*****************************************************************************/ 
 static void
-__modify_region(l4rm_region_desc_t * region, 
-		l4_uint32_t new_flags)
+__modify_region(l4rm_region_desc_t * region, l4_uint32_t new_flags)
 {
   l4rm_region_desc_t * tmp;
 
   /* set flags */
   region->flags = new_flags;
 
-  if (IS_ATTACHED_REGION(region))
-    /* we can't join attached regions */
+  if (IS_USED_REGION(region))
+    /* we can't join used regions */
     return;
 
 #if DEBUG_REGION_MODIFY
   if (region->prev)
-    printf("prev   0x%08x-0x%08x, flags 0x%08x\n",
-	   region->prev->start,region->prev->end,region->prev->flags);
-  printf("region 0x%08x-0x%08x, flags 0x%08x\n",
-	 region->start,region->end,region->flags);
+    LOG_printf("prev   0x%08x-0x%08x, flags 0x%08x\n",
+	   region->prev->start, region->prev->end, region->prev->flags);
+  LOG_printf("region 0x%08x-0x%08x, flags 0x%08x\n",
+	 region->start, region->end, region->flags);
   if (region->next)
-    printf("next   0x%08x-0x%08x, flags 0x%08x\n",
-	   region->next->start,region->next->end,region->next->flags);
+    LOG_printf("next   0x%08x-0x%08x, flags 0x%08x\n",
+	   region->next->start, region->next->end, region->next->flags);
 #endif
 
   /* check previous/next region */
-  if (region->prev && (FLAGS_EQUAL(region->prev,region)))
+  if (region->prev && (FLAGS_EQUAL(region->prev, region)))
     {
       /* join with previous region */
       tmp = region->prev;
@@ -212,7 +214,7 @@ __modify_region(l4rm_region_desc_t * region,
       region = tmp;
     }
 
-  if (region->next && (FLAGS_EQUAL(region,region->next)))
+  if (region->next && (FLAGS_EQUAL(region, region->next)))
     {
       /* join with next region */
       tmp = region->next;
@@ -237,50 +239,94 @@ __modify_region(l4rm_region_desc_t * region,
 
 /*****************************************************************************/
 /**
- * \brief Search region.
+ * \brief  Find free region
  * 
- * \param  rp            region descriptor
+ * \param  size          Size of free region
+ * \param  area          Requested area id
+ * \param  align         Alignment of start address
+ * \retval region        Region descriptor of free region
+ * \retval addr          Start address of free region 
+ *                       (not necessarily equal to region->start, depends on 
+ *                        requested alignment)
  *	
- * \return region \a rp fits into, NULL if \a rp describes invalid address 
- *         range or overlaps serveral existing regions.
- *
- * Search region which contains address range described by rp. 
+ * \return 0 on success, 
+ *         error code (-#L4_ENOMAP) if no suitabele region found
  */
 /*****************************************************************************/ 
-static l4rm_region_desc_t *
-__find_region(l4rm_region_desc_t * rp)
+static int
+__find_free_region(l4_size_t size, l4_uint32_t area, int align, 
+                   l4rm_region_desc_t ** region, l4_addr_t * addr)
 {
-  l4rm_region_desc_t * tmp = head;
+  l4rm_region_desc_t * rp = head;
+  l4_size_t a_size = 1UL << align;
+  l4_addr_t a_addr, offs;
 
-  /* sanity checks */
-  if ((rp->start > rp->end) ||
-      (rp->start < vm_start) || (rp->start > vm_end) ||
-      (rp->end < vm_start) || (rp->end > vm_end))
-    /* invalid address region */
-    return NULL;
-
-  LOGdL(DEBUG_REGION_FIND,"L4RM: find <0x%08x-0x%08x>",rp->start,rp->end);
-
-  /* find region descriptor the new region fits into */
-  while (tmp && (tmp->end < rp->start))
-    tmp = tmp->next;
-
-  if (tmp == NULL)
+  /* search region */
+  while (rp)
     {
-      Panic("L4RM: corrupted region list!");
-      return NULL;
+      if (IS_FREE_REGION(rp) && (REGION_AREA(rp) == area))
+	{
+          a_addr = (rp->start + a_size - 1) & ~(a_size - 1);
+          offs = a_addr - rp->start;
+          if ((rp->end - rp->start + 1) >= (size + offs))
+            {
+              /* found suitable region */
+              *region = rp;
+              *addr = a_addr;
+              return 0;
+            }
+        }
+      rp = rp->next;
     }
 
-#if DEBUG_REGION_FIND
-  printf("  found <0x%08x-0x%08x>\n",tmp->start,tmp->end);
-#endif
+  /* nothing found */
+  return -L4_ENOMAP;
+}
 
-  if (rp->end > tmp->end)
-    /* overlapping areas */
-    return NULL;
+/*****************************************************************************/
+/**
+ * \brief  Search region
+ * 
+ * \param  addr          Address of region
+ * \param  size          Size of region
+ * \param  area          Area id
+ * \retval region        Region descriptor
+ *	
+ * \return 0 on success, error code otherwise:
+ *         - -#L4_EINVAL  invlaid addr / size argument
+ *         - -#L4_EUSED   region already used
+ */
+/*****************************************************************************/ 
+static int
+__find_region(l4_addr_t addr, l4_size_t size, l4_uint32_t area,
+              l4rm_region_desc_t ** region)
+{
+  l4rm_region_desc_t * rp = head;
 
-  /* found */
-  return tmp;
+  LOGdL(DEBUG_REGION_FIND, "addr 0x%08x, size %u, area 0x%05x", 
+        addr, size, area);
+
+  /* sanity checks */
+  if ((addr < vm_start) || (addr > vm_end) || ((addr + size) > vm_end))
+    return -L4_EINVAL;
+
+  /* find region descriptor the address fits into */
+  while (rp && (rp->end < addr))
+    rp = rp->next;
+  Assert(rp != NULL);
+
+  LOGdL(DEBUG_REGION_FIND, "found area 0x%08x-0x%08x, flags 0x%08x",
+        rp->start, rp->end, rp->flags);
+
+  /* valid area? */
+  if (IS_USED_REGION(rp) || (REGION_AREA(rp) != area) || 
+      (rp->end < (addr + size - 1)))
+    return -L4_EUSED;
+
+  *region = rp;
+
+  /* done */
+  return 0;
 }
 
 /*****************************************************************************
@@ -316,61 +362,147 @@ l4rm_init_regions(void)
   head->end = vm_end;
   head->prev = NULL;
   head->next = NULL;
-  SET_USED(head);
-  SET_FREE(head);
-  SET_AREA(head,L4RM_DEFAULT_REGION_AREA);
+  SET_REGION_FREE(head);
+  SET_AREA(head, L4RM_DEFAULT_REGION_AREA);
 
-  LOGdL(DEBUG_REGION_INIT,"L4RM: vm 0x%08x-0x%08x",head->start,head->end + 1);
+  LOGdL(DEBUG_REGION_INIT, "L4RM: vm 0x%08x-0x%08x", 
+        head->start, head->end + 1);
+
+  /* done */
+  return 0;
+}
+  
+/*****************************************************************************/
+/**
+ * \brief  Set new region
+ * 
+ * \param  region        Descriptor of new region, it must contain valid 
+ *                       entries for the dataspace / pagefault handler and
+ *                       region flags. 
+ * \param  addr          region start address 
+ *                       (#L4RM_ADDR_FIND ... find suitable region)
+ * \param  size          region size
+ * \param  area          area id
+ * \param  flags         flags:
+ *                       - #L4RM_LOG2_ALIGNED  find a 2^(log2(size) + 1)
+ *                                             aligned region
+ *                       - #L4RM_SUPERPAGE_ALIGNED find a 
+ *                                             superpage aligned region
+ *                       - #L4RM_LOG2_ALLOC    allocate the whole 
+ *                                             2^(log2(size) + 1) sized area
+ *                       - #L4RM_MODIFY_DIRECT add new region without locking
+ *                                             the region list and calling the
+ *                                             region mapper thread
+ *                       - #L4RM_TREE_INSERT   insert new region into region 
+ *                                             tree
+ * 	
+ * \return 0 on success (the region descriptor contains the valid start / end
+ *         entries), error code otherwise:
+ *         - -#L4_ENOMAP    no suitable map area found
+ *         - -#L4_EINVAL    invalid address / size argument
+ *         - -#L4_EUSED     address area already used
+ *         - -#L4_NOMEM     out of memory
+ */
+/*****************************************************************************/ 
+int
+l4rm_new_region(l4rm_region_desc_t * region, l4_addr_t addr, l4_size_t size, 
+                l4_uint32_t area, l4_uint32_t flags)
+{
+  int ret, align;
+  l4rm_region_desc_t * rp;
+  l4_addr_t map_addr;
+
+  LOGdL(DEBUG_REGION_NEW, "addr 0x%08x, size %u, area 0x%05x, flags 0x%08x",
+        addr, size, area, flags);
+
+  /* align size */
+  size = l4_round_page(size);
+
+  /* find / check region */
+  if (addr == L4RM_ADDR_FIND)
+    {
+      align = L4_LOG2_PAGESIZE;
+      if (flags & L4RM_LOG2_ALIGNED)
+        {
+          /* calculate alignment */
+          align = l4util_log2(size);
+          if (size > (1UL << align))
+            align++;
+
+          if (flags & L4RM_LOG2_ALLOC)
+            size = 1UL << align;
+        }
+
+      if ((flags & L4RM_SUPERPAGE_ALIGNED) && (align < L4_LOG2_SUPERPAGESIZE))
+	align = L4_LOG2_SUPERPAGESIZE;
+
+      /* find free region */
+      ret = __find_free_region(size, area, align, &rp, &map_addr);
+      if (ret < 0)
+        {
+          LOGdL(DEBUG_REGION_NEW, "no suitable region found");
+          return ret;
+        }
+    }
+  else
+    {
+      /* align address */
+      map_addr = l4_trunc_page(addr);
+
+      /* check region */
+      ret = __find_region(map_addr, size, area, &rp);
+      if (ret < 0)
+        {
+          LOGdL(DEBUG_REGION_NEW, "invalid region (%s)", l4env_errstr(ret));
+          return ret;
+        }
+    }
+
+  LOGd(DEBUG_REGION_NEW, "using addr 0x%08x, size %u", map_addr, size);
+
+  /* setup region descriptor */
+  region->start = map_addr;
+  region->end = map_addr + size - 1;
+
+  /* create area id if requested */
+  if (flags & L4RM_SET_AREA)
+    area = map_addr >> L4_PAGESHIFT;
+  SET_AREA(region, area);
+
+  LOGd(DEBUG_REGION_NEW, 
+       "\n create new region  0x%08x-0x%08x, flags 0x%08x\n" \
+       " in existing region 0x%08x-0x%08x, flags 0x%08x",
+       region->start, region->end, region->flags, 
+       rp->start, rp->end, rp->flags);
+
+  /* insert area in region list */
+  ret = __insert_region(region, rp);
+  if (ret < 0)
+    {
+      LOGdL(DEBUG_ERRORS, "insert new region failed: %s (%d)", 
+            l4env_errstr(ret), ret);
+      return ret;
+    }
+
+  if (flags & L4RM_TREE_INSERT)
+    {
+      /* insert region in region tree */
+      ret = l4rm_tree_insert_region(region, flags);
+      if (ret < 0)
+        {
+          if (ret == -L4_EEXISTS)
+            /* this should never happen */
+            Panic("corrupted region list or AVL tree!");
+          
+          l4rm_free_region(region);
+          return ret;
+        }
+    }
 
   /* done */
   return 0;
 }
 
-/*****************************************************************************/
-/**
- * \brief Insert region into region list.
- * 
- * \param  region        region descriptor
- *	
- * \return 0 on success (region inserted into region list), error code 
- *         otherwise:
- *         - \c -L4_EUSED   address region already used 
- *         - \c -L4_EINVAL  invalid region descriptor 
- *         - \c -L4_ENOMEM  out of memory allocating region descriptor
- *
- * Insert region into region list. The region list ist sorted, starting
- * with the lowest address.
- */
-/*****************************************************************************/ 
-int 
-l4rm_insert_region(l4rm_region_desc_t * region)
-{
-  l4rm_region_desc_t * rp;
-
-  LOGdL(DEBUG_REGION_INSERT,"\n  region <0x%08x-0x%08x>\n  area 0x%05x",
-        region->start,region->end,REGION_AREA(region));
-  
-  rp = __find_region(region);
-  if (rp == NULL)
-    /* invalid region */
-    return -L4_EUSED;
-
-#if DEBUG_REGION_INSERT
-  printf("  in region <0x%08x-0x%08x>\n",rp->start,rp->end);
-#endif
-
-  if (IS_ATTACHED_REGION(rp))
-    /* region already used */
-    return -L4_EUSED;
-
-  if (REGION_AREA(rp) != REGION_AREA(region))
-    /* region reserved by someone else */
-    return -L4_EUSED;
-
-  /* insert region */
-  return __insert_region(region,rp);
-}
-  
 /*****************************************************************************/
 /**
  * \brief Mark region free.
@@ -382,57 +514,14 @@ void
 l4rm_free_region(l4rm_region_desc_t * region)
 {
   /* sanity checks */
-  if (IS_UNUSED_REGION(region) || IS_FREE_REGION(region))
+  if (!IS_USED_REGION(region))
     return;
 
   /* mark region free */
-  SET_FREE(region);
-
-  if (REGION_AREA(region) != L4RM_DEFAULT_REGION_AREA)
-    SET_RESERVED(region);
+  SET_REGION_FREE(region);
 
   /* modify region list */
-  return __modify_region(region,region->flags);
-}
-
-/*****************************************************************************/
-/**
- * \brief Insert area into region list.
- * 
- * \param  region        region descriptor 
- *	
- * \return 0 on success (area inserted into region list), error code 
- *         otherwise:
- *         - \c -L4_EUSED   address region already used 
- *         - \c -L4_EINVAL  invalid region descriptor
- *         - \c -L4_ENOMEM  out of memory allocating region descriptor
- */
-/*****************************************************************************/ 
-int
-l4rm_insert_area(l4rm_region_desc_t * region)
-{
-  l4rm_region_desc_t * rp;
-
-  LOGdL(DEBUG_REGION_INSERT,"\n  region <0x%08x-0x%08x>\n  area 0x%05x",
-        region->start,region->end,REGION_AREA(region));
-
-  rp = __find_region(region);
-  if (rp == NULL)
-    /* invalid region */
-    return -L4_EINVAL;
-
-#if DEBUG_REGION_INSERT
-  printf("  in region <0x%08x-0x%08x>\n",rp->start,rp->end);
-#endif
-
-  if (IS_ATTACHED_REGION(rp))
-    /* region already used */
-    return -L4_EUSED;
-
-  Assert(REGION_AREA(rp) != REGION_AREA(region));
-
-  /* insert region */
-  return __insert_region(region,rp);
+  return __modify_region(region, region->flags);
 }
 
 /*****************************************************************************/
@@ -466,9 +555,8 @@ l4rm_reset_area(l4_uint32_t area)
       else
 	{
 	  /* reset area id */
-	  SET_AREA(rp,L4RM_DEFAULT_REGION_AREA);
-	  CLEAR_REGION_FLAG(rp,REGION_RESERVED);
-	  __modify_region(rp,rp->flags);
+	  SET_AREA(rp, L4RM_DEFAULT_REGION_AREA);
+	  __modify_region(rp, rp->flags);
 	}
 
       /* rp might be invalid after l4rm_modify_region, start from the 
@@ -476,80 +564,6 @@ l4rm_reset_area(l4_uint32_t area)
     }
   while (!done);
 }  
-
-/*****************************************************************************/
-/**
- * \brief Find free region.
- * 
- * \param  size          size of requested region
- * \param  area          area id 
- * \param  flags         flags:
- *                       - \c L4RM_LOG2_ALIGNED find a 2^(log2(size) + 1)
- *                                              aligned region
- *                       - \c L4RM_LOG2_ALLOC   allocate the whole 
- *                                              2^(log2(size) + 1) sized area
- * \retval addr          start address of region
- *	
- * \return 0 on success, -L4_ENOTFOUND if no region found.
- *
- *  Find free region of size \a size in area \a area.
- */
-/*****************************************************************************/ 
-int
-l4rm_find_free_region(l4_size_t size, 
-		      l4_uint32_t area, 
-		      l4_uint32_t flags,
-		      l4_addr_t * addr)
-{
-  l4rm_region_desc_t * rp = head;
-  int align;
-  l4_uint32_t a_size = 0;
-  l4_addr_t a_addr,offs;
-
-  if (flags & L4RM_LOG2_ALIGNED)
-    {
-      /* calculate alignment */
-      align = l4util_log2(size);
-      if (size > (1UL << align))
-	align++;
-
-      a_size = 1UL << align; 
-
-      if (flags & L4RM_LOG2_ALLOC)
-	size = a_size;
-    }
-
-  while (rp)
-    {
-      if (IS_FREE_REGION(rp) && (REGION_AREA(rp) == area))
-	{
-	  if (flags & L4RM_LOG2_ALIGNED)
-	    {
-	      a_addr = (rp->start + a_size - 1) & ~(a_size - 1);
-	      offs = a_addr - rp->start;
-	      if ((rp->end - rp->start + 1) >= (offs + size))
-		{
-		  /* found big enough region */
-		  *addr = a_addr;
-		  return 0;
-		}
-	    }
-	  else
-	    {
-	      if ((rp->end - rp->start + 1) >= size)
-		{
-		  /* found big enough region */
-		  *addr = rp->start;
-		  return 0;
-		}
-	    }
-	}
-      rp = rp->next;
-    }
-
-  /* nothing found */
-  return -L4_ENOTFOUND;
-}
 
 /*****************************************************************************/
 /**
@@ -563,43 +577,73 @@ l4rm_find_free_region(l4_size_t size,
 l4rm_region_desc_t *
 l4rm_find_region(l4_addr_t addr)
 {
-  l4rm_region_desc_t rp;
+  l4rm_region_desc_t * rp = head;
 
   /* Argh: we must manually search the given address in the region list, 
    *       reserved areas are not inserted into the region tree
    */
-  rp.start = rp.end = addr;
-  return __find_region(&rp);
+
+  /* sanity checks */
+  if ((addr < vm_start) || (addr > vm_end))
+    /* invalid address region */
+    return NULL;
+
+  LOGdL(DEBUG_REGION_FIND, "L4RM: find <0x%08x-0x%08x>", rp->start, rp->end);
+
+  /* find region descriptor the address fits into */
+  while (rp && (rp->end < addr))
+    rp = rp->next;
+  Assert(rp != NULL);
+
+#if DEBUG_REGION_FIND
+  LOG_printf("  found <0x%08x-0x%08x>\n", rp->start, rp->end);
+#endif
+
+  /* found */
+  return rp;
 }
 
 /*****************************************************************************/
 /**
- * \brief Get access rights for a dataspace
+ * \brief  Unmap region
  * 
- * \param  ds            Dataspace id
- *	
- * \return Access right bit mask, 0 if dataspace not attached.
- *
- * Walk the region list to get the access rights to the given dataspace. 
+ * \param  region        Region descriptor
  */
 /*****************************************************************************/ 
-l4_uint32_t
-l4rm_get_access_rights(l4dm_dataspace_t * ds)
+void
+l4rm_unmap_region(l4rm_region_desc_t * region)
 {
-  l4_uint32_t rights = 0;
-  l4rm_region_desc_t * rp = head;
+  l4_addr_t addr = region->start;
+  l4_size_t size = region->end - region->start + 1;
+  int addr_align, log2_size, fpage_size;
 
-  /* walk region list */
-  while(rp)
+  /* unmap pages
+   * we try to use as few l4_fpage_unmap calls as possible to minimize the 
+   * detach overhead for large regions.
+   */
+  LOGdL(DEBUG_REGION_UNMAP, "unmap addr 0x%08x, size %u", addr, size);
+
+  while (size > 0)
     {
-      if (IS_ATTACHED_REGION(rp) && (l4dm_dataspace_equal(*ds,rp->ds)))
-	rights |= rp->rights;
+      LOGd(DEBUG_REGION_UNMAP,"0x%08x, size %u (0x%08x)",
+           addr, size, size);
 
-      rp = rp->next;
+      /* calculate the largest fpage we can unmap at address addr, 
+       * it depends on the alignment of addr and the size */
+      addr_align = (addr == 0) ? 32 : l4util_bsf(addr);
+      log2_size = l4util_log2(size);
+      fpage_size = (addr_align < log2_size) ? addr_align : log2_size;
+
+      LOGd(DEBUG_REGION_UNMAP, "addr %d, size %d, log2 %d",
+           addr_align, log2_size, fpage_size);
+
+      /* unmap page */
+      l4_fpage_unmap(l4_fpage(addr, fpage_size, 0, 0),
+		     L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
+
+      addr += (1UL << fpage_size);
+      size -= (1UL << fpage_size);
     }
-
-  /* done */
-  return rights;
 }
 
 /*****************************************************************************/
@@ -612,28 +656,39 @@ l4rm_show_region_list(void)
 {
   l4rm_region_desc_t * rp = head;
 
-  printf("region list:\n");
+  LOG_printf("region list:\n");
   while (rp)
     {
-      printf("  area 0x%05x: 0x%08x - 0x%08x [%7dKiB]:",
-             REGION_AREA(rp),rp->start,rp->end, (rp->end - rp->start + 1) >> 10);
-      if (IS_ATTACHED_REGION(rp))
-	printf(" %2d at %2x.%x\n",
-               rp->ds.id,rp->ds.manager.id.task,rp->ds.manager.id.lthread);
-      else if (IS_FREE_REGION(rp) || IS_RESERVED_AREA(rp))
-	{
-	  if (IS_RESERVED_AREA(rp))
-	    printf(" reserved");
-
-	  if (IS_FREE_REGION(rp))
-	    printf(" free");
-
-	  printf("\n");
-	}
-      else
-	printf(" unknown\n");
+      LOG_printf("  area 0x%05x: 0x%08x - 0x%08x [%7dKiB]: ",
+             REGION_AREA(rp), rp->start, rp->end, 
+             (rp->end - rp->start + 1) >> 10);
+      switch (REGION_TYPE(rp))
+        {
+        case REGION_FREE:
+          if (REGION_AREA(rp) == L4RM_DEFAULT_REGION_AREA)
+            LOG_printf("free\n");
+          else
+            LOG_printf("reserved\n");
+          break;
+        case REGION_DATASPACE:
+          LOG_printf("ds %d at "l4util_idfmt"\n", rp->data.ds.ds.id,
+                 l4util_idstr(rp->data.ds.ds.manager));
+          break;
+        case REGION_PAGER:
+          LOG_printf("pager "l4util_idfmt"\n", 
+	      l4util_idstr(rp->data.pager.pager));
+          break;
+        case REGION_EXCEPTION:
+          LOG_printf("exception\n");
+          break;
+        case REGION_BLOCKED:
+          LOG_printf("blocked\n");
+          break;
+        default:
+          LOG_printf("unknown\n");
+        }
 
       rp = rp->next;
     }
-  printf("\n");
+  LOG_printf("\n");
 }

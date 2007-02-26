@@ -67,7 +67,7 @@ l4rm_region_desc_alloc(void)
     return NULL;
 
   /* setup descriptor */
-  r->flags = REGION_USED;
+  r->flags = REGION_INITIALIZER;
   r->next = NULL;
   r->prev = NULL;
 

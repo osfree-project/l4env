@@ -1,11 +1,11 @@
 /**
- *	\file	dice/src/be/sock/SockBEUnmarshalFunction.cpp
- *	\brief	contains the implementation of the class CSockBEUnmarshalFunction
+ *    \file    dice/src/be/sock/SockBEUnmarshalFunction.cpp
+ *    \brief   contains the implementation of the class CSockBEUnmarshalFunction
  *
- *	\date	11/28/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    11/28/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,20 +31,16 @@
 #include "be/BEMsgBufferType.h"
 #include "be/BEDeclarator.h"
 
-IMPLEMENT_DYNAMIC(CSockBEUnmarshalFunction);
-
 CSockBEUnmarshalFunction::CSockBEUnmarshalFunction()
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBEUnmarshalFunction, CBEUnmarshalFunction);
 }
 
 CSockBEUnmarshalFunction::CSockBEUnmarshalFunction(CSockBEUnmarshalFunction & src)
 : CBEUnmarshalFunction(src)
 {
-    IMPLEMENT_DYNAMIC_BASE(CSockBEUnmarshalFunction, CBEUnmarshalFunction);
 }
 
-/**	\brief destructor of target class */
+/**    \brief destructor of target class */
 CSockBEUnmarshalFunction::~CSockBEUnmarshalFunction()
 {
 
@@ -59,7 +55,9 @@ bool CSockBEUnmarshalFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBE
 {
     if (!CBEUnmarshalFunction::AddMessageBuffer(pFEInterface, pContext))
         return false;
-    m_pMsgBuffer->GetAlias()->IncStars(-m_pMsgBuffer->GetAlias()->GetStars());
+    CBEMsgBufferType *pMsgBuffer = GetMessageBuffer();
+    assert(pMsgBuffer);
+    pMsgBuffer->GetAlias()->IncStars(-pMsgBuffer->GetAlias()->GetStars());
     return true;
 }
 
@@ -71,5 +69,5 @@ bool CSockBEUnmarshalFunction::AddMessageBuffer(CFEInterface * pFEInterface, CBE
 void CSockBEUnmarshalFunction::WriteCallAfterParameters(CBEFile* pFile,  CBEContext* pContext,  bool bComma)
 {
     m_bCastMsgBufferOnCall = false;
-	CBEUnmarshalFunction::WriteCallAfterParameters(pFile, pContext, bComma);
+    CBEUnmarshalFunction::WriteCallAfterParameters(pFile, pContext, bComma);
 }

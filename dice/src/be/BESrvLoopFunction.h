@@ -1,11 +1,12 @@
 /**
- *	\file	dice/src/be/BESrvLoopFunction.h
- *	\brief	contains the declaration of the class CBESrvLoopFunction
+ *    \file    dice/src/be/BESrvLoopFunction.h
+ *    \brief   contains the declaration of the class CBESrvLoopFunction
  *
- *	\date	01/21/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/21/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -34,32 +35,31 @@
 class CFEInterface;
 
 class CBEWaitAnyFunction;
-class CBEReplyAnyWaitAnyFunction;
 class CBEDispatchFunction;
 
-/**	\class CBESrvLoopFunction
- *	\ingroup backend
- *	\brief the wait-any function class for the back-end
+/**    \class CBESrvLoopFunction
+ *    \ingroup backend
+ *    \brief the wait-any function class for the back-end
  *
  * This class contains the code to write a wait-any function
  */
 class CBESrvLoopFunction : public CBEInterfaceFunction
 {
-DECLARE_DYNAMIC(CBESrvLoopFunction);
 // Constructor
 public:
-	/**	\brief constructor
-	 */
-	CBESrvLoopFunction();
-	virtual ~CBESrvLoopFunction();
+    /**    \brief constructor
+     */
+    CBESrvLoopFunction();
+    virtual ~CBESrvLoopFunction();
 
 protected:
-	/**	\brief copy constructor */
-	CBESrvLoopFunction(CBESrvLoopFunction &src);
+    /**    \brief copy constructor */
+    CBESrvLoopFunction(CBESrvLoopFunction &src);
 
 public:
-	virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
-	virtual bool DoWriteFunction(CBEFile * pFile, CBEContext * pContext);
+    virtual bool CreateBackEnd(CFEInterface *pFEInterface, CBEContext *pContext);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile,  CBEContext* pContext);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile,  CBEContext* pContext);
     virtual int GetReceiveDirection();
     virtual int GetSendDirection();
     virtual bool DoUseParameterAsEnv(CBEContext *pContext);
@@ -75,24 +75,24 @@ protected:
     virtual void WriteVariableDeclaration(CBEFile *pFile, CBEContext *pContext);
     virtual bool AddMessageBuffer(CFEInterface * pFEInterface, CBEContext * pContext);
     virtual void WriteEnvironmentInitialization(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteFunctionAttributes(CBEFile* pFile,  CBEContext* pContext);
-	virtual void WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteCorbaEnvironmentDeclaration(CBEFile *pFile, CBEContext *pContext);
-	virtual void WriteReturn(CBEFile* pFile,  CBEContext* pContext);
+    virtual void WriteFunctionAttributes(CBEFile* pFile,  CBEContext* pContext);
+    virtual void WriteCorbaObjectDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteCorbaEnvironmentDeclaration(CBEFile *pFile, CBEContext *pContext);
+    virtual void WriteReturn(CBEFile* pFile,  CBEContext* pContext);
 
 protected:
-    /**	\var CBEWaitAnyFunction *m_pWaitAnyFunction
-     *	\brief needed to write wait any function calls
+    /**    \var CBEWaitAnyFunction *m_pWaitAnyFunction
+     *    \brief needed to write wait any function calls
      */
     CBEWaitAnyFunction *m_pWaitAnyFunction;
     /** \var CBEReplyAnyWaitAnyFunction *m_pReplyAnyWaitAnyFunction
      *  \brief needed if default function is used
      */
-    CBEReplyAnyWaitAnyFunction *m_pReplyAnyWaitAnyFunction;
-	/** \var CBEDispatchFunction *m_pDispatchFunction
-	 *  \brief dioes the multiplexing of the request
-	 */
-	CBEDispatchFunction *m_pDispatchFunction;
+    CBEWaitAnyFunction *m_pReplyAnyWaitAnyFunction;
+    /** \var CBEDispatchFunction *m_pDispatchFunction
+     *  \brief dioes the multiplexing of the request
+     */
+    CBEDispatchFunction *m_pDispatchFunction;
 };
 
 #endif // !__DICE_BESRVLOOPFUNCTION_H__

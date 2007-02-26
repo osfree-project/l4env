@@ -8,13 +8,13 @@ unsigned long *global_ptr = 0;
 CORBA_long test_test_map_component(CORBA_Object _dice_corba_obj,
     CORBA_unsigned_long offset,
     l4_snd_fpage_t *page,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   unsigned long *ptr;
   l4dm_dataspace_t ds;
   void * addr = 0;
 
-  LOG("received offset 0x%x", offset);
+  LOG("received offset 0x%ld", offset);
 
   /* if offset is out of our reach, return error */
   if (offset >= 8192)
@@ -34,14 +34,14 @@ CORBA_long test_test_map_component(CORBA_Object _dice_corba_obj,
       LOG("l4rm_attach failed");
       return 3;
     }
-  LOG("attached DS at addr 0x%08x", addr);
+  LOG("attached DS at addr 0x%p", addr);
   ptr = (unsigned long*)(addr + offset);
   
   // do something with the meomry, it is attached to address addr
   global_ptr = ptr;
-  LOG("address = 0x%08x", ptr);
+  LOG("address = 0x%p", ptr);
   *ptr = 12345;
-  LOG("data = %d", *ptr);
+  LOG("data = %ld", *ptr);
   
   /* is the address we touched page at */
   page->snd_base = (l4_mword_t)addr;
@@ -58,11 +58,11 @@ CORBA_long test_test_map_component(CORBA_Object _dice_corba_obj,
 }
 
 CORBA_long test_test_check_component(CORBA_Object _dice_corba_obj,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   if (global_ptr)
     {
-      LOG("data = %d", *global_ptr);
+      LOG("data = %ld", *global_ptr);
     }
   else
     {
@@ -71,9 +71,10 @@ CORBA_long test_test_check_component(CORBA_Object _dice_corba_obj,
   return 1;
 }
 
+char LOG_tag[9] = "fpageS";
+
 int main(int argc, char* argv[])
 {
-  LOG_init("fpageS");
   // register with names
   names_register("fpageS");
   // start loop

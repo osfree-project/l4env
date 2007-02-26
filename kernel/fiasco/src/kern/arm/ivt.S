@@ -1,12 +1,40 @@
 /* -*- asm -*- */
 
 #include "config_tcbsize.h"
+#include "tcboffset.h"
 
+
+
+/**********************************************************************
+ * calculate the TCB address from a stack pointer
+ */
+.macro CONTEXT_OF reg, ptr
+	bic	\reg, \ptr, #((THREAD_BLOCK_SIZE-1) & 0xff)
+	bic	\reg, \reg, #((THREAD_BLOCK_SIZE-1) & 0xff00)
+.endm
+
+/**********************************************************************
+ * Reset the thread cancel flag. 
+ * Register r0 is scratched and contains the thread state afterwards
+ */
+.macro RESET_THREAD_CANCEL_AT tcb
+	ldr 	r0, [\tcb, #(OFS__THREAD__STATE)]
+	bic	r0, r0, #0x100
+	str	r0, [\tcb, #(OFS__THREAD__STATE)]
+.endm
+
+/****************************
+ * some handy definitions
+ */
 #define S_FRAME_SIZE	36
 
 #define S_PSR           28
 #define S_PC		32
 
+/**************************************************************************
+ * Enter kernel mode (i.e. switch from any exception mode to the 
+ * kernel mode and transfer the exception state).
+ */
 .macro  switch_to_kernel
 	str	lr, s_lr
 	mrs	lr, spsr
@@ -19,6 +47,41 @@
 	ldr	lr, s_spsr
 	msr	spsr, lr
 	ldr	lr, s_lr
+.endm
+
+/*************************************************************************
+ * return for an exception
+ */
+.macro 	return_from_exception
+	ldr	lr, [sp], #12		@ Unstack SPSR
+	msr	spsr, lr		@ Load SPSR from kernel_lr
+	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
+					@ NE -> kernel
+	ldmeqdb	sp, {sp,lr}^		@ restore user sp and lr
+	add	sp, sp, #8		@ Read return address
+	ldr	lr, [sp, #-4]		@ Read return address
+	moveqs	pc, lr			@ return and switch mode
+        ldrne   lr, [sp, #-8]           @ load old kernel lr
+	ldmdb	sp, {pc}^		@ switches mode - doesnt do anything
+	nop
+.endm
+
+/***********************************************************************
+ * Enter the kernel slowtrap handler
+ *
+ * Stack the state and call 'slowtrap_entry' with sp and error code
+ */
+.macro 	enter_slowtrap_w_stack errorcode
+	mov	r1, #\errorcode
+	stmdb	sp!, {r0, r1}
+	mov 	r0, sp
+	adr	lr, exception_return
+	ldr	pc, .LCslowtrap_entry
+.endm
+
+.macro 	enter_slowtrap errorcode
+	stmdb 	sp!, {r0 - r12}
+	enter_slowtrap_w_stack \errorcode
 .endm
 
 /*	
@@ -41,9 +104,28 @@
  *             |       |
  *
  */
-	
-.macro exceptionframe adjust
+
+
+/*************************************************************************
+ *
+ * Generate stack for exception entries
+ * - Adjust return address
+ * - Store return address at [sp + 4]
+ * - Store spsr at [sp - 12]
+ * - Store user sp at [sp - 4]
+ * - Store user lr at [sp - 8]
+ * - sp := sp - 12
+ */
+.macro	exceptionframe adjust
 	sub	lr, lr, #\adjust
+	@ Adjust PC if it is in the special atomic insns area
+        cmp     lr, #0xffffe000
+	addls	pc, pc, #12
+	cmp	lr, #0xfffff000
+	addhs   pc, pc, #4
+	tst	lr, #0x10
+	biceq	lr, lr, #0x0ff
+	@ ---------------------------------------------------
 	str	lr, [sp, #4]
         mrs	lr, spsr    
         str     lr, [sp, #-12]!
@@ -52,7 +134,9 @@
 .endm
 
 
-/*	
+/***************************************************************************
+ * Generate stack for system call entries
+ *
  * Stack layout:
  *
  *  after SWITCH_TO_SVC !!!!
@@ -72,10 +156,7 @@
  *             |       |
  *
  */
-
-
-	
-.macro syscallframe	
+.macro	syscallframe	
 	stmib	sp, {lr}^
 	nop			
         mrs	lr, spsr        
@@ -84,7 +165,9 @@
 .endm
 
 
-
+/**************************************************************************
+ * The Exception vector table.
+ */
 .section	.vect,"a"
 .globl	exception_vector
 exception_vector:
@@ -104,13 +187,13 @@ exception_vector:
 s_lr:	.word	0
 s_spsr:	.word	0
 
-/*
+/***************************************************************************
 **
 ** Exception entry points.
 **
 */
 
-/*
+/***************************************************************************
  * Exception undef ()
  *
  *    Exception is an undefined instruction.
@@ -118,10 +201,10 @@ s_spsr:	.word	0
  */
 undef_entry:
 	switch_to_kernel
-	mov	r0,#0xFE
-	b	kern_kdebug_entry
+	exceptionframe 4
+	enter_slowtrap 0x00100000
 	
-/*
+/**************************************************************************
  * Exception swi ()
  *
  *    Exception is a software interrupt (typically a syscall in normal
@@ -130,12 +213,12 @@ undef_entry:
  */
 swi_entry:
 	switch_to_kernel
-	mov	r0,#0xFD
-	b	kern_kdebug_entry
+	exceptionframe 4
+	enter_slowtrap 0x00200000
 
+.align 4
 
-	
-/*
+/***************************************************************************
  * Exception inst_abort ()
  *
  *    Exception is a prefetch (instruction) abort.  This exception is also
@@ -156,15 +239,19 @@ inst_abort_entry:
 	cmn	lr, #0x08
 	bhi	prefetch_abort
 	syscallframe			
-	stmdb   sp, {r0 - r12}^
-        nop
-        sub     sp, sp, #13*4
+	stmdb   sp!, {r0 - r12}
+	CONTEXT_OF	r1, sp
+	RESET_THREAD_CANCEL_AT r1       @ sets r0 to state 
+	tst	r0, #0x10000
+	bne	alien_syscall
 	ldr	r0, s_lr
 	adr	r1, sys_call_table
 	sub	r0, r1, r0
 	adr	lr, 2f
-        msr	cpsr_c, #0x13 // enable IRQs
 1:	ldr	pc, [r0]
+
+.global fast_ret_from_irq
+fast_ret_from_irq:
 2:      nop
         ldmia   sp, {r0 - r12}^
         nop
@@ -180,33 +267,36 @@ inst_abort_entry:
 	ldr	lr, [sp, #-4]		
 	movs	pc, lr	
 	
-prefetch_abort:
+/**************************************************************************/
+prefetch_abort: @ A real prefetch abort occured --- handled as a page fault 
 	exceptionframe 4
-
-	stmdb   sp, {r0 - r12}^ 	@ Stack rest of user state
-	nop
-	sub	sp, sp, #(13*4)
+	stmdb   sp!, {r0 - r3, r12} 	@ Stack rest of user state
 
 	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
 	bne	kernel_prefetch_abort	@ Kernel abort?
 	/* user prefetch abort */
 	mrc     p15, 0, r1, c5, c0, 0	@ Load FSR into r1
 	bic	r1, r1, #0x00ff0000
-	orr	r1, r1, #0x00100000
-	ldr	r0, [sp, #68]
+	orr	r1, r1, #0x00330000     @ Set read bit and prefetch abort
+	ldr	r0, [sp, #(9*4)]
 	mov	r2, r0
-
-	adr	lr, exception_return
+	mov 	r3, sp
+	stmdb	sp!, {r0, r1}
+	adr	lr, pagefault_return
 	ldr	pc,  .LCpagefault_entry	@ Jump to C code
 
 kernel_prefetch_abort:			@ Kernel generated IAbort
 					@ Should not get IAborts in kernel
 					@ Kernel Panic
 	switch_to_kernel
-	mov	r0,#0xFC
+	adr	r0, kernel_prefetch_abort_label
 	b	kern_kdebug_entry
 
-/*
+
+
+
+
+/****************************************************************************
  * Exception data_abort ()
  *
  *    Exception is a data abort.  If exception happened in user mode,
@@ -239,35 +329,36 @@ kernel_prefetch_abort:			@ Kernel generated IAbort
  *
  *
  */
-
 data_abort_entry:
 
 	switch_to_kernel
 
 	exceptionframe 8
-	stmdb   sp, {r0 - r12}^         @ Stack rest of user state
-	nop
-	sub	sp, sp, #(13*4)
+	stmdb   sp!, {r0 - r3, r12}          @ Stack rest of user state
 
 	/* user data abort */
 	mrc     p15, 0, r1, c5, c0, 0	@ Load FSR into r1
 	bic	r1, r1, #0x00ff0000
 	mrc     p15, 0, r0, c6, c0, 0	@ Load FAR into r0
-	ldr	r2, [sp, #68]
+	ldr	r2, [sp, #(9*4)]
 	ldr	r3, [r2]		@ Load faulting insn
 	tst	r3, #(1<<20)
-	orrne	r1, r1, #0x00100000	@ Set read fault bit
+	orrne	r1, r1, #0x00020000	@ Set read fault bit
 	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
 					@ NE -> kernel
-	orreq	r1, r1, #0x00080000
-	adr	lr, exception_return	@ set return address
+	mov 	r3, sp
+	orreq	r1, r1, #0x00010000
+	orr	r1, r1, #0x00400000     @ Set error code to data abort
+	stmdb	sp!, {r0, r1}
+	adr	lr, pagefault_return	@ set return address
 
 	ldr	pc, .LCpagefault_entry	@ page fault	
 
 .LCpagefault_entry:	.word	pagefault_entry
+.LCslowtrap_entry:	.word	slowtrap_entry
 
 
-/*
+/***************************************************************************
  * Generic return code for restoring the thread state after exceptions.
  *
  * Stack layout:
@@ -294,65 +385,104 @@ data_abort_entry:
  *
  *
  */	
+pagefault_return:
+	cmp 	r0, #0
+	ldmia	sp!, {r12, lr}
+	beq	slowtrap_from_pagefault
+	
+        msrne	cpsr_c, #0xd3 // disable IRQs
+	ldmneia	sp!, {r0 - r3, r12}		@ Restore user state
+	return_from_exception
+
+slowtrap_from_pagefault:
+	ldmia 	sp!, {r0 - r3}
+	stmdb 	sp!, {r0 - r11}
+	stmdb 	sp!, {r12, lr}
+	mov	r0, sp
+	adr   	lr, exception_return
+	ldr	pc, .LCslowtrap_entry	@ slow trap	
+
 exception_return:
-	ldmia	sp, {r0 - r12}^		@ Restore user state
-	nop
-	add	sp, sp, #(13*4)
+        msr	cpsr_c, #0xd3 // disable IRQs
+	add	sp, sp, #8
+	ldmia	sp!, {r0 - r12}
+	return_from_exception
 
-	ldr	lr, [sp], #12		@ Unstack SPSR
-	msr	spsr, lr		@ Load SPSR from kernel_lr
-	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
-					@ NE -> kernel
-	ldmeqdb	sp, {sp,lr}^		@ restore user sp and lr
-	nop
-	add	sp, sp, #8		@ Read return address
-	ldr	lr, [sp, #-4]		@ Read return address
-	moveqs	pc, lr			@ return and switch mode
-        ldrne   lr, [sp, #-8]           @ load old kernel lr
-	ldmdb	sp, {pc}^		@ switches mode - doesnt do anything
-	nop
 
-	bl	kern_kdebug_entry
-/*
+/***************************************************************************
  * Exception irq ()
  *
  *    Exception is an interrupt.  Generate interrupt IPC.
-
-         *
+ *
  */
 irq_entry:	
 	switch_to_kernel
 	exceptionframe 4
 
-	stmdb   sp, {r0 - r12}^   	@ Stack rest of user state
-	nop
-	sub	sp, sp, #(13*4)
-        mov     r0, sp
-//	ldr	r0, [sp, #68]
+	stmdb   sp!, {r0 - r3, r12}   	@ Stack rest of user state
 #if 0 /*def EXCEPTION_VECTOR_RELOCATED*/
         bl      irq_handler
 #else
         mov     lr, pc
         ldr     pc, 1f
 #endif
-	b	exception_return
+	ldmia	sp!, {r0 - r3, r12}		@ Restore user state
+        msr	cpsr_c, #0xd3 // disable IRQs
+	return_from_exception
 #if 1	
 1:	.word	irq_handler
 #endif
 
 
 
-/*
+/******************************************************************************
  * Exception fiq ()
  *
- *    Exception is a fast interrupt.  Generate interrupt IPC.
+ *    Exception is a fast interrupt.  Trap into kernel debugger.
  *
  */
 fiq_entry:
 	switch_to_kernel
-	mov	r0,#0xFD
+	adr	r0, fiq_label
 	b	kern_kdebug_entry
 
+
+/**************************************************************************/
+/* The alien stuff is below                                               */
+/**************************************************************************/
+alien_syscall: @ Do it for an alien ---------------------------------------
+	tst	r0, #0x20000
+	bicne	r0, r0, #0x20000
+	bne	1f
+	@ Trap alien before system call -----------------------------------
+	@ The trap is an insn abort on the syscall address in the kernel.
+	ldr	lr, [sp, #(16+13*4)]
+	str	lr, [sp, #(8 +13*4)]
+	ldr	lr, s_lr
+	sub	lr, lr, #4
+	str	lr, [sp, #(16+13*4)]
+	enter_slowtrap_w_stack 0x00300000
+	@ Never reach this -- end up in user land after exception reply
+
+1:	@ Resume the alien system call ------------------------------------
+	str	r0, [r1, #(OFS__THREAD__STATE)]
+	ldr	r0, s_lr
+	adr	r1, sys_call_table
+	sub	r0, r1, r0
+	adr	lr, 2f
+	ldr	pc, [r0]
+2:	nop @ The return point after the resumed alien system call --------
+        msr	cpsr_c, #0xd3 // disable IRQs
+	@ Trap after the resumed alien system call ------------------------
+	@ The trap occurs at the insn where the system call returns to.
+	@ Set the bit 0x00010000 to indicate a trap after the resumed 
+	@ system call.
+	enter_slowtrap_w_stack 0x00310000
+
+	
+/*****************************************************************************/
+/* The syscall table stuff                                                   */
+/*****************************************************************************/
 #if 0
 #define SYSCALL(name)			  \
 sys_##name##_entry:			  \
@@ -361,6 +491,7 @@ sys_##name##_entry:			  \
 	bl	sys_##name##_wrapper	; \
 	ldmia   sp!, {r0 - r12}^	; \
 	/* Return */			; \
+        msr	cpsr_c, #0xd3           ; \ // disable IRQs
 	ldr	lr, [sp]		; \
 	msr	spsr, lr		; \
 	ldmib	sp, {sp,lr}^		; \
@@ -378,8 +509,8 @@ sys_##name##_entry:			  \
 sys_call_table:
 	.word sys_kdb_ke
 	.word sys_kdb_ke
-SYSCALL(ipc)
-/*	.word ipc_short_cut_wrapper*/
+/*SYSCALL(ipc)*/
+	.word ipc_short_cut_wrapper
 SYSCALL(id_nearest)
 SYSCALL(fpage_unmap)
 SYSCALL(thread_switch)
@@ -388,14 +519,49 @@ SYSCALL(thread_ex_regs)
 SYSCALL(task_new)
 	.word sys_kdb_ke
 	
+	
+kernel_prefetch_abort_label: .string "Kernel prefetch abort"
+missed_excpt_ret_label:      .string "ERROR in exception return"
+fiq_label:	             .string "FIQ entry"
+
+.align 4
+
 /**********************************************************************
 	kdebug entry
  **********************************************************************/
+
+/* STACK LAYOUT
+   _kdebug_stack_top  | 
+                      +-------------+
+		      | lr (kernel) |
+		      +-------------+
+		      | sp (kernel) |
+		      +-------------+
+		      | cpsr        |
+		      +-------------+
+		      | spsr        |
+		      +-------------+
+		      | r14^ (lr^)  |
+		      +-------------+
+		      | r13^ (sp^)  |
+		      +-------------+
+		      | r12         |
+		      +-------------+
+		      | r11         |
+		      +-------------+
+		      | r10         |
+		      +-------------+
+		          :     :
+		      +-------------+
+		      | r0          |
+		      +-------------+
+*/
 
 3:	.word enter_jdb
 	
 	.globl	kern_kdebug_entry
 kern_kdebug_entry:
+	mov     r1, r0
         str     sp,_kdebug_stack_top-8
         str     lr,_kdebug_stack_top-4
         mrs	lr, cpsr
@@ -418,6 +584,7 @@ kern_kdebug_entry:
 	ldr	lr,_kdebug_stack_top-4
 	mov	pc, lr			@ return and switch mode
 
+
 	.globl	_kdebug_stack_bottom
 _kdebug_stack_bottom:
 	.space	1024
@@ -425,6 +592,4 @@ _kdebug_stack_bottom:
 	.globl	_kdebug_stack_top
 _kdebug_stack_top:
 	.word	_kdebug_stack_top
-
-
 

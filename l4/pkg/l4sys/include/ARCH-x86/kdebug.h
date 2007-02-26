@@ -90,7 +90,7 @@ outchar(char c);
  * \param   text         Character string
  */
 L4_INLINE void
-outstring(char * text);
+outstring(const char * text);
 
 /**
  * Print character string
@@ -163,7 +163,7 @@ outdec(int number);
  * \return Input character
  */
 L4_INLINE char
-kd_inchar(void);
+l4kd_inchar(void);
 
 /**
  * Start profiling
@@ -201,25 +201,30 @@ L4_INLINE void
 fiasco_watchdog_disable(void);
 
 /**
- *
+ * Disable automatic resetting of watchdog. User is responsible to call
+ * \c fiasco_watchdog_touch from time to time to ensure that the watchdog
+ * does not trigger.
  * \ingroup api_calls_fiasco
  */
 L4_INLINE void
 fiasco_watchdog_takeover(void);
 
 /**
- *
+ * Reenable automatic resetting of watchdog.
  * \ingroup api_calls_fiasco
  */
 L4_INLINE void
 fiasco_watchdog_giveback(void);
 
 /**
- *
+ * Reset watchdog from userland. This function \b must be called from time
+ * to time to prevent the watchdog from triggering if the watchdog is
+ * activated and if \c fiasco_watchdog_takeover was performed.
  * \ingroup api_calls_fiasco
  */
 L4_INLINE void
 fiasco_watchdog_touch(void);
+
 
 /*****************************************************************************
  *** Implementation
@@ -238,7 +243,7 @@ outchar(char c)
 
 /* actually outstring is outcstring */
 L4_INLINE void
-outstring(char *text)
+outstring(const char *text)
 {
   asm(
       "int	$3	\n\t"
@@ -252,11 +257,13 @@ outstring(char *text)
 L4_INLINE void
 outnstring(char const *text, unsigned len)
 {
-  asm(
-      "int	$3	\n\t"
-      "cmpb	$1,%%al \n\t"
+  asm("pushl    %%ebx        \n\t"
+      "movl     %%ecx, %%ebx \n\t"
+      "int	$3	     \n\t"
+      "cmpb	$1,%%al      \n\t"
+      "popl     %%ebx        \n\t"
       : /* No output */
-      : "a" (text), "b"(len)
+      : "a" (text), "c"(len)
       );
 }
 
@@ -287,7 +294,7 @@ outhex16(int number)
 {
   asm(
       "int	$3	\n\t"
-      "cmpb	$7, %%al	\n\t"
+      "cmpb	$7, %%al\n\t"
       : /* No output */
       : "a" (number)
       );
@@ -298,7 +305,7 @@ outhex12(int number)
 {
   asm(
       "int	$3	\n\t"
-      "cmpb	$8, %%al	\n\t"
+      "cmpb	$8, %%al\n\t"
       : /* No output */
       : "a" (number)
       );
@@ -309,7 +316,7 @@ outhex8(int number)
 {
   asm(
       "int	$3	\n\t"
-      "cmpb	$9, %%al	\n\t"
+      "cmpb	$9, %%al\n\t"
       : /* No output */
       : "a" (number)
       );
@@ -320,14 +327,14 @@ outdec(int number)
 {
   asm(
       "int	$3	\n\t"
-      "cmpb	$11, %%al	\n\t"
+      "cmpb	$11, %%al\n\t"
       : /* No output */
       : "a" (number)
       );
 }
 
 L4_INLINE char
-kd_inchar(void)
+l4kd_inchar(void)
 {
   char c;
   asm volatile ("int $3; cmpb $13, %%al" : "=a" (c));

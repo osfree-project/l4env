@@ -1,7 +1,7 @@
 INTERFACE:
 
 /**
- * @brief Implementation for PC keyboards.
+ * Implementation for PC keyboards.
  */
 EXTENSION class Keyb
 {
@@ -104,12 +104,12 @@ IMPLEMENTATION[pc]:
 #include "io.h"
 
 enum {
-  SHIFT = -1,
+  SHIFT = 0xff,
 };
 
-static const char keymap[128][2] = {
-  {0},			/* 0 */
-  {27,	27},		/* 1 - ESC */
+static const unsigned char keymap[][2] = {
+  {0       },		/* 0 */
+  {27,	27 },		/* 1 - ESC */
   {'1',	'!'},		/* 2 */
   {'2',	'@'},
   {'3',	'#'},
@@ -122,7 +122,7 @@ static const char keymap[128][2] = {
   {'0',	')'},
   {'-',	'_'},
   {'=',	'+'},
-  {8,	8},		/* 14 - Backspace */
+  {8,	8  },		/* 14 - Backspace */
   {'\t','\t'},		/* 15 */
   {'q',	'Q'},
   {'w',	'W'},
@@ -135,10 +135,10 @@ static const char keymap[128][2] = {
   {'o',	'O'},
   {'p',	'P'},
   {'[',	'{'},
-//   {']',	'}'},		/* 27 */
+// {']','}'},		/* 27 */
   {'+',	'*'},		/* 27 */
-  {'\r',	'\r'},		/* 28 - Enter */
-  {0,	0},		/* 29 - Ctrl */
+  {'\r','\r'},		/* 28 - Enter */
+  {0,	0  },		/* 29 - Ctrl */
   {'a',	'A'},		/* 30 */
   {'s',	'S'},
   {'d',	'D'},
@@ -149,10 +149,10 @@ static const char keymap[128][2] = {
   {'k',	'K'},
   {'l',	'L'},
   {';',	':'},
-  {'\'',	'"'},		/* 40 */
+  {'\'','"'},		/* 40 */
   {'`',	'~'},		/* 41 */
-  {SHIFT,	SHIFT},		/* 42 - Left Shift */
-  {'\\',	'|'},		/* 43 */
+  {SHIFT, SHIFT},	/* 42 - Left Shift */
+  {'\\','|'},		/* 43 */
   {'z',	'Z'},		/* 44 */
   {'x',	'X'},
   {'c',	'C'},
@@ -162,90 +162,93 @@ static const char keymap[128][2] = {
   {'m',	'M'},
   {',',	'<'},
   {'.',	'>'},
-  //  {'/',	'?'},		/* 53 */
+// {'/', '?'},		/* 53 */
   {'-',	'_'},		/* 53 */
-  {SHIFT,	SHIFT},		/* 54 - Right Shift */
-  {0,	0},		/* 55 - Print Screen */
-  {0,	0},		/* 56 - Alt */
-  {' ',	' '},		/* 57 - Space bar */
-  {0,	0},		/* 58 - Caps Lock */
-  {0,	0},		/* 59 - F1 */
-  {0,	0},		/* 60 - F2 */
-  {0,	0},		/* 61 - F3 */
-  {0,	0},		/* 62 - F4 */
-  {0,	0},		/* 63 - F5 */
-  {0,	0},		/* 64 - F6 */
-  {0,	0},		/* 65 - F7 */
-  {0,	0},		/* 66 - F8 */
-  {0,	0},		/* 67 - F9 */
-  {0,	0},		/* 68 - F10 */
-  {0,	0},		/* 69 - Num Lock */
-  {0,	0},		/* 70 - Scroll Lock */
-  {'7',	'7'},		/* 71 - Numeric keypad 7 */
-  {'8',	'8'},		/* 72 - Numeric keypad 8 */
-  {'9',	'9'},		/* 73 - Numeric keypad 9 */
+  {SHIFT, SHIFT},	/* 54 - Right Shift */
+  {0,	 0},		/* 55 - Print Screen */
+  {0,	 0},		/* 56 - Alt */
+  {' ',' '},		/* 57 - Space bar */
+  {0,	 0},		/* 58 - Caps Lock */
+  {0,	 0},		/* 59 - F1 */
+  {0,	 0},		/* 60 - F2 */
+  {0,	 0},		/* 61 - F3 */
+  {0,	 0},		/* 62 - F4 */
+  {0,	 0},		/* 63 - F5 */
+  {0,	 0},		/* 64 - F6 */
+  {0,	 0},		/* 65 - F7 */
+  {0,	 0},		/* 66 - F8 */
+  {0,	 0},		/* 67 - F9 */
+  {0,	 0},		/* 68 - F10 */
+  {0,	 0},		/* 69 - Num Lock */
+  {0,	 0},		/* 70 - Scroll Lock */
+  {0xb7,0xb7},		/* 71 - Numeric keypad 7 */
+  {0xb8,0xb8},		/* 72 - Numeric keypad 8 */
+  {0xb9,0xb9},		/* 73 - Numeric keypad 9 */
   {'-',	'-'},		/* 74 - Numeric keypad '-' */
-  {'4',	'4'},		/* 75 - Numeric keypad 4 */
-  {'5',	'5'},		/* 76 - Numeric keypad 5 */
-  {'6',	'6'},		/* 77 - Numeric keypad 6 */
+  {0xb4,0xb4},		/* 75 - Numeric keypad 4 */
+  {0xb5,0xb5},		/* 76 - Numeric keypad 5 */
+  {0xb6,0xb6},		/* 77 - Numeric keypad 6 */
   {'+',	'+'},		/* 78 - Numeric keypad '+' */
-  {'1',	'1'},		/* 79 - Numeric keypad 1 */
-  {'2',	'2'},		/* 80 - Numeric keypad 2 */
-  {'3',	'3'},		/* 81 - Numeric keypad 3 */
-  {'0',	'0'},		/* 82 - Numeric keypad 0 */
-  {'.',	'.'},		/* 83 - Numeric keypad '.' */
+  {0xb1,0xb1},		/* 79 - Numeric keypad 1 */
+  {0xb2,0xb2},		/* 80 - Numeric keypad 2 */
+  {0xb3,0xb3},		/* 81 - Numeric keypad 3 */
+  {0xb0,0xb0},		/* 82 - Numeric keypad 0 */
+  {0xae,0xae},		/* 83 - Numeric keypad '.' */
 };
 
 
-
 IMPLEMENT
-int Keyb::getchar( bool b )
+int Keyb::getchar(bool wait)
 {
   static unsigned shift_state;
   unsigned status, scan_code, ch;
   Proc::Status old_s = Proc::cli_save();
 
-retry:
+  for (;;)
+    {
+      /* Wait until a scan code is ready and read it. */
+      status = Io::in8(0x64);
+      if ((status & K_OBUF_FUL) == 0)
+	{
+	  if (wait)
+	    continue;
+    	  Proc::sti_restore(old_s);
+	  return -1;
+	}
+      scan_code = Io::in8(0x60);
 
-  /* Wait until a scan code is ready and read it. */
-  status = Io::in8(0x64);
-  if ((status & K_OBUF_FUL) == 0) {
-    if(b)
-      goto retry;
-    else {
+      /* Drop mouse events */
+      if ((status & K_AUX_OBUF_FUL) != 0)
+	{
+	  if (wait)
+	    continue;
+	  Proc::sti_restore(old_s);
+      	  return -1;
+	}
+
+      if ((scan_code & 0x7f) >= sizeof(keymap)/sizeof(keymap[0]))
+	continue;
+
+      /* Handle key releases - only release of SHIFT is important. */
+      if (scan_code & 0x80)
+	{
+	  scan_code &= 0x7f;
+	  if (keymap[scan_code][0] == SHIFT)
+	    shift_state = 0;
+	  continue;
+	}
+
+      /* Translate the character through the keymap. */
+      ch = keymap[scan_code][shift_state];
+      if (ch == (unsigned)SHIFT)
+	{
+	  shift_state = 1;
+	  continue;
+	}
+      if (ch == 0)
+	continue;
+      
       Proc::sti_restore(old_s);
-      return -1;
+      return ch;
     }
-  }
-  scan_code = Io::in8(0x60);
-
-  /* Drop mouse events */
-  if ((status & K_AUX_OBUF_FUL) != 0) {
-    if(b)
-      goto retry;
-    else {
-      Proc::sti_restore(old_s);
-      return -1;
-    }
-  }
-
-  /* Handle key releases - only release of SHIFT is important. */
-  if (scan_code & 0x80) {
-    scan_code &= 0x7f;
-    if (keymap[scan_code][0] == SHIFT)
-      shift_state = 0;
-    goto retry;
-  }
-
-  /* Translate the character through the keymap. */
-  ch = keymap[scan_code][shift_state];
-  if (ch == (unsigned)SHIFT) {
-    shift_state = 1;
-    goto retry;
-  } else if (ch == 0)
-    goto retry;
-
-  Proc::sti_restore(old_s);
-
-  return ch;
 }

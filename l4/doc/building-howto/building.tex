@@ -36,14 +36,15 @@ abstract:
 \item Get the following components from \code{http://os.{\hskip
       0pt}inf.{\hskip 0pt}tu-{\hskip 0pt}dresden.de/{\hskip
       0pt}drops/{\hskip 0pt}download.html}:
-  OSKit, OSKit 1.0, L4Env, \llinux, Fiasco.
+  L4Env, OSKit, OSKit~1.0, \llinux, Fiasco.
 
 \item Unpack the tar-balls in one directory. Memorize the directory.
 
 \item Switch into \code{l4/} and enter
 
-  \code{DROPS\_STDDIR=<dir>/drops make oldconfig}
-
+  \code{DROPS\_STDDIR=<dir>/drops $\backslash$\\}
+  \code{make oldconfig}
+  
   Substitute \code{<dir>} with the absolute pathname of the directory
   you kept in mind. Still in \code{l4/}, enter
 
@@ -80,7 +81,7 @@ dependencies:
 \item the resource manager \code{rmgr} (part of DROPS)
 \item the logging server \code{log} (part of DROPS)
 \item the packet l4util (part of DROPS)
-\item the C library from OSKit 0.6 (not part of DROPS but available from the
+\item the C library from OSKit~0.6 (not part of DROPS but available from the
   DROPS download site)
 \item the BID make macros
 \end{itemize}
@@ -114,8 +115,8 @@ component               & default location     \\
 \hline
 DROPS packets           & \code{L4DIR/pkg}         \\
 DROPS Tools             & \code{L4DIR/tool}        \\
-OSKit 0.6               & \code{L4DIR/../oskit}    \\
-OSKit 1.0               & \code{L4DIR/../oskit10}  \\
+OSKit~0.6               & \code{L4DIR/../oskit}    \\
+OSKit~1.0               & \code{L4DIR/../oskit10}  \\
 \llinux{} v2.2          & \code{L4DIR/../linux22}  \\
 \hline
 \end{tabular}
@@ -208,7 +209,7 @@ this should be \code{l4/}. A
 starts an interactive configuration tool. You should at least adapt
 the \code{DROPS\_STDDIR} setting at ``Paths and Directories'', as this
 is the directory where the components will be installed on a
-\code{make install}. Note that unlike the other components, OSKit 1.0
+\code{make install}. Note that unlike the other components, OSKit~1.0
 cannot be used without being installed into \code{DROPS\_STDDIR}.
 
 The default values meet most peoples requirements. Thus, instead of
@@ -232,7 +233,7 @@ After configuring, go to the \code{L4DIR} directory and do a
 This builds everything available as sources: the tools, C libraries,
 Fiasco micro-kernel and the DROPS packages. It also builds the documentation.
 
-OSKit 1.0 will also be installed if its sources are available. If you
+OSKit~1.0 will also be installed if its sources are available. If you
 forgot to set DROPS\_STDDIR during configuration, you probably notice
 this now, as OSKIT 1.0 tries to install to \code{/home/drops}. Delete
 the files \code{L4DIR/../oskit/GNUMakefile} and
@@ -255,7 +256,7 @@ the makefile in \code{L4DIR} does.
 \begin{verbatim}
 cd l4/tool ; make
 \end{verbatim}
-\item OSKit 0.6 and 1.0
+\item OSKit~0.6 and OSKit~1.0
 \begin{verbatim}
 cd oskit ; make -f Makefile.drops
 cd oskit10 ; make -f Makefile.drops

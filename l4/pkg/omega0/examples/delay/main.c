@@ -12,6 +12,8 @@
 #include "serial.h"
 #include "pic.h"
 
+char LOG_tag[9]="pit";
+
 #define MHZ 400000000	// 1Mio*400
 #define COUNT 100
 
@@ -57,7 +59,7 @@ static int attach(int irq, int*handle){
   l4_make_taskid_from_irq(irq, &irq_th);
   
   error = l4_ipc_receive(irq_th, 0, &dummy, &dummy,
-                              L4_IPC_TIMEOUT(0,1,0,1,0,0), &result);
+                         L4_IPC_BOTH_TIMEOUT_0, &result);
 
   if(error!=L4_IPC_RETIMEOUT) return 3;
   *handle = irq+1;
@@ -148,8 +150,7 @@ static void measure_delay(void){
     t1 = l4_rdtsc();
     if(err<0){
       LOGl("omega0_request(handle=%d, request=%#x) returned %d",
-                           handle, request,
-                           err);
+                           handle, request.i, err);
       enter_kdebug("!");
       continue;
     }
@@ -158,15 +159,17 @@ static void measure_delay(void){
     request.s.unmask= 0;
     request.s.consume=1;
     
+#if 0
     // consume and mask the irq
-    //err = irq_request(handle, OMEGA0_RQ(OMEGA0_CONSUME,irq+1));
+    err = irq_request(handle, OMEGA0_RQ(OMEGA0_CONSUME,irq+1));
     if(err<0){
       LOGl("omega0_request(handle=%d, request=%#x) returned %d",
-                           handle, OMEGA0_RQ(OMEGA0_CONSUME|OMEGA0_MASK,irq+1),
+            handle, OMEGA0_RQ(OMEGA0_CONSUME|OMEGA0_MASK,irq+1).i,
                            err);
       enter_kdebug("!");
       continue;
     }
+#endif
   }
   LOG("I got %u irqs, needed %u cycles per irq. This are:", 
       COUNT, (unsigned)(sum/COUNT));
@@ -179,7 +182,6 @@ static void measure_delay(void){
 
 int main(int argc, char*argv[]){
   rmgr_init();
-  LOG_init("pit");
   
   #ifdef USE_OMEGA0
     LOG("using Omega0-server");

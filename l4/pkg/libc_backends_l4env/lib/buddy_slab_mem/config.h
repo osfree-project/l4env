@@ -1,5 +1,5 @@
 /*!
- * \file   dietlibc/lib/backends/l4env_base/config.h
+ * \file   libc_backends_l4env/lib/buddy_slab_mem/config.h
  * \brief  backend lib logging configuration
  *
  * \date   08/19/2003
@@ -10,8 +10,8 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
-#ifndef __DIETLIBC_LIB_BACKENDS_L4ENV_BASE_CONFIG_H_
-#define __DIETLIBC_LIB_BACKENDS_L4ENV_BASE_CONFIG_H_
+#ifndef __LIBC_BACKENDS_L4ENV_LIB_BUDDY_SLAB_MEM_CONFIG_H_
+#define __LIBC_BACKENDS_L4ENV_LIB_BUDDY_SLAB_MEM_CONFIG_H_
 
 /* Malloc debugging */
 #define LOG_MALLOC_INIT		0

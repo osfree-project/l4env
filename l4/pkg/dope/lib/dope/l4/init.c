@@ -13,21 +13,29 @@
  * COPYING file for details.
  */
 
-#include "dopestd.h"
-#include "dopeapp-server.h"
-#include "dopelib.h"
+/*** GENERAL INCLUDES ***/
 #include <stdio.h>
 #include <stdlib.h>
+
+/*** L4 INCLUDES ***/
 #include <l4/thread/thread.h>
 #include <l4/names/libnames.h>
 #include <l4/util/util.h>
-#include "sync.h"
 
-l4_threadid_t        l4_dope_server;
-CORBA_Object         dope_server;
+/*** LOCAL INCLUDES ***/
+#include "dopestd.h"
+#include "dopeapp-server.h"
+#include "dopelib.h"
+#include "dopedef.h"
+#include "sync.h"
+#include "events.h"
+
+CORBA_Object_base l4_dope_server;
+CORBA_Object      dope_server = &l4_dope_server;
 
 struct dopelib_mutex *dopelib_cmdf_mutex;
 struct dopelib_mutex *dopelib_cmd_mutex;
+
 
 void dopelib_usleep(int usec);
 void dopelib_usleep(int usec) {
@@ -35,19 +43,28 @@ void dopelib_usleep(int usec) {
 }
 
 
+/*** INTERFACE: CONNECT TO DOpE SERVER AND INIT CLIENT LIB ***
+ *
+ * return 0 on success, != 0 otherwise
+ */
 long dope_init(void) {
-//	l4thread_init();
-	INFO(printf("DOpElib(dope_init): ask for 'DOpE' at names...\n");)
-	dope_server = &l4_dope_server;
-	while (names_waitfor_name("DOpE", dope_server, 1000) == 0) {
-		ERROR(printf("DOpE is not registered at names!\n");)
+	static int initialized;
+
+	/* avoid double initialization */
+	if (initialized) return 0;
+
+	INFO(printf("DOpElib(dope_init): ask for 'DOpE' at names...\n"));
+	if (names_waitfor_name("DOpE", dope_server, 10000) == 0) {
+		ERROR(printf("DOpE is not registered at names!\n"));
+	        return DOPE_ERR_NOT_PRESENT;
 	}
-	INFO(printf("DOpElib(dope_init): found some DOpE.\n");)
-	
+	INFO(printf("DOpElib(dope_init): found some DOpE.\n"));
+
 	/* create mutex to make dope_cmdf and dope_cmd thread save */
-	dopelib_cmdf_mutex = dopelib_create_mutex(0);
-	dopelib_cmd_mutex  = dopelib_create_mutex(0);
-	
+	dopelib_cmdf_mutex = dopelib_mutex_create(0);
+	dopelib_cmd_mutex  = dopelib_mutex_create(0);
+
+	initialized++;
 	return 0;
 }
 

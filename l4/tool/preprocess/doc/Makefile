@@ -25,9 +25,9 @@ stamp-%: Doxyfile manpage.dox
 	touch $@
 
 install: stamp-man
-	-$(INSTALL) -d $(DROPS_STDDIR)/man/man1
+	-$(INSTALL) -d $(DROPS_STDDIR)/tool/man/man1
 	$(INSTALL) -m 644 man/man1/preprocess.1 \
-	  $(DROPS_STDDIR)/man/man1/preprocess.1
+	  $(DROPS_STDDIR)/tool/man/man1/preprocess.1
 
 
 cleanall clean:

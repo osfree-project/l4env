@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/BETypedef.cpp
- *	\brief	contains the implementation of the class CBETypedef
+ *    \file    dice/src/be/BETypedef.cpp
+ *    \brief   contains the implementation of the class CBETypedef
  *
- *	\date	01/18/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *    \date    01/18/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,25 +22,23 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BETypedef.h"
-#include "be/BEContext.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEDeclarator.h"
-#include "be/BEStructType.h"
+#include "BETypedef.h"
+#include "BEContext.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BEDeclarator.h"
+#include "BEStructType.h"
 
 #include "fe/FETypedDeclarator.h"
-
-IMPLEMENT_DYNAMIC(CBETypedef);
+#include "fe/FEFile.h"
 
 CBETypedef::CBETypedef()
 {
     m_pAlias = 0;
-    IMPLEMENT_DYNAMIC_BASE(CBETypedef, CBETypedDeclarator);
 }
 
 CBETypedef::CBETypedef(CBETypedef & src)
@@ -47,27 +46,26 @@ CBETypedef::CBETypedef(CBETypedef & src)
   m_sDefine(src.m_sDefine)
 {
     m_pAlias = 0; // will be found, when first calling GetAlias
-    IMPLEMENT_DYNAMIC_BASE(CBETypedef, CBETypedDeclarator);
 }
 
-/**	\brief destructor of this instance */
+/**    \brief destructor of this instance */
 CBETypedef::~CBETypedef()
 {
 }
 
-/**	\brief writes the definition of a type to the target file
- *	\param pFile the file to write to
- *	\param pContext the context of the write operation
+/**    \brief writes the definition of a type to the target file
+ *    \param pFile the file to write to
+ *    \param pContext the context of the write operation
  *
  * The reason for CBETypedef to exist is to write the define symbols around the type definition.
  */
 void CBETypedef::WriteDeclaration(CBEHeaderFile * pFile, CBEContext * pContext)
 {
-    bool bNeedDefine = !m_sDefine.IsEmpty();
+    bool bNeedDefine = !m_sDefine.empty();
     if (bNeedDefine)
     {
-        pFile->Print("#if !defined(%s)\n", (const char *) m_sDefine);
-        pFile->Print("#define %s\n", (const char *) m_sDefine);
+        pFile->Print("#if !defined(%s)\n", m_sDefine.c_str());
+        pFile->Print("#define %s\n", m_sDefine.c_str());
     }
 
     int nSize = GetSize();
@@ -79,14 +77,14 @@ void CBETypedef::WriteDeclaration(CBEHeaderFile * pFile, CBEContext * pContext)
 
     if (bNeedDefine)
     {
-        pFile->Print("#endif /* %s */\n\n", (const char *) m_sDefine);
+        pFile->Print("#endif /* %s */\n\n", m_sDefine.c_str());
     }
 }
 
-/**	\brief creates the typedef class
- *	\param pFETypedef the corresponding type definition
- *	\param pContext the context of the code generation
- *	\return true if successful
+/**    \brief creates the typedef class
+ *    \param pFETypedef the corresponding type definition
+ *    \param pContext the context of the code generation
+ *    \return true if successful
  *
  * This implementation extracts the define symbol.
  */
@@ -98,17 +96,55 @@ bool CBETypedef::CreateBackEnd(CFETypedDeclarator * pFETypedef, CBEContext * pCo
     m_pAlias = 0;
 
     if (!CBETypedDeclarator::CreateBackEnd(pFETypedef, pContext))
-	{
+    {
         VERBOSE("%s failed because base typed declarator could not be created\n", __PRETTY_FUNCTION__);
         return false;
-	}
+    }
 
     // a typedef can have only one name
     CBEDeclarator *pDecl = GetAlias();
-    String sAlias = pContext->GetNameFactory()->GetTypeName(pFETypedef, pDecl->GetName(), pContext);
+    string sAlias = pContext->GetNameFactory()->GetTypeName(pFETypedef, pDecl->GetName(), pContext);
     // recreate decl
     pDecl->CreateBackEnd(sAlias, pDecl->GetStars(), pContext);
     m_sDefine = pContext->GetNameFactory()->GetTypeDefine(pDecl->GetName(), pContext);
+
+    return true;
+}
+
+/** \brief creates the typed declarator using a given back-end type and a name
+ *  \param pType the type of the typed declarator
+ *  \param sName the name of the declarator
+ *  \param pFERefObject a reference object at the same position of the newly created type
+ *  \param pContext the context of the code generation
+ *  \return true if successful
+ */
+bool
+CBETypedef::CreateBackEnd(CBEType * pType,
+    string sName,
+    CFEBase *pFERefObject,
+    CBEContext * pContext)
+{
+    SetTargetFileName(pFERefObject, pContext);
+    // if declarator changes, we have to reset the alias as well
+    m_pAlias = 0;
+
+    if (!CBETypedDeclarator::CreateBackEnd(pType, sName, pContext))
+    {
+        VERBOSE("%s failed because base typed declarator could not be created\n",
+            __PRETTY_FUNCTION__);
+        return false;
+    }
+
+    // a typedef can have only one name
+    CBEDeclarator *pDecl = GetAlias();
+    string sAlias = pContext->GetNameFactory()->GetTypeName(pFERefObject, pDecl->GetName(), pContext);
+    // recreate decl
+    pDecl->CreateBackEnd(sAlias, pDecl->GetStars(), pContext);
+    m_sDefine = pContext->GetNameFactory()->GetTypeDefine(pDecl->GetName(), pContext);
+    // set source file information
+    SetSourceLine(pFERefObject->GetSourceLine());
+    if (pFERefObject->GetSpecificParent<CFEFile>())
+        SetSourceFileName(pFERefObject->GetSpecificParent<CFEFile>()->GetFileName());
 
     return true;
 }
@@ -123,6 +159,8 @@ bool CBETypedef::CreateBackEnd(CFETypedDeclarator * pFETypedef, CBEContext * pCo
  */
 bool CBETypedef::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
 {
+    VERBOSE("CBETypedef::AddToFile(header: %s) for typedef %s called\n",
+        pHeader->GetFileName().c_str(), GetAlias()->GetName().c_str());
     if (IsTargetFile(pHeader))
         pHeader->AddTypedef(this);
     return true;
@@ -135,12 +173,7 @@ bool CBETypedef::AddToFile(CBEHeaderFile *pHeader, CBEContext *pContext)
  */
 CBEDeclarator* CBETypedef::GetAlias()
 {
-    if (!m_pAlias)
-    {
-        VectorElement *pIter = GetFirstDeclarator();
-        m_pAlias = GetNextDeclarator(pIter);
-    }
-    return m_pAlias;
+    return GetDeclarator();
 }
 
 /** \brief creates a new instance of this object */

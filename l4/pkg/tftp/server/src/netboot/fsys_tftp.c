@@ -1,6 +1,6 @@
 /*
  *  GRUB  --  GRand Unified Bootloader
- *  Copyright (C) 2000, 2001  Free Software Foundation, Inc.
+ *  Copyright (C) 2000,2001,2002  Free Software Foundation, Inc.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,17 +27,18 @@ Author: Martin Renters
 **************************************************************************/
 
 /* #define TFTP_DEBUG	1 */
+/* #define FULL_ERRMSG */
 
 #include "filesys.h"
-#include "etherboot.h"
-#include "nic.h"
-#include "netboot.h"
+#include "shared.h"
 
-#include "grub_emu.h"
+#include "grub.h"
+#include "tftp.h"
+#include "nic.h"
 
 static int retry;
 static unsigned short iport = 2000;
-static unsigned short oport;
+static unsigned short oport = 0;
 static unsigned short block, prevblock;
 static int bcounter;
 static struct tftp_t tp, saved_tp;
@@ -46,8 +47,178 @@ static int buf_eof, buf_read;
 static int saved_filepos;
 static unsigned short len, saved_len;
 static char *buf;
-extern unsigned int netboot_buf;
 int disp_filesizebarrier, disp_filesize;
+
+/**
+ * tftp_read
+ *
+ * Read file with _name_, data handled by _fnc_. In fact, grub never
+ * use it, we just use it to read dhcp config file.
+ */
+static int await_tftp(int ival, void *ptr __unused, 
+		      unsigned short ptype __unused, struct iphdr *ip, 
+		      struct udphdr *udp)
+{
+	if (!udp) {
+		return 0;
+	}
+	if (arptable[ARP_CLIENT].ipaddr.s_addr != ip->dest.s_addr)
+		return 0;
+	if (ntohs(udp->dest) != ival)
+		return 0;
+	return 1;
+}
+
+int tftp_file_read(const char *name, int (*fnc)(unsigned char *, unsigned int, unsigned int, int))
+{
+	struct tftpreq_t tp;
+	struct tftp_t  *tr;
+	int		rc;
+
+	retry = 0;
+	block = 0;
+	prevblock = 0;
+	bcounter = 0;
+	
+
+	rx_qdrain();
+
+	tp.opcode = htons(TFTP_RRQ);
+	/* Warning: the following assumes the layout of bootp_t.
+	   But that's fixed by the IP, UDP and BOOTP specs. */
+	len = sizeof(tp.ip) + sizeof(tp.udp) + sizeof(tp.opcode) +
+		sprintf((char *)tp.u.rrq, "%s%coctet%cblksize%c%d",
+		name, 0, 0, 0, TFTP_MAX_PACKET) + 1;
+	if (!udp_transmit(arptable[ARP_SERVER].ipaddr.s_addr, ++iport,
+			  TFTP_PORT, len, &tp))
+		return (0);
+	for (;;)
+	{
+		long timeout;
+#ifdef	CONGESTED
+		timeout = rfc2131_sleep_interval(block?TFTP_REXMT: TIMEOUT, retry);
+#else
+		timeout = rfc2131_sleep_interval(TIMEOUT, retry);
+#endif
+		if (!await_reply(await_tftp, iport, NULL, timeout))
+		{
+			if (!block && retry++ < MAX_TFTP_RETRIES)
+			{	/* maybe initial request was lost */
+				if (!udp_transmit(arptable[ARP_SERVER].ipaddr.s_addr,
+						  ++iport, TFTP_PORT, len, &tp))
+					return (0);
+				continue;
+			}
+#ifdef	CONGESTED
+			if (block && ((retry += TFTP_REXMT) < TFTP_TIMEOUT))
+			{	/* we resend our last ack */
+#ifdef	MDEBUG
+				printf("<REXMT>\n");
+#endif
+				udp_transmit(arptable[ARP_SERVER].ipaddr.s_addr,
+					     iport, oport,
+					     TFTP_MIN_PACKET, &tp);
+				continue;
+			}
+#endif
+			break;	/* timeout */
+		}
+		tr = (struct tftp_t *)&nic.packet[ETH_HLEN];
+		if (tr->opcode == ntohs(TFTP_ERROR))
+		{
+#ifdef FULL_ERRMSG
+			printf("TFTP error %d (%s)\n",
+			       ntohs(tr->u.err.errcode),
+			       tr->u.err.errmsg);
+#else
+			printf("TFTP error %d\n",
+			       ntohs(tr->u.err.errcode));
+#endif
+			break;
+		}
+
+		if (tr->opcode == ntohs(TFTP_OACK)) {
+			const char *p = tr->u.oack.data, *e;
+
+			if (prevblock)		/* shouldn't happen */
+				continue;	/* ignore it */
+			len = ntohs(tr->udp.len) - sizeof(struct udphdr) - 2;
+			if (len > TFTP_MAX_PACKET)
+				goto noak;
+			e = p + len;
+			while (*p != '\0' && p < e) {
+/* 				if (!strcasecmp("blksize", p)) { */
+				if (!grub_strcmp("blksize", p)) {
+					p += 8;
+/* 					if ((packetsize = strtoul(p, &p, 10)) < */
+					if ((packetsize = getdec(&p)) < TFTP_DEFAULTSIZE_PACKET)
+						goto noak;
+					while (p < e && *p) p++;
+					if (p < e)
+						p++;
+				}
+				else {
+				noak:
+					tp.opcode = htons(TFTP_ERROR);
+					tp.u.err.errcode = 8;
+/*
+ *	Warning: the following assumes the layout of bootp_t.
+ *	But that's fixed by the IP, UDP and BOOTP specs.
+ */
+					len = sizeof(tp.ip) + sizeof(tp.udp) + sizeof(tp.opcode) + sizeof(tp.u.err.errcode) +
+/*
+ *	Normally bad form to omit the format string, but in this case
+ *	the string we are copying from is fixed. sprintf is just being
+ *	used as a strcpy and strlen.
+ */
+						sprintf((char *)tp.u.err.errmsg,
+						"RFC1782 error") + 1;
+					udp_transmit(arptable[ARP_SERVER].ipaddr.s_addr,
+						     iport, ntohs(tr->udp.src),
+						     len, &tp);
+					return (0);
+				}
+			}
+			if (p > e)
+				goto noak;
+			block = tp.u.ack.block = 0; /* this ensures, that */
+						/* the packet does not get */
+						/* processed as data! */
+		}
+		else if (tr->opcode == htons(TFTP_DATA)) {
+			len = ntohs(tr->udp.len) - sizeof(struct udphdr) - 4;
+			if (len > packetsize)	/* shouldn't happen */
+				continue;	/* ignore it */
+			block = ntohs(tp.u.ack.block = tr->u.data.block); }
+		else {/* neither TFTP_OACK nor TFTP_DATA */
+			break;
+		}
+
+		if ((block || bcounter) && (block != (unsigned short)(prevblock+1))) {
+			/* Block order should be continuous */
+			tp.u.ack.block = htons(block = prevblock);
+		}
+		tp.opcode = htons(TFTP_ACK);
+		oport = ntohs(tr->udp.src);
+		udp_transmit(arptable[ARP_SERVER].ipaddr.s_addr, iport,
+			     oport, TFTP_MIN_PACKET, &tp);	/* ack */
+		if ((unsigned short)(block-prevblock) != 1) {
+			/* Retransmission or OACK, don't process via callback
+			 * and don't change the value of prevblock.  */
+			continue;
+		}
+		prevblock = block;
+		retry = 0;	/* It's the right place to zero the timer? */
+		if ((rc = fnc(tr->u.data.download,
+			      ++bcounter, len, len < packetsize)) <= 0)
+			return(rc);
+		if (len < packetsize) {	/* End of data --- fnc should not have returned */
+			printf("tftp download complete, but\n");
+			return (1);
+		}
+	}
+	return (0);
+}
 
 /* Fill the buffer by receiving the data via the TFTP protocol.  */
 static int
@@ -59,16 +230,18 @@ buf_fill (int abort)
   
   while (! buf_eof && (buf_read + packetsize <= FSYS_BUFLEN))
     {
-      static struct tftp_t *tr;
-  
+      struct tftp_t *tr;
+      long timeout;
+
 #ifdef CONGESTED
-      if (! await_reply (AWAIT_TFTP, iport, NULL,
-			 block ? TFTP_REXMT : TIMEOUT))
+      timeout = rfc2131_sleep_interval (block ? TFTP_REXMT : TIMEOUT, retry);
 #else
-      if (! await_reply (AWAIT_TFTP, iport, NULL, TIMEOUT))
+      timeout = rfc2131_sleep_interval (TIMEOUT, retry);
 #endif
+  
+      if (! await_reply (await_tftp, iport, NULL, timeout))
 	{
-	  if (ip_abort)
+	  if (user_abort)
 	    return 0;
 
 	  if (! block && retry++ < MAX_TFTP_RETRIES)
@@ -77,7 +250,6 @@ buf_fill (int abort)
 #ifdef TFTP_DEBUG
 	      grub_printf ("Maybe initial request was lost.\n");
 #endif
-	      rfc951_sleep (retry);
 	      if (! udp_transmit (arptable[ARP_SERVER].ipaddr.s_addr,
 				  ++iport, TFTP_PORT, len, &tp))
 		return 0;
@@ -102,18 +274,23 @@ buf_fill (int abort)
 	  return 0;
 	}
 
-      tr = (struct tftp_t *) &nic.packet[ETHER_HDR_SIZE];
+      tr = (struct tftp_t *) &nic.packet[ETH_HLEN];
       if (tr->opcode == ntohs (TFTP_ERROR))
 	{
+#ifdef FULL_ERRMSG
 	  grub_printf ("TFTP error %d (%s)\n",
 		       ntohs (tr->u.err.errcode),
 		       tr->u.err.errmsg);
+#else
+	  grub_printf ("TFTP error %d\n",
+		       ntohs (tr->u.err.errcode));
+#endif
 	  return 0;
 	}
       
       if (tr->opcode == ntohs (TFTP_OACK))
 	{
-	  char *p = tr->u.oack.data, *e;
+	  const char *p = tr->u.oack.data, *e;
 
 #ifdef TFTP_DEBUG
 	  grub_printf ("OACK ");
@@ -165,7 +342,9 @@ buf_fill (int abort)
 		  tp.u.err.errcode = 8;
 		  len = (grub_sprintf ((char *) tp.u.err.errmsg,
 				       "RFC1782 error")
-			 + TFTP_MIN_PACKET + 1);
+			 + sizeof (tp.ip) + sizeof (tp.udp)
+			 + sizeof (tp.opcode) + sizeof (tp.u.err.errcode)
+			 + 1);
 		  udp_transmit (arptable[ARP_SERVER].ipaddr.s_addr,
 				iport, ntohs (tr->udp.src),
 				len, &tp);
@@ -203,9 +382,6 @@ buf_fill (int abort)
 	    }
 	  
 	  block = ntohs (tp.u.ack.block = tr->u.data.block);
-#ifdef TFTP_DEBUG
-	  grub_printf ("block: %d ", block);
-#endif
 	}
       else
 	/* Neither TFTP_OACK nor TFTP_DATA.  */
@@ -220,7 +396,7 @@ buf_fill (int abort)
       oport = ntohs (tr->udp.src);
 
 #ifdef TFTP_DEBUG
-      grub_printf ("ACK %d\n", ntohs(tp.u.ack.block));
+      grub_printf ("ACK\n");
 #endif
       /* Ack.  */
       udp_transmit (arptable[ARP_SERVER].ipaddr.s_addr, iport,
@@ -261,6 +437,8 @@ buf_fill (int abort)
 static int
 send_rrq (void)
 {
+  extern unsigned netboot_buf;
+
   /* Initialize some variables.  */
   retry = 0;
   block = 0;
@@ -273,13 +451,7 @@ send_rrq (void)
   buf_read = 0;
   saved_filepos = 0;
 
-  /* Clear out the Rx queue first.  It contains nothing of interest,
-   * except possibly ARP requests from the DHCP/TFTP server.  We use
-   * polling throughout Etherboot, so some time may have passed since we
-   * last polled the receive queue, which may now be filled with
-   * broadcast packets.  This will cause the reply to the packets we are
-   * about to send to be lost immediately.  Not very clever.  */
-  await_reply (AWAIT_QDRAIN, 0, NULL, 0);
+  rx_qdrain();
   
 #ifdef TFTP_DEBUG
   grub_printf ("send_rrq ()\n");
@@ -338,7 +510,7 @@ tftp_read (char *addr, int size)
 #ifdef TFTP_DEBUG
       {
 	int i;
-	grub_printf ("opcode = 0x%lx, rrq = ", (unsigned long) tp.opcode);
+	grub_printf ("opcode = 0x%x, rrq = ", (unsigned long) tp.opcode);
 	for (i = 0; i < TFTP_DEFAULTSIZE_PACKET; i++)
 	  {
 	    if (tp.u.rrq[i] >= ' ' && tp.u.rrq[i] <= '~')
@@ -376,7 +548,7 @@ tftp_read (char *addr, int size)
 	  ret += amt;
 
 	  disp_filesize += amt;
-	  if (disp_filesize > disp_filesizebarrier + (5 << 20))
+	  if (disp_filesize > disp_filesizebarrier + (5<<20))
 	    {
 	      printf("Read %dMB\n", disp_filesize >> 20);
 	      disp_filesizebarrier = disp_filesize;
@@ -399,7 +571,7 @@ tftp_read (char *addr, int size)
 	}
 
       /* Read the data.  */
-      if (! buf_fill (0))
+      if (size > 0 && ! buf_fill (0))
 	{
 	  errnum = ERR_READ;
 	  return 0;
@@ -427,7 +599,7 @@ tftp_dir (char *dirname)
   grub_printf ("tftp_dir (%s)\n", dirname);
 #endif
   
-  /* In TFTP, there is no way to know what files exis.  */
+  /* In TFTP, there is no way to know what files exist.  */
   if (print_possibilities)
     return 1;
 
@@ -443,7 +615,7 @@ tftp_dir (char *dirname)
   len = (grub_sprintf ((char *) tp.u.rrq,
 		       "%s%coctet%cblksize%c%d%ctsize%c0",
 		       dirname, 0, 0, 0, TFTP_MAX_PACKET, 0, 0)
-	 + sizeof (struct iphdr) + sizeof (struct udphdr) + 2 + 1);
+	 + sizeof (tp.ip) + sizeof (tp.udp) + sizeof (tp.opcode) + 1);
   /* Restore the original DIRNAME.  */
   dirname[grub_strlen (dirname)] = ch;
   /* Save the TFTP packet so that we can reopen the file later.  */

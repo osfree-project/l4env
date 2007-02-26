@@ -9,4 +9,3 @@ TARGET = dietlibc backends include
 include $(L4DIR)/mk/subdir.mk
 
 backends: dietlibc
-

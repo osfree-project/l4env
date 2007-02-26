@@ -19,6 +19,7 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/env/errno.h>
 #include <l4/util/macros.h>
+#include <l4/sys/compiler.h>
 
 /* library includes */
 #include "__thread.h"
@@ -71,22 +72,6 @@ l4_addr_t
 l4th_thread_setup_stack(l4_addr_t addr, l4_size_t size, l4_threadid_t thread,
 			l4_uint32_t flags)
 {
-  int ret;
-
-  /* add new thread to region mapper client list, L4RM needs to know which 
-   * threads are allowed to use it */
-  if (flags & L4THREAD_CREATE_SETUP)
-    ret = l4rm_direct_add_client(thread);
-  else
-    ret = l4rm_add_client(thread);
-  if (ret < 0)
-    {
-      /* failed, ignore error since it does not mean that the thread 
-       * cannot run. */
-      ERROR("l4thread: add thread to region mapper clients failed: %s (%d)!",
-	    l4env_errstr(ret),ret);
-    }
-
   /* nothing else necessary, return stack pointer */
   return addr + size;
 }
@@ -94,8 +79,13 @@ l4th_thread_setup_stack(l4_addr_t addr, l4_size_t size, l4_threadid_t thread,
 /*****************************************************************************/
 /**
  * \brief  Entry point for new threads
+ *
+ * This function cannot be instrumented, as it has no upper stack (caller).
+ * Call-graph analysis would raise pagefaults.
  */
 /*****************************************************************************/ 
+void
+l4th_thread_entry(void) L4_NOINSTRUMENT;
 void
 l4th_thread_entry(void)
 {

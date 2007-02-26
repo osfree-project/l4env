@@ -1,0 +1,41 @@
+#! /bin/sh
+espenckey=0x54f11985_0594ceea_3d37893a_6be34b67_f31eab0d_86e4f0dc
+espauthkey=0xc7b5fa7a_132f0868_d9dd39cb_6607fe35
+algo=3des-md5-96
+spi=0x200 
+proto=tun
+ipsecdev=ipsec1
+
+physdev=eth0
+gw=141.76.48.93
+edst=141.76.48.93
+esrc=141.76.48.19
+
+case $1 in
+vmware)
+  physdev=vmnet1
+  #gw=192.168.2.2
+  edst=192.168.2.2
+  esrc=192.168.2.1
+  ;;
+esac 
+
+echo "set up ipsec for ($physdev)"
+
+ipsec tncfg --attach --virtual $ipsecdev --physical $physdev
+ipsec spi --esp $algo --said esp$spi@$esrc --enckey $espenckey --authkey $espauthkey --src $edst
+ipsec spi --ip4 --said tun$spi@$esrc --src $edst --dst $esrc
+ipsec spigrp --said tun$spi@$esrc esp$spi@$esrc
+
+ipsec spi --esp $algo --said esp$spi@$edst --enckey $espenckey --authkey $espauthkey --src $esrc
+ipsec spi --ip4 --said tun$spi@$edst --src $esrc --dst $edst
+ipsec spigrp --said tun$spi@$edst esp$spi@$edst
+
+ipsec eroute --add --eraf inet --src $esrc/32 --dst $edst/32 --said tun$spi@$edst
+ipsec eroute --add --eraf inet --src 192.168.10.0/24 --dst 192.168.10.0/24 --said tun$spi@$edst
+
+ip address add 192.168.10.2 dev ipsec1
+ip link set up ipsec1
+ip route add 192.168.10.0/24 dev ipsec1
+#ip route add $edst via $gw
+

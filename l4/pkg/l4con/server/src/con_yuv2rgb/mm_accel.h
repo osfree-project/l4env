@@ -28,7 +28,15 @@
 extern "C" {
 #endif
 
+#ifdef ARCH_x86
 uint32_t mm_accel (void);
+#else
+uint32_t inline mm_accel (void);
+uint32_t inline mm_accel (void)
+{
+  return 0;
+}
+#endif
 
 #ifdef __cplusplus
 }

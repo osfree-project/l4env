@@ -35,7 +35,7 @@
  *** Error codes
  *****************************************************************************/
 
-#define L4_EUNKNOWN        1  /* unkwon error */
+#define L4_EUNKNOWN        1  /* unknown error */
 #define L4_ENOMEM          2  /* cannot allocate memory */  
 #define L4_EINVAL          3  /* invalid argument */
 #define L4_EINVAL_OFFS     4  /* invalid offset in dataspace */
@@ -65,8 +65,18 @@
 #define L4_ENODEV         28  /* no such device */
 #define L4_EMFILE         29  /* too many open files */
 #define L4_ENOSPC         30  /* no space left on device */
+#define L4_ETIME          31  /* timer expired */
+/* 32 is reserved for L4 IPC error */
+#define L4_EBADF          33  /* invalid file descriptor */
+#define L4_ENFILE         34  /* file table overflow */
+#define L4_EROFS          35  /* read-only file system */
+#define L4_EINVOFFS       36  /* invalid file offset */
+#define L4_EINVSB         37  /* invalid file system superblock */
+#define L4_ERES           38  /* resource reservation failed */
 
-/* 32, 48, 64 ... 240 are reserved for L4 IPC errors */
+/* 48, 64 ... 240 are reserved for L4 IPC errors */
+
+/* 0x100 (256) .. 0x10F (271) are reserved for event-package */
 
 /*****************************************************************************
  *** typedefs 
@@ -274,6 +284,22 @@ l4env_err_register_desc(l4env_err_desc_t * desc);
 /*****************************************************************************/
 extern const char *
 l4env_strerror(int code);
+
+/*!\brief  Print an error message containing an l4env error string
+ * \ingroup errno
+ *
+ * \param  string        The main format string. May contain printf-
+ *                       format specifiers. AAn ": %s\n" will be appended.
+ * \param  code          The error code. It will be passed to
+ *                       l4env_strerror() and given as last argument to
+ *                       the string formatter.
+ * \param  opts          Optional arguments for the format specifiers
+ *                       in string.
+ *
+ * \pre Requires liblog to be linked, which is the case with l4env normally.
+ */
+#define l4env_perror(string, errcode, opts...) \
+	LOG_Error(string ": %s" ,##opts, l4env_strerror(errcode))
 
 __END_DECLS;
 

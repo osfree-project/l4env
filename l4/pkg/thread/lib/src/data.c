@@ -54,7 +54,7 @@ __set_data(l4th_tcb_t * tcb, int key, void * data)
 {
   /* sanity checks */
   if ((key < 0) || (key >= L4THREAD_MAX_DATA_KEYS) || 
-      (l4util_test_bit(key,&l4th_data_keys) == 0))
+      (l4util_test_bit(key, &l4th_data_keys) == 0))
     return -L4_EINVAL;
 
   /* set data pointer */
@@ -71,14 +71,18 @@ __set_data(l4th_tcb_t * tcb, int key, void * data)
  * \param  key           Data key
  *	
  * \return Data pointer, NULL if invalid data key
+ *
+ * This function cannot be instrumented, as it is used by the profiling.
  */
 /*****************************************************************************/ 
+static inline void * 
+__get_data(l4th_tcb_t * tcb, int key) L4_NOINSTRUMENT;
 static inline void * 
 __get_data(l4th_tcb_t * tcb, int key)
 {
   /* sanity checks */
   if ((key < 0) || (key >= L4THREAD_MAX_DATA_KEYS) || 
-      (l4util_test_bit(key,&l4th_data_keys) == 0))
+      (l4util_test_bit(key, &l4th_data_keys) == 0))
     return NULL;
   
   /* return data pointer */
@@ -103,7 +107,7 @@ l4thread_data_allocate_key(void)
 
   for (i = 0; i < L4THREAD_MAX_DATA_KEYS; i++)
     {
-      if (l4util_bts(i,&l4th_data_keys) == 0)
+      if (l4util_bts(i, &l4th_data_keys) == 0)
 	/* found unused key */
 	break;
     }
@@ -129,7 +133,7 @@ l4thread_data_release_key(int key)
     return;
 
   /* release key */
-  l4util_clear_bit(key,&l4th_data_keys);
+  l4util_clear_bit(key, &l4th_data_keys);
 }
 
 /*****************************************************************************/
@@ -149,14 +153,14 @@ l4thread_data_set_current(int key, void * data)
 
   /* get my tcb */
   tcb = l4th_tcb_get_current();
-  if ((tcb == NULL) || (tcb->state != TCB_ACTIVE))
+  if (tcb == NULL)
     {
-      Error("l4thread: myself not found!");
+      LOG_Error("l4thread: myself not found or inactive!");
       return -L4_EINVAL;
     }
 
   /* set data pointer */
-  return __set_data(tcb,key,data);
+  return __set_data(tcb, key, data);
 }
 
 /*****************************************************************************/
@@ -166,23 +170,25 @@ l4thread_data_set_current(int key, void * data)
  * \param  key           data key
  *	
  * \return Data pointer, NULL if invalid or unused data key.
+ *
+ * This function cannot be instrumented, as it is used by the profiling.
  */
 /*****************************************************************************/ 
 void *
-l4thread_data_get_current(int key)
-{
+l4thread_data_get_current(int key) L4_NOINSTRUMENT;
+void *
+l4thread_data_get_current(int key){
   l4th_tcb_t * tcb;
 
   /* get my tcb */
   tcb = l4th_tcb_get_current();
-  if ((tcb == NULL) || (tcb->state != TCB_ACTIVE))
+  if (tcb == NULL)
     {
-      Error("l4thread: myself not found!");
       return NULL;
     }
 
   /* get data pointer */
-  return __get_data(tcb,key);
+  return __get_data(tcb, key);
 }
 
 /*****************************************************************************/
@@ -202,12 +208,12 @@ l4thread_data_set(l4thread_t thread, int key, void * data)
   l4th_tcb_t * tcb;
 
   /* get tcb */
-  tcb = l4th_tcb_get_active(thread);
+  tcb = l4th_tcb_get(thread);
   if (tcb == NULL)
     return -L4_EINVAL;
 
   /* set data pointer */
-  return __set_data(tcb,key,data);  
+  return __set_data(tcb, key, data);  
 }
 
 /*****************************************************************************/
@@ -226,10 +232,10 @@ l4thread_data_get(l4thread_t thread, int key)
   l4th_tcb_t * tcb;
 
   /* get tcb */
-  tcb = l4th_tcb_get_active(thread);
+  tcb = l4th_tcb_get(thread);
   if (tcb == NULL)
     return NULL;
   
   /* get data pointer */
-  return __get_data(tcb,key);  
+  return __get_data(tcb, key);  
 }

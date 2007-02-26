@@ -1,0 +1,8 @@
+#ifndef ___PRESENTER_INCLUDE_PRESENTER_EXEC_LIB_H_
+#define ___PRESENTER_INCLUDE_PRESENTER_EXEC_LIB_H_
+
+#define PRESENTER_EXEC "PR_EXEC"
+
+#define ERROR_LOG "/tmp/error.log"
+
+#endif

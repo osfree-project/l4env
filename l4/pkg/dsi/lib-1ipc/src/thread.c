@@ -10,6 +10,7 @@
 /*****************************************************************************/
 
 /* L4 includes */
+#include <stdio.h>
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
 #include <l4/util/macros.h>
@@ -131,13 +132,16 @@ int
 dsi_create_sync_thread(dsi_socket_t * socket)
 {
   l4thread_t t;
+  char buf[14];
 
   /* start synchronization thread */
   if (IS_SEND_SOCKET(socket))
     {
       LOGdL(DEBUG_THREAD,"send sync thread...");
+      sprintf(buf, "dsi.txsync-%.2d", socket->socket_id);
 
       t = l4thread_create_long(L4THREAD_INVALID_ID,dsi_sync_thread_send,
+			       buf,
 			       L4THREAD_INVALID_SP,L4THREAD_DEFAULT_SIZE,
 			       sync_thread_prio, (void *)socket,
 			       L4THREAD_CREATE_ASYNC);
@@ -145,8 +149,10 @@ dsi_create_sync_thread(dsi_socket_t * socket)
   else
     {
       LOGdL(DEBUG_THREAD,"receive sync thread...");
+      sprintf(buf, "dsi.rxsync-%.2d", socket->socket_id);
 
       t = l4thread_create_long(L4THREAD_INVALID_ID,dsi_sync_thread_receive,
+			       buf,
 			       L4THREAD_INVALID_SP,L4THREAD_DEFAULT_SIZE,
 			       sync_thread_prio, (void *)socket,
 			       L4THREAD_CREATE_ASYNC);
@@ -154,7 +160,7 @@ dsi_create_sync_thread(dsi_socket_t * socket)
 
   if (t < 0)
     {
-      Error("DSI: failed to create sync thread: %s (%d)",l4env_errstr(t),t);
+      LOG_Error("failed to create sync thread: %s (%d)",l4env_errstr(t),t);
       return t;
     }
 
@@ -206,7 +212,7 @@ dsi_create_event_thread(l4thread_fn_t fn)
   l4thread_t t;
 
   /* create thread */
-  t = l4thread_create_long(L4THREAD_INVALID_ID,fn,
+  t = l4thread_create_long(L4THREAD_INVALID_ID,fn,".dsi-evt",
 			   L4THREAD_INVALID_SP,L4THREAD_DEFAULT_SIZE,
 			   event_thread_prio,NULL,L4THREAD_CREATE_ASYNC);
   if (t < 0)
@@ -240,8 +246,8 @@ dsi_create_select_thread(l4thread_fn_t fn, void * data)
   l4thread_t t;
 
   /* create thread */
-  t = l4thread_create_long(L4THREAD_INVALID_ID,fn,L4THREAD_INVALID_SP,
-			   L4THREAD_DEFAULT_SIZE,
+  t = l4thread_create_long(L4THREAD_INVALID_ID,fn,".dsi-sel",
+			   L4THREAD_INVALID_SP, L4THREAD_DEFAULT_SIZE,
 			   select_thread_prio,
 			   data,L4THREAD_CREATE_ASYNC);
   if (t < 0)
@@ -270,6 +276,6 @@ dsi_shutdown_select_thread(l4thread_t thread)
   ret = l4thread_shutdown(thread);
 
   if (ret)
-    Error("DSI: shutdown select thread failed: %s (%d)",
+    LOG_Error("shutdown select thread failed: %s (%d)",
 	  l4env_errstr(ret),ret);
 }

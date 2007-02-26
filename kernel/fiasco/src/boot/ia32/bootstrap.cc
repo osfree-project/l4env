@@ -7,26 +7,24 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include <flux/x86/multiboot.h>
-#include <flux/x86/base_paging.h>
-#include <flux/x86/base_cpu.h>
-#include <flux/x86/pc/phys_lmm.h>
-
+#include "boot_cpu.h"
+#include "boot_paging.h"
+#include "checksum.h"
 #include "globalconfig.h"
-#include "load_elf.h"
 #include "kip.h"
+#include "mem_layout.h"
+#include "multiboot.h"
 #include "reset.h"
 
+struct check_sum
+{
+  char delimiter[16];
+  unsigned long checksum_ro;
+  unsigned long checksum_rw;
+} check_sum = {"FIASCOCHECKSUM=", 0, 0};
 
-#define PAGE_SIZE	4096
-#define PAGE_MASK	(PAGE_SIZE-1)
-#define SUPERPAGE_SIZE  (4096*1024)
-#define SUPERPAGE_MASK  (SUPERPAGE_SIZE-1)
-
-
-extern "C" unsigned checksum_ro;
-extern "C" unsigned checksum_rw;
-extern "C" char _binary_kernel_start;
+extern "C" char _start[];
+extern "C" char _end[];
 extern "C" void _exit(int code) __attribute__((noreturn));
 
 // test if [start1..end1-1] overlaps [start2..end2-1]
@@ -38,99 +36,81 @@ check_overlap (const char *str,
   if (   (start1 >= start2 && start1 <  end2)
       || (end1   >  start2 && end1   <= end2))
     {
-      printf("\nPANIC: kernel (%08x-%08x) overlaps %s (%08x-%08x)", 
+      printf("\nPANIC: kernel [0x%08lx,0x%08lx) overlaps %s [0x%08lx,0x%08lx)", 
 	    start1, end1, str, start2, end2);
       _exit(1);
     }
 }
 
-extern "C"
-void
-bootstrap (struct multiboot_info *mbi, unsigned int flag)
-{
-  void (*start)(struct multiboot_info *, unsigned, unsigned, unsigned);
-  Address vma_start, vma_end;
+typedef void (*Start)(Multiboot_info *, unsigned, unsigned) FIASCO_FASTCALL;
 
-  assert(flag == MULTIBOOT_VALID);
+extern "C" FIASCO_FASTCALL
+void
+bootstrap (Multiboot_info *mbi, unsigned int flag)
+{
+  Address mem_max;
+  Start start;
+
+  assert(flag == Multiboot_header::Valid);
 
   // setup stuff for base_paging_init() 
   base_cpu_setup();
 
-  phys_mem_max = 1024 * (1024 + mbi->mem_upper);
-  phys_mem_max = (phys_mem_max + SUPERPAGE_MASK) & ~SUPERPAGE_MASK;
-
-  if (phys_mem_max > (256<<20)) 
-    {
-      puts("WARNING: More than 256MB RAM found, limiting hard to 256MB");
-      phys_mem_max = 256 << 20;
-    }
+  // this calculation must fit Kmem::init()!
+  mem_max = trunc_page((mbi->mem_upper + 1024) << 10);
+  if (mem_max > 1<<30)
+    mem_max = 1<<30;
 
   // now do base_paging_init(): sets up paging with one-to-one mapping
-  base_paging_init();
+  base_paging_init(round_superpage(mem_max));
 
-  // map in physical memory at 0xf0000000
-  pdir_map_range(base_pdir_pa, 0xf0000000, 0, phys_mem_max,
-		 INTEL_PTE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
-
-  start = (void (*)(multiboot_info *, unsigned, unsigned, unsigned))
-    load_elf("kernel", &_binary_kernel_start, &vma_start, &vma_end);
-
+  start = (Start)_start;
+  
   // make sure that we did not forgot to discard an unused header section
   // (compare "objdump -p kernel.image")
-  if (vma_start < 0xf0000000)
+  if ((unsigned long)_start < Mem_layout::Kernel_image)
     {
-      printf("\nPANIC: kernel (%08x-%08x) occupies memory below 0xf0000000",
-	    vma_start, vma_end);
+      printf("\nPANIC: kernel [%p,%p) occupies memory below %08x",
+	   _start, _end, Mem_layout::Kernel_image);
       _exit(1);
     }
 
   // check if kernel overwrites something important
-  if (mbi->flags & MULTIBOOT_CMDLINE)
+  if (mbi->flags & Multiboot_info::Cmdline)
     {
-      char *sub = strstr((const char*)(mbi->cmdline), " proto=");
+      char *sub = strstr(reinterpret_cast<const char*>
+			 (mbi->cmdline), " proto=");
       if (sub)
 	{
-	  Kernel_info *rki = (Kernel_info*)strtoul(sub+7, 0, 0);
+	  Kip *rki = (Kip*)strtoul(sub+7, 0, 0);
 	  if (rki)
 	    {
-	      Address phys_start = vma_start - 0xf0000000;
-	      Address phys_end   = vma_end   - 0xf0000000;
+	      Address phys_start = (unsigned long)_start 
+		                   - Mem_layout::Kernel_image;
+	      Address phys_end   = (unsigned long)_end   
+		                   - Mem_layout::Kernel_image;
 
-	      check_overlap("sigma0", phys_start, phys_end,
-			    rki->sigma0_memory.low, rki->sigma0_memory.high);
-	      check_overlap("rmgr", phys_start, phys_end,
-			    rki->sigma0_memory.low, rki->sigma0_memory.high);
+	      check_overlap ("VGA/IO", phys_start, phys_end,
+			     0xa0000, 0x100000);
+	      check_overlap ("sigma0", phys_start, phys_end,
+			     rki->sigma0_memory.low, rki->sigma0_memory.high);
+	      check_overlap ("rmgr", phys_start, phys_end,
+			     rki->root_memory.low, rki->root_memory.high);
 	    }
 	}
     }
 
-  start (mbi, flag, (unsigned) &checksum_ro, (unsigned) &checksum_rw);
-}
-
-/* the following simple-minded function definition overrides the (more
-   complicated) default one the OSKIT*/
-extern "C"
-int
-ptab_alloc(vm_offset_t *out_ptab_pa)
-{
-  static char pool[0x100000];
-  static vm_offset_t pdirs;
-  static int initialized;
-
-  if (! initialized)
+  if (Checksum::get_checksum_ro() != check_sum.checksum_ro)
     {
-      initialized = 1;
-      memset( pool, 0, sizeof(pool) );
-      // printf("pool from %p to %p\n",pool, ((char*)pool) + sizeof(pool));
-
-      pdirs = (reinterpret_cast<vm_offset_t>(pool) + PAGE_SIZE - 1) 
-	& ~PAGE_MASK;
+      printf("\nPANIC: read-only (text) checksum does not match");
+      _exit(1);
     }
 
-  assert(pdirs < reinterpret_cast<vm_offset_t>(pool) + sizeof(pool));
+  if (Checksum::get_checksum_rw() != check_sum.checksum_rw)
+    {
+      printf("\nPANIC: read-write (data) checksum does not match");
+      _exit(1);
+    }
 
-  *out_ptab_pa = pdirs;
-  pdirs += PAGE_SIZE;
-
-  return 0;
+  start (mbi, flag, check_sum.checksum_ro);
 }

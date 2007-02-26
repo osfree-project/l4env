@@ -321,10 +321,10 @@ static void initialize (void)
           strncpy(fn, depfile_name, STRLEN);
       } else {
           slash = strrchr(target, '/');
-          // copy the path
+          /* copy the path */
           strncat (fn, target, min(STRLEN, slash?slash-target+1:0));
           strncat (fn, ".", STRLEN);
-          // copy the name
+          /* copy the name */
           strncat(fn, slash?slash+1:target, STRLEN);
           strncat (fn, ".d", STRLEN);
       }

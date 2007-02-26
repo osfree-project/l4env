@@ -1,5 +1,4 @@
-
-IMPLEMENTATION[std]:
+IMPLEMENTATION [arm]:
 
 #include "config.h"
 #include "initcalls.h"
@@ -17,7 +16,7 @@ Kernel_thread::init_workload()
   //
 
   for (unsigned i = Config::boot_taskno + 1; 
-       i < Space_index::max_space_number;
+       i < Space_index::Max_space_number;
        i++)
     {
       check(Space_index(i).set_chief(space_index(), 
@@ -33,17 +32,25 @@ Kernel_thread::init_workload()
   Space_index(Config::sigma0_id.task()).
     set_chief(space_index(), Space_index(Config::sigma0_id.chief()));
 
-  sigma0 = new Task(Config::sigma0_id.task());
+  sigma0_task = new Task(Config::sigma0_id.task());
+  sigma0_space = sigma0_task;
 
   //puts("Kernel_thread::init_workload(): create sigma0 thread");
-  sigma0_thread = new (Config::sigma0_id) Thread (sigma0, Config::sigma0_id, 
-						  Config::sigma0_prio, 
-						  Config::sigma0_mcp);
+  sigma0_thread = lookup (Config::sigma0_id);
+
+  {
+    Lock_guard <Thread_lock> guard (sigma0_thread->thread_lock());
+
+    new (Config::sigma0_id) Thread (sigma0_task, 
+				    Config::sigma0_id, 
+				    Config::sigma0_prio, 
+				    Config::sigma0_mcp);
   
-  //puts("Kernel_thread::init_workload(): initialize sigma0");
-  sigma0_thread->initialize(Kernel_info::kip()->sigma0_pc, 
-			    Kernel_info::kip()->sigma0_sp,
-			    0, 0);
+    //puts("Kernel_thread::init_workload(): initialize sigma0");
+    sigma0_thread->initialize(Kip::k()->sigma0_pc, 
+			      Kip::k()->sigma0_sp,
+			      0, 0);
+  }
 
   //
   // create the boot task
@@ -55,16 +62,23 @@ Kernel_thread::init_workload()
   Space_index(Config::boot_id.task()).
     set_chief(space_index(), Space_index(Config::boot_id.chief()));
 
-  Space *boot = new Task(Config::boot_id.task());
+  Task *boot = new Task(Config::boot_id.task());
   //puts("Kernel_thread::init_workload(): create root thread");
   //printf("ID: %x.%x\n",Config::boot_id.task(),Config::boot_id.lthread());
-  Thread *boot_thread = new (Config::boot_id) Thread (boot, Config::boot_id, 
-						      Config::boot_prio, 
-						      Config::boot_mcp);
+  
+  Thread *boot_thread = lookup (Config::boot_id);
+  {
+    Lock_guard <Thread_lock> guard (boot_thread->thread_lock());
 
-  //puts("Kernel_thread::init_workload(): initialize root");
+    new (Config::boot_id) Thread (boot, Config::boot_id, 
+				  Config::boot_prio, 
+				  Config::boot_mcp);
 
-  boot_thread->initialize(Kernel_info::kip()->root_pc,
-			  Kernel_info::kip()->root_sp,
-			  sigma0_thread, 0);
+    //puts("Kernel_thread::init_workload(): initialize root");
+
+    boot_thread->initialize(Kip::k()->root_pc,
+			    Kip::k()->root_sp,
+			    sigma0_thread, 0);
+  }
 }
+

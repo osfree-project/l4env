@@ -12,7 +12,7 @@ unsigned long *glob_ptr;
 CORBA_long test_test_map_component(CORBA_Object _dice_corba_obj,
     l4_snd_fpage_t page,
     CORBA_unsigned_long offset,
-    CORBA_Environment *_dice_corba_env)
+    CORBA_Server_Environment *_dice_corba_env)
 {
   unsigned long *ptr;
 
@@ -23,22 +23,23 @@ CORBA_long test_test_map_component(CORBA_Object _dice_corba_obj,
   ptr = (unsigned long*)(page.snd_base + offset);
 #endif
   
-  LOG("address = 0x%x", ptr);
+  LOG("address = 0x%p", ptr);
   LOG("page = 0x%x", page.snd_base);
-  LOG("data at serv before = %d\n", *ptr);
+  LOG("data at serv before = %ld", *ptr);
   *ptr = 12345;
-  LOG("data at serv after = %d", *ptr);
+  LOG("data at serv after = %ld", *ptr);
 
   /* done */    
   return 0;
 }
 
+char LOG_tag[9] = "fpageS";
+
 int main(int argc, char* argv[])
 {
   void *ptr;
-  CORBA_Environment _env = dice_default_environment; // timout:never, rcv_fpage:WHOLE_AS
+  CORBA_Server_Environment _env = dice_default_server_environment; // timout:never, rcv_fpage:WHOLE_AS
   
-  LOG_init("fpageS");
   /* get a receive window (need only 1 page)
    */
   ptr = l4dm_mem_allocate(0x1000,0);
@@ -48,10 +49,11 @@ int main(int argc, char* argv[])
   glob_ptr = ptr;
 #endif
   _env.rcv_fpage = l4_fpage((unsigned long)ptr, 12, 1, 1);
-  LOG("receive at 0x%x\n", ptr);
+  LOG("receive at 0x%p", ptr);
   
   // register with names
   names_register("fpageS");
+  LOG("registered with names, start loop");
   // turn on logging
 //  enter_kdebug("*#I*");
 //  enter_kdebug("*#IR+");

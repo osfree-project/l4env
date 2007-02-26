@@ -40,13 +40,12 @@
  * \param  new_size      New dataspace size
  *	
  * \return 0 on success (resized dataspace), error code otherwise:
- *         - \c -L4_EINVAL  invalid dataspace
- *         - \c -L4_ENOMEM  memory area not available
+ *         - -#L4_EINVAL  invalid dataspace
+ *         - -#L4_ENOMEM  memory area not available
  */
 /*****************************************************************************/ 
 static int
-__resize(dmphys_dataspace_t * ds, 
-	 l4_size_t new_size)
+__resize(dmphys_dataspace_t * ds, l4_size_t new_size)
 {
   int ret;
   l4_size_t old_size,add;
@@ -56,12 +55,12 @@ __resize(dmphys_dataspace_t * ds,
   if (new_size == 0)
     {
       /* close dataspace */
-      LOGdL(DEBUG_RESIZE,"new_size 0, close dataspace");
+      LOGdL(DEBUG_RESIZE, "new_size 0, close dataspace");
 
       ret = dmphys_close(ds);
       if (ret < 0)
 	{
-	  ERROR("DMphys: close dataspace failed: %d!",ret);
+	  LOGdL(DEBUG_ERRORS, "DMphys: close dataspace failed: %d!", ret);
 	  return ret;
 	}
     }
@@ -72,7 +71,7 @@ __resize(dmphys_dataspace_t * ds,
       pages = dmphys_ds_get_pages(ds);
       pool = dmphys_ds_get_pool(ds);
 
-      LOGdL(DEBUG_RESIZE,"size new 0x%x, old 0x%x",new_size,old_size);
+      LOGdL(DEBUG_RESIZE, "size new 0x%x, old 0x%x", new_size, old_size);
 
       if (new_size > old_size)
 	{
@@ -84,24 +83,25 @@ __resize(dmphys_dataspace_t * ds,
 	    {
 	      /* phys. contiguous dataspace, try to enlarge page area */
 #if DEBUG_RESIZE
-	      printf("  contiguous ds, enlarge page area by 0x%x\n",add);
+	      LOG_printf(" contiguous ds, enlarge page area by 0x%x\n", add);
 #endif
-	      ret = dmphys_pages_enlarge(pool,pages,add,PAGES_USER);
+	      ret = dmphys_pages_enlarge(pool, pages, add, PAGES_USER);
 	      if (ret < 0)
 		{
-		  ERROR("DMphys: enlarge page area list failed: %d!",ret);
+		  LOGdL(DEBUG_ERRORS, 
+                        "DMphys: enlarge page area list failed: %d!", ret);
 		  return ret;
 		}
 	    }
 	  else
 	    {
 #if DEBUG_RESIZE
-	      printf("  allocate new page areas, size 0x%x\n",add);
+	      LOG_printf(" allocate new page areas, size 0x%x\n", add);
 #endif
-	      ret = dmphys_pages_add(pool,pages,add,PAGES_USER);
+	      ret = dmphys_pages_add(pool, pages, add, PAGES_USER);
 	      if (ret < 0)
 		{
-		  ERROR("DMphys: add pages failed: %d!",ret);
+		  LOGdL(DEBUG_ERRORS, "DMphys: add pages failed: %d!", ret);
 		  return ret;
 		}
 	    }
@@ -110,12 +110,13 @@ __resize(dmphys_dataspace_t * ds,
 	{
 	  /* shrink dataspace */
 #if DEBUG_RESIZE
-	  printf("  shrink dataspace page area list\n");
+	  LOG_printf(" shrink dataspace page area list\n");
 #endif
-	  ret = dmphys_pages_shrink(pool,pages,new_size);
+	  ret = dmphys_pages_shrink(pool, pages, new_size);
 	  if (ret < 0)
 	    {
-	      ERROR("DMphys: shrink page area list failed: %d!",ret);
+	      LOGdL(DEBUG_ERRORS, 
+                    "DMphys: shrink page area list failed: %d!", ret);
 	      return ret;
 	    }
 	}
@@ -123,7 +124,7 @@ __resize(dmphys_dataspace_t * ds,
 	{
 	  /* kepp size, nothing to do */
 #if DEBUG_RESIZE
-	  DMSG("  keep size\n");
+	  LOG_printf(" keep size\n");
 #endif  
 	}
 
@@ -150,19 +151,18 @@ __resize(dmphys_dataspace_t * ds,
  * \param  new_size      New dataspace size
  *	
  * \return 0 on success, error code otherwise:
- *         - \c -L4_EINVAL  invalid dataspace
- *         - \c -L4_ENOMEM  memory area not available
+ *         - -#L4_EINVAL  invalid dataspace
+ *         - -#L4_ENOMEM  memory area not available
  */
 /*****************************************************************************/ 
 int
-dmphys_resize(dmphys_dataspace_t * ds, 
-	      l4_size_t new_size)
+dmphys_resize(dmphys_dataspace_t * ds, l4_size_t new_size)
 {
   /* round new size to pagesize */
   new_size = (new_size + DMPHYS_PAGESIZE - 1) & DMPHYS_PAGEMASK;
 
   /* resize dataspace */
-  return __resize(ds,new_size);
+  return __resize(ds, new_size);
 }
 
 /*****************************************************************************
@@ -173,40 +173,39 @@ dmphys_resize(dmphys_dataspace_t * ds,
 /**
  * \brief  Resize dataspace
  * 
- * \param  request       Flick request structure
- * \param  ds_id         Dataspace id
- * \param  new_size      New dataspace size
- * \retval _ev           Flick exception structure, unused
+ * \param  _dice_corba_obj    Request source
+ * \param  ds_id              Dataspace id
+ * \param  new_size           New dataspace size
+ * \param  _dice_corba_env    Server environment
  *	
  * \return 0 on success (resized dataspace), error code otherwise:
- *         - \c -L4_EINVAL  invalid dataspace
- *         - \c -L4_EPERM   caller is not allowed to resize the dataspace
- *         - \c -L4_ENOMEM  memory area not available
+ *         - -#L4_EINVAL  invalid dataspace
+ *         - -#L4_EPERM   caller is not allowed to resize the dataspace
+ *         - -#L4_ENOMEM  memory area not available
  */
 /*****************************************************************************/ 
 l4_int32_t 
 if_l4dm_mem_resize_component(CORBA_Object _dice_corba_obj,
-                             l4_uint32_t ds_id,
-                             l4_uint32_t new_size,
-                             CORBA_Environment *_dice_corba_env)
+                             l4_uint32_t ds_id, l4_uint32_t new_size,
+                             CORBA_Server_Environment *_dice_corba_env)
 {
   int ret;
   dmphys_dataspace_t * ds;
   
-  LOGdL(DEBUG_RESIZE,"ds %u, caller %x.%x",
-        ds_id,_dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
+  LOGdL(DEBUG_RESIZE, "ds %u, caller "l4util_idfmt,
+        ds_id, l4util_idstr(*_dice_corba_obj));
 
   /* get dataspace descriptor, check if caller owns the dataspace */
-  ret = dmphys_ds_get_check_rights(ds_id,*_dice_corba_obj,L4DM_RESIZE,&ds);
+  ret = dmphys_ds_get_check_rights(ds_id, *_dice_corba_obj, L4DM_RESIZE, &ds);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       if (ret == -L4_EINVAL)
-	ERROR("DMphys: invalid dataspace id %u, caller %x.%x",ds_id,
-	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread);
+	LOGL("DMphys: invalid dataspace id %u, caller "l4util_idfmt,
+             ds_id, l4util_idstr(*_dice_corba_obj));
       else
-	ERROR("DMphys: client %x.%x  is not allowed to resize ds %u",
-	      _dice_corba_obj->id.task,_dice_corba_obj->id.lthread,ds_id);
+	LOGL("DMphys: client "l4util_idfmt" is not allowed to resize ds %u",
+             l4util_idstr(*_dice_corba_obj), ds_id);
 #endif      
       return ret;
     }
@@ -215,5 +214,5 @@ if_l4dm_mem_resize_component(CORBA_Object _dice_corba_obj,
   new_size = (new_size + DMPHYS_PAGESIZE - 1) & DMPHYS_PAGEMASK;
 
   /* resize dataspace */
-  return __resize(ds,new_size);
+  return __resize(ds, new_size);
 }

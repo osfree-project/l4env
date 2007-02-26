@@ -1,0 +1,167 @@
+                           Nitpicker Documentation
+
+                                 Norman Feske
+
+
+Introduction
+############
+
+Nitpicker is an experiment to see how small a window system can be.  Following
+the micro-kernel idea, its functionality is reduced to a very small set of
+mechanisms. The implementation of policies such as window decoration, behaviour
+of widgets and, drag and drop is left to the client applications.
+
+Nitpicker is meant to serve as backend of multiple window systems, which belong
+to different trust domains. Particular, it is able to serve multiple instances
+of the DOpE window server. This way, isolated instances of DOpE can be started
+for different security domains and do not need to be trusted in the terms of
+confidentially and integrity anymore.
+
+Very much the same way, the X11 window system or any other legacy window system
+can be integrated into a Nitpicker desktop.
+
+
+Goals
+#####
+
+The design of Nitpicker aims at the following design goals:
+
+:Ultra-low complexity:
+  Since Nitpicker is part of the trusted computing base of a secure
+  platform, it needs to be as small (in terms of source complexity)
+  as possible.
+
+:Isolation of client applications:
+  All client applications are considered to be untrusted in the terms
+  of confidentially. Nitpicker should not provide any channel through
+  which client applications could communicate. Although it should
+  provide a mechanism to establish direct communication channels
+  between applications authorized by the user and a global policy
+  that is not part of Nitpicker.
+
+:Integrity of window labeling:
+  We do not trust client applications to properly label their windows.
+  For example, a trojan horse tries to imitate the user interface
+  including window labels of another application. For this reason,
+  Nitpicker need to provide a labeling mechanism, that cannot be faked
+  by client applications.
+
+:Prevention of Denial of Service:
+  A user of Nitpicker should always be able to acqire the full control
+  over the user interface at any time. The way of how to reach the
+  control does not need to be modest but effective - for example by
+  the ability to kill misbehaving applications.
+
+Currently, we do not pay respect to the following things:
+
+:Real-Time:
+  There is no special handling of real-time applications with fixed
+  update rates. Even though, a redraw dropping mechanism is useful
+  to assure availablity of the user interface and to bound the output
+  latency.
+
+:Performance:
+  The current implementation is not optimized for speed.
+
+:Beauty:
+  Nitpicker is not beautiful because unfortunately, we do research, not art.
+
+
+Functionality
+#############
+
+Nitpicker provides two primitives to its client applications: _Buffers_ and
+_Views_.
+
+A Buffer is an image with a defined width and height and associated pixel data.
+The pixel data is a memory area that is allocated by the client and shared
+between the client and Nitpicker. Each time, a client manipulates the content
+of the buffer, it notifies Nitpicker about the affected buffer area. Nitpicker
+never manipulates Buffers.
+
+A View provides a visible viewport on a part of a buffer on screen. Every
+view has a defined size and location on screen and displays a section of
+a buffer. The visible part of the buffer can be defined by a x/y offset
+from the buffer's origin. In particular, there can exist multiple Views
+on one Buffer. This is the key to use Nitpicker as an overlay window system.
+The position of a View on screen can be freely defined by the client that
+created it. Views can intersect. A client application can manipulate the
+stacking order of its intersecting Views.
+
+
+Input events
+============
+
+For every View, a _listener_ thread can be specified that gets notified about
+input events referring this View. Input events are either mouse motion events,
+press events or release events.
+
+Press and release events are delivered with their associated hardware keycode.
+Tracking the state of modifier keys, converting key strokes to ASCII by
+applying different key tables for different keyboard layouts and, of course,
+reacting to keyboard input is completely up to the client application.
+Nitpicker only multiplexes the input devices.
+
+When no mouse button is pressed, mouse motion events are delivered to the
+listener of the View that is visible at the current mouse position. While a
+mouse button is pressed, all motion events are delivered to the listener of
+the view that was hit by the initial mouse click. This way, even the handling
+of window movement and resizing can be implemented in the affected client
+application.
+
+
+Frequently Asked Questions
+##########################
+
+Denial of Service
+=================
+
+:Question:
+  Since a client can freely define Views and bring them on top, couldn't it
+  denial the service of Nitpicker?
+
+:Answer:
+  Client applications are not expected by behave in a (by Nitpicker) specified
+  way. If an application behaves differently than expected by the user, the
+  user need to have an instrument to kill the misbehaving application. This
+  killing facility must be provided by Nitpicker. It is up to the application
+  to be nice to the user. If it is not - it runs in the risk to be put to death
+  by the user.
+
+
+How to use Nickpicker as overlay window system?
+===============================================
+
+Nitpicker is intended to be used as an overlay window system. That means,
+it can serve complete window systems as client applications and merge them
+on one screen. For making an existing window system ready to be integrated
+into a Nitpicker desktop, you need to:
+
+* Import the frame buffer that you use for your screen output into Nitpicker
+  as a Buffer.
+* Notify Nitpicker about all changes on your frame buffer.
+* Create a View for every window that is visible on your screen and set the
+* View size and position to the coordinates of the corresponding window. For
+  each View, register your input event handler and handle incoming input events
+  the same way, as they came from a real input device. Since Nitpicker manages
+  the mouse cursor, the input device is always an absolute one --- very much
+  like a graphics tablet.
+* When moving one of your windows, move its associated Nitpicker View, too.
+* When topping one of your windows, top the associated Nitpicker View, too.
+
+Every client window system can define one view that represents the desktop
+background. Each time, the user changes the focused view, the background is
+set to the background of the client. This way, a full desktop environment
+is still usable when running as Nitpicker client.
+
+
+What is cool about Nitpicker?
+=============================
+
+Nitpicker is cool because:
+
+* Currently, it is comprised of only about 1300 lines of code. The final version
+  is expected to be smaller than 2000 lines of code.
+* It uses only one thread and very little memory.
+* Its way to handle the mouse cursor.
+

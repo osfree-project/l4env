@@ -1,0 +1,26 @@
+# Format: (all on one line)
+#   Source file : Copyright Owner(s)
+# Please use "TUD" when referring to TU Dresden.
+# If sole owner is TUD, the license field defaults to GPL and can be
+# left empty.
+# Source-file spec can be a directory name or a wildcard like "src/*.c".
+doc : TUD
+examples : TUD
+include : TUD
+lib/include: TUD
+lib/l4 : TUD
+lib/linux: TUD
+lib/src/doprnt.c : Utah Flux Group : GPL
+lib/src/fiasco_tbuf.c : TUD
+lib/src/lock.c : TUD
+lib/src/log.c : TUD
+lib/src/logL.c : TUD
+lib/src/log_init.c : TUD
+lib/src/log_printf.c : TUD
+lib/src/logl.c : TUD
+lib/src/loglib.c : TUD
+lib/src/logliblinux.c : TUD
+lib/src/logserver.c : TUD
+lib/src/printf.c : TUD
+lib/src/sprintf.c : TUD
+server: TUD

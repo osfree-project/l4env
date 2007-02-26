@@ -1,4 +1,11 @@
-/* Copyright (C) 2001-2003 by
+/**
+ *    \file    dice/src/be/l4/x0adapt/L4X0aBESndFunction.cpp
+ *    \brief   contains the declaration of the class CL4X0aBESndFunction
+ *
+ *    \date    06/01/2002
+ *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/* Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,15 +37,15 @@
  */
 class CL4X0aBESndFunction : public CL4BESndFunction
 {
-DECLARE_DYNAMIC(CL4X0aBESndFunction);
 
 public:
-  CL4X0aBESndFunction();
-  ~CL4X0aBESndFunction();
+    /** creates a send function object */
+    CL4X0aBESndFunction();
+    virtual ~CL4X0aBESndFunction();
 
 protected:
     virtual void WriteVariableDeclaration(CBEFile * pFile,  CBEContext * pContext);
-	virtual void WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
+    virtual void WriteMarshalling(CBEFile* pFile,  int nStartOffset,  bool& bUseConstOffset,  CBEContext* pContext);
 };
 
 #endif

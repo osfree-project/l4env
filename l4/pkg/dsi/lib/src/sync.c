@@ -88,17 +88,17 @@ __wakeup_and_map(dsi_socket_t * socket,dsi_packet_t * packet)
 
   if (size != (1U << i))
     Panic("DSI: unaligned pages not supported yet!");
-
+  
   LOGdL(DEBUG_MAP_PACKET,"map packet %u, size %u (%d)",packet->no,size,i);
-  LOGdL(DEBUG_MAP_PACKET,"addr 0x%08x, offset 0x%08x",addr,offs);
+  LOGdL(DEBUG_MAP_PACKET,"addr 0x%08x, offset 0x%08x",(unsigned)addr,offs);
 
   /* send map message */
   ret = l4_ipc_send(socket->remote_socket.work_th,L4_IPC_SHORT_FPAGE,
 			 offs,l4_fpage((l4_addr_t)addr,i,
 				       L4_FPAGE_RW,L4_FPAGE_MAP).fpage,
-			 L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
+			 L4_IPC_SEND_TIMEOUT_0,&result);
   if (ret)
-    Error("DSI: IPC error in wakeup 0x%02x",ret); 
+    LOG_Error("DSI: IPC error in wakeup 0x%02x",ret); 
 }
 
 /*****************************************************************************/
@@ -132,7 +132,8 @@ __wakeup_and_copy(dsi_socket_t * socket,dsi_packet_t * packet)
   size = socket->sg_lists[packet->sg_list].size;
 
   LOGdL(DEBUG_COPY_PACKET,"copy packet");
-  LOGdL(DEBUG_COPY_PACKET,"addr 0x%08x, size %u",socket->data_area + offs,size);
+  LOGdL(DEBUG_COPY_PACKET,"addr 0x%08x, size %u",
+      (unsigned)socket->data_area + offs,size);
 
   /* send message */
   msg_buf.size_dope = L4_IPC_DOPE(2,1);
@@ -140,9 +141,9 @@ __wakeup_and_copy(dsi_socket_t * socket,dsi_packet_t * packet)
   msg_buf.buf.snd_str = (l4_addr_t)socket->data_area + offs;
   msg_buf.buf.snd_size = size;
   ret = l4_ipc_send(socket->remote_socket.work_th,&msg_buf,
-			 0,0,L4_IPC_TIMEOUT(0,1,0,0,0,0),&result);
+			 0,0,L4_IPC_SEND_TIMEOUT_0,&result);
   if (ret)
-    Error("DSI: IPC error in wakeup 0x%02x",ret);   
+    LOG_Error("DSI: IPC error in wakeup 0x%02x", ret);   
 }
 
 /*****************************************************************************/
@@ -163,8 +164,8 @@ dsi_sync_thread_send(void * data)
   l4_msgdope_t result;
   l4_threadid_t src;
 
-  LOGdL(DEBUG_SYNC_SEND,"up, parent %x.%x",parent.id.task,parent.id.lthread);
-
+  LOGdL(DEBUG_SYNC_SEND,"up, parent "l4util_idfmt, l4util_idstr(parent));
+  
   /* sanity checks */
   Assert(data != NULL);
   socket = (dsi_socket_t *)data;
@@ -180,11 +181,10 @@ dsi_sync_thread_send(void * data)
   Assert(data == (void *)dw1);
   
   LOGdL(DEBUG_SYNC_SEND,"connected.");
-  LOGdL(DEBUG_SYNC_SEND,"remote socket %d, work %x.%x",
+  LOGdL(DEBUG_SYNC_SEND,"remote socket %d, work "l4util_idfmt,
         socket->remote_socket.socket,
-        socket->remote_socket.work_th.id.task,
-        socket->remote_socket.work_th.id.lthread);
-
+        l4util_idstr(socket->remote_socket.work_th));
+  
   /* snychronization loop */
   while (1)
     {
@@ -193,7 +193,7 @@ dsi_sync_thread_send(void * data)
 
       if (!ret)
 	{
-	  LOGdL(DEBUG_SYNC_SEND,"msg from %x.%x",src.id.task,src.id.lthread);
+	  LOGdL(DEBUG_SYNC_SEND,"msg from "l4util_idfmt, l4util_idstr(src));
 	  LOGdL(DEBUG_SYNC_SEND,"dw0 = %u, dw1 = %u",dw0,dw1);
           
 	  switch (dw0)
@@ -214,10 +214,9 @@ dsi_sync_thread_send(void * data)
 		  if (packet->flags & DSI_PACKET_RX_WAITING)
 		    {
 		      LOGdL(DEBUG_SYNC_SEND,"receiver already waiting");
-		      LOGdL(DEBUG_SYNC_SEND,"wakeup %x.%x",
-                            socket->remote_socket.work_th.id.task,
-                            socket->remote_socket.work_th.id.lthread);
-
+		      LOGdL(DEBUG_SYNC_SEND,"wakeup "l4util_idfmt,
+                            l4util_idstr(socket->remote_socket.work_th));
+                      
 		      if (socket->flags & DSI_SOCKET_MAP)
 			__wakeup_and_map(socket,packet);
 		      else if (socket->flags & DSI_SOCKET_COPY)
@@ -227,10 +226,10 @@ dsi_sync_thread_send(void * data)
 			  /* wakeup */
 			  ret = l4_ipc_send(socket->remote_socket.work_th,
 						 L4_IPC_SHORT_MSG,0,0,
-						 L4_IPC_TIMEOUT(0,1,0,0,0,0),
+						 L4_IPC_SEND_TIMEOUT_0,
 						 &result);
 			  if (ret)
-			    Error("DSI: IPC error in wakeup 0x%02x",ret);
+			    LOG_Error("DSI: IPC error in wakeup 0x%02x", ret);
 			}
 		      
 		      /* reset flags */
@@ -264,8 +263,8 @@ dsi_sync_thread_send(void * data)
 		  if (packet->flags & DSI_PACKET_RX_PENDING)
 		    {
 		      LOGdL(DEBUG_SYNC_SEND,"notification pending");
-		      LOGdL(DEBUG_SYNC_SEND,"wakeup %x.%x",
-                            src.id.task,src.id.lthread);
+		      LOGdL(DEBUG_SYNC_SEND,"wakeup "l4util_idfmt,
+                            l4util_idstr(src));
                       
 		      if (socket->flags & DSI_SOCKET_MAP)
 			__wakeup_and_map(socket,packet);
@@ -276,10 +275,10 @@ dsi_sync_thread_send(void * data)
 			  /* wakeup */
 			  ret = l4_ipc_send(socket->remote_socket.work_th,
 						 L4_IPC_SHORT_MSG,0,0,
-						 L4_IPC_TIMEOUT(0,1,0,0,0,0),
+						 L4_IPC_SEND_TIMEOUT_0,
 						 &result);
 			  if (ret)
-			    Error("DSI: IPC error in reply 0x%02x",ret);
+			    LOG_Error("DSI: IPC error in reply 0x%02x",ret);
 			}
 
 		      /* reset pending flag */
@@ -316,10 +315,11 @@ dsi_sync_thread_send(void * data)
 #if RELEASE_DO_CALL
 		  /* reply */
 		  ret = l4_ipc_send(src,L4_IPC_SHORT_MSG,0,0,
-					 L4_IPC_TIMEOUT(0,1,0,0,0,0),
-					 &result);
+					 L4_IPC_SEND_TIMEOUT_0,
+                                    &result);
 		  if (ret)
-		    Error("DSI: sync notification reply failed (0x%02x)!",ret);
+		    LOG_Error("DSI: sync notification reply failed (0x%02x)!",
+                              ret);
 #endif		  
 		} else goto e_inv_sender;
 	      break;
@@ -340,18 +340,18 @@ dsi_sync_thread_send(void * data)
 		} else goto e_inv_sender;
 	      break;
 	    default:
-		Error("DSI: invalid command (%d) from %x.%x!",dw0,
-		      src.id.task, src.id.lthread);
+              LOG_Error("DSI: invalid command (%d) from "l4util_idfmt, dw0,
+                        l4util_idstr(src));
 	    }
 	  continue;
 
 	  e_inv_sender:
-	  Error("DSI: ignoring message from %x.%x",
-		src.id.task,src.id.lthread);
+	  LOG_Error("DSI: ignoring message from "l4util_idfmt,
+                    l4util_idstr(src));
 
 	} /* if (!ret) */
 
-      Error("DSI: IPC error in sender sync thread 0x%02x",ret);
+      LOG_Error("DSI: IPC error in sender sync thread 0x%02x",ret);
     } /* while(1) */
 
   /* this should never happen */
@@ -376,8 +376,8 @@ dsi_sync_thread_receive(void * data)
   l4_umword_t dw0,dw1;
   l4_msgdope_t result;
   l4_threadid_t src;
-
-  LOGdL(DEBUG_SYNC_RECEIVE,"up, parent %x.%x",parent.id.task,parent.id.lthread);
+  
+  LOGdL(DEBUG_SYNC_RECEIVE,"up, parent "l4util_idfmt, l4util_idstr(parent));
 
   /* sanity checks */
   Assert(data != NULL);
@@ -385,7 +385,7 @@ dsi_sync_thread_receive(void * data)
 
   /* wait for parent to send connect message */ 
   ret = l4_ipc_receive(parent,L4_IPC_SHORT_MSG,&dw0,&dw1,
-			    L4_IPC_NEVER,&result);
+                       L4_IPC_NEVER,&result);
   if (ret || (dw0 != DSI_SYNC_CONNECTED))
     {
       Panic("DSI: sync setup IPC failed (0x%02X)!",ret);
@@ -394,11 +394,10 @@ dsi_sync_thread_receive(void * data)
   Assert(data == (void *)dw1);
   
   LOGdL(DEBUG_SYNC_RECEIVE,"connected.");
-  LOGdL(DEBUG_SYNC_RECEIVE,"remote socket %d, work %x.%x",
+  LOGdL(DEBUG_SYNC_RECEIVE,"remote socket %d, work "l4util_idfmt,
         socket->remote_socket.socket,
-        socket->remote_socket.work_th.id.task,
-        socket->remote_socket.work_th.id.lthread);
-
+        l4util_idstr(socket->remote_socket.work_th));
+  
   /* synchronization thread loop */
   while (1)
     {
@@ -407,8 +406,7 @@ dsi_sync_thread_receive(void * data)
 
       if (!ret)
 	{
-	  LOGdL(DEBUG_SYNC_RECEIVE,"msg from %x.%x",
-                src.id.task,src.id.lthread);
+	  LOGdL(DEBUG_SYNC_RECEIVE,"msg from "l4util_idfmt, l4util_idstr(src));
 	  LOGdL(DEBUG_SYNC_RECEIVE,"dw0 = %u, dw1 = %u",dw0,dw1);
 
 	  switch (dw0)
@@ -429,17 +427,16 @@ dsi_sync_thread_receive(void * data)
 		  if (packet->flags & DSI_PACKET_TX_WAITING)
 		    {
 		      LOGdL(DEBUG_SYNC_RECEIVE,"sender already waiting");
-		      LOGdL(DEBUG_SYNC_RECEIVE,"wakeup %x.%x",
-			   socket->remote_socket.work_th.id.task,
-			   socket->remote_socket.work_th.id.lthread);
-
+		      LOGdL(DEBUG_SYNC_RECEIVE,"wakeup "l4util_idfmt,
+                            l4util_idstr(socket->remote_socket.work_th));
+                      
 		      /* wakeup */
 		      ret = l4_ipc_send(socket->remote_socket.work_th,
 					     L4_IPC_SHORT_MSG,0,0,
-					     L4_IPC_TIMEOUT(0,1,0,0,0,0),
+					     L4_IPC_SEND_TIMEOUT_0,
 					     &result);
 		      if (ret)
-			Error("DSI: IPC error in wakeup 0x%02x",ret);
+			LOG_Error("DSI: IPC error in wakeup 0x%02x",ret);
 
 		      /* reset flags */
 		      packet->flags &= (~DSI_PACKET_TX_WAITING);
@@ -470,14 +467,15 @@ dsi_sync_thread_receive(void * data)
 		  if (packet->flags & DSI_PACKET_TX_PENDING)
 		    {
 		      LOGdL(DEBUG_SYNC,"notification pending");
-		      LOGdL(DEBUG_SYNC,"wakeup %x.%x",src.id.task,src.id.lthread);
+		      LOGdL(DEBUG_SYNC,"wakeup "l4util_idfmt, 
+                            l4util_idstr(src));
 
 		      /* receiver already commited packet, reply immediately */
 		      ret = l4_ipc_send(src,L4_IPC_SHORT_MSG,0,0,
-					     L4_IPC_TIMEOUT(0,1,0,0,0,0),
+					     L4_IPC_SEND_TIMEOUT_0,
 					     &result);
 		      if (ret)
-			Error("DSI: IPC error in reply 0x%02x",ret);
+			LOG_Error("DSI: IPC error in reply 0x%02x", ret);
 
 		      /* reset pending flag */
 		      packet->flags &= (~DSI_PACKET_TX_PENDING);
@@ -496,20 +494,19 @@ dsi_sync_thread_receive(void * data)
 		} else goto e_inv_sender;
 		  
 	      break;
-
+              
 	    default:
-		Error("DSI: invalid command (%d) from %x.%x",
-		      dw0, src.id.task, src.id.lthread);
+              LOG_Error("DSI: invalid command (%d) from "l4util_idfmt,
+                        dw0, l4util_idstr(src));
 	    }
 	  continue;
 
 	  e_inv_sender:
-	  Error("ignoring message from %x.%x",
-		src.id.task,src.id.lthread);
-
+	  LOG_Error("ignoring message from "l4util_idfmt, l4util_idstr(src));
+          
 	} /* if (!ret) */
 
-      Error("DSI: IPC error in receiver sync thread 0x%02x",ret);
+      LOG_Error("DSI: IPC error in receiver sync thread 0x%02x", ret);
     } /* while(1) */
 
   /* this should never happen */

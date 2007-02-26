@@ -1,16 +1,17 @@
 /**
- *	\file	dice/src/be/l4/L4BETestServerFunction.h
- *	\brief	contains the declaration of the class CL4BETestServerFunction
+ *  \file   dice/src/be/l4/L4BETestServerFunction.h
+ *  \brief  contains the declaration of the class CL4BETestServerFunction
  *
- *	\date	04/04/2002
- *	\author	Ronald Aigner <ra3@os.inf.tu-dresden.de>
- *
- * Copyright (C) 2001-2003
+ *  \date   04/04/2002
+ *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2001-2004
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * For different licensing schemes please contact 
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 
@@ -31,15 +32,14 @@
 
 #include "be/BETestServerFunction.h"
 
-/**	\class CL4BETestServerFunction
- *	\ingroup backend
- *	\brief the function class for the back-end
+/** \class CL4BETestServerFunction
+ *  \ingroup backend
+ *  \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
  */
 class CL4BETestServerFunction:public CBETestServerFunction
 {
-DECLARE_DYNAMIC(CL4BETestServerFunction);
 // Constructor
 public:
   /** \brief constructor
@@ -48,19 +48,19 @@ public:
   virtual ~ CL4BETestServerFunction();
 
 protected:
-  /**	\brief copy constructor */
+  /**   \brief copy constructor */
   CL4BETestServerFunction(CL4BETestServerFunction & src);
-public: 
+public:
 
 protected:
-	virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext *pContext);
-	virtual void WriteStopServerLoop(CBEFile * pFile, CBEContext * pContext);
-	virtual void WriteStartServerLoop(CBEFile * pFile, CBEContext * pContext);
-	virtual void WriteCleanup(CBEFile * pFile, CBEContext * pContext);
-	virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
-	virtual void WriteGlobalVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteVariableInitialization(CBEFile * pFile, CBEContext *pContext);
+    virtual void WriteStopServerLoop(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteStartServerLoop(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteCleanup(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
+    virtual void WriteGlobalVariableDeclaration(CBEFile * pFile, CBEContext * pContext);
     virtual void WriteTestFunction(CBEFile * pFile, CBETestFunction * pFunction, CBEContext * pContext);
 };
 
-#endif				// !__DICE_L4BETESTSERVERFUNCTION_H__
+#endif              // !__DICE_L4BETESTSERVERFUNCTION_H__
 

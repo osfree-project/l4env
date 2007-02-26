@@ -14,24 +14,23 @@
 #define CRTX_CRT0_H
 
 #include <l4/sys/l4int.h>
+#include <l4/sys/compiler.h>
 
-#ifdef __cplusplus
-#define XC "C"
-#else
-#define XC
+EXTERN_C_BEGIN
+
+void crt0_construction(void);
+void crt0_sys_destruction(void);
+void crt0_dde_construction(void);
+
+void __main(void);
+
+extern l4_uint8_t crt0_stack_low;
+extern l4_uint8_t crt0_stack_high;
+extern l4_addr_t  crt0_tramppage;
+extern void*      crt0_multiboot_info;
+extern l4_mword_t crt0_multiboot_flag;
+extern void*      crt0_l4env_infopage;
+
+EXTERN_C_END
+
 #endif
-
-extern XC void crt0_construction(void);
-extern XC void crt0_sys_destruction(void);
-extern XC void __main(void);
-
-extern XC l4_uint8_t crt0_stack_low;
-extern XC l4_uint8_t crt0_stack_high;
-extern XC l4_addr_t  crt0_tramppage;
-extern XC void*      crt0_multiboot_info;
-extern XC l4_mword_t crt0_multiboot_flag;
-
-#undef XC
-
-#endif
-

@@ -1,0 +1,40 @@
+# Format: (all on one line)
+#   Source file : Copyright Owner(s)
+# Please use "TUD" when referring to TU Dresden.
+# If sole owner is TUD, the license field defaults to GPL and can be
+# left empty.
+# Source-file spec can be a directory name or a wildcard like "src/*.c".
+include/Makefile : TUD
+include/mmap_util.h : TUD
+Makefile : TUD
+lib/buddy_slab_mem/Makefile : TUD
+lib/buddy_slab_mem/buddy.c : TUD
+lib/buddy_slab_mem/buddy.h : TUD
+lib/buddy_slab_mem/config.h : TUD
+lib/buddy_slab_mem/malloc.c : TUD
+lib/Makefile : TUD
+lib/l4env_start_stop/Makefile : TUD
+lib/l4env_start_stop/README : TUD
+lib/l4env_start_stop/_exit.c : TUD
+lib/l4env_start_stop/_exit.h : TUD
+lib/l4env_start_stop/abort.c : TUD
+lib/l4env_start_stop/l4libc_startup.c : TUD
+lib/minimal_log_io/Makefile : TUD
+lib/minimal_log_io/lseek.c : TUD
+lib/minimal_log_io/write.c : TUD
+lib/mmap/Makefile : TUD
+lib/mmap/mmap.c : TUD
+lib/mmap_util/Makefile : TUD
+lib/mmap_util/mmap_util.c : TUD
+lib/simple_mem/Makefile : TUD
+lib/simple_mem/README : TUD
+lib/simple_mem/getpagesize.c : TUD
+lib/simple_mem/mmap.c : TUD
+lib/syslog/Makefile : Jens Syckor : Student
+lib/syslog/README : Jens Syckor : Student
+lib/syslog/syslog.c : Jens Syckor : Student
+examples/malloc/Makefile : TUD
+examples/malloc/main.c : TUD
+examples/Makefile : TUD
+examples/malloc_stress/Makefile : TUD
+examples/malloc_stress/main.c : TUD

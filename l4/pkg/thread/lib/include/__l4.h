@@ -18,6 +18,7 @@
 #define _THREAD___L4_H
 
 /* L4 includes */
+#include <l4/sys/compiler.h>
 #include <l4/env/cdefs.h>
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
@@ -41,6 +42,9 @@ l4th_l4_create_thread(l4_threadid_t id, l4_addr_t eip, l4_addr_t esp,
 
 L4_INLINE l4_threadid_t
 l4th_l4_myself(void);
+
+L4_INLINE l4_threadid_t
+l4th_l4_myself_noprof(void) L4_NOINSTRUMENT;
 
 /*****************************************************************************
  *** implementation
@@ -99,14 +103,16 @@ l4th_l4_create_thread(l4_threadid_t id, l4_addr_t eip, l4_addr_t esp,
 
   /* get preempter/pager */
   preempter = my_pager = L4_INVALID_ID;
-  l4_thread_ex_regs(l4_myself(),(l4_umword_t)-1,(l4_umword_t)-1,&preempter,
-                    &my_pager,&dummy,&dummy,&dummy);
+  l4_thread_ex_regs(l4_myself(), (l4_umword_t)-1, (l4_umword_t)-1, &preempter,
+                    &my_pager, &dummy, &dummy, &dummy);
   
   /* create thread */
   if (l4_is_invalid_id(pager))
-    l4_thread_ex_regs(id,eip,esp,&preempter,&my_pager,&dummy,&dummy,&dummy);
+    l4_thread_ex_regs(id, eip, esp, &preempter, &my_pager, 
+                      &dummy, &dummy, &dummy);
   else
-    l4_thread_ex_regs(id,eip,esp,&preempter,&pager,&dummy,&dummy,&dummy);
+    l4_thread_ex_regs(id, eip, esp, &preempter, &pager,
+                      &dummy, &dummy, &dummy);
 }
 
 /*****************************************************************************/
@@ -118,6 +124,12 @@ l4th_l4_create_thread(l4_threadid_t id, l4_addr_t eip, l4_addr_t esp,
 /*****************************************************************************/ 
 L4_INLINE l4_threadid_t
 l4th_l4_myself(void)
+{
+  return l4_myself();
+}
+
+L4_INLINE l4_threadid_t
+l4th_l4_myself_noprof(void)
 {
   return l4_myself();
 }
