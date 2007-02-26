@@ -1,9 +1,9 @@
 #
 # Automatically generated, don't edit
 #
-# Generated on: noys
-# At: Fri, 30 Jun 2006 07:36:38 +0000
-# Linux version 2.6.17 (fm3@noys) (gcc version 4.1.2 20060613 (prerelease) (Debian 4.1.1-5)) #13 SMP Mon Jun 26 22:28:51 CEST 2006
+# Generated on: blackbox
+# At: Wed, 07 Feb 2007 15:20:23 +0000
+# Linux version 2.6.20-osnb (adam@erwin) (gcc version 3.3.5 (Debian 1:3.3.5-13)) #1 SMP Sun Feb 4 21:23:24 CET 2007
 
 #
 # Main menu
@@ -23,6 +23,7 @@ CONFIG_PF_SA1100=n
 CONFIG_PF_XSCALE=n
 CONFIG_PF_ISG=n
 CONFIG_PF_INTEGRATOR=n
+CONFIG_PF_REALVIEW=n
 
 
 #
@@ -69,6 +70,7 @@ CONFIG_DECEIT_BIT_DISABLES_SWITCH=n
 CONFIG_EXCEPTION_IPC=n
 CONFIG_HANDLE_SEGMENTS=n
 CONFIG_PL0_HACK=n
+CONFIG_TASK_CAPS=n
 
 CONFIG_ASSEMBLER_IPC_SHORTCUT=y
 CONFIG_SMALL_SPACES=y

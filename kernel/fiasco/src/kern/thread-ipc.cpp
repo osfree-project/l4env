@@ -1003,10 +1003,9 @@ Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t, Sys_ipc_fr
   // we need a cancel test.
   //
 
-  if(EXPECT_FALSE (partner == 0
-		   // must not send to L4_NIL_ID
-		   || partner->state() == Thread_invalid
-		   || partner == nil_thread))
+  if (EXPECT_FALSE (partner == 0 || partner == nil_thread
+	|| !partner->is_tcb_mapped() // msut ensure a mapped TCB (cli'd)
+	|| partner->state() == Thread_invalid))
     return Ipc_err (Ipc_err::Enot_existent);
 
   assert(cpu_lock.test());

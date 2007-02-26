@@ -101,6 +101,7 @@ __grow_cache(l4slab_cache_t * cache)
   buffer = cache->grow_fn(cache, &data);
   if (buffer == NULL)
     return -1;
+  Assert(((l4_addr_t)buffer & (cache->slab_size - 1)) == 0);
 
   LOGdL(DEBUG_SLAB_GROW,"new slab at 0x"l4_addr_fmt, (l4_addr_t)buffer);
 

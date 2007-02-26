@@ -76,8 +76,9 @@ Kip_init::setup_arch_abi()
 
   if (mod_end > mod_start)
     *(m++) = Mem_desc(mod_start, mod_end - 1, Mem_desc::Bootloader);
- 
+
   *(m++) = Mem_desc(Boot_info::mbi_phys(), 
-      Boot_info::mbi_phys() + Config::PAGE_SIZE -1, 
+      ((Boot_info::mbi_phys() + Boot_info::mbi_size() 
+       + Config::PAGE_SIZE-1) & Config::PAGE_MASK) -1, 
       Mem_desc::Bootloader);
 }

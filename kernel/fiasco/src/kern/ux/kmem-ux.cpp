@@ -171,13 +171,5 @@ Kmem::init()
 
   Cpu::init_tss (alloc_from_page(&cpu_page_vm, sizeof(Tss)));
 
-  // CPU initialization done
-#if 0
-  // allocate the kernel info page
-  Kip *kinfo = static_cast<Kip*>(phys_to_virt (himem_alloc()));
-
-  // initialize global pointer to the KIP
-  Kip::init_global_kip (kinfo);
-#endif
 }
 

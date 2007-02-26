@@ -32,7 +32,7 @@ namespace L4 {
 
 };
 
-L4::BasicOStream &operator << (L4::BasicOStream &o, L4::String const &s)
+inline L4::BasicOStream &operator << (L4::BasicOStream &o, L4::String const &s)
 {
   o << s.p_str();
   return o;

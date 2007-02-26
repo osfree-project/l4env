@@ -244,9 +244,16 @@ resolve_iopf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
       ioports_mapped = 1;
     }
 
-  if (port == 0 && size == L4_WHOLE_IOADDRESS_SPACE &&
-      !(app->flags & APP_ALLOW_CLI))
+  if (port == 0 && size == L4_WHOLE_IOADDRESS_SPACE
+      && !(app->flags & APP_ALLOW_CLI))
     {
+      if (*dw2 == ~0xeUL)
+	{
+	  /* Just a request, do not kill */
+	  *dw1 = *dw2 = 0;
+	  *reply = L4_IPC_SHORT_MSG;
+	  return;
+	}
       app_msg(app, "Task not allowed to execute cli/sti -- killing");
       if ((error = l4ts_kill_task_recursive(app->tid)))
 	app_msg(app, "Error %d (%s)", error, l4env_errstr(error));

@@ -119,7 +119,7 @@ memmap_alloc_page(l4_addr_t address, owner_t owner)
   if (s >= __memmap4mb + SUPERPAGE_MAX)
     return 0;			/* address exceeds __memmap4mb array */
   if (address-ram_base >= mem_high)
-    return 0;			/* address exceedxs _memmap array */
+    return 0;			/* address exceeds _memmap array */
   if (*m == owner || s->owner == owner)
     return 1;			/* already allocated */
   if (*m != O_FREE)

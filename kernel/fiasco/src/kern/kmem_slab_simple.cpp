@@ -56,6 +56,19 @@ Kmem_slab_simple::Kmem_slab_simple(unsigned long slab_size,
   enqueue_reap_list();
 }
 
+// Specializations providing their own block_alloc()/block_free() can
+// also request slab sizes larger than one page.
+PROTECTED
+Kmem_slab_simple::Kmem_slab_simple(unsigned elem_size, 
+				   unsigned alignment,
+				   char const *name,
+				   unsigned long min_size,
+				   unsigned long max_size)
+  : slab_cache_anon(elem_size, alignment, name, min_size, max_size)
+{
+  enqueue_reap_list();
+}
+
 void
 Kmem_slab_simple::enqueue_reap_list()
 {

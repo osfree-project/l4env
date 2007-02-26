@@ -19,6 +19,7 @@
 #include <l4/sys/l4int.h>
 #include <l4/sigma0/sigma0.h>
 #include <l4/crtx/ctor.h>
+#include <l4/sys/kdebug.h>
 
 #include <stdio.h>
 
@@ -49,7 +50,7 @@ static unsigned request_page(void *addr)
   if(l4_thread_equal(pager_id, L4_INVALID_ID) && get_pager() != 0)
     {
       /* no pager, can't allocate memory */
-      printf("morecore: no pager!\n");
+      outstring("morecore: no pager!\n");
       return 0;
     }
 
@@ -76,7 +77,7 @@ static void libc_backend_sigma0_pool_mem_init(void)
 
   if (addr + libc_backend_sigma0_pool_mem_size > sigma0_heap_limit)
     {
-      printf("Requested pool size for libc_backend_sigma0_pool_mem too big!\n");
+      outstring("Requested pool size for libc_backend_sigma0_pool_mem too big!\n");
       return;
     }
 
@@ -85,7 +86,9 @@ static void libc_backend_sigma0_pool_mem_init(void)
     {
       if (!request_page(addr))
 	{
-	  printf("Allocation of page to %p failed\n", addr);
+          outstring("Allocation of page of ");
+          outhex32((l4_umword_t)addr);
+          outstring("failed\n");
 	  return;
 	}
     }

@@ -123,7 +123,8 @@
      static_cast<Tb_entry_ipc_sfl*>(Jdb_tbuf::new_entry());             \
   tb->set(this, ef->ip(), regs->snd_desc(), regs->rcv_desc(),           \
                 regs->timeout(), regs->snd_dst(), 0, 0,                 \
-		!dst->sender_ok(this), dst->thread_lock()->test(),	\
+		!dst->is_tcb_mapped() || !dst->sender_ok(this),         \
+                dst->is_tcb_mapped()?(dst->thread_lock()->test()):0,	\
 		can_preempt);                                           \
   Jdb_tbuf::commit_entry();                                             \
   END_LOG_EVENT

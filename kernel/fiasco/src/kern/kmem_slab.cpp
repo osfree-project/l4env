@@ -2,6 +2,8 @@ INTERFACE:
 
 #include "kmem_slab_simple.h"
 
+#include "config.h"
+
 class Kmem_slab : public Kmem_slab_simple
 {
 };
@@ -30,12 +32,24 @@ IMPLEMENTATION:
 
 #include <cassert>
 
-#include "config.h"
 #include "vmem_alloc.h"
 #include "kmem.h"
 #include "mapped_alloc.h"
 #include "mem_layout.h"
 #include "region.h"
+
+PRIVATE static
+void
+Kmem_slab::init_region_map()
+{  
+  static bool region_initialized = false;
+
+  if (!region_initialized)
+    {
+      region_initialized = true; 
+      Region::init (Mem_layout::Slabs_start, Mem_layout::Slabs_end);
+    }
+}
 
 
 PUBLIC
@@ -43,14 +57,17 @@ Kmem_slab::Kmem_slab(unsigned long slab_size, unsigned elem_size,
 		     unsigned alignment, char const *name)
   : Kmem_slab_simple (slab_size, elem_size, alignment, name)
 {
-  static bool region_initialized = false;
+  init_region_map();
+}
 
-  if (!region_initialized)
-    {
-      region_initialized = true; // set this first to avoid recursion
-                                 // because region allocs a slab of its own
-      Region::init (Mem_layout::Slabs_start, Mem_layout::Slabs_end);
-    }
+PUBLIC
+Kmem_slab::Kmem_slab(unsigned elem_size, 
+		     unsigned alignment, char const *name,
+		     unsigned long min_size = Config::PAGE_SIZE,
+		     unsigned long max_size = Config::PAGE_SIZE * 32)
+  : Kmem_slab_simple (elem_size, alignment, name, min_size, max_size)
+{
+  init_region_map();
 }
 
 // Callback functions called by our super class, slab_cache_anon, to

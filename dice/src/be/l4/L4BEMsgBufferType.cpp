@@ -221,6 +221,7 @@ CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
     string sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
     // now create member
     pMember->CreateBackEnd(pType, sName);
+    delete pType; /* cloned in CreateBackEnd */
     // add directional attribute
     CBEAttribute *pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pMember);

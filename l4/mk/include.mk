@@ -27,7 +27,7 @@ INSTALLDIR_LOCAL	= $(INSTALLDIR_INC_LOCAL)
 
 ifeq ($(origin TARGET),undefined)
 # use POSIX -print here
-TARGET_CMD		:= find . -name \*.h -print
+TARGET_CMD		:= find . -name '*.[ih]' -print
 else
 TARGET_CMD		:= echo $(TARGET)
 endif

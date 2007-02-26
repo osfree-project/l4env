@@ -15,7 +15,7 @@ class Io_space
 public:
   enum {
     Map_page_size = 1,
-    Map_superpage_size = 0x100,
+    Map_superpage_size = 0x10000,
     Map_max_address = 0x10000,
   };
 
@@ -102,6 +102,11 @@ Io_space::~Io_space ()
     }
 }
 
+PRIVATE inline
+bool
+Io_space::is_superpage()
+{ return _io_counter & 0x10000000; }
+
 PUBLIC inline
 void
 Io_space::init (Mem_space* s)
@@ -130,11 +135,19 @@ Io_space::v_fabricate (unsigned /*task_id*/, Address address,
   return false;
 }
 
-PUBLIC inline 
+PUBLIC inline NEEDS[Io_space::is_superpage] 
 bool 
 Io_space::v_lookup (Address virt, Address *phys = 0, Address *size = 0,
 		    unsigned *attribs = 0)
 {
+  if (is_superpage())
+    {
+      if (size) *size = Map_superpage_size;
+      if (phys) *phys = 0;
+      if (attribs) *attribs = Page_writable | Page_user_accessible;
+      return true;
+    }
+
   if (size) *size = 1;
 
   if (io_lookup (virt))
@@ -144,10 +157,16 @@ Io_space::v_lookup (Address virt, Address *phys = 0, Address *size = 0,
       return true;
     }
 
+  if (get_io_counter() == 0)
+    {
+      if (size) *size = Map_superpage_size;
+      if (phys) *phys = 0;
+    }
+
   return false;
 }
 
-PUBLIC inline
+PUBLIC inline NEEDS [Io_space::is_superpage]
 unsigned long
 Io_space::v_delete (Address virt, unsigned long size, 
 		    unsigned long page_attribs = Page_all_attribs)
@@ -155,6 +174,14 @@ Io_space::v_delete (Address virt, unsigned long size,
   (void)size;
   (void)page_attribs;
   assert (page_attribs == Page_all_attribs);
+
+  if (is_superpage())
+    {
+      assert (size == Map_superpage_size);
+      _io_counter = 0;
+      return Page_writable | Page_user_accessible;
+    }
+
   assert (size == 1);
 
   return io_delete (virt);
@@ -170,6 +197,12 @@ Io_space::v_insert (Address phys, Address virt, size_t size,
   (void)page_attribs;
 
   assert (phys == virt);
+  if (get_io_counter() == 0 && size == Map_superpage_size)
+    {
+      _io_counter = 0x10000000 | Map_superpage_size;
+      return Insert_ok;
+    }
+  
   assert (size == 1);
 
   return Io_space::Status (io_insert (virt));
@@ -179,7 +212,7 @@ PUBLIC inline
 bool
 Io_space::is_mappable (Address virt, size_t size)
 {
-  return virt < 0x10000U && size == 1;
+  return virt < 0x10000U && (size == 1 || size == Map_superpage_size);
 }
 
 PUBLIC inline static
@@ -203,7 +236,7 @@ PUBLIC inline NEEDS["paging.h"]
 Mword
 Io_space::get_io_counter() const
 {
-  return _io_counter;
+  return _io_counter & ~0x10000000;
 }
 
 

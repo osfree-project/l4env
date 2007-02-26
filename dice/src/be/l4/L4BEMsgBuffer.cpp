@@ -996,6 +996,7 @@ bool
 CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct, 
     int nPosition)
 {
+    assert(pStruct);
     // get start of payload
     CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
     assert(pType);
@@ -1020,6 +1021,7 @@ CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct,
     if (iter == pStruct->m_Members.end())
 	return true;
 
+    assert(*iter);
     // otherwise, the member is a refstring and the previous members are less
     // than the minimal position. Pad them with words until minimal size
     // is reached.
@@ -1027,12 +1029,15 @@ CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct,
     {
 	int nPadding = nPosition - nSize;
     	int nWordSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
+	// store member before which to insert padding into extra variable,
+	// because if first padding succeeds, the iterator is no longer valid
+	CBETypedDeclarator *pMember = *iter;
 	if (nPadding % nWordSize)
 	    InsertPadMember(TYPE_BYTE, nPadding % nWordSize,
-		*iter, pStruct);
+		pMember, pStruct);
 	if (nPadding / nWordSize)
 	    InsertPadMember(TYPE_MWORD, nPadding / nWordSize,
-		*iter, pStruct);
+		pMember, pStruct);
     }
     
     return true;
@@ -1077,6 +1082,7 @@ CL4BEMsgBuffer::InsertPadMember(int nFEType,
 	    // create padding member
 	    pPadMember = pCF->GetNewTypedDeclarator();
 	    pPadMember->CreateBackEnd(pType, sName);
+	    delete pType; /* cloned in CBETypedDeclarator::CreateBackEnd */
 	    // add array with size difference
 	    if (nSize > 1)
 	    {

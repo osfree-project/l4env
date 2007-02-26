@@ -157,7 +157,10 @@ int Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc,
 	 return 2;
 
       if (cpu_lock.test())
-	kdb_ke("Forbidden page fault under CPU lock! FIX ME!");
+	{
+	  LOG_MSG_3VAL(current(), "Bad", pfa, error_code, pc);
+	  kdb_ke("Forbidden page fault under CPU lock! FIX ME!");
+	}
 
       if (PF::is_translation_error(error_code))   // page not present
         {

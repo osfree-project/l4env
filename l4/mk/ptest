@@ -18,6 +18,7 @@ use strict;
 use Getopt::Long;
 
 my $FIASCOUX;
+my $FIASCOUX_PARAM;
 my $L4DIR;
 my $OBJ_BASE;
 my $OBJDIR = 'OBJ-x86_586-l4v2';
@@ -69,6 +70,7 @@ $0 [options] -c <client> -s <server>
 
  --l4dir, -l path         Path to an L4 directory
  --fiascoux, -f file      Path to the Fiasco-UX binary
+ --fiascoux_param, -p params Parameters for Fiasco-UX
  --memory, -m megabyte    Number of Megabytes used by Fiasco. (default: 32)
  --objdir, -O objdir      Object dir, currently: $OBJDIR
  --verbose, -v            Be verbose (e.g. show output of L4 apps)
@@ -123,17 +125,22 @@ sub check_for_fiasco_ux() {
 }
 
 # check for user app in binary path of L4
-sub check_user_app {
-  my $app = shift;
+sub check_user_app($)
+{
+  my $app_with_args = shift;
 
   # extract arch and api from OBJ-dir
   $OBJDIR =~ /OBJ-([^-]*)-(.*)/;
   my $arch = $1;
   my $api = $2;
 
+  my @check = split(/\s+/, $app_with_args);
+  my $app = shift @check;
+
   my $p = sprintf "%s/bin/%s/%s/%s", $OBJ_BASE, $arch, $api, $app;
   die "There's no $p!" unless -f $p;
 
+  return $p.'\\ '.join('\\ ', @check) if @check;
   $p;
 }
 
@@ -250,6 +257,7 @@ sub set_alarm {
 sub fiascoux_cmdline() {
   (my $p = $FIASCOUX) =~ s/\/[^\/]+$//;
   my $cmdline = "$FIASCOUX";
+  $cmdline .= " $FIASCOUX_PARAM" if defined $FIASCOUX_PARAM;
   $cmdline .= " -symbols $Fiasco_Dir/Symbols" if $Use_Symbols;
   $cmdline .= " -lines $Fiasco_Dir/Lines" if $Use_Lines;
   $cmdline .= " -m $Memory";
@@ -380,6 +388,7 @@ unless (GetOptions("help|h", sub { usage(); exit(0); },
                    "l4dir|l=s", \$L4DIR,
 		   "builddir=s", \$OBJ_BASE,
 		   "fiascoux|f=s", \$FIASCOUX,
+		   "fiascoux_param|p=s", \$FIASCOUX_PARAM,
 		   "memory|m=s", \$Memory,
 		   "objdir|O=s", \$OBJDIR,
 		   "verbose|v!", \$Verbose,

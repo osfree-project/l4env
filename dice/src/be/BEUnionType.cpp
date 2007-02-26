@@ -463,28 +463,28 @@ int CBEUnionType::GetFixedSize()
     int nSize = 0;
     vector<CBEUnionCase*>::iterator iter;
     for (iter = m_UnionCases.begin();
-	 iter != m_UnionCases.end();
-	 iter++)
+	iter != m_UnionCases.end();
+	iter++)
     {
-        int nUnionSize = (*iter)->GetSize();
-        // if this is negative size, then its variable sized
-        // and we skip it here (the max operation will simply ignore it)
-        if (nSize < nUnionSize)
-            nSize = nUnionSize;
+	int nUnionSize = (*iter)->GetSize();
+	// if this is negative size, then its variable sized
+	// and we skip it here (the max operation will simply ignore it)
+	if (nSize < nUnionSize)
+	    nSize = nUnionSize;
     }
 
     if (m_UnionCases.empty() && (nSize == 0))
     {
-       // forward declared union -> find definition of union
-       if (m_sTag.empty())
-           return nSize;
+	// forward declared union -> find definition of union
+	if (m_sTag.empty())
+	    return nSize;
 
-        CBERoot *pRoot = GetSpecificParent<CBERoot>();
-        assert(pRoot);
-        CBEType *pType = pRoot->FindTaggedType(TYPE_UNION, m_sTag);
-       if (!pType)
-           return nSize;
-       nSize = pType->GetSize();
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	CBEType *pType = pRoot->FindTaggedType(TYPE_UNION, m_sTag);
+	if (!pType)
+	    return nSize;
+	nSize = pType->GetSize();
     }
 
     return nSize;

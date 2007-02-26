@@ -4,34 +4,75 @@ use strict;
 
 my %modules =
  (
-   bid => { paths => [ qw(l4/Makefile l4/tool/Makefile l4/mk l4/pkg/COPYING
-                        l4/COPYING l4/pkg/Makefile l4/tool/gendep
-			l4/tool/config l4/tool/gosh) ],
+   bid => { paths => [ qw(repomgr
+                          l4/Makefile
+                          l4/mk
+                          l4/COPYING
+			  l4/pkg/COPYING
+			  l4/pkg/Makefile
+			  l4/tool/Makefile
+			  l4/tool/gendep
+			  l4/tool/config
+			  l4/tool/gosh
+		         ) ],
           },
 
-   doc => { paths => [ qw(l4/doc) ], },
+   doc => { paths => [ qw(l4/doc/Makefile
+                          l4/doc/README
+			  l4/doc/bid-spec
+			  l4/doc/bid-tut
+			  l4/doc/building-howto
+			  l4/doc/dev-overview
+			  l4/doc/l4env-concept
+                         ) ], },
 
    l4env_pkg => {
-      paths => [ qw(l4/pkg/l4con l4/pkg/crtx l4/pkg/cxx l4/pkg/demangle
-                    l4/pkg/dm_generic l4/pkg/dm_mem l4/pkg/dm_phys
-                    l4/pkg/events l4/pkg/generic_blk l4/pkg/generic_fprov
-                    l4/pkg/generic_io l4/pkg/generic_ts l4/pkg/l4env
-                    l4/pkg/exec l4/pkg/linux-24-headers l4/pkg/l4io
-                    l4/pkg/l4rm l4/pkg/l4sys l4/pkg/l4util l4/pkg/input
-                    l4/pkg/loader
-                    l4/pkg/lock l4/pkg/log l4/pkg/names l4/pkg/pci
-                    l4/pkg/omega0 l4/pkg/serial l4/pkg/semaphore
-                    l4/pkg/libsigma0 l4/pkg/ldso
-                    l4/pkg/sigma0 l4/pkg/simple_ts l4/pkg/slab l4/pkg/tftp
-                    l4/pkg/thread l4/pkg/x86emu
-                    l4/pkg/roottask
+      paths => [ qw(l4/pkg/bootstrap
+		    l4/pkg/cxx
+		    l4/pkg/demangle
+		    l4/pkg/dm_mem
+		    l4/pkg/dm_phys
+		    l4/pkg/generic_blk
+		    l4/pkg/generic_fprov
+		    l4/pkg/generic_ts
+		    l4/pkg/input
+                    l4/pkg/l4con
+		    l4/pkg/l4env
+		    l4/pkg/l4io
+		    l4/pkg/l4sys
+		    l4/pkg/l4util
+		    l4/pkg/ldso
 		    l4/pkg/libc_backends
 		    l4/pkg/libc_backends_l4env
-                    l4/pkg/libc_support l4/pkg/bootstrap
-		    l4/pkg/lxfuxlibc ) ], },
+		    l4/pkg/linux-24-headers
+		    l4/pkg/log
+		    l4/pkg/lxfuxlibc
+		    l4/pkg/names
+		    l4/pkg/pci
+		    l4/pkg/semaphore
+		    l4/pkg/serial
+		    l4/pkg/simple_ts
+		    l4/pkg/slab
+		    l4/pkg/tftp
+		    l4/pkg/x86emu
+                    l4/pkg/crtx
+                    l4/pkg/dm_generic
+                    l4/pkg/events
+                    l4/pkg/exec
+                    l4/pkg/generic_io
+                    l4/pkg/l4rm
+                    l4/pkg/libc_support
+                    l4/pkg/libsigma0
+                    l4/pkg/loader
+                    l4/pkg/lock
+                    l4/pkg/omega0
+                    l4/pkg/roottask
+                    l4/pkg/sigma0
+                    l4/pkg/thread
+		    ) ], },
 
    l4env_tools => {
-      paths => [ qw(dice l4/tool/bin/abs2rel.sh l4/tool/bin/genoffsets.pl) ]
+      paths => [ qw(l4/tool/bin/abs2rel.sh l4/tool/bin/genoffsets.pl) ]
    },
 
    preprocess => {
@@ -55,10 +96,19 @@ my %modules =
    },
 
    hello_pkg => {
-      paths => [ qw(l4/pkg/uclibc l4/pkg/l4sys l4/pkg/hello
-                    l4/pkg/libc_support l4/pkg/l4util l4/pkg/roottask
-                    l4/pkg/libsigma0 l4/pkg/sigma0 l4/pkg/crtx
-                    l4/pkg/demangle l4/pkg/bootstrap l4/pkg/cxx) ],
+      paths => [ qw(l4/pkg/bootstrap
+		    l4/pkg/crtx
+		    l4/pkg/cxx
+                    l4/pkg/demangle
+		    l4/pkg/hello
+		    l4/pkg/l4util
+                    l4/pkg/l4sys
+                    l4/pkg/libc_support
+                    l4/pkg/libsigma0
+		    l4/pkg/roottask
+		    l4/pkg/sigma0
+                    l4/pkg/uclibc
+		   ) ],
    },
 
    hello => {
@@ -78,11 +128,15 @@ my %modules =
    },
 
    fiasco => {
-      paths   => [ qw(kernel/fiasco/src kernel/fiasco/man kernel/fiasco/tool
-                      kernel/fiasco/Makefile kernel/fiasco/COPYING
-                      kernel/fiasco/mksnap kernel/fiasco/MAINTAINER
+      paths   => [ qw(kernel/fiasco/COPYING
+                      kernel/fiasco/MAINTAINER
+                      kernel/fiasco/Makefile
                       kernel/fiasco/README
-                      kernel/fiasco/doc/design/ipc-path-charts) ],
+                      kernel/fiasco/doc/design/ipc-path-charts
+                      kernel/fiasco/man
+                      kernel/fiasco/src
+                      kernel/fiasco/tool
+                     ) ],
       modules => [ qw(preprocess) ],
    },
    
@@ -90,22 +144,49 @@ my %modules =
       paths => [ qw(kernel/Makefile) ],
    },
 
-   remote_repo => {
-      modules => [ qw(bid fiasco hello l4env l4env_diet l4env_uclibc
-                      dope misc) ],
-      paths   => [ qw(l4/pkg/overlay_wm l4/pkg/dde_linux26
-                      l4/pkg/linux-26-headers l4/pkg/dde_linux l4/pkg/l4ide
-                      l4/pkg/ore l4/pkg/l4vfs l4/pkg/flips
-                      l4/pkg/socket_linux l4/pkg/libpng l4/pkg/nethub
-                      l4/pkg/pingpong l4/pkg/verner l4/pkg/cxx_log_io
-                      l4/pkg/cxx_linux_io l4/pkg/dmon l4/pkg/dsi
-                      l4/pkg/dsi_example l4/pkg/cpu_reserve l4/pkg/libvfb
-                      l4/pkg/rt_mon l4/pkg/presenter l4/pkg/petze
-                      l4/pkg/dice_hello l4/pkg/signal l4/pkg/nitpicker
-                      l4/pkg/uclibc++ l4/pkg/c++-examples
-                      l4/pkg/local_socks l4/pkg/qt3 l4/pkg/ipreg
-                      l4/pkg/arm_drivers l4/pkg/ipcmon) ],
-     },
+   dice => {
+      paths => [ qw(dice) ],
+   },
+
+   remote_repo_l4 => {
+      modules => [ qw(bid l4env l4env_diet l4env_uclibc dope misc) ],
+      paths   => [ qw(l4/pkg/arm_drivers
+                      l4/pkg/c++-examples
+                      l4/pkg/cpu_reserve
+                      l4/pkg/cxx_linux_io
+                      l4/pkg/cxx_log_io
+                      l4/pkg/dde_linux
+                      l4/pkg/dde_linux26
+                      l4/pkg/dice_hello
+                      l4/pkg/dmon
+                      l4/pkg/dsi
+                      l4/pkg/dsi_example
+                      l4/pkg/flips
+                      l4/pkg/ipcmon
+                      l4/pkg/ipreg
+                      l4/pkg/l4ide
+                      l4/pkg/l4vfs
+                      l4/pkg/libpng
+                      l4/pkg/libvfb
+                      l4/pkg/linux-26-headers
+                      l4/pkg/local_socks
+                      l4/pkg/nethub
+                      l4/pkg/nitpicker
+                      l4/pkg/ore
+                      l4/pkg/overlay_wm
+                      l4/pkg/petze
+                      l4/pkg/pingpong
+                      l4/pkg/presenter
+                      l4/pkg/qt3
+                      l4/pkg/rt_mon
+                      l4/pkg/signal
+                      l4/pkg/socket_linux
+                      l4/pkg/uclibc++
+                      l4/pkg/verner
+                     ) ],
+   },
+
+   remote_repo => { modules => [ qw(fiasco dice remote_repo_l4) ], },
 
    all => {
       modules => [ qw(remote_repo) ],
@@ -205,6 +286,8 @@ sub command_checkout
       exit 1;
     }
 
+  die "Current directory is no SVN WC" unless -d ".svn";
+
   my @paths = merge_modules(@_);
 
   foreach my $paths (@paths)
@@ -217,7 +300,7 @@ sub command_checkout
         {
           if (! -d "$path/$pe/.svn")
             {
-              print "Creating $paths\n";
+              print "Creating $path/$pe\n";
 
               system("cd $path && svn --quiet update -N $pe");
               die "svn update failed" if $?;

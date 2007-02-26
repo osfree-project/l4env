@@ -623,9 +623,12 @@ Thread::handle_io_page_fault (Trap_state *ts, Address eip, bool from_user)
       (ts->_trapno == 13 && (ts->_err & 7) == 0 ||
        ts->_trapno == 14 && Kmem::is_io_bitmap_page_fault (ts->_cr2)))
     {
+
       unsigned port, size;
       if (get_ioport (eip, ts, &port, &size))
         {
+	  if (space()->is_privileged() && gain_iopl(ts))
+	    return 1;
 	  Mword io_page = L4_fpage::io (port, size, 0).raw();
           Ipc_err ipc_code;
 

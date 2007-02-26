@@ -51,7 +51,8 @@ ifneq ($(TEST_CLIENT),)
 TEST_CLIENT_PARAM = $(addprefix -c ,$(TEST_CLIENT))
 endif
 ifneq ($(BASE_SERVERS),)
-BASESERVERS	= $(addprefix -b ,$(BASE_SERVERS))
+$(warning $(BASE_SERVERS))
+BASESERVERS     = $(foreach server, $(BASE_SERVERS), -b $(server) $(BASE_SERVERS_PARAM_$(server)))
 endif
 
 # expected output and what to do on mismatch
@@ -71,6 +72,10 @@ endif
 
 ifneq ($(MEMORY),)
 MEMORY_		= -m $(MEMORY)
+endif
+
+ifneq ($(FIASCOUX_PARAM),)
+FIASCOUX_PARAM_ = -p $(FIASCOUX_PARAM)
 endif
 
 # allow failure of test
@@ -132,7 +137,8 @@ ptest:: $(EXPECTED_OUT) $(BID_OBJ_Makefile).inc
 		L4DIR=$(L4DIR) OBJ_BASE=$(OBJ_BASE) TMP_OUT=$(TMP_OUT) \
 		COMPARE_CMD=$(COMPARE_CMD) \
 		$(L4DIR)/mk/ptest -s $(TEST_SERVER) $(TEST_CLIENT_PARAM) \
-		-f $(FIASCOUX) -t $(TIMEOUT) -O OBJ-$(SYSTEM) \
+		-f $(FIASCOUX) $(FIASCOUX_PARAM_) -t $(TIMEOUT) \
+		-O OBJ-$(SYSTEM) \
 		$(BASESERVERS) $(DEBUG_PERL_) $(MEMORY_) $(EXPECT_FAIL_) \
 		$(FILTER_KEEP_) $(NO_FBUF_DEV_) $(USE_SYMBOLS_) $(USE_LINES_)
 
@@ -144,7 +150,8 @@ $(EXPECTED_OUT):
 		L4DIR=$(L4DIR) OBJ_BASE=$(OBJ_BASE) TMP_OUT=$(TMP_OUT) \
 		COMPARE=$(COMPARE_CMD) \
 		$(L4DIR)/mk/ptest -s $(TEST_SERVER) $(TEST_CLIENT_PARAM) \
-		-f $(FIASCOUX) -t $(TIMEOUT) -O OBJ-$(SYSTEM) \
+		-f $(FIASCOUX) $(FIASCOUX_PARAM_) -t $(TIMEOUT) \
+		-O OBJ-$(SYSTEM) \
 		$(BASESERVERS) $(DEBUG_PERL_) $(MEMORY_) $(EXPECT_FAIL_) \
 		$(FILTER_KEEP_) $(NO_FBUF_DEV_) $(USE_SYMBOLS_) $(USE_LINES_) \
 		--generate
@@ -156,7 +163,8 @@ plainrun:: $(BID_OBJ_Makefile).inc
 		L4DIR=$(L4DIR) OBJ_BASE=$(OBJ_BASE) TMP_OUT=$(TMP_OUT) \
 		COMPARE_CMD=$(COMPARE_CMD) \
 		$(L4DIR)/mk/ptest -s $(TEST_SERVER) $(TEST_CLIENT_PARAM) \
-		-f $(FIASCOUX) -t $(TIMEOUT) -O OBJ-$(SYSTEM) \
+		-f $(FIASCOUX) $(FIASCOUX_PARAM_) -t $(TIMEOUT) \
+		-O OBJ-$(SYSTEM) \
 		$(BASESERVERS) $(DEBUG_PERL_) $(MEMORY_) $(FILTER_KEEP_) \
 		$(NO_FBUF_DEV_) $(USE_SYMBOLS_) $(USE_LINES_) --plainrun
 

@@ -89,6 +89,7 @@ slab::operator delete(void* /*block*/)
 {
   assert (!"slab::operator delete called");
 }
+
   
 PUBLIC
 slab::slab(slab_cache_anon *cache)
@@ -262,6 +263,58 @@ slab::operator new(size_t,
   // slabs must be size-aligned so that we can compute their addresses
   // from element addresses
   return cache->block_alloc(cache->_slab_size, cache->_slab_size);
+}
+
+PUBLIC static
+unsigned
+slab::num_elems(unsigned long slab_size,
+    unsigned elem_size,
+    unsigned alignment)
+{
+  // Compute offset of first slab_entry in slab, not taking into
+  // account the colorization offset.  "slab_entry._entry[]" needs to
+  // be "cache->_alignment"-aligned
+  unsigned long offset_first_elem = 
+    ((sizeof(slab::slab_data) + sizeof (slab::slab_entry) + alignment - 1) 
+     & ~(alignment - 1)) 
+    - sizeof (slab::slab_entry);
+
+  // Compute size of a slab entry, including alignment padding at end
+  // of entry
+  unsigned entry_size = 
+    (sizeof(slab::slab_entry) + elem_size + alignment - 1)
+    & ~(alignment - 1);
+
+  // Compute number of elements fitting into a slab
+  return (slab_size - offset_first_elem) / entry_size;
+}
+
+PUBLIC static
+unsigned
+slab_cache_anon::num_elems(unsigned long slab_size,
+    unsigned elem_size,
+    unsigned alignment)
+{ return slab::num_elems(slab_size, elem_size, alignment); }
+
+// 
+// slab_cache_anon
+// 
+PUBLIC inline
+slab_cache_anon::slab_cache_anon(unsigned elem_size, 
+				 unsigned alignment,
+				 char const * name, 
+				 unsigned long min_size,
+				 unsigned long max_size)
+  : _first_slab(0), _first_available_slab(0), _last_slab(0),
+    _elem_size(elem_size), 
+    _latest_offset(0), _alignment(alignment),
+    _name (name)
+{
+  for (
+      _slab_size = min_size;
+      num_elems(_slab_size, elem_size, alignment) < 8
+        && _slab_size < max_size;
+      _slab_size <<= 1) ;
 }
 
 // 

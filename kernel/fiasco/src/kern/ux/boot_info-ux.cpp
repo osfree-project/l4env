@@ -143,7 +143,8 @@ char Boot_info::_help[] FIASCO_INITDATA =
   "-T          : Test mode -- do not load any modules\n"
   "-s          : Emulate cli/sti instructions\n";
 
-char const *Boot_info::_modules[32] FIASCO_INITDATA =
+
+char const *Boot_info::_modules[64] FIASCO_INITDATA =
 {
   "fiasco",
   "sigma0",
@@ -204,13 +205,14 @@ Boot_info::init()
       case 'l':
         if (modcount < sizeof (_modules) / sizeof (*_modules))
           _modules[owner = modcount++] = optarg;
+	else
+	  fprintf(stderr, "WARNING: max modules exceeded (dropped '%s')\n",
+	      optarg);
         break;
 
       case 'd':
         if (modcount < sizeof (_modules) / sizeof (*_modules))
           {
-            // XXX: Insufficient bounds checking
-
             unsigned len;
             if (owner + 1 == modcount)
               {
@@ -246,6 +248,9 @@ Boot_info::init()
 
             _modules[modcount++] = optarg;
           }
+	else
+	  fprintf(stderr, "WARNING: max modules exceeded (dropped '%s')\n",
+	      optarg);
         break;
 
       case 'f':
@@ -509,6 +514,15 @@ Multiboot_vbe_controller *
 Boot_info::mbi_vbe()
 {
   return reinterpret_cast<Multiboot_vbe_controller *>(_mbi_vbe);
+}
+
+PUBLIC static inline
+unsigned long 
+Boot_info::mbi_size()
+{
+  return (unsigned long)mbi_vbe() 
+    + sizeof (Multiboot_vbe_controller) + sizeof (Multiboot_vbe_mode) 
+    - (unsigned long)mbi_virt();
 }
 
 PUBLIC static inline

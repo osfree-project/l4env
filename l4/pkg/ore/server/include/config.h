@@ -17,7 +17,7 @@
 // maximum number of connections one instance of ORe can handle
 #define ORE_CONFIG_MAX_CONNECTIONS    30
 // maximum size of a packet
-#define ORE_CONFIG_MAX_BUF_SIZE       2000
+#define ORE_CONFIG_MAX_BUF_SIZE       16500
 
 // flags for server-internal state
 #define ORE_FLAG_RX_WAITING           1

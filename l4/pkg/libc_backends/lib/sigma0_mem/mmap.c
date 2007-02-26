@@ -17,6 +17,7 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/l4int.h>
 #include <l4/sigma0/sigma0.h>
+#include <l4/sys/kdebug.h>
 
 #include <stdio.h>
 
@@ -45,7 +46,7 @@ static unsigned request_page(void *addr)
     if(l4_thread_equal(pager_id, L4_INVALID_ID) && get_pager() != 0)
     {
         /* no pager, can't allocate memory */
-        printf("morecore: no pager!\n");
+        outstring("morecore: no pager!\n");
         return 0;
     }
 
@@ -54,8 +55,8 @@ static unsigned request_page(void *addr)
     {
 	switch (err)
 	{
-	case -2: printf("morecore: IPC error!\n"); return 0;
-	case -3: printf("morecore: page request failed!\n"); return 0;
+	case -2: outstring("morecore: IPC error!\n"); return 0;
+	case -3: outstring("morecore: page request failed!\n"); return 0;
 	}
     }
     return 1;
@@ -75,7 +76,7 @@ void * mmap(void *start, size_t length, int prot, int flags, int fd, off_t offse
     }
     if (! (flags & MAP_ANON))
     {
-        printf("mmap() called without MAP_ANON flag, not supported!\n");
+        outstring("mmap() called without MAP_ANON flag, not supported!\n");
         errno = -EINVAL;
         return MAP_FAILED;
     }

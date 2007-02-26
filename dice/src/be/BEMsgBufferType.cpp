@@ -569,12 +569,6 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
 	__func__, pParameter->m_Declarators.First()->GetName().c_str(), 
 	pStruct);
 
-    // check out if the parent of the message buffer (a function) is at the
-    // client or server side. At the server side this message buffer is
-    // probably global (exceptions to this rule have to be handled when they
-    // arise).
-    CBEFunction *pFunc = GetSpecificParent<CBEFunction>();
-    bool bGlobal = (pFunc) ? pFunc->IsComponentSide() : true;
     
     CBEDeclarator *pDecl = pParameter->m_Declarators.First();
     
@@ -693,57 +687,71 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
     // 
     // If no stars but array bounds, rely on those and get the hell outa
     // here
-    if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
-	 pParameter->m_Attributes.Find(ATTR_LENGTH_IS)) &&
-	!pParameter->m_Attributes.Find(ATTR_OUT) &&
-	!((pDecl->GetStars() == 0) && 
-	  (pDecl->GetArrayDimensionCount() > nEmptyBounds)) &&
-	!bGlobal)
-    {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "CBEMsgBufferType::%s param has unbound array dimensions\n",
-	    __func__);
-	// check for stars that have to be removed
-	if (pDecl->GetStars() > 0)
-	    pDecl->IncStars(-1);
-	// add size_is parameter as array bound
-	CBEAttribute *pAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS);
-	if (!pAttr)
-	    pAttr = pParameter->m_Attributes.Find(ATTR_LENGTH_IS);
-	CBEExpression *pExpr = pCF->GetNewExpression();
-	if (pAttr->IsOfType(ATTR_CLASS_INT))
-	{
-	    pExpr->CreateBackEnd(pAttr->GetIntValue());
-	}
-	else if (pAttr->IsOfType(ATTR_CLASS_IS))
-	{
-	    CBEDeclarator *pIsDecl = pAttr->m_Parameters.First();
-	    pExpr->CreateBackEnd(pIsDecl->GetName());
-	}
-	else
-	    pExpr->CreateBackEnd(0);
-	// look for empty bound and remove it (it will be replaced by new
-	// boundary
-	if (nEmptyBounds > 0)
-	{
-	    for (iterB = pDecl->m_Bounds.begin();
-		 iterB != pDecl->m_Bounds.end();
-		 iterB++)
-	    {
-		if ((*iterB)->GetIntValue() == 0)
-		{
-		    pDecl->RemoveArrayBound(*iterB);
-		    break;
-		}
-	    }
-	}
-	pDecl->AddArrayBound(pExpr);
-
-	// return here
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CBEMsgBufferType::%s array fixed, returns\n", __func__);
-	return;
-    }
+    //
+    //     \todo: variable sized arrays should be placed into a byte array and
+    //     be marshalled/unmarshalled with offset variables.
+    //     Because this is not done yet, the size_is size of the array cannot
+    //     be applied if two variable sized arrays are used: the second starts
+    //     at the sender's side right behind the size of the first, but on the
+    //     receiver's side, the max-is size is used for the first array.
+    //
+    // check out if the parent of the message buffer (a function) is at the
+    // client or server side. At the server side this message buffer is
+    // probably global (exceptions to this rule have to be handled when they
+    // arise).
+//     CBEFunction *pFunc = GetSpecificParent<CBEFunction>();
+//     bool bGlobal = (pFunc) ? pFunc->IsComponentSide() : true;
+//     if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
+// 	 pParameter->m_Attributes.Find(ATTR_LENGTH_IS)) &&
+// 	!pParameter->m_Attributes.Find(ATTR_OUT) &&
+// 	!((pDecl->GetStars() == 0) && 
+// 	  (pDecl->GetArrayDimensionCount() > nEmptyBounds)) &&
+// 	!bGlobal)
+//     {
+// 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+// 	    "CBEMsgBufferType::%s param has unbound array dimensions\n",
+// 	    __func__);
+// 	// check for stars that have to be removed
+// 	if (pDecl->GetStars() > 0)
+// 	    pDecl->IncStars(-1);
+// 	// add size_is parameter as array bound
+// 	CBEAttribute *pAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS);
+// 	if (!pAttr)
+// 	    pAttr = pParameter->m_Attributes.Find(ATTR_LENGTH_IS);
+// 	CBEExpression *pExpr = pCF->GetNewExpression();
+// 	if (pAttr->IsOfType(ATTR_CLASS_INT))
+// 	{
+// 	    pExpr->CreateBackEnd(pAttr->GetIntValue());
+// 	}
+// 	else if (pAttr->IsOfType(ATTR_CLASS_IS))
+// 	{
+// 	    CBEDeclarator *pIsDecl = pAttr->m_Parameters.First();
+// 	    pExpr->CreateBackEnd(pIsDecl->GetName());
+// 	}
+// 	else
+// 	    pExpr->CreateBackEnd(0);
+// 	// look for empty bound and remove it (it will be replaced by new
+// 	// boundary
+// 	if (nEmptyBounds > 0)
+// 	{
+// 	    for (iterB = pDecl->m_Bounds.begin();
+// 		 iterB != pDecl->m_Bounds.end();
+// 		 iterB++)
+// 	    {
+// 		if ((*iterB)->GetIntValue() == 0)
+// 		{
+// 		    pDecl->RemoveArrayBound(*iterB);
+// 		    break;
+// 		}
+// 	    }
+// 	}
+// 	pDecl->AddArrayBound(pExpr);
+// 
+// 	// return here
+// 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+// 	    "CBEMsgBufferType::%s array fixed, returns\n", __func__);
+// 	return;
+//     }
     
     // handle arrays: if we have a max_is and no array bounds, we add the
     // max_is as array bound.
@@ -1080,6 +1088,7 @@ CBEMsgBufferType::AddStruct(CBEStructType *pStruct,
 	exc += " union case could not be created.";
         throw new CBECreateException(exc);
     }
+    delete pType; /* cloned in CBETypedDeclarator::CreateBackEnd */
 }
 
 /** \brief checks if a parameter is a string and if it's size parameter is \

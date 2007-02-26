@@ -15,15 +15,9 @@ There you may find a user manual as well as some short tutorials.
 Of course there are also links to a mailing list and many other sources
 of information.
 
-\section User Documentation
-
-I started the first few pieces of user documentation. This currently 
-includes an <a href="http://os.inf.tu-dresden.de/dice/flick.xml">
-Howto on moving from Flick to Dice</a>.
-
 \section license DICE License
 
-Copyright &copy; 2001-2006 by Dresden University of Technology,
+Copyright &copy; 2001-2007 by Tchnische Universität Dresden
 Operating Systems Research Group.
 
 Written by Ronald Aigner.

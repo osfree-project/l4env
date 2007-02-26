@@ -398,9 +398,7 @@ mapping_tree_allocators::mapping_tree_allocators()
 	+ sizeof(Mapping_tree);
 
       auto_ptr<Kmem_slab> alloc (
-			  new Kmem_slab(((Config::PAGE_SIZE / elem_size) < 40
-			  ? 8*Config::PAGE_SIZE : Config::PAGE_SIZE),
-			  elem_size, Mapdb_defs::slab_align,
+			  new Kmem_slab(elem_size, Mapdb_defs::slab_align,
 			  "Mapping_tree"));
       _allocator[slab_number] = alloc;
     }

@@ -6,21 +6,12 @@
 #include "shortcut.h"
 #include "tcboffset.h"
 
-#ifdef CONFIG_IO_PROT
-
 /* be sure that we do not enable the interrupts here! */
 	.macro	RESTORE_IOPL
 	pushl	16(%esp)
 	andl	$~EFLAGS_IF,(%esp)
 	popf
 	.endm
-
-#else
-
-	.macro	RESTORE_IOPL
-	.endm
-
-#endif
 
 /** Some shared macros and stuff shared by the two different 
  *  assembler kernel entry sources.

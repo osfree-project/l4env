@@ -1,3 +1,10 @@
+/****************************************************************
+ * (c) 2005 - 2007 Technische Universitaet Dresden              *
+ * This file is part of DROPS, which is distributed under the   *
+ * terms of the GNU General Public License 2. Please see the    *
+ * COPYING file for details.                                    *
+ ****************************************************************/
+
 #include <l4/sys/types.h>
 #include <l4/dm_generic/types.h>
 #include <l4/ore/ore-types.h>
@@ -14,7 +21,7 @@ library ore
          *  \param tx_blocking   ORE_BLOCKING_CALL for blocking rx,
          *                       ORE_NONBLOCKING_CALL for non-blocking rx
          */
-        int send(   [in,ref,size_is(size), max_is(2000)] char *buf,
+        int send(   [in,ref,size_is(size), max_is(16500)] char *buf,
                     [in] l4_size_t                           size);
          
         /** receive data over an established connection using string IPC
@@ -27,7 +34,7 @@ library ore
          *                       ORE_NONBLOCKING_CALL for non-blocking rx
          */
         [allow_reply_only]
-        int recv([out,prealloc_client,ref,size_is(real_size), max_is(2000)] char **buf,
+        int recv([out,prealloc_client,ref,size_is(real_size), max_is(16500)] char **buf,
                  [in] l4_size_t      size,
                  [out] l4_size_t     *real_size,
                  [in] int            rx_blocking);    

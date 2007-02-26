@@ -28,7 +28,7 @@ refresh:
 
 %:
 	$(MAKE) -I$(srcdir)  -f $(srcdir)/Makefile \
-	  srcdir=$(srcdir) "$@"
+	  srcdir=$(srcdir) objbase=. "$@"
 
 .PHONY: refresh testconfig
 

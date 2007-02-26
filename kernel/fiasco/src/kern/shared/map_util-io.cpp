@@ -8,12 +8,14 @@ IMPLEMENTATION[{ia32,amd64}-io]:
 #include "l4_types.h"
 #include "assert.h"
 #include "space.h"
+#include "io_space.h"
 
 Mapdb*
 io_mapdb_instance()
 {
-  static const size_t io_page_sizes[] = {0x100, 1};
-  static Mapdb mapdb (0x10000 / io_page_sizes[0], io_page_sizes, 2);
+  static const size_t io_page_sizes[] = 
+    {Io_space::Map_superpage_size, 0x200, Io_space::Map_page_size};
+  static Mapdb mapdb (0x10000 / io_page_sizes[0], io_page_sizes, 3);
 
   return &mapdb;
 }
