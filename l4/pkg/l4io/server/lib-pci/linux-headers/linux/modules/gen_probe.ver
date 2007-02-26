@@ -1,2 +1,0 @@
-#define __ver_mtd_do_chip_probe	smp_ddd5d3d8
-#define mtd_do_chip_probe	_set_ver(mtd_do_chip_probe)

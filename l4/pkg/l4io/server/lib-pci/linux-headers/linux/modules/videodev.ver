@@ -1,4 +1,0 @@
-#define __ver_video_register_device	smp_ab2b6716
-#define video_register_device	_set_ver(video_register_device)
-#define __ver_video_unregister_device	smp_03154fd4
-#define video_unregister_device	_set_ver(video_unregister_device)

@@ -1,4 +1,0 @@
-#define __ver_capifs_new_ncci	smp_598f271d
-#define capifs_new_ncci	_set_ver(capifs_new_ncci)
-#define __ver_capifs_free_ncci	smp_98e7f4b7
-#define capifs_free_ncci	_set_ver(capifs_free_ncci)

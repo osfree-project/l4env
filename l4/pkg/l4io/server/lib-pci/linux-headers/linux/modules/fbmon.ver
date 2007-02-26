@@ -1,2 +1,0 @@
-#define __ver_fbmon_valid_timings	smp_574d2ee7
-#define fbmon_valid_timings	_set_ver(fbmon_valid_timings)

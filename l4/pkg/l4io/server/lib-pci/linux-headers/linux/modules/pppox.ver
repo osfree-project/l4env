@@ -1,6 +1,0 @@
-#define __ver_register_pppox_proto	smp_9b384ac6
-#define register_pppox_proto	_set_ver(register_pppox_proto)
-#define __ver_unregister_pppox_proto	smp_e0ff7a18
-#define unregister_pppox_proto	_set_ver(unregister_pppox_proto)
-#define __ver_pppox_unbind_sock	smp_713b15bc
-#define pppox_unbind_sock	_set_ver(pppox_unbind_sock)

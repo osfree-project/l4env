@@ -1,2 +1,0 @@
-#define __ver_register_isdn	smp_9f752ac2
-#define register_isdn	_set_ver(register_isdn)

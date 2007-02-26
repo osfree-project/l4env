@@ -1,4 +1,0 @@
-#define __ver_pwc_register_decompressor	smp_b96c2d3b
-#define pwc_register_decompressor	_set_ver(pwc_register_decompressor)
-#define __ver_pwc_unregister_decompressor	smp_f9a969b5
-#define pwc_unregister_decompressor	_set_ver(pwc_unregister_decompressor)

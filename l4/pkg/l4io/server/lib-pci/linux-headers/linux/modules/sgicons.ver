@@ -1,4 +1,0 @@
-#define __ver_disable_gconsole	smp_e3789ed6
-#define disable_gconsole	_set_ver(disable_gconsole)
-#define __ver_enable_gconsole	smp_1ac6778f
-#define enable_gconsole	_set_ver(enable_gconsole)

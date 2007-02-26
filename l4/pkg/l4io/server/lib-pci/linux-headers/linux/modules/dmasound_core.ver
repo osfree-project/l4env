@@ -1,8 +1,0 @@
-#define __ver_dmasound	smp_cc7f198e
-#define dmasound	_set_ver(dmasound)
-#define __ver_dmasound_init	smp_47edde25
-#define dmasound_init	_set_ver(dmasound_init)
-#define __ver_dmasound_write_sq	smp_1fd9862a
-#define dmasound_write_sq	_set_ver(dmasound_write_sq)
-#define __ver_dmasound_catchRadius	smp_4b9f5770
-#define dmasound_catchRadius	_set_ver(dmasound_catchRadius)

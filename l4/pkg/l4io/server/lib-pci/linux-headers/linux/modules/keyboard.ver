@@ -1,6 +1,0 @@
-#define __ver_handle_scancode	smp_d3d6a2f1
-#define handle_scancode	_set_ver(handle_scancode)
-#define __ver_kbd_ledfunc	smp_fa67cc5f
-#define kbd_ledfunc	_set_ver(kbd_ledfunc)
-#define __ver_keyboard_tasklet	smp_28aa0faa
-#define keyboard_tasklet	_set_ver(keyboard_tasklet)

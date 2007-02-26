@@ -1,4 +1,0 @@
-#define __ver_opl3_init	smp_1afd20ac
-#define opl3_init	_set_ver(opl3_init)
-#define __ver_opl3_detect	smp_67481767
-#define opl3_detect	_set_ver(opl3_detect)

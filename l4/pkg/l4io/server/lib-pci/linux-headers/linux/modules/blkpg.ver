@@ -1,2 +1,0 @@
-#define __ver_blk_ioctl	smp_e7800428
-#define blk_ioctl	_set_ver(blk_ioctl)

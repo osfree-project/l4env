@@ -1,4 +1,0 @@
-#define __ver_register_snap_client	smp_1be4cb82
-#define register_snap_client	_set_ver(register_snap_client)
-#define __ver_unregister_snap_client	smp_9abefc50
-#define unregister_snap_client	_set_ver(unregister_snap_client)

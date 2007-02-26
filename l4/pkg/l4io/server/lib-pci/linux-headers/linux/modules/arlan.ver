@@ -1,8 +1,0 @@
-#define __ver_arlan_device	smp_b612f515
-#define arlan_device	_set_ver(arlan_device)
-#define __ver_arlan_conf	smp_64980e03
-#define arlan_conf	_set_ver(arlan_conf)
-#define __ver_last_arlan	smp_2ea834a0
-#define last_arlan	_set_ver(last_arlan)
-#define __ver_arlan_command	smp_63c91d45
-#define arlan_command	_set_ver(arlan_command)

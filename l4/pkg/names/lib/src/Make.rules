@@ -1,8 +1,0 @@
-TARGET	= lib$(PKGNAME).a
-MODE	= sigma0
-
-CPPFLAGS += -I$(PKGDIR)/server/include
-
-SRC_C	= libnames.c names_query_id.c names_query_name.c names_query_nr.c \
-	  names_register.c names_unregister.c names_unregister_task.c \
-	  names_waitfor_name.c

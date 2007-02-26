@@ -1,4 +1,0 @@
-#define __ver_cyber2000fb_attach	smp_d6550c61
-#define cyber2000fb_attach	_set_ver(cyber2000fb_attach)
-#define __ver_cyber2000fb_detach	smp_0cc3ede5
-#define cyber2000fb_detach	_set_ver(cyber2000fb_detach)

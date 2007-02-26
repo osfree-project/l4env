@@ -1,8 +1,0 @@
-#define __ver_sis_malloc	smp_a3329ed5
-#define sis_malloc	_set_ver(sis_malloc)
-#define __ver_sis_free	smp_ced25333
-#define sis_free	_set_ver(sis_free)
-#define __ver_sis_dispinfo	smp_0c4f5f15
-#define sis_dispinfo	_set_ver(sis_dispinfo)
-#define __ver_ivideo	smp_91460595
-#define ivideo	_set_ver(ivideo)

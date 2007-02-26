@@ -1,2 +1,0 @@
-#define __ver_atm_async_release_vcc	smp_f503479e
-#define atm_async_release_vcc	_set_ver(atm_async_release_vcc)

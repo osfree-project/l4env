@@ -1,2 +1,0 @@
-#define __ver_yenta_operations	smp_9246ff96
-#define yenta_operations	_set_ver(yenta_operations)

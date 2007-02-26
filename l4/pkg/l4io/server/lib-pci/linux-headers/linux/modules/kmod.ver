@@ -1,8 +1,0 @@
-#define __ver_hotplug_path	smp_12dcd5a6
-#define hotplug_path	_set_ver(hotplug_path)
-#define __ver_exec_usermodehelper	smp_c47bf6ad
-#define exec_usermodehelper	_set_ver(exec_usermodehelper)
-#define __ver_call_usermodehelper	smp_84a291c8
-#define call_usermodehelper	_set_ver(call_usermodehelper)
-#define __ver_request_module	smp_27e4dc04
-#define request_module	_set_ver(request_module)

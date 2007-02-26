@@ -1,4 +1,0 @@
-#define __ver_ray_dev_ioctl	smp_c4d28ab6
-#define ray_dev_ioctl	_set_ver(ray_dev_ioctl)
-#define __ver_ray_rx	smp_b975673e
-#define ray_rx	_set_ver(ray_rx)

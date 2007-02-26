@@ -1,4 +1,0 @@
-#define __ver_adb_controller	smp_b21bd6ef
-#define adb_controller	_set_ver(adb_controller)
-#define __ver_adb_client_list	smp_7fbb3ff8
-#define adb_client_list	_set_ver(adb_client_list)

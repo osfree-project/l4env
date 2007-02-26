@@ -1,2 +1,0 @@
-#define __ver_DAC960_KernelIOCTL	smp_53011449
-#define DAC960_KernelIOCTL	_set_ver(DAC960_KernelIOCTL)

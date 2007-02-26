@@ -1,4 +1,0 @@
-#define __ver_mtrr_add	smp_56179c5f
-#define mtrr_add	_set_ver(mtrr_add)
-#define __ver_mtrr_del	smp_272d394e
-#define mtrr_del	_set_ver(mtrr_del)
