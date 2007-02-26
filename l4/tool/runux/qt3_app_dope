@@ -1,6 +1,0 @@
-#! /bin/bash
-
-# This is the runux script to start Qt programs
-
-FB_PROVIDER=l4dope-ux ${0%/*}/qt3_app_con "$@"
-

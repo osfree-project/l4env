@@ -1,9 +1,0 @@
-*.ps
-*.log
-*.aux
-*.dvi
-*.pdf
-drops-building
-drops-building.tex
-drops-building.title
-drops-building.flags

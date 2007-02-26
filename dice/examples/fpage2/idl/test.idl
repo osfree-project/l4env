@@ -1,8 +1,0 @@
-library test
-{
-  interface test
-  {
-    long map([in] fpage page, [in] unsigned long offset);
-  };
-};
-
