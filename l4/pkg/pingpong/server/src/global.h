@@ -31,14 +31,18 @@ enum test_type { INTER, INTRA, SINGLE, };
 
 enum callmodes { INT30, SYSENTER, KIPCALL, NR_MODES };
 
-#define BENCH_END	                                             \
-  do { if (fiasco_running) { fiasco_watchdog_enable();               \
-                             fiasco_timer_enable(); } } while (0)
-#define BENCH_BEGIN	                                             \
-  do { if (fiasco_running) { fiasco_timer_disable();                 \
-                             fiasco_watchdog_disable(); } } while (0)
+#define BENCH_END	                                    \
+  do { if (fiasco_running) { if (!ux_running)               \
+                               fiasco_watchdog_enable();    \
+                             fiasco_timer_enable(); }       \
+  } while (0)
+#define BENCH_BEGIN	                                    \
+  do { if (fiasco_running) { fiasco_timer_disable();        \
+                             if (!ux_running)               \
+                               fiasco_watchdog_disable(); } \
+  } while (0)
 
-extern void create_thread(l4_threadid_t id, l4_umword_t eip, 
+extern void create_thread(l4_threadid_t id, l4_umword_t eip,
 			  l4_umword_t esp, l4_threadid_t new_pager);
 extern void test_memory_bandwidth(int nr);
 extern void test_instruction_cycles(int nr);

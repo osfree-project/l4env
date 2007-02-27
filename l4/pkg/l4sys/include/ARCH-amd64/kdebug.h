@@ -156,10 +156,10 @@ L4_INLINE void
 outdec(int number);
 
 /**
- * Read character from console
+ * Read character from console, non blocking
  * \ingroup api_calls_kdebug
  *
- * \return Input character
+ * \return Input character, -1 if no character to read
  */
 L4_INLINE char
 l4kd_inchar(void);

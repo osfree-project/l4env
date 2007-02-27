@@ -90,12 +90,16 @@ Vkey::clear()
 }
 
 
-IMPLEMENTATION [debug-{!serial,ux}]:
+IMPLEMENTATION [debug && (!serial || ux)]:
+
+#include "kernel_console.h"
 
 PUBLIC static
 int
 Vkey::get()
-{ return 0; }
+{
+  return Kconsole::console()->getchar(0);
+}
 
 PUBLIC static
 void
@@ -103,7 +107,7 @@ Vkey::clear()
 {}
 
 
-IMPLEMENTATION[!debug,!serial]:
+IMPLEMENTATION[!debug || !serial]:
 
 PUBLIC static inline
 int

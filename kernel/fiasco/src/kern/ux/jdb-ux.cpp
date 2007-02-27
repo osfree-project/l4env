@@ -74,6 +74,7 @@ IMPLEMENTATION [ux]:
 #include "thread_state.h"
 #include "trap_state.h"
 #include "usermode.h"
+#include "vkey.h"
 
 int (*Jdb::bp_test_log_only)();
 int (*Jdb::bp_test_break)(char *errbuf, size_t bufsize);
@@ -148,7 +149,8 @@ Jdb::int3_extension()
   if (todo == 0x3c && peek ((Unsigned8 *) (addr+1), user) == 13)
     {
       enter_getchar();
-      entry_frame->_eax = getchar();
+      entry_frame->_eax = Vkey::get();
+      Vkey::clear();
       leave_getchar();
       return 1;
     }
