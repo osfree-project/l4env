@@ -74,6 +74,7 @@ l4_int32_t open_network_devices(void)
 
       xmit_lock_add(dev->name);
 
+#if 0
       LOGd(ORE_DEBUG_INIT,"attaching irq");
       if (dev->irq)
         {
@@ -93,6 +94,7 @@ l4_int32_t open_network_devices(void)
               return err;
             }
         }
+#endif
     }
 
   return cnt;

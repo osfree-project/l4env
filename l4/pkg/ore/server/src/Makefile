@@ -19,35 +19,48 @@ SRC_C		=  main.c		\
 		   checksum.c		\
 		   xmit_lock.c		\
 		   worker.c			\
-		   local_deliver.c	\
+		   local_deliver.c
 
-DEFINES 	= -DL4 -D__KERNEL__ -D__ORE__ -DDDE_LINUX	   	
+DEFINES 	+= -DL4 -D__KERNEL__ -D__ORE__ -DDDE_LINUX
 
-PRIVATE_INCDIR = $(PKGDIR_ABS)/server/include/linux_headers 	\
+-include $(PKGDIR_OBJ)/server/Makeconf.bid.local
+.general.d: $(PKGDIR_OBJ)/server/Makeconf.bid.local
+
+ifeq ($(CONFIG_ORE_DDE26),y)
+
+# Most paths & co. come from DDE's Makeconf file
+include $(PKGDIR)/../dde/linux26/Makeconf
+
+PRIVATE_INCDIR += $(PKGDIR_ABS)/server/include \
+		 		  $(PKGDIR_OBJ)/server/include \
+
+LIBS 		+= -llinuxnetdrv26.o -ldde_linux26_net -ldde_linux26 -lddekit -llist_alloc
+
+else # using DDE2.4
+
+PRIVATE_INCDIR += $(PKGDIR_ABS)/server/include/linux_headers 	\
 		 $(DDE_INCDIR)					\
 		 $(LINUX24_INCDIR)				\
 		 $(PKGDIR_ABS)/server/include			\
 		 $(PKGDIR_OBJ)/server/include
-LIBCINCDIR     = -nostdinc -I$(GCCINCDIR)
-
 PRIVATE_LIBDIR = $(PKGDIR_OBJ)/server/lib/linuxemul/OBJ-$(SYSTEM)
+LIBS 		+= -llinuxemul -llinuxnetdrv -ldde_linux
+LDFLAGS		+= -Wl,--whole-archive \
+		   $(PKGDIR_OBJ)/server/lib/net/OBJ-$(SYSTEM)/liblinuxnetdrv.a \
+		   -Wl,--no-whole-archive
 
-LIBS		+= -llinuxemul -levents -llinuxnetdrv -ldde_linux \
-		   -lomega0 -lio -ll4rm -lore_server-worker \
+endif
+
+LIBCINCDIR     += -nostdinc -I$(GCCINCDIR)
+
+LIBS		+= -levents -lomega0 -lio -ll4rm -lore_server-worker \
 		   -lore_server -lore_notify -llist_alloc -lparsecmdline
-
--include $(PKGDIR_OBJ)/server/Makeconf.bid.local
-.general.d: $(PKGDIR_OBJ)/server/Makeconf.bid.local
 
 ifeq ($(CONFIG_ORE_UX_ONLY),y)
 LIBS += -lclxfux.o $(GCCLIB)
 else
 LIBS += $(GCCLIB)
 endif
-
-LDFLAGS		+= -Wl,--whole-archive \
-		   $(PKGDIR_OBJ)/server/lib/net/OBJ-$(SYSTEM)/liblinuxnetdrv.a \
-		   -Wl,--no-whole-archive
 
 ifeq ($(USE_DSI),y)
 SRC_C	  += dsi.c rxtx_dsi.c

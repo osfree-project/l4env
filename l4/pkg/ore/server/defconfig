@@ -5,15 +5,16 @@
 #
 # Supported network cards
 #
+# CONFIG_ORE_DDE26 is not set
 # CONFIG_ORE_UX_ONLY is not set
-CONFIG_ORE_EEPRO100=y
-# CONFIG_ORE_TULIP is not set
-# CONFIG_ORE_PRO1000 is not set
-# CONFIG_ORE_TIGON3 is not set
-# CONFIG_ORE_RHINE is not set
 # CONFIG_ORE_3C59X is not set
 # CONFIG_ORE_PCNET32 is not set
+# CONFIG_ORE_TIGON3 is not set
+CONFIG_ORE_EEPRO100=y
+# CONFIG_ORE_PRO1000 is not set
 # CONFIG_ORE_NE2000 is not set
+# CONFIG_ORE_TULIP is not set
+# CONFIG_ORE_RHINE is not set
 
 #
 # Misc. features

@@ -48,6 +48,7 @@ l4_addr_t
 dmphys_kinfo_get_conventional_mem(enum lowhigh t)
 {
   l4_addr_t val = t == low ? ~0UL : 0UL;
+  l4_addr_t end_trunc;
 
   if (!kinfo)
     kinfo = dmphys_sigma0_kinfo();
@@ -66,8 +67,13 @@ dmphys_kinfo_get_conventional_mem(enum lowhigh t)
 	      val = md->start();
 	    break;
 	  case high:
-	    if (md->end() > val)
-	      val = md->end();
+            /* Limit the upper bound of physical memory to the last address
+             * of the last fully available page, otherwise __map() does not
+             * work correctly. Even works if md->end is 0xffffffff on 32-bit
+             * systems. */
+            end_trunc = l4_trunc_page(md->end() + 1) - 1;
+	    if (end_trunc > val)
+	      val = end_trunc;
 	    break;
 	  }
       }

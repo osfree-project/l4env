@@ -205,7 +205,8 @@ int setup_connection(char *device_name, ore_mac mac,
 {
     LOGd_Enter(ORE_DEBUG);
     LOGd(ORE_DEBUG, "setting up connection for "l4util_idfmt, l4util_idstr(*owner));
-    
+	LOGd(ORE_DEBUG, "device name: %s", device_name);
+
     // check if we have this device name
     ore_connection_table[channel].dev               = dev_get_by_name(device_name);
     if (ore_connection_table[channel].dev == NULL)

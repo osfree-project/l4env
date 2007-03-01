@@ -14,3 +14,6 @@ LIBS	 	+= -lore -lparsecmdline -ldm_phys
 DEFAULT_RELOC  = 0x00980000
 
 include $(L4DIR)/mk/prog.mk
+
+foo :
+	@echo $(L4INCDIR)

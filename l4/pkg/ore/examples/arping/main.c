@@ -36,6 +36,7 @@
 static int arping_verbose = 0;  // verbose
 static int recv_broadcast = 0;  // recv broadcast packets
 static char *ore_name     = NULL;
+static int use_phys       = 0;
 //static int send_dsi       = 0;  // send through dsi
 //static int recv_dsi       = 0;  // receive through dsi
 
@@ -202,6 +203,8 @@ int main(int argc, const char **argv)
               PARSE_CMD_SWITCH, 1, &exit_somewhen,
               'o', "orename", "name of ORe instance to connect to",
               PARSE_CMD_STRING, "ORe", &ore_name,
+			  'p', "phys", "use physical MAC address if possible",
+			  PARSE_CMD_SWITCH, 1, &use_phys,
               'v', "verbose", "verbose output",
               PARSE_CMD_SWITCH, 1, &arping_verbose,
 //              's', "senddsi", "send packets via dsi",
@@ -221,6 +224,11 @@ int main(int argc, const char **argv)
 
     if (recv_broadcast)
         ore_conf.rw_broadcast = 1;
+
+	if (use_phys) {
+		LOG("using physical device mac.");
+		ore_conf.ro_keep_device_mac = 1;
+	}
 #if 0  
     if (recv_dsi)
     {
@@ -263,6 +271,11 @@ int main(int argc, const char **argv)
     }
 
     LOG("ORe handle = %d", handle);
+
+	if (use_phys) {
+		LOG("%s physical device MAC.",
+		    ore_conf.ro_keep_device_mac == 1 ? "got" : "didn't get");
+	}
 
 #if 0
     if (send_dsi)

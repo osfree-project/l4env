@@ -159,11 +159,13 @@ void free_rxtx_entry(rxtx_entry_t *e)
     if (e->skb)
         kfree_skb(e->skb);
 
+#if 0
     // the skb may be freed now _OR_ kfree_skb only decremented the usage
     // counter --> free e only if the belonging skb was freed. Otherwise the
     // entry is still located within another rx_list and must not be deleted.
     if (!e->skb || atomic_read(&e->skb->users) < 2)
-        kfree(e);
+#endif
+	kfree(e);
 }
 
 /******************************************************************************

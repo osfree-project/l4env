@@ -17,15 +17,19 @@
 #include <l4/util/util.h>
 #include <l4/util/parse_cmd.h>
 #include <l4/rmgr/librmgr.h>
-#include <l4/dde_linux/dde.h>
 #include <l4/names/libnames.h>
 #include <l4/sys/syscalls.h>
 #include <l4/util/getopt.h>
 #include <l4/thread/thread.h>
 
-#include <stdlib.h>
-
 #include "ore-local.h"
+
+#ifndef CONFIG_ORE_DDE26
+#include <l4/dde_linux/dde.h>
+#else /* DDE26 */
+#include <l4/dde/linux26/dde26.h>
+#include <l4/dde/linux26/dde26_net.h>
+#endif
 
 static char *_oreName = "ORe";
 /* MAC addresses are by default 04:EA:xx:xx:xx:xx; where xx is a checksum
@@ -97,6 +101,26 @@ static void copy_mac(int id, const char *arg, int num)
   global_mac_address_head[0] = (unsigned char)(tmp >> 24 & 0xff);
 }
 
+
+#ifdef CONFIG_ORE_DDE26
+extern int l4ore_rx_handle(struct sk_buff *s);
+extern void loopback_init(void);
+
+static void init_dde(void);
+static void init_dde(void)
+{
+	l4dde26_init();
+	l4dde26_process_init();
+	l4dde26_init_timers();
+	l4dde26_softirq_init();
+	skb_init();
+	l4dde26_do_initcalls();
+	l4dde26_register_rx_callback(l4ore_rx_handle);
+	loopback_init();
+}
+#endif /* DDE26 */
+
+
 /* Basic initialization. */
 int main(int argc, const char **argv)
 {
@@ -130,10 +154,16 @@ int main(int argc, const char **argv)
 
   LOGd(ore_debug, "debug is on");
 
+#ifndef CONFIG_ORE_DDE26
   // initialize linux emulation library
   LOGd(ORE_DEBUG_INIT, "memsize = %d", ORE_LINUXEMUL_MEMSIZE);
   ret = init_emulation(ORE_LINUXEMUL_MEMSIZE);
   LOGd(ORE_DEBUG_INIT, "init_emulation: %d (%s)", ret, l4env_strerror(-ret));
+  LOG("initialized DDELinux2.4");
+#else /* DDE26 */
+  init_dde();
+  LOG("initialized DDELinux2.6");
+#endif /* DDE26 */
 
   LOG("loopback: %d", loopback_only);
   // initialize network devices
@@ -144,6 +174,9 @@ int main(int argc, const char **argv)
   list_network_devices();
 
   init_connection_table();
+
+  __l4ore_tls_id_key = l4thread_data_allocate_key();
+  LOGd(ORE_DEBUG_INIT, "Allocated tls key: %d", __l4ore_tls_id_key);
 
   // register
   LOG("Registering '%s' at names...", _oreName);
@@ -165,9 +198,6 @@ int main(int argc, const char **argv)
   l4thread_create(dump_periodic, NULL, L4THREAD_CREATE_ASYNC);
   LOGd(ORE_DEBUG, "created debug dumper thread");
 #endif
-
-  __l4ore_tls_id_key = l4thread_data_allocate_key();
-  LOGd(ORE_DEBUG_INIT, "Allocated tls key: %d", __l4ore_tls_id_key);
 
 #ifdef ORE_DSI
   dsi_init();
