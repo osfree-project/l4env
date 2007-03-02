@@ -42,6 +42,8 @@ int loopback_only = 0;
 ore_connection_t ore_connection_table[ORE_CONFIG_MAX_CONNECTIONS];
 l4_threadid_t ore_main_server   = L4_INVALID_ID;
 
+extern unsigned long int strtoul(const char *, char **, int);
+
 /* Our version of CORBA_alloc().
  *
  * This one is tricky: Dice-generated code will allocate buffers for receiving

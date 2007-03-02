@@ -737,7 +737,7 @@ sub parse_file
 	       $s :: $s
 	       ((?:$operator_name | (?: ~? $identifier )) # member name
 	        (?:$s $template_arg)?)  # optional member-template args
-               $s ( \( (?: [^\)] | \([^\)]*\) )* \) [^:\{\(=]* ) # arg list
+               $s ( \( (?: [^\)] | \([^\)]*\) )* \) [^:\{=]* ) # arg list
                ((?:\{|:.*\{).*)$/sx)    # initializer ':' and body '{'
 	    {
 	      my ($pretext, $class, $templateargs, $name, $args, $posttext)
