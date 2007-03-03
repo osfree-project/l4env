@@ -27,7 +27,7 @@ enum Thread_state
   Thread_dis_alien        = 0x20000, // Thread is an alien, however the next
                                      // system call is allowed
   Thread_in_exception     = 0x40000, // Thread has sent an exception but still
-                                     // and got no reply
+                                     // got no reply
   Thread_transfer_in_progress        = 0x80000, // ipc transfer
 
   // constants for convenience
