@@ -121,7 +121,7 @@ int create_logo()
   int i;
 
   /* create 16 bit picture from logo_pmap */
-  if (!(pmap_buf = (l4_uint16_t *) malloc(160*120*2)))
+  if (!(pmap_buf = malloc(160*120*2)))
     return 1;
 
   for (i=0; i<160*120; i++) 

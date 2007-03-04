@@ -209,7 +209,7 @@ vc_init()
   for (i = 0; i < MAX_NR_L4CONS; i++) 
     {
       /* malloc */
-      vc[i] = (struct l4con_vc *) malloc(sizeof(struct l4con_vc));
+      vc[i] = malloc(sizeof(struct l4con_vc));
       if (!vc[i])
 	{
 	  LOG_printf("Out of memory allocating l4con_vc");

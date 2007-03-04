@@ -365,7 +365,8 @@ relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
        mmap = (l4util_mb_addr_range_t *) ((unsigned long) mmap + mmap->struct_size + sizeof (mmap->struct_size)))
     {
       char *types[] = { "unknown", "RAM", "reserved", "ACPI", "ACPI NVS", "unusable" };
-      char *type_str = (mmap->type < sizeof(types)) ? types[mmap->type] : types[0];
+      char *type_str = (mmap->type < (sizeof(types) / sizeof(types[0])))
+	               ? types[mmap->type] : types[0];
 
       printf("    [%08x,%08x) %s (%d)\n",
              (unsigned) mmap->addr, (unsigned) mmap->addr + (unsigned) mmap->size,

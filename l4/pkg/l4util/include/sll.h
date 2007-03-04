@@ -60,7 +60,7 @@ list_new_entry(void *data)
 {
   slist_t *sll;
 
-  sll=(slist_t *) malloc(sizeof(slist_t));
+  sll = malloc(sizeof(slist_t));
   if (!sll)
     return ((slist_t *) NULL);
 

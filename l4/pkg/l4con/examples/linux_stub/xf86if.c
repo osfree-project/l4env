@@ -148,8 +148,7 @@ xf86if_f_async(int fd, struct file *filp, int on)
 	  fa->fa_fd = fd;
 	  return 0;
 	}
-      fa = (struct fasync_struct *)kmalloc(sizeof(struct fasync_struct), 
-					   GFP_KERNEL);
+      fa = kmalloc(sizeof(struct fasync_struct), GFP_KERNEL);
       if (!fa)
 	return -ENOMEM;
       fa->magic = FASYNC_MAGIC;

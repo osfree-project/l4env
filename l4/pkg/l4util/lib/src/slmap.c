@@ -10,7 +10,7 @@ map_new_entry(void* key, unsigned key_size, void* data)
 {
   slmap_t* map;
 
-  map = (slmap_t*)malloc(sizeof(slmap_t));
+  map = malloc(sizeof(slmap_t));
   if (!map)
     return (slmap_t*)0;
 

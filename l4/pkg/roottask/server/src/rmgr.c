@@ -5,7 +5,6 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/l4_macros.h>
-#include <l4/sys/utcb.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/rmgr/proto.h>
 #include <l4/env_support/panic.h>

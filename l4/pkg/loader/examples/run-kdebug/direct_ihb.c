@@ -504,7 +504,7 @@ direct_ihb_init(direct_ihb_t *ihb, int lines, int length)
   ihb->length = length;
  
   /* allocate history buffer */
-  if (!(ihb->buffer = (char*)(malloc(lines*length))))
+  if (!(ihb->buffer = malloc(lines*length)))
     {
       LOGl("no mem for ihb->head");
       return -L4_ENOMEM;

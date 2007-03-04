@@ -66,6 +66,23 @@ else
 LDS_LOADER   = $(LDS_DEFAULT)
 endif
 
+LIBC_INCLUDE_diet = -nostdinc                                 \
+                    -I$(OBJ_BASE)/include/dietlibc            \
+                    -I$(DROPS_STDDIR)/include/dietlibc        \
+                    -I$(GCCINCDIR)
+LIBC_INCLUDE_uc   = -nostdinc                                 \
+                    -I$(OBJ_BASE)/include/$(ARCH)/uclibc      \
+                    -I$(OBJ_BASE)/include/uclibc              \
+                    -I$(OBJ_BASE)/include/uclibc++            \
+                    -I$(DROPS_STDDIR)/include/$(ARCH)/uclibc  \
+                    -I$(DROPS_STDDIR)/include/uclibc          \
+                    -I$(DROPS_STDDIR)/include/uclibc++        \
+                    -I$(GCCINCDIR)
+ifeq ($(USE_DIETLIBC),y)
+LIBC_INCLUDE = $(LIBC_INCLUDE_diet)
+else
+LIBC_INCLUDE = $(LIBC_INCLUDE_uc)
+endif
 
 #############################################################################
 #
@@ -76,10 +93,7 @@ endif
 # x86_tiny - minimal environment (only l4util, no log, no names)
 #
 BID_SUPPORTED_x86_tiny_diet     = y
-LIBCINCDIR_x86_tiny_diet        = -nostdinc -DUSE_DIETLIBC=y                \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_tiny_diet        = $(LIBC_INCLUDE)
 LIBCLIBDIR_x86_tiny_diet        =
 LIBCLIBS_x86_tiny_diet          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c                                  \
@@ -95,14 +109,7 @@ CRTN_x86_tiny_diet              =
 LDSCRIPT_x86_tiny_diet          = $(LDS_DEFAULT)
 
 BID_SUPPORTED_x86_tiny_uc       = y
-LIBCINCDIR_x86_tiny_uc          = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/x86/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/x86/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_tiny_uc          = $(LIBC_INCLUDE)
 LIBCLIBDIR_x86_tiny_uc          =
 LIBCLIBS_x86_tiny_uc            = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
@@ -140,10 +147,7 @@ endif
 # x86_sigma0 - minimal environment (util, names, log)
 #
 BID_SUPPORTED_x86_sigma0_diet   = y
-LIBCINCDIR_x86_sigma0_diet      = -nostdinc -DUSE_DIETLIBC=y                \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_sigma0_diet      = $(LIBC_INCLUDE)
 LIBCLIBDIR_x86_sigma0_diet      =
 LIBCLIBS_x86_sigma0_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c                                  \
@@ -162,14 +166,7 @@ CRTN_x86_sigma0_diet            =
 LDSCRIPT_x86_sigma0_diet        = $(LDS_DEFAULT)
 
 BID_SUPPORTED_x86_sigma0_uc     = y
-LIBCINCDIR_x86_sigma0_uc        = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/x86/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/x86/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_sigma0_uc        = $(LIBC_INCLUDE)
 LIBCLIBDIR_x86_sigma0_uc        =
 LIBCLIBS_x86_sigma0_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
@@ -209,9 +206,7 @@ endif
 # all_libc - compiles C libs
 #
 BID_SUPPORTED_all_libc          = y
-LIBCINCDIR_all_libc             = -nostdinc -I$(GCCINCDIR)                  \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc
+LIBCINCDIR_all_libc             = $(LIBC_INCLUDE)
 LIBCLIBDIR_all_libc             =
 LIBCLIBS_all_libc               = -nostdlib $(GCCLDNOSTDLIB) -ldiet_c       \
                                   $(LIBCBACKEND_LIB) $(GCCLIB) -ldiet_c
@@ -225,9 +220,7 @@ LDSCRIPT_all_libc               = $(LDS_DEFAULT)
 # all_plain - compilation for the host system
 #
 BID_SUPPORTED_all_plain         = y
-LIBCINCDIR_all_plain            = -nostdinc -I$(GCCINCDIR)                  \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc
+LIBCINCDIR_all_plain            = $(LIBC_INCLUDE)
 LIBCLIBDIR_all_plain            =
 LIBCLIBS_all_plain              = -nostdlib $(GCCLDNOSTDLIB) $(GCCLIB) -ll4sys
 L4LIBS_all_plain                =
@@ -281,10 +274,7 @@ LDSCRIPT_x86_l4linux_kern       =
 # x86_l4env -- l4env, the default
 #
 BID_SUPPORTED_x86_l4env_diet    = y
-LIBCINCDIR_x86_l4env_diet       = -nostdinc -DUSE_DIETLIBC=y                \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_l4env_diet       = $(LIBC_INCLUDE)
 LIBCLIBDIR_x86_l4env_diet       =
 L4LIBS_x86_l4env_diet           = -static -lgeneric_ts -ll4env              \
                                   -ll4rm -ldm_generic -ldm_mem -lthread     \
@@ -312,14 +302,7 @@ CRTN_x86_l4env_diet             =
 LDSCRIPT_x86_l4env_diet         = $(LDS_DEFAULT)
 
 BID_SUPPORTED_x86_l4env_uc      = y
-LIBCINCDIR_x86_l4env_uc         = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/x86/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/x86/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_l4env_uc         = $(LIBC_INCLUDE)
 LIBCLIBDIR_x86_l4env_uc         =
 L4LIBS_x86_l4env_uc             = $(L4LIBS_x86_l4env_diet)
 LIBCLIBS_x86_l4env_uc           = -nostdlib $(GCCLDNOSTDLIB)                \
@@ -364,10 +347,7 @@ endif
 # x86_l4env_minimal - dietlibc/uClibc with just write(1, ...) as io backend
 #
 BID_SUPPORTED_x86_l4env_dietlibc_minimal = y
-LIBCINCDIR_x86_l4env_dietlibc_minimal = -nostdinc -DUSE_DIETLIBC=y          \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_l4env_dietlibc_minimal = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_x86_l4env_dietlibc_minimal =
 LIBCLIBS_x86_l4env_dietlibc_minimal = -nostdlib $(GCCLDNOSTDLIB)            \
                                   $(MALLOC_BACKEND)                         \
@@ -395,14 +375,7 @@ CRTN_x86_l4env_dietlibc_minimal =
 LDSCRIPT_x86_l4env_dietlibc_minimal = $(LDS_DEFAULT)
 
 BID_SUPPORTED_x86_l4env_uclibc_minimal = y
-LIBCINCDIR_x86_l4env_uclibc_minimal = -nostdinc                             \
-                                  -I$(OBJ_BASE)/include/x86/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/x86/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_l4env_uclibc_minimal = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_x86_l4env_uclibc_minimal =
 LIBCLIBS_x86_l4env_uclibc_minimal = -nostdlib $(GCCLDNOSTDLIB)              \
                                   $(MALLOC_BACKEND)                         \
@@ -450,9 +423,7 @@ endif
 #     basic_io, io, basic_mmap, mmap_util, syslog, simple_sleep, time,
 #     file_table
 #
-LIBCINCDIR_x86_l4env_base_diet  = -nostdinc -I$(OBJ_BASE)/include/dietlibc  \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_l4env_base_diet  = $(LIBC_INCLUDE)
 LIBCLIBDIR_x86_l4env_base_diet  =
 LIBCLIBS_x86_l4env_base_diet    = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -u printf -lc_be_io.o $(MALLOC_BACKEND)   \
@@ -485,14 +456,7 @@ CRTN_x86_l4env_base_diet        =
 LDSCRIPT_x86_l4env_base_diet    = $(LDS_DEFAULT)
 
 BID_SUPPORTED_x86_l4env_base_uc = y
-LIBCINCDIR_x86_l4env_base_uc    = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/x86/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/x86/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_x86_l4env_base_uc    = $(LIBC_INCLUDE)
 LIBCLIBDIR_x86_l4env_base_uc    =
 LIBCLIBS_x86_l4env_base_uc      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -u printf -lc_be_io.o $(MALLOC_BACKEND)   \
@@ -545,10 +509,7 @@ endif
 #
 ifeq ($(USE_DIETLIBC),y)
   BID_SUPPORTED_x86_loader      = y
-  LIBCINCDIR_x86_loader         = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+  LIBCINCDIR_x86_loader         = $(LIBC_INCLUDE)
   LIBCLIBDIR_x86_loader         =
   LIBCLIBS_x86_loader           = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c $(GCCLIB) -ldiet_c
@@ -558,14 +519,7 @@ ifeq ($(USE_DIETLIBC),y)
   LDSCRIPT_x86_loader           = $(LDS_LOADER)
 else
   BID_SUPPORTED_x86_loader      = y
-  LIBCINCDIR_x86_loader         = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/x86/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/x86/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+  LIBCINCDIR_x86_loader         = $(LIBC_INCLUDE)
   LIBCLIBDIR_x86_loader         =
   LIBCLIBS_x86_loader           = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c $(GCCLIB) -luc_c
@@ -585,10 +539,7 @@ endif
 # arm_tiny
 #
 BID_SUPPORTED_arm_tiny_diet     = y
-LIBCINCDIR_arm_tiny_diet        = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_arm_tiny_diet        = $(LIBC_INCLUDE)
 LIBCLIBDIR_arm_tiny_diet        =
 LIBCLIBS_arm_tiny_diet          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain -ldiet_c -ldietlibc_support        \
@@ -602,14 +553,7 @@ CRTN_arm_tiny_diet              =
 LDSCRIPT_arm_tiny_diet          = $(LDS_DEFAULT)
 
 BID_SUPPORTED_arm_tiny_uc       = y
-LIBCINCDIR_arm_tiny_uc          = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/arm/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/arm/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_arm_tiny_uc          = $(LIBC_INCLUDE)
 LIBCLIBDIR_arm_tiny_uc          =
 LIBCLIBS_arm_tiny_uc            = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain -luc_c -luclibc_support            \
@@ -643,10 +587,7 @@ endif
 
 
 BID_SUPPORTED_arm_sigma0_diet   = y
-LIBCINCDIR_arm_sigma0_diet      = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_arm_sigma0_diet      = $(LIBC_INCLUDE)
 LIBCLIBDIR_arm_sigma0_diet      =
 LIBCLIBS_arm_sigma0_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain                                    \
@@ -663,14 +604,7 @@ CRTN_arm_sigma0_diet            =
 LDSCRIPT_arm_sigma0_diet        = $(LDS_DEFAULT)
 
 BID_SUPPORTED_arm_sigma0_uc     = y
-LIBCINCDIR_arm_sigma0_uc        = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/arm/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/arm/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_arm_sigma0_uc        = $(LIBC_INCLUDE)
 LIBCLIBDIR_arm_sigma0_uc        =
 LIBCLIBS_arm_sigma0_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain                                    \
@@ -710,7 +644,7 @@ endif
 # makefile changes are necessary
 #
 BID_SUPPORTED_arm_l4env_dietlibc_minimal    = $(BID_SUPPORTED_arm_sigma0_diet)
-LIBCINCDIR_arm_l4env_dietlibc_minimal       = $(LIBCINCDIR_arm_sigma0_diet)
+LIBCINCDIR_arm_l4env_dietlibc_minimal       = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_arm_l4env_dietlibc_minimal       = $(LIBCLIBDIR_arm_sigma0_diet)
 LIBCLIBS_arm_l4env_dietlibc_minimal         = $(LIBCLIBS_arm_sigma0_diet)
 L4LIBS_arm_l4env_dietlibc_minimal           = $(L4LIBS_arm_sigma0_diet)
@@ -719,7 +653,7 @@ CRTN_arm_l4env_dietlibc_minimal             = $(CRTN_arm_sigma0_diet)
 LDSCRIPT_arm_l4env_dietlibc_minimal         = $(LDSCRIPT_arm_sigma0_diet)
 
 BID_SUPPORTED_arm_l4env_uclibc_minimal      = $(BID_SUPPORTED_arm_sigma0_uc)
-LIBCINCDIR_arm_l4env_uclibc_minimal         = $(LIBCINCDIR_arm_sigma0_uc)
+LIBCINCDIR_arm_l4env_uclibc_minimal         = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_arm_l4env_uclibc_minimal         = $(LIBCLIBDIR_arm_sigma0_uc)
 LIBCLIBS_arm_l4env_uclibc_minimal           = $(LIBCLIBS_arm_sigma0_uc)
 L4LIBS_arm_l4env_uclibc_minimal             = $(L4LIBS_arm_sigma0_uc)
@@ -740,10 +674,7 @@ LDSCRIPT_arm_l4env_minimal      = $(LDSCRIPT_arm_sigma0)
 # arm_l4env -- default mode
 #
 BID_SUPPORTED_arm_l4env         = y
-LIBCINCDIR_arm_l4env_diet       = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_arm_l4env_diet       = $(LIBC_INCLUDE)
 LIBCLIBDIR_arm_l4env_diet       =
 L4LIBS_arm_l4env_diet           = -static -lgeneric_ts -ll4env              \
                                   -ll4rm -ldm_generic -ldm_mem -lthread     \
@@ -766,14 +697,7 @@ CRTN_arm_l4env_diet             =
 LDSCRIPT_arm_l4env_diet         = $(LDS_DEFAULT)
 
 BID_SUPPORTED_arm_l4env_uc      = y
-LIBCINCDIR_arm_l4env_uc         = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/x86/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/x86/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_arm_l4env_uc         = $(LIBC_INCLUDE)
 LIBCLIBDIR_arm_l4env_uc         =
 L4LIBS_arm_l4env_uc             = $(L4LIBS_arm_l4env_diet)
 LIBCLIBS_arm_l4env_uc           = -nostdlib $(GCCLDNOSTDLIB)                \
@@ -811,10 +735,7 @@ endif
 #
 # arm_loader - applications to be loaded by the L4Env loader.
 #
-LIBCINCDIR_arm_loader_diet      = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_arm_loader_diet      = $(LIBC_INCLUDE)
 LIBCLIBDIR_arm_loader_diet      =
 LIBCLIBS_arm_loader_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c $(GCCLIB) -ldiet_c
@@ -823,14 +744,7 @@ CRT0_arm_loader_diet            = $(CRT0_DEFAULT)
 CRTN_arm_loader_diet            =
 LDSCRIPT_arm_loader_diet        = $(LDS_LOADER)
 
-LIBCINCDIR_arm_loader_uc        = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/x86/uclibc          \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/x86/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_arm_loader_uc        = $(LIBC_INCLUDE)
 LIBCLIBDIR_arm_loader_uc        =
 LIBCLIBS_arm_loader_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c $(GCCLIB) -luc_c
@@ -883,10 +797,7 @@ LDSCRIPT_arm_l4linux            =
 # amd64_tiny (without names and logserver)
 #
 BID_SUPPORTED_amd64_tiny_diet   = y
-LIBCINCDIR_amd64_tiny_diet      = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_amd64_tiny_diet      = $(LIBC_INCLUDE)
 LIBCLIBDIR_amd64_tiny_diet      =
 LIBCLIBS_amd64_tiny_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain                                    \
@@ -894,7 +805,7 @@ LIBCLIBS_amd64_tiny_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldietlibc_support                        \
                                   -ldiet_be_l4_start_stop                   \
                                   -ldiet_be_minimal_io                      \
-                                  $(MMAP_BACKEND)                           \
+                                  $(MMAP_BACKEND) -lsigma0                  \
                                   -ldiet_c $(GCCLIB) -ldiet_c -ll4sys
 L4LIBS_amd64_tiny_diet          = -static -lmain -ll4util -ll4sys
 CRT0_amd64_tiny_diet            = $(CRT0_DEFAULT)
@@ -902,21 +813,14 @@ CRTN_amd64_tiny_diet            =
 LDSCRIPT_amd64_tiny_diet        = $(LDS_DEFAULT)
 
 BID_SUPPORTED_amd64_tiny_uc     = y
-LIBCINCDIR_amd64_tiny_uc        = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/amd64/uclibc        \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/amd64/uclibc    \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_amd64_tiny_uc        = $(LIBC_INCLUDE)
 LIBCLIBDIR_amd64_tiny_uc        =
 LIBCLIBS_amd64_tiny_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
                                   -luc_be_minimal_io                        \
                                   -luc_be_l4_start_stop                     \
                                   $(MMAP_BACKEND)                           \
-                                  -luc_c -luclibc_support -ll4util -lsigma0 \
+                                  -luc_c -luclibc_support -lsigma0          \
                                   -luc_c $(GCCLIB) -luc_c -ll4sys
 L4LIBS_amd64_tiny_uc            = $(L4LIBS_amd64_tiny_diet)
 CRT0_amd64_tiny_uc              = $(CRT0_DEFAULT)
@@ -946,10 +850,7 @@ endif
 # amd64_sigma0 - sigma0 with dietlibc
 #
 BID_SUPPORTED_amd64_sigma0_diet = y
-LIBCINCDIR_amd64_sigma0_diet    = -nostdinc -DUSE_DIETLIBC=y                \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_amd64_sigma0_diet    = $(LIBC_INCLUDE)
 LIBCLIBDIR_amd64_sigma0_diet    =
 LIBCLIBS_amd64_sigma0_diet      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c                                  \
@@ -958,7 +859,7 @@ LIBCLIBS_amd64_sigma0_diet      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_be_l4_start_stop                   \
                                   $(MMAP_BACKEND)                           \
                                   -ldiet_c                                  \
-                                  -llogserver -lnames                       \
+                                  -llogserver -lnames -lsigma0              \
                                   -ll4util_root -ll4util $(ROOTLIB)         \
                                   -ldiet_c $(GCCLIB) -ldiet_c -ll4sys
 L4LIBS_amd64_sigma0_diet        = -static -lmain -lnames                    \
@@ -968,14 +869,7 @@ CRTN_amd64_sigma0_diet          =
 LDSCRIPT_amd64_sigma0_diet      = $(LDS_DEFAULT)
 
 BID_SUPPORTED_amd64_sigma0_uc   = y
-LIBCINCDIR_amd64_sigma0_uc      = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/amd64/uclibc        \
-                                  -I$(OBJ_BASE)/include/uclibc              \
-                                  -I$(OBJ_BASE)/include/uclibc++            \
-                                  -I$(DROPS_STDDIR)/include/amd64/uclibc    \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_amd64_sigma0_uc      = $(LIBC_INCLUDE)
 LIBCLIBDIR_amd64_sigma0_uc      =
 LIBCLIBS_amd64_sigma0_uc        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
@@ -1027,10 +921,7 @@ LDSCRIPT_amd64_l4env_dietlibc_minimal       = $(LDSCRIPT_amd64_sigma0)
 # amd64_l4env - dietlibc and l4env, the default
 #
 BID_SUPPORTED_amd64_l4env_diet  = y
-LIBCINCDIR_amd64_l4env_diet     = -nostdinc -DUSE_DIETLIBC=y                \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_amd64_l4env_diet     = $(LIBC_INCLUDE)
 LIBCLIBDIR_amd64_l4env_diet     =
 L4LIBS_amd64_l4env_diet         = -static -lgeneric_ts -ll4env              \
                                   -ll4rm -ldm_generic -ldm_mem -lthread     \
@@ -1049,21 +940,15 @@ LIBCLIBS_amd64_l4env_diet       = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_be_simple_sleep                    \
                                   -ll4env -llogserver_capsule -ll4rm        \
                                   -ldm_generic -ldm_mem -lthread            \
-                                  -lgeneric_ts $(DIETLIBC_IMPLEMENTATION)   \
+                                  -lgeneric_ts -lsigma0                     \
+                                  $(DIETLIBC_IMPLEMENTATION)                \
                                   $(GCCLIB) $(DIETLIBC_IMPLEMENTATION)      \
                                   -ll4sys
 CRT0_amd64_l4env_diet           = $(CRT0_DEFAULT)
 CRTN_amd64_l4env_diet           =
 LDSCRIPT_amd64_l4env_diet       = $(LDS_DEFAULT)
 
-LIBCINCDIR_amd64_l4env_uc         = -nostdinc                                 \
-                                  -I$(OBJ_BASE)/include/amd64/uclibc             \
-                                  -I$(OBJ_BASE)/include/uclibc                 \
-                                  -I$(OBJ_BASE)/include/uclibc++               \
-                                  -I$(DROPS_STDDIR)/include/amd64/uclibc      \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_amd64_l4env_uc         = $(LIBC_INCLUDE)
 LIBCLIBDIR_amd64_l4env_uc         =
 L4LIBS_amd64_l4env_uc             = $(L4LIBS_amd64_l4env_diet)
 LIBCLIBS_amd64_l4env_uc           = -nostdlib $(GCCLDNOSTDLIB)                \
@@ -1108,10 +993,7 @@ endif
 # amd64_l4env_minimal - dietlibc with just write(1, ...) as io backend
 #
 BID_SUPPORTED_amd64_l4env_dietlibc_minimal = y
-LIBCINCDIR_amd64_l4env_dietlibc_minimal = -nostdinc -DUSE_DIETLIBC=y        \
-                                  -I$(OBJ_BASE)/include/dietlibc            \
-                                  -I$(DROPS_STDDIR)/include/dietlibc        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_amd64_l4env_dietlibc_minimal = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_amd64_l4env_dietlibc_minimal =
 LIBCLIBS_amd64_l4env_dietlibc_minimal = -nostdlib $(GCCLDNOSTDLIB)          \
                                   $(MALLOC_BACKEND)                         \
@@ -1137,14 +1019,7 @@ CRTN_amd64_l4env_dietlibc_minimal =
 LDSCRIPT_amd64_l4env_dietlibc_minimal = $(LDS_DEFAULT)
 
 BID_SUPPORTED_amd64_l4env_uclibc_minimal = y
-LIBCINCDIR_amd64_l4env_uclibc_minimal = -nostdinc                           \
-                                  -I$(OBJ_BASE)/include/amd64/uclibc           \
-                                  -I$(OBJ_BASE)/include/uclibc                 \
-                                  -I$(OBJ_BASE)/include/uclibc++               \
-                                  -I$(DROPS_STDDIR)/include/amd64/uclibc    \
-                                  -I$(DROPS_STDDIR)/include/uclibc          \
-                                  -I$(DROPS_STDDIR)/include/uclibc++        \
-                                  -I$(GCCINCDIR)
+LIBCINCDIR_amd64_l4env_uclibc_minimal = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_amd64_l4env_uclibc_minimal =
 LIBCLIBS_amd64_l4env_uclibc_minimal = -nostdlib $(GCCLDNOSTDLIB)            \
                                   $(MALLOC_BACKEND)                         \

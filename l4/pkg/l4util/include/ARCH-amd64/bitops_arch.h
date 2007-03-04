@@ -115,7 +115,7 @@ l4util_clear_bit(int b, volatile l4_umword_t * dest)
 }
 
 /* change bit */
-#define __L4UITIL_BITOPS_HAVE_ARCH_COMPLEMENT_BIT
+#define __L4UTIL_BITOPS_HAVE_ARCH_COMPLEMENT_BIT
 L4_INLINE void
 l4util_complement_bit(int b, volatile l4_umword_t * dest)
 {

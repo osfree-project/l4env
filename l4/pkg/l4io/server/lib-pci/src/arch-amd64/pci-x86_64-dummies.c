@@ -1,4 +1,5 @@
 #include <linux/threads.h>
+#include <asm/types.h>
 #include <asm/mpspec.h>
 #include <string.h>
 

@@ -84,7 +84,7 @@ cfg_init_task(cfg_task_t *ct, l4dm_dataspace_t ds, l4_threadid_t dsm_id,
 
   if (cfg_task_template.iobitmap)
     {
-      ct->iobitmap = (char*)malloc(8192);
+      ct->iobitmap = malloc(8192);
       memcpy(ct->iobitmap, cfg_task_template.iobitmap, 8192);
     }
 }
@@ -115,7 +115,7 @@ cfg_job(l4_uint32_t flag, unsigned int number)
       return -L4_ENOMEM;
     }
 
-  if (!(ct = (cfg_task_t*)malloc(sizeof(cfg_task_t))))
+  if (!(ct = malloc(sizeof(cfg_task_t))))
     {
       printf("Out of memory\n");
       return -L4_ENOMEM;
@@ -164,7 +164,7 @@ cfg_new_task(const char *fname, const char *args)
       return -L4_ENOMEM;
     }
 
-  if (!(ct = (cfg_task_t*)malloc(sizeof(cfg_task_t))))
+  if (!(ct = malloc(sizeof(cfg_task_t))))
     {
       printf("Out of memory\n");
       return -L4_ENOMEM;
@@ -294,7 +294,7 @@ cfg_new_ioport(int low, int high)
 
   if (!(*cfg_task_current)->iobitmap)
     {
-      if (!((*cfg_task_current)->iobitmap = (char*)malloc(8192)))
+      if (!((*cfg_task_current)->iobitmap = malloc(8192)))
 	{
 	  printf("Cannot allocate I/O bitmap\n");
 	  return -L4_ENOMEM;
