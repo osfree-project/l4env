@@ -12,4 +12,7 @@
 #endif /* __ASSEMBLY__ */
 #endif /* ! ENTRY */
 
+#define FASTCALL(x)     x
+#define fastcall
+
 #endif /* ! __L4__SYS__ARCH_AMD64__LINKAGE_H__ */

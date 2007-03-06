@@ -12,6 +12,3 @@ MODE = 		l4linux
 L4LIBS = 	
 
 include $(L4DIR)/mk/prog.mk
-
-# we do not need other L4 libs than l4lthread and l4util
-LIBCLIBS_x86_l4linux = -lrmgr

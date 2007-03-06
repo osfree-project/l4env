@@ -713,11 +713,7 @@ init_infopage(l4env_infopage_t *env)
   strcpy(env->libpath, cfg_libpath);
 
   env->vm_low  = 0x1000;
-#ifdef ARCH_x86
-  env->vm_high = 0xC0000000;
-#else
   env->vm_high = l4util_memdesc_vm_high();
-#endif
 
   return 0;
 }

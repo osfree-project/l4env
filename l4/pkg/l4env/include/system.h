@@ -162,8 +162,16 @@ typedef struct {
 # define ARCH_ARM
 #endif
 
+#if defined(ARCH_amd64)
+# define ARCH_AMD64
+#endif
+
 #if defined(ARCH_IA32)
 # include <l4/env/ia32.h>
+#endif
+
+#if defined(ARCH_AMD64)
+# include <l4/env/amd64.h>
 #endif
 
 #if defined(ARCH_IA64)

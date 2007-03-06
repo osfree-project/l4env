@@ -3,6 +3,7 @@
  */
 
 #include <l4/sigma0/kip.h>
+#include <l4/sys/memdesc.h>
 #include <l4/util/memdesc.h>
 
 l4_addr_t

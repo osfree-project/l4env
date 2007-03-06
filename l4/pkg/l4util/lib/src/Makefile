@@ -13,7 +13,7 @@ ROOT_SRC_C_only_amd64 = $(addprefix ARCH-x86/, rdtsc.c)
 ALL_SRC_C_NOAPI       = alloc.c getopt2.c rand.c base64.c slmap.c \
 			ARCH-$(ARCH)/reboot.c
 ALL_SRC_C_L4API       = alloc.c getopt2.c micros2l4to.c queue.c rand.c sleep.c \
-                        thread.c base64.c slmap.c wait_queue.c \
+                        thread.c base64.c slmap.c wait_queue.c memdesc.c \
                         ARCH-$(ARCH)/reboot.c $(ALL_SRC_C_only_$(ARCH))
 
 ROOT_SRC_C            = reboot.c $(ROOT_SRC_C_only_$(ARCH))
@@ -22,9 +22,9 @@ ROOT_SRC_C            = reboot.c $(ROOT_SRC_C_only_$(ARCH))
 SRC_C_libl4util.a_x86            = $(ALL_SRC_C_NOAPI)
 SRC_C_libl4util.a_x86-l4v2       = $(ALL_SRC_C_L4API) ARCH-x86/setjmp.c
 SRC_C_libl4util.a_amd64-l4v2     = $(ALL_SRC_C_L4API) ARCH-amd64/setjmp.c
-SRC_C_libl4util.a_arm-l4x0       = $(ALL_SRC_C_L4API) memdesc.c
+SRC_C_libl4util.a_arm-l4x0       = $(ALL_SRC_C_L4API)
 SRC_C_libl4util.p.a_x86-l4v2     = $(ALL_SRC_C_L4API) ARCH-x86/setjmp.c
-SRC_C_libl4util.p.a_arm-l4x0     = $(ALL_SRC_C_L4API) memdesc.c
+SRC_C_libl4util.p.a_arm-l4x0     = $(ALL_SRC_C_L4API)
 SRC_S_libl4util.a_x86-l4v2       = $(SRC_S_$(ARCH))
 SRC_S_libl4util.a_arm-l4x0       = $(SRC_S_$(ARCH))
 SRC_S_libl4util.p.a_x86-l4v2     = $(SRC_S_$(ARCH))

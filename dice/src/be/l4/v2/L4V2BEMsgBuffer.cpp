@@ -355,6 +355,11 @@ CL4V2BEMsgBuffer::WriteDopeShortInitialization(CBEFile *pFile,
 /** \brief writes the initialization of the receive flexpage
  *  \param pFile the file to write to
  *  \param nDirection the direction of the struct to initialize
+ *
+ * Only initialize receive window member with environment's receive flexpage,
+ * if we really do receive a flexpage. This is a performance optimization: it
+ * saves an indirect access via the environment parameter. For security
+ * reasons, a mandatory, empty receive window is required.
  */
 void
 CL4V2BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
@@ -377,10 +382,13 @@ CL4V2BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
     else
 	sEnv += ".";
     
-    // assign environment's flexpage to message buffer's flexpage
+    // message buffer's receive window
     *pFile << "\t";
     WriteAccess(pFile, pFunction, nDirection, pFlexpage);
-    *pFile << " = " << sEnv << "rcv_fpage;\n";
+    if ((nDirection != 0) && (GetCount(TYPE_FLEXPAGE, nDirection) == 0))
+	*pFile << ".raw = 0;\n";
+    else
+	*pFile << " = " << sEnv << "rcv_fpage;\n";
 }
 
 /** \brief try to get the position of a member counting word sizes

@@ -161,7 +161,7 @@ insert_event_into_blocked_queues(channel_item_t *curr_channel,
 	  curr_task = curr_task_ref->task_item;
 
 	  /* create event_ref for curr_event */ 
-	  curr_event_ref = (event_ref_t*) my_malloc( sizeof(event_ref_t));
+	  curr_event_ref = my_malloc( sizeof(event_ref_t));
 	  curr_event_ref->event_item = curr_event;
 	  curr_event_ref->next_ref = NULL;
 
@@ -629,7 +629,7 @@ server_register(l4_threadid_t client,
 
 	  LOGd(DEBUGLVL(2), "create a new channel: %d", event_ch);
 
-	  curr_channel = (channel_item_t*) my_malloc( sizeof(channel_item_t));
+	  curr_channel = my_malloc( sizeof(channel_item_t));
 	  curr_channel->event_ch = event_ch;
 	  curr_channel->registered_tasks = 0;
 	  for (pr=0; pr<=L4EVENTS_MAX_PRIORITY; pr++)
@@ -665,14 +665,14 @@ server_register(l4_threadid_t client,
       LOGd(DEBUGLVL(2), "link task and channel together");
 
       /* create a new list element for channel */
-      curr_channel_ref = (channel_ref_t*) my_malloc( sizeof(channel_ref_t));
+      curr_channel_ref = my_malloc( sizeof(channel_ref_t));
       curr_channel_ref->channel_item = curr_channel;
 
       /* link channel into list of registered channels for the task */
       link_channel_to_task(curr_task, curr_channel_ref);
 
       /* create a new list element for the task */
-      curr_task_ref = (task_ref_t*) my_malloc( sizeof(task_ref_t));
+      curr_task_ref = my_malloc( sizeof(task_ref_t));
       curr_task_ref->task_item = curr_task;
 
       /* link task into list of registered tasks for the channel */
@@ -891,7 +891,7 @@ server_send_event(l4_threadid_t client,
   LOGd(DEBUGLVL(3), "create event [%d,%ld]", event_ch, event_nr);
 
   /* create an event */
-  curr_event = (event_item_t*) my_malloc( sizeof(event_item_t));
+  curr_event = my_malloc( sizeof(event_item_t));
 
   curr_event->event_ch = event_ch;
   curr_event->event_nr = event_nr;

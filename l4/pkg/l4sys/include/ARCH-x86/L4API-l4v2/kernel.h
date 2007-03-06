@@ -73,7 +73,7 @@ typedef struct
 					       **  - bits 8-15: set the number
 					       **    of mapping nodes.
 					       **/
-  l4_umword_t            reserved2;
+  l4_umword_t            mem_info;
   l4_umword_t            kdebug_config;       /**< Kernel debugger config.
 					       **
 					       **  Values:

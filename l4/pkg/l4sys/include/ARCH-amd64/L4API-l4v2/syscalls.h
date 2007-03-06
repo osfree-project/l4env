@@ -391,8 +391,12 @@ l4_task_new(l4_taskid_t destination,
 	    l4_umword_t eip,
 	    l4_threadid_t pager);
 enum {
+  L4_TASK_NEW_IPC_MONITOR     = 1 << 29,
   L4_TASK_NEW_RAISE_EXCEPTION = 1 << 30,
   L4_TASK_NEW_ALIEN           = 1 << 31,
+  L4_TASK_NEW_NR_OF_FLAGS     = 3,
+  L4_TASK_NEW_FLAGS_MASK      = ((1 << L4_TASK_NEW_NR_OF_FLAGS) - 1)
+                                  << (4 * 8 - L4_TASK_NEW_NR_OF_FLAGS),
 };
 
 

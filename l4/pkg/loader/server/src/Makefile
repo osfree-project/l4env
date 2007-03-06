@@ -1,11 +1,11 @@
 PKGDIR		 ?= ../..
 L4DIR		= $(PKGDIR)/../..
-SYSTEMS		= x86-l4v2 arm-l4x0
+SYSTEMS		= x86-l4v2 arm-l4x0 amd64-l4v2
 TARGET		= loader
 
 WITH_IPC_MON	= n
 
-DEFAULT_RELOC_x86 = 0x01300000
+DEFAULT_RELOC   = 0x01300000
 DEFAULT_RELOC_arm = 0x002c0000
 PRIVATE_INCDIR	= $(PKGDIR)/server/src .
 LIB_IPCMON-y	= -lipcmon
