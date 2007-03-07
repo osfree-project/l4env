@@ -310,9 +310,9 @@ __l4blk_ctrl(unsigned int cmd, unsigned long arg, void * ret_buf, int ret_len)
   ret = l4blk_cmd_ctrl_call(&l4blk_cmd_id, l4blk_drv_handle,
                             cmd, &arg, sizeof(unsigned long), 
                             &ret_buf, &ret_len, &_env);
-  if (_env.major != CORBA_NO_EXCEPTION)
+  if (DICE_HAS_EXCEPTION(&_env))
     {
-      Error("calling block driver failed (exc %d)!", _env.major);
+      Error("calling block driver failed (exc %d)!", DICE_EXCEPTION_MAJOR(&_env));
       return -1;
     }
   
@@ -553,10 +553,10 @@ __l4blk_do_request(void)
                                        &blk_req, sg_list, 
                                        num * sizeof(l4blk_sg_phys_elem_t), 
                                        num, L4BLK_SG_PHYS, &_env);
-      if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+      if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
         {
           Error("send request to driver failed (ret %d, exc %d)",
-                ret, _env.major);
+                ret, DICE_EXCEPTION_MAJOR(&_env));
           goto req_error_mem;
         }
       
@@ -612,10 +612,10 @@ __l4blk_notify_thread(void)
       /* we are handling an 'interrupt', tell the rest of the kernel */ 
       irq_enter(smp_processor_id(), l4blk_irq);
       
-      if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+      if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
         {
           Error("error waiting for notification (ret %d,  exc %d)",
-                ret, _env.major);
+                ret, DICE_EXCEPTION_MAJOR(&_env));
           goto notify_error;
         }
       
@@ -953,9 +953,10 @@ l4blk_stub_init(void)
   /* open block driver */
   ret = l4blk_driver_open_call(&l4blk_drv_id, &l4blk_drv_handle,
                                &l4blk_cmd_id, &l4blk_notify_id, &_env);
-  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+  if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
     {
-      Error("open L4 block driver failed (ret %d, exc %d)", ret, _env.major);
+      Error("open L4 block driver failed (ret %d, exc %d)", ret, 
+	  DICE_EXCEPTION_MAJOR(&_env));
       return -ENODEV;
     }
 
@@ -1229,10 +1230,10 @@ l4blk_stub_cleanup(void)
   if (l4blk_drv_handle != -1)
     {
       ret = l4blk_driver_close_call(&l4blk_drv_id, l4blk_drv_handle, &_env);
-      if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+      if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
         {
           Error("close L4 block driver failed (ret %d, exc %d)",
-                ret, _env.major);
+                ret, DICE_EXCEPTION_MAJOR(&_env));
           return;
         }
     }

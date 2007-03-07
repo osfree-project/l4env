@@ -11,8 +11,9 @@ EXTENSION class Utcb
 {
   /* must be 2^n bytes */
 public:
+  enum { Max_words = 24 };
   Mword		status;
-  Mword		values[24];
+  Mword		values[Max_words];
   Mword	        snd_size;
   Mword         rcv_size;
 

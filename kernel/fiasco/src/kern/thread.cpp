@@ -806,6 +806,8 @@ Thread::copy_utcb_to_utcb(Thread *snd, Thread *rcv)
   Mword s = snd->utcb()->snd_size;
   Mword r = rcv->utcb()->rcv_size;
 
+  if (r > Utcb::Max_words) r = Utcb::Max_words;
+
   Cpu::memcpy_mwords (rcv->utcb()->values, snd->utcb()->values, r < s ? r : s);
   if ((rcv->utcb()->status & Utcb::Inherit_fpu) 
       && (snd->utcb()->status & Utcb::Transfer_fpu))

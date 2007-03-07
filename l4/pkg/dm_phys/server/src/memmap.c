@@ -21,6 +21,7 @@
 #include <l4/crtx/crt0.h>
 #include <l4/sys/types.h>
 #include <l4/sys/consts.h>
+#include <l4/sys/memdesc.h>
 #include <l4/util/bitops.h>
 #include <l4/util/macros.h>
 #include <l4/slab/slab.h>
@@ -78,9 +79,6 @@ static char * isa_dma_pool_name = "ISA DMA memory pool";
 
 extern char _stext;  ///< DMphys binary start
 extern char _end;    ///< DMphys binary end
-
-/// RMGR trampoline page, defined in crt0 (crtx/lib/src/crt0_l4env_noenv.S)
-extern unsigned long _tramppage;
 
 /*****************************************************************************
  *** helpers
@@ -872,9 +870,8 @@ __check_assumptions(int use_4M_pages)
     }
 }
 
-#if !(defined(ARCH_x86) || defined(ARCH_amd64))
 static
-void 
+void
 __insert_ram(memmap_t *mp)
 {
   if (!mem)
@@ -893,29 +890,15 @@ __insert_ram(memmap_t *mp)
 
   *m = mp;
 }
-#endif
 
-static 
+static
 int
 __setup_free_regions(void)
 {
   /* set memory range to be used to assigne memory pools */
   mem_low = (phys_mem_low > DMPHYS_MEM_LOW) ? phys_mem_low : DMPHYS_MEM_LOW;
   mem_high = phys_mem_high;
-#if defined(ARCH_x86) || defined(ARCH_amd64)
-  mem = __alloc_memmap_desc();
-  if (mem == NULL)
-    return -1;
-  /* the initial memory map always contains thw whole phys. memory, it can
-   * be restricted by reserving memory areas or setting mem_low and
-   * mem_high */
-  mem->addr = phys_mem_low;
-  mem->size = phys_mem_high - phys_mem_low;
-
-
-#else
   mem = 0;
-  
   memmap_t *mp = 0;
 
   l4_kernel_info_t *kip = dmphys_sigma0_kinfo();
@@ -940,7 +923,7 @@ __setup_free_regions(void)
 	}
 
     }
-#endif
+
   /* if we skip low memory by default, mark it reserved */
   if (mem_low > phys_mem_low)
     {

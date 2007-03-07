@@ -44,7 +44,7 @@ _comh_fill(comh_fill_t *fill)
 			&fill->rect, 
 			fill->color, 
 			&_env)
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     printk("comh.c: pslim_fill failed\n");
 }
 
@@ -60,7 +60,7 @@ _comh_puts(comh_puts_t *puts)
 		  puts->x, 
 		  puts->y,
 		  &_env)
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     printk("comh.c: pslim_puts failed\n");
 }
 
@@ -76,7 +76,7 @@ _comh_putc(comh_putc_t *putc)
 		  putc->x,
 		  putc->y,
 		  &_env)
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     printk("comh.c: pslim_putc failed\n");
 }
 
@@ -94,7 +94,7 @@ _comh_redraw(comh_redraw_t *redraw)
 			   redraw->x,
 			   redraw->y,
 			   &_env)
-	  || _env.major != CORBA_NO_EXCEPTION)
+	  || DICE_HAS_EXCEPTION(&_env))
 	printk("comh.c: pslim_puts failed\n");
 
       redraw->p += dropscon_num_columns;
@@ -113,7 +113,7 @@ _comh_copy(comh_copy_t *copy)
 			copy->dx, 
 			copy->dy,
 			&_env)
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     printk("comh.c: pslim_copy failed\n");
 }
 

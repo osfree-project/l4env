@@ -2,7 +2,7 @@ INTERFACE [v2-utcb]:
 class Utcb
 {};
 
-INTERFACE [{ia32,ux}-utcb]:
+INTERFACE [(ia32|ux) & utcb]:
 
 #include "types.h"
 #include "l4_types.h"
@@ -11,8 +11,9 @@ EXTENSION class Utcb
 {
   /* must be 2^n bytes */
 public:
+  enum { Max_words = 16 };
   Mword		status;
-  Mword		values[16];
+  Mword		values[Max_words];
   Unsigned32	snd_size;
   Unsigned32	rcv_size;
 

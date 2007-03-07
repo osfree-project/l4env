@@ -601,7 +601,7 @@ dropscon_blank(struct vc_data *conp,
       rect.w = xres;
       
       if (con_vc_pslim_fill_call(&dropsvc_l4id, &rect, black, &_env)
-	  || _env.major != CORBA_NO_EXCEPTION)
+	  || DICE_HAS_EXCEPTION(&_env))
 	{
 	  printk("dropscon.o: blank fill failed\n");
 	  return 0;
@@ -763,7 +763,7 @@ dropsconsole_init(void)
 		     PRIO_KERNEL /*from linux22/include/l4linux/x86/config.h*/,
 #endif
 		     &dropsvc_l4id, CON_NOVFB, &_env)
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       printk("dropscon.o: open vc failed\n");
       goto fail3;
@@ -788,7 +788,7 @@ dropsconsole_init(void)
 			 &bits_per_pixel, &bytes_per_pixel,
 			 &bytes_per_line, &accel_flags, 
 			 &fn_x, &fn_y, &_env)
-      || _env.major != CORBA_NO_EXCEPTION)
+      || DICE_HAS_EXCEPTION(&_env))
     {
       printk("dropscon.o: get graph_gmode failed\n");
       goto fail1;
