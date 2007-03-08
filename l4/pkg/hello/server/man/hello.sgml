@@ -1,0 +1,43 @@
+<!-- -*- sgml -*- -->
+<!doctype manpage public "-//JFW//DTD Manpage//EN">
+
+<manpage
+sect=demo
+date="02.02.1999"
+author="Lukas Grützmacher"
+>hello world
+<short>demomonstration server for the L4 interface
+<sect>Synopsis
+
+<verb>hello
+</verb>
+
+<sect>Description
+
+Demonstrate that a small server can run over L4 or a similar kernel.
+
+You will see every 4th second the following message:
+
+<code/hello: My thread-id is xxx:xxx/.
+
+<sect>Arguments
+
+<desc>
+<dt>
+No arguments.
+
+</desc>
+
+<sect>Return Values
+
+<desc>
+<dt>
+No Return Values.
+
+</desc>
+
+<sect>See Also
+
+FIASCO home page <ref t=u id="http://os.inf.tu-dresden.de/fiasco/"//
+
+sdc home page <ref t=u id="http://www.inf.tu-dresden.de/~jw6/doc/typeset/"//

@@ -186,8 +186,7 @@ namespace dice
 
 typedef struct CORBA_Environment
 {
-    CORBA_exception_type major:4;
-    CORBA_exception_type repos_id:28;
+    dice_CORBA_exception_type _exception;
     void *param;
     
     in_port_t srv_port;
@@ -354,13 +353,13 @@ private:
 
 #endif /* x2 || v4 */
 
-#if defined(L4API_l4v2) || defined(L4API_l4x0) || defined(L4API_l4x2) || defined(L4API_l4v4)
-
 /** \def access exception major member */
 #define DICE_EXCEPTION_MAJOR(env) (env)->_exception._corba.major
 
 /** \def access exception minor (repos_id) member */
 #define DICE_EXCEPTION_MINOR(env) (env)->_exception._corba.repos_id
+
+#if defined(L4API_l4v2) || defined(L4API_l4x0) || defined(L4API_l4x2) || defined(L4API_l4v4)
 
 /** \def access exception param member */
 #define DICE_EXCEPTION_PARAM(env) (env)->_p.param
@@ -369,12 +368,6 @@ private:
 #define DICE_IPC_ERROR(env) (env)->_p.ipc_error
 
 #else 
-
-/** \def access exception major member */
-#define DICE_EXCEPTION_MAJOR(env) (env)->major
-
-/** \def access exception minor (repos_id) member */
-#define DICE_EXCEPTION_MINOR(env) (env)->repos_id
 
 /** \def access exception param member */
 #define DICE_EXCEPTION_PARAM(env) (env)->param

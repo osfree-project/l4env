@@ -4,7 +4,7 @@ include $(L4DIR)/mk/Makeconf
 
 ifeq ($(IN_OBJ_DIR),)
 
-all install:: $(OBJ_DIR)/Makefile.build
+all install clean cleanall:: $(OBJ_DIR)/Makefile.build
 	$(MAKE) -C $(OBJ_DIR) O=$(OBJ_BASE) -f Makefile.build $@
 
 $(OBJ_DIR)/Makefile.build: $(SRC_DIR)/Makefile
@@ -28,6 +28,9 @@ all::
 l4env.dvi: $(PICS)
 clean::
 	$(VERBOSE)$(RM) $(PICS)
+
+cleanall::
+	$(VERBOSE)$(RM) l4env.fig dataspaces.fig own.bib
 
 include $(L4DIR)/mk/doc.mk
 

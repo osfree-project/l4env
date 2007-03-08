@@ -1,0 +1,12 @@
+
+This directory contains three example programs that run on top of L4:
+
+many_threads: 
+	create 128 threads and let a message cycle.
+
+many_tasks: 
+	create tasks and threads until kernel memory is consumed.
+
+many_mappings:
+	remap one physical memory page until the mapping tree 
+	in the kernel exceeds its size limit.

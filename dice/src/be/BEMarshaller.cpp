@@ -571,6 +571,10 @@ CBEMarshaller::MarshalOpcode(CBETypedDeclarator *pMember)
 /** \brief test for and marshal exception
  *  \param pMember the member to marshal
  *  \return true if this was an special parameter
+ *
+ * If unmarshalling, first test diretly in the message buffer if there was an
+ * exception. Only then, store this exception in the environment.  This saves
+ * us an indirect access in the nominal case.
  */
 bool
 CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
@@ -625,6 +629,14 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
     }
     else
     {
+	int nRecvDir = m_pFunction->GetReceiveDirection();
+	// test if we really received an exception
+	// if (env->major != CORBA_NO_EXCEPTION) => if (_exception != 0)
+	*m_pFile << "\tif (DICE_EXPECT_FALSE(";
+	WriteMember(nRecvDir, pMsgBuffer, pMember, 0);
+	*m_pFile << " != 0))\n";
+	*m_pFile << "\t{\n";
+	m_pFile->IncIndent();
 	// now assign the values
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 	{
@@ -657,13 +669,7 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 	    *m_pFile << ";\n";
 	}
 
-	// check exception
-	// if (env->major != CORBA_NO_EXCEPTION)
-	//   return
-	*m_pFile << "\tif (DICE_EXPECT_FALSE(DICE_HAS_EXCEPTION(" << sEnvPtr
-	    << ")))\n";
-	*m_pFile << "\t{\n";
-	m_pFile->IncIndent();
+	// if exception, return
 	m_pFunction->WriteReturn(m_pFile);
 	m_pFile->DecIndent();
 	*m_pFile << "\t}\n";

@@ -75,7 +75,7 @@ L4_INLINE
 unsigned
 l4_kernel_info_get_num_mem_descs(l4_kernel_info_t *kip)
 {
-  return kip->mem_info & ((1 << (sizeof(l4_umword_t)*4)) -1);
+  return kip->mem_info & ((1UL << (sizeof(l4_umword_t)*4)) -1);
 }
 
 L4_INLINE

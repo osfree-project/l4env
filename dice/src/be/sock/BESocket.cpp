@@ -121,7 +121,7 @@ void CBESocket::WriteExceptionClear(CBEFile* pFile,
 {
     /* write exception check (clear any existing exception) */
     *pFile << "\tif (";
-    WriteEnvironmentField(pFile, pFunction, "major");
+    WriteEnvironmentField(pFile, pFunction, "_exception._corba.major");
     *pFile << " != CORBA_NO_EXCEPTION)\n";
     pFile->IncIndent();
     *pFile << "\tCORBA_server_exception_set(";
@@ -146,7 +146,7 @@ void CBESocket::WriteErrorCheck(CBEFile* pFile,
     pFile->IncIndent();
     /* set exception */
     *pFile << "\tif (";
-    WriteEnvironmentField(pFile, pFunction, "major");
+    WriteEnvironmentField(pFile, pFunction, "_exception._corba.major");
     *pFile << " == CORBA_NO_EXCEPTION)\n";
     pFile->IncIndent();
     *pFile << "\tCORBA_server_exception_set(";

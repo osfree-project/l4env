@@ -56,7 +56,7 @@ fi
 #
 if test x"$AUTOMAKE" = x || test x"$ACLOCAL" = x ; then
   am_ver=""
-  for ver in "" "-1.9" "-1.8" "-1.7" ; do
+  for ver in "" "-1.10" "-1.9" "-1.8" "-1.7" ; do
     am="automake$ver"
     if ($am --version) < /dev/null > /dev/null 2>&1 ; then
       if ($am --version | head -n 1 | awk 'NR==1 { if( $(NF) >= '$automake_min_vers') \

@@ -1,0 +1,7 @@
+This little example uses RT scheduling.
+
+It sets up 2 timeslices and adapts it workload for each timeslice by
+monitoring itself with the help of preemption ipcs.
+
+If there are some complex computations in the preemter like
+"outnstring" it will crash with a strange PF.

@@ -84,9 +84,9 @@ extern struct resource ioport_resource;
 extern struct resource iomem_resource;
 
 extern int check_resource(struct resource *root, unsigned long, unsigned long);
-extern int request_resource(struct resource *root, struct resource *new);
-extern int release_resource(struct resource *new);
-extern int allocate_resource(struct resource *root, struct resource *new,
+extern int request_resource(struct resource *root, struct resource *new_);
+extern int release_resource(struct resource *new_);
+extern int allocate_resource(struct resource *root, struct resource *new_,
 			     unsigned long size,
 			     unsigned long min, unsigned long max,
 			     unsigned long align,

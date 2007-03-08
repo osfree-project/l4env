@@ -1,0 +1,4 @@
+Simple Hello Example.
+
+This example only uses plain L4 mechanisms. The examples subdirectory contains
+some test cases covering some issues of the L4 micro kernel.

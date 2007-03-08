@@ -1,0 +1,75 @@
+#! /usr/bin/perl
+
+use Math::BigInt;
+
+my %sym_tab = (new Math::BigInt(0) => "ERRRRRRROR");
+my $sections = "BdDdTtVvWwuU";
+my $img = shift;
+
+my %test;
+
+sub as_hex($)
+{
+  my $i = shift;
+  my $h = substr $i->as_hex(), 2;
+  $h = ('0' x (16-length($h))) . $h;
+  return $h;
+}
+
+foreach my $l (split('\n', qx{nm $img | c++filt}))
+{
+  if ($l =~ /^([0-9a-fA-F]*)\s+([$sections])\s+(.*)$/)
+  {
+    my ($addr, $sec, $sym) = (new Math::BigInt("0x$1"), $2, $3);
+    $sym_tab{as_hex($addr)} = $sym 
+      if defined $addr && ref $addr && !$addr->is_nan();
+  }
+}
+
+sub find_sym($)
+{
+  my $addr = as_hex(shift);
+  my $hit = '0';
+
+  foreach my $s (sort keys %sym_tab)
+  {
+    if ($s gt $addr)
+    {
+      return new Math::BigInt("0x$hit");
+    }
+
+    $hit = $s;
+  }
+
+  return new Math::BigInt(0);
+}
+
+
+my $last_f = 0;
+while (<>)
+{
+  if (/#(\d+)\s+([0-9a-fA-F]+)\s+([0-9a-fA-F]+)/)
+  {
+    my $fn = $1;
+    my $stack = new Math::BigInt("0x$2");
+    my $addr = new Math::BigInt("0x$3");
+    my $hit  = find_sym($addr);
+    my $fsize = $stack - $last_f;
+
+    $last_f = $stack;
+    printf "%2d %s ", $fn, $stack->as_hex();
+    if ($fsize >= 0 && $fsize <= 2000)
+    {
+      printf "%4d", $fsize;
+    } else {
+      printf "....";
+    }
+    my $offset = $addr-$hit;
+    my $o = $hit->as_hex();
+    printf " %s %s + %s = %s\n", 
+      $addr->as_hex(), $sym_tab{as_hex($hit)}, $offset->as_hex(), 
+      $hit->as_hex();
+  }
+}
+
+

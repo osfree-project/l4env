@@ -149,7 +149,7 @@ my %modules =
    },
 
    remote_repo_l4 => {
-      modules => [ qw(bid l4env l4env_diet l4env_uclibc dope misc) ],
+      modules => [ qw(bid hello l4env l4env_diet l4env_uclibc dope misc) ],
       paths   => [ qw(l4/pkg/arm_drivers
                       l4/pkg/c++-examples
                       l4/pkg/cpu_reserve

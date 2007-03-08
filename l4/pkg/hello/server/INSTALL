@@ -1,0 +1,9 @@
+   "Hello World" test server
+    for L4 binary interface
+
+by running ./configure you can change the install directory.
+(Run it to get help.)
+
+The standard install directory is defined in $(SRC_BASE)/l4/Makeconf.
+
+SRC_BASE should be defined in ~/Makeconf.user

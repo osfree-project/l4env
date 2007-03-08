@@ -16,8 +16,9 @@
 #define DICE_DEFAULT_PORT (in_port_t)9999
 #endif
 
-#define dice_default_environment { CORBA_NO_EXCEPTION, \
-    0, 0, (in_port_t)9999, -1 , 0, \
+#define dice_default_environment { \
+    { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
+    0, (in_port_t)9999, -1 , 0, \
     malloc, free, \
     { sin_family: 0, sin_port: 0, sin_addr: { s_addr: 0 } }, \
     { 0,0,0,0,0, 0,0,0,0,0}, 0, { 0L, 0L } }
@@ -27,8 +28,7 @@
 namespace dice
 {   
     CORBA_Environment::CORBA_Environment()
-    : exc_major(0),
-      repos_id(0),
+    : _exception(),
       param(0),
       srv_port(9999),
       cur_socket(-1),
@@ -39,6 +39,8 @@ namespace dice
       ptrs_cur(0),
       receive_timeout()
     {
+	_exception._corba.major = CORBA_NO_EXCEPTION;
+	_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
 	for (int i=0; i < DICE_PTRS_MAX; i++)
 	    ptrs[i] = 0;
     }
