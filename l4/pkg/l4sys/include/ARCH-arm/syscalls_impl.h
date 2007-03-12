@@ -37,7 +37,7 @@ L4_INLINE int l4_nchief(l4_threadid_t destination,
      "r8", "r9", "r12", "r14", "memory" PIC_CLOBBER
      );
 
-  *next_chief = next;
+  next_chief->raw = next.raw;
 
   return destid_type;
 }
@@ -65,7 +65,7 @@ L4_INLINE l4_threadid_t l4_myself()
      "r8", "r9" PIC_CLOBBER, "r12", "r14", "memory"
      );
 
-  return id;
+  return (l4_threadid_t)id.raw;
 }
 
 L4_INLINE l4_threadid_t l4_myself_noprof()
