@@ -106,13 +106,14 @@ CL4BENameFactory::GetZeroFpage()
 }
 
 /** \brief generates the variable of the client side timeout
+ *  \param pFunction the function needing this variable
  *  \return the name of the variable
  *
  * At client side we always return the timeout member of the environment,
  * since this should be set by the user anyways.
  */
 string
-CL4BENameFactory::GetTimeoutClientVariable()
+CL4BENameFactory::GetTimeoutClientVariable(CBEFunction* /* pFunction */)
 {
     string sEnv = GetCorbaEnvironmentVariable();
     sEnv += "->timeout";
@@ -120,13 +121,14 @@ CL4BENameFactory::GetTimeoutClientVariable()
 }
 
 /** \brief generates the variable of the component side timeout
+ *  \param pFunction the function needing this variable
  *  \return the name of the variable
  *
  * We always use the environment's timeout member as well, because we trust
  * that it is set either by the user or per default by the server-loop.
  */
 string
-CL4BENameFactory::GetTimeoutServerVariable()
+CL4BENameFactory::GetTimeoutServerVariable(CBEFunction* /* pFunction */)
 {
     string sEnv = GetCorbaEnvironmentVariable();
     sEnv += "->timeout";

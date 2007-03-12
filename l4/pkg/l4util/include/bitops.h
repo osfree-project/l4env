@@ -102,14 +102,14 @@ l4util_complement_bit(int b, volatile l4_umword_t * dest);
  * \return Value of bit \em b.
  */
 L4_INLINE int
-l4util_test_bit(int b, volatile l4_umword_t * dest);
+l4util_test_bit(int b, const volatile l4_umword_t * dest);
 
 L4_INLINE int
-l4util_test_bit32(int b, volatile l4_uint32_t * dest);
+l4util_test_bit32(int b, const volatile l4_uint32_t * dest);
 
 #if L4_MWORD_BITS >= 64
 L4_INLINE int
-l4util_test_bit64(int b, volatile l4_uint64_t * dest);
+l4util_test_bit64(int b, const volatile l4_uint64_t * dest);
 #endif
 
 /**
@@ -193,7 +193,7 @@ l4util_bsf(l4_umword_t word);
  *         >= size if no bit is set
  */
 L4_INLINE int
-l4util_find_first_set_bit(void * dest, l4_size_t size);
+l4util_find_first_set_bit(const void * dest, l4_size_t size);
 
 /**
  * \brief Find the first zero bit in a memory region
@@ -206,7 +206,7 @@ l4util_find_first_set_bit(void * dest, l4_size_t size);
  *         >= size if no bit is set
  */
 L4_INLINE int
-l4util_find_first_zero_bit(void * dest, l4_size_t size);
+l4util_find_first_zero_bit(const void * dest, l4_size_t size);
 
 
 EXTERN_C_END
@@ -261,7 +261,7 @@ l4util_clear_bit(int b, volatile l4_umword_t * dest)
 
 #ifndef __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT
 L4_INLINE int
-l4util_test_bit(int b, volatile l4_umword_t * dest)
+l4util_test_bit(int b, const volatile l4_umword_t * dest)
 {
   dest += b / (sizeof(*dest) * 8);
   b    &= sizeof(*dest) * 8 - 1;
@@ -272,7 +272,7 @@ l4util_test_bit(int b, volatile l4_umword_t * dest)
 
 #ifndef __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT32
 L4_INLINE int
-l4util_test_bit32(int b, volatile l4_uint32_t * dest)
+l4util_test_bit32(int b, const volatile l4_uint32_t * dest)
 {
   dest += b / (sizeof(*dest) * 8);
   b    &= sizeof(*dest) * 8 - 1;
@@ -361,7 +361,7 @@ l4util_bsf(l4_umword_t word)
 
 #ifndef __L4UTIL_BITOPS_HAVE_ARCH_FIND_FIRST_ZERO_BIT
 L4_INLINE int
-l4util_find_first_zero_bit(void * dest, l4_size_t size)
+l4util_find_first_zero_bit(const void * dest, l4_size_t size)
 {
   l4_size_t i, j;
   unsigned long *v = (unsigned long*)dest;

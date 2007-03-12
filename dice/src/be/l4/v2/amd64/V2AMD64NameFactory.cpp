@@ -32,7 +32,7 @@
 #include <iostream>
 
 CL4V2AMD64BENameFactory::CL4V2AMD64BENameFactory()
-: CL4BENameFactory()
+: CL4V2BENameFactory()
 {
 }
 
@@ -74,7 +74,7 @@ string CL4V2AMD64BENameFactory::GetTypeName(int nType, bool bUnsigned, int nSize
 	}
 	break;
     default:
-        sReturn = CL4BENameFactory::GetTypeName(nType, bUnsigned, nSize);
+        sReturn = CL4V2BENameFactory::GetTypeName(nType, bUnsigned, nSize);
         break;
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: Generated type name \"%s\" for type code %d\n",

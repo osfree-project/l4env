@@ -3,8 +3,12 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.50)
 
 AC_INIT(src/main.cpp)
-AM_INIT_AUTOMAKE(dice, 3.1.1)
+AM_INIT_AUTOMAKE(dice, 3.1.2)
 AM_CONFIG_HEADER(config.h)
+
+AC_CANONICAL_HOST
+dnl Test for Darwin host
+AM_CONDITIONAL(HOST_DARWIN, [case "$host_os" in darwin*) true ;; *) false ;; esac])
 
 dnl Test for AIX
 AC_AIX
@@ -34,19 +38,19 @@ fi
 if test "$YACC" == yacc; then
   AC_MSG_ERROR(['bison' is missing from your system.])
 fi
-  AC_CACHE_CHECK([for bison version], dice_bison_version, [
-    set `bison --version|grep 'GNU Bison'|cut -d ' ' -f 4|sed -e 's/\./ /'|tr -d a-z`
-    if test "(" "${1}" == "1" -a "(" "${2}" == "35" -o "${2}" == "75" -o "${2}" == "875" ")" ")" -o "(" "${1}" == "2" ")"; then
-      dice_bison_version="${1}.${2} (ok)"
-    else
-      dice_bison_version=invalid
-    fi
-  ])
-  case $dice_bison_version in
-  ""|invalid[)]
-    AC_MSG_ERROR([You will need at lest bison version 1.35 (found ${1}.${2}).])
-    ;;
-  esac
+AC_CACHE_CHECK([for bison version], dice_bison_version, [
+  set `$YACC --version|grep 'GNU Bison'|cut -d ' ' -f 4|sed -e 's/\./ /'|tr -d a-z`
+  if test "(" "${1}" == "1" -a "(" "${2}" == "35" -o "${2}" == "75" -o "${2}" == "875" ")" ")" -o "(" "${1}" == "2" ")"; then
+    dice_bison_version="${1}.${2} (ok)"
+  else
+    dice_bison_version=invalid
+  fi
+])
+case $dice_bison_version in
+""|invalid[)]
+  AC_MSG_ERROR([You will need at lest bison version 1.35 (found ${1}.${2}).])
+  ;;
+esac
 AC_PROG_LN_S
 
 dnl check for documentation programs

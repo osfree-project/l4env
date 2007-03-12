@@ -461,6 +461,7 @@ l4_sched_deceit        RETURN_IF_ATTR(SCHED_DONATE);
 schedule_donate        RETURN_IF_ATTR(SCHED_DONATE);
 sched_donate	       RETURN_IF_ATTR(SCHED_DONATE);
 dedicated_partner      RETURN_IF_ATTR(DEDICATED_PARTNER);
+default_timeout		RETURN_IF_ATTR(DEFAULT_TIMEOUT);
 attribute       return ATTRIBUTE;
 __attribute__	return ATTRIBUTE;
 ">>="           return RS_ASSIGN;

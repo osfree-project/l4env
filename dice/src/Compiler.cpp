@@ -61,6 +61,7 @@
 #include "be/l4/L4BENameFactory.h"
 // L4V2
 #include "be/l4/v2/L4V2BEClassFactory.h"
+#include "be/l4/v2/L4V2BENameFactory.h"
 // L4V2 AMD64
 #include "be/l4/v2/amd64/V2AMD64ClassFactory.h"
 #include "be/l4/v2/amd64/V2AMD64NameFactory.h"
@@ -1515,14 +1516,15 @@ void CCompiler::PrepareWrite()
 
     // set name factory depending on arguments
     CBENameFactory *pNF = NULL;
-    if ((IsBackEndInterfaceSet(PROGRAM_BE_V2)) ||
-        (IsBackEndInterfaceSet(PROGRAM_BE_X0)))
+    if (IsBackEndInterfaceSet(PROGRAM_BE_V2))
     {
 	if (IsBackEndPlatformSet(PROGRAM_BE_AMD64))
 	    pNF = new CL4V2AMD64BENameFactory();
 	else
-	    pNF = new CL4BENameFactory();
+	    pNF = new CL4V2BENameFactory();
     }
+    else if (IsBackEndInterfaceSet(PROGRAM_BE_X0))
+	pNF = new CL4BENameFactory();
     else if (IsBackEndInterfaceSet(PROGRAM_BE_V4))
         pNF = new CL4V4BENameFactory();
     else

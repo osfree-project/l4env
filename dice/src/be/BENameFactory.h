@@ -86,8 +86,8 @@ class CBENameFactory : public CBEObject
 
     virtual string GetMessageBufferMember(int nFEType);
     virtual string GetComponentIDVariable();
-    virtual string GetTimeoutServerVariable();
-    virtual string GetTimeoutClientVariable();
+    virtual string GetTimeoutServerVariable(CBEFunction *pFunction);
+    virtual string GetTimeoutClientVariable(CBEFunction *pFunction);
     virtual string GetScheduleClientVariable();
     virtual string GetScheduleServerVariable();
     virtual string GetMessageBufferTypeName(string sInterfaceName);

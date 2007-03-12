@@ -37,8 +37,8 @@
 class CFEDeclarator;
 
 /* FIRST_IS, LAST_IS, LENGTH_IS, MIN_IS, MAX_IS, SIZE_IS, SWITCH_IS, IID_IS */
-/**    \class CFEIsAttribute
- *    \ingroup frontend
+/** \class CFEIsAttribute
+ *  \ingroup frontend
  *  \brief represents all the attributes, which end on "_IS"
  */
 class CFEIsAttribute : public CFEAttribute

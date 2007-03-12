@@ -312,10 +312,8 @@ l4con_render_pslim(const unsigned char *py,
 	    (char*)py, y_len, 
 	    (char*)pu, u_len, 
 	    (char*)pv, v_len, 
-	    pSLIM_CSCS_PLN_YV12, 1, &env))
-	printf("Error doing pslim_cscs (exc=%d)\n", env.major);
-      if (env.major != CORBA_NO_EXCEPTION)
-	printf("Error doing pslim_cscs (exc=%d)\n", env.major);
+	    pSLIM_CSCS_PLN_YV12, 1, &env) || DICE_HAS_EXCEPTION(&env))
+	printf("Error doing pslim_cscs (exc=%d)\n", DICE_EXCEPTION_MAJOR(&env));
 /*
       rect.y += 2;
       py += y_len;
@@ -424,7 +422,7 @@ l4con_render_stream_init(int width, int height, int aspect)
 			 &rect_src, &rect_dst, yuv_type, &snd_fpage,
 			 &stream_y, &stream_u, &stream_v,
 			 &env)
-      || (env.major != CORBA_NO_EXCEPTION))
+      || DICE_HAS_EXCEPTION(&env))
     {
       printf("Error doing stream_cscs\n");
       return -L4_EINVAL;

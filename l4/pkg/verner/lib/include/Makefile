@@ -34,6 +34,6 @@ $(TARGETS):
 	$(VERBOSE)cd $(OBJ_DIR) && for i in $(subst $(L4DIR_ABS),$(L4DIR)/source,$(FILES)); do ln -sf $${i} `basename $${i}`; done
 
 clean cleanall:
-	$(VERBOSE)cd $(OBJ_DIR) && $(RM) $(notdir $(FILES))
+	$(VERBOSE)$(RM) -f $(addprefix $(OBJ_DIR)/,$(notdir $(FILES)))
 
 install:

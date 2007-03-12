@@ -14,7 +14,7 @@ EXTERN_C_BEGIN
  * \param to_m  contains l4-mantissa after return
  * \param to_e  contains l4-exponent after return
  */
-int l4util_micros2l4to(int mus, int *to_e, int *to_m);
+int l4util_micros2l4to(int mus, int *to_m, int *to_e);
 
 /** Calculate l4 timeouts
  * \param to_m  contains l4-mantissa

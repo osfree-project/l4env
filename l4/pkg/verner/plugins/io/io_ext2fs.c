@@ -75,7 +75,7 @@ __init_ext2fs (void)
   /* open new client context */
   ret =
     l4ext2fs_fs_open_call (&fs_id, "0x00", L4EXT2_RDWR, &ext2fs_id, &_env);
-  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+  if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
   {
     LOG_Error ("open file server failed: %s (%d)", l4env_errstr (ret), ret);
   }
@@ -131,10 +131,10 @@ io_ext2fs_close (int __fd)
   LOGdL (DEBUG_CLOSE, "fd %d", __fd);
 
   ret = l4ext2fs_file_close_call (&ext2fs_id, __fd, &_env);
-  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+  if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
   {
     LOG_Error ("l4ext2fs_file_close_call failed: %s (%d, exc %d)",
-	       l4env_errstr (ret), ret, _env.major);
+	       l4env_errstr (ret), ret, DICE_EXCEPTION_MAJOR(&_env));
     return -1;
   }
 
@@ -157,10 +157,10 @@ io_ext2fs_read (int __fd, void *__buf, unsigned long __n)
 
   ret = l4ext2fs_file_read_call (&ext2fs_id, __fd, (l4_uint8_t **) & __buf,
 				 (l4_uint32_t *) & __n, &_env);
-  if ((ret < 0) || (_env.major != CORBA_NO_EXCEPTION))
+  if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
   {
     LOG_Error ("l4ext2fs_file_read_call() failed: %s (%d, exc %d)",
-	       l4env_errstr (ret), ret, _env.major);
+	       l4env_errstr (ret), ret, DICE_EXCEPTION_MAJOR(&_env));
     return -1;
   }
 
@@ -200,10 +200,10 @@ io_ext2fs_lseek (int __fd, long __offset, int __whence)
 
   new_pos =
     l4ext2fs_file_lseek_call (&ext2fs_id, __fd, __offset, whence, &_env);
-  if ((new_pos == -1) || (_env.major != CORBA_NO_EXCEPTION))
+  if ((new_pos == -1) || DICE_HAS_EXCEPTION(&_env))
   {
     LOG_Error ("l4ext2fs_file_lseek_call() failed (ret %d, exc %d)",
-	       (int) new_pos, _env.major);
+	       (int) new_pos, DICE_EXCEPTION_MAJOR(&_env));
     return -1;
   }
 

@@ -70,7 +70,7 @@ CL4V2BEIPC::WriteCall(CBEFile *pFile,
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-    string sTimeout = pNF->GetTimeoutClientVariable();
+    string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sScheduling = pNF->GetScheduleClientVariable();
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
     string sMsgBuffer = pNF->GetMessageBufferVariable();
@@ -167,9 +167,9 @@ CL4V2BEIPC::WriteReceive(CBEFile* pFile,
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable();
+        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
     else
-        sTimeout = pNF->GetTimeoutClientVariable();
+        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
@@ -221,9 +221,9 @@ CL4V2BEIPC::WriteWait(CBEFile* pFile,
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable();
+        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
     else
-        sTimeout = pNF->GetTimeoutClientVariable();
+        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
     int nDirection = pFunction->GetReceiveDirection();
@@ -278,9 +278,9 @@ CL4V2BEIPC::WriteReplyAndWait(CBEFile* pFile,
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable();
+        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
     else
-        sTimeout = pNF->GetTimeoutClientVariable();
+        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sServerID = pNF->GetComponentIDVariable();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
@@ -367,9 +367,9 @@ CL4V2BEIPC::WriteSend(CBEFile* pFile,
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable();
+        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
     else
-        sTimeout = pNF->GetTimeoutClientVariable();
+        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
     string sScheduling = pNF->GetScheduleClientVariable();

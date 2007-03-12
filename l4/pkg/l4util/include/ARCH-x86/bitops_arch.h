@@ -100,7 +100,7 @@ l4util_complement_bit(int b, volatile l4_umword_t * dest)
 /* test bit */
 #define __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT32
 L4_INLINE int
-l4util_test_bit32(int b, volatile l4_uint32_t * dest)
+l4util_test_bit32(int b, const volatile l4_uint32_t * dest)
 {
   l4_int8_t bit;
 
@@ -123,7 +123,7 @@ l4util_test_bit32(int b, volatile l4_uint32_t * dest)
 /* test bit */
 #define __L4UTIL_BITOPS_HAVE_ARCH_TEST_BIT
 L4_INLINE int
-l4util_test_bit(int b, volatile l4_umword_t * dest)
+l4util_test_bit(int b, const volatile l4_umword_t * dest)
 {
   return l4util_test_bit32(b, (volatile l4_uint32_t*)dest);
 }
@@ -243,7 +243,7 @@ l4util_bsf(l4_umword_t word)
 
 #define __L4UTIL_BITOPS_HAVE_ARCH_FIND_FIRST_SET_BIT
 L4_INLINE int
-l4util_find_first_set_bit(void * dest, l4_size_t size)
+l4util_find_first_set_bit(const void * dest, l4_size_t size)
 {
   l4_mword_t dummy0, dummy1, res;
 
@@ -267,7 +267,7 @@ l4util_find_first_set_bit(void * dest, l4_size_t size)
 
 #define __L4UTIL_BITOPS_HAVE_ARCH_FIND_FIRST_ZERO_BIT
 L4_INLINE int
-l4util_find_first_zero_bit(void * dest, l4_size_t size)
+l4util_find_first_zero_bit(const void * dest, l4_size_t size)
 {
   l4_mword_t dummy0, dummy1, dummy2, res;
 

@@ -422,6 +422,7 @@ void CConsistencyVisitor::CheckReturnType(CFEOperation& operation)
         case ATTR_STRING:
         case ATTR_CONTEXT_HANDLE:
 	case ATTR_SCHED_DONATE:
+	case ATTR_DEFAULT_TIMEOUT:
             /* keep attribute */
             break;
         default:

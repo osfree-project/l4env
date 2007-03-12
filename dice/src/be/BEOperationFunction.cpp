@@ -261,6 +261,7 @@ CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation)
         case ATTR_STRING:
         case ATTR_CONTEXT_HANDLE:
 	case ATTR_SCHED_DONATE:
+	case ATTR_DEFAULT_TIMEOUT:
             /* keep attribute */
             if (!AddAttribute(*iter))
                 return false;

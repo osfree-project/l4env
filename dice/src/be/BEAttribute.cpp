@@ -229,6 +229,7 @@ CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute)
     case ATTR_ALLOW_REPLY_ONLY: // simple
     case ATTR_SCHED_DONATE: // simple
     case ATTR_DEDICATED_PARTNER:
+    case ATTR_DEFAULT_TIMEOUT:
         m_nAttrClass = ATTR_CLASS_SIMPLE;
         break;
     case ATTR_INIT_RCVSTRING: // simple or string
@@ -287,6 +288,7 @@ CBEAttribute::CreateBackEnd(ATTR_TYPE nType)
     case ATTR_ALLOW_REPLY_ONLY: // simple
     case ATTR_SCHED_DONATE: // simple
     case ATTR_DEDICATED_PARTNER: // simple
+    case ATTR_DEFAULT_TIMEOUT: // simple
     case ATTR_INIT_RCVSTRING: // simple or string
         m_nAttrClass = ATTR_CLASS_SIMPLE;
         break;

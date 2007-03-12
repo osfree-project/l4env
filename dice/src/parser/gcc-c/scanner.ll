@@ -54,7 +54,7 @@
 #include "fe/FEConditionalExpression.h"
 #include "fe/FESizeOfExpression.h"
 
-#include "parser/gcc-c/parser.h"
+#include "parser.h"
 #include "Compiler.h"
 #include "CParser.h"
 #include "CPreProcess.h"

@@ -511,12 +511,12 @@ player_poll_thread (void)
         //  LOG("Position: %d", (int)position);
           verner_remote_gui_update_update_send(&update_thread, gui_state.playmode,
                                                currentQLevel, position, &env);
-          if (env.major != CORBA_NO_EXCEPTION)
+          if (DICE_HAS_EXCEPTION(&env))
           {
-              LOG("Error: %d", env.major);
-              if (env.major == CORBA_SYSTEM_EXCEPTION)
+              LOG("Error: %d", DICE_EXCEPTION_MAJOR(&env));
+              if (DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION)
               {
-                  LOG("IPC Error: 0x%x", env._p.ipc_error);
+                  LOG("IPC Error: 0x%x", DICE_IPC_ERROR(&env));
               }
           }
 

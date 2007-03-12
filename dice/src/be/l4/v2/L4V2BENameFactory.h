@@ -1,13 +1,13 @@
 /**
- *    \file    dice/src/be/l4/v2/amd64/V2AMD64NameFactory.h
- *    \brief   contains the declaration of the class CL4V2AMD64BENameFactory
+ *  \file    dice/src/be/l4/v2/L4V2BENameFactory.h
+ *  \brief   contains the declaration of the class CL4V2BENameFactory
  *
- *    \date    12/15/2005
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/05/2007
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2005
- * Dresden University of Technology, Operating Systems Research Group
+ * Copyright (C) 2007
+ * Technische Universität Dresden, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
  * it under the terms of the GNU General Public License, Version 2 as
@@ -27,27 +27,26 @@
  */
 
 /** preprocessing symbol to check header file */
-#ifndef __DICE_BE_L4_V2_AMD64_V2AMD64NAMEFACTORY_H__
-#define __DICE_BE_L4_V2_AMD64_V2AMD64NAMEFACTORY_H__
+#ifndef L4V2BENAMEFACTORY_H
+#define L4V2BENAMEFACTORY_H
 
-#include "be/l4/v2/L4V2BENameFactory.h"
+#include <be/l4/L4BENameFactory.h>
 
-/** \class CL4V2AMD64BENameFactory
+/** \class CL4V2BENameFactory
  *  \ingroup backend
- *  \brief the name factory for the back-end classes
+ *  \brief contains functions to create V4 specific names
  */
-class CL4V2AMD64BENameFactory : public CL4V2BENameFactory
+class CL4V2BENameFactory : public CL4BENameFactory
 {
 
-// Constructor
 public:
-    /** \brief constructor
+    /** \brief creates the instance of the name factory
      */
-    CL4V2AMD64BENameFactory();
-    ~CL4V2AMD64BENameFactory();
+    CL4V2BENameFactory();
+    virtual ~CL4V2BENameFactory();
 
-public:
-    virtual string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
+    virtual string GetTimeoutServerVariable(CBEFunction *pFunction);
+    virtual string GetTimeoutClientVariable(CBEFunction *pFunction);
 };
 
-#endif // !__DICE_BE_L4_V2_AMD64_V2AMD64NAMEFACTORY_H__
+#endif

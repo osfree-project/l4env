@@ -1,3 +1,9 @@
+dice (3.1.2-1) unstable; urgency=low
+
+  * New upstream release.
+
+ -- Adam Lackorzynski <adam@os.inf.tu-dresden.de>  Fri, 9 Mar 2007 17:56:30 +0100
+
 dice (3.1.1-1) unstable; urgency=low
 
   * New upstream release.

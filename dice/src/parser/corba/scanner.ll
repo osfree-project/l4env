@@ -54,7 +54,7 @@
 #include "fe/FEUserDefinedExpression.h"
 #include "fe/FEUnionCase.h"
 
-#include "parser/corba/parser.h"
+#include "parser.h"
 #include "Compiler.h"
 #include "CParser.h"
 #include "CPreProcess.h"

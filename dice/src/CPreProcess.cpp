@@ -659,7 +659,8 @@ string CPreProcess::FindPathToFile(string sFilename, unsigned int nLineNb)
 	     * generate /usr/include/blah.h. To catch this, we have to call
 	     * realpath on the stored paths.
 	     */
-	    char *real_path = realpath((*i2).c_str(), NULL);
+	    char real_path_buffer[PATH_MAX];
+	    char *real_path = realpath((*i2).c_str(), real_path_buffer);
 	    if (real_path)
 	    {
 		/* realpath removes trainling slashes, but we need trailing

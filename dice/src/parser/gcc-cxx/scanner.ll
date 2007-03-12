@@ -33,7 +33,7 @@
 #include <string>
 #include "fe/FEFile.h"
 
-#include "parser/gcc-cxx/parser.h"
+#include "parser.h"
 #include "Compiler.h"
 #include "CParser.h"
 #include "CPreProcess.h"

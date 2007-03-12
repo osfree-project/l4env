@@ -562,9 +562,9 @@ void CDependency::PrintDependentFile(string sFileName)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called\n", __func__, sFileName.c_str());
     
-    char *real_path;
+    char real_path_buffer[PATH_MAX];
     /* Cite: Avoid using this function. It is broken by design... */
-    real_path = realpath(sFileName.c_str(), NULL /* glibc extension! */);
+    char *real_path = realpath(sFileName.c_str(), real_path_buffer);
     if (!real_path)
     {
 	CCompiler::Error("Calling realpath(%s) returned an error: %s\n",

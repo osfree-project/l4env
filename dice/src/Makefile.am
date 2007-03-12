@@ -42,7 +42,13 @@ dice_LDADD=	-L$(top_builddir)/src/be/l4/v2 -lv2 \
 		-L$(top_builddir)/src/fe -lfe \
 		-lstdc++ -ldl
 
+if HOST_DARWIN
+# Darwin's _toupper and _tolower are macros, so using these as function
+# pointers creates a linker error, which we avoid with some symbol mapping.
+dice_LDFLAGS = -Wl,-i__toupper:_toupper -Wl,-i__tolower:_tolower
+else
 dice_LDFLAGS = -export-dynamic
+endif
 
 AM_CPPFLAGS=	-D__USER__="\"$(USER)@`hostname`\"" \
 		-D__L4DIR__="\"`pwd`/${top_builddir}/@L4DIR@\"" \

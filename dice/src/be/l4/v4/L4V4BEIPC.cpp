@@ -56,9 +56,9 @@ CL4V4BEIPC::WriteCall(CBEFile* pFile,
     string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable();
+        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
     else
-        sTimeout = pNF->GetTimeoutClientVariable();
+        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
 
     // MsgTag Call(ThreadId to)
     *pFile << "\t" << sReturn << " = L4_Call_Timeouts ( *" << sServerID << ", "
@@ -78,9 +78,9 @@ CL4V4BEIPC::WriteReceive(CBEFile* pFile,
     string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sTimeout;
     if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable();
+        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
     else
-        sTimeout = pNF->GetTimeoutClientVariable();
+        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
 
     // MsgTag Receive(ThreadId from) (timeout: never)
     *pFile << "\t" << sReturn << " = L4_Receive_Timeout (*" << sServerID <<

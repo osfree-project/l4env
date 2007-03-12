@@ -310,7 +310,7 @@ l4util_##opname##bit##_res(volatile l4_uint##bit##_t* dest,	\
 l4util_gen_allop(add, +)
 l4util_gen_allop(sub, -)
 l4util_gen_allop(and, &)
-l4util_gen_allop(or, &&)
+l4util_gen_allop(or,  |)
 
 #define __L4UTIL_ATOMIC_HAVE_ARCH_INC8
 #define __L4UTIL_ATOMIC_HAVE_ARCH_INC16

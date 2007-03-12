@@ -23,7 +23,7 @@ TEXFILES=       manual.bib manual.tex section1.tex section2.tex \
 		appendix3.tex commands.tex version.tex appendix4.tex
 EXTRA_DIST=     $(TEXFILES)
 SUFFIXES=       .tex .aux .bbl .toc .pdf .dvi .ps
-CLEANFILES=     version.tex
+CLEANFILES=     version.tex tex-stamp
 
 ERROR_PDF=	LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
@@ -39,7 +39,7 @@ if HAS_LATEX
 # manual_PDF has to come before manual_PS, because pdflatex touches
 # .aux files, which will make generate .ps->.dvi again, even though
 # nothing changed in .tex files
-all-local:      version.tex  $(manual_PDF)
+all-local:      version.tex  $(manual_PDF) tex-stamp
 
 %.dvi:  %.tex
 	@echo Generating $*.dvi ...

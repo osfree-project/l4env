@@ -204,7 +204,7 @@ AddInterfaceToFileComponent(CFEInterface* pFEInterface, CFELibrary *pFELibrary);
 
 /* dice specific token */
 %token EOF_TOKEN    NOOPCODE    NOEXCEPTIONS
-%token SCHED_DONATE DEDICATED_PARTNER
+%token SCHED_DONATE DEDICATED_PARTNER DEFAULT_TIMEOUT
 
 %token <_id>     ID
 %token <_id>     TYPENAME
@@ -951,6 +951,11 @@ interface_attribute :
     {
         $$ = new CFEAttribute(ATTR_DEDICATED_PARTNER);
         $$->SetSourceLine(gLineNumber);
+    }
+    | DEFAULT_TIMEOUT
+    {
+        $$ = new CFEAttribute(ATTR_DEFAULT_TIMEOUT);
+	$$->SetSourceLine(gLineNumber);
     }
     ;
 
@@ -2447,9 +2452,9 @@ field_attributes :
     }
     | field_attribute
     {
-        $$ = new vector<CFEAttribute*>();
+	$$ = new vector<CFEAttribute*>();
     if ($1)
-        $$->push_back($1);
+	$$->push_back($1);
     }
     ;
 
@@ -2844,6 +2849,11 @@ operation_attribute :
         $$ = new CFEAttribute(ATTR_SCHED_DONATE);
         $$->SetSourceLine(gLineNumber);
     }
+    | DEFAULT_TIMEOUT
+    {
+    	$$ = new CFEAttribute(ATTR_DEFAULT_TIMEOUT);
+	$$->SetSourceLine(gLineNumber);
+    }
     ;
 
 param_declarators :
@@ -2958,9 +2968,9 @@ param_attribute_list :
     }
     | param_attribute
     {
-        $$ = new vector<CFEAttribute*>();
-        if ($1)
-        $$->push_back($1);
+	$$ = new vector<CFEAttribute*>();
+	if ($1)
+	    $$->push_back($1);
     }
     | INOUT
     {
@@ -3049,8 +3059,8 @@ predefined_type_spec :
     }
     | FLEXPAGE
     {
-        $$ = new CFESimpleType(TYPE_FLEXPAGE);
-        $$->SetSourceLine(gLineNumber);
+	$$ = new CFESimpleType(TYPE_FLEXPAGE);
+	$$->SetSourceLine(gLineNumber);
     }
     | ISO_LATIN_1
     {
@@ -3624,8 +3634,6 @@ attribute:
  *********************************************************************************/
 
 %%
-
-extern int gLineNumber;
 
 void
 dceerror(char* s)

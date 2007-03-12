@@ -1,5 +1,24 @@
 $Log, ChangeLog,v $
 
+3.1.2
+ - [feature] only set receive window in message buffer to environment's
+   receive flexpage if we really receive a flexpage
+ - [feature] only set exception in environment if we received an exception
+   (this might require to reset the environment in case of error in calling
+   code)
+ - [feature] add [default_timeout] attribute: if attribute is set, IPC timeout
+   is set using constant, default timeout values. Otherwise the environment's
+   timeout member is used.
+ - [fix] sending two variable sized arrays into one direction
+ - [fix] crash on Mac OS due to internal misuse of iterators
+ - [fix] print file name and line number also for warnings
+ - [feature] the Common Data Representation back-end is obsolete
+ - [fix] smaller memory leakage fixes
+ - [fix] build on MacOS X
+ - [fix] configure is more strict if bison/flex are missing
+ - [fix] bootstrap version checks more accurate now
+ - removed the obsolete developer's manual
+
 3.1.1
  - [feature] on installation a version suffix is appended to the binary name,
    allowing installation of multiple dice binaries. The 'dice' name is linked

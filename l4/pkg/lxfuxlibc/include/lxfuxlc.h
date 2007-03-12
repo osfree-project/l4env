@@ -10,6 +10,10 @@
 #ifndef __LXFUXLC_H__
 #define __LXFUXLC_H__
 
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
+
 /* -- sys/time.h -- */
 struct lx_timeval {
   long tv_sec;
@@ -254,5 +258,7 @@ int lx_fprintf(LX_FILE *f, const char *format, ...);
 
 
 #define SHMAT		21
+
+EXTERN_C_END
 
 #endif /* __LXFUXLC_H__ */

@@ -65,8 +65,8 @@ public:
 	int nSize = 0);
     virtual string GetThreadIdVariable();
     virtual string GetComponentIDVariable();
-    virtual string GetTimeoutServerVariable();
-    virtual string GetTimeoutClientVariable();
+    virtual string GetTimeoutServerVariable(CBEFunction *pFunction);
+    virtual string GetTimeoutClientVariable(CBEFunction *pFunction);
     virtual string GetScheduleClientVariable();
     virtual string GetScheduleServerVariable();
     virtual string GetPartnerVariable();

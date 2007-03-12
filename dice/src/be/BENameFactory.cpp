@@ -1094,17 +1094,19 @@ string CBENameFactory::GetMessageBufferTypeName()
 }
 
 /** \brief generates the variable of the client side timeout
+ *  \param pFunction the function needing this variable
  *  \return the name of the variable
  */
-string CBENameFactory::GetTimeoutClientVariable()
+string CBENameFactory::GetTimeoutClientVariable(CBEFunction* /* pFunction */)
 {
     return string("timeout");
 }
 
 /** \brief generates the variable of the component side timeout
+ *  \param pFunction the function needing this variable
  *  \return the name of the variable
  */
-string CBENameFactory::GetTimeoutServerVariable()
+string CBENameFactory::GetTimeoutServerVariable(CBEFunction* /* pFunction */)
 {
     return string("timeout");
 }
