@@ -15,7 +15,7 @@ map_1mb(void *pd, Address va, Address pa, bool cache)
 }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION[arm-sa1100]:
+IMPLEMENTATION[arm && sa1100]:
 
 enum {
   Cache_flush_area = 0xe0000000,
@@ -41,7 +41,7 @@ void wrb(char c)
 }
 
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [arm-pxa]: 
+IMPLEMENTATION [arm && pxa]: 
 
 enum {
   Cache_flush_area = 0xa0100000, // XXX: hacky
@@ -69,7 +69,7 @@ void wrb(char c)
 }
 
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [arm-integrator]:
+IMPLEMENTATION [arm && integrator]:
 
 enum {
   Cache_flush_area = 0xe0000000,
@@ -96,10 +96,18 @@ void wrb(char c)
 }
 
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [arm-realview]:
+IMPLEMENTATION [arm && realview && mpcore]:
+static void map_hw2(void *pd)
+{ map_1mb(pd, Mem_layout::Mpcore_scu_map_base, Mem_layout::Mpcore_scu_phys_base, false); }
+
+IMPLEMENTATION [arm && realview && !mpcore]:
+static void map_hw2(void *pd)
+{}
+
+IMPLEMENTATION [arm && realview]:
 
 enum {
-  Cache_flush_area = 0xe0000000,
+  Cache_flush_area = 0,
 };
 
 static
@@ -108,6 +116,7 @@ map_hw(void *pd)
 {
   // map devices
   map_1mb(pd, Mem_layout::Devices_map_base, Mem_layout::Devices_phys_base, false);
+  map_hw2(pd);
 }
 
 //-----------------------------------------------------------------------------
@@ -183,6 +192,7 @@ extern "C" int bootstrap_main()
 
   unsigned domains      = 0x55555555; // client for all domains
   unsigned control      = 0x0100f;
+  //unsigned control        = 0x01003;
   //unsigned control      = 0x00063;
 
   Mmu<Cache_flush_area, true>::flush_cache();

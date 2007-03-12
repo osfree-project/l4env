@@ -46,7 +46,7 @@ private:
   };
 };
 
-INTERFACE [arm-realview]:
+INTERFACE [arm && realview]:
 
 #include "kmem.h"
 
@@ -89,7 +89,7 @@ private:
     INTCLR_2 = Kmem::Timer2_map_base + TIMER_INTCLR,
     INTCLR_3 = Kmem::Timer3_map_base + TIMER_INTCLR,
 
-    INTERVAL = 10000,
+    INTERVAL = 1000,
 
     CTRL_IE        = 1 << 5,
     CTRL_PERIODIC  = 1 << 6,

@@ -49,7 +49,7 @@ public:
   
 };
 
-INTERFACE [arm-{pxa,sa1100}]:
+INTERFACE [arm && (pxa || sa1100)]:
 
 EXTENSION class Config
 {
@@ -65,7 +65,7 @@ public:
   };
 };
 
-INTERFACE [arm-integrator]:
+INTERFACE [arm && integrator]:
 
 EXTENSION class Config
 {
@@ -81,7 +81,7 @@ public:
   };
 };
 
-INTERFACE [arm-realview]:
+INTERFACE [arm && realview && 926]:
 
 EXTENSION class Config
 {
@@ -90,31 +90,45 @@ public:
   {
     Scheduling_irq       = 36,
     scheduler_irq_vector = Scheduling_irq,
-    Max_num_irqs         = 99,
+    Max_num_irqs         = 97,
     Max_num_dirqs        = 96,
 
     Vkey_irq             = 96,
   };
 };
 
-INTERFACE[arm-pxa]:
+INTERFACE [arm && realview && mpcore]:
+
+EXTENSION class Config
+{
+public:
+  enum
+  {
+    Scheduling_irq       = 33,
+    scheduler_irq_vector = Scheduling_irq,
+    Max_num_irqs         = 65,
+    Max_num_dirqs        = 64,
+
+    Vkey_irq             = 64,
+  };
+};
+
+INTERFACE[arm && pxa]:
 #define CONFIG_TARGET "XScale"
 
-INTERFACE[arm-sa1100]:
+INTERFACE[arm && sa1100]:
 #define CONFIG_TARGET "StrongARM"
 
-INTERFACE[arm-integrator]:
+INTERFACE[arm && integrator]:
 #define CONFIG_TARGET "Integrator"
 
-INTERFACE[arm-realview]:
+INTERFACE[arm && realview]:
 #define CONFIG_TARGET "Realview"
 
-INTERFACE[arm-isg]:
+INTERFACE[arm && isg]:
 #define CONFIG_TARGET "ISG"
 
 INTERFACE[arm]:
-#define GREETING_COLOR_ANSI_TITLE  "\033[1;33m"
-#define GREETING_COLOR_ANSI_INFO   "\033[0;33m"
 #define CONFIG_KERNEL_VERSION_STRING \
   GREETING_COLOR_ANSI_TITLE "Welcome to Fiasco("CONFIG_XARCH")!\\n"             \
   GREETING_COLOR_ANSI_INFO "DD-L4("CONFIG_ABI")/" ARCH_NAME " "                 \

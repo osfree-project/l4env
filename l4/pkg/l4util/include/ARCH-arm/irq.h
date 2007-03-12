@@ -5,7 +5,8 @@
 
 /** Disable all interrupts
  */
-void static volatile inline
+static inline
+void
 l4util_cli (void)
 {
   l4_sys_cli();
@@ -13,7 +14,8 @@ l4util_cli (void)
 
 /** Enable all interrupts
  */
-void static volatile inline
+static inline
+void
 l4util_sti (void)
 {
   l4_sys_sti();
@@ -26,7 +28,8 @@ l4util_sti (void)
  *
  */
 
-void static volatile inline
+static inline
+void
 l4util_flags_save(l4_umword_t *flags)
 {
   enter_kdebug("l4util_flags_save");
@@ -34,7 +37,8 @@ l4util_flags_save(l4_umword_t *flags)
 
 /** Restore processor flags. Can be used to restore the interrupt flag
  *  */
-void static volatile inline
+static inline
+void
 l4util_flags_restore(l4_umword_t *flags)
 {
   enter_kdebug("l4util_flags_restore");

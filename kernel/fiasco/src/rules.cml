@@ -60,6 +60,7 @@ Choose this if you have an Intel StrongARM CPU.
 .
 
 ARM_926			'(arm926) ARM 926 Processor'
+ARM_MPCORE		'(mpcore) ARM MPCore CPU'
 
 IA32_486		'(i486)  Intel 80486'				text
 Choose this if you have an Intel 80486 or equivalent CPU (i486).
@@ -455,10 +456,10 @@ require PF_XSCALE implies (ARM and ARM_PXA)
 unless  PF_ISG or PF_INTEGRATOR or PF_REALVIEW suppress dependent ARM_926
 require PF_ISG        implies (ARM and ARM_926)
 require PF_INTEGRATOR implies ARM
-require PF_REALVIEW   implies ARM
+require PF_REALVIEW   implies (ARM and (ARM_926 or ARM_MPCORE))
 unless  PF_ISG suppress arm_isg_options
 
-unless PF_UX or PF_PC suppress CONTEXT_4K
+#unless PF_UX or PF_PC suppress CONTEXT_4K
 unless IA32 and PF_PC suppress dependent REGPARM3
 unless IA32 suppress dependent PROFILE SYNC_TSC SMALL_SPACES IO_PROT 
                        FINE_GRAINED_CPUTIME  
@@ -486,7 +487,7 @@ require ARM implies  BEFORE_IRET_SANITY==n and  HANDLE_SEGMENTS==n
                      and ABI_X0 
 		     and ASSEMBLER_IPC_SHORTCUT==n and FINE_GRAINED_CPUTIME==n 
                      and JDB_ACCOUNTING==n and JDB_MISC==n 
-		     and SERIAL and CONTEXT_4K==n and GSTABS==n
+		     and SERIAL and GSTABS==n
 
 unless SERIAL 	 suppress dependent KDB
 unless JDB	 suppress dependent JDB_LOGGING JDB_ACCOUNTING JDB_MISC
@@ -581,6 +582,7 @@ choices arm_processor
         ARM_SA
 	ARM_PXA
 	ARM_926
+	ARM_MPCORE
 	default ARM_SA
 	
 choices ia32_processor		# Target processor selection

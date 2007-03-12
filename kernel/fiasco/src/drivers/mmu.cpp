@@ -6,6 +6,15 @@ template< unsigned long Flush_area = 0, bool Ram = false >
 class Mmu
 {
 public:
+  static void clean_vdcache();
+  static void clean_vdcache(void const *start, void const *end);
+  static void flush_vcache();
+  static void flush_vcache(void const *start, void const *end);
+  static void flush_vdcache();
+  static void flush_vdcache(void const *start, void const *end);
+  static void inv_vdcache(void const *start, void const *end);
+  
+  
   /**
    * Clean the entire dcache.
    */
@@ -97,4 +106,80 @@ template< unsigned long Flush_area, bool Ram >
 void Mmu<Flush_area, Ram>::inv_dcache(void const *, void const *)
 {}
 
+//---------------------------------------------------------------------------
+IMPLEMENTATION[!vcache]:
 
+IMPLEMENT inline
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_vcache(void const *, void const *)
+{}
+
+IMPLEMENT
+template< unsigned long Flush_area , bool Ram >
+void Mmu<Flush_area, Ram>::clean_vdcache(void const *, void const *)
+{}
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_vdcache(void const *, void const *)
+{}
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::inv_vdcache(void const *, void const *)
+{}
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_vcache()
+{}
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::clean_vdcache()
+{}
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_vdcache()
+{}
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[vcache]:
+
+IMPLEMENT inline
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_vcache(void const *start, 
+				       void const *end)
+{ flush_cache(start, end); }
+
+IMPLEMENT
+template< unsigned long Flush_area , bool Ram >
+void Mmu<Flush_area, Ram>::clean_vdcache(void const *start, void const *end)
+{ clean_dcache(start, end); }
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_vdcache(void const *start, void const *end)
+{ flush_dcache(start, end); }
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::inv_vdcache(void const *start, void const *end)
+{ inv_dcache(start, end); }
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_vcache()
+{ flush_cache(); }
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::clean_vdcache()
+{ clean_dcache(); }
+
+IMPLEMENT
+template< unsigned long Flush_area, bool Ram >
+void Mmu<Flush_area, Ram>::flush_vdcache()
+{ flush_dcache(); }

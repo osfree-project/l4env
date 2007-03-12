@@ -122,6 +122,12 @@ static void do_cli(Thread *, Entry_frame *r)
 static void do_sti(Thread *, Entry_frame *r)
 { r->psr &= ~128; }
 
+/* Instruction Memory Barrier */
+static void imb(Thread *, Entry_frame *r)
+{
+  Mem_unit::clean_dcache();
+}
+
 static void init_dbg_extensions()
 {
   Thread::dbg_extension[0x01] = &outchar;
@@ -137,6 +143,8 @@ static void init_dbg_extensions()
   Thread::dbg_extension[0x1d] = &tbuf;
   Thread::dbg_extension[0x32] = &do_cli;
   Thread::dbg_extension[0x33] = &do_sti;
+
+  Thread::dbg_extension[0x3f] = &imb;
 }
 
 STATIC_INITIALIZER(init_dbg_extensions);

@@ -17,7 +17,11 @@ typedef struct {
 /* 
  * L4 unique identifiers 
  */
-typedef union {
+typedef union l4_threadid_t {
+#ifdef __cplusplus
+  l4_threadid_t() {}
+  l4_threadid_t(unsigned long x) : raw(x) {}
+#endif
   l4_threadid_struct_t id;
   l4_umword_t raw;
 } l4_threadid_t;

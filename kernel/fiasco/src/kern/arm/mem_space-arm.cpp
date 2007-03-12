@@ -287,7 +287,7 @@ Mem_space::v_delete(Address virt, unsigned long size,
       return 0;
     }
 
-  Mem_unit::flush_cache((void*)(virt & ~(pte.size()-1)), 
+  Mem_unit::flush_vcache((void*)(virt & ~(pte.size()-1)), 
       (void*)((virt & ~(pte.size()-1)) + pte.size()));
 
   unsigned long a = pte.attr();

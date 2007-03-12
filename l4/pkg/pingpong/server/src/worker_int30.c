@@ -311,7 +311,6 @@ pong_utcb_ipc_thread(void)
   l4_touch_rw(&_etext, &_end-&_etext);
 
   /* I want exception IPC */
-  l4_utcb_exception_ipc_enable();
   utcb->rcv_size = L4_UTCB_GENERIC_DATA_SIZE;
 
   PREFIX(send)(main_id);

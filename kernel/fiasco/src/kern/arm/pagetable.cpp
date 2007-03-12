@@ -26,8 +26,6 @@ public:
 
   Page_table();
   
-  //P_ptr<void> lookup(void *, Address *, Page::Attribs *a) const;
-
   void copy_in(void *my_base, Page_table *o, 
 	       void *base, size_t size = 0, bool force_flush = false);
 

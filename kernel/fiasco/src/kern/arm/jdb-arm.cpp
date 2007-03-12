@@ -88,7 +88,7 @@ Jdb::access_mword_task(Address virt, Task_num task)
   unsigned long addr = Mem_layout::phys_to_pmem(phys);
   if (addr == (Address)-1)
     {
-      Mem_unit::flush_dcache();
+      Mem_unit::flush_vdcache();
       Pte pte = Page_table::current()->walk
 	((void*)Mem_layout::Jdb_tmp_map_area, 0, false);
 
@@ -143,14 +143,14 @@ PRIVATE static
 void
 Jdb::at_jdb_enter()
 {
-  Mem_unit::clean_dcache();
+  Mem_unit::clean_vdcache();
 }
 
 PRIVATE static
 void
 Jdb::at_jdb_leave()
 {
-  Mem_unit::flush_cache();
+  Mem_unit::flush_vcache();
 }
 
 PUBLIC static inline

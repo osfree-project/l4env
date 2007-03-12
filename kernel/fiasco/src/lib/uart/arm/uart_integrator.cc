@@ -14,6 +14,9 @@ namespace L4
     UART011_RXIS = 1 << 4,
     UART011_RTIS = 1 << 6,
 
+    UART011_RXIC = 1 << 4,
+    UART011_RTIC = 1 << 6,
+
     UART01x_CR_UARTEN = 1, // UART enable
     UART011_CR_LBE    = 0x080, // loopback enable
     UART011_CR_TXE    = 0x100, // transmit enable
@@ -24,17 +27,19 @@ namespace L4
     UART01x_FR_TXFF   = 0x020,
 
     UART01x_LCRH_PEN    = 0x02, // parity enable
+    UART01x_LCRH_FEN    = 0x10, // FIFO enable
     UART01x_LCRH_WLEN_8 = 0x60,
 
-    UART01x_DR = 0x00,
-    UART01x_FR = 0x18,
+    UART01x_DR   = 0x00,
+    UART011_ECR  = 0x04,
+    UART01x_FR   = 0x18,
     UART011_IBRD = 0x24,
     UART011_FBRD = 0x28,
     UART011_LCRH = 0x2c,
-    UART011_CR = 0x30,
+    UART011_CR   = 0x30,
     UART011_IMSC = 0x38,
-    UART011_MIS = 0x40,
-    UART011_ICR = 0x44,
+    UART011_MIS  = 0x40,
+    UART011_ICR  = 0x44,
   };
 
 
@@ -53,10 +58,10 @@ namespace L4
   bool Uart_integrator::startup(unsigned long base)
   {
     _base = base;
-    wr(UART011_CR, UART01x_CR_UARTEN | UART011_CR_TXE);
-    wr(UART011_FBRD, 2);
-    wr(UART011_IBRD, 13);
-    wr(UART011_LCRH, 0x60);
+    wr(UART011_CR, UART01x_CR_UARTEN | UART011_CR_TXE | UART011_CR_RXE);
+//    wr(UART011_FBRD, 2);
+//    wr(UART011_IBRD, 13);
+//    wr(UART011_LCRH, 0x60);
     wr(UART011_IMSC, 0);
     while (rd(UART01x_FR) & UART01x_FR_BUSY);
     return true;
@@ -66,7 +71,7 @@ namespace L4
   {
     wr(UART011_IMSC,0);
     wr(UART011_ICR, 0xffff);
-    wr(UART011_CR, UART01x_CR_UARTEN | UART011_CR_TXE);
+    wr(UART011_CR, 0);
   }
 
   bool Uart_integrator::enable_rx_irq(bool enable) 
@@ -74,6 +79,7 @@ namespace L4
     unsigned long mask = UART011_RXIM | UART011_RTIM;
 
     wr(UART011_ICR, 0xffff);
+    wr(UART011_ECR, 0xff);
     if (enable)
       wr(UART011_IMSC, rd(UART011_IMSC) | mask);
     else
@@ -89,10 +95,10 @@ namespace L4
     unsigned long old_cr = rd(UART011_CR);
     wr(UART011_CR, 0);
 
-    wr(UART011_FBRD, 0x0);
-    wr(UART011_IBRD, 0x4);
+    wr(UART011_FBRD, 2);
+    wr(UART011_IBRD, 13);
+    wr(UART011_LCRH, UART01x_LCRH_WLEN_8 | UART01x_LCRH_FEN);
 
-    wr(UART011_LCRH, UART01x_LCRH_WLEN_8 | UART01x_LCRH_PEN);
     wr(UART011_CR, old_cr);
 
     return true;
@@ -103,7 +109,11 @@ namespace L4
     while (!char_avail()) 
       if (!blocking) return -1;
 
-    return rd(UART01x_DR);
+    //wr(UART011_ICR, UART011_RXIC | UART011_RTIC);
+
+    int c = rd(UART01x_DR);
+    wr(UART011_ECR, 0xff);
+    return c;
   }
 
   int Uart_integrator::char_avail() const 

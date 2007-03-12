@@ -239,12 +239,12 @@ l4util_btc(int b, volatile l4_umword_t * dest)
 
   __asm__ __volatile__
     (
-     "btcl  %2,%1   \n\t"
+     "btc   %2,%1   \n\t"
      "setc  %0      \n\t"
-     : 
+     :
      "=r"  (bit)      /* 0,     old bit value */
      :
-     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "m"   (*dest),   /* 1 mem, destination operand */
      "Ir"  ((l4_umword_t)b)        /* 2,     bit number */
      :
      "memory", "cc"

@@ -1,8 +1,24 @@
+//---------------------------------------------------------------------------
+INTERFACE[arm && !vcache]:
+class Pte 
+{
+private:
+  enum { Arm_vcache = 0 };
+};
+
+//---------------------------------------------------------------------------
+INTERFACE[arm && vcache]:
+class Pte
+{
+private:
+  enum { Arm_vcache = 1 };
+};
+
 INTERFACE [arm]:
 
 #include "paging.h"
 
-class Pte
+EXTENSION class Pte
 {
 public:
 //private:
@@ -13,7 +29,6 @@ public:
   Pte(Page_table *pt, unsigned level, Mword *pte)
   : _pt((unsigned long)pt | level), _pte(pte)
   {}
-
 
 };
 
@@ -54,6 +69,23 @@ private:
 private:
   static Page_table *_current;
 };
+
+//---------------------------------------------------------------------------
+INTERFACE[arm && !vcache]:
+EXTENSION class Page_table 
+{
+private:
+  enum { Arm_vcache = 0 };
+};
+
+//---------------------------------------------------------------------------
+INTERFACE[arm && vcache]:
+EXTENSION class Page_table 
+{
+private:
+  enum { Arm_vcache = 1 };
+};
+
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
@@ -140,7 +172,7 @@ void
 Pte::__set(unsigned long v, bool write_back)
 {
   *_pte = v;
-  if (write_back) 
+  if (write_back || !Arm_vcache) 
     Mem_unit::clean_dcache(_pte);
 }
 
@@ -215,6 +247,8 @@ Page_table::Page_table()
 {
   for( unsigned i = 0; i< 4096; ++i ) 
     raw[i]=0;
+  if (!Arm_vcache)
+    Mem_unit::clean_dcache(raw, raw + 4096);
 }
 
 PUBLIC
@@ -313,13 +347,13 @@ Page_table::walk(void *va, unsigned long size, bool write_back)
 
 	  memset(pt, 0, 1024);
 	  
-	  if (write_back)
+	  if (write_back || !Arm_vcache)
 	    Mem_unit::clean_dcache(pt, (char*)pt + 1024);
 
 	  raw[pd_idx] = current()->walk(pt, 0, false).phys(pt)
 	    | PDE_TYPE_COARSE;
 	  
-	  if (write_back)
+	  if (write_back || !Arm_vcache)
 	    Mem_unit::clean_dcache(raw + pd_idx, raw + pd_idx);
 	}
       else
@@ -425,7 +459,7 @@ void Page_table::activate()
   if(_current!=this) 
     {
       _current = this;
-      Mem_unit::flush_cache();
+      Mem_unit::flush_vcache();
       asm volatile ( 
 	  "mcr p15, 0, r0, c8, c7, 0x00 \n" // TLB flush
 	  "mcr p15, 0, %0, c2, c0       \n" // pdbr
@@ -470,7 +504,7 @@ void Page_table::copy_in(void *my_base, Page_table *o,
       for (unsigned i = pd_idx;  i < pd_idx_max; ++i)
 	if (pde_valid(raw + i))
 	  {
-	    Mem_unit::flush_dcache();
+	    Mem_unit::flush_vdcache();
 	    need_flush = true;
 	    break;
 	  }
@@ -479,7 +513,7 @@ void Page_table::copy_in(void *my_base, Page_table *o,
   for (unsigned i = pd_idx; i < pd_idx_max; ++i, ++o_pd_idx)
     raw[i] = o->raw[o_pd_idx];
 
-  if (force_flush)
+  if (force_flush || !Arm_vcache)
     Mem_unit::clean_dcache(raw + pd_idx, raw + pd_idx_max);
 
   if (need_flush && force_flush)
@@ -501,7 +535,7 @@ Page_table::invalidate(void *my_base, unsigned size, bool flush = true)
       for (unsigned i = pd_idx; i < pd_idx_max; ++i)
 	if (pde_valid(raw + i))
 	  {
-	    Mem_unit::flush_dcache();
+	    Mem_unit::flush_vdcache();
 	    need_flush = true;
 	    break;
 	  }
@@ -510,7 +544,9 @@ Page_table::invalidate(void *my_base, unsigned size, bool flush = true)
   for (unsigned i = pd_idx; i < pd_idx_max; ++i)
     raw[i] = 0;
   
-  if (flush)
+  // clean the caches if manipulating the current pt or in the case if phys.
+  // tagged caches.
+  if (flush || !Arm_vcache)
     Mem_unit::clean_dcache(raw + pd_idx, raw + pd_idx_max);
   
   if (need_flush && flush)

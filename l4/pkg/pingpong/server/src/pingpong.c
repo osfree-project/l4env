@@ -731,6 +731,12 @@ test_short_interAS_flood(int nr)
 {
   print_testname("short inter IPC", nr, INTER, 0);
 
+  if (dont_do_sysenter)
+    {
+      printf("Only support with sysenter, no available on this machine.\n");
+      return;
+    }
+
   printf("  === Shortcut (Client=Timeout(NEVER), Server=Timeout(0)) ===\n");
   BENCH_BEGIN;
   create_pingpong_tasks(sysenter_ping_short_cold_thread,

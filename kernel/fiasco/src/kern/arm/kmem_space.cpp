@@ -46,6 +46,7 @@ void Kmem_space::init()
   
   puts("Initialize page table");
   Page_table::init(kdir());
-  Mem_unit::clean_dcache();
+  
+  Mem_unit::clean_vdcache();
 }
 

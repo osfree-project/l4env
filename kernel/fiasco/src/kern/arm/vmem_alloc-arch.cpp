@@ -111,7 +111,10 @@ void Vmem_alloc::page_free(void *page)
   if (!pte.valid())
     return;
 
-  Mem_unit::inv_dcache(page, ((char*)page) + Config::PAGE_SIZE);
+  // Invalidate the page because we remove this alias and use the
+  // mapped_allocator mapping from now on.
+  // Write back is not needed here, because we free the page.
+  Mem_unit::inv_vdcache(page, ((char*)page) + Config::PAGE_SIZE);
 
   Address phys = pte.phys(page);
   pte.set_invalid(0, true);

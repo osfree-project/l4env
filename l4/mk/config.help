@@ -259,6 +259,17 @@ LEX
   here. Defaults are 'byacc' and 'flex'. You can also specify cmdline
   arguments using this option.
 
+CTAGS-name
+CTAGS
+  If you would like to use alternative ctags tool, set its name here.
+  You may want to at least also specify a recursive option for your ctags
+  tool.
+
+ETAGS-name
+ETAGS
+  If you would like to use alternative etags tool, set its name here.
+  You may want to at least also specify a recursive option for your etags
+  tool.
 
 System has ld.so
 HAVE_LDSO

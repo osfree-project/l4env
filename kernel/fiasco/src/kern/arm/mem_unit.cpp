@@ -40,7 +40,7 @@ void Mem_unit::dtlb_flush( void* va )
   asm volatile (
       "mcr p15, 0, %0, c8, c6, 0x01 \n" 
       : 
-      : "r"(va) 
+      : "r"((unsigned long)va & 0xfffff000) 
       : "memory" ); // TLB flush
 }
 

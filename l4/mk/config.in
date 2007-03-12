@@ -130,6 +130,8 @@ fi
 comment "Tools"
 string 'YACC' YACC byacc
 string 'LEX' LEX flex
+string 'CTAGS' CTAGS ctags
+string 'ETAGS' ETAGS etags
 
 comment "Options"
 bool 'System has ld.so (highly recommended if so)' HAVE_LDSO

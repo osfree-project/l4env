@@ -95,9 +95,26 @@ private:
 
     CPU_CTRL          = Kmem::Gic_cpu_map_base + 0x00,
     CPU_PRIMASK       = Kmem::Gic_cpu_map_base + 0x04,
+    CPU_BPR           = Kmem::Gic_cpu_map_base + 0x08,
     CPU_INTACK        = Kmem::Gic_cpu_map_base + 0x0c,
     CPU_EOI           = Kmem::Gic_cpu_map_base + 0x10,
+    CPU_RUNINT        = Kmem::Gic_cpu_map_base + 0x14,
     CPU_PENDING       = Kmem::Gic_cpu_map_base + 0x18,
+  };
+};
+
+INTERFACE [arm && realview && mpcore]:
+
+EXTENSION class Pic
+{
+private:
+  enum
+  {
+    SYS_LOCK = Kmem::System_regs_map_base + 0x20,
+    SYS_PLD_CTRL1 = Kmem::System_regs_map_base + 0x74,
+    SYS_PLD_CTRL2 = Kmem::System_regs_map_base + 0x78,
+
+    INTMODE_NEW_NO_DDC = 1 << 23,
   };
 };
 
@@ -240,7 +257,43 @@ void Pic::block_locked(unsigned irq)
   disable_locked(irq);
 }
 
-IMPLEMENTATION [arm-realview]:
+//-------------------------------------------------------------------
+IMPLEMENTATION [arm && !mpcore]:
+
+PRIVATE static inline
+void Pic::configure_core()
+{}
+
+PRIVATE static inline
+unsigned Pic::platform_irqs()
+{ return 96; }
+
+//-------------------------------------------------------------------
+IMPLEMENTATION [arm && mpcore]:
+
+PRIVATE static
+void Pic::unlock_config()
+{ Io::write<Mword>(0xa05f, SYS_LOCK); }
+
+PRIVATE static
+void Pic::lock_config()
+{ Io::write<Mword>(0x0, SYS_LOCK); }
+
+PRIVATE static
+void Pic::configure_core()
+{
+  // Enable 'new' interrupt-mode, no DCC
+  unlock_config();
+  Io::write<Mword>(Io::read<Mword>(SYS_PLD_CTRL1) | INTMODE_NEW_NO_DDC, SYS_PLD_CTRL1);
+  lock_config();
+}
+
+PRIVATE static inline
+unsigned Pic::platform_irqs()
+{ return 64; }
+
+//-------------------------------------------------------------------
+IMPLEMENTATION [arm && pic_gic]:
 
 #include <cstring>
 #include <cstdio>
@@ -254,28 +307,32 @@ IMPLEMENTATION [arm-realview]:
 IMPLEMENT FIASCO_INIT
 void Pic::init()
 {
+  configure_core();
+
   Io::write<Mword>(0, DIST_CTRL);
 
   unsigned nr_irqs = ((Io::read<Mword>(DIST_CTR) & 0x1f) + 1) * 32;
+  printf("Number of IRQs available: %d\n", nr_irqs);
+  if (nr_irqs != platform_irqs())
+    panic("Unexpected number of IRQs detected!");
 
-  printf("GIC irqs: %d\n", nr_irqs);
-  if (nr_irqs != 96)
-    panic("Unexpected number of IRQs");
+  unsigned int intmask = 1 << Proc::cpu_number();
+  intmask |= intmask << 8;
+  intmask |= intmask << 16;
 
-  // level triggered, active low
   for (unsigned i = 32; i < nr_irqs; i += 16)
     Io::write<Mword>(0, DIST_CONFIG + i * 4 / 16);
   for (unsigned i = 32; i < nr_irqs; i += 4)
-    Io::write<Mword>(1 << 24, DIST_TARGET + i);
+    Io::write<Mword>(intmask, DIST_TARGET + i);
   for (unsigned i = 0; i < nr_irqs; i += 4)
     Io::write<Mword>(0xa0a0a0a0, DIST_PRI + i);
   for (unsigned i = 0; i < nr_irqs; i += 32)
-    Io::write<Mword>(0xffffffff, DIST_ENABLE_SET + i * 4 / 32);
+    Io::write<Mword>(0xffffffff, DIST_ENABLE_CLEAR + i * 4 / 32);
 
   Io::write<Mword>(1, DIST_CTRL);
+  Io::write<Mword>(1, CPU_CTRL);
 
   Io::write<Mword>(0xf0, CPU_PRIMASK);
-  Io::write<Mword>(1, CPU_CTRL);
 }
 
 IMPLEMENT inline NEEDS["io.h"]

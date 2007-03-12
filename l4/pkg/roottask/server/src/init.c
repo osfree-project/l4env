@@ -669,7 +669,7 @@ pagein_4KB_memory(void)
 #if defined ARCH_x86 | ARCH_amd64
 /**
  * page in BIOS data area page explicitly.  the BIOS area will be
- * marked "reserved" and special-cased in the pager() in memmap.c
+ * marked "reserved" and special-cased in the pager() in pager.c
  */
 static void
 pagein_bios_memory(void)
@@ -752,6 +752,10 @@ reserve_module_memory(void)
       if (mb_mod[i].mod_end > mod_range_end)
 	mod_range_end = mb_mod[i].mod_end;
     }
+
+  /* Leave if no modules */
+  if (!mod_range_end)
+    return;
 
   for (a = l4_trunc_page(mod_range_start); a < mod_range_end; a += L4_PAGESIZE)
     {

@@ -26,12 +26,12 @@ ifeq ("$(CONFIG_TASK_CAPS)","y")
 endif
 
 ifeq ("$(CONFIG_PF_XSCALE)","y")
-  PREPROCESS_PARTS	  += pxa 16550
+  PREPROCESS_PARTS	  += pxa 16550 vcache
   CONFIG_KERNEL_LOAD_ADDR := 0xa0000000
 endif
 
 ifeq ("$(CONFIG_PF_SA1100)","y")
-  PREPROCESS_PARTS        += sa1100
+  PREPROCESS_PARTS        += sa1100 vcache
   CONFIG_KERNEL_LOAD_ADDR := 0xc0000000
 endif
 
@@ -53,17 +53,23 @@ ifeq ("$(CONFIG_PF_ISG)","y")
   endif
 endif
 
+
+PREPROCESS_PARTS-$(CONFIG_ARM_926)    += 926 vcache
+PREPROCESS_PARTS-$(CONFIG_ARM_MPCORE) += mpcore
+
 ifeq ("$(CONFIG_PF_INTEGRATOR)","y")
   SUBSYSTEMS += LIBUART
-  PREPROCESS_PARTS        += integrator 926 libuart
+  PREPROCESS_PARTS        += integrator libuart
   CONFIG_KERNEL_LOAD_ADDR := 0x00000000
 endif
 
 ifeq ("$(CONFIG_PF_REALVIEW)","y")
   SUBSYSTEMS += LIBUART
-  PREPROCESS_PARTS        += realview 926 libuart
-  CONFIG_KERNEL_LOAD_ADDR := 0x00000000
+  PREPROCESS_PARTS        += realview libuart pic_gic
+  CONFIG_KERNEL_LOAD_ADDR := 0x70000000
 endif
+
+PREPROCESS_PARTS	+= $(PREPROCESS_PARTS-y)
 
 #
 # TYPES subsystem

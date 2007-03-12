@@ -1,4 +1,6 @@
 arm/strcpy.S
+arm/__longjmp.S
+arm/setjmp.S
 dietdirent.h
 dietlibm.h
 dietstring.h

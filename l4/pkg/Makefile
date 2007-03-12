@@ -235,6 +235,13 @@ ptest:
 	  fi; \
 	done
 
+TAGS:
+	$(ETAGS)
+
+tags:
+	$(CTAGS)
+
+.PHONY: TAGS tags
 .PHONY: $(foreach ext, .bin .lib .include .idl .headers,addsuffix $(ext), $(BUILD_SUBDIRS))
 
 clean cleanall:: BID_cont_reset

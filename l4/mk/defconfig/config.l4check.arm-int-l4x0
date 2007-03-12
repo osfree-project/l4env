@@ -41,6 +41,8 @@ CXX='$(SYSTEM_TARGET_arm)g++'
 #
 YACC='byacc'
 LEX='flex'
+CTAGS='ctags'
+ETAGS='etags'
 
 #
 # Options

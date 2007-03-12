@@ -75,17 +75,41 @@ fi
 echo "$ARGV0: autoheader version $ah_version (ok)"
 
 #
+# Test for existing versions of automake, which fulfill our minimum
+# requirements. We check automake without extension first to allow it to be a
+# newer version than we know about.
+#
+if test x"$AUTOMAKE" = x; then
+	am_ver=""
+	for ver in "" "-1.10" "-1.9"; do
+		am="automake$ver"
+		if ($am --version) < /dev/null > /dev/null 2>&1 ; then
+			am_version=`$am --version 2>/dev/null|head -1|sed -e 's/^.* \([0-9]\)/\1/' -e 's/[a-z]* *$//' -e 's/\(.*\)\(-p.*\)/\1/'`
+			if test -n "$am_version"; then
+				IFS=.; set $am_version; IFS=' '
+				if test "$1" = "$automake_min_vers_maj" -a "$2" -lt "$automake_min_vers_min" || test "$1" -lt "$automake_min_vers_maj"; then : ; else
+					am_ver=$ver;
+					break;
+				fi
+			fi
+		fi
+	done
+
+	AUTOMAKE=${AUTOMAKE:-automake$am_ver}
+fi
+
+#
 # Test for automake. Usually aclocal is distributed in the same package, but
 # we test for both of them -- you never know
 # 
 am=${AUTOMAKE:-automake}
 am_version=`$am --version 2>/dev/null|head -1|sed -e 's/^.* \([0-9]\)/\1/' -e 's/[a-z]* *$//' -e 's/\(.*\)\(-p.*\)/\1/'`
 if test -z "$am_version"; then
-    echo $am: command not found
-    echo
-    echo "$ARGV0: ERROR: You must have \`automake' installed to compile $PACKAGE."
-    echo "           (version $automake_min_vers_maj.$automake_min_vers_min or newer is required)"
-    exit 1;
+	echo $am: command not found
+	echo
+	echo "$ARGV0: ERROR: You must have \`automake' installed to compile $PACKAGE."
+	echo "           (version $automake_min_vers_maj.$automake_min_vers_min or newer is required)"
+	exit 1;
 fi
 IFS=.; set $am_version; IFS=' '
 if test "$1" = "$automake_min_vers_maj" -a "$2" -lt "$automake_min_vers_min" || test "$1" -lt "$automake_min_vers_maj"; then
@@ -97,14 +121,38 @@ fi
 
 echo "$ARGV0: automake version $am_version (ok)"
 
+#
+# Test for existing versions of aclocal, which fulfill our minimum
+# requirements. We check aclocal without extension first to allow it to be a
+# newer version than we know about.
+#
+if test x"$ACLOCAL" = x; then
+	acl_ver=""
+	for ver in "" "-1.10" "-1.9"; do
+		acl="aclocal$ver"
+		if ($acl --version) < /dev/null > /dev/null 2>&1 ; then
+			acl_version=`$acl --version 2>/dev/null|head -1|sed -e 's/^.* \([0-9]\)/\1/' -e 's/[a-z]* *$//' -e 's/\(.*\)\(-p.*\)/\1/'`
+			if test -n "$acl_version"; then
+				IFS=.; set $acl_version; IFS=' '
+				if test "$1" = "$aclocal_min_vers_maj" -a "$2" -lt "$aclocal_min_vers_min" || test "$1" -lt "$aclocal_min_vers_maj"; then : ; else
+					acl_ver=$ver;
+					break;
+				fi
+			fi
+		fi
+	done
+
+	ACLOCAL=${ACLOCAL:-aclocal$acl_ver}
+fi
+
 acl=${ACLOCAL:-aclocal}
 acl_version=`$acl --version 2>/dev/null|head -1|sed -e 's/^.* \([0-9]\)/\1/' -e 's/[a-z]* *$//' -e 's/\(.*\)\(-p.*\)/\1/'`
 if test -z "$acl_version"; then
-    echo $acl: command not found
-    echo
-    echo "$ARGV0: ERROR: You must have \`aclocal' installed to compile $PACKAGE."
-    echo "           (version $aclocal_min_vers_maj.$aclocal_min_vers_min or newer is required)"
-    exit 1;
+	echo $acl: command not found
+	echo
+	echo "$ARGV0: ERROR: You must have \`aclocal' installed to compile $PACKAGE."
+	echo "           (version $aclocal_min_vers_maj.$aclocal_min_vers_min or newer is required)"
+	exit 1;
 fi
 IFS=.; set $acl_version; IFS=' '
 if test "$1" = "$aclocal_min_vers_maj" -a "$2" -lt "$aclocal_min_vers_min" || test "$1" -lt "$aclocal_min_vers_maj"; then
@@ -117,20 +165,22 @@ fi
 echo "$ARGV0: aclocal version $acl_version (ok)"
 
 do_cmd() {
-    echo "$ARGV0: running \`$@'"
-    $@
+	echo "$ARGV0: running \`$@'"
+	$@
 }
 
-do_cmd $ac $ACLOCAL_FLAGS
+do_cmd $acl $ACLOCAL_FLAGS
 
 do_cmd $ah
 
 do_cmd $am $AUTOMAKE_FLAGS
 
-do_cmd $acl
+do_cmd $ac
 
 cd $ORIGDIR || exit 1
 
 rm -f config.cache
 
 echo "$ARGV0: now run configure and make."
+
+# vim: set tabstop=4 :
