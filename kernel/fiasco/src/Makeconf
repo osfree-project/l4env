@@ -20,6 +20,7 @@ CONFIG_ABI	:= $(patsubst "%",%,$(CONFIG_ABI))
 SYSTEM		:= $(shell uname)
 CC		:= $(patsubst "%",%,$(CONFIG_CC))
 CXX		:= $(patsubst "%",%,$(CONFIG_CXX))
+HOST_CC		:= $(patsubst "%",%,$(CONFIG_HOST_CC))
 HOST_CXX	:= $(patsubst "%",%,$(CONFIG_HOST_CXX))
 RM		:= rm -f
 RM_R		:= rm -rf

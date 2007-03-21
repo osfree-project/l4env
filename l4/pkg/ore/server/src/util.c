@@ -19,7 +19,7 @@ static ore_mac broadcast_mac = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
  ******************************************************************************/
 int mac_equal(ore_mac mac1, ore_mac mac2)
 {
-  return (memcmp(mac1, mac2, 6) == 0);
+  return (mac1 && mac2 && memcmp(mac1, mac2, 6) == 0);
 }
 
 /******************************************************************************
@@ -27,7 +27,7 @@ int mac_equal(ore_mac mac1, ore_mac mac2)
  ******************************************************************************/
 int mac_is_broadcast(ore_mac mac)
 {
-  return (memcmp(mac, broadcast_mac, 6) == 0);
+  return (mac && memcmp(mac, broadcast_mac, 6) == 0);
 }
 
 /******************************************************************************

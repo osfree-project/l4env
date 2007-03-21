@@ -407,3 +407,11 @@ Enable Release flag
 RELEASE_FLAG
   This option enables the RELEASE flag possible omitting
   debugging/development code.
+
+Build documentation
+BID_BUILD_DOC
+  Build documentation.
+
+Build only in l4 directory
+BID_BUILD_L4DIR_ONLY
+  Only build in l4 directory, no kernel, no dice.

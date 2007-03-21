@@ -156,7 +156,8 @@ main(int argc, char**argv)
       return 1;
     }
 
-  l4thread_create(contxt_init_thread, 0, L4THREAD_CREATE_ASYNC);
+  l4thread_create_named(contxt_init_thread, ".coninit",
+                        0, L4THREAD_CREATE_ASYNC);
 
   env.malloc = msg_alloc;
   env.rcv_fpage.fpage = 0;

@@ -41,6 +41,7 @@ typedef struct
 } con_accel_t;
 
 int  con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
+                 unsigned short bpl,
 		 l4_addr_t vid_mem_addr, l4_size_t vid_mem_size,
      		 con_accel_t *accel, l4_uint8_t **map_vid_mem_addr);
 
@@ -50,6 +51,7 @@ extern l4_addr_t      hw_vid_mem_addr, hw_vid_mem_size;
 extern l4_addr_t      hw_map_vid_mem_addr;
 extern unsigned short hw_xres, hw_yres;
 extern unsigned char  hw_bits;
+extern unsigned short hw_bpl;
 
 extern int            con_hw_use_l4io;
 

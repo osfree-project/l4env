@@ -27,7 +27,6 @@
 #include <l4/thread/thread.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/l4rm/l4rm.h>
-#include <l4/exec/exec.h>
 #include <l4/util/reboot.h>
 #include <l4/util/l4_macros.h>
 #include <l4/loader/loader-client.h>

@@ -16,7 +16,7 @@ build-stamp:
 	
 	# Add here commands to compile the package.
 	#CC=gcc-3.2 CXX=g++-3.2 ./configure --prefix=/usr --mandir=/usr/share/man
-	./configure --prefix=/usr --mandir=/usr/share/man --with-l4dir=/usr
+	./configure --prefix=/usr --mandir=/usr/share/man
 
 	$(MAKE)
 

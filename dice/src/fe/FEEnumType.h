@@ -62,12 +62,7 @@ protected:
 // Operations
 public:
     virtual void Accept(CVisitor&);
-
-    /** copies the object
-     *  \return a reference to a new enumeration type object
-     */
-    virtual CObject* Clone()
-    { return new CFEEnumType(*this); }
+    virtual CObject* Clone();
 
 // atributes
 public:

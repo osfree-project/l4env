@@ -47,6 +47,9 @@
 #include <vector>
 #include <cassert>
 
+CConsistencyVisitor::~CConsistencyVisitor()
+{}
+
 /** \brief check consistency for interface
  *  \param interface the interface to check
  */
@@ -299,9 +302,9 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
             if ((*iterP) != (*iterP2))
             {
                 // get name of second param
-                pDecl = (*iterP2)->m_Declarators.First();
-                if (sName == pDecl->GetName())
-                {
+		pDecl = (*iterP2)->m_Declarators.First();
+		if (sName == pDecl->GetName())
+		{
                     CCompiler::GccError(&operation, 0, 
 			"The operation %s has the parameter %s defined more than once.\n",
 			operation.GetName().c_str(), sName.c_str());
@@ -309,6 +312,24 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
                 }
             }
         }
+    }
+    ////////////////////////////////////////////////////////
+    // check if used exceptions are declared in interface
+    vector<CFEIdentifier*>::iterator iterR;
+    CFEInterface *pFEInterface = operation.GetSpecificParent<CFEInterface>();
+    assert(pFEInterface);
+    for (iterR = operation.m_RaisesDeclarators.begin();
+	 iterR != operation.m_RaisesDeclarators.end();
+	 iterR++)
+    {
+	string sName = (*iterR)->GetName();
+	if (pFEInterface->m_Exceptions.Find(sName))
+	    continue;
+	// not found
+	CCompiler::GccError(*iterR, 0,
+	    "The raises declaration uses an undefined exception (%s).\n",
+	    sName.c_str());
+	throw error::consistency_error();
     }
 }
 
@@ -723,25 +744,25 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
                     CCompiler::GccError(&typeddecl, 0, "The type %s is defined" \
 			" multiple times. Previously defined here: %s at" \
 			" line %d.", (*iterD)->GetName().c_str(),
-                        (pSecondFile) ? 
+			(pSecondFile) ? 
 			(pSecondFile->GetFileName().c_str()) : "", 
 			pSecondType->GetSourceLine());
-                    throw error::consistency_error();
-                }
-            }
-        }
+		    throw error::consistency_error();
+		}
+	    }
+	}
     }
     // check string and wstring
     if (((pType->GetType() == TYPE_CHAR) ||
-        (pType->GetType() == TYPE_WCHAR)) &&
+	    (pType->GetType() == TYPE_WCHAR)) &&
 	typeddecl.m_Attributes.Find(ATTR_STRING))
     {
-        // now we search all declarators. We make from any more than 1 star
-        // only one star (a string can have only one star (per definition)
-        // set star with declarator (can only be one or array dimension)
-        vector<CFEDeclarator*>::iterator iterD;
+	// now we search all declarators. We make from any more than 1 star
+	// only one star (a string can have only one star (per definition)
+	// set star with declarator (can only be one or array dimension)
+	vector<CFEDeclarator*>::iterator iterD;
 	for (iterD = typeddecl.m_Declarators.begin();
-	     iterD != typeddecl.m_Declarators.end(); )
+	    iterD != typeddecl.m_Declarators.end(); )
 	{
             // we check if there are too many stars
             int nMaxStars = 1;

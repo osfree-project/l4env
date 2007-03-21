@@ -371,6 +371,10 @@ CXX			'C++ compiler'					text
 Use this option to override the default C++ compiler (g++).
 .
 
+HOST_CC			'C host compiler'				text
+Use this option to override the default C host compiler (gcc).
+.
+
 HOST_CXX		'C++ host compiler'				text
 Use this option to override the default C++ host compiler (g++).
 .
@@ -472,9 +476,6 @@ require AMD64 implies WATCHDOG==n and GSTABS==n and ABI_X0==n and
 when AMD64 suppress WATCHDOG GSTABS ABI_X0 KDB HANDLE_SEGMENTS
 		PL0_HACK
 
-when EXCEPTION_IPC suppress ASSEMBLER_IPC_SHORTCUT
-require EXCEPTION_IPC implies ASSEMBLER_IPC_SHORTCUT==n
-
 unless ARM  suppress dependent DEBUG_KERNEL_PAGE_FAULTS VMEM_ALLOC_TEST 
                                arm_processor
 			       
@@ -507,6 +508,7 @@ require HANDLE_SEGMENTS	implies (SMALL_SPACES == n)
 default IA32				from y
 default CC				from 'gcc'
 default CXX				from 'g++'
+default HOST_CC				from 'gcc'
 default HOST_CXX			from 'g++'
 default VERBOSE				from n
 default ABI_V2				from y
@@ -672,6 +674,7 @@ menu debugging			# Debug options
 menu compiling			# Compiling and Building
 	CC$
 	CXX$
+	HOST_CC$
 	HOST_CXX$
 	VERBOSE
 	MAINTAINER_MODE

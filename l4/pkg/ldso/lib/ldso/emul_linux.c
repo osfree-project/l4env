@@ -16,7 +16,6 @@
 #include <l4/env/env.h>
 #include <l4/log/l4log.h>
 #include <l4/dm_mem/dm_mem.h>
-#include <l4/exec/exec.h>
 #include <l4/util/l4_macros.h>
 #include <l4/util/util.h>
 #include <l4/generic_ts/generic_ts.h>

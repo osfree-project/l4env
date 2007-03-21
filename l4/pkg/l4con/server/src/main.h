@@ -20,7 +20,7 @@
 extern struct l4con_vc *vc[];
 extern l4lock_t want_vc_lock;
 extern l4_uint8_t  vc_mode;
-extern l4_threadid_t ev_partner_l4id;
+extern l4_threadid_t ev_partner_l4id, vc_partner_l4id;
 extern int want_vc, fg_vc;
 extern int noaccel, pan, use_l4io, vbemode, use_fastmemcpy, cpu_load_history;
 extern int update_id;

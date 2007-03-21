@@ -12,7 +12,7 @@ namespace L4
     unsigned _rate;
 
   public:
-    void *operator new (unsigned, void* a) 
+    void *operator new (__SIZE_TYPE__, void* a) 
     { return a; }
 
   public:

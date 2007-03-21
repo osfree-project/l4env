@@ -64,19 +64,24 @@ protected:
 // operations
 public:
     virtual void Accept(CVisitor&);
-    virtual bool IsDefault();
+    virtual CObject* Clone();
+
+    /** \brief test this union case for default
+     *  \return true if default case, false if not
+     *
+     * Returns the value of m_bDefault, which is set in the constructor. Usually
+     * all, but one union arm have a case label. The C unions (if included from a
+     * header file) have no case labels at all. Thus you can differentiate the
+     * C unions from IDL unions by testing all union case for default.
+     */
+    bool IsDefault()
+    { return m_bDefault; }
 
     /** retrieves the union arm
      *  \return the typed declarator, which is this union case's arm
      */
-    virtual CFETypedDeclarator* GetUnionArm()
+    CFETypedDeclarator* GetUnionArm()
     { return m_pUnionArm; }
-
-    /** creates a copy of this object
-     *  \return a copy of this object
-     */
-    virtual CObject* Clone()
-    { return new CFEUnionCase(*this); }
 
 // attributes
 protected:

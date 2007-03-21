@@ -149,19 +149,19 @@ else
 all::		$(TARGET)
 
 L4INCDIR ?=	$(addprefix $(OBJ_BASE)/include/$(ARCH)/,$(L4API)) \
-                $(addprefix $(DROPS_STDDIR)/include/$(ARCH)/,$(L4API)) \
                 $(addprefix $(OBJ_BASE)/include/,$(L4API)) \
-                $(addprefix $(DROPS_STDDIR)/include/,$(L4API)) \
                 $(OBJ_BASE)/include/$(ARCH) \
-                $(DROPS_STDDIR)/include/$(ARCH) \
-		$(DICE_INCDIR) \
                 $(OBJ_BASE)/include \
+		$(DICE_INCDIR) \
+                $(addprefix $(DROPS_STDDIR)/include/$(ARCH)/,$(L4API)) \
+                $(addprefix $(DROPS_STDDIR)/include/,$(L4API)) \
+                $(DROPS_STDDIR)/include/$(ARCH) \
                 $(DROPS_STDDIR)/include
 L4LIBDIR ?=	$(addprefix $(OBJ_BASE)/lib/$(ARCH)_$(CPU)/,$(L4API)) \
-                $(addprefix $(DROPS_STDDIR)/lib/$(ARCH)_$(CPU)/,$(L4API)) \
                 $(OBJ_BASE)/lib/$(ARCH)_$(CPU) \
-                $(DROPS_STDDIR)/lib/$(ARCH)_$(CPU) \
                 $(OBJ_BASE)/lib \
+                $(addprefix $(DROPS_STDDIR)/lib/$(ARCH)_$(CPU)/,$(L4API)) \
+                $(DROPS_STDDIR)/lib/$(ARCH)_$(CPU) \
                 $(DROPS_STDDIR)/lib
 
 L4LINUX22_DIR ?= $(L4DIR)/../linux22
@@ -271,6 +271,8 @@ CXXFLAGS+= $(CXXFLAGS_$(OSYSTEM)) $(CXXFLAGS_$(@:.o=.cc)) $(CXXFLAGS_$(@:.o=.cc)
 CXXFLAGS+= $(CXXFLAGS_$(@:.o=.cpp)) $(CXXFLAGS_$(@:.o=.cpp)_$(OSYSTEM))
 CXXFLAGS+= $(OPTS) $(filter-out -Wmissing-declarations -Wstrict-prototypes -Wmissing-prototypes,$(WARNINGS))
 CXXFLAGS+= -fno-common
+
+PICFLAGS = -D__PIC__ -fPIC
 
 ASFLAGS+= $(ASFLAGS_$(ARCH)) $(ASFLAGS_$(@:.o=.S)) $(ASFLAGS_$(@:.o=.S)_$(OSYSTEM))
 OBJS	+= $(strip $(OBJS_$(OSYSTEM)) $(OBJS_$@) $(OBJS_$@_$(OSYSTEM)))
@@ -535,7 +537,7 @@ endif # HAVE_LDSO empty
 
 %.s.o:	%.cc
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) -fPIC $(call absfilename,$<) -o $@
+	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) $(PICFLAGS) $(call absfilename,$<) -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
 
 %.pr.o:	%.cc
@@ -545,7 +547,7 @@ endif # HAVE_LDSO empty
 
 %.pr.s.o: %.cc
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) -fPIC -DPROFILE -pg $(call absfilename,$<) -o $@
+	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) $(PICFLAGS) -DPROFILE -pg $(call absfilename,$<) -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
 
 %.o:	%.cpp
@@ -555,7 +557,7 @@ endif # HAVE_LDSO empty
 
 %.s.o:	%.cpp
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) -fPIC $(call absfilename,$<) -o $@
+	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) $(PICFLAGS) $(call absfilename,$<) -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
 
 %.pr.o:	%.cpp
@@ -565,7 +567,7 @@ endif # HAVE_LDSO empty
 
 %.pr.s.o: %.cpp
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) -fPIC -DPROFILE -pg $(call absfilename,$<) -o $@
+	$(VERBOSE)$(call MAKEDEP,$(INT_CXX_NAME)) $(CXX) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CXXFLAGS) $(PICFLAGS) -DPROFILE -pg $(call absfilename,$<) -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
 
 %.o:	%.c
@@ -575,7 +577,7 @@ endif # HAVE_LDSO empty
 
 %.s.o:	%.c
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_CPP_NAME)) $(CC) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CFLAGS) -fPIC $(call absfilename,$<) -o $@
+	$(VERBOSE)$(call MAKEDEP,$(INT_CPP_NAME)) $(CC) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CFLAGS) $(PICFLAGS) $(call absfilename,$<) -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
 
 %.pr.o:	%.c
@@ -585,7 +587,7 @@ endif # HAVE_LDSO empty
 
 %.pr.s.o: %.c
 	@$(COMP_PR_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_CPP_NAME)) $(CC) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CFLAGS) -fPIC -DPROFILE -pg $(call absfilename,$<) -o $@
+	$(VERBOSE)$(call MAKEDEP,$(INT_CPP_NAME)) $(CC) -c $(DEPEND_FLAG) $(CPPFLAGS) $(CFLAGS) $(PICFLAGS) -DPROFILE -pg $(call absfilename,$<) -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
 
 %.o:	%.S
@@ -595,7 +597,7 @@ endif # HAVE_LDSO empty
 
 %.s.o:	%.S
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_CPP_NAME)) $(CC) -c $(DEPEND_FLAG) $(CPPFLAGS) $(ASFLAGS) -fPIC $(call absfilename,$<) -o $@
+	$(VERBOSE)$(call MAKEDEP,$(INT_CPP_NAME)) $(CC) -c $(DEPEND_FLAG) $(CPPFLAGS) $(ASFLAGS) $(PICFLAGS) $(call absfilename,$<) -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
 
 %.pr.o:	%.S
@@ -605,7 +607,7 @@ endif # HAVE_LDSO empty
 
 %.pr.s.o:	%.S
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(INT_CPP_NAME)) $(CC) -c $(DEPEND_FLAG) $(CPPFLAGS) $(ASFLAGS) -fPIC -DPROFILE -pg $(call absfilename,$<) -o $@
+	$(VERBOSE)$(call MAKEDEP,$(INT_CPP_NAME)) $(CC) -c $(DEPEND_FLAG) $(CPPFLAGS) $(ASFLAGS) $(PICFLAGS) -DPROFILE -pg $(call absfilename,$<) -o $@
 	$(DEPEND_VERBOSE)$(call DEPEND_EXTEND_FUNC, $(*F).d, $(dir $@).$(notdir $@).d)
 
 %.c:	%.y
@@ -625,7 +627,7 @@ endif # HAVE_LDSO empty
 
 %.s.i:	%.c
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(CC) -E -H -dD $(CPPFLAGS) $(CFLAGS) -fPIC $(call absfilename,$<) -o $@
+	$(VERBOSE)$(CC) -E -H -dD $(CPPFLAGS) $(CFLAGS) $(PICFLAGS) $(call absfilename,$<) -o $@
 	$(VERBOSE)$(INDENT) -o $@ $@
 
 %.i:	%.cc
@@ -635,7 +637,7 @@ endif # HAVE_LDSO empty
 
 %.s.i:	%.cc
 	@$(COMP_MESSAGE)
-	$(VERBOSE)$(CXX) -E -H -dD $(CPPFLAGS) $(CXXFLAGS) -fPIC $(call absfilename,$<) -o $@
+	$(VERBOSE)$(CXX) -E -H -dD $(CPPFLAGS) $(CXXFLAGS) $(PICFLAGS) $(call absfilename,$<) -o $@
 	$(VERBOSE)$(INDENT) -sob -o $@ $@
 
 %.i:	%.S

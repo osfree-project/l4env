@@ -160,6 +160,7 @@ handle_event(struct l4input *ev)
 	      cpu_load_history = 1-cpu_load_history;
 	      return;
 	    }
+#ifndef L4BID_RELEASE_MODE
 	  if (keycode == KEY_SYSRQ && altgr_down)
 	    {
 	      /* Magic SysReq -> enter_kdebug() */
@@ -167,6 +168,7 @@ handle_event(struct l4input *ev)
 	      special_ev.type = 0xff;
 	      return;
 	    }
+#endif
 	}
 
       /* No special key, send deferred key event */

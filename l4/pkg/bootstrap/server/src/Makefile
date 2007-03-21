@@ -1,7 +1,8 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
-DEFAULT_RELOC_arm := 0x02000000
+#DEFAULT_RELOC_arm := 0x02000000
+DEFAULT_RELOC_arm := 0x01000000
 
 include $(L4DIR)/mk/Makeconf
 -include $(OBJ_DIR)/Makeconf.local
@@ -27,6 +28,7 @@ MODE		 = sigma0
 LIBC_SUPPORT_C_x86             := libc_support.c
 LIBC_SUPPORT_C_amd64           := libc_support.c
 LIBC_SUPPORT_C_arm-sa1000      := libc_support.c
+LIBC_SUPPORT_CC_arm-isg        := libc_support+.cc
 LIBC_SUPPORT_CC_arm-integrator := libc_support+.cc
 
 SRC_C		+= startup.c exec.c region.c module.c base_critical.c patch.c 
@@ -141,12 +143,9 @@ CXXFLAGS += -fno-rtti -fno-exceptions
 
 ifneq ($(SYSTEM),)
  ifneq ($(ENTRY),)
-  ifeq ($(ARCH),arm)
-   CROSS_COMPILE := arm-linux-
-  endif
   ifeq ($(filter clean cleanall,$(MAKECMDGOALS)),)
     BUILD_DUMMY := $(shell SEARCHPATH=$(LOCAL_SEARCH_PATH):$(MODULE_PATH) \
-                           CROSS_COMPILE=$(CROSS_COMPILE) \
+                           CROSS_COMPILE=$(SYSTEM_TARGET) \
 			   OPT_ARCH=$(ARCH) \
 			   OPT_COMPRESS=$(COMPRESS) \
                            $(SRC_DIR)/build.pl $(SRC_DIR)/$(MODULE_LIST) $(ENTRY) 2>&1 | tee build.log 1>&2 \

@@ -43,8 +43,8 @@ libc/sysdeps/linux/common/bits/locale.h
 libc/sysdeps/linux/common/bits/local_lim.h
 libc/sysdeps/linux/common/bits/mathcalls.h
 libc/sysdeps/linux/common/bits/nan.h
-libc/sysdeps/linux/common/bits/poll.h
 libc/sysdeps/linux/common/bits/netdb.h
+libc/sysdeps/linux/common/bits/poll.h
 libc/sysdeps/linux/common/bits/posix1_lim.h
 libc/sysdeps/linux/common/bits/posix2_lim.h
 libc/sysdeps/linux/common/bits/posix_opt.h

@@ -103,6 +103,7 @@ my %modules =
 		    l4/pkg/hello
 		    l4/pkg/l4util
                     l4/pkg/l4sys
+		    l4/pkg/libc_backends
                     l4/pkg/libc_support
                     l4/pkg/libsigma0
 		    l4/pkg/roottask

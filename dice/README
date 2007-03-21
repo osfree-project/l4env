@@ -2,68 +2,55 @@ Read Me First file for DICE (DROPS IDL Compiler) Project
 
 Welcome
 =======
- Dice is an IDL compiler for the L4 microkernel. It translates
-CORBA IDL and DCE IDL files into L4 specific communication stubs.
-To be able to support L4 specific IPC, some special types and
-attributes have been added to the IDLs.
-
- Currently Dice supports only the V2 ABI of the L4 microkernel,
-but work is under way to add support for the X0 and X2/V4 ABIs
-asap.
+ Dice is an IDL compiler for the L4 microkernel. It translates CORBA IDL and
+DCE IDL files into L4 specific communication stubs.  To be able to support L4
+specific IPC, some special types and attributes have been added to the IDLs.
 
 Compiling for the first time:
 =============================
- If you have checked out a fresh version from the remote CVS,
-you will have noticed that there is no Makefile. Please run
-'make -f Makefile.cvs', 
-which invokes the bootstrap script, then configure, and 
-eventually make again to build Dice. If you wish to configure 
-Dice manually, run the bootstrap script first to create the 
-configure script.
+ If you have checked out a fresh version from the remote CVS, you will have
+noticed that there is no Makefile. Please run
 
- If you obtained a tarball or zip file, unpack the compressed
-file. Change into the generated directory (dice-<version>) and
-call './configure', which will test your local build environment
-and generate appropriate Makefiles. Then simply run 'make'.
-
-Compiling for DROPS Environment
-===============================
- If you have checked out a fresh version from the (remote) CVS,
-and wish to build all the Makefiles and Dice for the DROPS build
-environment using DROPS_STDDIR, you can do so buy running
 'make -f Makefile.drops', 
-which performs the same steps as above, but uses the variable 
-DROPS_STDDIR as prefix for configure. DROPS_STDDIR is set in 
-$(L4DIR)/Makeconf.local.
+
+which invokes the bootstrap script, then configure, and eventually make again
+to build Dice. If you wish to configure Dice manually, run the bootstrap
+script first to create the configure script.
+
+ If you obtained a tarball or zip file, unpack the compressed file. Change
+into the generated directory (dice-<version>) and call './configure', which
+will test your local build environment and generate appropriate Makefiles.
+Then simply run 'make'.
 
 Used Header Files
 =================
- Dice comes with some header files (include directory), which
-are used to compiler IDL files and in the generated files.
-Typically they are installed into $(L4DIR)/include/dice. If
-no L4 build environment exists, no header files are locally
-installed. When compiling IDL files this may lead to an 
-error:
+ Dice comes with some header files (include directory), which are used to
+compile IDL files and in the generated files.  When compiling IDL files you
+may (unlikely) encounter the following error:
+
 "<idlfile>:1: dice/dice-corba-types.h: No such file or directory"
-Add the path to the Dice include to the include paths with
-the -I option.
-(If you have an older version of Dice installed, make sure,
-its header files are not included.)
+
+Add the path to the Dice include directory to the include paths with the -I
+option.
 
 Bugs
 ====
- To report bugs, send an email to dice@os.inf.tu-dresden.de
-or ra3@os.inf.tu-dresden.de.
+ To report bugs, send an email to dice@os.inf.tu-dresden.de or
+ra3@os.inf.tu-dresden.de.
+
+Packaged Versions
+=================
+ There may exist packages for Dice. Refer to the Dice homepage for the latest
+information (http://os.inf.tu-dresden.de/dice/).
 
 Mailinglist
 ===========
-There exists a low-traffic mailinglist for Dice related stuff:
-to subscribe visit http://os.inf.tu-dresden.de/mailman/listinfo/dice.
-To simply post a bug or question, send an email to
-dice@os.inf.tu-dresden.de.
+ There exists a low-traffic mailinglist for Dice related stuff: to subscribe
+visit http://os.inf.tu-dresden.de/mailman/listinfo/dice.  To simply post a bug
+or question, send an email to dice@os.inf.tu-dresden.de.
 
 
-Thanx for using DICE
+Thank you for using DICE
 Ronald Aigner
 
-file last modified: 06/14/06
+file last modified: 03/15/07

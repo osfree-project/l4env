@@ -6,10 +6,15 @@
 
 L4DIR		?= .
 
-BUILD_DIRS	= tool ../kernel/fiasco ../dice pkg
-install-dirs	= tool ../kernel/fiasco ../dice pkg
-clean-dirs	= tool ../kernel/fiasco ../dice pkg doc
-cleanall-dirs	= tool ../kernel/fiasco ../dice pkg doc
+BUILD_DIRS_ALL      = tool ../kernel/fiasco ../dice pkg
+install-dirs_ALL    = tool ../kernel/fiasco ../dice pkg
+clean-dirs_ALL      = tool ../kernel/fiasco ../dice pkg doc
+cleanall-dirs_ALL   = tool ../kernel/fiasco ../dice pkg doc
+
+BUILD_DIRS_L4DIR    = tool pkg
+install-dirs_L4DIR  = tool pkg
+clean-dirs_L4DIR    = tool pkg doc
+cleanall-dirs_L4DIR = tool pkg doc
 
 BUILD_TOOLS	= gawk
 
@@ -55,14 +60,25 @@ ifneq ($(filter config txtconfig oldconfig, $(MAKECMDGOALS)),)
 export BID_ROOT_CONF=$(call absfilename,$(OBJ_BASE))/.Makeconf.bid.converted
 endif
 
+ifeq ($(BID_BUILD_L4DIR_ONLY),y)
+BUILD_F = L4DIR
+else
+BUILD_F = ALL
+endif
+
+BUILD_DIRS    = $(BUILD_DIRS_$(BUILD_F))
+install-dirs  = $(install-dirs_$(BUILD_F))
+clean-dirs    = $(clean-dirs_$(BUILD_F))
+cleanall-dirs = $(cleanall-dirs_$(BUILD_F))
+
 #####################
 # rules follow
 
 # some dependencies
-all::	$(BUILD_DIRS)
-tool:	$(DROPSCONF_CONFIG_MK)
-pkg:	$(DROPSCONF_CONFIG_MK) tool
-doc:	pkgdoc
+all:: $(BUILD_DIRS)
+tool: $(DROPSCONF_CONFIG_MK)
+pkg:  $(DROPSCONF_CONFIG_MK) tool
+doc:  pkgdoc
 
 ifeq ($(BID_BUILD_DOC),y)
 install-dirs += doc
@@ -134,6 +150,8 @@ Makeconf.bid.local-helper:
 			>>$(DROPSCONF_CONFIG_MK);)
 	$(foreach v, BID_LIBGENDEP, echo $v=$($(v)) >>$(DROPSCONF_CONFIG_MK);)
 	$(VERBOSE)echo 'BUILD_PIC += $$(BUILD_LOADER_PICS)' >>$(DROPSCONF_CONFIG_MK)
+	$(VERBOSE)echo "HOST_SYSTEM=$(shell uname | tr 'A-Z' 'a-z' )" >>$(DROPSCONF_CONFIG_MK)
+	$(VERBOSE)echo "COLOR_TERMINAL=$(shell if [ $$(tput colors) = '-1' ]; then echo n; else echo y; fi)" >>$(DROPSCONF_CONFIG_MK)
 ifeq ($(INT_CPP_NAME_SWITCH), y)
 	$(VERBOSE) set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
 		rm -f $$X.out ; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \

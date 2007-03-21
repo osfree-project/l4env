@@ -80,8 +80,8 @@ main(int argc, char **argv)
     }
 
   _env.rcv_fpage = l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0);
-  if (con_vc_graph_mapfb_call(&vc_l4id,
-		 	 &snd_fpage, &offset, &_env)
+  if (con_vc_graph_mapfb_call(&vc_l4id, 0, 
+                              &snd_fpage, &offset, &_env)
       || DICE_HAS_EXCEPTION(&_env))
     {
       printf("Error mapping framebuffer (exc=%d)", DICE_EXCEPTION_MAJOR(&_env));

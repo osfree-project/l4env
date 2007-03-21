@@ -75,6 +75,8 @@ libc/sysdeps/linux/common/bits/waitstatus.h
 libc/sysdeps/linux/common/bits/xopen_lim.h
 libc/sysdeps/linux/x86_64/setjmp.S
 libc/sysdeps/linux/x86_64/__longjmp.S
+libc/sysdeps/linux/x86_64/bsd-setjmp.S
+libc/sysdeps/linux/x86_64/bsd-_setjmp.S
 libc/sysdeps/linux/x86_64/bits/atomic.h
 libc/sysdeps/linux/x86_64/bits/byteswap.h
 libc/sysdeps/linux/x86_64/bits/endian.h

@@ -340,16 +340,6 @@ the source file line information.  This can be used to
 display the corresponding source for errors in target code.
 </DD>
 
-<DT><b>-fno-l4dir-include-path</b></DT>
-<DD>By default '$(L4DIR)/include' is added to the include
-paths to be able to include the file 'dice/dice-corba-types.h',
-which is parsed by default to "know" the CORBA Types.
-If you do not wish to add this path to your include paths,
-then use this option. $(L4DIR) is build during 
-compile-time of dice and can be set using the <i>--with-l4dir</i>
-configure switch.
-</DD>
-
 <DT><b>-fkeep-temp-files</b></DT>
 <DD>Keeps the temporarely during preprocessing created files.
 This option should be used to debug Dice only.

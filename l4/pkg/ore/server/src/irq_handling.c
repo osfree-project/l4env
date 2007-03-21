@@ -28,8 +28,13 @@ int l4ore_rx_handle(struct sk_buff *skb)
 int netif_rx(struct sk_buff *skb)
 #endif
 {
+	int channel;
+
+	if (skb && skb->dev && (strcmp(skb->dev->name, "lo") == 0))
+		return NET_RX_SUCCESS;
+
 	// find out who will receive this skb
-	int channel = find_channel_for_skb(skb, 0);
+	channel = find_channel_for_skb(skb, 0);
 
 	LOGd_Enter(ORE_DEBUG_IRQ, "I am: "l4util_idfmt, l4util_idstr(l4_myself()));
 

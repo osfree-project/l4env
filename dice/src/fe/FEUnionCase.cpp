@@ -65,17 +65,12 @@ CFEUnionCase::~CFEUnionCase()
         delete m_pUnionArm;
 }
 
-/** \brief test this union case for default
- *  \return true if default case, false if not
- *
- * Returns the value of m_bDefault, which is set in the constructor. Usually
- * all, but one union arm have a case label. The C unions (if included from a
- * header file) have no case labels at all. Thus you can differentiate the
- * C unions from IDL unions by testing all union case for default.
+/** creates a copy of this object
+ *  \return a copy of this object
  */
-bool CFEUnionCase::IsDefault()
-{
-    return m_bDefault;
+CObject* CFEUnionCase::Clone()
+{ 
+    return new CFEUnionCase(*this);
 }
 
 /** \brief accept the iterations of the visitors

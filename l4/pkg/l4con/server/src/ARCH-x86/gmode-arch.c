@@ -25,8 +25,6 @@
 #include "con_hw/init.h"
 #include "con_hw/iomem.h"
 
-static l4_size_t vid_mem_size;
-
 /** Try to detect and initialize the graphics card. */
 static int
 detect_hw(l4util_mb_vbe_ctrl_t *vbe, l4util_mb_vbe_mode_t *vbi)
@@ -37,10 +35,10 @@ detect_hw(l4util_mb_vbe_ctrl_t *vbe, l4util_mb_vbe_mode_t *vbi)
     return -L4_ENOTFOUND;
 
   vid_mem_addr = vbi->phys_base;
-  vid_mem_size = vbe->total_memory << 16;
+  gr_vmem_size = vbe->total_memory << 16;
 
-  if (con_hw_init(VESA_XRES, VESA_YRES, &VESA_BITS,
-		  vid_mem_addr, vid_mem_size, &hw_accel, &gr_vmem)<0)
+  if (con_hw_init(VESA_XRES, VESA_YRES, &VESA_BITS, VESA_BPL,
+		  vid_mem_addr, gr_vmem_size, &hw_accel, &gr_vmem)<0)
     {
       /* fall back to VESA support */
       printf("No supported accelerated graphics card detected\n");
@@ -63,7 +61,14 @@ detect_hw(l4util_mb_vbe_ctrl_t *vbe, l4util_mb_vbe_mode_t *vbi)
   if (hw_accel.caps & ACCEL_FAST_FILL)
     accel_caps |= L4CON_FAST_FILL;
 
-  vis_vmem = gr_vmem;
+  gr_vmem_maxmap = gr_vmem + VESA_YRES_CLIENT*VESA_BPL;
+  vis_vmem       = gr_vmem;
+  vis_offs       = 0;
+  if (gr_vmem_maxmap >= gr_vmem+gr_vmem_size)
+    {
+      LOG_printf("Framebuffer too small??\n");
+      gr_vmem_maxmap = gr_vmem+gr_vmem_size;
+    }
 
   return 0;
 }
@@ -78,24 +83,20 @@ pan_vmem(void)
   if (!pan)
     return;
 
-  /* hardware support for panning the display */
-  next_super_offs = L4_SUPERPAGESIZE;
-
   /* consider overflow on memory modes with more than 4MB */
-  if (VESA_YRES * VESA_BPL > next_super_offs)
-    next_super_offs += L4_SUPERPAGESIZE;
+  next_super_offs = l4_round_superpage(VESA_YRES_CLIENT * VESA_BPL);
 
-  if (next_super_offs + status_area*VESA_BPL > vid_mem_size)
+  if (next_super_offs + status_area*VESA_BPL > gr_vmem_size)
     {
       printf("WARNING: Can't pan display: Only have %dkB video memory "
-	     "need %ldkB\n", vid_mem_size >> 10, 
+	     "need %ldkB\n", gr_vmem_size >> 10, 
 	     (next_super_offs + status_area*VESA_BPL) >> 10);
       return;
     }
 
   bpp = (VESA_BITS + 1) / 8;
   x   = (next_super_offs % VESA_BPL) / bpp;
-  y   = (next_super_offs / VESA_BPL) - VESA_YRES + status_area;
+  y   = (next_super_offs / VESA_BPL) - VESA_YRES_CLIENT;
 
   /* pan graphics card */
   if (hw_accel.pan)
@@ -110,12 +111,13 @@ pan_vmem(void)
 	return;
     }
 
-  pan_offs_x = x;
-  pan_offs_y = y;
-	      
-  start     = y * VESA_BPL + x * bpp;
-  vis_vmem  = gr_vmem + start;
-  vis_offs  = (l4_uint8_t*)start;
+  pan_offs_x     = x;
+  pan_offs_y     = y;
+  start          = y*VESA_BPL + x*bpp;
+
+  gr_vmem_maxmap = gr_vmem + next_super_offs;
+  vis_vmem       = gr_vmem + start;
+  vis_offs       = start;
 
   printf("Display panned to %d:%d\n", y, x);
   panned = 1;
@@ -146,23 +148,24 @@ init_gmode(void)
     }
 
   /* 2) Read graphics mode parameters from VESA controller/mode info */
-  vid_mem_size    = vbe->total_memory << 16;
-  VESA_YRES       = vbi->y_resolution;
-  VESA_XRES       = vbi->x_resolution;
-  VESA_BITS       = vbi->bits_per_pixel;
-  VESA_BPL        = vbi->bytes_per_scanline;
-  VESA_RES        = 0;
-  VESA_RED_OFFS   = vbi->red_field_position;
-  VESA_RED_SIZE   = vbi->red_mask_size;
-  VESA_GREEN_OFFS = vbi->green_field_position;
-  VESA_GREEN_SIZE = vbi->green_mask_size;
-  VESA_BLUE_OFFS  = vbi->blue_field_position;
-  VESA_BLUE_SIZE  = vbi->blue_mask_size;
+  gr_vmem_size     = vbe->total_memory << 16;
+  VESA_YRES        = vbi->y_resolution;
+  VESA_YRES_CLIENT = VESA_YRES - status_area;
+  VESA_XRES        = vbi->x_resolution;
+  VESA_BITS        = vbi->bits_per_pixel;
+  VESA_BPL         = vbi->bytes_per_scanline;
+  VESA_RES         = 0;
+  VESA_RED_OFFS    = vbi->red_field_position;
+  VESA_RED_SIZE    = vbi->red_mask_size;
+  VESA_GREEN_OFFS  = vbi->green_field_position;
+  VESA_GREEN_SIZE  = vbi->green_mask_size;
+  VESA_BLUE_OFFS   = vbi->blue_field_position;
+  VESA_BLUE_SIZE   = vbi->blue_mask_size;
 
   printf("VESA reports %dx%d@%d %dbpl (%04x) [%dkB]\n"
          "Color mapping: red=%d:%d green=%d:%d blue=%d:%d res=%d:%d\n",
 	 VESA_XRES, VESA_YRES, vbi->bits_per_pixel, vbi->bytes_per_scanline,
-	 vbi->mode_attributes, vid_mem_size >> 10,
+	 vbi->mode_attributes, gr_vmem_size >> 10,
 	 vbi->red_field_position, vbi->red_mask_size,
 	 vbi->green_field_position, vbi->green_mask_size,
 	 vbi->blue_field_position, vbi->blue_mask_size,
@@ -189,9 +192,10 @@ init_gmode(void)
     {
       /* not known graphics adapter detected -- map video memory */
       l4_addr_t map_addr;
-      map_io_mem(vbi->phys_base, vid_mem_size, 1, "video", &map_addr);
-      gr_vmem  = (void*)map_addr;
-      vis_vmem = gr_vmem;
+      map_io_mem(vbi->phys_base, gr_vmem_size, 1, "video", &map_addr);
+      gr_vmem        = (void*)map_addr;
+      gr_vmem_maxmap = gr_vmem + gr_vmem_size;
+      vis_vmem       = gr_vmem;
     }
 
   /* 4) Try to force panning */

@@ -70,6 +70,7 @@ int update_id;				/* 1=redraw vc id */
 int use_l4io = 0;			/* Use L4 IO server, dfl: no */
 l4lock_t want_vc_lock = L4LOCK_UNLOCKED;/* mutex for want_vc */
 l4_threadid_t ev_partner_l4id = L4_NIL_ID;/* current event handler */
+l4_threadid_t vc_partner_l4id = L4_NIL_ID;/* current active client */
 l4_uint8_t vc_mode = CON_CLOSED;		/* mode of current console */
 
 static void do_switch(int i_new, int i_old);
@@ -157,7 +158,8 @@ get_free_vc(void)
   return -CON_EFREE;
 }
 
-/** send con_event redraw. */
+/** send con_event redraw.
+ * @pre have want_vc_lock */
 static int
 redraw_vc(void)
 {
@@ -165,7 +167,6 @@ redraw_vc(void)
    static CORBA_Environment env = dice_default_environment;
    static stream_io_input_event_t ev_struct;
 
-   l4lock_lock(&want_vc_lock);
    if (!l4_is_nil_id(ev_partner_l4id))
      {
        /* ev_struct.time is not used */
@@ -178,7 +179,7 @@ redraw_vc(void)
 
 	if (DICE_EXCEPTION_MAJOR(&env) == CORBA_SYSTEM_EXCEPTION &&
 	    DICE_EXCEPTION_MINOR(&env) == CORBA_DICE_EXCEPTION_IPC_ERROR)
-	  {
+          {
 	    if (DICE_IPC_ERROR(&env) == L4_IPC_ENOT_EXISTENT)
 	      {
 		printf("redraw_vc: Target thread "l4util_idfmt" dead?\n",
@@ -186,10 +187,12 @@ redraw_vc(void)
 		ret = -1;
 	      }
 	    else
-	      printf("redraw_vc: IPC error %02x\n", DICE_IPC_ERROR(&env));
-	  }
+              {
+	        printf("redraw_vc("l4util_idfmt"): IPC error %02x\n", 
+                        l4util_idstr(ev_partner_l4id), DICE_IPC_ERROR(&env));
+              }
+          }
      }
-   l4lock_unlock(&want_vc_lock);
 
    return ret;
 }
@@ -212,6 +215,9 @@ background_vc(void)
 
        env.timeout = EVENT_TIMEOUT;
        stream_io_push_call(&ev_partner_l4id, &ev_struct, &env);
+       if (DICE_HAS_EXCEPTION(&env))
+         LOG("exception %d sending background event to "l4util_idfmt,
+             DICE_EXCEPTION_MAJOR(&env), l4util_idstr(ev_partner_l4id));
 
        /* ignore errors */
        vc[fg_vc]->fb_mapped = 0;
@@ -310,8 +316,7 @@ found:
 		  continue;
 		}
 
-	      fg_vc   = i;
-	      want_vc = fg_vc;
+	      want_vc = fg_vc = i;
 	      break;
 	    }
 	}
@@ -330,8 +335,9 @@ found:
 	{
 	  /* return to sane state */
 	  want_vc         = fg_vc;
-	  ev_partner_l4id = vc[want_vc]->ev_partner_l4id;
-	  vc_mode         = vc[want_vc]->mode;
+	  ev_partner_l4id = vc[fg_vc]->ev_partner_l4id;
+          vc_partner_l4id = vc[fg_vc]->vc_partner_l4id;
+	  vc_mode         = vc[fg_vc]->mode;
 	  return;
 	}
 
@@ -373,7 +379,7 @@ do_switch(int i_new, int i_old)
   if (old != 0)
     {
       l4lock_lock(&old->fb_lock);
-      if (old->vfb_used)
+      if (old->save_restore && old->vfb)
 	{
 	  /* save screen */
 	  if (use_fastmemcpy && (new->vfb_size % 4096 == 0))
@@ -381,9 +387,9 @@ do_switch(int i_new, int i_old)
 	  else
 	    fast_memcpy        (old->vfb, vis_vmem, old->vfb_size);
 	}
-      old->fb       = old->vfb_used ? old->vfb : 0;
-      old->pan_xofs = old->vfb_used ? 0        : pan_offs_x;
-      old->pan_yofs = old->vfb_used ? 0        : pan_offs_y;
+      old->fb       = old->vfb_in_server ? old->vfb : 0;
+      old->pan_xofs = old->vfb_in_server ? 0        : pan_offs_x;
+      old->pan_yofs = old->vfb_in_server ? 0        : pan_offs_y;
       old->do_copy  = bg_do_copy;
       old->do_fill  = bg_do_fill;
       old->do_sync  = bg_do_sync;
@@ -405,10 +411,16 @@ do_switch(int i_new, int i_old)
       new->do_drty  = fg_do_drty;
       new->prev     = old;
 
-      if (i_new == 0 || !new->vfb_used)
-	vc_clear(new);
+      if (i_new == 0 || !new->save_restore || !new->vfb)
+        {
+          /* We clear the screen here for security reasons: If save_restore
+           * is false the client is responsible for updating the screen when
+           * it receives the EV_CON_REDRAW event. A malicous client could
+           * "forget" to respond but now has the input focus. */
+          vc_clear(new);
+        }
 
-      if (new->vfb_used)
+      if (new->save_restore && new->vfb)
 	{
 	  /* restore screen */
 	  if (use_fastmemcpy && (new->vfb_size % 4096 == 0))
@@ -428,15 +440,25 @@ do_switch(int i_new, int i_old)
   /* tell old console that we flash its video memory */
   background_vc();
 
-  /* flush video memory of old console.
-   * XXX does not work on current Fiasco implementation because the
-   * mapping database does not record mappings of adapter pages */
-  l4_fpage_unmap(l4_fpage((l4_addr_t)gr_vmem & L4_SUPERPAGEMASK,
-			   L4_LOG2_SUPERPAGESIZE, 0, 0),
-		 L4_FP_FLUSH_PAGE | L4_FP_OTHER_SPACES);
-
+  if (old && old->fb_mapped)
+  {
+    /* Flush video memory of old console.
+     * XXX This does not work on current Fiasco implementation because the
+     * mapping database does not record mappings of pages beyond end of
+     * physical RAM. */
+    l4_addr_t map_addr;
+    
+    for (map_addr=(l4_addr_t)gr_vmem;
+         map_addr+L4_SUPERPAGESIZE < (l4_addr_t)gr_vmem_maxmap;
+         map_addr+=L4_SUPERPAGESIZE)
+      {
+        l4_fpage_unmap(l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0),
+                       L4_FP_FLUSH_PAGE | L4_FP_OTHER_SPACES);
+      }
+  }
   ev_partner_l4id = vc[i_new]->ev_partner_l4id;
-  vc_mode = vc[i_new]->mode;
+  vc_partner_l4id = vc[i_new]->vc_partner_l4id;
+  vc_mode         = vc[i_new]->mode;
 }
 
 /******************************************************************************
@@ -530,13 +552,16 @@ con_if_openqry_component (CORBA_Object _dice_corba_obj,
 
   vc[vc_num]->fb              = 0;
   vc[vc_num]->vfb             = 0;
-  vc[vc_num]->vfb_used        = vfbmode;
+  vc[vc_num]->vfb_in_server   = vfbmode;
   vc[vc_num]->mode            = CON_OPENING;
   vc[vc_num]->vc_partner_l4id = *_dice_corba_obj;
   vc[vc_num]->sbuf1_size      = sbuf1_size;
   vc[vc_num]->sbuf2_size      = sbuf2_size;
   vc[vc_num]->sbuf3_size      = sbuf3_size;
   vc[vc_num]->fb_mapped       = 0;
+
+  if (vfbmode)
+    vc[vc_num]->save_restore  = 1;
 
   sprintf(name, ".vc-%.2d", vc_num);
   vc_tid = l4thread_create_long(L4THREAD_INVALID_ID,
@@ -590,7 +615,7 @@ con_if_screenshot_component (CORBA_Object _dice_corba_obj,
   if (!(vc_shoot->mode & CON_INOUT))
     return -L4_EINVAL;
 
-  if (!vc_shoot->vfb_used && vc_nr != fg_vc)
+  if (!vc_shoot->vfb_in_server && vc_nr != fg_vc)
     return -L4_EINVAL;
 
   l4lock_lock(&vc_shoot->fb_lock);
@@ -604,7 +629,7 @@ con_if_screenshot_component (CORBA_Object _dice_corba_obj,
 
   /* XXX consider situations where
    * bytes_per_line != bytes_per_pixel * xres !!! */
-  memcpy(addr, (vc_shoot->vfb_used) ? vc_shoot->vfb : vc_shoot->fb,
+  memcpy(addr, vc_shoot->vfb_in_server ? vc_shoot->vfb : vc_shoot->fb,
          vc_shoot->vfb_size);
 
   l4lock_unlock(&vc_shoot->fb_lock);
@@ -767,23 +792,40 @@ server_loop(void)
 
 #ifdef ARCH_x86
 #include <l4/util/idt.h>
-static jmp_buf check_jmp_buf;
+static jmp_buf exception6_jmp_buf;
+static int     exception6_handler_active;
 
-void check_exception6_handler(void);
-void check_exception6_c_handler(void);
-
-void
-check_exception6_c_handler(void)
+static void
+my_exception_handler(void)
 {
-  longjmp(check_jmp_buf, 1);
+  longjmp(exception6_jmp_buf, 1);
 }
 
-asm ("check_exception6_handler:         \n\t"
-     "pusha                             \n\t"
-     "call   check_exception6_c_handler \n\t"
-     "popa                              \n\t"
-     "iret                              \n\t");
-#endif
+static void
+exception6_handler_done(void)
+{
+  if (!exception6_handler_active)
+    enter_kdebug("???");
+  exception6_handler_active = 0;
+}
+
+static void
+exception6_handler_start(void)
+{
+  static struct
+    {
+      l4util_idt_header_t header;
+      l4util_idt_desc_t   desc[0x20];
+    } __attribute__((packed)) idt;
+
+  l4util_idt_init (&idt.header, sizeof(idt.desc)/sizeof(idt.desc[0]));
+  l4util_idt_entry(&idt.header, 6, my_exception_handler);
+  l4util_idt_load (&idt.header);
+
+  exception6_handler_active = 1;
+}
+
+#endif // ARCH_x86
 
 static void
 check_fast_memcpy(void)
@@ -791,30 +833,22 @@ check_fast_memcpy(void)
 #ifdef ARCH_x86
   if (use_fastmemcpy)
     {
-      static struct
+      exception6_handler_start();
+      if (!setjmp(exception6_jmp_buf))
 	{
-	  l4util_idt_header_t header;
-	  l4util_idt_desc_t   desc[0x20];
-	} __attribute__((packed)) idt;
-      l4_uint64_t src, dst;
-
-      l4util_idt_init (&idt.header, sizeof(idt.desc)/sizeof(idt.desc[0]));
-      l4util_idt_entry(&idt.header, 6, check_exception6_handler);
-      l4util_idt_load (&idt.header);
-
-      if (!setjmp(check_jmp_buf))
-	{
+          l4_uint64_t src, dst;
 	  asm volatile("emms; movq (%0),%%mm0; movntq %%mm0,(%1); sfence; emms"
                        : : "r"(&src), "r"(&dst) , "m"(src) : "memory");
+          exception6_handler_done();
 	  printf("Using fast memcpy.\n");
-	  return;
 	}
       else
 	{
+          exception6_handler_done();
 	  printf("Fast memcpy not supported by this CPU.\n");
 	  use_fastmemcpy = 0;
-	  return;
 	}
+      return;
     }
 #else
   use_fastmemcpy = 0;
@@ -828,24 +862,17 @@ check_cpuload(void)
 #ifdef ARCH_x86
   if (cpu_load)
     {
-      static struct
-	{
-	  l4util_idt_header_t header;
-	  l4util_idt_desc_t   desc[0x20];
-	} __attribute__((packed)) idt;
-
-      l4util_idt_init (&idt.header, sizeof(idt.desc)/sizeof(idt.desc[0]));
-      l4util_idt_entry(&idt.header, 6, check_exception6_handler);
-      l4util_idt_load (&idt.header);
-
-      if (!setjmp(check_jmp_buf))
+      exception6_handler_start();
+      if (!setjmp(exception6_jmp_buf))
 	{
 	  l4_rdpmc_32(0);
+          exception6_handler_done();
 	  printf("Enabling CPU load indicator\n"
 	         "\033[32mALTGR+PAUSE switches CPU load indicator!\033[m\n");
 	}
       else
 	{
+          exception6_handler_done();
 	  printf("Disabling CPU load indicator since rdpmc unsupported\n");
 	  cpu_load = 0;
 	}

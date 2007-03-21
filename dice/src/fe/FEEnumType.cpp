@@ -52,6 +52,14 @@ CFEEnumType::CFEEnumType(CFEEnumType & src)
 CFEEnumType::~CFEEnumType()
 { }
 
+/** copies the object
+ *  \return a reference to a new enumeration type object
+ */
+CObject* CFEEnumType::Clone()
+{ 
+    return new CFEEnumType(*this);
+}
+
 /** \brief accepts the iterations of the visitors
  *  \param v reference to the visitor
  */

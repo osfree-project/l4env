@@ -1,0 +1,9 @@
+This backend provides very simple mmap functionality, as such backing
+malloc & co.
+
+Memory is supplied by the program itself, by specifying something like this:
+
+char libc_backend_self_mem[64 << 10] __attribute__((aligned(L4_PAGESIZE)));
+const int libc_backend_self_mem_size = sizeof(libc_backend_self_mem);
+
+to reserve 64kb of memory for the allocator.

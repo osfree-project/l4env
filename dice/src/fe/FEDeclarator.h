@@ -35,10 +35,10 @@ enum DECL_TYPE {
     DECL_NONE        = 0,    // for void constructor
     DECL_ATTR_VAR    = 1,
     DECL_VOID        = 2,    // for no Declarator in list
-    DECL_ARRAY        = 3,    // CFEArrayDeclarator
-    DECL_IDENTIFIER    = 4,    // simple declarator
+    DECL_ARRAY       = 3,    // CFEArrayDeclarator
+    DECL_IDENTIFIER  = 4,    // simple declarator
     DECL_ENUM        = 5,    // enumeration's decl
-    DECL_DECLARATOR    = 6
+    DECL_DECLARATOR  = 6
 };
 
 #include "fe/FEIdentifier.h"

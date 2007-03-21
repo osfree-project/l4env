@@ -82,11 +82,11 @@ protected:
 
 // operations
 public:
-    virtual void Accept(CVisitor&);
     virtual CObject* Clone();
+    virtual CFETypeSpec* GetType();
+    virtual void Accept(CVisitor&);
     virtual CFETypeSpec* ReplaceType(CFETypeSpec *pNewType);
     virtual TYPEDDECL_TYPE GetTypedDeclType();
-    virtual CFETypeSpec* GetType();
     virtual bool IsTypedef();
     bool Match(string sName);
 

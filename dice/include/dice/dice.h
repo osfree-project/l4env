@@ -35,7 +35,7 @@
     __builtin_memcpy(to, from, size)
 #else
 #define _dice_memcpy(to,from,size)   \
-    { int _i = size; while (_i--) *to = *from; }
+    { int _i = size; char *_f = (char*)from, *_t = (char*)to; while (_i--) *_t++= *_f++; }
 #endif
 
 #undef _dice_max
@@ -189,7 +189,7 @@ static inline
 CORBA_char* CORBA_exception_id(CORBA_Environment *ev)
 {
     // string can be found using repository id (repos_id)
-    if (DICE_HAS_EXCEPTION(ev) &&
+    if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&
 	(DICE_EXCEPTION_MINOR(ev) >= 0) &&
 	(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
 	return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];
@@ -246,7 +246,7 @@ static inline
 CORBA_char* CORBA_server_exception_id(CORBA_Server_Environment *ev)
 {
     // string can be found using repository id (repos_id)
-    if (DICE_HAS_EXCEPTION(ev) &&
+    if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&
 	(DICE_EXCEPTION_MINOR(ev) >= 0) &&
 	(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
 	return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];

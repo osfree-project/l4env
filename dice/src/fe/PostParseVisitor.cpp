@@ -44,6 +44,10 @@
 #include "Error.h"
 #include <cassert>
 
+/** empty destructor */
+CPostParseVisitor::~CPostParseVisitor()
+{ }
+
 /** \brief post parse processing for interface
  *  \param interface the interface to post process
  */

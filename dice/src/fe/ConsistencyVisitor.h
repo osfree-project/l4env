@@ -44,8 +44,7 @@ public:
     CConsistencyVisitor()
     { }
     /** empty destructor */
-    virtual ~CConsistencyVisitor()
-    { }
+    virtual ~CConsistencyVisitor();
 
     /** Declare all the visit methods for all the classes in the syntax tree.
      * There are two opinions on how to write this: opinion A is that the

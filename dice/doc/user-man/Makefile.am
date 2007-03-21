@@ -39,9 +39,9 @@ if HAS_LATEX
 # manual_PDF has to come before manual_PS, because pdflatex touches
 # .aux files, which will make generate .ps->.dvi again, even though
 # nothing changed in .tex files
-all-local:      version.tex  $(manual_PDF) tex-stamp
+all-local:      version.tex tex-stamp $(manual_PDF)
 
-%.dvi:  %.tex
+%.dvi: %.tex
 	@echo Generating $*.dvi ...
 	@${LATEX} $< ${NUMB_LATEX}
 	@grep '\citation' `ls *.aux` ${NUMB_GREP} && ${BIBTEX} $* ${NUMB_BIBTEX} || true
@@ -105,7 +105,7 @@ tex-stamp: $(TEXFILES)
 	@echo timestamp > tex-stamp 2>/dev/null
 
 clean-local:
-	@$(RM_F) *.dvi *.aux *.log *~ *.bbl *.blg *.toc *.ps *.pdf
+	@$(RM_F) *.dvi *.aux *.log *~ *.bbl *.blg *.toc *.ps *.pdf *.out
 	@for F in $(TEXFILES); do \
           test ! -L $${F} || ${RM_F} $${F}; \
         done

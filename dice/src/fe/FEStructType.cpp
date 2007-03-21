@@ -58,6 +58,14 @@ CFEStructType::CFEStructType(CFEStructType & src)
 CFEStructType::~CFEStructType()
 { }
 
+/** copies the struct object
+ *  \return a reference to the new struct object
+ */
+CObject* CFEStructType::Clone()
+{ 
+    return new CFEStructType(*this);
+}
+
 /** tries to find a member by its name
  *  \param sName the name to look for
  *  \return the member if found, 0 if no such member

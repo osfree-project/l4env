@@ -389,16 +389,6 @@ Constants are usually printed in the generated header files as const
 declarations (\verb|const <type> <var> = <value>;|). Using this option,
 they are written as define statements (\verb|#define <var> <value>|).
 
-\subsubsection{\tt no-l4dir-include-path}
-To know the CORBA Types, \dice{} imports the file \verb|dice/dice-corba-types.h|
-before parsing the IDL file. The file can (usually) be found in
-the L4 trees include dir. Therefore the L4 include dir has to be
-known to include this file. This directory is automatically added to
-the include search paths. If you do not wish to set this path, then
-use the {\tt no-l4dir-include-path} option. The L4 tree's root is
-determined by the configure switch \verb|--with-l4dir| which defaults
-to \verb|../..|.
-
 \subsubsection{\tt align-to-type}
 On some architectures (e.g. ARM) it is necessary to align parameters 
 when marshaling to type size (or word size). To turn this feature on,

@@ -14,6 +14,7 @@ static int init_done = 0;
 
 int
 con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
+            unsigned short bpl,
 	    l4_addr_t vid_mem_addr, l4_size_t vid_mem_size,
 	    con_accel_t *accel, l4_uint8_t **map_vid_mem_addr)
 {

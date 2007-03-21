@@ -12,11 +12,12 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <l4/sys/types.h>
 #include <l4/env/errno.h>
 #include <l4/sigma0/kip.h>
+#include <l4/sys/types.h>
 #include <l4/sys/vhw.h>
 #include <l4/sys/kdebug.h>
+#include <l4/util/l4_macros.h>
 
 #include <l4/lxfuxlibc/lxfuxlc.h>
 
@@ -77,8 +78,8 @@ ux_probe(con_accel_t *accel)
 
   if (hw_vid_mem_addr != vhwe->mem_start
       || hw_vid_mem_size != vhwe->mem_size)
-    printf("!!! Memory area mismatch %08lx(%lx) vs. %08lx(%lx) "
-	   "... continueing\n",
+    printf("!!! Memory area mismatch "l4_addr_fmt"(%lx) vs. "l4_addr_fmt
+           "(%lx) ... continuing\n",
            hw_vid_mem_addr, hw_vid_mem_size, vhwe->mem_start, vhwe->mem_size);
 
   map_io_mem(hw_vid_mem_addr, hw_vid_mem_size, 0, "UX video",

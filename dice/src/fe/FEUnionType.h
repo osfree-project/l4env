@@ -58,12 +58,7 @@ public:
 // Operations
 public:
     virtual void Accept(CVisitor&);
-
-    /** creates a copy of this object
-     *  \return a reference to a new union type object
-     */
-    virtual CObject* Clone()
-    { return new CFEUnionType(*this); }
+    virtual CObject* Clone();
     
 protected:
     /** a copy construtor used for the tagged union class */

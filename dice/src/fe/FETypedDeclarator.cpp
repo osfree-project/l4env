@@ -86,6 +86,14 @@ TYPEDDECL_TYPE CFETypedDeclarator::GetTypedDeclType()
     return m_nType;
 }
 
+/** \brief return true if this is a typedef
+ *  \return true if this is a typedef
+ */
+bool CFETypedDeclarator::IsTypedef()
+{
+    return m_nType == TYPEDECL_TYPEDEF;
+}
+
 /**
  *  \brief replaces the contained type
  *  \param pNewType the new type for this declarator
@@ -100,39 +108,28 @@ CFETypeSpec *CFETypedDeclarator::ReplaceType(CFETypeSpec * pNewType)
     return pRet;
 }
 
-/**
- *  \brief creates a copy of this object
- *  \return an exact copy of this object
- */
-CObject *CFETypedDeclarator::Clone()
-{
-    return new CFETypedDeclarator(*this);
-}
-
-/**
- *  \brief returns the contained type
- *  \return the contained type
- */
-CFETypeSpec *CFETypedDeclarator::GetType()
-{
-    return m_pType;
-}
-
-/**
- *  \brief test if this declarator is a typedef
- *  \return true if the typed declarator's type is TYPEDEF
- */
-bool CFETypedDeclarator::IsTypedef()
-{
-    return m_nType == TYPEDECL_TYPEDEF;
-}
-
 /** \brief accepts the iterations of the visitors
  *  \param v reference to the visitor
  */
 void CFETypedDeclarator::Accept(CVisitor& v)
 {
     v.Visit(*this);
+}
+
+/** \brief creates a copy of this object
+ *  \return an exact copy of this object
+ */
+CObject* CFETypedDeclarator::Clone()
+{
+    return new CFETypedDeclarator(*this);
+}
+
+/** \brief returns the contained type
+ *  \return the contained type
+ */
+CFETypeSpec* CFETypedDeclarator::GetType()
+{
+    return m_pType;
 }
 
 /** \brief try to match the given name to the internal names

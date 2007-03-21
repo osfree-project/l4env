@@ -383,10 +383,10 @@ endif
 # set SHOWMESSAGES=true or 'y' to print textual action descriptions
 SHOWMESSAGES ?= true
 
-# coloring on vt100-, xterm-, linux- and console-consoles
-# enbaled by setting BID_COLORED_PHASES to y
+# coloring on color-capable terminals
+# enabled by setting BID_COLORED_PHASES to y
 ifeq ($(BID_COLORED_PHASES),y)
-ifneq (,$(findstring ${TERM},vt100 xterm linux console))
+ifeq ($(COLOR_TERMINAL),y)
   EMPHSTART = '\033[34m'
   EMPHSTOP  = '\033[0m'
 else

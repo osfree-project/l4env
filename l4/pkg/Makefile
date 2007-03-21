@@ -16,7 +16,6 @@ dm_mem.headers:		dm_generic.headers
 dm_phys.headers:	dm_mem.headers
 semaphore.headers:	l4util.headers l4env.headers thread.headers
 thread.headers:		l4env.headers
-exec.headers:		dm_generic.headers
 generic_blk.headers:	semaphore.headers dm_generic.headers
 generic_fprov.headers:	dm_generic.headers
 loader.headers:		dm_generic.headers
@@ -48,6 +47,9 @@ endif
 ifeq ($(USE_DIETLIBC),y)
 log.headers:		dietlibc.headers
 endif
+ifeq ($(BUILD_ARCH_arm),y)
+bootstrap.bin:		arm_drivers.bin
+endif
 
 # The directories/packages of l4env
 L4ENV_SUBDIRS = \
@@ -58,7 +60,6 @@ L4ENV_SUBDIRS = \
 	dm_generic \
 	dm_mem \
 	dm_phys \
-	exec \
 	events \
 	generic_fprov \
 	generic_io \

@@ -27,3 +27,5 @@
  * The event handler may be busy handling the last event => snd to 100ms.
  * The handler needs some time to process the new event  => rcv to 100ms. */
 #define EVENT_TIMEOUT		L4_IPC_TIMEOUT(97,10,97,10,0,0)
+
+#define CONFIG_MAX_CLIENTS      4

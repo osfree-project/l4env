@@ -158,7 +158,7 @@ IMPLEMENT inline bool Uart::change_mode(TransferMode m, BaudRate baud)
 }
 
 IMPLEMENT inline
-int Uart::write( const char *s, unsigned count )
+int Uart::write( const char *s, __SIZE_TYPE__ count )
 {
   return uart()->write(s, count);
 }

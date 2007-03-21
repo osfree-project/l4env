@@ -646,14 +646,10 @@ the content of this file is only scanned for IDL syntax. This includes C/C++
 style type and constant definitions, but excludes C style function
 declarations and definitions.
 
-\dice{} automatically scans the file \verb|dice-corba-types.h| to know all the
-CORBA types. This file is searched in L4 tree's include path and the include
-path where dice headers might be installed to. To avoid inclusion of unwanted
-header files the two include paths contain the \verb|/dice| sub-directory.  If
-you receive the error '\verb|dice-corba-types.h| cannot be found', please
-check if your \verb|$(L4DIR)/include/dice| or \verb|/usr/local/include/dice|
-contain that file. If not, fix your installation or run \verb|make| in the
-\dice{} source directory.
+\dice{} automatically scans the file \verb|dice/dice-corba-types.h| to know
+all the CORBA types. This file is searched in the given include paths.  If you
+receive the error '\verb|dice-corba-types.h| cannot be found', please check
+your include directories.
 
 \subsection{C/C++ Attributes}
 

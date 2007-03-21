@@ -78,6 +78,14 @@ CFEOperation::~CFEOperation()
         delete m_pReturnType;
 }
 
+/** creates a copy of this object
+ *  \return a copy of this object
+ */
+CObject* CFEOperation::Clone()
+{ 
+    return new CFEOperation(*this);
+}
+
 /**
  *  \brief retrieves the operations name
  *  \return the name of the operation

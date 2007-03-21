@@ -1,5 +1,5 @@
 /**
- * \file   dietlibc/lib/backends/sigma0_mem/getpagesize.c
+ * \file   libc_backends/lib/backends/sigma0_pool/mem/getpagesize.c
  * \brief
  *
  * \date   08/10/2004

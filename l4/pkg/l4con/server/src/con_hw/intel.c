@@ -16,6 +16,7 @@
 #include <l4/sys/types.h>
 #include <l4/util/port_io.h>
 #include <l4/util/rdtsc.h>
+#include <l4/util/l4_macros.h>
 #include <l4/env/errno.h>
 #include <l4/dm_mem/dm_mem.h>
 
@@ -385,14 +386,17 @@ intel_probe(unsigned int bus, unsigned int devfn,
     return -L4_ENOTFOUND;
 
 
-  printf("Found Intel (R) %s adapter at %08lx\n", name, addr);
+  printf("Found Intel (R) %s adapter at "l4_addr_fmt"\n", name, addr);
 
+#if 0
   switch (hw_bits)
     {
     case 8:  pitch = hw_xres;     break;
     case 16: pitch = hw_xres * 2; break;
     case 32: pitch = hw_xres * 4; break;
     }
+#endif
+  pitch = hw_bpl;
 
   intel_2d_start();
 

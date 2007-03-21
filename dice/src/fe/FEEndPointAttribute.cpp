@@ -44,3 +44,12 @@ CFEEndPointAttribute::CFEEndPointAttribute(CFEEndPointAttribute & src)
 CFEEndPointAttribute::~CFEEndPointAttribute()
 {
 }
+
+/** creates a copy of this object
+ *  \return a copy of this object
+ */
+CObject* CFEEndPointAttribute::Clone()
+{ 
+    return new CFEEndPointAttribute(*this);
+}
+

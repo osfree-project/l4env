@@ -30,14 +30,15 @@
 
 #include "pslim.h"
 
+#include <l4/env/errno.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/types.h>
 #include <l4/dm_phys/dm_phys.h>
-#include <l4/l4con/l4con.h>
-#include <l4/l4con/l4con-client.h>
 #include <l4/names/libnames.h>
 #include <l4/util/l4_macros.h>
+#include <l4/l4con/l4con.h>
+#include <l4/l4con/l4con-client.h>
 
 /* All drivers initialising the SW cursor need this */
 #include "mipointer.h"
@@ -47,7 +48,7 @@
 #include "micmap.h"
 #include "xf86cmap.h"
 #include "xf86Priv.h"
-#include "xf86Bus.h"
+//#include "xf86Bus.h"
 
 #define L4IOTYPE	(0x34)
 
@@ -74,16 +75,10 @@ static void PSLIMFreeRec (ScrnInfoPtr pScrn);
 static void PSLIMLoadPalette (ScrnInfoPtr pScrn, int numColors, int *indices,
 			      LOCO *colors, VisualPtr pVisual);
 
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-static void PSLIMUpdate(ScreenPtr pScreen, PixmapPtr pShadow, RegionPtr damage);
-static void PSLIMMapShadowUpdate(ScreenPtr pScreen, PixmapPtr pShadow, 
-				 RegionPtr damage);
-static void PSLIMPostDirtyUpdate(ScrnInfoPtr pScrn, int nboxes, BoxPtr boxPtr);
-#else
-static void PSLIMUpdate(ScreenPtr pScreen, shadowBufPtr pBuf);
+static void PSLIMIpcUpdate(ScreenPtr pScreen, shadowBufPtr pBuf);
 static void PSLIMMapShadowUpdate(ScreenPtr pScreen, shadowBufPtr pBuf);
+static void PSLIMMapPhysUpdate(ScreenPtr pScreen, shadowBufPtr pBuf);
 static void PSLIMPostDirtyUpdate(ScrnInfoPtr pScrn, int nboxes, BoxPtr boxPtr);
-#endif
 static void PSLIMInitAccel(ScreenPtr pScreen);
 static Bool PSLIMInitSIGIOHandler(ScrnInfoPtr pScrn);
 
@@ -127,13 +122,31 @@ static SymTabRec PSLIMChipsets[] = {
 };
 
 typedef enum {
-  OPTION_SHADOW_FB,
-  OPTION_MAP_SHADOW,
+  OPTION_MODE,
 } PSLIMOpts;
 
+/*
+ * Modes:
+ *   0  Physical FB mapped from L4 console, use shadow FB. Fastest mode since
+ *      screen updates (normally) does not involve any IPC and we read from
+ *      from the fast shadow framebuffer (RAM). This is much like the VESA
+ *      driver with shadowFB enabled.
+ *   1  Physical FB mapped from L4 console, no  shadow FB. Slower because we
+ *      read from the physical framebuffer which is usually very slow. HW
+ *      acceleration possible. This is much like the VESA driver w/o shadowFB
+ *      enabled but with some acceleration.
+ *   2  Physical FB not mapped, use shadow FB, use long IPC to transfer
+ *      dirty regions to L4 console. Screen updates involve many IPCs but
+ *      speed is still acceptable on modern systems.
+ *   3  Physical FB not mapped, shadow FB mapped into console, update dirty
+ *      regions in L4 console. Slightly slower than mode 0 since each screen
+ *      update involves an L4 IPC.
+ * 
+ * Modes 0 and 3 should have very similar performance.
+ */
+
 static const OptionInfoRec PSLIMOptions[] = {
-    { OPTION_SHADOW_FB,     "ShadowFB",     OPTV_BOOLEAN, {0}, FALSE },
-    { OPTION_MAP_SHADOW,    "MapShadow",    OPTV_BOOLEAN, {0}, FALSE },
+    { OPTION_MODE,          "Mode",         OPTV_INTEGER, {0}, FALSE },
     { -1,                    NULL,          OPTV_NONE,    {0}, FALSE }
 };
 
@@ -182,7 +195,11 @@ static XF86ModuleVersionInfo pslimVersionRec = {
   "TU Dresden, OS Group, Frank Mehnert",
   MODINFOSTRING1,
   MODINFOSTRING2,
+#if 1
+  (((7) * 10000000) + ((1) * 100000) + ((1) * 1000) + 0),
+#else
   XF86_VERSION_CURRENT,
+#endif
   PSLIM_MAJOR_VERSION, PSLIM_MINOR_VERSION, PSLIM_PATCHLEVEL,
   ABI_CLASS_VIDEODRV,		/* This is a video driver */
   ABI_VIDEODRV_VERSION,
@@ -267,7 +284,6 @@ PSLIMProbe (DriverPtr drv, int flags)
   ScrnInfoPtr pScrn = NULL;
   EntityInfoPtr pEnt;
 
-  xf86DrvMsg (0, X_CONFIG, "PSLIMProbe\n");
   /*
    * Find the config file Device sections that match this
    * driver, and return if there are none.
@@ -398,10 +414,10 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
     }
 
   /* get graphics screen resolution, bpp and Bpp */
-  if (con_vc_graph_gmode_call(&pSlim->vc_tid, &gmode, &xres, &yres, 
-			&bits_per_pixel, &bytes_per_pixel,
-			&bytes_per_line, &pSlim->accel_flags, 
-			&fn_x, &fn_y, &env)
+  if (con_vc_graph_gmode_call(&pSlim->vc_tid, &gmode, &xres, &yres,
+			      &bits_per_pixel, &bytes_per_pixel,
+                              &bytes_per_line, &pSlim->accel_flags,
+                              &fn_x, &fn_y, &env)
       || DICE_HAS_EXCEPTION(&env))
     {
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
@@ -429,8 +445,8 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
   pScrn->monitor = pScrn->confScreen->monitor;
   pScrn->progClock = TRUE;
   pScrn->rgbBits = 8;
-  
-  if (!xf86SetDepthBpp (pScrn, 8, 8, 8, 
+
+  if (!xf86SetDepthBpp (pScrn, 16, 0, 0,
 			bits_per_pixel == 32 ? Support32bppFb : Support24bppFb))
     return FALSE;
   xf86PrintDepthBpp (pScrn);
@@ -450,7 +466,7 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
   xf86SetGamma (pScrn, gzeros);
 
   /* XXX */
-  pScrn->videoRam = 4*1024*1024;
+  pScrn->videoRam = 8 << 20;
 
   /* Set display resolution */
   xf86SetDpi (pScrn, 0, 0);
@@ -460,29 +476,25 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
   /* allocate mode */
   pMode = xcalloc(sizeof(DisplayModeRec), 1);
 
-  pMode->status = MODE_OK;
-  pMode->type = M_T_BUILTIN;
-
-  /* for adjust frame */
-  pMode->HDisplay = xres;
-  pMode->VDisplay = yres;
-
-  data = xcalloc(sizeof(ModeInfoData), 1);
-  data->mode = 0; /* only one mode */
-  data->memory_model = 6; /* Packed Pixel, XXX get from console server */
-  pMode->PrivSize = sizeof(ModeInfoData);
-  pMode->Private = (INT32*)data;
-
-  pScrn->modePool = pMode;
-  pMode->next = pMode->prev = pMode;
-
-  pScrn->modes = pScrn->modePool;
-  pSlim->maxBytesPerScanline = bytes_per_line;
-
-  pScrn->currentMode = pScrn->modes;
+  pMode->status       = MODE_OK;
+  pMode->type         = M_T_BUILTIN;
+  pMode->name         = "L4con mode";
+  pMode->HDisplay     = xres;
+  pMode->VDisplay     = yres;
+  data                = xcalloc(sizeof(ModeInfoData), 1);
+  data->mode          = 0; /* only one mode */
+  data->memory_model  = 6; /* Packed Pixel, XXX get from console server */
+  pMode->PrivSize     = sizeof(ModeInfoData);
+  pMode->Private      = (INT32*)data;
+  pScrn->modePool     = pMode;
+  pMode->next         =
+  pMode->prev         = pMode;
+  pScrn->modes        = pScrn->modePool;
+  pSlim->bytesPerScanline = bytes_per_line;
+  pScrn->currentMode  = pScrn->modes;
   pScrn->displayWidth = bytes_per_line / bytes_per_pixel;
-  pScrn->virtualX = xres;
-  pScrn->virtualY = yres;
+  pScrn->virtualX     = xres;
+  pScrn->virtualY     = yres;
 
   xf86PrintModes (pScrn);
   
@@ -494,27 +506,50 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
   memcpy(pSlim->Options, PSLIMOptions, sizeof(PSLIMOptions));
   xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, pSlim->Options);
 
-  if (xf86ReturnOptValBool(pSlim->Options, OPTION_SHADOW_FB, FALSE))
-    pSlim->shadowFB = TRUE;
-
-  if (xf86ReturnOptValBool(pSlim->Options, OPTION_MAP_SHADOW, FALSE))
+  xf86GetOptValInteger(pSlim->Options, OPTION_MODE, &pSlim->Mode);
+  
+  switch (pSlim->Mode)
     {
-      pSlim->shadowFB = TRUE;
-      pSlim->mapShadow = TRUE;
+      case 0:
+        /* physical FB mapped from L4 console, use shadow FB */
+        pSlim->shadowFB  = TRUE;
+        pSlim->mapShadow = FALSE;
+        pSlim->mapPhys   = TRUE;
+        break;
+      case 1:
+        /* physical FB mapped from L4 console, no shadow FB */
+        pSlim->shadowFB  = FALSE;
+        pSlim->mapShadow = FALSE;
+        pSlim->mapPhys   = TRUE;
+        break;
+      case 2:
+        /* physical FB not mapped, use shadow FB, use long IPC to transfer
+         * dirty regions to L4 console */
+        pSlim->shadowFB  = TRUE;
+        pSlim->mapShadow = FALSE;
+        pSlim->mapPhys   = FALSE;
+        break;
+      case 3:
+        /* physical FB not mapped, shadow FB mapped into console, update
+         * dirty regions in L4 console */
+        pSlim->shadowFB  = TRUE;
+        pSlim->mapShadow = TRUE;
+        pSlim->mapPhys   = FALSE;
+        break;
+      default:
+        xf86DrvMsg (pScrn->scrnIndex, X_ERROR, "Unsupported mode %d\n",
+                    pSlim->Mode);
+        return FALSE;
     }
 
-  if (pSlim->shadowFB)
+  xf86DrvMsg (pScrn->scrnIndex, X_CONFIG, "Using mode %d\n", pSlim->Mode);
+
+  if (!pSlim->mapPhys)
     {
-      /* we don't access the framebuffer directly -- con translates */
-      pSlim->maxBytesPerScanline = xres * bytes_per_pixel;
+      /* we don't access the framebuffer directly -- con translates between
+       * xres*bpp and bytes_per_scanline */
+      pSlim->bytesPerScanline = xres * bytes_per_pixel;
       pScrn->displayWidth = xres;
-    }
-
-  if (0) /* mode not supported */
-    {
-      xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-		  "Unsupported mode\n");
-      return FALSE;
     }
 
   mod = "fb";
@@ -539,15 +574,14 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
       break;
     default:
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-	  "Unsupported bpp: %d", pScrn->bitsPerPixel);
+	          "Unsupported bpp: %d\n", pScrn->bitsPerPixel);
       return FALSE;
     }
 
   if (pSlim->shadowFB)
     {
       /* load shadow  module */
-      xf86DrvMsg (pScrn->scrnIndex, X_CONFIG,
-		 "Using \"Shadow Framebuffer\"\n");
+      xf86DrvMsg (pScrn->scrnIndex, X_CONFIG, "Using shadow framebuffer\n");
       if (!xf86LoadSubModule (pScrn, "shadow"))
 	{
 	  PSLIMFreeRec (pScrn);
@@ -557,13 +591,17 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
     }
   else
     {
+      /* load module for post dirty updates */
       if (!xf86LoadSubModule (pScrn, "shadowfb"))
 	{
 	  PSLIMFreeRec (pScrn);
 	  return FALSE;
 	}
       xf86LoaderReqSymLists(shadowfbSymbols, NULL);
+    }
 
+  if (pSlim->mapPhys && !pSlim->shadowFB)
+    {
       /* load accel module */
       if (!xf86LoadSubModule (pScrn, "xaa"))
 	{
@@ -572,7 +610,7 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
 	}
       xf86LoaderReqSymLists (xaaSymbols, NULL);
     }
-  
+
   /* load fb module */
   if (mod && xf86LoadSubModule (pScrn, mod) == NULL)
     {
@@ -583,58 +621,110 @@ PSLIMPreInit (ScrnInfoPtr pScrn, int flags)
 
   if (!PSLIMInitSIGIOHandler (pScrn))
     return FALSE;
-  
+
   return TRUE;
 }
 
-static Bool
+static int
 PSLIMMapFB (ScrnInfoPtr pScrn)
 {
   PSLIMPtr pSlim = PSLIMGetRec (pScrn);
-  static char fb_buf[2*4*1024*1024];
-  unsigned map_addr;
-  l4_offs_t offset;
+  /* reserve 20MB here in order to find a 4MB-aligned area of 16MB */
+  static char fb_buf[20 << 20];
+  l4_addr_t map_addr, fb_offs, dummy;
   l4_snd_fpage_t snd_fpage;
-  CORBA_Environment env = dice_default_environment;
+  int rc;
+  DICE_DECLARE_ENV(env);
 
-  map_addr = (unsigned)(fb_buf+L4_SUPERPAGESIZE-1)&L4_SUPERPAGEMASK;
+  map_addr = (unsigned)(fb_buf+L4_SUPERPAGESIZE-1) & L4_SUPERPAGEMASK;
 
-  /* prevent dangling L4 pages */
-  l4_fpage_unmap(l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE,
-		          L4_FPAGE_RW, L4_FPAGE_MAP),
-		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
+  pSlim->fbOffs = 0;
  
-  env.rcv_fpage = l4_fpage(map_addr, L4_LOG2_SUPERPAGESIZE, 0, 0);
-
-  /* map framebuffer from con server */
-  if (con_vc_graph_mapfb_call(&pSlim->vc_tid, &snd_fpage, &offset, &env)
-      || DICE_HAS_EXCEPTION(&env))
+  for (fb_offs=0; pSlim->fbPhysSize==0 || fb_offs<pSlim->fbPhysSize;
+       fb_offs+=L4_SUPERPAGESIZE)
     {
-      xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-		  "Error mapping framebuffer (exc=%d, %08x)", 
-		  DICE_EXCEPTION_MAJOR(&env), DICE_IPC_ERROR(&env));
-      return FALSE;
+        if (fb_offs >= (16 << 20))
+          goto done;
+
+      /* unmap dangling L4 pages */
+      l4_fpage_unmap(l4_fpage(map_addr+fb_offs, L4_LOG2_SUPERPAGESIZE,
+	                      L4_FPAGE_RW, L4_FPAGE_MAP),
+                     L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
+
+      /* map framebuffer from con server */
+      env.rcv_fpage = l4_fpage(map_addr+fb_offs, L4_LOG2_SUPERPAGESIZE, 0, 0);
+      rc = con_vc_graph_mapfb_call(&pSlim->vc_tid, fb_offs, &snd_fpage,
+                                   fb_offs == 0 ? &pSlim->fbOffs : &dummy,
+                                   &env);
+      if (DICE_HAS_EXCEPTION(&env))
+        {
+          xf86DrvMsg (pScrn->scrnIndex, X_INFO,
+                      "Error mapping offset %08lx of framebuffer\n",
+                      fb_offs);
+          return -1;
+        }
+
+      if (rc == -L4_EPERM)
+        {
+          xf86DrvMsg (pScrn->scrnIndex, X_INFO,
+                      "Mapping of framebuffer currently not allowed\n");
+          return 0;
+        }
+
+      if (rc == -L4_EINVAL_OFFS)
+        {
+done:
+          if (!pSlim->fbPhysSize)
+            {
+              pSlim->fbPhysSize = fb_offs;
+              break;
+            }
+        }
     }
 
-  pSlim->fbPtr = (CARD8*)(map_addr + offset);
-  pSlim->fbMapped = TRUE;
-      
-  xf86DrvMsg (pScrn->scrnIndex, X_CONFIG, 
-	      "Framebuffer mapped to %08x\n", (unsigned)pSlim->fbPtr);
+  /* even if we failed to map the framebuffer we got the offset */
+  pSlim->fbPhysBase = (CARD8*)map_addr;
+  pSlim->fbPhysPtr  = (CARD8*)map_addr + pSlim->fbOffs;
+  pSlim->fbMapped   = TRUE;
 
-  return TRUE;
+  xf86DrvMsg (pScrn->scrnIndex, X_CONFIG, 
+	      "Framebuffer mapped to %08lx-%08lx\n",
+              (l4_addr_t)pSlim->fbPhysPtr, (l4_addr_t)map_addr+pSlim->fbPhysSize);
+
+  return 1;
 }
 
 static void
 PSLIMUnmapFB (ScrnInfoPtr pScrn)
 {
   PSLIMPtr pSlim = PSLIMGetRec (pScrn);
+  l4_addr_t fb_offs;
+
+  xf86DrvMsg (pScrn->scrnIndex, X_INFO, "Unmapping framebuffer\n");
+  pSlim->fbMapped = FALSE;
 
   /* unmap framebuffer */
-  l4_fpage_unmap(l4_fpage((unsigned)pSlim->fbPtr, L4_LOG2_SUPERPAGESIZE, 0, 0),
-			  L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
+  for (fb_offs = 0; fb_offs<pSlim->fbPhysSize; fb_offs += L4_SUPERPAGESIZE)
+    {
+      l4_fpage_unmap(l4_fpage((l4_addr_t)pSlim->fbPhysBase,
+                              L4_LOG2_SUPERPAGESIZE, 0, 0),
+                     L4_FP_FLUSH_PAGE | L4_FP_ALL_SPACES);
+    }
+}
 
-  pSlim->fbMapped = FALSE;
+static Bool
+PSLIMCreateScreenResources(ScreenPtr pScreen)
+{
+  ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+  PSLIMPtr pSlim = PSLIMGetRec(pScrn);
+  Bool ret;
+
+  pScreen->CreateScreenResources = pSlim->CreateScreenResources;
+  ret = pScreen->CreateScreenResources(pScreen);
+  pScreen->CreateScreenResources = PSLIMCreateScreenResources;
+  shadowAdd(pScreen, pScreen->GetScreenPixmap(pScreen), pSlim->update, 0, 0, 0);
+
+  return ret;
 }
 
 static Bool
@@ -644,20 +734,21 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
   PSLIMPtr pSlim = PSLIMGetRec (pScrn);
   VisualPtr visual;
   int memory_model;
+  int init_picture = 0;
 
   /* XXX */
-  pScrn->videoRam = 4*1024*1024;
+  pScrn->videoRam = 8 << 20;
 
   if (pSlim->shadowFB)
     {
       /* use shadow framebuffer */
       if (pSlim->mapShadow)
 	{
-	  /* we want to map the shadow frame buffer into console so
+	  /* we want to map the shadow frame buffer into console therefore
       	   * allocate a dataspace */
 	  unsigned bpp  = (pScrn->bitsPerPixel+1) / 8;
-      	  l4_size_t size = l4_round_page(pScrn->virtualX *
-					 bpp * pScrn->virtualY);
+      	  pSlim->fbVirtSize = l4_round_page(pScrn->virtualX *
+					    bpp * pScrn->virtualY);
 	  CORBA_Environment env = dice_default_environment;
 	  int error;
 
@@ -670,16 +761,17 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	      if (!names_waitfor_name(L4DM_MEMPHYS_NAME, &dm_id, 2000))
 		{
 		  xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-			     L4DM_MEMPHYS_NAME " not found");
+			     L4DM_MEMPHYS_NAME " not found\n");
 		  return FALSE;
 		}
 	  
 	      /* allocate dataspace */
-	      if ((error = l4dm_mem_open(dm_id, size, 0, 0, "xf86 vfb", &ds)))
+	      if ((error = l4dm_mem_open(dm_id, pSlim->fbVirtSize,
+                                         0, 0, "xf86 vfb", &ds)))
 		{
 		  xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-			     "Can't allocate dataspace of %dkB\n",
-			     size / 1024);
+			     "Can't allocate dataspace of %ldkB\n",
+			     pSlim->fbVirtSize / 1024);
 		  return FALSE;
 		}
 
@@ -699,6 +791,8 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 			     DICE_EXCEPTION_MAJOR(&env), DICE_IPC_ERROR(&env));
 		  return FALSE;
 		}
+    	      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+			 "Using own dataspace as framebuffer\n");
 	      pSlim->mapShadowDs = ds;
 	    }
 	  else
@@ -709,41 +803,62 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
               pSlim->shareDS = TRUE;
 	    }
 
-	  if ((error = l4rm_attach(&pSlim->mapShadowDs, size, 0, 0,
-				   (void**)&pSlim->fbPtr)))
+	  if ((error = l4rm_attach(&pSlim->mapShadowDs, pSlim->fbVirtSize, 0, 0,
+				   (void**)&pSlim->fbVirtPtr)))
     	    {
 	      xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 			 "Can't attach framebuffer ds\n");
 	      return FALSE;
 	    }
 	}
-      else
+      else /* !mapShadow */
 	{
 	  /* default way like XFree86 does it */
-	  if ((pSlim->fbPtr = shadowAlloc (pScrn->virtualX, pScrn->virtualY,
-					   pScrn->bitsPerPixel)) == NULL)
+	  if ((pSlim->fbVirtPtr = shadowAlloc (pScrn->virtualX, pScrn->virtualY,
+					       pScrn->bitsPerPixel)) == NULL)
 	    {
 	      xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
 			 "Error allocating shadow buffer of size %d\n",
 			 pScrn->virtualX*pScrn->virtualY*pScrn->bitsPerPixel/8);
 	      return FALSE;
 	    }
+
+          pSlim->fbVirtSize = pScrn->virtualX*pScrn->virtualY*pScrn->bitsPerPixel/8;
+
+          if (!pSlim->mapPhys)
+            xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+		       "Using pSLIM region update\n");
 	}
-    }
-  else
-    {
-      /* use direct mapped framebuffer */
-      if (PSLIMMapFB(pScrn) != TRUE)
-	return FALSE;
+
+      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+                 "Using shadow framebuffer %08lx-%08lx\n",
+                 (l4_addr_t)pSlim->fbVirtPtr,
+                 (l4_addr_t)pSlim->fbVirtPtr+pSlim->fbVirtSize);
+
+      /* we are active */
+      if (!pSlim->mapPhys)
+        pScrn->vtSema = TRUE;
     }
 
-  /* we are active */
-  pScrn->vtSema = TRUE;
+  if (pSlim->mapPhys)
+    {
+      xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+                 "Mapping physical framebuffer from L4 console\n");
+
+      /* use direct mapped framebuffer */
+      switch (PSLIMMapFB(pScrn))
+        {
+          case -1: return FALSE;          /* FATAL error */
+          case  0: pScrn->vtSema = FALSE; /* mapping denied */
+          case  1: pScrn->vtSema = TRUE;  /* mapping permitted */
+        }
+    }
 
   /* mi layer */
   miClearVisualTypes ();
   if (!xf86SetDefaultVisual (pScrn, -1))
     return FALSE;
+
   if (pScrn->bitsPerPixel > 8)
     {
       if (!miSetVisualTypes (pScrn->depth, TrueColorMask,
@@ -759,7 +874,7 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     }
   if (!miSetPixmapDepths ())
     return FALSE;
-  
+
   memory_model = ((ModeInfoData*)pScrn->modes->Private)->memory_model;
   
   switch (memory_model)
@@ -771,7 +886,7 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
     case 0x5:			/* Non-chain 4, 256 color */
     case 0x7:			/* YUV */
       xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-		  "Unsupported Memory Model: %d", memory_model);
+		  "Unsupported Memory Model: %d\n", memory_model);
       return FALSE;
     case 0x4:			/* Packed pixel */
     case 0x6:			/* Direct Color */
@@ -783,11 +898,13 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	  if (pSlim->pix24bpp == 32)
 	    {
 	      if (!cfb24_32ScreenInit (pScreen,
-				       pSlim->fbPtr,
+				       pSlim->shadowFB
+                                          ? pSlim->fbVirtPtr : pSlim->fbPhysPtr,
 				       pScrn->virtualX, pScrn->virtualY,
 				       pScrn->xDpi, pScrn->yDpi,
 				       pScrn->displayWidth))
 		return FALSE;
+              init_picture = 1;
 	      break;
 	    }
 #endif
@@ -795,21 +912,22 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	case 16:
 	case 32:
 	  if (!fbScreenInit (pScreen,
-			     pSlim->fbPtr,
+			     pSlim->shadowFB
+                               ? pSlim->fbVirtPtr : pSlim->fbPhysPtr,
 			     pScrn->virtualX, pScrn->virtualY,
 			     pScrn->xDpi, pScrn->yDpi,
 			     pScrn->displayWidth, pScrn->bitsPerPixel))
 	    return FALSE;
-	  fbPictureInit (pScreen, 0, 0);
+          init_picture = 1;
 	  break;
 	default:
 	  xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
-		      "Unsupported bpp: %d", pScrn->bitsPerPixel);
+		      "Unsupported bpp: %d\n", pScrn->bitsPerPixel);
 	  return FALSE;
 	}
       break;
     }
-  
+
   if (pScrn->bitsPerPixel > 8)
     {
       /* Fixup RGB ordering */
@@ -827,30 +945,48 @@ PSLIMScreenInit (int scrnIndex, ScreenPtr pScreen, int argc, char **argv)
 	    }
 	}
     }
-      
-  if (pSlim->shadowFB)
+
+  /* must be done after RGB ordering fixed */
+  if (init_picture)
+      fbPictureInit (pScreen, 0, 0);
+
+  pSlim->update = 0;
+  switch (pSlim->Mode)
     {
-      if (pSlim->mapShadow)
-	{
-	  if (!shadowInit (pScreen, PSLIMMapShadowUpdate, 0))
-	    return FALSE;
-	}
-      else
-	{
-	  if (!shadowInit (pScreen, PSLIMUpdate, 0))
-	    return FALSE;
-	}
+      case 0:
+        /* physical FB mapped from L4 console, use shadow FB */
+        pSlim->update = PSLIMMapPhysUpdate;
+        break;
+      case 1:
+        /* physical FB mapped from L4 console, no shadow FB */
+        if (!ShadowFBInit2(pScreen, NULL, PSLIMPostDirtyUpdate))
+	  {
+	    xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+        	       "ShadowFB initialization failed\n");
+            return FALSE;
+          }
+        /* accleration possible */
+        PSLIMInitAccel(pScreen);
+        break;
+      case 2:
+        /* physical FB not mapped, use shadow FB, use long IPC to transfer
+         * dirty regions to L4 console */
+        pSlim->update = PSLIMIpcUpdate;
+        break;
+      case 3:
+        /* physical FB not mapped, shadow FB mapped into console, update
+         * dirty regions in L4 console */
+	pSlim->update = PSLIMMapShadowUpdate;
+        break;
     }
-  else
+
+  if (pSlim->update)
     {
-      if (!ShadowFBInit2(pScreen, NULL, PSLIMPostDirtyUpdate))
-	{
-	  xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-		     "ShadowFB initialization failed\n");
-	  return FALSE;
-	}
-      PSLIMInitAccel(pScreen);
-    }
+      if (!shadowSetup (pScreen))
+        return FALSE;
+      pSlim->CreateScreenResources   = pScreen->CreateScreenResources;
+      pScreen->CreateScreenResources = PSLIMCreateScreenResources;
+    } 
 
   xf86SetBlackWhitePixels (pScreen);
   miInitializeBackingStore (pScreen);
@@ -911,6 +1047,8 @@ PSLIMCloseScreen (int scrnIndex, ScreenPtr pScreen)
   ScrnInfoPtr pScrn = xf86Screens[scrnIndex];
   PSLIMPtr pSlim = PSLIMGetRec (pScrn);
 
+  pScrn->vtSema = FALSE;
+
   if (pSlim->AccelInfoRec)
     {
       xfree (pSlim->AccelInfoRec);
@@ -920,23 +1058,22 @@ PSLIMCloseScreen (int scrnIndex, ScreenPtr pScreen)
     {
       if (pSlim->shareDS)
         /* dataspace used together with L4Linux, only unmap */
-        l4rm_detach(pSlim->fbPtr);
+        l4rm_detach(pSlim->fbVirtPtr);
       else
         /* dataspace created by ourself, destroy (and unmap) */
         l4dm_close(&pSlim->mapShadowDs);
       pSlim->mapShadowDs = L4DM_INVALID_DATASPACE;
-      pSlim->fbPtr = NULL;
+      pSlim->fbVirtPtr = NULL;
     }
   if (pSlim->fbMapped)
     PSLIMUnmapFB (pScrn);
-  if (pSlim->shadowFB && pSlim->fbPtr)
+  if (pSlim->shadowFB && pSlim->fbVirtPtr)
     {
-      xfree (pSlim->fbPtr);
-      pSlim->fbPtr = NULL;
+      xfree (pSlim->fbVirtPtr);
+      pSlim->fbVirtPtr = NULL;
     }
   
-  pScrn->vtSema = FALSE;
-
+  pScreen->CreateScreenResources = pSlim->CreateScreenResources;
   pScreen->CloseScreen = pSlim->CloseScreen;
   return pScreen->CloseScreen (scrnIndex, pScreen);
 }
@@ -965,10 +1102,10 @@ PSLIMFreeScreen (int scrnIndex, int flags)
   PSLIMFreeRec (xf86Screens[scrnIndex]);
   close(pSlim->dropscon_dev);
   
-  if (pSlim->shadowFB && pSlim->fbPtr)
+  if (pSlim->shadowFB && pSlim->fbVirtPtr)
     {
-      xfree (pSlim->fbPtr);
-      pSlim->fbPtr = NULL;
+      xfree (pSlim->fbVirtPtr);
+      pSlim->fbVirtPtr = NULL;
     }
   if (pSlim->mapShadow && !l4dm_is_invalid_ds(pSlim->mapShadowDs))
     {
@@ -979,56 +1116,55 @@ PSLIMFreeScreen (int scrnIndex, int flags)
     PSLIMUnmapFB (pScrn);
 }
 
+/* X wrote to the shadow framebuffer. We need to send the updated region
+ * to the L4 console using L4 long IPC. */
 static void
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-PSLIMUpdate(ScreenPtr pScreen, PixmapPtr pShadow, RegionPtr damage)
-#else
-PSLIMUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
-#endif
+PSLIMIpcUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
 {
   FbBits *shaBase;
-  int shaBpp;
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-  int nboxes = REGION_NUM_RECTS (damage);
-  BoxPtr pbox = REGION_RECTS (damage);
-#else
-  int nboxes = REGION_NUM_RECTS (&pBuf->damage);
-  BoxPtr pbox = REGION_RECTS (&pBuf->damage);
-  int shaXoff, shaYoff;
-#endif
   FbStride shaStride;
+  int shaBpp;
+#ifdef XORG71
+  RegionPtr pRegion = DamageRegion(pBuf->pDamage);
+#else
+  RegionPtr pRegion = &pBuf->damage;
+#endif
+  int nboxes = REGION_NUM_RECTS (pRegion);
+  BoxPtr pbox = REGION_RECTS (pRegion);
+  int shaXoff, shaYoff;
   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
   PSLIMPtr pSlim = PSLIMGetRec (pScrn);
+  int bytes_per_pixel;
 
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-  fbGetDrawable (&pShadow->drawable, shaBase, shaStride, shaBpp);
-#else
   fbGetDrawable (&pBuf->pPixmap->drawable, shaBase, shaStride, shaBpp,
 		 shaXoff, shaYoff);
-#endif
+
+  bytes_per_pixel = shaBpp / 8;
   
   while (nboxes--)
     {
       l4con_pslim_rect_t rect;
       unsigned stride_width;
-      unsigned h, vfbofs;
+      unsigned h;
+      l4_uint8_t *vfbofs;
 
       rect.x = pbox->x1;
       rect.y = pbox->y1;
       rect.w = pbox->x2 - pbox->x1;
       rect.h = 1;
       h      = pbox->y2 - pbox->y1;
-      vfbofs = (unsigned)shaBase + rect.x*(shaBpp/8);
-      
-      stride_width = rect.w * (shaBpp/8);
+      vfbofs = (l4_uint8_t*)shaBase 
+             + rect.y * pSlim->bytesPerScanline
+             + rect.x * bytes_per_pixel;
+
+      stride_width = rect.w * bytes_per_pixel;
 
       while (h--)
 	{
 	  CORBA_Environment env = dice_default_environment;
 	 
-	  if (con_vc_pslim_set_call(&pSlim->vc_tid, &rect, 
-		(l4_uint8_t*)(vfbofs + rect.y*pSlim->maxBytesPerScanline), 
-		stride_width, &env)
+	  if (con_vc_pslim_set_call(&pSlim->vc_tid, &rect,
+                                     vfbofs, stride_width, &env)
 	      || DICE_HAS_EXCEPTION(&env))
 	    {
 	      xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
@@ -1036,40 +1172,29 @@ PSLIMUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
 			 DICE_EXCEPTION_MAJOR(&env), DICE_IPC_ERROR(&env));
 	      return;
 	    }
+          vfbofs += pSlim->bytesPerScanline;
 	  rect.y++;
 	}
       pbox++;
     }
 }
 
+/* X wrote to the shadow framebuffer. We need to tell the L4 console which
+ * region to copy from the mapped shadow framebuffer to the physical frame-
+ * buffer. */
 static void 
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-PSLIMMapShadowUpdate(ScreenPtr pScreen, PixmapPtr pShadow, RegionPtr damage)
-#else
 PSLIMMapShadowUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
-#endif
 {
-  FbBits *shaBase;
-  int shaBpp;
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-  int nboxes = REGION_NUM_RECTS (damage);
-  BoxPtr pbox = REGION_RECTS (damage);
+#ifdef XORG71
+  RegionPtr pRegion = DamageRegion(pBuf->pDamage);
 #else
-  int nboxes = REGION_NUM_RECTS (&pBuf->damage);
-  BoxPtr pbox = REGION_RECTS (&pBuf->damage);
-  int shaXoff, shaYoff;
+  RegionPtr pRegion = &pBuf->damage;
 #endif
-  FbStride shaStride;
+  int nboxes = REGION_NUM_RECTS (pRegion);
+  BoxPtr pbox = REGION_RECTS (pRegion);
   ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
   PSLIMPtr pSlim = PSLIMGetRec (pScrn);
 
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-  fbGetDrawable (&pShadow->drawable, shaBase, shaStride, shaBpp);
-#else
-  fbGetDrawable (&pBuf->pPixmap->drawable, shaBase, shaStride, shaBpp,
-		 shaXoff, shaYoff);
-#endif
-  
   while (nboxes--)
     {
       l4con_pslim_rect_t rect;
@@ -1093,6 +1218,90 @@ PSLIMMapShadowUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
     }
 }
 
+/* X wrote to the shadow framebuffer. Therefore we need to update the mapped
+ * physical framebuffer. If the framebuffer is not ``really'' physical (e.g.
+ * VMware framebuffer), we need to tell the graphics device where the content
+ * has changed (post dirty notification) */
+static void
+PSLIMMapPhysUpdate(ScreenPtr pScreen, shadowBufPtr pBuf)
+{
+  FbBits *shaBase;
+  FbStride shaStride;
+#ifdef XORG71
+  RegionPtr pRegion = DamageRegion(pBuf->pDamage);
+#else
+  RegionPtr pRegion = &pBuf->damage;
+#endif
+  int shaBpp, nboxes = REGION_NUM_RECTS (pRegion);
+  BoxPtr pbox = REGION_RECTS (pRegion);
+  int shaXoff, shaYoff;
+  ScrnInfoPtr pScrn = xf86Screens[pScreen->myNum];
+  PSLIMPtr pSlim = PSLIMGetRec (pScrn);
+  int bytes_per_pixel;
+
+  if (!pSlim->fbMapped)
+      return;
+
+  fbGetDrawable (&pBuf->pPixmap->drawable, shaBase, shaStride, shaBpp,
+		 shaXoff, shaYoff);
+
+  bytes_per_pixel = shaBpp / 8;
+
+  while (nboxes--)
+    {
+      l4con_pslim_rect_t rect;
+      unsigned h, stride_width;
+      l4_uint8_t *vfbofs, *pfbofs;
+      CORBA_Environment env = dice_default_environment;
+
+      rect.x = pbox->x1;
+      rect.y = pbox->y1;
+      rect.w = pbox->x2 - pbox->x1;
+      rect.h = pbox->y2 - pbox->y1;
+      h      = pbox->y2 - pbox->y1;
+      vfbofs = (l4_uint8_t*)shaBase
+             +              rect.y * pSlim->bytesPerScanline
+             +              rect.x * bytes_per_pixel;
+      pfbofs = (l4_uint8_t*)pSlim->fbPhysPtr
+             +              rect.y * pSlim->bytesPerScanline
+             +              rect.x * bytes_per_pixel;
+
+      stride_width = rect.w * bytes_per_pixel;
+
+      while (h--)
+        {
+          if (pfbofs              < pSlim->fbPhysPtr ||
+              pfbofs+stride_width > pSlim->fbPhysBase+pSlim->fbPhysSize)
+            xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                    "pfbofs = %08x, stride = %08x\n", (unsigned)pfbofs, stride_width);
+          if (vfbofs              <  pSlim->fbVirtPtr || 
+              vfbofs+stride_width > pSlim->fbVirtPtr+pSlim->fbVirtSize)
+            xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                    "vfbofs = %08x, stride = %08x\n", (unsigned)vfbofs, stride_width);
+          memcpy(pfbofs, vfbofs, stride_width);
+          vfbofs += pSlim->bytesPerScanline;
+          pfbofs += pSlim->bytesPerScanline;
+        }
+
+      if ((pSlim->accel_flags & L4CON_POST_DIRTY))
+        {
+          /* post dirty necessary (e.g. VMware) */
+          if (con_vc_direct_update_call(&pSlim->vc_tid, &rect, &env)
+              || DICE_HAS_EXCEPTION(&env))
+            {
+              xf86DrvMsg (pScrn->scrnIndex, X_ERROR,
+	 	          "Error updating region at console (exc=%d, %08x)\n", 
+                          DICE_EXCEPTION_MAJOR(&env), DICE_IPC_ERROR(&env));
+              return;
+            }
+        }
+      pbox++;
+    }
+}
+
+/* X wrote directly to the framebuffer. If the framebuffer is not ``really''
+ * physical (e.g. VMware framebuffer), we need to tell the graphics device
+ * where the content has changed */
 static void
 PSLIMPostDirtyUpdate(ScrnInfoPtr pScrn, int nboxes, BoxPtr boxPtr)
 {
@@ -1112,7 +1321,6 @@ PSLIMPostDirtyUpdate(ScrnInfoPtr pScrn, int nboxes, BoxPtr boxPtr)
       rect.w = boxPtr->x2 - boxPtr->x1;
       rect.h = boxPtr->y2 - boxPtr->y1;
 
-      /* try to send more than one line */
       if (con_vc_direct_update_call(&pSlim->vc_tid, &rect, &env)
 	  || DICE_HAS_EXCEPTION(&env))
 	{
@@ -1246,8 +1454,8 @@ PSLIMInitAccel(ScreenPtr pScreen)
        * enabled the PIXMAP_CACHE flag, then these lines can be omitted. */
       AvailFBArea.x1 = 0;
       AvailFBArea.y1 = 0;
-      AvailFBArea.x2 = pScrn->virtualX;
-      AvailFBArea.y2 = 4*1024*1024/pSlim->maxBytesPerScanline;
+      AvailFBArea.x2 = pScrn->virtualX; /* XXX */
+      AvailFBArea.y2 = (4 << 20) / pSlim->bytesPerScanline;
       xf86InitFBManager(pScreen, &AvailFBArea);
       xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 		 "Using %d lines for offscreen memory.\n",
@@ -1274,17 +1482,27 @@ PSLIMSIGIOHandler (int fd, void *closure)
       return;
     }
 
+//  xf86DrvMsg (0, X_INFO, "PSLIMSIGIOHandler => %d\n", arg);
+
   switch (arg)
     {
     case 1:
-      if (!pSlim->shadowFB)
-	PSLIMMapFB (pScrn);
-      pScrn->vtSema = TRUE;
+      if (pSlim->mapPhys)
+        {
+          switch (PSLIMMapFB (pScrn))
+            {
+              case -1: /* fatal */
+              case  0: pScrn->vtSema = FALSE; break;
+              case  1: pScrn->vtSema = TRUE;  break;
+            }
+        }
+      else
+        pScrn->vtSema = TRUE;
       break;
     case 2:
-      if (!pSlim->shadowFB)
-	PSLIMUnmapFB (pScrn);
       pScrn->vtSema = FALSE;
+      if (pSlim->mapPhys)
+	PSLIMUnmapFB (pScrn);
       break;
     }
 }
@@ -1297,10 +1515,9 @@ PSLIMInitSIGIOHandler(ScrnInfoPtr pScrn)
   if (!xf86InstallSIGIOHandler (pSlim->dropscon_dev,
 				PSLIMSIGIOHandler, (void*)pScrn))
     {
-      xf86DrvMsg(0, X_CONFIG, "Error connecting SIGIO");
+      xf86DrvMsg(0, X_CONFIG, "Error connecting SIGIO\n");
       return FALSE;
     }
 
   return TRUE;
 }
-

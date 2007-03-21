@@ -1,15 +1,3 @@
-L4DIR= 	../l4
-
--include $(L4DIR)/mk/Makeconf
-
-# added this for people with CDPATH set
-ifneq (${CDPATH},)
-$(warning Please do not export CDPATH in your shell!!)
-$(warning CDPATH only makes sense in interactive mode.)
-$(warning Change "export CDPATH=<dirs>" to "CDPATH=<dirs>")
-$(warning in your shell init script .bashrc, .profile, ...)
-$(error Please fix that error)
-endif
 
 # If we are running in l4check we overwrite the MAKE environment variable for
 # configure. It seems that the l4check make does not cope with the arguments
@@ -20,15 +8,15 @@ else
 CONFMAKE=$(MAKE)
 endif
 
+all::
+
 # the ifeq prevents the warning regarding overiding rules for Makefile
 ifeq ($(wildcard GNUmakefile),)
 GNUmakefile:
 	@echo "Calling bootstrap..."
 	@./bootstrap
 	@echo "Calling configure..."
-	@CC="$(HOST_CC)" CXX="$(HOST_CXX)" MAKE=$(CONFMAKE) ./configure \
-	  $(if $(DROPS_STDDIR),--prefix=$(DROPS_STDDIR) \
-	  --bindir=$(DROPS_STDDIR)/tool/bin --mandir=$(DROPS_STDDIR)/tool/man)
+	@MAKE=$(CONFMAKE) ./configure
 endif
 
 all clean cleanall:: GNUmakefile

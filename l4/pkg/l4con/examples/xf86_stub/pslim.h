@@ -61,17 +61,23 @@
 #define PSLIM_NAME		"PSLIM"
 #define PSLIM_DRIVER_NAME	"pslim"
 #define PSLIM_MAJOR_VERSION	1
-#define PSLIM_MINOR_VERSION	0
+#define PSLIM_MINOR_VERSION	1
 #define PSLIM_PATCHLEVEL	0
 
 typedef struct _PSLIMRec
 {
   EntityInfoPtr pEnt;
   GDevPtr device;
-  CARD16 maxBytesPerScanline;
+  CARD16 bytesPerScanline;
   int pix24bpp;
-  CARD8 *fbPtr;
+  CARD8 *fbVirtPtr;
+  CARD32 fbVirtSize;
+  CARD8 *fbPhysPtr;
+  CARD8 *fbPhysBase;
+  CARD32 fbPhysSize;
+  CARD32 fbOffs;
   CloseScreenProcPtr CloseScreen;
+  CreateScreenResourcesProcPtr CreateScreenResources;
   XAAInfoRecPtr AccelInfoRec;
   l4_threadid_t vc_tid;
   int dropscon_dev;
@@ -79,10 +85,13 @@ typedef struct _PSLIMRec
   int SavedFgColor;
   Bool shadowFB;
   Bool mapShadow;
+  Bool mapPhys;
+  int  Mode;
   Bool fbMapped;
   Bool shareDS;
   OptionInfoPtr Options;
   l4dm_dataspace_t mapShadowDs;
+  ShadowUpdateProc update;
 } PSLIMRec, *PSLIMPtr;
 
 typedef struct _ModeInfoData 

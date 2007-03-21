@@ -188,8 +188,8 @@ vc_font_init(void)
       Panic("bad psf font file magic %02x!", _binary_font_psf_start[2]);
     }
 
-  printf("Character size is %dx%d, font has %d characters\n", 
-	 FONT_XRES, FONT_YRES, FONT_CHRS);
+  LOG_printf("Character size is %dx%d, font has %d characters\n", 
+	     FONT_XRES, FONT_YRES, FONT_CHRS);
 
   status_area = FONT_YRES + 4;
 
@@ -230,7 +230,7 @@ vc_init()
   vc[0]->prev            = vc[0];
   vc[0]->mode            = CON_MASTER | CON_OUT;
   vc[0]->vfb             = 0;
-  vc[0]->vfb_used        = 0;
+  vc[0]->vfb_in_server   = 0;
   vc[0]->fb              = gr_vmem;
   vc[0]->fb_mapped       = 0;
   vc[0]->vc_partner_l4id = L4_INVALID_ID;
@@ -238,13 +238,13 @@ vc_init()
   vc[0]->ev_partner_l4id = L4_NIL_ID;
   vc[0]->gmode           = VESA_RES;
   vc[0]->xres            = VESA_XRES;
+  vc[0]->yres            = VESA_YRES;
   vc[0]->pan_xofs        = pan_offs_x;
   vc[0]->pan_yofs        = pan_offs_y;
-  vc[0]->user_xofs       = 0;
-  vc[0]->user_yofs       = 0;
-  vc[0]->user_xres       = VESA_XRES;
-  vc[0]->user_yres       = VESA_YRES - status_area;
-  vc[0]->yres            = VESA_YRES;
+  vc[0]->client_xofs     = 0;
+  vc[0]->client_yofs     = 0;
+  vc[0]->client_xres     = VESA_XRES;
+  vc[0]->client_yres     = VESA_YRES_CLIENT;
   vc[0]->logo_x          = 100000;
   vc[0]->logo_y          = 100000;
   vc[0]->bpp             = VESA_BITS;
@@ -269,12 +269,12 @@ vc_open(struct l4con_vc *vc, l4_uint8_t mode, l4_threadid_t ev_handler)
   int error;
   l4_threadid_t e = L4_NIL_ID;
 
-  switch (mode) 
+  switch (mode)
     {
     case CON_INOUT:
       e = ev_handler;
 
-      if ((error = vc_open_in(vc)) ) 
+      if ((error = vc_open_in(vc))) 
 	return error;
 
       // fall through
@@ -322,29 +322,32 @@ vc_open_in(struct l4con_vc *vc)
 int 
 vc_open_out(struct l4con_vc *vc)
 {
-  /* set default video mode */
-  vc->gmode     = VESA_RES;
-  vc->user_xofs = 0;
-  vc->user_yofs = 0;
-  vc->user_xres = VESA_XRES;
-  vc->user_yres = VESA_YRES - status_area;
-  vc->xres      = VESA_XRES;
-  vc->yres      = VESA_YRES;
-  vc->pan_xofs  = pan_offs_x;
-  vc->pan_yofs  = pan_offs_y;
-  vc->bpp       = VESA_BITS;
-  vc->logo_x    = 100000;
-  vc->logo_y    = 100000;
+  int i;
 
+  /* set default video mode */
+  vc->gmode           = VESA_RES;
+  vc->client_xofs     = 0;
+  vc->client_yofs     = 0;
+  vc->client_xres     = VESA_XRES;
+  vc->client_yres     = VESA_YRES_CLIENT;
+  vc->xres            = VESA_XRES;
+  vc->yres            = VESA_YRES;
+  vc->pan_xofs        = pan_offs_x;
+  vc->pan_yofs        = pan_offs_y;
+  vc->bpp             = VESA_BITS;
+  vc->logo_x          = 100000;
+  vc->logo_y          = 100000;
   vc->bytes_per_pixel = (vc->bpp+7)/8;
   vc->bytes_per_line  = VESA_BPL;
   vc->vfb_size        = ((vc->yres * vc->bytes_per_line) + 3) & ~3;
   vc->flags           = accel_caps;
+  vc->do_copy         = bg_do_copy;
+  vc->do_fill         = bg_do_fill;
+  vc->do_sync         = bg_do_sync;
+  vc->do_drty         = 0;
 
-  vc->do_copy = bg_do_copy;
-  vc->do_fill = bg_do_fill;
-  vc->do_sync = bg_do_sync;
-  vc->do_drty = 0;
+  for (i=0; i<CONFIG_MAX_CLIENTS; i++)
+    vc->clients[i] = L4_INVALID_ID;
 
   switch (vc->gmode & GRAPH_BPPMASK)
     {
@@ -355,14 +358,14 @@ vc_open_out(struct l4con_vc *vc)
     default:           vc->color_tab = color_tab16; break;
     }
 
-  if (vc->vfb_used)
+  if (vc->vfb_in_server)
     {
       int error;
       char ds_name[32];
       l4dm_dataspace_t ds;
 
       sprintf(ds_name, "vfb for "l4util_idfmt, 
-	  l4util_idstr(vc->vc_partner_l4id));
+	      l4util_idstr(vc->vc_partner_l4id));
       if ((error = l4dm_mem_open(L4DM_DEFAULT_DSM, vc->vfb_size, 
 				 0, 0, ds_name, &ds)))
 	{
@@ -370,7 +373,8 @@ vc_open_out(struct l4con_vc *vc)
 	  Panic("open_vc_out");
 	  return -CON_ENOMEM;
 	}
-      if ((error = l4rm_attach(&ds, vc->vfb_size, 0, L4DM_RW,
+      if ((error = l4rm_attach(&ds, vc->vfb_size, 0,
+                               L4DM_RW | L4RM_SUPERPAGE_ALIGNED,
 			       (void**)&vc->vfb)))
 	{
 	  LOG("Error %d attaching vc dataspace", error);
@@ -383,8 +387,10 @@ vc_open_out(struct l4con_vc *vc)
       vc->pan_yofs = 0;
     }
 
-  LOG("vc[%d] %ldx%ld@%d, gmode:0x%x", 
-      vc->vc_number,vc->xres, vc->yres,vc->bpp,vc->gmode);
+  LOG_printf("vc[%d] %ldx%ld@%d, bpl:%ld, gmode:0x%x, evprt:"l4util_idfmt
+             " save:%d\n", vc->vc_number, vc->xres, vc->yres, vc->bpp,
+             vc->bytes_per_line, vc->gmode, l4util_idstr(vc->ev_partner_l4id),
+             vc->save_restore);
   return 0;
 }
 
@@ -402,12 +408,12 @@ vc_close(struct l4con_vc *this_vc)
   l4lock_lock(&this_vc->fb_lock);
   /* temporary mode: no output allowed, but occupied */
   this_vc->mode = CON_CLOSING;
-  if (this_vc->vfb_used && this_vc->vfb)
+  if (this_vc->vfb_in_server && this_vc->vfb)
     {
       l4dm_mem_release(this_vc->vfb);
       this_vc->vfb = 0;
     }
-  this_vc->vfb_used = 0;
+  this_vc->vfb_in_server = 0;
   this_vc->fb = 0;
   l4lock_unlock(&this_vc->fb_lock);
 
@@ -560,7 +566,7 @@ vc_show_id(struct l4con_vc *this_vc)
   int i, x, cnt_vc;
   const l4con_pslim_color_t fgc = 0x009999FF;
   const l4con_pslim_color_t bgc = 0x00666666;
-  l4con_pslim_rect_t rect = { 0, this_vc->user_yres,
+  l4con_pslim_rect_t rect = { 0, this_vc->client_yres,
 			      this_vc->xres, status_area };
 
   cnt_vc = MAX_NR_L4CONS > 10 ? 9 : MAX_NR_L4CONS-1;
@@ -573,14 +579,14 @@ vc_show_id(struct l4con_vc *this_vc)
   else
     strcpy(id, "TUDOS console: (all closed)");
 
-  vc_puts(this_vc, 0, id, strlen(id), 2, this_vc->user_yres+2, fgc, bgc);
+  vc_puts(this_vc, 0, id, strlen(id), 2, this_vc->client_yres+2, fgc, bgc);
 
   sprintf(id, "%ldx%ld@%d%s%s", 
 	  this_vc->xres, this_vc->yres, this_vc->bpp,
 	  panned ?             " [PAN]"   : "",
 	  this_vc->fb_mapped ? " [FBmap]" : "");
   vc_puts(this_vc, 0, id, strlen(id),
-	  ((this_vc->xres - strlen(id)*FONT_XRES) / 2), this_vc->user_yres+2,
+	  ((this_vc->xres - strlen(id)*FONT_XRES) / 2), this_vc->client_yres+2,
 	  fgc, bgc);
 
   for (i=1, x=this_vc->xres-cnt_vc*(FONT_XRES+2);
@@ -613,7 +619,7 @@ vc_show_dmphys_poolsize(struct l4con_vc *this_vc)
 
   l4dm_memphys_poolsize(L4DM_MEMPHYS_DEFAULT, &size, &free);
   l4con_pslim_rect_t rect = 
-    { this_vc->xres - 180, this_vc->user_yres, 80, status_area };
+    { this_vc->xres - 180, this_vc->client_yres, 80, status_area };
   vc_fill(this_vc, 0, &rect, bgc);
   sprintf(str, "%3d/%dMB", free/(1<<20), size/(1<<20));
   vc_puts(this_vc, 0, str, strlen(str), rect.x, rect.y+2, fgc, bgc);
@@ -626,7 +632,7 @@ show_counters(struct l4con_vc *this_vc)
 #if 0
   l4_tracebuffer_status_t *tb = fiasco_tbuf_get_status();
 
-  l4con_pslim_rect_t rect = { this_vc->xres-380, this_vc->user_yres,
+  l4con_pslim_rect_t rect = { this_vc->xres-380, this_vc->client_yres,
 			      14*8, status_area };
 
   char  str[32];
@@ -640,6 +646,31 @@ show_counters(struct l4con_vc *this_vc)
 }
 #endif
 
+static void
+vc_show_history(struct l4con_vc *this_vc,
+		l4_uint8_t *history_val, l4_size_t history_size,
+                l4con_pslim_color_t fgc, l4con_pslim_color_t bgc,
+		l4con_pslim_rect_t *rect)
+{
+  /* show load history */
+  int i, j;
+  l4_uint8_t b;
+  l4_uint8_t history_map[history_size/8*status_area];
+
+  convert_color(this_vc, &fgc);
+  convert_color(this_vc, &bgc);
+
+  for (i=0, b=0x80; i<history_size; i++, b = (b>>1)|(b<<7))
+    {
+      for (j=0; j<status_area; j++)
+	if (history_val[i] >= status_area-j)
+	  history_map[i/8 + history_size/8*j] |= b;
+	else
+	  history_map[i/8 + history_size/8*j] &= ~b;
+    }
+  pslim_bmap(this_vc, 0, rect, fgc, bgc, history_map, pSLIM_BMAP_START_MSB);
+}
+
 void
 vc_show_cpu_load(struct l4con_vc *this_vc)
 {
@@ -647,7 +678,7 @@ vc_show_cpu_load(struct l4con_vc *this_vc)
   static l4_uint32_t tsc, pmc;
   static l4_uint8_t  history_val[6*8]; // 6 characters == "xxx.x%"!
   l4_uint32_t new_tsc = l4_rdtsc_32(), new_pmc = l4_rdpmc_32(0);
-  l4con_pslim_rect_t rect = { this_vc->xres-260, this_vc->user_yres,
+  l4con_pslim_rect_t rect = { this_vc->xres-260, this_vc->client_yres,
 			      sizeof(history_val), status_area };
 
   memmove(history_val, history_val+1, sizeof(history_val)-1);
@@ -659,8 +690,8 @@ vc_show_cpu_load(struct l4con_vc *this_vc)
 
   else
     {
-      history_val[sizeof(history_val)-1] = 
-	(new_pmc-pmc) / ((new_tsc-tsc)/status_area);
+      history_val[sizeof(history_val)-1] = (new_pmc-pmc) / 
+					   ((new_tsc-tsc)/status_area);
 
       if (cpu_load_history == 0)
 	{
@@ -678,28 +709,8 @@ vc_show_cpu_load(struct l4con_vc *this_vc)
 	  vc_puts(this_vc, 0, str, strlen(str), rect.x, rect.y+2, fgc, bgc);
 	}
       else
-	{
-	  /* show load history */
-	  l4_uint8_t history_map[sizeof(history_val)/8*status_area];
-	  int i, j;
-	  l4_uint8_t b;
-	  l4con_pslim_color_t fgc = 0x00CC5555;
-	  l4con_pslim_color_t bgc = 0x00222222;
-
-	  convert_color(this_vc, &fgc);
-	  convert_color(this_vc, &bgc);
-
-	  for (i=0, b=0x80; i<sizeof(history_val); i++, b = (b>>1)|(b<<7))
-	    {
-	      for (j=0; j<status_area; j++)
-		if (history_val[i] >= status_area-j)
-		  history_map[i/8 + sizeof(history_val)/8*j] |= b;
-		else
-		  history_map[i/8 + sizeof(history_val)/8*j] &= ~b;
-	    }
-	  pslim_bmap(this_vc, 0, &rect, fgc, bgc,
-		     history_map, pSLIM_BMAP_START_MSB);
-	}
+	vc_show_history(this_vc, history_val, sizeof(history_val),
+			0x00CC5555, 0x00222222, &rect);
     }
 
   tsc = new_tsc;
@@ -734,7 +745,7 @@ vc_clear(struct l4con_vc *vc)
 {
   const l4con_pslim_color_t fgc = 0x00223344;
   const l4con_pslim_color_t bgc = 0x00000000;
-  l4con_pslim_rect_t rect = { 0, 0, vc->user_xres, vc->user_yres };
+  l4con_pslim_rect_t rect = { 0, 0, vc->client_xres, vc->client_yres };
   
   vc_fill(vc, 0, &rect, bgc);
 
@@ -744,16 +755,16 @@ vc_clear(struct l4con_vc *vc)
       /* master console, show DROPS label */
       int x, y, scale_x_1, scale_y_1, scale_x_2, scale_y_2;
 
-      scale_x_1 = (vc->user_xres*4/ 5) / (5*FONT_XRES);
-      scale_y_1 = (vc->user_yres*6/10) / (1*FONT_YRES);
-      x = vc->user_xofs + (vc->user_xres-5*FONT_XRES*scale_x_1)/2;
-      y = vc->user_yofs + (vc->user_yres-1*FONT_YRES*scale_y_1)*3/7;
+      scale_x_1 = (vc->client_xres*4/ 5) / (5*FONT_XRES);
+      scale_y_1 = (vc->client_yres*6/10) / (1*FONT_YRES);
+      x = vc->client_xofs + (vc->client_xres-5*FONT_XRES*scale_x_1)/2;
+      y = vc->client_yofs + (vc->client_yres-1*FONT_YRES*scale_y_1)*3/7;
       vc_puts_scale(vc, 0, 
 			"TUDOS", 5,
 		        x, y, fgc, bgc, scale_x_1, scale_y_1);
       scale_x_2 = scale_x_1*10/90;
       scale_y_2 = scale_y_1*10/90;
-      x = vc->user_xofs + (vc->user_xres-36*FONT_XRES*scale_x_2)/2;
+      x = vc->client_xofs + (vc->client_xres-36*FONT_XRES*scale_x_2)/2;
       y += 1*FONT_YRES*scale_y_1*12/14;
       vc_puts_scale(vc, 0, 
 			"The Dresden Operating System Project", 36,
@@ -775,12 +786,12 @@ con_vc_smode_component (CORBA_Object _dice_corba_obj,
     {
       /* inital state */
       vc->ev_partner_l4id = *ev_handler;
-      return vc_open(vc, mode, *ev_handler);
+      return vc_open(vc, mode & CON_INOUT, *ev_handler);
     }
   else 
     { 
       /* set new event handler */
-      vc->ev_partner_l4id = (mode & CON_IN) ? *ev_handler : L4_NIL_ID;
+      vc->ev_partner_l4id = mode & CON_IN ? *ev_handler : L4_NIL_ID;
       return 0;
     }
 }
@@ -803,6 +814,44 @@ con_vc_gmode_component (CORBA_Object _dice_corba_obj,
   *sbuf_3size = vc->sbuf3_size;
 	
   return 0;
+}
+
+long
+con_vc_share_component (CORBA_Object _dice_corba_obj,
+                        const l4_threadid_t *client,
+                        CORBA_Server_Environment *_dice_corba_env)
+{
+  struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
+  int i;
+
+  for (i=0; i<CONFIG_MAX_CLIENTS; i++)
+    if (l4_thread_equal(*client, vc->clients[i]))
+      return 0;
+    else if (l4_is_invalid_id(vc->clients[i]))
+      {
+        vc->clients[i] = *client;
+        return 0;
+      }
+
+  return -L4_ENOSPC;
+}
+
+long
+con_vc_revoke_component (CORBA_Object _dice_corba_obj,
+                         const l4_threadid_t *client,
+                         CORBA_Server_Environment *_dice_corba_env)
+{
+  struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
+  int i;
+
+  for (i=0; i<CONFIG_MAX_CLIENTS; i++)
+    if (l4_thread_equal(*client, vc->clients[i]))
+      {
+        vc->clients[i] = L4_INVALID_ID;
+        return 0;
+      }
+
+  return -L4_ENOTFOUND;
 }
 
 /**
@@ -863,8 +912,8 @@ con_vc_graph_gmode_component(CORBA_Object _dice_corba_obj,
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   
   *g_mode          = vc->gmode;
-  *xres            = vc->user_xres;
-  *yres            = vc->user_yres;
+  *xres            = vc->client_xres;
+  *yres            = vc->client_yres;
   *bits_per_pixel  = vc->bpp;
   *bytes_per_pixel = vc->bytes_per_pixel;
   *bytes_per_line  = vc->bytes_per_line;
@@ -907,19 +956,56 @@ con_vc_graph_get_rgb_component(CORBA_Object _dice_corba_obj,
 
 long 
 con_vc_graph_mapfb_component(CORBA_Object _dice_corba_obj,
+                             unsigned long fb_offset,
 			     l4_snd_fpage_t *page,
-			     unsigned long *offset,
+			     unsigned long *page_offset,
 			     CORBA_Server_Environment *_dice_corba_env)
 {
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
-  l4_addr_t base = (l4_addr_t)vis_vmem & L4_SUPERPAGEMASK;
+  l4_addr_t base = l4_trunc_superpage(vis_vmem);
   l4_offs_t offs = (l4_addr_t)vis_vmem - base;
 
-  /* XXX map more than 4 MB */
+  /* deliver offset in any case! */
+  *page_offset = fb_offset == 0 ? offs : 0;
 
-  page->fpage = l4_fpage(base, L4_LOG2_SUPERPAGESIZE,
-			 L4_FPAGE_RW, L4_FPAGE_MAP);
-  *offset = offs;
+  /* don't allow a client in the background to map the framebuffer! */
+  if (!l4_tasknum_equal(*_dice_corba_obj, vc_partner_l4id))
+    {
+      /* scan clients */
+      int i;
+      
+      for (i=0; i<CONFIG_MAX_CLIENTS; i++)
+        if (l4_tasknum_equal(*_dice_corba_obj, vc->clients[i]))
+          break;
+
+      if (i >= CONFIG_MAX_CLIENTS)
+        {
+          /* not found */
+          /* XXX No support from DICE to prevent setting bit 1 of the send message
+           *     descriptor. Therefore we invalidate the flexpage */
+          LOG_printf("mapfb: not allowed to map FB. Currently allowed:\n");
+          for (i=0; i<CONFIG_MAX_CLIENTS; i++)
+              if (!l4_is_invalid_id(vc->clients[i]))
+                  LOG_printf("  "l4util_idfmt"\n", l4util_idstr(vc->clients[i]));
+          page->snd_base  = 0;
+          page->fpage.raw = 0;
+          return -L4_EPERM;
+        }
+    }
+
+  if ((gr_vmem + fb_offset + L4_SUPERPAGESIZE > gr_vmem_maxmap) ||
+      (fb_offset % L4_SUPERPAGESIZE))
+    {
+      /* XXX No support from DICE to prevent setting bit 1 of the send message
+       *     descriptor. Therefore we invalidate the flexpage */
+      page->snd_base  = 0;
+      page->fpage.raw = 0;
+      return -L4_EINVAL_OFFS;
+    }
+
+  page->snd_base = 0;
+  page->fpage    = l4_fpage(base+fb_offset, L4_LOG2_SUPERPAGESIZE,
+		            L4_FPAGE_RW, L4_FPAGE_MAP);
   vc->fb_mapped = 1;
   update_id = 1;
 
@@ -1197,8 +1283,8 @@ con_vc_direct_update_component(CORBA_Object _dice_corba_obj,
 	  static int bug;
 	  if (!bug)
 	    {
-	      printf("fb mapped and post dirty probably not necessary "
-		     "by "l4util_idfmt"\n", l4util_idstr(*_dice_corba_obj));
+	      LOG_printf("fb mapped and post dirty probably not necessary "
+		         "by "l4util_idfmt"\n", l4util_idstr(*_dice_corba_obj));
 	      bug++;
 	    }
 	}
@@ -1206,7 +1292,7 @@ con_vc_direct_update_component(CORBA_Object _dice_corba_obj,
 
   if (vc->vfb == 0)
     {
-      printf("no vfb set\n");
+      LOG_printf("no vfb set\n");
       return -CON_EPERM;
     }
   
@@ -1229,16 +1315,10 @@ con_vc_direct_setfb_component(CORBA_Object _dice_corba_obj,
   l4_size_t size;
 
   struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
-  
-  if (vc->vfb_used)
-    {
-      LOG("Virtual framebuffer used -- direct_setfb nonsense");
-      return -L4_EINVAL;
-    }
 
-  if (vc->fb_mapped)
+  if (vc->vfb_in_server)
     {
-      LOG("Physical framebuffer mapped -- direct_setfb nonsense");
+      LOG("Virtual framebuffer allocated by server -- direct_setfb nonsense");
       return -L4_EINVAL;
     }
 
@@ -1247,7 +1327,7 @@ con_vc_direct_setfb_component(CORBA_Object _dice_corba_obj,
       LOG("Virtual framebuffer already mapped -- direct_setfb nonsense");
       return -L4_EINVAL;
     }
-  
+
   if ((error = l4dm_mem_size((l4dm_dataspace_t*)data_ds, &size)))
     {
       LOG("Error %d requesting size of data_ds", error);
@@ -1255,11 +1335,15 @@ con_vc_direct_setfb_component(CORBA_Object _dice_corba_obj,
     }
   
   if ((error = l4rm_attach((l4dm_dataspace_t*)data_ds, size, 0, 
-			   L4DM_RO | L4RM_MAP, (void*)&vc->vfb)))
+			   L4DM_RO | L4RM_MAP | L4RM_SUPERPAGE_ALIGNED,
+                           (void*)&vc->vfb)))
     {
       LOG("Error %d attaching data_ds", error);
       return -L4_EINVAL;
     }
+
+  LOG_printf("Mapped client FB to %08lx size %08x\n",
+            (l4_addr_t)vc->vfb, size);
 
   return 0;
 }
@@ -1316,18 +1400,18 @@ con_vc_stream_cscs_component(CORBA_Object _dice_corba_obj,
   config.dest   = (vidix_rect_t){ rect_dst->x, rect_dst->y,
 				  rect_dst->w, rect_dst->h, { 0, 0, 0 } };
 
-  if (config.dest.x > vc->user_xres-32)
-    config.dest.x = vc->user_xres-32;
-  if (config.dest.y > vc->user_yres-32)
-    config.dest.y = vc->user_yres-32;
+  if (config.dest.x > vc->client_xres-32)
+    config.dest.x = vc->client_xres-32;
+  if (config.dest.y > vc->client_yres-32)
+    config.dest.y = vc->client_yres-32;
   if (config.dest.w < 32)
     config.dest.w = 32;
-  else if (config.dest.w+config.dest.x > vc->user_xres)
-    config.dest.w = vc->user_xres-config.dest.x;
+  else if (config.dest.w+config.dest.x > vc->client_xres)
+    config.dest.w = vc->client_xres-config.dest.x;
   if (config.dest.h < 32)
     config.dest.h = 32;
-  else if (config.dest.h+config.dest.y > vc->user_yres)
-    config.dest.h = vc->user_yres-config.dest.y;
+  else if (config.dest.h+config.dest.y > vc->client_yres)
+    config.dest.h = vc->client_yres-config.dest.y;
 
   if (hw_accel.caps & ACCEL_COLOR_KEY)
     {
@@ -1477,6 +1561,10 @@ asm ("vc_pf_entry:		\n\t"
      "addl  $8, %esp		\n\t"
      "iret			\n\t");
 
+/**
+ * Pagefault handler for console threads. A pagefault may occur if the client
+ * sends a flexpage which is too small.
+ */
 static L4_STICKY(void)
 vc_pf_handler(l4_addr_t pf_addr)
 {
@@ -1488,7 +1576,6 @@ vc_pf_handler(l4_addr_t pf_addr)
       if (l4_thread_equal(me, vc[i]->vc_l4id))
 	{
 	  printf("vc[%d]: page fault at "l4_addr_fmt" -- closing\n", i, pf_addr);
-	  enter_kdebug("stop");
 
 	  vc_close(vc[i]);
 	  if (vc[i]->mode == CON_CLOSING)

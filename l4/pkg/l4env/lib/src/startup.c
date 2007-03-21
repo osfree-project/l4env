@@ -32,7 +32,6 @@
 #include <l4/util/mbi_argv.h>
 #include <l4/util/l4_macros.h>
 #include <l4/log/l4log.h>
-#include <l4/exec/exec.h>
 
 /* binary test/data segments from linker script */
 extern l4_uint8_t _prog_img_start __attribute__((weak));

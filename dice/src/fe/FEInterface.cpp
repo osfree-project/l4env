@@ -62,6 +62,7 @@ CFEInterface::CFEInterface(vector<CFEAttribute*> * pIAttributes,
     m_TaggedDeclarators(0, this),
     m_Operations(0, this),
     m_Typedefs(0, this),
+    m_Exceptions(0, this),
     m_BaseInterfaceNames(pIBaseNames, this),
     m_DerivedInterfaces(0, (CObject*)0),
     m_BaseInterfaces(0, (CObject*)0)
@@ -77,6 +78,7 @@ CFEInterface::CFEInterface(CFEInterface & src)
     m_TaggedDeclarators(src.m_TaggedDeclarators),
     m_Operations(src.m_Operations),
     m_Typedefs(src.m_Typedefs),
+    m_Exceptions(src.m_Exceptions),
     m_BaseInterfaceNames(src.m_BaseInterfaceNames),
     m_DerivedInterfaces(src.m_DerivedInterfaces),
     m_BaseInterfaces(src.m_BaseInterfaces)
@@ -88,8 +90,17 @@ CFEInterface::CFEInterface(CFEInterface & src)
     m_TaggedDeclarators.Adopt(this);
     m_Operations.Adopt(this);
     m_Typedefs.Adopt(this);
+    m_Exceptions.Adopt(this);
     m_BaseInterfaceNames.Adopt(this);
     // not for m_DerivedInterfaces, m_BaseInterfaces
+}
+
+/** creates a copy of this object
+ *  \return a copy of this object
+ */
+CObject* CFEInterface::Clone()
+{ 
+    return new CFEInterface(*this);
 }
 
 /** \brief add components to this interface
@@ -109,7 +120,13 @@ CFEInterface::AddComponents(vector<CFEInterfaceComponent*> *pComponents)
 	    if (dynamic_cast<CFEConstDeclarator*>(*iter))
 		m_Constants.Add((CFEConstDeclarator*)*iter);
 	    else if (dynamic_cast<CFETypedDeclarator*>(*iter))
-		m_Typedefs.Add((CFETypedDeclarator*) *iter);
+	    {
+		CFETypedDeclarator *pTD = dynamic_cast<CFETypedDeclarator*>(*iter);
+		if (pTD->GetTypedDeclType() == TYPEDECL_EXCEPTION)
+		    m_Exceptions.Add(pTD);
+		else
+    		    m_Typedefs.Add(pTD);
+	    }
 	    else if (dynamic_cast<CFEOperation*>(*iter))
 		m_Operations.Add((CFEOperation*)*iter);
 	    else if (dynamic_cast<CFEConstructedType*>(*iter))
@@ -266,6 +283,13 @@ void CFEInterface::Accept(CVisitor &v)
     {
 	(*iT)->Accept(v);
     }
+    // check exceptions
+    for (iT = m_Exceptions.begin();
+	 iT != m_Exceptions.end();
+	 iT++)
+    {
+	(*iT)->Accept(v);
+    }
 }
 
 /** \brief tests if this is a foward declaration
@@ -279,5 +303,6 @@ bool CFEInterface::IsForward()
            m_Constants.empty() &&
 	   m_Operations.empty() &&
 	   m_TaggedDeclarators.empty() &&
-	   m_Typedefs.empty();
+	   m_Typedefs.empty() &&
+	   m_Exceptions.empty();
 }

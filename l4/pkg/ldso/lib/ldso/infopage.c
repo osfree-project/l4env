@@ -2,7 +2,6 @@
 #include <l4/env/env.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/l4_macros.h>
-#include <l4/exec/exec.h>
 #include <l4/log/l4log.h>
 
 #include "emul_linux.h"

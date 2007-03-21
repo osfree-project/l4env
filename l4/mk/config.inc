@@ -73,10 +73,14 @@ $(DROPSCONF_CONFIG_H) $(DROPSCONF_CONFIG): $(DROPSCONF_CONFIG_IN)
 	@$(GEN_MESSAGE)
 	$(VERBOSE)install -d $(dir $(DROPSCONF_CONFIG))
 	$(VERBOSE)install -d $(dir $(DROPSCONF_CONFIG_H))
-	$(VERBOSE)true | $(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_OLD) \
+	$(VERBOSE)if tty >/dev/null; then \
+	  $(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_OLD); \
+	 else \
+	  true | $(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_OLD) \
 	  $(if $(VERBOSE),>/dev/null,) || \
-	  ( echo -e "\nError: Some defaults for config options are missing." ; \
-	    false )
+	  ( echo -e "\nError: Unattended mode -- Some defaults for config options are missing." ; \
+	    false ) \
+	 fi
 
 $(DROPSCONF_CONFIG_MK): $(DROPSCONF_CONFIG)
 	$(VERBOSE)sed -e "s/\(^[^= ]*=\)'\([^']*\)'/\1\2/" \

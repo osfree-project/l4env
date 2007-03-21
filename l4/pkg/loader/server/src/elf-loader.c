@@ -17,7 +17,6 @@
 #include <l4/env/errno.h>
 #include <l4/env/env.h>
 #include <l4/dm_mem/dm_mem.h>
-#include <l4/exec/exec.h>
 #include <l4/util/elf.h>
 
 #include "app.h"

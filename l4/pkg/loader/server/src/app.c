@@ -25,7 +25,6 @@
 #include <l4/l4rm/l4rm.h>
 #include <l4/log/l4log.h>
 #include <l4/env/mb_info.h>
-#include <l4/exec/exec.h>
 #include <l4/util/util.h>
 #include <l4/util/stack.h>
 #include <l4/util/macros.h>
@@ -1362,8 +1361,7 @@ static int app_setup_caps(app_t *app)
 #else
 static int app_setup_caps(app_t *app)
 {
-  printf("Capability support not supported.\n");
-
+  printf("Capability support not enabled.\n");
   return 0;
 }
 #endif
@@ -1782,7 +1780,7 @@ app_cleanup_intern(app_t *app)
 static int
 app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
 {
-  int error, open_flags;
+  int error;
   l4env_infopage_t *env;
   app_t *app;
 
@@ -1814,13 +1812,9 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
     app->name++;
 
   /* translate flags */
-  open_flags = 0;
   app->flags = 0;
   if (ct->flags & CFG_F_DIRECT_MAPPED)
-    {
-      app->flags |= APP_DIRECTMAP;
-      open_flags |= L4EXEC_DIRECT_MAP;
-    }
+    app->flags |= APP_DIRECTMAP;
   app->flags |= ct->flags & CFG_F_REBOOT_ABLE    ? APP_REBOOTABLE  : 0;
   app->flags |= ct->flags & CFG_F_NO_VGA         ? APP_NOVGA       : 0;
   app->flags |= ct->flags & CFG_F_NO_SIGMA0      ? APP_NOSIGMA0    : 0;
@@ -1830,15 +1824,9 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
   app->flags |= ct->flags & CFG_F_NOSUPERPAGES   ? APP_NOSUPER     : 0;
   app->flags |= ct->flags & CFG_F_ALL_WRITABLE   ? APP_ALL_WRITBLE : 0;
   if (cfg_fiasco_symbols)
-    {
-      app->flags |= APP_SYMBOLS;
-      open_flags |= L4EXEC_LOAD_SYMBOLS;
-    }
+    app->flags |= APP_SYMBOLS;
   if (cfg_fiasco_lines)
-    {
-      app->flags |= APP_LINES;
-      open_flags |= L4EXEC_LOAD_LINES;
-    }
+    app->flags |= APP_LINES;
 
   app->owner      = owner;
   app->caphandler = ct->caphandler;
@@ -1863,35 +1851,6 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
       return error;
     }
 
-#ifndef USE_LDSO
-  /* open file image and separate sections */
-  if (!(error = exec_if_open(app, ct->task.fname, &ct->ds_image, open_flags)))
-    {
-      if (env->entry_1st == L4_MAX_ADDRESS)
-	{
-	  /* Application is not linked against libloader.s -- Plan B */
-	  if (ct->flags & CFG_F_L4ENV_BINARY)
-	    app_msg(app, "Starting static l4env-style application");
-	  else
-	    app_msg(app, "Starting sigma0-style application");
-	  app->flags |= APP_MODE_SIGMA0;
-	  if (   (error = app_create_tid(app))
-	      || (error = app_start_static(ct, app)))
-	    ;
-
-	}
-      else
-	{
-	  /* libloader.s entry point found -- Plan A */
-	  app_msg(app, "Starting l4env-style application");
-	  app->flags |= APP_MODE_LOADER;
-	  if (   (error = app_create_tid(app))
-	      || (error = app_start_libloader(ct, app)))
-	    ;
-	}
-    }
-#else
-
   if (ct->flags & CFG_F_L4ENV_BINARY)
     app_msg(app, "Starting static l4env-style application");
   else
@@ -1907,7 +1866,6 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
   if (   (error = app_create_tid(app))
       || (error = app_start_static(ct, app)))
     ;
-#endif
 
   /* save task id for the client which sent the open() request */
   ct->task_id = app->tid;

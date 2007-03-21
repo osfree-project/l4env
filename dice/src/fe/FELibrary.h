@@ -69,12 +69,7 @@ protected:
 
 // Operations
 public:
-    /** creates a copy of this object
-     *  \return a copy of this object
-     */
-    virtual CObject* Clone()
-    { return new CFELibrary(*this); }
-
+    virtual CObject* Clone();
     CFEInterface* FindInterface(string sName, CFELibrary *pStart = NULL);
     CFETypedDeclarator* FindUserDefinedType(string sName);
     CFEConstDeclarator* FindConstant(string sName);

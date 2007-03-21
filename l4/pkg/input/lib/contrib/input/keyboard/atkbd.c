@@ -524,6 +524,16 @@ static int atkbd_probe(struct atkbd *atkbd)
 	param[0] = param[1] = 0xa5;	/* initialize with invalid values */
 	if (ps2_command(ps2dev, param, ATKBD_CMD_GETID)) {
 
+		/* Some crappy BIOSes (hello DELL!) do not implement CMD_GETID */
+		if (param[0]==0xa5 && param[1]==0xa5) {
+			if (!ps2dev->serio || !ps2dev->serio->name ||
+			    !strstr(ps2dev->serio->name, "Kbd"))
+				return -1;
+			atkbd->id = 0;
+			atkbd->translated = 1;
+			return 0;
+		}
+
 /*
  * If the get ID command failed, we check if we can at least set the LEDs on
  * the keyboard. This should work on every keyboard out there. It also turns

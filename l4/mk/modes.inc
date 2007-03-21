@@ -93,7 +93,7 @@ endif
 # x86_tiny - minimal environment (only l4util, no log, no names)
 #
 BID_SUPPORTED_x86_tiny_diet     = y
-LIBCINCDIR_x86_tiny_diet        = $(LIBC_INCLUDE)
+LIBCINCDIR_x86_tiny_diet        = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_x86_tiny_diet        =
 LIBCLIBS_x86_tiny_diet          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c                                  \
@@ -109,7 +109,7 @@ CRTN_x86_tiny_diet              =
 LDSCRIPT_x86_tiny_diet          = $(LDS_DEFAULT)
 
 BID_SUPPORTED_x86_tiny_uc       = y
-LIBCINCDIR_x86_tiny_uc          = $(LIBC_INCLUDE)
+LIBCINCDIR_x86_tiny_uc          = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_x86_tiny_uc          =
 LIBCLIBS_x86_tiny_uc            = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
@@ -147,7 +147,7 @@ endif
 # x86_sigma0 - minimal environment (util, names, log)
 #
 BID_SUPPORTED_x86_sigma0_diet   = y
-LIBCINCDIR_x86_sigma0_diet      = $(LIBC_INCLUDE)
+LIBCINCDIR_x86_sigma0_diet      = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_x86_sigma0_diet      =
 LIBCLIBS_x86_sigma0_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c                                  \
@@ -166,7 +166,7 @@ CRTN_x86_sigma0_diet            =
 LDSCRIPT_x86_sigma0_diet        = $(LDS_DEFAULT)
 
 BID_SUPPORTED_x86_sigma0_uc     = y
-LIBCINCDIR_x86_sigma0_uc        = $(LIBC_INCLUDE)
+LIBCINCDIR_x86_sigma0_uc        = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_x86_sigma0_uc        =
 LIBCLIBS_x86_sigma0_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
@@ -274,7 +274,7 @@ LDSCRIPT_x86_l4linux_kern       =
 # x86_l4env -- l4env, the default
 #
 BID_SUPPORTED_x86_l4env_diet    = y
-LIBCINCDIR_x86_l4env_diet       = $(LIBC_INCLUDE)
+LIBCINCDIR_x86_l4env_diet       = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_x86_l4env_diet       =
 L4LIBS_x86_l4env_diet           = -static -lgeneric_ts -ll4env              \
                                   -ll4rm -ldm_generic -ldm_mem -lthread     \
@@ -302,7 +302,7 @@ CRTN_x86_l4env_diet             =
 LDSCRIPT_x86_l4env_diet         = $(LDS_DEFAULT)
 
 BID_SUPPORTED_x86_l4env_uc      = y
-LIBCINCDIR_x86_l4env_uc         = $(LIBC_INCLUDE)
+LIBCINCDIR_x86_l4env_uc         = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_x86_l4env_uc         =
 L4LIBS_x86_l4env_uc             = $(L4LIBS_x86_l4env_diet)
 LIBCLIBS_x86_l4env_uc           = -nostdlib $(GCCLDNOSTDLIB)                \
@@ -423,7 +423,7 @@ endif
 #     basic_io, io, basic_mmap, mmap_util, syslog, simple_sleep, time,
 #     file_table
 #
-LIBCINCDIR_x86_l4env_base_diet  = $(LIBC_INCLUDE)
+LIBCINCDIR_x86_l4env_base_diet  = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_x86_l4env_base_diet  =
 LIBCLIBS_x86_l4env_base_diet    = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -u printf -lc_be_io.o $(MALLOC_BACKEND)   \
@@ -456,7 +456,7 @@ CRTN_x86_l4env_base_diet        =
 LDSCRIPT_x86_l4env_base_diet    = $(LDS_DEFAULT)
 
 BID_SUPPORTED_x86_l4env_base_uc = y
-LIBCINCDIR_x86_l4env_base_uc    = $(LIBC_INCLUDE)
+LIBCINCDIR_x86_l4env_base_uc    = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_x86_l4env_base_uc    =
 LIBCLIBS_x86_l4env_base_uc      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -u printf -lc_be_io.o $(MALLOC_BACKEND)   \
@@ -507,27 +507,20 @@ endif
 # x86_loader - applications to be loaded by the L4Env loader.
 #              Will be merged with l4env_base and become the default mode.
 #
+BID_SUPPORTED_x86_loader      = y
+LIBCINCDIR_x86_loader         = $(LIBC_INCLUDE)
+LIBCLIBDIR_x86_loader         =
 ifeq ($(USE_DIETLIBC),y)
-  BID_SUPPORTED_x86_loader      = y
-  LIBCINCDIR_x86_loader         = $(LIBC_INCLUDE)
-  LIBCLIBDIR_x86_loader         =
   LIBCLIBS_x86_loader           = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c $(GCCLIB) -ldiet_c
-  L4LIBS_x86_loader             = -lloader.s -ll4sys
-  CRT0_x86_loader               = $(CRT0_DEFAULT)
-  CRTN_x86_loader               =
-  LDSCRIPT_x86_loader           = $(LDS_LOADER)
 else
-  BID_SUPPORTED_x86_loader      = y
-  LIBCINCDIR_x86_loader         = $(LIBC_INCLUDE)
-  LIBCLIBDIR_x86_loader         =
   LIBCLIBS_x86_loader           = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c $(GCCLIB) -luc_c
-  L4LIBS_x86_loader             = -lloader.s -ll4sys
-  CRT0_x86_loader               = $(CRT0_DEFAULT)
-  CRTN_x86_loader               =
-  LDSCRIPT_x86_loader           = $(LDS_LOADER)
 endif
+L4LIBS_x86_loader             = -lloader.s -ll4sys
+CRT0_x86_loader               = $(CRT0_DEFAULT)
+CRTN_x86_loader               =
+LDSCRIPT_x86_loader           = $(LDS_LOADER)
 
 
 #############################################################################
@@ -539,7 +532,7 @@ endif
 # arm_tiny
 #
 BID_SUPPORTED_arm_tiny_diet     = y
-LIBCINCDIR_arm_tiny_diet        = $(LIBC_INCLUDE)
+LIBCINCDIR_arm_tiny_diet        = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_arm_tiny_diet        =
 LIBCLIBS_arm_tiny_diet          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain -ldiet_c -ldietlibc_support        \
@@ -553,7 +546,7 @@ CRTN_arm_tiny_diet              =
 LDSCRIPT_arm_tiny_diet          = $(LDS_DEFAULT)
 
 BID_SUPPORTED_arm_tiny_uc       = y
-LIBCINCDIR_arm_tiny_uc          = $(LIBC_INCLUDE)
+LIBCINCDIR_arm_tiny_uc          = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_arm_tiny_uc          =
 LIBCLIBS_arm_tiny_uc            = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain -luc_c -luclibc_support            \
@@ -587,7 +580,7 @@ endif
 
 
 BID_SUPPORTED_arm_sigma0_diet   = y
-LIBCINCDIR_arm_sigma0_diet      = $(LIBC_INCLUDE)
+LIBCINCDIR_arm_sigma0_diet      = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_arm_sigma0_diet      =
 LIBCLIBS_arm_sigma0_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain                                    \
@@ -604,7 +597,7 @@ CRTN_arm_sigma0_diet            =
 LDSCRIPT_arm_sigma0_diet        = $(LDS_DEFAULT)
 
 BID_SUPPORTED_arm_sigma0_uc     = y
-LIBCINCDIR_arm_sigma0_uc        = $(LIBC_INCLUDE)
+LIBCINCDIR_arm_sigma0_uc        = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_arm_sigma0_uc        =
 LIBCLIBS_arm_sigma0_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain                                    \
@@ -674,7 +667,7 @@ LDSCRIPT_arm_l4env_minimal      = $(LDSCRIPT_arm_sigma0)
 # arm_l4env -- default mode
 #
 BID_SUPPORTED_arm_l4env         = y
-LIBCINCDIR_arm_l4env_diet       = $(LIBC_INCLUDE)
+LIBCINCDIR_arm_l4env_diet       = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_arm_l4env_diet       =
 L4LIBS_arm_l4env_diet           = -static -lgeneric_ts -ll4env              \
                                   -ll4rm -ldm_generic -ldm_mem -lthread     \
@@ -697,7 +690,7 @@ CRTN_arm_l4env_diet             =
 LDSCRIPT_arm_l4env_diet         = $(LDS_DEFAULT)
 
 BID_SUPPORTED_arm_l4env_uc      = y
-LIBCINCDIR_arm_l4env_uc         = $(LIBC_INCLUDE)
+LIBCINCDIR_arm_l4env_uc         = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_arm_l4env_uc         =
 L4LIBS_arm_l4env_uc             = $(L4LIBS_arm_l4env_diet)
 LIBCLIBS_arm_l4env_uc           = -nostdlib $(GCCLDNOSTDLIB)                \
@@ -735,7 +728,7 @@ endif
 #
 # arm_loader - applications to be loaded by the L4Env loader.
 #
-LIBCINCDIR_arm_loader_diet      = $(LIBC_INCLUDE)
+LIBCINCDIR_arm_loader_diet      = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_arm_loader_diet      =
 LIBCLIBS_arm_loader_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c $(GCCLIB) -ldiet_c
@@ -744,7 +737,7 @@ CRT0_arm_loader_diet            = $(CRT0_DEFAULT)
 CRTN_arm_loader_diet            =
 LDSCRIPT_arm_loader_diet        = $(LDS_LOADER)
 
-LIBCINCDIR_arm_loader_uc        = $(LIBC_INCLUDE)
+LIBCINCDIR_arm_loader_uc        = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_arm_loader_uc        =
 LIBCLIBS_arm_loader_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c $(GCCLIB) -luc_c
@@ -797,7 +790,7 @@ LDSCRIPT_arm_l4linux            =
 # amd64_tiny (without names and logserver)
 #
 BID_SUPPORTED_amd64_tiny_diet   = y
-LIBCINCDIR_amd64_tiny_diet      = $(LIBC_INCLUDE)
+LIBCINCDIR_amd64_tiny_diet      = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_amd64_tiny_diet      =
 LIBCLIBS_amd64_tiny_diet        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain                                    \
@@ -813,7 +806,7 @@ CRTN_amd64_tiny_diet            =
 LDSCRIPT_amd64_tiny_diet        = $(LDS_DEFAULT)
 
 BID_SUPPORTED_amd64_tiny_uc     = y
-LIBCINCDIR_amd64_tiny_uc        = $(LIBC_INCLUDE)
+LIBCINCDIR_amd64_tiny_uc        = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_amd64_tiny_uc        =
 LIBCLIBS_amd64_tiny_uc          = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
@@ -850,7 +843,7 @@ endif
 # amd64_sigma0 - sigma0 with dietlibc
 #
 BID_SUPPORTED_amd64_sigma0_diet = y
-LIBCINCDIR_amd64_sigma0_diet    = $(LIBC_INCLUDE)
+LIBCINCDIR_amd64_sigma0_diet    = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_amd64_sigma0_diet    =
 LIBCLIBS_amd64_sigma0_diet      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ldiet_c                                  \
@@ -869,7 +862,7 @@ CRTN_amd64_sigma0_diet          =
 LDSCRIPT_amd64_sigma0_diet      = $(LDS_DEFAULT)
 
 BID_SUPPORTED_amd64_sigma0_uc   = y
-LIBCINCDIR_amd64_sigma0_uc      = $(LIBC_INCLUDE)
+LIBCINCDIR_amd64_sigma0_uc      = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_amd64_sigma0_uc      =
 LIBCLIBS_amd64_sigma0_uc        = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_c                                    \
@@ -921,7 +914,7 @@ LDSCRIPT_amd64_l4env_dietlibc_minimal       = $(LDSCRIPT_amd64_sigma0)
 # amd64_l4env - dietlibc and l4env, the default
 #
 BID_SUPPORTED_amd64_l4env_diet  = y
-LIBCINCDIR_amd64_l4env_diet     = $(LIBC_INCLUDE)
+LIBCINCDIR_amd64_l4env_diet     = $(LIBC_INCLUDE_diet)
 LIBCLIBDIR_amd64_l4env_diet     =
 L4LIBS_amd64_l4env_diet         = -static -lgeneric_ts -ll4env              \
                                   -ll4rm -ldm_generic -ldm_mem -lthread     \
@@ -948,7 +941,7 @@ CRT0_amd64_l4env_diet           = $(CRT0_DEFAULT)
 CRTN_amd64_l4env_diet           =
 LDSCRIPT_amd64_l4env_diet       = $(LDS_DEFAULT)
 
-LIBCINCDIR_amd64_l4env_uc         = $(LIBC_INCLUDE)
+LIBCINCDIR_amd64_l4env_uc         = $(LIBC_INCLUDE_uc)
 LIBCLIBDIR_amd64_l4env_uc         =
 L4LIBS_amd64_l4env_uc             = $(L4LIBS_amd64_l4env_diet)
 LIBCLIBS_amd64_l4env_uc           = -nostdlib $(GCCLDNOSTDLIB)                \

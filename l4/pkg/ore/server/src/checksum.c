@@ -25,6 +25,10 @@ unsigned int adler32(unsigned char *buf, unsigned int len)
 {
     unsigned int a=1, b=0;
 
+	/* sanity check */
+	if (!buf)
+		return 0;
+
     while (len) { 
         unsigned tlen = len > 5550 ? 5550 : len;
         len -= tlen;
@@ -48,6 +52,8 @@ unsigned int adler32(unsigned char *buf, unsigned int len)
    return b << 16 | a; 
 }
 
+/* ORe with DDE2.6 uses the CRC implementations from Linux. */
+#ifndef CONFIG_ORE_DDE26
 /* CRC16 checksum algorithm
  */
 unsigned short crc16(unsigned char *buf, int len, short magic) 
@@ -87,4 +93,4 @@ unsigned int crc32(unsigned char *buf, int len, short magic)
 
     return ret;
 }
-
+#endif

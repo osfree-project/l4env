@@ -75,12 +75,7 @@ protected:
 
 // operations
 public:
-    /** creates a copy of this object
-     *  \return a copy of this object
-     */
-    virtual CObject* Clone()
-    { return new CFEOperation(*this); }
-
+    virtual CObject* Clone();
     virtual void Accept(CVisitor&);
     CFETypedDeclarator *FindParameter(string sName);
 

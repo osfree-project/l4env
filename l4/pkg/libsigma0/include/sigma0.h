@@ -4,6 +4,8 @@
 #include <l4/sys/compiler.h>
 #include <l4/sys/types.h>
 
+#define SIGMA0_ID (l4_threadid_t){.id = {.lthread = 0, .task = 2}}
+
 #undef SIGMA0_REQ_MAGIC
 #undef SIGMA0_REQ_MASK
 

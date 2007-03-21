@@ -56,6 +56,14 @@ CFEUnionType::CFEUnionType(CFEUnionType & src)
 CFEUnionType::~CFEUnionType()
 {}
 
+/** creates a copy of this object
+ *  \return a reference to a new union type object
+ */
+CObject* CFEUnionType::Clone()
+{ 
+    return new CFEUnionType(*this);
+}
+
 /** \brief accept the iterations of the visitors
  *  \param v reference to the current visitor
  */

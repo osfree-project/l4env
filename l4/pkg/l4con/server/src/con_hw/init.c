@@ -30,11 +30,13 @@ l4_addr_t      hw_vid_mem_addr, hw_vid_mem_size;
 l4_addr_t      hw_map_vid_mem_addr;
 unsigned short hw_xres, hw_yres;
 unsigned char  hw_bits;
+unsigned short hw_bpl;
 
 static int init_done = 0;
 
 int
 con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
+            unsigned short bpl,
 	    l4_addr_t vid_mem_addr, l4_size_t vid_mem_size,
 	    con_accel_t *accel, l4_uint8_t **map_vid_mem_addr)
 {
@@ -48,6 +50,7 @@ con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
   hw_xres = xres;
   hw_yres = yres;
   hw_bits = *bits;
+  hw_bpl  = bpl;
 
   radeon_register();
   ati128_register();

@@ -3,7 +3,10 @@
 SUBDIRS=	src include doc
 
 DISTCLEANFILES= GNUmakefile GNUmakefile.in
-MAINTAINERCLEANFILES= aclocal.m4 depcomp mkinstalldirs stamp-h stamp-h1 install-sh missing config.h.in configure Makefile.in compile $(PACKAGE)-$(VERSION).tar.gz
+MAINTAINERCLEANFILES= mkinstalldirs stamp-h depcomp install-sh \
+		      config.h.in config.guess config.sub configure \
+		      missing ylwrap aclocal.m4 \
+		      $(PACKAGE)-$(VERSION).tar.gz
 
 dist-hook:
 	@perl -p -i -e 's/doc\/html\/Makefile//g' $(distdir)/configure
@@ -14,7 +17,7 @@ doc:
 install-data-local:
 	@cd doc/manual; $(MAKE) install; cd ../..
 
-cleanall: distclean
+cleanall: maintainer-clean
 	@cp Makefile.template Makefile
 
 .PHONY: doc

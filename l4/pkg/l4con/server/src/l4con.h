@@ -57,8 +57,10 @@ struct l4con_vc
   /* vfb */
   l4_uint8_t    gmode;		 /* graphics mode */
   l4_uint8_t    bpp;		 /* bits per pixel */
-  l4_umword_t   user_xres, user_yres; /* screen dimensions (user visible) */
-  l4_umword_t   user_xofs, user_yofs; /* offsets of user vfb into physical fb */
+  l4_umword_t   client_xres;
+  l4_umword_t   client_yres;     /* screen dimensions (client visible) */
+  l4_umword_t   client_xofs;
+  l4_umword_t   client_yofs;     /* offsets of user vfb into physical fb */
   l4_umword_t   xres, yres;	 /* physical dimensions of fb */
   l4_umword_t   pan_xofs, pan_yofs;
   l4_umword_t   logo_x, logo_y;
@@ -67,10 +69,10 @@ struct l4con_vc
   l4_umword_t   flags;		 /* miscellaneous flags */
   l4_uint8_t    *vfb;		 /* begin of vfb in memory */
   l4_uint8_t    *fb;		 /* whether vfb or h/w */
-  l4_uint8_t    *pan_offset;
 
-  l4_uint8_t    vfb_used;	 /* vfb mode (vfb used or not) */
-  l4_uint8_t    fb_mapped;	 /* framebuffer mapped to client */
+  l4_uint8_t    vfb_in_server;	 /* =1: server has allocated a dataspace */
+  l4_uint8_t    save_restore;    /* =1: save/restore to *vfb */
+  l4_uint8_t    fb_mapped;	 /* =1: phys. framebuffer mapped to client */
   l4_uint32_t   vfb_size;	 /* size of vfb; depends on g_mode */
   l4lock_t      fb_lock;	 /* thread is `drawing' - mutex for fb */
   const l4con_pslim_color_t *color_tab;
@@ -86,6 +88,7 @@ struct l4con_vc
   pslim_sync_fn do_sync;	 /* current function for sync acceleration */
   pslim_drty_fn do_drty;	 /* function for marking framebuffer areas 
 				  * as dirty after direct framebuffer access */
+  l4_threadid_t clients[CONFIG_MAX_CLIENTS];
 };
 
 #endif /* !_CON_H */

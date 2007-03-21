@@ -4,15 +4,15 @@
 checksum.ro: genchecksum $(KERNEL) $(BOOT)
 	$(CHKSUM_MESSAGE)"$(BOOT) text section"
 	$(VERBOSE)$(OBJDUMP) \
-	  --start-address=0x`nm $(KERNEL) | grep "\<_start\>" | cut -f1 -d' '` \
-	  --stop-address=0x`nm $(KERNEL) | grep _etext | cut -f1 -d' '` \
+	  --start-address=0x`$(NM) $(KERNEL) | grep "\<_start\>" | cut -f1 -d' '` \
+	  --stop-address=0x`$(NM) $(KERNEL) | grep _etext | cut -f1 -d' '` \
 	  -s $(BOOT) | cut -f3,4,5,6 -d' ' | ./genchecksum > $@
 
 checksum.rw: genchecksum $(KERNEL) $(BOOT)
 	$(CHKSUM_MESSAGE)"$(BOOT) data section"
 	$(VERBOSE)$(OBJDUMP) \
-	  --start-address=0x`nm $(KERNEL) | grep _etext | cut -f1 -d' '` \
-	  --stop-address=0x`nm $(KERNEL) | grep _edata | cut -f1 -d' '` \
+	  --start-address=0x`$(NM) $(KERNEL) | grep _etext | cut -f1 -d' '` \
+	  --stop-address=0x`$(NM) $(KERNEL) | grep _edata | cut -f1 -d' '` \
 	  -s $(BOOT) | cut -f3,4,5,6 -d' ' | ./genchecksum > $@
 
 $(CHECKSUM): checksum.ro checksum.rw setchecksum $(BOOT)
@@ -24,15 +24,15 @@ $(CHECKSUM): checksum.ro checksum.rw setchecksum $(BOOT)
 
 setchecksum: setchecksum.c
 	$(COMP_MESSAGE)
-	$(VERBOSE)$(CC) -O2 -Wall -o $@ $^
+	$(VERBOSE)$(HOST_CC) -O2 -Wall $(HOST_CPPFLAGS) $(HOST_CFLAGS) -o $@ $^
 
 genchecksum: $(OBJ_CHECKSUM)
 	$(LINK_MESSAGE)
-	$(VERBOSE)$(CXX) -fno-rtti -fno-exceptions -o $@ $^ 
+	$(VERBOSE)$(HOST_CXX) -fno-rtti -fno-exceptions $(HOST_CPPFLAGS) $(HOST_CXXFLAGS) -o $@ $^ 
 
 $(OBJ_CHECKSUM): %.o: %.cc
 	$(COMP_MESSAGE)
-	$(VERBOSE)$(CXX) -fno-rtti -fno-exceptions -c -MD -MP -MF .$*.cc.d.new -O2 $< -o $@
+	$(VERBOSE)$(HOST_CXX) -fno-rtti -fno-exceptions -c -MD -MP -MF .$*.cc.d.new -O2 $(HOST_CPPFLAGS) $(HOST_CXXFLAGS) $< -o $@
 	@mv .$*.cc.d.new .$*.cc.d
 
 clean-CHECKSUM:

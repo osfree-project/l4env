@@ -51,7 +51,8 @@ map_io_mem(l4_addr_t paddr, l4_size_t size, int cacheable,
 	Panic("Error %d reserving region size=%dMB for %s mem",
 	      error, size>>20, id);
 
-      LOG_printf("Mapping I/O %s mem %08lx => %08lx+%06lx [%dkB]\n",
+      LOG_printf("Mapping I/O %s mem "l4_addr_fmt" => "l4_addr_fmt
+                 "+%06lx [%dkB]\n",
 	         id, paddr+offset, *vaddr, offset, size>>10);
 
       if (l4_is_invalid_id(my_task_pager_id))
@@ -84,7 +85,8 @@ map_io_mem(l4_addr_t paddr, l4_size_t size, int cacheable,
 					    &offset)) == 0)
 	Panic("Can't request mem region from l4io.");
 
-      LOG_printf("Mapped I/O %s mem %08lx => %08lx+%06lx [%dkB] via l4io\n",
+      LOG_printf("Mapped I/O %s mem "l4_addr_fmt" => "l4_addr_fmt
+                 "+%06lx [%dkB] via l4io\n",
 	  id, paddr, *vaddr, offset, size >> 10);
 #else
       Panic("Use of l4io not supported.");
@@ -112,8 +114,8 @@ unmap_io_mem(l4_addr_t addr, l4_size_t size, const char *id, l4_addr_t vaddr)
 	  vaddr += L4_SUPERPAGESIZE;
 	} while (vaddr < vend);
 
-      if (l4rm_area_release_addr((void*)(vaddr1 & L4_SUPERPAGEMASK)))
-	Panic("Error releasing region %08lx-%08lx", 
+      if (l4rm_area_release_addr((void*)l4_trunc_superpage(vaddr1)))
+	Panic("Error releasing region "l4_addr_fmt"-"l4_addr_fmt, 
 	    vaddr1, vaddr1+size);
 
       LOG_printf("Unmapped I/O %s mem\n", id);
@@ -124,7 +126,7 @@ unmap_io_mem(l4_addr_t addr, l4_size_t size, const char *id, l4_addr_t vaddr)
       int error;
 
       if ((error = l4io_release_mem_region(addr, size)) < 0)
-	Panic("Error %d releasing region %08lx-%08lx at l4io", 
+	Panic("Error %d releasing region "l4_addr_fmt"-"l4_addr_fmt" at l4io",
 	    error, addr, addr+size);
       LOG_printf("Unmapped I/O %s mem via l4io\n", id);
 #else

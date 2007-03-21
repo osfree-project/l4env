@@ -9,7 +9,7 @@ $(LINES):	$(PROG_LINES) $(KERNEL)
 
 $(PROG_LINES):	genlines.c
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(CC) -O2 -Wall -o $@ $^
+		$(VERBOSE)$(HOST_CC) -O2 -Wall $(HOST_CPPFLAGS) $(HOST_CXXFLAGS) -o $@ $^
 
 clean-LINES:
 		rm -f $(LINES) $(PROG_LINES)

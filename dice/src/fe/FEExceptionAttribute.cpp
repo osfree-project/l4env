@@ -46,3 +46,11 @@ CFEExceptionAttribute::CFEExceptionAttribute(CFEExceptionAttribute & src)
 /** clean up the exception attribute (free the exception names */
 CFEExceptionAttribute::~CFEExceptionAttribute()
 { }
+
+/** creates a copy of this object
+ *  \return a copy of this object
+ */
+CObject* CFEExceptionAttribute::Clone()
+{ 
+    return new CFEExceptionAttribute(*this);
+}

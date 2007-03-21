@@ -35,8 +35,8 @@
 #include "template.h"
 #include <vector>
 
-/**    \class CFEStructType
- *    \ingroup frontend
+/** \class CFEStructType
+ *  \ingroup frontend
  *  \brief represent the struct type
  */
 class CFEStructType : public CFEConstructedType
@@ -60,14 +60,9 @@ protected:
 // Operations
 public:
     virtual void Accept(CVisitor&);
+    virtual CObject* Clone();
 
     CFETypedDeclarator* FindMember(string sName);
-
-    /** copies the struct object
-     *  \return a reference to the new struct object
-     */
-    virtual CObject* Clone()
-    { return new CFEStructType(*this); }
 
 // Attributes
 public:

@@ -47,6 +47,7 @@ libc/sysdeps/linux/common/bits/posix1_lim.h
 libc/sysdeps/linux/common/bits/posix2_lim.h
 libc/sysdeps/linux/common/bits/posix_opt.h
 libc/sysdeps/linux/common/bits/sched.h
+libc/sysdeps/linux/common/bits/select.h
 libc/sysdeps/linux/common/bits/sigaction.h
 libc/sysdeps/linux/common/bits/sigcontext.h
 libc/sysdeps/linux/common/bits/siginfo.h

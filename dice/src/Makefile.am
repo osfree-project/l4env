@@ -51,7 +51,6 @@ dice_LDFLAGS = -export-dynamic
 endif
 
 AM_CPPFLAGS=	-D__USER__="\"$(USER)@`hostname`\"" \
-		-D__L4DIR__="\"`pwd`/${top_builddir}/@L4DIR@\"" \
 		-D__DICEINCDIR__="\"${includedir}\""
 
 AM_CXXFLAGS = -Wunused -Wunused-parameter -Wall -W \

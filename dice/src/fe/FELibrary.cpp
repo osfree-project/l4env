@@ -83,6 +83,14 @@ CFELibrary::CFELibrary(CFELibrary & src)
 CFELibrary::~CFELibrary()
 { }
 
+/** creates a copy of this object
+ *  \return a copy of this object
+ */
+CObject* CFELibrary::Clone()
+{ 
+    return new CFELibrary(*this);
+}
+
 /** \brief add the components of the library
  *  \param pComponents the components to add
  */

@@ -24,7 +24,6 @@
 #include <l4/names/libnames.h>
 #include <l4/loader/loader-client.h>
 #include <l4/env/env.h>
-#include <l4/exec/exec.h>
 #include <l4/dm_mem/dm_mem.h>
 
 typedef char l4_page_t[L4_PAGESIZE];

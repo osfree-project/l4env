@@ -65,7 +65,7 @@ endmenu
 
 mainmenu_option next_comment
 comment 'Paths and Directories'
-string 'DROPS_STDDIR' DROPS_STDDIR '/home/drops'
+string 'DROPS_STDDIR' DROPS_STDDIR '/path/to/drops'
 string 'DROPS_INSTDIR' DROPS_INSTDIR '$(DROPS_STDDIR)'
 endmenu
 
@@ -206,6 +206,7 @@ mainmenu_option next_comment
   fi
 
   bool 'Enable RELEASE flag' RELEASE_MODE
+  bool 'Do not build anything outside l4 directory' BID_BUILD_L4DIR_ONLY
 
   string 'Configuration label' CONFIG_LABEL
 

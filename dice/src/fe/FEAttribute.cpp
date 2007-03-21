@@ -48,6 +48,14 @@ CFEAttribute::CFEAttribute(CFEAttribute & src):CFEBase(src)
 CFEAttribute::~CFEAttribute()
 { }
 
+/** creates a copy of this object
+ *  \return a copy of this object
+ */
+CObject* CFEAttribute::Clone()
+{ 
+    return new CFEAttribute(*this);
+}
+
 /** returns the attribute's type
  *  \return the attribute's type
  */

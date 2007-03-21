@@ -286,6 +286,7 @@ Cpu::Vendor_table const Cpu::amd_table[] FIASCO_INITDATA =
   { 0xfff0ff0,  0x20fb0,    0,      "Athlon 64 X2 (Manchester)" },
   { 0xfff0ff0,  0x20fc0,    0,      "Sempron (Palermo)"         },
   { 0xfff0ff0,  0x20ff0,    0,      "Athlon 64 (Venice)"        },
+  { 0xfff0ff0,  0x40f10,    0,      "Opteron (Santa Rosa)"      },
   { 0xfff0ff0,  0x40f30,    0,      "Athlon 64 X2 (Windsor)"    },
   { 0xfff0ff0,  0x40f80,    0,      "Turion 64 X2 (Taylor)"     },
   { 0x0,        0x0,        0,      ""                          }

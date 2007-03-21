@@ -33,7 +33,7 @@ struct pslim_offset
 /* word_t endskip_y; */	/* snip lines */
 };
 
-extern l4_uint8_t *vis_offs;
+extern l4_offs_t vis_offs;
 
 static inline void _bmap16msb(l4_uint8_t*, l4_uint8_t*, l4_uint32_t, 
 			      l4_uint32_t, l4_uint32_t, l4_uint32_t, 
@@ -82,7 +82,7 @@ static inline void sw_bmap(struct l4con_vc*, l4_int16_t, l4_int16_t,
 			   l4_uint8_t *bmap, l4_uint32_t fgc, l4_uint32_t bgc, 
 			   struct pslim_offset*, l4_uint8_t mode);
 static inline void  sw_set(struct l4con_vc*, l4_int16_t, l4_int16_t, 
-			   l4_uint32_t, l4_uint32_t,
+			   l4_uint32_t, l4_uint32_t, l4_uint32_t, l4_uint32_t,
 			   l4_uint8_t *pmap, struct pslim_offset*);
 static inline void sw_cscs(struct l4con_vc*, l4_int16_t, l4_int16_t, 
 			   l4_uint32_t, l4_uint32_t,
@@ -117,10 +117,10 @@ clip_rect(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect)
 
   if (from_user)
     {
-      rect->x += vc->user_xofs;
-      rect->y += vc->user_yofs;
-      max_x    = vc->user_xres;
-      max_y    = vc->user_yres;
+      rect->x += vc->client_xofs;
+      rect->y += vc->client_yofs;
+      max_x    = vc->client_xres;
+      max_y    = vc->client_yres;
     }
 
   if ((rect->x > max_x) || (rect->y > max_y))
@@ -164,10 +164,10 @@ clip_rect_offset(struct l4con_vc *vc, int from_user,
 
   if (from_user)
     {
-      rect->x += vc->user_xofs;
-      rect->y += vc->user_yofs;
-      max_x    = vc->user_xres;
-      max_y    = vc->user_yres;
+      rect->x += vc->client_xofs;
+      rect->y += vc->client_yofs;
+      max_x    = vc->client_xres;
+      max_y    = vc->client_yres;
     }
 
   if ((rect->x > max_x) || (rect->y > max_y))
@@ -216,10 +216,10 @@ clip_rect_dxy(struct l4con_vc *vc, int from_user,
 
   if (from_user)
     {
-      rect->x += vc->user_xofs;
-      rect->y += vc->user_yofs;
-      max_x    = vc->user_xres;
-      max_y    = vc->user_yres;
+      rect->x += vc->client_xofs;
+      rect->y += vc->client_yofs;
+      max_x    = vc->client_xres;
+      max_y    = vc->client_yres;
     }
 
   /* clip source rectangle */
@@ -837,21 +837,22 @@ sw_bmap(struct l4con_vc *vc, l4_int16_t x, l4_int16_t y, l4_uint32_t w,
 
 static inline void
 sw_set(struct l4con_vc *vc, l4_int16_t x, l4_int16_t y, l4_uint32_t w, 
-       l4_uint32_t h, l4_uint8_t *pmap, struct pslim_offset* offset)
+       l4_uint32_t h, l4_uint32_t xoffs, l4_uint32_t yoffs,
+       l4_uint8_t *pmap, struct pslim_offset* offset)
 {
   l4_uint8_t *vfb = (l4_uint8_t*) vc->fb;
   l4_uint32_t bytepp = vc->bytes_per_pixel;
   l4_uint32_t bwidth = vc->bytes_per_line;
   l4_uint32_t pwidth;
   
-  OFFSET(x, y, vfb, bytepp);
+  OFFSET(x+xoffs, y+yoffs, vfb, bytepp);
 
   if (!pmap)
     {
       /* copy from direct mapped framebuffer of client */
       /* bwidth may be different from xres*bytepp: e.g. VMware */
       pwidth = vc->xres*bytepp;
-      pmap   = vc->vfb + y*pwidth + x*bytepp - (l4_addr_t)vis_offs;
+      pmap   = vc->vfb + y*pwidth + x*bytepp;
     }
   else
     {
@@ -878,7 +879,7 @@ sw_set(struct l4con_vc *vc, l4_int16_t x, l4_int16_t y, l4_uint32_t w,
 
   /* force redraw of changed screen content (needed by VMware) */
   if (vc->do_drty)
-    vc->do_drty(x, y, w, h);
+    vc->do_drty(x+xoffs, y+yoffs, w, h);
 }
 
 void 
@@ -978,8 +979,8 @@ pslim_set(struct l4con_vc *vc, int from_user, l4con_pslim_rect_t *rect,
     /* nothing todo */
     return;
 
-  sw_set(vc, rect->x+vc->pan_xofs, rect->y+vc->pan_yofs, 
-             rect->w, rect->h, (l4_uint8_t*) pmap, &offset);
+  sw_set(vc, rect->x, rect->y, rect->w, rect->h,
+             vc->pan_xofs, vc->pan_yofs, (l4_uint8_t*) pmap, &offset);
 }
 
 /* SVGAlib calls this:	COPYBOX */

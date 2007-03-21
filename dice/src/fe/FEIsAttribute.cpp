@@ -48,3 +48,11 @@ CFEIsAttribute::CFEIsAttribute(CFEIsAttribute & src)
 CFEIsAttribute::~CFEIsAttribute()
 {
 }
+
+/** creates a copy of this object
+ *  \return a copy of this object
+ */
+CObject* CFEIsAttribute::Clone()
+{ 
+    return new CFEIsAttribute(*this);
+}

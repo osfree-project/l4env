@@ -23,7 +23,6 @@ void
 init_gmode(void)
 {
   struct arm_lcd_ops *lcd;
-  l4_size_t vid_mem_size;
 
   if (!(lcd = arm_lcd_probe()))
     {
@@ -33,7 +32,7 @@ init_gmode(void)
 
   printf("Using LCD driver: %s\n", lcd->get_info());
 
-  vid_mem_size    = lcd->get_video_mem_size();
+  gr_vmem_size    = lcd->get_video_mem_size();
   VESA_YRES       = lcd->get_screen_height();
   VESA_XRES       = lcd->get_screen_width();
   VESA_BITS       = lcd->get_bpp();
@@ -46,8 +45,9 @@ init_gmode(void)
   VESA_BLUE_OFFS  = 11;
   VESA_BLUE_SIZE  = 5;
 
-  gr_vmem  = lcd->get_fb();
-  vis_vmem = gr_vmem;
+  gr_vmem         = lcd->get_fb();
+  gr_vmem_maxmap  = gr_vmem + gr_vmem_size;
+  vis_vmem        = gr_vmem;
   if (!gr_vmem)
     Panic("Could not setup video memory");
 

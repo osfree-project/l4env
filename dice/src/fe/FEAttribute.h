@@ -61,11 +61,7 @@ protected:
 
 //operations
 public:
-    /** creates a copy of this object
-     *  \return a copy of this object
-     */
-    virtual CObject* Clone()
-    { return new CFEAttribute(*this); }
+    virtual CObject* Clone();
     virtual ATTR_TYPE GetAttrType();
     bool Match(ATTR_TYPE type);
 

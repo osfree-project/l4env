@@ -65,7 +65,11 @@ L4_INLINE l4_threadid_t l4_myself()
      "r8", "r9" PIC_CLOBBER, "r12", "r14", "memory"
      );
 
-  return (l4_threadid_t)id.raw;
+#ifdef __cplusplus
+  return l4_threadid_t::_convert(id);
+#else
+  return id;
+#endif
 }
 
 L4_INLINE l4_threadid_t l4_myself_noprof()
@@ -91,7 +95,11 @@ L4_INLINE l4_threadid_t l4_myself_noprof()
      "r8", "r9" PIC_CLOBBER, "r12", "r14", "memory"
      );
 
+#ifdef __cplusplus
+  return l4_threadid_t::_convert(id);
+#else
   return id;
+#endif
 }
 
 L4_INLINE void

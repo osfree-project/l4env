@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stddef.h>
 #include <l4/sys/l4int.h>
 #include <l4/sys/kdebug.h>
 #include <l4/util/util.h>
@@ -32,7 +33,7 @@ memcpy(void *dst, const void *src, size_t len)
 }
 
 int
-memcmp(const void *dst, const void *src, unsigned count)
+memcmp(const void *dst, const void *src, size_t count)
 {
   register int r;
   register const char *d=dst;
@@ -49,7 +50,7 @@ memcmp(const void *dst, const void *src, unsigned count)
 }
 
 void
-*memset(void *dest, int c, unsigned int n)
+*memset(void *dest, int c, size_t n)
 {
   register char *d = dest;
   while (n-- > 0)
@@ -58,7 +59,7 @@ void
 }
 
 int
-strncmp(const char *s1, const char *s2, unsigned int n)
+strncmp(const char *s1, const char *s2, size_t n)
 {
   for (; n>0; s1++, s2++, n--)
     {
@@ -80,7 +81,7 @@ strcmp(const char *s1, const char *s2)
 }
 
 char*
-strncpy(char *dest, const char *src, unsigned int n)
+strncpy(char *dest, const char *src, size_t n)
 {
   register char *ret = dest;
   while (n > 0) 
@@ -105,7 +106,7 @@ strcpy(char *dest, const char *src)
   return ret;
 }
 
-unsigned
+size_t
 strlen(const char *s)
 {
   const char *o = s;

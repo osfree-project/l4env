@@ -231,6 +231,24 @@ con_vc_close_component(CORBA_Object _dice_corba_obj,
 }
 
 
+/*** DUMMY (FOR COMPATIBILITY TO L4CON) ***/
+long
+con_vc_share_component (CORBA_Object _dice_corba_obj,
+                        const l4_threadid_t *client,
+                        CORBA_Server_Environment *_dice_corba_env) {
+	return 0;
+}
+
+
+/*** DUMMY (FOR COMPATIBILITY TO L4CON) ***/
+long
+con_vc_revoke_component (CORBA_Object _dice_corba_obj,
+                         const l4_threadid_t *client,
+                         CORBA_Server_Environment *_dice_corba_env) {
+	return 0;
+}
+
+
 /*** DRAW FILLED RECTANGLE ***/
 long
 con_vc_pslim_fill_component(CORBA_Object _dice_corba_obj,

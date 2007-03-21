@@ -77,12 +77,7 @@ protected:
 
 // Operations
 public:
-    /** creates a copy of this object
-     *  \return a copy of this object
-     */
-    virtual CObject* Clone()
-    { return new CFEInterface(*this); }
-
+    virtual CObject* Clone();
     virtual CFEInterface* FindBaseInterface(string sName);
     virtual void AddBaseInterface(CFEInterface* pBaseInterface);
 
@@ -128,6 +123,10 @@ public:
      *  \brief the interface's type definitions
      */
     CSearchableCollection<CFETypedDeclarator, string> m_Typedefs;
+    /** \var CSearchableCollection<CFETypedDeclarator, string> m_Exceptions
+     *  \brief the interface's exceptions
+     */
+    CSearchableCollection<CFETypedDeclarator, string> m_Exceptions;
     /** \var CCollection<CFEIdentifier> m_BaseInterfaceNames
      *  \brief holds the base interface names
      */

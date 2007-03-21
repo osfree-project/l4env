@@ -60,11 +60,7 @@ protected:
     CFEIsAttribute(CFEIsAttribute &src);
 
 public:
-    /** creates a copy of this object
-     *  \return a copy of this object
-     */
-    virtual CObject* Clone()
-    { return new CFEIsAttribute(*this); }
+    virtual CObject* Clone();
 
 // attributes
 public:

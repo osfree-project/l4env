@@ -101,6 +101,18 @@ library con
 		 [out] unsigned long *sbuf_2size,
 		 [out] unsigned long *sbuf_3size);
 
+      /** Allow client to access the console and map the physical
+       *  framebuffer.
+       * \ingroup idl_con_vc
+       * \param  client         thread ID of client to share */
+      long share([in] l4_threadid_t client);
+
+      /** Revoke right to access the console and map the physcial
+       *  framebuffer.
+       * \ingroup idl_con_vc
+       * \param  client         thread ID of client to revoke */
+      long revoke([in] l4_threadid_t client);
+
       /** Close virtual console.
        * \ingroup idl_con_vc
        *
@@ -279,8 +291,9 @@ library con
        * \retval offset		offset into mapped memory
        *
        * \return 0 for success, negative error codes otherwise */
-      long graph_mapfb([out] fpage *page,
-		       [out] unsigned long *offset);
+      long graph_mapfb([in]  unsigned long fb_offset,
+                       [out] fpage *page,
+		       [out] unsigned long *page_offset);
 
       /** Setup input event filter.
        * \ingroup idl_con_vc

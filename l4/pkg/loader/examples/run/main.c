@@ -29,7 +29,6 @@
 #include <l4/events/events.h>
 #include <l4/thread/thread.h>
 #include <l4/generic_ts/generic_ts.h>
-#include <l4/exec/exec.h>
 #include <l4/log/l4log.h>
 #include <l4/util/reboot.h>
 #include <l4/util/parse_cmd.h>
@@ -77,6 +76,7 @@ help(void)
 "  N ... list really all registered names at name server\n"
 "  p ... dump dataspace manager's pool info to L4 debug console\n"
 "  r ... dump rmgr memory info to L4 debug console\n"
+"  s ... sigma0 debug dump\n"
 "  K ... enter kernel debugger\n"
 "  Q ... quit\n"
 "  ^ ... reboot machine\n");
@@ -761,6 +761,14 @@ command_loop(void)
 	    exit(0);
 	  else
 	    printf(" go on.\n");
+	  break;
+	case 's':
+	    {
+	      l4_threadid_t s0id = L4_NIL_ID;
+	      s0id.id.task = 2;
+	      printf("SIGMA0 dump:\n");
+	      l4sigma0_debug_dump(s0id);
+	    }
 	  break;
 	default:
 	  printf("## invalid command\n");

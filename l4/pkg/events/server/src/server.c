@@ -48,6 +48,9 @@
 /* set to nonzero to enable debugging the malloc function */
 static int debug_malloc = 0;
 
+char libc_backend_self_mem[64 << 10] __attribute__((aligned(L4_PAGESIZE)));
+const int libc_backend_self_mem_size = sizeof(libc_backend_self_mem);
+
 int verbosity = 0;
 
 /* the  event-nr counter */
