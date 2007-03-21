@@ -1,7 +1,0 @@
-L4 Executable Interpreter.
-
-The L4 exec server interprets L4 binaries and creates appropriate dataspaces
-containing the program sections. A binary may depend on a shared library which
-is additionally loaded. For further documentation on how to start programs on
-L4 see the loader package. For internal documentation of the exec package see
-the doc directory.

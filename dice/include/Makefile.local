@@ -1,8 +1,0 @@
-PKGNAME			= dice
-INSTALL_INC_PREFIX 	= 
-
--include $(L4DIR)/mk/include.mk
-
-install-data-local: all
-
-.PHONY: all
