@@ -3,6 +3,7 @@
 
   (c) Han-Wen Nienhuys <hanwen@cs.uu.nl> 1998
   (c) Jork Loeser <jork.loeser@inf.tu-dresden.de> 2002
+  (c) Michael Roitzsch <mroi@os.inf.tu-dresden.de> 2007
  */
 
 #include <stdio.h>
@@ -18,12 +19,25 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/syscall.h>
-#include <asm/unistd.h>
 #include <unistd.h>
 /* Assume GNU as target platform. We need this in dlfcn.h */
 #define __USE_GNU
 #include <dlfcn.h>
 #include "gendep.h"
+
+#ifdef __ELF__
+#  define OPEN    __open
+#  define OPEN64  __open64
+#  define FOPEN   __fopen
+#  define FOPEN64 __fopen64
+#  define UNLINK  __unlink
+#else
+#  define OPEN    open
+#  define OPEN64  open64
+#  define FOPEN   fopen
+#  define FOPEN64 fopen64
+#  define UNLINK  unlink
+#endif
 
 #define VERBOSE 0	/* set to 1 to log open/unlink calls */
 
@@ -32,15 +46,13 @@
   This breaks if we hook gendep onto another library that overrides open(2).
   (zlibc comes to mind)
  */
-static int
-real_open (const char *fn, int flags, int mode)
+static int real_open (const char *fn, int flags, int mode)
 {
   if(VERBOSE) printf("real_open(%s)\n", fn);
   return (syscall(SYS_open, (fn), (flags), (mode)));
 }
 
-int
-__open (const char *fn, int flags, ...)
+int OPEN(const char *fn, int flags, ...)
 {
   int rv ;
   va_list p;
@@ -72,7 +84,7 @@ static int real_open64(const char*path, int flag, int mode){
   return f_open64(path, flag, mode);
 }
 
-int __open64(const char*path, int flag, int mode){
+int OPEN64(const char*path, int flag, int mode){
   int f;
 
   if(VERBOSE) printf("open64(%s)\n", path);
@@ -101,7 +113,7 @@ static FILE* real_fopen(const char*path, const char*mode){
   return f_fopen(path, mode);
 }
 
-FILE* __fopen(const char*path, const char*mode){
+FILE* FOPEN(const char*path, const char*mode){
   FILE *f;
   int binmode;
 
@@ -136,7 +148,7 @@ static FILE* real_fopen64(const char*path, const char*mode){
   return f_fopen64(path, mode);
 }
 
-FILE* __fopen64(const char*path, const char*mode){
+FILE* FOPEN64(const char*path, const char*mode){
   FILE *f;
   int binmode;
 
@@ -154,15 +166,13 @@ FILE* __fopen64(const char*path, const char*mode){
 }
 
 /* ----------------------------------------------------------------------- */
-static int
-real_unlink (const char *fn)
+static int real_unlink (const char *fn)
 {
   if(VERBOSE) printf("real_unlink(%s)\n", fn);
   return syscall(SYS_unlink, (fn));
 }
 
-int
-__unlink (const char *fn)
+int UNLINK(const char *fn)
 {
   int rv ;
     
@@ -175,8 +185,10 @@ __unlink (const char *fn)
 }
 
 /* ----------------------------------------------------------------------- */
+#ifdef __ELF__
 int open (const char *fn, int flags, ...) __attribute__ ((alias ("__open")));
 int open64 (const char *fn, int flags, ...) __attribute__ ((alias ("__open64")));
 int unlink(const char *fn) __attribute__ ((alias ("__unlink")));
 FILE *fopen (const char *path, const char *mode) __attribute__ ((alias ("__fopen")));
 FILE *fopen64 (const char *path, const char *mode) __attribute__ ((alias ("__fopen64")));
+#endif

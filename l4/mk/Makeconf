@@ -164,14 +164,22 @@ ifeq ($(origin PKGDIR_OBJ),undefined)
 PKGDIR_OBJ     := $(call absfilename,$(OBJ_DIR)/$(PKGDIR))
 endif
 
-#$(warning PKGDIR: $(PKGDIR))
-#$(warning OBJ_BASE: $(OBJ_BASE))
-#$(warning L4DIR_ABS: $(L4DIR_ABS))
-#$(warning SRC_BASE_ABS: $(SRC_BASE_ABS))
-#$(warning PKGDIR_ABS: $(PKGDIR_ABS))
-#$(warning SRC_DIR: $(SRC_DIR))
-#$(warning OBJ_DIR: $(OBJ_DIR))
-##$(warning PKGDIR_OBJ: $(PKGDIR_OBJ))
+# sanity check the object dir
+ifneq ($(SRC_BASE_ABS),$(OBJ_BASE))
+ifeq ($(SRC_DIR),$(OBJ_DIR))
+$(warning Sorry, your object or source path became garbled.)
+$(warning OBJ_BASE: $(OBJ_BASE))
+$(warning SRC_BASE_ABS: $(SRC_BASE_ABS))
+$(warning SRC_DIR: $(SRC_DIR))
+$(warning OBJ_DIR: $(OBJ_DIR))
+$(warning PKGDIR: $(PKGDIR))
+$(warning L4DIR_ABS: $(L4DIR_ABS))
+$(warning PKGDIR_ABS: $(PKGDIR_ABS))
+$(warning PKGDIR_OBJ: $(PKGDIR_OBJ))
+$(error Please investigate.)
+endif
+endif
+
 
 OBJ_DIR_EXPORT = $(OBJ_DIR)
 export OBJ_DIR_EXPORT
@@ -227,10 +235,17 @@ ifneq ($(HAVE_LDSO),)
 # arg3 - [opt] name of the dependency file. If unset, .<arg2>.d will be used.
 ifeq ($(origin BID_LIBGENDEP), undefined)
 BID_LIBGENDEP := $(firstword $(wildcard $(call absfilename, \
-				$(L4DIR)/tool/gendep/libgendep.so \
+				$(OBJ_BASE)/tool/gendep/libgendep.so \
 				$(DROPS_STDDIR)/tool/lib/libgendep.so )))
 endif
-MAKEDEP=LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_TARGET=$(if $(2),$(2),$@) \
+
+ifeq ($(HOST_SYSTEM),linux)
+	LD_PRELOAD = LD_PRELOAD
+endif
+ifeq ($(HOST_SYSTEM),darwin)
+	LD_PRELOAD = DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES
+endif
+MAKEDEP=$(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_TARGET=$(if $(2),$(2),$@) \
 		    GENDEP_BINARY=$(1) $(if $(3),GENDEP_DEPFILE=$(3))
 endif
 
@@ -299,11 +314,11 @@ $(SUBDIRS):
 # we know that SUBDIRS isn't empty, hence we can avoid the dir-test
 scrub clean cleanall::
 	$(VERBOSE)set -e; $(foreach i,$(SUBDIRS), \
-		PWD=$(PWD)/$$i $(MAKE) -C $i $@ $(MKFLAGS) $(MKFLAGS_$i);)
+		PWD=$(PWD)/$(i) $(MAKE) -C $(i) $@ $(MKFLAGS) $(MKFLAGS_$(i));)
 
 install:: $(SUBDIRS)
 	$(VERBOSE)set -e; $(foreach i,$(SUBDIRS), \
-		PWD=$(PWD)/$$i $(MAKE) -C $i $@ $(MKFLAGS) $(MKFLAGS_$i);)
+		PWD=$(PWD)/$(i) $(MAKE) -C $(i) $@ $(MKFLAGS) $(MKFLAGS_$(i));)
 
 endif
 
@@ -366,7 +381,7 @@ DEPS	+= $(GENERAL_D_LOC)
 
 ifneq ($(DEPENDS_PKGS),)
 DEPENDS_PKGS_MISSING := $(strip $(foreach i,$(DEPENDS_PKGS),		\
-	                          $(if $(wildcard $(L4DIR)/pkg/$i),,$i)))
+	                          $(if $(wildcard $(L4DIR)/pkg/$(i)),,$(i))))
 
 ifneq ($(DEPENDS_PKGS_MISSING),)
 # clear TARGET to prevent building anything

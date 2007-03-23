@@ -4,7 +4,7 @@
  * \file   generic_io/lib/include/__macros.h
  * \brief  L4Env I/O Client Library Support Macros
  *
- * \date   05/28/2003
+ * \date   2007-03-23
  * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
  */
@@ -22,14 +22,22 @@
 
 #include "generic_io-client.h"
 
+/**
+ * @brief The minimal page size used for client IO memory requests.
+ *
+ * This size used to be super page size and is now page size by default.
+ */
+#define GENERIC_IO_MIN_PAGEORDER L4_LOG2_PAGESIZE
+
 /* prototypes */
-extern inline int nLOG2(l4_uint32_t);
+extern inline int nLOG2(unsigned long);
 extern inline int DICE_ERR(int, CORBA_Environment*);
+extern inline unsigned long generic_io_trunc_page(unsigned long);
 
 /**
  * \brief LOG2(word) and round up
  */
-extern inline int nLOG2(l4_uint32_t word)
+extern inline int nLOG2(unsigned long word)
 {
   int tmp;
 
@@ -63,6 +71,13 @@ extern inline int DICE_ERR(int ret, CORBA_Environment *_env)
     }
   else
     return ret;
+}
+
+
+extern inline
+unsigned long generic_io_trunc_page(unsigned long addr)
+{
+  return addr & ~((1UL << GENERIC_IO_MIN_PAGEORDER) - 1);
 }
 
 #endif

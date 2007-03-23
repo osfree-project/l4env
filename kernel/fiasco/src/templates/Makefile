@@ -5,9 +5,7 @@
 # and change srcdir to the relative path to your fiasco/src.
 #
 
-SAMPLE_CONFIGS := ia32-short ia32-noshort ia32-ndebug \
-		  ux-short ux-noshort ia32-smas\
-		  arm-x0
+SAMPLE_CONFIGS := $(subst globalconfig.out.,,$(wildcard globalconfig.out.*))
 
 srcdir = ../
 
@@ -20,10 +18,14 @@ testconfig:
 	  mv globalconfig.out globalconfig.out.$(cfg); )
 
 refresh:
-	$(foreach cfg,$(SAMPLE_CONFIGS), \
-	  cp globalconfig.out.$(cfg) globalconfig.out ; \
+	for cfg in $(SAMPLE_CONFIGS); do                                 \
+	  cp globalconfig.out.$$cfg globalconfig.out;                    \
           CONFIG_BANNER_STRING="\"Fiasco - $(cfg)\"" make regenconfig && \
-	  mv globalconfig.out globalconfig.out.$(cfg); )
+	  sed -e '/^# Generated on: /d' -e '/^# Linux version /d '       \
+	      -e '/^# At: /d' globalconfig.out > globalconfig.out.$$cfg; \
+	  $(RM) globalconfig.out;                                        \
+	done
+	$(RM) rules.out
 
 
 %:

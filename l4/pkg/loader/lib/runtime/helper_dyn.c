@@ -1,7 +1,7 @@
 /* $Id$ */
 /**
- * \file   l4rm/lib/src/helper_dyn.c
- * \brief  Support functions to use l4rm with dynamic linking.
+ * \file   loader/lib/runtime/helper_dyn.c
+ * \brief  Support functions for libloader.s.so.
  *
  * \date   06/15/2001
  * \author Frank Mehnert <fm3@os.inf.tu-dresden.de> */
@@ -18,7 +18,7 @@
 
 #ifdef ARCH_x86
 void
-*memcpy(void *dest, const void *src, unsigned int n)
+*memcpy(void *dest, const void *src, size_t n)
 {
   int d0, d1, d2;
   asm volatile(

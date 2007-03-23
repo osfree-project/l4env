@@ -37,11 +37,11 @@ IDL_PATH	=
 PRIVATE_INCDIR	= $(SRC_DIR)/ARCH-$(ARCH)/include $(SRC_DIR)/ARCH-all/include \
 		  $(OBJ_DIR)/ARCH-$(ARCH)/include $(OBJ_DIR)/ARCH-all/include \
 		  $(OBJ_BASE)/include/$(ARCH) $(OBJ_BASE)/include
-MODE		= host
+MODE		= libc
 LIBCINCDIR	= $(addprefix -I,$(GCCINCDIR))
-CPPFLAGS	= -nostdinc -include \
+CPPFLAGS	+= -nostdinc -include \
 		  $(OBJ_DIR)/ARCH-all/include/libc-symbols.h
-CFLAGS		= -fno-builtin
+CFLAGS		+= -fno-builtin
 # CFLAGS	+= -std=iso9899:199901
 DEFINES		= -DNDEBUG -D_LIBC -DSTATIC
 WARNINGS	= -Wall -Wstrict-prototypes

@@ -4,11 +4,11 @@
  * \file   generic_io/idl/generic_io.idl
  * \brief  Common L4 Environment I/O Server Interface
  *
- * \date   05/28/2003
+ * \date   20007-03-23
  * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
  */
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
@@ -81,8 +81,6 @@ library l4
        * \name Miscellaneous Services
        *
        * Client registration and information purposes.
-       *
-       * \todo   define client_info_t (driver class, ...)
        * @{
        */
 
@@ -104,7 +102,7 @@ library l4
        * \param  client  the client to unregister, must be equal to the
        *                 caller if called by a client (this function is
        *                 also called by the events thread).
-       *                 
+       *
        * \return 0 on success, negative error code otherwise
        */
       /***********************************************************************/
@@ -140,8 +138,7 @@ library l4
        *
        * \return 0 on success, negative error code otherwise
        *
-       * \krishna request_region ALWAYS succeeds under Linux; here it could
-       * FAIL!
+       * request_region() ALWAYS succeeds under Linux; here it could FAIL!
        */
       /***********************************************************************/
       long request_region([in] unsigned long addr, [in] unsigned long len);
@@ -167,19 +164,17 @@ library l4
        *                        to that physical memory range
        *
        * \retval region fpage for memory region
-       * \retval offset in io region the requested memory starts
        * \return 0 on success, negative error code otherwise
        *
        * If available the region is reserved and replied as fpage.
        *
-       * \krishna This is Linux' request_mem_region()+ioremap().
+       * This is Linux' request_mem_region()+ioremap().
        */
       /***********************************************************************/
       long request_mem_region([in] unsigned long addr,
                               [in] unsigned long len,
-			      [in] unsigned long flags,
-                              [out] fpage *region,
-                              [out] unsigned long *offset);
+                              [in] unsigned long flags,
+                              [out] fpage *region);
 
       /***********************************************************************/
       /**
@@ -190,11 +185,14 @@ library l4
        * \retval len   Length of region if found
        *
        * \return 0 if region was found, <0 on error
+       *
+       * XXX For me this function looks somewhat dubious and will not appear in
+       * the next l4io device manager version. - krishna
        */
       /***********************************************************************/
       long search_mem_region([in]  unsigned long addr,
                              [out] unsigned long *start,
-			     [out] l4_size_t *len);
+                             [out] l4_size_t *len);
 
       /***********************************************************************/
       /**
@@ -205,9 +203,7 @@ library l4
        *
        * Release initiates page flushing.
        *
-       * \krishna This'll be Linux' iounmap()+release_mem_region().
-       *
-       * \todo check if flushing works
+       * This'll be Linux' iounmap()+release_mem_region().
        */
       /***********************************************************************/
       long release_mem_region([in] unsigned long addr, [in] unsigned long len);

@@ -4,11 +4,11 @@
  * \file   l4io/server/include/__config.h
  * \brief  L4Env l4io I/O Server Configuration
  *
- * \date   05/28/2003
+ * \date   2007-03-23
  * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
  */
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
@@ -49,5 +49,8 @@
 #define DEBUG_REGDRV    0  /** debug driver registration */
 #define DEBUG_MAP       0  /** debug mappings */
 /** @} */
+
+#define IO_REQUEST_PAGE 1  /**< request 4K MMIO pages from pager */
+#define IO_SEND_PAGE    1  /**< send 4K MMIO pages on requests */
 
 #endif

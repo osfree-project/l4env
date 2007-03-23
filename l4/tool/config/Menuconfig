@@ -4,8 +4,8 @@
 #
 # We differ in some aspects, among them
 #
-# + we expect the lxdialog utility to be found at path/lxdialog/lxdialog
-#   with "path" being the path this script is located at.
+# + we expect the lxdialog utility to be found at `dirname $0`/lxdialog/lxdialog
+#   or at $DROPSCONF_LXDIALOG
 #
 # + can set the configuration title
 #   (DROPSCONF_TITLE, default 'DROPS Configuration Tool')
@@ -1413,7 +1413,8 @@ inputbox_instructions_string="\
 Please enter a string value. \
 Use the <TAB> key to move from the input field to the buttons below it."
 
-DIALOG=${0%/*}/lxdialog/lxdialog
+DIALOG="${0%/*}/lxdialog/lxdialog"
+test -x "$DIALOG" || DIALOG="$DROPSCONF_LXDIALOG"
 
 # check that all required parameters are set
 

@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= list-ds
-MODE		= host
+MODE		= l4linux
 SYSTEMS		= x86-l4v2
 
 LIBCINCDIR	= $(addprefix -I,$(L4INCDIR))

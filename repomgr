@@ -58,7 +58,6 @@ my %modules =
                     l4/pkg/crtx
                     l4/pkg/dm_generic
                     l4/pkg/events
-                    l4/pkg/exec
                     l4/pkg/generic_io
                     l4/pkg/l4rm
                     l4/pkg/libc_support

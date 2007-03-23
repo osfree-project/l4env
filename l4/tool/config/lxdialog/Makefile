@@ -1,7 +1,6 @@
 L4DIR ?= ../../..
 include $(L4DIR)/mk/Makeconf
 
-HOSTCC = $(HOST_CC)
 HOSTCFLAGS += -DLOCALE -MD
 LIBS = -lncurses
 
@@ -20,20 +19,19 @@ endif
 endif
 
 
-OBJS = checklist.o menubox.o textbox.o yesno.o inputbox.o \
-       util.o lxdialog.o msgbox.o
+OBJS = $(patsubst %.c,$(OBJ_DIR)/%.o,$(wildcard *.c))
 
-%.o: %.c
-	$(HOSTCC) $(HOSTCFLAGS) -c -o $@ $<
+all:: ncurses $(OBJ_DIR)/lxdialog
 
-all:: ncurses lxdialog
+$(OBJ_DIR)/%.o: %.c
+	$(HOST_CC) $(HOSTCFLAGS) -c -o $@ $<
 
-lxdialog: $(OBJS)
-	$(HOSTCC) -o lxdialog $(OBJS) $(LIBS)
+$(OBJ_DIR)/lxdialog: $(OBJS)
+	$(HOST_CC) -o $@ $(OBJS) $(LIBS)
 
 ncurses:
-	@echo "main() {}" > lxtemp.c
-	@if $(HOSTCC) -lncurses lxtemp.c ; then \
+	$(VERBOSE)echo "main() {}" > lxtemp.c
+	$(VERBOSE)if $(HOST_CC) -lncurses lxtemp.c ; then \
 		rm -f lxtemp.c a.out; \
 	else \
 		rm -f lxtemp.c; \
@@ -47,9 +45,9 @@ ncurses:
 	fi
 
 clean:
-	rm -f core *.o *~ lxdialog
+	rm -f core $(OBJ_DIR)/*.o $(OBJ_DIR)/lxdialog
 
 cleanall: clean
-	rm -rf *.d
+	rm -rf $(OBJ_DIR)/*.d
 
 -include $(OBJS:.o=.d)

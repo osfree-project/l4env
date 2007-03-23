@@ -44,10 +44,10 @@ SRC_S		+= $(SYS_S)
 IDL_PATH	=
 PRIVATE_INCDIR	= $(OBJ_DIR)/include $(OBJ_DIR) \
 		  $(SRC_DIR)/include $(SRC_DIR)
-MODE		= host
+MODE		= libc
 LIBCINCDIR	= $(addprefix -I,$(GCCINCDIR))
-CFLAGS          = -fno-builtin
-CPPFLAGS	= -nostdinc
+CFLAGS          += -fno-builtin
+CPPFLAGS	+= -nostdinc
 
 # Threadsafe stuff.
 #

@@ -9,4 +9,4 @@ include: virt_dep
 
 .PHONY: virt_dep
 virt_dep:
-	$(MAKE) -C lib/uclibc include
+	$(VERBOSE)PWD=$(PWD)/lib/uclibc $(MAKE) -C lib/uclibc include

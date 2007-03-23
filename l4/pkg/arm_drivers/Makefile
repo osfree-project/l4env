@@ -20,19 +20,19 @@ lib: uart.lib
 uart: uart.lib
 
 %.clean: 
-	$(MAKE) -C $* clean
+	$(VERBOSE)PWD=$(PWD)/$* $(MAKE) -C $* clean
 
 %.cleanall:
-	$(MAKE) -C $* cleanall
+	$(VERBOSE)PWD=$(PWD)/$* $(MAKE) -C $* cleanall
 
 $(addsuffix .include,$(SUBDIRS)): %.include: %
-	$(MAKE) -C $(subst .include,,$@) include
+	$(VERBOSE)PWD=$(PWD)/$(subst .include,,$@) $(MAKE) -C $(subst .include,,$@) include
 
 $(addsuffix .idl,$(SUBDIRS)): %.idl: %
-	$(MAKE) -C $(subst .idl,,$@) idl
+	$(VERBOSE)PWD=$(PWD)/$(subst .idl,,$@) $(MAKE) -C $(subst .idl,,$@) idl
 
 $(addsuffix .lib,$(SUBDIRS)): %.lib: %
-	$(MAKE) -C $(subst .lib,,$@) lib
+	$(VERBOSE)PWD=$(PWD)/$(subst .lib,,$@) $(MAKE) -C $(subst .lib,,$@) lib
 
 # these targets are phony
 .PHONY: include idl lib

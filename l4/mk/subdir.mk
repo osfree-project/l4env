@@ -41,7 +41,7 @@ $(filter-out ptest,$(SUBDIR_TARGET)):
 # targets. Going down into sub-pkgs.
 	$(if $(SUBDIRS),$(if $(filter $@,idl include lib server examples doc),\
 		$(VERBOSE)set -e; for s in $(SUBDIRS); do \
-			make -C $$s $@ $(MKFLAGS); done ))
+			PWD=$(PWD)/$$s $(MAKE) -C $$s $@ $(MKFLAGS); done ))
 
 idl include lib server examples doc:
 

@@ -4,11 +4,11 @@
  * \file   l4io/server/src/res.c
  * \brief  L4Env l4io I/O Server Resource Management Module
  *
- * \date   05/28/2003
+ * \date   2007-03-23
  * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
  */
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
@@ -33,6 +33,30 @@
 #include "mtrr.h"
 #include "__config.h"
 #include "__macros.h"
+
+#if IO_REQUEST_PAGE
+# define IO_REQ_PAGESIZE L4_PAGESIZE
+# define IO_REQ_LOG2_PAGESIZE L4_LOG2_PAGESIZE
+# define IO_REQ_PAGEMASK L4_PAGEMASK
+# define io_req_trunc_page(a) l4_trunc_page(a)
+#else
+# define IO_REQ_PAGESIZE L4_SUPERPAGESIZE
+# define IO_REQ_LOG2_PAGESIZE L4_LOG2_SUPERPAGESIZE
+# define IO_REQ_PAGEMASK L4_SUPERPAGEMASK
+# define io_req_trunc_page(a) l4_trunc_superpage(a)
+#endif
+
+#if IO_SEND_PAGE
+# define IO_PAGESIZE L4_PAGESIZE
+# define IO_LOG2_PAGESIZE L4_LOG2_PAGESIZE
+# define IO_PAGEMASK L4_PAGEMASK
+# define io_trunc_page(a) l4_trunc_page(a)
+#else
+# define IO_PAGESIZE L4_SUPERPAGESIZE
+# define IO_LOG2_PAGESIZE L4_LOG2_SUPERPAGESIZE
+# define IO_PAGEMASK L4_SUPERPAGEMASK
+# define io_trunc_page(a) l4_trunc_superpage(a)
+#endif
 
 /*
  * types and module vars
@@ -341,7 +365,6 @@ l4_io_release_region_component (CORBA_Object _dice_corba_obj,
  * \param len                region length
  * \param region             fpage descriptor for memory region
  *
- * \retval offset            offset with memory region
  * \retval _dice_corba_env   corba environment
  *
  * \return 0 on success, negative error code otherwise
@@ -356,15 +379,13 @@ long
 l4_io_request_mem_region_component (CORBA_Object _dice_corba_obj,
                                     unsigned long addr,
                                     unsigned long len,
-				    unsigned long flags,
+                                    unsigned long flags,
                                     l4_snd_fpage_t *region,
-                                    unsigned long *offset,
                                     CORBA_Server_Environment *_dice_corba_env)
 {
   int error, size;
   unsigned int start = addr;
   unsigned int end = addr + len - 1;
-  unsigned int sp_voffset;
   l4_addr_t vaddr;
   io_client_t *c = find_client(*_dice_corba_obj);
   io_ares_t *p = io_mem_ares;
@@ -395,70 +416,29 @@ l4_io_request_mem_region_component (CORBA_Object _dice_corba_obj,
   if ((error = __request_region(addr, len, MAX_IO_MEMORY, &io_mem_res, c)))
     return error;
 
-  /* cacheable mapping requested? */
-  if (flags & L4IO_MEM_CACHED)
-    {
-      size = len >> L4_LOG2_SUPERPAGESIZE;
-      if (len > (size << L4_LOG2_SUPERPAGESIZE))
-	size++;
-
-      /* Already mapped uncacheable? */
-      if (!p->flags)
-	{
-	  l4_uint32_t   vaddr_area;
-	  l4_threadid_t pager = rmgr_pager_id;
-
-	  /* No. Request cached mapping from Sigma0. */
-	  printf("Remapping I/O memory "l4_addr_fmt"-"l4_addr_fmt" cached\n",
-	         addr, addr+len);
-	  error = l4rm_area_reserve(size * L4_SUPERPAGESIZE,
-				    L4RM_LOG2_ALIGNED, &vaddr, &vaddr_area);
-	  if (error)
-	    Panic("no area for memory region announcement (%d)\n", error);
-
-	  if ((error = l4sigma0_map_iomem(pager, l4_trunc_superpage(addr),
-					  vaddr, size*L4_SUPERPAGESIZE, 1)))
-	    {
-	      switch (error)
-		{
-		case -2: Panic("sigma0 request IPC error");
-		case -3: Panic("sigma0 request for phys addr %08lx failed", addr);
-		}
-	    }
-
-	  /* Release old (uncached mapped) region */
-	  l4rm_area_release_addr((void*)p->vaddr);
-	  /* store new mapped address */
-	  p->vaddr = vaddr;
-	  /* this area is now mapped cachable */
-	  p->flags = 1;
-	}
-
-      if ((flags & L4IO_MEM_WRITE_COMBINED) == L4IO_MEM_WRITE_COMBINED)
-	mtrr_set(addr, size*L4_SUPERPAGESIZE, MTRR_WC);
-    }
-
-  /* p->vaddr points to a 4MB aligned address even if addr doesn't start
-   * there! */
-  vaddr   = p->vaddr + (p->start - l4_trunc_superpage(p->start));
-  *offset = addr - p->start;
-
-  /* build fpage - we can map the entire region */
-  size = (len & L4_SUPERPAGEMASK) ? nLOG2(len) : L4_LOG2_SUPERPAGESIZE;
-
-  sp_voffset  = l4_trunc_superpage(*offset);
-  vaddr      += sp_voffset;
-  *offset    -= sp_voffset;
-
-  /* if we've got an offset extend the size, the library code on the other
-   * side already awaits a doubled size, so we're save */
-  if (*offset)
+  size = len >> IO_LOG2_PAGESIZE;
+  if (len > (size << IO_LOG2_PAGESIZE))
     size++;
 
-  region->snd_base = 0;  /* hopefully no hot spot required */
+  if ((flags & L4IO_MEM_WRITE_COMBINED) == L4IO_MEM_WRITE_COMBINED)
+    mtrr_set(addr, size * IO_PAGESIZE, MTRR_WC);
+
+  /* p->vaddr points to a io-page-aligned address even if addr doesn't start
+   * there! */
+  vaddr   = io_trunc_page(p->vaddr);
+
+  /* build fpage - we can map the entire region */
+  size = (len & IO_PAGEMASK) ? nLOG2(len) : IO_LOG2_PAGESIZE;
+
+  region->snd_base = addr; /* the requested physical address */
   region->fpage = l4_fpage(vaddr, size, L4_FPAGE_RW, L4_FPAGE_MAP);
 
-  LOGd(DEBUG_RES, "sending fpage {0x%08lx, 0x%08lx}",
+  /* cacheable mapping requested? */
+  region->fpage.raw |= (flags & L4IO_MEM_CACHED) ?
+                         L4_FPAGE_CACHE_ENABLE : L4_FPAGE_CACHE_DISABLE;
+
+  LOGd(DEBUG_RES, "sending fpage {snd_base=%lx, 0x%08lx, 0x%08lx}",
+       region->snd_base,
        (unsigned long)region->fpage.fp.page << 12,
        1UL << region->fpage.fp.size);
 
@@ -529,11 +509,8 @@ l4_io_release_mem_region_component (CORBA_Object _dice_corba_obj,
     }
 
   /* build fpage for region */
-  if (len & L4_SUPERPAGEMASK)
-    size = nLOG2(len);
-  else
-    size = L4_LOG2_SUPERPAGESIZE;
-  region = l4_fpage(p->vaddr, size, 0, 0);
+  size = (len & IO_PAGEMASK) ? nLOG2(len) : IO_LOG2_PAGESIZE;
+  region = l4_fpage(io_trunc_page(p->vaddr), size, 0, 0);
 
   /* unmap region */
   l4_fpage_unmap(region, L4_FP_FLUSH_PAGE | L4_FP_OTHER_SPACES);
@@ -703,68 +680,77 @@ int callback_request_mem_region(unsigned long addr, unsigned long len)
 void callback_announce_mem_region(unsigned long addr, unsigned long len)
 {
   int error;
-  l4_addr_t vaddr;
+  l4_addr_t vaddr = 0;
   l4_uint32_t vaddr_area;
   l4_size_t size;
 
-  io_ares_t *s = io_mem_ares;
-  io_ares_t *p = NULL;
-#if 1
-  l4_threadid_t pager = rmgr_pager_id;  /* from l4/rmgr/librmgr.h */
-#else
-  l4_threadid_t pager = l4_myself();
-
-  pager.id.task = 2;
-  pager.id.lthread = 0;
-#endif
+  io_ares_t **s = &io_mem_ares;
+  io_ares_t *p = io_mem_ares;
+  l4_threadid_t pager = SIGMA0_ID;
 
   /* reserve area */
-  size = len >> L4_LOG2_SUPERPAGESIZE;
-  if (len > (size << L4_LOG2_SUPERPAGESIZE))
+  size = len >> IO_REQ_LOG2_PAGESIZE;
+  if (len > (size << IO_REQ_LOG2_PAGESIZE))
     size++;
 
-  error = l4rm_area_reserve(size * L4_SUPERPAGESIZE,
-                            L4RM_LOG2_ALIGNED, &vaddr, &vaddr_area);
-  if (error)
+  /* check for earlier mapping of region */
+  while (p)
     {
-      Panic("no area for memory region announcement (%d)\n", error);
+      if (io_req_trunc_page(p->start) <= addr
+          && io_req_trunc_page(p->end + IO_REQ_PAGESIZE -1) - 1 >= addr + len - 1)
+        break;
+      p = p->next;
     }
+
+  if (p)
+    {
+      /* area was mapped before */
+      LOGd(DEBUG_RES, "reuse mapping from (0x%08lx-0x%08lx); mapped to 0x%08lx",
+           p->start, p->end, p->vaddr);
+      vaddr = io_req_trunc_page(p->vaddr);
+    }
+
+
+  else
+    {
+      /* map area */
+      error = l4rm_area_reserve(size * IO_REQ_PAGESIZE, L4RM_LOG2_ALIGNED,
+                                &vaddr, &vaddr_area);
+      if (error)
+        {
+          Panic("no area for memory region announcement (%d)\n", error);
+        }
+
+      /* request sigma0 mappings to area */
+      if ((error = l4sigma0_map_iomem(pager, io_req_trunc_page(addr),
+                                      vaddr, size * IO_REQ_PAGESIZE, 0)))
+        {
+          switch (error)
+            {
+              case -2: Panic("sigma0 request IPC error");
+              case -3: Panic("sigma0 request for phys addr %08lx failed", addr);
+            }
+        }
+    }
+
+  /* consider in-page offset */
+  vaddr += addr & (IO_REQ_PAGESIZE - 1);
 
   /* new announced regions list entry */
-  /* krishna: did it before calling sigma0 because we panic on fail */
-  while (s)
-    {
-      p = s;
-      s = s->next;
-    }
+  while (*s) s = &((*s)->next);
 
-  s = malloc(sizeof(io_ares_t));
-  Assert(s);
-  s->next = NULL;
-  s->start = addr;
-  s->end = addr + len - 1;
-  s->vaddr = vaddr;
-  s->flags = 0;
+  p = malloc(sizeof(io_ares_t));
+  Assert(p);
+  p->next = NULL;
+  p->start = addr;
+  p->end = addr + len - 1;
+  p->vaddr = vaddr;
+  p->flags = 0;
 
-  if (!p)
-    /* new res is the first */
-    io_mem_ares = s;
-  else
-    p->next = s;
-
-  /* request sigma0/RMGR mappings to area */
-  if ((error = l4sigma0_map_iomem(pager, l4_trunc_superpage(addr),
-				  vaddr, size*L4_SUPERPAGESIZE, 0)))
-    {
-      switch (error)
-	{
-	case -2: Panic("sigma0 request IPC error");
-	case -3: Panic("sigma0 request for phys addr %08lx failed", addr);
-	}
-    }
+  *s = p;
 
   LOGd(DEBUG_RES, "(0x%08lx-0x%08lx) was announced; mapped to 0x%08lx",
-       s->start, s->end, s->vaddr);
+       p->start, p->end, p->vaddr);
 }
 
 static struct device_inclusion_list

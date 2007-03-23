@@ -47,12 +47,11 @@ DROPSCONF_CONFIG_MK	?= $(OBJ_DIR)/Makeconf.bid.local
 DROPSCONF_DONTINC_MK	?=
 DROPSCONF_MACRO		?= CONFIG_H_INCLUDED
 DROPSCONF_HELPFILE	?= config.help
+DROPSCONF_LXDIALOG	?= $(OBJ_BASE)/tool/config/lxdialog/lxdialog
 DROPSCONF_TOOL		?= $(firstword $(wildcard \
 					$(L4DIR)/tool/config/Menuconfig \
 					$(DROPS_STDDIR)/tool/bin/Menuconfig) \
 					false)
-DROPSCONF_LXDIALOG	= $(filter-out false, \
-			     $(DROPSCONF_TOOL:Menuconfig=lxdialog/lxdialog))
 DROPSCONF_TOOL_TXT	?= $(firstword $(wildcard \
 					$(L4DIR)/tool/config/Configure \
 					$(DROPS_STDDIR)/tool/bin/Configure) \
@@ -62,7 +61,7 @@ DROPSCONF_TOOL_OLD	?= $(firstword $(wildcard \
 					$(DROPS_STDDIR)/tool/bin/Configure) \
 					false) -d
 DROPSCONF_VARDEFS = $(foreach v,TITLE DEFCONFIG CONFIG_IN CONFIG CONFIG_H \
-	MACRO HELPFILE UNDEF,DROPSCONF_$v='$(DROPSCONF_$v)')
+	MACRO HELPFILE UNDEF LXDIALOG,DROPSCONF_$v='$(DROPSCONF_$v)')
 
 ifneq ($(DROPSCONF),)
 .o:	$(DROPSCONF_CONFIG_H)
@@ -85,7 +84,7 @@ $(DROPSCONF_CONFIG_H) $(DROPSCONF_CONFIG): $(DROPSCONF_CONFIG_IN)
 $(DROPSCONF_CONFIG_MK): $(DROPSCONF_CONFIG)
 	$(VERBOSE)sed -e "s/\(^[^= ]*=\)'\([^']*\)'/\1\2/" \
 		<$(DROPSCONF_CONFIG) >$@
-	$(MAKE) DROPSCONF_CONFIG_MK_POST_HOOK
+	$(VERBOSE)$(MAKE) DROPSCONF_CONFIG_MK_POST_HOOK
 
 DROPSCONF_CONFIG_MK_POST_HOOK::
 	
@@ -106,10 +105,9 @@ oldconfig::
 	$(VERBOSE)$(DROPSCONF_VARDEFS) $(DROPSCONF_TOOL_OLD)
 	@$(MAKE) $(DROPSCONF_CONFIG_MK)
 
-# provide a rule for generating the lxdialog in $(L4DIR)/tool/config
-# If Menuconfig is not found there, you will receive an error
-$(L4DIR)/tool/config/lxdialog/lxdialog:
-	$(MAKE) -C $(L4DIR)/tool/config
+$(DROPSCONF_LXDIALOG):
+	$(VERBOSE)install -d $(@D)
+	$(VERBOSE)PWD=$(call absfilename,$(L4DIR)/tool/config) $(MAKE) -C $(L4DIR)/tool/config
 
 clean::
 

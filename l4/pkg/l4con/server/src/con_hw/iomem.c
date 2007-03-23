@@ -5,7 +5,7 @@
  * \date	07/2002
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
-/* (c) 2003 'Technische Universitaet Dresden'
+/* (c) 2007 Technische Universitaet Dresden
  * This file is part of the con package, which is distributed under
  * the terms of the GNU General Public License 2. Please see the
  * COPYING file for details. */
@@ -74,26 +74,23 @@ map_io_mem(l4_addr_t paddr, l4_size_t size, int cacheable,
 			   "page", id);
 	    }
 	}
+
+      *vaddr += offset;
     }
   else /* use l4io */
     {
 #ifdef ARCH_x86
       if ((*vaddr = l4io_request_mem_region(paddr, size,
-	      				    cacheable 
-					      ? L4IO_MEM_WRITE_COMBINED
-					      : 0,
-					    &offset)) == 0)
+                                            cacheable
+					      ? L4IO_MEM_WRITE_COMBINED : 0)) == 0)
 	Panic("Can't request mem region from l4io.");
 
-      LOG_printf("Mapped I/O %s mem "l4_addr_fmt" => "l4_addr_fmt
-                 "+%06lx [%dkB] via l4io\n",
-	  id, paddr, *vaddr, offset, size >> 10);
+      LOG_printf("Mapped I/O %s mem  "l4_addr_fmt" => "l4_addr_fmt" [%dkB] via l4io\n",
+                 id, paddr, *vaddr, size >> 10);
 #else
       Panic("Use of l4io not supported.");
 #endif
     }
-
-  *vaddr += offset;
 
   return 0;
 }

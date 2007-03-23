@@ -21,7 +21,7 @@ PRIVATE_INCDIR	= $(SRC_DIR)/ARCH-all/include \
 		  $(OBJ_DIR)/ARCH-all/include \
                   $(OBJ_BASE)/include/$(ARCH)/uclibc \
 		  $(OBJ_BASE)/include/uclibc $(OBJ_BASE)/include
-MODE		= host
+MODE		= libc
 IDL_PATH	=
 LIBCINCDIR	= $(addprefix -I,$(GCCINCDIR))
 CPPFLAGS	:= -nostdinc

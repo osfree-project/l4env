@@ -95,7 +95,7 @@ tool ../kernel/fiasco pkg: ../dice
 
 doc:
 	$(VERBOSE)for d in tool doc ; do \
-		test ! -r $$d/Makefile || $(MAKE) -C $$d $@ ; done
+		test ! -r $$d/Makefile || PWD=$(PWD)/$$d $(MAKE) -C $$d $@ ; done
 
 pkgdoc:
 	$(VERBOSE)test ! -r pkg/Makefile || PWD=$(PWD)/pkg $(MAKE) -C pkg doc
@@ -124,6 +124,8 @@ install::
 #####################
 # config-rules follow
 
+_HOST_SYSTEM := $(shell uname | tr 'A-Z' 'a-z')
+
 # it becomes a bit confusing now: 'make config' results in a config file, which
 # must be postprocessed. This is done in config.inc. Then,
 # we evaluate some variables that depend on the postprocessed config file.
@@ -131,14 +133,14 @@ install::
 # Hence, we have to 1) postprocess, 2) call make again to get the variables.
 DROPSCONF_CONFIG_MK_POST_HOOK:: check_build_tools $(OBJ_DIR)/Makefile
         # libgendep must be done before calling make with the local helper
-	$(VERBOSE)$(MAKE) libgendep
+	$(VERBOSE)$(MAKE) HOST_SYSTEM=$(_HOST_SYSTEM) libgendep
 	$(VERBOSE)$(MAKE) Makeconf.bid.local-helper || \
 		(rm -f $(DROPSCONF_CONFIG_MK) $(CONFIG_MK_REAL) $(CONFIG_MK_INDEP); false)
 	$(VEROBSE)$(LN) -snf $(L4DIR_ABS) $(OBJ_BASE)/source
 
-# cashing of some variables. Others are determined directly.
+# caching of some variables. Others are determined directly.
 # The contents of the variables to cache is already defined in mk/Makeconf.
-.PHONY: Makeconf.bid.local-helper libgendep
+.PHONY: Makeconf.bid.local-helper Makeconf.bid.local-internal-names libgendep
 ARCH = $(BUILD_ARCH)
 Makeconf.bid.local-helper:
 	$(VERBOSE)echo BUILD_SYSTEMS="$(strip $(ARCH)_$(CPU)            \
@@ -150,30 +152,11 @@ Makeconf.bid.local-helper:
 			>>$(DROPSCONF_CONFIG_MK);)
 	$(foreach v, BID_LIBGENDEP, echo $v=$($(v)) >>$(DROPSCONF_CONFIG_MK);)
 	$(VERBOSE)echo 'BUILD_PIC += $$(BUILD_LOADER_PICS)' >>$(DROPSCONF_CONFIG_MK)
-	$(VERBOSE)echo "HOST_SYSTEM=$(shell uname | tr 'A-Z' 'a-z' )" >>$(DROPSCONF_CONFIG_MK)
+	$(VERBOSE)echo "HOST_SYSTEM=$(_HOST_SYSTEM)" >>$(DROPSCONF_CONFIG_MK)
 	$(VERBOSE)echo "COLOR_TERMINAL=$(shell if [ $$(tput colors) = '-1' ]; then echo n; else echo y; fi)" >>$(DROPSCONF_CONFIG_MK)
-ifeq ($(INT_CPP_NAME_SWITCH), y)
-	$(VERBOSE) set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
-		rm -f $$X.out ; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
-		GENDEP_OUTPUT=$$X.out $(CC) -c $$X -o $$X.o; \
-		test -e $$X.out; echo INT_CPP_NAME=`cat $$X.out` \
-			>>$(DROPSCONF_CONFIG_MK); \
-		rm -f $$X $$X.{o,out};
-	$(VERBOSE)set -e; X="tmp.$$$$$$RANDOM.cc" ; echo 'int main(void){}'>$$X; \
-		rm -f $$X.out; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
-		GENDEP_OUTPUT=$$X.out $(CXX) -c $$X -o $$X.o; \
-		test -e $$X.out; echo INT_CXX_NAME=`cat $$X.out` \
-			>>$(DROPSCONF_CONFIG_MK); \
-		rm -f $$X $$X.{o,out};
-endif
-ifeq ($(INT_LD_NAME_SWITCH), y)
-	$(VERBOSE) set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
-		rm -f $$X.out ; LD_PRELOAD=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X. \
-		GENDEP_OUTPUT=$$X.out $(CC) $$X -o $$X.; \
-		test -e $$X.out; echo INT_LD_NAME=`cat $$X.out` \
-			>>$(DROPSCONF_CONFIG_MK); \
-		rm -f $$X $$X.{,out};
-endif
+	$(VERBOSE)# we need to call make again, because HOST_SYSTEM (set above) must be
+	$(VERBOSE)# evaluated for LD_PRELOAD to be set, which we need in the following
+	$(VERBOSE)$(MAKE) Makeconf.bid.local-internal-names
 	$(VERBOSE)sort <$(DROPSCONF_CONFIG_MK) >$(CONFIG_MK_REAL).tmp
 	$(VERBOSE)echo -e "# Automatically generated. Don't edit\n" >$(CONFIG_MK_INDEP)
 	$(VERBOSE)grep $(addprefix -e ^,$(CONFIG_MK_INDEPOPTS) ) \
@@ -189,6 +172,30 @@ endif
 		    mv $(CONFIG_MK_REAL).tmp2 $(CONFIG_MK_REAL);             \
 		  fi
 	$(VERBOSE)$(RM) $(CONFIG_MK_REAL).tmp $(CONFIG_MK_REAL).tmp2
+
+Makeconf.bid.local-internal-names:
+ifeq ($(INT_CPP_NAME_SWITCH), y)
+	$(VERBOSE) set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
+		rm -f $$X.out ; $(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
+		GENDEP_OUTPUT=$$X.out $(CC) -c $$X -o $$X.o; \
+		test -e $$X.out; echo INT_CPP_NAME=`cat $$X.out` \
+			>>$(DROPSCONF_CONFIG_MK); \
+		rm -f $$X $$X.{o,out};
+	$(VERBOSE)set -e; X="tmp.$$$$$$RANDOM.cc" ; echo 'int main(void){}'>$$X; \
+		rm -f $$X.out; $(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X \
+		GENDEP_OUTPUT=$$X.out $(CXX) -c $$X -o $$X.o; \
+		test -e $$X.out; echo INT_CXX_NAME=`cat $$X.out` \
+			>>$(DROPSCONF_CONFIG_MK); \
+		rm -f $$X $$X.{o,out};
+endif
+ifeq ($(INT_LD_NAME_SWITCH), y)
+	$(VERBOSE) set -e; X="tmp.$$$$$$RANDOM.c" ; echo 'int main(void){}'>$$X ; \
+		rm -f $$X.out ; $(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_SOURCE=$$X. \
+		GENDEP_OUTPUT=$$X.out $(CC) $$X -o $$X.; \
+		test -e $$X.out; echo INT_LD_NAME=`cat $$X.out` \
+			>>$(DROPSCONF_CONFIG_MK); \
+		rm -f $$X $$X.{,out};
+endif
 
 libgendep:
 	$(VERBOSE)if [ ! -r tool/gendep/Makefile ]; then	\

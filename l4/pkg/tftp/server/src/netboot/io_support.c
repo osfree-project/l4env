@@ -1,3 +1,13 @@
+/*
+ * \brief   TFTP server I/O support
+ * \author  Frank Mehnert
+ * \date    2007-03-23
+ */
+/* (c) 2007 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #include <l4/pci/libpci.h>
 #include <l4/generic_io/libio.h>
 #include <l4/sys/kdebug.h>
@@ -41,17 +51,16 @@ l4_addr_t
 io_support_remap(l4_addr_t phys_addr, l4_size_t size)
 {
   l4_addr_t virt_addr;
-  l4_offs_t offset;
   l4_uint32_t rg;
   int error;
 
   if (use_l4io)
     {
-      if (!(virt_addr = l4io_request_mem_region(phys_addr, size, 0, &offset)))
-	Panic("Can't request memory region from l4io.");
+      if (!(virt_addr = l4io_request_mem_region(phys_addr, size, 0)))
+        Panic("Can't request memory region from l4io.");
 
-      LOG_printf("Mapped I/O memory %08lx => %08lx+%06lx [%dkB] via l4io\n",
-	     phys_addr, virt_addr, offset, size >> 10);
+      LOG_printf("Mapped I/O memory %08lx => %08lx [%dkB] via l4io\n",
+                 phys_addr, virt_addr, size >> 10);
 
       return virt_addr;
     }
@@ -59,7 +68,7 @@ io_support_remap(l4_addr_t phys_addr, l4_size_t size)
     {
       extern l4_threadid_t l4rm_task_pager_id;
 
-      offset     = phys_addr - l4_trunc_superpage(phys_addr);
+      unsigned long offset = phys_addr - l4_trunc_superpage(phys_addr);
       size       = l4_round_superpage(offset+size);
       phys_addr  = l4_trunc_superpage(phys_addr);
 
@@ -69,6 +78,8 @@ io_support_remap(l4_addr_t phys_addr, l4_size_t size)
 
       LOG_printf("Mapping I/O memory %08lx => %08lx+%06lx [%dkB]\n",
 	    phys_addr+offset, virt_addr, offset, size>>10);
+
+      virt_addr += offset;
 
       if ((error = l4sigma0_map_iomem(l4rm_task_pager_id, phys_addr,
 				      virt_addr, size, 0)))
@@ -83,7 +94,7 @@ io_support_remap(l4_addr_t phys_addr, l4_size_t size)
 	    }
 	}
 
-      return virt_addr + offset;
+      return virt_addr;
     }
 }
 

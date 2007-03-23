@@ -4,7 +4,7 @@ L4DIR   ?= $(PKGDIR)/../..
 
 SRC_C	= main.c
 TARGET	= names_lister
-MODE	= host
+MODE	= l4linux
 
 PRIVATE_INCDIR = $(L4INCDIR)
 

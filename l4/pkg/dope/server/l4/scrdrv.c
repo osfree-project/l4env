@@ -142,13 +142,14 @@ vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
 	l4_threadid_t my_task_pager_id;
 
 	if (!config_use_l4io) {
+		/* XXX Sigma0 support will be removed soon */
 		*offset = paddr & ~L4_SUPERPAGEMASK;
 		paddr  &= L4_SUPERPAGEMASK;
 		size    = l4_round_superpage(size + *offset);
 
 		if ((error = l4rm_area_reserve(size, L4RM_LOG2_ALIGNED, vaddr, &rg))) {
-			printf("Error %d reserving region size=%dMB for video memory\n",
-			 error, size>>20);
+			printf("Error %d reserving region size=%ldMB for video memory\n",
+			       error, (unsigned long)size>>20);
 			enter_kdebug("map_video_mem");
 			return 0;
 		}
@@ -156,8 +157,8 @@ vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
 		/* get region manager's pager */
 		my_task_pager_id = l4_thread_ex_regs_pager(l4rm_region_mapper_id());
 
-		printf("Mapping video memory at 0x%08lx to 0x%08lx (size=%dMB)\n",
-		       paddr, *vaddr, size>>20);
+		printf("Mapping video memory at 0x%08lx to 0x%08lx (size=%ldMB)\n",
+		       paddr, *vaddr, (unsigned long)size>>20);
 
 		switch (l4sigma0_map_iomem(my_task_pager_id, paddr, *vaddr, size, 1)) {
 			case -2:
@@ -174,17 +175,17 @@ vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
 				return -L4_EINVAL;
 		}
 	} else {
-		printf("dope: addr=%lx size=%dKiB\n", paddr, size >> 10);
-		if ((*vaddr = l4io_request_mem_region(paddr, size, L4IO_MEM_WRITE_COMBINED,
-						      offset)) == 0)
+		printf("dope: paddr=%lx size=%ldKiB\n", paddr, (unsigned long)size >> 10);
+		if ((*vaddr = l4io_request_mem_region(paddr, size, L4IO_MEM_WRITE_COMBINED)) == 0)
 			Panic("Can't request memory region from l4io.");
+		*offset = 0;
 
-		printf("Mapped video memory at %08lx to %08lx+%06lx [%dkB] via L4IO\n",
-		       paddr, *vaddr, *offset, size >> 10);
+		printf("Mapped video memory at %08lx to %08lx+%06lx [%ldkB] via L4IO\n",
+		       paddr, *vaddr, *offset, (unsigned long)size >> 10);
 	}
 
-	printf("mapping: vaddr=0x%lx size=%d(0x%x) offset=%ld(0x%lx)\n",
-	       *vaddr, size, size, *offset, *offset);
+	printf("mapping: vaddr=0x%lx size=%ld(0x%lx) offset=%ld(0x%lx)\n",
+	       *vaddr, (unsigned long)size, (unsigned long)size, *offset, *offset);
 
 	return 0;
 }
@@ -208,8 +209,8 @@ static long set_screen(long width, long height, long depth) {
 		return 0;
 	}
 
-	vbe = (l4util_mb_vbe_ctrl_t*) mbi->vbe_ctrl_info;
-	vbi = (l4util_mb_vbe_mode_t*) mbi->vbe_mode_info;
+	vbe = (l4util_mb_vbe_ctrl_t*) (unsigned long)mbi->vbe_ctrl_info;
+	vbi = (l4util_mb_vbe_mode_t*) (unsigned long)mbi->vbe_mode_info;
 
 	vc_map_video_mem((vbi->phys_base >> L4_SUPERPAGESHIFT) << L4_SUPERPAGESHIFT,
                          64*1024*vbe->total_memory,
@@ -307,8 +308,8 @@ static void update_area_16(long x1, long y1, long x2, long y2) {
 	src = (u16 *)buf_adr + y1*scr_width + x1;
 	dst = (u16 *)scr_adr + y1*scr_linelength + x1;
 
-	src = (u16 *)((adr)src & 0xfffffffc);
-	dst = (u16 *)((adr)dst & 0xfffffffc);
+	src = (u16 *)((adr)src & ~3);
+	dst = (u16 *)((adr)dst & ~3);
 	dx  = (dx>>1) + 1;
 
 #if USE_RT_MON

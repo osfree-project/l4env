@@ -2,6 +2,7 @@
   deptrack.c -- high-level routines for gendepend.
 
   (c) Han-Wen Nienhuys <hanwen@cs.uu.nl> 1998
+  (c) Michael Roitzsch <mroi@os.inf.tu-dresden.de> 2007
  */
 
 #include <stdio.h>
@@ -11,6 +12,12 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <assert.h>
+
+#ifdef __APPLE__
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <unistd.h>
+#endif
 
 #include "gendep.h"
 
@@ -282,11 +289,12 @@ setup_regexps (void)
  */
 static void get_executable_name (void)
 {
+  char *basename_p;
+#ifdef __linux
   const char * const proc_cmdline = "/proc/self/cmdline";
   FILE *cmdline = fopen (proc_cmdline, "r");
   char cmd[STRLEN];
   int i=0;
-  char *basename_p;
   int c;
   cmd[STRLEN-1] = 0;
  
@@ -300,15 +308,48 @@ static void get_executable_name (void)
     cmd[i++] = c;
 
   cmd[i++] = 0;
+#elif defined(__APPLE__)
+  int mib[3], arglen;
+  size_t size;
+  char *procargs, *cmd;
+  
+  /* allocate process argument space */
+  mib[0] = CTL_KERN;
+  mib[1] = KERN_ARGMAX;
+  size = sizeof(arglen);
+  if (sysctl(mib, 2, &arglen, &size, NULL, 0) == -1)
+    exit(-1);
+  if (!(procargs = xmalloc(arglen)))
+    exit(-1);
 
+  /* get a copy of the process argument space */
+  mib[0] = CTL_KERN;
+  mib[1] = KERN_PROCARGS2;
+  mib[2] = getpid();
+  size = (size_t)arglen;
+  if (sysctl(mib, 3, procargs, &size, NULL, 0) == -1) {
+    free(procargs);
+    exit(-1);
+  }
+  
+  /* jump over the argument count */
+  cmd = procargs + sizeof(int);
+#else
+#  error "Retrieving the executable name is not implemented for your platform."
+#endif
+  
   /* ugh.  man 3 basename -> ?  */
   basename_p =  strrchr (cmd, '/');
   if (basename_p)
     basename_p++;
   else
     basename_p = cmd;
-
+  
   executable_name = xstrdup (basename_p);
+  
+#ifdef __APPLE__
+  free(procargs);
+#endif
 }
 
 static void initialize (void) __attribute__ ((constructor));

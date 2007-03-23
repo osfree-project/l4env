@@ -217,20 +217,21 @@ LDSCRIPT_all_libc               = $(LDS_DEFAULT)
 
 
 #
-# all_plain - compilation for the host system
+# all_linux - compilation without anything, but unlike host mode still
+#             (potentially) cross compiled
 #
-BID_SUPPORTED_all_plain         = y
-LIBCINCDIR_all_plain            = $(LIBC_INCLUDE)
-LIBCLIBDIR_all_plain            =
-LIBCLIBS_all_plain              = -nostdlib $(GCCLDNOSTDLIB) $(GCCLIB) -ll4sys
-L4LIBS_all_plain                =
-CRT0_all_plain                  = $(CRT0_DEFAULT)
-CRTN_all_plain                  =
-LDSCRIPT_all_plain              = $(LDS_DEFAULT)
+BID_SUPPORTED_all_linux         = y
+LIBCINCDIR_all_linux            =
+LIBCLIBDIR_all_linux            =
+LIBCLIBS_all_linux              =
+L4LIBS_all_linux                =
+CRT0_all_linux                  =
+CRTN_all_linux                  =
+LDSCRIPT_all_linux              =
 
 
 #
-# x86_host - compilation for the host system
+# all_host - compilation for the host system
 #
 BID_SUPPORTED_all_host          = y
 LIBCINCDIR_all_host             =
@@ -240,7 +241,6 @@ L4LIBS_all_host                 =
 CRT0_all_host                   =
 CRTN_all_host                   =
 LDSCRIPT_all_host               =
-
 
 #
 # x86_l4linux - L4Env functions for L4Linux programs

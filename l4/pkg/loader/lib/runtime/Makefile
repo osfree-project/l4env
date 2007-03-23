@@ -3,7 +3,7 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= libloader.s.so
 MODE		= l4env
-SYSTEMS		= x86-l4v2 arm-l4x0
+SYSTEMS		= x86-l4v2 arm-l4x0 amd64-l4v2
 
 # When -Bsymbolic is added to the linker flags, all references to functions
 # and data are resolved using the stuff provided by libloader. This would

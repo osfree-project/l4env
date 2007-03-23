@@ -22,7 +22,7 @@ devlist.h classlist.h: pci.ids gen-devlist
 
 gen-devlist: gen-devlist.c Makefile
 	@$(BUILD_MESSAGE)
-	$(VERBOSE)$(CC) -o $@ $<
+	$(VERBOSE)$(HOST_CC) -o $@ $<
 
 clean::
 	$(VERBOSE)$(RM) devlist.h classlist.h gen-devlist

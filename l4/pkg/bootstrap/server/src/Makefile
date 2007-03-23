@@ -238,7 +238,8 @@ cleanall::
 endif
 
 clean cleanall::
-	$(VERBOSE)$(MAKE) -C $(SRC_DIR)/ARCH-amd64/libc32 $@
+	$(VERBOSE)PWD=$(call absfilename,$(SRC_DIR)/ARCH-amd64/libc32) \
+	  $(MAKE) -C $(SRC_DIR)/ARCH-amd64/libc32 $@
 
 ifeq ($(ARCH),amd64)
 

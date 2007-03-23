@@ -19,6 +19,11 @@ $(OBJ_DIR)/Makefile.build: $(SRC_DIR)/Makefile
 	$(VERBOSE)echo 'vpath %.tex $(SRC_DIR)'      >> $@
 	$(VERBOSE)echo 'include $(SRC_DIR)/Makefile' >> $@
 
+clean::
+
+cleanall::
+	$(VERBOSE)rm -f $(OBJ_DIR)/Makefile.build
+
 else
 
 SRC_TEX = l4env.tex

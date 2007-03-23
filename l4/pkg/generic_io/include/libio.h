@@ -4,11 +4,11 @@
  * \file   generic_io/include/ARCH-x86/libio.h
  * \brief  L4Env I/O Client API
  *
- * \date   05/28/2003
+ * \date   2007-03-23
  * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
  */
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
@@ -58,13 +58,11 @@ int l4io_init(l4io_info_t **io_info_addr, l4io_drv_t drv_type);
  * \param  len     size of mem region
  * \param  flags   bit 0=1: map region cachable otherwise uncacheable
  *                 bit 1=1: allocate MTRR and enable write combining
- * \retval offset  offset with memory region
  *
  * \return virtual address of mapped region; 0 on error
  */
 /*****************************************************************************/
-l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len, int flags,
-                                  l4_umword_t *offset);
+l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len, int flags);
 
 /******************************************************************************/
 /**

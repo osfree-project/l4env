@@ -77,7 +77,7 @@ BID_ORIG_SYSTEM = $(shell echo $(2)|$(AWKP) '\
 
 ifeq ($(ROLE),idl.mk)
 TARGET_SYSTEMS := $(sort $(foreach sys,$(sort \
-	$(shell echo $(BUILD_SYSTEMS)|$(SED) -e 's/_[^- ]*\(-\)\?/\1/g')), \
+	$(shell echo $(BUILD_SYSTEMS)|$(SED) -e 's/_[^- ]*\(-\{0,1\}\)/\1/g')), \
 	$(call FILTER_SYSTEM,$(sys),$(SYSTEMS))))
 else
 TARGET_SYSTEMS := $(sort $(foreach sys,$(BUILD_SYSTEMS),\
@@ -132,7 +132,7 @@ clean::
 	$(if $(wildcard $(OBJ_DIR)/OBJ-*), $(VERBOSE)set -e ; \
 	    for d in $(wildcard $(OBJ_DIR)/OBJ-*) ; do \
 	        PWD=OBJ-$$d $(MAKE) -C $$d -f $(BID_OBJ_Makefile) $@; \
-	    done )
+	    done, @true)
 
 cleanall::
 	$(VERBOSE)$(RM) -r $(wildcard $(OBJ_DIR))
@@ -230,6 +230,14 @@ LDFLAGS	+= $(strip $(LDFLAGS_$(OSYSTEM)) $(LDFLAGS_$(ARCH)) $(LDFLAGS_$@) $(LDFL
 
 OPTS	?= -g -O2 -fno-strict-aliasing $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 WARNINGS?= -Wall -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations $(WARNINGS_$@)
+
+ifeq ($(MODE),host)
+# never cross compile in host mode
+SYSTEM_TARGET = 
+CC            = $(HOST_CC)
+CXX           = $(HOST_CXX)
+endif
+
 
 #
 # These are some special defines for the X2 sources from Pistachio.

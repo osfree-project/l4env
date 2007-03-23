@@ -3,7 +3,7 @@ PKGDIR ?=	../..
 L4DIR ?=	$(PKGDIR)/../..
 
 SRC_C =		main.c
-MODE		= host
+MODE		= linux
 
 TARGET =	cmdlineex
 PRIVATE_INCDIR	= $(L4INCDIR)

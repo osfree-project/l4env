@@ -1,21 +1,32 @@
 L4DIR ?= ../..
 include $(L4DIR)/mk/Makeconf
 
-VERSION	=0.2
+VERSION	= 0.2
 CSRC	= deptrack.c syscall.c
 MAN	= man/man7/libgendep.so.7
 MAN_SRC	= manpage.dox Doxyfile
 
 CFLAGS	= -fPIC -Wall -pedantic -g
 DDIR	= gendep-$(VERSION)
-OBJS	= $(CSRC:.c=.o)
-LIB	= libgendep.so
+OBJS	= $(addprefix $(OBJ_DIR)/,$(CSRC:.c=.o))
+LIB	= $(OBJ_DIR)/libgendep.so
 CC	= $(HOST_CC)
 
 all:: $(LIB)
 
+$(OBJS):: $(OBJ_DIR)/%.o: %.c
+	$(COMPILE.c) $(OUTPUT_OPTION) $<
+
 $(LIB): $(OBJS)
+ifeq ($(HOST_SYSTEM),linux)
 	$(HOST_CC) -shared -Wl,-soname,$@ -ldl -o $@ $^
+else
+ifeq ($(HOST_SYSTEM),darwin)
+	$(HOST_CC) -dynamiclib -o $@ $^
+else
+$(error Your host system type "$(HOST_SYSTEM)" is not supported here. Fix me.)
+endif
+endif
 
 doc: $(MAN)
 
@@ -33,23 +44,23 @@ test:
 	GENDEP_TARGET='simple-cat' \
 		GENDEP_BINARY=cpp\
 		GENDEP_cpp='+\.h$$ -^/usr' \
-		LD_PRELOAD=$(shell pwd)/libgendep.so\
-		$(HOST_CC) -o simple-cat simple-cat.c
+		$(LD_PRELOAD)=$(OBJ_DIR)/libgendep.so\
+		$(HOST_CC) -o $(OBJ_DIR)/simple-cat simple-cat.c
 	GENDEP_TARGET='blabla' \
 		GENDEP_BINARY=cpp\
-		LD_PRELOAD=$(shell pwd)/libgendep.so\
-		$(HOST_CC) -o simple-cat simple-cat.c
+		$(LD_PRELOAD)=$(OBJ_DIR)/libgendep.so\
+		$(HOST_CC) -o $(OBJ_DIR)/simple-cat simple-cat.c
 	GENDEP_TARGET='badexp' \
 		GENDEP_BINARY=cpp\
 		GENDEP_cpp='\)foo'\
-		LD_PRELOAD=$(shell pwd)/libgendep.so\
-		$(HOST_CC) -o simple-cat simple-cat.c
+		$(LD_PRELOAD)=$(OBJ_DIR)/libgendep.so\
+		$(HOST_CC) -o $(OBJ_DIR)/simple-cat simple-cat.c
 	@echo ==========
 	cat simple-cat.dep
 	cat blabla.dep
 
 clean cleanall::
-	rm -f .*.d *.o simple-cat
+	rm -f $(OBJ_DIR)/.*.d $(OBJ_DIR)/*.o $(OBJ_DIR)/simple-cat
 
 cleanall::
 	rm -f $(LIB)

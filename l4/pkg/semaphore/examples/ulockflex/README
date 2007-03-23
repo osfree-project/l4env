@@ -1,0 +1,77 @@
+Ulockflex Benchmark
+===================
+
+This benchmark is a reimplementation of the original ulockflex benchmark
+written by Hubertus Franke for the Futex and ulock implementations in the
+Linux kernel. It has been rewritten because the infrastructure on L4 is quite
+different.  However, the basic idea of the benchmark was used.
+
+The benchmarks works as follows: The benchmarking programm will start a
+specified number of tasks or threads and allocate a specified number of locks.
+Lets dubb the numbers num_clients and num_locks.  The clients will be assigned
+the locks in a round robin fashion, that is:
+
+for (i = 0; i < num_clients; i++)
+  lock for thread i = i % num_locks;
+
+An additional lock (atomic variable) is used to synchronize the start of the
+clients.
+
+Each client runs in a tight loop that calculates a non-lock-holding time and a
+lock-holding time based on a random value.  The client then does some work for
+non-ock-holding time, acquires the lock, does some work for lock-holding time,
+releases the lock, and then starts the loop again.
+
+while (true)
+{
+  compute nhlt, lht;
+
+  work for nhlt;
+  lock();
+  work for lht;
+  unlock();
+}
+
+The controlling application will after a specified run-time stop the threads.
+
+The rest of the code is measurement code that counts the number of runs the
+client can make in the specified time and the times it has to wait for a lock
+or to unlock.  When the client finished, the mean times for lock() and
+unlock() as well as standard deviation, minimum and maximum times are
+calculated.
+
+Usage
+=====
+
+To run ulockflex you need the basic l4env: sigma0, roottask, log, names,
+dm_phys.  If you intend to use tasks instead of threads, you will also need
+simple_ts.
+
+Valid options for ulockflex are:
+-c <num-clients>  : the number of clients to start
+-l <num-locks>    : the number of locks to create
+-r <run-time>     : the run time of the test
+-t                : use threads instead of tasks (default)
+
+The number of locks should (naturally) be smaller or equal to the number of
+clients.  Also, the number of clients is restricted by the limitations of the
+platform: about 120 threads can be started and by default simple_ts allows
+only 64 tasks to be started.  See the relevant documentation on how to soften
+these restraints.
+
+Code
+====
+
+The benchmark itself as well as option parsing etc. is unified in main.c (not
+very elegant, I know).  The file __debug.h allows to turn some debugging
+output on or off.  The file lock_impl.h contains the mappings of the used lock
+implementation.  The benchmark uses the following macros to interact with the
+lock implementation:
+
+LOCK_TYPE       - type of the used lock
+LOCK_SIZE	- size of the lock type
+LOCK_INIT(lock) - code to initialize a free lock
+LOCK_DOWN(lock) - code to obtain a lock
+LOCK_UP(lock)   - code to release the lock
+
+(lock is always expected to be a pointer to a variable of type LOCK_TYPE.)

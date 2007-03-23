@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= pslim_drv_43.o pslim_drv_70.so pslim_drv_71.so
-MODE		= host
+MODE		= linux
 LIBS		= -lcon.p -ldm_generic.p -ldm_mem.p -lnames.p \
 		  -ll4util.p $(ROOTPLIB) -ll4sys.p
 LIBCINCDIR	= $(addprefix -I,$(L4INCDIR) $(GCCINCDIR))

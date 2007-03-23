@@ -103,10 +103,9 @@ struct resource *request_mem_region(unsigned long start, unsigned long n,
 				    const char *name)
 {
   l4_addr_t vaddr;
-  l4_addr_t offset;
 
   LOGdL(DEBUG_RES_TRACE, "phys_addr=%p, size=%ld, name=\"%s\"", (void *)start, n, name);
-  vaddr = l4io_request_mem_region((l4_addr_t) start, (l4_size_t) n, 0, &offset);
+  vaddr = l4io_request_mem_region((l4_addr_t) start, (l4_size_t) n, 0);
 
   if (!vaddr)
     {
@@ -114,7 +113,7 @@ struct resource *request_mem_region(unsigned long start, unsigned long n,
       return 0;
     }
   /* keep region info */
-  dde_add_region(&regions, vaddr+offset, start, n);
+  dde_add_region(&regions, vaddr, start, n);
 
   return (struct resource *) 1;
 }

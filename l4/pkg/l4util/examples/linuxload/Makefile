@@ -8,7 +8,7 @@ SRC_C		= main.c
 # target
 TARGET		= load
 LIBS		= -lparsecmdline
-MODE		= host
+MODE		= linux
 PRIVATE_INCDIR	= $(L4INCDIR)
 
 include $(L4DIR)/mk/prog.mk

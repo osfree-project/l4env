@@ -33,6 +33,7 @@
 #include <l4/util/reboot.h>
 #include <l4/util/parse_cmd.h>
 #include <l4/util/l4_macros.h>
+#include <l4/sigma0/sigma0.h>
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -3,7 +3,7 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= l4env_err
 SYSTEMS		= x86
-MODE		= host
+MODE		= linux
 PRIVATE_INCDIR	= $(L4INCDIR)
 LIBS		= -ll4env_err
 

@@ -44,7 +44,7 @@ do_link = if (readlink($$dst) ne $$src) {                                     \
             }                                                                 \
             system("ln","-sf$(if $(VERBOSE),,v)",$$src,$$dst) && exit 1;      \
           }
-do_inst = system("install","-vm","644",$$src,$$dst) && exit 1;
+do_inst = system("install","-m$(if $(VERBOSE),,v)","644",$$src,$$dst) && exit 1;
 installscript = perl -e '                                                     \
   chomp($$srcdir="$(INCSRC_DIR)");                                            \
   $$notify=1;                                                                 \
@@ -58,7 +58,7 @@ installscript = perl -e '                                                     \
 	    $$src="$$srcdir/$$src" if $$src !~ /^\//;                         \
 	    $$dstdir=$$dst="$(if $(1),$(INSTALLDIR_LOCAL),$(INSTALLDIR))/$$_";\
 	    $$dstdir=~s|/[^/]*$$||;                                           \
-	    -d $$dstdir || system("install","-vd",$$dstdir) && exit 1;        \
+	    -d $$dstdir || system("install","-d$(if $(VERBOSE),,v)",$$dstdir) && exit 1;        \
 	    $(if $(1),$(do_link),$(do_inst))                                  \
 	  }                                                                   \
     }                                                                         \

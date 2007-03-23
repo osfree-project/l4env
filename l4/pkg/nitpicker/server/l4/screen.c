@@ -5,7 +5,7 @@
  */
 
 /*
- * Copyright (C) 2002-2004  Norman Feske  <nf2@os.inf.tu-dresden.de>
+ * Copyright (C) 2002-2007  Norman Feske  <nf2@os.inf.tu-dresden.de>
  * Technische Universitaet Dresden, Operating Systems Research Group
  *
  * This file is part of the DOpE package, which is distributed under
@@ -51,7 +51,7 @@ vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
 		size    = l4_round_superpage(size + *offset);
 
 		TRY(l4rm_area_reserve(size, L4RM_LOG2_ALIGNED, vaddr, &rg),
-		    "Reserving region size=%dMB for video memory failed.", size>>20);
+		    "Reserving region size=%ldMB for video memory failed.", (unsigned long)size>>20);
 
 		/* get region manager's pager */
 		my_task_pager_id = l4_thread_ex_regs_pager(l4rm_region_mapper_id());
@@ -71,8 +71,8 @@ vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
 			     	return -L4_EINVAL;
 		}
 	} else {
-		if ((*vaddr = l4io_request_mem_region(paddr, size, L4IO_MEM_WRITE_COMBINED,
-						      offset)) == 0)
+		*offset = 0;
+		if ((*vaddr = l4io_request_mem_region(paddr, size, L4IO_MEM_WRITE_COMBINED)) == 0)
 			Panic("Can't request memory region from l4io.");
 	}
 

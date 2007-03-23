@@ -60,7 +60,10 @@ endif
 LDFLAGS += $(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))
 LDFLAGS += $(addprefix -L, $(L4LIBDIR)) $(LIBCLIBDIR)
 LDFLAGS	+= $(addprefix -T, $(LDSCRIPT)) $(LIBS) $(L4LIBS) $(LIBCLIBS) $(LDFLAGS_$@)
+# Not all host linkers understand this option
+ifneq ($(MODE),host)
 LDFLAGS += -Wl,--warn-common
+endif
 
 ifeq ($(notdir $(LDSCRIPT)),main_stat.ld)
 # ld denies -gc-section when linking against shared libraries
