@@ -21,7 +21,6 @@
 #include "app.h"
 #include "dm-if.h"
 #include "lib.h"
-#include "exec-if.h"
 
 static char error_message[MAX_ERROR_MSG];
 

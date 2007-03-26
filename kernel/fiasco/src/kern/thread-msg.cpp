@@ -411,7 +411,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  L4_fpage snd_fpage (regs->msg_word (1));
 
 	  // fpage valid?
-	  if (EXPECT_FALSE (snd_fpage.size() < 12))
+	  if (EXPECT_FALSE (!snd_fpage.is_valid()))
 	    {
 	      // This is not a valid flexpage, so do not try to send it.
 	      // Also, don't try to transfer any more flexpages.
@@ -505,7 +505,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	      L4_fpage snd_fpage (regs->msg_word ((Mword *) snd_descr, n+1));
 
 	      // if not a valid flexpage, break
-	      if (snd_fpage.size() < 12)
+	      if (!snd_fpage.is_valid())
 		{
 		  snd_fpages = false;
 		  break;

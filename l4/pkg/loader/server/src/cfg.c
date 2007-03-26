@@ -30,7 +30,6 @@
 #include "app.h"
 #include "dm-if.h"
 #include "fprov-if.h"
-#include "exec-if.h"
 #include "elf-loader.h"
 #include "idl.h"
 #include "global.h"

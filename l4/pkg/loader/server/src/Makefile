@@ -1,6 +1,6 @@
 PKGDIR		 ?= ../..
 L4DIR		= $(PKGDIR)/../..
-SYSTEMS		= x86-l4v2 arm-l4x0 amd64-l4v2
+SYSTEMS		= x86-l4v2 arm-l4x0
 TARGET		= loader
 
 WITH_IPC_MON	= n
@@ -28,12 +28,7 @@ include $(L4DIR)/mk/prog.mk
 DEFINES_IPCMON-y = -DIPCMON
 DEFINES		+= $(DEFINES_IPCMON-$(WITH_IPC_MON))
 
-ifeq ($(USE_LDSO),y)
 DEFINES		+= -DUSE_LDSO
-else
-LIBS		+= -ll4exec
-SRC_C		+= lib.c exec-if.c
-endif
 
 # create Makeconf.local with EMULATE_MMIO = 1 to activate this
 ifeq ($(EMULATE_MMIO),1)

@@ -24,7 +24,6 @@
 #include "idl.h"
 #include "fprov-if.h"
 #include "dm-if.h"
-#include "exec-if.h"
 #include "events.h"
 
 char LOG_tag[9] = "loader";		     /**< tell logserver our log tag

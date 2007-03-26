@@ -41,7 +41,6 @@
 #include "elf-loader.h"
 #include "fprov-if.h"
 #include "dm-if.h"
-#include "exec-if.h"
 #include "trampoline.h"
 #include "pager.h"
 #include "debug.h"
