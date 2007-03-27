@@ -112,6 +112,7 @@ my %modules =
    },
 
    hello => {
+      pub_module => 1,
       modules => [ qw(fiasco bid hello_pkg l4env_tools) ],
    },
 
@@ -124,10 +125,12 @@ my %modules =
    },
 
    'l4linux-2.6-env' => {
+      pub_module => 1,
       modules => [ qw(l4env dope misc) ],
    },
 
    fiasco => {
+      pub_module => 1,
       paths   => [ qw(kernel/fiasco/COPYING
                       kernel/fiasco/MAINTAINER
                       kernel/fiasco/Makefile
@@ -145,6 +148,7 @@ my %modules =
    },
 
    dice => {
+      pub_module => 1,
       paths => [ qw(dice) ],
    },
 
@@ -249,7 +253,10 @@ sub usage
     {
       print "  'checkout' will check out the given modules.\n";
       print "Available modules:\n";
-      print "  $_\n" foreach sort keys %modules;
+      foreach (sort keys %modules)
+        {
+           print "  $_\n" if $modules{$_}{pub_module};
+        }
     }
   else
     {
@@ -314,6 +321,14 @@ sub command_checkout
   die "svn update failed" if $?;
 }
 
+sub command_modules
+{
+  foreach (sort keys %modules)
+    {
+      print "$_\n" if defined $modules{$_}{pub_module};
+    }
+}
+
 sub command_paths
 {
   print "$_\n" foreach merge_modules(@_);
@@ -326,6 +341,7 @@ sub command_paths
    up       => { func => \&command_update, alias => 'update' },
    checkout => { func => \&command_checkout, public => 1},
    co       => { func => \&command_checkout, alias => 'checkout'},
+   modules  => { func => \&command_modules, public => 1},
    paths    => { func => \&command_paths, },
  );
 
