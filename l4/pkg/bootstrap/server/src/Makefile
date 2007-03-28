@@ -62,7 +62,6 @@ MODULE_PATH     ?= $(INSTALLDIR_LOCAL)
 MODULE_LIST     ?= modules.list
 
 # can be overwritten by Makeconf.local
-XEN		?= 0
 COMPRESS	?= 0
 LOADER_MBI	?= 0
 REALMODE_LOADING ?= 0
@@ -76,20 +75,6 @@ ifeq ($(ARCH),arm)
 LOADER_MBI	 := 1
 endif
 
-ifneq ($(XEN_PATH),)
-XEN		 := 1
-endif
-
-ifneq ($(XEN),0)
-LOADER_MBI	 = 1
-SRC_C		+= ARCH-x86/xen.c
-LINK_ADDR	 = 0xf0100000
-MOD_ADDR	 = 0xc2000000
-CPPFLAGS	+= -DXEN -DSINGLE_SECTION
-XEN_PATH	?= /your/path/to/xen
-CPPFLAGS	+= -I$(XEN_PATH)/xen-2.0/xen/include \
-		   -I$(XEN_PATH)/xen-2.0/extras/mini-os
-endif
 
 # convenience
 ifneq ($(E),)

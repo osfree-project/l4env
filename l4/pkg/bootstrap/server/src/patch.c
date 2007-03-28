@@ -35,14 +35,11 @@
 #include "types.h"
 #include "patch.h"
 
-static char  argspc[4096];
-static char *argptr = argspc;
-static char *argarr[MODS_MAX];
 
 /* search module in module list */
 static l4util_mb_mod_t*
 search_module(const char *name, size_t name_len, l4util_mb_info_t *mbi,
-              const char **cmdline, const char **modname_end)
+              const char **cmdline)
 {
   int i;
   const char *c = 0, *ce = 0;
@@ -86,7 +83,7 @@ patch_module(const char **str, l4util_mb_info_t *mbi)
   const char *val_beg, *val_end;
   char *mod_beg, *mod_end, *mod_ptr, quote = 0;
   l4_size_t var_size, val_size, max_patch_size;
-  const char *cmdline = 0, *modname_end = 0;
+  const char *cmdline = 0;
   l4util_mb_mod_t *mod;
 
   /* nam_beg ... nam_end */
@@ -95,9 +92,9 @@ patch_module(const char **str, l4util_mb_info_t *mbi)
   if (!nam_end || strpbrk(nam_beg, "\011 =*")-1 < nam_end)
     panic("-patch: bad module name");
 
-  mod = search_module(nam_beg, nam_end-nam_beg, mbi, &cmdline, &modname_end);
+  mod = search_module(nam_beg, nam_end-nam_beg, mbi, &cmdline);
   if (!mod)
-    panic("-patch: cannot find module \"%.*s\"", 
+    panic("-patch: cannot find module \"%.*s\"",
 	  (int)(nam_end-nam_beg), nam_beg);
 
   mod_beg = L4_CHAR_PTR(mod->mod_start);
@@ -108,8 +105,7 @@ patch_module(const char **str, l4util_mb_info_t *mbi)
    * there and we don't want to move the following modules. */
   max_patch_size = l4_round_page(mod_end) - (l4_addr_t)mod_end - 1;
 
-  printf("  Patching module \"%.*s\"\n",
-         (unsigned)(modname_end - cmdline), cmdline);
+  printf("  Patching module \"%s\"\n", cmdline);
 
   for (var_beg=nam_end; *var_beg==','; var_beg=*str)
     {
@@ -128,7 +124,7 @@ patch_module(const char **str, l4util_mb_info_t *mbi)
 	  quote = *val_end++;
 	}
       while (*val_end && ((!quote && !isspace(*val_end) && *val_end!=',') ||
-			  ( quote && *val_end!=quote)))
+			  (quote && *val_end!=quote)))
 	val_end++;
       *str = val_end;
       if (quote)
@@ -157,69 +153,51 @@ patch_module(const char **str, l4util_mb_info_t *mbi)
   mod->mod_end = (l4_addr_t)mod_end;
 }
 
+
 /**
- * Handle -cmdline=<module_name>,blah parameter. Replace old command line
+ * Handle -arg=<module_name>,blah parameter. Replace old command line
  * parameters of <module_name> by blah. Useful for changing the boot
  * configuration of a bootstrap image.
+ *
+ * Get a pointer to new argument and return the size.
  */
-void
-args_module(const char **str, l4util_mb_info_t *mbi)
+char *
+get_arg_module(l4util_mb_info_t *mbi, const char *name, unsigned *size)
 {
-  const char *nam_beg, *nam_end;
-  const char *val_beg, *val_end;
-  char quote = 0;
-  l4_size_t val_size;
-  const char *cmdline = 0, *modname_end = 0;
-  l4util_mb_mod_t *mod;
-  int modnr;
+  char *val_beg = NULL, *val_end;
+  char *s = L4_CHAR_PTR(mbi->cmdline);
 
-  /* nam_beg ... nam_end */
-  nam_beg = *str+8;
-  nam_end = strchr(nam_beg, ',');
-  if (!nam_end || strpbrk(nam_beg, "\011 =*")-1 < nam_end)
-    panic("-args: bad module name");
-
-  mod = search_module(nam_beg, nam_end-nam_beg, mbi, &cmdline, &modname_end);
-  if (!mod)
-    panic("-args: cannot find module \"%.*s\"",
-	  (int)(nam_end-nam_beg), nam_beg);
-
-  modnr = mod - L4_MB_MOD_PTR(mbi->mods_addr);
-  if (argarr[modnr])
-    panic("-args: called more than once for same module, use quotes");
-
-  printf("  Replacing args of module %d: \"%.*s\"\n", 
-      modnr, (unsigned)(modname_end - cmdline), cmdline);
-
-  /* val_beg ... val_end, consider quotes */
-  val_beg = val_end = nam_end+1;
-  if (*val_end == '"' || *val_end == '\'')
+  while (!val_beg && (s = strstr(s, " -arg=")))
     {
-      val_beg++;
-      quote = *val_end++;
+      char *a, *name_end;
+
+      s += 6;
+      name_end = strchr(s, ',');
+      if (!name_end)
+	panic("comma missing after modname in -arg=");
+      *name_end = 0;
+
+      for (a = s; *a; a++)
+	if (isspace(*a))
+	  panic("Invalid '-arg=modname,text' parameter");
+
+      // we do a fuzzy name-match here
+      if (strstr(name, s))
+	val_beg = name_end+1;
+      *name_end = ',';
     }
-  while (*val_end && ((!quote && !isspace(*val_end) && *val_end!=',') ||
-		      ( quote && *val_end!=quote)))
+  if (!val_beg)
+    return 0;
+
+  // consider quotes
+  unsigned char quote = 0;
+  if (*val_beg == '"' || *val_beg == '\'')
+    quote = *val_beg++;
+  val_end = val_beg;
+
+  while (*val_end && ((!quote && !isspace(*val_end)) || *val_end!=quote))
     val_end++;
-  *str = val_end;
-  if (quote)
-    (*str)++;
-  quote = 0;
-  val_size = val_end-val_beg;
 
-  if (argptr + val_size + 1 > argspc + sizeof(argspc))
-    panic("-cmdline: internal parameter memory exceeded");
-
-  argarr[modnr] = memcpy(argptr, val_beg, val_size);
-  argptr += val_size;
-  *argptr++ = '\0';
-}
-
-const char *
-get_args_module(int i)
-{
-  if (i >= MODS_MAX)
-    return NULL;
-
-  return argarr[i];
+  *size = val_end - val_beg;
+  return val_beg;
 }

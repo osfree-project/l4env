@@ -15,8 +15,17 @@ l4util_mb_info_t *init_loader_mbi(void *realmode_pointer, unsigned int mem)
 
   if (!mem)
     {
-      loader_mbi.mem_upper  = *(unsigned long *)(realmode_pointer + 0x1e0);
+      unsigned long *cmd_line_ptr;
+
+      loader_mbi.mem_upper  = *(unsigned long *)((char *)realmode_pointer + 0x1e0);
       printf("Detected memory size: %dKB\n", loader_mbi.mem_upper);
+
+      cmd_line_ptr = (unsigned long *)((char *)realmode_pointer + 0x228);
+      if (cmd_line_ptr && *cmd_line_ptr)
+        {
+          loader_mbi.flags |= L4UTIL_MB_CMDLINE;
+          loader_mbi.cmdline = *cmd_line_ptr;
+        }
     }
   else
     {

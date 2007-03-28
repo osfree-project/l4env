@@ -195,7 +195,7 @@ Jdb::execute_command()
 	set_next_cmd(0);
       else
 	c = getchar();
-    } while (c < ' ' & c!= KEY_RETURN);
+    } while (c < ' ' && c != KEY_RETURN);
 
   if (c == KEY_F1)
     c = 'h';

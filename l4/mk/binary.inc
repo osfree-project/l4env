@@ -431,30 +431,28 @@ ifneq ($(MODE)$(USE_LDSO),loadery)
         # (defined in Makeconf).
         # If DEFAULT_RELOC_xxx is set, xxx is made dependent on the
         # STATIC file.
-ifneq ($(strip $(DEFAULT_RELOC) $(foreach target,$(TARGET),		\
-					  $(DEFAULT_RELOC_$(target)))),)
+ifneq ($(strip $(foreach target,$(TARGET), $(call default_reloc, $(target)))),)
 ifneq ($(filter l4linux host,$(MODE)),)
 	$(error DEFAULT_RELOC must not be set if MODE is l4linux or host)
 endif
         # the relocatable binaries depend on Makefile.inc
-	@$(ECHO) -e '\n$(strip						\
-		$(foreach target, $(TARGET),				\
-			$(if $(DEFAULT_RELOC),$(target),		\
-			     $(if $(DEFAULT_RELOC_$(target)),$(target))))\
+	@$(ECHO) -e '\n$(strip						 \
+		$(foreach target, $(TARGET),				 \
+			$(if $(call default_reloc,$(target)), $(target))) \
 		: $@)' >>$@_
 ifneq ($(wildcard $(STATICFILE)),)
         # Makefile.inc depends on STATIC
-	@$(ECHO) -e '\n$@: $(STATICFILE)' >>$@_
+	@$(ECHO) -e '\n$@: $(firstword $(wildcard $(STATICFILE)))' >>$@_
         # we find out the relocation address here.
 	@$(ECHO) -e '$(foreach target, $(TARGET),$(strip		\
 		\nLDFLAGS_$(target)+= -Ttext=$(firstword		\
 			$(shell $(AWKP) -v prog=$(target)		\
 				"/^[^\#]/{if(\$$2==prog){print $$1; exit}}" \
-				< $(STATICFILE))			\
-			$(DEFAULT_RELOC_$(target)) $(DEFAULT_RELOC))))'	\
+				< $(firstword $(wildcard $(STATICFILE)))) \
+			$(call default_reloc,$(target)))))'	\
 		>>$@_
         # and the dummy-rule to rebuild myself if STATIC disappears
-	@$(ECHO) -e '\n$(STATICFILE): ' >>$@_
+	@$(ECHO) -e '\n$(firstword $(wildcard $(STATICFILE))): ' >>$@_
 else
         # STATIC does not exist. rebuild myself if STATIC appears
 	@$(ECHO) -e '\n$$(if $$(wildcard $(STATICFILE)), $@: FORCE)'	\
@@ -462,7 +460,7 @@ else
         # we find out the relocation address here.
 	@$(ECHO) -e '$(foreach target, $(TARGET),$(strip		\
 		\nLDFLAGS_$(target)+= -Ttext=$(firstword		\
-			$(DEFAULT_RELOC_$(target)) $(DEFAULT_RELOC))))'	\
+			$(call default_reloc,$(target)))))'	\
 		>>$@_
 endif # STATIC file
 endif

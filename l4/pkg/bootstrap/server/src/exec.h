@@ -60,7 +60,6 @@ typedef struct
 {
   void *mod_start;
   l4util_mb_mod_t *mod;
-  unsigned task_no;
   l4_addr_t begin;	/* program begin */
   l4_addr_t end;	/* program end */
 } exec_task_t;

@@ -59,4 +59,4 @@ vpath roottask.ld.in $(PKGDIR)/server/src
 
 roottask.ld: roottask.ld.in Makefile
 	@$(GEN_MESSAGE)
-	$(VERBOSE)sed 's,@linkaddr@,$(DEFAULT_RELOC),g' $< > $@;
+	$(VERBOSE)sed 's,@linkaddr@,$(call default_reloc,$(TARGET)),g' $< > $@;

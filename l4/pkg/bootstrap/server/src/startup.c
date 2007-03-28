@@ -39,52 +39,33 @@
 #include "ARCH-x86/serial.h"
 #endif
 
-#if defined(REALMODE_LOADING) || defined(XEN) || defined(ARCH_arm)
+#if defined(REALMODE_LOADING) || defined(ARCH_arm)
 #include "loader_mbi.h"
 #endif
 
 #undef getchar
 
+static char bootstrap_mbi[16 << 10];
 
-
-extern int _start;	/* begin of image -- defined in crt0.S */
-extern int _end;	/* end   of image -- defined by bootstrap.ld */
-
-/* temporary buffer for multiboot info */
-static l4util_mb_info_t *mb_info;
-static l4util_mb_mod_t *mb_mod;
-static boot_info_t boot_info;
-
-const l4_addr_t _mod_addr = MODADDR;
+#ifdef IMAGE_MODE
+l4_addr_t _mod_addr = MODADDR;
+#else
+l4_addr_t _mod_addr;
+#endif
 
 /* hardware config variables */
 int hercules = 0; /* hercules monitor attached */
 
 /* modules to load by bootstrap */
 static const int kernel = 1; /* we have at least a kernel */
-#ifdef XEN
-static int sigma0 = 0;   /* we need sigma0 */
-static int roottask = 0; /* we need a roottask */
-#else
 static int sigma0 = 1;   /* we need sigma0 */
 static int roottask = 1; /* we need a roottask */
-#endif
 
 enum {
   kernel_module,
   sigma0_module,
   roottask_module,
 };
-
-/* RAM memory size */
-static l4_addr_t mod_range_start = 0;
-static l4_addr_t mod_range_end = 0;
-
-static l4_addr_t bios_area_start = 0;
-static l4_addr_t bios_area_end = 0;
-
-static l4_addr_t bootstrap_start = 0;
-static l4_addr_t bootstrap_end = 0;
 
 /* we define a small stack for sigma0 and roottask here -- it is used by L4
  * for parameter passing. however, sigma0 and roottask must switch to its
@@ -103,18 +84,7 @@ l4_exec_add_region(void * handle,
 		  l4_addr_t file_ofs, l4_size_t file_size,
 		  l4_addr_t mem_addr, l4_size_t mem_size,
 		  exec_sectype_t section_type);
-/**
- * copy mbi from bootstrap to roottask
- * also add the l4_version variable to command-line
- * don't copy kernel, sigma0 and roottask module
- */
-static inline void*
-lin_alloc(l4_size_t size, l4_uint8_t **ptr)
-{
-  void *ret = *ptr;
-  *ptr += (size + 3) & ~3;;
-  return ret;
-}
+
 
 #if 0
 static void
@@ -143,16 +113,16 @@ dump_mbi(l4util_mb_info_t *mbi)
 
 static
 void *
-find_kip(void)
+find_kip(boot_info_t *bi)
 {
   enum { L4_KERNEL_INFO_MAGIC = 0x4BE6344CL /* "L4µK" */ };
   unsigned char *p;
   void *k = 0;
 
   printf("  find kernel info page...\n");
-  for (p = (unsigned char *) (boot_info.kernel_low & 0xfffff000);
-       p < (unsigned char *) boot_info.kernel_low +
-         (boot_info.kernel_high - boot_info.kernel_low);
+  for (p = (unsigned char *) (bi->kernel_low & 0xfffff000);
+       p < (unsigned char *) bi->kernel_low +
+         (bi->kernel_high - bi->kernel_low);
        p += 0x1000)
     {
       l4_umword_t magic = L4_KERNEL_INFO_MAGIC;
@@ -177,6 +147,27 @@ unsigned long get_api_version(void *kip)
 }
 
 /**
+ * The cmdline string may either be including the calling program
+ * (.../bootstrap -arg1 -arg2) or without (-arg1 -arg2) in the realmode
+ * case, there, we do not have a leading space
+ *
+ * return pointer after argument, NULL if not found
+ */
+static char *
+check_arg(char *cmdline, char *arg)
+{
+  char *s = cmdline;
+  while ((s = strstr(s, arg)))
+    {
+      if (s == cmdline
+          || isspace(s[-1]))
+        return s;
+    }
+
+  return NULL;
+}
+
+/**
  * setup memory range
  */
 static void
@@ -192,7 +183,7 @@ setup_memory_range(l4util_mb_info_t *mbi, boot_info_t *bi)
 
   /* maxmem= parameter? */
   if ((mbi->flags & L4UTIL_MB_CMDLINE) &&
-      (c = strstr(L4_CHAR_PTR(mbi->cmdline), " -maxmem=")))
+      (c = check_arg(L4_CHAR_PTR(mbi->cmdline), "-maxmem=")))
     bi->mem_upper = 1024 * (strtoul(c + 9, NULL, 10) - 1);
 
   if (mbi->mem_upper != bi->mem_upper)
@@ -207,22 +198,31 @@ setup_memory_range(l4util_mb_info_t *mbi, boot_info_t *bi)
 }
 
 /**
- * init memory map
+ * Move modules to another address.
  */
 static void
-init_memmap(l4util_mb_info_t *mbi)
+move_modules(l4util_mb_info_t *mbi, unsigned modaddr)
 {
-#if defined(ARCH_x86) || defined(ARCH_amd64)
-  bios_area_start = 0x09f000;
-  bios_area_end   = 0x100000;
-#endif
+  int offset = modaddr - (L4_MB_MOD_PTR(mbi->mods_addr))[0].mod_start;
+  unsigned i;
+  unsigned dir = offset > 0 ? mbi->mods_count : 1;
+  
+  printf("  move modules to %x with offset %x\n", modaddr, offset);
 
-  bootstrap_start = (l4_addr_t)&_start;
-  bootstrap_end   = (l4_addr_t)&_end;
+  for (i = dir; i != mbi->mods_count - dir ; offset > 0 ? i-- : i++)
+    {
+      unsigned start = (L4_MB_MOD_PTR(mbi->mods_addr))[i-1].mod_start;
+      unsigned end = (L4_MB_MOD_PTR(mbi->mods_addr))[i-1].mod_end;
 
-  mod_range_start = (L4_MB_MOD_PTR(mbi->mods_addr))[0].mod_start;
-  mod_range_end   = (L4_MB_MOD_PTR(mbi->mods_addr))[mbi->mods_count-1].mod_end;
+      printf("  move module %d start %x -> %x\n",i, start, start+offset);
+      if ((start+offset < 0x100000) || (end+offset) >> 10 > mbi->mem_upper)
+	panic("can not move module to [%x,%x]\n", start+offset, end+offset);
+      memmove((void *)(start+offset), (void *)start, end-start);
+      (L4_MB_MOD_PTR(mbi->mods_addr))[i-1].mod_start += offset;
+      (L4_MB_MOD_PTR(mbi->mods_addr))[i-1].mod_end += offset;
+    }
 }
+
 
 /**
  * init region map
@@ -230,13 +230,23 @@ init_memmap(l4util_mb_info_t *mbi)
 static void
 init_region(l4util_mb_info_t *mbi, boot_info_t *bi)
 {
-  region_add(bios_area_start, bios_area_end, ".BIOS area");
-  region_add(bootstrap_start, bootstrap_end, ".bootstrap");
-  region_add(mod_range_start, mod_range_end, ".Modules Memory");
+  extern int _start;	/* begin of image -- defined in crt0.S */
+  extern int _end;	/* end   of image -- defined by bootstrap.ld */
+
+
+#if defined(ARCH_x86) || defined(ARCH_amd64)
+  region_add(0x09f000, 0x100000, ".BIOS area");
+#endif  
+
+  region_add((l4_addr_t)&_start, (l4_addr_t)&_end, ".bootstrap");
+
+  region_add((L4_MB_MOD_PTR(mbi->mods_addr))[0].mod_start,
+	     (L4_MB_MOD_PTR(mbi->mods_addr))[mbi->mods_count-1].mod_end,
+	     ".Modules Memory");
+
+  // RAM memory size
   region_add(0,               RAM_BASE,      ".Deep Space");
-#ifndef XEN
   region_add(RAM_BASE + bi->mem_high, ~0U,   ".Deep Space");
-#endif
 }
 
 /**
@@ -255,7 +265,6 @@ add_module_regions(l4util_mb_info_t *mbi, l4_umword_t module, l4_addr_t *begin, 
   exec_task.end   = 0;
 
   exec_task.mod_start = L4_VOID_PTR(mb_mod[module].mod_start);
-  exec_task.task_no   = module;
   exec_task.mod       = mb_mod + module;
 
   printf("  Scaning %s\n", L4_CHAR_PTR(mb_mod[module].cmdline));
@@ -265,7 +274,7 @@ add_module_regions(l4util_mb_info_t *mbi, l4_umword_t module, l4_addr_t *begin, 
 }
 
 static l4_addr_t
-load_module(l4_umword_t module, l4_addr_t *begin, l4_addr_t *end)
+load_module(l4util_mb_mod_t *mb_mod, l4_addr_t *begin, l4_addr_t *end)
 {
   exec_task_t exec_task;
   l4_addr_t entry;
@@ -275,17 +284,16 @@ load_module(l4_umword_t module, l4_addr_t *begin, l4_addr_t *end)
   exec_task.begin = 0xffffffff;
   exec_task.end   = 0;
 
-  exec_task.mod_start = L4_VOID_PTR(mb_mod[module].mod_start);
-  exec_task.task_no   = module;
-  exec_task.mod       = mb_mod + module;
+  exec_task.mod_start = L4_VOID_PTR(mb_mod->mod_start);
+  exec_task.mod       = mb_mod;
 
   r = exec_load_elf(l4_exec_read_exec, &exec_task,
                     &error_msg, &entry);
 
 #ifndef RELEASE_MODE
   /* clear the image for debugging and security reasons */
-  memset(L4_VOID_PTR(mb_mod[module].mod_start), 0,
-         mb_mod[module].mod_end - mb_mod[module].mod_start);
+  memset(L4_VOID_PTR(mb_mod->mod_start), 0,
+         mb_mod->mod_end - mb_mod->mod_start);
 #endif
 
   if (r)
@@ -297,7 +305,7 @@ load_module(l4_umword_t module, l4_addr_t *begin, l4_addr_t *end)
   /* Only add region if non-elf module */
   if (r)
     region_add(exec_task.begin, exec_task.end,
-	       L4_CHAR_PTR(mb_mod[module].cmdline));
+	       L4_CHAR_PTR(mb_mod->cmdline));
 
   return entry;
 }
@@ -305,58 +313,67 @@ load_module(l4_umword_t module, l4_addr_t *begin, l4_addr_t *end)
 
 static
 unsigned char *
-dup_cmdline(unsigned mod_nr, l4_uint8_t **ptr, char const *orig)
+dup_cmdline(l4util_mb_info_t *mbi, unsigned mod_nr, l4_uint8_t **ptr, char const *orig)
 {
-  char const *new_args = get_args_module(mod_nr);
-  unsigned char *ret = *ptr;
-
-  if (new_args)
-    printf("new args for %d = %s\n", mod_nr, new_args);
-
+  unsigned char *res = *ptr;
   if (!orig)
     return 0;
 
-  for (;*orig; ++(*ptr))
+  char* name_end = strchr(orig, ' ');
+  if (name_end && *name_end)
+    *name_end = 0;
+  else
+    name_end = 0;
+
+  unsigned size;
+  char const *new_args = get_arg_module(mbi, orig, &size);
+
+  if (new_args && size)
+    printf("    new args for %d = \"%.*s\"\n", mod_nr, size, new_args);
+  else
+    if (name_end)
+      *name_end = ' ';
+
+  strcpy(*ptr, orig);
+  *ptr+= strlen(*ptr)+1;
+
+  if (new_args)
     {
-      **ptr = *orig;
-      if (new_args && (*orig == 0 || *orig == ' '))
-	{
-	  **ptr = ' ';
-	  orig = new_args;
-	  new_args = 0;
-	}
-      else
-	++orig;
+      *((*ptr)-1) = ' ';
+      strncpy(*ptr, new_args, size);
+      *ptr += size;
+      *((*ptr)++) = 0;
     }
+  return res;
+}
 
-  **ptr = 0;
-  ++(*ptr);
 
+/**
+ * alloc linear pointer from an backing store array.
+ */
+static inline void*
+lin_alloc(l4_size_t size, l4_uint8_t **ptr, l4_size_t *free)
+{
+  void *ret = *ptr;
+  *ptr += (size + 3) & ~3;
+  assert(*free > (size + 3));
+  *free -= (size + 3) & ~3;
   return ret;
 }
+
 
 /**
  * copy mbi to save place for boot
  */
 static
-l4util_mb_info_t *
-relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
-             unsigned long* end)
+void *
+relocate_mbi(l4util_mb_info_t *src_mbi, void *mbi_start,
+             l4_size_t free)
 {
   int i;
   l4util_mb_info_t *dst_mbi;
-  l4_addr_t x = region_find_free(RAM_BASE + 0x2000, RAM_BASE + (4 << 20),
-      16 << 10, L4_LOG2_PAGESIZE);
-  if (!x)
-    panic("no memory for mbi found (below 4MB)");
-
-  void *mbi_start = (void*)x;
-
-  l4_uint8_t *p = (l4_uint8_t*)x;
-  *start = x;
-
-  dst_mbi = lin_alloc(sizeof(l4util_mb_info_t), &p);
-
+  l4_uint8_t *p = mbi_start;
+  dst_mbi = lin_alloc(sizeof(l4util_mb_info_t), &p, &free);
   printf("  Bootloader MMAP %s\n", src_mbi->flags & L4UTIL_MB_MEM_MAP ? "available" : "not available");
 
   l4util_mb_addr_range_t *mmap;
@@ -376,13 +393,19 @@ relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
   /* copy (extended) multiboot info structure */
   memcpy(dst_mbi, src_mbi, sizeof(l4util_mb_info_t));
 
-  dst_mbi->flags &= ~L4UTIL_MB_CMDLINE;
+  if ((src_mbi->flags & L4UTIL_MB_CMDLINE) && src_mbi->cmdline)
+    {
+      void *dest = lin_alloc(strlen((void *)src_mbi->cmdline) + 1, &p, &free);
+      strcpy(dest, (void *)src_mbi->cmdline);
+      dst_mbi->cmdline = (unsigned long)dest;
+	  
+    }
 
   if (dst_mbi->flags & L4UTIL_MB_MEM_MAP)
     {
       if (src_mbi->mmap_addr)
 	{
-	  void *mmap = lin_alloc(src_mbi->mmap_length, &p);
+	  void *mmap = lin_alloc(src_mbi->mmap_length, &p, &free);
 	  memcpy(mmap, (void*)src_mbi->mmap_addr, dst_mbi->mmap_length);
 	  dst_mbi->mmap_addr = (unsigned long)mmap;
 	}
@@ -397,9 +420,7 @@ relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
       if (src_mbi->vbe_mode_info)
 	{
 	  l4util_mb_vbe_mode_t *m
-	    = (l4util_mb_vbe_mode_t*)lin_alloc(sizeof(l4util_mb_vbe_mode_t),
-		&p);
-
+            = lin_alloc(sizeof(l4util_mb_vbe_mode_t), &p, &free);
 	  memcpy(m, L4_VOID_PTR(src_mbi->vbe_mode_info),
 		 sizeof(l4util_mb_vbe_mode_t));
 	  dst_mbi->vbe_mode_info = (l4_addr_t)m;
@@ -409,8 +430,7 @@ relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
       if (src_mbi->vbe_ctrl_info)
 	{
 	  l4util_mb_vbe_ctrl_t *m
-	    = (l4util_mb_vbe_ctrl_t*)lin_alloc(sizeof(l4util_mb_vbe_ctrl_t),
-		&p);
+            = lin_alloc(sizeof(l4util_mb_vbe_ctrl_t), &p, &free);
 	  memcpy(m, L4_VOID_PTR(src_mbi->vbe_ctrl_info),
 		 sizeof(l4util_mb_vbe_ctrl_t));
 	  dst_mbi->vbe_ctrl_info = (l4_addr_t)m;
@@ -418,26 +438,24 @@ relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
     }
 
   /* copy module descriptions */
-  l4util_mb_mod_t *mods = (l4util_mb_mod_t*)lin_alloc(sizeof(l4util_mb_mod_t)*
-      src_mbi->mods_count, &p);
+  l4util_mb_mod_t *mods
+    = lin_alloc(sizeof(l4util_mb_mod_t) * src_mbi->mods_count, &p, &free);
   memcpy(mods, L4_VOID_PTR(dst_mbi->mods_addr),
 	 dst_mbi->mods_count * sizeof (l4util_mb_mod_t));
   dst_mbi->mods_addr = (l4_addr_t)mods;
-  mb_mod = mods;
 
   /* copy command lines of modules */
   for (i = 0; i < dst_mbi->mods_count; i++)
     {
-      unsigned char *n = dup_cmdline(i, &p, (char const *)(mb_mod[i].cmdline));
+      unsigned char *n = dup_cmdline(src_mbi, i, &p, (char const *)(mods[i].cmdline));
       if (n)
-	mods[i].cmdline = (l4_addr_t)n;
+	  mods[i].cmdline = (l4_addr_t) n;
     }
-  *end = (l4_addr_t)p;
 
-  printf("  Relocated mbi to [%p-%p]\n", mbi_start, (void*)(*end));
-
-  return dst_mbi;
+  printf("  Relocated mbi to [%p-%p]\n", mbi_start, p);
+  return p;
 }
+
 
 #ifdef IMAGE_MODE
 
@@ -521,23 +539,20 @@ l4_addr_t _mod_end   = (l4_addr_t)&_module_data_end;
  */
 void
 startup(l4util_mb_info_t *mbi, l4_umword_t flag,
-	void *realmode_or_xen_si_pointer)
+	void *realmode_si)
 {
   void *l4i;
+  boot_info_t boot_info;
+  l4util_mb_mod_t *mb_mod;
 #if defined(ARCH_x86) || defined(ARCH_amd64)
   l4util_mb_info_t kernel_mbi;
 #endif
 
 #if defined(ARCH_x86) || defined(ARCH_amd64)
 #ifdef REALMODE_LOADING
-  mbi = init_loader_mbi(realmode_or_xen_si_pointer, 0);
-  move_modules_to_modaddr();
+  mbi = init_loader_mbi(realmode_si, 0);
 #else
-# ifdef XEN
-  mbi = init_loader_mbi(NULL, MEMORY << 10);
-# else
   assert(flag == L4UTIL_MB_VALID); /* we need to be multiboot-booted */
-# endif
 #endif
 #else /* arm */
 #ifdef ARCH_arm
@@ -554,20 +569,20 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
       int comport = 1;
       const char *s;
 
-      if ((s = strstr(L4_CHAR_PTR(mbi->cmdline), " -comport=")))
-	comport = strtoul(s+10,0,0);
+      if ((s = check_arg(L4_CHAR_PTR(mbi->cmdline), "-comport")))
+	comport = strtoul(s + 9, 0, 0);
 
-      if (strstr(L4_CHAR_PTR(mbi->cmdline), " -serial"))
+      if (check_arg(L4_CHAR_PTR(mbi->cmdline), "-serial"))
 	com_cons_init(comport);
 
-      if (strstr(L4_CHAR_PTR(mbi->cmdline), " -hercules") && have_hercules())
+      if (check_arg(L4_CHAR_PTR(mbi->cmdline), "-hercules") && have_hercules())
         hercules = 1;
 #endif
 
-      if (strstr(L4_CHAR_PTR(mbi->cmdline), " -no-sigma0"))
+      if (check_arg(L4_CHAR_PTR(mbi->cmdline), "-no-sigma0"))
 	sigma0 = 0;
 
-      if (strstr(L4_CHAR_PTR(mbi->cmdline), " -no-roottask"))
+      if (check_arg(L4_CHAR_PTR(mbi->cmdline), "-no-roottask"))
 	roottask = 0;
     }
 
@@ -582,7 +597,7 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
   assert(mbi->mods_count >= 2);
   assert(mbi->mods_count <= MODS_MAX);
 
-  /* we're not an L4 task yet -- we're just a GRUB-booted kernel! */
+  /* we're just a GRUB-booted kernel! */
   puts("\nL4 Bootstrapper");
 
 #ifdef ARCH_x86
@@ -595,21 +610,30 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
     mbi->mem_upper = 3048UL << 10;
 #endif
 
+  // clear boot_info data structure
+  memset(&boot_info, 0, sizeof boot_info);
+
+  /* copy Multiboot data structures, we still need to a safe place
+   * before playing with memory we don't own and starting L4 */
+  boot_info.mbi_low = (unsigned long)bootstrap_mbi;
+  boot_info.mbi_high = (unsigned long)relocate_mbi(mbi, bootstrap_mbi, sizeof(bootstrap_mbi));
+  mbi = (l4util_mb_info_t *)bootstrap_mbi;
+
   /* Guess the amount of installed memory from the bootloader. We already
    * need that value because (1) we have to initialize the memmap for module
    * loading and (2) we have to check for a valid L4 kernel. Later (in init.c),
    * mem_high is determined from the sigma0 server. */
   setup_memory_range(mbi, &boot_info);
-  /* We initialize the memmap here to observe loading tasks before starting
-   * the L4 kernel. Later in init.c, we re-initialize the memmap */
-  init_memmap(mbi);
+
+  if (_mod_addr)
+    move_modules(mbi, _mod_addr);
 
   /* We initialize the region map here to find overlapping regions and
    * report useful error messages. roottask will use its own region map */
   init_region(mbi, &boot_info);
 
   if (kernel)
-    add_module_regions(mbi, kernel_module, &boot_info.kernel_low, 
+    add_module_regions(mbi, kernel_module, &boot_info.kernel_low,
 	&boot_info.kernel_high);
 
   if (sigma0)
@@ -624,19 +648,12 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
   if (mbi->flags & L4UTIL_MB_CMDLINE)
     {
       const char *s = L4_CONST_CHAR_PTR(mbi->cmdline);
-      while ((s = strstr(s, " -patch=")))
+      while ((s = check_arg((char *)s, "-patch=")))
 	patch_module(&s, mbi);
 
-      s = L4_CONST_CHAR_PTR(mbi->cmdline);
-      while ((s = strstr(s, " -arg=")))
-	args_module(&s, mbi);
     }
 
-  /* copy Multiboot data structures, we still need to a safe place
-   * before playing with memory we don't own and starting L4 */
-  mb_info = relocate_mbi(mbi, &boot_info.mbi_low, &boot_info.mbi_high);
-  if (!mb_info)
-    panic("could not copy multiboot info to memory below 4MB");
+  mb_mod = (l4util_mb_mod_t*)mbi->mods_addr;
 
   /* --- Shouldn't touch original Multiboot parameters after here. -- */
 
@@ -648,7 +665,7 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
 			"[KERNEL]");
       putchar('\n');
 
-      boot_info.kernel_start = load_module(kernel_module,
+      boot_info.kernel_start = load_module(mb_mod + kernel_module,
                                            &boot_info.kernel_low,
                                            &boot_info.kernel_high);
     }
@@ -661,7 +678,7 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
 			 "[SIGMA0]");
       putchar('\n');
 
-      boot_info.sigma0_start = load_module(sigma0_module,
+      boot_info.sigma0_start = load_module(mb_mod + sigma0_module,
                                            &boot_info.sigma0_low,
                                            &boot_info.sigma0_high);
       boot_info.sigma0_stack = (l4_addr_t)sigma0_init_stack
@@ -677,7 +694,7 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
 			 "[ROOTTASK]");
       putchar('\n');
 
-      boot_info.roottask_start = load_module(roottask_module,
+      boot_info.roottask_start = load_module(mb_mod + roottask_module,
                                              &boot_info.roottask_low,
                                              &boot_info.roottask_high);
       boot_info.roottask_stack = (l4_addr_t)roottask_init_stack
@@ -685,11 +702,11 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
     }
 
   /* setup kernel PART TWO (special kernel initialization) */
-  l4i = find_kip();
+  l4i = find_kip(&boot_info);
 
 #if defined(ARCH_x86) || defined(ARCH_amd64)
   /* setup multi boot info structure for kernel */
-  kernel_mbi = *mb_info;
+  kernel_mbi = *mbi;
   kernel_mbi.flags = L4UTIL_MB_MEMORY;
   if (mb_mod[kernel_module].cmdline)
     {
@@ -707,11 +724,11 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
     case 0x02: // Version 2 API
     case 0x03: // Version X.0 and X.1
     case 0x87: // Fiasco V2++
-      init_kip_v2(l4i, &boot_info, mb_info);
+      init_kip_v2(l4i, &boot_info, mbi);
       break;
     case 0x84:
     case 0x04:
-      init_kip_v4(l4i, &boot_info, mb_info);
+      init_kip_v4(l4i, &boot_info, mbi);
       break;
     default:
       panic("cannot boot a kernel with unknown api version %lx\n", api_version);
@@ -732,7 +749,7 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
      :
      : "a" (L4UTIL_MB_VALID),
        "b" (&kernel_mbi),
-       "S" (realmode_or_xen_si_pointer),
+       "S" (realmode_si),
        "r" (boot_info.kernel_start));
 
 #elif defined(ARCH_amd64)
@@ -743,7 +760,7 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
      : "S" (L4UTIL_MB_VALID), "D" (&kernel_mbi), "r" (boot_info.kernel_start));
 
 #elif defined(ARCH_arm)
-  init_kip_arm(l4i, &boot_info, mb_info);
+  init_kip_arm(l4i, &boot_info, mbi);
 #else
 
 #error "How to enter the kernel?"

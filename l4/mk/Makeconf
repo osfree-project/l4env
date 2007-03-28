@@ -109,17 +109,9 @@ RAM_BASE         = $(firstword  $(RAM_BASE_$(ARCH)_$(CPU)) \
 
 DEFINES         += -DRAM_BASE=$(RAM_BASE)
 
-ifneq ($(DEFAULT_RELOC),)
-  DEFAULT_RELOC := $(shell printf "0x%x" $$(($(RAM_BASE) + $(DEFAULT_RELOC))))
-endif
 
-ifneq ($(ARCH),)
- ifneq ($(CPU),)
-   ifneq ($(DEFAULT_RELOC_$(ARCH)),)
-     DEFAULT_RELOC := $(shell printf "0x%x" $$(($(RAM_BASE) + $(DEFAULT_RELOC_$(ARCH)))))
-   endif
- endif
-endif
+default_reloc_base = $(firstword $(DEFAULT_RELOC_$(1)) $(DEFAULT_RELOC_$(ARCH)) $(DEFAULT_RELOC))
+default_reloc = $(if $(call default_reloc_base,$(1)), $(shell printf "0x%x" $$(($(RAM_BASE) + $(call default_reloc_base, $(1))))),)
 
 # functions that are handy
 absfilename_target_dir_needs_to_exist = $(foreach w,$(1),$(addsuffix /$(notdir $(w)),$(shell cd $(dir $(w)) 2>/dev/null&&$(PWDCMD))))
@@ -210,7 +202,9 @@ MAKECONFLOCAL ?= Makeconf.local
 -include $(MAKECONFLOCAL)
 
 DROPS_STDDIR	?= /home/drops
-STATICFILE	?= $(L4DIR)/pkg/STATIC
+ifeq ($(STATICFILE),)
+STATICFILE	= $(OBJ_BASE)/pkg/STATIC $(L4DIR)/pkg/STATIC
+endif
 
 # a nasty workaround for make-3.79/make-3.80. The former needs an additional
 # $$ for $-quotation when calling a function.

@@ -91,6 +91,7 @@ my %modules =
    },
 
    l4env => {
+      pub_module => 1,
       modules => [ qw(l4env_uclibc l4env_pkg) ],
    },
 
@@ -150,6 +151,10 @@ my %modules =
    dice => {
       pub_module => 1,
       paths => [ qw(dice) ],
+   },
+
+   grub => {
+      paths => [ qw(grub) ],
    },
 
    remote_repo_l4 => {
@@ -317,7 +322,7 @@ sub command_checkout
     }
 
   print "Getting sources\n";
-  system("svn --quiet update ".join(' ', @paths));
+  system("svn update ".join(' ', @paths));
   die "svn update failed" if $?;
 }
 
