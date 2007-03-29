@@ -27,13 +27,39 @@ static unsigned
 static size_t page_sizes[] = { Config::SUPERPAGE_SIZE, Config::PAGE_SIZE };
 static size_t page_sizes_max = 2;
 
+class Test_space : public Space
+{
+public:
+  Test_space (Ram_quota *rq, unsigned i)
+    : Space (rq, i)
+  {}
+
+  void* operator new (size_t s)
+  { return malloc (s); }
+
+  void operator delete (void *p)
+  { free (p); }
+};
+
+static void init_spaces()
+{
+  static Ram_quota rq(0,~0UL);
+  new Space(&rq, s0);
+  new Space(&rq, other);
+  new Space(&rq, client);
+  new Space(&rq, father);
+  new Space(&rq, son);
+  new Space(&rq, daughter);
+  new Space(&rq, aunt);
+}
+
 static void print_node(Mapping* node, const Mapdb::Frame& frame)
 {
   assert (node);
 
   size_t size = frame.size();
 
-  for (Mapdb_iterator i (frame, node); node;)
+  for (Mapdb::Iterator i (frame, node); node;)
     {
       for (int d = node->depth(); d != 0; d--)
         cout << ' ';
@@ -264,12 +290,14 @@ void multilevel ()
 #include "kmem.h"
 #include "kmem_alloc.h"
 #include "static_init.h"
+#include "usermode.h"
 #include "vmem_alloc.h"
 
 STATIC_INITIALIZER_P(init, STARTUP_INIT_PRIO);
 
 static void init()
 {
+  Usermode::init();
   Boot_info::init();
   Cpu::init();
   Config::init();
@@ -281,6 +309,7 @@ static void init()
 
 int main()
 {
+  init_spaces();
   cout << "Basic test" << endl;
   basic();
   cout << "########################################" << endl;

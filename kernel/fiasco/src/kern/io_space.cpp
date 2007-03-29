@@ -13,10 +13,16 @@ class Io_space
   friend class Jdb_iomap;
 
 public:
+  static char const * const name;
+  typedef Address Phys_addr;
+
   enum {
+    Has_superpage = 1,
     Map_page_size = 1,
     Map_superpage_size = 0x10000,
     Map_max_address = 0x10000,
+    Whole_space = L4_fpage::Whole_io_space,
+    Identity_map = 1,
   };
 
   // We'd rather like to use a "using Mem_space::Status" declaration here,
@@ -54,6 +60,8 @@ IMPLEMENTATION [ia32-io,ux-io]:
 #include "mapped_alloc.h"
 #include "panic.h"
 #include "paging.h"
+  
+char const * const Io_space::name = "Io_space";
 
 PUBLIC inline
 Io_space::Io_space ()
@@ -83,24 +91,36 @@ Io_space::~Io_space ()
       Pt_entry iopte = *(iopde->ptab()->lookup(ports_base));
       
       if (iopte.valid())
-	Mapped_allocator::allocator()
-	  ->free_phys(Config::PAGE_SHIFT, P_ptr <void> (iopte.pfn()));
+	{
+	  Mapped_allocator::allocator()
+	    ->free_phys(Config::PAGE_SHIFT, P_ptr <void> (iopte.pfn()));
+	  _mem_space->ram_quota()->free(Config::PAGE_SIZE);
+	}
       
       // free the second half
       iopte = *(iopde->ptab()->lookup(ports_base + Config::PAGE_SIZE));
       
       if (iopte.valid())
-	Mapped_allocator::allocator()
-	  ->free_phys(Config::PAGE_SHIFT, P_ptr <void> (iopte.pfn()));
+	{
+	  Mapped_allocator::allocator()
+	    ->free_phys(Config::PAGE_SHIFT, P_ptr <void> (iopte.pfn()));
+	  _mem_space->ram_quota()->free(Config::PAGE_SIZE);
+	}
       
       // free the page table
       Mapped_allocator::allocator()
        ->free_phys(Config::PAGE_SHIFT, P_ptr <void> (iopde->ptabfn()));
+      _mem_space->ram_quota()->free(Config::PAGE_SIZE);
 
       // free reference
       *iopde = 0;
     }
 }
+
+PUBLIC inline
+Ram_quota *
+Io_space::ram_quota() const
+{ return _mem_space->ram_quota(); }
 
 PRIVATE inline
 bool
@@ -305,8 +325,9 @@ Io_space::io_insert(Address port_number)
   if (port_phys == 0xffffffff)
     {
       // nothing mapped! Get a page and map it in the IO bitmap
-      void *page = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
-      if (!page)
+      void *page;
+      if (!(page=Mapped_allocator::allocator()->q_alloc(ram_quota(),
+	      Config::PAGE_SHIFT)))
 	return Insert_err_nomem;
 
       // clear all IO ports
@@ -322,6 +343,7 @@ Io_space::io_insert(Address port_number)
       if (status == Mem_space::Insert_err_nomem)
 	{
 	  Mapped_allocator::allocator()->free(Config::PAGE_SHIFT,page);
+	  _mem_space->ram_quota()->free(Config::PAGE_SIZE);
 	  return Insert_err_nomem;
 	}
 

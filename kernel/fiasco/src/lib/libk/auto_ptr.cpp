@@ -25,7 +25,7 @@ INTERFACE:
 // #include <stl_raw_storage_iter.h>
 
 #ifndef __STL_NOTHROW
-#define __STL_NOTHROW
+#define __STL_NOTHROW throw()
 #endif
 
 //__STL_BEGIN_NAMESPACE

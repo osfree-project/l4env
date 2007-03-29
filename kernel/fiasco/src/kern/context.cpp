@@ -37,6 +37,9 @@ public:
     Ignore_Helping
   };
 
+  Mword is_tcb_mapped() const;
+  Mword state() const;
+
   /**
    * Size of a Context (TCB + kernel stack)
    */
@@ -199,6 +202,7 @@ Context::~Context()
 //@{
 //-
 
+#if 0
 /**
  * State flags.
  * @return context's state flags
@@ -209,6 +213,7 @@ Context::state() const
 {
   return _state;
 }
+#endif
 
 /**
  * Does the context exist? .

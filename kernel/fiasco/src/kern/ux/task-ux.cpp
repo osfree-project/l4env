@@ -21,26 +21,22 @@ Task::map_tbuf ()
 {
   if (id() != Config::sigma0_taskno)
     {
-      mem_map (sigma0_task,                         // from: space
-	       Kmem::virt_to_phys ((const void*)
-		 (Mem_layout::Tbuf_status_page)),   // from: address
-	       Config::PAGE_SHIFT,                  // from: size
-	       true, 0,                             // write, map
-	       nonull_static_cast<Space*>(this),    // to: space
-	       Mem_layout::Tbuf_ustatus_page,       // to: address
-	       Config::PAGE_SHIFT,                  // to: size
-	       0, L4_fpage::Cached);                // to: offset
+      mem_map (sigma0_task, 
+	  L4_fpage(0, 1, Config::PAGE_SHIFT, 
+	    Kmem::virt_to_phys ((const void*)(Mem_layout::Tbuf_status_page))),
+	  nonull_static_cast<Space*>(this),    // to: space
+	  L4_fpage(0, 0, Config::PAGE_SHIFT,
+	    Mem_layout::Tbuf_ustatus_page, L4_fpage::Cached), 0);
+
       for (Address size=0; size<Jdb_tbuf::size(); size+=Config::PAGE_SIZE)
 	{
 	  mem_map (sigma0_task,                            // from: space
-		   Kmem::virt_to_phys ((const void*)
-		     (Mem_layout::Tbuf_buffer_area+size)), // from: address
-		   Config::PAGE_SHIFT,                     // from: size
-		   true, 0,                                // write, map
-		   nonull_static_cast<Space*>(this),	   // to: space
-		   Mem_layout::Tbuf_ubuffer_area+size,     // to: adddress
-		   Config::PAGE_SHIFT,                     // to: size
-		   0, L4_fpage::Cached);                   // to: offset
+	      L4_fpage(0, 1, Config::PAGE_SHIFT,
+		Kmem::virt_to_phys ((const void*)
+		  (Mem_layout::Tbuf_buffer_area+size))),
+	      nonull_static_cast<Space*>(this),	   // to: space
+	      L4_fpage(0, 0, Config::PAGE_SHIFT, 
+		Mem_layout::Tbuf_ubuffer_area+size, L4_fpage::Cached), 0);
 	}
     }
 }
@@ -75,13 +71,10 @@ void
 Task::map_utcb_ptr_page()
 {
   mem_map (sigma0_task,			// from: space
-	   Mem_layout::Utcb_ptr_frame,		// from: address
-	   Config::PAGE_SHIFT,			// from: size
-	   true, 0,				// write, grant
-	   nonull_static_cast<Space*>(this),    // to: space
-	   Mem_layout::Utcb_ptr_page,		// to: address
-	   Config::PAGE_SHIFT,			// to: size
-	   0, L4_fpage::Cached);		// to: offset
+      L4_fpage(0, 1, Config::PAGE_SHIFT, Mem_layout::Utcb_ptr_frame),
+      nonull_static_cast<Space*>(this),    // to: space
+      L4_fpage(0, 0, Config::PAGE_SHIFT, Mem_layout::Utcb_ptr_page,
+	L4_fpage::Cached),0);		// to: offset
 }
 
 // -----------------------------------------------------------------------

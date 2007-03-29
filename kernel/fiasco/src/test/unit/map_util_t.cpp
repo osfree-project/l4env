@@ -31,8 +31,8 @@ unsigned sigma0_taskno;
 class Test_space : public Space
 {
 public:
-  Test_space (unsigned i)
-    : Space (i)
+  Test_space (Ram_quota *rq, unsigned i)
+    : Space (rq, i)
   {}
 
   void* operator new (size_t s)
@@ -62,16 +62,17 @@ int main()
   // 
   // Create tasks
   // 
-  Test_space *sigma0 = new Test_space (2);
+  Ram_quota rq(0, ~0UL);
+  Test_space *sigma0 = new Test_space (&rq, 2);
 
   sigma0_space = sigma0->mem_space();
   sigma0_taskno = sigma0->id();
 
-  Test_space *server = new Test_space (5);
+  Test_space *server = new Test_space (&rq, 5);
   assert (server);
-  Test_space *client = new Test_space (6);
+  Test_space *client = new Test_space (&rq, 6);
   assert (client);
-  Test_space *client2 = new Test_space (7);
+  Test_space *client2 = new Test_space (&rq, 7);
   assert (client2);
 
   // 
@@ -95,7 +96,7 @@ int main()
 	     Test_fpage (false, true, Config::PAGE_SHIFT, 0x10000),
 	     server,
 	     L4_fpage (L4_fpage::Whole_space, 0),
-	     0x1000, false);
+	     0x1000);
 
   assert (server->mem_space()->v_lookup (0x1000, &phys, &size, &page_attribs)
 	  == true);
@@ -119,7 +120,7 @@ int main()
 	     L4_fpage (Config::SUPERPAGE_SHIFT, 0),
 	     server,
 	     L4_fpage (L4_fpage::Whole_space, 0),
-	     0, false);
+	     0);
 
   assert (server->mem_space()->v_lookup (0, &phys, &size, &page_attribs)
 	  == true);
@@ -181,7 +182,7 @@ int main()
 	     Test_fpage (false, true, Config::SUPERPAGE_SHIFT, 0x400000),
 	     server,
 	     L4_fpage (Config::SUPERPAGE_SHIFT, 0x800000),
-	     0, false);
+	     0);
 
   assert (server->mem_space()->v_lookup (0x800000, &phys, &size, &page_attribs)
 	  == true);
@@ -204,7 +205,7 @@ int main()
 	     Test_fpage (false, true, Config::PAGE_SHIFT, 0x801000),
 	     client,
 	     L4_fpage (L4_fpage::Whole_space, 0),
-	     0x8000, false);
+	     0x8000);
 
   assert (client->mem_space()->v_lookup (0x8000, &phys, &size, &page_attribs)
 	  == true);
@@ -228,7 +229,7 @@ int main()
 	     Test_fpage (false, false, Config::PAGE_SHIFT, 0x801000),
 	     client,
 	     L4_fpage (L4_fpage::Whole_space, 0),
-	     0x8000, false);
+	     0x8000);
 
   assert (client->mem_space()->v_lookup (0x8000, &phys, &size, &page_attribs)
 	  == true);
@@ -245,7 +246,7 @@ int main()
 	     Test_fpage (false, true, Config::PAGE_SHIFT, 0x801000),
 	     client2,
 	     L4_fpage (L4_fpage::Whole_space, 0),
-	     0x1000, false);
+	     0x1000);
 
   assert (client2->mem_space()->v_lookup (0x1000, &phys, &size, &page_attribs)
 	  == true);
@@ -276,6 +277,8 @@ int main()
   assert (mapdb->lookup (sigma0->id(), 0x400000, 0x400000, &m, &frame));
   print_node (m, frame);
   mapdb->free (frame);
+
+  cerr << "... ";
 
 
   // 
@@ -350,9 +353,14 @@ int main()
   // 
   // Delete tasks
   // 
+#if 0
+  // do not do this because the mapping database would crash if 
+  // they has mappings without spaces
   delete server;
   delete client;
+  delete client2;
   delete sigma0;
+#endif
 
   cerr << "OK" << endl;
 
@@ -366,7 +374,7 @@ static void print_node(Mapping* node, const Mapdb::Frame& frame,
 
   size_t size = frame.size();
 
-  for (Mapdb_iterator i (frame, node, 0, va_begin, va_end); node;)
+  for (Mapdb::Iterator i (frame, node, 0, va_begin, va_end); node;)
     {
       for (int d = node->depth(); d != 0; d--)
         cout << ' ';

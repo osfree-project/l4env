@@ -202,7 +202,7 @@ Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code)
   // do not handle user space page faults from kernel mode if we're
   // already handling a request
   if (EXPECT_FALSE(!PF::is_usermode_error(error_code)
-		   && thread_lock()->test()))
+		   && thread_lock()->test() == Thread_lock::Locked))
     {
       panic("page fault in locked operation");
     }
@@ -216,7 +216,7 @@ Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code)
     {
       WARN ("Denying %x.%x to send fault message (pfa=" L4_PTR_FMT
 	    ", code=" L4_PTR_FMT ") to %x.%x",
-	    id().task(), id().lthread(), pfa, error_code, 
+	    id().task(), id().lthread(), pfa, error_code,
 	    pager ? pager->id().task() : L4_uid (L4_uid::Invalid).task(),
 	    pager ? pager->id().lthread() : L4_uid (L4_uid::Invalid).lthread());
       return Ipc_err(Ipc_err::Enot_existent);
@@ -249,11 +249,11 @@ Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code)
   if (orig_ipc_state)
     timeout = _pf_timeout;	// in long IPC -- use pagefault timeout
 
-  Proc::cli();
+  cpu_lock.lock();
   Ipc_err err = do_ipc(true, pager,
                        true, pager,
                        timeout, &r);
-  Proc::sti();
+  cpu_lock.clear();
   
   Ipc_err ret(0);
 
@@ -390,9 +390,7 @@ Thread::ipc_short_cut()
   // We don't need the cpu_lock because we are still cli'd.
 
   register bool can_preempt = false;
-  if (EXPECT_FALSE(    !dst->is_tcb_mapped()
-			// don't take the shortcut if
-		    || !dst->sender_ok(this)
+  if (EXPECT_FALSE( !dst->sender_ok(this)
 		    || (   Config::deceit_bit_disables_switch
 		        && regs->snd_desc().deceite()
 			&& (can_preempt = can_preempt_current(dst->sched())))
@@ -553,7 +551,7 @@ Thread::sys_ipc()
 	  partner = lookup (id, space());
 	  lookup_done = true;
 
-          if (EXPECT_FALSE (!partner || !partner->is_tcb_mapped() || partner->state() == Thread_invalid))
+          if (EXPECT_FALSE (!partner || partner->state() == Thread_invalid))
             {
               commit_ipc_failure (regs, Ipc_err::Enot_existent);
               return;
@@ -686,7 +684,7 @@ Thread::page_fault_msg (Sys_ipc_frame &r, Address fault_address,
   r.set_msg_word (1, PF::pc_to_msgword1 (fault_eip, error_code));
   r.set_msg_word (2, 0); // nop in V2
   r.snd_desc (0);	// short msg
-  r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage(0,0,L4_fpage::Whole_space,0)));
+  r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage::all_spaces()));
 };
 
 IMPLEMENT inline
@@ -759,7 +757,7 @@ Ipc_err Thread::do_send_wait (Thread *partner, L4_timeout t, Sys_ipc_frame *regs
       Unsigned64 tval = snd_timeout (t, regs);
       // Zero timeout or timeout expired already -- give up
       if (tval == 0)
-	  return abort_send(Ipc_err::Setimeout, partner);
+	return abort_send(Ipc_err::Setimeout, partner);
       
       // enqueue timeout
       Proc::preemption_point();
@@ -793,7 +791,19 @@ Ipc_err Thread::do_send_wait (Thread *partner, L4_timeout t, Sys_ipc_frame *regs
       // - the receiver has been killed
       // - or someone has simply awake us, then we go to sleep again
 
-      partner->thread_lock()->lock_dirty();
+      if (EXPECT_FALSE(partner->thread_lock()->lock_dirty() 
+	    == Thread_lock::Invalid))
+	{
+	  state_del_dirty (Thread_send_in_progress | Thread_polling 
+	      | Thread_ipc_in_progress |Thread_transfer_in_progress);
+
+	  if (_timeout && _timeout->is_set())
+	    _timeout->reset();
+	  
+	  set_timeout(0);
+
+	  return Ipc_err::Enot_existent;
+	}
       
       if (EXPECT_FALSE(state() & Thread_cancel))
 	break;
@@ -827,7 +837,7 @@ Ipc_err Thread::do_send_wait (Thread *partner, L4_timeout t, Sys_ipc_frame *regs
     } while(true);
   
   // because the handshake has already taken place
-  // an triggered timeout can be ignored
+  // a triggered timeout can be ignored
   if (timeout.has_hit())
     state_add_dirty(Thread_ipc_in_progress);
  
@@ -836,7 +846,8 @@ Ipc_err Thread::do_send_wait (Thread *partner, L4_timeout t, Sys_ipc_frame *regs
   timeout.reset();
   set_timeout(0);
   
-  Proc::preemption_point();
+  Proc::preemption_point(); // partner still locked
+
   sender_dequeue (partner->sender_list());
   Proc::preemption_point();
 
@@ -904,7 +915,7 @@ Thread::handle_long_ipc()
    {
 
       // XXX handle cancel: should notify sender -- even if we're killed!
-     Proc::sti();
+      cpu_lock.clear();
 
       assert (pagein_addr() != (Address) -1);
 
@@ -922,7 +933,7 @@ Thread::handle_long_ipc()
       // XXX ipc_continue could already put us back to sleep...  This
       // would save us another context switch and running this code:
 
-      Proc::cli();
+      cpu_lock.lock();
 
       assert(state() & Thread_ready);
 
@@ -990,9 +1001,12 @@ void Thread::goto_sleep(L4_timeout t, Sys_ipc_frame *regs)
 
 
 
-
+/** 
+ * @pre cpu_lock must be held
+ */
 PRIVATE inline NEEDS["logdefs.h"]
-Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t, Sys_ipc_frame *regs)
+Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t, 
+    Sys_ipc_frame *regs)
 {
 
   // By touching the partner tcb we can raise an pagefault.
@@ -1004,7 +1018,6 @@ Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t, Sys_ipc_fr
   //
 
   if (EXPECT_FALSE (partner == 0 || partner == nil_thread
-	|| !partner->is_tcb_mapped() // msut ensure a mapped TCB (cli'd)
 	|| partner->state() == Thread_invalid))
     return Ipc_err (Ipc_err::Enot_existent);
 
@@ -1013,7 +1026,9 @@ Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t, Sys_ipc_fr
   if(EXPECT_FALSE(partner->thread_lock()->test())) // lock is not free
     {
       Proc::preemption_point();
-      partner->thread_lock()->lock_dirty();
+      if (EXPECT_FALSE(partner->thread_lock()->lock_dirty() 
+	    == Thread_lock::Invalid))
+	return Ipc_err (Ipc_err::Enot_existent);
     }
 
   if(EXPECT_FALSE(state() & Thread_cancel))
@@ -1086,6 +1101,7 @@ Thread::wake_receiver (Thread *receiver)
  * @param partner the receiver of our message
  * @param t a timeout specifier
  * @param regs sender's IPC registers
+ * @pre cpu_lock must be held
  * @return sender's IPC error code
  */
 PRIVATE
@@ -1364,16 +1380,15 @@ Ipc_err Thread::transfer_msg (Thread *receiver,
         }
       else
         {
-          Proc::sti();
+	  cpu_lock.clear();
 
           dst_regs->msg_dope_combine
             (fpage_map(space(),
                        L4_fpage(sender_regs->msg_word(1)),
                        receiver->space(), dst_regs->rcv_desc().fpage(),
-                       sender_regs->msg_word(0),
-                       L4_fpage(sender_regs->msg_word(1)).grant()));
+                       sender_regs->msg_word(0)));
 
-          Proc::cli();
+	  cpu_lock.lock();
 
           if (dst_regs->msg_dope().rcv_map_failed())
             ret = Ipc_err::Semapfailed;
@@ -1392,9 +1407,9 @@ Ipc_err Thread::transfer_msg (Thread *receiver,
   receiver->thread_lock()->clear_dirty();
 
   CNT_IPC_LONG;
-  Proc::sti();
+  cpu_lock.clear();
   error_ret = do_send_long (receiver, sender_regs);
-  Proc::cli();
+  cpu_lock.lock();
 
   assert(receiver->thread_lock()->lock_owner() == this);
 

@@ -16,6 +16,7 @@ IMPLEMENTATION [arm]:
 #include "panic.h"
 #include "kdb_ke.h"
 #include "mem_unit.h"
+#include "ram_quota.h"
 #include "static_init.h"
 
 #include <cstdio>
@@ -33,7 +34,7 @@ void Vmem_alloc::init()
   printf("Vmem_alloc::init()\n");
   void *zp = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
   std::memset( zp, 0, Config::PAGE_SIZE );
-  zero_page = Kmem_space::kdir()->walk(zp,0,false).phys(zp);
+  zero_page = Kmem_space::kdir()->walk(zp,0,false,0).phys(zp);
   printf("  allocated zero page @%p[phys=%p]\n",
       zp, (void*)zero_page);
 
@@ -74,11 +75,8 @@ void *Vmem_alloc::page_alloc( void *address, Zero_fill zf, Page::Attribs pa )
     {
       vpage = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
       if (!vpage) 
-	{
-	  kdb_ke("Vmem_alloc: can't alloc new page");
-	  return 0;
-	}
-      page = Kmem_space::kdir()->walk(vpage, 0, false).phys(vpage);
+	return 0;
+      page = Kmem_space::kdir()->walk(vpage, 0, false, 0).phys(vpage);
       //printf("  allocated page (virt=%p, phys=%08lx\n", vpage, page);
       Mem_unit::inv_dcache(vpage, ((char*)vpage) + Config::PAGE_SIZE);
     } 
@@ -93,7 +91,8 @@ void *Vmem_alloc::page_alloc( void *address, Zero_fill zf, Page::Attribs pa )
   printf("  address=%p\n", address);
 #endif
   // insert page into master page table
-  Pte pte = Kmem_space::kdir()->walk(address, Config::PAGE_SIZE, true);
+  Pte pte = Kmem_space::kdir()->walk(address, Config::PAGE_SIZE, true,
+      Ram_quota::root);
   pte.set(page, Config::PAGE_SIZE, pa | Page::CACHEABLE, true);
 
   Mem_unit::dtlb_flush(address);
@@ -107,7 +106,7 @@ void *Vmem_alloc::page_alloc( void *address, Zero_fill zf, Page::Attribs pa )
 IMPLEMENT 			   
 void Vmem_alloc::page_free(void *page)
 {
-  Pte pte = Kmem_space::kdir()->walk(page, 0, false);
+  Pte pte = Kmem_space::kdir()->walk(page, 0, false,0);
   if (!pte.valid())
     return;
 
@@ -123,5 +122,24 @@ void Vmem_alloc::page_free(void *page)
   if (phys != zero_page)
     Mapped_allocator::allocator()->free_phys(Config::PAGE_SHIFT, (void*)phys);
 
+}
+
+IMPLEMENT 			   
+void *Vmem_alloc::page_unmap(void *page)
+{
+  Pte pte = Kmem_space::kdir()->walk(page, 0, false,0);
+  if (!pte.valid())
+    return 0;
+
+  Mem_unit::inv_dcache(page, ((char*)page) + Config::PAGE_SIZE);
+
+  Address phys = pte.phys(page);
+  pte.set_invalid(0, true);
+  Mem_unit::dtlb_flush(page);
+  
+  if (phys != zero_page)
+    return (void*)Mem_layout::phys_to_pmem(phys);
+
+  return 0;
 }
 

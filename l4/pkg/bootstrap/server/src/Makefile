@@ -73,6 +73,7 @@ endif
 
 ifeq ($(ARCH),arm)
 LOADER_MBI	 := 1
+CPPFLAGS         += -DSINGLE_SECTION
 endif
 
 
@@ -104,6 +105,8 @@ endif
 ifneq ($(COMPRESS),0)
 SRC_C		+= uncompress.c gunzip.c
 CPPFLAGS	+= -DCOMPRESS
+else
+CPPFLAGS	+= -DPLACE_MODULES_AT_MODADDR
 endif
 
 ifneq ($(MEM),)

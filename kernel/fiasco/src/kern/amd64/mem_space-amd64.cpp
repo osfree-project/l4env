@@ -38,17 +38,10 @@ IMPLEMENT inline NEEDS ["cpu.h", "kmem.h"]
 void
 Mem_space::make_current()
 {
+  _current = this;
   Cpu::set_pdbr((Mem_layout::pmem_to_phys(_dir)));
 }
 
-IMPLEMENT inline NEEDS ["cpu.h", "kmem.h", Mem_space::current_pdir]
-Mem_space *
-Mem_space::current_mem_space()
-{
-  Pml4* pml4 = current_pdir();
-
-  return reinterpret_cast<Mem_space*>((*pml4)[Mem_layout::Space_index]);
-}
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [amd64-!smas]:

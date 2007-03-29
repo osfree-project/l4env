@@ -4,6 +4,8 @@ INTERFACE:
 #include "space.h"
 
 class Mapdb;
+class Io_space;
+class Cap_space;
 
 /** Unmap arguments and results.  Elements can be bit-ORed together. */
 enum Unmap_flags 
@@ -27,6 +29,180 @@ IMPLEMENTATION:
 #include "paging.h"
 #include "warn.h"
 
+template< typename SPACE >
+class Map_traits
+{
+public:
+  static Address get_addr(L4_fpage const &fp);
+  static void constraint(Address &snd_addr, size_t &snd_size,
+      Address &rcv_addr, size_t rcv_size, Address hot_spot);
+  static bool match(L4_fpage const &from, L4_fpage const &to);
+};
+
+IMPLEMENT template<typename SPACE>
+inline 
+bool 
+Map_traits<SPACE>::match(L4_fpage const &, L4_fpage const &)
+{ return false; }
+
+PUBLIC template<typename SPACE>
+static inline
+void
+Map_traits<SPACE>::prepare_fpage(Address &addr, size_t &size)
+{
+  addr &= ~((1UL << (unsigned long)size)-1);
+}
+
+PUBLIC template<typename SPACE>
+static inline
+void
+Map_traits<SPACE>::calc_size(size_t &size)
+{
+  if (size >= SPACE::Whole_space) 
+    size = SPACE::Map_max_address;
+  else
+    size = (1UL << (unsigned long)size);
+}
+
+
+
+PUBLIC template< typename SPACE >
+static inline
+void
+Map_traits<SPACE>::attribs(L4_fpage const &, unsigned long *del_attr,
+    unsigned long *set_attr)
+{ *del_attr = 0; *set_attr = 0; }
+
+PRIVATE template<typename SPACE>
+static inline
+void
+Map_traits<SPACE>::identity_constraint(Address &snd_addr, size_t &snd_size,
+    Address rcv_addr, size_t rcv_size)
+{
+  calc_size(rcv_size);
+  calc_size(snd_size);
+
+  if (rcv_addr > snd_addr)
+    {
+      snd_size -= rcv_addr - snd_addr;
+      snd_addr = rcv_addr;
+    }
+
+  if (snd_size > rcv_size)
+    snd_size = rcv_size;
+}
+
+PRIVATE template<typename SPACE>
+static inline
+void
+Map_traits<SPACE>::free_constraint(Address &snd_addr, size_t &snd_size,
+    Address &rcv_addr, size_t rcv_size, Address hot_spot)
+{
+  hot_spot &= ~((unsigned long)SPACE::Map_page_size-1);
+
+  register unsigned long rcv_m = 
+    rcv_size >= MWORD_BITS 
+    ? ~0UL 
+    : (1UL << (unsigned long)rcv_size)-1;
+  register unsigned long snd_m = 
+    snd_size >= MWORD_BITS 
+    ? ~0UL 
+    : (1UL << (unsigned long)snd_size)-1;
+  
+  if (rcv_size >= snd_size)
+    rcv_addr += hot_spot & rcv_m & ~snd_m;
+  else
+    {
+      snd_addr += hot_spot & snd_m & ~rcv_m;
+      snd_size = rcv_size;
+      // reduce size of address range
+    }
+
+  calc_size(snd_size);
+}
+
+IMPLEMENT template<typename SPACE>
+inline
+void
+Map_traits<SPACE>::constraint(Address &snd_addr, size_t &snd_size,
+    Address &rcv_addr, size_t rcv_size, Address hot_spot)
+{ 
+  if (SPACE::Identity_map)
+    identity_constraint(snd_addr, snd_size, rcv_addr, rcv_size); 
+  else
+    free_constraint(snd_addr, snd_size, rcv_addr, rcv_size, hot_spot); 
+}
+
+
+//-------------------------------------------------------------------------
+IMPLEMENTATION [io]:
+
+IMPLEMENT template<>
+inline
+bool
+Map_traits<Io_space>::match(L4_fpage const &from, L4_fpage const &to)
+{ return from.is_iopage() && (to.is_iopage() || to.is_all_spaces()); }
+
+IMPLEMENT template<>
+inline
+Address
+Map_traits<Io_space>::get_addr(L4_fpage const &fp)
+{ return fp.is_iopage() ? fp.iopage() : 0; }
+
+
+//-------------------------------------------------------------------------
+IMPLEMENTATION [caps]:
+
+IMPLEMENT template<>
+inline
+bool
+Map_traits<Cap_space>::match(L4_fpage const &from, L4_fpage const &to)
+{ return from.is_cappage() && (to.is_cappage() || to.is_all_spaces()); }
+
+IMPLEMENT template<>
+inline
+Address
+Map_traits<Cap_space>::get_addr(L4_fpage const &fp)
+{ return fp.is_cappage() ? fp.task() : 0; }
+
+
+//-------------------------------------------------------------------------
+IMPLEMENTATION:
+
+IMPLEMENT template<>
+inline
+bool
+Map_traits<Mem_space>::match(L4_fpage const &from, L4_fpage const &)
+{ return !from.is_cappage() && !from.is_iopage(); }
+
+IMPLEMENT template<>
+inline
+Address
+Map_traits<Mem_space>::get_addr(L4_fpage const &fp)
+{ return fp.is_all_spaces() ? 0 : fp.page(); }
+
+IMPLEMENT template<>
+inline
+void
+Map_traits<Mem_space>::attribs(L4_fpage const &fp, unsigned long *del_attr,
+    unsigned long *set_attr)
+{ 
+  *del_attr = fp.write() ? 0 : Mem_space::Page_writable;
+  short cache = fp.cache_type();
+
+  if (cache & L4_fpage::Caching_opt)
+    {
+      *del_attr |= Page::Cache_mask;
+
+      if (cache == L4_fpage::Cached)
+	*set_attr = Page::CACHEABLE;
+      else
+	*set_attr = Page::NONCACHEABLE;
+    }
+  else
+    *set_attr = 0;
+}
+
 /** Flexpage mapping.
     divert to mem_map (for memory fpages) or io_map (for IO fpages)
     @param from source address space
@@ -44,52 +220,18 @@ IMPLEMENTATION:
 // inline NEEDS ["config.h", io_map]
 Ipc_err
 fpage_map(Space *from, L4_fpage fp_from, Space *to,
-	  L4_fpage fp_to, Address offs, bool grant)
+	  L4_fpage fp_to, Address offs)
 {
   Ipc_err result(0);
 
-  if (Config::enable_io_protection &&
-      (fp_from.is_iopage() || fp_from.is_whole_space()))
-    {
-      result.combine(io_map(from,
-			    fp_from.iopage(),
-			    fp_from.size(),
-			    grant,
-			    fp_from.is_whole_space(),
-			    to,
-			    fp_to.iopage(),
-			    fp_to.size(),
-			    fp_to.is_iopage(),
-			    fp_to.is_whole_space()));
-    }
+  if (Map_traits<Io_space>::match(fp_from, fp_to))
+    result.combine(io_map(from, fp_from, to, fp_to));
 
-  if (fp_from.is_cappage() || fp_from.is_whole_space())
-    {
-      result.combine(cap_map(from,
-			    fp_from.task(),
-			    fp_from.size(),
-			    grant,
-			    fp_from.is_whole_space(),
-			    to,
-			    fp_to.task(),
-			    fp_to.size(),
-			    fp_to.is_cappage(),
-			    fp_to.is_whole_space()));
-    }
-
-  if (!fp_from.is_iopage() && !fp_from.is_cappage())
-    {
-      result.combine (mem_map (from,
-			       fp_from.page(),
-			       fp_from.size(),
-			       fp_from.write(),
-			       grant,
-			       to,
-			       fp_to.page(),
-			       fp_to.size(),
-			       offs,
-			       fp_from.cache_type()));
-    }
+  if (Map_traits<Cap_space>::match(fp_from, fp_to))
+    result.combine(cap_map(from, fp_from, to, fp_to));
+  
+  if (Map_traits<Mem_space>::match(fp_from, fp_to))
+    result.combine (mem_map (from, fp_from, to, fp_to, offs));
 
   return result;
 }
@@ -113,10 +255,10 @@ fpage_unmap (Space *space, L4_fpage fp, bool me_too, unsigned restriction,
 {
   unsigned ret = 0;
 
-  if (Config::enable_io_protection && (fp.is_iopage() || fp.is_whole_space()))
+  if (Config::enable_io_protection && (fp.is_iopage() || fp.is_all_spaces()))
     ret |= io_fpage_unmap(space, fp, me_too, restriction);
   
-  if (fp.is_cappage() || fp.is_whole_space())
+  if (fp.is_cappage() || fp.is_all_spaces())
     ret |= cap_fpage_unmap(space, fp, me_too, restriction);
   
   if (! (Config::enable_io_protection && fp.is_iopage())
@@ -133,9 +275,10 @@ fpage_unmap (Space *space, L4_fpage fp, bool me_too, unsigned restriction,
 
 #include "mapdb.h"
 
-template <typename SPACE>
+
+template <typename SPACE, typename MAPDB>
 Ipc_err
-map (Mapdb* mapdb,
+map (MAPDB* mapdb,
      SPACE* from, unsigned from_id, Address snd_addr, Mword snd_size, 
      SPACE* to, unsigned to_id, Address rcv_addr, 
      bool grant, unsigned attrib_add, unsigned attrib_del)
@@ -143,6 +286,7 @@ map (Mapdb* mapdb,
   enum { 
     PAGE_SIZE = SPACE::Map_page_size,
     PAGE_MASK = ~(PAGE_SIZE - 1),
+    HAS_SUPERPAGE = SPACE::Has_superpage,
     SUPERPAGE_SIZE = SPACE::Map_superpage_size,
     SUPERPAGE_MASK = ~(SUPERPAGE_SIZE - 1)
   };
@@ -152,7 +296,6 @@ map (Mapdb* mapdb,
   bool no_page_mapped = true;
   const Address rcv_start = rcv_addr;
   const Address rcv_size = snd_size;
-
   // We now loop through all the pages we want to send from the
   // sender's address space, looking up appropriate parent mappings in
   // the mapping data base, and entering a child mapping and a page
@@ -189,7 +332,8 @@ map (Mapdb* mapdb,
       // receiver address spaces.
 
       // Sender lookup.
-      Address s_phys, s_size;
+      typename SPACE::Phys_addr s_phys;
+      Address s_size;
       unsigned s_attribs;
 
       // Sigma0 special case: Sigma0 doesn't need to have a
@@ -213,7 +357,8 @@ map (Mapdb* mapdb,
       no_page_mapped = false;
 
       // Receiver lookup.  
-      Address r_phys, r_size;
+      typename SPACE::Phys_addr r_phys;
+      Address r_size;
       unsigned r_attribs;
 
       // Also, look up mapping database entry.  Depending on whether
@@ -221,7 +366,7 @@ map (Mapdb* mapdb,
       // (and compute the sender mapping from it) or look up the
       // sender mapping directly.
       Mapping* sender_mapping = 0;
-      Mapdb::Frame mapdb_frame;
+      typename MAPDB::Frame mapdb_frame;
       bool doing_upgrade = false;
 
       if (to->v_lookup(rcv_addr, &r_phys, &r_size, &r_attribs))
@@ -245,7 +390,7 @@ map (Mapdb* mapdb,
 
 	  if (! grant	    		      // Grant currently always flushes
 	      && r_size <= s_size             // Rcv frame in snd frame
-	      && (r_phys & ~(s_size - 1)) == s_phys
+	      && mapdb->page_address(r_phys, s_size) == s_phys
 	      && mapdb->valid_address(r_phys) // Can lookup in mapdb
 	      && mapdb->lookup (to_id, rcv_addr, r_phys, 
 				&receiver_mapping, &mapdb_frame))
@@ -286,11 +431,12 @@ map (Mapdb* mapdb,
       // already exists (doing_upgrade).
       
       // Compute attributes for to-be-inserted frame
-      Address i_phys = s_phys, i_size = s_size;
+      typename SPACE::Phys_addr i_phys = s_phys;
+      Address i_size = s_size;
       unsigned i_attribs = s_attribs;
 
       // See if we have to degrade to non-superpage mappings
-      if (i_size == SUPERPAGE_SIZE)
+      if (HAS_SUPERPAGE && i_size == SUPERPAGE_SIZE)
 	{
 	  if (i_size > snd_size          // want to send less that a superpage?
 	      || i_size > r_size         // not enough space for superpage map?
@@ -311,7 +457,7 @@ map (Mapdb* mapdb,
 		{
 		  // Just use OR here because i_phys may already contain 
 		  // the offset. (As is on ARM)
-		  i_phys |= super_offset;
+		  i_phys = mapdb->subpage_address(i_phys, super_offset);
 		}
 
 	      if (grant)
@@ -347,7 +493,17 @@ map (Mapdb* mapdb,
 	  if (grant)
 	    {
 	      if (mapdb->valid_address(s_phys))
-		mapdb->grant(mapdb_frame, sender_mapping, to_id, rcv_addr);
+		if (EXPECT_FALSE(
+		      !mapdb->grant(mapdb_frame, sender_mapping, to_id, 
+			rcv_addr)))
+		  {
+		    // Error -- remove mapping again.
+		    to->v_delete(rcv_addr, i_size);
+		    // may fail due to quota limits
+		    condition.error(Ipc_err::Remapfailed);
+		    break;
+		  }
+
 
 	      from->v_delete(snd_addr & ~(s_size - 1), s_size);
 	      need_tlb_flush = true;
@@ -395,8 +551,8 @@ map (Mapdb* mapdb,
 
   if (EXPECT_FALSE(no_page_mapped))
     {
-      WARN ("nothing mapped: from [%x]: "L4_PTR_FMT
-	    " size: "L4_PTR_FMT" to [%x]",
+      WARN ("nothing mapped: (%s) from [%x]: "L4_PTR_FMT
+	    " size: "L4_PTR_FMT" to [%x]", SPACE::name, 
 	    from_id, snd_addr, rcv_size,
 	    to_id);
     }
@@ -404,9 +560,9 @@ map (Mapdb* mapdb,
   return condition;
 }
 
-template <typename SPACE>
+template <typename SPACE, typename MAPDB>
 unsigned
-unmap (Mapdb* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
+unmap (MAPDB* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
        Address start, Address size, bool me_too, 
        unsigned flush_mode)
 {
@@ -415,7 +571,7 @@ unmap (Mapdb* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
   unsigned flushed_rights = 0;
   Address end = start + size;  
 
-  Address phys;
+  typename SPACE::Phys_addr phys;
   Address phys_size;
   Address page_address;
 
@@ -487,7 +643,7 @@ unmap (Mapdb* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
 	}
 
       Mapping *mapping;
-      Mapdb::Frame mapdb_frame;
+      typename MAPDB::Frame mapdb_frame;
 
       if (! mapdb->lookup(space_id, page_address, phys,
 			  &mapping, &mapdb_frame))
@@ -501,11 +657,13 @@ unmap (Mapdb* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
 	{
 	  page_rights |= 
 	    space->v_delete(address, phys_size, flush_mode);
+
 	  need_tlb_flush = true;
 	}
 
       // now delete from the other address spaces
-      for (Mapdb_iterator m (mapdb_frame, mapping, restriction, address, end);
+      for (typename MAPDB::Iterator m(mapdb_frame, mapping, 
+	    	restriction, address, end);
 	   m;
 	   ++m)
 	{
@@ -514,7 +672,7 @@ unmap (Mapdb* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
 	  
 	  page_rights |= 
 	    child_space->v_delete(m->page() * m.size(), m.size(), flush_mode);
-	  
+
 	  // Not so rare case that we delete mappings in our host space.
 	  // With small adress spaces there will be no flush on switch
 	  // anymore.
@@ -531,7 +689,7 @@ unmap (Mapdb* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
 
       if (full_flush)
 	mapdb->flush(mapdb_frame, mapping, 
-		     me_too && !mapping->space_is_sigma0(),
+		     me_too,
 		     restriction, address, end);
 
       mapdb->free(mapdb_frame);
@@ -548,23 +706,21 @@ unmap (Mapdb* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
   return flushed_rights;
 }
 
+
 IMPLEMENTATION[!io]:
 
 // Empty dummy functions when I/O protection is disabled
 
 inline
 Ipc_err
-io_map(Space * /*from*/, Address /*fp_from_iopage*/, Mword /*fp_from_size*/,
-       bool /*fp_from_grant*/, bool /*fp_from_is_whole_space*/,
-       Space * /*to*/,   Address /*fp_to_iopage*/,   Mword /*fp_to_size*/,
-       bool /*fp_to_is_iopage*/, bool /*fp_to_is_whole_space*/)
+io_map(Space *, L4_fpage const &, Space *, L4_fpage const &)
 {
   return Ipc_err(0);
 }
 
 inline
 unsigned
-io_fpage_unmap(Space * /*space*/, L4_fpage /*fp*/, bool /*me_too*/, 
+io_fpage_unmap(Space * /*space*/, L4_fpage const &/*fp*/, bool /*me_too*/, 
 	       unsigned /*restriction*/)
 {
   return 0;
@@ -576,17 +732,14 @@ IMPLEMENTATION[!caps]:
 
 inline
 Ipc_err
-cap_map(Space * /*from*/, Address /*fp_from_cappage*/, Mword /*fp_from_size*/,
-       bool /*fp_from_grant*/, bool /*fp_from_is_whole_space*/,
-       Space * /*to*/,   Address /*fp_to_cappage*/,   Mword /*fp_to_size*/,
-       bool /*fp_to_is_cappage*/, bool /*fp_to_is_whole_space*/)
+cap_map(Space *, L4_fpage const &, Space *, L4_fpage const &)
 {
   return Ipc_err(0);
 }
 
 inline
 unsigned
-cap_fpage_unmap(Space * /*space*/, L4_fpage /*fp*/, bool /*me_too*/, 
+cap_fpage_unmap(Space * /*space*/, L4_fpage const &/*fp*/, bool /*me_too*/, 
 		unsigned /*restriction*/)
 {
   return 0;

@@ -483,8 +483,10 @@ i30_no_enqueue:
 	movl	%ecx, 4 (%eax)  // x86_tss.esp0
 
 	// eax = this->space()
-	movl	OFS__THREAD__SPACE_CONTEXT (THIS_ebx), %eax
-	movl	OFS__SPACE__PGTABLE (%eax), %eax
+	movl	OFS__THREAD__SPACE (THIS_ebx), %eax
+	leal	OFS__SPACE__MEM_SPACE (%eax), %eax
+	movl	%eax, CURRENT_MEM_SPACE
+	movl	OFS__MEM_SPACE__PGTABLE (%eax), %eax
 
 #ifdef CONFIG_SMALL_SPACES
 	// current_user_gdt != this->smas_area()?
@@ -1014,8 +1016,10 @@ se_no_enqueue:
 	leal	THREAD_BLOCK_SIZE (DEST_esi), %ecx
 	movl	%ecx, KSEG 4 (%eax)	// x86_tss.esp0
 
-	movl	KSEG OFS__THREAD__SPACE_CONTEXT (DEST_esi), %eax
-	movl    OFS__SPACE__PGTABLE (%eax), %eax           
+	movl	KSEG OFS__THREAD__SPACE (DEST_esi), %eax
+	leal	OFS__SPACE__MEM_SPACE (%eax), %eax
+	movl	%eax, CURRENT_MEM_SPACE
+	movl	OFS__MEM_SPACE__PGTABLE (%eax), %eax
 
 #ifdef CONFIG_SMALL_SPACES
 	// current_user_gdt != this->smas_area()?

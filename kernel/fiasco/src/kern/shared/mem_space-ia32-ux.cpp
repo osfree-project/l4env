@@ -72,18 +72,6 @@ Mem_space::enable_reverse_lookup()
     reinterpret_cast<Unsigned32>(this);
 }
 
-IMPLEMENT inline NEEDS ["mem_layout.h",Mem_space::current_pdir]
-Mem_space *
-Mem_space::current_mem_space()
-{
-  Pdir* pdir = current_pdir();
-
-  Mem_space *s = 
-    reinterpret_cast<Mem_space*>(pdir->entry(Mem_layout::Space_index).raw());
-
-  return s;
-}
-
 /**
  * Destructor.  Deletes the address space and unregisters it from
  * Space_index.
@@ -99,8 +87,8 @@ Mem_space::dir_shutdown()
     if (    ((*_dir)[i] & Pd_entry::Valid)
 	&& !((*_dir)[i] & (Pd_entry::Superpage | Pd_entry::global())))
       Mapped_allocator::allocator()
-	->free_phys(Config::PAGE_SHIFT, 
-	            P_ptr<void>((*_dir)[i] & Config::PAGE_MASK));
+	->q_free_phys(_quota, Config::PAGE_SHIFT, 
+	    P_ptr<void>((*_dir)[i] & Config::PAGE_MASK));
 
   // free IO bitmap (if allocated) -- this should have already
   // happened in ~Io_space
@@ -167,13 +155,12 @@ Mem_space::v_insert (Address phys, Address virt, size_t size,
 	  update_small (virt, false);
           return Insert_ok;
         }
-         
+       
+      Ptab *new_pt;
       // can't map a superpage -- alloc new page table
-      Ptab *new_pt = (Ptab *)Mapped_allocator::allocator()
-	->alloc(Config::PAGE_SHIFT);
-
-      if (EXPECT_FALSE (!new_pt))
-        return Insert_err_nomem;
+      if (EXPECT_FALSE(!(new_pt = (Ptab *)Mapped_allocator::allocator()
+	         ->q_alloc(_quota, Config::PAGE_SHIFT))))
+	return Insert_err_nomem;
 
       new_pt->clear();
 

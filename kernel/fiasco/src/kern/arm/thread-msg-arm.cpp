@@ -66,7 +66,7 @@ Mword Thread::update_ipc_window (Address pfa, Address remote_pfa, Mword error)
   
   (void)error;
 
-  if (receiver()->mem_space()->dir()->walk((void*)remote_pfa,0,false).valid())
+  if (receiver()->mem_space()->dir()->walk((void*)remote_pfa,0,false,0).valid())
     {
       mem_space()->dir()->copy_in((void*)pfa, 
 				  receiver()->mem_space()->dir(), 

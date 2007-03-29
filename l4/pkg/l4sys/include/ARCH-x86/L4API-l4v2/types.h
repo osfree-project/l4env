@@ -44,7 +44,7 @@ typedef struct {
  * L4 thread id
  * \ingroup api_types_id
  */
-typedef union {
+typedef union l4_threadid_t {
   l4_low_high_t lh;          ///< Plain 64 bit id
   l4_threadid_struct_t id;   ///< Thread id struct
   l4_uint64_t raw;
@@ -494,6 +494,18 @@ typedef union {
  */
 L4_INLINE int
 l4_is_invalid_sched_param(l4_sched_param_t sp);
+
+
+typedef union l4_quota_desc_t
+{
+  l4_umword_t raw;
+  struct 
+  {
+    unsigned long id: 12;
+    unsigned long amount: 16;
+    unsigned long cmd: 4;
+  } q;
+} l4_quota_desc_t;
 
 /*****************************************************************************
  *** implementations

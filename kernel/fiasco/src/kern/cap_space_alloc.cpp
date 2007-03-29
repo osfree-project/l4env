@@ -7,6 +7,8 @@ IMPLEMENTATION[caps]:
 
 class Cap_space_alloc : public Cap_space
 {
+protected:
+  Cap_space_alloc() : Cap_space(0) {}
 };
 
 PUBLIC static inline

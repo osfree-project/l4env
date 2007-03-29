@@ -86,6 +86,7 @@ public:
    * @return 0 if this is not the INVALID ID, not 0 else.
    */
   Mword is_invalid() const;
+  bool is_valid() const;
 
   /// Get the L4 UID for the given IRQ.
   static L4_uid irq( unsigned irq );
@@ -262,7 +263,8 @@ public:
    * @param order the size of the flex page is 2^order.
    * @param page the base address of the flex page.
    */
-  L4_fpage (Mword grant, Mword write, Mword order, Mword page);
+  L4_fpage (Mword grant, Mword write, Mword order, Mword page, 
+      short cache = 0);
 
   /**
    * Create a flexpage with the given parameters.
@@ -369,6 +371,8 @@ public:
    * @return this flex page in binary representation.
    */
   Raw raw() const;
+
+  bool is_all_spaces() const;
 
 private:
 
@@ -1203,6 +1207,22 @@ public:
   };
 };
 
+class L4_quota_desc
+{
+public:
+  enum Command
+  { Nop = 0, Share = 1, New = 2 };
+
+  explicit L4_quota_desc(Mword raw) : _d(raw) {}
+
+  Command command() const;
+  Task_num id() const;
+  Mword amount() const;
+
+private:
+  Mword _d;
+};
+
 
 //----------------------------------------------------------------------------
 INTERFACE [v2]:
@@ -1244,7 +1264,8 @@ public:
   /// must be constant since we build the spaces array from it
   enum
     {
-      Max_tasks          = 1 << Task_size
+      Max_tasks          = 1 << Task_size,
+      Max_threads_per_task = 1 << Lthread_size,
     };
 
   /**
@@ -1315,7 +1336,8 @@ public:
   /// must be constant since we build the spaces array from it
   enum
   {
-    Max_tasks          = 1 << Task_size
+    Max_tasks          = 1 << Task_size,
+    Max_threads_per_task = 1 << Lthread_size,
   };
 
   /**
@@ -1691,6 +1713,25 @@ IMPLEMENT inline Mword L4_uid::is_nil() const
 IMPLEMENT inline Mword L4_uid::is_invalid() const
 { return (_raw & Low_mask) == Invalid; }
 
+IMPLEMENT inline bool L4_uid::is_valid() const
+{ return !is_invalid(); }
+
+
+IMPLEMENT inline
+L4_quota_desc::Command 
+L4_quota_desc::command() const
+{ return (Command)(_d >> (MWORD_BITS-4)); }
+
+IMPLEMENT inline
+Task_num
+L4_quota_desc::id() const
+{ return _d  & 0xfff; }
+
+IMPLEMENT inline
+Mword
+L4_quota_desc::amount() const
+{ return _d & ~((0xfUL << (MWORD_BITS-4)) | 0xfff); }
+
 //---------------------------------------------------------------------------
 IMPLEMENTATION [v2]:
 
@@ -1958,17 +1999,32 @@ Mword
 L4_fpage::is_valid() const
 { return _raw; }
 
+PUBLIC static
+inline
+L4_fpage 
+L4_fpage::all_spaces(unsigned long size = Whole_space)
+{
+  return L4_fpage(All_spaces_id | ((size << Size_shift) & Size_mask));
+}
+
+IMPLEMENT inline
+bool
+L4_fpage::is_all_spaces() const
+{ return (_raw & Special_fp_mask) == All_spaces_id; }
+
 IMPLEMENT inline
 L4_fpage::L4_fpage(Raw raw)
   : _raw(raw)
 {}
 
 IMPLEMENT inline
-L4_fpage::L4_fpage(Mword grant, Mword write, Mword size, Mword page)
+L4_fpage::L4_fpage(Mword grant, Mword write, Mword size, Mword page,
+    short cache)
   : _raw((grant ? (1<<Grant_bit) : 0)
 	 | (write ? (1<<Write_bit) : 0)
 	 | ((size << Size_shift) & Size_mask)
-	 | ((page << Page_shift) & Page_mask))
+	 | ((page << Page_shift) & Page_mask)
+	 | cache)
 {}
 
 IMPLEMENT inline

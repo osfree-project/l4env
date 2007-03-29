@@ -10,6 +10,13 @@ enum Switch_hint
   SWITCH_ACTIVATE_LOCKEE,	// Activate thread that was locked
 };
 
+class Thread_lock_valid
+{
+public:
+  static bool valid(void const *t) 
+  { return context_of(t)->is_tcb_mapped(); }
+};
+
 /** Thread lock.
     This lock uses the basic priority-inheritance mechanism (Switch_lock)
     and extends it in two ways: First, it has a hinting mechanism that
@@ -25,10 +32,30 @@ enum Switch_hint
     The rest is protected with this lock, this includes the
     kernelstackpointer (kernel_sp).
  */
-class Thread_lock
+class Thread_lock : private Switch_lock<Thread_lock_valid>
 {
 private:
-  Switch_lock _switch_lock;
+  typedef Switch_lock<Thread_lock_valid> Lock;
+
+public:
+  using Lock::Invalid;
+  using Lock::Locked;
+  using Lock::Not_locked;
+
+  using Lock::Lock_context;
+  
+  using Lock::test;
+  using Lock::lock_owner;
+
+  /*
+   * Can use the Switch_lock version, because we assume the context
+   * is invalid during switch_dirty and we do not need to consider it
+   * for scheduling any more.
+   */
+  using Lock::clear_no_switch_dirty;
+  using Lock::switch_dirty;
+
+private:
   Switch_hint _switch_hint;
 };
 
@@ -68,40 +95,37 @@ Thread_lock::set_switch_hint (Switch_hint const hint)
     @return true if we owned the lock already.  false otherwise.
  */
 PUBLIC
-bool
+Thread_lock::Lock_res
 Thread_lock::test_and_set()
 {
   Lock_guard <Cpu_lock> guard (&cpu_lock);
-
-  if (_switch_lock.test_and_set ()) // Get the lock
-    return true;
-
-  context()->set_donatee (current()); // current get time of context
-
-  set_switch_hint (SWITCH_ACTIVATE_HIGHER);
-
-  return false;
+  return test_and_set_dirty();
 }
 
 /** Lock a context.
     @return true if we owned the lock already.  false otherwise.
     @pre caller holds cpu lock
  */
-PUBLIC inline NEEDS["switch_lock.h","cpu_lock.h","globals.h", Thread_lock::context]
-bool
+PRIVATE inline NEEDS["switch_lock.h","cpu_lock.h","globals.h", Thread_lock::context]
+Thread_lock::Lock_res
 Thread_lock::test_and_set_dirty()
 {
-
   assert(cpu_lock.test());
 
-  if (_switch_lock.test_and_set_dirty ()) // Get the lock
-    return true;
+  switch (Lock_res r = Lock::test_and_set ())
+    {
+    case Invalid:
+    case Locked:
+      return r;
+    case Not_locked:
+      break;
+    }
 
   context()->set_donatee (current()); // current get time of context
 
   set_switch_hint (SWITCH_ACTIVATE_HIGHER);
 
-  return false;
+  return Not_locked;
 }
 
 
@@ -110,10 +134,10 @@ Thread_lock::test_and_set_dirty()
     to current lock owner until we are the lock owner.
  */
 PUBLIC inline NEEDS["globals.h"]
-void
+Thread_lock::Lock_res
 Thread_lock::lock()
 {
-  check (test_and_set() == false);
+  return test_and_set();
 }
 
 /** Lock a thread.
@@ -121,12 +145,12 @@ Thread_lock::lock()
     to current lock owner until we are the lock owner.
     @pre caller holds cpu lock
  */
-PUBLIC inline NEEDS["globals.h"]
-void
+PUBLIC inline NEEDS[Thread_lock::test_and_set_dirty, "globals.h"]
+Thread_lock::Lock_res
 Thread_lock::lock_dirty()
 {
   // removed assertion, because we do lazy locking
-  test_and_set_dirty();
+  return test_and_set_dirty();
 }
 
 /** Free the lock.
@@ -156,8 +180,8 @@ Thread_lock::clear()
   // lock owner or even when the context() has been killed.
   // Fortunately, it works anyway because contexts live in
   // type-stable memory.
-  _switch_lock.clear();
-  context()->set_donatee (_switch_lock.lock_owner());	// (*)
+  Lock::clear();
+  context()->set_donatee (lock_owner());	// (*)
 
   // We had locked ourselves, remain current
   if (context() == current())
@@ -202,8 +226,8 @@ Thread_lock::clear_dirty()
 
   if(test())
     {
-      _switch_lock.clear_dirty();
-      context()->set_donatee (_switch_lock.lock_owner());       // (*)
+      Lock::clear_dirty();
+      context()->set_donatee (lock_owner());       // (*)
     }
   else
     {
@@ -254,30 +278,11 @@ Thread_lock::clear_dirty_dont_switch()
   if(EXPECT_TRUE(!test()))
     return;
 
-  _switch_lock.clear_dirty();
-  context()->set_donatee (_switch_lock.lock_owner());   // (*)
+  Lock::clear_dirty();
+  context()->set_donatee (lock_owner());   // (*)
 
   assert(cpu_lock.test());
 }
 
 
-/** Lock owner.
-    @return current owner of the lock.  0 if there is no owner.
- */
-PUBLIC inline
-Context *
-Thread_lock::lock_owner() const
-{
-  return _switch_lock.lock_owner();
-}
-
-/** Is lock set?.
-    @return true if lock is set.
- */
-PUBLIC inline
-bool
-Thread_lock::test()
-{
-  return _switch_lock.test();
-}
 

@@ -3,14 +3,20 @@ INTERFACE[caps]:
 #include "l4_types.h"
 
 class slab_cache_anon;
+class Ram_quota;
 
 class Cap_space
 {
 public:
+  static char const * const name;
+  typedef Address Phys_addr;
   enum {
+    Has_superpage = 1,
     Map_page_size = 1,
     Map_superpage_size = L4_uid::Max_tasks,
     Map_max_address = L4_uid::Max_tasks,
+    Whole_space = L4_fpage::Whole_cap_space,
+    Identity_map = 1,
   };
 
   enum Status {
@@ -33,6 +39,8 @@ private:
   // DATA
   Mword* _bits;
   bool   _full;
+  bool   _task_caps;
+  Ram_quota *_quota;
 
   //  Mword _bits[Cap_words];
 
@@ -54,14 +62,17 @@ IMPLEMENTATION[caps]:
 #include "atomic.h"
 #include "config.h"
 #include "cpu.h"
+#include "ram_quota.h"
 #include "slab_cache_anon.h"
 
+char const * const Cap_space::name = "Cap_space";
 slab_cache_anon* Cap_space::_slabs;
 
 PUBLIC inline
-Cap_space::Cap_space ()
+Cap_space::Cap_space (Ram_quota *q)
   : _bits (0), 
-    _full (false)
+    _full (false),
+    _quota(q)
 {
 }
 
@@ -71,24 +82,30 @@ Cap_space::~Cap_space ()
   bits_free();
 }
 
-PRIVATE inline NEEDS["slab_cache_anon.h", <cstring>]
+PUBLIC inline
+Ram_quota *
+Cap_space::ram_quota() const
+{ return _quota; }
+
+PRIVATE inline NEEDS["slab_cache_anon.h", <cstring>, "ram_quota.h"]
 bool
 Cap_space::bits_alloc ()
 {
-  _bits = static_cast <Mword*> (_slabs->alloc());
-  if (_bits)
-    memset (_bits, 0, sizeof(_bits));
+  if (EXPECT_FALSE(!(_bits = static_cast <Mword*> (_slabs->q_alloc(_quota)))))
+    return 0;
 
+  memset (_bits, 0, sizeof (Mword) * Cap_words);
   return _bits;
 }
 
-PRIVATE inline NEEDS["slab_cache_anon.h"]
+PRIVATE inline NEEDS["slab_cache_anon.h", "ram_quota.h"]
 void
 Cap_space::bits_free ()
 {
   if (_bits)
     {
       _slabs->free (_bits);
+      _quota->free(sizeof (Mword) * Cap_words);
       _bits = 0;
     }
 }

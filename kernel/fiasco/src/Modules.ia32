@@ -122,13 +122,15 @@ KERNEL			:= kernel.image
 VPATH			+= kern/$(CONFIG_XARCH) kern/shared kern
 PRIVATE_INCDIR		+= kern/$(CONFIG_XARCH) kern/shared kern 
 
-INTERFACES_KERNEL	:= startup boot_info cmdline __main mapdb region pic \
-			   cap_space cap_space_alloc io_space		     \
+INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
+			   mapping_tree mapdb region pic                     \
+			   cap_space cap_space_alloc io_space ram_quota      \
 			   mem_space space space_index space_index_util	     \
 			   kmem kmem_alloc slab_cache_anon mem_layout        \
 			   kmem_slab_simple kmem_slab switch_lock kip_init   \
 			   thread_lock helping_lock cpu_lock timer timeout   \
 			   ipc_timeout deadline_timeout timeslice_timeout    \
+			   ram_quota_alloc		                     \
 			   thread_state context sender receiver mem_unit     \
 			   thread kernel_thread map_util irq banner warn     \
 			   dirq globals apic watchdog kernel_uart pit        \
@@ -163,7 +165,8 @@ kip_init_IMPL		:= kip_init-ia32-amd64-ux kip_init-ia32-amd64
 kmem_IMPL		:= kmem-ia32-ux kmem-ia32
 kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-amd64-ux
 main_IMPL		:= main-ia32-ux main-ia32-amd64
-mapdb_IMPL		:= mapdb-ia32-ux mapdb
+mapping_IMPL		:= mapping-ia32-ux mapping
+mapdb_IMPL		:= mapdb
 map_util_IMPL		:= map_util map_util-mem map_util-io map_util-caps
 mem_layout_IMPL		:= mem_layout mem_layout-ia32
 mem_space_IMPL		:= mem_space mem_space-user mem_space-ia32-ux \
@@ -187,7 +190,7 @@ thread_IMPL		:= thread thread-ia32-ux thread-ia32-amd64           \
 			   thread-pagefault thread-ia32-smas thread-log      \
 			   thread-debug thread-dbf thread-lookup
 utcb_init_IMPL		:= utcb_init utcb_init-ia32-ux
-vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-ia32-amd64-ux \
+vmem_alloc_IMPL		:= vmem_alloc \
 			   vmem_alloc-ia32-ux vmem_alloc-ia32-amd64
 watchdog_IMPL		:= watchdog watchdog-ia32
 
@@ -223,7 +226,7 @@ ifeq ("$(CONFIG_IO_PROT)","y")
 endif
 
 ifeq ("$(CONFIG_JDB)","y")
-INTERFACES_KERNEL	+= jdb jdb_prompt_ext jdb_symbol jdb_lines \
+INTERFACES_KERNEL	+= jdb jdb_util jdb_prompt_ext jdb_symbol jdb_lines \
 			   jdb_dbinfo jdb_bp jdb_thread_list \
 			   jdb_tbuf jdb_module jdb_core jdb_io_ports \
 			   jdb_kern_info jdb_prompt_module jdb_tbuf_output \
@@ -237,7 +240,7 @@ INTERFACES_KERNEL	+= jdb jdb_prompt_ext jdb_symbol jdb_lines \
 			   jdb_kern_info_kmem_alloc jdb_kern_info_region \
 			   jdb_kern_info_kip jdb_kern_info_config \
 			   jdb_thread_names loadcnt jdb_utcb jdb_bts \
-			   jdb_entry_frame
+			   jdb_entry_frame jdb_space
 
 apic_IMPL		+= apic-debug
 jdb_IMPL		:= jdb-ia32-amd64 jdb-ansi jdb-ia32-ux jdb-thread \

@@ -11,6 +11,7 @@ IMPLEMENTATION [ia32,amd64,ux]:
 #include "thread_state.h"
 #include "kip.h"
 
+
 IMPLEMENT inline NEEDS ["config.h", "cpu.h"]
 void
 Context::init_switch_time()
@@ -90,6 +91,31 @@ Context::consumed_time()
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [ia32,ux]:
+
+IMPLEMENT inline
+Mword
+Context::state() const
+{
+  Mword res;
+  asm volatile ("movl (%1), %0		\n\t"
+		: "=acd" (res) : "acdbSD" (&_state));
+  return res;
+
+}
+
+IMPLEMENT inline
+Mword
+Context::is_tcb_mapped() const
+{
+  // Touch the state to page in the TCB. If we get a pagefault here,
+  // the handler doesn't handle it but returns immediatly after
+  // setting eax to 0xffffffff
+  Mword pagefault_if_0;
+  asm volatile ("mov (%2), %0		\n\t"
+		"setnc %b0		\n\t"
+		: "=acd" (pagefault_if_0) : "0"(0UL), "acdbSD" (&_state));
+  return pagefault_if_0;
+}
 
 IMPLEMENT inline NEEDS [Context::update_consumed_time,
 			Context::update_kip_switch_time,

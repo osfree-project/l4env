@@ -60,7 +60,6 @@ EXTENSION class L4_fpage
 private:
   enum 
   {
-    Capid_mask    = 0xf0000f02,
     Cap_id        = 0xf0000100,
   };
 };
@@ -72,7 +71,6 @@ EXTENSION class L4_fpage
 private:
   enum 
   {
-    Capid_mask    = 0xfffffffff0000f02UL,
     Cap_id        = 0xfffffffff0000100UL,
   };
 };
@@ -98,7 +96,7 @@ IMPLEMENTATION [caps]:
 IMPLEMENT inline
 Mword L4_fpage::is_cappage() const
 {
-  return (_raw & Capid_mask) == Cap_id;
+  return (_raw & Special_fp_mask) == Cap_id;
 }
 
 IMPLEMENT inline
@@ -125,5 +123,5 @@ L4_fpage L4_fpage::task_cap( Mword taskno, Mword order, Mword grant)
 IMPLEMENT inline
 Mword L4_fpage::is_whole_cap_space() const
 {
-  return (_raw >> 2) == Whole_io_space;
+  return (_raw >> 2) == Whole_cap_space;
 }

@@ -102,15 +102,20 @@ endif
 
 INTERFACES_KERNEL	:= simpleio kernel_console panic warn list_alloc  \
 			   mem_layout globals loader vhw kip_init	  \
-			   boot_info cmdline config jdb_symbol		  \
+			   boot_info cmdline config jdb_symbol jdb_util	  \
 			   tb_entry perf_cnt jdb_tbuf x86desc		  \
 			   emulation pic usermode cpu trampoline cpu_lock \
 			   region entry_frame kmem mapped_alloc mem_unit  \
+			   ram_quota  			  		  \
 			   kmem_alloc slab_cache_anon kmem_slab_simple	  \
 			   vmem_alloc paging kmem_slab fpu_state fpu	  \
 			   sched_context switch_lock timer timeout	  \
+			   space_index 					  \
 			   cap_space mem_space space context helping_lock \
-			   cap_space_alloc space_index mapdb map_util	  \
+			   cap_space_alloc 		                  \
+			   mapping mapping_tree                           \
+			   mapdb map_util	  	          	  \
+			   ram_quota_alloc				  \
 			   hostproc task kernel_task                      \
 			   thread_lock preemption timeslice_timeout	  \
 			   ipc_timeout deadline_timeout thread_state	  \
@@ -135,6 +140,7 @@ INTERFACES_KERNEL	:= simpleio kernel_console panic warn list_alloc  \
 			   jdb_halt_thread  jdb_tetris                    \
 			   jdb_kern_info_kip jdb_kern_info_region         \
 			   jdb_kern_info_kmem_alloc jdb_kern_info_config  \
+			   jdb_space                                      \
 			   vkey jdb_thread_names jdb_utcb		  \
 			   jdb_entry_frame kdb_ke
 
@@ -169,7 +175,7 @@ kip_init_IMPL		:= kip_init-ia32-amd64-ux kip_init-ux
 kmem_IMPL		:= kmem-ia32-ux kmem-ux
 kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-amd64-ux
 main_IMPL		:= main-ia32-ux main-ux
-mapdb_IMPL		:= mapdb-ia32-ux mapdb
+mapping_IMPL		:= mapping-ia32-ux mapping
 map_util_IMPL		:= map_util map_util-mem map_util-caps
 mem_layout_IMPL		:= mem_layout mem_layout-ux
 mem_space_IMPL		:= mem_space mem_space-user mem_space-ia32-ux \
@@ -191,7 +197,7 @@ thread_IMPL		:= thread thread-ia32-ux thread-ux thread-syscall    \
 			   thread-debug thread-lookup
 timer_IMPL 		:= timer timer-ia32-amd64-ux timer-ux
 utcb_init_IMPL		:= utcb_init utcb_init-ia32-ux
-vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-ia32-amd64-ux \
+vmem_alloc_IMPL		:= vmem_alloc \
 			   vmem_alloc-ia32-ux vmem_alloc-ux
 
 ASSRC_KERNEL		:= entry-ia32-ux.S entry-ux.S sighandler.S \

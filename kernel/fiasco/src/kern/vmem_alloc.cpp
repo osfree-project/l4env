@@ -17,6 +17,8 @@ public:
   
   static void init();
 
+  static void *page_unmap(void *page);
+
   /**
    * Allocate a page of kernel memory and insert it into the master
    * page directory.

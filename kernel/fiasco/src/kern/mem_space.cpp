@@ -2,8 +2,9 @@ INTERFACE:
 
 #include "paging.h"		// for page attributes
 #include "mem_layout.h"
+#include "ram_quota.h"
 
-class Space;
+//class Space;
 
 /**
  * An address space.
@@ -13,6 +14,10 @@ class Space;
 class Mem_space
 {
 public:
+  typedef Address Phys_addr;
+
+  static char const * const name;
+
   /** Return status of v_insert. */
   enum Status {
     Insert_ok = 0,		///< Mapping was added successfully.
@@ -45,29 +50,32 @@ public:
 
   enum				// Definitions for map_util
     {
+      Has_superpage = 1,
       Map_page_size = Config::PAGE_SIZE,
       Map_superpage_size = Config::SUPERPAGE_SIZE,
-      Map_max_address = Mem_layout::User_max
+      Map_max_address = Mem_layout::User_max,
+      Whole_space = L4_fpage::Whole_space,
+      Identity_map = 0,
     };
 
 public:
   // Each architecture must provide these members:
+  void switchin_context();
 
-  void          switchin_context();
+  Status v_insert (Address phys, Address virt, size_t size,
+      unsigned page_attribs);
 
-  Status        v_insert (Address phys, Address virt, size_t size, 
-			  unsigned page_attribs);
-
-  bool          v_lookup (Address virt, Address *phys = 0, Address *size = 0,
-			  unsigned *page_attribs = 0);
+  bool v_lookup (Address virt, Address *phys = 0, Address *size = 0,
+      unsigned *page_attribs = 0);
 
 
   unsigned long v_delete(Address virt, unsigned long size, 
-			 unsigned long page_attribs = Page_all_attribs);
+      unsigned long page_attribs = Page_all_attribs);
 
 
 private:
-  // Each architecture must provide these members:
+  Ram_quota *_quota;
+  // Each architecture must provide these members
 
   // Page-table ops
   // We'd like to declare current_pdir here, but Dir_type isn't defined yet.
@@ -80,6 +88,8 @@ private:
 
   // Mem_space();
   Mem_space(const Mem_space &);	// undefined copy constructor
+
+  static Mem_space *_current asm ("CURRENT_MEM_SPACE");
 };
 
 INTERFACE [utcb]:
@@ -104,17 +114,22 @@ IMPLEMENTATION:
 #include "mem_unit.h"
 #include "panic.h"
 
-PUBLIC
-Mem_space::Mem_space ()
-  : _dir (0)
-{
-  _dir = static_cast<Dir_type*>
-    (Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT));
 
-  assert (_dir);
-  
-  _dir->clear();		// initialize to zero
-  Kmem::dir_init(_dir);		// copy current shared kernel page directory
+char const * const Mem_space::name = "Mem_space";
+Mem_space *Mem_space::_current;
+
+PUBLIC
+Mem_space::Mem_space (Ram_quota *q)
+  : _quota(q), _dir (0)
+{
+  void *b;
+  if (EXPECT_FALSE(! (b = Mapped_allocator::allocator()
+	  ->q_alloc(_quota, Config::PAGE_SHIFT))))
+    return;
+
+  _dir = static_cast<Dir_type*>(b);
+  _dir->clear();	// initialize to zero
+  Kmem::dir_init(_dir);	// copy current shared kernel page directory
   enable_reverse_lookup();
 }
 
@@ -122,7 +137,15 @@ PUBLIC
 Mem_space::Mem_space (Dir_type* pdir)
   : _dir (pdir)
 {
+  _current = this;
   enable_reverse_lookup();
+}
+
+IMPLEMENT inline
+Mem_space *
+Mem_space::current_mem_space()
+{
+  return _current;
 }
 
 /**
@@ -136,9 +159,20 @@ Mem_space::~Mem_space()
     {
       dir_shutdown();
 
-      Mapped_allocator::allocator()->free(Config::PAGE_SHIFT, _dir);
+      Mapped_allocator::allocator()->q_free(_quota, Config::PAGE_SHIFT, _dir);
     }
 }
+
+PUBLIC inline
+bool
+Mem_space::valid() const
+{ return _dir; }
+
+PUBLIC inline
+Ram_quota *
+Mem_space::ram_quota() const
+{ return _quota; }
+
 
 /// Avoid deallocation of page table upon Mem_space destruction.
 PUBLIC

@@ -14,6 +14,7 @@ IMPLEMENTATION [arm]:
 
 #include "kmem_space.h"
 #include "pagetable.h"
+#include "ram_quota.h"
 
 IMPLEMENT
 void Kern_lib_page::init()
@@ -21,7 +22,7 @@ void Kern_lib_page::init()
   extern char kern_lib_start;
 
   Pte pte = Kmem_space::kdir()->walk((void*)Kmem_space::Kern_lib_base, 
-      Config::PAGE_SIZE, true);
+      Config::PAGE_SIZE, true, Ram_quota::root);
 
   if (pte.lvl() == 0) // allocation of second level faild
     {

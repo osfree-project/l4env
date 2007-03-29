@@ -13,6 +13,7 @@ IMPLEMENTATION[ia32,ux,arm]:
 #include "jdb_input.h"
 #include "jdb_module.h"
 #include "jdb_screen.h"
+#include "jdb_util.h"
 #include "kernel_console.h"
 #include "keycodes.h"
 #include "l4_types.h"
@@ -32,8 +33,6 @@ class Jdb_tcb : public Jdb_module
 
 private:
   static void print_entry_frame_regs();
-protected:
-  static bool is_mapped(void const *addr);
 };
 
 class Jdb_tcb_ptr
@@ -429,7 +428,7 @@ dump_stack:
 	    {
 	      // It is possible that we have an invalid kernel_sp
 	      // (in result of an kernel error). Handle it smoothly.
-	      if (is_mapped((const void*)p.addr()))
+	      if (Jdb_util::is_mapped((const void*)p.addr()))
     		printf(" %s%08lx%s", p.is_user_value() ? Jdb::esc_iret : "",
 				     p.value(),
 				     p.is_user_value() ? "\033[m" : "");

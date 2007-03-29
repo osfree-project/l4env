@@ -45,6 +45,7 @@ void
 Mem_space::make_current()
 {
   Cpu::set_pdbr((Mem_layout::pmem_to_phys(_dir)));
+  _current = this;
 }
 
 //---------------------------------------------------------------------------

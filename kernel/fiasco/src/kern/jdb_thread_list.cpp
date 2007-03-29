@@ -500,7 +500,7 @@ Jdb_list_threads::list_threads_show_thread(Thread *t)
 	    if (*c != '5')
 	      break;
 
-	  printf("(%4d) ", stack_depth);
+	  printf("(%4d) ", stack_depth-sizeof(Thread));
 	  t->print_state_long(29);
 	}
       else

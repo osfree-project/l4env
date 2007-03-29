@@ -162,13 +162,30 @@ IMPLEMENT inline
 bool
 Thread::pagein_tcb_request (Return_frame *regs)
 {
-  if (*(Unsigned32*)regs->ip() == 0xff01f636)
+  unsigned long new_ip = regs->ip();
+  if (*(Unsigned8*)new_ip == 0x48) // REX.W
+    new_ip += 1;
+
+  register Unsigned16 op = *(Unsigned16*)new_ip;
+  //LOG_MSG_3VAL(current(),"TCB", op, regs->ip(), 0);
+  if ((op & 0xc0ff) == 0x8b) // Context::is_tcb_mapped() and Context::state()
     {
-      regs->ip(regs->ip() + 4);
+      regs->ip(new_ip + 2);
+      Mword *reg = ((Mword*)regs) - 3;
+      assert((op >> 11) <= 2);
+      reg[-(op>>11)] = 0;
+
       // tell program that a pagefault occured we cannot handle
-      regs->flags(regs->flags() | 1);	// set carry flag in EFLAGS
+      regs->flags(regs->flags() | 0x41); // set carry and zero flag in EFLAGS
       return true;
     }
+  else if (*(Unsigned32*)regs->ip() == 0xff01f636) // used in shortcut.S
+    {
+      regs->ip(regs->ip() + 4);
+      regs->flags(regs->flags() | 1);  // set carry flag in EFLAGS
+      return true;
+    }
+
   return false;
 }
 
@@ -216,37 +233,6 @@ Thread::restore_exc_state()
   _exc_ip = ~0UL;
 }
 
-IMPLEMENT inline
-Mword
-Thread::is_tcb_mapped() const
-{
-  // Touch the state to page in the TCB. If we get a pagefault here,
-  // the handler doesn't handle it but returns immediatly after
-  // setting eax to 0xffffffff
-  Mword pagefault_if_0;
-  asm volatile ("xorl %%eax,%%eax		\n\t"
-		"testb $0xff, %%ss:(%%ecx)	\n\t"
-		"setnc %%al			\n\t"
-		: "=a" (pagefault_if_0) : "c" (&_state));
-  return pagefault_if_0;
-}
-
-IMPLEMENTATION[amd64]:
-
-IMPLEMENT inline
-Mword
-Thread::is_tcb_mapped() const
-{
-  // Touch the state to page in the TCB. If we get a pagefault here,
-  // the handler doesn't handle it but returns immediatly after
-  // setting eax to 0xffffffff
-  Mword pagefault_if_0;
-  asm volatile ("xorl %%eax,%%eax		\n\t"
-		"testb $0xff, %%ss:(%%rcx)	\n\t"
-		"setnc %%al			\n\t"
-		: "=a" (pagefault_if_0) : "c" (&_state));
-  return pagefault_if_0;
-}
 
 IMPLEMENTATION[ia32,amd64,ux]:
 
@@ -588,7 +574,10 @@ Thread::raise_exception (Trap_state *ts, Address handler)
   bool error_code = false, fault_addr = false;
 
   {
-    Lock_guard <Thread_lock> guard (thread_lock());
+    Lock_guard <Thread_lock> guard;
+    
+    if (!guard.lock(thread_lock()))
+      return false;
 
     if (!(state() & Thread_ready) || (state() & Thread_cancel))
       return false;
@@ -833,18 +822,25 @@ IMPLEMENTATION[{ia32,ux,amd64}-utcb]:
 #include "fpu_alloc.h"
 #include "utcb.h"
 
+PRIVATE
+void
+Thread::destroy_utcb()
+{
+  task()->free_utcb(id().lthread());
+}
+
 /** Setup the UTCB pointer of this thread.
  */
 PRIVATE inline NOEXPORT
 void
 Thread::setup_utcb_kernel_addr()
 {
-  Address uaddr = Mem_layout::V2_utcb_addr + id().lthread()*sizeof(Utcb);
-  Utcb *ptr     = reinterpret_cast<Utcb *>
-                   (Kmem::phys_to_virt(mem_space()->virt_to_phys(uaddr)));
+  Utcb *ptr = task()->alloc_utcb(id().lthread());
+  if (!ptr)
+    kdb_ke("could not allocate UTCB");
 
-  local_id((Local_id)uaddr);
   utcb(ptr);
+  local_id(task()->user_utcb(id().lthread()));
 
   setup_exception_ipc();
 }
@@ -903,6 +899,11 @@ IMPLEMENTATION[{ia32,amd64,ux}-!utcb]:
 PRIVATE inline NOEXPORT
 void
 Thread::setup_utcb_kernel_addr()
+{}
+
+PRIVATE inline
+void
+Thread::destroy_utcb()
 {}
 
 
@@ -1037,7 +1038,7 @@ Thread::exception(Trap_state *ts)
   r.set_msg_word(1, L4_exception_ipc::Exception_ipc_cookie_2);
   r.set_msg_word(2, 0); // nop in V2
   r.snd_desc(0);
-  r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage(0,0,L4_fpage::Whole_space,0)));
+  r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage::all_spaces()));
 
   Ipc_err ret (0);
 

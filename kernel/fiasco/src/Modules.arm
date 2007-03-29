@@ -175,6 +175,7 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			entry_frame irq_alloc helping_lock switch_lock \
 			kmem_slab_simple region kmem_slab slab_cache_anon \
 			thread_state context sched_context fpu fpu_state \
+			mapping mapping_tree \
 			mapdb map_util mem_space space space_index \
 			space_index_util task thread_lock receiver timer \
 			timeout ipc_timeout deadline_timeout timeslice_timeout \
@@ -182,7 +183,7 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			preemption k_sa1100 list_alloc trap_state warn \
 			bootstrap virq uart_console vkey kern_lib_page \
 			watchdog perf_cnt kern_cnt jdb_extensions kernel_task \
-			cap_space cap_space_alloc
+			cap_space cap_space_alloc ram_quota ram_quota_alloc 
 
 
 boot_info_IMPL	  	:= boot_info boot_info-arch
@@ -199,7 +200,7 @@ kernel_task_IMPL	:= kernel_task kernel_task-arm
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std
 kernel_uart_IMPL  	:= kernel_uart kernel_uart-arm
 map_util_IMPL		:= map_util map_util-mem map_util-caps
-mapdb_IMPL		:= mapdb-arm mapdb
+mapping_IMPL		:= mapping-arm mapping
 mem_layout_IMPL		:= mem_layout mem_layout-arm mem_layout-noncont
 mem_space_IMPL		:= mem_space-arm mem_space-user
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-arm
@@ -242,7 +243,7 @@ JDB_INTERFACES		:= jdb_handler_queue jdb_module jdb_pic            \
 			   jdb_kern_info_kmem_alloc jdb_kern_info_region   \
 			   jdb_kern_info_kip jdb_mapdb                     \
 			   jdb_trace jdb_trace_set jdb_entry_frame         \
-			   jdb_thread_names
+			   jdb_thread_names jdb_util jdb_space
 
 
 JDB_TBUF_IFS		:= jdb_tbuf jdb_tbuf_init jdb_tbuf_output          \

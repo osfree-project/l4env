@@ -272,6 +272,9 @@ public:
   /// get the pager id (active)
   L4_uid cap_handler(const Utcb*) const; 
 
+  /// get the quota descriptor (active)
+  L4_quota_desc quota_descriptor(const Utcb*) const; 
+  
   /// get the task id of the new task
   L4_uid dst() const;
 
@@ -282,7 +285,7 @@ public:
   Mword alien() const;
 
   /// should task capabilities be enabled for the new task?
-  Mword enable_task_caps() const;
+  Mword extra_args() const;
 
   /// get the trigger_exception flag
   Mword trigger_exception() const;
@@ -330,6 +333,7 @@ public:
   Mword  entry_func() const;
   void   ret_val(Mword v);
 };
+
 
 extern "C" void Entry_frame_Syscall_frame_cast_problem();
 

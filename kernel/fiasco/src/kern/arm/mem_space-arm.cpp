@@ -4,12 +4,16 @@ INTERFACE:
 #include "paging.h"
 #include "types.h"
 #include "pagetable.h"
+#include "ram_quota.h"
 #include "space_index.h"
 
 class Mem_space
 {
 public:
   typedef Page_table Dir_type;
+  typedef Address Phys_addr;
+
+  static char const * const name;
 
   void make_current();
   static Mem_space *kspace;
@@ -47,7 +51,11 @@ public:
   {
     Map_page_size = Config::PAGE_SIZE,
     Map_superpage_size = Config::SUPERPAGE_SIZE,
-    Map_max_address = Mem_layout::User_max
+    Map_max_address = Mem_layout::User_max,
+    Has_superpage = 1,
+    Whole_space = 32,
+    Identity_map = 0,
+
   };
 
   
@@ -74,6 +82,7 @@ private:
 
 private:
   // DATA
+  Ram_quota *_quota;
   Dir_type *_dir;
 };
 
@@ -95,6 +104,18 @@ IMPLEMENTATION [arm]:
 // 
 // class Mem_space
 // 
+
+char const * const Mem_space::name = "Mem_space";
+
+PUBLIC inline
+Ram_quota *
+Mem_space::ram_quota() const
+{ return _quota; }
+
+PUBLIC inline
+bool
+Mem_space::valid() const
+{ return _dir; }
 
 // Mapping utilities
 
@@ -128,7 +149,7 @@ Mem_space::enable_reverse_lookup()
   // Store reverse pointer to Space in page directory
   assert(((unsigned long)this & 0x03) == 0);
   Pte pte = _dir->walk((void*)Mem_layout::Space_index, 
-      Config::SUPERPAGE_SIZE, false);
+      Config::SUPERPAGE_SIZE, false, 0 /*does never allocate*/);
 
   pte.set_invalid((unsigned long)this, false);
 }
@@ -137,7 +158,7 @@ IMPLEMENT inline
 Mem_space *Mem_space::current_mem_space()
 {
   Pte pte = Page_table::current()->walk((void*)Mem_layout::Space_index, 
-      Config::SUPERPAGE_SIZE, false);
+      Config::SUPERPAGE_SIZE, false, 0 /*does never allocate*/);
   return reinterpret_cast<Mem_space*>(pte.raw());
 }
 
@@ -163,7 +184,7 @@ Page_table *Mem_space::current_pdir()
 IMPLEMENT inline
 Address Mem_space::lookup( void *a ) const
 {
-  Pte pte = _dir->walk(a, 0, false);
+  Pte pte = _dir->walk(a, 0, false, 0 /*does never allocate*/);
   if (EXPECT_FALSE(!pte.valid()))
     return ~0UL;
 
@@ -263,7 +284,7 @@ IMPLEMENT
 bool Mem_space::v_lookup(Address virt, Address *phys,
 		     Address *size, unsigned *page_attribs)
 {
-  Pte p = _dir->walk( (void*)virt, 0, false);
+  Pte p = _dir->walk( (void*)virt, 0, false,0);
   
   if (size) *size = p.size();
   if (page_attribs) *page_attribs = p.attr();
@@ -277,7 +298,7 @@ Mem_space::v_delete(Address virt, unsigned long size,
     unsigned long page_attribs)
 {
   bool flush = Page_table::current() == _dir;
-  Pte pte = _dir->walk((void*)virt, 0, false);
+  Pte pte = _dir->walk((void*)virt, 0, false, ram_quota());
   if (EXPECT_FALSE(!pte.valid()))
     return 0;
 
@@ -308,7 +329,7 @@ Mem_space::Status Mem_space::v_insert(Address phys, Address virt,
 			      size_t size, Mword page_attribs)
 {
   bool flush = Page_table::current() == _dir;
-  Pte pte = _dir->walk((void*)virt, size, flush);
+  Pte pte = _dir->walk((void*)virt, size, flush, ram_quota());
 
   if (pte.valid())
     {
@@ -373,6 +394,7 @@ Mem_space::~Mem_space()
     {
       _dir->free_page_tables(0, (void*)Mem_layout::User_max);
       delete _dir;
+      ram_quota()->free(sizeof(Page_table));
     }
 }
 
@@ -394,9 +416,12 @@ Mem_space::reset_dirty()
   * @param new_number Task number of the new address space
   */
 PUBLIC
-Mem_space::Mem_space()
-  : _dir(0)
+Mem_space::Mem_space(Ram_quota *q)
+  : _quota(q), _dir(0)
 {
+  if (EXPECT_FALSE(!ram_quota()->alloc(sizeof(Page_table))))
+      return;
+
   _dir = new Page_table();
   assert(_dir);
 

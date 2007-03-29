@@ -232,6 +232,7 @@ void Sys_ex_regs_frame::old_cap_handler(L4_uid id, Utcb* utcb)
   utcb->values[1] = id.raw();
 }
 
+
 //////////////////////////////////////////////////////////////////////
 
 IMPLEMENTATION [amd64-!{caps-utcb}]:
@@ -365,27 +366,36 @@ Mword Sys_task_new_frame::has_pager() const
 { return _rbx; }
 
 IMPLEMENT inline
-Mword Sys_task_new_frame::enable_task_caps() const
+Mword Sys_task_new_frame::extra_args() const
 { return _rax & (1 << 29); }
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [{amd64,ux}-caps-utcb]:
+IMPLEMENTATION [(amd64 || ux) && caps && utcb]:
 
 #include "utcb.h"
 
 IMPLEMENT inline NEEDS["utcb.h"]
 L4_uid Sys_task_new_frame::cap_handler(const Utcb* utcb) const
 {
-  if (! enable_task_caps())
+  if (! extra_args())
     return L4_uid::Invalid;
 
   return utcb->values[1];
 }
 
+IMPLEMENT inline NEEDS["utcb.h"]
+L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* utcb) const
+{
+  if (! extra_args())
+    return L4_quota_desc(0);
+
+  return L4_quota_desc(utcb->values[4]);
+}
+
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [{amd64,ux}-!{caps-utcb}]:
+IMPLEMENTATION [amd64 && !(caps && utcb)]:
 
 #include "utcb.h"
 
@@ -398,9 +408,15 @@ L4_uid Sys_task_new_frame::cap_handler(const Utcb* /*utcb*/) const
   return L4_uid::Invalid;
 }
 
+IMPLEMENT inline NEEDS["utcb.h"]
+L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb*) const
+{
+  return L4_quota_desc(0);
+}
+
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [{ux,amd64}-v2]:
+IMPLEMENTATION [(ux || amd64) && v2]:
 
 IMPLEMENT inline 
 void Sys_ipc_frame::rcv_src(L4_uid id) 

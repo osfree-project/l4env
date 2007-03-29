@@ -3,7 +3,7 @@
  * Specific code for I/O port protection
  */
 
-IMPLEMENTATION[{ia32,amd64}-io]:
+IMPLEMENTATION[(ia32|amd64) & io]:
 
 #include "l4_types.h"
 #include "assert.h"
@@ -33,10 +33,8 @@ io_mapdb_instance()
     @return IPC error code that describes the status of the operation
  */
 Ipc_err
-io_map(Space *from, Address fp_from_iopage, Mword fp_from_size,
-       bool fp_from_grant, bool fp_from_is_whole_space,
-       Space *to,   Address fp_to_iopage,   Mword fp_to_size,
-       bool fp_to_is_iopage, bool fp_to_is_whole_space)
+io_map(Space *from, L4_fpage const &fp_from, 
+       Space *to, L4_fpage const &fp_to)
 {
 /*   printf("io_map %u -> %u "
  * 	    "snd %08x base %x size %x rcv %08x base %x size %x\n",
@@ -48,50 +46,25 @@ io_map(Space *from, Address fp_from_iopage, Mword fp_from_size,
  *   kdb_ke("io_fpage_map 1");
  */
 
-  // if ordinary memory fpage on receiver but not complete address space
-  // then do nothing
-  if(!fp_to_is_iopage && !fp_to_is_whole_space)
-    return Ipc_err (0);
+  Address rcv_pos, snd_pos;
+  rcv_pos = Map_traits<Io_space>::get_addr(fp_to);
+  snd_pos = Map_traits<Io_space>::get_addr(fp_from);
+  size_t rcv_size = fp_to.size();
+  size_t snd_size = fp_from.size();
 
-  // if fp_from == whole address space
-  // than try to map the full IO address space
-  if(fp_from_is_whole_space)
-    {
-      fp_from_iopage = 0;
-      fp_from_size = L4_fpage::Whole_io_space;
-    }
+  Map_traits<Io_space>::prepare_fpage(snd_pos, snd_size);
+  Map_traits<Io_space>::prepare_fpage(rcv_pos, rcv_size);
+  Map_traits<Io_space>::constraint(snd_pos, snd_size, rcv_pos, rcv_size,0);
 
-  // compute end of sender window
-  Address snd_size = fp_from_size < L4_fpage::Whole_io_space 
-    			? fp_from_size 
-			: (Mword)L4_fpage::Whole_io_space;
-
-  Address snd_end  = fp_from_iopage+(1L<<snd_size) < L4_fpage::Io_port_max
-                    	? fp_from_iopage+(1L<<snd_size) 
-			: (Address)L4_fpage::Io_port_max;
-  Address snd_pos  = fp_from_iopage;
-
-  if(fp_to_is_iopage)		// valid IO page for receiver ?
-    {				// need to adjust snd_pos & snd_end
-      // snd_pos : take the max of fp_from & fp_to
-      if(snd_pos < fp_to_iopage)
-	snd_pos = fp_to_iopage; 
-
-      Address rcv_win =	fp_to_size < L4_fpage::Whole_io_space
-				? (1L << fp_to_size) 
-				: (Address)L4_fpage::Io_port_max;
-
-      // snd_end : take min of fp_from & fp_to
-      if(snd_end > fp_to_iopage + rcv_win)
-	snd_end = fp_to_iopage + rcv_win;
-    }
+  if (snd_size == 0)
+    return Ipc_err(0);
 
   assert(snd_pos < L4_fpage::Io_port_max);
 
   return map (io_mapdb_instance(), 
-	      from->io_space(), from->id(), snd_pos, snd_end - snd_pos, 
+	      from->io_space(), from->id(), snd_pos, snd_size, 
 	      to->io_space(), to->id(), snd_pos, 
-	      fp_from_grant, 0, 0);
+	      fp_from.grant(), 0, 0);
 }
 
 /** Unmap IO mappings.
@@ -109,23 +82,10 @@ io_map(Space *from, Address fp_from_iopage, Mword fp_from_size,
 unsigned
 io_fpage_unmap(Space *space, L4_fpage fp, bool me_too, unsigned restriction)
 {
-  Address port, size;
-
-  if (fp.is_iopage())
-    {
-      // try to unmap our own fpage
-      size = fp.size() < L4_fpage::Whole_io_space
-	? (1L << fp.size()) 
-	: (Address)L4_fpage::Io_port_max;
-
-      port = fp.iopage();
-    }
-  else
-    {
-      assert (fp.is_whole_space());
-      port = 0;
-      size = (Address)L4_fpage::Io_port_max;;
-    }
+  size_t size = fp.size();
+  Address port = Map_traits<Io_space>::get_addr(fp);
+  Map_traits<Io_space>::prepare_fpage(port, size);
+  Map_traits<Io_space>::calc_size(size);
 
   // Here we _would_ reset IOPL to 0 but this doesn't make much sense
   // for only one thread since this thread may have forwarded the right

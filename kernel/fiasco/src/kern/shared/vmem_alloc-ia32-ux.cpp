@@ -15,6 +15,7 @@ IMPLEMENTATION[ia32,ux]:
 #include "config.h"
 #include "kdb_ke.h"
 #include "kmem.h"
+#include "mem_layout.h"
 #include "mapped_alloc.h"
 #include "mem_unit.h"
 #include "paging.h"
@@ -46,10 +47,7 @@ Vmem_alloc::page_alloc (void *address, Zero_fill zf, Page::Attribs pa)
     {
       vpage = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
       if (!vpage)
-        {
-          kdb_ke("page_alloc: can't alloc new page");
-          return 0;
-        }
+	return 0;
     }
  
   // insert page into master page table
@@ -61,10 +59,7 @@ Vmem_alloc::page_alloc (void *address, Zero_fill zf, Page::Attribs pa)
       Ptab *new_pt = (Ptab*)Mapped_allocator::allocator()
 	->alloc(Config::PAGE_SHIFT);
       if (!new_pt)
-        {
-          kdb_ke("page_alloc: can't alloc page table");
-          goto error;
-        }
+	goto error;
 
       new_pt->clear();
 
@@ -110,6 +105,32 @@ error:
   if (zf != ZERO_MAP)
     Mapped_allocator::allocator()->free(Config::PAGE_SHIFT, vpage); // 2^0 = 1 page
   return 0;
+}
+
+IMPLEMENT inline NEEDS ["paging.h", "mem_layout.h", "mem_unit.h"]
+void *
+Vmem_alloc::page_unmap (void *page)
+{
+  Address phys = Kmem::virt_to_phys(page);
+
+  if (phys == (Address) -1)
+    return 0;
+  
+  Address va = reinterpret_cast<Address>(page);
+  void *res = (void*)Mem_layout::phys_to_pmem(phys);
+
+  if (va < Mem_layout::Vmem_end)
+    {
+      // clean out page-table entry
+      *(Kmem::kdir->lookup(va)->ptab()->lookup(va)) = 0;
+      page_unmap (page, 0);
+      Mem_unit::tlb_flush(va);
+    }
+  
+  if (EXPECT_FALSE(phys == zero_page.get_unsigned()))
+    return 0;
+
+  return res;
 }
 
 IMPLEMENT inline NEEDS ["paging.h", "config.h", "kmem.h", "mapped_alloc.h",

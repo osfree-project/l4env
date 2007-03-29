@@ -64,7 +64,7 @@ Jdb::access_mword_task(Address virt, Task_num task)
     {
       if (Mem_layout::in_kernel(virt))
 	{
-	  Pte p = Kmem_space::kdir()->walk((void *)virt, 0, false);
+	  Pte p = Kmem_space::kdir()->walk((void *)virt, 0, false,0);
 	  if (!p.valid())
 	    return 0;
 
@@ -90,7 +90,7 @@ Jdb::access_mword_task(Address virt, Task_num task)
     {
       Mem_unit::flush_vdcache();
       Pte pte = Page_table::current()->walk
-	((void*)Mem_layout::Jdb_tmp_map_area, 0, false);
+	((void*)Mem_layout::Jdb_tmp_map_area, 0, false,0);
 
       if (pte.phys() != (phys & ~(Config::SUPERPAGE_SIZE-1)))
 	pte.set(phys & ~(Config::SUPERPAGE_SIZE-1), Config::SUPERPAGE_SIZE,

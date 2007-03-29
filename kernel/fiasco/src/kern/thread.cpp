@@ -4,6 +4,7 @@ INTERFACE:
 #include "l4_types.h"
 #include "config.h"
 #include "deadline_timeout.h"
+#include "helping_lock.h"
 #include "mem_layout.h"
 #include "preemption.h"
 #include "receiver.h"
@@ -105,7 +106,6 @@ private:
 
 public:
   static bool pagein_tcb_request(Return_frame *regs);
-  Mword is_tcb_mapped() const;
 
   inline Mword user_ip() const;
   inline void user_ip(Mword);
@@ -156,6 +156,8 @@ protected:
   Address _exc_ip;
   unsigned _irq;
 
+  static Helping_lock tcb_area_lock;
+
   // Constructor
   Thread (Task* task, L4_uid id);
 
@@ -186,20 +188,133 @@ IMPLEMENTATION:
 
 KIP_KERNEL_FEATURE("multi_irq");
 
+Helping_lock Thread::tcb_area_lock;
+
+PRIVATE static
+Thread *
+Thread::maybe_create(Task *task, L4_uid id, bool &n)
+{
+  Thread *t = id_to_tcb (id);
+  Address tcb_page = (Address)t & Config::PAGE_MASK;
+  while (1)
+    {
+      n = false;
+      Lock_guard<Helping_lock> area_guard(&tcb_area_lock);
+
+	{
+	  Lock_guard<Cpu_lock> cpu_guard(&cpu_lock);
+	  if (EXPECT_TRUE(t->thread_lock()->lock_dirty() 
+		!= Thread_lock::Invalid))
+	    {
+	      if (!t->exists())
+		n = true;
+
+	      return t;
+	    }
+	}
+
+
+      if (EXPECT_FALSE(! task->ram_quota()->alloc(Config::PAGE_SIZE)))
+	return 0;
+
+      if (EXPECT_FALSE(! Vmem_alloc::page_alloc((void*)tcb_page,
+	      Vmem_alloc::ZERO_FILL)))
+	{
+	  task->ram_quota()->free(Config::PAGE_SIZE);
+	  return 0;
+	}
+
+      current_mem_space()->kmem_update((void*)tcb_page);
+      if (EXPECT_TRUE(t->thread_lock()->lock() != Thread_lock::Invalid))
+	{
+	  n = true;
+	  return t;
+	}
+    }
+}
+
+PUBLIC static
+Thread *
+Thread::create(Task *task, L4_uid id)
+{
+  bool is_new = false;
+  Thread *t = maybe_create(task, id, is_new);
+  if (is_new)
+    new (t) Thread(task, id);
+
+  return t;
+}
+
+PUBLIC static
+Thread *
+Thread::create(Task *task, L4_uid id, unsigned short prio, unsigned short mcp)
+{
+  bool is_new = false;
+  Thread *t = maybe_create(task, id, is_new);
+  if (is_new)
+    new (t) Thread(task, id, prio, mcp);
+
+  return t;
+}
+
+PUBLIC inline NEEDS[Thread::thread_lock]
+void
+Thread::kill_lock()
+{
+  thread_lock()->lock();
+}
+
+PUBLIC static
+void
+Thread::destroy(Ram_quota *q, void *_t)
+{
+  Thread *t = (Thread*)_t;
+  void *tcb;
+  Address tcb_page = (Address)t & Config::PAGE_MASK;
+
+    {
+      Lock_guard<Cpu_lock> cpu_guard(&cpu_lock);
+      if (EXPECT_FALSE(!t->is_tcb_mapped()))
+	return;
+
+      Thread_lock::Lock_context lc = t->thread_lock()->clear_no_switch_dirty();
+
+      for (Address thread = tcb_page; thread < tcb_page + Config::PAGE_SIZE;
+	  thread += Config::thread_block_size)
+	{
+	  Thread *x = (Thread*)thread;
+	  if (x->state() != Thread_invalid 
+	      || x->thread_lock()->test())
+	    {
+	      t->thread_lock()->switch_dirty(lc);
+	      return;
+	    }
+	}
+      tcb = Vmem_alloc::page_unmap((void*)tcb_page);
+      t->thread_lock()->switch_dirty(lc);
+    }
+
+  Mapped_allocator::allocator()->q_free(q, Config::PAGE_SHIFT, tcb);
+  
+  // are we the last task on this quota ??
+  if (q->current() == 0)
+    Ram_quota_alloc::free(q);
+}
+
 /** Class-specific allocator.
     This allocator ensures that threads are allocated at a fixed virtual
     address computed from their thread ID.
     @param id thread ID
     @return address of new thread control block
  */
-PUBLIC inline
+PRIVATE inline
 void *
-Thread::operator new(size_t, L4_uid id)
+Thread::operator new(size_t, Thread *t) throw ()
 {
   // Allocate TCB in TCB space.  Actually, do not allocate anything,
   // just return the address.  Allocation happens on the fly in
   // Thread::handle_page_fault().
-  return static_cast <void*>(id_to_tcb (id));
+  return t;
 }
 
 /** Deallocator.  This function currently does nothing: We do not free up
@@ -207,12 +322,13 @@ Thread::operator new(size_t, L4_uid id)
  */
 PUBLIC inline
 void
-Thread::operator delete(void *)
+Thread::operator delete(void *t)
 {
   // XXX should check if all thread blocks on a given page are free
   // and deallocate (or mark free) the page if so.  this should be
   // easy to detect since normally all threads of a given task are
   // destroyed at once at task deletion time
+  destroy(reinterpret_cast<Ram_quota*>(((Thread*)t)->_cap_handler), t);
 }
 
 /** Cut-down version of Thread constructor; only for kernel threads
@@ -254,8 +370,9 @@ Thread::~Thread()		// To be called in locked state.
 
   _kernel_sp = 0;
   *--init_sp = 0;
-  state_change (0, Thread_invalid);
   Fpu_alloc::free_state(fpu_state());
+  destroy_utcb();
+  state_change(0, Thread_invalid);
 }
 
 /** Lookup function: Find Thread instance that owns a given Context.
@@ -315,13 +432,6 @@ Preemption *
 Thread::preemption()
 {
   return &_preemption;
-}
-
-PUBLIC inline
-void
-Thread::enforce_tcb_alloc()
-{
-  _magic = magic;
 }
 
 PUBLIC inline NEEDS ["config.h", "timeout.h"]
@@ -454,6 +564,8 @@ Thread::kill()
 
   unset_utcb_ptr();
 
+  _cap_handler = reinterpret_cast<typeof(_cap_handler)>(_task->ram_quota());
+
   if (id().lthread() == 0)
     {
       //
@@ -468,8 +580,7 @@ Thread::kill()
       // because subtasks could still be scheduled and do page faults.
       // XXX check /how/ ugly...
 
-      fpage_unmap(space(), L4_fpage(0,0,L4_fpage::Whole_space,0), 
-		  true, 0, Unmap_full);
+      fpage_unmap(space(), L4_fpage::all_spaces(), true, 0, Unmap_full);
 
       //for small spaces...
       kill_small_space();
@@ -478,6 +589,7 @@ Thread::kill()
       //  Delete our address space
       //
       delete _task;
+      
     }
 
   //
@@ -506,6 +618,9 @@ Thread::kill()
     // Switch to time-sharing scheduling context
     if (sched() != sched_context())
       switch_sched (sched_context());
+      
+    if (current_sched()->owner() == this)
+      current()->switch_to_locked(current());
   }
 
   state_change (0, Thread_dead);
@@ -617,7 +732,7 @@ Thread::kill_task(Space_index subtask)
 	  _thread = next_sibling (_thread_0);
 	  if (_thread)
 	    {
-	      _thread->thread_lock()->lock();
+	      _thread->kill_lock();
 	      return;
 	    }
 
@@ -625,7 +740,7 @@ Thread::kill_task(Space_index subtask)
 	  if (_thread)
 	    {
 	      _thread_0 = _thread;
-	      _thread_0->thread_lock()->lock();
+	      _thread_0->kill_lock();
 	      continue;
 	    }
 
@@ -644,7 +759,7 @@ Thread::kill_task(Space_index subtask)
     kill_iter (Thread* top)
       : _top (top), _thread_0 (top), _thread (0)
     {
-      _top->thread_lock()->lock();
+      _top->kill_lock();
       advance_to_next();
     }
 
@@ -669,9 +784,9 @@ Thread::kill_task(Space_index subtask)
        ++next_to_kill)
     {
       if (next_to_kill->kill())	// Turn in in locked state
-        delete next_to_kill;
-
-      next_to_kill->thread_lock()->clear();
+        delete next_to_kill; // also clears the lock
+      else
+	next_to_kill->thread_lock()->clear();
     }
 
   return true;

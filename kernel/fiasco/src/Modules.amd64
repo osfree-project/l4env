@@ -112,7 +112,8 @@ KERNEL			:= kernel.image
 VPATH			+= kern/$(CONFIG_XARCH) kern/shared kern
 PRIVATE_INCDIR		+= kern/$(CONFIG_XARCH) kern/shared kern 
 
-INTERFACES_KERNEL	:= startup boot_info cmdline __main mapdb region pic \
+INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
+			   mapping_tree mapdb region pic \
 			   mem_space space space_index space_index_util  \
 			   kmem kmem_alloc slab_cache_anon mem_layout        \
 			   kmem_slab_simple kmem_slab switch_lock kip_init   \
@@ -128,7 +129,8 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapdb region pic \
 			   sched_context allocators utcb_init \
 			   perf_cnt x86desc gdt idt tss trap_state           \
 			   list_alloc vkey kdb_ke kernel_task 		     \
-			   cap_space cap_space_alloc
+			   cap_space cap_space_alloc ram_quota \
+			   ram_quota_alloc 
 
 __main_IMPL		:= __main-ia32-amd64
 apic_IMPL		:= apic-ia32-amd64
@@ -154,7 +156,7 @@ kmem_IMPL		:= kmem-ia32-ux kmem-amd64
 kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-ia32-amd64-ux
 
 main_IMPL		:= main-amd64 main-ia32-amd64
-mapdb_IMPL		:= mapdb-amd64 mapdb
+mapping_IMPL		:= mapping-amd64 mapping
 map_util_IMPL		:= map_util map_util-mem map_util-io map_util-caps
 mem_layout_IMPL		:= mem_layout mem_layout-amd64
 mem_space_IMPL		:= mem_space mem_space-user mem_space-amd64-ux \
@@ -182,7 +184,7 @@ tss_IMPL		:= tss-amd64
 utcb_handler_trap_IMPL	:= utcb_handler_trap-ia32-ux
 utcb_init_IMPL		:= utcb_init utcb_init-ia32-ux
 vmem_alloc_IMPL		:= vmem_alloc vmem_alloc-amd64-ux \
-			   vmem_alloc-ia32-amd64 vmem_alloc-ia32-amd64-ux
+			   vmem_alloc-ia32-amd64
 #watchdog_IMPL		:= watchdog watchdog-ia32
 x86desc_IMPL		:= x86desc-amd64
 
@@ -235,7 +237,7 @@ INTERFACES_KERNEL	+= jdb_entry_frame jdb jdb_prompt_ext jdb_symbol \
 			   jdb_handler_queue jdb_halt_thread jdb_tbuf_events \
 			   jdb_kern_info_kmem_alloc jdb_kern_info_region \
 			   jdb_kern_info_kip jdb_kern_info_config \
-			   jdb_thread_names loadcnt 
+			   jdb_thread_names loadcnt jdb_util jdb_space
 
 apic_IMPL		+= apic-debug
 jdb_IMPL		:= jdb-ia32-amd64 jdb-ansi jdb-ia32-ux jdb-thread \

@@ -8,6 +8,7 @@
 # Source-code locations
 #
 
+
 # If building in a separate srcdir, prepend it to module-provided include paths
 ifneq ($(srcdir),.)
 VPATH 		:= $(addprefix $(srcdir)/, $(VPATH))
@@ -27,6 +28,8 @@ NOOPT_C =      $(filter $(addsuffix .c,  $(NOOPT)),     $(SRC_C))
 NOOPT_CC =     $(filter $(addsuffix .cc, $(NOOPT)),     $(SRC_CC))
 NONDEBUG_C =   $(filter $(addsuffix .c,  $(NONDEBUG)),  $(SRC_C))
 NONDEBUG_CC =  $(filter $(addsuffix .cc, $(NONDEBUG)),  $(SRC_CC))
+INSTRUMENT_C = $(filter $(addsuffix .c,  $(INSTRUMENT)),  $(SRC_C))
+INSTRUMENT_CC = $(filter $(addsuffix .cc, $(INSTRUMENT)),  $(SRC_CC))
 
 $(NOPROFILE_CC:.cc=.o) : %.o: %.cc
 	$(COMP_MESSAGE)
@@ -61,6 +64,18 @@ $(NOOPT_C:.c=.S) : %.S: %.c
 	$(COMP_MESSAGE_NOOPT)
 	$(VERBOSE)$(CC) -S -o $@ \
 	  $(CPPFLAGS) $(CFLAGS) $(NOOPT_CFLAGS) $<
+
+$(INSTRUMENT_CC:.cc=.o) : %.o: %.cc
+	$(COMP_MESSAGE)
+	$(VERBOSE)$(CXX) -c -MD -MP -MF .$*.cc.d.new -o $@ \
+	  $(CPPFLAGS) $(CXXFLAGS) $(PROF_FLAGS) $(OPT_CXXFLAGS) $(INST_FLAGS) $<
+	@mv .$*.cc.d.new .$*.cc.d
+
+$(INSTRUMENT_C:.c=.o) : %.o: %.c
+	$(COMP_MESSAGE)
+	$(VERBOSE)$(CC) -c -MD -MP -MF .$*.c.d.new -o $@ \
+	  $(CPPFLAGS) $(CFLAGS) $(PROF_FLAGS) $(OPT_CFLAGS) $(INST_FLAGS) $<
+	@mv .$*.c.d.new .$*.c.d
 
 $(NONDEBUG_CC:.cc=.o) : %.o: %.cc
 	$(COMP_MESSAGE)

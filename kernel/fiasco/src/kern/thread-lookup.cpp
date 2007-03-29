@@ -143,7 +143,8 @@ Thread::setup_task_caps (Task* new_task, const Sys_task_new_frame *params,
 {
   Space* s = space();
 
-  if ((params && params->enable_task_caps()) || s->task_caps_enabled())
+  if ((params && params->cap_handler(utcb()).is_valid()) 
+      || s->task_caps_enabled())
     {
       {
 	// XXX This should be done in sys_task_new and cover all newly

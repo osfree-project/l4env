@@ -48,6 +48,7 @@ void
 Mem_space::make_current()
 {
   Emulation::set_pdir_addr (Kmem::virt_to_phys (_dir));
+  _current = this;
 }
 
 PUBLIC inline

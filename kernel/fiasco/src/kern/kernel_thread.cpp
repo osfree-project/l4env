@@ -39,29 +39,30 @@ IMPLEMENTATION:
 #include "timer.h"
 #include "vmem_alloc.h"
 
-PUBLIC
-Kernel_thread::Kernel_thread()
-  : Thread (Kernel_task::kernel_task(), Config::kernel_id)
-{}
-
 // overload allocator -- we cannot allocate by page fault during
 // bootstrapping
 PUBLIC
 void *
-Kernel_thread::operator new (size_t s, L4_uid id)
+Kernel_thread::operator new (size_t, L4_uid id)
 {
   // call superclass' allocator
-  void *addr = Thread::operator new (s, id);
+  Thread *addr = id_to_tcb (id);
+  if (! Vmem_alloc::page_alloc ((void*)((Address)addr & Config::PAGE_MASK),
+	  Vmem_alloc::ZERO_FILL))
+    panic("can't allocate kernel tcb");
 
   // explicitly allocate and enter in page table -- we cannot allocate
   // by page fault during bootstrapping
 
-  if (! Vmem_alloc::page_alloc ((void*)((Address)addr & Config::PAGE_MASK),
-			        Vmem_alloc::ZERO_FILL))
-    panic("can't allocate kernel tcb");
 
   return addr;
 }
+
+
+PUBLIC
+Kernel_thread::Kernel_thread()
+  : Thread (Kernel_task::kernel_task(), Config::kernel_id)
+{}
 
 PUBLIC inline
 Mword *

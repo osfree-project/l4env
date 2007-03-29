@@ -8,6 +8,7 @@ IMPLEMENTATION:
 #include "config.h"
 #include "jdb_symbol.h"
 #include "jdb_tbuf_output.h"
+#include "jdb_util.h"
 #include "static_init.h"
 #include "tb_entry.h"
 #include "thread.h"
@@ -417,11 +418,27 @@ formatter_ctx_switch(Tb_entry *tb, const char *tidstr, unsigned tidlen,
   char symstr[24], spcstr[16] = "";
   Tb_entry_ctx_sw *e = static_cast<Tb_entry_ctx_sw*>(tb);
   unsigned  spc      = (unsigned)((Space*)(e->from_space()))->id();
-  Context   *sctx    = e->from_sched()->owner();
-  Global_id sctxid   = Thread::lookup(sctx)->id();
-  Global_id src      = Thread::lookup(e->ctx())->id();
-  Global_id dst      = Thread::lookup(e->dst())->id();
-  Global_id dst_orig = Thread::lookup(e->dst_orig())->id();
+  
+  Context   *sctx    = 0;
+  Global_id sctxid; 
+  Global_id src;     
+  Global_id dst;     
+  Global_id dst_orig;
+  
+  if (Jdb_util::is_mapped(e->from_sched()) 
+      && Jdb_util::is_mapped(e->from_sched()->owner()))
+    {
+      sctx = e->from_sched()->owner();
+      sctxid = Thread::lookup(sctx)->id();
+    }
+
+  if (Jdb_util::is_mapped(e->ctx()))
+    src = Thread::lookup(e->ctx())->id();
+  if (Jdb_util::is_mapped(e->dst()))
+    dst = Thread::lookup(e->dst())->id();
+  if (Jdb_util::is_mapped(e->dst_orig()))
+    dst_orig = Thread::lookup(e->dst_orig())->id();
+
   Address addr       = e->kernel_ip();
 
   if (!Jdb_symbol::match_addr_to_symbol_fuzzy(&addr, 0 /*kernel*/,
@@ -541,7 +558,11 @@ formatter_sched(Tb_entry *tb, const char *tidstr, unsigned tidlen,
 		char *buf, int maxlen)
 {
   Tb_entry_sched *e = static_cast<Tb_entry_sched*>(tb);
-  Thread *t = Thread::lookup (e->owner());
+  Thread *_t = Thread::lookup (e->owner());
+  Global_id t;
+  if (Jdb_util::is_mapped(_t))
+    t = _t->id();
+
 
   my_snprintf (buf, maxlen, 
             "%-*s (ts %s) owner:%2x.%02x id:%2x, prio:%2x, left:%6ld/%-6lu",
@@ -549,7 +570,7 @@ formatter_sched(Tb_entry *tb, const char *tidstr, unsigned tidlen,
                e->mode() == 0 ? "save" :
                e->mode() == 1 ? "load" :
                e->mode() == 2 ? "invl" : "????",
-               t->id().d_task(), t->id().d_thread(),
+               t.d_task(), t.d_thread(),
                e->id(), e->prio(), e->left(), e->quantum());
 
   return maxlen;

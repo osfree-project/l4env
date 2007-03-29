@@ -66,6 +66,42 @@ void Mapped_allocator::free_phys(size_t s, P_ptr<void> p)
     free(s, va);
 }
 
+PUBLIC template< typename Q >
+inline
+void *
+Mapped_allocator::q_alloc(Q *quota, size_t order)
+{
+  if (EXPECT_FALSE(!quota->alloc(1UL<<order)))
+    return 0;
+
+  void *b;
+  if (EXPECT_FALSE(!(b=alloc(order))))
+    {
+      quota->free(1UL<<order);
+      return 0;
+    }
+
+  return b;
+}
+
+PUBLIC template< typename Q >
+inline
+void 
+Mapped_allocator::q_free_phys(Q *quota, size_t order, P_ptr<void> const &obj)
+{
+  free_phys(order, obj);
+  quota->free(1UL<<order);
+}
+
+PUBLIC template< typename Q >
+inline
+void 
+Mapped_allocator::q_free(Q *quota, size_t order, void *obj)
+{
+  free(order, obj);
+  quota->free(1UL<<order);
+}
+
 // 
 // class Mapped_alloc_reaper
 // 
@@ -96,10 +132,11 @@ Mapped_alloc_reaper::morecore (bool desperate = false)
     {
       freed += reaper->_reap(desperate);
     }
-
+#if 0
   if (desperate)
     WARN ("morecore freed %lu bytes of memory", 
 	  static_cast<unsigned long>(freed));
+#endif
 
   return freed;
 }

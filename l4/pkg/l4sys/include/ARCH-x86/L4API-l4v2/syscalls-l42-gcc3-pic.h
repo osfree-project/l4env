@@ -278,7 +278,8 @@ l4_task_new_cap(l4_taskid_t destination,
 	        l4_threadid_t pager,
 	        l4_threadid_t cap_handler)
 {
-  l4_utcb_get()->ex_regs.caphandler = cap_handler;
+  l4_utcb_get()->task_new.caphandler = cap_handler;
+  l4_utcb_get()->task_new.quota.raw = 0;
   return __do_l4_task_new(destination,
                           mcp_or_new_chief | L4_TASK_NEW_IPC_MONITOR,
                           esp, eip, pager);

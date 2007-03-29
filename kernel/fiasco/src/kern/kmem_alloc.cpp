@@ -61,9 +61,6 @@ Kmem_alloc::alloc(size_t o)
       ret = a->alloc(1UL << o, o);
     }
 
-  if (!ret)
-    kdb_ke ("KERNEL: Out of memory!");
-  
   return ret;
 }
 

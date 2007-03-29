@@ -204,8 +204,8 @@ Thread::handle_fpu_trap()
     {
       if (EXPECT_FALSE(state() & Thread_alien))
 	return 0;
-      else
-	Fpu_alloc::alloc_state (fpu_state());
+      else if (!Fpu_alloc::alloc_state (space()->ram_quota(), fpu_state()))
+	return 0;
     }
 
   // Become FPU owner and restore own FPU state

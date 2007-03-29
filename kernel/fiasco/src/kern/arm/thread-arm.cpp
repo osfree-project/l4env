@@ -45,6 +45,11 @@ Thread::print_page_fault_error(Mword e)
          (e & 0x00020000)?'r':'w');
 }
 
+PUBLIC inline
+void
+Thread::destroy_utcb()
+{}
+
 //
 // Public services
 //
@@ -64,7 +69,7 @@ Thread::user_invoke()
 #endif
 
   register unsigned long r0 asm ("r0")
-    = Kmem_space::kdir()->walk(Kip::k(),0,false).phys(Kip::k());
+    = Kmem_space::kdir()->walk(Kip::k(),0,false,0).phys(Kip::k());
 
 #if 1
   asm volatile
@@ -188,30 +193,19 @@ IMPLEMENT inline
 bool
 Thread::pagein_tcb_request(Return_frame *regs)
 {
-  if (*(Mword*)regs->pc == 0xe59ee000 && *(Mword*)(regs->pc + 4) == 0x03a0e000)
+  if (*(Mword*)regs->pc == 0xe59ee000)
     {
+      //printf("TCBR: %08lx\n", *(Mword*)regs->pc);
       // skip faulting instruction
       regs->pc += 4;
       // tell program that a pagefault occured we cannot handle
       regs->psr |= 0x40000000;	// set zero flag in psr
+      regs->km_lr = 0;
 
       return true;
     }
   return false;
 }
-
-IMPLEMENT inline
-Mword
-Thread::is_tcb_mapped() const
-{
-  register Mword pagefault_if_0 asm("r14");
-  asm volatile ("msr cpsr_f, #0 \n" // clear flags
-                "ldr %0, [%0]   \n"
-		"moveq %0, #0   \n"
-		: "=r" (pagefault_if_0) : "0" (&_state));
-  return pagefault_if_0;
-}
-
 
 // ---------------------------------------------------------------------------
 #include "std_macros.h"
@@ -434,7 +428,7 @@ Thread::exception(Trap_state *ts)
   r.set_msg_word(2, 0); // nop in V2
   r.snd_desc((Mword)&snd_msg);
   r.rcv_desc((Mword)&snd_msg);
-  snd_msg.fp = L4_fpage(0,0,L4_fpage::Whole_space,0);
+  snd_msg.fp = L4_fpage::all_spaces();
   snd_msg.size_dope = L4_msgdope(L4_snd_desc(0), 3,1);
   snd_msg.snd_dope  = L4_msgdope(L4_snd_desc(0), 3,1);
   snd_msg.excp_regs.snd_size = sizeof(Trap_state);

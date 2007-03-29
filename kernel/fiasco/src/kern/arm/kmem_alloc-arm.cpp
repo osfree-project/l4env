@@ -21,6 +21,7 @@ IMPLEMENTATION [arm]:
 #include "mem_unit.h"
 #include "kmem_space.h"
 #include "pagetable.h"
+#include "ram_quota.h"
 
 PRIVATE //inline
 bool
@@ -36,7 +37,7 @@ Kmem_alloc::map_pmem(unsigned long phy, unsigned long size)
   for (unsigned long i = 0; i <size; i+=Config::SUPERPAGE_SIZE)
     {
       Pte pte = Kmem_space::kdir()->walk((char*)next_map+i, 
-	  Config::SUPERPAGE_SIZE, false);
+	  Config::SUPERPAGE_SIZE, false, Ram_quota::root);
       pte.set(phy+i, Config::SUPERPAGE_SIZE, Page::USER_NO | Page::CACHEABLE,
 	  true);
 

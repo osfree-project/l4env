@@ -21,7 +21,6 @@
 #include "uncompress.h"
 
 static void *filestart;
-static l4_uint8_t *uncompressed_buffer;
 
 /*
  * Upper address for the allocator for gunzip
@@ -87,15 +86,10 @@ grub_read(unsigned char *buf, int len)
 }
 
 void*
-decompress(const char *name, void *start, int size, int size_uncompressed)
+decompress(const char *name, void *start, void *destbuf,
+           int size, int size_uncompressed)
 {
-  unsigned char *retbuf;
   int read_size;
-
-  if (!uncompressed_buffer)
-    uncompressed_buffer = (l4_uint8_t *)((_mod_end + 0xffff) & ~0xffff);
-
-  retbuf = uncompressed_buffer;
 
   if (!size_uncompressed)
     return NULL;
@@ -106,12 +100,12 @@ decompress(const char *name, void *start, int size, int size_uncompressed)
   if (!compressed_file)
     return start;
 
-  printf(".. Uncompressing %s to %p (%d to %d bytes, %+d%%).\n",
-        name, retbuf, size, size_uncompressed,
+  printf(".. Uncompressing %s from %p to %p (%d to %d bytes, %+d%%).\n",
+        name, start, destbuf, size, size_uncompressed,
 	100*size_uncompressed/size - 100);
 
   // Add 10 to detect too short given size
-  if ((read_size = grub_read(retbuf, size_uncompressed + 10))
+  if ((read_size = grub_read(destbuf, size_uncompressed + 10))
       != size_uncompressed)
     {
       printf("Uncorrect decompression: should be %d bytes but got %d bytes.\n",
@@ -119,8 +113,5 @@ decompress(const char *name, void *start, int size, int size_uncompressed)
       return NULL;
     }
 
-  // Page aligned (important for data modules to work!)
-  uncompressed_buffer += l4_round_page(read_size);
-
-  return retbuf;
+  return destbuf;
 }

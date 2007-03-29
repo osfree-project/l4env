@@ -117,6 +117,13 @@ Address const Mem_layout::kernel_trampoline_page =
 
 PUBLIC static inline
 Address
+Mem_layout::pmem_to_phys (void *addr)
+{
+  return (unsigned long)addr - Physmem;
+}
+
+PUBLIC static inline
+Address
 Mem_layout::pmem_to_phys (Address addr)
 {
   return addr - Physmem;

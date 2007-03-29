@@ -40,7 +40,7 @@ Thread::arch_init()
 {
   // Allocate FPU state now because it indirectly calls current()
   // save_state runs on a signal stack and current() doesn't work there.
-  Fpu_alloc::alloc_state(fpu_state());
+  Fpu_alloc::alloc_state(space()->ram_quota(), fpu_state());
   
   // clear out user regs that can be returned from the thread_ex_regs
   // system call to prevent covert channel

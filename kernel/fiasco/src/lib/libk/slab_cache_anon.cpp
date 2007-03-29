@@ -258,7 +258,7 @@ slab::next()
 PUBLIC
 inline void *
 slab::operator new(size_t,
-		   slab_cache_anon *cache)
+		   slab_cache_anon *cache) throw()
 {
   // slabs must be size-aligned so that we can compute their addresses
   // from element addresses
@@ -397,6 +397,24 @@ slab_cache_anon::alloc()	// request initialized member from cache
   return ret;
 }
 
+PUBLIC template< typename Q >
+inline
+void *
+slab_cache_anon::q_alloc(Q *quota)
+{
+  if (EXPECT_FALSE(!quota->alloc(_elem_size)))
+    return 0;
+
+  void *r;
+  if (EXPECT_FALSE(!(r=alloc())))
+    {
+      quota->free(_elem_size);
+      return 0;
+    }
+
+  return r;
+}
+
 PUBLIC
 virtual void 
 slab_cache_anon::free(void *cache_entry) // return initialized member to cache
@@ -475,6 +493,15 @@ slab_cache_anon::free(void *cache_entry) // return initialized member to cache
     }
 
   assert(_first_available_slab);
+}
+
+PUBLIC template< typename Q >
+inline
+void
+slab_cache_anon::q_free(Q *quota, void *obj)
+{
+  free(obj);
+  quota->free(_elem_size);
 }
 
 PUBLIC

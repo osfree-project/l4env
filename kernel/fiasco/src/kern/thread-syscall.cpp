@@ -16,6 +16,8 @@ IMPLEMENTATION:
 #include "irq_alloc.h"
 #include "logdefs.h"
 #include "map_util.h"
+#include "ram_quota.h"
+#include "ram_quota_alloc.h"
 #include "space.h"
 #include "space_index.h"
 #include "space_index_util.h"
@@ -306,16 +308,8 @@ Thread::ex_regs_permission_inter_task(Sys_ex_regs_frame *regs,
     // thread lock
     Lock_guard<Cpu_lock> guard(&cpu_lock);
 
-    while (EXPECT_FALSE(!(*dst_thread0)->is_tcb_mapped()))
-      {
-	cpu_lock.clear();
-	Mword x = (*dst_thread0)->exists(); // trigger PF and allocate TCB
-        // do not let the compiler optimize away the above existence test
-        asm volatile("" : : "r"(x));
-	cpu_lock.lock();
-      }
-
-    if (! (*dst_thread0)->exists())
+    if (EXPECT_FALSE(!(*dst_thread0)->is_tcb_mapped()
+	  || !(*dst_thread0)->exists()))
       return false;
 
     (*dst_thread0)->thread_lock()->lock_dirty();
@@ -332,7 +326,8 @@ Thread::ex_regs_permission_inter_task(Sys_ex_regs_frame *regs,
 
   // if dst_check->_pager is nil (i.e. the destination thread does not
   // exist), we check the pager of thread0 of that address space
-  if (!dst_check || !dst_check->_pager || !(*dst)->in_present_list())
+  if (!dst_check || !dst_check->is_tcb_mapped() 
+      || !dst_check->_pager || !(*dst)->in_present_list())
     dst_check = *dst_thread0;
 
   if (dst_check->_pager->id().task() != id().task()
@@ -370,20 +365,12 @@ Thread::sys_thread_ex_regs()
       return;
     }
 
-  bool new_thread = false;
-
-  if (dst != dst_thread0)
+  dst = Thread::create(dst_task, dst_id, sched()->prio(), mcp());
+  if (!dst)
     {
-      // Allocate TCB before grabbing the CPU lock
-      dst->enforce_tcb_alloc();
-      dst->thread_lock()->lock();
-    }
-
-  if (!dst->exists())
-    {
-      new_thread = true;
-      check (new (dst_id) Thread (dst_task, dst_id, sched()->prio(), mcp())
-	     == dst);
+      LOG_THREAD_EX_REGS_FAILED;
+      regs->old_eflags(~0U);
+      return;
     }
 
   // now we own the lock of an existing thread in the destination task,
@@ -410,32 +397,25 @@ Thread::sys_thread_ex_regs()
 		      lookup (regs->pager(), space()),
 		      lookup (regs->preempter(), space()),
 		      lookup (regs->cap_handler(utcb()), space()),
-		      new_thread ? 0 : & o_ip, & o_sp,
-		      new_thread ? 0 : & o_pager,
-		      new_thread ? 0 : & o_preempter,
-		      new_thread ? 0 : & o_cap_handler,
-		      new_thread ? 0 : & o_flags,
+		      &o_ip, &o_sp,
+		      &o_pager,
+		      &o_preempter,
+		      &o_cap_handler,
+		      &o_flags,
 		      regs->no_cancel(),
 		      regs->alien(),
 		      regs->trigger_exception()))
     {
-      if (new_thread)
-	{
-	  regs->old_eflags(0);
-	}
-      else
-	{
-	  regs->old_sp        (o_sp);
-	  regs->old_ip        (o_ip >= Mem_layout::User_max ? ~0UL : o_ip);
-	  regs->old_pager     (o_pager ? o_pager->id() : L4_uid::Invalid);
-	  regs->old_preempter (o_preempter
-			       ? Thread::lookup (context_of (o_preempter))->id()
-			       : L4_uid::Invalid);
-	  regs->old_cap_handler (o_cap_handler 
-				   ? o_cap_handler->id() : L4_uid::Invalid,
-				 utcb());
-	  regs->old_eflags    (o_flags);
-	}
+      regs->old_sp        (o_sp);
+      regs->old_ip        (o_ip >= Mem_layout::User_max ? ~0UL : o_ip);
+      regs->old_pager     (o_pager ? o_pager->id() : L4_uid::Invalid);
+      regs->old_preempter (o_preempter
+	  ? Thread::lookup (context_of (o_preempter))->id()
+	  : L4_uid::Invalid);
+      regs->old_cap_handler (o_cap_handler 
+	  ? o_cap_handler->id() : L4_uid::Invalid,
+	  utcb());
+      regs->old_eflags    (o_flags);
 
     }
   else
@@ -681,6 +661,36 @@ Thread::sys_thread_schedule()
   regs->time          (dst->consumed_time());
 }
 
+//
+// -- Quota helpers
+//
+
+PRIVATE
+Ram_quota *
+Thread::share_quota(Task_num ref)
+{
+  Space *ref_space = Space_index(ref).lookup();
+  if (!ref_space 
+      || (ref_space->chief() != space()->id()
+	  && ref_space != space()))
+    return 0;
+
+  return ref_space->ram_quota();
+}
+
+PRIVATE
+Ram_quota *
+Thread::new_quota(Task_num ref, unsigned long max)
+{
+  Space *ref_space = Space_index(ref).lookup();
+  if (!ref_space 
+      || (ref_space->chief() != space()->id()
+	  && ref_space != space()))
+    return 0;
+
+  return Ram_quota_alloc::alloc(ref_space->ram_quota(), max);
+}
+
 
 /** L4 system call task_new.  */
 IMPLEMENT inline NOEXPORT ALWAYS_INLINE
@@ -709,13 +719,12 @@ Thread::sys_task_new()
 	  //
 	  // task exists -- delete it
 	  //
-
 	  if (! lookup_first_thread(space_index())->kill_task(si))
 	    {
 	      WARN("Deletion of task 0x%x failed.", unsigned(si));
 	      break;
 	    }
-
+	  
 	  // The subtask's address space has already been deleted by
 	  // kill_task().
 	}
@@ -748,7 +757,23 @@ Thread::sys_task_new()
       //
       // create the task
       //
-      task = new Task(taskno);
+      
+      Ram_quota *rq = space()->ram_quota();
+      L4_quota_desc q_desc = regs->quota_descriptor(utcb());
+      //printf("task_new quota_desc = %08lx\n", q_desc);
+      switch (q_desc.command())
+	{
+	case L4_quota_desc::Share:
+	  rq = share_quota(q_desc.id());
+	  break;
+	case L4_quota_desc::New:
+	  rq = new_quota(q_desc.id(), q_desc.amount());
+	  break;
+	default:
+	  break;
+	}
+
+      task = Task::create(rq, taskno);
       if (! task)
 	break;
 
@@ -763,7 +788,14 @@ Thread::sys_task_new()
       Thread* cap_handler = lookup (regs->cap_handler(utcb()), space());
 
       CNT_TASK_CREATE;
-      task->initialize();
+      if (! task->initialize())
+	{
+	  // out of mem
+	  delete task;
+	  regs->new_taskid(L4_uid::Nil);
+	  return;
+	}
+
       setup_task_caps (task, regs, cap_handler ? cap_handler->space() : 0);
 
       id.lthread(0);
@@ -773,15 +805,17 @@ Thread::sys_task_new()
       //
       // create the first thread of the task
       //
-      Thread *t = id_to_tcb (id);
 
-      t->enforce_tcb_alloc();
+      // returns locked tcb
+      Thread *t = Thread::create(task, id, sched()->prio(), 
+	  mcp() < regs->mcp() ? mcp() : regs->mcp());
 
-      Lock_guard <Thread_lock> guard (t->thread_lock());
-
-      check (new (id) Thread (task, id, sched()->prio(),
-                              mcp() < regs->mcp() ? mcp() : regs->mcp())
-	     == t);
+      if (EXPECT_FALSE(!t))
+	{
+	  delete task;
+	  regs->new_taskid(L4_uid::Nil);
+	  return;
+	}
 
       check(t->initialize(regs->ip(), regs->sp(), 
 			  lookup (regs->pager(), space()),
@@ -789,6 +823,7 @@ Thread::sys_task_new()
 			  0, 0, 0, 0, 0, 0, 0,
 			  regs->alien(), regs->trigger_exception()));
 
+      t->thread_lock()->clear();
       return;
     }
 

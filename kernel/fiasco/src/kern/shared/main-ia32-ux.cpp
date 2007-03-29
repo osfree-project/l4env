@@ -58,4 +58,5 @@ main (void)
      :	"=m" (boot_stack),
         "=a" (dummy), "=c" (dummy), "=d" (dummy)
      :	"a"(kernel), "S" (kernel->init_stack()));
+  
 }

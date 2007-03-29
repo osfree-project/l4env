@@ -106,7 +106,7 @@ Jdb_mapdb::show_tree(Treemap* pages, Mword address,
     {
       Kconsole::console()->getchar_chance();
       
-      if (m->depth() == Depth_submap)
+      if (m->depth() == Mapping::Depth_submap)
 	printf("%*u: %lx  subtree@"L4_PTR_FMT,
 	       indent + m->parent()->depth() > 10 
 	         ? 0 : indent + m->parent()->depth(), 
@@ -119,11 +119,11 @@ Jdb_mapdb::show_tree(Treemap* pages, Mword address,
 		 pages->vaddr(m),
 		 (Task_num)(m->space()));
 	  
-	  if (m->depth() == Depth_root)
+	  if (m->depth() == Mapping::Depth_root)
 	    printf("root");
-	  else if (m->depth() == Depth_empty)
+	  else if (m->depth() == Mapping::Depth_empty)
 	    printf("empty");
-	  else if (m->depth() == Depth_end)
+	  else if (m->depth() == Mapping::Depth_end)
 	    printf("end");
 	  else
 	    printf("%lu", static_cast<unsigned long>(m->depth()));
@@ -132,7 +132,7 @@ Jdb_mapdb::show_tree(Treemap* pages, Mword address,
       puts("\033[K");
       screenline++;
       
-      if (screenline >= (m->depth() == Depth_submap 
+      if (screenline >= (m->depth() == Mapping::Depth_submap 
 			 ? Jdb_screen::height() - 3
 			 : Jdb_screen::height()))
 	{
@@ -146,7 +146,7 @@ Jdb_mapdb::show_tree(Treemap* pages, Mword address,
 	  Jdb::cursor(3, 1);
 	}
 
-      if (m->depth() == Depth_submap)
+      if (m->depth() == Mapping::Depth_submap)
 	{
 	  if (! Jdb_mapdb::show_tree(m->submap(), 
 				     address & (pages->_page_size - 1),

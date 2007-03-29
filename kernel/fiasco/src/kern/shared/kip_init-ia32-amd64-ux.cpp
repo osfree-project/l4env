@@ -35,7 +35,7 @@ IMPLEMENTATION [ia32,ux,amd64]:
 #include "kmem.h"
 #include "panic.h"
 
-static FIASCO_INIT
+static inline
 void
 set_version_and_features()
 {

@@ -9,6 +9,7 @@
 #ifndef _L4_SYS_UTCB_H
 #define _L4_SYS_UTCB_H
 
+#ifndef DICE
 #include <l4/sys/types.h>
 
 enum {
@@ -20,7 +21,7 @@ enum {
 #define L4_UTCB_EXCEPTION_IPC_COOKIE1  (-0x5UL)
 #define L4_UTCB_EXCEPTION_IPC_COOKIE2  (-0x21504151UL)
 #define L4_UTCB_EXCEPTION_REGS_SIZE    16
-#define L4_UTCB_GENERIC_DATA_SIZE      16
+#define L4_UTCB_GENERIC_DATA_SIZE      29
 
 enum {
   L4_EXCEPTION_REPLY_DW0_DEALIEN = 1,
@@ -62,24 +63,6 @@ struct l4_utcb_exception
   l4_umword_t esp;
 };
 
-/**
- * UTCB structure for LIPC.
- *
- * Structure size: 24 Bytes
- *
- * \ingroup api_utcb
- */
-struct l4_utcb_lipc
-{
-  l4_uint32_t id_1;	/* Thread ID */
-  l4_uint32_t id_2;
-
-  l4_addr_t esp;	/* User SP and IP if the thread is in IPC wait */
-  l4_addr_t eip;
-
-  l4_umword_t state;	/* IPC partner, IPC state and thread lock bit */
-  l4_umword_t snd_state; /* FPU and sendqueue bit */
-};
 
 /**
  * UTCB structure for l4_thread_ex_regs arguments
@@ -96,6 +79,14 @@ struct l4_utcb_ex_regs_args
   l4_threadid_t _res1;
 };
 
+struct l4_utcb_task_new_args
+{
+  l4_umword_t _res0[2];
+  l4_threadid_t caphandler;
+  l4_quota_desc_t quota;
+  l4_threadid_t _res1;
+};
+
 /**
  * UTCB.
  * \ingroup api_utcb
@@ -107,13 +98,11 @@ typedef struct
     l4_umword_t                 values[L4_UTCB_GENERIC_DATA_SIZE];
     struct l4_utcb_exception    exc;
     struct l4_utcb_ex_regs_args ex_regs;
+    struct l4_utcb_task_new_args task_new;
   };
   l4_uint32_t snd_size;
   l4_uint32_t rcv_size;
 
-  struct l4_utcb_lipc		lipc;
-
-  l4_uint32_t			_padding[7]; /* padding to 2^n */
 } l4_utcb_t;
 
 /**
@@ -180,5 +169,7 @@ L4_INLINE void l4_utcb_exception_ipc_set_exc_receive_size(void)
 {
   l4_utcb_get()->rcv_size = L4_UTCB_EXCEPTION_REGS_SIZE;
 }
+
+#endif
 
 #endif /* ! _L4_SYS_UTCB_H */

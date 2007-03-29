@@ -153,7 +153,6 @@ IMPLEMENTATION:
     @param from_fpage sender's flexpage
     @param to_fpage   receiver's flexpage
     @param offset     sender-specified offset into receiver's flexpage
-    @param grant      if set the page will be granted, otherwise mapped
     @param finish     if true, finish IPC operation after sending flexpage;
                       if false, leave IPC partners in IPC-in-progress state
     @return IPC error code if an error occurred.  0 if successful
@@ -161,7 +160,7 @@ IMPLEMENTATION:
 PRIVATE
 Ipc_err Thread::ipc_snd_fpage(Thread* receiver,
 			      L4_fpage from_fpage, L4_fpage to_fpage,
-			      Address offset, bool grant, bool finish)
+			      Address offset, bool finish)
 {
   receiver->thread_lock()->lock();
 
@@ -173,8 +172,7 @@ Ipc_err Thread::ipc_snd_fpage(Thread* receiver,
     return Ipc_err(Ipc_err::Seaborted);
 
   Ipc_err ret = fpage_map(space(), from_fpage,
-			  receiver->space(), to_fpage,
-			  offset, grant);
+			  receiver->space(), to_fpage, offset);
   if(!finish)
     {
       receiver->thread_lock()->clear();
@@ -430,8 +428,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  else
 	    {
 	      ret = ipc_snd_fpage (partner, snd_fpage, rcv_fpage,
-				   regs->msg_word (0),
-				   snd_fpage.grant(), snd_short_fpage);
+				   regs->msg_word (0), snd_short_fpage);
 
 	      // short-fpage send?
 	      if (snd_short_fpage)
@@ -514,7 +511,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	      // otherwise, map
 	      ret = ipc_snd_fpage (partner, snd_fpage, rcv_fpage,
 				   regs->msg_word ((Mword *) snd_descr, n),
-				   snd_fpage.grant(), false);
+				   false);
 
 	      if (EXPECT_FALSE (ret.has_error()))
 		break;

@@ -120,8 +120,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  else
 	    {
 	      ret = ipc_snd_fpage (partner, snd_fpage, rcv_fpage,
-				   regs->msg_word (0),
-				   snd_fpage.grant(), snd_short_fpage);
+				   regs->msg_word (0), snd_short_fpage);
 
 	      // short-fpage send?
 	      if (snd_short_fpage)
@@ -204,7 +203,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	      // otherwise, map
 	      ret = ipc_snd_fpage (partner, snd_fpage, rcv_fpage,
 				   regs->msg_word ((Mword *) snd_descr, n),
-				   snd_fpage.grant(), false);
+				   false);
 
 	      if (EXPECT_FALSE (ret.has_error()))
 		break;

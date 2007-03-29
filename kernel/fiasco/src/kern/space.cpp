@@ -3,6 +3,7 @@ INTERFACE:
 #include "space_index.h"
 #include "mem_space.h"
 
+class Ram_quota;
 class Io_space;
 
 class Space
@@ -36,9 +37,13 @@ IMPLEMENTATION:
   * @param number Task number of the new address space
   */
 PUBLIC
-Space::Space (unsigned number)
-  : _id (number),
+Space::Space (Ram_quota *q, unsigned number)
+  : _mem_space(q),
+    _id (number),
     _chief (~0UL)
+#ifdef CONFIG_TASK_CAPS
+    ,_cap_space(q)
+#endif
 {
   Task_num chief;
 
@@ -57,6 +62,9 @@ Space::Space (unsigned number, unsigned chief, Mem_space::Dir_type* pdir)
   : _mem_space (pdir),
     _id (number),
     _chief (chief)
+#ifdef CONFIG_TASK_CAPS
+    ,_cap_space(Ram_quota::root)
+#endif
 {
   init_task_caps();
   init_io_space();
@@ -71,6 +79,11 @@ Space::~Space ()
       remove_from_space_index();
     }
 }
+
+PUBLIC inline
+Ram_quota *
+Space::ram_quota() const
+{ return _mem_space.ram_quota(); }
 
 PROTECTED
 void
@@ -127,6 +140,11 @@ Space::id_lookup (Task_num id)
 // Mem_space utilities
 
 /// Return memory space.
+PUBLIC inline
+Mem_space const * 
+Space::mem_space () const
+{ return &_mem_space; }
+
 PUBLIC inline
 Mem_space* 
 Space::mem_space ()

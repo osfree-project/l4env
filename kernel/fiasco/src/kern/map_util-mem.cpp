@@ -16,92 +16,33 @@ IMPLEMENTATION:
     @return IPC error code that describes the status of the operation
  */
 Ipc_err
-mem_map (Space *from, Address fp_from_page, Mword fp_from_size,
-	 bool fp_from_write, bool fp_from_grant,
-	 Space *to, Address fp_to_page, Mword fp_to_size,
-	 Address offs, short cached)
+mem_map (Space *from, L4_fpage const &fp_from,
+         Space *to, L4_fpage const &fp_to, Address offs)
 {
-  // compute virtual address space regions for this operation
-  Address snd_start;
-  size_t  snd_size;
-  size_t  snd_size_mask;
-  Address rcv_start;
-  size_t  rcv_size;
-  size_t  rcv_size_mask;
-
-  offs &= Config::PAGE_MASK;
-
-  if (fp_from_size >= L4_fpage::Whole_space)
-    {
-      snd_size      = Mem_layout::User_max;
-      snd_size_mask = 0;
-    }
-  else
-    {
-      snd_size      = (1L << fp_from_size) & Config::PAGE_MASK;
-      snd_size_mask = ~(snd_size - 1);
-    }
-  if (fp_to_size  >= L4_fpage::Whole_space)
-    {
-      rcv_size      = Mem_layout::User_max;
-      rcv_size_mask = 0;
-    }
-  else
-    {
-      rcv_size      = (1L << fp_to_size) & Config::PAGE_MASK;
-      rcv_size_mask = ~(rcv_size - 1);
-    }
-
-  if (Config::backward_compatibility)
-    {
-      offs      = offs         & Config::PAGE_MASK;
-      snd_start = fp_from_page & snd_size_mask;
-      rcv_start = fp_to_page   & rcv_size_mask;
-    }
-  else
-    {
-      offs      = offs         & Config::PAGE_MASK;
-      snd_start = fp_from_page & Config::PAGE_MASK;
-      rcv_start = fp_to_page   & Config::PAGE_MASK;
-    }
-
   // loop variables
-  Address rcv_addr;
-  Address snd_addr;
-  if (rcv_size >= snd_size)
-    {
-      rcv_addr = rcv_start + (offs & ~rcv_size_mask);
-      snd_addr = snd_start;
-    }
-  else
-    {
-      rcv_addr = rcv_start;
-      snd_addr = snd_start + (offs & ~snd_size_mask);
-      snd_size = rcv_size;	// reduce size of address range
-    }
+  Address rcv_addr = Map_traits<Mem_space>::get_addr(fp_to);
+  Address snd_addr = Map_traits<Mem_space>::get_addr(fp_from);
+
+  size_t snd_size = fp_from.size();
+  size_t rcv_size = fp_to.size();
+
+  // calc size in bytes from power of tows
+  Map_traits<Mem_space>::prepare_fpage(snd_addr, snd_size);
+  Map_traits<Mem_space>::prepare_fpage(rcv_addr, rcv_size);
+  Map_traits<Mem_space>::constraint(snd_addr, snd_size, rcv_addr, rcv_size, 
+      offs);
 
   if (snd_size == 0 || rcv_size == 0)
     {
       if (Config::conservative)
 	kdb_ke("fpage transfer = nop");
-
       return Ipc_err(0);
     }
 
-  unsigned del_attribs = fp_from_write ? 0 : Mem_space::Page_writable;
-  unsigned add_attribs;
-
-  if (cached & L4_fpage::Caching_opt)
-    {
-      del_attribs |= Page::Cache_mask;
-
-      if (cached == L4_fpage::Cached)
-	add_attribs = Page::CACHEABLE;
-      else
-	add_attribs = Page::NONCACHEABLE;
-    }
-  else
-    add_attribs = 0;
+  bool fp_from_grant = fp_from.grant();
+  
+  unsigned long del_attribs, add_attribs;
+  Map_traits<Mem_space>::attribs(fp_from, &del_attribs, &add_attribs);
 
   return map (mapdb_instance(), 
 	      from->mem_space(), from->id(), snd_addr, snd_size, 
@@ -125,12 +66,9 @@ mem_fpage_unmap(Space *space, L4_fpage fp, bool me_too, unsigned restriction,
 		unsigned flush_mode)
 {
   size_t size = fp.size();
-  size = (size >= L4_fpage::Whole_space)
-    ? (size_t) Mem_layout::User_max
-    : (1L << size) & Config::PAGE_MASK;
-  Address start = Config::backward_compatibility
-    ? fp.page() & ~(size - 1)	// size-alignment
-    : fp.page() & Config::PAGE_MASK;
+  Address start = Map_traits<Mem_space>::get_addr(fp);
+  Map_traits<Mem_space>::prepare_fpage(start, size);
+  Map_traits<Mem_space>::calc_size(size);
 
   return unmap (mapdb_instance(), space->mem_space(), space->id(), 
 		restriction, start, size, me_too, flush_mode);
@@ -151,7 +89,7 @@ save_access_attribs (Mapdb* mapdb, const Mapdb::Frame& mapdb_frame,
       
       // When flushing access attributes from our space as well,
       // cache them in parent space, otherwise in our space.
-      if (! me_too || mapping->space_is_sigma0())
+      if (! me_too || !mapping->parent())
 	{
 	  status = space->v_insert(phys, virt, size,
 				   page_accessed);

@@ -11,7 +11,7 @@
 #define L4_SYSCALL_THREAD_SWITCH	(-0x00000010-L4_SYSCALL_MAGIC_OFFSET)
 #define L4_SYSCALL_THREAD_SCHEDULE	(-0x00000014-L4_SYSCALL_MAGIC_OFFSET)
 #define L4_SYSCALL_LTHREAD_EX_REGS	(-0x00000018-L4_SYSCALL_MAGIC_OFFSET)
-#define L4_SYSCALL_CREATE_THREAD	(-0x0000001C-L4_SYSCALL_MAGIC_OFFSET)
+#define L4_SYSCALL_TASK_NEW		(-0x0000001C-L4_SYSCALL_MAGIC_OFFSET)
 
 L4_INLINE int l4_nchief(l4_threadid_t destination,
                         l4_threadid_t *next_chief)
@@ -276,12 +276,14 @@ l4_task_new(l4_threadid_t dest,
   register l4_umword_t _pager asm("r2") = pager.raw;
   register l4_umword_t _uip   asm("r3") = uip;
   register l4_umword_t _usp   asm("r4") = usp;
+  register l4_umword_t _cap   asm("r6") = ~0UL; // invalid id
+  register l4_umword_t _quota asm("r7") = 0;
   __asm__ __volatile__
     ("@ l4_task_new()   \n\t"
      PIC_SAVE_ASM
      "stmdb   sp!, {fp} \n\t"
      "mov     lr, pc    \n\t"
-     "mov     pc, %5    \n\t"
+     "mov     pc, %[syscall]    \n\t"
      "ldmia   sp!, {fp} \n\t"
      PIC_RESTORE_ASM
      :
@@ -289,16 +291,20 @@ l4_task_new(l4_threadid_t dest,
      "=r"(_mcp),
      "=r"(_pager),
      "=r"(_uip),
-     "=r"(_usp)
+     "=r"(_usp),
+     "=r"(_cap),
+     "=r"(_quota)
      :
-     "i" (L4_SYSCALL_CREATE_THREAD),
+     [syscall] "i" (L4_SYSCALL_TASK_NEW),
      "0"(_dest),
      "1"(_mcp),
      "2"(_pager),
      "3"(_uip),
-     "4"(_usp)
+     "4"(_usp),
+     "5"(_cap),
+     "6"(_quota)
      :
-     "r5", "r6", "r7", "r8", "r9" PIC_CLOBBER,
+     "r5", "r8", "r9" PIC_CLOBBER,
      "r12", "r14");
 
   return (l4_taskid_t){raw:_dest};

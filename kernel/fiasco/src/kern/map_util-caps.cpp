@@ -3,6 +3,7 @@ INTERFACE[caps]:
 #include "mapdb.h"
 	// Needed for Mapdb::Frame, which appears in the signature of
 	// save_access_attribs(...Cap_space...).
+	
 
 IMPLEMENTATION[caps]:
 
@@ -23,77 +24,38 @@ cap_mapdb_instance()
 }
 
 Ipc_err
-cap_map(Space * from, Address fp_from_task, Mword fp_from_size,
-       bool fp_from_grant, bool fp_from_is_whole_space,
-       Space * to,   Address fp_to_task,   Mword fp_to_size,
-       bool fp_to_is_cappage, bool fp_to_is_whole_space)
+cap_map(Space * from, L4_fpage const &fp_from,
+       Space * to, L4_fpage const &fp_to)
 {
-  // if ordinary memory fpage on receiver but not complete address space
-  // then do nothing
-  if(!fp_to_is_cappage && !fp_to_is_whole_space)
-    return Ipc_err (0);
+  Address rcv_pos, snd_pos;
+  rcv_pos = Map_traits<Cap_space>::get_addr(fp_to);
+  snd_pos = Map_traits<Cap_space>::get_addr(fp_from);
+  size_t rcv_size = fp_to.size();
+  size_t snd_size = fp_from.size();
 
-  // if fp_from == whole address space
-  // than try to map the full CAP address space
-  if(fp_from_is_whole_space)
-    {
-      fp_from_task = 0;
-      fp_from_size = L4_fpage::Whole_cap_space;
-    }
+  Map_traits<Cap_space>::prepare_fpage(snd_pos, snd_size);
+  Map_traits<Cap_space>::prepare_fpage(rcv_pos, rcv_size);
+  Map_traits<Cap_space>::constraint(snd_pos, snd_size, rcv_pos, rcv_size,0);
 
-  // compute end of sender window
-  Address snd_size = fp_from_size < L4_fpage::Whole_cap_space 
-    			? fp_from_size 
-			: (Mword)L4_fpage::Whole_cap_space;
-
-  Address snd_end  = fp_from_task+(1L<<snd_size) < L4_fpage::Cap_max
-                    	? fp_from_task+(1L<<snd_size) 
-			: (Address)L4_fpage::Cap_max;
-  Address snd_pos  = fp_from_task;
-
-  if(fp_to_is_cappage)		// valid CAP page for receiver ?
-    {				// need to adjust snd_pos & snd_end
-      // snd_pos : take the max of fp_from & fp_to
-      if(snd_pos < fp_to_task)
-	snd_pos = fp_to_task; 
-
-      Address rcv_win =	fp_to_size < L4_fpage::Whole_cap_space
-				? (1L << fp_to_size) 
-				: (Address)L4_fpage::Cap_max;
-
-      // snd_end : take min of fp_from & fp_to
-      if(snd_end > fp_to_task + rcv_win)
-	snd_end = fp_to_task + rcv_win;
-    }
+  if (snd_size == 0)
+    return Ipc_err(0);
 
   assert(snd_pos < L4_fpage::Cap_max);
 
   return map (cap_mapdb_instance(),
-	      from->cap_space(), from->id(), snd_pos, snd_end - snd_pos,
+	      from->cap_space(), from->id(), snd_pos, snd_size,
 	      to->cap_space(), to->id(), snd_pos, 
-	      fp_from_grant, 0, 0);
+	      fp_from.grant(), 0, 0);
 }
 
 unsigned
 cap_fpage_unmap(Space * space, L4_fpage fp, bool me_too, unsigned restriction)
 {
-  Address task, size;
+  size_t size = fp.size();
+  Address task = Map_traits<Cap_space>::get_addr(fp);
+  Map_traits<Cap_space>::prepare_fpage(task, size);
+  Map_traits<Cap_space>::calc_size(size);
 
-  if (fp.is_cappage())
-    {
-      // try to unmap our own fpage
-      size = fp.size() < L4_fpage::Whole_cap_space
-	? (1L << fp.size()) 
-	: (Address)L4_fpage::Cap_max;
-
-      task = fp.task();
-    }
-  else
-    {
-      assert (fp.is_whole_space());
-      task = 0;
-      size = (Address)L4_fpage::Cap_max;;
-    }
 
   // XXX prevent unmaps when a task has no caps enabled
 
@@ -109,3 +71,4 @@ save_access_attribs (Mapdb* /*mapdb*/, const Mapdb::Frame& /*mapdb_frame*/,
 		     Address /*virt*/, Address /*phys*/, Address /*size*/,
 		     bool /*me_too*/)
 {}
+

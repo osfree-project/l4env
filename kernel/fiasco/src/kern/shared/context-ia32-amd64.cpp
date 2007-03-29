@@ -44,3 +44,30 @@ Context::switch_fpu (Context *t)
   else if (Fpu::is_owner(t))
     Fpu::enable();
 }
+
+IMPLEMENTATION[amd64]:
+
+IMPLEMENT inline
+Mword
+Context::state() const
+{
+  Mword res;
+  asm volatile ("mov (%1), %0		\n\t"
+		: "=acd" (res) : "acdbSD" (&_state));
+  return res;
+
+}
+
+IMPLEMENT inline
+Mword
+Context::is_tcb_mapped() const
+{
+  // Touch the state to page in the TCB. If we get a pagefault here,
+  // the handler doesn't handle it but returns immediatly after
+  // setting eax to 0xffffffff
+  Mword pagefault_if_0;
+  asm volatile ("mov (%2), %0	\n\t"
+		"setnc %b0	\n\t"
+		: "=acd" (pagefault_if_0) : "0"(0UL), "acdbSD"(&_state));
+  return pagefault_if_0;
+}

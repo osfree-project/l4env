@@ -72,8 +72,8 @@
   Lock_guard <Cpu_lock> guard (&cpu_lock);                              \
   Tb_entry_ex_regs *tb =                                                \
      static_cast<Tb_entry_ex_regs*>(Jdb_tbuf::new_entry());             \
-  tb->set(this, ef->ip(), regs, new_thread ? 0 : dst->regs()->sp(),     \
-                                new_thread ? 0 : dst->regs()->ip(), 0); \
+  tb->set(this, ef->ip(), regs, dst->regs()->sp(),                      \
+                                dst->regs()->ip(), 0);                  \
   Jdb_tbuf::commit_entry();                                             \
   END_LOG_EVENT
 

@@ -64,7 +64,6 @@ EXTENSION class L4_fpage
 private:
   enum 
   {
-    Ioid_mask    = 0xf0000f02,
     Io_id        = 0xf0000000,
   };
 };
@@ -76,23 +75,22 @@ EXTENSION class L4_fpage
 private:
   enum 
   {
-    Ioid_mask    = 0xfffffffff0000f02UL,
     Io_id        = 0xfffffffff0000000UL,
   };
 };
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [ia32,ux]:
+IMPLEMENTATION [ia32|ux]:
 
 IMPLEMENT inline
 Mword L4_fpage::is_iopage() const
 {
-  return (_raw & Ioid_mask) == Io_id;
+  return (_raw & Special_fp_mask) == Io_id;
 }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [!{ia32,ux}]:
+IMPLEMENTATION [!(ia32|ux)]:
 
 IMPLEMENT inline
 Mword L4_fpage::is_iopage() const
@@ -126,6 +124,5 @@ L4_fpage L4_fpage::io( Mword port, Mword size, Mword grant )
 
 IMPLEMENT inline
 Mword L4_fpage::is_whole_io_space() const
-{
-  return (_raw >> 2) == Whole_io_space;
-}
+{ return is_iopage() && (_raw >> 2) == Whole_io_space; }
+

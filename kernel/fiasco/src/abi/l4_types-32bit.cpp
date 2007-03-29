@@ -24,6 +24,8 @@ private:
     Size_size        = 6,
     Cache_type_mask  = 0x00000e00,///< C (Cache type [extension])
     Page_mask        = 0xfffff000,
+    Special_fp_mask  = 0xf0000f02,
+    All_spaces_id    = 0xf0000f00,
   };
 
 };

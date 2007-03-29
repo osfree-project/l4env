@@ -20,6 +20,7 @@ IMPLEMENTATION [arm]:
 #include "pagetable.h"
 #include "kmem_space.h"
 #include "mem_unit.h"
+#include "ram_quota.h"
 
 IMPLEMENT
 void Cpu::early_init()
@@ -89,7 +90,7 @@ void Cpu::init()
   extern char ivt_start;
   // map the interrupt vector table to 0xffff0000
   Pte pte = Kmem_space::kdir()->walk((void*)Kmem_space::Ivt_base, 4096,
-      true);
+      true, Ram_quota::root);
 
   pte.set((unsigned long)&ivt_start, 4096, Page::USER_NO | Page::CACHEABLE,
       true);

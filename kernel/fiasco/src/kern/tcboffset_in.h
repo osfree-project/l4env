@@ -1,6 +1,5 @@
   DUMP_MEMBER1 (THREAD, Context, _state,		STATE)
   DUMP_MEMBER1 (THREAD, Context, _kernel_sp,		KERNEL_SP)
-  DUMP_MEMBER1 (THREAD, Context, _space,		SPACE_CONTEXT)
   DUMP_MEMBER1 (THREAD, Context, _donatee,		DONATEE)
   DUMP_MEMBER1 (THREAD, Context, _lock_cnt,		LOCK_CNT)
   DUMP_MEMBER1 (THREAD, Context, _thread_lock,		THREAD_LOCK_PTR)
@@ -39,9 +38,7 @@
                 PREEMPTION__PENDING)
   DUMP_MEMBER1 (THREAD, Thread, _task,		SPACE)
   DUMP_MEMBER1 (THREAD, Thread, _thread_lock,	THREAD_LOCK)
-  DUMP_MEMBER1 (THREAD, Thread,	_thread_lock._switch_lock,
-                THREAD_LOCK__SWITCH_LOCK)
-  DUMP_MEMBER1 (THREAD, Thread,	_thread_lock._switch_lock._lock_owner,
+  DUMP_MEMBER1 (THREAD, Thread,	_thread_lock._lock_owner,
                 THREAD_LOCK__SWITCH_LOCK__LOCK_OWNER)
   DUMP_MEMBER1 (THREAD, Thread,	_thread_lock._switch_hint,
                 THREAD_LOCK__SWITCH_HINT)
@@ -75,7 +72,8 @@
   DUMP_MEMBER1 (SCHED_CONTEXT, Sched_context,_next,		NEXT)
   DUMP_OFFSET  (SCHED_CONTEXT, MAX, sizeof (Sched_context))
 
-  DUMP_MEMBER1 (SPACE, Space, _mem_space._dir,                  PGTABLE)
+  DUMP_MEMBER1 (SPACE,         Space, _mem_space,               MEM_SPACE)
+  DUMP_MEMBER1 (MEM_SPACE, Mem_space, _dir,                     PGTABLE)
 
   DUMP_MEMBER1 (IRQ, Irq, _queued,				QUEUED)
 

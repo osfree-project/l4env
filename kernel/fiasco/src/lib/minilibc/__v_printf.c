@@ -36,7 +36,7 @@ int __v_printf(struct output_op* fn, const char *format, va_list arg_ptr)
       format+=sz;
     }
     if (*format=='%') {
-      char buf[128];
+      char buf[32];
 
       char ch, padwith=' ';
       char *s;

@@ -36,6 +36,7 @@ int Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc,
 {
   if (Config::Log_kernel_page_faults && !PF::is_usermode_error(error_code))
     {
+      Lock_guard<Cpu_lock> guard(&cpu_lock);
       printf("*KP[%lx,", pfa);
       print_page_fault_error(error_code);
       printf(",%lx]\n", pc);
@@ -162,37 +163,8 @@ int Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc,
 	  kdb_ke("Forbidden page fault under CPU lock! FIX ME!");
 	}
 
-      if (PF::is_translation_error(error_code))   // page not present
-        {
-          if (!Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK),
-                                      PF::is_read_error(error_code) ?
-				      Vmem_alloc::ZERO_MAP:
-				      Vmem_alloc::ZERO_FILL)) 
-            panic("can't alloc kernel page");
-        }
-      else
-        { 
-          // protection fault
-          // this can only be because we have the zero page mapped
-          Vmem_alloc::page_free
-	    (reinterpret_cast<void*> (pfa & Config::PAGE_MASK));
-          if (! Vmem_alloc::page_alloc((void*)(pfa & Config::PAGE_MASK),
-                                       Vmem_alloc::ZERO_FILL))
-            {
-              // error could mean: someone else was faster allocating
-              // a page there, or we just don't have any pages left; verify
-#ifdef CONFIG_ARM
-	      if (Mem_space::kernel_space()->lookup((void*)pfa) != (Mword) -1)
-		panic("can't alloc kernel page");
-#else
-              if (Kmem::virt_to_phys(reinterpret_cast<void*>(pfa)) 
-                  == Mword (-1))
-                panic("can't alloc kernel page");
-#endif
-
-              // otherwise, there's a page mapped.  continue
-            }
-        }
+      LOG_MSG_3VAL(current(), "TCBA", pfa, pc, 0);
+      kdb_ke("Implicit TCB alloc");
 
       current_mem_space()->kmem_update((void*)pfa);
       return 1;

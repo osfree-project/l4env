@@ -18,6 +18,8 @@ INTERFACE [arm]:
 
 #include "paging.h"
 
+class Ram_quota;
+
 EXTENSION class Pte
 {
 public:
@@ -95,6 +97,7 @@ IMPLEMENTATION [arm]:
 
 #include "mem_unit.h"
 #include "kdb_ke.h"
+#include "ram_quota.h"
 
 Page_table *Page_table::_current;
   
@@ -331,7 +334,7 @@ size_t const * const Page_table::page_shifts()
 
 PUBLIC
 Pte 
-Page_table::walk(void *va, unsigned long size, bool write_back)
+Page_table::walk(void *va, unsigned long size, bool write_back, Ram_quota *q)
 {
   unsigned const pd_idx = pd_index(va);
 
@@ -341,7 +344,13 @@ Page_table::walk(void *va, unsigned long size, bool write_back)
     {
       if (size == (4 << 10))
 	{
-	  pt = (Mword*)alloc()->alloc(10);
+	  assert(q);
+	  if (q->alloc(1<<10))
+	    {
+	      pt = (Mword*)alloc()->alloc(10);
+	      if (EXPECT_FALSE(!pt))
+		q->free(1<<10);
+	    }
 	  if (!pt) 
 	    return Pte(this, 0, raw + pd_idx);
 
@@ -350,7 +359,7 @@ Page_table::walk(void *va, unsigned long size, bool write_back)
 	  if (write_back || !Arm_vcache)
 	    Mem_unit::clean_dcache(pt, (char*)pt + 1024);
 
-	  raw[pd_idx] = current()->walk(pt, 0, false).phys(pt)
+	  raw[pd_idx] = current()->walk(pt, 0, false, 0).phys(pt)
 	    | PDE_TYPE_COARSE;
 	  
 	  if (write_back || !Arm_vcache)
@@ -455,7 +464,7 @@ size_t const Page_table::num_page_sizes()
 PUBLIC /*inline*/
 void Page_table::activate()
 {
-  Pte p = current()->walk(this,0,false);
+  Pte p = current()->walk(this,0,false,0);
   if(_current!=this) 
     {
       _current = this;

@@ -616,7 +616,6 @@ SYSTEM_CALL(0x33,sys_thread_switch)
 SYSTEM_CALL(0x34,sys_thread_schedule)
 SYSTEM_CALL(0x35,sys_thread_ex_regs)
 SYSTEM_CALL(0x36,sys_task_new)
-
 #ifdef CONFIG_PL0_HACK
 SYSTEM_CALL(0x37,sys_priv_control)
 
@@ -762,3 +761,35 @@ leave_by_trigger_exception:
 	pushl	$0xff
 	pusha
 	jmp	_slowtraps
+
+
+
+.section ".text.debug.stack_profiling"
+
+	.global __cyg_profile_func_enter
+	.global __cyg_profile_func_exit
+
+
+__ret_from_cyg:
+	ret
+__cyg_profile_func_enter:
+__cyg_profile_func_exit:
+	cmp $0xc0000000, %esp
+	jl __ret_from_cyg
+	cmp $0xd0000000,%esp
+	jg __ret_from_cyg
+	mov %esp, %ecx
+//	and $0x7ff, %ecx /* 2K TCBs */
+	and $0xfff, %ecx /* 4K TCBs */
+	cmp $0x200, %ecx
+	jg __ret_from_cyg
+	int3
+	jmp 1f
+	.ascii "STACK"
+1: 	ret
+
+
+
+
+
+

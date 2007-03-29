@@ -11,6 +11,28 @@ IMPLEMENTATION [arm]:
 #include "space.h"
 #include "thread_state.h"
 
+IMPLEMENT inline
+Mword
+Context::state() const
+{
+  register Mword res asm("r14");
+  asm volatile ("ldr %0, [%0]   \n"
+		: "=r" (res) : "0" (&_state));
+  return res;
+}
+
+IMPLEMENT inline
+Mword
+Context::is_tcb_mapped() const
+{
+  register Mword pagefault_if_0 asm("r14");
+  asm volatile ("msr cpsr_f, #0 \n" // clear flags
+                "ldr %0, [%0]   \n"
+		"movne %0, #1   \n"
+		"moveq %0, #0   \n"
+		: "=r" (pagefault_if_0) : "0" (&_state));
+  return pagefault_if_0;
+}
 
 IMPLEMENT inline
 void
