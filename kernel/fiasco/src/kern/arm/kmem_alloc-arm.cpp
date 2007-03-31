@@ -36,7 +36,7 @@ Kmem_alloc::map_pmem(unsigned long phy, unsigned long size)
 
   for (unsigned long i = 0; i <size; i+=Config::SUPERPAGE_SIZE)
     {
-      Pte pte = Kmem_space::kdir()->walk((char*)next_map+i, 
+      Pte pte = Kmem_space::kdir()->walk((char*)next_map+i,
 	  Config::SUPERPAGE_SIZE, false, Ram_quota::root);
       pte.set(phy+i, Config::SUPERPAGE_SIZE, Page::USER_NO | Page::CACHEABLE,
 	  true);
@@ -63,7 +63,7 @@ Kmem_alloc::Kmem_alloc()
 
 	  panic("Corrupt memory descscriptor in KIP...");
 	}
-      
+
       if (r.start == r.end)
 	{
 	  panic("not enough kernel memory");
@@ -71,21 +71,21 @@ Kmem_alloc::Kmem_alloc()
       Mword size = r.end - r.start + 1;
       if (size <= alloc_size)
 	{
-	  Kip::k()->add_mem_region(Mem_desc(r.start, r.end, 
+	  Kip::k()->add_mem_region(Mem_desc(r.start, r.end,
 		                                Mem_desc::Reserved));
-	  // printf("ALLOC: [%08x; %08x]\n", r.start, r.end);
+	  //printf("ALLOC1: [%08lx; %08lx]\n", r.start, r.end);
 	  if (Mem_layout::phys_to_pmem(r.start) == ~0UL)
 	    if (!map_pmem(r.start, size))
 	      panic("could not map physical memory %p\n", (void*)r.start);
 	  a->free((void*)Mem_layout::phys_to_pmem(r.start), size);
 	  alloc_size -= size;
 	}
-      else 
+      else
 	{
 	  r.start += (size - alloc_size);
-	  Kip::k()->add_mem_region(Mem_desc(r.start, r.end, 
+	  Kip::k()->add_mem_region(Mem_desc(r.start, r.end,
 		                                Mem_desc::Reserved));
-	  // printf("ALLOC: [%08x; %08x]\n", r.start, r.end);
+	  //printf("ALLOC2: [%08lx; %08lx]\n", r.start, r.end);
 	  if (Mem_layout::phys_to_pmem(r.start) == ~0UL)
 	    if (!map_pmem(r.start, alloc_size))
 	      panic("could not map physical memory %p\n", (void*)r.start);
@@ -94,5 +94,3 @@ Kmem_alloc::Kmem_alloc()
 	}
     }
 }
-
-

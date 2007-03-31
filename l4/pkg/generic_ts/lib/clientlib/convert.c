@@ -1,8 +1,8 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file   generic_ts/clientlib/src/free.c
- * \brief  Kill a task.
+ * \file   generic_ts/clientlib/src/convert.c
+ * \brief  Convet TS task number to L4 task ID.
  *
  * \date   04/2004
  * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
@@ -30,7 +30,7 @@ l4ts_taskno_to_taskid(l4_uint32_t tasknr, l4_taskid_t *taskid)
   if (!l4ts_connected())
     return -L4_ENOTFOUND;
 
-  if ((error = l4_ts_taskno_to_taskid_call(&l4ts_server_id, tasknr, 
+  if ((error = l4_ts_taskno_to_taskid_call(&l4ts_server_id, tasknr,
 				      taskid, &_env)) < 0
       || DICE_HAS_EXCEPTION(&_env))
     {

@@ -1,7 +1,7 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file   generic_ts/clientlib/src/free.c
+ * \file   generic_ts/clientlib/src/kill.c
  * \brief  Kill a task.
  *
  * \date   04/2004
@@ -52,7 +52,7 @@ l4ts_kill_task_recursive(l4_taskid_t taskid)
   if (!l4ts_connected())
     return -L4_ENOTFOUND;
 
-  if ((error = l4_ts_kill_recursive_call(&l4ts_server_id, 
+  if ((error = l4_ts_kill_recursive_call(&l4ts_server_id,
 				         &taskid, &_env)) < 0
       || DICE_HAS_EXCEPTION(&_env))
     {

@@ -1,6 +1,8 @@
 #ifndef L4_CXX_UART_H__
 #define L4_CXX_UART_H__
 
+#include <stddef.h>
+
 namespace L4 
 {
   class Uart
@@ -12,7 +14,7 @@ namespace L4
     unsigned _rate;
 
   public:
-    void *operator new (unsigned, void* a) 
+    void *operator new (size_t, void* a) 
     { return a; }
 
   public:

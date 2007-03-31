@@ -1,15 +1,15 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file   generic_ts/clientlib/src/dump.c
- * \brief  Dump all tasks at task server.
+ * \file   generic_ts/clientlib/src/owner.c
+ * \brief  Ownership functions.
  *
  * \date   04/2004
  * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
  */
 /*****************************************************************************/
 
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2003-2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details. */
 
