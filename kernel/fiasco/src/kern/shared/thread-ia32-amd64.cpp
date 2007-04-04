@@ -670,12 +670,15 @@ Thread::handle_io_page_fault (Trap_state *ts, Address eip, bool from_user)
 	  // other thread sets the flag again.
           state_del (Thread_cancel);
 
+	  // set cr2 in ts so that we also get the io_page value in an
+	  // consecutive exception
+	  ts->_cr2    = io_page;
+
 	  if (EXPECT_FALSE(state() & Thread_alien))
 	    {
 	      // special case for alien tasks: Don't generate pagefault but
 	      // send (pagefault) exception to pager.
 	      ts->_trapno = 14;
-	      ts->_cr2    = io_page;
 	      if (send_exception(ts))
 		{
 		  if (!_need_iopl || gain_iopl(ts))

@@ -61,17 +61,17 @@ Space_registry* Space_index::spaces = registered_spaces;
 
 PUBLIC inline explicit
 Space_index::Space_index(unsigned number) // type-conversion cons.:
-				              // from task number
+                                          // from task number
   : space_id(number)
-{ }
+{}
 
 PUBLIC inline 
-Space_index::operator unsigned ()
+Space_index::operator unsigned () const
 { return space_id; }
 
 PUBLIC inline NEEDS [Space_registry]
 Space *
-Space_index::lookup()
+Space_index::lookup() const
 { 
   if (spaces[space_id].state.dead)
     return 0;
@@ -81,7 +81,8 @@ Space_index::lookup()
 
 PUBLIC inline NEEDS[Space_registry::Space_registry, "atomic.h"]
 bool 
-Space_index::set_chief(Space_index old_chief, Space_index new_chief)
+Space_index::set_chief(Space_index const &old_chief, 
+    Space_index const &new_chief)
 {
   Space_registry o(spaces[space_id]);
 
@@ -95,9 +96,9 @@ Space_index::set_chief(Space_index old_chief, Space_index new_chief)
 }
 
 PUBLIC inline NEEDS [Space_index::Space_index, 
-		     Space_registry, <cassert>]
+                     Space_registry, <cassert>]
 Space_index 
-Space_index::chief() // return chief number
+Space_index::chief() const // return chief number
 {
   assert (spaces[space_id].state.dead); // space does not exist
 
@@ -107,7 +108,7 @@ Space_index::chief() // return chief number
 PUBLIC static inline NEEDS[Space_registry::Space_registry]
 bool 
 Space_index::add(Space *new_space, unsigned new_number,
-		 unsigned *out_chief)
+                 unsigned *out_chief)
 {
   Space_registry o, n;
 
@@ -127,10 +128,23 @@ Space_index::add(Space *new_space, unsigned new_number,
   return true;
 }
 
+PRIVATE inline
+void
+Space_index::reparent_children(Space_index const &chief) const
+{
+  // long operation, iterates over all possible tasks
+  for (unsigned i = 0; i < Max_space_number; ++i)
+    {
+      Space_index child(i);
+      if (child.chief() == *this)
+	child.set_chief(*this, chief);
+    }
+}
 
-PUBLIC static inline NEEDS[<cassert>, Space_registry, Space_index::aux_del]
+PUBLIC static inline NEEDS[<cassert>, Space_registry, Space_index::aux_del,
+                           Space_index::reparent_children]
 bool 
-Space_index::del(Space_index number, Space_index chief)
+Space_index::del(Space_index const &number, Space_index const &chief)
 {
   assert(number < Max_space_number);
   assert(! spaces[number].state.dead);
@@ -138,6 +152,8 @@ Space_index::del(Space_index number, Space_index chief)
   // when deleting a task, write its owner (chief) into the task register
   spaces[number].state.dead = 1;
   spaces[number].state.chief = chief;
+
+  number.reparent_children(chief);
 
   aux_del(number);
 
@@ -148,5 +164,5 @@ IMPLEMENTATION [!pl0_hack]:
 
 PUBLIC static inline
 void
-Space_index::aux_del(Space_index /*number*/)
+Space_index::aux_del(Space_index const &/*number*/)
 {}

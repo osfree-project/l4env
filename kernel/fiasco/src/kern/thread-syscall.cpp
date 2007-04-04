@@ -358,15 +358,8 @@ Thread::sys_thread_ex_regs()
   Thread *dst    = lookup (dst_id, space()), *dst_thread0 = 0;
 
   if (EXPECT_FALSE(! ex_regs_permission_inter_task(regs, &dst_id, &dst,
-						   &dst_task, &dst_thread0)))
-    {
-      LOG_THREAD_EX_REGS_FAILED;
-      regs->old_eflags(~0U);
-      return;
-    }
-
-  dst = Thread::create(dst_task, dst_id, sched()->prio(), mcp());
-  if (!dst)
+						   &dst_task, &dst_thread0))
+      || !(dst = Thread::create(dst_task, dst_id, sched()->prio(), mcp())))
     {
       LOG_THREAD_EX_REGS_FAILED;
       regs->old_eflags(~0U);
