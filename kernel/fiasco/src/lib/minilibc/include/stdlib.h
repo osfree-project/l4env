@@ -27,6 +27,7 @@ double atof(const char *nptr);
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
 
+void _exit(int status) __attribute__((noreturn));
 void exit(int status) __attribute__((noreturn));
 void abort(void);
 

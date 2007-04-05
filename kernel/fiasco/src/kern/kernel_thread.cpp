@@ -135,7 +135,7 @@ Kernel_thread::run()
 
   Helping_lock::threading_system_active = false;
 
-  exit (0);					// Commit suicide
+  _exit (0);					// Commit suicide
 }
 
 PUBLIC inline NEEDS["processor.h"]

@@ -464,7 +464,7 @@ Mapping_tree::copy_compact_tree(Mapping_tree *dst, Mapping_tree *src)
   Mapping *d = dst->mappings();     
   
   for (Mapping *s = src->mappings();
-       s;
+       s && !s->is_end_tag();
        s = src->next (s))
     {
       *d++ = *s;

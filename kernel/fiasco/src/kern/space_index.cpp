@@ -73,7 +73,7 @@ PUBLIC inline NEEDS [Space_registry]
 Space *
 Space_index::lookup() const
 { 
-  if (spaces[space_id].state.dead)
+  if (EXPECT_FALSE(spaces[space_id].state.dead))
     return 0;
 
   return spaces[space_id].space;
@@ -136,7 +136,7 @@ Space_index::reparent_children(Space_index const &chief) const
   for (unsigned i = 0; i < Max_space_number; ++i)
     {
       Space_index child(i);
-      if (child.chief() == *this)
+      if (spaces[i].state.dead && child.chief() == *this)
 	child.set_chief(*this, chief);
     }
 }

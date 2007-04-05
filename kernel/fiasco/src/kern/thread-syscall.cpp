@@ -734,15 +734,6 @@ Thread::sys_task_new()
 
 	  id.lthread(0);
 	  id.chief(si.chief());
-	  reset_nest (id);
-
-	  Space_index c = si.chief();
-	  while (Space_index_util::chief(c) != Config::boot_id.chief())
-	    {
-	      c = Space_index_util::chief(c);
-	      inc_nest (id);
-	    }
-
 	  regs->new_taskid(id);
 	  return;
 	}
@@ -793,7 +784,6 @@ Thread::sys_task_new()
 
       id.lthread(0);
       id.chief(space_index());
-      update_nest (id);
 
       //
       // create the first thread of the task
@@ -842,54 +832,6 @@ extern "C" void sys_task_new_wrapper()
 
 extern "C" void sys_thread_schedule_wrapper()
 { Proc::sti(); current_thread()->sys_thread_schedule(); }
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [v2]:
-
-#include "l4_types.h"
-#include "config.h"
-#include "space_index.h"
-
-
-PRIVATE inline NOEXPORT
-void
-Thread::reset_nest (L4_uid& id)
-{ id.nest (0); }
-
-PRIVATE inline NOEXPORT
-void
-Thread::inc_nest (L4_uid& id)
-{ id.nest (id.nest() + 1); }
-
-PRIVATE inline NOEXPORT 
-void 
-Thread::update_nest (L4_uid& id)
-{
-  id.nest ((nest() == 0 && space_index() == Config::boot_taskno)
-	   ? 0 : nest() + 1);
-}
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [x0]:
-
-#include "l4_types.h"
-
-PRIVATE inline NOEXPORT
-void
-Thread::reset_nest (L4_uid&)
-{}
-
-PRIVATE inline NOEXPORT
-void
-Thread::inc_nest (L4_uid&)
-{}
-
-PRIVATE inline NOEXPORT
-void
-Thread::update_nest (L4_uid&)
-{}
 
 
 //---------------------------------------------------------------------------
