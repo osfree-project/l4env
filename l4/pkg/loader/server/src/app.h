@@ -75,6 +75,7 @@ typedef struct
 #define APP_CONT	0x00001000	/**< ensure that we cont only once */
 #define APP_NOSUPER	0x00002000	/**< don't page superpages */
 #define APP_ALL_WRITBLE	0x00004000	/**< all sections writable */
+#define APP_NOBIOS      0x00008000      /**< access to BIOS denied */
 #define APP_MSG_IO	0x00010000	/**< internal pager flag */
   l4_addr_t		image;		/**< attached image */
   l4_size_t		sz_image;	/**< size of attached image */

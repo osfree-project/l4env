@@ -67,6 +67,7 @@ reboot_able		{ count(); return REBOOTABLE; }
 rebootable		{ count(); return REBOOTABLE; }
 no_sigma0		{ count(); return NO_SIGMA0; }
 no_vga			{ count(); return NO_VGA; }
+no_bios			{ count(); return NO_BIOS; }
 dma_able		{ count(); return DMAABLE; }
 dmaable			{ count(); return DMAABLE; }
 pool			{ count(); return POOL; }

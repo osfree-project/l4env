@@ -386,8 +386,8 @@ handle_tbuf_status(l4_threadid_t t,l4_umword_t pfa,
  * Returns 1 if this was successfull, zero otherwise.
  */
 static inline int
-try_superpage_maping(l4_threadid_t t,l4_umword_t pfa,
-		     l4_umword_t *d1,l4_umword_t *d2)
+try_superpage_mapping(l4_threadid_t t,l4_umword_t pfa,
+                      l4_umword_t *d1,l4_umword_t *d2)
 {
   /* map a specific page */
   if ((*d1 & 1) && (*d2 == (L4_LOG2_SUPERPAGESIZE << 2)))
@@ -433,7 +433,7 @@ handle_physicalpage(l4_threadid_t t,l4_umword_t pfa,
   if ((v = vm_find(t.id.task, pfa) > -1))
       pfa += vm_get_offset(v);
 
-  if (try_superpage_maping(t,pfa,d1,d2))
+  if (try_superpage_mapping(t,pfa,d1,d2))
     return 1;
 
   /* failing a superpage allocation, try a single page allocation */

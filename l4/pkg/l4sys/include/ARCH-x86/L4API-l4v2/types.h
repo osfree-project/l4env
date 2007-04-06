@@ -206,7 +206,7 @@ typedef struct {
 typedef struct {
   unsigned grant:1;          ///< Grant I/O page (send I/O flexpage)
   unsigned zero1:1;          ///< Unused (no write permissions, must be 0)
-  unsigned iosize:6;         ///< I/O flexpage size
+  unsigned iosize:6;         ///< I/O flexpage size (log2)
   unsigned zero2:4;          ///< Unused (must be 0)
   unsigned iopage:16;        ///< I/O flexpage base address
   unsigned f: 4;             ///< Unused, must be 0xF
@@ -307,7 +307,7 @@ l4_fpage(unsigned long address, unsigned int size,
  * \ingroup api_types_fpage
  *
  * \param   port         I/O flexpage port base
- * \param   size         I/O flexpage size, #L4_WHOLE_IOADDRESS_SPACE to 
+ * \param   size         I/O flexpage size (log2), #L4_WHOLE_IOADDRESS_SPACE to 
  *                       specify the whole I/O address space (with \a port 0)
  * \param   grant        Grant flexpage (#L4_FPAGE_GRANT) or map flexpage
  *                       (#L4_FPAGE_MAP)

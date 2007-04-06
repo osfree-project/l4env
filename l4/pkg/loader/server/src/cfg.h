@@ -85,6 +85,7 @@ typedef struct
 #define CFG_F_INTERPRETER	0x00000800 /**< interpret using libld-l4.s.so */
 #define CFG_F_ALL_WRITABLE	0x00001000 /**< all sections writable */
 #define CFG_F_L4ENV_BINARY	0x00002000 /**< l4env binary with infopage */
+#define CFG_F_NO_BIOS           0x00004000 /**< deny access to BIOS memory */
 } cfg_task_t;
 
 extern unsigned int cfg_verbose;

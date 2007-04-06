@@ -36,9 +36,7 @@ __cxa_atexit(void (*func)(void*), void *arg, void *dso_handle)
   return 0;
 }
 
-extern void _exit(int code) __attribute__((noreturn));
-
-void exit(int code) 
+void exit(int code)
 {
   while (atexit_counter)
     {

@@ -473,7 +473,7 @@ is_fiasco(void)
 
 /** Map dummy page. To deny direkt VGA access the dummy page is mapped in
  * place of the whole video memory (9F000-BF000) to make the application
- * happy. (see app_t flag APP_NOVGA) */
+ * happy. (see app_t flag APP_NOVGA APP_NOBIOS) */
 static int
 map_dummy_page(void)
 {
@@ -695,11 +695,25 @@ app_pager_thread(void *data)
 	      else if (dw1 >= 0x000C0000 && dw1 <= 0x000FFFFF)
 		{
 		  /* BIOS requested */
-		  dbg_pf("PF (%c, eip=%08x) %08x in BIOS area. "
-			 "Forwarding to ROOT.",
-			 dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
+		  if (app->flags & APP_NOBIOS)
+                    {
+		      /* deny direct access */
+		      dbg_pf("PF (%c, eip=%08x) %08x in BIOS memory. "
+			     "Sending dummy page.",
+			     dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
 
-		  forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
+		      dw1 &= L4_PAGEMASK;
+		      dw2 = l4_fpage(dummy_map_addr, L4_LOG2_PAGESIZE,
+				     L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
+		    }
+		  else
+		    {
+                      dbg_pf("PF (%c, eip=%08x) %08x in BIOS area. "
+                             "Forwarding to ROOT.",
+                             dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
+
+		      forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
+                    }
 		}
 	      else if (dw1 == 0x3ffff000)
 		{

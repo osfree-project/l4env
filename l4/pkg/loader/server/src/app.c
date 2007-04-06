@@ -1816,6 +1816,7 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
     app->flags |= APP_DIRECTMAP;
   app->flags |= ct->flags & CFG_F_REBOOT_ABLE    ? APP_REBOOTABLE  : 0;
   app->flags |= ct->flags & CFG_F_NO_VGA         ? APP_NOVGA       : 0;
+  app->flags |= ct->flags & CFG_F_NO_BIOS        ? APP_NOBIOS      : 0;
   app->flags |= ct->flags & CFG_F_NO_SIGMA0      ? APP_NOSIGMA0    : 0;
   app->flags |= ct->flags & CFG_F_ALLOW_CLI      ? APP_ALLOW_CLI   : 0;
   app->flags |= ct->flags & CFG_F_SHOW_APP_AREAS ? APP_SHOW_AREAS  : 0;

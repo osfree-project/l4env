@@ -98,7 +98,7 @@ lx_size_t lx_fwrite(const void *ptr, lx_size_t size, lx_size_t nmemb, LX_FILE *f
 
 int lx_fseek(LX_FILE *f, long offset, int whence)
 {
-  return lx_lseek(f->fd, offset, whence);
+  return lx_lseek(f->fd, offset, whence) < 0 ? -1 : 0;
 }
 
 long lx_ftell(LX_FILE *f)
