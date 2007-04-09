@@ -31,16 +31,9 @@ LOADERLIBS_uc	= -lc_be_l4env_start_stop.p	\
 		  -lc_be_mmap_util.p		\
 		  -luclibc_support.p
 
-ifneq ($(USE_LDSO),y)
-# exec-server mode
-vpath %.c $(L4DIR)/pkg/l4env/lib/src
-OBJS_libloader.s.so = main.s.o helper_dyn.s.o errstr-l4ipc.s.o
-LIBL4ENV            = -ll4env_loaderruntime.p
-else
-# ldso mode
 OBJS_libloader.s.so = helper_dyn.s.o
 LIBL4ENV            = -ll4env.p
-endif
+
 LIBS		= --whole-archive \
 		    -lsemaphore.p \
 		    -lthread.p \

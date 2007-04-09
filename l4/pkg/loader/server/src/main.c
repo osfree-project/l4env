@@ -41,7 +41,7 @@ main(int argc, const char **argv)
 {
   int i, error;
   const char *fprov_name;
-  
+
   if ((error = parse_cmdline(&argc, &argv,
 		'f', "fprov", "specify file provider",
 		PARSE_CMD_STRING, "TFTP", &fprov_name,
@@ -59,17 +59,13 @@ main(int argc, const char **argv)
 	}
       return 1;
     }
-  if (  
-#ifndef USE_LDSO
-        (error = exec_if_init()) ||
-#endif
-        (error = dm_if_init())
-      ||(error = cfg_init())
-      ||(error = start_app_pager()))
+  if ((error = dm_if_init())
+      || (error = cfg_init())
+      || (error = start_app_pager()))
     return error;
-  
+
   /* start thread listening for exit events */
-  if (use_events) 
+  if (use_events)
     init_events();
 
   /* now we're ready to service ... */

@@ -18,6 +18,7 @@ IMPLEMENTATION[ux]:
 #include "kdb_ke.h"
 #include "net.h"
 #include "mem_layout.h"
+#include "pic.h"
 #include "trap_state.h"
 #include "usermode.h"
 
@@ -55,4 +56,13 @@ Kernel_thread::bootstrap_arch()
 
   Fb::enable();
   Net::enable();
+}
+
+IMPLEMENT
+void
+Kernel_thread::arch_exit()
+{
+  fflush(0);  // Flush output stream
+  Pic::irq_prov_shutdown(); // atexit calls are not run with _exit
+  _exit(0);   // Don't call destructors
 }

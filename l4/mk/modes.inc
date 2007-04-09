@@ -60,7 +60,7 @@ CRT0_DEFAULT = $(call findfile,crt0.o,$(L4LIBDIR))
 CRTP_DEFAULT = $(call findfile,crt0.s.o,$(L4LIBDIR))
 LDS_DEFAULT  = $(call findfile,main_stat.ld,$(L4LIBDIR))
 
-ifeq ($(MODE)$(USE_LDSO),loadery)
+ifeq ($(MODE),loader)
 LDS_LOADER   = $(call findfile,main_dyn.ld,$(L4LIBDIR))
 else
 LDS_LOADER   = $(LDS_DEFAULT)
@@ -70,6 +70,7 @@ LIBC_INCLUDE_diet = -nostdinc                                 \
                     -I$(OBJ_BASE)/include/dietlibc            \
                     -I$(DROPS_STDDIR)/include/dietlibc        \
                     -I$(GCCINCDIR)
+LIBC_LIB_diet     = -ldiet_c
 LIBC_INCLUDE_uc   = -nostdinc                                 \
                     -I$(OBJ_BASE)/include/$(ARCH)/uclibc      \
                     -I$(OBJ_BASE)/include/uclibc              \
@@ -78,10 +79,14 @@ LIBC_INCLUDE_uc   = -nostdinc                                 \
                     -I$(DROPS_STDDIR)/include/uclibc          \
                     -I$(DROPS_STDDIR)/include/uclibc++        \
                     -I$(GCCINCDIR)
+LIBC_LIB_uc       = -luc_c
+
 ifeq ($(USE_DIETLIBC),y)
 LIBC_INCLUDE = $(LIBC_INCLUDE_diet)
+LIBC_LIB     = $(LIBC_LIB_diet)
 else
 LIBC_INCLUDE = $(LIBC_INCLUDE_uc)
+LIBC_LIB     = $(LIBC_LIB_uc)
 endif
 
 #############################################################################
@@ -208,8 +213,8 @@ endif
 BID_SUPPORTED_all_libc          = y
 LIBCINCDIR_all_libc             = $(LIBC_INCLUDE)
 LIBCLIBDIR_all_libc             =
-LIBCLIBS_all_libc               = -nostdlib $(GCCLDNOSTDLIB) -ldiet_c       \
-                                  $(LIBCBACKEND_LIB) $(GCCLIB) -ldiet_c
+LIBCLIBS_all_libc               = -nostdlib $(GCCLDNOSTDLIB) $(LIBC_LIB)    \
+                                  $(LIBCBACKEND_LIB) $(GCCLIB) $(LIBC_LIB)
 L4LIBS_all_libc                 =
 CRT0_all_libc                   = $(CRT0_DEFAULT)
 CRTN_all_libc                   =

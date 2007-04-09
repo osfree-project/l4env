@@ -74,8 +74,7 @@ typedef struct
 #define CFG_F_TEMPLATE		0x00000001 /**< this is a template */
 #define CFG_F_MEMDUMP		0x00000002 /**< dump memory */
 #define CFG_F_DIRECT_MAPPED	0x00000004 /**< sections are mapped 1:1 */
-#define CFG_F_REBOOT_ABLE	0x00000008 /**< application may reboot */
-#define CFG_F_NO_VGA		0x00000010 /**< deny access to vga */
+#define CFG_F_ALLOW_VGA		0x00000010 /**< allow access to vga memory */
 #define CFG_F_SLEEP		0x00000020 /**< sleep before continue */
 #define CFG_F_NO_SIGMA0		0x00000040 /**< dont page other regions */
 #define CFG_F_ALLOW_CLI		0x00000080 /**< task may execute cli/sti */
@@ -85,7 +84,7 @@ typedef struct
 #define CFG_F_INTERPRETER	0x00000800 /**< interpret using libld-l4.s.so */
 #define CFG_F_ALL_WRITABLE	0x00001000 /**< all sections writable */
 #define CFG_F_L4ENV_BINARY	0x00002000 /**< l4env binary with infopage */
-#define CFG_F_NO_BIOS           0x00004000 /**< deny access to BIOS memory */
+#define CFG_F_ALLOW_BIOS        0x00004000 /**< allow access to BIOS memory */
 } cfg_task_t;
 
 extern unsigned int cfg_verbose;

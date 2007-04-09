@@ -63,11 +63,9 @@ at			{ count(); return AT; }
 direct_mapped		{ count(); return DIRECT_MAPPED; }
 l4env			{ count(); return L4ENV_BINARY; }
 contiguous		{ count(); return CONTIGUOUS; }
-reboot_able		{ count(); return REBOOTABLE; }
-rebootable		{ count(); return REBOOTABLE; }
 no_sigma0		{ count(); return NO_SIGMA0; }
-no_vga			{ count(); return NO_VGA; }
-no_bios			{ count(); return NO_BIOS; }
+allow_vga		{ count(); return ALLOW_VGA; }
+allow_bios		{ count(); return ALLOW_BIOS; }
 dma_able		{ count(); return DMAABLE; }
 dmaable			{ count(); return DMAABLE; }
 pool			{ count(); return POOL; }

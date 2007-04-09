@@ -6,7 +6,7 @@
  * \date	06/10/2001
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2003-2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details. */
 
@@ -97,46 +97,6 @@ library l4loader
       long info([in] unsigned long task_id, [in] unsigned long flags,
 	        [out, string, prealloc_client] char** fname, 
 		[out] l4dm_dataspace_t *l4env_page);
-
-      /** Open a library.
-       *
-       * Get the library image from the file provider, create dataspaces
-       * containing the program sections and map the library at the start.
-       *
-       * \param fname		library name
-       * \param fprov		id of file provider to use
-       * \param flags		flags
-       * \param envpage		l4env_infopage_t describing the program
-       * 			sections of this application.
-       * \return 		0 on success */
-      long lib_open([in, string] char* fname,
-		    [in] l4_threadid_t fprov,
-		    [in] unsigned long flags,
-		    [out] envpage_t *envpage);
-
-      /** Link a library.
-       *
-       * This function must be called as a second step after a library
-       * was loaded to ensure that all open references of the library are
-       * linked.
-       *
-       * \param envpage		l4env_infopage_t describing the program
-       * 			sections of this application (as returned
-       * 			by lib_open).
-       * \return		0 on success */
-      long lib_link([in] envpage_t *envpage);
-
-      /** Return the address of a dynamic loader function.
-       *
-       * \param symname		Name of a symbol of a dynamic object.
-       * \param envpage		l4env_infopage_t describing the program
-       * 			sections of this application (as returned
-       * 			by lib_open).
-       * \retval addr		the address of the symbol
-       * \return 		0 on success */
-      long lib_dsym([in] char *symname,
-		    [in] envpage_t *envpage,
-		    [out] l4_addr_t *addr);
     };
 };
 

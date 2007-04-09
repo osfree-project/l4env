@@ -399,10 +399,6 @@ Build system using uClibc
 USE_UCLIBC
   Uses the uClibc as the main libc.
 
-Use ldso for dynamic linking
-USE_LDSO
-  Use ldso for linking shared libraries.
-
 Enable Release flag
 RELEASE_FLAG
   This option enables the RELEASE flag possible omitting

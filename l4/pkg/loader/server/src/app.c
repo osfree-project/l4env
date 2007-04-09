@@ -6,7 +6,7 @@
  * \date	06/10/2001
  * \author	Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2003-2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details. */
 
@@ -22,6 +22,7 @@
 #include <l4/env/errno.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/syscalls.h>
+#include <l4/sys/cache.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/log/l4log.h>
 #include <l4/env/mb_info.h>
@@ -461,44 +462,6 @@ app_attach_sections_to_pager(app_t *app)
   return 0;
 }
 
-#ifndef USE_LDSO
-/** We must attach the libloader.s.so sections to the pager since the
- * region manager cannot page itself.
- *
- * \param app		application descriptor
- * \return		0 on success */
-static int
-app_attach_startup_sections_to_pager(app_t *app)
-{
-  int error;
-  l4env_infopage_t *env = app->env;
-  l4exec_section_t *l4exc;
-  l4exec_section_t *l4exc_stop = env->section + env->section_num;
-
-#ifdef DEBUG_RESERVEAREA
-  app_msg(app, "Scanning %d sections for attach startup", env->section_num);
-#endif
-
-  for (l4exc = env->section; l4exc<l4exc_stop; l4exc++)
-    {
-      if ((l4exc->info.type & L4_DSTYPE_STARTUP) &&
-	  (l4exc->info.type & L4_DSTYPE_PAGEME))
-	{
-	  if (l4exc->info.type & L4_DSTYPE_RELOCME)
-	    {
-	      app_msg(app, "Startup section %d not yet relocated",
-			   l4exc-env->section);
-	      return -L4_EINVAL;
-	    }
-	  if ((error = app_attach_section_to_pager(l4exc, env, app)))
-	    return error;
-	}
-    }
-
-  return 0;
-}
-#endif
-
 /** Create dataspace of anonymous memory mapped into the new application.
  * The dataspace is also mapped into this application.
  *
@@ -578,34 +541,28 @@ app_publish_lines(app_t *app)
 static void
 app_publish_lines_symbols(app_t *app)
 {
-#ifdef USE_LDSO
-  app->flags &= ~APP_SYMBOLS;
-  app->flags &= ~APP_LINES;
-#else
+  /* XXX-Todo: this function and the two above are just for sigma0-style
+   * applications, lines/symbol loading does not work for sigma0 apps right
+   * now as we would have to redo the work previously done in the exec
+   * server, something similar exists in the ldso lib
+   */
   if (app->flags & APP_SYMBOLS)
     {
-      if (exec_if_get_symbols(app))
-	app->flags &= ~APP_SYMBOLS;
-      else
-	{
-	  /* tell Fiasco where the symbols are. If error, ignore it */
-	  app_publish_symbols(app);
-	  l4dm_transfer(&app->ds_symbols, app->tid);
-	}
+      if (app->symbols)
+        {
+          app_publish_symbols(app);
+          l4dm_transfer(&app->ds_symbols, app->tid);
+        }
     }
 
   if (app->flags & APP_LINES)
     {
-      if (exec_if_get_lines(app))
-	app->flags &= ~APP_LINES;
-      else
-	{
-	  /* tell Fiasco where the lines are. If error, ignore it */
-	  app_publish_lines(app);
-	  l4dm_transfer(&app->ds_lines, app->tid);
-	}
+      if (app->lines)
+        {
+          app_publish_lines(app);
+          l4dm_transfer(&app->ds_lines, app->tid);
+        }
     }
-#endif
 }
 
 /** Retire symbolic debug information of an application from Fiasco. */
@@ -1091,7 +1048,7 @@ app_create_phys_memory(app_t *app, l4_size_t size, int cfg_flags, int pool)
   char ds_name[L4DM_DS_NAME_MAX_LEN];
   char ds_flags[20];
 
-  if (app->flags & APP_MODE_LOADER)
+  if (!(app->flags & APP_MODE_SIGMA0))
     {
       app_msg(app, "Can't create physical memory for l4env-style application");
       return -L4_EINVAL;
@@ -1197,7 +1154,7 @@ app_create_tid(app_t *app)
 static int
 app_start_static(cfg_task_t *ct, app_t *app)
 {
-  int error, i, relink;
+  int error, i;
   l4_size_t task_trampoline_size;
   l4_addr_t tramp_page_addr, esp;
   app_addr_t tramp_page;
@@ -1215,50 +1172,10 @@ app_start_static(cfg_task_t *ct, app_t *app)
       return error;
     }
 
-  /* check if some section has to be relocated */
-  relink = 0;
+  /* check if some section has to be relocated -- gone with l4exec removal */
   for (i=0; i<env->section_num; i++)
-    {
-      if (env->section[i].info.type & L4_DSTYPE_RELOCME)
-	{
-	  l4exec_section_t *l4exc = env->section + i;
-	  l4_addr_t addr;
-	  l4_size_t psize;
-
-	  if ((error = l4dm_mem_ds_phys_addr(&l4exc->ds, 0, L4DM_WHOLE_DS,
-					     &addr, &psize)))
-	    {
-	      app_msg(app, "Error %d requesting physical address of ds %d",
-			   error, l4exc->ds.id);
-	      return -L4_EINVAL;
-	    }
-
-	  app_msg(app, "Relocating section %08lx-%08lx to %08lx",
-		       l4exc->addr, l4exc->addr+l4exc->size, addr);
-
-	  l4exc->addr = addr;
-	  l4exc->info.type &= ~L4_DSTYPE_RELOCME;
-	  relink = 1;
-	}
-    }
-
-  if (relink)
-    {
-#ifdef USE_LDSO
+    if (env->section[i].info.type & L4_DSTYPE_RELOCME)
       enter_kdebug("relink static not supported");
-#else
-      if ((error = exec_if_link(app)))
-	return error;
-
-      /* attach relocated sections (usual the application itself) */
-      if ((error = app_attach_sections_to_pager(app)))
-	{
-	  app_msg(app, "Error %d (%s) attaching sections",
-	      error, l4env_errstr(error));
-	  return error;
-	}
-#endif
-    }
 
   app_publish_lines_symbols(app);
 
@@ -1407,161 +1324,6 @@ app_cont_static(app_t *app)
   return 0;
 }
 
-#ifndef USE_LDSO
-/** Start app the new way.
- *
- * \param ct		config task descriptor
- * \param app		application descriptor
- * \return		0 on success */
-static int
-app_start_libloader(cfg_task_t *ct, app_t *app)
-{
-  int error;
-  l4_addr_t tramp_page_addr, esp;
-  app_addr_t tramp_page;
-  app_area_t *tramp_page_aa;
-  l4env_infopage_t *env = app->env;
-  l4util_mb_info_t *mbi;
-  char dbg_name[32];
-
-  /* First stage: attach startup sections which was marked by exec
-   * (usually libloader.s containing the region manager). */
-  if ((error = app_attach_startup_sections_to_pager(app)))
-    {
-      app_msg(app, "Error %d (%s) attaching sections",
-		   error, l4env_errstr(error));
-      return error;
-    }
-
-  /* create stack (also contains multiboot_info) */
-  snprintf(dbg_name, sizeof(dbg_name), "tramp %s", app->name);
-  if ((error = app_create_ds(app, APP_ADDR_STACK, env->stack_size,
-			     &tramp_page_aa, dbg_name)))
-    return error;
-
-  tramp_page      = tramp_page_aa->beg;
-  env->stack_low  = tramp_page.app;
-  env->stack_high = tramp_page.app  + env->stack_size;
-  tramp_page_addr = tramp_page.here + env->stack_size;
-
-  /* create boot info, load boot modules */
-  if ((error = app_create_mb_info(ct, app, &tramp_page, &tramp_page_addr,
-				  app->env->fprov_id, &mbi)))
-    return error;
-
-  env->addr_mb_info = HERE_TO_APP(mbi, tramp_page);
-
-  /* allocate stack */
-  if (!(esp = alloc_from_tramp_page(0x400, &tramp_page, &tramp_page_addr)))
-    {
-      app_msg(app, "No space left for stack in trampoline page "
-	     "(have %ld bytes, need %d bytes)",
-	     tramp_page_addr - tramp_page.here, 0x400);
-      return -L4_ENOMEM;
-    }
-  esp += 0x400;
-
-  /* put function parameters for l4loader_init on top of stack
-   * (we start at app->eip = env->entry_1st -- not at task_trampoline) */
-  l4util_stack_push_mword(&esp, APP_ADDR_ENVPAGE);
-  l4util_stack_push_mword(&esp, 0);
-
-  /* set application's stack pointer and instruction pointer */
-  app->esp = HERE_TO_APP(esp, tramp_page);
-  app->eip = env->entry_1st;
-
-  /* Share all program sections not yet transfered to the application
-   * (all sections but modules). This is necessary because otherwise
-   * the applications region mapper contained in libloader.s.so is not
-   * allowed to forward pagefaults to the appropriate dataspace managers. */
-  app_share_sections_with_client(app, app->tid); /* thread x.0 */
-
-  return 0;
-}
-#endif
-
-static int
-app_cont_libloader(app_t *app)
-{
-#ifdef USE_LDSO
-  enter_kdebug("loader: app_cont_libloader");
-  return 1;
-#else
-  l4_msgdope_t result;
-  l4_umword_t dw0, dw1;
-  int error;
-  int create_flag = app_setup_caps(app);
-
-  app_msg(app, "Starting at l4loader_init (%08lx)", app->env->entry_1st);
-
-  if ((error = l4ts_create_task2(&app->tid, app->eip, app->esp,
-                                 app->mcp | create_flag,
-                                 &app_pager_id, &app->caphandler,
-                                 app->prio, app->fname, 0)))
-    {
-      int ferror;
-
-      app_msg(app, "Error %d (%s) creating task %x at task server",
-	      error, l4env_errstr(error), app->tid.id.task);
-      if ((ferror = l4ts_free_task(&app->tid)))
-	app_msg(app, "Error %d (%s) freeing task %x at task server",
-	        ferror, l4env_errstr(ferror), app->tid.id.task);
-
-      return error;
-    }
-
-  /* set client as owner so that client is able to kill that task */
-  if ((error = l4ts_owner(app->tid, app->owner)))
-    {
-      app_msg(app, "Error %d (%s) setting ownership",
-		   error, l4env_errstr(error));
-      return error;
-    }
-
-  /* wait for message of libloader that we should complete
-   * the loading process */
-  for (;;)
-    {
-      l4_ipc_receive(app->tid, L4_IPC_SHORT_MSG, &dw0, &dw1,
-			  L4_IPC_NEVER, &result);
-      if (dw0 == L4LOADER_ERROR)
-	{
-	  app_msg(app, "Error from libloader");
-	  return 1;
-	}
-      else if (dw0 != L4LOADER_COMPLETE)
-	{
-	  app_msg(app, "What? Got %08lx from started application...", dw0);
-	  enter_kdebug("start_app");
-	}
-      else
-	break;
-    }
-
-  /* link binary against dynamic libraries */
-  if ((error = exec_if_link(app)))
-    return error;
-
-  app_publish_lines_symbols(app);
-
-  app_msg(app, "Continue at l4env_init (%08lx, libloader.s.so)",
-		app->env->entry_2nd);
-
-  if (app->flags & APP_SHOW_AREAS)
-    {
-      app_msg(app, "Areas:");
-      list_app_areas(app);
-    }
-
-  /* signal the loader that we are ready */
-  l4_ipc_send(app->tid, 
-		   L4_IPC_SHORT_MSG, L4LOADER_COMPLETE, APP_ADDR_ENVPAGE,
-		   L4_IPC_NEVER, &result);
-
-  return 0;
-#endif
-}
-
 static int
 app_start_interp(cfg_task_t *ct, app_t *app)
 {
@@ -1657,6 +1419,8 @@ app_cont_interp(app_t *app)
   app_msg(app, "Starting %s at %08lx via %08lx",
 	       interp, app->env->entry_1st, app->eip);
 
+  l4_imb();
+
   if ((error = l4ts_create_task2(&app->tid, app->eip, app->esp,
                                  app->mcp | create_flag,
                                  &app_pager_id, &app->caphandler,
@@ -1714,18 +1478,9 @@ app_cleanup_extern(app_t *app)
 static int
 app_cleanup_intern(app_t *app)
 {
-#ifndef USE_LDSO
-  int error;
-#endif
   app_area_t *aa;
   l4env_infopage_t *env = app->env;
   l4exec_section_t *l4exc;
-
-  /* free program sections at exec server */
-#ifndef USE_LDSO
-  if ((error = exec_if_close(app)))
-    return error;
-#endif
 
   /* go through the app_area list and omit all envpage program sections
    * from killing ds which are already killed by exec layer. Nevertheless,
@@ -1814,15 +1569,20 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
   app->flags = 0;
   if (ct->flags & CFG_F_DIRECT_MAPPED)
     app->flags |= APP_DIRECTMAP;
-  app->flags |= ct->flags & CFG_F_REBOOT_ABLE    ? APP_REBOOTABLE  : 0;
-  app->flags |= ct->flags & CFG_F_NO_VGA         ? APP_NOVGA       : 0;
-  app->flags |= ct->flags & CFG_F_NO_BIOS        ? APP_NOBIOS      : 0;
+  app->flags |= ct->flags & CFG_F_ALLOW_VGA      ? APP_ALLOW_VGA   : 0;
+  app->flags |= ct->flags & CFG_F_ALLOW_BIOS     ? APP_ALLOW_BIOS  : 0;
   app->flags |= ct->flags & CFG_F_NO_SIGMA0      ? APP_NOSIGMA0    : 0;
   app->flags |= ct->flags & CFG_F_ALLOW_CLI      ? APP_ALLOW_CLI   : 0;
   app->flags |= ct->flags & CFG_F_SHOW_APP_AREAS ? APP_SHOW_AREAS  : 0;
   app->flags |= ct->flags & CFG_F_STOP           ? APP_STOP        : 0;
   app->flags |= ct->flags & CFG_F_NOSUPERPAGES   ? APP_NOSUPER     : 0;
   app->flags |= ct->flags & CFG_F_ALL_WRITABLE   ? APP_ALL_WRITBLE : 0;
+
+#if defined(ARCH_x86) || defined(ARCH_amd64)
+  env->loader_info.has_x86_vga  = ct->flags & CFG_F_ALLOW_VGA  ? 1 : 0;
+  env->loader_info.has_x86_bios = ct->flags & CFG_F_ALLOW_BIOS ? 1 : 0;
+#endif
+
   if (cfg_fiasco_symbols)
     app->flags |= APP_SYMBOLS;
   if (cfg_fiasco_lines)
@@ -1883,9 +1643,7 @@ app_cont(app_t *app)
 
       return (app->flags & APP_MODE_SIGMA0)
 		? app_cont_static(app)
-		: (app->flags & APP_MODE_LOADER)
-		     ? app_cont_libloader(app)
-		     : app_cont_interp(app);
+		: app_cont_interp(app);
     }
 
   return -L4_EINVAL;

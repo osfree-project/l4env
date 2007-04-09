@@ -27,7 +27,6 @@
 #include <l4/thread/thread.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/l4rm/l4rm.h>
-#include <l4/util/reboot.h>
 #include <l4/util/l4_macros.h>
 #include <l4/loader/loader-client.h>
 #include <l4/generic_ts/generic_ts.h>
@@ -48,7 +47,6 @@ static l4_kernel_info_t *kip;			/**< address of KI page. */
 #ifdef ARCH_x86
 static l4_addr_t tb_stat_map_addr  = 0;		/**< address of Tbuf status. */
 #endif
-static l4_addr_t dummy_map_addr    = 0;		/**< address of dummy page. */
 
 
 /** Return <>0 if address lays inside an application area.
@@ -471,27 +469,6 @@ is_fiasco(void)
   return (l4sigma0_kip_version() == L4SIGMA0_KIP_VERSION_FIASCO);
 }
 
-/** Map dummy page. To deny direkt VGA access the dummy page is mapped in
- * place of the whole video memory (9F000-BF000) to make the application
- * happy. (see app_t flag APP_NOVGA APP_NOBIOS) */
-static int
-map_dummy_page(void)
-{
-  int error;
-  l4dm_dataspace_t ds;
-
-  if ((error = create_ds(app_dsm_id, L4_PAGESIZE, &dummy_map_addr,
-			 &ds, "loader dummy page")))
-    {
-      printf("Error %d creating dummy page ds\n", error);
-      return error;
-    }
-
-  memset((void*)dummy_map_addr, 0, L4_PAGESIZE);
-
-  return 0;
-}
-
 /** Pager thread for the application.
  *
  * \param data		pointer to parameter struct */
@@ -669,77 +646,23 @@ app_pager_thread(void *data)
 		  dw2 = l4_fpage(tb_stat_map_addr, L4_LOG2_PAGESIZE,
 				 L4_FPAGE_RO, L4_FPAGE_MAP).fpage;
 		}
-	      else if (dw1 >= 0x0009F000 && dw1 <= 0x000BFFFF)
+	      else if (dw1 >= 0x0009F000 && dw1 <= 0x000BFFFF
+                       && app->flags & APP_ALLOW_VGA)
 		{
 		  /* graphics memory requested */
-		  if (app->flags & APP_NOVGA)
-		    {
-		      /* deny direct access */
-		      dbg_pf("PF (%c, eip=%08x) %08x in video memory. "
-			     "Sending dummy page.",
-			     dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
-
-		      dw1 &= L4_PAGEMASK;
-		      dw2 = l4_fpage(dummy_map_addr, L4_LOG2_PAGESIZE,
-				     L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
-		    }
-		  else
-		    {
-		      dbg_pf("PF (%c, eip=%08x) %08x in video memory. "
-			     "Forwarding to ROOT.",
-			     dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
-		      forward_pf_rmgr(app, &dw1, &dw2, &reply,
-				      L4_LOG2_PAGESIZE);
-		    }
+                  dbg_pf("PF (%c, eip=%08x) %08x in video memory. "
+                         "Forwarding to ROOT.",
+                         dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
+                  forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
 		}
-	      else if (dw1 >= 0x000C0000 && dw1 <= 0x000FFFFF)
+	      else if (dw1 >= 0x000C0000 && dw1 <= 0x000FFFFF
+		       && app->flags & APP_ALLOW_BIOS)
 		{
 		  /* BIOS requested */
-		  if (app->flags & APP_NOBIOS)
-                    {
-		      /* deny direct access */
-		      dbg_pf("PF (%c, eip=%08x) %08x in BIOS memory. "
-			     "Sending dummy page.",
-			     dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
-
-		      dw1 &= L4_PAGEMASK;
-		      dw2 = l4_fpage(dummy_map_addr, L4_LOG2_PAGESIZE,
-				     L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
-		    }
-		  else
-		    {
-                      dbg_pf("PF (%c, eip=%08x) %08x in BIOS area. "
-                             "Forwarding to ROOT.",
-                             dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
-
-		      forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
-                    }
-		}
-	      else if (dw1 == 0x3ffff000)
-		{
-		  /* XXX Special hook: L4Linux wants to reboot. */
-		  dbg_pf("PF (%c, eip=%08x) %08x. Reboot request. "
-			 "Killing task",
-			 dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
-
-		  if ((error = l4ts_kill_task_recursive(app->tid)))
-		    {
-		      app_msg(app, "Error %d (%s) killing task "
-			           l4util_idtskfmt,
-				   error, l4env_errstr(error),
-			           l4util_idtskstr(src_tid));
-		    }
-		  else
-		    {
-		      /* success, don't reply because the sender does not
-		       * exists anymore ... */
-		      skip_reply = 1;
-		      if (app->flags & APP_REBOOTABLE)
-			{
-			  app_msg(app, "Serving reboot request");
-			  l4util_reboot();
-			}
-		    }
+		  dbg_pf("PF (%c, eip=%08x) %08x in BIOS area. "
+                         "Forwarding to ROOT.",
+                         dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
+		  forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
 		}
 #endif
 	      else
@@ -804,9 +727,6 @@ start_app_pager(void)
 
   /* map KI page */
   if ((error = map_kernel_info_page()))
-    return error;
-
-  if ((error = map_dummy_page()))
     return error;
 
   if ((l4_thread = l4thread_create_long(L4THREAD_INVALID_ID,

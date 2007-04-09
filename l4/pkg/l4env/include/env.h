@@ -126,10 +126,20 @@ typedef struct
   l4exec_info_t	info;		        ///< id/type of section
 } l4exec_section_t;
 
+/**
+ * Defines loader configuration information useful for programs.
+ * \ingroup env
+ */
+typedef struct
+{
+  int		has_x86_vga : 1;	///< program has access to VGA memory
+  int		has_x86_bios : 1;	///< program has access to BIOS memory
+} l4env_loader_info_t;
+
 /** 
  * The environment info page - should consider 64-bit architectures too.
  * With L4ENV_MAXSECT = 64 and L4ENV_MAXPATH = 256, 
- * l4env_infopage_t occupies 562 dwords 
+ * l4env_infopage_t occupies 632 dwords 
  * \ingroup env
  */
 typedef struct 
@@ -185,6 +195,8 @@ typedef struct
   l4_uint32_t		phnum;			///< number of program headers
   int			num_init_fn;
   l4_addr_t		init_fn[64];		///< dynamic[DT_INIT] of shlibs
+
+  l4env_loader_info_t	loader_info;		///< loader info for app
 
 } l4env_infopage_t;
 

@@ -63,3 +63,10 @@ Kernel_thread::bootstrap_arch()
 	Irq_alloc::lookup(0)->alloc(this, false); // reserve irq0 even though
     }
 }
+
+IMPLEMENT
+void
+Kernel_thread::arch_exit()
+{
+  exit(0);
+}

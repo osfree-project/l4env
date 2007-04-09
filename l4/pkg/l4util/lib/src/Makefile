@@ -10,10 +10,11 @@ ALL_SRC_C_only_x86    = $(addprefix ARCH-x86/, apic.c perform.c spin.c)
 ROOT_SRC_C_only_x86   = $(addprefix ARCH-x86/, rdtsc.c)
 ROOT_SRC_C_only_amd64 = $(addprefix ARCH-x86/, rdtsc.c)
 
-ALL_SRC_C_NOAPI       = alloc.c getopt2.c rand.c base64.c slmap.c \
+ALL_SRC_C_NOAPI       = alloc.c getopt2.c rand.c base64.c slmap.c kprintf.c \
 			ARCH-$(ARCH)/reboot.c
 ALL_SRC_C_L4API       = alloc.c getopt2.c micros2l4to.c queue.c rand.c sleep.c \
                         thread.c base64.c slmap.c wait_queue.c memdesc.c \
+			kprintf.c \
                         ARCH-$(ARCH)/reboot.c $(ALL_SRC_C_only_$(ARCH))
 
 ROOT_SRC_C            = reboot.c $(ROOT_SRC_C_only_$(ARCH))

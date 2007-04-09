@@ -48,7 +48,7 @@ typedef struct
 } app_area_t;
 
 /** Application descriptor. */
-typedef struct 
+typedef struct
 {
   l4_threadid_t		tid;		/**< L4 task id. */
   int			hi_first_msg;	/**< true if first message. */
@@ -61,13 +61,11 @@ typedef struct
   l4_addr_t		eip, esp;
   l4_uint32_t		flags;		/**< flags. */
 #define APP_MODE_SIGMA0	0x00000001	/**< emulate sigma0 style application */
-#define APP_MODE_LOADER	0x00000002	/**< loader mode */
 #define APP_MODE_INTERP	0x00000004	/**< interpret using libld-l4.s.so */
 #define APP_DIRECTMAP	0x00000008	/**< map program sections one-by-one */
 #define APP_SYMBOLS	0x00000010	/**< load symbols */
 #define APP_LINES	0x00000020	/**< load lines information */
-#define APP_REBOOTABLE	0x00000040	/**< application may reboot system */
-#define APP_NOVGA	0x00000080	/**< access to VGA memory denied */
+#define APP_ALLOW_VGA	0x00000080	/**< access to VGA memory allowed */
 #define APP_NOSIGMA0	0x00000100	/**< don't page other regions */
 #define APP_ALLOW_CLI	0x00000200	/**< task may execute cli/sti */
 #define APP_SHOW_AREAS	0x00000400	/**< show app areas before start */
@@ -75,7 +73,7 @@ typedef struct
 #define APP_CONT	0x00001000	/**< ensure that we cont only once */
 #define APP_NOSUPER	0x00002000	/**< don't page superpages */
 #define APP_ALL_WRITBLE	0x00004000	/**< all sections writable */
-#define APP_NOBIOS      0x00008000      /**< access to BIOS denied */
+#define APP_ALLOW_BIOS  0x00008000      /**< access to BIOS allowed */
 #define APP_MSG_IO	0x00010000	/**< internal pager flag */
   l4_addr_t		image;		/**< attached image */
   l4_size_t		sz_image;	/**< size of attached image */

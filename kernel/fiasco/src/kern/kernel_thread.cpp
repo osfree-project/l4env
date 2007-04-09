@@ -17,6 +17,7 @@ private:
   void	bootstrap()		asm ("call_bootstrap") FIASCO_FASTCALL;
   void	bootstrap_arch();
   void	run();
+  void  arch_exit() __attribute__((noreturn));
 
 protected:
   void	init_workload();
@@ -135,7 +136,7 @@ Kernel_thread::run()
 
   Helping_lock::threading_system_active = false;
 
-  _exit (0);					// Commit suicide
+  arch_exit();
 }
 
 PUBLIC inline NEEDS["processor.h"]

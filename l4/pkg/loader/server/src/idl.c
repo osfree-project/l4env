@@ -6,7 +6,7 @@
  * \date	06/11/2001
  * \author	Frank Mehnert */
 
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2003-2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details. */
 
@@ -16,6 +16,7 @@
 #include <l4/env/errno.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/l4rm/l4rm.h>
+#include <l4/util/util.h>
 
 #include "cfg.h"
 #include "app.h"
@@ -164,80 +165,10 @@ l4loader_app_info_component (CORBA_Object _dice_corba_obj,
   return app_info(task_id, l4env_page, *_dice_corba_obj, fname);
 }
 
-
-/** Load a library at runtime app's */
-long
-l4loader_app_lib_open_component (CORBA_Object _dice_corba_obj,
-                                 const char* fname,
-                                 const l4_threadid_t *fprov,
-                                 unsigned long flags,
-                                 envpage_t *envpage,
-                                 CORBA_Server_Environment *_dice_corba_env)
-{
-#ifdef USE_LDSO
-  return -L4_EINVAL;
-#else
-  app_t *app = task_to_app(*_dice_corba_obj);
-  l4env_infopage_t *env = (l4env_infopage_t*)envpage;
-  int error;
-
-  if (!app)
-    return -L4_ENOTFOUND;
-
-  if ((error = lib_load(app, fname, *fprov)))
-    return error;
-
-  app_share_sections_with_client(app, *_dice_corba_obj);
-  // copy infopage to client
-  memcpy(env, app->env, sizeof(l4env_infopage_t));
-  return 0;
-#endif
-}
-
-/** Link a library which was loaded at app's runtime */
-long
-l4loader_app_lib_link_component (CORBA_Object _dice_corba_obj,
-                                 envpage_t *envpage,
-                                 CORBA_Server_Environment *_dice_corba_env)
-{
-#ifdef USE_LDSO
-  return -L4_EINVAL;
-#else
-  app_t *app = task_to_app(*_dice_corba_obj);
-  l4env_infopage_t *env = (l4env_infopage_t*)envpage;
-
-  if (!app)
-    return -L4_ENOTFOUND;
-
-  // XXX Update infopage. We don't need to update the whole page, only
-  //     changed program sections.
-  memcpy(app->env, env, sizeof(l4env_infopage_t));
-  return lib_link(app);
-#endif
-}
-
-/** Find a symbol of a dynamic object */
-long
-l4loader_app_lib_dsym_component (CORBA_Object _dice_corba_obj,
-                                 const char* symname,
-                                 envpage_t *envpage,
-                                 l4_addr_t *addr,
-                                 CORBA_Server_Environment *_dice_corba_env)
-{
-#ifdef USE_LDSO
-  return -L4_EINVAL;
-#else
-  l4env_infopage_t *env = (l4env_infopage_t*)envpage;
-
-  return exec_if_get_dsym(symname, env, addr);
-#endif
-}
-
 /** IDL server loop */
 void
 server_loop(void)
 {
   l4loader_app_server_loop(NULL);
-  for (;;)
-    ;
+  l4_sleep_forever();
 }

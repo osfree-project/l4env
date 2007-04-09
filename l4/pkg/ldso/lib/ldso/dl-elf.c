@@ -32,6 +32,7 @@
 
 #include "ldso.h"
 #include "debug_info.h"
+#include <l4/sys/cache.h>
 
 #ifdef __LDSO_CACHE_SUPPORT__
 
@@ -620,6 +621,8 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 		};
 		ppnt++;
 	};
+
+	l4_imb();
 
 	// fm3: Do this later since _dl_debug_info_add() needs this file open
 	// _dl_close(infile);

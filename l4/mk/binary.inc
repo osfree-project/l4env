@@ -424,7 +424,7 @@ $(BID_OBJ_Makefile).inc: .general.d
 		>> $@_
         # Using LDSO does not need a RELOC address, so omit the following in
         # this case
-ifneq ($(MODE)$(USE_LDSO),loadery)
+ifneq ($(MODE),loader)
         # in case of a binary, write the link address
         # the dependency to the static file: If DEFAULT_RELOC is set,
         # all targets are made dependent on the STATIC file
@@ -464,7 +464,7 @@ else
 		>>$@_
 endif # STATIC file
 endif
-endif # MODE == loader && USE_LDSO == y
+endif # MODE != loader
 	@mv $@_ $@
 
 ifeq ($(filter scrub help,$(MAKECMDGOALS)),)

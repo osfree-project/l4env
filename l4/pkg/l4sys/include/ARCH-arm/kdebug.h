@@ -60,6 +60,9 @@ l4_sys_cli(void);
 L4_INLINE void
 l4_sys_sti(void);
 
+L4_INLINE void
+l4_kdebug_imb(void);
+
 EXTERN_C long int
 l4_atomic_add(volatile long int* mem, long int offset) LONG_CALL;
 
@@ -236,6 +239,12 @@ L4_INLINE void
 l4_sys_sti(void)
 {
   __KDEBUG_ARM_PARAM_0(0x33);
+}
+
+L4_INLINE void
+l4_kdebug_imb(void)
+{
+  __KDEBUG_ARM_PARAM_0(0x3f);
 }
 
 #endif /* ! __L4SYS__INCLUDE__ARCH_ARM__KDEBUG_H__ */

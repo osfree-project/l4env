@@ -159,12 +159,23 @@ __setup_fixed(void)
 	}
     }
 
-#ifndef ARCH_arm
-  /* adapter area (BIOS, graphics memory) */
-  fixed[num_fixed].addr = 0xA0000;
-  fixed[num_fixed].size = 0x100000 - 0xA0000;
-  fixed_type[num_fixed] = L4RM_REGION_PAGER;
-  num_fixed++;
+#if defined(ARCH_x86) || defined(ARCH_amd64)
+  if (!l4env_infopage || l4env_infopage->loader_info.has_x86_vga)
+    {
+      /* adapter area (graphics memory) */
+      fixed[num_fixed].addr = 0xA0000;
+      fixed[num_fixed].size = 0xC0000 - 0xA0000;
+      fixed_type[num_fixed] = L4RM_REGION_PAGER;
+      num_fixed++;
+    }
+  if (!l4env_infopage || l4env_infopage->loader_info.has_x86_bios)
+    {
+      /* adapter area (BIOS memory) */
+      fixed[num_fixed].addr = 0xC0000;
+      fixed[num_fixed].size = 0x100000 - 0xC0000;
+      fixed_type[num_fixed] = L4RM_REGION_PAGER;
+      num_fixed++;
+    }
 #endif
 
   /* areas where our modules (e.g. files for memfs) live */

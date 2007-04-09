@@ -51,7 +51,7 @@ TARGET_PROFILE := $(addsuffix .pr,$(filter $(BUILD_PROFILE),$(TARGET)))
 TARGET	+= $(TARGET_$(OSYSTEM)) $(TARGET_PROFILE)
 
 # define some variables different for lib.mk and prog.mk
-ifeq ($(MODE)$(USE_LDSO),loadery)
+ifeq ($(MODE),loader)
 LDFLAGS += -Wl,--dynamic-linker,libld-l4.s.so
 endif
 ifeq ($(BID_GENERATE_MAPFILE),y)

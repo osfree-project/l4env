@@ -6,7 +6,7 @@
  * \date	01/01/2001
  * \author	Frank Mehnert */
 
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2003-2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details. */
 
@@ -628,14 +628,6 @@ load_without_script(const char *fname_and_arg, l4_size_t fname_len,
       printf("Setting libpath to %s\n", cfg_libpath);
     }
 
-#ifndef USE_LDSO
-  if (!(ct.flags & CFG_F_INTERPRETER))
-    {
-      if ((error = l4rm_detach((void*) bin_addr)))
-	printf("Error %d detaching dataspace\n", error);
-    }
-#endif
-
   error = app_boot(&ct, owner);
 
   if (task_ids)
@@ -680,15 +672,9 @@ load_config_script(const char *fname_and_arg, l4_threadid_t fprov_id,
   if ((o = strchr(fname_and_arg, ' ')))
     fname_len = o-fname_and_arg;
 
-#ifdef USE_LDSO
   error = elf_check_ftype(cfg_addr, cfg_size, cfg_env);
   if (!(!(error = elf_check_ftype(cfg_addr, cfg_size, cfg_env))
         || error == -ELF_INTERPRETER || error == -ELF_BADFORMAT))
-#else
-  /* Check if user gave us the filename of an executable. cfg_env is needed
-   * here to pass ELF class and architecture to l4exec. */
-  if ((error = exec_if_ftype(cfg_ds, cfg_env)) == -L4_EINVAL)
-#endif
     return return_error_msg(error, "checking file type of \"%s\"",
 			    fname_and_arg);
 
@@ -744,13 +730,8 @@ load_config_script(const char *fname_and_arg, l4_threadid_t fprov_id,
 	      return error;
 	    }
 
-#ifdef USE_LDSO
 	  if ((error = elf_check_ftype(ct->image, ct->sz_image, cfg_env)) == -ELF_CORRUPT
               || error == -ELF_BADFORMAT)
-#else
-	  if ((error = exec_if_ftype(&ct->ds_image, cfg_env)) == -L4_EINVAL
-	      || error == -ELF_BADFORMAT)
-#endif
 	    {
 	      junk_ds(&ct->ds_image, ct->image);
 	      return return_error_msg(error, "checking file type of \"%s\"",

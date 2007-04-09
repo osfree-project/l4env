@@ -11,11 +11,6 @@ DEPENDS_PKGS	= l4con
 
 include $(L4DIR)/mk/Makeconf
 
-ifneq ($(USE_LDSO),y)
-LIBS		= -lcontxt -lcon -lconstream-server -lloaderif \
-		  -ldm_phys -lparsecmdline -levents
-else
 LIBS		= -lcontxt -lconstream-server -ldm_phys -lparsecmdline -levents
-endif
 
 include $(L4DIR)/mk/prog.mk
