@@ -11,6 +11,9 @@
 
 /* L4 includes */
 #include <l4/sys/types.h>
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
 
 #ifndef NULL
 #define NULL 0
@@ -42,5 +45,7 @@ typedef struct l4_wait_queue l4_wait_queue_t;
 inline void l4_wq_lock(l4_wait_queue_t *wq);
 inline void l4_wq_unlock(l4_wait_queue_t *wq);
 inline void l4_wq_remove_myself(l4_wait_queue_t *wq);
+
+EXTERN_C_END
 
 #endif /* __L4UTIL_WAIT_QUEUE_H */

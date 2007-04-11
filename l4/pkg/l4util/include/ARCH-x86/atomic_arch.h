@@ -32,6 +32,8 @@
  *** Implementation
  *****************************************************************************/
 
+EXTERN_C_BEGIN
+
 /* atomic compare and exchange 64 bit value */
 #define __L4UTIL_ATOMIC_HAVE_ARCH_CMPXCHG64
 L4_INLINE int
@@ -384,5 +386,7 @@ l4util_atomic_inc(volatile long *dest)
                        : "=m" (*dest)
                        : "m" (*dest));
 }
+
+EXTERN_C_END
 
 #endif /* ! __L4UTIL__INCLUDE__ARCH_X86__ATOMIC_ARCH_H__ */

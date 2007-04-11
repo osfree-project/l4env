@@ -8,6 +8,7 @@
 
 /** \defgroup memdesc Memory descriptor convenience functions */
 
+EXTERN_C_BEGIN
 /**
  * \brief Return end of virtual memory.
  * \ingroup memdesc
@@ -16,5 +17,7 @@
  *         last address of address space otherwise
  */
 l4_addr_t l4util_memdesc_vm_high(void);
+
+EXTERN_C_END
 
 #endif /* ! __L4UTIL__INCLUDE__MEMDESC_H__ */

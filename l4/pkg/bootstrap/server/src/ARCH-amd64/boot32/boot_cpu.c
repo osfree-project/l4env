@@ -201,10 +201,10 @@ static inline l4_uint16_t get_ss(void)
 { l4_uint16_t ss; asm volatile("movw %%ss,%w0" : "=r" (ss)); return ss; }
 
 #define set_idt(pseudo_desc) \
- asm volatile("lidt %0" : : "m" ((pseudo_desc)->limit))
+ asm volatile("lidt %0" : : "m" ((pseudo_desc)->limit) : "memory")
 
 #define set_gdt(pseudo_desc) \
- asm volatile("lgdt %0" : : "m" ((pseudo_desc)->limit))
+ asm volatile("lgdt %0" : : "m" ((pseudo_desc)->limit) : "memory")
 
 #define	set_tr(seg) \
  asm volatile("ltr %0" : : "rm" ((l4_uint16_t)(seg)))

@@ -18,6 +18,8 @@
 #include <l4/sys/compiler.h>
 #include <l4/util/port_io.h>
 
+EXTERN_C_BEGIN
+
 /** Acknowledge IRQ at PIC in fully special nested mode.
  * \param irq  number of interrupt to acknowledge 
  */
@@ -70,5 +72,7 @@ l4util_irq_acknowledge(unsigned int irq)
   else
     l4util_out8(0x60+irq, 0x20);     /* acknowledge the irq */
 };
+
+EXTERN_C_END
 
 #endif

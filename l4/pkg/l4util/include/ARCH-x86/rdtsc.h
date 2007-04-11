@@ -14,6 +14,8 @@
 #include <l4/sys/compiler.h>
 #include <l4/sys/l4int.h>
 
+EXTERN_C_BEGIN
+
 /* interface */
 
 #define L4_TSC_INIT_AUTO             0
@@ -326,6 +328,8 @@ l4_busy_wait_us (l4_uint64_t us)
   while (l4_rdtsc() < stop)
     ;
 }
+
+EXTERN_C_END
 
 #endif /* __l4_rdtsc_h */
 

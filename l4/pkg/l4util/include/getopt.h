@@ -5,9 +5,9 @@
 #define NULL 0
 #endif
 
-#ifdef	__cplusplus
-extern "C" {
-#endif
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
 
 /* For communication from `getopt' to the caller.
    When `getopt' finds an option that takes an argument,
@@ -89,8 +89,7 @@ extern int _getopt_internal (int argc, char *const *argv,
 			     const char *shortopts,
 		             const struct option *longopts, int *longind,
 			     int long_only);
-#ifdef	__cplusplus
-}
-#endif
+
+EXTERN_C_END
 
 #endif /* _GETOPT_H */

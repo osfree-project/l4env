@@ -47,7 +47,7 @@ NEWLINE 	\n
 #		BEGIN COMMENT;
 <COMMENT>.*$	BEGIN 0;
 rmgr		{ col +=  4; return RMGR; }
-roottask	{ col +=  4; return RMGR; }
+roottask	{ col +=  8; return RMGR; }
 sigma0		{ col +=  6; return SIGMA0; }
 task		{ col +=  4; return TASK; }
 attached	{ col +=  8; return ATTACHED; }

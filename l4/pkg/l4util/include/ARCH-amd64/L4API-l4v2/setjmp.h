@@ -14,6 +14,9 @@
 #define __UTIL_INCLUDE_ARCH_AMd64_L4API_L4V2_SETJMP_H_
 #include <l4/sys/types.h>
 #include <l4/sys/syscalls.h>
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
 
 typedef struct{
     l4_umword_t r8;		/* 0x00 */
@@ -67,5 +70,6 @@ extern int l4_thread_setjmp(l4_thread_jmp_buf env);
  */
 void l4_thread_longjmp(l4_threadid_t thread, l4_thread_jmp_buf env, int val);
 
+EXTERN_C_END
 
 #endif

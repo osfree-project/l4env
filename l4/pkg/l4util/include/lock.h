@@ -32,6 +32,8 @@
 #include <l4/sys/compiler.h>
 #include <l4/util/atomic.h>
 
+EXTERN_C_BEGIN
+
 typedef l4_uint32_t l4util_simple_lock_t;
 
 L4_INLINE int  l4_simple_try_lock(l4util_simple_lock_t *lock);
@@ -71,5 +73,7 @@ l4_simple_lock(l4util_simple_lock_t * lock)
   if (!l4_simple_try_lock(lock))
     l4_simple_lock_solid(lock);
 }
+
+EXTERN_C_END
 
 #endif

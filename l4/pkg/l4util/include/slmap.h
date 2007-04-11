@@ -3,6 +3,10 @@
 
 #include <stdlib.h>
 
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
+
 /*
  * the map structure
  *
@@ -85,6 +89,8 @@ map_elements(slmap_t* list)
       n++;
   return n;
 }
+
+EXTERN_C_END
 
 #endif /* SLMAP_H */
 

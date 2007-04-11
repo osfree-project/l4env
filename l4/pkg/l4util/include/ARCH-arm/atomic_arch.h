@@ -6,6 +6,8 @@
 
 #include <l4/sys/kdebug.h>
 
+EXTERN_C_BEGIN
+
 #define __L4UTIL_ATOMIC_HAVE_ARCH_CMPXCHG32
 L4_INLINE int
 l4util_cmpxchg32(volatile l4_uint32_t * dest,
@@ -51,5 +53,7 @@ l4util_atomic_inc(volatile long *dest)
 {
   l4_atomic_add(dest, 1);
 }
+
+EXTERN_C_END
 
 #endif /* ! __L4UTIL__INCLUDE__ARCH_ARM__ATOMIC_ARCH_H__ */

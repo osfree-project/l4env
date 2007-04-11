@@ -46,7 +46,7 @@
 static char bootstrap_mbi[16 << 10];
 
 #ifdef IMAGE_MODE
-l4_addr_t _mod_addr = MODADDR;
+l4_addr_t _mod_addr = RAM_BASE + MODADDR;
 #else
 l4_addr_t _mod_addr;
 #endif
@@ -264,6 +264,8 @@ add_module_regions(l4util_mb_info_t *mbi, l4_umword_t module, l4_addr_t *begin, 
   int r;
   const char *error_msg;
   l4util_mb_mod_t *mb_mod = (l4util_mb_mod_t*)mbi->mods_addr;
+
+  assert(module < mbi->mods_count);
 
   exec_task.begin = 0xffffffff;
   exec_task.end   = 0;

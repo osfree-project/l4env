@@ -14,6 +14,8 @@
 
 #include <l4/sys/types.h>
 
+EXTERN_C_BEGIN
+
 /** \defgroup thread Low-Level Thread Functions */
 
 /** Create an L4 thread.
@@ -39,5 +41,7 @@ l4util_attach_interrupt (int irq);
  */
 void
 l4util_detach_interrupt (void);
+
+EXTERN_C_END
 
 #endif /* __L4_THREAD_H */

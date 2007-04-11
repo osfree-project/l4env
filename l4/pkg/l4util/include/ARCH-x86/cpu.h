@@ -13,6 +13,8 @@
 
 #include <l4/sys/compiler.h>
 
+EXTERN_C_BEGIN
+
 /** \defgroup cpu CPU related functions */
 
 /**
@@ -111,6 +113,8 @@ l4util_cpu_capabilities(void)
 
   return l4util_cpu_capabilities_nocheck();
 }
+
+EXTERN_C_END
 
 #endif
 

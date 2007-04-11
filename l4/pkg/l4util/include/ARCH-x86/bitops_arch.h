@@ -32,6 +32,8 @@
  *** Implementation
  *****************************************************************************/
 
+EXTERN_C_BEGIN
+
 /* set bit */
 #define __L4UTIL_BITOPS_HAVE_ARCH_SET_BIT32
 L4_INLINE void
@@ -292,5 +294,7 @@ l4util_find_first_zero_bit(const void * dest, l4_size_t size)
 
   return res;
 }
+
+EXTERN_C_END
 
 #endif /* ! __L4UTIL__INCLUDE__ARCH_X86__BITOPS_ARCH_H__ */

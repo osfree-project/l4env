@@ -17,6 +17,9 @@
 #define _L4UTIL_STACK_H
 
 #include <l4/sys/types.h>
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
 
 L4_INLINE void l4util_stack_push_mword(l4_addr_t *stack, l4_mword_t val);
 L4_INLINE void l4util_stack_push_threadid(l4_addr_t *stack, l4_threadid_t val);
@@ -50,5 +53,7 @@ l4util_stack_push_threadid(l4_addr_t *stack, l4_threadid_t val)
   *--esp = val;
   *stack = (l4_addr_t)esp;
 }
+
+EXTERN_C_END
 
 #endif

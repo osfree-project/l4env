@@ -11,9 +11,9 @@
 #ifndef B64_EN_DECODE
 #define B64_EN_DECODE
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
 
 /** \defgroup utils_internal Internal functions */
 
@@ -41,8 +41,6 @@ void base64_encode( const char *infile, unsigned int in_size, char **outfile);
  */
 void base64_decode(const char *infile, unsigned int in_size, char **outfile);
 
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C_END
 
 #endif //B64_EN_DECODE

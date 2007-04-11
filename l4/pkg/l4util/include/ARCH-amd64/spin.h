@@ -1,6 +1,10 @@
 #ifndef __l4util_spin_h
 #define __l4util_spin_h
 
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
+
 extern void l4_spin(int x,int y);
 extern void l4_spin_vga(int x,int y);
 extern void l4_spin_n_text(int x, int y, int len, const char*s);
@@ -19,5 +23,7 @@ extern void l4_spin_n_text_vga(int x, int y, int len, const char*s);
 	l4_spin_n_text((x), (y), sizeof(text)-1, "" text)
 #define l4_spin_text_vga(x, y, text) \
 	l4_spin_n_text_vga((x), (y), sizeof(text)-1, "" text)
+
+EXTERN_C_END
 
 #endif

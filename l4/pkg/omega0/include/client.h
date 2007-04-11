@@ -15,6 +15,8 @@
 
 #include <l4/sys/types.h>
 
+EXTERN_C_BEGIN
+
 /*!\brief Omega0 IRQ descriptor, bitfields
  *\ingroup clientapi
  */
@@ -168,5 +170,6 @@ extern int omega0_next(int irq_num);
 extern omega0_alien_handler_t omega0_set_alien_handler(
     omega0_alien_handler_t handler);
 
+EXTERN_C_END
 
 #endif

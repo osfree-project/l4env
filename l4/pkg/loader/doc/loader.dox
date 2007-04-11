@@ -351,9 +351,15 @@ The following information can be find there (see the
   interpreted as a request to an adapter page of addr+0x40000000 (see
   sigma0 protocol at L4 reference manual.
 
-\par no_vga
-  Don't map the VGA area into the application. Instead map a dummy page
-  preventing the application from garbage our screen.
+\par allow_vga
+  Allow the application to map the VGA memory. This option only has an
+  effect on the x86 and amd64 architectures. The affected memory region is
+  0xA0000 to 0xC0000.
+
+\par allow_bios
+  Allow the application to map the BIOS memory. This option only has an
+  effect on the x86 and amd64 architectures. The affected memory region is
+  0xC0000 to 0x100000.
 
 \par allow_cli
   Permit the task to execute cli/sti. If this flag is not given and the

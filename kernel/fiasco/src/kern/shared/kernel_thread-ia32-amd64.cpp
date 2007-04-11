@@ -68,5 +68,5 @@ IMPLEMENT
 void
 Kernel_thread::arch_exit()
 {
-  exit(0);
+  _exit(0);
 }

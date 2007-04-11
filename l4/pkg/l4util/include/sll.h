@@ -3,6 +3,10 @@
 
 #include <stdlib.h>
 
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
+
 /*
  * the linked list structure
  */
@@ -264,5 +268,7 @@ list_elements(slist_t *head)
   for (n=0; head; head=head->next) n++;
   return (n);
 }
+
+EXTERN_C_END
 
 #endif  /* __L4UTIL__SLL_H__ */

@@ -2,6 +2,9 @@
 #define __L4UTIL__ARCH_ARCH__IRQ_H__
 
 #include <l4/sys/kdebug.h>
+#include <l4/sys/compiler.h>
+
+EXTERN_C_BEGIN
 
 /** Disable all interrupts
  */
@@ -43,5 +46,7 @@ l4util_flags_restore(l4_umword_t *flags)
 {
   enter_kdebug("l4util_flags_restore");
 }
+
+EXTERN_C_END
 
 #endif /* ! __L4UTIL__ARCH_ARCH__IRQ_H__ */

@@ -21,6 +21,8 @@
 #include <l4/sys/ipc.h>
 #include <l4/util/atomic.h>
 
+EXTERN_C_BEGIN
+
 typedef struct l4util_wq_lock_queue_elem_t
 {
   volatile struct l4util_wq_lock_queue_elem_t *next, *prev;
@@ -127,5 +129,7 @@ l4util_wq_lock_locked(l4util_wq_lock_queue_base_t *queue)
 {
   return queue->last!=NULL;
 }
+
+EXTERN_C_END
 
 #endif
