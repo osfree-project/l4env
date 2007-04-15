@@ -366,6 +366,8 @@ $(GENERAL_D_LOC): $(L4DIR)/mk/Makeconf
 		$(OBJ_BASE)/Makeconf.bid.local)
 	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
 		$(OBJ_BASE)/Makeconf.local)
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(SRC_BASE)/Makeconf.local)
 	$(if $(PKGDIR),$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
 		$(PKGDIR)/Makeconf.local))
 	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
