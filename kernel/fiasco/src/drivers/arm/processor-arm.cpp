@@ -137,7 +137,7 @@ void Proc::pause()
 {}
 
 //----------------------------------------------------------------
-IMPLEMENTATION[arm && 926]:
+IMPLEMENTATION[arm && (926 || arm11xx)]:
 
 IMPLEMENT static inline
 void Proc::pause()

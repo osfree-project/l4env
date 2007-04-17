@@ -219,7 +219,8 @@ move_modules(l4util_mb_info_t *mbi, unsigned modaddr)
       unsigned end = (L4_MB_MOD_PTR(mbi->mods_addr))[i-1].mod_end;
 
       printf("  move module %d start %x -> %x\n",i, start, start+offset);
-      if ((start+offset < 0x100000) || (end+offset) >> 10 > mbi->mem_upper)
+      if ((start+offset < 0x100000)
+	  || (end+offset) > (mbi->mem_upper * 1024 + RAM_BASE))
 	panic("can not move module to [%x,%x]\n", start+offset, end+offset);
       memmove((void *)(start+offset), (void *)start, end-start);
       (L4_MB_MOD_PTR(mbi->mods_addr))[i-1].mod_start += offset;

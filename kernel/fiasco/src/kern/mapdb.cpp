@@ -207,9 +207,9 @@ static inline
 Physframe *
 Physframe::alloc(Ram_quota *q, size_t size)
 {
-  unsigned long ps = (size*sizeof(Physframe) + Config::PAGE_SIZE-1) 
-    >> Config::PAGE_SHIFT;
-  if (!q->alloc(ps<<Config::PAGE_SHIFT))
+  unsigned long ps = (size*sizeof(Physframe) + 1023) & ~1023;
+
+  if (!q->alloc(ps))
     return 0;
 
   Physframe* block 
@@ -219,7 +219,7 @@ Physframe::alloc(Ram_quota *q, size_t size)
   if (block) 
     memset(block, 0, size * sizeof(Physframe));
   else
-    q->free(ps<<Config::PAGE_SHIFT);
+    q->free(ps);
 #else
   assert (block);
   for (unsigned i = 0; i < size; ++i)
@@ -257,9 +257,9 @@ Physframe::free(Ram_quota *q, Physframe *block, size_t size)
   for (unsigned i = 0; i < size; ++i)
     block[i].~Physframe();
   
-  size = (size*sizeof(Physframe) + Config::PAGE_SIZE-1) >> Config::PAGE_SHIFT;
+  size = (size*sizeof(Physframe) + 1023) & ~1023;
   Mapped_allocator::allocator()->unaligned_free (size, block);
-  q->free(size<<Config::PAGE_SHIFT);
+  q->free(size);
 }
 
 // 

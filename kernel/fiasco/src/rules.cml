@@ -59,8 +59,9 @@ ARM_SA                  '(sa1100) Intel StrongARM'                      text
 Choose this if you have an Intel StrongARM CPU.
 .
 
-ARM_926			'(arm926) ARM 926 Processor'
-ARM_MPCORE		'(mpcore) ARM MPCore CPU'
+ARM_926			'(arm926)  ARM 926 Processor'
+ARM_1176		'(arm1176) ARM 1176 CPU'
+ARM_MPCORE		'(mpcore)  ARM MPCore CPU'
 
 IA32_486		'(i486)  Intel 80486'				text
 Choose this if you have an Intel 80486 or equivalent CPU (i486).
@@ -458,9 +459,11 @@ require PF_SA1100 implies (ARM and ARM_SA)
 unless  PF_XSCALE suppress dependent ARM_PXA
 require PF_XSCALE implies (ARM and ARM_PXA)
 unless  PF_ISG or PF_INTEGRATOR or PF_REALVIEW suppress dependent ARM_926
+unless  PF_INTEGRATOR or PF_REALVIEW suppress dependent ARM_1176
+unless  PF_INTEGRATOR or PF_REALVIEW suppress dependent ARM_MPCORE
 require PF_ISG        implies (ARM and ARM_926)
 require PF_INTEGRATOR implies ARM
-require PF_REALVIEW   implies (ARM and (ARM_926 or ARM_MPCORE))
+require PF_REALVIEW   implies (ARM and (ARM_926 or ARM_MPCORE or ARM_1176))
 unless  PF_ISG suppress arm_isg_options
 
 #unless PF_UX or PF_PC suppress CONTEXT_4K
@@ -584,6 +587,7 @@ choices arm_processor
         ARM_SA
 	ARM_PXA
 	ARM_926
+	ARM_1176
 	ARM_MPCORE
 	default ARM_SA
 	

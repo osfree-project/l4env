@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEComponent.cpp
+ *  \file    dice/src/be/BEComponent.cpp
  *  \brief   contains the implementation of the class CBEComponent
  *
- *    \date    01/11/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/11/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -125,7 +125,8 @@ CBEComponent::CreateBackEndHeader(CFEFile * pFEFile)
 {
     // the header files are created on a per IDL file basis, no matter
     // which option is set
-    CBEHeaderFile *pHeader = CCompiler::GetClassFactory()->GetNewHeaderFile();
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEHeaderFile *pHeader = pCF->GetNewHeaderFile();
     m_HeaderFiles.Add(pHeader);
     try
     {
@@ -142,12 +143,38 @@ CBEComponent::CreateBackEndHeader(CFEFile * pFEFile)
     // add include of opcode file to header file
     if (!CCompiler::IsOptionSet(PROGRAM_NO_OPCODES))
     {
-        // get name
-        // do not use include file name, since we assume, that opcode
-        // file is in same directory
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-        string sOpcode = pNF->GetFileName(pFEFile, FILETYPE_OPCODE);
-        pHeader->AddIncludedFileName(sOpcode, true, false, pFEFile);
+	if (!CCompiler::IsOptionSet(PROGRAM_GENERATE_CLIENT))
+	{
+	    // create opcode header file outselves, because client, which
+	    // normally does, is not created
+	    CBEHeaderFile *pOpcodes = pCF->GetNewHeaderFile();
+	    m_HeaderFiles.Add(pOpcodes);
+	    try
+	    {
+		pOpcodes->CreateBackEnd(pFEFile, FILETYPE_OPCODE);
+	    }
+	    catch (CBECreateException *e)
+	    {
+		m_HeaderFiles.Remove(pOpcodes);
+		delete pOpcodes;
+		throw;
+	    }
+	    pRoot->AddOpcodesToFile(pOpcodes, pFEFile);
+	    // include opcode file to included files
+	    // do not use include file name, since the opcode file is
+	    // assumed to be in the same directory
+	    pHeader->AddIncludedFileName(pOpcodes->GetFileName(), true, false,
+		pFEFile);
+	}
+	else
+	{
+	    // get name
+	    // do not use include file name, since we assume, that opcode
+	    // file is in same directory
+	    CBENameFactory *pNF = CCompiler::GetNameFactory();
+	    string sOpcode = pNF->GetFileName(pFEFile, FILETYPE_OPCODE);
+	    pHeader->AddIncludedFileName(sOpcode, true, false, pFEFile);
+	}
     }
 }
 

@@ -4,15 +4,17 @@ INTERFACE:
 #include "helping_lock.h"
 #include "initcalls.h"
 
-class List_alloc;
+class Buddy_alloc;
 
 class Kmem_alloc : public Mapped_allocator
 {
   Kmem_alloc();
 
+public:
+  typedef Buddy_alloc Alloc;
 private:
   static Helping_lock lmm_lock;
-  static List_alloc *a;
+  static Alloc *a;
 };
 
 
@@ -23,10 +25,10 @@ IMPLEMENTATION:
 #include "config.h"
 #include "kdb_ke.h"
 #include "kmem.h"
-#include "list_alloc.h"
+#include "buddy_alloc.h"
 
-static List_alloc _a;
-List_alloc *Kmem_alloc::a = &_a;
+static Kmem_alloc::Alloc _a;
+Kmem_alloc::Alloc *Kmem_alloc::a = &_a;
 Helping_lock Kmem_alloc::lmm_lock;
 
 PUBLIC static FIASCO_INIT
@@ -50,7 +52,7 @@ Kmem_alloc::alloc(size_t o)
   void *ret;
   {
     Helping_lock_guard guard (&lmm_lock);
-    ret = a->alloc(1UL << o, o);
+    ret = a->alloc(1UL << o);
   }
   
   if (!ret)
@@ -58,7 +60,7 @@ Kmem_alloc::alloc(size_t o)
       Mapped_alloc_reaper::morecore (/* despeate= */ true);
       
       Helping_lock_guard guard (&lmm_lock);
-      ret = a->alloc(1UL << o, o);
+      ret = a->alloc(1UL << o);
     }
 
   return ret;
@@ -76,13 +78,13 @@ Kmem_alloc::free(size_t o, void *p)
 
 PUBLIC 
 void *
-Kmem_alloc::unaligned_alloc(int pages)
+Kmem_alloc::unaligned_alloc(unsigned long size)
 {
   void* ret;
 
   {
     Helping_lock_guard guard(&lmm_lock);
-    ret = a->alloc(pages * Config::PAGE_SIZE, 0);
+    ret = a->alloc(size);
   }
 
   if (!ret)
@@ -93,9 +95,9 @@ Kmem_alloc::unaligned_alloc(int pages)
 
 PUBLIC
 void
-Kmem_alloc::unaligned_free(int pages, void *page)
+Kmem_alloc::unaligned_free(unsigned long size, void *page)
 {
   Helping_lock_guard guard (&lmm_lock);
-  a->free(page, pages * Config::PAGE_SIZE);
+  a->free(page, size);
 }
 

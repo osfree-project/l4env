@@ -13,8 +13,8 @@ public:
   /// free s bytes previously allocated with alloc(s)
   virtual void free(size_t order, void *p) = 0;
 
-  virtual void *unaligned_alloc(int pages) = 0;
-  virtual void unaligned_free(int pages, void *p) = 0;
+  virtual void *unaligned_alloc(unsigned long size) = 0;
+  virtual void unaligned_free(unsigned long size, void *p) = 0;
 
   virtual void dump() const {}
 private:

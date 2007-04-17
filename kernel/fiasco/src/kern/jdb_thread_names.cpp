@@ -22,8 +22,8 @@ class Jdb_thread_names
 private:
   enum
   {
-    Name_pages   = 2,
-    Name_entries = (Name_pages<<Config::PAGE_SHIFT) / sizeof(Name_entry),
+    Name_buffer_size = 8192,
+    Name_entries = Name_buffer_size / sizeof(Name_entry),
   };
 
   static Name_entry *_names;
@@ -100,7 +100,7 @@ PUBLIC static FIASCO_INIT
 void
 Jdb_thread_names::init()
 {
-  _names = (Name_entry*)Kmem_alloc::allocator()->unaligned_alloc(Name_pages);
+  _names = (Name_entry*)Kmem_alloc::allocator()->unaligned_alloc(Name_buffer_size);
   if (!_names)
     panic("No memory for thread names");
 

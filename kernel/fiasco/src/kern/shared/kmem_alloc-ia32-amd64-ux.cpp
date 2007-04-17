@@ -18,8 +18,8 @@ Kmem_alloc::Kmem_alloc()
 
   Kip_init::setup_kmem_region (Kmem::virt_to_phys (kmem_base), kmem_size);
 
-  a->init();
-  a->free(kmem_base, kmem_size);
+  a->init(Mem_layout::Physmem);
+  a->add_mem(kmem_base, kmem_size);
 }
 
 //-----------------------------------------------------------------------------

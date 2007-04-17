@@ -128,7 +128,7 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
 			   long_msg task irq_alloc terminate preemption      \
 			   sched_context allocators utcb_init \
 			   perf_cnt x86desc gdt idt tss trap_state           \
-			   list_alloc vkey kdb_ke kernel_task 		     \
+			   buddy_alloc vkey kdb_ke kernel_task 		     \
 			   cap_space cap_space_alloc ram_quota \
 			   ram_quota_alloc 
 

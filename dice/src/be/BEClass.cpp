@@ -1561,7 +1561,8 @@ void CBEClass::Write(CBEHeaderFile *pFile)
     // since message buffer is local for this class, the class declaration
     // wraps the message buffer
     // per default we derive from CORBA_Object
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	IsTargetFile(pFile))
     {
 	// CPP TODO: should derive from CORBA_Object, _but_:
 	// then we need to have a declaration of CORBA_Object which is not a
@@ -1598,7 +1599,8 @@ void CBEClass::Write(CBEHeaderFile *pFile)
 	    pMsgBuf->WriteDeclaration(pFile);
 	    *pFile << "\n";
 	}
-	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	    IsTargetFile(pFile))
 	{
 	    *pFile << "\tprotected:\n";
 	    pFile->IncIndent();
@@ -1610,7 +1612,8 @@ void CBEClass::Write(CBEHeaderFile *pFile)
     WriteFunctions(pFile);
     WriteHelperFunctions(pFile);
     
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	IsTargetFile(pFile))
 	*pFile << "\t};\n";
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
@@ -1834,7 +1837,8 @@ void CBEClass::WriteElements(CBEHeaderFile *pFile)
     CreateOrderedElementList();
 
     // members are public
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	IsTargetFile(pFile))
     {
 	*pFile << "\tpublic:\n";
 	pFile->IncIndent();
@@ -1856,7 +1860,8 @@ void CBEClass::WriteElements(CBEHeaderFile *pFile)
             WriteTaggedType((CBEType*)(*iter), pFile);
     }
 
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	IsTargetFile(pFile))
 	pFile->DecIndent();
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
@@ -1880,7 +1885,8 @@ CBEClass::WriteFunctions(CBEHeaderFile *pFile)
     if (nFuncCount > 0)
     {
 	// members are public
-	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	    IsTargetFile(pFile))
 	{
 	    *pFile << "\tpublic:\n";
 	    pFile->IncIndent();
@@ -1901,7 +1907,8 @@ CBEClass::WriteFunctions(CBEHeaderFile *pFile)
     if (nFuncCount > 0)
     {
 	WriteExternCEnd(pFile);
-	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	    IsTargetFile(pFile))
 	    pFile->DecIndent();
     }
 

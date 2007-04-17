@@ -69,7 +69,7 @@ public:
 };
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [!arm]:
+IMPLEMENTATION [!arm || arm_nocache]:
 
 IMPLEMENT inline
 template< unsigned long Flush_area, bool Ram >

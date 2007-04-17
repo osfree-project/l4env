@@ -52,7 +52,7 @@ Kmem_alloc::Kmem_alloc()
 {
   Mword kmem_size = 8*1024*1024;
   Mword alloc_size = kmem_size;
-  a->init();
+  a->init(Mem_layout::Map_base);
 
   for (;alloc_size > 0;)
     {
@@ -77,7 +77,7 @@ Kmem_alloc::Kmem_alloc()
 	  if (Mem_layout::phys_to_pmem(r.start) == ~0UL)
 	    if (!map_pmem(r.start, size))
 	      panic("could not map physical memory %p\n", (void*)r.start);
-	  a->free((void*)Mem_layout::phys_to_pmem(r.start), size);
+	  a->add_mem((void*)Mem_layout::phys_to_pmem(r.start), size);
 	  alloc_size -= size;
 	}
       else
@@ -89,7 +89,7 @@ Kmem_alloc::Kmem_alloc()
 	  if (Mem_layout::phys_to_pmem(r.start) == ~0UL)
 	    if (!map_pmem(r.start, alloc_size))
 	      panic("could not map physical memory %p\n", (void*)r.start);
-	  a->free((void*)Mem_layout::phys_to_pmem(r.start), alloc_size);
+	  a->add_mem((void*)Mem_layout::phys_to_pmem(r.start), alloc_size);
 	  alloc_size = 0;
 	}
     }

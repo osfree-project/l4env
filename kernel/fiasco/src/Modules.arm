@@ -35,6 +35,10 @@ ifeq ("$(CONFIG_PF_SA1100)","y")
   CONFIG_KERNEL_LOAD_ADDR := 0xc0000000
 endif
 
+ifeq ("$(CONFIG_ARM_1176)","y")
+  PREPROCESS_PARTS        += arm1176 arm11xx
+endif
+
 ifeq ("$(CONFIG_PF_ISG)","y")
   SUBSYSTEMS += LIBUART
   OBJECTS_LIBUART	  += usif.o usart.o 
@@ -180,7 +184,7 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			space_index_util task thread_lock receiver timer \
 			timeout ipc_timeout deadline_timeout timeslice_timeout \
 			dirq fpu_alloc long_msg kernel_thread pic cmdline \
-			preemption k_sa1100 list_alloc trap_state warn \
+			preemption k_sa1100 buddy_alloc trap_state warn \
 			bootstrap virq uart_console vkey kern_lib_page \
 			watchdog perf_cnt kern_cnt jdb_extensions kernel_task \
 			cap_space cap_space_alloc ram_quota ram_quota_alloc 

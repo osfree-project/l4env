@@ -64,7 +64,7 @@ void *
 sbrk(size_t size)
 {
   void *ret = Kmem_alloc::allocator()
-    ->unaligned_alloc((size+Config::PAGE_SIZE-1)/Config::PAGE_SIZE);
+    ->unaligned_alloc((size+Config::PAGE_SIZE-1) & ~(Config::PAGE_SIZE-1));
   if (ret == 0) 
     ret = (void*)-1;
   else

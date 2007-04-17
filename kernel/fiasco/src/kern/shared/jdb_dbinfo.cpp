@@ -25,9 +25,11 @@ Jdb_dbinfo::init_symbols_lines ()
   Mword p;
 
   p = (sizeof(Jdb_symbol_info)*Jdb_symbol::Max_tasks) >> Config::PAGE_SHIFT;
-  Jdb_symbol::init(Kmem_alloc::allocator()->unaligned_alloc(p), p);
+  Jdb_symbol::init(Kmem_alloc::allocator()
+      ->unaligned_alloc(p*Config::PAGE_SIZE), p);
   p = (sizeof(Jdb_lines_info) *Jdb_lines::Max_tasks)  >> Config::PAGE_SHIFT;
-  Jdb_lines::init(Kmem_alloc::allocator()->unaligned_alloc(p), p);
+  Jdb_lines::init(Kmem_alloc::allocator()
+      ->unaligned_alloc(p*Config::PAGE_SIZE), p);
 }
 
 

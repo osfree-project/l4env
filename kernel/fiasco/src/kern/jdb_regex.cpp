@@ -10,7 +10,7 @@ IMPLEMENTATION:
 class Jdb_regex
 {
 private:
-  static const unsigned heap_pages = 16;
+  static const unsigned heap_size = 64 * 1024;
   static char _init_done;
 
 public:
@@ -31,10 +31,10 @@ Jdb_regex::init()
 {
   if (!_init_done)
     {
-      char *heap = (char*)Kmem_alloc::allocator()->unaligned_alloc(heap_pages);
+      char *heap = (char*)Kmem_alloc::allocator()->unaligned_alloc(heap_size);
       if (!heap)
 	panic("No memory for regex heap");
-      regex_init(heap, heap_pages * Config::PAGE_SIZE);
+      regex_init(heap, heap_size);
       _init_done = 1;
     }
 }

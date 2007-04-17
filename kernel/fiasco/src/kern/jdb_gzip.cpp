@@ -13,7 +13,7 @@ IMPLEMENTATION:
 
 class Jdb_gzip : public Console
 {
-  static const unsigned heap_pages = 34;
+  static const unsigned heap_pages = 32;
   char   active;
   char   init_done;
   static Console *uart;
@@ -24,7 +24,8 @@ Console *Jdb_gzip::uart;
 Jdb_gzip::Jdb_gzip()
 {
   _state = (Mword)-1;
-  char *heap = (char*)Kmem_alloc::allocator()->unaligned_alloc(heap_pages);
+  char *heap = (char*)Kmem_alloc::allocator()->
+    unaligned_alloc(heap_pages*Config::PAGE_SIZE);
   if (!heap)
     panic("No memory for gzip heap");
   gz_init(heap, heap_pages * Config::PAGE_SIZE, raw_write);

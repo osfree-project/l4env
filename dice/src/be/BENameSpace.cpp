@@ -500,7 +500,8 @@ void CBENameSpace::WriteElements(CBEHeaderFile *pFile)
     CreateOrderedElementList();
 
     // for C++ write namespace opening
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	IsTargetFile(pFile))
     {
 	*pFile << "\tnamespace " << GetName() << "\n";
 	*pFile << "\t{\n";
@@ -558,7 +559,8 @@ void CBENameSpace::WriteElements(CBEHeaderFile *pFile)
     }
 
     // close namespace for C++
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	IsTargetFile(pFile))
     {
 	pFile->DecIndent();
 	*pFile << "\t}\n";
@@ -582,7 +584,8 @@ void CBENameSpace::WriteElements(CBEImplementationFile *pFile)
         return;
 
     // for C++ write namespace opening
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	IsTargetFile(pFile))
     {
 	*pFile << "\tnamespace " << GetName() << "\n";
 	*pFile << "\t{\n";
@@ -626,7 +629,8 @@ void CBENameSpace::WriteElements(CBEImplementationFile *pFile)
     }
 
     // close namespace for C++
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+	IsTargetFile(pFile))
     {
 	pFile->DecIndent();
 	*pFile << "\t}\n";
