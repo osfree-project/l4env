@@ -80,7 +80,7 @@ svnversion.h.new:
 
 svnversion.h: svnversion.h.new
 	if [ -e $@ ]; then \
-	if [ 0 == `diff $@ $< | wc -l` ]; then \
+	if [ 0 = `diff $@ $< | wc -l` ]; then \
 	    rm $<; \
 	else \
 	    mv $< $@; \

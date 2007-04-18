@@ -5,13 +5,34 @@ INTERFACE [arm]:
 #include "mem_layout.h"
 
 //---------------------------------------------------------------------------
+IMPLEMENTATION [arm && armv5]:
+
+enum
+{
+  Section_cachable = 0x40e,
+  Section_no_cache = 0x402,
+  Cp15_c1 = 0x0100f,
+};
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [arm && armv6]:
+
+enum
+{
+  Section_cachable = 0x140e,
+  Section_no_cache = 0x0402,
+  Cp15_c1 = 0x803007,
+};
+
+//---------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
 
 void 
 map_1mb(void *pd, Address va, Address pa, bool cache)
 {
   Unsigned32 *const p = (Unsigned32*)pd;
-  p[va >> 20] = (pa & 0xfff00000) | (cache?0x040e:0x0402);
+  p[va >> 20] = (pa & 0xfff00000) | (cache?Section_cachable:Section_no_cache);
 }
 
 //---------------------------------------------------------------------------
@@ -191,7 +212,7 @@ extern "C" int bootstrap_main()
   map_hw(page_dir);
 
   unsigned domains      = 0x55555555; // client for all domains
-  unsigned control      = 0x0100f;
+  unsigned control      = Cp15_c1;
   //unsigned control        = 0x01003;
   //unsigned control      = 0x00063;
 

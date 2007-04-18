@@ -6,6 +6,8 @@ TARGET		= $(TARGET_$(ARCH))
 DEFAULT_RELOC_x86 = 0x00b00000
 DEFAULT_RELOC_arm = 0x00320000
 
+DEPENDS_PKGS	= x86emu
+
 PRIVATE_INCDIR	= $(SRC_DIR)
 LIBS_x86	= -lomega0
 LIBS_ALL	= -L$(OBJ_DIR)/con_yuv2rgb/OBJ-$(ARCH)_$(CPU) -lcon_yuv2rgb \

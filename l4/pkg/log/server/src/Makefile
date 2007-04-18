@@ -5,6 +5,8 @@
 PKGDIR ?= ../..
 L4DIR  ?= $(PKGDIR)/../..
 
+DEPENDS_PKGS = serial
+
 TARGET		= log
 DEFAULT_RELOC_x86 = 0x00400000
 DEFAULT_RELOC_amd64 = 0x00410000

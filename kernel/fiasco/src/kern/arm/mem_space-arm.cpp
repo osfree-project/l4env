@@ -39,8 +39,9 @@ public:
     Page_writable = Page::USER_NO, 
     /// Page is noncacheable.
     Page_noncacheable = Page::NONCACHEABLE, 
+    Page_cacheable = Page::CACHEABLE,
     /// it's a user page (USER_NO | USER_RO = USER_RW).
-    Page_user_accessible = Page::USER_RO, 
+    Page_user_accessible = Page::USER_BIT, 
     /// A mask which contains all mask bits
     Page_all_attribs = Page_writable | Page_noncacheable | Page_user_accessible,
     Page_referenced = 0,

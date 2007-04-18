@@ -1,5 +1,7 @@
 INTERFACE:
 
+#include <cassert>
+
 class Bitmap_base
 {
 private:
@@ -29,6 +31,8 @@ protected:
 
     void unlink() 
     { 
+      assert (prev_next);
+
       if (next) 
 	next->prev_next = prev_next; 
       *prev_next = next; 
@@ -137,6 +141,7 @@ Buddy_t_base<A,B,M>::free(void *block, unsigned long size)
 {
   assert ((unsigned long)block >= _base);
   assert ((unsigned long)block - _base < Max_mem);
+  assert (!_free_map[((unsigned long)block - _base) / Min_size]);
   //bool _b = 0;
   //if (_debug) printf("Buddy::free(%p, %ld)\n", block, size);
   unsigned size_index = 0;
@@ -180,7 +185,7 @@ Buddy_t_base<A,B,M>::add_mem(void *b, unsigned long size)
 
   //printf("Buddy::add_mem(%p, %lx): al_start=%lx; _base=%lx\n", b, size, al_start, _base);
 
-  //_debug = 0;
+  // _debug = 0;
   if (size <= al_start-start)
     return;
 
@@ -193,7 +198,7 @@ Buddy_t_base<A,B,M>::add_mem(void *b, unsigned long size)
       al_start += Min_size;
       size -= Min_size;
     }
-  //_debug = 1;
+  // _debug = 1;
   //dump();
 }
 
@@ -228,6 +233,7 @@ Buddy_t_base<A,B,M>::alloc(unsigned long size)
     ++size_index;
 
   //printf("Buddy::alloc(%ld): size_index=%d ", size, size_index);
+  //
 
   for (unsigned i = size_index; i < Num_sizes; ++i)
     {

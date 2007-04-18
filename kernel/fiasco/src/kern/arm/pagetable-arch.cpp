@@ -34,38 +34,15 @@ public:
 
 };
 
+
 EXTENSION class Page_table
 {
 private:
   Mword raw[4096];
-  
-  enum {
-    PDE_PRESENT      = 0x03,
-    PDE_TYPE_MASK    = 0x03,
-    PDE_TYPE_SECTION = 0x02,
-    PDE_TYPE_COARSE  = 0x01,
-    PDE_TYPE_FINE    = 0x03,
-    PDE_TYPE_FREE    = 0x00,
-
-    PDE_DOMAIN_MASK  = 0x01e0,
-    PDE_DOMAIN_SHIFT = 5,
-
-    PDE_AP_MASK      = 0x0c00,
-    PDE_CACHE_MASK   = 0x000c,
-
-    // already mask the lower 12 bits,
-    // coz always have a 4kb second level 
-    // that spans 4 pd entries
-    PT_BASE_MASK     = 0xfffffc00, 
-
-    PTE_PRESENT      = 0x03,
-    PTE_TYPE_MASK    = 0x03,
-    PTE_TYPE_LARGE   = 0x01,
-    PTE_TYPE_SMALL   = 0x02,
-    PTE_TYPE_TINY    = 0x03,
-    PTE_TYPE_FREE    = 0x00,
-
-    PAGE_BASE_MASK   = 0xfffff000,
+  enum
+  {
+    Pt_base_mask     = 0xfffffc00, 
+    Pde_type_coarse  = 0x01,
   };
 
 private:
@@ -147,6 +124,11 @@ Pte::raw() const
 { return *_pte; }
 
 PUBLIC inline
+bool 
+Pte::superpage() const
+{ return !(_pt & 3) && ((*_pte & 3) == 2); }
+
+PUBLIC inline
 unsigned long 
 Pte::size() const
 {
@@ -170,6 +152,7 @@ Pte::size() const
     }
 }
 
+
 PRIVATE inline NEEDS["mem_unit.h"]
 void
 Pte::__set(unsigned long v, bool write_back)
@@ -183,6 +166,10 @@ PUBLIC inline NEEDS[Pte::__set]
 void 
 Pte::set_invalid(unsigned long val, bool write_back)
 { __set(val & ~3, write_back); }
+
+
+//-----------------------------------------------------------------------------
+IMPLEMENTATION [arm && armv5]:
 
 PUBLIC inline NEEDS[Pte::__set]
 void 
@@ -228,7 +215,74 @@ Pte::attr(unsigned long attr, bool write_back)
     }
 }
 
-//#include "panic.h"
+
+//-----------------------------------------------------------------------------
+IMPLEMENTATION [arm && armv6]:
+
+PUBLIC inline NEEDS[Pte::__set]
+void 
+Pte::set(Address phys, unsigned long size, Mword attr, bool write_back)
+{
+  switch (_pt & 3)
+    {
+    case 0:
+      if (size != (1 << 20))
+	return;
+	{
+	  unsigned long a = attr & 0x0c; // C & B
+	  a |= ((attr ^ 0x200) & 0xfe0) << 6;
+	  __set(phys | a | 0x402, write_back);
+	}
+      break;
+    case 1:
+      if (size != (4 << 10))
+	return;
+      __set(phys | ((attr ^ 0x200) & Page::MAX_ATTRIBS) | 0x12, write_back);
+      break;
+    }
+}
+
+PUBLIC inline
+unsigned long 
+Pte::attr() const 
+{
+  switch (_pt & 3)
+    {
+    case 0:
+	{
+	  unsigned long a = *_pte & 0x0c; // C & B
+	  a |= (*_pte >> 6) & 0xfe0;
+	  return a ^ 0x200;
+	}
+    case 1:
+    default:
+      return (*_pte & Page::MAX_ATTRIBS) ^ 0x200;
+    }
+}
+
+PUBLIC inline NEEDS["mem_unit.h"]
+void 
+Pte::attr(unsigned long attr, bool write_back)
+{
+  switch (_pt & 3)
+    {
+    case 1:
+      __set((*_pte & ~Page::MAX_ATTRIBS) 
+	  | ((attr & Page::MAX_ATTRIBS) ^ 0x200), write_back);
+      break;
+    case 0:
+	{ 
+	  unsigned long a = attr & 0x0c;
+	  a |= ((attr ^ 0x200) & 0xfe0) << 6;
+	  __set((*_pte & ~0x3f8c) | a, write_back);
+	}
+      break;
+    }
+}
+
+
+//-----------------------------------------------------------------------------
+IMPLEMENTATION [arm]:
 
 IMPLEMENT
 void * Page_table::operator new( size_t s )
@@ -236,7 +290,6 @@ void * Page_table::operator new( size_t s )
   assert(s == 16*1024);
   return alloc()->alloc(14); // 2^14 = 16K
 }
-
 
 IMPLEMENT
 void Page_table::operator delete( void *b )
@@ -260,14 +313,14 @@ void Page_table::free_page_tables(void *start, void *end)
   
   for (unsigned i = (Address)start >> 20; i < ((Address)end >> 20); ++i)
     {
-      if (pde_coarse(raw + i))
+      Pte p(this, 0, raw + i);
+      if (p.valid() && !p.superpage())
 	{
-	  void *pt = (void*)Mem_layout::phys_to_pmem(raw[i] & PT_BASE_MASK);
+	  void *pt = (void*)Mem_layout::phys_to_pmem(p.raw() & Pt_base_mask);
 	  alloc()->free(10, pt); 
 	}
     }
 }
-
 
 PRIVATE inline
 static unsigned Page_table::pd_index( void const *const address )
@@ -281,57 +334,6 @@ static unsigned Page_table::pt_index( void const *const address )
   return ((Mword)address >> 12) & 255; // 4KB steps for coarse pts
 }
 
-PRIVATE static inline
-Mword Page_table::pde_valid(Mword const *pde)
-{ return *pde & PDE_PRESENT; }
-
-PRIVATE static inline
-Mword Page_table::pte_valid(Mword const *pte)
-{ return *pte & PTE_PRESENT; }
-
-PRIVATE static inline
-Mword Page_table::pde_section(Mword const *pde)
-{ return (*pde & PDE_TYPE_MASK) == PDE_TYPE_SECTION; }
-
-PRIVATE static inline
-Mword Page_table::pde_coarse(Mword const *pde)
-{ return (*pde & PDE_TYPE_MASK) == PDE_TYPE_COARSE; }
-
-PRIVATE static inline
-Mword Page_table::pte_small(Mword const *pte)
-{ return (*pte & PTE_TYPE_MASK) == PTE_TYPE_SMALL; }
-
-PRIVATE static inline
-Mword Page_table::pte_large(Mword const *pte)
-{ return (*pte & PTE_TYPE_MASK) == PTE_TYPE_LARGE; }
-
-PRIVATE static inline
-Mword Page_table::pte_tiny(Mword const *pte)
-{ return (*pte & PTE_TYPE_MASK) == PTE_TYPE_TINY; }
-
-PRIVATE static inline
-Mword Page_table::pte_type(Mword const *pte)
-{ return *pte & PTE_TYPE_MASK; }
-
-PRIVATE static inline
-Mword Page_table::pde_type(Mword const *pde)
-{ return *pde & PDE_TYPE_MASK; }
-
-
-IMPLEMENT inline
-size_t const * const Page_table::page_sizes()
-{
-  static size_t const _page_sizes[] = {4 *1024, 1024 *1024};
-  return _page_sizes;
-}
-
-IMPLEMENT inline
-size_t const * const Page_table::page_shifts()
-{
-  static size_t const _page_shifts[] = {12, 20};
-  return _page_shifts;
-}
-
 PUBLIC
 Pte 
 Page_table::walk(void *va, unsigned long size, bool write_back, Ram_quota *q)
@@ -340,7 +342,9 @@ Page_table::walk(void *va, unsigned long size, bool write_back, Ram_quota *q)
 
   Mword *pt = 0;
 
-  if (!pde_valid(raw + pd_idx)) 
+  Pte pde(this, 0, raw + pd_idx);
+
+  if (!pde.valid()) 
     {
       if (size == (4 << 10))
 	{
@@ -352,7 +356,7 @@ Page_table::walk(void *va, unsigned long size, bool write_back, Ram_quota *q)
 		q->free(1<<10);
 	    }
 	  if (!pt) 
-	    return Pte(this, 0, raw + pd_idx);
+	    return pde;
 
 	  memset(pt, 0, 1024);
 	  
@@ -360,105 +364,23 @@ Page_table::walk(void *va, unsigned long size, bool write_back, Ram_quota *q)
 	    Mem_unit::clean_dcache(pt, (char*)pt + 1024);
 
 	  raw[pd_idx] = current()->walk(pt, 0, false, 0).phys(pt)
-	    | PDE_TYPE_COARSE;
+	    | Pde_type_coarse;
 	  
 	  if (write_back || !Arm_vcache)
 	    Mem_unit::clean_dcache(raw + pd_idx, raw + pd_idx);
 	}
       else
-	return Pte(this, 0, raw + pd_idx);
+	return pde;
     }
-  else if (pde_section(raw + pd_idx)) 
-    return Pte(this, 0, raw + pd_idx);
+  else if (pde.superpage()) 
+    return pde;
 
   if (!pt)
-    pt = (Mword *)Mem_layout::phys_to_pmem(raw[pd_idx] & PT_BASE_MASK);
+    pt = (Mword *)Mem_layout::phys_to_pmem(pde.raw() & Pt_base_mask);
 
   unsigned const pt_idx = pt_index(va);
 
   return Pte(this, 1, pt + pt_idx);
-}
-PRIVATE inline NEEDS[Page_table::pd_index, Page_table::pt_index,
-	             Page_table::pte_valid, Page_table::pde_valid,
-		     Page_table::pde_section, Page_table::pte_type]
-Mword Page_table::__lookup(void *va, Address *size, Page::Attribs *a,
-			   bool &valid) const
-{
-  unsigned const pd_idx = pd_index(va);
-  unsigned const pt_idx = pt_index(va);
-  valid = false;
-
-  if (!pde_valid(raw + pd_idx)) 
-    {
-      if (size) *size = 1024*1024;
-      return raw[pd_idx];
-    }
-
-  if (pde_section(raw + pd_idx)) 
-    {
-      if(size)
-	*size = 1024*1024;
-      if(a)
-	*a = (Page::Attribs)(raw[pd_idx] & (PDE_AP_MASK | PDE_CACHE_MASK));
-
-      valid = true;
-      return (raw[pd_idx] & 0xfff00000) | ((Unsigned32)va & 0x0fffff );
-
-    } 
-  else 
-    {
-      // no test for fine pgt
-      Mword *pt = (Mword *)Mem_layout::phys_to_pmem
-	(raw[pd_idx] & PT_BASE_MASK);
-
-      if (!pte_valid(pt + pt_idx)) 
-	{
-	  // the size value must be 1024 if, the page table
-	  // is a fine one (but we do not support this at the
-	  // momemnt).
-	  if (size) *size = 4096;
-  	  return pt[pt_idx];
-	}
-
-      valid = true;
-      Unsigned32 ret = pt[pt_idx] & PAGE_BASE_MASK;
-      if (a) 
-	*a = pt[pt_idx] & (PDE_AP_MASK | PDE_CACHE_MASK);
-
-      switch(pte_type(pt + pt_idx)) 
-	{
-	case PTE_TYPE_LARGE:
-	  if(size) *size = 64*1024;
-	  return (ret | ((Unsigned32)va & 0x00ffff ));
-	default:
-	case PTE_TYPE_SMALL:
-	  if(size) *size = 4096;
-	  return (ret | ((Unsigned32)va & 0x000fff ));
-	case PTE_TYPE_TINY: // should never occur
-	  if(size) *size = 1024;
-	  return (ret | ((Unsigned32)va & 0x0003ff ));
-	}
-    }
-}
-
-#if 0
-IMPLEMENT inline NEEDS[Page_table::__lookup]
-P_ptr<void> Page_table::lookup( void *va, Address *size, Page::Attribs *a ) const
-{
-  bool valid = false;
-  Mword ret = __lookup(va, size, a, valid);
-  if(valid)
-    return P_ptr<void>(ret);
-  else
-    return P_ptr<void>();
-}
-#endif
-
-
-IMPLEMENT inline
-size_t const Page_table::num_page_sizes()
-{
-  return 2;
 }
 
 PUBLIC /*inline*/
@@ -511,7 +433,7 @@ void Page_table::copy_in(void *my_base, Page_table *o,
   if (force_flush)
     {
       for (unsigned i = pd_idx;  i < pd_idx_max; ++i)
-	if (pde_valid(raw + i))
+	if (Pte(this, 0, raw + i).valid())
 	  {
 	    Mem_unit::flush_vdcache();
 	    need_flush = true;
@@ -542,7 +464,7 @@ Page_table::invalidate(void *my_base, unsigned size, bool flush = true)
   if (flush)
     {
       for (unsigned i = pd_idx; i < pd_idx_max; ++i)
-	if (pde_valid(raw + i))
+	if (Pte(this, 0, raw + i).valid())
 	  {
 	    Mem_unit::flush_vdcache();
 	    need_flush = true;

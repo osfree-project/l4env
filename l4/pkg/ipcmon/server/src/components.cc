@@ -26,9 +26,12 @@
 
 static CapManager   *theManager = NULL;
 static bool         verbose     = false;
+static int          allow_roottask = 0;
 
 #define MT_USE_WHITELIST    1
 #define MT_USE_BLACKLIST    2
+
+#define ROOTTASK_ID         4
 
 int ipcmon_pagefault(CORBA_Object obj,
                      ipcmon_monitor_msg_buffer_t *msgbuf,
@@ -41,7 +44,8 @@ int ipcmon_pagefault(CORBA_Object obj,
 	LOGd(verbose, l4util_idfmt" trying to do IPC to %X", 
 	    l4util_idstr(*obj), fp.iofp.iopage);
 
-	if (theManager->check(obj->id.task, fp.iofp.iopage))
+	if ((allow_roottask && fp.iofp.iopage == ROOTTASK_ID)
+		|| theManager->check(obj->id.task, fp.iofp.iopage))
 	{
 		LOGd(verbose, "ipc allowed");
 		sfp.fpage = l4_iofpage(fp.iofp.iopage, 0, L4_FPAGE_MAP);
@@ -115,6 +119,8 @@ int main(int argc, const char **argv)
 	if (parse_cmdline(&argc, &argv,
 				'b', "blacklist", "blacklisting IPC monitor",
 				PARSE_CMD_SWITCH, MT_USE_BLACKLIST, &manager_type,
+				'r', "roottask-for-all", "allow everyone to communicate with the roottask",
+				PARSE_CMD_SWITCH, 1, &allow_roottask,
 				'w', "whitelist", "whitelisting IPC monitor",
 				PARSE_CMD_SWITCH, MT_USE_WHITELIST, &manager_type,
 				'v', "verbose", "verbose mode",
@@ -125,6 +131,7 @@ int main(int argc, const char **argv)
 	LOGd(verbose, "Verbose mode on.");
 	LOGd(verbose, "manager type: %s",
 	     manager_type == MT_USE_WHITELIST ? "whitelist" : "blacklist");
+	LOGd(verbose, "roottask %s allowed for everyone", allow_roottask ? "" : "not");
 
 	LOGd(verbose, "registering at names");
 	names_register("ipcmon");

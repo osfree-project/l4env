@@ -103,7 +103,8 @@ bool Thread::handle_sigma0_page_fault( Address pfa )
   return (mem_space()->v_insert((pfa & Config::SUPERPAGE_MASK),
 	(pfa & Config::SUPERPAGE_MASK),
 	Config::SUPERPAGE_SIZE,
-	Mem_space::Page_writable | Mem_space::Page_user_accessible)
+	Mem_space::Page_writable | Mem_space::Page_user_accessible 
+	| Mem_space::Page_cacheable)
       != Mem_space::Insert_err_nomem);
 }
 

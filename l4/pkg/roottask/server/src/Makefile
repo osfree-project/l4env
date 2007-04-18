@@ -5,6 +5,8 @@ L4DIR		?= $(PKGDIR)/../..
 TARGET		= roottask
 MODE		= sigma0
 
+DEPENDS_PKGS	= demangle
+
 PRIVATE_INCDIR	= $(PKGDIR)/server/src .
 
 DEFAULT_RELOC_x86	:= 0x00120000
