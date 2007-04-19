@@ -215,6 +215,29 @@ Pte::attr(unsigned long attr, bool write_back)
     }
 }
 
+PUBLIC /*inline*/
+void Page_table::activate()
+{
+  Pte p = current()->walk(this,0,false,0);
+  if(_current!=this) 
+    {
+      _current = this;
+      Mem_unit::flush_vcache();
+      asm volatile ( 
+	  "mcr p15, 0, r0, c8, c7, 0x00 \n" // TLB flush
+	  "mcr p15, 0, %0, c2, c0       \n" // pdbr
+
+	  "mrc p15, 0, r1, c2, c0       \n" 
+	  "mov r1,r1                    \n"
+	  "sub pc,pc,#4                 \n"
+	  
+	  : 
+	  : "r"(p.phys(this)) 
+	  : "r1" );
+      
+    }
+}
+
 
 //-----------------------------------------------------------------------------
 IMPLEMENTATION [arm && armv6]:
@@ -277,6 +300,29 @@ Pte::attr(unsigned long attr, bool write_back)
 	  __set((*_pte & ~0x3f8c) | a, write_back);
 	}
       break;
+    }
+}
+
+PUBLIC /*inline*/
+void Page_table::activate(unsigned long asid)
+{
+  Pte p = current()->walk(this,0,false,0);
+  if(_current!=this) 
+    {
+      _current = this;
+      asm volatile (
+	  "mcr p15, 0, r0, c7, c10, 4   \n"
+	  "mcr p15, 0, %0, c2, c0       \n" // pdbr
+	  "mcr p15, 0, %1, c13, c0, 1   \n"
+
+	  "mrc p15, 0, r1, c2, c0       \n" 
+	  "mov r1,r1                    \n"
+	  "sub pc,pc,#4                 \n"
+	  
+	  : 
+	  : "r"(p.phys(this)), "r"(asid)
+	  : "r1" );
+      
     }
 }
 
@@ -383,28 +429,6 @@ Page_table::walk(void *va, unsigned long size, bool write_back, Ram_quota *q)
   return Pte(this, 1, pt + pt_idx);
 }
 
-PUBLIC /*inline*/
-void Page_table::activate()
-{
-  Pte p = current()->walk(this,0,false,0);
-  if(_current!=this) 
-    {
-      _current = this;
-      Mem_unit::flush_vcache();
-      asm volatile ( 
-	  "mcr p15, 0, r0, c8, c7, 0x00 \n" // TLB flush
-	  "mcr p15, 0, %0, c2, c0       \n" // pdbr
-
-	  "mrc p15, 0, r1, c2, c0       \n" 
-	  "mov r1,r1                    \n"
-	  "sub pc,pc,#4                 \n"
-	  
-	  : 
-	  : "r"(p.phys(this)) 
-	  : "r1" );
-      
-    }
-}
 
 IMPLEMENT
 void Page_table::init(Page_table *current)
@@ -421,7 +445,7 @@ void Page_table::init(Page_table *current)
 
 IMPLEMENT /*inline*/
 void Page_table::copy_in(void *my_base, Page_table *o, 
-			 void *base, size_t size, bool force_flush )
+			 void *base, size_t size, unsigned long asid)
 {
   unsigned pd_idx = pd_index(my_base);
   unsigned pd_idx_max = pd_index(my_base) + pd_index((void*)size);
@@ -430,7 +454,7 @@ void Page_table::copy_in(void *my_base, Page_table *o,
 
   //printf("copy_in: %03x-%03x from %03x\n", pd_idx, pd_idx_max, o_pd_idx);
  
-  if (force_flush)
+  if (asid != ~0UL)
     {
       for (unsigned i = pd_idx;  i < pd_idx_max; ++i)
 	if (Pte(this, 0, raw + i).valid())
@@ -444,16 +468,16 @@ void Page_table::copy_in(void *my_base, Page_table *o,
   for (unsigned i = pd_idx; i < pd_idx_max; ++i, ++o_pd_idx)
     raw[i] = o->raw[o_pd_idx];
 
-  if (force_flush || !Arm_vcache)
+  if ((asid != ~0UL) || !Arm_vcache)
     Mem_unit::clean_dcache(raw + pd_idx, raw + pd_idx_max);
 
-  if (need_flush && force_flush)
-    Mem_unit::dtlb_flush();
+  if (need_flush && (asid != ~0UL))
+    Mem_unit::dtlb_flush(asid);
 }
 
 PUBLIC
 void
-Page_table::invalidate(void *my_base, unsigned size, bool flush = true)
+Page_table::invalidate(void *my_base, unsigned size, unsigned long asid = ~0UL)
 {
   unsigned pd_idx = pd_index(my_base);
   unsigned pd_idx_max = pd_index(my_base) + pd_index((void*)size);
@@ -461,7 +485,7 @@ Page_table::invalidate(void *my_base, unsigned size, bool flush = true)
   
   //printf("invalidate: %03x-%03x\n", pd_idx, pd_idx_max);
 
-  if (flush)
+  if (asid != ~0UL)
     {
       for (unsigned i = pd_idx; i < pd_idx_max; ++i)
 	if (Pte(this, 0, raw + i).valid())
@@ -477,11 +501,11 @@ Page_table::invalidate(void *my_base, unsigned size, bool flush = true)
   
   // clean the caches if manipulating the current pt or in the case if phys.
   // tagged caches.
-  if (flush || !Arm_vcache)
+  if ((asid != ~0UL) || !Arm_vcache)
     Mem_unit::clean_dcache(raw + pd_idx, raw + pd_idx_max);
   
-  if (need_flush && flush)
-    Mem_unit::tlb_flush();
+  if (need_flush && (asid != ~0UL))
+    Mem_unit::tlb_flush(asid);
 }
 
 IMPLEMENT inline

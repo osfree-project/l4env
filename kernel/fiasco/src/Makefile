@@ -17,7 +17,7 @@ help:
 	@echo "  clean          - clear all auto-generated files in auto"
 	@echo "  cleanall       - like clean + dependencies"
 	@echo "  mrproper       - like cleanall + config files"
-	@echo "  update         - update Fiasco and preprocess using cvs"
+	@echo "  update         - update Fiasco and preprocess using svn"
 	@echo "  DEPS           - dependencies between kernel object files"
 	@echo "  DEPS.ps        - graphical representation of DEPS"
 	@echo "  DEPS.tred.ps   - transitive reduction of DEPS.ps"
@@ -254,8 +254,8 @@ endif # clean, cleanall, mrproper
 
 .PHONY: update
 update:
-	cd $(srcdir)/.. && cvs -q update -dP
-	cd $(L4DIR)/tool/preprocess && cvs -q update -dP
+	cd $(srcdir)/.. && svn update
+	cd $(L4DIR)/tool/preprocess && svn update
 
 endif # srcdir != NOT_SET
 

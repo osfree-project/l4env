@@ -27,7 +27,7 @@ public:
   Page_table();
   
   void copy_in(void *my_base, Page_table *o, 
-	       void *base, size_t size = 0, bool force_flush = false);
+	       void *base, size_t size = 0, unsigned long asid = ~0UL);
 
   void *dir() const;
 

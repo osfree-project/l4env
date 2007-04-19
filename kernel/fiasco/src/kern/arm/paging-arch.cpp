@@ -1,3 +1,9 @@
+INTERFACE [arm]:
+
+class Paging
+{};
+
+//-----------------------------------------------------------------------------
 INTERFACE [arm && armv5]:
 
 #include "types.h"
@@ -14,7 +20,7 @@ namespace Page
     USER_RX  = 0x0800, ///< User Read/Execute
     USER_XO  = 0x0800, ///< User Execute only
     USER_RWX = 0x0c00, ///< User Read/Write/Execute
-    
+
     USER_BIT = 0x00800,
 
     Cache_mask    = 0x0c,
@@ -26,6 +32,7 @@ namespace Page
     BUFFERED     = 0x04, ///< Write buffer enabled
 
     MAX_ATTRIBS  = 0x0dec,
+    Local_page   = 0,
   };
 };
 
@@ -59,14 +66,14 @@ namespace Page
     BUFFERED     = 0x04, ///< Write buffer enabled
 
     MAX_ATTRIBS  = 0x0fec,
+    Local_page   = 0x800,
   };
 };
 
-class Paging
-{};
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
+
 
 /* this functions do nothing on the ARM architecture */
 PUBLIC static inline

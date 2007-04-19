@@ -1,11 +1,35 @@
-INTERFACE [arm]: //----------------------------------------------------------
+INTERFACE [arm && !sa1100]:
+
+EXTENSION class Mem_layout
+{
+public:
+  enum Virt_layout_umax {
+    User_max             = 0xc0000000,
+    Tcbs                 = 0xc0000000,  ///< % 256MB
+  };
+};
+
+
+//---------------------------------------------------------------------------
+INTERFACE [arm && sa1100]:
+
+EXTENSION class Mem_layout
+{
+public:
+  enum Virt_layout_umax {
+    User_max             = 0xd0000000,
+    Tcbs                 = 0xd0000000,  ///< % 256MB
+  };
+};
+
+
+//---------------------------------------------------------------------------
+INTERFACE [arm]:
 
 EXTENSION class Mem_layout
 {
 public:
   enum Virt_layout {
-    User_max             = 0xd0000000,
-    Tcbs                 = 0xd0000000,  ///< % 256MB
     Tcbs_end             = 0xe0000000,
     Slabs_start          = 0xe0000000,
     Slabs_end            = 0xea000000,
@@ -32,7 +56,8 @@ public:
 };
 
 
-INTERFACE [arm-sa1100]: //---------------------------------------------------
+//---------------------------------------------------------------------------
+INTERFACE [arm-sa1100]:
 
 EXTENSION class Mem_layout
 {

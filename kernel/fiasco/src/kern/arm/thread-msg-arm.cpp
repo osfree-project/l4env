@@ -45,7 +45,8 @@ Thread::setup_ipc_window(unsigned win, Address address)
   Page_table::current()->copy_in((void*)Kmem::ipc_window(win),
                            receiver()->mem_space()->dir(), 
                            (void*)address, 
-                           Config::SUPERPAGE_SIZE * 2, true);
+                           Config::SUPERPAGE_SIZE * 2, 
+			   current_mem_space()->c_asid());
 }
 
 IMPLEMENT inline
@@ -71,7 +72,8 @@ Mword Thread::update_ipc_window (Address pfa, Address remote_pfa, Mword error)
       mem_space()->dir()->copy_in((void*)pfa, 
 				  receiver()->mem_space()->dir(), 
 				  (void*)remote_pfa, 
-				  Config::SUPERPAGE_SIZE, true);
+				  Config::SUPERPAGE_SIZE, 
+				  mem_space()->c_asid());
 
       cpu_lock.clear();
 

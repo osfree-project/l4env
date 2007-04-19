@@ -170,11 +170,6 @@ current_mem_space()
   return Mem_space::current_mem_space();
 }
 
-IMPLEMENT inline
-void Mem_space::make_current()
-{
-  _dir->activate();
-}
 
 PRIVATE inline
 Page_table *Mem_space::current_pdir()
@@ -193,16 +188,17 @@ Address Mem_space::lookup( void *a ) const
 }
 
 
-IMPLEMENT inline NEEDS ["kmem.h"] 
+IMPLEMENT inline NEEDS ["kmem.h", Mem_space::c_asid] 
 void Mem_space::switchin_context()
 {
 
   // never switch to kernel space (context of the idle thread)
   if (this == kernel_space())
     return;
-  
-  _dir->invalidate((void*)Kmem::ipc_window(0), Config::SUPERPAGE_SIZE * 4);
-  
+
+  _dir->invalidate((void*)Kmem::ipc_window(0), Config::SUPERPAGE_SIZE * 4,
+      c_asid());
+
   if (Page_table::current() != dir())
     make_current();
 
@@ -319,7 +315,7 @@ Mem_space::v_delete(Address virt, unsigned long size,
   else
     pte.set_invalid(0, flush);
 
-  Mem_unit::tlb_flush((void*)virt);
+  Mem_unit::tlb_flush((void*)virt, c_asid());
 
   return a & page_attribs;
 }
@@ -341,12 +337,12 @@ Mem_space::Status Mem_space::v_insert(Address phys, Address virt,
     }
   else
     {
-      pte.set(phys, size, page_attribs, flush);
+      pte.set(phys, size, page_attribs | Page::Local_page, flush);
       return Insert_ok;
     }
 
   pte.set(phys, size, pte.attr() | page_attribs, flush);
-  Mem_unit::tlb_flush((void*)virt);
+  Mem_unit::tlb_flush((void*)virt, c_asid());
   return Insert_warn_attrib_upgrade;
 }
 
@@ -361,19 +357,19 @@ Mem_space::v_fabricate (unsigned /*task_id*/, Address address,
       *phys = address & Config::SUPERPAGE_MASK;
       *size = Config::SUPERPAGE_SIZE;
       if (attribs)
-	*attribs = Page_writable | Page_user_accessible;
+	*attribs = Page_writable | Page_user_accessible | Page_cacheable;
       return true;
     }
 
   return false;
 }
 
-IMPLEMENT inline
+IMPLEMENT inline NEEDS[Mem_space::c_asid]
 void Mem_space::kmem_update (void *addr)
 {
   // copy current shared kernel page directory
   _dir->copy_in(addr, kernel_space()->_dir, 
-	  addr, Config::SUPERPAGE_SIZE, true);
+	  addr, Config::SUPERPAGE_SIZE, c_asid());
 
 }
 
@@ -420,6 +416,8 @@ PUBLIC
 Mem_space::Mem_space(Ram_quota *q)
   : _quota(q), _dir(0)
 {
+  asid(~0UL);
+
   if (EXPECT_FALSE(!ram_quota()->alloc(sizeof(Page_table))))
       return;
 
@@ -439,5 +437,107 @@ PUBLIC
 Mem_space::Mem_space (Dir_type* pdir)
   : _dir (pdir)
 {
+  asid(0);
   enable_reverse_lookup ();
 }
+
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [armv5]:
+
+PRIVATE inline 
+void
+Mem_space::asid(unsigned long)
+{}
+
+PUBLIC inline 
+unsigned long
+Mem_space::c_asid() const
+{ return 0; }
+
+IMPLEMENT inline
+void Mem_space::make_current()
+{
+  _dir->activate();
+}
+
+
+//----------------------------------------------------------------------------
+INTERFACE [armv6]:
+
+EXTENSION class Mem_space
+{
+private:
+  unsigned long _asid;
+
+  static unsigned char _next_free_asid;
+  static Mem_space *_active_asids[256];
+};
+
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [armv6]:
+
+
+unsigned char Mem_space::_next_free_asid;
+Mem_space *Mem_space::_active_asids[256];
+
+PRIVATE inline 
+void
+Mem_space::asid(unsigned long a)
+{ _asid = a; }
+
+PUBLIC inline 
+unsigned long
+Mem_space::c_asid() const
+{ return _asid; }
+
+PRIVATE inline static
+unsigned long
+Mem_space::next_asid()
+{ 
+  unsigned long ret = _next_free_asid++;
+  return ret; 
+}
+
+PRIVATE inline NEEDS[Mem_space::next_asid]
+unsigned long
+Mem_space::asid()
+{
+  if (EXPECT_FALSE(_asid == ~0UL))
+    {
+      // FIFO ASID replacement strategy
+      unsigned char new_asid = next_asid();
+      Mem_space **bad_guy = &_active_asids[new_asid];
+      while (*bad_guy)
+	{
+	  // need ASID replacement
+	  if (*bad_guy == current_mem_space())
+	    {
+	      // do not replace the ASID of the current space
+	      new_asid = next_asid();
+	      bad_guy = &_active_asids[new_asid];
+	      continue;
+	    }
+
+	  //LOG_MSG_3VAL(current(), "ASIDr", new_asid, (Mword)*bad_guy, (Mword)this);
+	  Mem_unit::tlb_flush((*bad_guy)->_asid);
+	  (*bad_guy)->_asid = ~0UL;
+
+	  break;
+	}
+
+      *bad_guy = this;
+      _asid = new_asid;
+    }
+
+  //LOG_MSG_3VAL(current(), "ASID", (Mword)this, _asid, (Mword)__builtin_return_address(0));
+  return _asid;
+};
+
+IMPLEMENT inline NEEDS[Mem_space::asid]
+void Mem_space::make_current()
+{
+  _dir->activate(asid());
+}
+
