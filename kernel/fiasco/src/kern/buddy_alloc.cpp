@@ -60,6 +60,7 @@ public:
     Min_log2_size = MIN_LOG2_SIZE,
     Min_size = 1UL << MIN_LOG2_SIZE,
     Num_sizes = NUM_SIZES,
+	Max_size = Min_size << NUM_SIZES,
     Max_mem = MAX_MEM,
   };
 

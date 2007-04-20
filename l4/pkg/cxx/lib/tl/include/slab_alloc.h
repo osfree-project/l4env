@@ -219,10 +219,20 @@ public:
   unsigned total_objects() const { return _num_slabs * objects_per_slab; }
   unsigned free_objects() const
   {
-    if (!_empty_slabs)
-      return 0;
+    unsigned count = 0;
 
-    return _num_free * objects_per_slab; // XXX forgot partial slabs
+    /* count partial slabs first */
+    List_item::T_iter<Slab_i> s = _partial_slabs;
+    while (*s)
+      {
+        count += s->num_free;
+        s++;
+      }
+
+    /* add empty slabs */
+    count += _num_free * objects_per_slab;
+
+    return count;
   }
     
   
