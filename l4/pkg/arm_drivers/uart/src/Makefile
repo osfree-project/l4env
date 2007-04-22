@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 MODE		= libc
-SRC_CC	       := uart_integrator.cc
+SRC_CC	       := uart_pl011.cc
 SYSTEMS		= arm
 TARGET		= libarm_uart.a
 
