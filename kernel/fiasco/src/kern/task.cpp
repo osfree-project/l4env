@@ -69,6 +69,11 @@ private:
 };
 
 //---------------------------------------------------------------------------
+IMPLEMENTATION [!ux && utcb]:
+
+IMPLEMENT inline void Task::map_utcb_ptr_page() {}
+
+//---------------------------------------------------------------------------
 IMPLEMENTATION:
 
 #include "auto_ptr.h"
@@ -252,10 +257,12 @@ Task::alloc_utcb(unsigned thread)
 	return 0;
 
       Address va = user_utcb(thread) & ~(Config::PAGE_SIZE-1);
-      Mem_space::Status res = 
-	mem_space()->v_insert(Mem_layout::pmem_to_phys(p), va, 
-	    Config::PAGE_SIZE, 
-	    Mem_space::Page_writable | Mem_space::Page_user_accessible);
+      Address p_phys = current_mem_space()->virt_to_phys((Address)p);
+      assert (p_phys != ~0UL);
+      Mem_space::Status res =
+	mem_space()->v_insert(p_phys, va, Config::PAGE_SIZE, 
+	    Mem_space::Page_writable | Mem_space::Page_user_accessible
+	    | Mem_space::Page_cacheable);
 
       switch (res)
 	{

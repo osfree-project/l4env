@@ -1506,6 +1506,7 @@ void
 Pf_msg_utcb_saver::restore (Utcb *)
 {}
 
+//---------------------------------------------------------------------------
 IMPLEMENTATION[utcb]:
 
 EXTENSION class Pf_msg_utcb_saver
@@ -1526,4 +1527,81 @@ Pf_msg_utcb_saver::restore (Utcb *u)
 {
   u->snd_size = snd_size;
   u->rcv_size = rcv_size;  
+}
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [exc_ipc]:
+
+
+PRIVATE
+Ipc_err
+Thread::exception(Trap_state *ts)
+{
+  Sys_ipc_frame r;
+  L4_timeout timeout( L4_timeout::Never );
+  Thread *handler = _pager; // _exception_handler;
+
+  if (! revalidate(handler))
+    {
+      WARN ("Denying %x.%x to send exception message (ip=" L4_PTR_FMT
+	    ", trap=" L4_PTR_FMT ") to %x.%x",
+	    id().task(), id().lthread(), ts->ip(), ts->trapno(),
+	    handler ? handler->id().task() : L4_uid (L4_uid::Invalid).task(),
+	    handler ? handler->id().lthread() 
+	            : L4_uid (L4_uid::Invalid).lthread());
+
+      return Ipc_err(Ipc_err::Enot_existent);
+    }
+
+  void *old_utcb_handler = _utcb_handler;
+  _utcb_handler = ts;
+
+  // fill registers for IPC
+  r.set_msg_word(0, L4_exception_ipc::Exception_ipc_cookie_1);
+  r.set_msg_word(1, L4_exception_ipc::Exception_ipc_cookie_2);
+  r.set_msg_word(2, 0); // nop in V2
+  r.snd_desc(0);
+  r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage::all_spaces()));
+
+  Ipc_err ret (0);
+
+  Proc::cli();
+
+  Ipc_err err = do_ipc(true, handler,
+                       true, handler,
+                       timeout, &r);
+  Proc::sti();
+
+  if (EXPECT_FALSE(err.has_error()))
+    {
+      if (Config::conservative)
+        {
+          printf(" exception fault %s error = 0x%lx\n",
+                 err.snd_error() ? "send" : "rcv",
+                 err.raw());
+          if(err.snd_error())
+            {
+              kdb_ke("snd to pager failed");
+            }
+          else
+            {
+              kdb_ke("rcv from pager failed");
+            }
+        }
+      if(err.snd_error()
+         && (err.error() == Ipc_err::Enot_existent))
+        ret = (state() & Thread_cancel)
+          ? Ipc_err (0)
+          : err;
+
+      state_del(Thread_in_exception);
+    }
+   else if (r.msg_word(0) == 1)
+     state_add(Thread_dis_alien);
+
+  // restore original utcb_handler
+  _utcb_handler = old_utcb_handler;
+
+  return ret;
 }

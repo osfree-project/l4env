@@ -33,6 +33,7 @@ public:
       Page_no_attribs = 0,
       /// Page is writable.
       Page_writable = Pt_entry::Writable, 
+      Page_cacheable = 0, 
       /// Page is noncacheable.
       Page_noncacheable = Pt_entry::Noncacheable | Pt_entry::Write_through, 
       /// it's a user page.
@@ -264,7 +265,7 @@ Mem_space::v_fabricate (unsigned /*task_id*/, Address address,
       *phys = address & Config::SUPERPAGE_MASK;
       *size = Config::SUPERPAGE_SIZE;
       if (attribs)
-	*attribs = Page_writable | Page_user_accessible;
+	*attribs = Page_writable | Page_user_accessible | Page_cacheable;
       return true;
     }
 
@@ -278,7 +279,7 @@ Mem_space::tlb_flush()
   Mem_unit::tlb_flush();
 }
 
-PUBLIC inline NEEDS["config.h"]
+PUBLIC inline NEEDS["config.h", Mem_space::current_pdir]
 bool
 Mem_space::need_tlb_flush()
 {

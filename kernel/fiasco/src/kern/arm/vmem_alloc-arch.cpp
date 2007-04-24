@@ -1,11 +1,3 @@
-INTERFACE [arm]:
-
-EXTENSION class Vmem_alloc
-{
-private:
-  static Address zero_page;
-};
-
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
 
@@ -24,33 +16,18 @@ IMPLEMENTATION [arm]:
 #include <cstring>
 
 
-// this static initializer must have a higer priotity than Vmem_alloc::init()
-Address Vmem_alloc::zero_page;
-
 IMPLEMENT
 void Vmem_alloc::init()
 {
   // Allocate a generic zero page
   printf("Vmem_alloc::init()\n");
-  void *zp = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
-  std::memset( zp, 0, Config::PAGE_SIZE );
-  zero_page = Kmem_space::kdir()->walk(zp,0,false,0).phys(zp);
-  printf("  allocated zero page @%p[phys=%p]\n",
-      zp, (void*)zero_page);
 
   if(Config::VMEM_ALLOC_TEST) 
     {
       printf("Vmem_alloc::TEST\n");
 
-      printf("  allocate zero-mapped page...");
-      void *p = page_alloc((void*)(0xefc00000), ZERO_MAP );
-      printf(" [%p] done\n",p);
-      printf("  free zero-mapped page...");
-      page_free(p);
-      printf(" done\n");
-
       printf("  allocate zero-filled page...");
-      p = page_alloc((void*)(0xefc01000), ZERO_FILL );
+      void *p = page_alloc((void*)(0xefc01000), ZERO_FILL );
       printf(" [%p] done\n",p);
       printf("  free zero-filled page...");
       page_free(p);
@@ -66,34 +43,31 @@ void Vmem_alloc::init()
 }
 
 IMPLEMENT
-void *Vmem_alloc::page_alloc( void *address, Zero_fill zf, Page::Attribs pa )
+void *Vmem_alloc::page_alloc(void *address, Zero_fill zf, unsigned mode)
 {
   Address page;
   void *vpage;
 
-  if (zf != ZERO_MAP)
-    {
-      vpage = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
-      if (!vpage) 
-	return 0;
-      page = Kmem_space::kdir()->walk(vpage, 0, false, 0).phys(vpage);
-      //printf("  allocated page (virt=%p, phys=%08lx\n", vpage, page);
-      Mem_unit::inv_dcache(vpage, ((char*)vpage) + Config::PAGE_SIZE);
-    } 
-  else 
-    {
-      page = zero_page;
-      pa = Page::KERN_RO;
-    }
+  vpage = Mapped_allocator::allocator()->alloc(Config::PAGE_SHIFT);
+  
+  if (EXPECT_FALSE(!vpage)) 
+    return 0;
 
-#if 0
-  printf("  phys=%08lx\n", page);
-  printf("  address=%p\n", address);
-#endif
+  page = Kmem_space::kdir()->walk(vpage, 0, false, 0).phys(vpage);
+  //printf("  allocated page (virt=%p, phys=%08lx\n", vpage, page);
+  Mem_unit::inv_dcache(vpage, ((char*)vpage) + Config::PAGE_SIZE);
+
   // insert page into master page table
   Pte pte = Kmem_space::kdir()->walk(address, Config::PAGE_SIZE, true,
       Ram_quota::root);
-  pte.set(page, Config::PAGE_SIZE, pa | Page::CACHEABLE, true);
+
+  unsigned long pa = Page::CACHEABLE;
+  if (mode & User)
+    pa |= Page::USER_RW;
+  else
+    pa |= Page::KERN_RW;
+
+  pte.set(page, Config::PAGE_SIZE, Mem_page_attr(pa), true);
 
   Mem_unit::dtlb_flush(address);
 
@@ -119,8 +93,7 @@ void Vmem_alloc::page_free(void *page)
   pte.set_invalid(0, true);
   Mem_unit::dtlb_flush(page);
   
-  if (phys != zero_page)
-    Mapped_allocator::allocator()->free_phys(Config::PAGE_SHIFT, (void*)phys);
+  Mapped_allocator::allocator()->free_phys(Config::PAGE_SHIFT, (void*)phys);
 
 }
 
@@ -137,9 +110,6 @@ void *Vmem_alloc::page_unmap(void *page)
   pte.set_invalid(0, true);
   Mem_unit::dtlb_flush(page);
   
-  if (phys != zero_page)
-    return (void*)Mem_layout::phys_to_pmem(phys);
-
-  return 0;
+  return (void*)Mem_layout::phys_to_pmem(phys);
 }
 

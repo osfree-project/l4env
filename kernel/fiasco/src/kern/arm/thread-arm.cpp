@@ -45,10 +45,6 @@ Thread::print_page_fault_error(Mword e)
          (e & 0x00020000)?'r':'w');
 }
 
-PUBLIC inline
-void
-Thread::destroy_utcb()
-{}
 
 //
 // Public services
@@ -123,6 +119,13 @@ extern "C" {
   Mword pagefault_entry(const Mword pfa, const Mword error_code,
                         const Mword pc, Mword *const sp)
   {
+#if 0 // Doubvle PF detect
+    static unsigned long last_pfa = ~0UL;
+    LOG_MSG_3VAL(current(),"PF", pfa, last_pfa, 0);
+    if (last_pfa == pfa)
+      kdb_ke("DBF");
+    last_pfa = pfa;
+#endif
     // Pagefault in user mode
     if (PF::is_usermode_error(error_code))
       {
@@ -308,8 +311,6 @@ Thread::Thread(Task* task,
   _exc_ip = ~0UL;
   _in_exception = false;
 
-  Lock_guard <Thread_lock> guard (thread_lock());
-
   *reinterpret_cast<void(**)()> (--_kernel_sp) = user_invoke;
 
   // clear out user regs that can be returned from the thread_ex_regs
@@ -321,6 +322,8 @@ Thread::Thread(Task* task,
   mem_space()->kmem_update(this);
   // make sure the thread's kernel stack is mapped in its address space
   //  _task->kmem_update(reinterpret_cast<Address>(this));
+
+  setup_utcb_kernel_addr();
 
   caps_init (current_thread());
   _pager = _ext_preempter = nil_thread;
@@ -369,158 +372,25 @@ Thread::user_ip(Mword ip)
 
 
 PUBLIC inline NEEDS ["trap_state.h"]
-Mword
+int
 Thread::send_exception(Trap_state *ts)
 {
-  state_del(Thread_cancel);
-  Proc::sti();        // enable interrupts, we're sending IPC
+  if (_pager != kernel_thread
+      && _pager->utcb()->status & Utcb::Handle_exception)
+    {
+      state_change(~Thread_cancel, Thread_in_exception);
 
-  Ipc_err err = exception(ts);
+      Proc::sti();		// enable interrupts, we're sending IPC
+      Ipc_err err = exception(ts);
 
-  if (err.has_error() && err.error() == Ipc_err::Enot_existent)
-    return 0;
+      if (err.has_error() && err.error() == Ipc_err::Enot_existent)
+	return 0;
 
-  return 1;           // We did it
+      return 1;      // We did it
+    }
+  return 0;
 }
 
-
-PRIVATE
-Ipc_err
-Thread::exception(Trap_state *ts)
-{
-  if (mem_space()->is_sigma0())
-    {
-      puts("KERNEL: Exception in Sigma0: killing SIGMA0");
-      ts->dump();
-      halt();
-    }
-
-  Sys_ipc_frame r;
-  struct Message_header
-    {
-      L4_fpage     fp;
-      L4_msgdope   size_dope;
-      L4_msgdope   snd_dope;
-      Mword        words[3];
-      L4_str_dope  excp_regs;
-    };
-
-  Message_header snd_msg;
-
-
-  L4_timeout timeout( L4_timeout::Never );
-  Thread *handler = _pager; // _exception_handler;
-
-  if (! revalidate(handler))
-    {
-      WARN ("Denying %x.%x to send exception message (pc=%x"
-	    ", error=%x) to %x.%x",
-	    id().task(), id().lthread(), ts->pc, ts->error_code, 
-	    handler ? handler->id().task() : L4_uid (L4_uid::Invalid).task(),
-	    handler ? handler->id().lthread() 
-	            : L4_uid (L4_uid::Invalid).lthread());
-
-      return Ipc_err(Ipc_err::Enot_existent);
-    }
-
-  // fill registers for IPC
-  r.set_msg_word(0, L4_exception_ipc::Exception_ipc_cookie_1);
-  r.set_msg_word(1, L4_exception_ipc::Exception_ipc_cookie_2);
-  r.set_msg_word(2, 0); // nop in V2
-  r.snd_desc((Mword)&snd_msg);
-  r.rcv_desc((Mword)&snd_msg);
-  snd_msg.fp = L4_fpage::all_spaces();
-  snd_msg.size_dope = L4_msgdope(L4_snd_desc(0), 3,1);
-  snd_msg.snd_dope  = L4_msgdope(L4_snd_desc(0), 3,1);
-  snd_msg.excp_regs.snd_size = sizeof(Trap_state);
-  snd_msg.excp_regs.rcv_size = sizeof(Trap_state);
-  snd_msg.excp_regs.snd_str = (Unsigned8*)ts;
-  snd_msg.excp_regs.rcv_str = (Unsigned8*)ts;
-
-  _in_exception = true;
-  asm volatile ( "" : : : "memory" );
-
-  if (_exc_ip != ~0UL)
-    ts->pc = user_ip();
-
-  Ipc_err ret (0);
-  Proc::cli();
-  Ipc_err err = do_ipc(true, handler,
-                       true, handler,
-                       timeout, &r);
-  Proc::sti();
-
-  if (EXPECT_FALSE(err.has_error()
-                   && err.error() != Ipc_err::Recanceled
-                   && err.error() != Ipc_err::Secanceled
-                   && err.error() != Ipc_err::Seaborted
-                   && err.error() != Ipc_err::Reaborted))
-    {
-      if (Config::conservative)
-        {
-          printf("KERNEL: Error %s exception (err=0x%lx) %s ",
-                 err.snd_error() ? "sending" : "rcveiving", err.raw(),
-                 err.snd_error() ? "to" : "from");
-          handler->id().print();
-          printf("\nKERNEL: killing thread ");
-          id().print();
-          puts("");
-          ts->dump();
-          halt();
-
-          if (err.snd_error())
-            kdb_ke("snd to pager failed");
-          else
-            kdb_ke("rcv from pager failed");
-        }
-
-      if (err.snd_error())
-        {
-          if (err.error() == Ipc_err::Enot_existent)
-            ret = (state() & Thread_cancel)
-              ? Ipc_err (0)
-              : err;
-          else if (err.error() == Ipc_err::Semsgcut
-                   || err.error() == Ipc_err::Sercvpfto)
-            {
-              printf("KERNEL: Pager is not willing to handle exceptions\n"
-                     "KERNEL: killing thread: ");
-              id().print();
-              puts("");
-              ts->dump();
-
-              halt();
-            }
-        }
-    }
-
-
-  if (r.msg_word(0) == 1)
-    state_add(Thread_dis_alien);
-
-  {
-    Lock_guard<Cpu_lock> lock(&cpu_lock);
-
-    if (EXPECT_FALSE(_exc_ip != ~0UL))
-      {
-        extern char leave_by_trigger_exception[];
-	user_ip(ts->pc);
-        ts->pc = (Mword)leave_by_trigger_exception;
-        ts->cpsr &= ~Proc::Status_mode_mask; // clear mode
-        ts->cpsr |= Proc::Status_mode_supervisor
-                     | Proc::Status_interrupts_disabled;
-      }
-    else
-      {
-        ts->cpsr &= ~Proc::Status_mode_mask; // clear mode
-        ts->cpsr |= Proc::Status_mode_user;
-      }
-
-    _in_exception = false;
-  }
-
-  return ret;
-}
 
 PRIVATE inline
 bool
@@ -544,15 +414,112 @@ Thread::do_trigger_exception(Entry_frame *r)
       // store FIQ and IRQ Mask bits in lowest two bits of exception IP
       // (PC ist always word aligned --> no Thumb support yet)
       _exc_ip |= (r->psr >> 6) & 0x03; 
-      if (!_in_exception)
-        {
-          extern char leave_by_trigger_exception[];
-          r->pc = (Mword)leave_by_trigger_exception;
-          r->psr &= ~Proc::Status_mode_mask; // clear mode
-          r->psr |= Proc::Status_mode_supervisor
-                     | Proc::Status_interrupts_disabled;
-        }
+      
+      extern char leave_by_trigger_exception[];
+      r->pc = (Mword)leave_by_trigger_exception;
+      r->psr &= ~Proc::Status_mode_mask; // clear mode
+      r->psr |= Proc::Status_mode_supervisor
+	| Proc::Status_interrupts_disabled;
+
       return 1;
     }
   return 0;
+}
+
+
+PUBLIC inline
+void
+Thread::transfer_fpu(Thread *)
+{}
+
+
+PRIVATE static inline
+void
+Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
+{
+  Trap_state *ts = (Trap_state*)rcv->_utcb_handler;
+  Utcb *snd_utcb = (Utcb*)snd->local_id();
+  Mword       s  = snd_utcb->snd_size;
+
+  if (EXPECT_FALSE(rcv->exception_triggered()))
+    {
+      // triggered exception pending
+      Cpu::memcpy_mwords (ts, snd_utcb->values, s > 19 ? 19 : s);
+      if (EXPECT_TRUE(s > 15))
+	rcv->_exc_ip = (rcv->_exc_ip & ~0x3) 
+	  | ((snd_utcb->values[15] >> 6) & 3);
+      if (EXPECT_TRUE(s > 19))
+	rcv->user_ip(snd_utcb->values[19]);
+
+      ts->cpsr &= ~Proc::Status_mode_mask; // clear mode
+      ts->cpsr |= Proc::Status_mode_supervisor
+	| Proc::Status_interrupts_disabled;
+    }
+  else
+    {
+      Cpu::memcpy_mwords (ts, snd_utcb->values, s > 20 ? 20 : s);
+      ts->cpsr &= ~Proc::Status_mode_mask; // clear mode
+      ts->cpsr |= Proc::Status_mode_user;
+    }
+
+  if (snd_utcb->status & Utcb::Transfer_fpu)
+    snd->transfer_fpu(rcv);
+
+  rcv->state_del(Thread_in_exception);
+}
+
+
+PRIVATE static inline NEEDS[Thread::access_utcb]
+void
+Thread::copy_ts_to_utcb(Thread *snd, Thread *rcv)
+{
+  Trap_state *ts = (Trap_state*)snd->_utcb_handler;
+
+  {
+    Lock_guard <Cpu_lock> guard (&cpu_lock);
+    Utcb *rcv_utcb = rcv->access_utcb();
+
+    Mword        r = rcv_utcb->rcv_size;
+    if (EXPECT_FALSE(snd->exception_triggered()))
+      {
+	Cpu::memcpy_mwords (rcv_utcb->values, ts, r > 19 ? 19 : r);
+	if (EXPECT_TRUE(r > 15))
+	  rcv_utcb->values[15] = (ts->cpsr & ~(0x3 << 6)) 
+	    | ((snd->_exc_ip & 0x3) << 6);
+	if (EXPECT_TRUE(r > 19))
+	  rcv_utcb->values[19] = snd->user_ip();
+
+      }
+    else
+      Cpu::memcpy_mwords (rcv_utcb->values, ts, r > 20 ? 20 : r);
+
+    if (rcv_utcb->status & Utcb::Inherit_fpu)
+	snd->transfer_fpu(rcv);
+
+  }
+}
+
+
+//-----------------------------------------------------------------------------
+IMPLEMENTATION [arm && vcache]:
+
+PRIVATE inline
+Utcb*
+Thread::access_utcb() const
+{
+  // Do not use the alias mapping of the UTCB for the current address space
+  return current_mem_space() == mem_space() 
+    ? (Utcb*)local_id()
+    : utcb();
+}
+
+
+//-----------------------------------------------------------------------------
+IMPLEMENTATION [arm && !vcache]:
+
+PRIVATE inline
+Utcb*
+Thread::access_utcb() const
+{
+  return utcb();
 }

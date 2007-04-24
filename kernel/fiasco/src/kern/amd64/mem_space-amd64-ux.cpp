@@ -63,6 +63,29 @@ IMPLEMENTATION [ux,amd64]:
 #include "mapped_alloc.h"
 #include "std_macros.h"
 
+
+PUBLIC inline
+bool 
+Mem_space::set_attributes(Address virt, unsigned page_attribs)
+{
+  Pd_entry *p = _dir->lookup(virt)
+    ->pdp()->lookup(virt)
+    ->pdir()->lookup(virt);
+  Pt_entry *e;
+
+  if (!p->valid() || p->superpage())
+    return 0;
+
+  e = p->ptab()->lookup(virt);
+  if (!e->valid())
+    return 0;
+
+  e->del_attr(Page::MAX_ATTRIBS);
+  e->add_attr(page_attribs);
+  return true;
+}
+
+
 PRIVATE
 void
 Mem_space::dir_shutdown()

@@ -30,6 +30,7 @@ EXTENSION class Mem_layout
 {
 public:
   enum Virt_layout {
+    V2_utcb_addr	 = User_max - 0x10000,
     Tcbs_end             = 0xe0000000,
     Slabs_start          = 0xe0000000,
     Slabs_end            = 0xea000000,
@@ -48,6 +49,7 @@ public:
     Space_index		 = 0xeff00000,
     Map_base             = 0xf0000000,
     Map_end              = 0xffff0000,
+    Utcb_ptr_page        = 0xffffd000,
     Kern_lib_base	 = 0xffffe000,
     Ivt_base             = 0xffff0000,
 

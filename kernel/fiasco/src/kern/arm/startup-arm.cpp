@@ -14,6 +14,7 @@ IMPLEMENTATION [arm]:
 #include "processor.h"
 #include "static_init.h"
 #include "timer.h"
+#include "utcb_init.h"
 #include "vmem_alloc.h"
 
 #include <cstdlib>
@@ -49,4 +50,5 @@ Startup::stage2()
   Cpu::init();
   Timer::init();
   Kern_lib_page::init();
+  Utcb_init::init();
 }

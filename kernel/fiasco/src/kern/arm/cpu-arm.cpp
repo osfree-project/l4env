@@ -13,7 +13,7 @@ public:
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm && armv5]:
 
-enum { Cp15_c1 = 0x317f };
+enum { Cp15_c1 = 0x327f };
 
 
 //---------------------------------------------------------------------------
@@ -103,6 +103,17 @@ void Cpu::init()
   Pte pte = Kmem_space::kdir()->walk((void*)Kmem_space::Ivt_base, 4096,
       true, Ram_quota::root);
 
-  pte.set((unsigned long)&ivt_start, 4096, Page::USER_NO | Page::CACHEABLE,
+  pte.set((unsigned long)&ivt_start, 4096, 
+      Mem_page_attr(Page::KERN_RW | Page::CACHEABLE),
       true);
+
+  Mem_unit::tlb_flush();
+}
+
+
+PUBLIC inline static
+void
+Cpu::memcpy_mwords( void *dst, void const *src, unsigned words)
+{
+  __builtin_memcpy(dst, src, words * sizeof(unsigned long));
 }

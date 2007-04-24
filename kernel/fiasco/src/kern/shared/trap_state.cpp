@@ -53,6 +53,11 @@ Trap_state::Handler Trap_state::base_handler FIASCO_FASTCALL;
 
 PUBLIC inline
 Mword
+Trap_state::trapno() const
+{ return _trapno; }
+
+PUBLIC inline
+Mword
 Trap_state::ip() const
 { return _eip; }
 

@@ -191,7 +191,7 @@ namespace Page
 
   enum Attribs_enum 
   {
-    USER_NO       = 0x00000002, ///< User No access
+    KERN_RW       = 0x00000002, ///< User No access
     USER_RO       = 0x00000004, ///< User Read only
     USER_RW       = 0x00000006, ///< User Read/Write
     USER_RX       = 0x00000004, ///< User Read/Execute

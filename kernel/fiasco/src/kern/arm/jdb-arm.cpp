@@ -94,7 +94,7 @@ Jdb::access_mword_task(Address virt, Task_num task)
 
       if (pte.phys() != (phys & ~(Config::SUPERPAGE_SIZE-1)))
 	pte.set(phys & ~(Config::SUPERPAGE_SIZE-1), Config::SUPERPAGE_SIZE,
-	    Page::USER_NO | Page::CACHEABLE, true);
+	    Mem_page_attr(Page::KERN_RW | Page::CACHEABLE), true);
 
       addr = Mem_layout::Jdb_tmp_map_area + (phys & (Config::SUPERPAGE_SIZE-1));
     }

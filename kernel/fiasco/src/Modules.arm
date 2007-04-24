@@ -8,7 +8,7 @@ SUBSYSTEMS := 	ABI LIBAMM KERNEL LIBK DRIVERS MINILIBC \
 
 
 PREPROCESS_PARTS 	+= arch $(CONFIG_ABI) 32bit $(CONFIG_XARCH) serial   \
-                           h3800 jdb_thread_names noncont_mem
+                           h3800 jdb_thread_names noncont_mem utcb exc_ipc
 
 ifeq ("$(CONFIG_LIST_ALLOC_SANITY)","y")
   PREPROCESS_PARTS	+= list_alloc_debug
@@ -187,7 +187,8 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			preemption k_sa1100 buddy_alloc trap_state warn \
 			bootstrap virq uart_console vkey kern_lib_page \
 			watchdog perf_cnt kern_cnt jdb_extensions kernel_task \
-			cap_space cap_space_alloc ram_quota ram_quota_alloc 
+			cap_space cap_space_alloc ram_quota ram_quota_alloc \
+			utcb_init utcb_support
 
 
 boot_info_IMPL	  	:= boot_info boot_info-arch

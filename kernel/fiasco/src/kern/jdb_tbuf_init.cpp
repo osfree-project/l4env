@@ -59,16 +59,14 @@ void Jdb_tbuf_init::init(Observer *o)
       max_entries(n);
       unsigned size = n*sizeof(Tb_entry_fit);
 
-      if (! Vmem_alloc::page_alloc((void*) status(),
-				   Vmem_alloc::ZERO_FILL, Page::USER_RW))
+      if (! Vmem_alloc::page_alloc((void*) status(), Vmem_alloc::ZERO_FILL, Vmem_alloc::User))
 	panic("jdb_tbuf: alloc status page at "L4_PTR_FMT" failed", 
 	      (Address)Mem_layout::Tbuf_status_page);
 
       Address va = (Address) buffer();
       for (unsigned i=0; i<size/Config::PAGE_SIZE; i++)
 	{
-	  if (! Vmem_alloc::page_alloc((void*)va, 
-				       Vmem_alloc::ZERO_FILL, Page::USER_RW))
+	  if (! Vmem_alloc::page_alloc((void*)va, Vmem_alloc::ZERO_FILL, Vmem_alloc::User))
 	    panic("jdb_tbuf: alloc buffer at "L4_PTR_FMT" failed", va);
 	  
 	  va += Config::PAGE_SIZE;

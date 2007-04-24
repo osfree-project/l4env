@@ -13,13 +13,9 @@ namespace Page
   typedef Unsigned32 Attribs;
 
   enum Attribs_enum {
-    KERN_RO  = 0x0000,
-    USER_NO  = 0x0400, ///< User No access
-    USER_RO  = 0x0800, ///< User Read only
+    KERN_RW  = 0x0400, ///< User No access
+    USER_RO  = 0x0000, ///< User Read only
     USER_RW  = 0x0c00, ///< User Read/Write
-    USER_RX  = 0x0800, ///< User Read/Execute
-    USER_XO  = 0x0800, ///< User Execute only
-    USER_RWX = 0x0c00, ///< User Read/Write/Execute
 
     USER_BIT = 0x00800,
 
@@ -47,13 +43,10 @@ namespace Page
   typedef Unsigned32 Attribs;
 
   enum Attribs_enum {
-    KERN_RO  = 0x0000,
-    USER_NO  = 0x0200, ///< User No access
-    USER_RO  = 0x0020, ///< User Read only
-    USER_RW  = 0x0220, ///< User Read/Write
-    USER_RX  = 0x0020, ///< User Read/Execute
-    USER_XO  = 0x0020, ///< User Execute only
-    USER_RWX = 0x0220, ///< User Read/Write/Execute
+    KERN_RO  = 0x0210,
+    KERN_RW  = 0x0010, ///< User No access
+    USER_RO  = 0x0230, ///< User Read only
+    USER_RW  = 0x0030, ///< User Read/Write
 
     USER_BIT = 0x0020,
 
@@ -65,7 +58,7 @@ namespace Page
     WRITETHROUGH = 0x08, ///< Write through cached
     BUFFERED     = 0x04, ///< Write buffer enabled
 
-    MAX_ATTRIBS  = 0x0fec,
+    MAX_ATTRIBS  = 0x0ffc,
     Local_page   = 0x800,
   };
 };

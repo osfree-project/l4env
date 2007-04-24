@@ -36,14 +36,14 @@ public:
   enum Page_attrib {
     Page_no_attribs = 0,
     /// Page is writable.
-    Page_writable = Page::USER_NO, 
+    Page_writable = Mem_page_attr::Write,
+    Page_user_accessible = Mem_page_attr::User,
     /// Page is noncacheable.
-    Page_noncacheable = Page::NONCACHEABLE, 
+    Page_noncacheable = Page::NONCACHEABLE,
     Page_cacheable = Page::CACHEABLE,
     /// it's a user page (USER_NO | USER_RO = USER_RW).
-    Page_user_accessible = Page::USER_BIT, 
     /// A mask which contains all mask bits
-    Page_all_attribs = Page_writable | Page_noncacheable | Page_user_accessible,
+    Page_all_attribs = Page_user_accessible | Page_writable | Page_cacheable,
     Page_referenced = 0,
     Page_dirty = 0,
   };
@@ -99,8 +99,10 @@ IMPLEMENTATION [arm]:
 #include "mapped_alloc.h"
 #include "l4_types.h"
 #include "panic.h"
+#include "paging.h"
 #include "kmem.h"
 #include "mem_unit.h"
+#include "utcb.h"
 
 // 
 // class Mem_space
@@ -120,11 +122,28 @@ Mem_space::valid() const
 
 // Mapping utilities
 
-IMPLEMENT inline
-bool
-Mem_space::is_mappable(Address, size_t)
+/**
+ * Get size of UTCB area
+ */
+PRIVATE inline NEEDS ["utcb.h"]
+Mword
+Mem_space::utcb_size_pages()
 {
-  return true;
+  return (L4_uid::threads_per_task()*sizeof(Utcb) + (Config::PAGE_SIZE -1))
+          / Config::PAGE_SIZE;
+}
+
+IMPLEMENT inline NEEDS[Mem_space::utcb_size_pages]
+bool
+Mem_space::is_mappable(Address addr, size_t size)
+{
+  if ((addr + size) <= Mem_layout::V2_utcb_addr)
+    return true;
+
+  if (addr >= Mem_layout::V2_utcb_addr + utcb_size_pages()*Config::PAGE_SIZE)
+    return true;
+
+  return false;
 }
 
 PUBLIC static inline NEEDS["mem_unit.h"]
@@ -276,7 +295,6 @@ Address Mem_space::virt_to_phys_s0(void *a) const // pgtble lookup
   return (Address)Mem_space::lookup(a);
 }
 
-
 IMPLEMENT
 bool Mem_space::v_lookup(Address virt, Address *phys,
 		     Address *size, unsigned *page_attribs)
@@ -284,7 +302,7 @@ bool Mem_space::v_lookup(Address virt, Address *phys,
   Pte p = _dir->walk( (void*)virt, 0, false,0);
   
   if (size) *size = p.size();
-  if (page_attribs) *page_attribs = p.attr();
+  if (page_attribs) *page_attribs = p.attr().get_abstract();
   if (phys) *phys = p.phys((void*)virt);
   return p.valid();
 }
@@ -308,18 +326,21 @@ Mem_space::v_delete(Address virt, unsigned long size,
   Mem_unit::flush_vcache((void*)(virt & ~(pte.size()-1)), 
       (void*)((virt & ~(pte.size()-1)) + pte.size()));
 
-  unsigned long a = pte.attr();
+  Mem_page_attr a = pte.attr();
+  unsigned long abs_a = a.get_abstract();
 
   if (!(page_attribs & Page_user_accessible))
-    pte.attr(a & ~page_attribs, flush);
+    {
+      a.set_ap(abs_a & ~page_attribs);
+      pte.attr(a, flush);
+    }
   else
     pte.set_invalid(0, flush);
 
   Mem_unit::tlb_flush((void*)virt, c_asid());
 
-  return a & page_attribs;
+  return abs_a & page_attribs;
 }
-
 
 IMPLEMENT
 Mem_space::Status Mem_space::v_insert(Address phys, Address virt, 
@@ -327,21 +348,24 @@ Mem_space::Status Mem_space::v_insert(Address phys, Address virt,
 {
   bool flush = Page_table::current() == _dir;
   Pte pte = _dir->walk((void*)virt, size, flush, ram_quota());
-
   if (pte.valid())
     {
       if (EXPECT_FALSE(pte.size() != size || pte.phys() != phys))
 	return Insert_err_exists;
-      if (pte.attr() == page_attribs)
+      if (pte.attr().get_abstract() == page_attribs)
 	return Insert_warn_exists;
     }
   else
     {
-      pte.set(phys, size, page_attribs | Page::Local_page, flush);
+      Mem_page_attr a(Page::Local_page);
+      a.set_abstract(page_attribs);
+      pte.set(phys, size, a, flush);
       return Insert_ok;
     }
 
-  pte.set(phys, size, pte.attr() | page_attribs, flush);
+  Mem_page_attr a = pte.attr();
+  a.set_abstract(a.get_abstract() | page_attribs);
+  pte.set(phys, size, a, flush);
   Mem_unit::tlb_flush((void*)virt, c_asid());
   return Insert_warn_attrib_upgrade;
 }

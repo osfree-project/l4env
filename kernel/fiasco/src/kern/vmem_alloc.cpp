@@ -12,7 +12,12 @@ public:
   enum Zero_fill {
     NO_ZERO_FILL = 0,
     ZERO_FILL,		///< Fill the page with zeroes.
-    ZERO_MAP,		///< Allocate nothing but map the global zero page.
+  };
+
+  enum
+  {
+    Kernel = 0,
+    User = 1
   };
   
   static void init();
@@ -29,7 +34,7 @@ public:
    */
   static void *page_alloc (void *address,
 			   Zero_fill zf = NO_ZERO_FILL,
-			   Page::Attribs pa = Page::USER_NO | Page::CACHEABLE);
+			   unsigned mode = Kernel);
 
   /**
    * Free the page at the given virtual address.  If kernel memory was
@@ -39,6 +44,7 @@ public:
    */
   static void page_free (void *page);
 
+#if 0
   /**
    * Set the page attributes of an already existing page of kernel memory.
    *
@@ -46,6 +52,7 @@ public:
    * @param pa page attributes to use for the page table entry.
    */
   static void *page_attr (void *address, Page::Attribs pa);
+#endif
 
 private:
   static void page_map (void *address, int order, Zero_fill zf,

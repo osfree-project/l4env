@@ -32,7 +32,7 @@ void Kern_lib_page::init()
   
   pte.set((Address)&kern_lib_start - Mem_layout::Map_base 
       + Mem_layout::Sdram_phys_base,
-      Config::PAGE_SIZE, Page::USER_RX | Page::CACHEABLE, true);
+      Config::PAGE_SIZE, Mem_page_attr(Page::USER_RO | Page::CACHEABLE), true);
 
 }
 

@@ -1,4 +1,52 @@
 //---------------------------------------------------------------------------
+INTERFACE[arm]:
+
+class Mem_page_attr
+{
+  friend class Pte;
+
+public:
+  unsigned long get_ap() const;
+  void set_ap(unsigned long ap);
+
+private:
+  unsigned long _a;
+};
+
+
+
+//---------------------------------------------------------------------------
+INTERFACE[arm && armv5]:
+
+EXTENSION class Mem_page_attr
+{
+public:
+  enum 
+  {
+    Write   = 0x400,
+    User    = 0x800,
+    Ap_mask = 0xc00,
+  };
+
+
+};
+
+
+//---------------------------------------------------------------------------
+INTERFACE[arm && armv6]:
+
+EXTENSION class Mem_page_attr
+{
+public:
+  enum 
+  {
+    Write   = 0x200,
+    User    = 0x020,
+    Ap_mask = 0x220,
+  };
+};
+
+//---------------------------------------------------------------------------
 INTERFACE[arm && !vcache]:
 class Pte 
 {
@@ -19,6 +67,8 @@ INTERFACE [arm]:
 #include "paging.h"
 
 class Ram_quota;
+
+
 
 EXTENSION class Pte
 {
@@ -75,6 +125,37 @@ IMPLEMENTATION [arm]:
 #include "mem_unit.h"
 #include "kdb_ke.h"
 #include "ram_quota.h"
+
+PUBLIC inline explicit
+Mem_page_attr::Mem_page_attr(unsigned long attr) : _a(attr)
+{}
+
+PRIVATE inline
+unsigned long
+Mem_page_attr::raw() const
+{ return _a; }
+
+PUBLIC inline
+void
+Mem_page_attr::set_caching(unsigned long del, unsigned long set)
+{
+  del &= Page::Cache_mask;
+  set &= Page::Cache_mask;
+  _a = (_a & ~del) | set;
+}
+
+PUBLIC inline NEEDS[Mem_page_attr::get_ap]
+unsigned long
+Mem_page_attr::get_abstract() const
+{ return get_ap() | (_a & Page::Cache_mask); }
+
+PUBLIC inline NEEDS[Mem_page_attr::set_ap]
+void
+Mem_page_attr::set_abstract(unsigned long a)
+{ 
+  _a = (_a & ~Page::Cache_mask) | (a & Page::Cache_mask);
+  set_ap(a);
+}
 
 Page_table *Page_table::_current;
   
@@ -170,46 +251,63 @@ Pte::set_invalid(unsigned long val, bool write_back)
 
 //-----------------------------------------------------------------------------
 IMPLEMENTATION [arm && armv5]:
+  
+IMPLEMENT inline
+unsigned long 
+Mem_page_attr::get_ap() const
+{
+  static unsigned char const _map[4] = { 0x8, 0x4, 0x0, 0xc };
+  return ((unsigned long)_map[(_a >> 10) & 0x3]) << 8UL;
+}
 
-PUBLIC inline NEEDS[Pte::__set]
+IMPLEMENT inline
 void 
-Pte::set(Address phys, unsigned long size, Mword attr, bool write_back)
+Mem_page_attr::set_ap(unsigned long ap)
+{
+  static unsigned char const _map[4] = { 0x4, 0x4, 0x0, 0xc };
+  _a = (_a & ~0xc00) | (((unsigned long)_map[(ap >> 10) & 0x3]) << 8UL);
+}
+
+PUBLIC inline NEEDS[Pte::__set, Mem_page_attr::raw]
+void 
+Pte::set(Address phys, unsigned long size, Mem_page_attr const &attr, 
+    bool write_back)
 {
   switch (_pt & 3)
     {
     case 0:
       if (size != (1 << 20))
 	return;
-      __set(phys | (attr & Page::MAX_ATTRIBS) | 2, write_back);
+      __set(phys | (attr.raw() & Page::MAX_ATTRIBS) | 2, write_back);
       break;
     case 1:
 	{ 
 	  if (size != (4 << 10))
 	    return;
-	  unsigned long ap = attr & 0xc00; ap |= ap >> 2; ap |= ap >> 4; 
-	  __set(phys | (attr & 0x0c) | ap | 2, write_back);
+	  unsigned long ap = attr.raw() & 0xc00; ap |= ap >> 2; ap |= ap >> 4; 
+	  __set(phys | (attr.raw() & 0x0c) | ap | 2, write_back);
 	}
       break;
     }
 }
 
-PUBLIC inline
-unsigned long 
-Pte::attr() const { return *_pte & 0xc0c; }
+PUBLIC inline NEEDS[Mem_page_attr::Mem_page_attr]
+Mem_page_attr 
+Pte::attr() const { return Mem_page_attr(*_pte & 0xc0c); }
 
 PUBLIC inline NEEDS["mem_unit.h"]
 void 
-Pte::attr(unsigned long attr, bool write_back)
+Pte::attr(Mem_page_attr const &attr, bool write_back)
 {
   switch (_pt & 3)
     {
     case 0:
-      __set((*_pte & ~0xc0c) | (attr & 0xc0c), write_back);
+      __set((*_pte & ~0xc0c) | (attr.raw() & 0xc0c), write_back);
       break;
     case 1:
 	{ 
-	  unsigned long ap = attr & 0xc00; ap |= ap >> 2; ap |= ap >> 4; 
-	  __set((*_pte & ~0xffc) | (attr & 0x0c) | ap, write_back);
+	  unsigned long ap = attr.raw() & 0xc00; ap |= ap >> 2; ap |= ap >> 4; 
+	  __set((*_pte & ~0xffc) | (attr.raw() & 0x0c) | ap, write_back);
 	}
       break;
     }
@@ -242,9 +340,24 @@ void Page_table::activate()
 //-----------------------------------------------------------------------------
 IMPLEMENTATION [arm && armv6]:
 
+IMPLEMENT inline
+unsigned long 
+Mem_page_attr::get_ap() const
+{
+  return (_a & User) | ((_a & Write) ^ Write);
+}
+
+IMPLEMENT inline NEEDS[Mem_page_attr::raw]
+void 
+Mem_page_attr::set_ap(unsigned long ap)
+{
+  _a = (_a & ~(User | Write)) | (ap & User) | ((ap & Write) ^ Write) | 0x10;
+}
+
 PUBLIC inline NEEDS[Pte::__set]
 void 
-Pte::set(Address phys, unsigned long size, Mword attr, bool write_back)
+Pte::set(Address phys, unsigned long size, Mem_page_attr const &attr, 
+    bool write_back)
 {
   switch (_pt & 3)
     {
@@ -252,21 +365,21 @@ Pte::set(Address phys, unsigned long size, Mword attr, bool write_back)
       if (size != (1 << 20))
 	return;
 	{
-	  unsigned long a = attr & 0x0c; // C & B
-	  a |= ((attr ^ 0x200) & 0xfe0) << 6;
-	  __set(phys | a | 0x402, write_back);
+	  unsigned long a = attr.raw() & 0x0c; // C & B
+	  a |= (attr.raw() & 0xff0) << 6;
+	  __set(phys | a | 0x2, write_back);
 	}
       break;
     case 1:
       if (size != (4 << 10))
 	return;
-      __set(phys | ((attr ^ 0x200) & Page::MAX_ATTRIBS) | 0x12, write_back);
+      __set(phys | (attr.raw() & Page::MAX_ATTRIBS) | 0x2, write_back);
       break;
     }
 }
 
-PUBLIC inline
-unsigned long 
+PUBLIC inline NEEDS[Mem_page_attr::raw]
+Mem_page_attr
 Pte::attr() const 
 {
   switch (_pt & 3)
@@ -274,30 +387,30 @@ Pte::attr() const
     case 0:
 	{
 	  unsigned long a = *_pte & 0x0c; // C & B
-	  a |= (*_pte >> 6) & 0xfe0;
-	  return a ^ 0x200;
+	  a |= (*_pte >> 6) & 0xff0;
+	  return Mem_page_attr(a);
 	}
     case 1:
     default:
-      return (*_pte & Page::MAX_ATTRIBS) ^ 0x200;
+      return Mem_page_attr(*_pte & Page::MAX_ATTRIBS);
     }
 }
 
-PUBLIC inline NEEDS["mem_unit.h"]
+PUBLIC inline NEEDS["mem_unit.h", Mem_page_attr::raw]
 void 
-Pte::attr(unsigned long attr, bool write_back)
+Pte::attr(Mem_page_attr const &attr, bool write_back)
 {
   switch (_pt & 3)
     {
     case 1:
       __set((*_pte & ~Page::MAX_ATTRIBS) 
-	  | ((attr & Page::MAX_ATTRIBS) ^ 0x200), write_back);
+	  | (attr.raw() & Page::MAX_ATTRIBS), write_back);
       break;
     case 0:
 	{ 
-	  unsigned long a = attr & 0x0c;
-	  a |= ((attr ^ 0x200) & 0xfe0) << 6;
-	  __set((*_pte & ~0x3f8c) | a, write_back);
+	  unsigned long a = attr.raw() & 0x0c;
+	  a |= (attr.raw() & 0xff0) << 6;
+	  __set((*_pte & ~0x3fcc) | a, write_back);
 	}
       break;
     }

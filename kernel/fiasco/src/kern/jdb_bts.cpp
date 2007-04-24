@@ -88,8 +88,8 @@ Jdb_bts::allocate()
 {
   for (Address addr=Bts_ctrl; addr<Bts_start+Bts_size; addr+=Config::PAGE_SIZE)
     {
-      if (! Vmem_alloc::page_alloc((void*) addr,
-	                           Vmem_alloc::ZERO_FILL, Page::USER_RW))
+      if (! Vmem_alloc::page_alloc((void*) addr, 
+	    Vmem_alloc::ZERO_FILL, Vmem_alloc::User))
 	panic("jdb_bts:: alloc buffer at "L4_PTR_FMT" failed", addr);
     }
 

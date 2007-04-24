@@ -62,7 +62,7 @@ ux_probe(con_accel_t *accel)
   if (!l4sigma0_kip_kernel_is_ux())
     return -L4_ENOTFOUND;
 
-  printf("Found Fiasco/UX\n");
+  printf("Found Fiasco-UX\n");
 
   if (!(vhw = l4_vhw_get(kip)))
     return -L4_ENOTFOUND;

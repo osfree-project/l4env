@@ -8,6 +8,7 @@ IMPLEMENTATION [ia32-abs_syscalls]:
 #include <cstring>
 #include "config.h"
 #include "cpu.h"
+#include "kernel_task.h"
 #include "mem_layout.h"
 #include "panic.h"
 #include "paging.h"
@@ -50,11 +51,8 @@ Sys_call_page::init()
   SYSCALL_SYMS(task_new);
   SYSCALL_SYMS(privctrl);
 
-  if (!Vmem_alloc::page_alloc((void*)Mem_layout::Syscalls,
-			      Vmem_alloc::ZERO_FILL,
-                              Mem_space::Page_user_accessible 
-			      | Pd_entry::global()
-			      | Page::CACHEABLE))
+  if (!Vmem_alloc::page_alloc((void*)Mem_layout::Syscalls, 
+	Vmem_alloc::ZERO_FILL, Vmem_alloc::User))
     panic("FIASCO: can't allocate system-call page.\n");
 
   printf ("Absolute KIP Syscalls using: %s\n",
@@ -82,4 +80,7 @@ Sys_call_page::init()
   COPY_SYSCALL(lthread_ex_regs);
   COPY_SYSCALL(task_new);
   COPY_SYSCALL(privctrl);
+
+  Kernel_task::kernel_task()->mem_space()->set_attributes(Mem_layout::Syscalls,
+      Page::USER_RO);
 }

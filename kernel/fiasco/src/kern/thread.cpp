@@ -914,18 +914,26 @@ IMPLEMENTATION [exc_ipc]:
 KIP_KERNEL_FEATURE("exception_ipc");
 
 
+//---------------------------------------------------------------------------
+IMPLEMENTATION [utcb]:
+
+
 PRIVATE static inline
 void
 Thread::copy_utcb_to_utcb(Thread *snd, Thread *rcv)
 {
-  Mword s = snd->utcb()->snd_size;
-  Mword r = rcv->utcb()->rcv_size;
+  assert (cpu_lock.test());
+
+  Utcb *snd_utcb = snd->access_utcb();
+  Utcb *rcv_utcb = rcv->access_utcb();
+  Mword s = snd_utcb->snd_size;
+  Mword r = rcv_utcb->rcv_size;
 
   if (r > Utcb::Max_words) r = Utcb::Max_words;
 
-  Cpu::memcpy_mwords (rcv->utcb()->values, snd->utcb()->values, r < s ? r : s);
-  if ((rcv->utcb()->status & Utcb::Inherit_fpu) 
-      && (snd->utcb()->status & Utcb::Transfer_fpu))
+  Cpu::memcpy_mwords (rcv_utcb->values, snd_utcb->values, r < s ? r : s);
+  if ((rcv_utcb->status & Utcb::Inherit_fpu) 
+      && (snd_utcb->status & Utcb::Transfer_fpu))
     snd->transfer_fpu(rcv);
 }
 
@@ -945,7 +953,7 @@ Thread::copy_utcb_to(Thread* receiver)
 }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [!exc_ipc]:
+IMPLEMENTATION [!utcb]:
 
 PRIVATE inline
 void
@@ -1030,11 +1038,31 @@ void
 Thread::unset_utcb_ptr() {}
 
 
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION[exc_ipc]:
+PRIVATE inline
+void
+Thread::setup_exception_ipc() 
+{ _utcb_handler = 0; }
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [!exc_ipc]:
+
+PRIVATE inline
+void
+Thread::setup_exception_ipc() 
+{}
+
+
 //----------------------------------------------------------------------------
 IMPLEMENTATION[utcb]:
 
+#include "utcb.h"
+
 /** Clears the utcb pointer of the Thread
- *  Reason: To avoid a stole pointer after unmapping and deallocating
+ *  Reason: To avoid a stale pointer after unmapping and deallocating
  *  the UTCB. Without this the Thread_lock::clear will access the UTCB
  *  after the unmapping the UTCB -> POOFFF.
  */
@@ -1046,6 +1074,46 @@ Thread::unset_utcb_ptr()
   local_id(0);
 }
 
+
+PRIVATE
+void
+Thread::destroy_utcb()
+{
+  task()->free_utcb(id().lthread());
+}
+
+
+/** Setup the UTCB pointer of this thread.
+ */
+PRIVATE
+void
+Thread::setup_utcb_kernel_addr()
+{
+  Utcb *ptr = task()->alloc_utcb(id().lthread());
+  if (!ptr)
+    kdb_ke("could not allocate UTCB");
+
+  utcb(ptr);
+  local_id(task()->user_utcb(id().lthread()));
+
+  setup_exception_ipc();
+}
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION[!utcb]: 
+
+/** Dummy function to hold code in thread-ia32-ux-v2x0 generic.
+ */
+PRIVATE inline
+void
+Thread::setup_utcb_kernel_addr()
+{}
+
+PRIVATE inline
+void
+Thread::destroy_utcb()
+{}
 
 
 // ----------------------------------------------------------------------------

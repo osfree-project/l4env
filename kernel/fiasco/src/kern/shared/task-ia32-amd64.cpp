@@ -13,11 +13,6 @@ Task::~Task()
 }
 
 //------------------------------------------------------------------------
-IMPLEMENTATION [{ia32,amd64}-utcb]:
-
-IMPLEMENT inline void Task::map_utcb_ptr_page() {}
-
-//------------------------------------------------------------------------
 IMPLEMENTATION [ia32-v2-utcb]:
 
 #include "paging.h"

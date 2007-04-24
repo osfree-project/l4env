@@ -45,6 +45,7 @@ IMPLEMENTATION [smas]:
 #include "cpu_lock.h"
 #include "globals.h"
 #include "lock_guard.h"
+#include "kernel_task.h"
 #include "kmem.h"
 #include "mem_layout.h"
 #include "mem_space.h"
@@ -65,7 +66,7 @@ Smas::Smas()
   memset (_spaces, 0, _available_size*sizeof(_spaces[0]));
 
   if (! Vmem_alloc::page_alloc ((void*) Mem_layout::Smas_trampoline,
-				Vmem_alloc::NO_ZERO_FILL, Page::USER_NO))
+	Vmem_alloc::NO_ZERO_FILL))
     panic("Cannot allocate trampoline page for smas");
 
   // copy the code (position independant) to the trampoline page
@@ -74,7 +75,8 @@ Smas::Smas()
          &tramp_small_end - &tramp_small_after_sysexit_func);
 
   // make page readable by user
-  Vmem_alloc::page_attr ((void*) Mem_layout::Smas_trampoline, Page::USER_RO);
+  Kernel_task::kernel_task()->mem_space()
+    ->set_attributes(Mem_layout::Smas_trampoline, Page::USER_RO);
 }
 
 /** 

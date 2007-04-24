@@ -24,6 +24,16 @@ IMPLEMENTATION:
 
 #include <cstdio>
 
+PUBLIC inline
+unsigned long
+Trap_state::ip() const
+{ return pc; }
+
+PUBLIC inline
+unsigned long
+Trap_state::trapno() const
+{ return error_code; }
+
 PUBLIC
 void
 Trap_state::dump()

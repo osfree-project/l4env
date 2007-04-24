@@ -10,6 +10,7 @@ IMPLEMENTATION [arm]:
 #include "lock_guard.h"
 #include "space.h"
 #include "thread_state.h"
+#include "utcb_support.h"
 
 IMPLEMENT inline
 Mword
@@ -111,6 +112,8 @@ void Context::switchin_context()
   
   // switch to our page directory if nessecary
   _space->switchin_context();
+  
+  Utcb_support::current((Utcb*)local_id());
 }
 
 IMPLEMENT inline

@@ -34,11 +34,7 @@ Utcb_init::init()
   global_utcb_ptr = (Address*) Mem_layout::Utcb_ptr_page;
 
   if (!Vmem_alloc::page_alloc ((void *) global_utcb_ptr,
-			       Vmem_alloc::ZERO_FILL,
-			       (Mem_space::Page_user_accessible
-				| Mem_space::Page_writable
-				| Pd_entry::global()
-				| Page::CACHEABLE)))
+	Vmem_alloc::ZERO_FILL, Vmem_alloc::User))
     panic ("UTCB pointer page allocation failure");
 
   Cpu::get_gdt()->set_entry_byte (Gdt::gdt_utcb / 8, 
@@ -50,31 +46,6 @@ Utcb_init::init()
 				  Gdt_entry::Size_32);
 
   Cpu::set_gs (gs_value());
-}
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION [amd64-utcb]:
-
-#include <cstdio>
-#include "gdt.h"
-#include "paging.h"
-#include "panic.h"
-#include "space.h"
-#include "vmem_alloc.h"
-
-IMPLEMENT 
-void
-Utcb_init::init()
-{
-  global_utcb_ptr = (Address*) Mem_layout::Utcb_ptr_page;
-
-  if (!Vmem_alloc::page_alloc ((void *) global_utcb_ptr,
-			       Vmem_alloc::ZERO_FILL,
-			       (Mem_space::Page_user_accessible
-				| Mem_space::Page_writable
-				| Pd_entry::global()
-				| Page::CACHEABLE)))
-    panic ("UTCB pointer page allocation failure");
 }
 
 //-----------------------------------------------------------------------------

@@ -11,7 +11,7 @@ enum
 {
   Section_cachable = 0x40e,
   Section_no_cache = 0x402,
-  Cp15_c1 = 0x0100f,
+  Cp15_c1 = 0x0120f,
 };
 
 
