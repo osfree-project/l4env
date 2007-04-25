@@ -99,7 +99,7 @@ mtrr_get(int num, l4_addr_t *addr, l4_size_t *size, int *type)
   return 0;
 }
 
-static const char * const
+static const char *
 mtrr_mem_type(int type)
 {
   switch (type)

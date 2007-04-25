@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * Version: $Id$
+ * Version: $Id: quota.h,v 2.0 1996/11/17 16:48:14 mvw Exp mvw $
  */
 
 #ifndef _LINUX_QUOTA_
@@ -172,7 +172,6 @@ struct mem_dqinfo {
 #define DQF_INFO_DIRTY 0x10000  /* Is info dirty? */
 #define DQF_ANY_DQUOT_DIRTY 0x20000	/* Is any dquot dirty? */
 
-extern inline void mark_info_dirty(struct mem_dqinfo *info);
 extern inline void mark_info_dirty(struct mem_dqinfo *info)
 {
 	info->dqi_flags |= DQF_INFO_DIRTY;

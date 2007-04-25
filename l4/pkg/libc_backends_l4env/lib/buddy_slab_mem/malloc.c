@@ -52,7 +52,7 @@ static int init_malloc(size_t size){
     unsigned size_owner_map;
     int err, i;
 
-    baseaddr = l4dm_mem_ds_allocate_named(size, 0, "libc heap",
+    baseaddr = l4dm_mem_ds_allocate_named(size, L4RM_LOG2_ALIGNED, "libc heap",
 					  &malloc_ds);
     if(baseaddr == NULL){
 	LOG_Error("l4dm_mem_ds_allocate_named() failed");
@@ -159,7 +159,7 @@ static void* slab_grow(l4slab_cache_t *slab, void**data){
     void *addr;
 
     LOGd_Enter(LOG_MALLOC_SLAB, "getting new page...");
-    addr = l4buddy_alloc(buddy, L4_PAGESIZE);
+    addr = l4buddy_alloc(buddy, slab->slab_size);
     if(addr){
 	set_owner_slab(addr);
     }

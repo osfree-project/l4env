@@ -51,7 +51,8 @@ static int ore_initialize(void)
     }
 
 #ifdef ORE_DSI
-    LOG("dsi_init: %d", dsi_init());
+    i = dsi_init();
+    LOG("dsi_init: %d", i);
 #endif
 
     ore_initialized = 1;

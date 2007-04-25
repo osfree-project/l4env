@@ -228,7 +228,8 @@ LIBS	+= $(strip $(LIBS_$(OSYSTEM)) $(LIBS_$@) $(LIBS_$@_$(OSYSTEM)))
 
 LDFLAGS	+= $(strip $(LDFLAGS_$(OSYSTEM)) $(LDFLAGS_$(ARCH)) $(LDFLAGS_$@) $(LDFLAGS_$@_$(OSYSTEM)))
 
-OPTS	?= -g -O2 -fno-strict-aliasing $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
+OPTS	?= -g -O2 -fno-strict-aliasing
+OPTS	+= $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 WARNINGS?= -Wall -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations $(WARNINGS_$@)
 
 ifeq ($(MODE),host)
@@ -431,14 +432,14 @@ ifneq ($(MODE),loader)
         # (defined in Makeconf).
         # If DEFAULT_RELOC_xxx is set, xxx is made dependent on the
         # STATIC file.
-ifneq ($(strip $(foreach target,$(TARGET), $(call default_reloc, $(target)))),)
+ifneq ($(strip $(foreach target,$(TARGET), $(call default_reloc,$(target)))),)
 ifneq ($(filter l4linux host,$(MODE)),)
 	$(error DEFAULT_RELOC must not be set if MODE is l4linux or host)
 endif
         # the relocatable binaries depend on Makefile.inc
 	@$(ECHO) -e '\n$(strip						 \
 		$(foreach target, $(TARGET),				 \
-			$(if $(call default_reloc,$(target)), $(target))) \
+			$(if $(call default_reloc,$(target)),$(target))) \
 		: $@)' >>$@_
 ifneq ($(wildcard $(STATICFILE)),)
         # Makefile.inc depends on STATIC

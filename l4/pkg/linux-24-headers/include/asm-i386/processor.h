@@ -72,7 +72,6 @@ struct cpuinfo_x86 {
  */
 
 extern struct cpuinfo_x86 boot_cpu_data;
-extern struct tss_struct init_tss[NR_CPUS];
 
 #ifdef CONFIG_SMP
 extern struct cpuinfo_x86 cpu_data[];
@@ -357,6 +356,8 @@ struct tss_struct {
 	unsigned long __cacheline_filler[5];
 };
 
+extern struct tss_struct init_tss[NR_CPUS];
+
 struct thread_struct {
 	unsigned long	esp0;
 	unsigned long	eip;
@@ -493,7 +494,7 @@ struct extended_sigtable {
 /* REP NOP (PAUSE) is a good thing to insert into busy-wait loops. */
 static inline void rep_nop(void)
 {
-	__asm__ __volatile__("rep;nop" : : : "memory");
+	__asm__ __volatile__("rep;nop" ::: "memory");
 }
 
 #define cpu_relax()	rep_nop()

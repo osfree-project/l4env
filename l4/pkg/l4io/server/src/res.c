@@ -813,7 +813,7 @@ static int parse_device_pair(const char *s, unsigned short *vendor,
  */
 int add_device_inclusion(const char *s)
 {
-  static short vendor, device;
+  static unsigned short vendor, device;
   static struct device_inclusion_list *elem;
 
   if (!parse_device_pair(s, &vendor, &device))
@@ -839,7 +839,7 @@ int add_device_inclusion(const char *s)
  */
 int add_device_exclusion(const char *s)
 {
-  static short vendor, device;
+  static unsigned short vendor, device;
   static struct device_inclusion_list *elem;
 
   if (!parse_device_pair(s, &vendor, &device))

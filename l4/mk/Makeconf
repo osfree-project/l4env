@@ -111,7 +111,7 @@ DEFINES         += -DRAM_BASE=$(RAM_BASE)
 
 
 default_reloc_base = $(firstword $(DEFAULT_RELOC_$(1)) $(DEFAULT_RELOC_$(ARCH)) $(DEFAULT_RELOC))
-default_reloc = $(if $(call default_reloc_base,$(1)), $(shell printf "0x%x" $$(($(RAM_BASE) + $(call default_reloc_base, $(1))))),)
+default_reloc = $(if $(call default_reloc_base,$(1)), $(shell printf "0x%x" $$(($(RAM_BASE) + $(call default_reloc_base,$(1))))),)
 
 # functions that are handy
 absfilename_target_dir_needs_to_exist = $(foreach w,$(1),$(addsuffix /$(notdir $(w)),$(shell cd $(dir $(w)) 2>/dev/null&&$(PWDCMD))))

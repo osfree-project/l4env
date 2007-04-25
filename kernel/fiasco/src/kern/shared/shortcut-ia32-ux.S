@@ -743,12 +743,12 @@ entry_sys_fast_ipc:
 
 	leal	16(%ecx), %ecx			// adapt user esp
 
-	RESET_THREAD_CANCEL_AT THIS_ebx
-
 	movl	%ecx, REG_ESP (%esp)		// set user esp
 
 	testl   $Thread_alien, KSEG OFS__THREAD__STATE (%ebx)
 	jnz     alien_sys_fast_ipc_c
+
+	RESET_THREAD_CANCEL_AT THIS_ebx
 
 	// test if long send or no send at all
 #ifdef CONFIG_DECEIT_BIT_DISABLES_SWITCH

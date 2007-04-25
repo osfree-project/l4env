@@ -84,8 +84,6 @@ extern unsigned long simple_strtoul(const char *,char **,unsigned int);
 extern long simple_strtol(const char *,char **,unsigned int);
 extern unsigned long long simple_strtoull(const char *,char **,unsigned int);
 extern long long simple_strtoll(const char *,char **,unsigned int);
-
-//#ifndef DDE_LINUX
 extern int sprintf(char * buf, const char * fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 extern int vsprintf(char *buf, const char *, va_list)
@@ -99,7 +97,6 @@ extern int sscanf(const char *, const char *, ...)
 	__attribute__ ((format (scanf, 2, 3)));
 extern int vsscanf(const char *, const char *, va_list)
 	__attribute__ ((format (scanf, 2, 0)));
-//#endif /* DDE_LINUX */
 
 extern int get_option(char **str, int *pint);
 extern char *get_options(char *str, int nints, int *ints);
