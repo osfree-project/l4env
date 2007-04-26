@@ -123,9 +123,12 @@ install relink scrub:: $(foreach arch,$(TARGET_SYSTEMS),\
 	    	PWD=$OBJ-$$d $(MAKE) -C $(OBJ_DIR)/OBJ-$$d -f $(BID_OBJ_Makefile) \
 			$@ ; done )
 
+.PHONY: pre-obj
+pre-obj::
+
 all:: $(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch))
 .PHONY: $(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch))
-$(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch)):%:%/$(BID_OBJ_Makefile)
+$(foreach arch,$(TARGET_SYSTEMS), $(OBJ_DIR)/OBJ-$(arch)):%:%/$(BID_OBJ_Makefile) pre-obj
 	$(VERBOSE)PWD=$@ $(MAKE) $(PL_j) -C $@ -f $(BID_OBJ_Makefile)
 
 clean::
@@ -276,7 +279,8 @@ endif
 CPPFLAGS+= $(LIBCINCDIR)
 
 CXXFLAGS+= $(BID_CFLAGS_GSTAB) $(BID_CFLAGS_OMIT_FP)
-CXXFLAGS+= $(CXXFLAGS_$(OSYSTEM)) $(CXXFLAGS_$(@:.o=.cc)) $(CXXFLAGS_$(@:.o=.cc)_$(OSYSTEM))
+CXXFLAGS+= $(CXXFLAGS_$(OSYSTEM))
+CXXFLAGS+= $(CXXFLAGS_$(@:.o=.cc))  $(CXXFLAGS_$(@:.o=.cc)_$(OSYSTEM))
 CXXFLAGS+= $(CXXFLAGS_$(@:.o=.cpp)) $(CXXFLAGS_$(@:.o=.cpp)_$(OSYSTEM))
 CXXFLAGS+= $(OPTS) $(filter-out -Wmissing-declarations -Wstrict-prototypes -Wmissing-prototypes,$(WARNINGS))
 CXXFLAGS+= -fno-common
@@ -655,6 +659,14 @@ endif # HAVE_LDSO empty
 %.S:	%.c
 	@$(COMP_MESSAGE)
 	$(VERBOSE)$(CC) -S $(CFLAGS) $(CPPFLAGS) $(call absfilename,$<) -o $@
+
+%.S:	%.cc
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(CXX) -S $(CXXFLAGS) $(CPPFLAGS) $(call absfilename,$<) -o $@
+
+%.S:	%.cpp
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(CXX) -S $(CXXFLAGS) $(CPPFLAGS) $(call absfilename,$<) -o $@
 
 %.dpi:	%.dpe
 	@$(GEN_MESSAGE)

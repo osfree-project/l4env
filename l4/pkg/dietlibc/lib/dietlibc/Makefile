@@ -81,7 +81,7 @@ INCDIRS	      = include
 INCDIRS_OBJ   = $(OBJ_DIR)/include
 INCDIRS_OBJ_m = $(INCDIRS_OBJ)/Makefile
 
-all:: $(INCDIRS)
+pre-obj:: $(INCDIRS)
 
 $(INCDIRS_OBJ_m):
 	$(VERBOSE)$(MKDIR) $(dir $@)
@@ -92,6 +92,7 @@ $(INCDIRS_OBJ_m):
 	$(VERBOSE)echo 'INSTALL_INC_PREFIX = $$(PKGNAME)' >> $@
 	$(VERBOSE)echo 'include $$(L4DIR)/mk/include.mk' >> $@
 
+.PHONY: $(INCDIRS)
 $(INCDIRS): $(INCDIRS_OBJ_m) $(OBJ_DIR)/links-done
 	$(VERBOSE)PWD=$(PWD)/$@             $(MAKE) -C $@
 	$(VEROBSE)PWD=$(PWD)/$(INCDIRS_OBJ) $(MAKE) -C $(INCDIRS_OBJ)

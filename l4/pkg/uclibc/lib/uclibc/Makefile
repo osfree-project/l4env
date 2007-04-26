@@ -72,15 +72,18 @@ ifeq ($(SYSTEM),)
 INCDIRS		= $(addsuffix /include,$(addprefix $(OBJ_DIR)/ARCH-,$(BUILD_ARCHS)))
 INCDIRS_OBJ_m   = $(addsuffix /Makefile,$(INCDIRS))
 
-all:: include
+pre-obj:: include
 
 $(INCDIRS_OBJ_m):
+	$(VERBOSE)install -d $(dir $@)
 	$(VERBOSE)echo 'PKGDIR   ?= $(PKGDIR_ABS)' > $@
 	$(VERBOSE)echo 'L4DIR    ?= $(L4DIR_ABS)' >> $@
 	$(VERBOSE)echo 'OBJ_BASE ?= $(OBJ_BASE)' >> $@
 	$(VERBOSE)echo 'OBJ_DIR  ?= $(OBJ_DIR)' >> $@
 	$(VERBOSE)echo 'INSTALL_INC_PREFIX = $$(PKGNAME)' >> $@
 	$(VERBOSE)echo 'include $$(L4DIR)/mk/include.mk' >> $@
+
+.PHONY: include
 
 include:: $(addprefix $(OBJ_DIR)/ARCH-,$(addsuffix /links-done,$(BUILD_ARCHS))) $(INCDIRS_OBJ_m)
 	$(VERBOSE)for i in $(INCDIRS); do \

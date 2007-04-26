@@ -36,9 +36,10 @@ CONTRIB_DIR	:= $(PKGDIR_ABS)/lib/contrib/uclibc++
 
 ifeq ($(SYSTEM),)
 
-all:: include
+pre-obj:: include
 
 $(OBJ_DIR)/ARCH-all/include/Makefile: .general.d
+	$(VERBOSE)install -d $(dir $@)
 	$(VERBOSE)echo 'PKGDIR   ?= $(PKGDIR_ABS)' > $@
 	$(VERBOSE)echo 'L4DIR    ?= $(L4DIR_ABS)' >> $@
 	$(VERBOSE)echo 'OBJ_BASE ?= $(OBJ_BASE)' >> $@
@@ -46,6 +47,8 @@ $(OBJ_DIR)/ARCH-all/include/Makefile: .general.d
 	$(VERBOSE)echo 'INSTALL_INC_PREFIX = $$(PKGNAME)' >> $@
 	$(VERBOSE)echo 'TARGET   := $$(filter-out Makefile CVS,$$(wildcard *))' >> $@
 	$(VERBOSE)echo 'include $$(L4DIR)/mk/include.mk' >> $@
+
+.PHONY: include
 
 include: CONTRIB $(OBJ_DIR)/ARCH-all/include/Makefile
 	$(VERBOSE)PWD=$(PWD)/ARCH-all/include $(MAKE) -C \
