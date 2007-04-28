@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/BEUserDefinedType.h
+ *  \file    dice/src/be/BEUserDefinedType.h
  *  \brief   contains the declaration of the class CBEUserDefinedType
  *
- *    \date    02/13/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/13/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -46,7 +46,7 @@ public:
     /** \brief constructor
      */
     CBEUserDefinedType();
-    virtual ~CBEUserDefinedType();
+    ~CBEUserDefinedType();
 
 protected:
     /** \brief copy constructor
@@ -55,11 +55,7 @@ protected:
     CBEUserDefinedType(CBEUserDefinedType &src);
 
 public:
-    /** \brief generates an exact copy of this class
-     *  \return a reference to the new object
-     */
-    virtual CObject* Clone()
-    { return new CBEUserDefinedType(*this); }
+    virtual CObject* Clone();
 
     virtual void WriteZeroInit(CBEFile *pFile);
     virtual int GetSize();
@@ -72,8 +68,7 @@ public:
 
     virtual bool DoWriteZeroInit();
     virtual void WriteGetSize(CBEFile *pFile, 
-	vector<CDeclaratorStackLocation*> *pStack,
-	CBEFunction *pUsingFunc);
+	CDeclStack* pStack, CBEFunction *pUsingFunc);
     virtual bool IsSimpleType();
     virtual bool IsArrayType();
     virtual bool IsPointerType();

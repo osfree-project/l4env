@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -54,10 +54,18 @@ CL4X0BEMsgBuffer::~CL4X0BEMsgBuffer()
 {
 }
 
+/** \brief creates a copy of the object
+ *  \return a reference to the newly created instance
+ */
+CObject* CL4X0BEMsgBuffer::Clone()
+{ 
+    return new CL4X0BEMsgBuffer(*this); 
+}
+
 /** \brief add platform specific members to specific struct
  *  \param pFunction the function of the message buffer
  *  \param pStruct the struct to add the members to
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the struct
  *  \return true if successful
  *
  *  In this implementation we should add the L4 specific receive
@@ -66,10 +74,10 @@ CL4X0BEMsgBuffer::~CL4X0BEMsgBuffer()
 bool
 CL4X0BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction,
     CBEStructType *pStruct,
-    int nDirection)
+    CMsgStructType nType)
 {
     if (!CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct, 
-	    nDirection))
+	    nType))
 	return false;
 
     // create receive flexpage
@@ -132,12 +140,12 @@ CL4X0BEMsgBuffer::AddGenericStruct(CBEFunction *pFunction,
     if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
 	return true;
    
-    bool bWordMembers = HasWordMembers(pFunction, 
-	pFunction->GetSendDirection());
+    CMsgStructType nType = pFunction->GetSendDirection();
+    bool bWordMembers = HasWordMembers(pFunction, nType);
     if (bWordMembers)
     {
-	bWordMembers = HasWordMembers(pFunction, 
-	    pFunction->GetReceiveDirection());
+	nType = pFunction->GetReceiveDirection();
+	bWordMembers = HasWordMembers(pFunction, nType);
     }
    
     if (bWordMembers)
@@ -151,7 +159,7 @@ CL4X0BEMsgBuffer::AddGenericStruct(CBEFunction *pFunction,
  *  \param pFunction the function to write for
  *  \param pClass the class to write for
  *  \param nIndex the index of the refstring in an array
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return true if we wrote something, false if not
  */
 bool
@@ -159,7 +167,7 @@ CL4X0BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
     CBEFunction *pFunction,
     CBEClass *pClass,
     int nIndex,
-    int nDirection)
+    CMsgStructType nType)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     // check if this is server side, and if so, check for 
@@ -197,10 +205,10 @@ CL4X0BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
 	CBEDeclarator *pEnv = pEnvVar->m_Declarators.First();
 	// call the init function for the indirect string
 	*pFile << "\t" << sFunction << " ( " << nIndex << ", &(";
-	WriteMemberAccess(pFile, pFunction, nDirection, TYPE_REFSTRING,
+	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
 	    nIndex);
 	*pFile << ".rcv_str), &(";
-	WriteMemberAccess(pFile, pFunction, nDirection, TYPE_REFSTRING,
+	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
 	    nIndex);
 	*pFile << ".rcv_size), " << pEnv->GetName() << ");\n";
 
@@ -215,14 +223,14 @@ CL4X0BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
  *  \param pFunction the function to write for
  *  \param pMember the member to write
  *  \param nIndex the index of the refstring to initialize
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  */
 void
 CL4X0BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
     CBEFunction *pFunction,
     CBETypedDeclarator *pMember,
     int nIndex,
-    int nDirection)
+    CMsgStructType nType)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sWord = pNF->GetTypeName(TYPE_MWORD, true);
@@ -237,7 +245,7 @@ CL4X0BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
 	     pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER))) )
     {
 	*pFile << "\t";
-	WriteAccess(pFile, pFunction, nDirection, pMember);
+	WriteAccess(pFile, pFunction, nType, pMember);
 	*pFile << ".rcv_str = (" << sWord << ")(";
 	CBEDeclarator *pDecl = pParameter->m_Declarators.First();
 	int nStars = pDecl->GetStars();
@@ -249,7 +257,7 @@ CL4X0BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
 	*pFile << pDecl->GetName() << ");\n";
 
 	*pFile << "\t";
-	WriteAccess(pFile, pFunction, nDirection, pMember);
+	WriteAccess(pFile, pFunction, nType, pMember);
 	*pFile << ".rcv_size = ";
 	if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS)) ||
 	    (pParameter->m_Attributes.Find(ATTR_LENGTH_IS)))
@@ -274,7 +282,7 @@ CL4X0BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
 	bool bUseArray = pMember->m_Declarators.First()->IsArray() &&
 	    pMember->m_Declarators.First()->GetArrayDimensionCount() > 0;
 	*pFile << "\t";
-	WriteAccess(pFile, pFunction, nDirection, pMember);
+	WriteAccess(pFile, pFunction, nType, pMember);
 	if (bUseArray)
 	    *pFile << "[" << nIndex << "]";
 	*pFile << ".rcv_str = (" << sWord << ")";
@@ -284,7 +292,7 @@ CL4X0BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
 	*pFile << ");\n";
 
 	*pFile << "\t";
-	WriteAccess(pFile, pFunction, nDirection, pMember);
+	WriteAccess(pFile, pFunction, nType, pMember);
 	if (bUseArray)
 	    *pFile << "[" << nIndex << "]";
 	*pFile << ".rcv_size = ";
@@ -296,14 +304,14 @@ CL4X0BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
 /** \brief initializes the dopes to a value pair for short IPC
  *  \param pFile the file to write to
  *  \param nType the member to initialize
- *  \param nDirection the direction of the struct to set the member in
+ *  \param nStructType the type of the message buffer struct
  *
  * \todo This is not X.2 conform (have map,grant items as well).
  */
 void
 CL4X0BEMsgBuffer::WriteDopeShortInitialization(CBEFile *pFile,
     int nType,
-    int nDirection)
+    CMsgStructType nStructType)
 {
     if ((nType != TYPE_MSGDOPE_SIZE) &&
 	(nType != TYPE_MSGDOPE_SEND))
@@ -315,14 +323,14 @@ CL4X0BEMsgBuffer::WriteDopeShortInitialization(CBEFile *pFile,
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName = pNF->GetMessageBufferMember(nType);
     // get member
-    CBETypedDeclarator *pMember = FindMember(sName, nDirection);
+    CBETypedDeclarator *pMember = FindMember(sName, nStructType);
     // check if we have member of that type
     if (!pMember)
 	return;
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
 
     *pFile << "\t";
-    WriteAccess(pFile, pFunction, nDirection, pMember);
+    WriteAccess(pFile, pFunction, nStructType, pMember);
     // get short IPC values
     CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
     int nMinSize = pSizes->GetMaxShortIPCSize();
@@ -333,17 +341,17 @@ CL4X0BEMsgBuffer::WriteDopeShortInitialization(CBEFile *pFile,
 
 /** \brief writes the initialization of the receive flexpage
  *  \param pFile the file to write to
- *  \param nDirection the direction of the struct to initialize
+ *  \param nType the type of the message buffer struct
  */
 void
 CL4X0BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
-	int nDirection)
+    CMsgStructType nType)
 {
     // get receive flexpage member
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sFlexName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
 
-    CBETypedDeclarator *pFlexpage = FindMember(sFlexName, nDirection);
+    CBETypedDeclarator *pFlexpage = FindMember(sFlexName, nType);
     assert (pFlexpage);
 
     // get environment
@@ -358,13 +366,13 @@ CL4X0BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
     
     // assign environment's flexpage to message buffer's flexpage
     *pFile << "\t";
-    WriteAccess(pFile, pFunction, nDirection, pFlexpage);
+    WriteAccess(pFile, pFunction, nType, pFlexpage);
     *pFile << " = " << sEnv << "rcv_fpage;\n";
 }
 
 /** \brief try to get the position of a member counting word sizes
  *  \param sName the name of the member
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return the position (index) of the member, -1 if not found
  *
  * The position obtained here will be used as index into the word size member
@@ -373,7 +381,7 @@ CL4X0BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
  */
 int
 CL4X0BEMsgBuffer::GetMemberPosition(string sName,
-    int nDirection)
+    CMsgStructType nType)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     if (sName == pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE))
@@ -386,5 +394,5 @@ CL4X0BEMsgBuffer::GetMemberPosition(string sName,
 	return -1;
 
     // not found 
-    return CL4BEMsgBuffer::GetMemberPosition(sName, nDirection);
+    return CL4BEMsgBuffer::GetMemberPosition(sName, nType);
 }

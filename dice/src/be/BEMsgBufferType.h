@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,10 +31,89 @@
 #define __DICE_BE_BEMSGBUFFERTYPE_H__
 
 #include <be/BEUnionType.h>
+#include "BEFunction.h"
 
 class CFEOperation;
 class CFEInterface;
 class CFETypedDeclarator;
+
+/** \class CMsgStructType
+ *  \ingroup backend
+ *  \brief helper class to determine struct in msg-buf type
+ */
+class CMsgStructType
+{
+public:
+    /** \enum Type
+     *  \brief contains the valid message buffer struct types
+     */
+    enum Type { Generic, In, Out, Exc };
+
+    /** \brief constructor
+     *  \param type a message buffer struct type initializer
+     */
+    CMsgStructType(Type type)
+    {
+	nType = type;
+    }
+
+    /** \brief constructor
+     *  \param nDir a DIRECTION_TYPE initializer
+     */
+    CMsgStructType(DIRECTION_TYPE nDir)
+    {
+	switch (nDir) {
+	case 0:
+	case DIRECTION_INOUT:
+	    nType = Generic;
+	    break;
+	case DIRECTION_IN:
+	    nType = In;
+	    break;
+	case DIRECTION_OUT:
+	    nType = Out;
+	    break;
+	default:
+	    nType = Exc;
+	}
+    }
+
+    /** \brief cast operator
+     *  \return an int value
+     */
+    operator int() const
+    {
+	return nType;
+    }
+
+    /** \brief cast operator
+     *  \return a DIRECTION_TYPE value
+     */
+    operator DIRECTION_TYPE() const
+    {
+	switch (nType) {
+	case In:
+	    return DIRECTION_IN;
+	case Out:
+	    return DIRECTION_OUT;
+	default:
+	    break;
+	}
+	return DIRECTION_NONE;
+    }
+
+    friend bool operator== (const CMsgStructType&, const CMsgStructType&);
+    friend bool operator== (const CMsgStructType::Type&, const CMsgStructType&);
+    friend bool operator== (const CMsgStructType&, const CMsgStructType::Type&);
+    friend bool operator!= (const CMsgStructType&, const CMsgStructType&);
+    friend bool operator!= (const CMsgStructType::Type&, const CMsgStructType&);
+    friend bool operator!= (const CMsgStructType&, const CMsgStructType::Type&);
+private:
+    /** \var Type nType
+     *  \brief the message buffer struct type
+     */
+    Type nType;
+};
 
 /** \class CBEMsgBufferType
  *  \ingroup backend
@@ -46,8 +125,7 @@ public:
     /** constructor */
     CBEMsgBufferType();
     /** destroys instance of this class */
-    ~CBEMsgBufferType()
-    { }
+    ~CBEMsgBufferType();
 
 protected:
     /** \brief copy constructor
@@ -56,43 +134,38 @@ protected:
     CBEMsgBufferType(CBEMsgBufferType & src);
 
 public: // public methods
-    /** \brief creates a new instance of this class
-     *  \return a reference to the copy of this instance
-     */
-    virtual CObject* Clone()
-    { return new CBEMsgBufferType(*this); }
-
+    virtual CObject* Clone();
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
     CBEStructType* GetStruct(string sFuncName, string sClassName, 
-	int nDirection);
+	CMsgStructType nType);
     vector<CBETypedDeclarator*>::iterator 
 	GetStartOfPayload(CBEStructType* pStruct);
 
     virtual bool AddGenericStruct(CFEBase *pFERefObj);
 
 protected:
-    void AddStruct(CFEOperation *pFEOperation, int nDirection);
+    void AddStruct(CFEOperation *pFEOperation, CMsgStructType nType);
     void AddStruct(CFEInterface *pFEInterface);
-    void AddStruct(CBEStructType *pStruct, int nDirection, string sFunctionName,
+    void AddStruct(CBEStructType *pStruct, CMsgStructType nType, string sFunctionName,
 	string sClassName);
-    virtual void AddElements(CFEOperation *pFEOperation, int nDirection);
-    virtual void AddElement(CFETypedDeclarator *pFEParameter, int nDirection);
+    virtual void AddElements(CFEOperation *pFEOperation, CMsgStructType nType);
+    virtual void AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType);
     virtual void AddElement(CBEStructType *pStruct, CBETypedDeclarator *pParameter);
-    virtual void FlattenElement(CBETypedDeclarator *pParameter, 
-	CBEStructType *pStruct);
+    virtual void FlattenElement(CBETypedDeclarator *pParameter, CBEStructType *pStruct);
     virtual void FlattenConstructedElement(CBETypedDeclarator *pParameter,
-	vector<CDeclaratorStackLocation*> *pStack, CBEStructType *pStruct);
+	CDeclStack* pStack, CBEStructType *pStruct);
     void CheckElementForString(CBETypedDeclarator *pParameter,
-	CBEFunction *pFunction, CBEStructType *pStruct, 
-	vector<CDeclaratorStackLocation*> *pStack);
+	CBEFunction *pFunction, CBEStructType *pStruct, CDeclStack* pStack);
     void CheckConstructedElementForVariableSize(CBETypedDeclarator *pParameter,
-	CBEFunction *pFunction, CBEStructType *pStruct, 
-	vector<CDeclaratorStackLocation*> *pStack);
-    string CreateInitStringForString(CBEFunction *pFunction,
-	vector<CDeclaratorStackLocation*> *pStack);
+	CBEFunction *pFunction, CBEStructType *pStruct, CDeclStack* pStack);
+    string CreateInitStringForString(CBEFunction *pFunction, CDeclStack* pStack);
 
     friend class CBEMsgBuffer;
+
+private:
+    bool CreateInitStringForStringIDLUnion(CBETypedDeclarator*& pParameter, string& sUnionStrPre,
+	string& sUnionStrSuf, CDeclStack::iterator& iter, CDeclStack& vStack);
 };
 
 #endif

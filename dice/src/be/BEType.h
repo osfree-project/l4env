@@ -30,14 +30,14 @@
 #ifndef __DICE_BETYPE_H__
 #define __DICE_BETYPE_H__
 
-#include "be/BEObject.h"
+#include "BEObject.h"
+#include "BEDeclarator.h"
 #include <vector>
 using std::vector;
 
 class CBEFile;
 class CBETypedef;
 class CFETypeSpec;
-class CBEDeclarator;
 class CBEType;
 class CBEExpression;
 class CDeclaratorStackLocation;
@@ -84,10 +84,10 @@ public:
     virtual bool IsArrayType();
     virtual void WriteDeclaration(CBEFile *pFile);
     virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile *pFile, 
-	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
-    virtual void WriteGetMaxSize(CBEFile *pFile, 
-	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
+    virtual void WriteGetSize(CBEFile *pFile, CDeclStack* pStack,
+	CBEFunction *pUsingFunc);
+    virtual void WriteGetMaxSize(CBEFile *pFile, CDeclStack* pStack,
+	CBEFunction *pUsingFunc);
     virtual bool IsSimpleType();
     virtual int GetArrayDimensionCount();
     virtual int GetIndirectionCount();

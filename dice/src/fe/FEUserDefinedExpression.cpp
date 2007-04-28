@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,6 +33,7 @@
 #include "File.h"
 // needed for Error function
 #include "Compiler.h"
+#include "Messages.h"
 #include <cassert>
 
 CFEUserDefinedExpression::CFEUserDefinedExpression(string sExpName)
@@ -89,7 +90,7 @@ long CFEUserDefinedExpression::GetIntValue()
     if (pConst)
         return pConst->GetValue()->GetIntValue();
     // not found
-    CCompiler::Error("The const \"%s\" is not defined in the the valid scope(s).\n",
+    CMessages::Error("The const \"%s\" is not defined in the the valid scope(s).\n",
         GetExpName().c_str());
     return 0;
 }
@@ -119,7 +120,7 @@ bool CFEUserDefinedExpression::IsOfType(unsigned int nType)
     if (pConst)
         return pConst->GetValue()->IsOfType(nType);
     // not found
-    CCompiler::Error("The const \"%s\" is not defined in the valid scope(s).\n",
+    CMessages::Error("The const \"%s\" is not defined in the valid scope(s).\n",
           GetExpName().c_str());
     return false;
 }

@@ -55,6 +55,32 @@ entry_##name:							;\
 	pusha							;\
 	jmp	_slowtraps
 
+.macro  PRE_ALIEN_IPC
+	btrl	$17, KSEG OFS__THREAD__STATE (%ebx) /* Thread_dis_alien */
+	jc	1f
+	RESTORE_STATE
+	sub	$2, 4(%esp)                /* Correct EIP to point to insn */
+	popl 	%eax
+	pushl	$(0x30 << 3 | 2)
+	pushl	$(0xd)
+	pusha
+	jmp	_slowtraps
+
+1: 	/* do alien IPC and raise a trap afterwards */	
+	RESET_THREAD_CANCEL_AT %ebx
+.endm
+
+.macro  POST_ALIEN_IPC
+	CHECK_SANITY $3			/* scratches ecx */
+	RESET_USER_SEGMENTS $3,in_cli	/* scratches ecx */
+	RESTORE_STATE_AFTER_IPC
+	popl	%eax
+	pushl	$(0x30 << 3 | 6)
+	pushl	$(0xd)
+	pusha
+	jmp	_slowtraps
+.endm
+
 GATE_INITTAB_BEGIN(idt_init_table)
 
 EXCEPTION(0x00,vec00_zero_div)
@@ -662,51 +688,15 @@ GATE_INITTAB_END
 
 	.globl alien_sys_ipc_c /* Also used in shortcut */
 alien_sys_ipc_c:
-	btrl	$17, KSEG OFS__THREAD__STATE (%ebx) /* Thread_dis_alien */
-	jc	1f
-	RESTORE_STATE
-	sub	$2, 4(%esp)                /* Correct EIP to point to insn */
-	popl 	%eax
-	pushl	$(0x30 << 3 | 2)
-	pushl	$(0xd)
-	pusha
-	jmp	_slowtraps
-
-1: 	/* do alien IPC and raise a trap afterwards */	
-	RESET_THREAD_CANCEL_AT %ebx
+	PRE_ALIEN_IPC
 	call	ipc_short_cut_wrapper
-	CHECK_SANITY $3			/* scratches ecx */
-	RESET_USER_SEGMENTS $3,in_cli	/* scratches ecx */
-	RESTORE_STATE_AFTER_IPC
-	popl	%eax
-	pushl	$(0x30 << 3 | 6)
-	pushl	$(0xd)
-	pusha
-	jmp	_slowtraps
+	POST_ALIEN_IPC
 
 #if defined (CONFIG_JDB)
 alien_sys_ipc_log:
-	btrl	$17, KSEG OFS__THREAD__STATE (%ebx) /* Thread_dis_alien */
-	jc	1f
-	RESTORE_STATE
-	sub	$2, 4(%esp)                /* Correct EIP to point to insn */
-	popl 	%eax
-	pushl	$(0x30 << 3 | 2)
-	pushl	$(0xd)
-	pusha
-	jmp	_slowtraps
-
-1: 	/* do alien IPC and raise a trap afterwards */	
-	RESET_THREAD_CANCEL_AT %ebx
+	PRE_ALIEN_IPC
 	call	*syscall_table
-	CHECK_SANITY $3			/* scratches ecx */
-	RESET_USER_SEGMENTS $3,in_cli	/* scratches ecx */
-	RESTORE_STATE_AFTER_IPC
-	popl	%eax
-	pushl	$(0x30 << 3 | 6)
-	pushl	$(0xd)
-	pusha
-	jmp	_slowtraps
+	POST_ALIEN_IPC
 #endif
 
 /*

@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -36,6 +36,8 @@
 #include <vector>
 #include <bitset>
 using std::bitset;
+#include <map>
+using std::map;
 
 #include "ProgramOptions.h"
 #include "be/BENameFactory.h"
@@ -83,18 +85,6 @@ public:
     void ShowHelp(bool bShort = false);
     void ShowCopyright();
     void ParseArguments(int argc, char *argv[]);
-    static void Error(const char *sMsg, ...) 
-	__attribute__(( format(printf, 1, 2) ));
-    static void Warning(const char *sMsg, ...)
-	__attribute__(( format(printf, 1, 2) ));
-    static void GccError(CFEBase * pFEObject, int nLinenb,
-	const char *sMsg, ...) __attribute__(( format(printf, 3, 4) ));
-    static void GccErrorVL(CFEBase * pFEObject, int nLinenb,
-	const char *sMsg, va_list vl);
-    static void GccWarning(CFEBase * pFEObject, int nLinenb,
-	const char *sMsg, ...) __attribute__(( format(printf, 3, 4) ));
-    static void GccWarningVL(CFEBase * pFEObject, int nLinenb,
-	const char *sMsg, va_list vl);
     static void Verbose(ProgramVerbose_Type level, const char *format, ...)
 	__attribute__(( format(printf, 2, 3) ));
     static void VerboseI(ProgramVerbose_Type level, const char *format, ...)
@@ -111,19 +101,12 @@ public:
     static bool IsBackEndPlatformSet(BackEnd_Platform_Type nOption);
     static bool IsBackEndLanguageSet(BackEnd_Language_Type nOption);
     static bool IsWarningSet(ProgramWarning_Type nLevel);
-    static string GetIncludePrefix();
-    static string GetFilePrefix();
-    static string GetTraceClientFunc();
-    static string GetTraceServerFunc();
-    static string GetTraceMsgBufFunc();
-    static string GetTraceLib();
     static int GetTraceMsgBufDwords();
-    static string GetInitRcvStringFunc();
-    static string GetOutputDir();
     static CBENameFactory *GetNameFactory();
     static CBEClassFactory *GetClassFactory();
     static CBESizes* GetSizes();
     static void SetDebug(bool bOn = true);
+    static bool GetBackEndOption(const string sOption, string& sValue);
 
 protected:
     void ShowVersion();
@@ -140,21 +123,14 @@ protected:
     static void SetBackEndLanguage(BackEnd_Language_Type nAdd);
     static void SetWarningLevel(ProgramWarning_Type nLevel);
     static void UnsetWarningLevel(ProgramWarning_Type nLevel);
-    static void SetIncludePrefix(string sPrefix);
-    static void SetFilePrefix(string sPrefix);
-    static void SetTraceClientFunc(string sName);
-    static void SetTraceServerFunc(string sName);
-    static void SetTraceMsgBufFunc(string sName);
     static void SetTraceMsgBufDwords(int nDwords);
-    static void SetTraceLib(string sName);
-    static void SetInitRcvStringFunc(string sName);
-    static void SetOutputDir(string sOutputDir);
     static void SetNameFactory(CBENameFactory *pNF);
     static void SetClassFactory(CBEClassFactory *pCF);
     static void SetSizes(CBESizes *pSizes);
+    static void SetBackEndOption(const string sOption, const string sValue);
 
 // Attributes
-  protected:
+protected:
     /** \var int m_VerboseLevel
      *  \brief the verbose level
      */
@@ -175,14 +151,6 @@ protected:
      *  \brief a reference to the top most file of the front-end
      */
     CFEFile *m_pRootFE;
-    /** \var string m_sIncludePrefix
-     *  \brief the include prefix, which is used to prefix each include statement
-     */
-    static string m_sIncludePrefix;
-    /** \var string m_sFilePrefix
-     *  \brief the file prefix, which all files are supposed to receive
-     */
-    static string m_sFilePrefix;
     /** \var string m_sOutFileName
      *  \brief the name of the output file
      */
@@ -231,30 +199,6 @@ protected:
      *  \brief the file to write depends output to if set
      */
     string m_sDependsFile;
-    /** \var string m_sInitRcvStringFunc
-     *  \brief contains the name of the init-rcv-string function
-     */
-    static string m_sInitRcvStringFunc;
-    /** \var string m_sTraceClientFunc
-     *  \brief contains the name of the Trace function for the client
-     */
-    static string m_sTraceClientFunc;
-    /** \var string m_sTraceServerFunc
-     *  \brief contains the name of the Trace function for the server
-     */
-    static string m_sTraceServerFunc;
-    /** \var string m_sTraceMsgBufFunc
-     *  \brief contains the name of the Trace function for the message buffer
-     */
-    static string m_sTraceMsgBufFunc;
-    /** \var string m_sTraceLib
-     *  \brief contains the file name of the tracing library
-     */
-    static string m_sTraceLib;
-    /** \var string m_sOutputDir
-     *  \brief determines the output directory
-     */
-    static string m_sOutputDir;
     /** \var int m_nDumpMsgBufDwords
      *  \brief contains the number of dwords to dump
      */
@@ -271,6 +215,10 @@ protected:
      *  \brief contains a reference to the sizes class of a traget architecture
      */
     static CBESizes *m_pSizes;
+    /** \var map<string, string> m_mBackEndOptions
+     *  \brief back-end options
+     */
+    static map<string, string> m_mBackEndOptions;
 };
 
 /** \brief set the option
@@ -487,126 +435,6 @@ CCompiler::IsWarningSet(ProgramWarning_Type nLevel)
     return m_WarningLevel.test(nLevel);
 }
 
-/** \brief retrieve include prefix
- *  \return include prefix
- */
-inline
-string
-CCompiler::GetIncludePrefix()
-{
-    return m_sIncludePrefix;
-}
-
-/** \brief set include prefix
- *  \param sPrefix the new include prefix
- */
-inline
-void
-CCompiler::SetIncludePrefix(string sPrefix)
-{
-    m_sIncludePrefix = sPrefix;
-}
-
-/** \brief retrieve file prefix
- *  \return file prefix
- */
-inline
-string
-CCompiler::GetFilePrefix()
-{
-    return m_sFilePrefix;
-}
-
-/** \brief set file prefix
- *  \param sPrefix the new file prefix
- */
-inline
-void
-CCompiler::SetFilePrefix(string sPrefix)
-{
-    m_sFilePrefix = sPrefix;
-}
-
-/** \brief sets the name of the trace lib
- *  \param sName the name
- */
-inline
-void
-CCompiler::SetTraceLib(string sName)
-{
-    m_sTraceLib = sName;
-}
-
-/** \brief retrieves the name of the Trace lib
- *  \return the name
- */
-inline
-string
-CCompiler::GetTraceLib()
-{
-    return m_sTraceLib;
-}
-	
-/** \brief sets the name of the trace function
- *  \param sName the name
- */
-inline
-void 
-CCompiler::SetTraceClientFunc(string sName)
-{
-    m_sTraceClientFunc = sName;
-}
-
-/** \brief retrieves the name of the Trace function
- *  \return the name
- */
-inline
-string
-CCompiler::GetTraceClientFunc()
-{
-    return m_sTraceClientFunc;
-}
-
-/** \brief sets the name of the trace function
- *  \param sName the name
- */
-inline
-void
-CCompiler::SetTraceServerFunc(string sName)
-{
-    m_sTraceServerFunc = sName;
-}
-
-/** \brief retrieves the name of the Trace function
- *  \return the name
- */
-inline
-string
-CCompiler::GetTraceServerFunc()
-{
-    return m_sTraceServerFunc;
-}
-
-/** \brief sets the name of the trace function
- *  \param sName the name
- */
-inline
-void
-CCompiler::SetTraceMsgBufFunc(string sName)
-{
-    m_sTraceMsgBufFunc = sName;
-}
-
-/** \brief retrieves the name of the Trace function
- *  \return the name
- */
-inline
-string
-CCompiler::GetTraceMsgBufFunc()
-{
-    return m_sTraceMsgBufFunc;
-}
-
 /** \brief sets the number of dwords to dump from the message buffer
  *  \param nDwords the number of dwords
  */
@@ -625,46 +453,6 @@ int
 CCompiler::GetTraceMsgBufDwords()
 {
     return m_nDumpMsgBufDwords;
-}
-
-/** \brief sets the name of the init-rcv-string function
- *  \param sName the name
- */
-inline
-void
-CCompiler::SetInitRcvStringFunc(string sName)
-{
-    m_sInitRcvStringFunc = sName;
-}
-
-/** \brief retrieves the name of the init-rcv-string function
- *  \return the name
- */
-inline
-string
-CCompiler::GetInitRcvStringFunc()
-{
-    return m_sInitRcvStringFunc;
-}
-
-/** \brief returns the output directory
- *  \return the output directory
- */
-inline
-string
-CCompiler::GetOutputDir()
-{
-    return m_sOutputDir;
-}
-
-/** \brief set the output directory
- *  \param sOutputDir the directory
- */
-inline
-void 
-CCompiler::SetOutputDir(string sOutputDir)
-{
-    m_sOutputDir = sOutputDir;
 }
 
 /** \brief returns a reference to the class factory
@@ -747,5 +535,38 @@ CCompiler::SetDebug(bool bOn)
     else
 	m_VerboseLevel = PROGRAM_VERBOSE_NONE;
 }
+
+/** \brief set the back-end option in the compiler
+ *  \param sOption the option
+ *  \param sValue the corresponding value
+ */
+inline 
+void 
+CCompiler::SetBackEndOption(const string sOption, const string sValue)
+{
+    map<string, string>::value_type e(sOption, sValue);
+    if (m_mBackEndOptions.find(sOption) == m_mBackEndOptions.end())
+	m_mBackEndOptions.insert(e);
+    else
+	m_mBackEndOptions[sOption] = sValue;
+}
+
+/** \brief try to retrieve the value for the given back-end option
+ *  \param sOption the value to look for
+ *  \retval sValue set to the respective option if found
+ *  \return true if value was found, false if not
+ *
+ * The return value can be used to check for an option without a value
+ * (although that should be handled with the bitmap).
+ */
+inline bool 
+CCompiler::GetBackEndOption(const string sOption, string& sValue)
+{
+    if (m_mBackEndOptions.find(sOption) == m_mBackEndOptions.end())
+	return false;
+    sValue = m_mBackEndOptions[sOption];
+    return true;
+}
+
 
 #endif                // __DICE_COMPILER_H__

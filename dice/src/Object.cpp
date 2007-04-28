@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -55,6 +55,11 @@ CObject *CObject::Clone()
 {
     return new CObject(*this);
 }
+
+/** \brief accept function for visitors
+ */
+void CObject::Accept(CVisitor&)
+{}
 
 /** \brief test if an object is parent of this object
  *  \param pParent the alleged parent

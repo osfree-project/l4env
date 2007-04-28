@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/l4/L4BEUnmarshalFunction.h
+ *  \file    dice/src/be/l4/L4BEUnmarshalFunction.h
  *  \brief   contains the declaration of the class CL4BEUnmarshalFunction
  *
- *    \date    02/20/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/20/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -57,7 +57,7 @@ public:
 
 protected:
     virtual bool HasVariableSizedParameters(
-	int nDirection = DIRECTION_IN | DIRECTION_OUT);
+	DIRECTION_TYPE nDirection);
 };
 
 #endif // !__DICE_L4BEUNMARSHALFUNCTION_H__

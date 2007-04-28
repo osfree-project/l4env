@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -42,6 +42,7 @@ enum FUNCTION_TYPE {
     FUNCTION_WAIT,        /**< the wait function */
     FUNCTION_UNMARSHAL,   /**< the unmarshal function */
     FUNCTION_MARSHAL,     /**< the marshal function */
+    FUNCTION_MARSHAL_EXCEPTION, /**< the marshal function for exceptions */
     FUNCTION_REPLY_RECV,  /**< the reply-and-receive function */
     FUNCTION_REPLY_WAIT,  /**< the reply-and-wait function */
     FUNCTION_CALL,        /**< the call function */

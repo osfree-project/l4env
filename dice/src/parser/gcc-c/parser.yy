@@ -7,7 +7,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,6 +33,7 @@
 
 #include "defines.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "CParser.h"
 
 #if defined(HAVE_CONFIG_H)
@@ -943,7 +944,7 @@ declaration:
 	    // now add tagged decl to scope
 	    if (!CParser::GetCurrentFile())
 	    {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
 		    "Fatal Error: current file vanished (typedef)");
 		YYABORT;
 	    }
@@ -955,7 +956,7 @@ declaration:
 		    ((CFEInterface*)pCurFileComponent)->m_TaggedDeclarators.Add(pT);
 		else
 		{
-		    CCompiler::GccError(NULL, 0, 
+		    CMessages::GccError(NULL, 0, 
 		        "current file component is unknown type: %s\n", 
 		        typeid(*pCurFileComponent).name());
 		    assert(false);
@@ -1052,7 +1053,7 @@ declaration:
         // now add typedef to scope
         if (!CParser::GetCurrentFile())
         {
-            CCompiler::GccError(NULL, 0, "Fatal Error: current file vanished (typedef)");
+            CMessages::GccError(NULL, 0, "Fatal Error: current file vanished (typedef)");
             YYABORT;
         }
         if (pCurFileComponent)
@@ -1063,7 +1064,7 @@ declaration:
                 ((CFEInterface*)pCurFileComponent)->m_Typedefs.Add(pTypedef);
             else
             {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
 		    "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -2708,7 +2709,7 @@ gcc_cerror2(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    CCompiler::GccErrorVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
+    CMessages::GccErrorVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
     va_end(args);
     nParseErrorGCC_C = 0;
     erroccured = 1;

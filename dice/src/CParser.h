@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -70,7 +70,7 @@ public: // Public methods
      *  \param bPreProcessOnly true if parser should staop after preprocessing
      *  \return true if successful
      */
-    virtual bool Parse(void *scan_buffer, string sFilename, FrontEnd_Type nIDL, 
+    virtual bool Parse(void *scan_buffer, string sFilename, FrontEnd_Type nIDL,
 	    bool bPreProcessOnly = false) = 0;
     virtual bool DoEndImport();
     /** \brief imports a file

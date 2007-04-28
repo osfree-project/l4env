@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -77,10 +77,11 @@
 #include "fe/FEFile.h"
 
 #include "Compiler.h"
+#include "Messages.h"
 
 #include <string>
 #include <cassert>
-
+#include <iostream>
 
 // CFunctionGroup IMPLEMENTATION
 
@@ -194,7 +195,7 @@ void CBEClass::AddBaseClass(string sName)
     CBEClass *pBaseClass = pRoot->FindClass(sName);
     if (!pBaseClass)
     {
-	CCompiler::Warning("%s failed because base class \"%s\"" \
+	CMessages::Warning("%s failed because base class \"%s\"" \
 	    " cannot be found\n", __func__,
 	    sName.c_str());
 	return;
@@ -249,7 +250,7 @@ CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 	 iterA != pFEInterface->m_Attributes.end();
 	 iterA++)
     {
-        CreateBackEnd(*iterA);
+        CreateBackEndAttribute(*iterA);
     }
     // we can resolve this if we only add the base names now, but when the
     // base classes are first used, add the actual references.
@@ -268,7 +269,7 @@ CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 	 iterC != pFEInterface->m_Constants.end();
 	 iterC++)
     {
-        CreateBackEnd(*iterC);
+        CreateBackEndConst(*iterC);
     }
     // add typedefs
     vector<CFETypedDeclarator*>::iterator iterTD;
@@ -276,7 +277,7 @@ CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 	 iterTD != pFEInterface->m_Typedefs.end();
 	 iterTD++)
     {
-        CreateBackEnd(*iterTD);
+        CreateBackEndTypedef(*iterTD);
     }
     // add tagged decls
     vector<CFEConstructedType*>::iterator iterT;
@@ -284,7 +285,7 @@ CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 	 iterT != pFEInterface->m_TaggedDeclarators.end();
 	 iterT++)
     {
-        CreateBackEnd(*iterT);
+        CreateBackEndTaggedDecl(*iterT);
     }
     // add types for Class (only for C)
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
@@ -312,7 +313,7 @@ CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 	 iterAD != pFEInterface->m_AttributeDeclarators.end();
 	 iterAD++)
     {
-        CreateBackEnd(*iterAD);
+        CreateBackEndAttrDecl(*iterAD);
     }
     // add functions for interface
     AddInterfaceFunctions(pFEInterface);
@@ -567,7 +568,6 @@ CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
 
 /** \brief creates an alias type for the class
  *  \param pFEInterface the interface to use as reference
- *  \return true if successful
  *
  * In C we have an alias of CORBA_Object type to the name if the interface.
  * In C++ this is not needed, because the class is derived from CORBA_Object
@@ -630,10 +630,9 @@ CBEClass::CreateAliasForClass(CFEInterface *pFEInterface)
 
 /** \brief internal function to create a constant
  *  \param pFEConstant the respective front-end constant
- *  \return true if successful
  */
 void
-CBEClass::CreateBackEnd(CFEConstDeclarator *pFEConstant)
+CBEClass::CreateBackEndConst(CFEConstDeclarator *pFEConstant)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(const) called\n",
 	__func__);
@@ -665,10 +664,9 @@ CBEClass::CreateBackEnd(CFEConstDeclarator *pFEConstant)
 
 /** \brief internal function to create a typedefinition
  *  \param pFETypedef the respective front-end type definition
- *  \return true if successful
  */
 void
-CBEClass::CreateBackEnd(CFETypedDeclarator *pFETypedef)
+CBEClass::CreateBackEndTypedef(CFETypedDeclarator *pFETypedef)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s(typedef) called\n", __func__);
@@ -699,10 +697,9 @@ CBEClass::CreateBackEnd(CFETypedDeclarator *pFETypedef)
 
 /** \brief internal function to create a functions for attribute declarator
  *  \param pFEAttrDecl the respective front-end attribute declarator definition
- *  \return true if successful
  */
 void
-CBEClass::CreateBackEnd(CFEAttributeDeclarator *pFEAttrDecl)
+CBEClass::CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl)
 {
     string exc = string(__func__);
     if (!pFEAttrDecl)
@@ -795,7 +792,6 @@ CBEClass::CreateBackEnd(CFEAttributeDeclarator *pFEAttrDecl)
 
 /** \brief internal function to create the back-end functions
  *  \param pFEOperation the respective front-end function
- *  \return true if successful
  *
  * A function has to be generated depending on its attributes. If it is a call 
  * function, we have to generate different back-end function than for a message
@@ -985,7 +981,6 @@ CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
 
 /** \brief internal function to create the back-end functions
  *  \param pFEOperation the respective front-end function
- *  \return true if successful
  *
  * A function has to be generated depending on its attributes. If it is a call
  * function, we have to generate different back-end function than for a
@@ -1016,7 +1011,8 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
         !(pFEOperation->m_Attributes.Find(ATTR_OUT)))
     {
         // the call case:
-        // we need the functions unmarshal, marshal
+        // we need the functions unmarshal, marshal, and, if necessary,
+	// marshal_exc
         CBEOperationFunction *pFunction = pCF->GetNewUnmarshalFunction();
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(true);
@@ -1052,7 +1048,7 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
 	    e->Print();
 	    delete e;
 
-	    exc += " failed, because marshal function coudl not be created" \
+	    exc += " failed, because marshal function could not be created" \
 		" for " + pFEOperation->GetName();
             throw new CBECreateException(exc);
         }
@@ -1087,10 +1083,9 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
 
 /** \brief interna function to create an attribute
  *  \param pFEAttribute the respective front-end attribute
- *  \return true if successful
  */
 void
-CBEClass::CreateBackEnd(CFEAttribute *pFEAttribute)
+CBEClass::CreateBackEndAttribute(CFEAttribute *pFEAttribute)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(attr) called\n",
 	__func__);
@@ -1185,7 +1180,7 @@ bool CBEClass::AddToFile(CBEImplementationFile *pImpl)
 int
 CBEClass::GetParameterCount(int nFEType,
     bool& bSameCount,
-    int nDirection)
+    DIRECTION_TYPE nDirection)
 {
     if (nDirection == 0)
     {
@@ -1217,7 +1212,7 @@ CBEClass::GetParameterCount(int nFEType,
  *  \return the number of strings needed
  */
 int
-CBEClass::GetStringParameterCount(int nDirection,
+CBEClass::GetStringParameterCount(DIRECTION_TYPE nDirection,
     ATTR_TYPE nMustAttrs,
     ATTR_TYPE nMustNotAttrs)
 {
@@ -1257,7 +1252,7 @@ CBEClass::GetStringParameterCount(int nDirection,
  *  \param nDirection the direction to count
  *  \return the number of bytes needed to transmit any of the functions
  */
-int CBEClass::GetSize(int nDirection)
+int CBEClass::GetSize(DIRECTION_TYPE nDirection)
 {
     if (nDirection == 0)
     {
@@ -2345,7 +2340,7 @@ CBEClass::FindPredefinedNumbers(vector<CFEInterface*> *pCollection,
 		{
 		    if (CCompiler::IsWarningSet(PROGRAM_WARNING_IGNORE_DUPLICATE_FID))
 		    {
-			CCompiler::GccWarning(*iterO, 0,
+			CMessages::GccWarning(*iterO, 0,
 			    "Function \"%s\" has same Uuid (%d) as function \"%s\"",
 			    (*iterO)->GetName().c_str(), nOpNumber,
 			    (*pNumbers)[nOpNumber].c_str());
@@ -2353,7 +2348,7 @@ CBEClass::FindPredefinedNumbers(vector<CFEInterface*> *pCollection,
 		    }
 		    else
 		    {
-			CCompiler::GccError(*iterO, 0,
+			CMessages::GccError(*iterO, 0,
 			    "Function \"%s\" has same Uuid (%d) as function \"%s\"",
 			    (*iterO)->GetName().c_str(), nOpNumber,
 			    (*pNumbers)[nOpNumber].c_str());
@@ -2432,7 +2427,7 @@ CBEClass::CheckOpcodeCollision(CFEInterface *pFirst,
 	    {
 		if (CCompiler::IsWarningSet(PROGRAM_WARNING_IGNORE_DUPLICATE_FID))
 		{
-		    CCompiler::GccWarning(*iOp2, 0,
+		    CMessages::GccWarning(*iOp2, 0,
 			"Function \"%s\" in interface \"%s\" has same Uuid (%d) "
 			"as function \"%s\" in interface \"%s\"",
 			(*iOp2)->GetName().c_str(), pSecond->GetName().c_str(),
@@ -2442,7 +2437,7 @@ CBEClass::CheckOpcodeCollision(CFEInterface *pFirst,
 		}
 		else
 		{
-		    CCompiler::GccError(*iOp2, 0,
+		    CMessages::GccError(*iOp2, 0,
 			"Function \"%s\" in interface \"%s\" has same Uuid (%d) "
 			"as function \"%s\" in interface \"%s\"",
 			(*iOp2)->GetName().c_str(), pSecond->GetName().c_str(),
@@ -2486,7 +2481,7 @@ CBEClass::CheckOpcodeCollision(CFEInterface *pFEInterface,
         {
             if (CCompiler::IsWarningSet(PROGRAM_WARNING_IGNORE_DUPLICATE_FID))
             {
-                CCompiler::GccWarning(pFEOperation, 0,
+                CMessages::GccWarning(pFEOperation, 0,
 		    "Function \"%s\" has Uuid (%d) which is used by compiler for base interface \"%s\"",
 		    pFEOperation->GetName().c_str(), nOpNumber,
 		    (*iterI)->GetName().c_str());
@@ -2494,7 +2489,7 @@ CBEClass::CheckOpcodeCollision(CFEInterface *pFEInterface,
             }
             else
             {
-                CCompiler::GccError(pFEOperation, 0, "Function \"%s\" has Uuid (%d) which is used by compiler for interface \"%s\"",
+                CMessages::GccError(pFEOperation, 0, "Function \"%s\" has Uuid (%d) which is used by compiler for interface \"%s\"",
 		    pFEOperation->GetName().c_str(), nOpNumber,
 		    (*iterI)->GetName().c_str());
                 exit(1);
@@ -2632,7 +2627,7 @@ CBEType* CBEClass::FindTaggedType(int nType, string sTag)
  *  \return true if successful
  */
 void
-CBEClass::CreateBackEnd(CFEConstructedType *pFEType)
+CBEClass::CreateBackEndTaggedDecl(CFEConstructedType *pFEType)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(constr type) called\n",
 	__func__);
@@ -2721,7 +2716,7 @@ bool CBEClass::HasFunctionWithUserType(string sTypeName, CBEFile *pFile)
 int 
 CBEClass::GetParameterCount(ATTR_TYPE nMustAttrs,
     ATTR_TYPE nMustNotAttrs,
-    int nDirection)
+    DIRECTION_TYPE nDirection)
 {
     if (nDirection == 0)
     {

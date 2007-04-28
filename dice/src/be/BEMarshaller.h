@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/BEMarshaller.h
+ *  \file    dice/src/be/BEMarshaller.h
  *  \brief   contains the declaration of the class CBEMarshaller
  *
- *    \date    11/18/2004
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    11/18/2004
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,9 +30,10 @@
 #ifndef __DICE_BE_BEMARSHALLER_H__
 #define __DICE_BE_BEMARSHALLER_H__
 
-#include <be/BEObject.h>
+#include "BEObject.h"
 #include <vector>
 using std::vector;
+#include "BEMsgBufferType.h"
 
 class CBETypedDeclarator;
 class CBEFunction;
@@ -62,9 +63,9 @@ public:
     virtual ~CBEMarshaller();
 
 public:
-    virtual void MarshalFunction(CBEFile *pFile, int nDirection);
+    virtual void MarshalFunction(CBEFile *pFile, DIRECTION_TYPE nDirection);
     virtual void MarshalFunction(CBEFile *pFile, CBEFunction *pFunction, 
-	int nDirection);
+	DIRECTION_TYPE nDirection);
     virtual void MarshalParameter(CBEFile *pFile, CBEFunction *pFunction, 
 	CBETypedDeclarator *pParameter, bool bMarshal);
     virtual void MarshalValue(CBEFile *pFile, CBEFunction *pFunction, 
@@ -73,44 +74,44 @@ public:
     virtual bool AddLocalVariable(CBEFunction *pFunction);
 
 protected:
-    CBEStructType* GetStruct(int& nDirection);
-    CBEStructType* GetStruct(CBEFunction *pFunction, int& nDirection);
+    CBEStructType* GetStruct(CMsgStructType& nType);
+    CBEStructType* GetStruct(CBEFunction *pFunction, CMsgStructType& nType);
     CBEMsgBuffer* GetMessageBuffer(CBEFunction *pFunction);
 
     virtual void MarshalParameterIntern(CBETypedDeclarator *pParameter,
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack* pStack);
     virtual bool MarshalSpecialMember(CBETypedDeclarator *pMember);
     virtual bool MarshalOpcode(CBETypedDeclarator *pMember);
     virtual bool MarshalException(CBETypedDeclarator *pMember);
     virtual bool MarshalReturn(CBETypedDeclarator *pMember);
     virtual void MarshalGenericMember(int nPosition,
 	CBETypedDeclarator *pParameter,
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack* pStack);
     virtual void MarshalGenericValue(int nPosition, int nValue);
     virtual bool MarshalString(CBETypedDeclarator *pParameter, 
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack* pStack);
     virtual bool MarshalArray(CBETypedDeclarator *pParameter, 
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack* pStack);
     virtual void MarshalArrayIntern(CBETypedDeclarator *pParameter, 
-	CBEType *pType, vector<CDeclaratorStackLocation*> *pStack);
+	CBEType *pType, CDeclStack* pStack);
     virtual void MarshalArrayInternRef(CBETypedDeclarator *pParameter,
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack* pStack);
     virtual bool MarshalStruct(CBETypedDeclarator *pParameter, 
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack* pStack);
     virtual bool MarshalUnion(CBETypedDeclarator *pParameter,
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack* pStack);
 
     virtual bool DoSkipParameter(CBEFunction *pFunction, 
-	CBETypedDeclarator *pParameter, int nDirection);
+	CBETypedDeclarator *pParameter, DIRECTION_TYPE nDirection);
     virtual CBETypedDeclarator* FindMarshalMember(
-	vector<CDeclaratorStackLocation*> *pSack);
+	CDeclStack* pStack);
     
-    virtual void WriteMember(int nDir, CBEMsgBuffer *pMsgBuffer,
-	CBETypedDeclarator *pMember, vector<CDeclaratorStackLocation*> *pStack);
+    virtual void WriteMember(CMsgStructType nType, CBEMsgBuffer *pMsgBuffer,
+	CBETypedDeclarator *pMember, CDeclStack* pStack);
     virtual void WriteParameter(CBETypedDeclarator *pParameter, 
-	vector<CDeclaratorStackLocation*> *pStack, bool bPointer);
+	CDeclStack* pStack, bool bPointer);
     virtual void WriteAssignment(CBETypedDeclarator *pParameter,
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack* pStack);
 
 protected:
     /** \var bool m_bMarshal

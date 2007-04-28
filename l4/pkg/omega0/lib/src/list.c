@@ -9,11 +9,11 @@
 int omega0_first(void){
   if(!omega0_initalized && omega0_init()) return -1;
   
-  return omega0_call(MANAGEMENT_THREAD, OMEGA0_FIRST, 0, L4_IPC_NEVER);
+  return omega0_call(0, OMEGA0_FIRST, 0, L4_IPC_NEVER);
 }
 
 int omega0_next(int num){
   if(!omega0_initalized && omega0_init()) return -1;
   
-  return omega0_call(MANAGEMENT_THREAD, OMEGA0_NEXT, num, L4_IPC_NEVER);
+  return omega0_call(0, OMEGA0_NEXT, num, L4_IPC_NEVER);
 }

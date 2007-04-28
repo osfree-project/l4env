@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -31,6 +31,7 @@
 #define L4BEIPC_H
 
 #include "be/BECommunication.h"
+#include "be/BEFunction.h" // DIRECTION_TYPE
 
 /** \class CL4BEIPC
  *  \ingroup backend
@@ -52,7 +53,7 @@ public:
 
 protected:
     virtual bool IsShortIPC(CBEFunction *pFunction, 
-	int nDirection = 0);
+	DIRECTION_TYPE nDirection);
     virtual bool UseAssembler(CBEFunction *pFunction);
 };
 

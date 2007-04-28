@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -45,6 +45,7 @@
 #include "BESizes.h"
 #include "BERoot.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEOperation.h"
 #include "fe/FEInterface.h"
@@ -54,14 +55,83 @@
 #include <string>
 #include <cassert>
 
+/** \brief comparison operator
+ *  \param l a message buffer struct type
+ *  \param r another message buffer struct type
+ *  \return true if both are equal
+ */
+bool operator== (const CMsgStructType& l, const CMsgStructType& r)
+{
+    return l.nType == r.nType;
+}
+
+/** \brief comparison operator
+ *  \param l a message buffer struct type
+ *  \param r another message buffer struct type
+ *  \return true if both are equal
+ */
+bool operator== (const CMsgStructType::Type& l, const CMsgStructType& r)
+{
+    return l == r.nType;
+}
+
+/** \brief comparison operator
+ *  \param l a message buffer struct type
+ *  \param r another message buffer struct type
+ *  \return true if both are equal
+ */
+bool operator== (const CMsgStructType& l, const CMsgStructType::Type& r)
+{
+    return l.nType == r;
+}
+
+/** \brief comparison operator
+ *  \param l a message buffer struct type
+ *  \param r another message buffer struct type
+ *  \return true if both are not equal
+ */
+bool operator!= (const CMsgStructType& l, const CMsgStructType& r)
+{
+    return l.nType != r.nType;
+}
+
+/** \brief comparison operator
+ *  \param l a message buffer struct type
+ *  \param r another message buffer struct type
+ *  \return true if both are not equal
+ */
+bool operator!= (const CMsgStructType::Type& l, const CMsgStructType& r)
+{
+    return l != r.nType;
+}
+
+/** \brief comparison operator
+ *  \param l a message buffer struct type
+ *  \param r another message buffer struct type
+ *  \return true if both are not equal
+ */
+bool operator!= (const CMsgStructType& l, const CMsgStructType::Type& r)
+{
+    return l.nType != r;
+}
+
 CBEMsgBufferType::CBEMsgBufferType()
  : CBEUnionType()
-{
-}
+{}
 
 CBEMsgBufferType::CBEMsgBufferType(CBEMsgBufferType & src)
  : CBEUnionType(src)
-{
+{}
+
+CBEMsgBufferType::~CBEMsgBufferType()
+{}
+
+/** \brief creates a new instance of this class
+ *  \return a reference to the copy of this instance
+ */
+CObject* CBEMsgBufferType::Clone()
+{ 
+    return new CBEMsgBufferType(*this);
 }
 
 /** \brief initialize instance of this class
@@ -172,7 +242,7 @@ CBEMsgBufferType::AddStruct(CFEInterface *pFEInterface)
 
 /** \brief adds a struct to the union
  *  \param pFEOperation the front-end operation to use as reference
- *  \param nDirection the direction of the new struct
+ *  \param nType the type of struct to add
  *
  * This creates a struct and adds a union case with the struct as type to the
  * union.  Then it calls the AddElements method, which inserts the parameters
@@ -187,7 +257,7 @@ CBEMsgBufferType::AddStruct(CFEInterface *pFEInterface)
  */
 void
 CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
-    int nDirection)
+    CMsgStructType nType)
 {
     string exc = string(__func__);
 
@@ -212,13 +282,22 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
 	delete e;
 
 	exc += " failed, because ";
-	exc += (nDirection == DIRECTION_IN) ? "_in" : "_out";
+	switch ((int)nType) {
+	case CMsgStructType::In:
+	    exc += "_in"; break;
+	case CMsgStructType::Out:
+	    exc += "_out"; break;
+	case CMsgStructType::Exc:
+	    exc += "_exc"; break;
+	default:
+	    exc += "_word"; break;
+	}
 	exc += " struct could not be created.";
         throw new CBECreateException(exc);
     }
     // get name of struct
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sTag = pNF->GetMessageBufferStructName(nDirection,
+    string sTag = pNF->GetMessageBufferStructName(nType,
 	pFEOperation->GetName(), 
 	pFEOperation->GetSpecificParent<CFEInterface>()->GetName());
     // create union case
@@ -235,7 +314,16 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
 	delete e;
 
 	exc += " failed, because ";
-	exc += (nDirection == DIRECTION_IN) ? "_in" : "_out";
+	switch ((int)nType) {
+	case CMsgStructType::In:
+	    exc += "_in"; break;
+	case CMsgStructType::Out:
+	    exc += "_out"; break;
+	case CMsgStructType::Exc:
+	    exc += "_exc"; break;
+	default:
+	    exc += "_word"; break;
+	}
 	exc += " union case could not be created.";
         throw new CBECreateException(exc);
     }
@@ -244,7 +332,7 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
     // add the elements
     try
     {
-	AddElements(pFEOperation, nDirection);
+	AddElements(pFEOperation, nType);
     }
     catch (CBECreateException *e)
     {
@@ -258,7 +346,7 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
 
 /** \brief adds the elements of the structs
  *  \param pFEOperation the front-end operation to extract the elements from
- *  \param nDirection the direction to add
+ *  \param nType the type of struct
  *  \return true if successful
  *
  * This method iterates over the parameters and calls the AddElement method
@@ -271,7 +359,7 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
  */
 void
 CBEMsgBufferType::AddElements(CFEOperation *pFEOperation,
-    int nDirection)
+    CMsgStructType nType)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMsgBufferType::%s called for %s\n", __func__,
@@ -284,13 +372,13 @@ CBEMsgBufferType::AddElements(CFEOperation *pFEOperation,
     {
 	if ((*iter)->m_Attributes.Find(ATTR_IGNORE))
 	    continue;
-	if ((nDirection == DIRECTION_IN) &&
+	if ((nType == CMsgStructType::In) &&
 	    !(*iter)->m_Attributes.Find(ATTR_IN))
 	    continue;
-	if ((nDirection == DIRECTION_OUT) &&
+	if ((nType == CMsgStructType::Out) &&
 	    !(*iter)->m_Attributes.Find(ATTR_OUT))
 	    continue;
-        AddElement(*iter, nDirection);
+        AddElement(*iter, nType);
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -299,7 +387,7 @@ CBEMsgBufferType::AddElements(CFEOperation *pFEOperation,
 
 /** \brief adds elements for a single parameter to the message buffer
  *  \param pFEParameter the parameter to add the elements for
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the struct
  *  \return true if successful
  *
  * To add an element we first look for the parameter in the back-end function.
@@ -313,7 +401,7 @@ CBEMsgBufferType::AddElements(CFEOperation *pFEOperation,
  */
 void
 CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
-    int nDirection)
+    CMsgStructType nType)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMsgBufferType::%s called\n", __func__);
@@ -325,7 +413,7 @@ CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
     CFEInterface *pFEInterface =
 	pFEOperation->GetSpecificParent<CFEInterface>();
     CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
-	pFEInterface->GetName(), nDirection);
+	pFEInterface->GetName(), nType);
     assert(pStruct);
 
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
@@ -445,18 +533,13 @@ CBEMsgBufferType::AddElement(CBEStructType *pStruct,
 		pParameter->m_Declarators.First()->GetName());
 	if (!pOriginal)
 	    pOriginal = pParameter;
-	vector<CDeclaratorStackLocation*> vStack;
-	CDeclaratorStackLocation *pLoc = new 
-	    CDeclaratorStackLocation(pOriginal->m_Declarators.First());
-	vStack.push_back(pLoc);
+	CDeclStack vStack;
+	vStack.push_back(pOriginal->m_Declarators.First());
 	// check if string
 	CheckElementForString(pParameter, pFunction, pStruct, &vStack);
 	// if constructed type, check for variable sized members
 	CheckConstructedElementForVariableSize(pParameter, pFunction, 
 	    pStruct, &vStack);
-
-	vStack.pop_back();
-	delete pLoc;
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -483,7 +566,8 @@ CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
 	pType->CreateBackEnd(string(), pFERefObj);
 	// get name of struct
 	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	string sTag = pNF->GetMessageBufferStructName(0, string(), string());
+	string sTag = pNF->GetMessageBufferStructName(CMsgStructType::Generic,
+	    string(), string());
 	// create union case
 	pCase->CreateBackEnd(pType, sTag, 0, false);
     }
@@ -509,7 +593,7 @@ CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
  *         direction
  *  \param sFuncName the front-end operation to use as reference
  *  \param sClassName the front-end interface to use as reference
- *  \param nDirection the direction to get the struct for
+ *  \param nType the type of the struct
  *  \return a reference to the struct or 0 if not found
  *
  * We first try to find the struct including the function name. If it is not
@@ -518,16 +602,16 @@ CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
 CBEStructType*
 CBEMsgBufferType::GetStruct(string sFuncName,
     string sClassName,
-    int nDirection)
+    CMsgStructType nType)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMsgBufferType::%s called for func %s, class %s and %d\n", __func__,
-        sFuncName.c_str(), sClassName.c_str(), nDirection);
+        sFuncName.c_str(), sClassName.c_str(), (int)nType);
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sName = pNF->GetMessageBufferStructName(nDirection, string(), 
+    string sName = pNF->GetMessageBufferStructName(nType, string(), 
 	string());
-    sFuncName = pNF->GetMessageBufferStructName(nDirection, sFuncName,
+    sFuncName = pNF->GetMessageBufferStructName(nType, sFuncName,
 	sClassName);
     vector<CBEUnionCase*>::iterator iter;
     for (iter = m_UnionCases.begin();
@@ -830,14 +914,10 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
 	    "CBEMsgBufferType::%s param is var sized and has constr type\n",
 	    __func__);
 
-	vector<CDeclaratorStackLocation*> vStack;
-	CDeclaratorStackLocation *pLoc = 
-	    new CDeclaratorStackLocation(pParameter->m_Declarators.First());
-	vStack.push_back(pLoc);
+	CDeclStack vStack;
+	vStack.push_back(pParameter->m_Declarators.First());
 
 	FlattenConstructedElement(pParameter, &vStack, pStruct);
-
-	delete pLoc;
 	
 	// done
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
@@ -895,11 +975,10 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
  */
 void
 CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEStructType *pStruct)
 {
     assert (pParameter);
-    assert (pStack);
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEMsgBufferType::%s(%s, stack) called\n",
@@ -956,14 +1035,9 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 	     iter != pUnion->m_UnionCases.end();
 	     iter++)
 	{
-	    CDeclaratorStackLocation *pLoc = 
-		new CDeclaratorStackLocation((*iter)->m_Declarators.First());
-	    pStack->push_back(pLoc);
-
+	    pStack->push_back((*iter)->m_Declarators.First());
 	    FlattenConstructedElement(*iter, pStack, pStruct);
-
 	    pStack->pop_back();
-	    delete pLoc;
 	}
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -983,14 +1057,9 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 	     iter != pParamStruct->m_Members.end();
 	     iter++)
 	{
-	    CDeclaratorStackLocation *pLoc =
-		new CDeclaratorStackLocation((*iter)->m_Declarators.First());
-	    pStack->push_back(pLoc);
-
+	    pStack->push_back((*iter)->m_Declarators.First());
 	    FlattenConstructedElement((*iter), pStack, pStruct);
-
 	    pStack->pop_back();
-	    delete pLoc;
 	}
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -1045,7 +1114,7 @@ CBEMsgBufferType::GetStartOfPayload(CBEStructType* pStruct)
 
 /** \brief adds a struct to the union
  *  \param pStruct the struct to add as is
- *  \param nDirection the direction of the new struct
+ *  \param nType the type of the struct
  *  \param sFunctionName name of function
  *  \param sClassName name of class
  *  \return true on success
@@ -1055,7 +1124,7 @@ CBEMsgBufferType::GetStartOfPayload(CBEStructType* pStruct)
  */
 void
 CBEMsgBufferType::AddStruct(CBEStructType *pStruct,
-    int nDirection,
+    CMsgStructType nType,
     string sFunctionName,
     string sClassName)
 {
@@ -1067,7 +1136,7 @@ CBEMsgBufferType::AddStruct(CBEStructType *pStruct,
     m_UnionCases.Add(pCase);
     // get name of struct
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sTag = pNF->GetMessageBufferStructName(nDirection, sFunctionName,
+    string sTag = pNF->GetMessageBufferStructName(nType, sFunctionName,
 	sClassName);
     // create union case
     try
@@ -1083,9 +1152,7 @@ CBEMsgBufferType::AddStruct(CBEStructType *pStruct,
 	delete e;
 	
 	string exc = string(__func__);
-	exc += " failed, because ";
-	exc += (nDirection == DIRECTION_IN) ? "_in" : "_out";
-	exc += " union case could not be created.";
+	exc += " failed, because " + sTag + " union case could not be created.";
         throw new CBECreateException(exc);
     }
     delete pType; /* cloned in CBETypedDeclarator::CreateBackEnd */
@@ -1102,7 +1169,7 @@ void
 CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
     CBEFunction *pFunction,
     CBEStructType *pStruct,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     assert(pParameter);
     assert(pStruct);
@@ -1167,10 +1234,9 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 	if (!pTrueParameter)
 	{
 	    pTrueParameter = pFunction->GetReturnVariable();
-	    vector<CDeclaratorStackLocation*>::iterator iter = pStack->begin();
 	    string sDeclName;
-	    if (iter != pStack->end())
-		sDeclName = (*iter)->pDeclarator->GetName();
+	    if (!pStack->empty())
+		sDeclName = pStack->front().pDeclarator->GetName();
 	    if (sDeclName.empty() || 
 		!pTrueParameter->m_Declarators.Find(sDeclName))
 		pTrueParameter = NULL;
@@ -1185,11 +1251,10 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 	//
 	// we use the top-most parameter, because the pParameter might be the
 	// member of a struct without a separate directional attribute.
-	vector<CDeclaratorStackLocation*>::iterator iter = pStack->begin();
 	CBETypedDeclarator *pOrigParameter = 0;
-	if (iter != pStack->end())
+	if (!pStack->empty())
 	    pOrigParameter = pFunction->FindParameter(
-		(*iter)->pDeclarator->GetName());
+		pStack->front().pDeclarator->GetName());
 	bool bIn = pOrigParameter ? pOrigParameter->m_Attributes.Find(ATTR_IN) :
 	    pParameter->m_Attributes.Find(ATTR_IN);
 	bool bOut = pOrigParameter ? pOrigParameter->m_Attributes.Find(ATTR_OUT) :
@@ -1361,28 +1426,28 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
  */
 string 
 CBEMsgBufferType::CreateInitStringForString(CBEFunction *pFunction,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     string sUnionStrPre, sUnionStrSuf;
     // if stack is longer than one element, then there might be a member of a
     // constructed type
     if (pStack->size() > 1)
     {
-	vector<CDeclaratorStackLocation*>::iterator iter = pStack->begin();
-	vector<CDeclaratorStackLocation*> vStack;
+	CDeclStack vStack;
 	// get parameter
 	CBETypedDeclarator *pParameter = 0;
 	// (no need to test for valid pointer: there are at least two elements
 	// in stack)
 	pParameter = pFunction->FindParameter(
-	    (*iter)->pDeclarator->GetName());
-	vStack.push_back(*iter);
+	    pStack->front().pDeclarator->GetName());
+	vStack.push_back(pStack->front());
 	// at least parameter sould exist
 	assert(pParameter);
 	// now: check if there is a next element in stack. Then check if
 	// parameter's type is constructed (alias of constructed) - should be,
 	// otherwise stack wouldn't make sense
-	while (++iter != pStack->end())
+	CDeclStack::iterator iter = pStack->begin() + 1;
+	for (; iter != pStack->end(); iter++)
 	{
 	    CBEType *pType = pParameter->GetType();
 	    while (dynamic_cast<CBEUserDefinedType*>(pType))
@@ -1390,71 +1455,19 @@ CBEMsgBufferType::CreateInitStringForString(CBEFunction *pFunction,
 	    
 	    CBEStructType *pStruct = dynamic_cast<CBEStructType*>(pType);
 	    CBEUnionType *pUnion = dynamic_cast<CBEUnionType*>(pType);
-	    CBEIDLUnionType *pIDLUnion = dynamic_cast<CBEIDLUnionType*>(pType);
 	    assert(pStruct || pUnion);
 
 	    // check IDL union before struct, because IDL union is derived
 	    // from struct:
 	    // get switch variable and try to find the value for the next
 	    // member
-	    if (pIDLUnion)
-	    {
-		CBETypedDeclarator *pSwitchVar = pIDLUnion->GetSwitchVariable();
-		assert (pSwitchVar);
-		CBETypedDeclarator *pUnionVar = pIDLUnion->GetUnionVariable();
-		assert(pUnionVar);
-		// current iterator should point to union variable
-		assert(pUnionVar->m_Declarators.Find(
-			(*iter)->pDeclarator->GetName()));
-
-		// build switch var string part
-		string sSwitchVar;
-		CDeclaratorStackLocation *pLoc = 
-		    new CDeclaratorStackLocation(pSwitchVar->m_Declarators.First());
-		vStack.push_back(pLoc);
-		CDeclaratorStackLocation::WriteToString(sSwitchVar, &vStack,
-		    false);
-		vStack.pop_back();
-		delete pLoc;
-		
-		pUnion = dynamic_cast<CBEUnionType*>(pUnionVar->GetType());
-		// find member
-		iter++;
-		CBEUnionCase *pCase = 
-		    pUnion->m_UnionCases.Find((*iter)->pDeclarator->GetName());
-		assert(pCase);
-		int nCount = 0;
-		vector<CBEExpression*>::iterator iL;
-		for (iL = pCase->m_Labels.begin();
-		     iL != pCase->m_Labels.end();
-		     iL++)
-		{
-		    string sCompare = "(" + sSwitchVar + " == ";
-		    (*iL)->WriteToStr(sCompare);
-		    sCompare += ")";
-
-		    if (nCount == 0)
-			sUnionStrPre = sCompare;
-		    else
-			sUnionStrPre += " || " + sCompare;
-
-		    nCount++;
-		}
-		if (nCount > 1)
-		    sUnionStrPre = "(" + sUnionStrPre + ")";
-		sUnionStrPre += " ? (";
-		sUnionStrSuf = ") : 0" + sUnionStrSuf;
-		
-		pParameter = pCase;
-		// add to decl stack
-		vStack.push_back(*iter);
+	    if (CreateInitStringForStringIDLUnion(pParameter, sUnionStrPre,
+		    sUnionStrSuf, iter, vStack))
 		continue;
-	    }
 	    // now check: with a struct, we simply get the next member
 	    if (pStruct)
 	    {
-		pParameter = pStruct->m_Members.Find(
-		    (*iter)->pDeclarator->GetName());
+		pParameter = pStruct->m_Members.Find(iter->pDeclarator->GetName());
 		// should exist
 		assert(pParameter);
 		// add to decl stack
@@ -1463,15 +1476,15 @@ CBEMsgBufferType::CreateInitStringForString(CBEFunction *pFunction,
 	    }
 	    // with a union, we issues a big fat warning and terminate the
 	    // loop: there is nothing reasonable we can do, if we cannot
-	    // determine for sure is string is used or not
+	    // determine for sure if string is used or not
 	    if (pUnion)
 	    {
 		string sParam;
 		CDeclaratorStackLocation::WriteToString(sParam, pStack, true);
-		CCompiler::Warning(
+		CMessages::Warning(
 "The string %s in function %s is member of a union with descriminator.\n", 
 		    sParam.c_str(), pFunction->GetName().c_str());
-		CCompiler::Warning(
+		CMessages::Warning(
 "I cannot determine it's size safely. Please ensure that it is either NULL or\n"
 "a valid pointer to a string.\n");
 		sUnionStrPre = sUnionStrSuf = string();
@@ -1488,6 +1501,68 @@ CBEMsgBufferType::CreateInitStringForString(CBEFunction *pFunction,
     return sInitStr;
 }
 
+bool
+CBEMsgBufferType::CreateInitStringForStringIDLUnion(CBETypedDeclarator*& pParameter,
+    string& sUnionStrPre,
+    string& sUnionStrSuf,
+    CDeclStack::iterator& iter,
+    CDeclStack& vStack)
+{
+    CBEType *pType = pParameter->GetType();
+    while (dynamic_cast<CBEUserDefinedType*>(pType))
+	pType = static_cast<CBEUserDefinedType*>(pType)->GetRealType();
+    CBEIDLUnionType *pIDLUnion = dynamic_cast<CBEIDLUnionType*>(pType);
+    if (!pIDLUnion)
+	return false;
+
+    CBETypedDeclarator *pSwitchVar = pIDLUnion->GetSwitchVariable();
+    assert (pSwitchVar);
+    CBETypedDeclarator *pUnionVar = pIDLUnion->GetUnionVariable();
+    assert(pUnionVar);
+    // current iterator should point to union variable
+    assert(pUnionVar->m_Declarators.Find(iter->pDeclarator->GetName()));
+
+    // build switch var string part
+    string sSwitchVar;
+    vStack.push_back(pSwitchVar->m_Declarators.First());
+    CDeclaratorStackLocation::WriteToString(sSwitchVar, &vStack,
+	false);
+    vStack.pop_back();
+
+    CBEUnionType *pUnion = dynamic_cast<CBEUnionType*>(pUnionVar->GetType());
+    // find member
+    iter++;
+    CBEUnionCase *pCase = 
+	pUnion->m_UnionCases.Find(iter->pDeclarator->GetName());
+    assert(pCase);
+    int nCount = 0;
+    vector<CBEExpression*>::iterator iL;
+    for (iL = pCase->m_Labels.begin();
+	iL != pCase->m_Labels.end();
+	iL++)
+    {
+	string sCompare = "(" + sSwitchVar + " == ";
+	(*iL)->WriteToStr(sCompare);
+	sCompare += ")";
+
+	if (nCount == 0)
+	    sUnionStrPre = sCompare;
+	else
+	    sUnionStrPre += " || " + sCompare;
+
+	nCount++;
+    }
+    if (nCount > 1)
+	sUnionStrPre = "(" + sUnionStrPre + ")";
+    sUnionStrPre += " ? (";
+    sUnionStrSuf = ") : 0" + sUnionStrSuf;
+
+    pParameter = pCase;
+    // add to decl stack
+    vStack.push_back(*iter);
+    return true;
+}
+
 /** \brief checks if a new variable sized element has its size attributes set
  *  \param pParameter the new parameter representing the element
  *  \param pFunction the respective function
@@ -1499,7 +1574,7 @@ CBEMsgBufferType::CheckConstructedElementForVariableSize(
     CBETypedDeclarator *pParameter,
     CBEFunction *pFunction,
     CBEStructType *pStruct,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s(%s,%s,struct,stack) called\n",
 	__func__, pParameter->m_Declarators.First()->GetName().c_str(),
@@ -1532,9 +1607,7 @@ CBEMsgBufferType::CheckConstructedElementForVariableSize(
 	       continue;
 
 	   // add the member to the declarator stack
-	   CDeclaratorStackLocation *pLoc = 
-	       new CDeclaratorStackLocation((*iter)->m_Declarators.First());
-	   pStack->push_back(pLoc);
+	   pStack->push_back((*iter)->m_Declarators.First());
 	   // check if string
 	   CheckElementForString(*iter, pFunction, pStruct, pStack);
 	   // if constructed type, check for variable sized members
@@ -1542,8 +1615,6 @@ CBEMsgBufferType::CheckConstructedElementForVariableSize(
 	       pStruct, pStack);
 	   // get member from stack again
 	   pStack->pop_back();
-	   delete pLoc;
-
        }
 
        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -1567,9 +1638,7 @@ CBEMsgBufferType::CheckConstructedElementForVariableSize(
 	       continue;
 
 	   // push the member to the stack
-	   CDeclaratorStackLocation *pLoc = 
-	       new CDeclaratorStackLocation((*iter)->m_Declarators.First());
-	   pStack->push_back(pLoc);
+	   pStack->push_back((*iter)->m_Declarators.First());
 	   // check if string
 	   CheckElementForString(*iter, pFunction, pStruct, pStack);
 	   // if constructed type, check for variable sized members
@@ -1577,7 +1646,6 @@ CBEMsgBufferType::CheckConstructedElementForVariableSize(
 	       pStruct, pStack);
 	   // now get the last element from the stack again
 	   pStack->pop_back();
-	   delete pLoc;
        }
 
        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,

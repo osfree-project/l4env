@@ -38,8 +38,8 @@ library l4vfs
         int accept     ([in] object_handle_t handle,
                         [in, out, size_is(addrlen),
                          max_is(L4VFS_SOCKET_MAX_ADDRLEN)] char addr[],
-                        [in, out] int *addrlen,
-                        [out] int *actual_len);
+                        [in, out] l4vfs_socklen_t *addrlen,
+                        [out] l4vfs_socklen_t *actual_len);
 
         int bind       ([in] object_handle_t handle,
                         [in, size_is(addrlen),
@@ -69,18 +69,18 @@ library l4vfs
                         [out,  size_is(len), ref, prealloc_client, 
 			 prealloc_server, max_is(L4VFS_WRITE_RCVBUF_SIZE)]
 			 char **buf,
-                        [in, out] int *len,
+                        [in, out] l4vfs_size_t *len,
                         [in] int flags,
                         [in, out, size_is(fromlen), max_is(128)] char from[],
-                        [in, out] int *fromlen,
-                        [out] int *actual_fromlen);
+                        [in, out] l4vfs_socklen_t *fromlen,
+                        [out] l4vfs_socklen_t *actual_fromlen);
 
         [allow_reply_only]
         int recv       ([in] object_handle_t handle,
                         [out, size_is(len), ref, prealloc_client,
 			 prealloc_server, max_is(L4VFS_WRITE_RCVBUF_SIZE)]
 			 char **buf,
-                        [in,out] int *len,
+                        [in,out] l4vfs_size_t *len,
                         [in] int flags);
 
         [allow_reply_only]
@@ -135,7 +135,7 @@ library l4vfs
 
         int getsockname([in] object_handle_t s,
                         [out, size_is(len), max_is(4096)] char name[],
-                        [in,out] int *len);
+                        [in,out] l4vfs_socklen_t *len);
 
         int setsockopt ([in] object_handle_t s,
                         [in] int level,
@@ -148,8 +148,8 @@ library l4vfs
                         [in] int optname,
                         [in, out, ref, size_is(optlen),
                          max_is(4096)] char *optval,
-                        [in, out] int *optlen,
-                        [out] int *actual_optlen);
+                        [in, out] l4vfs_socklen_t *optlen,
+                        [out] l4vfs_socklen_t *actual_optlen);
 
         int socketpair ([in] int domain,
                         [in] int type,
@@ -160,8 +160,8 @@ library l4vfs
         int getpeername([in] object_handle_t handle,
                         [in, out, size_is(addrlen),
                          max_is(L4VFS_SOCKET_MAX_ADDRLEN)] char addr[],
-                        [in, out] int *addrlen,
-                        [out] int *actual_len);
+                        [in, out] l4vfs_socklen_t *addrlen,
+                        [out] l4vfs_socklen_t *actual_len);
 
     };
 };

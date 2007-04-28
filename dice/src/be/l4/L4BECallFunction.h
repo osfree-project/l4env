@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/l4/L4BECallFunction.h
+ *  \file    dice/src/be/l4/L4BECallFunction.h
  *  \brief   contains the declaration of the class CL4BECallFunction
  *
- *    \date    02/07/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/07/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -48,8 +48,8 @@ public:
     ~CL4BECallFunction();
 
 public:
-    virtual int GetFixedSize(int nDirection);
-    virtual int GetSize(int nDirection);
+    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+    virtual int GetSize(DIRECTION_TYPE nDirection);
 
 protected:
     /** \brief copy constructor

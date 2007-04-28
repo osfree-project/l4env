@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -52,7 +52,7 @@ public:
     virtual void WriteReply(CBEFile* pFile, CBEFunction* pFunction);
     virtual void WriteWait(CBEFile* pFile, CBEFunction *pFunction);
 
-    virtual void WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction, 
+    virtual void WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction,
 	bool bSendFlexpage, bool bSendShortIPC);
     virtual void WriteInitialization(CBEFile* pFile, CBEFunction* pFunction);
     virtual void WriteBind(CBEFile *pFile, CBEFunction* pFunction);
@@ -61,8 +61,8 @@ public:
     virtual bool AddLocalVariable(CBEFunction *pFunction);
 
 protected:
-    virtual bool IsShortIPC(CBEFunction *pFunction, 
-	int nDirection = 0);
+    virtual bool IsShortIPC(CBEFunction *pFunction,
+	DIRECTION_TYPE nDirection);
     virtual bool UseAssembler(CBEFunction *pFunction);
 };
 

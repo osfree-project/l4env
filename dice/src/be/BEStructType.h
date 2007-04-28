@@ -86,7 +86,7 @@ protected:
 
     virtual void WriteGetMemberSize(CBEFile *pFile, 
     	CBETypedDeclarator *pMember, 
-	vector<CDeclaratorStackLocation*> *pStack,
+	CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
     virtual void CreateBackEndSequence(CFEArrayType *pFEType);
 
@@ -104,12 +104,11 @@ public:
     virtual string GetTag();
     virtual void WriteDeclaration(CBEFile * pFile);
     virtual void WriteGetSize(CBEFile * pFile, 
-	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
+	CDeclStack* pStack, CBEFunction *pUsingFunc);
     virtual int GetFixedSize();
     virtual bool IsSimpleType();
     virtual CBETypedDeclarator* FindMember(
-	vector<CDeclaratorStackLocation*> *pStack,
-	vector<CDeclaratorStackLocation*>::iterator iCurr);
+	CDeclStack* pStack, CDeclStack::iterator iCurr);
     virtual CBETypedDeclarator* FindMemberAttribute(ATTR_TYPE nAttributeType);
     virtual CBETypedDeclarator* FindMemberIsAttribute(ATTR_TYPE nAttributeType, 
 	string sAttributeParameter);

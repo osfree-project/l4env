@@ -13,7 +13,7 @@
     * CFLAGS = -ffunction-sections
     * CFLAGS += -fno-strict-aliasing
   * Merge Makefile and Make.rules
-  * Move oshkosh.c (later l4tun.c too) into own libs
+  * Move l4tun.c into own libs
     * Need not to rebuild Liblinux when reconfiguring
     * The server implementation chooses (dynamically) which backends are used
   * fix some XXX and FIXMEs

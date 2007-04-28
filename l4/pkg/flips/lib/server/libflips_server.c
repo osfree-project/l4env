@@ -53,8 +53,8 @@ int
 l4vfs_net_io_accept_component (CORBA_Object _dice_corba_obj,
                                object_handle_t s,
                                char addr[16],
-                               int *addrlen,
-                               int *actual_len,
+                               l4vfs_socklen_t *addrlen,
+                               l4vfs_socklen_t *actual_len,
                                short *_dice_reply,
                                CORBA_Server_Environment *_dice_corba_env)
 {
@@ -115,7 +115,7 @@ int
 l4vfs_net_io_getsockname_component (CORBA_Object _dice_corba_obj,
                                     object_handle_t s,
                                     char name[4096],
-                                    int *len,
+                                    l4vfs_socklen_t *len,
                                     CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
@@ -145,11 +145,11 @@ int
 l4vfs_net_io_recvfrom_component (CORBA_Object _dice_corba_obj,
                                  object_handle_t s,
                                  char **buf,
-                                 int *len,
+                                 l4vfs_size_t *len,
                                  int flags,
                                  char from[128],
-                                 int *fromlen,
-                                 int *actual_fromlen,
+                                 l4vfs_socklen_t *fromlen,
+                                 l4vfs_socklen_t *actual_fromlen,
                                  short *_dice_reply,
                                  CORBA_Server_Environment *_dice_corba_env)
 {
@@ -159,7 +159,7 @@ l4vfs_net_io_recvfrom_component (CORBA_Object _dice_corba_obj,
 
 	*actual_fromlen = *fromlen;
 
-    LOGd(_DEBUG, "fd (%d), len (%d), fromlen (%d)", s, *len, *fromlen);
+	LOGd(_DEBUG, "fd (%d), len (%d), fromlen (%d)", s, *len, *fromlen);
 	err = recvfrom(s, *buf, *len, flags, (struct sockaddr *)from, actual_fromlen);
 
 	if (err > 0)
@@ -171,7 +171,7 @@ l4vfs_net_io_recvfrom_component (CORBA_Object _dice_corba_obj,
 	if (*fromlen > *actual_fromlen)
 		*fromlen = *actual_fromlen;
 
-    LOGd(_DEBUG,"ret (%d), fromlen (%d)", err, *fromlen);
+	LOGd(_DEBUG,"ret (%d), fromlen (%d)", err, *fromlen);
 	return err;
 }
 
@@ -181,7 +181,7 @@ int
 l4vfs_net_io_recv_component (CORBA_Object _dice_corba_obj,
                              object_handle_t s,
                              char **buf,
-                             int *len,
+                             l4vfs_size_t *len,
                              int flags,
                              short *_dice_reply,
                              CORBA_Server_Environment *_dice_corba_env)
@@ -355,8 +355,8 @@ l4vfs_net_io_getsockopt_component (CORBA_Object _dice_corba_obj,
                                    int level,
                                    int optname,
                                    char *optval,
-                                   int *optlen,
-				   int *actual_optlen,
+                                   l4vfs_socklen_t *optlen,
+				   l4vfs_socklen_t *actual_optlen,
                                    CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;
@@ -380,8 +380,8 @@ int
 l4vfs_net_io_getpeername_component (CORBA_Object _dice_corba_obj,
                                     object_handle_t s,
                                     char addr[120],
-                                    int *addrlen,
-                                    int *actual_len,
+                                    l4vfs_socklen_t *addrlen,
+                                    l4vfs_socklen_t *actual_len,
                                     CORBA_Server_Environment *_dice_corba_env)
 {
 	int err;

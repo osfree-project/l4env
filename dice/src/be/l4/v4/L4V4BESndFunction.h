@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -45,15 +45,14 @@ public:
     virtual ~CL4V4BESndFunction();
 
 public:
-    virtual int GetFixedSize(int nDirection);
-    virtual int GetSize(int nDirection);
+    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+    virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
 
 protected:
     virtual void WriteMarshalling(CBEFile * pFile);
     virtual void WriteInvocation(CBEFile * pFile);
     virtual void WriteIPCErrorCheck(CBEFile * pFile);
-    virtual void WriteMarshalException(CBEFile* pFile, bool bMarshal);
 };
 
 #endif

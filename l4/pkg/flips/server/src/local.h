@@ -3,7 +3,7 @@
 #include <l4/dde_linux/dde.h>
 #include <l4/socket_linux/socket_linux.h>
 
-/* XXX never ever mix Oskit and Linux NET
+/* XXX never ever mix LibC (dietlibc or uclibc) and Linux NET
  * I was looking for a nasty sockaddr bug for hours - Linux has _no_
  * sa_len member.
 #include <sys/types.h>

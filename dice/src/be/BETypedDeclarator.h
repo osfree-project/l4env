@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,9 +30,10 @@
 #ifndef __DICE_BETYPEDDECLARATOR_H__
 #define __DICE_BETYPEDDECLARATOR_H__
 
-#include "be/BEObject.h"
-#include "be/BEAttribute.h"
-#include "be/BEDeclarator.h"
+#include "BEObject.h"
+#include "BEAttribute.h"
+#include "BEDeclarator.h"
+#include "BEFunction.h"
 #include "template.h"
 #include "Attribute-Type.h"
 #include <vector>
@@ -84,7 +85,7 @@ public:
 
     virtual bool IsVariableSized();
     bool IsString();
-    bool IsDirection(int nDirection);
+    bool IsDirection(DIRECTION_TYPE nDirection);
     bool IsFixedSized();
     bool HasReference();
 
@@ -97,11 +98,7 @@ public:
     CBEAttribute* FindIsAttribute(string sDeclName);
     void AddAttribute(CFEAttribute *pFEAttribute);
 
-    /** \brief creates a new instance of this class 
-     *  \return a reference to the copy
-     */
-    virtual CObject *Clone()
-    { return new CBETypedDeclarator(*this); }
+    virtual CObject *Clone();
 
     /** \brief sets the default initialization string
      *  \param sInitString the new initializatio string (may be empty)
@@ -124,9 +121,9 @@ public:
     virtual void WriteDeclaration(CBEFile * pFile);
     void WriteSetZero(CBEFile* pFile);
     void WriteGetSize(CBEFile * pFile, 
-	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
+	CDeclStack* pStack, CBEFunction *pUsingFunc);
     void WriteGetMaxSize(CBEFile * pFile, 
-	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
+	CDeclStack* pStack, CBEFunction *pUsingFunc);
     void WriteCleanup(CBEFile* pFile, bool bDeferred);
     void WriteType(CBEFile * pFile, bool bUseConst = true);
     void WriteIndirect(CBEFile * pFile);
@@ -142,7 +139,7 @@ public:
 protected:
     int GetSizeOfDeclarator(CBEDeclarator *pDeclarator);
     CBETypedDeclarator* GetSizeVariable(CBEAttribute *pIsAttribute,
-	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc,
+	CDeclStack* pStack, CBEFunction *pUsingFunc,
 	bool& bFoundInStruct);
     CBEConstant* GetSizeConstant(CBEAttribute *pIsAttribute);
     void WarnNoMax(int nSize);

@@ -403,6 +403,12 @@ IDL file, the generated functions for this operation will be preceeded
 be a pre-processor statement containing the IDL file's name and
 line number of the original declaration.
 
+\subsubsection{\tt syscall$=<$string$>$}
+Instead of generating assembly code that uses a macro from the systems headers
+to enter the kernel mode, you can specify which mechanism to use. Valid
+options for the ia32 v2 back-end are: {\tt sysenter}, {\tt int30}, or {\tt
+abs-syscall}.
+
 \section{Warnings}
 \dice{} will print warnings for different conditions if the respective
 option is given. This section gives an overview of the available warning

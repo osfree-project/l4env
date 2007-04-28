@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -36,6 +36,7 @@
 #include "be/BEClassFactory.h"
 #include "be/l4/L4BENameFactory.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "be/BEFile.h"
@@ -65,7 +66,7 @@ CL4V4BEMarshaller::~CL4V4BEMarshaller()
 bool
 CL4V4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
     CBETypedDeclarator *pParameter,
-    int nDirection)
+    DIRECTION_TYPE nDirection)
 {
     return CBEMarshaller::DoSkipParameter(pFunction, pParameter, nDirection);
 }
@@ -86,7 +87,7 @@ CL4V4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
  */
 bool
 CL4V4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CL4BEMarshaller::%s called for %s\n", __func__, 
@@ -96,7 +97,7 @@ CL4V4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
     CBETypedDeclarator *pMember = FindMarshalMember(pStack);
     if (!pMember)
     {
-	CCompiler::Warning("%s: could not find member for parameter %s\n",
+	CMessages::Warning("%s: could not find member for parameter %s\n",
 	    __func__, pParameter->m_Declarators.First()->GetName().c_str());
     }
     assert(pMember);
@@ -186,7 +187,7 @@ CL4V4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
  * in the indirect string list the current member is.
  */
 void
-CL4V4BEMarshaller::WriteRefstringCastMember(int nDirection,
+CL4V4BEMarshaller::WriteRefstringCastMember(DIRECTION_TYPE nDirection,
     CBEMsgBuffer *pMsgBuffer,
     CBETypedDeclarator *pMember)
 {
@@ -194,7 +195,8 @@ CL4V4BEMarshaller::WriteRefstringCastMember(int nDirection,
     assert(pMsgBuffer);
 
     // get index in refstring field
-    CBEStructType *pStruct = GetStruct(m_pFunction, nDirection);
+    CMsgStructType nType = nDirection;
+    CBEStructType *pStruct = GetStruct(m_pFunction, nType);
     assert(pStruct);
     // iterate members of struct, when member of struct matches pMember, then
     // stop counting, otherwise: if member of struct is of type refstring

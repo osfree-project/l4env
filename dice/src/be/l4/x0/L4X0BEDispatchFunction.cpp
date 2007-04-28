@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -58,6 +58,7 @@ void CL4X0BEDispatchFunction::WriteSetWrongOpcodeException(CBEFile* pFile)
     CL4X0BEMsgBuffer *pMsgBuffer = 
 	dynamic_cast<CL4X0BEMsgBuffer*>(GetMessageBuffer());
     assert(pMsgBuffer);
-    pMsgBuffer->WriteDopeShortInitialization(pFile, TYPE_MSGDOPE_SEND, 0);
+    pMsgBuffer->WriteDopeShortInitialization(pFile, TYPE_MSGDOPE_SEND, 
+	CMsgStructType::Generic);
 }
 

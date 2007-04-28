@@ -19,8 +19,8 @@ l4vfs_net_io_getsockopt_component(CORBA_Object _dice_corba_obj,
                                   int level,
                                   int optname,
                                   char *optval,
-                                  int *optlen,
-                                  int *actual_optlen,
+                                  l4vfs_socklen_t *optlen,
+                                  l4vfs_socklen_t *actual_optlen,
                                   CORBA_Server_Environment *_dice_corba_env)
     __attribute__((weak));
 
@@ -30,8 +30,8 @@ l4vfs_net_io_getsockopt_component(CORBA_Object _dice_corba_obj,
                                   int level,
                                   int optname,
                                   char *optval,
-                                  int *optlen,
-                                  int *actual_optlen,
+                                  l4vfs_socklen_t *optlen,
+                                  l4vfs_socklen_t *actual_optlen,
                                   CORBA_Server_Environment *_dice_corba_env)
 {
     LOG("l4vfs_net_io_getsockopt_component is not implemented!");

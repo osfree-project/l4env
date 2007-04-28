@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -74,7 +74,7 @@ CL4V2BEIPC::WriteCall(CBEFile *pFile,
     string sScheduling = pNF->GetScheduleClientVariable();
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
     string sMsgBuffer = pNF->GetMessageBufferVariable();
-    int nDirection = pFunction->GetSendDirection();
+    CMsgStructType nDirection = pFunction->GetSendDirection();
     bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE); 
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     CL4BEMarshaller *pMarshaller = 
@@ -176,7 +176,7 @@ CL4V2BEIPC::WriteReceive(CBEFile* pFile,
     CL4BEMarshaller *pMarshaller = 
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
-    int nDirection = pFunction->GetReceiveDirection();
+    CMsgStructType nDirection = pFunction->GetReceiveDirection();
 
     *pFile << "\t" << "l4_ipc_receive(*(l4_threadid_t*)" << sServerID << ",\n";
     pFile->IncIndent();
@@ -226,7 +226,7 @@ CL4V2BEIPC::WriteWait(CBEFile* pFile,
         sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
-    int nDirection = pFunction->GetReceiveDirection();
+    CMsgStructType nDirection = pFunction->GetReceiveDirection();
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     CL4BEMarshaller *pMarshaller = 
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
@@ -320,7 +320,7 @@ CL4V2BEIPC::WriteReplyAndWait(CBEFile* pFile,
     }
     *pFile << ",\n";
 
-    int nDirection = pFunction->GetSendDirection();
+    CMsgStructType nDirection = pFunction->GetSendDirection();
     *pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
 	    false, false))
@@ -361,7 +361,7 @@ void
 CL4V2BEIPC::WriteSend(CBEFile* pFile, 
 	CBEFunction* pFunction)
 {
-    int nDirection = pFunction->GetSendDirection();
+    CMsgStructType nDirection = pFunction->GetSendDirection();
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
@@ -468,7 +468,7 @@ CL4V2BEIPC::UseAssembler(CBEFunction *)
  */
 bool 
 CL4V2BEIPC::IsShortIPC(CBEFunction *pFunction, 
-	int nDirection)
+    DIRECTION_TYPE nDirection)
 {
     if (nDirection == 0)
        	return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
@@ -485,7 +485,7 @@ CL4V2BEIPC::IsShortIPC(CBEFunction *pFunction,
 bool 
 CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
 {
-    int nSndDir = pFunction->GetSendDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     assert(pFunction);
@@ -539,7 +539,7 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
 	CL4BEMsgBuffer *pMsgBuffer = dynamic_cast<CL4BEMsgBuffer*>
 	    (pFunction->GetMessageBuffer());
 	assert(pMsgBuffer);
-	int nRcvDir = pFunction->GetReceiveDirection();
+	CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
 	// interface functions use generic struct, instead of using dummys
 	bool bUseDummy = dynamic_cast<CBEOperationFunction*>(pFunction) &&
 	    !pMsgBuffer->HasWordMembers(pFunction, nRcvDir);

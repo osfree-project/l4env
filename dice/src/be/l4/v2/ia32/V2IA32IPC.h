@@ -63,6 +63,8 @@ protected:
     virtual void WriteAsmSend(CBEFile *pFile, CBEFunction *pFunction);
     virtual void WriteAsmPicSend(CBEFile *pFile, CBEFunction *pFunction);
     virtual void WriteAsmNonPicSend(CBEFile *pFile, CBEFunction *pFunction);
+
+    virtual void WriteAsmSyscall(CBEFile *pFile, bool bPic);
 };
 
 #endif

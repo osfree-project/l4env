@@ -27,12 +27,12 @@ static inline void spin_lock(spinlock_t *lock)
 
 #define spin_lock_irqsave(lock, flags)      \
 	do {                                \
-		flags=flags;                \
+                (void)flags;                \
 		spin_lock(lock);            \
 	} while (0)
 #define spin_unlock_irqrestore(lock, flags) \
 	do {                                \
-		flags=flags;                \
+                (void)flags;                \
 		spin_unlock(lock);          \
 	} while (0)
 

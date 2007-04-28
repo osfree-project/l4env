@@ -7,7 +7,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -34,6 +34,7 @@
 
 #include "defines.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "CParser.h"
 
 #include <typeinfo>
@@ -372,7 +373,7 @@ file_component:
     {
         if (!CParser::GetCurrentFile())
         {
-            CCompiler::GccError(NULL, 0, "Fatal Error: current file vanished (typedef)");
+            CMessages::GccError(NULL, 0, "Fatal Error: current file vanished (typedef)");
             YYABORT;
         }
         if (pCurFileComponent)
@@ -383,7 +384,7 @@ file_component:
                 ((CFEInterface*)pCurFileComponent)->m_Typedefs.Add($1);
             else
             {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
 		"current file component is unknown type: %s\n",
 		typeid(*pCurFileComponent).name());
                 assert(false);
@@ -396,7 +397,7 @@ file_component:
     {
         if (!CParser::GetCurrentFile())
         {
-            CCompiler::GccError(NULL, 0, "Fatal Error: current file vanished (const)");
+            CMessages::GccError(NULL, 0, "Fatal Error: current file vanished (const)");
             YYABORT;
         }
         else
@@ -406,7 +407,7 @@ file_component:
     {
         if (!CParser::GetCurrentFile())
         {
-            CCompiler::GccError(NULL, 0, "Fatal Error: current file vanished (struct/union)");
+            CMessages::GccError(NULL, 0, "Fatal Error: current file vanished (struct/union)");
             YYABORT;
         }
         else
@@ -1060,7 +1061,7 @@ export :
                 ((CFEInterface*)pCurFileComponent)->m_Typedefs.Add($1);
             else
             {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
 		"current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -1080,7 +1081,7 @@ export :
                 ((CFEInterface*)pCurFileComponent)->m_Constants.Add($1);
             else
             {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
                     "current file component is unknown type: %s\n", 
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -1100,7 +1101,7 @@ export :
                 ((CFEInterface*)pCurFileComponent)->m_TaggedDeclarators.Add($1);
             else
             {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
 		    "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -1111,7 +1112,7 @@ export :
     }
     | exception_declarator 
     { 
-    	$$ = $1; 
+	$$ = $1;
     }
     ;
 
@@ -2662,7 +2663,7 @@ op_declarator :
                 ((CFEInterface*)pCurFileComponent)->m_Operations.Add(pOp);
             else
             {
-		CCompiler::GccError(NULL, 0,
+		CMessages::GccError(NULL, 0,
                     "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -2691,7 +2692,7 @@ op_declarator :
                 ((CFEInterface*)pCurFileComponent)->m_Operations.Add(pOp);
             else
             {
-	    	CCompiler::GccError(NULL, 0, 
+	    	CMessages::GccError(NULL, 0, 
 		    "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -2720,7 +2721,7 @@ op_declarator :
                 ((CFEInterface*)pCurFileComponent)->m_Operations.Add(pOp);
             else
             {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
 		    "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -2748,7 +2749,7 @@ op_declarator :
                 ((CFEInterface*)pCurFileComponent)->m_Operations.Add(pOp);
             else
             {
-		CCompiler::GccError(NULL, 0,
+		CMessages::GccError(NULL, 0,
 		    "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -3087,19 +3088,19 @@ predefined_type_spec :
 exception_declarator :
       EXCEPTION type_attribute_list type_spec declarator_list
     {
-        $$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, $3, $4, $2);
+	$$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, $3, $4, $2);
         // set parent relationship
-        $3->SetParent($$);
-        delete $4;
-        delete $2;
+	$3->SetParent($$);
+	delete $4;
+	delete $2;
         $$->SetSourceLine(gLineNumber);
     }
     | EXCEPTION type_spec declarator_list
     {
-        $$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, $2, $3);
+    	$$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, $2, $3);
         // set parent relationship
-        $2->SetParent($$);
-        delete $3;
+	$2->SetParent($$);
+	delete $3;
         $$->SetSourceLine(gLineNumber);
     }
     | EXCEPTION error
@@ -3421,7 +3422,7 @@ lib_definition :
                 ((CFEInterface*)pCurFileComponent)->m_Typedefs.Add($1);
             else
             {
-		CCompiler::GccError(NULL, 0,
+		CMessages::GccError(NULL, 0,
                     "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -3442,7 +3443,7 @@ lib_definition :
                 ((CFEInterface*)pCurFileComponent)->m_Constants.Add($1);
             else
             {
-		CCompiler::GccError(NULL, 0,
+		CMessages::GccError(NULL, 0,
                     "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -3460,7 +3461,7 @@ lib_definition :
                 ((CFEInterface*)pCurFileComponent)->m_TaggedDeclarators.Add($1);
             else
             {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
 		    "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -3496,7 +3497,7 @@ attribute_decl :
                 ((CFEInterface*)pCurFileComponent)->m_AttributeDeclarators.Add(pAttr);
             else
             {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
 		    "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -3524,7 +3525,7 @@ attribute_decl :
                 ((CFEInterface*)pCurFileComponent)->m_AttributeDeclarators.Add(pAttr);
             else
             {
-		CCompiler::GccError(NULL, 0, 
+		CMessages::GccError(NULL, 0, 
 		    "current file component is unknown type: %s\n",
 		    typeid(*pCurFileComponent).name());
                 assert(false);
@@ -3647,7 +3648,7 @@ dceerror2(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    CCompiler::GccErrorVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
+    CMessages::GccErrorVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
     va_end(args);
     nParseErrorDCE = 0;
     erroccured = 1;
@@ -3659,7 +3660,7 @@ dcewarning(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    CCompiler::GccWarningVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
+    CMessages::GccWarningVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
     va_end(args);
     nParseErrorDCE = 0;
 }

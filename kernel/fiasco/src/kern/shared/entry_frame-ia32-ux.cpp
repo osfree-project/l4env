@@ -203,43 +203,61 @@ void Sys_ex_regs_frame::old_ip(Mword oip)
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [{ia32,ux}-caps-utcb]:
+IMPLEMENTATION [(ia32 || ux) && caps]:
+
+PRIVATE inline
+bool Sys_ex_regs_frame::utcb_args() const
+{ return _eax & (1 << 27); }
+
+//////////////////////////////////////////////////////////////////////
+IMPLEMENTATION [(ia32 || ux ) && caps && utcb && v2]:
 
 #include "utcb.h"
 
-IMPLEMENT inline NEEDS["utcb.h"]
+IMPLEMENT inline NEEDS["utcb.h", Sys_ex_regs_frame::utcb_args]
 L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* utcb) const
 {
-  if (! (_eax & (1 << 27)))
+  if (!utcb_args())
+    return L4_uid::Invalid;
+
+  return L4_uid(((Unsigned64)utcb->values[3] << 32)
+                | (Unsigned64)utcb->values[2]);
+}
+
+IMPLEMENT inline NEEDS["utcb.h", Sys_ex_regs_frame::utcb_args]
+void Sys_ex_regs_frame::old_cap_handler(L4_uid id, Utcb* utcb)
+{
+  if (utcb_args())
+    {
+      utcb->values[2] = id.raw();
+      utcb->values[3] = (id.raw() >> 32);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////
+IMPLEMENTATION [(ia32 || ux) && caps && utcb && x0]:
+
+#include "utcb.h"
+
+IMPLEMENT inline NEEDS["utcb.h", Sys_ex_regs_frame::utcb_args]
+L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* utcb) const
+{
+  if (!utcb_args())
     return L4_uid::Invalid;
 
   return utcb->values[2];
 }
 
-//////////////////////////////////////////////////////////////////////
-
-IMPLEMENTATION [{ia32,ux}-caps-utcb-v2]:
-
-IMPLEMENT inline NEEDS["utcb.h"]
+IMPLEMENT inline NEEDS["utcb.h", Sys_ex_regs_frame::utcb_args]
 void Sys_ex_regs_frame::old_cap_handler(L4_uid id, Utcb* utcb)
 {
-  utcb->values[2] = id.raw();
-  utcb->values[3] = (id.raw() >> 32);
+  if (utcb_args())
+    utcb->values[2] = id.raw();
 }
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [{ia32,ux}-caps-utcb-x0]:
-
-IMPLEMENT inline NEEDS["utcb.h"]
-void Sys_ex_regs_frame::old_cap_handler(L4_uid id, Utcb* utcb)
-{
-  utcb->values[2] = id.raw();
-}
-
-//////////////////////////////////////////////////////////////////////
-
-IMPLEMENTATION [{ia32,ux}-!{caps-utcb}]:
+IMPLEMENTATION [(ia32 || ux) && !(caps && utcb)]:
 
 #include "utcb.h"
 

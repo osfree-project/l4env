@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -53,6 +53,14 @@ CBEUnionCase::CBEUnionCase(CBEUnionCase & src)
 /** \brief destructor of this instance */
 CBEUnionCase::~CBEUnionCase()
 { }
+
+/** \brief creates a clone of this object
+ *  \return reference to copy
+ */
+CObject* CBEUnionCase::Clone()
+{ 
+    return new CBEUnionCase(*this); 
+}
 
 /** \brief creates the back-end structure for a union case
  *  \param pFEUnionCase the corresponding front-end union case

@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -208,7 +208,8 @@ void CBEFile::WriteDefaultIncludes()
  */
 void CBEFile::WriteInclude(CIncludeStatement *pInclude)
 {
-    string sPrefix = CCompiler::GetIncludePrefix();
+    string sPrefix;
+    CCompiler::GetBackEndOption(string("include-prefix"), sPrefix);
     string sFileName = pInclude->m_sFilename;
     if (!sFileName.empty())
     {

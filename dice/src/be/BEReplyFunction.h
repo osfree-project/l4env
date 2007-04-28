@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -52,10 +52,10 @@ public:
 	    bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
-    virtual int GetReceiveDirection();
-    virtual int GetSendDirection();
-    virtual int GetFixedSize(int nDirection);
-    virtual int GetSize(int nDirection);
+    virtual DIRECTION_TYPE GetReceiveDirection();
+    virtual DIRECTION_TYPE GetSendDirection();
+    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+    virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual bool MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
     virtual CBETypedDeclarator* GetExceptionVariable(void);

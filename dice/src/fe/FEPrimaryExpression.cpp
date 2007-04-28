@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/fe/FEPrimaryExpression.cpp
+ *  \file    dice/src/fe/FEPrimaryExpression.cpp
  *  \brief   contains the implementation of the class CFEPrimaryExpression
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -29,6 +29,7 @@
 #include "FEPrimaryExpression.h"
 #include "File.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include <sstream>
 
 
@@ -159,7 +160,7 @@ long CFEPrimaryExpression::GetIntValue()
         return (int) m_fValue;
         break;
     default:
-	CCompiler::Warning("CFEPrimaryExpression::GetIntValue unrecognized\n");
+	CMessages::Warning("CFEPrimaryExpression::GetIntValue unrecognized\n");
         break;
     }
     return 0;

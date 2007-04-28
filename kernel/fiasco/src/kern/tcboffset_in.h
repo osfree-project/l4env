@@ -20,20 +20,14 @@
   DUMP_MEMBER1 (THREAD, Receiver, _pagein_addr,		PAGEIN_ADDR)
   DUMP_MEMBER1 (THREAD, Receiver, _pagein_error_code,	PAGEIN_ERROR_CODE)
   DUMP_MEMBER1 (THREAD, Receiver, _pagein_applicant,	PAGEIN_APPLICANT)
-  DUMP_MEMBER1 (THREAD, Receiver, _sender_first,	SENDER_FIRST)
+  DUMP_MEMBER1 (THREAD, Receiver, _sender_list._head,	SENDER_FIRST)
   DUMP_MEMBER1 (THREAD, Thread, _timeout,		TIMEOUT)
   DUMP_MEMBER1 (THREAD, Thread, _id,			ID)
   DUMP_MEMBER1 (THREAD, Thread, _receiver,		RECEIVER)
-  DUMP_MEMBER1 (THREAD, Thread, sender_next,		SENDER_NEXT)
-  DUMP_MEMBER1 (THREAD, Thread, sender_prev,		SENDER_PREV)
   DUMP_MEMBER1 (THREAD, Thread, _preemption,		PREEMPTION)
   DUMP_MEMBER1 (THREAD, Thread, _preemption._id,	PREEMPTION__ID)
   DUMP_MEMBER1 (THREAD, Thread,	_preemption._receiver,
                 PREEMPTION__RECEIVER)
-  DUMP_MEMBER1 (THREAD, Thread,	_preemption.sender_next,
-                PREEMPTION__SENDER_NEXT)
-  DUMP_MEMBER1 (THREAD, Thread,	_preemption.sender_prev,
-                PREEMPTION__SENDER_PREV)
   DUMP_MEMBER1 (THREAD, Thread,	_preemption._pending,
                 PREEMPTION__PENDING)
   DUMP_MEMBER1 (THREAD, Thread, _task,		SPACE)

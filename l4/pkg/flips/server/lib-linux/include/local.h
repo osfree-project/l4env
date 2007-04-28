@@ -17,7 +17,6 @@ extern int liblinux_timer_init(void);   /* from timer.c */
 extern int liblinux_sysctl_init(void);  /* from sysctl.c */
 extern int liblinux_lo_init(struct net_device *dev);
                                         /* from lo.c */
-extern int liblinux_oshkosh_init(void); /* from oshkosh.c */
 extern int liblinux_socket_init(void);  /* from socket.c */
 
 /*** LINUX ***/

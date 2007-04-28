@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/BESwitchCase.h
+ *  \file    dice/src/be/BESwitchCase.h
  *  \brief   contains the declaration of the class CBESwitchCase
  *
- *    \date    01/29/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/29/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -36,8 +36,8 @@ class CBEUnmarshalFunction;
 class CBEComponentFunction;
 class CBEMarshalFunction;
 
-/**    \class CBESwitchCase
- *    \ingroup backend
+/** \class CBESwitchCase
+ *  \ingroup backend
  *  \brief the function class for the back-end
  *
  * This class contains resembles a back-end function which belongs to a front-end operation
@@ -75,7 +75,7 @@ public:
     { return true; }
 
 protected:
-    virtual void WriteVariableInitialization(CBEFile *pFile, int nDirection);
+    virtual void WriteVariableInitialization(CBEFile *pFile, DIRECTION_TYPE nDirection);
     virtual void WriteVariableDeclaration(CBEFile *pFile);
     virtual void WriteCleanup(CBEFile *pFile);
     virtual bool DoWriteVariable(CBETypedDeclarator *pParameter);

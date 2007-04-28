@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -70,7 +70,7 @@ CBESndFunction::WriteVariableInitialization(CBEFile * pFile)
 {
     // init message buffer
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    pMsgBuffer->WriteInitialization(pFile, this, 0, 0);
+    pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
 }
 
 /** \brief writes the invocation of the message transfer
@@ -133,7 +133,7 @@ CBESndFunction::AddBeforeParameters()
     {
         CBETypedDeclarator *pReturn = 
 	    (CBETypedDeclarator*)GetReturnVariable()->Clone();
-	int nDir = GetSendDirection();
+	DIRECTION_TYPE nDir = GetSendDirection();
 	ATTR_TYPE nAttr = (nDir == DIRECTION_IN) ? ATTR_IN : ATTR_OUT;
 	if (!pReturn->m_Attributes.Find(nAttr))
 	{
@@ -186,7 +186,7 @@ bool CBESndFunction::DoWriteFunction(CBEImplementationFile * pFile)
 /** \brief return the direction, which this functions sends to
  *  \return DIRECTION_IN if sending to server, DIRECTION_OUT if sending to client
  */
-int CBESndFunction::GetSendDirection()
+DIRECTION_TYPE CBESndFunction::GetSendDirection()
 {
     return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
 }
@@ -196,7 +196,7 @@ int CBESndFunction::GetSendDirection()
  *
  * Since this function only sends data, the value should be superfluous.
  */
-int CBESndFunction::GetReceiveDirection()
+DIRECTION_TYPE CBESndFunction::GetReceiveDirection()
 {
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
@@ -205,7 +205,7 @@ int CBESndFunction::GetReceiveDirection()
  *  \param nDirection the direction to calulate the size for
  *  \return the size of the function's parameters in bytes
  */
-int CBESndFunction::GetSize(int nDirection)
+int CBESndFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size
     int nSize = CBEOperationFunction::GetSize(nDirection);
@@ -219,7 +219,7 @@ int CBESndFunction::GetSize(int nDirection)
  *  \param nDirection the direction to calc
  *  \return the size of the params in bytes
  */
-int CBESndFunction::GetFixedSize(int nDirection)
+int CBESndFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEOperationFunction::GetFixedSize(nDirection);
     if ((nDirection & GetSendDirection()) &&

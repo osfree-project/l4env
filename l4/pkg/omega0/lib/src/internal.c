@@ -2,7 +2,7 @@
 #include <l4/sys/ipc.h>
 #include <l4/names/libnames.h>
 #include <l4/omega0/client.h>
-#include <omega0_proto.h>	/* krishna: I assume MANAGEMENT_THREAD is `0' */
+#include <omega0_proto.h>
 #include "config.h"
 #include "internal.h"
 

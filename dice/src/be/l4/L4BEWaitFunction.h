@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/l4/L4BEWaitFunction.h
+ *  \file    dice/src/be/l4/L4BEWaitFunction.h
  *  \brief   contains the declaration of the class CL4BEWaitFunction
  *
- *    \date    06/01/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    06/01/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -47,12 +47,11 @@ public:
     virtual ~CL4BEWaitFunction();
 
 public: // Public methods
-    virtual int GetFixedSize(int nDirection);
-    virtual int GetSize(int nDirection);
+    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+    virtual int GetSize(DIRECTION_TYPE nDirection);
 
 protected: // Protected methods
-    virtual bool HasVariableSizedParameters(
-	int nDirection = DIRECTION_IN | DIRECTION_OUT);
+    virtual bool HasVariableSizedParameters(DIRECTION_TYPE nDirection);
     virtual void WriteIPCErrorCheck(CBEFile * pFile);
     virtual void WriteInvocation(CBEFile * pFile);
     virtual void WriteVariableInitialization(CBEFile* pFile);

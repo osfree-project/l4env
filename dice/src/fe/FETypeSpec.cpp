@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -36,6 +36,7 @@
 
 // needed for Error function
 #include "Compiler.h"
+#include "Messages.h"
 #include <cassert>
 
 CFETypeSpec::CFETypeSpec(unsigned int nType)
@@ -88,7 +89,7 @@ bool CFETypeSpec::IsConstructedType(CFETypeSpec * pType)
             // if not found now, this can be an interface
             if (pRoot->FindInterface(sUserName))
                 return true; // is CORBA_Object a constructed type?
-            CCompiler::GccError(pType, 0,
+            CMessages::GccError(pType, 0,
 		"User defined type \"%s\" not defined\n",
                 sUserName.c_str());
             return false;
@@ -138,7 +139,7 @@ bool CFETypeSpec::IsPointerType(CFETypeSpec * pType)
         // check if we found the user defined type (if not: panic)
         if (!pUserDecl)
         {
-            CCompiler::GccError(pType, 0,
+            CMessages::GccError(pType, 0,
 		"User defined type \"%s\" not defined\n",
                 sUserName.c_str());
             return false;

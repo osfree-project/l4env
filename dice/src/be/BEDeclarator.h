@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -36,6 +36,7 @@
 #include <string>
 
 class CFEDeclarator;
+class CFEIdentifier;
 class CFEArrayDeclarator;
 class CFEEnumDeclarator;
 class CFEExpression;
@@ -50,6 +51,10 @@ class CBEDeclarator;
  * a declarators.
  */
 const int MAX_INDEX_NUMBER = 10;
+
+class CDeclaratorStackLocation;
+
+typedef std::vector<CDeclaratorStackLocation> CDeclStack;
 
 /** \class CDeclaratorStackLocation
  *  \brief class to represent a stack location for the declarator stack
@@ -70,7 +75,7 @@ public:
     /** \brief constructor of this class
      *  \param pDecl the declarator
      */
-    CDeclaratorStackLocation(CBEDeclarator *pDecl)
+    CDeclaratorStackLocation(CBEDeclarator *pDecl = 0)
     {
         pDeclarator = pDecl;
         for (int i=0; i<MAX_INDEX_NUMBER; i++)
@@ -83,7 +88,7 @@ public:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CDeclaratorStackLocation(CDeclaratorStackLocation &src)
+    CDeclaratorStackLocation(const CDeclaratorStackLocation &src)
     {
         for (int i=0; i<MAX_INDEX_NUMBER; i++)
         {
@@ -170,9 +175,9 @@ public:
     }
 
     static void WriteToString(string &sResult, 
-	vector<CDeclaratorStackLocation*> *pStack, bool bUsePointer);
+	CDeclStack* pStack, bool bUsePointer);
     static void Write(CBEFile *pFile, 
-	vector<CDeclaratorStackLocation*> *pStack, bool bUsePointer);
+	CDeclStack* pStack, bool bUsePointer);
 };
 
 /** \def DUMP_STACK(iter, stack, str)
@@ -180,10 +185,10 @@ public:
  */
 #define DUMP_STACK(iter, stack, str) \
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s stack is:\n", str); \
-    vector<CDeclaratorStackLocation*>::iterator iter = stack->begin(); \
+    CDeclStack::iterator iter = stack->begin(); \
     for (; iter != stack->end(); iter++) \
         CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s\n", \
-	    (*iter)->pDeclarator->GetName().c_str()); \
+	    iter->pDeclarator->GetName().c_str()); \
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "--end--\n");
 
 /** \class CBEDeclarator
@@ -206,11 +211,7 @@ protected:
     CBEDeclarator(CBEDeclarator & src);
     
 public:
-    /** \brief creates a copy of this object
-     *  \return a reference to the copy
-     */
-    virtual CObject * Clone()
-    { return new CBEDeclarator(*this); }
+    virtual CObject * Clone();
 
     virtual void WriteName(CBEFile * pFile);
     virtual void WriteNameToStr(string &str);
@@ -222,7 +223,7 @@ public:
 	bool bHasPointerType);
     virtual void WriteDeclaration(CBEFile * pFile);
     virtual void CreateBackEnd(string sName, int nStars);
-    virtual void CreateBackEnd(CFEDeclarator * pFEDeclarator);
+    virtual void CreateBackEnd(CFEIdentifier * pFEIdentifier);
 
     virtual int GetSize();
     
@@ -280,6 +281,7 @@ public:
 
 protected:
     virtual int GetEmptyArrayDims();
+    virtual void CreateBackEndDecl(CFEDeclarator * pFEDeclarator);
     virtual void CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator);
     virtual void CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator);
     virtual CBEExpression *GetArrayDimension(CFEExpression * pLower, 

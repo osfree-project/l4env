@@ -5,7 +5,8 @@
  *    \date    02/07/2002
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
-/* Copyright (C) 2001-2004
+/*
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -78,8 +79,8 @@ CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation)
 	// we might need the offset variables if we transmit [ref]
 	// attributes, because strings are found in message buffer by
 	// offset calculation if message buffer is at server side.
-	if (!HasVariableSizedParameters() &&
-	    !HasArrayParameters() &&
+	if (!HasVariableSizedParameters(DIRECTION_INOUT) &&
+	    !HasArrayParameters(DIRECTION_INOUT) &&
 	    FindParameterAttribute(ATTR_REF))
 	{
 	    sCurr = pNF->GetTempOffsetVariable();
@@ -184,7 +185,7 @@ CL4BEReplyFunction::WriteVariableInitialization(CBEFile * pFile)
  * If we recv flexpages, remove the exception size again, since either the
  * flexpage or the exception is sent.
  */
-int CL4BEReplyFunction::GetSize(int nDirection)
+int CL4BEReplyFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size
     int nSize = CBEReplyFunction::GetSize(nDirection);
@@ -202,7 +203,7 @@ int CL4BEReplyFunction::GetSize(int nDirection)
  * If we recv flexpages, remove the exception size again, since either the
  * flexpage or the exception is sent.
  */
-int CL4BEReplyFunction::GetFixedSize(int nDirection)
+int CL4BEReplyFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEReplyFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&

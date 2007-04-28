@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -374,7 +374,7 @@ CBEDispatchFunction::WriteSetWrongOpcodeException(CBEFile* pFile)
     // copy from environment to local exception variable
     WriteExceptionWordInitialization(pFile);
     // marshal exception variable
-    WriteMarshalException(pFile, true);
+    WriteMarshalException(pFile, true, false);
 }
 
 /** \brief test fi this function should be written

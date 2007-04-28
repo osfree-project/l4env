@@ -6,7 +6,7 @@
  * \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -32,6 +32,7 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include <string.h>
 
 CBEContext::CBEContext()
@@ -96,16 +97,16 @@ void CBEContext::WriteMemory(CBEFile *pFile,
 	    sFree += sEnv + ")";
 	    *pFile << sFree;
             if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
-                CCompiler::Warning("CORBA_Environment.%s is used to set receive buffer in %s.",
+                CMessages::Warning("CORBA_Environment.%s is used to set receive buffer in %s.",
 		    sEnv.c_str(), sFuncName.c_str());
         }
         else
         {
             if (CCompiler::IsOptionSet(PROGRAM_FORCE_ENV_MALLOC))
-                CCompiler::Warning("Using %s because function %s has no environment.",
+                CMessages::Warning("Using %s because function %s has no environment.",
 		    sCorba.c_str(), sFuncName.c_str());
             if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
-                CCompiler::Warning("%s is used to set receive buffer in %s.",
+                CMessages::Warning("%s is used to set receive buffer in %s.",
 		    sCorba.c_str(), sFuncName.c_str());
             *pFile << sCorba;
         }
@@ -113,7 +114,7 @@ void CBEContext::WriteMemory(CBEFile *pFile,
     else
     {
         if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
-            CCompiler::Warning("%s is used to set receive buffer in %s.",
+            CMessages::Warning("%s is used to set receive buffer in %s.",
 		sCorba.c_str(), sFuncName.c_str());
         *pFile << sCorba;
     }

@@ -345,6 +345,16 @@ display the corresponding source for errors in target code.
 This option should be used to debug Dice only.
 </DD>
 
+<DT><b>-fsyscall=&lt;string&gt;</b></DT>
+<DD>Allows to set the mechanism to enter the kernel on IPC. This option only
+has effect for ia32 platform and v2 kernel interface. Instead of using a macro
+from the system headers, the mechanism is directly written into the generated
+assembler inline code.<BR>
+<i>string</i> can be one of <i>sysenter</i>, <i>int30</i>, or
+<i>abs-syscall</i>.<BR>
+<b>Caution</b>: only use this option if you know what you are doing.
+</DD>
+
 <DT><b>--back-end, -B</b> &lt;string&gt;</DT>
 <DD>Defines the back-end to use:
 <BR><i>string</i> starts with a letter specifying the platform,

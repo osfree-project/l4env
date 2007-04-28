@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2005
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -56,9 +56,21 @@ CL4BEMsgBufferType::CL4BEMsgBufferType(CL4BEMsgBufferType & src)
 {
 }
 
+/** \brief destructor of this instance */
+CL4BEMsgBufferType::~CL4BEMsgBufferType()
+{ }
+
+/** \brief creates a copy of this object
+ *  \return a reference to the new instance
+ */
+CObject *CL4BEMsgBufferType::Clone()
+{ 
+    return new CL4BEMsgBufferType(*this); 
+}
+
 /** \brief adds the elements of the structs
  *  \param pFEOperation the front-end operation to extract the elements from
- *  \param nDirection the direction to add
+ *  \param nType the type of the struct
  *  \return true if successful
  *
  *  This method calls the base class and then checks if any flexpages have
@@ -66,49 +78,49 @@ CL4BEMsgBufferType::CL4BEMsgBufferType(CL4BEMsgBufferType & src)
  */
 void
 CL4BEMsgBufferType::AddElements(CFEOperation *pFEOperation,
-    int nDirection)
+    CMsgStructType nType)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s called for %s\n",
 	__func__, pFEOperation->GetName().c_str());
 
-    CBEMsgBufferType::AddElements(pFEOperation, nDirection);
+    CBEMsgBufferType::AddElements(pFEOperation, nType);
 
-    AddZeroFlexpage(pFEOperation, nDirection);
+    AddZeroFlexpage(pFEOperation, nType);
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
 }
 
 /** \brief adds elements for a single parameter to the message buffer
  *  \param pFEParameter the parameter to add the elements for
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the struct
  */
 void
 CL4BEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
-    int nDirection)
+    CMsgStructType nType)
 {
     assert(pFEParameter);
 
     if (pFEParameter->m_Attributes.Find(ATTR_REF))
     {
-	AddRefstringElement(pFEParameter, nDirection);
+	AddRefstringElement(pFEParameter, nType);
 	return;
     }
     if (pFEParameter->GetType()->GetType() == TYPE_FLEXPAGE)
     {
-	AddFlexpageElement(pFEParameter, nDirection);
+	AddFlexpageElement(pFEParameter, nType);
 	return;
     }
 
-    CBEMsgBufferType::AddElement(pFEParameter, nDirection);
+    CBEMsgBufferType::AddElement(pFEParameter, nType);
 }
 
 /** \brief adds elements for a refstring parameter to the message buffer
  *  \param pFEParameter the parameter to add the elements for
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the struct
  */
 void
 CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
-    int nDirection)
+    CMsgStructType nType)
 {
     assert(pFEParameter);
     // get struct
@@ -117,7 +129,7 @@ CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
     CFEInterface *pFEInterface = 
 	pFEOperation->GetSpecificParent<CFEInterface>();
     CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
-	pFEInterface->GetName(), nDirection);
+	pFEInterface->GetName(), nType);
     assert(pStruct);
 
     // we have to create a new element for the indirect string part
@@ -142,11 +154,11 @@ CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
 
 /** \brief adds elements for a flexpage parameter to the message buffer
  *  \param pFEParameter the parameter to add the elements for
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the struct
  */
 void
 CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
-    int nDirection)
+    CMsgStructType nType)
 {
     assert(pFEParameter);
     // get struct
@@ -155,7 +167,7 @@ CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
     CFEInterface *pFEInterface =
 	pFEOperation->GetSpecificParent<CFEInterface>();
     CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
-	pFEInterface->GetName(), nDirection);
+	pFEInterface->GetName(), nType);
     assert(pStruct);
 
     // we have to create a new element for the indirect string part
@@ -175,11 +187,11 @@ CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
 
 /** \brief adds a zero flexpage if neccessary
  *  \param pFEOperation the front-end operation containing the parameters
- *  \param nDirection the direction of the struct to use
+ *  \param nType the type of the struct
  */
 void
 CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
-    int nDirection)
+    CMsgStructType nType)
 {
     bool bFlexpage = false;
 
@@ -190,10 +202,10 @@ CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
     {
 	if ((*iter)->m_Attributes.Find(ATTR_IGNORE))
 	    continue;
-	if ((nDirection == DIRECTION_IN) &&
+	if ((nType == CMsgStructType::In) &&
 	    !(*iter)->m_Attributes.Find(ATTR_IN))
 	    continue;
-	if ((nDirection == DIRECTION_OUT) &&
+	if ((nType == CMsgStructType::Out) &&
 	    !(*iter)->m_Attributes.Find(ATTR_OUT))
 	    continue;
 	if ((*iter)->GetType()->GetType() == TYPE_FLEXPAGE)
@@ -205,7 +217,7 @@ CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
     CFEInterface *pFEInterface = 
 	pFEOperation->GetSpecificParent<CFEInterface>();
     CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
-	pFEInterface->GetName(), nDirection);
+	pFEInterface->GetName(), nType);
     assert(pStruct);
 
     // we have to create a new element for the indirect string part
@@ -225,7 +237,7 @@ CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
     // add directional attribute
     CBEAttribute *pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pMember);
-    if (nDirection == DIRECTION_IN)
+    if (nType == CMsgStructType::In)
 	pAttr->CreateBackEnd(ATTR_IN);
     else
 	pAttr->CreateBackEnd(ATTR_OUT);

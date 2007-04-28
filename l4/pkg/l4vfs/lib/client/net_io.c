@@ -60,7 +60,7 @@ int l4vfs_accept(l4_threadid_t server,
                  struct sockaddr *addr,
                  socklen_t *addrlen)
 {
-    int buflen;
+    socklen_t buflen;
     CORBA_Environment _dice_corba_env = dice_default_environment;
     _dice_corba_env.malloc = (dice_malloc_func)malloc;
     _dice_corba_env.free = (dice_free_func)free;
@@ -138,7 +138,7 @@ int l4vfs_recvfrom(l4_threadid_t server,
                    struct sockaddr *from,
                    socklen_t *fromlen)
 {
-    int buflen;
+    socklen_t buflen;
     CORBA_Environment _dice_corba_env = dice_default_environment;
     _dice_corba_env.malloc = (dice_malloc_func)malloc;
     _dice_corba_env.free = (dice_free_func)free;
@@ -308,7 +308,7 @@ int l4vfs_getsockopt(l4_threadid_t server,
                      const void *optval,
                      socklen_t *optlen)
 {
-    int buflen;
+    socklen_t buflen;
     CORBA_Environment _dice_corba_env = dice_default_environment;
     _dice_corba_env.malloc = (dice_malloc_func)malloc;
    _dice_corba_env.free = (dice_free_func)free;
@@ -336,7 +336,7 @@ int l4vfs_getpeername(l4_threadid_t server,
                  struct sockaddr *addr,
                  socklen_t *addrlen)
 {
-    int buflen;
+    socklen_t buflen;
     CORBA_Environment _dice_corba_env = dice_default_environment;
     _dice_corba_env.malloc = (dice_malloc_func)malloc;
     _dice_corba_env.free = (dice_free_func)free;

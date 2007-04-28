@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -63,25 +63,21 @@ protected:
     virtual void WriteGetMaxSize(CBEFile *pFile,
     	const vector<CBEUnionCase*> *pMembers,
     	vector<CBEUnionCase*>::iterator iter,
-    	vector<CDeclaratorStackLocation*> *pStack,
+    	CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
     virtual void WriteGetMemberSize(CBEFile *pFile,
     	CBEUnionCase *pMember,
-    	vector<CDeclaratorStackLocation*> *pStack,
+    	CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
     
 public:
-    /** \brief generates an exact copy of this class
-     *  \return a reference to the new object
-     */
-    virtual CObject *Clone()
-    { return new CBEUnionType(*this); }
+    virtual CObject *Clone();
 
     virtual void Write(CBEFile * pFile);
     
     virtual CBETypedDeclarator* FindMember(
-	vector<CDeclaratorStackLocation*> *pStack,
-	vector<CDeclaratorStackLocation*>::iterator iCurr);
+	CDeclStack* pStack,
+	CDeclStack::iterator iCurr);
     
     virtual void CreateBackEnd(CFETypeSpec * pFEType);
     virtual void CreateBackEnd(string sTag);
@@ -93,7 +89,7 @@ public:
     virtual void WriteZeroInit(CBEFile * pFile);
     virtual bool DoWriteZeroInit();
     virtual void WriteGetSize(CBEFile * pFile, 
-	vector<CDeclaratorStackLocation*> *pStack, CBEFunction *pUsingFunc);
+	CDeclStack* pStack, CBEFunction *pUsingFunc);
     virtual void WriteDeclaration(CBEFile * pFile);
 
     /** \brief return the tag

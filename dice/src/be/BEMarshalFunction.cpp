@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -355,7 +355,7 @@ CBETypedDeclarator * CBEMarshalFunction::FindParameterType(string sTypeName)
  * Since this function ignores marshalling parameter this value should be
  * irrelevant
  */
-int CBEMarshalFunction::GetSendDirection()
+DIRECTION_TYPE CBEMarshalFunction::GetSendDirection()
 {
     return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
 }
@@ -363,7 +363,7 @@ int CBEMarshalFunction::GetSendDirection()
 /** \brief gets the direction of the unmarshal-parameters
  *  \return if at client's side DIRECTION_OUT, if at server's side DIRECTION_IN
  */
-int CBEMarshalFunction::GetReceiveDirection()
+DIRECTION_TYPE CBEMarshalFunction::GetReceiveDirection()
 {
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
@@ -377,7 +377,7 @@ int CBEMarshalFunction::GetReceiveDirection()
  * parameters. Thus the status code for the IPC is counted even though it
  * shouldn't. We have to subtract it from the calculated size.
  */
-int CBEMarshalFunction::GetSize(int nDirection)
+int CBEMarshalFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEOperationFunction::GetSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&
@@ -390,7 +390,7 @@ int CBEMarshalFunction::GetSize(int nDirection)
  *  \param nDirection the direction to count
  *  \return the size of the parameters
  */
-int CBEMarshalFunction::GetFixedSize(int nDirection)
+int CBEMarshalFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEOperationFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&
@@ -406,7 +406,7 @@ int CBEMarshalFunction::GetFixedSize(int nDirection)
  * The return var (or the variable in m_pReturnValue is the IPC reply code,
  * which should not be counted as a parameter.
  */
-int CBEMarshalFunction::GetMaxReturnSize(int /*nDirection*/)
+int CBEMarshalFunction::GetMaxReturnSize(DIRECTION_TYPE /*nDirection*/)
 {
     return 0;
 }
@@ -418,7 +418,7 @@ int CBEMarshalFunction::GetMaxReturnSize(int /*nDirection*/)
  * The return var (or the variable in m_pReturnValue is the IPC reply code,
  * which should not be counted as a parameter.
  */
-int CBEMarshalFunction::GetFixedReturnSize(int /*nDirection*/)
+int CBEMarshalFunction::GetFixedReturnSize(DIRECTION_TYPE /*nDirection*/)
 {
     return 0;
 }
@@ -430,7 +430,7 @@ int CBEMarshalFunction::GetFixedReturnSize(int /*nDirection*/)
  * The return var (or the variable in m_pReturnValue is the IPC reply code,
  * which should not be counted as a parameter.
  */
-int CBEMarshalFunction::GetReturnSize(int /*nDirection*/)
+int CBEMarshalFunction::GetReturnSize(DIRECTION_TYPE /*nDirection*/)
 {
     return 0;
 }

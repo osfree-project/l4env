@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -205,7 +205,7 @@ CL4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile)
 	dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
     assert(pMarshaller);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    int nDirection = GetSendDirection();
+    CMsgStructType nType = GetSendDirection();
 
     assert(m_pTrace);
     m_pTrace->BeforeReplyWait(pFile, this);
@@ -216,16 +216,16 @@ CL4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile)
     // to determine if we can send a short IPC we have to test the size dope
     // of the message
     *pFile << "\tif ((";
-    pMsgBuffer->WriteMemberAccess(pFile, this, nDirection, TYPE_MSGDOPE_SEND,
+    pMsgBuffer->WriteMemberAccess(pFile, this, nType, TYPE_MSGDOPE_SEND,
 	0);
     *pFile << ".md.dwords <= " << nShortWords << ") && (";
-    pMsgBuffer->WriteMemberAccess(pFile, this, nDirection, TYPE_MSGDOPE_SEND,
+    pMsgBuffer->WriteMemberAccess(pFile, this, nType, TYPE_MSGDOPE_SEND,
 	0);
     *pFile << ".md.strings == 0))\n";
     pFile->IncIndent();
     // if fpage
     *pFile << "\tif (";
-    pMsgBuffer->WriteMemberAccess(pFile, this, nDirection, TYPE_MSGDOPE_SEND,
+    pMsgBuffer->WriteMemberAccess(pFile, this, nType, TYPE_MSGDOPE_SEND,
 	0);
     *pFile << ".md.fpage_received == 1)\n";
     pFile->IncIndent();
@@ -243,7 +243,7 @@ CL4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile)
     pFile->IncIndent();
     // if fpage
     *pFile << "\tif (";
-    pMsgBuffer->WriteMemberAccess(pFile, this, nDirection, TYPE_MSGDOPE_SEND,
+    pMsgBuffer->WriteMemberAccess(pFile, this, nType, TYPE_MSGDOPE_SEND,
 	0);
     *pFile << ".md.fpage_received == 1)\n";
     pFile->IncIndent();
@@ -538,8 +538,7 @@ void CL4BEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile)
     if (m_Attributes.Find(ATTR_NOOPCODE))
 	return;
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    int nDirection = GetReceiveDirection();
-    if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, nDirection) > 0)
+    if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, GetReceiveDirection()) > 0)
     {
 	// we have to always check if this was a flexpage IPC
 	//
@@ -587,13 +586,12 @@ void CL4BEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile)
 void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile *pFile)
 {
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    int nDirection = GetReceiveDirection();
-    if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, nDirection) == 0)
+    if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
 	return;
     
     bool bFixedNumberOfFlexpages = true;
     int nNumberOfFlexpages = 
-	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages);
+	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
     CBESizes *pSizes = CCompiler::GetSizes();
     int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
 	             pSizes->GetSizeOfType(TYPE_MWORD);
@@ -625,9 +623,9 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile *pFile)
 	// init temp var
 	*pFile << "\t" << sTempVar << " = 0;\n";
 	*pFile << "\twhile ((";
-	pMsgBuffer->WriteMemberAccess(pFile, this, 0, TYPE_MWORD, 0);
+	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
 	*pFile << "[" << sTempVar << "++] != 0) && (";
-	pMsgBuffer->WriteMemberAccess(pFile, this, 0, TYPE_MWORD, 0);
+	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
 	*pFile << "[" << sTempVar << "++] != 0)) /* empty */;\n";
 
 	// now sTempVar points to the delimiter flexpage

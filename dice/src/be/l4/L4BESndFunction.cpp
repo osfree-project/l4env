@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -95,7 +95,7 @@ void CL4BESndFunction::WriteInvocation(CBEFile * pFile)
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
     pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
-	    GetSendDirection());
+	GetSendDirection());
     // invocate
     if (!CCompiler::IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
     {
@@ -179,7 +179,7 @@ CL4BESndFunction::WriteVariableInitialization(CBEFile * pFile)
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
     pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, 
-	    GetSendDirection());
+	GetSendDirection());
 }
 
 /** \brief write the IPC code

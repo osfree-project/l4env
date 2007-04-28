@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -32,6 +32,19 @@
 #include "be/BEType.h"
 #include "be/BEDeclarator.h"
 #include "be/BETypedDeclarator.h"
+
+/** destroys the typed declarator object */
+CL4BETypedDeclarator::~CL4BETypedDeclarator(void)
+{}
+
+/** \brief clones this object
+ *  \return reference to copy
+ */
+CObject* CL4BETypedDeclarator::Clone()
+{ 
+    return new CL4BETypedDeclarator(*this); 
+}
+
 
 /** \brief check if this typed decl is regarded as variable sized
  *  \return true if it is

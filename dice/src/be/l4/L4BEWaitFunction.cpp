@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -189,7 +189,7 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile *pFile)
         return;
     bool bFixedNumberOfFlexpages = true;
     int nNumberOfFlexpages = 
-	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages);
+	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
     CBESizes *pSizes = CCompiler::GetSizes();
     int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
 	             pSizes->GetSizeOfType(TYPE_MWORD);
@@ -222,9 +222,9 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile *pFile)
 	*pFile << "\t" << sTempVar << " = 0;\n";
 	*pFile << "\twhile ((";
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-	pMsgBuffer->WriteMemberAccess(pFile, this, 0, TYPE_MWORD, 0);
+	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
 	*pFile << "[" << sTempVar << "++] != 0) && (";
-	pMsgBuffer->WriteMemberAccess(pFile, this, 0, TYPE_MWORD, 0);
+	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
 	*pFile << "[" << sTempVar << "++] != 0)) /* empty */;\n";
 
 	// now sTempVar points to the delimiter flexpage
@@ -262,9 +262,9 @@ CL4BEWaitFunction::WriteVariableInitialization(CBEFile* pFile)
     CBEWaitFunction::WriteVariableInitialization(pFile);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    int nDirection = GetReceiveDirection();
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, nDirection);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, nDirection);
+    CMsgStructType nType = GetReceiveDirection();
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, nType);
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, nType);
 }
 
 /** \brief calculates the size of the function's parameters
@@ -275,7 +275,7 @@ CL4BEWaitFunction::WriteVariableInitialization(CBEFile* pFile)
  * flexpage or the exception is sent.
  */
 int 
-CL4BEWaitFunction::GetSize(int nDirection)
+CL4BEWaitFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size
     int nSize = CBEWaitFunction::GetSize(nDirection);
@@ -294,7 +294,7 @@ CL4BEWaitFunction::GetSize(int nDirection)
  * flexpage or the exception is sent.
  */
 int
-CL4BEWaitFunction::GetFixedSize(int nDirection)
+CL4BEWaitFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEWaitFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&
@@ -310,7 +310,7 @@ CL4BEWaitFunction::GetFixedSize(int nDirection)
  * (needed to specify temp + offset var)
  */
 bool
-CL4BEWaitFunction::HasVariableSizedParameters(int nDirection)
+CL4BEWaitFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 {
     bool bRet = CBEWaitFunction::HasVariableSizedParameters(nDirection);
     // if we have indirect strings to marshal then we need the offset vars

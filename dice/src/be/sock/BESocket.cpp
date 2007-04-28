@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -230,6 +230,7 @@ void CBESocket::WriteEnvironment(CBEFile* pFile, CBEFunction* pFunction)
 /** \brief writes the call to set the socket receive timeout
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
+ *  \param bUseEnv true if the environment should be used
  */
 void CBESocket::WriteTimeoutOptionCall(CBEFile* pFile, CBEFunction* pFunction,
     bool bUseEnv)
@@ -253,8 +254,8 @@ void CBESocket::WriteCall(CBEFile* pFile, CBEFunction* pFunction)
     WriteSendTo(pFile, pFunction, false, "call");
     // offset might have been overwritten, so it has to be reinitialized
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    if (pMsgBuffer->IsVariableSized(0))
-	pMsgBuffer->WriteInitialization(pFile, pFunction, 0, 0);
+    if (pMsgBuffer->IsVariableSized(CMsgStructType::Generic))
+	pMsgBuffer->WriteInitialization(pFile, pFunction, 0, CMsgStructType::Generic);
     // zero msgbuffer
     WriteZeroMsgBuffer(pFile, pFunction);
     // receive response

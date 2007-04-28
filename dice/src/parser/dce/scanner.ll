@@ -7,7 +7,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -69,6 +69,7 @@
 
 #include "parser.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "CParser.h"
 #include "CPreProcess.h"
 
@@ -578,7 +579,7 @@ __attribute__	return ATTRIBUTE;
             if (c == '\n') { gLineNumber++; if (dcedebug) fprintf(stderr, " gLineNumber: %d (%s)\n", gLineNumber, sInFileName.c_str()); }
             if (c == EOF)
             {
-                CCompiler::GccError (CParser::GetCurrentFile(), gLineNumber, "EOF in comment.");
+                CMessages::GccError (CParser::GetCurrentFile(), gLineNumber, "EOF in comment.");
                 yyterminate ();
                 break;
             }
@@ -595,7 +596,7 @@ __attribute__	return ATTRIBUTE;
                     yyterminate(); // stops dceparse()
                 }
 .               {
-                    CCompiler::GccWarning (CParser::GetCurrentFile(), gLineNumber, "Unknown character \"%s\" (0x%x).", yytext, (yytext)?yytext[0]:0);
+                    CMessages::GccWarning (CParser::GetCurrentFile(), gLineNumber, "Unknown character \"%s\" (0x%x).", yytext, (yytext)?yytext[0]:0);
                 }
 
 
@@ -619,7 +620,7 @@ static unsigned int HexToInt (char *s)
           s++;
      }
      if (lastres > res)
-         CCompiler::GccWarning (CParser::GetCurrentFile(), gLineNumber,
+         CMessages::GccWarning (CParser::GetCurrentFile(), gLineNumber,
                 "Hexadecimal number overflow.");
      return res;
 }
@@ -636,7 +637,7 @@ static unsigned int OctToInt (char *s)
         s++;
      }
      if (lastres > res)
-         CCompiler::GccWarning (CParser::GetCurrentFile(), gLineNumber,
+         CMessages::GccWarning (CParser::GetCurrentFile(), gLineNumber,
                 "Octal number overflow.");
      return res;
 }

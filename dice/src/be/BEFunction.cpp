@@ -6,7 +6,7 @@
  * \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -53,6 +53,7 @@
 #include "fe/FEOperation.h"
 #include "fe/FETypeSpec.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include <cassert>
 
 CBEFunction::CBEFunction(FUNCTION_TYPE nFunctionType)
@@ -724,7 +725,7 @@ CBEFunction::WriteCallParameterName(CBEFile * pFile,
  */
 int
 CBEFunction::GetStringParameterCount(
-    int nDirection,
+    DIRECTION_TYPE nDirection,
     ATTR_TYPE nMustAttrs,
     ATTR_TYPE nMustNotAttrs)
 {
@@ -771,7 +772,7 @@ CBEFunction::GetStringParameterCount(
  *  \param nDirection the direction to count
  *  \return the number of variable sized parameters
  */
-int CBEFunction::GetVariableSizedParameterCount(int nDirection)
+int CBEFunction::GetVariableSizedParameterCount(DIRECTION_TYPE nDirection)
 {
     int nCount = 0;
     vector<CBETypedDeclarator*>::iterator iter;
@@ -805,7 +806,7 @@ int CBEFunction::GetVariableSizedParameterCount(int nDirection)
  * \todo If member is indirect, we should add size of size-attr instead of
  * size of type
  */
-int CBEFunction::GetSize(int nDirection)
+int CBEFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     CBETypedDeclarator *pMsgBuf = GetMessageBuffer();
     string sMsgBuf;
@@ -894,7 +895,7 @@ int CBEFunction::GetSize(int nDirection)
  * variable is NOT a parameter to transferred. Which means that some functions
  * will return 0 even though they have an return value.
  */
-int CBEFunction::GetReturnSize(int nDirection)
+int CBEFunction::GetReturnSize(DIRECTION_TYPE nDirection)
 {
     CBETypedDeclarator *pReturn = GetReturnVariable();
     if (pReturn && pReturn->IsDirection(nDirection))
@@ -921,7 +922,7 @@ int CBEFunction::GetReturnSize(int nDirection)
  *
  * \todo: issue warning if no max size available
  */
-int CBEFunction::GetMaxSize(int nDirection)
+int CBEFunction::GetMaxSize(DIRECTION_TYPE nDirection)
 {
     // get msg buffer's name
     string sMsgBuf;
@@ -959,7 +960,7 @@ int CBEFunction::GetMaxSize(int nDirection)
             if (CCompiler::IsWarningSet(PROGRAM_WARNING_NO_MAXSIZE))
             {
                 CBEDeclarator *pD = (*iter)->m_Declarators.First();
-                CCompiler::Warning("%s in %s has no maximum size (guessing %d)",
+                CMessages::Warning("%s in %s has no maximum size (guessing %d)",
                     pD->GetName().c_str(), GetName().c_str(), 
 		    nTypeSize * -nParamSize);
             }
@@ -987,7 +988,7 @@ int CBEFunction::GetMaxSize(int nDirection)
  * variable is NOT a parameter to transferred. Which means that some functions
  * will return 0 even though they have an return value.
  */
-int CBEFunction::GetMaxReturnSize(int nDirection)
+int CBEFunction::GetMaxReturnSize(DIRECTION_TYPE nDirection)
 {
     CBETypedDeclarator *pReturn = GetReturnVariable();
     if (pReturn && pReturn->IsDirection(nDirection))
@@ -1011,7 +1012,7 @@ int CBEFunction::GetMaxReturnSize(int nDirection)
  * also a size_is or length_is parameter, which makes them effectively
  * variable sized parameters.
  */
-int CBEFunction::GetFixedSize(int nDirection)
+int CBEFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     CBETypedDeclarator *pMsgBuf = GetMessageBuffer();
     string sMsgBuf;
@@ -1064,7 +1065,7 @@ int CBEFunction::GetFixedSize(int nDirection)
                 else
                 {
                     CBEDeclarator *pD = (*iter)->m_Declarators.First();
-                    CCompiler::Error("%s in %s has no type\n", 
+                    CMessages::Error("%s in %s has no type\n", 
 			pD->GetName().c_str(), GetName().c_str());
                 }
             }
@@ -1104,7 +1105,7 @@ int CBEFunction::GetFixedSize(int nDirection)
  * variable is NOT a parameter to transferred. Which means that some functions
  * will return 0 even though they have an return value.
  */
-int CBEFunction::GetFixedReturnSize(int nDirection)
+int CBEFunction::GetFixedReturnSize(DIRECTION_TYPE nDirection)
 {
     CBETypedDeclarator *pReturn = GetReturnVariable();
     if (pReturn &&
@@ -1307,7 +1308,7 @@ CBEFunction::WriteMarshalOpcode(CBEFile *pFile,
 /** \brief marshals the exception
  *  \param pFile the file to write to
  *  \param bMarshal true if marshalling, false if unmarshalling
- *  \return the number of bytes used to marshal the exception
+ *  \param bReturn true if we should write a return statement
  *
  * The exception is represented by the first two members of the
  * CORBA_Environment, major and repos_id, which are (together) of type
@@ -1320,7 +1321,8 @@ CBEFunction::WriteMarshalOpcode(CBEFile *pFile,
  */
 void
 CBEFunction::WriteMarshalException(CBEFile* pFile,
-    bool bMarshal)
+    bool bMarshal, 
+    bool bReturn)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
 	GetName().c_str());
@@ -1330,6 +1332,19 @@ CBEFunction::WriteMarshalException(CBEFile* pFile,
 	return;
     CBEMarshaller *pMarshaller = GetMarshaller();
     pMarshaller->MarshalParameter(pFile, this, pExceptionVar, bMarshal);
+
+    if (bReturn)
+    {
+	CBEDeclarator *pEnv = GetEnvironment()->m_Declarators.First();
+	string sName;
+	if (pEnv->GetStars() == 0)
+	    sName = "&";
+	sName += pEnv->GetName();
+	*pFile << "\tif (DICE_HAS_EXCEPTION(" << sName << "))\n";
+	pFile->IncIndent();
+	WriteReturn(pFile);
+	pFile->DecIndent();
+    }
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__,
 	GetName().c_str());
@@ -1562,32 +1577,24 @@ CBEFunction::FindParameter(string sName, bool bCall)
 }
 
 /** \brief searches for a parameter with the given name
- *  \param pStack the declarator stack of the member of this parameter
+ *  \param stack the declarator stack of the member of this parameter
  *  \param bCall true if an call parameter is searched
  *  \return a reference to the parameter or 0 if not found
  */
 CBETypedDeclarator*
-CBEFunction::FindParameter(vector<CDeclaratorStackLocation*> *pStack,
+CBEFunction::FindParameter(CDeclStack* pStack,
     bool bCall)
 {
-    if (!pStack)
+    if (!pStack || pStack->empty())
 	return 0;
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEFunction::%s(stack, %s) called in %s\n", __func__, 
 	bCall ? "true" : "false", GetName().c_str());
 
-    // get first element of stack
-    vector<CDeclaratorStackLocation*>::iterator iter = pStack->begin();
-    if (iter == pStack->end())
-    {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
-	    "CBEFunction::%s end, returns 0\n", __func__);
-	return 0;
-    }
     // find parameter
     CBETypedDeclarator *pParameter =
-	FindParameter((*iter)->pDeclarator->GetName(), bCall);
+	FindParameter(pStack->front().pDeclarator->GetName(), bCall);
     if (!pParameter)
     {
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
@@ -1599,19 +1606,19 @@ CBEFunction::FindParameter(vector<CDeclaratorStackLocation*> *pStack,
 	"CBEFunction::%s calling FindParameterMember(%s,,stack)\n",
 	__func__, pParameter->m_Declarators.First()->GetName().c_str());
 
-    return FindParameterMember(pParameter, iter + 1, pStack);
+    return FindParameterMember(pParameter, pStack->begin() + 1, pStack);
 }
 
 /** \brief searches for member in a constructed type
  *  \param pParameter the parameter to test
  *  \param iter the iterator pointing to the next element in the stack
- *  \param pStack the stack with the declarators
+ *  \param stack the stack with the declarators
  *  \return the member of the constructed parameter
  */
 CBETypedDeclarator*
 CBEFunction::FindParameterMember(CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*>::iterator iter,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack::iterator iter,
+    CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%p (%s)) called\n", __func__,
 	pParameter, 
@@ -1620,6 +1627,7 @@ CBEFunction::FindParameterMember(CBETypedDeclarator *pParameter,
     if (!pParameter)
 	return 0;
     // if at end of stack, pParameter is what we are looking for
+    assert(pStack);
     if (iter == pStack->end())
 	return pParameter;
 
@@ -1635,7 +1643,7 @@ CBEFunction::FindParameterMember(CBETypedDeclarator *pParameter,
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: type of parameter is struct\n",
 	    __func__);
 	CBETypedDeclarator *pMember =
-	    pStruct->m_Members.Find((*iter)->pDeclarator->GetName());
+	    pStruct->m_Members.Find(iter->pDeclarator->GetName());
 	return FindParameterMember(pMember, iter + 1, pStack);
     }
     // check if union
@@ -1645,7 +1653,7 @@ CBEFunction::FindParameterMember(CBETypedDeclarator *pParameter,
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: type of parameter is union\n",
 	    __func__);
 	CBETypedDeclarator *pMember =
-	    pUnion->m_UnionCases.Find((*iter)->pDeclarator->GetName());
+	    pUnion->m_UnionCases.Find(iter->pDeclarator->GetName());
 	return FindParameterMember(pMember, iter + 1, pStack);
     }
     // no constructed type, and stack not empty, something is wrong
@@ -1696,7 +1704,7 @@ CBEFunction::HasAdditionalReference(CBEDeclarator* /*pDeclarator*/,
  * (meaning are associated with a string attribute).
  */
 bool 
-CBEFunction::HasVariableSizedParameters(int nDirection)
+CBEFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 {
     vector<CBETypedDeclarator*>::iterator iter;
     for (iter = m_Parameters.begin();
@@ -1732,7 +1740,7 @@ CBEFunction::HasVariableSizedParameters(int nDirection)
  *  \param nDirection the direction to count
  *  \return the number of parameters, which have this type
  */
-int CBEFunction::GetParameterCount(int nFEType, int nDirection)
+int CBEFunction::GetParameterCount(int nFEType, DIRECTION_TYPE nDirection)
 {
     if (nDirection == 0)
     {
@@ -1771,7 +1779,7 @@ int CBEFunction::GetParameterCount(int nFEType, int nDirection)
 int 
 CBEFunction::GetParameterCount(ATTR_TYPE nMustAttrs, 
     ATTR_TYPE nMustNotAttrs, 
-    int nDirection)
+    DIRECTION_TYPE nDirection)
 {
     if (nDirection == 0)
     {
@@ -1859,7 +1867,7 @@ bool CBEFunction::AddToFile(CBEImplementationFile *pImpl)
  *  \param nDirection the direction to test
  *  \return true if it has
  */
-bool CBEFunction::HasArrayParameters(int nDirection)
+bool CBEFunction::HasArrayParameters(DIRECTION_TYPE nDirection)
 {
     vector<CBETypedDeclarator*>::iterator iter;
     for (iter = m_Parameters.begin();
@@ -1927,7 +1935,7 @@ CBETypedDeclarator* CBEFunction::FindParameterType(string sTypeName)
  * Use the function IsComponentSide() to determine if this function is at the
  * sever's side or not.
  */
-int CBEFunction::GetSendDirection()
+DIRECTION_TYPE CBEFunction::GetSendDirection()
 {
     return DIRECTION_IN;
 }
@@ -1944,7 +1952,7 @@ int CBEFunction::GetSendDirection()
  * Use the function IsComponentSide() to determine if this function is at the
  * sever's side or not.
  */
-int CBEFunction::GetReceiveDirection()
+DIRECTION_TYPE CBEFunction::GetReceiveDirection()
 {
     return DIRECTION_OUT;
 }

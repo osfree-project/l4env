@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2005
+ * Copyright (C) 2005-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -54,7 +54,8 @@ CL4V4BETrace::AddLocalVariable(CBEFunction *pFunction)
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     bool bShortIPC = false;
     if (pMsgBuffer)
-	pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, 0);
+	pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, 
+	    CMsgStructType::Generic);
 
     // write loop variable for msg buffer dump
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF) ||
@@ -93,7 +94,8 @@ CL4V4BETrace::BeforeCall(CBEFile *pFile,
     // get tracing function
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    string sFunc = CCompiler::GetTraceClientFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption(string("trace-client-func"), sFunc);
     
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
@@ -128,8 +130,8 @@ CL4V4BETrace::AfterCall(CBEFile *pFile,
 	pFunction->IsComponentSide())
 	return;
 
-    int nSndDir = pFunction->GetSendDirection();
-    int nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
     // check if we send a short IPC
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
@@ -138,7 +140,8 @@ CL4V4BETrace::AfterCall(CBEFile *pFile,
 	pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nRcvDir);
 
     // get tracing function
-    string sFunc = CCompiler::GetTraceClientFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption(string("trace-client-func"), sFunc);
 
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_CLIENT) ||
 	CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
@@ -180,8 +183,9 @@ CL4V4BETrace::BeforeDispatch(CBEFile *pFile,
     string sOpcodeVar = pNF->GetOpcodeVariable();
     string sObjectVar = pNF->GetCorbaObjectVariable();
     string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    string sFunc = CCompiler::GetTraceServerFunc();
-    int nDirection = pFunction->GetReceiveDirection();
+    string sFunc;
+    CCompiler::GetBackEndOption(string("trace-server-func"), sFunc);
+    CMsgStructType nDirection = pFunction->GetReceiveDirection();
 
     *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
 	": opcode %lx received from %lX\\n\",\n";
@@ -219,9 +223,10 @@ CL4V4BETrace::AfterDispatch(CBEFile *pFile,
 
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sFunc = CCompiler::GetTraceServerFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption(string("trace-server-func"), sFunc);
     string sReply = pNF->GetReplyCodeVariable();
-    int nDirection = pFunction->GetSendDirection();
+    CMsgStructType nDirection = pFunction->GetSendDirection();
     CL4BEMarshaller *pMarshaller = static_cast<CL4BEMarshaller*>(
 	pCF->GetNewMarshaller());
 
@@ -255,7 +260,8 @@ CL4V4BETrace::WaitIPCError(CBEFile *pFile,
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 	return;
 
-    string sFunc = CCompiler::GetTraceServerFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption(string("trace-server-func"), sFunc);
     *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": IPC error: %lx\\n\", L4_ErrorCode ());\n";
 }
@@ -278,12 +284,13 @@ CL4V4BETrace::BeforeReplyWait(CBEFile *pFile,
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sObjectVar = pNF->GetCorbaObjectVariable();
     string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    string sFunc = CCompiler::GetTraceServerFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption(string("trace-server-func"), sFunc);
     
     *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": send reply to %lX (label %08lx)\\n\", " << sObjectVar <<
 	"->raw, ";
-    pMsgBuffer->WriteAccessToStruct(pFile, pFunction, 0);
+    pMsgBuffer->WriteAccessToStruct(pFile, pFunction, DIRECTION_INOUT);
     *pFile << "." << sMsgTag << ".raw);\n";
 }
 
@@ -303,7 +310,8 @@ CL4V4BETrace::AfterReplyWait(CBEFile *pFile,
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sObjectVar = pNF->GetCorbaObjectVariable();
     string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    string sFunc = CCompiler::GetTraceServerFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption(string("trace-server-func"), sFunc);
 
     *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": received request from %lX (mr0 %08lx)\\n\", " << sObjectVar <<

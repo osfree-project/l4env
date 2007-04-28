@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -48,6 +48,7 @@
 #include "fe/FEBinaryExpression.h"
 #include <sstream>
 #include <cassert>
+#include <iostream>
 
 /** \brief writes the declarator stack to a file
  *  \param pFile the file to write to
@@ -55,7 +56,7 @@
  *  \param bUsePointer true if one star should be ignored
  */
 void CDeclaratorStackLocation::Write(CBEFile *pFile,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     bool bUsePointer)
 {
     string sOut;
@@ -69,20 +70,19 @@ void CDeclaratorStackLocation::Write(CBEFile *pFile,
  *  \param bUsePointer true if one star should be ignored
  */
 void CDeclaratorStackLocation::WriteToString(string &sResult,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     bool bUsePointer)
 {
     assert(pStack);
 
     CBEFunction *pFunction = 0;
-    CDeclaratorStackLocation *pLast = pStack->front();
-    if (pLast && pLast->pDeclarator)
-        pFunction = pLast->pDeclarator->GetSpecificParent<CBEFunction>();
+    if (!pStack->empty() && pStack->front().pDeclarator)
+        pFunction = pStack->front().pDeclarator->GetSpecificParent<CBEFunction>();
 
-    vector<CDeclaratorStackLocation*>::iterator iter;
+    CDeclStack::iterator iter;
     for (iter = pStack->begin(); iter != pStack->end(); iter++)
     {
-        CBEDeclarator *pDecl = (*iter)->pDeclarator;
+        CBEDeclarator *pDecl = iter->pDeclarator;
         assert(pDecl);
         int nStars = pDecl->GetStars();
         // test for empty array dimensions, which are treated as
@@ -100,7 +100,7 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
             {
                 if ((*iterB)->IsOfType(EXPR_NONE))
                 {
-                    if (!(*iter)->HasIndex(nLevel++))
+                    if (!iter->HasIndex(nLevel++))
                         nStars++;
                 }
             }
@@ -116,7 +116,7 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
             else
             {
                 // test for an array, which only has stars as array dimensions
-                if ((*iter)->HasIndex() && 
+                if (iter->HasIndex() && 
 		    (pDecl->GetArrayDimensionCount() == 0) && 
 		    (nStars > 0))
                     nStars--;
@@ -125,7 +125,7 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	    "CDeclaratorStackLocation::%s for %s with %d stars (3)\n",
 	    __func__, pDecl->GetName().c_str(), nStars);
-        if (pFunction && ((*iter)->nIndex[0] != -3))
+        if (pFunction && (iter->nIndex[0] != -3))
         {
 	    // this only works if the declarator really belongs to the
 	    // parameter
@@ -173,16 +173,16 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
 	sResult += pDecl->GetName();
 	if (nStars > 0)
 	    sResult += ")";
-        for (int i=0; i<(*iter)->GetUsedIndexCount(); i++)
+        for (int i = 0; i < iter->GetUsedIndexCount(); i++)
         {
-            if ((*iter)->nIndex[i] >= 0)
+            if (iter->nIndex[i] >= 0)
 	    {
 		std::ostringstream os;
-		os << (*iter)->nIndex[i];
+		os << iter->nIndex[i];
 		sResult += string("[") + os.str() + "]";
 	    }
-            if ((*iter)->nIndex[i] == -2)
-		sResult += string("[") + (*iter)->sIndex[i] + "]";
+            if (iter->nIndex[i] == -2)
+		sResult += string("[") + iter->sIndex[i] + "]";
         }
         if ((iter + 1) != pStack->end())
 	    sResult += ".";
@@ -225,15 +225,22 @@ CBEDeclarator::~CBEDeclarator()
         delete m_pInitialValue;
 }
 
+/** \brief creates a copy of this object
+ *  \return a reference to the copy
+ */
+CObject * CBEDeclarator::Clone()
+{ 
+    return new CBEDeclarator(*this); 
+}
+
 /** \brief prepares this instance for the code generation
  *  \param pFEDeclarator the corresponding front-end declarator
- *  \return true if the code generation was successful
  *
  * This implementation extracts the name, stars and bitfields from the
  * front-end declarator.
  */
 void 
-CBEDeclarator::CreateBackEnd(CFEDeclarator * pFEDeclarator)
+CBEDeclarator::CreateBackEndDecl(CFEDeclarator * pFEDeclarator)
 {
     // call CBEObject's CreateBackEnd method
     CBEObject::CreateBackEnd(pFEDeclarator);
@@ -259,10 +266,31 @@ CBEDeclarator::CreateBackEnd(CFEDeclarator * pFEDeclarator)
 	__func__);
 }
 
+/** \brief create a simple declarator using a front-end identifier
+ *  \param pFEIdentifier the front-end identifier
+ */
+void 
+CBEDeclarator::CreateBackEnd(CFEIdentifier * pFEIdentifier)
+{
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBEDeclarator::%s(identifier)\n", __func__);
+
+    if (dynamic_cast<CFEDeclarator*>(pFEIdentifier))
+	return CreateBackEndDecl(dynamic_cast<CFEDeclarator*>(pFEIdentifier));
+    
+    m_sName = pFEIdentifier->GetName();
+    m_nType = DECL_IDENTIFIER;
+    
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	"CBEDeclarator::%s(identifier) done\n", __func__);
+}
+
 /** \brief create a simple declarator using name and number of stars
  *  \param sName the name of the declarator
  *  \param nStars the number of asterisks
- *  \return true if successful
+ *
+ * Do not overwrite type, because this function might be called to
+ * reinitialize (set new name) the declarator.
  */
 void 
 CBEDeclarator::CreateBackEnd(string sName, 
@@ -273,6 +301,8 @@ CBEDeclarator::CreateBackEnd(string sName,
     
     m_sName = sName;
     m_nStars = nStars;
+    if (m_nType == DECL_NONE)
+	m_nType = DECL_IDENTIFIER;
     
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	"CBEDeclarator::%s(string) done\n", __func__);
@@ -817,9 +847,8 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
      */
     for (int nStars = nStartStars; nStars > nFakeStars; nStars--)
     {
-        vector<CDeclaratorStackLocation*> vStack;
-        CDeclaratorStackLocation *pLoc = new CDeclaratorStackLocation(this);
-        vStack.push_back(pLoc);
+        CDeclStack vStack;
+        vStack.push_back(this);
 	*pFile << "\t";
         for (int j = 0; j < nStartStars - nStars + 1; j++)
 	    *pFile << "_";
@@ -878,7 +907,6 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
             *pFile << nSize;
         }
 	*pFile << ");" << sAppend << "\n";
-        delete pLoc;
     }
 }
 

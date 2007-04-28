@@ -5,8 +5,8 @@
  *  \date    Tue Jun 25 2002
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
- /*
- * Copyright (C) 2001-2004
+/*
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,6 +33,7 @@
 
 #include "BEObject.h"
 #include "BEContext.h" /* for FUNCTION_TYPE */
+#include "BEFunction.h"
 #include "Attribute-Type.h" /* for ATTR_TYPE */
 #include "template.h"
 #include <vector>
@@ -107,10 +108,10 @@ public: // Public methods
     void CreateBackEnd(CFEInterface *pFEInterface);
     bool AddToFile(CBEHeaderFile *pHeader);
     bool AddToFile(CBEImplementationFile *pImpl);
-    int GetParameterCount(int nFEType, bool& bSameCount, int nDirection = 0);
-    int GetStringParameterCount(int nDirection,
+    int GetParameterCount(int nFEType, bool& bSameCount, DIRECTION_TYPE nDirection);
+    int GetStringParameterCount(DIRECTION_TYPE nDirection,
 	ATTR_TYPE nMustAttrs = ATTR_NONE, ATTR_TYPE nMustNotAttrs = ATTR_NONE);
-    int GetSize(int nDirection);
+    int GetSize(DIRECTION_TYPE nDirection);
     string GetName();
 
     /** \brief try to match with the name
@@ -141,7 +142,7 @@ public: // Public methods
 
     bool HasFunctionWithUserType(string sTypeName, CBEFile *pFile);
     int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs,
-	int nDirection = 0);
+	DIRECTION_TYPE nDirection);
 
     bool HasParametersWithAttribute(ATTR_TYPE nAttribute1,
 	ATTR_TYPE nAttribute2 = ATTR_NONE);
@@ -154,11 +155,11 @@ public: // Public methods
     { return m_pMsgBuffer; }
 
 protected:
-    void CreateBackEnd(CFEConstDeclarator *pFEConstant);
-    void CreateBackEnd(CFETypedDeclarator *pFETypedef);
-    void CreateBackEnd(CFEAttributeDeclarator *pFEAttrDecl);
-    void CreateBackEnd(CFEAttribute *pFEAttribute);
-    void CreateBackEnd(CFEConstructedType *pFEType);
+    void CreateBackEndConst(CFEConstDeclarator *pFEConstant);
+    void CreateBackEndTypedef(CFETypedDeclarator *pFETypedef);
+    void CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl);
+    void CreateBackEndAttribute(CFEAttribute *pFEAttribute);
+    void CreateBackEndTaggedDecl(CFEConstructedType *pFEType);
     
     void CreateFunctionsNoClassDependency(CFEOperation *pFEOperation);
     void CreateFunctionsClassDependency(CFEOperation *pFEOperation);

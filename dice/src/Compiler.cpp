@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -49,6 +49,7 @@
 #include <getopt.h>
 #endif
 
+#include "Messages.h"
 #include "File.h"
 #include "CParser.h"
 #include "CPreProcess.h"
@@ -130,15 +131,7 @@ int CCompiler::m_nDumpMsgBufDwords = 0;
 CBENameFactory *CCompiler::m_pNameFactory = 0;
 CBEClassFactory *CCompiler::m_pClassFactory = 0;
 CBESizes *CCompiler::m_pSizes = 0;
-/* they have empty constructors because we test for this */
-string CCompiler::m_sTraceMsgBufFunc = string();
-string CCompiler::m_sTraceServerFunc = string();
-string CCompiler::m_sTraceClientFunc = string();
-string CCompiler::m_sTraceLib = string();
-string CCompiler::m_sInitRcvStringFunc;
-string CCompiler::m_sFilePrefix;
-string CCompiler::m_sOutputDir;
-string CCompiler::m_sIncludePrefix;
+map<string, string> CCompiler::m_mBackEndOptions;
 //@}
 
 CCompiler::CCompiler()
@@ -236,19 +229,19 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         case '?':
             // Unknown options might be used by plugins
 #if defined(HAVE_GETOPT_LONG)
-            Warning("unrecognized option: %s (%d)\n", argv[optind - 1],
+	    CMessages::Warning("unrecognized option: %s (%d)\n", argv[optind - 1],
 		optind);
-	    Warning("Use \'--help\' to show valid options.\n");
-	    Warning("However, plugins might process this option.\n");
+	    CMessages::Warning("Use \'--help\' to show valid options.\n");
+	    CMessages::Warning("However, plugins might process this option.\n");
 #else
-            Warning("unrecognized option: %s (%d)\n", argv[optind], optind);
-	    Warning("Use \'-h\' to show valid options.\n");
-	    Warning("However, plugins might process this option.\n");
+            CMessages::Warning("unrecognized option: %s (%d)\n", argv[optind], optind);
+	    CMessages::Warning("Use \'-h\' to show valid options.\n");
+	    CMessages::Warning("However, plugins might process this option.\n");
 #endif
             break;
         case ':':
             // Error exits
-            Error("missing argument for option: %s\n", argv[optind - 1]);
+            CMessages::Error("missing argument for option: %s\n", argv[optind - 1]);
             break;
         case 'c':
             Verbose(PROGRAM_VERBOSE_OPTIONS, "Create client-side code.\n");
@@ -291,7 +284,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else
                     {
-                        Warning("dice: Inline argument \"%s\" not supported. (assume none)", optarg);
+                        CMessages::Warning("dice: Inline argument \"%s\" not supported. (assume none)", optarg);
                         UnsetOption(PROGRAM_GENERATE_INLINE_EXTERN);
                         UnsetOption(PROGRAM_GENERATE_INLINE_STATIC);
                     }
@@ -330,7 +323,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     if ((nVerboseLevel < 0) ||
 			(nVerboseLevel > PROGRAM_VERBOSE_MAXLEVEL))
                     {
-                        Warning("dice: Verbose level %d not supported in this version.", nVerboseLevel);
+                        CMessages::Warning("dice: Verbose level %d not supported in this version.", nVerboseLevel);
                         nVerboseLevel = std::max(std::min(nVerboseLevel, 
 				(int)PROGRAM_VERBOSE_MAXLEVEL), 0);
                     }
@@ -344,7 +337,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             break;
         case 'F':
             Verbose(PROGRAM_VERBOSE_OPTIONS, "file prefix %s used\n", optarg);
-            SetFilePrefix(optarg);
+            SetBackEndOption("file-prefix", string(optarg));
             break;
         case 'p':
 	    {
@@ -353,11 +346,11 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 		// remove trailing slashes
 		while (*(sPrefix.end()-1) == '/')
 		    sPrefix.erase(sPrefix.end()-1);
-		SetIncludePrefix(sPrefix);
+		SetBackEndOption("include-prefix", sPrefix);
 	    }
             break;
         case 'C':
-	    Warning("Option -C is deprecated. Use '-x corba' instead.\n");
+	    CMessages::Warning("Option -C is deprecated. Use '-x corba' instead.\n");
             Verbose(PROGRAM_VERBOSE_OPTIONS, "use the CORBA frontend\n");
             m_nUseFrontEnd = USE_FE_CORBA;
             break;
@@ -388,7 +381,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             break;
         case 'N':
             Verbose(PROGRAM_VERBOSE_OPTIONS, "no standard include paths\n");
-            pPreProcess->AddCPPArgument(string("-nostdinc"));
+            pPreProcess->AddCPPArgument("-nostdinc");
             break;
         case 'f':
             {
@@ -416,7 +409,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
 		    else if (sArg == "CTYPES")
                     {
-			Error("Option -fctypes is deprecated.\n");
+			CMessages::Error("Option -fctypes is deprecated.\n");
                     }
                     else if (sArg == "CONST-AS-DEFINE")
                     {
@@ -485,7 +478,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         }
                         else
                         {
-                            Error("\"%s\" is an invalid argument for option -ff\n",
+                            CMessages::Error("\"%s\" is an invalid argument for option -ff\n",
 				&optarg[1]);
                         }
                     }
@@ -500,7 +493,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         }
                         else
                         {
-                            Error("\"%s\" is an invalid argument for option -f\n", optarg);
+                            CMessages::Error("\"%s\" is an invalid argument for option -f\n", optarg);
                         }
                     }
                 case 'I':
@@ -511,7 +504,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         {
                             string sName = sOrig.substr(15);
                             Verbose(PROGRAM_VERBOSE_OPTIONS, "User provides function \"%s\" to init indirect receive strings\n", sName.c_str());
-                            SetInitRcvStringFunc(sName);
+                            SetBackEndOption("init-rcvstring", sName);
                         }
                         else
                             Verbose(PROGRAM_VERBOSE_OPTIONS, "User provides function to init indirect receive strings\n");
@@ -527,7 +520,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                 case 'L':
                     if (sArg == "L4TYPES")
                     {
-			Error("Option \"%s\" is deprecated.", sOrig.c_str());
+			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
                     }
                     break;
                 case 'N':
@@ -585,10 +578,18 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     break;
                 case 'S':
-                    if (sArg == "SERVER-PARAMETER")
-                    {
-			Error("Option \"%s\" is deprecated.", sOrig.c_str());
-                    }
+		    if (sArg.substr(0, 8) == "SYSCALL=")
+		    {
+			if (sArg.length() > 8)
+			{
+			    string sName = sOrig.substr(8);
+			    Verbose(PROGRAM_VERBOSE_OPTIONS, "User sets syscall to \"%s\".\n", 
+				sName.c_str());
+			    SetBackEndOption("syscall", sName);
+			}
+		    }
+                    else if (sArg == "SERVER-PARAMETER")
+			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
                     break;
                 case 'T':
                     if (sArg.substr(0, 12) == "TRACE-SERVER")
@@ -599,7 +600,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         {
                             string sName = sOrig.substr(13);
                             Verbose(PROGRAM_VERBOSE_OPTIONS, "User sets trace function to \"%s\".\n", sName.c_str());
-                            SetTraceServerFunc(sName);
+                            SetBackEndOption("trace-server-func", sName);
                         }
                     }
                     else if (sArg.substr(0, 12) == "TRACE-CLIENT")
@@ -610,7 +611,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         {
                             string sName = sOrig.substr(13);
                             Verbose(PROGRAM_VERBOSE_OPTIONS, "User sets trace function to \"%s\".\n", sName.c_str());
-                            SetTraceClientFunc(sName);
+                            SetBackEndOption("trace-client-func", sName);
                         }
                     }
                     else if (sArg.substr(0, 17) == "TRACE-DUMP-MSGBUF")
@@ -631,13 +632,13 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 				    SetTraceMsgBufDwords(nDwords);
                                 }
                                 else
-                                    Error("The option -ftrace-dump-msgbuf-dwords expects an argument (e.g. -ftrace-dump-msgbuf-dwords=10).\n");
+                                    CMessages::Error("The option -ftrace-dump-msgbuf-dwords expects an argument (e.g. -ftrace-dump-msgbuf-dwords=10).\n");
                             }
                             else
                             {
                                 string sName = sOrig.substr(18);
                                 Verbose(PROGRAM_VERBOSE_OPTIONS, "User sets trace function to \"%s\".\n", sName.c_str());
-                                SetTraceMsgBufFunc(sName);
+                                SetBackEndOption("trace-msgbuf-func", sName);
                             }
                         }
                     }
@@ -647,15 +648,16 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                         {
                             string sName = sOrig.substr(15);
                             Verbose(PROGRAM_VERBOSE_OPTIONS, "User sets trace function to \"%s\".\n", sName.c_str());
-                            if (GetTraceServerFunc().empty())
-                                SetTraceServerFunc(sName);
-                            if (GetTraceClientFunc().empty())
-                                SetTraceClientFunc(sName);
-                            if (GetTraceMsgBufFunc().empty())
-                                SetTraceMsgBufFunc(sName);
+			    string sFunc;
+                            if (!GetBackEndOption("trace-server-func", sFunc))
+                                SetBackEndOption("trace-server-func", sName);
+                            if (!GetBackEndOption("trace-client-func", sFunc))
+                                SetBackEndOption("trace-client-func", sName);
+                            if (!GetBackEndOption("trace-msgbuf-func", sFunc))
+                                SetBackEndOption("trace-msgbuf-func", sName);
                         }
                         else
-                            Error("The option -ftrace-function expects an argument (e.g. -ftrace-function=LOGl).\n");
+                            CMessages::Error("The option -ftrace-function expects an argument (e.g. -ftrace-function=LOGl).\n");
                     }
 		    else if (sArg.substr(0, 9) == "TRACE-LIB")
 		    {
@@ -664,25 +666,25 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			    string sName = sOrig.substr(10);
 			    Verbose(PROGRAM_VERBOSE_OPTIONS, "User sets tracing lib to \"%s\".\n",
 				sName.c_str());
-			    SetTraceLib(sName);
+			    SetBackEndOption("trace-lib", sName);
 			}
 			else
-			    Error("The option -ftrace-lib expects an argument.\n");
+			    CMessages::Error("The option -ftrace-lib expects an argument.\n");
 		    }
                     else if ((sArg == "TEST-NO-SUCCESS") || 
 			     (sArg == "TEST-NO-SUCCESS-MESSAGE"))
                     {
-			Error("Option \"%s\" is deprecated.", sOrig.c_str());
+			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
                     }
                     else if (sArg == "TESTSUITE-SHUTDOWN")
                     {
-			Error("Option \"%s\" is deprecated.", sOrig.c_str());
+			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
                     }
                     break;
                 case 'U':
                     if ((sArg == "USE-SYMBOLS") || (sArg == "USE-DEFINES"))
                     {
-			Error("Option \"%s\" is deprecated.", sOrig.c_str());
+			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
                     }
                     break;
                 case 'Z':
@@ -693,7 +695,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     break;
                 default:
-                    Warning("unsupported argument \"%s\" for option -f\n", sArg.c_str());
+                    CMessages::Warning("unsupported argument \"%s\" for option -f\n", sArg.c_str());
                     break;
                 }
             }
@@ -720,7 +722,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else if (sArg == "IA64")
                     {
-                        Warning("IA64 back-end not supported yet!");
+                        CMessages::Warning("IA64 back-end not supported yet!");
 			SetBackEndPlatform(PROGRAM_BE_IA32);
                         Verbose(PROGRAM_VERBOSE_OPTIONS, "use back-end for IA64 platform\n");
                     }
@@ -736,7 +738,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else
                     {
-                        Error("\"%s\" is an invalid argument for option -B/--back-end\n", optarg);
+                        CMessages::Error("\"%s\" is an invalid argument for option -B/--back-end\n", optarg);
                     }
                     break;
                 case 'I':
@@ -753,7 +755,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else if (sArg == "X0ADAPT")
                     {
-			Error("X0adapt Back-End deprecated.\n");
+			CMessages::Error("X0adapt Back-End deprecated.\n");
                     }
                     else if ((sArg == "X2") || (sArg == "V4"))
                     {
@@ -762,7 +764,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else if (sArg == "FLICK")
                     {
-                        Error("Flick compatibility mode is no longer supported");
+                        CMessages::Error("Flick compatibility mode is no longer supported");
                     }
                     else if ((sArg == "SOCKETS") || (sArg == "SOCK"))
                     {
@@ -771,7 +773,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else
                     {
-                        Error("\"%s\" is an invalid argument for option -B/--back-end\n", optarg);
+                        CMessages::Error("\"%s\" is an invalid argument for option -B/--back-end\n", optarg);
                     }
                     break;
                 case 'M':
@@ -788,12 +790,12 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else
                     {
-                        Error("\"%s\" is an invalid argument for option -B/--back-end\n", optarg);
+                        CMessages::Error("\"%s\" is an invalid argument for option -B/--back-end\n", optarg);
                     }
                     break;
                 default:
                     // unknown option
-                    Error("\"%s\" is an invalid argument for option -B/--back-end\n", optarg);
+                    CMessages::Error("\"%s\" is an invalid argument for option -B/--back-end\n", optarg);
                 }
             }
             break;
@@ -809,11 +811,11 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                 transform(sArg.begin(), sArg.end(), sArg.begin(), _toupper);
                 if (sArg == "XML")
                 {
-		    Error("Option -EXML is deprecated.\n"); 
+		    CMessages::Error("Option -EXML is deprecated.\n"); 
                 }
                 else
                 {
-                    Warning("unrecognized argument \"%s\" to option -E.\n", sArg.c_str());
+                    CMessages::Warning("unrecognized argument \"%s\" to option -E.\n", sArg.c_str());
                     SetOption(PROGRAM_STOP_AFTER_PRE);
                 }
             }
@@ -821,7 +823,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         case 'o':
             if (!optarg)
             {
-                Error("Option -o requires argument\n");
+                CMessages::Error("Option -o requires argument\n");
             }
             else
             {
@@ -832,11 +834,11 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 		    if (sDir[sDir.length()-1] != '/')
 			sDir += "/";
 		}
-		SetOutputDir(sDir);
+		SetBackEndOption("output-dir", sDir);
             }
             break;
         case 'T':
-	    Error("Option \"-T%s\" is deprecated.", optarg ? optarg : "");
+	    CMessages::Error("Option \"-T%s\" is deprecated.", optarg ? optarg : "");
             break;
         case 'V':
             ShowVersion();
@@ -884,7 +886,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			SetDependsOption(PROGRAM_DEPEND_MP);
                     else
                     {
-                        Warning("dice: Argument \"%s\" of option -M unrecognized: ignoring.", optarg);
+                        CMessages::Warning("dice: Argument \"%s\" of option -M unrecognized: ignoring.", optarg);
                         SetDependsOption(PROGRAM_DEPEND_M);
                     }
                     Verbose(PROGRAM_VERBOSE_OPTIONS, "Create dependencies with argument %s\n", optarg);
@@ -894,7 +896,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         case 'W':
             if (!optarg)
             {
-                Error("The option '-W' has to be used with parameters (see --help for details)\n");
+                CMessages::Error("The option '-W' has to be used with parameters (see --help for details)\n");
             }
             else
             {
@@ -957,14 +959,14 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                 }
                 else
                 {
-                    Warning("dice: warning \"%s\" not supported.\n", optarg);
+                    CMessages::Warning("dice: warning \"%s\" not supported.\n", optarg);
                 }
             }
             break;
         case 'D':
             if (!optarg)
             {
-                Error("There has to be an argument for the option '-D'\n");
+                CMessages::Error("There has to be an argument for the option '-D'\n");
             }
             else
             {
@@ -979,7 +981,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             {
                 string sArg = optarg;
                 if (!pPreProcess->SetCPP(sArg.c_str()))
-                    Error("Preprocessor \"%s\" does not exist.\n", optarg);
+                    CMessages::Error("Preprocessor \"%s\" does not exist.\n", optarg);
                 Verbose(PROGRAM_VERBOSE_OPTIONS,
 		    "Use \"%s\" as preprocessor\n", optarg);
             }
@@ -1009,7 +1011,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 	    }
 	    break;
         default:
-            Error("You used an obsolete parameter (%c).\nPlease use dice --help to check your parameters.\n", c);
+            CMessages::Error("You used an obsolete parameter (%c).\nPlease use dice --help to check your parameters.\n", c);
         }
     }
 
@@ -1049,15 +1051,15 @@ void CCompiler::ParseArguments(int argc, char *argv[])
     if (IsBackEndPlatformSet(PROGRAM_BE_ARM) &&
         !IsBackEndInterfaceSet(PROGRAM_BE_X0))
     {
-        Warning("The Arm Backend currently works with X0 native only!");
-        Warning("  -> Setting interface to X0 native.");
+        CMessages::Warning("The Arm Backend currently works with X0 native only!");
+        CMessages::Warning("  -> Setting interface to X0 native.");
 	SetBackEndInterface(PROGRAM_BE_X0);
     }
     if (IsBackEndPlatformSet(PROGRAM_BE_AMD64) &&
         !IsBackEndInterfaceSet(PROGRAM_BE_V2))
     {
-        Warning("The AMD64 Backend currently works with V2 native only!");
-        Warning("  -> Setting interface to V2 native.");
+        CMessages::Warning("The AMD64 Backend currently works with V2 native only!");
+        CMessages::Warning("  -> Setting interface to V2 native.");
 	SetBackEndInterface(PROGRAM_BE_V2);
     }
     // with arm we *have to* marshal type aligned
@@ -1076,15 +1078,16 @@ void CCompiler::ParseArguments(int argc, char *argv[])
     }
 
     // check if tracing functions are set
+    string sFunc;
     if (IsOptionSet(PROGRAM_TRACE_SERVER) &&
-	GetTraceServerFunc().empty())
-	SetTraceServerFunc("printf");
+	!GetBackEndOption("trace-server-func", sFunc))
+	SetBackEndOption("trace-server-func", "printf");
     if (IsOptionSet(PROGRAM_TRACE_CLIENT) &&
-	GetTraceClientFunc().empty())
-	SetTraceClientFunc("printf");
+	!GetBackEndOption("trace-client-func", sFunc))
+	SetBackEndOption("trace-client-func", "printf");
     if (IsOptionSet(PROGRAM_TRACE_MSGBUF) &&
-	GetTraceMsgBufFunc().empty())
-	SetTraceMsgBufFunc("printf");
+	!GetBackEndOption("trace-msgbuf-func", sFunc))
+	SetBackEndOption("trace-msgbuf-func", "printf");
 
     if (nNoWarning.any())
 	m_WarningLevel &= ~nNoWarning;
@@ -1098,14 +1101,14 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 	    !IsDependsOptionSet(PROGRAM_DEPEND_MD) &&
 	    !IsDependsOptionSet(PROGRAM_DEPEND_MMD))
 	{
-	    Error("Option %s requires one of -M,-MM,-MD,-MMD.\n",
+	    CMessages::Error("Option %s requires one of -M,-MM,-MD,-MMD.\n",
 		IsDependsOptionSet(PROGRAM_DEPEND_MP) ? "-MP" : "-MF");
 	}
     }
     if (IsDependsOptionSet(PROGRAM_DEPEND_MF) &&
 	m_sDependsFile.empty())
     {
-	Error("Option -MF requires argument.\n");
+	CMessages::Error("Option -MF requires argument.\n");
     }
 	
 
@@ -1124,8 +1127,8 @@ void CCompiler::InitTraceLib(int argc, char *argv[])
 {
     // if trace lib was set, then open it and let it parse the arguments. This
     // way it might interpret some arguments that we ignored
-    string sTraceLib = CCompiler::GetTraceLib();
-    if (sTraceLib.empty())
+    string sTraceLib;
+    if (!CCompiler::GetBackEndOption("trace-lib", sTraceLib))
 	return;
 
     void* lib = dlopen(sTraceLib.c_str(), RTLD_NOW);
@@ -1133,7 +1136,7 @@ void CCompiler::InitTraceLib(int argc, char *argv[])
     {
 	fprintf(stderr, "%s\n", dlerror());
 	// error exists
-	Error("Could not load tracing library \"%s\".\n", sTraceLib.c_str());
+	CMessages::Error("Could not load tracing library \"%s\".\n", sTraceLib.c_str());
 
 	return;
     }
@@ -1146,7 +1149,7 @@ void CCompiler::InitTraceLib(int argc, char *argv[])
     if (errmsg != NULL)
     {
 	fprintf(stderr, "%s\n", errmsg);
-	Error("Could not find symbol for init function.\n");
+	CMessages::Error("Could not find symbol for init function.\n");
 	return;
     }
 
@@ -1312,6 +1315,9 @@ void CCompiler::ShowHelp(bool bShort)
     "       function\n"
     "    set <string> to 'no-dispatcher' to not generate the dispatcher\n"
     "       function\n"
+    "    set <string> to 'syscall=<means>' to specify the mechanism to enter\n"
+    "       kernel mode. Valid means are for ia32-v2 back-end: sysenter, \n"
+    "       int30, and abs-syscall.\n"
     "\n"
     "  Debug Options:\n"
     "    set <string> to 'trace-server' to trace all messages received by the\n"
@@ -1421,7 +1427,7 @@ void CCompiler::Parse()
         m_nUseFrontEnd, IsOptionSet(PROGRAM_STOP_AFTER_PRE)))
     {
         if (!erroccured)
-            Error("other parser error.");
+            CMessages::Error("other parser error.");
     }
     // get file
     m_pRootFE = pParser->GetTopFileInScope();
@@ -1436,16 +1442,16 @@ void CCompiler::Parse()
     }
     catch (...)
     {
-	Error("Post-Parse Processing failed.\n");
+	CMessages::Error("Post-Parse Processing failed.\n");
     }
     // if errors, print them and abort
     if (erroccured)
     {
         if (errcount > 0)
-            Error("%d Error(s) and %d Warning(s) occured.", errcount, 
+            CMessages::Error("%d Error(s) and %d Warning(s) occured.", errcount, 
 		warningcount);
         else
-            Warning("%s: warning: %d Warning(s) occured while parsing.", 
+            CMessages::Warning("%s: warning: %d Warning(s) occured while parsing.", 
 		m_sInFileName.c_str(), warningcount);
     }
 }
@@ -1473,7 +1479,7 @@ void CCompiler::PrepareWrite()
 
     Verbose(PROGRAM_VERBOSE_NORMAL, "Check consistency of parsed input ...\n");
     if (!m_pRootFE)
-        Error("Internal Error: Current file not set");
+        CMessages::Error("Internal Error: Current file not set");
     // consistency check
     CConsistencyVisitor v;
     try
@@ -1482,7 +1488,7 @@ void CCompiler::PrepareWrite()
     }
     catch (...)
     {
-	Error("Consistency check failed.\n");
+	CMessages::Error("Consistency check failed.\n");
     }
     Verbose(PROGRAM_VERBOSE_NORMAL, "... finished consistency check.\n");
 
@@ -1554,7 +1560,7 @@ void CCompiler::PrepareWrite()
         m_pRootBE = 0;
 	e->Print();
 	delete e;
-	Error("Creating back-end failed.\n");
+	CMessages::Error("Creating back-end failed.\n");
     }
     Verbose(PROGRAM_VERBOSE_NORMAL, "...done.\n");
 
@@ -1600,127 +1606,6 @@ void CCompiler::Write()
     Verbose(PROGRAM_VERBOSE_NORMAL, "Write backend...\n");
     m_pRootBE->Write();
     Verbose(PROGRAM_VERBOSE_NORMAL, "...done.\n");
-}
-
-/**
- *  \brief helper function
- *  \param sMsg the error message to print before exiting
- *
- * This method prints an error message and exits the compiler. Any clean up
- * should be performed  BEFORE this method is called.
- */
-void CCompiler::Error(const char *sMsg, ...)
-{
-    std::cerr << "dice: ";
-    va_list args;
-    va_start(args, sMsg);
-    vfprintf(stderr, sMsg, args);
-    va_end(args);
-    std::cerr << "\n";
-
-    exit(1);
-}
-
-/** \brief helper function
- *  \param pFEObject the front-end object where the error occurred
- *  \param nLinenb the linenumber of the error
- *  \param sMsg the error message
- *
- * The given front-end object can be used to determine the file this object
- * belonged to and the line, where this object has been declared. This is
- * useful if we do not have a current line number available (any time after
- * the parsing finished).
- */
-void CCompiler::GccError(CFEBase * pFEObject, int nLinenb, const char *sMsg, ...)
-{
-    va_list args;
-    va_start(args, sMsg);
-    GccErrorVL(pFEObject, nLinenb, sMsg, args);
-    va_end(args);
-}
-
-/** \brief helper function
- *  \param pFEObject the front-end object where the error occurred
- *  \param nLinenb the linenumber of the error
- *  \param sMsg the error message
- *  \param vl the argument list to be printed
- *
- * The given front-end object can be used to determine the file this object
- * belonged to and the line, where this object has been declared. This is
- * useful if we do not have a current line number available (any time after
- * the parsing finished).
- */
-void 
-CCompiler::GccErrorVL(CFEBase * pFEObject,
-    int nLinenb,
-    const char *sMsg,
-    va_list vl)
-{
-    if (pFEObject)
-    {
-        // check line number
-        if (nLinenb == 0)
-            nLinenb = pFEObject->GetSourceLine();
-        // iterate through include hierarchy
-        CFEFile *pCur = (CFEFile*)pFEObject->GetSpecificParent<CFEFile>(0);
-        vector<CFEFile*> *pStack = new vector<CFEFile*>();
-        while (pCur)
-        {
-            pStack->insert(pStack->begin(), pCur);
-            // get file of parent because GetFile start with "this"
-            pCur = pCur->GetSpecificParent<CFEFile>(1);
-        }
-        // need at least one file
-        if (!pStack->empty())
-        {
-            // walk down
-            if (pStack->size() > 1)
-                std::cerr << "In file included ";
-            vector<CFEFile*>::iterator iter;
-            for (iter = pStack->begin();
-                (iter != pStack->end()) && (iter != pStack->end()-1); iter++)
-            {
-		// we do not use GetFullFileName, because the "normal"
-		// filename already includes the whole path it is the filename
-		// generated by Gcc
-                CFEFile *pFEFile = *iter;
-                int nIncludeLine = 1;
-                if (iter != pStack->end()-1)
-                    nIncludeLine = (*(iter+1))->GetIncludedOnLine();
-		std::cerr << "from " << pFEFile->GetFileName() << ":" << nIncludeLine;
-                if (iter + 2 != pStack->end())
-                    std::cerr << ",\n                 ";
-                else
-                    std::cerr << ":\n";
-            }
-            if (*iter)
-            {
-		// we do not use GetFullFileName, because the "normal"
-		// filename already includes the whole path it is the filename
-		// generated by Gcc
-                std::cerr << (*iter)->GetFileName() << ":" << nLinenb << ": ";
-            }
-        }
-        // cleanup
-        delete pStack;
-    }
-    vfprintf(stderr, sMsg, vl);
-    std::cerr << std::endl;
-}
-
-/**
- *  \brief helper function
- *  \param sMsg the warning message to print
- *
- * This method prints an error message and returns.
- */
-void CCompiler::Warning(const char *sMsg, ...)
-{
-    va_list args;
-    va_start(args, sMsg);
-    vfprintf(stderr, sMsg, args);
-    va_end(args);
-    std::cerr << std::endl;
 }
 
 /** \brief print verbose message
@@ -1781,70 +1666,5 @@ void CCompiler::VerboseD(ProgramVerbose_Type level, const char *format, ...)
     vfprintf(stdout, format, args);
     va_end(args);
     fflush (stdout);
-}
-
-/** \brief print warning messages
- *  \param pFEObject the object where the warning occured
- *  \param nLinenb the line in the file where the object originated
- *  \param sMsg the warning message
- */
-void CCompiler::GccWarning(CFEBase * pFEObject, int nLinenb, const char *sMsg, ...)
-{
-    va_list args;
-    va_start(args, sMsg);
-    GccWarningVL(pFEObject, nLinenb, sMsg, args);
-    va_end(args);
-}
-
-/** \brief print warning messages
- *  \param pFEObject the object where the warning occured
- *  \param nLinenb the line in the file where the object originated
- *  \param sMsg the warning message
- *  \param vl teh variable argument list
- */
-void CCompiler::GccWarningVL(CFEBase * pFEObject, int nLinenb, const char *sMsg, va_list vl)
-{
-    erroccured++;
-    warningcount++;
-    if (pFEObject)
-    {
-        // check line number
-        if (nLinenb == 0)
-            nLinenb = pFEObject->GetSourceLine();
-        // iterate through include hierarchy
-        CFEFile *pCur = (CFEFile*)pFEObject->GetSpecificParent<CFEFile>(0);
-        vector<CFEFile*> *pStack = new vector<CFEFile*>();
-        while (pCur)
-        {
-            pStack->insert(pStack->begin(), pCur);
-            // start with parent of current, because GetFile starts with "this"
-            pCur = pCur->GetSpecificParent<CFEFile>();
-        }
-        // need at least one file
-        if (!pStack->empty())
-        {
-            // walk down
-            if (pStack->size() > 1)
-                std::cerr << "In file included ";
-            vector<CFEFile*>::iterator iter;
-            for (iter = pStack->begin();
-                (iter != pStack->end()) && (iter != pStack->end()-1); iter++)
-            {
-                std::cerr << "from " << (*iter)->GetFileName() << ":1";
-                if (iter+2 != pStack->end())
-                    std::cerr << ",\n                 ";
-                else
-                    std::cerr << ":\n";
-            }
-            if (*iter)
-            {
-                std::cerr << (*iter)->GetFileName() << ":" << nLinenb << ": warning: ";
-            }
-        }
-        // cleanup
-        delete pStack;
-    }
-    vfprintf(stderr, sMsg, vl);
-    std::cerr << "\n";
 }
 

@@ -8,6 +8,35 @@
 #include "shortcut.h"
 #include "tcboffset.h"
 
+.macro  PRE_FAST_ALIEN_IPC
+	btrl	$17, OFS__THREAD__STATE (%ebx)	/* Thread_dis_alien */
+	jc	1f
+	RESTORE_STATE
+	popl	%eax
+	sub	$6,(%esp)
+	andl	$0x7f,4(%esp)
+	orl	$EFLAGS_IF,8(%esp)
+	sub	$16,12(%esp)
+	pushl	$(0x30 << 3 | 2)
+	pushl	$(0xd)
+	pusha
+	jmp	slowtraps
+
+1:	/* do alien IPC and raise a trap afterwards */
+	RESET_THREAD_CANCEL_AT %ebx
+.endm
+
+.macro  POST_FAST_ALIEN_IPC
+	RESTORE_STATE_AFTER_IPC
+	popl	%eax
+	andl	$0x7f,4(%esp)
+	orl	$EFLAGS_IF, 8(%esp)
+	pushl	$(0x30 << 3 | 6)
+	pushl	$(0xd)
+	pusha
+	jmp	slowtraps
+.endm
+
 	.p2align 4
 	.globl	entry_vec01_debug
 entry_vec01_debug:
@@ -174,30 +203,9 @@ in_slow_ipc5:
 	DO_SYSEXIT
 
 alien_sys_fast_ipc_log:
-	btrl	$17, OFS__THREAD__STATE (%ebx)	/* Thread_dis_alien */
-	jc	1f
-	RESTORE_STATE
-	popl	%eax
-	sub	$6,(%esp)
-	andl	$0x7f,4(%esp)
-	orl	$EFLAGS_IF, 8(%esp)
-	sub	$16,12(%esp)
-	pushl	$(0x30 << 3 | 2)
-	pushl	$(0xd)
-	pusha
-	jmp	slowtraps
-
-1:	/* do alien IPC and raise a trap afterwards */
-	RESET_THREAD_CANCEL_AT %ebx
-	call    *syscall_table
-	RESTORE_STATE_AFTER_IPC
-	popl	%eax
-	andl	$0x7f,4(%esp)
-	orl	$EFLAGS_IF, 8(%esp)
-	pushl	$(0x30 << 3 | 6)
-	pushl	$(0xd)
-	pusha
-	jmp	slowtraps
+	PRE_FAST_ALIEN_IPC
+	push    $ret_from_fast_alien_ipc
+	jmp     *syscall_table
 
 	.globl	in_slow_ipc5
 
@@ -255,46 +263,49 @@ in_sc_ipc2:
 	DO_SYSEXIT
 #endif
 
-	.globl alien_sys_fast_ipc_c /* Also used in shortcut */
-alien_sys_fast_ipc_c:
-	btrl	$17, OFS__THREAD__STATE (%ebx)	/* Thread_dis_alien */
-	jc	1f
-	RESTORE_STATE
-	popl	%eax
-	sub	$6,(%esp)
-	andl	$0x7f,4(%esp)
-	orl	$EFLAGS_IF,8(%esp)
-	sub	$16,12(%esp)
-	pushl	$(0x30 << 3 | 2)
-	pushl	$(0xd)
-	pusha
-	jmp	slowtraps
+	.globl alien_sys_fast_ipc_c     /* Also used in shortcut */
+	.global ret_from_fast_alien_ipc /* used in ex-regs */
+/* ex-regs patches the return address of the call to the 'sys_ipc' function
+ * in the case of sysenter, because we need to leave the kernel by iret
+ * to prevent the need of user-level trampoline code.
+ * In the case of alien ipc there must be a special case because otherwise the
+ * second alien exception is not generated. Therefore ex-regs uses 
+ * 'ret_from_fast_alien_ipc' to determine this case and paches the return
+ * address with 'leave_alien_from_sysenter_by_iret' instead of
+ * 'leave_from_sysenter_by_iret'. (see Thread::user_ip in thread-ia32-ux.cpp)
+ */
 
-1:	/* do alien IPC and raise a trap afterwards */
-	RESET_THREAD_CANCEL_AT %ebx
+
+alien_sys_fast_ipc_c:
+	PRE_FAST_ALIEN_IPC
 	call    ipc_short_cut_wrapper
-	RESTORE_STATE_AFTER_IPC
-	popl	%eax
-	andl	$0x7f,4(%esp)
-	orl	$EFLAGS_IF, 8(%esp)
-	pushl	$(0x30 << 3 | 6)
-	pushl	$(0xd)
-	pusha
-	jmp	slowtraps
+ret_from_fast_alien_ipc:
+	POST_FAST_ALIEN_IPC
 
 	.globl	in_sc_ipc2
 
-
-	.p2align(4)
-	.globl	leave_from_sysenter_by_iret
-leave_from_sysenter_by_iret:
+.macro	LEAVE_SE_BY_IRET
 	ESP_TO_TCB_AT %ebx
 	RESET_THREAD_IPC_MASK_AT %ebx
 	RESET_USER_SEGMENTS $3,in_cli		/* scratches ecx */
 	RESTORE_STATE_AFTER_IPC
 	popl    %eax
 	orl	$EFLAGS_IF, 8(%esp)
+.endm
+
+	.p2align(4)
+	.globl	leave_from_sysenter_by_iret
+leave_from_sysenter_by_iret:
+	LEAVE_SE_BY_IRET
 	iret
+
+	.globl	leave_alien_from_sysenter_by_iret
+leave_alien_from_sysenter_by_iret:
+	LEAVE_SE_BY_IRET
+	pushl	$(0x30 << 3 | 6)
+	pushl	$(0xd)
+	pusha
+	jmp	slowtraps
 
 
 	// This code is globally visible at the trampoline page for small

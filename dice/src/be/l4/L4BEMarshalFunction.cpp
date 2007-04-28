@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/l4/L4BEMarshalFunction.cpp
+ *  \file    dice/src/be/l4/L4BEMarshalFunction.cpp
  *  \brief   contains the implementation of the class CL4BEMarshalFunction
  *
- *    \date    10/10/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/10/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -78,15 +78,16 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
 	m_pTrace->BeforeMarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;
     }
-    
-    int nDirection = GetSendDirection();
-    bool bSendFpages = GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
+
+    CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
+    CMsgStructType nType = GetSendDirection();
+    bool bSendFpages = GetParameterCount(TYPE_FLEXPAGE, GetSendDirection()) > 0;
     if (bSendFpages)
     {
         // if (env.major == CORBA_NO_EXCEPTION)
         //   marshal flexpages
         // else
-        //   marhsal exception
+        //   marshal exception
 	CBETypedDeclarator *pEnv = GetEnvironment();
         string sFreeFunc;
         if (((CBEUserDefinedType*)pEnv->GetType())->GetName() ==
@@ -110,9 +111,12 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
 	*pFile << "\telse\n";
 	*pFile << "\t{\n";
         pFile->IncIndent();
-        WriteMarshalException(pFile, true);
+        WriteMarshalException(pFile, true, false);
         // clear exception
         *pFile << "\t" << sFreeFunc << "(" << sEnv << ");\n";
+	// set send dope
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
+	    nType); 
 	// write return (don't marshal any parameters if exception)
 	WriteReturn(pFile);
         pFile->DecIndent();
@@ -121,15 +125,14 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
     else
         CBEMarshalFunction::WriteMarshalling(pFile);
 
-    CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
     // set send dope
     pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-	GetSendDirection());
+	nType);
     // if we had send flexpages,we have to set the flexpage bit
     if (bSendFpages)
     {
 	*pFile << "\t";
-	pMsgBuffer->WriteMemberAccess(pFile, this, nDirection, 
+	pMsgBuffer->WriteMemberAccess(pFile, this, nType, 
 	    TYPE_MSGDOPE_SEND, 0);
 	*pFile << ".md.fpage_received = 1;\n";
     }
@@ -146,14 +149,14 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
  *  \return true if variable sized parameters are needed
  */
 bool 
-CL4BEMarshalFunction::HasVariableSizedParameters(int nDirection)
+CL4BEMarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 {
     bool bRet = 
 	CBEMarshalFunction::HasVariableSizedParameters(nDirection);
     bool bFixedNumberOfFlexpages = true;
     CBEClass *pClass = GetSpecificParent<CBEClass>();
     assert(pClass);
-    pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages);
+    pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
     // if no flexpages, return
     if (!bFixedNumberOfFlexpages)
         return true;
@@ -170,7 +173,7 @@ CL4BEMarshalFunction::HasVariableSizedParameters(int nDirection)
  * If we send flexpages, remove the exception size again, since either the
  * flexpage or the exception is sent.
  */
-int CL4BEMarshalFunction::GetFixedSize(int nDirection)
+int CL4BEMarshalFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEMarshalFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&
@@ -187,7 +190,7 @@ int CL4BEMarshalFunction::GetFixedSize(int nDirection)
  * If we send flexpages, remove the exception size again, since either the
  * flexpage or the exception is sent.
  */
-int CL4BEMarshalFunction::GetSize(int nDirection)
+int CL4BEMarshalFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEMarshalFunction::GetSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&

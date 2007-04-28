@@ -45,7 +45,8 @@ int ioctl( int fd, int cmd, ... )
 #endif
 {
     file_desc_t fdesc;
-    int ret, count;
+    int ret;
+    size_t count;
     char *arg;
     va_list list;
 

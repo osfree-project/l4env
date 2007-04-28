@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -73,11 +73,11 @@ CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
     if (CCompiler::IsOptionSet(PROGRAM_ZERO_MSGBUF)) 
 	pMsgBuffer->WriteSetZero(pFile);
     // set the size dope here, so we do not need to set it anywhere else
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, 0);
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, CMsgStructType::Generic);
     // init receive flexpage
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, 0);
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, CMsgStructType::Generic);
     // init indirect strings (using generic struct)
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING, 0);
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING, CMsgStructType::Generic);
 
     // set CORBA_Object depending on [dedicated_partner]. Here, the
     // environment is initialized, so it is save to use the environment's
@@ -154,8 +154,8 @@ CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
     CBETypedDeclarator *pEnv = GetEnvironment();
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    int nDirection = GetReceiveDirection();
-    if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0) && 
+    CMsgStructType nType = GetReceiveDirection();
+    if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nType) > 0) && 
 	pEnv)
     {
         CBEDeclarator *pDecl = pEnv->m_Declarators.First();

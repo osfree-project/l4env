@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/BETypedef.h
+ *  \file    dice/src/be/BETypedef.h
  *  \brief   contains the declaration of the class CBETypedef
  *
- *    \date    01/18/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/18/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -45,9 +45,7 @@ public:
     /** \brief constructor
      */
     CBETypedef();
-    /** \brief destructor of this instance */
-    virtual ~CBETypedef()
-    {}
+    ~CBETypedef();
 
 protected:
     /** \brief copy constructor
@@ -60,11 +58,7 @@ public:
     virtual void CreateBackEnd(CBEType * pType, string sName, CFEBase *pFERefObject);
     virtual bool AddToFile(CBEHeaderFile *pHeader);
 
-    /** \brief creates a new instance of this object 
-     *  \return reference to copy
-     */
-    virtual CObject *Clone()
-    { return new CBETypedef(*this); }
+    virtual CObject *Clone();
 
     virtual void WriteForwardDeclaration(CBEFile *pFile);
     virtual void WriteDefinition(CBEFile *pFile);

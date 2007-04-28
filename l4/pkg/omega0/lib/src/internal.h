@@ -8,6 +8,13 @@ extern int omega0_initalized;
 extern l4_threadid_t omega0_management_thread;
 
 extern int omega0_init(void);
+
+/*
+ * If lthread is 0, the call is directed to the Omega0 management thread.
+ * Otherwise lthread is used as local thread number in the Omega0 task.
+ * XXX Not nice, but works.
+ */
+
 extern int omega0_call(int lthread, omege0_request_descriptor type,
                        l4_umword_t param, l4_timeout_t timeout);
 extern int omega0_open_call(int lthread, omege0_request_descriptor type,

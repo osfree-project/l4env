@@ -5,7 +5,7 @@ SRC_C = dummy.c softirq.c notifier.c init.c timer.c proc.c sysctl.c \
         util.c core_dev.c select.c brlock.c #seq_file.c
 
 ### DEVICES
-SRC_C += lo.c #oshkosh.c
+SRC_C += lo.c
 
 PRIVATE_INCDIR = $(PKGDIR)/server/lib-linux/include $(PKGDIR)/server/include \
                  $(DDE_INCDIR) $(LINUX24_INCDIR)

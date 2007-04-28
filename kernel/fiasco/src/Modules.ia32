@@ -141,7 +141,7 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
 			   irq_alloc terminate preemption		     \
 			   sched_context allocators utcb_init sys_call_page  \
 			   smas perf_cnt x86desc gdt idt tss trap_state      \
-			   buddy_alloc vkey kdb_ke
+			   buddy_alloc vkey kdb_ke prio_list
 
 __main_IMPL		:= __main-ia32-amd64
 apic_IMPL		:= apic-ia32-amd64

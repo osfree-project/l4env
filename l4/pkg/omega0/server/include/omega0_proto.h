@@ -3,7 +3,7 @@
 
 /* for internal use of client and server */
 
-#define MANAGEMENT_THREAD	0	// thread number of management thread
+extern unsigned MANAGEMENT_THREAD;	// thread number of management thread
 
 typedef enum{
 	OMEGA0_ATTACH,

@@ -17,8 +17,8 @@ l4_int32_t
 l4vfs_net_io_getpeername_component (CORBA_Object _dice_corba_obj,
                                     object_handle_t handle,
                                     char addr[L4VFS_SOCKET_MAX_ADDRLEN],
-                                    int *addrlen,
-                                    int *actual_len,
+                                    l4vfs_socklen_t *addrlen,
+                                    l4vfs_socklen_t *actual_len,
                                     CORBA_Server_Environment *_dice_corba_env)
     __attribute__((weak));
 
@@ -26,8 +26,8 @@ l4_int32_t
 l4vfs_net_io_getpeername_component (CORBA_Object _dice_corba_obj,
                                     object_handle_t handle,
                                     char addr[L4VFS_SOCKET_MAX_ADDRLEN],
-                                    int *addrlen,
-                                    int *actual_len,
+                                    l4vfs_socklen_t *addrlen,
+                                    l4vfs_socklen_t *actual_len,
                                     CORBA_Server_Environment *_dice_corba_env)
 {
     LOG("l4vfs_net_io_getpeername_component is not implemented!");

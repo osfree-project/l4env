@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -14,18 +14,12 @@
  * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY
-{
-}
-
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program
-{
-}
-
+ * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
  * For different licensing schemes please contact
@@ -33,6 +27,9 @@
  */
 
 #include "Visitor.h"
+
+CVisitor::~CVisitor()
+{}
 
 /** \brief visit a class of type CObject */
 void CVisitor::Visit(CObject&)

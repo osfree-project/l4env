@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -74,7 +74,7 @@ CBECallFunction::WriteVariableInitialization(CBEFile * pFile)
         GetName().c_str(), pFile->GetFileName().c_str());
     // init message buffer
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    pMsgBuffer->WriteInitialization(pFile, this, 0, 0);
+    pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
 }
 
 /** \brief writes the invocation of the message transfer
@@ -106,7 +106,7 @@ CBECallFunction::WriteUnmarshalling(CBEFile * pFile)
     }
 
     // unmarshal exception first
-    WriteMarshalException(pFile, false);
+    WriteMarshalException(pFile, false, true);
     // unmarshal return variable
     WriteMarshalReturn(pFile, false);
 
@@ -277,7 +277,7 @@ bool CBECallFunction::DoWriteFunction(CBEImplementationFile * pFile)
  *  \param nDirection the direction to calulate the size for
  *  \return the size of the function's parameters in bytes
  */
-int CBECallFunction::GetSize(int nDirection)
+int CBECallFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size
     int nSize = CBEOperationFunction::GetSize(nDirection);
@@ -294,7 +294,7 @@ int CBECallFunction::GetSize(int nDirection)
  *  \param nDirection the direction to calc
  *  \return the size of the params in bytes
  */
-int CBECallFunction::GetFixedSize(int nDirection)
+int CBECallFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEOperationFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_IN) &&

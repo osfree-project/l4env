@@ -130,7 +130,7 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
 			   perf_cnt x86desc gdt idt tss trap_state           \
 			   buddy_alloc vkey kdb_ke kernel_task 		     \
 			   cap_space cap_space_alloc ram_quota \
-			   ram_quota_alloc 
+			   ram_quota_alloc prio_list
 
 __main_IMPL		:= __main-ia32-amd64
 apic_IMPL		:= apic-ia32-amd64

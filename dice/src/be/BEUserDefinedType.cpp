@@ -6,7 +6,7 @@
  *  \author    Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -41,8 +41,7 @@
 #include <cassert>
 
 CBEUserDefinedType::CBEUserDefinedType()
-{
-}
+{}
 
 CBEUserDefinedType::CBEUserDefinedType(CBEUserDefinedType & src)
  : CBEType(src)
@@ -52,7 +51,14 @@ CBEUserDefinedType::CBEUserDefinedType(CBEUserDefinedType & src)
 
 /** \brief destructor of this instance */
 CBEUserDefinedType::~CBEUserDefinedType()
-{
+{}
+
+/** \brief generates an exact copy of this class
+ *  \return a reference to the new object
+ */
+CObject* CBEUserDefinedType::Clone()
+{ 
+    return new CBEUserDefinedType(*this); 
 }
 
 /** \brief creates a user defined type
@@ -351,7 +357,7 @@ bool CBEUserDefinedType::DoWriteZeroInit()
  *  \param pUsingFunc the function to use as reference for members
  */
 void CBEUserDefinedType::WriteGetSize(CBEFile *pFile,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
     CBEType *pType = GetRealType();

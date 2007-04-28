@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -318,7 +318,7 @@ CBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
     WriteEnvironmentInitialization(pFile);
     // init message buffer
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    pMsgBuffer->WriteInitialization(pFile, this, 0 , 0);
+    pMsgBuffer->WriteInitialization(pFile, this, 0 , CMsgStructType::Generic);
 }
 
 /** \brief writes the invocation of the message transfer
@@ -496,7 +496,7 @@ CBESrvLoopFunction::DoWriteFunction(CBEImplementationFile * pFile)
 /** \brief determines the direction, the server loop sends to
  *  \return DIRECTION_OUT
  */
-int CBESrvLoopFunction::GetSendDirection()
+DIRECTION_TYPE CBESrvLoopFunction::GetSendDirection()
 {
     return DIRECTION_OUT;
 }
@@ -504,7 +504,7 @@ int CBESrvLoopFunction::GetSendDirection()
 /** \brief determined the direction the server loop receives from
  *  \return DIRECTION_IN
  */
-int CBESrvLoopFunction::GetReceiveDirection()
+DIRECTION_TYPE CBESrvLoopFunction::GetReceiveDirection()
 {
     return DIRECTION_IN;
 }

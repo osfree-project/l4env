@@ -1,10 +1,12 @@
-/** \file   dice/src/be/l4/v4/L4V4BEMsgBuffer.cpp
+/**
+ * \file   dice/src/be/l4/v4/L4V4BEMsgBuffer.cpp
  *  \brief  contains the implementation of the class CL4V4BEMsgBuffer
  *
  *  \date   06/15/2004
  *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
-/* Copyright (C) 2001-2004 by
+/* 
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -56,10 +58,18 @@ CL4V4BEMsgBuffer::~CL4V4BEMsgBuffer()
 {
 }
 
+/** \brief creates a copy of this instance
+ *  \return a reference to the copy
+ */
+CObject* CL4V4BEMsgBuffer::Clone()
+{ 
+    return new CL4V4BEMsgBuffer(*this); 
+}
+
 /** \brief add platform specific members to specific struct
  *  \param pFunction the function of the message buffer
  *  \param pStruct the struct to add the members to
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return true if successful
  *
  * We have to skip the V2 specific message buffer members. Instead we have to
@@ -71,14 +81,14 @@ CL4V4BEMsgBuffer::~CL4V4BEMsgBuffer()
 bool
 CL4V4BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction,
     CBEStructType *pStruct,
-    int nDirection)
+    CMsgStructType nType)
 {
     if (!CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct, 
-	    nDirection))
+	    nType))
 	return false;
 
     // add message tag member
-    if (!AddMsgTagMember(pFunction, pStruct, nDirection))
+    if (!AddMsgTagMember(pFunction, pStruct, nType))
 	return false;
 
     return true;
@@ -113,19 +123,19 @@ CL4V4BEMsgBuffer::Sort(CBEStructType *pStruct)
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  *  \param nType the type of the members to initialize
- *  \param nDirection the direction of the struct to initialize
+ *  \param nStructType the type of the message buffer struct
  */
 void
 CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
     CBEFunction *pFunction,
     int nType,
-    int nDirection)
+    CMsgStructType nStructType)
 {
     if (nType != TYPE_MSGDOPE_SEND &&
 	nType != TYPE_MSGDOPE_SIZE)
     {
 	CL4BEMsgBuffer::WriteInitialization(pFile, pFunction, nType, 
-	    nDirection);
+	    nStructType);
 	return;
     }
 
@@ -134,7 +144,7 @@ CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
 	return;
 
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s for func %s and dir %d\n",
-	__func__, pFunction ? pFunction->GetName().c_str() : "(no func)", nDirection);
+	__func__, pFunction ? pFunction->GetName().c_str() : "(no func)", (int)nStructType);
 
     // if direction is 0 we have to get maximum of IN and OUT
     int nWords = 0;
@@ -142,30 +152,30 @@ CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
     CBESizes *pSizes = CCompiler::GetSizes();
     int nRefSize = pSizes->GetSizeOfType(TYPE_REFSTRING) /
 	pSizes->GetSizeOfType(TYPE_MWORD);
-    if (nDirection == 0)
+    if (CMsgStructType::Generic == nStructType)
     {
 	int nWordsIn = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-	    DIRECTION_IN, false);
+	    CMsgStructType::In, false);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words in: %d\n", __func__,
 	    nWordsIn);
 
 	if (nWordsIn < 0)
 	    nWordsIn = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-		DIRECTION_IN, true);
+		CMsgStructType::In, true);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words in: %d\n", __func__,
 	    nWordsIn);
 
 	int nWordsOut = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-	    DIRECTION_OUT, false);
+	    CMsgStructType::Out, false);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words out: %d\n", __func__,
 	    nWordsOut);
 
 	if (nWordsOut < 0)
 	    nWordsOut = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-		DIRECTION_OUT, true);
+		CMsgStructType::Out, true);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words out: %d\n", __func__,
 	    nWordsOut);
@@ -174,13 +184,13 @@ CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
 	// word count, because the strings have been counted when counting
 	// TYPE_MWORD as well.
 	int nStringsIn = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING,
-	    pFunction, DIRECTION_IN, false);
+	    pFunction, CMsgStructType::In, false);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings in: %d\n", __func__,
 	    nStringsIn);
 
 	int nStringsOut = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING,
-	    pFunction, DIRECTION_OUT, false);
+	    pFunction, CMsgStructType::Out, false);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings out: %d\n", __func__,
 	    nStringsOut);
@@ -195,19 +205,19 @@ CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
 	if (nWordsIn >= 0 && nWordsOut >= 0)
 	    nWords = std::max(nWordsIn, nWordsOut);
 	else
-	    nWords = (nWordsIn < nWordsOut) ? nWordsIn : nWordsOut;
+	    nWords = std::min(nWordsIn, nWordsOut);
 	
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words: %d\n", __func__, nWords);
     }
     else
     {
 	nWords = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-	    nDirection, false);
+	    nStructType, false);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words: %d\n", __func__, nWords);
 
 	nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction,
-	    nDirection, false);
+	    nStructType, false);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings: %d\n", __func__,
 	    nStrings);
@@ -225,7 +235,7 @@ CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
     string sName = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     *pFile << "\t";
-    WriteAccessToStruct(pFile, pFunction, nDirection);
+    WriteAccessToStruct(pFile, pFunction, nStructType);
     *pFile << "." << sName << ".X.u = ";
     if (nWords >= 0)
 	*pFile << nWords;
@@ -233,23 +243,23 @@ CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
     {
 	// sizeof(<msgbufvar>.<structname>)/sizeof(long)-3
 	*pFile << "sizeof(";
-	WriteAccessToStruct(pFile, pFunction, nDirection);
+	WriteAccessToStruct(pFile, pFunction, nStructType);
 	*pFile << ")/sizeof(long)-";
 	*pFile << 3 + nStrings*nRefSize;
     }
     *pFile << ";\n";
     *pFile << "\t";
-    WriteAccessToStruct(pFile, pFunction, nDirection);
+    WriteAccessToStruct(pFile, pFunction, nStructType);
     *pFile << "." << sName << ".X.t = " << nStrings << ";\n";
 }
 
 /** \brief writes the initialization of the receive flexpage
  *  \param pFile the file to write to
- *  \param nDirection the direction of the struct to initialize
+ *  \param nType the type of the message buffer struct
  */
 void
 CL4V4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
-    int /*nDirection*/)
+    CMsgStructType /*nType*/)
 {
     // get environment
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -268,7 +278,7 @@ CL4V4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
 /** \brief adds platform specific opcode member
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return true if successful
  *
  * The opcode member is transmitted in the message tag. Do not create an
@@ -280,7 +290,7 @@ CL4V4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
 bool
 CL4V4BEMsgBuffer::AddOpcodeMember(CBEFunction* /*pFunction*/,
     CBEStructType* /*pStruct*/,
-    int /*nDirection*/)
+    CMsgStructType /*nType*/)
 {
     return true;
 }
@@ -288,13 +298,13 @@ CL4V4BEMsgBuffer::AddOpcodeMember(CBEFunction* /*pFunction*/,
 /** \brief adds platform specific msgtag member
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return true if successful
  */
 bool
 CL4V4BEMsgBuffer::AddMsgTagMember(CBEFunction* /*pFunction*/,
     CBEStructType *pStruct,
-    int /*nDirection*/)
+    CMsgStructType /*nType*/)
 {
     CBETypedDeclarator *pMsgTag = GetMsgTagVariable();
     if (!pMsgTag)
@@ -406,7 +416,7 @@ CL4V4BEMsgBuffer::GetMsgTagVariable()
  *  \param pFunction the function to write for
  *  \param pClass the class to write for
  *  \param nIndex the index of the refstring in an array
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return true if we wrote something, false if not
  */
 bool
@@ -414,7 +424,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
     CBEFunction *pFunction,
     CBEClass *pClass,
     int nIndex,
-    int nDirection)
+    CMsgStructType nType)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     // check if this is server side, and if so, check for 
@@ -451,7 +461,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
 	// store the string length in the temporary string length variable
 	string sVarName = pNF->GetString(CL4V4BENameFactory::STR_INIT_RCVSTR_VARIABLE, 0);
 	*pFile << "\t" << sVarName << " = ";
-	WriteMemberAccess(pFile, pFunction, nDirection, TYPE_REFSTRING,
+	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
 	    nIndex);
 	*pFile << ".X.string_length;\n";
 	// call the init function for the indirect string
@@ -459,12 +469,12 @@ CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
 	CBETypedDeclarator *pEnvVar = pFunction->GetEnvironment();
 	CBEDeclarator *pEnv = pEnvVar->m_Declarators.First();
 	*pFile << "\t" << sFunction << " ( " << nIndex << ", (" << sMWord << "*)&(";
-	WriteMemberAccess(pFile, pFunction, nDirection, TYPE_REFSTRING,
+	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
 	    nIndex);
 	*pFile << ".X.str.string_ptr), &" << sVarName << ", " << pEnv->GetName() << ");\n";
 	// store returned size back in string dope
 	*pFile << "\t";
-	WriteMemberAccess(pFile, pFunction, nDirection, TYPE_REFSTRING,
+	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
 	    nIndex);
 	*pFile << ".X.string_length = " << sVarName << ";\n";
 
@@ -477,7 +487,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
 
 /** \brief write the initialization of refstring
  *  \param pFile the file to write to
- *  \param nDirection the direction to write for
+ *  \param nType the type of the message buffer struct
  *  \return true if we actually wrote for
  *
  * Here, we call the base class to write the refstring initialization, but
@@ -485,9 +495,9 @@ CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
  */
 bool
 CL4V4BEMsgBuffer::WriteRefstringInitialization(CBEFile *pFile,
-    int nDirection)
+    CMsgStructType nType)
 {
-    bool bRefstring = CL4BEMsgBuffer::WriteRefstringInitialization(pFile, nDirection);
+    bool bRefstring = CL4BEMsgBuffer::WriteRefstringInitialization(pFile, nType);
     if (bRefstring)
     {
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -503,14 +513,14 @@ CL4V4BEMsgBuffer::WriteRefstringInitialization(CBEFile *pFile,
  *  \param pFunction the function to write for
  *  \param pMember the member to write
  *  \param nIndex the index of the refstring to initialize
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  */
 void
 CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
     CBEFunction *pFunction,
     CBETypedDeclarator *pMember,
     int nIndex,
-    int nDirection)
+    CMsgStructType nType)
 {
     // get parameter
     CBETypedDeclarator *pParameter = pFunction->FindParameter(
@@ -523,7 +533,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
 	     pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER))) )
     {
 	*pFile << "\t";
-	WriteAccess(pFile, pFunction, nDirection, pMember);
+	WriteAccess(pFile, pFunction, nType, pMember);
 	*pFile << " = L4_StringItem /* " << __func__ << " */ (";
 	// size
 	CBEType *pType = pParameter->GetType();
@@ -557,7 +567,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
 	bool bUseArray = pMember->m_Declarators.First()->IsArray() &&
 	    pMember->m_Declarators.First()->GetArrayDimensionCount() > 0;
 	*pFile << "\t";
-	WriteAccess(pFile, pFunction, nDirection, pMember);
+	WriteAccess(pFile, pFunction, nType, pMember);
 	if (bUseArray)
 	    *pFile << "[" << nIndex << "]";
 	*pFile << ".X.str.string_ptr = ";
@@ -567,7 +577,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
 	*pFile << ");\n";
 
 	*pFile << "\t";
-	WriteAccess(pFile, pFunction, nDirection, pMember);
+	WriteAccess(pFile, pFunction, nType, pMember);
 	if (bUseArray)
 	    *pFile << "[" << nIndex << "]";
 	*pFile << ".X.string_length = ";
@@ -593,10 +603,10 @@ void
 CL4V4BEMsgBuffer::PostCreate(CBEFunction *pFunction,
     CFEOperation *pFEOperation)
 {
-    CBEStructType *pStruct = GetStruct(DIRECTION_IN);
+    CBEStructType *pStruct = GetStruct(CMsgStructType::In);
     assert(pStruct);
     CheckConvertStruct(pStruct);
-    pStruct = GetStruct(DIRECTION_OUT);
+    pStruct = GetStruct(CMsgStructType::Out);
     assert(pStruct);
     CheckConvertStruct(pStruct);
 
@@ -704,7 +714,6 @@ CL4V4BEMsgBuffer::CheckConvertMember(CBEStructType *pStruct,
 }
 
 /** \brief convert the member into an indirect part
- *  \param pStruct the struct, the member belongs to
  *  \param pMember the member to convert
  *
  * We make a refstring parameter out of the member
@@ -787,7 +796,7 @@ CL4V4BEMsgBuffer::PostCreate(CBEClass *pClass,
 	if (!(*i)->GetOperation()->m_Attributes.Find(ATTR_OUT))
 	{
 	    CBEStructType *pStruct = pMsgType->GetStruct(sFuncName, sClassName,
-		DIRECTION_IN);
+		CMsgStructType::In);
 	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 		"CL4V4BEMsgBuffer::%s struct for (%s, %s, IN) at %p\n", __func__,
 		sFuncName.c_str(), sClassName.c_str(), pStruct);
@@ -797,7 +806,7 @@ CL4V4BEMsgBuffer::PostCreate(CBEClass *pClass,
 	if (!(*i)->GetOperation()->m_Attributes.Find(ATTR_IN))
 	{
 	    CBEStructType *pStruct = pMsgType->GetStruct(sFuncName, sClassName, 
-		DIRECTION_OUT);
+		CMsgStructType::Out);
 	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 		"CL4V4BEMsgBuffer::%s struct for (%s, %s, OUT) at %p\n", __func__,
 		sFuncName.c_str(), sClassName.c_str(), pStruct);

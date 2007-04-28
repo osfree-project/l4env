@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -75,28 +75,28 @@ CBEMarshaller::AddLocalVariable(CBEFunction*)
 }
 
 /** \brief retrieve a reference to the struct member of the message buffer
- *  \param nDirection the direction of the struct to get
+ *  \param nType the type of the message buffer struct
  *  \return a reference to the struct iff any is found
  */
 CBEStructType* 
-CBEMarshaller::GetStruct(int& nDirection)
+CBEMarshaller::GetStruct(CMsgStructType& nType)
 {
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
     assert(pFunction);
-    return GetStruct(pFunction, nDirection);
+    return GetStruct(pFunction, nType);
 }
 
 /** \brief retrieve a reference to the struct member of a function's msgbuf
  *  \param pFunction the function to get the message buffer from
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return a reference to the struct iff any is found
  */
 CBEStructType* 
 CBEMarshaller::GetStruct(CBEFunction *pFunction, 
-	int& nDirection)
+	CMsgStructType& nType)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s, %d) called\n",
-	__func__, pFunction->GetName().c_str(), nDirection);
+	__func__, pFunction->GetName().c_str(), (int)nType);
 
     // check function's type to get name
     string sFuncName = pFunction->GetOriginalName();
@@ -104,7 +104,7 @@ CBEMarshaller::GetStruct(CBEFunction *pFunction,
     // if name is empty, get generic struct
     if (sFuncName.empty())
     {
-	nDirection = 0;
+	nType = CMsgStructType::Generic;
 	sClassName = string();
     }
     // get the message buffer type
@@ -115,7 +115,7 @@ CBEMarshaller::GetStruct(CBEFunction *pFunction,
 	dynamic_cast<CBEMsgBufferType*>(pMsgBuffer->GetType());
     assert (pType);
     // get struct from type
-    return pType->GetStruct(sFuncName, sClassName, nDirection);
+    return pType->GetStruct(sFuncName, sClassName, nType);
 }
 
 /** \brief get the message buffer suited for the given function
@@ -144,7 +144,7 @@ CBEMarshaller::GetMessageBuffer(CBEFunction *pFunction)
  */
 void 
 CBEMarshaller::MarshalFunction(CBEFile *pFile, 
-	int nDirection)
+	DIRECTION_TYPE nDirection)
 {
     // get function
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -166,14 +166,15 @@ CBEMarshaller::MarshalFunction(CBEFile *pFile,
 void 
 CBEMarshaller::MarshalFunction(CBEFile *pFile,
 	CBEFunction *pFunction, 
-	int nDirection)
+	DIRECTION_TYPE nDirection)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMarshaller::%s(%s, %s, %d) called\n", __func__,
 	pFile->GetFileName().c_str(), pFunction->GetName().c_str(), nDirection);
     
     // get struct
-    CBEStructType *pStruct = GetStruct(pFunction, nDirection);
+    CMsgStructType nType = nDirection;
+    CBEStructType *pStruct = GetStruct(pFunction, nType);
     // if the function has no struct, then it should not be marshalled. E.g.
     // wait-any
     if (!pStruct)
@@ -225,13 +226,9 @@ CBEMarshaller::MarshalFunction(CBEFile *pFile,
 	    pParameter = *iter;
 
 	// now marshal parameter
-	vector<CDeclaratorStackLocation*> vStack;
-    	CDeclaratorStackLocation *pLoc = new 
-	    CDeclaratorStackLocation(pParameter->m_Declarators.First());
-	vStack.push_back(pLoc);
+	CDeclStack vStack;
+	vStack.push_back(pParameter->m_Declarators.First());
 	MarshalParameterIntern(pParameter, &vStack);
-	vStack.pop_back();
-    	delete pLoc;
     }
 
     m_pFunction = 0;
@@ -253,7 +250,7 @@ CBEMarshaller::MarshalFunction(CBEFile *pFile,
 bool
 CBEMarshaller::DoSkipParameter(CBEFunction* pFunction,
     CBETypedDeclarator *pParameter,
-    int nDirection)
+    DIRECTION_TYPE nDirection)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s(%s, %s, %d) called\n", __func__, 
 	pFunction->GetName().c_str(), 
@@ -305,29 +302,27 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
     m_bMarshal = bMarshal;
     m_pFunction = pFunction;
     
-    int nDirection = 0;
+    CMsgStructType nType = CMsgStructType::Generic;
     if (bMarshal)
-	nDirection = pFunction->GetSendDirection();
+	nType = pFunction->GetSendDirection();
     else
-	nDirection = pFunction->GetReceiveDirection();
+	nType = pFunction->GetReceiveDirection();
     // get struct
-    CBEStructType *pStruct = GetStruct(pFunction, nDirection);
+    CBEStructType *pStruct = GetStruct(pFunction, nType);
     // there always should be a struct
     assert(pStruct);
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s got %p and direction %d\n",
-	__func__, pStruct, nDirection);
+	__func__, pStruct, (int)nType);
 
-    vector<CDeclaratorStackLocation*> vStack;
-    CDeclaratorStackLocation *pLoc = new 
-	CDeclaratorStackLocation(pParameter->m_Declarators.First());
-    vStack.push_back(pLoc);
-    if (nDirection == 0)
+    CDeclStack vStack;
+    vStack.push_back(pParameter->m_Declarators.First());
+    if (CMsgStructType::Generic == nType)
     {
 	string sName = pParameter->m_Declarators.First()->GetName();
 	// if direction has been changed to 0 then this is a generic struct
 	// and we have to get the supposed position to marshal the parameter
 	// to
-	int nPosition = pMsgBuffer->GetMemberPosition(sName, nDirection);
+	int nPosition = pMsgBuffer->GetMemberPosition(sName, nType);
 	// write access to generic member
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	    "%s calling MarshalGenericMember for pos %d\n", __func__, nPosition);
@@ -335,15 +330,13 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
     }
     else
     {
-	if (!DoSkipParameter(pFunction, pParameter, nDirection))
+	if (!DoSkipParameter(pFunction, pParameter, nType))
 	{
 	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 		"%s calling MarshalParameterIntern\n", __func__);
 	    MarshalParameterIntern(pParameter, &vStack);
 	}
     }
-    vStack.pop_back();
-    delete pLoc;
 
     m_pFunction = 0;
     m_pFile = 0;
@@ -366,39 +359,35 @@ CBEMarshaller::MarshalValue(CBEFile *pFile,
     // get the message buffer type
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(pFunction);
     assert(pMsgBuffer);
-    // get start of payload
-    CBEMsgBufferType *pType = 
-	dynamic_cast<CBEMsgBufferType*>(pMsgBuffer->GetType());
-    assert (pType);
    
     // set member variables
     m_pFile = pFile;
     m_bMarshal = true;
     m_pFunction = pFunction;
     
-    int nDirection = pFunction->GetSendDirection();
+    CMsgStructType nType = pFunction->GetSendDirection();
     // get struct
-    CBEStructType *pStruct = GetStruct(pFunction, nDirection);
+    CBEStructType *pStruct = GetStruct(pFunction, nType);
     // there always should be a struct
     assert(pStruct);
 
-    if (nDirection == 0)
+    if (CMsgStructType::Generic == nType)
     {
 	string sName = pParameter->m_Declarators.First()->GetName();
 	// if direction has been changed to 0 then this is a generic struct
 	// and we have to get the supposed position to marshal the parameter
 	// to
-	int nPosition = pMsgBuffer->GetMemberPosition(sName, nDirection);
+	int nPosition = pMsgBuffer->GetMemberPosition(sName, nType);
 	// write access to generic member
 	MarshalGenericValue(nPosition, nValue);
     }
     else
     {
-	if (!DoSkipParameter(pFunction, pParameter, nDirection))
+	if (!DoSkipParameter(pFunction, pParameter, nType))
 	{
 	    // try to find respective member and assign
 	    *pFile << "\t";
-	    WriteMember(nDirection, pMsgBuffer, pParameter, NULL);
+	    WriteMember(nType, pMsgBuffer, pParameter, NULL);
 	    *pFile << " = " << nValue << ";\n";
 	}
     }
@@ -416,7 +405,7 @@ CBEMarshaller::MarshalValue(CBEFile *pFile,
  */
 void
 CBEMarshaller::MarshalParameterIntern(CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n", __func__,
 	pParameter->m_Declarators.First()->GetName().c_str());
@@ -461,7 +450,7 @@ CBEMarshaller::MarshalParameterIntern(CBETypedDeclarator *pParameter,
 void
 CBEMarshaller::MarshalGenericMember(int nPosition,
     CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
@@ -629,11 +618,11 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
     }
     else
     {
-	int nRecvDir = m_pFunction->GetReceiveDirection();
+	CMsgStructType nType = m_pFunction->GetReceiveDirection();
 	// test if we really received an exception
 	// if (env->major != CORBA_NO_EXCEPTION) => if (_exception != 0)
 	*m_pFile << "\tif (DICE_EXPECT_FALSE(";
-	WriteMember(nRecvDir, pMsgBuffer, pMember, 0);
+	WriteMember(nType, pMsgBuffer, pMember, 0);
 	*m_pFile << " != 0))\n";
 	*m_pFile << "\t{\n";
 	m_pFile->IncIndent();
@@ -645,14 +634,12 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 	    *m_pFile << "\tDICE_EXCEPTION_MAJOR(" << sEnvPtr << ") = ((" << 
 		sType << "){ ._raw = ";
 	    // access message buffer
-	    WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer,
-		pMember, 0);
+	    WriteMember(nType, pMsgBuffer, pMember, 0);
 	    *m_pFile << "})._corba.major;\n";
 	    *m_pFile << "\tDICE_EXCEPTION_MINOR(" << sEnvPtr << ") = ((" << 
 		sType << "){ ._raw = ";
 	    // access message buffer
-	    WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer,
-		pMember, 0);
+	    WriteMember(nType, pMsgBuffer, pMember, 0);
 	    *m_pFile << "})._corba.repos_id;\n";
 	}
 	else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
@@ -664,8 +651,7 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 		sEnv += "->";
 	    *m_pFile << "\t" << sEnv << "_exception._raw = ";
 	    // access message buffer
-	    WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer,
-		pMember, 0);
+	    WriteMember(nType, pMsgBuffer, pMember, 0);
 	    *m_pFile << ";\n";
 	}
 
@@ -720,10 +706,8 @@ CBEMarshaller::MarshalReturn(CBETypedDeclarator *pMember)
 	    m_pFunction->GetName().c_str());
     assert(pParameter);
 
-    vector<CDeclaratorStackLocation*> stack;
-    CDeclaratorStackLocation *pLoc = 
-	new CDeclaratorStackLocation(pMember->m_Declarators.First());
-    stack.push_back(pLoc);
+    CDeclStack stack;
+    stack.push_back(pMember->m_Declarators.First());
 
     // try to marshal strings
     if (MarshalString(pParameter, &stack))
@@ -743,8 +727,6 @@ CBEMarshaller::MarshalReturn(CBETypedDeclarator *pMember)
     // assignment
     WriteAssignment(pParameter, &stack);
 
-    if (pLoc)
-	delete pLoc;
     return true;
 }
 
@@ -754,7 +736,7 @@ CBEMarshaller::MarshalReturn(CBETypedDeclarator *pMember)
  */
 void
 CBEMarshaller::WriteAssignment(CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
     CBETypedDeclarator *pMember = FindMarshalMember(pStack);
@@ -787,25 +769,26 @@ CBEMarshaller::WriteAssignment(CBETypedDeclarator *pParameter,
 }
 
 /** \brief writes the access to a specific member in the message buffer
- *  \param nDir the direction of the parameter
+ *  \param nType the type of the message buffer type
  *  \param pMsgBuffer the message buffer containing the members
  *  \param pMember the member to access
  *  \param pStack set if a stack is to be used
  */
 void
-CBEMarshaller::WriteMember(int nDir,
+CBEMarshaller::WriteMember(CMsgStructType nType,
     CBEMsgBuffer *pMsgBuffer,
     CBETypedDeclarator *pMember,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     assert(pMember);
     assert(pMsgBuffer);
-    CDeclaratorStackLocation *pLoc = NULL;
+
+    bool bMine = false;
     if (!pStack)
     {
-	pStack = new vector<CDeclaratorStackLocation*>();
-	pLoc = new CDeclaratorStackLocation(pMember->m_Declarators.First());
-	pStack->push_back(pLoc);
+	pStack = new CDeclStack();
+	pStack->push_back(pMember->m_Declarators.First());
+	bMine = true;
     }
 
     // variable sized members of constructed types can have an "alias" member
@@ -814,30 +797,20 @@ CBEMarshaller::WriteMember(int nDir,
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName = pNF->GetLocalVariableName(pStack);
     CBETypedDeclarator *pAlias = pMsgBuffer->FindMember(sName, m_pFunction,
-	nDir);
+	nType);
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "Alias for %s at %p\n", sName.c_str(),
 	pAlias);
     if (pAlias)
     {
-	vector<CDeclaratorStackLocation*> vStack;
-	CDeclaratorStackLocation *pL = 
-	    new CDeclaratorStackLocation(pAlias->m_Declarators.First());
-	vStack.push_back(pL);
-	
-	pMsgBuffer->WriteAccess(m_pFile, m_pFunction, nDir, &vStack);
-
-	delete pL;
+	CDeclStack vStack;
+	vStack.push_back(pAlias->m_Declarators.First());
+	pMsgBuffer->WriteAccess(m_pFile, m_pFunction, nType, &vStack);
     }
     else
-    {
-    	pMsgBuffer->WriteAccess(m_pFile, m_pFunction, nDir, pStack);
-    }
+    	pMsgBuffer->WriteAccess(m_pFile, m_pFunction, nType, pStack);
 
-    if (pLoc)
-    {
-	delete pLoc;
+    if (bMine)
 	delete pStack;
-    }
 }
 
 /** \brief writes the access to a parameter
@@ -853,7 +826,7 @@ CBEMarshaller::WriteMember(int nDir,
  */
 void
 CBEMarshaller::WriteParameter(CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     bool bPointer)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
@@ -944,7 +917,7 @@ CBEMarshaller::WriteParameter(CBETypedDeclarator *pParameter,
  */
 bool
 CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter, 
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     if (!pParameter->IsString())
 	return false;
@@ -957,18 +930,14 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
     // a simple memcpy
     
     // get struct
-    int nDirection = 0;
+    CMsgStructType nType(CMsgStructType::Generic);
     if (m_bMarshal)
-	nDirection = m_pFunction->GetSendDirection();
+	nType = m_pFunction->GetSendDirection();
     else
-	nDirection = m_pFunction->GetReceiveDirection();
-    // if direction is 0, then this function does not have a struct, so we
-    // have to use the generic struct and have to marshal to/from a offset
-    // position
-    if (nDirection == 0)
-	throw new std::invalid_argument("No direction determinable");
+	nType = m_pFunction->GetReceiveDirection();
+    assert(CMsgStructType::In == nType || CMsgStructType::Out == nType);
 
-    CBEStructType *pStruct = GetStruct(m_pFunction, nDirection);
+    CBEStructType *pStruct = GetStruct(m_pFunction, nType);
     assert(pStruct);
 
     // get name of size variable added by us
@@ -1039,13 +1008,9 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 	// marshal size member first
 	// create a stack with the local variable
 	// FIXME can we use size member?
-	vector<CDeclaratorStackLocation*> vStack;
-	CDeclaratorStackLocation *pLoc = new 
-	    CDeclaratorStackLocation(pSizeVariable->m_Declarators.First());
-	vStack.push_back(pLoc);
+	CDeclStack vStack;
+	vStack.push_back(pSizeVariable->m_Declarators.First());
 	MarshalParameterIntern(pSizeMember, &vStack);
-	vStack.pop_back();
-	delete pLoc;
 
 	if (!m_bMarshal && !bOurSizeAttr && 
 	    pParameter->m_Attributes.Find(ATTR_MAX_IS))
@@ -1087,7 +1052,7 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 	*m_pFile << " > 0))\n";
 	m_pFile->IncIndent();
 	*m_pFile << "\t_dice_memcpy (";
-	WriteMember(nDirection, pMsgBuffer, pMember, pStack);
+	WriteMember(nType, pMsgBuffer, pMember, pStack);
 	*m_pFile << ", ";
 	WriteParameter(pParameter, pStack, true);
 	*m_pFile << ", ";
@@ -1165,7 +1130,7 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 	
 	// zero terminate string in buffer
 	*m_pFile << "\t";
-	WriteMember(nDirection, pMsgBuffer, pMember, pStack);
+	WriteMember(nType, pMsgBuffer, pMember, pStack);
 	*m_pFile << "[";
 	pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
 	*m_pFile << "] = 0;\n";
@@ -1176,7 +1141,7 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 	    *m_pFile << "\t";
 	    WriteParameter(pParameter, pStack, true);
 	    *m_pFile << " = ";
-	    WriteMember(nDirection, pMsgBuffer, pMember, pStack);
+	    WriteMember(nType, pMsgBuffer, pMember, pStack);
 	    *m_pFile << ";\n";
 	}
 	else
@@ -1196,7 +1161,7 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 	    *m_pFile << "\t_dice_memcpy (";
 	    WriteParameter(pParameter, pStack, true);
 	    *m_pFile << ", ";
-	    WriteMember(nDirection, pMsgBuffer, pMember, pStack);
+	    WriteMember(nType, pMsgBuffer, pMember, pStack);
 	    *m_pFile << ", ";
 	    pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
 	    *m_pFile << ");\n";
@@ -1240,7 +1205,7 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
  */
 bool
 CBEMarshaller::MarshalArray(CBETypedDeclarator *pParameter, 
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     // get array dimensions from user defined types
     vector<CBEExpression*> vBounds;
@@ -1312,7 +1277,7 @@ CBEMarshaller::MarshalArray(CBETypedDeclarator *pParameter,
  */
 void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
     CBEType *pType,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
     
@@ -1337,23 +1302,77 @@ void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
 	return;
     }
 
-    // make sure that the size value does not exceed the maximum
+    // make sure that size or length members are unmarshalled before array
+    // itself
     if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
-	pParameter->m_Attributes.Find(ATTR_LENGTH_IS)) &&
-	pParameter->m_Attributes.Find(ATTR_MAX_IS))
+	    pParameter->m_Attributes.Find(ATTR_LENGTH_IS)) &&
+	!m_bMarshal)
     {
-	*m_pFile << "\tif (";
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << " > ";
-	pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << ")\n";
-	m_pFile->IncIndent();
-	*m_pFile << "\t";
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << " = ";
-	pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << ";\n";
-	m_pFile->DecIndent();
+	// get declarator
+	CBEAttribute *pAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS);
+	if (!pAttr)
+	    pAttr = pParameter->m_Attributes.Find(ATTR_LENGTH_IS);
+	assert(pAttr);
+	CBEDeclarator *pSizeDecl = 0;
+	if (pAttr->IsOfType(ATTR_CLASS_IS))
+	    pSizeDecl = pAttr->m_Parameters.First();
+
+	if (pSizeDecl)
+	{
+	    // check if decl is before parameter in struct (then it will be
+	    // unmarshalled before array)
+	    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+	    assert(pMsgBuffer);
+
+	    if (pMsgBuffer->IsEarlier(m_pFunction, m_pFunction->GetReceiveDirection(), 
+		    pParameter->m_Declarators.First()->GetName(),
+		    pSizeDecl->GetName()))
+	    {
+		// unmarshal size first
+		CBETypedDeclarator *pSizeParam = m_pFunction->m_Parameters.Find(pSizeDecl->GetName());
+		CDeclStack vStack;
+		vStack.push_back(pSizeParam->m_Declarators.First());
+		MarshalParameterIntern(pSizeParam, &vStack);
+	    }
+	}
+    }
+
+    // make sure that the size value does not exceed the maximum
+    if (pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
+	pParameter->m_Attributes.Find(ATTR_LENGTH_IS))
+    {
+	if (pParameter->m_Attributes.Find(ATTR_MAX_IS))
+	{
+	    *m_pFile << "\tif (";
+	    pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	    *m_pFile << " > ";
+	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	    *m_pFile << ")\n";
+	    m_pFile->IncIndent();
+	    *m_pFile << "\t";
+	    pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	    *m_pFile << " = ";
+	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	    *m_pFile << ";\n";
+	    m_pFile->DecIndent();
+	}
+	else
+	{
+	    int nMax = 0;
+	    if (pDeclarator->GetArrayDimensionCount() > 0)
+		nMax = pDeclarator->m_Bounds.First()->GetIntValue();
+	    if (nMax)
+	    {
+		*m_pFile << "\tif (";
+		pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+		*m_pFile << " > " << nMax << ")\n";
+		m_pFile->IncIndent();
+		*m_pFile << "\t";
+		pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+		*m_pFile << " = " << nMax << ";\n";
+		m_pFile->DecIndent();
+	    }
+	}
     }
 
     // test if we have to allocate memory for the array. Following
@@ -1464,7 +1483,7 @@ void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
  */ 
 void
 CBEMarshaller::MarshalArrayInternRef(CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     *m_pFile << "\t";
     WriteParameter(pParameter, pStack, true);
@@ -1489,7 +1508,7 @@ CBEMarshaller::MarshalArrayInternRef(CBETypedDeclarator *pParameter,
  */
 bool
 CBEMarshaller::MarshalStruct(CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMarshaller::%s(%s) called\n", __func__,
@@ -1523,12 +1542,9 @@ CBEMarshaller::MarshalStruct(CBETypedDeclarator *pParameter,
 	    __func__, (*iter)->m_Declarators.First()->GetName().c_str());
 	
 	// add to declarator stack
-	CDeclaratorStackLocation *pLoc = 
-	    new CDeclaratorStackLocation((*iter)->m_Declarators.First());
-	pStack->push_back(pLoc);
+	pStack->push_back((*iter)->m_Declarators.First());
 	MarshalParameterIntern((*iter), pStack);
 	pStack->pop_back();
-	delete pLoc;
     }
     
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -1552,7 +1568,7 @@ CBEMarshaller::MarshalStruct(CBETypedDeclarator *pParameter,
  */
 bool
 CBEMarshaller::MarshalUnion(CBETypedDeclarator *pParameter,
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n", __func__,
 	pParameter->m_Declarators.First()->GetName().c_str());
@@ -1574,24 +1590,20 @@ CBEMarshaller::MarshalUnion(CBETypedDeclarator *pParameter,
 	    "%s no switch var for param %s\n", __func__,
 	    pParameter->m_Declarators.First()->GetName().c_str());
     assert (pSwitchVar);
-    CDeclaratorStackLocation *pLoc = new 
-	CDeclaratorStackLocation(pSwitchVar->m_Declarators.First());
-    pStack->push_back(pLoc);
+    pStack->push_back(pSwitchVar->m_Declarators.First());
     MarshalParameterIntern(pSwitchVar, pStack);
     
     // write switch statement
     *m_pFile << "\tswitch (";
     CDeclaratorStackLocation::Write(m_pFile, pStack, false);
     pStack->pop_back();
-    delete pLoc;
     *m_pFile << ")\n";
     *m_pFile << "\t{\n";
 
     CBETypedDeclarator *pUnionVar = pUnion->GetUnionVariable();
     assert (pUnionVar);
-    pLoc = new CDeclaratorStackLocation(pUnionVar->m_Declarators.First());
-    pStack->push_back(pLoc);
-    pLoc->SetIndex(-3);
+    pStack->push_back(pUnionVar->m_Declarators.First());
+    pStack->back().SetIndex(-3);
 
     CBEUnionType *pUnionType = dynamic_cast<CBEUnionType*>(
 	pUnionVar->GetType());
@@ -1620,20 +1632,16 @@ CBEMarshaller::MarshalUnion(CBETypedDeclarator *pParameter,
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEMarshaller::%s marshalling case %s\n",
 	    __func__, (*iterC)->m_Declarators.First()->GetName().c_str());
-	pLoc = new CDeclaratorStackLocation((*iterC)->m_Declarators.First());
-	pStack->push_back(pLoc);
+	pStack->push_back((*iterC)->m_Declarators.First());
 	MarshalParameterIntern(*iterC, pStack);
 	pStack->pop_back();
-	delete pLoc;
 	
 	*m_pFile << "\tbreak;\n";
 	m_pFile->DecIndent();
     }
     
     // remove the union name from the stack
-    pLoc = pStack->back();
     pStack->pop_back();
-    delete pLoc;
     
     *m_pFile << "\t}\n";
 
@@ -1649,36 +1657,31 @@ CBEMarshaller::MarshalUnion(CBETypedDeclarator *pParameter,
  *  \return a reference to the respective member if found
  */
 CBETypedDeclarator*
-CBEMarshaller::FindMarshalMember(vector<CDeclaratorStackLocation*> *pStack)
+CBEMarshaller::FindMarshalMember(CDeclStack* pStack)
 {
     CBETypedDeclarator *pMember = 0;
 
     // get struct
-    int nDirection = 0;
+    CMsgStructType nType(CMsgStructType::Generic);
     if (m_bMarshal)
-	nDirection = m_pFunction->GetSendDirection();
+	nType = m_pFunction->GetSendDirection();
     else
-	nDirection = m_pFunction->GetReceiveDirection();
-    CBEStructType *pStruct = GetStruct(m_pFunction, nDirection);
+	nType = m_pFunction->GetReceiveDirection();
+    assert(CMsgStructType::In == nType || CMsgStructType::Out == nType);
+    CBEStructType *pStruct = GetStruct(m_pFunction, nType);
     assert(pStruct);
 
-    // if direction is 0, then this function does not have a struct, so we
-    // have to use the generic struct
-    if (nDirection == 0)
-	return pMember;
-
-    // get first member
-    vector<CDeclaratorStackLocation*>::iterator iter = pStack->begin();
     // there should be at least one member
-    assert(iter != pStack->end());
+    assert(pStack && !pStack->empty());
+    CDeclStack::iterator iter = pStack->begin();
     // get the member
-    string sName = (*iter++)->pDeclarator->GetName();
+    string sName = iter->pDeclarator->GetName();
     pMember = pStruct->m_Members.Find(sName);
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CBEMarshaller::%s member in struct is %s (@ %p)\n", __func__,
 	sName.c_str(), pMember);
 
-    for (; iter != pStack->end(); iter++)
+    for (iter += 1; iter != pStack->end(); iter++)
     {
 	// when we are here, there is at least one more element in stack,
 	// which must then be an element of the current member. Thus check for
@@ -1691,7 +1694,7 @@ CBEMarshaller::FindMarshalMember(vector<CDeclaratorStackLocation*> *pStack)
 	    pMember->m_Declarators.First()->GetName().c_str(),
 	    pType->GetFEType());
 
-	sName = (*iter)->pDeclarator->GetName();
+	sName = iter->pDeclarator->GetName();
 	
 	if (dynamic_cast<CBEStructType*>(pType))
 	{

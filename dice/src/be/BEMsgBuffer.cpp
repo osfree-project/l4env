@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -46,6 +46,7 @@
 #include "BENameFactory.h"
 #include "BESizes.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
 #include "TypeSpec-Type.h"
@@ -53,46 +54,53 @@
 
 #include <string>
 #include <cassert>
+#include <algorithm>
 
 CBEMsgBuffer::CBEMsgBuffer()
  : CBETypedef()
-{
-}
+{}
 
 CBEMsgBuffer::CBEMsgBuffer(CBEMsgBuffer & src)
  : CBETypedef(src)
-{
-}
+{}
 
 /** destroys the object */
 CBEMsgBuffer::~CBEMsgBuffer()
-{
+{}
+
+/** \brief creates a copy of the object
+ *  \return a reference to the newly created instance
+ */
+CObject* CBEMsgBuffer::Clone()
+{ 
+    return new CBEMsgBuffer(*this); 
 }
 
 /** \brief checks if message buffer is variable sized for a given direction
- *  \param nDirection the direction to check
+ *  \param nType the type of the message buffer struct
  *  \return true if variable sized
  *
  * A message buffer is variable sized if one of it's structs has a variable
  * sized member.
  */
 bool 
-CBEMsgBuffer::IsVariableSized(int nDirection)
+CBEMsgBuffer::IsVariableSized(CMsgStructType nType)
 {
-    if (nDirection == 0)
+    if (CMsgStructType::Generic == nType)
     {
-        return IsVariableSized(DIRECTION_IN) &&
-               IsVariableSized(DIRECTION_OUT);
+        return IsVariableSized(CMsgStructType::In) ||
+               IsVariableSized(CMsgStructType::Out);
+// 	       IsVariableSized(CMsgStructType::Exc);
     }
 
     // get the struct
-    CBEStructType *pStruct = GetStruct(nDirection);
+    CBEStructType *pStruct = GetStruct(nType);
     return pStruct->GetSize() < 0;
 }
 
 /** \brief calculate the number of elements with a given type for a direction
  *  \param nFEType the type to look for
- *  \param nDirection the direction to check
+ *  \param nType the type of the message buffer struct
  *  \return the number of elements of this given type for this direction
  *
  * If no direction is given, the maximum of both directions is calculated.
@@ -101,16 +109,17 @@ CBEMsgBuffer::IsVariableSized(int nDirection)
  */
 int 
 CBEMsgBuffer::GetCount(int nFEType, 
-    int nDirection)
+    CMsgStructType nType)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%d, %d)\n", __func__, nFEType,
-	nDirection);
+	(int)nType);
     
-    if (nDirection == 0)
+    if (CMsgStructType::Generic == nType)
     {
-        int nSend = GetCount(nFEType, DIRECTION_IN);
-        int nRecv = GetCount(nFEType, DIRECTION_OUT);
-        return (nRecv > nSend) ? nRecv : nSend;
+        int nSend = GetCount(nFEType, CMsgStructType::In);
+        int nRecv = GetCount(nFEType, CMsgStructType::Out);
+	int nExc = GetCount(nFEType, CMsgStructType::Exc);
+        return std::max(nRecv, std::max(nSend, nExc));
     }
 
     CBEUserDefinedType *pUsrType = dynamic_cast<CBEUserDefinedType*>(GetType());
@@ -121,7 +130,7 @@ CBEMsgBuffer::GetCount(int nFEType,
 	pMsgType = dynamic_cast<CBEMsgBufferType*>(GetType());
     assert(pMsgType);
 
-    CBEStructType *pStruct = GetStruct(nDirection);
+    CBEStructType *pStruct = GetStruct(nType);
     assert(pStruct);
 
     int nCount = 0;
@@ -150,7 +159,7 @@ CBEMsgBuffer::GetCount(int nFEType,
 
 /** \brief calculate the number of elements with a given type for a direction
  *  \param nFEType the type to look for
- *  \param nDirection the direction to check
+ *  \param nType the type if the message buffer struct
  *  \return the number of elements of this given type for this direction
  *
  * Count all structs for the given direction. If no direction is given, get
@@ -158,10 +167,10 @@ CBEMsgBuffer::GetCount(int nFEType,
  */
 int 
 CBEMsgBuffer::GetCountAll(int nFEType, 
-    int nDirection)
+    CMsgStructType nType)
 {
-    if (nDirection == 0)
-	return GetCount(nFEType, nDirection);
+    if (CMsgStructType::Generic == nType)
+	return GetCount(nFEType, nType);
 
     // get function
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -169,7 +178,7 @@ CBEMsgBuffer::GetCountAll(int nFEType,
     
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMsgBuffer::%s (%d, %d) called for mb in %s\n", __func__, nFEType,
-	nDirection, pFunction->GetName().c_str());
+	(int)nType, pFunction->GetName().c_str());
     
     bool bInterfaceFunc = (dynamic_cast<CBEInterfaceFunction*>(pFunction));
     // get type
@@ -188,8 +197,7 @@ CBEMsgBuffer::GetCountAll(int nFEType,
     // get struct
     CBEStructType *pStruct = 0;
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sName = pNF->GetMessageBufferStructName(nDirection, string(), 
-	string());
+    string sName = pNF->GetMessageBufferStructName(nType, string(), string());
     int nLen = sName.length();
     int nMaxCount = 0;
     vector<CBEUnionCase*>::iterator iter;
@@ -486,12 +494,13 @@ CBEMsgBuffer::AddReturnVariable(CBEFunction *pFunction,
     CBETypedDeclarator *pReturn)
 {
     // get OUT structure
-    int nDirection;
+    CMsgStructType nType(CMsgStructType::Generic);
     if (pFunction->IsComponentSide())
-	nDirection = pFunction->GetSendDirection();
+	nType = pFunction->GetSendDirection();
     else
-	nDirection = pFunction->GetReceiveDirection();
-    CBEStructType *pStruct = GetStruct(pFunction, nDirection);
+	nType = pFunction->GetReceiveDirection();
+    assert(CMsgStructType::In == nType || CMsgStructType::Out == nType);
+    CBEStructType *pStruct = GetStruct(pFunction, nType);
     assert(pStruct);
     // create exception
     if (!pReturn)
@@ -552,41 +561,41 @@ CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction)
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "Try to get struct for func %s\n",
 	pFunction->GetName().c_str());
     CBEStructType *pStruct;
-    int nDir = pFunction->GetReceiveDirection();
+    CMsgStructType nType = pFunction->GetReceiveDirection();
     // if the function's receive direction is OUT then the function should not
     // have an IN attribute (that would indicate an IN only function)
-    ATTR_TYPE nAttr = (nDir == DIRECTION_OUT) ? ATTR_IN : ATTR_OUT;
+    ATTR_TYPE nAttr = (CMsgStructType::Out == nType) ? ATTR_IN : ATTR_OUT;
     if (!pFunction->m_Attributes.Find(nAttr))
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	    "func %s does not have attribute %s\n", 
 	    pFunction->GetName().c_str(), (nAttr == ATTR_IN) ? "in" : "out");
-	pStruct = GetStruct(pFunction, nDir);
+	pStruct = GetStruct(pFunction, nType);
 	assert(pStruct);
-	if (!AddPlatformSpecificMembers(pFunction, pStruct, nDir))
+	if (!AddPlatformSpecificMembers(pFunction, pStruct, nType))
 	{
 	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 		"CBEMsgBuffer::%s: could not add members for dir %d\n", 
-		__func__, nDir);
+		__func__, (int)nType);
 	    return false;
 	}
     }
     
     // get SEND structure
-    nDir = pFunction->GetSendDirection();
-    nAttr = (nDir == DIRECTION_IN) ? ATTR_OUT : ATTR_IN;
+    nType = pFunction->GetSendDirection();
+    nAttr = (CMsgStructType::In == nType) ? ATTR_OUT : ATTR_IN;
     if (!pFunction->m_Attributes.Find(nAttr))
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	    "func %s does not have attribute %s\n", 
 	    pFunction->GetName().c_str(), (nAttr == ATTR_IN) ? "in" : "out");
-	pStruct = GetStruct(pFunction, nDir);
+	pStruct = GetStruct(pFunction, nType);
 	assert(pStruct);
-	if (!AddPlatformSpecificMembers(pFunction, pStruct, nDir))
+	if (!AddPlatformSpecificMembers(pFunction, pStruct, nType))
 	{
 	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 		"CBEMsgBuffer::%s: could not add members for dir %d\n",
-		__func__, nDir);
+		__func__, (int)nType);
 	    return false;
 	}
     }
@@ -649,7 +658,7 @@ CBEMsgBuffer::AddPlatformSpecificMembers(CBEClass *pClass)
 /** \brief adds platform specific members to this class
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return true if successful
  *
  * This implementaion adds the opcode member and the exception member to the
@@ -660,20 +669,20 @@ CBEMsgBuffer::AddPlatformSpecificMembers(CBEClass *pClass)
 bool
 CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction,
     CBEStructType *pStruct,
-    int nDirection)
+    CMsgStructType nType)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMsgBuffer::%s(%s,, %d) called\n", __func__,
-	pFunction->GetName().c_str(), nDirection);
+	pFunction->GetName().c_str(), (int)nType);
 
-    if (!AddOpcodeMember(pFunction, pStruct, nDirection))
+    if (!AddOpcodeMember(pFunction, pStruct, nType))
     {
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "CBEMsgBuffer::%s: could not add opcode\n", __func__);
 	return false;
     }
 
-    if (!AddExceptionMember(pFunction, pStruct, nDirection))
+    if (!AddExceptionMember(pFunction, pStruct, nType))
     {
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	    "CBEMsgBuffer::%s: could not add exception\n", __func__);
@@ -688,23 +697,23 @@ CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction,
 /** \brief adds platform specific opcode member
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return true if successful
  */
 bool
 CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction,
     CBEStructType *pStruct,
-    int nDirection)
+    CMsgStructType nType)
 {
-    int nFuncOpcodeDir = pFunction->GetSendDirection();
+    CMsgStructType nFuncOpcodeType = pFunction->GetSendDirection();
     if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
 	dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
 	dynamic_cast<CBEMarshalFunction*>(pFunction) ||
 	dynamic_cast<CBEReplyFunction*>(pFunction))
-	nFuncOpcodeDir = pFunction->GetReceiveDirection();
+	nFuncOpcodeType = pFunction->GetReceiveDirection();
     // add opcode
     if (!pFunction->m_Attributes.Find(ATTR_NOOPCODE) &&
-	(nDirection == nFuncOpcodeDir))
+	(nType == nFuncOpcodeType))
     {
 	// we are using DIRECTION_IN here, because we need an "absolute"
 	// direction, in contrary to the relative Send direction of a
@@ -732,27 +741,27 @@ CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction,
 /** \brief adds platform specific exception member
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return true if successful
  */
 bool
 CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction,
     CBEStructType *pStruct,
-    int nDirection)
+    CMsgStructType nType)
 {
-    int nFuncExceptionDir = pFunction->GetReceiveDirection();
+    CMsgStructType nFuncExceptionType = pFunction->GetReceiveDirection();
     if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
 	dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
 	dynamic_cast<CBEMarshalFunction*>(pFunction) ||
 	dynamic_cast<CBEReplyFunction*>(pFunction))
-	nFuncExceptionDir = pFunction->GetSendDirection();
+	nFuncExceptionType = pFunction->GetSendDirection();
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"%s exception dir is %d and struct at %p (type at %p)\n", 
-	__func__, nFuncExceptionDir, pStruct, 
+	__func__, (int)nFuncExceptionType, pStruct, 
 	pStruct->GetSpecificParent<CBEMsgBufferType>());
     // add exception
     if (!pFunction->m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
-	(nDirection == nFuncExceptionDir))
+	(nType == nFuncExceptionType))
     {
 	// we get the OUT direction, because we need an "absolute" direction,
 	// in contrary to the relative direction of GetReceiveDirection
@@ -792,29 +801,29 @@ CBEMsgBuffer::Sort(CBEFunction *pFunction)
 	pFunction->GetName().c_str());
     // get RECEIVE structure
     CBEStructType *pStruct;
-    int nDir = pFunction->GetReceiveDirection();
+    CMsgStructType nType = pFunction->GetReceiveDirection();
     // if the function's receive direction is OUT then the function should not
     // have an IN attribute (that would indicate an IN only function)
-    ATTR_TYPE nAttr = (nDir == DIRECTION_OUT) ? ATTR_IN : ATTR_OUT;
+    ATTR_TYPE nAttr = (CMsgStructType::Out == nType) ? ATTR_IN : ATTR_OUT;
     if (!pFunction->m_Attributes.Find(nAttr))
     {
-	pStruct = GetStruct(pFunction, nDir);
+	pStruct = GetStruct(pFunction, nType);
 	assert(pStruct);
 	// sort it
 	if (!Sort(pStruct))
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s failed, because receive struct could not be sorted.\n",
-		__func__);
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"%s failed, because receive struct could not be sorted.\n", __func__);
 	    return false;
 	}
     }
     
     // get SEND  structure
-    nDir = pFunction->GetSendDirection();
-    nAttr = (nDir == DIRECTION_IN) ? ATTR_OUT : ATTR_IN;
+    nType = pFunction->GetSendDirection();
+    nAttr = (CMsgStructType::In == nType) ? ATTR_OUT : ATTR_IN;
     if (!pFunction->m_Attributes.Find(nAttr))
     {
-	pStruct = GetStruct(pFunction, nDir);
+	pStruct = GetStruct(pFunction, nType);
 	assert(pStruct);
 	if (!Sort(pStruct))
 	{
@@ -1074,7 +1083,7 @@ CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst,
 /** \brief writes the access to a member of the message buffer
  *  \param pFile the file to write to
  *  \param pFunction the function the member belongs to
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \param pStack the member stack to write
  * 
  * Find the struct, then write 
@@ -1082,33 +1091,33 @@ CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst,
  */
 void
 CBEMsgBuffer::WriteAccess(CBEFile *pFile,
-	CBEFunction *pFunction,
-	int nDirection,
-	vector<CDeclaratorStackLocation*> *pStack)
+    CBEFunction *pFunction,
+    CMsgStructType nType,
+    CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CBEMsgBuffer::%s (%s, %s, %d, stack @ %p (%d)) called\n", __func__,
 	pFile->GetFileName().c_str(),
 	pFunction->GetName().c_str(),
-	nDirection,
+	(int)nType,
 	pStack, pStack ? pStack->size() : 0);
     // struct
-    WriteAccessToStruct(pFile, pFunction, nDirection);
+    WriteAccessToStruct(pFile, pFunction, nType);
     // actual member
     if (!pStack)
 	return;
 
-    vector<CDeclaratorStackLocation*>::iterator iter = pStack->begin();
+    CDeclStack::iterator iter = pStack->begin();
     for (; iter != pStack->end(); iter++)
     {
-	*pFile << "." << (*iter)->pDeclarator->GetName();
+	*pFile << "." << iter->pDeclarator->GetName();
     }
 }
 
 /** \brief wraps write access with stack
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- *  \param nDirection the direction to write
+ *  \param nType the type of the message buffer struct
  *  \param pMember the member of the message buffer struct
  *  
  * This is an internal function to allow for flat member access.
@@ -1116,54 +1125,50 @@ CBEMsgBuffer::WriteAccess(CBEFile *pFile,
 void
 CBEMsgBuffer::WriteAccess(CBEFile *pFile,
     CBEFunction *pFunction,
-    int nDirection,
+    CMsgStructType nType,
     CBETypedDeclarator* pMember)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CBEMsgBuffer::%s (%s, %s, %d, %s) called\n",
 	__func__, pFile->GetFileName().c_str(),
 	pFunction->GetName().c_str(),
-	nDirection,
+	(int)nType,
 	pMember->m_Declarators.First()->GetName().c_str());
-    vector<CDeclaratorStackLocation*> vStack;
-    CDeclaratorStackLocation *pLoc = 
-	new CDeclaratorStackLocation(pMember->m_Declarators.First());
-    vStack.push_back(pLoc);
+    CDeclStack vStack;
+    vStack.push_back(pMember->m_Declarators.First());
 
-    WriteAccess(pFile, pFunction, nDirection, &vStack);
-
-    delete pLoc;
+    WriteAccess(pFile, pFunction, nType, &vStack);
 }
 
 /** \brief write the part of the access to a member that contains the struct
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- *  \param nDirection the direction of the buffer to write for
+ *  \param nType the type of the message buffer struct
  */
 void
 CBEMsgBuffer::WriteAccessToStruct(CBEFile *pFile,
     CBEFunction *pFunction,
-    int nDirection)
+    CMsgStructType nType)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CBEMsgBuffer::%s (%s, %s, %d) called\n", __func__,
 	pFile->GetFileName().c_str(),
 	pFunction->GetName().c_str(),
-	nDirection);
+	(int)nType);
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     // get struct name
     // if direction is zero, do not use a function name
-    string sFuncName = (nDirection == 0) ? 
+    string sFuncName = (CMsgStructType::Generic == nType) ? 
 	string() : pFunction->GetOriginalName();
-    string sClassName = (nDirection == 0) ? string() :
+    string sClassName = (CMsgStructType::Generic == nType) ? string() :
 	pFunction->GetSpecificParent<CBEClass>()->GetName();
     // if name is empty, than this is a generic function: get generic struct
     if (sFuncName.empty())
     {
-	nDirection = 0;
+	nType = CMsgStructType::Generic;
 	sClassName = string();
     }
-    string sStructName = pNF->GetMessageBufferStructName(nDirection, sFuncName,
+    string sStructName = pNF->GetMessageBufferStructName(nType, sFuncName,
 	sClassName);
     // write access to message buffer
     CBETypedDeclarator *pMsgBufParam = WriteAccessToVariable(pFile, pFunction, false);
@@ -1212,7 +1217,7 @@ CBEMsgBuffer::WriteAccessToVariable(CBEFile *pFile,
 	    bHasPointer = pMsgBufParam->HasReference();
 	}
 	else
-	    CCompiler::Error("No param of type %s in func %s\n",
+	    CMessages::Error("No param of type %s in func %s\n",
 		sName.c_str(), pFunction->GetName().c_str());
     }
     if (bPointer && (!bHasPointer || 
@@ -1228,7 +1233,7 @@ CBEMsgBuffer::WriteAccessToVariable(CBEFile *pFile,
 /** \brief writes the access to a member of a specific type
  *  \param pFile the file to write to
  *  \param pFunction the function to write the member for
- *  \param nDirection the direction of the struct to write from
+ *  \param nType the type of the message buffer struct
  *  \param nFEType the type of the member
  *  \param nIndex the number (0-based) of the member of the specific type
  *
@@ -1238,12 +1243,12 @@ CBEMsgBuffer::WriteAccessToVariable(CBEFile *pFile,
 void
 CBEMsgBuffer::WriteMemberAccess(CBEFile *pFile,
     CBEFunction *pFunction,
-    int nDirection,
+    CMsgStructType nType,
     int nFEType,
     int nIndex)
 {
     // get struct
-    CBEStructType *pStruct = GetStruct(pFunction, nDirection);
+    CBEStructType *pStruct = GetStruct(pFunction, nType);
     assert(pStruct);
     // iterate members and count to the wanted type (remember: 0-based)
     vector<CBETypedDeclarator*>::iterator iter;
@@ -1268,7 +1273,7 @@ CBEMsgBuffer::WriteMemberAccess(CBEFile *pFile,
 	    if (nIndex == 0)
 	    {
 		// call WriteAccess
-		WriteAccess(pFile, pFunction, nDirection, *iter);
+		WriteAccess(pFile, pFunction, nType, *iter);
 		if (pBound)
 		    *pFile << "[" << nCurArrayIndex << "]";
 		return;
@@ -1290,7 +1295,8 @@ CBEMsgBuffer::WriteGenericMemberAccess(CBEFile *pFile,
     int nIndex)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sStructName = pNF->GetMessageBufferStructName(0, string(), string());
+    string sStructName = pNF->GetMessageBufferStructName(CMsgStructType::Generic,
+	string(), string());
     // FIXME: build declarator stack
     // write access
     string sName = m_Declarators.First()->GetName();
@@ -1304,16 +1310,16 @@ CBEMsgBuffer::WriteGenericMemberAccess(CBEFile *pFile,
 }
 
 /** \brief retrieve a reference to one of the structs
- *  \param nDirection the direction to get the struct for 
+ *  \param nType the type of the message buffer struct
  *  \return a reference to the struct or NULL if none found
  */
 CBEStructType*
-CBEMsgBuffer::GetStruct(int nDirection)
+CBEMsgBuffer::GetStruct(CMsgStructType nType)
 {
     // get function
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
     // get struct
-    return GetStruct(pFunction, nDirection);
+    return GetStruct(pFunction, nType);
 }
 
 /** \brief return the offset where the payload starts 
@@ -1327,12 +1333,12 @@ CBEMsgBuffer::GetPayloadOffset()
 
 /** \brief retrieve the reference to one of the structs
  *  \param pFunction the function to get the struct for
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the message buffer struct
  *  \return a reference to the struct or NULL if none found
  */
 CBEStructType*
 CBEMsgBuffer::GetStruct(CBEFunction *pFunction,
-    int nDirection)
+    CMsgStructType nType)
 {
     assert(pFunction);
     bool bInterfaceFunc = (dynamic_cast<CBEInterfaceFunction*>(pFunction));
@@ -1342,12 +1348,12 @@ CBEMsgBuffer::GetStruct(CBEFunction *pFunction,
     // if name is empty, get generic struct
     if (sFuncName.empty())
     {
-	nDirection = 0;
+	nType = CMsgStructType::Generic;
 	sClassName = string();
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CBEMsgBuffer::%s: func name: %s, class name: %s, dir %d, interface-func %s\n",
-	__func__, sFuncName.c_str(), sClassName.c_str(), nDirection, 
+	__func__, sFuncName.c_str(), sClassName.c_str(), (int)nType, 
 	bInterfaceFunc ? "true":"false");
     // get type
     CBEMsgBufferType *pType;
@@ -1368,12 +1374,12 @@ CBEMsgBuffer::GetStruct(CBEFunction *pFunction,
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CBEMsgBuffer::%s return struct of type at %p (msgbuf type)\n", __func__,
 	pType);
-    return pType->GetStruct(sFuncName, sClassName, nDirection);
+    return pType->GetStruct(sFuncName, sClassName, nType);
 }
 
 /** \brief test if the message buffer has a certain property
  *  \param nProperty the property to test for
- *  \param nDirection the direction to test 
+ *  \param nType the type of the message buffer struct
  *  \return true if property is available for direction
  *
  * This implementation always returns false, because no properties to check
@@ -1381,7 +1387,7 @@ CBEMsgBuffer::GetStruct(CBEFunction *pFunction,
  */
 bool
 CBEMsgBuffer::HasProperty(int /*nProperty*/,
-	int /*nDirection*/)
+    CMsgStructType /*nType*/)
 {
     return false;
 }
@@ -1390,7 +1396,7 @@ CBEMsgBuffer::HasProperty(int /*nProperty*/,
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  *  \param nType the type of the members to initialize
- *  \param nDirection the direction of the struct to initialize
+ *  \param nStructType the type of the message buffer struct
  *
  * Here we have to allocate the message buffer dynamically if it has variable
  * sized members.
@@ -1399,7 +1405,7 @@ void
 CBEMsgBuffer::WriteInitialization(CBEFile* /*pFile*/,
     CBEFunction* /*pFunction*/,
     int /*nType*/,
-    int /*nDirection*/)
+    CMsgStructType /*nStructType*/)
 {
     // FIXME find variable sized members
     // FIXME allocate memory for message buffer
@@ -1407,17 +1413,17 @@ CBEMsgBuffer::WriteInitialization(CBEFile* /*pFile*/,
 
 /** \brief find a specific members of the message buffer
  *  \param sName the name of the member
- *  \param nDirection the direction of the struct 
+ *  \param nType the type of the message buffer struct
  *  \return a reference to the member if found, NULL if none
  */
 CBETypedDeclarator* 
 CBEMsgBuffer::FindMember(string sName, 
-    int nDirection)
+    CMsgStructType nType)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s(%s, %d) called\n", 
-	__func__, sName.c_str(), nDirection);
+	__func__, sName.c_str(), (int)nType);
     
-    CBEStructType *pStruct = GetStruct(nDirection);
+    CBEStructType *pStruct = GetStruct(nType);
     if (!pStruct)
 	return (CBETypedDeclarator*)0;
     
@@ -1430,18 +1436,18 @@ CBEMsgBuffer::FindMember(string sName,
 /** \brief find a specific members of the message buffer
  *  \param sName the name of the member
  *  \param pFunction the function to use as reference
- *  \param nDirection the direction of the struct 
+ *  \param nType the type of the message buffer struct
  *  \return a reference to the member if found, NULL if none
  */
 CBETypedDeclarator* 
 CBEMsgBuffer::FindMember(string sName, 
     CBEFunction *pFunction,
-    int nDirection)
+    CMsgStructType nType)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s(%s, %s, %d) called\n",
-	__func__, sName.c_str(), pFunction->GetName().c_str(), nDirection);
+	__func__, sName.c_str(), pFunction->GetName().c_str(), (int)nType);
 
-    CBEStructType *pStruct = GetStruct(pFunction, nDirection);
+    CBEStructType *pStruct = GetStruct(pFunction, nType);
     if (!pStruct)
 	return (CBETypedDeclarator*)0;
 
@@ -1453,12 +1459,12 @@ CBEMsgBuffer::FindMember(string sName,
 
 /** \brief try to get the position of a member counting word sizes
  *  \param sName the name of the member
- *  \param nDirection the direction of the struct 
+ *  \param nType the type of the message buffer struct
  *  \return the position (index) of the member, -1 if not found
  */
 int
 CBEMsgBuffer::GetMemberPosition(string sName,
-    int nDirection)
+    CMsgStructType nType)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     // test opcode
@@ -1469,7 +1475,7 @@ CBEMsgBuffer::GetMemberPosition(string sName,
 	return 0;
 
     // get struct
-    CBEStructType *pStruct = GetStruct(nDirection);
+    CBEStructType *pStruct = GetStruct(nType);
     assert(pStruct);
     // get word size
     int nWordSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
@@ -1509,7 +1515,8 @@ CBEMsgBuffer::WriteDump(CBEFile *pFile)
     // if TRACE_MSGBUF is set a variable _i is specified
     // FIXME: make _i name factory string
     string sVar = string("_i");
-    string sFunc = CCompiler::GetTraceMsgBufFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption("trace-msgbuf-func", sFunc);
     CBEDeclarator *pDecl = m_Declarators.First();
 
     // cast message buffer to word buffer and start iterating
@@ -1662,7 +1669,7 @@ CBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction,
     // if either one has not the desired number of word sized memebers, we add
     // the short IPC struct
     // get any structure
-    CBEStructType *pStruct = GetStruct(pFunction, DIRECTION_IN);
+    CBEStructType *pStruct = GetStruct(pFunction, CMsgStructType::In);
     assert(pStruct);
     // get message buffer type
     CBEMsgBufferType *pType = 
@@ -1676,13 +1683,13 @@ CBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction,
 	    __func__);
 	return false;
     }
-    pStruct = GetStruct(pFunction, 0);
+    pStruct = GetStruct(pFunction, CMsgStructType::Generic);
     assert(pStruct);
     // add the required members
     if (!AddGenericStructMembersFunction(pStruct))
 	return false;
     // now we have to repeat the initialization steps (if they apply)
-    if (!AddPlatformSpecificMembers(pFunction, pStruct, 0))
+    if (!AddPlatformSpecificMembers(pFunction, pStruct, CMsgStructType::Generic))
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	    "%s failed, because platform specific members could not be" \
@@ -1871,13 +1878,13 @@ CBEMsgBuffer::AddGenericStruct(CBEClass *pClass,
 	    __func__);
 	return false;
     }
-    CBEStructType *pStruct = GetStruct(pFunction, 0);
+    CBEStructType *pStruct = GetStruct(pFunction, CMsgStructType::Generic);
     assert(pStruct);
     // add the members
     if (!AddGenericStructMembersClass(pStruct))
 	return false;
     // now we have to repeat the initialization steps (if they apply)
-    if (!AddPlatformSpecificMembers(pFunction, pStruct, 0))
+    if (!AddPlatformSpecificMembers(pFunction, pStruct, CMsgStructType::Generic))
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "%s failed, because platform specific members could not be" \
@@ -1998,7 +2005,7 @@ CBEMsgBuffer::GetMemberSize(int nType)
 /** \brief gets the size of specific message buffer members
  *  \param nType the type of message buffer members requested (0 all)
  *  \param pFunction the function of the message buffer
- *  \param nDirection the direction of the message buffer struct
+ *  \param nStructType the type of the message buffer struct
  *  \param bMax determine maximum size rather than actual size
  *  \return the number of elements of that specific type, or if type is 0, \
  *          the size of the message buffer in bytes
@@ -2008,15 +2015,15 @@ CBEMsgBuffer::GetMemberSize(int nType)
 int 
 CBEMsgBuffer::GetMemberSize(int nType, 
     CBEFunction *pFunction, 
-    int nDirection,
+    CMsgStructType nStructType,
     bool bMax)
 {
     int nSize = 0;
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%d, %s, %d, %s) called\n",
-	__func__, nType, pFunction->GetName().c_str(), nDirection,
+	__func__, nType, pFunction->GetName().c_str(), (int)nStructType,
 	bMax ? "true" : "false");
 
-    CBEStructType *pStruct = GetStruct(pFunction, nDirection);
+    CBEStructType *pStruct = GetStruct(pFunction, nStructType);
     assert(pStruct);
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: struct at %p\n", __func__, pStruct);
 
@@ -2089,3 +2096,44 @@ CBEMsgBuffer::Pad()
 {
     return true;
 }
+
+class MemFind
+{
+    string _s;
+public:
+    MemFind(string s) : _s(s) { }
+
+    bool operator() (CBETypedDeclarator *pMember)
+    {
+	return pMember && pMember->m_Declarators.Find(_s);
+    }
+};
+
+/** \brief check if one member comes before another in the message buffer
+ *  \param pFunction the function for which the message buffer is needed
+ *  \param nType the type of the message buffer struct
+ *  \param sName1 the name of the first member
+ *  \param sName2 the name of the second member
+ *  \return true if member sName1 comes before member sName2
+ */
+bool
+CBEMsgBuffer::IsEarlier(CBEFunction *pFunction, 
+    CMsgStructType nType, 
+    string sName1, 
+    string sName2)
+{
+    CBEStructType *pStruct = GetStruct(pFunction, nType);
+    assert(pStruct);
+
+    if (!pStruct->m_Members.Find(sName1) ||
+	!pStruct->m_Members.Find(sName2))
+	std::__throw_out_of_range("CBEMsgBuffer::IsEarlier");
+
+    CStructMembers::iterator i1 = std::find_if(pStruct->m_Members.begin(),
+	pStruct->m_Members.end(), MemFind(sName1));
+    CStructMembers::iterator i2 = std::find_if(pStruct->m_Members.begin(),
+	pStruct->m_Members.end(), MemFind(sName2));
+
+    return (i2 - i1) > 0;
+}
+

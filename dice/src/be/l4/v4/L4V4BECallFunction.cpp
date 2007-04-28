@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -108,22 +108,6 @@ CL4V4BECallFunction::WriteMarshalling(CBEFile * pFile)
     *pFile << "\tL4_MsgLoad ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
 }
 
-/** \brief marshals the exception
- *  \param pFile the file to write to
- *  \param bMarshal true if marshalling, false if unmarshalling
- *  \return the number of bytes used to marshal the exception
- *
- * Because for V4 the exception is member of the message buffer and never
- * skipped, we make this function empty because it is called explicetly in
- * CBECallFunction::WriteUnmarshalling. The exception is (un)marshalled together
- * with the "normal" parameters
- */
-void
-CL4V4BECallFunction::WriteMarshalException(CBEFile* /*pFile*/,
-    bool /*bMarshal*/)
-{
-}
-
 /** \brief writes the invocation of the message transfer
  *  \param pFile the file to write to
  *
@@ -214,7 +198,7 @@ CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile * pFile)
  * In V4 we do have the exception in the msgbuf but not the opcode, which is
  * in the tag's label.
  */
-int CL4V4BECallFunction::GetSize(int nDirection)
+int CL4V4BECallFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size
     int nSize = CBECallFunction::GetSize(nDirection);
@@ -230,7 +214,7 @@ int CL4V4BECallFunction::GetSize(int nDirection)
  * In V4 we do have the exception in the msgbuf but not the opcode, which is
  * in the tag's label.
  */
-int CL4V4BECallFunction::GetFixedSize(int nDirection)
+int CL4V4BECallFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBECallFunction::GetFixedSize(nDirection);
     if (nDirection & DIRECTION_IN)

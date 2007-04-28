@@ -101,13 +101,5 @@ int liblinux_init(unsigned int vmem, unsigned int kmem, int dhcp)
 		return err;
 	}
 
-	/* our drivers */
-#if 0
-	if ((err = liblinux_oshkosh_init())) {
-		LOGd(DEBUG_LIBLX, "OshKosh initialization failed (%d)", err);
-		return err;
-	}
-#endif
-
 	return 0;
 }

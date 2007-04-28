@@ -392,7 +392,7 @@ bool CBEType::DoWriteZeroInit()
  * be variable sized overload this function to print the correct size.
  */
 void CBEType::WriteGetSize(CBEFile* /*pFile*/,
-    vector<CDeclaratorStackLocation*>* /*pStack*/,
+    CDeclStack* /*sStack*/,
     CBEFunction* /*pUsingFunc*/)
 {
     assert(false);
@@ -404,7 +404,7 @@ void CBEType::WriteGetSize(CBEFile* /*pFile*/,
  *  \param pUsingFunc the function to use as reference for members
  */
 void CBEType::WriteGetMaxSize(CBEFile *pFile,
-    vector<CDeclaratorStackLocation*>* /*pStack*/,
+    CDeclStack* /*pStack*/,
     CBEFunction* /*pUsingFunc*/)
 {
     *pFile << GetMaxSize();

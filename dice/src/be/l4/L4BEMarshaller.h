@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/l4/L4BEMarshaller.h
+ *  \file    dice/src/be/l4/L4BEMarshaller.h
  *  \brief   contains the declaration of the class CL4BEMarshaller
  *
- *    \date    01/26/2005
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/26/2005
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2005
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -30,9 +30,8 @@
 #ifndef L4BEMARSHALLER_H
 #define L4BEMARSHALLER_H
 
-#include <be/BEMarshaller.h>
-
-class CBEMsgBufferType;
+#include "be/BEMarshaller.h"
+#include "be/BEMsgBufferType.h"
 
 /** \class CL4BEMarshaller
  *  \ingroup backend
@@ -56,9 +55,9 @@ public:
     virtual ~CL4BEMarshaller();
 
     virtual void MarshalFunction(CBEFile *pFile, CBEFunction *pFunction, 
-	int nDirection);
+	DIRECTION_TYPE nDirection);
     virtual bool MarshalWordMember(CBEFile *pFile, CBEFunction *pFunction,
-	int nDirection, int nPosition, bool bReference, bool bLValue);
+	CMsgStructType nType, int nPosition, bool bReference, bool bLValue);
     virtual void MarshalParameter(CBEFile *pFile, CBEFunction *pFunction,
 	CBETypedDeclarator *pParameter, bool bMarshal, int nPosition);
 
@@ -70,16 +69,19 @@ protected:
     virtual bool MarshalZeroFlexpage(CBETypedDeclarator *pMember);
     
     virtual void MarshalParameterIntern(CBETypedDeclarator *pParameter,
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack* pStack);
     virtual bool MarshalRefstring(CBETypedDeclarator *pParameter, 
-	vector<CDeclaratorStackLocation*> *pStack);
-    virtual void WriteMember(int nDir, CBEMsgBuffer *pMsgBuffer,
-	CBETypedDeclarator *pMember, vector<CDeclaratorStackLocation*> *pStack);
-    virtual void WriteRefstringCastMember(int nDir, CBEMsgBuffer *pMsgBuffer,
+	CDeclStack* pStack);
+    virtual void WriteMember(DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
+	CBETypedDeclarator *pMember, CDeclStack* pStack);
+    virtual void WriteRefstringCastMember(DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember);
 
+    virtual void MarshalArrayIntern(CBETypedDeclarator *pParameter, 
+	CBEType *pType, CDeclStack* pStack);
+
     virtual bool DoSkipParameter(CBEFunction *pFunction, 
-	CBETypedDeclarator *pParameter, int nDirection);
+	CBETypedDeclarator *pParameter, DIRECTION_TYPE nDirection);
     
 protected:
     /** \var int m_nSkipSize
@@ -104,7 +106,7 @@ private:
 	~PositionMarshaller();
 
     public:
-	bool Marshal(CBEFile *pFile, CBEFunction *pFunction, int nDirection, 
+	bool Marshal(CBEFile *pFile, CBEFunction *pFunction, CMsgStructType nType, 
     	    int nPosition, bool bReference, bool bLValue);
     private:
 	CBEMsgBufferType* GetMessageBufferType(CBEFunction *pFunction);
@@ -114,7 +116,7 @@ private:
 	void WriteParameter(CBEFile *pFile, CBETypedDeclarator *pParameter,
 	    bool bReference, bool bLValue);
 	void WriteSpecialMember(CBEFile *pFile, CBEFunction *pFunction,
-	    CBETypedDeclarator *pMember, int nDirection, bool bReference, 
+	    CBETypedDeclarator *pMember, CMsgStructType nType, bool bReference, 
 	    bool bLValue);
 
     protected:

@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -60,8 +60,8 @@ public:
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual CBETypedDeclarator * FindParameterType(string sTypeName);
-    virtual int GetReceiveDirection();
-    virtual int GetSendDirection();
+    virtual DIRECTION_TYPE GetReceiveDirection();
+    virtual DIRECTION_TYPE GetSendDirection();
 
 protected:
     virtual void WriteUnmarshalling(CBEFile *pFile);

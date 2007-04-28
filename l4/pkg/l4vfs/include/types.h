@@ -53,6 +53,7 @@ typedef l4_int32_t object_handle_t;
 typedef l4_int32_t  l4vfs_off_t;
 typedef l4_int32_t  l4vfs_ssize_t;
 typedef l4_uint32_t l4vfs_size_t;
+typedef l4_uint32_t l4vfs_socklen_t;
 typedef l4_uint32_t l4vfs_mode_t;
 typedef l4_int32_t  l4vfs_time_t;
 

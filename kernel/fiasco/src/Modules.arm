@@ -188,7 +188,7 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			bootstrap virq uart_console vkey kern_lib_page \
 			watchdog perf_cnt kern_cnt jdb_extensions kernel_task \
 			cap_space cap_space_alloc ram_quota ram_quota_alloc \
-			utcb_init utcb_support
+			utcb_init utcb_support prio_list
 
 
 boot_info_IMPL	  	:= boot_info boot_info-arch

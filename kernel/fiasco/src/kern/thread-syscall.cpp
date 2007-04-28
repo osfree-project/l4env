@@ -728,8 +728,12 @@ Thread::sys_task_new()
 	  // do not create a new task -- transfer ownership
 	  //
 	  L4_uid e = regs->new_chief();
+	  Space_index chief(e.task());
 
-	  if (! si.set_chief(space_index(), Space_index(e.task())))
+	  if (!chief.lookup())
+	    break;
+
+	  if (! si.set_chief(space_index(), chief))
 	    break;		// someone else was faster
 
 	  id.lthread(0);

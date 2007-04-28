@@ -7,7 +7,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2005
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -42,6 +42,7 @@
 #include "be/BEAttribute.h"
 #include "be/BEUserDefinedType.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include <cassert>
@@ -63,7 +64,7 @@ CL4BEMarshaller::PositionMarshaller::~PositionMarshaller()
 /** \brief marshal a specific member of a function to a specific position
  *  \param pFile the file to write to
  *  \param pFunction the function to get the parameter from
- *  \param nDirection the direction to marshal
+ *  \param nType the type of the struct
  *  \param nPosition the word position of the member in the message buffer
  *  \param bReference true if the written parameter should be a reference
  *  \param bLValue true if param is l-Value
@@ -84,7 +85,7 @@ CL4BEMarshaller::PositionMarshaller::~PositionMarshaller()
 bool
 CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile, 
 	CBEFunction *pFunction, 
-	int nDirection, 
+	CMsgStructType nType, 
 	int nPosition,
 	bool bReference,
 	bool bLValue)
@@ -92,7 +93,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile,
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"%s called for func %s dir %d, pos %d\n",
 	__func__, pFunction ? pFunction->GetName().c_str() : "", 
-	nDirection, nPosition);
+	(int)nType, nPosition);
 
     m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
     m_bReference = bReference;
@@ -107,11 +108,11 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile,
     // if name is empty, get generic struct
     if (sFuncName.empty())
     {
-	nDirection = 0;
+	nType = CMsgStructType::Generic;
 	sClassName = string();
     }
     CBEStructType *pStruct = pMsgType->GetStruct(sFuncName, sClassName, 
-	nDirection);
+	nType);
     if (!pStruct)
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -160,7 +161,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile,
 		sName.c_str());
 	    // only call this method if we are sure the member is special
 	    // e.g. return, opcode, etc.
-	    WriteSpecialMember(pFile, pFunction, pMember, nDirection, 
+	    WriteSpecialMember(pFile, pFunction, pMember, nType, 
 		bReference, bLValue);
 	}
 	else
@@ -216,7 +217,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile,
 		    e->Print();
 		    delete e;
 		    
-		    CCompiler::Error("%s: could not create cast type.\n",
+		    CMessages::Error("%s: could not create cast type.\n",
 			__func__);
 		    delete pTransmitType;
 		}
@@ -363,7 +364,7 @@ CL4BEMarshaller::PositionMarshaller::GetMemberSize(CBETypedDeclarator *pMember)
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  *  \param pMember the special member to write
- *  \param nDirection the direction of the struct
+ *  \param nType the type of the struct
  *  \param bReference true if member should be referenced
  *  \param bLValue true if the parameter is an l-Value
  *
@@ -378,7 +379,7 @@ void
 CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile *pFile,
     CBEFunction *pFunction,
     CBETypedDeclarator *pMember,
-    int nDirection,
+    CMsgStructType nType,
     bool bReference,
     bool bLValue)
 {
@@ -431,7 +432,7 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile *pFile,
 
     // no special member we know of: access in struct
     assert(m_pParent);
-    m_pParent->WriteMember(nDirection, pMsgBuffer, pMember, NULL);
+    m_pParent->WriteMember(nType, pMsgBuffer, pMember, NULL);
 }
 
 /** \brief writes the access to a parameter
@@ -499,7 +500,7 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile *pFile,
     if (nStars < 0)
     {
 	if (nStars < -1)
-	    CCompiler::Error("Cannot create more than one reference to" \
+	    CMessages::Error("Cannot create more than one reference to" \
 		" parameter %s (%s: %d).\n", pDecl->GetName().c_str(),
 		__FILE__, __LINE__);
 	

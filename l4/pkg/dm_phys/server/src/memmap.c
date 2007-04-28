@@ -892,7 +892,7 @@ __insert_ram(memmap_t *mp)
 }
 
 static
-int
+void
 __setup_free_regions(void)
 {
   /* set memory range to be used to assigne memory pools */
@@ -914,14 +914,13 @@ __setup_free_regions(void)
 	  unsigned long end   = l4_kernel_info_get_mem_desc_end(md);
 	  mp = __alloc_memmap_desc();
 	  if (mp == NULL)
-	    return -1;
+	    Panic("DMphys: cannot allocate memmap descriptor!");;
 
 	  mp->addr = start;
 	  mp->size = end-start + 1;
 
 	  __insert_ram(mp);
 	}
-
     }
 
   /* if we skip low memory by default, mark it reserved */

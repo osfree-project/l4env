@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -45,10 +45,10 @@ public:
 
 protected:
     virtual bool DoSkipParameter(CBEFunction *pFunction, 
-	CBETypedDeclarator *pParameter, int nDirection);
+	CBETypedDeclarator *pParameter, DIRECTION_TYPE nDirection);
     virtual bool MarshalRefstring(CBETypedDeclarator *pParameter, 
-	vector<CDeclaratorStackLocation*> *pStack);
-    virtual void WriteRefstringCastMember(int nDir, CBEMsgBuffer *pMsgBuffer,
+	CDeclStack* pStack);
+    virtual void WriteRefstringCastMember(DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember);
 
 protected:

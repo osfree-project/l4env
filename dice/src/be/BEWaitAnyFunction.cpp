@@ -6,7 +6,7 @@
  *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -293,7 +293,7 @@ CBETypedDeclarator * CBEWaitAnyFunction::FindParameterType(string sTypeName)
  * Since this function ignores the send part, this value should be not
  * interesting
  */
-int CBEWaitAnyFunction::GetSendDirection()
+DIRECTION_TYPE CBEWaitAnyFunction::GetSendDirection()
 {
     return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
 }
@@ -301,7 +301,7 @@ int CBEWaitAnyFunction::GetSendDirection()
 /** \brief gets the direction for the receiving data
  *  \return if at client's side DIRECTION_OUT, else DIRECTION_IN
  */
-int CBEWaitAnyFunction::GetReceiveDirection()
+DIRECTION_TYPE CBEWaitAnyFunction::GetReceiveDirection()
 {
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }

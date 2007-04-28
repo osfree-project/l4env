@@ -952,7 +952,7 @@ void CBEStructType::WriteDeclaration(CBEFile * pFile)
  * sizeof(struct tag).
  */
 void CBEStructType::WriteGetSize(CBEFile * pFile,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
     /* check for variable sized members */
@@ -1089,7 +1089,7 @@ int CBEStructType::GetFixedSize()
 void
 CBEStructType::WriteGetMemberSize(CBEFile *pFile,
     CBETypedDeclarator *pMember,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
     bool bFirst = true;
@@ -1104,8 +1104,7 @@ CBEStructType::WriteGetMemberSize(CBEFile *pFile,
             bFirst = false;
         }
         // add the current decl to the stack
-        CDeclaratorStackLocation *pLoc = new CDeclaratorStackLocation(*iterD);
-        pStack->push_back(pLoc);
+        pStack->push_back(*iterD);
         // add the member of the struct to the stack
         pMember->WriteGetSize(pFile, pStack, pUsingFunc);
         if ((pMember->GetType()->GetSize() > 1) && !(pMember->IsString()))
@@ -1127,7 +1126,6 @@ CBEStructType::WriteGetMemberSize(CBEFile *pFile,
         }
         // remove the decl from the stack
         pStack->pop_back();
-        delete pLoc;
     }
 }
 
@@ -1147,8 +1145,8 @@ bool CBEStructType::IsSimpleType()
  * Gets the first element on the stack and tries to find
  */
 CBETypedDeclarator* 
-CBEStructType::FindMember(vector<CDeclaratorStackLocation*> *pStack,
-    vector<CDeclaratorStackLocation*>::iterator iCurr)
+CBEStructType::FindMember(CDeclStack* pStack,
+    CDeclStack::iterator iCurr)
 {
     // if at end, return
     if (iCurr == pStack->end())
@@ -1158,7 +1156,7 @@ CBEStructType::FindMember(vector<CDeclaratorStackLocation*> *pStack,
 
     DUMP_STACK(i, pStack, "Find");
     // try to find member for current declarator
-    string sName = (*iCurr)->pDeclarator->GetName();
+    string sName = iCurr->pDeclarator->GetName();
     CBETypedDeclarator *pMember = m_Members.Find(sName);
     if (!pMember)
 	return pMember;

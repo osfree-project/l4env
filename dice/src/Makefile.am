@@ -19,9 +19,9 @@ DICELIBS=	$(top_builddir)/src/be/l4/libl4.a \
 		$(top_builddir)/src/parser/inc/libinc.a
 
 bin_PROGRAMS=	dice
-dice_SOURCES = main.cpp Compiler.cpp CParser.cpp File.cpp Object.cpp Visitor.cpp version.cpp CCParser.cpp CCXXParser.cpp CDCEParser.cpp CCORBAParser.cpp CPreProcess.cpp IncludeStatement.cpp Exception.cpp Dependency.cpp
+dice_SOURCES = main.cpp Compiler.cpp CParser.cpp File.cpp Object.cpp Visitor.cpp version.cpp CCParser.cpp CCXXParser.cpp CDCEParser.cpp CCORBAParser.cpp CPreProcess.cpp IncludeStatement.cpp Exception.cpp Dependency.cpp Messages.cpp
 
-noinst_HEADERS = defines.h template.h Compiler.h CParser.h File.h Object.h Visitor.h ProgramOptions.h CCParser.h CCXXParser.h CDCEParser.h CCORBAParser.h CPreProcess.h TypeSpec-Type.h Attribute-Type.h IncludeStatement.h Exception.h Dependency.h
+noinst_HEADERS = defines.h template.h Compiler.h CParser.h File.h Object.h Visitor.h ProgramOptions.h CCParser.h CCXXParser.h CDCEParser.h CCORBAParser.h CPreProcess.h TypeSpec-Type.h Attribute-Type.h IncludeStatement.h Exception.h Dependency.h Messages.h
 
 dice_DEPENDENCIES= $(DICELIBS)
 

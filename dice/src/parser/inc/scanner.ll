@@ -7,7 +7,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -35,6 +35,7 @@
 #include "CPreProcess.h"
 #include "fe/FEFile.h"
 #include "Compiler.h"
+#include "Messages.h"
 
 extern int gLineNumber;
 int nStartOfStringInc = 0;
@@ -168,7 +169,7 @@ Filename        ("<")?[a-zA-Z0-9_\./\\:\- ]*(">")?("\""|">")
                           // check if stack full
                           if (state_stack_size+1 == MAX_INCLUDE_DEPTH)
                           {
-                              CCompiler::Error(
+                              CMessages::Error(
 			         "Include depth exceeds Dice's limit (%d)\n", 
 				 MAX_INCLUDE_DEPTH);
                               yyterminate();

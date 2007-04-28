@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,6 +33,7 @@
 #include "CPreProcess.h"
 #include "CParser.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "Error.h"
 #include <cerrno> // needed for errno
 #include <unistd.h> // needed for pipe
@@ -210,10 +211,10 @@ void CPreProcess::CPPErrorHandling()
 {
     char *s = strerror(errno);
     if (s)
-        CCompiler::Error("execvp(\"%s\", cpp_args) returned: %s\n", 
+        CMessages::Error("execvp(\"%s\", cpp_args) returned: %s\n", 
 	    m_sCPPProgram, s);
     else
-        CCompiler::Error("execvp(\"%s\", cpp_args) returned an unknown error\n",
+        CMessages::Error("execvp(\"%s\", cpp_args) returned an unknown error\n",
 	    m_sCPPProgram);
 }
 
@@ -382,7 +383,7 @@ FILE* CPreProcess::PreProcess(string sFilename, bool bDefault)
     rewind(fInput);
 
     if (!fInput)
-        CCompiler::Error("No input file.\n");
+        CMessages::Error("No input file.\n");
 
     return fInput;
 }

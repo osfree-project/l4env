@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -41,6 +41,7 @@
 #include "FEIsAttribute.h"
 #include "FEPrimaryExpression.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "Error.h"
 #include <cassert>
 
@@ -82,7 +83,7 @@ void CPostParseVisitor::Visit(CFEInterface& interface)
         }
         else
         {
-            CCompiler::GccError(&interface, 0, "Base interface %s not declared.",
+            CMessages::GccError(&interface, 0, "Base interface %s not declared.",
                 (*iterBIN)->GetName().c_str());
 	    throw error::postparse_error();
         }

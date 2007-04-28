@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2005
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -58,30 +58,26 @@ protected:
     CL4BEMsgBuffer(CL4BEMsgBuffer & src);
 
 public: // public methods
-    /** \brief creates a copy of the object
-     *  \return a reference to the newly created instance
-     */
-    virtual CObject* Clone()
-    { return new CL4BEMsgBuffer(*this); }
+    virtual CObject* Clone();
 
     virtual void WriteInitialization(CBEFile *pFile, CBEFunction *pFunction,
-	int nType, int nDirection);
+	int nType, CMsgStructType nStructType);
 
-    virtual bool HasWordMembers(CBEFunction *pFunction, int nDirection);
-    virtual bool HasProperty(int nProperty, int nDirection);
+    virtual bool HasWordMembers(CBEFunction *pFunction, CMsgStructType nType);
+    virtual bool HasProperty(int nProperty, CMsgStructType nType);
 
 protected: // protected methods
     virtual CBETypedDeclarator* GetFlexpageVariable();
     virtual CBETypedDeclarator* GetSizeDopeVariable();
     virtual CBETypedDeclarator* GetSendDopeVariable();
 
-    virtual bool WriteRefstringInitialization(CBEFile *pFile, int nDirection);
+    virtual bool WriteRefstringInitialization(CBEFile *pFile, CMsgStructType nType);
     virtual bool WriteRefstringInitFunction(CBEFile *pFile,
-        CBEFunction *pFunction, CBEClass *pClass, int nIndex, int nDirection);
-    virtual void WriteRcvFlexpageInitialization(CBEFile *pFile, int nDirection);
+        CBEFunction *pFunction, CBEClass *pClass, int nIndex, CMsgStructType nType);
+    virtual void WriteRcvFlexpageInitialization(CBEFile *pFile, CMsgStructType nType);
     virtual void WriteRefstringInitParameter(CBEFile *pFile,
         CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
-        int nDirection);
+        CMsgStructType nType);
     virtual void WriteMaxRefstringSize(CBEFile *pFile, CBEFunction *pFunction,
 	CBETypedDeclarator *pMember, CBETypedDeclarator *pParameter,
 	int nIndex);

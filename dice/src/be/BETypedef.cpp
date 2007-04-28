@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -41,13 +41,23 @@
 
 CBETypedef::CBETypedef()
 : m_sDefine()
-{
-}
+{}
 
 CBETypedef::CBETypedef(CBETypedef & src)
 : CBETypedDeclarator(src),
   m_sDefine(src.m_sDefine)
-{
+{}
+
+/** \brief destructor of this instance */
+CBETypedef::~CBETypedef()
+{}
+
+/** \brief creates a new instance of this object 
+ *  \return reference to copy
+ */
+CObject *CBETypedef::Clone()
+{ 
+    return new CBETypedef(*this); 
 }
 
 /** \brief creates the typedef class

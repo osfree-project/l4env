@@ -373,7 +373,7 @@ Thread::ipc_short_cut()
 	      // We never call sender_list()->ipc_receiver_ready(), so
 	      // we have to rule out cases where we would normally call it.
 	      || (regs->rcv_desc().open_wait() // open wait and...
-		  && (*sender_list() || _irq)) // ... sender queued or irq atch
+		  && (sender_list()->head() || _irq)) // ... sender queued or irq atch
 	    ))))
     {
       CNT_SHORTCUT_FAILED;
@@ -1008,15 +1008,6 @@ PRIVATE inline NEEDS["logdefs.h"]
 Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t, 
     Sys_ipc_frame *regs)
 {
-
-  // By touching the partner tcb we can raise an pagefault.
-  // The Pf handler might be enable the interrupts, if no mapping in
-  // the master kernel directory exists.
-  // Because the partner can created in between,
-  // and partner->state() == Thread_invalid is insufficient
-  // we need a cancel test.
-  //
-
   if (EXPECT_FALSE (partner == 0 || partner == nil_thread
 	|| partner->state() == Thread_invalid))
     return Ipc_err (Ipc_err::Enot_existent);
@@ -1033,7 +1024,7 @@ Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t,
 
   if(EXPECT_FALSE(state() & Thread_cancel))
     {
-      // clear_dirty() handle the not locked case too
+      // clear_dirty() handles the not locked case too
       partner->thread_lock()->clear_dirty();
       return Ipc_err(Ipc_err::Secanceled);
     }
@@ -1198,7 +1189,7 @@ Ipc_err Thread::do_ipc (bool have_send, Thread *partner,
     
       Sender *next = 0;
 
-      if(EXPECT_FALSE((long)*sender_list()))
+      if(EXPECT_FALSE((long)sender_list()->head()))
 	{
 
 	  if(sender) // closed wait
@@ -1212,7 +1203,7 @@ Ipc_err Thread::do_ipc (bool have_send, Thread *partner,
 	  else // open wait
 	    {
 	      
-	      next = *sender_list();
+	      next = Sender::cast(sender_list()->head());
 	      if(!next->ipc_receiver_ready(this)) 
 		{
 		  next->sender_dequeue_head(sender_list());

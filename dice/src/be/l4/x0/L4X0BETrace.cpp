@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2005
+ * Copyright (C) 2005-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -63,8 +63,8 @@ CL4X0BETrace::BeforeCall(CBEFile *pFile,
 	!CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF))
 	return;
 
-    int nSndDir = pFunction->GetSendDirection();
-    int nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
     // check if we send a short IPC
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
@@ -84,7 +84,8 @@ CL4X0BETrace::BeforeCall(CBEFile *pFile,
 	pCF->GetNewMarshaller());
 
     // get tracing function
-    string sFunc = CCompiler::GetTraceClientFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption(string("trace-client-func"), sFunc);
 
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_CLIENT))
     {
@@ -133,8 +134,8 @@ CL4X0BETrace::AfterCall(CBEFile *pFile,
 	pFunction->IsComponentSide())
 	return;
 
-    int nSndDir = pFunction->GetSendDirection();
-    int nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
     // check if we send a short IPC
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
@@ -146,7 +147,8 @@ CL4X0BETrace::AfterCall(CBEFile *pFile,
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 
     // get tracing function
-    string sFunc = CCompiler::GetTraceClientFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption(string("trace-client-func"), sFunc);
 
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_CLIENT) ||
 	CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))

@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -78,22 +78,6 @@ CL4V4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
 	    ") could not be added.";
 	throw new CBECreateException(exc);
     }
-}
-
-/** \brief marshals the exception
- *  \param pFile the file to write to
- *  \param bMarshal true if marshalling, false if unmarshalling
- *  \return the number of bytes used to marshal the exception
- *
- * Because for V4 the exception is member of the message buffer and never
- * skipped, we make this function empty because it is called explicetly in
- * CBEWaitFunction::WriteUnmarshalling. The exception is (un)marshalled together
- * with the "normal" parameters
- */
-void
-CL4V4BEWaitFunction::WriteMarshalException(CBEFile* /*pFile*/,
-    bool /*bMarshal*/)
-{
 }
 
 /** \brief write L4 specific unmarshalling code
@@ -211,7 +195,7 @@ CL4V4BEWaitFunction::WriteOpcodeCheck(CBEFile *pFile)
  * In V4 we do have the exception in the msgbuf but not the opcode, which is
  * in the tag's label.
  */
-int CL4V4BEWaitFunction::GetSize(int nDirection)
+int CL4V4BEWaitFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size
     int nSize = CBEWaitFunction::GetSize(nDirection);
@@ -227,7 +211,7 @@ int CL4V4BEWaitFunction::GetSize(int nDirection)
  * In V4 we do have the exception in the msgbuf but not the opcode, which is
  * in the tag's label.
  */
-int CL4V4BEWaitFunction::GetFixedSize(int nDirection)
+int CL4V4BEWaitFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEWaitFunction::GetFixedSize(nDirection);
     if (nDirection & DIRECTION_IN)

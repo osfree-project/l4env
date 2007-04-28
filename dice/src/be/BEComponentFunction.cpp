@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -117,8 +117,8 @@ CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation)
     pReturn->SetParent(m_pFunction);
 
     // check for temp
-    if (m_pFunction->HasVariableSizedParameters() ||
-        m_pFunction->HasArrayParameters())
+    if (m_pFunction->HasVariableSizedParameters(DIRECTION_INOUT) ||
+        m_pFunction->HasArrayParameters(DIRECTION_INOUT))
     {
         int nVariableSizedArrayDimensions = 0;
         vector<CBETypedDeclarator*>::iterator iterP;

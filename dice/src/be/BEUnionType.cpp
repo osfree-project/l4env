@@ -6,7 +6,7 @@
  * \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -62,6 +62,14 @@ CBEUnionType::CBEUnionType(CBEUnionType & src)
 /** \brief destructor of this instance */
 CBEUnionType::~CBEUnionType()
 { }
+
+/** \brief generates an exact copy of this class
+ *  \return a reference to the new object
+ */
+CObject *CBEUnionType::Clone()
+{ 
+    return new CBEUnionType(*this); 
+}
 
 /** \brief creates this class' part of the back-end
  *  \param pFEType the respective type to crete from
@@ -426,7 +434,7 @@ bool CBEUnionType::DoWriteZeroInit()
  * \todo what if default case is variable sized?
  */
 void CBEUnionType::WriteGetSize(CBEFile * pFile,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
     int nFixedSize = GetFixedSize();
@@ -500,7 +508,7 @@ int CBEUnionType::GetFixedSize()
 void CBEUnionType::WriteGetMaxSize(CBEFile *pFile,
     const vector<CBEUnionCase*> *pMembers,
     vector<CBEUnionCase*>::iterator iter,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: called for func %s\n", __func__,
@@ -536,7 +544,7 @@ void CBEUnionType::WriteGetMaxSize(CBEFile *pFile,
  */
 void CBEUnionType::WriteGetMemberSize(CBEFile *pFile,
     CBEUnionCase *pMember,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
     assert(pMember);
@@ -572,14 +580,14 @@ void CBEUnionType::WriteGetMemberSize(CBEFile *pFile,
  * Gets the first element on the stack and tries to find
  */
 CBETypedDeclarator* 
-CBEUnionType::FindMember(vector<CDeclaratorStackLocation*> *pStack,
-    vector<CDeclaratorStackLocation*>::iterator iCurr)
+CBEUnionType::FindMember(CDeclStack* pStack,
+    CDeclStack::iterator iCurr)
 {
     // if at end, return
     if (iCurr == pStack->end())
 	return 0;
     // try to find member for current declarator
-    string sName = (*iCurr)->pDeclarator->GetName();
+    string sName = iCurr->pDeclarator->GetName();
     CBETypedDeclarator *pMember = m_UnionCases.Find(sName);
     if (!pMember)
 	return pMember;

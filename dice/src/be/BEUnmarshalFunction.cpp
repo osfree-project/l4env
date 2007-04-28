@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -313,13 +313,10 @@ CBEUnmarshalFunction::HasAdditionalReference(CBEDeclarator * pDeclarator,
 	// should not be resprected when determining additional reference
 	if ((pAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS)) != 0)
 	{
-	    vector<CDeclaratorStackLocation*> vStack;
-	    CDeclaratorStackLocation *pLoc = new 
-		CDeclaratorStackLocation(pParameter->m_Declarators.First());
-	    vStack.push_back(pLoc);
+	    CDeclStack vStack;
+	    vStack.push_back(pParameter->m_Declarators.First());
 	    CBENameFactory *pNF = CCompiler::GetNameFactory();
 	    string sName = pNF->GetLocalSizeVariableName(&vStack);
-	    delete pLoc;
 
 	    // compare to size declarator -> if no such declarator is present,
 	    // this is not one of our size attributes -> do the normal check
@@ -440,7 +437,7 @@ CBEUnmarshalFunction::FindParameterType(string sTypeName)
  * Since this function ignores marshalling parameter this value should be
  * irrelevant
  */
-int CBEUnmarshalFunction::GetSendDirection()
+DIRECTION_TYPE CBEUnmarshalFunction::GetSendDirection()
 {
     return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
 }
@@ -448,7 +445,7 @@ int CBEUnmarshalFunction::GetSendDirection()
 /** \brief gets the direction of the unmarshal-parameters
  *  \return if at client's side DIRECTION_OUT, if at server's side DIRECTION_IN
  */
-int CBEUnmarshalFunction::GetReceiveDirection()
+DIRECTION_TYPE CBEUnmarshalFunction::GetReceiveDirection()
 {
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }

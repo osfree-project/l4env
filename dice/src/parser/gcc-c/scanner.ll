@@ -7,7 +7,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -56,6 +56,7 @@
 
 #include "parser.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "CParser.h"
 #include "CPreProcess.h"
 
@@ -472,7 +473,7 @@ __builtin_va_list   {
                     lvalp->_ullong = atoll(yytext);
                     return ULONGLONG_CONST;
 #else
-                    CCompiler::GccWarning(CParser::GetCurrentFile(), gLineNumber,
+                    CMessages::GccWarning(CParser::GetCurrentFile(), gLineNumber,
                         "'atoll' not provided on this architecture");
                     lvalp->_ulong = atol(yytext);
                     return ULONG_CONST;
@@ -483,7 +484,7 @@ __builtin_va_list   {
                     lvalp->_llong = atoll(yytext);
                     return LONGLONG_CONST;
 #else
-                    CCompiler::GccWarning(CParser::GetCurrentFile(), gLineNumber,
+                    CMessages::GccWarning(CParser::GetCurrentFile(), gLineNumber,
                         "'atoll' not provided on this architecture");
                     lvalp->_long = atol(yytext);
                     return LONG_CONST;
@@ -510,7 +511,7 @@ __builtin_va_list   {
                     lvalp->_ullong = OctToULLong(&yytext[1]);
                     return ULONGLONG_CONST;
 #else
-                    CCompiler::GccWarning(CParser::GetCurrentFile, gLineNumber,
+                    CMessages::GccWarning(CParser::GetCurrentFile, gLineNumber,
                         "'long long' not supported on this architecture");
                     lvalp->_ulong = OctoToULong(&yytext[1]);
                     return ULONG_ CONST;
@@ -521,7 +522,7 @@ __builtin_va_list   {
                     lvalp->_llong = OctToLLong(&yytext[1]);
                     return LONGLONG_CONST;
 #else
-                    CCompiler::GccWarning(CParser::GetCurrentFile, gLineNumber,
+                    CMessages::GccWarning(CParser::GetCurrentFile, gLineNumber,
                         "'long long' not supported on this architecture");
                     lvalp->_long = OctoToLong(&yytext[1]);
                     return LONG_CONST;
@@ -609,7 +610,7 @@ __builtin_va_list   {
                             fprintf(stderr, " gLineNumber: %d (%s)\n", gLineNumber, sInFileName.c_str());
                     }
                     if (c == EOF) {
-                        CCompiler::GccError(CParser::GetCurrentFile(), gLineNumber, "EOF in comment.");
+                        CMessages::GccError(CParser::GetCurrentFile(), gLineNumber, "EOF in comment.");
                         yyterminate();
                         break;
                     }
@@ -629,7 +630,7 @@ __builtin_va_list   {
                 yyterminate(); // stops gcc_cparse
             }
 .            {
-                CCompiler::GccWarning(CParser::GetCurrentFile(), gLineNumber, "Unknown character \"%s\".",yytext);
+                CMessages::GccWarning(CParser::GetCurrentFile(), gLineNumber, "Unknown character \"%s\".",yytext);
             }
 
 %%
@@ -655,7 +656,7 @@ static unsigned long long HexToULLong (char *s)
         s++;
     }
     if (lastres > res)
-        CCompiler::GccWarning (CParser::GetCurrentFile(), gLineNumber,
+        CMessages::GccWarning (CParser::GetCurrentFile(), gLineNumber,
                 "Hexadecimal number overflow.");
     return res;
 }
@@ -677,7 +678,7 @@ static unsigned long long OctToULLong (char *s)
         s++;
      }
      if (lastres > res)
-         CCompiler::GccWarning (CParser::GetCurrentFile(), gLineNumber,
+         CMessages::GccWarning (CParser::GetCurrentFile(), gLineNumber,
                 "Octal number overflow.");
      return res;
 }

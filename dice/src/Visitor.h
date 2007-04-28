@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -85,8 +85,7 @@ public:
     CVisitor()
     { }
     /** virtual destructor */
-    virtual ~CVisitor()
-    { }
+    virtual ~CVisitor();
 
     /** Declare all the visit methods for all the classes in the syntax tree.
      * There are two opinions on how to write this: opinion A is that the

@@ -5,7 +5,7 @@
  *  \date     Tue Jun 15 2004
  *  \author   Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
-/* Copyright (C) 2001-2004 by
+/* Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -47,11 +47,7 @@ protected:
     CL4V4BEMsgBuffer(CL4V4BEMsgBuffer &src);
 
 public:
-    /** \brief creates a copy of this instance
-     *  \return a reference to the copy
-     */
-    virtual CObject* Clone()
-    { return new CL4V4BEMsgBuffer(*this); }
+    virtual CObject* Clone();
     virtual int GetPayloadOffset();
     virtual bool Sort(CBEStructType *pStruct);
 
@@ -59,24 +55,24 @@ public:
     virtual void PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation);
 
     virtual void WriteInitialization(CBEFile *pFile, CBEFunction *pFunction,
-	int nType, int nDirection);
+	int nType, CMsgStructType nStructType);
 
 protected:
     virtual bool AddPlatformSpecificMembers(CBEFunction *pFunction,
-	CBEStructType *pStruct, int nDirection);
+	CBEStructType *pStruct, CMsgStructType nType);
     virtual void WriteRcvFlexpageInitialization(CBEFile *pFile,	
-	int nDirection);
-    virtual bool WriteRefstringInitialization(CBEFile *pFile, int nDirection);
+	CMsgStructType nType);
+    virtual bool WriteRefstringInitialization(CBEFile *pFile, CMsgStructType nType);
     virtual void WriteRefstringInitParameter(CBEFile *pFile,
 	CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
-	int nDirection);
+	CMsgStructType nType);
     virtual bool WriteRefstringInitFunction(CBEFile *pFile,
-	CBEFunction *pFunction,	CBEClass *pClass, int nIndex, int nDirection);
+	CBEFunction *pFunction,	CBEClass *pClass, int nIndex, CMsgStructType nType);
     
     virtual bool AddMsgTagMember(CBEFunction *pFunction,
-	CBEStructType *pStruct, int nDirection);
+	CBEStructType *pStruct, CMsgStructType nType);
     virtual bool AddOpcodeMember(CBEFunction *pFunction,
-	CBEStructType *pStruct, int nDirection);
+	CBEStructType *pStruct, CMsgStructType nType);
 
     CBETypedDeclarator* GetMsgTagVariable(void);
     virtual void CheckConvertStruct(CBEStructType *pStruct);

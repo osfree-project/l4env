@@ -5,7 +5,8 @@
  *  \date    06/01/2002
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
-/* Copyright (C) 2001-2004
+/*
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -204,7 +205,7 @@ CBEReplyFunction::DoWriteFunction(CBEImplementationFile * pFile)
  * If this function is used at the server's side it sends data to the client,
  * which is DIRECTION_OUT.
  */
-int CBEReplyFunction::GetSendDirection()
+DIRECTION_TYPE CBEReplyFunction::GetSendDirection()
 {
     return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
 }
@@ -215,7 +216,7 @@ int CBEReplyFunction::GetSendDirection()
  * If this function is used at the server's side its DIRECTION_IN, which means
  * receiving data from the client.
  */
-int CBEReplyFunction::GetReceiveDirection()
+DIRECTION_TYPE CBEReplyFunction::GetReceiveDirection()
 {
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
@@ -271,7 +272,7 @@ CBEReplyFunction::GetExceptionVariable()
  *  \param nDirection the direction to check
  *  \return the number of bytes
  */
-int CBEReplyFunction::GetFixedSize(int nDirection)
+int CBEReplyFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEOperationFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&
@@ -284,7 +285,7 @@ int CBEReplyFunction::GetFixedSize(int nDirection)
  *  \param nDirection the direction to check
  *  \return the number of bytes
  */
-int CBEReplyFunction::GetSize(int nDirection)
+int CBEReplyFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBEOperationFunction::GetSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&

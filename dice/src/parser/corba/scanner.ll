@@ -7,7 +7,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -56,6 +56,7 @@
 
 #include "parser.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "CParser.h"
 #include "CPreProcess.h"
 
@@ -429,7 +430,7 @@ L{string}    {
                     }
                     if (c == '\n') gLineNumber++;
                     if (c == EOF) {
-                        CCompiler::GccError(CParser::GetCurrentFile(), gLineNumber, "EOF in comment.");
+                        CMessages::GccError(CParser::GetCurrentFile(), gLineNumber, "EOF in comment.");
                         yyterminate();
                         break;
                     }
@@ -447,7 +448,7 @@ L{string}    {
                 yyterminate(); // stops corbaparse()
             }
 .            {
-                CCompiler::GccWarning(CParser::GetCurrentFile(), gLineNumber, "Unknown character \"%s\".",yytext);
+                CMessages::GccWarning(CParser::GetCurrentFile(), gLineNumber, "Unknown character \"%s\".",yytext);
             }
 
 %%

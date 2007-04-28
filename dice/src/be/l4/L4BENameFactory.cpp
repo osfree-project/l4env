@@ -6,7 +6,7 @@
  * \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -275,9 +275,9 @@ CL4BENameFactory::GetInitRcvStringFunction(string sFuncName)
 {
     if (sFuncName.empty())
     {
-        if (CCompiler::GetInitRcvStringFunc().empty())
-            return string("dice_init_rcvstring");
-        return CCompiler::GetInitRcvStringFunc();
+	string sFunc = string("dice_init_rcvstring");
+        CCompiler::GetBackEndOption("init-rcvstring", sFunc);
+        return sFunc;
     }
     return sFuncName;
 }

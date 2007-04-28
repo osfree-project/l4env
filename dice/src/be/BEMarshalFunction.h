@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/BEMarshalFunction.h
+ *  \file    dice/src/be/BEMarshalFunction.h
  *  \brief   contains the declaration of the class CBEMarshalFunction
  *
- *    \date    10/09/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/09/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -56,10 +56,10 @@ public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
     virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
     virtual void WriteReturn(CBEFile * pFile);
-    virtual int GetFixedSize(int nDirection);
-    virtual int GetSize(int nDirection);
-    virtual int GetReceiveDirection();
-    virtual int GetSendDirection();
+    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+    virtual int GetSize(DIRECTION_TYPE nDirection);
+    virtual DIRECTION_TYPE GetReceiveDirection();
+    virtual DIRECTION_TYPE GetSendDirection();
     virtual CBETypedDeclarator* FindParameterType(string sTypeName);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, 
 	    bool bMarshal);
@@ -70,9 +70,9 @@ public:
     virtual CBETypedDeclarator* GetExceptionVariable(void);
 
 protected:
-    virtual int GetReturnSize(int nDirection);
-    virtual int GetFixedReturnSize(int nDirection);
-    virtual int GetMaxReturnSize(int nDirection);
+    virtual int GetReturnSize(DIRECTION_TYPE nDirection);
+    virtual int GetFixedReturnSize(DIRECTION_TYPE nDirection);
+    virtual int GetMaxReturnSize(DIRECTION_TYPE nDirection);
     virtual void WriteInvocation(CBEFile * pFile);
     virtual void WriteVariableInitialization(CBEFile * pFile);
     virtual void WriteCallParameter(CBEFile *pFile, 

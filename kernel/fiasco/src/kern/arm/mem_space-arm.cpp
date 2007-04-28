@@ -263,6 +263,7 @@ Mem_space::update(Address addr, const Mem_space *from,
 
 // routines
 
+
 /**
  * Simple page-table lookup.
  *
@@ -274,6 +275,13 @@ Address
 Mem_space::virt_to_phys (Address virt) const
 {
   return (Address)Mem_space::lookup((void *)virt);
+}
+
+PUBLIC inline NEEDS [Mem_space::virt_to_phys]
+Address
+Mem_space::pmem_to_phys (Address virt) const
+{
+  return virt_to_phys(virt);
 }
 
 /** Simple page-table lookup.  This method is similar to Mem_space's 

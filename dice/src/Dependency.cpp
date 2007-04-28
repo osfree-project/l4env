@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -28,6 +28,7 @@
 
 #include "Dependency.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "ProgramOptions.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
@@ -70,7 +71,8 @@ void CDependency::PrintDependencies()
 	CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MMD) ||
 	CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MF))
     {
-	string sOutName = CCompiler::GetOutputDir();
+	string sOutName;
+	CCompiler::GetBackEndOption(string("output-dir"), sOutName);
 	if (CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MF))
 	    sOutName += m_sDependsFile;
 	else
@@ -78,7 +80,7 @@ void CDependency::PrintDependencies()
         of->open(sOutName.c_str());
         if (!of->is_open())
         {
-            CCompiler::Warning("Could not open %s, use <stdout>\n", sOutName.c_str());
+            CMessages::Warning("Could not open %s, use <stdout>\n", sOutName.c_str());
         }
 	else
 	{
@@ -567,7 +569,7 @@ void CDependency::PrintDependentFile(string sFileName)
     char *real_path = realpath(sFileName.c_str(), real_path_buffer);
     if (!real_path)
     {
-	CCompiler::Error("Calling realpath(%s) returned an error: %s\n",
+	CMessages::Error("Calling realpath(%s) returned an error: %s\n",
 	    sFileName.c_str(), strerror(errno));
     }
     

@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -74,7 +74,7 @@ CBEWaitFunction::WriteVariableInitialization(CBEFile * pFile)
 {
     // initialize message buffer
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    pMsgBuffer->WriteInitialization(pFile, this, 0, 0);
+    pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
 }
 
 /** \brief writes the invocation of the message transfer
@@ -218,10 +218,8 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile *pFile)
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sOpcode = pNF->GetOpcodeVariable();
     CBETypedDeclarator *pOpcode = m_LocalVariables.Find(sOpcode);
-    vector<CDeclaratorStackLocation*> vStack;
-    CDeclaratorStackLocation *pLoc =
-	new CDeclaratorStackLocation(pOpcode->m_Declarators.First());
-    vStack.push_back(pLoc);
+    CDeclStack vStack;
+    vStack.push_back(pOpcode->m_Declarators.First());
     
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
@@ -240,8 +238,6 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile *pFile)
     WriteReturn(pFile);
     pFile->DecIndent();
     *pFile << "\t}\n";
-
-    delete pLoc;
 }
 
 /** \brief test if this function should be written
@@ -292,7 +288,7 @@ bool CBEWaitFunction::DoWriteFunction(CBEImplementationFile * pFile)
  * At the server side, a wait function receives IN parameters, thus its send
  * direction is OUT. At the client side its vice versa.
  */
-int CBEWaitFunction::GetSendDirection()
+DIRECTION_TYPE CBEWaitFunction::GetSendDirection()
 {
     return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
 }
@@ -300,7 +296,7 @@ int CBEWaitFunction::GetSendDirection()
 /** \brief gets the direction for the receiving data
  *  \return if at client's side DIRECTION_OUT, else DIRECTION_IN
  */
-int CBEWaitFunction::GetReceiveDirection()
+DIRECTION_TYPE CBEWaitFunction::GetReceiveDirection()
 {
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
@@ -394,7 +390,7 @@ void CBEWaitFunction::AddParameter(CFETypedDeclarator * pFEParameter)
  *  \param nDirection the direction to calc
  *  \return the size of the params in bytes
  */
-int CBEWaitFunction::GetSize(int nDirection)
+int CBEWaitFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size
     int nSize = CBEOperationFunction::GetSize(nDirection);
@@ -411,7 +407,7 @@ int CBEWaitFunction::GetSize(int nDirection)
  *  \param nDirection the direction to calc
  *  \return the size of the params in bytes
  */
-int CBEWaitFunction::GetFixedSize(int nDirection)
+int CBEWaitFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size
     int nSize = CBEOperationFunction::GetFixedSize(nDirection);

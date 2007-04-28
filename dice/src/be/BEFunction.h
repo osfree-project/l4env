@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -33,18 +33,18 @@
 #include "BEObject.h"
 #include "BEContext.h" // FUNCTION_TYPE
 #include "BEAttribute.h"
+#include "BEDeclarator.h"
 #include "Attribute-Type.h"
 #include "template.h"
-#include <vector>
 
 class CBETypedDeclarator;
 class CBEType;
-class CBEException;
 class CBEFile;
 class CBEHeaderFile;
 class CBEImplementationFile;
 class CBEContext;
 class CBEDeclarator;
+class CBEException;
 class CBEOpcodeType;
 class CBEReplyCodeType;
 class CBEClass;
@@ -53,18 +53,20 @@ class CBECommunication;
 class CBETrace;
 class CBEMarshaller;
 class CBEMsgBuffer;
-class CDeclaratorStackLocation;
 
 class CFEInterface;
 class CFEOperation;
 class CFETypeSpec;
 
-//@{
-#define DIRECTION_IN    1    /**< alias for ATTR_IN */
-#define DIRECTION_OUT    2    /**< alias for ATTR_OUT */
-#define DIRECTION_INOUT    3    /**< alias for neither */
-#define DIRECTION_OTHER(x) (3-x) /**< macro to determine alternative direction */
-//@}
+/** \enum DIRECTION_TYPE
+ *  \brief the directions possible
+ */
+enum DIRECTION_TYPE {
+    DIRECTION_NONE,
+    DIRECTION_IN,
+    DIRECTION_OUT,
+    DIRECTION_INOUT
+};
 
 /** \class CBEFunction
  *  \ingroup backend
@@ -98,11 +100,11 @@ public:
      */
     virtual bool DoWriteFunction(CBEImplementationFile *pFile) = 0;
     
-    virtual int GetSize(int nDirection);
-    virtual int GetMaxSize(int nDirection);
-    virtual int GetVariableSizedParameterCount(int nDirection);
-    virtual int GetFixedSize(int nDirection);
-    virtual int GetStringParameterCount(int nDirection, 
+    virtual int GetSize(DIRECTION_TYPE nDirection);
+    virtual int GetMaxSize(DIRECTION_TYPE nDirection);
+    virtual int GetVariableSizedParameterCount(DIRECTION_TYPE nDirection);
+    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+    virtual int GetStringParameterCount(DIRECTION_TYPE nDirection, 
 	    ATTR_TYPE nMustAttrs = ATTR_NONE, ATTR_TYPE nMustNotAttrs = ATTR_NONE);
     virtual void WriteCall(CBEFile * pFile, string sReturnVar,
 	bool bCallFromSameClass);
@@ -110,8 +112,7 @@ public:
     virtual void Write(CBEHeaderFile * pFile);
     
     virtual CBETypedDeclarator* FindParameter(string sName, bool bCall = false);
-    virtual CBETypedDeclarator* FindParameter(
-	vector<CDeclaratorStackLocation*> *pStack, bool bCall = false);
+    virtual CBETypedDeclarator* FindParameter(CDeclStack* pStack, bool bCall = false);
     virtual CBETypedDeclarator* FindParameterType(string sTypeName);
     virtual CBETypedDeclarator* FindParameterAttribute(ATTR_TYPE nAttributeType);
     virtual CBETypedDeclarator* FindParameterIsAttribute(ATTR_TYPE nAttributeType, 
@@ -122,20 +123,18 @@ public:
 	    bool bMarshal);
     virtual bool HasAdditionalReference(CBEDeclarator *pDeclarator, 
 	bool bCall = false);
-    virtual int GetParameterCount(int nFEType, int nDirection);
+    virtual int GetParameterCount(int nFEType, DIRECTION_TYPE nDirection);
     virtual int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs, 
-	    int nDirection);
+	    DIRECTION_TYPE nDirection);
     virtual void SetMsgBufferCastOnCall(bool bCastMsgBufferOnCall);
     virtual bool AddToFile(CBEHeaderFile *pHeader);
     virtual bool AddToFile(CBEImplementationFile *pImpl);
     bool IsComponentSide();
     virtual void SetComponentSide(bool bComponentSide);
-    virtual bool HasVariableSizedParameters(int nDirection = 
-	DIRECTION_IN | DIRECTION_OUT);
-    virtual bool HasArrayParameters(int nDirection = 
-	DIRECTION_IN | DIRECTION_OUT);
-    virtual int GetReceiveDirection();
-    virtual int GetSendDirection();
+    virtual bool HasVariableSizedParameters(DIRECTION_TYPE nDirection);
+    virtual bool HasArrayParameters(DIRECTION_TYPE nDirection);
+    virtual DIRECTION_TYPE GetReceiveDirection();
+    virtual DIRECTION_TYPE GetSendDirection();
     virtual void SetCallVariable(string sOriginalName, int nStars, 
 	    string sCallName);
     virtual void RemoveCallVariable(string sCallName);
@@ -192,7 +191,7 @@ protected:
     virtual void WriteMarshalling(CBEFile * pFile);
     virtual int WriteMarshalReturn(CBEFile * pFile, bool bMarshal);
     virtual int WriteMarshalOpcode(CBEFile *pFile, bool bMarshal);
-    virtual void WriteMarshalException(CBEFile* pFile, bool bMarshal);
+    virtual void WriteMarshalException(CBEFile* pFile, bool bMarshal, bool bReturn);
     virtual void WriteParameterName(CBEFile * pFile, 
 	    CBEDeclarator * pDeclarator);
     virtual void WriteParameter(CBEFile * pFile, 
@@ -221,9 +220,9 @@ protected:
     void CreateTrace(void);
     virtual void AddExceptionVariable();
 
-    virtual int GetFixedReturnSize(int nDirection);
-    virtual int GetReturnSize(int nDirection);
-    virtual int GetMaxReturnSize(int nDirection);
+    virtual int GetFixedReturnSize(DIRECTION_TYPE nDirection);
+    virtual int GetReturnSize(DIRECTION_TYPE nDirection);
+    virtual int GetMaxReturnSize(DIRECTION_TYPE nDirection);
     virtual CBETypedDeclarator* GetParameter(CBEDeclarator *pDeclarator, 
 	    bool bCall);
     virtual void WriteExceptionWordInitialization(CBEFile* pFile);
@@ -235,8 +234,7 @@ protected:
     void AddLocalVariable(CBETypedDeclarator *pVariable);
 
     CBETypedDeclarator* FindParameterMember(CBETypedDeclarator *pParameter,
-	vector<CDeclaratorStackLocation*>::iterator iter,
-	vector<CDeclaratorStackLocation*> *pStack);
+	CDeclStack::iterator iter, CDeclStack* pStack);
 
     CBETypedDeclarator* CreateOpcodeVariable(void);
     

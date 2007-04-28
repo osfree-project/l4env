@@ -332,8 +332,8 @@ map (MAPDB* mapdb,
       // receiver address spaces.
 
       // Sender lookup.
-      typename SPACE::Phys_addr s_phys;
-      Address s_size;
+      typename SPACE::Phys_addr s_phys = 0;
+      Address s_size = 0;
       unsigned s_attribs;
 
       // Sigma0 special case: Sigma0 doesn't need to have a
@@ -571,8 +571,8 @@ unmap (MAPDB* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
   unsigned flushed_rights = 0;
   Address end = start + size;  
 
-  typename SPACE::Phys_addr phys;
-  Address phys_size;
+  typename SPACE::Phys_addr phys = 0;
+  Address phys_size = 0;
   Address page_address;
 
   bool full_flush = flush_mode & Unmap_r;

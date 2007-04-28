@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/l4/L4BEMarshalFunction.h
+ *  \file    dice/src/be/l4/L4BEMarshalFunction.h
  *  \brief   contains the declaration of the class CL4BEMarshalFunction
  *
- *    \date    10/10/2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/10/2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -54,12 +54,12 @@ protected:
     CL4BEMarshalFunction(CL4BEMarshalFunction &src);
 
 public:
-    virtual int GetFixedSize(int nDirection);
-    virtual int GetSize(int nDirection);
+    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+    virtual int GetSize(DIRECTION_TYPE nDirection);
 
 protected:
     virtual bool HasVariableSizedParameters(
-	int nDirection = DIRECTION_IN | DIRECTION_OUT);
+	DIRECTION_TYPE nDirection);
     virtual void WriteMarshalling(CBEFile* pFile);
 };
 

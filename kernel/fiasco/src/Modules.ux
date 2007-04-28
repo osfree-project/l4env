@@ -116,7 +116,7 @@ INTERFACES_KERNEL	:= simpleio kernel_console panic warn buddy_alloc  \
 			   mapping mapping_tree                           \
 			   mapdb map_util	  	          	  \
 			   ram_quota_alloc				  \
-			   hostproc task kernel_task                      \
+			   hostproc task kernel_task prio_list            \
 			   thread_lock preemption timeslice_timeout	  \
 			   ipc_timeout deadline_timeout thread_state	  \
 			   sender receiver thread			  \

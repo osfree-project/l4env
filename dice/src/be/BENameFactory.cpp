@@ -6,7 +6,7 @@
  * \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -83,7 +83,8 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
     }
 
     string sReturn;
-    string sPrefix = CCompiler::GetFilePrefix();
+    string sPrefix;
+    CCompiler::GetBackEndOption(string("file-prefix"), sPrefix);
 
     // first check non-IDL files
     CFEFile *pFEFile = dynamic_cast<CFEFile *>(pFEBase);
@@ -363,7 +364,9 @@ string
 CBENameFactory::GetIncludeFileName(string sBaseName)
 {
     // get file-name
-    string sReturn = CCompiler::GetFilePrefix() + sBaseName;
+    string sReturn;
+    CCompiler::GetBackEndOption(string("file-prefix"), sReturn);
+    sReturn += sBaseName;
     // deliver filename
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameFactory::%s = %s (!IDL file)\n",
 	__func__, sReturn.c_str());
@@ -1314,12 +1317,12 @@ string CBENameFactory::GetExceptionWordVariable()
 }
 
 /** \brief returns the name of the message buffer struct member
- *  \param nDirection the transfer direction of the struct
+ *  \param nType the transfer direction of the struct
  *  \param sFuncName if not empty the operation's name should be added
  *  \param sClassName if not empty the class's name should be added
  *  \return the name of the union member
  */
-string CBENameFactory::GetMessageBufferStructName(int nDirection,
+string CBENameFactory::GetMessageBufferStructName(CMsgStructType nType,
     string sFuncName, string sClassName)
 {
     string sReturn;
@@ -1331,11 +1334,13 @@ string CBENameFactory::GetMessageBufferStructName(int nDirection,
 	sReturn += "_";
     if (!sFuncName.empty())
 	sReturn += sFuncName;
-    if (nDirection == DIRECTION_IN)
+    if (CMsgStructType::In == nType)
 	sReturn += "_in";
-    else if (nDirection == DIRECTION_OUT)
+    else if (CMsgStructType::Out == nType)
 	sReturn += "_out";
-    else
+    else if (CMsgStructType::Exc == nType)
+	sReturn += "_exc";
+    else // generic
 	sReturn += "_word";
     return sReturn;
 }
@@ -1370,7 +1375,7 @@ CBENameFactory::GetWordMemberVariable(int nNumber)
  */
 string 
 CBENameFactory::GetLocalSizeVariableName(
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     string sReturn = GetLocalVariableName(pStack);
     sReturn += "_size";
@@ -1383,13 +1388,13 @@ CBENameFactory::GetLocalSizeVariableName(
  */
 string
 CBENameFactory::GetLocalVariableName(
-    vector<CDeclaratorStackLocation*> *pStack)
+    CDeclStack* pStack)
 {
     string sReturn = string("_dice");
     assert(pStack);
-    vector<CDeclaratorStackLocation*>::iterator iter = pStack->begin();
+    CDeclStack::iterator iter = pStack->begin();
     for (; iter != pStack->end(); iter++)
-	sReturn += string("_") + (*iter)->pDeclarator->GetName();
+	sReturn += string("_") + iter->pDeclarator->GetName();
     return sReturn;
 }
 

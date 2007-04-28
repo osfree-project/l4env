@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/l4/L4BEMsgBufferType.h
+ *  \file    dice/src/be/l4/L4BEMsgBufferType.h
  *  \brief   contains the declaration of the class CL4BEMsgBufferType
  *
- *    \date    02/10/2005
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/10/2005
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2005
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -43,9 +43,7 @@ class CL4BEMsgBufferType : public CBEMsgBufferType
 public:
     /** \brief constructor */
     CL4BEMsgBufferType();
-    /** \brief destructor of this instance */
-    virtual ~CL4BEMsgBufferType()
-    { }
+    ~CL4BEMsgBufferType();
 
 protected: // Protected methods
     /** \brief copy constructor
@@ -54,20 +52,16 @@ protected: // Protected methods
     CL4BEMsgBufferType(CL4BEMsgBufferType &src);
 
 public: // Public methods
-    /** \brief creates a copy of this object
-     *  \return a reference to the new instance
-     */
-    virtual CObject * Clone()
-    { return new CL4BEMsgBufferType(*this); }
+    virtual CObject * Clone();
 
 protected:
-    virtual void AddElements(CFEOperation *pFEOperation, int nDirection);
-    virtual void AddElement(CFETypedDeclarator *pFEParameter, int nDirection);
+    virtual void AddElements(CFEOperation *pFEOperation, CMsgStructType nType);
+    virtual void AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType);
     virtual void AddRefstringElement(CFETypedDeclarator *pFEParameter, 
-	int nDirection);
+	CMsgStructType nType);
     virtual void AddFlexpageElement(CFETypedDeclarator *pFEParameter,
-	int nDirection);
-    virtual void AddZeroFlexpage(CFEOperation *pFEOperation, int nDirection);
+	CMsgStructType nType);
+    virtual void AddZeroFlexpage(CFEOperation *pFEOperation, CMsgStructType nType);
 };
 
 #endif // !__DICE_L4BEMSGBUFFERTYPE_H__

@@ -29,6 +29,7 @@
 #include "be/l4/v2/L4V2BENameFactory.h"
 #include "be/BEFunction.h"
 #include "be/BEClass.h"
+#include "Compiler.h"
 #include <cassert>
 #include <iostream>
 

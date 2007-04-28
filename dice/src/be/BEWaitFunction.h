@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/be/BEWaitFunction.h
+ *  \file    dice/src/be/BEWaitFunction.h
  *  \brief   contains the declaration of the class CBEWaitFunction
  *
- *    \date    01/14/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/14/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -58,8 +58,8 @@ public:
     	bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile * pFile);
     virtual bool DoWriteFunction(CBEImplementationFile * pFile);
-    virtual int GetReceiveDirection();
-    virtual int GetSendDirection();
+    virtual DIRECTION_TYPE GetReceiveDirection();
+    virtual DIRECTION_TYPE GetSendDirection();
     virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
 protected:
@@ -70,8 +70,8 @@ protected:
 	bool bCall = false);
     virtual void AddParameter(CFETypedDeclarator * pFEParameter);
     virtual void CreateObject(void);
-    virtual int GetSize(int nDirection);
-    virtual int GetFixedSize(int nDirection);
+    virtual int GetSize(DIRECTION_TYPE nDirection);
+    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
 
 protected:
     /** \var bool m_bOpenWait

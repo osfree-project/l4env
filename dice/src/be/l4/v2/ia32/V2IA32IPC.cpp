@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -27,7 +27,7 @@
  */
 
 #include "V2IA32IPC.h"
-#include "be/l4/L4BENameFactory.h"
+#include "be/l4/v2/L4V2BENameFactory.h"
 #include "be/l4/L4BEMarshaller.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
@@ -78,7 +78,7 @@ CL4V2IA32BEIPC::WriteCall(CBEFile * pFile,
 {
     if (UseAssembler(pFunction))
     {
-        if (IsShortIPC(pFunction))
+        if (IsShortIPC(pFunction, DIRECTION_INOUT))
             WriteAsmShortCall(pFile, pFunction);
         else
             WriteAsmLongCall(pFile, pFunction);
@@ -135,8 +135,8 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile *pFile,
     CL4BEMarshaller *pMarshaller = 
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
-    int nRcvDir = pFunction->GetReceiveDirection();
-    int nSndDir = pFunction->GetSendDirection();
+    CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
 
     bool bSendFlexpage = 
@@ -192,7 +192,7 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile *pFile,
 	    *pFile << "\t\"subl %%eax,%%eax \\n\\t\"\n";
     }
     *pFile << "\t\"subl %%ebp,%%ebp \\n\\t\"\n";
-    *pFile << "\tIPC_SYSENTER\n";
+    WriteAsmSyscall(pFile, true);
     *pFile << "\t\"popl %%ebp \\n\\t\"\n";
     *pFile << "\t\"movl %%ebx,%%ecx \\n\\t\"\n";
     *pFile << "\t\"popl %%ebx \\n\\t\"\n";
@@ -263,8 +263,8 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile *pFile,
     CL4BEMarshaller *pMarshaller = 
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
-    int nRcvDir = pFunction->GetReceiveDirection();
-    int nSndDir = pFunction->GetSendDirection();
+    CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
 
     bool bSendFlexpage = 
@@ -314,7 +314,7 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile *pFile,
 	    *pFile << "\t\"subl %%eax,%%eax \\n\\t\"\n";
     }
     *pFile << "\t\"subl %%ebp,%%ebp \\n\\t\"\n";
-    *pFile << "\tIPC_SYSENTER\n";
+    WriteAsmSyscall(pFile, false);
     *pFile << "\t\"popl %%ebp \\n\\t\"\n";
     *pFile << "\t:\n";
     *pFile << "\t\"=a\" (" << sResult << "),\n"; /* EAX, 0 */
@@ -393,8 +393,8 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile *pFile,
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
-    int nSndDir = pFunction->GetSendDirection();
-    int nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
 
     bool bSendShortIPC = IsShortIPC(pFunction, nSndDir);
     bool bRecvShortIPC = IsShortIPC(pFunction, nRcvDir);
@@ -479,7 +479,7 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile *pFile,
     *pFile << "\t\"movl %%edi,%%ebx \\n\\t\"\n";
     *pFile << "\t\"movl 4(%%esi),%%edi \\n\\t\"\n";
     *pFile << "\t\"movl (%%esi),%%esi \\n\\t\"\n";
-    *pFile << "\tIPC_SYSENTER\n";
+    WriteAsmSyscall(pFile, true);
     *pFile << "\t\"popl %%ebp \\n\\t\"\n";
     *pFile << "\t\"movl %%ebx,%%ecx \\n\\t\"\n";
     *pFile << "\t\"popl %%ebx \\n\\t\"\n";
@@ -545,8 +545,8 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile *pFile,
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
-    int nSndDir = pFunction->GetSendDirection();
-    int nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
 
     bool bSendShortIPC = IsShortIPC(pFunction, nSndDir);
     bool bRecvShortIPC = IsShortIPC(pFunction, nRcvDir);
@@ -627,7 +627,7 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile *pFile,
 	if (bSendFlexpage)
 	    *pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
     }
-    *pFile << "\tIPC_SYSENTER\n";
+    WriteAsmSyscall(pFile, false);
     *pFile << "\t\"popl  %%ebp  \\n\\t\"\n";
     *pFile << "\t:\n";
     *pFile << "\t\"=a\" (" << sResult << "),\n";
@@ -738,7 +738,7 @@ CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile* pFile,
     CL4BEMarshaller *pMarshaller = 
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
-    int nSndDir = pFunction->GetSendDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
 
     bool bSendFlexpage = 
 	pFunction->GetParameterCount(TYPE_FLEXPAGE, nSndDir) > 0;
@@ -774,7 +774,7 @@ CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile* pFile,
     *pFile << "\t\"movl %%edi,%%ebx \\n\\t\"\n";
     *pFile << "\t\"movl 4(%%esi),%%edi \\n\\t\"\n";
     *pFile << "\t\"movl (%%esi),%%esi \\n\\t\"\n";
-    *pFile << "\tIPC_SYSENTER\n";
+    WriteAsmSyscall(pFile, true);
     *pFile << "\t\"popl   %%ebp  \\n\\t\"\n";
     *pFile << "\t\"popl   %%ebx  \\n\\t\"\n";
     *pFile << "\t:\n";
@@ -837,7 +837,7 @@ CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile* pFile,
     CL4BEMarshaller *pMarshaller = 
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
-    int nSndDir = pFunction->GetSendDirection();
+    CMsgStructType nSndDir = pFunction->GetSendDirection();
     bool bSendFlexpage = 
 	pFunction->GetParameterCount(TYPE_FLEXPAGE, nSndDir) > 0;
     bool bSendShortIPC = IsShortIPC(pFunction, nSndDir);
@@ -867,7 +867,7 @@ CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile* pFile,
     if (bSendFlexpage)
 	*pFile << "\t\"orl $0x2,%%eax  \\n\\t\"\n";
     *pFile << "\t\"movl   $-1,%%ebp  \\n\\t\"\n";
-    *pFile << "\tIPC_SYSENTER\n";
+    WriteAsmSyscall(pFile, false);
     *pFile << "\t\"popl   %%ebp  \\n\\t\"\n";
     *pFile << "\t:\n";
     *pFile << "\t\"=a\" (" << sResult << "),\n";
@@ -912,3 +912,54 @@ CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile* pFile,
     *pFile << "\t);\n";
 }
 
+/** \brief writes the actual instruction to invoke the IPC syscall
+ *  \param pFile the file to write to
+ *  \param bPic true if currently writing __PIC__ code
+ *
+ * This function evaluates the -fsyscall=xx option of Dice.
+ */
+void CL4V2IA32BEIPC::WriteAsmSyscall(CBEFile *pFile,
+    bool bPic)
+{
+    string sSyscall("IPC_SYSENTER");
+    CCompiler::GetBackEndOption("syscall", sSyscall);
+    if (sSyscall == "int30")
+    {
+	*pFile << "\t\"int $0x30 \\n\\t\"\n";
+	return;
+    }
+    if (sSyscall == "abs-syscall")
+    {
+	if (bPic)
+	    *pFile << "\t\"call __l4sys_abs_ipc_fixup \\n\\t\"\n";
+	else
+	    *pFile << "\t\"call __l4sys_ipc_direct \\n\\t\"\n";
+	return;
+    }
+    if (sSyscall == "sysenter")
+    {
+	if (bPic)
+	{
+	    *pFile << "\t\"push   %%ecx  \\n\\t\"\n";
+	    *pFile << "\t\"push   %%ebp  \\n\\t\"\n";
+	    *pFile << "\t\"push   $0x1b  \\n\\t\"\n";
+	    *pFile << "\t\"call   0f     \\n\\t\"\n";
+	    *pFile << "\t\"0:            \\n\\t\"\n";
+	    *pFile << "\t\"addl   $(1f-0b),(%%esp) \\n\\t\"\n";
+	    *pFile << "\t\"mov    %%esp,%%ecx      \\n\\t\"\n";
+	    *pFile << "\t\"sysenter      \\n\\t\"\n";
+	    *pFile << "\t\"mov    %%ebp,%%edx      \\n\\t\"\n";
+	    *pFile << "\t\"1:            \\n\\t\"\n";
+	} else {
+	    *pFile << "\t\"push   %%ecx  \\n\\t\"\n";
+	    *pFile << "\t\"push   %%ebp  \\n\\t\"\n";
+	    *pFile << "\t\"push   $0x1b  \\n\\t\"\n";
+	    *pFile << "\t\"push   $0f    \\n\\t\"\n";
+	    *pFile << "\t\"mov    %%esp,%%ecx      \\n\\t\"\n";
+	    *pFile << "\t\"sysenter      \\n\\t\"\n";
+	    *pFile << "\t\"mov    %%ebp,%%edx      \\n\\t\"\n";
+	    *pFile << "\t\"0:            \\n\\t\"\n";
+	}
+    }
+    *pFile << "\tIPC_SYSENTER\n";
+}

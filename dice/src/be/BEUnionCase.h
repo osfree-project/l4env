@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -49,7 +49,7 @@ public:
     /** \brief constructor
      */
     CBEUnionCase();
-    virtual ~ CBEUnionCase();
+    ~CBEUnionCase();
 
 protected:
     /** \brief copy constructor
@@ -61,17 +61,13 @@ public:
     virtual void CreateBackEnd(CFEUnionCase * pFEUnionCase);
     virtual void CreateBackEnd(CBEType *pType, string sName, 
 	CBEExpression *pCaseLabel, bool bDefault);
+    virtual CObject* Clone();
 
     /** \brief returns true if this is the default case
      *  \return true if this is the default case
      */
     virtual bool IsDefault()
     { return m_bDefault; }
-    /** \brief creates a clone of this object
-     *  \return reference to copy
-     */
-    virtual CObject* Clone()
-    { return new CBEUnionCase(*this); }
 
 protected:
     /** \var bool m_bDefault

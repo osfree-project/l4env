@@ -112,7 +112,7 @@
      static_cast<Tb_entry_ipc_sfl*>(Jdb_tbuf::new_entry());             \
   tb->set(this, ef->ip(), regs->snd_desc(), regs->rcv_desc(),           \
                 regs->timeout(), regs->snd_dst(),                       \
-                _irq!=0, *sender_list()!=0, 0, 0, 0);                   \
+                _irq!=0, sender_list()->head()!=0, 0, 0, 0);            \
   Jdb_tbuf::commit_entry();                                             \
   END_LOG_EVENT
 

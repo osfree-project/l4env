@@ -9,5 +9,5 @@
 int omega0_attach(omega0_irqdesc_t desc){
   if(!omega0_initalized && omega0_init()) return -1;
   
-  return omega0_call(MANAGEMENT_THREAD, OMEGA0_ATTACH, desc.i, L4_IPC_NEVER);
+  return omega0_call(0, OMEGA0_ATTACH, desc.i, L4_IPC_NEVER);
 }

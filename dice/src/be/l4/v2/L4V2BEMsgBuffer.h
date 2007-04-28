@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2006
+ * Copyright (C) 2006-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -50,30 +50,26 @@ protected:
     CL4V2BEMsgBuffer(CL4V2BEMsgBuffer & src);
 
 public: // public methods
-    /** \brief creates a copy of the object
-     *  \return a reference to the newly created instance
-     */
-    virtual CObject* Clone()
-    { return new CL4V2BEMsgBuffer(*this); }
+    virtual CObject* Clone();
     virtual int GetPayloadOffset();
 
     virtual void WriteDopeShortInitialization(CBEFile *pFile, int nType,
-	int nDirection);
+	CMsgStructType nType);
 
-    virtual int GetMemberPosition(string sName, int nDirection);
+    virtual int GetMemberPosition(string sName, CMsgStructType nType);
 
 protected: // protected methods
     virtual void WriteRefstringInitParameter(CBEFile *pFile,
 	CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
-	int nDirection);
+	CMsgStructType nType);
     virtual bool WriteRefstringInitFunction(CBEFile *pFile,
-	CBEFunction *pFunction,	CBEClass *pClass, int nIndex, int nDirection);
-    virtual void WriteRcvFlexpageInitialization(CBEFile *pFile,	int nDirection);
+	CBEFunction *pFunction,	CBEClass *pClass, int nIndex, CMsgStructType nType);
+    virtual void WriteRcvFlexpageInitialization(CBEFile *pFile,	CMsgStructType nType);
 	
     CBETypedDeclarator* GetRefstringMemberVariable(int nNumber);
 
     virtual bool AddPlatformSpecificMembers(CBEFunction *pFunction,
-	CBEStructType *pStruct, int nDirection);
+	CBEStructType *pStruct, CMsgStructType nType);
     virtual bool AddGenericStruct(CBEFunction *pFunction,
 	CFEOperation *pFEOperation);
 };

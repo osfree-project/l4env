@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -54,6 +54,7 @@
 #include "fe/FEIsAttribute.h"
 #include "fe/FEExpression.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include <cassert>
 #include <algorithm>
 
@@ -85,6 +86,14 @@ CBETypedDeclarator::~CBETypedDeclarator()
     m_mProperties.clear();
     if (m_pType)
         delete m_pType;
+}
+
+/** \brief creates a new instance of this class 
+ *  \return a reference to the copy
+ */
+CObject *CBETypedDeclarator::Clone()
+{ 
+    return new CBETypedDeclarator(*this); 
 }
 
 /** \brief writes the declaration of an variable
@@ -159,7 +168,7 @@ CBETypedDeclarator::WriteSetZero(CBEFile* pFile)
  */
 void
 CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
@@ -186,16 +195,14 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
                 if (pDecl)
                 {
 		    *pFile << "strlen(";
-		    CDeclaratorStackLocation *pLoc = NULL;
 		    if (!pStack)
 		    {
-			pStack = new vector<CDeclaratorStackLocation*>();
-			pLoc = new CDeclaratorStackLocation(pDecl);
-			pStack->push_back(pLoc);
+			CDeclStack vStack;
+			vStack.push_back(pDecl);
+			CDeclaratorStackLocation::Write(pFile, &vStack, true);
 		    }
-		    CDeclaratorStackLocation::Write(pFile, pStack, true);
-		    if (pLoc)
-			delete pLoc;
+		    else
+			CDeclaratorStackLocation::Write(pFile, pStack, true);
                     // restore old number of stars
 		    *pFile << ")";
                 }
@@ -212,19 +219,17 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
                 // this only happends, when this is variable sized
                 // because of its variable sized type
                 // => we have to animate the type to write the size
+		CDeclStack vStack;
                 if (!pStack)
-                    pStack = new vector<CDeclaratorStackLocation*>();
+                    pStack = &vStack;
                 vector<CBEDeclarator*>::iterator iterD;
 		for (iterD = m_Declarators.begin();
 		     iterD != m_Declarators.end();
 		     iterD++)
                 {
-                    CDeclaratorStackLocation *pLoc = 
-			new CDeclaratorStackLocation(*iterD);
-                    pStack->push_back(pLoc);
+                    pStack->push_back(*iterD);
                     pType->WriteGetSize(pFile, pStack, pUsingFunc);
                     pStack->pop_back();
-                    delete pLoc;
                 }
 
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
@@ -244,7 +249,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	    "CBETypedDeclarator::%s an IS attr found\n", __func__);
-	vector<CDeclaratorStackLocation*> vStack;
+	CDeclStack vStack;
 	if (pStack)
 	    vStack = *pStack;
 	bool bFoundInStruct = false;
@@ -292,7 +297,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
 	if (!pConstant)
 	{
     	    CBEDeclarator *pSizeName = pAttr->m_Parameters.First();
-	    CCompiler::Warning(
+	    CMessages::Warning(
 	"Size attribute (%s) is neither parameter nor defined as constant.",
 		pSizeName->GetName().c_str());
 	}
@@ -319,7 +324,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
  */
 void
 CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
@@ -412,19 +417,17 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
 	// this only happends, when this is variable sized
 	// because of its variable sized type
 	// => we have to animate the type to write the size
+	CDeclStack vStack;
 	if (!pStack)
-	    pStack = new vector<CDeclaratorStackLocation*>();
+	    pStack = &vStack;
 	vector<CBEDeclarator*>::iterator iterD;
 	for (iterD = m_Declarators.begin();
 	     iterD != m_Declarators.end();
 	     iterD++)
 	{
-	    CDeclaratorStackLocation *pLoc = 
-		new CDeclaratorStackLocation(*iterD);
-	    pStack->push_back(pLoc);
+	    pStack->push_back(*iterD);
 	    pType->WriteGetMaxSize(pFile, pStack, pUsingFunc);
 	    pStack->pop_back();
-	    delete pLoc;
 	}
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -434,17 +437,17 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s max_is found\n", __func__);
     if (pAttr->IsOfType(ATTR_CLASS_IS))
     {
-	vector<CDeclaratorStackLocation*> vStack;
-	if (pStack)
-	    vStack = *pStack;
+	CDeclStack vStack;
+	if (!pStack)
+	    pStack = &vStack;
 	bool bFoundInStruct = false;
-	CBETypedDeclarator *pSizeParameter = GetSizeVariable(pAttr, &vStack,
+	CBETypedDeclarator *pSizeParameter = GetSizeVariable(pAttr, pStack,
 	    pUsingFunc, bFoundInStruct);
 
 	if (bFoundInStruct)
 	{
-	    CDeclaratorStackLocation::Write(pFile, &vStack, false);
-	    if (vStack.size() > 0)
+	    CDeclaratorStackLocation::Write(pFile, pStack, false);
+	    if (pStack->size() > 0)
 		*pFile << ".";
 	    // has only one declarator
     	    pSizeParameter->WriteDeclarators(pFile);
@@ -481,7 +484,7 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
 	if (!pConstant)
 	{
     	    CBEDeclarator *pSizeName = pAttr->m_Parameters.First();
-	    CCompiler::Warning(
+	    CMessages::Warning(
 "Size attribute (%s) is neither parameter nor defined as constant.",
 		pSizeName->GetName().c_str());
 	}
@@ -519,7 +522,7 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
  */
 CBETypedDeclarator*
 CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
-    vector<CDeclaratorStackLocation*> *pStack,
+    CDeclStack* pStack,
     CBEFunction *pUsingFunc,
     bool& bFoundInStruct)
 {
@@ -630,7 +633,7 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
     // get class before resetting function
     CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
     // get direction before getting real message buffer
-    int nDir = (m_Attributes.Find(ATTR_IN)) ? pFunction->GetSendDirection() :
+    CMsgStructType nType = (m_Attributes.Find(ATTR_IN)) ? pFunction->GetSendDirection() :
 	pFunction->GetReceiveDirection();
     // check message buffer
     pFunction = GetSpecificParent<CBEFunction>();
@@ -641,7 +644,7 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
      	pMsgBuffer = pClass->GetMessageBuffer();
     if (pMsgBuffer)
 	pSizeParameter = pMsgBuffer->FindMember(sSizeName, pFunction ? 
-	    pFunction : pUsingFunc, nDir);
+	    pFunction : pUsingFunc, nType);
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBETypedDeclarator::%s tried to find %s as member in msgbuf (-> %p)\n",
 	__func__, sSizeName.c_str(), pSizeParameter);
@@ -664,9 +667,7 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
 		if (!pParent)
 		    continue;
 	    }
-	    CDeclaratorStackLocation *pLoc = 
-		new CDeclaratorStackLocation(pParent->m_Declarators.First());
-	    pStack->insert(pStack->begin(), pLoc);
+	    pStack->insert(pStack->begin(), pParent->m_Declarators.First());
 	}
 	bFoundInStruct = true;
 
@@ -1503,12 +1504,12 @@ void CBETypedDeclarator::WarnNoMax(int nSize)
     CBEDeclarator *pD = m_Declarators.First();
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
     if (pFunction)
-	CCompiler::Warning("%s in %s has no maximum size (guessing size %d)",
+	CMessages::Warning("%s in %s has no maximum size (guessing size %d)",
 	    pD->GetName().c_str(),
 	    pFunction->GetName().c_str(),
 	    nSize);
     else
-	CCompiler::Warning("%s has no maximum size (guessing size %d)",
+	CMessages::Warning("%s has no maximum size (guessing size %d)",
 	    pD->GetName().c_str(),
 	    nSize);
 }
@@ -1753,12 +1754,16 @@ int CBETypedDeclarator::GetBitfieldSize()
  *  \param nDirection the direction to check
  *  \return true if it is transmitted that way
  */
-bool CBETypedDeclarator::IsDirection(int nDirection)
+bool CBETypedDeclarator::IsDirection(DIRECTION_TYPE nDirection)
 {
-    return ((((nDirection & DIRECTION_IN) != 0) &&
-              (m_Attributes.Find(ATTR_IN) != 0)) ||
-            (((nDirection & DIRECTION_OUT) != 0) &&
-              (m_Attributes.Find(ATTR_OUT) != 0)));
+    if ((nDirection == DIRECTION_IN) && m_Attributes.Find(ATTR_IN))
+	return true;
+    if ((nDirection == DIRECTION_OUT) && m_Attributes.Find(ATTR_OUT))
+	return true;
+    if ((nDirection == DIRECTION_INOUT) && 
+	(m_Attributes.Find(ATTR_IN) || m_Attributes.Find(ATTR_OUT)))
+	return true;
+    return false;
 }
 
 /** \brief checks if this parameter is referenced

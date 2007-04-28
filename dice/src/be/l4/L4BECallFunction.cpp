@@ -6,7 +6,7 @@
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -192,7 +192,7 @@ CL4BECallFunction::WriteVariableInitialization(CBEFile * pFile)
     if (CCompiler::IsOptionSet(PROGRAM_ZERO_MSGBUF))
 	pMsgBuffer->WriteSetZero(pFile);
     pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, 
-	0);
+	CMsgStructType::Generic);
     pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING, 
 	GetReceiveDirection());
     pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE,
@@ -230,7 +230,7 @@ CL4BECallFunction::WriteUnmarshalling(CBEFile * pFile)
         pFile->IncIndent();
         // unmarshal exception and test if we really received an exception. If
 	// so, we return
-        WriteMarshalException(pFile, false);
+        WriteMarshalException(pFile, false, false);
         pFile->DecIndent();
 	*pFile << "\t}\n";
     }
@@ -274,7 +274,7 @@ void CL4BECallFunction::WriteIPC(CBEFile* pFile)
  * If we recv flexpages, remove the exception size again, since either the
  * flexpage or the exception is sent.
  */
-int CL4BECallFunction::GetSize(int nDirection)
+int CL4BECallFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size
     int nSize = CBECallFunction::GetSize(nDirection);
@@ -292,7 +292,7 @@ int CL4BECallFunction::GetSize(int nDirection)
  * If we recv flexpages, remove the exception size again, since either the
  * flexpage or the exception is sent.
  */
-int CL4BECallFunction::GetFixedSize(int nDirection)
+int CL4BECallFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
     int nSize = CBECallFunction::GetFixedSize(nDirection);
     if ((nDirection & DIRECTION_OUT) &&

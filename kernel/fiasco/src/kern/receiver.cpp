@@ -2,6 +2,7 @@ INTERFACE:
 
 #include "context.h"
 #include "timeout.h"
+#include "prio_list.h"
 
 class Sys_ipc_frame;
 class Sender;
@@ -28,7 +29,7 @@ private:
   Address           _pagein_addr; // sender requests page in of this page
   Mword             _pagein_error_code;
   Thread*           _pagein_applicant;
-  Sender*           _sender_first;
+  Prio_list         _sender_list;
 
 protected:
   // XXX Timeout for both, sender and receiver! In normal case we would have
@@ -204,10 +205,10 @@ Receiver::in_long_ipc (Sender* sender) const
     @return a reference to the receiver's list of senders
  */
 PUBLIC inline
-Sender**
+Prio_list *
 Receiver::sender_list()
 {
-  return &_sender_first;
+  return &_sender_list;
 }
 
 // MANIPULATORS
@@ -361,7 +362,8 @@ Receiver::sender_ok (const Sender *sender) const
 
   // Check open wait; test if this sender is really the first in queue
   if (EXPECT_TRUE(!partner()
-                  && (!_sender_first || sender == _sender_first)))
+                  && (!_sender_list.head() 
+		    || sender->is_head_of(&_sender_list))))
     return true;
 
   // Check closed wait; test if this sender is really who we specified

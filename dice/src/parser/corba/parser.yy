@@ -7,7 +7,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -34,6 +34,7 @@
 
 #include "defines.h"
 #include "Compiler.h"
+#include "Messages.h"
 #include "CParser.h"
 
 void corbaerror(char *);
@@ -1608,15 +1609,16 @@ simple_declarator_list :
 except_dcl :
       EXCEPTION ID LBRACE member_list rbrace
     {
-        // defines an exception with name ID and members ... (represent as struct?)
-        $$ = NULL;
-        if ($4)
-            delete $4;
+    	// defines an exception with name ID and members ... (represent as struct?)
+	$$ = NULL;
+	if ($4)
+	    delete $4;
+
     }
     | EXCEPTION ID LBRACE RBRACE
     {
         // defines an exception with name ID and no members
-        $$ = NULL;
+	$$ = NULL;
     }
     ;
 
@@ -1922,7 +1924,7 @@ corbaerror2(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    CCompiler::GccErrorVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
+    CMessages::GccErrorVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
     va_end(args);
     nParseErrorCORBA = 0;
     erroccured = 1;
@@ -1934,7 +1936,7 @@ corbawarning(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    CCompiler::GccWarningVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
+    CMessages::GccWarningVL(CParser::GetCurrentFile(), gLineNumber, fmt, args);
     va_end(args);
     nParseErrorCORBA = 0;
 }

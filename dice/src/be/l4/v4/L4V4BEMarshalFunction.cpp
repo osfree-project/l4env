@@ -5,7 +5,8 @@
  *  \date     Mon Jul 5 2004
  *  \author   Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
-/* Copyright (C) 2001-2004 by
+/*
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -68,16 +69,15 @@ CL4V4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
         CCompiler::GetNameFactory()->GetMessageBufferVariable();
     // clear message
     *pFile << "\tL4_MsgClear ( (L4_Msg_t*) " << sMsgBuffer << " );\n";
+    // set exception in msgbuffer and return if there was an exception.
+    WriteMarshalException(pFile, true, true);
     // call base class
     // we skip L4 specific implementation, because it marshals flexpages
     // or exceptions (we don't need this) and it sets the send dope, which
     // is set by convenience functions automatically.
-    // we also skip basic backend marshalling, because it marshals exception
-    // first, we want this to be done later (into the tag label) and it
-    // starts marshalling after the opcode, which is in the tag as well
+    // we also skip basic backend marshalling, because it starts marshalling
+    // after the opcode, which is in the tag as well
     CBEOperationFunction::WriteMarshalling(pFile);
-    // set exception in msgbuffer
-    WriteMarshalException(pFile, true);
     // set dopes
     CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
     assert(pMsgBuffer);

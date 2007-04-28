@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/CDCEParser.h
+ *  \file    dice/src/CDCEParser.h
  *  \brief   contains the declaration of the class CDCEParser
  *
- *    \date    Sun Jul 27 2003
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    Sun Jul 27 2003
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -52,7 +52,7 @@ protected:
 public:
     virtual ~CDCEParser();
 
-    virtual bool Parse(void *scan_buffer, string sFilename, FrontEnd_Type nIDL, 
+    virtual bool Parse(void *scan_buffer, string sFilename, FrontEnd_Type nIDL,
 	bool bPreProcessOnly = false);
     virtual unsigned char Import(string sFilename); // used by parser
 

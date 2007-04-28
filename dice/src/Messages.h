@@ -1,12 +1,12 @@
 /**
- *  \file    dice/src/be/l4/L4BETypedDeclarator.h
- *  \brief   contains the declaration of the class CL4BETypedDeclarator
+ *  \file    dice/src/Messages.h
+ *  \brief   contains the declaration of the class CMessages
  *
- *  \date    07/17/2002
+ *  \date    04/10/2007
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2007
+ * Copyright (C) 2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -27,35 +27,28 @@
  */
 
 /** preprocessing symbol to check header file */
-#ifndef L4BETYPEDDECLARATOR_H
-#define L4BETYPEDDECLARATOR_H
+#ifndef __DICE_MESSAGES_H__
+#define __DICE_MESSAGES_H__
 
-#include <be/BETypedDeclarator.h>
+#include <stdarg.h>
 
-/** \class CL4BETypedDeclarator
- *  \ingroup backend
- *  \brief implements L4 specific functions of the typed declarator
- */
-class CL4BETypedDeclarator : public CBETypedDeclarator
+class CFEBase;
+
+class CMessages
 {
 public:
-    /** creates a new object of a typed declarator */
-    CL4BETypedDeclarator() : CBETypedDeclarator()
-    {}
-    /** copy constructor
-     *  \param src the source to copy from
-     */
-    CL4BETypedDeclarator(CL4BETypedDeclarator &src)
-    : CBETypedDeclarator(src)
-    {}
-
-    ~CL4BETypedDeclarator(void);
-    virtual CObject* Clone();
-
-public: // Public methods
-    virtual bool IsVariableSized();
-    virtual bool IsFixedSized();
-    virtual bool GetMaxSize(bool bGuessSize, int & nSize);
+    static void Error(const char *sMsg, ...) 
+	__attribute__(( format(printf, 1, 2) ));
+    static void Warning(const char *sMsg, ...)
+	__attribute__(( format(printf, 1, 2) ));
+    static void GccError(CFEBase * pFEObject, int nLinenb,
+	const char *sMsg, ...) __attribute__(( format(printf, 3, 4) ));
+    static void GccErrorVL(CFEBase * pFEObject, int nLinenb,
+	const char *sMsg, va_list vl);
+    static void GccWarning(CFEBase * pFEObject, int nLinenb,
+	const char *sMsg, ...) __attribute__(( format(printf, 3, 4) ));
+    static void GccWarningVL(CFEBase * pFEObject, int nLinenb,
+	const char *sMsg, va_list vl);
 };
 
-#endif
+#endif /* __DICE_MESSAGES_H__ */

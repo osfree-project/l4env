@@ -6,7 +6,7 @@
  *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2005
+ * Copyright (C) 2005-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -137,7 +137,8 @@ CBETrace::BeforeCall(CBEFile *pFile,
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
     // get tracing function
-    string sFunc = CCompiler::GetTraceClientFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption("trace-client-func", sFunc);
     
     *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": before call\\n\");\n";
@@ -158,7 +159,8 @@ CBETrace::AfterCall(CBEFile *pFile,
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
     // get tracing function
-    string sFunc = CCompiler::GetTraceClientFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption("trace-client-func", sFunc);
 
     *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": after call\\n\");\n";
@@ -180,7 +182,8 @@ CBETrace::BeforeDispatch(CBEFile *pFile,
     
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sOpcodeVar = pNF->GetOpcodeVariable();
-    string sFunc = CCompiler::GetTraceServerFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption("trace-server-func", sFunc);
 
     *pFile << "\t" << sFunc << " (\"opcode %x received\\n\", "
 	<< sOpcodeVar << ");\n";
@@ -200,7 +203,8 @@ CBETrace::AfterDispatch(CBEFile *pFile,
 	return;
     
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sFunc = CCompiler::GetTraceServerFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption("trace-server-func", sFunc);
     string sReply = pNF->GetReplyCodeVariable();
 
     *pFile << "\t" << sFunc << " (\"reply %s\\n\", (" <<
@@ -255,7 +259,8 @@ CBETrace::AfterReplyWait(CBEFile *pFile,
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
     // get tracing function
-    string sFunc = CCompiler::GetTraceClientFunc();
+    string sFunc;
+    CCompiler::GetBackEndOption("trace-client-func", sFunc);
 
     *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": after wait\\n\");\n";
