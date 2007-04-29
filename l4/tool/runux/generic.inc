@@ -49,6 +49,12 @@ then
   ROOTTASK_ARGS="$ROOTTASK_ARGS -lines"
 fi
 
+if [ -n "$ROOTTASK_CONFIG_FILE" ];
+then
+  ROOTTASK_CONFIG_FILE_ARG="--roottaskconfig $ROOTTASK_CONFIG_FILE"
+  ROOTTASK_ARGS="$ROOTTASK_ARGS -configfile"
+fi
+
 if [ ! -e "$L4PATH/sigma0" ];
 then
   echo "Your L4PATH $L4PATH is missing sigma0!"
@@ -96,6 +102,7 @@ fiasco() {
   echo $FIASCODIR/$FIASCO				\
     $SYMBOLS_ARG					\
     $LINES_ARG						\
+    $ROOTTASK_CONFIG_FILE_ARG				\
     -R           ${L4PATH}/$ROOTTASK" $ROOTTASK_ARGS" 	\
     --sigma0     ${L4PATH}/sigma0 			\
     --fb_program ${FIASCODIR}/ux_con			\
@@ -108,6 +115,7 @@ fiasco() {
   $gdb_wrap $FIASCODIR/$FIASCO				\
     $SYMBOLS_ARG					\
     $LINES_ARG						\
+    $ROOTTASK_CONFIG_FILE_ARG				\
     -R           ${L4PATH}/$ROOTTASK" $ROOTTASK_ARGS" 	\
     --sigma0     ${L4PATH}/sigma0 			\
     --fb_program ${FIASCODIR}/ux_con			\

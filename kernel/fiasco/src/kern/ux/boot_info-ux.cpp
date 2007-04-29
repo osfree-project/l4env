@@ -113,6 +113,7 @@ struct option Boot_info::_long_options[] FIASCO_INITDATA =
   { "test",                     no_argument,            NULL, 'T' },
   { "disable_irq0",             no_argument,            NULL, '0' },
   { "symbols",                  required_argument,      NULL, 'Y' },
+  { "roottaskconfig",           required_argument,      NULL, 'C' },
   { "lines",                    required_argument,      NULL, 'L' },
   { "clisti",			no_argument,		NULL, 's' },
   { 0, 0, 0, 0 }
@@ -140,6 +141,7 @@ char Boot_info::_help[] FIASCO_INITDATA =
   "-S          : Specify different sigma0 binary\n"
   "-Y          : Specify symbols path\n"
   "-L          : Specify lines path\n"
+  "-C          : Specify roottask configuration file path\n"
   "-T          : Test mode -- do not load any modules\n"
   "-s          : Emulate cli/sti instructions\n";
 
@@ -150,7 +152,8 @@ char const *Boot_info::_modules[64] FIASCO_INITDATA =
   "sigma0",
   "roottask",
    NULL,        // Symbols
-   NULL         // Lines
+   NULL,        // Lines
+   NULL         // Roottask configuration
 };
 
 IMPLEMENT FIASCO_INIT
@@ -164,13 +167,14 @@ Boot_info::init()
   char                          *cmd, *str, buffer[4096];
   int                           arg;
   bool                          quiet = false;
-  unsigned int                  i, owner = 1, modcount = 5, skip = 2;
+  unsigned int                  i, owner = 1, modcount = 6, skip = 3;
   unsigned long int             memsize = 64 << 20;
   Multiboot_info *              mbi;
   Multiboot_module *            mbm;
   struct utsname                uts;
   char const *                  symbols_file = "Symbols";
   char const *                  lines_file = "Lines";
+  char const *                  roottask_config_file = "roottask.config";
 
   _args = __libc_argv;
   _pid  = getpid ();
@@ -180,7 +184,7 @@ Boot_info::init()
   // Parse command line. Use getopt_long_only() to achieve more compatibility
   // with command line switches in the IA32 architecture.
   while ((arg = getopt_long_only (__libc_argc, __libc_argv,
-                                  "d:f:hj:k:l:m:n:qst:wE:F:G:I:L:NR:S:TY:0",
+                                  "C:d:f:hj:k:l:m:n:qst:wE:F:G:I:L:NR:S:TY:0",
                                   _long_options, NULL)) != -1) {
     switch (arg) {
 
@@ -201,6 +205,10 @@ Boot_info::init()
       case 'L': // Lines path
         lines_file = optarg;
         break;
+
+      case 'C': // roottask Configuration file
+	roottask_config_file = optarg;
+	break;
 
       case 'l':
         if (modcount < sizeof (_modules) / sizeof (*_modules))
@@ -357,6 +365,11 @@ Boot_info::init()
   if (strstr (_modules[2], " -lines"))
     {
       _modules[4] = lines_file;
+      skip--;
+    }
+  if (strstr (_modules[2], " -configfile"))
+    {
+      _modules[5] = roottask_config_file;
       skip--;
     }
 

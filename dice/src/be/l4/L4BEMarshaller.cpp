@@ -503,7 +503,7 @@ void CL4BEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
     {
 	*m_pFile << "\tif (";
 	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << " < (";
+	*m_pFile << " < ";
 	if (pParameter->m_Attributes.Find(ATTR_MAX_IS))
 	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
 	else
@@ -514,7 +514,7 @@ void CL4BEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
 		nMax = pDeclarator->m_Bounds.First()->GetIntValue();
 	    *m_pFile << nMax;
 	}
-    	*m_pFile << " - 1))\n";
+    	*m_pFile << ")\n";
 	*m_pFile << "\t{\n";
 	m_pFile->IncIndent();
 
@@ -524,13 +524,13 @@ void CL4BEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
 	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pParameter, pStack);
 	*m_pFile << "[";
 	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << "].snd_base = 0;\n";
+	*m_pFile << "-1].snd_base = 0;\n";
 	// zero fpage member
 	*m_pFile << "\t";
 	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pParameter, pStack);
 	*m_pFile << "[";
 	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << "].fpage.raw = 0;\n";
+	*m_pFile << "-1].fpage.raw = 0;\n";
 	
 	m_pFile->DecIndent();
 	*m_pFile << "\t}\n";
