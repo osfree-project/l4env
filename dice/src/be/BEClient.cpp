@@ -129,7 +129,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 		" could not be found";
 	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl);
+        pFunction->AddToImpl(pImpl);
     }
     else if (pFEOperation->m_Attributes.Find(ATTR_OUT))
     {
@@ -142,7 +142,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 		" could not be found";
 	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl);
+        pFunction->AddToImpl(pImpl);
         // receive function
         sFuncName = pNF->GetFunctionName(pFEOperation, FUNCTION_RECV);
         pFunction = pRoot->FindFunction(sFuncName, FUNCTION_RECV);
@@ -152,7 +152,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 		" could not be found";
 	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl);
+        pFunction->AddToImpl(pImpl);
         // unmarshal function
         if (CCompiler::IsOptionSet(PROGRAM_GENERATE_MESSAGE))
         {
@@ -164,7 +164,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 		    " could not be found";
 		throw new CBECreateException(exc);
             }
-            pFunction->AddToFile(pImpl);
+            pFunction->AddToImpl(pImpl);
         }
     }
     else
@@ -177,7 +177,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 		" could not be found";
 	    throw new CBECreateException(exc);
         }
-        pFunction->AddToFile(pImpl);
+        pFunction->AddToImpl(pImpl);
     }
 }
 
@@ -212,7 +212,7 @@ CBEClient::CreateBackEndHeader(CFEFile * pFEFile)
         delete pHeader;
 	throw;
     }
-    pRoot->AddToFile(pHeader);
+    pRoot->AddToHeader(pHeader);
     // create opcode files per IDL file
     if (!CCompiler::IsOptionSet(PROGRAM_NO_OPCODES))
     {
@@ -338,7 +338,7 @@ CBEClient::CreateBackEndFile(CFEFile * pFEFile,
         }
         // if class has been added already, then skip it
         if (pImpl->FindClass(pClass->GetName()) != pClass)
-            pClass->AddToFile(pImpl);
+            pClass->AddToImpl(pImpl);
     }
     // iterate over libraries and add them
     vector<CFELibrary*>::iterator iterL;
@@ -355,7 +355,7 @@ CBEClient::CreateBackEndFile(CFEFile * pFEFile,
         }
         // if this namespace is already added, skip it
         if (pImpl->FindNameSpace(pNameSpace->GetName()) != pNameSpace)
-            pNameSpace->AddToFile(pImpl);
+            pNameSpace->AddToImpl(pImpl);
     }
     // if FILE_ALL: iterate over included files and call this function using
     // them
@@ -370,6 +370,16 @@ CBEClient::CreateBackEndFile(CFEFile * pFEFile,
         }
     }
 }
+
+template<class T>
+class CreateBackEndCall {
+    CBEClient *client;
+    std::mem_fun1_t<void, CBEClient, T*> fun;
+public:
+    explicit CreateBackEndCall(CBEClient *c, void (CBEClient::*__pf)(T* arg)) : 
+	client(c), fun(__pf) { }
+    void operator() (T* arg) { fun(client, arg); }
+};
 
 /** \brief creates the back-end files for the FILE_MODULE option
  *  \param pFEFile the respective front-end file
@@ -440,17 +450,13 @@ CBEClient::CreateBackEndModule(CFEFile *pFEFile)
 		throw new CBECreateException(exc);
             }
             // add interface to file
-            pClass->AddToFile(pImpl);
+            pClass->AddToImpl(pImpl);
         }
     }
     // iterate over libraries and create files for them
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFEFile->m_Libraries.begin();
-	 iterL != pFEFile->m_Libraries.end();
-	 iterL++)
-    {
-        CreateBackEndModule(*iterL);
-    }
+    for_each(pFEFile->m_Libraries.begin(),
+	pFEFile->m_Libraries.end(),
+	CreateBackEndCall<CFELibrary>(this, &CBEClient::CreateBackEndModule));
     // success
 }
 
@@ -500,18 +506,11 @@ CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
         throw;
     }
     // add it to the file
-    pBENameSpace->AddToFile(pImpl);
+    pBENameSpace->AddToImpl(pImpl);
     // iterate over nested libs and call this function for them as well
-//     for_each(pFELibrary->m_Libraries.begin(),
-// 	pFELibrary->m_Libraries.end(),
-// 	mem_fun(&CBEClient::CreateBackEndModule));
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFELibrary->m_Libraries.begin();
-	 iterL != pFELibrary->m_Libraries.end();
-	 iterL++)
-    {
-        CreateBackEndModule(*iterL);
-    }
+    for_each(pFELibrary->m_Libraries.begin(),
+	pFELibrary->m_Libraries.end(),
+	CreateBackEndCall<CFELibrary>(this, &CBEClient::CreateBackEndModule));
 }
 
 /** \brief creates the files for the FILE_INTERFACE option
@@ -524,27 +523,13 @@ CBEClient::CreateBackEndInterface(CFEFile *pFEFile)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndInterface(file: %s) called\n",
         pFEFile->GetFileName().c_str());
     // search for top-level interfaces
-//     for_each(pFEFile->m_Interfaces.Begin(),
-// 	pFEFile->m_Interfaces.End(),
-// 	CreateBackEndInterface);
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFEFile->m_Interfaces.begin();
-	 iterI != pFEFile->m_Interfaces.end();
-	 iterI++)
-    {
-        CreateBackEndInterface(*iterI);
-    }
+    for_each(pFEFile->m_Interfaces.begin(),
+	pFEFile->m_Interfaces.end(),
+	CreateBackEndCall<CFEInterface>(this, &CBEClient::CreateBackEndInterface));
     // search for libraries
-//     for_each(pFEFile->m_Libraries.Begin(),
-// 	pFEFile->m_Libraries.End(),
-// 	CreateBackEndInterface);
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFEFile->m_Libraries.begin();
-	 iterL != pFEFile->m_Libraries.end();
-	 iterL++)
-    {
-        CreateBackEndInterface(*iterL);
-    }
+    for_each(pFEFile->m_Libraries.begin(),
+	pFEFile->m_Libraries.end(),
+	CreateBackEndCall<CFELibrary>(this, &CBEClient::CreateBackEndInterface));
 }
 
 /** \brief creates the file for the FILE_INTERFACE option
@@ -558,27 +543,13 @@ CBEClient::CreateBackEndInterface(CFELibrary *pFELibrary)
 	"CBEClient::CreateBackEndInterface(lib: %s) called\n",
         pFELibrary->GetName().c_str());
     // search for interfaces
-//     for_each(pFELibrary->m_Interfaces.Begin(),
-// 	pFELibrary->m_Interfaces.End(),
-// 	CreateBackEndInterface);
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFELibrary->m_Interfaces.begin();
-	 iterI != pFELibrary->m_Interfaces.end();
-	 iterI++)
-    {
-        CreateBackEndInterface(*iterI);
-    }
+    for_each(pFELibrary->m_Interfaces.begin(),
+	pFELibrary->m_Interfaces.end(),
+	CreateBackEndCall<CFEInterface>(this, &CBEClient::CreateBackEndInterface));
     // search for nested libs
-//     for_each(pFELibrary->m_Libraries.Begin(),
-// 	pFELibrary->m_Libraries.End(),
-// 	CreateBackEndInterface);
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFELibrary->m_Libraries.begin();
-	 iterL != pFELibrary->m_Libraries.end();
-	 iterL++)
-    {
-        CreateBackEndInterface(*iterL);
-    }
+    for_each(pFELibrary->m_Libraries.begin(),
+	pFELibrary->m_Libraries.end(),
+	CreateBackEndCall<CFELibrary>(this, &CBEClient::CreateBackEndInterface));
 }
 
 /** \brief create the back-end file for an interface
@@ -627,7 +598,7 @@ CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
 	throw;
     }
     // add the interface
-    pBEClass->AddToFile(pImpl);
+    pBEClass->AddToImpl(pImpl);
 }
 
 /** \brief creates the files for the FILE_FUNCTION option
@@ -641,27 +612,13 @@ CBEClient::CreateBackEndFunction(CFEFile *pFEFile)
         pFEFile->GetFileName().c_str());
     // if there are any top level type definitions and  constants
     // iterate over interfaces
-//     for_each(pFEFile->m_Interfaces.Begin(),
-// 	pFEFile->m_Interfaces.End(),
-// 	CreateBackEndFunction);
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFEFile->m_Interfaces.begin();
-	 iterI != pFEFile->m_Interfaces.end();
-	 iterI++)
-    {
-        CreateBackEndFunction(*iterI);
-    }
+    for_each(pFEFile->m_Interfaces.begin(),
+	pFEFile->m_Interfaces.end(),
+	CreateBackEndCall<CFEInterface>(this, &CBEClient::CreateBackEndFunction));
     // iterate over libraries
-//     for_each(pFEFile->m_Libraries.Begin(),
-// 	pFEFile->m_Libraries.End(),
-// 	CreateBackEndFunction);
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFEFile->m_Libraries.begin();
-	 iterL != pFEFile->m_Libraries.end();
-	 iterL++)
-    {
-        CreateBackEndFunction(*iterL);
-    }
+    for_each(pFEFile->m_Libraries.begin(),
+	pFEFile->m_Libraries.end(),
+	CreateBackEndCall<CFELibrary>(this, &CBEClient::CreateBackEndFunction));
 }
 
 /** \brief creates the back-end files for the FILE_FUNCTION option
@@ -674,21 +631,13 @@ CBEClient::CreateBackEndFunction(CFELibrary *pFELibrary)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
         pFELibrary->GetName().c_str());
     // search for interface
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFELibrary->m_Interfaces.begin();
-	 iterI != pFELibrary->m_Interfaces.end();
-	 iterI++)
-    {
-        CreateBackEndFunction(*iterI);
-    }
+    for_each(pFELibrary->m_Interfaces.begin(),
+	pFELibrary->m_Interfaces.end(),
+	CreateBackEndCall<CFEInterface>(this, &CBEClient::CreateBackEndFunction));
     // search for nested libs
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFELibrary->m_Libraries.begin();
-	 iterL != pFELibrary->m_Libraries.end();
-	 iterL++)
-    {
-        CreateBackEndFunction(*iterL);
-    }
+    for_each(pFELibrary->m_Libraries.begin(),
+	pFELibrary->m_Libraries.end(),
+	CreateBackEndCall<CFELibrary>(this, &CBEClient::CreateBackEndFunction));
 }
 
 /** \brief creates the back-end file for the FILE_FUNCTION option
@@ -701,12 +650,8 @@ CBEClient::CreateBackEndFunction(CFEInterface *pFEInterface)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
         pFEInterface->GetName().c_str());
     // search the interface
-    vector<CFEOperation*>::iterator iter;
-    for (iter = pFEInterface->m_Operations.begin();
-	 iter != pFEInterface->m_Operations.end();
-	 iter++)
-    {
-        CreateBackEndFunction(*iter);
-    }
+    for_each(pFEInterface->m_Operations.begin(),
+	pFEInterface->m_Operations.end(),
+	CreateBackEndCall<CFEOperation>(this, &CBEClient::CreateBackEndFunction));
 }
 

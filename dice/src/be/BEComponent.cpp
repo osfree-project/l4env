@@ -139,7 +139,7 @@ CBEComponent::CreateBackEndHeader(CFEFile * pFEFile)
 	throw;
     }
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
-    pRoot->AddToFile(pHeader);
+    pRoot->AddToHeader(pHeader);
     // add include of opcode file to header file
     if (!CCompiler::IsOptionSet(PROGRAM_NO_OPCODES))
     {
@@ -213,7 +213,7 @@ CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile)
 
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
-    pRoot->AddToFile(pImpl);
+    pRoot->AddToImpl(pImpl);
     // if create component function, we use seperate file for this
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
     {
@@ -230,7 +230,7 @@ CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile)
             delete pImpl;
 	    throw;
         }
-        pRoot->AddToFile(pImpl);
+        pRoot->AddToImpl(pImpl);
     }
 }
 

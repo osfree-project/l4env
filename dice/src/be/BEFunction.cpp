@@ -1823,16 +1823,14 @@ void CBEFunction::SetMsgBufferCastOnCall(bool bCastMsgBufferOnCall)
 
 /** \brief adds this function to the header files
  *  \param pHeader the header file
- *  \return true if successful
  *
  * This function should be overloaded, because the functions should be added to the
  * files depending on their instance and attributes.
  */
-bool CBEFunction::AddToFile(CBEHeaderFile *pHeader)
+void CBEFunction::AddToHeader(CBEHeaderFile *pHeader)
 {
     if (IsTargetFile(pHeader))
         pHeader->m_Functions.Add(this);
-    return false;
 }
 
 /** \brief checks if this function belings to the component side
@@ -1856,11 +1854,10 @@ void CBEFunction::SetComponentSide(bool bComponentSide)
  *
  * This is usually only used for global functions.
  */
-bool CBEFunction::AddToFile(CBEImplementationFile *pImpl)
+void CBEFunction::AddToImpl(CBEImplementationFile *pImpl)
 {
     if (IsTargetFile(pImpl))
         pImpl->m_Functions.Add(this);
-    return false;
 }
 
 /** \brief tests if this function has array parameters

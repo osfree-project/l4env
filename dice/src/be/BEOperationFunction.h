@@ -61,12 +61,12 @@ public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
 
 protected:
-    virtual bool AddAttributes(CFEOperation *pFEOperation);
-    virtual bool AddExceptions(CFEOperation *pFEOperation);
     virtual void AddParameters(CFEOperation *pFEOperation);
     virtual void AddParameter(CFETypedDeclarator *pFEParameter);
-    virtual bool AddException(CFEIdentifier *pFEException);
-    virtual bool AddAttribute(CFEAttribute *pFEAttribute);
+    void AddExceptions(CFEOperation *pFEOperation);
+    void AddException(CFEIdentifier *pFEException);
+    void AddAttributes(CFEOperation *pFEOperation);
+    void AddAttribute(CFEAttribute *pFEAttribute);
 };
 
 #endif // !__DICE_BEOPERATIONFUNCTION_H__

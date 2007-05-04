@@ -418,25 +418,24 @@ CBEConstant* CBENameSpace::FindConstant(string sConstantName)
  * This implementation adds its types, constants, interfaces and
  * nested libs.
  */
-bool CBENameSpace::AddToFile(CBEHeaderFile *pHeader)
+void CBENameSpace::AddToHeader(CBEHeaderFile *pHeader)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBENameSpace::AddToFile(header: %s) for namespace %s called\n",
+	"CBENameSpace::%s(header: %s) for namespace %s called\n", __func__,
         pHeader->GetFileName().c_str(), GetName().c_str());
     // add this namespace to the file
     if (IsTargetFile(pHeader))
         pHeader->m_NameSpaces.Add(this);
-    return true;
 }
 
 /** \brief adds this namespace to the file
  *  \param pImpl the implementation file to add this namespace to
  *  \return true if successful
  */
-bool CBENameSpace::AddToFile(CBEImplementationFile *pImpl)
+void CBENameSpace::AddToImpl(CBEImplementationFile *pImpl)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBENameSpace::AddToFile(impl: %s) for namespace %s called\n",
+	"CBENameSpace::%s(impl: %s) for namespace %s called\n", __func__,
         pImpl->GetFileName().c_str(), GetName().c_str());
     // if compiler options for interface or function target file are set
     // iterate over interfaces and add them
@@ -448,14 +447,13 @@ bool CBENameSpace::AddToFile(CBEImplementationFile *pImpl)
 	    iter != m_Classes.end();
 	    iter++)
 	{
-	    (*iter)->AddToFile(pImpl);
+	    (*iter)->AddToImpl(pImpl);
 	}
     }
     // add this namespace to the file
     // (needed for types, etc.)
     if (IsTargetFile(pImpl))
         pImpl->m_NameSpaces.Add(this);
-    return true;
 }
 
 /** \brief adds the opcodes for this namespace to the file

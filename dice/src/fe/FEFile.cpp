@@ -242,7 +242,7 @@ CFEConstructedType* CFEFile::FindTaggedDecl(string sName)
 	 iterI != m_Interfaces.end();
 	 iterI++)
     {
-        if ((pTaggedDecl = (*iterI)->m_TaggedDeclarators.Find(sName)) != 0)
+        if ((pTaggedDecl = (*iterI)->m_TaggedDeclarators.Find(sName)))
             return pTaggedDecl;
     }
     // search libs
@@ -251,7 +251,7 @@ CFEConstructedType* CFEFile::FindTaggedDecl(string sName)
 	 iterL != m_Libraries.end();
 	 iterL++)
     {
-        if ((pTaggedDecl = (*iterL)->FindTaggedDecl(sName)) != 0)
+        if ((pTaggedDecl = (*iterL)->FindTaggedDecl(sName)))
             return pTaggedDecl;
     }
     // search included files
@@ -260,7 +260,7 @@ CFEConstructedType* CFEFile::FindTaggedDecl(string sName)
 	 iterF != m_ChildFiles.end();
 	 iterF++)
     {
-        if ((pTaggedDecl = (*iterF)->FindTaggedDecl(sName)) != 0)
+        if ((pTaggedDecl = (*iterF)->FindTaggedDecl(sName)))
             return pTaggedDecl;
     }
     // nothing found:
@@ -355,7 +355,7 @@ CFELibrary *CFEFile::FindLibrary(string sName)
 	 iterF != m_ChildFiles.end();
 	 iterF++)
     {
-        if ((pLib = (*iterF)->FindLibrary(sName)) != 0)
+        if ((pLib = (*iterF)->FindLibrary(sName)))
             return pLib;
     }
 
@@ -469,8 +469,8 @@ void CFEFile::Accept(CVisitor &v)
     // call visitor
     v.Visit(*this);
     // included files
-//     for_each(m_ChildFiles.begin(), m_ChildFiles.end(), 
-// 	mem_fun(&CFEFile::Accept));
+//     for_each(m_ChildFiles.begin(), m_ChildFiles.end(),
+// 	std::bind2nd(std::mem_fun(&CFEFile::Accept), v));
     vector<CFEFile*>::iterator iterF;
     for (iterF = m_ChildFiles.begin();
 	 iterF != m_ChildFiles.end();
@@ -520,6 +520,15 @@ void CFEFile::Accept(CVisitor &v)
     }
 }
 
+class ConstantSum {
+    int res;
+    std::mem_fun1_t<int, CFEFile, bool> fun;
+public:
+    ConstantSum(int (CFEFile::*__pf)(bool), int i = 0) : res(i), fun(__pf) { }
+    void operator () (CFEFile *f) { res += fun(f, true); }
+    int result() const { return res; }
+};
+
 /** \brief counts the constants of the file
  *  \param bCountIncludes true if included files should be countedt as well
  *  \return number of constants in this file
@@ -534,15 +543,9 @@ int CFEFile::GetConstantCount(bool bCountIncludes)
      if (!bCountIncludes)
          return nCount;
 
-     vector<CFEFile*>::iterator iterF;
-     for (iterF = m_ChildFiles.begin();
-	  iterF != m_ChildFiles.end();
-	  iterF++)
-     {
-         nCount += (*iterF)->GetConstantCount();
-     }
-
-     return nCount;
+     ConstantSum s(&CFEFile::GetConstantCount);
+     s = for_each(m_ChildFiles.begin(), m_ChildFiles.end(), s);
+     return nCount + s.result();
 }
 
 /** \brief count the typedefs of the file
@@ -559,15 +562,9 @@ int CFEFile::GetTypedefCount(bool bCountIncludes)
      if (!bCountIncludes)
          return nCount;
 
-     vector<CFEFile*>::iterator iterF;
-     for (iterF = m_ChildFiles.begin();
-	  iterF != m_ChildFiles.end();
-	  iterF++)
-     {
-         nCount += (*iterF)->GetTypedefCount();
-     }
-
-     return nCount;
+     ConstantSum s(&CFEFile::GetTypedefCount);
+     s = for_each(m_ChildFiles.begin(), m_ChildFiles.end(), s);
+     return nCount + s.result();
 }
 
 /** \brief checks if this file is a standard include file

@@ -62,17 +62,17 @@ typedef char l4_page_t[L4_PAGESIZE];
 static l4_page_t map_page __attribute__ ((aligned(L4_PAGESIZE)));
 
 typedef struct bpp_15 {
-  unsigned char blue:5;
-  unsigned char green:5 __attribute__ ((packed));
-  unsigned char red:5 __attribute__ ((packed));
-  unsigned char reserved:1 __attribute__ ((packed));
-} bpp_15_t;
+  unsigned short blue:5;
+  unsigned short green:5;
+  unsigned short red:5;
+  unsigned short reserved:1;
+} __attribute__((packed)) bpp_15_t;
 
 typedef struct bpp_16 {
-  unsigned char blue:5;
-  unsigned char green:6 __attribute__ ((packed));
-  unsigned char red:5 __attribute__ ((packed));
-} bpp_16_t;
+  unsigned short blue:5;
+  unsigned short green:6;
+  unsigned short red:5;
+} __attribute__((packed)) bpp_16_t;
 
 typedef struct bpp_24 {
   unsigned char blue, green, red;

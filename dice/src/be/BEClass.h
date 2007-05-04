@@ -52,6 +52,7 @@ class CBENameSpace;
 class CBEFile;
 class CBEMsgBuffer;
 class CBESrvLoopFunction;
+class CBEException;
 
 class CFEInterface;
 class CFEAttribute;
@@ -106,8 +107,8 @@ public:
 
 public: // Public methods
     void CreateBackEnd(CFEInterface *pFEInterface);
-    bool AddToFile(CBEHeaderFile *pHeader);
-    bool AddToFile(CBEImplementationFile *pImpl);
+    void AddToHeader(CBEHeaderFile *pHeader);
+    void AddToImpl(CBEImplementationFile *pImpl);
     int GetParameterCount(int nFEType, bool& bSameCount, DIRECTION_TYPE nDirection);
     int GetStringParameterCount(DIRECTION_TYPE nDirection,
 	ATTR_TYPE nMustAttrs = ATTR_NONE, ATTR_TYPE nMustNotAttrs = ATTR_NONE);
@@ -124,9 +125,6 @@ public: // Public methods
     void Write(CBEHeaderFile *pFile);
     void Write(CBEImplementationFile *pFile);
     void WriteClassName(CBEFile *pFile);
-
-    CBEClass* GetNextBaseClass(vector<CBEClass*>::iterator &iter);
-    vector<CBEClass*>::iterator GetFirstBaseClass();
 
     bool AddOpcodesToFile(CBEHeaderFile *pFile);
     int GetClassNumber();
@@ -230,10 +228,6 @@ protected: // Protected members
      *  \brief a reference to the server's message buffer
      */
     CBEMsgBuffer *m_pMsgBuffer;
-    /** \var vector<CBEClass*> m_vBaseClasses
-     *  \brief contains references to the base classes
-     */
-    vector<CBEClass*> m_vBaseClasses;
     /** \var vector<CObject*> m_vOrderedElements
      *  \brief contains ordered list of elements
      */
@@ -251,6 +245,10 @@ protected: // Protected members
     friend class CBEMsgBuffer;
 
 public:
+    /** \var vector<CBEClass*> m_BaseClasses
+     *  \brief contains references to the base classes
+     */
+    vector<CBEClass*> m_BaseClasses;
     /** \var CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes
      *  \brief contains the attributes of the Class
      */

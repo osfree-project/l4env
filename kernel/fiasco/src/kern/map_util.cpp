@@ -172,8 +172,11 @@ IMPLEMENTATION:
 IMPLEMENT template<>
 inline
 bool
-Map_traits<Mem_space>::match(L4_fpage const &from, L4_fpage const &)
-{ return !from.is_cappage() && !from.is_iopage(); }
+Map_traits<Mem_space>::match(L4_fpage const &from, L4_fpage const &to)
+{ 
+  return !from.is_cappage() && !from.is_iopage() 
+    && (to.is_all_spaces() || (!to.is_cappage() && !to.is_iopage())) ; 
+}
 
 IMPLEMENT template<>
 inline

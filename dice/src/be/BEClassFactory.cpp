@@ -48,6 +48,7 @@
 #include "BEDeclarator.h"
 #include "BEExpression.h"
 #include "BECallFunction.h"
+#include "BECppCallWrapperFunction.h"
 #include "BEConstant.h"
 #include "BESrvLoopFunction.h"
 #include "BEWaitAnyFunction.h"
@@ -328,6 +329,16 @@ CBECallFunction *CBEClassFactory::GetNewCallFunction()
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
         "CBEClassFactory: created class CBECallFunction\n");
     return new CBECallFunction();
+}
+
+/** \brief creates a new instance of the class CBECppCallWrapperFunction
+ *  \return a reference to the new instance
+ */
+CBECppCallWrapperFunction *CBEClassFactory::GetNewCppCallWrapperFunction()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+        "CBEClassFactory: created class CBECppCallWrapperFunction\n");
+    return new CBECppCallWrapperFunction();
 }
 
 /** \brief creates a new instance of the class CBEConstant

@@ -56,7 +56,7 @@ protected:
 public:
     virtual void CreateBackEnd(CFETypedDeclarator *pFETypedef);
     virtual void CreateBackEnd(CBEType * pType, string sName, CFEBase *pFERefObject);
-    virtual bool AddToFile(CBEHeaderFile *pHeader);
+    virtual void AddToHeader(CBEHeaderFile *pHeader);
 
     virtual CObject *Clone();
 

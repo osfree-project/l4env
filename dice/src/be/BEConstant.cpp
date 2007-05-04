@@ -213,11 +213,11 @@ CBEExpression *CBEConstant::GetValue()
  * A const usually is always added to a header file , if the target file is the
  * respective file for the IDL file
  */
-bool CBEConstant::AddToFile(CBEHeaderFile *pHeader)
+void CBEConstant::AddToHeader(CBEHeaderFile *pHeader)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEConstant::AddToFile(header: %s) for const %s called\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEConstant::%s(header: %s) for const %s called\n", __func__,
         pHeader->GetFileName().c_str(), m_sName.c_str());
     if (IsTargetFile(pHeader))
         pHeader->m_Constants.Add(this);
-    return true;
 }

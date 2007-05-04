@@ -395,12 +395,12 @@ CBEComponentFunction::DoWriteFunctionInline(CBEFile* /*pFile*/)
  * A component function is only added if the create-skeleton
  * option is set.
  */
-bool
-CBEComponentFunction::AddToFile(CBEImplementationFile * pImpl)
+void
+CBEComponentFunction::AddToImpl(CBEImplementationFile * pImpl)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
-        return true;  // fake success, without adding function
-    return CBEOperationFunction::AddToFile(pImpl);
+        return;  // fake success, without adding function
+    return CBEOperationFunction::AddToImpl(pImpl);
 }
 
 /** \brief set the target file name for this function

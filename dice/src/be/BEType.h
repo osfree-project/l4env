@@ -93,7 +93,7 @@ public:
     virtual int GetIndirectionCount();
     virtual void WriteIndirect(CBEFile* pFile);
 
-    virtual bool AddToFile(CBEHeaderFile *pHeader);
+    virtual void AddToHeader(CBEHeaderFile *pHeader);
 
 protected:
     virtual void WriteZeroInitArray(CBEFile *pFile, CBEType *pType, 

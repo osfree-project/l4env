@@ -100,12 +100,7 @@ CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface)
     string exc = string(__func__);
 
     // add functions
-    if (!AddSwitchCases(pFEInterface))
-    {
-	exc += " failed, beacuse switch cases could not be added.";
-	throw new CBECreateException(exc);
-    }
-
+    AddSwitchCases(pFEInterface);
     // set own message buffer
     AddMessageBuffer();
     // add marshaller and communication class
@@ -144,9 +139,9 @@ CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface)
     {
         (*iterS)->SetMessageBufferType();
 	// also set the call variable value of our return variable
-	CBEDeclarator *pDecl = pReturn->m_Declarators.First();
-	(*iterS)->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
-	    pDecl->GetName());
+// 	CBEDeclarator *pDecl = pReturn->m_Declarators.First();
+// 	(*iterS)->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
+// 	    pDecl->GetName());
     }
 
     // check if interface has default function and add its name if available
@@ -183,10 +178,9 @@ CBEDispatchFunction::AddBeforeParameters(void)
 /** \brief adds the functions for the given front-end interface
  *  \param pFEInterface the interface to add the functions for
  */
-bool CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
+void CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
 {
-    if (!pFEInterface)
-        return true;
+    assert(pFEInterface);
 
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     vector<CFEOperation*>::iterator iterO;
@@ -205,12 +199,9 @@ bool CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
 	}
 	catch (CBECreateException *e)
         {
-	    e->Print();
-	    delete e;
-	    
 	    m_SwitchCases.Remove(pFunction);
             delete pFunction;
-            return false;
+            throw;
         }
     }
 
@@ -219,11 +210,8 @@ bool CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
 	 iterI != pFEInterface->m_BaseInterfaces.end();
 	 iterI++)
     {
-        if (!AddSwitchCases(*iterI))
-            return false;
+        AddSwitchCases(*iterI);
     }
-
-    return true;
 }
 
 /** \brief writes the variable initializations of this function
@@ -249,13 +237,8 @@ CBEDispatchFunction::WriteSwitch(CBEFile * pFile)
 
     // iterate over functions
     assert(m_pClass);
-    vector<CBESwitchCase*>::iterator iter;
-    for (iter = m_SwitchCases.begin();
-	 iter != m_SwitchCases.end();
-	 iter++)
-    {
-        (*iter)->Write(pFile);
-    }
+    for_each(m_SwitchCases.begin(), m_SwitchCases.end(),
+	std::bind2nd(std::mem_fun(&CBESwitchCase::Write), pFile));
 
     // writes default case
     WriteDefaultCase(pFile);

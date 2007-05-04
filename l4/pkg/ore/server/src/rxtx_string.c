@@ -130,6 +130,7 @@ static int rx_reply_string(int h, rxtx_entry_t *entry)
   // reset the waiting flag
   ore_connection_table[h].flags &= ~ORE_FLAG_RX_WAITING;
   
+  LOGd(ORE_DEBUG_COMPONENTS, "sending reply to "l4util_idfmt, l4util_idstr(client));
   ore_rxtx_recv_reply(&client, 0, (char **)&entry->skb->data,
                      &packet_size, &env);
   
@@ -240,8 +241,9 @@ int tx_component_string(CORBA_Object _dice_corba_obj,
   // fill the skb with all data necessary for sending,
   memcpy(skb->data, buf, size);
   skb->len  = size;
+  skb->dev  = ore_connection_table[channel].dev;
 
-  i = local_deliver(ent);
+  i = local_deliver(ent, channel);
 
   // deliver to external client or broadcast
   if (i < 0 || mac_is_broadcast(ent->skb->data))
@@ -267,10 +269,8 @@ int tx_component_string(CORBA_Object _dice_corba_obj,
       ore_connection_table[channel].packets_sent++;
     }
     else  // we only did local_deliver() -> no NIC will ever free this skb, so
-        // we do it ourselves
-    {
+          // we do it ourselves
         kfree_skb(skb);
-    }
 
     // we kfree() the entry directly, because we do not need it anymore,
     // while the skb inside is still in possession of the NIC and will
@@ -337,7 +337,7 @@ int netif_rx_string(int h, struct sk_buff *skb)
   }
   else
   {
-      LOGd(ORE_DEBUG_PACKET, "quota limit reached - removing first");
+      LOG("quota limit reached - removing first");
 	  free_rxtx_entry(ent);
   }
   

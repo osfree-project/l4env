@@ -66,17 +66,7 @@ protected:
     virtual void WriteUnmarshalling(CBEFile *pFile);
     virtual void WriteInvocation(CBEFile *pFile);
     virtual void WriteVariableInitialization(CBEFile *pFile);
-    virtual void WriteFunctionDeclaration(CBEFile* pFile);
-    virtual void WriteFunctionDefinition(CBEFile* pFile);
-    virtual void WriteBody(CBEFile * pFile);
     virtual void WriteReturnType(CBEFile * pFile);
-    virtual bool DoWriteParameter(CBETypedDeclarator *pParam);
-
-protected:
-    /** \var unsigned char m_nSkipParameter
-     *  \brief bitmap indication whether to skip CORBA Object or Env
-     */
-    unsigned char m_nSkipParameter;
 };
 
 #endif // !__DICE_BECALLFUNCTION_H__

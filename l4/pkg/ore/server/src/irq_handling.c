@@ -36,8 +36,6 @@ int netif_rx(struct sk_buff *skb)
 	// find out who will receive this skb
 	channel = find_channel_for_skb(skb, 0);
 
-	LOGd_Enter(ORE_DEBUG_IRQ, "I am: "l4util_idfmt, l4util_idstr(l4_myself()));
-
 	if (ORE_DEBUG_PACKET)
 		LOG_SKB(skb);
 

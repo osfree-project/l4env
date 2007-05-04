@@ -63,7 +63,7 @@ wc:
 	(find . \( -name "*.[chS]" -or -name "*.cpp" -or -name "*.ll" -or -name "*.yy" \) -and -not -name "*getopt*" ) | xargs wc -l
 
 stats:
-	cccc --help 2>&1|head -n 1 && rm -rf /tmp/cccc && mkdir /tmp/cccc && find . -name \*.cpp | xargs cccc --outdir=/tmp/cccc && install /tmp/cccc/* /mnt/kurt/public_html/dice_stats/ && ln -f /mnt/kurt/public_html/dice_stats/cccc.html /mnt/kurt/public_html/dice_stats/index.html
+	cccc --help 2>&1|head -n 1 && rm -rf /tmp/cccc && mkdir /tmp/cccc && find . -name \*.cpp | xargs cccc --outdir=/tmp/cccc && install /tmp/cccc/* /mnt/oz/public_html/dice_stats/ && ln -f /mnt/oz/public_html/dice_stats/cccc.html /mnt/oz/public_html/dice_stats/index.html
 
 .PHONY: svnversion.h.new
 

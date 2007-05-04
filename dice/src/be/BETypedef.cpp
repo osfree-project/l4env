@@ -146,18 +146,17 @@ CBETypedef::CreateBackEnd(CBEType * pType,
  * A type definition is usually always added to a header file, if it is the
  * respective target file (for the IDL file).
  */
-bool CBETypedef::AddToFile(CBEHeaderFile *pHeader)
+void CBETypedef::AddToHeader(CBEHeaderFile *pHeader)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBETypedef::AddToFile(header: %s) for typedef %s called\n",
+	"CBETypedef::%s(header: %s) for typedef %s called\n", __func__,
         pHeader->GetFileName().c_str(), 
 	m_Declarators.First()->GetName().c_str());
     if (IsTargetFile(pHeader))
         pHeader->m_Typedefs.Add(this);
     
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"CBETypedef::AddToFile(header) return true\n");
-    return true;
+	"CBETypedef::%s(header) return true\n", __func__);
 }
 
 

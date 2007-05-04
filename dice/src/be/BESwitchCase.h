@@ -60,8 +60,6 @@ public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
 
     virtual void SetMessageBufferType();
-    virtual void SetCallVariable(string sOriginalName, int nStars, 
-	string sCallName);
     
     /** \brief tests if this function should be written
      *  \return true if successful

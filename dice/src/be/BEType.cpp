@@ -479,13 +479,13 @@ int CBEType::GetArrayDimensionCount()
  *  \param pHeader the header file to add this type to
  *  \return if the adding succeeded
  */
-bool CBEType::AddToFile(CBEHeaderFile *pHeader)
+void CBEType::AddToHeader(CBEHeaderFile *pHeader)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEType::AddToFile(header: %s) for type %d called\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEType::%s(header: %s) for type %d called\n", __func__,
         pHeader->GetFileName().c_str(), GetFEType());
     if (IsTargetFile(pHeader))
         pHeader->m_TaggedTypes.Add(this);
-    return true;
 }
 
 /** \brief writes the type for an indirect declaration

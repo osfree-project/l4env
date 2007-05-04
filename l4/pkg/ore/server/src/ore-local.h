@@ -174,7 +174,7 @@ int find_channel_for_skb(struct sk_buff *skb, int start);
 int find_channel_for_mac(ore_mac mac, int start);
 int find_channel_for_threadid(l4_threadid_t, int);
 int find_channel_for_worker(l4ore_handle_t worker);
-int local_deliver(rxtx_entry_t *);
+int local_deliver(rxtx_entry_t *, int channel);
 int service_waiting_clients(void);
 int sanity_check_rxtx(int, l4_threadid_t);
 int __l4ore_in_dataspace(void *, dsi_packet_t **, dsi_socket_t **);
@@ -193,8 +193,17 @@ void worker_thread_dsi(void *);
 
 /* checksum functions */
 unsigned int adler32(unsigned char *buf, unsigned int len);
+
+#ifndef CONFIG_ORE_DDE26
 unsigned short crc16(unsigned char *buf, int len, short magic);
 unsigned int crc32(unsigned char *buf, int len, short magic);
+#else
+#include <linux/crc16.h>
+#include <linux/crc32.h>
+#endif
+
+/* unit test function */
+extern void cunit_tests(void);
 
 /* debugging stuff */
 #ifdef CONFIG_ORE_DUMPER

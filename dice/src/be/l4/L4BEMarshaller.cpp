@@ -524,13 +524,13 @@ void CL4BEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
 	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pParameter, pStack);
 	*m_pFile << "[";
 	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << "-1].snd_base = 0;\n";
+	*m_pFile << "].snd_base = 0;\n";
 	// zero fpage member
 	*m_pFile << "\t";
 	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pParameter, pStack);
 	*m_pFile << "[";
 	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << "-1].fpage.raw = 0;\n";
+	*m_pFile << "].fpage.raw = 0;\n";
 	
 	m_pFile->DecIndent();
 	*m_pFile << "\t}\n";

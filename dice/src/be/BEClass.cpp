@@ -40,6 +40,7 @@
 #include "BEOperationFunction.h"
 #include "BEInterfaceFunction.h"
 #include "BECallFunction.h"
+#include "BECppCallWrapperFunction.h"
 #include "BEUnmarshalFunction.h"
 #include "BEMarshalFunction.h"
 #include "BEReplyFunction.h"
@@ -60,6 +61,8 @@
 #include "BEUnionType.h"
 #include "BEUserDefinedType.h"
 #include "BEMsgBuffer.h"
+#include "BEClass.h"
+#include "BEException.h"
 
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
@@ -159,26 +162,29 @@ int CBEClass::GetFunctionCount()
     return m_Functions.size();
 }
 
+class GetFunctionWriteCountPred {
+    CBEFile *f;
+public:
+    GetFunctionWriteCountPred(CBEFile *ff) : f(ff) { }
+    bool operator() (CBEFunction *fun) 
+    {
+	CBEHeaderFile *h = dynamic_cast<CBEHeaderFile*>(f);
+	if (h && fun->DoWriteFunction(h))
+	    return true;
+	CBEImplementationFile *i = dynamic_cast<CBEImplementationFile*>(f);
+	if (i && fun->DoWriteFunction(i))
+	    return true;
+	return false;
+    }
+};
+
 /** \brief returns the number of functions in this class which are written
  *  \return the number of functions in this class which are written
  */
 int CBEClass::GetFunctionWriteCount(CBEFile *pFile)
 {
-    int nCount = 0;
-    vector<CBEFunction*>::iterator iter;
-    for (iter = m_Functions.begin();
-	 iter != m_Functions.end();
-	 iter++)
-    {
-        if (dynamic_cast<CBEHeaderFile*>(pFile) &&
-            (*iter)->DoWriteFunction((CBEHeaderFile*)pFile))
-            nCount++;
-        if (dynamic_cast<CBEImplementationFile*>(pFile) &&
-            (*iter)->DoWriteFunction((CBEImplementationFile*)pFile))
-            nCount++;
-    }
-
-    return nCount;
+    return std::count_if(m_Functions.begin(), m_Functions.end(), 
+	GetFunctionWriteCountPred(pFile));
 }
 
 /** \brief adds a new base class from a name
@@ -200,31 +206,9 @@ void CBEClass::AddBaseClass(string sName)
 	    sName.c_str());
 	return;
     }
-    m_vBaseClasses.push_back(pBaseClass);
+    m_BaseClasses.push_back(pBaseClass);
     // if we add a base class, we add us to that class' derived classes
     pBaseClass->m_DerivedClasses.Add(this);
-}
-
-/** \brief retrieves a pointer to the first base Class
- *  \return a pointer to the first base Class
- *
- * If m_vBaseClasses is empty and m_nBaseNameSize is bigger than 0,
- * we have to add the references to the base classes first.
- */
-vector<CBEClass*>::iterator CBEClass::GetFirstBaseClass()
-{
-    return m_vBaseClasses.begin();
-}
-
-/** \brief retrieves a pointer to the next base Class
- *  \param iter a pointer to the next base Class
- *  \return a reference to the next base Class
- */
-CBEClass* CBEClass::GetNextBaseClass(vector<CBEClass*>::iterator &iter)
-{
-    if (iter == m_vBaseClasses.end())
-        return 0;
-    return *iter++;
 }
 
 /** \brief creates the members of this class
@@ -839,6 +823,50 @@ CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
 		pFEOperation->GetName();
             throw new CBECreateException(exc);
         }
+	// for C++ we need two call wrapper functions in the class
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	{
+	    // first wrapper
+	    CBECppCallWrapperFunction *pWrapper = pCF->GetNewCppCallWrapperFunction();
+	    m_Functions.Add(pWrapper);
+	    pWrapper->SetComponentSide(false);
+	    pGroup->m_Functions.Add(pWrapper);
+	    try
+	    {
+		pWrapper->CreateBackEnd(pFEOperation, 1);
+	    }
+	    catch (CBECreateException *e)
+	    {
+		e->Print();
+		delete e;
+		m_Functions.Remove(pWrapper);
+		delete pWrapper;
+
+		exc += " failed, because call wrapper func couldn't be created for " +
+		    pFEOperation->GetName();
+		throw new CBECreateException(exc);
+	    }
+	    // second wrapper
+	    pWrapper = pCF->GetNewCppCallWrapperFunction();
+	    m_Functions.Add(pWrapper);
+	    pWrapper->SetComponentSide(false);
+	    pGroup->m_Functions.Add(pWrapper);
+	    try
+	    {
+		pWrapper->CreateBackEnd(pFEOperation, 3);
+	    }
+	    catch (CBECreateException *e)
+	    {
+		e->Print();
+		delete e;
+		m_Functions.Remove(pWrapper);
+		delete pWrapper;
+
+		exc += " failed, because call wrapper func couldn't be created for " +
+		    pFEOperation->GetName();
+		throw new CBECreateException(exc);
+	    }
+	}
 
         // for server side: reply-and-wait, reply-and-recv, skeleton
         pFunction = pCF->GetNewComponentFunction();
@@ -1118,7 +1146,7 @@ CBEClass::CreateBackEndAttribute(CFEAttribute *pFEAttribute)
  *
  * An Class adds its included types, constants and functions.
  */
-bool CBEClass::AddToFile(CBEHeaderFile *pHeader)
+void CBEClass::AddToHeader(CBEHeaderFile *pHeader)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEClass::%s(header: %s) for class %s called\n", __func__,
@@ -1131,7 +1159,6 @@ bool CBEClass::AddToFile(CBEHeaderFile *pHeader)
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s(header: %s) for class %s returns true\n", __func__,
 	pHeader->GetFileName().c_str(), GetName().c_str());
-    return true;
 }
 
 /** \brief adds this class (or its members) to an implementation file
@@ -1142,7 +1169,7 @@ bool CBEClass::AddToFile(CBEHeaderFile *pHeader)
  * seperately for the client implementation file. Otherwise we add the
  * whole class.
  */
-bool CBEClass::AddToFile(CBEImplementationFile *pImpl)
+void CBEClass::AddToImpl(CBEImplementationFile *pImpl)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s(impl: %s) for class %s called\n", __func__,
@@ -1152,13 +1179,9 @@ bool CBEClass::AddToFile(CBEImplementationFile *pImpl)
     if (CCompiler::IsFileOptionSet(PROGRAM_FILE_FUNCTION) &&
         dynamic_cast<CBEClient*>(pImpl->GetTarget()))
     {
-        vector<CBEFunction*>::iterator iter;
-	for (iter = m_Functions.begin();
-	     iter != m_Functions.end();
-	     iter++)
-        {
-            (*iter)->AddToFile(pImpl);
-        }
+	for_each(m_Functions.begin(),
+	    m_Functions.end(),
+	    std::bind2nd(std::mem_fun(&CBEFunction::AddToImpl), pImpl));
     }
     // add this class to the file
     if (IsTargetFile(pImpl))
@@ -1167,7 +1190,6 @@ bool CBEClass::AddToFile(CBEImplementationFile *pImpl)
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s(impl: %s) for class %s returns true\n", __func__,
         pImpl->GetFileName().c_str(), GetName().c_str());
-    return true;
 }
 
 /** \brief counts the parameters with a specific type
@@ -1241,7 +1263,7 @@ CBEClass::GetStringParameterCount(DIRECTION_TYPE nDirection,
 		continue;
             nCurr = (*iterF)->GetStringParameterCount(nDirection, nMustAttrs,
 		nMustNotAttrs);
-            nCount = (nCount > nCurr) ? nCount : nCurr;
+            nCount = std::max(nCount, nCurr);
         }
     }
 
@@ -1271,7 +1293,7 @@ int CBEClass::GetSize(DIRECTION_TYPE nDirection)
 	if (!dynamic_cast<CBEOperationFunction*>(*iter))
 	    continue;
         nCurr = (*iter)->GetSize(nDirection);
-        nSize = (nSize > nCurr) ? nSize : nCurr;
+        nSize = std::max(nSize, nCurr);
     }
 
     return nSize;
@@ -1526,8 +1548,8 @@ int CBEClass::GetClassNumber()
 
     int nNumber = 1;
     vector<CBEClass*>::iterator iter;
-    for (iter = m_vBaseClasses.begin();
-	 iter != m_vBaseClasses.end();
+    for (iter = m_BaseClasses.begin();
+	 iter != m_BaseClasses.end();
 	 iter++)
     {
         int nBaseNumber = (*iter)->GetClassNumber();
@@ -1631,8 +1653,8 @@ void CBEClass::WriteBaseClasses(CBEFile *pFile)
 {
     bool bComma = false;
     vector<CBEClass*>::iterator iterC;
-    for (iterC = m_vBaseClasses.begin();
-	 iterC != m_vBaseClasses.end();
+    for (iterC = m_BaseClasses.begin();
+	 iterC != m_BaseClasses.end();
 	 iterC++)
     {
 	if (bComma)
@@ -1654,7 +1676,7 @@ void CBEClass::WriteBaseClasses(CBEFile *pFile)
  */
 void CBEClass::WriteMemberVariables(CBEHeaderFile *pFile)
 {
-    if (!m_vBaseClasses.empty())
+    if (!m_BaseClasses.empty())
 	return;
 
     if (pFile->IsOfFileType(FILETYPE_CLIENTHEADER))
@@ -1704,15 +1726,15 @@ void CBEClass::WriteConstructor(CBEHeaderFile *pFile)
      	*pFile << " (CORBA_Object_base _server)\n";
 	*pFile << "\t : ";
 	// if we do not have a base class, we initialize our server member
-	if (m_vBaseClasses.empty())
+	if (m_BaseClasses.empty())
 	    *pFile << "_dice_server(_server)";
 	else
 	{
 	    // initialize the base classes
 	    bool bComma = false;
 	    vector<CBEClass*>::iterator iterC;
-	    for (iterC = m_vBaseClasses.begin();
-		iterC != m_vBaseClasses.end();
+	    for (iterC = m_BaseClasses.begin();
+		iterC != m_BaseClasses.end();
 		iterC++)
 	    {
 		if (bComma)
@@ -1726,7 +1748,7 @@ void CBEClass::WriteConstructor(CBEHeaderFile *pFile)
     {
 	*pFile << " (void)";
 
-	if (m_vBaseClasses.empty())
+	if (m_BaseClasses.empty())
 	{
 	    *pFile << "\n";
 
@@ -1743,8 +1765,8 @@ void CBEClass::WriteConstructor(CBEHeaderFile *pFile)
 	    // initialize the base classes
 	    bool bComma = false;
 	    vector<CBEClass*>::iterator iterC;
-	    for (iterC = m_vBaseClasses.begin();
-		iterC != m_vBaseClasses.end();
+	    for (iterC = m_BaseClasses.begin();
+		iterC != m_BaseClasses.end();
 		iterC++)
 	    {
 		if (bComma)
@@ -1764,7 +1786,7 @@ void CBEClass::WriteConstructor(CBEHeaderFile *pFile)
     // if this class is derived from other interfaces, then there is no need
     // to define a private copy constructor, because the base class already
     // has one.
-    if (m_vBaseClasses.empty())
+    if (m_BaseClasses.empty())
     {
 	*pFile << "\tprivate:\n";
 	pFile->IncIndent();
@@ -2282,14 +2304,8 @@ CBEClass::FindInterfaceWithNumber(CFEInterface *pFEInterface,
         if (GetInterfaceNumber(*iter) == nNumber)
         {
             // check if we already got this interface (use pointer)
-            vector<CFEInterface*>::const_iterator iterI;
-            for (iterI = pCollection->begin();
-		 iterI != pCollection->end();
-		 iterI++)
-            {
-                if (*iterI == *iter)
-                    break; // stops for(iterI) loop
-            }
+            vector<CFEInterface*>::const_iterator iterI = find(pCollection->begin(), pCollection->end(),
+		*iter);
             if (iterI == pCollection->end()) // no match found
                 pCollection->push_back(*iter);
             nCount++;
@@ -2513,14 +2529,9 @@ CFunctionGroup* CBEClass::FindFunctionGroup(CBEFunction *pFunction)
 	 iter++)
     {
         // iterate over its functions
-        vector<CBEFunction*>::iterator iterF;
-	for (iterF = (*iter)->m_Functions.begin();
-	     iterF != (*iter)->m_Functions.end();
-	     iterF++)
-        {
-            if (*iterF == pFunction)
-                return *iter;
-        }
+        if (find((*iter)->m_Functions.begin(), (*iter)->m_Functions.end(),
+		pFunction) != (*iter)->m_Functions.end())
+	    return *iter;
     }
     return 0;
 }
@@ -2767,8 +2778,8 @@ CBEClass::HasFunctionWithAttribute(ATTR_TYPE nAttribute)
     }
     // check base classes
     vector<CBEClass*>::iterator iterC;
-    for (iterC = m_vBaseClasses.begin();
-	 iterC != m_vBaseClasses.end();
+    for (iterC = m_BaseClasses.begin();
+	 iterC != m_BaseClasses.end();
 	 iterC++)
     {
         if ((*iterC)->HasFunctionWithAttribute(nAttribute))
@@ -2804,8 +2815,8 @@ CBEClass::HasParametersWithAttribute(ATTR_TYPE nAttribute1,
     }
     // check base classes
     vector<CBEClass*>::iterator iterC;
-    for (iterC = m_vBaseClasses.begin();
-	 iterC != m_vBaseClasses.end();
+    for (iterC = m_BaseClasses.begin();
+	 iterC != m_BaseClasses.end();
 	 iterC++)
     {
         if ((*iterC)->HasParametersWithAttribute(nAttribute1, nAttribute2))

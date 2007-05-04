@@ -44,6 +44,7 @@ class CBEReplyRcvFunction;
 class CBEReplyFunction;
 class CBEReplyWaitFunction;
 class CBECallFunction;
+class CBECppCallWrapperFunction;
 class CBEUnmarshalFunction;
 class CBEMarshalFunction;
 class CBEComponentFunction;
@@ -103,6 +104,7 @@ public:
     virtual CBESrvLoopFunction* GetNewSrvLoopFunction();
     virtual CBEConstant* GetNewConstant();
     virtual CBECallFunction* GetNewCallFunction();
+    virtual CBECppCallWrapperFunction* GetNewCppCallWrapperFunction();
     virtual CBETypedef* GetNewTypedef();
     virtual CBEExpression* GetNewExpression();
     virtual CBEDeclarator* GetNewDeclarator();

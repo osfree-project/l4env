@@ -32,10 +32,10 @@
 #include "be/BEType.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
-#include "be/BERoot.h"
-#include "be/BEException.h"
 #include "be/BEClass.h"
 #include "be/BEMarshaller.h"
+#include "be/BERoot.h"
+#include "be/BEException.h"
 #include "Compiler.h"
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
@@ -85,19 +85,11 @@ CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation)
         throw new CBECreateException(exc);
     }
     // add attributes
-    if (!AddAttributes(pFEOperation))
-    {
-	exc += " failed because attributes could not be added.";
-        throw new CBECreateException(exc);
-    }
+    AddAttributes(pFEOperation);
     // add parameters
     AddParameters(pFEOperation);
     // add exceptions
-    if (!AddExceptions(pFEOperation))
-    {
-	exc += " failed because exceptions could not be added.";
-        throw new CBECreateException(exc);
-    }
+    AddExceptions(pFEOperation);
     // set opcode name
     m_sOpcodeConstName = pNF->GetOpcodeConst(pFEOperation);
     // set parent
@@ -138,6 +130,16 @@ CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation)
     }
 }
 
+template<class _Arg>
+class AddCall {
+    CBEOperationFunction *f;
+    std::mem_fun1_t<void, CBEOperationFunction, _Arg*> fun;
+public:
+    AddCall(void (CBEOperationFunction::*__pf)(_Arg*), CBEOperationFunction *ff) : 
+	f(ff), fun(__pf) { }
+    void operator() (_Arg *p) { fun(f, p); }
+};
+
 /** \brief adds the parameters of a front-end function to this class
  *  \param pFEOperation the front-end function
  */
@@ -150,13 +152,8 @@ CBEOperationFunction::AddParameters(CFEOperation * pFEOperation)
 
     AddBeforeParameters();
 
-    vector<CFETypedDeclarator*>::iterator iter;
-    for (iter = pFEOperation->m_Parameters.begin();
-	 iter != pFEOperation->m_Parameters.end();
-	 iter++)
-    {
-        AddParameter(*iter);
-    }
+    for_each(pFEOperation->m_Parameters.begin(), pFEOperation->m_Parameters.end(),
+	AddCall<CFETypedDeclarator>(&CBEOperationFunction::AddParameter, this));
 
     AddAfterParameters();
 
@@ -189,28 +186,23 @@ CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter)
  *  \param pFEOperation the front-end function
  *  \return true if successful
  */
-bool 
+void
 CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEOperationFunction::%s called for %s\n", __func__,
         pFEOperation->GetName().c_str());
-    vector<CFEIdentifier*>::iterator iter;
-    for (iter = pFEOperation->m_RaisesDeclarators.begin();
-	 iter != pFEOperation->m_RaisesDeclarators.end();
-	 iter++)
-    {
-        if (!AddException(*iter))
-            return false;
-    }
+
+    for_each(pFEOperation->m_RaisesDeclarators.begin(), pFEOperation->m_RaisesDeclarators.end(),
+	AddCall<CFEIdentifier>(&CBEOperationFunction::AddException, this));
+
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEOperationFunction::%s returns true\n", __func__);
-    return true;
 }
 
 /** \brief adds a single exception to this class
  *  \param pFEException the exception to add
  *  \return true if successful
  */
-bool 
+void 
 CBEOperationFunction::AddException(CFEIdentifier * pFEException)
 {
     CBEException *pException = CCompiler::GetClassFactory()->GetNewException();
@@ -225,88 +217,73 @@ CBEOperationFunction::AddException(CFEIdentifier * pFEException)
         delete pException;
         throw;
     }
-    return true;
 }
 
 /** \brief adds attributes of a front-end function this this class
  *  \param pFEOperation the front-end operation
  *  \return true if successful
  */
-bool 
+void 
 CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEOperationFunction::%s called for %s\n", __func__,
 	pFEOperation->GetName().c_str());
-    CBETypedDeclarator *pReturn = GetReturnVariable();
-    vector<CFEAttribute*>::iterator iter;
-    for (iter = pFEOperation->m_Attributes.begin();
-	 iter != pFEOperation->m_Attributes.end();
-	 iter++)
-    {
-        // check if attribute is for function or return type
-        ATTR_TYPE nType = (*iter)->GetAttrType();
-        switch (nType)
-        {
-        case ATTR_IDEMPOTENT:
-        case ATTR_BROADCAST:
-        case ATTR_MAYBE:
-        case ATTR_REFLECT_DELETIONS:
-        case ATTR_UUID:
-        case ATTR_NOOPCODE:
-        case ATTR_NOEXCEPTIONS:
-        case ATTR_ALLOW_REPLY_ONLY:
-        case ATTR_IN:
-        case ATTR_OUT:
-        case ATTR_STRING:
-        case ATTR_CONTEXT_HANDLE:
-	case ATTR_SCHED_DONATE:
-	case ATTR_DEFAULT_TIMEOUT:
-            /* keep attribute */
-            if (!AddAttribute(*iter))
-                return false;
-            break;
-        default:
-	    try
-	    {
-		pReturn->AddAttribute(*iter);
-	    }
-	    catch (CBECreateException *e)
-	    {
-		e->Print();
-		delete e;
-                return false;
-	    }
-            break;
-        }
-    }
+
+    for_each(pFEOperation->m_Attributes.begin(), pFEOperation->m_Attributes.end(),
+	AddCall<CFEAttribute>(&CBEOperationFunction::AddAttribute, this));
+
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEOperationFunction::%s returns true\n", __func__);
-    return true;
 }
 
 /** \brief adds a single attribute to this function
  *  \param pFEAttribute the attribute to add
  *  \return true if successful
  */
-bool 
+void 
 CBEOperationFunction::AddAttribute(CFEAttribute * pFEAttribute)
 {
-    CBEAttribute *pAttribute = CCompiler::GetClassFactory()->GetNewAttribute();
-    m_Attributes.Add(pAttribute);
-    try
+    // check if attribute is for function or return type
+    ATTR_TYPE nType = pFEAttribute->GetAttrType();
+    switch (nType)
     {
-	pAttribute->CreateBackEnd(pFEAttribute);
+    case ATTR_IDEMPOTENT:
+    case ATTR_BROADCAST:
+    case ATTR_MAYBE:
+    case ATTR_REFLECT_DELETIONS:
+    case ATTR_UUID:
+    case ATTR_NOOPCODE:
+    case ATTR_NOEXCEPTIONS:
+    case ATTR_ALLOW_REPLY_ONLY:
+    case ATTR_IN:
+    case ATTR_OUT:
+    case ATTR_STRING:
+    case ATTR_CONTEXT_HANDLE:
+    case ATTR_SCHED_DONATE:
+    case ATTR_DEFAULT_TIMEOUT:
+	/* keep attribute */
+	{
+	    CBEAttribute *pAttribute = CCompiler::GetClassFactory()->GetNewAttribute();
+	    m_Attributes.Add(pAttribute);
+	    try
+	    {
+		pAttribute->CreateBackEnd(pFEAttribute);
+	    }
+	    catch (CBECreateException *e)
+	    {
+		m_Attributes.Remove(pAttribute);
+		delete pAttribute;
+		throw;
+	    }
+	}
+	break;
+    default:
+	{
+	    CBETypedDeclarator *pReturn = GetReturnVariable();
+	    pReturn->AddAttribute(pFEAttribute);
+	}
+	break;
     }
-    catch (CBECreateException *e)
-    {
-	m_Attributes.Remove(pAttribute);
-        delete pAttribute;
-	e->Print();
-	delete e;
-
-        return false;
-    }
-    return true;
 }
 

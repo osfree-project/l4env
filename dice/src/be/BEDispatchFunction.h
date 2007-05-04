@@ -70,7 +70,7 @@ protected:
     virtual void WriteFunctionDeclaration(CBEFile * pFile);
     virtual void WriteInvocation(CBEFile *pFile);
     virtual void WriteBody(CBEFile *pFile);
-    virtual bool AddSwitchCases(CFEInterface *pFEInterface);
+    virtual void AddSwitchCases(CFEInterface *pFEInterface);
     virtual void AddBeforeParameters();
 
 protected:

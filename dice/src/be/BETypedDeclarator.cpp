@@ -1062,6 +1062,10 @@ void CBETypedDeclarator::AddDeclarator(CFEDeclarator * pFEDeclarator)
  */
 void CBETypedDeclarator::AddDeclarator(string sName, int nStars)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedDeclarator::%s(%s, %d) called\n", __func__,
+	sName.c_str(), nStars);
+
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEDeclarator *pDecl = pCF->GetNewDeclarator();
     m_Declarators.Add(pDecl);
@@ -1073,8 +1077,15 @@ void CBETypedDeclarator::AddDeclarator(string sName, int nStars)
     {
 	m_Declarators.Remove(pDecl);
 	delete pDecl;
+
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CBETypedDeclarator::%s failed.\n", __func__);
+
 	throw;
     }
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedDeclarator::%s returns.\n", __func__);
 }
 
 /** \brief retrieves a reference to the call declarator

@@ -48,13 +48,11 @@
 CBECallFunction::CBECallFunction()
     : CBEOperationFunction(FUNCTION_CALL)
 {
-    m_nSkipParameter = 0;
 }
 
 CBECallFunction::CBECallFunction(CBECallFunction & src)
 : CBEOperationFunction(src)
 {
-    m_nSkipParameter = src.m_nSkipParameter;
 }
 
 /** \brief destructor of target class */
@@ -306,57 +304,6 @@ int CBECallFunction::GetFixedSize(DIRECTION_TYPE nDirection)
     return nSize;
 }
 
-/** \brief writes the declaration of a function to the target file
- *  \param pFile the target file to write to
- *
- * For C++ we have some additional wrapper functions. One without the server
- * id and one without server id and environment.
- */
-void 
-CBECallFunction::WriteFunctionDeclaration(CBEFile * pFile)
-{
-    // check C++
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-    {
-	// write version without server id and environment
-	m_nSkipParameter = 3; /* skip both */
-	CBEOperationFunction::WriteFunctionDefinition(pFile);
-	
-	// write version without server id
-	m_nSkipParameter = 1; /* skip object */
-	CBEOperationFunction::WriteFunctionDefinition(pFile);
-    }
-    // finally write base class function declaration
-    m_nSkipParameter = 0;
-    CBEOperationFunction::WriteFunctionDeclaration(pFile);
-}
-
-/** \brief writes the definition of the function to the target file
- *  \param pFile the target file to write to
- *
- * If this is a header file and we have been called because of inlining, and
- * its C++ then write the wrapper functions.
- */
-void 
-CBECallFunction::WriteFunctionDefinition(CBEFile * pFile)
-{
-    if (CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE) &&
-	pFile->IsOfFileType(FILETYPE_HEADER) &&
-	CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-    {
-	// write version without server id and environment
-	m_nSkipParameter = 3; /* skip both */
-	CBEOperationFunction::WriteFunctionDefinition(pFile);
-	
-	// write version without server id
-	m_nSkipParameter = 1; /* skip object */
-	CBEOperationFunction::WriteFunctionDefinition(pFile);
-    }
-    // finally write base class function declaration
-    m_nSkipParameter = 0;
-    CBEOperationFunction::WriteFunctionDefinition(pFile);
-}
-
 /** \brief writes the return type of a function
  *  \param pFile the file to write to
  *
@@ -369,87 +316,4 @@ CBECallFunction::WriteReturnType(CBEFile * pFile)
 	CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	*pFile << "virtual ";
     CBEOperationFunction::WriteReturnType(pFile);
-}
-
-/** \brief writes the body of the function to the target file
- *  \param pFile the file to write to
- */
-void
-CBECallFunction::WriteBody(CBEFile * pFile)
-{
-    if (m_nSkipParameter == 0)
-    {
-	CBEOperationFunction::WriteBody(pFile);
-	return;
-    }
-
-    if (m_nSkipParameter == 1)
-    {
-	// use the _dice_server member to call one of the other functions
-	CBEDeclarator *pObj = GetObject()->m_Declarators.First();
-	string sObj = string("&_dice_server");
-	SetCallVariable(pObj->GetName(), 0, sObj);
-
-	CBETypedDeclarator *pReturn = GetReturnVariable();
-	string sReturn;
-	if (!pReturn->GetType()->IsVoid())
-	{
-	    pReturn->WriteInitDeclaration(pFile, string());
-	    sReturn = pReturn->m_Declarators.First()->GetName();
-	}
-	
-	m_nSkipParameter = 0;
-	CBEOperationFunction::WriteCall(pFile, sReturn, true);
-	m_nSkipParameter = 1;
-
-	if (!pReturn->GetType()->IsVoid())
-	    WriteReturn(pFile);
-
-	RemoveCallVariable(sObj);
-	return;
-    }
-
-    if (m_nSkipParameter == 3)
-    {
-	// construct a default environment and call the next function
-	*pFile << "\tCORBA_Environment _env;\n";
-	CBEDeclarator *pEnv = GetEnvironment()->m_Declarators.First();
-	string sEnv = string("_env");
-	SetCallVariable(pEnv->GetName(), 0, sEnv);
-
-	CBETypedDeclarator *pReturn = GetReturnVariable();
-	string sReturn;
-	if (!pReturn->GetType()->IsVoid())
-	{
-	    pReturn->WriteInitDeclaration(pFile, string());
-	    sReturn = pReturn->m_Declarators.First()->GetName();
-	}
-	
-	m_nSkipParameter = 1;
-	CBEOperationFunction::WriteCall(pFile, sReturn, true);
-	m_nSkipParameter = 3;
-
-	if (!pReturn->GetType()->IsVoid())
-	    WriteReturn(pFile);
-
-	RemoveCallVariable(sEnv);
-    }
-}
-
-/** \brief check if parameter should be written
- *  \param pParam the parameter to test
- *  \return true if writing param, false if not
- *
- * Do not write CORBA_Object and CORBA_Env depending on m_nSkipParameter map.
- */
-bool
-CBECallFunction::DoWriteParameter(CBETypedDeclarator *pParam)
-{
-    if ((m_nSkipParameter & 1) &&
-	pParam == GetObject())
-	return false;
-    if ((m_nSkipParameter & 2) &&
-	pParam == GetEnvironment())
-	return false;
-    return CBEOperationFunction::DoWriteParameter(pParam);
 }

@@ -47,6 +47,7 @@
 #include "TypeSpec-Type.h"
 #include "fe/FEStructType.h"
 #include <cassert>
+#include <iostream>
 
 CBESwitchCase::CBESwitchCase()
     : CBEOperationFunction(FUNCTION_SWITCH_CASE)
@@ -71,6 +72,45 @@ CBESwitchCase::CBESwitchCase(CBESwitchCase & src)
 CBESwitchCase::~CBESwitchCase()
 {
 }
+
+bool checkForInAttr(CFETypedDeclarator *pParameter)
+{
+    return pParameter->m_Attributes.Find(ATTR_IN) != 0;
+}
+
+class SetCallVariableCall {
+    CBEFunction *f;
+public:
+    SetCallVariableCall(CBEFunction *ff) : f(ff) { }
+    void operator() (CBETypedDeclarator *pParameter)
+    {
+	/* instead of simply returning for one of the special parameters, we
+	 * set the prefix to empty, so the function's SetCallVariable method
+	 * gets called. Only if that happens the call-parameter list is
+	 * created. If we have no parameter to prefix we still need that
+	 * call-parameter list.
+	 */
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sPrefix;
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	{
+	    sPrefix = pNF->GetWrapperVariablePrefix();
+	    if (pParameter == f->GetObject())
+		sPrefix.clear();
+	    if (pParameter == f->GetEnvironment())
+		sPrefix.clear();
+	    string sMsgBuf = pNF->GetMessageBufferVariable();
+	    if (pParameter->m_Declarators.Find(sMsgBuf))
+		sPrefix.clear();
+	    string sReturn = pNF->GetReturnVariable();
+	    if (pParameter->m_Declarators.Find(sReturn))
+		sPrefix.clear();
+	}
+	CBEDeclarator *pName = pParameter->m_Declarators.First();
+	f->SetCallVariable(pName->GetName(), pName->GetStars(),
+	    sPrefix + pName->GetName());
+    }
+};
 
 /** \brief creates the back-end receive function
  *  \param pFEOperation the corresponding front-end operation
@@ -112,14 +152,10 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
     string sFunctionName;
 
     // check if we need unmarshalling function
-    vector<CFETypedDeclarator*>::iterator iterP;
-    for (iterP = pFEOperation->m_Parameters.begin();
-	 iterP != pFEOperation->m_Parameters.end();
-	 iterP++)
+    vector<CFETypedDeclarator*>::iterator iterP = find_if(pFEOperation->m_Parameters.begin(),
+	pFEOperation->m_Parameters.end(), checkForInAttr);
+    if (iterP != pFEOperation->m_Parameters.end())
     {
-        if (!(*iterP)->m_Attributes.Find(ATTR_IN))
-	    continue;
-
         // create references to unmarshal function
         sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_UNMARSHAL);
         m_pUnmarshalFunction = static_cast<CBEUnmarshalFunction *>(
@@ -132,17 +168,9 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
         }
 	// set the call parameters: this is simple, since we use the same
 	// names and reference counts
-	vector<CBETypedDeclarator*>::iterator iter;
-	for (iter = m_pUnmarshalFunction->m_Parameters.begin();
-	     iter != m_pUnmarshalFunction->m_Parameters.end();
-	     iter++)
-        {
-            CBEDeclarator *pName = (*iter)->m_Declarators.First();
-            m_pUnmarshalFunction->SetCallVariable(pName->GetName(),
-		pName->GetStars(), pName->GetName());
-        }
-
-	break;
+	for_each(m_pUnmarshalFunction->m_Parameters.begin(),
+	    m_pUnmarshalFunction->m_Parameters.end(),
+	    SetCallVariableCall(m_pUnmarshalFunction));
     }
     // check if we need marshalling function
     // basically we alwas need marshalling, because we at least transfer
@@ -161,15 +189,9 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
             throw new CBECreateException(exc);
         }
         // set call parameters
-        vector<CBETypedDeclarator*>::iterator iter;
-	for (iter = m_pMarshalFunction->m_Parameters.begin();
-	     iter != m_pMarshalFunction->m_Parameters.end();
-	     iter++)
-        {
-            CBEDeclarator *pName = (*iter)->m_Declarators.First();
-            m_pMarshalFunction->SetCallVariable(pName->GetName(),
-		pName->GetStars(), pName->GetName());
-        }
+	for_each(m_pMarshalFunction->m_Parameters.begin(),
+	    m_pMarshalFunction->m_Parameters.end(),
+	    SetCallVariableCall(m_pMarshalFunction));
     }
     // create reference to component function
     sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_TEMPLATE);
@@ -183,14 +205,20 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
     }
     // set the call parameters: this is simple, since we use the same names
     // and reference counts
-    vector<CBETypedDeclarator*>::iterator iterBP;
-    for (iterBP = m_pComponentFunction->m_Parameters.begin();
-	 iterBP != m_pComponentFunction->m_Parameters.end();
-	 iterBP++)
+    for_each(m_pComponentFunction->m_Parameters.begin(),
+	m_pComponentFunction->m_Parameters.end(),
+	SetCallVariableCall(m_pComponentFunction));
+
+    // now prefix own parameters
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
     {
-        CBEDeclarator *pName = (*iterBP)->m_Declarators.First();
-        m_pComponentFunction->SetCallVariable(pName->GetName(),
-	    pName->GetStars(), pName->GetName());
+	vector<CBETypedDeclarator*>::iterator iter = m_Parameters.begin();
+	for (; iter != m_Parameters.end(); iter++)
+	{
+	    string sPrefix = pNF->GetWrapperVariablePrefix();
+	    CBEDeclarator *pDecl = (*iter)->m_Declarators.First();
+	    pDecl->SetName(sPrefix + pDecl->GetName());
+	}
     }
 }
 
@@ -406,30 +434,5 @@ void CBESwitchCase::SetMessageBufferType()
         m_pUnmarshalFunction->SetMsgBufferCastOnCall(true);
     if (m_pMarshalFunction)
         m_pMarshalFunction->SetMsgBufferCastOnCall(true);
-}
-
-/** \brief propagates the SetCallVariable call if the internal variables are \
- *         Corba object and environment
- *  \param sOriginalName the internal name of the variable
- *  \param nStars the new number of stars of the variable
- *  \param sCallName the external name
- *
- * Since we reference the unmarshal, wait and component functions, we have to
- * propagate this call, so they initialize their arguments repectively.
- */
-void
-CBESwitchCase::SetCallVariable(string sOriginalName, 
-    int nStars, 
-    string sCallName)
-{
-    if (m_pUnmarshalFunction)
-        m_pUnmarshalFunction->SetCallVariable(sOriginalName, nStars, 
-	    sCallName);
-    if (m_pMarshalFunction)
-        m_pMarshalFunction->SetCallVariable(sOriginalName, nStars, 
-	    sCallName);
-    if (m_pComponentFunction)
-        m_pComponentFunction->SetCallVariable(sOriginalName, nStars, 
-	    sCallName);
 }
 

@@ -323,6 +323,15 @@ CBENameSpace* CBERoot::FindNameSpace(string sNameSpaceName)
     return 0;
 }
 
+template<class T>
+class CreateCall {
+    CBERoot *root;
+public:
+    explicit CreateCall(CBERoot *r) : root(r) { }
+    void operator() (T* arg)
+    { root->CreateBackEnd(arg); }
+};
+
 /** \brief creates the constants of a file
  *  \param pFEFile the front-end file to search for constants
  *
@@ -334,54 +343,29 @@ void CBERoot::CreateBackEnd(CFEFile *pFEFile)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
         pFEFile->GetFileName().c_str());
     // first search included files-> may contain base interfaces we need later
-    // FIXME: for_each
-    vector<CFEFile*>::iterator iterF;
-    for (iterF = pFEFile->m_ChildFiles.begin();
-	 iterF != pFEFile->m_ChildFiles.end();
-	 iterF++)
-    {
-        CreateBackEnd(*iterF);
-    }
+    for_each(pFEFile->m_ChildFiles.begin(),
+	pFEFile->m_ChildFiles.end(),
+	CreateCall<CFEFile>(this));
     // next search top level consts
-    vector<CFEConstDeclarator*>::iterator iterC;
-    for (iterC = pFEFile->m_Constants.begin();
-	 iterC != pFEFile->m_Constants.end();
-	 iterC++)
-    {
-        CreateBackEnd(*iterC);
-    }
+    for_each(pFEFile->m_Constants.begin(),
+	pFEFile->m_Constants.end(),
+	CreateCall<CFEConstDeclarator>(this));
     // next search top level typedefs
-    vector<CFETypedDeclarator*>::iterator iterT;
-    for (iterT = pFEFile->m_Typedefs.begin();
-	 iterT != pFEFile->m_Typedefs.end();
-	 iterT++)
-    {
-        CreateBackEnd(*iterT);
-    }
+    for_each(pFEFile->m_Typedefs.begin(),
+	pFEFile->m_Typedefs.end(),
+	CreateCall<CFETypedDeclarator>(this));
     // next search top level type declarations
-    vector<CFEConstructedType*>::iterator iterTD;
-    for (iterTD = pFEFile->m_TaggedDeclarators.begin();
-	 iterTD != pFEFile->m_TaggedDeclarators.end();
-	 iterTD++)
-    {
-        CreateBackEnd(*iterTD);
-    }
+    for_each(pFEFile->m_TaggedDeclarators.begin(),
+	pFEFile->m_TaggedDeclarators.end(),
+	CreateCall<CFEConstructedType>(this));
     // next search top level interfaces
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFEFile->m_Interfaces.begin();
-	 iterI != pFEFile->m_Interfaces.end();
-	 iterI++)
-    {
-        CreateBackEnd(*iterI);
-    }
+    for_each(pFEFile->m_Interfaces.begin(),
+	pFEFile->m_Interfaces.end(),
+	CreateCall<CFEInterface>(this));
     // next search libraries
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFEFile->m_Libraries.begin();
-	 iterL != pFEFile->m_Libraries.end();
-	 iterL++)
-    {
-        CreateBackEnd(*iterL);
-    }
+    for_each(pFEFile->m_Libraries.begin(),
+	pFEFile->m_Libraries.end(),
+	CreateCall<CFELibrary>(this));
 }
 
 /** \brief creates the constants for a specific library
@@ -533,58 +517,32 @@ CBERoot::CreateBackEnd(CFEConstructedType *pFEType)
  *  \return true if successful
  *
  * The root adds to the header files everything it own. It iterates over its
- * members and calls their respective AddToFile functions.
+ * members and calls their respective AddToHeader functions.
  */
-bool CBERoot::AddToFile(CBEHeaderFile *pHeader)
+void CBERoot::AddToHeader(CBEHeaderFile *pHeader)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%s) called\n", __func__,
         pHeader->GetFileName().c_str());
     // constants
-    vector<CBEConstant*>::iterator iterC;
-    for (iterC = m_Constants.begin();
-	 iterC != m_Constants.end();
-	 iterC++)
-    {
-        if (!(*iterC)->AddToFile(pHeader))
-            return false;
-    }
+    for_each(m_Constants.begin(),
+	m_Constants.end(),
+	std::bind2nd(std::mem_fun(&CBEConstant::AddToHeader), pHeader));
     // types
-    vector<CBETypedef*>::iterator iterT;
-    for (iterT = m_Typedefs.begin();
-	 iterT != m_Typedefs.end();
-	 iterT++)
-    {
-        if (!(*iterT)->AddToFile(pHeader))
-            return false;
-    }
+    for_each(m_Typedefs.begin(),
+	m_Typedefs.end(),
+	std::bind2nd(std::mem_fun(&CBETypedef::AddToHeader), pHeader));
     // tagged declarations
-    vector<CBEType*>::iterator iterTa;
-    for (iterTa = m_TypeDeclarations.begin();
-	 iterTa != m_TypeDeclarations.end();
-	 iterTa++)
-    {
-        if (!(*iterTa)->AddToFile(pHeader))
-            return false;
-    }
+    for_each(m_TypeDeclarations.begin(),
+	m_TypeDeclarations.end(),
+	std::bind2nd(std::mem_fun(&CBEType::AddToHeader), pHeader));
     // Classs
-    vector<CBEClass*>::iterator iterCl;
-    for (iterCl = m_Classes.begin();
-	 iterCl != m_Classes.end();
-	 iterCl++)
-    {
-        if (!(*iterCl)->AddToFile(pHeader))
-            return false;
-    }
+    for_each(m_Classes.begin(),
+	m_Classes.end(),
+	std::bind2nd(std::mem_fun(&CBEClass::AddToHeader), pHeader));
     // libraries
-    vector<CBENameSpace*>::iterator iterN;
-    for (iterN = m_Namespaces.begin();
-	 iterN != m_Namespaces.end();
-	 iterN++)
-    {
-        if (!(*iterN)->AddToFile(pHeader))
-            return false;
-    }
-    return true;
+    for_each(m_Namespaces.begin(),
+	m_Namespaces.end(),
+	std::bind2nd(std::mem_fun(&CBENameSpace::AddToHeader), pHeader));
 }
 
 /** \brief adds the members of the root to the implementation file
@@ -594,38 +552,19 @@ bool CBERoot::AddToFile(CBEHeaderFile *pHeader)
  * The root adds to the implementation file only the members of the Classs
  * and libraries.
  */
-bool CBERoot::AddToFile(CBEImplementationFile *pImpl)
+void CBERoot::AddToImpl(CBEImplementationFile *pImpl)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called\n", __func__,
         pImpl->GetFileName().c_str());
     // Classs
-    vector<CBEClass*>::iterator iterC;
-    for (iterC = m_Classes.begin();
-	 iterC != m_Classes.end();
-	 iterC++)
-    {
-        if (!(*iterC)->AddToFile(pImpl))
-            return false;
-    }
+    for_each(m_Classes.begin(), m_Classes.end(),
+	std::bind2nd(std::mem_fun(&CBEClass::AddToImpl), pImpl));
     // name-spaces
-    vector<CBENameSpace*>::iterator iterN;
-    for (iterN = m_Namespaces.begin();
-	 iterN != m_Namespaces.end();
-	 iterN++)
-    {
-        if (!(*iterN)->AddToFile(pImpl))
-            return false;
-    }
+    for_each(m_Namespaces.begin(), m_Namespaces.end(),
+	std::bind2nd(std::mem_fun(&CBENameSpace::AddToImpl), pImpl));
     // global functions
-    vector<CBEFunction*>::iterator iterF;
-    for (iterF = m_GlobalFunctions.begin();
-	 iterF != m_GlobalFunctions.end();
-	 iterF++)
-    {
-        if (!(*iterF)->AddToFile(pImpl))
-            return false;
-    }
-    return true;
+    for_each(m_GlobalFunctions.begin(), m_GlobalFunctions.end(),
+	std::bind2nd(std::mem_fun(&CBEFunction::AddToImpl), pImpl));
 }
 
 /** \brief adds the opcodes of a file to the header files

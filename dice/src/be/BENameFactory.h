@@ -134,6 +134,7 @@ class CBENameFactory : public CBEObject
     virtual string GetLocalSizeVariableName(CDeclStack* pStack);
     virtual string GetLocalVariableName(CDeclStack* pStack);
     virtual string GetPaddingMember(int nPadType, int nPadToType);
+    virtual string GetWrapperVariablePrefix();
 
 protected:
     virtual string GetCORBATypeName(int nType, bool bUnsigned, int nSize);

@@ -64,7 +64,7 @@ public:
     virtual void CreateBackEnd(CBEType* pType, string sName, 
 	CBEExpression* pValue, bool bAlwaysDefine);
     virtual void CreateBackEnd(CFEConstDeclarator *pFEConstDeclarator);
-    virtual bool AddToFile(CBEHeaderFile *pHeader);
+    virtual void AddToHeader(CBEHeaderFile *pHeader);
     virtual string GetName();
     virtual CBEExpression *GetValue();
 

@@ -86,8 +86,8 @@ public: // Public methods
     CBEType* FindTaggedType(unsigned int nType, string sTag);
     CBEFunction* FindFunction(string sFunctionName, FUNCTION_TYPE nFunctionType);
 
-    bool AddToFile(CBEImplementationFile *pImpl);
-    bool AddToFile(CBEHeaderFile *pHeader);
+    void AddToImpl(CBEImplementationFile *pImpl);
+    void AddToHeader(CBEHeaderFile *pHeader);
     bool AddOpcodesToFile(CBEHeaderFile *pHeader, CFEFile *pFEFile);
 
     void PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol);
@@ -99,6 +99,8 @@ protected: // Protected methods
     void CreateBackEnd(CFETypedDeclarator *pFETypedef);
     void CreateBackEnd(CFEFile *pFEFile);
     void CreateBackEnd(CFEConstructedType *pFEType);
+
+    template<class T> friend class CreateCall;
 
 protected:
     /** \var CBEClient *m_pClient

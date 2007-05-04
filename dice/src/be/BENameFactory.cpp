@@ -1418,3 +1418,11 @@ CBENameFactory::GetPaddingMember(int nPadType,
     return sReturn;
 }
 
+/** \brief get a prefix for the parameters of a C++ wrapper function
+ *  \return the prefix
+ */
+string
+CBENameFactory::GetWrapperVariablePrefix()
+{
+    return string("_dice_wrap_");
+}

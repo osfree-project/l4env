@@ -127,8 +127,8 @@ public:
     virtual int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs, 
 	    DIRECTION_TYPE nDirection);
     virtual void SetMsgBufferCastOnCall(bool bCastMsgBufferOnCall);
-    virtual bool AddToFile(CBEHeaderFile *pHeader);
-    virtual bool AddToFile(CBEImplementationFile *pImpl);
+    virtual void AddToHeader(CBEHeaderFile *pHeader);
+    virtual void AddToImpl(CBEImplementationFile *pImpl);
     bool IsComponentSide();
     virtual void SetComponentSide(bool bComponentSide);
     virtual bool HasVariableSizedParameters(DIRECTION_TYPE nDirection);

@@ -65,8 +65,8 @@ public:
 
 public: // Public methods
     virtual void CreateBackEnd(CFELibrary *pFELibrary);
-    virtual bool AddToFile(CBEHeaderFile *pHeader);
-    virtual bool AddToFile(CBEImplementationFile *pImpl);
+    virtual void AddToHeader(CBEHeaderFile *pHeader);
+    virtual void AddToImpl(CBEImplementationFile *pImpl);
 
     /** \brief retrieves the name of the NameSpace
      *  \return the name of the lib

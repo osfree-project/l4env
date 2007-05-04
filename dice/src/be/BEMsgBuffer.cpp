@@ -90,13 +90,23 @@ CBEMsgBuffer::IsVariableSized(CMsgStructType nType)
     {
         return IsVariableSized(CMsgStructType::In) ||
                IsVariableSized(CMsgStructType::Out);
-// 	       IsVariableSized(CMsgStructType::Exc);
     }
 
     // get the struct
     CBEStructType *pStruct = GetStruct(nType);
     return pStruct->GetSize() < 0;
 }
+
+class TypeCount {
+    int t;
+public:
+    TypeCount(int type) : t(type) { }
+    bool operator() (CBETypedDeclarator *pMember)
+    {
+	return pMember->GetType()->IsOfType(t) ||
+	    ((t == TYPE_STRING) && pMember->IsString());
+    }
+};
 
 /** \brief calculate the number of elements with a given type for a direction
  *  \param nFEType the type to look for
@@ -118,8 +128,7 @@ CBEMsgBuffer::GetCount(int nFEType,
     {
         int nSend = GetCount(nFEType, CMsgStructType::In);
         int nRecv = GetCount(nFEType, CMsgStructType::Out);
-	int nExc = GetCount(nFEType, CMsgStructType::Exc);
-        return std::max(nRecv, std::max(nSend, nExc));
+        return std::max(nRecv, nSend);
     }
 
     CBEUserDefinedType *pUsrType = dynamic_cast<CBEUserDefinedType*>(GetType());
@@ -133,25 +142,8 @@ CBEMsgBuffer::GetCount(int nFEType,
     CBEStructType *pStruct = GetStruct(nType);
     assert(pStruct);
 
-    int nCount = 0;
-    vector<CBETypedDeclarator*>::iterator iter;
-    for (iter = pMsgType->GetStartOfPayload(pStruct);
-	 iter != pStruct->m_Members.end();
-	 iter++)
-    {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "testing member %s\n", 
-	    (*iter)->m_Declarators.First()->GetName().c_str());
-	if ((*iter)->GetType()->IsOfType(nFEType))
-	{
-	    nCount++;
-	    continue;
-	}
-	if ((nFEType == TYPE_STRING) &&
-	    (*iter)->IsString())
-	{
-	    nCount++;
-	}
-    }
+    int nCount = std::count_if(pMsgType->GetStartOfPayload(pStruct), 
+	pStruct->m_Members.end(), TypeCount(nFEType));
     
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns %d\n", __func__, nCount);
     return nCount;
@@ -214,33 +206,13 @@ CBEMsgBuffer::GetCountAll(int nFEType,
 	{
 	    pStruct = static_cast<CBEStructType*>((*iter)->GetType());
 	    
-	    int nCount = 0;
-	    vector<CBETypedDeclarator*>::iterator iterM;
-	    for (iterM = pMsgType->GetStartOfPayload(pStruct);
-		 iterM != pStruct->m_Members.end();
-		 iterM++)
-	    {
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-		    "testing member %s of type %d with %d\n", 
-		    (*iterM)->m_Declarators.First()->GetName().c_str(),
-		    (*iterM)->GetType()->GetFEType(), nFEType);
-		if ((*iterM)->GetType()->IsOfType(nFEType))
-		{
-		    nCount++;
-		    continue;
-		}
-		if ((nFEType == TYPE_STRING) &&
-		    (*iterM)->IsString())
-		{
-		    nCount++;
-		}
-	    }
+	    int nCount = std::count_if(pMsgType->GetStartOfPayload(pStruct), 
+		pStruct->m_Members.end(), TypeCount(nFEType));
 
 	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 		"Union %s has %d members of type %d\n", sUnion.c_str(),
 		nCount, nFEType);
-	    if (nCount > nMaxCount)
-		nMaxCount = nCount;
+	    nCount = std::max(nCount, nMaxCount);
 	}
     }
 
@@ -416,6 +388,9 @@ CBEMsgBuffer::GetOpcodeVariable()
 CBETypedDeclarator*
 CBEMsgBuffer::GetExceptionVariable()
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBEMsgBuffer::%s called\n", __func__);
+
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     // create type
     CBEType *pType = pCF->GetNewType(TYPE_MWORD);
@@ -429,7 +404,7 @@ CBEMsgBuffer::GetExceptionVariable()
 	e->Print();
 	delete e;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "%s failed, because type could not be created.\n",
 	    __func__);
 	return 0;
@@ -450,7 +425,7 @@ CBEMsgBuffer::GetExceptionVariable()
 	e->Print();
 	delete e;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "%s failed, because exception could not be created.\n",
 	    __func__);
 	return 0;
@@ -471,13 +446,15 @@ CBEMsgBuffer::GetExceptionVariable()
 	e->Print();
 	delete e;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "%s failed, because attribute could not be created.\n",
 	    __func__);
 	return 0;
     }
     pException->m_Attributes.Add(pAttr);
 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEMsgBuffer::%s returns %p\n", __func__, pException);
     return pException;
 }
 
@@ -645,10 +622,9 @@ CBEMsgBuffer::AddPlatformSpecificMembers(CBEClass *pClass)
     }
 
     // also iterate the base classes
-    vector<CBEClass*>::iterator iC = pClass->GetFirstBaseClass();
-    CBEClass *pBaseClass;
-    while ((pBaseClass = pClass->GetNextBaseClass(iC)) != 0)
-	AddPlatformSpecificMembers(pBaseClass);
+    vector<CBEClass*>::iterator iC = pClass->m_BaseClasses.begin();
+    for (; iC != pClass->m_BaseClasses.end(); iC++)
+	AddPlatformSpecificMembers(*iC);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEMsgBuffer::%s returns true\n", __func__);
@@ -705,6 +681,10 @@ CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction,
     CBEStructType *pStruct,
     CMsgStructType nType)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBEMsgBuffer::%s(%s,, %d) called\n", __func__,
+	pFunction->GetName().c_str(), int(nType));
+
     CMsgStructType nFuncOpcodeType = pFunction->GetSendDirection();
     if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
 	dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
@@ -723,8 +703,8 @@ CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction,
 	CBETypedDeclarator *pOpcode = GetOpcodeVariable();
 	if (!pOpcode)
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s failed, because opcode member could not be created.\n",
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBEMsgBuffer::%s failed, because opcode member could not be created.\n",
 		__func__);
 	    return false;
 	}
@@ -735,6 +715,8 @@ CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction,
 	    pStruct->m_Members.Add(pOpcode);
     }
     
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	"CBEMsgBuffer::%s returns true\n", __func__);
     return true;
 }
 
@@ -749,6 +731,10 @@ CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction,
     CBEStructType *pStruct,
     CMsgStructType nType)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEMsgBuffer::%s(%s,, %d) called\n", __func__,
+	pFunction->GetName().c_str(), int(nType));
+
     CMsgStructType nFuncExceptionType = pFunction->GetReceiveDirection();
     if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
 	dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
@@ -756,7 +742,7 @@ CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction,
 	dynamic_cast<CBEReplyFunction*>(pFunction))
 	nFuncExceptionType = pFunction->GetSendDirection();
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	"%s exception dir is %d and struct at %p (type at %p)\n", 
+	"CBEMsgBuffer::%s exception dir is %d and struct at %p (type at %p)\n", 
 	__func__, (int)nFuncExceptionType, pStruct, 
 	pStruct->GetSpecificParent<CBEMsgBufferType>());
     // add exception
@@ -769,21 +755,28 @@ CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction,
 	if (!pException)
 	{
 	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s failed, because exception could not be created.\n", __func__);
+		"CBEMsgBuffer::%s failed, because exception could not be created.\n",
+		__func__);
 	    return false;
 	}
 	// check if struct already has member with that name
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEMsgBuffer::%s decl at %p\n", __func__, pException->m_Declarators.First());
 	if (pStruct->m_Members.Find(pException->m_Declarators.First()->GetName()))
+	{
 	    delete pException;
+	    pException = NULL;
+	}
 	else
 	    pStruct->m_Members.Add(pException);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "%s exception %sadded to struct %p\n", __func__,
-	    pStruct->m_Members.Find(pException->m_Declarators.First()->GetName()) ?
-	    "" : "not ", pStruct);
+	    "CBEMsgBuffer::%s exception %sadded to struct %p\n", __func__,
+	    pException ? "" : "not ", pStruct);
     }
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEMsgBuffer::%s returned true\n", __func__);
     return true;
 }
 
@@ -869,10 +862,9 @@ CBEMsgBuffer::Sort(CBEClass *pClass)
     }
 
     // sort base class' structs as well
-    vector<CBEClass*>::iterator iC = pClass->GetFirstBaseClass();
-    CBEClass *pBaseClass;
-    while ((pBaseClass = pClass->GetNextBaseClass(iC)) != 0)
-	Sort(pBaseClass);
+    vector<CBEClass*>::iterator iC = pClass->m_BaseClasses.begin();
+    for (; iC != pClass->m_BaseClasses.end(); iC++)
+	Sort(*iC);
 
     return true;
 }
@@ -1914,12 +1906,10 @@ CBEMsgBuffer::GetAnyFunctionFromClass(CBEClass *pClass)
 
     // try to get function from base classes (this class might be just an
     // empty class derived from other classes)
-    vector<CBEClass*>::iterator iC = pClass->GetFirstBaseClass();
-    CBEClass *pBaseClass;
-    while ((pBaseClass = pClass->GetNextBaseClass(iC)) != 0)
+    vector<CBEClass*>::iterator iC = pClass->m_BaseClasses.begin();
+    for (; iC != pClass->m_BaseClasses.end(); iC++)
     {
-	pFunction = GetAnyFunctionFromClass(pBaseClass);
-	if (pFunction)
+	if ((pFunction = GetAnyFunctionFromClass(*iC)))
 	    return pFunction;
     }
 
@@ -2102,11 +2092,8 @@ class MemFind
     string _s;
 public:
     MemFind(string s) : _s(s) { }
-
     bool operator() (CBETypedDeclarator *pMember)
-    {
-	return pMember && pMember->m_Declarators.Find(_s);
-    }
+    { return pMember && pMember->m_Declarators.Find(_s); }
 };
 
 /** \brief check if one member comes before another in the message buffer

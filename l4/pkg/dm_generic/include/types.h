@@ -39,7 +39,7 @@ typedef struct l4dm_dataspace
  * Invalid dataspace id initializer
  * \ingroup api_types
  */
-#define L4DM_INVALID_DATASPACE_INITIALIZER  { (l4_uint32_t)-1, L4_INVALID_ID}
+#define L4DM_INVALID_DATASPACE_INITIALIZER  { (l4_uint32_t)-1, L4_INVALID_ID_INIT }
 
 /**
  * Invalid dataspace id

@@ -76,11 +76,12 @@ CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction,
     CBEStructType *pStruct,
     CMsgStructType nType)
 {
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s(%s,, %d) called\n", 
+	__func__, pFunction->GetName().c_str(), (int)nType);
+
     if (!CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct, 
 	    nType))
 	return false;
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s(%s,, %d) called\n", 
-	__func__, pFunction->GetName().c_str(), (int)nType);
 
     // create receive flexpage
     CBETypedDeclarator *pFlexpage = GetFlexpageVariable();
