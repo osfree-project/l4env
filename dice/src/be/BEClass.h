@@ -158,6 +158,7 @@ protected:
     void CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl);
     void CreateBackEndAttribute(CFEAttribute *pFEAttribute);
     void CreateBackEndTaggedDecl(CFEConstructedType *pFEType);
+    void CreateBackEndException(CFETypedDeclarator *pFEException);
     
     void CreateFunctionsNoClassDependency(CFEOperation *pFEOperation);
     void CreateFunctionsClassDependency(CFEOperation *pFEOperation);
@@ -182,6 +183,7 @@ protected:
 
     void WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile *pFile);
     void WriteTaggedType(CBEType *pType, CBEHeaderFile *pFile);
+    void WriteException(CBEException *pException, CBEHeaderFile *pFile);
     void WriteConstant(CBEConstant *pConstant, CBEHeaderFile *pFile);
     void WriteFunction(CBEFunction *pFunction, CBEHeaderFile *pFile);
     void WriteFunction(CBEFunction *pFunction, CBEImplementationFile *pFile);
@@ -257,6 +259,10 @@ public:
      *  \brief the constants of the Class
      */
     CSearchableCollection<CBEConstant, string> m_Constants;
+    /** \var CSearchableCollection<CBEException> m_Exceptions
+     *  \brief contains the exceptions defined for the interface
+     */
+    CSearchableCollection<CBEException, string> m_Exceptions;
     /** \var CCollection<CBEType> m_TypeDeclarations
      *  \brief contains the tagged type declarations
      */

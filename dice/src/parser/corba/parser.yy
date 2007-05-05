@@ -1609,16 +1609,31 @@ simple_declarator_list :
 except_dcl :
       EXCEPTION ID LBRACE member_list rbrace
     {
-    	// defines an exception with name ID and members ... (represent as struct?)
-	$$ = NULL;
-	if ($4)
-	    delete $4;
+    	CFEStructType *st = new CFEStructType($2, $4);
+        st->SetSourceLine(gLineNumber);
 
+        vector<CFEDeclarator*> *vd = new vector<CFEDeclarator*>();
+        vd->push_back(new CFEDeclarator(DECL_IDENTIFIER, $2));
+
+        $$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, st, vd);
+        // set parent relationship
+        st->SetParent($$);
+        delete $2;
+        $$->SetSourceLine(gLineNumber);
     }
     | EXCEPTION ID LBRACE RBRACE
     {
-        // defines an exception with name ID and no members
-	$$ = NULL;
+    	CFESimpleType *st = new CFESimpleType(TYPE_INTEGER, false, true, 4/*value for LONG*/, false);
+	st->SetSourceLine(gLineNumber);
+
+        vector<CFEDeclarator*> *vd = new vector<CFEDeclarator*>();
+        vd->push_back(new CFEDeclarator(DECL_IDENTIFIER, $2));
+
+        $$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, st, vd);
+        // set parent relationship
+        st->SetParent($$);
+        delete $2;
+        $$->SetSourceLine(gLineNumber);
     }
     ;
 

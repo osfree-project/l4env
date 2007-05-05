@@ -124,8 +124,8 @@ void * RENAME(fast_memcpy)(void * to, const void * from, size_t len)
 		MOVNTQ" %%mm6, 48(%1)\n"
 		MOVNTQ" %%mm7, 56(%1)\n"
 		:: "r" (from), "r" (to) : "memory");
-		((const unsigned char *)from)+=64;
-		((unsigned char *)to)+=64;
+		from = ((unsigned char*)from)+64;
+		to = ((unsigned char *)to)+64;
 	}
 
 //	printf(" %d %d\n", (int)from&1023, (int)to&1023);
@@ -213,8 +213,8 @@ void * RENAME(fast_memcpy)(void * to, const void * from, size_t len)
 		MOVNTQ" %%mm6, 48(%1)\n"
 		MOVNTQ" %%mm7, 56(%1)\n"
 		:: "r" (from), "r" (to) : "memory");
-		((const unsigned char *)from)+=64;
-		((unsigned char *)to)+=64;
+		from = ((unsigned char *)from)+64;
+		to = ((unsigned char *)to)+64;
 	}
 
 #endif /* Have SSE */
@@ -310,8 +310,8 @@ void * RENAME(fast_memcpy)(void * to, const void * from, size_t len)
 		"movntps %%xmm2, 32(%1)\n"
 		"movntps %%xmm3, 48(%1)\n"
 		:: "r" (from), "r" (to) : "memory");
-		((const unsigned char *)from)+=64;
-		((unsigned char *)to)+=64;
+		from = ((unsigned char *)from)+64;
+		to = ((unsigned char *)to)+64;
 	}
 	else
 	/*
@@ -332,8 +332,8 @@ void * RENAME(fast_memcpy)(void * to, const void * from, size_t len)
 		"movntps %%xmm2, 32(%1)\n"
 		"movntps %%xmm3, 48(%1)\n"
 		:: "r" (from), "r" (to) : "memory");
-		((const unsigned char *)from)+=64;
-		((unsigned char *)to)+=64;
+		from = ((unsigned char *)from)+64;
+		to = ((unsigned char *)to)+64;
 	}
 #else
 	// Align destination at BLOCK_SIZE boundary

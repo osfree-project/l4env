@@ -161,6 +161,8 @@ bool
 CL4BEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
 {
     assert(pMember);
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4BEMarshaller::%s(%s) called\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
     if (CBEMarshaller::MarshalSpecialMember(pMember))
 	return true;
 
@@ -173,6 +175,8 @@ CL4BEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
     if (MarshalZeroFlexpage(pMember))
 	return true;
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4BEMarshaller::%s(%s) returns false\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
     return false;
 }
 

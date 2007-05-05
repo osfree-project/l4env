@@ -13,7 +13,7 @@ IMPLEMENTATION:
 
 class Jdb_gzip : public Console
 {
-  static const unsigned heap_pages = 32;
+  static const unsigned heap_pages = 26;
   char   active;
   char   init_done;
   static Console *uart;
@@ -23,7 +23,7 @@ Console *Jdb_gzip::uart;
 
 Jdb_gzip::Jdb_gzip()
 {
-  _state = (Mword)-1;
+  _state = Console::DISABLED_INIT;
   char *heap = (char*)Kmem_alloc::allocator()->
     unaligned_alloc(heap_pages*Config::PAGE_SIZE);
   if (!heap)
@@ -66,13 +66,6 @@ Jdb_gzip::disable()
 PUBLIC void
 Jdb_gzip::state(Mword new_state)
 {
-  if (_state == (Mword)-1)
-    {
-      // Console is off by default
-      _state = 0;
-      return;
-    }
-
   if ((_state ^ new_state) & OUTENABLED)
     {
       if (new_state & OUTENABLED)

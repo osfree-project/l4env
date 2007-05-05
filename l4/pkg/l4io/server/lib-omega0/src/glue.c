@@ -153,7 +153,7 @@ int OMEGA0_init(int use_spec)
 
 /** Free all ressources of a specific client.
  * \ingroup grp_o0 */
-void OMEGA0_free_ressources(l4_threadid_t client)
+void OMEGA0_free_resources(l4_threadid_t client)
 {
   int res;
   l4_umword_t dw0, dw1;

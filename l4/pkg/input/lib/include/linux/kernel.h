@@ -2,6 +2,7 @@
 #define _LINUX_KERNEL_H
 
 #include <stddef.h>
+#include <string.h>
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 

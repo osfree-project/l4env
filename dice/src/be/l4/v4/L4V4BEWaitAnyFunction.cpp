@@ -34,7 +34,7 @@
 #include "be/BEUserDefinedType.h"
 #include "be/BECommunication.h"
 #include "be/BEMsgBuffer.h"
-#include "be/l4/L4BETrace.h"
+#include "be/BETrace.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"

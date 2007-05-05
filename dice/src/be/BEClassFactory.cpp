@@ -54,6 +54,7 @@
 #include "BEWaitAnyFunction.h"
 #include "BEUnmarshalFunction.h"
 #include "BEMarshalFunction.h"
+#include "BEMarshalExceptionFunction.h"
 #include "BEOpcodeType.h"
 #include "BEReplyCodeType.h"
 #include "BEComponentFunction.h"
@@ -399,6 +400,16 @@ CBEMarshalFunction *CBEClassFactory::GetNewMarshalFunction()
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
         "CBEClassFactory: created class CBEMarshalFunction\n");
     return new CBEMarshalFunction();
+}
+
+/** \brief creates a new instance of the class CBEMarshalFunction
+ *  \return a reference to the new instance
+ */
+CBEMarshalExceptionFunction *CBEClassFactory::GetNewMarshalExceptionFunction()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+        "CBEClassFactory: created class CBEMarshalExceptionFunction\n");
+    return new CBEMarshalExceptionFunction();
 }
 
 /** \brief creates a new instance of the class CBEOpcodeType

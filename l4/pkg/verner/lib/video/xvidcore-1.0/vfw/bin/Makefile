@@ -36,7 +36,7 @@ CFLAGS += -O2
 CFLAGS += -fstrength-reduce
 CFLAGS += -finline-functions
 CFLAGS += -fgcse
-CFLAGS += -freduce-all-givs
+# CFLAGS += -freduce-all-givs
 CFLAGS += -ffast-math
 
 ##############################################################################

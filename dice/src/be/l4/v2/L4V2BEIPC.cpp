@@ -37,6 +37,7 @@
 #include "be/BETypedDeclarator.h"
 
 #include "be/BEMarshalFunction.h"
+#include "be/BEMarshalExceptionFunction.h"
 #include "be/BEUnmarshalFunction.h"
 #include "be/BECallFunction.h"
 #include "be/BESndFunction.h"
@@ -492,6 +493,7 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
 
     // temp offset and offset variable
     if (dynamic_cast<CBEMarshalFunction*>(pFunction) ||
+	dynamic_cast<CBEMarshalExceptionFunction*>(pFunction) ||
         dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
         dynamic_cast<CBEReplyFunction*>(pFunction) ||
         dynamic_cast<CBESndFunction*>(pFunction) ||
@@ -550,7 +552,7 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
             string sDummy = pNF->GetDummyVariable();
 	    try
 	    {
-		pFunction->AddLocalVariable(TYPE_MWORD, false, 0, sDummy, 
+		pFunction->AddLocalVariable(TYPE_MWORD, true, 0, sDummy, 
 		    0);
 	    }
 	    catch (CBECreateException *e)

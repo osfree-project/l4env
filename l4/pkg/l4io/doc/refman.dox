@@ -51,5 +51,7 @@ Possible command line arguments are:
 <dt><tt> --nosfn </tt></dt>
   <dd> Disables special fully-nested mode (only effective if --noirq is not
        set). </dd>
+<dt><tt> --nomtrr </tt></dt>
+  <dd> Disables MTRR programming. </dd>
 </dl>
 */

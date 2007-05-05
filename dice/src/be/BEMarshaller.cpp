@@ -30,6 +30,7 @@
 #include "BEInterfaceFunction.h"
 #include "BEOperationFunction.h"
 #include "BEMarshalFunction.h"
+#include "BEMarshalExceptionFunction.h"
 #include "BEUnmarshalFunction.h"
 #include "BEReplyFunction.h"
 #include "BESndFunction.h"
@@ -51,6 +52,9 @@
 #include "Compiler.h"
 #include <stdexcept>
 #include <cassert>
+#include <iosfwd>
+#include <iostream>
+#include <sstream>
 
 CBEMarshaller::CBEMarshaller()
  : CBEObject()
@@ -125,16 +129,23 @@ CBEMarshaller::GetStruct(CBEFunction *pFunction,
 CBEMsgBuffer*
 CBEMarshaller::GetMessageBuffer(CBEFunction *pFunction)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEMarshaller::%s(%s) called\n", __func__,
+	pFunction->GetName().c_str());
     // get the message buffer type
     if (dynamic_cast<CBEInterfaceFunction*>(pFunction) ||
 	dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
 	dynamic_cast<CBEMarshalFunction*>(pFunction))
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEMarshaller::%s return class' message buffer\n", __func__);
 	CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
 	assert(pClass);
 	return pClass->GetMessageBuffer();
     }
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEMarshaller::%s return function's message buffer\n", __func__);
     return pFunction->GetMessageBuffer();
 }
 
@@ -188,6 +199,10 @@ CBEMarshaller::MarshalFunction(CBEFile *pFile,
     m_pFile = pFile;
     m_bMarshal = nDirection == pFunction->GetSendDirection();
     m_pFunction = pFunction;
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEMarshaller::%s %smarshals function %s for dir %d\n", __func__,
+	m_bMarshal ? "" : "un", pFunction->GetName().c_str(),
+	nDirection);
     
     // to maintain the order of the members in the struct, we iterate
     // the struct members, get the respective parameter or local variable
@@ -207,9 +222,18 @@ CBEMarshaller::MarshalFunction(CBEFile *pFile,
 	// get respective parameter
 	// or local variable
 	string sName = (*iter)->m_Declarators.First()->GetName();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEMarshaller::%s marshalling struct member %s\n", __func__,
+	    sName.c_str());
 	CBETypedDeclarator *pParameter = pFunction->FindParameter(sName);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEMarshaller::%s marshalling parameter in func %s at %p\n", __func__,
+	    pFunction->GetName().c_str(), pParameter);
 	if (!pParameter)
 	    pParameter = pFunction->m_LocalVariables.Find(sName);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEMarshaller::%s marshalling parameter in func %s at %p (local)\n", __func__,
+	    pFunction->GetName().c_str(), pParameter);
 	// check if this member should be skipped 
 	// Do this before skipping in case of missing parameter, because this
 	// member may influence later skip decisions (other member come later
@@ -252,26 +276,31 @@ CBEMarshaller::DoSkipParameter(CBEFunction* pFunction,
     CBETypedDeclarator *pParameter,
     DIRECTION_TYPE nDirection)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s(%s, %s, %d) called\n", __func__, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+	"CBEMarshaller::%s(%s, %s, %d) called\n", __func__, 
 	pFunction->GetName().c_str(), 
 	pParameter->m_Declarators.First()->GetName().c_str(),
 	nDirection);
     if (!pParameter->IsDirection(nDirection))
     {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s: wrong direction\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEMarshaller::%s: wrong direction\n", __func__);
 	return true;
     }
     if (pParameter->m_Attributes.Find(ATTR_IGNORE))
     {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s: ignore\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEMarshaller::%s: ignore\n", __func__);
 	return true;
     }
     if (!pFunction->DoMarshalParameter(pParameter, m_bMarshal))
     {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s: dont marshal\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEMarshaller::%s: dont marshal\n", __func__);
 	return true;
     }
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s returns false\n", __func__);
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	"CBEMarshaller::%s returns false\n", __func__);
     return false;
 }
 
@@ -288,7 +317,7 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
     bool bMarshal)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	"%s called for func %s and param %s (%s)\n",
+	"CBEMarshaller::%s called for func %s and param %s (%s)\n",
 	__func__, pFunction ? pFunction->GetName().c_str() : "(none)",
 	pParameter ? pParameter->m_Declarators.First()->GetName().c_str() : "(none)",
 	bMarshal ? "marshalling" : "unmarshalling");
@@ -311,7 +340,8 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
     CBEStructType *pStruct = GetStruct(pFunction, nType);
     // there always should be a struct
     assert(pStruct);
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s got %p and direction %d\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEMarshaller::%s got %p and direction %d\n",
 	__func__, pStruct, (int)nType);
 
     CDeclStack vStack;
@@ -324,16 +354,16 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
 	// to
 	int nPosition = pMsgBuffer->GetMemberPosition(sName, nType);
 	// write access to generic member
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "%s calling MarshalGenericMember for pos %d\n", __func__, nPosition);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEMarshaller::%s calling MarshalGenericMember for pos %d\n", __func__, nPosition);
 	MarshalGenericMember(nPosition, pParameter, &vStack);
     }
     else
     {
 	if (!DoSkipParameter(pFunction, pParameter, nType))
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-		"%s calling MarshalParameterIntern\n", __func__);
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+		"CBEMarshaller::%s calling MarshalParameterIntern\n", __func__);
 	    MarshalParameterIntern(pParameter, &vStack);
 	}
     }
@@ -341,7 +371,7 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
     m_pFunction = 0;
     m_pFile = 0;
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s done.\n", __func__);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s done.\n", __func__);
 }
 
 /** \brief marshals a value at the position of a parameter
@@ -455,7 +485,8 @@ CBEMarshaller::MarshalGenericMember(int nPosition,
     CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%d, %s) called\n", __func__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEMarshaller::%s (%d, %s) called\n", __func__,
 	nPosition, pParameter->m_Declarators.First()->GetName().c_str());
 
     *m_pFile << "\t";
@@ -473,7 +504,8 @@ CBEMarshaller::MarshalGenericMember(int nPosition,
     }
     *m_pFile << ";\n";
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s done.\n", __func__);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEMarshaller::%s done.\n", __func__);
 }
 
 /** \brief marshals a value in the generic struct
@@ -505,6 +537,8 @@ bool
 CBEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
 {
     assert(pMember);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
     // check for opcode
     if (MarshalOpcode(pMember))
 	return true;
@@ -515,6 +549,8 @@ CBEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
     if (MarshalReturn(pMember))
 	return true;
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns false\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
     return false;
 }
 
@@ -525,6 +561,9 @@ CBEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
 bool
 CBEMarshaller::MarshalOpcode(CBETypedDeclarator *pMember)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
+
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName = pNF->GetOpcodeVariable();
     // check name of member
@@ -554,6 +593,8 @@ CBEMarshaller::MarshalOpcode(CBETypedDeclarator *pMember)
 	*m_pFile << ";\n";
     }
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns true\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
     return true;
 }
 
@@ -568,6 +609,9 @@ CBEMarshaller::MarshalOpcode(CBETypedDeclarator *pMember)
 bool
 CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
+
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName = pNF->GetExceptionWordVariable();
     if (!pMember->m_Declarators.Find(sName))
@@ -661,6 +705,8 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 	*m_pFile << "\t}\n";
     }
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns true\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
     return true;
 }
 
@@ -671,22 +717,26 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 bool
 CBEMarshaller::MarshalReturn(CBETypedDeclarator *pMember)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called\n", __func__, 
-	pMember->m_Declarators.First()->GetName().c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     // check if member is return variable
     string sName = pNF->GetReturnVariable();
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "try to find %s in param\n",
-	sName.c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEMarshaller::%s try to find %s in param\n", __func__, sName.c_str());
     if (!pMember->m_Declarators.Find(sName))
+    {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns false\n",
+	    __func__, pMember->m_Declarators.First()->GetName().c_str());
 	return false;
+    }
 
     // the return value is not a parameter, but a local variable, 
     // so we have to find that variable instead of the parameter
     CBETypedDeclarator *pParameter = m_pFunction->m_LocalVariables.Find(sName);
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	"Found return as local var in %s at %p\n", 
+	"CBEMarshaller::%s Found return as local var in %s at %p\n", __func__,
 	m_pFunction->GetName().c_str(), pParameter);
     // now, the local return variable can be of type void, for marshal
     // functions at the server side: we do indeed have a return variable as
@@ -702,8 +752,8 @@ CBEMarshaller::MarshalReturn(CBETypedDeclarator *pMember)
     // the return member. 
     if (!pParameter)
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "No local return variable available in func %s\n", 
-	    m_pFunction->GetName().c_str());
+	    "CBEMarshaller::%s No local return variable available in func %s\n", 
+	    __func__, m_pFunction->GetName().c_str());
     assert(pParameter);
 
     CDeclStack stack;
@@ -727,6 +777,8 @@ CBEMarshaller::MarshalReturn(CBETypedDeclarator *pMember)
     // assignment
     WriteAssignment(pParameter, &stack);
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns true\n",
+	__func__, pMember->m_Declarators.First()->GetName().c_str());
     return true;
 }
 
@@ -742,8 +794,8 @@ CBEMarshaller::WriteAssignment(CBETypedDeclarator *pParameter,
     CBETypedDeclarator *pMember = FindMarshalMember(pStack);
     if (!pMember)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "%s: could not find member for parameter %s\n",
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEMarshaller::%s: could not find member for parameter %s\n",
 	    __func__, pParameter->m_Declarators.First()->GetName().c_str());
 	DUMP_STACK(iter, pStack, __func__);
     }
@@ -798,7 +850,8 @@ CBEMarshaller::WriteMember(CMsgStructType nType,
     string sName = pNF->GetLocalVariableName(pStack);
     CBETypedDeclarator *pAlias = pMsgBuffer->FindMember(sName, m_pFunction,
 	nType);
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "Alias for %s at %p\n", sName.c_str(),
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEMarshaller::%s: Alias for %s at %p\n", __func__, sName.c_str(),
 	pAlias);
     if (pAlias)
     {
@@ -845,7 +898,7 @@ CBEMarshaller::WriteParameter(CBETypedDeclarator *pParameter,
 	bCast = !pType->IsOfType(pCastType->GetFEType());
     }
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEMarshaller::%s cast? %s\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s cast? %s\n",
 	__func__, bCast ? "yes" : "no");
     
     // get declarator
@@ -1586,8 +1639,8 @@ CBEMarshaller::MarshalUnion(CBETypedDeclarator *pParameter,
 
     CBETypedDeclarator *pSwitchVar = pUnion->GetSwitchVariable();
     if (!pSwitchVar)
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "%s no switch var for param %s\n", __func__,
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    "CBEMarshaller::%s no switch var for param %s\n", __func__,
 	    pParameter->m_Declarators.First()->GetName().c_str());
     assert (pSwitchVar);
     pStack->push_back(pSwitchVar->m_Declarators.First());
@@ -1677,7 +1730,7 @@ CBEMarshaller::FindMarshalMember(CDeclStack* pStack)
     // get the member
     string sName = iter->pDeclarator->GetName();
     pMember = pStruct->m_Members.Find(sName);
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMarshaller::%s member in struct is %s (@ %p)\n", __func__,
 	sName.c_str(), pMember);
 
@@ -1689,7 +1742,7 @@ CBEMarshaller::FindMarshalMember(CDeclStack* pStack)
 	CBEType *pType = pMember->GetType();
 	while (dynamic_cast<CBEUserDefinedType*>(pType))
 	    pType = ((CBEUserDefinedType*)pType)->GetRealType();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	    "CBEMarshaller::%s type of member %s is %d\n", __func__,
 	    pMember->m_Declarators.First()->GetName().c_str(),
 	    pType->GetFEType());

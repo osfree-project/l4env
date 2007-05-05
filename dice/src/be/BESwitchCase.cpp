@@ -35,6 +35,7 @@
 #include "BETypedef.h"
 #include "BEUnmarshalFunction.h"
 #include "BEMarshalFunction.h"
+#include "BEMarshalExceptionFunction.h"
 #include "BEComponentFunction.h"
 #include "BERoot.h"
 #include "BEClass.h"
@@ -55,6 +56,7 @@ CBESwitchCase::CBESwitchCase()
     m_bSameClass = true;
     m_pUnmarshalFunction = 0;
     m_pMarshalFunction = 0;
+    m_pMarshalExceptionFunction = 0;
     m_pComponentFunction = 0;
 }
 
@@ -65,6 +67,7 @@ CBESwitchCase::CBESwitchCase(CBESwitchCase & src)
     m_sOpcode = src.m_sOpcode;
     m_pUnmarshalFunction = src.m_pUnmarshalFunction;
     m_pMarshalFunction = src.m_pMarshalFunction;
+    m_pMarshalExceptionFunction = src.m_pMarshalExceptionFunction;
     m_pComponentFunction = src.m_pComponentFunction;
 }
 
@@ -193,6 +196,24 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
 	    m_pMarshalFunction->m_Parameters.end(),
 	    SetCallVariableCall(m_pMarshalFunction));
     }
+    if (!pFEOperation->m_RaisesDeclarators.empty())
+    {
+	sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_MARSHAL_EXCEPTION);
+	m_pMarshalExceptionFunction = static_cast<CBEMarshalExceptionFunction*>(
+	    pRoot->FindFunction(sFunctionName, FUNCTION_MARSHAL_EXCEPTION));
+	// marshal_exc function has to be here, because we have raises
+	// declarators
+	if (!m_pMarshalExceptionFunction)
+	{
+	    exc += " failed, because marshal_exc function (" + sFunctionName +
+		") could not be found.";
+            throw new CBECreateException(exc);
+	}
+        // set call parameters
+	for_each(m_pMarshalExceptionFunction->m_Parameters.begin(),
+	    m_pMarshalExceptionFunction->m_Parameters.end(),
+	    SetCallVariableCall(m_pMarshalExceptionFunction));
+    }
     // create reference to component function
     sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_TEMPLATE);
     m_pComponentFunction = static_cast<CBEComponentFunction *>(
@@ -270,7 +291,34 @@ void CBESwitchCase::Write(CBEFile * pFile)
             pFile->IncIndent();
         }
 
+	// check for exceptions
+	if (m_pMarshalExceptionFunction)
+	{
+	    CBEDeclarator *pEnv = GetEnvironment()->m_Declarators.First();
+	    string sEnv;
+	    if (pEnv->GetStars() == 0)
+		sEnv = "&";
+	    sEnv += pEnv->GetName();
+	    *pFile << "\tif (DICE_EXCEPTION_MAJOR(" << sEnv << ") == CORBA_USER_EXCEPTION)\n";
+	    *pFile << "\t{\n";
+	    pFile->IncIndent();
+
+	    m_pMarshalExceptionFunction->WriteCall(pFile, string(), m_bSameClass);
+
+	    pFile->DecIndent();
+	    *pFile << "\t}\n";
+	    *pFile << "\telse\n";
+	    *pFile << "\t{\n";
+	    pFile->IncIndent();
+	}
+
         m_pMarshalFunction->WriteCall(pFile, string(), m_bSameClass);
+
+	if (m_pMarshalExceptionFunction)
+	{
+	    pFile->DecIndent();
+	    *pFile << "\t}\n";
+	}
 
         if (m_Attributes.Find(ATTR_ALLOW_REPLY_ONLY))
             pFile->DecIndent();

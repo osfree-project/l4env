@@ -70,8 +70,8 @@ void * RENAME(fast_memcpy)(void * to, const void * from, size_t len)
 		"movntps %%xmm2, 32(%1)\n"
 		"movntps %%xmm3, 48(%1)\n"
 		:: "r" (from), "r" (to) : "memory");
-		((const unsigned char *)from)+=64;
-		((unsigned char *)to)+=64;
+		from = ((unsigned char *)from)+64;
+		to = ((unsigned char *)to)+64;
 	}
 	else
 	/*
@@ -92,8 +92,8 @@ void * RENAME(fast_memcpy)(void * to, const void * from, size_t len)
 		"movntps %%xmm2, 32(%1)\n"
 		"movntps %%xmm3, 48(%1)\n"
 		:: "r" (from), "r" (to) : "memory");
-		((const unsigned char *)from)+=64;
-		((unsigned char *)to)+=64;
+		from = ((unsigned char *)from)+64;
+		to = ((unsigned char *)to)+64;
 	}
 #else
 	// Align destination at BLOCK_SIZE boundary

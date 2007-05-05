@@ -18,6 +18,7 @@ public:
       DISABLED    =     0,
       INENABLED   =     1, ///< output channel of console enabled
       OUTENABLED  =     2, ///< input channel of console enabled
+      DISABLED_INIT =   4, ///< the console remains disabled during boot
     };
 
   enum Console_attr

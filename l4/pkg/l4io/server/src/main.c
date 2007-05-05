@@ -64,8 +64,12 @@ const int l4thread_max_threads = IO_MAX_THREADS;
  *  this number because we have some threads. */
 const l4_size_t l4thread_stack_size = 16 << 10;
 
-int use_spec = 1;		/** use special fully nesting mode */
-int use_events;			/** receive exit events */
+static int cfg_events;            /* receive exit events            (default off) */
+static int cfg_mtrr = 1;          /* program MTRR                   (default on)  */
+static int cfg_dev_list = 1;      /* list PCI devices at bootup     (default on)  */
+static int cfg_irq = 1;           /* Omega0 in l4io                 (default on)  */
+static int cfg_irq_sfn = 1;       /* special fully nesting mode     (default on)  */
+static int cfg_force_omega0 = 0;  /* force omega0 flag in info page (default off) */
 
 /*
  * module vars
@@ -75,14 +79,6 @@ int use_events;			/** receive exit events */
  *\ingroup grp_misc */
 static io_client_t io_self;
 
-/** I/O server claimed resources and root for client list
- *\ingroup grp_irq */
-static int io_noirq = 0;
-
-static int io_set_omega0 = 0;
-
-/** Don't list PCI devices at bootup */
-static int nolist = 0;
 
 /** \name Miscellaneous Services (IPC interface)
  *
@@ -283,6 +279,7 @@ static void do_args(int argc, char *argv[])
     {"exclude", required_argument, &long_check, 5},
     {"omega0", no_argument, &long_check, 6},
     {"events", no_argument, &long_check, 7},
+    {"nomtrr", no_argument, &long_check, 8},
     {0, 0, 0, 0}
   };
 
@@ -301,33 +298,37 @@ static void do_args(int argc, char *argv[])
         case 0:  /* long option */
           switch (long_check)
             {
-            case 1:  /* debug jiffies */
-              io_noirq = 1;
-              LOG("Disabling internal IRQ handling.");
+            case 1:
+              cfg_irq = 0;
+              LOG_printf("Disabling internal IRQ handling.\n");
               break;
             case 2:
-              nolist = 1;
-              LOG("Disabling listing of PCI devices.");
+              cfg_dev_list = 0;
+              LOG_printf("Disabling listing of PCI devices.\n");
               break;
             case 3:
-              use_spec = 0;
-              LOG("Disabling special fully nested mode.");
+              cfg_irq_sfn = 0;
+              LOG_printf("Disabling special fully nested mode.\n");
               break;
             case 4:
               if(add_device_inclusion(optarg))
-                LOG("invalid vendor:device string \"%s\"", optarg);
+                LOG_Error("invalid vendor:device string \"%s\"", optarg);
               break;
             case 5:
               if(add_device_exclusion(optarg))
-                LOG("invalid vendor:device string \"%s\"", optarg);
+                LOG_Error("invalid vendor:device string \"%s\"", optarg);
               break;
             case 6:
-              io_set_omega0 = 1;
-              LOG("Setting omega0 flag in info page.");
+              cfg_force_omega0 = 1;
+              LOG_printf("Setting omega0 flag in info page.\n");
               break;
             case 7:
-              use_events = 1;
-              LOG("Enabling events support.");
+              cfg_events = 1;
+              LOG_printf("Enabling events support.\n");
+              break;
+            case 8:
+              cfg_mtrr = 0;
+              LOG_printf("Disabling MTRR support.\n");
               break;
             default:
               /* ignore unknown */
@@ -349,7 +350,6 @@ int main(int argc, char *argv[])
 {
   int error;
 
-  /* global init stuff */
   rmgr_init();
 
   do_args(argc, argv);
@@ -361,10 +361,8 @@ int main(int argc, char *argv[])
       return error;
     }
 
-  /* Detect support for MTRR. This needs IOPL3 to access MSRs. Maybe we should
-   * allow to disable support by command line option. */
-  if (!l4sigma0_kip_kernel_is_ux())
-    mtrr_init();
+  /* Detect support for MTRR. This needs IOPL3 to access MSRs. */
+  if (cfg_mtrr && !l4sigma0_kip_kernel_is_ux()) mtrr_init();
 
   /* setup self structure */
   io_self.next = NULL;
@@ -388,15 +386,15 @@ int main(int argc, char *argv[])
 
   if (!l4sigma0_kip_kernel_is_ux())
     {
-      if ((error = io_pci_init(!nolist)))
+      if ((error = io_pci_init(cfg_dev_list)))
         {
           LOGdL(DEBUG_ERRORS, "pci initialization failed (%d)\n", error);
           return error;
         }
       /* skip irq handling on demand */
-      if (!io_noirq)
+      if (cfg_irq)
         {
-          if ((error = OMEGA0_init(use_spec)))
+          if ((error = OMEGA0_init(cfg_irq_sfn)))
             {
               LOGdL(DEBUG_ERRORS, "omega0 initialization failed (%d)\n", error);
               return error;
@@ -405,11 +403,8 @@ int main(int argc, char *argv[])
         }
     }
 
-  if (io_set_omega0)
+  if (cfg_force_omega0)
     io_info.omega0 = 1;
-
-  /* DEBUGGING */
-  //list_res();
 
   /* we are up -> register at names */
   if (!names_register(IO_NAMES_STR))
@@ -418,8 +413,7 @@ int main(int argc, char *argv[])
       return -L4_ENOTFOUND;
     }
 
-  if (use_events)
-    init_events();
+  if (cfg_events) init_events();
 
   /* go looping */
   io_loop();

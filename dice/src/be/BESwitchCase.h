@@ -35,6 +35,7 @@
 class CBEUnmarshalFunction;
 class CBEComponentFunction;
 class CBEMarshalFunction;
+class CBEMarshalExceptionFunction;
 
 /** \class CBESwitchCase
  *  \ingroup backend
@@ -105,6 +106,10 @@ protected:
      *  \brief a reference to the corresponding marshal function
      */
     CBEMarshalFunction *m_pMarshalFunction;
+    /** \var CBEMarshalExceptionFunction *m_pMarshalExceptionFunction
+     *  \brief a reference to the corresponding marshal function for exceptions
+     */
+    CBEMarshalExceptionFunction *m_pMarshalExceptionFunction;
     /** \var CBEComponentFunction *m_pComponentFunction
      *  \brief a reference to the corresponding component function
      */

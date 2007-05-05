@@ -64,7 +64,7 @@ events_init_and_wait(void *dummy)
 
       /* call the OMEGA0lib service thread to detach all interrupts of
        * that client. */
-      OMEGA0_free_ressources(tid);
+      OMEGA0_free_resources(tid);
     }
 }
 

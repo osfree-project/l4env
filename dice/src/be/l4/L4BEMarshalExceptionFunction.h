@@ -1,12 +1,12 @@
 /**
- *  \file    dice/src/be/BEException.h
- *  \brief   contains the declaration of the class CBEException
+ *  \file    dice/src/be/l4/L4BEMarshalExceptionFunction.h
+ *  \brief   contains the declaration of the class CL4BEMarshalExceptionFunction
  *
- *  \date    01/15/2002
+ *  \date    05/04/2007
  *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2007
+ * Copyright (C) 2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -27,32 +27,34 @@
  */
 
 /** preprocessing symbol to check header file */
-#ifndef __DICE_BEEXCEPTION_H__
-#define __DICE_BEEXCEPTION_H__
+#ifndef L4BEMARSHALEXCEPTIONFUNCTION_H
+#define L4BEMARSHALEXCEPTIONFUNCTION_H
 
-#include "be/BETypedef.h"
 
-/** \class CBEException
+#include <be/BEMarshalExceptionFunction.h>
+
+/** \class CL4BEMarshalExceptionFunction
  *  \ingroup backend
- *  \brief the back-end class for exceptions declared in the interface
+ *  \brief the function class for the back-end
+ *
+ * This class contains resembles a back-end function which belongs to a
+ * front-end operation
  */
-class CBEException : public CBETypedef
+class CL4BEMarshalExceptionFunction : public CBEMarshalExceptionFunction
 {
 // Constructor
 public:
     /** \brief constructor
      */
-    CBEException();
-    virtual ~CBEException();
+    CL4BEMarshalExceptionFunction();
+    ~CL4BEMarshalExceptionFunction();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEException(CBEException &src);
+    /** \brief copy constructor */
+    CL4BEMarshalExceptionFunction(CL4BEMarshalExceptionFunction &src);
 
-public:
-    virtual void CreateBackEnd(CFETypedDeclarator *pFEException);
+protected:
+    virtual void WriteMarshalling(CBEFile* pFile);
 };
 
-#endif // !__DICE_BEEXCEPTION_H__
+#endif

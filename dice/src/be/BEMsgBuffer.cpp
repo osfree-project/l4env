@@ -35,6 +35,7 @@
 #include "BESndFunction.h"
 #include "BEUnmarshalFunction.h"
 #include "BEMarshalFunction.h"
+#include "BEMarshalExceptionFunction.h"
 #include "BEReplyFunction.h"
 #include "BEStructType.h"
 #include "BEOpcodeType.h"
@@ -89,7 +90,8 @@ CBEMsgBuffer::IsVariableSized(CMsgStructType nType)
     if (CMsgStructType::Generic == nType)
     {
         return IsVariableSized(CMsgStructType::In) ||
-               IsVariableSized(CMsgStructType::Out);
+               IsVariableSized(CMsgStructType::Out) ||
+	       IsVariableSized(CMsgStructType::Exc);
     }
 
     // get the struct
@@ -503,6 +505,9 @@ CBEMsgBuffer::AddReturnVariable(CBEFunction *pFunction,
     // members for variable sized return type
     CBEMsgBufferType *pType = pStruct->GetSpecificParent<CBEMsgBufferType>();
     assert(pType);
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s: add return to %d struct for function %s\n", __func__, (int)nType,
+	pFunction->GetName().c_str());
     pType->AddElement(pStruct, pReturn);
 
     return true;
@@ -689,6 +694,7 @@ CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction,
     if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
 	dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
 	dynamic_cast<CBEMarshalFunction*>(pFunction) ||
+	dynamic_cast<CBEMarshalExceptionFunction*>(pFunction) ||
 	dynamic_cast<CBEReplyFunction*>(pFunction))
 	nFuncOpcodeType = pFunction->GetReceiveDirection();
     // add opcode
@@ -739,6 +745,7 @@ CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction,
     if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
 	dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
 	dynamic_cast<CBEMarshalFunction*>(pFunction) ||
+	dynamic_cast<CBEMarshalExceptionFunction*>(pFunction) ||
 	dynamic_cast<CBEReplyFunction*>(pFunction))
 	nFuncExceptionType = pFunction->GetSendDirection();
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 

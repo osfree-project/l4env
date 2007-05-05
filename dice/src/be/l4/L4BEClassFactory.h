@@ -64,6 +64,7 @@ public:
     virtual CBEReplyFunction * GetNewReplyFunction();
     virtual CBEClass * GetNewClass();
     virtual CBEMarshalFunction* GetNewMarshalFunction();
+    virtual CBEMarshalExceptionFunction* GetNewMarshalExceptionFunction();
     virtual CBEDispatchFunction* GetNewDispatchFunction();
     virtual CBESwitchCase* GetNewSwitchCase();
     virtual CBEMsgBuffer* GetNewMessageBuffer();

@@ -47,6 +47,7 @@ class CBECallFunction;
 class CBECppCallWrapperFunction;
 class CBEUnmarshalFunction;
 class CBEMarshalFunction;
+class CBEMarshalExceptionFunction;
 class CBEComponentFunction;
 class CBESwitchCase;
 class CBEWaitAnyFunction;
@@ -99,6 +100,7 @@ public:
     virtual CBEReplyCodeType* GetNewReplyCodeType();
     virtual CBEUnmarshalFunction* GetNewUnmarshalFunction();
     virtual CBEMarshalFunction* GetNewMarshalFunction();
+    virtual CBEMarshalExceptionFunction* GetNewMarshalExceptionFunction();
     virtual CBEWaitAnyFunction* GetNewWaitAnyFunction();
     virtual CBEWaitAnyFunction* GetNewRcvAnyFunction();
     virtual CBESrvLoopFunction* GetNewSrvLoopFunction();

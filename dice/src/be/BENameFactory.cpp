@@ -647,6 +647,7 @@ CBENameFactory::GetTypeName(int nType,
  * - FUNCTION_WAIT: "_wait"
  * - FUNCTION_UNMARSHAL:  "_unmarshal"   (10)
  * - FUNCTION_MARSHAL:  "_marshal"       (8)
+ * - FUNCTION_MARSHAL_EXCEPTION:  "_marshal_exc"       (12)
  * - FUNCTION_REPLY_RECV: "_reply_recv"  (11)
  * - FUNCTION_REPLY_WAIT: "_reply_wait"  (11)
  * - FUNCTION_CALL: "_call"
@@ -719,6 +720,9 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
 	break;
     case FUNCTION_MARSHAL:
 	sReturn += "_marshal";
+	break;
+    case FUNCTION_MARSHAL_EXCEPTION:
+	sReturn += "_marshal_exc";
 	break;
     case FUNCTION_TEMPLATE:
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))

@@ -290,10 +290,10 @@ public:
      *  \brief contains the attributes of the function (CBEAttribute)
      */
     CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes;
-    /** \var CCollection<CBEException> m_Exceptions
+    /** \var CCollection<CBEDeclarator> m_Exceptions
     *  \brief contains the exceptions the function may throw
     */
-    CCollection<CBEException> m_Exceptions;
+    CCollection<CBEDeclarator> m_Exceptions;
     /** \var CSearchableCollection<CBETypedDeclarator, string> m_Parameters
      *  \brief contains the parameters of the functuin (CBETypedDeclarator)
      */

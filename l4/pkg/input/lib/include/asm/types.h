@@ -17,6 +17,8 @@ typedef unsigned int __u32;
 #define BITS_PER_LONG 32
 #elif defined (ARCH_amd64)
 #define BITS_PER_LONG 64
+#elif defined (ARCH_arm)
+#define BITS_PER_LONG 32
 #endif
 
 //typedef signed char s8;

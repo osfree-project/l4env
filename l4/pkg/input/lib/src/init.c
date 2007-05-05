@@ -15,7 +15,9 @@
  */
 
 /* L4 */
+#ifndef ARCH_arm
 #include <l4/util/rdtsc.h>  /* XXX x86 specific */
+#endif
 
 /* C */
 #include <stdio.h>
@@ -41,7 +43,9 @@ int l4input_init(int omega0, int prio, void (*handler)(struct l4input *))
 	int error;
 
 	/* for usleep */
+#ifndef ARCH_arm
 	l4_calibrate_tsc();
+#endif
 
 	/* lib state */
 	l4input_internal_jiffies_init();
@@ -59,10 +63,16 @@ int l4input_init(int omega0, int prio, void (*handler)(struct l4input *))
 		printf("L4INPUT: Registered %p for callbacks.\n", handler);
 
 	if ((error=l4input_internal_input_init()) ||
+#ifndef ARCH_arm
 	    (error=l4input_internal_i8042_init()) ||
 	    (error=l4input_internal_psmouse_init()) ||
+#else
+	    (error=l4input_internal_amba_kmi_init()) ||
+#endif
 	    (error=l4input_internal_atkbd_init()) ||
+#ifndef ARCH_arm
 	    (error=l4input_internal_pcspkr_init()) ||
+#endif
 	    (error=l4input_internal_proxy_init(prio)))
 		return error;
 

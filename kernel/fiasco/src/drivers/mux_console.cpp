@@ -155,7 +155,10 @@ Mux_console::register_console( Console *c, int pos = 0)
   } 
   _items++;
   _cons[pos] = c;
-  _cons[pos]->state(INENABLED|OUTENABLED);
+  if (_cons[pos]->state() & DISABLED_INIT)
+      _cons[pos]->state(DISABLED);
+  else
+      _cons[pos]->state(INENABLED|OUTENABLED);
 
   return true;
 }

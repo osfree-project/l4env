@@ -6,7 +6,7 @@
  *  \author Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2001-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -27,34 +27,24 @@
  */
 
 #include "be/BEException.h"
-#include "fe/FEIdentifier.h"
-
 
 CBEException::CBEException()
-{
-}
+{}
 
 CBEException::CBEException(CBEException & src)
- : CBEObject(src)
-{
-    m_sName = src.m_sName;
-}
+ : CBETypedef(src)
+{}
 
 /** \brief destructor of this instance */
 CBEException::~CBEException()
-{
-}
+{}
 
 /** \brief prepares the target code generation for this element
  *  \param pFEException the respective front-end exception
-
- *  \return true if code generationwas successful
  */
 void
-CBEException::CreateBackEnd(CFEIdentifier * pFEException)
+CBEException::CreateBackEnd(CFETypedDeclarator * pFEException)
 {
     // call CBEObject's CreateBackEnd method
-    CBEObject::CreateBackEnd(pFEException);
-
-    m_sName = pFEException->GetName();
+    CBETypedef::CreateBackEnd(pFEException);
 }

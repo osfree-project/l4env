@@ -191,12 +191,10 @@ setInfo (const char *format, ...)
 extern inline void
 setPlaymode (int playmode)
 {
-  if (playmode == PLAYMODE_PLAY 
 #if PREDICT_DECODING_TIME || H264_SLICE_SCHEDULE
-      && gui_state.silent
-#endif
-      )
+  if (playmode == PLAYMODE_PLAY && gui_state.silent)
     playmode = PLAYMODE_DROP;
+#endif
   gui_state.playmode = playmode;
   /* push button for current playmode but not w/o gui */
   if (gui_state.text_only)

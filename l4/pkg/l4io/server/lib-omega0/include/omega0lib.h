@@ -20,6 +20,6 @@
 int  OMEGA0_init(int use_spec);
 
 /** free ressources of a client. */
-void OMEGA0_free_ressources(l4_threadid_t client);
+void OMEGA0_free_resources(l4_threadid_t client);
 
 #endif

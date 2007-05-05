@@ -25,7 +25,7 @@ raw_putchar(int c)
 static void
 uu_open(const char *name)
 {
-  raw_write("\nbegin 644 ", 10);
+  raw_write("\nbegin 644 ", 11);
   raw_write(name, strlen(name));
   raw_write("\n", 1);
 }

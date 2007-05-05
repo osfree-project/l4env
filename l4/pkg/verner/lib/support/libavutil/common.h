@@ -604,7 +604,7 @@ tend= read_time();\
 /* XXX: add ISOC specific test to avoid specific BSD testing. */
 /* better than nothing implementation. */
 /* btw, rintf() is existing on fbsd too -- alex */
-static always_inline long int lrintf(float x)
+/*static*/ extern always_inline long int lrintf(float x)
 {
 #ifdef CONFIG_WIN32
 #  ifdef ARCH_X86

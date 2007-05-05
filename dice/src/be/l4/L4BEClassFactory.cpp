@@ -37,6 +37,7 @@
 #include "L4BEWaitFunction.h"
 #include "L4BEHeaderFile.h"
 #include "L4BEMarshalFunction.h"
+#include "L4BEMarshalExceptionFunction.h"
 #include "L4BETypedDeclarator.h"
 #include "L4BEClass.h"
 #include "L4BEDispatchFunction.h"
@@ -196,6 +197,16 @@ CBEMarshalFunction* CL4BEClassFactory::GetNewMarshalFunction()
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CL4BEClassFactory: created class CL4BEMarshalFunction\n");
     return new CL4BEMarshalFunction();
+}
+
+/** \brief creates a new marshal function
+ *  \return a reference to the new instance
+ */
+CBEMarshalExceptionFunction* CL4BEClassFactory::GetNewMarshalExceptionFunction()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CL4BEClassFactory: created class CL4BEMarshalExceptionFunction\n");
+    return new CL4BEMarshalExceptionFunction();
 }
 
 /** \brief creates a new dispatch function

@@ -15,7 +15,7 @@ PRIVATE_LIBDIR  = $(PKGDIR_OBJ)/server/lib-omega0/src/OBJ-$(SYSTEM) \
                   $(PKGDIR_OBJ)/server/lib-pci/src/OBJ-$(SYSTEM)
 
 LIBS            = -lio-pci24 -lio-omega0 -levents \
-		  -lgeneric_io-server -lio-idl
+                  -lgeneric_io-server -lio-idl
 CFLAGS          = -fno-strict-aliasing
 
 include $(L4DIR)/mk/prog.mk

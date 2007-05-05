@@ -43,6 +43,7 @@
 #include "BECppCallWrapperFunction.h"
 #include "BEUnmarshalFunction.h"
 #include "BEMarshalFunction.h"
+#include "BEMarshalExceptionFunction.h"
 #include "BEReplyFunction.h"
 #include "BEComponentFunction.h"
 #include "BESndFunction.h"
@@ -124,6 +125,7 @@ CFEOperation *CFunctionGroup::GetOperation()
 CBEClass::CBEClass()
 : m_Attributes(0, this),
   m_Constants(0, this),
+  m_Exceptions(0, this),
   m_TypeDeclarations(0, this),
   m_Typedefs(0, this),
   m_Functions(0, this),
@@ -262,6 +264,13 @@ CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 	 iterTD++)
     {
         CreateBackEndTypedef(*iterTD);
+    }
+    // add exceptions
+    for (iterTD = pFEInterface->m_Exceptions.begin();
+	 iterTD != pFEInterface->m_Exceptions.end();
+	 iterTD++)
+    {
+	CreateBackEndException(*iterTD);
     }
     // add tagged decls
     vector<CFEConstructedType*>::iterator iterT;
@@ -1080,6 +1089,29 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
 		" for " + pFEOperation->GetName();
             throw new CBECreateException(exc);
         }
+
+	if (!pFEOperation->m_RaisesDeclarators.empty())
+	{
+	    pFunction = pCF->GetNewMarshalExceptionFunction();
+	    m_Functions.Add(pFunction);
+	    pFunction->SetComponentSide(true);
+	    (*iterFG)->m_Functions.Add(pFunction);
+	    try
+	    {
+		pFunction->CreateBackEnd(pFEOperation);
+	    }
+	    catch (CBECreateException *e)
+	    {
+		m_Functions.Remove(pFunction);
+		delete pFunction;
+		e->Print();
+		delete e;
+
+		exc += " failed, because marshal_exc function could not be created" \
+			" for " + pFEOperation->GetName();
+		throw new CBECreateException(exc);
+	    }
+	}
     }
     else
     {
@@ -1138,6 +1170,38 @@ CBEClass::CreateBackEndAttribute(CFEAttribute *pFEAttribute)
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+}
+
+/** \brief internal function to create an exception
+ *  \param pFEException the repective front-end exception
+ */
+void
+CBEClass::CreateBackEndException(CFETypedDeclarator* pFEException)
+{
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n", 
+	__func__);
+
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEException *pException = pCF->GetNewException();
+    m_Exceptions.Add(pException);
+    try
+    {
+	pException->CreateBackEnd(pFEException);
+    }
+    catch (CBECreateException *e)
+    {
+	m_Exceptions.Remove(pException);
+	delete pException;
+	e->Print();
+	delete e;
+
+	string exc = string(__func__);
+	exc += " failed because exception could not be created";
+	throw new CBECreateException(exc);
+    }
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n",
+	__func__);
 }
 
 /** \brief adds the Class to the header file
@@ -1871,6 +1935,8 @@ void CBEClass::WriteElements(CBEHeaderFile *pFile)
 	WriteLineDirective(pFile, *iter);
         if (dynamic_cast<CBEConstant*>(*iter))
             WriteConstant((CBEConstant*)(*iter), pFile);
+	else if (dynamic_cast<CBEException*>(*iter))
+	    WriteException((CBEException*)(*iter), pFile);
         else if (dynamic_cast<CBETypedef*>(*iter))
             WriteTypedef((CBETypedef*)(*iter), pFile);
         else if (dynamic_cast<CBEType*>(*iter))
@@ -2692,6 +2758,18 @@ void CBEClass::WriteTaggedType(CBEType *pType,
     *pFile << "\n";
 }
 
+/** \brief writes the declaration of the exception
+ *  \param pException the exception to write
+ *  \param pFile the file to write to
+ *
+ * We first define the type of the exception, which is a simple typedef.
+ */
+void CBEClass::WriteException(CBEException *pException,
+    CBEHeaderFile *pFile)
+{
+    WriteTypedef(pException, pFile);
+}
+
 /** \brief searches for a function with the given type
  *  \param sTypeName the name of the type to look for
  *  \param pFile the file to write to (its used to test if a function shall be written)
@@ -2867,6 +2945,14 @@ void CBEClass::CreateOrderedElementList(void)
 	 iterC++)
     {
         InsertOrderedElement(*iterC);
+    }
+    // exceptions
+    vector<CBEException*>::iterator iterE;
+    for (iterE = m_Exceptions.begin();
+	 iterE != m_Exceptions.end();
+	 iterE++)
+    {
+	InsertOrderedElement(*iterE);
     }
 }
 

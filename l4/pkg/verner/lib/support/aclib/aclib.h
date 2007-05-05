@@ -146,7 +146,9 @@ __asm__ __volatile__(\
 #endif
 
 //cr7
-#define size_t unsigned long
+//#define size_t unsigned long
+#define __need_size_t
+#include <stddef.h>
 extern void * fast_memcpy_MMX(void * to, const void * from, size_t len);
 extern void * fast_memcpy_MMX2(void * to, const void * from, size_t len);
 extern void * fast_memcpy_3DNow(void * to, const void * from, size_t len);

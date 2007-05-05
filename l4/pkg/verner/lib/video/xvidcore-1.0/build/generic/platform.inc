@@ -36,7 +36,8 @@ OBJECT_EXTENSION=o
 # ============================================================================
 
 SPECIFIC_CFLAGS=-fPIC 
-CFLAGS=-Wall -O2 -fstrength-reduce -finline-functions -freduce-all-givs -ffast-math -fomit-frame-pointer $(LIBCINCDIR_x86_tiny)
+# CFLAGS=-Wall -O2 -fstrength-reduce -finline-functions -freduce-all-givs -ffast-math -fomit-frame-pointer $(LIBCINCDIR_x86_tiny)
+CFLAGS=-Wall -O2 -fstrength-reduce -finline-functions -ffast-math -fomit-frame-pointer $(LIBCINCDIR_x86_tiny)
 
 # ============================================================================
 # Assembler

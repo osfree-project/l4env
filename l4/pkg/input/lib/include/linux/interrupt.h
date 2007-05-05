@@ -7,7 +7,11 @@
 struct pt_regs;
 
 /* from asm-i386/mach-default/irq-vectors.h */
+#ifdef ARCH_arm
+#define NR_IRQS 64
+#else
 #define NR_IRQS 16
+#endif
 
 typedef int irqreturn_t;
 

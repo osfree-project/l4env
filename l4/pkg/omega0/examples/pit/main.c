@@ -155,16 +155,18 @@ int main(int argc, char*argv[]){
 #else
   LOG("Programmin interrupts myself.");
 #endif
-  
-  pit(20000, 2);
-  pit(50000, 2);
-  pit(100000, 2);
-  pit(200000, 2);
-  pit(300000, 2);
-  pit(400000, 2);
 
-  pit(500000, 2);
-  pit(1000000, 2);
+  const unsigned sec = 10;
+  
+  pit(20000, sec);
+  pit(50000, sec);
+  pit(100000, sec);
+  pit(200000, sec);
+  pit(300000, sec);
+  pit(400000, sec);
+
+  pit(500000, sec);
+  pit(1000000, sec);
   
   enter_kdebug("ready.");
   LOG("falling asleep");

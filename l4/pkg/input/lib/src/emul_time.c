@@ -16,7 +16,9 @@
 
 /* L4 */
 #include <stdio.h>
+#ifndef ARCH_arm
 #include <l4/util/rdtsc.h>     /* XXX x86 specific */
+#endif
 #include <l4/thread/thread.h>
 
 /* Linux */
@@ -67,5 +69,9 @@ void l4input_internal_jiffies_init(void)
 /* UDELAY */
 void udelay(unsigned long usecs)
 {
+#ifdef ARCH_arm
+  l4_sleep(usecs/1000); // XXX
+#else
   l4_busy_wait_us(usecs);
+#endif
 }

@@ -35,7 +35,6 @@
 #include "be/BEClass.h"
 #include "be/BEMarshaller.h"
 #include "be/BERoot.h"
-#include "be/BEException.h"
 #include "Compiler.h"
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
@@ -205,7 +204,7 @@ CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation)
 void 
 CBEOperationFunction::AddException(CFEIdentifier * pFEException)
 {
-    CBEException *pException = CCompiler::GetClassFactory()->GetNewException();
+    CBEDeclarator *pException = CCompiler::GetClassFactory()->GetNewDeclarator();
     m_Exceptions.Add(pException);
     try
     {

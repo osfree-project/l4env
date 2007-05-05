@@ -19,7 +19,9 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/types.h>
 #include <l4/util/irq.h>
+#ifndef ARCH_arm
 #include <l4/util/port_io.h>
+#endif
 #include <l4/util/macros.h>
 #include <l4/util/thread.h>
 #include <l4/omega0/client.h>
@@ -68,6 +70,7 @@ static int irq_prio   = L4THREAD_DEFAULT_PRIO;
  */
 static inline int __omega0_attach(unsigned int irq, int *handle)
 {
+#ifndef ARCH_arm
 	omega0_irqdesc_t irqdesc;
 
 	/* setup irq descriptor */
@@ -79,6 +82,7 @@ static inline int __omega0_attach(unsigned int irq, int *handle)
 	if (*handle < 0)
 		return -1;
 	else
+#endif
 		return 0;
 }
 
@@ -96,6 +100,7 @@ static inline int __omega0_attach(unsigned int irq, int *handle)
 static inline int __omega0_wait(unsigned int irq, int handle,
                                 unsigned int flags)
 {
+#ifndef ARCH_arm
 	omega0_request_t request = { .i=0 };
 	int ret;
 
@@ -117,6 +122,7 @@ static inline int __omega0_wait(unsigned int irq, int handle,
 		return L4_IPC_RETIMEOUT;
 	if (ret != (irq + 1))
 		Panic("error waiting for interrupt (error %08x)", ret);
+#endif
 	return 0;
 }
 
@@ -128,11 +134,13 @@ static inline int __omega0_wait(unsigned int irq, int handle,
  */
 static inline void enable_irq(unsigned int irq)
 {
+#ifndef ARCH_arm
 	int port;
 	l4util_cli();
 	port = (((irq & 0x08) << 4) + 0x21);
 	l4util_out8(l4util_in8(port) & ~(1 << (irq & 7)), port);
 	l4util_sti();
+#endif
 }
 
 /** Disable IRQ.
@@ -141,11 +149,13 @@ static inline void enable_irq(unsigned int irq)
  */
 static inline void disable_irq(unsigned int irq)
 {
+#ifndef ARCH_arm
 	unsigned short port;
 	l4util_cli();
 	port = (((irq & 0x08) << 4) + 0x21);
 	l4util_out8(l4util_in8(port) | (1 << (irq & 7)), port);
 	l4util_sti();
+#endif
 }
 
 /** Disable and acknowledge IRQ.
@@ -154,7 +164,9 @@ static inline void disable_irq(unsigned int irq)
  */
 static inline void ack_irq(unsigned int irq)
 {
+#ifndef ARCH_arm
 	l4util_irq_acknowledge(irq);
+#endif
 }
 
 /** IRQ HANDLER THREAD.
@@ -180,10 +192,12 @@ static void __irq_handler(struct irq_desc *irq_desc)
 		else
 			error = L4_IPC_RETIMEOUT;
 	} else {
+#ifndef ARCH_arm
 		if (rmgr_get_irq(irq))
 			/* can't get permission -> block */
 			Panic("__irq_handler(): "
 			      "can't get permission for irq 0x%02x, giving up...\n", irq);
+#endif
 
 		/* attach to IRQ */
 		if (l4_is_invalid_id(irq_id = l4util_attach_interrupt(irq)))
@@ -331,6 +345,9 @@ void free_irq(unsigned int irq, void *cookie)
 void l4input_internal_irq_init(int omega0, int prio)
 {
 	use_omega0 = omega0;
+#ifdef ARCH_arm
+	use_omega0 = 0;
+#endif
 	irq_prio   = prio;
 
 	memset(&handlers, 0, sizeof(handlers));

@@ -1112,7 +1112,17 @@ export :
     }
     | exception_declarator 
     { 
-	$$ = $1;
+	$$ = NULL;
+	if (pCurFileComponent && 
+	    dynamic_cast<CFEInterface*>(pCurFileComponent))
+		((CFEInterface*)pCurFileComponent)->m_Exceptions.Add($1);
+	else
+	{
+	    CMessages::GccError(NULL, 0, 
+		"current file component is unknown type: %s\n",
+		typeid(*pCurFileComponent).name());
+	    assert(false);
+	}
     }
     ;
 
@@ -3086,21 +3096,31 @@ predefined_type_spec :
     ;
 
 exception_declarator :
-      EXCEPTION type_attribute_list type_spec declarator_list
+      EXCEPTION ID LBRACE member_list RBRACE
     {
-	$$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, $3, $4, $2);
+        vector<CFEDeclarator*> *vd = new vector<CFEDeclarator*>();
+        vd->push_back(new CFEDeclarator(DECL_IDENTIFIER, *$2));
+        CFEStructType *st = new CFEStructType(*$2, $4);
+        st->SetSourceLine(gLineNumber);
+        delete $2;
+        delete $4;
+        $$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, st, vd);
         // set parent relationship
-	$3->SetParent($$);
-	delete $4;
-	delete $2;
+        st->SetParent($$);
         $$->SetSourceLine(gLineNumber);
     }
-    | EXCEPTION type_spec declarator_list
+    | EXCEPTION ID LBRACE RBRACE
     {
-    	$$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, $2, $3);
+    	CFESimpleType *st = new CFESimpleType(TYPE_INTEGER, false, true, 4/*value for LONG*/, false);
+	st->SetSourceLine(gLineNumber);
+
+        vector<CFEDeclarator*> *vd = new vector<CFEDeclarator*>();
+        vd->push_back(new CFEDeclarator(DECL_IDENTIFIER, *$2));
+        delete $2;
+
+        $$ = new CFETypedDeclarator(TYPEDECL_EXCEPTION, st, vd);
         // set parent relationship
-	$2->SetParent($$);
-	delete $3;
+        st->SetParent($$);
         $$->SetSourceLine(gLineNumber);
     }
     | EXCEPTION error
