@@ -2,7 +2,7 @@ PKGDIR	= .
 L4DIR	?= $(PKGDIR)/../..
 
 TARGET  = include lib
-SUBDIRS = uart drv lcd
+SUBDIRS = common uart drv lcd
 
 include $(L4DIR)/mk/subdir.mk
 
