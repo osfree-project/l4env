@@ -61,17 +61,11 @@ public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
 
     virtual void SetMessageBufferType();
+    virtual void SetCallVariable(string sOriginalName, int nStars, 
+	string sCallName);
     
-    /** \brief tests if this function should be written
-     *  \return true if successful
-     */
-    virtual bool DoWriteFunction(CBEHeaderFile * /*pFile*/) 
-    { return true; }
-    /** \brief tests if this function should be written
-     *  \return true if successful
-     */
-    virtual bool DoWriteFunction(CBEImplementationFile * /*pFile*/)
-    { return true; }
+    virtual bool DoWriteFunction(CBEHeaderFile * pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile * pFile);
 
 protected:
     virtual void WriteVariableInitialization(CBEFile *pFile, DIRECTION_TYPE nDirection);
@@ -79,14 +73,8 @@ protected:
     virtual void WriteCleanup(CBEFile *pFile);
     virtual bool DoWriteVariable(CBETypedDeclarator *pParameter);
 
-    /** \brief writes the initialization of the variables
-     */
-    virtual void WriteVariableInitialization(CBEFile * /*pFile*/)
-    { }
-    /** \brief writes the invocation of the message transfer
-     */
-    virtual void WriteInvocation(CBEFile * /*pFile*/)
-    { }
+    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile * pFile);
 
 protected:
     /** \var bool m_bSameClass

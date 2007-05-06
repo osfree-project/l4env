@@ -87,6 +87,8 @@ CObject* CBEMsgBuffer::Clone()
 bool 
 CBEMsgBuffer::IsVariableSized(CMsgStructType nType)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEMsgBuffer::%s(%d) called\n", __func__, (int)nType);
     if (CMsgStructType::Generic == nType)
     {
         return IsVariableSized(CMsgStructType::In) ||
@@ -96,6 +98,11 @@ CBEMsgBuffer::IsVariableSized(CMsgStructType nType)
 
     // get the struct
     CBEStructType *pStruct = GetStruct(nType);
+    if (!pStruct)
+	return false;
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEMsgBuffer::%s(%d) returns %s\n", __func__, (int)nType,
+	(pStruct->GetSize() < 0) ? "true" : "false");
     return pStruct->GetSize() < 0;
 }
 

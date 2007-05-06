@@ -662,9 +662,11 @@ CBEFunction::WriteCallParameter(CBEFile * pFile,
 {
     CBEDeclarator *pOriginalDecl = pParameter->m_Declarators.First();
     CBEDeclarator *pCallDecl = pParameter->GetCallDeclarator();
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s: orig @ %p, call q %p\n",
+	__func__, pOriginalDecl, pCallDecl);
     if (!pCallDecl)
         pCallDecl = pOriginalDecl;
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: write parameter %s\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s: write parameter %s\n", __func__, 
 	pOriginalDecl->GetName().c_str());
     WriteCallParameterName(pFile, pOriginalDecl, pCallDecl);
 }
@@ -692,10 +694,17 @@ CBEFunction::WriteCallParameterName(CBEFile * pFile,
 	CBEDeclarator * pInternalDecl,
 	CBEDeclarator * pExternalDecl)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEFunction::%s called\n", __func__);
     // check stars
     int nDiffStars = pExternalDecl->GetStars() - pInternalDecl->GetStars();
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEFunction::%s nDiffStars = %d = %d - %d (1)\n", __func__, nDiffStars,
+	pExternalDecl->GetStars(), pInternalDecl->GetStars());
     if (HasAdditionalReference(pInternalDecl, true))
         nDiffStars--;
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEFunction::%s nDiffStars = %d (2)\n", __func__, nDiffStars);
 
     int nCount;
     for (nCount = nDiffStars; nCount < 0; nCount++)
@@ -713,6 +722,8 @@ CBEFunction::WriteCallParameterName(CBEFile * pFile,
 	*pFile << ")";
     for (nCount = nDiffStars+1; nCount < 0; nCount++)
 	*pFile << ")";
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief counts the number of string parameters
@@ -2139,6 +2150,10 @@ CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl,
 	string sNewDeclName, 
 	int nStars)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEFunction::%s(decl: %s, %s, %d) called\n", __func__,
+	pTypedDecl->m_Declarators.First()->GetName().c_str(),
+	sNewDeclName.c_str(), nStars);
     // check if there is already a second declarator
     CBEDeclarator *pSecond = pTypedDecl->GetCallDeclarator();
     if (pSecond)
@@ -2160,6 +2175,8 @@ CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl,
 	    throw;
         }
     }
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEFunction::%s(decl) returns\n", __func__);
 }
 
 /** \brief create a call varaiable for the original parameter
@@ -2189,12 +2206,18 @@ CBEFunction::SetCallVariable(string sOriginalName,
 	int nStars, 
 	string sCallName)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEFunction::%s(%s, %d, %s) called\n", __func__,
+	sOriginalName.c_str(), nStars, sCallName.c_str());
     // clone existing parameters if not yet done
     if (m_CallParameters.empty())
     {
         vector<CBETypedDeclarator*>::iterator iter;
         for (iter = m_Parameters.begin(); iter != m_Parameters.end(); iter++)
         {
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEFunction::%s cloning %s\n", __func__,
+		(*iter)->m_Declarators.First()->GetName().c_str());
             CBETypedDeclarator *pParam = 
 		(CBETypedDeclarator*)((*iter)->Clone());
             m_CallParameters.Add(pParam);
@@ -2203,11 +2226,17 @@ CBEFunction::SetCallVariable(string sOriginalName,
     }
     // search for original name
     CBETypedDeclarator *pCallParam = m_CallParameters.Find(sOriginalName);
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEFunction::%s call param for %s at %p\n", __func__,
+	sOriginalName.c_str(), pCallParam);
     // if we didn't find anything, then pCallParam is 0
     if (!pCallParam)
         return;
     // new name and new stars
     SetCallVariable(pCallParam, sCallName, nStars);
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief remove the call declarator set for a parameter

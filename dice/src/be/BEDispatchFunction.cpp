@@ -138,10 +138,12 @@ CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface)
 	 iterS++)
     {
         (*iterS)->SetMessageBufferType();
-	// also set the call variable value of our return variable
-// 	CBEDeclarator *pDecl = pReturn->m_Declarators.First();
-// 	(*iterS)->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
-// 	    pDecl->GetName());
+	// also set the call variable value of our return variable, which is
+	// the reply code. The switch case' SetCallVariable method propagates
+	// the call to its respective nested functions.
+	CBEDeclarator *pDecl = pReturn->m_Declarators.First();
+	(*iterS)->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
+	    pDecl->GetName());
     }
 
     // check if interface has default function and add its name if available

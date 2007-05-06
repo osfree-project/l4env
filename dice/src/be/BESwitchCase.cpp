@@ -110,6 +110,10 @@ public:
 		sPrefix.clear();
 	}
 	CBEDeclarator *pName = pParameter->m_Declarators.First();
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "SetCallVariableCall(func %s) param %s (%d) -> %s\n",
+	    f->GetName().c_str(), pName->GetName().c_str(),
+	    pName->GetStars(), string(sPrefix + pName->GetName()).c_str());
 	f->SetCallVariable(pName->GetName(), pName->GetStars(),
 	    sPrefix + pName->GetName());
     }
@@ -241,6 +245,22 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
 	    pDecl->SetName(sPrefix + pDecl->GetName());
 	}
     }
+}
+
+/** \brief tests if this function should be written
+ *  \return true if successful
+ */
+bool CBESwitchCase::DoWriteFunction(CBEHeaderFile * /*pFile*/) 
+{ 
+    return true; 
+}
+
+/** \brief tests if this function should be written
+ *  \return true if successful
+ */
+bool CBESwitchCase::DoWriteFunction(CBEImplementationFile * /*pFile*/)
+{ 
+    return true; 
 }
 
 /** \brief writes the target code
@@ -471,6 +491,16 @@ void CBESwitchCase::WriteCleanup(CBEFile * pFile)
     }
 }
 
+/** \brief writes the initialization of the variables
+ */
+void CBESwitchCase::WriteVariableInitialization(CBEFile * /*pFile*/)
+{ }
+
+/** \brief writes the invocation of the message transfer
+ */
+void CBESwitchCase::WriteInvocation(CBEFile * /*pFile*/)
+{ }
+
 /** \brief resets the message buffer type of the respective functions
  *
  * The unmarshal and reply functions need their message buffer parameter to be
@@ -482,5 +512,37 @@ void CBESwitchCase::SetMessageBufferType()
         m_pUnmarshalFunction->SetMsgBufferCastOnCall(true);
     if (m_pMarshalFunction)
         m_pMarshalFunction->SetMsgBufferCastOnCall(true);
+    if (m_pMarshalExceptionFunction)
+	m_pMarshalExceptionFunction->SetMsgBufferCastOnCall(true);
 }
+
+/** \brief propagates the SetCallVariable call if the internal variables are \ 
+ * Corba object and environment 
+ *  \param sOriginalName the internal name of the variable 
+ *  \param nStars the new number of stars of the variable 
+ *  \param sCallName the external name 
+ *
+ * This method is called by the dispatch function to set the reply-code
+ * variable according to its internal representation. This may also be used
+ * for other local variables of the dispatch function. Because we use the
+ * nested functions, we have to propagate the invocation respectively.
+ */ 
+void 
+CBESwitchCase::SetCallVariable(string sOriginalName, 
+    int nStars, 
+    string sCallName) 
+{ 
+    if (m_pUnmarshalFunction) 
+	m_pUnmarshalFunction->SetCallVariable(sOriginalName, nStars, 
+	    sCallName); 
+    if (m_pMarshalFunction) 
+	m_pMarshalFunction->SetCallVariable(sOriginalName, nStars, 
+	    sCallName); 
+    if (m_pMarshalExceptionFunction)
+	m_pMarshalExceptionFunction->SetCallVariable(sOriginalName, nStars,
+	    sCallName);
+    if (m_pComponentFunction) 
+	m_pComponentFunction->SetCallVariable(sOriginalName, nStars, 
+	    sCallName); 
+} 
 
