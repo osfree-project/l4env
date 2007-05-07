@@ -2,9 +2,10 @@ PKGDIR ?= ../..
 L4DIR  ?= $(PKGDIR)/../..
 
 SYSTEMS           := x86-l4v2 amd64-l4v2 arm-l4x0
-TARGET_x86-l4v2   := inputtst inputtst-ux
-TARGET_amd64-l4v2 := inputtst inputtst-ux
-TARGET_arm-l4x0   := inputtst-arm
+FILES_x86-l4v2    := inputtst inputtst-ux
+FILES_amd64-l4v2  := inputtst inputtst-ux
+FILES_arm-l4x0    := inputtst-arm
+TARGET             = $(FILES_$(OSYSTEM))
 
 DEFAULT_RELOC = 0x00900000
 
