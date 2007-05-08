@@ -262,7 +262,7 @@ void Timer::init()
   Io::write(timer_reload, TIMER1_VA_BASE + TIMER_VALUE);
   Io::write(timer_ctrl | TIMER_CTRL_IE, TIMER1_VA_BASE + TIMER_CTRL);
 
-  Irq_alloc::lookup(Config::Scheduling_irq)->alloc( (Receiver*)-1, false );
+  Irq_alloc::lookup(Config::Scheduling_irq)->alloc((Receiver*)-1);
 }
 
 static inline
@@ -394,7 +394,7 @@ void Timer::init()
   Io::write<Mword>(INTERVAL, VALUE_0);
   Io::write<Mword>(CTRL_ENABLE | CTRL_PERIODIC | CTRL_IE, CTRL_0);
 
-  Irq_alloc::lookup(Config::Scheduling_irq)->alloc( (Receiver*)-1, false );
+  Irq_alloc::lookup(Config::Scheduling_irq)->alloc( (Receiver*)-1);
 }
 
 static inline

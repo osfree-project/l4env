@@ -392,6 +392,10 @@ Cpu::init ()
   // reset time stamp counter (better for debugging)
   if (features() & FEAT_TSC)
     wrmsr(0, 0, 0x10);
+
+  if ((features() & FEAT_PAT) && can_wrmsr())
+    wrmsr(0x00010406, 0x00070406, 0x277);
+
 }
 
 extern "C" Address syscall_rsp0;

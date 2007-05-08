@@ -806,7 +806,7 @@ IMPLEMENT
 bool
 Thread::associate_irq(Irq_alloc *irq)
 {
-  if (irq->alloc(this, Config::irq_ack_in_kernel))
+  if (irq->alloc(this))
     {
       ++_irq;
       return true;

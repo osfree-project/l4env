@@ -80,8 +80,6 @@ public: // Public methods
     virtual unsigned char Import(string sFilename) = 0;
 
     virtual CFEFile *GetTopFileInScope(); // used by scanner, parser
-    virtual bool PrepareEnvironment(string sFilename, FILE*& fIn, FILE*& fOut); // used by preprocessing
-    virtual void FinishEnvironment(); // used by parser
 
     virtual void UpdateState(string sFileName, int nLineNumber);
 

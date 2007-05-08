@@ -12,7 +12,7 @@ Timer::init()
 {
   puts("Using the PIT (i8254) on IRQ 0 for scheduling");
 
-  Irq_alloc::lookup(0)->alloc( (Receiver*)-1, false );
+  Irq_alloc::lookup(0)->alloc( (Receiver*)-1);
 
   // set up timer interrupt (~ 1ms)
   Pit::init();

@@ -260,8 +260,7 @@ next_irq:
 	else
 	  {
 	    Irq *i = Dirq::lookup(irq);
-	    i->maybe_acknowledge();
-	    nonull_static_cast<Dirq*>(i)->hit();
+	    i->hit();
 	  }
       }
   }

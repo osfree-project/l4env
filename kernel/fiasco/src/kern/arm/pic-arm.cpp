@@ -151,9 +151,9 @@ void Pic::enable_locked(unsigned irq, unsigned /*prio*/)
   Io::write(Io::read<Mword>(ICMR) | (1<<irq), ICMR);
 }
 
-IMPLEMENT inline NEEDS [Pic::enable_locked]
+IMPLEMENT inline
 void Pic::acknowledge_locked( unsigned irq )
-{ Pic::enable_locked(irq); }
+{}
 
 
 IMPLEMENT inline NEEDS["io.h"]
@@ -218,11 +218,9 @@ void Pic::enable_locked(unsigned irq, unsigned /*prio*/)
   Io::write(1 << irq, IRQ_ENABLE_SET);
 }
 
-IMPLEMENT inline NEEDS [Pic::enable_locked]
-void Pic::acknowledge_locked(unsigned irq)
-{
-  Pic::enable_locked(irq);
-}
+IMPLEMENT inline
+void Pic::acknowledge_locked(unsigned)
+{}
 
 
 IMPLEMENT inline

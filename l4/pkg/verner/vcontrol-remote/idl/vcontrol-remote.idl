@@ -2,6 +2,8 @@
  * Specifies the Verner Remote Control interface.
  */
 
+import <l4/sys/types.h>
+
 module verner
 {
   interface remote

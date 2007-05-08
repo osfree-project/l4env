@@ -122,9 +122,6 @@ CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
 	 iterI != pFEFile->m_Includes.end();
 	 iterI++)
     {
-        // check if we shall add an include statement
-        if ((*iterI)->m_bPrivate)
-            continue;
         // find the corresponding file
         CFEFile *pIncFile = pFERoot->FindFile((*iterI)->m_sFilename);
         // get name for include (with prefix, etc.)

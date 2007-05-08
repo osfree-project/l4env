@@ -123,7 +123,7 @@ CBEFile::AddIncludedFileName(string sFileName,
 	return;
     // add new include file
     CIncludeStatement *pNewInc = new CIncludeStatement(bIDLFile, 
-	bIsStandardInclude, false, false, sFileName, string(),
+	bIsStandardInclude, false, sFileName, string(),
 	string(), 0);
     m_IncludedFiles.Add(pNewInc);
     // set source file info

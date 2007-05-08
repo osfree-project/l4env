@@ -363,6 +363,9 @@ Cpu::init ()
   // reset time stamp counter (better for debugging)
   if ((features() & FEAT_TSC) && can_wrmsr())
     wrmsr(0, 0, 0x10);
+
+  if ((features() & FEAT_PAT) && can_wrmsr())
+    wrmsr(0x00010406, 0x00070406, 0x277);
 }
 
 PUBLIC static FIASCO_INIT

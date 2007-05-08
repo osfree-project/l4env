@@ -177,7 +177,7 @@ CBEMsgBuffer::GetCountAll(int nFEType,
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
     assert(pFunction);
     
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEMsgBuffer::%s (%d, %d) called for mb in %s\n", __func__, nFEType,
 	(int)nType, pFunction->GetName().c_str());
     
@@ -221,7 +221,7 @@ CBEMsgBuffer::GetCountAll(int nFEType,
 	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 		"Union %s has %d members of type %d\n", sUnion.c_str(),
 		nCount, nFEType);
-	    nCount = std::max(nCount, nMaxCount);
+	    nMaxCount = std::max(nCount, nMaxCount);
 	}
     }
 

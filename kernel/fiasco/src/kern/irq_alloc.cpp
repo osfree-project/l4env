@@ -6,9 +6,8 @@ class Irq_alloc
 {
 
 public:
-  virtual bool alloc(Receiver *t, bool ack_in_kernel) = 0;
+  virtual bool alloc(Receiver *t) = 0;
   virtual bool free(Receiver *t) = 0;
-  virtual void acknowledge() = 0;
 
   static void init();
 
@@ -16,7 +15,6 @@ public:
 
 protected:
   Receiver *_irq_thread;
-  bool _ack_in_kernel;
 
 private:
   static Irq_alloc *irqs[];
@@ -63,8 +61,8 @@ Irq_alloc::free_all(Receiver *rcv)
 IMPLEMENT inline NEEDS["config.h"]
 Irq_alloc *Irq_alloc::lookup( unsigned irq )
 {
-  if(irq < Config::Max_num_irqs) 
-    return irqs[irq];    
+  if(irq < Config::Max_num_irqs)
+    return irqs[irq];
   else
     return 0;
 }
@@ -72,7 +70,7 @@ Irq_alloc *Irq_alloc::lookup( unsigned irq )
 IMPLEMENT inline NEEDS["config.h"]
 void Irq_alloc::register_irq( unsigned irq, Irq_alloc *i )
 {
-  if(irq < Config::Max_num_irqs) 
+  if(irq < Config::Max_num_irqs)
     irqs[irq] = i;
 }
 

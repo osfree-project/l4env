@@ -99,6 +99,7 @@ namespace Page
     MAX_ATTRIBS   = 0x00000006,
     Cache_mask    = 0x00000018, ///< Cache attrbute mask
     CACHEABLE     = 0x00000000,
+    BUFFERED      = 0x00000010,
     NONCACHEABLE  = 0x00000018,
   };
 };

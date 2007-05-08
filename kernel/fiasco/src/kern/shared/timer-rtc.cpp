@@ -17,7 +17,7 @@ Timer::init()
   puts("Using the RTC on IRQ 8 (1kHz) for scheduling");
 #endif
   
-  Irq_alloc::lookup(8)->alloc( (Receiver*)-1, false );
+  Irq_alloc::lookup(8)->alloc((Receiver*)-1);
 
   // set up timer interrupt (~ 1ms)
   Rtc::init();

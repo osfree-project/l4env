@@ -150,11 +150,6 @@ Filename        ("<")?[a-zA-Z0-9_\./\\:\- ]*(">")?("\""|">")
                           sExt = sFilename.substr(iDot + 1);
                       transform(sExt.begin(), sExt.end(), sExt.begin(), 
 		          _tolower);
-                      // our own header dice-corba-types.h is an exception
-		      // use the "idl" extension as a hack to get this file
-		      // opened
-//                       if (sFilename == "dice/dice-corba-types.h")
-//                           sExt = "idl";
                       // only open the input file if it is an IDL file and
                       // if we did not include it at the same spot before 
 		      // (return value of AddInclude)

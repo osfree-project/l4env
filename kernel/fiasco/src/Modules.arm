@@ -196,11 +196,10 @@ config_IMPL	  	:= config config-arm
 context_IMPL	  	:= context context-arm
 cpu_IMPL	  	:= cpu-arm
 cpu_lock_IMPL  	  	:= cpu_lock cpu_lock-generic
-dirq_IMPL		:= dirq dirq-arm
 entry_frame_IMPL  	:= entry_frame entry_frame-arm                       \
 			   entry_frame-abs-timeout-hack
 globals_IMPL	  	:= globals globals-arch
-irq_IMPL		:= irq irq-generic irq-ipc
+irq_IMPL		:= irq irq-ipc
 kernel_task_IMPL	:= kernel_task kernel_task-arm
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std
 kernel_uart_IMPL  	:= kernel_uart kernel_uart-arm

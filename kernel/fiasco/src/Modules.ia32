@@ -156,7 +156,7 @@ entry_frame_IMPL	:= entry_frame entry_frame-ia32-ux \
 			   entry_frame-abs-timeout-hack
 fpu_IMPL		:= fpu fpu-ia32-ux fpu-ia32
 globals_IMPL		:= globals globals-ia32-ux
-irq_IMPL		:= irq irq-ipc irq-generic
+irq_IMPL		:= irq irq-ipc
 ioapic_IMPL		:= ioapic-ia32
 kernel_thread_IMPL	:= kernel_thread kernel_thread-std \
 			   kernel_thread-ia32-amd64

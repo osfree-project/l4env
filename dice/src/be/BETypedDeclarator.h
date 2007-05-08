@@ -148,6 +148,10 @@ protected:
     virtual void WriteAttributes(CBEFile * pFile);
     virtual void WriteConstPrefix(CBEFile *pFile);
     virtual void WriteProperties(CBEFile *pFile);
+    virtual bool DoAllocateMemory(CBEFile *pFile);
+
+private:
+    bool UsePointer(void);
 
 protected:
     /** \var CBEType *m_pType

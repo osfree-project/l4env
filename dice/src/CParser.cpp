@@ -191,61 +191,6 @@ CFEFile *CParser::GetCurrentFile()
     return m_pCurrentFile;
 }
 
-/** \brief prepare the environment of the parsed files
- *  \param sFilename the name of the file to prepare the environment for
- *  \param fIn the file handle where the input file is opened
- *  \param fOut the file handle to the preprocessed output (to be)
- *
- * This function creates types, which should be known
- * when parsing IDL files, but cannot be imported.
- */
-bool CParser::PrepareEnvironment(string sFilename, FILE*& fIn, FILE*& /*fOut*/)
-{
-    // if we run for the very first time, we import the
-    // dice header file
-    if (m_bFirstRun)
-    {
-        m_bFirstRun = false;
-        // we have to make the include statement come first in the
-        // in-file, therefore we have to copy the in-file into a
-        // temporary file and prepend the include statement
-        FILE *fTmp = tmpfile();
-        if (!fTmp)
-            return false;
-	// set line number before, so include statement will be detected of
-	// right line
-        fprintf(fTmp, "#line 1 \"%s\"\n", sFilename.c_str());
-        fprintf(fTmp, "#include \"dice/dice-corba-types.h\"\n");
-	// set line number afterwards so elements in IDL file will be detected
-	// at right line
-        fprintf(fTmp, "#line 1 \"%s\"\n", sFilename.c_str());
-        if (!CopyFile(fIn, fTmp))
-            return false;
-        fclose(fIn);
-        fIn = fTmp;
-    }
-    rewind(fIn);
-    return true;
-}
-
-/** \brief does some finializing work
- *  \return true if successful
- *
- * We "remove" the "dice-corba-types.h" include.
- */
-void CParser::FinishEnvironment()
-{
-    CFEFile *pRoot = dynamic_cast<CFEFile*>(GetTopFileInScope()->GetRoot());
-    vector<CIncludeStatement*>::iterator iter;
-    for (iter = pRoot->m_Includes.begin();
-	 iter != pRoot->m_Includes.end();
-	 iter++)
-    {
-        if ((*iter)->m_sFilename == "dice/dice-corba-types.h")
-            (*iter)->m_bPrivate = true;
-    }
-}
-
 /** \brief test if we have to switch parsers
  *  \return true if we have to close this parser and switch to the parser owning us
  *

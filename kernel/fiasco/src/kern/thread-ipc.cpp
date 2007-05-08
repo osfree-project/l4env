@@ -486,7 +486,7 @@ Thread::sys_ipc()
   bool lookup_done       = false;
   Thread *partner        = 0;
   Sender *sender         = 0;
-  Irq_alloc *interrupt 	 = 0;
+  Irq *interrupt = 0;
   
   // Add Thread_delayed_* flags if this a "next-period" IPC.
   // The flags must be cleared again on all exit paths from this function.
@@ -517,8 +517,8 @@ Thread::sys_ipc()
             }
         }
       else if (EXPECT_FALSE(id.is_irq()))
-	{	
-          interrupt = Irq_alloc::lookup (regs->irq());
+	{
+          interrupt = Irq::lookup (regs->irq());
 
 	  if (EXPECT_FALSE (!interrupt))
 	    {
@@ -540,8 +540,6 @@ Thread::sys_ipc()
 
 	  if (interrupt->owner() == this)
 	    {
-	      // we always try to receive from the
-	      // assoc'd irq first, not from the spec. one
 	      sender = nonull_static_cast<Irq*>(interrupt);
 	      have_sender = true;
 	    }
@@ -571,21 +569,21 @@ Thread::sys_ipc()
       // irq quirks
       if (EXPECT_FALSE(id.is_irq()))
 	{
-	  Irq_alloc *irq = Irq_alloc::lookup(regs->irq());
+	  Irq *irq = Irq::lookup(regs->irq());
 	  if (EXPECT_FALSE(!irq || irq->owner() != this))
 	    {
-	      // failed -- could not associate new irq
+	      // failed -- not associated to this irq
 	      commit_ipc_failure (regs, Ipc_err::Enot_existent);
 	      return;
 	    }
 
-	  if (regs->msg_word(0) == 0) // ack IRQ
-	    irq->acknowledge();
-	  else if (regs->msg_word(0) == 1) // disassociate IRQ
+	  if (regs->msg_word(0) == 0)
+	    irq->unmask();
+	  else if (regs->msg_word(0) == 1)
 	    disassociate_irq(irq);
 	  else
 	    {
-	      // failed -- could not associate new irq
+	      // failed -- invalid message to irq
 	      commit_ipc_failure (regs, Ipc_err::Enot_existent);
 	      return;
 	    }

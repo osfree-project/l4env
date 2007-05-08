@@ -199,6 +199,8 @@ Map_traits<Mem_space>::attribs(L4_fpage const &fp, unsigned long *del_attr,
 
       if (cache == L4_fpage::Cached)
 	*set_attr = Page::CACHEABLE;
+      else if (cache == L4_fpage::Buffered)
+	*set_attr = Page::BUFFERED;
       else
 	*set_attr = Page::NONCACHEABLE;
     }

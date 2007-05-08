@@ -761,6 +761,9 @@ Thread::sys_task_new()
 	  break;
 	}
 
+      if (! rq)
+	break;
+
       task = Task::create(rq, taskno);
       if (! task)
 	break;

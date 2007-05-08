@@ -252,6 +252,7 @@ public:
   {
     Uncached    = 0x200,
     Cached      = 0x600,
+    Buffered    = 0xa00,
     No_change   = 0x000,
     Caching_opt = 0x200
   };

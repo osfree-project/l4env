@@ -14,6 +14,7 @@
  */
 
 #include <l4/dm_generic/types.h>
+#include <dice/dice-corba-types.h>
 
 interface nitpicker {
 

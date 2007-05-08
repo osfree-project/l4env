@@ -56,6 +56,9 @@ public: // Public methods
     virtual bool IsVariableSized();
     virtual bool IsFixedSized();
     virtual bool GetMaxSize(bool bGuessSize, int & nSize);
+
+protected:
+    virtual bool DoAllocateMemory(CBEFile *pFile);
 };
 
 #endif

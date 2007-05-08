@@ -40,7 +40,7 @@ PUBLIC
 Space::Space (Ram_quota *q, unsigned number)
   : _mem_space(q),
     _id (number),
-    _chief (~0UL)
+    _chief (~0U)
 #ifdef CONFIG_TASK_CAPS
     ,_cap_space(q)
 #endif

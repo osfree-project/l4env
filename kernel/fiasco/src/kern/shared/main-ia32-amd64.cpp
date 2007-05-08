@@ -86,7 +86,7 @@ main_arch()
       if(irq && (irq->owner() == (Receiver*)-1)) 
 	{
 	  // internal used irq
-	  irq->maybe_enable();
+	  irq->unmask();
 	}
     }
 

@@ -35,7 +35,7 @@ Kernel_thread::bootstrap_arch()
   //
   // initialize interrupts
   //
-  Irq_alloc::lookup(2)->alloc(this, false);	// reserve cascade irq  
+  Irq_alloc::lookup(2)->alloc(this);	// reserve cascade irq  
   Pic::enable(2);			// allow cascaded irqs
 
   // initialize the profiling timer
@@ -52,7 +52,7 @@ Kernel_thread::bootstrap_arch()
 	panic("option -profile' not available since PIT is used as "
               "source for timer tick");
 
-      Irq_alloc::lookup(0)->alloc(this, false);
+      Irq_alloc::lookup(0)->alloc(this);
       Profile::init();
       if (strstr (Cmdline::cmdline(), " -profstart"))
         Profile::start();
@@ -60,7 +60,7 @@ Kernel_thread::bootstrap_arch()
   else
     {
       if (! user_irq0 && ! Config::scheduler_mode == Config::SCHED_PIT)
-	Irq_alloc::lookup(0)->alloc(this, false); // reserve irq0 even though
+	Irq_alloc::lookup(0)->alloc(this); // reserve irq0 even though
     }
 }
 

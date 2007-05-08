@@ -45,7 +45,7 @@ class CIncludeStatement : public CObject
 
 public:
     /** default constructor */
-    CIncludeStatement(bool bIDLFile, bool bStdInclude, bool bPrivate, bool bImport,
+    CIncludeStatement(bool bIDLFile, bool bStdInclude, bool bImport,
 	string sFileName, string sFromFile, string sPath, int nLineNb);
     /** copy constructor
      * \param src the source to copy from
@@ -76,10 +76,6 @@ public:
      *         (using "<" and ">")
      */
     bool m_bStandard;
-    /** \var bool m_bPrivate
-     *  \brief true if this include statement should not appear in target file
-     */
-    bool m_bPrivate;
     /** \var bool m_bImport
      *  \brief true if this is an import statement
      */

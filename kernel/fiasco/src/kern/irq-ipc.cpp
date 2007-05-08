@@ -11,7 +11,7 @@ IMPLEMENTATION:
 /** Sender-activation function called when receiver gets ready.
     Irq::hit() actually ensures that this method is always called
     when an interrupt occurs, even when the receiver was already
-    waiting. 
+    waiting.
  */
 PUBLIC
 virtual bool
@@ -30,10 +30,6 @@ Irq::ipc_receiver_ready(Receiver *)
 
   _irq_thread->ipc_init(this);
 
-#ifndef CONFIG_ABI_V4
-  _irq_thread->rcv_regs()->msg_dope(0); // state = OK
-#endif
-
   assert(_irq_thread->state() & Thread_ready);
 
   _irq_thread->state_change(~(Thread_receiving | Thread_busy
@@ -44,13 +40,7 @@ Irq::ipc_receiver_ready(Receiver *)
   // here we can optimize coz we are running with ints off
       // XXX receiver should also get a fresh timeslice
   if (consume() < 1)    // last interrupt in queue?
-    {
-      sender_dequeue(_irq_thread->sender_list());
-
-      // Now that the interrupt has been delivered, it is OK for it to
-      // occur again.
-      maybe_enable();
-    }
+    sender_dequeue(_irq_thread->sender_list());
 
   // else remain queued if more interrupts are left
   return true;

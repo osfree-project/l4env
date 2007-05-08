@@ -51,6 +51,7 @@ log.headers:		dietlibc.headers
 endif
 ifeq ($(BUILD_ARCH_arm),y)
 bootstrap.bin:		arm_drivers.bin
+input.lib:		arm_drivers.headers
 endif
 
 # The directories/packages of l4env
@@ -109,6 +110,10 @@ dietlibc.lib:	libc_support.lib libc_backends.lib
 loader.lib:	dietlibc.lib
 
 L4ENV_SUBDIRS += dietlibc dietlibc_r
+endif
+
+ifeq ($(BUILD_ARCH_arm),y)
+L4ENV_SUBDIRS += arm_drivers
 endif
 
 # -----------------------------

@@ -231,6 +231,13 @@ LIBS	+= $(strip $(LIBS_$(OSYSTEM)) $(LIBS_$@) $(LIBS_$@_$(OSYSTEM)))
 
 LDFLAGS	+= $(strip $(LDFLAGS_$(OSYSTEM)) $(LDFLAGS_$(ARCH)) $(LDFLAGS_$@) $(LDFLAGS_$@_$(OSYSTEM)))
 
+# May 2007: force somewhat old hash-style as some(!, independant of the
+#           actual version) ld now use an other format, no uclibc upstream fix
+#           available yet, until available, we need:
+ifeq ($(LD_HAS_HASH_STYLE_OPTION),y)
+LDFLAGS += -Wl,--hash-style=sysv
+endif
+
 OPTS	?= -g -O2 -fno-strict-aliasing
 OPTS	+= $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 WARNINGS?= -Wall -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations $(WARNINGS_$@)

@@ -171,7 +171,6 @@ bool CCORBAParser::Parse(void *scan_buffer,
     bool bPreProcessOnly)
 {
     m_nInputFileType = nIDL;
-    bool bFirst = (scan_buffer == 0);
 
     // 1. call preprocess -> opens input file
     CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
@@ -249,10 +248,6 @@ bool CCORBAParser::Parse(void *scan_buffer,
 
     // switch current file
     CParser::SetCurrentFileParent();
-
-    // finish the environment
-    if (bFirst)
-        FinishEnvironment();
 
     return true;
 }

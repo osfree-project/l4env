@@ -13,6 +13,8 @@
  * the COPYING file for details.
  */
 
+#include <dice/dice-corba-types.h>
+
 interface overlay {
 
 	/*** REQUEST INFORMATION ABOUT PHYSICAL SCREEN ***/

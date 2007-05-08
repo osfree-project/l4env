@@ -731,7 +731,7 @@ CBEDeclarator::WriteIndirect(CBEFile * pFile,
     // 'char **buf' we want a declaration of 'char **buf, *_buf'
     //  (m_nStars:2 nFakeStars:0 bUsePointer:true -> nStartStars:2 nFakeStars:1)
     if (bUsePointer && (nFakeStars == 0) && (m_nStars > 0))
-        nFakeStars++;
+        nFakeStars = 1;
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"%s: for %s, nFakeStars: %d, nStartStars: %d\n", __func__,
 	m_sName.c_str(), nFakeStars, nStartStars);
@@ -808,7 +808,7 @@ CBEDeclarator::WriteIndirectInitialization(CBEFile * pFile,
  *  \param pFile the file to write to
  *  \param bUsePointer true if the variable is intended to be used as a pointer
  *
- * Does something like "t1 = \&_t1;" for a variable "CORBA_long *t1"
+ * Does something like "*t1 = malloc(size);" for variable char* *t1.
  *
  * \todo indirect var by underscore hard coded => replace with configurable
  */
@@ -822,21 +822,29 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
     assert(pFunction);
     // is only called from CBESwitchCase
     assert(dynamic_cast<CBESwitchCase*>(pFunction));
+
     CBETypedDeclarator *pParameter = pFunction->FindParameter(m_sName);
     assert(pParameter);
-    // skip the memory allocation if not preallocated
-    if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-	!pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT))
-	return;
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-	!pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER))
-	return;
+    CBEType *pType = pParameter->GetTransmitType();
 
     int nFakeStars = GetEmptyArrayDims();
-    int nTypeStars = pParameter->GetTransmitType()->GetIndirectionCount();
+    int nTypeStars = pType->GetIndirectionCount();
     int nStartStars = m_nStars + nTypeStars + nFakeStars;
     if (bUsePointer && (m_nStars > 0) && (nFakeStars == 0))
         nFakeStars = 1;
+    /** usually we allocate memory for temporary variables, because the
+     * real variables are [out] pointers pointing to these temporary
+     * variables. An exemption are constructed types. Here, the [out]
+     * parameters point to preallocated memory. This function is called to
+     * preallocate the memory, thus the parameter directly has to point to
+     * the allocated memory. To take all the possible pointers into
+     * account, we set the offset to zero if the type is constructed.
+     * Otherwise (normal types, string pointers, etc.) the offset would be
+     * 1 and thus allocate with the first temporary variable.
+     */
+    int nOffset = 1;
+    if (pType->IsConstructedType() && (nTypeStars == 0) && (nFakeStars == 0))
+	nOffset = 0;
     /** now we have to initialize the fake stars (unbound array dimensions).
      * problem is to use an allocation routine appropriate for this. If there is
      * an max_is or upper bound it is used, but we have no upper bound.
@@ -850,9 +858,10 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
         CDeclStack vStack;
         vStack.push_back(this);
 	*pFile << "\t";
-        for (int j = 0; j < nStartStars - nStars + 1; j++)
+        for (int j = 0; j < nStartStars - nStars + nOffset; j++)
 	    *pFile << "_";
 	*pFile << m_sName << " = ";
+	// use original parameter type (not transmit type)
         pParameter->GetType()->WriteCast(pFile, true);
         CBEContext::WriteMalloc(pFile, pFunction);
 	*pFile << "(";
@@ -882,7 +891,6 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
 	if (pSizeParam && pSizeParam->m_Attributes.Find(ATTR_IN))
 	{
             pParameter->WriteGetSize(pFile, &vStack, pFunction);
-	    CBEType *pType = pParameter->GetType();
 	    if (pType->GetSize() > 1)
 	    {
 		*pFile << "*sizeof";
@@ -923,32 +931,27 @@ void CBEDeclarator::WriteCleanup(CBEFile * pFile, bool bUsePointer,
     assert(pFunction);
     CBETypedDeclarator *pParameter = pFunction->FindParameter(m_sName);
     assert(pParameter);
+    CBEType *pType = pParameter->GetTransmitType();
     // skip the memory allocation if not preallocated
     if (!pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT) &&
 	!pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER) &&
 	!bDeferred)
 	return;
-    if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-	!pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT))
-	return;
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-	!pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER))
-	return;
 
     CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
     CBEDeclarator *pDecl = pEnv->m_Declarators.First();
     if (!pDecl && bDeferred)
-	return; /* return here, so nothing is written */
-    // calculate stars
+	return;
+    // calculate stars: see explaination above
+    // (WriteIndirectInitializationMemory)
     int nFakeStars = GetEmptyArrayDims();
     int nTypeStars = pParameter->GetType()->GetIndirectionCount();
     int nStartStars = m_nStars + nTypeStars + nFakeStars;
     if (bUsePointer && (m_nStars > 0) && (nFakeStars == 0))
-        nFakeStars++;
-    /** now we have to free the fake stars (unbound array dimensions).
-     *
-     * \todo maybe we can propagate the max size when connecting to the server.
-     */
+        nFakeStars = 1;
+    int nOffset = 1;
+    if (pType->IsConstructedType() && (nTypeStars == 0) && (nFakeStars == 0))
+	nOffset = 0;
     for (int nStars = nStartStars; nStars > nFakeStars; nStars--)
     {
 	*pFile << "\t";
@@ -965,7 +968,7 @@ void CBEDeclarator::WriteCleanup(CBEFile * pFile, bool bUsePointer,
 	    CBEContext::WriteFree(pFile, GetSpecificParent<CBEFunction>());
 	    *pFile << "(";
 	}
-        for (int j = 0; j < nStartStars - nStars + 1; j++)
+        for (int j = 0; j < nStartStars - nStars + nOffset; j++)
 	    *pFile << "_";
 	*pFile << m_sName << ");\n";
     }

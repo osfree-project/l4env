@@ -30,7 +30,6 @@
 
 CIncludeStatement::CIncludeStatement(bool bIDLFile,
     bool bStdInclude,
-    bool bPrivate,
     bool bImport,
     string sFileName,
     string sFromFile,
@@ -38,7 +37,6 @@ CIncludeStatement::CIncludeStatement(bool bIDLFile,
     int nLineNb)
 : m_bIDLFile(bIDLFile),
   m_bStandard(bStdInclude),
-  m_bPrivate(bPrivate),
   m_bImport(bImport),
   m_sFilename(sFileName),
   m_sFromFile(sFromFile),
@@ -50,7 +48,6 @@ CIncludeStatement::CIncludeStatement(const CIncludeStatement &src)
 : CObject(src),
   m_bIDLFile(src.m_bIDLFile),
   m_bStandard(src.m_bStandard),
-  m_bPrivate(src.m_bPrivate),
   m_bImport(src.m_bImport),
   m_sFilename(src.m_sFilename),
   m_sFromFile(src.m_sFromFile),

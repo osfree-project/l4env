@@ -162,6 +162,7 @@ Boot_info::init()
 {
   extern int                    __libc_argc;
   extern char **                __libc_argv;
+  register unsigned long        _sp asm("esp");
   char const                    *physmem_file = "/tmp/physmem";
   char const                    *error, *ptr, **m;
   char                          *cmd, *str, buffer[4096];
@@ -343,8 +344,9 @@ Boot_info::init()
     }
   }
 
-  if (munmap((void *)((Mem_layout::Host_as_base - 1) & Config::PAGE_MASK),
-	     Config::PAGE_SIZE) == -1 && errno == EINVAL)
+  if (_sp < ((Mem_layout::Host_as_base - 1) & Config::SUPERPAGE_MASK)
+      && munmap((void *)((Mem_layout::Host_as_base - 1) & Config::PAGE_MASK),
+	        Config::PAGE_SIZE) == -1 && errno == EINVAL)
     {
       printf(" Fiasco-UX does only run with %dGB user address space size.\n"
              " Please make sure your host Linux kernel is configured for %dGB\n"
@@ -373,7 +375,8 @@ Boot_info::init()
       skip--;
     }
 
-  uname (&uts);
+  if (uname (&uts))
+    panic("uname: %s", strerror (errno));
 
   if (! quiet)
     printf ("\n\nFiasco-UX on %s %s (%s)\n",

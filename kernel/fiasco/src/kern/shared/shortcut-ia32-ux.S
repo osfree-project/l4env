@@ -335,7 +335,7 @@ i30_test_tcb_mapped:
 
 	// if DEST_esi->partner() == 0, openwait
 	testl	%edx, %edx
-	jne	1f
+	jnz	1f
 
 	// sender_queue empty?
 //	testl	%eax, %eax

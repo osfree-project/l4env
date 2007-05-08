@@ -313,10 +313,6 @@ FILE* CPreProcess::PreProcess(string sFilename, bool bDefault)
         return 0;
     }
 
-    // check if parser has to contribute something
-    // Parser has to set at least the line statement correctly
-    CParser *pParser = CParser::GetCurrentParser();
-    pParser->PrepareEnvironment(sFilename, fInput, fOutput);
     // search fInput for import statements
     incin = fInput;
     incout = fOutput;
@@ -516,7 +512,7 @@ CPreProcess::OpenFile(string sName,
         return 0;
 
     /* store path and file name to map them later */
-    CIncludeStatement b(false, bDefault, false, false, sName, string(), sCurPath, 0);
+    CIncludeStatement b(false, bDefault, false, sName, string(), sCurPath, 0);
     m_vOpenBookmarks.push_back(b);
 
     /* switch to buffer */
@@ -833,7 +829,7 @@ CPreProcess::AddInclude(string sFile,
         return true;
     }
     // now create new entry
-    CIncludeStatement inc(false, bStandard, false, bImport, sFile, sFromFile,
+    CIncludeStatement inc(false, bStandard, bImport, sFile, sFromFile,
 	string(), nLineNb);
     m_vBookmarks.push_back(inc);
     // return if entry existed before

@@ -705,12 +705,11 @@ CBETypedDeclarator::WriteCleanup(CBEFile* pFile, bool bDeferred)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBETypedDeclarator::%s called\n", __func__);
-    CBEType *pType = GetType();
-    bool bUsePointer = IsString() && !pType->IsPointerType();
-    // with size_is or length_is we use malloc to init the pointer,
-    // we have no indirection variables
-    bUsePointer = bUsePointer || m_Attributes.Find(ATTR_SIZE_IS) || 
-	m_Attributes.Find(ATTR_LENGTH_IS);
+    // if no memory was allocated, no cleanup required.
+    if (!DoAllocateMemory(pFile))
+	return;
+
+    bool bUsePointer = UsePointer();
     // iterate over declarators
     vector<CBEDeclarator*>::iterator iterD;
     for (iterD = m_Declarators.begin();
@@ -776,11 +775,7 @@ CBETypedDeclarator::WriteIndirect(CBEFile * pFile)
         pType->IsSimpleType())
         bIsPointerType = false;
     // test if we need a pointer of this variable
-    bool bUsePointer = IsString() && !pType->IsPointerType();
-    // size_is or length_is attributes indicate an array, where we will need
-    // a pointer to use.
-    bUsePointer = bUsePointer || m_Attributes.Find(ATTR_SIZE_IS) ||
-	m_Attributes.Find(ATTR_LENGTH_IS);
+    bool bUsePointer = UsePointer();
     // loop over declarators
     bool bComma = false;
     vector<CBEDeclarator*>::iterator iterD;
@@ -793,6 +788,27 @@ CBETypedDeclarator::WriteIndirect(CBEFile * pFile)
         (*iterD)->WriteIndirect(pFile, bUsePointer, bIsPointerType);
         bComma = true;
     }
+}
+
+/** \brief check if we really have to allocate memory for the parameter
+ *  \param pFile the file to write to
+ *  \return true if we have to allocate memory
+ *
+ * This function checks the preallocation attributes. If none is given, no
+ * memory is allocated.
+ */
+bool
+CBETypedDeclarator::DoAllocateMemory(CBEFile *pFile)
+{
+    // skip the memory allocation if not preallocated
+    if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+	!m_Attributes.Find(ATTR_PREALLOC_CLIENT))
+	return false;
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+	!m_Attributes.Find(ATTR_PREALLOC_SERVER))
+	return false;
+
+    return true;
 }
 
 /** \brief writes indirect parameter initialization
@@ -808,13 +824,8 @@ CBETypedDeclarator::WriteIndirectInitialization(CBEFile * pFile,
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBETypedDeclarator::%s called\n", __func__);
-    CBEType *pType = GetTransmitType();
 
-    bool bUsePointer = IsString() && !pType->IsPointerType();
-    // with size_is, length_is we use malloc to init the pointer,
-    // we have no indirection variables
-    bUsePointer = bUsePointer || m_Attributes.Find(ATTR_SIZE_IS) || 
-	m_Attributes.Find(ATTR_LENGTH_IS);
+    bool bUsePointer = UsePointer();
     // iterate over declarators
     vector<CBEDeclarator*>::iterator iterD;
     for (iterD = m_Declarators.begin();
@@ -822,10 +833,31 @@ CBETypedDeclarator::WriteIndirectInitialization(CBEFile * pFile,
 	 iterD++)
     {
 	if (bMemory)
-	    (*iterD)->WriteIndirectInitializationMemory(pFile, bUsePointer);
+	{
+	    if (DoAllocateMemory(pFile))
+		(*iterD)->WriteIndirectInitializationMemory(pFile, bUsePointer);
+	}
 	else
 	    (*iterD)->WriteIndirectInitialization(pFile, bUsePointer);
     }
+}
+
+/** \brief check if pointer should be used
+ *  \return true if so
+ */
+bool
+CBETypedDeclarator::UsePointer(void)
+{
+    // test if we need a pointer of this variable
+    CBEType *pType = GetTransmitType();
+    bool bUsePointer = IsString() && !pType->IsPointerType();
+    // size_is or length_is attributes indicate an array, where we will need
+    // a pointer to use.  with size_is, length_is we use malloc to init the
+    // pointer, we have no indirection variables
+    bUsePointer = bUsePointer || m_Attributes.Find(ATTR_SIZE_IS) || 
+	m_Attributes.Find(ATTR_LENGTH_IS);
+
+    return bUsePointer;
 }
 
 /** \brief writes init declaration

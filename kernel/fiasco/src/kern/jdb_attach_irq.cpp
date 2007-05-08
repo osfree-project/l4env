@@ -80,7 +80,7 @@ Jdb_attach_irq::action( int cmd, void *&args, char const *&fmt, int & )
     {
       Irq_alloc *i = Irq_alloc::lookup(irq);
       if (i)
-	i->alloc((Receiver*)-1, true);
+	i->alloc((Receiver*)-1);
     }
   return NOTHING;
 }

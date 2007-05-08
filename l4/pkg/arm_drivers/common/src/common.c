@@ -7,9 +7,7 @@
 
 int arm_driver_reserve_region(l4_addr_t addr, l4_size_t size)
 {
-  l4_threadid_t sigma0_id = L4_NIL_ID;
-
-  sigma0_id.id.task = 2;
+  l4_threadid_t sigma0_id = SIGMA0_ID;
 
   if (l4rm_area_setup_region(addr, size,
                              L4RM_DEFAULT_REGION_AREA, L4RM_REGION_PAGER,

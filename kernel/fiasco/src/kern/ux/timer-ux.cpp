@@ -31,7 +31,7 @@ Timer::init()
       exit (1);
     }
 
-  Irq_alloc::lookup (Pic::IRQ_TIMER)->alloc ((Receiver *) -1, false);
+  Irq_alloc::lookup (Pic::IRQ_TIMER)->alloc ((Receiver *) -1);
 }
 
 IMPLEMENT FIASCO_INIT

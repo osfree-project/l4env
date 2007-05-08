@@ -272,9 +272,5 @@ CDCEParser::Parse(void *scan_buffer,
     // switch current file
     CParser::SetCurrentFileParent();
 
-    // finish the environment
-    if (bFirst)
-        FinishEnvironment();
-
     return true;
 }

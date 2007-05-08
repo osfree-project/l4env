@@ -32,6 +32,7 @@
 #include "be/BEType.h"
 #include "be/BEDeclarator.h"
 #include "be/BETypedDeclarator.h"
+#include "be/BEFile.h"
 
 /** destroys the typed declarator object */
 CL4BETypedDeclarator::~CL4BETypedDeclarator(void)
@@ -104,3 +105,23 @@ CL4BETypedDeclarator::GetMaxSize(bool bGuessSize,
     return false;
 }
 
+/** \brief check if we really have to allocate memory for the parameter
+ *  \param pFile the file to write to
+ *  \return true if we have to allocate memory
+ *
+ * This function checks the preallocation attributes.
+ *
+ * Usually no memory is allocated (in switch) for a parameter if the
+ * preallocation attribute is not set. But we have to allocate memory also if
+ * the [ref] attribute is set, because this stores the memory in the indirect
+ * string and only frees it after the reply.
+ */
+bool
+CL4BETypedDeclarator::DoAllocateMemory(CBEFile *pFile)
+{
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+	m_Attributes.Find(ATTR_REF))
+	return true;
+
+    return CBETypedDeclarator::DoAllocateMemory(pFile);
+}
