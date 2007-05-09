@@ -21,6 +21,7 @@ IMPLEMENTATION:
 
 #include "initcalls.h"
 #include "pic.h"
+#include "receiver.h"
 #include "std_macros.h"
 #include "vkey.h"
 
@@ -70,7 +71,7 @@ Dirq::mask_and_ack()
 }
 
 
-PUBLIC inline NEEDS["pic.h"]
+PUBLIC inline NEEDS["pic.h", "receiver.h"]
 void
 Dirq::unmask()
 {

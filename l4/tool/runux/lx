@@ -56,8 +56,10 @@ while [ -n "$1" ]; do
     ;;
     --blk|-blk|-b)
       use_blk=1
-      con_inc
-      ore_inc
+      if [ -z "$BLK_FILE" ]; then
+        con_inc
+        ore_inc
+      fi
     ;;
     --block-ro|-bro)
       blk_write=""

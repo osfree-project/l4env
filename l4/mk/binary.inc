@@ -238,6 +238,9 @@ ifeq ($(LD_HAS_HASH_STYLE_OPTION),y)
 LDFLAGS += -Wl,--hash-style=sysv
 endif
 
+LD_GCC_PREFIX  := -Wl,
+LDFLAGS_FOR_LD  = $(subst $(LD_GCC_PREFIX),,$(LDFLAGS))
+
 OPTS	?= -g -O2 -fno-strict-aliasing
 OPTS	+= $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 WARNINGS?= -Wall -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations $(WARNINGS_$@)

@@ -46,9 +46,6 @@ task_trampoline(l4_addr_t entry, void *mbi)
  * sp -> 0
  */
 
-#define _st2(x)	#x
-#define _st(x)	_st2(x)
-
 asm (".globl task_trampoline         \n"
      "task_trampoline:               \n"
      "  ldr r3, [sp, #4]!            \n" // inc sp, load entry address to r3 sp
@@ -56,7 +53,7 @@ asm (".globl task_trampoline         \n"
      "  ldr r0, .LC_l4util_mb_valid  \n" // load MB-Magic to r0
      "  mov pc, r3                   \n" // jump to entry
      ".LC_l4util_mb_valid:           \n"
-     "  .word "_st(L4UTIL_MB_VALID)" \n"
+     "  .word " L4_stringify(L4UTIL_MB_VALID) "\n"
      "                               \n"
      ".globl _task_trampoline_end    \n"
      "_task_trampoline_end:          \n");

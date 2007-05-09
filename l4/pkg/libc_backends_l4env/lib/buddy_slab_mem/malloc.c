@@ -41,8 +41,8 @@ static l4slab_cache_t slabs[MAX_SLAB_SIZE_LD-MIN_SLAB_SIZE_LD+1];
 l4_ssize_t l4libc_heapsize __attribute__((weak)) = L4LIBC_HEAPSIZE;
 void l4libc_init_mem(void);
 
-extern inline void set_owner_slab(void *addr);
-extern inline void set_owner_buddy(void *addr);
+extern inline void set_owner_slab(void *addr, int pages);
+extern inline void set_owner_buddy(void *addr, int pages);
 extern inline int  get_owner_slab(void *addr);
 extern inline l4slab_cache_t* get_slab(size_t size);
 static void* slab_grow(l4slab_cache_t *slab, void**data);
@@ -126,17 +126,23 @@ void l4libc_init_mem(void)
 }
 L4C_CTOR(l4libc_init_mem, 1100);
 
-extern inline void set_owner_slab(void *addr){
+extern inline void set_owner_slab(void *addr, int pages){
     unsigned off;
 
     off = ((unsigned char*)addr-baseaddr)>>L4_PAGESHIFT;
-    owner_map[off>>3] |= 1<<(off & 7);
+    int i;
+    for( i=0; i<pages; i++ ) {
+        owner_map[(off+i)>>3] |= 1<<((off+i) & 7);
+    }
 }
-extern inline void set_owner_buddy(void *addr){
+extern inline void set_owner_buddy(void *addr, int pages){
     unsigned off;
 
     off = ((unsigned char*)addr-baseaddr)>>L4_PAGESHIFT;
-    owner_map[off>>3] &= ~(1<<(off & 7));
+    int i;
+    for( i=0; i<pages; i++ ) {
+        owner_map[(off+i)>>3] &= ~(1<<((off+i) & 7));
+    }
 }
 extern inline int get_owner_slab(void *addr){
     unsigned off;
@@ -161,14 +167,14 @@ static void* slab_grow(l4slab_cache_t *slab, void**data){
     LOGd_Enter(LOG_MALLOC_SLAB, "getting new page...");
     addr = l4buddy_alloc(buddy, slab->slab_size);
     if(addr){
-	set_owner_slab(addr);
+	set_owner_slab(addr, (slab->slab_size-1)>>L4_PAGESHIFT);
     }
     return addr;
 }
 static void  slab_release(l4slab_cache_t *slab, void*addr, void*data){
     LOGd_Enter(LOG_MALLOC_SLAB, "releasing page at %p", addr);
     l4buddy_free(buddy, addr);
-    set_owner_buddy(addr);
+    set_owner_buddy(addr, (slab->slab_size-1)>>L4_PAGESHIFT);
 }
 
 void* malloc(size_t size){
