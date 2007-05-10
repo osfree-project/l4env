@@ -55,66 +55,6 @@
 #include <string>
 #include <cassert>
 
-/** \brief comparison operator
- *  \param l a message buffer struct type
- *  \param r another message buffer struct type
- *  \return true if both are equal
- */
-bool operator== (const CMsgStructType& l, const CMsgStructType& r)
-{
-    return l.nType == r.nType;
-}
-
-/** \brief comparison operator
- *  \param l a message buffer struct type
- *  \param r another message buffer struct type
- *  \return true if both are equal
- */
-bool operator== (const CMsgStructType::Type& l, const CMsgStructType& r)
-{
-    return l == r.nType;
-}
-
-/** \brief comparison operator
- *  \param l a message buffer struct type
- *  \param r another message buffer struct type
- *  \return true if both are equal
- */
-bool operator== (const CMsgStructType& l, const CMsgStructType::Type& r)
-{
-    return l.nType == r;
-}
-
-/** \brief comparison operator
- *  \param l a message buffer struct type
- *  \param r another message buffer struct type
- *  \return true if both are not equal
- */
-bool operator!= (const CMsgStructType& l, const CMsgStructType& r)
-{
-    return l.nType != r.nType;
-}
-
-/** \brief comparison operator
- *  \param l a message buffer struct type
- *  \param r another message buffer struct type
- *  \return true if both are not equal
- */
-bool operator!= (const CMsgStructType::Type& l, const CMsgStructType& r)
-{
-    return l != r.nType;
-}
-
-/** \brief comparison operator
- *  \param l a message buffer struct type
- *  \param r another message buffer struct type
- *  \return true if both are not equal
- */
-bool operator!= (const CMsgStructType& l, const CMsgStructType::Type& r)
-{
-    return l.nType != r;
-}
-
 CBEMsgBufferType::CBEMsgBufferType()
  : CBEUnionType()
 {}
@@ -1091,7 +1031,7 @@ CBEMsgBufferType::GetStartOfPayload(CBEStructType* pStruct)
     assert(pMsgBuffer);
     // GetPayloadOffset is in bytes
     int nPayloadOffset = pMsgBuffer->GetPayloadOffset();
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s called. start at offset %d\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEMsgBufferType::%s called. start at offset %d\n",
 	__func__, nPayloadOffset);
     vector<CBETypedDeclarator*>::iterator iter;
     for (iter = pStruct->m_Members.begin();
@@ -1099,13 +1039,13 @@ CBEMsgBufferType::GetStartOfPayload(CBEStructType* pStruct)
 	 iter++)
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "%s taking off %d the size of %s (%d)\n", __func__,
+	    "CBEMsgBufferType::%s taking off %d the size of %s (%d)\n", __func__,
 	    nPayloadOffset, (*iter)->m_Declarators.First()->GetName().c_str(),
 	    (*iter)->GetSize());
 	nPayloadOffset -= (*iter)->GetSize();
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	"%s returning iterator pointing after %s\n", __func__,
+	"CBEMsgBufferType::%s returning iterator pointing after %s\n", __func__,
 	((iter != pStruct->m_Members.end()) &&  (*iter)) ? 
 	(*iter)->m_Declarators.First()->GetName().c_str() : "(begin)");
     return iter;

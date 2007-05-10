@@ -519,6 +519,9 @@ CBETarget::FindHeaderFile(CFEOperation * pFEOperation,
  */
 CBETypedef *CBETarget::FindTypedef(string sTypeName)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETarget::%s(%s) called\n",
+	__func__, sTypeName.c_str());
+
     CBETypedef *pRet = 0;
     vector<CBEHeaderFile*>::iterator iter;
     for (iter = m_HeaderFiles.begin();
@@ -527,6 +530,9 @@ CBETypedef *CBETarget::FindTypedef(string sTypeName)
     {
         pRet = (*iter)->m_Typedefs.Find(sTypeName);
     }
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETarget::%s returns %p\n",
+	__func__, pRet);
     return pRet;
 }
 

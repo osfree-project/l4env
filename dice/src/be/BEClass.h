@@ -243,9 +243,6 @@ protected: // Protected members
      */
     CBETypedDeclarator *m_pCorbaEnv;
 
-    friend class CBEMsgBufferType; // needs to access function groups
-    friend class CBEMsgBuffer;
-
 public:
     /** \var vector<CBEClass*> m_BaseClasses
      *  \brief contains references to the base classes

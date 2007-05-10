@@ -128,7 +128,7 @@ void Timer::init()
   Io::write(0,          OSCR); // set timer counter to zero
   Io::write(~0U,        OSSR); // clear all status bits
 
-  Irq_alloc::lookup(26)->alloc( (Receiver*)-1, false );
+  Irq_alloc::lookup(26)->alloc((Receiver*)-1);
 }
 
 static inline

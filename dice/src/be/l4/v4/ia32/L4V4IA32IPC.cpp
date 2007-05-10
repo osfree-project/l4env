@@ -88,19 +88,19 @@ CL4V4IA32IPC::WriteCall(CBEFile* pFile,
     // do not load to into EAX, because EAX is used
     // during mathematical calculations, such as
     // MR0 bit stuffing
-    *pFile << "\t\"mov %%edx, %%eax\" /* from-specifier == to */\n";
-    *pFile << "\t\"mov %%gs:[0], %%edi\"\n";
-    *pFile << "\t\"call Ipc\"\n";
-    *pFile << "\t\"mov %%ebx, 4(%%edi)\" /* save mr1 */\n";
-    *pFile << "\t\"mov %%ebp, 8(%%edi)\" /* save mr2 */\n";
+    *pFile << "\t\"mov %%edx, %%eax \\n\\t\" /* from-specifier == to */\n";
+    *pFile << "\t\"mov %%gs:[0], %%edi \\n\\t\"\n";
+    *pFile << "\t\"call Ipc \\n\\t\"\n";
+    *pFile << "\t\"mov %%ebx, 4(%%edi) \\n\\t\" /* save mr1 */\n";
+    *pFile << "\t\"mov %%ebp, 8(%%edi) \\n\\t\" /* save mr2 */\n";
     *pFile << "\t: /* output */\n";
-    *pFile << "\t\"=r\" (" << sMsgTag << ") /* ESI */\n";
+    *pFile << "\t\"=S\" (" << sMsgTag << ") /* ESI */\n";
     *pFile << "\t: /* input */\n";
-    *pFile << "\t\"r\" (" << pObjName->GetName() << "), /* EDX */\n";
-    *pFile << "\t\"r\" (" << sTimeout << "), /* ECX */\n";
-    *pFile << "\t\"0\" (" << sMsgTag << ") /* ESI */\n";
+    *pFile << "\t\"d\" (" << pObjName->GetName() << "), /* EDX */\n";
+    *pFile << "\t\"c\" (" << sTimeout << "), /* ECX */\n";
+    *pFile << "\t\"S\" (" << sMsgTag << ") /* ESI */\n";
     *pFile << "\t: /* clobber list */\n";
-    *pFile << "\t\"a\", \"c\", \"d\", \"D\", \"memory\"\n";
+    *pFile << "\t\"memory\"\n";
 
     pFile->DecIndent();
     *pFile << "\t);\n";

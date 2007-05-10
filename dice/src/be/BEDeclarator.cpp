@@ -611,8 +611,8 @@ int CBEDeclarator::GetSize()
  */
 int CBEDeclarator::GetMaxSize()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for %s\n", __func__,
-	GetName().c_str());
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEDeclarator::%s called for %s\n", __func__, GetName().c_str());
     
     int nStars = m_nStars;
     // deduct from stars one if this is an out reference
@@ -620,7 +620,8 @@ int CBEDeclarator::GetMaxSize()
     if (pParameter && pParameter->m_Attributes.Find(ATTR_OUT))
 	nStars--;
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s stars %d array? %s\n", __func__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	"CBEDeclarator::%s stars %d array? %s\n", __func__,
 	nStars, IsArray() ? "yes" : "no");
     
     if (!IsArray())
@@ -650,7 +651,8 @@ int CBEDeclarator::GetMaxSize()
 
     int nSize = 1;
     int nFakeStars = 0;
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s check array bounds\n", __func__);
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	"CBEDeclarator::%s check array bounds\n", __func__);
 
     vector<CBEExpression*>::iterator iterB;
     for (iterB = m_Bounds.begin();
@@ -667,7 +669,8 @@ int CBEDeclarator::GetMaxSize()
     if (nFakeStars > 0)
 	nSize = -(nFakeStars + nStars);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s return %d\n", __func__, nSize);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEDeclarator::%s return %d\n", __func__, nSize);
     return nSize;
 }
 
@@ -909,7 +912,7 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
 	    }
 	    else
 	    {
-		pParameter->GetMaxSize(true, nSize);
+		pParameter->GetMaxSize(nSize);
 		sAppend = " /* allocated using max size of type */";
 	    }
             *pFile << nSize;

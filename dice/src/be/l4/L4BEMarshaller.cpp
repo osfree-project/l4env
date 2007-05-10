@@ -131,7 +131,7 @@ CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
     // second: if that didn't work try to get the maximum size of the param
     if (pType->IsPointerType() ||
 	nParamSize == -1)
-	pParameter->GetMaxSize(true, nParamSize);
+	pParameter->GetMaxSize(nParamSize);
     // and third: if that didn't work either, get the max size of the type
     if (nParamSize == -1)
 	nParamSize = pSizes->GetMaxSizeOfType(pType->GetFEType());

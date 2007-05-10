@@ -79,6 +79,8 @@ protected:
     virtual CBETypedDeclarator* CheckConvertMember(CBEStructType *pStruct,
 	vector<CBETypedDeclarator*>::iterator iter);
     virtual void ConvertMember(CBETypedDeclarator* pMember);
+
+    virtual bool Pad();
 };
 
 #endif

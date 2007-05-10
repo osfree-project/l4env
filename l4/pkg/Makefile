@@ -40,7 +40,7 @@ ferret.headers:		l4vfs.lib
 uclibc++.headers:	uclibc.headers
 l4con.bin:		lxfuxlibc.lib
 input.bin:		omega0.lib
-cunit.lib:		dde.lib
+cunit.lib:		dde.bin
 ifeq ($(USE_UCLIBC),y)
 qt3.bin:		uclibc_r.lib
 log.headers:		uclibc.headers

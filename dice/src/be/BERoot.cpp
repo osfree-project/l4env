@@ -116,14 +116,7 @@ void CBERoot::CreateBE(CFEFile * pFEFile)
     }
     // create the "normal" namespace-class-function hierarchy now, because
     // client and component depend on its existence
-    try
-    {
-	CreateBackEnd(pFEFile);
-    }
-    catch (CBECreateException *e)
-    {
-	throw;
-    }
+    CreateBackEnd(pFEFile);
     // create new client
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_CLIENT))
@@ -181,8 +174,9 @@ void CBERoot::Write()
  */
 CBETypedef *CBERoot::FindTypedef(string sTypeName)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called\n", __func__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBERoot::%s(%s) called\n", __func__,
 	sTypeName.c_str());
+
     CBETypedef *pTypedef = m_Typedefs.Find(sTypeName);
     if (pTypedef)
 	return pTypedef;

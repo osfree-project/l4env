@@ -773,14 +773,14 @@ CBEFunction* CBENameSpace::FindFunction(string sFunctionName,
  */
 CBETypedef* CBENameSpace::FindTypedef(string sTypeName)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%s) called\n", __func__,
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::%s(%s) called\n", __func__,
 	sTypeName.c_str());
 
     CBETypedef *pTypedef = m_Typedefs.Find(sTypeName);
     if (pTypedef)
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "%s: typedef found in namespace, return %p\n", __func__,
+	    "CBENameSpace::%s: typedef found in namespace, return %p\n", __func__,
 	    pTypedef);
 	return pTypedef;
     }
@@ -791,7 +791,7 @@ CBETypedef* CBENameSpace::FindTypedef(string sTypeName)
 	 iterC != m_Classes.end();
 	 iterC++)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: checking class %s\n",
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBENameSpace::%s: checking class %s\n",
 	    __func__, (*iterC)->GetName().c_str());
         if ((pTypedDecl = (*iterC)->FindTypedef(sTypeName)) != 0)
             if (dynamic_cast<CBETypedef*>(pTypedDecl))
@@ -803,13 +803,13 @@ CBETypedef* CBENameSpace::FindTypedef(string sTypeName)
 	 iterN != m_NestedNamespaces.end();
 	 iterN++)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: checking namespace %s\n",
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBENameSpace::%s: checking namespace %s\n",
 	    __func__, (*iterN)->GetName().c_str());
         if ((pTypedef = (*iterN)->FindTypedef(sTypeName)) != 0)
             return pTypedef;
     }
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: no typedef found, return 0\n",
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::%s: no typedef found, return 0\n",
 	__func__);
     return 0;
 }

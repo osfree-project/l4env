@@ -2610,6 +2610,9 @@ CFunctionGroup* CBEClass::FindFunctionGroup(CBEFunction *pFunction)
  */
 CBETypedef* CBEClass::FindTypedef(string sTypeName)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEClass::%s(%s) called\n",
+	__func__, sTypeName.c_str());
+
     vector<CBETypedef*>::iterator iter;
     for (iter = m_Typedefs.begin();
 	 iter != m_Typedefs.end();
@@ -2630,6 +2633,9 @@ CBETypedef* CBEClass::FindTypedef(string sTypeName)
             pMsgBuf->GetType()->HasTag(sTypeName))
             return pMsgBuf;
     }
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEClass::%s returns 0\n", 
+	__func__);
     return 0;
 }
 

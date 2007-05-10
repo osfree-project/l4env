@@ -100,21 +100,15 @@ CStructMembers::Move(string sName, int nPos)
 	return;
 
     Remove(pMember);
-    if (nPos == -1)
-	CSearchableCollection<CBETypedDeclarator, string>::Add(pMember, end());
-	/*vector<CBETypedDeclarator*>::push_back(pMember);*/
+    // check if nPos was too big
+    if (nPos == -1 || (unsigned)nPos > size())
+	Add(pMember);
 
     // get position to insert at
     iterator i = begin();
     while ((nPos-- > 0) && (i != end())) i++;
-    // check if nPos was too big
-    if ((nPos > 0) && (i == end()))
-    {
-	Add(pMember);
-	return;
-    }
     // insert member
-    CSearchableCollection<CBETypedDeclarator, string>::Add(pMember, i);
+    vector<CBETypedDeclarator*>::insert(i, pMember);
 }
 
 /** \brief moves a member in the struct
@@ -142,7 +136,7 @@ CStructMembers::Move(string sName, string sBeforeHere)
 	return;
     }
     // move member
-    CSearchableCollection<CBETypedDeclarator, string>::Add(pMember, i);
+    vector<CBETypedDeclarator*>::insert(i, pMember);
 }
 
 /******************************
@@ -567,7 +561,8 @@ int CBEStructType::GetSize()
 	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
 	    pMemberType->GetFEType());
 	
-	while (dynamic_cast<CBEUserDefinedType*>(pMemberType))
+	while (dynamic_cast<CBEUserDefinedType*>(pMemberType) &&
+	    static_cast<CBEUserDefinedType*>(pMemberType)->GetRealType())
     	    pMemberType = ((CBEUserDefinedType*)pMemberType)->GetRealType();
 	assert(pMemberType);
 
@@ -740,7 +735,8 @@ int CBEStructType::GetMaxSize()
 	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
 	    pMemberType->GetFEType());
 	
-	while (dynamic_cast<CBEUserDefinedType*>(pMemberType))
+	while (dynamic_cast<CBEUserDefinedType*>(pMemberType) &&
+	    static_cast<CBEUserDefinedType*>(pMemberType)->GetRealType())
     	    pMemberType = ((CBEUserDefinedType*)pMemberType)->GetRealType();
 	assert(pMemberType);
 
@@ -760,7 +756,7 @@ int CBEStructType::GetMaxSize()
         }
 
         int nSize = 0;
-	if (!(*iter)->GetMaxSize(true, nSize))
+	if (!(*iter)->GetMaxSize(nSize))
 	{
 	    nMaxSize = -1;
 	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 

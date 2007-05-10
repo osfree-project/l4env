@@ -606,13 +606,14 @@ CL4V4BEMsgBuffer::PostCreate(CBEFunction *pFunction,
     CBEStructType *pStruct = GetStruct(CMsgStructType::In);
     assert(pStruct);
     CheckConvertStruct(pStruct);
+
     pStruct = GetStruct(CMsgStructType::Out);
     assert(pStruct);
     CheckConvertStruct(pStruct);
 
     int nMaxSize = CCompiler::GetSizes()->GetMaxSizeOfType(TYPE_MESSAGE);
     int nSize = 0;
-    GetMaxSize(true, nSize);
+    GetMaxSize(nSize);
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "Check size: %d <= %d?\n", 
 	nSize, nMaxSize);
     assert(nSize <= nMaxSize);
@@ -621,27 +622,38 @@ CL4V4BEMsgBuffer::PostCreate(CBEFunction *pFunction,
     CL4BEMsgBuffer::PostCreate(pFunction, pFEOperation);
 }
 
+/** \brief pads elements of the message buffer
+ *  \return false if an error occured
+ *
+ * On V4 we do not need to pad, because the indirect parts do not have to be
+ * aligned.
+ */
+bool
+CL4V4BEMsgBuffer::Pad()
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4V4BEMsgBuffer::%s called\n", __func__);
+    return true;
+}
+
 /** \brief check whether a member of the specified struct has to be converted
  *  \param pStruct the struct to check for convertable members
  */
 void
 CL4V4BEMsgBuffer::CheckConvertStruct(CBEStructType *pStruct)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4V4BEMsgBuffer::%s(%p) called\n",
-	__func__, pStruct);
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4V4BEMsgBuffer::%s(%p) struct %s called\n",
+	__func__, pStruct, pStruct->GetTag().c_str());
 
-    CBEUserDefinedType *pUsrType = dynamic_cast<CBEUserDefinedType*>(GetType());
-    CBEMsgBufferType *pMsgType = 0;
-    if (pUsrType)
- 	pMsgType = dynamic_cast<CBEMsgBufferType*>(pUsrType->GetRealType());
-    else
-	pMsgType = dynamic_cast<CBEMsgBufferType*>(GetType());
+    CBEMsgBufferType *pMsgType = pStruct->GetSpecificParent<CBEMsgBufferType>();
     assert(pMsgType);
 
     int nMaxSize = CCompiler::GetSizes()->GetMaxSizeOfType(TYPE_MESSAGE);
-    int nSize = 0;
-    GetMaxSize(true, nSize);
+    int nSize = pStruct->GetMaxSize();
     bool bConverted = true;
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	"\n\nCL4V4BEMsgBuffer::%s checking (nSize %d, nMaxSize %d)\n", __func__,
+	nSize, nMaxSize);
 
     while ((nSize > nMaxSize) && bConverted)
     {
@@ -659,11 +671,16 @@ CL4V4BEMsgBuffer::CheckConvertStruct(CBEStructType *pStruct)
 	    bConverted = true;
 	}
 
-	GetMaxSize(true, nSize);
+	nSize = pStruct->GetMaxSize();
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	    "\n\nCL4V4BEMsgBuffer::%s checking in (nSize %d, nMaxSize %d)\n", __func__,
+	    nSize, nMaxSize);
     }
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4V4BEMsgBuffer::%s finished\n",
-	__func__);
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	"CL4V4BEMsgBuffer::%s finished (nSize %d, nMaxSize %d) struct %s\n", __func__,
+	nSize, nMaxSize, pStruct->GetTag().c_str());
 }
 
 /** \brief check if members of the struct can be converted.
@@ -675,24 +692,37 @@ CBETypedDeclarator*
 CL4V4BEMsgBuffer::CheckConvertMember(CBEStructType *pStruct,
     vector<CBETypedDeclarator*>::iterator iter)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4V4BEMsgBuffer::%s called\n", 
-	__func__);
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4V4BEMsgBuffer::%s struct %s called\n", 
+	__func__, pStruct->GetTag().c_str());
 
     int nMaxSize = CCompiler::GetSizes()->GetMaxSizeOfType(TYPE_MESSAGE);
     CBETypedDeclarator *pBiggestMember = 0;
     for (; iter != pStruct->m_Members.end(); iter++)
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "CL4V4BEMsgBuffer::%s checking %s (size: %d, max: %d)\n", __func__,
-	    (*iter)->m_Declarators.First()->GetName().c_str(),
+	    "CL4V4BEMsgBuffer::%s checking %s\n", __func__,
+	    (*iter)->m_Declarators.First()->GetName().c_str());
+	// skip refstrings. We can't make them "better"
+	if ((*iter)->GetType()->IsOfType(TYPE_REFSTRING))
+	    continue;
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	    "CL4V4BEMsgBuffer::%s size: %d, max: %d\n", __func__,
 	    (*iter)->GetSize(), nMaxSize);
 	// if the member itself is bigger than the message size then it should
 	// be converted
 	if ((*iter)->GetSize() > nMaxSize)
+	{
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+		"CL4V4BEMsgBuffer::%s size of member bigger, then max, return\n", __func__);
 	    return *iter;
+	}
 	// if member is variable sized then it should be converted
 	if ((*iter)->GetSize() < 0)
+	{
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CL4V4BEMsgBuffer::%s member variable sized, return\n", __func__);
 	    return *iter;
+	}
 	// try to find biggest member.
 	if (pBiggestMember && (pBiggestMember->GetSize() < (*iter)->GetSize()))
 	    pBiggestMember = *iter;
@@ -721,6 +751,10 @@ CL4V4BEMsgBuffer::CheckConvertMember(CBEStructType *pStruct,
 void
 CL4V4BEMsgBuffer::ConvertMember(CBETypedDeclarator* pMember)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CL4V4BEMsgBuffer::%s(%s) called\n", __func__,
+	pMember->m_Declarators.First()->GetName().c_str());
+
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
     pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
@@ -737,7 +771,7 @@ CL4V4BEMsgBuffer::ConvertMember(CBETypedDeclarator* pMember)
 	    CBEAttribute *pAttr = pCF->GetNewAttribute();
 	    pMember->m_Attributes.Add(pAttr);
 	    int nSize = 0;
-	    pMember->GetMaxSize(true, nSize);
+	    pMember->GetMaxSize(nSize);
 	    pAttr->CreateBackEndInt(ATTR_MAX_IS, nSize);
 	}
 	// remove array dimensions
@@ -753,6 +787,14 @@ CL4V4BEMsgBuffer::ConvertMember(CBETypedDeclarator* pMember)
 	pMember->m_Declarators.First()->GetName().c_str(), pMember);
     // add C language property to avoid const qualifier in struct
     pMember->AddLanguageProperty(string("noconst"), string());
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CL4V4BEMsgBuffer::%s %s's type is now %d\n", __func__,
+	pMember->m_Declarators.First()->GetName().c_str(),
+	pMember->GetType()->GetFEType());
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CL4V4BEMsgBuffer::%s returns\n", __func__);
 }
 
 /** \brief the post-create (and post-sort) step during creation

@@ -1456,7 +1456,8 @@ int CBETypedDeclarator::GetSize(string sName)
 CBEType* CBETypedDeclarator::GetTransmitType()
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
-	"CBETypedDeclarator::%s called\n", __func__);
+	"CBETypedDeclarator::%s called (m_pType is %d)\n", 
+	__func__, m_pType->GetFEType());
     
     CBEType *pType = m_pType;
     CBEAttribute *pAttr = m_Attributes.Find(ATTR_TRANSMIT_AS);
@@ -1465,7 +1466,8 @@ CBEType* CBETypedDeclarator::GetTransmitType()
 
     // get type
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"CBETypedDeclarator::%s returns %p\n", __func__, pType);
+	"CBETypedDeclarator::%s returns %p (%d)\n", __func__,
+	pType, pType ? pType->GetFEType() : 0);
     return pType;
 }
 
@@ -1586,7 +1588,6 @@ bool CBETypedDeclarator::GetSizeOrDimensionOfAttr(ATTR_TYPE nAttr,
 }
 
 /** \brief calculates the max size of the paramater
- *  \param bGuessSize true if we should guess the size of the parameter
  *  \param nSize the maximum size
  *  \param sName the name of the declarator to determine the size of, empty if
  *         all
@@ -1595,13 +1596,12 @@ bool CBETypedDeclarator::GetSizeOrDimensionOfAttr(ATTR_TYPE nAttr,
  * Platform dependent size preceedes language dependent size.
  */
 bool
-CBETypedDeclarator::GetMaxSize(bool bGuessSize,
-    int & nSize, string sName)
+CBETypedDeclarator::GetMaxSize(int & nSize,
+    string sName)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
-	"CBETypedDeclarator::%s(%s, %s) called.\n",
-	__func__, bGuessSize ? "true" : "false",
-	sName.empty() ? "(none)" : sName.c_str());
+	"CBETypedDeclarator::%s(%s) called.\n",
+	__func__, sName.empty() ? "(none)" : sName.c_str());
     
     CBESizes *pSizes = CCompiler::GetSizes();
     
@@ -1628,7 +1628,7 @@ CBETypedDeclarator::GetMaxSize(bool bGuessSize,
 	 iterD++)
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "%s sName empty? %s || \"%s\" != \"%s\" (%s)\n",
+	    "CBETypedDeclarator::%s sName empty? %s || \"%s\" != \"%s\" (%s)\n",
 	    __func__, sName.empty() ? "true" : "false",
 	    (*iterD)->GetName().c_str(), sName.empty() ? "" : sName.c_str(),
 	    (sName.empty() || (*iterD)->GetName() != sName) ? "continue" : "calc");
@@ -1644,7 +1644,7 @@ CBETypedDeclarator::GetMaxSize(bool bGuessSize,
         // if decl is array, but returns a negative maximum size,
         // it is an unbound array. Its max size is the max size of it's
         // type times the dimensions
-        if ((nDeclSize < 0) && (*iterD)->IsArray() && bGuessSize)
+        if ((nDeclSize < 0) && (*iterD)->IsArray())
         {
             nTypeSize = pSizes->GetMaxSizeOfType(pType->GetFEType());
             nSize += nTypeSize * -nDeclSize;
@@ -1657,7 +1657,7 @@ CBETypedDeclarator::GetMaxSize(bool bGuessSize,
              m_Attributes.Find(ATTR_LENGTH_IS) ||
              m_Attributes.Find(ATTR_MAX_IS)))
         {
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s some size attribute\n",
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBETypedDeclarator::%s some size attribute\n",
 		__func__);
             int nDimensions = 1;
 	    if (GetSizeOrDimensionOfAttr(ATTR_SIZE_IS, nSize, nDimensions))
@@ -1666,16 +1666,13 @@ CBETypedDeclarator::GetMaxSize(bool bGuessSize,
 		continue;
 	    if (GetSizeOrDimensionOfAttr(ATTR_MAX_IS, nSize, nDimensions))
 		continue;
-            if (bGuessSize)
-            {
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-		    "%s guessing size for size attr\n", __func__);
-		WarnNoMax(nTypeSize * -nDeclSize);
-                nSize += pSizes->GetMaxSizeOfType(pType->GetFEType()) * nDimensions;
-                continue;
-            }
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+		"CBETypedDeclarator::%s guessing size for size attr\n", __func__);
+	    WarnNoMax(nTypeSize * -nDeclSize);
+	    nSize += pSizes->GetMaxSizeOfType(pType->GetFEType()) * nDimensions;
+	    continue;
         }
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s decl size is %d\n", __func__,
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBETypedDeclarator::%s decl size is %d\n", __func__,
 	    nDeclSize);
         // if referenced, this is the size
         if (nDeclSize == -((*iterD)->GetStars()))
@@ -1687,7 +1684,7 @@ CBETypedDeclarator::GetMaxSize(bool bGuessSize,
         // const array or simple? -> return array-dimension * type's size
         nSize += nDeclSize * nTypeSize;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s total now %d\n", __func__,
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBETypedDeclarator::%s total now %d\n", __func__,
 	    nSize);
     }
     

@@ -2080,7 +2080,7 @@ CBEMsgBuffer::GetMemberSize(int nType,
 	pMember->GetType()->IsOfType(nType))
     {
 	if (bMax)
-	    pMember->GetMaxSize(true, nMemberSize);
+	    pMember->GetMaxSize(nMemberSize);
 	else
 	    nMemberSize = pMember->GetSize();
     }

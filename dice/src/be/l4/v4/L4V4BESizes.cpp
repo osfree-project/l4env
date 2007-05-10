@@ -27,7 +27,9 @@
  */
 
 #include "L4V4BESizes.h"
+#include "be/BENameFactory.h"
 #include "TypeSpec-L4V4Types.h"
+#include "Compiler.h"
 
 CL4V4BESizes::CL4V4BESizes()
  : CL4BESizes()
@@ -76,6 +78,25 @@ int CL4V4BESizes::GetSizeOfType(int nFEType, int nFESize)
 	break;
     }
     return nSize;
+}
+
+/** \brief try to determine the size of a user defined type based on its name
+ *  \param sUserType the name of the type
+ *  \return the size of the type or 0 if not found
+ *
+ * Only test L4V4 specific type names. Leave the rest to the base class.
+ */
+int CL4V4BESizes::GetSizeOfType(string sUserType)
+{
+    if (sUserType == "L4_Fpage_t")
+	return TYPE_FLEXPAGE;
+    else if (sUserType == "L4_Word_t")
+	return TYPE_MWORD;
+    else if (sUserType == "L4_MsgTag_t")
+	return TYPE_MSGTAG;
+    else if (sUserType == "L4_StringItem_t")
+	return TYPE_REFSTRING;
+    return CL4BESizes::GetSizeOfType(sUserType);
 }
 
 /** \brief returns a value for the maximum  size of a specific type

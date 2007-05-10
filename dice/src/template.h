@@ -86,8 +86,8 @@ public:
 	{
 	    T* pNew = static_cast<T*>((*i)->Clone());
 	    push_back(pNew);
-	    SetParent(dynamic_cast<CObject*>(pNew));
 	}
+	Adopt(m_pParent);
     }
 
     /** \brief destoys collection
@@ -129,17 +129,6 @@ public:
 	    vector<T*>::swap(*src);
     }
 
-    /** \brief adds a new member at specific position
-     *  \param pAdd the new member
-     *  \param pos the position to insert before
-     */
-    void Add(T* pAdd, typename vector<T*>::iterator pos)
-    {
-	if (!pAdd)
-	    return;
-	vector<T*>::insert(pos, pAdd);
-    }
-
     /** \brief return reference to firt element in vector or NULL if empty
      *  \return reference to first element in vector
      */
@@ -150,6 +139,8 @@ public:
 	return vector<T*>::front();
     }
 
+    class SetParentCall;
+
     /** \brief "adopt" all elements of the vector
      *  \param pParent the new parent
      */
@@ -157,14 +148,9 @@ public:
     {
 	m_pParent = pParent;
 
-// 	for_each(vector<T*>::begin(),
-// 	    vector<T*>::end(),
-// 	    CCollection<T>::SetParent);
-	typename vector<T*>::iterator i;
-	for (i = vector<T*>::begin();
-	     i != vector<T*>::end();
-	     ++i)
-	    SetParent(*i);
+	for_each(vector<T*>::begin(),
+	    vector<T*>::end(),
+	    SetParentCall(this));
     }
 
     /** \brief remove an element from the collection
@@ -180,6 +166,14 @@ public:
 	    return;
 	erase(i);
     }
+};
+
+template<class T>
+class CCollection<T>::SetParentCall {
+    CCollection *c;
+public:
+    SetParentCall(CCollection *cc) : c(cc) { }
+    void operator() (T* mem) { c->SetParent(mem); }
 };
 
 template<class T, typename KeyT>

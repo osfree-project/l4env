@@ -175,9 +175,12 @@ int CBEUserDefinedType::GetSizeOfTypedef(string sTypeName)
     CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
     if (!pTypedef)
     {
+	// try to find size at CBESizes
+	CBESizes *pSizes = CCompiler::GetSizes();
+	int nSize = pSizes->GetSizeOfType(sTypeName);
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CBEUserDefinedType::%s returns 0\n", __func__);
-        return 0;
+	    "CBEUserDefinedType::%s returns %d\n", __func__, nSize);
+        return nSize;
     }
     /* check for recursion: if type of typedef is ourselves, then try to get
      * size of real type instead
@@ -219,9 +222,12 @@ int CBEUserDefinedType::GetMaxSizeOfTypedef(string sTypeName)
     CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
     if (!pTypedef)
     {
+	// try to find size at CBESizes
+	CBESizes *pSizes = CCompiler::GetSizes();
+	int nSize = pSizes->GetSizeOfType(sTypeName);
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CBEUserDefinedType::%s returns 0\n", __func__);
-        return 0;
+	    "CBEUserDefinedType::%s returns %d\n", __func__, nSize);
+        return nSize;
     }
     /* check for recursion: if type of typedef is ourselves, then try to get
      * size of real type instead
@@ -239,7 +245,7 @@ int CBEUserDefinedType::GetMaxSizeOfTypedef(string sTypeName)
        for the declarator we are using. That's why we use a specific
        GetSize function instead of the generic one. */
     int nSize;
-    if (!pTypedef->GetMaxSize(true, nSize, sTypeName))
+    if (!pTypedef->GetMaxSize(nSize, sTypeName))
 	nSize = 0;
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,

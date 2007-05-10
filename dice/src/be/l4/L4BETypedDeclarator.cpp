@@ -33,6 +33,8 @@
 #include "be/BEDeclarator.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEFile.h"
+#include "be/BESizes.h"
+#include "Compiler.h"
 
 /** destroys the typed declarator object */
 CL4BETypedDeclarator::~CL4BETypedDeclarator(void)
@@ -82,27 +84,31 @@ bool CL4BETypedDeclarator::IsFixedSized()
 {
     if (m_Attributes.Find(ATTR_REF))
         return false;
-    return true;
+    return CBETypedDeclarator::IsFixedSized();
 }
 
 /** \brief calculates the max size of the paramater
- *  \param bGuessSize true if we should guess the size of the parameter
  *  \param nSize the size to set in bytes
+ *  \param sName the name of a specific declarator or empty if all
  *  \return true if value has been assigned
  *
  * If bGuessSize is false, then this is for message buffer size calculation
  * and we have to check for [ref] attribute.
  */
 bool
-CL4BETypedDeclarator::GetMaxSize(bool bGuessSize,
-    int & nSize)
+CL4BETypedDeclarator::GetMaxSize(int & nSize,
+    string sName)
 {
-    if (!bGuessSize && m_Attributes.Find(ATTR_REF))
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CL4BETypedDeclarator::%s called\n", __func__);
+
+    if (m_Attributes.Find(ATTR_REF))
     {
-        nSize = 0;
+	CBESizes *pSizes = CCompiler::GetSizes();
+        nSize = pSizes->GetSizeOfType(TYPE_REFSTRING);
         return true;
     }
-    return false;
+    return CBETypedDeclarator::GetMaxSize(nSize, sName);
 }
 
 /** \brief check if we really have to allocate memory for the parameter

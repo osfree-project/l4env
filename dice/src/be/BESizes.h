@@ -46,6 +46,7 @@ public:
 
 public:  // Public methods
     virtual int GetSizeOfType(int nFEType, int nFESize = 0);
+    virtual int GetSizeOfType(string sUserType);
     virtual int GetMaxSizeOfType(int nFEType);
     virtual int GetOpcodeSize();
     virtual int GetExceptionSize();

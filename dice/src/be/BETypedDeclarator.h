@@ -79,7 +79,7 @@ public:
     int GetSize(string sName);
     CBEType *GetType();
     int GetBitfieldSize();
-    bool GetMaxSize(bool bGuessSize, int & nSize, string sName = string());
+    virtual bool GetMaxSize(int & nSize, string sName = string());
 
     void ReplaceType(CBEType * pNewType);
 

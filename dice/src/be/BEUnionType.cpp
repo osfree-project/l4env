@@ -291,6 +291,8 @@ int CBEUnionType::GetSize()
 int CBEUnionType::GetMaxSize()
 {
     int nMaxSize = GetSize();
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEUnionType::%s called, GetSize = %d\n", __func__, nMaxSize);
     if (nMaxSize > 0)
 	return nMaxSize;
     
@@ -302,7 +304,7 @@ int CBEUnionType::GetMaxSize()
 	 iter++)
     {
         int nUnionSize = 0;
-	(*iter)->GetMaxSize(true, nUnionSize);
+	(*iter)->GetMaxSize(nUnionSize);
 
 	// here we try to determine the maximum size. If there is a variable
 	// sized member, it has some fixed size or anything else replica
@@ -330,6 +332,8 @@ int CBEUnionType::GetMaxSize()
 	nMaxSize = pType->GetMaxSize();
     }
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	"CBEUnionType::%s returns %d\n", __func__, nMaxSize);
     return nMaxSize;
 }
 

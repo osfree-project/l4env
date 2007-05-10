@@ -961,10 +961,9 @@ int CBEFunction::GetMaxSize(DIRECTION_TYPE nDirection)
 	CBESizes *pSizes = CCompiler::GetSizes();
         // GetMaxSize already checks for variable sized params and
         // tries to find their MAX values. If there is no way to determine
-        // them, it returns a negative value. (should issue a warning)
+        // them, it returns false.
         int nParamSize = 0;
-        (*iter)->GetMaxSize(true, nParamSize);
-        if (nParamSize < 0)
+        if (!(*iter)->GetMaxSize(nParamSize))
         {
             CBEType *pType = (*iter)->GetType();
             int nTypeSize = pSizes->GetMaxSizeOfType(pType->GetFEType());
@@ -975,14 +974,10 @@ int CBEFunction::GetMaxSize(DIRECTION_TYPE nDirection)
                     pD->GetName().c_str(), GetName().c_str(), 
 		    nTypeSize * -nParamSize);
             }
-            CBEAttribute *pAttr;
-            if ((pAttr = (*iter)->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
-                pType = pAttr->GetAttrType();
-            // check alignment
-            nSize += nTypeSize + GetParameterAlignment(nSize, nTypeSize);
+	    nParamSize = nTypeSize;
         }
-        else
-            nSize += nParamSize + GetParameterAlignment(nSize, nParamSize);
+	// check alignment
+	nSize += nParamSize + GetParameterAlignment(nSize, nParamSize);
     }
     // add return var's size
     int nTypeSize = GetMaxReturnSize(nDirection);
@@ -1005,7 +1000,7 @@ int CBEFunction::GetMaxReturnSize(DIRECTION_TYPE nDirection)
     if (pReturn && pReturn->IsDirection(nDirection))
     {
         int nParamSize = 0;
-        pReturn->GetMaxSize(true, nParamSize);
+        pReturn->GetMaxSize(nParamSize);
         if (nParamSize < 0) // cannot issue warning, since return type cannot have attributes defined
             return CCompiler::GetSizes()->GetMaxSizeOfType(pReturn->GetType()->GetFEType());
         else
@@ -1044,14 +1039,15 @@ int CBEFunction::GetFixedSize(DIRECTION_TYPE nDirection)
         if ((*iter)->m_Attributes.Find(ATTR_IGNORE))
             continue;
 
-        // function cannot have bitfield params, so we dont test for them
-        // if param is not variable sized, then add its size
         // BTW: do not count message buffer parameter
         if ((*iter)->m_Declarators.Find(sMsgBuf))
             continue;
+        // function cannot have bitfield params, so we dont test for them
+        // if param is not variable sized, then add its size
 
         // only count fixed sized or with attribute max_is
         // var-size can be from size_is attribute
+	int nParamSize = 0;
         if ((*iter)->IsFixedSized())
         {
             // pParam->GetSize also tests for referenced OUT
@@ -1059,32 +1055,9 @@ int CBEFunction::GetFixedSize(DIRECTION_TYPE nDirection)
             // BUT: it does not check for pointered vars, which
             // should be dereferenced
 
-            int nParamSize = (*iter)->GetSize();
+            nParamSize = (*iter)->GetSize();
             if (nParamSize < 0)
-            {
-                CBEType *pType = (*iter)->GetType();
-                CBEAttribute *pAttr;
-                if ((pAttr = (*iter)->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
-                    pType = pAttr->GetAttrType();
-                // pointer (without size attributes!)
-                if (pType)
-                {
-                    // check alignment
-                    int nTypeSize = pType->GetSize();
-                    nSize += nTypeSize + GetParameterAlignment(nSize, nTypeSize);
-                }
-                else
-                {
-                    CBEDeclarator *pD = (*iter)->m_Declarators.First();
-                    CMessages::Error("%s in %s has no type\n", 
-			pD->GetName().c_str(), GetName().c_str());
-                }
-            }
-            else
-            {
-                // check alignment
-                nSize += nParamSize + GetParameterAlignment(nSize, nParamSize);
-            }
+		nParamSize = (*iter)->GetTransmitType()->GetSize();
         }
         else
         {
@@ -1094,11 +1067,10 @@ int CBEFunction::GetFixedSize(DIRECTION_TYPE nDirection)
             // GetMaxSize to avoid this case.
 
             // an array with size_is attribute is still fixed in size
-            int nParamSize = 0;
-            (*iter)->GetMaxSize(false, nParamSize);
-            if (nParamSize > 0)
-                nSize += nParamSize + GetParameterAlignment(nSize, nParamSize);
+            (*iter)->GetMaxSize(nParamSize);
         }
+	// check alignment
+	nSize += nParamSize + GetParameterAlignment(nSize, nParamSize);
     }
     // add return var's size
     // check alignment

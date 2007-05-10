@@ -1032,7 +1032,7 @@ CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct,
 	    break;
 	int nMemberSize = (*iter)->GetSize();
 	if (nMemberSize < 0)
-	    (*iter)->GetMaxSize(true, nMemberSize);
+	    (*iter)->GetMaxSize(nMemberSize);
 	nSize += nMemberSize;
 	if (nSize > nPosition)
 	    return true;
@@ -1182,7 +1182,7 @@ CL4BEMsgBuffer::GetMaxPosOfRefstringInMsgBuffer()
 		(*iter)->GetSize());
 	    int nMemberSize = (*iter)->GetSize();
 	    if (nMemberSize < 0)
-		(*iter)->GetMaxSize(true, nMemberSize);
+		(*iter)->GetMaxSize(nMemberSize);
 	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: adding size (max?) %d\n",
 		__func__, nMemberSize);
 	    nSize += nMemberSize;

@@ -26,8 +26,10 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BESizes.h"
+#include "BESizes.h"
+#include "BENameFactory.h"
 #include "TypeSpec-Type.h"
+#include "Compiler.h"
 #include <sstream>
 
 #if defined(HAVE_CONFIG_H)
@@ -140,6 +142,27 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
         break;
     }
     return nSize;
+}
+
+/** \brief try to determine the size of a user defined type based on its name
+ *  \param sUserType the name of the type
+ *  \return the size of the type, or 0 if not known
+ *
+ * We iterate the types, try to get a typename fromt the name factory and
+ * compare it with the given one.
+ */
+int
+CBESizes::GetSizeOfType(string sUserType)
+{
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    int nType;
+    for (nType = TYPE_NONE; nType < TYPE_MAX; nType++)
+    {
+	if ((pNF->GetTypeName(nType, false) == sUserType) ||
+	    (pNF->GetTypeName(nType, true) == sUserType))
+	    return GetSizeOfType(nType);
+    }
+    return 0;
 }
 
 /** \brief returns a value for the maximum  size of a specific type
