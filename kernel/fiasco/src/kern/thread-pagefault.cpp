@@ -159,11 +159,11 @@ int Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc,
 
       if (cpu_lock.test())
 	{
-	  LOG_MSG_3VAL(current(), "Bad", pfa, error_code, pc);
+	  //LOG_MSG_3VAL(current(), "Bad", pfa, error_code, pc);
 	  kdb_ke("Forbidden page fault under CPU lock! FIX ME!");
 	}
 
-      LOG_MSG_3VAL(current(), "TCBA", pfa, pc, 0);
+      //LOG_MSG_3VAL(current(), "TCBA", pfa, pc, 0);
       kdb_ke("Implicit TCB alloc");
 
       current_mem_space()->kmem_update((void*)pfa);

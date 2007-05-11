@@ -444,7 +444,7 @@ handle_physicalpage(l4_threadid_t t,l4_umword_t pfa,
 		       L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
       return 1;
     }
-
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   if (pfa >= (mem_lower << 10) && pfa < (1 << 20))
     {
       /* This is for the BIOS adapter area.
@@ -456,6 +456,7 @@ handle_physicalpage(l4_threadid_t t,l4_umword_t pfa,
 		       L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
       return 1;
     }
+#endif
 
   return check_double_pagefault(t,pfa,d1,d2);
 }
@@ -640,7 +641,7 @@ pager(void)
 	      else if (pfa < 0x40000000)
 		handled = handle_physicalpage(t, pfa, &d1, &d2);
 #else
-	      else if (pfa > ram_base && (pfa - ram_base) < (mem_upper << 10))
+	      else if (pfa > ram_base && (pfa - ram_base) < mem_high)
 		handled = handle_physicalpage(t, pfa, &d1, &d2);
 #endif
 #if defined ARCH_x86 | ARCH_amd64

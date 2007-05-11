@@ -1,8 +1,22 @@
+/**
+ * \file   omega0/server/src/main.c
+ * \brief  Main routine
+ *
+ * \date   2007-04-27
+ * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ */
+/* (c) 2007 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #include <omega0_proto.h>
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/syscalls.h>
 #include <l4/sys/kdebug.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/util.h>
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
@@ -14,7 +28,6 @@
 #include "globals.h"
 #include "irq_threads.h"
 #include "server.h"
-#include "pic.h"
 #include "config.h"
 #include "events.h"
 
@@ -27,17 +40,20 @@ int main(int argc, const char**argv)
   int error;
 
   if ((error = parse_cmdline(&argc, &argv,
-	       'o', "nosfn", "don't use special fully nested mode",
-	       PARSE_CMD_SWITCH, 0, &use_special_fully_nested_mode,
       	       'e', "events", "enable exit handling via events",
 	       PARSE_CMD_SWITCH, 1, &use_events,
 	       0)))
     return 1;
 
   rmgr_init();
-  LOG_printf("Using %s fully nested PIC mode\n",
-	     use_special_fully_nested_mode ? "special" : "(normal)");
-  
+
+  unsigned abi_version;
+  if ((abi_version = l4sigma0_kip_kernel_abi_version()) < 9)
+    {
+      LOG_Error("Fiasco kernel too old (current ABI %d - need >=9)", abi_version);
+      return 2;
+    }
+
   attach_irqs();
   LOGdl(OMEGA0_DEBUG_STARTUP,"attached to irqs");
 

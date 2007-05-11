@@ -358,8 +358,9 @@ init_config(void)
   mb_mod       = L4_MB_MOD_PTR mb_info->mods_addr;
 
   /* set mem size */
-  mem_upper = mb_info->mem_upper;
+#if defined (ARCH_x86) || defined(ARCH_amd64)
   mem_lower = mb_info->mem_lower & ~3; // round down to next 4k boundary
+#endif
   mem_high  = root_kinfo_mem_high()-RAM_BASE;
   mem_high  = l4_trunc_page(mem_high); // round down to next 4k boundary
 

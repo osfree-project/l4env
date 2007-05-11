@@ -39,6 +39,7 @@ init_memory(l4_kernel_info_t *info)
 	  iomem.alloc(Region(start, end, sigma0_taskno));
 	  break;
 	case Mem_desc::Reserved:
+	case Mem_desc::Dedicated:
 	  iomem.alloc(Region(start, end, sigma0_taskno));
 	  Mem_man::ram()->alloc(Region(start, end, sigma0_taskno));
 	  break;
@@ -46,8 +47,8 @@ init_memory(l4_kernel_info_t *info)
 	  iomem.alloc(Region(start, end, sigma0_taskno));
 	  Mem_man::ram()->alloc(Region(start, end, root_taskno));
 	  break;
-	case Mem_desc::Dedicated:
 	case Mem_desc::Arch:
+	case Mem_desc::Shared:
 	  iomem.add_free(Region(start,end));
 	  Mem_man::ram()->alloc(Region(start, end, sigma0_taskno));
 	  break;

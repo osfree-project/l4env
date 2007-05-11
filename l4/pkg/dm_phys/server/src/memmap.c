@@ -910,14 +910,14 @@ __setup_free_regions(void)
       if (   l4_kernel_info_get_mem_desc_type(md) == l4_mem_type_conventional
 	&& !l4_kernel_info_get_mem_desc_is_virtual(md))
 	{
-	  unsigned long start = l4_kernel_info_get_mem_desc_start(md);
-	  unsigned long end   = l4_kernel_info_get_mem_desc_end(md);
+	  unsigned long start = l4_round_page(l4_kernel_info_get_mem_desc_start(md));
+	  unsigned long end   = l4_trunc_page(l4_kernel_info_get_mem_desc_end(md)+1);
 	  mp = __alloc_memmap_desc();
 	  if (mp == NULL)
 	    Panic("DMphys: cannot allocate memmap descriptor!");;
 
 	  mp->addr = start;
-	  mp->size = end-start + 1;
+	  mp->size = end-start;
 
 	  __insert_ram(mp);
 	}

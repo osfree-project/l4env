@@ -25,12 +25,13 @@ bootstrap (l4util_mb_info_t *mbi, unsigned int flag, char *rm_pointer)
 #ifdef REALMODE_LOADING
   mem_upper = *(unsigned long*)(rm_pointer + 0x1e0);
 #else
-  mem_upper = mbi->mem_upper = mbi->mem_upper;
+  mem_upper = mbi->mem_upper;
 #endif
 
   // now do base_paging_init(): sets up paging with one-to-one mapping
   base_paging_init(round_superpage(1024 * (1024 + mem_upper)));
 
+  printf("Loading 64bit part...\n");
   // switch from 32 Bit compatibility mode to 64 Bit mode
   far_ptr.cs    = KERNEL_CS_64;
   far_ptr.start = load_elf(&_binary_bootstrap64_bin_start, 

@@ -24,7 +24,7 @@ namespace L4
     private:
       unsigned long _l, _h;
 
-      static unsigned long memory_info(void *kip)
+      static unsigned long &memory_info(void *kip)
       { return *((unsigned long *)kip + 21); }
 
     public:
@@ -37,6 +37,12 @@ namespace L4
       static unsigned long count(void *kip)
       {
 	return memory_info(kip) & (1UL << ((sizeof(unsigned long)/2)*8)) - 1;
+      }
+      
+      static void count(void *kip, unsigned c)
+      {
+	unsigned long &mi = memory_info(kip);
+	mi = (mi & ~((1UL << ((sizeof(unsigned long)/2)*8)) - 1)) | c;
       }
 
 

@@ -1,3 +1,16 @@
+/**
+ * \file   omega0/server/src/server.c
+ * \brief  IPC server implementation
+ *
+ * \date   2007-04-27
+ * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
+ */
+/* (c) 2007 Technische Universitaet Dresden
+ * This file is part of DROPS, which is distributed under the terms of the
+ * GNU General Public License 2. Please see the COPYING file for details.
+ */
+
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
@@ -7,7 +20,7 @@
 #include <l4/log/l4log.h>
 #include <stdlib.h>
 #include <omega0_proto.h>
-#include "pic.h"
+
 #include "globals.h"
 #include "server.h"
 #include "irq_threads.h"
@@ -70,7 +83,6 @@ attach(l4_threadid_t client, omega0_irqdesc_t desc)
   c->next = irqs[desc.s.num].clients;
   irqs[desc.s.num].clients = c;
   irqs[desc.s.num].shared = desc.s.shared;
-  irq_mask(desc.s.num);
   irqs[desc.s.num].masked++;
   irqs[desc.s.num].clients_registered++;
   c->masked = 1;

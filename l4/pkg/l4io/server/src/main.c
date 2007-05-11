@@ -67,9 +67,6 @@ const l4_size_t l4thread_stack_size = 16 << 10;
 static int cfg_events;            /* receive exit events            (default off) */
 static int cfg_mtrr = 1;          /* program MTRR                   (default on)  */
 static int cfg_dev_list = 1;      /* list PCI devices at bootup     (default on)  */
-static int cfg_irq = 1;           /* Omega0 in l4io                 (default on)  */
-static int cfg_irq_sfn = 1;       /* special fully nesting mode     (default on)  */
-static int cfg_force_omega0 = 0;  /* force omega0 flag in info page (default off) */
 
 /*
  * module vars
@@ -272,12 +269,9 @@ static void do_args(int argc, char *argv[])
   static int long_optind;
   static struct option long_options[] =
   {
-    {"noirq", no_argument, &long_check, 1},
     {"nolist", no_argument, &long_check, 2},
-    {"nosfn", no_argument, &long_check, 3},
     {"include", required_argument, &long_check, 4},
     {"exclude", required_argument, &long_check, 5},
-    {"omega0", no_argument, &long_check, 6},
     {"events", no_argument, &long_check, 7},
     {"nomtrr", no_argument, &long_check, 8},
     {0, 0, 0, 0}
@@ -298,17 +292,9 @@ static void do_args(int argc, char *argv[])
         case 0:  /* long option */
           switch (long_check)
             {
-            case 1:
-              cfg_irq = 0;
-              LOG_printf("Disabling internal IRQ handling.\n");
-              break;
             case 2:
               cfg_dev_list = 0;
               LOG_printf("Disabling listing of PCI devices.\n");
-              break;
-            case 3:
-              cfg_irq_sfn = 0;
-              LOG_printf("Disabling special fully nested mode.\n");
               break;
             case 4:
               if(add_device_inclusion(optarg))
@@ -317,10 +303,6 @@ static void do_args(int argc, char *argv[])
             case 5:
               if(add_device_exclusion(optarg))
                 LOG_Error("invalid vendor:device string \"%s\"", optarg);
-              break;
-            case 6:
-              cfg_force_omega0 = 1;
-              LOG_printf("Setting omega0 flag in info page.\n");
               break;
             case 7:
               cfg_events = 1;
@@ -391,20 +373,14 @@ int main(int argc, char *argv[])
           LOGdL(DEBUG_ERRORS, "pci initialization failed (%d)\n", error);
           return error;
         }
-      /* skip irq handling on demand */
-      if (cfg_irq)
-        {
-          if ((error = OMEGA0_init(cfg_irq_sfn)))
-            {
-              LOGdL(DEBUG_ERRORS, "omega0 initialization failed (%d)\n", error);
-              return error;
-            }
-          io_info.omega0 = 1;
-        }
     }
 
-  if (cfg_force_omega0)
-    io_info.omega0 = 1;
+  if ((error = OMEGA0_init()))
+    {
+      LOGdL(DEBUG_ERRORS, "omega0 initialization failed (%d)\n", error);
+      return error;
+    }
+  io_info.omega0 = 1;
 
   /* we are up -> register at names */
   if (!names_register(IO_NAMES_STR))

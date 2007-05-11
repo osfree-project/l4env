@@ -63,8 +63,8 @@ dmphys_kinfo_get_conventional_mem(enum lowhigh t)
 	switch (t)
 	  {
 	  case low:
-	    if (md->start() < val)
-	      val = md->start();
+	    if (l4_round_page(md->start()) < val)
+	      val = l4_round_page(md->start());
 	    break;
 	  case high:
             /* Limit the upper bound of physical memory to the last address

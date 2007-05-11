@@ -16,7 +16,6 @@ extern int               ux_running;
 extern int               quiet;
 extern l4_kernel_info_t *kip;
 extern l4_addr_t         mem_lower;	/* see multiboot info */
-extern l4_addr_t         mem_upper;	/* see multiboot info */
 
 /* number of small address spaces configured at boot */
 extern unsigned small_space_size;

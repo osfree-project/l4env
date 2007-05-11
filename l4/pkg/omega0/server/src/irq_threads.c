@@ -1,15 +1,25 @@
-/*!
+/**
  * \file   omega0/server/src/irq_threads.c
  * \brief  IRQ threads handling client requests and IRQs
  *
- * \date   2000/02/08
+ * \date   2007-04-27
  * \author Jork Loeser <jork.loeser@inf.tu-dresden.de>
+ * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
+ * L4V2 protocol:
+ * - Receive from IRQ ID associates caller with this IRQ
+ * - Receive from NIL ID with L4_IPC_RECV_TIMEOUT_0 disassociates the caller
+ *   from all interrupts
+ *
+ * Recent Fiasco extends this protocol:
+ * - Send to IRQ ID with dw0==0 enables (unmasks) the IRQ
+ * - Send to IRQ ID with dw0==1 disassociates caller from this IRQ
  */
-/* (c) 2000-2004 Technische Universitaet Dresden
+/* (c) 2000-2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
+
 #include <omega0_proto.h>
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
@@ -17,16 +27,16 @@
 #include <l4/util/util.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/log/l4log.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <l4/omega0/client.h>
 #include <l4/util/rdtsc.h>
 #include <l4/util/spin.h>
 #include <l4/util/macros.h>
-#include "pic.h"
+
+#include <stdio.h>
+
 #include "globals.h"
 #include "irq_threads.h"
-#include "create_threads.h"	/* krishna: separate thread creation */
+#include "create_threads.h"
 #include "config.h"
 
 
@@ -44,8 +54,6 @@ typedef struct{
     l4_umword_t d0;
     omega0_request_t request;
 } client_ipc_t;
-
-static void attach_irq(int);
 
 /*!\brief Signal a single user thread. Assume, the client is waiting.
  *
@@ -145,6 +153,18 @@ static int signal_user_threads(int irq, client_ipc_t *ipc){
     return 1;
 }
 
+/**
+ * Enable IRQ in kernel
+ */
+static inline void irq_enable(int num)
+{
+    l4_threadid_t irq;
+    l4_msgdope_t result;
+
+    l4_make_taskid_from_irq(num, &irq);
+    l4_ipc_send(irq, L4_IPC_SHORT_MSG, 0, 0, L4_IPC_SEND_TIMEOUT_0, &result);
+}
+
 /*!\brief Actually consume an irq. 
  *
  * The function checks if the IRQ is in service, and if so, it
@@ -153,16 +173,13 @@ static int signal_user_threads(int irq, client_ipc_t *ipc){
  *
  * \return 0 if the IRQ was in service, -1 else.
  */
-static inline int irq_consume(int irq){
-    // irq in service?
-    if(!irqs[irq].in_service) return -1;
+static inline int irq_consume(int irq)
+{
+    if (!irqs[irq].in_service) return -1;
 
-    /* it is acknowledged already, but implicitely masked */
-    if(OMEGA0_STRATEGY_IMPLICIT_MASK){
-	irq_unmask(irq);
-    } else {
-	irq_ack(irq);
-    }
+    /* reenable IRQ in kernel */
+    irq_enable(irq);
+
     irqs[irq].in_service = 0;
     return 0;
 }
@@ -257,8 +274,8 @@ static int handle_user_request(int irq,
 		    ret = -2; goto back;
 		}
 		/* then the irq is masked. is it masked exactly once? */
-		if(--irqs[irq].masked==0) irq_unmask(irq);
-		ipc->request.s.unmask=0;
+		if (--irqs[irq].masked == 0) irq_enable(irq);
+		ipc->request.s.unmask = 0;
 		c->masked = 0;
 	    }
     
@@ -278,19 +295,23 @@ static int handle_user_request(int irq,
 	    // masks the client the irq?
 	    if(ipc->request.s.mask){
 		// correct irq? (currently: only <irq>)
-		if(ipc->request.s.param!=irq+1) {
+		if (ipc->request.s.param != irq + 1) {
 		    ret = -5; goto back;
 		}
     
 		// is it masked already?
-		if(c->masked) {
+		if (c->masked) {
 		    ret = -6; goto back;
 		}
       
 		// is the irq unmasked now?
-		if(irqs[irq].masked==0) irq_mask(irq);
+		if (irqs[irq].masked == 0) {
+		    /* XXX Explicit mask is not supported currently. Fiasco
+		     * masks the IRQ on occurence and it is only unmasked on
+		     * explicit request. */
+		}
 		irqs[irq].masked++;
-		ipc->request.s.mask=0;
+		ipc->request.s.mask = 0;
 		c->masked = 1;
 	    }
     
@@ -318,7 +339,7 @@ static int handle_user_request(int irq,
 		    c->last_request = ipc->request;
 		    return ret;
 		}
-		ipc->request.s.wait=0;
+		ipc->request.s.wait = 0;
 		ret = RET_WAIT;		// no ipc back, wait for next request
 	    } else {
 		ret = RET_REPLY;	// send ipc back
@@ -363,6 +384,7 @@ static void attach_irq(int num){
  
     l4_make_taskid_from_irq(num, &irq_th);
   
+    /* associate with IRQ */
     error = l4_ipc_receive(irq_th, 0, &dummy, &dummy,
 			   L4_IPC_BOTH_TIMEOUT_0, &result);
   
@@ -412,12 +434,11 @@ void irq_handler(int num){
 	}
     }while(error);
 
-
     /* wait for ipcs now */
     error = l4_ipc_wait(&ipc.sender, L4_IPC_SHORT_MSG,
 			&ipc.d0, &ipc.request.i, L4_IPC_NEVER, &result);
-    while(1){
-	while(error){
+    while (1) {
+	while (error) {
 	    LOGdl(OMEGA0_DEBUG_WARNING,
 		  "IRQ %d: ipc error %#x", num, error);
 	    error = l4_ipc_wait(&ipc.sender, L4_IPC_SHORT_MSG,
@@ -425,33 +446,26 @@ void irq_handler(int num){
 				L4_IPC_NEVER, &result);
 	}
 	
-	if(ipc.sender.lh.high==0 && ipc.sender.lh.low<=IRQ_NUMS){
-	    /* irq from kernel */
-	    
-	    if(OMEGA0_DEBUG_IRQ_THREADS) l4_spin_text(0, num, "IRQ: ");
+	/* irq from kernel ? */
+	if ( l4_is_irq_id(ipc.sender) &&
+	     (l4_get_irqnr(ipc.sender) <= IRQ_NUMS) ) {
+
+	    if (OMEGA0_DEBUG_IRQ_THREADS) l4_spin_text(0, num, "IRQ: ");
 	    
 	    irqs[num].in_service = 1;
-	    if(num == 7 && OMEGA0_DEBUG_IRQ_THREADS) {
+	    if (num == 7 && OMEGA0_DEBUG_IRQ_THREADS) {
 		l4_spin_text(0,14,"IRQ 7: ");
 	    }
-	    
-	    /* implicitely mask the irq */
-	    if(OMEGA0_STRATEGY_IMPLICIT_MASK){
-		/* mask and acknowledge the irq at the pic */
-		irq_mask_and_ack(num);
-	    
-		LOGd(OMEGA0_DEBUG_PIC,
-		     "irq=%x, ISR after ack=%#x, IRR=%#x",
-		     num, pic_isr(num>=8), pic_irr(num>=8));
-	    }
-	    
+
 	    /* signal all waiting threads now and wait for new
 	     * request. */
 	    error = signal_user_threads(num, &ipc);
+
 	} else {
-	    int ret;
 	    /* ipc from user thread, must be a request */
-	    if(ipc.d0!=OMEGA0_REQUEST){
+
+	    int ret;
+	    if (ipc.d0 != OMEGA0_REQUEST) {
 		LOGd(OMEGA0_DEBUG_REQUESTS,
 		     "non-Omega0 request from "l4util_idfmt,
 		     l4util_idstr(ipc.sender));
@@ -469,8 +483,8 @@ void irq_handler(int num){
 		 ipc.request.s.param);
 	    
 	    ret=handle_user_request(num, &ipc);
-	    if(ret==RET_HANDLE) continue;
-	    if(ret==RET_WAIT){
+	    if (ret == RET_HANDLE) continue;
+	    if (ret == RET_WAIT) {
 		LOGd(OMEGA0_DEBUG_IRQ_THREADS, "sending no reply, waiting");
 		error = l4_ipc_wait(&ipc.sender, L4_IPC_SHORT_MSG,
 				    &ipc.d0, &ipc.request.i,
@@ -489,8 +503,8 @@ void irq_handler(int num){
 					      L4_IPC_SEND_TIMEOUT_0,
 					      &result);
 	    }
-	}	// ipc from client
-    }	// while(1) - outer request loop
+	}
+    }
 }
 
 /*!\brief Initialize the local irq acceptor threads.

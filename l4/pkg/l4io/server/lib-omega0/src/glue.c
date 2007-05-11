@@ -14,6 +14,8 @@
  */
 
 /* L4 */
+#include <l4/env/errno.h>
+#include <l4/sigma0/kip.h>
 #include <l4/names/libnames.h>
 #include <l4/sys/kdebug.h>
 #include <l4/thread/thread.h>
@@ -30,7 +32,6 @@
 #include <server.h>
 #include <irq_threads.h>
 #include <create_threads.h>
-#include <pic.h>
 
 /* do debugging */
 #define DO_DEBUG  0
@@ -118,14 +119,18 @@ int create_threads_sync(void)
 
 /** OMEGA0lib initialization.
  * \ingroup grp_o0 */
-int OMEGA0_init(int use_spec)
+int OMEGA0_init()
 {
+  unsigned abi_version;
+
+  if ((abi_version = l4sigma0_kip_kernel_abi_version()) < 9)
+    {
+      LOG_Error("Fiasco kernel too old (current ABI %d - need >=9)", abi_version);
+      return -L4_ENOTFOUND;
+    }
+
   l4thread_t thread = L4THREAD_INVALID_ID;
   int noparam;
-
-  use_special_fully_nested_mode = use_spec;
-  LOG("Using %s fully nested PIC mode",
-       use_special_fully_nested_mode ? "special" : "");
 
   /* create omega0 irq threads */
   attach_irqs();
