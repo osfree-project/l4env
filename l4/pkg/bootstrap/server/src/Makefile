@@ -31,12 +31,11 @@ LIBC_SUPPORT_C_arm-sa1000      := libc_support.c
 LIBC_SUPPORT_CC_arm-isg        := libc_support+.cc
 LIBC_SUPPORT_CC_arm-integrator := libc_support+.cc
 
-SRC_C		+= startup.c exec.c region.c module.c base_critical.c patch.c 
-SRC_C_x86	+= init_kip_v4.c serial.c 
-SRC_CC_x86	+= init_kip_v2.cc
-SRC_C_amd64	+= init_kip_v4.c serial.c
-SRC_CC_amd64	+= init_kip_v2.cc
-SRC_CC_arm-l4x0	+= init_kip_arm.cc $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_DRV_TYPE))
+SRC_C		+= exec.c module.c base_critical.c patch.c
+SRC_CC		:= region.cc startup.cc init_kip_v2.cc init_kip_v4.cc
+SRC_C_x86	+= serial.c 
+SRC_C_amd64	+= serial.c
+SRC_CC_arm-l4x0	+= $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_DRV_TYPE))
 ARM_DRV_TYPE	?= sa1000
 
 OPTS		 = -g -Os $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
@@ -59,7 +58,7 @@ vpath bootstrap.ld.in $(SRC_DIR)/ARCH-$(ARCH)
 vpath crt0.S	      $(SRC_DIR)/ARCH-$(ARCH)
 
 MODULE_PATH     ?= $(INSTALLDIR_LOCAL)
-MODULE_LIST     ?= modules.list
+MODULE_LIST     ?= $(SRC_DIR)/modules.list
 
 # can be overwritten by Makeconf.local
 COMPRESS	?= 0
@@ -84,7 +83,7 @@ endif
 
 ifneq ($(ENTRY),)
 TARGET		:= bootstrap.image
-INSTALL_TARGET	+= bootstrap_$(ENTRY)
+INSTALL_TARGET	+= bootstrap_$(ENTRY) bootstrap.image
 bootstrap_$(ENTRY): bootstrap.stripped
 	$(VERBOSE)ln -f $< $@
 endif
@@ -129,6 +128,10 @@ include $(L4DIR)/mk/prog.mk
 
 CXXFLAGS += -fno-rtti -fno-exceptions
 
+ifneq ($(GCCMAJORVERSION),3)
+CXXFLAGS += -fno-threadsafe-statics
+endif
+
 ifneq ($(SYSTEM),)
  ifneq ($(ENTRY),)
   ifeq ($(filter clean cleanall,$(MAKECMDGOALS)),)
@@ -136,7 +139,7 @@ ifneq ($(SYSTEM),)
                            CROSS_COMPILE=$(SYSTEM_TARGET) \
 			   OPT_ARCH=$(ARCH) \
 			   OPT_COMPRESS=$(COMPRESS) \
-                           $(SRC_DIR)/build.pl $(SRC_DIR)/$(MODULE_LIST) $(ENTRY) 2>&1 | tee build.log 1>&2 \
+                           $(SRC_DIR)/build.pl $(MODULE_LIST) $(ENTRY) 2>&1 | tee build.log 1>&2 \
                      || echo X-build-failed-X)
     ifeq ($(BUILD_DUMMY),X-build-failed-X)
      $(error Processing of module list failed!)

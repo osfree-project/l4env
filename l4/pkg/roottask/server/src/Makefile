@@ -15,14 +15,16 @@ DEFAULT_RELOC_amd64	:= 0x00120000
 
 SRC_C_x86	= iomap.c
 SRC_C_amd64	= iomap.c
-SRC_C		= rmgr.c exec.c init.c module.c quota.c names.c \
-		  memmap.c memmap_lock.c region.c irq.c small.c symbols.c \
-		  vm.c lines.c boot_error.c pager.c task.c irq_thread.c \
-		  bootquota.c cfg-parse.c misc.c $(SRC_C_$(ARCH)) \
+SRC_C		= rmgr.c quota.c names.c \
+		  memmap.c memmap_lock.c region.c irq.c small.c \
+		  vm.c pager.c task.c irq_thread.c \
+		  misc.c $(SRC_C_$(ARCH)) \
 		  libc_support.c
+SRC_C_root_inits.o  = init.c lines.c symbols.c cfg-parse.c exec.c bootquota.c \
+		  boot_error.c module.c
 SRC_CC		= kinfo.cc
 SRC_S		= crt0.S __memmap.S __pool.S
-OBJS		= trampoline.s.o
+OBJS		= root_inits.o trampoline.s.o
 CRT0 		=
 LDSCRIPT	= roottask.ld
 WARNINGS_cfg-parse.o = -Wno-unused -Wno-parentheses \
@@ -49,7 +51,7 @@ LIBCLIBS        = -nostdlib $(GCCLDNOSTDLIB)                    \
 		  -luc_c -ll4util				\
 		  -luc_c $(GCCLIB) -luc_c -llist_alloc
 endif
-L4LIBS          = -ldemangle -lsigma0 -ll4sys
+L4LIBS          = -lsigma0 -ll4sys
 
 LDFLAGS := $(filter-out -Ttext, $(LDFLAGS))
 
@@ -62,3 +64,10 @@ vpath roottask.ld.in $(PKGDIR)/server/src
 roottask.ld: roottask.ld.in Makefile
 	@$(GEN_MESSAGE)
 	$(VERBOSE)sed 's,@linkaddr@,$(call default_reloc,$(TARGET)),g' $< > $@;
+
+OBJS_root_inits.o = $(patsubst %.c,%.o,$(SRC_C_root_inits.o))
+
+root_inits.o: $(OBJS_root_inits.o)
+	@$(LINK_MESSAGE)
+	$(VERBOSE)$(LD) $(findstring -m elf_x86_64, $(LDFLAGS_FOR_LD)) -r -o $@ $(OBJS_root_inits.o) $(addprefix -L,$(L4LIBDIR)) -ldemangle
+

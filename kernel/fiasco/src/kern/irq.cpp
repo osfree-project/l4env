@@ -21,7 +21,6 @@ protected:
 public:
   virtual void mask() = 0;
   virtual void mask_and_ack() = 0;
-  virtual void unmask() = 0;
   virtual bool check_debug_irq() = 0;
 
   static Irq *lookup( unsigned irq );

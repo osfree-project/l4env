@@ -60,7 +60,7 @@ exec_load_elf(exec_handler_func_t *handler,
 	  if (ph->p_flags & PF_X) type |= EXEC_SECTYPE_EXECUTE;
 	  result = (*handler)(handle,
 	            ph->p_offset, ph->p_filesz,
-		    ph->p_paddr, ph->p_memsz, type);
+		    ph->p_paddr, ph->p_vaddr, ph->p_memsz, type);
 	}
     }
 

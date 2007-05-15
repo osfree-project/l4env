@@ -8,33 +8,13 @@ SECTIONS
   
   .init :
   {
-    *(.init)
-    init.o(.text .rodata .data)
-    lines.o(.text .rodata .data)
-    symbols.o(.text .rodata .data)
-    cfg-parse.o(.text .rodata .data)
-    exec.o(.text .rodata .data)
-    bootquota.o(.text .rodata .data)
-    boot_error.o(.text .rodata .data)
-    module.o(.text .rodata .data)
-    *cp-demangle.o(.text .rodata .data)
-    *cplus-dem.o(.text .rodata .data)
-    *safe-ctype.o(.text .rodata .data)
+    KEEP (*(.init .init.*))
+    KEEP (root_inits.o(.text .text.* .rodata .rodata.* .data .data.*))
   } =0x9090
 
   .init.bss :
   {
-    init.o(.bss COMMON)
-    lines.o(.bss COMMON)
-    symbols.o(.bss COMMON)
-    cfg-parse.o(.bss COMMON)
-    exec.o(.bss COMMON)
-    bootquota.o(.bss COMMON)
-    boot_error.o(.bss COMMON)
-    module.o(.bss COMMON)
-    *cp-demangle.o(.bss COMMON)
-    *cplus-dem.o(.bss COMMON)
-    *safe-ctype.o(.bss COMMON)
+    root_inits.o(.bss .bss.* COMMON)
   }
 
   . = ALIGN(0x1000);
@@ -43,7 +23,7 @@ SECTIONS
 
   .text :
   {
-    *(.text)
+    *(.text .text.*)
   } =0x9090
 
   _etext = .;
@@ -54,7 +34,7 @@ SECTIONS
   . = ALIGN(0x1000) + ((ALIGN(8) + 0x1000 - ALIGN(0x1000)) & (0x1000 - 1));
   .data :
   {
-    *(.rodata*)
+    *(.rodata .rodata.*)
     . = ALIGN(0x1000);
     _multi_boot_info = .;
     PROVIDE (_multi_boot_info = .);
@@ -66,7 +46,7 @@ SECTIONS
     _mod_names = .;
     PROVIDE (_mod_names = .);
     rmgr.o(.mod_names)
-    *(.data)
+    *(.data .data.*)
     CONSTRUCTORS
   }
   _edata  =  .;
@@ -76,7 +56,7 @@ SECTIONS
   /* The __memmap and __pool arrays must be located right before _end! */
   .bss :
   {
-   *(.bss)
+   *(.bss .bss.*)
    *(COMMON)
    *(.bss_memmap)
    *(.bss_pool)

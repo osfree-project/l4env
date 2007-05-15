@@ -8,6 +8,7 @@ class Irq_alloc
 public:
   virtual bool alloc(Receiver *t) = 0;
   virtual bool free(Receiver *t) = 0;
+  virtual void unmask() = 0;
 
   static void init();
 

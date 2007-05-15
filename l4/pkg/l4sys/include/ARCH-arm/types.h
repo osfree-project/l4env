@@ -13,35 +13,7 @@
 #include <l4/sys/types_api.h>
 #endif
 
-/*
- * L4 flex pages
- */
-typedef union {
-  struct {
-    l4_umword_t grant : 1;
-    l4_umword_t write : 1;
-    l4_umword_t size  : 6;
-    l4_umword_t zero  : 4;
-    l4_umword_t page  :20;
-  } fp;
-  l4_umword_t raw;
-  l4_umword_t fpage;
-} l4_fpage_t;
-
-
-#define L4_WHOLE_ADDRESS_SPACE	(32)
-#define L4_FPAGE_RO		0
-#define L4_FPAGE_RW		1
-#define L4_FPAGE_MAP		0
-#define L4_FPAGE_GRANT		1
-#define L4_FPAGE_CACHE_OPT      (0x200)
-#define L4_FPAGE_CACHE_ENABLE   (L4_FPAGE_CACHE_OPT | 0x400)
-#define L4_FPAGE_CACHE_DISABLE  L4_FPAGE_CACHE_OPT
-
-typedef struct {
-  l4_umword_t snd_base;
-  l4_fpage_t fpage;
-} l4_snd_fpage_t;
+#include <l4/sys/__l4_fpage-32bit.h>
 
 /*
  * L4 message dopes
@@ -128,8 +100,6 @@ typedef struct {
  */
 
 L4_INLINE int        l4_is_invalid_sched_param (l4_sched_param_t sp);
-L4_INLINE l4_fpage_t l4_fpage(l4_addr_t address, l4_size_t size, 
-                              unsigned char write, unsigned char grant);
 
 /*-----------------------------------------------------------------------------
  * IMPLEMENTATION
@@ -139,12 +109,6 @@ L4_INLINE int l4_is_invalid_sched_param(l4_sched_param_t sp)
   return sp.raw == (l4_umword_t)-1;
 }
 
-L4_INLINE l4_fpage_t l4_fpage(l4_addr_t address, l4_size_t size, 
-			      unsigned char write, unsigned char grant)
-{
-  return ((l4_fpage_t){fp:{grant, write, size, 0, 
-			     (address & L4_PAGEMASK) >> 12 }});
-}
 
 #endif /* L4_TYPES_H */ 
 

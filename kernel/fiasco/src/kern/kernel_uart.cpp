@@ -91,7 +91,10 @@ Kernel_uart::enable_rcv_irq()
   // since the constructor is called before Dirq::Dirq() constructor
   Irq_alloc *i = Irq_alloc::lookup(uart()->irq());
   if (i)
-    i->alloc((Receiver*)-1);
+    {
+      i->alloc((Receiver*)-1);
+      i->unmask();
+    }
 
   uart()->enable_rcv_irq();
 }

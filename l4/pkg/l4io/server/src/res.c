@@ -30,7 +30,6 @@
 /* local includes */
 #include "io.h"
 #include "res.h"
-#include "mtrr.h"
 #include "__config.h"
 #include "__macros.h"
 
@@ -420,8 +419,6 @@ l4_io_request_mem_region_component (CORBA_Object _dice_corba_obj,
   if (len > (size << IO_LOG2_PAGESIZE))
     size++;
 
-  if ((flags & L4IO_MEM_WRITE_COMBINED) == L4IO_MEM_WRITE_COMBINED)
-    mtrr_set(addr, size * IO_PAGESIZE, MTRR_WC);
 
   /* p->vaddr points to a io-page-aligned address even if addr doesn't start
    * there! */
@@ -433,9 +430,18 @@ l4_io_request_mem_region_component (CORBA_Object _dice_corba_obj,
   region->snd_base = addr; /* the requested physical address */
   region->fpage = l4_fpage(vaddr, size, L4_FPAGE_RW, L4_FPAGE_MAP);
 
-  /* cacheable mapping requested? */
-  region->fpage.raw |= (flags & L4IO_MEM_CACHED) ?
-                         L4_FPAGE_CACHE_ENABLE : L4_FPAGE_CACHE_DISABLE;
+  switch (flags)
+    {
+    case L4IO_MEM_WRITE_COMBINED:
+      region->fpage.fp.cache = L4_FPAGE_BUFFERABLE;
+      break;
+    case L4IO_MEM_CACHED:
+      region->fpage.fp.cache = L4_FPAGE_CACHEABLE;
+      break;
+    default:
+      region->fpage.fp.cache = L4_FPAGE_UNCACHEABLE;
+      break;
+    }
 
   LOGd(DEBUG_RES, "sending fpage {snd_base=%lx, 0x%08lx, 0x%08lx}",
        region->snd_base,

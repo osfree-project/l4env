@@ -742,7 +742,10 @@ Ipc_err Thread::do_send_wait (Thread *partner, L4_timeout t, Sys_ipc_frame *regs
     }
   
   if(partner->sender_ok(this))
-    return 0;
+    {
+      state_del_dirty(Thread_polling);
+      return 0;
+    }
   
   sender_enqueue (partner->sender_list(), sched_context()->prio());
 
@@ -1036,7 +1039,8 @@ Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t,
       err = do_send_wait(partner, t, regs);
 
       // if an error occured, we should not hold the lock anymore
-      assert(!err.has_error() || partner->thread_lock()->lock_owner() != this);
+      assert(!err.has_error() || !partner->state() 
+	  || partner->thread_lock()->lock_owner() != this);
     }
   return err;
 }

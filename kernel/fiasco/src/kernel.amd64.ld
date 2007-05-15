@@ -2,7 +2,7 @@
 
 _boot_sys_start = 0x300000;
 _kernel_image	= 0xfffffffff0000000;	/* kernel link address */
-_load		= 0x1000;	/* skip page 0 to preserve BIOS data */
+_load		= 0x01000;	/* skip page 0 to preserve BIOS data */
 
 OUTPUT_FORMAT("elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
@@ -87,7 +87,7 @@ SECTIONS {
   . = ALIGN(0x10);
   .bss : AT (ADDR(.bss) - 0xfffffffff0000000) {
     PROVIDE (_bss_start = .);
-    *(.bss .gnu.linkonce.b.* COMMON)
+    *(.bss .bss.* .gnu.linkonce.b.* COMMON)
     PROVIDE (_bss_end = .);
   } : kdata
 

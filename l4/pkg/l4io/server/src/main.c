@@ -39,7 +39,6 @@
 #include "res.h"
 #include "pci.h"
 #include "jiffies.h"
-#include "mtrr.h"
 #include "events.h"
 #include "omega0lib.h"
 
@@ -65,7 +64,6 @@ const int l4thread_max_threads = IO_MAX_THREADS;
 const l4_size_t l4thread_stack_size = 16 << 10;
 
 static int cfg_events;            /* receive exit events            (default off) */
-static int cfg_mtrr = 1;          /* program MTRR                   (default on)  */
 static int cfg_dev_list = 1;      /* list PCI devices at bootup     (default on)  */
 
 /*
@@ -273,7 +271,6 @@ static void do_args(int argc, char *argv[])
     {"include", required_argument, &long_check, 4},
     {"exclude", required_argument, &long_check, 5},
     {"events", no_argument, &long_check, 7},
-    {"nomtrr", no_argument, &long_check, 8},
     {0, 0, 0, 0}
   };
 
@@ -308,10 +305,6 @@ static void do_args(int argc, char *argv[])
               cfg_events = 1;
               LOG_printf("Enabling events support.\n");
               break;
-            case 8:
-              cfg_mtrr = 0;
-              LOG_printf("Disabling MTRR support.\n");
-              break;
             default:
               /* ignore unknown */
               break;
@@ -342,9 +335,6 @@ int main(int argc, char *argv[])
       LOGdL(DEBUG_ERRORS, "I/O info page initialization failed (%d)", error);
       return error;
     }
-
-  /* Detect support for MTRR. This needs IOPL3 to access MSRs. */
-  if (cfg_mtrr && !l4sigma0_kip_kernel_is_ux()) mtrr_init();
 
   /* setup self structure */
   io_self.next = NULL;

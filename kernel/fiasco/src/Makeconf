@@ -70,6 +70,14 @@ include $(srcdir)/Makeconf.$(CONFIG_XARCH)
 -include $(srcdir)/Makeconf.local
 -include $(objbase)/Makeconf.local
 
+LD			?= ld
+AR			?= ar
+NM			?= nm
+RANLIB			?= ranlib
+SIZE			?= size
+STRIP			?= strip
+OBJCOPY			?= objcopy
+OBJDUMP			?= objdump
 
 ifneq ($(CCXX_VERSION),)
   CCXX_SUFFIX		:= -$(CCXX_VERSION)
@@ -77,15 +85,15 @@ endif
 
 CC			:= $(CCXX_WRAP) $(SYSTEM_TARGET)$(CC)$(CCXX_SUFFIX)
 CXX			:= $(CCXX_WRAP) $(SYSTEM_TARGET)$(CXX)$(CCXX_SUFFIX)
-AS			:= $(SYSTEM_TARGET)as
-LD			:= $(SYSTEM_TARGET)ld
-AR			:= $(SYSTEM_TARGET)ar
-NM			:= $(SYSTEM_TARGET)nm
-RANLIB			:= $(SYSTEM_TARGET)ranlib
-SIZE			:= $(SYSTEM_TARGET)size
-STRIP			:= $(SYSTEM_TARGET)strip
-OBJCOPY			:= $(SYSTEM_TARGET)objcopy
-OBJDUMP			:= $(SYSTEM_TARGET)objdump
+AS			:= $(SYSTEM_TARGET)$(AS)
+LD			:= $(SYSTEM_TARGET)$(LD)
+AR			:= $(SYSTEM_TARGET)$(AR)
+NM			:= $(SYSTEM_TARGET)$(NM)
+RANLIB			:= $(SYSTEM_TARGET)$(RANLIB)
+SIZE			:= $(SYSTEM_TARGET)$(SIZE)
+STRIP			:= $(SYSTEM_TARGET)$(STRIP)
+OBJCOPY			:= $(SYSTEM_TARGET)$(OBJCOPY)
+OBJDUMP			:= $(SYSTEM_TARGET)$(OBJDUMP)
 
 CCVER_MAJOR		:= $(shell $(CXX) -dumpversion | cut -d . -f 1)
 CCVER_MINOR		:= $(shell $(CXX) -dumpversion | cut -d . -f 2)

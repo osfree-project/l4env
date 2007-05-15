@@ -3,6 +3,6 @@
 
 #include <l4/util/mb_info.h>
 
-l4util_mb_info_t *init_loader_mbi(void *, unsigned int);
+l4util_mb_info_t *init_loader_mbi(void *);
 
 #endif /* ! __BOOTSTRAP__LOADER_MBI_H__ */

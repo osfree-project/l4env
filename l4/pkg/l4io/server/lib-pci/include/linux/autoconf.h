@@ -29,3 +29,5 @@
 #undef  CONFIG_PROC_FS          /* pci/pci.c */
 #undef  CONFIG_GART_IOMMU       /* arch-i386/pci-pc.c */
 #undef  CONFIG_MULTIQUAD        /* arch-i386/pci-pc.c */
+#define CONFIG_RWSEM_GENERIC_SPINLOCK 1
+#undef CONFIG_ACPI_BOOT

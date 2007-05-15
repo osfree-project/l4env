@@ -167,6 +167,9 @@ get_arg_module(l4util_mb_info_t *mbi, const char *name, unsigned *size)
   char *val_beg = NULL, *val_end;
   char *s = L4_CHAR_PTR(mbi->cmdline);
 
+  if (!(mbi->flags & L4UTIL_MB_CMDLINE))
+    return 0;
+  
   while (!val_beg && (s = strstr(s, " -arg=")))
     {
       char *a, *name_end;

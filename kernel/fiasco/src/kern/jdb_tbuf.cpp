@@ -89,7 +89,9 @@ protected:
 IMPLEMENTATION:
 
 #include "config.h"
+#include "cpu_lock.h"
 #include "initcalls.h"
+#include "lock_guard.h"
 #include "mem_layout.h"
 #include "observer.h"
 #include "std_macros.h"
@@ -182,7 +184,10 @@ Jdb_tbuf::commit_entry()
 
       // fire the virtual 'buffer full' irq
       if (_observer)
-	_observer->notify();
+        {
+          Lock_guard<Cpu_lock> guard(&cpu_lock);
+	  _observer->notify();
+	}
     }
 }
 
