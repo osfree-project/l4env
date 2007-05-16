@@ -328,6 +328,15 @@ int netif_rx_string(int h, struct sk_buff *skb)
   // in every case we add this packet to the rx_list.
   l4lock_lock(&ore_connection_table[h].channel_lock);
 
+  // XXX: It may happen, that the connection is being freed and we are
+  //      just in bad luck by having it found used beforehand. If the
+  //      connection is inactive now, free data and return.
+  if (ore_connection_table[h].in_use == 0) {
+	  l4lock_unlock(&ore_connection_table[h].channel_lock);
+	  free_rxtx_entry(ent);
+	  return NET_RX_SUCCESS;
+  }
+
   if (ore_connection_table[h].packets_queued < CONFIG_ORE_RX_QUOTA)
   {
 	  list_add_tail(&ent->list, &(ore_connection_table[h].rx_list));
@@ -337,7 +346,7 @@ int netif_rx_string(int h, struct sk_buff *skb)
   }
   else
   {
-      LOG("quota limit reached - removing first");
+      LOGd(ORE_DEBUG_PACKET, "quota limit reached - removing first");
 	  free_rxtx_entry(ent);
   }
   

@@ -13,7 +13,7 @@ my %modules =
 			  l4/tool/Makefile
 			  l4/tool/gendep
 			  l4/tool/config
-			  l4/tool/gosh
+			  tools/gosh
 		         ) ],
           },
 
@@ -75,7 +75,7 @@ my %modules =
    },
 
    preprocess => {
-      paths => [ qw(l4/tool/preprocess) ]
+      paths => [ qw(tools/preprocess) ]
    },
 
    # l4env with dietlibc

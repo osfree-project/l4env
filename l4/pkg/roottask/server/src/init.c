@@ -15,6 +15,7 @@
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
+#include <l4/sys/memdesc.h>
 #include <l4/util/l4_macros.h>
 #include <l4/util/util.h>
 #include <l4/rmgr/proto.h>
@@ -1007,12 +1008,32 @@ free_unused_memory(void)
   region_free(free_beg, free_end);
 }
 
+/* get the total amount of RAM available in the system, as reported
+ * by the memory descriptors */
+static unsigned long
+get_total_ram(void)
+{
+  l4_kernel_info_mem_desc_t *md = l4_kernel_info_get_mem_descs(kip);
+  unsigned num = l4_kernel_info_get_num_mem_descs(kip);
+  unsigned long total_ram = 0;
+
+  for (; num--; md++)
+    if (!l4_kernel_info_get_mem_desc_is_virtual(md)
+        && (l4_kernel_info_get_mem_desc_type(md) == l4_mem_type_conventional))
+      total_ram += l4_kernel_info_get_mem_desc_end(md)
+                   - l4_kernel_info_get_mem_desc_start(md) + 1;
+
+  return total_ram;
+}
+
 /**
  * initialize the memory mangement.
  */
 static void
 init_memmap(void)
 {
+  unsigned long total_ram;
+
   assert(mem_high > 0x200000);	/* 2MB is the minimum for any useful work */
 
   /* initialize memory to "reserved" */
@@ -1028,7 +1049,7 @@ init_memmap(void)
   pagein_adapter_memory();
 #endif
   pagein_4KB_memory();
-  
+
   /* reserve special memory regions */
   reserve_module_memory();
   reserve_rmgr_memory();
@@ -1040,12 +1061,13 @@ init_memmap(void)
 
   free_high_ram();
 
+  total_ram = get_total_ram();
+
   printf("\n"
 	 " %7ldkB (%4ldMB) total RAM (reported by bootloader)\n"
 	 " %7ldkB (%4ldMB) received RAM from Sigma0\n"
 	 " %7ldkB (%4ldMB) reserved RAM for RMGR\n",
-	 (unsigned long)mb_info->mem_upper  + mb_info->mem_lower,
-	 (unsigned long)(mb_info->mem_upper + mb_info->mem_lower) / (1<<10),
+	 total_ram >> 10, total_ram >> 20,
 	 (unsigned long)(free_size    +(1<<10)-1) / (1<<10),
 	 (unsigned long)(free_size    +(1<<20)-1) / (1<<20),
 	 (unsigned long)(reserved_size+(1<<10)-1) / (1<<10),

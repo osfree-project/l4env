@@ -178,7 +178,7 @@ void clear_rxtx_list(struct list_head *h)
     list_for_each_safe(p, n, h)
     {
         rxtx_entry_t *entry = list_entry(p, rxtx_entry_t, list);
-        free_rxtx_entry(entry);
         list_del(p);
+        free_rxtx_entry(entry);
     }
 }

@@ -433,7 +433,7 @@ unless  EXPERIMENTAL suppress dependent PF_ISG
   PL0_HACK ASSEMBLER_IPC_SHORTCUT
 
 unless  PF_PC or PF_UX suppress dependent IA32
-unless  PF_PC or PF_UX suppress dependent AMD64
+unless  PF_PC suppress dependent AMD64
 unless  PF_PC suppress timer WATCHDOG
 unless  PF_PC suppress WORKAROUND_AMD_FPU_LEAK
 require PF_PC implies (IA32 or AMD64)

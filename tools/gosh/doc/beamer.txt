@@ -1,0 +1,111 @@
+
+        Description of the GOSH backend for the Latex Beamer Package
+
+                            Ronald Aigner
+
+The style 'beamer.gosh' allows to generate slides from a GOSH file using the
+latex-beamer style.  There are some restriction on how to format the text:
+* The Beamer style displays short names of the current part of the
+  presentation.  For these parts we use the chapter. Therefore use short
+  descriptive names with chapters.
+* Two chapter titles are reserved: 'Outline' and 'Question'. 
+  * Writing a single outline chapter will generate the outline slide in the
+    presentation. Leave this chapter empty. Using a dedicated chapter allows
+    you to palce the outline wherever you like.
+  * Writing a single question chapter will generate a slide with the caption
+    "Question" and a centered graphic showing question marks. Per default the
+    provided graphic 'question1.pdf' is included. To be able to use this file
+    use 'TEXINPUTS=.:$(GOSHDIR)/beamer: pdflatex' instead of 'pdflatex'. You
+    can specify an alternative graphic using the '--question' argument.
+* To assign the title of a slide, use the section heading.
+* You may also use the subsection heading to generate a slide. The main
+  difference to a section is the placement in the outline.
+* You may use pictures just as you would with the main latex style.
+* To generate listings with grayed items where the items are displayed with
+  the next click, insert the 'pause' command after an item (Don't forget to
+  write the backslash before 'pause'.)
+* To use the nice box frames of the beamer package, you can write your
+  text in GOSH's paragraph style (by using '-' to underline the title of the
+  paragraph.
+* Per default a biblioraphy is generated.
+
+Options:
+########
+
+You can specify a beamer theme using the '--theme' command line argument.
+Default is 'Darmstadt'. For a list of valid theme refer to the latex-beamer
+documentation.
+
+To manipulate the look of a theme you may use the command line arguments
+'--colortheme', '--fonttheme', '--innertheme, and '--outertheme'. For a list
+of valid themes refer to the latex-beamer documentation.
+
+You can also split a them using the '--theme-split' command line argument.
+This gives you the possibility to define single elemts of the layout.
+*Untested!*
+
+If you specify the '--slidenum' command line argument to let gosh generate a
+specific footline with your name, the title of the talk, and your name.
+
+Animated items (see 'pause' command) are per default grayed if not displayed.
+You can hide the gayed items if you specify the '--cover-notransparent'
+command line argument. Another option is to use '--cover-auto', which will
+only display two grayed items.
+
+Use the command line option '--question' to specify an alternative file
+containing the question mark graphic.
+
+
+Example:
+########
+
+!    This is an example presentation
+!
+!           Ronald Aigner
+!
+! Outline
+! #######
+!
+! First Part
+! ##########
+!
+! First Slide
+! ===========
+!
+! * Item
+!   * Subitem \pause
+!   * Subitem 2
+!   * Subitem 3 \pause
+!   * Subitem 4
+!
+! Second Slide
+! ============
+!
+! * foo
+!
+! Second Part
+! ###########
+!
+! Third Slide
+! ===========
+!
+! * bla
+!
+! Forth Slide
+! ===========
+!
+! * blubb
+
+To generate the respective latex file use:
+
+! gosh --style /where/gosh/lives/techreport.gosh \
+!      --theme Frankfurt
+!      your_paper.txt > your_paper.tex
+
+Now simply run pdflatex with the resulting tex file. Don't forget to install
+the 'latex-beamer' package!
+
+
+TODO:
+#####
+* generate question mark slide

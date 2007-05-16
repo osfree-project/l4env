@@ -68,7 +68,7 @@ DROPS_CXX	= L4DIR=$(L4DIR) $(firstword $(wildcard \
 ECHO		= echo
 
 GENOFFSETS	= $(L4DIR)/tool/bin/genoffsets.pl
-GOSH		= $(firstword $(wildcard $(L4DIR)/tool/gosh/gosh \
+GOSH		= $(firstword $(wildcard $(L4DIR)/../tools/gosh/gosh \
 				$(DROPS_STDDIR)/tool/bin/gosh \
 				 $(shell which gosh 2>/dev/null) ) false )
 HOST_CC		= gcc

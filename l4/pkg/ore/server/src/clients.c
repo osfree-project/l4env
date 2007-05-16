@@ -259,7 +259,19 @@ int setup_connection(char *device_name, ore_mac mac,
  ******************************************************************************/
 int free_connection(int handle)
 {
+	// Grab the channel lock here so that no one is able to modify the lists
+	// while we are cleaning them up. (The lock is freed down there in a rather
+	// unconventional way.
+	l4lock_lock(&ore_connection_table[handle].channel_lock);
+
     ore_connection_table[handle].in_use         = 0;
+
+    // clear rx list and tx list
+    if (ore_connection_table[handle].dev)
+    {
+        clear_rxtx_list(&ore_connection_table[handle].rx_list);
+        clear_rxtx_list(&ore_connection_table[handle].tx_list);
+    }
 
     if (ore_connection_table[handle].dev
         && memcmp(ore_connection_table[handle].mac,
@@ -277,13 +289,6 @@ int free_connection(int handle)
     ore_connection_table[handle].packets_received     = -1;
     ore_connection_table[handle].packets_queued       = -1;
     ore_connection_table[handle].packets_sent         = -1;
-
-    // clear rx list and tx list
-    if (ore_connection_table[handle].dev)
-    {
-        clear_rxtx_list(&ore_connection_table[handle].rx_list);
-        clear_rxtx_list(&ore_connection_table[handle].tx_list);
-    }
 
     ore_connection_table[handle].dev            = NULL;
 

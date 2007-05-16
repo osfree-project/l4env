@@ -26,9 +26,6 @@ TXTFILES = $(PKGNAME).txt
 IMGFILES = 
 TITLE    = $(PKGNAME).title
 
-GOSHDIR  = $(L4DIR)/tool/gosh
-GOSH     = $(GOSHDIR)/gosh
-
 PDFFILES  = $(TXTFILES:.txt=.pdf)
 HTMLFILES = $(TXTFILES:.txt=.html)
 

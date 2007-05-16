@@ -52,7 +52,7 @@ endif
 MODULES_FILE	= Modules.$(CONFIG_XARCH)
 
 PREPROCESS = \
-  $(word 1, $(wildcard $(shell cd $(L4DIR)/tool/preprocess/src 2>/dev/null; \
+  $(word 1, $(wildcard $(shell cd $(srcdir)/../../../tools/preprocess/src 2>/dev/null; \
                                pwd)/preprocess \
 		       $(DROPS_STDDIR)/tool/bin/preprocess) preprocess)
 
