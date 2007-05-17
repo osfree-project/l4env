@@ -60,7 +60,7 @@ int getUnusedConnection(void)
  * Generate/setup MAC address.
  ******************************************************************************/ 
 static void __init_mac(int channel, l4ore_config *conf, ore_mac mac, 
-    unsigned char mac_address_head[4])
+					   unsigned char mac_address_head[4])
 {
     unsigned char data[10];
     static unsigned char zero_head[4] = {0,0,0,0};
@@ -69,26 +69,25 @@ static void __init_mac(int channel, l4ore_config *conf, ore_mac mac,
      *
      * 1. try to hand out hardware MAC if requested.
      */
-    if (conf->ro_keep_device_mac)
+    if (conf->ro_keep_device_mac && device_mac_available)
     {
-        if (device_mac_available)
-        {
-            LOG("Allocating physical MAC address to client.");
-            memcpy(mac, ore_connection_table[channel].dev->dev_addr, 6);
-            device_mac_available = 0;
-        }
-        else
-        {
+		LOG("Allocating physical MAC address to client.");
+		memcpy(mac, ore_connection_table[channel].dev->dev_addr, 6);
+		device_mac_available = 0;
+		/* Done here. no more processing. */
+		goto out;
+	}
+
+	if (conf->ro_keep_device_mac)  /* && !device_mac_available */
+	{
             LOG("Physical MAC address not available!");
             conf->ro_keep_device_mac = 0;
-            goto copy;
-        }
     }
+
     /* 2. no MAC head given at cmd line --> use predefined head and a checksum.
      */
-    else if (memcmp(mac_address_head, zero_head, 4) == 0)
+    if (memcmp(mac_address_head, zero_head, 4) == 0)
     {
-    copy:
         memcpy(data, ore_connection_table[channel].dev->dev_addr, 6);
         memcpy(&data[7], &channel, sizeof(int));
 
@@ -106,9 +105,10 @@ static void __init_mac(int channel, l4ore_config *conf, ore_mac mac,
         mac[3] = mac_address_head[3];
         mac[4] = 0x00;
         mac[5] = channel;
-        LOG_MAC(1, mac);
     }
 
+out:
+	LOG_MAC(1, mac);
     memcpy(ore_connection_table[channel].mac, mac, 6);
 }
 
@@ -206,6 +206,7 @@ int setup_connection(char *device_name, ore_mac mac,
     LOGd_Enter(ORE_DEBUG);
     LOGd(ORE_DEBUG, "setting up connection for "l4util_idfmt, l4util_idstr(*owner));
 	LOGd(ORE_DEBUG, "device name: %s", device_name);
+	LOGd(ORE_DEBUG, "channel: %d", channel);
 
     // check if we have this device name
     ore_connection_table[channel].dev               = dev_get_by_name(device_name);

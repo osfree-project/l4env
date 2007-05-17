@@ -52,6 +52,7 @@ public:
     Utcb_ptr_page        = 0xffffd000,
     Kern_lib_base	 = 0xffffe000,
     Ivt_base             = 0xffff0000,
+    Syscalls		 = 0xfffff000,
 
     Kernel_max           = 0x00000000,
   };

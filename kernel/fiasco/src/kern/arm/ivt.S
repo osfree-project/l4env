@@ -164,6 +164,40 @@
 	stmib	sp, {sp}^
 .endm
 
+.macro  enter_sys_call no_sys_call
+	cmn	lr, #0x28		@ Range Check !!! UNSIGNED !!!
+	bls	\no_sys_call		@ no syscall
+	cmn	lr, #0x08
+	bhi	\no_sys_call
+	syscallframe			
+	stmdb   sp!, {r0 - r12}
+	CONTEXT_OF	r1, sp
+	RESET_THREAD_CANCEL_AT r1       @ sets r0 to state 
+	tst	r0, #0x10000
+	bne	alien_syscall
+	ldr	r0, s_lr
+	adr	r1, sys_call_table
+	sub	r0, r1, r0
+	adr	lr, 2f
+1:	ldr	pc, [r0]
+.global fast_ret_from_irq
+fast_ret_from_irq:
+2:      nop
+        ldmia   sp, {r0 - r12}^
+        nop
+        msr	cpsr_c, #0xd3 // disable IRQs
+        add     sp, sp, #13*4
+
+	/* Return */			
+	ldr	lr, [sp]		
+	msr	spsr, lr		
+	ldmib	sp, {sp,lr}^		
+	nop				
+	add	sp, sp, #20		
+	ldr	lr, [sp, #-4]		
+	movs	pc, lr	
+.endm
+
 
 /**************************************************************************
  * The Exception vector table.
@@ -213,6 +247,8 @@ undef_entry:
  */
 swi_entry:
 	switch_to_kernel
+	enter_sys_call no_sys_call
+no_sys_call:
 	exceptionframe 4
 	enter_slowtrap 0x00200000
 
@@ -234,38 +270,7 @@ swi_entry:
 inst_abort_entry:
 
 	switch_to_kernel
-	cmn	lr, #0x28		@ Range Check !!! UNSIGNED !!!
-	bls	prefetch_abort		@ no syscall
-	cmn	lr, #0x08
-	bhi	prefetch_abort
-	syscallframe			
-	stmdb   sp!, {r0 - r12}
-	CONTEXT_OF	r1, sp
-	RESET_THREAD_CANCEL_AT r1       @ sets r0 to state 
-	tst	r0, #0x10000
-	bne	alien_syscall
-	ldr	r0, s_lr
-	adr	r1, sys_call_table
-	sub	r0, r1, r0
-	adr	lr, 2f
-1:	ldr	pc, [r0]
 
-.global fast_ret_from_irq
-fast_ret_from_irq:
-2:      nop
-        ldmia   sp, {r0 - r12}^
-        nop
-        msr	cpsr_c, #0xd3 // disable IRQs
-        add     sp, sp, #13*4
-
-	/* Return */			
-	ldr	lr, [sp]		
-	msr	spsr, lr		
-	ldmib	sp, {sp,lr}^		
-	nop				
-	add	sp, sp, #20		
-	ldr	lr, [sp, #-4]		
-	movs	pc, lr	
 	
 /**************************************************************************/
 prefetch_abort: @ A real prefetch abort occured --- handled as a page fault 

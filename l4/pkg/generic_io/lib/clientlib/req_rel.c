@@ -78,6 +78,17 @@ l4_addr_t l4io_request_mem_region(l4_addr_t start, l4_size_t len, int flags)
   return vaddr;
 }
 
+/******************************************************************************/
+/**
+ * \brief  Search I/O memory region for an address.
+ *
+ * \param  addr    Address to search for
+ * \retval start   Start of memory region if found
+ * \retval len     Length of memory region if found.
+ *
+ * \return 0 on success; negative error code otherwise
+ */
+/*****************************************************************************/
 int l4io_search_mem_region(l4_addr_t addr,
                            l4_addr_t *start, l4_size_t *len)
 {
