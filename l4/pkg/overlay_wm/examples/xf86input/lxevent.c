@@ -25,6 +25,7 @@
 /*** XFREE INCLUDES ***/
 #include <xf86_OSproc.h>
 #include <xf86Xinput.h>
+#include <xf86_ansic.h>
 #include <exevents.h>         /* needed for initvaluator/proximity */
 
 #ifdef XFree86LOADER

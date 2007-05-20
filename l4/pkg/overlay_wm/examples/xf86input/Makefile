@@ -1,91 +1,55 @@
-PKGDIR          ?= ../..
-L4DIR           ?= $(PKGDIR)/../..
+PKGDIR     ?= ../..
+L4DIR      ?= $(PKGDIR)/../..
+CONDRV_DIR  = $(L4DIR)/pkg/l4con/examples/xf86_stub
+X11_INCDIR ?= /usr/include/xorg
 
-ifeq ($(XF86TREE),)
-ifeq ($(XORGTREE),)
-all::
-	$(error *** you have to specify XF86TREE=/where/your/xfree/sources/reside/xc or XORGTREE ***)
-endif
-endif
-
-TARGET           = lxevent_drv.o
-SRC_C            = lxevent.c
-MODE             = host
-LDFLAGS          = -shared -nostdlib -nostartfiles
-LDSCRIPT         = $(call findfile,main_rel.ld,$(L4LIBDIR))
-CFLAGS          = -fPIC
-CPPFLAGS        = -fPIC
-CRT0            = $(CRTP_DEFAULT)
-
-CPPFLAGS_lxevent.c = \
-                 -Dlinux -D__i386__ \
-                 -D_POSIX_C_SOURCE=199309L -D_POSIX_SOURCE \
-                 -D_XOPEN_SOURCE -D_BSD_SOURCE -D_SVID_SOURCE -D_GNU_SOURCE \
-                 -DSHAPE -DXINPUT -DXKB -DLBX -DXAPPGROUP -DXCSECURITY \
-                 -DTOGCUP -DXF86BIGFONT -DDPMSExtension \
-                 -DPIXPRIV -DPANORAMIX -DRENDER -DGCCUSESGAS \
-                 -DAVOID_GLYPHBLT -DPIXPRIV -DSINGLEDEPTH -DXFreeXDGA \
-                 -DXvExtension -DXFree86LOADER -DXFree86Server \
-                 -DXF86VIDMODE -DSMART_SCHEDULE -DBUILDDEBUG \
-                 -DX_BYTE_ORDER=X_LITTLE_ENDIAN -DNDEBUG \
-                 -DFUNCPROTO=15 -DNARROWPROTO -DIN_MODULE -DXFree86Module
-
-ifneq ($(XORGTREE),)
-PRIVATE_INCDIR = .. \
-                 $(XORGTREE)/include \
-                 $(XORGTREE)/include/X11 \
-                 $(XORGTREE)/include/fonts \
-                 $(XORGTREE)/include/extensions \
-                 $(XORGTREE)/include/xserver \
-                 $(XORGTREE)/programs/Xserver/hw/xfree86/common \
-                 $(XORGTREE)/programs/Xserver/hw/xfree86/os-support \
-                 $(XORGTREE)/programs/Xserver/hw/xfree86/os-support/bus \
-                 $(XORGTREE)/programs/Xserver/hw/xfree86/xf24_32bpp \
-                 $(XORGTREE)/programs/Xserver/hw/xfree86/xaa \
-                 $(XORGTREE)/programs/Xserver/hw/xfree86/shadowfb \
-                 $(XORGTREE)/programs/Xserver/hw/xfree86 \
-                 $(XORGTREE)/programs/Xserver/include \
-                 $(XORGTREE)/programs/Xserver/fb \
-                 $(XORGTREE)/programs/Xserver/mi \
-                 $(XORGTREE)/programs/Xserver/afb \
-                 $(XORGTREE)/programs/Xserver/mfb \
-                 $(XORGTREE)/programs/Xserver/render \
-                 $(XORGTREE)/programs/Xserver/miext/shadow \
-                 $(PKGDIR)/include \
-                 .
+ifeq ($(wildcard $(X11_INCDIR)),)
+$(warning Please define X11_INCDIR. This variable should point to the Xorg development headers)
+$(warning On Debian, you may just install the xserver-xorg-dev package.)
+TARGET     =
 else
-PRIVATE_INCDIR = $(XF86TREE)/include \
-                 $(XF86TREE)/include/X11 \
-                 $(XF86TREE)/include/fonts \
-                 $(XF86TREE)/include/extensions \
-                 $(XF86TREE)/include/xserver \
-                 $(XF86TREE)/programs/Xserver/hw/xfree86/common \
-                 $(XF86TREE)/programs/Xserver/hw/xfree86/os-support \
-                 $(XF86TREE)/programs/Xserver/hw/xfree86/os-support/bus \
-                 $(XF86TREE)/programs/Xserver/hw/xfree86/xf24_32bpp \
-                 $(XF86TREE)/programs/Xserver/hw/xfree86/xaa \
-                 $(XF86TREE)/programs/Xserver/hw/xfree86 \
-                 $(XF86TREE)/programs/Xserver/include \
-                 $(XF86TREE)/programs/Xserver/fb \
-                 $(XF86TREE)/programs/Xserver/mi \
-                 $(XF86TREE)/programs/Xserver/afb \
-                 $(XF86TREE)/programs/Xserver/mfb \
-                 $(XF86TREE)/programs/Xserver/render \
-                 $(XF86TREE)/programs/Xserver/miext/shadow \
-                 $(PKGDIR)/include \
-                 .
+TARGET     = lxevent_drv.so
 endif
+
+SRC_C      = lxevent.c
+MODE       = linux
+LDFLAGS    = -nostdlib -nostartfiles -shared
+LDSCRIPT   = $(call findfile,main_rel.ld,$(L4LIBDIR))
+CRT0       = $(CRTP_DEFAULT)
+CFLAGS     = -fPIC
+
+WARNINGS   = -Wall -Wpointer-arith -Wstrict-prototypes \
+             -Wmissing-prototypes -Wmissing-declarations \
+             -Wredundant-decls -Wnested-externs
+
+DEFINES    = -Dlinux -D__i386__ -D_POSIX_C_SOURCE=199309L \
+             -D_POSIX_SOURCE -D_XOPEN_SOURCE -D_BSD_SOURCE \
+             -D_SVID_SOURCE -D_GNU_SOURCE -DSHAPE -DXINPUT \
+             -DXKB -DLBX -DXAPPGROUP -DXCSECURITY -DTOGCUP \
+             -DXF86BIGFONT -DDPMSExtension -DPIXPRIV \
+             -DPANORAMIX -DRENDER -DGCCUSESGAS \
+             -DAVOID_GLYPHBLT -DPIXPRIV -DSINGLEDEPTH \
+             -DXFreeXDGA -DXvExtension -DXFree86LOADER \
+             -DXFree86Server -DXF86VIDMODE -DSMART_SCHEDULE \
+             -DBUILDDEBUG -DX_BYTE_ORDER=X_LITTLE_ENDIAN \
+             -DNDEBUG -DFUNCPROTO=15 -DNARROWPROTO -DIN_MODULE \
+             -DXFree86Module
+
+DEFINES   += -DXORG71
 
 INSTALLFILE_BIN_LOCAL = $(STRIP) --strip-unneeded $(1) \
                         -o $(INSTALLDIR_LOCAL)/$(1)
 
+#
+# Use Xorg headers as supplied with L4con
+#
+
+PRIVATE_INCDIR = $(SRC_DIR) $(X11_INCDIR)
+
+#
+# Use L4cons implementation of emul_l4env.c
+#
+
+vpath emul_l4env.c $(CONDRV_DIR)
+
 include $(L4DIR)/mk/prog.mk
-
-ifeq ($(FORCE_GCC295),yes)
-include $(PKGDIR)/examples/xf86input/Makeconf
-endif
-
-ifneq ($(SYSTEM),)
-all::
-	objcopy -G lxeventModuleData $(TARGET) $(TARGET)
-endif

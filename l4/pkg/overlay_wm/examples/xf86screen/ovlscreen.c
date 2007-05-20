@@ -18,10 +18,10 @@
 
 /*** XFREE HEADERS ***/
 #include "mipointer.h"      /* for initializing the software cursor */
+#include "shadowfb.h"
 #include "micmap.h"         /* colormap handling */
 #include "xf86cmap.h"
 #include "xf86Priv.h"
-#include "xf86Bus.h"
 #include "xf86.h"           /* all drivers should typically include these */
 #include "xf86_OSproc.h"
 #include "xf86Resources.h"
@@ -31,11 +31,8 @@
 #include "fb.h"             /* frame buffer support */
 #include "afb.h"
 #include "mfb.h"
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,3,99,0,0)
-#include "cfb24_32.h"
-#endif
 
-#include "ovl_screen.h"
+#include <l4/overlay_wm/ovl_screen.h>
 
 #define OVLSCREEN_VERSION        4000
 #define OVLSCREEN_NAME           "OVLSCREEN"
@@ -52,6 +49,7 @@ struct ovlscreen {
 	int depth;
 	void *fb_adr;
 	CloseScreenProcPtr CloseScreen;
+	CreateScreenResourcesProcPtr CreateScreenResources;
 };
 
 #undef ALLOW_OFFSCREEN_PIXMAPS
@@ -400,16 +398,13 @@ static Bool OVLSCREENPreInit(ScrnInfoPtr scrinfo, int flags) {
  * It forwards the information about the dirty areas to
  * the Overlay Screen server.
  */
-#if XF86_VERSION_CURRENT < XF86_VERSION_NUMERIC(4,2,0,0,0)
-static void update_screenarea(ScreenPtr pScreen, PixmapPtr pShadow, RegionPtr damage) {
-	int nbox = REGION_NUM_RECTS(damage);
-	BoxPtr pbox = REGION_RECTS(damage);
-#else
 static void update_screenarea(ScreenPtr pScreen, shadowBufPtr pBuf) {
-	int nbox = REGION_NUM_RECTS(&pBuf->damage);
-	BoxPtr pbox = REGION_RECTS(&pBuf->damage);
-#endif
-	while (nbox--) {
+	RegionPtr pRegion = DamageRegion(pBuf->pDamage);
+	int nboxes = REGION_NUM_RECTS (pRegion);
+	BoxPtr pbox = REGION_RECTS (pRegion);
+
+	while (nboxes--)
+	{
 		int rx,ry,rw,rh;
 		rx = pbox->x1;
 		ry = pbox->y1;
@@ -418,6 +413,20 @@ static void update_screenarea(ScreenPtr pScreen, shadowBufPtr pBuf) {
 		ovl_screen_refresh(rx,ry,rw,rh);
 		pbox++;
 	}
+}
+
+
+static Bool OVLSCREENCreateScreenResources(ScreenPtr pScreen) {
+	ScrnInfoPtr scrinfo = xf86Screens[pScreen->myNum];
+	struct ovlscreen *ovlscr = get_private_data(scrinfo);
+	Bool ret;
+
+	pScreen->CreateScreenResources = ovlscr->CreateScreenResources;
+	ret = pScreen->CreateScreenResources(pScreen);
+	pScreen->CreateScreenResources = OVLSCREENCreateScreenResources;
+	shadowAdd(pScreen, pScreen->GetScreenPixmap(pScreen), update_screenarea, 0, 0, 0);
+
+	return ret;
 }
 
 
@@ -480,8 +489,11 @@ static Bool OVLSCREENScreenInit(int scrnIndex, ScreenPtr pScreen,
 		}
 	}
 
-	if (!shadowInit(pScreen, update_screenarea, 0))
-		return (FALSE);
+	if (!shadowSetup (pScreen))
+		return FALSE;
+
+	ovlscr->CreateScreenResources  = pScreen->CreateScreenResources;
+	pScreen->CreateScreenResources = OVLSCREENCreateScreenResources;
 
 	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG, "screeninit: setblackwhite\n");
 	xf86SetBlackWhitePixels(pScreen);
