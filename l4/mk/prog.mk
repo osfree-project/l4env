@@ -52,23 +52,23 @@ TARGET	+= $(TARGET_$(OSYSTEM)) $(TARGET_PROFILE)
 
 # define some variables different for lib.mk and prog.mk
 ifeq ($(MODE),loader)
-LDFLAGS += -Wl,--dynamic-linker,libld-l4.s.so
+LDFLAGS += --dynamic-linker libld-l4.s.so
 endif
 ifeq ($(BID_GENERATE_MAPFILE),y)
-LDFLAGS += -Wl,-Map -Wl,$(strip $@).map
+LDFLAGS += -Map $(strip $@).map
 endif
 LDFLAGS += $(addprefix -L, $(PRIVATE_LIBDIR) $(PRIVATE_LIBDIR_$(OSYSTEM)) $(PRIVATE_LIBDIR_$@) $(PRIVATE_LIBDIR_$@_$(OSYSTEM)))
 LDFLAGS += $(addprefix -L, $(L4LIBDIR)) $(LIBCLIBDIR)
 LDFLAGS	+= $(addprefix -T, $(LDSCRIPT)) $(LIBS) $(L4LIBS) $(LIBCLIBS) $(LDFLAGS_$@)
 # Not all host linkers understand this option
-ifneq ($(MODE),host)
-LDFLAGS += -Wl,--warn-common
+ifneq ($(HOST_LINK),1)
+LDFLAGS += --warn-common
 endif
 
 ifeq ($(notdir $(LDSCRIPT)),main_stat.ld)
 # ld denies -gc-section when linking against shared libraries
 ifeq ($(findstring FOO,$(patsubst -l%.s,FOO,$(LIBS) $(L4LIBS) $(LIBCLIBS))),)
-LDFLAGS += -Wl,-gc-sections
+LDFLAGS += -gc-sections
 endif
 endif
 
@@ -105,10 +105,16 @@ endif
 
 DEPS	+= $(foreach file,$(TARGET), $(dir $(file)).$(notdir $(file)).d)
 
-# Link C++ programs with g++ (esp. in l4linux mode)
-LINK_PROGRAM := $(CC)
+LINK_PROGRAM-C-host-1   := $(CC)
+LINK_PROGRAM-CXX-host-1 := $(CXX)
+
+LINK_PROGRAM  := $(LINK_PROGRAM-C-host-$(HOST_LINK))
 ifneq ($(SRC_CC),)
-LINK_PROGRAM := $(CXX)
+LINK_PROGRAM  := $(LINK_PROGRAM-CXX-host-$(HOST_LINK))
+endif
+
+ifeq ($(LINK_PROGRAM),)
+LINK_PROGRAM  := $(LD)
 endif
 
 $(TARGET): $(OBJS) $(LIBDEPS) $(CRT0) $(CRTN)

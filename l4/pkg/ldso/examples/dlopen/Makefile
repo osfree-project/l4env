@@ -5,8 +5,8 @@ include $(L4DIR)/mk/Makeconf
 
 TARGET		= ldso_dlopen_example
 SYSTEMS		= x86-l4v2 arm-l4x0
-LDFLAGS		= -Wl,--export-dynamic,--dynamic-linker=libld-l4.s.so \
-		  -Wl,--rpath-link,$(OBJ_BASE)/lib/$(ARCH)_$(CPU)/$(L4API)
+LDFLAGS		= --export-dynamic --dynamic-linker=libld-l4.s.so \
+		  --rpath-link $(OBJ_BASE)/lib/$(ARCH)_$(CPU)/$(L4API)
 LDSCRIPT	= $(call findfile,main_dyn.ld,$(L4LIBDIR))
 LIBS		= -Bdynamic -ldl.s
 L4LIBS		= -Bstatic $(L4LIBS_$(LIBC_TYPE)) -lgeneric_ts -ll4env -ll4rm \

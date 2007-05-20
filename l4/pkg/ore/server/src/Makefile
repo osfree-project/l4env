@@ -45,9 +45,9 @@ PRIVATE_INCDIR += $(PKGDIR_ABS)/server/include/linux_headers 	\
 		 $(PKGDIR_OBJ)/server/include
 PRIVATE_LIBDIR = $(PKGDIR_OBJ)/server/lib/linuxemul/OBJ-$(SYSTEM)
 LIBS 		+= -llinuxemul -llinuxnetdrv -ldde_linux
-LDFLAGS		+= -Wl,--whole-archive \
+LDFLAGS		+= --whole-archive \
 		   $(PKGDIR_OBJ)/server/lib/net/OBJ-$(SYSTEM)/liblinuxnetdrv.a \
-		   -Wl,--no-whole-archive
+		   --no-whole-archive
 
 endif
 

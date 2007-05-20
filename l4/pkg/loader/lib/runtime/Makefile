@@ -62,7 +62,7 @@ LIBS		= --whole-archive \
 #                    symbols used by applications which are not referenced
 #                    by the other libraries included in libloader.
 
-LDFLAGS_arm     = -Wl,--no-warn-mismatch
+LDFLAGS_arm     = --no-warn-mismatch
 LDFLAGS         = $(LDFLAGS_$(ARCH))
 
 include $(L4DIR)/mk/lib.mk

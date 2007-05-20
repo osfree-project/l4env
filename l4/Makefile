@@ -146,8 +146,7 @@ Makeconf.bid.local-helper:
 	$(VERBOSE)echo BUILD_SYSTEMS="$(strip $(ARCH)_$(CPU)            \
 	               $(ARCH)_$(CPU)-$(BUILD_ABI))" >> $(DROPSCONF_CONFIG_MK)
 	$(VERBOSE)$(foreach v, GCCDIR GCCLIB GCCLIB_EH GCCVERSION	\
-			GCCMAJORVERSION GCCMINORVERSION GCCSUBVERSION	\
-			LDNOSTDLIB GCCLDNOSTDLIB,			\
+			GCCMAJORVERSION GCCMINORVERSION GCCSUBVERSION,	\
 			echo $(v)=$(call $(v)_f,$(ARCH))	\
 			>>$(DROPSCONF_CONFIG_MK);)
 	$(foreach v, BID_LIBGENDEP, echo $v=$($(v)) >>$(DROPSCONF_CONFIG_MK);)

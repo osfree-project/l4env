@@ -8,9 +8,9 @@ include $(L4DIR)/mk/Makeconf
 
 TARGET		= ldso_simple_example
 SYSTEMS		= x86-l4v2 arm-l4x0
-LDFLAGS		= -Wl,--no-undefined \
-		  -Wl,--dynamic-linker,libld-l4.s.so \
-		  -Wl,--export-dynamic
+LDFLAGS		= --no-undefined \
+		  --dynamic-linker libld-l4.s.so \
+		  --export-dynamic
 LDSCRIPT	= $(call findfile,main_dyn.ld,$(L4LIBDIR))
 LIBS		= -Bdynamic -lsimple1_dyn.s -lsimple2_dyn.s
 L4LIBS		= -Bstatic $(L4LIBS_$(LIBC_TYPE)) -lgeneric_ts -ll4env \

@@ -765,7 +765,7 @@ IMPLEMENTATION [{ia32,ux}-segments]:
  * \param  ts		trap state
  * \retval desc_addr	address of the descriptors
  * \retval size		size of descritptors (multiple of 8)
- * \retval entry_number	number of first entry
+ * \retval entry_number	number of first entry, valid values: 0-2
  * \retval task		task number
  * \return		0 on success */
 PRIVATE inline
@@ -921,7 +921,6 @@ Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
     snd->transfer_fpu(rcv);
 
   // sanitize eflags
-  // XXX: ia32 in here!
   if (!rcv->trap_is_privileged(0))
     ts->flags((ts->flags() & ~(EFLAGS_IOPL | EFLAGS_NT)) | EFLAGS_IF);
 
@@ -975,11 +974,15 @@ Thread::send_exception(Trap_state *ts)
 	{
 	  if (!(state() & Thread_alien))
 	    return 0;
+
 	  if (state() & Thread_dis_alien)
 	    {
 	      state_del(Thread_dis_alien);
 	      return 0;
 	    }
+
+          // set IP back on the int3 instruction
+	  ts->ip(ts->ip() - 1);
 	}
 
       state_change(~Thread_cancel, Thread_in_exception);

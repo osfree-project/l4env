@@ -23,8 +23,8 @@ include $(L4DIR)/mk/lib.mk
 
 crt0.o: crt0_x.o construction.o support.o
 	@$(LINK_MESSAGE)
-	$(VERBOSE)$(LD) $(LDFLAGS_FOR_LD) -r $(filter %.o,$^) -o $@
+	$(VERBOSE)$(LD) $(LDFLAGS) -r $(filter %.o,$^) -o $@
 
 crt0.s.o: crt0_x.s.o construction.s.o support.s.o .general.d
 	@$(LINK_MESSAGE)
-	$(VERBOSE)$(LD) $(LDFLAGS_FOR_LD) -r $(filter %.o,$^) -o $@
+	$(VERBOSE)$(LD) $(LDFLAGS) -r $(filter %.o,$^) -o $@

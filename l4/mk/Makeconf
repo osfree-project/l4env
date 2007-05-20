@@ -256,14 +256,6 @@ GCCLIB_f	= $(shell $(CC) -print-libgcc-file-name)
 GCCLIB_EH_f	= $(filter /%,$(shell $(CC) -print-file-name=libgcc_eh.a))
 GCCINCDIR_f	= $(call GCCDIR_f)/include
 
-# some ld-versions support the "--nostdlib" switch, others do not.
-LDNOSTDLIB_f	= $(if $(shell echo -e '\
-	                  asm\050".globl _start; _start:"\051;\
-	                  int main\050void\051{return 0;}\
-	                  '|gcc -xc -o/dev/null -nostdlib -Wl,--nostdlib - \
-	                  2>/dev/null && echo yes),--nostdlib)
-GCCLDNOSTDLIB_f	= $(addprefix -Wl$(BID_COMMA),$(LDNOSTDLIB_f))
-
 GCCINCDIR	= $(GCCDIR)/include
 
 ifneq ($(PKGDIR),)
@@ -294,6 +286,16 @@ endif
 
 ifeq ($(RELEASE_MODE),y)
 DEFINES		+= -DL4BID_RELEASE_MODE
+endif
+
+ifeq ($(MODE),linux)
+HOST_LINK      := 1
+endif
+ifeq ($(MODE),l4linux)
+HOST_LINK      := 1
+endif
+ifeq ($(MODE),host)
+HOST_LINK      := 1
 endif
 
 #

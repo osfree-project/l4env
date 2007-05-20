@@ -235,11 +235,10 @@ LDFLAGS	+= $(strip $(LDFLAGS_$(OSYSTEM)) $(LDFLAGS_$(ARCH)) $(LDFLAGS_$@) $(LDFL
 #           actual version) ld now use an other format, no uclibc upstream fix
 #           available yet, until available, we need:
 ifeq ($(LD_HAS_HASH_STYLE_OPTION),y)
-LDFLAGS += -Wl,--hash-style=sysv
+ifneq ($(HOST_LINK),1)
+LDFLAGS += --hash-style=sysv
 endif
-
-LD_GCC_PREFIX  := -Wl,
-LDFLAGS_FOR_LD  = $(subst $(LD_GCC_PREFIX),,$(LDFLAGS))
+endif
 
 OPTS	?= -g -O2 -fno-strict-aliasing
 OPTS	+= $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
