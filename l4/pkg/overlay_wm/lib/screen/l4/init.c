@@ -24,7 +24,6 @@
 #include "overlay-client.h"
 #include "ovl_screen.h"
 
-static CORBA_Environment env = dice_default_environment;
 static CORBA_Object_base ovl_tid;
 CORBA_Object ovl_screen_srv = &ovl_tid;
 int ovl_phys_width, ovl_phys_height, ovl_phys_mode;
@@ -33,6 +32,7 @@ int ovl_phys_width, ovl_phys_height, ovl_phys_mode;
 /*** INTERFACE: INIT OVERLAY SCREEN LIBRARY ***/
 int ovl_screen_init(char *ovl_name) {
 	static int initialized;
+	CORBA_Environment env = dice_default_environment;
 
 	if (initialized) return 0;
 	if (!ovl_name) ovl_name = "OvlWM";

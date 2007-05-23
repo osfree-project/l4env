@@ -59,7 +59,7 @@ pci_probe(con_accel_t *accel)
   l4io_pdev_t start = 0;
   l4io_pci_dev_t new;
 
-  if (!con_hw_use_l4io)
+  if (con_hw_not_use_l4io)
     {
       buses = 1;
       for (bus = 0; bus < buses; ++bus)

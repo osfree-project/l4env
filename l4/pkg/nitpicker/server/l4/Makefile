@@ -5,12 +5,10 @@ DOPEDIR          ?= $(L4DIR_ABS)/pkg/dope
 
 include $(L4DIR)/mk/Makeconf
 
-TARGET            = nitpicker nitpicker-ux
+TARGET            = nitpicker
 DEFAULT_RELOC     = 0x01b00000
 
-LIBS_ALL          = -ldm_phys -lio -lomega0 -ll4env -levents
-LIBS_nitpicker    = -linput $(LIBS_ALL)
-LIBS_nitpicker-ux = -linput-ux $(LIBS_ALL)
+LIBS              = -ldm_phys -linput -lio -lomega0 -ll4env -levents
 
 PRIVATE_INCDIR    = $(SRC_DIR)/../include \
                     $(DOPEDIR)/server/gfx

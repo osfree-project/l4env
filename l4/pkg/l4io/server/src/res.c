@@ -292,6 +292,51 @@ static int __release_region_client(io_res_t ** root, io_client_t * c)
   return 0;
 }
 
+/**
+ * Split I/O port region into fpages
+ *
+ * \param regions  pointer to fpage array
+ *
+ * We split up arbitrary I/O port regions into chunks that can be
+ * processed by Fiasco (-> size-aligned and the size is a power of 2) and
+ * store these into the regions array.
+ */
+static void process_port_region(unsigned start, unsigned length,
+                                l4_snd_fpage_t **regions, l4_size_t *num)
+{
+  unsigned log2_start, log2, log2_length;
+
+  if (!length) return;
+
+  /* find the largest suitable chunk, whose size is a power of 2, inside the
+   * original region */
+  for (log2 = l4util_log2(length); ; log2--)
+    {
+      log2_length = 1 << log2;
+      unsigned size_mask = log2_length - 1;
+      log2_start = (start + size_mask) & ~size_mask;
+      if (log2_start + log2_length <= start + length) break;
+    }
+
+  /* process everything before the same way */
+  process_port_region(start, log2_start - start, regions, num);
+
+  /* now store fpage / unmap region */
+  LOGd(DEBUG_RES, "I/O port chunk: 0x%04x-0x%04x [0x%04x]\n",
+       log2_start, log2_start + log2_length - 1, log2_length);
+
+  l4_fpage_t fpage = l4_iofpage(log2_start, log2, L4_FPAGE_MAP);
+
+  (*regions)->snd_base = 0;
+  (*regions)->fpage = fpage;
+  (*regions)++;
+  (*num)++;
+
+  /* process everything behind the same way */
+  unsigned last_start = log2_start + log2_length;
+  process_port_region(last_start, start + length - last_start, regions, num);
+}
+
 /** @} */
 /** \name Request/Release Interface Functions (IPC interface)
  *
@@ -309,25 +354,68 @@ static int __release_region_client(io_res_t ** root, io_client_t * c)
  *
  * \return 0 on success, negative error code otherwise
  *
- * As of the current L4/Fiasco features this is just "formal" as I/O fpages are
- * not implemented yet.
+ * The requested region is checked for availability and mapped into client's
+ * address space. Port regions are kept in a list.
  */
 long
 l4_io_request_region_component (CORBA_Object _dice_corba_obj,
-                                unsigned long addr,
-                                unsigned long len,
+                                l4_uint16_t addr,
+                                l4_uint16_t len,
+                                l4_size_t *num,
+                                l4_snd_fpage_t regions[],
                                 CORBA_Server_Environment *_dice_corba_env)
 {
+  int err;
+
+  /* set to 0 here to avoid copying an arbitrary number of elements,
+   * when returning with an error code */
+  *num = 0;
+
+  /* size is 0 */
+  if (!len) return -L4_EINVAL;
+
+  /* out of range */
+  if ((addr + len - 1) > MAX_IO_PORT) return -L4_EINVAL;
+
   io_client_t *c = find_client(*_dice_corba_obj);
 
-  if (!c)
-    /* client not registered */
-    return -L4_ENOTFOUND;
+  /* client not registered */
+  if (!c) return -L4_ENOTFOUND;
 
-  return (__request_region(addr, len, MAX_IO_PORTS, &io_port_res, c));
+  /* check availability */
+  if ((err = __request_region(addr, len, MAX_IO_PORT, &io_port_res, c)))
+    return err;
+
+  LOGd(DEBUG_RES, "requested I/O ports: 0x%04x-0x%04x [0x%04x]\n",
+       addr, addr + len - 1, len);
+
+  l4_snd_fpage_t *r = regions;
+  process_port_region(addr, len, &r, num);
+  ASSERT(*num <= l4_io_max_fpages); /* XXX to be sure */
+
+  /* ensure we posses the I/O ports */
+  unsigned i;
+  l4_threadid_t pager = rmgr_pager_id; /* FIXME should be sigma0 */
+  for (i = 0; i < *num; i++)
+    {
+      l4_umword_t dw0, dw1;
+      l4_msgdope_t result;
+      int err = l4_ipc_call(pager,
+                            L4_IPC_SHORT_MSG, regions[i].fpage.fpage, 0,
+                            L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE), &dw0, &dw1,
+                            L4_IPC_NEVER, &result);
+      /* IPC error || no fpage received */
+      if (err || !dw1)
+          Panic("sigma0 request for I/O ports [%04x,%04x) failed (err=%d dw1=%ld)\n",
+                 regions[i].fpage.iofp.iopage,
+                 regions[i].fpage.iofp.iopage + regions[i].fpage.iofp.iosize,
+                 err, dw1);
+  }
+
+  return 0;
 }
 
-/** Release I/O Port Region.
+/** Release I/O port region.
  * \ingroup grp_res
  *
  * \param _dice_corba_obj   DICE corba object
@@ -337,26 +425,34 @@ l4_io_request_region_component (CORBA_Object _dice_corba_obj,
  * \retval _dice_corba_env  corba environment
  *
  * \return 0 on success, negative error code otherwise
- *
- * As of the current L4/Fiasco features this is just "formal" as I/O fpages are
- * not implemented yet.
  */
 long
 l4_io_release_region_component (CORBA_Object _dice_corba_obj,
-                                unsigned long addr,
-                                unsigned long len,
+                                l4_uint16_t addr,
+                                l4_uint16_t len,
                                 CORBA_Server_Environment *_dice_corba_env)
 {
+  l4_size_t num = 0;
+  l4_snd_fpage_t regions[l4_io_max_fpages];
+  l4_snd_fpage_t *r = regions;
+
   io_client_t *c = find_client(*_dice_corba_obj);
 
-  if (!c)
-    /* client not registered */
-    return -L4_ENOTFOUND;
+  /* client not registered */
+  if (!c) return -L4_ENOTFOUND;
+
+  process_port_region(addr, len, &r, &num);
+  ASSERT(*num <= l4_io_max_fpages); /* XXX to be sure */
+
+  /* unmap region -- XXX from *all* clients */
+  unsigned i;
+  for (i = 0; i < num; i++)
+    l4_fpage_unmap(regions[i].fpage, L4_FP_FLUSH_PAGE | L4_FP_OTHER_SPACES);
 
   return (__release_region(addr, len, &io_port_res, c));
 }
 
-/** Request I/O Memory Region.
+/** Request I/O memory region.
  * \ingroup grp_res
  *
  * \param _dice_corba_obj    DICE corba object
@@ -372,7 +468,7 @@ l4_io_release_region_component (CORBA_Object _dice_corba_obj,
  * address space. Any policy regarding memory region has to be checked in this
  * function.
  *
- * Memory Regions are kept in a list.
+ * Memory regions are kept in a list.
  */
 long
 l4_io_request_mem_region_component (CORBA_Object _dice_corba_obj,
@@ -452,7 +548,7 @@ l4_io_request_mem_region_component (CORBA_Object _dice_corba_obj,
   return 0;
 }
 
-/** Search for I/O Memory Region.
+/** Search for I/O memory region.
  * \ingroup grp_res
  *
  * \param  _dice_corba_obj   DICE corba object
@@ -660,7 +756,7 @@ int callback_request_region(unsigned long addr, unsigned long len)
 {
   io_client_t *c = io_self;
 
-  return (__request_region(addr, len, MAX_IO_PORTS, &io_port_res, c));
+  return (__request_region(addr, len, MAX_IO_PORT, &io_port_res, c));
 }
 
 /** Request I/O memory region.
@@ -949,28 +1045,29 @@ int io_res_init(io_client_t *c)
   io_self = c;
 
   /* DMA controller #1 */
-  if ((err = __request_region(0, 0x20, MAX_IO_PORTS, &io_port_res, c)))
+  if ((err = __request_region(0, 0x20, MAX_IO_PORT, &io_port_res, c)))
     goto err;
   /* DMA controller #2 */
-  if ((err = __request_region(0xc0, 0x20, MAX_IO_PORTS, &io_port_res, c)))
+  if ((err = __request_region(0xc0, 0x20, MAX_IO_PORT, &io_port_res, c)))
     goto err;
   /* DMA page regs */
-  if ((err = __request_region(0x80, 0x10, MAX_IO_PORTS, &io_port_res, c)))
+  /* XXX I/O port 0x80 may be used for io_delay in clients */
+  if ((err = __request_region(0x80, 0x10, MAX_IO_PORT, &io_port_res, c)))
     goto err;
 
   /* PIC #1 */
-  if ((err = __request_region(0x20, 0x20, MAX_IO_PORTS, &io_port_res, c)))
+  if ((err = __request_region(0x20, 0x20, MAX_IO_PORT, &io_port_res, c)))
     goto err;
   /* PIC #2 */
-  if ((err = __request_region(0xa0, 0x20, MAX_IO_PORTS, &io_port_res, c)))
+  if ((err = __request_region(0xa0, 0x20, MAX_IO_PORT, &io_port_res, c)))
     goto err;
 
   /* Timer */
-  if ((err = __request_region(0x40, 0x20, MAX_IO_PORTS, &io_port_res, c)))
+  if ((err = __request_region(0x40, 0x20, MAX_IO_PORT, &io_port_res, c)))
     goto err;
 
   /* FPU */
-  if ((err = __request_region(0xf0, 0x10, MAX_IO_PORTS, &io_port_res, c)))
+  if ((err = __request_region(0xf0, 0x10, MAX_IO_PORT, &io_port_res, c)))
     goto err;
 
   /* allocate ISA DMA CASCADE */

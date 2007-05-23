@@ -79,9 +79,9 @@ con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
 }
 
 void
-con_hw_set_l4io(int l4io)
+con_hw_set_l4io(int s0)
 {
-  con_hw_use_l4io = l4io;
-  if (!l4io)
+  con_hw_not_use_l4io = s0;
+  if (s0)
     pcibios_init();
 }

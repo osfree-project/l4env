@@ -26,7 +26,6 @@
 #include "input_listener-server.h"
 #include "ovl_input.h"
 
-static CORBA_Environment env = dice_default_environment;
 static l4_threadid_t ovl_tid;
 CORBA_Object ovl_input_srv = &ovl_tid;
 
@@ -46,6 +45,7 @@ int ovl_input_init(char *ovl_name) {
 /*** INTERFACE: REGISTER AS LISTENER AND PROCESS INPUT EVENTS ***/
 int ovl_input_eventloop(void) {
 	l4_threadid_t listener_tid = l4_myself();
+	CORBA_Environment env = dice_default_environment;
 
 	printf("libovlinput(init): register listener at overlay server\n");
 	overlay_input_listener_call(ovl_input_srv,

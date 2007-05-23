@@ -103,7 +103,7 @@ int l4io_release_mem_region(l4_addr_t start, l4_size_t len);
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_request_region(l4_addr_t start, l4_size_t len);
+int l4io_request_region(l4_uint16_t start, l4_uint16_t len);
 
 /*****************************************************************************/
 /**
@@ -116,7 +116,7 @@ int l4io_request_region(l4_addr_t start, l4_size_t len);
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4io_release_region(l4_addr_t start, l4_size_t len);
+int l4io_release_region(l4_uint16_t start, l4_uint16_t len);
 
 /*****************************************************************************/
 /**

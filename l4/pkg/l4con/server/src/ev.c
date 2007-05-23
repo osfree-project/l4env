@@ -39,7 +39,6 @@ int nomouse;
 static void
 send_event_client(struct l4input *ev)
 {
-  static CORBA_Environment env = dice_default_environment;
   int loop, resend;
   stream_io_input_event_t stream_event = { .type  = ev->type, 
 					   .code  = ev->code,
@@ -47,6 +46,8 @@ send_event_client(struct l4input *ev)
 
   for (loop=0, resend=1; resend && loop<10; loop++)
     {
+      CORBA_Environment env = dice_default_environment;
+
       l4lock_lock(&want_vc_lock);
       if ((vc_mode & CON_IN) && !l4_is_nil_id(ev_partner_l4id))
 	{
@@ -203,5 +204,5 @@ handle_event(struct l4input *ev)
 void
 ev_init()
 {
-  l4input_init(use_omega0, 254, handle_event);
+  l4input_init(254, handle_event);
 }

@@ -24,7 +24,7 @@ public:
   Region(Type) : _begin(0), _end(0) {}
 
   /** Create a 1byte region at begin, basically for lookups */
-  Region(unsigned long begin)
+  Region(unsigned long long begin)
   : _begin(begin), _end(begin), _name(0), _t(No_mem), _s(0)
   {}
 
@@ -35,8 +35,8 @@ public:
    * @param t The type of the region.
    * @param sub The subtype of the region.
    */
-  Region(unsigned long begin, unsigned long end, char const *name = 0, 
-      Type t = No_mem, char sub = 0)
+  Region(unsigned long long begin, unsigned long long end,
+         char const *name = 0, Type t = No_mem, char sub = 0)
   : _begin(begin), _end(end), _name(name), _t(t), _s(sub)
   {}
 
@@ -48,18 +48,19 @@ public:
    * @param t The type of the region.
    * @param sub The subtype of the region.
    */
-  static Region n(unsigned long begin, unsigned long end, char const *name = 0, 
-      Type t = No_mem, char sub = 0)
+  static Region n(unsigned long long begin,
+                  unsigned long long end, char const *name = 0,
+                  Type t = No_mem, char sub = 0)
   { return Region(begin, end -1, name ,t, sub); }
 
   /** Get the start address. */
-  unsigned long begin() const { return _begin; }
+  unsigned long long begin() const { return _begin; }
   /** Get the address of the last byte. */
-  unsigned long end() const { return _end; }
+  unsigned long long end() const { return _end; }
   /** Set the start address. */
-  void begin(unsigned long b) { _begin = b; }
+  void begin(unsigned long long b) { _begin = b; }
   /** Set the address of the last byte. */
-  void end(unsigned long e) { _end = e; }
+  void end(unsigned long long e) { _end = e; }
   /** Get the name of the region. */
   char const *name() const { return _name; }
   /** Set the name of the region. */
@@ -76,15 +77,15 @@ public:
   void vprint() const;
 
   /** Compare two regions. */
-  bool operator < (Region const &o) const 
+  bool operator < (Region const &o) const
   { return end() < o.begin(); }
 
   /** Check for an overlap. */
-  bool overlaps(Region const &o) const 
+  bool overlaps(Region const &o) const
   { return !(*this < o) && !(o < *this); }
 
   /** Test if o is a sub-region of ourselfes. */
-  bool contains(Region const &o) const 
+  bool contains(Region const &o) const
   { return begin() <= o.begin() && end() >= o.end(); }
 
   /** Calculate the intersection. */
@@ -102,7 +103,7 @@ public:
   bool invalid() const { return begin()==0 && end()==0; }
 
 private:
-  unsigned long _begin, _end;
+  unsigned long long _begin, _end;
   char const *_name;
   char _t, _s;
 };
@@ -112,8 +113,8 @@ private:
 class Region_list
 {
 public:
-  /** 
-   * Initialize the region list, using the array of given size 
+  /**
+   * Initialize the region list, using the array of given size
    * as backing store.
    */
   void init(Region *store, unsigned size)
@@ -122,12 +123,12 @@ public:
   /** Search for a region that overlaps o. */
   Region *find(Region const &o);
 
-  /** 
-   * Search for a memory region not overlapping any known region, 
-   * within search. 
+  /**
+   * Search for a memory region not overlapping any known region,
+   * within search.
    */
-  unsigned long find_free(Region const &search, 
-      unsigned long size, unsigned align);
+  unsigned long long find_free(Region const &search,
+                               unsigned long long size, unsigned align);
 
   /**
    * Add a new memory region to the list. The new region must not overlap
@@ -145,7 +146,7 @@ public:
 
   /** Remove the region given by the iterator r. */
   void remove(Region *r);
-  
+
   /** Sort the region list (does bublle sort). */
   void sort();
 
@@ -162,8 +163,8 @@ protected:
 
 private:
   void swap(Region *a, Region *b);
-  unsigned long next_free(unsigned long start);
-  bool test_fit(unsigned long start, unsigned long _size);
+  unsigned long next_free(unsigned long long start);
+  bool test_fit(unsigned long long start, unsigned long long _size);
 
 };
 

@@ -36,7 +36,6 @@ static void  *buf_adr;                  /* adress of screen buffer (doublebuffer
 CORBA_Object_base nit;                  /* nitpicker server        */
 static l4dm_dataspace_t ds;             /* screen buffer dataspace */
 
-static CORBA_Environment env = dice_default_environment;
 int    nit_buf_id;                      /* nitpicker buffer id     */
 
 extern CORBA_Object_base nitevent_thread;  /* from nitinput.c */
@@ -52,6 +51,7 @@ int init_scrdrv(struct dope_services *d);
 /*** SET UP SCREEN ***/
 static long set_screen(long width, long height, long depth) {
 	int ret;
+	CORBA_Environment env = dice_default_environment;
 
 	buf_adr = l4dm_mem_ds_allocate(100*1024,
 	                               L4DM_CONTIGUOUS | L4RM_LOG2_ALIGNED | L4RM_MAP,
@@ -64,6 +64,7 @@ static long set_screen(long width, long height, long depth) {
 	ret = nitpicker_donate_memory_call(&nit, &ds, 100, 1, &env);
 	printf("nitpicker_donate_memory_call returned %d\n", ret);
 
+	CORBA_exception_free(&env);
 	nitpicker_get_screen_info_call(&nit, &scr_width, &scr_height, &scr_depth, &env);
 	printf("scr_width=%d, scr_height=%d, scr_mode=%d\n", scr_width, scr_height, scr_depth);
 	scr_linelength = scr_width;
@@ -76,6 +77,7 @@ static long set_screen(long width, long height, long depth) {
 	ret = l4dm_share(&ds, nit, L4DM_RW);
 	printf("l4dm_share returned %d\n", ret);
 
+	CORBA_exception_free(&env);
 	nit_buf_id = nitpicker_import_buffer_call(&nit, &ds, scr_width, scr_height, &env);
 	printf("nitpicker_import_buffer_call returned nit_buf_id=%d\n", nit_buf_id);
 
@@ -97,6 +99,8 @@ static void *get_buf_adr    (void) {return buf_adr;}
 
 /*** PROPAGATE BUFFER UPDATE TO NITPICKER ***/
 static void update_area(long x1,long y1,long x2,long y2) {
+
+	CORBA_Environment env = dice_default_environment;
 
 	if ((x1 > x2) || (y1 > y2) || (x1 > scr_width)  || (x2 < 0)
 	                           || (y1 > scr_height) || (y2 < 0)) return;

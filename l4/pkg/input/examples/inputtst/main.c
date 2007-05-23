@@ -16,6 +16,7 @@
 
 /* L4 */
 #include <l4/thread/thread.h>
+#include <l4/generic_io/libio.h>
 
 /* C */
 #include <stdio.h>
@@ -360,34 +361,29 @@ static int usage(void)
 	printf("MODE is one of:\n");
 	printf("  -cb      callback mode\n");
 	printf("  -buf     buffer mode\n");
-	printf("\n");
-	printf("  -omega0  use Omega0 IRQ server\n");
 	return 1;
 }
 
 int main(int argc, char **argv)
 {
-	int use_omega0 = 0;
-
 	if (argc < 2)
 		return usage();
 
-	if (argc > 2) {
-		if (strcmp(argv[2], "-omega0") == 0)
-			use_omega0 = 1;
-		else
-			return usage();
-	}
+#ifndef ARCH_arm
+	l4io_info_t *io_info_addr = 0;
+	l4io_init(&io_info_addr, L4IO_DRV_INVALID);
+#endif
+
 	if (strcmp(argv[1], "-cb") == 0) {
 		printf("Testing L4INPUT callback mode...\n");
 		printf("init => %d\n",
-		       l4input_init(use_omega0, L4THREAD_DEFAULT_PRIO, event_cb));
+		       l4input_init(L4THREAD_DEFAULT_PRIO, event_cb));
 		l4thread_sleep(-1);
 	}
 	else if (strcmp(argv[1], "-buf") == 0) {
 		printf("Testing L4INPUT buffer mode...\n");
 		printf("init => %d\n",
-		       l4input_init(use_omega0, L4THREAD_DEFAULT_PRIO, NULL));
+		       l4input_init(L4THREAD_DEFAULT_PRIO, NULL));
 		event_buf();
 	}
 	else

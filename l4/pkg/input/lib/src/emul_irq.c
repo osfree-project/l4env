@@ -50,6 +50,8 @@ static struct irq_desc {
 	irqreturn_t (*handler)(int, void *, struct pt_regs *);
 } handlers[NR_IRQS];
 
+/* We use omega0 mode per default -- support for native IRQs is only an interim
+ * hack for ARM. */
 static int use_omega0 = 0;
 
 static int irq_prio   = L4THREAD_DEFAULT_PRIO;
@@ -126,49 +128,6 @@ static inline int __omega0_wait(unsigned int irq, int handle,
 	return 0;
 }
 
-/* PIC HANDLING. */
-
-/** Enable IRQ.
- *
- * \param  irq           IRQ number
- */
-static inline void enable_irq(unsigned int irq)
-{
-#ifndef ARCH_arm
-	int port;
-	l4util_cli();
-	port = (((irq & 0x08) << 4) + 0x21);
-	l4util_out8(l4util_in8(port) & ~(1 << (irq & 7)), port);
-	l4util_sti();
-#endif
-}
-
-/** Disable IRQ.
- *
- * \param  irq           IRQ number
- */
-static inline void disable_irq(unsigned int irq)
-{
-#ifndef ARCH_arm
-	unsigned short port;
-	l4util_cli();
-	port = (((irq & 0x08) << 4) + 0x21);
-	l4util_out8(l4util_in8(port) | (1 << (irq & 7)), port);
-	l4util_sti();
-#endif
-}
-
-/** Disable and acknowledge IRQ.
- *
- * \param  irq           IRQ number
- */
-static inline void ack_irq(unsigned int irq)
-{
-#ifndef ARCH_arm
-	l4util_irq_acknowledge(irq);
-#endif
-}
-
 /** IRQ HANDLER THREAD.
  *
  * \param irq_desc  IRQ handling descriptor (IRQ number and handler routine)
@@ -192,13 +151,6 @@ static void __irq_handler(struct irq_desc *irq_desc)
 		else
 			error = L4_IPC_RETIMEOUT;
 	} else {
-#ifndef ARCH_arm
-		if (rmgr_get_irq(irq))
-			/* can't get permission -> block */
-			Panic("__irq_handler(): "
-			      "can't get permission for irq 0x%02x, giving up...\n", irq);
-#endif
-
 		/* attach to IRQ */
 		if (l4_is_invalid_id(irq_id = l4util_attach_interrupt(irq)))
 			Panic("__irq_handler(): "
@@ -226,21 +178,14 @@ static void __irq_handler(struct irq_desc *irq_desc)
 	if (ret || (error != L4_IPC_RETIMEOUT))
 		Panic("IRQ thread startup failed!\n");
 
-	if (!use_omega0)
-		enable_irq(irq);
 	om_flags = OM_UNMASK;
 	for (;;) {
 		if (use_omega0)
 			error = __omega0_wait(irq, irq_handle, om_flags);
-		else {
-			/* wait for incoming interrupt */
+		else
 			error = l4_ipc_receive(irq_id,
-			 L4_IPC_SHORT_MSG, &dw0, &dw1,
-			 IRQ_TIMEOUT, &result);
-			disable_irq(irq);
-			if (error != L4_IPC_RETIMEOUT)
-				ack_irq(irq);
-		}
+			                       L4_IPC_SHORT_MSG, &dw0, &dw1,
+			                       IRQ_TIMEOUT, &result);
 
 		switch (error) {
 		case 0:
@@ -251,17 +196,15 @@ static void __irq_handler(struct irq_desc *irq_desc)
 				irq_desc->handler(irq, cookie, NULL);
 			if (use_omega0)
 				om_flags = 0;
-			else
-				enable_irq(irq);
 			break;
+
 		case L4_IPC_RETIMEOUT:
 			if (irq_desc->active)
 				irq_desc->handler(irq, cookie, NULL);
 			if (use_omega0)
 				om_flags = OM_AGAIN;
-			else
-				enable_irq(irq);
 			break;
+
 		default:
 			Panic("error receiving irq");
 			break;
@@ -342,11 +285,12 @@ void free_irq(unsigned int irq, void *cookie)
 }
 
 /* INTERRUPT EMULATION INITIALIZATION */
-void l4input_internal_irq_init(int omega0, int prio)
+void l4input_internal_irq_init(int prio)
 {
-	use_omega0 = omega0;
 #ifdef ARCH_arm
 	use_omega0 = 0;
+#else
+	use_omega0 = 1;
 #endif
 	irq_prio   = prio;
 

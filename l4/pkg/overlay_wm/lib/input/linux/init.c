@@ -25,7 +25,6 @@
 #include "ovl_input.h"
 
 static struct sockaddr_in ovl_input_sockaddr;
-static CORBA_Environment env = dice_default_environment;
 CORBA_Object ovl_input_srv = &ovl_input_sockaddr;
 
 
@@ -44,6 +43,7 @@ int ovl_input_init(char *ovl_name) {
 /*** INTERFACE: REGISTER AS LISTENER AND PROCESS INPUT EVENTS ***/
 int ovl_input_eventloop(void) {
 	CORBA_Environment listener_env = dice_default_environment;
+	CORBA_Environment env = dice_default_environment;
 	struct sockaddr listener_sockaddr;
 	CORBA_Object listener_srv = (CORBA_Object)&listener_sockaddr;
 

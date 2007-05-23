@@ -89,7 +89,7 @@ static void __init_mac(int channel, l4ore_config *conf, ore_mac mac,
     if (memcmp(mac_address_head, zero_head, 4) == 0)
     {
         memcpy(data, ore_connection_table[channel].dev->dev_addr, 6);
-        memcpy(&data[7], &channel, sizeof(int));
+        memcpy(&data[6], &channel, sizeof(int));
 
         mac[0] = 0x04;
         mac[1] = 0xEA;
@@ -108,8 +108,8 @@ static void __init_mac(int channel, l4ore_config *conf, ore_mac mac,
     }
 
 out:
-	LOG_MAC(1, mac);
     memcpy(ore_connection_table[channel].mac, mac, 6);
+	LOG_MAC(1, ore_connection_table[channel].mac);
 }
 
 /******************************************************************************

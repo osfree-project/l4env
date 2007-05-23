@@ -32,7 +32,6 @@
 char LOG_tag[9] = "nitovl";
 l4_ssize_t l4libc_heapsize = 500*1024;
 
-static CORBA_Environment env = dice_default_environment;
 
 static CORBA_Object_base nit;              /* nitpicker server             */
 static CORBA_Object_base nit_ev;           /* local event listener thread  */
@@ -104,6 +103,7 @@ overlay_open_screen_component(CORBA_Object _dice_corba_obj,
                               int depth,
                               CORBA_Server_Environment *_dice_corba_env) {
 	int ret;
+	CORBA_Environment env = dice_default_environment;
 	printf("nitovlwm: open_screen called w=%d, h=%d, depth=%d\n", width, height, depth);
 
 	/* open screen only once */
@@ -135,6 +135,7 @@ overlay_open_screen_component(CORBA_Object _dice_corba_obj,
 void
 overlay_close_screen_component(CORBA_Object _dice_corba_obj,
                                CORBA_Server_Environment *_dice_corba_env) {
+	CORBA_Environment env = dice_default_environment;
 
 	/* destroy all remaining overlay windows */
 	while (first_win)
@@ -182,6 +183,8 @@ overlay_refresh_screen_component(CORBA_Object _dice_corba_obj,
                                  int w,
                                  int h,
                                  CORBA_Server_Environment *_dice_corba_env) {
+	CORBA_Environment env = dice_default_environment;
+
 	nitpicker_refresh_call(&nit, scr_buf_id, x, y, w, h, &env);
 }
 
@@ -264,6 +267,7 @@ void
 overlay_open_window_component(CORBA_Object _dice_corba_obj,
                               int win_id,
                               CORBA_Server_Environment *_dice_corba_env) {
+	CORBA_Environment env = dice_default_environment;
 	struct window *win = find_window(win_id);
 
 	if (!win) return;
@@ -286,6 +290,7 @@ void
 overlay_close_window_component(CORBA_Object _dice_corba_obj,
                                int win_id,
                                CORBA_Server_Environment *_dice_corba_env) {
+	CORBA_Environment env = dice_default_environment;
 	struct window *win = find_window(win_id);
 
 	if (!win) return;
@@ -308,6 +313,7 @@ void
 overlay_place_window_component(CORBA_Object _dice_corba_obj,
                                int win_id, int x, int y, int w, int h,
                                CORBA_Server_Environment *_dice_corba_env) {
+	CORBA_Environment env = dice_default_environment;
 	int ox1, oy1, ox2, oy2;
 	int nx1, ny1, nx2, ny2;
 	int min_y1, max_y1;
@@ -347,24 +353,32 @@ overlay_place_window_component(CORBA_Object _dice_corba_obj,
 	max_x2 = MAX(nx2, ox2);
 
 	/* top */
-	if (ny1 != oy1)
+	if (ny1 != oy1) {
+		CORBA_exception_free(&env);
 		nitpicker_refresh_call(&nit, scr_buf_id, min_x1, min_y1,
 		                       max_x2 - min_x1 + 1, max_y1 - min_y1, &env);
+	}
 
 	/* bottom */
-	if (ny2 != oy2)
+	if (ny2 != oy2) {
+		CORBA_exception_free(&env);
 		nitpicker_refresh_call(&nit, scr_buf_id, min_x1, min_y2 + 1,
 		                       max_x2 - min_x1 + 1, max_y2 - min_y2, &env);
+	}
 
 	/* left */
-	if (nx1 != ox1)
+	if (nx1 != ox1) {
+		CORBA_exception_free(&env);
 		nitpicker_refresh_call(&nit, scr_buf_id, min_x1, max_y1,
 		                       max_x1 - min_x1, min_y2 - max_y1 + 1, &env);
+	}
 
 	/* right */
-	if (nx2 != ox2)
+	if (nx2 != ox2) {
+		CORBA_exception_free(&env);
 		nitpicker_refresh_call(&nit, scr_buf_id, min_x2 + 1, max_y1,
 		                       max_x2 - min_x2, min_y2 - max_y1 + 1, &env);
+	}
 }
 
 
@@ -377,6 +391,7 @@ overlay_stack_window_component(CORBA_Object _dice_corba_obj,
                                int do_redraw,
                                CORBA_Server_Environment *_dice_corba_env) {
 
+	CORBA_Environment env   = dice_default_environment;
 	struct window *win      = find_window(win_id);
 	struct window *neighbor = find_window(neighbor_id);
 
@@ -394,6 +409,7 @@ void overlay_title_window_component(CORBA_Object _dice_corba_obj,
                                     int win_id, const char* title,
                                     CORBA_Server_Environment *_dice_corba_env) {
 
+	CORBA_Environment env = dice_default_environment;
 	struct window *win = find_window(win_id);
 	if (!win) return;
 	nitpicker_set_view_title_call(&nit, win->nit_id, title, &env);
@@ -404,6 +420,7 @@ void overlay_title_window_component(CORBA_Object _dice_corba_obj,
 void overlay_set_background_component(CORBA_Object _dice_corba_obj, int win_id,
                                       CORBA_Server_Environment *_dice_corba_env) {
 
+	CORBA_Environment env = dice_default_environment;
 	struct window *win = find_window(win_id);
 	if (!win) return;
 
@@ -427,7 +444,7 @@ nitevent_event_component(CORBA_Object _dice_corba_obj,
                          int ax,
                          int ay,
                          CORBA_Server_Environment *_dice_corba_env) {
-	static CORBA_Environment env = dice_default_environment;
+	CORBA_Environment env = dice_default_environment;
 	static int old_ax, old_ay;
 
 	/* deliver motion event if absolute pointer position changed */
@@ -465,6 +482,7 @@ int main(int argc, char **argv) {
 	void *buf_adr;
 	l4thread_t event_thread;
 	l4dm_dataspace_t ds;
+	CORBA_Environment env = dice_default_environment;
 
 	/* set identifier of overlay server if specified as argument */
 	for (i = 1; i < argc; i++)
@@ -485,9 +503,11 @@ int main(int argc, char **argv) {
 	ret = l4dm_share(&ds, nit, L4DM_RW);
 	printf("l4dm_share returned %d\n", ret);
 
+	CORBA_exception_free(&env);
 	ret = nitpicker_donate_memory_call(&nit, &ds, 100, 1, &env);
 	printf("nitpicker_donate_memory_call returned %d\n", ret);
 
+	CORBA_exception_free(&env);
 	nitpicker_get_screen_info_call(&nit, &scr_width, &scr_height, &scr_mode, &env);
 
 	/* start event thread that listens to input events from nitpicker */

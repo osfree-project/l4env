@@ -25,7 +25,6 @@
 #include "ovl_window.h"
 
 static struct sockaddr_in ovl_sockaddr;
-static CORBA_Environment env = dice_default_environment;
 CORBA_Object ovl_window_srv = &ovl_sockaddr;
 
 
@@ -38,6 +37,7 @@ void *CORBA_alloc(unsigned long size) {
 /*** WINDOW EVENT LISTENER SERVER THREAD ***/
 static void *listener_thread(void *arg) {
 	CORBA_Environment listener_env = dice_default_environment;
+	CORBA_Environment env = dice_default_environment;
 	struct sockaddr listener_sockaddr;
 	CORBA_Object listener_srv = (CORBA_Object)&listener_sockaddr;
 	

@@ -55,7 +55,7 @@ all-local:      version.tex tex-stamp $(manual_PDF)
 	@echo Generating $*.pdf ...
 	@${PDFLATEX} $< ${NUMB_PDFLATEX}
 	@${BIBTEX} $* ${NUMB_BIBTEX}
-	@(while [ "`grep '${ERROR_PDF}' manual.log`" == "${ERROR_PDF}" ]; do \
+	@(while grep -q '${ERROR_PDF}' manual.log; do \
 	  ${PDFLATEX} $< ${NUMB_PDFLATEX}; \
 	  done)
 	@${RM_F} `ls *.aux` ${NUMB_RM_F}

@@ -2,15 +2,13 @@ SYSTEMS         := x86-l4v2
 PKGDIR          ?= ../..
 L4DIR           ?= $(PKGDIR)/../..
 
-TARGET           = l4dope l4dope-ux
+TARGET           = l4dope
 DEFAULT_RELOC    = 0x01b00000
 
 PRIVATE_LIBDIR   = $(PKGDIR_OBJ)/server/common/OBJ-$(SYSTEM) \
                    $(PKGDIR_OBJ)/server/gfx/OBJ-$(SYSTEM)
 
-LIBS_ALL         = -ldm_phys -lio -lomega0 -ll4env -levents -lcommon -lgfx $(GCCLIB)
-LIBS_l4dope      = -linput -lio $(LIBS_ALL)
-LIBS_l4dope-ux   = -linput-ux $(LIBS_ALL)
+LIBS             = -ldm_phys -linput -lio -lomega0 -ll4env -levents -lcommon -lgfx $(GCCLIB)
 
 PRIVATE_INCDIR   = $(PKGDIR_ABS)/server/include
 

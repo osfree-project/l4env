@@ -14,7 +14,9 @@
  * GNU General Public License 2. Please see the COPYING file for details. */
 
 /* LibC stuff */
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -238,13 +240,13 @@ add_ram(l4util_mb_info_t *mbi, Region mem)
   static unsigned long mem_limit = get_memory_limit(mbi);
   if (mem.invalid())
     {
-      printf("  WARNING: trying to add invalid region of conventional ram.\n");
+      printf("  WARNING: trying to add invalid region of conventional RAM.\n");
       return;
     }
 
   if (mem.begin() >= mem_limit)
     {
-      printf("  Drop ram region ");
+      printf("  Dropping RAM region ");
       mem.print();
       printf(" due to %ld MB limit\n", mem_limit >> 20);
       return;
@@ -252,7 +254,7 @@ add_ram(l4util_mb_info_t *mbi, Region mem)
 
   if (mem.end() >= mem_limit-1)
     {
-      printf("  Limit ram region ");
+      printf("  Limiting RAM region ");
       mem.print();
       mem.end(mem_limit-1);
       printf(" to ");
@@ -506,6 +508,34 @@ find_free_ram(unsigned long start, unsigned long end, unsigned long size,
   return 0;
 }
 
+static
+void
+print_e820_map(l4util_mb_info_t *mbi)
+{
+  printf("  Bootloader MMAP%s\n", mbi->flags & L4UTIL_MB_MEM_MAP
+                                   ? ":" : "not available.");
+
+  if (mbi->flags & L4UTIL_MB_MEM_MAP)
+    {
+      l4util_mb_addr_range_t *mmap;
+      for (mmap = (l4util_mb_addr_range_t *) mbi->mmap_addr;
+	  (unsigned long long) mmap < mbi->mmap_addr + mbi->mmap_length;
+	  mmap = (l4util_mb_addr_range_t *) ((unsigned long long) mmap + mmap->struct_size + sizeof (mmap->struct_size)))
+	{
+	  char *types[] = { "unknown", "RAM", "reserved", "ACPI",
+                            "ACPI NVS", "unusable" };
+	  char *type_str = (mmap->type < (sizeof(types) / sizeof(types[0])))
+                           ? types[mmap->type] : types[0];
+
+	  printf("    [%16llx, %16llx) %s (%d)\n",
+                 (unsigned long long) mmap->addr,
+                 (unsigned long long) mmap->addr + (unsigned long long) mmap->size,
+                 type_str, (unsigned) mmap->type);
+	}
+    }
+
+
+}
 
 /**
  * Relocate and compact the multi-boot infomation (MBI).
@@ -537,22 +567,7 @@ relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
 
   dst_mbi = (l4util_mb_info_t*)lin_alloc(sizeof(l4util_mb_info_t), &p);
 
-  printf("  Bootloader MMAP %s\n", src_mbi->flags & L4UTIL_MB_MEM_MAP ? "available" : "not available");
-
-  l4util_mb_addr_range_t *mmap;
-  if (src_mbi->flags & L4UTIL_MB_MEM_MAP)
-    for (mmap = (l4util_mb_addr_range_t *) src_mbi->mmap_addr;
-	(unsigned long) mmap < src_mbi->mmap_addr + src_mbi->mmap_length;
-	mmap = (l4util_mb_addr_range_t *) ((unsigned long) mmap + mmap->struct_size + sizeof (mmap->struct_size)))
-      {
-	char *types[] = { "unknown", "RAM", "reserved", "ACPI", "ACPI NVS", "unusable" };
-	char *type_str = (mmap->type < (sizeof(types) / sizeof(types[0])))
-	  ? types[mmap->type] : types[0];
-
-	printf("    [%08x,%08x) %s (%d)\n",
-	    (unsigned) mmap->addr, (unsigned) mmap->addr + (unsigned) mmap->size,
-	    type_str, (unsigned) mmap->type);
-      }
+  print_e820_map(src_mbi);
 
   /* copy (extended) multiboot info structure */
   memcpy(dst_mbi, src_mbi, sizeof(l4util_mb_info_t));
@@ -636,7 +651,7 @@ extern l4util_mb_mod_t _modules_mbi_end[];
 static void
 construct_mbi(l4util_mb_info_t *mbi)
 {
-  int i;
+  unsigned i;
   l4util_mb_mod_t *mods = _modules_mbi_start;
   l4_addr_t destbuf;
 
@@ -667,6 +682,8 @@ construct_mbi(l4util_mb_info_t *mbi)
       printf("  mod%02u: %08x-%08x: %s\n",
 	     i, mods[i].mod_start, mods[i].mod_end,
 	     L4_CHAR_PTR(_module_info_start[i].name));
+      if (image == 0)
+	panic("Failure decompressing image\n");
 
       destbuf += l4_round_page(_module_info_start[i].size_uncompressed);
     }
@@ -708,19 +725,19 @@ init_memory_map(l4util_mb_info_t *mbi)
   assert(mbi->flags & L4UTIL_MB_MEMORY);
 
   if (!(mbi->flags & L4UTIL_MB_MEM_MAP))
-    add_ram(mbi, Region::n(0, (mbi->mem_upper + 1024) << 10, ".ram", 
-	  Region::Ram));
+    add_ram(mbi, Region::n(0, (mbi->mem_upper + 1024) << 10, ".ram",
+            Region::Ram));
   else
     {
-      for (l4util_mb_addr_range_t *mmap = 
-	  (l4util_mb_addr_range_t *)mbi->mmap_addr;
-	(unsigned long) mmap < mbi->mmap_addr + mbi->mmap_length;
-	mmap = (l4util_mb_addr_range_t *) ((unsigned long) mmap 
-	  + mmap->struct_size + sizeof (mmap->struct_size)))
+      for (l4util_mb_addr_range_t *mmap
+            = (l4util_mb_addr_range_t *)mbi->mmap_addr;
+           (unsigned long long) mmap < mbi->mmap_addr + mbi->mmap_length;
+           mmap = (l4util_mb_addr_range_t *) ((unsigned long) mmap
+            + mmap->struct_size + sizeof (mmap->struct_size)))
       {
 
-	unsigned long start = (unsigned long)mmap->addr;
-	unsigned long end = (unsigned long)mmap->addr + mmap->size;
+	unsigned long long start = (unsigned long long)mmap->addr;
+	unsigned long long end = (unsigned long long)mmap->addr + mmap->size;
 
 	switch (mmap->type)
 	  {
@@ -730,8 +747,7 @@ init_memory_map(l4util_mb_info_t *mbi)
 	  case 2:
 	  case 3:
 	  case 4:
-	    regions.add(Region::n(start, end, ".BIOS", Region::Arch, 
-		  mmap->type));
+	    regions.add(Region::n(start, end, ".BIOS", Region::Arch, mmap->type));
 	    break;
 	  case 5:
 	    regions.add(Region::n(start, end, ".BIOS", Region::No_mem));

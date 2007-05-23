@@ -126,7 +126,7 @@ char dope_manager_get_ascii_component(CORBA_Object _dice_corba_obj,
  **********************************/
 
 static void server_thread(void *arg) {
-	static CORBA_Environment dopesrv_env;
+	CORBA_Environment dopesrv_env = dice_default_server_environment;
 	INFO(printf("Server(server_thead): entering server mainloop\n");)
 	dopesrv_env.srv_port = htons(9997);
 	dope_manager_server_loop(&dopesrv_env);

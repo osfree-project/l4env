@@ -163,38 +163,36 @@ __handle_iopf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
  *
  * \return Reply type
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static inline int
 __call_dm(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
 	  CORBA_Object src_id)
 {
-  /* this server is single-threaded and we don't need to initialize the
-   * environment again and again */
-  static CORBA_Environment env = dice_default_environment;
+  DICE_DECLARE_ENV(env);
   l4_snd_fpage_t snd_fpage;
   l4_offs_t offset;
   int ret;
 
   LOGdL(DEBUG_PAGEFAULT, "dataspace %d at "l4util_idfmt,
         region->data.ds.ds.id, l4util_idstr(region->data.ds.ds.manager));
-      
+
   /* call dataspace manager */
   offset = addr - region->start + region->data.ds.offs;
   env.rcv_fpage = l4_fpage(addr & L4_PAGEMASK, L4_LOG2_PAGESIZE, 0, 0);
   ret = if_l4dm_generic_fault_call(&region->data.ds.ds.manager,
-                                   region->data.ds.ds.id, offset, 
+                                   region->data.ds.ds.id, offset,
                                    &snd_fpage, &env);
   if (EXPECT_FALSE(DICE_HAS_EXCEPTION(&env) || (ret < 0)))
     {
       LOG_printf("L4RM: dataspace at 0x"l4_addr_fmt"-0x"l4_addr_fmt
-	     ", id %d at "l4util_idfmt"\n", 
-             region->start, region->end, region->data.ds.ds.id, 
+	     ", id %d at "l4util_idfmt"\n",
+             region->start, region->end, region->data.ds.ds.id,
              l4util_idstr(region->data.ds.ds.manager));
       if (ret < 0)
         LOG_printf("L4RM: dataspace manager call failed (\"%s\")\n",
                    l4env_errstr(ret));
       else
-        LOG_printf("L4RM: map call error %d (ipc: %x)\n", 
+        LOG_printf("L4RM: map call error %d (ipc: %x)\n",
                DICE_EXCEPTION_MINOR(&env), DICE_IPC_ERROR(&env));
 
       return __unknown_pf(addr, ip, src_id);

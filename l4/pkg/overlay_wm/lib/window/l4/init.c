@@ -26,7 +26,6 @@
 #include "window_listener-server.h"
 #include "ovl_window.h"
 
-static CORBA_Environment env = dice_default_environment;
 static l4_threadid_t ovl_tid;
 CORBA_Object ovl_window_srv = &ovl_tid;
 
@@ -35,6 +34,7 @@ CORBA_Object ovl_window_srv = &ovl_tid;
 int ovl_window_init(char *ovl_name) {
 	l4thread_t listener;
 	l4_threadid_t listener_tid;
+	CORBA_Environment env = dice_default_environment;
 
 	printf("libovlwindow(init): l4thread_init\n");
 	l4thread_init();

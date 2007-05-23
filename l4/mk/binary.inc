@@ -660,6 +660,11 @@ endif # HAVE_LDSO empty
 	$(VERBOSE)$(CXX) -E -H -dD $(CPPFLAGS) $(CXXFLAGS) $(PICFLAGS) $(call absfilename,$<) -o $@
 	$(VERBOSE)$(INDENT) -sob -o $@ $@
 
+%.i:	%.cpp
+	@$(COMP_MESSAGE)
+	$(VERBOSE)$(CXX) -E -H -dD $(CPPFLAGS) $(CXXFLAGS) $(call absfilename,$<) -o $@
+	$(VERBOSE)$(INDENT) -sob -o $@ $@
+
 %.i:	%.S
 	@$(COMP_MESSAGE)
 	$(VERBOSE)$(CC) -E -H -dD $(CPPFLAGS) $(ASFLAGS) $(call absfilename,$<) -o $@

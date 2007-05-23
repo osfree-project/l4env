@@ -53,7 +53,7 @@ extern unsigned short hw_xres, hw_yres;
 extern unsigned char  hw_bits;
 extern unsigned short hw_bpl;
 
-extern int            con_hw_use_l4io;
+extern int            con_hw_not_use_l4io;
 
 #define ACCEL_FAST_COPY		0x00000001
 #define ACCEL_FAST_FILL		0x00000002

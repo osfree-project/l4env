@@ -103,8 +103,7 @@ int input_init(void) {
 
 	TRY(!l4_calibrate_tsc(), "L4_calibrare_tsc failed");
 
-	TRY(l4input_init(l4io_page ? l4io_page->omega0 : 0,
-	                 0xc0, NULL),
+	TRY(l4input_init(0xc0, NULL),
 	                 "Initialization of l4input failed");
 
 	return 0;

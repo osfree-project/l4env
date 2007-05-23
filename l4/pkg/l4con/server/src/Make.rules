@@ -12,12 +12,12 @@ PRIVATE_INCDIR	= $(SRC_DIR)
 LIBS_x86	= -lomega0
 LIBS_ALL	= -L$(OBJ_DIR)/con_yuv2rgb/OBJ-$(ARCH)_$(CPU) -lcon_yuv2rgb \
 		  $(LIBS_$(ARCH)) -levents -lparsecmdline -ldm_phys
-LIBS_con_x86	= -lio -linput  $(LIBS_ALL) -L../con_hw/OBJ-$(SYSTEM) \
+LIBS_con_x86	= -lio -linput  $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
 		  -lcon_hw -lx86emu_int10 -lpci -lio -lx86emu
-LIBS_con_arm	= -linput-dummy $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
-		  -lcon_hw -larm_lcd.o
+LIBS_con_arm	= -linput $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
+		  -lcon_hw -larm_lcd.o -larm_drv_common.o
 LIBS_con	= $(LIBS_con_$(ARCH))
-LIBS_con-ux	= -lio -linput-ux $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
+LIBS_con-ux	= -lio -linput $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
 		  -lcon_hw-ux -lx86emu_int10-ux -lio -lclxfux.o
 SRC_C		= main.c pslim.c ev.c vc.c events.c gmode.c gmode-arch.c
 SRC_C_con	= $(SRC_C_con_$(ARCH))

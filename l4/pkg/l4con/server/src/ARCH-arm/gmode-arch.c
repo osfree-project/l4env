@@ -38,12 +38,24 @@ init_gmode(void)
   VESA_BITS       = lcd->get_bpp();
   VESA_BPL        = lcd->get_bytes_per_line();
   VESA_RES        = 0;
-  VESA_RED_OFFS   = 0;
-  VESA_RED_SIZE   = 5;
-  VESA_GREEN_OFFS = 5;
-  VESA_GREEN_SIZE = 6;
-  VESA_BLUE_OFFS  = 11;
-  VESA_BLUE_SIZE  = 5;
+  if (VESA_BITS == 32)
+    {
+      VESA_RED_OFFS   = 16;
+      VESA_RED_SIZE   = 8;
+      VESA_GREEN_OFFS = 8;
+      VESA_GREEN_SIZE = 8;
+      VESA_BLUE_OFFS  = 0;
+      VESA_BLUE_SIZE  = 8;
+    }
+  else
+    {
+      VESA_RED_OFFS   = 0;
+      VESA_RED_SIZE   = 5;
+      VESA_GREEN_OFFS = 5;
+      VESA_GREEN_SIZE = 5;
+      VESA_BLUE_OFFS  = 10;
+      VESA_BLUE_SIZE  = 5;
+    }
 
   gr_vmem         = lcd->get_fb();
   gr_vmem_maxmap  = gr_vmem + gr_vmem_size;

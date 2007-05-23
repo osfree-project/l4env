@@ -25,7 +25,6 @@
 static int threadlib_key;
 static l4_threadid_t petze_tid;
 static CORBA_Object petze_server;
-static CORBA_Environment env = dice_default_environment;
 
 static int retry = 5;
 
@@ -86,6 +85,8 @@ static int must_account(void) {
  */
 void *petz_malloc(char *poolname, unsigned int size) {
 	void *addr;
+	CORBA_Environment env = dice_default_environment;
+
 	enter_accounting();
 
 	addr = __real_malloc(size);
@@ -95,7 +96,7 @@ void *petz_malloc(char *poolname, unsigned int size) {
 
 	/* inform petze server about the called function */
 	if (addr && petze_server && must_account()) {
-		petze_malloc_call(petze_server,poolname,(int)addr,size,&env);
+		petze_malloc_call(petze_server, poolname, (int)addr, size, &env);
 	}
 
 	leave_accounting();
@@ -105,15 +106,17 @@ void *petz_malloc(char *poolname, unsigned int size) {
 
 void *petz_calloc(char *poolname, unsigned int nmemb, unsigned int size) {
 	void *addr;
+	CORBA_Environment env = dice_default_environment;
+
 	enter_accounting();
 
-	addr = __real_calloc(nmemb,size);
+	addr = __real_calloc(nmemb, size);
 
 	contact_petze_server();
 
 	/* inform petze server about the called function */
 	if (addr && petze_server && must_account()) {
-		petze_malloc_call(petze_server,poolname,(int)addr,(nmemb*size),&env);
+		petze_malloc_call(petze_server, poolname, (int)addr, (nmemb*size), &env);
 	}
 
 	leave_accounting();
@@ -124,20 +127,23 @@ void *petz_calloc(char *poolname, unsigned int nmemb, unsigned int size) {
 /*** INFORM PETZE SERVER TO FREE AND MALLOC NEW SIZE ***/
 void *petz_realloc(char *poolname, void *addr, unsigned int size) {
 	void *newaddr;
+	CORBA_Environment env = dice_default_environment;
+
 	enter_accounting();
 
 	contact_petze_server();
 
 	/* inform petze server about the called function */
 	if (addr && petze_server && must_account()) {
-		petze_free_call(petze_server,poolname,(int)addr,&env);
+		petze_free_call(petze_server, poolname, (int)addr, &env);
 	}
 
-	newaddr = __real_realloc(addr,size);
+	newaddr = __real_realloc(addr, size);
 
 	/* inform petze server about the called function */
 	if (newaddr && petze_server && must_account()) {
-		petze_malloc_call(petze_server,poolname,(int)newaddr,size,&env);
+		CORBA_exception_free(&env);
+		petze_malloc_call(petze_server, poolname, (int)newaddr, size, &env);
 	}
 
 	leave_accounting();
@@ -146,6 +152,8 @@ void *petz_realloc(char *poolname, void *addr, unsigned int size) {
 
 
 void petz_free(char *poolname, void *addr) {
+	CORBA_Environment env = dice_default_environment;
+
 	enter_accounting();
 
 	__real_free(addr);
@@ -154,7 +162,7 @@ void petz_free(char *poolname, void *addr) {
 
 	/* inform petze server about the called function */
 	if (addr && petze_server && must_account()) {
-		petze_free_call(petze_server,poolname,(int)addr,&env);
+		petze_free_call(petze_server, poolname, (int)addr, &env);
 	}
 
 	leave_accounting();

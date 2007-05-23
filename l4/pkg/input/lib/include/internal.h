@@ -20,14 +20,22 @@
 #include <l4/input/libinput.h>
 
 /** SUBSYSTEMS/EMULATION **/
-void l4input_internal_irq_init(int omega0, int prio);
+void l4input_internal_irq_init(int prio);
 void l4input_internal_jiffies_init(void);
-
-/** L4EVDEV input event handler **/
-int  l4input_internal_l4evdev_init(void (*cb)(struct l4input *));
-void l4input_internal_l4evdev_exit(void);
 void l4input_internal_wait_init(void);
 
+struct l4input_ops {
+	int(*ispending)(void);
+	int(*flush)(void *buf, int count);
+	int(*pcspkr)(int tone);
+};
+
+/** L4EVDEV input event handler (hardware drivers) **/
+struct l4input_ops * l4input_internal_l4evdev_init(void (*cb)(struct l4input *));
+void l4input_internal_l4evdev_exit(void);
+
+/** UX backend */
+struct l4input_ops * l4input_internal_ux_init(void (*cb)(struct l4input *));
 
 /** INPUT SYSTEM **/
 int  l4input_internal_atkbd_init(void);

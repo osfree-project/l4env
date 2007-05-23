@@ -6,7 +6,7 @@ MODE		= l4env
 DEFAULT_RELOC   = 0x00b80000
 SYSTEMS         = x86-l4v2 amd64-l4v2
 
-SRC_C           = main.c res.c pci.c jiffies.c events.c
+SRC_C           = main.c res.c pci.c jiffies.c events.c ux.c
 PRIVATE_INCDIR  = $(PKGDIR)/server/include \
                   $(PKGDIR)/server/lib-pci/include \
                   $(PKGDIR)/server/lib-omega0/include

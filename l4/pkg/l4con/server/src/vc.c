@@ -90,7 +90,7 @@ static const l4con_pslim_color_t color_tab32[16] =
 /** Convert l4con_pslim_color_t into ``drawable'' color. */
 static inline void
 convert_color(struct l4con_vc *vc, l4con_pslim_color_t *color)
-{ 
+{
   /* if the highest bit is 1, don't convert the color */
   if ((*color & 0x80000000) == 0)
     {
@@ -101,9 +101,9 @@ convert_color(struct l4con_vc *vc, l4con_pslim_color_t *color)
 	  *color &= 0x00FFFFFF;
 	  break;
 	case GRAPH_BPP_15:
-	  *color = ((*color & 0x00F80000) >> 9)
-		 | ((*color & 0x0000F800) >> 6)
-		 | ((*color & 0x000000F8) >> 3);
+	  *color = (((*color >> (16 + 8 -   VESA_RED_SIZE)) & ((1 <<   VESA_RED_SIZE)-1)) << VESA_RED_OFFS)
+	         | (((*color >> ( 8 + 8 - VESA_GREEN_SIZE)) & ((1 << VESA_GREEN_SIZE)-1)) << VESA_GREEN_OFFS)
+	         | (((*color >> ( 0 + 8 -  VESA_BLUE_SIZE)) & ((1 <<  VESA_BLUE_SIZE)-1)) << VESA_BLUE_OFFS);
 	  break;
 	case GRAPH_BPP_16:
 	default:
@@ -201,7 +201,7 @@ vc_init()
 {
   int i;
 
-  if (use_l4io)
+  if (!use_s0)
     vc_l4io_init();
   vc_font_init();
   vc_init_gr();
@@ -339,7 +339,7 @@ vc_open_out(struct l4con_vc *vc)
   vc->logo_y          = 100000;
   vc->bytes_per_pixel = (vc->bpp+7)/8;
   vc->bytes_per_line  = VESA_BPL;
-  vc->vfb_size        = ((vc->yres * vc->bytes_per_line) + 3) & ~3;
+  vc->vfb_size        = ((vc->client_yres * vc->bytes_per_line) + 3) & ~3;
   vc->flags           = accel_caps;
   vc->do_copy         = bg_do_copy;
   vc->do_fill         = bg_do_fill;

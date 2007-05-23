@@ -23,7 +23,6 @@
 #include "messenger.h"
 
 static struct appman_services *appman;
-static CORBA_Environment env = dice_default_environment;
 
 int init_messenger(struct dope_services *d);
 
@@ -35,6 +34,7 @@ int init_messenger(struct dope_services *d);
 
 static void send_input_event(s32 app_id,EVENT *e,char *bindarg) {
 	dope_event_u de;
+	CORBA_Environment env = dice_default_environment;
 	CORBA_Object listener = appman->get_listener(app_id);
 
 	INFO(printf("Messenger(send_input_event)\n");)
@@ -79,6 +79,11 @@ static void send_input_event(s32 app_id,EVENT *e,char *bindarg) {
 		return;
 	}
 
+#ifndef L4API_linux
+	env.timeout = L4_IPC_TIMEOUT(195,11,195,11,0,0);
+#endif
+
+
 	INFO(printf("Messenger(send_event): event type = %d\n",(int)de.type));
 	INFO(printf("Messenger(send_event): try to deliver event\n");)
 	dopeapp_listener_event_call(listener, &de, bindarg, &env);
@@ -89,11 +94,17 @@ static void send_input_event(s32 app_id,EVENT *e,char *bindarg) {
 static void send_action_event(s32 app_id,char *action,char *bindarg) {
 
 	dope_event_u de;
+	CORBA_Environment env = dice_default_environment;
 	CORBA_Object listener = appman->get_listener(app_id);
 
 	if (!listener || !action  || !bindarg) return;
 	de.type = 1;
 	de._u.command.cmd = action;
+
+#ifndef L4API_linux
+	env.timeout = L4_IPC_TIMEOUT(195,11,195,11,0,0);
+#endif
+
 	dopeapp_listener_event_call(listener,&de,bindarg,&env);
 }
 
@@ -116,10 +127,6 @@ static struct messenger_services services = {
 int init_messenger(struct dope_services *d) {
 
 	appman = d->get_module("ApplicationManager 1.0");
-
-#ifndef L4API_linux
-	env.timeout = L4_IPC_TIMEOUT(195,11,195,11,0,0);
-#endif
 
 	d->register_module("Messenger 1.0",&services);
 	return 1;

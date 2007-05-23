@@ -22,7 +22,7 @@
 
 #include "iomem.h"
 
-int con_hw_use_l4io;
+int con_hw_not_use_l4io;
 
 static l4_threadid_t my_task_pager_id = L4_INVALID_ID;
 
@@ -41,7 +41,7 @@ map_io_mem(l4_addr_t paddr, l4_size_t size, int cacheable,
   l4_uint32_t rg;
   l4_offs_t offset;
 
-  if (!con_hw_use_l4io)
+  if (con_hw_not_use_l4io)
     {
       offset = paddr - l4_trunc_superpage(paddr);
       size   = l4_round_superpage(size + offset);
@@ -98,7 +98,7 @@ map_io_mem(l4_addr_t paddr, l4_size_t size, int cacheable,
 void
 unmap_io_mem(l4_addr_t addr, l4_size_t size, const char *id, l4_addr_t vaddr)
 {
-  if (!con_hw_use_l4io)
+  if (con_hw_not_use_l4io)
     {
       l4_addr_t vend   = vaddr + size;
       l4_addr_t vaddr1 = vaddr;

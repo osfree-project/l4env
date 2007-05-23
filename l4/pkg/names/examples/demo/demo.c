@@ -18,7 +18,7 @@
 
 #include <l4/rmgr/librmgr.h>
 
-#include <l4/util/getopt.h>		/* from libl4util */
+#include <l4/util/getopt.h> /* from libl4util */
 #include <l4/util/l4_macros.h>
 #include <l4/util/util.h>
 
@@ -28,8 +28,15 @@ int
 main(int argc, char* argv[])
 {
   l4_threadid_t id;
-  char		buffer[1024];
+  char          buffer[1024];
   int           i;
+
+  printf("Waiting for dm_phys to register... ");
+  while (names_waitfor_name("DM_PHYS", &id, 1000) == 0)
+    /* Do nothing */
+    ;
+  printf("OK\n");
+
 
   printf("Registering ABCGEFG ");
   if (names_register("ABCGEFG"))
@@ -84,13 +91,12 @@ main(int argc, char* argv[])
   for (i = 0; i < NAMES_MAX_ENTRIES; i++)
     {
       if (names_query_nr(i, buffer, sizeof(buffer), &id))
-	{
-	  if (i)
-	    printf(", ");
-	  printf("%s ("l4util_idfmt")", buffer, l4util_idstr(id));
-	}
+        {
+          if (i)
+            printf(", ");
+          printf("%s ("l4util_idfmt")", buffer, l4util_idstr(id));
+        }
     }
-
   printf("\n");
 
   printf("Unregistering ABCGEFG ");
@@ -111,11 +117,8 @@ main(int argc, char* argv[])
   else
     printf("FAILED!!! (but expected)\n");
 
-
   printf("Requesting dump from names:\n");
   names_dump();
-
-  
 
   printf("Done.\n");
   if (names_waitfor_name("DEMO2", &id, 8000))

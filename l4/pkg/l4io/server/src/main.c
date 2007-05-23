@@ -364,6 +364,9 @@ int main(int argc, char *argv[])
           return error;
         }
     }
+  else
+      /* init Fiasco's virtual H/W */
+      if ((error = io_ux_init())) return error;
 
   if ((error = OMEGA0_init()))
     {

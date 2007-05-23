@@ -9,8 +9,8 @@
  * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
  *
  * This is roughly a Linux /dev/event implementation adopted from evdev.
- */
-/* Original copyright notice from drivers/input/evdev.c follows...
+ *
+ * Original copyright notice from drivers/input/evdev.c follows...
  */
 /*
  * Event char devices, giving access to raw input device events.
@@ -442,35 +442,14 @@ static struct input_handler l4evdev_handler = {
 	.id_table =   l4evdev_ids
 };
 
-int l4input_internal_l4evdev_init(void (*cb)(struct l4input *))
-{
-	if (cb) {
-		/* do callbacks */
-		callback = cb;
-		l4evdev_handler.event = l4evdev_event_cb;
-	} else {
-		/* buffer events in ring buffer */
-		l4evdev_handler.event = l4evdev_event;
-	}
-
-	input_register_handler(&l4evdev_handler);
-
-	return 0;
-}
-
-void l4input_internal_l4evdev_exit(void)
-{
-	input_unregister_handler(&l4evdev_handler);
-}
-
 /*****************************************************************************/
 
-int l4input_ispending()
+static int l4evdev_ispending(void)
 {
 	return !(HEAD==TAIL);
 }
 
-int l4input_flush(void *buf, int count)
+static int l4evdev_flush(void *buf, int count)
 {
 	int num = 0;
 	struct l4input *buffer = buf;
@@ -500,7 +479,7 @@ int l4input_flush(void *buf, int count)
 	return num;
 }
 
-int l4input_pcspkr(int tone)
+static int l4evdev_pcspkr(int tone)
 {
 	if (!pcspkr)
 		return -L4_ENODEV;
@@ -508,4 +487,29 @@ int l4input_pcspkr(int tone)
 	input_event(pcspkr->handle.dev, EV_SND, SND_TONE, tone);
 
 	return 0;
+}
+
+static struct l4input_ops ops = {
+	l4evdev_ispending, l4evdev_flush, l4evdev_pcspkr
+};
+
+struct l4input_ops * l4input_internal_l4evdev_init(void (*cb)(struct l4input *))
+{
+	if (cb) {
+		/* do callbacks */
+		callback = cb;
+		l4evdev_handler.event = l4evdev_event_cb;
+	} else {
+		/* buffer events in ring buffer */
+		l4evdev_handler.event = l4evdev_event;
+	}
+
+	input_register_handler(&l4evdev_handler);
+
+	return &ops;
+}
+
+void l4input_internal_l4evdev_exit(void)
+{
+	input_unregister_handler(&l4evdev_handler);
 }

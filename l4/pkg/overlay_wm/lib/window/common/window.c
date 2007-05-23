@@ -22,7 +22,6 @@
 #include "ovl_window.h"
 
 extern CORBA_Object ovl_window_srv;   /* defined in init.c */
-static CORBA_Environment env = dice_default_environment;
 
 static void (*winplace_callback) (int win_id, int x, int y, int w, int h);
 static void (*winclose_callback) (int win_id);
@@ -64,36 +63,42 @@ void window_listener_close_component(CORBA_Object _dice_corba_obj,
 
 /*** INTERFACE: CREATE NEW WINDOW FOR OVERLAY SCREEN ***/
 int ovl_window_create(void) {
+	CORBA_Environment env = dice_default_environment;
 	return overlay_create_window_call(ovl_window_srv, &env);
 }
 
 
 /*** INTERFACE: DESTROY OVERLAY WINDOW ***/
 void ovl_window_destroy(int win_id) {
+	CORBA_Environment env = dice_default_environment;
 	overlay_destroy_window_call(ovl_window_srv, win_id, &env);
 }
 
 
 /*** INTERFACE: OPEN OVERLAY WINDOW ***/
 void ovl_window_open(int win_id) {
+	CORBA_Environment env = dice_default_environment;
 	overlay_open_window_call(ovl_window_srv, win_id, &env);
 }
 
 
 /*** INTERFACE: CLOSE OVERLAY WINDOW ***/
 void ovl_window_close(int win_id) {
+	CORBA_Environment env = dice_default_environment;
 	overlay_close_window_call(ovl_window_srv, win_id, &env);
 }
 
 
 /*** INTERFACE: SET THE SIZE AND POSITION OF AN OVERLAY WINDOW ***/
 void ovl_window_place(int win_id, int x, int y, int w, int h) {
+	CORBA_Environment env = dice_default_environment;
 	overlay_place_window_call(ovl_window_srv, win_id, x, y, w, h, &env);
 }
 
 
 /*** INTERFACE: TOP THE SPECIFIED OVERLAY WINDOW ***/
 void ovl_window_stack(int win_id, int neighbor_id, int behind, int do_redraw) {
+	CORBA_Environment env = dice_default_environment;
 	overlay_stack_window_call(ovl_window_srv, win_id, neighbor_id, behind,
 	                          do_redraw, &env);
 }
@@ -101,12 +106,14 @@ void ovl_window_stack(int win_id, int neighbor_id, int behind, int do_redraw) {
 
 /*** INTERFACE: SET TITLE OF OVERLAY WINDOW ***/
 void ovl_window_title(int win_id, const char *title) {
+	CORBA_Environment env = dice_default_environment;
 	overlay_title_window_call(ovl_window_srv, win_id, title, &env);
 }
 
 
 /*** INTERFACE: DEFINE BACKGROUND OVERLAY WINDOW ***/
 void ovl_set_background(int bg_win_id) {
+	CORBA_Environment env = dice_default_environment;
 	overlay_set_background_call(ovl_window_srv, bg_win_id, &env);
 }
 

@@ -67,7 +67,7 @@ int want_vc = 0;			/* the vc we want to switch to */
 					 * don't switch to USED VCs, only to
 					 * that in OUT/INOUT mode */
 int update_id;				/* 1=redraw vc id */
-int use_l4io = 0;			/* Use L4 IO server, dfl: no */
+int use_s0 = 0;				/* Use sigma0 direct, dfl: no */
 l4lock_t want_vc_lock = L4LOCK_UNLOCKED;/* mutex for want_vc */
 l4_threadid_t ev_partner_l4id = L4_NIL_ID;/* current event handler */
 l4_threadid_t vc_partner_l4id = L4_NIL_ID;/* current active client */
@@ -164,11 +164,12 @@ static int
 redraw_vc(void)
 {
    int ret = 0;
-   static CORBA_Environment env = dice_default_environment;
-   static stream_io_input_event_t ev_struct;
 
    if (!l4_is_nil_id(ev_partner_l4id))
      {
+       static stream_io_input_event_t ev_struct;
+       CORBA_Environment env = dice_default_environment;
+
        /* ev_struct.time is not used */
        ev_struct.type = EV_CON;
        ev_struct.code = EV_CON_REDRAW;
@@ -202,8 +203,8 @@ redraw_vc(void)
 static int
 background_vc(void)
 {
-   static CORBA_Environment env = dice_default_environment;
    static stream_io_input_event_t ev_struct;
+   CORBA_Environment env = dice_default_environment;
 
    l4lock_lock(&want_vc_lock);
    if (!l4_is_nil_id(ev_partner_l4id))
@@ -216,8 +217,9 @@ background_vc(void)
        env.timeout = EVENT_TIMEOUT;
        stream_io_push_call(&ev_partner_l4id, &ev_struct, &env);
        if (DICE_HAS_EXCEPTION(&env))
-         LOG("exception %d sending background event to "l4util_idfmt,
-             DICE_EXCEPTION_MAJOR(&env), l4util_idstr(ev_partner_l4id));
+         LOG("exception %d.%d sending background event to "l4util_idfmt,
+             DICE_EXCEPTION_MAJOR(&env), DICE_EXCEPTION_MINOR(&env),
+             l4util_idstr(ev_partner_l4id));
 
        /* ignore errors */
        vc[fg_vc]->fb_mapped = 0;
@@ -917,8 +919,8 @@ main(int argc, const char *argv[])
 		    'e', "events", "use event server to free resources",
 		    PARSE_CMD_SWITCH, 1, &use_events,
 #ifdef ARCH_x86
-		    'i', "l4io", "use L4 I/O server for PCI management",
-		    PARSE_CMD_SWITCH, 1, &use_l4io,
+		    's', "sigma0", "sigma0 direct mode",
+		    PARSE_CMD_SWITCH, 1, &use_s0,
 #endif
 		    'l', "nolog", "don't connect to logserver",
 		    PARSE_CMD_SWITCH, 1, &nolog,

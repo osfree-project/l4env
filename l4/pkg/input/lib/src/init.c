@@ -15,6 +15,8 @@
  */
 
 /* L4 */
+#include <l4/sigma0/kip.h>
+#include <l4/env/errno.h>
 #ifndef ARCH_arm
 #include <l4/util/rdtsc.h>  /* XXX x86 specific */
 #endif
@@ -27,6 +29,34 @@
 
 #include "internal.h"
 
+/** Backend operations */
+struct l4input_ops *ops;
+
+
+int l4input_ispending()
+{
+	if (ops->ispending)
+		return ops->ispending();
+	else
+		return 0;
+}
+
+int l4input_flush(void *buf, int count)
+{
+	if (ops->flush)
+		return ops->flush(buf, count);
+	else
+		return 0;
+}
+
+int l4input_pcspkr(int tone)
+{
+	if (ops->pcspkr)
+		return ops->pcspkr(tone);
+	else
+		return -L4_EINVAL;
+}
+
 /* Okay ...
 
    We have to initialize requested devices only here because there is only one
@@ -38,47 +68,59 @@
 */
 
 /** L4INPUT LIBRARY INITIALIZATION **/
-int l4input_init(int omega0, int prio, void (*handler)(struct l4input *))
+int l4input_init(int prio, void (*handler)(struct l4input *))
 {
-	int error;
+	if (!l4sigma0_kip_kernel_is_ux()) {
+		printf("L4INPUT native mode activated\n");
 
-	/* for usleep */
+		/* for usleep */
 #ifndef ARCH_arm
-	l4_calibrate_tsc();
+		l4_calibrate_tsc();
 #endif
 
-	/* lib state */
-	l4input_internal_jiffies_init();
-	l4input_internal_irq_init(omega0, prio);
-	l4input_internal_wait_init();
+		/* lib state */
+		l4input_internal_jiffies_init();
+		l4input_internal_irq_init(prio);
+		l4input_internal_wait_init();
 
-	/* XXX */
-	printf("L4INPUT:                !!! W A R N I N G !!!\n"
-	       "L4INPUT:  Please, do not use Fiasco's \"-esc\" with L4INPUT.\n"
-	       "L4INPUT:                !!! W A R N I N G !!!\n");
+		printf("L4INPUT:                !!! W A R N I N G !!!\n"
+		       "L4INPUT:  Please, do not use Fiasco's \"-esc\" with L4INPUT.\n"
+		       "L4INPUT:                !!! W A R N I N G !!!\n");
 
-	if (omega0)
-		printf("L4INPUT: Using omega0 for IRQs.\n");
-	if (handler)
-		printf("L4INPUT: Registered %p for callbacks.\n", handler);
+		if (handler)
+			printf("L4INPUT: Registered %p for callbacks.\n", handler);
 
-	if ((error=l4input_internal_input_init()) ||
+		int error;
+		if ((error=l4input_internal_input_init()) ||
 #ifndef ARCH_arm
-	    (error=l4input_internal_i8042_init()) ||
-	    (error=l4input_internal_psmouse_init()) ||
+		    (error=l4input_internal_i8042_init()) ||
+		    (error=l4input_internal_psmouse_init()) ||
 #else
-	    (error=l4input_internal_amba_kmi_init()) ||
+		    (error=l4input_internal_amba_kmi_init()) ||
 #endif
-	    (error=l4input_internal_atkbd_init()) ||
+		    (error=l4input_internal_atkbd_init()) ||
 #ifndef ARCH_arm
-	    (error=l4input_internal_pcspkr_init()) ||
+		    (error=l4input_internal_pcspkr_init()) ||
 #endif
-	    (error=l4input_internal_proxy_init(prio)))
-		return error;
+		    (error=l4input_internal_proxy_init(prio)))
+			return error;
 
-	if ((error=l4input_internal_l4evdev_init(handler))) {
-		printf("L4INPUT: evdev initialization failed (%d)", error);
-		return error;
+		if (!(ops = l4input_internal_l4evdev_init(handler))) {
+			printf("L4INPUT: evdev initialization failed\n");
+			return -L4_EUNKNOWN;
+		}
+
+	} else {
+		printf("L4INPUT Fiasco-UX mode activated\n");
+
+		l4input_internal_irq_init(prio);
+
+#ifdef ARCH_x86
+		if (!(ops = l4input_internal_ux_init(handler))) {
+			printf("L4INPUT: Fiasco-UX H/W initialization failed\n");
+			return -L4_EUNKNOWN;
+		}
+#endif
 	}
 
 	return 0;

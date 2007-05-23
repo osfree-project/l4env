@@ -54,4 +54,8 @@ extern __inline__ int client_equal(io_client_t *c0, io_client_t *c1)
   return l4_tasknum_equal(c0->c_l4id, c1->c_l4id);
 }
 
+
+/** Init Fiasco-UX H/W resources */
+extern int io_ux_init(void);
+
 #endif

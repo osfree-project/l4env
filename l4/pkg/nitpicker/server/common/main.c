@@ -39,8 +39,6 @@ int            mx, my;                       /* current mouse position   */
 CORBA_Object   myself;
 static int     num_keys;                     /* nb of currently pressed keys */
 
-static CORBA_Environment env = dice_default_environment;
-
 
 /*** INTERFACE: PROVIDE INFORMATION ABOUT THE PHYSICAL SCREEN ***/
 int nitpicker_get_screen_info_component(CORBA_Object _dice_corba_obj,
@@ -103,9 +101,10 @@ static void refresh_screen(void) {
 static void event_send(CORBA_Object dst, unsigned long token,
                        int type, int code,
                        int rx, int ry, int mx, int my) {
+	CORBA_Environment env = dice_default_environment;
 	if (!dst) return;
 
-	CORBA_exception_free(&env);
+	env.timeout = L4_IPC_TIMEOUT(97,10,97,10,0,0);
 	nitevent_event_send(dst, token, type, code, rx, ry, mx, my, &env);
 
 //	if (env.major != CORBA_NO_EXCEPTION)
@@ -257,9 +256,6 @@ static void setup_view(int view_id, int add_flags, int remove_flags, int bg) {
 int main(int argc, char **argv) {
 	static int bg_view_id, menu_view_id, mouse_buf_id;
 	buffer *b;
-
-//	env.timeout = L4_IPC_TIMEOUT(0, 1, 128, 11, 0, 0);
-	env.timeout = L4_IPC_TIMEOUT(195,11,195,11,0,0);
 
 	printf("sizeof(client) = %d\nsizeof(view)   = %d\nsizeof(buffer) = %d\n",
 	       sizeof(client), sizeof(view), sizeof(buffer));

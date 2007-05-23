@@ -17,13 +17,7 @@
 #include <stdio.h>
 
 /*** L4 INCLUDES ***/
-#include <l4/env/errno.h>
 #include <l4/env/mb_info.h>
-#include <l4/sys/types.h>
-#include <l4/sys/kdebug.h>
-#include <l4/sys/syscalls.h>
-#include <l4/sigma0/sigma0.h>
-#include <l4/l4rm/l4rm.h>
 #include <l4/util/macros.h>
 #include <l4/generic_io/libio.h>
 
@@ -42,39 +36,9 @@ extern int config_use_l4io;    /* defined in startup.c   */
 static inline int
 vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
                  l4_addr_t *vaddr, l4_offs_t *offset) {
-	l4_uint32_t rg;
-	l4_threadid_t my_task_pager_id;
-
-	if (!config_use_l4io) {
-		*offset = paddr & ~L4_SUPERPAGEMASK;
-		paddr  &= L4_SUPERPAGEMASK;
-		size    = l4_round_superpage(size + *offset);
-
-		TRY(l4rm_area_reserve(size, L4RM_LOG2_ALIGNED, vaddr, &rg),
-		    "Reserving region size=%ldMB for video memory failed.", (unsigned long)size>>20);
-
-		/* get region manager's pager */
-		my_task_pager_id = l4_thread_ex_regs_pager(l4rm_region_mapper_id());
-
-		switch (l4sigma0_map_iomem(my_task_pager_id, paddr, *vaddr, size, 1)) {
-			case -2:
-				printf("IPC error mapping video memory\n");
-				enter_kdebug("map_video_mem");
-				return -L4_EINVAL;
-			case -3:
-				printf("No fpage received\n");
-				enter_kdebug("map_video_mem");
-				return -L4_EINVAL;
-      			case -4:
-	    			printf("Video memory address is below 2GB (0x80000000), don't know\n"
-		 		    "how to map it as device super i/o page.\n");
-			     	return -L4_EINVAL;
-		}
-	} else {
-		*offset = 0;
-		if ((*vaddr = l4io_request_mem_region(paddr, size, L4IO_MEM_WRITE_COMBINED)) == 0)
-			Panic("Can't request memory region from l4io.");
-	}
+	*offset = 0;
+	if ((*vaddr = l4io_request_mem_region(paddr, size, L4IO_MEM_WRITE_COMBINED)) == 0)
+		Panic("Can't request memory region from l4io.");
 
 	return 0;
 }

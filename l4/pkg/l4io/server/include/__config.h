@@ -41,7 +41,6 @@
  * @{
  */
 #define DEBUG_ERRORS    1  /** verbose errror handling */
-#define DEBUG_MSG       0  /** show debug messages */
 
 #define DEBUG_PCI       0  /** debug pci module */
 #define DEBUG_PCI_RW    0  /** debug pci rw config */

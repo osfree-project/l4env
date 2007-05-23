@@ -155,7 +155,7 @@ CBEConstant::CreateBackEnd(CBEType * pType,
 /** \brief writes the constant definition to the header file
  *  \param pFile the file to write to
  *
- * A constant definitionlooks like this:
+ * A constant definition looks like this (if -fconst-as-define is given):
  *
  * <code>\#define \<name\> \<expression\></code>
  *
@@ -181,7 +181,7 @@ void CBEConstant::Write(CBEHeaderFile * pFile)
     else
     {
         // should be static
-        *pFile << "const ";
+        *pFile << "static const ";
         m_pType->Write(pFile);
         *pFile << " " << GetName() << " = ";
         m_pValue->Write(pFile);

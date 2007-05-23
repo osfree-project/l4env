@@ -31,7 +31,6 @@ rt_mon_histogram2d_t * hist2dxy;
 
 /*** L4 SPECIFIC CONFIG VARIABLES ***/
 
-int config_use_l4io     = 0;  /* whether to use L4IO server or not, default no        */
 int config_use_vidfix   = 0;  /* certain graphic adapter deliver garbage in vesa info */
 int config_events       = 0;  /* use Drops events to close DOpE applications          */
 int config_oldresize    = 0;  /* use traditional way to resize windows                */
@@ -59,23 +58,11 @@ void native_startup(int, char **);
 asm (".globl jiffies");
 
 
-/*** INIT L4IO ***/
-static int dope_l4io_init(void) {
-
-	if (l4io_init(&l4io_page, L4IO_DRV_INVALID)) {
-		Panic("Couldn't connect to L4IO server!");
-		return 1;
-	}
-	return 0;
-}
-
-
 /*** PARSE COMMAND LINE ARGUMENTS AND SET GLOBAL CONFIG VARIABLES ***/
 static void do_args(int argc, char **argv) {
 	char c;
 
 	static struct option long_options[] = {
-		{"l4io",          0, 0, 'i'},
 		{"vidfix",        0, 0, 'f'},
 		{"donscheduler",  0, 0, 'd'},
 		{"transparency",  0, 0, 't'},
@@ -94,10 +81,6 @@ static void do_args(int argc, char **argv) {
 			break;
 
 		switch (c) {
-			case 'i':
-				config_use_l4io = 1;
-				printf("DOpE(init): using L4 IO server\n");
-				break;
 			case 'f':
 				config_use_vidfix = 1;
 				printf("DOpE(init): using video fix\n");
@@ -125,6 +108,7 @@ static void do_args(int argc, char **argv) {
 			case 'b':
 				if (optarg) config_winborder = atol(optarg);
 				printf("DOpE(init): using window border size of %d\n", config_winborder);
+				break;
 			default:
 				printf("DOpE(init): unknown option!\n");
 		}
@@ -157,7 +141,6 @@ void native_startup(int argc, char **argv) {
 
 	do_args(argc, argv);
 
-	if (config_use_l4io)
-		dope_l4io_init();
-
+	if (l4io_init(&l4io_page, L4IO_DRV_INVALID))
+		Panic("Couldn't connect to L4IO server!");
 }

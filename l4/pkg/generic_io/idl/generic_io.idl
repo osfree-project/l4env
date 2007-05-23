@@ -30,6 +30,8 @@ typedef struct l4_io_drv {
 typedef unsigned long l4_io_drv_t;
 #endif
 
+const unsigned l4_io_max_fpages = 32;
+
 /**
  *  resource type (for PCI devices)
  */
@@ -138,12 +140,19 @@ library l4
        * \param  addr  start of IO port region
        * \param  len   length of IO port region
        *
+       * \retval regions I/O flexpages describing the requested region
+       * \retval num     number of valid entries in region array
        * \return 0 on success, negative error code otherwise
        *
        * request_region() ALWAYS succeeds under Linux; here it could FAIL!
+       *
+       * Note: The number of elements in the region array cannot
+       *       exceed log2 (2^16) * 2, which is 32.
        */
       /***********************************************************************/
-      long request_region([in] unsigned long addr, [in] unsigned long len);
+      long request_region([in] l4_uint16_t addr, [in] l4_uint16_t len,
+                          [out] l4_size_t *num,
+                          [out, size_is(num), max_is(l4_io_max_fpages), prealloc_client] fpage regions[]);
 
       /***********************************************************************/
       /**
@@ -153,7 +162,7 @@ library l4
        * \param  len   length of IO port region
        */
       /***********************************************************************/
-      long release_region([in] unsigned long addr, [in] unsigned long len);
+      long release_region([in] l4_uint16_t addr, [in] l4_uint16_t len);
 
       /***********************************************************************/
       /**

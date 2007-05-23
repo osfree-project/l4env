@@ -3,12 +3,13 @@ L4DIR      ?= $(PKGDIR)/../..
 
 SYSTEMS     = x86-l4v2
 
-TARGET      = snddrv-es1371 snddrv-i810
+TARGET      = snddrv-es1370 snddrv-es1371 snddrv-i810
 DEFAULT_RELOC = 0x00800000
 
 SRC_C       = server.c
 
 VPATH += $(PKGDIR)/examples/sound/contrib
+SRC_C_snddrv-es1370 = es1370.c ac97_codec.c
 SRC_C_snddrv-es1371 = es1371.c ac97_codec.c
 SRC_C_snddrv-i810 = i810_audio.c ac97_codec.c
 
@@ -21,6 +22,7 @@ LIBS = -ldde_linux -ldde_linux-sound -lio -lomega0 -llist_alloc
 
 DEFINES                 = -D__KERNEL__ -DDDE_LINUX
 DEFINES_i810_audio.c    = -UDEBUG
+DEFINES_es1370.c        = -UDEBUG
 DEFINES_es1371.c        = -UDEBUG
 DEFINES_ac97_codec.c    = -UDEBUG
 WARNINGS = -Wall -Wstrict-prototypes -fno-strict-aliasing

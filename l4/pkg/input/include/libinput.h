@@ -42,7 +42,6 @@ struct l4input {
 
 /** Initialize input driver library.
  *
- * \param omega0    if unset use RMGR / if set use omega0 for IRQs
  * \param prio      if != L4THREAD_DEFAULT_PRIO use as prio for irq threads
  * \param handler   if !NULL use this function on event occurence as
  *                  callback
@@ -55,7 +54,7 @@ struct l4input {
  * -# on each event occurrence \a handler is called and no local event
  * buffering is done.
  */
-int l4input_init(int omega0, int prio, void (*handler)(struct l4input *));
+int l4input_init(int prio, void (*handler)(struct l4input *));
 
 /** Query event status.
  *
@@ -67,6 +66,8 @@ int l4input_ispending(void);
  *
  * \param buffer    event return buffer
  * \param count     max number of events to return 
+ *
+ * \return number of flushed events
  *
  * Returns up to \a count events into buffer.
  */

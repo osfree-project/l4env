@@ -25,7 +25,6 @@
 extern CORBA_Object ovl_screen_srv;   /* defined in init.c */
 extern int ovl_phys_width, ovl_phys_height, ovl_phys_mode;
 
-static CORBA_Environment env = dice_default_environment;
 static void *fb_addr;
 
 
@@ -49,12 +48,14 @@ int ovl_get_phys_mode(void) {
 
 /*** INTERFACE: OPEN NEW OVERLAY SCREEN ***/
 int ovl_screen_open(int w, int h, int depth) {
+	CORBA_Environment env = dice_default_environment;
 	return overlay_open_screen_call(ovl_screen_srv, w, h, depth, &env);
 }
 
 
 /*** INTERFACE: CLOSE OVERLAY SCREEN ***/
 int ovl_screen_close(void) {
+	CORBA_Environment env = dice_default_environment;
 	if (fb_addr) ovl_screen_release_framebuffer(fb_addr);
 	overlay_close_screen_call(ovl_screen_srv, &env);
 	return 0;
@@ -64,6 +65,7 @@ int ovl_screen_close(void) {
 /*** INTERFACE: MAP FRAME BUFFER OF OVERLAY SCREEN ***/
 void *ovl_screen_map(void) {
 	char *ds_ident;
+	CORBA_Environment env = dice_default_environment;
 	env.malloc = (dice_malloc_func)&malloc;
 	overlay_map_screen_call(ovl_screen_srv, &ds_ident, &env);
 	printf("libovlscreen(map): ds_ident = %s\n",ds_ident);
@@ -74,6 +76,7 @@ void *ovl_screen_map(void) {
 
 /*** INTERFACE: REFRESH OVERLAY SCREEN AREA ***/
 void ovl_screen_refresh(int x, int y, int w, int h) {
+	CORBA_Environment env = dice_default_environment;
 	overlay_refresh_screen_call(ovl_screen_srv, x, y, w, h, &env);
 }
 

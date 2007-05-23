@@ -31,7 +31,6 @@ char LOG_tag[9] = "testnit";
 l4_ssize_t l4libc_heapsize = 500*1024;
 
 static CORBA_Object_base nit;
-static CORBA_Environment env = dice_default_environment;
 
 static int scr_width, scr_height, scr_mode;
 static int userstate;
@@ -64,6 +63,7 @@ nitevent_event_component(CORBA_Object _dice_corba_obj,
                          CORBA_Server_Environment *_dice_corba_env) {
 //	printf("got event: token=%d, type=%d, keycode=%d, rx=%d, ry=%d, ax=%d, ay=%d\n",
 //	       (int)token, type, keycode, rx, ry, ax, ay);
+	CORBA_Environment env = dice_default_environment;
 
 	if (type == NITEVENT_TYPE_PRESS) {
 		omx = ax;
@@ -99,6 +99,7 @@ nitevent_event_component(CORBA_Object _dice_corba_obj,
 
 int main(int argc, char **argv) {
 	CORBA_Object_base myself = l4_myself();
+	CORBA_Environment env = dice_default_environment;
 	int ret;
 	l4dm_dataspace_t ds;
 	short *addr;
@@ -125,6 +126,7 @@ int main(int argc, char **argv) {
 	ret = nitpicker_donate_memory_call(&nit, &ds, 10, 10, &env);
 	printf("nitpicker_donate_memory_call returned %d\n", ret);
 
+	CORBA_exception_free(&env);
 	nitpicker_get_screen_info_call(&nit, &scr_width, &scr_height, &scr_mode, &env);
 	printf("scr_width=%d, scr_height=%d, scr_mode=%d\n", scr_width, scr_height, scr_mode);
 
@@ -136,25 +138,32 @@ int main(int argc, char **argv) {
 	ret = l4dm_share(&ds, nit, L4DM_RW);
 	printf("l4dm_share returned %d\n", ret);
 
+	CORBA_exception_free(&env);
 	buf_id = nitpicker_import_buffer_call(&nit, &ds, BUF_W, BUF_H, &env);
 	printf("nitpicker_import_buffer_call returned buf_id=%d\n", buf_id);
 
+	CORBA_exception_free(&env);
 	vid1 = nitpicker_new_view_call(&nit, buf_id, &myself, &env);
 	printf("nitpicker_new_view_call returned vid1=%d\n", vid1);
 
 	views[vid1].x = 240; views[vid1].y = 100; views[vid1].w = 300; views[vid1].h = 140;
+	CORBA_exception_free(&env);
 	ret = nitpicker_set_view_port_call(&nit, vid1, 0, 0, views[vid1].x, views[vid1].y,
 	                                   views[vid1].w, views[vid1].h, 1, &env);
 
+	CORBA_exception_free(&env);
 	nitpicker_set_view_title_call(&nit, vid1, "Trusted Colour Haze 1", &env);
 
+	CORBA_exception_free(&env);
 	vid2 = nitpicker_new_view_call(&nit, buf_id, &myself, &env);
 	printf("nitpicker_new_view_call returned vid2=%d\n", vid2);
 
 	views[vid2].x = 350; views[vid2].y = 200; views[vid2].w = 250; views[vid2].h = 180;
+	CORBA_exception_free(&env);
 	ret = nitpicker_set_view_port_call(&nit, vid2, 0, 0, views[vid2].x, views[vid2].y,
 	                                   views[vid2].w, views[vid2].h, 1, &env);
 
+	CORBA_exception_free(&env);
 	nitpicker_set_view_title_call(&nit, vid2, "Trusted Colour Haze 2", &env);
 
 //	vid3 = nitpicker_new_view_call(&nit, buf_id, &myself, &env);
@@ -169,6 +178,7 @@ int main(int argc, char **argv) {
 
 	for (j = 0; j < BUF_W*BUF_H; j++) addr[j] = j + i;
 	i++;
+	CORBA_exception_free(&env);
 	nitpicker_refresh_call(&nit, buf_id, 0, 0, 320, 240, &env);
 
 	nitevent_server_loop(NULL);

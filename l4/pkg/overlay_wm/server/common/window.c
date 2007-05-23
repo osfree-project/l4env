@@ -34,7 +34,6 @@
 #include "screen.h"
 
 
-static CORBA_Environment env = dice_default_environment;
 static CORBA_Object_base window_event_listener_base;
 static CORBA_Object window_event_listener;
 int ovl_num_windows; /* number of created windows */
@@ -48,6 +47,7 @@ int ovl_num_windows; /* number of created windows */
 
 /*** EVENT CALLBACK: NEW SIZE AND POSITION OF OVERLAY WINDOW ***/
 static void winplace_callback(dope_event *e, void *arg) {
+	CORBA_Environment env = dice_default_environment;
 	char retbuf[16];
 	int win_id = (int)arg;
 	int x, y, w, h;
@@ -87,6 +87,7 @@ static void winplace_callback(dope_event *e, void *arg) {
 
 /*** EVENT CALLBACK: OVERLAY WINDOW GOT TOPPED ***/
 static void wintop_callback(dope_event *e, void *arg) {
+	CORBA_Environment env = dice_default_environment;
 	int win_id = (int)arg;
 	if (window_event_listener) {
 		window_listener_top_call(window_event_listener, win_id, &env);

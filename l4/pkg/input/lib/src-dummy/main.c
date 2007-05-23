@@ -28,7 +28,7 @@ int l4input_pcspkr(int tone)
 	return -L4_ENODEV;
 }
 
-int l4input_init(int omega0, int prio, void (*handler)(struct l4input *))
+int l4input_init(int prio, void (*handler)(struct l4input *))
 {
 	return 0;
 }

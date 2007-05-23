@@ -29,7 +29,7 @@ int bios_map_area(unsigned long *);
 void * bios_phys_to_virt(unsigned long);
 
 /* IO port space */
-#define MAX_IO_PORTS   0xffff  /**< 64K IO ports */
+#define MAX_IO_PORT    (L4_IOPORT_MAX - 1) /**< last valid I/O port */
 /* IO memory space */
 #define MAX_IO_MEMORY  0xffffffff
                                /**< some GB IO memory;

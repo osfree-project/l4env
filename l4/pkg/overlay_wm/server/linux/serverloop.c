@@ -17,9 +17,8 @@
 #include "serverloop.h"
 #include "overlay-server.h"
 
-static CORBA_Environment ovl_env = dice_default_environment;
-
 void enter_overlay_server_loop(void *arg) {
+	CORBA_Environment ovl_env = dice_default_server_environment;
 	ovl_env.srv_port = htons(13246);
 	overlay_server_loop(&ovl_env);
 }

@@ -131,7 +131,7 @@ init_gmode(void)
   l4util_mb_vbe_ctrl_t *vbe;
 
   /* tell con_hw lib if l4io should be used */
-  con_hw_set_l4io(use_l4io);
+  con_hw_set_l4io(use_s0);
 
   /* 1) Mode switch */
   if (vbemode == 0 || x86emu_int10_set_vbemode(vbemode, &vbe, &vbi) != 0)

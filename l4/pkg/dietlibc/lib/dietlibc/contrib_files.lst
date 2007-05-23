@@ -101,6 +101,7 @@ include/asm/sparc-sigcontext.h
 include/asm/types.h
 include/asm/x86_64-sigcontext.h
 include/assert.h
+include/byteswap.h
 include/ctype.h
 include/dirent.h
 include/elf.h
@@ -167,6 +168,7 @@ include/termio.h
 include/termios.h
 include/unistd.h
 include/utime.h
+include/wchar.h
 include/write12.h
 lib/__dtostr.c
 lib/__finite.c

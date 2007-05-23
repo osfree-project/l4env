@@ -9,7 +9,7 @@
 #include "module.h"
 
 bool
-Region_list::test_fit(unsigned long start, unsigned long _size)
+Region_list::test_fit(unsigned long long start, unsigned long long _size)
 {
   Region r(start, start + _size);
   for (Region const *c = _reg; c < _end; ++c)
@@ -25,10 +25,10 @@ Region_list::test_fit(unsigned long start, unsigned long _size)
   return true;
 }
 
-unsigned long 
-Region_list::next_free(unsigned long start)
+unsigned long
+Region_list::next_free(unsigned long long start)
 {
-  unsigned long s = ~0UL;
+  unsigned long long s = ~0ULL;
   for (Region const *c = _reg; c < _end; ++c)
     if (c->end() > start && c->end() < s)
       s = c->end();
@@ -36,16 +36,16 @@ Region_list::next_free(unsigned long start)
   return s;
 }
 
-unsigned long
-Region_list::find_free(Region const &search, unsigned long _size, 
-    unsigned align)
+unsigned long long
+Region_list::find_free(Region const &search, unsigned long long _size,
+                       unsigned align)
 {
-  unsigned long start = search.begin();
-  unsigned long end   = search.end();
+  unsigned long long start = search.begin();
+  unsigned long long end   = search.end();
   while (1)
     {
-      start = (start + (1UL << align) -1) & ~((1UL << align)-1);
-     
+      start = (start + (1ULL << align) -1) & ~((1ULL << align)-1);
+
       if (start + _size > end)
 	return 0;
 
@@ -100,7 +100,7 @@ Region_list::find(Region const &o)
 void
 Region::print() const
 {
-  printf("["l4_addr_fmt"; "l4_addr_fmt"]", begin(), end());
+  printf("  [%16llx, %16llx]", begin(), end());
 }
 
 void
@@ -127,7 +127,7 @@ Region_list::dump()
   Region const *i;
   Region const *j;
   Region const *min_idx;
-  unsigned long min, mark = 0;
+  unsigned long long min, mark = 0;
 
   for (i = _reg; i < _end; ++i)
     {
@@ -146,7 +146,7 @@ Region_list::dump()
     }
 }
 
-void 
+void
 Region_list::swap(Region *a, Region *b)
 {
   Region t = *a; *a = *b; *b = t;
@@ -161,7 +161,7 @@ Region_list::sort()
 
   Region *e = end() - 1;
 
-  do 
+  do
     {
       swapped = false;
       for (Region *c = begin(); c < e; ++c)
@@ -176,15 +176,15 @@ Region_list::sort()
     }
   while (swapped);
 }
-  
-void 
+
+void
 Region_list::remove(Region *r)
 {
   memmove(r, r+1, (end() - r - 1)*sizeof(Region));
   --_end;
 }
 
-void 
+void
 Region_list::optimize()
 {
   sort();
@@ -196,7 +196,7 @@ Region_list::optimize()
 	return;
 
       if (n->type() == c->type() && n->sub_type() == c->sub_type()
-	  && n->name() == c->name() && 
+	  && n->name() == c->name() &&
 	  l4_round_page(c->end()) >= l4_trunc_page(n->begin()))
 	{
 	  c->end(n->end());

@@ -1,3 +1,3 @@
 
-#define request_region(start,n,name)	(1)
-#define release_region(start,n)
+extern void * request_region(unsigned long start, unsigned long len, const char *name);
+extern void release_region(unsigned long start, unsigned long len);

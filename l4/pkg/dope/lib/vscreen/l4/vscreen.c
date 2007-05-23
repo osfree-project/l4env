@@ -32,7 +32,6 @@
 #define MAX_VSCREENS 32
 #define DEBUG(x) /* x */
 
-static CORBA_Environment env = dice_default_environment;
 
 struct vscr {
 	char          *name;
@@ -145,6 +144,7 @@ void *vscr_map_smb(char *smb_ident) {
 
 /*** INTERFACE: WAIT FOR END OF CURRENT REDRAW OPERATION ***/
 void vscr_server_waitsync(void *id) {
+	CORBA_Environment env = dice_default_environment;
 	int i = ((int)id) - 1;
 	if (!valid_index(i)) return;
 	dope_vscr_waitsync_call(&vscreens[i].tid,&env);
@@ -154,6 +154,7 @@ void vscr_server_waitsync(void *id) {
 
 /*** INTERFACE: ASYNCHRONOUS REFRESH OF A VSCREEN REGION ***/
 void vscr_server_refresh(void *id, int x, int y, int w, int h) {
+	CORBA_Environment env = dice_default_environment;
 	int i = ((int)id) - 1;
 	if (!valid_index(i)) return;
 	dope_vscr_refresh_call(&vscreens[i].tid, x, y, w, h, &env);

@@ -112,18 +112,20 @@ int l4io_search_mem_region(l4_addr_t addr,
  * \param  len    size of port region
  *
  * \return 0 on success; negative error code otherwise
- *
- * \todo I/O flexpages
  */
 /*****************************************************************************/
-int l4io_request_region(l4_addr_t start, l4_size_t len)
+int l4io_request_region(l4_uint16_t start, l4_uint16_t length)
 {
   int err;
 
   CORBA_Environment _env = dice_default_environment;
 
-  /* request port region */
-  err = l4_io_request_region_call(&io_l4id, start, len, &_env);
+  static l4_snd_fpage_t fpages[l4_io_max_fpages];
+  l4_size_t num;
+
+  /* open whole I/O space to not fiddle around with alignment constraints */
+  _env.rcv_fpage = l4_iofpage(0, L4_WHOLE_IOADDRESS_SPACE, 0);
+  err = l4_io_request_region_call(&io_l4id, start, length, &num, fpages, &_env);
 
   /* done */
   return DICE_ERR(err, &_env);
@@ -148,7 +150,7 @@ int l4io_release_mem_region(l4_addr_t start, l4_size_t len)
 
   CORBA_Environment _env = dice_default_environment;
 
-  /* request port region */
+  /* release memory region */
   err = l4_io_release_mem_region_call(&io_l4id, start, len, &_env);
 
   /* done */
@@ -163,17 +165,15 @@ int l4io_release_mem_region(l4_addr_t start, l4_size_t len)
  * \param  len    size of port region
  *
  * \return 0 on success; negative error code otherwise
- *
- * \todo I/O flexpages
  */
 /*****************************************************************************/
-int l4io_release_region(l4_addr_t start, l4_size_t len)
+int l4io_release_region(l4_uint16_t start, l4_uint16_t len)
 {
   int err;
 
   CORBA_Environment _env = dice_default_environment;
 
-  /* request port region */
+  /* release port region */
   err = l4_io_release_region_call(&io_l4id, start, len, &_env);
 
   /* done */

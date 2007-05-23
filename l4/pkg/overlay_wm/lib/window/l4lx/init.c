@@ -19,7 +19,6 @@
 #include "window_listener-server.h"
 #include "ovl_window.h"
 
-static CORBA_Environment env = dice_default_environment;
 static l4_threadid_t ovl_tid;
 CORBA_Object ovl_window_srv = &ovl_tid;
 
@@ -34,6 +33,7 @@ void *CORBA_alloc(unsigned long size) {
 static pthread_t listener_pid;
 static void *listener_pthread(void *arg) {
 	l4_threadid_t mytid = l4_myself();
+	CORBA_Environment env = dice_default_environment;
 
 	printf("libovlwindow(listener_pthread): register listener (%x.%x) ar Overlay Server\n",
 	 (int)mytid.id.task, (int)mytid.id.lthread);

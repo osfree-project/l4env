@@ -605,24 +605,20 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
     }
     else
     {
- 	// sizeof(<msgbufvar>.<structname>)/sizeof(long)-3
- 	WriteAccessToStruct(pFile, pFunction, nStructType);
+	// sizeof(<msgbufvar>.<structname>)/sizeof(long)-3
+	WriteAccessToStruct(pFile, pFunction, nStructType);
     }
     *pFile << ")/sizeof(long)-" << 3 + nStrings*nRefSize;
-    if (CMsgStructType::Generic != nStructType && nType == TYPE_MSGDOPE_SEND)
+    if (CMsgStructType::Generic != nStructType && 
+	nType == TYPE_MSGDOPE_SEND)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	    "In func %s try to find padding members:\n", pFunction->GetName().c_str());
-	// if we have any padding members in the send part, subtract their size
+	// if we have any padding members in the send part, subtract their size.
+	// do NOT subtract byte padding, because the byte padding is always
+	// smaller than word size and we have to transmit full words. Thus
+	// only subtract word sized padding.
 	CBEStructType *pStruct = GetStruct(pFunction, nStructType);
-        sName = pNF->GetPaddingMember(TYPE_BYTE, TYPE_REFSTRING);
-	pMember = pStruct->m_Members.Find(sName);
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "  member %s found at %p\n",
-	    sName.c_str(), pMember);
-
-	if (pMember)
-	    *pFile << "-" << pMember->GetSize();
 	sName = pNF->GetPaddingMember(TYPE_MWORD, TYPE_REFSTRING);
 	pMember = pStruct->m_Members.Find(sName);
 
