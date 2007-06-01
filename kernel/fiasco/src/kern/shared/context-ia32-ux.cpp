@@ -1,3 +1,13 @@
+INTERFACE[ia32 && segments]:
+
+EXTENSION class Context
+{
+protected:
+  Unsigned64	_gdt_user_entries[3];
+  Unsigned32	_es, _fs, _gs;
+};
+
+//-----------------------------------------------------------------------------
 IMPLEMENTATION [ia32,amd64,ux]:
 
 #include <cassert>
@@ -64,9 +74,6 @@ Context::switchin_context()
   // regs() + 1 returns a pointer to the end of our kernel stack.
   *(Kmem::kernel_sp()) = reinterpret_cast<Address>(regs() + 1);
 
-  // load the GDT entries used for TLS
-  switch_gdt_tls();
-
   // switch to our page directory if necessary
   _space->switchin_context();
 
@@ -75,7 +82,7 @@ Context::switchin_context()
 
   // update the global UTCB pointer to make the thread find its UTCB 
   // using gs:[0]
-  update_utcb_ptr();
+  Mem_layout::user_utcb_ptr(local_id());
 }
 
 IMPLEMENT inline NEEDS ["config.h", "cpu.h"]
@@ -129,6 +136,8 @@ Context::switch_cpu (Context *t)
   update_kip_switch_time(t);
 
   store_segments();
+
+  switch_gdt_user_entries(t);
 
   asm volatile
     (
@@ -187,44 +196,6 @@ Context::switch_cpu (Context *t)
      : "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", "rax", "rbx", "rdx", "memory");
 }
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [{ia32,amd64,ux}-!utcb]:
-
-inline
-void
-Context::update_utcb_ptr() 
-{}
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [{ia32,ux,amd64}-utcb]:
-
-/**
- * Update current UTCB Pointer and sets the FPU used Bit in the UTCB
- * if necessary. LIPC is only allowed with FPU disabled
- */
-PROTECTED inline NEEDS ["globals.h"]
-void
-Context::update_utcb_ptr() 
-{
-  *global_utcb_ptr = local_id();
-
-  /* An optimization here would be the test if the fpu is disabled */
-  //  if(state() % Thread_fpu_owner)
-  //    utcb()->set_fpu_bit_dirty();
-  //  else
-  //    utcb()->clear_fpu_bit_dirty();
-}
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [!{ia32-segments}]:
-
-PROTECTED inline
-void
-Context::switch_gdt_tls()
-{}
-
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [segments]:
@@ -259,4 +230,9 @@ Context::load_segments()
 PROTECTED inline
 void
 Context::store_segments()
+{}
+
+PROTECTED inline
+void
+Context::switch_gdt_user_entries(Context *)
 {}

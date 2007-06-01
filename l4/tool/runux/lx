@@ -16,11 +16,11 @@ gen_loader_appname() {
 
 . ${0%/*}/generic.inc
 
-fprov_task=9
-rtc_task=10
-blk_task=11
-ore_task=11
-con_task=11
+fprov_task=10
+rtc_task=11
+blk_task=12
+ore_task=12
+con_task=12
 
 events_param=
 
@@ -88,7 +88,6 @@ while [ -n "$1" ]; do
     --net|-n)
       use_ore=1
       con_inc
-      con_inc
       ENABLE_NET=1
     ;;
     -s)
@@ -112,7 +111,7 @@ then
 fi
 if [ -n "$use_ore" ];
 then
-  ORE=(-l l4io -l ore -n$ore_task)
+  ORE=(-l ore -n$ore_task)
 fi
 
 gen_loader_appname
@@ -129,7 +128,7 @@ case "$cmd" in
   	;;
   dope|d)
 	RES="-G 800x600@16"
-	CON=(-l l4dope-ux)
+	CON=(-l l4dope)
 	RUN="$L4PATH/proxygon $L4PATH/run"
 	LOG=(-l dmon)
 	LAUNCHPAD=(-l $L4PATH/launchpad" -a $CFGPATH/$LOADERAPP -n L4Linux -a $L4PATH/vscrtest -s")
@@ -169,6 +168,7 @@ fiasco -t 32768                         \
 	"${LOG[@]}"                     \
 	-l dm_phys\ $events_param       \
 	-l simple_ts\ $events_param     \
+	-l l4io\ $events_param          \
 	-l fuxfprov -n$fprov_task       \
 	-l rtc-ux   -n$rtc_task         \
 	"${BLK[@]}"                     \

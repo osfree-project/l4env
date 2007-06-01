@@ -46,7 +46,7 @@ CL4V2BESizes::~CL4V2BESizes()
  */
 int CL4V2BESizes::GetMaxShortIPCSize()
 {
-    return 8;
+    return 2 * GetSizeOfType(TYPE_MWORD);
 }
 
 /** \brief returns a value for the maximum  size of a specific type

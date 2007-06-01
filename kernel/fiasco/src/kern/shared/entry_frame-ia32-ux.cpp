@@ -93,7 +93,11 @@ IMPLEMENTATION [ia32,ux]:
 IMPLEMENT inline 
 Mword Sys_ipc_frame::has_snd_dst() const
 { return _esi; }
- 
+
+IMPLEMENT inline
+Mword Sys_ipc_frame::next_period() const
+{ return false; }
+
 IMPLEMENT inline 
 Mword Sys_ipc_frame::irq() const
 { return _esi -1; }
@@ -107,12 +111,22 @@ L4_snd_desc Sys_ipc_frame::snd_desc() const
 { return _eax; }
 
 IMPLEMENT inline
+L4_msg_tag Sys_ipc_frame::tag() const
+{ return L4_msg_tag(_edi); }
+
+
+IMPLEMENT inline
+void Sys_ipc_frame::tag(L4_msg_tag const &tag)
+{ _edi = tag.raw(); }
+
+
+IMPLEMENT inline
 Mword Sys_ipc_frame::has_snd() const
 { return snd_desc().has_snd(); }
 
 IMPLEMENT inline 
-L4_timeout Sys_ipc_frame::timeout() const
-{ return L4_timeout(_ecx); }
+L4_timeout_pair Sys_ipc_frame::timeout() const
+{ return L4_timeout_pair(_ecx); }
 
 IMPLEMENT inline
 L4_rcv_desc Sys_ipc_frame::rcv_desc() const
@@ -200,6 +214,24 @@ IMPLEMENT inline
 void Sys_ex_regs_frame::old_ip(Mword oip)
 { _edx = oip; }
 
+//////////////////////////////////////////////////////////////////////
+
+IMPLEMENT inline
+Sys_u_lock_frame::Op Sys_u_lock_frame::op() const
+{ return (Op)_eax; }
+
+IMPLEMENT inline
+unsigned long Sys_u_lock_frame::lock() const
+{ return _edx; }
+
+IMPLEMENT inline
+void Sys_u_lock_frame::result(unsigned long res)
+{ _eax = res; }
+
+IMPLEMENT inline
+L4_timeout 
+Sys_u_lock_frame::timeout() const
+{ return L4_timeout(_ecx); }
 
 //////////////////////////////////////////////////////////////////////
 
@@ -210,7 +242,7 @@ bool Sys_ex_regs_frame::utcb_args() const
 { return _eax & (1 << 27); }
 
 //////////////////////////////////////////////////////////////////////
-IMPLEMENTATION [(ia32 || ux ) && caps && utcb && v2]:
+IMPLEMENTATION [(ia32 || ux ) && caps]:
 
 #include "utcb.h"
 
@@ -220,44 +252,20 @@ L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* utcb) const
   if (!utcb_args())
     return L4_uid::Invalid;
 
-  return L4_uid(((Unsigned64)utcb->values[3] << 32)
-                | (Unsigned64)utcb->values[2]);
+  return L4_uid(utcb->values[2]);
 }
 
 IMPLEMENT inline NEEDS["utcb.h", Sys_ex_regs_frame::utcb_args]
-void Sys_ex_regs_frame::old_cap_handler(L4_uid id, Utcb* utcb)
-{
-  if (utcb_args())
-    {
-      utcb->values[2] = id.raw();
-      utcb->values[3] = (id.raw() >> 32);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
-IMPLEMENTATION [(ia32 || ux) && caps && utcb && x0]:
-
-#include "utcb.h"
-
-IMPLEMENT inline NEEDS["utcb.h", Sys_ex_regs_frame::utcb_args]
-L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* utcb) const
-{
-  if (!utcb_args())
-    return L4_uid::Invalid;
-
-  return utcb->values[2];
-}
-
-IMPLEMENT inline NEEDS["utcb.h", Sys_ex_regs_frame::utcb_args]
-void Sys_ex_regs_frame::old_cap_handler(L4_uid id, Utcb* utcb)
+void Sys_ex_regs_frame::old_cap_handler(L4_uid const &id, Utcb* utcb)
 {
   if (utcb_args())
     utcb->values[2] = id.raw();
 }
 
+
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [(ia32 || ux) && !(caps && utcb)]:
+IMPLEMENTATION [(ia32 || ux) && !caps]:
 
 #include "utcb.h"
 
@@ -271,7 +279,7 @@ L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* /*utcb*/) const
 }
 
 IMPLEMENT inline NEEDS["utcb.h"]
-void Sys_ex_regs_frame::old_cap_handler(L4_uid /*id*/, Utcb* /*utcb*/)
+void Sys_ex_regs_frame::old_cap_handler(L4_uid const &/*id*/, Utcb* /*utcb*/)
 {
 }
 
@@ -404,7 +412,7 @@ Mword Sys_task_new_frame::extra_args() const
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [(ia32 | ux) & caps & utcb]:
+IMPLEMENTATION [(ia32 | ux) & caps]:
 
 #include "utcb.h"
 
@@ -421,7 +429,7 @@ L4_uid Sys_task_new_frame::cap_handler(const Utcb* utcb) const
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [(ia32|ux) & !(caps & utcb)]:
+IMPLEMENTATION [(ia32|ux) & !caps]:
 
 #include "utcb.h"
 
@@ -433,7 +441,7 @@ L4_uid Sys_task_new_frame::cap_handler(const Utcb* /*utcb*/) const
 { return L4_uid::Invalid; }
 
 //////////////////////////////////////////////////////////////////////
-IMPLEMENTATION [(ia32 || ux) && utcb && caps]:
+IMPLEMENTATION [(ia32 || ux) && caps]:
 
 #include "utcb.h"
 
@@ -447,7 +455,7 @@ L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* utcb) const
 }
 
 //////////////////////////////////////////////////////////////////////
-IMPLEMENTATION [(ia32|ux) && (!utcb || !caps)]:
+IMPLEMENTATION [(ia32|ux) && !caps]:
 
 IMPLEMENT inline
 L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb*) const
@@ -455,22 +463,21 @@ L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb*) const
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [{ia32,ux}-v2]:
+IMPLEMENTATION [ia32 || ux]:
 
-IMPLEMENT inline 
-void Sys_ipc_frame::rcv_src(L4_uid id) 
+IMPLEMENT inline
+void Sys_ipc_frame::rcv_src(L4_uid const &id) 
 {
   _esi = id.raw();
-  _edi = (id.raw() >> 32);
 }
 
-IMPLEMENT inline 
+IMPLEMENT inline
 L4_uid Sys_ipc_frame::rcv_src() const
-{ return L4_uid(((Unsigned64)_edi << 32) | (Unsigned64)_esi); }
+{ return L4_uid(_esi); }
 
 IMPLEMENT inline 
 L4_uid Sys_ipc_frame::snd_dst() const
-{ return L4_uid((Unsigned64)_esi | ((Unsigned64)_edi << 32)); }
+{ return L4_uid(_esi); }
 
 IMPLEMENT inline 
 Mword Sys_ipc_frame::msg_word(unsigned index) const
@@ -519,167 +526,13 @@ void Sys_ipc_frame::copy_msg(Sys_ipc_frame *to) const
 
 IMPLEMENT inline
 L4_uid Sys_id_nearest_frame::dst() const
-{ return L4_uid((Unsigned64)_esi | ((Unsigned64)_edi << 32)); }
-
-IMPLEMENT inline
-void Sys_id_nearest_frame::nearest(L4_uid id)
-{
-  _esi = id.raw();
-  _edi = (id.raw() >> 32);
-}
-
-//Sys_ex_regs_frame::----------------------------------------------------
-
-IMPLEMENT inline
-L4_uid Sys_ex_regs_frame::preempter() const
-{ return L4_uid((Unsigned64)_ebx | ((Unsigned64)_ebp << 32)); }
-
-IMPLEMENT inline
-L4_uid Sys_ex_regs_frame::pager() const
-{ return L4_uid((Unsigned64)_esi | ((Unsigned64)_edi << 32)); }
-
-IMPLEMENT inline
-void Sys_ex_regs_frame::old_preempter(L4_uid id)
-{
-  _ebx = id.raw();
-  _ebp = id.raw() >> 32;
-}
-
-IMPLEMENT inline
-void Sys_ex_regs_frame::old_pager(L4_uid id)
-{
-  _esi = id.raw();
-  _edi = id.raw() >> 32;
-}
-
-
-//Sys_thread_switch_frame::-------------------------------------------------
-
-IMPLEMENT inline
-L4_uid
-Sys_thread_switch_frame::dst() const
-{ return L4_uid ((Unsigned64) _esi); }
-
-//Sys_thread_schedule_frame::----------------------------------------------
-
-IMPLEMENT inline 
-L4_uid
-Sys_thread_schedule_frame::preempter() const 
-{ return L4_uid ((Unsigned64) _ebx | (Unsigned64) _ebp << 32); }
-
-IMPLEMENT inline 
-L4_uid
-Sys_thread_schedule_frame::dst() const
-{ return L4_uid ((Unsigned64) _esi | (Unsigned64) _edi << 32); }
-
-IMPLEMENT inline 
-void
-Sys_thread_schedule_frame::old_preempter (L4_uid id)
-{
-  _ebx = id.raw();
-  _ebp = id.raw() >> 32;
-}
-
-IMPLEMENT inline
-void 
-Sys_thread_schedule_frame::partner (L4_uid id)
-{
-  _esi = id.raw();
-  _edi = id.raw() >> 32;
-}
-
-//Sys_task_new_frame::-------------------------------------------
-
-IMPLEMENT inline
-L4_uid Sys_task_new_frame::new_chief() const
-{ return L4_uid((Unsigned64)(_eax & ~(1 << 31))); }
-
-IMPLEMENT inline
-L4_uid Sys_task_new_frame::pager() const
-{ return L4_uid((Unsigned64)_ebx | ((Unsigned64)_ebp << 32)); }
-
-IMPLEMENT inline 
-L4_uid Sys_task_new_frame::dst() const
-{ return L4_uid((Unsigned64)_esi | ((Unsigned64)_edi << 32)); }
-
-IMPLEMENT inline
-void Sys_task_new_frame::new_taskid(L4_uid id)
-{
-  _esi = id.raw();
-  _edi = id.raw() >> 32;
-}
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION[ia32-x0,ux-x0]:
-
-IMPLEMENT inline
-void Sys_ipc_frame::rcv_src(L4_uid id) 
-{ _esi = id.raw(); }
-
-IMPLEMENT inline
-L4_uid Sys_ipc_frame::rcv_src() const 
 { return L4_uid(_esi); }
 
 IMPLEMENT inline
-L4_uid Sys_ipc_frame::snd_dst() const
-{ return L4_uid(_esi); }
-
-IMPLEMENT inline
-Mword Sys_ipc_frame::msg_word(unsigned index) const
+void Sys_id_nearest_frame::nearest(L4_uid const &id)
 {
-  switch(index)
-    {
-    case 0:
-      return _edx;
-    case 1:
-      return _ebx;
-    case 2:
-      return _edi;
-    default:
-      return 0;
-    }
+  _esi = id.raw();
 }
-
-IMPLEMENT inline
-void Sys_ipc_frame::set_msg_word(unsigned index, Mword value)
-{
-  switch(index)
-    {
-    case 0:
-      _edx = value;
-      break;
-    case 1:
-      _ebx = value;
-      break;
-    case 2:
-      _edi = value;
-      break;
-    default:
-      break;
-    }
-}
-
-IMPLEMENT inline
-unsigned Sys_ipc_frame::num_reg_words()
-{ return 3; }
-
-IMPLEMENT inline
-void Sys_ipc_frame::copy_msg(Sys_ipc_frame *to) const
-{
-  to->_edx = _edx;
-  to->_ebx = _ebx;
-  to->_edi = _edi;
-}
-
-//Entry_id_nearest_data::-------------------------------------------------
-
-IMPLEMENT inline
-L4_uid Sys_id_nearest_frame::dst() const
-{ return L4_uid(_esi); }
-
-IMPLEMENT inline
-void Sys_id_nearest_frame::nearest(L4_uid id)
-{ _esi = id.raw(); }
 
 //Sys_ex_regs_frame::----------------------------------------------------
 
@@ -692,12 +545,16 @@ L4_uid Sys_ex_regs_frame::pager() const
 { return L4_uid(_esi); }
 
 IMPLEMENT inline
-void Sys_ex_regs_frame::old_preempter(L4_uid id)
-{ _ebx = id.raw(); }
+void Sys_ex_regs_frame::old_preempter(L4_uid const &id)
+{
+  _ebx = id.raw();
+}
 
 IMPLEMENT inline
-void Sys_ex_regs_frame::old_pager(L4_uid id)
-{ _esi = id.raw(); }
+void Sys_ex_regs_frame::old_pager(L4_uid const &id)
+{
+  _esi = id.raw();
+}
 
 
 //Sys_thread_switch_frame::-------------------------------------------------
@@ -709,54 +566,52 @@ Sys_thread_switch_frame::dst() const
 
 //Sys_thread_schedule_frame::----------------------------------------------
 
+IMPLEMENT inline 
+L4_uid
+Sys_thread_schedule_frame::preempter() const 
+{ return L4_uid (_ebx); }
+
+IMPLEMENT inline 
+L4_uid
+Sys_thread_schedule_frame::dst() const
+{ return L4_uid (_esi); }
+
+IMPLEMENT inline 
+void
+Sys_thread_schedule_frame::old_preempter (L4_uid const &id)
+{
+  _ebx = id.raw();
+}
 
 IMPLEMENT inline
-L4_uid Sys_thread_schedule_frame::preempter() const
-{ return L4_uid(_ebx); }
-
-IMPLEMENT inline
-L4_uid Sys_thread_schedule_frame::dst() const
-{ return L4_uid(_esi); }
-
-IMPLEMENT inline
-void Sys_thread_schedule_frame::old_preempter(L4_uid id)
-{ _ebx = id.raw(); }
-
-IMPLEMENT inline
-void Sys_thread_schedule_frame::partner(L4_uid id)
-{ _esi = id.raw(); }
-
+void 
+Sys_thread_schedule_frame::partner (L4_uid const &id)
+{
+  _esi = id.raw();
+}
 
 //Sys_task_new_frame::-------------------------------------------
 
 IMPLEMENT inline
 L4_uid Sys_task_new_frame::new_chief() const
-{ return L4_uid(_eax & ~(1 << 31)); }
+{ return L4_uid((_eax & ~(1 << 31))); }
 
 IMPLEMENT inline
 L4_uid Sys_task_new_frame::pager() const
 { return L4_uid(_ebx); }
 
-IMPLEMENT inline
+IMPLEMENT inline 
 L4_uid Sys_task_new_frame::dst() const
 { return L4_uid(_esi); }
 
 IMPLEMENT inline
-void Sys_task_new_frame::new_taskid(L4_uid id)
-{ _esi = id.raw(); }
+void Sys_task_new_frame::new_taskid(L4_uid const &id)
+{
+  _esi = id.raw();
+}
 
 
-IMPLEMENTATION[{ia32,ux}-v2-lipc]:
-
-//Sys_ipc_frame::----------------------------------------------------
-IMPLEMENT inline
-void Sys_ipc_frame::snd_utcb(Mword local_id)
-{ _ecx = local_id; }
-
-IMPLEMENT inline
-void Sys_ipc_frame::timeout(Mword t)
-{ _ecx = t; }
-
+//-------------------------------------------------------------------------
 IMPLEMENTATION[pl0_hack]:
 
 IMPLEMENT inline

@@ -39,9 +39,8 @@ $(if $(ROLE),$(OBJ_DIR)/.general.d: $(L4DIR)/mk/$(ROLE))
 
 SYSTEM_TARGET	= $(SYSTEM_TARGET_$(ARCH))
 SYSTEM_TARGET_arm = arm-linux-
-SYSTEM_TARGET_ia64 = /usr/local/ia64-linux/bin/
 CARCHFLAGS_amd64 = -m64
-IDL_SYSTEMS 	= x86-l4v2 x86-l4x0
+IDL_SYSTEMS 	= x86-l4v2
 
 AR		= $(SYSTEM_TARGET)ar
 AS		= $(SYSTEM_TARGET)as
@@ -52,25 +51,19 @@ CP		= cp
 DICEDIR		?= $(L4DIR)/../dice
 DICE		= $(firstword $(wildcard $(DICEDIR)/src/dice \
 				$(DROPS_STDDIR)/tool/bin/dice \
-				 $(shell which dice 2>/dev/null) ) false )
+				 $(shell which dice 2>/dev/null) ) \
+				 did_not_find_dice___please_install_dice )
 DICE_CPP_NAME	= cpp0
 
 DICE_INCDIR	?= $(DICEDIR)/include
 
-DROPS_CC	= L4DIR=$(L4DIR) $(firstword $(wildcard \
-					$(L4DIR)/tool/gcc-wrap/drops-gcc \
-					$(DROPS_STDDIR)/tool/bin/drops-gcc) \
-                                 false )
-DROPS_CXX	= L4DIR=$(L4DIR) $(firstword $(wildcard \
-					$(L4DIR)/tool/gcc-wrap/drops-c++ \
-					$(DROPS_STDDIR)/tool/bin/drops-c++) \
-                                 false )
 ECHO		= echo
 
 GENOFFSETS	= $(L4DIR)/tool/bin/genoffsets.pl
 GOSH		= $(firstword $(wildcard $(L4DIR)/../tools/gosh/gosh \
 				$(DROPS_STDDIR)/tool/bin/gosh \
-				 $(shell which gosh 2>/dev/null) ) false )
+				 $(shell which gosh 2>/dev/null) ) \
+				 did_not_find_gosh___please_install_gosh )
 HOST_CC		= gcc
 HOST_CXX	= g++
 INDENT		= indent -sob
@@ -243,6 +236,9 @@ MAKEDEP=$(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_TARGET=$(if $(2),$(2),$@) \
 		    GENDEP_BINARY=$(1) $(if $(3),GENDEP_DEPFILE=$(3))
 endif
 
+checkcc   = $(shell if $(CC) $(1) -o /dev/null -c -x c \
+                    /dev/null > /dev/null 2>&1; then echo "$(1)"; fi)
+
 # the gcc specific variables: version, base dir, include dir, gcc lib
 # note: determining these variables is slow, and the values should
 #       be set in Makeconf.bid.local. However, this is the place were
@@ -255,6 +251,7 @@ GCCDIR_f	= $(shell LC_ALL=C $(CC) -print-search-dirs|sed -ne 's+^install: \(.*[^
 GCCLIB_f	= $(shell $(CC) -print-libgcc-file-name)
 GCCLIB_EH_f	= $(filter /%,$(shell $(CC) -print-file-name=libgcc_eh.a))
 GCCINCDIR_f	= $(call GCCDIR_f)/include
+GCCNOSTACKPROTOPT_f= $(call checkcc,-fno-stack-protector)
 
 GCCINCDIR	= $(GCCDIR)/include
 

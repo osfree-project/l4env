@@ -396,6 +396,20 @@ Mem_space::v_fabricate (unsigned /*task_id*/, Address address,
   return false;
 }
 
+PUBLIC inline
+bool 
+Mem_space::set_attributes(Address virt, unsigned page_attribs)
+{
+  Pte p = _dir->walk( (void*)virt, 0, false,0);
+  if (!p.valid()) 
+    return false;
+
+  Mem_page_attr a = p.attr();
+  a.set_ap(page_attribs);
+  p.attr(a, true);
+  return true;
+}
+
 IMPLEMENT inline NEEDS[Mem_space::c_asid]
 void Mem_space::kmem_update (void *addr)
 {

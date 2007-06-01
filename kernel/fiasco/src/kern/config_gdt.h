@@ -35,22 +35,10 @@
 
 #define GDT_LDT			(0x38)		// #7
 
-#if defined(CONFIG_EXCEPTION_IPC)
-
 #define GDT_UTCB		(0x40)		// #8 segment for UTCB pointer
-#define GDT_TLS1		(0x48)		// #9
-#define GDT_TLS2		(0x50)		// #10
-#define GDT_TLS3		(0x58)		// #11
+#define GDT_USER_ENTRY1		(0x48)		// #9
+#define GDT_USER_ENTRY2		(0x50)		// #10
+#define GDT_USER_ENTRY3		(0x58)		// #11
 #define GDT_MAX			(0x60)
-
-#else
-
-#define GDT_UTCB		GDT_DATA_USER	// dummy
-#define GDT_TLS1		(0x00)		// dummy
-#define GDT_TLS2		(0x00)		// dummy
-#define GDT_TLS3		(0x00)		// dummy
-#define GDT_MAX			(0x40)
-
-#endif
 
 #endif // CONFIG_GDT_H

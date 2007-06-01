@@ -140,24 +140,13 @@ Thread::ipc_receiver_ready(Receiver *recv)
  */
 PRIVATE inline
 Unsigned64
-Thread::snd_timeout (L4_timeout t, Sys_ipc_frame const * regs)
+Thread::snd_timeout (L4_timeout_pair const &t)
 {
-  // absolute timeout
-  if (EXPECT_FALSE (regs->has_abs_snd_timeout()))
-    {
-      Unsigned64 sc = Timer::system_clock();
-      Unsigned64 tval = t.snd_microsecs_abs (sc, regs->abs_snd_clock());
+  Unsigned64 sc = Timer::system_clock();
+  Unsigned64 tval = t.snd.microsecs (sc);
 
-      // check if timeout already expired
-      return tval <= sc ? 0 : tval;
-    }
-
-  // zero timeout
-  if (t.snd_man() == 0)
-    return 0;
-
-  // relative timeout
-  return t.snd_microsecs_rel (Timer::system_clock());
+  // check if timeout already expired
+  return tval <= sc ? 0 : tval;
 }
 
 /**
@@ -168,24 +157,13 @@ Thread::snd_timeout (L4_timeout t, Sys_ipc_frame const * regs)
  */
 PRIVATE inline
 Unsigned64
-Thread::rcv_timeout (L4_timeout t, Sys_ipc_frame const *regs)
+Thread::rcv_timeout (L4_timeout_pair const &t)
 {
-  // absolute timeout
-  if (EXPECT_FALSE (regs->has_abs_rcv_timeout()))
-    {
-      Unsigned64 sc = Timer::system_clock();
-      Unsigned64 tval = t.rcv_microsecs_abs (sc, regs->abs_rcv_clock());
+  Unsigned64 sc = Timer::system_clock();
+  Unsigned64 tval = t.rcv.microsecs (sc);
 
-      // check if timeout already expired
-      return tval <= sc ? 0 : tval;
-    }
-
-  // zero timeout
-  if (t.rcv_man() == 0)
-    return 0;
-
-  // relative timeout
-  return t.rcv_microsecs_rel (Timer::system_clock());
+  // check if timeout already expired
+  return tval <= sc ? 0 : tval;
 }
 
 
@@ -197,7 +175,8 @@ Thread::rcv_timeout (L4_timeout t, Sys_ipc_frame const *regs)
  */
 PRIVATE 
 Ipc_err
-Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code)
+Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code, 
+    L4_msg_tag::Protocol protocol)
 {
   // do not handle user space page faults from kernel mode if we're
   // already handling a request
@@ -232,7 +211,7 @@ Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code)
   // create the page-fault message
   page_fault_msg(r, pfa, regs()->ip(), error_code);
 
-  L4_timeout timeout(L4_timeout::Never);
+  L4_timeout_pair timeout(L4_timeout::Never, L4_timeout::Never);
   
   // This might be a page fault in midst of a long-message IPC operation.
   // Save the current IPC state and restore it later.
@@ -247,10 +226,12 @@ Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code)
   unsigned orig_ipc_state = state() & Thread_ipc_mask;
   state_del (orig_ipc_state);
   if (orig_ipc_state)
-    timeout = _pf_timeout;	// in long IPC -- use pagefault timeout
+    timeout = access_utcb()->xfer;	// in long IPC -- use pagefault timeout
+
+  L4_msg_tag tag(0, 0, 0, protocol);
 
   cpu_lock.lock();
-  Ipc_err err = do_ipc(true, pager,
+  Ipc_err err = do_ipc(tag, true, pager,
                        true, pager,
                        timeout, &r);
   cpu_lock.clear();
@@ -361,15 +342,14 @@ Thread::ipc_short_cut()
        || dst_id.is_invalid()	// L4_INVALID_ID
        || dst_id.is_nil()	// L4_NIL_ID
        || dst_id.is_irq()	// Interrupt ID
-       || dst_id.next_period()  // next period IPC
+       || regs->next_period()  // next period IPC
        // Check receive options:
        || (regs->rcv_desc().has_receive() // have receive part
 	  && (!regs->rcv_desc().is_register_ipc() // rcv more than short ipc
 	      || (Config::deceit_bit_disables_switch
 		  && regs->snd_desc().deceite())  // only rcv + don't switch
-	      || regs->has_abs_rcv_timeout()
-	      || (t = regs->timeout(), // timeout != 0, != infin.
-		  t.rcv_exp() && t.rcv_man())
+	      || (t = regs->timeout().rcv, t.is_absolute()
+		  || (!t.is_zero() && !t.is_never()))
 	      // We never call sender_list()->ipc_receiver_ready(), so
 	      // we have to rule out cases where we would normally call it.
 	      || (regs->rcv_desc().open_wait() // open wait and...
@@ -416,7 +396,7 @@ Thread::ipc_short_cut()
   dst_regs->msg_dope (ret_dope);	// status code: rcv'd 2 dw
   regs->copy_msg (dst_regs);
 
-  copy_utcb_to(dst);
+  copy_utcb_to(regs->tag(), dst);
 
   // copy sender ID
   dst_regs->rcv_src( current_thread()->id() );
@@ -438,7 +418,7 @@ Thread::ipc_short_cut()
       // change our state to waiting / receiving
       state_change_dirty (~0U, Thread_ipc_in_progress | ipc_state);
 
-      if (t.rcv_exp() == 0)	// timeout == infin.?
+      if (t.is_never())
 	{
 	  regs->msg_dope(Ipc_err::Recanceled);
 	  state_change_dirty (~Thread_ready, 0); // Need wakeup.
@@ -458,7 +438,7 @@ Thread::ipc_short_cut()
     switch_exec_locked (dst, Not_Helping);
   else
     dst->ready_enqueue ();
-
+  
   state_change_dirty (~Thread_ipc_mask, 0);
   return true;
 }
@@ -476,7 +456,7 @@ Thread::sys_ipc()
   Sys_ipc_frame *regs = sys_frame_cast<Sys_ipc_frame>(this->regs());
 
   Ipc_err ret(0);
-  L4_timeout t = regs->timeout();
+  L4_timeout_pair t = regs->timeout();
 
   // find the ipc partner thread belonging to the destination id
   L4_uid id              = regs->snd_dst();
@@ -490,12 +470,11 @@ Thread::sys_ipc()
   
   // Add Thread_delayed_* flags if this a "next-period" IPC.
   // The flags must be cleared again on all exit paths from this function.
-  if (EXPECT_FALSE (id.next_period()))
+  if (EXPECT_FALSE (regs->next_period()))
     {
       state_add (Thread_delayed_deadline);
 
-      if (id.is_nil() && t.rcv_exp() && !t.rcv_man() &&
-          !regs->has_abs_rcv_timeout())		// next period, 0 timeout
+      if (id.is_nil() && t.rcv.is_zero())		// next period, 0 timeout
         goto success;
 
       if (mode() & Nonstrict)
@@ -510,7 +489,7 @@ Thread::sys_ipc()
       else if (EXPECT_FALSE(id.is_nil()))
 	{
           // only prepare IPC for timeout != 0
-          if (!t.rcv_exp() || t.rcv_man() || regs->has_abs_rcv_timeout())
+          if (!t.rcv.is_zero())
             {
               sender = nil_thread;
               have_sender = true;
@@ -530,8 +509,7 @@ Thread::sys_ipc()
 	    {
 	      // a receive with a timeout != 0 from a non-associated
 	      // interrupt is illegal
-	      if (!t.rcv_exp() || t.rcv_man()
-		  || regs->has_abs_rcv_timeout())
+	      if (!t.rcv.is_zero())
 		{
 		  commit_ipc_failure (regs, Ipc_err::Enot_existent);
 		  return;
@@ -555,7 +533,7 @@ Thread::sys_ipc()
               return;
             }
 
-          if (EXPECT_FALSE (id.is_preemption()))
+          if (EXPECT_FALSE (false /*id.is_preemption()*/)) // XXX: how to do it?
             sender = partner->preemption();
           else
             sender = partner;
@@ -597,7 +575,7 @@ Thread::sys_ipc()
     {
       if (!interrupt) // is disassoc from IRQ
 	{
-	  assert(t.rcv_exp() && !t.rcv_man()); // timeout 0
+	  assert(t.rcv.is_zero()); // timeout 0
 	  //
 	  // disassociate from all IRQs 
 	  //
@@ -625,7 +603,7 @@ Thread::sys_ipc()
     }
 
   if (EXPECT_TRUE(have_send_part || have_receive_part))
-    ret = do_ipc(have_send_part, partner,
+    ret = do_ipc(regs->tag(), have_send_part, partner,
 	         have_receive_part, sender,
 	         t, regs);
 
@@ -680,7 +658,6 @@ Thread::page_fault_msg (Sys_ipc_frame &r, Address fault_address,
 {
   r.set_msg_word (0, PF::addr_to_msgword0 (fault_address, error_code));
   r.set_msg_word (1, PF::pc_to_msgword1 (fault_eip, error_code));
-  r.set_msg_word (2, 0); // nop in V2
   r.snd_desc (0);	// short msg
   r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage::all_spaces()));
 };
@@ -714,7 +691,7 @@ Thread::get_ipc_err (Sys_ipc_frame *regs)
 }
 
 PRIVATE
-Ipc_err Thread::do_send_wait (Thread *partner, L4_timeout t, Sys_ipc_frame *regs)
+Ipc_err Thread::do_send_wait (Thread *partner, L4_timeout snd_t)
 {
 
   // test if we have locked the partner 
@@ -753,9 +730,9 @@ Ipc_err Thread::do_send_wait (Thread *partner, L4_timeout t, Sys_ipc_frame *regs
 
   IPC_timeout timeout;
   
-  if (EXPECT_FALSE(t.snd_exp()))
+  if (EXPECT_FALSE(snd_t.is_finite()))
     {
-      Unsigned64 tval = snd_timeout (t, regs);
+      Unsigned64 tval = snd_t.microsecs(Timer::system_clock());
       // Zero timeout or timeout expired already -- give up
       if (tval == 0)
 	return abort_send(Ipc_err::Setimeout, partner);
@@ -921,8 +898,7 @@ Thread::handle_long_ipc()
       assert (pagein_addr() != (Address) -1);
 
       Ipc_err ipc_code = handle_page_fault_pager (_pager,
-						  pagein_addr(),
-						  pagein_error_code());
+	  pagein_addr(), pagein_error_code(), L4_msg_tag::Label_page_fault);
 
       clear_pagein_request();     
       state_add (Thread_busy_long);
@@ -954,7 +930,7 @@ Thread::handle_long_ipc()
 
 
 PRIVATE inline
-void Thread::goto_sleep(L4_timeout t, Sys_ipc_frame *regs)
+void Thread::goto_sleep(L4_timeout const &t)
 {
   if(EXPECT_FALSE
      ((state() & (Thread_receiving | Thread_ipc_in_progress | Thread_cancel))
@@ -963,13 +939,13 @@ void Thread::goto_sleep(L4_timeout t, Sys_ipc_frame *regs)
 
   IPC_timeout timeout;
 
-  if(EXPECT_FALSE(t.rcv_exp() && t.rcv_man() && !_timeout))
+  if(EXPECT_FALSE(t.is_finite() && !_timeout))
     {
 
-      state_del_dirty(Thread_ready);	  
+      state_del_dirty(Thread_ready);
 
-      Unsigned64 tval = rcv_timeout (t, regs);
-      
+      Unsigned64 tval = t.microsecs(Timer::system_clock());
+
       if (EXPECT_TRUE((tval != 0)))
 	{
 	  set_timeout (&timeout);
@@ -982,7 +958,7 @@ void Thread::goto_sleep(L4_timeout t, Sys_ipc_frame *regs)
   else
     {
       
-      if(EXPECT_TRUE(!t.rcv_exp()))
+      if(EXPECT_TRUE(t.is_never()))
 	state_del_dirty(Thread_ready);
       else
 	state_change_dirty(~Thread_ipc_in_progress, Thread_ready);
@@ -1006,8 +982,7 @@ void Thread::goto_sleep(L4_timeout t, Sys_ipc_frame *regs)
  * @pre cpu_lock must be held
  */
 PRIVATE inline NEEDS["logdefs.h"]
-Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t, 
-    Sys_ipc_frame *regs)
+Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout snd_t)
 {
   if (EXPECT_FALSE (partner == 0 || partner == nil_thread
 	|| partner->state() == Thread_invalid))
@@ -1036,7 +1011,7 @@ Ipc_err Thread::try_handshake_receiver(Thread *partner, L4_timeout t,
 		    (nonull_static_cast<Sender*>(current_thread()))))
   
     {
-      err = do_send_wait(partner, t, regs);
+      err = do_send_wait(partner, snd_t);
 
       // if an error occured, we should not hold the lock anymore
       assert(!err.has_error() || !partner->state() 
@@ -1098,17 +1073,17 @@ Thread::wake_receiver (Thread *receiver)
  * @return sender's IPC error code
  */
 PRIVATE
-Ipc_err Thread::do_ipc (bool have_send, Thread *partner,
+Ipc_err Thread::do_ipc (L4_msg_tag const &tag, bool have_send, Thread *partner,
 			bool have_receive, Sender *sender,
-			L4_timeout t, Sys_ipc_frame *regs)
+			L4_timeout_pair t, Sys_ipc_frame *regs)
 {
 
   bool dont_switch = false;
-  
+
   if(have_send)
     {
 
-      Ipc_err err = try_handshake_receiver(partner, t, regs);
+      Ipc_err err = try_handshake_receiver(partner, t.snd);
      
       if(EXPECT_FALSE(err.has_error()))
 	return err;
@@ -1128,7 +1103,7 @@ Ipc_err Thread::do_ipc (bool have_send, Thread *partner,
 	  partner->set_timeout(0);
 	}
 
-      Ipc_err ret = transfer_msg(partner, regs);
+      Ipc_err ret = transfer_msg(tag, partner, regs);
 
       if (Config::deceit_bit_disables_switch &&
           regs->snd_desc().deceite())
@@ -1255,7 +1230,7 @@ Ipc_err Thread::do_ipc (bool have_send, Thread *partner,
             partner->ready_enqueue();
         }
       else
-	goto_sleep(t, regs);
+	goto_sleep(t.rcv);
       
       have_send = false;
     }
@@ -1324,7 +1299,7 @@ Ipc_err Thread::do_ipc (bool have_send, Thread *partner,
 
 PRIVATE inline NEEDS ["map_util.h", Thread::copy_utcb_to, 
 		      Thread::unlock_receiver]
-Ipc_err Thread::transfer_msg (Thread *receiver,
+Ipc_err Thread::transfer_msg (L4_msg_tag const &tag, Thread *receiver,
                               Sys_ipc_frame *sender_regs)
 {
   
@@ -1341,7 +1316,8 @@ Ipc_err Thread::transfer_msg (Thread *receiver,
   // copy message register contents
   sender_regs->copy_msg (dst_regs);
 
-  copy_utcb_to (receiver);
+  copy_utcb_to (tag, receiver);
+  dst_regs->tag(tag);
 
   // copy sender ID
   dst_regs->rcv_src (id());
@@ -1392,7 +1368,7 @@ Ipc_err Thread::transfer_msg (Thread *receiver,
   Proc::preemption_point();
 
   // else long ipc
-  prepare_long_ipc(receiver, sender_regs);
+  prepare_long_ipc(receiver);
 
   Ipc_err error_ret;
 
@@ -1414,8 +1390,7 @@ Ipc_err Thread::transfer_msg (Thread *receiver,
 
 
 PRIVATE
-void Thread::prepare_long_ipc (Thread *receiver,
-                                Sys_ipc_frame *sender_regs)
+void Thread::prepare_long_ipc (Thread *receiver)
 {
 
   state_add_dirty( Thread_ipc_in_progress | Thread_send_in_progress);
@@ -1444,24 +1419,6 @@ void Thread::prepare_long_ipc (Thread *receiver,
 
   receiver->reset_timeout();
 
-  // set up page-fault timeouts
-  L4_timeout t = sender_regs->timeout();
-  if (t.snd_pfault() == 15) // send pfault timeout == 0 ms?
-    receiver->_pf_timeout = L4_timeout(0,1,0,1,0,0);
-  else
-      receiver->_pf_timeout = L4_timeout(1, t.snd_pfault(),
-                                             1, t.snd_pfault(), 0, 0);
-          // XXX should normalize timeout spec, but do_send/do_receive
-          // can cope with non-normalized numbers.
-
-  t = dst_regs->timeout();
-  if (t.rcv_pfault() == 15) // rcv pfault timeout == 0 ms?
-    _pf_timeout = L4_timeout(0,1,0,1,0,0);
-  else
-    _pf_timeout = L4_timeout(1, t.rcv_pfault(), 1, t.rcv_pfault(), 0, 0);
-  // XXX should normalize timeout spec, but do_send/do_receive
-  // can cope with non-normalized numbers.
-
   // set up return code in case we're aborted
   dst_regs->msg_dope_set_error(Ipc_err::Reaborted);
 
@@ -1486,45 +1443,20 @@ Thread::unlock_receiver (Receiver *receiver, const Sys_ipc_frame*)
   receiver->ipc_unlock();
 }
 
-//////////////////////////////////////////////////////////////////////
-
-IMPLEMENTATION[!utcb]:
 
 IMPLEMENT inline
-Pf_msg_utcb_saver::Pf_msg_utcb_saver (const Utcb *)
+Pf_msg_utcb_saver::Pf_msg_utcb_saver (const Utcb * /*u*/)
+/*  : snd_size (u->snd_size),
+    rcv_size (u->rcv_size)*/
 {}
 
 IMPLEMENT inline
 void
-Pf_msg_utcb_saver::restore (Utcb *)
-{}
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION[utcb]:
-
-EXTENSION class Pf_msg_utcb_saver
+Pf_msg_utcb_saver::restore (Utcb * /*u*/)
 {
-private:
-  Mword snd_size, rcv_size;
-};
-
-IMPLEMENT inline
-Pf_msg_utcb_saver::Pf_msg_utcb_saver (const Utcb *u)
-  : snd_size (u->snd_size),
-    rcv_size (u->rcv_size)
-{}
-
-IMPLEMENT inline
-void
-Pf_msg_utcb_saver::restore (Utcb *u)
-{
-  u->snd_size = snd_size;
-  u->rcv_size = rcv_size;  
+/*  u->snd_size = snd_size;
+  u->rcv_size = rcv_size;   */
 }
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [exc_ipc]:
 
 
 PRIVATE
@@ -1532,7 +1464,7 @@ Ipc_err
 Thread::exception(Trap_state *ts)
 {
   Sys_ipc_frame r;
-  L4_timeout timeout( L4_timeout::Never );
+  L4_timeout_pair timeout( L4_timeout::Never, L4_timeout::Never );
   Thread *handler = _pager; // _exception_handler;
 
   if (! revalidate(handler))
@@ -1551,17 +1483,17 @@ Thread::exception(Trap_state *ts)
   _utcb_handler = ts;
 
   // fill registers for IPC
-  r.set_msg_word(0, L4_exception_ipc::Exception_ipc_cookie_1);
-  r.set_msg_word(1, L4_exception_ipc::Exception_ipc_cookie_2);
-  r.set_msg_word(2, 0); // nop in V2
   r.snd_desc(0);
   r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage::all_spaces()));
+
+  L4_msg_tag tag(L4_exception_ipc::Msg_size, 0, L4_msg_tag::Transfer_fpu, 
+      L4_msg_tag::Label_exception);
 
   Ipc_err ret (0);
 
   Proc::cli();
 
-  Ipc_err err = do_ipc(true, handler,
+  Ipc_err err = do_ipc(tag, true, handler,
                        true, handler,
                        timeout, &r);
   Proc::sti();

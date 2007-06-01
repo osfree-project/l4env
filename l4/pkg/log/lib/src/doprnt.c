@@ -178,11 +178,10 @@ typedef int	bool_t;
 
  static char digits[] = "0123456789abcdef";
 static char capdigits[]= "0123456789ABCDEF";
-static int capital;
 
 static void
 printnum(register unsigned long u, register int base, 
-	 void (*putc)(char*, char), char *putc_arg)
+	 void (*putc)(char*, char), char *putc_arg, int capital)
 {
 	char	buf[MAXBUF];	/* build number here */
 	register char *	p = &buf[MAXBUF-1];
@@ -198,7 +197,7 @@ printnum(register unsigned long u, register int base,
 
 static void
 printnum_16(register unsigned long u,
-	    void (*putc)(char*, char), char *putc_arg)
+	    void (*putc)(char*, char), char *putc_arg, int capital)
 {
     char    buf[8]; /* build number here */
     register char * p = &buf[7];
@@ -219,6 +218,7 @@ static bool_t	_doprnt_truncates = FALSE;
 void LOG_doprnt(register const char *fmt, va_list args, int radix, 
 	     void (*putc)(char*, char), char *putc_arg)
 {
+  	int capital;
 	int		length;
 	int		prec;
 	bool_t		ladjust;
@@ -339,7 +339,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		    u = va_arg(args, unsigned long);
 		    p = va_arg(args, char *);
 		    base = *p++;
-		    printnum(u, base, putc, putc_arg);
+		    printnum(u, base, putc, putc_arg, capital);
 
 		    if (u == 0)
 			break;
@@ -362,7 +362,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 			    for (; (c = *p) > 32; p++)
 				(*putc)(putc_arg, c);
 			    printnum((unsigned)( (u>>(j-1)) & ((2<<(i-j))-1)),
-					base, putc, putc_arg);
+					base, putc, putc_arg, capital);
 			}
 			else if (u & (1<<(i-1))) {
 			    if (any)
@@ -427,11 +427,11 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		        }
 		      }
 		      if(altfmt) putc(putc_arg, '[');
-		      printnum_16( tid.lh.high, putc, putc_arg);
+		      printnum_16( tid.lh.high, putc, putc_arg, capital);
 		      
 		      putc(putc_arg, ':');
 		      
-		      printnum_16( tid.lh.low, putc, putc_arg);
+		      printnum_16( tid.lh.low, putc, putc_arg, capital);
 		      
 		      if(altfmt) putc(putc_arg, ']');
 		      
@@ -472,7 +472,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
 		        }
 		      }
 		      
-		      printnum(tid.id.task, 16, putc, putc_arg);
+		      printnum(tid.id.task, 16, putc, putc_arg, capital);
                       putc(putc_arg, '.');
                       
                       if(length > 0 && !ladjust) {
@@ -481,7 +481,7 @@ void LOG_doprnt(register const char *fmt, va_list args, int radix,
                           n++;
                         }
                       }
-                      printnum(tid.id.lthread, 16, putc, putc_arg);
+                      printnum(tid.id.lthread, 16, putc, putc_arg, capital);
                       
                       if(altfmt) putc(putc_arg, ']');
 

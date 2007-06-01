@@ -75,7 +75,7 @@ void dope_bindf(long id, const char *varfmt, const char *event_type,
 void dope_process_event(long id) {
 	dope_event *e;
 	char *bindarg, *s;
-	u32 num1 = 0, num2 = 0;
+	unsigned long num1 = 0, num2 = 0;
 
 	dopelib_wait_event(id, &e, &bindarg);
 

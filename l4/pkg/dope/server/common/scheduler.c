@@ -218,11 +218,11 @@ static void process_mainloop(void) {
 			static char buf[32];
 			i += 20;
 			for (j=0; j<4; j++) {
-				snprintf(buf, 32, "%ld", (slot_usr_time[j])/((period_length*5)/100));
+				snprintf(buf, 32, "%d", (slot_usr_time[j])/((period_length*5)/100));
 				ld[j]->ldm->barconfig(ld[j], "user", buf, "<default>");
-				snprintf(buf, 32, "%ld", (slot_rt_time[j])/((period_length*5)/100));
+				snprintf(buf, 32, "%d", (slot_rt_time[j])/((period_length*5)/100));
 				ld[j]->ldm->barconfig(ld[j], "rt",   buf, "<default>");
-				snprintf(buf, 32, "%ld", (slot_nrt_time[j])/((period_length*5)/100));
+				snprintf(buf, 32, "%d", (slot_nrt_time[j])/((period_length*5)/100));
 				ld[j]->ldm->barconfig(ld[j], "nrt",  buf, "<default>");
 				slot_rt_time[j] = 0;
 				slot_nrt_time[j] = 0;

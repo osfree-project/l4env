@@ -72,12 +72,11 @@ l4_myself_noprof(void)
 					   ("m") before this point */
 	  "popl  %%ebx		\n\t"
 	  :
-	   "=S" (temp_id.lh.low),	/* ESI, 0 */
-	   "=D" (temp_id.lh.high)	/* EDI, 1 */
+	   "=S" (temp_id.raw)	/* ESI, 0 */
 	  :
 	   "0" (0)			/* ESI, nil id (id.low = 0) */
 	  :
-	   "eax", "ecx", "edx"
+	   "eax", "ecx", "edx", "edi"
 	  );
   return temp_id;
 }

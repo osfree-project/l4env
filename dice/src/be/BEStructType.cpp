@@ -523,14 +523,23 @@ int CBEStructType::GetSize()
     }
 
     int nBitSize = 0;
+    int __loop = 1;
     vector<CBETypedDeclarator*>::iterator iter;
     for (iter = m_Members.begin();
 	 iter != m_Members.end();
 	 iter++)
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "CBEStructType::%s at member %d, type at %p (%d), first decl at %p\n",
+	    __func__, __loop++, (*iter)->GetType(), 
+	    (*iter)->GetType() ? (*iter)->GetType()->GetFEType() : 0,
+	    (*iter)->m_Declarators.First());
+	CBEDeclarator *pDecl = (*iter)->m_Declarators.First();
+	// do not assert pDecl, but check later to allow anonym unions/structs
+	// as members of the struct
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEStructType::%s testing member %s\n",
-	    __func__, (*iter)->m_Declarators.First()->GetName().c_str());
+	    __func__, pDecl ? pDecl->GetName().c_str() : "(anonym)");
 
         // special case handling:
         // if the member is a pointer to ourself, then we
@@ -558,7 +567,7 @@ int CBEStructType::GetSize()
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEStructType::%s member %s is of type %d\n",
-	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
+	    __func__, pDecl ? pDecl->GetName().c_str() : "(anonym)", 
 	    pMemberType->GetFEType());
 	
 	while (dynamic_cast<CBEUserDefinedType*>(pMemberType) &&
@@ -568,7 +577,7 @@ int CBEStructType::GetSize()
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEStructType::%s member %s has real type %d\n",
-	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
+	    __func__, pDecl ? pDecl->GetName().c_str() : "(anonym)", 
 	    pMemberType->GetFEType());
 	
         if ((dynamic_cast<CBEStructType*>(pMemberType)) &&
@@ -583,7 +592,11 @@ int CBEStructType::GetSize()
             return -1;
         }
 
-        int nElemSize = (*iter)->GetSize();
+	int nElemSize = 0;
+	if (pDecl)
+	    nElemSize = (*iter)->GetSize();
+	else
+	    nElemSize = pMemberType->GetSize();
         if ((*iter)->IsString())
         {
             // a string is also variable sized member
@@ -703,9 +716,12 @@ int CBEStructType::GetMaxSize()
 	 iter != m_Members.end();
 	 iter++)
     {
+	CBEDeclarator *pDecl = (*iter)->m_Declarators.First();
+	// do not assert pDecl, but check later to allow anonym unions/structs
+	// as members of the struct
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEStructType::%s testing member %s\n",
-	    __func__, (*iter)->m_Declarators.First()->GetName().c_str());
+	    __func__, pDecl ? pDecl->GetName().c_str() : "(anonym)");
         // special case handling:
         // if the member is a pointer to ourself, then we
         // handle this as a variable sized entry.
@@ -732,7 +748,7 @@ int CBEStructType::GetMaxSize()
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEStructType::%s member %s is of type %d\n",
-	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
+	    __func__, pDecl ? pDecl->GetName().c_str() : "(anonym)", 
 	    pMemberType->GetFEType());
 	
 	while (dynamic_cast<CBEUserDefinedType*>(pMemberType) &&
@@ -742,7 +758,7 @@ int CBEStructType::GetMaxSize()
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEStructType::%s member %s has real type %d\n",
-	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(), 
+	    __func__, pDecl ? pDecl->GetName().c_str() : "(anonym)", 
 	    pMemberType->GetFEType());
 	
         if ((dynamic_cast<CBEStructType*>(pMemberType)) &&
@@ -792,7 +808,7 @@ int CBEStructType::GetMaxSize()
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	    "CBEStructType::%s: member %s has size %d (bits %d) - total: %d\n", 
-	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(),
+	    __func__, pDecl ? pDecl->GetName().c_str() : "(anonym)",
 	    nSize, nBitSize, nMaxSize);
     }
     // some bitfields left? -> align them and add them

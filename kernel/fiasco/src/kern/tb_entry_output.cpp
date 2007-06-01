@@ -98,7 +98,7 @@ formatter_ipc(Tb_entry *tb, const char *tidstr, unsigned tidlen,
       : "(no ipc) ";
 
   my_snprintf(buf, maxlen, "%s%-*s %s", 
-      e->dst().next_period() ? "[NP] " : "", tidlen, tidstr, m);
+      /*e->dst().next_period() ? "[NP] " :*/ "", tidlen, tidstr, m);
 
   // print destination id
   if (!e->rcv_desc().open_wait() || e->snd_desc().has_snd())
@@ -117,62 +117,62 @@ formatter_ipc(Tb_entry *tb, const char *tidstr, unsigned tidlen,
     {
       if (e->snd_desc().map())
 	my_snprintf(buf, maxlen, e->dword(1) & 1 ? " grant" : " map");
-
+#if 0 // XXX: next_period
       if (!e->dst().next_period())
+#endif
 	my_snprintf(buf, maxlen, " ("L4_PTR_FMT","L4_PTR_FMT")", 
 	    e->dword(0), e->dword(1));
     }
 
   my_snprintf(buf, maxlen, " TO=");
-  L4_timeout to = e->timeout();
+  L4_timeout_pair to = e->timeout();
   if (e->snd_desc().has_snd())
     {
-      if (e->dst().abs_snd_timeout())
+      if (to.snd.is_absolute())
 	{
 	  // absolute send timeout
-	  Unsigned64 end = to.snd_microsecs_abs (e->kclock(), 
-						     e->dst().abs_snd_clock());
+	  Unsigned64 end = to.snd.microsecs_abs (e->kclock());
 	  format_timeout((Mword)(end > e->kclock() ? end-e->kclock() : 0),
 			 buf, maxlen);
 	}
       else
 	{
 	  // relative send timeout
-	  if (to.snd_exp() == 0)
+	  if (to.snd.is_never())
 	    my_snprintf(buf, maxlen, "INF");
-	  else if (to.snd_man() == 0)
+	  else if (to.snd.is_zero())
 	    my_snprintf(buf, maxlen, "0");
 	  else
-    	    format_timeout((Mword)to.snd_microsecs_rel(0), buf, maxlen);
+    	    format_timeout((Mword)to.snd.microsecs_rel(0), buf, maxlen);
 	}
     }
   if (e->snd_desc().has_snd() && e->rcv_desc().has_receive())
     my_snprintf(buf, maxlen, "/");
   if (e->rcv_desc().has_receive())
     {
-      if (e->dst().abs_rcv_timeout())
+      if (to.rcv.is_absolute())
 	{
 	  // absolute receive timeout
-	  Unsigned64 end = to.rcv_microsecs_abs (e->kclock(),
-						     e->dst().abs_rcv_clock());
+	  Unsigned64 end = to.rcv.microsecs_abs (e->kclock());
 	  format_timeout((Mword)(end > e->kclock() ? end-e->kclock() : 0),
 			 buf, maxlen);
 	}
       else
 	{
 	  // relative receive timeout
-	  if (to.rcv_exp() == 0)
+	  if (to.rcv.is_never())
 	    my_snprintf(buf, maxlen, "INF");
-	  else if (to.rcv_man() == 0)
+	  else if (to.rcv.is_zero())
 	    my_snprintf(buf, maxlen, "0");
 	  else
-    	    format_timeout((Mword)to.rcv_microsecs_rel(0), buf, maxlen);
+    	    format_timeout((Mword)to.rcv.microsecs_rel(0), buf, maxlen);
 	}
     }
-
+#if 0
   if (e->dst().next_period())
     my_snprintf(buf, maxlen, " left:%lld",
 		(Unsigned64)e->dword(0) + ((Unsigned64)e->dword(1) << 32));
+#endif
 
   return maxlen;
 }
@@ -225,15 +225,17 @@ formatter_sc_failed(Tb_entry *tb, const char *tidstr, unsigned tidlen,
     m = "dest invalid";
   else if (e->dst().is_nil())
     m = "dest nil";
+#if 0
   else if (e->dst().next_period())
     m = "next period";
+#endif
   else if (e->rcv_desc().has_receive())
     {
       if (!e->rcv_desc().is_register_ipc())
 	m = "long recv";
       else if (Config::deceit_bit_disables_switch && e->snd_desc().deceite())
 	m = "don't switch on recv";
-      else if (e->timeout().rcv_exp() && e->timeout().rcv_man())
+      else if (!e->timeout().rcv.is_never() && !e->timeout().rcv.is_zero())
 	m = "to != (0, inf)";
       else if (e->rcv_desc().open_wait())
 	{
@@ -593,46 +595,6 @@ formatter_preemption(Tb_entry *tb, const char *tidstr, unsigned tidlen,
 }
 
 
-// lipc
-static
-unsigned
-formatter_lipc(Tb_entry *tb, const char *tidstr, unsigned,
-	       char *buf, int maxlen)
-{
-  Tb_entry_lipc *e = static_cast<Tb_entry_lipc*>(tb);
-  
-  switch(e->type())
-    {
-    case 1:
-      my_snprintf (buf, maxlen,
-		   "lipc: rollback kernel: %s utcbptr: "L4_PTR_FMT,
-		   tidstr, e->c_utcb_ptr());
-      break;
-    case 2:
-      my_snprintf (buf, maxlen,
-		   "lipc: rollforw kernel: %s %2x.%02x -> %2x.%02x",
-		   tidstr,
-		   e->old_thread().d_task(), e->old_thread().d_thread(),
-		   e->new_thread().d_task(), e->new_thread().d_thread());
-      break;
-    case 3:
-      my_snprintf (buf, maxlen,
-		   "lipc: stack cp kernel: %s -> %2x.%02x",
-		   tidstr,
-		   e->new_thread().d_task(), e->new_thread().d_thread());
-      break;
-    case 4:
-      my_snprintf (buf, maxlen,
-		   "lipc: iret st. kernel: %s old: %2x.%02x",
-		   tidstr,
-		   e->old_thread().d_task(), e->old_thread().d_thread());
-      break;
-    }
-  
-  return maxlen;
-}
-
-
 // jean1
 static
 unsigned
@@ -652,6 +614,24 @@ formatter_jean1(Tb_entry *tb, const char *tidstr, unsigned,
   return maxlen;
 }
 
+// id nearest
+static
+unsigned
+formatter_id_nearest(Tb_entry *tb, const char *tidstr, unsigned tidlen,
+                     char *buf, int maxlen)
+{
+  Tb_entry_id_nearest *e = static_cast<Tb_entry_id_nearest*>(tb);
+
+  if (e->dst().is_nil())
+    my_snprintf (buf, maxlen, "idn: %-*s @ "L4_PTR_FMT": myself",
+                 tidlen, tidstr, e->ip());
+  else
+    my_snprintf (buf, maxlen, "idn: %-*s @ "L4_PTR_FMT": %x.%02x",
+                 tidlen, tidstr, e->ip(),
+                 e->dst().d_task(), e->dst().d_thread());
+
+  return maxlen;
+}
 
 // task_new
 static
@@ -701,7 +681,7 @@ init_formatters()
   Jdb_tbuf_output::register_ff(Tbuf_trap, formatter_trap);
   Jdb_tbuf_output::register_ff(Tbuf_sched, formatter_sched);
   Jdb_tbuf_output::register_ff(Tbuf_preemption, formatter_preemption);
-  Jdb_tbuf_output::register_ff(Tbuf_lipc, formatter_lipc);
+  Jdb_tbuf_output::register_ff(Tbuf_id_nearest, formatter_id_nearest);
   Jdb_tbuf_output::register_ff(Tbuf_jean1, formatter_jean1);
   Jdb_tbuf_output::register_ff(Tbuf_task_new, formatter_task_new);
 }

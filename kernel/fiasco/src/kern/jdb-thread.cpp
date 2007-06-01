@@ -16,6 +16,7 @@ public:
 IMPLEMENTATION:
 
 #include "jdb_prompt_ext.h"
+#include "jdb_thread_names.h"
 #include "jdb.h"
 #include "thread.h"
 
@@ -39,7 +40,7 @@ Jdb_tid_ext::ext()
 {
   if (Jdb::get_current_active())
     printf("(%x.%02x) ",
-	Jdb::get_current_active()->d_taskno(), 
+	Jdb::get_current_active()->d_taskno(),
 	Jdb::get_current_active()->d_threadno());
 }
 
@@ -51,6 +52,36 @@ Jdb_tid_ext::update()
 }
 
 static Jdb_tid_ext jdb_tid_ext INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
+
+//-
+
+class Jdb_thread_name_ext : public Jdb_prompt_ext
+{
+public:
+  void ext();
+  void update();
+};
+
+IMPLEMENT
+void
+Jdb_thread_name_ext::ext()
+{
+  if (Jdb::get_current_active())
+    {
+      const char *s = Jdb_thread_names::lookup(Jdb::get_current_active()->id(), 1)->name();
+      if (s && s[0])
+        printf("[%s] ", s);
+    }
+}
+
+IMPLEMENT
+void
+Jdb_thread_name_ext::update()
+{
+  Jdb::get_current();
+}
+
+static Jdb_thread_name_ext jdb_thread_name_ext INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
 #include "space_index.h"
 #include "kernel_task.h"

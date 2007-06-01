@@ -71,7 +71,7 @@ static void release_index(int i) {
 
 /*** INTERFACE: ESTABLISH CONNECTION TO VSCREEN SERVER ***/
 void *vscr_connect_server(char *ident) {
-	int i;
+	long i;
 
 	if (ident) DEBUG(printf("libVScr(get_id): ident = %s\n",ident));
 	if ((i = get_new_index()) <0) return NULL;
@@ -91,7 +91,7 @@ void *vscr_connect_server(char *ident) {
 
 /*** INTERFACE: DISCONNECT FROM VSCREEN SERVER ***/
 void vscr_release_server_id(void *id) {
-	int i = ((int)id) - 1;
+	long i = ((long)id) - 1;
 
 	if (!valid_index(i)) return;
 
@@ -122,10 +122,9 @@ void *vscr_map_smb(char *smb_ident) {
 
 	DEBUG(printf("libVScreen(get_fb): smb_ident = %s\n",smb_ident));
 
-	ds.manager.lh.low  = hex2u32(smb_ident+7);
-	ds.manager.lh.high = hex2u32(smb_ident+16);
-	ds.id              = hex2u32(smb_ident+33);
-	smb_size           = hex2u32(smb_ident+49);
+	ds.manager.raw = hex2u32(smb_ident +  7);
+	ds.id          = hex2u32(smb_ident + 24);
+	smb_size       = hex2u32(smb_ident + 40);
 
 	DEBUG(printf("libVScreen(get_fb): DS = " l4util_idfmt " id = 0x%x "
 	             "fb-size = %dKB\n",
@@ -145,7 +144,7 @@ void *vscr_map_smb(char *smb_ident) {
 /*** INTERFACE: WAIT FOR END OF CURRENT REDRAW OPERATION ***/
 void vscr_server_waitsync(void *id) {
 	CORBA_Environment env = dice_default_environment;
-	int i = ((int)id) - 1;
+	long i = ((long)id) - 1;
 	if (!valid_index(i)) return;
 	dope_vscr_waitsync_call(&vscreens[i].tid,&env);
 	l4_thread_switch(L4_NIL_ID);
@@ -155,7 +154,7 @@ void vscr_server_waitsync(void *id) {
 /*** INTERFACE: ASYNCHRONOUS REFRESH OF A VSCREEN REGION ***/
 void vscr_server_refresh(void *id, int x, int y, int w, int h) {
 	CORBA_Environment env = dice_default_environment;
-	int i = ((int)id) - 1;
+	long i = ((long)id) - 1;
 	if (!valid_index(i)) return;
 	dope_vscr_refresh_call(&vscreens[i].tid, x, y, w, h, &env);
 	l4_thread_switch(L4_NIL_ID);

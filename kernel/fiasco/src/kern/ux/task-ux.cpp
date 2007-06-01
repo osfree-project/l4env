@@ -6,6 +6,8 @@ IMPLEMENTATION [ux]:
 #include "cpu_lock.h"
 #include "hostproc.h"
 #include "lock_guard.h"
+#include "map_util.h"
+#include "mem_layout.h"
 
 IMPLEMENT
 void
@@ -61,10 +63,6 @@ Task::~Task()
     ;
 }
 
-IMPLEMENTATION [ux-utcb]:
-
-#include "map_util.h"
-#include "mem_layout.h"
 
 IMPLEMENT
 void
@@ -73,11 +71,9 @@ Task::map_utcb_ptr_page()
   mem_map (sigma0_task,			// from: space
       L4_fpage(0, 1, Config::PAGE_SHIFT, Mem_layout::Utcb_ptr_frame),
       nonull_static_cast<Space*>(this),    // to: space
-      L4_fpage(0, 0, Config::PAGE_SHIFT, Mem_layout::Utcb_ptr_page,
+      L4_fpage(0, 0, Config::PAGE_SHIFT, Mem_layout::Utcb_ptr_page_user,
 	L4_fpage::Cached),0);		// to: offset
 }
 
-// -----------------------------------------------------------------------
-IMPLEMENTATION [ux-v2-utcb]:
 
 IMPLEMENT void Task::free_utcb_pagetable() {}

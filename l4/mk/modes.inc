@@ -68,7 +68,9 @@ endif
 
 LIBC_INCLUDE_diet = -nostdinc                                 \
                     -I$(OBJ_BASE)/include/dietlibc            \
+                    -I$(OBJ_BASE)/include/uclibc++            \
                     -I$(DROPS_STDDIR)/include/dietlibc        \
+                    -I$(DROPS_STDDIR)/include/uclibc++        \
                     -I$(GCCINCDIR)
 LIBC_LIB_diet     = -ldiet_c
 LIBC_INCLUDE_uc   = -nostdinc                                 \

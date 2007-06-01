@@ -18,6 +18,7 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/kernel.h>
+#include <l4/sys/utcb.h>
 #include <l4/util/mb_info.h>
 #include <l4/util/l4_macros.h>
 #include <l4/rmgr/proto.h>
@@ -601,9 +602,10 @@ pager(void)
   l4_umword_t d1, d2, pfa;
   void *desc;
   int err;
-  int handled;
+  int handled, skip;
   l4_threadid_t t;
   l4_msgdope_t result;
+  l4_msgtag_t tag;
 
   /* we (the main thread of this task) will serve as a pager for our
      children. */
@@ -611,7 +613,7 @@ pager(void)
   /* now start serving the subtasks */
   for (;;)
     {
-      err = l4_ipc_wait(&t, 0, &d1, &d2, L4_IPC_NEVER, &result);
+      err = l4_ipc_wait_tag(&t, 0, &d1, &d2, L4_IPC_NEVER, &result, &tag);
 
       while (!err)
 	{
@@ -622,47 +624,69 @@ pager(void)
 
 	  /* we received a paging request here */
 	  /* handle the sigma0 protocol */
-	  handled = 0;
+	  handled = skip = 0;
 
-	  if (t.id.task <= O_MAX)
-	    /* valid requester */
-	    {
-	      pfa = d1 & 0xfffffffc;
+	  if (l4_msgtag_is_page_fault(tag)
+              || l4_msgtag_is_io_page_fault(tag)
+              || l4_msgtag_label(tag) == 0)
+            {
+              if (t.id.task <= O_MAX)
+                /* valid requester */
+                {
+                  pfa = d1 & 0xfffffffc;
 
-	      if (SIGMA0_IS_MAGIC_REQ(d1))
-		handled = handle_extended_sigma0(t, &d1, &d2);
-	      else if (d1 == 0xfffffffc)
-		handled = handle_anypage(t, pfa, &d1, &d2);
-	      else if (d1 == 1 && (d2 & 0xff) == 1)
-		handled=handle_kip(t,pfa,&d1,&d2);
-	      else if (d1 == 1 && (d2 & 0xff) == 0xff)
-		handled = handle_tbuf_status(t, pfa, &d1, &d2);
+                  if (SIGMA0_IS_MAGIC_REQ(d1))
+                    handled = handle_extended_sigma0(t, &d1, &d2);
+                  else if (d1 == 0xfffffffc)
+                    handled = handle_anypage(t, pfa, &d1, &d2);
+                  else if (d1 == 1 && (d2 & 0xff) == 1)
+                    handled=handle_kip(t,pfa,&d1,&d2);
+                  else if (d1 == 1 && (d2 & 0xff) == 0xff)
+                    handled = handle_tbuf_status(t, pfa, &d1, &d2);
 #if defined ARCH_x86 | ARCH_amd64
-	      else if (pfa < 0x40000000)
-		handled = handle_physicalpage(t, pfa, &d1, &d2);
+                  else if (pfa < 0x40000000)
+                    handled = handle_physicalpage(t, pfa, &d1, &d2);
 #else
-	      else if (pfa > ram_base && (pfa - ram_base) < mem_high)
-		handled = handle_physicalpage(t, pfa, &d1, &d2);
+                  else if (pfa > ram_base && (pfa - ram_base) < mem_high)
+                    handled = handle_physicalpage(t, pfa, &d1, &d2);
 #endif
 #if defined ARCH_x86 | ARCH_amd64
-	      else if (pfa >= 0x40000000 && pfa < 0xC0000000 && !(d1 & 1))
-		handled = handle_adapterpage(t, pfa, &d1, &d2);
-	      else if ((l4_version == VERSION_FIASCO)
-		       && l4_is_io_page_fault(d1))
-		handled = handle_io(t, pfa, &d1, &d2);
+                  else if (pfa >= 0x40000000 && pfa < 0xC0000000 && !(d1 & 1))
+                    handled = handle_adapterpage(t, pfa, &d1, &d2);
+                  else if ((l4_version == VERSION_FIASCO)
+                      && l4_is_io_page_fault(d1))
+                    handled = handle_io(t, pfa, &d1, &d2);
 #endif
-	      else
-                print_err("\r\nROOT: can't handle d1=0x%08x, d2=0x%08x "
-                          "from thread="l4util_idfmt"\n",
-                          d1, d2, l4util_idstr(t));
-	    }
-	  else
-	    /* OOPS.. can't map to this sender. */
-	    ;
+                  else
+                    print_err("\r\nROOT: can't handle d1=0x%08lx, d2=0x%08lx "
+                        "from thread="l4util_idfmt"\n",
+                        d1, d2, l4util_idstr(t));
+                }
+              else
+                /* OOPS.. can't map to this sender. */
+                ;
+            }
+          else if (l4_msgtag_is_exception(tag))
+            {
+              print_err("ROOT: cannot handle exception from "l4util_idfmt
+                        " at "l4_addr_fmt".\n",
+                        l4util_idstr(t), l4_utcb_exc_pc(l4_utcb_get()));
+              skip = 1;
+            }
+          else
+            {
+              print_err("ROOT: cannot handle message of type %d.\n",
+                        l4_msgtag_label(tag));
+              skip = 1;
+            }
+
+	  leave_memmap_functions(RMGR_LTHREAD_PAGER, rmgr_super_id);
+
+          if (skip)
+            break;
 
 	  if (handled)
 	    desc = L4_IPC_SHORT_FPAGE;
-
 	  else
 	    {
 	      // something goes wrong
@@ -670,16 +694,14 @@ pager(void)
 	      desc = L4_IPC_SHORT_MSG;
 	    }
 
-	  leave_memmap_functions(RMGR_LTHREAD_PAGER, rmgr_super_id);
-
 	  /* send reply and wait for next message */
 	  //printf("ROOT: reply to "l4util_idfmt" d1="l4_addr_fmt" d2="
 	  //l4_addr_fmt"\n", l4util_idstr(t), d1, d2);
-	  err = l4_ipc_reply_and_wait(t, desc, d1, d2,
-				      &t, 0, &d1, &d2,
-				      L4_IPC_SEND_TIMEOUT_0,
-				      /* snd timeout = 0 */
-				      &result);
+	  err = l4_ipc_reply_and_wait_tag(t, desc, d1, d2,
+                                          l4_msgtag(0, 0, 0, 0),
+                                          &t, 0, &d1, &d2,
+                                          L4_IPC_SEND_TIMEOUT_0,
+                                          &result, &tag);
 
 	  /* send error while granting?  flush fpage! */
 	  if (err == L4_IPC_SETIMEOUT

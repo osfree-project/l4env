@@ -4,10 +4,10 @@ L4DIR		?= $(PKGDIR)/../..
 TARGET		= dm_phys
 DEFAULT_RELOC_x86 = 0x01500000
 DEFAULT_RELOC_amd64 = 0x01500000
-DEFAULT_RELOC_arm = 0x001b0000
+DEFAULT_RELOC_arm = 0x00190000
 
 MODE		= sigma0
-SYSTEMS		= x86-l4v2 arm-l4x0 amd64-l4v2
+SYSTEMS		= x86-l4v2 arm-l4v2 amd64-l4v2
 
 LIBS		= -ldm_generic-server -ldm_generic -ldm_mem-server \
 		  -lslab -levents -ll4env_err

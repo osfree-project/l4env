@@ -46,6 +46,7 @@
 #include <l4/sigma0/kip.h>
 #include <l4/sigma0/sigma0.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /* number of tasks to create */
 static int number_of_tasks = 10;
@@ -149,7 +150,7 @@ void ipc_error(char * msg, int error)
 static
 void sit_and_wait(int exp)
 {
-  l4_ipc_sleep(L4_IPC_TIMEOUT(255,exp,255,exp,0,0));
+  l4_ipc_sleep(l4_ipc_timeout(255,16-exp,255,16-exp));
 }
 
 
@@ -199,7 +200,7 @@ static void lock(void)
   l4_umword_t ignore =0;
   l4_msgdope_t dope;
 
-  if(lock_thread_id.lh.low == L4_INVALID_ID.lh.low)
+  if(l4_is_invalid_id(lock_thread_id))
     {
       printf("Lock thread not initialised\n");
     }
@@ -226,7 +227,7 @@ static void unlock(void)
   l4_umword_t ignore;
   l4_msgdope_t dope;
 
-  if(lock_thread_id.lh.low == L4_INVALID_ID.lh.low)
+  if(l4_is_invalid_id(lock_thread_id))
     {
       printf("Unlock thread not initialised\n");
     }
@@ -569,6 +570,7 @@ static void pager_thread(void)
     }
 }
 
+static void kill_me(void);
 
 /* the thread that counts */
 static 
@@ -592,6 +594,24 @@ void counter_thread(void)
       ipc_error("counter", res);
     
     count++;
+
+    if (0 && count == 20000)
+      {
+	l4_threadid_t m = counter_thread_id;
+	l4_threadid_t new_pager = L4_INVALID_ID;
+	l4_threadid_t my_preempter = L4_INVALID_ID;
+	l4_umword_t ignore;
+	m.id.lthread = 0;
+	l4_thread_ex_regs( m,		 /* dest thread */
+		     (l4_umword_t)kill_me,       /* EIP */
+		     ~0UL,                       /* ESP */
+		     &my_preempter,		 /* preempter */
+		     &new_pager,		 /* pager */
+		     &ignore,			 /* flags */
+		     &ignore,			 /* old ip */
+		     &ignore			 /* old sp */
+		     );
+      }
 
     if(count % 10000 == 0)
       {
@@ -820,6 +840,27 @@ void ping_pong_task(void)
 
 /* start a task, this is called in the spinner thread */
 static
+void kill_task(int task)
+{
+  l4_threadid_t t, new_t;
+
+  get_thread_ids(&t,NULL,NULL,NULL);
+  t.id.task = task;
+  t.id.lthread = 0;
+
+  l4_utcb_get()->values[4] = 0;
+
+  printf("kill task %d\n", task);
+
+  new_t = l4_task_new(t,			 /* dest task */
+		      0,			 /* prio */
+		      0,	 /* ESP */
+		      0,	 /* EIP */
+		      L4_NIL_ID );	 /* pager */
+}
+
+/* start a task, this is called in the spinner thread */
+static
 void start_task(int task)
 {
   l4_threadid_t t, new_t;
@@ -827,6 +868,8 @@ void start_task(int task)
   get_thread_ids(&t,NULL,NULL,NULL);
   t.id.task = task;
   t.id.lthread = 0;
+
+  l4_utcb_get()->values[4] = 0x10000000 | initiator_task_id.id.task;
 
   new_t = l4_task_new(t,			 /* dest task */
 		      0,			 /* prio */
@@ -1056,6 +1099,8 @@ int main(void)
     sit_and_wait(8);
 
   /* start initiator */
+  
+  l4_utcb_get()->values[4] = 0x2ffff000 | pager_thread_id.id.task;
   initiator_task_id = 
     l4_task_new(initiator_task_id,			 /* dest task */
 		0,				 /* prio */
@@ -1086,6 +1131,13 @@ int main(void)
     }
   }
 
+  enter_kdebug("before kill");
+  int task;
+  for(task = initiator_task_id.id.task; task <= last_task.id.task; task++)
+    kill_task(task);
+
+  enter_kdebug("after kill");
+
   /* wait forever */
   lock();
   printf("stop main\n");
@@ -1093,3 +1145,18 @@ int main(void)
   wait_forever();
   return 0;
 }
+
+
+static
+void
+kill_me()
+{
+  enter_kdebug("before kill");
+  int task;
+  for(task = initiator_task_id.id.task; task <= last_task.id.task; task++)
+    kill_task(task);
+
+  enter_kdebug("after kill");
+  exit(1);
+}
+

@@ -33,8 +33,8 @@ IMPLEMENTATION:
  * Preemption sender role constructor
  */
 PUBLIC
-Preemption::Preemption (Global_id const id)
-          : Sender     (id.preemption_id()),
+Preemption::Preemption (Global_id const &id)
+          : Sender     (id/*.preemption_id() XXX: enable preeption again*/),
             _pending   (0)
 {}
 

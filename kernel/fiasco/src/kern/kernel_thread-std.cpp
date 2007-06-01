@@ -28,7 +28,7 @@ Kernel_thread::init_workload()
 
   // sigma0's chief is the boot task
   Space_index (Config::sigma0_id.task()).set_chief
-    (space_index(), Space_index (Config::sigma0_id.chief()));
+    (space_index(), Space_index (0));
 
   sigma0_task = Task::create(Ram_quota::root, Config::sigma0_id.task());
   assert(sigma0_task);
@@ -52,7 +52,7 @@ Kernel_thread::init_workload()
 
   // the boot task's chief is the kernel
   Space_index (Config::boot_id.task()).set_chief
-    (space_index(), Space_index (Config::boot_id.chief()));
+    (space_index(), Space_index (0));
   
   Task *boot_task = Task::create(Ram_quota::root, Config::boot_id.task());
   assert(boot_task);

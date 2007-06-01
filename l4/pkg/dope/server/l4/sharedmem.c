@@ -47,7 +47,7 @@ int init_sharedmem(struct dope_services *d);
 
 
 /*** ALLOCATE SHARED MEMORY BLOCK OF SPECIFIED SIZE ***/
-static SHAREDMEM *shm_alloc(s32 size) {
+static SHAREDMEM *shm_alloc(long size) {
 	SHAREDMEM *new = malloc(sizeof(SHAREDMEM));
 	if (!new) {
 		ERROR(printf("SharedMemory(alloc): out of memory.\n"));
@@ -58,11 +58,10 @@ static SHAREDMEM *shm_alloc(s32 size) {
 	                                       "DOpE shm",
 	                                       &new->ds);
 	new->size = size;
-	printf("SharedMem(alloc): hl.low=%lx, lh.high=%lx, id=%x, size=%x\n",
-		new->ds.manager.lh.low,
-		new->ds.manager.lh.high,
+	printf("SharedMem(alloc): hl.raw=%lx, id=%x, size=%lx\n",
+		(unsigned long)new->ds.manager.raw,
 		new->ds.id,
-		(int)size);
+		(int long)size);
 	return new;
 }
 
@@ -78,7 +77,7 @@ static void shm_destroy(SHAREDMEM *sm) {
 /*** RETURN THE ADRESS OF THE SHARED MEMORY BLOCK ***/
 static void *shm_get_adr(SHAREDMEM *sm) {
 	if (!sm) return NULL;
-	printf("SharedMem(get_adr): address = %x\n", (int)sm->addr);
+	printf("SharedMem(get_adr): address = %p\n", sm->addr);
 	return sm->addr;
 }
 
@@ -86,11 +85,10 @@ static void *shm_get_adr(SHAREDMEM *sm) {
 /*** GENERATE A GLOBAL IDENTIFIER FOR THE SPECIFIED SHARED MEMORY BLOCK ***/
 static void shm_get_ident(SHAREDMEM *sm, u8 *dst) {
 	if (!sm) return;
-	sprintf(dst, "t_id=0x%08lX,%08lX ds_id=0x%08x size=0x%08x",
-	        sm->ds.manager.lh.low,
-	        sm->ds.manager.lh.high,
+	sprintf(dst, "t_id=0x%08lX ds_id=0x%08x size=0x%08lx",
+	        (unsigned long)sm->ds.manager.raw,
 	        sm->ds.id,
-	        (int)sm->size);
+	        (long)sm->size);
 }
 
 

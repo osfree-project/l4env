@@ -20,7 +20,7 @@ enum {
   Tbuf_pf_res             = 14,
   Tbuf_sched              = 15,
   Tbuf_preemption         = 16,
-  Tbuf_lipc               = 17,
+  Tbuf_id_nearest         = 17,
   Tbuf_jean1              = 18,
   Tbuf_task_new           = 19,
   Tbuf_max                = 32,
@@ -66,7 +66,8 @@ private:
   L4_rcv_desc	_rcv_desc;	///< ipc receive descriptor
   Mword		_dword[2]; 	///< first two message words
   Global_id	_dst;		///< destination id
-  L4_timeout	_timeout;	///< timeout
+  Mword		_flags;         ///< flags
+  L4_timeout_pair	_timeout;	///< timeout
 };
 
 /** logged ipc result. */
@@ -100,7 +101,7 @@ class Tb_entry_ipc_sfl : public Tb_entry
 private:
   L4_snd_desc	_snd_desc;	///< short ipc send descriptor
   L4_rcv_desc	_rcv_desc;	///< short ipc rcv descriptor
-  L4_timeout	_timeout;	///< ipc timeout
+  L4_timeout_pair	_timeout;	///< ipc timeout
   Global_id	_dst;		///< partner
   Unsigned8	_is_irq, _snd_lst, _dst_ok, _dst_lck, _preempt;
 };
@@ -150,6 +151,13 @@ private:
   Address	_old_ip;	///< old instruction pointer
   Address	_new_ip;	///< new instruction pointer
   Mword		_failed;	///< inter-task ex-regs failed?
+};
+
+/** logged id_nearest operation. */
+class Tb_entry_id_nearest : public Tb_entry
+{
+private:
+  Global_id	_dst;
 };
 
 /** logged task_new operation. */
@@ -205,16 +213,6 @@ private:
   Context	 *_preempter;
 };
 
-/** logged lipc event */
-class Tb_entry_lipc : public Tb_entry
-{
-private:
-  short int	_type;
-  Global_id	_old;
-  Global_id	_new;
-  Address	_c_utcb_ptr;
-};
-
 class Tb_entry_jean1 : public Tb_entry
 {
 private:
@@ -249,8 +247,9 @@ extern "C" void _wrong_sizeof_tb_entry_ipc_sfl	 (void);
 extern "C" void _wrong_sizeof_tb_entry_ctx_sw	 (void);
 extern "C" void _wrong_sizeof_tb_entry_sched	 (void);
 extern "C" void _wrong_sizeof_tb_entry_preemption(void);
-extern "C" void _wrong_sizeof_tb_entry_lipc      (void);
+extern "C" void _wrong_sizeof_tb_entry_id_nearest(void);
 extern "C" void _wrong_sizeof_tb_entry_jean1     (void);
+extern "C" void _wrong_sizeof_tb_entry_task_new  (void);
 
 STATIC_INITIALIZE(Tb_entry_fit);
 
@@ -292,10 +291,12 @@ Tb_entry_fit::init()
     _wrong_sizeof_tb_entry_sched();
   if (sizeof(Tb_entry_preemption) > Tb_entry_size)
     _wrong_sizeof_tb_entry_preemption();
-  if (sizeof(Tb_entry_lipc)       > Tb_entry_size)
-    _wrong_sizeof_tb_entry_lipc();
+  if (sizeof(Tb_entry_id_nearest) > Tb_entry_size)
+    _wrong_sizeof_tb_entry_id_nearest();
   if (sizeof(Tb_entry_jean1)      > Tb_entry_size)
     _wrong_sizeof_tb_entry_jean1();
+  if (sizeof(Tb_entry_task_new)   > Tb_entry_size)
+    _wrong_sizeof_tb_entry_task_new();
   init_arch();
 }
 
@@ -409,7 +410,7 @@ Tb_entry_ipc::set(Context *ctx, Mword ip, Sys_ipc_frame *ipc_regs,
   _rcv_desc  = ipc_regs->rcv_desc();
   _dst       = ipc_regs->snd_dst();
   _timeout   = ipc_regs->timeout();
-  if (_dst.next_period())
+  if (ipc_regs->next_period())
     {
       _dword[0]  = (Unsigned32)(left & 0xffffffff);
       _dword[1]  = (Unsigned32)(left >> 32);
@@ -444,7 +445,7 @@ Tb_entry_ipc::set_sc(Context *ctx, Mword ip, Sys_ipc_frame *ipc_regs,
   _rcv_desc  = ipc_regs->rcv_desc();
   _dst       = ipc_regs->snd_dst();
   _timeout   = ipc_regs->timeout();
-  if (_dst.next_period())
+  if (ipc_regs->next_period())
     {
       _dword[0]  = (Unsigned32)(left & 0xffffffff);
       _dword[1]  = (Unsigned32)(left >> 32);
@@ -475,7 +476,7 @@ Tb_entry_ipc::dst() const
 { return _dst; }
 
 PUBLIC inline
-L4_timeout
+L4_timeout_pair
 Tb_entry_ipc::timeout() const
 { return _timeout; }
 
@@ -562,7 +563,7 @@ PUBLIC inline
 void
 Tb_entry_ipc_sfl::set(Context *ctx, Mword ip,
 		      L4_snd_desc snd_desc, L4_rcv_desc rcv_desc,
-		      L4_timeout timeout, Global_id dst,
+		      L4_timeout_pair timeout, Global_id dst,
 		      Unsigned8 is_irq, Unsigned8 snd_lst,
 		      Unsigned8 dst_ok, Unsigned8 dst_lck,
 		      Unsigned8 preempt)
@@ -580,7 +581,7 @@ Tb_entry_ipc_sfl::set(Context *ctx, Mword ip,
 }
 
 PUBLIC inline
-L4_timeout
+L4_timeout_pair
 Tb_entry_ipc_sfl::timeout() const
 { return _timeout; }
 
@@ -878,6 +879,18 @@ Mword
 Tb_entry_ex_regs::failed() const
 { return _failed; }
 
+PUBLIC inline
+void
+Tb_entry_id_nearest::set (Context *ctx, Address ip, Global_id dst)
+{
+  set_global (Tbuf_id_nearest, ctx, ip);
+  _dst = dst;
+}
+
+PUBLIC inline
+Global_id
+Tb_entry_id_nearest::dst()
+{ return _dst; }
 
 PUBLIC inline
 void
@@ -975,40 +988,6 @@ PUBLIC inline
 Context*
 Tb_entry_preemption::preempter() const
 { return _preempter; }
-
-
-PUBLIC inline
-void
-Tb_entry_lipc::set(Context *tid, Address ip, unsigned short type,
-		   Global_id old_thread, Global_id new_thread,
-		   Address current_utcb_ptr)
-{
-  set_global(Tbuf_lipc, tid, ip);
-  _type    = type;
-  _new     = new_thread;
-  _old     = old_thread;
-  _c_utcb_ptr = current_utcb_ptr;
-}
-
-PUBLIC inline
-unsigned short
-Tb_entry_lipc::type() const
-{ return _type; }
-
-PUBLIC inline
-Global_id
-Tb_entry_lipc::old_thread() const
-{ return _old; }
-
-PUBLIC inline
-Global_id
-Tb_entry_lipc::new_thread() const
-{ return _new; }
-
-PUBLIC inline
-Address
-Tb_entry_lipc::c_utcb_ptr() const
-{ return _c_utcb_ptr; }
 
 
 PUBLIC inline

@@ -67,7 +67,7 @@ __lock_exit_stack(void)
   while (!l4util_cmpxchg32(&exit_stack_used, 0, 1))
     {
       /* wait 1 ms */
-      l4_ipc_sleep(L4_IPC_TIMEOUT(0, 0, 250, 14, 0, 0));
+      l4_ipc_sleep(l4_ipc_timeout(0, 0, 250, 2));
     }
 }
 

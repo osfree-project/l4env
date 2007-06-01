@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= events
-SYSTEMS 	= x86-l4v2 arm-l4x0
+SYSTEMS 	= x86-l4v2 arm-l4v2
 MODE		= sigma0
 MMAP_BACKEND    = -lc_be_self_mem
 DEFAULT_RELOC	= 0x01540000

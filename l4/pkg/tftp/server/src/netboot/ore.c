@@ -102,14 +102,14 @@ static int ore_poll(struct nic *nic)
   LOGd_Enter(CONFIG_LOG_TRACE);
 
   ret = l4ore_recv_blocking(handle, (char **)&nic->packet, &size, my_state.recv_to);
-   
+
   if (ret == 0)
     {
       nic->packetlen = size;
 
       LOGd(CONFIG_LOG_TRACE, "packet size: %d", size);
       LOGd(CONFIG_LOG_MESSAGE, "Packet header: "
-	   "%02x %02x %02x %02x %02x %02x ...",
+		   "%02x %02x %02x %02x %02x %02x ...",
            nic->packet[0], nic->packet[1], nic->packet[2],
            nic->packet[3], nic->packet[4], nic->packet[5]);
 
@@ -153,7 +153,7 @@ int ore_probe(struct dev *dev, const char *type_name)
   l4ore_config ore_conf  = L4ORE_DEFAULT_CONFIG;
   int exp, mant;
 
-#if 0
+#if 1
   ore_conf.ro_keep_device_mac = 1;
 #endif
 
@@ -180,7 +180,7 @@ int ore_probe(struct dev *dev, const char *type_name)
   l4util_micros2l4to(500000, &mant, &exp);
   my_state.handle = err;
   memcpy(my_state.mac, nic->node_addr, 6);
-  my_state.recv_to = L4_IPC_TIMEOUT(0,0,mant,exp,0,0);
+  my_state.recv_to = l4_timeout(0,0,mant,exp);
 
   initialized    = PROBE_WORKED;
   nic->priv_data = (void*)&my_state;

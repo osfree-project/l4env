@@ -79,7 +79,6 @@ int l4input_init(int prio, void (*handler)(struct l4input *))
 #endif
 
 		/* lib state */
-		l4input_internal_jiffies_init();
 		l4input_internal_irq_init(prio);
 		l4input_internal_wait_init();
 

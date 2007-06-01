@@ -35,7 +35,7 @@
 #include "be/BEDeclarator.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEMsgBuffer.h"
-#include "be/BETrace.h"
+#include "be/Trace.h"
 #include "be/BESizes.h"
 #include "Compiler.h"
 #include "TypeSpec-L4Types.h"
@@ -155,14 +155,15 @@ CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile * pFile)
  */
 void CL4BEReplyFunction::WriteIPC(CBEFile *pFile)
 {
-    assert(m_pTrace);
-    m_pTrace->BeforeReplyOnly(pFile, this);
+    if (m_pTrace)
+	m_pTrace->BeforeReplyOnly(pFile, this);
 
     CBECommunication *pComm = GetCommunication();
     assert(pComm);
     pComm->WriteReply(pFile, this);
 
-    m_pTrace->AfterReplyOnly(pFile, this);
+    if (m_pTrace)
+	m_pTrace->AfterReplyOnly(pFile, this);
 }
 
 /** \brief init message buffer size dope

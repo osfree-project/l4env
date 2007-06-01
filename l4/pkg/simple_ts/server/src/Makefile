@@ -1,11 +1,11 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
-SYSTEMS		= x86-l4v2 arm-l4x0 amd64-l4v2
+SYSTEMS		= x86-l4v2 arm-l4v2 amd64-l4v2
 
 TARGET		= simple_ts
 MODE		= sigma0
 DEFAULT_RELOC   = 0x01400000
-DEFAULT_RELOC_arm = 0x00290000
+DEFAULT_RELOC_arm = 0x001f0000
 PRIVATE_INCDIR  = .
 
 SRC_C		= main.c

@@ -21,6 +21,9 @@ endif
 
 ifeq ("$(CONFIG_IO_PROT)","y")
   PREPROCESS_PARTS      += io
+  ifeq ("$(CONFIG_IO_PROT_IOPL_3)","y")
+    PREPROCESS_PARTS      += iopl3
+  endif
 endif
 
 ifeq ("$(CONFIG_TASK_CAPS)","y")
@@ -59,10 +62,6 @@ ifeq ("$(CONFIG_PERF_CNT)","y")
   PREPROCESS_PARTS	+= perf_cnt
 endif
 
-ifeq ("$(CONFIG_EXCEPTION_IPC)","y")
-  PREPROCESS_PARTS	+= utcb exc_ipc
-endif
-
 ifeq ("$(CONFIG_HANDLE_SEGMENTS)","y")
   PREPROCESS_PARTS	+= segments
 endif
@@ -85,8 +84,8 @@ INTERFACES_ABI		:= kip l4_types utcb
 
 kip_IMPL		:= kip kip-ia32 kip-debug kip-ia32-debug
 l4_types_IMPL		:= l4_types l4_types-iofp l4_types-32bit \
-			   l4_types-debug l4_types-caps
-utcb_IMPL		:= utcb-ia32-ux
+			   l4_types-debug l4_types-caps l4_types-objs
+utcb_IMPL		:= utcb utcb-ia32-ux
 
 #
 # JABI Subsystem
@@ -123,7 +122,9 @@ VPATH			+= kern/$(CONFIG_XARCH) kern/shared kern
 PRIVATE_INCDIR		+= kern/$(CONFIG_XARCH) kern/shared kern 
 
 INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
-			   mapping_tree mapdb region pic                     \
+			   mapping_tree mappable simple_mapdb    \
+			   mapdb region pic \
+			   obj_space obj_space_alloc \
 			   cap_space cap_space_alloc io_space ram_quota      \
 			   mem_space space space_index space_index_util	     \
 			   kmem kmem_alloc slab_cache_anon mem_layout        \
@@ -132,7 +133,8 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
 			   ipc_timeout deadline_timeout timeslice_timeout    \
 			   ram_quota_alloc		                     \
 			   thread_state context sender receiver mem_unit     \
-			   thread kernel_thread map_util irq banner warn     \
+			   thread syscalls kernel_thread map_util irq banner \
+			   warn                                              \
 			   dirq globals apic watchdog kernel_uart pit        \
 			   checksum main config kern_types mapped_alloc      \
 			   vmem_alloc paging fpu fpu_state fpu_alloc cpu     \
@@ -142,6 +144,12 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
 			   sched_context allocators utcb_init sys_call_page  \
 			   smas perf_cnt x86desc gdt idt tss trap_state      \
 			   buddy_alloc vkey kdb_ke prio_list
+
+
+ifeq ("$(CONFIG_USER_LOCKS)","y")
+  PREPROCESS_PARTS	+= ulock
+  INTERFACES_KERNEL	+= obj_ref_ptr obj_helping_lock u_lock u_semaphore
+endif
 
 __main_IMPL		:= __main-ia32-amd64
 apic_IMPL		:= apic-ia32-amd64
@@ -185,10 +193,10 @@ task_IMPL		:= task task-ia32-amd64
 tb_entry_IMPL		:= tb_entry tb_entry-ia32-ux
 timer_IMPL		:= timer timer-ia32-amd64-ux
 thread_IMPL		:= thread thread-ia32-ux thread-ia32-amd64           \
-			   thread-syscall thread-syscall-ia32-ux thread-ipc  \
+			   thread-ipc  \
 			   thread-msg thread-msg-ia32-amd64 thread-list      \
 			   thread-pagefault thread-ia32-smas thread-log      \
-			   thread-debug thread-dbf thread-lookup
+			   thread-debug thread-dbf thread-lookup thread-ulock
 utcb_init_IMPL		:= utcb_init utcb_init-ia32-ux
 vmem_alloc_IMPL		:= vmem_alloc \
 			   vmem_alloc-ia32-ux vmem_alloc-ia32-amd64
@@ -258,7 +266,6 @@ jdb_ptab_IMPL		:= jdb_ptab jdb_ptab-ia32-ux-arm
 jdb_screen_IMPL		:= jdb_screen jdb_screen-ia32-ux-arm
 jdb_tcb_IMPL		:= jdb_tcb-ia32-ux
 jdb_trace_set_IMPL	:= jdb_trace_set jdb_trace_set-ia32-ux
-jdb_utcb_IMPL		:= jdb_utcb-ia32-ux
 
   ifeq ("$(CONFIG_JDB_MISC)","y")
     INTERFACES_KERNEL	+= jdb_tetris

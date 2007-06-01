@@ -26,7 +26,8 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/l4/L4BESizes.h"
+#include "L4BESizes.h"
+#include "TypeSpec-L4Types.h"
 
 CL4BESizes::CL4BESizes()
 {
@@ -36,3 +37,31 @@ CL4BESizes::CL4BESizes()
 CL4BESizes::~CL4BESizes()
 {
 }
+
+/** \brief gets the size of a type
+ *  \param nFEType the type to look up
+ *  \param nFESize the size in the front-end
+ *  \return the size of the type in bytes
+ */
+int CL4BESizes::GetSizeOfType(int nFEType, int nFESize)
+{
+    int nSize = 0;
+    switch (nFEType)
+    {
+    case TYPE_RCV_FLEXPAGE:
+    case TYPE_MSGDOPE_SEND:
+    case TYPE_MSGDOPE_SIZE:
+	return GetSizeOfType(TYPE_MWORD, 4);
+        break;
+    case TYPE_FLEXPAGE:
+	return 2 * GetSizeOfType(TYPE_MWORD, 4);
+	break;
+    case TYPE_REFSTRING:
+	return 4 * GetSizeOfType(TYPE_MWORD, 4);
+        break;
+    default:
+        nSize = CBESizes::GetSizeOfType(nFEType, nFESize);
+    }
+    return nSize;
+}
+

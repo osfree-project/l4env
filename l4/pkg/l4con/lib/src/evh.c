@@ -240,7 +240,7 @@ btn_repeat(void *data)
 	  /* wait for around 250ms */
 	  error = l4_ipc_receive(evh_l4id,
 				      L4_IPC_SHORT_MSG, &new_code, &new_repeat,
-				      L4_IPC_TIMEOUT(0,0,244,10,0,0), &result);
+				      l4_ipc_timeout(0,0,976,8), &result);
 	  if (error == L4_IPC_RETIMEOUT && !key_pending)
 	    {
 	      /* no new key in the meantime -- start repeat.
@@ -277,7 +277,7 @@ btn_repeat(void *data)
 		  error = l4_ipc_receive(evh_l4id,
 					      L4_IPC_SHORT_MSG, 
 					        &new_code, &repeat,
-					      L4_IPC_TIMEOUT(0,0,130,11,0,0),
+					      l4_ipc_timeout(0,0,546,6),
 					      &result);
 		  if (error != L4_IPC_RETIMEOUT || key_pending)
 		    {

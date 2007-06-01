@@ -7,7 +7,7 @@ all:: $(SUBDIRS)
 include $(L4DIR)/mk/Makeconf
 
 TARGET		= ldso_simple_example
-SYSTEMS		= x86-l4v2 arm-l4x0
+SYSTEMS		= x86-l4v2 arm-l4v2
 LDFLAGS		= --no-undefined \
 		  --dynamic-linker libld-l4.s.so \
 		  --export-dynamic

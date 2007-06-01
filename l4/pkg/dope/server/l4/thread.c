@@ -162,11 +162,10 @@ static int ident2thread(const u8 *ident, THREAD *dst) {
 	if (!ident || !tid) return -1;
 
 	/* check if identifier string length is valid */
-	for (i=0;i<24;i++) {
+	for (i = 0; i < 13; i++) {
 		if (!ident[i]) return -1;
 	}
-	tid->lh.low  = hex2u32(ident+7);
-	tid->lh.high = hex2u32(ident+16);
+	tid->raw = hex2u32(ident + 7);
 	return 0;
 }
 

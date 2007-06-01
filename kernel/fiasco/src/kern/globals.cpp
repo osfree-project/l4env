@@ -42,10 +42,6 @@ static Thread * const nil_thread    =
 static Thread * const kernel_thread = 
   reinterpret_cast<Thread*>(Mem_layout::Tcbs);
 
-//---------------------------------------------------------------------------
-INTERFACE[utcb]:
-
-extern Address *global_utcb_ptr;
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION:
@@ -65,9 +61,4 @@ Context *context_of(const void *ptr)
   return reinterpret_cast<Context *>
     (reinterpret_cast<unsigned long>(ptr) & ~(Config::thread_block_size - 1));
 }
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION[utcb]:
-
-Address *global_utcb_ptr;
 

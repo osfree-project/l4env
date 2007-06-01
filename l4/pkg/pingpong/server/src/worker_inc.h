@@ -30,36 +30,41 @@
 
 #else
 
-/* IPC operation to use in ping thread - short call */
+/* IPC operation to use in ping thread - short call
+ * send timeout never, receive timeout never */
 #define WHATTODO_SHORT_PING \
   "sub  %%ebp,%%ebp  \n\t"  \
   "sub  %%ecx,%%ecx  \n\t"  \
   "sub  %%eax,%%eax  \n\t"  \
   IPC_SYSENTER
 
-/* IPC operation to use in pong thread - short reply, send timeout 0 */
+/* IPC operation to use in pong thread - short reply
+ * send timeout 0, receive timeout never */
 #define WHATTODO_SHORT_PONG \
   "mov  $1,%%ebp     \n\t"  \
-  "mov  $0x10,%%ecx  \n\t"  \
+  "mov  $0x04000000,%%ecx  \n\t"  \
   "sub  %%eax,%%eax  \n\t"  \
   IPC_SYSENTER
 
 #endif /* !CALL_ONLY */
 
+/* IPC operating to use in ping thread - send timeout 0, receive with (long) timeout */
 #define WHATTODO_SHORT_TO_PING \
   "sub  %%ebp,%%ebp  \n\t"  \
-  "mov  $0xf4000009,%%ecx  \n\t"  \
+  "mov  $0x04007cff,%%ecx  \n\t"  \
   "sub  %%eax,%%eax  \n\t"  \
   IPC_SYSENTER
 
-/* IPC operation to use in pong thread - short reply, send timeout 0 */
+/* IPC operation to use in pong thread - short reply
+ * send timeout 0, receive with (long) timeout */
 #define WHATTODO_SHORT_TO_PONG \
   "mov  $1,%%ebp     \n\t"  \
-  "mov  $0xf4000009,%%ecx  \n\t"  \
+  "mov  $0x04007cff,%%ecx  \n\t"  \
   "sub  %%eax,%%eax  \n\t"  \
   IPC_SYSENTER
 
-/* IPC operation to use in ping thread - short send, receive long */
+/* IPC operation to use in ping thread - short send, receive long
+ * send timeout never, receive timeout never */
 #define WHATTODO_LONG_PING \
   "sub  %%eax,%%eax  \n\t" \
   "sub  %%ecx,%%ecx  \n\t" \
@@ -68,16 +73,18 @@
   "pop  %%ebp        \n\t" \
   "add  $(" L4_stringify(NR_BYTES) "),%%ebp \n\t"
 
-/* IPC operation to use in pong thread - reply long, send timeout 0 */
+/* IPC operation to use in pong thread - reply long
+ * send timeout 0, receive timeout never */
 #define WHATTODO_LONG_PONG \
   "mov  $1,%%ebp     \n\t" \
-  "mov  $0x10,%%ecx  \n\t" \
+  "mov  $0x04000000,%%ecx  \n\t" \
   "push %%eax        \n\t" \
   IPC_SYSENTER             \
   "pop  %%eax        \n\t" \
   "add  $(" L4_stringify(NR_BYTES) "),%%eax \n\t"
 
-/* IPC operation to use in ping thread - short send, receive long */
+/* IPC operation to use in ping thread - short send, receive long
+ * send timeout never, receive timeout never */
 #define WHATTODO_INDIRECT_PING \
   "sub  %%eax,%%eax  \n\t" \
   "sub  %%ecx,%%ecx  \n\t" \
@@ -86,16 +93,18 @@
   "pop  %%ebp        \n\t" \
   "add  $128,%%ebp   \n\t"
 
-/* IPC operation to use in pong thread - reply long, send timeout 0 */
+/* IPC operation to use in pong thread - reply long
+ * send timeout 0, receive timeout never */
 #define WHATTODO_INDIRECT_PONG \
   "mov  $1,%%ebp     \n\t" \
-  "mov  $0x10,%%ecx  \n\t" \
+  "mov  $0x04000000,%%ecx  \n\t" \
   "push %%eax        \n\t" \
   IPC_SYSENTER             \
   "pop  %%eax        \n\t" \
   "add  $128,%%eax   \n\t"
 
-/* IPC operation to use in ping thread - short send, receive fpage */
+/* IPC operation to use in ping thread - short send, receive fpage
+ * send timeout never, receive timeout never */
 #define WHATTODO_FPAGE_PING \
   "mov  $0x82,%%ebp  \n\t"  \
   "sub  %%ecx,%%ecx  \n\t"  \
@@ -104,11 +113,12 @@
 
 /* IPC operation to use in send thread - short send fpage. We don't need
  * to save the two dwords describing the flexpage since the recevie thread
- * replies both values immediatly to the sender */
+ * replies both values immediatly to the sender
+ * send timeout 0, receive timeout never */
 #define WHATTODO_FPAGE_PONG \
   "push %%eax        \n\t"  \
   "mov  $1,%%ebp     \n\t"  \
-  "mov  $0x10,%%ecx  \n\t"  \
+  "mov  $0x04000000,%%ecx  \n\t"  \
   "mov  $2,%%eax     \n\t"  \
   IPC_SYSENTER              \
   "pop  %%eax        \n\t"  \
@@ -117,9 +127,9 @@
 
 
 extern int PREFIX(l4_ipc_call_asm) (
-			l4_threadid_t dest, 
+			l4_threadid_t dest,
 			const void *snd_msg,
-	      		l4_umword_t snd_dword0,
+			l4_umword_t snd_dword0,
 			l4_umword_t snd_dword1,
 			void *rcv_msg,
 			l4_umword_t *rcv_dword0,
@@ -151,12 +161,7 @@ extern int dont_do_cold;
 void __attribute__((noreturn))
 PREFIX(pong_short_thread)(void)
 {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  l4_umword_t ping_id32 = l4sys_to_id32(ping_id);
-#else
-  register l4_umword_t idlow  = ping_id.lh.low;
-  register l4_umword_t idhigh = ping_id.lh.high;
-#endif
+  register l4_umword_t ping_id32  = ping_id.raw;
 
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
@@ -184,13 +189,8 @@ PREFIX(pong_short_thread)(void)
 	 WHATTODO_SHORT_PONG
 	 "pop   %%ebp    \n\t"
 	 :
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "S" (ping_id32)
 	 : "eax", "ebx", "ecx", "edx", "edi"
-#else
-	 : "S" (idlow), "D" (idhigh)
-	 : "eax", "ebx", "ecx", "edx"
-#endif	 
 	 );
     }
 }
@@ -201,12 +201,7 @@ PREFIX(ping_short_thread)(void)
 {
   int i;
   l4_cpu_time_t tsc;
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-  register l4_umword_t idlow  = pong_id.lh.low;
-  register l4_umword_t idhigh = pong_id.lh.high;
-#endif
+  register l4_umword_t id32 = pong_id.raw;
   
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
@@ -230,22 +225,17 @@ PREFIX(ping_short_thread)(void)
 	 WHATTODO_SHORT_PING
 	 "pop   %%ebp    \n\t"
 	 :
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "S" (id32)
 	 : "eax", "ebx", "ecx", "edx", "edi"
-#else
-	 : "S" (idlow), "D" (idhigh)
-	 : "eax", "ebx", "ecx", "edx"
-#endif	 
-	);      
+	);
     }
   tsc = l4_rdtsc() - tsc;
 
   printf("  %s%s: %10u cycles / %6lu rounds >> %5u <<\n",
-         (callmode == 1) ? "sysenter" : 
+         (callmode == 1) ? "sysenter" :
 	 (callmode == 2) ? "kipcalls" : "   int30",
 	 dont_do_cold ? "" : "/warm",
-	 (l4_uint32_t)tsc, 8*global_rounds, 
+	 (l4_uint32_t)tsc, 8*global_rounds,
 	 (l4_uint32_t)(tsc/(8*global_rounds)));
 
   /* tell main that we are finished */
@@ -262,12 +252,7 @@ PREFIX(ping_short_cold_thread)(void)
 {
   int i;
   l4_cpu_time_t tsc;
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-  register l4_umword_t idlow  = pong_id.lh.low;
-  register l4_umword_t idhigh = pong_id.lh.high;
-#endif
+  register l4_umword_t id32 = pong_id.raw;
   const l4_umword_t rounds = 10;
   
   /* prevent page faults */
@@ -288,13 +273,8 @@ PREFIX(ping_short_cold_thread)(void)
 	 WHATTODO_SHORT_PING
 	 "pop   %%ebp    	\n\t"
 	 :
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "S" (id32)
 	 : "eax", "ebx", "ecx", "edx", "edi"
-#else
-	 : "S" (idlow), "D" (idhigh)
-	 : "eax", "ebx", "ecx", "edx"
-#endif	 
 	);
     }
   tsc = l4_rdtsc() - tsc;
@@ -321,12 +301,7 @@ PREFIX(ping_short_cold_thread)(void)
 void __attribute__((noreturn))
 PREFIX(pong_short_to_thread)(void)
 {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  l4_umword_t ping_id32 = l4sys_to_id32(ping_id);
-#else
-  register l4_umword_t idlow  = ping_id.lh.low;
-  register l4_umword_t idhigh = ping_id.lh.high;
-#endif
+  l4_umword_t ping_id32 = ping_id.raw;
 
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
@@ -354,13 +329,8 @@ PREFIX(pong_short_to_thread)(void)
 	 WHATTODO_SHORT_TO_PONG
 	 "pop   %%ebp    \n\t"
 	 :
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "S" (ping_id32)
 	 : "eax", "ebx", "ecx", "edx", "edi"
-#else
-	 : "S" (idlow), "D" (idhigh)
-	 : "eax", "ebx", "ecx", "edx"
-#endif	 
 	 );
     }
 }
@@ -371,12 +341,7 @@ PREFIX(ping_short_to_thread)(void)
 {
   int i;
   l4_cpu_time_t tsc;
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-  register l4_umword_t idlow  = pong_id.lh.low;
-  register l4_umword_t idhigh = pong_id.lh.high;
-#endif
+  register l4_umword_t id32 = pong_id.raw;
   
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
@@ -400,13 +365,8 @@ PREFIX(ping_short_to_thread)(void)
 	 WHATTODO_SHORT_TO_PING
 	 "pop   %%ebp    \n\t"
 	 :
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "S" (id32)
 	 : "eax", "ebx", "ecx", "edx", "edi"
-#else
-	 : "S" (idlow), "D" (idhigh)
-	 : "eax", "ebx", "ecx", "edx"
-#endif	 
 	);      
     }
   tsc = l4_rdtsc() - tsc;
@@ -432,12 +392,7 @@ PREFIX(ping_short_to_cold_thread)(void)
 {
   int i;
   l4_cpu_time_t tsc;
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-  register l4_umword_t idlow  = pong_id.lh.low;
-  register l4_umword_t idhigh = pong_id.lh.high;
-#endif
+  register l4_umword_t id32 = pong_id.raw;
   const l4_umword_t rounds = 10;
   
   /* prevent page faults */
@@ -458,13 +413,8 @@ PREFIX(ping_short_to_cold_thread)(void)
 	 WHATTODO_SHORT_TO_PING
 	 "pop   %%ebp		\n\t"
 	 :
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "S" (id32)
 	 : "eax", "ebx", "ecx", "edx", "edi"
-#else
-	 : "S" (idlow), "D" (idhigh)
-	 : "eax", "ebx", "ecx", "edx"
-#endif	 
 	);      
     }
   tsc = l4_rdtsc() - tsc;
@@ -491,12 +441,7 @@ PREFIX(ping_short_to_cold_thread)(void)
 void __attribute__((noreturn))
 PREFIX(pong_short_dc_thread)(void)
 {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  l4_umword_t id32 = l4sys_to_id32(main_id);
-#else
-  register l4_umword_t idlow  = main_id.lh.low;
-  register l4_umword_t idhigh = main_id.lh.high;
-#endif
+  l4_umword_t id32 = main_id.raw;
 
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
@@ -514,13 +459,8 @@ PREFIX(pong_short_dc_thread)(void)
      IPC_SYSENTER
      "pop  %%ebp       \n\t"
      :
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
      : "S" (id32)
      : "eax", "ebx", "ecx", "edx", "edi"
-#else
-     : "S" (idlow), "D" (idhigh)
-     : "eax", "ebx", "ecx", "edx"
-#endif	 
     );
 
   for (;;)
@@ -534,12 +474,7 @@ PREFIX(ping_short_dc_thread)(void)
   int i;
   l4_umword_t dummy1, dummy2 __attribute__((unused));
   l4_cpu_time_t tsc;
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  register l4_umword_t id32   = l4sys_to_id32(pong_id);
-#else
-  register l4_umword_t idlow  = pong_id.lh.low;
-  register l4_umword_t idhigh = pong_id.lh.high;
-#endif
+  register l4_umword_t id32   = pong_id.raw;
   
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
@@ -558,21 +493,11 @@ PREFIX(ping_short_dc_thread)(void)
 	 "mov  $1,%%eax    \n\t"
 	 IPC_SYSENTER
 	 "pop   %%ebp      \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "=S"(dummy1)
 	 : "S" (id32)
 	 : "eax", "ebx", "ecx", "edx", "edi"
-#else
-	 : "=S"(dummy1), "=D"(dummy2)
-	 : "S" (idlow), "D" (idhigh)
-	 : "eax", "ebx", "ecx", "edx"
-#endif
 	);
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      id32  += 0x10000;
-#else
-      idlow += 0x20000;
-#endif
+      id32  += 0x20000;
     }
   tsc = l4_rdtsc() - tsc;
 
@@ -628,12 +553,7 @@ PREFIX(ping_short_ndc_thread)(void)
   int i;
   l4_umword_t dummy1, dummy2 __attribute__((unused));
   l4_cpu_time_t tsc;
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  register l4_umword_t id32   = l4sys_to_id32(pong_id);
-#else
-  register l4_umword_t idlow  = pong_id.lh.low;
-  register l4_umword_t idhigh = pong_id.lh.high;
-#endif
+  register l4_umword_t id32   = pong_id.raw;
   
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
@@ -652,21 +572,11 @@ PREFIX(ping_short_ndc_thread)(void)
 	 "sub  %%eax,%%eax \n\t"
 	 IPC_SYSENTER
 	 "pop   %%ebp      \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "=S"(dummy1)
 	 : "S" (id32)
 	 : "eax", "ebx", "ecx", "edx", "edi"
-#else
-	 : "=S"(dummy1), "=D"(dummy2)
-	 : "S" (idlow), "D" (idhigh)
-	 : "eax", "ebx", "ecx", "edx"
-#endif
 	);
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      id32  += 0x10000;
-#else
-      idlow += 0x20000;
-#endif
+      id32  += 0x20000;
     }
   tsc = l4_rdtsc() - tsc;
 
@@ -956,9 +866,7 @@ PREFIX(ping_short_asm_cold_thread)(void)
 void __attribute__((noreturn))
 PREFIX(pong_long_thread)(void)
 {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  l4_umword_t ping_id32 = l4sys_to_id32(ping_id);
-#endif
+  l4_umword_t ping_id32 = ping_id.raw;
   int i;
 
   /* prevent page faults */
@@ -995,13 +903,8 @@ PREFIX(pong_long_thread)(void)
 	 WHATTODO_LONG_PONG
 	 "pop   %%ebp    \n\t"
 	 : "=a" (dummy)
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "a" (long_send_msg), "S" (ping_id32)
 	 : "ebx", "ecx", "edx", "edi"
-#else
-	 : "a" (long_send_msg), "D" (ping_id.lh.high), "S" (ping_id.lh.low)
-	 : "ebx", "ecx", "edx"
-#endif
 	 );
     }
 }
@@ -1030,12 +933,7 @@ PREFIX(ping_long_thread)(void)
     }
 
     {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-      register l4_umword_t idlow = pong_id.lh.low;
-      register l4_umword_t idhigh = pong_id.lh.high;
-#endif    
+      register l4_umword_t id32 = pong_id.raw;
 
       PREFIX(call)(pong_id);
 
@@ -1056,15 +954,9 @@ PREFIX(ping_long_thread)(void)
 	     WHATTODO_LONG_PING
 	     WHATTODO_LONG_PING
 	     "pop   %%ebp      \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	     : "=b" (dummy)
 	     :  "b" (&long_recv_msg), "S" (id32)
 	     : "eax", "ecx", "edx", "edi"
-#else
-	     : "=b" (dummy)
-	     :  "b" (&long_recv_msg), "S" (idlow), "D" (idhigh)
-	     : "eax", "ecx", "edx"
-#endif
 	    );
 	}
       tsc = l4_rdtsc() - tsc;
@@ -1115,12 +1007,7 @@ PREFIX(ping_long_cold_thread)(void)
     }
 
     {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-      register l4_umword_t idlow = pong_id.lh.low;
-      register l4_umword_t idhigh = pong_id.lh.high;
-#endif
+      register l4_umword_t id32 = pong_id.raw;
       PREFIX(call)(pong_id);
 
       rounds = 10;
@@ -1137,15 +1024,9 @@ PREFIX(ping_long_cold_thread)(void)
 	     "mov   %%ebx,%%ebp\n\t"
 	     WHATTODO_LONG_PING
 	     "pop   %%ebp      \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	     : "=b" (dummy)
 	     :  "b" (&long_recv_msg), "S" (id32)
 	     : "eax", "ecx", "edx", "edi"
-#else
-	     : "=b" (dummy)
-	     :  "b" (&long_recv_msg), "S" (idlow), "D" (idhigh)
-	     : "eax", "ecx", "edx"
-#endif
 	    );
 	}
       tsc = l4_rdtsc() - tsc;
@@ -1166,9 +1047,7 @@ PREFIX(ping_long_cold_thread)(void)
 void __attribute__((noreturn))
 PREFIX(pong_indirect_thread)(void)
 {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  l4_umword_t ping_id32 = l4sys_to_id32(ping_id);
-#endif
+  l4_umword_t ping_id32 = ping_id.raw;
   int i;
 
   /* prevent page faults */
@@ -1221,13 +1100,8 @@ PREFIX(pong_indirect_thread)(void)
 	 WHATTODO_INDIRECT_PONG
 	 "pop   %%ebp    \n\t"
 	 : "=a" (dummy)
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "a" (indirect_send_msg), "S" (ping_id32)
 	 : "ebx", "ecx", "edx", "edi"
-#else
-	 : "a" (indirect_send_msg), "D" (ping_id.lh.high), "S" (ping_id.lh.low)
-	 : "ebx", "ecx", "edx"
-#endif
 	 );
     }
 }
@@ -1269,12 +1143,7 @@ PREFIX(ping_indirect_thread)(void)
     }
 
     {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-      register l4_umword_t idlow = pong_id.lh.low;
-      register l4_umword_t idhigh = pong_id.lh.high;
-#endif    
+      register l4_umword_t id32 = pong_id.raw;
 
       PREFIX(call)(pong_id);
 
@@ -1295,15 +1164,9 @@ PREFIX(ping_indirect_thread)(void)
 	     WHATTODO_INDIRECT_PING
 	     WHATTODO_INDIRECT_PING
 	     "pop   %%ebp      \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	     : "=b" (dummy)
 	     :  "b" (&indirect_recv_msg), "S" (id32)
 	     : "eax", "ecx", "edx", "edi"
-#else
-	     : "=b" (dummy)
-	     :  "b" (&indirect_recv_msg), "S" (idlow), "D" (idhigh)
-	     : "eax", "ecx", "edx"
-#endif
 	    );
 	}
       tsc = l4_rdtsc() - tsc;
@@ -1354,12 +1217,7 @@ PREFIX(ping_indirect_cold_thread)(void)
     }
 
     {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-      register l4_umword_t idlow = pong_id.lh.low;
-      register l4_umword_t idhigh = pong_id.lh.high;
-#endif
+      register l4_umword_t id32 = pong_id.raw;
 
       PREFIX(call)(pong_id);
 
@@ -1377,15 +1235,9 @@ PREFIX(ping_indirect_cold_thread)(void)
 	     "mov   %%ebx,%%ebp\n\t"
 	     WHATTODO_INDIRECT_PING
 	     "pop   %%ebp      \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	     : "=b" (dummy)
 	     :  "b" (&indirect_recv_msg), "S" (id32)
 	     : "eax", "ecx", "edx", "edi"
-#else
-	     : "=b" (dummy)
-	     :  "b" (&indirect_recv_msg), "S" (idlow), "D" (idhigh)
-	     : "eax", "ecx", "edx"
-#endif
 	    );
 	}
       tsc = l4_rdtsc() - tsc;
@@ -1424,12 +1276,7 @@ PREFIX(pong_fpage_thread)(void)
   PREFIX(call)(ping_id);
 
     {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      register l4_umword_t ping_id32 = l4sys_to_id32(ping_id);
-#else
-      register l4_umword_t idlow  = ping_id.lh.low;
-      register l4_umword_t idhigh = ping_id.lh.high;
-#endif
+      register l4_umword_t ping_id32 = ping_id.raw;
       register l4_umword_t dw0 = scratch_mem;
       register l4_umword_t dw1 = l4_fpage(scratch_mem, l4util_log2(fpagesize),
 					  L4_FPAGE_RW, L4_FPAGE_MAP).fpage;
@@ -1447,15 +1294,9 @@ PREFIX(pong_fpage_thread)(void)
 	     WHATTODO_FPAGE_PONG
 	     WHATTODO_FPAGE_PONG
 	     "pop   %%ebp    \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	     : "=d" (dw0), "=b" (dw1)
 	     : "S" (ping_id32), "d" (dw0), "b" (dw1), "a" (fpagesize)
 	     : "ecx", "edi"
-#else
-	     : "=d" (dw0), "=b" (dw1)
-	     : "S" (idlow), "D" (idhigh), "d" (dw0), "b" (dw1), "a" (fpagesize)
-	     : "ecx"
-#endif
 	    );
 	}
     }
@@ -1467,9 +1308,7 @@ PREFIX(ping_fpage_thread)(void)
 {
   int i;
   l4_cpu_time_t tsc;
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#endif
+  register l4_umword_t id32 = pong_id.raw;
   register l4_umword_t dw0 = 0, dw1 = 0;
 
   /* prevent page faults */
@@ -1493,15 +1332,9 @@ PREFIX(ping_fpage_thread)(void)
 	 WHATTODO_FPAGE_PING
 	 WHATTODO_FPAGE_PING
 	 "pop  %%ebp    \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 :  "=d" (dw0), "=b" (dw1)
-	 :  "S" (id32),  "d" (dw0),  "b" (dw1)
-	 : "eax", "ecx", "edi"
-#else
-	 :  "=d" (dw0), "=b" (dw1)
-	 :  "S" (pong_id.lh.low),  "D" (pong_id.lh.high), "d" (dw0),  "b" (dw1)
+	 :  "S" (id32),  "d" (dw0),  "b" (dw1), "D" (0)
 	 : "eax", "ecx"
-#endif
 	);
     }
   tsc = l4_rdtsc() - tsc;
@@ -1526,9 +1359,7 @@ PREFIX(ping_fpage_thread)(void)
 void __attribute__((noreturn))
 PREFIX(pong_long_fpage_thread)(void)
 {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-  l4_umword_t ping_id32 = l4sys_to_id32(ping_id);
-#endif
+  l4_umword_t ping_id32 = ping_id.raw;
   int i;
 
   /* prevent page faults */
@@ -1568,26 +1399,18 @@ PREFIX(pong_long_fpage_thread)(void)
   for (i=0; ; i++)
     {
       l4_umword_t dummy;
-      asm volatile 
+      asm volatile
 	(
 	 "push %%ebp        \n\t"
 	 "mov  $1,%%ebp     \n\t"
-	 "mov  $0x10,%%ecx  \n\t"
+	 "sub  %%ecx,%%ecx \n\t"
 	 IPC_SYSENTER
 	 "pop   %%ebp       \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "=a" (dummy), "=b" (dummy), "=d" (dummy)
 	 : "a" ((l4_umword_t)&long_send_msg[i] | 2),
 	   "d" (long_send_msg[i].dw[0]), "b" (long_send_msg[i].dw[1]),
-	   "D" (long_send_msg[i].dw[2]), "S" (ping_id32)
+	   "D" (0), "S" (ping_id32)
 	 : "ecx"
-#else
-	 : "=a" (dummy), "=b" (dummy), "=d" (dummy)
-	 : "a" ((l4_umword_t)&long_send_msg[i] | 2),
-	   "d" (long_send_msg[i].dw[0]), "b" (long_send_msg[i].dw[1]),
-	   "S" (ping_id.lh.low), "D" (ping_id.lh.high)
-	 : "ecx"
-#endif
 	 );
     }
 }
@@ -1613,12 +1436,7 @@ PREFIX(ping_long_fpage_thread)(void)
     }
 
     {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-      register l4_umword_t idlow = pong_id.lh.low;
-      register l4_umword_t idhigh = pong_id.lh.high;
-#endif    
+      register l4_umword_t id32 = pong_id.raw;
 
       PREFIX(call)(pong_id);
 
@@ -1634,15 +1452,9 @@ PREFIX(ping_long_fpage_thread)(void)
 	     "sub  %%ecx,%%ecx  \n\t"
 	     IPC_SYSENTER
 	     "pop  %%ebp        \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	     : "=b" (dummy)
-	     :  "b" (&long_recv_msg[i]), "S" (id32)
-	     : "eax", "ecx", "edx", "edi"
-#else
-	     : "=b" (dummy)
-	     :  "b" (&long_recv_msg[i]), "S" (idlow), "D" (idhigh)
+	     :  "b" (&long_recv_msg[i]), "S" (id32), "D" (0)
 	     : "eax", "ecx", "edx"
-#endif
 	    );
 	}
       tsc = l4_rdtsc() - tsc;
@@ -1682,12 +1494,7 @@ PREFIX(ping_long_fpage_cold_thread)(void)
     }
 
     {
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      register l4_umword_t id32 = l4sys_to_id32(pong_id);
-#else
-      register l4_umword_t idlow = pong_id.lh.low;
-      register l4_umword_t idhigh = pong_id.lh.high;
-#endif    
+      register l4_umword_t id32 = pong_id.raw;
 
       PREFIX(call)(pong_id);
 
@@ -1706,15 +1513,9 @@ PREFIX(ping_long_fpage_cold_thread)(void)
 	     "sub  %%ecx,%%ecx  \n\t"
 	     IPC_SYSENTER
 	     "pop  %%ebp        \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	     : "=b" (dummy)
 	     :  "b" (&long_recv_msg[i]), "S" (id32)
 	     : "eax", "ecx", "edx", "edi"
-#else
-	     : "=b" (dummy)
-	     :  "b" (&long_recv_msg[i]), "S" (idlow), "D" (idhigh)
-	     : "eax", "ecx", "edx"
-#endif
 	    );
 	}
       tsc = l4_rdtsc() - tsc;
@@ -1755,31 +1556,20 @@ PREFIX(pong_pagefault_thread)(void)
   while (1)
     {
       register l4_umword_t dw0, dw1;
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-      register l4_umword_t ping_id32 = l4sys_to_id32(ping_id);
-#else
-      register l4_umword_t idlow = ping_id.lh.low;
-      register l4_umword_t idhigh = ping_id.lh.high;
-#endif
+      register l4_umword_t ping_id32 = ping_id.raw;
       register l4_umword_t fp = l4util_log2(fpagesize) << 2;
 
       asm volatile
 	(
 	 "push %%ebp              \n\t"
 	 "xorl %%eax,%%eax        \n\t"
-	 "mov  $0x10,%%ecx        \n\t"
-     	 "mov  $1,%%ebp           \n\t"
+	 "mov  $0x801,%%ecx        \n\t"
+	 "mov  $1,%%ebp           \n\t"
 	 IPC_SYSENTER
 	 "pop  %%ebp              \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	 : "=d" (dw0), "=b" (dw1), "=S" (ping_id32)
-	 : "S" (ping_id32)
-	 : "eax", "ecx", "edi"
-#else
-	 : "=d" (dw0), "=b" (dw1), "=S" (idlow), "=D" (idhigh)
-	 :  "S" (idlow), "D" (idhigh)
+	 : "S" (ping_id32), "D" (0)
 	 : "eax", "ecx"
-#endif
 	 );
 
       while (1)
@@ -1790,19 +1580,13 @@ PREFIX(pong_pagefault_thread)(void)
 	    (
 	     "push %%ebp        \n\t"
 	     "movl $2,%%eax     \n\t"
-	     "mov  $0x10,%%ecx  \n\t"
+	     "mov  $0x801,%%ecx  \n\t"
 	     "mov  $1,%%ebp     \n\t"
 	     IPC_SYSENTER
 	     "pop  %%ebp        \n\t"
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
 	     : "=d" (dw0), "=b" (dw1), "=S" (ping_id32)
-	     :  "d" (dw0),  "b" (dw1),  "S" (ping_id32)
-	     : "eax", "ecx", "edi"
-#else
-	     : "=d" (dw0), "=b" (dw1), "=S" (idlow), "=D" (idhigh)
-	     :  "d" (dw0),  "b" (dw1),  "S" (idlow),  "D" (idhigh)
+	     :  "d" (dw0),  "b" (dw1),  "S" (ping_id32), "D" (0)
 	     : "eax", "ecx"
-#endif
 	     );
 	}
     }
@@ -1871,4 +1655,3 @@ PREFIX(ping_pagefault_thread)(void)
   /* done, sleep */
   l4_sleep_forever();
 }
-

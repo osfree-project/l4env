@@ -100,7 +100,8 @@ Thread::handle_smas_page_fault (Address pfa, Mword error_code,
 
   // Didn't work? Seems the pager is needed.
   if (!(ipc_code 
-	= handle_page_fault_pager(_pager, smaddr, error_code)).has_error())
+	= handle_page_fault_pager(_pager, smaddr, error_code,
+                                  L4_msg_tag::Label_page_fault)).has_error())
     {
       // now copy it in again
       // strange but right: may not be the same space as before

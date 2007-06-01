@@ -30,6 +30,6 @@ void thread_create(void (*entry)(void *),void *arg) {
 }
 
 void thread2ident(l4_threadid_t *tid,char *dst) {
-	sprintf(dst,"t_id=0x%08X,%08X", (int)tid->lh.low, (int)tid->lh.high);
+	sprintf(dst,"t_id=0x%08X", (int)tid->raw);
 }
 

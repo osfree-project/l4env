@@ -31,7 +31,7 @@ l4ts_free_task(const l4_taskid_t *taskid)
 
   if (!l4ts_connected())
     return -L4_ENOTFOUND;
-
+#if 0
   /* If we used allocate2() to get this task, we need
    * to retransfer ownership to the task server
    */
@@ -44,6 +44,7 @@ l4ts_free_task(const l4_taskid_t *taskid)
       if (l4_is_nil_id(ret))
           LOG_Error("Error returning task.");
     }
+#endif
 
   if ((error = l4_ts_free_call(&l4ts_server_id, taskid, &_env)) < 0
       || DICE_HAS_EXCEPTION(&_env))

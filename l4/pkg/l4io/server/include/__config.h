@@ -25,10 +25,9 @@
  * @{
  */
 #define IORES_TOO_MUCH_POLICY   0   /**< skip client-check on release */
-#define IOJIFFIES_L4SCSI        0   /**< use L4SCSI jiffies implementation */
 #define IOJIFFIES_HZ            100 /**< jiffies update frequency */
 #define IOJIFFIES_PERIOD        1000000/IOJIFFIES_HZ
-                                    /**< jiffies period (method no.2) in us */
+                                    /**< jiffies period in us */
 
 #define IO_MAX_THREADS          32  /**< maximum number of threads in l4io */
 /** @} */

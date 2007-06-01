@@ -465,7 +465,7 @@ audio_init_dde (void)
     LOG_Error ("initializing process-level (%d)", err);
     return;
   }
-  if ((err = l4dde_irq_init (io_info_addr->omega0)))
+  if ((err = l4dde_irq_init ()))
   {
     LOG_Error ("initializing irqs (%d)", err);
     return;

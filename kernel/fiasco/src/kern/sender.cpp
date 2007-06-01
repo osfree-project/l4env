@@ -111,7 +111,7 @@ Sender::cast(Prio_list_elem *e)
 { return static_cast<Sender*>(e); }
 
 
-PROTECTED
+PUBLIC
 //PROTECTED inline NEEDS [<cassert>, "cpu_lock.h", "lock_guard.h",
 //                      Sender::replace_node, Sender::tree_insert]
 void Sender::sender_enqueue(Prio_list *head, unsigned short prio)

@@ -42,15 +42,7 @@ of threads to tasks also makes it impossible to migrate threads to other
 address spaces. Fiasco uses the "Clans & Chiefs" concept only for task
 creation and deletion rights.
 .
-ABI_X0			'(L4X0)  L4 Experimental Version X.0 ABI'	text
-This API was targeted at dealing with some of the problems experienced with
-the Version 2 API. The API is very similar to Version 2, the most notable
-differences being 32 bit thread IDs and the lack of "Clans & Chiefs".
-Reducing the ID to 32 bits frees up one register for other purposes and
-makes thread ID handling more efficient. The freed up register enables the
-IPC ABI to use 50% more registers (i.e., 3 instead of 2) for register-only
-IPC transfer. This boosts performance for many microkernel applications.
-.
+
 ARM_PXA                 '(pxa)    Intel XScale'                         text
 Choose this if you have an Intel XScale (PXA) CPU.
 .
@@ -187,6 +179,11 @@ and clear the interrupt flags (that is using cli and sti). Access rights
 to I/O ports can be mapped like memory. If a task has access to the whole
 I/O port space, its IOPL is raised to 3 allowing the task to use cli and
 sti.
+.
+
+IO_PROT_IOPL_3		'Enable CLI/STI (IOPL 3)'			text
+Enable IOPL 3 for tasks with access to all I/O prots, this is the old
+behavior.
 .
 
 TASK_CAPS			'Enable task capabilities'		text
@@ -349,11 +346,6 @@ JDB_MISC		'Miscellaneous JDB modules'
 VMEM_ALLOC_TEST		'Run test for Vmem_alloc allocator'
 
 
-EXCEPTION_IPC		'Exception IPC'					text
-Enable generation of exception IPC by the kernel whenever a thread
-causes an exception or a pagefault.
-.
-
 HANDLE_SEGMENTS		'Handle and preserve segments'			text
 This function preserves the values of segment registers across thread
 and task switches and allows to configure segments for user programs.
@@ -401,6 +393,10 @@ If you use Fiasco for high assurance, high security and use AMD CPUs
 you should enable this option. In any other case it is no harm to disable it.
 .
 
+USER_LOCKS		'Eanble support for user-level locks'		text
+Enable this option if you want to use l4_ulock or l4_usem calls for
+kernel provided user-level locks (FAST).
+.
 
 abi_extensions		'ABI Extensions'
 target_system		'Target System Options'
@@ -430,7 +426,10 @@ warndepend EXPERIMENTAL
 # Specify which items/menus to hide (in order of appearance in main menu) #
 ###########################################################################
 unless  EXPERIMENTAL suppress dependent PF_ISG
-  PL0_HACK ASSEMBLER_IPC_SHORTCUT
+  PL0_HACK USER_LOCKS
+
+unless  TASK_CAPS suppress dependent USER_LOCKS
+require TASK_CAPS == n implies USER_LOCKS == n
 
 unless  PF_PC or PF_UX suppress dependent IA32
 unless  PF_PC suppress dependent AMD64
@@ -438,9 +437,9 @@ unless  PF_PC suppress timer WATCHDOG
 unless  PF_PC suppress WORKAROUND_AMD_FPU_LEAK
 require PF_PC implies (IA32 or AMD64)
 
-when    PF_UX suppress IO_PROT POWERSAVE_GETCHAR SYNC_TSC SMALL_SPACES PROFILE
+when    PF_UX suppress IO_PROT IO_PROT_IOPL_3 POWERSAVE_GETCHAR SYNC_TSC SMALL_SPACES PROFILE
                        SERIAL VMEM_ALLOC_TEST
-require PF_UX implies IA32 and SCHED_PIT and IO_PROT == n
+require PF_UX implies IA32 and SCHED_PIT and IO_PROT == n and IO_PROT_IOPL_3 == n
                       and POWERSAVE_GETCHAR == n and SYNC_TSC == n 
 		      and SMALL_SPACES == n and PROFILE == n
 		      and WATCHDOG == n and SERIAL == n and JDB
@@ -468,27 +467,28 @@ unless  PF_ISG suppress arm_isg_options
 
 #unless PF_UX or PF_PC suppress CONTEXT_4K
 unless IA32 and PF_PC suppress dependent REGPARM3
-unless IA32 suppress dependent PROFILE SYNC_TSC SMALL_SPACES IO_PROT 
+unless IA32 suppress dependent PROFILE SYNC_TSC SMALL_SPACES 
                        FINE_GRAINED_CPUTIME  
+unless IA32 or AMD64 suppress dependent IO_PROT IO_PROT_IOPL_3
 unless PF_PC or PF_UX suppress ASSEMBLER_IPC_SHORTCUT
 unless IA32 suppress dependent JDB_ACCOUNTING ia32_processor
 unless AMD64 suppress dependent amd64_processor
-require AMD64 implies WATCHDOG==n and GSTABS==n and ABI_X0==n and
+require AMD64 implies WATCHDOG==n and GSTABS==n and
                       KDB==n and HANDLE_SEGMENTS==n and PL0_HACK==n and
 		      CONTEXT_4K
-when AMD64 suppress WATCHDOG GSTABS ABI_X0 KDB HANDLE_SEGMENTS
+when AMD64 suppress WATCHDOG GSTABS KDB HANDLE_SEGMENTS
 		PL0_HACK
 
 unless ARM  suppress dependent DEBUG_KERNEL_PAGE_FAULTS VMEM_ALLOC_TEST 
                                arm_processor
 			       
-when   ARM  suppress BEFORE_IRET_SANITY HANDLE_SEGMENTS ABI_V2 
+when   ARM  suppress BEFORE_IRET_SANITY HANDLE_SEGMENTS
                      ASSEMBLER_IPC_SHORTCUT 
 		     FINE_GRAINED_CPUTIME JDB_ACCOUNTING JDB_MISC
 		     IA32_TARGET GSTABS
 		     
 require ARM implies  BEFORE_IRET_SANITY==n and  HANDLE_SEGMENTS==n 
-                     and ABI_X0 
+                     and ABI_V2 
 		     and ASSEMBLER_IPC_SHORTCUT==n and FINE_GRAINED_CPUTIME==n 
                      and JDB_ACCOUNTING==n and JDB_MISC==n 
 		     and SERIAL and GSTABS==n
@@ -554,7 +554,7 @@ require PROFILE	      implies (NO_FRAME_PTR == n) explanation req_profile_fp
 # Specify derived symbols #
 ###########################
 derive XARCH		from ( ARM ? 'arm' : ( PF_UX ? 'ux' : ( AMD64 ? 'amd64' : ( PF_PC ? 'ia32' : '' ))))
-derive ABI		from ABI_V2 ? 'v2' : ( ABI_X0 ? 'x0' : ( IA32 ? '': 'generic'))
+derive ABI		from ABI_V2 ? 'v2' : (IA32 ? '': 'generic')
 derive IA32_TARGET	from IA32_486 ? 'Intel 80486' : (IA32_586 ? 'Intel Pentium' : (IA32_686 ? 'Intel Pentium Pro' : (IA32_P2 ? 'Intel Pentium II' : (IA32_P3 ? 'Intel Pentium III' : (IA32_P4 ? 'Intel Pentium 4' : (IA32_PM ? 'Pentium M' : (IA32_K6 ? 'AMD K6' : (IA32_K7 ? 'AMD Athlon' : (IA32_K8 ? 'AMD Opteron' : 'unknown')))))))))
 derive PERF_CNT		from (JDB and (IA32 or AMD64))
 derive BIT32		from (IA32 or ARM)
@@ -580,7 +580,6 @@ choices arch
 
 choices abi_version		# ABI selection
 	ABI_V2
-	ABI_X0
 	default ABI_V2
 
 choices arm_processor
@@ -631,10 +630,10 @@ menu target_system
 
 menu abi_extensions
 	DECEIT_BIT_DISABLES_SWITCH
-	EXCEPTION_IPC
 	HANDLE_SEGMENTS
 	PL0_HACK
 	TASK_CAPS
+	USER_LOCKS
 
 menu kernel_options
 	abi_version
@@ -650,6 +649,7 @@ menu kernel_options
 	SYNC_TSC
 	FINE_GRAINED_CPUTIME
 	IO_PROT
+	IO_PROT_IOPL_3
 	UX_CON
 	UX_NET
 

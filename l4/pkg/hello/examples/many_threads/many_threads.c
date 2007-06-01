@@ -82,7 +82,7 @@ void ipc_error(char * msg, int error)
 static
 void sit_and_wait(int exp)
 {
-  l4_ipc_sleep(L4_IPC_TIMEOUT(255,exp,255,exp,0,0));
+  l4_ipc_sleep(l4_ipc_timeout(255,16-exp,255,16-exp));
 }
 
 
@@ -92,7 +92,7 @@ static void othread(void)
   l4_threadid_t src, th, my_preempter, my_pager;
   l4_msgdope_t result;
   l4_umword_t msg, ignore;
-  l4_timeout_t t4s = L4_IPC_TIMEOUT(255,8,255,8,0,0);
+  l4_timeout_t t4s = l4_ipc_timeout(1020,12,1020,12);
   int res;
   l4_addr_t sp;
 

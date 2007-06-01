@@ -25,6 +25,16 @@ IMPLEMENTATION:
 #include "config.h"
 #include "l4_types.h"
 
+PUBLIC static inline
+Address
+Mem_layout::user_utcb_ptr() 
+{ return *reinterpret_cast<Address*>(Utcb_ptr_page); }
+
+PUBLIC static inline
+void
+Mem_layout::user_utcb_ptr(Address utcb) 
+{ *reinterpret_cast<Address*>(Utcb_ptr_page) = utcb; }
+
 IMPLEMENT inline
 Mword
 Mem_layout::in_tcbs (Address a)

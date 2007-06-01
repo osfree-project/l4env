@@ -27,8 +27,7 @@ fiasco_gdt_set(void *desc, unsigned int size,
 	 "b"(size),
          "c"(entry_number_start),
 	 "d"(0),
-	 "S"(tid.lh.low),
-	 "D"(tid.lh.high));
+	 "S"(tid.raw));
 }
 
 #endif /* ! __L4_SYS__ARCH_X86__L4API_L4V2__SEGMENT_H__ */

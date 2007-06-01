@@ -28,7 +28,7 @@ extern int verbosity;
 #define true 1
 
 /* value of the timeout: ~10ms */
-#define SERVER_TIMEOUT	L4_IPC_TIMEOUT(0,0,156,12,0,0)
+#define SERVER_TIMEOUT	l4_ipc_timeout(0,0,625,4)
 
 /* number of timeouts before releasing the event to the next priority class */
 #define TIMEOUT_TICKS 	3

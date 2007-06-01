@@ -80,9 +80,8 @@ static void send_input_event(s32 app_id,EVENT *e,char *bindarg) {
 	}
 
 #ifndef L4API_linux
-	env.timeout = L4_IPC_TIMEOUT(195,11,195,11,0,0);
+	env.timeout = l4_ipc_timeout(781, 6, 781, 6);
 #endif
-
 
 	INFO(printf("Messenger(send_event): event type = %d\n",(int)de.type));
 	INFO(printf("Messenger(send_event): try to deliver event\n");)
@@ -102,7 +101,7 @@ static void send_action_event(s32 app_id,char *action,char *bindarg) {
 	de._u.command.cmd = action;
 
 #ifndef L4API_linux
-	env.timeout = L4_IPC_TIMEOUT(195,11,195,11,0,0);
+	env.timeout = l4_ipc_timeout(781, 6, 781, 6);
 #endif
 
 	dopeapp_listener_event_call(listener,&de,bindarg,&env);

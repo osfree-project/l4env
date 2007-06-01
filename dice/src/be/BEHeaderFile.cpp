@@ -38,7 +38,7 @@
 #include "BEStructType.h"
 #include "BEUnionType.h"
 #include "IncludeStatement.h"
-#include "BETrace.h"
+#include "Trace.h"
 #include "Compiler.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
@@ -383,8 +383,9 @@ void CBEHeaderFile::WriteDefaultIncludes(void)
     free(major);
     
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBETrace *pTrace = pCF->GetNewTrace();
-    pTrace->DefaultIncludes(this);
+    CTrace *pTrace = pCF->GetNewTrace();
+    if (pTrace)
+	pTrace->DefaultIncludes(this);
     delete pTrace;
 
     m_file << 

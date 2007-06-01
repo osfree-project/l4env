@@ -4,7 +4,7 @@ L4DIR		?= $(PKGDIR)/../..
 TARGET		= libcontxt.a
 MODE		= l4env
 CLIENTIDL	= l4con.idl
-SYSTEMS		= x86-l4v2 arm-l4x0
+SYSTEMS		= x86-l4v2 arm-l4v2
 
 PRIVATE_INCDIR	= $(SRC_DIR)/../include
 vpath %.c	  $(SRC_DIR)/../src

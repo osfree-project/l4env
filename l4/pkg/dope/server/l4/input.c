@@ -105,7 +105,6 @@ static struct input_services input = {
 int init_input(struct dope_services *d) {
 
 	int init_ret = l4input_init(L4THREAD_DEFAULT_PRIO, (void *)0);
-
 	if (init_ret)
 		printf("Input(init): Error: l4input_init() returned %d\n", init_ret);
 

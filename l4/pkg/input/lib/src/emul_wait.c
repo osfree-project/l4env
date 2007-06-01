@@ -20,6 +20,7 @@
 #include <l4/util/util.h>
 #include <l4/util/l4_macros.h>
 #include <linux/wait.h>
+#include <linux/jiffies.h>
 
 l4_threadid_t wait_thread;
 
@@ -106,17 +107,17 @@ __wait_thread(void *ignore)
   l4_threadid_t src;
   l4_msgdope_t result;
   l4_umword_t dw1, dw2;
-  int error, e, m;
+  l4_timeout_t to = l4_timeout(L4_IPC_TIMEOUT_NEVER,
+                               l4util_micros2l4to(10000));
+  int error;
   wait_queue_head_t *main_queue = 0;
 
   l4thread_started(NULL);
-  l4util_micros2l4to(1000, &e, &m);
 
   for (;;)
     {
       error = l4_ipc_wait(&src, L4_IPC_SHORT_MSG, &dw1, &dw2,
-			  main_queue ? L4_IPC_TIMEOUT(0, 0, m, e, 0, 0)
-			             : L4_IPC_NEVER,
+			  main_queue ? to : L4_IPC_NEVER,
 			  &result);
       if (error == 0)
 	{

@@ -124,7 +124,7 @@ get_base_time(void)
   l4_uint32_t current_s, current_ns;
   int i;
 
-  l4util_cli();
+  //l4util_cli();
   fiasco_watchdog_disable();
 
   /* The Linux interpretation of the CMOS clock register contents:
@@ -164,7 +164,7 @@ get_base_time(void)
       BCD_TO_BIN(year);
     }
 
-  l4util_sti();
+  //l4util_sti();
   fiasco_watchdog_enable();
 
   if ((year += 1900) < 1970)

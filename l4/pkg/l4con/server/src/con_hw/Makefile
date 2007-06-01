@@ -5,7 +5,7 @@ TARGET_x86	= libcon_hw.a libcon_hw-ux.a
 TARGET_arm	= libcon_hw.a
 TARGET		= $(TARGET_$(ARCH))
 NOTARGETSTOINSTALL = 1
-SYSTEMS		= x86-l4v2 arm-l4x0
+SYSTEMS		= x86-l4v2 arm-l4v2
 
 MODE		= l4env
 OPTS		= -g -Os $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))

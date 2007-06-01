@@ -9,7 +9,7 @@ public:
   static void current(Utcb *utcb);
 };
 
-IMPLEMENTATION [arm && utcb]:
+IMPLEMENTATION [arm]:
 
 #include "mem_layout.h"
 

@@ -16,6 +16,9 @@
  * COPYING file for details.
  */
 
+/*** GENERAL ***/
+#include <stdlib.h>
+
 /*** L4-SPECIFIC ***/
 #include <l4/names/libnames.h>
 #include <l4/thread/thread.h>

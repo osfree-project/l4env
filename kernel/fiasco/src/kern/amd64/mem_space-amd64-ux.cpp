@@ -60,8 +60,12 @@ IMPLEMENTATION [ux,amd64]:
 #include <cstdio>
 #include "cpu.h"
 #include "kdb_ke.h"
+#include "l4_types.h"
 #include "mapped_alloc.h"
+#include "mem_layout.h"
+#include "paging.h"
 #include "std_macros.h"
+#include "utcb.h"
 
 
 PUBLIC inline
@@ -150,41 +154,6 @@ Mem_space::dir_shutdown()
 	  Mapped_allocator::allocator()
 	    ->free_phys(Config::PAGE_SHIFT, 
 		P_ptr<void>((*_dir)[i_pml4] & Config::PAGE_MASK));
-    }
-  // free IO bitmap (if allocated)
-  if (Config::enable_io_protection)
-    {
-      const Address ports_base = Config::Small_spaces
-				   ? Mem_layout::Smas_io_bmap_bak
-				   : Mem_layout::Io_bitmap;
-
-      Pd_entry iopde;
-      //Pd_entry iopde = *(_dir->lookup(ports_base));
-
-      // do we have an IO bitmap?
-      if (iopde.valid())
-	{
-	  // sanity check
-	  assert (!iopde.superpage());
-
-          // free the first half of the IO bitmap
-          Pt_entry iopte = *(iopde.ptab()->lookup(ports_base));
-
-          if (iopte.valid())
-            Mapped_allocator::allocator()
-	      ->free_phys(Config::PAGE_SHIFT, P_ptr <void> (iopte.pfn()));
-
-          // free the second half
-          iopte = *(iopde.ptab()->lookup(ports_base + Config::PAGE_SIZE));
-
-          if (iopte.valid())
-            Mapped_allocator::allocator()
-	      ->free_phys(Config::PAGE_SHIFT, P_ptr <void> (iopte.pfn()));
-
-          // free the page table
-          Mapped_allocator::allocator()
-	    ->free_phys(Config::PAGE_SHIFT, P_ptr <void> (iopde.ptabfn()));
-        }
     }
 
   // free ldt memory if it was allocated
@@ -536,21 +505,6 @@ Mem_space::kip_address() const
 	  : (Address)Mem_layout::Kip_auto_map);
 }
 
-// --------------------------------------------------------------------
-IMPLEMENTATION [!segments,ux]:
-
-PRIVATE inline
-void
-Mem_space::free_ldt_memory()
-{}
-
-// --------------------------------------------------------------------
-IMPLEMENTATION [{ux,amd64}-utcb]:
-
-#include "mem_layout.h"
-#include "utcb.h"
-#include "l4_types.h"
-#include "paging.h"
 
 IMPLEMENT inline NEEDS["mem_layout.h", "utcb.h","l4_types.h"]
 bool
@@ -566,11 +520,10 @@ Mem_space::is_mappable(Address addr, size_t size)
 }
 
 // --------------------------------------------------------------------
-IMPLEMENTATION [{ux,amd64}-!utcb]:
+IMPLEMENTATION [!segments,ux]:
 
-IMPLEMENT inline
-bool
-Mem_space::is_mappable(Address, size_t)
-{
-  return true;
-}
+PRIVATE inline
+void
+Mem_space::free_ldt_memory()
+{}
+

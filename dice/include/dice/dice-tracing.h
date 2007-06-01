@@ -18,7 +18,7 @@
  * class. Not using C++ to build that plugin is probably impossible.
  */
 #ifdef __cplusplus
-class CBETrace;
+class CTrace;
 
 extern "C" {
 
@@ -36,7 +36,7 @@ dice_tracing_init PARAMS((int argc, char *argv[]));
  * \return a reference to a CBETrace derived class
  */
 extern
-CBETrace* 
+CTrace* 
 dice_tracing_new_class PARAMS((void));
 
 }

@@ -13,6 +13,7 @@ fiasco \
 	-l names \
 	-l log \
 	-l dm_phys \
+	-l l4io \
 	-l con-ux \
 	-l rtc-ux \
 	-l "name_server -e" \
@@ -20,5 +21,5 @@ fiasco \
 	-d "/home/mp26/boot/ascii/bambi_godzila Mr_Pumpkin" \
 	-l term_con \
 	-l term_con_test \
-	-n8 \
-	-n9 "$@"
+	-n8 -n9 -n10 \
+	"$@"

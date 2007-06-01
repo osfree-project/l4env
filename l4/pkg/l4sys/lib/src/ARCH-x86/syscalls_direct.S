@@ -16,3 +16,4 @@ __l4sys_direct_syscalls = 0xeacff000
 	direct_syscall	__l4sys_task_new_direct, 0x600
 	direct_syscall	__l4sys_thread_schedule_direct, 0x400
 	direct_syscall	__l4sys_thread_switch_direct, 0x300
+	direct_syscall	__l4sys_ulock_direct, 0x800

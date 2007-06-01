@@ -5,11 +5,13 @@
 #ifndef L4_TYPES_H 
 #define L4_TYPES_H
 
+#include_next <l4/sys/types.h>
+
 #include <l4/sys/l4int.h>
 #include <l4/sys/compiler.h>
 #include <l4/sys/consts.h>
 
-#if defined(L4API_l4x0)
+#if defined(L4API_l4v2)
 #include <l4/sys/types_api.h>
 #endif
 
@@ -43,21 +45,7 @@ typedef struct {
   l4_umword_t rcv_str;
 } l4_strdope_t;
 
-/*
- * L4 timeouts
- */
-typedef union {
-  struct {
-    l4_umword_t rcv_exp    :4;
-    l4_umword_t snd_exp    :4;
-    l4_umword_t rcv_pfault :4;
-    l4_umword_t snd_pfault :4;
-    l4_umword_t snd_man    :8;
-    l4_umword_t rcv_man    :8;
-  } to;
-  l4_umword_t timeout;
-  l4_umword_t raw;
-} l4_timeout_t;
+#include <l4/sys/__timeout.h>
 
 /*
  * l4_schedule param word

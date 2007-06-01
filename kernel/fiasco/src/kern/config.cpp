@@ -251,8 +251,8 @@ KIP_KERNEL_ABI_VERSION("9");
 
 // define some constants which need a memory representation
 const L4_uid Config::kernel_id( L4_uid::Nil );
-const L4_uid Config::sigma0_id( sigma0_taskno, 0, 0, boot_taskno );
-const L4_uid Config::boot_id  ( boot_taskno, 0, 0, kernel_taskno );
+const L4_uid Config::sigma0_id( sigma0_taskno, 0, 0 );
+const L4_uid Config::boot_id  ( boot_taskno, 0, 0 );
 
 // class variables
 bool Config::esc_hack = false;

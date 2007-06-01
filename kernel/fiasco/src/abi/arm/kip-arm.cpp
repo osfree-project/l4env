@@ -1,4 +1,4 @@
-INTERFACE [arm && x0]:
+INTERFACE [arm]:
 
 #include "types.h"
 
@@ -59,7 +59,7 @@ public:
 };
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [arm && x0]:
+IMPLEMENTATION [arm]:
 
 #include "l4_types.h"
 
@@ -102,7 +102,7 @@ char const *Kip::version_string() const
 }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [arm && debug && x0]:
+IMPLEMENTATION [arm && debug]:
 
 IMPLEMENT inline
 void

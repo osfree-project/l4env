@@ -218,16 +218,13 @@ static void debug_irq(void)
 {
   int err;
 
-  /* initialize irq module of dde_linux
-     num < 16 RMGR
-     num > 15 Omega0 */
-  if ((err=l4dde_irq_init(irq_num & 0x10)))
+  if ((err=l4dde_irq_init()))
     {
       LOG_Error("initializing irqs (%d)", err);
       return;
     }
 
-  err = request_irq(irq_num & 0x0f, debug_irq_handler, 0, "haha", 0);
+  err = request_irq(irq_num, debug_irq_handler, 0, "haha", 0);
   if (err)
     LOG("DEBUG: request_irq failed (%d)", err);
 
@@ -560,9 +557,8 @@ static void usage(void)
 "usage: dde_debug [OPTION]...\n"
 "Debug dde_linux library functions. (Default is only library initialization.)\n"
 "\n"
-"  --irq[=n]            debug irq 0 at RMGR by default\n"
-"                       if n is set and n<16 use irq n at RMGR\n"
-"                       if n is set and n>15 use irq (n&0x0f) at Omega0\n"
+"  --irq[=n]            debug irq 0 at Omega0 by default\n"
+"                       if n is set, use irq n at Omega0\n"
 "  --jiffies[=n]        debug/measure 10 (or n) jiffies\n"
 "  --lock[=n]           debug 5 (or n) spinlocks\n"
 "  --malloc             debug memory allocations\n"

@@ -3,7 +3,7 @@
 PKGDIR	?= ../..
 L4DIR	?= $(PKGDIR)/../..
 
-SYSTEMS               = x86 x86-l4v2 arm arm-l4x0 amd64 amd64-l4v2
+SYSTEMS               = x86 x86-l4v2 arm arm-l4v2 amd64 amd64-l4v2
 
 ALL_SRC_C_only_x86    = $(addprefix ARCH-x86/, apic.c perform.c spin.c)
 
@@ -13,7 +13,7 @@ ROOT_SRC_C_only_amd64 = $(addprefix ARCH-x86/, rdtsc.c)
 ALL_SRC_C_NOAPI       = alloc.c getopt2.c rand.c base64.c slmap.c kprintf.c \
 			ARCH-$(ARCH)/reboot.c
 ALL_SRC_C_L4API       = alloc.c getopt2.c micros2l4to.c queue.c rand.c sleep.c \
-                        thread.c base64.c slmap.c wait_queue.c memdesc.c \
+                        thread.c base64.c slmap.c memdesc.c \
 			kprintf.c \
                         ARCH-$(ARCH)/reboot.c $(ALL_SRC_C_only_$(ARCH))
 
@@ -23,25 +23,25 @@ ROOT_SRC_C            = reboot.c $(ROOT_SRC_C_only_$(ARCH))
 SRC_C_libl4util.a_x86            = $(ALL_SRC_C_NOAPI)
 SRC_C_libl4util.a_x86-l4v2       = $(ALL_SRC_C_L4API) ARCH-x86/setjmp.c
 SRC_C_libl4util.a_amd64-l4v2     = $(ALL_SRC_C_L4API) ARCH-amd64/setjmp.c
-SRC_C_libl4util.a_arm-l4x0       = $(ALL_SRC_C_L4API)
+SRC_C_libl4util.a_arm-l4v2       = $(ALL_SRC_C_L4API)
 SRC_C_libl4util.p.a_x86-l4v2     = $(ALL_SRC_C_L4API) ARCH-x86/setjmp.c
-SRC_C_libl4util.p.a_arm-l4x0     = $(ALL_SRC_C_L4API)
+SRC_C_libl4util.p.a_arm-l4v2     = $(ALL_SRC_C_L4API)
 SRC_S_libl4util.a_x86-l4v2       = $(SRC_S_$(ARCH))
-SRC_S_libl4util.a_arm-l4x0       = $(SRC_S_$(ARCH))
+SRC_S_libl4util.a_arm-l4v2       = $(SRC_S_$(ARCH))
 SRC_S_libl4util.p.a_x86-l4v2     = $(SRC_S_$(ARCH))
-SRC_S_libl4util.p.a_arm-l4x0     = $(SRC_S_$(ARCH))
+SRC_S_libl4util.p.a_arm-l4v2     = $(SRC_S_$(ARCH))
 SRC_C_libl4util.a_amd64          = $(ALL_SRC_C_NOAPI)
 SRC_S_libl4util.a_amd64-l4v2     = $(SRC_S_$(ARCH))
 
 SRC_C_libl4util_root.a_x86-l4v2    = $(ROOT_SRC_C)
 SRC_C_libl4util_root.a_amd64-l4v2  = $(ROOT_SRC_C)
-SRC_C_libl4util_root.a_arm-l4x0    = $(ROOT_SRC_C)
+SRC_C_libl4util_root.a_arm-l4v2    = $(ROOT_SRC_C)
 SRC_C_libl4util_root.p.a_x86-l4v2  = $(ROOT_SRC_C)
-SRC_C_libl4util_root.p.a_arm-l4x0  = $(ROOT_SRC_C)
+SRC_C_libl4util_root.p.a_arm-l4v2  = $(ROOT_SRC_C)
 SRC_S_libl4util_root.a_x86-l4v2    = $(ROOT_SRC_S_$(ARCH))
-SRC_S_libl4util_root.a_arm-l4x0    = $(ROOT_SRC_S_$(ARCH))
+SRC_S_libl4util_root.a_arm-l4v2    = $(ROOT_SRC_S_$(ARCH))
 SRC_S_libl4util_root.p.a_x86-l4v2  = $(ROOT_SRC_S_$(ARCH))
-SRC_S_libl4util_root.p.a_arm-l4x0  = $(ROOT_SRC_S_$(ARCH))
+SRC_S_libl4util_root.p.a_arm-l4v2  = $(ROOT_SRC_S_$(ARCH))
 SRC_S_libl4util_root.a_amd64-l4v2  = $(ROOT_SRC_S_$(ARCH))
 
 SRC_C_libparsecmdline.a	         = parse_cmdline.c base64.c
@@ -55,7 +55,7 @@ TARGET_x86	= libparsecmdline.a liblist_alloc.a libl4util.a libmain.a
 TARGET_arm	= libparsecmdline.a liblist_alloc.a libl4util.a libmain.a
 TARGET_amd64	= libparsecmdline.a liblist_alloc.a libl4util.a libmain.a
 TARGET_x86-l4v2	= libl4util.a libl4util_root.a
-TARGET_arm-l4x0	= libl4util.a libl4util_root.a
+TARGET_arm-l4v2	= libl4util.a libl4util_root.a
 TARGET_amd64-l4v2 = libl4util.a libl4util_root.a
 MODE		= sigma0
 BUILD_PIC	= liblist_alloc.a

@@ -37,7 +37,7 @@
 #include "BEHeaderFile.h"
 #include "BEUserDefinedType.h"
 #include "BENameFactory.h"
-#include "BETrace.h"
+#include "Trace.h"
 #include "BEAttribute.h"
 #include "Compiler.h"
 #include "TypeSpec-Type.h"
@@ -168,9 +168,8 @@ CBEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
 void
 CBEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile)
 {
-    assert(m_pTrace);
     bool bLocalTrace = false;
-    if (!m_bTraceOn)
+    if (!m_bTraceOn && m_pTrace)
     {
 	m_pTrace->BeforeUnmarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;

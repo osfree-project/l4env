@@ -62,7 +62,7 @@ Jdb_space::cmds() const
 {
   static Cmd cs[] =
     {
-	{ 0, "s", "space", "%x\n", "<task_num>\t show task information", 
+	{ 0, "s", "space", "%x\n", "s<task_num>\tshow task information", 
 	  &space_num },
     };
   return cs;
@@ -76,7 +76,7 @@ Jdb_space::num_cmds() const
 static Jdb_space jdb_space INIT_PRIORITY(JDB_MODULE_INIT_PRIO);
 
 
-IMPLEMENTATION[!io]:
+IMPLEMENTATION[!io || ux]:
 
 PRIVATE
 void
@@ -90,7 +90,7 @@ void
 Jdb_space::cap_space_info(Space *)
 {}
 
-IMPLEMENTATION[io]:
+IMPLEMENTATION[io && !ux]:
 
 PRIVATE
 void
@@ -106,5 +106,6 @@ void
 Jdb_space::cap_space_info(Space *s)
 {
   printf("  cap_space:  %p\n", s->cap_space());
+  printf("  obj_space:  %p\n", s->obj_space());
 }
 

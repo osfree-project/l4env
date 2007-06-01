@@ -52,9 +52,7 @@ main(int argc, char **argv)
   for (i=0; i<2; i++)
     {
       printf("hello: My thread-id is "l4util_idfmt"\n", l4util_idstr(th));
-
-      /* wait .5 sec */
-      l4_ipc_sleep(L4_IPC_TIMEOUT(0,0,122,9,0,0));
+      l4_sleep(500);
     }
 
   printf("RMGR memory dump before exit event\n"

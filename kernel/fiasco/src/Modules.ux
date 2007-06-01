@@ -8,7 +8,7 @@ ifeq ("$(CONFIG_GSTABS)","y")
 endif
 
 PREPROCESS_PARTS	+= arch $(CONFIG_ABI) 32bit $(CONFIG_XARCH)    \
-			   fpu jdb_thread_names
+			   fpu jdb_thread_names io iofp
 
 ifeq ("$(CONFIG_LIST_ALLOC_SANITY)","y")
   PREPROCESS_PARTS	+= list_alloc_debug
@@ -26,9 +26,6 @@ PREPROCESS_PARTS      += abs_syscalls auto_map_kip
 
 ifeq ("$(CONFIG_PERF_CNT)","y")
   PREPROCESS_PARTS	+= perf_cnt
-endif
-ifeq ("$(CONFIG_EXCEPTION_IPC)","y")
-  PREPROCESS_PARTS	+= utcb exc_ipc
 endif
 ifeq ("$(CONFIG_HANDLE_SEGMENTS)","y")
   PREPROCESS_PARTS	+= segments
@@ -54,8 +51,8 @@ INTERFACES_ABI		:= kip l4_types utcb
 
 kip_IMPL		:= kip kip-ia32 kip-debug kip-ia32-debug
 l4_types_IMPL		:= l4_types l4_types-iofp l4_types-32bit \
-			   l4_types-debug l4_types-caps
-utcb_IMPL		:= utcb-ia32-ux
+			   l4_types-debug l4_types-caps l4_types-objs
+utcb_IMPL		:= utcb utcb-ia32-ux
 
 #
 # JABI Subsystem
@@ -110,16 +107,15 @@ INTERFACES_KERNEL	:= simpleio kernel_console panic warn buddy_alloc  \
 			   kmem_alloc slab_cache_anon kmem_slab_simple	  \
 			   vmem_alloc paging kmem_slab fpu_state fpu	  \
 			   sched_context switch_lock timer timeout	  \
-			   space_index 					  \
+			   space_index obj_space			  \
 			   cap_space mem_space space context helping_lock \
-			   cap_space_alloc 		                  \
-			   mapping mapping_tree                           \
-			   mapdb map_util	  	          	  \
-			   ram_quota_alloc				  \
+			   cap_space_alloc obj_space_alloc                \
+			   mapping mapping_tree mappable                  \
+			   mapdb simple_mapdb map_util ram_quota_alloc    \
 			   hostproc task kernel_task prio_list            \
 			   thread_lock preemption timeslice_timeout	  \
 			   ipc_timeout deadline_timeout thread_state	  \
-			   sender receiver thread			  \
+			   sender receiver thread syscalls		  \
 			   kernel_thread dirq	  			  \
 			   banner fpu_alloc irq main kern_types		  \
 			   startup irq_alloc libc_support		  \
@@ -144,6 +140,10 @@ INTERFACES_KERNEL	:= simpleio kernel_console panic warn buddy_alloc  \
 			   vkey jdb_thread_names jdb_utcb		  \
 			   jdb_entry_frame kdb_ke
 
+ifeq ("$(CONFIG_USER_LOCKS)","y")
+  PREPROCESS_PARTS	+= ulock
+  INTERFACES_KERNEL	+= obj_ref_ptr obj_helping_lock u_lock u_semaphore
+endif
 
 
 boot_info_IMPL		:= boot_info boot_info-ia32-amd64-ux boot_info-ux
@@ -160,7 +160,6 @@ irq_IMPL		:= irq irq-ipc irq-ux
 jdb_IMPL		:= jdb-ux jdb-ansi jdb-ia32-ux jdb-thread            \
 			   jdb-int3 jdb-int3-ia32-ux
 jdb_tcb_IMPL		:= jdb_tcb-ia32-ux
-jdb_utcb_IMPL		:= jdb_utcb-ia32-ux
 jdb_bp_IMPL		:= jdb_bp-ia32-ux jdb_bp-ux
 jdb_bt_IMPL		:= jdb_bt-ia32-ux
 jdb_entry_frame_IMPL	:= jdb_entry_frame-ia32-ux
@@ -190,11 +189,11 @@ sys_call_page_IMPL	:= sys_call_page sys_call_page-abs-ux
 task_IMPL		:= task task-ux
 tb_entry_IMPL		:= tb_entry tb_entry-ia32-ux
 terminate_IMPL		:= terminate-ux
-thread_IMPL		:= thread thread-ia32-ux thread-ux thread-syscall    \
-			   thread-syscall-ia32-ux thread-ipc thread-msg      \
+thread_IMPL		:= thread thread-ia32-ux thread-ux                   \
+			   thread-ipc thread-msg                             \
 			   thread-msg-ux                                     \
 			   thread-pagefault thread-list thread-log           \
-			   thread-debug thread-lookup
+			   thread-debug thread-lookup thread-io thread-ulock
 timer_IMPL 		:= timer timer-ia32-amd64-ux timer-ux
 utcb_init_IMPL		:= utcb_init utcb_init-ia32-ux
 vmem_alloc_IMPL		:= vmem_alloc \

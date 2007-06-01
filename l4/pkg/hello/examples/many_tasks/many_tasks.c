@@ -147,7 +147,7 @@ void ipc_error(char * msg, int error)
 static
 void sit_and_wait(int exp)
 {
-  l4_ipc_sleep(L4_IPC_TIMEOUT(255,exp,255,exp,0,0));
+  l4_ipc_sleep(l4_ipc_timeout(255,16-exp,255,16-exp));
 }
 
 
@@ -197,7 +197,7 @@ static void lock(void)
   int ignore =0;
   l4_msgdope_t dope;
 
-  if(lock_thread_id.lh.low == L4_INVALID_ID.lh.low)
+  if(l4_is_invalid_id(lock_thread_id))
     {
       printf("Lock thread not initialised\n");
     }
@@ -224,7 +224,7 @@ static void unlock(void)
   l4_umword_t ignore;
   l4_msgdope_t dope;
 
-  if(lock_thread_id.lh.low == L4_INVALID_ID.lh.low)
+  if(l4_is_invalid_id(lock_thread_id))
     {
       printf("Unlock thread not initialised\n");
     }

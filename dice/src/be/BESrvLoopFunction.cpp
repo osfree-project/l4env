@@ -40,7 +40,7 @@
 #include "BEHeaderFile.h"
 #include "BEDeclarator.h"
 #include "BEMsgBuffer.h"
-#include "BETrace.h"
+#include "Trace.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
@@ -309,8 +309,8 @@ CBESrvLoopFunction::CreateObject()
 void
 CBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
 {
-    assert(m_pTrace);
-    m_pTrace->InitServer(pFile, this);
+    if (m_pTrace)
+	m_pTrace->InitServer(pFile, this);
 
     WriteObjectInitialization(pFile);
     // do CORBA_ENvironment cast before message buffer init, because it might
@@ -384,8 +384,8 @@ CBESrvLoopFunction::WriteVariableDeclaration(CBEFile * pFile)
  */
 void CBESrvLoopFunction::WriteLoop(CBEFile * pFile)
 {
-    assert(m_pTrace);
-    m_pTrace->BeforeLoop(pFile, this);
+    if (m_pTrace)
+	m_pTrace->BeforeLoop(pFile, this);
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sOpcodeVar = pNF->GetOpcodeVariable();
@@ -421,14 +421,15 @@ CBESrvLoopFunction::WriteDispatchInvocation(CBEFile *pFile)
 {
     if (m_pDispatchFunction)
     {
-	assert (m_pTrace);
-	m_pTrace->BeforeDispatch(pFile, this);
+	if (m_pTrace)
+	    m_pTrace->BeforeDispatch(pFile, this);
 	
 	CBENameFactory *pNF = CCompiler::GetNameFactory();
 	string sReply = pNF->GetReplyCodeVariable();
         m_pDispatchFunction->WriteCall(pFile, sReply, true);
 
-	m_pTrace->AfterDispatch(pFile, this);
+	if (m_pTrace)
+	    m_pTrace->AfterDispatch(pFile, this);
     }
 }
 

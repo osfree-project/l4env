@@ -47,7 +47,7 @@
 #include "BEUnionType.h"
 #include "BEUnionCase.h"
 #include "BESizes.h"
-#include "BETrace.h"
+#include "Trace.h"
 #include "Attribute-Type.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
@@ -484,9 +484,8 @@ CBEFunction::WriteMarshalling(CBEFile * pFile)
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n", 
 	__func__, GetName().c_str());
 
-    assert(m_pTrace);
     bool bLocalTrace = false;
-    if (!m_bTraceOn)
+    if (!m_bTraceOn && m_pTrace)
     {
 	m_pTrace->BeforeMarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;
@@ -558,9 +557,8 @@ CBEFunction::WriteUnmarshalling(CBEFile * pFile)
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n", 
 	__func__, GetName().c_str());
 
-    assert(m_pTrace);
     bool bLocalTrace = false;
-    if (!m_bTraceOn)
+    if (!m_bTraceOn && m_pTrace)
     {
 	m_pTrace->BeforeUnmarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;
@@ -2014,8 +2012,8 @@ CBEFunction::CreateTrace()
 	delete m_pTrace;
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     m_pTrace = pCF->GetNewTrace();
-    assert(m_pTrace);
-    m_pTrace->AddLocalVariable(this);
+    if (m_pTrace)
+	m_pTrace->AddLocalVariable(this);
 }
 
 /** \brief creates the CORBA_Object variable (and member)

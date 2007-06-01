@@ -123,7 +123,6 @@ rmgr_get_task_component(CORBA_Object _dice_corba_obj,
 
   n          = *_dice_corba_obj;
   n.id.task  = num;
-  n.id.chief = l4_myself().id.task;
 
   n = l4_task_new(n, (unsigned)_dice_corba_obj->raw, 0, 0, L4_NIL_ID);
 
@@ -217,7 +216,6 @@ rmgr_task_new_component(CORBA_Object _dice_corba_obj,
            l4util_idstr(*_dice_corba_obj));
 
   n          = *tid;
-  n.id.chief = myself.id.task;
   task       = n.id.task;
 
   if (task >= RMGR_TASK_MAX
@@ -285,7 +283,6 @@ rmgr_free_task_all_component(CORBA_Object _dice_corba_obj,
 
 	  n          = *_dice_corba_obj;
 	  n.id.task  = i;
-	  n.id.chief = myself.id.task;
 
 	  n = l4_task_new(n, (unsigned)myself.raw, 0, 0, L4_NIL_ID);
 	  if (l4_is_nil_id(n))

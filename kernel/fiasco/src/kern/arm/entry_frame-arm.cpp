@@ -25,7 +25,7 @@ public:
 };
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [arm-x0]:
+IMPLEMENTATION [arm]:
 
 #include <cstdio>
 
@@ -61,7 +61,11 @@ Return_frame::sp(Mword sp)
 
 //---------------------------------------------------------------------------
 IMPLEMENT inline
-void Sys_ipc_frame::rcv_src( L4_uid id )
+Mword Sys_ipc_frame::next_period() const
+{ return false; }
+
+IMPLEMENT inline
+void Sys_ipc_frame::rcv_src( L4_uid const &id )
 { r[1] = id.raw(); }
 
 IMPLEMENT inline
@@ -93,14 +97,23 @@ Mword Sys_ipc_frame::has_snd() const
 { return snd_desc().has_snd(); }
 
 IMPLEMENT inline
-L4_timeout Sys_ipc_frame::timeout() const
-{ return L4_timeout( r[3] ); }
+L4_timeout_pair Sys_ipc_frame::timeout() const
+{ return L4_timeout_pair(r[3]); }
+  
+
+IMPLEMENT inline
+L4_msg_tag Sys_ipc_frame::tag() const
+{ return L4_msg_tag(r[4]); }
+
+IMPLEMENT inline
+void Sys_ipc_frame::tag(L4_msg_tag const &tag)
+{ r[4] = tag.raw(); }
 
 IMPLEMENT inline
 Mword Sys_ipc_frame::msg_word( unsigned index ) const
 {
-  if(index < 9)
-    return r[index+4];
+  if(index < 2)
+    return r[index+5];
   else
     return 0;
 }
@@ -108,8 +121,8 @@ Mword Sys_ipc_frame::msg_word( unsigned index ) const
 IMPLEMENT inline
 void Sys_ipc_frame::set_msg_word( unsigned index, Mword value )
 {
-  if(index < 9)
-    r[index+4] = value;
+  if(index < 2)
+    r[index+5] = value;
 }
 
 IMPLEMENT inline
@@ -134,7 +147,7 @@ void Sys_ipc_frame::msg_dope_set_error( Mword e )
 
 IMPLEMENT inline
 unsigned Sys_ipc_frame::num_reg_words()
-{ return 3; } /* This should be 9 but is 3 to make long-IPC compatible with the
+{ return 2; } /* This should be 9 but is 3 to make long-IPC compatible with the
                * current scheme (3 dwords in IPC) */
 
 IMPLEMENT inline
@@ -160,7 +173,7 @@ void Sys_ipc_frame::msg_dope_combine( Ipc_err d )
 IMPLEMENT inline
 void Sys_ipc_frame::copy_msg( Sys_ipc_frame *to ) const
 {
-  for(unsigned x = 4; x<13; ++x )
+  for(unsigned x = 5; x<=6; ++x )
     to->r[x] = r[x];
 }
 
@@ -174,7 +187,7 @@ void Sys_id_nearest_frame::type( Mword type )
 { r[0] = type; }
 
 IMPLEMENT inline
-void Sys_id_nearest_frame::nearest( L4_uid id )
+void Sys_id_nearest_frame::nearest( L4_uid const &id )
 { r[1] = id.raw(); }
 
 //Sys_unmap_frame::----------------------------------------------------------
@@ -264,11 +277,11 @@ void Sys_ex_regs_frame::old_ip( Mword oip )
 { r[1] = oip; }
 
 IMPLEMENT inline
-void Sys_ex_regs_frame::old_preempter( L4_uid id )
+void Sys_ex_regs_frame::old_preempter( L4_uid const &id )
 { r[5] = id.raw(); }
 
 IMPLEMENT inline
-void Sys_ex_regs_frame::old_pager( L4_uid id )
+void Sys_ex_regs_frame::old_pager( L4_uid const &id )
 { r[3] = id.raw(); }
 
 //////////////////////////////////////////////////////////////////////
@@ -285,7 +298,7 @@ L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* /*utcb*/) const
 }
 
 IMPLEMENT inline
-void Sys_ex_regs_frame::old_cap_handler(L4_uid id, Utcb* /*utcb*/)
+void Sys_ex_regs_frame::old_cap_handler(L4_uid const &id, Utcb* /*utcb*/)
 {
   r[6] = id.raw();
 }
@@ -302,7 +315,7 @@ L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* /*utcb*/) const
 }
 
 IMPLEMENT inline
-void Sys_ex_regs_frame::old_cap_handler(L4_uid /*id*/, Utcb* /*utcb*/)
+void Sys_ex_regs_frame::old_cap_handler(L4_uid const &/*id*/, Utcb* /*utcb*/)
 {
 }
 
@@ -336,6 +349,24 @@ void
 Sys_thread_switch_frame::ret (Mword)
 {}
 
+//--Sys_ulock_frame----------------------------------------------------------
+
+IMPLEMENT inline
+Sys_u_lock_frame::Op Sys_u_lock_frame::op() const
+{ return (Op)r[0]; }
+
+IMPLEMENT inline
+unsigned long Sys_u_lock_frame::lock() const
+{ return r[1]; }
+
+IMPLEMENT inline
+void Sys_u_lock_frame::result(unsigned long res)
+{ r[0] = res; }
+
+IMPLEMENT inline
+L4_timeout Sys_u_lock_frame::timeout() const
+{ return L4_timeout(r[3]); }
+
 //Sys_thread_schedule_frame::------------------------------------------------
 IMPLEMENT inline
 Unsigned64 Sys_thread_schedule_frame::time() const
@@ -362,11 +393,11 @@ void Sys_thread_schedule_frame::time( Unsigned64 t )
 { r[3] = t; r[4] = t >> 32; }
 
 IMPLEMENT inline
-void Sys_thread_schedule_frame::old_preempter( L4_uid id )
+void Sys_thread_schedule_frame::old_preempter( L4_uid const &id )
 { r[2] = id.raw(); }
 
 IMPLEMENT inline
-void Sys_thread_schedule_frame::partner( L4_uid id )
+void Sys_thread_schedule_frame::partner( L4_uid const &id )
 { r[1] = id.raw(); }
 
 //Sys_task_new_frame::-------------------------------------------------------
@@ -408,7 +439,7 @@ L4_uid Sys_task_new_frame::dst() const
 { return L4_uid( r[0] ); }
 
 IMPLEMENT inline
-void Sys_task_new_frame::new_taskid( L4_uid id )
+void Sys_task_new_frame::new_taskid( L4_uid const &id )
 { r[0] = id.raw(); }
 
 //////////////////////////////////////////////////////////////////////

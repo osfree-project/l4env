@@ -14,7 +14,12 @@ dnl Test for AIX
 AC_AIX
 
 dnl dynamic load library support
-AC_PROG_RANLIB
+AC_LIBLTDL_CONVENIENCE
+AC_LIBTOOL_DLOPEN
+AM_PROG_LIBTOOL
+dnl explicetly check for ltdl.h header
+AC_CHECK_HEADER(ltdl.h,
+	[AC_DEFINE(HAVE_LTDL_H, 1, needed by libtool)])
 
 dnl Checks for programs.
 AC_PROG_CXX
@@ -138,12 +143,15 @@ src/be/l4/Makefile
 src/be/l4/v2/Makefile
 src/be/l4/v2/amd64/Makefile
 src/be/l4/v2/ia32/Makefile
-src/be/l4/x0/Makefile
 src/be/l4/v4/Makefile
 src/be/l4/v4/ia32/Makefile
 src/be/sock/Makefile
 include/Makefile
 include/dice/Makefile
+lib/Makefile
+lib/debug/Makefile
+lib/invocations/Makefile
+lib/sizes/Makefile
 ])
 
 AC_OUTPUT

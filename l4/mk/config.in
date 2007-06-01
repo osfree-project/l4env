@@ -38,7 +38,7 @@ fi
 if [ "$BUILD_ARCH_arm" = "y" ] ; then
   define_string BUILD_ARCH "arm"
   string " CPU type" CPU 'sa'
-  define_string BUILD_ABI "l4x0"
+  define_string BUILD_ABI "l4v2"
 fi
 
 if [ "$BUILD_ARCH_amd64" = "y" ] ; then
@@ -164,7 +164,7 @@ if [ "$HAVE_LDSO" = "y" ] ; then
           string 'Internal name of arm gcc/g++ linker' INT_LD_NAME "ld"
 	fi
         if [ "$BUILD_ARCH" = "amd64" ] ; then
-          string 'Internal name of amd64 gcc/g++ linker' INT_LD_NAME "ld"
+          string 'Internal name of amd64 gcc/g++ linker' INT_LD_amd64_NAME "ld"
 	fi
 	if [ "$BUILD_ARCH" = "ppc32" ] ; then
           string 'Internal name of ppc32 gcc/g++ linker' INT_LD_NAME "ld"

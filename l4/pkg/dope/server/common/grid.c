@@ -104,25 +104,25 @@ void print_grid_info(GRID *g) {
 	printf("Grid info:\n");
 	if (!g) printf(" grid is zero!\n");
 	
-	printf(" xpos   = %lu\n", (long)g->wd->x);
-	printf(" ypos   = %lu\n", (long)g->wd->y);
-	printf(" width  = %lu\n", (long)g->wd->w);
-	printf(" height = %lu\n", (long)g->wd->h);
+	printf(" xpos   = %d\n", (int)g->wd->x);
+	printf(" ypos   = %d\n", (int)g->wd->y);
+	printf(" width  = %d\n", (int)g->wd->w);
+	printf(" height = %d\n", (int)g->wd->h);
 	printf(" row-sections:\n");
 	sec = g->gd->rows;
 	while (sec) {
-		printf("  index: %lu\n", sec->index);
-		printf("   offset:%lu\n", sec->offset);
-		printf("   size:  %lu\n", sec->size);
+		printf("  index: %u\n", sec->index);
+		printf("   offset:%u\n", sec->offset);
+		printf("   size:  %u\n", sec->size);
 		printf("   weight:%f\n",  sec->weight);
 		sec=sec->next;
 	}
 	printf(" column-sections:\n");
 	sec = g->gd->cols;
 	while (sec) {
-		printf("  index: %lu\n", sec->index);
-		printf("   offset:%lu\n", sec->offset);
-		printf("   size:  %lu\n", sec->size);
+		printf("  index: %u\n", sec->index);
+		printf("   offset:%u\n", sec->offset);
+		printf("   size:  %u\n", sec->size);
 		printf("   weight:%f\n",  sec->weight);
 		sec = sec->next;
 	}
@@ -132,10 +132,10 @@ void print_grid_info(GRID *g) {
 		cw = cc->wid;
 		if (cw) {
 			printf("  position (");
-			if (cc->row) printf("%lu", cc->row->index);
+			if (cc->row) printf("%u", cc->row->index);
 			else printf("unknown");
 			printf(",");
-			if (cc->col) printf("%lu", cc->col->index);
+			if (cc->col) printf("%u", cc->col->index);
 			else printf("unknown");
 			printf(")\n");
 			printf("   xpos   = %lu\n", cw->gen->get_x(cw));

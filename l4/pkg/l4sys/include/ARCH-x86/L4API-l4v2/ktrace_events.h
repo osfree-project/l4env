@@ -79,8 +79,7 @@ L4_INLINE unsigned l4_ktrace_get_l4_lthreadid(Context *context)
 L4_INLINE l4_threadid_t l4_ktrace_get_l4_threadid(Context *context)
 {
     l4_threadid_t id;
-    id.lh.low     = 0;
-    id.lh.high    = 0;
+    id.raw     = 0;
     id.id.task    = l4_ktrace_get_l4_taskid(context);
     id.id.lthread = l4_ktrace_get_l4_lthreadid(context);
     return id;

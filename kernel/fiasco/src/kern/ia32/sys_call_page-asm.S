@@ -43,6 +43,11 @@ sys_call_privctrl:
 	ret
 sys_call_privctrl_end:
 
+sys_call_ulock:
+	int	$0x39
+	ret
+sys_call_ulock_end:
+
 sys_call_se_ipc:
 	0:
 	push	%ecx
@@ -72,6 +77,8 @@ sys_call_se_ipc_end:
 	.global	sys_call_task_new_end
 	.global sys_call_privctrl
 	.global sys_call_privctrl_end
+	.global sys_call_ulock
+	.global sys_call_ulock_end
 	.global	sys_call_se_ipc
 	.global	sys_call_se_ipc_end
 

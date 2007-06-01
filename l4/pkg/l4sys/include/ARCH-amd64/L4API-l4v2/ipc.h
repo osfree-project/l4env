@@ -61,32 +61,6 @@ typedef struct {
 #define L4_IPC_DOPE(dwords, strings) \
 ( (l4_msgdope_t) {md: {0, 0, 0, 0, 0, 0, strings, dwords }})
 
-/**
- * Build IPC timeout
- * \ingroup api_types_timeout
- * \hideinitializer
- *
- * \param   snd_man      Send timeout mantissa
- * \param   snd_exp      Send timeout exponent
- * \param   rcv_man      Receive timeout mantissa
- * \param   rcv_exp      Receive timeout exponent
- * \param   snd_pflt     Send pagefault timeout
- * \param   rcv_pflt     Receive pagefault timeout
- */
-#define L4_IPC_TIMEOUT(snd_man, snd_exp, rcv_man, rcv_exp, snd_pflt, rcv_pflt)\
-     ( (l4_timeout_t) \
-       {to: { rcv_exp, snd_exp, rcv_pflt, snd_pflt, snd_man, rcv_man } } )
-
-/**
- * IPC special timeouts
- * \ingroup api_types_timeout
- * \hideinitializer
- */
-#define L4_IPC_NEVER			((l4_timeout_t) {timeout: 0})
-#define L4_IPC_NEVER_INITIALIZER	{timeout: 0}
-#define L4_IPC_RECV_TIMEOUT_0		L4_IPC_TIMEOUT(0,0,0,1,0,0)
-#define L4_IPC_SEND_TIMEOUT_0		L4_IPC_TIMEOUT(0,1,0,0,0,0)
-#define L4_IPC_BOTH_TIMEOUT_0		L4_IPC_TIMEOUT(0,1,0,1,0,0)
 
 /**
  * Build short flexpage receive message descriptor.
@@ -109,7 +83,7 @@ typedef struct {
  * \param   iosize       Receive window size
  */
 #define L4_IPC_IOMAPMSG(port, iosize)  \
-     ((void *)(l4_umword_t)( 0xf0000000 | ((port) << 12) | ((iosize) << 2) \
+     ((void *)(l4_umword_t)( 0xfffffffff0000000 | ((port) << 12) | ((iosize) << 2) \
                              | (unsigned long)L4_IPC_SHORT_FPAGE))
 
 
@@ -345,6 +319,19 @@ l4_ipc_call(l4_threadid_t dest,
             l4_timeout_t timeout,
             l4_msgdope_t *result);
 
+L4_INLINE int
+l4_ipc_call_tag(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t snd_w0,
+            l4_umword_t snd_w1,
+            l4_msgtag_t tag,
+            void *rcv_msg,
+            l4_umword_t *rcv_w0,
+            l4_umword_t *rcv_w1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result,
+            l4_msgtag_t *rtag);
+
 /**
  * IPC reply and wait, send a reply to a client and wait for next message
  * \ingroup api_calls_ipc
@@ -430,6 +417,20 @@ l4_ipc_reply_and_wait(l4_threadid_t dest,
                       l4_timeout_t timeout,
                       l4_msgdope_t *result);
 
+L4_INLINE int
+l4_ipc_reply_and_wait_tag(l4_threadid_t dest,
+                      const void *snd_msg,
+                      l4_umword_t snd_dword0,
+                      l4_umword_t snd_dword1,
+                      l4_msgtag_t tag,
+                      l4_threadid_t *src,
+                      void *rcv_msg,
+                      l4_umword_t *rcv_dword0,
+                      l4_umword_t *rcv_dword1,
+                      l4_timeout_t timeout,
+                      l4_msgdope_t *result,
+                      l4_msgtag_t *rtag);
+
 /**
  * IPC send, send a message to a thread
  * \ingroup api_calls_ipc
@@ -482,6 +483,15 @@ l4_ipc_send(l4_threadid_t dest,
             const void *snd_msg,
             l4_umword_t snd_dword0,
             l4_umword_t snd_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result);
+
+L4_INLINE int 
+l4_ipc_send_tag(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t w0,
+            l4_umword_t w1,
+            l4_msgtag_t tag,
             l4_timeout_t timeout,
             l4_msgdope_t *result);
 
@@ -543,6 +553,16 @@ l4_ipc_wait(l4_threadid_t *src,
             l4_timeout_t timeout,
             l4_msgdope_t *result);
 
+L4_INLINE int
+l4_ipc_wait_tag(l4_threadid_t *src,
+            void *rcv_msg,
+            l4_umword_t *rcv_dword0,
+            l4_umword_t *rcv_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result,
+	    l4_msgtag_t *tag);
+
+
 /**
  * IPC receive, wait for a message from a specified thread
  * \ingroup api_calls_ipc
@@ -601,6 +621,15 @@ l4_ipc_receive(l4_threadid_t src,
                l4_umword_t *rcv_dword1,
                l4_timeout_t timeout,
                l4_msgdope_t *result);
+
+L4_INLINE int
+l4_ipc_receive_tag(l4_threadid_t src,
+               void *rcv_msg,
+               l4_umword_t *rcv_w0,
+               l4_umword_t *rcv_w1,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result,
+               l4_msgtag_t *tag);
 
 /**
  * Sleep for an amount of time.
@@ -698,8 +727,82 @@ l4_ipc_is_fpage_writable(l4_fpage_t fp)
 #  if GCC_VERSION < 303
 #    error gcc >= 3.3 required
 #  else
-#    include "ipc-l42-gcc3-nopic.h"
+#    include "ipc-l42-gcc3.h"
 #  endif
 #endif
+
+L4_INLINE int
+l4_ipc_call(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t snd_dword0,
+            l4_umword_t snd_dword1,
+            void *rcv_msg,
+            l4_umword_t *rcv_dword0,
+            l4_umword_t *rcv_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result)
+{
+  l4_msgtag_t tag;
+  return l4_ipc_call_tag(dest, snd_msg, snd_dword0, snd_dword1,
+      l4_msgtag(0,0,0,0), rcv_msg, rcv_dword0, rcv_dword1, timeout, result,
+      &tag);
+}
+
+L4_INLINE int
+l4_ipc_reply_and_wait(l4_threadid_t dest,
+                      const void *snd_msg,
+                      l4_umword_t snd_dword0,
+                      l4_umword_t snd_dword1,
+                      l4_threadid_t *src,
+                      void *rcv_msg,
+                      l4_umword_t *rcv_dword0,
+                      l4_umword_t *rcv_dword1,
+                      l4_timeout_t timeout,
+                      l4_msgdope_t *result)
+{
+  l4_msgtag_t dummy;
+  return l4_ipc_reply_and_wait_tag(dest, snd_msg, snd_dword0, snd_dword1,
+      l4_msgtag(0,0,0,0), src, rcv_msg, rcv_dword0, rcv_dword1,
+      timeout, result, &dummy);
+}
+
+L4_INLINE int
+l4_ipc_wait(l4_threadid_t *src,
+            void *rcv_msg,
+            l4_umword_t *rcv_dword0,
+            l4_umword_t *rcv_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result)
+{
+  l4_msgtag_t tag;
+  return l4_ipc_wait_tag(src, rcv_msg, rcv_dword0, rcv_dword1, timeout, result,
+      &tag);
+}
+
+L4_INLINE int
+l4_ipc_send(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t snd_dword0,
+            l4_umword_t snd_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result)
+{
+  return l4_ipc_send_tag(dest, snd_msg, snd_dword0, snd_dword1,
+      l4_msgtag(0,0,0,0), timeout, result);
+}
+
+L4_INLINE int
+l4_ipc_receive(l4_threadid_t src,
+               void *rcv_msg,
+               l4_umword_t *rcv_dword0,
+               l4_umword_t *rcv_dword1,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result)
+{
+  l4_msgtag_t tag;
+  return l4_ipc_receive_tag(src, rcv_msg, rcv_dword0, rcv_dword1, timeout,
+      result, &tag);
+}
+
 
 #endif /* !__L4_IPC_H__ */

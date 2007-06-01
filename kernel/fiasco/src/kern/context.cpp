@@ -3,6 +3,7 @@ INTERFACE:
 #include "types.h"
 #include "config.h"
 #include "fpu_state.h"
+#include "l4_types.h"
 #include "sched_context.h"
 
 class Entry_frame;
@@ -61,6 +62,22 @@ public:
    * @return UTCB pointer, or 0 if there is no UTCB
    */
   Utcb* utcb() const;
+  
+  /**
+   * Get the local ID of the context.
+   */
+  Local_id local_id() const;
+
+  /**
+   * Set the local ID of the context.
+   * Does not touch the kernel UTCB pointer, since
+   * we would need space() to do the address translation.
+   *
+   * After setting the local ID and mapping the UTCB area, use
+   * Thread::utcb_init() to set the kernel UTCB pointer and initialize the
+   * UTCB.
+   */
+  void local_id (Local_id id);
 
 protected:
   /**
@@ -68,9 +85,17 @@ protected:
    *        reading out the current thread's consumed CPU time.
    */
   void update_consumed_time();
+  
+  /**
+   * Set the kernel UTCB pointer.
+   * Does NOT keep the value of _local_id in sync.
+   * @see local_id (Local_id id);
+   */
+  void utcb (Utcb *u);
 
   Mword			_state;
   Mword   *		_kernel_sp;
+  void *_utcb_handler;
 
 private:
   friend class Jdb;
@@ -95,6 +120,9 @@ private:
   // Thread::kill needs to know
   int			_lock_cnt;
   Thread_lock * const	_thread_lock;
+  
+  Local_id _local_id;
+  Utcb *_utcb;
 
   // The scheduling parameters.  We would only need to keep an
   // anonymous reference to them as we do not need them ourselves, but
@@ -223,7 +251,7 @@ PUBLIC inline NEEDS ["thread_state.h"]
 Mword
 Context::exists() const
 {
-  return _state != Thread_invalid;
+  return state() != Thread_invalid;
 }
 
 /**
@@ -920,8 +948,8 @@ Context::switch_exec_locked (Context *t, enum Helping_mode mode)
 
   // Time-slice lending: if t is locked, switch to its locker
   // instead, this is transitive
-  while (t->donatee() &&		// target thread not locked
-         t->donatee() != t)		// target thread has lock itself
+  while (t->donatee() &&		// target thread locked
+         t->donatee() != t)		// not by itself
     {
       // Special case for Thread::kill(): If the locker is
       // current(), switch to the locked thread to allow it to
@@ -966,8 +994,6 @@ Context::gthread_calculated()
 	 Config::thread_block_size;
 }
 
-//----------------------------------------------------------------------------
-IMPLEMENTATION:
 
 PUBLIC inline
 LThread_num
@@ -976,6 +1002,7 @@ Context::lthread_calculated()
   return gthread_calculated() % L4_uid::threads_per_task();
 }
 
+
 PUBLIC inline
 LThread_num
 Context::task_calculated()
@@ -983,57 +1010,6 @@ Context::task_calculated()
   return gthread_calculated() / L4_uid::threads_per_task();
 }
 
-//----------------------------------------------------------------------------
-IMPLEMENTATION [!utcb]:
-
-#include "l4_types.h"
-
-IMPLEMENT inline NEEDS ["l4_types.h"]
-Utcb *
-Context::utcb() const
-{
-  return 0;
-}
-
-//----------------------------------------------------------------------------
-INTERFACE [utcb]:
-
-#include "l4_types.h"
-
-EXTENSION class Context
-{
-public:
-  /**
-   * Get the local ID of the context.
-   */
-  Local_id local_id() const;
-
-  /**
-   * Set the local ID of the context.
-   * Does not touch the kernel UTCB pointer, since
-   * we would need space() to do the address translation.
-   *
-   * After setting the local ID and mapping the UTCB area, use
-   * Thread::utcb_init() to set the kernel UTCB pointer and initialize the
-   * UTCB.
-   */
-  void local_id (Local_id id);
-
-protected:
-  /**
-   * Set the kernel UTCB pointer.
-   * Does NOT keep the value of _local_id in sync.
-   * @see local_id (Local_id id);
-   */
-  void utcb (Utcb *u);
-
-private:
-  Local_id _local_id;
-  Utcb *_utcb;
-};
-
-//----------------------------------------------------------------------------
-IMPLEMENTATION [utcb]:
 
 IMPLEMENT inline
 Local_id
@@ -1062,14 +1038,4 @@ Context::utcb (Utcb *u)
 {
   _utcb = u;
 }
-
-
-//----------------------------------------------------------------------------
-INTERFACE [exc_ipc]:
-
-EXTENSION class Context
-{
-protected:
-  void *_utcb_handler;
-};
 

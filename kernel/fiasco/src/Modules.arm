@@ -8,7 +8,7 @@ SUBSYSTEMS := 	ABI LIBAMM KERNEL LIBK DRIVERS MINILIBC \
 
 
 PREPROCESS_PARTS 	+= arch $(CONFIG_ABI) 32bit $(CONFIG_XARCH) serial   \
-                           h3800 jdb_thread_names noncont_mem utcb exc_ipc \
+                           h3800 jdb_thread_names noncont_mem \
 			   abs_syscalls
 
 ifeq ("$(CONFIG_LIST_ALLOC_SANITY)","y")
@@ -157,7 +157,9 @@ VPATH 		+= abi/$(CONFIG_XARCH) abi
 INTERFACES_ABI 	:= kip l4_types utcb 
 
 l4_types_IMPL 	:= l4_types l4_types-32bit l4_types-iofp l4_types-caps \
-		   l4_types-debug
+		   l4_types-debug l4_types-objs
+
+utcb_IMPL	:= utcb utcb-arm
 
 # x0!=32Bit UIDs
 kip_IMPL	:= kip kip-debug kip-arm
@@ -175,21 +177,28 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			kernel_uart pagetable kern_types mem_layout \
 			mapped_alloc kmem_alloc kip_init kmem_space \
 			mem_unit boot_uart_init kernel_console cpu \
-			thread paging vmem_alloc kdb_ke terminate \
+			thread syscalls paging vmem_alloc kdb_ke terminate \
 			cpu_lock irq sender startup \
 			entry_frame irq_alloc helping_lock switch_lock \
 			kmem_slab_simple region kmem_slab slab_cache_anon \
 			thread_state context sched_context fpu fpu_state \
-			mapping mapping_tree \
+			mapping mappable mapping_tree simple_mapdb \
 			mapdb map_util mem_space space space_index \
 			space_index_util task thread_lock receiver timer \
-			timeout ipc_timeout deadline_timeout timeslice_timeout \
+			timeout ipc_timeout deadline_timeout \
+			timeslice_timeout \
 			dirq fpu_alloc long_msg kernel_thread pic cmdline \
 			preemption k_sa1100 buddy_alloc trap_state warn \
 			bootstrap virq uart_console vkey kern_lib_page \
 			watchdog perf_cnt kern_cnt jdb_extensions kernel_task \
 			cap_space cap_space_alloc ram_quota ram_quota_alloc \
+			obj_space obj_space_alloc \
 			utcb_init utcb_support prio_list sys_call_page
+
+ifeq ("$(CONFIG_USER_LOCKS)","y")
+  PREPROCESS_PARTS	+= ulock
+  INTERFACES_KERNEL	+= obj_ref_ptr obj_helping_lock u_lock u_semaphore
+endif
 
 
 boot_info_IMPL	  	:= boot_info boot_info-arch
@@ -202,13 +211,12 @@ entry_frame_IMPL  	:= entry_frame entry_frame-arm                       \
 globals_IMPL	  	:= globals globals-arch
 irq_IMPL		:= irq irq-ipc
 kernel_task_IMPL	:= kernel_task kernel_task-arm
-kernel_thread_IMPL	:= kernel_thread kernel_thread-std
+kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-arm
 kernel_uart_IMPL  	:= kernel_uart kernel_uart-arm
 map_util_IMPL		:= map_util map_util-mem map_util-caps
 mapping_IMPL		:= mapping-arm mapping
 mem_layout_IMPL		:= mem_layout mem_layout-arm mem_layout-noncont
 mem_space_IMPL		:= mem_space-arm mem_space-user
-kernel_thread_IMPL	:= kernel_thread kernel_thread-std kernel_thread-arm
 kmem_alloc_IMPL		:= kmem_alloc kmem_alloc-arm
 pagetable_IMPL	  	:= pagetable pagetable-arch
 paging_IMPL	  	:= paging paging-arch
@@ -216,9 +224,10 @@ pic_IMPL		:= pic pic-arm
 space_IMPL		:= space space-caps
 startup_IMPL		:= startup startup-arm
 sys_call_page_IMPL	:= sys_call_page sys_call_page-arm
-thread_IMPL	  	:= thread thread-list thread-arm thread-syscall \
+thread_IMPL	  	:= thread thread-list thread-arm \
 			   thread-jdb thread-ipc thread-msg thread-msg-arm \
-			   thread-pagefault  thread-log thread-lookup
+			   thread-pagefault  thread-log thread-lookup \
+			   thread-ulock
 timer_IMPL		:= timer timer-arm
 vmem_alloc_IMPL	  	:= vmem_alloc vmem_alloc-arch
 tb_entry_IMPL		:= tb_entry tb_entry-arm
@@ -249,7 +258,7 @@ JDB_INTERFACES		:= jdb_handler_queue jdb_module jdb_pic            \
 			   jdb_kern_info_kmem_alloc jdb_kern_info_region   \
 			   jdb_kern_info_kip jdb_mapdb                     \
 			   jdb_trace jdb_trace_set jdb_entry_frame         \
-			   jdb_thread_names jdb_util jdb_space
+			   jdb_thread_names jdb_util jdb_space jdb_utcb
 
 
 JDB_TBUF_IFS		:= jdb_tbuf jdb_tbuf_init jdb_tbuf_output          \

@@ -35,15 +35,6 @@
 ( (l4_msgdope_t) {md: {0, 0, 0, 0, 0, 0, strings, words }})
 
 
-#define L4_IPC_TIMEOUT(snd_man, snd_exp, rcv_man, rcv_exp, snd_pflt, rcv_pflt)\
-     ( (l4_timeout_t) \
-       {to: { rcv_exp, snd_exp, rcv_pflt, snd_pflt, snd_man, rcv_man } } )
-
-#define L4_IPC_NEVER			((l4_timeout_t) {timeout: 0})
-#define L4_IPC_NEVER_INITIALIZER	{timeout: 0}
-#define L4_IPC_RECV_TIMEOUT_0		L4_IPC_TIMEOUT(0,0,0,1,0,0)
-#define L4_IPC_SEND_TIMEOUT_0		L4_IPC_TIMEOUT(0,1,0,0,0,0)
-#define L4_IPC_BOTH_TIMEOUT_0		L4_IPC_TIMEOUT(0,1,0,1,0,0)
 
 #define L4_IPC_MAPMSG(address, size)  \
      ((void *)(l4_umword_t)( ((address) & L4_PAGEMASK) | ((size) << 2) \
@@ -115,6 +106,19 @@ l4_ipc_call(l4_threadid_t dest,
             l4_msgdope_t *result);
 
 L4_INLINE int
+l4_ipc_call_tag(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t snd_w0,
+            l4_umword_t snd_w1,
+            l4_msgtag_t tag,
+            void *rcv_msg,
+            l4_umword_t *rcv_w0,
+            l4_umword_t *rcv_w1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result,
+            l4_msgtag_t *rtag);
+
+L4_INLINE int
 l4_ipc_reply_and_wait(l4_threadid_t dest, 
                       const void *snd_msg, 
                       l4_umword_t snd_word0, 
@@ -127,11 +131,34 @@ l4_ipc_reply_and_wait(l4_threadid_t dest,
                       l4_msgdope_t *result);
 
 L4_INLINE int
+l4_ipc_reply_and_wait_tag(l4_threadid_t dest,
+                      const void *snd_msg,
+                      l4_umword_t snd_dword0,
+                      l4_umword_t snd_dword1,
+                      l4_msgtag_t tag,
+                      l4_threadid_t *src,
+                      void *rcv_msg,
+                      l4_umword_t *rcv_dword0,
+                      l4_umword_t *rcv_dword1,
+                      l4_timeout_t timeout,
+                      l4_msgdope_t *result,
+                      l4_msgtag_t *rtag);
+
+L4_INLINE int
 l4_ipc_send(l4_threadid_t dest, 
             const void *snd_msg,
             l4_umword_t snd_word0, 
             l4_umword_t snd_word1, 
             l4_timeout_t timeout, 
+            l4_msgdope_t *result);
+
+L4_INLINE int 
+l4_ipc_send_tag(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t w0,
+            l4_umword_t w1,
+            l4_msgtag_t tag,
+            l4_timeout_t timeout,
             l4_msgdope_t *result);
 
 L4_INLINE int
@@ -143,6 +170,15 @@ l4_ipc_wait(l4_threadid_t *src,
             l4_msgdope_t *result);
 
 L4_INLINE int
+l4_ipc_wait_tag(l4_threadid_t *src,
+            void *rcv_msg,
+            l4_umword_t *rcv_w0,
+            l4_umword_t *rcv_w1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result,
+            l4_msgtag_t *tag);
+
+L4_INLINE int
 l4_ipc_receive(l4_threadid_t src,
                void *rcv_msg, 
                l4_umword_t *rcv_word0, 
@@ -151,64 +187,17 @@ l4_ipc_receive(l4_threadid_t src,
                l4_msgdope_t *result);
 
 L4_INLINE int
+l4_ipc_receive_tag(l4_threadid_t src,
+               void *rcv_msg,
+               l4_umword_t *rcv_w0,
+               l4_umword_t *rcv_w1,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result,
+               l4_msgtag_t *tag);
+
+L4_INLINE int
 l4_ipc_sleep(l4_timeout_t timeout);
 
-/*----------------------------------------------------------------------------
- * 3 words in registers
- *--------------------------------------------------------------------------*/
-L4_INLINE int
-l4_ipc_call_w3(l4_threadid_t dest, 
-               const void *snd_msg, 
-               l4_umword_t snd_word0, 
-               l4_umword_t snd_word1, 
-               l4_umword_t snd_word2, 
-               void *rcv_msg, 
-               l4_umword_t *rcv_word0, 
-               l4_umword_t *rcv_word1, 
-               l4_umword_t *rcv_word2, 
-               l4_timeout_t timeout, 
-               l4_msgdope_t *result);
-
-L4_INLINE int
-l4_ipc_reply_and_wait_w3(l4_threadid_t dest, 
-                         const void *snd_msg, 
-                         l4_umword_t snd_word0, 
-                         l4_umword_t snd_word1, 
-                         l4_umword_t snd_word2, 
-                         l4_threadid_t *src,
-                         void *rcv_msg, 
-                         l4_umword_t *rcv_word0, 
-                         l4_umword_t *rcv_word1, 
-                         l4_umword_t *rcv_word2, 
-                         l4_timeout_t timeout, 
-                         l4_msgdope_t *result);
-
-L4_INLINE int
-l4_ipc_send_w3(l4_threadid_t dest, 
-               const void *snd_msg,
-               l4_umword_t snd_word0, 
-               l4_umword_t snd_word1, 
-               l4_umword_t snd_word2, 
-               l4_timeout_t timeout, 
-               l4_msgdope_t *result);
-
-L4_INLINE int
-l4_ipc_wait_w3(l4_threadid_t *src,
-               void *rcv_msg, 
-               l4_umword_t *rcv_word0, 
-               l4_umword_t *rcv_word1, 
-               l4_umword_t *rcv_word2, 
-               l4_timeout_t timeout, 
-               l4_msgdope_t *result);
-
-L4_INLINE int
-l4_ipc_receive_w3(l4_threadid_t src,
-                  void *rcv_msg, 
-                  l4_umword_t *rcv_word0, 
-                  l4_umword_t *rcv_word1, 
-                  l4_umword_t *rcv_word2, 
-                  l4_timeout_t timeout, 
-                  l4_msgdope_t *result);
 
 
 L4_INLINE int 

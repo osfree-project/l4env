@@ -46,7 +46,6 @@ public:
 
 public: // Public methods
     virtual int GetSizeOfType(int nFEType, int nFESize = 0);
-    virtual int GetMaxShortIPCSize(void);
 };
 
 #endif

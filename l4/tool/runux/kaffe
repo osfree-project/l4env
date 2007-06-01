@@ -59,10 +59,12 @@ fi
 fiasco \
 	-G $UXRES \
         -n8 \
-        -n10 \
+        -n9 \
+        -n11 \
         -l log \
         -l names \
         -l dm_phys \
+	-l l4io \
         -l rtc-ux \
         -l name_server \
         -l con-ux \

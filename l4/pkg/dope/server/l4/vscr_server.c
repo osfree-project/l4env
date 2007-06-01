@@ -95,7 +95,7 @@ static void vscreen_server_thread(void *arg) {
 	vs->vscr->reg_server(vs, ident_buf);
 	thread_started = 1;
 	INFO(printf("VScreen(server_thread): thread successfully started.\n"));
-	dice_env.timeout = L4_IPC_TIMEOUT(250, 14, 0, 0, 0, 0); /* send timeout 1ms */
+	dice_env.timeout = l4_ipc_timeout(250, 2, 0, 0); /* send timeout 1ms */
 	dope_vscr_server_loop(&dice_env);
 }
 

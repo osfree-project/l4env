@@ -45,7 +45,6 @@
 #include "L4BEMsgBuffer.h"
 #include "L4BEMsgBufferType.h"
 #include "L4BEMarshaller.h"
-#include "L4BETrace.h"
 
 #include "be/BEContext.h"
 #include "Compiler.h"
@@ -256,18 +255,5 @@ CBEMarshaller* CL4BEClassFactory::GetNewMarshaller()
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CL4BEClassFactory: created new instance of CL4BEMarshaller\n");
     return new CL4BEMarshaller();
-}
-
-/** \brief creates a new instance of a trace
- *  \return a reference to the newly created instance
- */
-CBETrace* CL4BEClassFactory::GetNewTrace()
-{
-    CBETrace *pRet = CBEClassFactory::GetNewTraceFromLib();
-    if (pRet)
-	return pRet;
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CL4BEClassFactory: created new instance of CL4BETrace\n");
-    return new CL4BETrace();
 }
 

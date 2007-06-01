@@ -73,7 +73,7 @@ class CBESizes;
 class CBECommunication;
 class CBEMsgBuffer;
 class CBEMsgBufferType;
-class CBETrace;
+class CTrace;
 
 /** \class CBEClassFactory
  *  \ingroup backend
@@ -135,10 +135,7 @@ public:
     virtual CBEDispatchFunction* GetNewDispatchFunction();
     virtual CBEMsgBuffer* GetNewMessageBuffer();
     virtual CBEMsgBufferType* GetNewMessageBufferType();
-    virtual CBETrace* GetNewTrace();
-
-protected:
-    CBETrace* GetNewTraceFromLib(void);
+    virtual CTrace* GetNewTrace();
 };
 
 #endif // !__DICE_BECLASSFACTORY_H__

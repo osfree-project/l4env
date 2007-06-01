@@ -11,6 +11,7 @@ INTERFACE:
 #include "sender.h"
 #include "space.h"		// Space_index
 #include "thread_lock.h"
+#include "utcb.h"
 
 class Irq_alloc;
 class Return_frame;
@@ -46,13 +47,6 @@ public:
   Thread (Task* task, Global_id id,
 	  unsigned short init_prio, unsigned short mcp);
 
-  void sys_ipc();
-  void sys_fpage_unmap();
-  void sys_thread_switch();
-  void sys_thread_schedule();
-  void sys_task_new();
-  void sys_id_nearest();
-  void sys_thread_ex_regs();
 
   int handle_page_fault (Address pfa, Mword error, Mword pc, 
       Return_frame *regs);
@@ -71,6 +65,8 @@ public:
    */
   LThread_num d_threadno();
 
+  void sys_ipc();
+
 private:
   Thread(const Thread&);	///< Default copy constructor is undefined
   void *operator new(size_t);	///< Default new operator undefined
@@ -87,11 +83,6 @@ private:
    * Return small address space the task is in.
    */
   Mword small_space();
-
-  /**
-   * Move the task this thread belongs to to the given small address space
-   */
-  void set_small_space (Mword nr);
 
   /**
    * Return to user.
@@ -116,6 +107,11 @@ public:
   inline Mword user_flags() const;
 
 protected:
+  /**
+   * Move the task this thread belongs to to the given small address space
+   */
+  void set_small_space (Mword nr);
+
   // implementation details follow...
 
   // DATA
@@ -143,7 +139,6 @@ protected:
   Address _vm_window0, _vm_window1; // data windows for the
 				// IPC partner's address space (for long IPC)
   jmp_buf *_recover_jmpbuf;	// setjmp buffer for page-fault recovery
-  L4_timeout _pf_timeout;	// page-fault timeout specified by partner
 
   // debugging stuff
   Address _last_pf_address;
@@ -180,13 +175,17 @@ IMPLEMENTATION:
 #include "kdb_ke.h"
 #include "logdefs.h"
 #include "map_util.h"
+#include "ram_quota.h"
+#include "ram_quota_alloc.h"
 #include "sched_context.h"
 #include "space_index_util.h"
 #include "std_macros.h"
+#include "task.h"
 #include "thread_state.h"
 #include "timeout.h"
 
 KIP_KERNEL_FEATURE("multi_irq");
+KIP_KERNEL_FEATURE("exception_ipc");
 
 Helping_lock Thread::tcb_area_lock;
 
@@ -524,7 +523,7 @@ Thread::space_index() const
 PUBLIC inline
 Space_index
 Thread::chief_index() const
-{ return Space_index (id().chief()); }
+{ return Space_index(space()->chief()); }
 
 /** Kill this thread.  If this thread has local number 0, kill its
     address space (task) as well.  This function does not handle
@@ -624,6 +623,9 @@ Thread::kill()
   }
 
   state_change (0, Thread_dead);
+
+  // possibly dequeue from a wait queue
+  wait_queue_kill();
 
   // if other threads want to send me IPC messages, abort these
   // operations
@@ -905,60 +907,136 @@ Thread::initialize(Address ip, Address sp,
   return true;
 }
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [exc_ipc]:
 
-#include "cpu.h"
-#include <feature.h>
-
-KIP_KERNEL_FEATURE("exception_ipc");
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [utcb]:
-
-
-PRIVATE static inline
+/** Clears the utcb pointer of the Thread
+ *  Reason: To avoid a stale pointer after unmapping and deallocating
+ *  the UTCB. Without this the Thread_lock::clear will access the UTCB
+ *  after the unmapping the UTCB -> POOFFF.
+ */
+PUBLIC inline
 void
-Thread::copy_utcb_to_utcb(Thread *snd, Thread *rcv)
+Thread::unset_utcb_ptr()
 {
-  assert (cpu_lock.test());
-
-  Utcb *snd_utcb = snd->access_utcb();
-  Utcb *rcv_utcb = rcv->access_utcb();
-  Mword s = snd_utcb->snd_size;
-  Mword r = rcv_utcb->rcv_size;
-
-  if (r > Utcb::Max_words) r = Utcb::Max_words;
-
-  Cpu::memcpy_mwords (rcv_utcb->values, snd_utcb->values, r < s ? r : s);
-  if ((rcv_utcb->status & Utcb::Inherit_fpu) 
-      && (snd_utcb->status & Utcb::Transfer_fpu))
-    snd->transfer_fpu(rcv);
+  utcb(0);
+  local_id(0);
 }
 
 
 PRIVATE
 void
-Thread::copy_utcb_to(Thread* receiver)
+Thread::destroy_utcb()
+{
+  task()->free_utcb(id().lthread());
+}
+
+
+/** Setup the UTCB pointer of this thread.
+ */
+PRIVATE
+void
+Thread::setup_utcb_kernel_addr()
+{
+  Utcb *ptr = task()->alloc_utcb(id().lthread());
+  if (!ptr)
+    kdb_ke("could not allocate UTCB");
+
+  utcb(ptr);
+  local_id(task()->user_utcb(id().lthread()));
+
+  _utcb_handler = 0;
+}
+
+
+PRIVATE static inline
+void
+Thread::copy_utcb_to_utcb(L4_msg_tag const &tag, Thread *snd, Thread *rcv)
+{
+  assert (cpu_lock.test());
+
+  Utcb *snd_utcb = snd->access_utcb();
+  Utcb *rcv_utcb = rcv->access_utcb();
+  Mword s = tag.words();
+  Mword r = Utcb::Max_words;
+
+  Cpu::memcpy_mwords (rcv_utcb->values, snd_utcb->values, r < s ? r : s);
+  if (tag.transfer_fpu() && rcv_utcb->inherit_fpu())
+    snd->transfer_fpu(rcv);
+}
+
+
+PUBLIC
+void
+Thread::copy_utcb_to(L4_msg_tag const &tag, Thread* receiver)
 {
   // we cannot copy trap state to trap state!
   assert(!this->_utcb_handler || !receiver->_utcb_handler);
   if (EXPECT_FALSE(this->_utcb_handler != 0))
-    copy_ts_to_utcb(this, receiver);
+    copy_ts_to_utcb(tag, this, receiver);
   else if (EXPECT_FALSE(receiver->_utcb_handler != 0))
-    copy_utcb_to_ts(this, receiver);
+    copy_utcb_to_ts(tag, this, receiver);
   else
-    copy_utcb_to_utcb(this, receiver);
+    copy_utcb_to_utcb(tag, this, receiver);
 }
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [!utcb]:
 
-PRIVATE inline
-void
-Thread::copy_utcb_to(Thread*)
-{}
+PROTECTED inline
+bool
+Thread::ex_regs_permission_inter_task(Sys_ex_regs_frame *regs,
+				      L4_uid *dst_id, Thread **dst,
+				      Task **dst_task, Thread **dst_thread0)
+{
+  // inter-task ex-regs: also consider the task number
+  if (EXPECT_TRUE(!regs->task()
+	|| regs->task() == id().task()))
+    return true;		// local ex_regs
+
+  *dst_thread0 = lookup (L4_uid (regs->task(), 0), space());
+
+  if (!*dst_thread0)
+    return false;		// error
+
+  {
+    // avoid race between checking existence of thread and getting the
+    // thread lock
+    Lock_guard<Cpu_lock> guard(&cpu_lock);
+
+    if (EXPECT_FALSE(!(*dst_thread0)->is_tcb_mapped()
+	  || !(*dst_thread0)->exists()))
+      return false;
+
+    (*dst_thread0)->thread_lock()->lock_dirty();
+  }
+
+  // now we own the lock of thread 0 of the target task
+
+  // take thread 0 of target as the ID template
+  *dst_id = (*dst_thread0)->id();
+  dst_id->lthread(regs->lthread());
+
+  // Are we the pager of dst_id (just check address spaces)?
+  Thread *dst_check = *dst = id_to_tcb(*dst_id);
+
+  // if dst_check->_pager is nil (i.e. the destination thread does not
+  // exist), we check the pager of thread0 of that address space
+  if (!dst_check || !dst_check->is_tcb_mapped() 
+      || !dst_check->_pager || !(*dst)->in_present_list())
+    dst_check = *dst_thread0;
+
+  if (dst_check->_pager->id().task() != id().task()
+#ifdef CONFIG_TASK_CAPS
+      && dst_check->_cap_handler->id().task() != id().task()
+#endif
+      )
+    {
+      WARN("Security violation: Not fault handler of %x.", dst_id->task());
+      (*dst_thread0)->thread_lock()->clear();
+      regs->old_eflags (~0U);
+      return false;		// error
+    }
+
+  *dst_task = (*dst_thread0)->task();
+  return true;			// success
+}
 
 
 //---------------------------------------------------------------------------
@@ -1005,21 +1083,6 @@ void Thread::set_small_space( Mword /*nr*/)
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [v2]:
-
-/**
- * Return nesting level.
- * @return nesting level of thread's clan
- */
-PUBLIC inline
-unsigned
-Thread::nest() const
-{
-  return id().nest();
-}
-
-
-//---------------------------------------------------------------------------
 IMPLEMENTATION [!io]:
 
 PUBLIC inline
@@ -1028,92 +1091,6 @@ Thread::has_privileged_iopl()
 {
   return false;
 }
-
-
-//----------------------------------------------------------------------------
-IMPLEMENTATION[!utcb]:
-
-PUBLIC inline
-void
-Thread::unset_utcb_ptr() {}
-
-
-
-//----------------------------------------------------------------------------
-IMPLEMENTATION[exc_ipc]:
-PRIVATE inline
-void
-Thread::setup_exception_ipc() 
-{ _utcb_handler = 0; }
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [!exc_ipc]:
-
-PRIVATE inline
-void
-Thread::setup_exception_ipc() 
-{}
-
-
-//----------------------------------------------------------------------------
-IMPLEMENTATION[utcb]:
-
-#include "utcb.h"
-
-/** Clears the utcb pointer of the Thread
- *  Reason: To avoid a stale pointer after unmapping and deallocating
- *  the UTCB. Without this the Thread_lock::clear will access the UTCB
- *  after the unmapping the UTCB -> POOFFF.
- */
-PUBLIC inline
-void
-Thread::unset_utcb_ptr()
-{
-  utcb(0);
-  local_id(0);
-}
-
-
-PRIVATE
-void
-Thread::destroy_utcb()
-{
-  task()->free_utcb(id().lthread());
-}
-
-
-/** Setup the UTCB pointer of this thread.
- */
-PRIVATE
-void
-Thread::setup_utcb_kernel_addr()
-{
-  Utcb *ptr = task()->alloc_utcb(id().lthread());
-  if (!ptr)
-    kdb_ke("could not allocate UTCB");
-
-  utcb(ptr);
-  local_id(task()->user_utcb(id().lthread()));
-
-  setup_exception_ipc();
-}
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION[!utcb]: 
-
-/** Dummy function to hold code in thread-ia32-ux-v2x0 generic.
- */
-PRIVATE inline
-void
-Thread::setup_utcb_kernel_addr()
-{}
-
-PRIVATE inline
-void
-Thread::destroy_utcb()
-{}
 
 
 // ----------------------------------------------------------------------------

@@ -69,8 +69,10 @@ PRIVATE inline bool Thread::check_trap13_kernel (Trap_state *, bool)
 PRIVATE inline void Thread::check_f00f_bug (Trap_state *)
 {}
 
-PRIVATE inline int  Thread::handle_io_page_fault (Trap_state *, Address, bool)
-{ return 0; }
+PRIVATE inline 
+unsigned
+Thread::check_io_bitmap_delimiter_fault(Trap_state *)
+{ return 1; }
 
 PRIVATE inline bool Thread::handle_sysenter_trap (Trap_state *, Address, bool)
 { return true; }
@@ -238,15 +240,16 @@ Thread::handle_lldt(Trap_state *ts)
 	      info.seg_not_present = !desc.present();
 	      info.useable         =  desc.avl();
 
-	      // Set up data on trampoline
-	      for (unsigned i = 0; i < sizeof(info) / sizeof(Mword); i++)
-		*(trampoline_page + i + 1) = *(((Mword *)&info) + i);
+	      // Remember descriptor for reload on thread switch
+	      memcpy(&t->_gdt_user_entries[entry_number], &info,
+                     sizeof(_gdt_user_entries[0]));
 
-	      s = Space_index(t->id().task()).lookup()->mem_space();
+	      // Set up data on trampoline
+	      memcpy(trampoline_page + 1, &info, sizeof(info));
 
 	      // Call set_thread_area for given user process
-	      Trampoline::syscall(s->pid(), 243 /* __NR_set_thread_area */,
-				  Mem_layout::Trampoline_page + sizeof(Mword));
+	      Trampoline::syscall(t->space()->pid(), 243 /* __NR_set_thread_area */,
+                                  Mem_layout::Trampoline_page + sizeof(Mword));
 
 	      // Also set this for the fiasco kernel so that
 	      // segment registers can be set, this is necessary for signal

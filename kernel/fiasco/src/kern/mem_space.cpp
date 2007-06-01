@@ -73,6 +73,8 @@ public:
   unsigned long v_delete(Address virt, unsigned long size, 
       unsigned long page_attribs = Page_all_attribs);
 
+  /// The number of pages occupied by the UTCB area.
+  Mword utcb_size_pages();
 
 private:
   Ram_quota *_quota;
@@ -93,15 +95,7 @@ private:
   static Mem_space *_current asm ("CURRENT_MEM_SPACE");
 };
 
-INTERFACE [utcb]:
-
-EXTENSION class Mem_space
-{
-public:
-  /// The number of pages occupied by the UTCB area.
-  Mword utcb_size_pages();
-};
-
+//---------------------------------------------------------------------------
 IMPLEMENTATION:
 
 // 
@@ -113,7 +107,9 @@ IMPLEMENTATION:
 #include "l4_types.h"
 #include "mapped_alloc.h"
 #include "mem_unit.h"
+#include "paging.h"
 #include "panic.h"
+#include "utcb.h"
 
 
 char const * const Mem_space::name = "Mem_space";
@@ -304,6 +300,19 @@ Mem_space::need_tlb_flush()
   return false;
 }
 
+
+/**
+ * Get size of UTCB area
+ */
+IMPLEMENT inline NEEDS ["utcb.h"]
+Mword
+Mem_space::utcb_size_pages()
+{
+  return (L4_uid::threads_per_task()*sizeof(Utcb) + (Config::PAGE_SIZE -1))
+          / Config::PAGE_SIZE;
+}
+
+
 //-----------------------------------------------------------------------------
 IMPLEMENTATION[ia32,ux]:
 
@@ -369,22 +378,4 @@ PUBLIC inline
 bool
 Mem_space::io_lookup (Address)
 { return false; }
-
-// --------------------------------------------------------------------
-IMPLEMENTATION [utcb]:
-
-#include "utcb.h"
-#include "l4_types.h"
-#include "paging.h"
-
-/**
- * Get size of UTCB area
- */
-IMPLEMENT inline NEEDS ["utcb.h"]
-Mword
-Mem_space::utcb_size_pages()
-{
-  return (L4_uid::threads_per_task()*sizeof(Utcb) + (Config::PAGE_SIZE -1))
-          / Config::PAGE_SIZE;
-}
 

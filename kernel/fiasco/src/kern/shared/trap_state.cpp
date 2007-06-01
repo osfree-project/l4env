@@ -93,6 +93,11 @@ Trap_state::value2() const
 
 PUBLIC inline
 Mword
+Trap_state::dx() const
+{ return _edx; }
+
+PUBLIC inline
+Mword
 Trap_state::value3() const
 { return _edx; }
 

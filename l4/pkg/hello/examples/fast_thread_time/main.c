@@ -6,9 +6,7 @@
 #include <l4/sys/l4int.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/kernel.h>
-#include <l4/sys/rt_sched.h>
 #include <l4/sys/syscalls.h>
-#include <l4/sys/timeout.h>
 #include <l4/sys/types.h>
 #include <l4/sigma0/kip.h>
 #include <l4/util/atomic.h>

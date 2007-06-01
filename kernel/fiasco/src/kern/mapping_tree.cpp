@@ -133,7 +133,7 @@ struct Mapping_tree
 // 
 
 /** Array elements for holding frame-specific data. */
-class Mappable
+class Base_mappable
 {
 public:
   // DATA
@@ -347,6 +347,13 @@ Mapping *
 Mapping_tree::mappings()
 {
   return & _mappings[0];
+}
+
+PUBLIC inline
+bool
+Mapping_tree::is_empty() const
+{
+  return _count == 0;
 }
 
 PUBLIC inline NEEDS[Mapping_tree::mappings, 
@@ -857,7 +864,7 @@ Mapping_tree::lookup (unsigned space, unsigned long page)
 
 PUBLIC
 Mapping *
-Mappable::lookup(unsigned space, Address va)
+Base_mappable::lookup(unsigned space, Address va)
 {
   // get and lock the tree.
   lock.lock();
@@ -872,7 +879,7 @@ Mappable::lookup(unsigned space, Address va)
 
 PUBLIC inline
 Mapping *
-Mappable::insert(Mapping* parent, unsigned space, unsigned long page) 
+Base_mappable::insert(Mapping* parent, unsigned space, unsigned long page) 
 {
   Mapping_tree* t = tree.get();
   if (!t)
@@ -909,18 +916,18 @@ Mappable::insert(Mapping* parent, unsigned space, unsigned long page)
 
 #if 0 // Optimization: do this using memset in Physframe::alloc()
 inline
-Mappable::Mappable ()
+Base_mappable::Base_mappable ()
 {}
 
 inline
 void *
-Mappable::operator new (size_t, void *p) 
+Base_mappable::operator new (size_t, void *p) 
 { return p; }
 #endif
 
 PUBLIC
 void 
-Mappable::pack()
+Base_mappable::pack()
 {
   // We are the owner of the tree lock.
   assert (lock.lock_owner() == current());

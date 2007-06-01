@@ -32,7 +32,7 @@
 #include "BEFunction.h"
 #include "BEClass.h"
 #include "BENameSpace.h"
-#include "BETrace.h"
+#include "Trace.h"
 #include "IncludeStatement.h"
 #include "Compiler.h"
 #include "fe/FEFile.h"
@@ -292,8 +292,9 @@ CBEImplementationFile::WriteDefaultIncludes(void)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBETrace *pTrace = pCF->GetNewTrace();
-    pTrace->DefaultIncludes(this);
+    CTrace *pTrace = pCF->GetNewTrace();
+    if (pTrace)
+	pTrace->DefaultIncludes(this);
     delete pTrace;
 }
 

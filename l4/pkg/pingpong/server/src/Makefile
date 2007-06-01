@@ -5,12 +5,6 @@ TARGET		= pingpong
 MODE		= tiny
 DEFAULT_RELOC	= 0x00800000
 SYSTEMS		= x86-l4v2
-ifeq ($(L4API),l4v2)
-#DEFINES		= -DL4V2_IPC_SYSENTER
-endif
-ifeq ($(L4API),l4x0)
-#DEFINES		= -DL4X0_IPC_SYSENTER
-endif
 
 SRC_C		= ipc_buffer.c worker_sysenter.c worker_int30.c \
 		  helper.c helper_sysenter.c helper_int30.c \

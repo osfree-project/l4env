@@ -81,8 +81,11 @@ print_request(enum Requests r)
 
 /* parser for incoming messages */
 static 
-Requests get_request(unsigned long d0, unsigned long d1)
+Requests get_request(unsigned long d0, unsigned long d1, l4_msgtag_t const &tag)
 {
+  if (l4_msgtag_label(tag) != 0 && !l4_msgtag_is_sigma0(tag))
+    return None;
+
   if (d0 == 1 && (d1 & 0x0f) == 0x0f)
     return Map_kip;
   else if (d0 == ~3UL)
@@ -187,10 +190,15 @@ Answer map_mem(l4_fpage_t fp, Memory_type fn, l4_threadid_t t)
 /* handler for page fault and io page fault requests */
 static
 Answer
-handle_page_fault(unsigned long d1, unsigned long d2, l4_threadid_t t)
+handle_page_fault(unsigned long d1, unsigned long d2, l4_threadid_t t, 
+    l4_msgtag_t const &tag)
 {
   unsigned long pfa = d1 & ~3UL;
   Answer answer;
+
+  if (l4_msgtag_label(tag) != 0 && !l4_msgtag_is_page_fault(tag)
+      && !l4_msgtag_is_io_page_fault(tag))
+    return answer;
 
   d1 &= ~2UL;	/* the L4 kernel seems to get this bit wrong */
   if (!handle_io_page_fault(d1, d2, t.id.task, 
@@ -227,11 +235,12 @@ pager(void)
   int err;
   l4_threadid_t t;
   l4_msgdope_t result;
+  l4_msgtag_t tag;
 
   /* now start serving the subtasks */
   for (;;)
     {
-      err = l4_ipc_wait(&t, 0, &d1, &d2, L4_IPC_NEVER, &result);
+      err = l4_ipc_wait_tag(&t, 0, &d1, &d2, L4_IPC_NEVER, &result, &tag);
 
       while (!err)
 	{
@@ -244,7 +253,7 @@ pager(void)
 	      << " d2=" << d2 << L4::dec << " from thread=" << t << '\n';
 
 
-	  Requests req = get_request(d1,d2);
+	  Requests req = get_request(d1,d2,tag);
 	  if (debug_ipc)
 	    print_request(req);
 	  switch(req)
@@ -295,14 +304,15 @@ pager(void)
 	      answer = map_mem((l4_fpage_t&)d2, Io_mem_cached, t);
 	      break;
 	    default:
-	      answer = handle_page_fault(d1, d2, t);
+	      answer = handle_page_fault(d1, d2, t, tag);
 	      break;
 	    }
 
 	  if (answer.failed())
 	    {
 	      if (debug_warnings)
-		L4::cout << PROG_NAME": can't handle d1=" << L4::hex << d1
+		L4::cout << PROG_NAME": can't handle label=" << L4::dec
+		  << l4_msgtag_label(tag) << " d1=" << L4::hex << d1
 		  << " d2=" << d2 << " from thread=" << L4::dec << t << '\n',
 	      answer.d1 = answer.d2 = 0;
 	    }
@@ -313,9 +323,13 @@ pager(void)
 	      << " to thread=" << t << '\n';
 
 	  /* send reply and wait for next message */
-	  err = l4_ipc_reply_and_wait(t, answer.msg, answer.d1, answer.d2,
+	  err = l4_ipc_reply_and_wait_tag(t, answer.msg, answer.d1, answer.d2, 
+	      			      l4_msgtag(0,0,0,0),
 				      &t, 0, &d1, &d2,
-				      L4_IPC_SEND_TIMEOUT_0, &result);
+				      L4_IPC_SEND_TIMEOUT_0, &result,
+				      &tag);
+
+	  //L4::cout << "tag=" << L4::dec << l4_msgtag_label(tag) << '\n';
 
 	}
     }

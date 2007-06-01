@@ -38,7 +38,7 @@
 #include "BEMsgBuffer.h"
 #include "BEDeclarator.h"
 #include "BESizes.h"
-#include "BETrace.h"
+#include "Trace.h"
 #include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
@@ -95,9 +95,8 @@ CBECallFunction::WriteUnmarshalling(CBEFile * pFile)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
 	GetName().c_str());
 
-    assert(m_pTrace);
     bool bLocalTrace = false;
-    if (!m_bTraceOn)
+    if (!m_bTraceOn && m_pTrace)
     {
 	m_pTrace->BeforeUnmarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;

@@ -168,6 +168,7 @@
 
 #ifdef CONFIG_ASSEMBLER_IPC_SHORTCUT
 
+	.section .text.asmshortcut
 	// ipc entry point for int 0x30
 	.align	16
 	.globl	entry_sys_ipc
@@ -204,19 +205,10 @@ entry_sys_ipc:
 	cmpl	$0xffffffff, %esi
 	je	i30_shortcut_failed
 
-#ifdef CONFIG_ABI_X0
-	// test if destination is L4_NIL_ID
-	testl	$0x00ffffff, %esi
-	jz	i30_shortcut_failed
-
-	// test if destination has ``next_period'' bit set
-	testl	$0x10000000, %esi
-	jnz	i30_shortcut_failed
-#else
 	// test if destination is L4_NIL_ID
 	or	%esi, %esi
 	jz	i30_shortcut_failed
-
+#if 0
 	// test if destination has ''next_period'' bit set
 	testl	$0x00200000, %edi
 	jnz	i30_shortcut_failed
@@ -238,11 +230,11 @@ entry_sys_ipc:
 	ja	i30_shortcut_failed			// more than 2 dwords
 	
 	// test if simple timeout
-	movl	%ecx, %edi
-	andl	$0x0f, %edi
+	movw	%cx, %di
+	test	%cx, %cx
 	jz	1f				// rcv_to==inf => o.k.
-	shrl	$24, %ecx
-	jnz	i30_shortcut_failed		// (rcv_to!=inf) && (rcv_to!=0)
+	cmpw	$0x0400, %cx
+	jne	i30_shortcut_failed		// (rcv_to!=inf) && (rcv_to!=0)
 
 1:	// test if open wait and (irq attached or sender queued)
 	// ebp is 0 (receive) or 1 (open wait) here
@@ -362,13 +354,9 @@ i30_sender_ok:
 	movl	%ecx, REG_EBX (%eax)		// dst_regs->ebx = ebx
 	movl	$RETURN_DOPE, REG_EAX (%eax)	// dst_regs->eax = DOPE(3,0)
 	movl	OFS__THREAD__ID (THIS_ebx), %edx
-#ifdef CONFIG_ABI_X0
 	movl	REG_EDI (REGS_esp), %ecx
-#else
-	movl	OFS__THREAD__ID+4 (THIS_ebx), %ecx
-#endif
 	movl	%edx, REG_ESI (%eax)		// dst_regs->esi = id.low
-	movl	%ecx, REG_EDI (%eax)		// dst_regs->edi = id.high
+	movl	%ecx, REG_EDI (%eax)		// copy tag
 
 	// wake up receiver
 	andl	$~(Thread_ipc_receiving_mask | \
@@ -402,7 +390,7 @@ i30_sender_ok:
 
 	// timeout = 0
 	movb	$L4_IPC_RETIMEOUT, %al
-	testl	%edi, %edi			// edi==0: timout==inf
+	testw	%di, %di			// edi==0: timout==inf
 	jne	i30_do_switch_exec		// timeout==inf? no
 
 	// timeout = infinite ==> need wakeup
@@ -422,12 +410,10 @@ i30_do_switch_exec:
 
 	CNT_CONTEXT_SWITCH
 
-#if defined(CONFIG_EXCEPTION_IPC) || defined(CONFIG_HANDLE_SEGMENTS)
 	movl THIS_ebx, %eax
 	movl DEST_esi, %edx
-	movl $1, %ecx
+	movl REG_EDI (REGS_esp), %ecx
 	call switch_exception_context_wrapper
-#endif
 
 	movl	OFS__THREAD__STATE (THIS_ebx), %eax
 
@@ -590,12 +576,10 @@ i30_handle_deceit:
 #define THIS_ebx %ebx
 #define DEST_esi %esi
 
-#if defined(CONFIG_EXCEPTION_IPC) || defined(CONFIG_HANDLE_SEGMENTS)
 	movl THIS_ebx, %eax
 	movl DEST_esi, %edx
-	movl $0, %ecx
-	call switch_exception_context_wrapper
-#endif
+	movl REG_EDI (REGS_esp), %ecx
+	call handle_utcb_ipc
 	
 	//   dst->ready_enqueue();
 	xorl	%edx, %edx
@@ -765,17 +749,10 @@ entry_sys_fast_ipc:
 	cmpl	$0xffffffff, %esi
 	je	se_shortcut_failed
 
-#ifdef CONFIG_ABI_X0
-	// test if destination is L4_NIL_ID
-	testl	$0x00ffffff, %esi
-	jz	se_shortcut_failed
-	// test if destination has ``next_period'' bit set
-	testl	$0x10000000, %esi
-	jnz	se_shortcut_failed
-#else
 	// test if destination is L4_NIL_ID
 	testl	%esi, %esi
 	jz	se_shortcut_failed
+#if 0
 	// test if destination has ``next_period'' bit set
 	testl	$0x002000000, %edi
 	jnz	se_shortcut_failed
@@ -805,11 +782,11 @@ entry_sys_fast_ipc:
 	ja	se_shortcut_failed		// more than 2 dwords
 	
 	// test if simple timeout
-	movl	%ecx, %edi			// rcv_to==inf => edi=0
-	andl	$0x0f, %edi
+	mov	%cx, %di
+	test	%cx, %cx				// rcv_to==inf => edi=0
 	jz	1f				// rcv_to==inf => o.k.
-	testl	$0xff000000, %ecx
-	jnz	se_shortcut_failed		// (rcv_to!=inf) && (rcv_to!=0)
+	cmp	$0x0400, %cx
+	jne	se_shortcut_failed		// (rcv_to!=inf) && (rcv_to!=0)
 
 1:	// test if open wait and (irq attached or sender queued)
 	// ebp is 0 (receive) or 1 (open wait) here
@@ -942,7 +919,7 @@ se_sender_ok:
 
 	// timeout = 0
 	movb	$L4_IPC_RETIMEOUT, %al
-	testl	%edi, %edi			// edi==0: timout==inf
+	testw	%di, %di			// edi==0: timout==inf
 	jne	se_do_switch_exec		// timeout==inf? no
 
 	// timeout = infinite ==> need wakeup
@@ -962,12 +939,10 @@ se_do_switch_exec:
 
 	CNT_CONTEXT_SWITCH
 
-#if defined(CONFIG_EXCEPTION_IPC) || defined(CONFIG_HANDLE_SEGMENTS)
 	movl THIS_ebx, %eax
 	movl DEST_esi, %edx
-	movl $1, %ecx
+	mov  REG_EDI (REGS_esp), %ecx
 	call switch_exception_context_wrapper
-#endif
 	
         movl    KSEG OFS__THREAD__STATE (THIS_ebx), %eax
 	testl	$Thread_fpu_owner, %eax
@@ -1082,11 +1057,7 @@ se_addr_space_switched:
 
 #if defined(CONFIG_SMALL_SPACES) && defined(CONFIG_IO_PROT)
 	movl	KSEG OFS__THREAD__ID  (THIS_ebx), %esi
-#ifdef CONFIG_ABI_X0
-	movl	4+REG_ESI (%esp), %edi
-#else
-	movl	KSEG OFS__THREAD__ID+4 (THIS_ebx), %edi
-#endif
+	movl	4+REG_EDI (%esp), %edi
 	movl	4+REG_EBX (%esp), %ebx
 	movl	4+REG_EDX (%esp), %edx
 	leal	32(%ebp), %esp
@@ -1099,11 +1070,7 @@ se_addr_space_switched:
 	movl	KSEG OFS__THREAD__ESP (DEST_esi), %ecx
 	subl	$16, %ecx
 	movl	KSEG OFS__THREAD__ID  (THIS_ebx), %esi
-#ifdef CONFIG_ABI_X0
-	movl	4+REG_ESI (%esp), %edi
-#else
-	movl	KSEG OFS__THREAD__ID+4 (THIS_ebx), %edi
-#endif
+	movl	4+REG_EDI (%esp), %edi
 	movl	4+REG_EBX (%esp), %ebx
 	movl	4+REG_EDX (%esp), %ebp
 	movl	$VAL__MEM_LAYOUT__SMAS_TRAMPOLINE, %edx
@@ -1120,11 +1087,7 @@ se_addr_space_switched:
 	subl	$2, %edx
 	movl	KSEG OFS__THREAD__ESP (DEST_esi), %ecx
 	movl	KSEG OFS__THREAD__ID  (THIS_ebx), %esi
-#ifdef CONFIG_ABI_X0
-	movl	4+REG_ESI (%esp), %edi
-#else
-	movl	KSEG OFS__THREAD__ID+4 (THIS_ebx), %edi
-#endif
+	movl	4+REG_EDI (%esp), %edi
 	movl	4+REG_EBX (%esp), %ebx
 	movl	4+REG_EDX (%esp), %ebp
 	movl	$RETURN_DOPE, %eax
@@ -1165,7 +1128,7 @@ se_ret_switch:
 	DO_SYSEXIT
 
 	// The destination thread is not in a shortcut IPC so we cannot
-	// throw it directly into user space since it may held a thread
+	// throw it directly into user space since it may hold a thread
 	// lock or does not return via sysexit (int-entered IPC or
 	// ex_regs manipulation)
 	.align	16
@@ -1176,11 +1139,7 @@ se_slow_switch:
 	movl	%edx, KSEG REG_EDX (%eax)		// dst_regs->edx = dw1
 	movl	%ecx, KSEG REG_EBX (%eax)		// dst_regs->ebx = dw2
 	movl	KSEG OFS__THREAD__ID (THIS_ebx), %edx
-#ifdef CONFIG_ABI_X0
 	movl	4+REG_EDI (%esp), %ecx
-#else
-	movl	KSEG OFS__THREAD__ID+4 (THIS_ebx), %ecx
-#endif
 	movl	$RETURN_DOPE, KSEG REG_EAX (%eax)
 	movl	%edx, KSEG REG_ESI (%eax)	    // dst_regs->esi = id.low
 	movl	%ecx, KSEG REG_EDI (%eax)	    // dst_regs->edi = id.high
@@ -1201,12 +1160,10 @@ se_handle_deceit:
 #define DEST_esi %esi
 #define REGS_esp %esp
 
-#if defined(CONFIG_EXCEPTION_IPC) || defined(CONFIG_HANDLE_SEGMENTS)
 	movl THIS_ebx, %eax
 	movl DEST_esi, %edx
-	movl $0, %ecx
-	call switch_exception_context_wrapper
-#endif
+	movl REG_EDI (%esp), %ecx
+	call handle_utcb_ipc
 
 	//   dst->ready_enqueue();
 	xorl	%edx, %edx
@@ -1224,11 +1181,7 @@ se_de_no_enqueue:
 	movl	%edx, KSEG REG_EDX (%eax)
 	movl	%ecx, KSEG REG_EBX (%eax)
 	movl	KSEG OFS__THREAD__ID (THIS_ebx), %edx
-#ifdef CONFIG_ABI_X0
 	movl	REG_EDI (REGS_esp), %ecx
-#else
-	movl	KSEG OFS__THREAD__ID+4 (THIS_ebx), %ecx
-#endif
 	movl	%edx, KSEG REG_ESI (%eax)	   // dst_regs->esi = id.low
 	movl	%ecx, KSEG REG_EDI (%eax)	   // dst_regs->edi = id.high
 	movl	$RETURN_DOPE, KSEG REG_EAX (%eax)

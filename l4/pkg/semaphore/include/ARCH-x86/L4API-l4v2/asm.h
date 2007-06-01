@@ -101,8 +101,8 @@ l4semaphore_down(l4semaphore_t * sem)
      :
      "a"  (L4_IPC_SHORT_MSG),                 /* EAX, short send */
      "c"  (sem),                              /* ECX, semaphore */
-     "D"  (l4semaphore_thread_l4_id.lh.high), /* EDI, id high */
-     "S"  (l4semaphore_thread_l4_id.lh.low)   /* ESI, id low */
+     "S"  (l4semaphore_thread_l4_id.raw),     /* ESI, id */
+     "D"  (0)                                 /* EDI, msgtag */
      :
      "memory"
      );
@@ -170,8 +170,8 @@ l4semaphore_up(l4semaphore_t * sem)
      :
      "a"  (L4_IPC_SHORT_MSG),                 /* EAX, short send */
      "c"  (sem),                              /* ECX, semaphore */
-     "D"  (l4semaphore_thread_l4_id.lh.high), /* EDI, id high */
-     "S"  (l4semaphore_thread_l4_id.lh.low)   /* ESI, id low */
+     "S"  (l4semaphore_thread_l4_id.raw),     /* ESI, id */
+     "D"  (0)                                 /* EDI, msgtag */
      :
      "memory"
      );
@@ -232,15 +232,14 @@ l4semaphore_down_timed(l4semaphore_t * sem, unsigned timeout)
 
   if (tmp < 0)
     {
-      int e, m;
-      
-      l4util_micros2l4to((signed)timeout*1000, &m, &e);
       /* we did not get the semaphore, block */
       ret = l4_ipc_call(l4semaphore_thread_l4_id,
 			L4_IPC_SHORT_MSG, L4SEMAPHORE_BLOCKTIMED,
 			(l4_umword_t)sem,
 			L4_IPC_SHORT_MSG, &dummy, &dummy,
-			L4_IPC_TIMEOUT(0, 0, m, e, 0, 0), &result);
+			l4_timeout(L4_IPC_TIMEOUT_NEVER, 
+			  l4util_micros2l4to((signed)timeout*1000)),
+			&result);
 
       if (ret != 0)
         {

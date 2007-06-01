@@ -119,8 +119,8 @@ Mword Sys_ipc_frame::has_snd() const
 { return snd_desc().has_snd(); }
 
 IMPLEMENT inline 
-L4_timeout Sys_ipc_frame::timeout() const
-{ return L4_timeout(_rdi); }
+L4_timeout_pair Sys_ipc_frame::timeout() const
+{ return L4_timeout_pair(_rdi); }
 
 IMPLEMENT inline
 L4_rcv_desc Sys_ipc_frame::rcv_desc() const
@@ -213,7 +213,7 @@ void Sys_ex_regs_frame::old_ip(Mword oip)
 { _rdx = oip; }
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [amd64-caps-utcb]:
+IMPLEMENTATION [amd64 && caps]:
 
 #include "utcb.h"
 
@@ -227,7 +227,7 @@ L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* utcb) const
 }
 
 IMPLEMENT inline NEEDS["utcb.h"]
-void Sys_ex_regs_frame::old_cap_handler(L4_uid id, Utcb* utcb)
+void Sys_ex_regs_frame::old_cap_handler(L4_uid const &id, Utcb* utcb)
 {
   utcb->values[1] = id.raw();
 }
@@ -235,7 +235,7 @@ void Sys_ex_regs_frame::old_cap_handler(L4_uid id, Utcb* utcb)
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [amd64-!{caps-utcb}]:
+IMPLEMENTATION [amd64 && !caps]:
 
 // If UTCBs are not available, changing or requesting the
 // task-capability fault handler is not supported on IA32.
@@ -247,7 +247,7 @@ L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* /*utcb*/) const
 }
 
 IMPLEMENT inline
-void Sys_ex_regs_frame::old_cap_handler(L4_uid /*id*/, Utcb* /*utcb*/)
+void Sys_ex_regs_frame::old_cap_handler(L4_uid const &/*id*/, Utcb* /*utcb*/)
 {
 }
 
@@ -363,7 +363,7 @@ Mword Sys_task_new_frame::ip() const
  
 IMPLEMENT inline
 Mword Sys_task_new_frame::has_pager() const
-{ return _rbx; }
+{ return _r8; }
 
 IMPLEMENT inline
 Mword Sys_task_new_frame::extra_args() const
@@ -371,7 +371,7 @@ Mword Sys_task_new_frame::extra_args() const
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [(amd64 || ux) && caps && utcb]:
+IMPLEMENTATION [amd64 && caps]:
 
 #include "utcb.h"
 
@@ -395,7 +395,7 @@ L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* utcb) const
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [amd64 && !(caps && utcb)]:
+IMPLEMENTATION [amd64 && !caps]:
 
 #include "utcb.h"
 
@@ -408,7 +408,7 @@ L4_uid Sys_task_new_frame::cap_handler(const Utcb* /*utcb*/) const
   return L4_uid::Invalid;
 }
 
-IMPLEMENT inline NEEDS["utcb.h"]
+IMPLEMENT inline 
 L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb*) const
 {
   return L4_quota_desc(0);
@@ -416,10 +416,22 @@ L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb*) const
 
 //////////////////////////////////////////////////////////////////////
 
-IMPLEMENTATION [(ux || amd64) && v2]:
+IMPLEMENTATION [amd64 && v2]:
+
+IMPLEMENT inline
+Mword Sys_ipc_frame::next_period() const
+{ return false; }
+
+IMPLEMENT inline
+L4_msg_tag Sys_ipc_frame::tag() const
+{ return L4_msg_tag(_rcx); }
+
+IMPLEMENT inline
+void Sys_ipc_frame::tag(L4_msg_tag const &tag)
+{ _rcx = tag.raw(); }
 
 IMPLEMENT inline 
-void Sys_ipc_frame::rcv_src(L4_uid id) 
+void Sys_ipc_frame::rcv_src(L4_uid const &id) 
 { _rsi = id.raw(); }
 
 IMPLEMENT inline 
@@ -438,7 +450,7 @@ Mword Sys_ipc_frame::msg_word(unsigned index) const
     case 0:
       return _rdx;
     case 1:
-      return _rbx;
+      return _r8;
     default:
       return 0;
     }
@@ -453,7 +465,7 @@ void Sys_ipc_frame::set_msg_word(unsigned index, Mword value)
       _rdx = value;
       break;
     case 1:
-      _rbx = value;
+      _r8 = value;
       break;
     default:
       break;
@@ -468,34 +480,36 @@ IMPLEMENT inline
 void Sys_ipc_frame::copy_msg(Sys_ipc_frame *to) const
 { 
   // hint for gcc to prevent stall
-  Mword tmp_rdx = _rdx, tmp_rbx = _rbx;
+  Mword tmp_rdx = _rdx, tmp_rbx = _r8;
   to->_rdx = tmp_rdx;
-  to->_rbx = tmp_rbx;
+  to->_r8 = tmp_rbx;
 }
 
 //Entry_id_nearest_data::-------------------------------------------------
 IMPLEMENT inline
 L4_uid Sys_id_nearest_frame::dst() const
 { return L4_uid(_rsi); }
+
 IMPLEMENT inline
-void Sys_id_nearest_frame::nearest(L4_uid id)
+void Sys_id_nearest_frame::nearest(L4_uid const &id)
 { _rsi = id.raw(); }
 
 //Sys_ex_regs_frame::----------------------------------------------------
 
 IMPLEMENT inline
 L4_uid Sys_ex_regs_frame::preempter() const
-{ return L4_uid(_rbx); }
+{ return L4_uid(_r8); }
+
 IMPLEMENT inline
 L4_uid Sys_ex_regs_frame::pager() const
 { return L4_uid(_rsi); }
 
 IMPLEMENT inline
-void Sys_ex_regs_frame::old_preempter(L4_uid id)
-{ _rbx = id.raw(); }
+void Sys_ex_regs_frame::old_preempter(L4_uid const &id)
+{ _r8 = id.raw(); }
 
 IMPLEMENT inline
-void Sys_ex_regs_frame::old_pager(L4_uid id)
+void Sys_ex_regs_frame::old_pager(L4_uid const &id)
 { _rsi = id.raw(); }
 
 
@@ -504,14 +518,14 @@ void Sys_ex_regs_frame::old_pager(L4_uid id)
 IMPLEMENT inline
 L4_uid
 Sys_thread_switch_frame::dst() const
-{ return L4_uid ((Unsigned64) _rsi); }
+{ return L4_uid(_rsi); }
 
 //Sys_thread_schedule_frame::----------------------------------------------
 
 IMPLEMENT inline 
 L4_uid
 Sys_thread_schedule_frame::preempter() const 
-{ return L4_uid(_rbx); }
+{ return L4_uid(_r8); }
 
 IMPLEMENT inline 
 L4_uid
@@ -520,153 +534,13 @@ Sys_thread_schedule_frame::dst() const
 
 IMPLEMENT inline 
 void
-Sys_thread_schedule_frame::old_preempter (L4_uid id)
-{ _rbx = id.raw(); }
+Sys_thread_schedule_frame::old_preempter (L4_uid const &id)
+{ _r8 = id.raw(); }
 
 IMPLEMENT inline
 void 
-Sys_thread_schedule_frame::partner (L4_uid id)
+Sys_thread_schedule_frame::partner (L4_uid const &id)
 { _rsi = id.raw(); }
-
-//Sys_task_new_frame::-------------------------------------------
-
-IMPLEMENT inline
-L4_uid Sys_task_new_frame::new_chief() const
-{ return L4_uid( (Unsigned64)(_rax & ~(1UL << 31))); }
-
-IMPLEMENT inline
-L4_uid Sys_task_new_frame::pager() const
-{ return L4_uid(_rbx); }
-
-IMPLEMENT inline 
-L4_uid Sys_task_new_frame::dst() const
-{ return L4_uid(_rsi); }
-
-IMPLEMENT inline
-void Sys_task_new_frame::new_taskid(L4_uid id)
-{ _rsi = id.raw(); }
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION[ux-x0]:
-
-IMPLEMENT inline
-void Sys_ipc_frame::rcv_src(L4_uid id) 
-{ _rsi = id.raw(); }
-
-IMPLEMENT inline
-L4_uid Sys_ipc_frame::rcv_src() const 
-{ return L4_uid(_rsi); }
-
-IMPLEMENT inline
-L4_uid Sys_ipc_frame::snd_dst() const
-{ return L4_uid(_rsi); }
-
-IMPLEMENT inline
-Mword Sys_ipc_frame::msg_word(unsigned index) const
-{
-  switch(index)
-    {
-    case 0:
-      return _rdx;
-    case 1:
-      return _rbx;
-    case 2:
-      return _rdi;
-    default:
-      return 0;
-    }
-}
-
-IMPLEMENT inline
-void Sys_ipc_frame::set_msg_word(unsigned index, Mword value)
-{
-  switch(index)
-    {
-    case 0:
-      _rdx = value;
-      break;
-    case 1:
-      _rbx = value;
-      break;
-    case 2:
-      _rdi = value;
-      break;
-    default:
-      break;
-    }
-}
-
-IMPLEMENT inline
-unsigned Sys_ipc_frame::num_reg_words()
-{ return 3; }
-
-IMPLEMENT inline
-void Sys_ipc_frame::copy_msg(Sys_ipc_frame *to) const
-{
-  to->_rdx = _rdx;
-  to->_rbx = _rbx;
-  to->_rdi = _rdi;
-}
-
-//Entry_id_nearest_data::-------------------------------------------------
-
-IMPLEMENT inline
-L4_uid Sys_id_nearest_frame::dst() const
-{
-  return L4_uid(rsi);
-}
-
-IMPLEMENT inline
-void Sys_id_nearest_frame::nearest(L4_uid id)
-{ _rsi = id.raw(); }
-
-//Sys_ex_regs_frame::----------------------------------------------------
-
-IMPLEMENT inline
-L4_uid Sys_ex_regs_frame::preempter() const
-{ return L4_uid(_rbx); }
-
-IMPLEMENT inline
-L4_uid Sys_ex_regs_frame::pager() const
-{ return L4_uid(_rsi); }
-
-IMPLEMENT inline
-void Sys_ex_regs_frame::old_preempter(L4_uid id)
-{ _rbx = id.raw(); }
-
-IMPLEMENT inline
-void Sys_ex_regs_frame::old_pager(L4_uid id)
-{ _rsi = id.raw(); }
-
-
-//Sys_thread_switch_frame::-------------------------------------------------
-
-IMPLEMENT inline
-L4_uid
-Sys_thread_switch_frame::dst() const
-{ return L4_uid (_rsi); }
-
-//Sys_thread_schedule_frame::----------------------------------------------
-
-
-IMPLEMENT inline
-L4_uid Sys_thread_schedule_frame::preempter() const
-{ return L4_uid(_rbx); }
-
-IMPLEMENT inline
-L4_uid Sys_thread_schedule_frame::dst() const
-{
-  return L4_uid(_rsi);
-}
-
-IMPLEMENT inline
-void Sys_thread_schedule_frame::old_preempter(L4_uid id)
-{ _rbx = id.raw(); }
-
-IMPLEMENT inline
-void Sys_thread_schedule_frame::partner(L4_uid id)
-{ _rsi = id.raw(); }
-
 
 //Sys_task_new_frame::-------------------------------------------
 
@@ -676,15 +550,34 @@ L4_uid Sys_task_new_frame::new_chief() const
 
 IMPLEMENT inline
 L4_uid Sys_task_new_frame::pager() const
-{ return L4_uid(_rbx); }
+{ return L4_uid(_r8); }
 
-IMPLEMENT inline
+IMPLEMENT inline 
 L4_uid Sys_task_new_frame::dst() const
 { return L4_uid(_rsi); }
 
 IMPLEMENT inline
-void Sys_task_new_frame::new_taskid(L4_uid id)
+void Sys_task_new_frame::new_taskid(L4_uid const &id)
 { _rsi = id.raw(); }
+
+
+//--Sys_u_lock_frame------------------------------------------------
+
+IMPLEMENT inline
+Sys_u_lock_frame::Op Sys_u_lock_frame::op() const
+{ return (Op)_rax; }
+
+IMPLEMENT inline
+unsigned long Sys_u_lock_frame::lock() const
+{ return _rdx; }
+
+IMPLEMENT inline
+void Sys_u_lock_frame::result(unsigned long res)
+{ _rax = res; }
+
+IMPLEMENT inline
+L4_timeout Sys_u_lock_frame::timeout() const
+{ return L4_timeout(_rdi); }
 
 
 IMPLEMENTATION[pl0_hack]:

@@ -102,13 +102,7 @@ CL4V2IA32BEIPC::WriteAsmShortCall(CBEFile *pFile,
     *pFile << "#ifdef __PIC__\n";
     WriteAsmShortPicCall(pFile, pFunction);
     *pFile << "#else // !__PIC__\n";
-    *pFile << "#ifdef PROFILE\n";
-    // !PIC && PROFILE branch
-    // uses ipc_i386_call_static (l4/sys/lib/src/ipc-profile.c)
-    CL4V2BEIPC::WriteCall(pFile, pFunction);
-    *pFile << "#else // !PROFILE\n";
     WriteAsmShortNonPicCall(pFile, pFunction);
-    *pFile << "#endif // PROFILE\n";
     *pFile << "#endif // __PIC__\n";
 }
 
@@ -363,13 +357,7 @@ CL4V2IA32BEIPC::WriteAsmLongCall(CBEFile *pFile,
     *pFile << "#ifdef __PIC__\n";
     WriteAsmLongPicCall(pFile, pFunction);
     *pFile << "#else // !__PIC__\n";
-    *pFile << "#ifdef PROFILE\n";
-    // !PIC && PROFILE branch
-    // uses ipc_i386_call_static (l4/sys/lib/src/ipc-profile.c)
-    CL4V2BEIPC::WriteCall(pFile, pFunction);
-    *pFile << "#else // !PROFILE\n";
     WriteAsmLongNonPicCall(pFile, pFunction);
-    *pFile << "#endif // PROFILE\n";
     *pFile << "#endif // __PIC__\n";
 }
 
@@ -710,11 +698,7 @@ CL4V2IA32BEIPC::WriteAsmSend(CBEFile* pFile,
     *pFile << "#ifdef __PIC__\n";
     WriteAsmPicSend(pFile, pFunction);
     *pFile << "#else // !__PIC__\n";
-    *pFile << "#ifdef PROFILE\n";
-    CL4V2BEIPC::WriteSend(pFile, pFunction);
-    *pFile << "#else // !PROFILE\n";
     WriteAsmNonPicSend(pFile, pFunction);
-    *pFile << "#endif // PROFILE\n";
     *pFile << "#endif // __PIC__\n";
 }
 

@@ -1,5 +1,5 @@
 IMPLEMENTATION:
-#include "thread.h"
+#include "syscalls.h"
 #include "idt.h"
 
 extern "C" void entry_sys_ipc_log (void);

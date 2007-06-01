@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS=	src include doc
+SUBDIRS=	lib src include doc
 
 DISTCLEANFILES= GNUmakefile GNUmakefile.in
 MAINTAINERCLEANFILES= mkinstalldirs stamp-h depcomp install-sh \

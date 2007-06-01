@@ -35,7 +35,6 @@
 #include "L4V4BEWaitFunction.h"
 #include "L4V4BESndFunction.h"
 #include "L4V4BEMsgBuffer.h"
-#include "L4V4BETrace.h"
 #include "L4V4BEMarshaller.h"
 #include "L4V4BESrvLoopFunction.h"
 #include "be/BEContext.h"
@@ -158,16 +157,6 @@ CBEMsgBuffer* CL4V4BEClassFactory::GetNewMessageBuffer()
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CL4V4BEClassFactory: created new instance of CL4V4BEMsgBuffer\n");
     return new CL4V4BEMsgBuffer();
-}
-
-/** \brief creates a new instance of the tracing class
- *  \return a reference to the newly created instance
- */
-CBETrace* CL4V4BEClassFactory::GetNewTrace()
-{
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	"CL4V4BEClassFactory: created new instance of CL4V4BETrace\n");
-    return new CL4V4BETrace();
 }
 
 /** \brief creates a new instance of a marshaller

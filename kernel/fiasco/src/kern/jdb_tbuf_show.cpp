@@ -28,12 +28,13 @@ public:
 private:
   static char  _search_str[40];
   static char  _filter_str[40];
-  static char  _buffer_str[80];
+  static char  _buffer_str[512];
   static Mword _status_type;
   static Mword _absy;
   static Mword _nr_cur;
   static Mword _nr_ref;
   static Mword _nr_pos[10];
+  static Mword y_offset;
 
   enum
   {
@@ -69,13 +70,15 @@ private:
 
 char  Jdb_tbuf_show::_search_str[40];
 char  Jdb_tbuf_show::_filter_str[40];
-char  Jdb_tbuf_show::_buffer_str[80];
+char  Jdb_tbuf_show::_buffer_str[512];
 Mword Jdb_tbuf_show::_status_type;
 Mword Jdb_tbuf_show::_absy;
 Mword Jdb_tbuf_show::_nr_cur;
 Mword Jdb_tbuf_show::_nr_ref;
 Mword Jdb_tbuf_show::_nr_pos[10] = { Nil, Nil, Nil, Nil, Nil,
 				     Nil, Nil, Nil, Nil, Nil };
+
+Mword Jdb_tbuf_show::y_offset = 0;
 
 // available from the jdb_disasm module
 int jdb_disasm_addr_task (Address addr, Task_num task, int level)
@@ -387,9 +390,7 @@ Jdb_tbuf_show::show_events(Mword n, Mword ref, Mword count, Unsigned8 mode,
 	{
 	  char s_tsc_dc[13], s_tsc_ds[15], s_tsc_sc[13], s_tsc_ss[15], s[3];
 
-	  Jdb_tbuf_output::print_entry(n, _buffer_str, 
-				       72 < sizeof(_buffer_str) 
-				          ? 72 : sizeof(_buffer_str));
+	  Jdb_tbuf_output::print_entry(n, _buffer_str, sizeof(_buffer_str));
 
 	  if (!Jdb_tbuf::diff_tsc(n, &dtsc))
 	    dtsc = 0;
@@ -416,15 +417,12 @@ Jdb_tbuf_show::show_events(Mword n, Mword ref, Mword count, Unsigned8 mode,
 		  }
 	    }
 	  printf("%-3s%10lu.  %72.72s %13.13s (%14.14s)  %13.13s (%14.14s)\n", 
-	      s, number, _buffer_str, s_tsc_dc, s_tsc_ds, s_tsc_sc, s_tsc_ss);
+	      s, number, _buffer_str+y_offset, s_tsc_dc, s_tsc_ds, s_tsc_sc, s_tsc_ss);
 	}
       else
 	{
 	  char s[13];
-	  const char maxlen = Jdb_screen::width()+1 < sizeof(_buffer_str)
-	                      ? Jdb_screen::width()+1 : sizeof(_buffer_str);
-
-	  Jdb_tbuf_output::print_entry(n, _buffer_str, maxlen);
+	  Jdb_tbuf_output::print_entry(n, _buffer_str, sizeof(_buffer_str));
 	  switch (mode)
 	    {
 	    case Index_mode:
@@ -504,7 +502,7 @@ Jdb_tbuf_show::show_events(Mword n, Mword ref, Mword count, Unsigned8 mode,
 	    }
 	  printf("%s%-*.*s %12s\033[m%s",
     	         c, Jdb_screen::width()-13, (int)Jdb_screen::width()-13,
-		 _buffer_str, s, count != 1 ? "\n" : "");
+		 _buffer_str+y_offset, s, count != 1 ? "\n" : "");
 	}
        n++;
     }
@@ -741,6 +739,22 @@ restart:
 
 	  switch (c)
 	    {
+	    case 'o':
+	      if (y_offset>10) 
+		y_offset -= 10;
+	      else
+		y_offset = 0;
+
+	      redraw = true;
+	      break;
+	    case 'p':
+	      if (y_offset<sizeof(_buffer_str)-82)
+		y_offset += 10;
+	      else
+		y_offset = sizeof(_buffer_str)-72;
+
+	      redraw = true;
+	      break;
 	    case 'F': // filter view by regex
 	      Jdb::printf_statline("tbuf", 0, "Filter(%s)=%s",
 				   jdb_regex_init != 0 ? "regex" : "instr",

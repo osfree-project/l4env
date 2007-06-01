@@ -21,7 +21,6 @@
 
 /** SUBSYSTEMS/EMULATION **/
 void l4input_internal_irq_init(int prio);
-void l4input_internal_jiffies_init(void);
 void l4input_internal_wait_init(void);
 
 struct l4input_ops {

@@ -1,4 +1,4 @@
-INTERFACE [ia32-io,ux-io]:
+INTERFACE [io]:
 
 #include "config.h"
 #include "io_space.h"
@@ -9,7 +9,7 @@ EXTENSION class Space
   Io_space _io_space;
 };
 
-IMPLEMENTATION [ia32-io,ux-io]:
+IMPLEMENTATION [io]:
 
 PRIVATE inline
 void
@@ -40,6 +40,9 @@ Space::lookup_space (Task_num id, Io_space** out_io_space)
   return s;
 }
 
+//----------------------------------------------------------------------------
+IMPLEMENTATION [io && iopl3]:
+
 /// Is this task a privileged one?
 PUBLIC inline NEEDS ["l4_types.h", "config.h"]
 bool 
@@ -49,3 +52,12 @@ Space::is_privileged ()
   return (!Config::enable_io_protection 
 	  || (_io_space.get_io_counter() == L4_fpage::Io_port_max));
 }
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [io && !iopl3]:
+
+/// Is this task a privileged one?
+PUBLIC inline NEEDS ["l4_types.h", "config.h"]
+bool 
+Space::is_privileged () 
+{ return false; }

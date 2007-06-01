@@ -56,7 +56,7 @@ static void  (*curr_tick_callback)    (WIDGET *,int,int);
 static int     press_cnt;                   /* number of pressed keys     */
 static char    keytab[DOPE_KEY_MAX];
 static s32     curr_keystate;               /* current key state          */
-static s32     curr_keycode;                /* code of curr. pressed key  */
+static long    curr_keycode;                /* code of curr. pressed key  */
 static s32     key_repeat_delay = 250;      /* delay until key repeat     */
 static s32     key_repeat_rate = 30;        /* key repeat rate            */
 
@@ -79,7 +79,7 @@ int init_userstate(struct dope_services *d);
  * mouse buttons while plain keys will be forwarded to
  * the currently active keyboard focused widget
  */
-static inline int key_sets_focus(int keycode) {
+static inline int key_sets_focus(long keycode) {
 	return (keycode >= DOPE_BTN_LEFT && keycode <= DOPE_BTN_MIDDLE);
 }
 
@@ -225,7 +225,7 @@ static long get(void) {
 
 /*** TICK CALLBACK THAT IS CALLED FOR EVERY REPEATED KEY ***/
 static int tick_handle_repeat(void *arg) {
-	s32 keycode = (s32)arg;
+	long keycode = (long)arg;
 	EVENT key_repeat_event;
 	if (curr_keystate != USERSTATE_KEY_REPEAT || curr_keycode != keycode)
 		return 0;
@@ -243,7 +243,7 @@ static int tick_handle_repeat(void *arg) {
 
 /*** TICK CALLBACK THAT IS CALLED AFTER KEY DELAY ***/
 static int tick_handle_delay(void *arg) {
-	s32 keycode = (s32)arg;
+	long keycode = (long)arg;
 	if (curr_keystate != USERSTATE_KEY_PRESS || curr_keycode != keycode)
 		return 0;
 

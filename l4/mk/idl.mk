@@ -108,14 +108,8 @@ vpath %.idl $(SRC_DIR)
 IDL_FLAGS	+= $(addprefix -P,$(CPPFLAGS))
 IDL_FLAGS	+= $(IDL_FLAGS_$(<F))
 
-# XXX just commented this out as long as dice does not support native x0
-# say dice if we want to build sources for L4X0 API.
-ifeq ($(L4API),l4x0)
-ifeq ($(ARCH),arm)
-IDL_FLAGS	+= -Bix0
-else
-IDL_FLAGS	+= -Bix0adapt
-endif
+ifeq ($(L4API),l4v2)
+IDL_FLAGS	+= -Biv2
 endif
 
 ifeq ($(L4API),l4v4)
@@ -132,6 +126,10 @@ endif
 
 ifeq ($(L4API),l4secv2emu)
 IDL_FLAGS	+= -fforce-c-bindings -P-DL4API_l4v2
+endif
+
+ifeq ($(ARCH),x86)
+IDL_FLAGS	+= -fforce-c-bindings
 endif
 
 ifeq ($(ARCH),arm)

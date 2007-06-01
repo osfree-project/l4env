@@ -11,6 +11,8 @@
 #include <l4/sys/compiler.h>
 #include <l4/sys/consts.h>
 #include <l4/sys/l4int.h>
+#include <l4/sys/__timeout.h>
+#include_next <l4/sys/types.h>
 
 /**
  * 64 Bit -> 32 Bit low/high conversion
@@ -34,9 +36,6 @@ typedef struct {
   unsigned lthread:7;        ///< Thread number
   unsigned task:11;          ///< Task number
   unsigned version_high:4;   ///< Version1
-  unsigned site:17;          ///< Site id
-  unsigned chief:11;         ///< Chief task number
-  unsigned nest:4;           ///< Nested
 } l4_threadid_struct_t;
 
 /**
@@ -44,9 +43,8 @@ typedef struct {
  * \ingroup api_types_id
  */
 typedef union {
-  l4_low_high_t lh;          ///< Plain 64 bit id
+  l4_uint32_t raw;
   l4_threadid_struct_t id;   ///< Thread id struct
-  l4_uint64_t raw;
 } l4_threadid_t;
 
 /**
@@ -61,7 +59,7 @@ typedef l4_threadid_t l4_taskid_t;
  */
 typedef struct {
   unsigned intr:8;           ///< Interrupt number
-  unsigned char zero[7];     ///< Unused (must be 0)
+  unsigned char zero[3];     ///< Unused (must be 0)
 } l4_intrid_struct_t;
 
 /**
@@ -69,7 +67,6 @@ typedef struct {
  * \ingroup api_types_id
  */
 typedef union {
-  l4_low_high_t lh;          ///< Plain 64 bit id
   l4_intrid_struct_t id;     ///< Interrupt id struct
 } l4_intrid_t;
 
@@ -78,7 +75,7 @@ typedef union {
  * \ingroup api_types_id
  * \hideinitializer
  */
-#define L4_NIL_ID_INIT	     {{0,0}}
+#define L4_NIL_ID_INIT	     {0}
 #define L4_NIL_ID	     ((l4_threadid_t)L4_NIL_ID_INIT)
 
 /**
@@ -86,7 +83,7 @@ typedef union {
  * \ingroup api_types_id
  * \hideinitializer
  */
-#define L4_INVALID_ID_INIT   {{0xffffffff,0xffffffff}}
+#define L4_INVALID_ID_INIT   {0xffffffff}
 #define L4_INVALID_ID        ((l4_threadid_t)L4_INVALID_ID_INIT)
 
 /**
@@ -229,32 +226,6 @@ typedef struct {
   l4_umword_t rcv_str;       ///< Receive string address
 } l4_strdope_t;
 
-/*****************************************************************************
- *** L4 timeouts
- *****************************************************************************/
-
-/**
- * L4 timeout structure
- * \ingroup api_types_timeout
- */
-typedef struct {
-  unsigned rcv_exp:4;        ///< Receive timeout exponent
-  unsigned snd_exp:4;        ///< Send timeout exponent
-  unsigned rcv_pfault:4;     ///< Receive pagefault timeout
-  unsigned snd_pfault:4;     ///< Send pagefault timeout
-  unsigned snd_man:8;        ///< Send timeout mantissa
-  unsigned rcv_man:8;        ///< Receive timeout mantissa
-} l4_timeout_struct_t;
-
-/**
- * L4 timeout type
- * \ingroup api_types_timeout
- */
-typedef union {
-  l4_umword_t timeout;       ///< Plain 32 bit value
-  l4_timeout_struct_t to;    ///< Timeout structure
-} l4_timeout_t;
-
 
 /*****************************************************************************
  *** l4_schedule param word
@@ -370,25 +341,25 @@ l4_is_invalid_sched_param(l4_sched_param_t sp)
 L4_INLINE int
 l4_is_nil_id(l4_threadid_t id)
 {
-  return id.lh.low == 0;
+  return id.raw == 0;
 }
 
 L4_INLINE int
 l4_is_invalid_id(l4_threadid_t id)
 {
-  return id.lh.low == 0xffffffff;
+  return id.raw == 0xffffffff;
 }
 
 L4_INLINE int
 l4_is_irq_id(l4_threadid_t id)
 {
-  return id.lh.high == 0 && id.lh.low > 0 && id.lh.low <= 255;
+  return id.raw > 0 && id.raw <= 255;
 }
 
 L4_INLINE int
 l4_get_irqnr(l4_threadid_t id)
 {
-  return id.lh.low - 1;
+  return id.raw - 1;
 }
 
 L4_INLINE l4_threadid_t
@@ -401,15 +372,14 @@ l4_get_taskid(l4_threadid_t t)
 L4_INLINE int
 l4_thread_equal(l4_threadid_t t1, l4_threadid_t t2)
 {
-  return ((t1.lh.low == t2.lh.low) && (t1.lh.high == t2.lh.high));
+  return t1.raw == t2.raw;
 }
 
 #define TASK_MASK 0xfffe03ff
 L4_INLINE int
 l4_task_equal(l4_threadid_t t1, l4_threadid_t t2)
 {
-  return (((t1.lh.low & TASK_MASK) == (t2.lh.low & TASK_MASK)) && 
-          (t1.lh.high == t2.lh.high));
+  return (t1.raw & TASK_MASK) == (t2.raw & TASK_MASK);
 }
 
 L4_INLINE int

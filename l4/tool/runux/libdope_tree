@@ -7,7 +7,8 @@ fiasco \
 	-l names \
 	-l log \
 	-l dm_phys \
-	-l l4dope-ux \
+	-l l4io \
+	-l l4dope \
         -l tree_test \
 	-n9 "$@"
 

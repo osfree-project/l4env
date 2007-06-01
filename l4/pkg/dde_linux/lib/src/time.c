@@ -315,7 +315,7 @@ static inline int __timer_sleep(l4_timeout_t to)
 static void dde_timer_thread(void)
 {
   l4_timeout_t to;
-  int err, to_e, to_m;
+  int err;
 
   struct list_head *head = &timer_list;
   struct list_head *curr;
@@ -369,16 +369,10 @@ static void dde_timer_thread(void)
       if (diff > 0)
         {
           to_us = diff * (1000000 / HZ);
-          if ((err = l4util_micros2l4to(to_us, &to_m, &to_e)))
-            {
-              Panic("error on timeout calculation (us = %d)", to_us);
-              continue;
-            }
           LOGd(DEBUG_TIMER, 
-               "timer_loop: to_us = %d, to_e = %d, to_m = %d",
-               to_us, to_e, to_m);
+               "timer_loop: to_us = %d", to_us);
 
-          to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
+          to = l4_timeout(L4_IPC_TIMEOUT_NEVER, l4util_micros2l4to(to_us));
 
           /* wait for timeout or __restart */
           __timer_sleep(to);

@@ -3,7 +3,7 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= liblog.a liblogserver.a liblogserver_capsule.a
 MODE		= sigma0
-SYSTEMS		= x86-l4v2 arm-l4x0 amd64-l4v2
+SYSTEMS		= x86-l4v2 arm-l4v2 amd64-l4v2
 
 SRC_C		= log_init.c log.c logll.c logL.c lock.c \
 		  doprnt.c log_printf.c fiasco_tbuf.c

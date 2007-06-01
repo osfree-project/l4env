@@ -1,6 +1,8 @@
 #ifndef __GLOBAL_H
 #define __GLOBAL_H
 
+#include <string.h>
+
 #define STACKSIZE		8192
 #define SCRATCH_MEM_SIZE	(32 << 20)
 
@@ -17,9 +19,9 @@
 
 #define SMAS_SIZE     16
 
-#define timeout_10s	L4_IPC_TIMEOUT(0,0,152,7,0,0)
-#define timeout_20s	L4_IPC_TIMEOUT(0,0,76,6,0,0)
-#define timeout_50s	L4_IPC_TIMEOUT(0,0,190,6,0,0)
+#define timeout_10s	l4_ipc_timeout(0,0,610,14)
+#define timeout_20s	l4_ipc_timeout(0,0,610,15)
+#define timeout_50s	l4_ipc_timeout(0,0,762,16)
 
 #if defined(L4_API_L4X0) || defined(L4API_l4x0)
 #define REGISTER_DWORDS 3
@@ -53,7 +55,7 @@ extern void test_flooder(void);
 extern void exception6_handler(void);
 extern void exception6_c_handler(void);
 
-extern void* memchr(const void *s, int c, unsigned n);
+extern void *memchr(const void *s, int c, size_t n);
 
 extern l4_threadid_t main_id;
 extern l4_threadid_t pager_id;

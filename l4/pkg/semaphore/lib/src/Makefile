@@ -8,7 +8,7 @@ PRIVATE_INCDIR = $(SRC_DIR)/../include
 
 # target
 TARGET = 	libsemaphore.a
-SYSTEMS =	x86-l4v2 arm-l4x0 amd64-l4v2
+SYSTEMS =	x86-l4v2 arm-l4v2 amd64-l4v2
 
 # include lib role
 include $(L4DIR)/mk/lib.mk

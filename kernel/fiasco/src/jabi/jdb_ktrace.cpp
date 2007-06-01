@@ -12,7 +12,7 @@ enum {
   Log_event_pf_res           = 6,
   Log_event_sched            = 7,
   Log_event_preemption       = 8,
-  Log_event_lipc             = 9,
+  Log_event_id_nearest       = 9,
   Log_event_task_new         = 10,
   Log_event_max              = 16,
 };

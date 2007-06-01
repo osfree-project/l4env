@@ -567,8 +567,6 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
 		    string("__attribute__ ((unused))"));
             pVariable->AddLanguageProperty(string("defined"), 
 		    string("__PIC__"));
-            pVariable->AddLanguageProperty(string("notdefined"), 
-		    string("PROFILE"));
         }
     }
 

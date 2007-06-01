@@ -34,7 +34,7 @@
 #include "be/BEUserDefinedType.h"
 #include "be/BECommunication.h"
 #include "be/BEMsgBuffer.h"
-#include "be/BETrace.h"
+#include "be/Trace.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
@@ -96,8 +96,8 @@ CL4V4BEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
 void
 CL4V4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile)
 {
-    assert(m_pTrace);
-    m_pTrace->BeforeReplyWait(pFile, this);
+    if (m_pTrace)
+	m_pTrace->BeforeReplyWait(pFile, this);
 
     CBECommunication *pComm = GetCommunication();
     assert(pComm);
@@ -105,8 +105,8 @@ CL4V4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile)
 
     // print trace code before IPC error check to have unmodified values in
     // message buffer
-    assert(m_pTrace);
-    m_pTrace->AfterReplyWait(pFile, this);
+    if (m_pTrace)
+	m_pTrace->AfterReplyWait(pFile, this);
 }
 
 /** \brief writes the unmarshalling code for this function
@@ -122,9 +122,8 @@ void CL4V4BEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile)
     if (m_Attributes.Find(ATTR_NOOPCODE))
 	return;
 
-    assert(m_pTrace);
     bool bLocalTrace = false;
-    if (!m_bTraceOn)
+    if (!m_bTraceOn && m_pTrace)
     {
 	m_pTrace->BeforeUnmarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;

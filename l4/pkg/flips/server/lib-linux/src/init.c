@@ -15,13 +15,14 @@ extern int ic_enable;
 
 l4io_info_t *io_info_addr;
 
+
 /** INITIALISATION OF DDE_LINUX */
 static int dde_init(unsigned int vmem, unsigned int kmem)
 {
 	int err;
 
-	l4io_init(&io_info_addr, L4IO_DRV_INVALID);
-	Assert(io_info_addr);
+        l4io_init(&io_info_addr, L4IO_DRV_INVALID);
+        Assert(io_info_addr);
 
 	/* initialize all DDE modules required ... */
 	/* XXX add cfg macros for memory */
@@ -48,11 +49,6 @@ static int dde_init(unsigned int vmem, unsigned int kmem)
 		return err;
 	}
 	return 0;
-}
-
-void * liblinux_get_l4io_info()
-{
-	return (void *)io_info_addr;
 }
 
 /** INITIALISATION OF LINUX NET

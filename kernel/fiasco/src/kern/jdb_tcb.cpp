@@ -774,19 +774,6 @@ jdb_show_tcb(L4_uid tid, int level)
 { return Jdb_tcb::show(tid, level); }
 
 
-IMPLEMENTATION[v2]:
-
-static inline
-void
-Jdb_tcb::print_thread_uid_raw(Thread *t)
-{
-  printf(" <%08x %08x>",
-      (Unsigned32)(t->id().raw() >> 32), (Unsigned32)(t->id().raw()));
-}
-
-
-IMPLEMENTATION[!v2]:
-
 static inline
 void
 Jdb_tcb::print_thread_uid_raw(Thread *t)

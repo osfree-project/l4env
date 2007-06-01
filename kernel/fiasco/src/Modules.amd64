@@ -52,13 +52,6 @@ ifeq ("$(CONFIG_PERF_CNT)","y")
   PREPROCESS_PARTS	+= perf_cnt
 endif
 
-ifeq ("$(CONFIG_EXCEPTION_IPC)","y")
-  PREPROCESS_PARTS	+= utcb exc_ipc
-endif
-
-ifeq ("$(CONFIG_ABI_V4)","y")
-  PREPROCESS_PARTS	+= utcb
-endif
 
 #
 # TYPES subsystem
@@ -75,8 +68,8 @@ INTERFACES_ABI		:= kip l4_types utcb
 
 kip_IMPL		:= kip kip-amd64 kip-debug kip-amd64-debug
 l4_types_IMPL		:= l4_types l4_types-iofp l4_types-caps \
-			   l4_types-64bit l4_types-debug 
-utcb_IMPL		:= utcb-amd64
+			   l4_types-64bit l4_types-debug l4_types-objs 
+utcb_IMPL		:= utcb utcb-amd64
 
 #
 # JABI Subsystem
@@ -112,15 +105,16 @@ KERNEL			:= kernel.image
 VPATH			+= kern/$(CONFIG_XARCH) kern/shared kern
 PRIVATE_INCDIR		+= kern/$(CONFIG_XARCH) kern/shared kern 
 
-INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
-			   mapping_tree mapdb region pic \
+INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping mappable \
+			   mapping_tree mapdb simple_mapdb region pic \
 			   mem_space space space_index space_index_util  \
 			   kmem kmem_alloc slab_cache_anon mem_layout        \
 			   kmem_slab_simple kmem_slab switch_lock kip_init   \
 			   thread_lock helping_lock cpu_lock timer timeout   \
 			   ipc_timeout deadline_timeout timeslice_timeout    \
 			   thread_state context sender receiver mem_unit     \
-			   thread kernel_thread map_util irq banner warn     \
+			   thread syscalls kernel_thread map_util irq banner \
+			   warn     \
 			   dirq globals apic watchdog kernel_uart pit        \
 			   checksum main config kern_types mapped_alloc      \
 			   vmem_alloc paging fpu fpu_state fpu_alloc cpu     \
@@ -129,8 +123,15 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
 			   sched_context allocators utcb_init \
 			   perf_cnt x86desc gdt idt tss trap_state           \
 			   buddy_alloc vkey kdb_ke kernel_task 		     \
-			   cap_space cap_space_alloc ram_quota \
-			   ram_quota_alloc prio_list
+			   cap_space cap_space_alloc io_space ram_quota \
+			   ram_quota_alloc prio_list \
+			   obj_space obj_space_alloc
+
+ifeq ("$(CONFIG_USER_LOCKS)","y")
+  PREPROCESS_PARTS	+= ulock
+  INTERFACES_KERNEL	+= obj_ref_ptr obj_helping_lock u_lock u_semaphore
+endif
+
 
 __main_IMPL		:= __main-ia32-amd64
 apic_IMPL		:= apic-ia32-amd64
@@ -175,10 +176,10 @@ tb_entry_IMPL		:= tb_entry tb_entry-amd64
 timer_IMPL		:= timer timer-ia32-amd64-ux
 thread_IMPL		:= thread thread-amd64 thread-ia32-ux \
                            thread-ia32-amd64 \
-			   thread-syscall thread-syscall-ia32-ux thread-ipc \
+			   thread-ipc \
 			   thread-msg thread-msg-ia32-amd64 thread-list \
 			   thread-pagefault thread-log      \
-			   thread-debug thread-dbf thread-lookup
+			   thread-debug thread-dbf thread-lookup thread-ulock
 trap_state_IMPL		:= trap_state-amd64
 tss_IMPL		:= tss-amd64
 utcb_handler_trap_IMPL	:= utcb_handler_trap-ia32-ux

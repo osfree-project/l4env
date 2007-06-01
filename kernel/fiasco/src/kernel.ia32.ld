@@ -44,7 +44,7 @@ SECTIONS {
   .text : AT (ADDR(.text) - 0xf0000000) {
     crt0.o(.text)
     *(.init)
-    *(.text .text.* .gnu.linkonce.t.*)
+    *( .text SORT(.text.*) .gnu.linkonce.t.*)
     *(.fini)
 
     PROVIDE (_ecode = .);

@@ -99,8 +99,8 @@ oredev_init(void)
     LOG_MAC(1, mac);
     
     // setup rx timeout
-    l4util_micros2l4to(CONFIG_OREDEV_TIMEOUT, &mant, &exp);
-    recv_to = L4_IPC_TIMEOUT(0,0,mant,exp,0,0);
+    recv_to = l4_timeout(L4_IPC_TIMEOUT_NEVER,
+	l4util_micros2l4to(CONFIG_OREDEV_TIMEOUT));
 
     rx_buf = malloc(1520);
     

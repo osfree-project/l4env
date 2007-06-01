@@ -12,15 +12,11 @@
 #include <l4/sys/types.h>
 
 enum {
-  L4_UTCB_EXCEPTION_IPC_ENABLED  = 1,
   L4_UTCB_EXCEPTION_FPU_INHERIT  = 2,
-  L4_UTCB_EXCEPTION_FPU_TRANSFER = 4,
 };
 
-#define L4_UTCB_EXCEPTION_IPC_COOKIE1  (-0x5UL)
-#define L4_UTCB_EXCEPTION_IPC_COOKIE2  (-0x21504151UL)
-#define L4_UTCB_EXCEPTION_REGS_SIZE    24
-#define L4_UTCB_GENERIC_DATA_SIZE      29
+#define L4_UTCB_EXCEPTION_REGS_SIZE    23
+#define L4_UTCB_GENERIC_DATA_SIZE      32
 
 enum {
   L4_EXCEPTION_REPLY_DW0_DEALIEN = 1,
@@ -97,14 +93,13 @@ struct l4_utcb_ex_regs_args
  */
 typedef struct
 {
-  l4_umword_t status;   /* l4_umword_t to keep vars umword aligned */
   union {
     l4_umword_t                 values[L4_UTCB_GENERIC_DATA_SIZE];
     struct l4_utcb_exception    exc;
     struct l4_utcb_ex_regs_args ex_regs;
   };
-  l4_umword_t snd_size;
-  l4_umword_t rcv_size;
+  l4_umword_t buffers[31];
+  l4_timeout_t xfer;
 
 } l4_utcb_t;
 
@@ -120,11 +115,6 @@ l4_utcb_t *l4_utcb_get(void);
  */
 l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u);
 
-/**
- * Function to check whether an IPC was an exception IPC.
- * \ingroup api_utcb
- */
-int l4_utcb_exc_is_exc_ipc(l4_umword_t dw0, l4_umword_t dw1);
 
 /*
  * ==================================================================
@@ -141,10 +131,5 @@ L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u)
   return u->exc.rip;
 }
 
-L4_INLINE int l4_utcb_exc_is_exc_ipc(l4_umword_t dw0, l4_umword_t dw1)
-{
-  return dw0 == L4_UTCB_EXCEPTION_IPC_COOKIE1
-         && dw1 == L4_UTCB_EXCEPTION_IPC_COOKIE2;
-}
 
 #endif /* ! _L4_SYS_UTCB_H */

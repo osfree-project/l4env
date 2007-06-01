@@ -11,6 +11,7 @@ set -e
 PACKAGE=dice
 
 AUTOMAKE_FLAGS="--add-missing --foreign"
+LIBTOOL_FLAGS="--force"
 
 automake_min_vers_maj=1
 automake_min_vers_min=9
@@ -20,6 +21,8 @@ autoconf_min_vers_maj=2
 autoconf_min_vers_min=50
 autoheader_min_vers_maj=$autoconf_min_vers_maj
 autoheader_min_vers_min=$autoconf_min_vers_min
+libtool_min_vers_maj=1
+libtool_min_vers_min=5
 
 ARGV0=$0
 
@@ -162,12 +165,33 @@ if test "$1" = "$aclocal_min_vers_maj" -a "$2" -lt "$aclocal_min_vers_min" || te
 	exit 1;
 fi
 
+lt=${LIBTOOLIZE:-libtoolize}
+lt_version=`$lt --version 2>/dev/null|head -1|sed -e 's/^.* \([0-9]\+\.[0-9]\+\.[0-9]\+\)/\1/'`
+if test -z "$lt_version"; then
+	echo $lt: command not found
+	echo
+	echo "$ARGV0: WARNING: It is recommended to have \`libtoolize' installed to compile $PACKAGE."
+	echo "          (version $libtool_min_vers_maj.$libtool_min_vers_min or newer is required)"
+	lt=
+fi
+IFS=.; set $lt_version; IFS=' '
+if test "$1" = "$libtool_min_vers_maj" -a "$2" -lt "$libtool_min_vers_min" || test "$1" -lt "$libtool_min_vers_maj"; then
+	echo "$ARGV0: ERROR: \`$lt' is too old."
+	$lt --version
+	echo "          (version $libtool_min_vers_maj.$libtool_min_vers_min or newer is required)"
+	exit 1
+fi
+
 echo "$ARGV0: aclocal version $acl_version (ok)"
 
 do_cmd() {
 	echo "$ARGV0: running \`$@'"
 	$@
 }
+
+if test -n "$lt"; then
+	do_cmd $lt $LIBTOOL_FLAGS
+fi
 
 do_cmd $acl $ACLOCAL_FLAGS
 
@@ -184,3 +208,4 @@ rm -f config.cache
 echo "$ARGV0: now run configure and make."
 
 # vim: set tabstop=4 :
+# vim: set ft=sh :

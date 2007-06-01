@@ -41,8 +41,8 @@
 #include "BEClass.h"
 #include "BEMsgBuffer.h"
 #include "BENameFactory.h"
-#include "BETrace.h"
 #include "Compiler.h"
+#include "Trace.h"
 #include "fe/FEOperation.h"
 #include "fe/FEInterface.h"
 #include "TypeSpec-Type.h"
@@ -287,8 +287,8 @@ void CBESwitchCase::Write(CBEFile * pFile)
 
     if (m_pComponentFunction)
     {
-	assert(m_pTrace);
-	m_pTrace->BeforeComponent(pFile, this);
+	if (m_pTrace)
+	    m_pTrace->BeforeComponent(pFile, this);
 	
         /* if this function has [allow_reply_only] attribute,
          * it has an additional parameter (_dice_reply)
@@ -298,7 +298,8 @@ void CBESwitchCase::Write(CBEFile * pFile)
         m_pComponentFunction->WriteCall(pFile, 
 	    pRetVar ? pRetVar->GetName() : string(), m_bSameClass);
 
-	m_pTrace->AfterComponent(pFile, this);
+	if (m_pTrace)
+	    m_pTrace->AfterComponent(pFile, this);
     }
 
     // write marshalling

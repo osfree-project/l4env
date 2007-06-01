@@ -9,7 +9,7 @@ include $(L4DIR)/mk/Makeconf
 
 SYSTEMS		:= x86 amd64
 ifeq ($(BUILD_ARCH),arm)
-SYSTEMS		:= arm-l4x0
+SYSTEMS		:= arm-l4v2
 # ARM always uses single image mode
 ENTRY		:= auto-build-entry
 endif
@@ -35,7 +35,7 @@ SRC_C		+= exec.c module.c base_critical.c patch.c
 SRC_CC		:= region.cc startup.cc init_kip_v2.cc init_kip_v4.cc
 SRC_C_x86	+= serial.c 
 SRC_C_amd64	+= serial.c
-SRC_CC_arm-l4x0	+= $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_DRV_TYPE))
+SRC_CC_arm-l4v2	+= $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_DRV_TYPE))
 ARM_DRV_TYPE	?= sa1000
 
 OPTS		 = -g -Os $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))

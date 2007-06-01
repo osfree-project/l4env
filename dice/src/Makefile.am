@@ -6,7 +6,6 @@ DICELIBS=	$(top_builddir)/src/be/l4/libl4.a \
 		$(top_builddir)/src/be/l4/v2/libv2.a \
 		$(top_builddir)/src/be/l4/v2/amd64/libv2amd64.a \
 		$(top_builddir)/src/be/l4/v2/ia32/libv2ia32.a \
-		$(top_builddir)/src/be/l4/x0/libx0.a \
 		$(top_builddir)/src/be/l4/v4/libv4.a \
 		$(top_builddir)/src/be/l4/v4/ia32/libv4ia32.a \
 		$(top_builddir)/src/be/sock/libsock.a \
@@ -28,7 +27,6 @@ dice_DEPENDENCIES= $(DICELIBS)
 dice_LDADD=	-L$(top_builddir)/src/be/l4/v2 -lv2 \
 		-L$(top_builddir)/src/be/l4/v2/amd64 -lv2amd64 \
 		-L$(top_builddir)/src/be/l4/v2/ia32 -lv2ia32 \
-		-L$(top_builddir)/src/be/l4/x0 -lx0 \
 		-L$(top_builddir)/src/be/l4/v4 -lv4 \
 		-L$(top_builddir)/src/be/l4/v4/ia32 -lv4ia32 \
 		-L$(top_builddir)/src/be/l4 -ll4 \
@@ -40,7 +38,7 @@ dice_LDADD=	-L$(top_builddir)/src/be/l4/v2 -lv2 \
 		-L$(top_builddir)/src/parser/gcc-c -lgcc_c \
 		-L$(top_builddir)/src/parser/gcc-cxx -lgcc_cxx \
 		-L$(top_builddir)/src/fe -lfe \
-		-lstdc++ -ldl
+		-lstdc++ $(LIBLTDL) -lltdl
 
 if HOST_DARWIN
 # Darwin's _toupper and _tolower are macros, so using these as function
@@ -51,7 +49,8 @@ dice_LDFLAGS = -export-dynamic
 endif
 
 AM_CPPFLAGS=	-D__USER__="\"$(USER)@`hostname`\"" \
-		-D__DICEINCDIR__="\"${includedir}\""
+		-D__DICEINCDIR__="\"${includedir}\"" \
+		-I$(LTDLINCL)
 
 AM_CXXFLAGS = -Wunused -Wunused-parameter -Wall -W \
 	      -Wcast-align -Wcast-qual -Wconversion -Wformat=2 \

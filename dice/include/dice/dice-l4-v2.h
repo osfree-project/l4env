@@ -37,7 +37,7 @@ void free_warning(void* addr)
 	malloc_warning, free_warning }
 #define dice_default_server_environment \
     { { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
-	{ param: 0 }, L4_IPC_TIMEOUT(0, 1, 0, 0, 15, 0), \
+	{ param: 0 }, L4_IPC_SEND_TIMEOUT_0, \
 	{ fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, \
 	malloc_warning, free_warning, L4_INVALID_ID_INIT, \
 	    0, { 0,0,0,0,0, 0,0,0,0,0}, 0 }
@@ -59,11 +59,7 @@ namespace dice
 	_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
 	_p.param = 0;
 	timeout = L4_IPC_NEVER;
-	rcv_fpage.fp.grant = 1;
-	rcv_fpage.fp.write = 1;
-	rcv_fpage.fp.size = L4_WHOLE_ADDRESS_SPACE;
-	rcv_fpage.fp.zero = 0;
-	rcv_fpage.fp.page = 0;
+	rcv_fpage = l4_fpage(0, L4_WHOLE_ADDRESS_SPACE, 1, 1);
     }
     
     extern inline
@@ -81,12 +77,8 @@ namespace dice
 	_exception._corba.major = CORBA_NO_EXCEPTION;
 	_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
 	_p.param = 0;
-	timeout = L4_IPC_TIMEOUT(0, 1, 0, 0, 15, 0);
-	rcv_fpage.fp.grant = 1;
-	rcv_fpage.fp.write = 1;
-	rcv_fpage.fp.size = L4_WHOLE_ADDRESS_SPACE;
-	rcv_fpage.fp.zero = 0;
-	rcv_fpage.fp.page = 0;
+	timeout = L4_IPC_SEND_TIMEOUT_0;
+	rcv_fpage = l4_fpage(0, L4_WHOLE_ADDRESS_SPACE, 1, 1);
 	for (int i=0; i < DICE_PTRS_MAX; i++)
 	    ptrs[i] = 0;
     }

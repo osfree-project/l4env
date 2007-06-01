@@ -32,7 +32,7 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
 #include "be/BESizes.h"
-#include "be/BETrace.h"
+#include "be/Trace.h"
 #include "be/BEMsgBuffer.h"
 #include "be/BEClass.h"
 #include "Attribute-Type.h"

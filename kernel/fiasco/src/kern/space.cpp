@@ -43,6 +43,7 @@ Space::Space (Ram_quota *q, unsigned number)
     _chief (~0U)
 #ifdef CONFIG_TASK_CAPS
     ,_cap_space(q)
+    ,_obj_space(q)
 #endif
 {
   Task_num chief;
@@ -64,6 +65,7 @@ Space::Space (unsigned number, unsigned chief, Mem_space::Dir_type* pdir)
     _chief (chief)
 #ifdef CONFIG_TASK_CAPS
     ,_cap_space(Ram_quota::root)
+    ,_obj_space(Ram_quota::root)
 #endif
 {
   init_task_caps();
@@ -175,8 +177,19 @@ Space::is_privileged ()
   return true;
 }
 
+
+IMPLEMENTATION[!io || ux]:
+
 PRIVATE static inline
 void
 Space::init_io_space ()
 {}
 
+
+IMPLEMENTATION [ux]:
+
+/// Is this task a privileged one?
+PUBLIC static inline 
+bool 
+Space::is_privileged () 
+{ return false; }

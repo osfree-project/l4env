@@ -226,20 +226,6 @@ l4_next_period_id(l4_threadid_t id);
  *
  * \param  dest		destination thread
  * \param  param	scheduling parameter
- * \retval 0		OK
- * \retval -1		Error.
- *
- * This function is not meant to be used directly, it is merely used
- * by others.
- */
-L4_INLINE int
-l4_rt_generic(l4_threadid_t dest, l4_sched_param_t param);
-
-/*!\brief Generic real-time setup function
- * \ingroup api_calls_rt_sched
- *
- * \param  dest		destination thread
- * \param  param	scheduling parameter
  * \param  clock	clock parameter
  * \retval 0		OK
  * \retval -1		Error.
@@ -248,7 +234,7 @@ l4_rt_generic(l4_threadid_t dest, l4_sched_param_t param);
  * by others.
  */
 L4_INLINE int
-l4_rt_generic_clock(l4_threadid_t dest, l4_sched_param_t param,
+l4_rt_generic(l4_threadid_t dest, l4_sched_param_t param,
 		    l4_kernel_clock_t clock);
 
 /*!\brief Delayed preemption: Reserve a duration
@@ -300,14 +286,14 @@ l4_rt_dp_end(void);
 L4_INLINE l4_threadid_t
 l4_preemption_id(l4_threadid_t id)
 {
-  id.id.chief |= L4_RT_PREEMPTION_ID;
+  //id.id.chief |= L4_RT_PREEMPTION_ID;
   return id;
 }
 
 L4_INLINE l4_threadid_t
 l4_next_period_id(l4_threadid_t id)
 {
-  id.id.chief |= L4_RT_NEXT_PERIOD;
+  //id.id.chief |= L4_RT_NEXT_PERIOD;
   return id;
 }
 

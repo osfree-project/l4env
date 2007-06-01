@@ -38,7 +38,7 @@
 #define DEBUG_IRQ_VERBOSE 0
 
 /* return within 50ms even if there was no interrupt */
-#define IRQ_TIMEOUT	  L4_IPC_TIMEOUT(0,0,195,11,0,0)
+#define IRQ_TIMEOUT	  l4_ipc_timeout(0,0,781,6)
 
 /* INTERRUPT HANDLING EMULATION */
 
@@ -160,7 +160,7 @@ static void __irq_handler(struct irq_desc *irq_desc)
 		for (;;) {
 			error = l4_ipc_receive(irq_id,
 			                       L4_IPC_SHORT_MSG, &dw0, &dw1,
-			                       L4_IPC_TIMEOUT(0, 0, 1, 15, 0, 0), &result);
+			                       l4_ipc_timeout(0, 0, 1, 0), &result);
 			if (error == L4_IPC_RETIMEOUT)
 				break;
 		}

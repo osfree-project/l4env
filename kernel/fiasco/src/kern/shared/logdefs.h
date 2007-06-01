@@ -214,39 +214,13 @@
   Jdb_tbuf::commit_entry();						\
   END_LOG_EVENT
 
-#define LOG_LIPC_ROLLBACK						\
-  BEGIN_LOG_EVENT(log_lipc_rollback)					\
-  Tb_entry_lipc *tb =							\
-     static_cast<Tb_entry_lipc*>(Jdb_tbuf::new_entry());		\
-  tb->set (current(), current()->regs()->ip(), 				\
-	   1, 0, 0, *global_utcb_ptr);					\
-  Jdb_tbuf::commit_entry();						\
-  END_LOG_EVENT
-
-#define LOG_LIPC_FORWARD						\
-  BEGIN_LOG_EVENT(log_lipc_rollforward)					\
-  Tb_entry_lipc *tb =							\
-     static_cast<Tb_entry_lipc*>(Jdb_tbuf::new_entry());		\
-  tb->set (current(), current()->regs()->ip(), 2,			\
-           src_thread->id(), dst_thread->id(), *global_utcb_ptr);	\
-  Jdb_tbuf::commit_entry();						\
-  END_LOG_EVENT
-
-#define LOG_LIPC_STACK_COPY						\
-  BEGIN_LOG_EVENT(log_lipc_copy)					\
-  Tb_entry_lipc *tb =							\
-     static_cast<Tb_entry_lipc*>(Jdb_tbuf::new_entry());		\
-  tb->set (current(), current()->regs()->ip(), 3,			\
-           0, dst->id(), *global_utcb_ptr);				\
-  Jdb_tbuf::commit_entry();						\
-  END_LOG_EVENT
-
-#define LOG_LIPC_SETUP_IRET_STACK					\
-  BEGIN_LOG_EVENT(log_lipc_setup_iret_stack)				\
-  Tb_entry_lipc *tb =							\
-     static_cast<Tb_entry_lipc*>(Jdb_tbuf::new_entry());		\
-  tb->set (current(), current()->regs()->ip(), 4,			\
-           this->id(), 0, *global_utcb_ptr);				\
+#define LOG_ID_NEAREST							\
+  BEGIN_LOG_EVENT(log_id_nearest)					\
+  Entry_frame *ef = reinterpret_cast<Entry_frame*>(regs);               \
+  Lock_guard <Cpu_lock> guard (&cpu_lock);				\
+  Tb_entry_id_nearest *tb =						\
+     static_cast<Tb_entry_id_nearest*>(Jdb_tbuf::new_entry());		\
+  tb->set (this, ef->ip(), dst_id_long);				\
   Jdb_tbuf::commit_entry();						\
   END_LOG_EVENT
 
@@ -316,10 +290,7 @@
 #define LOG_SCHED_LOAD			do { } while (0)
 #define LOG_SCHED_INVALIDATE		do { } while (0)
 #define LOG_SEND_PREEMPTION		do { } while (0)
-#define LOG_LIPC_ROLLBACK		do { } while (0)
-#define LOG_LIPC_FORWARD		do { } while (0)
-#define LOG_LIPC_STACK_COPY		do { } while (0)
-#define LOG_LIPC_SETUP_IRET_STACK	do { } while (0)
+#define LOG_ID_NEAREST			do { } while (0)
 #define LOG_TASK_NEW			do { } while (0)
 
 #endif // CONFIG_JDB

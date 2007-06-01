@@ -469,7 +469,8 @@ Jdb::peek_task(Address addr, Task_num task, Mword *value, int width)
 {
   Address phys;
 
-  if (Kmem::is_kmem_page_fault(addr, 0) || task == Config::kernel_taskno)
+  if (task == Config::kernel_taskno || (!Kmem::is_io_bitmap_page_fault(addr)
+	&& Kmem::is_kmem_page_fault(addr, 0)))
     {
       // address of kernel directory
       phys = Kmem::virt_to_phys((const void*)addr);
@@ -496,7 +497,8 @@ Jdb::poke_task(Address addr, Task_num task, Mword value, int width)
 {
   Address phys;
 
-  if (Kmem::is_kmem_page_fault(addr, 0) || task == Config::kernel_taskno)
+  if (task == Config::kernel_taskno || (!Kmem::is_io_bitmap_page_fault(addr)
+	&& Kmem::is_kmem_page_fault(addr, 0)))
     {
       // kernel address
       phys = Kmem::virt_to_phys((const void*)addr);
@@ -526,7 +528,8 @@ Jdb::is_adapter_memory(Address virt, Task_num task)
 {
   Address phys;
 
-  if (Kmem::is_kmem_page_fault(virt, 0) || task == Config::kernel_taskno)
+  if (task == Config::kernel_taskno || (!Kmem::is_io_bitmap_page_fault(virt) 
+	&& Kmem::is_kmem_page_fault(virt, 0)))
     {
       // kernel address
       phys = Kmem::virt_to_phys((const void*)virt);
@@ -543,7 +546,14 @@ Jdb::is_adapter_memory(Address virt, Task_num task)
   if (phys == ~0UL)
     return false;
 
-  return phys >= Kip::k()->main_memory_high();
+  Mem_desc *m = Kip::k()->mem_descs();
+  Mem_desc *e = m + Kip::k()->num_mem_descs();
+  for (; m != e; ++m)
+    if (m->type() == Mem_desc::Conventional && !m->is_virtual()
+	&& m->start() <= phys && m->end() >= phys)
+      return false;
+
+  return true;
 }
 
 #define WEAK __attribute__((weak))

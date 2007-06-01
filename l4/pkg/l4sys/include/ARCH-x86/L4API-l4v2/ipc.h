@@ -50,6 +50,8 @@ typedef struct {
 #define L4_IPC_STRING_SHIFT     8    /**< \ingroup api_types_msg */
 #define L4_IPC_DWORD_SHIFT      13   /**< \ingroup api_types_msg */
 
+#define L4_IPC_FLAG_NEXT_PERIOD 0x10000
+
 /**
  * Build IPC message dope
  * \ingroup api_types_msg
@@ -61,32 +63,6 @@ typedef struct {
 #define L4_IPC_DOPE(dwords, strings) \
 ( (l4_msgdope_t) {md: {0, 0, 0, 0, 0, 0, strings, dwords }})
 
-/**
- * Build IPC timeout
- * \ingroup api_types_timeout
- * \hideinitializer
- *
- * \param   snd_man      Send timeout mantissa
- * \param   snd_exp      Send timeout exponent
- * \param   rcv_man      Receive timeout mantissa
- * \param   rcv_exp      Receive timeout exponent
- * \param   snd_pflt     Send pagefault timeout
- * \param   rcv_pflt     Receive pagefault timeout
- */
-#define L4_IPC_TIMEOUT(snd_man, snd_exp, rcv_man, rcv_exp, snd_pflt, rcv_pflt)\
-     ( (l4_timeout_t) \
-       {to: { rcv_exp, snd_exp, rcv_pflt, snd_pflt, snd_man, rcv_man } } )
-
-/**
- * IPC special timeouts
- * \ingroup api_types_timeout
- * \hideinitializer
- */
-#define L4_IPC_NEVER			((l4_timeout_t) {timeout: 0})
-#define L4_IPC_NEVER_INITIALIZER	{timeout: 0}
-#define L4_IPC_RECV_TIMEOUT_0		L4_IPC_TIMEOUT(0,0,0,1,0,0)
-#define L4_IPC_SEND_TIMEOUT_0		L4_IPC_TIMEOUT(0,1,0,0,0,0)
-#define L4_IPC_BOTH_TIMEOUT_0		L4_IPC_TIMEOUT(0,1,0,1,0,0)
 
 /**
  * Build short flexpage receive message descriptor.
@@ -302,7 +278,7 @@ typedef struct {
  *                       undefined if no message was received.
  * \retval  rcv_dword1   The second dword of the received message,
  *                       undefined if no message was received.
- * \param   timeout      IPC timeout (see #L4_IPC_TIMEOUT).
+ * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
  *
  * \return  0 if no error occurred. The send operation (if specified) was
@@ -344,6 +320,19 @@ l4_ipc_call(l4_threadid_t dest,
             l4_umword_t *rcv_dword1,
             l4_timeout_t timeout,
             l4_msgdope_t *result);
+
+L4_INLINE int
+l4_ipc_call_tag(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t snd_w0,
+            l4_umword_t snd_w1,
+            l4_msgtag_t tag,
+            void *rcv_msg,
+            l4_umword_t *rcv_w0,
+            l4_umword_t *rcv_w1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result,
+            l4_msgtag_t *rtag);
 
 /**
  * IPC reply and wait, send a reply to a client and wait for next message
@@ -389,7 +378,7 @@ l4_ipc_call(l4_threadid_t dest,
  *                       undefined if no message was received.
  * \retval  rcv_dword1   The second dword of the received message,
  *                       undefined if no message was received.
- * \param   timeout      IPC timeout (see #L4_IPC_TIMEOUT).
+ * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
  *
  * \return  0 if no error occurred. The send operation (if specified) was
@@ -430,6 +419,22 @@ l4_ipc_reply_and_wait(l4_threadid_t dest,
                       l4_timeout_t timeout,
                       l4_msgdope_t *result);
 
+
+L4_INLINE int
+l4_ipc_reply_and_wait_tag(l4_threadid_t dest,
+                      const void *snd_msg,
+                      l4_umword_t snd_dword0,
+                      l4_umword_t snd_dword1,
+                      l4_msgtag_t tag,
+                      l4_threadid_t *src,
+                      void *rcv_msg,
+                      l4_umword_t *rcv_dword0,
+                      l4_umword_t *rcv_dword1,
+                      l4_timeout_t timeout,
+                      l4_msgdope_t *result,
+                      l4_msgtag_t *rtag);
+
+
 L4_INLINE int
 l4_ipc_wait_next_period(l4_threadid_t *src,
 			void *rcv_msg,
@@ -458,7 +463,7 @@ l4_ipc_wait_next_period(l4_threadid_t *src,
  *                         \a snd_dword0 and \a snd_dword1.
  * \param   snd_dword0   The first dword to be transmitted.
  * \param   snd_dword1   The second dword to be transmitted.
- * \param   timeout      IPC timeout (see #L4_IPC_TIMEOUT).
+ * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
  *
  * \return  0 if no error occurred. The send operation (if specified) was
@@ -494,6 +499,14 @@ l4_ipc_send(l4_threadid_t dest,
             l4_timeout_t timeout,
             l4_msgdope_t *result);
 
+L4_INLINE int 
+l4_ipc_send_tag(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t w0,
+            l4_umword_t w1,
+            l4_msgtag_t tag,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result);
 /**
  * IPC wait, wait for message from any source
  * \ingroup api_calls_ipc
@@ -517,7 +530,7 @@ l4_ipc_send(l4_threadid_t dest,
  *                         \a rcv_dword1) are accepted.
  * \retval  rcv_dword0   The first dword of the received message.
  * \retval  rcv_dword1   The second dword of the received message.
- * \param   timeout      IPC timeout (see #L4_IPC_TIMEOUT).
+ * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
  *
  * \return  0 if no error occurred. The send operation (if specified) was
@@ -552,6 +565,15 @@ l4_ipc_wait(l4_threadid_t *src,
             l4_timeout_t timeout,
             l4_msgdope_t *result);
 
+L4_INLINE int
+l4_ipc_wait_tag(l4_threadid_t *src,
+            void *rcv_msg,
+            l4_umword_t *rcv_dword0,
+            l4_umword_t *rcv_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result,
+	    l4_msgtag_t *tag);
+
 /**
  * IPC receive, wait for a message from a specified thread
  * \ingroup api_calls_ipc
@@ -575,7 +597,7 @@ l4_ipc_wait(l4_threadid_t *src,
  *                         \a rcv_dword1) are accepted.
  * \retval  rcv_dword0   The first dword of the received message.
  * \retval  rcv_dword1   The second dword of the received message.
- * \param   timeout      IPC timeout (see #L4_IPC_TIMEOUT).
+ * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
  *
  * \return  0 if no error occurred. The send operation (if specified) was
@@ -611,11 +633,20 @@ l4_ipc_receive(l4_threadid_t src,
                l4_timeout_t timeout,
                l4_msgdope_t *result);
 
+L4_INLINE int
+l4_ipc_receive_tag(l4_threadid_t src,
+               void *rcv_msg,
+               l4_umword_t *rcv_w0,
+               l4_umword_t *rcv_w1,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result,
+               l4_msgtag_t *tag);
+
 /**
  * Sleep for an amount of time.
  * \ingroup api_calls_ipc
  *
- * \param   timeout      IPC timeout (see #L4_IPC_TIMEOUT).
+ * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  *
  * \return  error code: 
  *          - #L4_IPC_RETIMEOUT Timeout during receive operation (expected!)
@@ -670,6 +701,98 @@ l4_ipc_is_fpage_writable(l4_fpage_t fp);
  *** Implementation
  *****************************************************************************/
 
+#include <l4/sys/rt_sched-proto.h>
+#include <l4/sys/ipc-invoke.h>
+
+#define GCC_VERSION	(__GNUC__ * 100 + __GNUC_MINOR__)
+
+#ifdef PROFILE
+#  include "ipc-l42-profile.h"
+#else
+#  if GCC_VERSION < 302
+#    error gcc >= 3.0.2 required
+#  else
+#    ifdef __PIC__
+#      include "ipc-l42-gcc3-pic.h"
+#    else
+#      include "ipc-l42-gcc3-nopic.h"
+#    endif
+#  endif
+#endif
+
+L4_INLINE int
+l4_ipc_call(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t snd_dword0,
+            l4_umword_t snd_dword1,
+            void *rcv_msg,
+            l4_umword_t *rcv_dword0,
+            l4_umword_t *rcv_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result)
+{
+  l4_msgtag_t tag;
+  return l4_ipc_call_tag(dest, snd_msg, snd_dword0, snd_dword1,
+      l4_msgtag(0,0,0,0), rcv_msg, rcv_dword0, rcv_dword1, timeout, result,
+      &tag);
+}
+
+L4_INLINE int
+l4_ipc_reply_and_wait(l4_threadid_t dest,
+                      const void *snd_msg,
+                      l4_umword_t snd_dword0,
+                      l4_umword_t snd_dword1,
+                      l4_threadid_t *src,
+                      void *rcv_msg,
+                      l4_umword_t *rcv_dword0,
+                      l4_umword_t *rcv_dword1,
+                      l4_timeout_t timeout,
+                      l4_msgdope_t *result)
+{
+  l4_msgtag_t dummy;
+  return l4_ipc_reply_and_wait_tag(dest, snd_msg, snd_dword0, snd_dword1,
+      l4_msgtag(0,0,0,0), src, rcv_msg, rcv_dword0, rcv_dword1,
+      timeout, result, &dummy);
+}
+
+L4_INLINE int
+l4_ipc_wait(l4_threadid_t *src,
+            void *rcv_msg,
+            l4_umword_t *rcv_dword0,
+            l4_umword_t *rcv_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result)
+{
+  l4_msgtag_t tag;
+  return l4_ipc_wait_tag(src, rcv_msg, rcv_dword0, rcv_dword1, timeout, result,
+      &tag);
+}
+
+L4_INLINE int
+l4_ipc_send(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t snd_dword0,
+            l4_umword_t snd_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result)
+{
+  return l4_ipc_send_tag(dest, snd_msg, snd_dword0, snd_dword1,
+      l4_msgtag(0,0,0,0), timeout, result);
+}
+
+L4_INLINE int
+l4_ipc_receive(l4_threadid_t src,
+               void *rcv_msg,
+               l4_umword_t *rcv_dword0,
+               l4_umword_t *rcv_dword1,
+               l4_timeout_t timeout,
+               l4_msgdope_t *result)
+{
+  l4_msgtag_t tag;
+  return l4_ipc_receive_tag(src, rcv_msg, rcv_dword0, rcv_dword1, timeout,
+      result, &tag);
+}
+
 L4_INLINE int
 l4_ipc_sleep(l4_timeout_t timeout)
 {
@@ -697,23 +820,5 @@ l4_ipc_is_fpage_writable(l4_fpage_t fp)
   return fp.fp.write != 0;
 }
 
-#include <l4/sys/rt_sched-proto.h>
-#include <l4/sys/ipc-invoke.h>
-
-#define GCC_VERSION	(__GNUC__ * 100 + __GNUC_MINOR__)
-
-#ifdef PROFILE
-#  include "ipc-l42-profile.h"
-#else
-#  if GCC_VERSION < 302
-#    error gcc >= 3.0.2 required
-#  else
-#    ifdef __PIC__
-#      include "ipc-l42-gcc3-pic.h"
-#    else
-#      include "ipc-l42-gcc3-nopic.h"
-#    endif
-#  endif
-#endif
 
 #endif /* !__L4_IPC_H__ */

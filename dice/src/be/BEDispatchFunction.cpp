@@ -36,7 +36,6 @@
 #include "BEComponent.h"
 #include "BEUserDefinedType.h"
 #include "BEMsgBuffer.h"
-#include "BETrace.h"
 #include "BEAttribute.h"
 #include "TypeSpec-Type.h"
 #include "Compiler.h"

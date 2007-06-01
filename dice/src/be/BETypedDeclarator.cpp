@@ -1155,9 +1155,10 @@ CBETypedDeclarator::RemoveCallDeclarator()
  */
 bool CBETypedDeclarator::IsString()
 {
+    CBEDeclarator *pDeclarator = m_Declarators.First();
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBETypedDeclarator::%s called for %s in func %s\n",
-	__func__, m_Declarators.First()->GetName().c_str(),
+	__func__, pDeclarator ? pDeclarator->GetName().c_str() : "(anonym)",
 	GetSpecificParent<CBEFunction>() ?
 	GetSpecificParent<CBEFunction>()->GetName().c_str() : 
 	"(no func)");
@@ -1182,7 +1183,6 @@ bool CBETypedDeclarator::IsString()
     if (m_pType->IsOfType(TYPE_CHAR) &&
         !m_pType->IsUnsigned())
     {
-        CBEDeclarator *pDeclarator = m_Declarators.First();
         if (pDeclarator)
         {
             int nSize = pDeclarator->GetSize();
@@ -1236,9 +1236,10 @@ bool CBETypedDeclarator::IsString()
  */
 bool CBETypedDeclarator::IsVariableSized()
 {
+    CBEDeclarator *pDeclarator = m_Declarators.First();
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBETypedDeclarator::%s called for %s\n", __func__,
-	m_Declarators.First()->GetName().c_str());
+	pDeclarator ? pDeclarator->GetName().c_str() : "(anonym)");
     
     // need the root
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
@@ -1327,6 +1328,8 @@ bool CBETypedDeclarator::IsVariableSized()
 	 iter != m_Declarators.end();
 	 iter++)
     {
+	if (!(*iter))
+	    continue;
         if (!(*iter)->IsArray())
             continue;
         vector<CBEExpression*>::iterator iterB;

@@ -1,4 +1,4 @@
-INTERFACE [ia32-io,ux-io]:
+INTERFACE [io]:
 
 #include "types.h"
 #include "mem_space.h"
@@ -49,7 +49,7 @@ private:
   Mem_space* _mem_space;
 };
 
-IMPLEMENTATION [ia32-io,ux-io]:
+IMPLEMENTATION [io]:
 
 #include <cassert>
 #include <cstring>
@@ -69,7 +69,8 @@ Io_space::Io_space ()
     _mem_space (0)
 {}
 
-PUBLIC inline NEEDS["config.h", "mapped_alloc.h"]
+
+PUBLIC inline NEEDS["config.h", "mapped_alloc.h",Io_space::bitmap_pde_lookup]
 Io_space::~Io_space ()
 {
   if (! _mem_space || ! _mem_space->dir())
@@ -79,10 +80,10 @@ Io_space::~Io_space ()
     ? Mem_layout::Smas_io_bmap_bak
     : Mem_layout::Io_bitmap;
   
-  Pd_entry *iopde = _mem_space->dir()->lookup(ports_base);
+  Pd_entry *iopde = bitmap_pde_lookup(ports_base);
   
   // do we have an IO bitmap?
-  if (iopde->valid())
+  if (!iopde || iopde->valid())
     {
       // sanity check
       assert (!iopde->superpage());
@@ -198,6 +199,10 @@ Io_space::v_delete (Address virt, unsigned long size,
   if (is_superpage())
     {
       assert (size == Map_superpage_size);
+#ifndef CONFIG_IO_PROT_IOPL_3
+      for (unsigned p = 0; p < Map_max_address; ++p)
+	io_delete(p);
+#endif
       _io_counter = 0;
       return Page_writable | Page_user_accessible;
     }
@@ -217,9 +222,18 @@ Io_space::v_insert (Address phys, Address virt, size_t size,
   (void)page_attribs;
 
   assert (phys == virt);
+  if (is_superpage() && size == Map_superpage_size)
+    return Insert_warn_exists;
+
   if (get_io_counter() == 0 && size == Map_superpage_size)
     {
+#ifndef CONFIG_IO_PROT_IOPL_3
+      for (unsigned p = 0; p < Map_max_address; ++p)
+	io_insert(p);
+      _io_counter |= 0x10000000;
+#else
       _io_counter = 0x10000000 | Map_superpage_size;
+#endif
       return Insert_ok;
     }
   
@@ -288,7 +302,7 @@ Io_space::io_lookup(Address port_number)
 
   Address port_addr = get_phys_port_addr(port_number);
 
-  if(port_addr == 0xffffffff)
+  if(port_addr == ~0UL)
     return false;		// no bitmap -> no ports
 
   // so there is memory mapped in the IO bitmap
@@ -322,7 +336,7 @@ Io_space::io_insert(Address port_number)
   Address port_virt = ports_base + (port_number >> 3);
   Address port_phys = _mem_space->virt_to_phys (port_virt);
 
-  if (port_phys == 0xffffffff)
+  if (port_phys == ~0UL)
     {
       // nothing mapped! Get a page and map it in the IO bitmap
       void *page;
@@ -351,7 +365,7 @@ Io_space::io_insert(Address port_number)
       assert(status == Mem_space::Insert_ok); 
 
       port_phys = _mem_space->virt_to_phys (port_virt);
-      assert(port_phys != 0xffffffff);
+      assert(port_phys != ~0UL);
     }
 
   // so there is memory mapped in the IO bitmap -- write the bits now
@@ -383,7 +397,7 @@ Io_space::io_delete(Address port_number)
 
   Address port_addr = get_phys_port_addr(port_number);
 
-  if (port_addr == 0xffffffff)
+  if (port_addr == ~0UL)
     // nothing mapped -> nothing to delete
     return 0;
 
@@ -419,3 +433,31 @@ Io_space::get_port_bit(Address const port_number) const
   return 1 << (port_number & 7);
 }
 
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [io && (ia32 || ux)]:
+
+PRIVATE inline
+Pd_entry *Io_space::bitmap_pde_lookup(Address v)
+{
+  return _mem_space->dir()->lookup(v);
+}
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [io && amd64]:
+
+PRIVATE inline
+Pd_entry *Io_space::bitmap_pde_lookup(Address v)
+{
+  Pml4_entry *l4 = _mem_space->dir()->lookup(v);
+  if (!l4->valid())
+    return 0;
+
+  Pdp_entry *l3 = l4->pdp()->lookup(v);
+
+  if (!l3->valid())
+    return 0;
+
+  return l3->pdir()->lookup(v);
+}

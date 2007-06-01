@@ -25,9 +25,11 @@ help:
 	@echo "  TAGS tags      - create tags files"
 
 
+ifneq ($(srcdir),NOT_SET)
 Makefile: $(srcdir)/templates/Makefile.builddir.templ
 	perl -p -i -e '$$s = "$(srcdir)"; s/\@SRCDIR\@/$$s/' \
 			< $< >$@
+endif
 
 ifneq ($(MAKECMDGOALS),help)
 
@@ -252,10 +254,9 @@ mrproper: cleanall
 
 endif # clean, cleanall, mrproper
 
-.PHONY: update
 update:
 	cd $(srcdir)/.. && svn update
-	cd $(L4DIR)/tool/preprocess && svn update
+	cd $(dir $(PREPROCESS))/.. && svn update
 
 endif # srcdir != NOT_SET
 

@@ -104,7 +104,7 @@ static void event_send(CORBA_Object dst, unsigned long token,
 	CORBA_Environment env = dice_default_environment;
 	if (!dst) return;
 
-	env.timeout = L4_IPC_TIMEOUT(97,10,97,10,0,0);
+	env.timeout = l4_ipc_timeout(781,7,781,7);
 	nitevent_event_send(dst, token, type, code, rx, ry, mx, my, &env);
 
 //	if (env.major != CORBA_NO_EXCEPTION)

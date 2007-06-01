@@ -68,7 +68,7 @@ attach(l4_threadid_t client, omega0_irqdesc_t desc)
   c = malloc(sizeof(client_chain));
   if(!c)
     {
-      LOGl("error getting %d bytes of memory", sizeof(client_chain));
+      LOGl("error getting %ld bytes of memory", (unsigned long)sizeof(client_chain));
       if(ENTER_KDEBUG_ON_ERRORS)
 	enter_kdebug("!");
       return -1;
@@ -89,10 +89,10 @@ attach(l4_threadid_t client, omega0_irqdesc_t desc)
   release_mutex(&irqs[desc.s.num].mutex, &wqe);
 
   LOGdl(OMEGA0_DEBUG_REQUESTS,
-	"client [%x.%x] registered to irq %#x, registered_clients=%d",
+	"client [%x.%x] registered to irq 0x%lx, registered_clients=%d\n",
 	client.id.task, client.id.lthread,
-	desc.s.num,
-	irqs[desc.s.num].clients_registered);
+	(unsigned long)desc.s.num,
+	(unsigned)irqs[desc.s.num].clients_registered);
 
   return irqs[desc.s.num].lthread;
 }

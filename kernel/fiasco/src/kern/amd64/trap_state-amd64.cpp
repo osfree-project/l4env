@@ -102,6 +102,11 @@ Trap_state::value3() const
 
 PUBLIC inline
 Mword
+Trap_state::dx() const
+{ return _rdx; }
+
+PUBLIC inline
+Mword
 Trap_state::value4() const
 { return _rbx; }
 

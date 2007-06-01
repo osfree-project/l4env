@@ -120,7 +120,7 @@ Thread::print_uid(int task_format=0)
 
   // address inside tcb
   putstr("\033[31;1m");
-  Global_id (reinterpret_cast<Address>(this), Mem_layout::Tcbs,
+  Global_id (this, Mem_layout::Tcbs,
  	     Config::thread_block_size).print (task_format);
   putstr("\033[m");
 }

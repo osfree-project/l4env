@@ -1,6 +1,6 @@
 PKGDIR		 ?= ../..
 L4DIR		= $(PKGDIR)/../..
-SYSTEMS		= x86-l4v2 arm-l4x0
+SYSTEMS		= x86-l4v2 arm-l4v2
 TARGET		= loader
 
 WITH_IPC_MON	= n

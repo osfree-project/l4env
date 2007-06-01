@@ -123,7 +123,7 @@ static void do_sti(Thread *, Entry_frame *r)
 { r->psr &= ~128; }
 
 /* Instruction Memory Barrier */
-static void imb(Thread *, Entry_frame *r)
+static void imb(Thread *, Entry_frame *)
 {
   Mem_unit::clean_dcache();
 }

@@ -5,7 +5,7 @@ include $(L4DIR)/mk/Makeconf
 
 TARGET		 = libld-l4.s.so
 MODE		 = l4env
-SYSTEMS		 = x86-l4v2 arm-l4x0
+SYSTEMS		 = x86-l4v2 arm-l4v2
 PRIVATE_INCDIR	 = $(PKGDIR)/lib/ldso \
 		   $(PKGDIR)/lib/ldso/include \
 		   $(PKGDIR)/lib/ldso/include/sysdeps/linux/$(LDSO_ARCH_NAME) \

@@ -1,8 +1,4 @@
-INTERFACE [v2-utcb]:
-class Utcb
-{};
-
-INTERFACE [amd64-utcb]:
+INTERFACE [amd64]:
 
 #include "types.h"
 #include "l4_types.h"
@@ -11,11 +7,10 @@ EXTENSION class Utcb
 {
   /* must be 2^n bytes */
 public:
-  enum { Max_words = 29 };
-  Mword		status;
-  Mword		values[Max_words];
-  Mword	        snd_size;
-  Mword         rcv_size;
+  enum { Max_words = 32 };
+  Mword values[Max_words];
+  Mword buffers[31];
+  L4_timeout_pair xfer;
 
   /**
    * UTCB Userland Thread Control Block.
@@ -26,16 +21,13 @@ public:
 public:
 
   enum {
-    Handle_exception    = 1,
-    Inherit_fpu         = 2,
-    Transfer_fpu	= 4,
     Utcb_addr_mask	= 0xfffffffc,
   };
 
 };
 
 // ----------------------------------------------------------------------------
-IMPLEMENTATION[amd64-v2-utcb-debug]:
+IMPLEMENTATION[amd64-debug]:
 
 PUBLIC
 void

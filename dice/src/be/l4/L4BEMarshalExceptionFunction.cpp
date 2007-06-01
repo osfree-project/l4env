@@ -26,7 +26,7 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 #include "L4BEMarshalExceptionFunction.h"
-#include "be/BETrace.h"
+#include "be/Trace.h"
 #include "be/BEClass.h"
 #include "be/BEMsgBuffer.h"
 #include "TypeSpec-L4Types.h"
@@ -59,9 +59,8 @@ CL4BEMarshalExceptionFunction::~CL4BEMarshalExceptionFunction()
 void
 CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile* pFile)
 {
-    assert(m_pTrace);
     bool bLocalTrace = false;
-    if (!m_bTraceOn)
+    if (!m_bTraceOn && m_pTrace)
     {
 	m_pTrace->BeforeMarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;

@@ -343,13 +343,13 @@ l4util_find_first_zero_bit(const void * dest, l4_size_t size)
      "sub   $4,%%rdi		\n\t"
      "bsf   %%rax,%%rdx	\n"
      "1:			\n\t"
-     "sub   %%rbx,%%rdi	\n\t"
+     "sub   %[dest],%%rdi	\n\t"
      "shl   $3,%%rdi		\n\t"
      "add   %%rdi,%%rdx	\n\t"
      :
      "=d" (res), "=&c" (dummy0), "=&D" (dummy1), "=&a" (dummy2)
      :
-     "1" ((size + 31) >> 5), "2" (dest), "b" (dest));
+     "1" ((size + 31) >> 5), "2" (dest), [dest] "S" (dest));
 
   return res;
 }

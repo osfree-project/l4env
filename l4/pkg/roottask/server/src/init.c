@@ -1090,7 +1090,7 @@ init_memmap(void)
 static void
 init_iomap(void)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   l4_msgdope_t result;
   l4_fpage_t fp;
   int error;
@@ -1113,7 +1113,7 @@ init_iomap(void)
   /* XXX should i check for errors? */
 
   if (l4_ipc_fpage_received(result) /* got something */
-      && fp.iofp.f == 0xf	   /* got IO ports */
+      && l4_is_io_page_fault(fp.raw)/* got IO ports */
       && fp.iofp.iosize == L4_WHOLE_IOADDRESS_SPACE
       && fp.iofp.iopage == 0)       /* got whole IO space */
     {
@@ -1476,7 +1476,6 @@ start_tasks(void)
 	 (mb_info->mods_count - first_task_module) == 1 ? "" : "s");
 
   t          = myself;
-  t.id.chief = t.id.task;
 
   for (mod_no = first_task_module, task_no = myself.id.task+1;
        mod_no < mb_info->mods_count;

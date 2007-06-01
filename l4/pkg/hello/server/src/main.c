@@ -20,8 +20,7 @@ main(int argc, char **argv)
       printf("hello: My thread-id is %x.%x\n", th.id.task, th.id.lthread);
 
       /* wait .5 sec */
-      l4_ipc_receive(L4_NIL_ID, 0, &d1, &d2,
-		     L4_IPC_TIMEOUT(0,0,122,9,0,0), &result);
+      l4_ipc_receive(L4_NIL_ID, 0, &d1, &d2, l4_ipc_timeout(0,0,976,9), &result);
 
     }
 }

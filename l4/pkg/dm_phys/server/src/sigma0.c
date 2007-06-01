@@ -97,13 +97,13 @@ dmphys_sigma0_map_any_page(void)
     {
   enter_kdebug("stop");
       PANIC("DMphys: map page failed!");
-      return NULL;
+      return (void*)~0UL;
     }
 
   if (base < RAM_BASE)
     {
       PANIC("DMphys: received non-physical memory (%08lx)!", base);
-      return NULL;
+      return (void*)~0UL;
     }
 
   LOGdL(DEBUG_SIGMA0, "got a page base 0x%08lx, mapped at 0x%08lx",

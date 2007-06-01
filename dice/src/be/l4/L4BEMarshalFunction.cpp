@@ -34,7 +34,7 @@
 #include "be/BEClass.h"
 #include "be/BEMsgBuffer.h"
 #include "be/BESizes.h"
-#include "be/BETrace.h"
+#include "be/Trace.h"
 #include "TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
@@ -71,9 +71,8 @@ CL4BEMarshalFunction::~CL4BEMarshalFunction()
 void
 CL4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
 {
-    assert(m_pTrace);
     bool bLocalTrace = false;
-    if (!m_bTraceOn)
+    if (!m_bTraceOn && m_pTrace)
     {
 	m_pTrace->BeforeMarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;

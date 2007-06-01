@@ -330,7 +330,7 @@ new_tcb:
 
   is_current_thread = t == t_current;
 
-  if (!t->is_valid())
+  if (!t->is_mapped())
     {
       puts(" Invalid thread");
       return NOTHING;
@@ -881,20 +881,6 @@ Jdb_tcb::print_regs_invalid_tid()
   putchar('\n');
   print_entry_frame_regs (task);
 }
-
-//----------------------------------------------------------------------------
-IMPLEMENTATION[v2]:
-
-static inline
-void
-Jdb_tcb::print_thread_uid_raw(Thread *t)
-{
-  printf(" <%08x %08x>",
-      (Unsigned32)(t->id().raw() >> 32), (Unsigned32)(t->id().raw()));
-}
-
-//----------------------------------------------------------------------------
-IMPLEMENTATION[!v2]:
 
 static inline
 void

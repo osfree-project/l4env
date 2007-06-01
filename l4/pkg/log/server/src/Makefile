@@ -10,9 +10,9 @@ DEPENDS_PKGS = serial
 TARGET		= log
 DEFAULT_RELOC_x86 = 0x00400000
 DEFAULT_RELOC_amd64 = 0x00410000
-DEFAULT_RELOC_arm = 0x00160000
+DEFAULT_RELOC_arm = 0x00150000
 MODE		= sigma0
-SYSTEMS		= x86-l4v2 arm-l4x0 amd64-l4v2
+SYSTEMS		= x86-l4v2 arm-l4v2 amd64-l4v2
 
 SRC_C		= logserver.c stuff.c flusher.c
 VPATH		= $(PKGDIR)/server/src

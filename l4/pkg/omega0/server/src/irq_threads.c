@@ -473,14 +473,14 @@ void irq_handler(int num){
 		continue;
 	    }
 	    LOGd(OMEGA0_DEBUG_REQUESTS,
-		 "request %#08lx from "l4util_idfmt" (%c,%c,%c,%c,%c,%#x)",
+		 "request %#08lx from "l4util_idfmt" (%c,%c,%c,%c,%c,0x%lx)",
 		 ipc.request.i, l4util_idstr(ipc.sender),
 		 ipc.request.s.wait?'w':'-',
 		 ipc.request.s.consume?'c':'-',
 		 ipc.request.s.mask?'m':'-',
 		 ipc.request.s.unmask?'u':'-',
 		 ipc.request.s.again?'a':'-',
-		 ipc.request.s.param);
+		 (unsigned long)ipc.request.s.param);
 	    
 	    ret=handle_user_request(num, &ipc);
 	    if (ret == RET_HANDLE) continue;

@@ -9,13 +9,13 @@
 [ -n "$UXMEM" ] || UXMEM=256
 [ -n "$L4DIR" ] || L4DIR=${0%/*}/../..
 
-# FB_PROVIDER should be set to 'con-ux', 'proxygon', 'l4dope-ux' or
+# FB_PROVIDER should be set to 'con-ux', 'proxygon', 'l4dope' or
 # 'sdl' (for direct framebuffer access)
 [ -n "$FB_PROVIDER" ] || FB_PROVIDER=con-ux
 
 if [ "$FB_PROVIDER" = "proxygon" ]
 then
-    FB_PROVIDER_EXTRA="l4dope-ux"
+    FB_PROVIDER_EXTRA="l4dope"
 fi
 
 if [ "$FB_PROVIDER" = "sdl" ]
@@ -35,10 +35,11 @@ fi
 ${0%/*}/fiasco                 \
 	-m$UXMEM               \
 	-G$UXRES               \
-	-n8 -n10 -n11 -n12     \
+	-n9 -n11 -n12 -n13     \
 	names                  \
 	log                    \
 	"dm_phys --events"     \
+	l4io                   \
 	rtc-ux                 \
         "simple_ts --events"   \
         fuxfprov               \

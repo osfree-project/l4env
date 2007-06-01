@@ -38,7 +38,7 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
 #include "be/BEMsgBuffer.h"
-#include "be/BETrace.h"
+#include "be/Trace.h"
 #include "be/BEClass.h"
 #include "TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
@@ -211,9 +211,8 @@ CL4BECallFunction::WriteUnmarshalling(CBEFile * pFile)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
 	GetName().c_str());
 
-    assert(m_pTrace);
     bool bLocalTrace = false;
-    if (!m_bTraceOn)
+    if (!m_bTraceOn && m_pTrace)
     {
 	m_pTrace->BeforeUnmarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;
@@ -251,20 +250,19 @@ CL4BECallFunction::WriteUnmarshalling(CBEFile * pFile)
 /** \brief writes the ipc call
  *  \param pFile the file to write to
  *
- * This implementation writes the L4 V2 IPC code. In Dresden we use a
- * X0-adaption C-binding to invoke IPC calls with the L4 V2 C calling
- * interface. Therefore can we use this IPC call here.
+ * This implementation writes the L4 V2 IPC code.
  */
 void CL4BECallFunction::WriteIPC(CBEFile* pFile)
 {
-    assert(m_pTrace);
-    m_pTrace->BeforeCall(pFile, this);
+    if (m_pTrace)
+	m_pTrace->BeforeCall(pFile, this);
     
     CBECommunication *pComm = GetCommunication();
     assert(pComm);
     pComm->WriteCall(pFile, this);
 
-    m_pTrace->AfterCall(pFile, this);
+    if (m_pTrace)
+	m_pTrace->AfterCall(pFile, this);
 }
 
 /** \brief calculates the size of the function's parameters

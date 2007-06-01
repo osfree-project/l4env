@@ -101,6 +101,13 @@
 	  STR(ins), (cycles+10*LOOPS)/(20*LOOPS));	\
     } while (0)
 
+static inline int get_iopl(void)
+{
+  unsigned long e;
+  asm volatile("pushf; pop %0" : "=rm"(e));
+  return (e & 0x3000) >> 12;
+}
+
 long long atomic_ll __attribute__((aligned(512))) = 0;
 
 void
@@ -120,9 +127,14 @@ test_instruction_cycles(int nr)
   test(pushf_pop);
   if (!ux_running)
     {
-      test(cli);
-      test(sti);
-      test(clisti);
+      if (get_iopl() == 3)
+        {
+	  test(cli);
+	  test(sti);
+	  test(clisti);
+	}
+      else
+	printf("   Skipping CLI/STI tests because not running with IOPL3\n");
     }
   test(cpuid);
   test(rdtsc);

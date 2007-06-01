@@ -163,9 +163,8 @@ overlay_map_screen_component(CORBA_Object _dice_corba_obj,
 
 	/* convert dataspace id to ds_ident outstring */
 	*ds_ident = retbuf;
-	sprintf(retbuf, "t_id=0x%08lX,%08lX ds_id=0x%08x size=0x%08x",
-	        scr_ds.manager.lh.low,
-	        scr_ds.manager.lh.high,
+	sprintf(retbuf, "t_id=0x%08x ds_id=0x%08x size=0x%08x",
+	        scr_ds.manager.raw,
 	        scr_ds.id,
 	        scr_width*scr_height*scr_mode/8);
 

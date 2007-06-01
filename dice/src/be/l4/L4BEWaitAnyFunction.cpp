@@ -39,7 +39,7 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BEOperationFunction.h"
 #include "be/BEMsgBuffer.h"
-#include "L4BETrace.h"
+#include "be/Trace.h"
 #include "TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
@@ -140,8 +140,8 @@ CL4BEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
 
     // print trace code before IPC error check to have unmodified values in
     // message buffer
-    assert(m_pTrace);
-    m_pTrace->AfterReplyWait(pFile, this);
+    if (m_pTrace)
+	m_pTrace->AfterReplyWait(pFile, this);
 	
     WriteIPCErrorCheck(pFile); // set IPC exception
 
@@ -207,8 +207,8 @@ CL4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile *pFile)
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     CMsgStructType nType = GetSendDirection();
 
-    assert(m_pTrace);
-    m_pTrace->BeforeReplyWait(pFile, this);
+    if (m_pTrace)
+	m_pTrace->BeforeReplyWait(pFile, this);
 
     CL4BESizes *pSizes = (CL4BESizes*)CCompiler::GetSizes();
     int nShortWords = pSizes->GetMaxShortIPCSize() / 
@@ -447,9 +447,8 @@ CL4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile * pFile)
     }
 
     // if error print it here
-    CL4BETrace *pTrace = dynamic_cast<CL4BETrace*>(m_pTrace);
-    if (pTrace)
-	pTrace->WaitIPCError(pFile, this);
+    if (m_pTrace)
+	m_pTrace->WaitCommError(pFile, this);
 
     // set zero value in opcode in msgbuffer
     CBEMarshaller *pMarshaller = GetMarshaller();
@@ -526,9 +525,8 @@ CL4BEWaitAnyFunction::WriteReleaseMemory(CBEFile *pFile)
  */
 void CL4BEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile)
 {
-    assert (m_pTrace);
     bool bLocalTrace = false;
-    if (!m_bTraceOn)
+    if (!m_bTraceOn && m_pTrace)
     {
 	m_pTrace->BeforeUnmarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;

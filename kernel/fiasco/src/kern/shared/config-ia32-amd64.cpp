@@ -157,3 +157,8 @@ Config::init_arch()
   if (scheduler_mode == SCHED_APIC)
     apic = true;
 }
+
+#ifdef CONFIG_IO_PROT
+#include <feature.h>
+KIP_KERNEL_FEATURE("io_prot");
+#endif

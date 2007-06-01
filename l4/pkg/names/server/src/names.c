@@ -268,8 +268,10 @@ names_query_id_component(CORBA_Object _dice_corba_obj,
   }
 
   if (i == NAMES_MAX_ENTRIES) {
-    if (w == -1)
+    if (w == -1) {
+      *name = 0;
       return 0;
+    }
     /* fall back to first matching weak */
     i = w;
   }

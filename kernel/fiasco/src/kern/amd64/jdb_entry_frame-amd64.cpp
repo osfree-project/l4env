@@ -186,10 +186,8 @@ void
 Jdb_get_cputime_frame::set(L4_uid next, Cpu_time total_us, unsigned short prio)
 {
   _rax = total_us;
-  _rdx = total_us >> 32;
   _rcx = prio;
   _rsi = next.raw(); 
-  _rdi = next.raw() >> 32;
 }
 
 // XXX dst is now only esi
@@ -211,7 +209,6 @@ void
 Jdb_get_cputime_frame::set(L4_uid next, Cpu_time total_us, unsigned short prio)
 {
   _rax = total_us;
-  _rdx = total_us >> 32;
   _rcx = prio;
   _rsi = next.raw();
 }

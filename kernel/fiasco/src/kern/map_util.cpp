@@ -6,6 +6,7 @@ INTERFACE:
 class Mapdb;
 class Io_space;
 class Cap_space;
+class Obj_space;
 
 /** Unmap arguments and results.  Elements can be bit-ORed together. */
 enum Unmap_flags 
@@ -21,13 +22,12 @@ enum Unmap_flags
   Unmap_error = ~ unsigned(Unmap_full),   ///< An error occured while unmapping
 };
 
-IMPLEMENTATION:
-
-#include <cassert>
-
-#include "config.h"
-#include "paging.h"
-#include "warn.h"
+template<typename SPACE>
+class Phys_addr
+{
+public:
+  typedef Address Type;
+};
 
 template< typename SPACE >
 class Map_traits
@@ -37,13 +37,29 @@ public:
   static void constraint(Address &snd_addr, size_t &snd_size,
       Address &rcv_addr, size_t rcv_size, Address hot_spot);
   static bool match(L4_fpage const &from, L4_fpage const &to);
+  static void free_object(typename Phys_addr<SPACE>::Type o);
 };
+
+IMPLEMENTATION:
+
+#include <cassert>
+
+#include "config.h"
+#include "paging.h"
+#include "warn.h"
+
 
 IMPLEMENT template<typename SPACE>
 inline 
 bool 
 Map_traits<SPACE>::match(L4_fpage const &, L4_fpage const &)
 { return false; }
+  
+IMPLEMENT template<typename SPACE>
+inline
+void 
+Map_traits<SPACE>::free_object(typename Phys_addr<SPACE>::Type)
+{}
 
 PUBLIC template<typename SPACE>
 static inline
@@ -149,6 +165,15 @@ Address
 Map_traits<Io_space>::get_addr(L4_fpage const &fp)
 { return fp.is_iopage() ? fp.iopage() : 0; }
 
+//-------------------------------------------------------------------------
+INTERFACE[caps]:
+
+template<>
+class Phys_addr<Obj_space>
+{
+public:
+  typedef Obj_space::Phys_addr Type;
+};
 
 //-------------------------------------------------------------------------
 IMPLEMENTATION [caps]:
@@ -165,6 +190,26 @@ Address
 Map_traits<Cap_space>::get_addr(L4_fpage const &fp)
 { return fp.is_cappage() ? fp.task() : 0; }
 
+IMPLEMENT template<>
+inline
+bool
+Map_traits<Obj_space>::match(L4_fpage const &from, L4_fpage const &to)
+{ return from.is_objpage() && (to.is_objpage() || to.is_all_spaces()); }
+
+IMPLEMENT template<>
+inline
+Address
+Map_traits<Obj_space>::get_addr(L4_fpage const &fp)
+{ return fp.is_objpage() ? fp.obj() : 0; }
+
+IMPLEMENT template<>
+inline
+void 
+Map_traits<Obj_space>::free_object(Phys_addr<Obj_space>::Type o)
+{
+  if (o->no_mappings())
+    delete o;
+}
 
 //-------------------------------------------------------------------------
 IMPLEMENTATION:
@@ -174,8 +219,9 @@ inline
 bool
 Map_traits<Mem_space>::match(L4_fpage const &from, L4_fpage const &to)
 { 
-  return !from.is_cappage() && !from.is_iopage() 
-    && (to.is_all_spaces() || (!to.is_cappage() && !to.is_iopage())) ; 
+  return !from.is_cappage() && !from.is_iopage() && !from.is_objpage()
+    && (to.is_all_spaces() 
+	|| (!to.is_cappage() && !to.is_iopage() && !to.is_objpage()));
 }
 
 IMPLEMENT template<>
@@ -235,6 +281,9 @@ fpage_map(Space *from, L4_fpage fp_from, Space *to,
   if (Map_traits<Cap_space>::match(fp_from, fp_to))
     result.combine(cap_map(from, fp_from, to, fp_to));
   
+  if (Map_traits<Obj_space>::match(fp_from, fp_to))
+    result.combine(obj_map(from, fp_from, to, fp_to, offs));
+
   if (Map_traits<Mem_space>::match(fp_from, fp_to))
     result.combine (mem_map (from, fp_from, to, fp_to, offs));
 
@@ -266,8 +315,11 @@ fpage_unmap (Space *space, L4_fpage fp, bool me_too, unsigned restriction,
   if (fp.is_cappage() || fp.is_all_spaces())
     ret |= cap_fpage_unmap(space, fp, me_too, restriction);
   
+  if (fp.is_objpage() || fp.is_all_spaces())
+    ret |= obj_fpage_unmap(space, fp, me_too, restriction);
+  
   if (! (Config::enable_io_protection && fp.is_iopage())
-      && ! fp.is_cappage())
+      && ! fp.is_cappage() && !fp.is_objpage())
     ret |= mem_fpage_unmap (space, fp, me_too, restriction, flush_mode);
 
   return ret;
@@ -337,6 +389,7 @@ map (MAPDB* mapdb,
       // receiver address spaces.
 
       // Sender lookup.
+      // make gcc happy, initialized later anyway
       typename SPACE::Phys_addr s_phys = 0;
       Address s_size = 0;
       unsigned s_attribs;
@@ -476,6 +529,13 @@ map (MAPDB* mapdb,
 	    }
 	}
 
+      if (EXPECT_FALSE(!to->is_mappable(rcv_addr, i_size)))
+        {
+	  if (EXPECT_TRUE(!!sender_mapping))
+	    mapdb->free(mapdb_frame);
+	  continue;
+	}
+
       i_attribs &= ~attrib_del;
       i_attribs |= attrib_add;
 
@@ -574,8 +634,9 @@ unmap (MAPDB* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
   assert (! (me_too && restriction));
 
   unsigned flushed_rights = 0;
-  Address end = start + size;  
+  Address end = start + size;
 
+  // make gcc happy, initialized later anyway
   typename SPACE::Phys_addr phys = 0;
   Address phys_size = 0;
   Address page_address;
@@ -672,7 +733,7 @@ unmap (MAPDB* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
 	   m;
 	   ++m)
 	{
-	  SPACE* child_space;
+	  SPACE* child_space = 0;
 	  check (Space::lookup_space (m->space(), &child_space));
 	  
 	  page_rights |= 
@@ -698,6 +759,9 @@ unmap (MAPDB* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
 		     restriction, address, end);
 
       mapdb->free(mapdb_frame);
+
+      if (full_flush)
+	Map_traits<SPACE>::free_object(phys);
     }
 
   if (need_tlb_flush)
@@ -712,7 +776,7 @@ unmap (MAPDB* mapdb, SPACE* space, unsigned space_id, unsigned restriction,
 }
 
 
-IMPLEMENTATION[!io]:
+IMPLEMENTATION[!io || ux]:
 
 // Empty dummy functions when I/O protection is disabled
 
@@ -742,9 +806,25 @@ cap_map(Space *, L4_fpage const &, Space *, L4_fpage const &)
   return Ipc_err(0);
 }
 
+
+inline
+Ipc_err
+obj_map(Space *, L4_fpage const &, Space *, L4_fpage const &, unsigned long)
+{
+  return Ipc_err(0);
+}
+
 inline
 unsigned
 cap_fpage_unmap(Space * /*space*/, L4_fpage const &/*fp*/, bool /*me_too*/, 
+		unsigned /*restriction*/)
+{
+  return 0;
+}
+
+inline
+unsigned
+obj_fpage_unmap(Space * /*space*/, L4_fpage const &/*fp*/, bool /*me_too*/, 
 		unsigned /*restriction*/)
 {
   return 0;

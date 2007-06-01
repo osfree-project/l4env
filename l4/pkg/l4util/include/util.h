@@ -11,10 +11,9 @@ EXTERN_C_BEGIN
  * \param mus   time in microseconds. Special cases:
  *              - 0 - > timeout 0
  *              - -1 -> timeout NEVER
- * \param to_m  contains l4-mantissa after return
- * \param to_e  contains l4-exponent after return
+ * \return the corresponding l4_timeout value
  */
-int l4util_micros2l4to(int mus, int *to_m, int *to_e);
+l4_timeout_s l4util_micros2l4to(int mus);
 
 /** Calculate l4 timeouts
  * \param to_m  contains l4-mantissa

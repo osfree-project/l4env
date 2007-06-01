@@ -16,33 +16,7 @@
 #include <l4/sys/ipc.h>
 
 L4_INLINE int
-l4_rt_generic(l4_threadid_t dest, l4_sched_param_t param)
-{
-  unsigned dummy;
-  int ret;
-
-  __asm__ __volatile__(
-	  "pushl %%ebp		\n\t"	/* save ebp, no memory references
-					   ("m") after this point */
-	  L4_SYSCALL(thread_schedule)
-	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references
-					   ("m") before this point */
-	 :
-	  "=a" (ret),
-	  "=S" (dummy),
-	  "=D" (dummy)
-	 :
-	  "a" (param),
-	  "S" (dest.lh.low),
-	  "D" (dest.lh.high)
-	 :
-	  "ebx", "ecx", "edx"
-	 );
-  return ret;
-}
-
-L4_INLINE int
-l4_rt_generic_clock(l4_threadid_t dest, l4_sched_param_t param,
+l4_rt_generic(l4_threadid_t dest, l4_sched_param_t param,
 		    l4_kernel_clock_t clock)
 {
   unsigned dummy;
@@ -58,19 +32,18 @@ l4_rt_generic_clock(l4_threadid_t dest, l4_sched_param_t param,
 	  "=a" (ret),
 	  "=c" (dummy),
 	  "=d" (dummy),
-	  "=S" (dummy),
-	  "=D" (dummy)
+	  "=S" (dummy)
 	 :
 	  "a" (param),
 	  "c" ((l4_uint32_t)clock),
 	  "d" ((l4_uint32_t)(clock>>32)),
-	  "S" (dest.lh.low),
-	  "D" (dest.lh.high)
+	  "S" (dest.raw)
 	 :
-	  "ebx"
+	  "ebx", "edi"
 	 );
   return ret;
 }
+
 
 /* Erm, the user shall be allowed to pass "normal" time parameters, not
  * the mantissa/exponent coding. Thus, make a reference to the external
@@ -78,35 +51,25 @@ l4_rt_generic_clock(l4_threadid_t dest, l4_sched_param_t param,
 L4_INLINE int
 l4_rt_add_timeslice(l4_threadid_t dest, int prio, int time)
 {
-  extern int l4util_micros2l4to(int,int*,int*);
   l4_sched_param_t sched = {sp:{prio:prio, small:0,
 				state:L4_RT_ADD_TIMESLICE}};
-  int exp, man;
-
-  l4util_micros2l4to(time, &man, &exp);
-  sched.sp.time_man = man;
-  sched.sp.time_exp = exp;
-  return l4_rt_generic(dest, sched);
+  l4_sched_param_set_time(time, &sched);
+  return l4_rt_generic(dest, sched, 0);
 }
 
 L4_INLINE int
 l4_rt_change_timeslice(l4_threadid_t dest, int id, int prio, int time)
 {
-  extern int l4util_micros2l4to(int,int*,int*);
   l4_sched_param_t sched = {sp:{prio:prio, small:id,
 				state:L4_RT_CHANGE_TIMESLICE}};
-  int exp, man;
-
-  l4util_micros2l4to(time, &man, &exp);
-  sched.sp.time_man = man;
-  sched.sp.time_exp = exp;
-  return l4_rt_generic(dest, sched);
+  l4_sched_param_set_time(time, &sched);
+  return l4_rt_generic(dest, sched, 0);
 }
 
 L4_INLINE int
 l4_rt_begin_strictly_periodic (l4_threadid_t dest, l4_kernel_clock_t clock)
 {
-  return l4_rt_generic_clock(dest,
+  return l4_rt_generic(dest,
 			     (l4_sched_param_t){
 			       sp:{ prio:0, small:0,
 				    state:L4_RT_BEGIN_PERIODIC}},
@@ -116,7 +79,7 @@ l4_rt_begin_strictly_periodic (l4_threadid_t dest, l4_kernel_clock_t clock)
 L4_INLINE int
 l4_rt_begin_minimal_periodic (l4_threadid_t dest, l4_kernel_clock_t clock)
 {
-  return l4_rt_generic_clock(dest,
+  return l4_rt_generic(dest,
 			     (l4_sched_param_t){
 			       sp:{prio:0, small: 0,
 				   state:L4_RT_BEGIN_PERIODIC_NS}},
@@ -129,7 +92,7 @@ l4_rt_end_periodic(l4_threadid_t dest)
   return l4_rt_generic(dest,
 		       (l4_sched_param_t){
 			 sp:{prio:0, small:0,
-			     state:L4_RT_END_PERIODIC}});
+			     state:L4_RT_END_PERIODIC}}, 0);
 }
 
 L4_INLINE int
@@ -138,13 +101,13 @@ l4_rt_remove(l4_threadid_t dest)
   return l4_rt_generic(dest,
 		       (l4_sched_param_t){
 			 sp:{prio:0, small:0,
-			     state:L4_RT_REM_TIMESLICES}});
+			     state:L4_RT_REM_TIMESLICES}}, 0);
 }
 
 L4_INLINE void
 l4_rt_set_period(l4_threadid_t dest, l4_kernel_clock_t clock)
 {
-  l4_rt_generic_clock(dest,
+  l4_rt_generic(dest,
 		      (l4_sched_param_t){
 			sp:{prio:0, small:0,
 			    state:L4_RT_SET_PERIOD}},
@@ -184,7 +147,7 @@ l4_rt_next_period(void)
   l4_msgdope_t result;
   return l4_ipc_receive(l4_next_period_id(L4_NIL_ID),
 			L4_IPC_SHORT_MSG,
-			&dummy, &dummy, L4_IPC_TIMEOUT(0,1,0,1,0,0),
+			&dummy, &dummy, L4_IPC_BOTH_TIMEOUT_0,
 			&result);
 }
 

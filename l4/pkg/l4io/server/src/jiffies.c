@@ -59,66 +59,16 @@ static int __map_kernel_info_page(void)
   return 0;
 }
 
-#if L4SCSI_JIFFIES
 /** Jiffies thread loop.
  * \ingroup grp_misc
  *
  * \param  data         dummy data pointer (unused)
  *
  * This thread implements the LINUX jiffies counter.
- * It uses a timeouted \c l4_ipc_receive() on \c L4_NIL_ID.
+ * It sleeps and tries to correct the period using the L4 kernel clock.
  *
- * (another implementation can be selected by defining \c L4_SCSI_JIFFIES=0 in
- * jiffies.h)
- *
- * \krishna Lars' L4SCSI implementation
- */
-static void jiffies_thread(void *data)
-{
-  int ms, to_e, to_m, ret;
-  int error;
-  l4_umword_t dummy;
-  l4_msgdope_t result;
-
-  ms = 1000 / IOJIFFIES_HZ;
-
-  ret = l4util_micros2l4to(ms * 1000, &to_m, &to_e);
-  if (ret)
-    Panic("failed to calculate timeout!\n");
-
-  /* I'm up */
-  l4thread_started();
-
-  /* jiffie loop */
-  for (;;)
-    {
-      error = l4_ipc_sleep(L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0));
-
-      if (error != L4_IPC_RETIMEOUT)
-        Panic("while receiving from NIL (IPC 0x%02x)", error);
-
-      io_info.jiffies++;
-      io_info.xtime.tv_sec = io_info.jiffies / HZ;
-    }
-
-  /* that schould never happen */
-  Panic("left jiffies loop!");
-}
-#else
-/** Jiffies thread loop.
- * \ingroup grp_misc
- *
- * \param  data         dummy data pointer (unused)
- *
- * This thread implements the LINUX jiffies counter.
- * It \c l4_sleep()s and tries to correct the period using the L4 kernel
- * clock.
- *
- * (another implementation can be selected by defining \c L4_SCSI_JIFFIES=1 in
- * jiffies.h)
- *
- * \lars test for (wait < 0) to increment jiffies by 2 or more if \c
- * JIFFIE_PERIOD is too short
+ * XXX test for (wait < 0) to increment jiffies by 2 or more if JIFFIE_PERIOD
+ * is too short
  */
 static void jiffies_thread(void *data)
 {
@@ -149,7 +99,6 @@ static void jiffies_thread(void *data)
   /* that should never happen */
   Panic("left jiffies loop!\n");
 }
-#endif
 
 /** Jiffies thread initialization.
  * \ingroup grp_misc

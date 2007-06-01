@@ -66,4 +66,11 @@ l4_is_io_page_fault(unsigned long address)
   return (address & 0xfffffffff0000f00UL) == 0xfffffffff0000000UL;
 }
 
+L4_INLINE l4_fpage_t
+l4_iofpage(unsigned port, unsigned int size,
+           unsigned char grant)
+{
+  return ((l4_fpage_t){iofp:{grant, 0, size, 0, port, 0xfffffffff}});
+}
+
 #endif

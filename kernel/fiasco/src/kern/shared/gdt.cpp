@@ -32,9 +32,9 @@ public:
       gdt_tss_dbf         = GDT_TSS_DBF,
       gdt_utcb            = GDT_UTCB,
       gdt_ldt             = GDT_LDT,
-      gdt_tls1            = GDT_TLS1,
-      gdt_tls2            = GDT_TLS2,
-      gdt_tls3            = GDT_TLS3,
+      gdt_user_entry1     = GDT_USER_ENTRY1,
+      gdt_user_entry2     = GDT_USER_ENTRY2,
+      gdt_user_entry3     = GDT_USER_ENTRY3,
       gdt_max             = GDT_MAX,
     };
 

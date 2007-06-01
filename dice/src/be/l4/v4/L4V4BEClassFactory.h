@@ -58,7 +58,6 @@ public:
     virtual CBEWaitFunction* GetNewWaitFunction();
     virtual CBEWaitFunction* GetNewRcvFunction();
     virtual CBEMsgBuffer* GetNewMessageBuffer();
-    virtual CBETrace* GetNewTrace();
     virtual CBEMarshaller* GetNewMarshaller();
     virtual CBESrvLoopFunction* GetNewSrvLoopFunction();
 };

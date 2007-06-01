@@ -58,21 +58,6 @@ extern unsigned long stack_high;
 l4_threadid_t l4rm_task_pager_id;
 
 /*****************************************************************************
- *** helpers
- *****************************************************************************/
-
-/*****************************************************************************/
-/**
- * \brief Determine task pager id
- */
-/*****************************************************************************/ 
-static void
-__get_pager(void)
-{
-  l4rm_task_pager_id = l4_thread_ex_regs_pager(l4rm_service_id);
-}
-
-/*****************************************************************************
  *** L4RM client API functions
  *****************************************************************************/
 
@@ -100,7 +85,7 @@ l4rm_init(int have_l4env, l4rm_vm_range_t used[], int num_used)
       l4rm_service_id = l4_myself();
 
       /* get my pager id */
-      __get_pager();
+      l4rm_task_pager_id = l4_thread_ex_regs_pager(l4rm_service_id);
 
       /* setup descriptor heap */
       ret = l4rm_heap_init(have_l4env, used,num_used);
@@ -117,7 +102,7 @@ l4rm_init(int have_l4env, l4rm_vm_range_t used[], int num_used)
 	  Panic("L4RM: setup region list failed!");
 	  return -1;
 	}
-      
+
       /* region tree */
       ret = avlt_init();
       if (ret < 0)

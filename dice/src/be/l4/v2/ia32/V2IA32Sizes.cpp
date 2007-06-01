@@ -48,14 +48,6 @@ int CL4V2IA32BESizes::GetSizeOfType(int nFEType, int nFESize)
     int nSize = 0;
     switch (nFEType)
     {
-    case TYPE_RCV_FLEXPAGE:
-    case TYPE_MSGDOPE_SEND:
-    case TYPE_MSGDOPE_SIZE:
-        nSize = 4; // l4_umword_t
-        break;
-    case TYPE_REFSTRING:
-        nSize = 16; // 4 * l4_umword_t
-        break;
     case TYPE_MWORD:
 	nSize = 4;
 	break;

@@ -19,9 +19,9 @@
 #include "widget.h"
 
 struct redraw_services {
-	void  (*draw_area)       (WIDGET *win,s32 x1,s32 y1,s32 x2,s32 y2);
+	void  (*draw_area)       (WIDGET *win, int x1, int y1, int x2, int y2);
 	void  (*draw_widget)     (WIDGET *wid);
-	void  (*draw_widgetarea) (WIDGET *wid,s32 x1,s32 y1,s32 x2,s32 y2);
+	void  (*draw_widgetarea) (WIDGET *wid, int x1, int y1, int x2, int y2);
 	s32   (*exec_redraw)     (s32 avail_time);
 	s32   (*process_pixels)  (s32 max_pixels);
 	u32   (*get_noque)       (void);

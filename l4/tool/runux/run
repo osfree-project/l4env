@@ -10,8 +10,9 @@ fiasco \
 	-l log					\
 	-l events				\
 	-l dm_phys\ --events			\
+	-l l4io\ --events -n9                   \
 	-l simple_ts\ --events			\
-	-l fuxfprov -n10			\
-	-l con-ux\ --events -n11		\
+	-l fuxfprov -n11			\
+	-l con-ux\ --events -n12		\
 	-l loader" --events $L4PATH/run"	\
 	"$@"

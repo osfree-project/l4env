@@ -6,6 +6,9 @@ INTERFACE:
 
 #include "types.h"
 
+class Utcb;
+typedef Address Local_id;
+
 /// Type for task numbers.
 typedef Unsigned32 Task_num;
 
@@ -27,18 +30,6 @@ typedef Unsigned32 GThread_num;
  */
 class L4_uid
 {
-private:
-  /// Bits used for absolute timeouts and RT scheduling.
-  enum
-  {
-    Abs_rcv_mask	= 0x1,
-    Abs_snd_mask	= 0x2,
-    Abs_rcv_clock	= 0x4,
-    Abs_snd_clock	= 0x8,
-    Next_period		= 0x10,
-    Preemption_id	= 0x20
-  };
-
 public:
   /// The standard IDs.
   enum
@@ -55,7 +46,7 @@ public:
   /**
    * Create an UID from an virtual address.
    */
-  L4_uid (Address addr, Address tcb_base, Address tcb_size);
+  L4_uid (void *addr, Address tcb_base, Address tcb_size);
 
   /**
    * Extract the version part of the UID.
@@ -101,22 +92,12 @@ public:
    */
   Mword irq() const;
 
-  /**
-   * Return preemption ID corresponding to ID.
-   */
-  L4_uid preemption_id() const;
-
   /// Test for equality.
-  bool operator == ( L4_uid o ) const;
+  bool operator == ( L4_uid const &o ) const;
 
   /// Test for inequality.
-  bool operator != ( L4_uid o ) const
+  bool operator != ( L4_uid const &o ) const
   { return ! operator == (o); }
-
-  /**
-   * Create a UID for the given task and thread.
-   */
-  L4_uid (Task_num task, LThread_num lthread);
 
   /**
    * Extract the task number.
@@ -128,50 +109,10 @@ public:
    */
   void task (Task_num);
 
-  /**
-   * Extract the chief ID.
-   */
-  Task_num chief() const;
-
-  /*
-   * Set the chief ID.
-   */
-  void chief (Task_num);
-
   /*
    * Get the task ID, the local thread-number is set to 0.
    */
   L4_uid task_id() const;
-
-  /**
-   * Check if receive timeout is absolute.
-   */
-  bool abs_rcv_timeout() const;
-
-  /**
-   * Check if send timeout is absolute.
-   */
-  bool abs_snd_timeout() const;
-
-  /**
-   * Check if receive timeout clock bit set.
-   */
-  bool abs_rcv_clock() const;
-
-  /**
-   * Check if send timeout clock bit set.
-   */
-  bool abs_snd_clock() const;
-
-  /**
-   * Check if next_period bit is set.
-   */
-  bool next_period() const;
-
-  /**
-   * Check if ID is a preemption ID.
-   */
-  bool is_preemption() const;
 
   /**
    * Get the maximum number of threads per task.
@@ -856,6 +797,29 @@ public:
 };
 
 
+class L4_msg_tag
+{
+public:
+  enum Flags
+  {
+    Transfer_fpu = 0x8000,
+  };
+  
+  enum Protocol
+  {
+    Label_irq = -1L,
+    Label_page_fault = -2L,
+    Label_preemption = -3L,
+    Label_sys_exception = -4L,
+    Label_exception  = -5L,
+    Label_sigma0 = -6L,
+    Label_io_page_fault = -8L,
+    Label_cap_fault = -9L,
+  };
+private:
+  Mword _tag;
+};
+
 /**
  * L4 timeouts data type.
  */
@@ -869,164 +833,94 @@ public:
 
   /**
    * Create the specified timeout.
-   * @param snd_man mantissa of the send timeout.
-   * @param snd_exp exponent of the send timeout
-   *        (snd_exp=0: infinite timeout,
-   *        snd_exp>0: t=4^(15-snd_exp)*snd_man,
-   *        snd_man=0 & snd_exp!=0: t=0).
-   * @param rcv_man mantissa of the receive timeout.
-   * @param rcv_exp exponent of the receive timeout (see snd_exp).
-   * @param snd_pflt send page fault timeout (snd_pflt=0: infinite timeout,
-   *        0<snd_pflt<15: t=4^(15-snd_pflt), snd_pflt=15: t=0).
-   * @param rcv_pflt receive page fault timeout (see snd_pflt).
+   * @param man mantissa of the send timeout.
+   * @param exp exponent of the send timeout
+   *        (exp=0: infinite timeout,
+   *        exp>0: t=2^(exp)*man,
+   *        man=0 & exp!=0: t=0).
    */
-  L4_timeout (Mword snd_man, Mword snd_exp,
-	      Mword rcv_man, Mword rcv_exp,
-	      Mword snd_pflt, Mword rcv_pflt);
+  L4_timeout (Mword man, Mword exp);
+  L4_timeout (Mword man, Mword exp, bool clock);
 
-  /**
-   * Get the receive page fault timeout.
-   * @return The exponent of the receive page fault timeout (see L4_timeout()).
-   */
-  Mword rcv_pfault() const;
-
-  /**
-   * Set the receive page fault timeout.
-   * @param pr the exponent of the receive page fault timeout
-   *        (see L4_timeout()).
-   */
-  void rcv_pfault (Mword pr);
-
-  /**
-   * Get the send page fault timeout.
-   * @return The exponent of the send page fault timeout (see L4_timeout()).
-   */
-  Mword snd_pfault() const;
-
-  /**
-   * Set the send page fault timeout.
-   * @param ps the exponent of the send page fault timeout (see L4_timeout()).
-   */
-  void snd_pfault (Mword ps);
   /**
    * Create a timeout from it's binary representation.
    * @param t the binary timeout value.
    */
-  explicit L4_timeout( Mword t = 0 );
+  L4_timeout( unsigned short t = 0 );
 
   /**
    * Get the binary representation of the timeout.
    * @return The timeout as binary representation.
    */
-  Mword raw();
+  unsigned short raw() const;
 
   /**
    * Get the receive exponent.
    * @return The exponent of the receive timeout.
    * @see rcv_man()
    */
-  Mword rcv_exp() const;
+  Mword exp() const;
 
   /**
    * Set the exponent of the receive timeout.
    * @param er the exponent for the receive timeout (see L4_timeout()).
    * @see rcv_man()
    */
-  void rcv_exp( Mword er );
+  void exp( Mword er );
 
   /**
    * Get the receive timout's mantissa.
    * @return The mantissa of the receive timeout (see L4_timeout()).
    * @see rcv_exp()
    */
-  Mword rcv_man() const;
+  Mword man() const;
 
   /**
    * Set the mantissa of the receive timeout.
    * @param mr the mantissa of the recieve timeout (see L4_timeout()).
    * @see rcv_exp()
    */
-  void rcv_man( Mword mr );
-
-  /**
-   * Get tge send timeout exponent.
-   * @return The exponent of the send timout (see L4_timeout()).
-   * @see snd_man()
-   */
-  Mword snd_exp() const;
-
-  /**
-   * Set the exponent of the send timeout.
-   * @param es the exponent of the send timeout (see L4_timeout()).
-   * @see snd_man()
-   */
-  void snd_exp( Mword es );
-
- /**
-   * Get the send timout's mantissa.
-   * @return The mantissa of the send timeout (see L4_timeout()).
-   * @see snd_exp()
-   */
-  Mword snd_man() const;
-
-  /**
-   * Set the mantissa of the send timeout.
-   * @param ms the mantissa of the send timeout (see L4_timeout()).
-   * @see snd_exp()
-   */
-  void snd_man( Mword ms );
+  void man( Mword mr );
 
   /**
    * Get the relative receive timeout in microseconds.
    * @param clock Current value of kernel clock
    * @return The receive timeout in micro seconds.
    */
-  Unsigned64 rcv_microsecs_rel (Unsigned64 clock) const;
-
-  /**
-   * Get the relative send timeout in microseconds.
-   * @param clock Current value of kernel clock
-   * @return The send timeout in micro seconds.
-   */
-  Unsigned64 snd_microsecs_rel (Unsigned64 clock) const;
+  Unsigned64 microsecs_rel (Unsigned64 clock) const;
 
   /**
    * Get the absolute receive timeout in microseconds.
    * @param clock Current value of kernel clock
    * @return The receive timeout in micro seconds.
    */
-  Unsigned64 rcv_microsecs_abs (Unsigned64 clock, bool c) const;
-
-  /**
-   * Get the absolute send timeout in microseconds.
-   * @param clock Current value of kernel clock
-   * @return The send timeout in micro seconds.
-   */
-  Unsigned64 snd_microsecs_abs (Unsigned64 clock, bool c) const;
+  Unsigned64 microsecs_abs (Unsigned64 clock) const;
 
 private:
   enum
     {
-      Rcv_exp_mask     = 0xf,
-      Rcv_exp_shift    = 0,
+      Clock_mask   = 0x0400,
+      Abs_mask     = 0x8000,
 
-      Snd_exp_mask     = 0xf0,
-      Snd_exp_shift    = 4,
+      Exp_mask     = 0x7c00,
+      Exp_shift    = 10,
 
-      Rcv_pfault_mask  = 0xf00,
-      Rcv_pfault_shift = 8,
-
-      Snd_pfault_mask  = 0xf000,
-      Snd_pfault_shift = 12,
-
-      Snd_man_mask     = 0xff0000,
-      Snd_man_shift    = 16,
-
-      Rcv_man_mask     = 0xff000000,
-      Rcv_man_shift    = 24,
+      Man_mask     = 0x3ff,
+      Man_shift    = 0,
     };
 
-  Mword _t;
+  unsigned short _t;
+} __attribute__((packed));
+
+struct L4_timeout_pair
+{
+  L4_timeout rcv;
+  L4_timeout snd;
+
+  L4_timeout_pair(L4_timeout const &rcv, L4_timeout const &snd)
+    : rcv(rcv), snd(snd) {}
+
+  L4_timeout_pair(unsigned long v) : rcv(v), snd(v >> 16) {}
 };
 
 
@@ -1203,8 +1097,9 @@ class L4_exception_ipc
 public:
   enum
   {
-    Exception_ipc_cookie_1 = Mword(-0x5),
-    Exception_ipc_cookie_2 = Mword(-0x21504151),
+    //Exception_ipc_cookie_1 = Mword(-0x5),
+    //Exception_ipc_cookie_2 = Mword(-0x21504151),
+    Protocol = -5
   };
 };
 
@@ -1226,40 +1121,61 @@ private:
 
 
 //----------------------------------------------------------------------------
-INTERFACE [v2]:
+INTERFACE [ia32 || ux]:
+
+EXTENSION class L4_exception_ipc
+{
+public:
+  enum { Msg_size = 16 };
+};
+
+
+//----------------------------------------------------------------------------
+INTERFACE [arm]:
+
+EXTENSION class L4_exception_ipc
+{
+public:
+  enum { Msg_size = 20 };
+};
+
+
+//----------------------------------------------------------------------------
+INTERFACE [amd64]:
+
+EXTENSION class L4_exception_ipc
+{
+public:
+  enum { Msg_size = 23 };
+};
+
+
+//----------------------------------------------------------------------------
+INTERFACE [v2 || x0]:
 
 EXTENSION class L4_uid
 {
 private:
   enum
     {
-      Irq_mask           = 0x00000000000000ffULL,
-      Low_mask           = 0x00000000ffffffffULL,
+      Irq_mask           = 0x000000ffUL,
+      Low_mask           = 0xffffffffUL,
       Nil_mask           = Low_mask,
-      Version_low_mask   = 0x00000000000003ffULL,
+      Version_low_mask   = 0x000003ffUL,
       Version_low_shift  = 0,
       Version_low_size   = 10,
-      Lthread_mask       = 0x000000000001fc00ULL,
+      Lthread_mask       = 0x0001fc00UL,
       Lthread_shift      = Version_low_shift + Version_low_size,
       Lthread_size       = 7,
-      Task_mask          = 0x000000000ffe0000ULL,
+      Task_mask          = 0x0ffe0000UL,
       Task_shift         = Lthread_shift + Lthread_size,
       Task_size          = 11,
-      Version_high_mask  = 0x00000000f0000000ULL,
+      Version_high_mask  = 0xf0000000UL,
       Version_high_shift = Task_shift + Task_size,
       Version_high_size  = 4,
-      Site_mask          = 0x0001ffff00000000ULL,
-      Site_shift         = Version_high_shift + Version_high_size,
-      Site_size          = 17,
-      Chief_mask         = 0x0ffe000000000000ULL,
-      Chief_shift        = Site_shift + Site_size,
-      Chief_size         = 11,
-      Nest_mask          = 0xf000000000000000ULL,
-      Nest_shift         = Chief_shift + Chief_size,
-      Nest_size          = 4,
     };
 
-  Unsigned64 _raw;
+  Unsigned32 _raw;
 
 public:
   /// must be constant since we build the spaces array from it
@@ -1272,165 +1188,120 @@ public:
   /**
    * Extract the raw 64Bit representation.
    */
-  Unsigned64 raw() const;
+  Unsigned32 raw() const;
 
   /**
    * Create an L4-V2 UID from the raw 64Bit representation.
    */
-  L4_uid (Unsigned64);
+  L4_uid (Unsigned32);
 
   /**
    * Create an L4-V2 UID.
    */
-  L4_uid (Task_num task, LThread_num lthread, unsigned site,
-          Task_num chief, unsigned nest = 0, unsigned version = 0);
-
-  /**
-   * Extract the V2-specific site ID.
-   */
-  unsigned site() const;
-
-  /**
-   * Set the V2-specific site ID.
-   */
-  void site (unsigned);
-
-  /**
-   * Extract the V2-specific Clans & Chiefs nesting level.
-   */
-  unsigned nest() const;
-
-  /**
-   * Set the V2-specific Clans & Chiefs nesting level.
-   */
-  void nest (unsigned);
+  L4_uid (Task_num task, LThread_num lthread, unsigned version = 0);
 };
-
-//----------------------------------------------------------------------------
-INTERFACE[x0]:
-
-EXTENSION class L4_uid
-{
-private:
-  enum
-    {
-      Irq_mask           = 0x000000ff,
-      Low_mask           = 0xffffffff,
-      Nil_mask           = 0x00ffffff,
-      Version_mask       = 0x000003ff,
-      Version_shift      = 0,
-      Version_size       = 10,
-      Lthread_mask       = 0x0000fc00,
-      Lthread_shift      = Version_shift + Version_size,
-      Lthread_size       = 6,
-      Task_mask          = 0x00ff0000,
-      Task_shift         = Lthread_shift + Lthread_size,
-      Task_size          = 8,
-      Chief_mask         = 0xff000000,
-      Chief_shift        = Task_shift + Task_size,
-      Chief_size         = 8,
-    };
-
-  Unsigned32 _raw;
-
-public:
-  /// must be constant since we build the spaces array from it
-  enum
-  {
-    Max_tasks          = 1 << Task_size,
-    Max_threads_per_task = 1 << Lthread_size,
-  };
-
-  /**
-   * Extract the raw 32Bit representation.
-   */
-  Unsigned32 raw() const;
-
-  /**
-   * Create an L4-X0 UID from the raw 32Bit representation.
-   */
-  L4_uid (Unsigned32);
-
-  /**
-   * Create an L4-X0 UID.
-   */
-  L4_uid (Task_num task, LThread_num lthread, unsigned site,
-          Task_num chief, unsigned nest = 0, unsigned version = 0);
-};
-
-
-//----------------------------------------------------------------------------
-INTERFACE [!utcb]:
-
-/**
- * Dummy type, needed to hold code in Thread generic
- */
-typedef void Utcb;
-typedef L4_uid Local_id;
-
-
-//----------------------------------------------------------------------------
-INTERFACE [utcb]:
-
-class Utcb;
-typedef Address Local_id;
 
 
 //----------------------------------------------------------------------------
 IMPLEMENTATION:
 
+PUBLIC inline
+L4_msg_tag::L4_msg_tag(unsigned words, unsigned items, unsigned long flags,
+    unsigned long proto)
+  : _tag((words & 0x3f) | ((items << 6) & 0x3f) | flags | (proto << 16))
+{}
+
+PUBLIC inline
+L4_msg_tag::L4_msg_tag(Mword raw)
+  : _tag(raw)
+{}
+
+
+PUBLIC inline
+unsigned long 
+L4_msg_tag::raw() const
+{ return _tag; }
+
+PUBLIC inline
+unsigned L4_msg_tag::words() const
+{ return _tag & 63; }
+
+PUBLIC inline
+bool L4_msg_tag::transfer_fpu() const
+{ return _tag & Transfer_fpu; }
+
 //
 // L4_timeout implementation
 //
 
-IMPLEMENT inline L4_timeout::L4_timeout (Mword t)
+IMPLEMENT inline L4_timeout::L4_timeout (unsigned short t)
   : _t(t)
 {}
 
-IMPLEMENT inline Mword L4_timeout::raw()
+IMPLEMENT inline unsigned short L4_timeout::raw() const
 { return _t; }
 
-IMPLEMENT inline
-Unsigned64
-L4_timeout::rcv_microsecs_rel (Unsigned64 clock) const
-{ return clock + ((Unsigned64) (rcv_man()) << ((15 - rcv_exp()) << 1)); }
+PUBLIC inline
+Mword L4_timeout::abs_exp() const
+{ return (_t >> 11) & 0xf; }
+
+PUBLIC inline
+bool L4_timeout::abs_clock() const
+{ return _t & Clock_mask; }
 
 IMPLEMENT inline
 Unsigned64
-L4_timeout::snd_microsecs_rel (Unsigned64 clock) const
-{ return clock + ((Unsigned64) (snd_man()) << ((15 - snd_exp()) << 1)); }
-
-IMPLEMENT inline
-Unsigned64
-L4_timeout::rcv_microsecs_abs (Unsigned64 clock, bool c) const
+L4_timeout::microsecs_rel (Unsigned64 clock) const
 {
-  Mword e = 15 - rcv_exp();
-  Unsigned64 timeout = clock & ~((1 << e + 8) - 1) | rcv_man() << e;
-
-  if (((clock >> e + 8) & 1) != c)
-    timeout += 1 << e + 8;
-
-  if (timeout > clock + (1 << e + 8))
-    timeout -= 1 << e + 9;
-
-  return timeout;
+  if (man() == 0)
+    return 0;
+  else
+   return clock + ((Unsigned64)man() << exp()); 
 }
 
 IMPLEMENT inline
 Unsigned64
-L4_timeout::snd_microsecs_abs (Unsigned64 clock, bool c) const
+L4_timeout::microsecs_abs (Unsigned64 clock) const
 {
-  Mword e = 15 - snd_exp();
-  Unsigned64 timeout = clock & ~((1 << e + 8) - 1) | snd_man() << e;
+  Mword e = abs_exp();
+  Unsigned64 timeout = clock & ~((1 << e + 10) - 1) | man() << e;
 
-  if (((clock >> e + 8) & 1) != c)
-    timeout += 1 << e + 8;
+  if (((clock >> e + 10) & 1) != abs_clock())
+    timeout += 1 << e + 10;
 
-  if (timeout > clock + (1 << e + 8))
-    timeout -= 1 << e + 9;
+  if (timeout < clock)
+    return 0;
 
   return timeout;
 }
+
+PUBLIC inline
+bool
+L4_timeout::is_absolute() const
+{ return _t & Abs_mask; }
+
+PUBLIC inline
+Unsigned64
+L4_timeout::microsecs (Unsigned64 clock) const
+{ 
+  if (is_absolute())
+    return microsecs_abs(clock);
+  else
+    return microsecs_rel(clock);
+}
+
+PUBLIC inline
+bool L4_timeout::is_never() const
+{ return !_t; }
+
+PUBLIC inline
+bool L4_timeout::is_zero() const
+{ return _t == 0x0400; }
+
+PUBLIC inline
+unsigned short L4_timeout::is_finite() const
+{ return _t; }
+
 
 //
 // L4_sched_param implementation
@@ -1606,52 +1477,29 @@ IMPLEMENT inline void Ipc_err::combine (Ipc_err o)
 //
 
 IMPLEMENT inline
-L4_timeout::L4_timeout (Mword snd_man, Mword snd_exp,
-			Mword rcv_man, Mword rcv_exp,
-			Mword snd_pflt, Mword rcv_pflt)
-          : _t (((snd_man << Snd_man_shift) & Snd_man_mask) |
-                ((snd_exp << Snd_exp_shift) & Snd_exp_mask) |
-                ((rcv_man << Rcv_man_shift) & Rcv_man_mask) |
-                ((rcv_exp << Rcv_exp_shift) & Rcv_exp_mask) |
-                ((rcv_pflt << Rcv_pfault_shift) & Rcv_pfault_mask) |
-                ((snd_pflt << Snd_pfault_shift) & Snd_pfault_mask))
+L4_timeout::L4_timeout (Mword man, Mword exp)
+          : _t (((man & Man_mask) |
+                ((exp << Exp_shift) & Exp_mask)))
 {}
 
-IMPLEMENT inline Mword L4_timeout::rcv_exp() const
-{ return (_t & Rcv_exp_mask) >> Rcv_exp_shift; }
+IMPLEMENT inline
+L4_timeout::L4_timeout (Mword man, Mword exp, bool clock)
+          : _t (((man & Man_mask) |
+                ((exp << (Exp_shift+1)) & Exp_mask) |
+		(clock ? Clock_mask : 0) | Abs_mask))
+{}
 
-IMPLEMENT inline void L4_timeout::rcv_exp (Mword w)
-{ _t = (_t & ~Rcv_exp_mask) | ((w << Rcv_exp_shift) & Rcv_exp_mask); }
+IMPLEMENT inline Mword L4_timeout::exp() const
+{ return (_t & Exp_mask) >> Exp_shift; }
 
-IMPLEMENT inline Mword L4_timeout::snd_exp() const
-{ return (_t & Snd_exp_mask) >> Snd_exp_shift; }
+IMPLEMENT inline void L4_timeout::exp (Mword w)
+{ _t = (_t & ~Exp_mask) | ((w << Exp_shift) & Exp_mask); }
 
-IMPLEMENT inline void L4_timeout::snd_exp (Mword w)
-{ _t = (_t & ~Snd_exp_mask) | ((w << Snd_exp_shift) & Snd_exp_mask); }
+IMPLEMENT inline Mword L4_timeout::man() const
+{ return (_t & Man_mask) >> Man_shift; }
 
-IMPLEMENT inline Mword L4_timeout::rcv_pfault() const
-{ return (_t & Rcv_pfault_mask) >> Rcv_pfault_shift; }
-
-IMPLEMENT inline void L4_timeout::rcv_pfault (Mword w)
-{ _t = (_t & ~Rcv_pfault_mask) | ((w << Rcv_pfault_shift) & Rcv_pfault_mask); }
-
-IMPLEMENT inline Mword L4_timeout::snd_pfault() const
-{ return (_t & Snd_pfault_mask) >> Snd_pfault_shift; }
-
-IMPLEMENT inline void L4_timeout::snd_pfault (Mword w)
-{ _t = (_t & ~Snd_pfault_mask) | ((w << Snd_pfault_shift) & Snd_pfault_mask); }
-
-IMPLEMENT inline Mword L4_timeout::rcv_man() const
-{ return (_t & Rcv_man_mask) >> Rcv_man_shift; }
-
-IMPLEMENT inline void L4_timeout::rcv_man (Mword w)
-{ _t = (_t & ~Rcv_man_mask) | ((w << Rcv_man_shift) & Rcv_man_mask); }
-
-IMPLEMENT inline Mword L4_timeout::snd_man() const
-{ return (_t & Snd_man_mask) >> Snd_man_shift; }
-
-IMPLEMENT inline void L4_timeout::snd_man (Mword w)
-{ _t = (_t & ~Snd_man_mask) | ((w << Snd_man_shift) & Snd_man_mask); }
+IMPLEMENT inline void L4_timeout::man (Mword w)
+{ _t = (_t & ~Man_mask) | ((w << Man_shift) & Man_mask); }
 
 //
 // L4_uid implementation
@@ -1660,37 +1508,10 @@ IMPLEMENT inline void L4_timeout::snd_man (Mword w)
 IMPLEMENT inline L4_uid::L4_uid()
 {}
 
-IMPLEMENT inline bool L4_uid::abs_rcv_timeout() const
-{ return chief() & Abs_rcv_mask; }
-
-IMPLEMENT inline bool L4_uid::abs_snd_timeout() const
-{ return chief() & Abs_snd_mask; }
-
-IMPLEMENT inline bool L4_uid::abs_rcv_clock() const
-{ return chief() & Abs_rcv_clock; }
-
-IMPLEMENT inline bool L4_uid::abs_snd_clock() const
-{ return chief() & Abs_snd_clock; }
-
-IMPLEMENT inline bool L4_uid::next_period() const
-{ return chief() & Next_period; }
-
-IMPLEMENT inline bool L4_uid::is_preemption() const
-{ return chief() & Preemption_id; }
-
-IMPLEMENT inline
-L4_uid
-L4_uid::preemption_id() const
-{
-  L4_uid id (_raw);
-  id.chief (Preemption_id);
-  return id;
-}
-
 IMPLEMENT inline unsigned L4_uid::threads_per_task()
 { return 1 << Lthread_size; }
 
-IMPLEMENT inline bool L4_uid::operator == (L4_uid o) const
+IMPLEMENT inline bool L4_uid::operator == (L4_uid const &o) const
 { return o._raw == _raw; }
 
 IMPLEMENT inline Mword L4_uid::max_threads()
@@ -1709,10 +1530,10 @@ IMPLEMENT inline L4_uid L4_uid::task_id() const
 { return L4_uid (_raw & ~Lthread_mask); }
 
 IMPLEMENT inline Mword L4_uid::is_nil() const
-{ return (_raw & Nil_mask) == 0; }
+{ return _raw == 0; }
 
 IMPLEMENT inline Mword L4_uid::is_invalid() const
-{ return (_raw & Low_mask) == Invalid; }
+{ return _raw == Invalid; }
 
 IMPLEMENT inline bool L4_uid::is_valid() const
 { return !is_invalid(); }
@@ -1733,33 +1554,20 @@ Mword
 L4_quota_desc::amount() const
 { return _d & ~((0xfUL << (MWORD_BITS-4)) | 0xfff); }
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [v2]:
-
 IMPLEMENT inline
-L4_uid::L4_uid (Unsigned64 w)
+L4_uid::L4_uid (Unsigned32 w)
       : _raw (w)
 {}
 
 IMPLEMENT inline
-L4_uid::L4_uid (Task_num task, LThread_num lthread)
-      : _raw ((((Unsigned64) task    << Task_shift)    & Task_mask) |
-              (((Unsigned64) lthread << Lthread_shift) & Lthread_mask))
+L4_uid::L4_uid (Task_num task, LThread_num lthread, unsigned version)
+  : _raw ((((Unsigned32) task    << Task_shift)         & Task_mask)        |
+	  (((Unsigned32) lthread << Lthread_shift)      & Lthread_mask)     |
+	  (((Unsigned32) version << Version_low_shift)  & Version_low_mask) |
+	  (((Unsigned32) version << Version_high_shift) & Version_high_mask))
 {}
 
-IMPLEMENT inline
-L4_uid::L4_uid (Task_num task, LThread_num lthread, unsigned site,
-                Task_num chief, unsigned nest, unsigned version)
-  : _raw ((((Unsigned64) task    << Task_shift)         & Task_mask)        |
-	  (((Unsigned64) lthread << Lthread_shift)      & Lthread_mask)     |
-	  (((Unsigned64) site    << Site_shift)         & Site_mask)        |
-	  (((Unsigned64) chief   << Chief_shift)        & Chief_mask)       |
-	  (((Unsigned64) nest    << Nest_shift)         & Nest_mask)	    |
-	  (((Unsigned64) version << Version_low_shift)  & Version_low_mask) |
-	  (((Unsigned64) version << Version_high_shift) & Version_high_mask))
-{}
-
-IMPLEMENT inline Unsigned64 L4_uid::raw() const
+IMPLEMENT inline Unsigned32 L4_uid::raw() const
 { return _raw; }
 
 IMPLEMENT inline
@@ -1775,8 +1583,8 @@ void
 L4_uid::version (unsigned w)
 {
   _raw = (_raw & ~(Version_low_mask | Version_high_mask)) |
-         (((Unsigned64) w << Version_low_shift)  & Version_low_mask) |
-         (((Unsigned64) w << Version_high_shift) & Version_high_mask);
+         (((Unsigned32) w << Version_low_shift)  & Version_low_mask) |
+         (((Unsigned32) w << Version_high_shift) & Version_high_mask);
 }
 
 IMPLEMENT inline
@@ -1792,7 +1600,7 @@ void
 L4_uid::lthread (LThread_num w)
 {
   _raw = (_raw & ~Lthread_mask) |
-         (((Unsigned64) w << Lthread_shift) & Lthread_mask);
+         (((Unsigned32) w << Lthread_shift) & Lthread_mask);
 }
 
 IMPLEMENT inline
@@ -1808,50 +1616,7 @@ void
 L4_uid::task (Task_num w)
 {
   _raw = (_raw & ~Task_mask) |
-         (((Unsigned64) w << Task_shift) & Task_mask);
-}
-
-IMPLEMENT inline
-Task_num
-L4_uid::chief() const
-{
-  return (_raw & Chief_mask) >> Chief_shift;
-}
-
-IMPLEMENT inline
-void
-L4_uid::chief (Task_num w)
-{
-  _raw = (_raw & ~Chief_mask) |
-         (((Unsigned64) w << Chief_shift) & Chief_mask);
-}
-
-IMPLEMENT inline
-unsigned
-L4_uid::site() const
-{
-  return (_raw & Site_mask) >> Site_shift;
-}
-
-IMPLEMENT inline
-void
-L4_uid::site (unsigned w)
-{
-  _raw = (_raw & ~Site_mask) | (((Unsigned64) w << Site_shift) & Site_mask);
-}
-
-IMPLEMENT inline
-unsigned
-L4_uid::nest() const
-{
-  return (_raw & Nest_mask) >> Nest_shift;
-}
-
-IMPLEMENT inline
-void
-L4_uid::nest (unsigned w)
-{
-  _raw = (_raw & ~Nest_mask) | (((Unsigned64) w << Nest_shift) & Nest_mask);
+         (((Unsigned32) w << Task_shift) & Task_mask);
 }
 
 IMPLEMENT inline
@@ -1864,103 +1629,11 @@ L4_uid::gthread() const
 							  Lthread_size));
 }
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [x0]:
+
 
 IMPLEMENT inline
-L4_uid::L4_uid (Unsigned32 w)
-      : _raw (w)
-{}
-
-IMPLEMENT inline
-L4_uid::L4_uid (Task_num task, LThread_num lthread)
-      : _raw ((((Unsigned32) task    << Task_shift)    & Task_mask) |
-              (((Unsigned32) lthread << Lthread_shift) & Lthread_mask))
-{}
-
-IMPLEMENT inline
-L4_uid::L4_uid (Task_num task, LThread_num lthread, unsigned /*site*/,
-	        Task_num chief, unsigned /*nest*/, unsigned version)
-      : _raw ((((Unsigned32) task    << Task_shift)    & Task_mask)    |
-              (((Unsigned32) lthread << Lthread_shift) & Lthread_mask) |
-              (((Unsigned32) chief   << Chief_shift)   & Chief_mask)   |
-              (((Unsigned32) version << Version_shift) & Version_mask))
-{}
-
-IMPLEMENT inline Unsigned32 L4_uid::raw() const
-{ return _raw; }
-
-IMPLEMENT inline unsigned L4_uid::version() const
-{ return (_raw & Version_mask) >> Version_shift; }
-
-IMPLEMENT inline
-void
-L4_uid::version (unsigned w)
-{
-  _raw = (_raw & ~Version_mask) |
-         (((Unsigned32) w << Version_shift) & Version_mask);
-}
-
-IMPLEMENT inline
-LThread_num
-L4_uid::lthread() const
-{
-  return (_raw & Lthread_mask) >> Lthread_shift;
-}
-
-IMPLEMENT inline
-void
-L4_uid::lthread (LThread_num w)
-{
-  _raw = (_raw & ~Lthread_mask) |
-         (((Unsigned32) w << Lthread_shift) & Lthread_mask);
-}
-
-IMPLEMENT inline
-Task_num
-L4_uid::task() const
-{
-  return (_raw & Task_mask) >> Task_shift;
-}
-
-IMPLEMENT inline
-void
-L4_uid::task (Task_num w)
-{
-  _raw = (_raw & ~Task_mask) |
-         (((Unsigned32) w << Task_shift) & Task_mask);
-}
-
-IMPLEMENT inline
-Task_num
-L4_uid::chief() const
-{
-  return (_raw & Chief_mask) >> Chief_shift;
-}
-
-IMPLEMENT inline
-void
-L4_uid::chief (Task_num w)
-{
-  _raw = (_raw & ~Chief_mask) |
-         (((Unsigned32) w << Chief_shift) & Chief_mask);
-}
-
-IMPLEMENT inline
-GThread_num
-L4_uid::gthread() const
-{
-  return ((_raw & Lthread_mask) >> Lthread_shift) |
-         ((_raw & Task_mask) >> (Task_shift - Lthread_size));
-}
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION:
-
-IMPLEMENT inline
-L4_uid::L4_uid (Address addr, Address tcb_base, Address tcb_size)
-      : _raw ( ((addr - tcb_base) / tcb_size) << Lthread_shift )
+L4_uid::L4_uid (void *addr, Address tcb_base, Address tcb_size)
+      : _raw ( (((unsigned long)addr - tcb_base) / tcb_size) << Lthread_shift )
 {}
 
 //

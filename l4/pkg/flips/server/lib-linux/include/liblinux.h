@@ -7,9 +7,6 @@
 extern int liblinux_init(unsigned int vmem_size, unsigned int kmem_size,
                          int dhcp);
 
-/*** UTIL: Get addr of L4IO info page ***/
-void * liblinux_get_l4io_info(void);
-
 /*** USER INTERFACE TO /proc ***/
 extern int  liblinux_proc_init(void);
 extern void liblinux_proc_ls(char *path);

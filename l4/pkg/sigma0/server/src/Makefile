@@ -1,4 +1,4 @@
-SYSTEMS		:= x86-l4v2 arm-l4x0 amd64-l4v2
+SYSTEMS		:= x86-l4v2 arm-l4v2 amd64-l4v2
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
@@ -21,7 +21,7 @@ PRIVATE_INCDIR	= $(SRC_DIR)
 SRC_CC := init.cc memmap.cc page_alloc.cc mem_man.cc
 SRC_CC_x86-l4v2   := init_mem_v2.cc ioports_x86.cc
 SRC_CC_amd64-l4v2 := init_mem_v2.cc ioports_x86.cc
-SRC_CC_arm-l4x0   := init_mem_arm.cc ioports_none.cc
+SRC_CC_arm-l4v2   := init_mem_arm.cc ioports_none.cc
 SRC_C  := support.c construction.c
 SRC_S  := $(addprefix ARCH-$(ARCH)/, crt0.S)
 

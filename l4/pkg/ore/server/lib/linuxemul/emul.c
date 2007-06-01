@@ -68,7 +68,7 @@ int init_emulation(long memsize)
     }
 
   LOGd(ORE_EMUL_DEBUG, "init irqs");
-  err = l4dde_irq_init(io_info->omega0);
+  err = l4dde_irq_init();
   if (err)
     {
       LOG_Error("irq_init: %d (%s)", err, l4env_strerror(-err));

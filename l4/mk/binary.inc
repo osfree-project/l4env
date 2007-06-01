@@ -269,6 +269,7 @@ CFLAGS	+= $(CFLAGS_$(OSYSTEM)) $(CFLAGS_$(<F)) $(CFLAGS_$(<F)_$(OSYSTEM))
 CFLAGS  += $(CFLAGS_$(L4API))
 CFLAGS	+= $(OPTS) $(WARNINGS)
 CFLAGS  += -fno-common
+CFLAGS  += $(GCCNOSTACKPROTOPT)
 DEFINES += $(DEFINES_$(OSYSTEM)) $(DEFINES_$(<F)) $(DEFINES_$(<F)_$(OSYSTEM))
 DEFINES += -DSYSTEM_$(subst -,_,$(SYSTEM)) -DARCH_$(ARCH) -DCPUTYPE_$(CPU) -DL4API_$(L4API)
 ifdef DEBUG
@@ -293,6 +294,7 @@ CXXFLAGS+= $(CXXFLAGS_$(@:.o=.cc))  $(CXXFLAGS_$(@:.o=.cc)_$(OSYSTEM))
 CXXFLAGS+= $(CXXFLAGS_$(@:.o=.cpp)) $(CXXFLAGS_$(@:.o=.cpp)_$(OSYSTEM))
 CXXFLAGS+= $(OPTS) $(filter-out -Wmissing-declarations -Wstrict-prototypes -Wmissing-prototypes,$(WARNINGS))
 CXXFLAGS+= -fno-common
+CXXFLAGS+= $(GCCNOSTACKPROTOPT)
 
 PICFLAGS = -D__PIC__ -fPIC
 

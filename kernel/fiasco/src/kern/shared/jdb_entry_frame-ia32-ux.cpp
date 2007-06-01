@@ -171,40 +171,14 @@ Jdb_thread_name_frame::name() const
 { return (const char*)_eax; }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION[v2]:
-
 PUBLIC inline
 void
-Jdb_get_cputime_frame::set(L4_uid next, Cpu_time total_us, unsigned short prio)
+Jdb_get_cputime_frame::set(L4_uid const &next, Cpu_time total_us, unsigned short prio)
 {
   _eax = total_us;
   _edx = total_us >> 32;
   _ecx = prio;
   _esi = next.raw(); 
-  _edi = next.raw() >> 32;
-}
-
-PUBLIC inline
-L4_uid
-Jdb_get_cputime_frame::dst() const
-{ return L4_uid((Unsigned64)_edi << 32 | (Unsigned64)_esi); }
-
-PUBLIC inline
-L4_uid
-Jdb_thread_name_frame::dst() const
-{ return L4_uid((Unsigned64)_edi << 32 | (Unsigned64)_esi); }
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION[x0]:
-
-PUBLIC inline
-void
-Jdb_get_cputime_frame::set(L4_uid next, Cpu_time total_us, unsigned short prio)
-{
-  _eax = total_us;
-  _edx = total_us >> 32;
-  _ecx = prio;
-  _esi = next.raw();
 }
 
 PUBLIC inline
@@ -216,3 +190,4 @@ PUBLIC inline
 L4_uid
 Jdb_thread_name_frame::dst() const
 { return L4_uid(_esi); }
+

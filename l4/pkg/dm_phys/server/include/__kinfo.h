@@ -37,6 +37,9 @@ dmphys_kinfo_mem_high(void);
 void
 dmphys_kinfo_init_ram_base(void);
 
+l4_kernel_info_t *
+dmphys_kinfo(void);
+
 /* ram_base variable */
 extern l4_addr_t ram_base;
 

@@ -642,6 +642,9 @@ SYSTEM_CALL(0x33,sys_thread_switch)
 SYSTEM_CALL(0x34,sys_thread_schedule)
 SYSTEM_CALL(0x35,sys_thread_ex_regs)
 SYSTEM_CALL(0x36,sys_task_new)
+
+SYSTEM_CALL(0x39,sys_u_lock)
+
 #ifdef CONFIG_PL0_HACK
 SYSTEM_CALL(0x37,sys_priv_control)
 

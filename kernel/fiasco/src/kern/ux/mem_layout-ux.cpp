@@ -82,7 +82,7 @@ public:
     User_max           = 0xc0000000 - Host_as_offset,
     Tbuf_ubuffer_area  = 0xbfd00000 - Host_as_offset,  ///< % 1MB   size 2MB
     V2_utcb_addr       = 0xbff00000 - Host_as_offset,  ///< % 4KB   v2 UTCB map address
-    Utcb_ptr_page      = 0xbfff0000 - Host_as_offset,  ///< % 4KB
+    Utcb_ptr_page_user = 0xbfff0000 - Host_as_offset,  ///< % 4KB
     Trampoline_page    = 0xbfff1000 - Host_as_offset,  ///< % 4KB
     Kip_auto_map       = 0xbfff2000 - Host_as_offset,  ///< % 4KB
     Tbuf_ustatus_page  = 0xbfff3000 - Host_as_offset,  ///< % 4KB
@@ -101,6 +101,11 @@ public:
     Sigstack_start_frame = 0x4000,      // Kernel Signal Altstack Start
     Sigstack_end_frame   = 0xc000,      // Kernel Signal Altstack End
     Kernel_end_frame     = Sigstack_end_frame
+  };
+
+  enum
+  {
+    Utcb_ptr_page      = Physmem + Utcb_ptr_frame
   };
 
   /// reflect symbols in linker script

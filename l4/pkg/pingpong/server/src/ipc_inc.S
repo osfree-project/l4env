@@ -7,12 +7,12 @@ PREFIX(l4_ipc_call_asm:)
 	pushl	%edi
 	push	%ebp
 	movl	%eax,%esi
-	movl	%edx,%edi
-	movl	%ecx,%eax
-	movl	20(%esp),%edx
-	movl	24(%esp),%ebx
-	movl	28(%esp),%ebp
-	movl	40(%esp),%ecx
+	movl	%edx,%eax
+	movl	%ecx,%edx
+	movl	20(%esp),%ebx
+	movl	24(%esp),%ebp
+	movl	36(%esp),%ecx
+	sub	%edi,%edi
 	andl	$0xfffffffe,%ebp
 #ifdef KIP_SYSCALLS
 	call	__l4sys_ipc_direct
@@ -30,9 +30,9 @@ PREFIX(l4_ipc_call_asm:)
 1:
 #endif
 #endif
-	movl	32(%esp),%edi
-	movl	36(%esp),%esi
-	movl	44(%esp),%ecx
+	movl	28(%esp),%edi
+	movl	32(%esp),%esi
+	movl	40(%esp),%ecx
 	movl	%edx,(%edi)
 	movl	%ebx,(%esi)
 	movl	%eax,(%ecx)
@@ -51,12 +51,12 @@ PREFIX(l4_ipc_reply_and_wait_asm:)
 	pushl	%edi
 	push	%ebp
 	movl	%eax,%esi
-	movl	%edx,%edi
-	movl	%ecx,%eax
-	movl	20(%esp),%edx
-	movl	24(%esp),%ebx
-	movl	32(%esp),%ebp
-	movl	44(%esp),%ecx
+	movl	%edx,%eax
+	movl	%ecx,%edx
+	movl	20(%esp),%ebx
+	movl	28(%esp),%ebp
+	movl	40(%esp),%ecx
+	sub	%edi,%edi
 	orl	$0x00000001,%ebp
 #ifdef KIP_SYSCALLS
 	call	__l4sys_ipc_direct
@@ -74,12 +74,11 @@ PREFIX(l4_ipc_reply_and_wait_asm:)
 1:
 #endif
 #endif
-	movl	28(%esp),%ecx
+	movl	24(%esp),%ecx
 	movl	%esi,(%ecx)
-	movl	%edi,4(%ecx)
-	movl	36(%esp),%edi
-	movl	40(%esp),%esi
-	movl	48(%esp),%ecx
+	movl	32(%esp),%edi
+	movl	36(%esp),%esi
+	movl	44(%esp),%ecx
 	movl	%edx,(%edi)
 	movl	%ebx,(%esi)
 	movl	%eax,(%ecx)

@@ -5,7 +5,7 @@ MODE		= libc
 LIBCLIBS	= 
 #LIBCINCDIR	= 
 SRC_C          := lcd.c lcd-virtual.c lcd-h3800.c
-SYSTEMS		= arm-l4x0
+SYSTEMS		= arm-l4v2
 TARGET		= libarm_lcd.o.a
 
 PRIVATE_INCDIR	+= $(PKGDIR)/lcd/src

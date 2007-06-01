@@ -58,7 +58,6 @@ bin names
 bin log
 bin dm_phys -v
 bin simple_ts -t 10
-bin l4exec
 bin bmodfs
 data  libloader.s.so
 data  shared_test
@@ -69,7 +68,6 @@ bin names
 bin log
 bin dm_phys -v
 bin simple_ts -t 10
-bin l4exec
 bin bmodfs
 data  libloader.s.so
 data  shared_test
@@ -91,7 +89,6 @@ bin      v2/simple_ts --tasks 380 --events --anykill
 bin      v2/rtc
 bin      v2/l4io --nolist
 bin      v2/con --l4io --omega0 --events --cpuload --vbemode 0x117 --pan
-bin      v2/l4exec
 bin      v2/loader --events --fprov=BMODFS ldr_run.bmodfs ldr_l4linux26.cd
 bin      v2/name_server
 bin      v2/l4vfs_log

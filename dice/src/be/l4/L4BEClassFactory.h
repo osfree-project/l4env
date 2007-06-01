@@ -70,7 +70,6 @@ public:
     virtual CBEMsgBuffer* GetNewMessageBuffer();
     virtual CBEMsgBufferType* GetNewMessageBufferType();
     virtual CBEMarshaller* GetNewMarshaller();
-    virtual CBETrace* GetNewTrace();
 };
 
 #endif // !__DICE_L4BEClassFactory_H__

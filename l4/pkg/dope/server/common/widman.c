@@ -88,11 +88,11 @@ static char * wid_get_type(WIDGET *w) {
 
 
 /*** GET/SET APPLICATION ID OF THE OWNER OF THE WIDGET ***/
-static long wid_get_app_id(WIDGET *w) {
+static s32 wid_get_app_id(WIDGET *w) {
 	return w->wd->app_id;
 }
-static void wid_set_app_id(WIDGET *w,long new_app_id){
-	w->wd->app_id=new_app_id;
+static void wid_set_app_id(WIDGET *w, s32 new_app_id){
+	w->wd->app_id = new_app_id;
 }
 
 

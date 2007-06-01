@@ -26,13 +26,29 @@
  *** TYPES USED BY DOpE ***
  **************************/
 
-#define u8  unsigned char
-#define s8    signed char
-#define u16 unsigned short
-#define s16   signed short
-#define u32 unsigned long
-#define s32   signed long
-#define adr unsigned long
+#if defined(L4API_l4v2) || defined(L4API_l4x0)
+
+#include <inttypes.h>
+
+typedef uint8_t   u8;
+typedef int8_t    s8;
+typedef uint16_t u16;
+typedef int16_t  s16;
+typedef uint32_t u32;
+typedef int32_t  s32;
+typedef intptr_t adr;
+
+#else
+
+typedef unsigned char   u8;
+typedef   signed char   s8;
+typedef unsigned short u16;
+typedef   signed short s16;
+typedef unsigned long  u32;
+typedef   signed long  s32;
+typedef unsigned long  adr;
+
+#endif
 
 #if !defined(NULL)
 #define NULL (void *)0
@@ -50,10 +66,10 @@
  * no libC.
  */
 
-void  *malloc(unsigned int size);
+void  *malloc(size_t size);
 void  *zalloc(unsigned long size);
 void   free(void *addr);
-int    snprintf(char *str, unsigned int size, const char *format, ...);
+int    snprintf(char *str, size_t size, const char *format, ...);
 long   strtol(const char *nptr, char **endptr, int base);
 double strtod(const char *nptr, char **endptr);
 int    printf( const char *format, ...);

@@ -268,7 +268,7 @@ next_irq:
 };
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [arm-x0]:
+IMPLEMENTATION [arm]:
 
 #include "trap_state.h"
 
@@ -374,8 +374,7 @@ PUBLIC inline NEEDS ["trap_state.h"]
 int
 Thread::send_exception(Trap_state *ts)
 {
-  if (_pager != kernel_thread
-      && _pager->utcb()->status & Utcb::Handle_exception)
+  if (_pager != kernel_thread)
     {
       state_change(~Thread_cancel, Thread_in_exception);
 
@@ -434,11 +433,11 @@ Thread::transfer_fpu(Thread *)
 
 PRIVATE static inline
 void
-Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
+Thread::copy_utcb_to_ts(L4_msg_tag const &tag, Thread *snd, Thread *rcv)
 {
   Trap_state *ts = (Trap_state*)rcv->_utcb_handler;
   Utcb *snd_utcb = (Utcb*)snd->local_id();
-  Mword       s  = snd_utcb->snd_size;
+  Mword       s  = tag.words();
 
   if (EXPECT_FALSE(rcv->exception_triggered()))
     {
@@ -461,7 +460,7 @@ Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
       ts->cpsr |= Proc::Status_mode_user;
     }
 
-  if (snd_utcb->status & Utcb::Transfer_fpu)
+  if (tag.transfer_fpu())
     snd->transfer_fpu(rcv);
 
   rcv->state_del(Thread_in_exception);
@@ -470,7 +469,7 @@ Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
 
 PRIVATE static inline NEEDS[Thread::access_utcb]
 void
-Thread::copy_ts_to_utcb(Thread *snd, Thread *rcv)
+Thread::copy_ts_to_utcb(L4_msg_tag const &, Thread *snd, Thread *rcv)
 {
   Trap_state *ts = (Trap_state*)snd->_utcb_handler;
 
@@ -478,21 +477,17 @@ Thread::copy_ts_to_utcb(Thread *snd, Thread *rcv)
     Lock_guard <Cpu_lock> guard (&cpu_lock);
     Utcb *rcv_utcb = rcv->access_utcb();
 
-    Mword        r = rcv_utcb->rcv_size;
     if (EXPECT_FALSE(snd->exception_triggered()))
       {
-	Cpu::memcpy_mwords (rcv_utcb->values, ts, r > 19 ? 19 : r);
-	if (EXPECT_TRUE(r > 15))
-	  rcv_utcb->values[15] = (ts->cpsr & ~(0x3 << 6)) 
-	    | ((snd->_exc_ip & 0x3) << 6);
-	if (EXPECT_TRUE(r > 19))
-	  rcv_utcb->values[19] = snd->user_ip();
-
+	Cpu::memcpy_mwords (rcv_utcb->values, ts, 19);
+	rcv_utcb->values[15] = (ts->cpsr & ~(0x3 << 6)) 
+	  | ((snd->_exc_ip & 0x3) << 6);
+	rcv_utcb->values[19] = snd->user_ip();
       }
     else
-      Cpu::memcpy_mwords (rcv_utcb->values, ts, r > 20 ? 20 : r);
+      Cpu::memcpy_mwords (rcv_utcb->values, ts, 20);
 
-    if (rcv_utcb->status & Utcb::Inherit_fpu)
+    if (rcv_utcb->inherit_fpu())
 	snd->transfer_fpu(rcv);
 
   }

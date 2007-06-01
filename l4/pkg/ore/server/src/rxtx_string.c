@@ -257,7 +257,7 @@ int tx_component_string(CORBA_Object _dice_corba_obj,
              * queue(dev). We don't do l4_yield() here because that
              * does not work if the priority of the IRQ threads(!) is
              * less than the current priority. */
-             l4_ipc_sleep(L4_IPC_TIMEOUT(0,0,250,14,0,0));
+             l4_ipc_sleep(l4_timeout(L4_IPC_TIMEOUT_0, l4_timeout_rel(250,2)));
           }
         xmit_lock(dev->name);
         xmit = dev->hard_start_xmit(ent->skb, dev);

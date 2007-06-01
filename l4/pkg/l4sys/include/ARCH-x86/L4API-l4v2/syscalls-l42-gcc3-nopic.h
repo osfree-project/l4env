@@ -39,19 +39,18 @@ l4_myself(void)
 {
   l4_threadid_t temp_id;
 
-  __asm__(
+  __asm__ __volatile__ (
 	  "push	%%ebp		\n\t"	/* save ebp, no memory references
 					   ("m") after this point */
 	  L4_SYSCALL(id_nearest)
 	  "popl	%%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	  :
-	   "=S" (temp_id.lh.low),
-	   "=D" (temp_id.lh.high)
+	   "=S" (temp_id.raw)
 	  :
 	   "S" (0)
 	  :
-	   "ebx", "eax", "ecx", "edx"
+	   "ebx", "eax", "ecx", "edx", "edi"
 	  );
   return temp_id;
 }
@@ -64,21 +63,19 @@ l4_nchief(l4_threadid_t destination,
 	  l4_threadid_t *next_chief)
 {
   int type;
-  __asm__(
+  __asm__ __volatile__ (
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references
 					   ("m") after this point */
 	  L4_SYSCALL(id_nearest)
 	  "popl	%%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	  :
-	   "=S" (next_chief->lh.low),
-	   "=D" (next_chief->lh.high),
+	   "=S" (next_chief->raw),
 	   "=a" (type)
 	  :
-	   "S" (destination.lh.low),
-	   "D" (destination.lh.high)
+	   "S" (destination.raw)
 	  :
-	   "ebx", "ecx", "edx"
+	   "ebx", "ecx", "edx", "edi"
 	  );
   return type;
 }
@@ -99,33 +96,24 @@ __do_l4_thread_ex_regs(l4_umword_t val0,
   __asm__ __volatile__(
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory  references
 					   ("m") after this point */
-	  "pushl %%ebx		\n\t"	/* save address of preempter */
-	  "movl	4(%%ebx), %%ebp	\n\t"	/* load new preempter id */
-	  "movl	 (%%ebx), %%ebx	\n\t"
-
 	  L4_SYSCALL(lthread_ex_regs)
 
-	  "xchgl (%%esp), %%ebx	\n\t"	/* save old preempter.lh.low
-					   and get address of preempter */
-	  "movl	%%ebp, 4(%%ebx)	\n\t"	/* write preempter.lh.high */
-	  "popl	(%%ebx)		\n\t"	/* write preempter.lh.low */
 	  "popl	%%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	  :
 	   "=a" (*old_eflags),
 	   "=c" (*old_esp),
 	   "=d" (*old_eip),
-	   "=S" (pager->lh.low),
-	   "=D" (pager->lh.high)
+	   "=S" (pager->raw),
+	   "=b" (preempter->raw)
 	  :
 	   "a" (val0),
 	   "c" (esp),
 	   "d" (eip),
-	   "S" (pager->lh.low),
-	   "D" (pager->lh.high),
-	   "b" (preempter)
+	   "S" (pager->raw),
+	   "b" (preempter->raw)
 	  :
-	   "memory"
+	   "edi"
 	  );
 }
 
@@ -146,7 +134,7 @@ l4_thread_switch(l4_threadid_t destination)
 	  "=S" (dummy),
 	  "=a" (dummy)
 	 :
-	  "S" (destination.lh.low),
+	  "S" (destination.raw),
 	  "a" (0)			/* Fiasco requirement */
 	 :
 	  "ebx", "ecx", "edx", "edi"
@@ -164,39 +152,29 @@ l4_thread_schedule(l4_threadid_t dest,
 		   l4_sched_param_t *old_param)
 {
   l4_uint32_t time_lo, time_hi;
-  unsigned dummy;
 
   __asm__ __volatile__(
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references
 					   ("m") after this point */
-	  "pushl %%ecx		\n\t"	/* save address of preempter */
-	  "movl  (%%ecx), %%ebx	\n\t"	/* load preempter id.low */
-	  "movl 4(%%ecx), %%ebp	\n\t"	/* load preempter id.high */
 	  "cmpl $-1,%%eax	\n\t"
 	  "jz   1f		\n\t"	/* don't change if invalid */
 	  "andl $0xfff0ffff, %%eax\n\t"	/* mask bits that must be zero */
 	  "1:			\n\t"
 	  L4_SYSCALL(thread_schedule)
-	  "xchgl (%%esp), %%ebx	\n\t"	/* save old preempter.lh.low
-					   and get address of preempter */
-	  "popl	 (%%ebx)	\n\t"	/* write preempter.lh.low */
-	  "movl	 %%ebp, 4(%%ebx)\n\t"	/* write preempter.lh.high */
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
 	 :
 	  "=a" (*old_param),
 	  "=c" (time_lo),
 	  "=d" (time_hi),
-	  "=S" (partner->lh.low),
-	  "=D" (partner->lh.high),
-	  "=b" (dummy)
+	  "=S" (partner->raw),
+	  "=b" (ext_preempter->raw)
 	 :
 	  "a" (param),
-	  "S" (dest.lh.low),
-	  "D" (dest.lh.high),
-	  "c" (ext_preempter)
+	  "S" (dest.raw),
+	  "b" (ext_preempter->raw)
 	 :
-	  "memory"
+	  "edi"
 	 );
   return (((l4_cpu_time_t)time_hi) << 32) | time_lo;
 }
@@ -217,8 +195,6 @@ __do_l4_task_new(l4_taskid_t destination,
   __asm__ __volatile__(
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory references
 					   ("m") after this point */
-	  "movl  4(%%ebx), %%ebp\n\t"	/* load pager id */
-	  "movl   (%%ebx), %%ebx\n\t"
 	  L4_SYSCALL(task_new)
 	  "popl	 %%ebp		\n\t"	/* restore ebp, no memory references
 					   ("m") before this point */
@@ -227,17 +203,15 @@ __do_l4_task_new(l4_taskid_t destination,
 	  "=a" (dummy2),
 	  "=c" (dummy3),
 	  "=d" (dummy4),
-	  "=S" (new_task.lh.low),
-	  "=D" (new_task.lh.high)
+	  "=S" (new_task.raw)
 	 :
-	  "b" (&pager),
+	  "b" (pager.raw),
 	  "a" (mcp_or_new_chief_and_flags),
 	  "c" (esp),
 	  "d" (eip),
-	  "S" (destination.lh.low),
-	  "D" (destination.lh.high),
-	  "m" (pager) // make the compiler to know that we dereference the
-                      // &pager value
+	  "S" (destination.raw)
+	 :
+	  "edi"
 	 );
   return new_task;
 }

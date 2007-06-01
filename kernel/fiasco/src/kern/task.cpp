@@ -21,12 +21,7 @@ public:
   Utcb *alloc_utcb(unsigned thread);
   void free_utcb(unsigned thread);
   Address user_utcb(unsigned thread);
-};
 
-INTERFACE [utcb]:
-
-EXTENSION class Task
-{
 private:
   Helping_lock _task_lock;
   enum { Utcbs_per_page = Config::PAGE_SIZE / sizeof(Utcb) };
@@ -68,10 +63,6 @@ private:
     / Utcbs_per_page];
 };
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [!ux && utcb]:
-
-IMPLEMENT inline void Task::map_utcb_ptr_page() {}
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION:
@@ -79,148 +70,15 @@ IMPLEMENTATION:
 #include "auto_ptr.h"
 #include "config.h"
 #include "globals.h"
+#include "kdb_ke.h"
 #include "kmem.h"
 #include "kmem_slab_simple.h"
 #include "l4_types.h"
 #include "map_util.h"
 #include "mem_layout.h"
 #include "ram_quota.h"
-
-PUBLIC inline
-Task::Task (Ram_quota *q, Task_num no)
-    : Space (q, no)
-{
-  host_init (no);
-
-  if (id() == Config::sigma0_taskno)
-    return;
-
-  map_tbuf();
-}
-
-/** Constructor for special derived classes such as Kernel_task. */
-PROTECTED inline
-Task::Task(Task_num no, Task_num chief, Mem_space::Dir_type* pdir)
-  : Space (no, chief, pdir)
-{
-}
-
-PRIVATE static
-slab_cache_anon* 
-Task::allocator ()
-{
-  static slab_cache_anon* slabs = new Kmem_slab_simple (sizeof (Task), 
-							sizeof (Mword),
-							"Task");
-  return slabs;
-
-  // If Fiasco would kill all tasks even when exiting through the
-  // kernel debugger, we could use a deallocating version of the above:
-  //
-  // static auto_ptr<slab_cache_anon> slabs
-  //   (new Kmem_slab_simple (sizeof (Task), sizeof (Mword)))
-  // return slabs.get();
-}
-
-
-
-PRIVATE inline NEEDS["kmem_slab_simple.h"]
-void *
-Task::operator new (size_t size, void *p)
-{
-  (void)size;
-  assert (size == sizeof (Task));
-  return p;
-}
-
-PUBLIC inline NEEDS["kmem_slab_simple.h"]
-void 
-Task::operator delete (void *ptr)
-{
-  if (ptr)
-    allocator()->q_free(reinterpret_cast<Task*>(ptr)->ram_quota(), ptr);
-}
-
-PUBLIC static
-Task *
-Task::create(Ram_quota *quota, Task_num num)
-{
-  if (void *t = allocator()->q_alloc(quota))
-    {
-      Task *a = new (t) Task(quota, num);
-      if (a->valid())
-	return a;
-
-      delete a;
-    }
-
-  return 0;
-}
-
-PUBLIC inline
-bool
-Task::valid() const
-{ return mem_space()->valid(); }
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [!ux]:
-
-IMPLEMENT inline
-void
-Task::host_init (Task_num)
-{}
-
-IMPLEMENT inline
-void
-Task::map_tbuf ()
-{}
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [!(ia32|ux|amd64)]:
-
-IMPLEMENT inline
-Task::~Task()
-{}
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [ia32|ux|amd64]:
-#include "config.h"
-#include "globals.h"
-#include "kmem.h"
-#include "l4_types.h"
-#include "map_util.h"
-#include "mem_layout.h"
-
-IMPLEMENT 
-Address
-Task::map_kip ()
-{
-  Address _kip;
-  if (mem_space()->v_lookup(Mem_layout::Kip_auto_map, &_kip, 0, 0))
-    {
-      if (_kip == Kmem::virt_to_phys (Kip::k()))
-	return Mem_layout::Kip_auto_map;
-    }
-  else if (!mem_map (sigma0_task,                      // from: space
-	L4_fpage(0, 0, Config::PAGE_SHIFT, Kmem::virt_to_phys (Kip::k())),
-	nonull_static_cast<Space*>(this),  // to: space
-	L4_fpage(0, 0, Config::PAGE_SHIFT, Mem_layout::Kip_auto_map),
-	0).has_error())
-    return Mem_layout::Kip_auto_map;
-
-  return ~0UL;
-}
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [utcb]:
-
-#include "utcb.h"
-#include "mem_layout.h"
-#include "kdb_ke.h"
 #include "paging.h"
+#include "utcb.h"
 #include "vmem_alloc.h"
 
 
@@ -342,15 +200,136 @@ Task::cleanup()
 }
 
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [!utcb]:
+
+PUBLIC inline
+Task::Task (Ram_quota *q, Task_num no)
+    : Space (q, no)
+{
+  host_init (no);
+
+  if (id() == Config::sigma0_taskno)
+    return;
+
+  map_tbuf();
+}
+
+/** Constructor for special derived classes such as Kernel_task. */
+PROTECTED inline
+Task::Task(Task_num no, Task_num chief, Mem_space::Dir_type* pdir)
+  : Space (no, chief, pdir)
+{
+}
+
+PRIVATE static
+slab_cache_anon* 
+Task::allocator ()
+{
+  static slab_cache_anon* slabs = new Kmem_slab_simple (sizeof (Task), 
+							sizeof (Mword),
+							"Task");
+  return slabs;
+
+  // If Fiasco would kill all tasks even when exiting through the
+  // kernel debugger, we could use a deallocating version of the above:
+  //
+  // static auto_ptr<slab_cache_anon> slabs
+  //   (new Kmem_slab_simple (sizeof (Task), sizeof (Mword)))
+  // return slabs.get();
+}
+
+
+
+PRIVATE inline NEEDS["kmem_slab_simple.h"]
+void *
+Task::operator new (size_t size, void *p)
+{
+  (void)size;
+  assert (size == sizeof (Task));
+  return p;
+}
+
+PUBLIC inline NEEDS["kmem_slab_simple.h"]
+void 
+Task::operator delete (void *ptr)
+{
+  if (ptr)
+    allocator()->q_free(reinterpret_cast<Task*>(ptr)->ram_quota(), ptr);
+}
+
+PUBLIC static
+Task *
+Task::create(Ram_quota *quota, Task_num num)
+{
+  if (void *t = allocator()->q_alloc(quota))
+    {
+      Task *a = new (t) Task(quota, num);
+      if (a->valid())
+	return a;
+
+      delete a;
+    }
+
+  return 0;
+}
 
 PUBLIC inline
 bool
-Task::initialize()
-{ return true; }
+Task::valid() const
+{ return mem_space()->valid(); }
 
-PUBLIC inline
-void
-Task::cleanup()
+//---------------------------------------------------------------------------
+IMPLEMENTATION [!ux]:
+
+IMPLEMENT inline 
+void 
+Task::map_utcb_ptr_page() 
 {}
+
+IMPLEMENT inline
+void
+Task::host_init (Task_num)
+{}
+
+IMPLEMENT inline
+void
+Task::map_tbuf ()
+{}
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [!(ia32|ux|amd64)]:
+
+IMPLEMENT inline
+Task::~Task()
+{}
+
+
+//---------------------------------------------------------------------------
+IMPLEMENTATION [ia32|ux|amd64]:
+#include "config.h"
+#include "globals.h"
+#include "kmem.h"
+#include "l4_types.h"
+#include "map_util.h"
+#include "mem_layout.h"
+
+IMPLEMENT 
+Address
+Task::map_kip ()
+{
+  Address _kip;
+  if (mem_space()->v_lookup(Mem_layout::Kip_auto_map, &_kip, 0, 0))
+    {
+      if (_kip == Kmem::virt_to_phys (Kip::k()))
+	return Mem_layout::Kip_auto_map;
+    }
+  else if (!mem_map (sigma0_task,                      // from: space
+	L4_fpage(0, 0, Config::PAGE_SHIFT, Kmem::virt_to_phys (Kip::k())),
+	nonull_static_cast<Space*>(this),  // to: space
+	L4_fpage(0, 0, Config::PAGE_SHIFT, Mem_layout::Kip_auto_map),
+	0).has_error())
+    return Mem_layout::Kip_auto_map;
+
+  return ~0UL;
+}
+

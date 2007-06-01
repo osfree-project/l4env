@@ -81,7 +81,7 @@ private:
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [ia32|ux]:
+IMPLEMENTATION [ia32|ux|amd64]:
 
 IMPLEMENT inline
 Mword L4_fpage::is_iopage() const
@@ -90,7 +90,7 @@ Mword L4_fpage::is_iopage() const
 }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION [!(ia32|ux)]:
+IMPLEMENTATION [!(ia32|ux|amd64)]:
 
 IMPLEMENT inline
 Mword L4_fpage::is_iopage() const

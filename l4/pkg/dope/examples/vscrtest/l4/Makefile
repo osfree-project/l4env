@@ -1,4 +1,4 @@
-SYSTEMS         := x86-l4v2
+SYSTEMS         := x86-l4v2 amd64-l4v2
 PKGDIR          ?= ../../..
 L4DIR           ?= $(PKGDIR)/../..
 

@@ -68,8 +68,6 @@
 #include "be/l4/v2/amd64/V2AMD64NameFactory.h"
 // L4V2 IA32
 #include "be/l4/v2/ia32/V2IA32ClassFactory.h"
-// L4X0
-#include "be/l4/x0/L4X0BEClassFactory.h"
 // L4V4
 #include "be/l4/v4/L4V4BEClassFactory.h"
 #include "be/l4/v4/ia32/L4V4IA32ClassFactory.h"
@@ -91,7 +89,9 @@
 #include "fe/PostParseVisitor.h"
 
 // dynamic loadable modules
-#include <dlfcn.h>
+#if defined(HAVE_LTDL_H)
+#include <ltdl.h>
+#endif
 
 //@{
 /** some config variables */
@@ -750,8 +750,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else if (sArg == "X0")
                     {
-			SetBackEndInterface(PROGRAM_BE_X0);
-                        Verbose(PROGRAM_VERBOSE_OPTIONS, "use back-end L4 version X.0\n");
+			CMessages::Error("X0 Back-End deprecated.\n");
                     }
                     else if (sArg == "X0ADAPT")
                     {
@@ -1038,22 +1037,17 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         m_nUseFrontEnd = USE_FE_DCE;
 
     if (!IsBackEndInterfaceSet(PROGRAM_BE_INTERFACE))
-    {
-        if (IsBackEndPlatformSet(PROGRAM_BE_ARM))
-	    SetBackEndInterface(PROGRAM_BE_X0);
-        else
-	    SetBackEndInterface(PROGRAM_BE_V2);
-    }
+	SetBackEndInterface(PROGRAM_BE_V2);
     if (!IsBackEndPlatformSet(PROGRAM_BE_PLATFORM))
 	SetBackEndPlatform(PROGRAM_BE_IA32);
     if (!IsBackEndLanguageSet(PROGRAM_BE_LANGUAGE))
 	SetBackEndLanguage(PROGRAM_BE_C);
     if (IsBackEndPlatformSet(PROGRAM_BE_ARM) &&
-        !IsBackEndInterfaceSet(PROGRAM_BE_X0))
+        !IsBackEndInterfaceSet(PROGRAM_BE_V2))
     {
-        CMessages::Warning("The Arm Backend currently works with X0 native only!");
-        CMessages::Warning("  -> Setting interface to X0 native.");
-	SetBackEndInterface(PROGRAM_BE_X0);
+        CMessages::Warning("The Arm Backend currently works with V2 native only!");
+        CMessages::Warning("  -> Setting interface to V2 native.");
+	SetBackEndInterface(PROGRAM_BE_V2);
     }
     if (IsBackEndPlatformSet(PROGRAM_BE_AMD64) &&
         !IsBackEndInterfaceSet(PROGRAM_BE_V2))
@@ -1066,7 +1060,8 @@ void CCompiler::ParseArguments(int argc, char *argv[])
     if (IsBackEndPlatformSet(PROGRAM_BE_ARM))
         SetOption(PROGRAM_ALIGN_TO_TYPE);
     // with AMD64 we *have to* use C bindings
-    if (IsBackEndPlatformSet(PROGRAM_BE_AMD64))
+    if (IsBackEndPlatformSet(PROGRAM_BE_AMD64) ||
+	IsBackEndPlatformSet(PROGRAM_BE_ARM))
         SetOption(PROGRAM_FORCE_C_BINDINGS);
 
     if (!IsOptionSet(PROGRAM_GENERATE_CLIENT) &&
@@ -1088,6 +1083,14 @@ void CCompiler::ParseArguments(int argc, char *argv[])
     if (IsOptionSet(PROGRAM_TRACE_MSGBUF) &&
 	!GetBackEndOption("trace-msgbuf-func", sFunc))
 	SetBackEndOption("trace-msgbuf-func", "printf");
+    if (IsOptionSet(PROGRAM_TRACE_SERVER) ||
+    	IsOptionSet(PROGRAM_TRACE_CLIENT) ||
+	IsOptionSet(PROGRAM_TRACE_MSGBUF))
+    {
+	string sLib;
+	if (!GetBackEndOption("trace-lib", sLib))
+	    SetBackEndOption("trace-lib", "libdice-debug.la");
+    }
 
     if (nNoWarning.any())
 	m_WarningLevel &= ~nNoWarning;
@@ -1131,10 +1134,18 @@ void CCompiler::InitTraceLib(int argc, char *argv[])
     if (!CCompiler::GetBackEndOption("trace-lib", sTraceLib))
 	return;
 
-    void* lib = dlopen(sTraceLib.c_str(), RTLD_NOW);
+#if defined(HAVE_LTDL_H)
+    if (lt_dlinit())
+    {
+	std::cerr << lt_dlerror() << std::endl;
+	CMessages::Error("Failed to initialize lt_dl\n");
+	return;
+    }
+
+    lt_dlhandle lib = lt_dlopen(sTraceLib.c_str());
     if (lib == NULL)
     {
-	fprintf(stderr, "%s\n", dlerror());
+	std::cerr << lt_dlerror() << std::endl;
 	// error exists
 	CMessages::Error("Could not load tracing library \"%s\".\n", sTraceLib.c_str());
 
@@ -1143,18 +1154,22 @@ void CCompiler::InitTraceLib(int argc, char *argv[])
 
     // get symbol for init function
     void (*init)(int, char**);
-    init = (void (*)(int, char**))dlsym(lib, "dice_tracing_init");
+    init = (void (*)(int, char**))lt_dlsym(lib, "dice_tracing_init");
     // use error message as error indicator
-    const char* errmsg = dlerror();
+    const char* errmsg = lt_dlerror();
     if (errmsg != NULL)
     {
-	fprintf(stderr, "%s\n", errmsg);
+	std::cerr << errmsg << std::endl;
 	CMessages::Error("Could not find symbol for init function.\n");
 	return;
     }
 
     // call init function
     (*init) (argc, argv);
+#else
+    CMessages::Error("Dynamic loading not supported.\n"
+	"Please install `libtool' development files and rebuild Dice.\n");
+#endif
 }
 
 /** displays a copyright notice of this compiler */
@@ -1364,7 +1379,7 @@ void CCompiler::ShowHelp(bool bShort)
     "    <string> starts with a letter specifying platform, kernel interface or\n"
     "    language mapping\n"
     "    p - specifies the platform (IA32, IA64, ARM, AMD64)\n"
-    "    i - specifies the kernel interface (v2, x0, v4, sock)\n"
+    "    i - specifies the kernel interface (v2, v4, sock)\n"
     "    m - specifies the language mapping (C, CPP)\n"
     "    example: -Bpia32 -Biv2 -BmC - which is default\n";
     std::cout <<
@@ -1506,8 +1521,6 @@ void CCompiler::PrepareWrite()
 	else
 	    pCF = new CL4V2BEClassFactory();
     }
-    else if (IsBackEndInterfaceSet(PROGRAM_BE_X0))
-	pCF = new CL4X0BEClassFactory();
     else if (IsBackEndInterfaceSet(PROGRAM_BE_V4))
     {
         if (IsBackEndPlatformSet(PROGRAM_BE_IA32))
@@ -1529,8 +1542,6 @@ void CCompiler::PrepareWrite()
 	else
 	    pNF = new CL4V2BENameFactory();
     }
-    else if (IsBackEndInterfaceSet(PROGRAM_BE_X0))
-	pNF = new CL4BENameFactory();
     else if (IsBackEndInterfaceSet(PROGRAM_BE_V4))
         pNF = new CL4V4BENameFactory();
     else

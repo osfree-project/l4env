@@ -2,7 +2,7 @@ Source: dice
 Section: devel
 Priority: optional
 Maintainer: Adam Lackorzynski <adam@os.inf.tu-dresde.de>
-Build-Depends: doxygen, automake1.9, autoconf
+Build-Depends: doxygen, automake1.9, autoconf, libltdl3-dev
 Standards-Version: 3.5.7
 
 Package: dice

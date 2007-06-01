@@ -60,8 +60,28 @@ IMPLEMENTATION [ia32,ux]:
 #include <cstdio>
 #include "cpu.h"
 #include "kdb_ke.h"
+#include "l4_types.h"
 #include "mem_layout.h"
+#include "paging.h"
 #include "std_macros.h"
+#include "utcb.h"
+
+IMPLEMENT inline NEEDS["mem_layout.h", "utcb.h","l4_types.h"]
+bool
+Mem_space::is_mappable(Address addr, size_t size) 
+{
+  if (size == Config::SUPERPAGE_SIZE && ! Cpu::have_superpages())
+    return false;
+
+  if ((addr + size) <= Mem_layout::V2_utcb_addr)
+    return true;
+
+  if (addr >= Mem_layout::V2_utcb_addr + utcb_size_pages()*Config::PAGE_SIZE)
+    return true;
+
+  return false;
+}
+
 
 PUBLIC inline
 bool 
@@ -411,41 +431,4 @@ PRIVATE inline
 void
 Mem_space::free_ldt_memory()
 {}
-
-// --------------------------------------------------------------------
-IMPLEMENTATION [{ia32,ux}-utcb]:
-
-#include "mem_layout.h"
-#include "utcb.h"
-#include "l4_types.h"
-#include "paging.h"
-
-IMPLEMENT inline NEEDS["mem_layout.h", "utcb.h","l4_types.h"]
-bool
-Mem_space::is_mappable(Address addr, size_t size) 
-{
-  if (size == Config::SUPERPAGE_SIZE && ! Cpu::have_superpages())
-    return false;
-
-  if ((addr + size) <= Mem_layout::V2_utcb_addr)
-    return true;
-
-  if (addr >= Mem_layout::V2_utcb_addr + utcb_size_pages()*Config::PAGE_SIZE)
-    return true;
-
-  return false;
-}
-
-// --------------------------------------------------------------------
-IMPLEMENTATION [{ia32,ux}-!utcb]:
-
-IMPLEMENT inline
-bool
-Mem_space::is_mappable(Address, size_t size)
-{
-  if (size == Config::SUPERPAGE_SIZE && ! Cpu::have_superpages())
-    return false;
-
-  return true;
-}
 

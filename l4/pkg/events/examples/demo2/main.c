@@ -129,7 +129,7 @@ ipc_error(char * msg, int error)
 static void
 sit_and_wait(int exp)
 {
-  l4_ipc_sleep(L4_IPC_TIMEOUT(255,exp,255,exp,0,0));
+  l4_ipc_sleep(l4_ipc_timeout(255,16-exp,255,16-exp));
 }
 
 
@@ -438,7 +438,7 @@ otask1(void)
 
   printf("receive first try.\n");
   res = l4events_receive(&event_ch, &event, &event_nr,
-      			L4_IPC_TIMEOUT(0,0,1,15,0,0), 0);
+      			l4_ipc_timeout(0,0,1,0), 0);
 
   if (res == L4EVENTS_OK)
   {

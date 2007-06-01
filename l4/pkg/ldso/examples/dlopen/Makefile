@@ -4,7 +4,7 @@ L4DIR		?= $(PKGDIR)/../..
 include $(L4DIR)/mk/Makeconf
 
 TARGET		= ldso_dlopen_example
-SYSTEMS		= x86-l4v2 arm-l4x0
+SYSTEMS		= x86-l4v2 arm-l4v2
 LDFLAGS		= --export-dynamic --dynamic-linker=libld-l4.s.so \
 		  --rpath-link $(OBJ_BASE)/lib/$(ARCH)_$(CPU)/$(L4API)
 LDSCRIPT	= $(call findfile,main_dyn.ld,$(L4LIBDIR))

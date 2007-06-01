@@ -37,7 +37,7 @@
 #include "be/BEMsgBuffer.h"
 #include "be/BEClient.h"
 #include "be/BEUserDefinedType.h"
-#include "be/BETrace.h"
+#include "be/Trace.h"
 #include "be/l4/L4BESizes.h"
 #include "be/l4/v2/L4V2BEIPC.h"
 #include "TypeSpec-L4Types.h"
@@ -187,13 +187,14 @@ CL4BESndFunction::WriteVariableInitialization(CBEFile * pFile)
  */
 void CL4BESndFunction::WriteIPC(CBEFile *pFile)
 {
-    assert(m_pTrace);
-    m_pTrace->BeforeCall(pFile, this);
+    if (m_pTrace)
+	m_pTrace->BeforeCall(pFile, this);
     
     CBECommunication *pComm = GetCommunication();
     assert(pComm);
     pComm->WriteSend(pFile, this);
 
-    m_pTrace->AfterCall(pFile, this);
+    if (m_pTrace)
+	m_pTrace->AfterCall(pFile, this);
 }
 

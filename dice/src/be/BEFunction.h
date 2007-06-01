@@ -50,7 +50,7 @@ class CBEReplyCodeType;
 class CBEClass;
 class CBETarget;
 class CBECommunication;
-class CBETrace;
+class CTrace;
 class CBEMarshaller;
 class CBEMsgBuffer;
 
@@ -157,7 +157,6 @@ public:
     CBEMarshaller* GetMarshaller() const;
     CBETypedDeclarator* GetObject() const;
     CBETypedDeclarator* GetEnvironment() const;
-    CBETrace* GetTrace() const;
     string GetName() const;
     void SetFunctionName(CFEOperation *pFEOperation, FUNCTION_TYPE nFunctionType);
     void SetFunctionName(CFEInterface *pFEInterface, FUNCTION_TYPE nFunctionType);
@@ -271,17 +270,17 @@ protected:
     *  \brief contains the name of the error function
     */
     string m_sErrorFunction;
-    /** \var CBETrace* m_pTrace
+    /** \var CTrace* m_pTrace
      *  \brief a reference to the tracing class
      */
-    CBETrace *m_pTrace;
+    CTrace *m_pTrace;
     /** \var bool m_bTraceOn
      *  \brief true if tracing code has been written
      *
      * Because methods can be overloaded and derived methods call base
      * methods, it is necessary to indicate whether a method already does
      * tracing in a derived method. This way we avoid double invocation of
-     * e.g. CBETrace::BeforeMarshalling.
+     * e.g. CTrace::BeforeMarshalling.
      */
     bool m_bTraceOn;
 
@@ -396,15 +395,6 @@ inline CBEMarshaller*
 CBEFunction::GetMarshaller() const
 { 
     return m_pMarshaller; 
-}
-
-/** \brief access the trace member
- *  \return reference to the corresponding trace
- */
-inline CBETrace* 
-CBEFunction::GetTrace() const
-{ 
-    return m_pTrace; 
 }
 
 /** \brief retrieves the name of the function

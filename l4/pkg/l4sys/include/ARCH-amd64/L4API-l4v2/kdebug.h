@@ -93,8 +93,7 @@ fiasco_register_lines(l4_taskid_t tid, l4_addr_t addr, l4_size_t size)
 L4_INLINE void
 fiasco_register_thread_name(l4_threadid_t tid, const char *name)
 {
-  asm("int $3; cmpb $30, %%al" : : "a" (name), "c" (3), 
-				   "S"(tid.lh.low), "D"(tid.lh.high));
+  asm("int $3; cmpb $30, %%al" : : "a" (name), "c" (3), "S"(tid.raw));
 }
 
 L4_INLINE int
@@ -105,11 +104,9 @@ fiasco_get_cputime(l4_threadid_t tid, l4_threadid_t *next_tid,
   asm volatile ("int $3; cmpb $30, %%al"
 		: "=A" (*total),
 		  "=c" (_prio),
-		  "=S" (next_tid->lh.low),
-		  "=D" (next_tid->lh.high)
+		  "=S" (next_tid->raw)
 		: "c" (4),
-		  "S" (tid.lh.low),
-		  "D" (tid.lh.high));
+		  "S" (tid.raw));
   if (_prio == 0xffffffff)
     return _prio;
 

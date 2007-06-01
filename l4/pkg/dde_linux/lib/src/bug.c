@@ -10,7 +10,7 @@
  * You can set your own BUG() handler by overwriting the dde_BUG function
  * pointer.
  */
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
@@ -26,7 +26,7 @@ void (*dde_BUG)(const char *file, const char *function, int line) __attribute__ 
 
 static void do_bug(const char *file, const char *function, int line)
 {
-  printk("BUG() called in %s:%d(%s)", file, line, function);
+  printk("BUG() called in %s:%d(%s) from %p", file, line, function, __builtin_return_address(0));
   LOG_flush();
   while (1) enter_kdebug("bug");
 }

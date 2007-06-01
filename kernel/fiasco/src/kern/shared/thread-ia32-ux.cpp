@@ -141,9 +141,22 @@ Thread::pagein_tcb_request (Return_frame *regs)
   if ((op & 0xc0ff) == 0x8b) // Context::is_tcb_mapped() and Context::state()
     {
       regs->ip(new_ip + 2);
-      Mword *reg = ((Mword*)regs) - 3;
+      // stack layout:
+      //         user eip
+      //         PF error code
+      // reg =>  eax/rax
+      //         ecx/rcx
+      //         edx/rdx
+      //         ...
+      Mword *reg = ((Mword*)regs) - 2;
+#if 0
+      LOG_MSG_3VAL(current(),"TCB", op, regs->ip(), (Mword)reg);
+      LOG_MSG_3VAL(current(),"TCBX", reg[-3], reg[-4], reg[-5]);
+      LOG_MSG_3VAL(current(),"TCB0", reg[0], reg[-1], reg[-2]);
+      LOG_MSG_3VAL(current(),"TCB1", reg[1], reg[2], reg[3]);
+#endif
       assert((op >> 11) <= 2);
-      reg[-(op>>11)] = 0;
+      reg[-(op>>11)] = 0; // op==0 => eax, op==1 => ecx, op==2 => edx
 
       // tell program that a pagefault occured we cannot handle
       regs->flags(regs->flags() | 0x41); // set carry and zero flag in EFLAGS
@@ -159,7 +172,7 @@ Thread::pagein_tcb_request (Return_frame *regs)
   return false;
 }
 
-IMPLEMENTATION[ia32,ux]:
+IMPLEMENTATION[ia32 || ux]:
 
 IMPLEMENT inline
 Mword 
@@ -188,6 +201,7 @@ Thread::do_trigger_exception(Entry_frame *r)
   return 0;
 }
 
+
 PUBLIC inline NOEXPORT
 void
 Thread::restore_exc_state()
@@ -201,6 +215,70 @@ Thread::restore_exc_state()
 #endif
   r->ip (_exc_ip);
   _exc_ip = ~0UL;
+}
+
+
+PRIVATE static inline
+void
+Thread::copy_utcb_to_ts(L4_msg_tag const &tag, Thread *snd, Thread *rcv)
+{
+  Trap_state *ts = (Trap_state*)rcv->_utcb_handler;
+  Mword       s  = tag.words();
+  Unsigned32  cs = ts->cs();
+
+  if (EXPECT_FALSE(rcv->exception_triggered()))
+    {
+      // triggered exception pending
+      Cpu::memcpy_mwords (&ts->_gs, snd->utcb()->values, s > 12 ? 12 : s);
+      if (EXPECT_TRUE(s > 12))
+	rcv->_exc_ip = snd->utcb()->values[12];
+      if (EXPECT_TRUE(s > 14))
+	ts->flags(snd->utcb()->values[14]);
+      if (EXPECT_TRUE(s > 15))
+	ts->sp(snd->utcb()->values[15]);
+    }
+  else
+    Cpu::memcpy_mwords (&ts->_gs, snd->utcb()->values, s > 16 ? 16 : s);
+
+  if (tag.transfer_fpu())
+    snd->transfer_fpu(rcv);
+
+  // sanitize eflags
+  if (!rcv->trap_is_privileged(0))
+    ts->flags((ts->flags() & ~(EFLAGS_IOPL | EFLAGS_NT)) | EFLAGS_IF);
+
+  // don't allow to overwrite the code selector!
+  ts->cs(cs);
+
+  rcv->state_del(Thread_in_exception);
+}
+
+PRIVATE static inline
+void
+Thread::copy_ts_to_utcb(L4_msg_tag const &, Thread *snd, Thread *rcv)
+{
+  Trap_state *ts = (Trap_state*)snd->_utcb_handler;
+  Mword        r = Utcb::Max_words;
+
+  {
+    Lock_guard <Cpu_lock> guard (&cpu_lock);
+    if (EXPECT_FALSE(snd->exception_triggered()))
+      {
+	Cpu::memcpy_mwords (rcv->utcb()->values, &ts->_gs, r > 12 ? 12 : r);
+	if (EXPECT_TRUE(r > 12))
+	  rcv->utcb()->values[12] = snd->_exc_ip;
+	if (EXPECT_TRUE(r > 14))
+	  rcv->utcb()->values[14] = ts->flags();
+	if (EXPECT_TRUE(r > 15))
+	  rcv->utcb()->values[15] = ts->sp();
+      }
+    else
+      Cpu::memcpy_mwords (rcv->utcb()->values, &ts->_gs, r > 16 ? 16 : r);
+
+    if (rcv->utcb()->inherit_fpu())
+	snd->transfer_fpu(rcv);
+
+  }
 }
 
 
@@ -260,6 +338,15 @@ Thread::user_ip(Mword ip)
 	}
     }
 }
+
+
+//----------------------------------------------------------------------------
+IMPLEMENTATION [(ia32,amd64,ux) && !io]:
+
+PRIVATE inline
+int
+Thread::handle_io_page_fault (Trap_state *, bool)
+{ return 0; }
 
 
 //----------------------------------------------------------------------------
@@ -357,13 +444,14 @@ Thread::handle_slow_trap (Trap_state *ts)
     }
 
   _recover_jmpbuf = &pf_recovery;
-  ip = ts->ip();
 
-  switch (handle_io_page_fault (ts, ip, from_user))
+  switch (handle_io_page_fault (ts, from_user))
     {
     case 1: goto success;
     case 2: goto fail;
     }
+  
+  ip = ts->ip();
 
   // check for "invalid opcode" exception
   if (EXPECT_FALSE (Config::Kip_syscalls && ts->_trapno == 6))
@@ -742,6 +830,83 @@ Thread::update_ipc_window (Address pfa, Address remote_pfa, Mword error_code)
   return 0;
 }
 
+
+PRIVATE inline
+Utcb *
+Thread::access_utcb() const
+{ return utcb(); }
+
+
+PUBLIC inline
+int
+Thread::send_exception(Trap_state *ts)
+{
+  if (//ts->_trapno != 1 && ts->_trapno != 3 &&
+      _pager != kernel_thread)
+    {
+      if (ts->_trapno == 3)
+	{
+	  if (!(state() & Thread_alien))
+	    return 0;
+
+	  if (state() & Thread_dis_alien)
+	    {
+	      state_del(Thread_dis_alien);
+	      return 0;
+	    }
+
+          // set IP back on the int3 instruction
+	  ts->ip(ts->ip() - 1);
+	}
+
+      state_change(~Thread_cancel, Thread_in_exception);
+
+      Proc::sti();		// enable interrupts, we're sending IPC
+      Ipc_err err = exception(ts);
+
+      if (err.has_error() && err.error() == Ipc_err::Enot_existent)
+	return 0;
+
+      return 1;      // We did it
+    }
+  return 0;
+}
+
+
+// used by the assembler shortcut
+// uargh, crap preprocess it dont like the asm directive and
+// the fastcall macro at the function definition
+PUBLIC static inline
+void 
+Thread::switch_exception_context(Thread *sender, Thread* receiver)
+//  asm("switch_exception_context_label") 
+{
+#ifdef CONFIG_HANDLE_SEGMENTS
+  sender->store_segments();
+  sender->switch_gdt_user_entries(receiver);
+  receiver->load_segments();
+#else
+  (void)sender; (void)receiver;
+#endif
+}
+
+extern "C"  FIASCO_FASTCALL __attribute__((section(".text.asmshortcut")))
+void
+handle_utcb_ipc(Thread *sender, Thread* receiver, Mword tag)
+{
+  //LOG_MSG_3VAL(sender, "UTCB", tag, 0, 0);
+  sender->copy_utcb_to(L4_msg_tag(tag), receiver);
+}
+
+extern "C"  FIASCO_FASTCALL __attribute__((section(".text.asmshortcut")))
+void
+switch_exception_context_wrapper(Thread *sender, Thread* receiver, Mword tag)
+{
+  handle_utcb_ipc(sender, receiver, tag);
+  Thread::switch_exception_context(sender, receiver);
+}
+
+
 //---------------------------------------------------------------------------
 IMPLEMENTATION[{ia32,amd64,ux}-!io]: 
 
@@ -783,7 +948,7 @@ Thread::tls_setup_emu(Trap_state *ts, Address *desc_addr, int *size,
   // In any case, jump over the instruction
   ts->ip(ts->ip() + 3);
 
-  *t = id_to_tcb(L4_uid(((Unsigned64)ts->_edi << 32) | ts->_esi));
+  *t = id_to_tcb(L4_uid(ts->_esi));
   if (!*t)
     {
       WARN("set_tls: non-existing thread %08lx.%08lx", ts->_edi, ts->_esi);
@@ -845,16 +1010,7 @@ Thread::lldt_setup_emu(Trap_state *ts, Mem_space **s, Address *desc_addr,
 
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION[(ia32 || amd64 || ux) && utcb]:
-
-PRIVATE inline
-Utcb *
-Thread::access_utcb() const
-{ return utcb(); }
-
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION[(ia32 || amd64) && utcb]:
+IMPLEMENTATION[ia32 || amd64]:
 
 #include "fpu.h"
 #include "fpu_alloc.h"
@@ -885,156 +1041,10 @@ Thread::transfer_fpu(Thread *to)
 }
 
 //---------------------------------------------------------------------------
-IMPLEMENTATION[ux && utcb]:
+IMPLEMENTATION[ux]:
 
 PUBLIC inline
 void
 Thread::transfer_fpu(Thread *)
 {}
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [{ia32,ux}-exc_ipc]:
-
-PRIVATE static inline
-void
-Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
-{
-  Trap_state *ts = (Trap_state*)rcv->_utcb_handler;
-  Mword       s  = snd->utcb()->snd_size;
-  Unsigned32  cs = ts->cs();
-
-  if (EXPECT_FALSE(rcv->exception_triggered()))
-    {
-      // triggered exception pending
-      Cpu::memcpy_mwords (&ts->_gs, snd->utcb()->values, s > 12 ? 12 : s);
-      if (EXPECT_TRUE(s > 12))
-	rcv->_exc_ip = snd->utcb()->values[12];
-      if (EXPECT_TRUE(s > 14))
-	ts->flags(snd->utcb()->values[14]);
-      if (EXPECT_TRUE(s > 15))
-	ts->sp(snd->utcb()->values[15]);
-    }
-  else
-    Cpu::memcpy_mwords (&ts->_gs, snd->utcb()->values, s > 16 ? 16 : s);
-
-  if (snd->utcb()->status & Utcb::Transfer_fpu)
-    snd->transfer_fpu(rcv);
-
-  // sanitize eflags
-  if (!rcv->trap_is_privileged(0))
-    ts->flags((ts->flags() & ~(EFLAGS_IOPL | EFLAGS_NT)) | EFLAGS_IF);
-
-  // don't allow to overwrite the code selector!
-  ts->cs(cs);
-
-  rcv->state_del(Thread_in_exception);
-}
-
-PRIVATE static inline
-void
-Thread::copy_ts_to_utcb(Thread *snd, Thread *rcv)
-{
-  Trap_state *ts = (Trap_state*)snd->_utcb_handler;
-  Mword        r = rcv->utcb()->rcv_size;
-
-  {
-    Lock_guard <Cpu_lock> guard (&cpu_lock);
-    if (EXPECT_FALSE(snd->exception_triggered()))
-      {
-	Cpu::memcpy_mwords (rcv->utcb()->values, &ts->_gs, r > 12 ? 12 : r);
-	if (EXPECT_TRUE(r > 12))
-	  rcv->utcb()->values[12] = snd->_exc_ip;
-	if (EXPECT_TRUE(r > 14))
-	  rcv->utcb()->values[14] = ts->flags();
-	if (EXPECT_TRUE(r > 15))
-	  rcv->utcb()->values[15] = ts->sp();
-      }
-    else
-      Cpu::memcpy_mwords (rcv->utcb()->values, &ts->_gs, r > 16 ? 16 : r);
-
-    if (rcv->utcb()->status & Utcb::Inherit_fpu)
-	snd->transfer_fpu(rcv);
-
-  }
-}
-
-//---------------------------------------------------------------------------
-IMPLEMENTATION [{ia32,ux,amd64}-exc_ipc]:
-
-
-PUBLIC inline
-int
-Thread::send_exception(Trap_state *ts)
-{
-  if (//ts->_trapno != 1 && ts->_trapno != 3 &&
-      _pager != kernel_thread &&
-      _pager->utcb()->status & Utcb::Handle_exception)
-    {
-      if (ts->_trapno == 3)
-	{
-	  if (!(state() & Thread_alien))
-	    return 0;
-
-	  if (state() & Thread_dis_alien)
-	    {
-	      state_del(Thread_dis_alien);
-	      return 0;
-	    }
-
-          // set IP back on the int3 instruction
-	  ts->ip(ts->ip() - 1);
-	}
-
-      state_change(~Thread_cancel, Thread_in_exception);
-
-      Proc::sti();		// enable interrupts, we're sending IPC
-      Ipc_err err = exception(ts);
-
-      if (err.has_error() && err.error() == Ipc_err::Enot_existent)
-	return 0;
-
-      return 1;      // We did it
-    }
-  return 0;
-}
-
-
-// used by the assembler shortcut
-// uargh, crap preprocess it dont like the asm directive and
-// the fastcall macro at the function definition
-PUBLIC static inline
-void 
-Thread::switch_exception_context(Thread *sender, Thread* receiver, Mword ctx_switch)
-//  asm("switch_exception_context_label") 
-{
-  
-#ifdef CONFIG_EXCEPTION_IPC
-  sender->copy_utcb_to(receiver);
-#endif
-
-#ifdef CONFIG_HANDLE_SEGMENTS
-  if(EXPECT_FALSE(!ctx_switch))
-    return;
-
-  sender->store_segments();
-  receiver->switch_gdt_tls();
-  receiver->load_segments();
-#endif
-  (void)ctx_switch;
-}
-
-extern "C"  FIASCO_FASTCALL
-void
-switch_exception_context_wrapper(Thread *sender, Thread* receiver, Mword ctx_switch)
-{
-  Thread::switch_exception_context(sender, receiver, ctx_switch);
-}
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION [{ia32,amd64,ux}-!exc_ipc]:
-
-PUBLIC inline
-int
-Thread::send_exception(Trap_state *) const
-{ return 0; }
 

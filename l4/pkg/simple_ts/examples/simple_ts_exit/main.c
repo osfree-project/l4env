@@ -117,8 +117,8 @@ app(int id, int num_create, l4_threadid_t caller)
       l4_ipc_receive(tid, 0, &dummy, &dummy, L4_IPC_NEVER, &result);
 
       if (debug_pager)
-        printf("Task "l4util_idfmt" (%08lx:%08lx) stack at %08lx..%08lx is up\n",
-	     l4util_idstr(tid),tid.lh.high,tid.lh.low,
+        printf("Task "l4util_idfmt" (%08lx) stack at %08lx..%08lx is up\n",
+	     l4util_idstr(tid),tid.raw,
 	     esp & L4_PAGEMASK, (esp & L4_PAGEMASK)+L4_PAGESIZE-1);
     }
 

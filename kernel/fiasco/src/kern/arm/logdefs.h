@@ -44,6 +44,7 @@
 #define LOG_SCHED_LOAD			do { } while (0)
 #define LOG_SCHED_SAVE			do { } while (0)
 #define LOG_SCHED_INVALIDATE		do { } while (0)
+#define LOG_ID_NEAREST			do { } while (0)
 
 #include "globalconfig.h"
 

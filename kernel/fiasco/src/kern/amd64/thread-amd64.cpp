@@ -7,7 +7,8 @@ private:
   Mword _exc_ss;
 };
 
-//---------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------
 IMPLEMENTATION [amd64]:
 
 IMPLEMENT inline
@@ -59,15 +60,12 @@ Thread::restore_exc_state()
   _exc_ip = ~0UL;
 }
 
-//---------------------------------------------------------------------------
-IMPLEMENTATION [amd64-exc_ipc]:
-
 PRIVATE static inline
 void
-Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
+Thread::copy_utcb_to_ts(L4_msg_tag const &tag, Thread *snd, Thread *rcv)
 {
   Trap_state *ts = (Trap_state*)rcv->_utcb_handler;
-  Mword       s  = snd->utcb()->snd_size;
+  Mword       s  = tag.words();
   Unsigned32  cs = ts->cs();
 
   if (EXPECT_FALSE(rcv->exception_triggered()))
@@ -82,7 +80,7 @@ Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
 	rcv->_exc_sp = snd->utcb()->values[22];
     }
   else
-    Cpu::memcpy_mwords (ts, snd->utcb()->values, s > 24 ? 24 : s);
+    Cpu::memcpy_mwords (ts, snd->utcb()->values, s > 23 ? 23 : s);
 
   // sanitize eflags
   // XXX: ia32 in here!
@@ -97,25 +95,21 @@ Thread::copy_utcb_to_ts(Thread *snd, Thread *rcv)
 
 PRIVATE static inline
 void
-Thread::copy_ts_to_utcb(Thread *snd, Thread *rcv)
+Thread::copy_ts_to_utcb(L4_msg_tag const &, Thread *snd, Thread *rcv)
 {
   Trap_state *ts = (Trap_state*)snd->_utcb_handler;
-  Mword        r = rcv->utcb()->rcv_size;
 
   {
     Lock_guard <Cpu_lock> guard (&cpu_lock);
     if (EXPECT_FALSE(snd->exception_triggered()))
       {
-	Cpu::memcpy_mwords (rcv->utcb()->values, ts, r > 19 ? 19 : r);
-	if (EXPECT_TRUE(r > 19))
-	  rcv->utcb()->values[19] = snd->_exc_ip;
-	if (EXPECT_TRUE(r > 21))
-	  rcv->utcb()->values[21] = ts->flags();
-	if (EXPECT_TRUE(r > 22))
-	  rcv->utcb()->values[22] = snd->_exc_sp;
+	Cpu::memcpy_mwords (rcv->utcb()->values, ts, 19);
+	rcv->utcb()->values[19] = snd->_exc_ip;
+	rcv->utcb()->values[21] = ts->flags();
+	rcv->utcb()->values[22] = snd->_exc_sp;
       }
     else
-      Cpu::memcpy_mwords (rcv->utcb()->values, ts, r > 24 ? 24 : r);
+      Cpu::memcpy_mwords (rcv->utcb()->values, ts, 23);
   }
 }
 

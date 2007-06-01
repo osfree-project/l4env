@@ -7,7 +7,7 @@
  * \date   12/28/2000
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
  *
- * \todo Synchronize with L4 kernel timer (requires abstraction of the 
+ * \todo Synchronize with L4 kernel timer (requires abstraction of the
  *       kernel clock in l4env).
  */
 /*****************************************************************************/
@@ -22,6 +22,7 @@
 #include <l4/sys/ipc.h>
 #include <l4/util/bitops.h>
 #include <l4/util/macros.h>
+#include <l4/util/util.h>
 
 /* library includes */
 #include <l4/thread/thread.h>
@@ -33,57 +34,8 @@
 
 /*****************************************************************************/
 /**
- * \brief  Calculate L4 timeout.
- * 
- * \param  mus           Timeout (microseconds)
- * \retval to_e          Exponent of the L4 timeout 
- * \retval to_m          Mantissa of the L4 timeout
- *
- * Calculate the exponent/mantissa of the L4 send/receive timeout from the 
- * microsecond value. 
- * 
- * The L4 timeout is specified by 2 unsigned integer values e (4 bit) and
- * m (8 bit) (see L4 Reference Manual) where 
- * 
- * \f[ timeout (\mu s)  = m * 4^{(15 - e)}\f]
- * 
- * With a given timeout \a mus, \a m and \a e can be calculated as follows:
- *
- * \f[ e = 14 - \left\lfloor \frac{1}{2} 
- *         log_2\left(\frac{mus}{256}\right) \right\rfloor \f]
- * \f[ m = \frac{mus}{2^{2 * (15 - e)}} \f]
- */
-/*****************************************************************************/ 
-static inline void 
-__micros2l4to(l4_uint32_t mus, l4_uint32_t * to_e, l4_uint32_t * to_m)
-{
-  if (mus == 0)
-    {
-      /* timeout 0, m = 0, e != 0 (see L4 Reference Manual) */  
-      *to_e = 1;
-      *to_m = 0; 
-    } 
-  else 
-    { 
-      *to_e = 14 - l4util_log2(mus / 256) / 2;
-      *to_m = mus / (1UL << (2 * (15 - *to_e)));
-
-      /* sanity check */
-      if ((*to_e > 15) || (*to_m > 255))
-	{
-	  LOG_Error("l4thread: invalid timeout (%u), using max. values", mus);
-	  *to_e = 0;
-	  *to_m = 255;
-	}
-    }
-
-  LOGdL(DEBUG_SLEEP, "mus = %u -> e = %u, m = %u", mus, *to_e, *to_m);
-}
-
-/*****************************************************************************/
-/**
  * \brief  Sleep.
- * 
+ *
  * \param  t             Timeout (microseconds)
  *
  * Do sleep.
@@ -94,7 +46,6 @@ __micros2l4to(l4_uint32_t mus, l4_uint32_t * to_e, l4_uint32_t * to_m)
 static void
 __do_sleep(l4_uint32_t t)
 {
-  l4_uint32_t to_e,to_m;
   l4_timeout_t to;
   int error;
 
@@ -102,17 +53,14 @@ __do_sleep(l4_uint32_t t)
     to = L4_IPC_NEVER;
   else
     {
-      /* calculate timeout */
-      __micros2l4to(t, &to_e, &to_m);
-      
-      /* sanity check */
-      if (to_e && !to_m)
-        /* sleep(0us), nothing to do */
-        return;
-      
-      to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
+      l4_timeout_s rcv = l4util_micros2l4to(t);
+
+      if (rcv.t == L4_IPC_TIMEOUT_0.t)
+	return;
+
+      to = l4_timeout(L4_IPC_TIMEOUT_NEVER, rcv);
     }
-  
+
   /* do wait */
   error = l4_ipc_sleep(to);
 
@@ -127,12 +75,12 @@ __do_sleep(l4_uint32_t t)
 /*****************************************************************************/
 /**
  * \brief  Sleep.
- * 
+ *
  * \param  t             Time (milliseconds)
  *
  * Sleep for \t milliseconds.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4thread_sleep(l4_uint32_t t)
 {
@@ -146,18 +94,18 @@ l4thread_sleep(l4_uint32_t t)
 /*****************************************************************************/
 /**
  * \brief  Sleep.
- * 
+ *
  * \param  t             Time (microseconds).
  *
  * Sleep for \t microseconds.
  *
- * \note Although the L4 timeout is specified in microseconds, the actual 
- *       timer resolution is about one millisecond. If we really need 
+ * \note Although the L4 timeout is specified in microseconds, the actual
+ *       timer resolution is about one millisecond. If we really need
  *       microsecond timers, we must implement them differently.
  * \todo Implement microsecond timers (if we really need them).
  */
-/*****************************************************************************/ 
-void 
+/*****************************************************************************/
+void
 l4thread_usleep(l4_uint32_t t)
 {
   /* sleep */
@@ -168,10 +116,10 @@ l4thread_usleep(l4_uint32_t t)
 /**
  * \brief  Sleep forever
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4thread_sleep_forever(void)
 {
-  /* sleep */ 
+  /* sleep */
   __do_sleep(-1);
 }

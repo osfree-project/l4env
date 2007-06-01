@@ -27,6 +27,7 @@ enum
   Offs_lthread_ex_regs   = 0x500,
   Offs_task_new          = 0x600,
   Offs_privctrl          = 0x700,
+  Offs_ulock             = 0x800,
 };
 
 #define SYSCALL_SYMS(sysc) \
@@ -50,6 +51,7 @@ Sys_call_page::init()
   SYSCALL_SYMS(lthread_ex_regs);
   SYSCALL_SYMS(task_new);
   SYSCALL_SYMS(privctrl);
+  SYSCALL_SYMS(ulock);
 
   if (!Vmem_alloc::page_alloc((void*)Mem_layout::Syscalls, 
 	Vmem_alloc::ZERO_FILL, Vmem_alloc::User))
@@ -80,6 +82,7 @@ Sys_call_page::init()
   COPY_SYSCALL(lthread_ex_regs);
   COPY_SYSCALL(task_new);
   COPY_SYSCALL(privctrl);
+  COPY_SYSCALL(ulock);
 
   Kernel_task::kernel_task()->mem_space()->set_attributes(Mem_layout::Syscalls,
       Page::USER_RO);

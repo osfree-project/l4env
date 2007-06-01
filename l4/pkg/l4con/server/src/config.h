@@ -21,11 +21,11 @@
 
 /* We assume that a client does l4_ipc_call for requests => snd to 0.
  * We want to leave the main loop from time to time      => rcv to 50ms */
-#define REQUEST_TIMEOUT		L4_IPC_TIMEOUT(0,1,195,11,0,0)
+#define REQUEST_TIMEOUT		l4_ipc_timeout(0,1,780,6)
 
 /* We want to push an event to a client. 
  * The event handler may be busy handling the last event => snd to 100ms.
  * The handler needs some time to process the new event  => rcv to 100ms. */
-#define EVENT_TIMEOUT		L4_IPC_TIMEOUT(97,10,97,10,0,0)
+#define EVENT_TIMEOUT		l4_ipc_timeout(781,7,781,7)
 
 #define CONFIG_MAX_CLIENTS      4

@@ -184,7 +184,7 @@ IMPLEMENTATION:
 // 
 
 /** Array elements for holding frame-specific data. */
-class Physframe : public Mappable
+class Physframe : public Base_mappable
 {
   friend class Mapdb;
   friend class Mapdb::Iterator;

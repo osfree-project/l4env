@@ -8,8 +8,9 @@ fiasco \
         -l log                                                         \
         -l dm_phys                                                     \
         -l simple_ts                                                   \
+	-l l4io                                                        \
         -l fuxfprov                                                    \
-        -l l4dope-ux                                                   \
+        -l l4dope                                                      \
         -l loader                                                      \
         -l name_server" -ep"                                           \
         -l "fstab -c /server -c /server/sfs -c /proc/ -c /proc/rt_mon  \
@@ -24,6 +25,6 @@ fiasco \
         -l l4vfs_log                                                   \
         -l "rt_l4vfs_dope_mon --stdout /server/log/L4VFS_DMon"         \
         -l dope_bench                                                  \
-        -n9 "$@"
+        -n10 "$@"
 
 

@@ -102,7 +102,7 @@ Helping_lock::clear()
  */
 PUBLIC inline NEEDS["std_macros.h", "globals.h"]
 Context* NO_INSTRUMENT
-Helping_lock::lock_owner ()
+Helping_lock::lock_owner () const
 {
   if (EXPECT_FALSE( ! threading_system_active) ) // still initializing?
     return current();

@@ -167,15 +167,8 @@ task_init(void)
       __tasks[i].id.id = (l4_threadid_struct_t){
 					      lthread:0,
 					      task:i+taskno_min,
-#ifdef ARCH_arm /* dummy check for x0-native */
-					      version:0,
-#else
 					      version_low:0,
 					      version_high:0,
-					      site:0,
-					      nest:0,
-#endif
-					      chief:rmgr_id.id.task,
 					    };
       __tasks[i].timeout.timeout = -1;
 
@@ -193,11 +186,7 @@ task_init(void)
 	  /* this is a valid task number; however, as we create tasks
 	   * through RMGR, just return the L4 task right back to RMGR */
 	  tid = server_id;
-	  tid.id.chief = l4_myself().id.task; //tid.id.task;
 	  tid.id.task = taskno;
-#ifndef ARCH_arm
-	  tid.id.nest++;
-#endif
 	  l4_task_new(tid, (l4_umword_t)rmgr_id.raw, 0, 0, L4_NIL_ID);
 	}
     }
@@ -215,11 +204,7 @@ task_alloc(l4_threadid_t *caller, l4_uint32_t taskno)
 	{
 	  __tasks[n].owner = *caller;
 	  __tasks[n].id.id.task = taskno;
-#ifdef ARCH_arm
-	  __tasks[n].id.id.version++;
-#else
 	  __tasks[n].id.id.version_low++;
-#endif
 	  return taskno;
 	}
       return -L4_ENOTASK;
@@ -235,11 +220,7 @@ task_alloc(l4_threadid_t *caller, l4_uint32_t taskno)
     } while (l4util_test_and_set_bit(n, task_used));
 
   __tasks[n].owner = *caller;
-#ifdef ARCH_arm
-  __tasks[n].id.id.version++;
-#else
   __tasks[n].id.id.version_low++;
-#endif
   return n + taskno_min;
 }
 
@@ -440,7 +421,6 @@ l4_ts_allocate2_component(CORBA_Object client,
     return -L4_ENOTASK;
 
   *taskid          = __tasks[taskno - taskno_min].id;
-  taskid->id.chief = client->id.task;
   // transfer chief rights
   ret = l4_task_new(*taskid, (l4_umword_t)client->raw, 0, 0, L4_NIL_ID);
   if (l4_is_nil_id(*taskid))
@@ -835,7 +815,7 @@ ack_thread(void)
 	   * forever. */
 	  eventnr = timeout_first->eventnr;
           if (l4events_get_ack_open(&eventnr, &sender, &w1, &w2,
-				    L4_IPC_TIMEOUT(0,0,244,9,0,0) /* 1s */)
+				    l4_ipc_timeout(0,0,976,10) /* 1s */)
 	      == -L4EVENTS_ERROR_TIMEOUT)
 	    {
 	      handle_timeout();

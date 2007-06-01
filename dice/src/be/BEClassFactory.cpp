@@ -68,10 +68,15 @@
 #include "BEStructType.h"
 #include "BEIDLUnionType.h"
 #include "BEEnumType.h"
-#include "BETrace.h"
 #include "Compiler.h"
+#include "Messages.h"
 // for dynamic loadable tracing classes
-#include <dlfcn.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+#if defined(HAVE_LTDL_H)
+#include <ltdl.h>
+#endif
 #include <iostream>
 
 CBEClassFactory::CBEClassFactory()
@@ -532,48 +537,41 @@ CBEMsgBufferType* CBEClassFactory::GetNewMessageBufferType()
     return new CBEMsgBufferType();
 }
 
-/** \brief creates a new instance of the tracing class CBETrace
+/** \brief creates a new instance of the tracing class CTrace
  *  \return a reference to the tracing class
  */
-CBETrace* CBEClassFactory::GetNewTraceFromLib()
+CTrace* CBEClassFactory::GetNewTrace()
 {
     string sTraceLib;
     if (!CCompiler::GetBackEndOption(string("trace-lib"), sTraceLib))
-	return (CBETrace*)0;
+	return 0;
 
     // get handle for lib
-    void *lib = dlopen(sTraceLib.c_str(), RTLD_NOW);
+#if defined(HAVE_LTDL_H)
+    lt_dlhandle lib = lt_dlopen(sTraceLib.c_str());
     if (lib == NULL)
-	return (CBETrace*)0;
+	return 0;
 
     // get symbol for create function
-    CBETrace* (*func)(void);
-    func = (CBETrace* (*)(void))dlsym(lib, "dice_tracing_new_class");
+    CTrace* (*func)(void);
+    func = (CTrace* (*)(void))lt_dlsym(lib, "dice_tracing_new_class");
     // use error message as error indicator
-    const char *errmsg = dlerror();
+    const char *errmsg = lt_dlerror();
     if (errmsg != NULL)
     {
 	std::cerr << errmsg;
-	return (CBETrace*)0;
+	return 0;
     }
 
     // call factory function
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEClassFactory: create class CBETrace from lib \"%s\".\n",
+	"CBEClassFactory: create class CTrace from lib \"%s\".\n",
 	sTraceLib.c_str());
     return (*func) ();
-}
-
-/** \brief creates a new instance of the trace class
- *  \return a reference to the newly created class
- */
-CBETrace* CBEClassFactory::GetNewTrace()
-{
-    CBETrace *pRet = GetNewTraceFromLib();
-    if (pRet)
-	return pRet;
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: create class CBETrace\n");
-    return new CBETrace();
+#else
+    CMessages::Error("Dynamic loading not supported.\n"
+	"Please install the `libtool' development package and rebuild Dice.\n");
+    return 0;
+#endif
 }
 

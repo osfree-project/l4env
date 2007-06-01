@@ -15,7 +15,7 @@ CXXLIB		= $(shell $(CXX) -print-file-name=libsupc++.a)
 GCCLIB		:= $(GCCLIB_EH) $(GCCLIB) 
 SRC_CC		:= main.cc
 TARGET		:= c++-excpt-test
-SYSTEMS		= x86-l4v2 #arm-l4x0
+SYSTEMS		= x86-l4v2 #arm-l4v2
 
 CPPFLAGS 	+= -DLOG_TAG=\"cxxtest\"
 

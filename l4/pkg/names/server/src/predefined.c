@@ -40,7 +40,6 @@ int preregister(void)
       return 0;
 
     id.id.task = 2;
-    id.id.chief = rmgr_id.id.task;
     if (!server_names_register(&me, "sigma0", &id, 0))
       return 0;
 

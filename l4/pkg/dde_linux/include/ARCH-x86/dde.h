@@ -8,7 +8,7 @@
  * \author Christian Helmuth <ch12@os.inf.tu-dresden.de>
  *
  */
-/* (c) 2003 Technische Universitaet Dresden
+/* (c) 2007 Technische Universitaet Dresden
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
@@ -101,7 +101,7 @@ l4_threadid_t l4dde_irq_l4_id(int irq);
  *
  * \return 0 on success, negative error code otherwise
  */
-int l4dde_irq_init(int omega0);
+int l4dde_irq_init(void);
 
 /** Set an alien IPC handler for interrupt requests
  *

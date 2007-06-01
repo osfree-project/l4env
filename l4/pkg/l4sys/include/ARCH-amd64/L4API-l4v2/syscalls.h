@@ -490,7 +490,7 @@ __do_l4_task_new(l4_taskid_t destination,
 #  if GCC_VERSION < 303
 #    error gcc >= 3.3 required
 #  else
-#    include "syscalls-l42-gcc3-nopic.h"
+#    include "syscalls-l42-gcc3.h"
 #  endif
 L4_INLINE l4_threadid_t
 l4_myself_noprof(void)

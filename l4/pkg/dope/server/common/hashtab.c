@@ -184,16 +184,16 @@ static void hashtab_add_elem(HASHTAB *h, char *ident, void *value) {
 
 /*** PRINT INFORMATION ABOUT A HASH TABLE (ONLY FOR DEBUGGING ISSUES) ***/
 void hashtab_print_info(HASHTAB *h) {
-	u32 i;
+	int i;
 	struct hashtab_entry *e;
 	if (!h) {
 		printf(" hashtab is zero!\n");
 		return;
 	}
-	printf(" tab_size=%lu\n", h->tab_size);
-	printf(" max_hash_length=%lu\n", h->max_hash_length);
+	printf(" tab_size=%u\n", h->tab_size);
+	printf(" max_hash_length=%u\n", h->max_hash_length);
 	for (i=0; i<h->tab_size; i++) {
-		printf(" hash #%lu: ", i);
+		printf(" hash #%d: ", i);
 		e = h->tab[i];
 		if (!e) printf("empty");
 		else {

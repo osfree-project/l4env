@@ -125,7 +125,7 @@ long dopeapp_listener_event_component(CORBA_Object _dice_corba_obj,
                                       const char* bindarg,
                                       CORBA_Server_Environment *_dice_corba_env) {
 
-	struct dopelib_app *app = dopelib_apps[(int)_dice_corba_env->user_data];
+	struct dopelib_app *app = dopelib_apps[(unsigned long)_dice_corba_env->user_data];
 	long first = app->first;
 	dope_event *event = &app->event_queue[first];
 

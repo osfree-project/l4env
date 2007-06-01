@@ -259,8 +259,8 @@ static void scale_bind(SCALE *s, char *bind_ident, char *message) {
 
 
 /*** PROPAGATE APPLICATION ID TO CHILD WIDGETS ***/
-static void (*orig_set_app_id)(WIDGET *w,long new_app_id);
-static void scale_set_app_id(SCALE *s,long new_app_id) {
+static void (*orig_set_app_id)(WIDGET *w, s32 new_app_id);
+static void scale_set_app_id(SCALE *s, s32 new_app_id) {
 	WIDGET *cw;
 
 	if ((cw = s->sd->slider))    cw->gen->set_app_id(cw, new_app_id);

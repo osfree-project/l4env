@@ -107,7 +107,7 @@ static void add_redraw_action(WIDGET *w, long x1, long y1, long x2, long y2, lon
 
 
 /*** PUT NEW REDRAW-ACTION INTO QUEUE ***/
-static void draw_area(WIDGET *cw, long cx1, long cy1, long cx2, long cy2) {
+static void draw_area(WIDGET *cw, int cx1, int cy1, int cx2, int cy2) {
 
 	/* the parent of a window is a screen, the screen has no parent */
 	while (cw && cw->wd->parent && cw->wd->parent->wd->parent) {
@@ -138,7 +138,7 @@ static void draw_widget(WIDGET *cw) {
 
 
 /*** GENERATE ACTION TO REDRAW AN AREA OF A SPECIFIED WIDGET ***/
-static void draw_widgetarea(WIDGET *cw, s32 rx1, s32 ry1, s32 rx2, s32 ry2) {
+static void draw_widgetarea(WIDGET *cw, int rx1, int ry1, int rx2, int ry2) {
 	draw_area(cw, rx1, ry1, rx2, ry2);
 }
 

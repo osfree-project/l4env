@@ -532,28 +532,9 @@ Thread::check_trap13_kernel (Trap_state * /*ts*/, bool /*from_user*/)
   return 1;
 }
 
+
+//----------------------------------------------------------------------------
 IMPLEMENTATION[ia32,amd64]:
-
-PRIVATE inline
-bool
-Thread::need_iopl(Address ip, bool from_user)
-{
-  Unsigned8 instr = mem_space()->peek ((Unsigned8*) ip, from_user);
-  return instr == 0xfa /*cli*/ || instr == 0xfb /*sti*/;
-}
-
-PRIVATE inline
-bool 
-Thread::gain_iopl(Trap_state *ts)
-{
-  if (space()->is_privileged())
-    {
-      // lazily link in IOPL if necessary
-      ts->flags(ts->flags() | EFLAGS_IOPL_U);
-      return 1;
-    }
-  return 0;
-}
 
 PRIVATE inline
 void
@@ -568,34 +549,25 @@ Thread::check_f00f_bug (Trap_state *ts)
     ts->_trapno = (ts->_cr2 - Idt::idt()) / 8;
 }
 
-PRIVATE inline NEEDS[Thread::gain_iopl]
-int
-Thread::handle_io_page_fault (Trap_state *ts, Address eip, bool from_user)
+
+PRIVATE inline
+unsigned
+Thread::check_io_bitmap_delimiter_fault(Trap_state *ts)
 {
-  bool _need_iopl = false;
-  if (Config::enable_io_protection && eip < Kmem::mem_user_max 
-      && ts->_trapno == 13 && (ts->_err & 7) == 0)
-    {
-      _need_iopl = need_iopl(eip, from_user);
-      if (_need_iopl && gain_iopl(ts))
-	return 1;
-    }
-  
   // check for page fault at the byte following the IO bitmap
-  if (Config::enable_io_protection
-      && ts->_trapno == 14           // page fault?
+  if (ts->_trapno == 14           // page fault?
       && (ts->_err & 4) == 0         // in supervisor mode?
-      && eip < Kmem::mem_user_max   // delimiter byte accessed?
+      && ts->ip() < Kmem::mem_user_max   // delimiter byte accessed?
       && (ts->_cr2 == Mem_layout::Io_bitmap + L4_fpage::Io_port_max / 8))
     {
       // page fault in the first byte following the IO bitmap
       // map in the cpu_page read_only at the place
       Mem_space::Status result =
 	mem_space()->v_insert (mem_space()->virt_to_phys_s0
-	                     ((void*)Kmem::io_bitmap_delimiter_page()),
-			   Mem_layout::Io_bitmap + L4_fpage::Io_port_max / 8,
-			   Config::PAGE_SIZE,
-			   Pd_entry::global());
+                                 ((void*)Kmem::io_bitmap_delimiter_page()),
+                               Mem_layout::Io_bitmap + L4_fpage::Io_port_max / 8,
+                               Config::PAGE_SIZE,
+                               Pd_entry::global());
 
       switch (result)
 	{
@@ -613,89 +585,7 @@ Thread::handle_io_page_fault (Trap_state *ts, Address eip, bool from_user)
 	}
     }
 
-  // Check for IO page faults. If we got exception #14, the IO bitmap page is
-  // not available. If we got exception #13, the IO bitmap is available but
-  // the according bit is set. In both cases we have to dispatch the code at
-  // the faulting eip to deterine the IO port and send an IO flexpage to our
-  // pager. If it was a page fault, check the faulting address to prevent
-  // touching userland.
-  if (Config::enable_io_protection && eip < Kmem::mem_user_max &&
-      (ts->_trapno == 13 && (ts->_err & 7) == 0 ||
-       ts->_trapno == 14 && Kmem::is_io_bitmap_page_fault (ts->_cr2)))
-    {
-
-      unsigned port, size;
-      if (get_ioport (eip, ts, &port, &size))
-        {
-	  if (space()->is_privileged() && gain_iopl(ts))
-	    return 1;
-	  Mword io_page = L4_fpage::io (port, size, 0).raw();
-          Ipc_err ipc_code;
-
-          // set User mode flag to get correct IP in handle_page_fault_pager
-          // pretend a write page fault
-          static const unsigned io_error_code = PF_ERR_WRITE | PF_ERR_USERMODE;
-
-	  CNT_IO_FAULT;
-
-          if (EXPECT_FALSE (log_page_fault()))
-	    page_fault_log (io_page, io_error_code, eip);
-
-          if (Config::monitor_page_faults)
-            {
-              if (_last_pf_address    == io_page &&
-		  _last_pf_error_code == io_error_code)
-                {
-                  if (!log_page_fault())
-		    printf ("*IO[%x,%x,%lx]\n", port, size, eip);
-                  else
-                    putchar ('\n');
-
-                  kdb_ke ("PF happened twice");
-                }
-
-              _last_pf_address    = io_page;
-              _last_pf_error_code = io_error_code;
-
-              // (See also corresponding code in
-              //  Thread::handle_page_fault() and Thread::handle_slow_trap.)
-            }
-
-          // treat it as a page fault in the region above 0xf0000000,
-
-	  // We could also reset the Thread_cancel at slowtraps entry but it
-	  // could be harmful for debugging (see also comment at slowtraps:).
-	  //
-	  // This must be done while interrupts are off to prevent that an
-	  // other thread sets the flag again.
-          state_del (Thread_cancel);
-
-	  // set cr2 in ts so that we also get the io_page value in an
-	  // consecutive exception
-	  ts->_cr2    = io_page;
-
-	  if (EXPECT_FALSE(state() & Thread_alien))
-	    {
-	      // special case for alien tasks: Don't generate pagefault but
-	      // send (pagefault) exception to pager.
-	      ts->_trapno = 14;
-	      if (send_exception(ts))
-		{
-		  if (!_need_iopl || gain_iopl(ts))
-		    return 1;
-		  else
-		    return 0;
-		}
-	      return 2; // fail, don't send exception again
-	    }
-
-          ipc_code = handle_page_fault_pager (_pager, io_page, io_error_code);
-
-          if (!ipc_code.has_error() && (!_need_iopl || gain_iopl(ts)))
-	    return 1;
-        }
-    }
-  return 0; // fail
+  return 1;
 }
 
 PRIVATE inline
@@ -804,7 +694,7 @@ Thread::handle_lldt(Trap_state *ts)
 
   if (EXPECT_FALSE(ts->_ebx == 0)) // size argument
     {
-      ts->_ebx  = Gdt::gdt_tls1 >> 3;
+      ts->_ebx  = Gdt::gdt_user_entry1 >> 3;
       ts->ip(ts->ip() + 3);
       return 1;
     }
@@ -820,14 +710,14 @@ Thread::handle_lldt(Trap_state *ts)
 	      return 0;
 	    }
 
-	  t->_gdt_tls[entry_number] = desc;
+	  t->_gdt_user_entries[entry_number] = desc;
 	  size      -= Cpu::Ldt_entry_size;
 	  desc_addr += Cpu::Ldt_entry_size;
 	  entry_number++;
 	}
 
       if (t == current_thread())
-	switch_gdt_tls();
+	switch_gdt_user_entries(this);
       return 1;
     }
 

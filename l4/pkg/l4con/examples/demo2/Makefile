@@ -5,7 +5,7 @@ TARGET		= con_demo2
 LIBS		= -lcon
 DEFAULT_RELOC_x86 = 0x00800000
 DEFAULT_RELOC_arm = 0x00370000
-SYSTEMS		= x86-l4v2 arm-l4x0
+SYSTEMS		= x86-l4v2 arm-l4v2
 
 SRC_C		= demo2.c
 PRIVATE_INCDIR	= $(SRC_DIR)/../include

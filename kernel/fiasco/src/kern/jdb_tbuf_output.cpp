@@ -160,7 +160,7 @@ Jdb_tbuf_output::print_entry(Tb_entry *tb, char *buf, int maxlen)
     strcpy(tidstr, "---.--");
   else
     {
-      Global_id g((Address)tb->ctx(), Mem_layout::Tcbs,
+      Global_id g(tb->ctx(), Mem_layout::Tcbs,
 		  Config::thread_block_size);
       const char *n = "";
       if (show_names)

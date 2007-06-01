@@ -50,7 +50,7 @@ public:
   void set_msg_word (unsigned index, Mword value);
 
   /// set the IPC source for the recipient
-  void rcv_src( L4_uid id ); 
+  void rcv_src(L4_uid const &id); 
 
   /// get the IPC source for the recipient
   L4_uid rcv_src() const;
@@ -64,29 +64,20 @@ public:
   /// has the IPC a send part?
   Mword has_snd() const;
 
+  L4_msg_tag tag() const;
+  void tag(L4_msg_tag const &tag);
+
   /// get the IRQ destination of the IPC
   Mword irq() const;
   
   /// get the message timeout
-  L4_timeout timeout() const;
+  L4_timeout_pair timeout() const;
 
   /// number of words sent in registers
   static unsigned num_snd_reg_words();
 
   /// number of words received in registers
   static unsigned num_rcv_reg_words();
-
-  /// Has this IPC an absolute send timeout?
-  Mword has_abs_snd_timeout() const;
-
-  /// The clock bit of the absolute send timeout.
-  Mword abs_snd_clock() const;
-
-  /// Has this IPC an absolute receive timeout?
-  Mword has_abs_rcv_timeout() const;
-
-  /// The clock bit of the absolute receive timeout.
-  Mword abs_rcv_clock() const;
 
   /// set the send descriptor
   void snd_desc(Mword w);
@@ -120,6 +111,8 @@ public:
 
   /// number of words transmitted in registers
   static unsigned num_reg_words();
+
+  Mword next_period() const;
 };
 
 /**
@@ -135,7 +128,7 @@ public:
   void type( Mword type );
 
   /// set the result of the syscall
-  void nearest( L4_uid id );
+  void nearest(L4_uid const &id);
 };
 
 /**
@@ -163,7 +156,7 @@ public:
   void old_ip( Mword oip );
 
   /// set the old pager id
-  void old_pager( L4_uid id );
+  void old_pager(L4_uid const &id);
 
   /// get the lthread parameter of the syscall
   LThread_num lthread() const;
@@ -178,13 +171,13 @@ public:
   L4_uid preempter() const;
 
   /// set the old preempter id
-  void old_preempter(L4_uid id);
+  void old_preempter(L4_uid const &id);
 
   /// get the task-capability-fault handler id
   L4_uid cap_handler(const Utcb* utcb) const;
 
   /// set the old task-capability-fault handler id
-  void old_cap_handler(L4_uid id, Utcb* utcb);
+  void old_cap_handler(L4_uid const &id, Utcb* utcb);
 
   Mword alien() const;
 
@@ -279,7 +272,7 @@ public:
   L4_uid dst() const;
 
   /// set the new tasks id
-  void new_taskid( L4_uid id );
+  void new_taskid(L4_uid const &id);
 
   /// get the alien flag
   Mword alien() const;
@@ -316,10 +309,10 @@ public:
   void time(Unsigned64 t);
 
   /// set the old preempter
-  void old_preempter(L4_uid id);
+  void old_preempter(L4_uid const &id);
 
   /// set the partner of a pending IPC
-  void partner(L4_uid id);
+  void partner(L4_uid const &id);
 };
 
 /**
@@ -328,10 +321,28 @@ public:
 class Sys_thread_privctrl_frame : public Syscall_frame
 {
 public:
-  Mword  command()    const;
-  L4_uid dst()        const;
-  Mword  entry_func() const;
-  void   ret_val(Mword v);
+  Mword command() const;
+  L4_uid dst() const;
+  Mword entry_func() const;
+  void ret_val(Mword v);
+};
+
+/**
+ * id_nearest specific interpretation of syscall data 
+ */
+class Sys_u_lock_frame : public Syscall_frame
+{
+public:
+  enum Op 
+  {
+    New = 1, Lock = 3, Unlock = 4,
+    New_semaphore = 5, Sem_sleep = 6, Sem_wakeup = 7
+  };
+
+  Op op() const;
+  unsigned long lock() const;
+  void result(unsigned long res);
+  L4_timeout timeout() const;
 };
 
 

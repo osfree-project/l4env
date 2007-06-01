@@ -100,7 +100,7 @@ Region_list::find(Region const &o)
 void
 Region::print() const
 {
-  printf("  [%16llx, %16llx]", begin(), end());
+  printf("  [%9llx, %9llx]", begin(), end());
 }
 
 void

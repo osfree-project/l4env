@@ -15,14 +15,13 @@
 
 void l4_sleep(int ms)
 {
-  int error, to_e, to_m;
+  int error;
   l4_timeout_t to;
 
   if (ms != -1)
     {
       /* calculate timeout */
-      l4util_micros2l4to(ms * 1000, &to_m, &to_e);
-      to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
+      to = l4_timeout(L4_IPC_TIMEOUT_NEVER,l4util_micros2l4to(ms * 1000));
     }
   else
     to = L4_IPC_NEVER;
@@ -36,12 +35,11 @@ void l4_sleep(int ms)
 
 void l4_usleep(int us)
 {
-  int error, to_e, to_m;
+  int error;
   l4_timeout_t to;
 
   /* calculate timeout */
-  l4util_micros2l4to(us, &to_m, &to_e);
-  to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
+  to = l4_timeout(L4_IPC_TIMEOUT_NEVER, l4util_micros2l4to(us));
 
   error = l4_ipc_sleep(to);
  

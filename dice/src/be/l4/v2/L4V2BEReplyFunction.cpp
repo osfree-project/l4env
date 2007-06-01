@@ -59,8 +59,8 @@ CL4V2BEReplyFunction::~CL4V2BEReplyFunction()
  */
 void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile * pFile)
 {
-    assert(m_pTrace);
-    m_pTrace->VariableDeclaration(pFile, this);
+    if (m_pTrace)
+	m_pTrace->VariableDeclaration(pFile, this);
     
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
@@ -89,17 +89,12 @@ void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile * pFile)
 	    pException->WriteDeclaration(pFile);
 
 	*pFile << "#else // !PIC\n";
-	*pFile << "#if defined(PROFILE)\n";
-	CL4BEReplyFunction::WriteVariableDeclaration(pFile);
-
-	*pFile << "#else // !PROFILE\n";
 	// write result variable
 	*pFile << "\tl4_msgdope_t " << sResult << " = { msgdope: 0 };\n";
 	*pFile << "\t" << sMWord << " " << sDummy << " = 0;\n";
 	if (!FindAttribute(ATTR_NOEXCEPTIONS))
 	    // declare local exception variable
 	    pException->WriteDeclaration(pFile);
-	*pFile << "#endif // PROFILE\n";
 	*pFile << "#endif // !PIC\n";
 	// if we have in either direction some bit-stuffing, we need more
 	// dummies finished with declaration
@@ -116,11 +111,6 @@ void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile * pFile)
 	    *pFile << "#if defined(__PIC__)\n";
 	    *pFile << "\t" << sMWord << " " << sDummy << 
 		" __attribute__((unused));\n";
-	    *pFile << "#else // !PIC\n";
-	    *pFile << "#if !defined(PROFILE)\n";
-	    *pFile << "\t" << sMWord << " " << sDummy << 
-		" __attribute__((unused));\n";
-	    *pFile << "#endif // !PROFILE\n";
 	    *pFile << "#endif // !PIC\n";
 	}
     }

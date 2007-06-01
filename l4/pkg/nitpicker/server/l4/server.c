@@ -22,7 +22,7 @@
 
 
 /*** SEND TIMEOUT 0, RECEIVE TIMEOUT 33ms ***/
-#define REQUEST_TIMEOUT  L4_IPC_TIMEOUT(0,1,128,11,0,0)
+#define REQUEST_TIMEOUT  l4_ipc_timeout(0, 1, 515, 6)
 
 
 CORBA_Object_base nit_tid, *nit_server;

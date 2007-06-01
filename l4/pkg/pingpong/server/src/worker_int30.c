@@ -128,6 +128,7 @@ exception_IPC_pong_handler(void)
   l4_msgdope_t dope;
   l4_threadid_t src_id;
   int err;
+  l4_msgtag_t tag;
   l4_utcb_t *utcb = l4_utcb_get();
 
   /* prevent page faults */
@@ -136,15 +137,13 @@ exception_IPC_pong_handler(void)
 
   /* I want exception IPC */
   l4_utcb_exception_ipc_enable();
-  utcb->rcv_size = L4_UTCB_EXCEPTION_REGS_SIZE;
-  utcb->snd_size = L4_UTCB_EXCEPTION_REGS_SIZE;
 
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
 
 wait_only:
-  err = l4_ipc_wait(&src_id, L4_IPC_SHORT_MSG, &d0, &d1,
-                    L4_IPC_NEVER, &dope);
+  err = l4_ipc_wait_tag(&src_id, L4_IPC_SHORT_MSG, &d0, &d1,
+                    L4_IPC_NEVER, &dope, &tag);
 
   if (err)
     {
@@ -154,16 +153,16 @@ wait_only:
 
   while (1)
     {
-      if (l4_utcb_exc_is_exc_ipc(d0, d1))
+      if (l4_msgtag_is_exception(tag))
 	{
 	  /* Resolve fault */
 	  utcb->exc.eip += 2;
-          utcb->snd_size = L4_UTCB_EXCEPTION_REGS_SIZE;
+          tag = l4_msgtag(0, L4_UTCB_EXCEPTION_REGS_SIZE, 0, 0);
 
 	  /* reply and receive exception IPC */
-	  err = l4_ipc_reply_and_wait(src_id,  L4_IPC_SHORT_MSG,  d0,  d1,
+	  err = l4_ipc_reply_and_wait_tag(src_id,  L4_IPC_SHORT_MSG,  d0,  d1, tag,
 				      &src_id, L4_IPC_SHORT_MSG, &d0, &d1,
-				      L4_IPC_NEVER, &dope);
+				      L4_IPC_NEVER, &dope, &tag);
 	  if (err)
 	    {
 	      printf("%s: l4_ipc_reply_and_wait = %x\n", __func__, err);
@@ -304,21 +303,18 @@ pong_utcb_ipc_thread(void)
   l4_msgdope_t dope;
   l4_threadid_t src_id;
   int err;
-  l4_utcb_t *utcb = l4_utcb_get();
+  l4_msgtag_t tag;
 
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
 
-  /* I want exception IPC */
-  utcb->rcv_size = L4_UTCB_GENERIC_DATA_SIZE;
-
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
 
 wait_only:
-  err = l4_ipc_wait(&src_id, L4_IPC_SHORT_MSG, &d0, &d1,
-                    L4_IPC_NEVER, &dope);
+  err = l4_ipc_wait_tag(&src_id, L4_IPC_SHORT_MSG, &d0, &d1,
+                    L4_IPC_NEVER, &dope, &tag);
 
   if (err)
     {
@@ -328,12 +324,12 @@ wait_only:
 
   while (1)
     {
-      utcb->snd_size = utcb_data_size;
+      tag = l4_msgtag(0, utcb_data_size, 0, 0);
 
       /* reply and receive exception IPC */
-      err = l4_ipc_reply_and_wait(src_id,  L4_IPC_SHORT_MSG,  d0,  d1,
+      err = l4_ipc_reply_and_wait_tag(src_id,  L4_IPC_SHORT_MSG,  d0,  d1, tag,
                                   &src_id, L4_IPC_SHORT_MSG, &d0, &d1,
-                                  L4_IPC_NEVER, &dope);
+                                  L4_IPC_NEVER, &dope, &tag);
       if (err)
         {
           printf("%s: l4_ipc_reply_and_wait = %x\n", __func__, err);
@@ -349,15 +345,15 @@ void __attribute__((noreturn))
 ping_utcb_ipc_thread(void)
 {
   int i;
-  l4_umword_t d0, d1;
+  l4_umword_t d0 = 0, d1 = 0;
   l4_msgdope_t dope;
   l4_cpu_time_t in, out;
+  l4_msgtag_t tag;
+  l4_msgtag_t rtag;
 
   /* prevent page faults */
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
-
-  l4_utcb_get()->rcv_size = L4_UTCB_GENERIC_DATA_SIZE;
 
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
@@ -365,15 +361,15 @@ ping_utcb_ipc_thread(void)
   for (utcb_data_size = 0; utcb_data_size < L4_UTCB_GENERIC_DATA_SIZE;
        utcb_data_size++)
     {
-      l4_utcb_get()->snd_size = utcb_data_size;
+      tag = l4_msgtag(0, utcb_data_size, 0, 0);
 
       in = l4_rdtsc();
       for (i = 8 * global_rounds; i; i--)
         {
-          l4_ipc_call(pong_id,
-                      L4_IPC_SHORT_MSG, d0, d1,
+          l4_ipc_call_tag(pong_id,
+                      L4_IPC_SHORT_MSG, d0, d1, tag,
                       L4_IPC_SHORT_MSG, &d0, &d1,
-                      L4_IPC_NEVER, &dope);
+                      L4_IPC_NEVER, &dope, &rtag);
         }
       out = l4_rdtsc();
 

@@ -98,16 +98,4 @@ l4_iofpage(unsigned port, unsigned int size, unsigned char grant);
 L4_INLINE int
 l4_is_io_page_fault(unsigned long address);
 
-
-
-/*******************/
-/* implementations */
-/*******************/
-L4_INLINE l4_fpage_t
-l4_iofpage(unsigned port, unsigned int size,
-           unsigned char grant)
-{
-  return ((l4_fpage_t){iofp:{grant, 0, size, 0, port, 0xf}});
-}
-
 #endif

@@ -14,10 +14,8 @@
 
 #define L4_UTCB_EXCEPTION_IPC_ENABLED  1
 #define L4_UTCB_EXCEPTION_IPC_DISABLED 0
-#define L4_UTCB_EXCEPTION_IPC_COOKIE1  (-0x5UL)
-#define L4_UTCB_EXCEPTION_IPC_COOKIE2  (-0x21504151UL)
 #define L4_UTCB_EXCEPTION_REGS_SIZE    20
-#define L4_UTCB_GENERIC_DATA_SIZE      29
+#define L4_UTCB_GENERIC_DATA_SIZE      32
 
 enum {
   L4_EXCEPTION_REPLY_DW0_DEALIEN = 1,
@@ -46,13 +44,12 @@ struct l4_utcb_exception
  */
 typedef struct
 {
-  unsigned long status;
   union {
     l4_umword_t              values[L4_UTCB_GENERIC_DATA_SIZE];
     struct l4_utcb_exception exc;
   };
-  unsigned long snd_size;
-  unsigned long rcv_size;
+  l4_umword_t buffers[31];
+  l4_timeout_t xfer;
 } l4_utcb_t;
 
 /**
@@ -85,12 +82,6 @@ l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u);
  */
 int l4_utcb_exc_is_exc_ipc(l4_umword_t dw0, l4_umword_t dw1);
 
-/**
- * Set UTCB receive size of exception frame size.
- * \ingroup api_utcb
- */
-L4_INLINE void l4_utcb_exception_ipc_set_exc_receive_size(void);
-
 
 /*
  * ==================================================================
@@ -117,20 +108,10 @@ L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u)
   return u->exc.pc;
 }
 
-L4_INLINE int l4_utcb_exc_is_exc_ipc(l4_umword_t dw0, l4_umword_t dw1)
-{
-  return dw0 == L4_UTCB_EXCEPTION_IPC_COOKIE1
-         && dw1 == L4_UTCB_EXCEPTION_IPC_COOKIE2;
-}
-
 L4_INLINE void l4_utcb_exception_ipc_enable(void)
 {
-  l4_utcb_get()->status |= L4_UTCB_EXCEPTION_IPC_ENABLED;
+  l4_utcb_get()->buffers[0] |= 2;
 }
 
-L4_INLINE void l4_utcb_exception_ipc_set_exc_receive_size(void)
-{
-  l4_utcb_get()->rcv_size = L4_UTCB_EXCEPTION_REGS_SIZE;
-}
 
 #endif /* ! _L4_SYS_UTCB_H */

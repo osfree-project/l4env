@@ -51,15 +51,15 @@ DROPSCONF_LXDIALOG	?= $(OBJ_BASE)/tool/config/lxdialog/lxdialog
 DROPSCONF_TOOL		?= $(firstword $(wildcard \
 					$(L4DIR)/tool/config/Menuconfig \
 					$(DROPS_STDDIR)/tool/bin/Menuconfig) \
-					false)
+					did_not_find_BID_Menuconfig)
 DROPSCONF_TOOL_TXT	?= $(firstword $(wildcard \
 					$(L4DIR)/tool/config/Configure \
 					$(DROPS_STDDIR)/tool/bin/Configure) \
-					false)
+					did_not_find_BID_Configure)
 DROPSCONF_TOOL_OLD	?= $(firstword $(wildcard \
 					$(L4DIR)/tool/config/Configure \
 					$(DROPS_STDDIR)/tool/bin/Configure) \
-					false) -d
+					did_not_find_BID_Configure) -d
 DROPSCONF_VARDEFS = $(foreach v,TITLE DEFCONFIG CONFIG_IN CONFIG CONFIG_H \
 	MACRO HELPFILE UNDEF LXDIALOG,DROPSCONF_$v='$(DROPSCONF_$v)')
 

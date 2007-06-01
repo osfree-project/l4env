@@ -130,7 +130,7 @@ static
 void *find_kip()
 {
   enum { L4_KERNEL_INFO_MAGIC = 0x4BE6344CL /* "L4µK" */ };
-  unsigned char *p;
+  unsigned char *p, *end;
   void *k = 0;
 
   printf("  find kernel info page...\n");
@@ -139,8 +139,14 @@ void *find_kip()
       if (m->type() != Region::Kernel)
 	continue;
 
-      for (p = (unsigned char *) (m->begin() & 0xfffff000);
-	   p < (unsigned char *) m->end();
+      if (sizeof(unsigned long) < 8
+          && m->end() >= (1ULL << 32))
+	end = (unsigned char *)(~0UL - 0x1000);
+      else
+	end = (unsigned char *) (unsigned long)m->end();
+
+      for (p = (unsigned char *) (unsigned long)(m->begin() & 0xfffff000);
+	   p < end;
 	   p += 0x1000)
 	{
 	  l4_umword_t magic = L4_KERNEL_INFO_MAGIC;
@@ -220,7 +226,7 @@ get_memory_limit(l4util_mb_info_t *mbi)
      * After that, the remaining pages are mapped using l4sigma0_map_anypage()
      * with a receive window of L4_WHOLE_ADDRESS_SPACE. In response Sigma0
      * could deliver pages beyond the 3GB user space limit. */
-    return 3UL << 30;
+    return 3024UL << 20;
 #else
     return ~0UL;
 #endif
@@ -519,15 +525,15 @@ print_e820_map(l4util_mb_info_t *mbi)
     {
       l4util_mb_addr_range_t *mmap;
       for (mmap = (l4util_mb_addr_range_t *) mbi->mmap_addr;
-	  (unsigned long long) mmap < mbi->mmap_addr + mbi->mmap_length;
-	  mmap = (l4util_mb_addr_range_t *) ((unsigned long long) mmap + mmap->struct_size + sizeof (mmap->struct_size)))
+	  (unsigned long)mmap < mbi->mmap_addr + mbi->mmap_length;
+	  mmap = (l4util_mb_addr_range_t *) ((unsigned long)mmap + mmap->struct_size + sizeof (mmap->struct_size)))
 	{
 	  char *types[] = { "unknown", "RAM", "reserved", "ACPI",
                             "ACPI NVS", "unusable" };
 	  char *type_str = (mmap->type < (sizeof(types) / sizeof(types[0])))
                            ? types[mmap->type] : types[0];
 
-	  printf("    [%16llx, %16llx) %s (%d)\n",
+	  printf("    [%9llx, %9llx) %s (%d)\n",
                  (unsigned long long) mmap->addr,
                  (unsigned long long) mmap->addr + (unsigned long long) mmap->size,
                  type_str, (unsigned) mmap->type);
@@ -731,7 +737,7 @@ init_memory_map(l4util_mb_info_t *mbi)
     {
       for (l4util_mb_addr_range_t *mmap
             = (l4util_mb_addr_range_t *)mbi->mmap_addr;
-           (unsigned long long) mmap < mbi->mmap_addr + mbi->mmap_length;
+           (unsigned long)mmap < mbi->mmap_addr + mbi->mmap_length;
            mmap = (l4util_mb_addr_range_t *) ((unsigned long) mmap
             + mmap->struct_size + sizeof (mmap->struct_size)))
       {
@@ -794,16 +800,16 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
 #else /* arm */
 #ifdef ARCH_arm
   l4util_mb_info_t my_mbi;
+  memset(&my_mbi, 0, sizeof(my_mbi));
   mbi = &my_mbi;
-  mbi->flags = 0;
-  add_ram(mbi, Region::n(RAM_BASE, RAM_BASE + (MEMORY << 20), ".ram",
-	Region::Ram));
   printf("  Memory size is %dMB\n", MEMORY);
+  add_ram(mbi, Region::n(RAM_BASE,
+          (unsigned long long)RAM_BASE + (MEMORY << 20), ".ram", Region::Ram));
 #else
 #error Unknown arch!
 #endif
 #endif
- 
+
   /* basically add the bootstrap binary to the allocated regions */
   init_regions();
 

@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 TARGET		 = libdl.s.so
 MODE		 = l4env
-SYSTEMS		 = x86-l4v2 arm-l4x0
+SYSTEMS		 = x86-l4v2 arm-l4v2
 PRIVATE_INCDIR	 = $(PKGDIR)/lib/libdl \
 		   $(PKGDIR)/lib/ldso \
 		   $(PKGDIR)/lib/ldso/include \

@@ -27,7 +27,7 @@ Thread::sys_ipc_log()
 
   Mword entry_event_num    = (Mword)-1;
   Unsigned8 have_snd       = ipc_regs->snd_desc().has_snd();
-  Unsigned8 is_next_period = ipc_regs->snd_dst().next_period();
+  Unsigned8 is_next_period = ipc_regs->next_period();
   int do_log               = Jdb_ipc_trace::log() &&
 				Jdb_ipc_trace::check_restriction (id(),
 					 get_task (id()),
@@ -144,34 +144,6 @@ Thread::page_fault_log(Address pfa, unsigned error_code, unsigned long eip)
     }
 }
 
-/** L4 system call fpage_unmap.
- */
-PUBLIC inline NOEXPORT ALWAYS_INLINE
-void
-Thread::sys_fpage_unmap_log()
-{
-  Entry_frame *ef       = reinterpret_cast<Entry_frame*>(this->regs());
-  Sys_unmap_frame *regs = reinterpret_cast<Sys_unmap_frame*>(this->regs());
-
-  if (Jdb_unmap_trace::log()
-      && Jdb_unmap_trace::check_restriction(current_thread()->id(),
-                                            regs->fpage().raw() & Config::PAGE_MASK))
-    {
-      Lock_guard <Cpu_lock> guard (&cpu_lock);
-
-      Tb_entry_unmap *tb = static_cast<Tb_entry_unmap*>
-	(EXPECT_TRUE(Jdb_unmap_trace::log_buf()) ? Jdb_tbuf::new_entry()
-					     : alloca(sizeof(Tb_entry_unmap)));
-      tb->set(this, ef->ip(), regs->fpage().raw(), regs->map_mask(), false);
-
-      if (EXPECT_TRUE(Jdb_unmap_trace::log_buf()))
-	Jdb_tbuf::commit_entry();
-      else
-	Jdb_tbuf::direct_log_entry(tb, "UNMAP");
-    }
-
-  sys_fpage_unmap_wrapper();
-}
 
 extern "C" void sys_ipc_log_wrapper(void)
 {
@@ -183,8 +155,3 @@ extern "C" void sys_ipc_trace_wrapper(void)
   current_thread()->sys_ipc_trace();
 }
 
-extern "C" void sys_fpage_unmap_log_wrapper(void)
-{
-  Proc::sti();
-  current_thread()->sys_fpage_unmap_log();
-}

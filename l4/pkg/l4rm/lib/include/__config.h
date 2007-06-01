@@ -39,7 +39,7 @@
 #define L4RM_MAX_HEAP_SIZE        (512 * 1024)
 
 /**
- * Initial size of heap dataspace 
+ * Initial size of heap dataspace
  */
 #define L4RM_HEAP_DS_INIT_PAGES   2
 
@@ -47,26 +47,14 @@
  *** Regions
  *****************************************************************************/
 
-/** 
+/**
  * Default start address of virtual memory, it is used if no vm start address
  * is set by L4Env (do not include page 0!)
  */
 #define L4RM_VM_START             0x00001000
 
-/** 
- * Default end address of virtual memory
- */
-#define L4RM_VM_END               0xC0000000
-
 /*****************************************************************************
- *** Service loop
- *****************************************************************************/
-
-/// first valid request id
-#define L4RM_FIRST_REQUEST        0xC0000000
-
-/*****************************************************************************
- *** Prototypes 
+ *** Prototypes
  *****************************************************************************/
 
 l4_addr_t
@@ -75,7 +63,7 @@ l4rm_get_vm_start(void);
 l4_addr_t
 l4rm_get_vm_end(void);
 
-l4_threadid_t 
+l4_threadid_t
 l4rm_get_dsm(void);
 
 l4_threadid_t

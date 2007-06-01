@@ -304,9 +304,12 @@ dmphys_internal_alloc_init(void)
   for (i = 0; i < DMPHYS_INT_POOL_INITIAL; i++)
     {
       page = dmphys_sigma0_map_any_page();
-      if (page != NULL)
+      if (page != (void*)~0UL)
 	{
 	  LOGdL(DEBUG_INT_ALLOC, "got page at 0x%08lx", (l4_addr_t)page);
+	
+	  if (page == (void*)0)
+			  continue;
 
 	  mem_pool[i].map_addr = (l4_addr_t)page;
 	  mem_pool[i].available = 1;

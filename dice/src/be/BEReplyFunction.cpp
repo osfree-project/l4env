@@ -35,7 +35,6 @@
 #include "BEDeclarator.h"
 #include "BEMsgBuffer.h"
 #include "BESizes.h"
-#include "BETrace.h"
 #include "BEClass.h"
 #include "BEMarshaller.h"
 #include "Compiler.h"

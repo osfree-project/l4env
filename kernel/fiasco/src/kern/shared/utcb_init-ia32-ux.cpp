@@ -13,7 +13,7 @@ public:
 
 
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [ia32-utcb]:
+IMPLEMENTATION [ia32]:
 
 #include <cstdio>
 #include "gdt.h"
@@ -31,14 +31,12 @@ IMPLEMENT
 void
 Utcb_init::init()
 {
-  global_utcb_ptr = (Address*) Mem_layout::Utcb_ptr_page;
-
-  if (!Vmem_alloc::page_alloc ((void *) global_utcb_ptr,
+  if (!Vmem_alloc::page_alloc ((void *) Mem_layout::Utcb_ptr_page,
 	Vmem_alloc::ZERO_FILL, Vmem_alloc::User))
     panic ("UTCB pointer page allocation failure");
 
   Cpu::get_gdt()->set_entry_byte (Gdt::gdt_utcb / 8, 
-				  (Address) global_utcb_ptr,
+				  Mem_layout::Utcb_ptr_page,
 				  sizeof (Address) -1,
 				  Gdt_entry::Access_user |
 				  Gdt_entry::Access_data_write |
@@ -47,16 +45,6 @@ Utcb_init::init()
 
   Cpu::set_gs (gs_value());
 }
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION [{ia32,amd64}-!utcb]:
-
-#include "gdt.h"
-
-IMPLEMENT static inline NEEDS ["gdt.h"]
-Unsigned32
-Utcb_init::gs_value() 
-{ return Gdt::gdt_data_user | Gdt::Selector_user; }
 
 
 //-----------------------------------------------------------------------------
@@ -75,7 +63,7 @@ public:
 
 
 //-----------------------------------------------------------------------------
-IMPLEMENTATION [ux-utcb]:
+IMPLEMENTATION [ux]:
 
 #include "emulation.h"
 #include "kip.h"
@@ -90,21 +78,9 @@ IMPLEMENT
 void
 Utcb_init::init()
 {
-  global_utcb_ptr = (Address *) Kmem::phys_to_virt	// fill public variable
-                    (Mem_layout::Utcb_ptr_frame);
-
-  Emulation::modify_ldt (0,				// entry
-			 Mem_layout::Utcb_ptr_page,	// address
-			 sizeof (Address) - 1);		// limit
+  Emulation::modify_ldt (0,					// entry
+			 Mem_layout::Utcb_ptr_page_user,	// address
+			 sizeof (Address) - 1);			// limit
 
 }
-
-
-//-----------------------------------------------------------------------------
-IMPLEMENTATION [ux-!utcb]:
-
-IMPLEMENT static inline
-Unsigned32
-Utcb_init::gs_value() 
-{ return 0; }
 

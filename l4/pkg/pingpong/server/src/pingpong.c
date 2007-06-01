@@ -368,7 +368,7 @@ create_pingpong_tasks(void (*ping_thread)(void),
     {
       printf("failed to create ping task "l4util_idtskfmt"\n",
 	  l4util_idtskstr(ping_id));
-      rmgr_task_new(pong_id,rmgr_id.lh.low,0,0,L4_NIL_ID);
+      rmgr_task_new(pong_id,rmgr_id.raw,0,0,L4_NIL_ID);
       return;
     }
 
@@ -393,15 +393,31 @@ static void
 kill_pingpong_tasks(void)
 {
   /* delete ping and pong tasks */
-  rmgr_task_new(ping_id,rmgr_id.lh.low,0,0,L4_NIL_ID);
-  rmgr_task_new(pong_id,rmgr_id.lh.low,0,0,L4_NIL_ID);
+  rmgr_task_new(ping_id,rmgr_id.raw,0,0,L4_NIL_ID);
+  rmgr_task_new(pong_id,rmgr_id.raw,0,0,L4_NIL_ID);
+}
+
+static inline
+int
+map_mem(l4_threadid_t from, l4_umword_t addr, unsigned sz)
+{
+  int err = l4sigma0_map_mem(from, addr, addr, 1UL << sz);
+
+  if (err)
+    printf("sigma0_map_mem(%lx,%lx,%ld) returned: '%s'\n", 
+	addr, addr, 1UL << sz, l4sigma0_map_errstr(err));
+
+  if (err)
+    return -2;
+
+  return 0;
 }
 
 /** map 4k page from "from" to addr. */
 static void
 map_4k_page(l4_threadid_t from, l4_umword_t addr)
 {
-  switch (l4sigma0_map_mem(from, addr, addr, L4_PAGESIZE))
+  switch (map_mem(from, addr, L4_LOG2_PAGESIZE))
     {
     case -2:
       printf("IPC error mapping 4KB page at %08lx from "l4util_idfmt"\n",
@@ -421,7 +437,7 @@ map_4k_page(l4_threadid_t from, l4_umword_t addr)
 static void
 map_4m_page(l4_threadid_t from, l4_umword_t addr)
 {
-  switch (l4sigma0_map_mem(from, addr, addr, L4_SUPERPAGESIZE))
+  switch (map_mem(from, addr, L4_LOG2_SUPERPAGESIZE))
     {
     case -2:
       printf("IPC error mapping 4MB page at %08lx from "l4util_idfmt"\n",
@@ -445,6 +461,7 @@ map_scratch_mem_from_rmgr(void)
 
   for (a=scratch_mem; a<scratch_mem+SCRATCH_MEM_SIZE; a+=L4_SUPERPAGESIZE)
     map_4m_page(rmgr_pager_id, a);
+
 }
 
 /** map scratch memory from page into current task. */
@@ -872,13 +889,13 @@ error:
 	    {
 	      p = pong_id;
 	      p.id.task += i;
-	      rmgr_task_new(p, rmgr_id.lh.low, 0, 0, L4_NIL_ID);
+	      rmgr_task_new(p, rmgr_id.raw, 0, 0, L4_NIL_ID);
 	    }
 	  for (i=0; i<ping_tasks; i++)
 	    {
 	      p = ping_id;
 	      p.id.task += i;
-	      rmgr_task_new(p, rmgr_id.lh.low, 0, 0, L4_NIL_ID);
+	      rmgr_task_new(p, rmgr_id.raw, 0, 0, L4_NIL_ID);
 	    }
 	}
     }
@@ -996,7 +1013,6 @@ bench_shortMap_test(void)
     {
       fpagesize = fpagesizes[i]*L4_PAGESIZE;
       rounds    = SCRATCH_MEM_SIZE/(fpagesize*8);
-
       BENCH_BEGIN;
       create_pingpong_tasks(callmode ? sysenter_ping_fpage_thread
 				     : int30_ping_fpage_thread, 
@@ -1044,7 +1060,7 @@ bench_longMap_interAS(int nr)
   print_testname("long fpage map", nr, INTER, 1);
   for (cold=0; cold<2-dont_do_cold; cold++)
     {
-      create_pingpong_tasks(callmode 
+      create_pingpong_tasks(callmode
 				? cold ? sysenter_ping_long_fpage_cold_thread
 				       : sysenter_ping_long_fpage_thread
 				: cold ? int30_ping_long_fpage_cold_thread
@@ -1111,6 +1127,7 @@ bench_exceptions(int nr)
 {
   /* start ping and pong thread */
   callmode = 0;
+#if 0
   print_testname("intra reflection exceptions", nr, SINGLE, 0);
 
   ping_id = intra_ping;
@@ -1152,7 +1169,7 @@ bench_exceptions(int nr)
              "remaining tests skipped.\n");
       return;
     }
-
+#endif
   /* ------------------------------------------------------ */
   print_testname("intra IPC exception", nr, INTRA, 0);
   ping_id = intra_ping;

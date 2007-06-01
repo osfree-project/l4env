@@ -13,7 +13,7 @@
   DUMP_MEMBER1 (THREAD, Context, _ready_next,		READY_NEXT)
   DUMP_MEMBER1 (THREAD, Context, _ready_prev,		READY_PREV)
 #if defined(CONFIG_IA32) && !defined(CONFIG_PF_UX) && defined(CONFIG_HANDLE_SEGMENTS)
-  DUMP_MEMBER1 (THREAD, Context, _gdt_tls,		GDT_TLS)
+  DUMP_MEMBER1 (THREAD, Context, _gdt_user_entries,	GDT_USER_ENTRIES)
 #endif
   DUMP_MEMBER1 (THREAD, Receiver, _partner,		PARTNER)
   DUMP_MEMBER1 (THREAD, Receiver, _rcv_regs,		RCV_REGS)
@@ -46,7 +46,6 @@
   DUMP_MEMBER1 (THREAD, Thread, _vm_window0,		VM_WINDOW0)
   DUMP_MEMBER1 (THREAD, Thread, _vm_window1,		VM_WINDOW1)
   DUMP_MEMBER1 (THREAD, Thread, _recover_jmpbuf,	RECOVER_JMPBUF)
-  DUMP_MEMBER1 (THREAD, Thread, _pf_timeout,		PF_TIMEOUT)
   DUMP_MEMBER1 (THREAD, Thread, _last_pf_address,	LAST_PF_ADDRESS)
   DUMP_MEMBER1 (THREAD, Thread, _last_pf_error_code,	LAST_PF_ERROR_CODE)
   DUMP_MEMBER1 (THREAD, Thread, _magic,			MAGIC)

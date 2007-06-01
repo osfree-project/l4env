@@ -126,6 +126,10 @@ DECLARE_PATCH (lp18, log_preemption);
 static Log_event le9("preemption sent",
 		      Log_event_preemption, 1, &lp18);
 
+DECLARE_PATCH (lp20, log_id_nearest);
+static Log_event le10("id_nearest",
+                      Log_event_id_nearest, 1, &lp20);
+
 DECLARE_PATCH (lp23, log_task_new);
 static Log_event le11("task_new",
 		      Log_event_task_new, 1, &lp23);
@@ -141,7 +145,7 @@ Log_event * const Jdb_tbuf_events::log_events[Log_event_max] =
   &le7,  // pagefault result
   &le8,	 // scheduling event
   &le9,  // preemption sent
-  0,
+  &le10, // id nearest
   &le11, // task new
   0,     // terminate list
 };

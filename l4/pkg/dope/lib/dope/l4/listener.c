@@ -21,8 +21,8 @@
 
 
 void CORBA_Object_to_ident(CORBA_Object tid, char *dst, int dst_len) {
-	snprintf(dst, dst_len, "t_id=0x%08X,%08X",
-	         (int)tid->lh.low, (int)tid->lh.high);
+	snprintf(dst, dst_len, "t_id=0x%08X",
+	         (int)tid->raw);
 }
 
 

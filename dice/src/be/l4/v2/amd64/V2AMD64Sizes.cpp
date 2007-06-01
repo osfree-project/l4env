@@ -38,15 +38,6 @@ CL4V2AMD64BESizes::~CL4V2AMD64BESizes()
 {
 }
 
-/** \brief get the maximum message size in bytes for a short IPC
- *  \return the max size in bytes
- */
-int CL4V2AMD64BESizes::GetMaxShortIPCSize()
-{
-    return 16;
-}
-
-
 /** \brief gets the size of a type
  *  \param nFEType the type to look up
  *  \param nFESize the size in the front-end
@@ -66,17 +57,6 @@ int CL4V2AMD64BESizes::GetSizeOfType(int nFEType, int nFESize)
     case TYPE_MWORD:
 	nSize = 8;
 	break;
-    case TYPE_RCV_FLEXPAGE:
-    case TYPE_MSGDOPE_SEND:
-    case TYPE_MSGDOPE_SIZE:
-        nSize = 8; // l4_umword_t
-        break;
-    case TYPE_FLEXPAGE:
-	nSize = 16;
-	break;
-    case TYPE_REFSTRING:
-        nSize = 32; // 4 * l4_umword_t
-        break;
     default:
 	nSize = CL4V2BESizes::GetSizeOfType(nFEType, nFESize);
 	break;

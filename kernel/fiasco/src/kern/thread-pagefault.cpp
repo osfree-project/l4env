@@ -94,8 +94,8 @@ int Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc,
         }
 
       // user mode page fault -- send pager request
-      if (!(ipc_code 
-	    = handle_page_fault_pager(_pager, pfa, error_code)).has_error())
+      if (!(ipc_code = handle_page_fault_pager(_pager, pfa, error_code, 
+	      L4_msg_tag::Label_page_fault)).has_error())
         return 1;
 
       goto error;
@@ -157,14 +157,17 @@ int Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc,
       if (pagein_tcb_request(regs))
 	 return 2;
 
+      printf("Fiasco BUG: pfa=%lx err=%lx pc=%lx\n", pfa, error_code, pc);
       if (cpu_lock.test())
 	{
 	  //LOG_MSG_3VAL(current(), "Bad", pfa, error_code, pc);
-	  kdb_ke("Forbidden page fault under CPU lock! FIX ME!");
+	  kdb_ke("Fiasco BUG: Invalid TCB access (locked)");
 	}
-
-      //LOG_MSG_3VAL(current(), "TCBA", pfa, pc, 0);
-      kdb_ke("Implicit TCB alloc");
+      else
+	{
+	  //LOG_MSG_3VAL(current(), "TCBA", pfa, pc, 0);
+	  kdb_ke("Fiasco BUG: Invalid TCB access (not locked)");
+	}
 
       current_mem_space()->kmem_update((void*)pfa);
       return 1;

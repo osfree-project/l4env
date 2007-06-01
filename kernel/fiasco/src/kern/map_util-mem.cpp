@@ -32,7 +32,7 @@ mem_map (Space *from, L4_fpage const &fp_from,
   Map_traits<Mem_space>::constraint(snd_addr, snd_size, rcv_addr, rcv_size, 
       offs);
 
-  if (snd_size == 0 || rcv_size == 0)
+  if (snd_size == 0)
     {
       if (Config::conservative)
 	kdb_ke("fpage transfer = nop");

@@ -111,8 +111,8 @@ Thread::cap_fault (Task_num taskno)
 
   Ipc_err err 
     = handle_page_fault_pager (_cap_handler, 
-			       L4_fpage::task_cap (taskno, 1, 0).raw(),
-			       error_code);
+	L4_fpage::task_cap (taskno, 1, 0).raw(),
+	error_code, L4_msg_tag::Label_cap_fault);
 
   if (was_locked) cpu_lock.lock();
 

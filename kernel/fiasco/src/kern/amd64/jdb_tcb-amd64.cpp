@@ -891,6 +891,11 @@ Jdb_tcb::action(int cmd, void *&args, char const *&fmt, int &next_char)
 		printf("%c\n", first_char);
 		auto_tcb = first_char == '+';
 		break;
+	      case '?':
+		args      = &address;
+		fmt       = " addr=%16lx => ";
+		putchar(first_char);
+		return Jdb_module::EXTRA_INPUT;
 	      case '.':
 		args      = &address;
 		fmt       = " addr=%16lx => ";
@@ -968,16 +973,6 @@ static inline
 void
 Jdb_tcb::print_thread_uid_raw(Thread *t)
 {
-  printf(" <%08x %08x>",
-      (Unsigned32)(t->id().raw() >> 32), (Unsigned32)(t->id().raw()));
-}
-
-//----------------------------------------------------------------------------
-IMPLEMENTATION[!v2]:
-
-static inline
-void
-Jdb_tcb::print_thread_uid_raw(Thread *t)
-{
   printf(" <%08x>         ", (Unsigned32)(t->id().raw()));
 }
+
