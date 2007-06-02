@@ -100,8 +100,8 @@ if [ "$BIDc_USE_SPECIAL_CC" = "y" ] ; then
         string 'CXX' CXX '$(SYSTEM_TARGET_arm)g++'
     fi
     if [ "$BUILD_ARCH" = "amd64" ] ; then
-        string 'CC'  CC  '$(SYSTEM_TARGET_amd64)gcc-3.4'
-        string 'CXX' CXX '$(SYSTEM_TARGET_amd64)g++-3.4'
+        string 'CC'  CC  '$(SYSTEM_TARGET_amd64)gcc'
+        string 'CXX' CXX '$(SYSTEM_TARGET_amd64)g++'
     fi
     if [ "$BUILD_ARCH" = "ppc32" ] ; then
         string 'CC'  CC  '$(SYSTEM_TARGET_ppc32)gcc'
@@ -119,8 +119,8 @@ else
       define_string CXX '$(SYSTEM_TARGET_arm)g++'
     fi
     if [ "$BUILD_ARCH" = "amd64" ] ; then
-      define_string CC  '$(SYSTEM_TARGET_amd64)gcc-3.4'
-      define_string CXX '$(SYSTEM_TARGET_amd64)g++-3.4'
+      define_string CC  '$(SYSTEM_TARGET_amd64)gcc'
+      define_string CXX '$(SYSTEM_TARGET_amd64)g++'
     fi
     if [ "$BUILD_ARCH" = "ppc32" ] ; then
       define_string CC  '$(SYSTEM_TARGET_ppc32)gcc'

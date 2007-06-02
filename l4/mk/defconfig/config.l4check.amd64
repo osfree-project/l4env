@@ -35,8 +35,8 @@ BID_COLORED_PHASES=y
 BIDc_USE_SPECIAL_CC=n
 HOST_CC='gcc'
 HOST_CXX='g++'
-CC='$(SYSTEM_TARGET_amd64)gcc-3.4'
-CXX='$(SYSTEM_TARGET_amd64)g++-3.4'
+CC='$(SYSTEM_TARGET_amd64)gcc'
+CXX='$(SYSTEM_TARGET_amd64)g++'
 
 #
 # Tools
