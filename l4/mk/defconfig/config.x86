@@ -66,7 +66,6 @@ BID_BUILD_DOC=y
 #
 USE_UCLIBC=y
 USE_DIETLIBC=n
-USE_LDSO=y
 BUILD_LOADER=y
 BUILD_LOADER_PICS='libl4util.a libl4util_root.a libsigma0.a libnames.a libloaderif.a libcon.a libl4rm.a libbootmod.a libcon.a libconstream-server.a libdm_generic.a libdm_mem.a libgeneric_ts.a liblogserver.a liblogserver_capsule.a libsemaphore.a libthread.a libslab.a libgeneric_fprov.a libl4env_err.a libl4env.a libroot.a libc_be_l4env_start_stop.a libc_be_minimal_log_io.a libc_be_simple_mem.a libc_be_mmap.a libc_be_mmap_util.a libuclibc_support.a librtc.a libl4env-l4lx.a'
 L4_CALL_SYSCALLS=y

@@ -409,7 +409,8 @@ se_no_enqueue:
 
 //	int3
 	// pdir = space_context - kmem::mem_phys (needed later)
-	movq	OFS__THREAD__SPACE_CONTEXT (DEST_rsi), %rax
+	movq	OFS__THREAD__SPACE (DEST_rsi), %rax
+	leaq	OFS__SPACE__MEM_SPACE (%rax), %rax
 	sub	PHYSMEM_OFFS, %rax
 
 	mov	PAGE_DIR_ADDR, %rcx		// get_pdir()
