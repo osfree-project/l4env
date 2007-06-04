@@ -165,7 +165,7 @@
 .endm
 
 .macro  enter_sys_call no_sys_call
-	cmn	lr, #0x28		@ Range Check !!! UNSIGNED !!!
+	cmn	lr, #0x2C		@ Range Check !!! UNSIGNED !!!
 	bls	\no_sys_call		@ no syscall
 	cmn	lr, #0x08
 	bhi	\no_sys_call
@@ -526,6 +526,7 @@ SYSCALL(thread_schedule)
 SYSCALL(thread_ex_regs)
 SYSCALL(task_new)
 	.word sys_kdb_ke
+SYSCALL(u_lock)
 	
 	.align 4	
 	.global leave_by_trigger_exception
