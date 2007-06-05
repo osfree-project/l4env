@@ -52,7 +52,7 @@ typedef void *             Address;
 typedef unsigned int       Mword;
 typedef unsigned int       L4_snd_desc;
 typedef unsigned int       L4_rcv_desc;
-typedef l4_uint64_t        Global_id;
+typedef l4_threadid_t      Global_id;
 typedef l4_msgdope_t       L4_msgdope;
 typedef unsigned int       L4_timeout;
 typedef unsigned char      Unsigned8;

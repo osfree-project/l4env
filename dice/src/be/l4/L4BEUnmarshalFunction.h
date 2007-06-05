@@ -51,11 +51,8 @@ protected:
     /** \brief copy constructor */
     CL4BEUnmarshalFunction(CL4BEUnmarshalFunction &src);
 
-public:
-    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator, 
-	bool bCall = false);
-
 protected:
+    virtual void AddParameter(CFETypedDeclarator *pFEParameter);
     virtual bool HasVariableSizedParameters(
 	DIRECTION_TYPE nDirection);
 };

@@ -101,16 +101,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
     CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
-    try
-    {
-	pImpl->CreateBackEnd(pFEOperation, FILETYPE_CLIENTIMPLEMENTATION);
-    }
-    catch (CBECreateException *e)
-    {
-	m_ImplementationFiles.Remove(pImpl);
-        delete pImpl;
-	throw;
-    }
+    pImpl->CreateBackEnd(pFEOperation, FILETYPE_CLIENTIMPLEMENTATION);
     // add the functions to the file
     // search the functions
     // if attribute == IN, we need send
@@ -202,32 +193,14 @@ CBEClient::CreateBackEndHeader(CFEFile * pFEFile)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEHeaderFile *pHeader = pCF->GetNewHeaderFile();
     m_HeaderFiles.Add(pHeader);
-    try
-    {
-	pHeader->CreateBackEnd(pFEFile, FILETYPE_CLIENTHEADER);
-    }
-    catch (CBECreateException *e)
-    {
-	m_HeaderFiles.Remove(pHeader);
-        delete pHeader;
-	throw;
-    }
+    pHeader->CreateBackEnd(pFEFile, FILETYPE_CLIENTHEADER);
     pRoot->AddToHeader(pHeader);
     // create opcode files per IDL file
     if (!CCompiler::IsOptionSet(PROGRAM_NO_OPCODES))
     {
         CBEHeaderFile *pOpcodes = pCF->GetNewHeaderFile();
         m_HeaderFiles.Add(pOpcodes);
-	try
-	{
-	    pOpcodes->CreateBackEnd(pFEFile, FILETYPE_OPCODE);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_HeaderFiles.Remove(pOpcodes);
-            delete pOpcodes;
-	    throw;
-        }
+	pOpcodes->CreateBackEnd(pFEFile, FILETYPE_OPCODE);
         pRoot->AddOpcodesToFile(pOpcodes, pFEFile);
         // include opcode file to included files
         // do not use include file name, since the opcode file is
@@ -291,16 +264,7 @@ CBEClient::CreateBackEndFile(CFEFile *pFEFile)
     CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
-    try
-    {
-	pImpl->CreateBackEnd(pFEFile, FILETYPE_CLIENTIMPLEMENTATION);
-    }
-    catch (CBECreateException *e)
-    {
-	m_ImplementationFiles.Remove(pImpl);
-        delete pImpl;
-	throw;
-    }
+    pImpl->CreateBackEnd(pFEFile, FILETYPE_CLIENTIMPLEMENTATION);
     // add interfaces and functions
     // throws exception if failing
     CreateBackEndFile(pFEFile, pImpl);
@@ -423,16 +387,7 @@ CBEClient::CreateBackEndModule(CFEFile *pFEFile)
         CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
         m_ImplementationFiles.Add(pImpl);
         pImpl->SetHeaderFile(pHeader);
-	try
-	{
-	    pImpl->CreateBackEnd(pFEFile, FILETYPE_CLIENTIMPLEMENTATION);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_ImplementationFiles.Remove(pImpl);
-            delete pImpl;
-	    throw;
-        }
+	pImpl->CreateBackEnd(pFEFile, FILETYPE_CLIENTIMPLEMENTATION);
         // add interfaces to this file
         vector<CFEInterface*>::iterator iterI;
 	for (iterI = pFEFile->m_Interfaces.begin();
@@ -495,16 +450,7 @@ CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
     CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
-    try
-    {
-	pImpl->CreateBackEnd(pFELibrary, FILETYPE_CLIENTIMPLEMENTATION);
-    }
-    catch (CBECreateException *e)
-    {
-	m_ImplementationFiles.Remove(pImpl);
-        delete pImpl;
-        throw;
-    }
+    pImpl->CreateBackEnd(pFELibrary, FILETYPE_CLIENTIMPLEMENTATION);
     // add it to the file
     pBENameSpace->AddToImpl(pImpl);
     // iterate over nested libs and call this function for them as well
@@ -587,16 +533,7 @@ CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
     CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
-    try
-    {
-	pImpl->CreateBackEnd(pFEInterface, FILETYPE_CLIENTIMPLEMENTATION);
-    }
-    catch (CBECreateException *e)
-    {
-	m_ImplementationFiles.Remove(pImpl);
-        delete pImpl;
-	throw;
-    }
+    pImpl->CreateBackEnd(pFEInterface, FILETYPE_CLIENTIMPLEMENTATION);
     // add the interface
     pBEClass->AddToImpl(pImpl);
 }

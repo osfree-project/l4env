@@ -561,6 +561,8 @@ Thread::kill()
         }
     }
 
+  state_change (0, Thread_dead);
+
   unset_utcb_ptr();
 
   _cap_handler = reinterpret_cast<typeof(_cap_handler)>(_task->ram_quota());
@@ -588,7 +590,6 @@ Thread::kill()
       //  Delete our address space
       //
       delete _task;
-      
     }
 
   //
@@ -617,12 +618,10 @@ Thread::kill()
     // Switch to time-sharing scheduling context
     if (sched() != sched_context())
       switch_sched (sched_context());
-      
+
     if (current_sched()->owner() == this)
       current()->switch_to_locked(current());
   }
-
-  state_change (0, Thread_dead);
 
   // possibly dequeue from a wait queue
   wait_queue_kill();

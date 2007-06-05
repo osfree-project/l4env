@@ -62,7 +62,7 @@ public:
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual DIRECTION_TYPE GetSendDirection();
-    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+    virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
 protected:
     virtual void WriteLoop(CBEFile *pFile);

@@ -261,11 +261,10 @@ CBESndFunction::WriteMarshalReturn(CBEFile * pFile,
  *  \param pMsgBuffer the message buffer to initialize
  *  \return true on success
  */
-bool
+void
 CBESndFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    if (!CBEOperationFunction::MsgBufferInitialization(pMsgBuffer))
-        return false;
+    CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
     // check return type (do test here because sometimes we like to call
     // AddReturnVariable depending on other constraint--return is parameter)
     
@@ -273,17 +272,16 @@ CBESndFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     string sReturn = pNF->GetReturnVariable();
     CBETypedDeclarator *pReturn = FindParameter(sReturn);
     if (!pReturn)
-        return true;
+        return;
     CBEType *pType = pReturn->GetType();
     if (pType->IsVoid())
-        return true;
+        return;
     // add return variable
     if (!pMsgBuffer->AddReturnVariable(this, pReturn))
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s failed, because return var could not be added to msgbuf\n",
-	    __func__);
-	return false;
+	string exc = string(__func__);
+	exc += " failed, because return variable could not be added to message buffer.";
+	throw new CBECreateException(exc);
     }
-    return true;
 }
 

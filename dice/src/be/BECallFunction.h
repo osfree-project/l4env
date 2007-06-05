@@ -60,7 +60,7 @@ public:
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
-    virtual bool MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
+    virtual void MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
 protected:
     virtual void WriteUnmarshalling(CBEFile *pFile);

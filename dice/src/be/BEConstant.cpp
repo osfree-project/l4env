@@ -85,16 +85,7 @@ CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator)
     CFETypeSpec *pFEType = pFEConstDeclarator->GetType();
     m_pType = pCF->GetNewType(pFEType->GetType());
     m_pType->SetParent(this);
-    try
-    {
-	m_pType->CreateBackEnd(pFEType);
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pType;
-        m_pType = 0;
-        throw;
-    }
+    m_pType->CreateBackEnd(pFEType);
     // check for constant's value
     if (!pFEConstDeclarator->GetValue())
     {
@@ -105,16 +96,7 @@ CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator)
     // get value
     m_pValue = pCF->GetNewExpression();
     m_pValue->SetParent(this);
-    try
-    {
-	m_pValue->CreateBackEnd(pFEConstDeclarator->GetValue());
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pValue;
-        m_pValue = 0;
-        throw;
-    }
+    m_pValue->CreateBackEnd(pFEConstDeclarator->GetValue());
 }
 
 /** \brief creates the back-end constants declarator

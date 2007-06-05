@@ -118,7 +118,7 @@ CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile *pFile)
 	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
 	*pFile << "\t" << pDecl->GetName() << "->_p.param = 0;\n";
 	*pFile << "\t" << pDecl->GetName() << 
-	    "->timeout = L4_IPC_TIMEOUT(0, 1, 0, 0, 15, 0);\n";
+	    "->timeout = L4_IPC_SEND_TIMEOUT_0;\n";
 	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.grant = 1;\n";
 	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.write = 1;\n";
 	*pFile << "\t" << pDecl->GetName() << 

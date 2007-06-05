@@ -109,15 +109,7 @@ CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface)
     // return type -> set to IPC reply code
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEReplyCodeType *pReplyType = pCF->GetNewReplyCodeType();
-    try
-    {
-	pReplyType->CreateBackEnd();
-    }
-    catch (CBECreateException *e)
-    {
-        delete pReplyType;
-	throw;
-    }
+    pReplyType->CreateBackEnd();
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sReply = pNF->GetReplyCodeVariable();
     if (!SetReturnVar(pReplyType, sReply))
@@ -194,16 +186,7 @@ void CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
             continue;
         CBESwitchCase *pFunction = pCF->GetNewSwitchCase();
         m_SwitchCases.Add(pFunction);
-	try
-	{
-	    pFunction->CreateBackEnd(*iterO);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_SwitchCases.Remove(pFunction);
-            delete pFunction;
-            throw;
-        }
+	pFunction->CreateBackEnd(*iterO);
     }
 
     vector<CFEInterface*>::iterator iterI;

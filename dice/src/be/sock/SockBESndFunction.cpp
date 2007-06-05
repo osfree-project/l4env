@@ -111,25 +111,16 @@ CSockBESndFunction::CreateBackEnd(CFEOperation *pFEOperation)
 
     string exc = string(__func__);
     // add local variables
-    string sCurr;
-    try
-    {
-	sCurr = string("dice_ret_size");
-	AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
-	// reuse pType (its been cloned)
-	sCurr = string("sd");
-	AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
+    string sCurr = string("dice_ret_size");
+    AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
+    // reuse pType (its been cloned)
+    sCurr = string("sd");
+    AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
 
-    	// needed for receive
-	string sInit = "sizeof(*" + 
-	    CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
-	sCurr = string("dice_fromlen");
-	AddLocalVariable(string("socklen_t"), sCurr, 0, sInit);
-    }
-    catch (CBECreateException *e)
-    {
-	exc += " failed, because variable " + sCurr + " could not be created.";
-	throw new CBECreateException(exc);
-    }
+    // needed for receive
+    string sInit = "sizeof(*" + 
+	CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
+    sCurr = string("dice_fromlen");
+    AddLocalVariable(string("socklen_t"), sCurr, 0, sInit);
 }
 

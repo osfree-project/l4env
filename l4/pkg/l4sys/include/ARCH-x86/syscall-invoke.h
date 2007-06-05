@@ -29,6 +29,7 @@ void l4sys_fixup_abs_syscalls(void);
 #define L4_ABS_lthread_ex_regs           (0x500)
 #define L4_ABS_task_new                  (0x600)
 #define L4_ABS_privctrl                  (0x700)
+#define L4_ABS_ulock                     (0x800)
 
 #ifndef CONFIG_L4_CALL_SYSCALLS
 
@@ -39,6 +40,7 @@ void l4sys_fixup_abs_syscalls(void);
 # define L4_SYSCALL_lthread_ex_regs       "int $0x35 \n\t"
 # define L4_SYSCALL_task_new              "int $0x36 \n\t"
 # define L4_SYSCALL_privctrl              "int $0x37 \n\t"
+# define L4_SYSCALL_ulock                 "int $0x39 \n\t"
 # define L4_SYSCALL(name)                 L4_SYSCALL_ ## name
 
 #else

@@ -209,79 +209,18 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
     pType->SetParent(pCase);
     m_UnionCases.Add(pCase);
     // create struct type
-    try
-    {
-	pType->CreateBackEnd(string(), pFEOperation);
-    }
-    catch (CBECreateException *e)
-    {
-	m_UnionCases.Remove(pCase);
-        delete pType;
-        delete pCase;
-	e->Print();
-	delete e;
-
-	exc += " failed, because ";
-	switch ((int)nType) {
-	case CMsgStructType::In:
-	    exc += "_in"; break;
-	case CMsgStructType::Out:
-	    exc += "_out"; break;
-	case CMsgStructType::Exc:
-	    exc += "_exc"; break;
-	default:
-	    exc += "_word"; break;
-	}
-	exc += " struct could not be created.";
-        throw new CBECreateException(exc);
-    }
+    pType->CreateBackEnd(string(), pFEOperation);
     // get name of struct
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sTag = pNF->GetMessageBufferStructName(nType,
 	pFEOperation->GetName(), 
 	pFEOperation->GetSpecificParent<CFEInterface>()->GetName());
     // create union case
-    try
-    {
-	pCase->CreateBackEnd(pType, sTag, 0, false);
-    }
-    catch (CBECreateException *e)
-    {
-	m_UnionCases.Remove(pCase);
-        delete pType;
-        delete pCase;
-	e->Print();
-	delete e;
-
-	exc += " failed, because ";
-	switch ((int)nType) {
-	case CMsgStructType::In:
-	    exc += "_in"; break;
-	case CMsgStructType::Out:
-	    exc += "_out"; break;
-	case CMsgStructType::Exc:
-	    exc += "_exc"; break;
-	default:
-	    exc += "_word"; break;
-	}
-	exc += " union case could not be created.";
-        throw new CBECreateException(exc);
-    }
+    pCase->CreateBackEnd(pType, sTag, 0, false);
     delete pType; // cloned in CBEUnionCase::CBETypedDeclarator::CreateBackEnd
 
     // add the elements
-    try
-    {
-	AddElements(pFEOperation, nType);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-	exc += "failed, because elements could not be added.";
-	throw new CBECreateException(exc);
-    }
+    AddElements(pFEOperation, nType);
 }
 
 /** \brief adds the elements of the structs
@@ -501,29 +440,13 @@ CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
     pType->SetParent(pCase);
     m_UnionCases.Add(pCase);
     // create struct type
-    try
-    {
-	pType->CreateBackEnd(string(), pFERefObj);
-	// get name of struct
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	string sTag = pNF->GetMessageBufferStructName(CMsgStructType::Generic,
-	    string(), string());
-	// create union case
-	pCase->CreateBackEnd(pType, sTag, 0, false);
-    }
-    catch (CBECreateException *e)
-    {
-	m_UnionCases.Remove(pCase);
-	delete pType;
-        delete pCase;
-	e->Print();
-	delete e;
-	
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-"CBEMsgBufferType::%s failed, because generic struct could not be created\n",
-            __func__);
-        return false;
-    }
+    pType->CreateBackEnd(string(), pFERefObj);
+    // get name of struct
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sTag = pNF->GetMessageBufferStructName(CMsgStructType::Generic,
+	string(), string());
+    // create union case
+    pCase->CreateBackEnd(pType, sTag, 0, false);
     delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
 
     return true;
@@ -644,16 +567,8 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
 	    // add max_is attribute with heuristic size
 	    pAttr = pCF->GetNewAttribute();
 	    pParameter->m_Attributes.Add(pAttr);
-	    try
-	    {
-		pAttr->CreateBackEndInt(ATTR_MAX_IS,
-		    CCompiler::GetSizes()->GetMaxSizeOfType(TYPE_CHAR));
-	    }
-	    catch (CBECreateException*)
-	    {
-		pParameter->m_Attributes.Remove(pAttr);
-		throw;
-	    }
+	    pAttr->CreateBackEndInt(ATTR_MAX_IS,
+    		CCompiler::GetSizes()->GetMaxSizeOfType(TYPE_CHAR));
 	}
 	// add array boundary
     	CBEExpression *pBoundary = pCF->GetNewExpression();
@@ -1079,22 +994,7 @@ CBEMsgBufferType::AddStruct(CBEStructType *pStruct,
     string sTag = pNF->GetMessageBufferStructName(nType, sFunctionName,
 	sClassName);
     // create union case
-    try
-    {
-	pCase->CreateBackEnd(pType, sTag, 0, false);
-    }
-    catch (CBECreateException *e)
-    {
-	m_UnionCases.Remove(pCase);
-        delete pCase;
-	delete pType;
-	e->Print();
-	delete e;
-	
-	string exc = string(__func__);
-	exc += " failed, because " + sTag + " union case could not be created.";
-        throw new CBECreateException(exc);
-    }
+    pCase->CreateBackEnd(pType, sTag, 0, false);
     delete pType; /* cloned in CBETypedDeclarator::CreateBackEnd */
 }
 
@@ -1237,29 +1137,14 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 	// set this local variable as size_is attribute of parameter
 	pAttr = pCF->GetNewAttribute();
 	pAttr->SetParent(pParameter);
-	try
-	{
-	    // declarator has to be cloned, otherwise it will be destroyed
-	    // twice
-	    CBEDeclarator *pNew = static_cast<CBEDeclarator*>(
-		pSizeVar->m_Declarators.First()->Clone());
-	    pAttr->CreateBackEndIs(ATTR_SIZE_IS, pNew);
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-		"%s: size_is attribute %s added to %s\n", __func__,
-		pNew->GetName().c_str(),
-		pParameter->m_Declarators.First()->GetName().c_str());
-	}
-	catch (CBECreateException *e)
-	{
-	    delete pAttr;
-	    e->Print();
-	    delete e;
-
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-"CBEMsgBufferType::%s failed because size-is attr could not be created\n",
-		__func__);
-	    return;
-	}
+	// declarator has to be cloned, otherwise it will be destroyed twice
+	CBEDeclarator *pNew = static_cast<CBEDeclarator*>(
+	    pSizeVar->m_Declarators.First()->Clone());
+	pAttr->CreateBackEndIs(ATTR_SIZE_IS, pNew);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	    "%s: size_is attribute %s added to %s\n", __func__,
+	    pNew->GetName().c_str(),
+	    pParameter->m_Declarators.First()->GetName().c_str());
 	pParameter->m_Attributes.Add(pAttr);
 	pAttr = static_cast<CBEAttribute*>(pAttr->Clone());
 	pTrueParameter->m_Attributes.Add(pAttr);
@@ -1285,24 +1170,9 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 	// create type
 	CBEType *pType = pCF->GetNewType(TYPE_MWORD);
 	pType->SetParent(pSizeVar);
-	try
-	{
-	    pType->CreateBackEnd(true, 0, TYPE_MWORD);
-	    // construct variable by hand
-	    pSizeVar->CreateBackEnd(pType, sName);
-	}
-	catch (CBECreateException *e)
-	{
-	    delete pType;
-	    delete pSizeVar;
-	    e->Print();
-	    delete e;
-
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-"CBEMsgBufferType::%s failed, because size var type could not be created.\n",
-		__func__);
-	    return;
-	}
+	pType->CreateBackEnd(true, 0, TYPE_MWORD);
+    	// construct variable by hand
+	pSizeVar->CreateBackEnd(pType, sName);
 	// add direction attributes to size variable
 	CBEAttribute *pAttr;
 	if (pParameter->m_Attributes.Find(ATTR_IN))
@@ -1324,29 +1194,14 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 	// set local variable as size attribute
 	pAttr = pCF->GetNewAttribute();
 	pAttr->SetParent(pParameter);
-	try
-	{
-	    // declarator has to be cloned, otherwise it would be destroyed
-	    // twice
-	    CBEDeclarator *pNew = static_cast<CBEDeclarator*>(
-		pSizeVar->m_Declarators.First()->Clone());
-	    pAttr->CreateBackEndIs(ATTR_SIZE_IS, pNew);
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-		"%s: size_is attributbute %s added to %s\n", __func__,
-		pNew->GetName().c_str(),
-		pParameter->m_Declarators.First()->GetName().c_str());
-	}
-	catch (CBECreateException *e)
-	{
-	    delete pAttr;
-	    e->Print();
-	    delete e;
-
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-"CBEMsgBufferType::%s failed, because size attribute could not be created.\n",
-		__func__);
-	    return;
-	}
+	// declarator has to be cloned, otherwise it would be destroyed twice
+	CBEDeclarator *pNew = static_cast<CBEDeclarator*>(
+	    pSizeVar->m_Declarators.First()->Clone());
+	pAttr->CreateBackEndIs(ATTR_SIZE_IS, pNew);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	    "%s: size_is attributbute %s added to %s\n", __func__,
+	    pNew->GetName().c_str(),
+	    pParameter->m_Declarators.First()->GetName().c_str());
 	pParameter->m_Attributes.Add(pAttr);
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s added size attr to %s\n",
 	    __func__, pParameter->m_Declarators.First()->GetName().c_str());

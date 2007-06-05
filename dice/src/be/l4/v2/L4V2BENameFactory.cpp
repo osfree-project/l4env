@@ -74,7 +74,7 @@ CL4V2BENameFactory::GetTimeoutServerVariable(CBEFunction* pFunction)
     assert(pClass);
 
     if (pClass->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT))
-	return string("L4_IPC_TIMEOUT(0, 1, 0, 0, 15, 0)");
+	return string("L4_IPC_SEND_TIMEOUT_0");
 
     return CL4BENameFactory::GetTimeoutServerVariable(pFunction);
 }

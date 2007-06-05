@@ -121,8 +121,6 @@ public:
     virtual CBEType *GetReturnType(void);
     virtual bool DoMarshalParameter(CBETypedDeclarator *pParameter,
 	    bool bMarshal);
-    virtual bool HasAdditionalReference(CBEDeclarator *pDeclarator, 
-	bool bCall = false);
     virtual int GetParameterCount(int nFEType, DIRECTION_TYPE nDirection);
     virtual int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs, 
 	    DIRECTION_TYPE nDirection);
@@ -147,7 +145,7 @@ public:
     virtual void AddLocalVariable(int nFEType, bool bUnsigned, int nSize, 
 	string sName, int nStars, 
 	string sInit = string());
-    virtual bool MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
+    virtual void MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
     virtual CBETypedDeclarator* GetReturnVariable(void);
     virtual CBETypedDeclarator* GetExceptionVariable(void);
@@ -191,8 +189,6 @@ protected:
     virtual int WriteMarshalReturn(CBEFile * pFile, bool bMarshal);
     virtual int WriteMarshalOpcode(CBEFile *pFile, bool bMarshal);
     virtual void WriteMarshalException(CBEFile* pFile, bool bMarshal, bool bReturn);
-    virtual void WriteParameterName(CBEFile * pFile, 
-	    CBEDeclarator * pDeclarator);
     virtual void WriteParameter(CBEFile * pFile, 
 	    CBETypedDeclarator * pParameter, 
 	    bool bUseConst = true);

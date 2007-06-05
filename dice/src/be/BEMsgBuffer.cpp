@@ -286,17 +286,7 @@ CBEMsgBuffer::CreateType(CFEOperation *pFEOperation)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEMsgBufferType *pType = pCF->GetNewMessageBufferType();
     pType->SetParent(this);
-    try
-    {
-	pType->CreateBackEnd(pFEOperation);
-    }
-    catch (CBECreateException *e)
-    {
-        delete pType;
-	e->Print();
-	delete e;
-        return 0;
-    }
+    pType->CreateBackEnd(pFEOperation);
     return pType;
 }
 
@@ -312,17 +302,7 @@ CBEMsgBuffer::CreateType(CFEInterface *pFEInterface)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEMsgBufferType *pType = pCF->GetNewMessageBufferType();
     pType->SetParent(this);
-    try
-    {
-	pType->CreateBackEnd(pFEInterface);
-    }
-    catch (CBECreateException *e)
-    {
-        delete pType;
-	e->Print();
-	delete e;
-        return 0;
-    }
+    pType->CreateBackEnd(pFEInterface);
     return pType;
 }
 
@@ -334,59 +314,15 @@ CBEMsgBuffer::GetOpcodeVariable()
 {
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEOpcodeType *pType = pCF->GetNewOpcodeType();
-    try
-    {
-	pType->CreateBackEnd();
-    }
-    catch (CBECreateException *e)
-    {
-	delete pType;
-	e->Print();
-	delete e;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "%s failed, because opcode type could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pType->CreateBackEnd();
     string sName = CCompiler::GetNameFactory()->GetOpcodeVariable();
     CBETypedDeclarator *pOpcode = pCF->GetNewTypedDeclarator();
-    try
-    {
-	pOpcode->CreateBackEnd(pType, sName);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pOpcode;
-	delete pType;
-	e->Print();
-	delete e;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "%s failed, because opcode could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pOpcode->CreateBackEnd(pType, sName);
     delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
     // add directional attribute so later checks when marshaling work
     CBEAttribute *pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pOpcode);
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_IN);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pAttr;
-	delete pOpcode;
-	e->Print();
-	delete e;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "%s failed, because attribute could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pAttr->CreateBackEnd(ATTR_IN);
     pOpcode->m_Attributes.Add(pAttr);
     return pOpcode;
 }
@@ -403,63 +339,19 @@ CBEMsgBuffer::GetExceptionVariable()
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     // create type
     CBEType *pType = pCF->GetNewType(TYPE_MWORD);
-    try
-    {
-	pType->CreateBackEnd(true, 0, TYPE_MWORD);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pType;
-	e->Print();
-	delete e;
-
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "%s failed, because type could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pType->CreateBackEnd(true, 0, TYPE_MWORD);
     // get name
     string sName = CCompiler::GetNameFactory()->
 	GetExceptionWordVariable();
     // create var
     CBETypedDeclarator *pException = pCF->GetNewTypedDeclarator();
-    try
-    {
-	pException->CreateBackEnd(pType, sName);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pException;
-	delete pType;
-	e->Print();
-	delete e;
-
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "%s failed, because exception could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pException->CreateBackEnd(pType, sName);
     delete pType; // its clone in CBETypedDeclarator::CreateBackEnd
     // add directional attribute, so the test if this should be marshalled
     // will work
     CBEAttribute *pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pException);
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_OUT);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pAttr;
-	delete pException;
-	e->Print();
-	delete e;
-
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "%s failed, because attribute could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pAttr->CreateBackEnd(ATTR_OUT);
     pException->m_Attributes.Add(pAttr);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -1178,15 +1070,12 @@ CBEMsgBuffer::WriteAccessToStruct(CBEFile *pFile,
 	sClassName);
     // write access to message buffer
     CBETypedDeclarator *pMsgBufParam = WriteAccessToVariable(pFile, pFunction, false);
-    CBEDeclarator *pMsgBufDecl = pMsgBufParam ? pMsgBufParam->m_Declarators.First() :
-	m_Declarators.First();
     // if we have a parameter as message buffer, we have to check that's
     // parameter references. If not, check our own
     bool bHasReference = pMsgBufParam ? pMsgBufParam->HasReference() : 
 	HasReference();
     string sName;
-    if (bHasReference || 
-	pFunction->HasAdditionalReference(pMsgBufDecl, false))
+    if (bHasReference)
 	sName = "->";
     else
 	sName = ".";
@@ -1226,10 +1115,7 @@ CBEMsgBuffer::WriteAccessToVariable(CBEFile *pFile,
 	    CMessages::Error("No param of type %s in func %s\n",
 		sName.c_str(), pFunction->GetName().c_str());
     }
-    if (bPointer && (!bHasPointer || 
-	    (pMsgBufParam && 
-	     pFunction->HasAdditionalReference(pMsgBufParam->m_Declarators.First(), 
-		 false))))
+    if (bPointer && !bHasPointer)
 	*pFile << "&";
     *pFile << sName;
 
@@ -1743,99 +1629,27 @@ CBEMsgBuffer::GetMemberVariable(int nFEType,
 {
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEType *pType = pCF->GetNewType(nFEType);
-    try
-    {
-	pType->CreateBackEnd(bUnsigned, 0, nFEType);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pType;
-	e->Print();
-	delete e;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "%s failed, because word type could not be created.\n", __func__);
-	return 0;
-    }
+    pType->CreateBackEnd(bUnsigned, 0, nFEType);
     CBETypedDeclarator *pWordMember = pCF->GetNewTypedDeclarator();
-    try
-    {
-	pWordMember->CreateBackEnd(pType, sName);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pWordMember;
-	delete pType;
-	e->Print();
-	delete e;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "%s failed, because word member could not be created.\n", __func__);
-	return 0;
-    }
+    pWordMember->CreateBackEnd(pType, sName);
     delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
     // set array dimension
     if (nArray > 0)
     {
 	CBEDeclarator *pDecl = pWordMember->m_Declarators.First();
 	CBEExpression *pBound = pCF->GetNewExpression();
-	try
-	{
-	    pBound->CreateBackEnd(nArray);
-	}
-	catch (CBECreateException *e)
-	{
-	    delete pBound;
-	    delete pWordMember;
-	    e->Print();
-	    delete e;
-	    
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s failed, because array dimension couldn't be created.\n",
-		__func__);
-	    return false;
-	}
+	pBound->CreateBackEnd(nArray);
 	pDecl->AddArrayBound(pBound);
     }
     // add directional attribute so later checks when marshaling work
     CBEAttribute *pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pWordMember);
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_IN);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pAttr;
-	delete pWordMember;
-	e->Print();
-	delete e;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "%s failed, because IN attribute could not be created.\n", 
-	    __func__);
-	return 0;
-    }
+    pAttr->CreateBackEnd(ATTR_IN);
     pWordMember->m_Attributes.Add(pAttr);
     // OUT
     pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pWordMember);
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_OUT);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pAttr;
-	delete pWordMember;
-	e->Print();
-	delete e;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "%s failed, because OUT attribute could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pAttr->CreateBackEnd(ATTR_OUT);
     pWordMember->m_Attributes.Add(pAttr);
     return pWordMember;
 }

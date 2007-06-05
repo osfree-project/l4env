@@ -86,16 +86,7 @@ CBEUnionCase::CreateBackEnd(CFEUnionCase * pFEUnionCase)
     {
 	CBEExpression *pLabel = pCF->GetNewExpression();
 	m_Labels.Add(pLabel);
-	try
-	{
-	    pLabel->CreateBackEnd(*iter);
-	}
-	catch (CBECreateException *e)
-	{
-	    m_Labels.Remove(pLabel);
-	    delete pLabel;
-	    throw;
-	}
+	pLabel->CreateBackEnd(*iter);
     }
 }
 

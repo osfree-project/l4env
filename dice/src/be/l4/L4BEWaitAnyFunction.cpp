@@ -76,19 +76,8 @@ CL4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
 
-    string sCurr;
-    try
-    {
-	sCurr = sResult;
-	AddLocalVariable(sDope, sResult, 0, 
-	    string("{ msgdope: 0 }"));
-    }
-    catch (CBECreateException *e)
-    {
-	exc += " failed, because local variable (" + sCurr +
-	    ") could not be added.";
-	throw new CBECreateException(exc);
-    }
+    string sCurr = sResult;
+    AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
 }
 
 /** \brief initializes the variables

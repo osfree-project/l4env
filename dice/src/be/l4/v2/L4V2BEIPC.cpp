@@ -503,29 +503,20 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
         if (pFunction->HasVariableSizedParameters(nSndDir) ||
             pFunction->HasArrayParameters(nSndDir))
         {
-	    try
-	    {
-		string sTmpVar = pNF->GetTempOffsetVariable();
-		pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 
-		    0);
-		CBETypedDeclarator *pVariable = 
-		    pFunction->m_LocalVariables.Find(sTmpVar);
-		pVariable->AddLanguageProperty(string("attribute"),
-		    string("__attribute__ ((unused))"));
+	    string sTmpVar = pNF->GetTempOffsetVariable();
+	    pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 
+		0);
+	    CBETypedDeclarator *pVariable = 
+		pFunction->m_LocalVariables.Find(sTmpVar);
+	    pVariable->AddLanguageProperty(string("attribute"),
+		string("__attribute__ ((unused))"));
 
-		string sOffsetVar = pNF->GetOffsetVariable();
-		pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, 
-		    sOffsetVar, 0);
-		pVariable = pFunction->m_LocalVariables.Find(sOffsetVar);
-		pVariable->AddLanguageProperty(string("attribute"),
-		    string("__attribute__ ((unused))"));
-	    }
-	    catch (CBECreateException *e)
-	    {
-		e->Print();
-		delete e;
-		return false;
-	    }
+	    string sOffsetVar = pNF->GetOffsetVariable();
+	    pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, 
+		sOffsetVar, 0);
+	    pVariable = pFunction->m_LocalVariables.Find(sOffsetVar);
+	    pVariable->AddLanguageProperty(string("attribute"),
+		string("__attribute__ ((unused))"));
         }
     }
 
@@ -550,17 +541,7 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
         if (bUseAssembler || bUseDummy)
         {
             string sDummy = pNF->GetDummyVariable();
-	    try
-	    {
-		pFunction->AddLocalVariable(TYPE_MWORD, true, 0, sDummy, 
-		    0);
-	    }
-	    catch (CBECreateException *e)
-	    {
-		e->Print();
-		delete e;
-                return false;
-	    }
+	    pFunction->AddLocalVariable(TYPE_MWORD, true, 0, sDummy, 0);
             CBETypedDeclarator *pVariable = 
 		pFunction->m_LocalVariables.Find(sDummy);
             pVariable->AddLanguageProperty(string("attribute"), 

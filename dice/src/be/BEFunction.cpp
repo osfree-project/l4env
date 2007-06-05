@@ -407,23 +407,10 @@ CBEFunction::WriteParameter(CBEFile * pFile,
     CBETypedDeclarator * pParameter,
     bool bUseConst)
 {
-    CBEDeclarator *pDecl = pParameter->m_Declarators.First();
-    assert(pDecl);
+    CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
+    assert(pDeclarator);
     pParameter->WriteType(pFile, bUseConst);
     *pFile << " ";
-    WriteParameterName(pFile, pDecl);
-}
-
-/** \brief writes the name of a parameter
- *  \param pFile the file to write to
- *  \param pDeclarator the declarator to write
- */
-void
-CBEFunction::WriteParameterName(CBEFile * pFile,
-    CBEDeclarator * pDeclarator)
-{
-    if (HasAdditionalReference(pDeclarator))
-	*pFile << "*";
     pDeclarator->WriteDeclaration(pFile);
 }
 
@@ -699,8 +686,6 @@ CBEFunction::WriteCallParameterName(CBEFile * pFile,
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"CBEFunction::%s nDiffStars = %d = %d - %d (1)\n", __func__, nDiffStars,
 	pExternalDecl->GetStars(), pInternalDecl->GetStars());
-    if (HasAdditionalReference(pInternalDecl, true))
-        nDiffStars--;
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"CBEFunction::%s nDiffStars = %d (2)\n", __func__, nDiffStars);
 
@@ -1127,28 +1112,13 @@ CBEFunction::AddMessageBuffer()
     string sName = 
 	CCompiler::GetNameFactory()->GetMessageBufferVariable();
     // add as user defined type
-    try
-    {
-	((CBETypedDeclarator*)m_pMsgBuffer)->
-	    CreateBackEnd(sTypeName, sName, 1);
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pMsgBuffer;
-        m_pMsgBuffer = 0;
-	throw;
-    }
+    m_pMsgBuffer->CreateBackEnd(sTypeName, sName, 1);
     // initialisation
     // NO platform-specific members added
     // NO sorting
     // NO post-create
     // (all done in msgbuffers used to create class' message buffer)
-    if (!MsgBufferInitialization(m_pMsgBuffer))
-    {
-	string exc = string(__func__);
-	exc += " failed, because message buffer could not be initialized.";
-	throw new CBECreateException(exc);
-    }
+    MsgBufferInitialization(m_pMsgBuffer);
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
@@ -1179,21 +1149,7 @@ CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
 	delete m_pMsgBuffer;
     m_pMsgBuffer = CCompiler::GetClassFactory()->GetNewMessageBuffer();
     m_pMsgBuffer->SetParent(this);
-    try
-    {
-	m_pMsgBuffer->CreateBackEnd(pFEOperation);
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pMsgBuffer;
-        m_pMsgBuffer = 0;
-	e->Print();
-	delete e;
-
-	exc += " failed, because message buffer could not be created for " +
-	    GetName() + ".";
-        throw new CBECreateException(exc);
-    }
+    m_pMsgBuffer->CreateBackEnd(pFEOperation);
 
     // add platform specific members
     if (!m_pMsgBuffer->AddPlatformSpecificMembers(this))
@@ -1203,11 +1159,7 @@ CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
     }
 
     // function specific initialization
-    if (!MsgBufferInitialization(m_pMsgBuffer))
-    {
-	exc += " failed, because message buffer could not be initialized.";
-	throw new CBECreateException(exc);
-    }
+    MsgBufferInitialization(m_pMsgBuffer);
 
     // sort message buffer
     if (!m_pMsgBuffer->Sort(this))
@@ -1226,11 +1178,9 @@ CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
  *  \param pMsgBuffer the message buffer to manipulate
  *  \return true on success
  */
-bool
+void
 CBEFunction::MsgBufferInitialization(CBEMsgBuffer*)
-{
-    return true;
-}
+{ }
 
 /** \brief marshals the return value
  *  \param pFile the file to write to
@@ -1351,37 +1301,28 @@ CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType,
 
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEType *pType = pCF->GetNewType(nFEType);
-    try
+    // set type
+    if (!pReturn)
     {
-	// set type
-	if (!pReturn)
-	{
-	    pReturn = pCF->GetNewTypedDeclarator();
-	    AddLocalVariable(pReturn);
-	    pType->SetParent(pReturn);
-	    pType->CreateBackEnd(bUnsigned, nSize, nFEType);
-	    pReturn->CreateBackEnd(pType, sName);
-	    delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
-	}
-	else
-	{
-	    pType->SetParent(pReturn);
-	    pType->CreateBackEnd(bUnsigned, nSize, nFEType);
-	    pReturn->ReplaceType(pType);
-
-    	    // set name
-    	    CBEDeclarator *pDecl = pReturn->m_Declarators.First();
-    	    pDecl->CreateBackEnd(sName, pDecl->GetStars());
-	}
-
-	SetReturnVarAttributes(pReturn);
+	pReturn = pCF->GetNewTypedDeclarator();
+	AddLocalVariable(pReturn);
+	pType->SetParent(pReturn);
+	pType->CreateBackEnd(bUnsigned, nSize, nFEType);
+	pReturn->CreateBackEnd(pType, sName);
+	delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
     }
-    catch (CBECreateException *e)
+    else
     {
-	e->Print();
-	delete e;
-        return false;
+	pType->SetParent(pReturn);
+	pType->CreateBackEnd(bUnsigned, nSize, nFEType);
+	pReturn->ReplaceType(pType);
+
+	// set name
+	CBEDeclarator *pDecl = pReturn->m_Declarators.First();
+	pDecl->CreateBackEnd(sName, pDecl->GetStars());
     }
+
+    SetReturnVarAttributes(pReturn);
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
     return true;
 }
@@ -1409,32 +1350,14 @@ CBEFunction::SetReturnVar(CBEType * pType,
     
     pType->SetParent(pReturn);
     AddLocalVariable(pReturn);
-    try
-    {
-	if (dynamic_cast<CBEOpcodeType*>(pType))
-	    ((CBEOpcodeType*)pType)->CreateBackEnd();
-	if (dynamic_cast<CBEReplyCodeType*>(pType))
-	    ((CBEReplyCodeType*)pType)->CreateBackEnd();
-	pReturn->CreateBackEnd(pType, sName);
-    }
-    catch (CBECreateException *e)
-    {
-	m_LocalVariables.Remove(pReturn);
-        delete pReturn; // deletes pType and pAttr
-        return false;
-    }
+    if (dynamic_cast<CBEOpcodeType*>(pType))
+	((CBEOpcodeType*)pType)->CreateBackEnd();
+    if (dynamic_cast<CBEReplyCodeType*>(pType))
+	((CBEReplyCodeType*)pType)->CreateBackEnd();
+    pReturn->CreateBackEnd(pType, sName);
     delete pType;        // is cloned by typed decl
 
-    try
-    {
-	SetReturnVarAttributes(pReturn);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-        return false;
-    }
+    SetReturnVarAttributes(pReturn);
     return true;
 }
 
@@ -1459,31 +1382,11 @@ CBEFunction::SetReturnVar(CFETypeSpec * pFEType,
     
     pType->SetParent(pReturn);
     AddLocalVariable(pReturn);
-    try
-    {
-	pType->CreateBackEnd(pFEType);
-	pReturn->CreateBackEnd(pType, sName);
-    }
-    catch (CBECreateException *e)
-    {
-	m_LocalVariables.Remove(pReturn);
-        delete pReturn;
-	e->Print();
-	delete e;
-        return false;
-    }
+    pType->CreateBackEnd(pFEType);
+    pReturn->CreateBackEnd(pType, sName);
     delete pType;        // cloned by typed declarator
 
-    try
-    {
-	SetReturnVarAttributes(pReturn);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-        return false;
-    }
+    SetReturnVarAttributes(pReturn);
     return true;
 }
 
@@ -1659,23 +1562,6 @@ CBEFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
     if (pParameter == m_pCorbaEnv)
 	return false;
     return true;
-}
-
-/** \brief checks whether a given parameter needs an additional reference pointer
- *  \param pDeclarator the decl to check
- *  \param bCall true if the parameter is a call parameter
- *  \return true if we need a reference
- *
- * An additional reference might be suitable if the parameter is declared
- * without it, but might be used in multiple places with an reference.
- *
- * By default a parameter needs no additional reference.
- */
-bool 
-CBEFunction::HasAdditionalReference(CBEDeclarator* /*pDeclarator*/,
-    bool /*bCall*/)
-{
-    return false;
 }
 
 /** \brief checks if this function has variable sized parameters
@@ -1858,9 +1744,7 @@ bool CBEFunction::HasArrayParameters(DIRECTION_TYPE nDirection)
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s checking %s (array: %s)\n",
 	    __func__, pDecl->GetName().c_str(), (pDecl->IsArray()) ? "yes" : "no");
         if (pDecl->IsArray())
-        {
             return true;
-        }
     }
     CBETypedDeclarator *pRet = GetReturnVariable();
     if (pRet && pRet->IsDirection(nDirection))
@@ -1869,9 +1753,7 @@ bool CBEFunction::HasArrayParameters(DIRECTION_TYPE nDirection)
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s checking %s (array: %s)\n",
 	    __func__, pDecl->GetName().c_str(), (pDecl->IsArray()) ? "yes" : "no");
         if (pDecl->IsArray())
-        {
             return true;
-        }
     }
     return false;
 }
@@ -2037,36 +1919,10 @@ CBEFunction::CreateObject()
     string sName = pNF->GetCorbaObjectVariable();
     m_pCorbaObject = pCF->GetNewTypedDeclarator();
     m_pCorbaObject->SetParent(this);
-    try
-    {
-	m_pCorbaObject->CreateBackEnd(sTypeName, sName, 0);
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pCorbaObject;
-        m_pCorbaObject = 0;
-	e->Print();
-	delete e;
-
-	exc += " failed, because CORBA Object could not be created.";
-	throw new CBECreateException(exc);
-    }
+    m_pCorbaObject->CreateBackEnd(sTypeName, sName, 0);
     // CORBA_Object is always in
     CBEAttribute *pAttr = pCF->GetNewAttribute();
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_IN);
-    }
-    catch (CBECreateException *e)
-    {
-        delete pAttr;
-	e->Print();
-	delete e;
-
-	exc += " failed, because IN attribute for CORBA Object could not be" \
-	    " created.";
-        throw new CBECreateException(exc);
-    }
+    pAttr->CreateBackEnd(ATTR_IN);
     m_pCorbaObject->m_Attributes.Add(pAttr);
 }
 
@@ -2094,16 +1950,7 @@ CBEFunction::CreateEnvironment()
     string sName = pNF->GetCorbaEnvironmentVariable();
     m_pCorbaEnv = pCF->GetNewTypedDeclarator();
     m_pCorbaEnv->SetParent(this);
-    try
-    {
-	m_pCorbaEnv->CreateBackEnd(sTypeName, sName, 1);
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pCorbaEnv;
-        m_pCorbaEnv = 0;
-	throw;
-    }
+    m_pCorbaEnv->CreateBackEnd(sTypeName, sName, 1);
 }
 
 /** \brief sets the second declarator of the typed decl to the name and stars
@@ -2127,23 +1974,12 @@ CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl,
     // check if there is already a second declarator
     CBEDeclarator *pSecond = pTypedDecl->GetCallDeclarator();
     if (pSecond)
-    {
         pSecond->CreateBackEnd(sNewDeclName, nStars);
-    }
     else
     {
         pSecond = CCompiler::GetClassFactory()->GetNewDeclarator();
         pTypedDecl->m_Declarators.Add(pSecond);
-	try
-	{
-	    pSecond->CreateBackEnd(sNewDeclName, nStars);
-	}
-	catch (CBECreateException *e)
-        {
-	    pTypedDecl->m_Declarators.Remove(pSecond);
-            delete pSecond;
-	    throw;
-        }
+	pSecond->CreateBackEnd(sNewDeclName, nStars);
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"CBEFunction::%s(decl) returns\n", __func__);
@@ -2191,7 +2027,6 @@ CBEFunction::SetCallVariable(string sOriginalName,
             CBETypedDeclarator *pParam = 
 		(CBETypedDeclarator*)((*iter)->Clone());
             m_CallParameters.Add(pParam);
-            // parent is already set to us -> skip the call
         }
     }
     // search for original name
@@ -2453,16 +2288,7 @@ CBEFunction::AddLocalVariable(string sUserType,
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
     AddLocalVariable(pVariable);
-    try
-    {
-	pVariable->CreateBackEnd(sUserType, sName, nStars);
-    }
-    catch (CBECreateException *e)
-    {
-	m_LocalVariables.Remove(pVariable);
-        delete pVariable;
-        throw;
-    }
+    pVariable->CreateBackEnd(sUserType, sName, nStars);
     if (!sInit.empty())
         pVariable->SetDefaultInitString(sInit);
 }
@@ -2492,17 +2318,8 @@ CBEFunction::AddLocalVariable(int nFEType,
     CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
     pType->SetParent(pVariable);
     AddLocalVariable(pVariable);
-    try
-    {
-	pType->CreateBackEnd(bUnsigned, nSize, nFEType);
-	pVariable->CreateBackEnd(pType, sName);
-    }
-    catch (CBECreateException *e)
-    {
-	m_LocalVariables.Remove(pVariable);
-        delete pVariable;
-        throw;
-    }
+    pType->CreateBackEnd(bUnsigned, nSize, nFEType);
+    pVariable->CreateBackEnd(pType, sName);
     delete pType; // cloned by typed decl.
 
     if (nStars > 0)
@@ -2564,18 +2381,8 @@ CBEFunction::CreateOpcodeVariable(void)
     string sOpcode = pNF->GetOpcodeVariable();
     pOpcode->SetParent(this);
     pOpcodeType->SetParent(pOpcode);
-    try
-    {
-	pOpcodeType->CreateBackEnd();
-	pOpcode->CreateBackEnd(pOpcodeType, sOpcode);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pOpcode;
-	delete pOpcodeType;
-
-        throw;
-    }
+    pOpcodeType->CreateBackEnd();
+    pOpcode->CreateBackEnd(pOpcodeType, sOpcode);
     delete pOpcodeType; // cloned in CBETypedDeclarator::CreateBackEnd
 
     return pOpcode;

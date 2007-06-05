@@ -317,16 +317,7 @@ CBEAttribute::CreateBackEndType(CFETypeAttribute * pFETypeAttribute)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     m_pType = pCF->GetNewType(pType->GetType());
     m_pType->SetParent(this);
-    try
-    {
-	m_pType->CreateBackEnd(pType);
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pType;
-        m_pType = 0;
-        throw;
-    }
+    m_pType->CreateBackEnd(pType);
 }
 
 /** \brief creates the back-end attribute for a string attribute
@@ -402,19 +393,7 @@ CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
 	    CBEClassFactory *pCF = CCompiler::GetClassFactory();
             pDeclarator = pCF->GetNewDeclarator();
             AddIsParameter(pDeclarator);
-	    try
-	    {
-		pDeclarator->CreateBackEnd(*iterAP);
-	    }
-	    catch (CBECreateException *e)
-            {
-                delete pDeclarator;
-		e->Print();
-		delete e;
-
-		exc += " failed because declarator could not be created.";
-                throw new CBECreateException(exc);
-            }
+    	    pDeclarator->CreateBackEnd(*iterAP);
         }
         else
         {

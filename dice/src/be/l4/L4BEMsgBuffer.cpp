@@ -82,44 +82,20 @@ CL4BEMsgBuffer::GetFlexpageVariable()
     string sName = CCompiler::GetNameFactory()->
 	GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
     CBETypedDeclarator *pFpage = pCF->GetNewTypedDeclarator();
-    try
-    {
-	pType->CreateBackEnd(false, 0, TYPE_RCV_FLEXPAGE);
-	pFpage->CreateBackEnd(pType, sName);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pFpage;
-	delete pType;
-	e->Print();
-	delete e;
-	exc += " failed, because flexpage variable could not be created";
-	throw new CBECreateException(exc);
-    }
+    pType->CreateBackEnd(false, 0, TYPE_RCV_FLEXPAGE);
+    pFpage->CreateBackEnd(pType, sName);
     delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
     
     CBEAttribute *pAttr = pCF->GetNewAttribute();
-    try
-    {
-	// add directional attribute so later checks when marshaling work
-	pAttr->SetParent(pFpage);
-	pAttr->CreateBackEnd(ATTR_IN);
-	pFpage->m_Attributes.Add(pAttr);
-	// add directional attribute so later checks when marshaling work
-	pAttr = pCF->GetNewAttribute();
-	pAttr->SetParent(pFpage);
-	pAttr->CreateBackEnd(ATTR_OUT);
-	pFpage->m_Attributes.Add(pAttr);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pAttr;
-	delete pFpage;
-	e->Print();
-	delete e;
-	exc += " failed, because attribute could not be created";
-	throw new CBECreateException(exc);
-    }
+    // add directional attribute so later checks when marshaling work
+    pAttr->SetParent(pFpage);
+    pAttr->CreateBackEnd(ATTR_IN);
+    pFpage->m_Attributes.Add(pAttr);
+    // add directional attribute so later checks when marshaling work
+    pAttr = pCF->GetNewAttribute();
+    pAttr->SetParent(pFpage);
+    pAttr->CreateBackEnd(ATTR_OUT);
+    pFpage->m_Attributes.Add(pAttr);
 
     return pFpage;
 }
@@ -137,44 +113,20 @@ CL4BEMsgBuffer::GetSizeDopeVariable()
     string sName = CCompiler::GetNameFactory()->
 	GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
     CBETypedDeclarator *pSize = pCF->GetNewTypedDeclarator();
-    try
-    {
-	pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SIZE);
-	pSize->CreateBackEnd(pType, sName);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pSize;
-	delete pType;
-	e->Print();
-	delete e;
-	exc += " failed, because size dope could not be created.";
-	throw new CBECreateException(exc);
-    }
+    pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SIZE);
+    pSize->CreateBackEnd(pType, sName);
     delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
     
     // add directional attribute so later checks when marshaling work
     CBEAttribute *pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pSize);
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_IN);
-	pSize->m_Attributes.Add(pAttr);
-	// add directional attribute so later checks when marshaling work
-	pAttr = pCF->GetNewAttribute();
-	pAttr->SetParent(pSize);
-	pAttr->CreateBackEnd(ATTR_OUT);
-	pSize->m_Attributes.Add(pAttr);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pAttr;
-	delete pSize;
-	e->Print();
-	delete e;
-	exc += " failed, because attribute could not be created.";
-	throw new CBECreateException(exc);
-    }
+    pAttr->CreateBackEnd(ATTR_IN);
+    pSize->m_Attributes.Add(pAttr);
+    // add directional attribute so later checks when marshaling work
+    pAttr = pCF->GetNewAttribute();
+    pAttr->SetParent(pSize);
+    pAttr->CreateBackEnd(ATTR_OUT);
+    pSize->m_Attributes.Add(pAttr);
 
     return pSize;
 }
@@ -191,44 +143,20 @@ CL4BEMsgBuffer::GetSendDopeVariable()
     string sName = CCompiler::GetNameFactory()->
 	GetMessageBufferMember(TYPE_MSGDOPE_SEND);
     CBETypedDeclarator *pSend = pCF->GetNewTypedDeclarator();
-    try
-    {
-	pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SEND);
-	pSend->CreateBackEnd(pType, sName);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pSend;
-	delete pType;
-	e->Print();
-	delete e;
-	exc += " failed, because send dope could not be created.";
-	throw new CBECreateException(exc);
-    }
+    pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SEND);
+    pSend->CreateBackEnd(pType, sName);
     delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
     
     // add directional attribute so later checks when marshaling work
     CBEAttribute *pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pSend);
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_IN);
-	pSend->m_Attributes.Add(pAttr);
-	// add directional attribute so later checks when marshaling work
-	pAttr = pCF->GetNewAttribute();
-	pAttr->SetParent(pSend);
-	pAttr->CreateBackEnd(ATTR_OUT);
-	pSend->m_Attributes.Add(pAttr);
-    }
-    catch (CBECreateException *e)
-    {
-	delete pAttr;
-	delete pSend;
-	e->Print();
-	delete e;
-	exc += " failed, because attribute could not be created.";
-	throw new CBECreateException(exc);
-    }
+    pAttr->CreateBackEnd(ATTR_IN);
+    pSend->m_Attributes.Add(pAttr);
+    // add directional attribute so later checks when marshaling work
+    pAttr = pCF->GetNewAttribute();
+    pAttr->SetParent(pSend);
+    pAttr->CreateBackEnd(ATTR_OUT);
+    pSend->m_Attributes.Add(pAttr);
 
     return pSend;
 }
@@ -1081,60 +1009,51 @@ CL4BEMsgBuffer::InsertPadMember(int nFEType,
     CBETypedDeclarator *pMember,
     CBEStructType *pStruct)
 {
-    try
+    CBETypedDeclarator *pPadMember = 0; 
+    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+
+    // get name
+    string sName = pNF->GetPaddingMember(nFEType, 
+	TYPE_REFSTRING);
+    // try to find padding member
+    if ((pPadMember = pStruct->m_Members.Find(sName)) == 0)
     {
-	CBETypedDeclarator *pPadMember = 0; 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	
-	// get name
-	string sName = pNF->GetPaddingMember(nFEType, 
-	    TYPE_REFSTRING);
-	// try to find padding member
-	if ((pPadMember = pStruct->m_Members.Find(sName)) == 0)
+	// create type
+	CBEType *pType = pCF->GetNewType(nFEType);
+	pType->CreateBackEnd(true, 1, nFEType);
+	// create padding member
+	pPadMember = pCF->GetNewTypedDeclarator();
+	pPadMember->CreateBackEnd(pType, sName);
+	delete pType; /* cloned in CBETypedDeclarator::CreateBackEnd */
+	// add array with size difference
+	if (nSize > 1)
 	{
-	    // create type
-	    CBEType *pType = pCF->GetNewType(nFEType);
-	    pType->CreateBackEnd(true, 1, nFEType);
-	    // create padding member
-	    pPadMember = pCF->GetNewTypedDeclarator();
-	    pPadMember->CreateBackEnd(pType, sName);
-	    delete pType; /* cloned in CBETypedDeclarator::CreateBackEnd */
-	    // add array with size difference
-	    if (nSize > 1)
-	    {
-		CBEExpression *pBound = pCF->GetNewExpression();
-		pBound->CreateBackEnd(nSize);
-		pPadMember->m_Declarators.First()->AddArrayBound(pBound);
-	    }
-	    // add member to struct
-	    pStruct->m_Members.Add(pPadMember);
-	    // move member just before refstring member
-	    pStruct->m_Members.Move(sName, pMember->m_Declarators.First()->GetName());
+	    CBEExpression *pBound = pCF->GetNewExpression();
+	    pBound->CreateBackEnd(nSize);
+	    pPadMember->m_Declarators.First()->AddArrayBound(pBound);
+	}
+	// add member to struct
+	pStruct->m_Members.Add(pPadMember);
+	// move member just before refstring member
+	pStruct->m_Members.Move(sName, pMember->m_Declarators.First()->GetName());
+    }
+    else
+    {
+	CBEDeclarator *pDecl = pPadMember->m_Declarators.First();
+	CBEExpression *pBound = 0;
+	if (pDecl->IsArray())
+	{
+	    pBound = pDecl->m_Bounds.First();
+	    nSize += pBound->GetIntValue();
 	}
 	else
 	{
-	    CBEDeclarator *pDecl = pPadMember->m_Declarators.First();
-	    CBEExpression *pBound = 0;
-	    if (pDecl->IsArray())
-	    {
-		pBound = pDecl->m_Bounds.First();
-		nSize += pBound->GetIntValue();
-	    }
-	    else
-	    {
-		pBound = pCF->GetNewExpression();
-		pDecl->AddArrayBound(pBound);
-		nSize++;
-	    }
-	    pBound->CreateBackEnd(nSize);
+	    pBound = pCF->GetNewExpression();
+	    pDecl->AddArrayBound(pBound);
+	    nSize++;
 	}
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-	return false;
+	pBound->CreateBackEnd(nSize);
     }
     return true;
 }

@@ -106,29 +106,25 @@ CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation)
  * function does not add the return variable to the struct if the return type
  * of the function is void, which is always true for marshal function.
  */
-bool 
+void 
 CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    if (!CBEOperationFunction::MsgBufferInitialization(pMsgBuffer))
-	return false;
+    CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
     // add return variable if we have a return parameter
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sReturn = pNF->GetReturnVariable();
-    if (FindParameter(sReturn))
+    if (FindParameter(sReturn) &&
+	!pMsgBuffer->AddReturnVariable(this))
     {
-	if (!pMsgBuffer->AddReturnVariable(this))
-	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-		"%s failed, because couldn't added ret-var to msgbuf\n", __func__);
-	    return false;
-	}
+	string exc = string(__func__);
+	exc += " failed, because return variable could not be added to message buffer.";
+	throw new CBECreateException(exc);
     }
     // in marshal function, the message buffer is a pointer to the server's
     // message buffer
     pMsgBuffer->m_Declarators.First()->SetStars(1);
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
-    return true;
 }
 
 /** \brief writes the variable initializations of this function

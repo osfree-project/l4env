@@ -50,13 +50,11 @@ CSockBEUnmarshalFunction::~CSockBEUnmarshalFunction()
  *  \param pMsgBuffer the message buffer to initialize
  *  \return true on success
  */
-bool
+void
 CSockBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    if (!CBEUnmarshalFunction::MsgBufferInitialization(pMsgBuffer))
-        return false;
+    CBEUnmarshalFunction::MsgBufferInitialization(pMsgBuffer);
     CBEDeclarator *pDecl = pMsgBuffer->m_Declarators.First();
     pDecl->SetStars(0);
-    return true;
 }
 

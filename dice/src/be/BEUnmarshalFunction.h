@@ -58,14 +58,12 @@ public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
-    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator,
-	bool bCall = false);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual CBETypedDeclarator * FindParameterType(string sTypeName);
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual DIRECTION_TYPE GetSendDirection();
-    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+    virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
     virtual CBETypedDeclarator* GetExceptionVariable(void);
 

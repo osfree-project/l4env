@@ -60,7 +60,7 @@ public:
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
     virtual void WriteReturn(CBEFile *pFile);
-    virtual bool MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
+    virtual void MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
 protected:
     virtual void WriteInvocation(CBEFile *pFile);

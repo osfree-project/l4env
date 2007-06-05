@@ -70,21 +70,7 @@ CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
-    try
-    {
-	AddLocalVariable(sDope, sResult, 0, 
-	    string("{ msgdope: 0 }"));
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed, because variable " + sResult + 
-	    " could not be created.";
-        throw new CBECreateException(exc);
-    }
+    AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
 }
 
 /** \brief writes the communication invocation

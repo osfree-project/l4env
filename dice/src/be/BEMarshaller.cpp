@@ -904,9 +904,6 @@ CBEMarshaller::WriteParameter(CBETypedDeclarator *pParameter,
     // get declarator
     CBEDeclarator *pDecl = pParameter->m_Declarators.First();
     int nStars = pDecl->GetStars();
-    bool bHasRef = m_pFunction->HasAdditionalReference(pDecl);
-    if (bHasRef)
-	nStars++;
     
     // if no constructed type, then cast the value
     if (!pType->IsConstructedType() && 

@@ -188,16 +188,7 @@ CBEExpression::CreateBackEndConditional(
     }
     m_pCondition = CCompiler::GetClassFactory()->GetNewExpression();
     m_pCondition->SetParent(this);
-    try
-    {
-	m_pCondition->CreateBackEnd(pFEExpression->GetCondition());
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pCondition;
-        m_pCondition = 0;
-        throw;
-    }
+    m_pCondition->CreateBackEnd(pFEExpression->GetCondition());
     CreateBackEndBinary(pFEExpression);
 }
 
@@ -217,16 +208,7 @@ CBEExpression::CreateBackEndBinary(CFEBinaryExpression * pFEExpression)
     }
     m_pOperand2 = CCompiler::GetClassFactory()->GetNewExpression();
     m_pOperand2->SetParent(this);
-    try
-    {
-	m_pOperand2->CreateBackEnd(pFEExpression->GetOperand2());
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pOperand2;
-        m_pOperand2 = 0;
-        throw;
-    }
+    m_pOperand2->CreateBackEnd(pFEExpression->GetOperand2());
     CreateBackEndUnary(pFEExpression);
 }
 
@@ -274,15 +256,7 @@ CBEExpression::CreateBackEndPrimary(CFEPrimaryExpression * pFEExpression)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEExpression *pExpression = pCF->GetNewExpression();
     pExpression->SetParent(this);
-    try
-    {
-	pExpression->CreateBackEnd(pFEOperand);
-    }
-    catch (CBECreateException *e)
-    {
-        delete pExpression;
-        throw;
-    }
+    pExpression->CreateBackEnd(pFEOperand);
     m_pOperand1 = pExpression;
 }
 
@@ -343,16 +317,7 @@ CBEExpression::CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression)
     {
         m_pType = pCF->GetNewType(pFEType->GetType());
         m_pType->SetParent(this);
-	try
-	{
-	    m_pType->CreateBackEnd(pFEType);
-	}
-	catch (CBECreateException *e)
-        {
-            delete m_pType;
-	    m_pType = 0;
-            throw;
-        }
+	m_pType->CreateBackEnd(pFEType);
         return;
     }
     // can be expression
@@ -361,16 +326,7 @@ CBEExpression::CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression)
     {
         m_pOperand1 = pCF->GetNewExpression();
         m_pOperand1->SetParent(this);
-	try
-	{
-	    m_pOperand1->CreateBackEnd(pFESizeOfExpression);
-	}
-	catch (CBECreateException *e)
-        {
-            delete m_pOperand1;
-	    m_pOperand1 = 0;
-	    throw;
-        }
+	m_pOperand1->CreateBackEnd(pFESizeOfExpression);
         return;
     }
     // then it is a string

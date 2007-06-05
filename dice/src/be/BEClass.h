@@ -212,7 +212,7 @@ protected:
     int GetFunctionCount(void);
     int GetFunctionWriteCount(CBEFile *pFile);
     
-    virtual bool MsgBufferInitialization(void);
+    virtual void MsgBufferInitialization(void);
 
     void CreateOrderedElementList(void);
     void InsertOrderedElement(CObject *pObj);

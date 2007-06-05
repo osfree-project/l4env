@@ -87,17 +87,15 @@ CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation)
  *
  * Make the message buffer variable a reference
  */
-bool 
+void 
 CBEMarshalExceptionFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    if (!CBEOperationFunction::MsgBufferInitialization(pMsgBuffer))
-	return false;
+    CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
     // in marshal function, the message buffer is a pointer to the server's
     // message buffer
     pMsgBuffer->m_Declarators.First()->SetStars(1);
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
-    return true;
 }
 
 /** \brief adds a single parameter to this function

@@ -99,20 +99,7 @@ CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType)
     {
         CBEUnionCase *pUnionCase = pCF->GetNewUnionCase();
         m_UnionCases.Add(pUnionCase);
-	try
-	{
-	    pUnionCase->CreateBackEnd(*iterUC);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_UnionCases.Remove(pUnionCase);
-            delete pUnionCase;
-	    e->Print();
-	    delete e;
-
-	    exc += " failed because union case could not be added";
-	    throw new CBECreateException(exc);
-        }
+	pUnionCase->CreateBackEnd(*iterUC);
     }
     // set tag
     string sTag = pFEUnion->GetTag();

@@ -160,45 +160,33 @@ CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation)
         }
 
 	string sCurr;
-	try
+	// for variable sized arrays we need a temporary variable
+	string sTmpVar = pNF->GetTempOffsetVariable();
+	for (int i=0; i < nVariableSizedArrayDimensions; i++)
 	{
-	    // for variable sized arrays we need a temporary variable
-	    string sTmpVar = pNF->GetTempOffsetVariable();
-	    for (int i=0; i < nVariableSizedArrayDimensions; i++)
-	    {
-		std::ostringstream os;
-		os << i;
-		sCurr = sTmpVar + os.str();
-		AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
-                
-		CBETypedDeclarator *pVariable = m_LocalVariables.Find(sCurr);
-		pVariable->AddLanguageProperty(string("attribute"), 
-		    string("__attribute__ ((unused))"));
-	    }
-
-	    // need a "pure" temp var as well
-	    sCurr = sTmpVar;
-	    AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 0);
-	    
-	    CBETypedDeclarator *pVariable = m_LocalVariables.Find(sTmpVar);
-	    pVariable->AddLanguageProperty(string("attribute"), 
-		string("__attribute__ ((unused))"));
-
-	    sCurr = pNF->GetOffsetVariable();
+	    std::ostringstream os;
+	    os << i;
+	    sCurr = sTmpVar + os.str();
 	    AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
-	    pVariable = m_LocalVariables.Find(sCurr);
+
+	    CBETypedDeclarator *pVariable = m_LocalVariables.Find(sCurr);
 	    pVariable->AddLanguageProperty(string("attribute"), 
 		string("__attribute__ ((unused))"));
 	}
-	catch (CBECreateException *e)
-	{
-	    e->Print();
-	    delete e;
-	    
-	    exc += " failed, because local variable (" + sCurr +
-		") could not be added.";
-	    throw new CBECreateException(exc);
-	}
+
+	// need a "pure" temp var as well
+	sCurr = sTmpVar;
+	AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 0);
+
+	CBETypedDeclarator *pVariable = m_LocalVariables.Find(sTmpVar);
+	pVariable->AddLanguageProperty(string("attribute"), 
+	    string("__attribute__ ((unused))"));
+
+	sCurr = pNF->GetOffsetVariable();
+	AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
+	pVariable = m_LocalVariables.Find(sCurr);
+	pVariable->AddLanguageProperty(string("attribute"), 
+	    string("__attribute__ ((unused))"));
     }
 }
 

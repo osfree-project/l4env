@@ -351,61 +351,17 @@ CL4V4BEMsgBuffer::GetMsgTagVariable()
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBETypedDeclarator *pMsgTag = pCF->GetNewTypedDeclarator();
     pMsgTag->SetParent(this);
-    try
-    {
-	pMsgTag->CreateBackEnd(sType, sName, 0);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-	delete pMsgTag;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "%s failed, because msgtag could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pMsgTag->CreateBackEnd(sType, sName, 0);
     // add directional attribute, so the test if this should be marshalled
     // will work
     CBEAttribute *pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pMsgTag);
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_OUT);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-	delete pAttr;
-	delete pMsgTag;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "%s failed, because attribute could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pAttr->CreateBackEnd(ATTR_OUT);
     pMsgTag->m_Attributes.Add(pAttr);
     // now IN
     pAttr = pCF->GetNewAttribute();
     pAttr->SetParent(pMsgTag);
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_IN);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-	delete pAttr;
-	delete pMsgTag;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "%s failed, because attribute could not be created.\n",
-	    __func__);
-	return 0;
-    }
+    pAttr->CreateBackEnd(ATTR_IN);
     pMsgTag->m_Attributes.Add(pAttr);
 
     return pMsgTag;

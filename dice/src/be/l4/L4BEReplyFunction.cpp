@@ -72,32 +72,19 @@ CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation)
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
     string sCurr = sResult;
-    try
+    AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
+    // we might need the offset variables if we transmit [ref]
+    // attributes, because strings are found in message buffer by
+    // offset calculation if message buffer is at server side.
+    if (!HasVariableSizedParameters(DIRECTION_INOUT) &&
+	!HasArrayParameters(DIRECTION_INOUT) &&
+	FindParameterAttribute(ATTR_REF))
     {
-	AddLocalVariable(sDope, sResult, 0, 
-	    string("{ msgdope: 0 }"));
-	// we might need the offset variables if we transmit [ref]
-	// attributes, because strings are found in message buffer by
-	// offset calculation if message buffer is at server side.
-	if (!HasVariableSizedParameters(DIRECTION_INOUT) &&
-	    !HasArrayParameters(DIRECTION_INOUT) &&
-	    FindParameterAttribute(ATTR_REF))
-	{
-	    sCurr = pNF->GetTempOffsetVariable();
-	    AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0 /*stars*/);
+	sCurr = pNF->GetTempOffsetVariable();
+	AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0 /*stars*/);
 
-	    sCurr = pNF->GetOffsetVariable();
-	    AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
-	}
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-	exc += " failed, because local variable \"" + sCurr +
-	    "\" could not be created.";
-	throw new CBECreateException(exc);
+	sCurr = pNF->GetOffsetVariable();
+	AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
     }
 }
 

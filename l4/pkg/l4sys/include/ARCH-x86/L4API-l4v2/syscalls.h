@@ -548,7 +548,6 @@ l4_inter_task_ex_regs(l4_threadid_t destination,
                          old_eflags, old_eip, old_esp);
 }
 
-#ifndef DICE
 L4_INLINE void
 l4_inter_task_ex_regs_cap(l4_threadid_t destination,
 		          l4_umword_t eip,
@@ -571,7 +570,6 @@ l4_inter_task_ex_regs_cap(l4_threadid_t destination,
                          old_eflags, old_eip, old_esp);
   *cap_handler = utcb->ex_regs.caphandler;
 }
-#endif
 
 /*
  * Special version of l4_thread_ex_regs to get the pager of a thread

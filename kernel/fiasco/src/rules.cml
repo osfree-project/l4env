@@ -393,9 +393,9 @@ If you use Fiasco for high assurance, high security and use AMD CPUs
 you should enable this option. In any other case it is no harm to disable it.
 .
 
-USER_LOCKS		'Eanble support for user-level locks'		text
+USER_LOCKS		'Enable support for user-level locks'		text
 Enable this option if you want to use l4_ulock or l4_usem calls for
-kernel provided user-level locks (FAST).
+kernel-provided user-level locks (FAST).
 .
 
 abi_extensions		'ABI Extensions'

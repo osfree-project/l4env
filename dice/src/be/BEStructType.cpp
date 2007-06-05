@@ -200,16 +200,7 @@ CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
     {
         CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
         m_Members.Add(pMember);
-	try
-	{
-	    pMember->CreateBackEnd(*iterM);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_Members.Remove(pMember);
-            delete pMember;
-            throw;
-        }
+	pMember->CreateBackEnd(*iterM);
     }
     // set tag
     string sTag = pFEStruct->GetTag();

@@ -33,9 +33,11 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BEType.h"
 #include "be/BEMarshaller.h"
+#include "fe/FETypedDeclarator.h"
 
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
+#include <cassert>
 
 CL4BEUnmarshalFunction::CL4BEUnmarshalFunction()
 {
@@ -52,31 +54,6 @@ CL4BEUnmarshalFunction::~CL4BEUnmarshalFunction()
 
 }
 
-/** \brief test if parameter needs additional reference
- *  \param pDeclarator the declarator to test
- *  \param bCall true if this test is invoked for a call to this function
- *  \return true if the given parameter needs an additional reference
- *
- * All [ref] attributes need an additional reference, because they are
- * pointers, which will be set by the unmarshal function.
- */
-bool 
-CL4BEUnmarshalFunction::HasAdditionalReference(CBEDeclarator * pDeclarator, 
-    bool bCall)
-{
-    if (CBEUnmarshalFunction::HasAdditionalReference(pDeclarator, 
-	    bCall))
-        return true;
-    // find parameter
-    CBETypedDeclarator *pParameter = GetParameter(pDeclarator, bCall);
-    if (!pParameter)
-        return false;
-    // find attribute
-    if (pParameter->m_Attributes.Find(ATTR_REF))
-        return true;
-    return false;
-}
-
 /** \brief test if this function has variable sized parameters (needed to \
  *         specify temp + offset var)
  *  \return true if variable sized parameters are needed
@@ -91,3 +68,20 @@ CL4BEUnmarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
     return bRet;
 }
 
+/** \brief adds a single parameter to this function
+ *  \param pFEParameter the parameter to add
+ */
+void
+CL4BEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
+{
+    CBEUnmarshalFunction::AddParameter(pFEParameter);
+    // retrieve the parameter
+    CBETypedDeclarator* pParameter = m_Parameters.Find(pFEParameter->m_Declarators.First()->GetName());
+    // base class can have decided to skip parameter
+    if (!pParameter)
+	return;
+    // find attribute
+    CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
+    if (pParameter->m_Attributes.Find(ATTR_REF) && (pDeclarator->GetStars() == 0))
+	pDeclarator->IncStars(1);
+}

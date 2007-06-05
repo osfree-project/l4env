@@ -97,10 +97,14 @@ public:
 	string sPrefix;
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	{
+	    // because the parameter is member of a different function than
+	    // the one given in the constructor, we have to check names
+	    // instead of pointers
 	    sPrefix = pNF->GetWrapperVariablePrefix();
-	    if (pParameter == f->GetObject())
+	    string sName = pParameter->m_Declarators.First()->GetName().c_str();
+	    if (f->GetObject()->m_Declarators.Find(sName))
 		sPrefix.clear();
-	    if (pParameter == f->GetEnvironment())
+	    if (f->GetEnvironment()->m_Declarators.Find(sName))
 		sPrefix.clear();
 	    string sMsgBuf = pNF->GetMessageBufferVariable();
 	    if (pParameter->m_Declarators.Find(sMsgBuf))
@@ -110,10 +114,11 @@ public:
 		sPrefix.clear();
 	}
 	CBEDeclarator *pName = pParameter->m_Declarators.First();
+	int nAdd = (pParameter->GetType()->IsPointerType()) ? 1 : 0;
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	    "SetCallVariableCall(func %s) param %s (%d) -> %s\n",
 	    f->GetName().c_str(), pName->GetName().c_str(),
-	    pName->GetStars(), string(sPrefix + pName->GetName()).c_str());
+	    pName->GetStars() + nAdd, string(sPrefix + pName->GetName()).c_str());
 	f->SetCallVariable(pName->GetName(), pName->GetStars(),
 	    sPrefix + pName->GetName());
     }
@@ -175,8 +180,7 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
         }
 	// set the call parameters: this is simple, since we use the same
 	// names and reference counts
-	for_each(m_pUnmarshalFunction->m_Parameters.begin(),
-	    m_pUnmarshalFunction->m_Parameters.end(),
+	for_each(m_Parameters.begin(), m_Parameters.end(),
 	    SetCallVariableCall(m_pUnmarshalFunction));
     }
     // check if we need marshalling function
@@ -196,8 +200,7 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
             throw new CBECreateException(exc);
         }
         // set call parameters
-	for_each(m_pMarshalFunction->m_Parameters.begin(),
-	    m_pMarshalFunction->m_Parameters.end(),
+	for_each(m_Parameters.begin(), m_Parameters.end(),
 	    SetCallVariableCall(m_pMarshalFunction));
     }
     if (!pFEOperation->m_RaisesDeclarators.empty())
@@ -214,8 +217,7 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
             throw new CBECreateException(exc);
 	}
         // set call parameters
-	for_each(m_pMarshalExceptionFunction->m_Parameters.begin(),
-	    m_pMarshalExceptionFunction->m_Parameters.end(),
+	for_each(m_Parameters.begin(), m_Parameters.end(),
 	    SetCallVariableCall(m_pMarshalExceptionFunction));
     }
     // create reference to component function
@@ -230,8 +232,7 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
     }
     // set the call parameters: this is simple, since we use the same names
     // and reference counts
-    for_each(m_pComponentFunction->m_Parameters.begin(),
-	m_pComponentFunction->m_Parameters.end(),
+    for_each(m_Parameters.begin(), m_Parameters.end(),
 	SetCallVariableCall(m_pComponentFunction));
 
     // now prefix own parameters

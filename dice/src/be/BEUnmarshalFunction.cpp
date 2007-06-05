@@ -104,13 +104,12 @@ CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation)
  *  \param pMsgBuffer the message buffer to initalize
  *  \return true on success
  */
-bool 
+void 
 CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBEUnmarshalFunction::%s called\n", __func__);
-    if (!CBEOperationFunction::MsgBufferInitialization(pMsgBuffer))
-	return false;
+    CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
     // in unmarshal function, the message buffer is a pointer to the server's
     // message buffer
     if (IsComponentSide())
@@ -120,17 +119,15 @@ CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     CBEType *pType = GetReturnType();
     assert(pType);
     if (pType->IsVoid())
-	return true; // having a void return type is not an error
+	return; // having a void return type is not an error
     // add return variable
     if (!pMsgBuffer->AddReturnVariable(this))
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "%s failed, because return var could not be added to msgbuf\n",
-	    __func__);
-	return false;
+	string exc = string(__func__);
+	exc += " failed, because return variable could not be added to message buffer.";
+	throw new CBECreateException(exc);
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
-    return true;
 }
 
 /** \brief writes the variable initializations of this function
@@ -198,6 +195,72 @@ CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
             return;
     }
     CBEOperationFunction::AddParameter(pFEParameter);
+    // retrieve the parameter
+    CBETypedDeclarator* pParameter = m_Parameters.Find(pFEParameter->m_Declarators.First()->GetName());
+    // base class can have decided to skip parameter
+    if (!pParameter)
+	return;
+    // skip CORBA_Object
+    if (pParameter == GetObject())
+	return;
+    ATTR_TYPE nDirection = IsComponentSide() ? ATTR_IN : ATTR_OUT;
+    if (pParameter->m_Attributes.Find(nDirection))
+    {
+        CBEType *pType = pParameter->GetType();
+        CBEAttribute *pAttr;
+        if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
+            pType = pAttr->GetAttrType();
+	CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
+        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - 
+	    pType->GetArrayDimensionCount();
+	// if there are no array dimensions, then we need to add a pointer
+        if ((pDeclarator->GetStars() == 0) && !pType->IsPointerType() && 
+	    (nArrayDimensions <= 0))
+	{
+	    pDeclarator->IncStars(1);
+            return;
+	}
+	// checking string
+        if (pParameter->m_Attributes.Find(ATTR_STRING) &&
+	    pParameter->m_Attributes.Find(ATTR_IN) &&
+	    !pParameter->m_Attributes.Find(ATTR_OUT) &&
+	    ((pType->IsOfType(TYPE_CHAR) && pDeclarator->GetStars() < 2) ||
+	     (pType->IsOfType(TYPE_CHAR_ASTERISK) && 
+	      pDeclarator->GetStars() < 1)))
+	{
+	    pDeclarator->IncStars(1);
+            return;
+	}
+
+	// check for size attribute and if found, check if it is ours, then it
+	// should not be resprected when determining additional reference
+	if ((pAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS)) != 0)
+	{
+	    CDeclStack vStack;
+	    vStack.push_back(pParameter->m_Declarators.First());
+	    CBENameFactory *pNF = CCompiler::GetNameFactory();
+	    string sName = pNF->GetLocalSizeVariableName(&vStack);
+
+	    // compare to size declarator -> if no such declarator is present,
+	    // this is not one of our size attributes -> do the normal check
+	    // with the array dimensions and return if true
+	    if (!pAttr->m_Parameters.Find(sName) && nArrayDimensions <= 0)
+	    {
+		pDeclarator->IncStars(1);
+		return;
+	    }
+
+	    // otherwise either it was one of our own size attributes or the
+	    // array dimensions were > 0
+	}
+        if ((pParameter->m_Attributes.Find(ATTR_LENGTH_IS) ||
+            pParameter->m_Attributes.Find(ATTR_MAX_IS)) &&
+            (nArrayDimensions <= 0))
+	{
+	    pDeclarator->IncStars(1);
+            return;
+	}
+    }
 }
 
 /** \brief checks if this parameter should be marshalled or not
@@ -237,110 +300,6 @@ CBEUnmarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
             return true;
     }
     return false;
-}
-
-/** \brief checks whether a given parameter needs an additional reference pointer
- *  \param pDeclarator the decl to check
- *  \param bCall true if the parameter is a call parameter
- *  \return true if we need a reference
- *
- * This implementation checks for the special condition to give an extra
- * reference.  Since the declarator may also belong to an attribute, we have
- * to check this as well.  (The size_is declarator belongs to a parameter, but
- * has to be checked as well).
- *
- * Another possibility is, that members of structures or union are checked. To
- * avoid giving them unwanted references, we search for the parameter.
- *
- * An additional reference is also given to the [in, string] parameters.  (The
- * message buffer parameter needs no additional reference, it is itself a
- * pointer.) However, and [in,out,string] already has 2 stars, so no need to
- * add another star.
- *
- * Because every parameter is set inside this functions, all parameters should
- * be referenced.  Since OUT parameters are already referenced, we only need
- * to add an asterisk to IN parameters.  This function is only called when
- * iterating over the declarators of a typed declarator. Thus the direction of
- * a parameter can be found out by checking the attributes of the declarator's
- * parent.  To be sure, whether this parameter needs an additional star, we
- * check the existing number of stars.
- *
- * We also need to add an asterisk to the message buffer parameter.
- */
-bool
-CBEUnmarshalFunction::HasAdditionalReference(CBEDeclarator * pDeclarator, 
-    bool bCall)
-{
-    CBETypedDeclarator *pParameter = GetParameter(pDeclarator, bCall);
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	"%s for %s in func %s: parameter at %p\n", __func__,
-	pDeclarator->GetName().c_str(), GetName().c_str(), pParameter);
-    if (!pParameter)
-        return false;
-    assert(dynamic_cast<CBETypedDeclarator*>(pParameter));
-    ATTR_TYPE nDirection = IsComponentSide() ? ATTR_IN : ATTR_OUT;
-    if (pParameter->m_Attributes.Find(nDirection))
-    {
-        CBEType *pType = pParameter->GetType();
-        CBEAttribute *pAttr;
-        if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
-            pType = pAttr->GetAttrType();
-        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - 
-	    pType->GetArrayDimensionCount();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "%s: check stars (%d), ptr-type %s (%d), array-dimensions %d\n",
-	    __func__, pDeclarator->GetStars(), 
-	    pType->IsPointerType() ? "yes" : "no", pType->GetFEType(),
-	    nArrayDimensions);
-	// if there are no array dimensions, then we need to add a pointer
-        if ((pDeclarator->GetStars() == 0) && !pType->IsPointerType() && 
-	    (nArrayDimensions <= 0))
-            return true;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "%s: check [string] %s, char type %s, stars %d < 2\n",
-	    __func__, pParameter->m_Attributes.Find(ATTR_STRING) ? "yes" : "no",
-	    pType->IsOfType(TYPE_CHAR) ? "yes" : "no", pDeclarator->GetStars());
-	// checking string
-        if (pParameter->m_Attributes.Find(ATTR_STRING) &&
-	    pParameter->m_Attributes.Find(ATTR_IN) &&
-	    !pParameter->m_Attributes.Find(ATTR_OUT) &&
-	    ((pType->IsOfType(TYPE_CHAR) && pDeclarator->GetStars() < 2) ||
-	     (pType->IsOfType(TYPE_CHAR_ASTERISK) && 
-	      pDeclarator->GetStars() < 1)))
-            return true;
-
-	// check for size attribute and if found, check if it is ours, then it
-	// should not be resprected when determining additional reference
-	if ((pAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS)) != 0)
-	{
-	    CDeclStack vStack;
-	    vStack.push_back(pParameter->m_Declarators.First());
-	    CBENameFactory *pNF = CCompiler::GetNameFactory();
-	    string sName = pNF->GetLocalSizeVariableName(&vStack);
-
-	    // compare to size declarator -> if no such declarator is present,
-	    // this is not one of our size attributes -> do the normal check
-	    // with the array dimensions and return if true
-	    if (!pAttr->m_Parameters.Find(sName) && nArrayDimensions <= 0)
-		return true;
-
-	    // otherwise either it was one of our own size attributes or the
-	    // array dimensions were > 0
-	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "%s check [length] %s, [max] %s, array-dims %d\n",
-	    __func__, 
-	    pParameter->m_Attributes.Find(ATTR_LENGTH_IS) ? "yes" : "no",
-	    pParameter->m_Attributes.Find(ATTR_MAX_IS) ? "yes" : "no",
-	    nArrayDimensions);
-        if ((pParameter->m_Attributes.Find(ATTR_LENGTH_IS) ||
-            pParameter->m_Attributes.Find(ATTR_MAX_IS)) &&
-            (nArrayDimensions <= 0))
-            return true;
-    }
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	"%s: Nothing found, call base\n", __func__);
-    return CBEOperationFunction::HasAdditionalReference(pDeclarator, bCall);
 }
 
 /** \brief test if this function should be written

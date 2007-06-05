@@ -59,12 +59,6 @@ typedef struct l4sem_wq
 l4_threadid_t l4semaphore_thread_l4_id  = L4_INVALID_ID;
 static l4thread_t l4semaphore_thread_id = L4THREAD_INVALID_ID;
 
-#ifdef ARCH_x86
-#ifdef L4API_l4x0
-l4_uint32_t l4semaphore_thread_l4_id32 = -1;
-#endif
-#endif
-
 /* wait queue allocation */
 static l4sem_wq_t wq_entries[L4SEMAPHORE_MAX_WQ_ENTRIES];
 static int next_entry = 0;
@@ -523,12 +517,6 @@ l4semaphore_init(void)
 
   LOGdL(DEBUG_INIT, "started semaphore thread (%d,"l4util_idfmt")", 
         t, l4util_idstr(l4semaphore_thread_l4_id));
-
-#ifdef ARCH_x86
-#ifdef L4API_l4x0
-  l4semaphore_thread_l4_id32 = l4sys_to_id32(l4semaphore_thread_l4_id);
-#endif
-#endif
 
   /* done */
   return 0;

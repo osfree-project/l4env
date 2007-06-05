@@ -123,32 +123,14 @@ void CBERoot::CreateBE(CFEFile * pFEFile)
     {
         m_pClient = pCF->GetNewClient();
         m_pClient->SetParent(this);
-	try
-	{
-	    m_pClient->CreateBackEnd(pFEFile);
-	}
-	catch (CBECreateException *e)
-	{
-            delete m_pClient;
-            m_pClient = 0;
-	    throw;
-        }
+	m_pClient->CreateBackEnd(pFEFile);
     }
     // create new component
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_COMPONENT))
     {
         m_pComponent = pCF->GetNewComponent();
         m_pComponent->SetParent(this);
-	try
-	{
-	    m_pComponent->CreateBackEnd(pFEFile);
-	}
-	catch (CBECreateException *e)
-        {
-            delete m_pComponent;
-            m_pComponent = 0;
-	    throw;
-        }
+	m_pComponent->CreateBackEnd(pFEFile);
     }
 }
 
@@ -376,16 +358,7 @@ void CBERoot::CreateBackEnd(CFELibrary *pFELibrary)
         // create NameSpace itself
         pNameSpace = CCompiler::GetClassFactory()->GetNewNameSpace();
         m_Namespaces.Add(pNameSpace);
-	try
-	{
-	    pNameSpace->CreateBackEnd(pFELibrary);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_Namespaces.Remove(pNameSpace);
-            delete pNameSpace;
-            throw;
-        }
+	pNameSpace->CreateBackEnd(pFELibrary);
     }
     else
     {
@@ -403,23 +376,7 @@ void CBERoot::CreateBackEnd(CFEInterface *pFEInterface)
         pFEInterface->GetName().c_str());
     CBEClass *pClass = CCompiler::GetClassFactory()->GetNewClass();
     m_Classes.Add(pClass);
-    try
-    {
-	pClass->CreateBackEnd(pFEInterface);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Classes.Remove(pClass);
-        delete pClass;
-	e->Print();
-	delete e;
-
-	string fail = string (__func__);
-    	fail += " failed because class ";
-	fail += pFEInterface->GetName();
-	fail += " could not be created";
-	throw new CBECreateException(fail);
-    }
+    pClass->CreateBackEnd(pFEInterface);
 }
 
 /** \brief creates a back-end const for the front-end const
@@ -432,21 +389,7 @@ CBERoot::CreateBackEnd(CFEConstDeclarator *pFEConstant)
         pFEConstant->GetName().c_str());
     CBEConstant *pConstant = CCompiler::GetClassFactory()->GetNewConstant();
     m_Constants.Add(pConstant);
-    try
-    {
-	pConstant->CreateBackEnd(pFEConstant);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Constants.Remove(pConstant);
-        delete pConstant;
-	e->Print();
-	delete e;
-
-	string fail = string (__func__);
-    	fail += " failed because BE constant could not be created";
-	throw new CBECreateException(fail);
-    }
+    pConstant->CreateBackEnd(pFEConstant);
 }
 
 /** \brief creates then back-end representation of an type definition
@@ -458,21 +401,7 @@ CBERoot::CreateBackEnd(CFETypedDeclarator *pFETypedef)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
     CBETypedef *pTypedef = CCompiler::GetClassFactory()->GetNewTypedef();
     m_Typedefs.Add(pTypedef);
-    try
-    {
-	pTypedef->CreateBackEnd(pFETypedef);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Typedefs.Remove(pTypedef);
-        delete pTypedef;
-	e->Print();
-	delete e;
-
-	string fail = string (__func__);
-    	fail += " failed because BE type could not be created";
-	throw new CBECreateException(fail);
-    }
+    pTypedef->CreateBackEnd(pFETypedef);
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBERoot::AddTypedef for %s with type at %p called\n",
 	pTypedef->m_Declarators.First()->GetName().c_str(),
 	pTypedef->GetType());
@@ -489,21 +418,7 @@ CBERoot::CreateBackEnd(CFEConstructedType *pFEType)
     CBEType *pType = pCF->GetNewType(pFEType->GetType());
     m_TypeDeclarations.Add(pType);
     pType->SetParent(this);
-    try
-    {
-	pType->CreateBackEnd(pFEType);
-    }
-    catch (CBECreateException *e)
-    {
-	m_TypeDeclarations.Remove(pType);
-        delete pType;
-	e->Print();
-	delete e;
-
-	string fail = string (__func__);
-    	fail += " failed because BE tagged type could not be created";
-	throw new CBECreateException(fail);
-    }
+    pType->CreateBackEnd(pFEType);
 }
 
 /** \brief adds the members of the root to the header file

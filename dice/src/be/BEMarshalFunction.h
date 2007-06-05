@@ -54,7 +54,7 @@ protected:
 
 public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
-    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+    virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
     virtual void WriteReturn(CBEFile * pFile);
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
     virtual int GetSize(DIRECTION_TYPE nDirection);

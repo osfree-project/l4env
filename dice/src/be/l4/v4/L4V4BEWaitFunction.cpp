@@ -64,20 +64,7 @@ CL4V4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
-    try
-    {
-	AddLocalVariable(sType, sMsgTag, 0, string("L4_MsgTag()"));
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed, because local variable (" + sMsgTag + 
-	    ") could not be added.";
-	throw new CBECreateException(exc);
-    }
+    AddLocalVariable(sType, sMsgTag, 0, string("L4_MsgTag()"));
 }
 
 /** \brief write L4 specific unmarshalling code

@@ -481,10 +481,6 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile *pFile,
 	"PositionMarshaller::%s stars(1)=%d\n", __func__, nStars);
     if (bReference)
 	nStars--;
-    // get function and check for additional references
-    CBEFunction *pFunction = pParameter->GetSpecificParent<CBEFunction>();
-    if (pFunction && pFunction->HasAdditionalReference(pDecl, false))
-	nStars++;
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"PositionMarshaller::%s stars(2)=%d\n", __func__, nStars);
     // check type equality

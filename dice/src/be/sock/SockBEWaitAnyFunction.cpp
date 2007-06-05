@@ -86,32 +86,13 @@ CSockBEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
     CBEType *pType = pCF->GetNewType(TYPE_INTEGER);
     pType->SetParent(pVariable);
     AddLocalVariable(pVariable);
-    try
-    {
-	pType->CreateBackEnd(false, 4, TYPE_INTEGER);
-	pVariable->CreateBackEnd(pType, string("dice_ret_size"));
-    }
-    catch (CBECreateException *e)
-    {
-	m_LocalVariables.Remove(pVariable);
-        delete pVariable; // deletes pType too
-        throw;
-    }
+    pType->CreateBackEnd(false, 4, TYPE_INTEGER);
+    pVariable->CreateBackEnd(pType, string("dice_ret_size"));
     delete pType; // has been cloned by typed decl.
 
     pVariable = pCF->GetNewTypedDeclarator();
     AddLocalVariable(pVariable);
-    try
-    {
-	pVariable->CreateBackEnd(string("socklen_t"), string("dice_fromlen"), 
-	    0);
-    }
-    catch (CBECreateException *e)
-    {
-	m_LocalVariables.Remove(pVariable);
-        delete pVariable;
-        throw;
-    }
+    pVariable->CreateBackEnd(string("socklen_t"), string("dice_fromlen"), 0);
     string sInit = "sizeof(*" + 
 	CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
     pVariable->SetDefaultInitString(sInit);

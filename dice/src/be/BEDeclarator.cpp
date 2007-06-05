@@ -123,21 +123,6 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
             }
         }
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	    "CDeclaratorStackLocation::%s for %s with %d stars (3)\n",
-	    __func__, pDecl->GetName().c_str(), nStars);
-        if (pFunction && (iter->nIndex[0] != -3))
-        {
-	    // this only works if the declarator really belongs to the
-	    // parameter
-	    CBETypedDeclarator *pTrueParameter = 
-		pFunction->FindParameter(pDecl->GetName());
-	    // now we do an additional check if we found a parameter
-	    if (pTrueParameter &&
-		pFunction->HasAdditionalReference(
-	    	    pTrueParameter->m_Declarators.First()))
-    		nStars++;
-        }
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	    "CDeclaratorStackLocation::%s for %s with %d stars func at %p (4)\n",
 	    __func__, pDecl->GetName().c_str(), nStars, pFunction);
         // check if the type is a pointer type
@@ -323,16 +308,7 @@ CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator)
 	CBEClassFactory *pCF = CCompiler::GetClassFactory();
         m_pInitialValue = pCF->GetNewExpression();
         m_pInitialValue->SetParent(this);
-	try
-	{
-	    m_pInitialValue->CreateBackEnd(pFEEnumDeclarator->GetInitialValue());
-	}
-	catch (CBECreateException *e)
-        {
-            delete m_pInitialValue;
-            m_pInitialValue = 0;
-            throw;
-        }
+	m_pInitialValue->CreateBackEnd(pFEEnumDeclarator->GetInitialValue());
     }
     
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -513,18 +489,7 @@ CBEDeclarator::GetArrayDimension(CFEExpression * pLower,
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEExpression *pReturn = pCF->GetNewExpression();
     pReturn->SetParent(this);
-    try
-    {
-	pReturn->CreateBackEnd(pNew);
-    }
-    catch (CBECreateException *e)
-    {
-        delete pReturn;
-	e->Print();
-	delete e;
-        return 0;
-    }
-
+    pReturn->CreateBackEnd(pNew);
     return pReturn;
 }
 

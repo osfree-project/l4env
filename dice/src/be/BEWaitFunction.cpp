@@ -145,21 +145,7 @@ CBEWaitFunction::CreateObject()
     CBETypedDeclarator *pObj = GetObject();
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEAttribute *pAttr = pCF->GetNewAttribute();
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_OUT);
-    }
-    catch (CBECreateException *e)
-    {
-        delete pAttr;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed, because IN attribute for CORBA Object could not be" \
-	    " created.";
-        throw new CBECreateException(exc);
-    }
+    pAttr->CreateBackEnd(ATTR_OUT);
     pObj->m_Attributes.Add(pAttr);
 }
 
@@ -301,25 +287,17 @@ DIRECTION_TYPE CBEWaitFunction::GetReceiveDirection()
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
 
-/** \brief checks whether a given parameter needs an additional reference pointer
- *  \param pDeclarator the decl to check
- *  \param bCall true if the parameter is a call parameter
- *  \return true if we need a reference
+/** \brief adds a single parameter to this function
+ *  \param pFEParameter the parameter to add
+ *  \return true if successful
  *
- * This implementation checks for the special condition to give an extra
- * reference.  Since the declarator may also belong to an attribute, we have
- * to check this as well.  (The size_is declarator belongs to a parameter, but
- * has to be checked as well).
+ * This function decides, which parameters to add and which don't. The
+ * parameters to unmarshal are for client-to-component transfer the IN
+ * parameters and for component-to-client transfer the OUT and return
+ * parameters. We depend on the information set in m_bComponentSide.
  *
- * Another possibility is, that members of structures or union are checked. To
- * avoid giving them unwanted references, we search for the parameter.
- *
- * An additional reference is also given to the [in, string] parameters.
- *
- * (The message buffer parameter needs no additional reference, it is itself a
- * pointer. So is the CORBA_Object.)
- *
- *
+ * For some parameters we have to add additional references:
+ * # [in, string] parameter
  * Because every parameter is set inside this functions, all parameters should
  * be referenced.  Since OUT parameters are already referenced, we only need
  * to add an asterisk to IN parameters.  This function is only called when
@@ -329,47 +307,9 @@ DIRECTION_TYPE CBEWaitFunction::GetReceiveDirection()
  * check the existing number of stars.
  *
  * We also need to add an asterisk to the message buffer parameter.
- */
-bool
-CBEWaitFunction::HasAdditionalReference(CBEDeclarator * pDeclarator,
-    bool bCall)
-{
-    CBETypedDeclarator *pParameter = GetParameter(pDeclarator, bCall);
-    if (!pParameter)
-        return false;
-    if (pParameter == GetObject())
-	return false;
-    if (pParameter->m_Attributes.Find(ATTR_IN))
-    {
-        CBEType *pType = pParameter->GetType();
-        CBEAttribute *pAttr;
-        if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
-            pType = pAttr->GetAttrType();
-        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - 
-	    pType->GetArrayDimensionCount();
-        if ((pDeclarator->GetStars() == 0) && (nArrayDimensions <= 0))
-            return true;
-        if ((pParameter->m_Attributes.Find(ATTR_STRING)) &&
-             pType->IsOfType(TYPE_CHAR) &&
-            (pDeclarator->GetStars() < 2))
-            return true;
-        if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
-            pParameter->m_Attributes.Find(ATTR_LENGTH_IS) ||
-            pParameter->m_Attributes.Find(ATTR_MAX_IS)) &&
-            (nArrayDimensions <= 0))
-            return true;
-    }
-    return CBEOperationFunction::HasAdditionalReference(pDeclarator, bCall);
-}
-
-/** \brief adds a single parameter to this function
- *  \param pFEParameter the parameter to add
- *  \return true if successful
  *
- * This function decides, which parameters to add and which don't. The
- * parameters to unmarshal are for client-to-component transfer the IN
- * parameters and for component-to-client transfer the OUT and return
- * parameters. We depend on the information set in m_bComponentSide.
+ * (The CORBA_Object parameter needs no additional reference, it is itself a
+ * pointer.)
  */
 void CBEWaitFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
@@ -384,6 +324,39 @@ void CBEWaitFunction::AddParameter(CFETypedDeclarator * pFEParameter)
             return;
     }
     CBEOperationFunction::AddParameter(pFEParameter);
+    // retrieve the parameter
+    CBETypedDeclarator* pParameter = m_Parameters.Find(pFEParameter->m_Declarators.First()->GetName());
+    // base class can have decided to skip parameter
+    if (!pParameter)
+	return;
+    // skip CORBA_Object
+    if (pParameter == GetObject())
+	return;
+    if (pParameter->m_Attributes.Find(ATTR_IN))
+    {
+	bool bAdd = false;
+        CBEType *pType = pParameter->GetType();
+        CBEAttribute *pAttr;
+        if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
+            pType = pAttr->GetAttrType();
+	CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
+        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - 
+	    pType->GetArrayDimensionCount();
+        if ((pDeclarator->GetStars() == 0) && (nArrayDimensions <= 0))
+            bAdd = true;
+        if ((pParameter->m_Attributes.Find(ATTR_STRING)) &&
+             pType->IsOfType(TYPE_CHAR) &&
+            (pDeclarator->GetStars() < 2))
+            bAdd = true;
+        if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
+            pParameter->m_Attributes.Find(ATTR_LENGTH_IS) ||
+            pParameter->m_Attributes.Find(ATTR_MAX_IS)) &&
+            (nArrayDimensions <= 0))
+            bAdd = true;
+
+	if (bAdd)
+	    pDeclarator->IncStars(1);
+    }
 }
 
 /** \brief calculates the size of the fixed sized params of this function
@@ -437,24 +410,22 @@ int CBEWaitFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  * * Class::MsgBufferInitialization
  * * WaitFunction::MsgBufferInitialization
  */
-bool
+void
 CBEWaitFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    if (!CBEOperationFunction::MsgBufferInitialization(pMsgBuffer))
-        return false;
+    CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
     // check return type (do test here because sometimes we like to call
     // AddReturnVariable depending on other constraint--return is parameter)
     CBEType *pType = GetReturnType();
     assert(pType);
     if (pType->IsVoid())
-	return true; // having a void return type is not an error
+	return; // having a void return type is not an error
     // add return variable
     if (!pMsgBuffer->AddReturnVariable(this))
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s failed, because return var could not be added to msgbuf\n",
-	    __func__);
-	return false;
+	string exc = string(__func__);
+	exc += " failed, because return variable could not be added to message buffer.";
+	throw new CBECreateException(exc);
     }
-    return true;
 }
 

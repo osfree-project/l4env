@@ -61,6 +61,7 @@ public: // public methods
     virtual int GetCountAll(int nFEType, CMsgStructType nType);
     virtual int GetPayloadOffset();
     
+    using CBETypedef::CreateBackEnd;
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
     virtual void PostCreate(CBEClass *pClass, CFEInterface *pFEInterface);

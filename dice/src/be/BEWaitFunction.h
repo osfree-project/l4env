@@ -60,14 +60,12 @@ public:
     virtual bool DoWriteFunction(CBEImplementationFile * pFile);
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual DIRECTION_TYPE GetSendDirection();
-    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+    virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
 protected:
     virtual void WriteInvocation(CBEFile *pFile);
     virtual void WriteVariableInitialization(CBEFile *pFile);
     virtual void WriteOpcodeCheck(CBEFile *pFile);
-    virtual bool HasAdditionalReference(CBEDeclarator * pDeclarator,
-	bool bCall = false);
     virtual void AddParameter(CFETypedDeclarator * pFEParameter);
     virtual void CreateObject(void);
     virtual int GetSize(DIRECTION_TYPE nDirection);

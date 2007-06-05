@@ -199,40 +199,10 @@ CBESrvLoopFunction::AddReplyVariable()
     CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
     pReplyType->SetParent(pVariable);
     AddLocalVariable(pVariable);
-    try
-    {
-	pReplyType->CreateBackEnd();
-    }
-    catch (CBECreateException *e)
-    {
-	m_LocalVariables.Remove(pVariable);
-        delete pVariable;
-        delete pReplyType;
-	e->Print();
-	delete e;
-
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s failed, because reply code type could not be created\n",
-            __func__);
-        return false;
-    }
+    pReplyType->CreateBackEnd();
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sReply = pNF->GetReplyCodeVariable();
-    try
-    {
-	pVariable->CreateBackEnd(pReplyType, sReply);
-    }
-    catch (CBECreateException *e)
-    {
-	m_LocalVariables.Remove(pVariable);
-        delete pVariable;
-        delete pReplyType;
-	e->Print();
-	delete e;
-
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s failed, because reply code variable could not be created\n",
-            __func__);
-        return false;
-    }
+    pVariable->CreateBackEnd(pReplyType, sReply);
     delete pReplyType;
     return true;
 }
@@ -243,20 +213,8 @@ CBESrvLoopFunction::AddReplyVariable()
 bool
 CBESrvLoopFunction::AddOpcodeVariable()
 {
-    try
-    {
-	CBETypedDeclarator *pOpcode = CreateOpcodeVariable();
-	AddLocalVariable(pOpcode);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-	
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s failed, because opcode variable could not be created\n",
-            __func__);
-        return false;
-    }
+    CBETypedDeclarator *pOpcode = CreateOpcodeVariable();
+    AddLocalVariable(pOpcode);
     return true;
 }
 
@@ -281,15 +239,7 @@ CBESrvLoopFunction::CreateObject()
     string sName = string("_") + pNF->GetCorbaObjectVariable();
     CBETypedDeclarator *pBaseObject = pCF->GetNewTypedDeclarator();
     pBaseObject->SetParent(this);
-    try
-    {
-	pBaseObject->CreateBackEnd(sTypeName, sName, 0);
-    }
-    catch (CBECreateException *e)
-    {
-        delete pBaseObject;
-	throw;
-    }
+    pBaseObject->CreateBackEnd(sTypeName, sName, 0);
     // add as local variable
     AddLocalVariable(pBaseObject);
     // set init string to invalid id
@@ -616,15 +566,13 @@ CBESrvLoopFunction::WriteReturn(CBEFile* /*pFile*/)
  *  \param pMsgBuffer the message buffer to initialize
  *  \return true if successful
  */
-bool
+void
 CBESrvLoopFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    if (!CBEInterfaceFunction::MsgBufferInitialization(pMsgBuffer))
-        return false;
+    CBEInterfaceFunction::MsgBufferInitialization(pMsgBuffer);
     // add as local variable and remove pointer
     CBEDeclarator *pDecl = pMsgBuffer->m_Declarators.First();
     pDecl->SetStars(0);
-    return true;
 }
 
 /** \brief add parameters after all other parameters

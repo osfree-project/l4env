@@ -9,7 +9,6 @@
 #ifndef _L4_SYS_UTCB_H
 #define _L4_SYS_UTCB_H
 
-#ifndef DICE
 #include <l4/sys/types.h>
 
 #define L4_UTCB_EXCEPTION_REGS_SIZE    16
@@ -139,7 +138,5 @@ L4_INLINE void l4_utcb_exception_ipc_enable(void)
 //  l4_utcb_get()->status |= L4_UTCB_EXCEPTION_IPC_ENABLED;
 }
 
-
-#endif
 
 #endif /* ! _L4_SYS_UTCB_H */

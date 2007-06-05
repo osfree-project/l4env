@@ -185,15 +185,7 @@ void CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary)
                         pNameSpace =
 			    CCompiler::GetClassFactory()->GetNewNameSpace();
                         m_NestedNamespaces.Add(pNameSpace);
-			try
-			{
-			    pNameSpace->CreateBackEnd(pNestedLib);
-			}
-			catch (CBECreateException *e)
-                        {
-			    m_NestedNamespaces.Remove(pNameSpace);
-                            throw;
-                        }
+			pNameSpace->CreateBackEnd(pNestedLib);
                     }
                     else
                     {
@@ -240,15 +232,7 @@ void CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary)
         {
             pNameSpace = CCompiler::GetClassFactory()->GetNewNameSpace();
             m_NestedNamespaces.Add(pNameSpace);
-	    try
-	    {
-		pNameSpace->CreateBackEnd(*iterL);
-	    }
-	    catch (CBECreateException *e)
-            {
-		m_NestedNamespaces.Remove(pNameSpace);
-                throw;
-            }
+	    pNameSpace->CreateBackEnd(*iterL);
         }
         else
         {
@@ -276,22 +260,7 @@ CBENameSpace::CreateBackEnd(CFEInterface *pFEInterface)
         pClass = CCompiler::GetClassFactory()->GetNewClass();
         m_Classes.Add(pClass);
         // recreate class to add additional members
-	try
-	{
-	    pClass->CreateBackEnd(pFEInterface);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_Classes.Remove(pClass);
-            delete pClass;
-	    e->Print();
-	    delete e;
-
-	    string exc = string(__func__);
-	    exc += " failed because class " + pFEInterface->GetName() +
-		" could not be created";
-            throw new CBECreateException(exc);
-        }
+	pClass->CreateBackEnd(pFEInterface);
     }
     // otherwise: it was the base class of some class and has been created by
     // it directly
@@ -306,22 +275,7 @@ CBENameSpace::CreateBackEnd(CFEConstDeclarator *pFEConstant)
 {
     CBEConstant *pConstant = CCompiler::GetClassFactory()->GetNewConstant();
     m_Constants.Add(pConstant);
-    try
-    {
-	pConstant->CreateBackEnd(pFEConstant);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Constants.Remove(pConstant);
-        delete pConstant;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed because constant " + pFEConstant->GetName() + 
-	    " could not be created";
-        throw new CBECreateException(exc);
-    }
+    pConstant->CreateBackEnd(pFEConstant);
 }
 
 /** \brief internal function to create typedef
@@ -334,21 +288,7 @@ CBENameSpace::CreateBackEnd(CFETypedDeclarator *pFETypedef)
     CBETypedef *pTypedef = CCompiler::GetClassFactory()->GetNewTypedef();
     m_Typedefs.Add(pTypedef);
     pTypedef->SetParent(this);
-    try
-    {
-	pTypedef->CreateBackEnd(pFETypedef);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Typedefs.Remove(pTypedef);
-        delete pTypedef;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed because typedef could not be created";
-        throw new CBECreateException(exc);
-    }
+    pTypedef->CreateBackEnd(pFETypedef);
 }
 
 /** \brief internale function to add an attribute
@@ -360,21 +300,7 @@ CBENameSpace::CreateBackEnd(CFEAttribute *pFEAttribute)
 {
     CBEAttribute *pAttribute = CCompiler::GetClassFactory()->GetNewAttribute();
     m_Attributes.Add(pAttribute);
-    try
-    {
-	pAttribute->CreateBackEnd(pFEAttribute);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Attributes.Remove(pAttribute);
-        delete pAttribute;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed because attribute could not be created";
-        throw new CBECreateException(exc);
-    }
+    pAttribute->CreateBackEnd(pFEAttribute);
 }
 
 /** \brief searches for a constants
@@ -929,21 +855,7 @@ CBENameSpace::CreateBackEnd(CFEConstructedType *pFEType)
     CBEType *pType = pCF->GetNewType(pFEType->GetType());
     m_TypeDeclarations.Add(pType);
     pType->SetParent(this);
-    try
-    {
-	pType->CreateBackEnd(pFEType);
-    }
-    catch (CBECreateException *e)
-    {
-	m_TypeDeclarations.Remove(pType);
-        delete pType;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed because tagged type could not be created";
-        throw new CBECreateException(exc);
-    }
+    pType->CreateBackEnd(pFEType);
 }
 
 /** \brief search for a function with a specific type

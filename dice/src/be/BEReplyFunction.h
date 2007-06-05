@@ -56,7 +56,7 @@ public:
     virtual DIRECTION_TYPE GetSendDirection();
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
     virtual int GetSize(DIRECTION_TYPE nDirection);
-    virtual bool MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
+    virtual void MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
     virtual CBETypedDeclarator* GetExceptionVariable(void);
 

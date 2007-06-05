@@ -53,7 +53,7 @@ protected:
     /** \brief copy constructor */
     CSockBEMarshalFunction(CSockBEMarshalFunction &src);
 
-    virtual bool MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+    virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 };
 
 #endif

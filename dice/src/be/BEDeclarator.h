@@ -83,7 +83,6 @@ public:
             nIndex[i] = -1;
             sIndex[i].erase(sIndex[i].begin(), sIndex[i].end());
         }
-        bCheckFunctionForReference = false;
     };
     /** \brief copy constructor
      *  \param src the source to copy from
@@ -95,7 +94,6 @@ public:
             nIndex[i] = src.nIndex[i];
             sIndex[i] = src.sIndex[i];
         }
-        bCheckFunctionForReference = src.bCheckFunctionForReference;
 	pDeclarator = src.pDeclarator;
     };
     /** \var CBEDeclarator *pDeclarator
@@ -111,11 +109,6 @@ public:
      *  \brief the name of the index variable if there is no fixed index
      */
     string sIndex[MAX_INDEX_NUMBER];
-    /** \var bool bCheckFunctionForReference
-     *  \brief true if WriteDeclaratorStack has to check \
-     *         pFunction->HasAdditionalReference
-     */
-    bool bCheckFunctionForReference;
     /** \brief sets the index of the stack location
      *  \param nIdx the new index
      *  \param nArrayDim which of the array dimensions is meant
@@ -155,12 +148,6 @@ public:
         if ((nArrayDim < 0) || (nArrayDim >= MAX_INDEX_NUMBER))
             return false;
         return nIndex[nArrayDim] != -1;
-    }
-    /** \brief turns on the test for the additional reference
-     */
-    void SetRefCheck()
-    {
-        bCheckFunctionForReference = true;
     }
     /** \brief get the number of used indices
      *  \return the number of used indices

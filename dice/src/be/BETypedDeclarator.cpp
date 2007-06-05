@@ -273,16 +273,6 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
 	
 	if (pSizeParameter)
         {
-	    // that one must be from the functions
-	    CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-	    if (!pFunction && pUsingFunc)
-		pFunction = pUsingFunc;
-	    
-	    // and now get original declarator, since size_is declarator
-	    // might have different reference count...
-    	    CBEDeclarator *pSizeName = pSizeParameter->m_Declarators.First();
-	    if (pFunction->HasAdditionalReference(pSizeName))
-		*pFile << "*";
 	    // has only one declarator
 	    pSizeParameter->WriteDeclarators(pFile);
 
@@ -460,16 +450,6 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
 	
 	if (pSizeParameter)
         {
-	    // that one must be from the functions
-	    CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-	    if (!pFunction && pUsingFunc)
-		pFunction = pUsingFunc;
-	    
-	    // and now get original declarator, since size_is declarator
-	    // might have different reference count...
-    	    CBEDeclarator *pSizeName = pSizeParameter->m_Declarators.First();
-	    if (pFunction->HasAdditionalReference(pSizeName))
-		*pFile << "*";
 	    // has only one declarator
 	    pSizeParameter->WriteDeclarators(pFile);
 
@@ -953,16 +933,7 @@ CBETypedDeclarator::CreateBackEnd(CFETypedDeclarator * pFEParameter)
     // get type
     m_pType = pCF->GetNewType(pFEParameter->GetType()->GetType());
     m_pType->SetParent(this);
-    try
-    {
-	m_pType->CreateBackEnd(pFEParameter->GetType());
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pType;
-        m_pType = 0;
-	throw;
-    }
+    m_pType->CreateBackEnd(pFEParameter->GetType());
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBETypedDeclarator::%s(fe) type created\n", __func__);
 
@@ -1006,17 +977,8 @@ CBETypedDeclarator::CreateBackEnd(string sUserDefinedType,
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     m_pType = pCF->GetNewUserDefinedType();
     m_pType->SetParent(this);    // has to be set before calling CreateBE
-    try
-    {
-	CBEUserDefinedType *pType = static_cast<CBEUserDefinedType*>(m_pType);
-	pType->CreateBackEnd(sUserDefinedType);
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pType;
-        m_pType = 0;
-	throw;
-    }
+    CBEUserDefinedType *pType = static_cast<CBEUserDefinedType*>(m_pType);
+    pType->CreateBackEnd(sUserDefinedType);
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s() returns\n", __func__);
 }
@@ -1056,16 +1018,7 @@ CBETypedDeclarator::AddAttribute(CFEAttribute *pFEAttribute)
 {
     CBEAttribute *pAttribute = CCompiler::GetClassFactory()->GetNewAttribute();
     m_Attributes.Add(pAttribute);
-    try
-    {
-	pAttribute->CreateBackEnd(pFEAttribute);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Attributes.Remove(pAttribute);
-        delete pAttribute;
-	throw;
-    }
+    pAttribute->CreateBackEnd(pFEAttribute);
 }
 
 /** \brief adds a declarator constructed from a front-end declarator
@@ -1076,16 +1029,7 @@ void CBETypedDeclarator::AddDeclarator(CFEDeclarator * pFEDeclarator)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEDeclarator *pDecl = pCF->GetNewDeclarator();
     m_Declarators.Add(pDecl);
-    try
-    {
-	pDecl->CreateBackEnd(pFEDeclarator);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Declarators.Remove(pDecl);
-	delete pDecl;
-	throw;
-    }
+    pDecl->CreateBackEnd(pFEDeclarator);
 }
 
 /** \brief adds a declarator constructed from name and stars
@@ -1101,20 +1045,7 @@ void CBETypedDeclarator::AddDeclarator(string sName, int nStars)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEDeclarator *pDecl = pCF->GetNewDeclarator();
     m_Declarators.Add(pDecl);
-    try
-    {
-	pDecl->CreateBackEnd(sName, nStars);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Declarators.Remove(pDecl);
-	delete pDecl;
-
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CBETypedDeclarator::%s failed.\n", __func__);
-
-	throw;
-    }
+    pDecl->CreateBackEnd(sName, nStars);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s returns.\n", __func__);

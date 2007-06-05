@@ -54,6 +54,7 @@ protected:
     CBETypedef(CBETypedef &src);
 
 public:
+    using CBETypedDeclarator::CreateBackEnd;
     virtual void CreateBackEnd(CFETypedDeclarator *pFETypedef);
     virtual void CreateBackEnd(CBEType * pType, string sName, CFEBase *pFERefObject);
     virtual void AddToHeader(CBEHeaderFile *pHeader);

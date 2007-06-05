@@ -169,16 +169,7 @@ CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter)
     CBETypedDeclarator *pParameter = 
 	CCompiler::GetClassFactory()->GetNewTypedDeclarator();
     m_Parameters.Add(pParameter);
-    try
-    {
-	pParameter->CreateBackEnd(pFEParameter);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Parameters.Remove(pParameter);
-        delete pParameter;
-        throw;
-    }
+    pParameter->CreateBackEnd(pFEParameter);
 }
 
 /** \brief adds exceptions of a front-end function to this class
@@ -206,16 +197,7 @@ CBEOperationFunction::AddException(CFEIdentifier * pFEException)
 {
     CBEDeclarator *pException = CCompiler::GetClassFactory()->GetNewDeclarator();
     m_Exceptions.Add(pException);
-    try
-    {
-	pException->CreateBackEnd(pFEException);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Exceptions.Remove(pException);
-        delete pException;
-        throw;
-    }
+    pException->CreateBackEnd(pFEException);
 }
 
 /** \brief adds attributes of a front-end function this this class
@@ -265,16 +247,7 @@ CBEOperationFunction::AddAttribute(CFEAttribute * pFEAttribute)
 	{
 	    CBEAttribute *pAttribute = CCompiler::GetClassFactory()->GetNewAttribute();
 	    m_Attributes.Add(pAttribute);
-	    try
-	    {
-		pAttribute->CreateBackEnd(pFEAttribute);
-	    }
-	    catch (CBECreateException *e)
-	    {
-		m_Attributes.Remove(pAttribute);
-		delete pAttribute;
-		throw;
-	    }
+	    pAttribute->CreateBackEnd(pFEAttribute);
 	}
 	break;
     default:

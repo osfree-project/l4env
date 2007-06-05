@@ -257,22 +257,7 @@ bool CBETarget::AddConstantToFile(CBEFile * pFile, CFEConstDeclarator * pFEConst
         {
             pConstant = CCompiler::GetClassFactory()->GetNewConstant();
             pF->m_Constants.Add(pConstant);
-	    try
-	    {
-		pConstant->CreateBackEnd(pFEConstant);
-	    }
-	    catch (CBECreateException *e)
-            {
-		pF->m_Constants.Remove(pConstant);
-                delete pConstant;
-		e->Print();
-		delete e;
-		
-                CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		    "%s (constant) failed because could not create BE constant\n",
-		    __func__);
-                return false;
-            }
+	    pConstant->CreateBackEnd(pFEConstant);
         }
         else
             pF->m_Constants.Add(pConstant);

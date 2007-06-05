@@ -352,23 +352,7 @@ CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     m_pMsgBuffer = pCF->GetNewMessageBuffer();
     m_pMsgBuffer->SetParent(this);
-    try
-    {
-	m_pMsgBuffer->CreateBackEnd(pFEInterface);
-    }
-    catch (CBECreateException *e)
-    {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "CBEClass::%s creation failed\n", __func__);
-        delete m_pMsgBuffer;
-        m_pMsgBuffer = 0;
-	e->Print();
-	delete e;
-	
-	exc += " failed, because message buffer for interface " +
-	    pFEInterface->GetName() + " could not be created";
-        throw new CBECreateException(exc);
-    }
+    m_pMsgBuffer->CreateBackEnd(pFEInterface);
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s MB created at %p\n", __func__, m_pMsgBuffer);
@@ -382,11 +366,7 @@ CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s MB added platform members\n", __func__);
     // function specific initialization
-    if (!MsgBufferInitialization())
-    {
-	exc += " failed, because message buffer could not be initialized.";
-	throw new CBECreateException(exc);
-    }
+    MsgBufferInitialization();
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s MB initialized\n",
 	__func__);
@@ -400,18 +380,7 @@ CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass:%s MB sorted\n",
 	__func__);
     // do post creation stuff
-    try
-    {
-	m_pMsgBuffer->PostCreate(this, pFEInterface);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-	exc += " failed, because PostCreate failed.";
-	throw new CBECreateException(exc);
-    }
+    m_pMsgBuffer->PostCreate(this, pFEInterface);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s returns\n",
 	__func__);
@@ -420,7 +389,7 @@ CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
 /** \brief make function specific initialization
  *  \return true if successful
  */
-bool
+void
 CBEClass::MsgBufferInitialization()
 {
     // iterate function groups of class, pick a function and use it to
@@ -440,12 +409,10 @@ CBEClass::MsgBufferInitialization()
 		(dynamic_cast<CBESndFunction*>(*iF) != 0) ||
 		(dynamic_cast<CBEWaitFunction*>(*iF) != 0))
 	    {
-		if (!(*iF)->MsgBufferInitialization(m_pMsgBuffer))
-		    return false;
+		(*iF)->MsgBufferInitialization(m_pMsgBuffer);
 	    }
 	}
     }
-    return true;
 }
 
 /** \brief adds the functions for an interface
@@ -461,99 +428,29 @@ CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
     CBEInterfaceFunction *pFunction = pCF->GetNewWaitAnyFunction();
     m_Functions.Add(pFunction);
     pFunction->SetComponentSide(true);
-    try
-    {
-	pFunction->CreateBackEnd(pFEInterface);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-	m_Functions.Remove(pFunction);
-        delete pFunction;
-	string exc = string(__func__);
-	exc += " failed because wait-any function could not be created";
-        throw new CBECreateException(exc);
-    }
+    pFunction->CreateBackEnd(pFEInterface);
     pFunction = pCF->GetNewRcvAnyFunction();
     m_Functions.Add(pFunction);
     pFunction->SetComponentSide(true);
-    try
-    {
-	pFunction->CreateBackEnd(pFEInterface);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-	m_Functions.Remove(pFunction);
-        delete pFunction;
-	string exc = string(__func__);
-	exc += " failed because recv-any function could not be created";
-        throw new CBECreateException(exc);
-    }
+    pFunction->CreateBackEnd(pFEInterface);
     pFunction = pCF->GetNewReplyAnyWaitAnyFunction();
     m_Functions.Add(pFunction);
     pFunction->SetComponentSide(true);
-    try
-    {
-	pFunction->CreateBackEnd(pFEInterface);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-	m_Functions.Remove(pFunction);
-        delete pFunction;
-	string exc = string(__func__);
-	exc += " failed because reply-wait-any function could not be created";
-        throw new CBECreateException(exc);
-    }
+    pFunction->CreateBackEnd(pFEInterface);
     if (!(CCompiler::IsOptionSet(PROGRAM_NO_DISPATCHER) &&
           CCompiler::IsOptionSet(PROGRAM_NO_SERVER_LOOP)))
     {
         pFunction = pCF->GetNewDispatchFunction();
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(true);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEInterface);
-	}
-	catch (CBECreateException *e)
-        {
-	    e->Print();
-	    delete e;
-
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-	    string exc = string(__func__);
-	    exc += " failed because dispatch function could not be created";
-	    throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEInterface);
     }
     if (!CCompiler::IsOptionSet(PROGRAM_NO_SERVER_LOOP))
     {
         pFunction = pCF->GetNewSrvLoopFunction();
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(true);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEInterface);
-	}
-	catch (CBECreateException *e)
-        {
-	    e->Print();
-	    delete e;
-
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-	    string exc = string(__func__);
-	    exc += " failed because srv-loop function could not be created";
-	    throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEInterface);
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
@@ -579,37 +476,9 @@ CBEClass::CreateAliasForClass(CFEInterface *pFEInterface)
     CBEUserDefinedType *pType = static_cast<CBEUserDefinedType*>(
 	pCF->GetNewType(TYPE_USER_DEFINED));
     pType->SetParent(pTypedef);
-    try
-    {
-	pType->CreateBackEnd(string("CORBA_Object"));
-    }
-    catch (CBECreateException *e)
-    {
-        delete pType;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed, because alias type could not be created.";
-	throw new CBECreateException(exc);
-    }
+    pType->CreateBackEnd(string("CORBA_Object"));
     // finally create typedef
-    try
-    {
-	pTypedef->CreateBackEnd(pType, pFEInterface->GetName(), pFEInterface);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Typedefs.Remove(pTypedef);
-        delete pTypedef;
-        delete pType;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed, because typedef could not be created.";
-	throw new CBECreateException(exc);
-    }
+    pTypedef->CreateBackEnd(pType, pFEInterface->GetName(), pFEInterface);
     delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
 
     // set source line and file
@@ -634,22 +503,7 @@ CBEClass::CreateBackEndConst(CFEConstDeclarator *pFEConstant)
     CBEConstant *pConstant = pCF->GetNewConstant();
     m_Constants.Add(pConstant);
     pConstant->SetParent(this);
-    try
-    {
-	pConstant->CreateBackEnd(pFEConstant);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Constants.Remove(pConstant);
-        delete pConstant;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed because const " + pFEConstant->GetName() +
-	    " could not be created";
-        throw new CBECreateException(exc);
-    }
+    pConstant->CreateBackEnd(pFEConstant);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s(const) returns\n", __func__);
@@ -668,21 +522,7 @@ CBEClass::CreateBackEndTypedef(CFETypedDeclarator *pFETypedef)
     CBETypedef *pTypedef = pCF->GetNewTypedef();
     m_Typedefs.Add(pTypedef);
     pTypedef->SetParent(this);
-    try
-    {
-	pTypedef->CreateBackEnd(pFETypedef);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Typedefs.Remove(pTypedef);
-        delete pTypedef;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed because typedef could not be created";
-        throw new CBECreateException(exc);
-    }
+    pTypedef->CreateBackEnd(pFETypedef);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s(typedef) returns\n", __func__);
@@ -724,16 +564,8 @@ CBEClass::CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl)
 	    pFEAttrDecl->GetSpecificParent<CFEInterface>();
         assert(pFEInterface);
         pFEInterface->m_Operations.Add(pFEOperation);
-	try
-	{
-	    CreateFunctionsNoClassDependency(pFEOperation);
-	    CreateFunctionsClassDependency(pFEOperation);
-	}
-	catch (CBECreateException *e)
-        {
-            delete pFEOperation;
-	    throw;
-        }
+	CreateFunctionsNoClassDependency(pFEOperation);
+    	CreateFunctionsClassDependency(pFEOperation);
 
         // set function
         if (!pFEAttrDecl->m_Attributes.Find(ATTR_READONLY))
@@ -767,16 +599,8 @@ CBEClass::CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl)
             pFEParam->SetParent(pFEOperation);
             pFEInterface->m_Operations.Add(pFEOperation);
 
-	    try
-	    {
-		CreateFunctionsNoClassDependency(pFEOperation);
-		CreateFunctionsClassDependency(pFEOperation);
-	    }
-	    catch (CBECreateException *e)
-            {
-                delete pFEOperation;
-                throw;
-            }
+	    CreateFunctionsNoClassDependency(pFEOperation);
+    	    CreateFunctionsClassDependency(pFEOperation);
         }
     }
 
@@ -817,21 +641,7 @@ CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(false);
         pGroup->m_Functions.Add(pFunction);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEOperation);
-	}
-	catch (CBECreateException *e)
-        {
-	    e->Print();
-	    delete e;
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-
-	    exc += " failed, because call func couldn't be created for " +
-		pFEOperation->GetName();
-            throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEOperation);
 	// for C++ we need two call wrapper functions in the class
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	{
@@ -840,41 +650,13 @@ CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
 	    m_Functions.Add(pWrapper);
 	    pWrapper->SetComponentSide(false);
 	    pGroup->m_Functions.Add(pWrapper);
-	    try
-	    {
-		pWrapper->CreateBackEnd(pFEOperation, 1);
-	    }
-	    catch (CBECreateException *e)
-	    {
-		e->Print();
-		delete e;
-		m_Functions.Remove(pWrapper);
-		delete pWrapper;
-
-		exc += " failed, because call wrapper func couldn't be created for " +
-		    pFEOperation->GetName();
-		throw new CBECreateException(exc);
-	    }
+	    pWrapper->CreateBackEnd(pFEOperation, 1);
 	    // second wrapper
 	    pWrapper = pCF->GetNewCppCallWrapperFunction();
 	    m_Functions.Add(pWrapper);
 	    pWrapper->SetComponentSide(false);
 	    pGroup->m_Functions.Add(pWrapper);
-	    try
-	    {
-		pWrapper->CreateBackEnd(pFEOperation, 3);
-	    }
-	    catch (CBECreateException *e)
-	    {
-		e->Print();
-		delete e;
-		m_Functions.Remove(pWrapper);
-		delete pWrapper;
-
-		exc += " failed, because call wrapper func couldn't be created for " +
-		    pFEOperation->GetName();
-		throw new CBECreateException(exc);
-	    }
+	    pWrapper->CreateBackEnd(pFEOperation, 3);
 	}
 
         // for server side: reply-and-wait, reply-and-recv, skeleton
@@ -882,21 +664,7 @@ CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(true);
         pGroup->m_Functions.Add(pFunction);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEOperation);
-	}
-	catch (CBECreateException *e)
-        {
-	    e->Print();
-	    delete e;
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-	    
-	    exc += " failed, because component func couldn't be created for " +
-		pFEOperation->GetName();
-            throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEOperation);
 
         if (pFEOperation->m_Attributes.Find(ATTR_ALLOW_REPLY_ONLY))
         {
@@ -904,21 +672,7 @@ CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
             m_Functions.Add(pFunction);
             pFunction->SetComponentSide(true);
             pGroup->m_Functions.Add(pFunction);
-	    try
-	    {
-		pFunction->CreateBackEnd(pFEOperation);
-	    }
-	    catch (CBECreateException *e)
-            {
-		e->Print();
-		delete e;
-		m_Functions.Remove(pFunction);
-                delete pFunction;
-
-		exc += " failed, because reply function could not be " \
-		    "created for " + pFEOperation->GetName();
-                throw new CBECreateException(exc);
-            }
+	    pFunction->CreateBackEnd(pFEOperation);
         }
     }
     else
@@ -931,62 +685,20 @@ CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(bComponent);
         pGroup->m_Functions.Add(pFunction);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEOperation);
-	}
-	catch (CBECreateException *e)
-        {
-	    e->Print();
-	    delete e;
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-
-	    exc += " failed, because send function could not be created " \
-		"for " + pFEOperation->GetName();
-            throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEOperation);
 
         // receiver: wait, recv, unmarshal
         pFunction = pCF->GetNewWaitFunction();
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(!bComponent);
         pGroup->m_Functions.Add(pFunction);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEOperation);
-	}
-	catch (CBECreateException *e)
-        {
-	    e->Print();
-	    delete e;
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-
-	    exc += " failed, because wait function could not be created for " +
-		pFEOperation->GetName();
-            throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEOperation);
 
         pFunction = pCF->GetNewRcvFunction();
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(!bComponent);
         pGroup->m_Functions.Add(pFunction);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEOperation);
-	}
-	catch (CBECreateException *e)
-        {
-	    e->Print();
-	    delete e;
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-
-	    exc += " failed because receive function could not be created for "
-		+ pFEOperation->GetName();
-            throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEOperation);
 
         // if we send oneway to the server we need a component function
         if (pFEOperation->m_Attributes.Find(ATTR_IN))
@@ -995,21 +707,7 @@ CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
             m_Functions.Add(pFunction);
             pFunction->SetComponentSide(true);
             pGroup->m_Functions.Add(pFunction);
-	    try
-	    {
-		pFunction->CreateBackEnd(pFEOperation);
-	    }
-	    catch (CBECreateException *e)
-            {
-		e->Print();
-		delete e;
-		m_Functions.Remove(pFunction);
-                delete pFunction;
-
-		exc += " failed, because component function could not be " \
-		    "created for " + pFEOperation->GetName();
-                throw new CBECreateException(exc);
-            }
+	    pFunction->CreateBackEnd(pFEOperation);
         }
     }
 
@@ -1054,41 +752,13 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(true);
         (*iterFG)->m_Functions.Add(pFunction);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEOperation);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-	    e->Print();
-	    delete e;
-
-	    exc += " failed, because unmarshal function could not be created" \
-		" for " + pFEOperation->GetName();
-            throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEOperation);
 
         pFunction = pCF->GetNewMarshalFunction();
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(true);
         (*iterFG)->m_Functions.Add(pFunction);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEOperation);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-	    e->Print();
-	    delete e;
-
-	    exc += " failed, because marshal function could not be created" \
-		" for " + pFEOperation->GetName();
-            throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEOperation);
 
 	if (!pFEOperation->m_RaisesDeclarators.empty())
 	{
@@ -1096,21 +766,7 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
 	    m_Functions.Add(pFunction);
 	    pFunction->SetComponentSide(true);
 	    (*iterFG)->m_Functions.Add(pFunction);
-	    try
-	    {
-		pFunction->CreateBackEnd(pFEOperation);
-	    }
-	    catch (CBECreateException *e)
-	    {
-		m_Functions.Remove(pFunction);
-		delete pFunction;
-		e->Print();
-		delete e;
-
-		exc += " failed, because marshal_exc function could not be created" \
-			" for " + pFEOperation->GetName();
-		throw new CBECreateException(exc);
-	    }
+	    pFunction->CreateBackEnd(pFEOperation);
 	}
     }
     else
@@ -1123,21 +779,7 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
         m_Functions.Add(pFunction);
         pFunction->SetComponentSide(!bComponent);
         (*iterFG)->m_Functions.Add(pFunction);
-	try
-	{
-	    pFunction->CreateBackEnd(pFEOperation);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_Functions.Remove(pFunction);
-            delete pFunction;
-	    e->Print();
-	    delete e;
-
-	    exc += " failed because unmarshal function could not be created" \
-		" for " + pFEOperation->GetName();
-            throw new CBECreateException(exc);
-        }
+	pFunction->CreateBackEnd(pFEOperation);
     }
 }
 
@@ -1153,21 +795,7 @@ CBEClass::CreateBackEndAttribute(CFEAttribute *pFEAttribute)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEAttribute *pAttribute = pCF->GetNewAttribute();
     m_Attributes.Add(pAttribute);
-    try
-    {
-	pAttribute->CreateBackEnd(pFEAttribute);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Attributes.Remove(pAttribute);
-        delete pAttribute;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed because attribute could not be created";
-	throw new CBECreateException(exc);
-    }
+    pAttribute->CreateBackEnd(pFEAttribute);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
 }
@@ -1184,21 +812,7 @@ CBEClass::CreateBackEndException(CFETypedDeclarator* pFEException)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEException *pException = pCF->GetNewException();
     m_Exceptions.Add(pException);
-    try
-    {
-	pException->CreateBackEnd(pFEException);
-    }
-    catch (CBECreateException *e)
-    {
-	m_Exceptions.Remove(pException);
-	delete pException;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed because exception could not be created";
-	throw new CBECreateException(exc);
-    }
+    pException->CreateBackEnd(pFEException);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n",
 	__func__);
@@ -1435,58 +1049,24 @@ bool CBEClass::AddOpcodesToFile(CBEHeaderFile *pFile)
     // now call Create functions, which require correct parent relationshsips
 
     // create opcode type
-    try
-    {
-	pType->CreateBackEnd();
-	// get opcode number
-	int nInterfaceNumber = GetClassNumber();
-	// create value
-	pValue->CreateBackEnd(nInterfaceNumber);
-	// create shift bits
-	string sShift = pNF->GetInterfaceNumberShiftConstant();
-	pBits->CreateBackEnd(sShift);
-	// create value << bits
-	pInterfaceCode->CreateBackEndBinary(pValue, EXPR_LSHIFT, pBits);
-	// brace it
-	pBrace->CreateBackEndPrimary(EXPR_PAREN, pInterfaceCode);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-        delete pOpcode;
-        delete pValue;
-        delete pType;
-        delete pBrace;
-        delete pInterfaceCode;
-        delete pBits;
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
-	    "CBEClass::%s opcode type creation failed\n", __func__);
-        return false;
-    }
+    pType->CreateBackEnd();
+    // get opcode number
+    int nInterfaceNumber = GetClassNumber();
+    // create value
+    pValue->CreateBackEnd(nInterfaceNumber);
+    // create shift bits
+    string sShift = pNF->GetInterfaceNumberShiftConstant();
+    pBits->CreateBackEnd(sShift);
+    // create value << bits
+    pInterfaceCode->CreateBackEndBinary(pValue, EXPR_LSHIFT, pBits);
+    // brace it
+    pBrace->CreateBackEndPrimary(EXPR_PAREN, pInterfaceCode);
     // create constant
     // create opcode name
     string sName = pNF->GetOpcodeConst(this);
     // add const to file
     pFile->m_Constants.Add(pOpcode);
-    try
-    {
-	pOpcode->CreateBackEnd(pType, sName, pBrace, true/* always define*/);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-
-	pFile->m_Constants.Remove(pOpcode);
-        delete pOpcode;
-        delete pValue;
-        delete pType;
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
-	    "CBEClass::%s opcode var creation failed\n", __func__);
-        return false;
-    }
+    pOpcode->CreateBackEnd(pType, sName, pBrace, true/* always define*/);
 
     // iterate over functions
     vector<CFunctionGroup*>::iterator iter;
@@ -1541,52 +1121,30 @@ CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation,
 
     // now call the create functions, which require an correct parent
     // relationship 
-    try
-    {
-	// get base opcode name
-	string sBase = pNF->GetOpcodeConst(this);
-	pBase->CreateBackEnd(sBase);
-	// create number
-	int nOperationNb = GetOperationNumber(pFEOperation);
-	pNumber->CreateBackEnd(nOperationNb);
-	// create bitmask
-	string sBitMask =  pNF->GetFunctionBitMaskConstant();
-	pBitMask->CreateBackEnd(sBitMask);
-	// create function code
-	pFuncCode->CreateBackEndBinary(pNumber, EXPR_BITAND, pBitMask);
-	// create braces
-	pBrace->CreateBackEndPrimary(EXPR_PAREN, pFuncCode);
-	// create value
-	pValue->CreateBackEndBinary(pBase, EXPR_PLUS, pBrace);
-	// create top brace
-	pTopBrace->CreateBackEndPrimary(EXPR_PAREN, pValue);
-	// create opcode type
-	pType->CreateBackEnd();
-	// create opcode name
-	string sName = pNF->GetOpcodeConst(pFEOperation);
-	// create constant
-	pFile->m_Constants.Add(pOpcode);
-	pOpcode->CreateBackEnd(pType, sName, pTopBrace, true/*always defined*/);
-    }
-    catch (CBECreateException *e)
-    {
-	e->Print();
-	delete e;
-	
-	pFile->m_Constants.Remove(pOpcode);
-        delete pOpcode;
-        delete pType;
-        delete pTopBrace;
-        delete pValue;
-        delete pNumber;
-        delete pBase;
-        delete pBrace;
-        delete pFuncCode;
-        delete pBitMask;
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
-	    "CBEClass::%s opcode const creation failed\n", __func__);
-        return false;
-    }
+    // get base opcode name
+    string sBase = pNF->GetOpcodeConst(this);
+    pBase->CreateBackEnd(sBase);
+    // create number
+    int nOperationNb = GetOperationNumber(pFEOperation);
+    pNumber->CreateBackEnd(nOperationNb);
+    // create bitmask
+    string sBitMask =  pNF->GetFunctionBitMaskConstant();
+    pBitMask->CreateBackEnd(sBitMask);
+    // create function code
+    pFuncCode->CreateBackEndBinary(pNumber, EXPR_BITAND, pBitMask);
+    // create braces
+    pBrace->CreateBackEndPrimary(EXPR_PAREN, pFuncCode);
+    // create value
+    pValue->CreateBackEndBinary(pBase, EXPR_PLUS, pBrace);
+    // create top brace
+    pTopBrace->CreateBackEndPrimary(EXPR_PAREN, pValue);
+    // create opcode type
+    pType->CreateBackEnd();
+    // create opcode name
+    string sName = pNF->GetOpcodeConst(pFEOperation);
+    // create constant
+    pFile->m_Constants.Add(pOpcode);
+    pOpcode->CreateBackEnd(pType, sName, pTopBrace, true/*always defined*/);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
     return true;
@@ -2719,21 +2277,7 @@ CBEClass::CreateBackEndTaggedDecl(CFEConstructedType *pFEType)
     CBEType *pType = pCF->GetNewType(pFEType->GetType());
     m_TypeDeclarations.Add(pType);
     pType->SetParent(this);
-    try
-    {
-	pType->CreateBackEnd(pFEType);
-    }
-    catch (CBECreateException *e)
-    {
-	m_TypeDeclarations.Remove(pType);
-        delete pType;
-	e->Print();
-	delete e;
-
-	string exc = string(__func__);
-	exc += " failed because tagged type could not be created";
-	throw new CBECreateException(exc);
-    }
+    pType->CreateBackEnd(pFEType);
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(constr type) returns\n",
 	__func__);
 }
@@ -3092,36 +2636,10 @@ CBEClass::CreateObject()
     string sName = pNF->GetCorbaObjectVariable();
     m_pCorbaObject = pCF->GetNewTypedDeclarator();
     m_pCorbaObject->SetParent(this);
-    try
-    {
-	m_pCorbaObject->CreateBackEnd(sTypeName, sName, 0);
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pCorbaObject;
-        m_pCorbaObject = 0;
-	e->Print();
-	delete e;
-
-	exc += " failed, because CORBA Object could not be created.";
-	throw new CBECreateException(exc);
-    }
+    m_pCorbaObject->CreateBackEnd(sTypeName, sName, 0);
     // CORBA_Object is always in
     CBEAttribute *pAttr = pCF->GetNewAttribute();
-    try
-    {
-	pAttr->CreateBackEnd(ATTR_IN);
-    }
-    catch (CBECreateException *e)
-    {
-        delete pAttr;
-	e->Print();
-	delete e;
-
-	exc += " failed, because IN attribute for CORBA Object could not be" \
-	    " created.";
-        throw new CBECreateException(exc);
-    }
+    pAttr->CreateBackEnd(ATTR_IN);
     m_pCorbaObject->m_Attributes.Add(pAttr);
 }
 
@@ -3145,15 +2663,6 @@ CBEClass::CreateEnvironment()
     string sName = pNF->GetCorbaEnvironmentVariable();
     m_pCorbaEnv = pCF->GetNewTypedDeclarator();
     m_pCorbaEnv->SetParent(this);
-    try
-    {
-	m_pCorbaEnv->CreateBackEnd(sTypeName, sName, 1);
-    }
-    catch (CBECreateException *e)
-    {
-        delete m_pCorbaEnv;
-        m_pCorbaEnv = 0;
-	throw;
-    }
+    m_pCorbaEnv->CreateBackEnd(sTypeName, sName, 1);
 }
 

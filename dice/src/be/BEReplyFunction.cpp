@@ -126,28 +126,25 @@ CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation)
  *  \param pMsgBuffer the message buffer to initialize
  *  \return true on success
  */
-bool 
+void 
 CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    if (!CBEOperationFunction::MsgBufferInitialization(pMsgBuffer))
-	return false;
+    CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
     // check return type (do test here because sometimes we like to call
     // AddReturnVariable under different constraints--return parameter)
     CBEType *pType = GetReturnType();
     assert(pType);
     if (pType->IsVoid())
-	return true; // having a void return type is not an error
+	return; // having a void return type is not an error
     // add return variable
     if (!pMsgBuffer->AddReturnVariable(this))
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "%s failed, because return var could not be added to msgbuf\n",
-	    __func__);
-	return false;
+	string exc = string(__func__);
+	exc += " failed, because return variable could not be added to message buffer.";
+	throw new CBECreateException(exc);
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
-    return true;
 }
 
 /** \brief checks of this parameter is marshalled or not

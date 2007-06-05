@@ -128,16 +128,7 @@ CBEComponent::CreateBackEndHeader(CFEFile * pFEFile)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEHeaderFile *pHeader = pCF->GetNewHeaderFile();
     m_HeaderFiles.Add(pHeader);
-    try
-    {
-	pHeader->CreateBackEnd(pFEFile, FILETYPE_COMPONENTHEADER);
-    }
-    catch (CBECreateException *e)
-    {
-	m_HeaderFiles.Remove(pHeader);
-        delete pHeader;
-	throw;
-    }
+    pHeader->CreateBackEnd(pFEFile, FILETYPE_COMPONENTHEADER);
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     pRoot->AddToHeader(pHeader);
     // add include of opcode file to header file
@@ -149,16 +140,7 @@ CBEComponent::CreateBackEndHeader(CFEFile * pFEFile)
 	    // normally does, is not created
 	    CBEHeaderFile *pOpcodes = pCF->GetNewHeaderFile();
 	    m_HeaderFiles.Add(pOpcodes);
-	    try
-	    {
-		pOpcodes->CreateBackEnd(pFEFile, FILETYPE_OPCODE);
-	    }
-	    catch (CBECreateException *e)
-	    {
-		m_HeaderFiles.Remove(pOpcodes);
-		delete pOpcodes;
-		throw;
-	    }
+	    pOpcodes->CreateBackEnd(pFEFile, FILETYPE_OPCODE);
 	    pRoot->AddOpcodesToFile(pOpcodes, pFEFile);
 	    // include opcode file to included files
 	    // do not use include file name, since the opcode file is
@@ -200,16 +182,7 @@ CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile)
     CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
-    try
-    {
-	pImpl->CreateBackEnd(pFEFile, FILETYPE_COMPONENTIMPLEMENTATION);
-    }
-    catch (CBECreateException *e)
-    {
-	m_ImplementationFiles.Remove(pImpl);
-        delete pImpl;
-	throw;
-    }
+    pImpl->CreateBackEnd(pFEFile, FILETYPE_COMPONENTIMPLEMENTATION);
 
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
@@ -220,16 +193,7 @@ CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile)
         pImpl = pCF->GetNewImplementationFile();
         m_ImplementationFiles.Add(pImpl);
         pImpl->SetHeaderFile(pHeader);
-	try
-	{
-	    pImpl->CreateBackEnd(pFEFile, FILETYPE_TEMPLATE);
-	}
-	catch (CBECreateException *e)
-        {
-	    m_ImplementationFiles.Remove(pImpl);
-            delete pImpl;
-	    throw;
-        }
+	pImpl->CreateBackEnd(pFEFile, FILETYPE_TEMPLATE);
         pRoot->AddToImpl(pImpl);
     }
 }
