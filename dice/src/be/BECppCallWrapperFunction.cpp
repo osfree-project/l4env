@@ -35,13 +35,13 @@
 CBECppCallWrapperFunction::CBECppCallWrapperFunction()
     : CBECallFunction()
 {
-    m_nSkipParameter = 0;
+  m_nSkipParameter = 0;
 }
 
 CBECppCallWrapperFunction::CBECppCallWrapperFunction(CBECppCallWrapperFunction & src)
 : CBECallFunction(src)
 {
-    m_nSkipParameter = src.m_nSkipParameter;
+  m_nSkipParameter = src.m_nSkipParameter;
 }
 
 /** \brief destructor of target class */

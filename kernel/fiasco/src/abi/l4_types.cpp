@@ -1120,6 +1120,15 @@ private:
 };
 
 
+
+class L4_semaphore
+{
+public:
+  Smword counter;
+  Mword flags;
+};
+
+
 //----------------------------------------------------------------------------
 INTERFACE [ia32 || ux]:
 

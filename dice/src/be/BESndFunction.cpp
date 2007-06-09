@@ -40,24 +40,21 @@
 #include "BEMarshaller.h"
 #include "BEDeclarator.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEOperation.h"
 
 CBESndFunction::CBESndFunction()
-    : CBEOperationFunction(FUNCTION_SEND)
-{
-}
+: CBEOperationFunction(FUNCTION_SEND)
+{ }
 
 CBESndFunction::CBESndFunction(CBESndFunction & src)
 : CBEOperationFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CBESndFunction::~CBESndFunction()
-{
-
-}
+{ }
 
 /** \brief writes the variable initializations of this function
  *  \param pFile the file to write to
@@ -281,7 +278,7 @@ CBESndFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     {
 	string exc = string(__func__);
 	exc += " failed, because return variable could not be added to message buffer.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 }
 

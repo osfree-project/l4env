@@ -5,6 +5,9 @@
  *
  * This module is derived from the pSLIM driver module by Frank Mehnert.
  * Thanks to Frank for his valuable help!
+ *
+ * Thanks to Robert Dorn for his additions regarding the support of
+ * multiple overlay-wm instances.
  */
 
 /*
@@ -68,6 +71,7 @@ static Bool OVLSCREENSwitchMode(int scrnIndex, DisplayModePtr pMode, int flags);
 static void OVLSCREENAdjustFrame(int scrnIndex, int x, int y, int flags);
 static void OVLSCREENFreeScreen(int scrnIndex, int flags);
 static void OVLSCREENFreeRec(ScrnInfoPtr scrinfo);
+static Bool OVLSCREENDriverFunc(ScrnInfoPtr pScrn, xorgDriverFuncOp op, pointer p);
 
 
 /*** DRIVER INFORMATION STRUCTURES ***
@@ -85,7 +89,8 @@ DriverRec OVLSCREEN = {
 	OVLSCREENProbe,
 	OVLSCREENAvailableOptions,
 	NULL,
-	0
+	0,
+	OVLSCREENDriverFunc,
 };
 
 enum GenericTypes {
@@ -159,7 +164,7 @@ static pointer ovlscreenSetup(pointer Module, pointer Options,
 
 	if (!Initialised) {
 		Initialised = TRUE;
-		xf86AddDriver(&OVLSCREEN, Module, 0);
+		xf86AddDriver(&OVLSCREEN, Module, HaveDriverFuncs);
 		LoaderRefSymLists(fbSymbols, shadowSymbols, NULL);
 		return (pointer) TRUE;
 	}
@@ -262,6 +267,38 @@ static Bool OVLSCREENProbe(DriverPtr drv, int flags) {
 	return (foundScreen);
 }
 
+/*
+ * We cannot use xf86CollectOptions as ScrnInfoPtr->display is initialized
+ * after ovl_screen_open is called.
+ * Due to this, option parsing has to be done manually.
+ */
+static char* getOvlName(ScrnInfoPtr pScrn)
+{           
+	int i;
+	char *name;
+
+	if(pScrn->confScreen->options)
+		if((name = xf86FindOptionValue(pScrn->confScreen->options,
+						"OverlayName")))
+			return name;
+
+	if(pScrn->monitor->options)
+		if((name = xf86FindOptionValue(pScrn->monitor->options,
+						"OverlayName")))
+			return name;
+
+	for(i=0; i < pScrn->numEntities; i++) {
+		GDevPtr device = xf86GetDevFromEntity(pScrn->entityList[i],
+				pScrn->entityInstanceList[i]);
+
+		if (device && device->options)
+			if((name = xf86FindOptionValue(device->options,
+							"OverlayName")))
+				return name;
+	}
+
+	return NULL;
+}
 
 /*** EXPORT: DRIVER PRE INITIALISATION ***
  *
@@ -274,10 +311,21 @@ static Bool OVLSCREENPreInit(ScrnInfoPtr scrinfo, int flags) {
 	Gamma gzeros = { 0.0, 0.0, 0.0 };
 	rgb rzeros = { 0, 0, 0 };
 	int res;
+	char *ovlname;
 
 	if (flags & PROBE_DETECT) return (FALSE);
 
-	if ((res = ovl_screen_init(NULL)) < 0) {
+	scrinfo->monitor = scrinfo->confScreen->monitor;
+	ovlname = getOvlName(scrinfo);
+
+	if(ovlname)
+		xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG,
+			"Using overlay %s\n", ovlname);
+	else
+		xf86DrvMsg(scrinfo->scrnIndex, X_INFO,
+			"Using default overlay\n");
+
+	if ((res = ovl_screen_init(ovlname)) < 0) {
 		xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG,
 		          "Error: ovl_screen_init() returned %d\n", res);
 		return (FALSE);
@@ -288,28 +336,13 @@ static Bool OVLSCREENPreInit(ScrnInfoPtr scrinfo, int flags) {
 	ovlscr->height = ovl_get_phys_height(); //768;
 	ovlscr->depth  = ovl_get_phys_mode();
 
-	ovl_screen_open(ovlscr->width, ovlscr->height, ovlscr->depth);
-
-	ovlscr->fb_adr = ovl_screen_map();
-
-	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG,
-	            "Overlay Screen is %dx%d@%d\n",
-	            ovlscr->width, ovlscr->height, ovlscr->depth);
-
-	/* clear screen */
-	if (ovlscr->depth == 16) {
-		short *dst = (short *)ovlscr->fb_adr;
-		int n = ovlscr->width*ovlscr->height;
-		for (;n--;) *(dst++) = 0;
-	}
-	ovl_screen_refresh(0, 0, ovlscr->width, ovlscr->height);
+	ovlscr->fb_adr = NULL; /* XXX */
 	
 	/* hack: override config entry */
 	scrinfo->bitsPerPixel = ovlscr->depth;
 	scrinfo->confScreen->defaultdepth = ovlscr->depth;
 
 	scrinfo->chipset = "ovlscreen";
-	scrinfo->monitor = scrinfo->confScreen->monitor;
 	scrinfo->progClock = TRUE;
 	scrinfo->rgbBits = 8;
 
@@ -444,6 +477,22 @@ static Bool OVLSCREENScreenInit(int scrnIndex, ScreenPtr pScreen,
 
 	/* XXX */
 	scrinfo->videoRam = 4 * 1024 * 1024;
+
+	ovl_screen_open(ovlscr->width, ovlscr->height, ovlscr->depth);
+
+	ovlscr->fb_adr = ovl_screen_map();
+
+	xf86DrvMsg(scrinfo->scrnIndex, X_CONFIG,
+	            "Overlay Screen is %dx%d@%d\n",
+	            ovlscr->width, ovlscr->height, ovlscr->depth);
+
+	/* clear screen */
+	if (ovlscr->depth == 16) {
+		short *dst = (short *)ovlscr->fb_adr;
+		int n = ovlscr->width*ovlscr->height;
+		for (;n--;) *(dst++) = 0;
+	}
+	ovl_screen_refresh(0, 0, ovlscr->width, ovlscr->height);
 
 	/* we are active */
 	scrinfo->vtSema = TRUE;
@@ -604,3 +653,16 @@ static Bool OVLSCREENSaveScreen(ScreenPtr pScreen, int mode) {
 	return (TRUE);
 }
 
+/*** EXPORT: WE DO NOT NEED HARDWARE ACCESS ***/
+static Bool OVLSCREENDriverFunc(ScrnInfoPtr pScrn, xorgDriverFuncOp op, pointer ptr) {
+	xorgHWFlags *flag;
+
+	switch(op) {
+		case GET_REQUIRED_HW_INTERFACES:
+			flag = (xorgHWFlags *)ptr;
+			(*flag) = 0;
+			return (TRUE);
+		default:
+			return (FALSE);
+	}
+}

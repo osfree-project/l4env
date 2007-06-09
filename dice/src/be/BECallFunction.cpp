@@ -40,26 +40,23 @@
 #include "BESizes.h"
 #include "Trace.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "fe/FEOperation.h"
 #include <cassert>
 
 CBECallFunction::CBECallFunction()
-    : CBEOperationFunction(FUNCTION_CALL)
-{
-}
+ : CBEOperationFunction(FUNCTION_CALL)
+{ }
 
 CBECallFunction::CBECallFunction(CBECallFunction & src)
-: CBEOperationFunction(src)
-{
-}
+ : CBEOperationFunction(src)
+{ }
 
 /** \brief destructor of target class */
 CBECallFunction::~CBECallFunction()
-{
-
-}
+{ }
 
 /** \brief writes the variable initializations of this function
  *  \param pFile the file to write to
@@ -187,7 +184,7 @@ CBECallFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     {
 	string exc = string(__func__);
 	exc += " failed, because return variable could not be added to message buffer.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }

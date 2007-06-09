@@ -33,6 +33,7 @@
 #include "be/BEHeaderFile.h"
 #include "be/BEImplementationFile.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "fe/FEConstDeclarator.h"
 #include "fe/FETypeSpec.h"
 
@@ -91,7 +92,7 @@ CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator)
     {
 	string exc = string(__func__);
 	exc += " for \"" + m_sName + "\" failed because no value.";
-        throw new CBECreateException(exc);
+        throw new error::create_error(exc);
     }
     // get value
     m_pValue = pCF->GetNewExpression();
@@ -122,7 +123,7 @@ CBEConstant::CreateBackEnd(CBEType * pType,
     else
     {
 	exc += " failed, beause no type given.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     m_pValue = pValue;
     if (m_pValue)
@@ -130,7 +131,7 @@ CBEConstant::CreateBackEnd(CBEType * pType,
     else
     {
 	exc += " failed, because no value given.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 }
 

@@ -82,10 +82,10 @@ protected:
      *  \brief a reference to the function which is tested (if we test at all)
      */
     CBEFunction *m_pFunction;
-    /** \var unsigned char m_nSkipParameter
+    /** \var int m_nSkipParameter
      *  \brief bitmap indication whether to skip CORBA Object or Env
      */
-    unsigned char m_nSkipParameter;
+    int m_nSkipParameter;
 };
 
 #endif // !__DICE_BECOMPONENTFUNCTION_H__

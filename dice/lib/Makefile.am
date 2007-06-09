@@ -1,1 +1,1 @@
-SUBDIRS = debug invocations sizes
+SUBDIRS = debug invocations sizes opcodes

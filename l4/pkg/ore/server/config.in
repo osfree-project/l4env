@@ -22,6 +22,7 @@ else
 		bool '  NE2000'	CONFIG_ORE_NE2000
 		bool '  RealTek RTL-8139' CONFIG_ORE_RTL8139
 		bool '  RealTek RTL-8139C+' CONFIG_ORE_RTL8139CP
+		bool '  SysKonnect GigaEthernet (Yukon chipset)' CONFIG_ORE_SKGE
 fi
 endmenu
 
@@ -40,6 +41,7 @@ bool 'Debugging features'                   CONFIG_ORE_DEBUGGING
 if [ "$CONFIG_ORE_DEBUGGING" == "y" ]; then
     bool '  Periodically dump connection table'   CONFIG_ORE_DUMPER
     int  '      dumper period in seconds'         CONFIG_ORE_DUMPER_PERIOD 30
+	bool '  Ferret support'                       CONFIG_ORE_FERRET
 fi
 endmenu
 

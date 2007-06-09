@@ -161,7 +161,7 @@ static void debug_irq(void)
   /* initialize irq module of dde_linux 
      num < 16 RMGR
      num > 15 Omega0 */
-  if ((err=l4dde_irq_init(irq_num & 0x10)))
+  if ((err=l4dde_irq_init()))
     {
       LOG_Error("initializing irqs (%d)", err);
       return;

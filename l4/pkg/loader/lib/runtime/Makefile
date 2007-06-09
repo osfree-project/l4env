@@ -31,6 +31,8 @@ LOADERLIBS_uc	= -lc_be_l4env_start_stop.p	\
 		  -lc_be_mmap_util.p		\
 		  -luclibc_support.p
 
+TASKLIB-y	+= -ltask_server.o.p
+
 OBJS_libloader.s.so = helper_dyn.s.o
 LIBL4ENV            = -ll4env.p
 
@@ -48,6 +50,7 @@ LIBS		= --whole-archive \
 		    $(ROOTPLIB) \
 		    $(LOADERLIBS_$(LIBC_TYPE)) \
 		    -lgeneric_ts.p \
+		    $(TASKLIB-$(USE_TASKLIB)) \
 		    -lloaderif.p \
 		    -ll4util_root.p \
 		    -lsigma0.p \

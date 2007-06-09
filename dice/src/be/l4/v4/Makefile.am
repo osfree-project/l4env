@@ -10,4 +10,5 @@ noinst_HEADERS = L4V4BEClassFactory.h L4V4BEIPC.h L4V4BENameFactory.h L4V4BESize
 
 AM_CXXFLAGS = -Wunused -Wunused-parameter -Wall -W \
 	      -Wcast-align -Wcast-qual -Wconversion -Wformat=2 \
-	      -Wmissing-format-attribute -Wpointer-arith -Wshadow -Wwrite-strings
+	      -Wmissing-format-attribute -Wpointer-arith -Wshadow -Wwrite-strings \
+	      -Wstrict-aliasing=2

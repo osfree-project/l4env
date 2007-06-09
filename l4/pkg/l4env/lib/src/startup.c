@@ -219,8 +219,6 @@ void
 __main(void)
 {
   int ret, i, j;
-  l4_umword_t dummy;
-  l4_threadid_t preempter, pager;
   l4_addr_t stack_low, stack_high;
 
 #if defined(ARCH_x86) && defined(__PIC__)
@@ -243,10 +241,7 @@ __main(void)
   LOG_setup_tag();
 
   /* init some internal L4env stuff */
-  preempter = pager = L4_INVALID_ID;
-  l4_thread_ex_regs(l4_myself(), (l4_umword_t)-1, (l4_umword_t)-1,
-		    &preempter, &pager, &dummy, &dummy, &dummy);
-  l4env_set_sigma0_id(pager);
+  l4env_set_sigma0_id(l4_thread_ex_regs_pager(l4_myself()));
 
   /* setup fixed VM areas */
   __setup_fixed();

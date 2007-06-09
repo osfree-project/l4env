@@ -45,6 +45,7 @@
 #include "BESizes.h"
 #include "BERoot.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "Messages.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEOperation.h"
@@ -594,7 +595,7 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
 		exc += " failed, because type of ";
 		exc += pDecl->GetName();
 		exc += " is not 'char*'.";
-		throw new CBECreateException(exc);
+		throw new error::create_error(exc);
 	    }
 	    CBEType *pType = pCF->GetNewType(TYPE_CHAR);
 	    pType->CreateBackEnd(false, 0, TYPE_CHAR);

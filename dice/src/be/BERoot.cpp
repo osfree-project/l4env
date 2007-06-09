@@ -93,7 +93,7 @@ CBERoot::~CBERoot()
 
 /** \brief creates the back-end structure
  *  \param pFEFile a reference to the corresponding starting point
- *  \throw CBECreateException if error
+ *  \throw error::create_error if error
  *
  * This implementation creates the corresponding client and component
  * parts. If these parts already exists the old versions are deleted

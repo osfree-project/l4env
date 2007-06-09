@@ -475,8 +475,8 @@ void CConsistencyVisitor::CheckReturnType(CFEOperation& operation)
 void CConsistencyVisitor::Visit(CFETypeSpec& type)
 {
     CMessages::GccError(&type, 0,
-	"The type %d (%s) has no consistency check implementation.",
-	type.GetType(), typeid(type).name());
+	"The type %d has no consistency check implementation.",
+	type.GetType());
     throw error::consistency_error();
 }
 

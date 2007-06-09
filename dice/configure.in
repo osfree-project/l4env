@@ -152,6 +152,7 @@ lib/Makefile
 lib/debug/Makefile
 lib/invocations/Makefile
 lib/sizes/Makefile
+lib/opcodes/Makefile
 ])
 
 AC_OUTPUT

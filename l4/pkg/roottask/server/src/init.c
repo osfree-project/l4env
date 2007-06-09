@@ -647,8 +647,8 @@ pagein_4KB_memory(void)
 	case -3:
 	  /* no more pages from sigma0 */
 	  return;
-
 	}
+
       if (MEM_MAX && base >= MEM_MAX + (unsigned long)ram_base)
 	/* cannot handle this page */
 	continue;

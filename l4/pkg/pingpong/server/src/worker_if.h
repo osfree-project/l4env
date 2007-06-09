@@ -27,3 +27,5 @@ extern void __attribute__((noreturn)) PREFIX(ping_long_fpage_thread)(void);
 extern void __attribute__((noreturn)) PREFIX(ping_long_fpage_cold_thread)(void);
 extern void __attribute__((noreturn)) PREFIX(pong_pagefault_thread)(void);
 extern void __attribute__((noreturn)) PREFIX(ping_pagefault_thread)(void);
+extern void __attribute__((noreturn)) PREFIX(syscall_id_nearest_thread)(void);
+extern void __attribute__((noreturn)) PREFIX(syscall_task_new_thread)(void);

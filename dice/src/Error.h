@@ -118,6 +118,39 @@ namespace error
 	}
     };
 
+    /** \class create_error
+     *  \ingroup error
+     *  \brief exception class for back-end creation errors
+     */
+    class create_error : public std::exception
+    {
+	/** \var string reason
+	 *  \brief the reason for the excpetion
+	 */
+	string reason;
+
+    public:
+	/** \brief constructs exception class
+	 *  \param a detailed reason
+	 */
+	explicit create_error(string r) : reason(r)
+	{ }
+
+	/** \brief destructor 
+	 *
+	 * Because the string() constructor can throw exceptions we have to
+	 * catch them here.
+	 */
+	~create_error() throw()
+	try { } catch (...) { }
+
+	/** \brief return the string of the exception */
+	virtual const char* what() const throw()
+	{
+	    return reason.c_str();
+	}
+    };
+
 }; /* namespace error */
 
 #endif                // __DICE_ERROR_H__

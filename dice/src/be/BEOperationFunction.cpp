@@ -36,6 +36,7 @@
 #include "be/BEMarshaller.h"
 #include "be/BERoot.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
 #include "Attribute-Type.h"
@@ -81,7 +82,7 @@ CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation)
     if (!SetReturnVar(pFEOperation->GetReturnType(), sReturn))
     {
 	exc += " failed because return var could not be set.";
-        throw new CBECreateException(exc);
+        throw new error::create_error(exc);
     }
     // add attributes
     AddAttributes(pFEOperation);

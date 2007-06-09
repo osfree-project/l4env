@@ -54,7 +54,7 @@ public: // public methods
     virtual int GetPayloadOffset();
 
     virtual void WriteDopeShortInitialization(CBEFile *pFile, int nType,
-	CMsgStructType nType);
+	CMsgStructType nStructType);
 
     virtual int GetMemberPosition(string sName, CMsgStructType nType);
 

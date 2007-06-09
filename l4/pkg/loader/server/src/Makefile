@@ -9,6 +9,7 @@ DEFAULT_RELOC   = 0x01300000
 DEFAULT_RELOC_arm = 0x002c0000
 PRIVATE_INCDIR	= $(PKGDIR)/server/src .
 LIB_IPCMON-y	= -lipcmon
+LIB_TASK-y	= -ltask_server.o
 LIBS		= \
 		-lgeneric_ts \
 		-lgeneric_fprov \
@@ -36,6 +37,8 @@ SRC_C		+= emulate.c emu_tulip.c emu_ide.c emu_e1000.c
 DEFINES		+= -DEMULATE_MMIO
 LIBS		+= -lio
 endif
+
+LIBS		+= $(LIB_TASK-$(USE_TASKLIB))
 
 cfg-parse.c: cfg-scan.c
 

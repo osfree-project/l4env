@@ -110,10 +110,10 @@ protected:
      *  \brief contains the value of the character expression
      */
     char m_cCharValue;
-    /**    \var double m_fFloatValue
+    /**    \var long double m_fFloatValue
      *  \brief contains the float value of the expression
      */
-    double m_fFloatValue;
+    long double m_fFloatValue;
     /**    \var string m_sStringValue
      *  \brief contains the string value of the expression
      */

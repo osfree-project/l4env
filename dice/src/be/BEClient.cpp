@@ -41,6 +41,7 @@
 #include "be/BEClass.h"
 #include "be/BENameSpace.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
@@ -51,19 +52,16 @@
 #include <cassert>
 
 CBEClient::CBEClient()
-{
-}
+{ }
 
 CBEClient::CBEClient(CBEClient & src)
 : CBETarget(src)
-{
-}
+{ }
 
 /** \brief destructor
  */
 CBEClient::~CBEClient()
-{
-}
+{ }
 
 /** \brief writes the clients output
  */
@@ -94,7 +92,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
     if (!pHeader)
     {
 	exc += "failed, because header file could not be found";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     // create the file
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
@@ -118,7 +116,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
         {
 	    exc += " failed because function " + sFuncName + 
 		" could not be found";
-	    throw new CBECreateException(exc);
+	    throw new error::create_error(exc);
         }
         pFunction->AddToImpl(pImpl);
     }
@@ -131,7 +129,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
         {
 	    exc += " failed because function " + sFuncName + 
 		" could not be found";
-	    throw new CBECreateException(exc);
+	    throw new error::create_error(exc);
         }
         pFunction->AddToImpl(pImpl);
         // receive function
@@ -141,7 +139,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
         {
 	    exc += " failed because function " + sFuncName + 
 		" could not be found";
-	    throw new CBECreateException(exc);
+	    throw new error::create_error(exc);
         }
         pFunction->AddToImpl(pImpl);
         // unmarshal function
@@ -153,7 +151,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
             {
 		exc += " failed because function " + sFuncName + 
 		    " could not be found";
-		throw new CBECreateException(exc);
+		throw new error::create_error(exc);
             }
             pFunction->AddToImpl(pImpl);
         }
@@ -166,7 +164,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
         {
 	    exc += " failed because function " + sFuncName + 
 		" could not be found";
-	    throw new CBECreateException(exc);
+	    throw new error::create_error(exc);
         }
         pFunction->AddToImpl(pImpl);
     }
@@ -256,7 +254,7 @@ CBEClient::CreateBackEndFile(CFEFile *pFEFile)
     {
 	exc += " failed, because could not find header file for ";
 	exc += pFEFile->GetFileName();
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     // create file
@@ -298,7 +296,7 @@ CBEClient::CreateBackEndFile(CFEFile * pFEFile,
         {
 	    exc += " failed because interface " + (*iterI)->GetName() +
 		" could not be found";
-	    throw new CBECreateException(exc);
+	    throw new error::create_error(exc);
         }
         // if class has been added already, then skip it
         if (pImpl->FindClass(pClass->GetName()) != pClass)
@@ -315,7 +313,7 @@ CBEClient::CreateBackEndFile(CFEFile * pFEFile,
         {
 	    exc += " failed because library " + (*iterL)->GetName() +
 		" could not be found";
-	    throw new CBECreateException(exc);
+	    throw new error::create_error(exc);
         }
         // if this namespace is already added, skip it
         if (pImpl->FindNameSpace(pNameSpace->GetName()) != pNameSpace)
@@ -371,7 +369,7 @@ CBEClient::CreateBackEndModule(CFEFile *pFEFile)
     {
 	exc += " failed, because header file could not be found for ";
 	exc += pFEFile->GetFileName();
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     // get root
@@ -402,7 +400,7 @@ CBEClient::CreateBackEndModule(CFEFile *pFEFile)
                 delete pImpl;
 		exc += " failed because clas " + (*iterI)->GetName() + 
 		    " is not created";
-		throw new CBECreateException(exc);
+		throw new error::create_error(exc);
             }
             // add interface to file
             pClass->AddToImpl(pImpl);
@@ -434,7 +432,7 @@ CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
     if (!pHeader)
     {
 	exc += " failed, beacuse header file could not be found";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     // search for the library
@@ -443,7 +441,7 @@ CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
     {
 	exc += " failed because namespace " + pFELibrary->GetName() +
 	    " could not be found\n";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     // create the file
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
@@ -517,7 +515,7 @@ CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
     if (!pHeader)
     {
 	exc += " failed, because no header file could be found";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     // find the interface
@@ -526,7 +524,7 @@ CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
     {
 	exc += " failed because interface " + pFEInterface->GetName() +
 	    " could not be found";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     // create the file
     CBEClassFactory *pCF = CCompiler::GetClassFactory();

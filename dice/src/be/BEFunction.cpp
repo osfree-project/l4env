@@ -53,6 +53,7 @@
 #include "fe/FEOperation.h"
 #include "fe/FETypeSpec.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "Messages.h"
 #include <cassert>
 
@@ -1155,7 +1156,7 @@ CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
     if (!m_pMsgBuffer->AddPlatformSpecificMembers(this))
     {
 	exc += " failed because platform specific members caused problems.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     // function specific initialization
@@ -1165,7 +1166,7 @@ CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
     if (!m_pMsgBuffer->Sort(this))
     {
 	exc += " failed, because Sort failed.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     // post create stuff

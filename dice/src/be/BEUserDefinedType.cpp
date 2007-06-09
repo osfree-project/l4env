@@ -35,13 +35,14 @@
 #include "be/BEExpression.h"
 #include "be/BESizes.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEUserDefinedType.h"
 #include "fe/FEFile.h"
 #include <cassert>
 
 CBEUserDefinedType::CBEUserDefinedType()
-{}
+{ }
 
 CBEUserDefinedType::CBEUserDefinedType(CBEUserDefinedType & src)
  : CBEType(src)
@@ -51,7 +52,7 @@ CBEUserDefinedType::CBEUserDefinedType(CBEUserDefinedType & src)
 
 /** \brief destructor of this instance */
 CBEUserDefinedType::~CBEUserDefinedType()
-{}
+{ }
 
 /** \brief generates an exact copy of this class
  *  \return a reference to the new object
@@ -74,7 +75,7 @@ CBEUserDefinedType::CreateBackEnd(string sName)
     if (sName.empty())
     {
 	exc += " failed because user defined name is empty";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     m_sName = sName;
     m_sOriginalName = sName;
@@ -113,14 +114,14 @@ CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType)
     if (!pFEType)
     {
 	exc += " failed, because FE Type is 0";
-        throw new CBECreateException(exc);
+        throw new error::create_error(exc);
     }
 
     CFEUserDefinedType *pUserType = dynamic_cast<CFEUserDefinedType*>(pFEType);
     if (!pUserType)
     {
 	exc += " failed because FE Type is not 'user defined'";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();

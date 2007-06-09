@@ -40,6 +40,7 @@
 #include "BEClassFactory.h"
 #include "BEMarshaller.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
@@ -48,18 +49,15 @@
 
 CBEMarshalFunction::CBEMarshalFunction()
  : CBEOperationFunction(FUNCTION_MARSHAL)
-{
-}
+{ }
 
 CBEMarshalFunction::CBEMarshalFunction(CBEMarshalFunction & src)
 : CBEOperationFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CBEMarshalFunction::~CBEMarshalFunction()
-{
-}
+{ }
 
 /** \brief creates the back-end marshal function
  *  \param pFEOperation the corresponding front-end operation
@@ -119,7 +117,7 @@ CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     {
 	string exc = string(__func__);
 	exc += " failed, because return variable could not be added to message buffer.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     // in marshal function, the message buffer is a pointer to the server's
     // message buffer

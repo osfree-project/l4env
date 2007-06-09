@@ -36,22 +36,20 @@
 #include "TypeSpec-Type.h"
 #include "fe/FEStringAttribute.h"
 #include "Compiler.h"
+#include "Error.h"
 #include <cassert>
 
 CBEInterfaceFunction::CBEInterfaceFunction(FUNCTION_TYPE nFunctionType)
-    : CBEFunction (nFunctionType)
-{
-}
+ : CBEFunction (nFunctionType)
+{ }
 
 CBEInterfaceFunction::CBEInterfaceFunction(CBEInterfaceFunction & src)
  : CBEFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CBEInterfaceFunction::~CBEInterfaceFunction()
-{
-}
+{ }
 
 /** \brief creates the back-end function for the interface
  *  \param pFEInterface the respective front-end interface
@@ -80,7 +78,7 @@ CBEInterfaceFunction::CreateBackEnd(CFEInterface *pFEInterface)
     {
 	string exc = string(__func__);
 	exc += " failed because return var could not be set.";
-        throw new CBECreateException(exc);
+        throw new error::create_error(exc);
     }
 
     // check if interface has error function and add its name if available

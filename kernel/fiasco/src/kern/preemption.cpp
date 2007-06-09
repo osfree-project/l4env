@@ -100,6 +100,16 @@ Preemption::set_pending (Sched_context *const sched)
   _pending = sched;
 }
 
+PUBLIC
+virtual void
+Preemption::ipc_receiver_aborted()
+{
+  assert(receiver());
+
+  sender_dequeue(receiver()->sender_list());
+  set_receiver(0);
+}
+
 /**
  * Callback function for when the receiver of a preemption IPC
  * becomes ready to receive. Send the IPC and submit the next one.

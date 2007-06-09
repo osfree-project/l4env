@@ -275,7 +275,7 @@ handle_extended_sigma0_request(app_t *app, l4_umword_t *dw1,
 			       l4_umword_t *dw2, void **reply)
 {
   int error;
-  l4_addr_t map_addr;
+  l4_addr_t map_addr = 0;
   l4_msgdope_t result;
   l4_umword_t dummy;
   unsigned log2_size = ((l4_fpage_t)(*dw2)).fp.size;
@@ -291,12 +291,20 @@ handle_extended_sigma0_request(app_t *app, l4_umword_t *dw1,
     case L4_LOG2_SUPERPAGESIZE:
       map_addr = pager_map_addr_4M;
       break;
-    default:
+    }
+
+  if (SIGMA0_IS_MAGIC_REQ(*dw1))
+    {
+      map_addr = pager_map_addr_4K;
+    }
+
+  if (!map_addr)
+    {
       app_msg(app, "fpage log2_size=%d", log2_size);
       enter_kdebug("stop");
       *reply = L4_IPC_SHORT_MSG;
       return;
-    } 
+    }
 
   /* We have to unmap here to make sure the place is empty. If an application
    * requests an page twice, the second grant operation fails so the page is
@@ -321,8 +329,8 @@ handle_extended_sigma0_request(app_t *app, l4_umword_t *dw1,
     {
       app_msg(app, "Can't sigma0 request dw1=%08lx dw2=%08lx:", *dw1, *dw2);
       rmgr_memmap_error("ROOT denies page at %08x "
-		        "(map=%08x, error=%02x result=%08x)",
-	    		*dw1, map_addr, error, result.msgdope);
+                        "(map=%08x, error=%02x result=%08x)",
+                        *dw1, map_addr, error, result.msgdope);
       enter_kdebug("app_pager");
       *reply = L4_IPC_SHORT_MSG;
       return;
@@ -482,6 +490,7 @@ app_pager_thread(void *data)
   l4_addr_t send_addr;
   l4_msgdope_t result;
   l4_threadid_t src_tid;
+  l4_msgtag_t tag;
 
   if ((error = l4rm_area_reserve(L4_PAGESIZE, L4RM_LOG2_ALIGNED,
 			         &pager_map_addr_4K, &rm_area)))
@@ -507,9 +516,9 @@ app_pager_thread(void *data)
   for (;;)
     {
       /* wait for a page fault */
-      int error = l4_ipc_wait(&src_tid,
-			      L4_IPC_SHORT_MSG, &dw1, &dw2,
-		   	      L4_IPC_NEVER, &result);
+      int error = l4_ipc_wait_tag(&src_tid,
+			          L4_IPC_SHORT_MSG, &dw1, &dw2,
+		   	          L4_IPC_NEVER, &result, &tag);
       while (!error)
 	{
 	  int skip_reply = 0;
@@ -518,6 +527,16 @@ app_pager_thread(void *data)
 
 	  reply = L4_IPC_SHORT_MSG;
 
+	  if (!l4_msgtag_is_page_fault(tag)
+              && !l4_msgtag_is_io_page_fault(tag)
+              && l4_msgtag_label(tag))
+            {
+              printf("Cannot handle IPC type %ld from "
+                     l4util_idfmt"\n",
+                     l4_msgtag_label(tag), l4util_idstr(src_tid));
+              skip_reply = 1;
+            }
+          else
 	  /* page fault belonging to one of our tasks? */
 	  if ((app = task_to_app(src_tid)))
 	    {
@@ -561,7 +580,7 @@ app_pager_thread(void *data)
 		      else
 			{
 			  /* sigma0 protocol: adapter space requested. */
-			  dbg_adap_pf("PF (%c) %08x in adapter space. "
+			  dbg_adap_pf("PF (%c) %08lx in adapter space. "
 				      "Forwarding to ROOT.",
 				      dw1 & 2 ? 'w' : 'r', dw1 & ~3);
 
@@ -583,7 +602,7 @@ app_pager_thread(void *data)
 		  if (aa->flags & APP_AREA_PAGE)
 		    {
 		      /* forward pagefault to dataspace manager */
-		      dbg_pf("PF (%c,eip=%08x) %08x in app area %08x-%08x. "
+		      dbg_pf("PF (%c,eip=%08lx) %08lx in app area %08lx-%08lx. "
 			     "Forwarding to ds.",
 			     dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3,
 			     aa->beg.app, aa->beg.app+aa->size);
@@ -595,8 +614,8 @@ app_pager_thread(void *data)
 		      /* Handle pagefault ourself since we own the dataspace. */
 		      send_addr = aa->beg.here+(dw1 & L4_PAGEMASK)-aa->beg.app;
 
-		      dbg_pf("PF (%c,eip=%08x) %08x in app area %08x-%08x. "
-			     "Sending %08x.",
+		      dbg_pf("PF (%c,eip=%08lx) %08lx in app area %08lx-%08lx. "
+			     "Sending %08lx.",
 			     dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3,
 			     aa->beg.app, aa->beg.app+aa->size,
 			     send_addr);
@@ -623,7 +642,7 @@ app_pager_thread(void *data)
 	      else if (dw1 == 1 && (dw2 & 0xff) == 1)
 		{
 		  /* sigma0 protocol: KI page requested */
-		  dbg_pf("PF (%c, eip=%08x) %08x in KI page. Sending KI page.",
+		  dbg_pf("PF (%c, eip=%08lx) %08lx in KI page. Sending KI page.",
 			  dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
 
 		  /* pf in KI page -> request read-only from rmgr */
@@ -635,7 +654,7 @@ app_pager_thread(void *data)
 	      else if (dw1 == 1 && (dw2 & 0xff) == 0xff)
 		{
 		  /* sigma0 protocol: Tbuf status page requested */
-		  dbg_pf("PF (%c, eip=%08x) %08x in Tbuf status page. Sending.",
+		  dbg_pf("PF (%c, eip=%08lx) %08lx in Tbuf status page. Sending.",
 			  dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
 
 		  if (!tb_stat_map_addr)
@@ -650,7 +669,7 @@ app_pager_thread(void *data)
                        && app->flags & APP_ALLOW_VGA)
 		{
 		  /* graphics memory requested */
-                  dbg_pf("PF (%c, eip=%08x) %08x in video memory. "
+                  dbg_pf("PF (%c, eip=%08lx) %08lx in video memory. "
                          "Forwarding to ROOT.",
                          dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
                   forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
@@ -659,7 +678,7 @@ app_pager_thread(void *data)
 		       && app->flags & APP_ALLOW_BIOS)
 		{
 		  /* BIOS requested */
-		  dbg_pf("PF (%c, eip=%08x) %08x in BIOS area. "
+		  dbg_pf("PF (%c, eip=%08lx) %08lx in BIOS area. "
                          "Forwarding to ROOT.",
                          dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
 		  forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
@@ -668,7 +687,7 @@ app_pager_thread(void *data)
 	      else
 		{
 		  /* unknown pagefault */
-		  dbg_pf("PF (%c, eip=%08x) %08x. Can't handle.",
+		  dbg_pf("PF (%c, eip=%08lx) %08lx. Can't handle.",
 			  dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
 
 		  /* check for double page faults */
@@ -697,10 +716,10 @@ app_pager_thread(void *data)
 	  if (skip_reply)
 	    break;
 
-	  error = l4_ipc_reply_and_wait(src_tid, reply, dw1, dw2,
-					&src_tid, L4_IPC_SHORT_MSG, &dw1, &dw2,
+	  error = l4_ipc_reply_and_wait_tag(src_tid, reply, dw1, dw2,
+					l4_msgtag(0, 0, 0, 0), &src_tid, L4_IPC_SHORT_MSG, &dw1, &dw2,
 					L4_IPC_SEND_TIMEOUT_0,
-					&result);
+					&result, &tag);
 
 	  /* send error while granting? flush fpage! */
 	  if (error==L4_IPC_SETIMEOUT && reply==L4_IPC_SHORT_FPAGE && (dw2 & 1))

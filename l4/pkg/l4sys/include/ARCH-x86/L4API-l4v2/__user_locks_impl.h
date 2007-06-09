@@ -15,24 +15,26 @@
 
 
 L4_INLINE unsigned
-l4_usem_down_to(unsigned long lock, unsigned long *counter, 
-                l4_timeout_s timeout)
+l4_usem_down_to(unsigned long ksem, l4_u_semaphore_t *sem, l4_timeout_s timeout)
 {
-  register unsigned long _lock asm ("edx") = lock;
-  register unsigned long *_counter asm ("edi") = counter;
+  register unsigned long _lock asm ("edx") = ksem;
+  register l4_u_semaphore_t *_counter asm ("esi") = sem;
   register unsigned long _timeout asm ("ecx") = timeout.t;
   unsigned long res;
 
   __asm__ __volatile__(
-	"decl 0(%%edi)		\n\t"
-	"jge  2f		\n\t"
+        "1: xorl %%eax, %%eax	\n\t"
+	"   decl 0(%%esi)	\n\t"
+	"   jge  2f		\n\t"
 	PIC_ASM_SAVE
-	"pushl %%ebp		\n\t"	/* save ebp, no memory references
+	"   pushl %%ebp		\n\t"	/* save ebp, no memory references
 					 ("m") after this point */
-	"movl $6, %%eax		\n\t"
+	"   movl $6, %%eax	\n\t"
 	L4_SYSCALL(ulock)
-	"popl	 %%ebp		\n\t"	/* restore ebp, no memory references
+	"   popl	 %%ebp	\n\t"	/* restore ebp, no memory references
 					 ("m") before this point */
+	"   cmpl $1, %%eax	\n\t"
+	"   je 1b		\n\t"
 	PIC_ASM_RESTORE
 	"2:			\n\t"
        :
@@ -45,21 +47,22 @@ l4_usem_down_to(unsigned long lock, unsigned long *counter,
 	"1" (_counter),
 	"2" (_timeout)
        :
-	"esi", "memory" PIC_CLOBBER
+	"edi", "memory" PIC_CLOBBER
        );
 
   return res;
 }
 
 L4_INLINE void
-l4_usem_up(unsigned long lock, unsigned long *counter)
+l4_usem_up(unsigned long ksem, l4_u_semaphore_t *sem)
 {
-  register unsigned long _lock asm ("edx") = lock;
-  register unsigned long *_counter asm ("ecx") = counter;
+  register unsigned long _lock asm ("edx") = ksem;
+  register l4_u_semaphore_t *_counter asm ("esi") = sem;
 
   __asm__ __volatile__(
-	"incl 0(%%ecx)		\n\t"
-	"jg   2f		\n\t"
+	"incl 0(%%esi)		\n\t"
+	"testb $1, 4(%%esi)	\n\t"
+	"jz   2f		\n\t"
 	PIC_ASM_SAVE
 	"pushl %%ebp		\n\t"	/* save ebp, no memory references
 					 ("m") after this point */
@@ -76,7 +79,7 @@ l4_usem_up(unsigned long lock, unsigned long *counter)
 	"0" (_lock),
 	"1" (_counter)
        :
-	"eax", "edi", "esi", "memory" PIC_CLOBBER
+	"eax", "ecx", "edi", "memory" PIC_CLOBBER
        );
 
   return;

@@ -121,6 +121,7 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile *pFile,
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
+    bool bDefaultTimeout = pFunction->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT) != 0;
     string sDummy = pNF->GetDummyVariable();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
@@ -183,9 +184,11 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile *pFile,
 	if (bSendFlexpage)
 	    *pFile << "\t\"movl $2,%%eax \\n\\t\"\n";
 	else
-	    *pFile << "\t\"subl %%eax,%%eax \\n\\t\"\n";
+	    *pFile << "\t\"xor %%eax,%%eax \\n\\t\"\n";
     }
-    *pFile << "\t\"subl %%ebp,%%ebp \\n\\t\"\n";
+    if (bDefaultTimeout)
+	*pFile << "\t\"xor %%ecx,%%ecx \\n\\t\"\n";
+    *pFile << "\t\"xor %%ebp,%%ebp \\n\\t\"\n";
     WriteAsmSyscall(pFile, true);
     *pFile << "\t\"popl %%ebp \\n\\t\"\n";
     *pFile << "\t\"movl %%ebx,%%ecx \\n\\t\"\n";
@@ -227,8 +230,13 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile *pFile,
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0,
 	    false, false))
 	*pFile << "0";
-    *pFile << "),\n";
-    *pFile << "\t\"2\" (" << sTimeout << ")\n";
+    if (bDefaultTimeout)
+	*pFile << ")\n";
+    else
+    {
+	*pFile << "),\n";
+	*pFile << "\t\"2\" (" << sTimeout << ")\n";
+    }
     *pFile << "\t:\n";
     *pFile << "\t\"memory\"\n";
     pFile->DecIndent();
@@ -250,6 +258,7 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile *pFile,
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
+    bool bDefaultTimeout = pFunction->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT) != 0;
     string sDummy = pNF->GetDummyVariable();
     bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
     string sScheduling = pNF->GetScheduleClientVariable();
@@ -305,9 +314,11 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile *pFile,
 	if (bSendFlexpage)
 	    *pFile << "\t\"movl $2,%%eax \\n\\t\"\n";
 	else
-	    *pFile << "\t\"subl %%eax,%%eax \\n\\t\"\n";
+	    *pFile << "\t\"xor %%eax,%%eax \\n\\t\"\n";
     }
-    *pFile << "\t\"subl %%ebp,%%ebp \\n\\t\"\n";
+    if (bDefaultTimeout)
+	*pFile << "\t\"xor %%ecx,%%ecx \\n\\t\"\n";
+    *pFile << "\t\"xor %%ebp,%%ebp \\n\\t\"\n";
     WriteAsmSyscall(pFile, false);
     *pFile << "\t\"popl %%ebp \\n\\t\"\n";
     *pFile << "\t:\n";
@@ -337,7 +348,8 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile *pFile,
 	    false, false))
 	*pFile << "0";
     *pFile << "),\n";  /* EBX, 2 */
-    *pFile << "\t\"c\" (" << sTimeout << "),\n"; /* ECX, 3 */
+    if (!bDefaultTimeout)
+	*pFile << "\t\"c\" (" << sTimeout << "),\n"; /* ECX, 3 */
     *pFile << "\t\"S\" (" << sObjName << "->lh.low),\n"; /* ESI */
     *pFile << "\t\"D\" (" << sObjName << "->lh.high)\n"; /* EDI */
     *pFile << "\t:\n";

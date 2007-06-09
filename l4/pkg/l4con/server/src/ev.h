@@ -5,7 +5,7 @@
  *
  * \date	2001
  * \author	Christian Helmuth <ch12@os.inf.tu-dresden.de>
- * 		Frank Mehnert <fm3@os.inf.tu-dresden.de> */
+ *		Frank Mehnert <fm3@os.inf.tu-dresden.de> */
 
 /* (c) 2003 'Technische Universitaet Dresden'
  * This file is part of the con package, which is distributed under
@@ -17,6 +17,7 @@
 
 extern int use_omega0;
 extern int nomouse;
+extern int noshift;
 
 void ev_init(void);
 

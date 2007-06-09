@@ -98,6 +98,22 @@ IMPLEMENTATION:
 #include "kdb_ke.h"
 #include "warn.h"
 
+PUBLIC
+virtual void
+Thread::ipc_receiver_aborted()
+{
+  assert(receiver());
+
+  sender_dequeue(receiver()->sender_list());
+  set_receiver(0);
+
+  if(!(state() & Thread_ipc_in_progress))
+    return;
+
+  state_add_dirty (Thread_ready);
+  ready_enqueue();
+}
+
 /** Receiver-ready callback.  
     Receivers make sure to call this function on waiting senders when
     they get ready to receive a message from that sender. Senders need
@@ -635,6 +651,7 @@ sys_ipc_wrapper()
   // If we return with a modified return address, we must not be interrupted
   //  Proc::cli();
 }
+
 
 extern "C"
 void
@@ -1486,8 +1503,12 @@ Thread::exception(Trap_state *ts)
   r.snd_desc(0);
   r.rcv_desc(L4_rcv_desc::short_fpage(L4_fpage::all_spaces()));
 
-  L4_msg_tag tag(L4_exception_ipc::Msg_size, 0, L4_msg_tag::Transfer_fpu, 
-      L4_msg_tag::Label_exception);
+  // clear regs
+  r.set_msg_word(0, 0);
+  r.set_msg_word(1, 0);
+
+  L4_msg_tag tag(L4_exception_ipc::Msg_size, 0, L4_msg_tag::Transfer_fpu,
+                 L4_msg_tag::Label_exception);
 
   Ipc_err ret (0);
 

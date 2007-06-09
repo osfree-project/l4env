@@ -12,47 +12,56 @@
 #define L4_SYSCALL_U_LOCK		(-0x00000024-L4_SYSCALL_MAGIC_OFFSET)
 
 L4_INLINE unsigned
-l4_usem_down_to(unsigned long lock, unsigned long *counter, 
-                l4_timeout_s timeout)
+l4_usem_down_to(unsigned long lock, l4_u_semaphore_t *sem, l4_timeout_s timeout)
 {
-  if (__builtin_expect(l4_atomic_add((long int*)counter, -1) >= 0, 1))
-    return 0;
+  do 
+    {
+      if (__builtin_expect(l4_atomic_add((long*)&(sem->counter), -1) >= 0, 1))
+	return 0;
 
-  register unsigned long _lock asm ("r1") = lock;
-  register unsigned long _timeout asm ("r3") = timeout.t;
-  register unsigned long res asm ("r0");
+      register unsigned long _lock asm ("r1") = lock;
+      register l4_u_semaphore_t *_counter asm ("r2") = sem;
+      register unsigned long _timeout asm ("r3") = timeout.t;
+      register unsigned long res asm ("r0");
 
-  __asm__ __volatile__
-    ("@ l4_u_lock (semaphore block) \n\t"
-     PIC_SAVE_ASM
-     "stmdb   sp!, {fp}    \n\t"
-     "mov     r0, #6       \n\t"
-     "mov     lr, pc       \n\t"
-     "mov     pc, %[sys]   \n\t"
-     "ldmia   sp!, {fp}    \n\t"
-     PIC_RESTORE_ASM
-     :
-     "=r"(_lock),
-     "=r"(_timeout),
-     "=r"(res)
-     :
-     "0"(_lock),
-     "1"(_timeout),
-     [sys] "i" (L4_SYSCALL_U_LOCK)
-     :
-     "r2", "r4", "r5", "r6", "r7", "r8", "r9" PIC_CLOBBER, "r12", "r14"
-     );
+      __asm__ __volatile__
+	("@ l4_u_lock (semaphore block) \n\t"
+	 PIC_SAVE_ASM
+	 "stmdb   sp!, {fp}    \n\t"
+	 "mov     r0, #6       \n\t"
+	 "mov     lr, pc       \n\t"
+	 "mov     pc, %[sys]   \n\t"
+	 "ldmia   sp!, {fp}    \n\t"
+	 PIC_RESTORE_ASM
+	 :
+	 "=r"(_lock),
+	 "=r"(_counter),
+	 "=r"(_timeout),
+	 "=r"(res)
+	 :
+	 "0"(_lock),
+	 "2"(_timeout),
+	 [sys] "i" (L4_SYSCALL_U_LOCK)
+	 :
+	 "r4", "r5", "r6", "r7", "r8", "r9" PIC_CLOBBER, "r12", "r14"
+	);
 
-  return res;
+      if (res != 1)
+	return res;
+    }
+  while (1);
 }
 
 L4_INLINE void
-l4_usem_up(unsigned long lock, unsigned long *counter)
+l4_usem_up(unsigned long lock, l4_u_semaphore_t *sem)
 {
-  if (__builtin_expect(l4_atomic_add((long int*)counter, 1) > 0, 1))
+  l4_atomic_add((long*)&(sem->counter), 1);
+
+  if (__builtin_expect(sem->flags == 0, 1))
     return;
 
   register unsigned long _lock asm ("r1") = lock;
+  register l4_u_semaphore_t *_counter asm ("r2") = sem;
 
   __asm__ __volatile__
     ("@ l4_u_lock (semaphore wake) \n\t"
@@ -64,12 +73,15 @@ l4_usem_up(unsigned long lock, unsigned long *counter)
      "ldmia   sp!, {fp}    \n\t"
      PIC_RESTORE_ASM
      :
-     "=r"(_lock)
+     "=r"(_lock),
+     "=r"(_counter)
      :
      [sys] "i" (L4_SYSCALL_U_LOCK),
-     "0"(_lock)
+     "0"(_lock),
+     "1"(_counter)
+
      :
-     "r0", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9" PIC_CLOBBER, "r12", 
+     "r0", "r3", "r4", "r5", "r6", "r7", "r8", "r9" PIC_CLOBBER, "r12", 
      "r14"
      );
 }

@@ -38,6 +38,9 @@
 #ifdef IPCMON
 #include <l4/ipcmon/ipcmon.h>
 #endif
+#ifdef USE_TASKLIB
+#include <l4/task/task_server.h>
+#endif
 
 #include "elf-loader.h"
 #include "fprov-if.h"
@@ -655,6 +658,9 @@ init_infopage(l4env_infopage_t *env)
   env->image_dm_id = app_image_dsm;
   env->text_dm_id  = app_text_dsm;
   env->data_dm_id  = app_data_dsm;
+#ifdef USE_TASKLIB
+  env->parent_id   = l4task_get_server();
+#endif
 
   env->ver_info.arch_class = ARCH_ELF_ARCH_CLASS;
   env->ver_info.arch_data  = ARCH_ELF_ARCH_DATA;
@@ -1678,7 +1684,7 @@ app_boot(cfg_task_t *ct, l4_taskid_t owner)
 
 /** Kill application.
  *
- * \param task_id	L4 task id or 0 to kill all tasks
+ * \param task_id	L4 task id
  * \return		0 on success
  *			-L4_ENOTFOUND if no proper task was not found */
 int

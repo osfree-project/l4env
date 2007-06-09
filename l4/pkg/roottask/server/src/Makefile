@@ -15,10 +15,11 @@ DEFAULT_RELOC_amd64	:= 0x00120000
 
 SRC_C_x86	= iomap.c
 SRC_C_amd64	= iomap.c
+SRC_C_TASKLIB-y = l4ts_if.c
 SRC_C		= rmgr.c quota.c names.c \
 		  memmap.c memmap_lock.c region.c irq.c small.c \
 		  vm.c pager.c task.c irq_thread.c \
-		  misc.c $(SRC_C_$(ARCH)) \
+		  misc.c $(SRC_C_TASKLIB-$(USE_TASKLIB)) $(SRC_C_$(ARCH)) \
 		  libc_support.c
 SRC_C_root_inits.o  = init.c lines.c symbols.c cfg-parse.c exec.c bootquota.c \
 		  boot_error.c module.c
@@ -29,7 +30,6 @@ CRT0 		=
 LDSCRIPT	= roottask.ld
 WARNINGS_cfg-parse.o = -Wno-unused -Wno-parentheses \
 		       -Wno-missing-prototypes -Wno-missing-declarations
-SERVERIDL	= rmgr.idl
 
 include $(L4DIR)/mk/prog.mk
 
@@ -52,6 +52,13 @@ LIBCLIBS        = -nostdlib $(GCCLDNOSTDLIB)                    \
 		  -luc_c $(GCCLIB) -luc_c -llist_alloc
 endif
 L4LIBS          = -lsigma0 -ll4sys
+
+ifeq ($(USE_TASKLIB), y)
+vpath generic_ts-server.c $(OBJ_BASE)/pkg/task/idl/OBJ-$(ARCH)-$(L4API)
+SERVERIDL	+= generic_ts.idl rmgr_task.idl
+else
+SERVERIDL	= rmgr.idl
+endif
 
 LDFLAGS := $(filter-out -Ttext, $(LDFLAGS))
 

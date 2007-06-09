@@ -42,6 +42,7 @@
 #include "BEMsgBuffer.h"
 #include "BENameFactory.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "Trace.h"
 #include "fe/FEOperation.h"
 #include "fe/FEInterface.h"
@@ -176,7 +177,7 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
         {
 	    exc +=" failed, because unmarshal function (" +
 		sFunctionName + ") could not be found.";
-             throw new CBECreateException(exc);
+             throw new error::create_error(exc);
         }
 	// set the call parameters: this is simple, since we use the same
 	// names and reference counts
@@ -197,7 +198,7 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
         {
 	    exc += " failed, because marshal function (" + sFunctionName +
 		") could not be found.";
-            throw new CBECreateException(exc);
+            throw new error::create_error(exc);
         }
         // set call parameters
 	for_each(m_Parameters.begin(), m_Parameters.end(),
@@ -214,7 +215,7 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
 	{
 	    exc += " failed, because marshal_exc function (" + sFunctionName +
 		") could not be found.";
-            throw new CBECreateException(exc);
+            throw new error::create_error(exc);
 	}
         // set call parameters
 	for_each(m_Parameters.begin(), m_Parameters.end(),
@@ -228,7 +229,7 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
     {
 	exc += " failed, because component function (" + sFunctionName +
 	    ") could not be found.";
-        throw new CBECreateException(exc);
+        throw new error::create_error(exc);
     }
     // set the call parameters: this is simple, since we use the same names
     // and reference counts

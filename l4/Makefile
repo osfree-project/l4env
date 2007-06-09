@@ -217,3 +217,85 @@ check_build_tools:
 	  echo -e "\033[1;31mProgram(s) \"$$mis\" not found, please install!\033[0m"; \
 	  exit 1;                                                  \
 	fi
+
+report:
+	@echo "============================================================="
+	@echo " Note, this report might disclose private information"
+	@echo " Please review (and edit) before sending it to public lists"
+	@echo "============================================================="
+	@echo
+	@echo "make -v:"
+	@make -v || true
+	@echo
+	@echo "CC: $(CC) -v:"
+	@$(CC) -v || true
+	@echo
+	@echo "CXX: $(CXX) -v:"
+	@$(CXX) -v || true
+	@echo
+	@echo "HOST_CC: $(HOST_CC) -v:"
+	@$(HOST_CC) -v || true
+	@echo
+	@echo "HOST_CXX: $(HOST_CXX) -v:"
+	@$(HOST_CXX) -v || true
+	@echo
+	@echo -n "ld: $(LD) -v: "
+	@$(LD) -v || true
+	@echo
+	@echo -n "perl -v:"
+	@perl -v || true
+	@echo
+	@echo -n "python -V: "
+	@python -V || true
+	@echo
+	@echo "svn --version: "
+	@svn --version || true
+	@echo
+	@echo "Shell is:"
+	@ls -la /bin/sh || true
+	@echo
+	@echo "uname -a: "; uname -a
+	@echo
+	@echo "Distriubtion"
+	@if [ -e "/etc/debian_version" ]; then    \
+	  echo -n "Debian: ";                     \
+	  cat /etc/debian_version;                \
+	elif [ -e /etc/gentoo-release ]; then     \
+	  echo -n "Gentoo: ";                     \
+	  cat /etc/gentoo-release;                \
+	fi
+	@lsb_release -a || true
+	@echo
+	@echo "Running as PID"
+	@id -u || true
+	@echo
+	@echo "Archive information:"
+	@svn info || true
+	@echo
+	@echo "CC       = $(CC)"
+	@echo "CXX      = $(CXX)"
+	@echo "HOST_CC  = $(HOST_CC)"
+	@echo "HOST_CXX = $(HOST_CXX)"
+	@echo "LD       = $(LD)"
+	@echo "Paths"
+	@echo "Current:   $$(pwd)"
+	@echo "L4DIR:     $(L4DIR)"
+	@echo "L4DIR_ABS: $(L4DIR_ABS)"
+	@echo "OBJ_BASE:  $(OBJ_BASE)"
+	@echo "OBJ_DIR:   $(OBJ_DIR)"
+	@echo
+	@for i in pkg \
+	          ../kernel/fiasco/src/kern/ia32 \
+		  ../dice/src \
+	          ../tools/preprocess/src/preprocess; do \
+	  if [ -e $$i ]; then \
+	    echo Path $$i found ; \
+	  else                \
+	    echo PATH $$i IS NOT AVAILABLE; \
+	  fi \
+	done
+	@echo
+	@echo "============================================================="
+	@echo " Note, this report might disclose private information"
+	@echo " Please review (and edit) before sending it to public lists"
+	@echo "============================================================="

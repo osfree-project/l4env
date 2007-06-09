@@ -47,6 +47,7 @@
 #include "BENameFactory.h"
 #include "BESizes.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "Messages.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
@@ -1463,14 +1464,14 @@ CBEMsgBuffer::PostCreate(CBEFunction *pFunction,
     {
 	exc += " failed, because generic struct could not be added for";
 	exc += " function " + pFunction->GetName() + ".";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s calling Pad for func %s\n",
 	__func__, pFunction->GetName().c_str());
     if (!Pad())
     {
 	exc += " failed, because could not pad message buffer.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 }
 
@@ -1488,14 +1489,14 @@ CBEMsgBuffer::PostCreate(CBEClass *pClass,
     {
 	exc += " failed, because generic struct could not be added for";
 	exc += " class " + pClass->GetName() + ".";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s calling Pad for class %s\n",
 	__func__, pClass->GetName().c_str());
     if (!Pad())
     {
 	exc += " failed, because could not pad message buffer.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 }
 
@@ -1783,8 +1784,8 @@ CBEMsgBuffer::GetMemberSize(int nType)
 	 iterS != pType->m_UnionCases.end();
 	 iterS++)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: %d. union (%s)\n", __func__,
-	    ++c, typeid(*(*iterS)).name());
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: %d. union\n", __func__,
+	    ++c);
 	CBEStructType *pStruct = dynamic_cast<CBEStructType*>((*iterS)->GetType());
 	if (!pStruct)
 	    continue;

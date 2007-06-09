@@ -40,7 +40,9 @@
 #include <cerrno>
 #include <cassert>
 #include <iostream>
-using std::ofstream;
+#include <climits>
+#include <cstdlib>
+#include <cstring>
 
 /** defines the number of characters for dependency output per line */
 #define MAX_SHELL_COLS 80
@@ -65,7 +67,7 @@ void CDependency::PrintDependencies()
 {
     assert (m_pRootBE);
 
-    ofstream *of = new ofstream();
+    std::ofstream *of = new std::ofstream();
     // if file, open file
     if (CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MD) || 
 	CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MMD) ||

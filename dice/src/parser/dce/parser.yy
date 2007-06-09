@@ -41,7 +41,7 @@
 #include <string>
 #include <cassert>
 
-void dceerror(char *);
+void dceerror(const char *);
 void dceerror2(const char *fmt, ...);
 void dcewarning(const char *fmt, ...);
 
@@ -3657,7 +3657,7 @@ attribute:
 %%
 
 void
-dceerror(char* s)
+dceerror(const char* s)
 {
     // ignore this functions -> it's called by bison code, which is not controlled by us
     nParseErrorDCE = 1;

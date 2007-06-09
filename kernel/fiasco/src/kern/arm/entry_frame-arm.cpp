@@ -367,6 +367,10 @@ IMPLEMENT inline
 L4_timeout Sys_u_lock_frame::timeout() const
 { return L4_timeout(r[3]); }
 
+IMPLEMENT inline
+L4_semaphore *Sys_u_lock_frame::semaphore() const
+{ return (L4_semaphore*)r[2]; }
+
 //Sys_thread_schedule_frame::------------------------------------------------
 IMPLEMENT inline
 Unsigned64 Sys_thread_schedule_frame::time() const

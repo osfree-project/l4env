@@ -97,7 +97,7 @@ public: // public methods
     virtual int GetMemberPosition(string sName, CMsgStructType nType);
 
     virtual int GetMemberSize(int nType, CBEFunction *pFunction, 
-	CMsgStructType nType, bool bMax);
+	CMsgStructType nStructType, bool bMax);
     virtual int GetMemberSize(int nType);
 
     virtual bool IsEarlier(CBEFunction *pFunction, CMsgStructType nType, 

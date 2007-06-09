@@ -40,6 +40,7 @@
 #include "BEMarshaller.h"
 #include "BESizes.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "fe/FEOperation.h"
@@ -60,8 +61,7 @@ CBEWaitFunction::CBEWaitFunction(CBEWaitFunction & src)
 
 /** \brief destructor of target class */
 CBEWaitFunction::~CBEWaitFunction()
-{
-}
+{ }
 
 /** \brief writes the variable initializations of this function
  *  \param pFile the file to write to
@@ -425,7 +425,7 @@ CBEWaitFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     {
 	string exc = string(__func__);
 	exc += " failed, because return variable could not be added to message buffer.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 }
 

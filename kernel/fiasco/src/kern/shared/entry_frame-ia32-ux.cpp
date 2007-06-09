@@ -229,9 +229,14 @@ void Sys_u_lock_frame::result(unsigned long res)
 { _eax = res; }
 
 IMPLEMENT inline
-L4_timeout 
+L4_timeout
 Sys_u_lock_frame::timeout() const
 { return L4_timeout(_ecx); }
+
+IMPLEMENT inline
+L4_semaphore *
+Sys_u_lock_frame::semaphore() const
+{ return (L4_semaphore *)_esi; }
 
 //////////////////////////////////////////////////////////////////////
 

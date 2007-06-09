@@ -27,7 +27,7 @@ l4ts_free_task(const l4_taskid_t *taskid)
 {
   CORBA_Environment _env = dice_default_environment;
   int error;
-  l4_taskid_t ret;
+//  l4_taskid_t ret;
 
   if (!l4ts_connected())
     return -L4_ENOTFOUND;

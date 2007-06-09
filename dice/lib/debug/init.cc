@@ -7,10 +7,6 @@
 
 #include "Compiler.h"
 
-extern "C" {
-void *__dso_handle __attribute__ ((weak));
-}
-
 /* for Dice includes be sure to set the correct include path in your Makefile
  * ($(DICEDIR)/src).
  */

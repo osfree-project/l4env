@@ -83,3 +83,9 @@ l4env_get_default_dsm(void)
 {
   return global_env->memserv_id;
 }
+
+l4_threadid_t
+l4env_get_parent(void)
+{
+  return global_env->parent_id;
+}

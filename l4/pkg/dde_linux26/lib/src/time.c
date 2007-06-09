@@ -521,7 +521,8 @@ static void run_timer_softirq(void)
 static void dde_timer_thread(void)
 {
   l4_timeout_t to;
-  int err, to_e, to_m, to_us;
+  l4_timeout_s to_send;
+	int to_us;
 
   timer_tid = l4thread_myself();
 
@@ -532,12 +533,8 @@ static void dde_timer_thread(void)
        l4util_idstr(l4thread_l4_id(l4thread_myself())));
 
   to_us = 1000000 / HZ;
-  if ((err = l4util_micros2l4to(to_us, &to_e, &to_m)))
-    {
-      Panic("error on timeout calculation (us = %d)", to_us);
-      goto ret;
-    }
-  to = L4_IPC_TIMEOUT(0, 0, to_m, to_e, 0, 0);
+  to_send =  l4util_micros2l4to(to_us);
+	to = l4_timeout(L4_IPC_TIMEOUT_NEVER, to_send);
 
   /* timer loop */
   while (1)

@@ -38,6 +38,7 @@
 #include "BEClass.h"
 #include "BEMarshaller.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "fe/FEOperation.h"
 #include "fe/FETypedDeclarator.h"
 #include "TypeSpec-Type.h"
@@ -142,7 +143,7 @@ CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     {
 	string exc = string(__func__);
 	exc += " failed, because return variable could not be added to message buffer.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }

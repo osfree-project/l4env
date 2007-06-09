@@ -39,6 +39,7 @@
 #include "BEAttribute.h"
 #include "TypeSpec-Type.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "fe/FEInterface.h"
 #include "fe/FEStringAttribute.h"
 #include "fe/FEOperation.h"
@@ -47,8 +48,7 @@
 CBEDispatchFunction::CBEDispatchFunction()
 : CBEInterfaceFunction(FUNCTION_DISPATCH),
   m_SwitchCases(0, this)
-{
-}
+{ }
 
 CBEDispatchFunction::CBEDispatchFunction(CBEDispatchFunction & src)
 : CBEInterfaceFunction(src),
@@ -116,7 +116,7 @@ CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface)
     {
         delete pReplyType;
 	exc += " failed because return var could not be set.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     // set initializer of reply variable
     CBETypedDeclarator *pReturn = GetReturnVariable();

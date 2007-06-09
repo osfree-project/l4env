@@ -46,6 +46,7 @@
 #include "fe/FEOperation.h"
 #include <iostream>
 #include <cassert>
+#include <cstring>
 
 CBEHeaderFile::CBEHeaderFile()
 : m_Constants(0, (CObject*)0),

@@ -628,9 +628,14 @@ Thread::kill()
 
   // if other threads want to send me IPC messages, abort these
   // operations
-
-  // XXX that's quite difficult: how to traverse a list that may
-  // change at all times?
+  {
+    Lock_guard <Cpu_lock> guard (&cpu_lock);
+    while (Sender *s = Sender::cast(sender_list()->head()))
+      {
+	s->ipc_receiver_aborted();
+	Proc::preemption_point();
+      }
+  }
 
   // if engaged in IPC operation, stop it
   if (receiver())
@@ -1037,6 +1042,11 @@ Thread::ex_regs_permission_inter_task(Sys_ex_regs_frame *regs,
   return true;			// success
 }
 
+
+PUBLIC inline
+void
+Thread::recover_jmp_buf(jmp_buf *b)
+{ _recover_jmpbuf = b; }
 
 //---------------------------------------------------------------------------
 IMPLEMENTATION [!log]:

@@ -285,6 +285,10 @@ ifeq ($(RELEASE_MODE),y)
 DEFINES		+= -DL4BID_RELEASE_MODE
 endif
 
+ifeq ($(USE_TASKLIB),y)
+DEFINES		+= -DUSE_TASKLIB=y
+endif
+
 ifneq ($(filter linux l4linux host,$(MODE)),)
 HOST_LINK      := 1
 endif

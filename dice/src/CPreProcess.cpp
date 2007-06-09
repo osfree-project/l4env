@@ -44,6 +44,8 @@
 #include "fe/FEFile.h"
 #include <iostream>
 #include <cassert>
+#include <climits>
+#include <cstdlib>
 
 //@{
 /** globale pre-processor variables and function */
@@ -667,8 +669,8 @@ string CPreProcess::FindPathToFile(string sFilename, unsigned int nLineNb)
 		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		    "%s comparing path to %s\n", __func__, s.c_str());
 
-		if (sPath == s);
-		    return sPath;
+		if (sPath == s)
+		  return sPath;
 	    }
         }
     }

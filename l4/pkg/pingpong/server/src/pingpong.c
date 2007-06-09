@@ -60,6 +60,7 @@ int use_superpages;
 int callmode;
 int deceit;
 int cold;
+int pager_always_map_writable;
 int ux_running;
 int fiasco_running;
 
@@ -541,7 +542,7 @@ pager(void)
 			  pfa, eip, l4util_idstr(src));
 		  enter_kdebug("stop");
 		}
-	  if (pfa & 2)
+	  if (pfa & 2 || pager_always_map_writable)
 	    fp |= 2;
 
 	  l4_ipc_reply_and_wait(src,L4_IPC_SHORT_FPAGE,snd_base,fp,
@@ -1382,6 +1383,63 @@ bench_utcb_ipc(int nr)
   BENCH_END;
 }
 
+/* Test syscall performannce */
+static void
+bench_syscalls(int nr)
+{
+  ping_id = intra_ping;
+
+  print_testname("id_neareast", nr, SINGLE, 1);
+
+  for (callmode=0; callmode<3; callmode += 2)
+    {
+      if (callmode == 2 && dont_do_kipcalls)
+	continue;
+
+      BENCH_BEGIN;
+
+      if (callmode == 0)
+        create_ping_thread(int30_syscall_id_nearest_thread);
+      else
+        create_ping_thread(kipcalls_syscall_id_nearest_thread);
+
+      /* wait for measurement to be finished */
+      recv_ping_timeout(timeout_50s);
+      /* give ping thread time to go to bed */
+      send(ping_id);
+
+
+      BENCH_END;
+    }
+
+  print_testname("task_new", nr, SINGLE, 1);
+
+  for (callmode = 0; callmode < 3; callmode++)
+    {
+      if (callmode == 1 && dont_do_sysenter)
+        continue;
+      if (callmode == 2 && dont_do_kipcalls)
+	continue;
+
+      BENCH_BEGIN;
+
+      if (callmode == 0)
+	create_ping_thread(int30_syscall_task_new_thread);
+      else if (callmode == 1)
+	create_ping_thread(sysenter_syscall_task_new_thread);
+      else
+	create_ping_thread(kipcalls_syscall_task_new_thread);
+
+      /* wait for measurement to be finished */
+      recv_ping_timeout(timeout_50s);
+      /* give ping thread time to go to bed */
+      send(ping_id);
+
+      BENCH_END;
+    }
+}
+
+
 static void
 test_rdtsc(void)
 {
@@ -1552,6 +1610,7 @@ main(int argc, const char **argv)
       { "compare fast sysenter IPC",        bench_short_compare,      1, '9' },
       { "short IPC inter / don't switch",   bench_short_dc_interAS,   1, 'd' },
       { "IPC using UTCB",                   bench_utcb_ipc,           1, 'u' },
+      { "syscalls",                         bench_syscalls,           1, 'l' },
       { "measure specific instructions",    test_instruction_cycles,  1, 'c' },
 //    { "measure costs of TLB/Cache",       test_cache_tlb,           1, 't' },
       { "memory bandwidth (memcpy)",        test_memory_bandwidth,    1, 'm' },

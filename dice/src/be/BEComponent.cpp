@@ -39,6 +39,7 @@
 #include "be/BERoot.h"
 #include "be/BENameSpace.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
@@ -46,20 +47,16 @@
 #include <cassert>
 
 CBEComponent::CBEComponent()
-{
-}
+{ }
 
 CBEComponent::CBEComponent(CBEComponent & src)
-: CBETarget(src)
-{
-}
+ : CBETarget(src)
+{ }
 
 /** \brief destructor
  */
 CBEComponent::~CBEComponent()
-{
-
-}
+{ }
 
 /** \brief writes the output
  *
@@ -174,7 +171,7 @@ CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile)
     {
 	exc += " failed, because could not find header file for " +
 	    pFEFile->GetFileName();
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     // the implementation files are created on a per IDL file basis, no matter
     // which option is set

@@ -45,7 +45,6 @@
 #include <l4/util/thread.h>	/* attach_interrupt() */
 #include <l4/thread/thread.h>
 #include <l4/lock/lock.h>
-
 #include <l4/dde_linux/dde.h>
 
 /* Linux */
@@ -70,7 +69,7 @@ static struct irq_desc handlers[NR_IRQS];
 
 /** Usage flag.
  * If 1 use Omega0 and if 0 use RMGR for interrupts. */
-static int use_omega0 = 0;
+static int use_omega0 = 1;
 
 static int _initialized = 0;	/**< initialization flag */
 
@@ -277,7 +276,7 @@ static void dde_irq_thread(struct irq_desc *irq_desc)
 	{
 	  error = l4_ipc_receive(irq_id,
 				      L4_IPC_SHORT_MSG, &dw0, &dw1,
-				      L4_IPC_TIMEOUT(0, 0, 1, 15, 0, 0), &result);
+				      l4_ipc_timeout(0, 0, 1, 0), &result);
 	  if (error == L4_IPC_RETIMEOUT)
 	    break;
 	}
@@ -813,14 +812,12 @@ int probe_irq_off(unsigned long val)
  * \return 0 on success; negative error code otherwise
  */
 /*****************************************************************************/
-int l4dde_irq_init(int omega0)
+int l4dde_irq_init()
 {
   int i;
 
   if (_initialized)
     return -L4_ESKIPPED;
-
-  use_omega0 = omega0;
 
   memset(&handlers, 0, sizeof(handlers));
   for (i=0; i<NR_IRQS;i++) {

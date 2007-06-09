@@ -81,6 +81,7 @@
 #include "fe/FEFile.h"
 
 #include "Compiler.h"
+#include "Error.h"
 #include "Messages.h"
 
 #include <string>
@@ -360,7 +361,7 @@ CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
     if (!m_pMsgBuffer->AddPlatformSpecificMembers(this))
     {
 	exc += " failed because platform specific members caused problems.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
@@ -374,7 +375,7 @@ CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
     if (!m_pMsgBuffer->Sort(this))
     {
 	exc += " failed, because Sort failed.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass:%s MB sorted\n",
@@ -538,7 +539,7 @@ CBEClass::CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl)
     if (!pFEAttrDecl)
     {
 	exc += " failed because attribute declarator is 0";
-        throw new CBECreateException(exc);
+        throw new error::create_error(exc);
     }
     
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(attr-decl) called\n",

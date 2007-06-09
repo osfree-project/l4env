@@ -37,7 +37,7 @@
 
 #include "fe/FEFileComponent.h"
 
-void gcc_cxxerror(char *);
+void gcc_cxxerror(const char *);
 #include "parser.h"
 int gcc_cxxlex(YYSTYPE*);
 
@@ -1689,7 +1689,7 @@ type_qualifier:
 
 %%
 
-void gcc_cxxerror(char* s)
+void gcc_cxxerror(const char* s)
 {
     printf("Error: %s\n", s);
 }

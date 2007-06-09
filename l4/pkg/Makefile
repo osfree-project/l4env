@@ -113,6 +113,13 @@ loader.lib:	dietlibc.lib
 L4ENV_SUBDIRS += dietlibc dietlibc_r
 endif
 
+ifeq ($(USE_TASKLIB),y)
+roottask.headers:	task.headers
+roottask.lib:		task.lib
+loader.lib:		task.lib
+L4ENV_SUBDIRS += task
+endif
+
 ifeq ($(BUILD_ARCH_arm),y)
 L4ENV_SUBDIRS += arm_drivers
 endif

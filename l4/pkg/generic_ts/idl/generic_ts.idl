@@ -14,7 +14,7 @@ import <l4/sys/types.h>
 library l4
 {
   /** generic task server interface */
-  [error_function(dice_server_error)]
+  [error_function_server(dice_server_error)]
   interface ts
     {
       /** Allocate a new task id. Returns -L4_ENOTASK if no task is available.

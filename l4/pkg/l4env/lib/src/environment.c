@@ -256,3 +256,21 @@ l4env_get_default_dsm(void)
   /* return dataspace manager id */
   return dsm_id;
 }
+
+/*****************************************************************************/
+/**
+ * \brief  Return parent ID
+ *
+ * \return parent ID or L4_NIL_ID
+ */
+/*****************************************************************************/
+l4_threadid_t
+l4env_get_parent(void)
+{
+  l4env_infopage_t *infopage = l4env_get_infopage();
+
+  if (infopage && !l4_is_nil_id(infopage->parent_id))
+    return infopage->parent_id;
+
+  return L4_NIL_ID;
+}

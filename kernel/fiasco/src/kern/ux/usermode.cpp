@@ -258,6 +258,7 @@ Usermode::kip_syscall (Address eip)
     return 0;
 
   Mword trap = 0x30 + (eip - Mem_layout::Syscalls >> 8);
+  if (trap == 0x38) trap = 0x39;
 
   return Emulation::idt_vector (trap, true) ? trap : 0;
 }

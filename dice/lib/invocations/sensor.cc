@@ -25,6 +25,8 @@ void Sensor::DefaultIncludes(CBEFile *pFile)
     *pFile << "#include <l4/util/l4_macros.h>\n";
     *pFile << "#include <l4/util/util.h>\n";
     *pFile << "#include <stdio.h>\n";
+    *pFile << "\tstatic unsigned long _trace_loop[0x9][0x20][0x20][0x20];\n";
+    *pFile << "\tstatic unsigned long _trace_loop_diff[0x9][0x20][0x20][0x20];\n";
 }
 
 void Sensor::VariableDeclaration(CBEFile *pFile, CBEFunction *pFunction)
@@ -32,26 +34,45 @@ void Sensor::VariableDeclaration(CBEFile *pFile, CBEFunction *pFunction)
     if (!dynamic_cast<CBESrvLoopFunction*>(pFunction))
 	return;
 
-    *pFile << "\tunsigned long _trace_loop[0x9][0x20];\n";
-    *pFile << "\tunsigned long _trace_loop_diff[0x9][0x20];\n";
-    *pFile << "\tunsigned long _trace_i = 0;\n";
+    *pFile << "\tunsigned long _trace_i = 0, _trace_c = 0;\n";
 }
     
 void Sensor::InitServer(CBEFile *pFile, CBEFunction *pFunction)
 {
     *pFile << "\t{\n";
     pFile->IncIndent();
-    *pFile << "\tint _j, _k;\n";
-    *pFile << "\tfor (_k=0; _k<0x9; _k++)\n";
-    pFile->IncIndent();
-    *pFile << "\tfor (_j=0; _j<0x20; _j++)\n";
+    *pFile << "\tint i, op, ta, th;\n";
+
+    *pFile << "\tfor (i=0; i<0x9; i++)\n";
     *pFile << "\t{\n";
     pFile->IncIndent();
-    *pFile << "\t_trace_loop[_k][_j] = 0;\n";
-    *pFile << "\t_trace_loop_diff[_k][_j] = 0;\n";
+
+    *pFile << "\tfor (op=0; op<0x20; op++)\n";
+    *pFile << "\t{\n";
+    pFile->IncIndent();
+
+    *pFile << "\tfor (ta=0; ta<0x20; ta++)\n";
+    *pFile << "\t{\n";
+    pFile->IncIndent();
+
+    *pFile << "\tfor (th=0; th<0x20; th++)\n";
+    *pFile << "\t{\n";
+    pFile->IncIndent();
+
+    *pFile << "\t_trace_loop[i][op][ta][th] = 0;\n";
+    *pFile << "\t_trace_loop_diff[i][op][ta][th] = 0;\n";
     pFile->DecIndent();
     *pFile << "\t}\n";
+
     pFile->DecIndent();
+    *pFile << "\t}\n";
+
+    pFile->DecIndent();
+    *pFile << "\t}\n";
+
+    pFile->DecIndent();
+    *pFile << "\t}\n";
+
     pFile->DecIndent();
     *pFile << "\t}\n";
 }
@@ -107,11 +128,11 @@ void Sensor::BeforeDispatch(CBEFile *pFile, CBEFunction *pFunction)
 
     *pFile << "\tif (op < 0x20 && i < 0x9)\n";
     pFile->IncIndent();
-    *pFile << "\t_trace_loop_diff[i][op]++;\n";
+    *pFile << "\t_trace_loop_diff[i][op][" << sObj << "->id.task & 0x1f][" << sObj << "->id.lthread]++;\n";
     pFile->DecIndent();
     *pFile << "\telse\n";
     pFile->IncIndent();
-    *pFile << "\t_trace_loop_diff[0][0]++;\n";
+    *pFile << "\t_trace_loop_diff[0][0][0][0]++;\n";
     pFile->DecIndent();
     *pFile << "\tif (_trace_i) _trace_i++;\n";
     
@@ -131,37 +152,79 @@ void Sensor::BeforeDispatch(CBEFile *pFile, CBEFunction *pFunction)
     *pFile << "\t{\n";
     pFile->IncIndent();
 
-    *pFile << "\tint _j, _k, _diff = 0;\n";
-    *pFile << "\tfor (_k=0; _k<0x9; _k++)\n";
+    *pFile << "\tint i, op, ta, th, _diff = 0;\n";
+    *pFile << "\tfor (i=0; i<0x9; i++)\n";
     pFile->IncIndent();
-    *pFile << "\tfor (_j=0; _j<0x20; _j++)\n";
+    *pFile << "\tfor (op=0; op<0x20; op++)\n";
     pFile->IncIndent();
-    *pFile << "\tif (_trace_loop_diff[_k][_j])\n";
+    *pFile << "\tfor (ta=0; ta<0x20; ta++)\n";
+    pFile->IncIndent();
+    *pFile << "\tfor (th=0; th<0x20; th++)\n";
+    pFile->IncIndent();
+    *pFile << "\tif (_trace_loop_diff[i][op][ta][th])\n";
     *pFile << "\t{\n";
     pFile->IncIndent();
 
-    *pFile << "\t_trace_loop[_k][_j] += _trace_loop_diff[_k][_j];\n";
-    *pFile << "\t_diff += _trace_loop_diff[_k][_j];\n";
-    *pFile << "\t_trace_loop_diff[_k][_j] = 0;\n";
+    *pFile << "\t_trace_loop[i][op][ta][th] += _trace_loop_diff[i][op][ta][th];\n";
+    *pFile << "\t_diff += _trace_loop_diff[i][op][ta][th];\n";
     pFile->DecIndent();
     *pFile << "\t}\n";
     pFile->DecIndent();
     pFile->DecIndent();
+    pFile->DecIndent();
+    pFile->DecIndent();
 
     *pFile << "\tif (_diff)\n";
+    *pFile << "\t{\n";
     pFile->IncIndent();
-    *pFile << "\tfor (_k=0; _k<0x9; _k++)\n";
+    *pFile << "\tfor (i=0; i<0x9; i++)\n";
     pFile->IncIndent();
-    *pFile << "\tfor (_j=0; _j<0x20; _j++)\n";
+    *pFile << "\tfor (op=0; op<0x20; op++)\n";
     pFile->IncIndent();
-    *pFile << "\tif (_trace_loop[_k][_j])\n";
+    *pFile << "\tfor (ta=0; ta<0x20; ta++)\n";
+    pFile->IncIndent();
+    *pFile << "\tfor (th=0; th<0x20; th++)\n";
+    *pFile << "\t{\n";
+    pFile->IncIndent();
+
+    *pFile << "\tif (_trace_c == 10)\n";
+    *pFile << "\t{\n";
+    pFile->IncIndent();
+    *pFile << "\tif (_trace_loop[i][op][ta][th])\n";
     pFile->IncIndent();
     *pFile << "\t" << sFunc << " (\"" << pClass->GetName() << 
-	" %02x %06x in \"l4util_idfmt\" %ld\\n\", _k, _j, "
-	<< "l4util_idstr(l4_myself()), _trace_loop[_k][_j]);\n";
+	" %02x %06x in \"l4util_idfmt\" from %x.%x sum %ld\\n\", i, op, "
+	<< "l4util_idstr(l4_myself()), ta, th, _trace_loop[i][op][ta][th]);\n";
+    pFile->DecIndent();
+    pFile->DecIndent();
+    *pFile << "\t} else {\n";
+    pFile->IncIndent();
+    *pFile << "\tif (_trace_loop_diff[i][op][ta][th])\n";
+    pFile->IncIndent();
+    *pFile << "\t" << sFunc << " (\"" << pClass->GetName() << 
+	" %02x %06x in \"l4util_idfmt\" from %x.%x diff %ld\\n\", i, op, "
+	<< "l4util_idstr(l4_myself()), ta, th, _trace_loop_diff[i][op][ta][th]);\n";
+    pFile->DecIndent();
+    *pFile << "\t_trace_loop_diff[i][op][ta][th] = 0;\n";
+    pFile->DecIndent();
+    *pFile << "\t}\n";
+
+    pFile->DecIndent();
+    *pFile << "\t}\n";
+
     pFile->DecIndent();
     pFile->DecIndent();
     pFile->DecIndent();
+    *pFile << "\tif (_trace_c == 10)\n";
+    pFile->IncIndent();
+    *pFile << "\t_trace_c = 0;\n";
+    pFile->DecIndent();
+    *pFile << "\telse\n";
+    pFile->IncIndent();
+    *pFile << "\t_trace_c++;\n";
+    pFile->DecIndent();
+    pFile->DecIndent();
+    *pFile << "\t}\n";
 
 //     pFile->DecIndent();
     *pFile << "\tif (_trace_i) _trace_i = 1; else _trace_i = 0;\n";

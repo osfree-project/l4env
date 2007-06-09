@@ -8,6 +8,16 @@ IMPLEMENTATION:
 #include "thread_lock.h"
 #include "lock_guard.h"
 
+PUBLIC
+virtual void
+Irq::ipc_receiver_aborted()
+{
+  assert(receiver());
+
+  sender_dequeue(receiver()->sender_list());
+  set_receiver(0);
+}
+
 /** Sender-activation function called when receiver gets ready.
     Irq::hit() actually ensures that this method is always called
     when an interrupt occurs, even when the receiver was already
@@ -22,8 +32,11 @@ Irq::ipc_receiver_ready(Receiver *)
   assert(_queued);
   assert(current()->state() & Thread_ready);
 
-  Lock_guard <Thread_lock> guard(_irq_thread->thread_lock());
+  Lock_guard <Thread_lock> guard;
+
   // possible preemption point
+  if (guard.lock(_irq_thread->thread_lock()) == Thread_lock::Invalid)
+    return false;
 
   if(!_irq_thread->sender_ok(this))
     return true;

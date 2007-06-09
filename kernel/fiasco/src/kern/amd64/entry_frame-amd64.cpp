@@ -579,6 +579,10 @@ IMPLEMENT inline
 L4_timeout Sys_u_lock_frame::timeout() const
 { return L4_timeout(_rdi); }
 
+IMPLEMENT inline
+L4_semaphore *Sys_u_lock_frame::semaphore() const
+{ return (L4_semaphore*)_rcx; }
+
 
 IMPLEMENTATION[pl0_hack]:
 

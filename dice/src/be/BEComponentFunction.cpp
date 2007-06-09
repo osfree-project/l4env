@@ -42,6 +42,7 @@
 #include "BEReplyCodeType.h"
 #include "BEAttribute.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "Attribute-Type.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEOperation.h"
@@ -51,7 +52,7 @@
 #include <cassert>
 
 CBEComponentFunction::CBEComponentFunction()
-    : CBEOperationFunction(FUNCTION_TEMPLATE)
+ : CBEOperationFunction(FUNCTION_TEMPLATE)
 {
     m_pFunction = 0;
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
@@ -61,7 +62,7 @@ CBEComponentFunction::CBEComponentFunction()
 }
 
 CBEComponentFunction::CBEComponentFunction(CBEComponentFunction & src)
-: CBEOperationFunction(src)
+ : CBEOperationFunction(src)
 {
     m_pFunction = 0;
     m_nSkipParameter = src.m_nSkipParameter;
@@ -69,8 +70,7 @@ CBEComponentFunction::CBEComponentFunction(CBEComponentFunction & src)
 
 /** \brief destructor of target class */
 CBEComponentFunction::~CBEComponentFunction()
-{
-}
+{ }
 
 /** \brief creates the call function
  *  \param pFEOperation the front-end operation used as reference
@@ -108,7 +108,7 @@ CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation)
     {
 	exc += " failed because component's function (" + sFunctionName +
 	    ") could not be found.";
-        throw new CBECreateException(exc);
+        throw new error::create_error(exc);
     }
 
     // the return value "belongs" to the client function (needed to determine

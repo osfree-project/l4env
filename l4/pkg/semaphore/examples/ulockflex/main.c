@@ -45,8 +45,8 @@ static void work(void)
 }
 
 typedef struct {
-    long int thread_nb;
-    long int lock_nb;
+    l4_umword_t thread_nb;
+    l4_umword_t lock_nb;
 } thread_data_t;
 
 static void worker_thread(void* param)

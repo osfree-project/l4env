@@ -16,24 +16,26 @@
 
 
 L4_INLINE unsigned
-l4_usem_down_to(unsigned long lock, unsigned long *counter, 
-                l4_timeout_s timeout)
+l4_usem_down_to(unsigned long lock, l4_u_semaphore_t *sem, l4_timeout_s timeout)
 {
   register unsigned long _lock asm ("rdx") = lock;
-  register unsigned long *_counter asm ("rcx") = counter;
+  register l4_u_semaphore_t *_counter asm ("rcx") = sem;
   register unsigned long _timeout asm ("rdi") = timeout.t;
   unsigned long res;
 
   __asm__ __volatile__(
-	"decq 0(%%rcx)		\n\t"
-	"jge  2f		\n\t"
+        "1: xor %%rax, %%rax	\n\t"
+	"   decq 0(%%rcx)	\n\t"
+	"   jge  2f		\n\t"
 	PIC_ASM_SAVE
-	"push %%rbp		\n\t"	/* save ebp, no memory references
-					 ("m") after this point */
-	"mov $6, %%rax		\n\t"
+	"   push %%rbp		\n\t"	/* save ebp, no memory references
+				 ("m") after this point */
+	"   mov $6, %%rax	\n\t"
 	L4_SYSCALL(ulock)
-	"pop	 %%rbp		\n\t"	/* restore ebp, no memory references
+	"   pop	 %%rbp		\n\t"	/* restore ebp, no memory references
 					 ("m") before this point */
+	"   cmpq $1, %%rax	\n\t"
+	"   je 1b		\n\t"
 	PIC_ASM_RESTORE
 	"2:			\n\t"
        :
@@ -53,14 +55,15 @@ l4_usem_down_to(unsigned long lock, unsigned long *counter,
 }
 
 L4_INLINE void
-l4_usem_up(unsigned long lock, unsigned long *counter)
+l4_usem_up(unsigned long lock, l4_u_semaphore_t *sem)
 {
   register unsigned long _lock asm ("rdx") = lock;
-  register unsigned long *_counter asm ("rcx") = counter;
+  register l4_u_semaphore_t *_counter asm ("rcx") = sem;
 
   __asm__ __volatile__(
 	"incq 0(%%rcx)		\n\t"
-	"jg   2f		\n\t"
+	"testb $1, 8(%%rcx)	\n\t"
+	"jz   2f		\n\t"
 	PIC_ASM_SAVE
 	"push %%rbp		\n\t"	/* save ebp, no memory references
 					 ("m") after this point */

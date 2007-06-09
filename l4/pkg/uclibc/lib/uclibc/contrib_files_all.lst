@@ -59,6 +59,7 @@ include/net/route.h
 include/netinet/ether.h
 include/netinet/if_ether.h
 include/netinet/in.h
+include/netinet/ip.h
 include/netinet/tcp.h
 include/rpc/netdb.h
 include/sys/bitypes.h

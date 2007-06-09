@@ -19,6 +19,7 @@ src-$(CONFIG_ORE_EEPRO100) += e100.c
 src-$(CONFIG_ORE_RTL8139) += 8139too.c
 src-$(CONFIG_ORE_RTL8139CP) += 8139cp.c
 src-$(CONFIG_ORE_PCNET32) += pcnet32.c
+src-$(CONFIG_ORE_SKGE) += skge.c
 
 SRC_C = loopback.c $(src-y)
 

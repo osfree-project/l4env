@@ -807,6 +807,9 @@ IMPLEMENTATION [ulock]:
 #include "u_semaphore.h"
 #include "obj_ref_ptr.h"
 
+KIP_KERNEL_FEATURE("ulock");
+KIP_KERNEL_FEATURE("usemaphore");
+
 PRIVATE inline NOEXPORT
 void 
 Syscalls::sys_u_lock(Sys_u_lock_frame *regs)
@@ -904,14 +907,18 @@ Syscalls::sys_u_semaphore(Sys_u_lock_frame *regs)
     }
 
   //printf ("  do it (%p)\n", l);
+  unsigned long res;
   
   switch (regs->op())
     {
     case Sys_u_lock_frame::Sem_sleep:
-      regs->result(l->block_locked(regs->timeout()));
+      //LOG_MSG_3VAL(this, "USBLOCK", regs->timeout().raw(), 0, 0);
+      regs->result(res = l->block_locked(regs->timeout(), regs->semaphore()));
+      //LOG_MSG_3VAL(this, "USBLOCK+", res, 0, 0);
       return;
     case Sys_u_lock_frame::Sem_wakeup:
-      l->wakeup_locked();
+      //LOG_MSG(this, "USWAKE");
+      l->wakeup_locked(regs->semaphore());
       break;
     default:
       break;
@@ -926,7 +933,7 @@ Syscalls::sys_u_lock()
 {
   Sys_u_lock_frame *regs = sys_frame_cast<Sys_u_lock_frame>(this->regs());
   //printf("u_lock called(op=%d, lock=%ld)\n", regs->op(), regs->lock());
-  //
+  //LOG_MSG_3VAL(this, "UL", regs->op(), regs->lock(), regs->timeout().raw());
   if (regs->op() < Sys_u_lock_frame::New_semaphore)
     sys_u_lock(regs);
   else

@@ -46,6 +46,7 @@
 #include "fe/FEDeclarator.h"
 #include "fe/FEFile.h"
 #include "Compiler.h"
+#include "Error.h"
 #include <sstream>
 #include <cassert>
 
@@ -300,7 +301,7 @@ CBEAttribute::CreateBackEnd(ATTR_TYPE nType)
 	    string exc = string(__func__);
 	    exc += "Attribute Type " + os.str() + 
 		" requires other CreateBackEnd method.";
-	    throw new CBECreateException(exc);
+	    throw new error::create_error(exc);
 	}
 	break;
     }
@@ -388,7 +389,7 @@ CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
                 // the is attribute has no parameter
 		exc += " failed because the IS-attribute's parameter (" +
 		    sName + ") is no function parameter or constant.";
-                throw new CBECreateException(exc);
+                throw new error::create_error(exc);
             }
 	    CBEClassFactory *pCF = CCompiler::GetClassFactory();
             pDeclarator = pCF->GetNewDeclarator();
@@ -405,7 +406,7 @@ CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
         if (!pDeclarator)
         {
 	    exc += ": Attribute " + sName + " is declared in invalid context.";
-            throw new CBECreateException(exc);
+            throw new error::create_error(exc);
         }
     }
 }
@@ -434,7 +435,7 @@ CBEAttribute::CreateBackEndIs(ATTR_TYPE nType,
 	break;
     default:
 	exc += " failed, beacuse invalid type.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     m_nType = nType;
     m_nAttrClass = ATTR_CLASS_IS;
@@ -467,7 +468,7 @@ CBEAttribute::CreateBackEndInt(ATTR_TYPE nType,
         break;
     default:
 	exc += " failed, because invalid type.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     m_nType = nType;
     m_nAttrClass = ATTR_CLASS_INT;
@@ -491,7 +492,7 @@ CBEAttribute::CreateBackEndType(ATTR_TYPE nType,
         break;
     default:
 	exc += " failed, because invalid type.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     m_nType = nType;
     m_nAttrClass = ATTR_CLASS_TYPE;

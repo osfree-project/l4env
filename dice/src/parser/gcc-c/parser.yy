@@ -40,7 +40,7 @@
 #include "config.h"
 #endif
 
-void gcc_cerror(char *);
+void gcc_cerror(const char *);
 void gcc_cerror2(const char *fmt, ...);
 
 #include "fe/FEFile.h"
@@ -2698,7 +2698,7 @@ string:
 
 
 void
-gcc_cerror(char* s)
+gcc_cerror(const char* s)
 {
     // ignore this functions -> it's called by bison code, which is not controlled by us
     nParseErrorGCC_C = 1;

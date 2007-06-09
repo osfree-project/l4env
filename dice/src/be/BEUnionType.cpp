@@ -40,6 +40,7 @@
 #include "BEStructType.h"
 #include "BEUserDefinedType.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "fe/FEFile.h"
 #include "fe/FEUnionType.h"
 #include "Attribute-Type.h"
@@ -137,7 +138,7 @@ CBEUnionType::CreateBackEnd(string sTag)
         // user defined type overloads this function -> m_sName.c_str()
         // should always be set
 	exc += " failed, because no type name could be assigned";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     m_nFEType = TYPE_UNION;
     m_sTag = sTag;

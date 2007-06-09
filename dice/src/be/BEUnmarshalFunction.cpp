@@ -44,6 +44,7 @@
 #include "BESizes.h"
 #include "BEMarshaller.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
@@ -51,20 +52,16 @@
 #include <cassert>
 
 CBEUnmarshalFunction::CBEUnmarshalFunction()
-    : CBEOperationFunction(FUNCTION_UNMARSHAL)
-{
-}
+ : CBEOperationFunction(FUNCTION_UNMARSHAL)
+{ }
 
 CBEUnmarshalFunction::CBEUnmarshalFunction(CBEUnmarshalFunction & src)
  : CBEOperationFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CBEUnmarshalFunction::~CBEUnmarshalFunction()
-{
-
-}
+{ }
 
 /** \brief creates the back-end unmarshal function
  *  \param pFEOperation the corresponding front-end operation
@@ -125,7 +122,7 @@ CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     {
 	string exc = string(__func__);
 	exc += " failed, because return variable could not be added to message buffer.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }

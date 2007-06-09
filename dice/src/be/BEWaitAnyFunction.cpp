@@ -40,6 +40,7 @@
 #include "Trace.h"
 #include "BEAttribute.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
 #include <cassert>
@@ -108,7 +109,7 @@ CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface)
 	    sOpcodeVar))
     {
 	exc += " failed because return var could not be created.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     // set to zero init it
     CBETypedDeclarator *pReturn = GetReturnVariable();

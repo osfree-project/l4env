@@ -89,3 +89,34 @@ PREFIX(l4_ipc_reply_and_wait_asm:)
 	popl	%ebx
 	ret
 
+#include <l4/sys/ipc-invoke.h>
+
+/* Put everything needed for the test task to one page */
+	.p2align 12
+	.global PREFIX(task_new_page_start)
+PREFIX(task_new_page_start):
+	.global	PREFIX(task_stack_compact)
+PREFIX(task_stack_compact):
+	.space 1024
+	.global	PREFIX(task_ping_id_compact)
+PREFIX(task_ping_id_compact):
+	.space 4
+	.global PREFIX(syscall_task_new_test_task_compact)
+PREFIX(syscall_task_new_test_task_compact):
+	pushl %ebp
+	xorl  %eax,%eax
+	xorl  %ecx,%ecx
+	xorl  %edi,%edi
+	movl  PREFIX(task_ping_id_compact),%esi
+	orl   $-1, %ebp
+	IPC_SYSENTER_ASM
+	popl  %ebp
+
+	xorl  $-1,%eax
+	xorl  %ecx,%ecx
+	xorl  %esi,%esi
+	pushl %ebp
+	xorl  %ebp,%ebp
+	IPC_SYSENTER_ASM
+	.global PREFIX(task_new_page_end)
+PREFIX(task_new_page_end):

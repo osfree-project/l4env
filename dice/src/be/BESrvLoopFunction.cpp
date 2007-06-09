@@ -46,6 +46,7 @@
 #include "fe/FEOperation.h"
 #include "fe/FEStringAttribute.h"
 #include "Compiler.h"
+#include "Error.h"
 #include <cassert>
 
 CBESrvLoopFunction::CBESrvLoopFunction()
@@ -113,14 +114,14 @@ CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
     if (!AddReplyVariable())
     {
 	exc += " failed, because reply variable could not be added.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     // create opcode as local variable
     if (!AddOpcodeVariable())
     {
 	exc += " failed, because opcode variable could not be added.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
 
     // parameters

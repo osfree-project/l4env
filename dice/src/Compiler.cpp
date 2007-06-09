@@ -49,6 +49,7 @@
 #include <getopt.h>
 #endif
 
+#include "Error.h"
 #include "Messages.h"
 #include "File.h"
 #include "CParser.h"
@@ -1564,12 +1565,12 @@ void CCompiler::PrepareWrite()
     {
 	m_pRootBE->CreateBE(m_pRootFE);
     }
-    catch (CBECreateException *e)
+    catch (error::create_error *e)
     {
 	Verbose(PROGRAM_VERBOSE_NORMAL, "Back-End creation failed\n");
         delete m_pRootBE;
         m_pRootBE = 0;
-	e->Print();
+	std::cerr << e->what();
 	delete e;
 	CMessages::Error("Creating back-end failed.\n");
     }

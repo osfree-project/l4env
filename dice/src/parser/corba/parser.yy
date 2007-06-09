@@ -37,7 +37,7 @@
 #include "Messages.h"
 #include "CParser.h"
 
-void corbaerror(char *);
+void corbaerror(const char *);
 void corbaerror2(const char *fmt, ...);
 void corbawarning(const char *fmt, ...);
 
@@ -1928,7 +1928,7 @@ colon
 
 
 void
-corbaerror(char* s)
+corbaerror(const char* s)
 {
     // ignore this function because it is called by bison code, which we cannot control
     nParseErrorCORBA = 1;

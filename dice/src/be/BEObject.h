@@ -43,8 +43,6 @@ class CFEBase;
 class CBEHeaderFile;
 class CBEImplementationFile;
 
-#include "BECreateException.h"
-
 /** \class CBEObject
  *    \ingroup backend
  *  \brief The back-end base class

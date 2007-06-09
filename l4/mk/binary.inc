@@ -296,7 +296,7 @@ CXXFLAGS+= $(OPTS) $(filter-out -Wmissing-declarations -Wstrict-prototypes -Wmis
 CXXFLAGS+= -fno-common
 CXXFLAGS+= $(GCCNOSTACKPROTOPT)
 
-PICFLAGS = -D__PIC__ -fPIC
+PICFLAGS = -fPIC -U__PIC__ -D__PIC__=1
 
 ASFLAGS+= $(ASFLAGS_$(ARCH)) $(ASFLAGS_$(@:.o=.S)) $(ASFLAGS_$(@:.o=.S)_$(OSYSTEM))
 OBJS	+= $(strip $(OBJS_$(OSYSTEM)) $(OBJS_$@) $(OBJS_$@_$(OSYSTEM)))

@@ -60,6 +60,42 @@ task_free(unsigned taskno, owner_t owner)
   return 1;
 }
 
+#ifdef USE_TASKLIB
+
+/** Allocate next free task to owner. */
+int
+task_next(owner_t owner)
+{
+  int i;
+
+  /* Find free task */
+  for (i = 0; i < RMGR_TASK_MAX; i++)
+    if (__task[i] == O_FREE)
+      break;
+
+  /* Out of tasks? */
+  if (i == RMGR_TASK_MAX)
+    return -1;
+
+  /* Out of quota? */
+  if (!quota_alloc_task(owner, i))
+    return -1;
+
+  /* Set owner and return task number */
+  __task[i] = owner;
+  return i;
+}
+
+void
+task_free_owned(owner_t owner)
+{
+  int i;
+
+  for (i = 0; i < RMGR_TASK_MAX; i++)
+    task_free(i, owner);
+}
+#endif
+
 owner_t
 task_owner(unsigned taskno)
 {

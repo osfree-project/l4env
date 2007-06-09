@@ -343,6 +343,7 @@ public:
   unsigned long lock() const;
   void result(unsigned long res);
   L4_timeout timeout() const;
+  L4_semaphore *semaphore() const;
 };
 
 

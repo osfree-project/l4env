@@ -203,6 +203,7 @@ mainmenu_option next_comment
     define_string  BID_CPPFLAGS_SYSCALLS "-DCONFIG_L4_CALL_SYSCALLS -DCONFIG_L4_ABS_SYSCALLS"
   fi
 
+  bool 'Use hierarchical task system (EXPERIMENTAL)' USE_TASKLIB
   bool 'Enable RELEASE flag' RELEASE_MODE
   bool 'Do not build anything outside l4 directory' BID_BUILD_L4DIR_ONLY
 

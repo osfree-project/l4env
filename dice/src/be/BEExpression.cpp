@@ -184,7 +184,7 @@ CBEExpression::CreateBackEndConditional(
     if (!pFEExpression->GetCondition())
     {
 	exc += " failed because no condition.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     m_pCondition = CCompiler::GetClassFactory()->GetNewExpression();
     m_pCondition->SetParent(this);
@@ -204,7 +204,7 @@ CBEExpression::CreateBackEndBinary(CFEBinaryExpression * pFEExpression)
     if (!pFEExpression->GetOperand2())
     {
 	exc += " failed because no second operand.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     m_pOperand2 = CCompiler::GetClassFactory()->GetNewExpression();
     m_pOperand2->SetParent(this);
@@ -251,7 +251,7 @@ CBEExpression::CreateBackEndPrimary(CFEPrimaryExpression * pFEExpression)
     {
 	string exc = string(__func__);
 	exc += " failed because no expression.";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEExpression *pExpression = pCF->GetNewExpression();

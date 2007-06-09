@@ -125,6 +125,14 @@
   "add  %%eax,%%edx  \n\t"  \
   "add  %%eax,%%ebx  \n\t"
 
+#define WHATTODO_SYSCALL_L4_MYSELF \
+  "xorl %%esi,%%esi  \n\t"         \
+  L4_SYSCALL(id_nearest)
+
+#define WHATTODO_SYSCALL_L4_NCHIEF \
+  "mov  %%ebx,%%esi  \n\t"         \
+  L4_SYSCALL(id_nearest)
+
 
 extern int PREFIX(l4_ipc_call_asm) (
 			l4_threadid_t dest,
@@ -1653,5 +1661,292 @@ PREFIX(ping_pagefault_thread)(void)
   PREFIX(send)(main_id);
 
   /* done, sleep */
+  l4_sleep_forever();
+}
+
+/*
+ * Syscall performance
+ */
+
+void __attribute__((noreturn))
+PREFIX(syscall_id_nearest_thread)(void)
+{
+  int i;
+  l4_cpu_time_t tsc;
+  l4_threadid_t me;
+  l4_umword_t dummy;
+
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  PREFIX(call)(pong_id);
+
+  tsc = l4_rdtsc();
+  for (i = global_rounds; i; i--)
+    {
+      asm volatile 
+	(
+	 "push  %%ebp   \n\t"
+	 WHATTODO_SYSCALL_L4_MYSELF
+	 WHATTODO_SYSCALL_L4_MYSELF
+	 WHATTODO_SYSCALL_L4_MYSELF
+	 WHATTODO_SYSCALL_L4_MYSELF
+	 WHATTODO_SYSCALL_L4_MYSELF
+	 WHATTODO_SYSCALL_L4_MYSELF
+	 WHATTODO_SYSCALL_L4_MYSELF
+	 WHATTODO_SYSCALL_L4_MYSELF
+	 "pop   %%ebp    \n\t"
+	 :
+	 :
+	 : "eax", "ebx", "ecx", "edx", "edi", "esi"
+	);
+    }
+  tsc = l4_rdtsc() - tsc;
+
+  printf(" l4_myself() %s%s: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" :
+	 (callmode == 2) ? "kipcalls" : "   int30",
+	 dont_do_cold ? "" : "/warm",
+	 (l4_uint32_t)tsc, 8*global_rounds,
+	 (l4_uint32_t)(tsc/(8*global_rounds)));
+
+  me = l4_myself();
+
+  tsc = l4_rdtsc();
+  for (i = global_rounds; i; i--)
+    {
+      asm volatile 
+	(
+	 "push  %%ebp   \n\t"
+	 WHATTODO_SYSCALL_L4_NCHIEF
+	 WHATTODO_SYSCALL_L4_NCHIEF
+	 WHATTODO_SYSCALL_L4_NCHIEF
+	 WHATTODO_SYSCALL_L4_NCHIEF
+	 WHATTODO_SYSCALL_L4_NCHIEF
+	 WHATTODO_SYSCALL_L4_NCHIEF
+	 WHATTODO_SYSCALL_L4_NCHIEF
+	 WHATTODO_SYSCALL_L4_NCHIEF
+	 "pop   %%ebp    \n\t"
+	 : "=b" (dummy)
+	 : "b" (me.raw)
+	 : "eax", "ecx", "edx", "edi", "esi"
+	);
+    }
+  tsc = l4_rdtsc() - tsc;
+
+  printf(" l4_nchief() %s%s: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" :
+	 (callmode == 2) ? "kipcalls" : "   int30",
+	 dont_do_cold ? "" : "/warm",
+	 (l4_uint32_t)tsc, 8*global_rounds,
+	 (l4_uint32_t)(tsc/(8*global_rounds)));
+
+  /* finished */
+  PREFIX(send)(main_id);
+  PREFIX(recv)(main_id);
+  l4_sleep_forever();
+}
+
+
+#include <l4/rmgr/librmgr.h>
+
+/* Normal code/data distribution */
+static char task_stack_normal[1024];
+static void syscall_task_new_test_task_normal(void)
+{
+  PREFIX(send)(ping_id);
+  l4_sleep_forever();
+}
+
+extern char PREFIX(task_stack_compact)[1024];
+extern l4_threadid_t PREFIX(task_ping_id_compact);
+extern char PREFIX(task_new_page_start)[];
+extern char PREFIX(task_new_page_end)[];
+void PREFIX(syscall_task_new_test_task_compact)(void);
+
+static void print_result(char *testname, unsigned long rounds,
+                         l4_cpu_time_t tsc)
+{
+  printf(" %s  %s: %10u cycles / %6lu rounds >> %5u <<\n",
+         (callmode == 1) ? "sysenter" :
+	 (callmode == 2) ? "kipcalls" : "   int30",
+	 testname,
+	 (l4_uint32_t)tsc, rounds,
+	 (l4_uint32_t)(tsc/rounds));
+}
+
+void __attribute__((noreturn))
+PREFIX(syscall_task_new_thread)(void)
+{
+  l4_threadid_t task = L4_NIL_ID;
+  l4_threadid_t me = l4_myself();
+  l4_umword_t stack;
+  l4_cpu_time_t tsc, tsc_sum;
+  const l4_umword_t rounds = 1024;
+  int i;
+
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  PREFIX(task_ping_id_compact) = ping_id;
+
+  task.id.lthread = 0;
+  task.id.task    = 38;
+  if (rmgr_get_task(task.id.task))
+    printf("rmgr_get_task(%d) failed\n", task.id.task);
+
+  stack = (l4_umword_t)task_stack_normal + sizeof(task_stack_normal);
+
+  /* First check setup */
+  task = l4_task_new(task, 255, stack,
+                     (l4_umword_t)syscall_task_new_test_task_normal, pager_id);
+  PREFIX(recv)(task);
+  if (l4_is_nil_id(task))
+    printf("Error creating task\n");
+
+  /* check that compact code is really within one page */
+  if (PREFIX(task_new_page_end) - PREFIX(task_new_page_start) > L4_PAGESIZE)
+    printf("compact task_new run exceeds one page!\n");
+
+
+
+  /* First test: normal */
+  tsc_sum = 0;
+  for (i = rounds; i; i--)
+    {
+      tsc = l4_rdtsc();
+      l4_task_new(task, 255, stack,
+                  (l4_umword_t)syscall_task_new_test_task_normal, pager_id);
+
+      PREFIX(recv)(task);
+      tsc_sum += l4_rdtsc() - tsc;
+
+      l4_task_new(task, (unsigned)me.raw, 0, 0, L4_NIL_ID);
+    }
+  print_result("normal  up-only", rounds, tsc_sum);
+
+  /* normal also with task destruction */
+  l4_task_new(task, 255, stack,
+              (l4_umword_t)syscall_task_new_test_task_normal, pager_id);
+  tsc_sum = 0;
+  for (i = rounds; i; i--)
+    {
+      tsc = l4_rdtsc();
+      l4_task_new(task, 255, stack,
+                  (l4_umword_t)syscall_task_new_test_task_normal, pager_id);
+
+      PREFIX(recv)(task);
+      tsc_sum += l4_rdtsc() - tsc;
+    }
+  print_result("normal  up+down", rounds, tsc_sum);
+
+  /* Next test: compact */
+  stack = (l4_umword_t)PREFIX(task_stack_compact)
+          + sizeof(PREFIX(task_stack_compact));
+  /* Pager maps writable upon first PF so that we don't catch a second
+   * when we write the stack */
+  pager_always_map_writable = 1;
+  tsc_sum = 0;
+  for (i = rounds; i; i--)
+    {
+      tsc = l4_rdtsc();
+      l4_task_new(task, 255, stack,
+                  (l4_umword_t)PREFIX(syscall_task_new_test_task_compact),
+                  pager_id);
+
+      PREFIX(recv)(task);
+      tsc_sum += l4_rdtsc() - tsc;
+
+      l4_task_new(task, (unsigned)me.raw, 0, 0, L4_NIL_ID);
+    }
+  pager_always_map_writable = 0;
+  print_result("compact up-only", rounds, tsc_sum);
+
+  /* Next test: compact with task destruction */
+   l4_task_new(task, 255, stack,
+               (l4_umword_t)PREFIX(syscall_task_new_test_task_compact),
+               pager_id);
+  pager_always_map_writable = 1;
+  tsc_sum = 0;
+  for (i = rounds; i; i--)
+    {
+      tsc = l4_rdtsc();
+      l4_task_new(task, 255, stack,
+                  (l4_umword_t)PREFIX(syscall_task_new_test_task_compact),
+                  pager_id);
+
+      PREFIX(recv)(task);
+      tsc_sum += l4_rdtsc() - tsc;
+    }
+  pager_always_map_writable = 0;
+  print_result("compact up+down", rounds, tsc_sum);
+
+
+
+  /* Next test: start with exception */
+  tsc_sum = 0;
+  for (i = rounds; i; i--)
+    {
+      tsc = l4_rdtsc();
+      l4_task_new(task, 255 | L4_TASK_NEW_RAISE_EXCEPTION, stack,
+                  (l4_umword_t)PREFIX(syscall_task_new_test_task_compact), me);
+      PREFIX(recv)(task);
+      tsc_sum += l4_rdtsc() - tsc;
+
+      l4_task_new(task, (unsigned)me.raw, 0, 0, L4_NIL_ID);
+    }
+  print_result("raise   up-only", rounds, tsc_sum);
+
+  /* Next test: start with exception and destruction */
+  l4_task_new(task, 255 | L4_TASK_NEW_RAISE_EXCEPTION, stack,
+              (l4_umword_t)PREFIX(syscall_task_new_test_task_compact), me);
+  tsc_sum = 0;
+  for (i = rounds; i; i--)
+    {
+      tsc = l4_rdtsc();
+      l4_task_new(task, 255 | L4_TASK_NEW_RAISE_EXCEPTION, stack,
+                  (l4_umword_t)PREFIX(syscall_task_new_test_task_compact), me);
+      PREFIX(recv)(task);
+      tsc_sum += l4_rdtsc() - tsc;
+    }
+  print_result("raise   up+down", rounds, tsc_sum);
+
+  /* Next test: pure without interaction of new task */
+  tsc_sum = 0;
+  for (i = rounds; i; i--)
+    {
+      tsc = l4_rdtsc();
+      l4_task_new(task, 255, stack,
+                  (l4_umword_t)PREFIX(syscall_task_new_test_task_compact), me);
+      tsc_sum += l4_rdtsc() - tsc;
+
+      l4_task_new(task, (unsigned)me.raw, 0, 0, L4_NIL_ID);
+    }
+  print_result("pure    up-only", rounds, tsc_sum);
+
+  /* Next test: pure without interaction of new task and with desctruction */
+  l4_task_new(task, 255, stack,
+              (l4_umword_t)PREFIX(syscall_task_new_test_task_compact), me);
+  tsc_sum = 0;
+  for (i = rounds; i; i--)
+    {
+      tsc = l4_rdtsc();
+      l4_task_new(task, 255, stack,
+                  (l4_umword_t)PREFIX(syscall_task_new_test_task_compact), me);
+      tsc_sum += l4_rdtsc() - tsc;
+    }
+  print_result("pure    up+down", rounds, tsc_sum);
+
+
+
+  /* Done */
+  if (rmgr_free_task(task.id.task))
+    printf("rmgr_free_task(%d) failed\n", task.id.task);
+
+  /* finished */
+  PREFIX(send)(main_id);
+  PREFIX(recv)(main_id);
   l4_sleep_forever();
 }

@@ -161,28 +161,29 @@ typedef struct
   l4_threadid_t	        taskserv_id;		///< default task server
   l4_threadid_t	        fprov_id;		///< file provider (tftp...)
   l4_threadid_t	        loader_id;		///< loader
+  l4_threadid_t		parent_id;		///< parent
 
   /* these entries are provided by the loader to define which dataspace
    * manager should be used for getting memory for a specific section */
-  l4_threadid_t	        image_dm_id;		///< dm for file image 
-  l4_threadid_t	        text_dm_id;		///< dm for text segment 
-  l4_threadid_t	        data_dm_id;		///< dm for data segment 
+  l4_threadid_t	        image_dm_id;		///< dm for file image
+  l4_threadid_t	        text_dm_id;		///< dm for text segment
+  l4_threadid_t	        data_dm_id;		///< dm for data segment
   l4_threadid_t	        stack_dm_id;		///< dm for stack segment
   l4_addr_t		entry_1st;		///< program entry (libloader)
   l4_addr_t		entry_2nd;		///< program entry (libl4env)
-  
+
   /* these entries are filled by the execution layer server */
   int			section_num;		///< # of program sections
   l4exec_section_t	section[L4ENV_MAXSECT];	///< program section descs
-  
-  /* relocating addresses for libraries which are need fixed addresses 
+
+  /* relocating addresses for libraries which are need fixed addresses
    * (libloader and libl4rm), because the l4rm can't page itself before
    * it's pager thread is started. */
   l4_addr_t		addr_libloader;		///< reloc address
-  
+
   l4_addr_t		stack_low;		///< low bound of thread stack
   l4_addr_t		stack_high;		///< high bound of thread stack
-  
+
   /* default path for loading binary objects if no path is given */
   char		        binpath[L4ENV_MAXPATH];	///< default bin path
   char		        libpath[L4ENV_MAXPATH];	///< default lib path
@@ -202,7 +203,7 @@ typedef struct
 
 
 /*****************************************************************************
- *** request environment configuration 
+ *** request environment configuration
  *****************************************************************************/
 
 /* keys */
@@ -225,18 +226,18 @@ __BEGIN_DECLS;
 /**
  * \brief  Request id of environment service.
  * \ingroup env
- * 
- * \param  key           service key (see l4/env/env.h) 
- * \retval service       service id 
- *	
- * \return 0 on success (\a service contains the requested service id), 
+ *
+ * \param  key           service key (see l4/env/env.h)
+ * \retval service       service id
+ *
+ * \return 0 on success (\a service contains the requested service id),
  *         error code otherwise:
  *         - -L4_EINVAL   invlid key
  *         - -L4_ENODATA  value not set
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-l4env_request_service(l4_uint32_t key, 
+l4env_request_service(l4_uint32_t key,
 		      l4_threadid_t * service);
 
 /*****************************************************************************/
@@ -259,33 +260,33 @@ l4env_request_config_u32(l4_uint32_t key,
 
 /*****************************************************************************/
 /**
- * \brief  Request configuration string. 
+ * \brief  Request configuration string.
  * \ingroup env
- * 
+ *
  * \param  key           config key
  * \param  str           destination string buffer
- * \param  max_len       length of destination buffer 
- *	
- * \return 0 on succes (\a str contains the requested configuration string), 
+ * \param  max_len       length of destination buffer
+ *
+ * \return 0 on succes (\a str contains the requested configuration string),
  *         error code otherwise:
  *         - -L4_EINVAL   invalid key
  *         - -L4_ENODATA  value not set
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-l4env_request_config_string(l4_uint32_t key, 
-			    char * str, 
+l4env_request_config_string(l4_uint32_t key,
+			    char * str,
 			    int max_len);
 
 /*****************************************************************************/
 /**
  * \brief  Return pointer to L4 environment page
  * \ingroup env
- *	
- * \return Pointer to L4 environment page, NULL if no environment page 
+ *
+ * \return Pointer to L4 environment page, NULL if no environment page
  *         available (i.e, the application was not started by our loader)
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 l4env_infopage_t *
 l4env_get_infopage(void);
 
@@ -298,7 +299,7 @@ l4env_get_infopage(void);
  *
  * Set sigma0 id (used by startup code).
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4env_set_sigma0_id(l4_threadid_t id);
 
@@ -306,22 +307,32 @@ l4env_set_sigma0_id(l4_threadid_t id);
 /**
  * \brief  Set default dataspace manager
  * \ingroup env
- * 
+ *
  * \param  id            Dataspace manager id
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 l4env_set_default_dsm(l4_threadid_t id);
 
 /*****************************************************************************/
 /**
  * \brief  Return default dataspace manager id
- *	
+ *
  * \return Dataspace manager id, L4_INVALID_ID if no dataspace manager found
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 l4_threadid_t
 l4env_get_default_dsm(void);
+
+/*****************************************************************************/
+/**
+ * \brief  Return parent id
+ *
+ * \return parent ID or L4_NIL_ID
+ */
+/*****************************************************************************/
+l4_threadid_t
+l4env_get_parent(void);
 
 __END_DECLS;
 

@@ -14,6 +14,7 @@ public:
       function on waiting senders when they get ready to receive a
       message from that sender.  Senders need to overwrite this interface. */
   virtual bool ipc_receiver_ready(Receiver *) = 0;
+  virtual void ipc_receiver_aborted() = 0;
 
 
 protected:

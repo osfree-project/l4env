@@ -35,7 +35,8 @@
 
 int use_omega0;
 int nomouse;
-  
+int noshift;
+
 static void
 send_event_client(struct l4input *ev)
 {
@@ -110,8 +111,9 @@ handle_event(struct l4input *ev)
 
       if (keycode == KEY_RIGHTALT)
 	altgr_down = special_down = down;
-      else if (keycode == KEY_LEFTSHIFT || keycode == KEY_RIGHTSHIFT)
-      	shift_down = special_down = down;
+      else if (!noshift
+               && (keycode == KEY_LEFTSHIFT || keycode == KEY_RIGHTSHIFT))
+        shift_down = special_down = down;
 
       if (special_down)
 	{

@@ -39,6 +39,7 @@
 #include "BESizes.h"
 #include "BEUnionType.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "fe/FEStructType.h"
 #include "fe/FEInterface.h"
 #include "fe/FELibrary.h"
@@ -291,7 +292,7 @@ CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType)
     {
 	string exc = string(__func__);
 	exc += " failed, because array type is no array type";
-	throw new CBECreateException(exc);
+	throw new error::create_error(exc);
     }
     // CLM states that (1.11)
     // that 'sequence <type, size>' will be mapped to

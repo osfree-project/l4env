@@ -46,8 +46,6 @@ class CFELibrary;
 class CFEFile;
 class CIncludeStatement;
 
-#include "BECreateException.h"
-
 /** \class CBEFile
  *  \ingroup backend
  *  \brief the output file class for the back-end classes

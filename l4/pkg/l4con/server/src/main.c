@@ -932,6 +932,8 @@ main(int argc, const char *argv[])
 		    PARSE_CMD_SWITCH, 1, &use_omega0,
 		    'p', "pan", "use panning to restrict client window",
 		    PARSE_CMD_SWITCH, 1, &pan,
+		    ' ', "noshift", "no shift key for console switching",
+		    PARSE_CMD_SWITCH, 1, &noshift,
 		    'v', "vbemode", "set VESA mode",
 		    PARSE_CMD_INT, 0, &vbemode,
 		    0)))
