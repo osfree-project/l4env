@@ -65,18 +65,18 @@ public:
     virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
 protected:
-    virtual void WriteLoop(CBEFile *pFile);
-    virtual void WriteVariableDeclaration(CBEFile* pFile);
-    virtual void WriteDispatchInvocation(CBEFile *pFile);
-    virtual bool DoWriteFunctionInline(CBEFile *pFile);
-    virtual void WriteBody(CBEFile *pFile);
-    virtual void WriteInvocation(CBEFile *pFile);
-    virtual void WriteVariableInitialization(CBEFile *pFile);
-    virtual void WriteEnvironmentInitialization(CBEFile *pFile);
-    virtual void WriteDefaultEnvAssignment(CBEFile *pFile);
-    virtual void WriteObjectInitialization(CBEFile *pFile);
-    virtual void WriteFunctionAttributes(CBEFile* pFile);
-    virtual void WriteReturn(CBEFile* pFile);
+    virtual void WriteLoop(CBEFile& pFile);
+    virtual void WriteVariableDeclaration(CBEFile& pFile);
+    virtual void WriteDispatchInvocation(CBEFile& pFile);
+    virtual bool DoWriteFunctionInline(CBEFile& pFile);
+    virtual void WriteBody(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteEnvironmentInitialization(CBEFile& pFile);
+    virtual void WriteDefaultEnvAssignment(CBEFile& pFile);
+    virtual void WriteObjectInitialization(CBEFile& pFile);
+    virtual void WriteFunctionAttributes(CBEFile& pFile);
+    virtual void WriteReturn(CBEFile& pFile);
     virtual void AddParameters(void);
     virtual bool AddOpcodeVariable();
     virtual bool AddReplyVariable();

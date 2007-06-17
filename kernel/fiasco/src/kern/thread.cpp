@@ -442,10 +442,11 @@ Thread::handle_timer_interrupt()
     consume_time (Config::scheduler_granularity);
 
   // Check if we need to reschedule due to timeouts or wakeups
-  if (Timeout::do_timeouts() && !Context::schedule_in_progress())
+  if (Timeout_q::timeout_queue.cpu(cpu()).do_timeouts() 
+      && !schedule_in_progress())
     {
       schedule();
-      assert (timeslice_timeout->is_set());	// Coma check
+      assert (timeslice_timeout.cpu(cpu())->is_set());	// Coma check
     }
 }
 
@@ -619,8 +620,8 @@ Thread::kill()
     if (sched() != sched_context())
       switch_sched (sched_context());
 
-    if (current_sched()->owner() == this)
-      current()->switch_to_locked(current());
+    if (current_sched(cpu())->owner() == this)
+      set_current_sched(current()->sched());
   }
 
   // possibly dequeue from a wait queue

@@ -60,7 +60,7 @@ public:
 protected:
     virtual bool HasVariableSizedParameters(
 	DIRECTION_TYPE nDirection);
-    virtual void WriteMarshalling(CBEFile* pFile);
+    virtual void WriteMarshalling(CBEFile& pFile);
 };
 
 #endif

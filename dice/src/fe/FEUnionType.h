@@ -59,6 +59,7 @@ public:
 public:
     virtual void Accept(CVisitor&);
     virtual CObject* Clone();
+    virtual bool IsConstructedType();
     
 protected:
     /** a copy construtor used for the tagged union class */

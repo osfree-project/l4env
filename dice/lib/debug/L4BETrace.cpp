@@ -83,7 +83,7 @@ CL4BETrace::AddLocalVariable(CBEFunction *pFunction)
  * are initialized and just before the loop actually starts doing something.
  */
 void
-CL4BETrace::BeforeLoop(CBEFile* pFile,
+CL4BETrace::BeforeLoop(CBEFile& pFile,
     CBEFunction* pFunction)
 {
     if (!pFunction->IsComponentSide())
@@ -97,17 +97,16 @@ CL4BETrace::BeforeLoop(CBEFile* pFile,
     string sFunc;
     CCompiler::GetBackEndOption("trace-server-func", sFunc);
 
-    *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+    pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": _size(%d,%d)\\n\", ";
-    pFile->IncIndent();
-    *pFile << "\t";
+    ++pFile << "\t";
     pMsgBuffer->WriteMemberAccess(pFile, pFunction, CMsgStructType::Generic,
 	TYPE_MSGDOPE_SIZE, 0);
-    *pFile << ".md.dwords, ";
+    pFile << ".md.dwords, ";
     pMsgBuffer->WriteMemberAccess(pFile, pFunction, CMsgStructType::Generic,
 	TYPE_MSGDOPE_SIZE, 0);
-    *pFile << ".md.strings);\n";
-    pFile->DecIndent();
+    pFile << ".md.strings);\n";
+    --pFile;
 }
 
 /** \brief prints the tracing message before a call
@@ -115,7 +114,7 @@ CL4BETrace::BeforeLoop(CBEFile* pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4BETrace::BeforeCall(CBEFile *pFile,
+CL4BETrace::BeforeCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!(CCompiler::IsOptionSet(PROGRAM_TRACE_CLIENT) ||
@@ -154,47 +153,44 @@ CL4BETrace::BeforeCall(CBEFile *pFile,
 	CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
     {
 	string sMWord = pNF->GetTypeName(TYPE_MWORD, false, 0);
-	*pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
+	pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
 	    ": server %2X.%X\\n\", " << pObjName->GetName() << 
 	    "->id.task, " << pObjName->GetName() << "->id.lthread);\n";
 
-	*pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+	pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	    ": with dw0=0x%x, dw1=0x%x\\n\", ";
-	pFile->IncIndent();
-	*pFile << "\t(unsigned int)";
+	++pFile << "\t(unsigned int)";
 	CL4BEMarshaller *pMarshaller = static_cast<CL4BEMarshaller*>(
 	    pCF->GetNewMarshaller());
 	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 
 		0, false, false))
-	    *pFile << "0";
-	*pFile << ",\n";
-	*pFile << "\t(unsigned int)";
+	    pFile << "0";
+	pFile << ",\n";
+	pFile << "\t(unsigned int)";
 	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir,
 		1, false, false))
-	    *pFile << "0";
-	*pFile << ");\n";
-	pFile->DecIndent();
+	    pFile << "0";
+	pFile << ");\n";
 
-	*pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+	--pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	    ": _size(%d,%d), _send(%d,%d)\\n\", ";
-	pFile->IncIndent();
-	*pFile << "\t";
+	++pFile << "\t";
 	pMsgBuffer->WriteMemberAccess(pFile, pFunction, nSndDir, TYPE_MSGDOPE_SIZE, 0);
-	*pFile << ".md.dwords, ";
+	pFile << ".md.dwords, ";
 	pMsgBuffer->WriteMemberAccess(pFile, pFunction, nSndDir, TYPE_MSGDOPE_SIZE, 0);
-	*pFile << ".md.strings,\n";
-	*pFile << "\t";
+	pFile << ".md.strings,\n";
+	pFile << "\t";
 	pMsgBuffer->WriteMemberAccess(pFile, pFunction, nSndDir, TYPE_MSGDOPE_SEND, 0);
-	*pFile << ".md.dwords, ";
+	pFile << ".md.dwords, ";
 	pMsgBuffer->WriteMemberAccess(pFile, pFunction, nSndDir, TYPE_MSGDOPE_SEND, 0);
-	*pFile << ".md.strings);\n";
-	pFile->DecIndent();
+	pFile << ".md.strings);\n";
+	--pFile;
     }
 
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF) &&
 	!bIsShortIPC)
     {
-	*pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+	pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	    ": before call\\n\");\n";
 	pMsgBuffer->WriteDump(pFile);
     }
@@ -205,7 +201,7 @@ CL4BETrace::BeforeCall(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4BETrace::AfterCall(CBEFile *pFile,
+CL4BETrace::AfterCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!(CCompiler::IsOptionSet(PROGRAM_TRACE_CLIENT) ||
@@ -236,16 +232,16 @@ CL4BETrace::AfterCall(CBEFile *pFile,
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_CLIENT) ||
 	CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
     {
-	*pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
+	pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
 	    ": return dope %lx (ipc error %lx)\\n\",\n";
-	*pFile << "\t\t" << sResult << ".msgdope, L4_IPC_ERROR(" 
+	pFile << "\t\t" << sResult << ".msgdope, L4_IPC_ERROR(" 
 	    << sResult << "));\n";
     }
 
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF) &&
 	!bIsShortIPC)
     {
-	*pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+	pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	    ": after call\\n\");\n";
 	pMsgBuffer->WriteDump(pFile);
     }
@@ -256,7 +252,7 @@ CL4BETrace::AfterCall(CBEFile *pFile,
  *  \param pFunction the dispatch function to write for
  */
 void
-CL4BETrace::BeforeDispatch(CBEFile *pFile,
+CL4BETrace::BeforeDispatch(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!pFunction->IsComponentSide())
@@ -274,19 +270,19 @@ CL4BETrace::BeforeDispatch(CBEFile *pFile,
     CL4BEMarshaller *pMarshaller = static_cast<CL4BEMarshaller*>(
 	pCF->GetNewMarshaller());
 
-    *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
+    pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
 	": opcode %lx received from %2X.%X\\n\", " << sOpcodeVar << 
 	", " << sObjectVar << "->id.task, " << sObjectVar << "->id.lthread);\n";
-    *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
+    pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
 	": received dw0=%lx, dw1=%lx\\n\", " << "(unsigned long)";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
 	    false, false))
-	*pFile << "0";
-    *pFile << ", (unsigned long)";
+	pFile << "0";
+    pFile << ", (unsigned long)";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
 	    false, false))
-	*pFile << "0";
-    *pFile << ");\n";
+	pFile << "0";
+    pFile << ");\n";
 }
 
 /** \brief write the tracing code shortly after the switch statement
@@ -294,7 +290,7 @@ CL4BETrace::BeforeDispatch(CBEFile *pFile,
  *  \param pFunction the dispatch function to write for
  */
 void
-CL4BETrace::AfterDispatch(CBEFile *pFile,
+CL4BETrace::AfterDispatch(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!pFunction->IsComponentSide())
@@ -313,23 +309,23 @@ CL4BETrace::AfterDispatch(CBEFile *pFile,
     CL4BEMarshaller *pMarshaller = static_cast<CL4BEMarshaller*>(
 	pCF->GetNewMarshaller());
 
-    *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+    pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": reply %s (dw0=%lx, dw1=%lx)\\n\", (" <<
 	sReply << "==DICE_REPLY)?\"DICE_REPLY\":\"DICE_NO_REPLY\", " <<
 	"(unsigned long)";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
 	    false, false))
-	*pFile << "0";
-    *pFile << ", (unsigned long)";
+	pFile << "0";
+    pFile << ", (unsigned long)";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
 	    false, false))
-	*pFile << "0";
-    *pFile << " );\n";
+	pFile << "0";
+    pFile << " );\n";
     // print if we got an fpage
-    *pFile << "\t" << sFunc << " (\"  fpage: %s\\n\", (";
+    pFile << "\t" << sFunc << " (\"  fpage: %s\\n\", (";
     pMsgBuffer->WriteMemberAccess(pFile, pFunction, nDirection, 
 	TYPE_MSGDOPE_SEND, 0);
-    *pFile << ".md.fpage_received==1)?\"yes\":\"no\");\n";
+    pFile << ".md.fpage_received==1)?\"yes\":\"no\");\n";
 }
 
 /** \brief write the tracing the code before reply IPC
@@ -337,7 +333,7 @@ CL4BETrace::AfterDispatch(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4BETrace::BeforeReplyWait(CBEFile *pFile,
+CL4BETrace::BeforeReplyWait(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!pFunction->IsComponentSide())
@@ -355,31 +351,31 @@ CL4BETrace::BeforeReplyWait(CBEFile *pFile,
     CL4BEMarshaller *pMarshaller = static_cast<CL4BEMarshaller*>(
 	pCF->GetNewMarshaller());
 
-    *pFile << "\t" << sFunc << " (\"reply (dw0=%lx, dw1=%lx)\\n\", ";
-    *pFile << "(unsigned long)";
+    pFile << "\t" << sFunc << " (\"reply (dw0=%lx, dw1=%lx)\\n\", ";
+    pFile << "(unsigned long)";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, CMsgStructType::Generic, 0, false,
 	    false))
-	*pFile << "0";
-    *pFile << ", (unsigned long)";
+	pFile << "0";
+    pFile << ", (unsigned long)";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, CMsgStructType::Generic, 1, false,
 	    false))
-	*pFile << "0";
-    *pFile << ");\n";
+	pFile << "0";
+    pFile << ");\n";
     // dwords
-    *pFile << "\t" << sFunc << " (\"  words: %d\\n\", ";
+    pFile << "\t" << sFunc << " (\"  words: %d\\n\", ";
     pMsgBuffer->WriteMemberAccess(pFile, pFunction, CMsgStructType::Out,
 	TYPE_MSGDOPE_SEND, 0);
-    *pFile << ".md.dwords);\n";
+    pFile << ".md.dwords);\n";
     // strings
-    *pFile << "\t" << sFunc << " (\"  strings; %d\\n\", ";
+    pFile << "\t" << sFunc << " (\"  strings; %d\\n\", ";
     pMsgBuffer->WriteMemberAccess(pFile, pFunction, CMsgStructType::Out,
 	TYPE_MSGDOPE_SEND, 0);
-    *pFile << ".md.strings);\n";
+    pFile << ".md.strings);\n";
     // print if we got an fpage
-    *pFile << "\t" << sFunc << " (\"  fpage: %s\\n\", (";
+    pFile << "\t" << sFunc << " (\"  fpage: %s\\n\", (";
     pMsgBuffer->WriteMemberAccess(pFile, pFunction, CMsgStructType::Out,
 	TYPE_MSGDOPE_SEND, 0);
-    *pFile << ".md.fpage_received==1)?\"yes\":\"no\");\n";
+    pFile << ".md.fpage_received==1)?\"yes\":\"no\");\n";
 }
 
 /** \brief writes the tracing code after the server waited for a message
@@ -387,7 +383,7 @@ CL4BETrace::BeforeReplyWait(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4BETrace::AfterReplyWait(CBEFile *pFile,
+CL4BETrace::AfterReplyWait(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF))
@@ -406,16 +402,16 @@ CL4BETrace::AfterReplyWait(CBEFile *pFile,
 
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF))
     {
-	*pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+	pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	    ": after wait\\n\");\n";
 	pMsgBuffer->WriteDump(pFile);
     }
 
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
     {
-	*pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
+	pFile << "\t" << sFunc << " (\"" << pFunction->GetName() << 
 	    ": return dope %lx (ipc error %lx)\\n\",\n";
-	*pFile << "\t\t" << sResult << ".msgdope, L4_IPC_ERROR(" 
+	pFile << "\t\t" << sResult << ".msgdope, L4_IPC_ERROR(" 
 	    << sResult << "));\n";
     }
 }
@@ -425,7 +421,7 @@ CL4BETrace::AfterReplyWait(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4BETrace::WaitCommError(CBEFile *pFile,
+CL4BETrace::WaitCommError(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
@@ -437,13 +433,13 @@ CL4BETrace::WaitCommError(CBEFile *pFile,
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 
-    *pFile << "\t" << sTraceFunc << 
+    pFile << "\t" << sTraceFunc << 
 	" (\"IPC Error in server: 0x%02lx\\n\", L4_IPC_ERROR(" << 
 	sResult << "));\n";
-    *pFile << "\t" << sTraceFunc << 
+    pFile << "\t" << sTraceFunc << 
 	" (\"  reply-wait returns with opcode %lx\\n\", ";
     pReturn->m_Declarators.First()->WriteName(pFile);
-    *pFile << ");\n";
+    pFile << ");\n";
 
     // set exception if not set already
     CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
@@ -452,14 +448,11 @@ CL4BETrace::WaitCommError(CBEFile *pFile,
     if (pDecl->GetStars() == 0)
 	sEnv = "&";
     sEnv += pDecl->GetName();
-    *pFile << "\tif (DICE_IS_NO_EXCEPTION(" << sEnv << "))\n";
-    pFile->IncIndent();
-    *pFile << "\t" << sTraceFunc << 
+    pFile << "\tif (DICE_IS_NO_EXCEPTION(" << sEnv << "))\n";
+    ++pFile << "\t" << sTraceFunc << 
 	" (\"  no exception set, so set internal IPC error\\n\");\n";
-    pFile->DecIndent();
-    *pFile << "\telse\n";
-    pFile->IncIndent();
-    *pFile << "\t" << sTraceFunc << " (\"  exception already set\\n\");\n";
-    pFile->DecIndent();
+    --pFile << "\telse\n";
+    ++pFile << "\t" << sTraceFunc << " (\"  exception already set\\n\");\n";
+    --pFile;
 }
 

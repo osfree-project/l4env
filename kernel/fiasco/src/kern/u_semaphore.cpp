@@ -125,7 +125,7 @@ U_semaphore::block_locked(L4_timeout const &to, L4_semaphore *sem)
       Unsigned64 t = to.microsecs(Timer::system_clock());
       if (t)
 	{
-	  timeout.set(t);
+	  timeout.set(t, c->cpu());
 	  c->set_timeout(&timeout);
 	}
       else
@@ -185,7 +185,7 @@ U_semaphore::wakeup_locked(L4_semaphore *sem)
   if (!_queue.head())
     set_queued(sem, false); // dequeued the last thread
 
-  if (Context::schedule_in_progress())
+  if (c->schedule_in_progress())
     return;
 
   if (Context::can_preempt_current(w->sched()))
@@ -211,8 +211,7 @@ U_semaphore::~U_semaphore()
 
   Lock_guard<Cpu_lock> guard(&cpu_lock);
 
-  if (!Context::schedule_in_progress())
-    current()->schedule();
+  current()->schedule();
 }
 
 

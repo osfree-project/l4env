@@ -87,6 +87,7 @@
 #include <string>
 #include <cassert>
 #include <iostream>
+#include <typeinfo> // for bad_cast
 
 // CFunctionGroup IMPLEMENTATION
 
@@ -184,10 +185,10 @@ public:
 /** \brief returns the number of functions in this class which are written
  *  \return the number of functions in this class which are written
  */
-int CBEClass::GetFunctionWriteCount(CBEFile *pFile)
+int CBEClass::GetFunctionWriteCount(CBEFile& pFile)
 {
     return std::count_if(m_Functions.begin(), m_Functions.end(), 
-	GetFunctionWriteCountPred(pFile));
+	GetFunctionWriteCountPred(&pFile));
 }
 
 /** \brief adds a new base class from a name
@@ -825,13 +826,12 @@ CBEClass::CreateBackEndException(CFETypedDeclarator* pFEException)
  *
  * An Class adds its included types, constants and functions.
  */
-void CBEClass::AddToHeader(CBEHeaderFile *pHeader)
+void CBEClass::AddToHeader(CBEHeaderFile* pHeader)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEClass::%s(header: %s) for class %s called\n", __func__,
         pHeader->GetFileName().c_str(), GetName().c_str());
     // add this class to the file
-    assert(pHeader);
     if (IsTargetFile(pHeader))
         pHeader->m_Classes.Add(this);
 
@@ -848,18 +848,16 @@ void CBEClass::AddToHeader(CBEHeaderFile *pHeader)
  * seperately for the client implementation file. Otherwise we add the
  * whole class.
  */
-void CBEClass::AddToImpl(CBEImplementationFile *pImpl)
+void CBEClass::AddToImpl(CBEImplementationFile* pImpl)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s(impl: %s) for class %s called\n", __func__,
         pImpl->GetFileName().c_str(), GetName().c_str());
     // check compiler option
-    assert(pImpl);
     if (CCompiler::IsFileOptionSet(PROGRAM_FILE_FUNCTION) &&
         dynamic_cast<CBEClient*>(pImpl->GetTarget()))
     {
-	for_each(m_Functions.begin(),
-	    m_Functions.end(),
+	for_each(m_Functions.begin(), m_Functions.end(),
 	    std::bind2nd(std::mem_fun(&CBEFunction::AddToImpl), pImpl));
     }
     // add this class to the file
@@ -1019,7 +1017,7 @@ CBEFunction* CBEClass::FindFunction(string sFunctionName,
  * This implementation adds the base opcode for this class and all opcodes for
  * its functions.
  */
-bool CBEClass::AddOpcodesToFile(CBEHeaderFile *pFile)
+bool CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(header: %s) called\n", 
 	__func__, pFile->GetFileName().c_str());
@@ -1093,7 +1091,7 @@ bool CBEClass::AddOpcodesToFile(CBEHeaderFile *pFile)
  */
 bool
 CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation,
-    CBEHeaderFile *pFile)
+    CBEHeaderFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::AddOpcodesToFile(operation: %s) called\n",
@@ -1194,7 +1192,7 @@ int CBEClass::GetClassNumber()
  * However, this does not work for inlined functions. They need to fully know
  * the message buffer type when using it.
  */
-void CBEClass::Write(CBEHeaderFile *pFile)
+void CBEClass::Write(CBEHeaderFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n", __func__);
 
@@ -1202,7 +1200,7 @@ void CBEClass::Write(CBEHeaderFile *pFile)
     // wraps the message buffer
     // per default we derive from CORBA_Object
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	IsTargetFile(pFile))
+	IsTargetFile(&pFile))
     {
 	// CPP TODO: should derive from CORBA_Object, _but_:
 	// then we need to have a declaration of CORBA_Object which is not a
@@ -1210,11 +1208,11 @@ void CBEClass::Write(CBEHeaderFile *pFile)
 	// the compilation of C++ files including generated header files for C
 	// backend... We have to find some other way, such as a dice local
 	// define for C++.
-	*pFile << "\tclass ";
+	pFile << "\tclass ";
 	WriteClassName(pFile);
 	WriteBaseClasses(pFile);
-	*pFile << "\n";
-	*pFile << "\t{\n";
+	pFile << "\n";
+	pFile << "\t{\n";
 
 	WriteMemberVariables(pFile);
 	WriteConstructor(pFile);
@@ -1223,7 +1221,7 @@ void CBEClass::Write(CBEHeaderFile *pFile)
     
     // write message buffer type seperately
     CBEMsgBuffer* pMsgBuf = GetMessageBuffer();
-    CBETarget *pTarget = pFile->GetTarget();
+    CBETarget *pTarget = pFile.GetTarget();
     // test for client and if type is needed
     bool bWriteMsgBuffer = (pMsgBuf != 0) &&
 	 pTarget->HasFunctionWithUserType(
@@ -1237,15 +1235,15 @@ void CBEClass::Write(CBEHeaderFile *pFile)
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 	{
 	    pMsgBuf->WriteDeclaration(pFile);
-	    *pFile << "\n";
+	    pFile << "\n";
 	}
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	    IsTargetFile(pFile))
+	    IsTargetFile(&pFile))
 	{
-	    *pFile << "\tprotected:\n";
-	    pFile->IncIndent();
+	    pFile << "\tprotected:\n";
+	    ++pFile;
 	    pMsgBuf->WriteDeclaration(pFile);
-	    pFile->DecIndent();
+	    --pFile;
 	}
     }
     // now write functions (which need definition of msg buffer)
@@ -1253,8 +1251,8 @@ void CBEClass::Write(CBEHeaderFile *pFile)
     WriteHelperFunctions(pFile);
     
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	IsTargetFile(pFile))
-	*pFile << "\t};\n";
+	IsTargetFile(&pFile))
+	pFile << "\t};\n";
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
 }
@@ -1262,17 +1260,17 @@ void CBEClass::Write(CBEHeaderFile *pFile)
 /** \brief writes the class name, which might be different for clnt & srv
  *  \param pFile the file to write to
  */
-void CBEClass::WriteClassName(CBEFile *pFile)
+void CBEClass::WriteClassName(CBEFile& pFile)
 {
-    *pFile << GetName();
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT))
-	*pFile << "Server";
+    pFile << GetName();
+    if (pFile.IsOfFileType(FILETYPE_COMPONENT))
+	pFile << "Server";
 }
 
 /** \brief writes the ist of base classes
  *  \param pFile the file to write to
  */
-void CBEClass::WriteBaseClasses(CBEFile *pFile)
+void CBEClass::WriteBaseClasses(CBEFile& pFile)
 {
     bool bComma = false;
     vector<CBEClass*>::iterator iterC;
@@ -1281,12 +1279,12 @@ void CBEClass::WriteBaseClasses(CBEFile *pFile)
 	 iterC++)
     {
 	if (bComma)
-	    *pFile << ", ";
+	    pFile << ", ";
 	else
-	    *pFile << " : public ";
-	*pFile << (*iterC)->GetName();
-	if (pFile->IsOfFileType(FILETYPE_COMPONENT))
-	    *pFile << "Server";
+	    pFile << " : public ";
+	pFile << (*iterC)->GetName();
+	if (pFile.IsOfFileType(FILETYPE_COMPONENT))
+	    pFile << "Server";
 	bComma = true;
     }
 }
@@ -1297,34 +1295,32 @@ void CBEClass::WriteBaseClasses(CBEFile *pFile)
  * Do not write member variables if deriving from a base interface, becuase
  * these variables have been defined there already.
  */
-void CBEClass::WriteMemberVariables(CBEHeaderFile *pFile)
+void CBEClass::WriteMemberVariables(CBEHeaderFile& pFile)
 {
     if (!m_BaseClasses.empty())
 	return;
 
-    if (pFile->IsOfFileType(FILETYPE_CLIENTHEADER))
+    if (pFile.IsOfFileType(FILETYPE_CLIENTHEADER))
     {
-	*pFile << "\tprotected:\n";
-	pFile->IncIndent();
-	*pFile << "\t/* contains the address of the server */\n";
-	*pFile << "\tCORBA_Object_base _dice_server;\n";
-	*pFile << "\n";
-	pFile->DecIndent();
+	pFile << "\tprotected:\n";
+	++pFile << "\t/* contains the address of the server */\n";
+	pFile << "\tCORBA_Object_base _dice_server;\n";
+	pFile << "\n";
+	--pFile;
     }
-    if (pFile->IsOfFileType(FILETYPE_COMPONENTHEADER))
+    if (pFile.IsOfFileType(FILETYPE_COMPONENTHEADER))
     {
-	*pFile << "\tprotected:\n";
-	pFile->IncIndent();
+	pFile << "\tprotected:\n";
 	assert(m_pCorbaObject);
-	*pFile << "\t";
+	++pFile << "\t";
 	m_pCorbaObject->WriteDeclaration(pFile);
-	*pFile << ";\n";
+	pFile << ";\n";
 
 	assert(m_pCorbaEnv);
-	*pFile << "\t";
+	pFile << "\t";
 	m_pCorbaEnv->WriteDeclaration(pFile);
-	*pFile << ";\n";
-	pFile->DecIndent();
+	pFile << ";\n";
+	--pFile;
     }
 }
 
@@ -1336,21 +1332,20 @@ void CBEClass::WriteMemberVariables(CBEHeaderFile *pFile)
  *
  * For both sides define a private copy constructor.
  */
-void CBEClass::WriteConstructor(CBEHeaderFile *pFile)
+void CBEClass::WriteConstructor(CBEHeaderFile& pFile)
 {
     
-    *pFile << "\tpublic:\n";
-    pFile->IncIndent();
-    *pFile << "\t/* construct the client object */\n";
-    *pFile << "\t";
+    pFile << "\tpublic:\n";
+    ++pFile << "\t/* construct the client object */\n";
+    pFile << "\t";
     WriteClassName(pFile);
-    if (pFile->IsOfFileType(FILETYPE_CLIENT))
+    if (pFile.IsOfFileType(FILETYPE_CLIENT))
     {
-     	*pFile << " (CORBA_Object_base _server)\n";
-	*pFile << "\t : ";
+     	pFile << " (CORBA_Object_base _server)\n";
+	pFile << "\t : ";
 	// if we do not have a base class, we initialize our server member
 	if (m_BaseClasses.empty())
-	    *pFile << "_dice_server(_server)";
+	    pFile << "_dice_server(_server)";
 	else
 	{
 	    // initialize the base classes
@@ -1361,27 +1356,27 @@ void CBEClass::WriteConstructor(CBEHeaderFile *pFile)
 		iterC++)
 	    {
 		if (bComma)
-		    *pFile << ",\n" << "\t   ";
-		*pFile << (*iterC)->GetName() << "(_server)";
+		    pFile << ",\n" << "\t   ";
+		pFile << (*iterC)->GetName() << "(_server)";
 		bComma = true;
 	    }
 	}
     }
     else /* COMPONENT */
     {
-	*pFile << " (void)";
+	pFile << " (void)";
 
 	if (m_BaseClasses.empty())
 	{
-	    *pFile << "\n";
+	    pFile << "\n";
 
 	    assert(m_pCorbaObject);
 	    string sObj = m_pCorbaObject->m_Declarators.First()->GetName();
-	    *pFile << "\t : " << sObj << "(),\n";
+	    pFile << "\t : " << sObj << "(),\n";
 
 	    assert(m_pCorbaEnv);
 	    string sEnv = m_pCorbaEnv->m_Declarators.First()->GetName();
-	    *pFile << "\t   " << sEnv << "()";
+	    pFile << "\t   " << sEnv << "()";
 	}
 	else
 	{
@@ -1393,53 +1388,51 @@ void CBEClass::WriteConstructor(CBEHeaderFile *pFile)
 		iterC++)
 	    {
 		if (bComma)
-		    *pFile << ",\n" << "\t   ";
+		    pFile << ",\n" << "\t   ";
 		else
-		    *pFile << "\n\t : ";
-		*pFile << (*iterC)->GetName() << "Server()";
+		    pFile << "\n\t : ";
+		pFile << (*iterC)->GetName() << "Server()";
 		bComma = true;
 	    }
 	}
     }
-    *pFile << "\n";
-    *pFile << "\t{ }\n";
-    *pFile << "\n";
-    pFile->DecIndent();
+    pFile << "\n";
+    pFile << "\t{ }\n";
+    pFile << "\n";
+    --pFile;
 
     // if this class is derived from other interfaces, then there is no need
     // to define a private copy constructor, because the base class already
     // has one.
     if (m_BaseClasses.empty())
     {
-	*pFile << "\tprivate:\n";
-	pFile->IncIndent();
-	*pFile << "\t/* copy constructor to avoid implicit assignment of object */\n";
-	*pFile << "\t";
+	pFile << "\tprivate:\n";
+	++pFile << "\t/* copy constructor to avoid implicit assignment of object */\n";
+	pFile << "\t";
 	WriteClassName(pFile);
-	*pFile << " (const ";
+	pFile << " (const ";
 	WriteClassName(pFile);
-	*pFile << "&";
-	*pFile << ")\n";
-	*pFile << "\t{ }\n";
-	*pFile << "\n";
-	pFile->DecIndent();
+	pFile << "&";
+	pFile << ")\n";
+	pFile << "\t{ }\n";
+	pFile << "\n";
+	--pFile;
     }
 }
 
 /** \brief write the destructore for C++ class
  *  \param pFile the file to write to
  */
-void CBEClass::WriteDestructor(CBEHeaderFile *pFile)
+void CBEClass::WriteDestructor(CBEHeaderFile& pFile)
 {
-    *pFile << "\tpublic:\n";
-    pFile->IncIndent();
-    *pFile << "\t/* destruct client object */\n";
-    *pFile << "\tvirtual ~";
+    pFile << "\tpublic:\n";
+    ++pFile << "\t/* destruct client object */\n";
+    pFile << "\tvirtual ~";
     WriteClassName(pFile);
-    *pFile << " ()\n";
-    *pFile << "\t{ }\n";
-    *pFile << "\n";
-    pFile->DecIndent();
+    pFile << " ()\n";
+    pFile << "\t{ }\n";
+    pFile << "\n";
+    --pFile;
 }
 
 /** \brief writes the class to the target file
@@ -1448,7 +1441,7 @@ void CBEClass::WriteDestructor(CBEHeaderFile *pFile)
  * With the C implementation the class simply calls the Write methods
  * of its constants, typedefs and functions
  */
-void CBEClass::Write(CBEImplementationFile *pFile)
+void CBEClass::Write(CBEImplementationFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n", __func__);
     // write implementation for functions
@@ -1467,7 +1460,7 @@ void CBEClass::Write(CBEImplementationFile *pFile)
  * they might be inline and need a full definition of the message buffer which
  * in turn needs all types to be declared.
  */
-void CBEClass::WriteElements(CBEHeaderFile *pFile)
+void CBEClass::WriteElements(CBEHeaderFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::%s for %s called\n", __func__, GetName().c_str());
@@ -1478,10 +1471,10 @@ void CBEClass::WriteElements(CBEHeaderFile *pFile)
 
     // members are public
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	IsTargetFile(pFile))
+	IsTargetFile(&pFile))
     {
-	*pFile << "\tpublic:\n";
-	pFile->IncIndent();
+	pFile << "\tpublic:\n";
+	++pFile;
     }
 
     // write target file
@@ -1503,8 +1496,8 @@ void CBEClass::WriteElements(CBEHeaderFile *pFile)
     }
 
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	IsTargetFile(pFile))
-	pFile->DecIndent();
+	IsTargetFile(&pFile))
+	--pFile;
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	"CBEClass::Write(head, %s) finished\n", GetName().c_str());
@@ -1514,7 +1507,7 @@ void CBEClass::WriteElements(CBEHeaderFile *pFile)
  *  \param pFile the header file to write to
  */
 void
-CBEClass::WriteFunctions(CBEHeaderFile *pFile)
+CBEClass::WriteFunctions(CBEHeaderFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEClass::%s(head, %s) called\n", __func__, GetName().c_str());
@@ -1528,10 +1521,10 @@ CBEClass::WriteFunctions(CBEHeaderFile *pFile)
     {
 	// members are public
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	    IsTargetFile(pFile))
+	    IsTargetFile(&pFile))
 	{
-	    *pFile << "\tpublic:\n";
-	    pFile->IncIndent();
+	    pFile << "\tpublic:\n";
+	    ++pFile;
 	}
 	WriteExternCStart(pFile);
     }
@@ -1550,8 +1543,8 @@ CBEClass::WriteFunctions(CBEHeaderFile *pFile)
     {
 	WriteExternCEnd(pFile);
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	    IsTargetFile(pFile))
-	    pFile->DecIndent();
+	    IsTargetFile(&pFile))
+	    --pFile;
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(head, %s) finished\n",
@@ -1564,7 +1557,7 @@ CBEClass::WriteFunctions(CBEHeaderFile *pFile)
  * With the C implementation the class simply calls it's
  * function's Write method.
  */
-void CBEClass::WriteElements(CBEImplementationFile *pFile)
+void CBEClass::WriteElements(CBEImplementationFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEClass::Write(impl, %s) called\n", GetName().c_str());
@@ -1582,7 +1575,7 @@ void CBEClass::WriteElements(CBEImplementationFile *pFile)
  *  \param pFile the implementation file to write to
  */
 void
-CBEClass::WriteFunctions(CBEImplementationFile *pFile)
+CBEClass::WriteFunctions(CBEImplementationFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEClass::%s(impl, %s) called\n", __func__, GetName().c_str());
@@ -1621,12 +1614,12 @@ CBEClass::WriteFunctions(CBEImplementationFile *pFile)
  *  \param pObj the object for which to write the line directive
  */
 void
-CBEClass::WriteLineDirective(CBEFile *pFile,
+CBEClass::WriteLineDirective(CBEFile& pFile,
     CObject *pObj)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
 	return;
-    *pFile << "# " << pObj->GetSourceLine() << " \"" <<
+    pFile << "# " << pObj->GetSourceLine() << " \"" <<
 	pObj->GetSourceFileName() << "\"\n";
 }
 
@@ -1635,10 +1628,10 @@ CBEClass::WriteLineDirective(CBEFile *pFile,
  *  \param pFile the file to write to
  */
 void CBEClass::WriteConstant(CBEConstant *pConstant,
-    CBEHeaderFile *pFile)
+    CBEHeaderFile& pFile)
 {
     assert(pConstant);
-    if (!pConstant->IsTargetFile(pFile))
+    if (!pConstant->IsTargetFile(&pFile))
 	return;
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n", __func__);
@@ -1653,10 +1646,10 @@ void CBEClass::WriteConstant(CBEConstant *pConstant,
  *  \param pFile the file to write to
  */
 void CBEClass::WriteTypedef(CBETypedef *pTypedef,
-    CBEHeaderFile *pFile)
+    CBEHeaderFile& pFile)
 {
     assert(pTypedef);
-    if (!pTypedef->IsTargetFile(pFile))
+    if (!pTypedef->IsTargetFile(&pFile))
 	return;
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n", __func__);
@@ -1671,18 +1664,17 @@ void CBEClass::WriteTypedef(CBETypedef *pTypedef,
  *  \param pFile the file to write to
  */
 void CBEClass::WriteFunction(CBEFunction *pFunction,
-    CBEHeaderFile *pFile)
+    CBEHeaderFile& pFile)
 {
     assert(pFunction);
-    assert(pFile);
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(%s, %s) called\n",
-	__func__, pFunction->GetName().c_str(), pFile->GetFileName().c_str());
+	__func__, pFunction->GetName().c_str(), pFile.GetFileName().c_str());
 
-    if (pFunction->DoWriteFunction(pFile))
+    if (pFunction->DoWriteFunction(&pFile))
     {
         pFunction->Write(pFile);
-        *pFile << "\n";
+        pFile << "\n";
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
@@ -1693,18 +1685,17 @@ void CBEClass::WriteFunction(CBEFunction *pFunction,
  *  \param pFile the file to write to
  */
 void CBEClass::WriteFunction(CBEFunction *pFunction,
-    CBEImplementationFile *pFile)
+    CBEImplementationFile& pFile)
 {
     assert(pFunction);
-    assert(pFile);
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(%s, %s) called\n",
-	__func__, pFunction->GetName().c_str(), pFile->GetFileName().c_str());
+	__func__, pFunction->GetName().c_str(), pFile.GetFileName().c_str());
 
-    if (pFunction->DoWriteFunction(pFile))
+    if (pFunction->DoWriteFunction(&pFile))
     {
         pFunction->Write(pFile);
-        *pFile << "\n";
+        pFile << "\n";
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
@@ -2205,7 +2196,7 @@ CBETypedef* CBEClass::FindTypedef(string sTypeName)
  * A file is a target file for the class if its the target file for at least
  * one function.
  */
-bool CBEClass::IsTargetFile(CBEImplementationFile * pFile)
+bool CBEClass::IsTargetFile(CBEImplementationFile* pFile)
 {
     vector<CBEFunction*>::iterator iter;
     for (iter = m_Functions.begin();
@@ -2225,7 +2216,7 @@ bool CBEClass::IsTargetFile(CBEImplementationFile * pFile)
  * A file is a target file for the class if its teh target class for at least
  * one function.
  */
-bool CBEClass::IsTargetFile(CBEHeaderFile * pFile)
+bool CBEClass::IsTargetFile(CBEHeaderFile* pFile)
 {
     vector<CBEFunction*>::iterator iter;
     for (iter = m_Functions.begin();
@@ -2288,10 +2279,10 @@ CBEClass::CreateBackEndTaggedDecl(CFEConstructedType *pFEType)
  *  \param pFile the file to write to
  */
 void CBEClass::WriteTaggedType(CBEType *pType,
-    CBEHeaderFile *pFile)
+    CBEHeaderFile& pFile)
 {
     assert(pType);
-    if (!pType->IsTargetFile(pFile))
+    if (!pType->IsTargetFile(&pFile))
 	return;
     // get tag
     string sTag;
@@ -2301,12 +2292,12 @@ void CBEClass::WriteTaggedType(CBEType *pType,
         sTag = ((CBEUnionType*)pType)->GetTag();
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     sTag = pNF->GetTypeDefine(sTag);
-    *pFile << "#ifndef " << sTag << "\n";
-    *pFile << "#define " << sTag << "\n";
+    pFile << "#ifndef " << sTag << "\n";
+    pFile << "#define " << sTag << "\n";
     pType->Write(pFile);
-    *pFile << ";\n";
-    *pFile << "#endif /* !" << sTag << " */\n";
-    *pFile << "\n";
+    pFile << ";\n";
+    pFile << "#endif /* !" << sTag << " */\n";
+    pFile << "\n";
 }
 
 /** \brief writes the declaration of the exception
@@ -2316,7 +2307,7 @@ void CBEClass::WriteTaggedType(CBEType *pType,
  * We first define the type of the exception, which is a simple typedef.
  */
 void CBEClass::WriteException(CBEException *pException,
-    CBEHeaderFile *pFile)
+    CBEHeaderFile& pFile)
 {
     WriteTypedef(pException, pFile);
 }
@@ -2328,21 +2319,21 @@ void CBEClass::WriteException(CBEException *pException,
  *
  * Search functions for a parameter with that type.
  */
-bool CBEClass::HasFunctionWithUserType(string sTypeName, CBEFile *pFile)
+bool CBEClass::HasFunctionWithUserType(string sTypeName, CBEFile* pFile)
 {
     vector<CBEFunction*>::iterator iter;
     for (iter = m_Functions.begin();
 	 iter != m_Functions.end();
 	 iter++)
     {
-        if (dynamic_cast<CBEHeaderFile*>(pFile) &&
-            (*iter)->DoWriteFunction((CBEHeaderFile*)pFile) &&
-            (*iter)->FindParameterType(sTypeName))
-            return true;
-        if (dynamic_cast<CBEImplementationFile*>(pFile) &&
-            (*iter)->DoWriteFunction((CBEImplementationFile*)pFile) &&
-            (*iter)->FindParameterType(sTypeName))
-            return true;
+	CBEHeaderFile *h = dynamic_cast<CBEHeaderFile*>(pFile);
+	if (h && (*iter)->DoWriteFunction(h) &&
+	    (*iter)->FindParameterType(sTypeName))
+	    return true;
+	CBEImplementationFile *i = dynamic_cast<CBEImplementationFile*>(pFile);
+	if (i && (*iter)->DoWriteFunction(i) &&
+	    (*iter)->FindParameterType(sTypeName))
+	    return true;
     }
     return false;
 }
@@ -2540,10 +2531,10 @@ void CBEClass::InsertOrderedElement(CObject *pObj)
  * declaration into the header file. The implementation has to be user
  * provided.
  */
-void CBEClass::WriteHelperFunctions(CBEHeaderFile* pFile)
+void CBEClass::WriteHelperFunctions(CBEHeaderFile& pFile)
 {
     // check for function prototypes
-    if (!pFile->IsOfFileType(FILETYPE_COMPONENT))
+    if (!pFile.IsOfFileType(FILETYPE_COMPONENT))
 	return;
 
     CBEAttribute *pAttr = m_Attributes.Find(ATTR_DEFAULT_FUNCTION);
@@ -2558,7 +2549,7 @@ void CBEClass::WriteHelperFunctions(CBEHeaderFile* pFile)
     string sMsgBuffer = pMsgBuffer->m_Declarators.First()->GetName();
     // int \<name\>(\<corba object\>, \<msg buffer type\>*,
     //              \<corba environment\>*)
-    *pFile << "\tint " << sDefaultFunction << " (CORBA_Object, " <<
+    pFile << "\tint " << sDefaultFunction << " (CORBA_Object, " <<
 	sMsgBuffer << "*, CORBA_Server_Environment*);\n";
     WriteExternCEnd(pFile);
 }
@@ -2568,7 +2559,7 @@ void CBEClass::WriteHelperFunctions(CBEHeaderFile* pFile)
  *
  * Writes platform specific helper functions.
  */
-void CBEClass::WriteHelperFunctions(CBEImplementationFile* /*pFile*/)
+void CBEClass::WriteHelperFunctions(CBEImplementationFile& /*pFile*/)
 {
 }
 
@@ -2592,12 +2583,12 @@ CBESrvLoopFunction* CBEClass::GetSrvLoopFunction()
  *  \param pFile the file to write to
  */
 void 
-CBEClass::WriteExternCStart(CBEFile *pFile)
+CBEClass::WriteExternCStart(CBEFile& pFile)
 {
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	return;
 
-    *pFile << "#ifdef __cplusplus\n" <<
+    pFile << "#ifdef __cplusplus\n" <<
         "extern \"C\" {\n" <<
         "#endif\n\n";
 }
@@ -2606,12 +2597,12 @@ CBEClass::WriteExternCStart(CBEFile *pFile)
  *  \param pFile the file to write to
  */
 void 
-CBEClass::WriteExternCEnd(CBEFile *pFile)
+CBEClass::WriteExternCEnd(CBEFile& pFile)
 {
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	return;
 
-    *pFile << "#ifdef __cplusplus\n" <<
+    pFile << "#ifdef __cplusplus\n" <<
         "}\n" <<
         "#endif\n\n";
 }

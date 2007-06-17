@@ -36,7 +36,6 @@
 #include "FEEnumType.h"
 #include "FEUnionType.h"
 #include "FEAttribute.h"
-#include "File.h"
 #include "Compiler.h"
 #include "Visitor.h"
 #include <iostream>

@@ -48,7 +48,7 @@ CBEImplementationFile::CBEImplementationFile()
 }
 
 CBEImplementationFile::CBEImplementationFile(CBEImplementationFile & src)
- : CBEFile(src)
+ : std::ios(), CBEFile(src)
 {
     m_pHeaderFile = src.m_pHeaderFile;
 }
@@ -56,14 +56,19 @@ CBEImplementationFile::CBEImplementationFile(CBEImplementationFile & src)
 /** \brief destructor
  */
 CBEImplementationFile::~CBEImplementationFile()
-{
+{ }
 
+/** \brief create a clone of this object
+ */
+CObject* CBEImplementationFile::Clone(void)
+{
+    return new CBEImplementationFile(*this);
 }
 
 /** \brief sets the internal reference to the corresponding header file
  *  \param pHeaderFile points to the header file
  */
-void CBEImplementationFile::SetHeaderFile(CBEHeaderFile * pHeaderFile)
+void CBEImplementationFile::SetHeaderFile(CBEHeaderFile* pHeaderFile)
 {
     m_pHeaderFile = pHeaderFile;
 }
@@ -71,7 +76,7 @@ void CBEImplementationFile::SetHeaderFile(CBEHeaderFile * pHeaderFile)
 /** \brief retrieves a reference to the corresponding header file
  *  \return a reference to this implementation file's header file
  */
-CBEHeaderFile *CBEImplementationFile::GetHeaderFile()
+CBEHeaderFile* CBEImplementationFile::GetHeaderFile()
 {
     return m_pHeaderFile;
 }
@@ -93,7 +98,7 @@ CBEImplementationFile::CreateBackEnd(CFEFile * pFEFile,
     m_nFileType = nFileType;
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     m_sFilename = pNF->GetFileName(pFEFile, m_nFileType);
-    CBEHeaderFile *pHeader = GetHeaderFile();
+    CBEHeaderFile* pHeader = GetHeaderFile();
     if (pHeader)
         AddIncludedFileName(pHeader->GetFileName(), true, false, pFEFile);
 }
@@ -110,7 +115,7 @@ CBEImplementationFile::CreateBackEnd(CFELibrary * pFELibrary,
     m_nFileType = nFileType;
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     m_sFilename = pNF->GetFileName(pFELibrary, m_nFileType);
-    CBEHeaderFile *pHeader = GetHeaderFile();
+    CBEHeaderFile* pHeader = GetHeaderFile();
     if (pHeader)
         AddIncludedFileName(pHeader->GetFileName(), true, false, pFELibrary);
 }
@@ -127,7 +132,7 @@ CBEImplementationFile::CreateBackEnd(CFEInterface *pFEInterface,
     m_nFileType = nFileType;
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     m_sFilename = pNF->GetFileName(pFEInterface, m_nFileType);
-    CBEHeaderFile *pHeader = GetHeaderFile();
+    CBEHeaderFile* pHeader = GetHeaderFile();
     if (pHeader)
         AddIncludedFileName(pHeader->GetFileName(), true, false, pFEInterface);
 }
@@ -144,7 +149,7 @@ CBEImplementationFile::CreateBackEnd(CFEOperation * pFEOperation,
     m_nFileType = nFileType;
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     m_sFilename = pNF->GetFileName(pFEOperation, m_nFileType);
-    CBEHeaderFile *pHeader = GetHeaderFile();
+    CBEHeaderFile* pHeader = GetHeaderFile();
     if (pHeader)
         AddIncludedFileName(pHeader->GetFileName(), true, false, pFEOperation);
 }
@@ -162,11 +167,20 @@ void CBEImplementationFile::Write(void)
     string sFilename;
     CCompiler::GetBackEndOption(string("output-dir"), sFilename);
     sFilename += GetFileName();
-    if (!Open(sFilename))
+    if (is_open())
     {
-	std::cerr << "Could not open implementation file " << sFilename << "\n";
+	std::cerr << "ERROR: Implementation file " << sFilename << " is already opened.\n";
+	return;
+    }
+    open(sFilename.c_str());
+    if (!good())
+    {
+	std::cerr << "ERROR: Could not open implementation file " << sFilename << "\n";
         return;
     }
+    m_sFilename = sFilename;
+    m_nIndent = 0;
+    m_nLastIndent = 0;
     // sort our members/elements depending on source line number
     // into extra vector
     CreateOrderedElementList();
@@ -197,17 +211,17 @@ void CBEImplementationFile::Write(void)
             // brace functions with extern C
             if (nLastType == 4)
             {
-		m_file << 
+		*this << 
 		    "#ifdef __cplusplus\n" <<
 		    "}\n" <<
 		    "#endif\n\n";
             }
-	    m_file << "\n";
+	    *this << "\n";
             nLastType = nCurrType;
             // brace functions with extern C
             if (nCurrType == 4)
             {
-		m_file <<
+		*this <<
 		    "#ifdef __cplusplus\n" <<
 		    "extern \"C\" {\n" <<
 		    "#endif\n\n";
@@ -216,7 +230,7 @@ void CBEImplementationFile::Write(void)
         // add pre-processor directive to denote source line
         if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
         {
-	    m_file << "# " << (*iter)->GetSourceLine() << " \"" << 
+	    *this << "# " << (*iter)->GetSourceLine() << " \"" << 
 		(*iter)->GetSourceFileName() << "\"\n";
         }
         // now really write the element
@@ -241,7 +255,7 @@ void CBEImplementationFile::Write(void)
     // if last element was function, close braces
     if (nLastType == 4)
     {
-	m_file <<
+	*this <<
 	    "#ifdef __cplusplus\n" <<
 	    "}\n" <<
 	    "#endif\n\n";
@@ -251,7 +265,7 @@ void CBEImplementationFile::Write(void)
     WriteHelperFunctions();
 
     // close file
-    Close();
+    close();
 }
 
 /** \brief writes a class
@@ -260,7 +274,7 @@ void CBEImplementationFile::Write(void)
 void CBEImplementationFile::WriteClass(CBEClass *pClass)
 {
     assert(pClass);
-    pClass->Write(this);
+    pClass->Write(*this);
 }
 
 /** \brief writes the namespace
@@ -270,7 +284,7 @@ void
 CBEImplementationFile::WriteNameSpace(CBENameSpace *pNameSpace)
 {
     assert(pNameSpace);
-    pNameSpace->Write(this);
+    pNameSpace->Write(*this);
 }
 
 /** \brief writes the function
@@ -281,7 +295,7 @@ CBEImplementationFile::WriteFunction(CBEFunction *pFunction)
 {
     assert(pFunction);
     if (pFunction->DoWriteFunction(this))
-        pFunction->Write(this);
+        pFunction->Write(*this);
 }
 
 /** \brief writes includes, which have to appear before any type definition
@@ -294,7 +308,7 @@ CBEImplementationFile::WriteDefaultIncludes(void)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CTrace *pTrace = pCF->GetNewTrace();
     if (pTrace)
-	pTrace->DefaultIncludes(this);
+	pTrace->DefaultIncludes(*(CBEFile*)this);
     delete pTrace;
 }
 

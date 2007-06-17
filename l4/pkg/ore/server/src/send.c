@@ -28,7 +28,7 @@ CORBA_int ore_rxtx_send_component(CORBA_Object _dice_corba_obj,
 {
   int ret = 0;
   int channel = *(int *)l4thread_data_get_current(__l4ore_tls_id_key);
-  
+ 
   LOGd(ORE_DEBUG_COMPONENTS, "send on channel %d", channel);
   LOG_MAC(ORE_DEBUG_COMPONENTS, buf);
 

@@ -123,9 +123,9 @@ CL4BETypedDeclarator::GetMaxSize(int & nSize,
  * string and only frees it after the reply.
  */
 bool
-CL4BETypedDeclarator::DoAllocateMemory(CBEFile *pFile)
+CL4BETypedDeclarator::DoAllocateMemory(CBEFile& pFile)
 {
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+    if (pFile.IsOfFileType(FILETYPE_COMPONENT) &&
 	m_Attributes.Find(ATTR_REF))
 	return true;
 

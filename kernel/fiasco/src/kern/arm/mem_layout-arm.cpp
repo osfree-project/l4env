@@ -154,7 +154,7 @@ public:
     Uart0_phys_base      = Devices_phys_base + 0x00009000,
     Timer0_1_phys_base   = Devices_phys_base + 0x00011000,
     Timer2_3_phys_base   = Devices_phys_base + 0x00012000,
-    Sdram_phys_base      = 0x70000000,
+    Sdram_phys_base      = 0x00000000, // keep at 0, see is_physical_memory()
 
     Flush_area_phys_base = 0xe0000000,
   };
@@ -197,7 +197,7 @@ public:
 
 // -------------------------------------------------------------------------
 
-IMPLEMENTATION [arm && (sa1100 || pxa || realview)]:
+IMPLEMENTATION [arm && (sa1100 || pxa)]:
 
 PUBLIC static inline
 bool
@@ -209,14 +209,17 @@ Mem_layout::is_physical_memory(Address addr)
 
 // ------------------------------------------------------------------------
 
-IMPLEMENTATION [arm && (integrator || realview_at_0)]:
+IMPLEMENTATION [arm && (integrator || realview)]:
+
+#include <cassert>
 
 // Separate version because of Sdram_phys_base == 0 and warnings
-PUBLIC static inline
+PUBLIC static inline NEEDS[<cassert>]
 bool
 Mem_layout::is_physical_memory(Address addr)
 {
-  return addr - Sdram_phys_base < Map_end - Map_base;
+  assert(!Sdram_phys_base);
+  return addr < Map_end - Map_base;
 }
 
 // ------------------------------------------------------------------------

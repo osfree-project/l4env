@@ -351,7 +351,7 @@ CL4BEMsgBuffer::GetRefstringMemberVariable(int nNumber)
  * This implementation is empty.
  */
 bool
-CL4BEMsgBuffer::WriteRefstringInitFunction(CBEFile* /*pFile*/,
+CL4BEMsgBuffer::WriteRefstringInitFunction(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/,
     CBEClass* /*pClass*/,
     int /*nIndex*/,
@@ -370,7 +370,7 @@ CL4BEMsgBuffer::WriteRefstringInitFunction(CBEFile* /*pFile*/,
  * This implementation is empty.
  */
 void 
-CL4BEMsgBuffer::WriteRefstringInitParameter(CBEFile* /*pFile*/,
+CL4BEMsgBuffer::WriteRefstringInitParameter(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/,
     CBETypedDeclarator* /*pMember*/,
     int /*nIndex*/,
@@ -385,7 +385,7 @@ CL4BEMsgBuffer::WriteRefstringInitParameter(CBEFile* /*pFile*/,
  * This implementation is empty
  */
 void
-CL4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile* /*pFile*/,
+CL4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& /*pFile*/,
     CMsgStructType /*nType*/)
 {
 }
@@ -441,7 +441,7 @@ CL4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile* /*pFile*/,
  *
  */
 void
-CL4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
+CL4BEMsgBuffer::WriteInitialization(CBEFile& pFile,
     CBEFunction *pFunction,
     int nType,
     CMsgStructType nStructType)
@@ -522,9 +522,9 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
     if (!pMember)
 	return;
 
-    *pFile << "\t";
+    pFile << "\t";
     WriteAccess(pFile, pFunction, nStructType, pMember);
-    *pFile << " = L4_IPC_DOPE( sizeof(";
+    pFile << " = L4_IPC_DOPE( sizeof(";
     if (CMsgStructType::Generic == nStructType ||
 	nType == TYPE_MSGDOPE_SIZE)
     {
@@ -536,7 +536,7 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
 	// sizeof(<msgbufvar>.<structname>)/sizeof(long)-3
 	WriteAccessToStruct(pFile, pFunction, nStructType);
     }
-    *pFile << ")/sizeof(long)-" << 3 + nStrings*nRefSize;
+    pFile << ")/sizeof(long)-" << 3 + nStrings*nRefSize;
     if (CMsgStructType::Generic != nStructType && 
 	nType == TYPE_MSGDOPE_SEND)
     {
@@ -554,9 +554,9 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
 	    sName.c_str(), pMember);
 
 	if (pMember)
-	    *pFile << "-" << pMember->GetSize()/nWordSize;
+	    pFile << "-" << pMember->GetSize()/nWordSize;
     }
-    *pFile << ", " << nStrings << ");\n";
+    pFile << ", " << nStrings << ");\n";
 }
 
 /** \brief writes the initialization of the refstring members
@@ -571,7 +571,7 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
  * attribute given, allocate using CBEContext::WriteMalloc().
  */
 bool
-CL4BEMsgBuffer::WriteRefstringInitialization(CBEFile *pFile,
+CL4BEMsgBuffer::WriteRefstringInitialization(CBEFile& pFile,
     CMsgStructType nType)
 {
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -646,7 +646,7 @@ CL4BEMsgBuffer::WriteRefstringInitialization(CBEFile *pFile,
  * this specific position and determine their maximum.
  */
 void
-CL4BEMsgBuffer::WriteMaxRefstringSize(CBEFile *pFile,
+CL4BEMsgBuffer::WriteMaxRefstringSize(CBEFile& pFile,
     CBEFunction *pFunction,
     CBETypedDeclarator *pMember,
     CBETypedDeclarator *pParameter,
@@ -737,7 +737,7 @@ CL4BEMsgBuffer::WriteMaxRefstringSize(CBEFile *pFile,
 	// if max-is string is not empty print and return
 	if (!sMaxStr.empty())
 	{
-	    *pFile << sMaxStr;
+	    pFile << sMaxStr;
 	    return;
 	}
     }
@@ -745,7 +745,7 @@ CL4BEMsgBuffer::WriteMaxRefstringSize(CBEFile *pFile,
     // the last resort: use the type's max size
     CBESizes *pSizes = CCompiler::GetSizes();
     int nMaxStrSize = pSizes->GetMaxSizeOfType(TYPE_CHAR);
-    *pFile << nMaxStrSize;
+    pFile << nMaxStrSize;
 }
 
 /** \brief tests if the struct for a direction has enough word sized members \

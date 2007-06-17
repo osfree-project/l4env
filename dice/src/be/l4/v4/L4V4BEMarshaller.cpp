@@ -86,7 +86,8 @@ CL4V4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
  * is not se properly.
  */
 bool
-CL4V4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
+CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile,
+    CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
@@ -112,55 +113,55 @@ CL4V4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
     // try to find respective member and assign
     if (m_bMarshal)
     {
-	*m_pFile << "\t";
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	pFile << "\t";
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
 	    pStack);
 	// write access to snd_str part of indirect string
-	*m_pFile << " = L4_StringItem ( (";
+	pFile << " = L4_StringItem ( (";
 	// size with max constraint
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	pParameter->WriteGetSize(pFile, pStack, m_pFunction);
 	if (!pParameter->m_Attributes.Find(ATTR_LENGTH_IS) &&
 	    !pParameter->m_Attributes.Find(ATTR_SIZE_IS) &&
 	    pParameter->m_Attributes.Find(ATTR_STRING))
-	    *m_pFile << "+1"; // tranmist terminating zero
-	*m_pFile << " > ";
-	pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << ") ? ";
-	pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << " : ";
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	    pFile << "+1"; // tranmist terminating zero
+	pFile << " > ";
+	pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
+	pFile << ") ? ";
+	pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
+	pFile << " : ";
+	pParameter->WriteGetSize(pFile, pStack, m_pFunction);
 	if (!pParameter->m_Attributes.Find(ATTR_LENGTH_IS) &&
 	    !pParameter->m_Attributes.Find(ATTR_SIZE_IS) &&
 	    pParameter->m_Attributes.Find(ATTR_STRING))
-	    *m_pFile << "+1"; // tranmist terminating zero
-	*m_pFile << ", (void *)(";
+	    pFile << "+1"; // tranmist terminating zero
+	pFile << ", (void *)(";
 	// if type of member and parameter are different, cast to member type
-	WriteParameter(pParameter, pStack, true);
-	*m_pFile << ") );\n";
+	WriteParameter(pFile, pParameter, pStack, true);
+	pFile << ") );\n";
     }
     else if (
 	!(pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT) &&
-	    m_pFile->IsOfFileType(FILETYPE_CLIENT)) &&
+	    pFile.IsOfFileType(FILETYPE_CLIENT)) &&
 	!(pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER) &&
-	    m_pFile->IsOfFileType(FILETYPE_COMPONENT)) )
+	    pFile.IsOfFileType(FILETYPE_COMPONENT)) )
     {
 	// only unmarshal refstrings if not preallocated, because preallocated
 	// refstrings are already assigned to rcv_str.
 	// also: check if parameter is return parameter, because we cannot
 	// make a pointer from it. Instead, dereference the refstring.
 	bool bReturn = pParameter == m_pFunction->GetReturnVariable();
-	*m_pFile << "\t";
-	WriteParameter(pParameter, pStack, !bReturn);
-	*m_pFile << " = ";
+	pFile << "\t";
+	WriteParameter(pFile, pParameter, pStack, !bReturn);
+	pFile << " = ";
 	if (bReturn)
-	    *m_pFile << "*";
+	    pFile << "*";
 	// cast to type of parameter
-	pType->WriteCast(m_pFile, true);
+	pType->WriteCast(pFile, true);
 	// access message buffer
-	WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, 
+	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, 
 	    pStack);
 	// append receive member
-	*m_pFile << ".X.str.string_ptr;\n";
+	pFile << ".X.str.string_ptr;\n";
 
 	// We do unmarshal the size parameter, because the actually
 	// transmitted size might be smaller than the size of the receive
@@ -187,7 +188,8 @@ CL4V4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
  * in the indirect string list the current member is.
  */
 void
-CL4V4BEMarshaller::WriteRefstringCastMember(DIRECTION_TYPE nDirection,
+CL4V4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile,
+    DIRECTION_TYPE nDirection,
     CBEMsgBuffer *pMsgBuffer,
     CBETypedDeclarator *pMember)
 {
@@ -216,13 +218,13 @@ CL4V4BEMarshaller::WriteRefstringCastMember(DIRECTION_TYPE nDirection,
     assert (nIndex >= 0);
 
     // dereference pointer to L4_StringItem
-    *m_pFile << "(*";
+    pFile << "(*";
 
     // write type cast for restring
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
     pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
-    pType->WriteCast(m_pFile, true);
+    pType->WriteCast(pFile, true);
     delete pType;
 
     // access to the strings is done using the generic struct, the word member
@@ -230,16 +232,16 @@ CL4V4BEMarshaller::WriteRefstringCastMember(DIRECTION_TYPE nDirection,
     // into the word member and casting the result to a string dope.
     //
     // ((L4_Msg_t*)<msgbuf>)->msg[((L4_Msg_t*)<msgbuf>)->tag.X.u + nIndex]
-    *m_pFile << "&( ((L4_Msg_t*)";
-    pMsgBuffer->WriteAccessToVariable(m_pFile, m_pFunction, true);
-    *m_pFile << ")->msg[((L4_Msg_t*)";
-    pMsgBuffer->WriteAccessToVariable(m_pFile, m_pFunction, true);
-    *m_pFile << ")->tag.X.u";
+    pFile << "&( ((L4_Msg_t*)";
+    pMsgBuffer->WriteAccessToVariable(pFile, m_pFunction, true);
+    pFile << ")->msg[((L4_Msg_t*)";
+    pMsgBuffer->WriteAccessToVariable(pFile, m_pFunction, true);
+    pFile << ")->tag.X.u";
     ostringstream os;
     os << nIndex;
     if (nIndex > 0)
-	*m_pFile << " + " << os.str();
-    *m_pFile << "] ))";
+	pFile << " + " << os.str();
+    pFile << "] ))";
 }
 
 /** \brief test if zero flexpage and marshal if so
@@ -247,7 +249,7 @@ CL4V4BEMarshaller::WriteRefstringCastMember(DIRECTION_TYPE nDirection,
  *  \return true if zero flexpage marshalled
  */
 bool
-CL4V4BEMarshaller::MarshalZeroFlexpage(CBETypedDeclarator *pMember)
+CL4V4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
@@ -261,9 +263,9 @@ CL4V4BEMarshaller::MarshalZeroFlexpage(CBETypedDeclarator *pMember)
     if (m_bMarshal)
     {
 	// zero raw member
-	*m_pFile << "\t";
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
-	*m_pFile << ".raw = 0;\n";
+	pFile << "\t";
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
+	pFile << ".raw = 0;\n";
     }
 
     return true;

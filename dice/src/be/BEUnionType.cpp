@@ -108,7 +108,7 @@ CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType)
     {
 	CBENameFactory *pNF = CCompiler::GetNameFactory();
         // see if we can find the original struct
-        CFEFile *pFERoot = dynamic_cast<CFEFile*>(pFEType->GetRoot());
+        CFEFile *pFERoot = pFEType->GetRoot();
         assert(pFERoot);
         CFEConstructedType *pFETaggedDecl = pFERoot->FindTaggedDecl(sTag);
         if (pFETaggedDecl)
@@ -156,17 +156,17 @@ CBEUnionType::CreateBackEnd(string sTag)
  *  \<member list\>
  * }
  */
-void CBEUnionType::Write(CBEFile * pFile)
+void CBEUnionType::Write(CBEFile& pFile)
 {
     // write union
-    *pFile << m_sName;
+    pFile << m_sName;
     if (!m_sTag.empty())
-	*pFile << " " << m_sTag;
+	pFile << " " << m_sTag;
     if (!m_UnionCases.empty())
     {
-	*pFile << "\n";
-	*pFile << "\t{\n";
-        pFile->IncIndent();
+	pFile << "\n";
+	pFile << "\t{\n";
+        ++pFile;
 
         // write members
 	vector<CBEUnionCase*>::iterator iterU;
@@ -174,14 +174,13 @@ void CBEUnionType::Write(CBEFile * pFile)
 	    iterU != m_UnionCases.end();
 	    iterU++)
 	{
-	    *pFile << "\t";
+	    pFile << "\t";
 	    (*iterU)->WriteDeclaration(pFile);
-	    *pFile << ";\n";
+	    pFile << ";\n";
 	}
 
         // close union
-        pFile->DecIndent();
-	*pFile << "\t}";
+	--pFile << "\t}";
     }
 }
 
@@ -190,11 +189,11 @@ void CBEUnionType::Write(CBEFile * pFile)
  *
  * Only write a 'struct \<tag\>'.
  */
-void CBEUnionType::WriteDeclaration(CBEFile * pFile)
+void CBEUnionType::WriteDeclaration(CBEFile& pFile)
 {
-    *pFile << m_sName;
+    pFile << m_sName;
     if (!m_sTag.empty())
-	*pFile << " " << m_sTag;
+	pFile << " " << m_sTag;
 }
 
 /** \brief calculates the size of this union type
@@ -339,9 +338,9 @@ int CBEUnionType::GetUnionCaseCount()
  *
  * The cast of a union type is '(union tag)'.
  */
-void CBEUnionType::WriteCast(CBEFile * pFile, bool bPointer)
+void CBEUnionType::WriteCast(CBEFile& pFile, bool bPointer)
 {
-    *pFile << "(";
+    pFile << "(";
     if (m_sTag.empty())
     {
 	// no tag -> we need a typedef to save us
@@ -358,17 +357,17 @@ void CBEUnionType::WriteCast(CBEFile * pFile, bool bPointer)
 		break;
 	}
         assert(iterD != pTypedef->m_Declarators.end());
-	*pFile << (*iterD)->GetName();
+	pFile << (*iterD)->GetName();
         if (bPointer && ((*iterD)->GetStars() == 0))
-	    *pFile << "*";
+	    pFile << "*";
     }
     else
     {
-	*pFile << m_sName << " " << m_sTag;
+	pFile << m_sName << " " << m_sTag;
         if (bPointer)
-	    *pFile << "*";
+	    pFile << "*";
     }
-    *pFile << ")";
+    pFile << ")";
 }
 
 /** \brief write the zero init code for a union
@@ -376,10 +375,10 @@ void CBEUnionType::WriteCast(CBEFile * pFile, bool bPointer)
  *
  * init union similar to struct, but use only first member.
  */
-void CBEUnionType::WriteZeroInit(CBEFile * pFile)
+void CBEUnionType::WriteZeroInit(CBEFile& pFile)
 {
-    *pFile << "{ ";
-    pFile->IncIndent();
+    pFile << "{ ";
+    ++pFile;
     CBEUnionCase *pMember = m_UnionCases.First();
     if (pMember)
     {
@@ -392,7 +391,7 @@ void CBEUnionType::WriteZeroInit(CBEFile * pFile)
 	     iterD++)
 	{
 	    // be C99 compliant:
-	    *pFile << (*iterD)->GetName() << " : ";
+	    pFile << (*iterD)->GetName() << " : ";
 	    if ((*iterD)->IsArray())
 		WriteZeroInitArray(pFile, pType, (*iterD), 
 		    (*iterD)->m_Bounds.begin());
@@ -400,8 +399,7 @@ void CBEUnionType::WriteZeroInit(CBEFile * pFile)
 		pType->WriteZeroInit(pFile);
 	}
     }
-    pFile->DecIndent();
-    *pFile << " }";
+    --pFile << " }";
 }
 
 /** \brief used to determine if this type writes a zero init string
@@ -425,7 +423,7 @@ bool CBEUnionType::DoWriteZeroInit()
  *
  * \todo what if default case is variable sized?
  */
-void CBEUnionType::WriteGetSize(CBEFile * pFile,
+void CBEUnionType::WriteGetSize(CBEFile& pFile,
     CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
@@ -445,14 +443,14 @@ void CBEUnionType::WriteGetSize(CBEFile * pFile,
     // call recursive write
     if (!vVarSizedUnionCase.empty())
     {
-	*pFile << "_dice_max(";
+	pFile << "_dice_max(";
         WriteGetMaxSize(pFile, &vVarSizedUnionCase, vVarSizedUnionCase.begin(), pStack, pUsingFunc);
-	*pFile << ", " << nFixedSize << ")";
+	pFile << ", " << nFixedSize << ")";
     }
     else
 	// should never get here, becaus WriteGetSize is only called if
 	// Var-Sized
-	*pFile << nFixedSize;
+	pFile << nFixedSize;
 }
 
 /** \brief calculates the maximum size of the fixed sized mebers
@@ -497,7 +495,7 @@ int CBEUnionType::GetFixedSize()
  *  \param pStack contains the declarator stack for variables sized parameters
  *  \param pUsingFunc the function to use as reference for members
  */
-void CBEUnionType::WriteGetMaxSize(CBEFile *pFile,
+void CBEUnionType::WriteGetMaxSize(CBEFile& pFile,
     const vector<CBEUnionCase*> *pMembers,
     vector<CBEUnionCase*>::iterator iter,
     CDeclStack* pStack,
@@ -512,15 +510,15 @@ void CBEUnionType::WriteGetMaxSize(CBEFile *pFile,
     assert(pMember);
     bool bNext = (iter != pMembers->end());
     if (bNext)
-	*pFile << "_dice_max(";
+	pFile << "_dice_max(";
     WriteGetMemberSize(pFile, pMember, pStack, pUsingFunc);
     // if we have successor, add ':(<max(next)>)'
     // otherwise nothing
     if (bNext)
     {
-	*pFile << ", ";
+	pFile << ", ";
         WriteGetMaxSize(pFile, pMembers, iter, pStack, pUsingFunc);
-	*pFile << ")";
+	pFile << ")";
     }
 }
 
@@ -534,7 +532,7 @@ void CBEUnionType::WriteGetMaxSize(CBEFile *pFile,
  * CBEMsgBufferType::WriteInitializationVarSizedParameters if something is not
  * working, check if something changed there as well.
  */
-void CBEUnionType::WriteGetMemberSize(CBEFile *pFile,
+void CBEUnionType::WriteGetMemberSize(CBEFile& pFile,
     CBEUnionCase *pMember,
     CDeclStack* pStack,
     CBEFunction *pUsingFunc)
@@ -547,19 +545,19 @@ void CBEUnionType::WriteGetMemberSize(CBEFile *pFile,
     pMember->WriteGetSize(pFile, pStack, pUsingFunc);
     if ((pMember->GetType()->GetSize() > 1) && !(pMember->IsString()))
     {
-	*pFile << "*sizeof";
+	pFile << "*sizeof";
         pMember->GetType()->WriteCast(pFile, false);
     }
     else if (pMember->IsString())
     {
         // add terminating zero
-	*pFile << "+1";
+	pFile << "+1";
         bool bHasSizeAttr = 
 	    pMember->m_Attributes.Find(ATTR_SIZE_IS) ||
 	    pMember->m_Attributes.Find(ATTR_LENGTH_IS) ||
 	    pMember->m_Attributes.Find(ATTR_MAX_IS);
         if (!bHasSizeAttr)
-	    *pFile << "+" << 
+	    pFile << "+" << 
 		CCompiler::GetSizes()->GetSizeOfType(TYPE_INTEGER);
     }
 }

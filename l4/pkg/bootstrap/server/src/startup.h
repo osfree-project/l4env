@@ -7,11 +7,7 @@
 
 #include "types.h"
 
-#ifndef MEMORY
-#define MEMORY 64
-#endif
-
-typedef struct 
+typedef struct
 {
   unsigned long kernel_start;
   unsigned long sigma0_start, sigma0_stack;

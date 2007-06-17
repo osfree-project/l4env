@@ -126,8 +126,8 @@ vc_l4io_init(void)
       Panic("Couldn't connect to L4 IO server!");
       return 1;
     }
-  if (io_info_addr->omega0)
-    use_omega0 = 1;
+  if (!io_info_addr->omega0)
+    Panic("l4io has no omega0 mode enabled!");
 #endif
 
   return 0;

@@ -62,11 +62,11 @@ CBECallFunction::~CBECallFunction()
  *  \param pFile the file to write to
  */
 void
-CBECallFunction::WriteVariableInitialization(CBEFile * pFile)
+CBECallFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBECallFunction::WriteVariableInitialization called %s in %s\n",
-        GetName().c_str(), pFile->GetFileName().c_str());
+        GetName().c_str(), pFile.GetFileName().c_str());
     // init message buffer
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
@@ -77,7 +77,7 @@ CBECallFunction::WriteVariableInitialization(CBEFile * pFile)
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
-void CBECallFunction::WriteInvocation(CBEFile * /*pFile*/)
+void CBECallFunction::WriteInvocation(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the unmarshalling of the message
@@ -87,7 +87,7 @@ void CBECallFunction::WriteInvocation(CBEFile * /*pFile*/)
  * message structure
  */
 void
-CBECallFunction::WriteUnmarshalling(CBEFile * pFile)
+CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
 	GetName().c_str());
@@ -222,7 +222,7 @@ CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
  * A call function is only written for a client file (it sould not have been
  * created if the attributes (IN,OUT) would not fit).
  */
-bool CBECallFunction::DoWriteFunction(CBEHeaderFile * pFile)
+bool CBECallFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBECallFunction::%s(%s) called for %s\n", __func__, 
@@ -247,7 +247,7 @@ bool CBECallFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * A call function is only written for a client file (it sould not have been
  * created if the attributes (IN,OUT) would not fit).
  */
-bool CBECallFunction::DoWriteFunction(CBEImplementationFile * pFile)
+bool CBECallFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBECallFunction::%s(%s) called for %s\n", __func__, 
@@ -304,10 +304,10 @@ int CBECallFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  * For C++ we are completely virtual
  */
 void
-CBECallFunction::WriteReturnType(CBEFile * pFile)
+CBECallFunction::WriteReturnType(CBEFile& pFile)
 {
-    if (pFile->IsOfFileType(FILETYPE_HEADER) &&
+    if (pFile.IsOfFileType(FILETYPE_HEADER) &&
 	CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-	*pFile << "virtual ";
+	pFile << "virtual ";
     CBEOperationFunction::WriteReturnType(pFile);
 }

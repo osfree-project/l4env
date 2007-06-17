@@ -95,13 +95,13 @@ Jdb_timeout_list::iter(int count, Timeout **t_start,
     {
       if (forw)
 	{
-	  if (t_new->_next == Timeout::get_first_timeout())
+	  if (t_new->_next == Timeout_q::timeout_queue.cpu(0).first())
 	    break;
 	  t_new = t_new->_next;
 	}
       else
 	{
-	  if (t_new->_prev == Timeout::get_first_timeout())
+	  if (t_new->_prev == Timeout_q::timeout_queue.cpu(0).first())
 	    break;
 	  t_new = t_new->_prev;
 	}
@@ -233,11 +233,11 @@ Jdb_list_timeouts::get_type(Timeout *t)
 {
   Address addr = (Address)t;
 
-  if (t == timeslice_timeout)
+  if (t == timeslice_timeout.cpu(0))
     // there is only one global timeslice timeout
     return Timeout_timeslice;
   
-  if(Timeout::is_root_node(addr))
+  if(Timeout_q::timeout_queue.cpu(0).is_root_node(addr))
     return Timeout_root;
   
   if (!Kmem::is_tcb_page_fault(addr, 0))
@@ -268,8 +268,8 @@ Jdb_list_timeouts::get_owner(Timeout *t)
       case Timeout_deadline:
         return Thread::lookup(context_of (t));
       case Timeout_timeslice:
-        if (Context::current_sched())
-          return Thread::lookup(Context::current_sched()->_owner);
+        if (Context::current_sched(0))
+          return Thread::lookup(Context::current_sched(0)->_owner);
       default:
         return 0;
     }
@@ -354,7 +354,7 @@ void
 Jdb_list_timeouts::list()
 {
   unsigned y, y_max;
-  Timeout *t_current = Timeout::get_first_timeout(); 
+  Timeout *t_current = Timeout_q::timeout_queue.cpu(0).first(); 
 
   Jdb::clear_screen();
   show_header();

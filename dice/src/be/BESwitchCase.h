@@ -57,24 +57,24 @@ protected:
     CBESwitchCase(CBESwitchCase &src);
 
 public:
-    virtual void Write(CBEFile *pFile);
+    virtual void Write(CBEFile& pFile);
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
 
     virtual void SetMessageBufferType();
     virtual void SetCallVariable(string sOriginalName, int nStars, 
 	string sCallName);
     
-    virtual bool DoWriteFunction(CBEHeaderFile * pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile * pFile);
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
 
 protected:
-    virtual void WriteVariableInitialization(CBEFile *pFile, DIRECTION_TYPE nDirection);
-    virtual void WriteVariableDeclaration(CBEFile *pFile);
-    virtual void WriteCleanup(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile, DIRECTION_TYPE nDirection);
+    virtual void WriteVariableDeclaration(CBEFile& pFile);
+    virtual void WriteCleanup(CBEFile& pFile);
     virtual bool DoWriteVariable(CBETypedDeclarator *pParameter);
 
-    virtual void WriteVariableInitialization(CBEFile * pFile);
-    virtual void WriteInvocation(CBEFile * pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
 
 protected:
     /** \var bool m_bSameClass

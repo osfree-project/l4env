@@ -65,92 +65,19 @@ unsigned int CFETypeSpec::GetType()
 }
 
 /** \brief test a type whether it is a constructed type or not
- *  \param pType the type to test
  *  \return true if it is a constructed type, false if not
- *
- * This function also follows user-defined types
  */
-bool CFETypeSpec::IsConstructedType(CFETypeSpec * pType)
+bool CFETypeSpec::IsConstructedType()
 {
-    // if type is simple -> return false
-    if (dynamic_cast<CFESimpleType*>(pType))
-        return false;
-    // if user defined -> follow the definition
-    if (dynamic_cast<CFEUserDefinedType*>(pType))
-    {
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(pType->GetRoot());
-        assert(pRoot);
-        // find type
-        string sUserName = ((CFEUserDefinedType *) pType)->GetName();
-        CFETypedDeclarator *pUserDecl = pRoot->FindUserDefinedType(sUserName);
-        // check if we found the user defined type (if not: panic)
-        if (!pUserDecl)
-        {
-            // if not found now, this can be an interface
-            if (pRoot->FindInterface(sUserName))
-                return true; // is CORBA_Object a constructed type?
-            CMessages::GccError(pType, 0,
-		"User defined type \"%s\" not defined\n",
-                sUserName.c_str());
-            return false;
-        }
-        // test the found type
-        return IsConstructedType(pUserDecl->GetType());
-    }
-    // is constructed -> test for struct and union
-    // cannot use CFEConstructedType, because enum is derived from
-    // CFEConstructedType, but not really a cosntructed type
-    if (dynamic_cast<CFEStructType*>(pType))
-        return true;
-    if (dynamic_cast<CFEUnionType*>(pType))
-        return true;
     // not a constructed type -> return false
     return false;
 }
 
 /** \brief test if a type is a pointered type
- *  \param pType the type to test
  *  \return true if it is a pointered type, false if not
- *
- * This function also follows user-defined types
  */
-bool CFETypeSpec::IsPointerType(CFETypeSpec * pType)
+bool CFETypeSpec::IsPointerType()
 {
-    // if type is simple -> return false
-    if (dynamic_cast<CFESimpleType*>(pType))
-    {
-	if ((pType->m_nType == TYPE_VOID_ASTERISK) ||
-	    (pType->m_nType == TYPE_CHAR_ASTERISK))
-	    return true;
-        return false;
-    }
-    // if user defined -> follow the definition
-    if (dynamic_cast<CFEUserDefinedType*>(pType))
-    {
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(pType->GetRoot());
-        assert(pRoot);
-        // find type
-        string sUserName = ((CFEUserDefinedType *) pType)->GetName();
-        CFETypedDeclarator *pUserDecl = pRoot->FindUserDefinedType(sUserName);
-        // if not found now, this can be an interface
-        if (!pUserDecl)
-            if (pRoot->FindInterface(sUserName))
-                pUserDecl = pRoot->FindUserDefinedType(string("CORBA_Object"));
-        // check if we found the user defined type (if not: panic)
-        if (!pUserDecl)
-        {
-            CMessages::GccError(pType, 0,
-		"User defined type \"%s\" not defined\n",
-                sUserName.c_str());
-            return false;
-        }
-        // test decls for pointers
-        CFEDeclarator *pDecl = pUserDecl->m_Declarators.First();
-        if (pDecl && (pDecl->GetStars() > 0))
-            return true;
-        // test the found type
-        return IsPointerType(pUserDecl->GetType());
-    }
     // not a pointered type -> return false
     return false;
 }

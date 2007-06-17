@@ -144,7 +144,7 @@ CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface)
  * send and want the message buffer to be in a defined state.
  */
 void
-CBEWaitAnyFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
+CBEWaitAnyFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the invocation of the message transfer
@@ -153,9 +153,9 @@ CBEWaitAnyFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
  * This implementation calls the underlying message trasnfer mechanisms
  */
 void
-CBEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
+CBEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
 {
-    *pFile << "\t/* invoke */\n";
+    pFile << "\t/* invoke */\n";
 }
 
 /** \brief writes the unmarshalling of the message
@@ -167,7 +167,7 @@ CBEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
  * This implementation unmarshals the "return variable", which is the opcode.
  */
 void
-CBEWaitAnyFunction::WriteUnmarshalling(CBEFile * pFile)
+CBEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
 {
     bool bLocalTrace = false;
     if (!m_bTraceOn && m_pTrace)
@@ -215,7 +215,7 @@ CBEWaitAnyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  * component's side.
  */
 bool
-CBEWaitAnyFunction::DoWriteFunction(CBEHeaderFile * pFile)
+CBEWaitAnyFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
 	return false;
@@ -237,7 +237,7 @@ CBEWaitAnyFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * component's side.
  */
 bool
-CBEWaitAnyFunction::DoWriteFunction(CBEImplementationFile * pFile)
+CBEWaitAnyFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
 	return false;
@@ -256,7 +256,7 @@ CBEWaitAnyFunction::DoWriteFunction(CBEImplementationFile * pFile)
  * Do not write const Object.
  */
 void
-CBEWaitAnyFunction::WriteParameter(CBEFile * pFile,
+CBEWaitAnyFunction::WriteParameter(CBEFile& pFile,
     CBETypedDeclarator * pParameter,
     bool bUseConst)
 {

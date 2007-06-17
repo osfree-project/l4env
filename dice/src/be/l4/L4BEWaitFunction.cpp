@@ -77,7 +77,7 @@ CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
  *  \param pFile the fiel to write to
  */
 void 
-CL4BEWaitFunction::WriteInvocation(CBEFile * pFile)
+CL4BEWaitFunction::WriteInvocation(CBEFile& pFile)
 {
     // set size and send dope
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
@@ -96,20 +96,19 @@ CL4BEWaitFunction::WriteInvocation(CBEFile * pFile)
  *  \param pFile the file to write to
  */
 void
-CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile * pFile)
+CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     if (!m_sErrorFunction.empty())
     {
-	*pFile << "\t/* test for IPC errors */\n";
-	*pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult 
+	pFile << "\t/* test for IPC errors */\n";
+	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult 
 	    << ")))\n";
-        pFile->IncIndent();
-        *pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
+        ++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
         WriteCallParameter(pFile, GetEnvironment(), true);
-        *pFile << ");\n";
-        pFile->DecIndent();
+        pFile << ");\n";
+        --pFile;
     }
     else if (!IsComponentSide())
     {
@@ -127,26 +126,22 @@ CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile * pFile)
 	else
 	    sSetFunc = "CORBA_exception_set";
 
-	*pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << 
+	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << 
 	    ")))\n" <<
 	    "\t{\n";
-	pFile->IncIndent();
 	// env.major = CORBA_SYSTEM_EXCEPTION;
 	// env.repos_id = DICE_IPC_ERROR;
-	*pFile << "\t" << sSetFunc << " (" << sEnv << ",\n";
-	pFile->IncIndent();
-	*pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
+	++pFile << "\t" << sSetFunc << " (" << sEnv << ",\n";
+	++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
 	    "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
 	    "\t0);\n";
-	pFile->DecIndent();
 	// env.ipc_error = L4_IPC_ERROR(result);
-	*pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" << 
+	--pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" << 
 	    sResult << ");\n";
 	// return
 	WriteReturn(pFile);
 	// close }
-	pFile->DecIndent();
-	*pFile << "\t}\n";
+	--pFile << "\t}\n";
     }
 }
 
@@ -169,7 +164,7 @@ CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile * pFile)
  * flexpages.
  */
 void
-CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile *pFile)
+CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 {
     if (GetParameterCount(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
         return;
@@ -184,7 +179,7 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile *pFile)
     {
 	// the fixed offset (where to find the opcode) is:
 	// offset = 8*nMaxNumberOfFlexpages + 8
-	pFile->IncIndent();
+	++pFile;
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 	if (!pReturn)
 	    return;
@@ -193,35 +188,33 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile *pFile)
 	assert(pMarshaller);
 	pMarshaller->MarshalParameter(pFile, this, pReturn, false, 
 	    (nNumberOfFlexpages+1) * nSizeFpage);
-	pFile->DecIndent();
+	--pFile;
     }
     else
     {
 	// the variable offset can be determined by searching for the
 	// delimiter flexpage which is two zero dwords
-	*pFile << "\t{\n";
-	pFile->IncIndent();
+	pFile << "\t{\n";
 	// search for delimiter flexpage
 	CBENameFactory *pNF = CCompiler::GetNameFactory();
 	string sTempVar = pNF->GetTempOffsetVariable();
 	// init temp var
-	*pFile << "\t" << sTempVar << " = 0;\n";
-	*pFile << "\twhile ((";
+	++pFile << "\t" << sTempVar << " = 0;\n";
+	pFile << "\twhile ((";
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
-	*pFile << "[" << sTempVar << "++] != 0) && (";
+	pFile << "[" << sTempVar << "++] != 0) && (";
 	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
-	*pFile << "[" << sTempVar << "++] != 0)) /* empty */;\n";
+	pFile << "[" << sTempVar << "++] != 0)) /* empty */;\n";
 
 	// now sTempVar points to the delimiter flexpage
 	// we have to add another 8 bytes to find the opcode, because
 	// UnmarshalReturn does only use temp-var
-	*pFile << "\t/* skip zero fpage */\n";
-	*pFile << "\t" << sTempVar << " += 2;\n";
+	pFile << "\t/* skip zero fpage */\n";
+	pFile << "\t" << sTempVar << " += 2;\n";
 	// now unmarshal opcode
 	WriteMarshalReturn(pFile, false);
-	pFile->DecIndent();
-	*pFile << "\t}\n";
+	++pFile << "\t}\n";
     }
 }
 
@@ -229,7 +222,7 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile *pFile)
  *  \param pFile the file to write to
  */
 void
-CL4BEWaitFunction::WriteIPC(CBEFile *pFile)
+CL4BEWaitFunction::WriteIPC(CBEFile& pFile)
 {
     CBECommunication *pComm = GetCommunication();
     assert(pComm);
@@ -243,7 +236,7 @@ CL4BEWaitFunction::WriteIPC(CBEFile *pFile)
  *  \param pFile the file to write to
  */
 void
-CL4BEWaitFunction::WriteVariableInitialization(CBEFile* pFile)
+CL4BEWaitFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     CBEWaitFunction::WriteVariableInitialization(pFile);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();

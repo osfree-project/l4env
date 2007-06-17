@@ -26,6 +26,7 @@ static inline void lock_rcv_map(LOCK_TYPE *l) {}
 static inline void free_lock(LOCK_TYPE *l) {}
 
 #elif FIASCO_ULOCK
+#include <l4/sys/user_locks.h>
 #include <l4/sys/syscalls.h>
 
 static int last_lock = 1;

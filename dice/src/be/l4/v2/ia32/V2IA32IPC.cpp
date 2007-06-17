@@ -73,7 +73,7 @@ CL4V2IA32BEIPC::UseAssembler(CBEFunction* /*pFunction*/)
  *  \param pFunction the function to write for
  */
 void 
-CL4V2IA32BEIPC::WriteCall(CBEFile * pFile,
+CL4V2IA32BEIPC::WriteCall(CBEFile& pFile,
 	CBEFunction * pFunction)
 {
     if (UseAssembler(pFunction))
@@ -96,14 +96,14 @@ CL4V2IA32BEIPC::WriteCall(CBEFile * pFile,
  * the assembler code.
  */
 void 
-CL4V2IA32BEIPC::WriteAsmShortCall(CBEFile *pFile,
+CL4V2IA32BEIPC::WriteAsmShortCall(CBEFile& pFile,
 	CBEFunction *pFunction)
 {
-    *pFile << "#ifdef __PIC__\n";
+    pFile << "#ifdef __PIC__\n";
     WriteAsmShortPicCall(pFile, pFunction);
-    *pFile << "#else // !__PIC__\n";
+    pFile << "#else // !__PIC__\n";
     WriteAsmShortNonPicCall(pFile, pFunction);
-    *pFile << "#endif // __PIC__\n";
+    pFile << "#endif // __PIC__\n";
 }
 
 /** \brief write the assembler version of the short IPC
@@ -115,7 +115,7 @@ CL4V2IA32BEIPC::WriteAsmShortCall(CBEFile *pFile,
  * the assembler code.
  */
 void 
-CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile *pFile,
+CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile& pFile,
 	CBEFunction *pFunction)
 {
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
@@ -165,82 +165,80 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile *pFile,
     // ESI: dest.lh.low
     // EDI: dest.lh.high
     // 
-    *pFile << "\tasm volatile(\n";
-    pFile->IncIndent();
-    *pFile << "\t\"pushl %%ebx \\n\\t\"\n";
-    *pFile << "\t\"pushl %%ebp \\n\\t\"\n";
+    pFile << "\tasm volatile(\n";
+    ++pFile << "\t\"pushl %%ebx \\n\\t\"\n";
+    pFile << "\t\"pushl %%ebp \\n\\t\"\n";
     
     if (bScheduling)
     {
 	if (bSendFlexpage)
-	    *pFile << "\t\"orl $2,%%eax \\n\\t\"\n";
-	*pFile << "\t\"movl %%edi,%%ebx \\n\\t\"\n";
-	*pFile << "\t\"movl 4(%%esi),%%edi \\n\\t\"\n";
-	*pFile << "\t\"movl (%%esi),%%esi \\n\\t\"\n";
+	    pFile << "\t\"orl $2,%%eax \\n\\t\"\n";
+	pFile << "\t\"movl %%edi,%%ebx \\n\\t\"\n";
+	pFile << "\t\"movl 4(%%esi),%%edi \\n\\t\"\n";
+	pFile << "\t\"movl (%%esi),%%esi \\n\\t\"\n";
     }
     else
     {
-	*pFile << "\t\"movl %%eax,%%ebx \\n\\t\"\n";
+	pFile << "\t\"movl %%eax,%%ebx \\n\\t\"\n";
 	if (bSendFlexpage)
-	    *pFile << "\t\"movl $2,%%eax \\n\\t\"\n";
+	    pFile << "\t\"movl $2,%%eax \\n\\t\"\n";
 	else
-	    *pFile << "\t\"xor %%eax,%%eax \\n\\t\"\n";
+	    pFile << "\t\"xor %%eax,%%eax \\n\\t\"\n";
     }
     if (bDefaultTimeout)
-	*pFile << "\t\"xor %%ecx,%%ecx \\n\\t\"\n";
-    *pFile << "\t\"xor %%ebp,%%ebp \\n\\t\"\n";
+	pFile << "\t\"xor %%ecx,%%ecx \\n\\t\"\n";
+    pFile << "\t\"xor %%ebp,%%ebp \\n\\t\"\n";
     WriteAsmSyscall(pFile, true);
-    *pFile << "\t\"popl %%ebp \\n\\t\"\n";
-    *pFile << "\t\"movl %%ebx,%%ecx \\n\\t\"\n";
-    *pFile << "\t\"popl %%ebx \\n\\t\"\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"=a\" (" << sResult << "),\n";
-    *pFile << "\t\"=d\" (";
+    pFile << "\t\"popl %%ebp \\n\\t\"\n";
+    pFile << "\t\"movl %%ebx,%%ecx \\n\\t\"\n";
+    pFile << "\t\"popl %%ebx \\n\\t\"\n";
+    pFile << "\t:\n";
+    pFile << "\t\"=a\" (" << sResult << "),\n";
+    pFile << "\t\"=d\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 0,
 	    false, true))
-	*pFile << sDummy;
-    *pFile << "),\n";
-    *pFile << "\t\"=c\" (";
+	pFile << sDummy;
+    pFile << "),\n";
+    pFile << "\t\"=c\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 1, 
 	    false, true))
-	*pFile << sDummy;
-    *pFile << ")\n";
-    *pFile << "\t:\n";
+	pFile << sDummy;
+    pFile << ")\n";
+    pFile << "\t:\n";
     if (bScheduling)
     {
-	*pFile << "\t\"0\" (" << sScheduling << "),\n";
-	*pFile << "\t\"S\" (" << sObjName << "),\n";
-	*pFile << "\t\"D\" (";
+	pFile << "\t\"0\" (" << sScheduling << "),\n";
+	pFile << "\t\"S\" (" << sObjName << "),\n";
+	pFile << "\t\"D\" (";
 	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1,
 		false, false))
-	    *pFile << "0";
-	*pFile << "),\n";
+	    pFile << "0";
+	pFile << "),\n";
     }
     else
     {
-	*pFile << "\t\"0\" (";
+	pFile << "\t\"0\" (";
 	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1,
 		false, false))
-	    *pFile << "0";
-	*pFile << "),\n";
-	*pFile << "\t\"S\" (" << sObjName << "->lh.low),\n";
-	*pFile << "\t\"D\" (" << sObjName << "->lh.high),\n";
+	    pFile << "0";
+	pFile << "),\n";
+	pFile << "\t\"S\" (" << sObjName << "->lh.low),\n";
+	pFile << "\t\"D\" (" << sObjName << "->lh.high),\n";
     }
-    *pFile << "\t\"1\" (";
+    pFile << "\t\"1\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0,
 	    false, false))
-	*pFile << "0";
+	pFile << "0";
     if (bDefaultTimeout)
-	*pFile << ")\n";
+	pFile << ")\n";
     else
     {
-	*pFile << "),\n";
-	*pFile << "\t\"2\" (" << sTimeout << ")\n";
+	pFile << "),\n";
+	pFile << "\t\"2\" (" << sTimeout << ")\n";
     }
-    *pFile << "\t:\n";
-    *pFile << "\t\"memory\"\n";
-    pFile->DecIndent();
-    *pFile << "\t);\n";
+    pFile << "\t:\n";
+    pFile << "\t\"memory\"\n";
+    --pFile << "\t);\n";
 }
 
 /** \brief write the assembler version of the short IPC
@@ -252,7 +250,7 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile *pFile,
  * the assembler code.
  */
 void 
-CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile *pFile,
+CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
@@ -301,61 +299,59 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile *pFile,
     // ESI: dest.lh.low
     // EDI: dest.lh.high
     // 
-    *pFile << "\tasm volatile(\n";
-    pFile->IncIndent();
-    *pFile << "\t\"pushl %%ebp \\n\\t\"\n"; 
+    pFile << "\tasm volatile(\n";
+    ++pFile << "\t\"pushl %%ebp \\n\\t\"\n"; 
     if (bScheduling)
     {
 	if (bSendFlexpage)
-	    *pFile << "\t\"orl $2,%%eax \\n\\t\"\n";
+	    pFile << "\t\"orl $2,%%eax \\n\\t\"\n";
     }
     else
     {
 	if (bSendFlexpage)
-	    *pFile << "\t\"movl $2,%%eax \\n\\t\"\n";
+	    pFile << "\t\"movl $2,%%eax \\n\\t\"\n";
 	else
-	    *pFile << "\t\"xor %%eax,%%eax \\n\\t\"\n";
+	    pFile << "\t\"xor %%eax,%%eax \\n\\t\"\n";
     }
     if (bDefaultTimeout)
-	*pFile << "\t\"xor %%ecx,%%ecx \\n\\t\"\n";
-    *pFile << "\t\"xor %%ebp,%%ebp \\n\\t\"\n";
+	pFile << "\t\"xor %%ecx,%%ecx \\n\\t\"\n";
+    pFile << "\t\"xor %%ebp,%%ebp \\n\\t\"\n";
     WriteAsmSyscall(pFile, false);
-    *pFile << "\t\"popl %%ebp \\n\\t\"\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"=a\" (" << sResult << "),\n"; /* EAX, 0 */
-    *pFile << "\t\"=d\" (";
+    pFile << "\t\"popl %%ebp \\n\\t\"\n";
+    pFile << "\t:\n";
+    pFile << "\t\"=a\" (" << sResult << "),\n"; /* EAX, 0 */
+    pFile << "\t\"=d\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 0, 
 	    false, true))
-	*pFile << sDummy;
-    *pFile << "),\n";  /* EDX, 1 */
-    *pFile << "\t\"=b\" (";
+	pFile << sDummy;
+    pFile << "),\n";  /* EDX, 1 */
+    pFile << "\t\"=b\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 1,
 	    false, true))
-	*pFile << sDummy;
-    *pFile << "),\n";  /* EBX, 2 */
-    *pFile << "\t\"=c\" (" << sDummy << ")\n"; /* ECX, 3 */
-    *pFile << "\t:\n";
+	pFile << sDummy;
+    pFile << "),\n";  /* EBX, 2 */
+    pFile << "\t\"=c\" (" << sDummy << ")\n"; /* ECX, 3 */
+    pFile << "\t:\n";
     if (bScheduling)
-	*pFile << "\t\"a\" (" << sScheduling << "),\n";
+	pFile << "\t\"a\" (" << sScheduling << "),\n";
     // if opcode is set, its in the first word
-    *pFile << "\t\"d\" (";
+    pFile << "\t\"d\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0, 
 	    false, false))
-	*pFile << "0";
-    *pFile << "),\n";  /* EDX, 1 */
-    *pFile << "\t\"b\" (";
+	pFile << "0";
+    pFile << "),\n";  /* EDX, 1 */
+    pFile << "\t\"b\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1, 
 	    false, false))
-	*pFile << "0";
-    *pFile << "),\n";  /* EBX, 2 */
+	pFile << "0";
+    pFile << "),\n";  /* EBX, 2 */
     if (!bDefaultTimeout)
-	*pFile << "\t\"c\" (" << sTimeout << "),\n"; /* ECX, 3 */
-    *pFile << "\t\"S\" (" << sObjName << "->lh.low),\n"; /* ESI */
-    *pFile << "\t\"D\" (" << sObjName << "->lh.high)\n"; /* EDI */
-    *pFile << "\t:\n";
-    *pFile << "\t\"memory\"\n";
-    pFile->DecIndent();
-    *pFile << "\t);\n";
+	pFile << "\t\"c\" (" << sTimeout << "),\n"; /* ECX, 3 */
+    pFile << "\t\"S\" (" << sObjName << "->lh.low),\n"; /* ESI */
+    pFile << "\t\"D\" (" << sObjName << "->lh.high)\n"; /* EDI */
+    pFile << "\t:\n";
+    pFile << "\t\"memory\"\n";
+    --pFile << "\t);\n";
 }
 
 /** \brief write the long IPC in assembler
@@ -363,14 +359,14 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile *pFile,
  *  \param pFunction the function to write the IPC for
  */
 void 
-CL4V2IA32BEIPC::WriteAsmLongCall(CBEFile *pFile, 
+CL4V2IA32BEIPC::WriteAsmLongCall(CBEFile& pFile, 
     CBEFunction *pFunction)
 {
-    *pFile << "#ifdef __PIC__\n";
+    pFile << "#ifdef __PIC__\n";
     WriteAsmLongPicCall(pFile, pFunction);
-    *pFile << "#else // !__PIC__\n";
+    pFile << "#else // !__PIC__\n";
     WriteAsmLongNonPicCall(pFile, pFunction);
-    *pFile << "#endif // __PIC__\n";
+    pFile << "#endif // __PIC__\n";
 }
 
 /** \brief write the long IPC in assembler
@@ -378,7 +374,7 @@ CL4V2IA32BEIPC::WriteAsmLongCall(CBEFile *pFile,
  *  \param pFunction the function to write the IPC for
  */
 void 
-CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile *pFile, 
+CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile, 
     CBEFunction *pFunction)
 {
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
@@ -439,90 +435,88 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile *pFile,
     // ESI: dest -> ESI/EDI
     // EDI: dw1              -> ebx
     // 
-    *pFile << "\tasm volatile(\n";
-    pFile->IncIndent();
-    *pFile << "\t\"pushl  %%ebx  \\n\\t\"\n";
-    *pFile << "\t\"pushl  %%ebp  \\n\\t\"\n";
+    pFile << "\tasm volatile(\n";
+    ++pFile << "\t\"pushl  %%ebx  \\n\\t\"\n";
+    pFile << "\t\"pushl  %%ebp  \\n\\t\"\n";
     
     if (bSendShortIPC)
     {
-	*pFile << "\t\"movl %%eax,%%ebp \\n\\t\"\n";
+	pFile << "\t\"movl %%eax,%%ebp \\n\\t\"\n";
 	if (bScheduling)
 	{
-	    *pFile << "\t\"andl $0xfffffffc,%%ebp \\n\\t\"\n";
-	    *pFile << "\t\"andl $0x1,%%eax \\n\\t\"\n";
+	    pFile << "\t\"andl $0xfffffffc,%%ebp \\n\\t\"\n";
+	    pFile << "\t\"andl $0x1,%%eax \\n\\t\"\n";
 	    if (bSendFlexpage)
-		*pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
+		pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
 	}
 	else
 	{
 	    if (bSendFlexpage)
-		*pFile << "\t\"movl $0x2,%%eax \\n\\t\"\n";
+		pFile << "\t\"movl $0x2,%%eax \\n\\t\"\n";
 	    else
-		*pFile << "\t\"subl %%eax,%%eax \\n\\t\"\n";
+		pFile << "\t\"subl %%eax,%%eax \\n\\t\"\n";
 	}
     }
     else if (bRecvShortIPC)
     {
-	*pFile << "\t\"subl %%ebp,%%ebp \\n\\t\"\n";
+	pFile << "\t\"subl %%ebp,%%ebp \\n\\t\"\n";
 	if (bSendFlexpage)
-	    *pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
+	    pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
     }
     else // long both ways
     {
-	*pFile << "\t\"movl %%eax,%%ebp \\n\\t\"\n";
+	pFile << "\t\"movl %%eax,%%ebp \\n\\t\"\n";
 	if (bScheduling)
-	    *pFile << "\t\"andl $0xfffffffc,%%ebp \\n\\t\"\n";
+	    pFile << "\t\"andl $0xfffffffc,%%ebp \\n\\t\"\n";
 	if (bSendFlexpage)
-	    *pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
+	    pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
     }
-    *pFile << "\t\"movl %%edi,%%ebx \\n\\t\"\n";
-    *pFile << "\t\"movl 4(%%esi),%%edi \\n\\t\"\n";
-    *pFile << "\t\"movl (%%esi),%%esi \\n\\t\"\n";
+    pFile << "\t\"movl %%edi,%%ebx \\n\\t\"\n";
+    pFile << "\t\"movl 4(%%esi),%%edi \\n\\t\"\n";
+    pFile << "\t\"movl (%%esi),%%esi \\n\\t\"\n";
     WriteAsmSyscall(pFile, true);
-    *pFile << "\t\"popl %%ebp \\n\\t\"\n";
-    *pFile << "\t\"movl %%ebx,%%ecx \\n\\t\"\n";
-    *pFile << "\t\"popl %%ebx \\n\\t\"\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"=a\" (" << sResult << "),\n";
-    *pFile << "\t\"=d\" (";
+    pFile << "\t\"popl %%ebp \\n\\t\"\n";
+    pFile << "\t\"movl %%ebx,%%ecx \\n\\t\"\n";
+    pFile << "\t\"popl %%ebx \\n\\t\"\n";
+    pFile << "\t:\n";
+    pFile << "\t\"=a\" (" << sResult << "),\n";
+    pFile << "\t\"=d\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 0, 
 	    false, true))
-	*pFile << sDummy;
-    *pFile << "),\n";
-    *pFile << "\t\"=c\" (";
+	pFile << sDummy;
+    pFile << "),\n";
+    pFile << "\t\"=c\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 1,
 	    false, true))
-	*pFile << sDummy;
-    *pFile << "),\n";
-    *pFile << "\t\"=S\" (" << sDummy << "),\n";
-    *pFile << "\t\"=D\" (" << sDummy << ")\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"a\" (";
+	pFile << sDummy;
+    pFile << "),\n";
+    pFile << "\t\"=S\" (" << sDummy << "),\n";
+    pFile << "\t\"=D\" (" << sDummy << ")\n";
+    pFile << "\t:\n";
+    pFile << "\t\"a\" (";
     if (bScheduling)
-	*pFile << "(unsigned long)(";
+	pFile << "(unsigned long)(";
     if (!pFunction->GetMessageBuffer()->HasReference())
-	*pFile << "&";
-    *pFile << sMsgBuffer;
+	pFile << "&";
+    pFile << sMsgBuffer;
     if (bScheduling)
-	*pFile << ")|" << sScheduling;
-    *pFile << "),\n";
-    *pFile << "\t\"c\" (" << sTimeout << "),\n";
-    *pFile << "\t\"d\" (";
+	pFile << ")|" << sScheduling;
+    pFile << "),\n";
+    pFile << "\t\"c\" (" << sTimeout << "),\n";
+    pFile << "\t\"d\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0, 
 	    false, false))
-	*pFile << "0";
-    *pFile << "),\n";
-    *pFile << "\t\"S\" (" << sObjName << "),\n";
-    *pFile << "\t\"D\" (";
+	pFile << "0";
+    pFile << "),\n";
+    pFile << "\t\"S\" (" << sObjName << "),\n";
+    pFile << "\t\"D\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1, 
 	    false, false))
-	*pFile << "0";
-    *pFile << ")\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"memory\"\n";
-    pFile->DecIndent();
-    *pFile << "\t);\n";
+	pFile << "0";
+    pFile << ")\n";
+    pFile << "\t:\n";
+    pFile << "\t\"memory\"\n";
+    --pFile << "\t);\n";
 }
 
 /** \brief write the long IPC in assembler
@@ -530,7 +524,7 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile *pFile,
  *  \param pFunction the function to write the IPC for
  */
 void 
-CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile *pFile, 
+CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile, 
     CBEFunction *pFunction)
 {
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
@@ -591,84 +585,82 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile *pFile,
     // ESI: dest.lh.low
     // EDI: dest.lh.high
     // 
-    *pFile << "\tasm volatile(\n";
-    pFile->IncIndent();
-    *pFile << "\t\"pushl %%ebp  \\n\\t\"\n";
+    pFile << "\tasm volatile(\n";
+    ++pFile << "\t\"pushl %%ebp  \\n\\t\"\n";
 
     if (bSendShortIPC)
     {
-	*pFile << "\t\"movl %%eax,%%ebp \\n\\t\"\n";
+	pFile << "\t\"movl %%eax,%%ebp \\n\\t\"\n";
 	if (bScheduling)
 	{
-	    *pFile << "\t\"andl $0xfffffffc,%%ebp \\n\\t\"\n";
-	    *pFile << "\t\"andl $0x1,%%eax \\n\\t\"\n";
+	    pFile << "\t\"andl $0xfffffffc,%%ebp \\n\\t\"\n";
+	    pFile << "\t\"andl $0x1,%%eax \\n\\t\"\n";
 	    if (bSendFlexpage)
-		*pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
+		pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
 	}
 	else
 	{
 	    if (bSendFlexpage)
-		*pFile << "\t\"movl $0x2,%%eax \\n\\t\"\n";
+		pFile << "\t\"movl $0x2,%%eax \\n\\t\"\n";
 	    else
-		*pFile << "\t\"subl %%eax,%%eax \\n\\t\"\n";
+		pFile << "\t\"subl %%eax,%%eax \\n\\t\"\n";
 	}
     }
     else if (bRecvShortIPC)
     {
-	*pFile << "\t\"subl %%ebp,%%ebp \\n\\t\"\n";
+	pFile << "\t\"subl %%ebp,%%ebp \\n\\t\"\n";
 	if (bSendFlexpage)
-	    *pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
+	    pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
     }
     else // long both ways
     {
-	*pFile << "\t\"movl %%eax,%%ebp \\n\\t\"\n";
+	pFile << "\t\"movl %%eax,%%ebp \\n\\t\"\n";
 	if (bScheduling)
-	    *pFile << "\t\"andl $0xfffffffc,%%ebp \\n\\t\"\n";
+	    pFile << "\t\"andl $0xfffffffc,%%ebp \\n\\t\"\n";
 	if (bSendFlexpage)
-	    *pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
+	    pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
     }
     WriteAsmSyscall(pFile, false);
-    *pFile << "\t\"popl  %%ebp  \\n\\t\"\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"=a\" (" << sResult << "),\n";
-    *pFile << "\t\"=d\" (";
+    pFile << "\t\"popl  %%ebp  \\n\\t\"\n";
+    pFile << "\t:\n";
+    pFile << "\t\"=a\" (" << sResult << "),\n";
+    pFile << "\t\"=d\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 0,
 	    false, true))
-	*pFile << sDummy;
-    *pFile << "),\n";
-    *pFile << "\t\"=b\" (";
+	pFile << sDummy;
+    pFile << "),\n";
+    pFile << "\t\"=b\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 1,
 	    false, true))
-	*pFile << sDummy;
-    *pFile << "),\n";
-    *pFile << "\t\"=c\" (" << sDummy << ")\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"a\" (";
+	pFile << sDummy;
+    pFile << "),\n";
+    pFile << "\t\"=c\" (" << sDummy << ")\n";
+    pFile << "\t:\n";
+    pFile << "\t\"a\" (";
     if (bScheduling)
-	*pFile << "(unsigned long)(";
+	pFile << "(unsigned long)(";
     if (!pFunction->GetMessageBuffer()->HasReference())
-	*pFile << "&";
-    *pFile << sMsgBuffer;
+	pFile << "&";
+    pFile << sMsgBuffer;
     if (bScheduling)
-	*pFile << ")|" << sScheduling;
-    *pFile << "),\n";
-    *pFile << "\t\"b\" (";
+	pFile << ")|" << sScheduling;
+    pFile << "),\n";
+    pFile << "\t\"b\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1,
 	    false, false))
-	*pFile << "0";
-    *pFile << "),\n";
-    *pFile << "\t\"c\" (" << sTimeout << "),\n";
-    *pFile << "\t\"d\" (";
+	pFile << "0";
+    pFile << "),\n";
+    pFile << "\t\"c\" (" << sTimeout << "),\n";
+    pFile << "\t\"d\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0,
 	    false, false))
-	*pFile << "0";
-    *pFile << "),\n";
-    *pFile << "\t\"S\" (" << sObjName << "->lh.low),\n";
-    *pFile << "\t\"D\" (" << sObjName << "->lh.high)\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"memory\"\n";
-    pFile->DecIndent();
-    *pFile << "\t);\n";
+	pFile << "0";
+    pFile << "),\n";
+    pFile << "\t\"S\" (" << sObjName << "->lh.low),\n";
+    pFile << "\t\"D\" (" << sObjName << "->lh.high)\n";
+    pFile << "\t:\n";
+    pFile << "\t\"memory\"\n";
+    --pFile << "\t);\n";
 }
 
 /** \brief writes the reply IPC code
@@ -676,7 +668,7 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void 
-CL4V2IA32BEIPC::WriteReply(CBEFile* pFile,
+CL4V2IA32BEIPC::WriteReply(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
     if (UseAssembler(pFunction))
@@ -690,7 +682,7 @@ CL4V2IA32BEIPC::WriteReply(CBEFile* pFile,
  *  \param pFunction the function to write for
  */
 void 
-CL4V2IA32BEIPC::WriteSend(CBEFile* pFile,
+CL4V2IA32BEIPC::WriteSend(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
     if (UseAssembler(pFunction))
@@ -704,14 +696,14 @@ CL4V2IA32BEIPC::WriteSend(CBEFile* pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4V2IA32BEIPC::WriteAsmSend(CBEFile* pFile,
+CL4V2IA32BEIPC::WriteAsmSend(CBEFile& pFile,
     CBEFunction* pFunction)
 {
-    *pFile << "#ifdef __PIC__\n";
+    pFile << "#ifdef __PIC__\n";
     WriteAsmPicSend(pFile, pFunction);
-    *pFile << "#else // !__PIC__\n";
+    pFile << "#else // !__PIC__\n";
     WriteAsmNonPicSend(pFile, pFunction);
-    *pFile << "#endif // __PIC__\n";
+    pFile << "#endif // __PIC__\n";
 }
 
 /** \brief writes the assembler short send IPC code
@@ -719,7 +711,7 @@ CL4V2IA32BEIPC::WriteAsmSend(CBEFile* pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile* pFile,
+CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile& pFile,
     CBEFunction* pFunction)
 {
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
@@ -759,58 +751,56 @@ CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile* pFile,
     // ESI: dest -> ESI/EDI
     // EDI: dw1 -> ebx
     //
-    *pFile << "\tasm volatile(\n";
-    pFile->IncIndent();
-    *pFile << "\t\"pushl  %%ebx  \\n\\t\"\n";
-    *pFile << "\t\"pushl  %%ebp  \\n\\t\"\n";
+    pFile << "\tasm volatile(\n";
+    ++pFile << "\t\"pushl  %%ebx  \\n\\t\"\n";
+    pFile << "\t\"pushl  %%ebp  \\n\\t\"\n";
     
     if (bSendFlexpage)
-	*pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
-    *pFile << "\t\"movl $0xffffffff,%%ebp \\n\\t\"\n";
-    *pFile << "\t\"movl %%edi,%%ebx \\n\\t\"\n";
-    *pFile << "\t\"movl 4(%%esi),%%edi \\n\\t\"\n";
-    *pFile << "\t\"movl (%%esi),%%esi \\n\\t\"\n";
+	pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
+    pFile << "\t\"movl $0xffffffff,%%ebp \\n\\t\"\n";
+    pFile << "\t\"movl %%edi,%%ebx \\n\\t\"\n";
+    pFile << "\t\"movl 4(%%esi),%%edi \\n\\t\"\n";
+    pFile << "\t\"movl (%%esi),%%esi \\n\\t\"\n";
     WriteAsmSyscall(pFile, true);
-    *pFile << "\t\"popl   %%ebp  \\n\\t\"\n";
-    *pFile << "\t\"popl   %%ebx  \\n\\t\"\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"=a\" (" << sResult << "),\n";
-    *pFile << "\t\"=d\" (" << sDummy << "),\n";
-    *pFile << "\t\"=c\" (" << sDummy << ")\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"a\" (";
+    pFile << "\t\"popl   %%ebp  \\n\\t\"\n";
+    pFile << "\t\"popl   %%ebx  \\n\\t\"\n";
+    pFile << "\t:\n";
+    pFile << "\t\"=a\" (" << sResult << "),\n";
+    pFile << "\t\"=d\" (" << sDummy << "),\n";
+    pFile << "\t\"=c\" (" << sDummy << ")\n";
+    pFile << "\t:\n";
+    pFile << "\t\"a\" (";
     if (bSendShortIPC)
     {
 	if (bScheduling)
-	    *pFile << sScheduling;
+	    pFile << sScheduling;
 	else
-	    *pFile << "0";
+	    pFile << "0";
     }
     else
     {
 	if (bScheduling)
-	    *pFile << "(unsigned long)(";
+	    pFile << "(unsigned long)(";
         if (!pFunction->GetMessageBuffer()->HasReference())
-	    *pFile << "&";
-	*pFile << sMsgBuffer;
+	    pFile << "&";
+	pFile << sMsgBuffer;
 	if (bScheduling)
-	    *pFile << ")|" << sScheduling;
+	    pFile << ")|" << sScheduling;
     }
-    *pFile << "),\n";
-    *pFile << "\t\"d\" (";
+    pFile << "),\n";
+    pFile << "\t\"d\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0,
 	    false, false))
-	*pFile << "0";
-    *pFile << "),\n";
-    *pFile << "\t\"D\" (";
+	pFile << "0";
+    pFile << "),\n";
+    pFile << "\t\"D\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1,
 	    false, false))
-	*pFile << "0";
-    *pFile << "),\n";
-    *pFile << "\t\"c\" (" << sTimeout << "),\n";
-    *pFile << "\t\"S\" (" << sObjName << ")\n";
-    pFile->DecIndent();
-    *pFile << "\t);\n";
+	pFile << "0";
+    pFile << "),\n";
+    pFile << "\t\"c\" (" << sTimeout << "),\n";
+    pFile << "\t\"S\" (" << sObjName << ")\n";
+    --pFile << "\t);\n";
 }
 
 /** \brief writes the assembler short send IPC code
@@ -818,7 +808,7 @@ CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile* pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile* pFile,
+CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile& pFile,
     CBEFunction* pFunction)
 {
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
@@ -857,55 +847,53 @@ CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile* pFile,
     // ESI: dest.lh.low
     // EDI: dest.lh.high
     //
-    *pFile << "\tasm volatile(\n";
-    pFile->IncIndent();
-    *pFile << "\t\"pushl  %%ebp  \\n\\t\"\n";
+    pFile << "\tasm volatile(\n";
+    ++pFile << "\t\"pushl  %%ebp  \\n\\t\"\n";
     if (bSendFlexpage)
-	*pFile << "\t\"orl $0x2,%%eax  \\n\\t\"\n";
-    *pFile << "\t\"movl   $-1,%%ebp  \\n\\t\"\n";
+	pFile << "\t\"orl $0x2,%%eax  \\n\\t\"\n";
+    pFile << "\t\"movl   $-1,%%ebp  \\n\\t\"\n";
     WriteAsmSyscall(pFile, false);
-    *pFile << "\t\"popl   %%ebp  \\n\\t\"\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"=a\" (" << sResult << "),\n";
-    *pFile << "\t\"=d\" (" << sDummy << "),\n";
-    *pFile << "\t\"=b\" (" << sDummy << "),\n";
-    *pFile << "\t\"=c\" (" << sDummy << ")\n";
-    *pFile << "\t:\n";
-    *pFile << "\t\"a\" (";
+    pFile << "\t\"popl   %%ebp  \\n\\t\"\n";
+    pFile << "\t:\n";
+    pFile << "\t\"=a\" (" << sResult << "),\n";
+    pFile << "\t\"=d\" (" << sDummy << "),\n";
+    pFile << "\t\"=b\" (" << sDummy << "),\n";
+    pFile << "\t\"=c\" (" << sDummy << ")\n";
+    pFile << "\t:\n";
+    pFile << "\t\"a\" (";
     if (bSendShortIPC)
     {
 	if (bScheduling)
-	    *pFile << sScheduling;
+	    pFile << sScheduling;
 	else
-	    *pFile << "0";
+	    pFile << "0";
     }
     else
     {
 	if (bScheduling)
-	    *pFile << "(unsigned long)(";
+	    pFile << "(unsigned long)(";
         if (!pFunction->GetMessageBuffer()->HasReference())
-	    *pFile << "&";
-	*pFile << sMsgBuffer;
+	    pFile << "&";
+	pFile << sMsgBuffer;
 	if (bScheduling)
-	    *pFile << ")|" << sScheduling;
+	    pFile << ")|" << sScheduling;
     }
-    *pFile << "),\n";
-    *pFile << "\t\"b\" (";
+    pFile << "),\n";
+    pFile << "\t\"b\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1,
 	    false, false))
-	*pFile << "0";
-    *pFile << "),\n";
-    *pFile << "\t\"c\" (" << sTimeout << "),\n";
+	pFile << "0";
+    pFile << "),\n";
+    pFile << "\t\"c\" (" << sTimeout << "),\n";
     // if opcode is set, its in the first word
-    *pFile << "\t\"d\" (";
+    pFile << "\t\"d\" (";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0,
 	    false, false))
-	*pFile << "0";
-    *pFile << "),\n";
-    *pFile << "\t\"S\" (" << sObjName << "->lh.low),\n";
-    *pFile << "\t\"D\" (" << sObjName << "->lh.high)\n";
-    pFile->DecIndent();
-    *pFile << "\t);\n";
+	pFile << "0";
+    pFile << "),\n";
+    pFile << "\t\"S\" (" << sObjName << "->lh.low),\n";
+    pFile << "\t\"D\" (" << sObjName << "->lh.high)\n";
+    --pFile << "\t);\n";
 }
 
 /** \brief writes the actual instruction to invoke the IPC syscall
@@ -914,48 +902,48 @@ CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile* pFile,
  *
  * This function evaluates the -fsyscall=xx option of Dice.
  */
-void CL4V2IA32BEIPC::WriteAsmSyscall(CBEFile *pFile,
+void CL4V2IA32BEIPC::WriteAsmSyscall(CBEFile& pFile,
     bool bPic)
 {
     string sSyscall("IPC_SYSENTER");
     CCompiler::GetBackEndOption("syscall", sSyscall);
     if (sSyscall == "int30")
     {
-	*pFile << "\t\"int $0x30 \\n\\t\"\n";
+	pFile << "\t\"int $0x30 \\n\\t\"\n";
 	return;
     }
     if (sSyscall == "abs-syscall")
     {
 	if (bPic)
-	    *pFile << "\t\"call __l4sys_abs_ipc_fixup \\n\\t\"\n";
+	    pFile << "\t\"call __l4sys_abs_ipc_fixup \\n\\t\"\n";
 	else
-	    *pFile << "\t\"call __l4sys_ipc_direct \\n\\t\"\n";
+	    pFile << "\t\"call __l4sys_ipc_direct \\n\\t\"\n";
 	return;
     }
     if (sSyscall == "sysenter")
     {
 	if (bPic)
 	{
-	    *pFile << "\t\"push   %%ecx  \\n\\t\"\n";
-	    *pFile << "\t\"push   %%ebp  \\n\\t\"\n";
-	    *pFile << "\t\"push   $0x1b  \\n\\t\"\n";
-	    *pFile << "\t\"call   0f     \\n\\t\"\n";
-	    *pFile << "\t\"0:            \\n\\t\"\n";
-	    *pFile << "\t\"addl   $(1f-0b),(%%esp) \\n\\t\"\n";
-	    *pFile << "\t\"mov    %%esp,%%ecx      \\n\\t\"\n";
-	    *pFile << "\t\"sysenter      \\n\\t\"\n";
-	    *pFile << "\t\"mov    %%ebp,%%edx      \\n\\t\"\n";
-	    *pFile << "\t\"1:            \\n\\t\"\n";
+	    pFile << "\t\"push   %%ecx  \\n\\t\"\n";
+	    pFile << "\t\"push   %%ebp  \\n\\t\"\n";
+	    pFile << "\t\"push   $0x1b  \\n\\t\"\n";
+	    pFile << "\t\"call   0f     \\n\\t\"\n";
+	    pFile << "\t\"0:            \\n\\t\"\n";
+	    pFile << "\t\"addl   $(1f-0b),(%%esp) \\n\\t\"\n";
+	    pFile << "\t\"mov    %%esp,%%ecx      \\n\\t\"\n";
+	    pFile << "\t\"sysenter      \\n\\t\"\n";
+	    pFile << "\t\"mov    %%ebp,%%edx      \\n\\t\"\n";
+	    pFile << "\t\"1:            \\n\\t\"\n";
 	} else {
-	    *pFile << "\t\"push   %%ecx  \\n\\t\"\n";
-	    *pFile << "\t\"push   %%ebp  \\n\\t\"\n";
-	    *pFile << "\t\"push   $0x1b  \\n\\t\"\n";
-	    *pFile << "\t\"push   $0f    \\n\\t\"\n";
-	    *pFile << "\t\"mov    %%esp,%%ecx      \\n\\t\"\n";
-	    *pFile << "\t\"sysenter      \\n\\t\"\n";
-	    *pFile << "\t\"mov    %%ebp,%%edx      \\n\\t\"\n";
-	    *pFile << "\t\"0:            \\n\\t\"\n";
+	    pFile << "\t\"push   %%ecx  \\n\\t\"\n";
+	    pFile << "\t\"push   %%ebp  \\n\\t\"\n";
+	    pFile << "\t\"push   $0x1b  \\n\\t\"\n";
+	    pFile << "\t\"push   $0f    \\n\\t\"\n";
+	    pFile << "\t\"mov    %%esp,%%ecx      \\n\\t\"\n";
+	    pFile << "\t\"sysenter      \\n\\t\"\n";
+	    pFile << "\t\"mov    %%ebp,%%edx      \\n\\t\"\n";
+	    pFile << "\t\"0:            \\n\\t\"\n";
 	}
     }
-    *pFile << "\tIPC_SYSENTER\n";
+    pFile << "\tIPC_SYSENTER\n";
 }

@@ -60,7 +60,7 @@ CSockBEWaitAnyFunction::~CSockBEWaitAnyFunction()
  * The socket has to be open already.
  */
 void
-CSockBEWaitAnyFunction::WriteInvocation(CBEFile * pFile)
+CSockBEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
 {
     // wait for new request
     CBECommunication *pComm = GetCommunication();

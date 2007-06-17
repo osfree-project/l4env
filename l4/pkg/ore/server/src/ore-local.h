@@ -26,10 +26,12 @@
 #include <dice/dice.h>
 
 #include "config.h"
-#ifndef CONFIG_ORE_DDE26
+#include "auto_config.h"
+#ifdef CONFIG_ORE_DDE26
+#include <l4/dde/linux26/dde26.h>
+#else
 #include "linuxemul.h"
 #endif
-#include "auto_config.h"
 #include <l4/ore/worker-server.h>
 #include <l4/ore/ore_manager-server.h>
 #include <l4/ore/ore_rxtx-server.h>

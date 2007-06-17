@@ -51,7 +51,6 @@
 
 #include "Error.h"
 #include "Messages.h"
-#include "File.h"
 #include "CParser.h"
 #include "CPreProcess.h"
 #include "Dependency.h"

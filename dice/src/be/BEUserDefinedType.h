@@ -57,7 +57,7 @@ protected:
 public:
     virtual CObject* Clone();
 
-    virtual void WriteZeroInit(CBEFile *pFile);
+    virtual void WriteZeroInit(CBEFile& pFile);
     virtual int GetSize();
     virtual int GetMaxSize();
     virtual string GetName();
@@ -67,14 +67,14 @@ public:
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
 
     virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile *pFile, 
+    virtual void WriteGetSize(CBEFile& pFile, 
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
     virtual bool IsSimpleType();
     virtual bool IsArrayType();
     virtual bool IsPointerType();
     virtual int GetArrayDimensionCount();
     virtual int GetIndirectionCount();
-    virtual void WriteIndirect(CBEFile* pFile);
+    virtual void WriteIndirect(CBEFile& pFile);
 
     virtual CBEType* GetRealType();
     virtual CBEDeclarator* GetRealName();

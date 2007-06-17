@@ -34,7 +34,11 @@ include $(PKGDIR)/../dde/linux26/Makeconf
 PRIVATE_INCDIR += $(PKGDIR_ABS)/server/include \
 		 		  $(PKGDIR_OBJ)/server/include \
 
-LIBS 		+= -llinuxnetdrv26.o -ldde_linux26_net -ldde_linux26 -lddekit -llist_alloc
+LIBS 		+= -llinuxnetdrv26.o -ldde_linux26_net -ldde_linux26 -lddekit
+
+ifeq ($(CONFIG_ORE_FERRET),y)
+LIBS        += -lferret_client -lferret_producer -lferret_client
+endif
 
 else # using DDE2.4
 
@@ -60,6 +64,10 @@ ifeq ($(CONFIG_ORE_UX_ONLY),y)
 LIBS += -lclxfux.o $(GCCLIB)
 else
 LIBS += $(GCCLIB)
+endif
+
+ifeq ($(CONFIG_ORE_PACKET_TRACE),y)
+LIBS += -lpacket_debug
 endif
 
 ifeq ($(USE_DSI),y)

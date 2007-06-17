@@ -59,7 +59,6 @@
 CBEMarshaller::CBEMarshaller()
  : CBEObject()
 {
-    m_pFile = 0;
     m_pFunction = 0;
 }
 
@@ -154,7 +153,7 @@ CBEMarshaller::GetMessageBuffer(CBEFunction *pFunction)
  *  \param nDirection the direction to marshal
  */
 void 
-CBEMarshaller::MarshalFunction(CBEFile *pFile, 
+CBEMarshaller::MarshalFunction(CBEFile& pFile, 
 	DIRECTION_TYPE nDirection)
 {
     // get function
@@ -175,13 +174,13 @@ CBEMarshaller::MarshalFunction(CBEFile *pFile,
  * parameters requiring "special treatment".
  */
 void 
-CBEMarshaller::MarshalFunction(CBEFile *pFile,
+CBEMarshaller::MarshalFunction(CBEFile& pFile,
 	CBEFunction *pFunction, 
 	DIRECTION_TYPE nDirection)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMarshaller::%s(%s, %s, %d) called\n", __func__,
-	pFile->GetFileName().c_str(), pFunction->GetName().c_str(), nDirection);
+	pFile.GetFileName().c_str(), pFunction->GetName().c_str(), nDirection);
     
     // get struct
     CMsgStructType nType = nDirection;
@@ -196,7 +195,6 @@ CBEMarshaller::MarshalFunction(CBEFile *pFile,
     }
     
     // set member variables
-    m_pFile = pFile;
     m_bMarshal = nDirection == pFunction->GetSendDirection();
     m_pFunction = pFunction;
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -252,11 +250,10 @@ CBEMarshaller::MarshalFunction(CBEFile *pFile,
 	// now marshal parameter
 	CDeclStack vStack;
 	vStack.push_back(pParameter->m_Declarators.First());
-	MarshalParameterIntern(pParameter, &vStack);
+	MarshalParameterIntern(pFile, pParameter, &vStack);
     }
 
     m_pFunction = 0;
-    m_pFile = 0;
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMarshaller::%s(,,) returns\n", __func__);
@@ -311,7 +308,7 @@ CBEMarshaller::DoSkipParameter(CBEFunction* pFunction,
  *  \param bMarshal true if marshaling, false if unamrshaling
  */
 void
-CBEMarshaller::MarshalParameter(CBEFile *pFile,
+CBEMarshaller::MarshalParameter(CBEFile& pFile,
     CBEFunction *pFunction,
     CBETypedDeclarator *pParameter,
     bool bMarshal)
@@ -327,7 +324,6 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
     assert(pMsgBuffer);
    
     // set member variables
-    m_pFile = pFile;
     m_bMarshal = bMarshal;
     m_pFunction = pFunction;
     
@@ -356,7 +352,7 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
 	// write access to generic member
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	    "CBEMarshaller::%s calling MarshalGenericMember for pos %d\n", __func__, nPosition);
-	MarshalGenericMember(nPosition, pParameter, &vStack);
+	MarshalGenericMember(pFile, nPosition, pParameter, &vStack);
     }
     else
     {
@@ -364,12 +360,11 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
 	{
 	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 		"CBEMarshaller::%s calling MarshalParameterIntern\n", __func__);
-	    MarshalParameterIntern(pParameter, &vStack);
+	    MarshalParameterIntern(pFile, pParameter, &vStack);
 	}
     }
 
     m_pFunction = 0;
-    m_pFile = 0;
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s done.\n", __func__);
 }
@@ -381,7 +376,7 @@ CBEMarshaller::MarshalParameter(CBEFile *pFile,
  *  \param nValue the value to marshal
  */
 void
-CBEMarshaller::MarshalValue(CBEFile *pFile,
+CBEMarshaller::MarshalValue(CBEFile& pFile,
     CBEFunction *pFunction,
     CBETypedDeclarator *pParameter,
     int nValue)
@@ -391,7 +386,6 @@ CBEMarshaller::MarshalValue(CBEFile *pFile,
     assert(pMsgBuffer);
    
     // set member variables
-    m_pFile = pFile;
     m_bMarshal = true;
     m_pFunction = pFunction;
     
@@ -409,21 +403,20 @@ CBEMarshaller::MarshalValue(CBEFile *pFile,
 	// to
 	int nPosition = pMsgBuffer->GetMemberPosition(sName, nType);
 	// write access to generic member
-	MarshalGenericValue(nPosition, nValue);
+	MarshalGenericValue(pFile, nPosition, nValue);
     }
     else
     {
 	if (!DoSkipParameter(pFunction, pParameter, nType))
 	{
 	    // try to find respective member and assign
-	    *pFile << "\t";
-	    WriteMember(nType, pMsgBuffer, pParameter, NULL);
-	    *pFile << " = " << nValue << ";\n";
+	    pFile << "\t";
+	    WriteMember(pFile, nType, pMsgBuffer, pParameter, NULL);
+	    pFile << " = " << nValue << ";\n";
 	}
     }
 
     m_pFunction = 0;
-    m_pFile = 0;
 }
 
 /** \brief internal method to marshal a parameter
@@ -434,31 +427,31 @@ CBEMarshaller::MarshalValue(CBEFile *pFile,
  * parameter. It also checks if there is a special treatment necessary.
  */
 void
-CBEMarshaller::MarshalParameterIntern(CBETypedDeclarator *pParameter,
+CBEMarshaller::MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n", __func__,
 	pParameter->m_Declarators.First()->GetName().c_str());
     
-    if (MarshalSpecialMember(pParameter))
+    if (MarshalSpecialMember(pFile, pParameter))
 	return;
     // try to marshal strings
-    if (MarshalString(pParameter, pStack))
+    if (MarshalString(pFile, pParameter, pStack))
 	return;
     // try to marshal arrays (if it _does_ marshal an array it returns true)
-    if (MarshalArray(pParameter, pStack))
+    if (MarshalArray(pFile, pParameter, pStack))
 	return;
     // try to marshal union
     // before struct, since IDL union is derived from struct
-    if (MarshalUnion(pParameter, pStack))
+    if (MarshalUnion(pFile, pParameter, pStack))
 	return;
     // try to marshal  struct
-    if (MarshalStruct(pParameter, pStack))
+    if (MarshalStruct(pFile, pParameter, pStack))
 	return;
     // FIXME test for enum
 
     // now this is a simple type:
-    WriteAssignment(pParameter, pStack);
+    WriteAssignment(pFile, pParameter, pStack);
     
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns\n", 
 	__func__, pParameter->m_Declarators.First()->GetName().c_str());
@@ -478,7 +471,8 @@ CBEMarshaller::MarshalParameterIntern(CBETypedDeclarator *pParameter,
  * struct should only contain an array of word sized members.
  */
 void
-CBEMarshaller::MarshalGenericMember(int nPosition,
+CBEMarshaller::MarshalGenericMember(CBEFile& pFile,
+    int nPosition,
     CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
@@ -489,20 +483,20 @@ CBEMarshaller::MarshalGenericMember(int nPosition,
 	"CBEMarshaller::%s (%d, %s) called\n", __func__,
 	nPosition, pParameter->m_Declarators.First()->GetName().c_str());
 
-    *m_pFile << "\t";
+    pFile << "\t";
     if (m_bMarshal)
     {
-	pMsgBuffer->WriteGenericMemberAccess(m_pFile, nPosition);
-	*m_pFile << " = ";
-	WriteParameter(pParameter, pStack, false);
+	pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
+	pFile << " = ";
+	WriteParameter(pFile, pParameter, pStack, false);
     }
     else
     {
-	WriteParameter(pParameter, pStack, false);
-	*m_pFile << " = ";
-	pMsgBuffer->WriteGenericMemberAccess(m_pFile, nPosition);
+	WriteParameter(pFile, pParameter, pStack, false);
+	pFile << " = ";
+	pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
     }
-    *m_pFile << ";\n";
+    pFile << ";\n";
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBEMarshaller::%s done.\n", __func__);
@@ -513,7 +507,8 @@ CBEMarshaller::MarshalGenericMember(int nPosition,
  *  \param nValue the value to marshal to this position
  */
 void
-CBEMarshaller::MarshalGenericValue(int nPosition,
+CBEMarshaller::MarshalGenericValue(CBEFile& pFile,
+    int nPosition,
     int nValue)
 {
     if (!m_bMarshal)
@@ -522,9 +517,9 @@ CBEMarshaller::MarshalGenericValue(int nPosition,
     CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
 
-    *m_pFile << "\t";
-    pMsgBuffer->WriteGenericMemberAccess(m_pFile, nPosition);
-    *m_pFile << " = " << nValue << ";\n";
+    pFile << "\t";
+    pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
+    pFile << " = " << nValue << ";\n";
 }
 
 /** \brief test for and marshal special members, such as opcode or exception
@@ -534,19 +529,19 @@ CBEMarshaller::MarshalGenericValue(int nPosition,
  * This implementation checks for opcode and exception member.
  */
 bool
-CBEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
+CBEMarshaller::MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
     assert(pMember);
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 	__func__, pMember->m_Declarators.First()->GetName().c_str());
     // check for opcode
-    if (MarshalOpcode(pMember))
+    if (MarshalOpcode(pFile, pMember))
 	return true;
     // check for exception
-    if (MarshalException(pMember))
+    if (MarshalException(pFile, pMember))
 	return true;
     // return variable
-    if (MarshalReturn(pMember))
+    if (MarshalReturn(pFile, pMember))
 	return true;
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns false\n",
@@ -559,7 +554,7 @@ CBEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
  *  \return true if this was an special parameter
  */
 bool
-CBEMarshaller::MarshalOpcode(CBETypedDeclarator *pMember)
+CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 	__func__, pMember->m_Declarators.First()->GetName().c_str());
@@ -577,20 +572,20 @@ CBEMarshaller::MarshalOpcode(CBETypedDeclarator *pMember)
     if (m_bMarshal)
     {
 	// marshal opcode
-	*m_pFile << "\t";
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
-	*m_pFile << " = ";
-	*m_pFile << m_pFunction->GetOpcodeConstName();
-	*m_pFile << ";\n";
+	pFile << "\t";
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
+	pFile << " = ";
+	pFile << m_pFunction->GetOpcodeConstName();
+	pFile << ";\n";
     }
     else
     {
 	// unmarshal into opcode variable
-	*m_pFile << "\t" << sName << " = ";
+	pFile << "\t" << sName << " = ";
 	// access message buffer
-	WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer,pMember,
+	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer,pMember,
 	    NULL);
-	*m_pFile << ";\n";
+	pFile << ";\n";
     }
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns true\n",
@@ -607,7 +602,7 @@ CBEMarshaller::MarshalOpcode(CBETypedDeclarator *pMember)
  * us an indirect access in the nominal case.
  */
 bool
-CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
+CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 	__func__, pMember->m_Declarators.First()->GetName().c_str());
@@ -640,10 +635,10 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 	// marshal exception
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 	{
-	    *m_pFile << "\t";
-	    WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	    pFile << "\t";
+	    WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
 		NULL);
-	    *m_pFile << " = ((" << sType << "){ _corba: { .major = " <<
+	    pFile << " = ((" << sType << "){ _corba: { .major = " <<
 		"DICE_EXCEPTION_MAJOR(" << sEnvPtr << "), .repos_id = " << 
 		"DICE_EXCEPTION_MINOR(" << sEnvPtr << ") }})._raw;\n";
 	}
@@ -654,10 +649,10 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 		sEnv += ".";
 	    else
 		sEnv += "->";
-	    *m_pFile << "\t";
-	    WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	    pFile << "\t";
+	    WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
 		NULL);
-	    *m_pFile << " = " << sEnv << "_exception._raw;\n";
+	    pFile << " = " << sEnv << "_exception._raw;\n";
 	}
     }
     else
@@ -665,26 +660,26 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 	CMsgStructType nType = m_pFunction->GetReceiveDirection();
 	// test if we really received an exception
 	// if (env->major != CORBA_NO_EXCEPTION) => if (_exception != 0)
-	*m_pFile << "\tif (DICE_EXPECT_FALSE(";
-	WriteMember(nType, pMsgBuffer, pMember, 0);
-	*m_pFile << " != 0))\n";
-	*m_pFile << "\t{\n";
-	m_pFile->IncIndent();
+	pFile << "\tif (DICE_EXPECT_FALSE(";
+	WriteMember(pFile, nType, pMsgBuffer, pMember, 0);
+	pFile << " != 0))\n";
+	pFile << "\t{\n";
+	++pFile;
 	// now assign the values
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 	{
 	    // env->major = ((dice_CORBA_exception_type)exception).major
 	    // env->repos_id = ((dice_CORBA_exception_type)exception).repos_id
-	    *m_pFile << "\tDICE_EXCEPTION_MAJOR(" << sEnvPtr << ") = ((" << 
+	    pFile << "\tDICE_EXCEPTION_MAJOR(" << sEnvPtr << ") = ((" << 
 		sType << "){ ._raw = ";
 	    // access message buffer
-	    WriteMember(nType, pMsgBuffer, pMember, 0);
-	    *m_pFile << "})._corba.major;\n";
-	    *m_pFile << "\tDICE_EXCEPTION_MINOR(" << sEnvPtr << ") = ((" << 
+	    WriteMember(pFile, nType, pMsgBuffer, pMember, 0);
+	    pFile << "})._corba.major;\n";
+	    pFile << "\tDICE_EXCEPTION_MINOR(" << sEnvPtr << ") = ((" << 
 		sType << "){ ._raw = ";
 	    // access message buffer
-	    WriteMember(nType, pMsgBuffer, pMember, 0);
-	    *m_pFile << "})._corba.repos_id;\n";
+	    WriteMember(pFile, nType, pMsgBuffer, pMember, 0);
+	    pFile << "})._corba.repos_id;\n";
 	}
 	else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	{
@@ -693,16 +688,15 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
 		sEnv += ".";
 	    else
 		sEnv += "->";
-	    *m_pFile << "\t" << sEnv << "_exception._raw = ";
+	    pFile << "\t" << sEnv << "_exception._raw = ";
 	    // access message buffer
-	    WriteMember(nType, pMsgBuffer, pMember, 0);
-	    *m_pFile << ";\n";
+	    WriteMember(pFile, nType, pMsgBuffer, pMember, 0);
+	    pFile << ";\n";
 	}
 
 	// if exception, return
-	m_pFunction->WriteReturn(m_pFile);
-	m_pFile->DecIndent();
-	*m_pFile << "\t}\n";
+	m_pFunction->WriteReturn(pFile);
+	--pFile << "\t}\n";
     }
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns true\n",
@@ -715,7 +709,7 @@ CBEMarshaller::MarshalException(CBETypedDeclarator *pMember)
  *  \return true if this was an special parameter
  */
 bool
-CBEMarshaller::MarshalReturn(CBETypedDeclarator *pMember)
+CBEMarshaller::MarshalReturn(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 	__func__, pMember->m_Declarators.First()->GetName().c_str());
@@ -760,22 +754,22 @@ CBEMarshaller::MarshalReturn(CBETypedDeclarator *pMember)
     stack.push_back(pMember->m_Declarators.First());
 
     // try to marshal strings
-    if (MarshalString(pParameter, &stack))
+    if (MarshalString(pFile, pParameter, &stack))
 	return true;
     // try to marshal arrays (if it _does_ marshal an array it returns true)
-    if (MarshalArray(pParameter, &stack))
+    if (MarshalArray(pFile, pParameter, &stack))
 	return true;
     // try to marshal union
     // before struct, since IDL union is derived from struct
-    if (MarshalUnion(pParameter, &stack))
+    if (MarshalUnion(pFile, pParameter, &stack))
 	return true;
     // try to marshal  struct
-    if (MarshalStruct(pParameter, &stack))
+    if (MarshalStruct(pFile, pParameter, &stack))
 	return true;
     
     // check type (transmit)
     // assignment
-    WriteAssignment(pParameter, &stack);
+    WriteAssignment(pFile, pParameter, &stack);
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) returns true\n",
 	__func__, pMember->m_Declarators.First()->GetName().c_str());
@@ -787,7 +781,8 @@ CBEMarshaller::MarshalReturn(CBETypedDeclarator *pMember)
  *  \param pStack the declarator stack
  */
 void
-CBEMarshaller::WriteAssignment(CBETypedDeclarator *pParameter,
+CBEMarshaller::WriteAssignment(CBEFile& pFile,
+    CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
@@ -801,23 +796,23 @@ CBEMarshaller::WriteAssignment(CBETypedDeclarator *pParameter,
     }
     assert(pMember);
     // try to find respective member and assign
-    *m_pFile << "\t";
+    pFile << "\t";
     if (m_bMarshal)
     {
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
 	    pStack);
-	*m_pFile << " = ";
+	pFile << " = ";
 	// if type of member and parameter are different, cast to member type
-	WriteParameter(pParameter, pStack, false);
+	WriteParameter(pFile, pParameter, pStack, false);
     }
     else
     {
-	WriteParameter(pParameter, pStack, false);
-	*m_pFile << " = ";
-	WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember,
+	WriteParameter(pFile, pParameter, pStack, false);
+	pFile << " = ";
+	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember,
 	    pStack);
     }
-    *m_pFile << ";\n";
+    pFile << ";\n";
 }
 
 /** \brief writes the access to a specific member in the message buffer
@@ -827,7 +822,8 @@ CBEMarshaller::WriteAssignment(CBETypedDeclarator *pParameter,
  *  \param pStack set if a stack is to be used
  */
 void
-CBEMarshaller::WriteMember(CMsgStructType nType,
+CBEMarshaller::WriteMember(CBEFile& pFile,
+    CMsgStructType nType,
     CBEMsgBuffer *pMsgBuffer,
     CBETypedDeclarator *pMember,
     CDeclStack* pStack)
@@ -857,10 +853,10 @@ CBEMarshaller::WriteMember(CMsgStructType nType,
     {
 	CDeclStack vStack;
 	vStack.push_back(pAlias->m_Declarators.First());
-	pMsgBuffer->WriteAccess(m_pFile, m_pFunction, nType, &vStack);
+	pMsgBuffer->WriteAccess(pFile, m_pFunction, nType, &vStack);
     }
     else
-    	pMsgBuffer->WriteAccess(m_pFile, m_pFunction, nType, pStack);
+    	pMsgBuffer->WriteAccess(pFile, m_pFunction, nType, pStack);
 
     if (bMine)
 	delete pStack;
@@ -878,7 +874,8 @@ CBEMarshaller::WriteMember(CMsgStructType nType,
  * pointers.
  */
 void
-CBEMarshaller::WriteParameter(CBETypedDeclarator *pParameter,
+CBEMarshaller::WriteParameter(CBEFile& pFile,
+    CBETypedDeclarator *pParameter,
     CDeclStack* pStack,
     bool bPointer)
 {
@@ -910,20 +907,20 @@ CBEMarshaller::WriteParameter(CBETypedDeclarator *pParameter,
 	!pType->IsPointerType() &&
 	!pDecl->IsArray() &&
 	bCast)
-	pCastType->WriteCast(m_pFile, false);
+	pCastType->WriteCast(pFile, false);
 	
     // if constructed type, then cast pointer
     if (pType->IsConstructedType() && bCast)
     {
 	// dereference casted value
 	if (!bPointer)
-	    *m_pFile << "*";
+	    pFile << "*";
 	// cast pointer
-	pCastType->WriteCast(m_pFile, true);
+	pCastType->WriteCast(pFile, true);
 	// write further dereferencing with one star less
 	nStars--;
 	// put parenthesis around variable
-	*m_pFile << "(";
+	pFile << "(";
     }
     else if (bPointer)
 	nStars--;
@@ -937,22 +934,22 @@ CBEMarshaller::WriteParameter(CBETypedDeclarator *pParameter,
 
     // if stars is negative then we have to create reference
     if ((nStars < 0) && !pDecl->IsArray()) // can be at most -1
-	*m_pFile << "&(";
+	pFile << "&(";
     // print name
     bool bReference = /* (nStars > (bHasRef ? 1 : 0)) || */
 	(pType->IsConstructedType() && bCast) || bPointer;
-    CDeclaratorStackLocation::Write(m_pFile, pStack, bReference);
+    CDeclaratorStackLocation::Write(pFile, pStack, bReference);
     // we could have referenced a fixed size array -> nStars is < 0 and the
     // declarator is an array
     if ((nStars < 0) && !pDecl->IsArray())
     {
 // 	if (pDecl->IsArray())
-// 	    *m_pFile << "[0]";
+// 	    pFile << "[0]";
 	// close opened parenthesis
-	*m_pFile << ")";
+	pFile << ")";
     }
     if (pType->IsConstructedType() && bCast)
-	*m_pFile << ")";
+	pFile << ")";
 }
 
 /** \brief marshal a member, which is an string
@@ -966,7 +963,8 @@ CBEMarshaller::WriteParameter(CBETypedDeclarator *pParameter,
  * for our size member is sufficient.
  */
 bool
-CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter, 
+CBEMarshaller::MarshalString(CBEFile& pFile,
+    CBETypedDeclarator *pParameter, 
     CDeclStack* pStack)
 {
     if (!pParameter->IsString())
@@ -1037,19 +1035,18 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 		"CBEMarshaller::%s writing maxis check (marshal)\n",
 		__func__);
 	    
-	    *m_pFile << "\tif (DICE_EXPECT_FALSE(";
-	    pSizeVariable->WriteDeclarators(m_pFile);
-	    *m_pFile << " > ";
-	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	    pFile << "\tif (DICE_EXPECT_FALSE(";
+	    pSizeVariable->WriteDeclarators(pFile);
+	    pFile << " > ";
+	    pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
 	    // max size
-	    *m_pFile << "))\n";
-	    m_pFile->IncIndent();
-	    *m_pFile << "\t";
-	    pSizeVariable->WriteDeclarators(m_pFile);
-	    *m_pFile << " = ";
-	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << ";\n";
-	    m_pFile->DecIndent();
+	    pFile << "))\n";
+	    ++pFile << "\t";
+	    pSizeVariable->WriteDeclarators(pFile);
+	    pFile << " = ";
+	    pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
+	    pFile << ";\n";
+	    --pFile;
 	}
 	
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
@@ -1060,7 +1057,7 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 	// FIXME can we use size member?
 	CDeclStack vStack;
 	vStack.push_back(pSizeVariable->m_Declarators.First());
-	MarshalParameterIntern(pSizeMember, &vStack);
+	MarshalParameterIntern(pFile, pSizeMember, &vStack);
 
 	if (!m_bMarshal && !bOurSizeAttr && 
 	    pParameter->m_Attributes.Find(ATTR_MAX_IS))
@@ -1069,19 +1066,18 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 		"CBEMarshaller::%s writing maxis check (unmarshal)\n",
 		__func__);
 	    
-	    *m_pFile << "\tif (DICE_EXPECT_FALSE(";
-	    pSizeVariable->WriteDeclarators(m_pFile);
-	    *m_pFile << " > ";
-	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	    pFile << "\tif (DICE_EXPECT_FALSE(";
+	    pSizeVariable->WriteDeclarators(pFile);
+	    pFile << " > ";
+	    pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
 	    // max size
-	    *m_pFile << "))\n";
-	    m_pFile->IncIndent();
-	    *m_pFile << "\t";
-	    pSizeVariable->WriteDeclarators(m_pFile);
-	    *m_pFile << " = ";
-	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << ";\n";
-	    m_pFile->DecIndent();
+	    pFile << "))\n";
+	    ++pFile << "\t";
+	    pSizeVariable->WriteDeclarators(pFile);
+	    pFile << " = ";
+	    pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
+	    pFile << ";\n";
+	    --pFile;
 	}
     }
 
@@ -1097,18 +1093,17 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 	    "CBEMarshaller::%s writing memcpy (marshal)\n",
 	    __func__);
 	    
-	*m_pFile << "\tif (DICE_EXPECT_TRUE(";
-	pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << " > 0))\n";
-	m_pFile->IncIndent();
-	*m_pFile << "\t_dice_memcpy (";
-	WriteMember(nType, pMsgBuffer, pMember, pStack);
-	*m_pFile << ", ";
-	WriteParameter(pParameter, pStack, true);
-	*m_pFile << ", ";
-	pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << ");\n";
-	m_pFile->DecIndent();
+	pFile << "\tif (DICE_EXPECT_TRUE(";
+	pMember->WriteGetSize(pFile, pStack, m_pFunction);
+	pFile << " > 0))\n";
+	++pFile << "\t_dice_memcpy (";
+	WriteMember(pFile, nType, pMsgBuffer, pMember, pStack);
+	pFile << ", ";
+	WriteParameter(pFile, pParameter, pStack, true);
+	pFile << ", ";
+	pMember->WriteGetSize(pFile, pStack, m_pFunction);
+	pFile << ");\n";
+	--pFile;
     }
     else
     {
@@ -1124,19 +1119,18 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 		"CBEMarshaller::%s writing maxis check (unmarshal + size)\n",
 		__func__);
 	    
-	    *m_pFile << "\tif (DICE_EXPECT_FALSE(";
-	    pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << " > ";
-	    pMember->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	    pFile << "\tif (DICE_EXPECT_FALSE(";
+	    pMember->WriteGetSize(pFile, pStack, m_pFunction);
+	    pFile << " > ";
+	    pMember->WriteGetMaxSize(pFile, pStack, m_pFunction);
 	    // max size
-	    *m_pFile << "))\n";
-	    m_pFile->IncIndent();
-	    *m_pFile << "\t";
-	    pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << " = ";
-	    pMember->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << ";\n";
-	    m_pFile->DecIndent();
+	    pFile << "))\n";
+	    ++pFile << "\t";
+	    pMember->WriteGetSize(pFile, pStack, m_pFunction);
+	    pFile << " = ";
+	    pMember->WriteGetMaxSize(pFile, pStack, m_pFunction);
+	    pFile << ";\n";
+	    --pFile;
 	}
 	
 	// at server side directly reference into message buffer (requires
@@ -1164,69 +1158,66 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
 	    "CBEMarshaller::%s writing mandatory zero termination\n",
 	    __func__);
 	    
-	*m_pFile << "\tif (DICE_EXPECT_TRUE(";
-	pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << " > 0))\n";
+	pFile << "\tif (DICE_EXPECT_TRUE(";
+	pMember->WriteGetSize(pFile, pStack, m_pFunction);
+	pFile << " > 0))\n";
 
 	bool bPrealloc = false;
 	if (pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT) &&
-	    m_pFile->IsOfFileType(FILETYPE_CLIENT))
+	    pFile.IsOfFileType(FILETYPE_CLIENT))
 	    bPrealloc = true;
 	if (pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER) &&
-	    m_pFile->IsOfFileType(FILETYPE_COMPONENT))
+	    pFile.IsOfFileType(FILETYPE_COMPONENT))
 	    bPrealloc = true;
-	*m_pFile << "\t{\n";
-	m_pFile->IncIndent();
+	pFile << "\t{\n";
 	
 	// zero terminate string in buffer
-	*m_pFile << "\t";
-	WriteMember(nType, pMsgBuffer, pMember, pStack);
-	*m_pFile << "[";
-	pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << "] = 0;\n";
+	++pFile << "\t";
+	WriteMember(pFile, nType, pMsgBuffer, pMember, pStack);
+	pFile << "[";
+	pMember->WriteGetSize(pFile, pStack, m_pFunction);
+	pFile << "] = 0;\n";
 
 	if (bComponentSide)
 	{
 	    // assing parameter reference into buffer
-	    *m_pFile << "\t";
-	    WriteParameter(pParameter, pStack, true);
-	    *m_pFile << " = ";
-	    WriteMember(nType, pMsgBuffer, pMember, pStack);
-	    *m_pFile << ";\n";
+	    pFile << "\t";
+	    WriteParameter(pFile, pParameter, pStack, true);
+	    pFile << " = ";
+	    WriteMember(pFile, nType, pMsgBuffer, pMember, pStack);
+	    pFile << ";\n";
 	}
 	else
 	{
 	    if (!bPrealloc)
 	    {
 		// allocate memory for client out string
-		*m_pFile << "\t";
-		WriteParameter(pParameter, pStack, true);
-		*m_pFile << " = ";
-		CBEContext::WriteMalloc(m_pFile, m_pFunction);
-		*m_pFile << "(";
-		pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
-		*m_pFile << ");\n";
+		pFile << "\t";
+		WriteParameter(pFile, pParameter, pStack, true);
+		pFile << " = ";
+		CBEContext::WriteMalloc(pFile, m_pFunction);
+		pFile << "(";
+		pMember->WriteGetSize(pFile, pStack, m_pFunction);
+		pFile << ");\n";
 	    }
 	    // copy string to client parameter
-	    *m_pFile << "\t_dice_memcpy (";
-	    WriteParameter(pParameter, pStack, true);
-	    *m_pFile << ", ";
-	    WriteMember(nType, pMsgBuffer, pMember, pStack);
-	    *m_pFile << ", ";
-	    pMember->WriteGetSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << ");\n";
+	    pFile << "\t_dice_memcpy (";
+	    WriteParameter(pFile, pParameter, pStack, true);
+	    pFile << ", ";
+	    WriteMember(pFile, nType, pMsgBuffer, pMember, pStack);
+	    pFile << ", ";
+	    pMember->WriteGetSize(pFile, pStack, m_pFunction);
+	    pFile << ");\n";
 	}
 	
-	m_pFile->DecIndent();
-	*m_pFile << "\t}\n";
-	*m_pFile << "\telse\n";
-	m_pFile->IncIndent();
+	--pFile << "\t}\n";
+	pFile << "\telse\n";
 	
-	*m_pFile << "\t";
-	WriteParameter(pParameter, pStack, true);
-	*m_pFile << " = 0;\n";
+	++pFile << "\t";
+	WriteParameter(pFile, pParameter, pStack, true);
+	pFile << " = 0;\n";
 	
-	m_pFile->DecIndent();
+	--pFile;
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
@@ -1254,7 +1245,8 @@ CBEMarshaller::MarshalString(CBETypedDeclarator *pParameter,
  * array marshalling function is called.
  */
 bool
-CBEMarshaller::MarshalArray(CBETypedDeclarator *pParameter, 
+CBEMarshaller::MarshalArray(CBEFile& pFile,
+    CBETypedDeclarator *pParameter, 
     CDeclStack* pStack)
 {
     // get array dimensions from user defined types
@@ -1299,7 +1291,7 @@ CBEMarshaller::MarshalArray(CBETypedDeclarator *pParameter,
     // that again.
     if (pDeclarator->IsArray())
     {
-	MarshalArrayIntern(pParameter, pType, pStack);
+	MarshalArrayIntern(pFile, pParameter, pType, pStack);
 
 	for (iter = vBounds.begin(); iter != vBounds.end(); iter++)
 	    pDeclarator->RemoveArrayBound(*iter);
@@ -1312,7 +1304,7 @@ CBEMarshaller::MarshalArray(CBETypedDeclarator *pParameter,
 	(pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
 	 pParameter->m_Attributes.Find(ATTR_LENGTH_IS)))
     {
-	MarshalArrayIntern(pParameter, pType, pStack);
+	MarshalArrayIntern(pFile, pParameter, pType, pStack);
 
 	return true;
     }
@@ -1325,7 +1317,8 @@ CBEMarshaller::MarshalArray(CBETypedDeclarator *pParameter,
  *  \param pType the type to marshal with
  *  \param pStack the currently active declarator stack
  */
-void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
+void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
+    CBETypedDeclarator *pParameter,
     CBEType *pType,
     CDeclStack* pStack)
 {
@@ -1348,7 +1341,7 @@ void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
 	(pDeclarator->GetArrayDimensionCount() == 0) && !m_bMarshal;
     if (bRefMsgBuf)
     {
-	MarshalArrayInternRef(pParameter, pStack);
+	MarshalArrayInternRef(pFile, pParameter, pStack);
 	return;
     }
 
@@ -1382,7 +1375,7 @@ void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
 		CBETypedDeclarator *pSizeParam = m_pFunction->m_Parameters.Find(pSizeDecl->GetName());
 		CDeclStack vStack;
 		vStack.push_back(pSizeParam->m_Declarators.First());
-		MarshalParameterIntern(pSizeParam, &vStack);
+		MarshalParameterIntern(pFile, pSizeParam, &vStack);
 	    }
 	}
     }
@@ -1393,18 +1386,17 @@ void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
     {
 	if (pParameter->m_Attributes.Find(ATTR_MAX_IS))
 	{
-	    *m_pFile << "\tif (";
-	    pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << " > ";
-	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << ")\n";
-	    m_pFile->IncIndent();
-	    *m_pFile << "\t";
-	    pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << " = ";
-	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << ";\n";
-	    m_pFile->DecIndent();
+	    pFile << "\tif (";
+	    pParameter->WriteGetSize(pFile, pStack, m_pFunction);
+	    pFile << " > ";
+	    pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
+	    pFile << ")\n";
+	    ++pFile << "\t";
+	    pParameter->WriteGetSize(pFile, pStack, m_pFunction);
+	    pFile << " = ";
+	    pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
+	    pFile << ";\n";
+	    --pFile;
 	}
 	else
 	{
@@ -1413,14 +1405,13 @@ void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
 		nMax = pDeclarator->m_Bounds.First()->GetIntValue();
 	    if (nMax)
 	    {
-		*m_pFile << "\tif (";
-		pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-		*m_pFile << " > " << nMax << ")\n";
-		m_pFile->IncIndent();
-		*m_pFile << "\t";
-		pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-		*m_pFile << " = " << nMax << ";\n";
-		m_pFile->DecIndent();
+		pFile << "\tif (";
+		pParameter->WriteGetSize(pFile, pStack, m_pFunction);
+		pFile << " > " << nMax << ")\n";
+		++pFile << "\t";
+		pParameter->WriteGetSize(pFile, pStack, m_pFunction);
+		pFile << " = " << nMax << ";\n";
+		--pFile;
 	    }
 	}
     }
@@ -1435,61 +1426,61 @@ void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
     // - is variable sized
     bool bPrealloc = false;
     if (pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT) &&
-	m_pFile->IsOfFileType(FILETYPE_CLIENT))
+	pFile.IsOfFileType(FILETYPE_CLIENT))
 	bPrealloc = true;
     if (pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER) &&
-	m_pFile->IsOfFileType(FILETYPE_COMPONENT))
+	pFile.IsOfFileType(FILETYPE_COMPONENT))
 	bPrealloc = true;
     bool bNeedMalloc = bIsVarSized && !m_bMarshal && !bRefMsgBuf &&
 	(pDeclarator->GetArrayDimensionCount() == 0) && !bPrealloc;
     if (bNeedMalloc)
     {
-	*m_pFile << "\t";
-	WriteParameter(pParameter, pStack, true);
-	*m_pFile << " = ";
-	pType->WriteCast(m_pFile, true);
-	CBEContext::WriteMalloc(m_pFile, m_pFunction);
-	*m_pFile << "(";
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	pFile << "\t";
+	WriteParameter(pFile, pParameter, pStack, true);
+	pFile << " = ";
+	pType->WriteCast(pFile, true);
+	CBEContext::WriteMalloc(pFile, m_pFunction);
+	pFile << "(";
+	pParameter->WriteGetSize(pFile, pStack, m_pFunction);
 	if (pType->GetSize() > 1)
 	{
-	    *m_pFile << "*sizeof";
-	    pType->WriteCast(m_pFile, false);
+	    pFile << "*sizeof";
+	    pType->WriteCast(pFile, false);
 	}
-	*m_pFile << ");\n";
+	pFile << ");\n";
     }
     
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
     CBETypedDeclarator *pMember = FindMarshalMember(pStack);
 
-    *m_pFile << "\t_dice_memcpy (";
+    pFile << "\t_dice_memcpy (";
     if (m_bMarshal)
     {
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
 	    pStack);
-	*m_pFile << ", ";
-	WriteParameter(pParameter, pStack, true);
+	pFile << ", ";
+	WriteParameter(pFile, pParameter, pStack, true);
     }
     else
     {
-	WriteParameter(pParameter, pStack, true);
-	*m_pFile << ", ";
-	WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember,
+	WriteParameter(pFile, pParameter, pStack, true);
+	pFile << ", ";
+	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember,
 	    pStack);
     }
-    *m_pFile << ", ";
+    pFile << ", ";
     // only call WriteGetSize if this is variable sized.
     // A variable sized array has to have the size_is or length_is attribute
     // set
     if (bIsVarSized)
     {
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	pParameter->WriteGetSize(pFile, pStack, m_pFunction);
 	// we make the cast here, because WriteGetSize will not write the size
 	// in bytes?
 	if (pType->GetSize() > 1)
 	{
-	    *m_pFile << "*sizeof";
-	    pType->WriteCast(m_pFile, false);
+	    pFile << "*sizeof";
+	    pType->WriteCast(pFile, false);
 	}
     }
     else
@@ -1507,16 +1498,16 @@ void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
 	// now write the size of the array multiplied with the size of the
 	// type
 	if (nBound > 1)
-	    *m_pFile << nBound;
+	    pFile << nBound;
 	if ((nBound > 1) && (pType->GetSize() > 1))
-	    *m_pFile << "*";
+	    pFile << "*";
 	if (pType->GetSize() > 1)
 	{
-	    *m_pFile << "sizeof";
-	    pType->WriteCast(m_pFile, false);
+	    pFile << "sizeof";
+	    pType->WriteCast(pFile, false);
 	}
     }
-    *m_pFile << ");\n";
+    pFile << ");\n";
 }
 
 /** \brief unmarshals an array by referencing directly into the message buffer
@@ -1532,17 +1523,18 @@ void CBEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
  * - unmarshalling
  */ 
 void
-CBEMarshaller::MarshalArrayInternRef(CBETypedDeclarator *pParameter,
+CBEMarshaller::MarshalArrayInternRef(CBEFile& pFile, 
+    CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
-    *m_pFile << "\t";
-    WriteParameter(pParameter, pStack, true);
-    *m_pFile << " = ";
+    pFile << "\t";
+    WriteParameter(pFile, pParameter, pStack, true);
+    pFile << " = ";
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
     CBETypedDeclarator *pMember = FindMarshalMember(pStack);
-    WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember,
+    WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember,
 	pStack);
-    *m_pFile << ";\n";
+    pFile << ";\n";
 }
 
 /** \brief marshal struct members (or parameters)
@@ -1557,7 +1549,8 @@ CBEMarshaller::MarshalArrayInternRef(CBETypedDeclarator *pParameter,
  * casting is done in the WriteParameter method.
  */
 bool
-CBEMarshaller::MarshalStruct(CBETypedDeclarator *pParameter,
+CBEMarshaller::MarshalStruct(CBEFile& pFile,
+    CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
@@ -1576,7 +1569,7 @@ CBEMarshaller::MarshalStruct(CBETypedDeclarator *pParameter,
     }
 
     // first write assignment of struct
-    WriteAssignment(pParameter, pStack);
+    WriteAssignment(pFile, pParameter, pStack);
 
     // iterate members and look for variable sized members
     vector<CBETypedDeclarator*>::iterator iter;
@@ -1593,7 +1586,7 @@ CBEMarshaller::MarshalStruct(CBETypedDeclarator *pParameter,
 	
 	// add to declarator stack
 	pStack->push_back((*iter)->m_Declarators.First());
-	MarshalParameterIntern((*iter), pStack);
+	MarshalParameterIntern(pFile, (*iter), pStack);
 	pStack->pop_back();
     }
     
@@ -1617,7 +1610,8 @@ CBEMarshaller::MarshalStruct(CBETypedDeclarator *pParameter,
  * method/
  */
 bool
-CBEMarshaller::MarshalUnion(CBETypedDeclarator *pParameter,
+CBEMarshaller::MarshalUnion(CBEFile& pFile,
+    CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n", __func__,
@@ -1641,14 +1635,14 @@ CBEMarshaller::MarshalUnion(CBETypedDeclarator *pParameter,
 	    pParameter->m_Declarators.First()->GetName().c_str());
     assert (pSwitchVar);
     pStack->push_back(pSwitchVar->m_Declarators.First());
-    MarshalParameterIntern(pSwitchVar, pStack);
+    MarshalParameterIntern(pFile, pSwitchVar, pStack);
     
     // write switch statement
-    *m_pFile << "\tswitch (";
-    CDeclaratorStackLocation::Write(m_pFile, pStack, false);
+    pFile << "\tswitch (";
+    CDeclaratorStackLocation::Write(pFile, pStack, false);
     pStack->pop_back();
-    *m_pFile << ")\n";
-    *m_pFile << "\t{\n";
+    pFile << ")\n";
+    pFile << "\t{\n";
 
     CBETypedDeclarator *pUnionVar = pUnion->GetUnionVariable();
     assert (pUnionVar);
@@ -1664,7 +1658,7 @@ CBEMarshaller::MarshalUnion(CBETypedDeclarator *pParameter,
 	 iterC++)
     {
 	if ((*iterC)->IsDefault())
-	    *m_pFile << "\tdefault:\n";
+	    pFile << "\tdefault:\n";
 	else
 	{
 	    vector<CBEExpression*>::iterator iterL;
@@ -1672,28 +1666,28 @@ CBEMarshaller::MarshalUnion(CBETypedDeclarator *pParameter,
 		 iterL != (*iterC)->m_Labels.end();
 		 iterL++)
 	    {
-		*m_pFile << "\tcase ";
-		(*iterL)->Write(m_pFile);
-		*m_pFile << ":\n";
+		pFile << "\tcase ";
+		(*iterL)->Write(pFile);
+		pFile << ":\n";
 	    }
 	}
-	m_pFile->IncIndent();
+	++pFile;
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEMarshaller::%s marshalling case %s\n",
 	    __func__, (*iterC)->m_Declarators.First()->GetName().c_str());
 	pStack->push_back((*iterC)->m_Declarators.First());
-	MarshalParameterIntern(*iterC, pStack);
+	MarshalParameterIntern(pFile, *iterC, pStack);
 	pStack->pop_back();
 	
-	*m_pFile << "\tbreak;\n";
-	m_pFile->DecIndent();
+	pFile << "\tbreak;\n";
+	--pFile;
     }
     
     // remove the union name from the stack
     pStack->pop_back();
     
-    *m_pFile << "\t}\n";
+    pFile << "\t}\n";
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEMarshaller::%s(%s) returns true\n", __func__,

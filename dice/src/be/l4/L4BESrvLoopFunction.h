@@ -55,9 +55,9 @@ public:
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
 
 protected:
-    virtual void WriteVariableInitialization(CBEFile *pFile);
-    virtual void WriteDispatchInvocation(CBEFile *pFile);
-    virtual void WriteDefaultEnvAssignment(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteDispatchInvocation(CBEFile& pFile);
+    virtual void WriteDefaultEnvAssignment(CBEFile& pFile);
 };
 
 #endif // !__DICE_L4BESRVLOOPFUNCTION_H__

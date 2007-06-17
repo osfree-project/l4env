@@ -219,15 +219,15 @@ Jdb_thread_list::iter_prev(Thread *t)
     {
       unsigned prio = t->sched()->prio();
 
-      if (t != Context::_prio_next[prio])
+      if (t != Context::_prio_next.cpu(0)[prio])
       	return Thread::lookup(t->_ready_prev);
 
       for (;;)
 	{
-	  if (++prio > Context::_prio_highest)
+	  if (++prio > Context::_prio_highest.cpu(0))
 	    prio = 0;
-	  if (Context::_prio_next[prio])
-	    return Thread::lookup(Context::_prio_next[prio]->_ready_prev);
+	  if (Context::_prio_next.cpu(0)[prio])
+	    return Thread::lookup(Context::_prio_next.cpu(0)[prio]->_ready_prev);
 	}
     }
 }
@@ -242,15 +242,15 @@ Jdb_thread_list::iter_next(Thread *t)
     {
       unsigned prio = t->sched()->prio();
 
-      if (t->_ready_next != Context::_prio_next[prio])
+      if (t->_ready_next != Context::_prio_next.cpu(0)[prio])
       	return Thread::lookup(t->_ready_next);
 
       for (;;)
 	{
-	  if (--prio > Context::_prio_highest) // prio is unsigned
-	    prio = Context::_prio_highest;
-	  if (Context::_prio_next[prio])
-	    return Thread::lookup(Context::_prio_next[prio]);
+	  if (--prio > Context::_prio_highest.cpu(0)) // prio is unsigned
+	    prio = Context::_prio_highest.cpu(0);
+	  if (Context::_prio_next.cpu(0)[prio])
+	    return Thread::lookup(Context::_prio_next.cpu(0)[prio]);
 	}
     }
 }

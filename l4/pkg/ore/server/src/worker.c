@@ -35,6 +35,10 @@ void worker_thread_string(void *arg)
 
     l4thread_data_set_current(__l4ore_tls_id_key, my_channel);
 
+#if CONFIG_ORE_DDE26
+	l4dde26_process_add_worker();
+#endif
+
     // register exit handler for cleanup
     l4thread_on_exit(&exit_fn, NULL);
 

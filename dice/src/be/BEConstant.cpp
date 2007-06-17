@@ -145,32 +145,32 @@ CBEConstant::CreateBackEnd(CBEType * pType,
  * So we first write the define, then the name, which is the same as used in
  * the IDL file, and then the expression.
  */
-void CBEConstant::Write(CBEHeaderFile * pFile)
+void CBEConstant::Write(CBEHeaderFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
-    *pFile << "#ifndef _constdef_" << m_sName << "\n";
-    *pFile << "#define _constdef_" << m_sName << "\n";
+    pFile << "#ifndef _constdef_" << m_sName << "\n";
+    pFile << "#define _constdef_" << m_sName << "\n";
     if (CCompiler::IsOptionSet(PROGRAM_CONST_AS_DEFINE) || m_bAlwaysDefine)
     {
         // #define <name>
-        *pFile << "#define " << m_sName << " ";
+        pFile << "#define " << m_sName << " ";
         // <expression>
         m_pValue->Write(pFile);
         // newline
-        *pFile << "\n";
+        pFile << "\n";
     }
     else
     {
         // should be static
-        *pFile << "static const ";
+        pFile << "static const ";
         m_pType->Write(pFile);
-        *pFile << " " << GetName() << " = ";
+        pFile << " " << GetName() << " = ";
         m_pValue->Write(pFile);
-        *pFile << ";\n";
+        pFile << ";\n";
     }
-    *pFile << "#endif /* _constdef_" << m_sName << " */\n";
+    pFile << "#endif /* _constdef_" << m_sName << " */\n";
 }
 
 /** \brief returns the name of the constant
@@ -196,7 +196,7 @@ CBEExpression *CBEConstant::GetValue()
  * A const usually is always added to a header file , if the target file is the
  * respective file for the IDL file
  */
-void CBEConstant::AddToHeader(CBEHeaderFile *pHeader)
+void CBEConstant::AddToHeader(CBEHeaderFile* pHeader)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBEConstant::%s(header: %s) for const %s called\n", __func__,

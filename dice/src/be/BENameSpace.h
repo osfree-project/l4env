@@ -65,8 +65,8 @@ public:
 
 public: // Public methods
     virtual void CreateBackEnd(CFELibrary *pFELibrary);
-    virtual void AddToHeader(CBEHeaderFile *pHeader);
-    virtual void AddToImpl(CBEImplementationFile *pImpl);
+    virtual void AddToHeader(CBEHeaderFile* pHeader);
+    virtual void AddToImpl(CBEImplementationFile* pImpl);
 
     /** \brief retrieves the name of the NameSpace
      *  \return the name of the lib
@@ -87,19 +87,19 @@ public: // Public methods
     CBENameSpace* FindNameSpace(string sNameSpaceName);
     CBEType* FindTaggedType(int nType, string sTag);
 
-    virtual bool AddOpcodesToFile(CBEHeaderFile *pFile);
+    virtual bool AddOpcodesToFile(CBEHeaderFile* pFile);
 
-    virtual void Write(CBEImplementationFile *pFile);
-    virtual void Write(CBEHeaderFile *pFile);
-    virtual void WriteElements(CBEImplementationFile *pFile);
-    virtual void WriteElements(CBEHeaderFile *pFile);
+    virtual void Write(CBEImplementationFile& pFile);
+    virtual void Write(CBEHeaderFile& pFile);
+    virtual void WriteElements(CBEImplementationFile& pFile);
+    virtual void WriteElements(CBEHeaderFile& pFile);
 
     virtual CBEFunction* FindFunction(string sFunctionName,
 	FUNCTION_TYPE nFunctionType);
-    virtual bool IsTargetFile(CBEImplementationFile * pFile);
-    virtual bool IsTargetFile(CBEHeaderFile * pFile);
+    virtual bool IsTargetFile(CBEImplementationFile* pFile);
+    virtual bool IsTargetFile(CBEHeaderFile* pFile);
 
-    virtual bool HasFunctionWithUserType(string sTypeName, CBEFile *pFile);
+    virtual bool HasFunctionWithUserType(string sTypeName, CBEFile* pFile);
 
 protected: // Protected methods
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
@@ -108,13 +108,13 @@ protected: // Protected methods
     virtual void CreateBackEnd(CFEConstructedType *pFEType);
     virtual void CreateBackEnd(CFEAttribute *pFEAttribute);
 
-    virtual void WriteConstant(CBEConstant *pConstant, CBEHeaderFile *pFile);
-    virtual void WriteNameSpace(CBENameSpace *pNameSpace, CBEImplementationFile *pFile);
-    virtual void WriteNameSpace(CBENameSpace *pNameSpace, CBEHeaderFile *pFile);
-    virtual void WriteClass(CBEClass *pClass, CBEImplementationFile *pFile);
-    virtual void WriteClass(CBEClass *pClass, CBEHeaderFile *pFile);
-    virtual void WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile *pFile);
-    virtual void WriteTaggedType(CBEType *pType, CBEHeaderFile *pFile);
+    virtual void WriteConstant(CBEConstant *pConstant, CBEHeaderFile& pFile);
+    virtual void WriteNameSpace(CBENameSpace *pNameSpace, CBEImplementationFile& pFile);
+    virtual void WriteNameSpace(CBENameSpace *pNameSpace, CBEHeaderFile& pFile);
+    virtual void WriteClass(CBEClass *pClass, CBEImplementationFile& pFile);
+    virtual void WriteClass(CBEClass *pClass, CBEHeaderFile& pFile);
+    virtual void WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile& pFile);
+    virtual void WriteTaggedType(CBEType *pType, CBEHeaderFile& pFile);
 
     virtual void CreateOrderedElementList(void);
     void InsertOrderedElement(CObject *pObj);

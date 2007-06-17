@@ -38,7 +38,7 @@ CL4BEHeaderFile::CL4BEHeaderFile()
 }
 
 CL4BEHeaderFile::CL4BEHeaderFile(CL4BEHeaderFile & src)
-: CBEHeaderFile(src)
+: std::ios(), CBEHeaderFile(src)
 {
 }
 
@@ -72,22 +72,22 @@ void CL4BEHeaderFile::WriteHelperFunctions()
          */
         if (GetFunctionCount() == 0)
         {
-	    m_file << "#ifdef __cplusplus\n";
-	    m_file << "extern \"C\" {\n";
-	    m_file << "#endif\n\n";
+	    *this << "#ifdef __cplusplus\n";
+	    *this << "extern \"C\" {\n";
+	    *this << "#endif\n\n";
         }
 	CBENameFactory *pNF = CCompiler::GetNameFactory();
         string sFuncName = pNF->GetString(
 	    CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
         string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
 	PrintIndent();
-	m_file << "void " << sFuncName << "(int, " << sMWord << "*, "
+	*this << "void " << sFuncName << "(int, " << sMWord << "*, "
 	    << sMWord << "*, " << sEnvType << "*);\n\n";
         if (GetFunctionCount() == 0)
         {
-	    m_file << "#ifdef __cplusplus\n";
-	    m_file << "}\n";
-	    m_file << "#endif\n\n";
+	    *this << "#ifdef __cplusplus\n";
+	    *this << "}\n";
+	    *this << "#endif\n\n";
         }
     }
     CBEHeaderFile::WriteHelperFunctions();

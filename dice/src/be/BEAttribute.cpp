@@ -379,8 +379,7 @@ CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
             if (!pFEParameter)
             {
                 // the declarator might be a constant -> search for this one
-                CFEFile *pFERoot = 
-		    dynamic_cast<CFEFile*>(pFEIsAttribute->GetRoot());
+                CFEFile *pFERoot = pFEIsAttribute->GetRoot();
                 assert(pFERoot);
                 pFEConstant = pFERoot->FindConstDeclarator(sName);
             }
@@ -578,11 +577,11 @@ CBEAttribute::GetRemainingNumberOfIsAttributes(
  *  \param pFile the file to write
  */
 void
-CBEAttribute::Write(CBEFile *pFile)
+CBEAttribute::Write(CBEFile& pFile)
 {
     string s;
     WriteToStr(s);
-    *pFile << s;
+    pFile << s;
 }
 
 /** \brief writes the attribute to the string

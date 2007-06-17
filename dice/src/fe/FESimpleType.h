@@ -63,6 +63,8 @@ public:
     virtual void SetUnsigned(bool bUnsigned);
     virtual void Accept(CVisitor&);
     virtual bool IsUnsigned();
+    virtual bool IsConstructedType();
+    virtual bool IsPointerType();
     virtual CObject* Clone();
     virtual int GetSize();
 

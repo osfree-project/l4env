@@ -65,7 +65,7 @@ protected:
 public:
     virtual bool IsUnsigned();
     virtual int GetFEType();
-    virtual void WriteZeroInit(CBEFile *pFile);
+    virtual void WriteZeroInit(CBEFile& pFile);
     virtual int GetStringLength();
     virtual CObject* Clone();
     virtual bool IsOfType(int nFEType);
@@ -75,28 +75,28 @@ public:
     virtual void CreateBackEnd(bool bUnsigned, int nSize, int nFEType);
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
     virtual CBETypedef* GetTypedef();
-    virtual void Write(CBEFile *pFile);
+    virtual void Write(CBEFile& pFile);
     virtual void WriteToStr(string &str);
     virtual bool IsConstructedType();
     virtual bool HasTag(string sTag);
-    virtual void WriteCast(CBEFile *pFile, bool bPointer);
+    virtual void WriteCast(CBEFile& pFile, bool bPointer);
     virtual bool IsPointerType();
     virtual bool IsArrayType();
-    virtual void WriteDeclaration(CBEFile *pFile);
+    virtual void WriteDeclaration(CBEFile& pFile);
     virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile *pFile, CDeclStack* pStack,
+    virtual void WriteGetSize(CBEFile& pFile, CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
-    virtual void WriteGetMaxSize(CBEFile *pFile, CDeclStack* pStack,
+    virtual void WriteGetMaxSize(CBEFile& pFile, CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
     virtual bool IsSimpleType();
     virtual int GetArrayDimensionCount();
     virtual int GetIndirectionCount();
-    virtual void WriteIndirect(CBEFile* pFile);
+    virtual void WriteIndirect(CBEFile& pFile);
 
-    virtual void AddToHeader(CBEHeaderFile *pHeader);
+    virtual void AddToHeader(CBEHeaderFile* pHeader);
 
 protected:
-    virtual void WriteZeroInitArray(CBEFile *pFile, CBEType *pType, 
+    virtual void WriteZeroInitArray(CBEFile& pFile, CBEType *pType, 
 	CBEDeclarator *pAlias, vector<CBEExpression*>::iterator iter);
 
 protected:

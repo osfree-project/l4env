@@ -83,12 +83,21 @@ SECTIONS {
     PROVIDE (_edata = .);
   } : kdata
 
+  . = ALIGN(8);
+  .per_cpu_data : AT (ADDR(.per_cpu_data) - 0xf0000000) {
+    PROVIDE (_per_cpu_data_start = .);
+    *(.per_cpu.data)
+    . = ALIGN(8);
+    PROVIDE (_per_cpu_data_end = .);
+  } : kdata
+  
   . = ALIGN(0x10);
   .bss : AT (ADDR(.bss) - 0xf0000000) {
     PROVIDE (_bss_start = .);
     *(.bss .bss.* .gnu.linkonce.b.* COMMON)
     PROVIDE (_bss_end = .);
   } : kdata
+
 
   PROVIDE (_end = .);
 

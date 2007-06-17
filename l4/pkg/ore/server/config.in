@@ -18,6 +18,7 @@ if [ "$CONFIG_ORE_DDE26" != "y" ]; then
 	fi
 else
 		bool '  AMD PCNET32' CONFIG_ORE_PCNET32
+		bool '  Broadcom Tigon3 support'   CONFIG_ORE_TIGON3
 		bool '  EtherexpressPro/100 support' CONFIG_ORE_EEPRO100
 		bool '  NE2000'	CONFIG_ORE_NE2000
 		bool '  RealTek RTL-8139' CONFIG_ORE_RTL8139
@@ -42,6 +43,7 @@ if [ "$CONFIG_ORE_DEBUGGING" == "y" ]; then
     bool '  Periodically dump connection table'   CONFIG_ORE_DUMPER
     int  '      dumper period in seconds'         CONFIG_ORE_DUMPER_PERIOD 30
 	bool '  Ferret support'                       CONFIG_ORE_FERRET
+	bool '  Show packet debugging information'    CONFIG_ORE_PACKET_TRACE
 fi
 endmenu
 

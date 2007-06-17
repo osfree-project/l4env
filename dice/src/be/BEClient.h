@@ -62,7 +62,7 @@ protected:
     virtual void CreateBackEndImplementation(CFEFile * pFEFile);
     virtual void CreateBackEndFile(CFEFile *pFEFile);
     virtual void CreateBackEndFile(CFEFile * pFEFile, 
-	CBEImplementationFile *pImpl);
+	CBEImplementationFile* pImpl);
     virtual void CreateBackEndModule(CFELibrary *pFELibrary);
     virtual void CreateBackEndModule(CFEFile *pFEFile);
     virtual void CreateBackEndInterface(CFEFile *pFEFile);

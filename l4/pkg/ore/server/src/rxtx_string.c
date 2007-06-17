@@ -23,6 +23,10 @@
 
 #include "ore-local.h"
 
+#ifdef CONFIG_ORE_PACKET_TRACE
+#include <l4/ore/packet_debug.h>
+#endif
+
 #define RX_REPLY_SUCCESS    0
 #define RX_REPLY_FAIL       1
 #define RX_REPLY_NO_DATA    2
@@ -243,6 +247,10 @@ int tx_component_string(CORBA_Object _dice_corba_obj,
   skb->len  = size;
   skb->dev  = ore_connection_table[channel].dev;
 
+#ifdef CONFIG_ORE_PACKET_TRACE
+  packet_debug((unsigned char *)skb->data);
+#endif
+
   i = local_deliver(ent, channel);
 
   // deliver to external client or broadcast
@@ -259,13 +267,20 @@ int tx_component_string(CORBA_Object _dice_corba_obj,
              * less than the current priority. */
              l4_ipc_sleep(l4_timeout(L4_IPC_TIMEOUT_0, l4_timeout_rel(250,2)));
           }
+		/* XXX: We could also use Linux' dev->queue_xmit() functions.
+		 * 		Thereby we can get rid of our hand-crafted xmit lock (it is
+		 * 		provided by the tx queues) and benefit from Linux' traffic
+		 * 		shaping algorithms. However we need to set up our own
+		 * 		queueing discipline beforehand, which is quite complex,
+		 * 		therefore we just use hard_start_xmit. */
         xmit_lock(dev->name);
         xmit = dev->hard_start_xmit(ent->skb, dev);
         xmit_unlock(dev->name);
         if (xmit)
-            LOG_Error("Error sending packet!");
+            LOG_Error("Error sending packet: %d", xmit);
       } while (xmit != 0);
 
+	  LOGd(ORE_DEBUG_PACKET_SEND, "sent %d bytes...", ent->skb->len);
       ore_connection_table[channel].packets_sent++;
     }
     else  // we only did local_deliver() -> no NIC will ever free this skb, so
@@ -306,6 +321,10 @@ int netif_rx_string(int h, struct sk_buff *skb)
       LOG_Error("failed to kmalloc rxtx entry");
       return -L4_ENOMEM;
   }
+
+#ifdef CONFIG_ORE_PACKET_TRACE
+  packet_debug((unsigned char *)skb->data);
+#endif
 
   // make sure everything is clean
   memset(ent, 0, sizeof(rxtx_entry_t));

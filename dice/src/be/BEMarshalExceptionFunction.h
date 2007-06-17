@@ -64,9 +64,9 @@ public:
 
 protected:
     virtual void AddAfterParameters();
-    virtual void WriteVariableInitialization(CBEFile * pFile);
-    virtual void WriteInvocation(CBEFile * pFile);
-    virtual void WriteCallParameter(CBEFile *pFile, 
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteCallParameter(CBEFile& pFile, 
 	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
 };
 

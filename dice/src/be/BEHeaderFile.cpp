@@ -55,7 +55,8 @@ CBEHeaderFile::CBEHeaderFile()
 { }
 
 CBEHeaderFile::CBEHeaderFile(CBEHeaderFile & src)
-: CBEFile(src),
+: std::ios(),
+  CBEFile(src),
   m_Constants(0, (CObject*)0),
   m_Typedefs(0, (CObject*)0),
   m_TaggedTypes(0, (CObject*)0)
@@ -83,6 +84,13 @@ CBEHeaderFile::CBEHeaderFile(CBEHeaderFile & src)
  */
 CBEHeaderFile::~CBEHeaderFile()
 { }
+
+/** \brief create a clone of this object
+ */
+CObject* CBEHeaderFile::Clone(void)
+{
+    return new CBEHeaderFile(*this);
+}
 
 /** \brief prepares the header file for the back-end
  *  \param pFEFile the corresponding front-end file
@@ -116,7 +124,7 @@ CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
 	"CBEHeaderFile::%s m_sFilename=%s, m_sIncludeName=%s\n", __func__,
 	m_sFilename.c_str(), m_sIncludeName.c_str());
 
-    CFEFile *pFERoot = dynamic_cast<CFEFile*>(pFEFile->GetRoot());
+    CFEFile *pFERoot = pFEFile->GetRoot();
     assert(pFERoot);
     vector<CIncludeStatement*>::iterator iterI;
     for (iterI = pFEFile->m_Includes.begin();
@@ -220,33 +228,48 @@ CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation,
  */
 void CBEHeaderFile::Write(void)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	"CBEHeaderFile::%s called\n", __func__);
     string sFilename;
     CCompiler::GetBackEndOption(string("output-dir"), sFilename);
     sFilename += GetFileName();
-    if (!Open(sFilename))
+    if (is_open())
     {
-	std::cerr << "Could not open header file " << sFilename << "\n";
+	std::cerr << "ERROR: Header file " << sFilename << " is already opened.\n";
+	return;
+    }
+    open(sFilename.c_str());
+    if (!good())
+    {
+	std::cerr << "ERROR: Failed to open header file " << sFilename << ".\n";
         return;
     }
+    m_sFilename = sFilename;
+    m_nIndent = m_nLastIndent = 0;
     // sort our members/elements depending on source line number
     // into extra vector
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEHeaderFile::%s create ordered elements\n", __func__);
     CreateOrderedElementList();
 
     // write intro
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEHeaderFile::%s write intro\n", __func__);
     WriteIntro();
     // write include define
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sDefine = pNF->GetHeaderDefine(GetFileName());
     if (!sDefine.empty())
     {
-	m_file << "#if !defined(" << sDefine << ")\n";
-	m_file << "#define " << sDefine << "\n";
+	*this << "#if !defined(" << sDefine << ")\n";
+	*this << "#define " << sDefine << "\n";
     }
-    m_file << "\n";
+    *this << "\n";
 
     // default includes always come first, because they define standard headers
     // needed by other includes
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEHeaderFile::%s write default includes\n", __func__);
     WriteDefaultIncludes();
 
     // write target file
@@ -281,16 +304,16 @@ void CBEHeaderFile::Write(void)
             // brace functions with extern C
             if (nLastType == 6)
             {
-		m_file << "#ifdef __cplusplus\n" <<
+		*this << "#ifdef __cplusplus\n" <<
 		    "}\n" <<
 		    "#endif\n\n";
             }
-	    m_file << "\n";
+	    *this << "\n";
             nLastType = nCurrType;
             // brace functions with extern C
             if (nCurrType == 6)
             {
-		m_file << "#ifdef __cplusplus\n" <<
+		*this << "#ifdef __cplusplus\n" <<
 		    "extern \"C\" {\n" <<
 		    "#endif\n\n";
             }
@@ -298,7 +321,7 @@ void CBEHeaderFile::Write(void)
         // add pre-processor directive to denote source line
         if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
         {
-	    m_file << "# " << (*iter)->GetSourceLine() << " \"" <<
+	    *this << "# " << (*iter)->GetSourceLine() << " \"" <<
 		(*iter)->GetSourceFileName() << "\"\n";
         }
         switch (nCurrType)
@@ -331,7 +354,7 @@ void CBEHeaderFile::Write(void)
     // if last element was function, close braces
     if (nLastType == 6)
     {
-	m_file << "#ifdef __cplusplus\n" <<
+	*this << "#ifdef __cplusplus\n" <<
 	    "}\n" <<
 	    "#endif\n\n";
     }
@@ -347,19 +370,23 @@ void CBEHeaderFile::Write(void)
     // write include define closing statement
     if (!sDefine.empty())
     {
-	m_file << "#endif /* " << sDefine << " */\n";
+	*this << "#endif /* " << sDefine << " */\n";
     }
-    m_file << "\n";
+    *this << "\n";
 
     // close file
-    Close();
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEHeaderFile::%s close file\n", __func__);
+    close();
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEHeaderFile::%s done.\n", __func__);
 }
 
 /** \brief writes includes, which have to appear before any type definition
  */
 void CBEHeaderFile::WriteDefaultIncludes(void)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEHeaderFile::%s called\n", __func__);
 
     char *major = strdup(VERSION);
     char *minor = strchr(major, '.');
@@ -375,7 +402,7 @@ void CBEHeaderFile::WriteDefaultIncludes(void)
 	    submin++;
 	}
     }
-    m_file << 
+    *this << 
 	"#ifndef DICE_MAJOR_VERSION\n" <<
 	"#define DICE_MAJOR_VERSION " << major << "\n" <<
 	"#define DICE_MINOR_VERSION " << minor << "\n" <<
@@ -386,13 +413,15 @@ void CBEHeaderFile::WriteDefaultIncludes(void)
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CTrace *pTrace = pCF->GetNewTrace();
     if (pTrace)
-	pTrace->DefaultIncludes(this);
+	pTrace->DefaultIncludes(*this);
     delete pTrace;
 
-    m_file << 
+    *this << 
 	"/* needed for CORBA types */\n" <<
 	"#include \"dice/dice.h\"\n" <<
 	"\n";
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEHeaderFile::%s returns\n", __func__);
 }
 
 /** \brief creates a list of ordered elements
@@ -439,7 +468,7 @@ void CBEHeaderFile::CreateOrderedElementList(void)
 void CBEHeaderFile::WriteClass(CBEClass *pClass)
 {
     assert(pClass);
-    pClass->Write(this);
+    pClass->Write(*this);
 }
 
 /** \brief writes the namespace
@@ -448,7 +477,7 @@ void CBEHeaderFile::WriteClass(CBEClass *pClass)
 void CBEHeaderFile::WriteNameSpace(CBENameSpace *pNameSpace)
 {
     assert(pNameSpace);
-    pNameSpace->Write(this);
+    pNameSpace->Write(*this);
 }
 
 /** \brief writes the function
@@ -458,7 +487,7 @@ void CBEHeaderFile::WriteFunction(CBEFunction *pFunction)
 {
     assert(pFunction);
     if (pFunction->DoWriteFunction(this))
-        pFunction->Write(this);
+        pFunction->Write(*this);
 }
 
 /** \brief  writes a constant
@@ -467,7 +496,7 @@ void CBEHeaderFile::WriteFunction(CBEFunction *pFunction)
 void CBEHeaderFile::WriteConstant(CBEConstant *pConstant)
 {
     assert(pConstant);
-    pConstant->Write(this);
+    pConstant->Write(*this);
 }
 
 /** \brief write a typedef
@@ -478,7 +507,7 @@ void CBEHeaderFile::WriteTypedef(CBETypedef *pTypedef)
     assert(pTypedef);
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for %s.\n", __func__,
         pTypedef->m_Declarators.First()->GetName().c_str());
-    pTypedef->WriteDeclaration(this);
+    pTypedef->WriteDeclaration(*this);
 }
 
 /** \brief writes a tagged type
@@ -494,11 +523,11 @@ void CBEHeaderFile::WriteTypedef(CBETypedef *pTypedef)
     if (dynamic_cast<CBEUnionType*>(pType))
         sTag = ((CBEUnionType*)pType)->GetTag();
     sTag = CCompiler::GetNameFactory()->GetTypeDefine(sTag);
-    m_file << 
+    *this << 
 	"#ifndef " << sTag << "\n" <<
 	"#define " << sTag << "\n";
-    pType->Write(this);
-    m_file << ";\n" <<
+    pType->Write(*this);
+    *this << ";\n" <<
 	"#endif /* !" << sTag << " */\n" <<
 	"\n";
 }

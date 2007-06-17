@@ -49,7 +49,7 @@ public:
     virtual ~CL4BEClass();
 
 protected: // Protected methods
-    virtual void WriteHelperFunctions(CBEHeaderFile * pFile);
+    virtual void WriteHelperFunctions(CBEHeaderFile& pFile);
 };
 
 #endif

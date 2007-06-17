@@ -11,6 +11,10 @@ PREPROCESS_PARTS 	+= arch $(CONFIG_ABI) 64bit iofp         \
 			   $(CONFIG_XARCH) apic abs-timeout-hack \
 			   i8259 pc i8254 fpu jdb_thread_names 
 
+ifeq ("$(CONFIG_MP)","y")
+  PREPROCESS_PARTS	+= mp
+endif
+
 ifeq ("$(CONFIG_LIST_ALLOC_SANITY)","y")
   PREPROCESS_PARTS	+= list_alloc_debug
 endif
@@ -114,7 +118,7 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping mappable \
 			   ipc_timeout deadline_timeout timeslice_timeout    \
 			   thread_state context sender receiver mem_unit     \
 			   thread syscalls kernel_thread map_util irq banner \
-			   warn     \
+			   warn per_cpu_data per_cpu_data_alloc              \
 			   dirq globals apic watchdog kernel_uart pit        \
 			   checksum main config kern_types mapped_alloc      \
 			   vmem_alloc paging fpu fpu_state fpu_alloc cpu     \

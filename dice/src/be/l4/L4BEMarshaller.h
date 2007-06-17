@@ -54,30 +54,30 @@ public:
     CL4BEMarshaller();
     virtual ~CL4BEMarshaller();
 
-    virtual void MarshalFunction(CBEFile *pFile, CBEFunction *pFunction, 
+    virtual void MarshalFunction(CBEFile& pFile, CBEFunction *pFunction, 
 	DIRECTION_TYPE nDirection);
-    virtual bool MarshalWordMember(CBEFile *pFile, CBEFunction *pFunction,
+    virtual bool MarshalWordMember(CBEFile& pFile, CBEFunction *pFunction,
 	CMsgStructType nType, int nPosition, bool bReference, bool bLValue);
-    virtual void MarshalParameter(CBEFile *pFile, CBEFunction *pFunction,
+    virtual void MarshalParameter(CBEFile& pFile, CBEFunction *pFunction,
 	CBETypedDeclarator *pParameter, bool bMarshal, int nPosition);
 
 protected:
-    virtual bool MarshalSpecialMember(CBETypedDeclarator *pMember);
+    virtual bool MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMember);
     virtual bool MarshalRcvFpage(CBETypedDeclarator *pMember);
     virtual bool MarshalSendDope(CBETypedDeclarator *pMember);
     virtual bool MarshalSizeDope(CBETypedDeclarator *pMember);
-    virtual bool MarshalZeroFlexpage(CBETypedDeclarator *pMember);
+    virtual bool MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember);
     
-    virtual void MarshalParameterIntern(CBETypedDeclarator *pParameter,
+    virtual void MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
-    virtual bool MarshalRefstring(CBETypedDeclarator *pParameter, 
+    virtual bool MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter, 
 	CDeclStack* pStack);
-    virtual void WriteMember(DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
+    virtual void WriteMember(CBEFile& pFile, DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember, CDeclStack* pStack);
-    virtual void WriteRefstringCastMember(DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
+    virtual void WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember);
 
-    virtual void MarshalArrayIntern(CBETypedDeclarator *pParameter, 
+    virtual void MarshalArrayIntern(CBEFile& pFile, CBETypedDeclarator *pParameter, 
 	CBEType *pType, CDeclStack* pStack);
 
     virtual bool DoSkipParameter(CBEFunction *pFunction, 
@@ -106,16 +106,16 @@ private:
 	~PositionMarshaller();
 
     public:
-	bool Marshal(CBEFile *pFile, CBEFunction *pFunction, CMsgStructType nType, 
+	bool Marshal(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType, 
     	    int nPosition, bool bReference, bool bLValue);
     private:
 	CBEMsgBufferType* GetMessageBufferType(CBEFunction *pFunction);
 	CBETypedDeclarator* GetMemberAt(CBEMsgBufferType *pType,
 	    CBEStructType *pStruct, int nPosition);
 	int GetMemberSize(CBETypedDeclarator *pMember);
-	void WriteParameter(CBEFile *pFile, CBETypedDeclarator *pParameter,
+	void WriteParameter(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	    bool bReference, bool bLValue);
-	void WriteSpecialMember(CBEFile *pFile, CBEFunction *pFunction,
+	void WriteSpecialMember(CBEFile& pFile, CBEFunction *pFunction,
 	    CBETypedDeclarator *pMember, CMsgStructType nType, bool bReference, 
 	    bool bLValue);
 
@@ -138,10 +138,6 @@ private:
 	 * Stored here to avoid passing as parameter (value does not change). 
 	 */
 	bool m_bReference;
-	/** \var CBEFile *m_pFile
-	 *  \brief the file to write to
-	 */
-	CBEFile *m_pFile;
 
 	friend class CL4BEMarshaller;
     };

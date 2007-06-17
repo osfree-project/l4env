@@ -344,7 +344,7 @@ CBEConstant* CBENameSpace::FindConstant(string sConstantName)
  * This implementation adds its types, constants, interfaces and
  * nested libs.
  */
-void CBENameSpace::AddToHeader(CBEHeaderFile *pHeader)
+void CBENameSpace::AddToHeader(CBEHeaderFile* pHeader)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBENameSpace::%s(header: %s) for namespace %s called\n", __func__,
@@ -358,7 +358,7 @@ void CBENameSpace::AddToHeader(CBEHeaderFile *pHeader)
  *  \param pImpl the implementation file to add this namespace to
  *  \return true if successful
  */
-void CBENameSpace::AddToImpl(CBEImplementationFile *pImpl)
+void CBENameSpace::AddToImpl(CBEImplementationFile* pImpl)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBENameSpace::%s(impl: %s) for namespace %s called\n", __func__,
@@ -368,13 +368,8 @@ void CBENameSpace::AddToImpl(CBEImplementationFile *pImpl)
     if (CCompiler::IsFileOptionSet(PROGRAM_FILE_FUNCTION) ||
         CCompiler::IsFileOptionSet(PROGRAM_FILE_INTERFACE))
     {
-	vector<CBEClass*>::iterator iter;
-	for (iter = m_Classes.begin();
-	    iter != m_Classes.end();
-	    iter++)
-	{
-	    (*iter)->AddToImpl(pImpl);
-	}
+	for_each(m_Classes.begin(), m_Classes.end(),
+	    std::bind2nd(std::mem_fun(&CBEClass::AddToImpl), pImpl));
     }
     // add this namespace to the file
     // (needed for types, etc.)
@@ -388,7 +383,7 @@ void CBENameSpace::AddToImpl(CBEImplementationFile *pImpl)
  *
  * This implements the opcodes of the included classes and nested namespaces.
  */
-bool CBENameSpace::AddOpcodesToFile(CBEHeaderFile *pFile)
+bool CBENameSpace::AddOpcodesToFile(CBEHeaderFile* pFile)
 {
     vector<CBEClass*>::iterator iterC;
     for (iterC = m_Classes.begin();
@@ -418,18 +413,18 @@ bool CBENameSpace::AddOpcodesToFile(CBEHeaderFile *pFile)
  * depending on their appearance in the source file. Then we iterate
  * over the generated list and write each element.
  */
-void CBENameSpace::WriteElements(CBEHeaderFile *pFile)
+void CBENameSpace::WriteElements(CBEHeaderFile& pFile)
 {
     // create ordered list
     CreateOrderedElementList();
 
     // for C++ write namespace opening
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	IsTargetFile(pFile))
+	IsTargetFile(&pFile))
     {
-	*pFile << "\tnamespace " << GetName() << "\n";
-	*pFile << "\t{\n";
-	pFile->IncIndent();
+	pFile << "\tnamespace " << GetName() << "\n";
+	pFile << "\t{\n";
+	++pFile;
     }
 
     // write target file
@@ -450,14 +445,14 @@ void CBENameSpace::WriteElements(CBEHeaderFile *pFile)
             nCurrType = 5;
         if (nCurrType != nLastType)
         {
-            *pFile << "\n";
+            pFile << "\n";
             nLastType = nCurrType;
         }
         // add pre-processor directive to denote source line
         if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE) &&
             (nCurrType >= 1) && (nCurrType <= 5))
         {
-            *pFile << "# " << (*iter)->GetSourceLine() <<  " \"" <<
+            pFile << "# " << (*iter)->GetSourceLine() <<  " \"" <<
                 (*iter)->GetSourceFileName() << "\"\n";
         }
         switch (nCurrType)
@@ -484,17 +479,16 @@ void CBENameSpace::WriteElements(CBEHeaderFile *pFile)
 
     // close namespace for C++
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	IsTargetFile(pFile))
+	IsTargetFile(&pFile))
     {
-	pFile->DecIndent();
-	*pFile << "\t}\n";
+	--pFile << "\t}\n";
     }
 }
 
 /** \brief writes the name-space to the header file
  *  \param pFile the header file to write to
  */
-void CBENameSpace::WriteElements(CBEImplementationFile *pFile)
+void CBENameSpace::WriteElements(CBEImplementationFile& pFile)
 {
     // create ordered list
     CreateOrderedElementList();
@@ -509,11 +503,11 @@ void CBENameSpace::WriteElements(CBEImplementationFile *pFile)
 
     // for C++ write namespace opening
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	IsTargetFile(pFile))
+	IsTargetFile(&pFile))
     {
-	*pFile << "\tnamespace " << GetName() << "\n";
-	*pFile << "\t{\n";
-	pFile->IncIndent();
+	pFile << "\tnamespace " << GetName() << "\n";
+	pFile << "\t{\n";
+	++pFile;
     }
 
     // write target file
@@ -529,14 +523,14 @@ void CBENameSpace::WriteElements(CBEImplementationFile *pFile)
         if ((nCurrType != nLastType) &&
             (nCurrType > 0))
         {
-            *pFile << "\n";
+            pFile << "\n";
             nLastType = nCurrType;
         }
         // add pre-processor directive to denote source line
         if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE) &&
             (nCurrType >= 1) && (nCurrType <= 2))
         {
-            *pFile << "# " << (*iter)->GetSourceLine() <<  " \"" <<
+            pFile << "# " << (*iter)->GetSourceLine() <<  " \"" <<
                 (*iter)->GetSourceFileName() << "\"\n";
         }
         switch (nCurrType)
@@ -554,10 +548,9 @@ void CBENameSpace::WriteElements(CBEImplementationFile *pFile)
 
     // close namespace for C++
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	IsTargetFile(pFile))
+	IsTargetFile(&pFile))
     {
-	pFile->DecIndent();
-	*pFile << "\t}\n";
+	--pFile << "\t}\n";
     }
 }
 
@@ -567,7 +560,7 @@ void CBENameSpace::WriteElements(CBEImplementationFile *pFile)
  */
 void
 CBENameSpace::WriteConstant(CBEConstant *pConstant,
-	CBEHeaderFile *pFile)
+	CBEHeaderFile& pFile)
 {
     assert(pConstant);
     pConstant->Write(pFile);
@@ -579,7 +572,7 @@ CBENameSpace::WriteConstant(CBEConstant *pConstant,
  */
 void
 CBENameSpace::WriteTypedef(CBETypedef *pTypedef,
-	CBEHeaderFile *pFile)
+	CBEHeaderFile& pFile)
 {
     assert(pTypedef);
     pTypedef->WriteDeclaration(pFile);
@@ -589,7 +582,7 @@ CBENameSpace::WriteTypedef(CBETypedef *pTypedef,
  *  \param pClass the class to write
  *  \param pFile the file to write to
  */
-void CBENameSpace::WriteClass(CBEClass *pClass, CBEImplementationFile *pFile)
+void CBENameSpace::WriteClass(CBEClass *pClass, CBEImplementationFile& pFile)
 {
     assert(pClass);
     pClass->Write(pFile);
@@ -599,7 +592,7 @@ void CBENameSpace::WriteClass(CBEClass *pClass, CBEImplementationFile *pFile)
  *  \param pClass the class to write
  *  \param pFile the file to write to
  */
-void CBENameSpace::WriteClass(CBEClass *pClass, CBEHeaderFile *pFile)
+void CBENameSpace::WriteClass(CBEClass *pClass, CBEHeaderFile& pFile)
 {
     assert(pClass);
     pClass->Write(pFile);
@@ -610,7 +603,7 @@ void CBENameSpace::WriteClass(CBEClass *pClass, CBEHeaderFile *pFile)
  *  \param pFile the file to write to
  */
 void CBENameSpace::WriteNameSpace(CBENameSpace *pNameSpace, 
-    CBEImplementationFile *pFile)
+    CBEImplementationFile& pFile)
 {
     assert(pNameSpace);
     pNameSpace->Write(pFile);
@@ -621,7 +614,7 @@ void CBENameSpace::WriteNameSpace(CBENameSpace *pNameSpace,
  *  \param pFile the file to write to
  */
 void CBENameSpace::WriteNameSpace(CBENameSpace *pNameSpace,
-    CBEHeaderFile *pFile)
+    CBEHeaderFile& pFile)
 {
     assert(pNameSpace);
     pNameSpace->Write(pFile);
@@ -635,7 +628,7 @@ void CBENameSpace::WriteNameSpace(CBENameSpace *pNameSpace,
  */
 void 
 CBENameSpace::WriteTaggedType(CBEType *pType, 
-    CBEHeaderFile *pFile)
+    CBEHeaderFile& pFile)
 {
     assert(pType);
     string sTag;
@@ -644,11 +637,11 @@ CBENameSpace::WriteTaggedType(CBEType *pType,
     if (dynamic_cast<CBEUnionType*>(pType))
         sTag = ((CBEUnionType*)pType)->GetTag();
     sTag = CCompiler::GetNameFactory()->GetTypeDefine(sTag);
-    *pFile << "#ifndef " << sTag << "\n";
-    *pFile << "#define " << sTag << "\n";
+    pFile << "#ifndef " << sTag << "\n";
+    pFile << "#define " << sTag << "\n";
     pType->Write(pFile);
-    *pFile << ";\n";
-    *pFile << "#endif /* !" << sTag << " */\n\n";
+    pFile << ";\n";
+    pFile << "#endif /* !" << sTag << " */\n\n";
 }
 
 /** \brief tries to find a function
@@ -747,7 +740,7 @@ CBETypedef* CBENameSpace::FindTypedef(string sTypeName)
  * A file is target file of a name-space if at least one of its classes or
  * nested name-spaces belongs to this class.
  */
-bool CBENameSpace::IsTargetFile(CBEHeaderFile * pFile)
+bool CBENameSpace::IsTargetFile(CBEHeaderFile* pFile)
 {
     vector<CBEClass*>::iterator iterC;
     for (iterC = m_Classes.begin();
@@ -776,7 +769,7 @@ bool CBENameSpace::IsTargetFile(CBEHeaderFile * pFile)
  * A file is target file of a name-space if at least one of its classes or
  * nested name-spaces belongs to this class.
  */
-bool CBENameSpace::IsTargetFile(CBEImplementationFile * pFile)
+bool CBENameSpace::IsTargetFile(CBEImplementationFile* pFile)
 {
     vector<CBEClass*>::iterator iterC;
     for (iterC = m_Classes.begin();
@@ -866,7 +859,7 @@ CBENameSpace::CreateBackEnd(CFEConstructedType *pFEType)
  * search own classe, namespaces and function for a function, which has
  * a parameter of that type
  */
-bool CBENameSpace::HasFunctionWithUserType(string sTypeName, CBEFile *pFile)
+bool CBENameSpace::HasFunctionWithUserType(string sTypeName, CBEFile* pFile)
 {
     vector<CBENameSpace*>::iterator iterN;
     for (iterN = m_NestedNamespaces.begin();
@@ -967,7 +960,7 @@ void CBENameSpace::InsertOrderedElement(CObject *pObj)
  *  \param pFile the header file to write to
  */
 void
-CBENameSpace::Write(CBEHeaderFile *pFile)
+CBENameSpace::Write(CBEHeaderFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
     WriteElements(pFile);
@@ -977,7 +970,7 @@ CBENameSpace::Write(CBEHeaderFile *pFile)
  *  \param pFile the implementation file to write to
  */
 void
-CBENameSpace::Write(CBEImplementationFile *pFile)
+CBENameSpace::Write(CBEImplementationFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
     WriteElements(pFile);

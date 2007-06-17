@@ -56,10 +56,10 @@ CL4BEClass::~CL4BEClass()
  * - error-function-server: void name(l4_msgdope_t, CORBA_Server_Environment*)
  */
 void 
-CL4BEClass::WriteHelperFunctions(CBEHeaderFile * pFile)
+CL4BEClass::WriteHelperFunctions(CBEHeaderFile& pFile)
 {
     string sEnvName;
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT))
+    if (pFile.IsOfFileType(FILETYPE_COMPONENT))
         sEnvName = "CORBA_Server_Environment";
     else
         sEnvName = "CORBA_Environment";
@@ -82,10 +82,10 @@ CL4BEClass::WriteHelperFunctions(CBEHeaderFile * pFile)
         if ((pAttr = m_Attributes.Find(ATTR_INIT_RCVSTRING)) != 0)
             sFuncName = pAttr->GetString();
         if (((pAttr = m_Attributes.Find(ATTR_INIT_RCVSTRING_CLIENT)) != 0) &&
-            pFile->IsOfFileType(FILETYPE_CLIENT))
+            pFile.IsOfFileType(FILETYPE_CLIENT))
             sFuncName = pAttr->GetString();
         if (((pAttr = m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER)) != 0) &&
-            pFile->IsOfFileType(FILETYPE_COMPONENT))
+            pFile.IsOfFileType(FILETYPE_COMPONENT))
             sFuncName = pAttr->GetString();
         if (sFuncName.empty())
             sFuncName = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
@@ -93,7 +93,7 @@ CL4BEClass::WriteHelperFunctions(CBEHeaderFile * pFile)
             sFuncName = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC, 
 		(void*)&sFuncName);
         string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
-        *pFile << "\tvoid " << sFuncName << "(int, " << sMWord << "*, " 
+        pFile << "\tvoid " << sFuncName << "(int, " << sMWord << "*, " 
 	    << sMWord << "*, " << sEnvName << "*);\n\n";
     }
     // error-functions
@@ -104,13 +104,13 @@ CL4BEClass::WriteHelperFunctions(CBEHeaderFile * pFile)
         if ((pAttr = m_Attributes.Find(ATTR_ERROR_FUNCTION)) != 0)
             sFuncName = pAttr->GetString();
         if (((pAttr = m_Attributes.Find(ATTR_ERROR_FUNCTION_CLIENT)) != 0) &&
-            pFile->IsOfFileType(FILETYPE_CLIENT))
+            pFile.IsOfFileType(FILETYPE_CLIENT))
             sFuncName = pAttr->GetString();
         if (((pAttr = m_Attributes.Find(ATTR_ERROR_FUNCTION_SERVER)) != 0) &&
-            pFile->IsOfFileType(FILETYPE_COMPONENT))
+            pFile.IsOfFileType(FILETYPE_COMPONENT))
             sFuncName = pAttr->GetString();
         if (!sFuncName.empty())
-            *pFile << "\tvoid " << sFuncName << "(l4_msgdope_t, " << sEnvName
+            pFile << "\tvoid " << sFuncName << "(l4_msgdope_t, " << sEnvName
 		<< "*);\n\n";
     }
     if (bInitRcv || bError)

@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEPtrDefaultAttribute.h"
-#include "File.h"
 
 CFEPtrDefaultAttribute::CFEPtrDefaultAttribute(CFEAttribute * pPtrAttr)
 :CFEAttribute(ATTR_POINTER_DEFAULT)

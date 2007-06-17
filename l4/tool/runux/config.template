@@ -15,4 +15,4 @@
 #unset USE_SYMBOLS
 #unset USE_LINES
 
-ROOTTASK_CONFIG_FILE=$CFGPATH/roottask.config
+#ROOTTASK_CONFIG_FILE=$CFGPATH/roottask.config

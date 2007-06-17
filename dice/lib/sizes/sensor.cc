@@ -10,7 +10,7 @@
 #include "TypeSpec-Type.h"
 #include "be/BEFile.h"
 
-void Sensor::BeforeCall(CBEFile *pFile, CBEFunction *pFunction)
+void Sensor::BeforeCall(CBEFile& pFile, CBEFunction *pFunction)
 {
     if (!dynamic_cast<CBECallFunction*>(pFunction) &&
 	!dynamic_cast<CBESndFunction*>(pFunction))
@@ -26,7 +26,7 @@ void Sensor::BeforeCall(CBEFile *pFile, CBEFunction *pFunction)
     int nRcvStr = pMsgBuffer->GetMemberSize(TYPE_REFSTRING, pFunction,
 	CMsgStructType::Out, true);
 
-    *pFile << "\t/* MsgSize " << pFunction->GetOpcodeConstName() << " " <<
+    pFile << "\t/* MsgSize " << pFunction->GetOpcodeConstName() << " " <<
 	nSndWords << " " << nSndStr << " " << nRcvWords << " " << nRcvStr << " */\n";
 }
 

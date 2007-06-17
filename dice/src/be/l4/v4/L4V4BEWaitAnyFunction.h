@@ -44,10 +44,10 @@ public:
     virtual ~CL4V4BEWaitAnyFunction();
 
 protected:
-    virtual void WriteInvocation(CBEFile * pFile);
-    virtual void WriteIPCReplyWait(CBEFile *pFile);
-    virtual void WriteUnmarshalling(CBEFile *pFile);
-    virtual void WriteIPCErrorCheck(CBEFile *pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteIPCReplyWait(CBEFile& pFile);
+    virtual void WriteUnmarshalling(CBEFile& pFile);
+    virtual void WriteIPCErrorCheck(CBEFile& pFile);
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
 };
 

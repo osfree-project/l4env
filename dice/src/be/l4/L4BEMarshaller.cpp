@@ -70,7 +70,7 @@ CL4BEMarshaller::~CL4BEMarshaller()
  * implementation.
  */
 void 
-CL4BEMarshaller::MarshalFunction(CBEFile *pFile,
+CL4BEMarshaller::MarshalFunction(CBEFile& pFile,
 	CBEFunction *pFunction, 
 	DIRECTION_TYPE nDirection)
 {
@@ -158,12 +158,12 @@ CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
  *  \return true if the member has been marshaled
  */
 bool 
-CL4BEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
+CL4BEMarshaller::MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
     assert(pMember);
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4BEMarshaller::%s(%s) called\n",
 	__func__, pMember->m_Declarators.First()->GetName().c_str());
-    if (CBEMarshaller::MarshalSpecialMember(pMember))
+    if (CBEMarshaller::MarshalSpecialMember(pFile, pMember))
 	return true;
 
     if (MarshalRcvFpage(pMember))
@@ -172,7 +172,7 @@ CL4BEMarshaller::MarshalSpecialMember(CBETypedDeclarator *pMember)
 	return true;
     if (MarshalSizeDope(pMember))
 	return true;
-    if (MarshalZeroFlexpage(pMember))
+    if (MarshalZeroFlexpage(pFile, pMember))
 	return true;
 
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CL4BEMarshaller::%s(%s) returns false\n",
@@ -265,14 +265,13 @@ CL4BEMarshaller::MarshalSizeDope(CBETypedDeclarator *pMember)
  * member is marshalled.
  */
 bool
-CL4BEMarshaller::MarshalWordMember(CBEFile *pFile, 
+CL4BEMarshaller::MarshalWordMember(CBEFile& pFile, 
 	CBEFunction *pFunction,
 	CMsgStructType nType,
 	int nPosition, 
 	bool bReference,
 	bool bLValue)
 {
-    m_pFile = pFile;
     m_pFunction = pFunction;
     PositionMarshaller *pPosMarshaller = new PositionMarshaller(this);
     bool bRet = pPosMarshaller->Marshal(pFile, pFunction, nType, 
@@ -291,13 +290,12 @@ CL4BEMarshaller::MarshalWordMember(CBEFile *pFile,
  *         struct
  */
 void
-CL4BEMarshaller::MarshalParameter(CBEFile *pFile,
+CL4BEMarshaller::MarshalParameter(CBEFile& pFile,
     CBEFunction *pFunction,
     CBETypedDeclarator *pParameter,
     bool bMarshal,
     int nPosition)
 {
-    m_pFile = pFile;
     m_pFunction = pFunction;
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"%s called for func %s and param %s (%s at pos %d)\n",
@@ -316,19 +314,19 @@ CL4BEMarshaller::MarshalParameter(CBEFile *pFile,
 
     if (bMarshal)
     {
-	*pFile << "\t";
+	pFile << "\t";
 	MarshalWordMember(pFile, pFunction, nDirection, nPosition, false, true);
-	*pFile << " = ";
-	WriteParameter(pParameter, &stack, false);
-	*pFile << ";\n";
+	pFile << " = ";
+	WriteParameter(pFile, pParameter, &stack, false);
+	pFile << ";\n";
     }
     else
     {
-	*pFile << "\t";
-	WriteParameter(pParameter, &stack, false);
-	*pFile << " = ";
+	pFile << "\t";
+	WriteParameter(pFile, pParameter, &stack, false);
+	pFile << " = ";
 	MarshalWordMember(pFile, pFunction, nDirection, nPosition, false, false);
-	*pFile << ";\n";
+	pFile << ";\n";
     }
 }
 
@@ -340,13 +338,13 @@ CL4BEMarshaller::MarshalParameter(CBEFile *pFile,
  * parameter. It also checks if there is a special treatment necessary.
  */
 void
-CL4BEMarshaller::MarshalParameterIntern(CBETypedDeclarator *pParameter,
+CL4BEMarshaller::MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
-    if (MarshalRefstring(pParameter, pStack))
+    if (MarshalRefstring(pFile, pParameter, pStack))
 	return;
 
-    CBEMarshaller::MarshalParameterIntern(pParameter, pStack);
+    CBEMarshaller::MarshalParameterIntern(pFile, pParameter, pStack);
 }
 
 /** \brief marshal an indirect string parameter
@@ -364,7 +362,8 @@ CL4BEMarshaller::MarshalParameterIntern(CBETypedDeclarator *pParameter,
  * is not se properly.
  */
 bool
-CL4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
+CL4BEMarshaller::MarshalRefstring(CBEFile& pFile,
+    CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
     assert(pParameter);
@@ -388,48 +387,47 @@ CL4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
     // try to find respective member and assign
     if (m_bMarshal)
     {
-	*m_pFile << "\t";
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	pFile << "\t";
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
 	    pStack);
 	// write access to snd_str part of indirect string
-	*m_pFile << ".snd_str = (l4_umword_t)";
+	pFile << ".snd_str = (l4_umword_t)";
 	// if type of member and parameter are different, cast to member type
-	WriteParameter(pParameter, pStack, true);
-	*m_pFile << ";\n";
+	WriteParameter(pFile, pParameter, pStack, true);
+	pFile << ";\n";
 	//
 	// set size
-	*m_pFile << "\t";
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	pFile << "\t";
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
 	    pStack);
 	// write access to snd_str part of indirect string
-	*m_pFile << ".snd_size = ";
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
+	pFile << ".snd_size = ";
+	pParameter->WriteGetSize(pFile, pStack, m_pFunction);
 	if (!pParameter->m_Attributes.Find(ATTR_LENGTH_IS) &&
 	    !pParameter->m_Attributes.Find(ATTR_SIZE_IS) &&
 	    pParameter->m_Attributes.Find(ATTR_STRING))
-	    *m_pFile << "+1"; // tranmist terminating zero
-	*m_pFile << ";\n";
+	    pFile << "+1"; // tranmist terminating zero
+	pFile << ";\n";
 
 	if (pParameter->m_Attributes.Find(ATTR_MAX_IS))
 	{
 	    // if parameter has max-is attribute, make sure snd_size adheres to
 	    // that
-	    *m_pFile << "\tif (";
-	    WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	    pFile << "\tif (";
+	    WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
 		pStack);
 	    // write access to snd_str part of indirect string
-	    *m_pFile << ".snd_size > ";
-	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << ")\n";
-	    m_pFile->IncIndent();
-	    *m_pFile << "\t";
-	    WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
+	    pFile << ".snd_size > ";
+	    pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
+	    pFile << ")\n";
+	    ++pFile << "\t";
+	    WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
 		pStack);
 	    // write access to snd_str part of indirect string
-	    *m_pFile << ".snd_size = ";
-	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
-	    *m_pFile << ";\n";
-	    m_pFile->DecIndent();
+	    pFile << ".snd_size = ";
+	    pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
+	    pFile << ";\n";
+	    --pFile;
 	}
     }
     else if (m_pFunction->IsComponentSide() || // on server side OR
@@ -444,17 +442,17 @@ CL4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
 	bool bDeref = pParameter->m_Attributes.Find(ATTR_OUT) &&
 	    pParameter->m_Declarators.First()->GetStars() == 1 &&
 	    !pParameter->GetType()->IsPointerType();
-	*m_pFile << "\t";
-	WriteParameter(pParameter, pStack, !bDeref);
-	*m_pFile << " = ";
+	pFile << "\t";
+	WriteParameter(pFile, pParameter, pStack, !bDeref);
+	pFile << " = ";
 	if (bDeref)
-	    *m_pFile << "*";
+	    pFile << "*";
 	// cast to type of parameter
-	pType->WriteCast(m_pFile, true);
+	pType->WriteCast(pFile, true);
 	// access message buffer
-	WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
+	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
 	// append receive member
-	*m_pFile << ".rcv_str;\n";
+	pFile << ".rcv_str;\n";
 
 	// We do unmarshal the size parameter, because the actually
 	// transmitted size might be smaller than the size of the receive
@@ -466,11 +464,11 @@ CL4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
 	// string, then we should free it now.
 	if (bDeref)
 	{
-	    *m_pFile << "\t";
-	    CBEContext::WriteFree(m_pFile, m_pFunction);
-	    *m_pFile << " ( (void*) ";
-	    WriteMember(m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
-	    *m_pFile << ".rcv_str);\n";
+	    pFile << "\t";
+	    CBEContext::WriteFree(pFile, m_pFunction);
+	    pFile << " ( (void*) ";
+	    WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
+	    pFile << ".rcv_str);\n";
 	}
     }
 
@@ -485,12 +483,13 @@ CL4BEMarshaller::MarshalRefstring(CBETypedDeclarator *pParameter,
  * If we marshalled an array of flexpages, ensure that the last + 1 flexpage
  * is a zero flexpage.
  */
-void CL4BEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
+void CL4BEMarshaller::MarshalArrayIntern(CBEFile& pFile,
+    CBETypedDeclarator *pParameter,
     CBEType *pType,
     CDeclStack* pStack)
 {
     // first marshal array
-    CBEMarshaller::MarshalArrayIntern(pParameter, pType, pStack);
+    CBEMarshaller::MarshalArrayIntern(pFile, pParameter, pType, pStack);
 
     // now check for flexpage and marshalling
     if (!pType->IsOfType(TYPE_FLEXPAGE) ||
@@ -505,39 +504,37 @@ void CL4BEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
 
     if (pAttr->IsOfType(ATTR_CLASS_IS))
     {
-	*m_pFile << "\tif (";
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << " < ";
+	pFile << "\tif (";
+	pParameter->WriteGetSize(pFile, pStack, m_pFunction);
+	pFile << " < ";
 	if (pParameter->m_Attributes.Find(ATTR_MAX_IS))
-	    pParameter->WriteGetMaxSize(m_pFile, pStack, m_pFunction);
+	    pParameter->WriteGetMaxSize(pFile, pStack, m_pFunction);
 	else
 	{
 	    CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
 	    int nMax = 0;
 	    if (pDeclarator->GetArrayDimensionCount() > 0)
 		nMax = pDeclarator->m_Bounds.First()->GetIntValue();
-	    *m_pFile << nMax;
+	    pFile << nMax;
 	}
-    	*m_pFile << ")\n";
-	*m_pFile << "\t{\n";
-	m_pFile->IncIndent();
+    	pFile << ")\n";
+	pFile << "\t{\n";
 
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
 	// zero send base
-	*m_pFile << "\t";
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pParameter, pStack);
-	*m_pFile << "[";
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << "].snd_base = 0;\n";
+	++pFile << "\t";
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pParameter, pStack);
+	pFile << "[";
+	pParameter->WriteGetSize(pFile, pStack, m_pFunction);
+	pFile << "].snd_base = 0;\n";
 	// zero fpage member
-	*m_pFile << "\t";
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pParameter, pStack);
-	*m_pFile << "[";
-	pParameter->WriteGetSize(m_pFile, pStack, m_pFunction);
-	*m_pFile << "].fpage.raw = 0;\n";
+	pFile << "\t";
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pParameter, pStack);
+	pFile << "[";
+	pParameter->WriteGetSize(pFile, pStack, m_pFunction);
+	pFile << "].fpage.raw = 0;\n";
 	
-	m_pFile->DecIndent();
-	*m_pFile << "\t}\n";
+	--pFile << "\t}\n";
     }
 
 }
@@ -547,7 +544,8 @@ void CL4BEMarshaller::MarshalArrayIntern(CBETypedDeclarator *pParameter,
  *  \return true if zero flexpage marshalled
  */
 bool
-CL4BEMarshaller::MarshalZeroFlexpage(CBETypedDeclarator *pMember)
+CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile,
+    CBETypedDeclarator *pMember)
 {
     assert(pMember);
 
@@ -563,13 +561,13 @@ CL4BEMarshaller::MarshalZeroFlexpage(CBETypedDeclarator *pMember)
     if (m_bMarshal)
     {
 	// zero send base
-	*m_pFile << "\t";
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
-	*m_pFile << ".snd_base = 0;\n";
+	pFile << "\t";
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
+	pFile << ".snd_base = 0;\n";
 	// zero fpage member
-	*m_pFile << "\t";
-	WriteMember(m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
-	*m_pFile << ".fpage.raw = 0;\n";
+	pFile << "\t";
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
+	pFile << ".fpage.raw = 0;\n";
     }
 
     return true;
@@ -591,7 +589,8 @@ CL4BEMarshaller::MarshalZeroFlexpage(CBETypedDeclarator *pMember)
  * in the indirect string list the current member is.
  */
 void
-CL4BEMarshaller::WriteMember(DIRECTION_TYPE nDirection,
+CL4BEMarshaller::WriteMember(CBEFile& pFile,
+    DIRECTION_TYPE nDirection,
     CBEMsgBuffer *pMsgBuffer,
     CBETypedDeclarator *pMember,
     CDeclStack* pStack)
@@ -601,11 +600,11 @@ CL4BEMarshaller::WriteMember(DIRECTION_TYPE nDirection,
 	!dynamic_cast<CBESndFunction*>(m_pFunction) &&
 	!dynamic_cast<CBEReplyFunction*>(m_pFunction))
     {
-	WriteRefstringCastMember(nDirection, pMsgBuffer, pMember);
+	WriteRefstringCastMember(pFile, nDirection, pMsgBuffer, pMember);
 	return;
     }
 
-    CBEMarshaller::WriteMember(nDirection, pMsgBuffer, pMember, pStack);
+    CBEMarshaller::WriteMember(pFile, nDirection, pMsgBuffer, pMember, pStack);
 }
 
 /** \brief writes the access to a refstring member in the message buffer
@@ -623,7 +622,8 @@ CL4BEMarshaller::WriteMember(DIRECTION_TYPE nDirection,
  * in the indirect string list the current member is.
  */
 void
-CL4BEMarshaller::WriteRefstringCastMember(DIRECTION_TYPE nDirection,
+CL4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile,
+    DIRECTION_TYPE nDirection,
     CBEMsgBuffer *pMsgBuffer,
     CBETypedDeclarator *pMember)
 {
@@ -667,21 +667,21 @@ CL4BEMarshaller::WriteRefstringCastMember(DIRECTION_TYPE nDirection,
     // get name of word sized member
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMember = pNF->GetWordMemberVariable();
-    *m_pFile << "(*";
+    pFile << "(*";
     // write type cast for restring
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
     pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
-    pType->WriteCast(m_pFile, true);
+    pType->WriteCast(pFile, true);
     delete pType;
 
-    *m_pFile << "(&(";
-    pMsgBuffer->WriteAccessToStruct(m_pFile, m_pFunction, CMsgStructType::Generic);
-    *m_pFile << "." << sMember << "[";
-    pMsgBuffer->WriteMemberAccess(m_pFile, m_pFunction, nType, TYPE_MSGDOPE_SIZE, 0);
-    *m_pFile << ".md.dwords";
+    pFile << "(&(";
+    pMsgBuffer->WriteAccessToStruct(pFile, m_pFunction, CMsgStructType::Generic);
+    pFile << "." << sMember << "[";
+    pMsgBuffer->WriteMemberAccess(pFile, m_pFunction, nType, TYPE_MSGDOPE_SIZE, 0);
+    pFile << ".md.dwords";
     if (nIndex > 0)
-	*m_pFile << " + " << os.str();
-    *m_pFile << "])))";
+	pFile << " + " << os.str();
+    pFile << "])))";
 }
 

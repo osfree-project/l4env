@@ -28,7 +28,6 @@
 
 #include "fe/FEIsAttribute.h"
 #include "fe/FEDeclarator.h"
-#include "File.h"
 
 CFEIsAttribute::CFEIsAttribute(ATTR_TYPE nType,
     vector<CFEDeclarator*> *pAttrParameters)

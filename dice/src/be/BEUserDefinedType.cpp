@@ -131,7 +131,7 @@ CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType)
 	    "CBEUserDefinedType::%s get orig type for %s\n", __func__,
 	    pUserType->GetName().c_str());
         // find original type
-        CFEFile *pFERoot = dynamic_cast<CFEFile*>(pFEType->GetRoot());
+        CFEFile *pFERoot = pFEType->GetRoot();
         assert(pFERoot);
         string sName, sUserName = pUserType->GetName();
         CFETypedDeclarator *pFETypedef = 
@@ -313,7 +313,7 @@ int CBEUserDefinedType::GetMaxSize()
  * To initialize a user defined type with zero values, means to find the
  * typedef and use its type to write this initialization.
  */
-void CBEUserDefinedType::WriteZeroInit(CBEFile * pFile)
+void CBEUserDefinedType::WriteZeroInit(CBEFile& pFile)
 {
     CBEType *pType = GetRealType();
     if (pType)
@@ -363,7 +363,7 @@ bool CBEUserDefinedType::DoWriteZeroInit()
  *         parameters 
  *  \param pUsingFunc the function to use as reference for members
  */
-void CBEUserDefinedType::WriteGetSize(CBEFile *pFile,
+void CBEUserDefinedType::WriteGetSize(CBEFile& pFile,
     CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
@@ -377,7 +377,7 @@ void CBEUserDefinedType::WriteGetSize(CBEFile *pFile,
     {
         int nMaxSize = CCompiler::GetSizes()->GetMaxSizeOfType(
 	    pType->GetFEType());
-	*pFile << nMaxSize;
+	pFile << nMaxSize;
     }
     else
     {
@@ -489,7 +489,7 @@ CBEDeclarator* CBEUserDefinedType::GetRealName()
 /** \brief writes the type without indirections
  *  \param pFile the file to write to
  */
-void CBEUserDefinedType::WriteIndirect(CBEFile* pFile)
+void CBEUserDefinedType::WriteIndirect(CBEFile& pFile)
 {
     if (IsPointerType())
     {

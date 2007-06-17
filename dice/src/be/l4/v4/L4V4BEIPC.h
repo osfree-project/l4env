@@ -46,16 +46,16 @@ public:
     virtual ~CL4V4BEIPC();
 
 public:
-    virtual void WriteCall(CBEFile* pFile,  CBEFunction* pFunction);
-    virtual void WriteReceive(CBEFile* pFile,  CBEFunction* pFunction);
-    virtual void WriteReplyAndWait(CBEFile* pFile,  CBEFunction* pFunction,  
+    virtual void WriteCall(CBEFile& pFile,  CBEFunction* pFunction);
+    virtual void WriteReceive(CBEFile& pFile,  CBEFunction* pFunction);
+    virtual void WriteReplyAndWait(CBEFile& pFile,  CBEFunction* pFunction,  
 	bool bSendFlexpage,  bool bSendShortIPC);
-    virtual void WriteSend(CBEFile* pFile,  CBEFunction* pFunction);
-    virtual void WriteWait(CBEFile* pFile,  CBEFunction* pFunction);
-    virtual void WriteReply(CBEFile* pFile, CBEFunction* pFunction);
-    virtual void WriteInitialization(CBEFile* pFile, CBEFunction* pFunction);
-    virtual void WriteBind(CBEFile *pFile, CBEFunction* pFunction);
-    virtual void WriteCleanup(CBEFile* pFile, CBEFunction* pFunction);
+    virtual void WriteSend(CBEFile& pFile,  CBEFunction* pFunction);
+    virtual void WriteWait(CBEFile& pFile,  CBEFunction* pFunction);
+    virtual void WriteReply(CBEFile& pFile, CBEFunction* pFunction);
+    virtual void WriteInitialization(CBEFile& pFile, CBEFunction* pFunction);
+    virtual void WriteBind(CBEFile& pFile, CBEFunction* pFunction);
+    virtual void WriteCleanup(CBEFile& pFile, CBEFunction* pFunction);
 };
 
 #endif

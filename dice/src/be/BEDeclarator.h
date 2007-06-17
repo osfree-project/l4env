@@ -163,7 +163,7 @@ public:
 
     static void WriteToString(string &sResult, 
 	CDeclStack* pStack, bool bUsePointer);
-    static void Write(CBEFile *pFile, 
+    static void Write(CBEFile& pFile, 
 	CDeclStack* pStack, bool bUsePointer);
 };
 
@@ -200,15 +200,15 @@ protected:
 public:
     virtual CObject * Clone();
 
-    virtual void WriteName(CBEFile * pFile);
+    virtual void WriteName(CBEFile& pFile);
     virtual void WriteNameToStr(string &str);
-    virtual void WriteIndirectInitialization(CBEFile * pFile, 
+    virtual void WriteIndirectInitialization(CBEFile& pFile, 
 	bool bUsePointer);
-    virtual void WriteIndirectInitializationMemory(CBEFile * pFile, 
+    virtual void WriteIndirectInitializationMemory(CBEFile& pFile, 
 	bool bUsePointer);
-    virtual void WriteIndirect(CBEFile * pFile, bool bUsePointer, 
+    virtual void WriteIndirect(CBEFile& pFile, bool bUsePointer, 
 	bool bHasPointerType);
-    virtual void WriteDeclaration(CBEFile * pFile);
+    virtual void WriteDeclaration(CBEFile& pFile);
     virtual void CreateBackEnd(string sName, int nStars);
     virtual void CreateBackEnd(CFEIdentifier * pFEIdentifier);
 
@@ -263,7 +263,7 @@ public:
     { return m_nStars; }
 
     virtual int GetMaxSize(void);
-    virtual void WriteCleanup(CBEFile * pFile, bool bUsePointer, 
+    virtual void WriteCleanup(CBEFile& pFile, bool bUsePointer, 
 	bool bDeferred);
 
 protected:
@@ -273,9 +273,9 @@ protected:
     virtual void CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator);
     virtual CBEExpression *GetArrayDimension(CFEExpression * pLower, 
 	CFEExpression * pUpper);
-    virtual void WriteArray(CBEFile * pFile);
-    virtual void WriteArrayIndirect(CBEFile * pFile);
-    virtual void WriteEnum(CBEFile * pFile);
+    virtual void WriteArray(CBEFile& pFile);
+    virtual void WriteArrayIndirect(CBEFile& pFile);
+    virtual void WriteEnum(CBEFile& pFile);
 
 protected:
     /** \var string m_sName

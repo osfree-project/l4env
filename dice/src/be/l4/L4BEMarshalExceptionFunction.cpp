@@ -57,7 +57,7 @@ CL4BEMarshalExceptionFunction::~CL4BEMarshalExceptionFunction()
  * marshal rest
  */
 void
-CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile* pFile)
+CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile& pFile)
 {
     bool bLocalTrace = false;
     if (!m_bTraceOn && m_pTrace)

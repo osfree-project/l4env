@@ -45,26 +45,26 @@ public:
     virtual ~CL4V2IA32BEIPC();
 
     virtual bool UseAssembler(CBEFunction* pFunction);
-    virtual void WriteCall(CBEFile * pFile,  CBEFunction * pFunction);
-    virtual void WriteSend(CBEFile* pFile,  CBEFunction* pFunction);
-    virtual void WriteReply(CBEFile* pFile,  CBEFunction* pFunction);
+    virtual void WriteCall(CBEFile& pFile,  CBEFunction * pFunction);
+    virtual void WriteSend(CBEFile& pFile,  CBEFunction* pFunction);
+    virtual void WriteReply(CBEFile& pFile,  CBEFunction* pFunction);
 
 protected:
-    virtual void WriteAsmLongCall(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void WriteAsmLongPicCall(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void WriteAsmLongNonPicCall(CBEFile *pFile,
+    virtual void WriteAsmLongCall(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void WriteAsmLongPicCall(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void WriteAsmLongNonPicCall(CBEFile& pFile,
 	CBEFunction *pFunction);
     
-    virtual void WriteAsmShortCall(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void WriteAsmShortPicCall(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void WriteAsmShortNonPicCall(CBEFile *pFile,
+    virtual void WriteAsmShortCall(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void WriteAsmShortPicCall(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void WriteAsmShortNonPicCall(CBEFile& pFile,
 	CBEFunction *pFunction);
     
-    virtual void WriteAsmSend(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void WriteAsmPicSend(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void WriteAsmNonPicSend(CBEFile *pFile, CBEFunction *pFunction);
+    virtual void WriteAsmSend(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void WriteAsmPicSend(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void WriteAsmNonPicSend(CBEFile& pFile, CBEFunction *pFunction);
 
-    virtual void WriteAsmSyscall(CBEFile *pFile, bool bPic);
+    virtual void WriteAsmSyscall(CBEFile& pFile, bool bPic);
 };
 
 #endif

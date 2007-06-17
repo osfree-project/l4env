@@ -50,7 +50,7 @@ CL4V2BEDispatchFunction::~CL4V2BEDispatchFunction()
  *         the message buffer
  *  \param pFile the file to write to
  */
-void CL4V2BEDispatchFunction::WriteSetWrongOpcodeException(CBEFile* pFile)
+void CL4V2BEDispatchFunction::WriteSetWrongOpcodeException(CBEFile& pFile)
 {
     // first call base class
     CL4BEDispatchFunction::WriteSetWrongOpcodeException(pFile);

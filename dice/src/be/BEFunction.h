@@ -93,12 +93,12 @@ public:
      *  \param pFile the target file this function should be added to
      *  \return true if successful
      */
-    virtual bool DoWriteFunction(CBEHeaderFile *pFile) = 0;
+    virtual bool DoWriteFunction(CBEHeaderFile* pFile) = 0;
     /** \brief tests if this function should be written
      *  \param pFile the target file this function should be added to
      *  \return true if successful
      */
-    virtual bool DoWriteFunction(CBEImplementationFile *pFile) = 0;
+    virtual bool DoWriteFunction(CBEImplementationFile* pFile) = 0;
     
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual int GetMaxSize(DIRECTION_TYPE nDirection);
@@ -106,10 +106,10 @@ public:
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
     virtual int GetStringParameterCount(DIRECTION_TYPE nDirection, 
 	    ATTR_TYPE nMustAttrs = ATTR_NONE, ATTR_TYPE nMustNotAttrs = ATTR_NONE);
-    virtual void WriteCall(CBEFile * pFile, string sReturnVar,
+    virtual void WriteCall(CBEFile& pFile, string sReturnVar,
 	bool bCallFromSameClass);
-    virtual void Write(CBEImplementationFile * pFile);
-    virtual void Write(CBEHeaderFile * pFile);
+    virtual void Write(CBEImplementationFile& pFile);
+    virtual void Write(CBEHeaderFile& pFile);
     
     virtual CBETypedDeclarator* FindParameter(string sName, bool bCall = false);
     virtual CBETypedDeclarator* FindParameter(CDeclStack* pStack, bool bCall = false);
@@ -125,8 +125,8 @@ public:
     virtual int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs, 
 	    DIRECTION_TYPE nDirection);
     virtual void SetMsgBufferCastOnCall(bool bCastMsgBufferOnCall);
-    virtual void AddToHeader(CBEHeaderFile *pHeader);
-    virtual void AddToImpl(CBEImplementationFile *pImpl);
+    virtual void AddToHeader(CBEHeaderFile* pHeader);
+    virtual void AddToImpl(CBEImplementationFile* pImpl);
     bool IsComponentSide();
     virtual void SetComponentSide(bool bComponentSide);
     virtual bool HasVariableSizedParameters(DIRECTION_TYPE nDirection);
@@ -137,7 +137,7 @@ public:
 	    string sCallName);
     virtual void RemoveCallVariable(string sCallName);
     virtual string GetOpcodeConstName();
-    virtual void WriteReturn(CBEFile * pFile);
+    virtual void WriteReturn(CBEFile& pFile);
     virtual int GetParameterAlignment(int nCurrentOffset, int nParamSize);
 
     virtual void AddLocalVariable(string sUserType,
@@ -171,35 +171,35 @@ protected:
     /** \brief writes the initialization of the variables
      *  \param pFile the file to write to
      */
-    virtual void WriteVariableInitialization(CBEFile * pFile) = 0;
+    virtual void WriteVariableInitialization(CBEFile& pFile) = 0;
     /** \brief writes the invocation of the message transfer
      *  \param pFile the file to write to
      */
-    virtual void WriteInvocation(CBEFile * pFile) = 0;
+    virtual void WriteInvocation(CBEFile& pFile) = 0;
 
-    virtual void WriteReturnType(CBEFile * pFile);
-    virtual void WriteFunctionDefinition(CBEFile* pFile);
-    virtual void WriteFunctionDeclaration(CBEFile* pFile);
-    virtual bool DoWriteFunctionInline(CBEFile *pFile);
-    virtual void WriteCleanup(CBEFile * pFile);
-    virtual void WriteVariableDeclaration(CBEFile* pFile);
-    virtual void WriteBody(CBEFile * pFile);
-    virtual void WriteUnmarshalling(CBEFile * pFile);
-    virtual void WriteMarshalling(CBEFile * pFile);
-    virtual int WriteMarshalReturn(CBEFile * pFile, bool bMarshal);
-    virtual int WriteMarshalOpcode(CBEFile *pFile, bool bMarshal);
-    virtual void WriteMarshalException(CBEFile* pFile, bool bMarshal, bool bReturn);
-    virtual void WriteParameter(CBEFile * pFile, 
+    virtual void WriteReturnType(CBEFile& pFile);
+    virtual void WriteFunctionDefinition(CBEFile& pFile);
+    virtual void WriteFunctionDeclaration(CBEFile& pFile);
+    virtual bool DoWriteFunctionInline(CBEFile& pFile);
+    virtual void WriteCleanup(CBEFile& pFile);
+    virtual void WriteVariableDeclaration(CBEFile& pFile);
+    virtual void WriteBody(CBEFile& pFile);
+    virtual void WriteUnmarshalling(CBEFile& pFile);
+    virtual void WriteMarshalling(CBEFile& pFile);
+    virtual int WriteMarshalReturn(CBEFile& pFile, bool bMarshal);
+    virtual int WriteMarshalOpcode(CBEFile& pFile, bool bMarshal);
+    virtual void WriteMarshalException(CBEFile& pFile, bool bMarshal, bool bReturn);
+    virtual void WriteParameter(CBEFile& pFile, 
 	    CBETypedDeclarator * pParameter, 
 	    bool bUseConst = true);
     virtual bool DoWriteParameter(CBETypedDeclarator *pParam);
-    virtual bool WriteParameterList(CBEFile * pFile);
-    virtual void WriteCallParameterName(CBEFile * pFile, 
+    virtual bool WriteParameterList(CBEFile& pFile);
+    virtual void WriteCallParameterName(CBEFile& pFile, 
 	    CBEDeclarator * pInternalDecl, CBEDeclarator * pExternalDecl);
-    virtual void WriteCallParameter(CBEFile * pFile, 
+    virtual void WriteCallParameter(CBEFile& pFile, 
 	    CBETypedDeclarator * pParameter, bool bCallFromSameClass);
-    virtual void WriteCallParameterList(CBEFile * pFile, bool bCallFromSameClass);
-    virtual void WriteFunctionAttributes(CBEFile* pFile);
+    virtual void WriteCallParameterList(CBEFile& pFile, bool bCallFromSameClass);
+    virtual void WriteFunctionAttributes(CBEFile& pFile);
     void AddMessageBuffer(void);
     void AddMessageBuffer(CFEOperation *pFEOperation);
     virtual bool SetReturnVar(bool bUnsigned, int nSize, int nFEType, 
@@ -220,8 +220,8 @@ protected:
     virtual int GetMaxReturnSize(DIRECTION_TYPE nDirection);
     virtual CBETypedDeclarator* GetParameter(CBEDeclarator *pDeclarator, 
 	    bool bCall);
-    virtual void WriteExceptionWordInitialization(CBEFile* pFile);
-    virtual void WriteExceptionCheck(CBEFile *pFile);
+    virtual void WriteExceptionWordInitialization(CBEFile& pFile);
+    virtual void WriteExceptionCheck(CBEFile& pFile);
     virtual string GetExceptionWordInitString();
 
     virtual void AddAfterParameters(void);

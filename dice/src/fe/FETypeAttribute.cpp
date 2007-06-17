@@ -28,7 +28,6 @@
 
 #include "fe/FETypeAttribute.h"
 #include "fe/FETypeSpec.h"
-#include "File.h"
 
 CFETypeAttribute::CFETypeAttribute(ATTR_TYPE nType, CFETypeSpec * pType)
 : CFEAttribute(nType)

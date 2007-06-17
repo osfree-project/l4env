@@ -41,7 +41,7 @@ public:
     virtual ~CL4V4BEMarshalFunction();
 
 protected:
-    virtual void WriteMarshalling(CBEFile* pFile);
+    virtual void WriteMarshalling(CBEFile& pFile);
 };
 
 #endif

@@ -27,6 +27,7 @@
  */
 
 #include "fe/FEBase.h"
+#include "fe/FEFile.h"
 
 #include <string>
 #include <typeinfo>
@@ -58,18 +59,13 @@ CFEBase::~CFEBase()
  * file.  If it is a file itself and has no parent its the top level file
  * itself.
  */
-CFEBase *CFEBase::GetRoot()
+CFEFile *CFEBase::GetRoot()
 {
     CObject *pParent = this;
-    while (pParent)
-    {
-        if (!(pParent->GetParent()))
-        {
-            return dynamic_cast<CFEBase *>(pParent);
-        }
-        pParent = pParent->GetParent();
-    }
-    return 0;
+    while (pParent &&
+	pParent->GetParent())
+	pParent = pParent->GetParent();
+    return dynamic_cast<CFEFile*>(pParent);
 }
 
 /** copies the object

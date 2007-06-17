@@ -123,7 +123,7 @@ CBEComponent::CreateBackEndHeader(CFEFile * pFEFile)
     // the header files are created on a per IDL file basis, no matter
     // which option is set
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEHeaderFile *pHeader = pCF->GetNewHeaderFile();
+    CBEHeaderFile* pHeader = pCF->GetNewHeaderFile();
     m_HeaderFiles.Add(pHeader);
     pHeader->CreateBackEnd(pFEFile, FILETYPE_COMPONENTHEADER);
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
@@ -135,7 +135,7 @@ CBEComponent::CreateBackEndHeader(CFEFile * pFEFile)
 	{
 	    // create opcode header file outselves, because client, which
 	    // normally does, is not created
-	    CBEHeaderFile *pOpcodes = pCF->GetNewHeaderFile();
+	    CBEHeaderFile* pOpcodes = pCF->GetNewHeaderFile();
 	    m_HeaderFiles.Add(pOpcodes);
 	    pOpcodes->CreateBackEnd(pFEFile, FILETYPE_OPCODE);
 	    pRoot->AddOpcodesToFile(pOpcodes, pFEFile);
@@ -166,7 +166,7 @@ CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile)
 {
     string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEFile, FILETYPE_COMPONENTHEADER);
+    CBEHeaderFile* pHeader = FindHeaderFile(pFEFile, FILETYPE_COMPONENTHEADER);
     if (!pHeader)
     {
 	exc += " failed, because could not find header file for " +
@@ -176,7 +176,7 @@ CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile)
     // the implementation files are created on a per IDL file basis, no matter
     // which option is set
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
     pImpl->CreateBackEnd(pFEFile, FILETYPE_COMPONENTIMPLEMENTATION);

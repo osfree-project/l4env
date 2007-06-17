@@ -36,18 +36,15 @@
 #include <cassert>
 
 CL4BEDispatchFunction::CL4BEDispatchFunction()
-{
-}
+{ }
 
 CL4BEDispatchFunction::CL4BEDispatchFunction(CL4BEDispatchFunction & src)
 : CBEDispatchFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CL4BEDispatchFunction::~CL4BEDispatchFunction()
-{
-}
+{ }
 
 /** \brief writes the default case if there is no default function
  *  \param pFile the file to write to
@@ -58,7 +55,7 @@ CL4BEDispatchFunction::~CL4BEDispatchFunction()
  * real error.
  */
 void
-CL4BEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile* pFile)
+CL4BEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
 {
     CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
     string sEnv;
@@ -66,29 +63,25 @@ CL4BEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile* pFile)
 	sEnv = "&";
     sEnv += pDecl->GetName();
 
-    *pFile << "\tif (DICE_IS_EXCEPTION(" << sEnv << 
+    pFile << "\tif (DICE_IS_EXCEPTION(" << sEnv << 
 	", CORBA_SYSTEM_EXCEPTION) &&\n";
-    pFile->IncIndent();
-    *pFile << "\t(DICE_EXCEPTION_MINOR(" << sEnv << 
+    ++pFile << "\t(DICE_EXCEPTION_MINOR(" << sEnv << 
 	") == CORBA_DICE_INTERNAL_IPC_ERROR))\n";
-    pFile->DecIndent();
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    --pFile << "\t{\n";
     // clear exception
-    *pFile << "\tCORBA_server_exception_free(" << sEnv << ");\n";
+    ++pFile << "\tCORBA_server_exception_free(" << sEnv << ");\n";
     // wait for next ipc
     string sReply = CCompiler::GetNameFactory()->GetReplyCodeVariable();
-    *pFile << "\t" << sReply << " = DICE_NEVER_REPLY;\n";
+    pFile << "\t" << sReply << " = DICE_NEVER_REPLY;\n";
 
     // finished
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
     // else: normal handling
-    *pFile << "\telse\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    pFile << "\telse\n";
+    pFile << "\t{\n";
+    ++pFile;
     CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(pFile);
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile;
+    pFile << "\t}\n";
 }
 

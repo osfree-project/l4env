@@ -94,17 +94,17 @@ protected:
     virtual void WriteHeaderFiles();
     virtual bool DoAddIncludedFiles();
     // constants
-    virtual bool AddConstantToFile(CBEFile *pFile, 
+    virtual bool AddConstantToFile(CBEFile& pFile, 
 	CFEConstDeclarator *pFEConstant);
-    virtual bool AddConstantToFile(CBEFile *pFile, CFEInterface *pFEInterface);
-    virtual bool AddConstantToFile(CBEFile *pFile, CFELibrary *pFELibrary);
-    virtual bool AddConstantToFile(CBEFile *pFile, CFEFile *pFEFile);
+    virtual bool AddConstantToFile(CBEFile& pFile, CFEInterface *pFEInterface);
+    virtual bool AddConstantToFile(CBEFile& pFile, CFELibrary *pFELibrary);
+    virtual bool AddConstantToFile(CBEFile& pFile, CFEFile *pFEFile);
     // type definitions
-    virtual bool AddTypedefToFile(CBEFile *pFile, 
+    virtual bool AddTypedefToFile(CBEFile& pFile, 
 	CFETypedDeclarator *pFETypedDeclarator);
-    virtual bool AddTypedefToFile(CBEFile *pFile, CFEInterface *pFEInterface);
-    virtual bool AddTypedefToFile(CBEFile *pFile, CFELibrary *pFELibrary);
-    virtual bool AddTypedefToFile(CBEFile *pFile, CFEFile *pFEFile);
+    virtual bool AddTypedefToFile(CBEFile& pFile, CFEInterface *pFEInterface);
+    virtual bool AddTypedefToFile(CBEFile& pFile, CFELibrary *pFELibrary);
+    virtual bool AddTypedefToFile(CBEFile& pFile, CFEFile *pFEFile);
     // header file search
     virtual CBEHeaderFile* FindHeaderFile(CFEOperation *pFEOperation,
 	FILE_TYPE nFileType);

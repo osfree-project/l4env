@@ -95,7 +95,7 @@ CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation)
  * the server (wait-any function).
  */
 void 
-CL4BEReplyFunction::WriteInvocation(CBEFile * pFile)
+CL4BEReplyFunction::WriteInvocation(CBEFile& pFile)
 {
     // set size and send dopes
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
@@ -119,28 +119,27 @@ CL4BEReplyFunction::WriteInvocation(CBEFile * pFile)
  * not respond?
  */
 void 
-CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile * pFile)
+CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     if (!m_sErrorFunction.empty())
     {
 	CBENameFactory *pNF = CCompiler::GetNameFactory();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 
-	*pFile << "\t/* test for IPC errors */\n";
-	*pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << 
+	pFile << "\t/* test for IPC errors */\n";
+	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << 
 	    ")))\n";
-	pFile->IncIndent();
-	*pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
+	++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
 	WriteCallParameter(pFile, GetEnvironment(), true);
-	*pFile << ");\n";
-	pFile->DecIndent();
+	pFile << ");\n";
+	--pFile;
     }
 }
 
 /** \brief writes the ipc code for this function
  *  \param pFile the file to write to
  */
-void CL4BEReplyFunction::WriteIPC(CBEFile *pFile)
+void CL4BEReplyFunction::WriteIPC(CBEFile& pFile)
 {
     if (m_pTrace)
 	m_pTrace->BeforeReplyOnly(pFile, this);
@@ -157,7 +156,7 @@ void CL4BEReplyFunction::WriteIPC(CBEFile *pFile)
  *  \param pFile the file to write to
  */
 void 
-CL4BEReplyFunction::WriteVariableInitialization(CBEFile * pFile)
+CL4BEReplyFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     CBEReplyFunction::WriteVariableInitialization(pFile);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();

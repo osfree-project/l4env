@@ -55,22 +55,22 @@ protected:
 
 public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
-    virtual void AddToImpl(CBEImplementationFile * pImpl);
-    virtual bool IsTargetFile(CBEImplementationFile * pFile);
+    virtual void AddToImpl(CBEImplementationFile* pImpl);
+    virtual bool IsTargetFile(CBEImplementationFile* pFile);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
-    virtual void WriteReturn(CBEFile *pFile);
+    virtual void WriteReturn(CBEFile& pFile);
 
 protected:
-    virtual void WriteFunctionDefinition(CBEFile* pFile);
-    virtual void WriteFunctionDeclaration(CBEFile* pFile);
-    virtual bool DoWriteFunctionInline(CBEFile *pFile);
-    virtual void WriteUnmarshalling(CBEFile *pFile);
+    virtual void WriteFunctionDefinition(CBEFile& pFile);
+    virtual void WriteFunctionDeclaration(CBEFile& pFile);
+    virtual bool DoWriteFunctionInline(CBEFile& pFile);
+    virtual void WriteUnmarshalling(CBEFile& pFile);
     virtual void SetTargetFileName(CFEBase * pFEObject);
-    virtual void WriteInvocation(CBEFile *pFile);
-    virtual void WriteVariableInitialization(CBEFile *pFile);
-    virtual void WriteVariableDeclaration(CBEFile *pFile);
-    virtual void WriteMarshalling(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteVariableDeclaration(CBEFile& pFile);
+    virtual void WriteMarshalling(CBEFile& pFile);
     virtual bool DoWriteParameter(CBETypedDeclarator *pParam);
     virtual void AddAfterParameters(void);
     virtual void AddBeforeParameters(void);

@@ -33,7 +33,6 @@
 #include "Object.h"
 #include <string>
 
-class CFile;
 class CFEFile;
 class CFEInterface;
 class CFEOperation;
@@ -69,7 +68,7 @@ public:
     virtual string ToString();
 
     virtual CObject* Clone();
-    virtual CFEBase* GetRoot();
+    virtual CFEFile* GetRoot();
 
 protected:
 };

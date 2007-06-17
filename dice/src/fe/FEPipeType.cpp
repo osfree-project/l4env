@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEPipeType.h"
-#include "File.h"
 
 CFEPipeType::CFEPipeType(CFETypeSpec * pType)
 :CFEConstructedType(TYPE_PIPE)

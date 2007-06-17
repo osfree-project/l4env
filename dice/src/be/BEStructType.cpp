@@ -227,7 +227,7 @@ CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
         }
         if (!pFETaggedDecl)
         {
-            CFEFile *pFERoot = dynamic_cast<CFEFile*>(pFEType->GetRoot());
+            CFEFile *pFERoot = pFEType->GetRoot();
             // we definetly have a root
             assert(pFERoot);
             // we definetly have this decl in there
@@ -392,21 +392,21 @@ CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType)
  * }
  * </code>
  */
-void CBEStructType::Write(CBEFile * pFile)
+void CBEStructType::Write(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called.\n", __func__);
     // open struct
-    *pFile << m_sName;
+    pFile << m_sName;
     if (!m_sTag.empty())
-        *pFile << " " << m_sTag;
+        pFile << " " << m_sTag;
     if (GetMemberCount() > 0)
     {
-        *pFile << "\n";
-        *pFile << "\t{\n";
-        pFile->IncIndent();
+        pFile << "\n";
+        pFile << "\t{\n";
+        ++pFile;
         // print members
         vector<CBETypedDeclarator*>::iterator iter;
 	for (iter = m_Members.begin();
@@ -417,17 +417,16 @@ void CBEStructType::Write(CBEFile * pFile)
             if ((*iter)->GetType()->IsVoid() &&
                 ((*iter)->GetSize() == 0))
                 continue;
-            *pFile << "\t";
+            pFile << "\t";
             (*iter)->WriteDeclaration(pFile);
-            *pFile << ";\n";
+            pFile << ";\n";
         }
         // close struct
-        pFile->DecIndent();
-        *pFile << "\t}";
+        --pFile << "\t}";
     }
     else if (!m_bForwardDeclaration)
     {
-        *pFile << " { }";
+        pFile << " { }";
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returned.\n", __func__);
 }
@@ -824,10 +823,10 @@ int CBEStructType::GetMaxSize()
  * in a comma seperated list, embraced by braces. E.g. { (CORBA_long)0,
  * (CORBA_float)0 }
  */
-void CBEStructType::WriteZeroInit(CBEFile * pFile)
+void CBEStructType::WriteZeroInit(CBEFile& pFile)
 {
-    *pFile << "{ ";
-    pFile->IncIndent();
+    pFile << "{ ";
+    ++pFile;
     bool bComma = false;
     vector<CBETypedDeclarator*>::iterator iter;
     for (iter = m_Members.begin();
@@ -843,9 +842,9 @@ void CBEStructType::WriteZeroInit(CBEFile * pFile)
 	     iterD++)
         {
             if (bComma)
-                *pFile << ", \n\t";
+                pFile << ", \n\t";
             // be C99 compliant:
-	    *pFile << (*iterD)->GetName() << " : ";
+	    pFile << (*iterD)->GetName() << " : ";
             if ((*iterD)->IsArray())
                 WriteZeroInitArray(pFile, pType, *iterD,
 		    (*iterD)->m_Bounds.begin());
@@ -855,8 +854,7 @@ void CBEStructType::WriteZeroInit(CBEFile * pFile)
             bComma = true;
         }
     }
-    pFile->DecIndent();
-    *pFile << " }";
+    --pFile << " }";
 }
 
 /** \brief checks if this is a constructed type
@@ -890,9 +888,9 @@ bool CBEStructType::HasTag(string sTag)
  *
  * A struct cast is '(struct tag)'.
  */
-void CBEStructType::WriteCast(CBEFile * pFile, bool bPointer)
+void CBEStructType::WriteCast(CBEFile& pFile, bool bPointer)
 {
-    *pFile << "(";
+    pFile << "(";
     if (m_sTag.empty())
     {
         // no tag -> we need a typedef to save us
@@ -909,17 +907,17 @@ void CBEStructType::WriteCast(CBEFile * pFile, bool bPointer)
 		break;
         }
         assert(iterD != pTypedef->m_Declarators.end());
-	*pFile << (*iterD)->GetName();
+	pFile << (*iterD)->GetName();
         if (bPointer && ((*iterD)->GetStars() == 0))
-	    *pFile << "*";
+	    pFile << "*";
     }
     else
     {
-	*pFile << m_sName << " " << m_sTag;
+	pFile << m_sName << " " << m_sTag;
         if (bPointer)
-	    *pFile << "*";
+	    pFile << "*";
     }
-    *pFile << ")";
+    pFile << ")";
 }
 
 /** \brief allows to access tag member
@@ -935,11 +933,11 @@ string CBEStructType::GetTag()
  *
  * Only write a 'struct \<tag\>'.
  */
-void CBEStructType::WriteDeclaration(CBEFile * pFile)
+void CBEStructType::WriteDeclaration(CBEFile& pFile)
 {
-    *pFile << m_sName;
+    pFile << m_sName;
     if (!m_sTag.empty())
-	*pFile << " " << m_sTag;
+	pFile << " " << m_sTag;
 }
 
 /** \brief if struct is variable size, it has to write the size
@@ -955,7 +953,7 @@ void CBEStructType::WriteDeclaration(CBEFile * pFile)
  * if we really are variable sized. If not and we have a tag:
  * sizeof(struct tag).
  */
-void CBEStructType::WriteGetSize(CBEFile * pFile,
+void CBEStructType::WriteGetSize(CBEFile& pFile,
     CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
@@ -972,7 +970,7 @@ void CBEStructType::WriteGetSize(CBEFile * pFile,
     }
     if (!bVarSized && !m_sTag.empty())
     {
-        *pFile << "sizeof(struct " << m_sTag << ")";
+        pFile << "sizeof(struct " << m_sTag << ")";
         return;
     }
 
@@ -980,7 +978,7 @@ void CBEStructType::WriteGetSize(CBEFile * pFile,
     bool bFirst = true;
     if (nFixedSize > 0)
     {
-	*pFile << nFixedSize;
+	pFile << nFixedSize;
         bFirst = false;
     }
     for (iter = m_Members.begin();
@@ -991,7 +989,7 @@ void CBEStructType::WriteGetSize(CBEFile * pFile,
             !(*iter)->IsString())
             continue;
         if (!bFirst)
-	    *pFile << "+";
+	    pFile << "+";
         bFirst = false;
         WriteGetMemberSize(pFile, *iter, pStack, pUsingFunc);
     }
@@ -1091,7 +1089,7 @@ int CBEStructType::GetFixedSize()
  * working, check if something changed there as well.
  */
 void
-CBEStructType::WriteGetMemberSize(CBEFile *pFile,
+CBEStructType::WriteGetMemberSize(CBEFile& pFile,
     CBETypedDeclarator *pMember,
     CDeclStack* pStack,
     CBEFunction *pUsingFunc)
@@ -1104,7 +1102,7 @@ CBEStructType::WriteGetMemberSize(CBEFile *pFile,
     {
         if (!bFirst)
         {
-	    *pFile << "+";
+	    pFile << "+";
             bFirst = false;
         }
         // add the current decl to the stack
@@ -1113,20 +1111,20 @@ CBEStructType::WriteGetMemberSize(CBEFile *pFile,
         pMember->WriteGetSize(pFile, pStack, pUsingFunc);
         if ((pMember->GetType()->GetSize() > 1) && !(pMember->IsString()))
         {
-	    *pFile << "*sizeof";
+	    pFile << "*sizeof";
             pMember->GetType()->WriteCast(pFile, false);
         }
         else if (pMember->IsString())
         {
             // add terminating zero
-	    *pFile << "+1";
+	    pFile << "+1";
             bool bHasSizeAttr = 
 		pMember->m_Attributes.Find(ATTR_SIZE_IS) ||
 		pMember->m_Attributes.Find(ATTR_LENGTH_IS) ||
 		pMember->m_Attributes.Find(ATTR_MAX_IS);
 	    CBESizes *pSizes = CCompiler::GetSizes();
             if (!bHasSizeAttr)
-		*pFile << "+" << pSizes->GetSizeOfType(TYPE_INTEGER);
+		pFile << "+" << pSizes->GetSizeOfType(TYPE_INTEGER);
         }
         // remove the decl from the stack
         pStack->pop_back();

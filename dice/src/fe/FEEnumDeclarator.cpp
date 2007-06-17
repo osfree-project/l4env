@@ -28,7 +28,6 @@
 
 #include "fe/FEEnumDeclarator.h"
 #include "fe/FEExpression.h"
-#include "File.h"
 
 CFEEnumDeclarator::CFEEnumDeclarator(CFEEnumDeclarator & src)
 :CFEDeclarator(src)

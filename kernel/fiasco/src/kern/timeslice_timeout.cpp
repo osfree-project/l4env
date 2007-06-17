@@ -13,23 +13,18 @@ IMPLEMENTATION:
 #include "context.h"
 #include "globals.h"
 #include "sched_context.h"
-#include "static_init.h"
 #include "std_macros.h"
 #include "thread.h"
 
 /* Initialize global valiable timeslice_timeout */
-static void timeslice_timeout_init () FIASCO_INIT;
+static Per_cpu<Timeslice_timeout> DEFINE_PER_CPU the_timeslice_timeout(true);
 
-static 
-void 
-timeslice_timeout_init ()
-{ 
-  static Timeslice_timeout the_timeslice_timeout;
-
-  timeslice_timeout = &the_timeslice_timeout;
+PUBLIC
+Timeslice_timeout::Timeslice_timeout(unsigned cpu)
+{
+  timeslice_timeout.cpu(cpu) = this;
 }
 
-STATIC_INITIALIZER (timeslice_timeout_init);
 
 /**
  * Timeout expiration callback function
@@ -39,7 +34,7 @@ PRIVATE
 bool
 Timeslice_timeout::expired()
 {
-  Sched_context *sched = Context::current_sched();
+  Sched_context *sched = Context::current_sched(current()->cpu());
 
   if (sched)
     {

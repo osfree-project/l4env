@@ -27,7 +27,6 @@
  */
 
 #include "IncludeStatement.h"
-#include "File.h"
 #include "CPreProcess.h" // needed to get include statements
 #include "FEFile.h"
 #include "FETypedDeclarator.h"

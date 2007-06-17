@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEDeclarator.h"
-#include "File.h"
 
 CFEDeclarator::CFEDeclarator(CFEDeclarator & src)
 :CFEIdentifier(src)

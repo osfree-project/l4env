@@ -52,9 +52,9 @@ public: // Public methods
     virtual void RemoveMember(string sMember);
     virtual void AddMember(string sMember);
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
-    virtual void WriteZeroInit(CBEFile * pFile);
-    virtual void Write(CBEFile * pFile);
-    virtual void WriteCast(CBEFile* pFile, bool bPointer);
+    virtual void WriteZeroInit(CBEFile& pFile);
+    virtual void Write(CBEFile& pFile);
+    virtual void WriteCast(CBEFile& pFile, bool bPointer);
     virtual bool HasTag(string sTag);
 
 protected: // Protected attributes

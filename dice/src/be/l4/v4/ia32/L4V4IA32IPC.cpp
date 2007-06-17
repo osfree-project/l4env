@@ -50,7 +50,7 @@ CL4V4IA32IPC::~CL4V4IA32IPC()
  *  \param pFunction the function to write for
  */
 void 
-CL4V4IA32IPC::WriteCall(CBEFile* pFile,
+CL4V4IA32IPC::WriteCall(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
     if (CCompiler::IsOptionSet(PROGRAM_FORCE_C_BINDINGS))
@@ -82,27 +82,27 @@ CL4V4IA32IPC::WriteCall(CBEFile* pFile,
     // ESI: MR0
     // EBX: MR1
     // EBP: MR2
-    *pFile << "\tasm volatile (\n";
-    pFile->IncIndent();
+    pFile << "\tasm volatile (\n";
+    ++pFile;
 
     // do not load to into EAX, because EAX is used
     // during mathematical calculations, such as
     // MR0 bit stuffing
-    *pFile << "\t\"mov %%edx, %%eax \\n\\t\" /* from-specifier == to */\n";
-    *pFile << "\t\"mov %%gs:[0], %%edi \\n\\t\"\n";
-    *pFile << "\t\"call Ipc \\n\\t\"\n";
-    *pFile << "\t\"mov %%ebx, 4(%%edi) \\n\\t\" /* save mr1 */\n";
-    *pFile << "\t\"mov %%ebp, 8(%%edi) \\n\\t\" /* save mr2 */\n";
-    *pFile << "\t: /* output */\n";
-    *pFile << "\t\"=S\" (" << sMsgTag << ") /* ESI */\n";
-    *pFile << "\t: /* input */\n";
-    *pFile << "\t\"d\" (" << pObjName->GetName() << "), /* EDX */\n";
-    *pFile << "\t\"c\" (" << sTimeout << "), /* ECX */\n";
-    *pFile << "\t\"S\" (" << sMsgTag << ") /* ESI */\n";
-    *pFile << "\t: /* clobber list */\n";
-    *pFile << "\t\"memory\"\n";
+    pFile << "\t\"mov %%edx, %%eax \\n\\t\" /* from-specifier == to */\n";
+    pFile << "\t\"mov %%gs:[0], %%edi \\n\\t\"\n";
+    pFile << "\t\"call Ipc \\n\\t\"\n";
+    pFile << "\t\"mov %%ebx, 4(%%edi) \\n\\t\" /* save mr1 */\n";
+    pFile << "\t\"mov %%ebp, 8(%%edi) \\n\\t\" /* save mr2 */\n";
+    pFile << "\t: /* output */\n";
+    pFile << "\t\"=S\" (" << sMsgTag << ") /* ESI */\n";
+    pFile << "\t: /* input */\n";
+    pFile << "\t\"d\" (" << pObjName->GetName() << "), /* EDX */\n";
+    pFile << "\t\"c\" (" << sTimeout << "), /* ECX */\n";
+    pFile << "\t\"S\" (" << sMsgTag << ") /* ESI */\n";
+    pFile << "\t: /* clobber list */\n";
+    pFile << "\t\"memory\"\n";
 
-    pFile->DecIndent();
-    *pFile << "\t);\n";
+    ++pFile;
+    pFile << "\t);\n";
 }
 

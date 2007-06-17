@@ -133,7 +133,7 @@ CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
  * unmarshal.
  */
 void 
-CBEMarshalFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
+CBEMarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {
 }
 
@@ -144,7 +144,7 @@ CBEMarshalFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
  * contain a message transfer.
  */
 void
-CBEMarshalFunction::WriteInvocation(CBEFile * /*pFile*/)
+CBEMarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
 {
 }
 
@@ -157,7 +157,7 @@ CBEMarshalFunction::WriteInvocation(CBEFile * /*pFile*/)
  * because otherwise the compiler issues warnings.
  */
 void 
-CBEMarshalFunction::WriteCallParameter(CBEFile * pFile,
+CBEMarshalFunction::WriteCallParameter(CBEFile& pFile,
     CBETypedDeclarator * pParameter,
     bool bCallFromSameClass)
 {
@@ -434,9 +434,9 @@ int CBEMarshalFunction::GetReturnSize(DIRECTION_TYPE /*nDirection*/)
  *
  * The Marshal function has no return value.
  */
-void CBEMarshalFunction::WriteReturn(CBEFile * pFile)
+void CBEMarshalFunction::WriteReturn(CBEFile& pFile)
 {
-    *pFile << "\treturn;\n";
+    pFile << "\treturn;\n";
 }
 
 /** \brief test if this function should be written
@@ -447,7 +447,7 @@ void CBEMarshalFunction::WriteReturn(CBEFile * pFile)
  * and one of the parameters has an OUT or we have an exception to transmit.
  */
 bool
-CBEMarshalFunction::DoWriteFunction(CBEHeaderFile * pFile)
+CBEMarshalFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -478,7 +478,7 @@ CBEMarshalFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * and one of the parameters has an OUT or we have an exception to transmit.
  */
 bool
-CBEMarshalFunction::DoWriteFunction(CBEImplementationFile * pFile)
+CBEMarshalFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;

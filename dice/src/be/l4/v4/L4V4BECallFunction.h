@@ -50,10 +50,10 @@ public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
 
 protected:
-    virtual void WriteMarshalling(CBEFile * pFile);
-    virtual void WriteUnmarshalling(CBEFile * pFile);
-    virtual void WriteInvocation(CBEFile * pFile);
-    virtual void WriteIPCErrorCheck(CBEFile * pFile);
+    virtual void WriteMarshalling(CBEFile& pFile);
+    virtual void WriteUnmarshalling(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteIPCErrorCheck(CBEFile& pFile);
 };
 
 #endif

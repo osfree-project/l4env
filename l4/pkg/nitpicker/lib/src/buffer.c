@@ -46,7 +46,7 @@ struct nitpicker_buffer *nitpicker_buffer_create(struct nitpicker *np,
 	npb->width = width;
 	npb->height = height;
 
-	if (!nitpicker_get_screen_info(np, NULL, NULL, &format)) {
+	if (nitpicker_get_screen_info(np, NULL, NULL, &format) < 0) {
 		printf("Failure at %s:%d\n", __FILE__, __LINE__);
 		free(npb);
 		return NULL;
@@ -125,7 +125,7 @@ int nitpicker_buffer_refresh(struct nitpicker_buffer *npb) {
 		return -1;
 	}
 
-	if (!nitpicker_buffer_get_size(npb, &width, &height)) {
+	if (nitpicker_buffer_get_size(npb, &width, &height) < 0) {
 		printf("Failure at %s:%d\n", __FILE__, __LINE__);
 		return -2;
 	}
@@ -174,7 +174,7 @@ int nitpicker_buffer_get_format(struct nitpicker_buffer  *npb,
 		return -1;
 	}
 
-	if (!nitpicker_get_screen_info(npb->np, NULL, NULL, format)) {
+	if (nitpicker_get_screen_info(npb->np, NULL, NULL, format) < 0) {
 	    printf("Failure at %s:%d\n", __FILE__, __LINE__);
 	    return -2;
 	}

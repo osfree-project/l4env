@@ -61,15 +61,15 @@ public:
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
 
 protected:
-    virtual void WriteVariableInitialization(CBEFile *pFile);
-    virtual void WriteSwitch(CBEFile *pFile);
-    virtual void WriteSetWrongOpcodeException(CBEFile* pFile);
-    virtual void WriteDefaultCase(CBEFile *pFile);
-    virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile *pFile);
-    virtual void WriteDefaultCaseWithDefaultFunc(CBEFile *pFile);
-    virtual void WriteFunctionDeclaration(CBEFile * pFile);
-    virtual void WriteInvocation(CBEFile *pFile);
-    virtual void WriteBody(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteSwitch(CBEFile& pFile);
+    virtual void WriteSetWrongOpcodeException(CBEFile& pFile);
+    virtual void WriteDefaultCase(CBEFile& pFile);
+    virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile);
+    virtual void WriteDefaultCaseWithDefaultFunc(CBEFile& pFile);
+    virtual void WriteFunctionDeclaration(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteBody(CBEFile& pFile);
     virtual void AddSwitchCases(CFEInterface *pFEInterface);
     virtual void AddBeforeParameters();
 

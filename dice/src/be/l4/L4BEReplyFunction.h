@@ -49,10 +49,10 @@ public:
     virtual int GetSize(DIRECTION_TYPE nDirection);
 
 protected:
-    virtual void WriteInvocation(CBEFile *pFile);
-    virtual void WriteIPC(CBEFile *pFile);
-    virtual void WriteIPCErrorCheck(CBEFile *pFile);
-    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteIPC(CBEFile& pFile);
+    virtual void WriteIPCErrorCheck(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
 };
 

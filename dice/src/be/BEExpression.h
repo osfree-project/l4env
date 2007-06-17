@@ -66,7 +66,7 @@ public:
     virtual string GetStringValue();
     virtual bool IsOfType(int nFEType);
     virtual CObject* Clone();
-    virtual void Write(CBEFile *pFile);
+    virtual void Write(CBEFile& pFile);
     virtual void WriteToStr(string &sStr);
 
     virtual void CreateBackEndBinary(CBEExpression *pOperand1, int nOperator, 

@@ -37,6 +37,7 @@ static char *_oreName = "ORe";
  * FIXME no global vars, please */
 unsigned char global_mac_address_head[4] = { 0x00, 0x00, 0x00, 0x00};
 static   int  use_events;
+static   int  unittest = 0;
 int loopback_only = 0;
 
 ore_connection_t ore_connection_table[ORE_CONFIG_MAX_CONNECTIONS];
@@ -72,14 +73,10 @@ extern unsigned long int strtoul(const char *, char **, int);
  */
 void *CORBA_alloc(unsigned long size)
 {
-#ifndef SENSOR
   if (size == ORE_CONFIG_MAX_BUF_SIZE)
-#endif
     return kmalloc(size, GFP_KERNEL);
 
-#ifndef SENSOR
   return NULL;
-#endif
 }
 
 /* CORBA_free() - not that tricky. We only free ptr if it is != NULL. */
@@ -112,6 +109,7 @@ static void init_dde(void);
 static void init_dde(void)
 {
 	l4dde26_init();
+	l4dde26_kmalloc_init();
 	l4dde26_process_init();
 	l4dde26_init_timers();
 	l4dde26_softirq_init();
@@ -147,6 +145,10 @@ int main(int argc, const char **argv)
                     PARSE_CMD_FN_ARG, 0, &copy_mac,
                     'n', "name", "configure server name",
                     PARSE_CMD_STRING, "ORe", &_oreName,
+#if 0
+                    'u', "unittest", "run ORe unit test",
+                    PARSE_CMD_SWITCH, 1, &unittest,
+#endif
                     0, 0))
     return 1;
 
@@ -210,7 +212,7 @@ int main(int argc, const char **argv)
   // now only responsible for managing connections
   ore_manager_server_loop(&env);
 
-  LOG("Loop returned.\n");
+  LOG("\033[31;1mLoop returned.\033[0m\n");
   l4_sleep_forever();
 
   return 0;

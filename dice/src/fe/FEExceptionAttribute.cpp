@@ -28,7 +28,6 @@
 
 #include "fe/FEExceptionAttribute.h"
 #include "fe/FEIdentifier.h"
-#include "File.h"
 
 CFEExceptionAttribute::CFEExceptionAttribute(vector<CFEIdentifier*> *pExcepNames)
 : CFEAttribute(ATTR_EXCEPTIONS),

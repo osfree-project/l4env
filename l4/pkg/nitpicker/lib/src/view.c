@@ -104,13 +104,13 @@ int nitpicker_view_stack(struct nitpicker_view *npv,
 
 	switch (stack_pos) {
 		case TOP:
-			return !nitpicker_stack_view_call(&npv->npb->np->srv,
-			                                  npv->id, -1, 1, do_redraw,
-			                                  &env);
+			return nitpicker_stack_view_call(&npv->npb->np->srv,
+			                                 npv->id, -1, 1, do_redraw,
+			                                 &env);
 		case BOTTOM:
-			return !nitpicker_stack_view_call(&npv->npb->np->srv,
-			                                  npv->id, -1, -1, do_redraw,
-			                                  &env);
+			return nitpicker_stack_view_call(&npv->npb->np->srv,
+			                                 npv->id, -1, -1, do_redraw,
+			                                 &env);
 		case INFRONT:
 			if (!nitpicker_view_is_valid(neighbor))
 				return -2;

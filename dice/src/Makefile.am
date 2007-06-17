@@ -18,12 +18,13 @@ DICELIBS=	$(top_builddir)/src/be/l4/libl4.a \
 		$(top_builddir)/src/parser/inc/libinc.a
 
 bin_PROGRAMS=	dice
-dice_SOURCES = main.cpp Compiler.cpp CParser.cpp File.cpp Object.cpp Visitor.cpp version.cpp CCParser.cpp CCXXParser.cpp CDCEParser.cpp CCORBAParser.cpp CPreProcess.cpp IncludeStatement.cpp Dependency.cpp Messages.cpp
+dice_SOURCES = main.cpp Compiler.cpp CParser.cpp Object.cpp Visitor.cpp version.cpp CCParser.cpp CCXXParser.cpp CDCEParser.cpp CCORBAParser.cpp CPreProcess.cpp IncludeStatement.cpp Dependency.cpp Messages.cpp
 
-noinst_HEADERS = defines.h template.h Compiler.h CParser.h File.h Object.h Visitor.h ProgramOptions.h CCParser.h CCXXParser.h CDCEParser.h CCORBAParser.h CPreProcess.h TypeSpec-Type.h Attribute-Type.h IncludeStatement.h Dependency.h Messages.h Error.h
+noinst_HEADERS = defines.h template.h Compiler.h CParser.h Object.h Visitor.h ProgramOptions.h CCParser.h CCXXParser.h CDCEParser.h CCORBAParser.h CPreProcess.h TypeSpec-Type.h Attribute-Type.h IncludeStatement.h Dependency.h Messages.h Error.h
 
 dice_DEPENDENCIES= $(DICELIBS)
 
+LIBLTDL=@LIBLTDL@
 dice_LDADD=	-L$(top_builddir)/src/be/l4/v2 -lv2 \
 		-L$(top_builddir)/src/be/l4/v2/amd64 -lv2amd64 \
 		-L$(top_builddir)/src/be/l4/v2/ia32 -lv2ia32 \
@@ -38,7 +39,7 @@ dice_LDADD=	-L$(top_builddir)/src/be/l4/v2 -lv2 \
 		-L$(top_builddir)/src/parser/gcc-c -lgcc_c \
 		-L$(top_builddir)/src/parser/gcc-cxx -lgcc_cxx \
 		-L$(top_builddir)/src/fe -lfe \
-		-lstdc++ $(LIBLTDL) -lltdl
+		-lstdc++ $(LIBLTDL)
 
 if HOST_DARWIN
 # Darwin's _toupper and _tolower are macros, so using these as function
@@ -48,9 +49,10 @@ else
 dice_LDFLAGS = -export-dynamic
 endif
 
+LTDLINCL=@LTDLINCL@
 AM_CPPFLAGS=	-D__USER__="\"$(USER)@`hostname`\"" \
 		-D__DICEINCDIR__="\"${includedir}\"" \
-		-I$(LTDLINCL)
+		$(LTDLINCL)
 
 AM_CXXFLAGS = -Wunused -Wunused-parameter -Wall -W \
 	      -Wcast-align -Wcast-qual -Wconversion -Wformat=2 \

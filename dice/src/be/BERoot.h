@@ -86,9 +86,9 @@ public: // Public methods
     CBEType* FindTaggedType(unsigned int nType, string sTag);
     CBEFunction* FindFunction(string sFunctionName, FUNCTION_TYPE nFunctionType);
 
-    void AddToImpl(CBEImplementationFile *pImpl);
-    void AddToHeader(CBEHeaderFile *pHeader);
-    bool AddOpcodesToFile(CBEHeaderFile *pHeader, CFEFile *pFEFile);
+    void AddToImpl(CBEImplementationFile* pImpl);
+    void AddToHeader(CBEHeaderFile* pHeader);
+    bool AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile);
 
     void PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol);
 

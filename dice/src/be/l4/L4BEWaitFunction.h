@@ -52,11 +52,11 @@ public: // Public methods
 
 protected: // Protected methods
     virtual bool HasVariableSizedParameters(DIRECTION_TYPE nDirection);
-    virtual void WriteIPCErrorCheck(CBEFile * pFile);
-    virtual void WriteInvocation(CBEFile * pFile);
-    virtual void WriteVariableInitialization(CBEFile* pFile);
-    virtual void WriteFlexpageOpcodePatch(CBEFile *pFile);
-    virtual void WriteIPC(CBEFile *pFile);
+    virtual void WriteIPCErrorCheck(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteFlexpageOpcodePatch(CBEFile& pFile);
+    virtual void WriteIPC(CBEFile& pFile);
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
 };
 

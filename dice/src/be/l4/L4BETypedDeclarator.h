@@ -58,7 +58,7 @@ public: // Public methods
     virtual bool GetMaxSize(int & nSize, string sName = string());
 
 protected:
-    virtual bool DoAllocateMemory(CBEFile *pFile);
+    virtual bool DoAllocateMemory(CBEFile& pFile);
 };
 
 #endif

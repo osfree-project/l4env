@@ -21,7 +21,7 @@
 #include <sys/types.h>
 
 #include <l4/arm_drivers/uart_base.h>
-#include <l4/arm_drivers/uart_integrator.h>
+#include <l4/arm_drivers/uart_pl011.h>
 #if defined ARCH_arm_isg
 # include <l4/arm_drivers/isg/usif.h>
 # include <l4/arm_drivers/isg/usart.h>
@@ -41,7 +41,7 @@ static union
   char u1[sizeof(L4::ISG_usif)];
   char u2[sizeof(L4::ISG_usart)];
 #endif
-  char u3[sizeof(L4::Uart_integrator)];
+  char u3[sizeof(L4::Uart_pl011)];
 } _uart;
 
 inline void *operator new(size_t, void *p) throw()
@@ -66,10 +66,10 @@ void __main(void)
 
 #if defined ARCH_arm
 # if defined ARCH_arm_integrator
-  new (&_uart) L4::Uart_integrator(1,1);
+  new (&_uart) L4::Uart_pl011(1,1);
   uart()->startup(0x16000000);
-# elif defined ARCH_arm_realview
-  new (&_uart) L4::Uart_integrator(44,44);
+# elif defined ARCH_arm_rv
+  new (&_uart) L4::Uart_pl011(36,36);
   uart()->startup(0x10009000);
 # elif defined ARCH_ARM_isg_3
   new (&_uart) L4::ISG_usif(133,134);

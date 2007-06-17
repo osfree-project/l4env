@@ -84,26 +84,26 @@ protected:
      */
     CBEStructType(CBEStructType &src);
 
-    virtual void WriteGetMemberSize(CBEFile *pFile, 
+    virtual void WriteGetMemberSize(CBEFile& pFile, 
     	CBETypedDeclarator *pMember, 
 	CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
     virtual void CreateBackEndSequence(CFEArrayType *pFEType);
 
 public:
-    virtual void WriteZeroInit(CBEFile *pFile);
+    virtual void WriteZeroInit(CBEFile& pFile);
     virtual int GetSize();
     virtual int GetMaxSize();
     virtual int GetStringLength();
     virtual CObject* Clone();
-    virtual void Write(CBEFile *pFile);
+    virtual void Write(CBEFile& pFile);
     virtual bool IsConstructedType();
     virtual int GetMemberCount();
     virtual bool HasTag(string sTag);
-    virtual void WriteCast(CBEFile * pFile, bool bPointer);
+    virtual void WriteCast(CBEFile& pFile, bool bPointer);
     virtual string GetTag();
-    virtual void WriteDeclaration(CBEFile * pFile);
-    virtual void WriteGetSize(CBEFile * pFile, 
+    virtual void WriteDeclaration(CBEFile& pFile);
+    virtual void WriteGetSize(CBEFile& pFile, 
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
     virtual int GetFixedSize();
     virtual bool IsSimpleType();

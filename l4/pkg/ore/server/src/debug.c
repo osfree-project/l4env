@@ -55,14 +55,12 @@ void dump_connection(int i)
 {
     ore_connection_t *con = &ore_connection_table[i];    
     LOG("\033[36mdumping connection #%d\033[0m", i);
-    LOG("Owner      = "l4util_idfmt, l4util_idstr(con->owner));
-    LOG("Device     = %s", con->dev->name);
+    LOG("Owner      = "l4util_idfmt"   Device    = %s", l4util_idstr(con->owner), con->dev->name);
     LOG("Flags      = %x", con->flags);
-    LOG_MAC(1,con->mac);
-    LOG("Packets received: %d", con->packets_received);
-    LOG("Packets queued: %d", con->packets_queued);
-    LOG("Packets delivered: %d", con->packets_received - con->packets_queued);
-    LOG("Packets sent: %d", con->packets_sent);
+    LOG_MAC(1, &con->mac[0]);
+    LOG("Packets inc %d, deliv %d, queued %d, tx %d", con->packets_received,
+		con->packets_received - con->packets_queued, con->packets_queued,
+		con->packets_sent);
     LOG("- - - - - - - - - - - - - - - - - - - - - -");
 }
 

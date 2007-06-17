@@ -120,7 +120,7 @@ void CBEObject::SetTargetFileName(CFEBase *pFEObject)
  * target file-name always ends on "-client.h" (see above) if derived from a
  * IDL file.
  */
-bool CBEObject::IsTargetFile(CBEHeaderFile *pFile)
+bool CBEObject::IsTargetFile(CBEHeaderFile* pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBEObject::%s(header: %s) called; m_sTargetHeader=%s\n",
@@ -179,7 +179,7 @@ bool CBEObject::IsTargetFile(CBEHeaderFile *pFile)
  * target file-name always ends on "-client.c" (see above) if derived from a
  * IDL file.
  */
-bool CBEObject::IsTargetFile(CBEImplementationFile *pFile)
+bool CBEObject::IsTargetFile(CBEImplementationFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEObject::%s(impl: %s) called; m_sTargetImplementation=%s\n",

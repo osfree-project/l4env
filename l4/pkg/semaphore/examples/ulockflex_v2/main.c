@@ -29,7 +29,7 @@
 #include "__debug.h"
 
 
-inline unsigned long long
+static inline unsigned long long
 rdtsc(void)
 {
 #if defined(ARCH_x86) || defined(ARCH_amd64)
@@ -378,7 +378,7 @@ static void fork_tasks(void)
 	// send startup IPC
 	printf("send startup to %x.%x\n", t.id.task, t.id.lthread);
 	l4_ipc_send(t, L4_IPC_SHORT_MSG, i, (i-1)%num_locks, L4_IPC_NEVER, &status);
-	printf("  result = %x\n", status.raw);
+	printf("  result = %lx\n", status.raw);
 	int j;
 	for (j = 0; j < num_locks; ++j)
 	  lock_map_to(t, lock(j)); 

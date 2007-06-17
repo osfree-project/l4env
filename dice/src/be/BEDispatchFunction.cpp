@@ -204,30 +204,31 @@ void CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
  * don't do anything (no variables to initialize)
  */
 void 
-CBEDispatchFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
+CBEDispatchFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the switch statement
  *  \param pFile the file to write to
  */
 void 
-CBEDispatchFunction::WriteSwitch(CBEFile * pFile)
+CBEDispatchFunction::WriteSwitch(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sOpcodeVar = pNF->GetOpcodeVariable();
 
-    *pFile << "\tswitch (" << sOpcodeVar << ")\n";
-    *pFile << "\t{\n";
+    pFile << "\tswitch (" << sOpcodeVar << ")\n";
+    pFile << "\t{\n";
 
     // iterate over functions
     assert(m_pClass);
-    for_each(m_SwitchCases.begin(), m_SwitchCases.end(),
-	std::bind2nd(std::mem_fun(&CBESwitchCase::Write), pFile));
+    vector<CBESwitchCase*>::iterator i;
+    for (i = m_SwitchCases.begin(); i != m_SwitchCases.end(); i++)
+	(*i)->Write(pFile);
 
     // writes default case
     WriteDefaultCase(pFile);
 
-    *pFile << "\t}\n";
+    pFile << "\t}\n";
 }
 
 /** \brief writes the default case of the switch statetment
@@ -242,16 +243,16 @@ CBEDispatchFunction::WriteSwitch(CBEFile * pFile)
  * An alternative is to call the wait-any function.
  */
 void 
-CBEDispatchFunction::WriteDefaultCase(CBEFile *pFile)
+CBEDispatchFunction::WriteDefaultCase(CBEFile& pFile)
 {
-    *pFile << "\tdefault:\n";
-    pFile->IncIndent();
+    pFile << "\tdefault:\n";
+    ++pFile;
     if (m_sDefaultFunction.empty())
         WriteDefaultCaseWithoutDefaultFunc(pFile);
     else
         WriteDefaultCaseWithDefaultFunc(pFile);
-    *pFile << "\tbreak;\n";
-    pFile->DecIndent();
+    pFile << "\tbreak;\n";
+    --pFile;
 }
 
 /** \brief writes the code in the default case if the default function is not \
@@ -259,13 +260,13 @@ CBEDispatchFunction::WriteDefaultCase(CBEFile *pFile)
  *  \param pFile the file to write to
  */
 void 
-CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile *pFile)
+CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
 {
-    *pFile << "\t/* unknown opcode */\n";
+    pFile << "\t/* unknown opcode */\n";
     WriteSetWrongOpcodeException(pFile);
     // send reply
     string sReply = CCompiler::GetNameFactory()->GetReplyCodeVariable();
-    *pFile << "\t" << sReply << " = DICE_REPLY;\n";
+    pFile << "\t" << sReply << " = DICE_REPLY;\n";
 }
 
 /** \brief writes the code in the default case if the default function is \
@@ -273,14 +274,14 @@ CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile *pFile)
  *  \param pFile the file to write to
  */
 void 
-CBEDispatchFunction::WriteDefaultCaseWithDefaultFunc(CBEFile *pFile)
+CBEDispatchFunction::WriteDefaultCaseWithDefaultFunc(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sObj = pNF->GetCorbaObjectVariable();
     string sEnv = pNF->GetCorbaEnvironmentVariable();
 
-    *pFile << "\treturn " << m_sDefaultFunction << " (" << sObj <<
+    pFile << "\treturn " << m_sDefaultFunction << " (" << sObj <<
 	", " << sMsgBuffer << ", " << sEnv << ");\n";
 }
 
@@ -291,12 +292,12 @@ CBEDispatchFunction::WriteDefaultCaseWithDefaultFunc(CBEFile *pFile)
  * and used. And it has to declare the reply-any-wait-any function
  */
 void
-CBEDispatchFunction::WriteFunctionDeclaration(CBEFile * pFile)
+CBEDispatchFunction::WriteFunctionDeclaration(CBEFile& pFile)
 {
     // call base
     CBEInterfaceFunction::WriteFunctionDeclaration(pFile);
     // add declaration of default function
-    *pFile << "\n";
+    pFile << "\n";
     if (!m_sDefaultFunction.empty())
     {
 	// get the class' message buffer to get the correct type
@@ -307,7 +308,7 @@ CBEDispatchFunction::WriteFunctionDeclaration(CBEFile * pFile)
         string sMsgBufferType = pMsgBuffer->m_Declarators.First()->GetName();
 	// int \<name\>(\<corba object\>, \<msg buffer type\>*,
 	//              \<corba environment\>*)
-	*pFile << "int " << m_sDefaultFunction << " (CORBA_Object, " <<
+	pFile << "int " << m_sDefaultFunction << " (CORBA_Object, " <<
 	    sMsgBufferType << "*, CORBA_Server_Environment*);\n";
     }
 }
@@ -317,7 +318,7 @@ CBEDispatchFunction::WriteFunctionDeclaration(CBEFile * pFile)
  *  \param pFile the file to write to
  */
 void 
-CBEDispatchFunction::WriteSetWrongOpcodeException(CBEFile* pFile)
+CBEDispatchFunction::WriteSetWrongOpcodeException(CBEFile& pFile)
 {
     // set the exception in the environment
     string sSetFunc;
@@ -328,16 +329,15 @@ CBEDispatchFunction::WriteSetWrongOpcodeException(CBEFile* pFile)
     else
         sSetFunc = "CORBA_exception_set";
     CBEDeclarator *pDecl = pEnv->m_Declarators.First();
-    *pFile << "\t" << sSetFunc << "(";
+    pFile << "\t" << sSetFunc << "(";
     if (pDecl->GetStars() == 0)
-	*pFile << "&";
+	pFile << "&";
     pDecl->WriteName(pFile);
-    *pFile << ",\n";
-    pFile->IncIndent();
-    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
-    *pFile << "\tCORBA_DICE_EXCEPTION_WRONG_OPCODE,\n";
-    *pFile << "\t0);\n";
-    pFile->DecIndent();
+    pFile << ",\n";
+    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+    pFile << "\tCORBA_DICE_EXCEPTION_WRONG_OPCODE,\n";
+    pFile << "\t0);\n";
+    --pFile;
     // copy from environment to local exception variable
     WriteExceptionWordInitialization(pFile);
     // marshal exception variable
@@ -351,7 +351,7 @@ CBEDispatchFunction::WriteSetWrongOpcodeException(CBEFile* pFile)
  * A server loop is only written at the component's side.
  */
 bool 
-CBEDispatchFunction::DoWriteFunction(CBEHeaderFile * pFile)
+CBEDispatchFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -365,7 +365,7 @@ CBEDispatchFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * A server loop is only written at the component's side.
  */
 bool 
-CBEDispatchFunction::DoWriteFunction(CBEImplementationFile * pFile)
+CBEDispatchFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -380,13 +380,13 @@ CBEDispatchFunction::DoWriteFunction(CBEImplementationFile * pFile)
  *  \param pFile the file to write to
  */
 void 
-CBEDispatchFunction::WriteInvocation(CBEFile * /*pFile*/)
+CBEDispatchFunction::WriteInvocation(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the server loop's function body
  *  \param pFile the target file
  */
-void CBEDispatchFunction::WriteBody(CBEFile * pFile)
+void CBEDispatchFunction::WriteBody(CBEFile& pFile)
 {
     // write variable declaration and initialization
     WriteVariableDeclaration(pFile);

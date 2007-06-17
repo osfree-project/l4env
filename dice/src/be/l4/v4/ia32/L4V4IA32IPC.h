@@ -45,7 +45,7 @@ public:
     virtual ~CL4V4IA32IPC();
 
 public:
-    virtual void WriteCall(CBEFile* pFile,  CBEFunction* pFunction);
+    virtual void WriteCall(CBEFile& pFile,  CBEFunction* pFunction);
 };
 
 #endif

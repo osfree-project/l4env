@@ -31,7 +31,6 @@
 #include "FETypedDeclarator.h"
 #include "FEExpression.h"
 #include "FEFile.h"
-#include "File.h"
 #include "Compiler.h"
 #include "Visitor.h"
 #include <iostream>

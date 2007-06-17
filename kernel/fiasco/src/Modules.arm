@@ -11,6 +11,10 @@ PREPROCESS_PARTS 	+= arch $(CONFIG_ABI) 32bit $(CONFIG_XARCH) serial   \
                            h3800 jdb_thread_names noncont_mem \
 			   abs_syscalls
 
+ifeq ("$(CONFIG_MP)","y")
+  PREPROCESS_PARTS	+= mp
+endif
+
 ifeq ("$(CONFIG_LIST_ALLOC_SANITY)","y")
   PREPROCESS_PARTS	+= list_alloc_debug
 endif
@@ -71,7 +75,7 @@ endif
 ifeq ("$(CONFIG_PF_REALVIEW)","y")
   SUBSYSTEMS += LIBUART
   PREPROCESS_PARTS        += realview libuart pic_gic
-  CONFIG_KERNEL_LOAD_ADDR := 0x70000000
+  CONFIG_KERNEL_LOAD_ADDR := 0x00000000
 endif
 
 PREPROCESS_PARTS	+= $(PREPROCESS_PARTS-y)
@@ -85,7 +89,7 @@ PRIVATE_INCDIR += types/$(CONFIG_XARCH) types
 ifeq ("$(filter LIBUART, $(SUBSYSTEMS))","LIBUART")
   LIBUART			:= uart/libuart.a
 endif
-OBJECTS_LIBUART		+= uart_integrator.o
+OBJECTS_LIBUART		+= uart_pl011.o
 VPATH_LIBUART		:= $(srcdir)/lib/uart \
 			   $(srcdir)/lib/uart/arm
 PRIVATE_INCDIR += lib/uart
@@ -100,7 +104,7 @@ INTERFACES_DRIVERS 	:= sa1100 mux_console console uart filter_console \
 			   gdb_server h3xxx io mmu reset processor delayloop
 io_IMPL			:= io io-arm
 mmu_IMPL		:= mmu mmu-arm
-uart_IMPL		:= uart uart-sa1100 uart-16550 uart-integrator
+uart_IMPL		:= uart uart-sa1100 uart-16550 uart-pl011
 reset_IMPL		:= reset-arm
 processor_IMPL		:= processor processor-arm
 CXXSRC_DRIVERS		:= glue_libc.cc 
@@ -178,7 +182,8 @@ INTERFACES_KERNEL := 	allocators kmem boot_info __main globals config main \
 			mapped_alloc kmem_alloc kip_init kmem_space \
 			mem_unit boot_uart_init kernel_console cpu \
 			thread syscalls paging vmem_alloc kdb_ke terminate \
-			cpu_lock irq sender startup \
+			cpu_lock irq sender startup per_cpu_data \
+			per_cpu_data_alloc \
 			entry_frame irq_alloc helping_lock switch_lock \
 			kmem_slab_simple region kmem_slab slab_cache_anon \
 			thread_state context sched_context fpu fpu_state \
@@ -286,7 +291,7 @@ INTERFACES_KERNEL 	+= $(GDB_INTERFACES) $(DBG_INTERFACES)
 gdb_IMPL		:= gdb gdb-arm
 endif
 
-CXXSRC_KERNEL		:= kernel_panic.cc 
+CXXSRC_KERNEL		:= kernel_panic.cc
 ASSRC_KERNEL	  	:= ivt.S
 
 NOOPT			+= $(filter jdb%,\

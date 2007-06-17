@@ -30,13 +30,13 @@ LIBC_SUPPORT_C_amd64           := libc_support.c
 LIBC_SUPPORT_C_arm-sa1000      := libc_support.c
 LIBC_SUPPORT_CC_arm-isg        := libc_support+.cc
 LIBC_SUPPORT_CC_arm-integrator := libc_support+.cc
+LIBC_SUPPORT_CC_arm-rv         := libc_support+.cc
 
 SRC_C		+= exec.c module.c base_critical.c patch.c
 SRC_CC		:= region.cc startup.cc init_kip_v2.cc init_kip_v4.cc
 SRC_C_x86	+= serial.c 
 SRC_C_amd64	+= serial.c
-SRC_CC_arm-l4v2	+= $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_DRV_TYPE))
-ARM_DRV_TYPE	?= sa1000
+SRC_CC_arm-l4v2	+= $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_PLATFORM_TYPE))
 
 OPTS		 = -g -Os $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 
@@ -44,14 +44,15 @@ LINK_ADDR	 = 0x00100000
 MOD_ADDR         = 0x02000000
 SRC_S		:= crt0.S
 ifeq ($(ARCH),arm)
-DRV_LIBS	:= -larm_drv-$(ARM_DRV_TYPE) -larm_uart -lcxx_base -lcxx_io -lcxx_io_kdebug
-CPPFLAGS	+= -DARCH_arm_$(ARM_DRV_TYPE)
+ifeq ($(ARM_PLATFORM_TYPE),)
+$(error For ARM architecture builds, ARM_PLATFORM_TYPE must be set to some valid platform name)
+endif
+DRV_LIBS	:= -larm_drv-$(ARM_PLATFORM_TYPE) -larm_uart -lcxx_base -lcxx_io -lcxx_io_kdebug
+CPPFLAGS	+= -DARCH_arm_$(ARM_PLATFORM_TYPE)
 endif
 CRT0		 =
 LDSCRIPT	 = bootstrap.ld
 LDNMAGIC	 =
-
-PRIVATE_INCDIR	+= $(OBJ_BASE)/include/l4/arm_drivers
 
 vpath serial.c        $(SRC_DIR)/ARCH-x86
 vpath bootstrap.ld.in $(SRC_DIR)/ARCH-$(ARCH)
@@ -108,8 +109,8 @@ else
 CPPFLAGS	+= -DPLACE_MODULES_AT_MODADDR
 endif
 
-ifneq ($(MEM),)
-CPPFLAGS	+= -DMEMORY=$(MEM)
+ifneq ($(RAM_SIZE_MB),)
+CPPFLAGS	+= -DRAM_SIZE_MB=$(RAM_SIZE_MB)
 endif
 
 ifeq ($(ARCH),arm)
@@ -127,15 +128,12 @@ endif
 include $(L4DIR)/mk/prog.mk
 
 CXXFLAGS += -fno-rtti -fno-exceptions
-
-ifneq ($(GCCMAJORVERSION),3)
-CXXFLAGS += -fno-threadsafe-statics
-endif
+CXXFLAGS += $(call checkcxx,-fno-threadsafe-statics)
 
 ifneq ($(SYSTEM),)
  ifneq ($(ENTRY),)
   ifeq ($(filter clean cleanall,$(MAKECMDGOALS)),)
-    BUILD_DUMMY := $(shell SEARCHPATH=$(LOCAL_SEARCH_PATH):$(MODULE_PATH) \
+    BUILD_DUMMY := $(shell SEARCHPATH=$(BOOTSTRAP_SEARCH_PATH):$(MODULE_PATH) \
                            CROSS_COMPILE=$(SYSTEM_TARGET) \
 			   OPT_ARCH=$(ARCH) \
 			   OPT_COMPRESS=$(COMPRESS) \
@@ -167,7 +165,7 @@ LIBCLIB_uc	 = -nostdlib $(GCCLDNOSTDLIB) -ll4util -luc_c $(GCCLIB)
 LIBCLIBS	 = $(LIBCLIB_$(LIBC_TYPE))
 
 SRC_C		+= $(LIBC_SUPPORT_C_$(ARCH)) \
-		   $(LIBC_SUPPORT_C_$(ARCH)-$(ARM_DRV_TYPE))
+		   $(LIBC_SUPPORT_C_$(ARCH)-$(ARM_PLATFORM_TYPE))
 
 ifneq ($(SYSTEM),)
 

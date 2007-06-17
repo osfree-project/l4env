@@ -67,7 +67,7 @@ Deadline_timeout::expired()
         }
 
       // Next period begins now
-      set (_wakeup + _owner->period());
+      set (_wakeup + _owner->period(), _owner->cpu());
       _owner->switch_sched (_owner->sched_context()->next());
       _owner->state_change_dirty (~Thread_delayed_deadline, Thread_ready);
       _owner->ready_enqueue();
@@ -82,7 +82,7 @@ Deadline_timeout::expired()
       // If in periodic mode, enforce next period
       if (EXPECT_TRUE (_mode & Context::Periodic))
         {
-          set (_wakeup + _owner->period());
+          set (_wakeup + _owner->period(), _owner->cpu());
           _owner->switch_sched (_owner->sched_context()->next());
         }
     }

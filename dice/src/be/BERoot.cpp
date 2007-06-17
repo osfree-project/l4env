@@ -428,29 +428,24 @@ CBERoot::CreateBackEnd(CFEConstructedType *pFEType)
  * The root adds to the header files everything it own. It iterates over its
  * members and calls their respective AddToHeader functions.
  */
-void CBERoot::AddToHeader(CBEHeaderFile *pHeader)
+void CBERoot::AddToHeader(CBEHeaderFile* pHeader)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%s) called\n", __func__,
         pHeader->GetFileName().c_str());
     // constants
-    for_each(m_Constants.begin(),
-	m_Constants.end(),
+    for_each(m_Constants.begin(), m_Constants.end(),
 	std::bind2nd(std::mem_fun(&CBEConstant::AddToHeader), pHeader));
     // types
-    for_each(m_Typedefs.begin(),
-	m_Typedefs.end(),
+    for_each(m_Typedefs.begin(), m_Typedefs.end(),
 	std::bind2nd(std::mem_fun(&CBETypedef::AddToHeader), pHeader));
     // tagged declarations
-    for_each(m_TypeDeclarations.begin(),
-	m_TypeDeclarations.end(),
+    for_each(m_TypeDeclarations.begin(), m_TypeDeclarations.end(),
 	std::bind2nd(std::mem_fun(&CBEType::AddToHeader), pHeader));
     // Classs
-    for_each(m_Classes.begin(),
-	m_Classes.end(),
+    for_each(m_Classes.begin(), m_Classes.end(),
 	std::bind2nd(std::mem_fun(&CBEClass::AddToHeader), pHeader));
     // libraries
-    for_each(m_Namespaces.begin(),
-	m_Namespaces.end(),
+    for_each(m_Namespaces.begin(), m_Namespaces.end(),
 	std::bind2nd(std::mem_fun(&CBENameSpace::AddToHeader), pHeader));
 }
 
@@ -461,7 +456,7 @@ void CBERoot::AddToHeader(CBEHeaderFile *pHeader)
  * The root adds to the implementation file only the members of the Classs
  * and libraries.
  */
-void CBERoot::AddToImpl(CBEImplementationFile *pImpl)
+void CBERoot::AddToImpl(CBEImplementationFile* pImpl)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called\n", __func__,
         pImpl->GetFileName().c_str());
@@ -485,7 +480,7 @@ void CBERoot::AddToImpl(CBEImplementationFile *pImpl)
  * only add the opcodes of the current IDL file, it is used as reference to
  * find these classes and namespaces
  */
-bool CBERoot::AddOpcodesToFile(CBEHeaderFile *pHeader, CFEFile *pFEFile)
+bool CBERoot::AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"%s(header: %s, file: %s) called\n", __func__,

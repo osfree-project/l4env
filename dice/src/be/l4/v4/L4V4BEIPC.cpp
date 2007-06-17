@@ -48,7 +48,7 @@ CL4V4BEIPC::~CL4V4BEIPC()
  *  \param pFunction the function to call for
  */
 void
-CL4V4BEIPC::WriteCall(CBEFile* pFile,
+CL4V4BEIPC::WriteCall(CBEFile& pFile,
     CBEFunction* pFunction)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -61,7 +61,7 @@ CL4V4BEIPC::WriteCall(CBEFile* pFile,
         sTimeout = pNF->GetTimeoutClientVariable(pFunction);
 
     // MsgTag Call(ThreadId to)
-    *pFile << "\t" << sReturn << " = L4_Call_Timeouts ( *" << sServerID << ", "
+    pFile << "\t" << sReturn << " = L4_Call_Timeouts ( *" << sServerID << ", "
         << sTimeout << ", L4_Never );\n";
 }
 
@@ -70,7 +70,7 @@ CL4V4BEIPC::WriteCall(CBEFile* pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4V4BEIPC::WriteReceive(CBEFile* pFile,
+CL4V4BEIPC::WriteReceive(CBEFile& pFile,
     CBEFunction* pFunction)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -83,7 +83,7 @@ CL4V4BEIPC::WriteReceive(CBEFile* pFile,
         sTimeout = pNF->GetTimeoutClientVariable(pFunction);
 
     // MsgTag Receive(ThreadId from) (timeout: never)
-    *pFile << "\t" << sReturn << " = L4_Receive_Timeout (*" << sServerID <<
+    pFile << "\t" << sReturn << " = L4_Receive_Timeout (*" << sServerID <<
         ", " << sTimeout << ");\n";
 }
 
@@ -94,7 +94,7 @@ CL4V4BEIPC::WriteReceive(CBEFile* pFile,
  *  \param bSendShortIPC true if an short IPC is sent
  */
 void
-CL4V4BEIPC::WriteReplyAndWait(CBEFile* pFile,
+CL4V4BEIPC::WriteReplyAndWait(CBEFile& pFile,
     CBEFunction* /*pFunction*/,
     bool /*bSendFlexpage*/,
     bool /*bSendShortIPC*/)
@@ -104,7 +104,7 @@ CL4V4BEIPC::WriteReplyAndWait(CBEFile* pFile,
     string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     // MsgTag ReplyWait(ThreadId to, ThreadId& from) (snd timeout: 0, rcv timeout: never)
-    *pFile << "\t" << sReturn << " = L4_ReplyWait (*" << sServerID << ", " <<
+    pFile << "\t" << sReturn << " = L4_ReplyWait (*" << sServerID << ", " <<
         sServerID << ");\n";
 }
 
@@ -113,7 +113,7 @@ CL4V4BEIPC::WriteReplyAndWait(CBEFile* pFile,
  *  \param pFunction the function to write for
  */
 void 
-CL4V4BEIPC::WriteSend(CBEFile* pFile,
+CL4V4BEIPC::WriteSend(CBEFile& pFile,
     CBEFunction* /*pFunction*/)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -121,7 +121,7 @@ CL4V4BEIPC::WriteSend(CBEFile* pFile,
     string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     // MsgTag Send(ThreadId to) (timeout: never)
-    *pFile << "\t" << sReturn << " = L4_Send (*" << sServerID << ");\n";
+    pFile << "\t" << sReturn << " = L4_Send (*" << sServerID << ");\n";
 }
 
 /** \brief writes the IPC wait
@@ -129,7 +129,7 @@ CL4V4BEIPC::WriteSend(CBEFile* pFile,
  *  \param pFunction the function to write for
  */
 void
-CL4V4BEIPC::WriteWait(CBEFile* pFile,
+CL4V4BEIPC::WriteWait(CBEFile& pFile,
     CBEFunction* /*pFunction*/)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -137,7 +137,7 @@ CL4V4BEIPC::WriteWait(CBEFile* pFile,
     string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     // MsgTag Wait(ThreadId to) (timeout: never)
-    *pFile << "\t" << sReturn << " = L4_Wait (" << sServerID << ");\n";
+    pFile << "\t" << sReturn << " = L4_Wait (" << sServerID << ");\n";
 }
 
 /** \brief writes a reply
@@ -145,7 +145,7 @@ CL4V4BEIPC::WriteWait(CBEFile* pFile,
  *  \param pFunction the funtion to write for
  */
 void
-CL4V4BEIPC::WriteReply(CBEFile* /*pFile*/,
+CL4V4BEIPC::WriteReply(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {}
 
@@ -154,7 +154,7 @@ CL4V4BEIPC::WriteReply(CBEFile* /*pFile*/,
  *  \param pFunction the funtion to write for
  */
 void
-CL4V4BEIPC::WriteInitialization(CBEFile* /*pFile*/, 
+CL4V4BEIPC::WriteInitialization(CBEFile& /*pFile*/, 
     CBEFunction* /*pFunction*/)
 {}
 
@@ -163,7 +163,7 @@ CL4V4BEIPC::WriteInitialization(CBEFile* /*pFile*/,
  *  \param pFunction the funtion to write for
  */
 void
-CL4V4BEIPC::WriteBind(CBEFile* /*pFile*/, 
+CL4V4BEIPC::WriteBind(CBEFile& /*pFile*/, 
     CBEFunction* /*pFunction*/)
 {}
 
@@ -172,7 +172,7 @@ CL4V4BEIPC::WriteBind(CBEFile* /*pFile*/,
  *  \param pFunction the funtion to write for
  */
 void
-CL4V4BEIPC::WriteCleanup(CBEFile* /*pFile*/, 
+CL4V4BEIPC::WriteCleanup(CBEFile& /*pFile*/, 
     CBEFunction* /*pFunction*/)
 {}
 

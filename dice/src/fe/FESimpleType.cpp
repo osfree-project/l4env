@@ -28,7 +28,6 @@
 
 #include "FESimpleType.h"
 #include "Compiler.h"
-#include "File.h"
 #include "Visitor.h"
 
 CFESimpleType::CFESimpleType(unsigned int nType,
@@ -71,6 +70,26 @@ CObject *CFESimpleType::Clone()
 bool CFESimpleType::IsUnsigned()
 {
     return m_bUnSigned;
+}
+
+/** \brief test a type whether it is a constructed type or not
+ *  \return true 
+ */
+bool CFESimpleType::IsConstructedType()
+{
+    return false;
+}
+
+/** \brief test if a type is a pointered type
+ *  \return true if it is a pointered type, false if not
+ */
+bool CFESimpleType::IsPointerType()
+{
+    // if type is simple -> return false
+    if (m_nType == TYPE_VOID_ASTERISK ||
+	m_nType == TYPE_CHAR_ASTERISK)
+	return true;
+    return false;
 }
 
 /** \brief accepts the iterations of the visitors

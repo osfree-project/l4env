@@ -93,19 +93,6 @@ ABS2REL		= $(L4DIR)/tool/bin/abs2rel.sh
 # it's optional to be able to set it as environment variable
 FIASCOUX	?= $(L4DIR)/../kernel/fiasco/build-ux/fiasco
 
-# per arch DEFAULT_RELOC handling
-RAM_BASE_arm_int = 0x00000000
-RAM_BASE_arm_sa  = 0xc0000000
-RAM_BASE_arm_pxa = 0xa0000000
-RAM_BASE         = $(firstword  $(RAM_BASE_$(ARCH)_$(CPU)) \
-				$(RAM_BASE_$(ARCH)) 0x0)
-
-DEFINES         += -DRAM_BASE=$(RAM_BASE)
-
-
-default_reloc_base = $(firstword $(DEFAULT_RELOC_$(1)) $(DEFAULT_RELOC_$(ARCH)) $(DEFAULT_RELOC))
-default_reloc = $(if $(call default_reloc_base,$(1)), $(shell printf "0x%x" $$(($(RAM_BASE) + $(call default_reloc_base,$(1))))),)
-
 # functions that are handy
 absfilename_target_dir_needs_to_exist = $(foreach w,$(1),$(addsuffix /$(notdir $(w)),$(shell cd $(dir $(w)) 2>/dev/null&&$(PWDCMD))))
 absfilename     = $(shell $(L4DIR)/mk/rel2abs.sh $(1))
@@ -186,6 +173,8 @@ include $(BID_ROOT_CONF)
 endif
 endif
 
+-include $(L4DIR)/Makeconf.$(CONFIG_LABEL)
+
 -include $(OBJ_BASE)/Makeconf.local
 ifneq ($(PKGDIR),)
 -include $(PKGDIR)/Makeconf.local
@@ -236,7 +225,10 @@ MAKEDEP=$(LD_PRELOAD)=$(BID_LIBGENDEP) GENDEP_TARGET=$(if $(2),$(2),$@) \
 		    GENDEP_BINARY=$(1) $(if $(3),GENDEP_DEPFILE=$(3))
 endif
 
+# macros used here and in packages
 checkcc   = $(shell if $(CC) $(1) -o /dev/null -c -x c \
+                    /dev/null > /dev/null 2>&1; then echo "$(1)"; fi)
+checkcxx  = $(shell if $(CXX) $(1) -o /dev/null -c -x c++ \
                     /dev/null > /dev/null 2>&1; then echo "$(1)"; fi)
 
 # the gcc specific variables: version, base dir, include dir, gcc lib
@@ -288,6 +280,20 @@ endif
 ifeq ($(USE_TASKLIB),y)
 DEFINES		+= -DUSE_TASKLIB=y
 endif
+
+ifeq ($(ARCH),arm)
+ifeq ($(RAM_BASE),)
+$(error RAM_BASE not given, needed for ARM architecture builds.)
+endif
+else #arch != arm
+  RAM_BASE	= 0x0
+endif
+
+DEFINES         += -DRAM_BASE=$(RAM_BASE)
+
+default_reloc_base = $(firstword $(DEFAULT_RELOC_$(1)) $(DEFAULT_RELOC_$(ARCH)) $(DEFAULT_RELOC))
+default_reloc = $(if $(call default_reloc_base,$(1)), $(shell printf "0x%x" $$(($(RAM_BASE) + $(call default_reloc_base,$(1))))),)
+
 
 ifneq ($(filter linux l4linux host,$(MODE)),)
 HOST_LINK      := 1
@@ -364,7 +370,9 @@ $(GENERAL_D_LOC): $(L4DIR)/mk/Makeconf
 	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
 		$(OBJ_BASE)/Makeconf.local)
 	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
-		$(SRC_BASE)/Makeconf.local)
+		$(L4DIR)/Makeconf.local)
+	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
+		$(L4DIR)/Makeconf.$(CONFIG_LABEL))
 	$(if $(PKGDIR),$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\
 		$(PKGDIR)/Makeconf.local))
 	$(DEPEND_VERBOSE)$(call BID_DEPEND_GENERAL_D_COND,\

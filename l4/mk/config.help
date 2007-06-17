@@ -393,7 +393,7 @@ BID_GENERATE_MAPFILE
 
 Build system using dietlibc
 USE_DIETLIBC
-  Uses the dietlibc as the main libc.
+  Uses the dietlibc as the main libc (deprecated).
 
 Build system using uClibc
 USE_UCLIBC
@@ -411,3 +411,9 @@ BID_BUILD_DOC
 Build only in l4 directory
 BID_BUILD_L4DIR_ONLY
   Only build in l4 directory, no kernel, no dice.
+
+Name for the configuration
+CONFIG_LABEL
+  Name for the configuration. The build system will also try to include
+  a file Makeconf.<label> from the build directory root and the l4 directory
+  root.

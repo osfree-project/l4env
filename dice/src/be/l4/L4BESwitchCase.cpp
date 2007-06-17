@@ -59,7 +59,7 @@ CL4BESwitchCase::~CL4BESwitchCase()
  * dynamically allocated memory and have to be freed after the IPC.
  */
 void 
-CL4BESwitchCase::WriteVariableInitialization(CBEFile * pFile, 
+CL4BESwitchCase::WriteVariableInitialization(CBEFile& pFile, 
     DIRECTION_TYPE nDirection)
 {
     // first call the base class
@@ -88,7 +88,7 @@ CL4BESwitchCase::WriteVariableInitialization(CBEFile * pFile,
  * If we have an [out, ref] skip the cleanup here, because it is already
  * registered for "deferred" cleanup.
  */
-void CL4BESwitchCase::WriteCleanup(CBEFile * pFile)
+void CL4BESwitchCase::WriteCleanup(CBEFile& pFile)
 {
     // cleanup indirect variables
     vector<CBETypedDeclarator*>::iterator iter;

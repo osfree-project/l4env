@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEConditionalExpression.h"
-#include "File.h"
 
 CFEConditionalExpression::CFEConditionalExpression(CFEExpression * pCondition, CFEExpression * pBranchTrue, CFEExpression * pBranchFalse)
 :CFEBinaryExpression(EXPR_CONDITIONAL, pBranchTrue, EXPR_NOOPERATOR, pBranchFalse)

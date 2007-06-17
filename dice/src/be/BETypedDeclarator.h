@@ -114,24 +114,24 @@ public:
     bool AddLanguageProperty(string sProperty, string sPropertyString);
     bool FindLanguageProperty(string sProperty, string& sPropertyString);
 
-    void WriteDeclarators(CBEFile * pFile);
+    void WriteDeclarators(CBEFile& pFile);
 
     // delegated to langauge dependent part
-    virtual void WriteDefinition(CBEFile *pFile);
-    virtual void WriteDeclaration(CBEFile * pFile);
-    void WriteSetZero(CBEFile* pFile);
-    void WriteGetSize(CBEFile * pFile, 
+    virtual void WriteDefinition(CBEFile& pFile);
+    virtual void WriteDeclaration(CBEFile& pFile);
+    void WriteSetZero(CBEFile& pFile);
+    void WriteGetSize(CBEFile& pFile, 
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
-    void WriteGetMaxSize(CBEFile * pFile, 
+    void WriteGetMaxSize(CBEFile& pFile, 
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
-    void WriteCleanup(CBEFile* pFile, bool bDeferred);
-    void WriteType(CBEFile * pFile, bool bUseConst = true);
-    void WriteIndirect(CBEFile * pFile);
-    void WriteIndirectInitialization(CBEFile * pFile, bool bMemory);
-    void WriteInitDeclaration(CBEFile* pFile, string sInitString);
+    void WriteCleanup(CBEFile& pFile, bool bDeferred);
+    void WriteType(CBEFile& pFile, bool bUseConst = true);
+    void WriteIndirect(CBEFile& pFile);
+    void WriteIndirectInitialization(CBEFile& pFile, bool bMemory);
+    void WriteInitDeclaration(CBEFile& pFile, string sInitString);
     // language specific
-    virtual void WriteForwardDeclaration(CBEFile *pFile);
-    virtual void WriteForwardTypeDeclaration(CBEFile * pFile,
+    virtual void WriteForwardDeclaration(CBEFile& pFile);
+    virtual void WriteForwardTypeDeclaration(CBEFile& pFile,
 	bool bUseConst = true);
 
     CBEType* GetTransmitType();
@@ -145,10 +145,10 @@ protected:
     void WarnNoMax(int nSize);
     bool GetSizeOrDimensionOfAttr(ATTR_TYPE nAttr, int& nSize, int& nDimension);
 
-    virtual void WriteAttributes(CBEFile * pFile);
-    virtual void WriteConstPrefix(CBEFile *pFile);
-    virtual void WriteProperties(CBEFile *pFile);
-    virtual bool DoAllocateMemory(CBEFile *pFile);
+    virtual void WriteAttributes(CBEFile& pFile);
+    virtual void WriteConstPrefix(CBEFile& pFile);
+    virtual void WriteProperties(CBEFile& pFile);
+    virtual bool DoAllocateMemory(CBEFile& pFile);
 
 private:
     bool UsePointer(void);

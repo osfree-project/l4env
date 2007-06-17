@@ -519,7 +519,7 @@ void
 print_e820_map(l4util_mb_info_t *mbi)
 {
   printf("  Bootloader MMAP%s\n", mbi->flags & L4UTIL_MB_MEM_MAP
-                                   ? ":" : "not available.");
+                                   ? ":" : " not available.");
 
   if (mbi->flags & L4UTIL_MB_MEM_MAP)
     {
@@ -802,9 +802,10 @@ startup(l4util_mb_info_t *mbi, l4_umword_t flag,
   l4util_mb_info_t my_mbi;
   memset(&my_mbi, 0, sizeof(my_mbi));
   mbi = &my_mbi;
-  printf("  Memory size is %dMB\n", MEMORY);
+  printf("  Memory size is %dMB\n", RAM_SIZE_MB);
   add_ram(mbi, Region::n(RAM_BASE,
-          (unsigned long long)RAM_BASE + (MEMORY << 20), ".ram", Region::Ram));
+          (unsigned long long)RAM_BASE + (RAM_SIZE_MB << 20), ".ram",
+          Region::Ram));
 #else
 #error Unknown arch!
 #endif

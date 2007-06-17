@@ -91,7 +91,7 @@ public:
     virtual void CreateBackEndType(ATTR_TYPE nType, CBEType *pType);
     virtual CObject * Clone();
 
-    virtual void Write(CBEFile *pFile);
+    virtual void Write(CBEFile& pFile);
     virtual void WriteToStr(string &str);
 
     /** \brief tries to match the attribute type

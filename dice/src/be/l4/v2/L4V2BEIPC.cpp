@@ -65,7 +65,7 @@ CL4V2BEIPC::~CL4V2BEIPC()
  *  \param pFunction the function to write it for
  */
 void 
-CL4V2BEIPC::WriteCall(CBEFile *pFile, 
+CL4V2BEIPC::WriteCall(CBEFile& pFile, 
 	CBEFunction* pFunction)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -85,74 +85,73 @@ CL4V2BEIPC::WriteCall(CBEFile *pFile,
     bool bFlexpage = 
 	pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
     
-    *pFile << "\tl4_ipc_call(*" << sServerID << ",\n";
-    pFile->IncIndent();
-    *pFile << "\t";
+    pFile << "\tl4_ipc_call(*" << sServerID << ",\n";
+    ++pFile << "\t";
     if (IsShortIPC(pFunction, nDirection))
     {
 	if (bFlexpage)
-	    *pFile << "L4_IPC_SHORT_FPAGE";
+	    pFile << "L4_IPC_SHORT_FPAGE";
 	else
-	    *pFile << "L4_IPC_SHORT_MSG";
+	    pFile << "L4_IPC_SHORT_MSG";
         if (bScheduling)
-            *pFile << " | " << sScheduling;
+            pFile << " | " << sScheduling;
     }
     else
     {
         if (bFlexpage || bScheduling)
-	    *pFile << "(" << sMWord << "*)((" << sMWord << ")";
+	    pFile << "(" << sMWord << "*)((" << sMWord << ")";
 
         if (!pMsgBuffer->HasReference())
-	    *pFile << "&";
-	*pFile << sMsgBuffer;
+	    pFile << "&";
+	pFile << sMsgBuffer;
 	    
         if (bFlexpage)
-	    *pFile << "|2";
+	    pFile << "|2";
         if (bScheduling)
-            *pFile << "|" << sScheduling;
+            pFile << "|" << sScheduling;
         if (bFlexpage || bScheduling)
-	    *pFile << ")";
+	    pFile << ")";
     }
-    *pFile << ",\n";
+    pFile << ",\n";
 
-    *pFile << "\t";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
 	    false, false))
-	*pFile << "0";
-    *pFile << ",\n";
-    *pFile << "\t";
+	pFile << "0";
+    pFile << ",\n";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
 	    false, false))
-	*pFile << "0";
-    *pFile << ",\n";
+	pFile << "0";
+    pFile << ",\n";
 	
     nDirection = pFunction->GetReceiveDirection();
     if (IsShortIPC(pFunction, nDirection))
-	*pFile << "\tL4_IPC_SHORT_MSG,\n";
+	pFile << "\tL4_IPC_SHORT_MSG,\n";
     else
     {
-	*pFile << "\t";
+	pFile << "\t";
         if (!pMsgBuffer->HasReference())
-	    *pFile << "&";
-	*pFile << sMsgBuffer << ",\n";
+	    pFile << "&";
+	pFile << sMsgBuffer << ",\n";
     }
 
     string sDummy = pNF->GetDummyVariable();
-    *pFile << "\t";
+    pFile << "\t";
     // if no member for this direction can be found, use dummy
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
 	    true, false))
-	*pFile << "&" << sDummy;
-    *pFile << ",\n";
-    *pFile << "\t";
+	pFile << "&" << sDummy;
+    pFile << ",\n";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
 	    true, false))
-	*pFile << "&" << sDummy;
-    *pFile << ",\n";
+	pFile << "&" << sDummy;
+    pFile << ",\n";
 
-    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+    pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
-    pFile->DecIndent();
+    --pFile;
 }
 
 /** \brief write an IPC receive operation
@@ -160,7 +159,7 @@ CL4V2BEIPC::WriteCall(CBEFile *pFile,
  *  \param pFunction the function to write it for
  */
 void 
-CL4V2BEIPC::WriteReceive(CBEFile* pFile,  
+CL4V2BEIPC::WriteReceive(CBEFile& pFile,  
 	CBEFunction* pFunction)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -179,34 +178,34 @@ CL4V2BEIPC::WriteReceive(CBEFile* pFile,
     assert(pMarshaller);
     CMsgStructType nDirection = pFunction->GetReceiveDirection();
 
-    *pFile << "\t" << "l4_ipc_receive(*(l4_threadid_t*)" << sServerID << ",\n";
-    pFile->IncIndent();
+    pFile << "\t" << "l4_ipc_receive(*(l4_threadid_t*)" << sServerID << ",\n";
+    ++pFile;
 
     if (IsShortIPC(pFunction, nDirection))
-	*pFile << "\tL4_IPC_SHORT_MSG,\n";
+	pFile << "\tL4_IPC_SHORT_MSG,\n";
     else
     {
-	*pFile << "\t";
+	pFile << "\t";
         if (!pMsgBuffer->HasReference())
-	    *pFile << "&";
-	*pFile << sMsgBuffer << ",\n";
+	    pFile << "&";
+	pFile << sMsgBuffer << ",\n";
     }
 
     string sDummy = pNF->GetDummyVariable();
-    *pFile << "\t";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
 	    true, false))
-	*pFile << "&" << sDummy;
-    *pFile << ",\n";
-    *pFile << "\t";
+	pFile << "&" << sDummy;
+    pFile << ",\n";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
 	    true, false))
-	*pFile << "&" << sDummy;
-    *pFile << ",\n";
+	pFile << "&" << sDummy;
+    pFile << ",\n";
 
-    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+    pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
-    pFile->DecIndent();
+    --pFile;
 }
 
 /** \brief write an IPC wait operation
@@ -214,7 +213,7 @@ CL4V2BEIPC::WriteReceive(CBEFile* pFile,
  *  \param pFunction the function to write it for
  */
 void 
-CL4V2BEIPC::WriteWait(CBEFile* pFile, 
+CL4V2BEIPC::WriteWait(CBEFile& pFile, 
 	CBEFunction *pFunction)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -233,32 +232,32 @@ CL4V2BEIPC::WriteWait(CBEFile* pFile,
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
 
-    *pFile << "\tl4_ipc_wait( (l4_threadid_t*)" << sServerID << ",\n";
-    pFile->IncIndent();
+    pFile << "\tl4_ipc_wait( (l4_threadid_t*)" << sServerID << ",\n";
+    ++pFile;
     if (IsShortIPC(pFunction, nDirection))
-	*pFile << "\tL4_IPC_SHORT_MSG,\n";
+	pFile << "\tL4_IPC_SHORT_MSG,\n";
     else
     {
-	*pFile << "\t";
+	pFile << "\t";
         if (!pMsgBuffer->HasReference())
-	    *pFile << "&";
-	*pFile << sMsgBuffer << ",\n";
+	    pFile << "&";
+	pFile << sMsgBuffer << ",\n";
     }
 
     string sDummy = pNF->GetDummyVariable();
-    *pFile << "\t";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
 	    true, false))
-	*pFile << "&" << sDummy;
-    *pFile << ",\n";
-    *pFile << "\t";
+	pFile << "&" << sDummy;
+    pFile << ",\n";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
 	    true, false))
-	*pFile << "&" << sDummy;
-    *pFile << ",\n";
+	pFile << "&" << sDummy;
+    pFile << ",\n";
 
-    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
-    pFile->DecIndent();
+    pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+    --pFile;
 }
 
 /** \brief write an IPC reply and receive operation
@@ -270,7 +269,7 @@ CL4V2BEIPC::WriteWait(CBEFile* pFile,
  *         message buffer should determine this)
  */
 void 
-CL4V2BEIPC::WriteReplyAndWait(CBEFile* pFile, 
+CL4V2BEIPC::WriteReplyAndWait(CBEFile& pFile, 
 	CBEFunction* pFunction, 
 	bool bSendFlexpage, 
 	bool bSendShortIPC)
@@ -291,67 +290,66 @@ CL4V2BEIPC::WriteReplyAndWait(CBEFile* pFile,
     bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE); 
     string sScheduling = pNF->GetScheduleServerVariable();
 
-    *pFile << "\tl4_ipc_reply_and_wait(*" << sServerID << ",\n";
-    pFile->IncIndent();
-    *pFile << "\t";
+    pFile << "\tl4_ipc_reply_and_wait(*" << sServerID << ",\n";
+    ++pFile << "\t";
     if (bSendShortIPC)
     {
-	*pFile << "(const void*)(";
+	pFile << "(const void*)(";
 	if (bSendFlexpage && bScheduling)
-	    *pFile << "(unsigned)";
+	    pFile << "(unsigned)";
         if (bSendFlexpage)
-            *pFile << "L4_IPC_SHORT_FPAGE";
+            pFile << "L4_IPC_SHORT_FPAGE";
 	else
-	    *pFile << "L4_IPC_SHORT_MSG";
+	    pFile << "L4_IPC_SHORT_MSG";
         if (bScheduling)
-            *pFile << " | " << sScheduling;
-	*pFile << ")";
+            pFile << " | " << sScheduling;
+	pFile << ")";
     }
     else
     {
         if (bSendFlexpage || bScheduling)
-            *pFile << "(" << sMWord << "*)((" << sMWord << ")";
-        *pFile << sMsgBuffer;
+            pFile << "(" << sMWord << "*)((" << sMWord << ")";
+        pFile << sMsgBuffer;
         if (bSendFlexpage)
-	    *pFile << "|2";
+	    pFile << "|2";
 	if (bScheduling)
-	    *pFile << "|" << sScheduling;
+	    pFile << "|" << sScheduling;
 	if (bSendFlexpage || bScheduling)
-	    *pFile << ")";
+	    pFile << ")";
     }
-    *pFile << ",\n";
+    pFile << ",\n";
 
     CMsgStructType nDirection = pFunction->GetSendDirection();
-    *pFile << "\t";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
 	    false, false))
-	*pFile << "0";
-    *pFile << ",\n";
-    *pFile << "\t";
+	pFile << "0";
+    pFile << ",\n";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
 	    false, false))
-	*pFile << "0";
-    *pFile << ",\n";
+	pFile << "0";
+    pFile << ",\n";
 
-    *pFile << "\t" << sServerID << ",\n";
-    *pFile << "\t" << sMsgBuffer << ",\n";
+    pFile << "\t" << sServerID << ",\n";
+    pFile << "\t" << sMsgBuffer << ",\n";
 
     nDirection = pFunction->GetReceiveDirection();
     string sDummy = pNF->GetDummyVariable();
-    *pFile << "\t";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
 	    true, false))
-	*pFile << "&" << sDummy;
-    *pFile << ",\n";
-    *pFile << "\t";
+	pFile << "&" << sDummy;
+    pFile << ",\n";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
 	    true, false))
-	*pFile << "&" << sDummy;
-    *pFile << ",\n";
+	pFile << "&" << sDummy;
+    pFile << ",\n";
 
-    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+    pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
-    pFile->DecIndent();
+    --pFile;
 }
 
 /** \brief write an IPC send operation
@@ -359,7 +357,7 @@ CL4V2BEIPC::WriteReplyAndWait(CBEFile* pFile,
  *  \param pFunction the function to write it for
  */
 void 
-CL4V2BEIPC::WriteSend(CBEFile* pFile, 
+CL4V2BEIPC::WriteSend(CBEFile& pFile, 
 	CBEFunction* pFunction)
 {
     CMsgStructType nDirection = pFunction->GetSendDirection();
@@ -380,9 +378,8 @@ CL4V2BEIPC::WriteSend(CBEFile* pFile,
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
 
-    *pFile << "\tl4_ipc_send(*" << sServerID << ",\n";
-    pFile->IncIndent();
-    *pFile << "\t";
+    pFile << "\tl4_ipc_send(*" << sServerID << ",\n";
+    ++pFile << "\t";
     bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
 
     bool bFlexpage = pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0;
@@ -390,44 +387,44 @@ CL4V2BEIPC::WriteSend(CBEFile* pFile,
     if (IsShortIPC(pFunction, nDirection))
     {
 	if (bFlexpage)
-	    *pFile << "L4_IPC_SHORT_FPAGE";
+	    pFile << "L4_IPC_SHORT_FPAGE";
 	else
-	    *pFile << "L4_IPC_SHORT_MSG";
+	    pFile << "L4_IPC_SHORT_MSG";
         if (bScheduling)
-            *pFile << "|" << sScheduling;
+            pFile << "|" << sScheduling;
     }
     else
     {
         if (bFlexpage || bScheduling)
-	    *pFile << "(" << sMWord << "*)((" << sMWord << ")";
+	    pFile << "(" << sMWord << "*)((" << sMWord << ")";
 
         if (!pMsgBuffer->HasReference())
-            *pFile << "&";
-        *pFile << sMsgBuffer;
+            pFile << "&";
+        pFile << sMsgBuffer;
 
         if (bFlexpage)
-	    *pFile << "|2";
+	    pFile << "|2";
         if (bScheduling)
-            *pFile << "|" << sScheduling;
+            pFile << "|" << sScheduling;
         if (bFlexpage || bScheduling)
-            *pFile << ")";
+            pFile << ")";
     }
-    *pFile << ",\n";
+    pFile << ",\n";
 
-    *pFile << "\t";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, 
 	    false, false))
-	*pFile << "0";
-    *pFile << ",\n";
-    *pFile << "\t";
+	pFile << "0";
+    pFile << ",\n";
+    pFile << "\t";
     if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, 
 	    false, false))
-	*pFile << "0";
-    *pFile << ",\n";
+	pFile << "0";
+    pFile << ",\n";
 
-    *pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+    pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
-    pFile->DecIndent();
+    --pFile;
 }
 
 /** \brief write an IPC reply operation
@@ -440,7 +437,7 @@ CL4V2BEIPC::WriteSend(CBEFile* pFile,
  * (opcode).
  */
 void 
-CL4V2BEIPC::WriteReply(CBEFile* pFile, 
+CL4V2BEIPC::WriteReply(CBEFile& pFile, 
 	CBEFunction* pFunction)
 {
     WriteSend(pFile, pFunction);
@@ -559,7 +556,7 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
  *  \param pFunction the funtion to write for
  */
 void
-CL4V2BEIPC::WriteInitialization(CBEFile* /*pFile*/, 
+CL4V2BEIPC::WriteInitialization(CBEFile& /*pFile*/, 
     CBEFunction* /*pFunction*/)
 {}
 
@@ -568,7 +565,7 @@ CL4V2BEIPC::WriteInitialization(CBEFile* /*pFile*/,
  *  \param pFunction the funtion to write for
  */
 void
-CL4V2BEIPC::WriteBind(CBEFile* /*pFile*/, 
+CL4V2BEIPC::WriteBind(CBEFile& /*pFile*/, 
     CBEFunction* /*pFunction*/)
 {}
 
@@ -577,7 +574,7 @@ CL4V2BEIPC::WriteBind(CBEFile* /*pFile*/,
  *  \param pFunction the funtion to write for
  */
 void
-CL4V2BEIPC::WriteCleanup(CBEFile* /*pFile*/, 
+CL4V2BEIPC::WriteCleanup(CBEFile& /*pFile*/, 
     CBEFunction* /*pFunction*/)
 {}
 

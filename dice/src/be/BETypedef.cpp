@@ -146,7 +146,7 @@ CBETypedef::CreateBackEnd(CBEType * pType,
  * A type definition is usually always added to a header file, if it is the
  * respective target file (for the IDL file).
  */
-void CBETypedef::AddToHeader(CBEHeaderFile *pHeader)
+void CBETypedef::AddToHeader(CBEHeaderFile* pHeader)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedef::%s(header: %s) for typedef %s called\n", __func__,
@@ -164,7 +164,7 @@ void CBETypedef::AddToHeader(CBEHeaderFile *pHeader)
  *  \param pFile the file to write to
  */
 void
-CBETypedef::WriteForwardDeclaration(CBEFile *pFile)
+CBETypedef::WriteForwardDeclaration(CBEFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBETypedef::%s called for %s\n", __func__, 
@@ -175,21 +175,21 @@ CBETypedef::WriteForwardDeclaration(CBEFile *pFile)
 	bool bNeedDefine = !m_sDefine.empty();
 	if (bNeedDefine)
 	{
-	    *pFile << "#if !defined(" << m_sDefine << ")\n";
-	    *pFile << "#define " << m_sDefine << "\n";
+	    pFile << "#if !defined(" << m_sDefine << ")\n";
+	    pFile << "#define " << m_sDefine << "\n";
 	}
 	
 	int nSize = GetSize();
-	*pFile << "\t/* size = " << nSize << " bytes == " << ((nSize+3) >> 2)
+	pFile << "\t/* size = " << nSize << " bytes == " << ((nSize+3) >> 2)
 	    << " dwords */\n";
 	
-	*pFile << "\ttypedef ";
+	pFile << "\ttypedef ";
 	CBETypedDeclarator::WriteForwardDeclaration(pFile);
-	*pFile << ";\n";
+	pFile << ";\n";
 	
 	if (bNeedDefine)
 	{
-	    *pFile << "#endif /* " << m_sDefine << " */\n\n";
+	    pFile << "#endif /* " << m_sDefine << " */\n\n";
 	}
     }
     else
@@ -203,7 +203,7 @@ CBETypedef::WriteForwardDeclaration(CBEFile *pFile)
  *  \param pFile the file to write to
  */
 void
-CBETypedef::WriteDefinition(CBEFile *pFile)
+CBETypedef::WriteDefinition(CBEFile& pFile)
 {
     if (GetType()->IsConstructedType())
     {
@@ -213,16 +213,16 @@ CBETypedef::WriteDefinition(CBEFile *pFile)
 	bool bNeedDefine = !m_sDefine.empty();
 	if (bNeedDefine)
 	{
-	    *pFile << "#if !defined(" << sDefine << ")\n";
-	    *pFile << "#define " << sDefine << "\n";
+	    pFile << "#if !defined(" << sDefine << ")\n";
+	    pFile << "#define " << sDefine << "\n";
 	}
 	
 	CBETypedDeclarator::WriteDefinition(pFile);
-	*pFile << ";\n";
+	pFile << ";\n";
 	
 	if (bNeedDefine)
 	{
-	    *pFile << "#endif /* " << sDefine << " */\n\n";
+	    pFile << "#endif /* " << sDefine << " */\n\n";
 	}
     }
 }
@@ -234,9 +234,9 @@ CBETypedef::WriteDefinition(CBEFile *pFile)
  * optional attributes.
  */
 void
-CBETypedef::WriteDeclaration(CBEFile * pFile)
+CBETypedef::WriteDeclaration(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
 	return;
     
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s called for %s\n", __func__,
@@ -244,21 +244,21 @@ CBETypedef::WriteDeclaration(CBEFile * pFile)
     bool bNeedDefine = !m_sDefine.empty();
     if (bNeedDefine)
     {
-	*pFile << "#if !defined(" << m_sDefine << ")\n";
-	*pFile << "#define " << m_sDefine << "\n";
+	pFile << "#if !defined(" << m_sDefine << ")\n";
+	pFile << "#define " << m_sDefine << "\n";
     }
     
     int nSize = GetSize();
-    *pFile << "\t/* size = " << nSize << " bytes == " << ((nSize+3) >> 2) <<
+    pFile << "\t/* size = " << nSize << " bytes == " << ((nSize+3) >> 2) <<
 	" dwords */\n";
     
-    *pFile << "\ttypedef ";
+    pFile << "\ttypedef ";
     CBETypedDeclarator::WriteDeclaration(pFile);
-    *pFile << ";\n";
+    pFile << ";\n";
     
     if (bNeedDefine)
     {
-	*pFile << "#endif /* " << m_sDefine << " */\n\n";
+	pFile << "#endif /* " << m_sDefine << " */\n\n";
     }
     
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s returned\n", __func__);

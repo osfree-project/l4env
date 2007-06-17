@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <math.h>
+#include <l4/util/atomic.h> // l4util_xchg32
 #include <l4/util/util.h>
 #include <l4/util/rand.h>
 #include <l4/util/rdtsc.h>
@@ -37,6 +38,8 @@ static void* share_addr = 0;
 static unsigned long share_size = 0;
 
 static l4_threadid_t master;
+
+const int l4thread_max_threads = 128;
 
 static void work(void)
 {
@@ -75,6 +78,7 @@ static void worker_thread(void* param)
     while (!(*running))
 	l4_sleep(1);
 
+    LOG("Client %ld started. Performing test-run ...", data->thread_nb);
     // test run, to ensure that we have everything in cache and mapped.
     runs = 10;
     while (runs--)
@@ -98,7 +102,7 @@ static void worker_thread(void* param)
     }
     runs = 0;
 
-    printf("Client %ld started.\n", data->thread_nb);
+    LOG("Client %ld started. Performing measure ...", data->thread_nb);
     while (*running)
     {
 	int nlht, lht;

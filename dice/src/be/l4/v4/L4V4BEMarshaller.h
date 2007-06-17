@@ -46,13 +46,13 @@ public:
 protected:
     virtual bool DoSkipParameter(CBEFunction *pFunction, 
 	CBETypedDeclarator *pParameter, DIRECTION_TYPE nDirection);
-    virtual bool MarshalRefstring(CBETypedDeclarator *pParameter, 
+    virtual bool MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter, 
 	CDeclStack* pStack);
-    virtual void WriteRefstringCastMember(DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
+    virtual void WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember);
 
 protected:
-    virtual bool MarshalZeroFlexpage(CBETypedDeclarator *pMember);
+    virtual bool MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember);
     
 };
 

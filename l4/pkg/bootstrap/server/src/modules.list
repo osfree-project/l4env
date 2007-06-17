@@ -60,6 +60,7 @@ bin dm_phys -v
 bin simple_ts -t 10
 bin bmodfs
 data  libloader.s.so
+data  libld-l4.s.so
 data  shared_test
 bin loader --fprov=BMODFS shared_test
 
@@ -70,6 +71,7 @@ bin dm_phys -v
 bin simple_ts -t 10
 bin bmodfs
 data  libloader.s.so
+data  libld-l4.s.so
 data  shared_test
 data  vmlinuz26.arm
 data  rd
@@ -95,6 +97,7 @@ bin      v2/l4vfs_log
 bin      v2/fstab -c/log -v10 -b/ -m/log
 bin      v2/bmodfs
 data     v2/libloader.s.so
+data     v2/libld-l4.s.so
 data     cfg/ldr_run.bmodfs
 data     v2/run
 data     lx/vmlinuz26

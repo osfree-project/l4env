@@ -40,26 +40,26 @@ public:
     CTrace() {}
     virtual ~CTrace() {}
     
-    virtual void DefaultIncludes(CBEFile *pFile) = 0;
+    virtual void DefaultIncludes(CBEFile& pFile) = 0;
     virtual void AddLocalVariable(CBEFunction *pFunction) = 0;
-    virtual void VariableDeclaration(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void BeforeCall(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void AfterCall(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void InitServer(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void BeforeLoop(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void BeforeDispatch(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void AfterDispatch(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void BeforeReplyOnly(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void AfterReplyOnly(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void BeforeReplyWait(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void AfterReplyWait(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void BeforeComponent(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void AfterComponent(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void BeforeMarshalling(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void AfterMarshalling(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void BeforeUnmarshalling(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void AfterUnmarshalling(CBEFile *pFile, CBEFunction *pFunction) = 0;
-    virtual void WaitCommError(CBEFile*, CBEFunction*) = 0;
+    virtual void VariableDeclaration(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void BeforeCall(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void AfterCall(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void InitServer(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void BeforeLoop(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void AfterDispatch(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void BeforeReplyOnly(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void AfterReplyOnly(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void BeforeReplyWait(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void AfterReplyWait(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void BeforeComponent(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void AfterComponent(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void BeforeMarshalling(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void AfterMarshalling(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void BeforeUnmarshalling(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void AfterUnmarshalling(CBEFile& pFile, CBEFunction *pFunction) = 0;
+    virtual void WaitCommError(CBEFile& , CBEFunction*) = 0;
 };
 
 #endif /* __DICE_TRACE_H__ */

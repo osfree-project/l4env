@@ -314,7 +314,7 @@ Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code,
   restore_receiver_state(orig_partner, orig_rcv_regs);
   state_add(orig_ipc_state);
   if (orig_timeout)
-    orig_timeout->set_again();
+    orig_timeout->set_again(cpu());
 
   LOG_PF_RES_USER;
 
@@ -758,7 +758,7 @@ Ipc_err Thread::do_send_wait (Thread *partner, L4_timeout snd_t)
       Proc::preemption_point();
       
       set_timeout (&timeout);
-      timeout.set (tval);
+      timeout.set (tval, cpu());
     }
 
   do
@@ -966,7 +966,7 @@ void Thread::goto_sleep(L4_timeout const &t)
       if (EXPECT_TRUE((tval != 0)))
 	{
 	  set_timeout (&timeout);
-	  timeout.set (tval);
+	  timeout.set (tval, cpu());
 	}
       else // timeout already hit
 	state_change_dirty(~Thread_ipc_in_progress, Thread_ready);
@@ -1061,7 +1061,7 @@ Thread::wake_receiver (Thread *receiver)
     {
       state_change_dirty (~Thread_delayed_ipc, 0);
       switch_sched (sched_context()->next());
-      _deadline_timeout.set (Timer::system_clock() + period());
+      _deadline_timeout.set (Timer::system_clock() + period(), cpu());
     }
 
   // Receiver's deadline timeout already hit
@@ -1072,7 +1072,7 @@ Thread::wake_receiver (Thread *receiver)
       receiver->state_change_dirty (~Thread_delayed_ipc, 0);   
       receiver->switch_sched (receiver->sched_context()->next());
       receiver->_deadline_timeout.set (Timer::system_clock() +
-                                       receiver->period());
+                                       receiver->period(), receiver->cpu());
     }
 
   receiver->state_change_dirty (~(Thread_ipc_mask|Thread_delayed_ipc),

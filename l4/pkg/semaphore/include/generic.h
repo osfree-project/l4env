@@ -20,10 +20,8 @@
 /* L4 includes */
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
-#include <l4/sys/kdebug.h>
 #include <l4/util/atomic.h>
 #include <l4/env/cdefs.h>
-#include <l4/thread/thread.h>
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
 
@@ -163,73 +161,4 @@ l4semaphore_down(l4semaphore_t * sem)
 	l4env_perror("L4semaphore: block IPC failed", ret);
     }
 }
-
-
-/*****************************************************************************
- * decrement semaphore counter, return error if semaphore locked
- *****************************************************************************/
-L4_INLINE int
-l4semaphore_try_down(l4semaphore_t * sem)
-{
-  int old,tmp;
-
-  /* try to decrement the semaphore counter */
-  do
-    {
-      old = sem->counter;
-
-      if (old <= 0)
-	/* semaphore already locked */
-	return 0;
-
-      tmp = old - 1;
-    }
-  /* retry if someone else also modified the counter */
-  while (!l4util_cmpxchg32((l4_uint32_t *)&sem->counter, old, tmp));
-
-  /* decremented semaphore counter */
-  return 1;
-}
-
-/*****************************************************************************
- * decrement semaphore counter, block for a given time if semaphore locked
- *****************************************************************************/
-L4_INLINE int
-l4semaphore_down_timed(l4semaphore_t * sem, unsigned time)
-{
-  int old,tmp,ret;
-  l4_umword_t dummy;
-  l4_msgdope_t result;
-
-  /* decrement counter, check result */
-  do
-    {
-      old = sem->counter;
-      tmp = old - 1;
-    }
-  /* retry if someone else also modified the counter */
-  while (!l4util_cmpxchg32((l4_uint32_t *)&sem->counter, old, tmp));
-
-  if (tmp < 0)
-    {
-      /* we did not get the semaphore, block */
-      ret = l4_ipc_call(l4semaphore_thread_l4_id,
-			L4_IPC_SHORT_MSG,L4SEMAPHORE_BLOCK,
-			(l4_umword_t)sem,
-			L4_IPC_SHORT_MSG, &dummy, &dummy,
-			l4_timeout(L4_IPC_TIMEOUT_NEVER,
-			  l4util_micros2l4to(time*1000)), 
-			&result);
-      if (ret != 0)
-	{
-          /* we had a timeout, do semaphore_up to compensate */
-          l4semaphore_up(sem);
-
-	  return 1;
-	}
-    }
-  return 0;
-}
-
-
 #endif /* !_L4_SEMAPHORE_GENERIC_H */

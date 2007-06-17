@@ -564,7 +564,7 @@ interface:
             YYABORT;
         // create interface but do not set as filecomponent: we only need it to be found
         // if scoped name: find libraries first
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+        CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
         string::size_type nScopePos = string::npos;
         CFELibrary *pFELibrary = NULL;
         string sRest = *$3;
@@ -718,7 +718,7 @@ interface:
             YYABORT;
         // create interface but do not set as filecomponent: we only need it to be found
         // if scoped name: find libraries first
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+        CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
         string::size_type nScopePos = string::npos;
         CFELibrary *pFELibrary = NULL;
         string sRest = *$2;
@@ -3139,7 +3139,7 @@ library:
 	CFELibrary *pFEPrevLib = 0;
         if (($7->find("::") != string::npos) || (!pCurFileComponent))
         {
-            CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+            CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
             assert(pRoot);
             pFEPrevLib = pRoot->FindLibrary(*$7);
         }
@@ -3197,7 +3197,7 @@ library:
         CFELibrary *pFEPrevLib  = 0;
         if (($2->find("::") != string::npos) || (!pCurFileComponent))
         {
-            CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+            CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
             assert(pRoot);
             pFEPrevLib = pRoot->FindLibrary(*$2);
         }
@@ -3256,7 +3256,7 @@ library:
         // check if we already have lib with this name
         // if name is scoped, start at root, if not, start at current file
         // component
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+        CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
         assert(pRoot);
         CFELibrary *pFEPrevLib = 0;
         if (($2->find("::") != string::npos) || (!pCurFileComponent))
@@ -3689,7 +3689,7 @@ bool
 DoInterfaceCheck(string *pIName, vector<CFEIdentifier*> *pBaseInterfaces, CFEInterface **pFEInterface)
 {
     // test base interfaces
-    CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+    CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
     assert(pRoot);
     if (pBaseInterfaces)
     {

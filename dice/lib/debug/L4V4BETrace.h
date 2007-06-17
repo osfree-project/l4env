@@ -41,13 +41,13 @@ public:
     ~CL4V4BETrace();
     
     virtual void AddLocalVariable(CBEFunction *pFunction);
-    virtual void BeforeCall(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterCall(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeDispatch(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterDispatch(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeReplyWait(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterReplyWait(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void WaitCommError(CBEFile *pFile, CBEFunction *pFunction);
+    virtual void BeforeCall(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterCall(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterDispatch(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeReplyWait(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterReplyWait(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void WaitCommError(CBEFile& pFile, CBEFunction *pFunction);
 };
 
 #endif /* __DICE_BE_L4_L4BETRACE_H__ */

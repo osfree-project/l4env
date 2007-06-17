@@ -126,7 +126,7 @@ CL4V4BEMsgBuffer::Sort(CBEStructType *pStruct)
  *  \param nStructType the type of the message buffer struct
  */
 void
-CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
+CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile,
     CBEFunction *pFunction,
     int nType,
     CMsgStructType nStructType)
@@ -234,23 +234,23 @@ CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
-    *pFile << "\t";
+    pFile << "\t";
     WriteAccessToStruct(pFile, pFunction, nStructType);
-    *pFile << "." << sName << ".X.u = ";
+    pFile << "." << sName << ".X.u = ";
     if (nWords >= 0)
-	*pFile << nWords;
+	pFile << nWords;
     else // variable sized elements
     {
 	// sizeof(<msgbufvar>.<structname>)/sizeof(long)-3
-	*pFile << "sizeof(";
+	pFile << "sizeof(";
 	WriteAccessToStruct(pFile, pFunction, nStructType);
-	*pFile << ")/sizeof(long)-";
-	*pFile << 3 + nStrings*nRefSize;
+	pFile << ")/sizeof(long)-";
+	pFile << 3 + nStrings*nRefSize;
     }
-    *pFile << ";\n";
-    *pFile << "\t";
+    pFile << ";\n";
+    pFile << "\t";
     WriteAccessToStruct(pFile, pFunction, nStructType);
-    *pFile << "." << sName << ".X.t = " << nStrings << ";\n";
+    pFile << "." << sName << ".X.t = " << nStrings << ";\n";
 }
 
 /** \brief writes the initialization of the receive flexpage
@@ -258,7 +258,7 @@ CL4V4BEMsgBuffer::WriteInitialization(CBEFile *pFile,
  *  \param nType the type of the message buffer struct
  */
 void
-CL4V4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
+CL4V4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile,
     CMsgStructType /*nType*/)
 {
     // get environment
@@ -272,7 +272,7 @@ CL4V4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile *pFile,
 	sEnv += ".";
     
     // assign environment's flexpage to message buffer's flexpage
-    *pFile << "\tL4_Accept( L4_MapGrantItems( " << sEnv << "rcv_fpage ) );\n";
+    pFile << "\tL4_Accept( L4_MapGrantItems( " << sEnv << "rcv_fpage ) );\n";
 }
 
 /** \brief adds platform specific opcode member
@@ -376,7 +376,7 @@ CL4V4BEMsgBuffer::GetMsgTagVariable()
  *  \return true if we wrote something, false if not
  */
 bool
-CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
+CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile,
     CBEFunction *pFunction,
     CBEClass *pClass,
     int nIndex,
@@ -401,11 +401,11 @@ CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
 		sFunction = pAttr->GetString();
 	    if (((pAttr = pClass->m_Attributes.Find(
 			    ATTR_INIT_RCVSTRING_CLIENT)) != 0) && 
-		pFile->IsOfFileType(FILETYPE_CLIENT))
+		pFile.IsOfFileType(FILETYPE_CLIENT))
 		sFunction = pAttr->GetString();
 	    if (((pAttr = pClass->m_Attributes.Find(
 			    ATTR_INIT_RCVSTRING_SERVER)) != 0) &&
-		pFile->IsOfFileType(FILETYPE_COMPONENT))
+		pFile.IsOfFileType(FILETYPE_COMPONENT))
 		sFunction = pAttr->GetString();
 	}
 	if (sFunction.empty())
@@ -416,23 +416,23 @@ CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
 
 	// store the string length in the temporary string length variable
 	string sVarName = pNF->GetString(CL4V4BENameFactory::STR_INIT_RCVSTR_VARIABLE, 0);
-	*pFile << "\t" << sVarName << " = ";
+	pFile << "\t" << sVarName << " = ";
 	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
 	    nIndex);
-	*pFile << ".X.string_length;\n";
+	pFile << ".X.string_length;\n";
 	// call the init function for the indirect string
 	string sMWord = pNF->GetTypeName(TYPE_MWORD, false);
 	CBETypedDeclarator *pEnvVar = pFunction->GetEnvironment();
 	CBEDeclarator *pEnv = pEnvVar->m_Declarators.First();
-	*pFile << "\t" << sFunction << " ( " << nIndex << ", (" << sMWord << "*)&(";
+	pFile << "\t" << sFunction << " ( " << nIndex << ", (" << sMWord << "*)&(";
 	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
 	    nIndex);
-	*pFile << ".X.str.string_ptr), &" << sVarName << ", " << pEnv->GetName() << ");\n";
+	pFile << ".X.str.string_ptr), &" << sVarName << ", " << pEnv->GetName() << ");\n";
 	// store returned size back in string dope
-	*pFile << "\t";
+	pFile << "\t";
 	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
 	    nIndex);
-	*pFile << ".X.string_length = " << sVarName << ";\n";
+	pFile << ".X.string_length = " << sVarName << ";\n";
 
 	// OK, next!
 	return true;
@@ -450,7 +450,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile *pFile,
  * have to set the "we want to receive refstrings" bit afterwards.
  */
 bool
-CL4V4BEMsgBuffer::WriteRefstringInitialization(CBEFile *pFile,
+CL4V4BEMsgBuffer::WriteRefstringInitialization(CBEFile& pFile,
     CMsgStructType nType)
 {
     bool bRefstring = CL4BEMsgBuffer::WriteRefstringInitialization(pFile, nType);
@@ -459,7 +459,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitialization(CBEFile *pFile,
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
 	if (!pFunction)
 	    return false;
-	*pFile << "\tL4_Accept (L4_StringItemsAcceptor);\n";
+	pFile << "\tL4_Accept (L4_StringItemsAcceptor);\n";
     }
     return bRefstring;
 }
@@ -472,7 +472,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitialization(CBEFile *pFile,
  *  \param nType the type of the message buffer struct
  */
 void
-CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
+CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile,
     CBEFunction *pFunction,
     CBETypedDeclarator *pMember,
     int nIndex,
@@ -483,62 +483,62 @@ CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile *pFile,
 	pMember->m_Declarators.First()->GetName());
 
     if (pParameter && (
-	    (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+	    (pFile.IsOfFileType(FILETYPE_CLIENT) &&
 	     pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT)) ||
-	    (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+	    (pFile.IsOfFileType(FILETYPE_COMPONENT) &&
 	     pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER))) )
     {
-	*pFile << "\t";
+	pFile << "\t";
 	WriteAccess(pFile, pFunction, nType, pMember);
-	*pFile << " = L4_StringItem /* " << __func__ << " */ (";
+	pFile << " = L4_StringItem /* " << __func__ << " */ (";
 	// size
 	CBEType *pType = pParameter->GetType();
 	if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS)) ||
 	    (pParameter->m_Attributes.Find(ATTR_LENGTH_IS)))
 	{
 	    if (pType->GetSize() > 1)
-		*pFile << "(";
+		pFile << "(";
 	    pParameter->WriteGetSize(pFile, NULL, pFunction);
 	    if (pType->GetSize() > 1)
 	    {
-		*pFile << ")*sizeof";
+		pFile << ")*sizeof";
 		pType->WriteCast(pFile, false);
 	    }
 	}
 	else
 	    // write max-is
 	    pParameter->WriteGetSize(pFile, NULL, pFunction);
-	*pFile << ", (void *)(";
+	pFile << ", (void *)(";
 	// address
 	CBEDeclarator *pDecl = pParameter->m_Declarators.First();
 	int nStars = pDecl->GetStars();
 	if (!pType->IsPointerType())
 	    nStars--;
 	for (; nStars > 0; nStars--)
-	    *pFile << "*";
-	*pFile << pDecl->GetName() << ") );\n";
+	    pFile << "*";
+	pFile << pDecl->GetName() << ") );\n";
     }
     else
     {
 	bool bUseArray = pMember->m_Declarators.First()->IsArray() &&
 	    pMember->m_Declarators.First()->GetArrayDimensionCount() > 0;
-	*pFile << "\t";
+	pFile << "\t";
 	WriteAccess(pFile, pFunction, nType, pMember);
 	if (bUseArray)
-	    *pFile << "[" << nIndex << "]";
-	*pFile << ".X.str.string_ptr = ";
+	    pFile << "[" << nIndex << "]";
+	pFile << ".X.str.string_ptr = ";
 	CBEContext::WriteMalloc(pFile, pFunction);
-	*pFile << "(";
+	pFile << "(";
 	WriteMaxRefstringSize(pFile, pFunction, pMember, pParameter, nIndex);
-	*pFile << ");\n";
+	pFile << ");\n";
 
-	*pFile << "\t";
+	pFile << "\t";
 	WriteAccess(pFile, pFunction, nType, pMember);
 	if (bUseArray)
-	    *pFile << "[" << nIndex << "]";
-	*pFile << ".X.string_length = ";
+	    pFile << "[" << nIndex << "]";
+	pFile << ".X.string_length = ";
 	WriteMaxRefstringSize(pFile, pFunction, pMember, pParameter, nIndex);
-	*pFile << ";\n";
+	pFile << ";\n";
     }
 }
 

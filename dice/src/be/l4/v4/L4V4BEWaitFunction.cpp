@@ -75,13 +75,13 @@ CL4V4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
  * message buffer.
  */
 void 
-CL4V4BEWaitFunction::WriteUnmarshalling(CBEFile * pFile)
+CL4V4BEWaitFunction::WriteUnmarshalling(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     // store message
-    *pFile << "\tL4_MsgStore ( " << sMsgTag << ", (L4_Msg_t*) &" << sMsgBuffer
+    pFile << "\tL4_MsgStore ( " << sMsgTag << ", (L4_Msg_t*) &" << sMsgBuffer
 	<< " );\n";
 
     CBEWaitFunction::WriteUnmarshalling(pFile);
@@ -96,15 +96,14 @@ CL4V4BEWaitFunction::WriteUnmarshalling(CBEFile * pFile)
  * L4_IPC_ERROR(result).
  */
 void
-CL4V4BEWaitFunction::WriteIPCErrorCheck(CBEFile * pFile)
+CL4V4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sResult = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
-    *pFile << "\tif (L4_IpcFailed (" << sResult << "))\n" <<
+    pFile << "\tif (L4_IpcFailed (" << sResult << "))\n" <<
               "\t{\n";
-    pFile->IncIndent();
     // env.major = CORBA_SYSTEM_EXCEPTION;
     // env.repos_id = DICE_IPC_ERROR;
     string sSetFunc;
@@ -113,34 +112,31 @@ CL4V4BEWaitFunction::WriteIPCErrorCheck(CBEFile * pFile)
         sSetFunc = "CORBA_server_exception_set";
     else
         sSetFunc = "CORBA_exception_set";
-    *pFile << "\t" << sSetFunc << " (";
+    ++pFile << "\t" << sSetFunc << " (";
     if (pDecl->GetStars() == 0)
-        *pFile << "&";
+        pFile << "&";
     pDecl->WriteName(pFile);
-    *pFile << ",\n";
-    pFile->IncIndent();
-    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
+    pFile << ",\n";
+    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
               "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
               "\t0);\n";
-    pFile->DecIndent();
     // env.ipc_error = L4_IPC_ERROR(result);
     string sEnv;
     if (pDecl->GetStars() == 0)
 	sEnv = "&";
     sEnv += pDecl->GetName();
-    *pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_ErrorCode();\n";
+    --pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_ErrorCode();\n";
     // return
     WriteReturn(pFile);
     // close }
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 
 /** \brief writes opcode check code
  *  \param pFile the file to write to
  */
 void
-CL4V4BEWaitFunction::WriteOpcodeCheck(CBEFile *pFile)
+CL4V4BEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
 {
     /* if the noopcode option is set, we cannot check for the correct opcode */
     if (m_Attributes.Find(ATTR_NOOPCODE))
@@ -159,20 +155,18 @@ CL4V4BEWaitFunction::WriteOpcodeCheck(CBEFile *pFile)
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
-    *pFile << "\tif (L4_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ") != " 
+    pFile << "\tif (L4_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ") != " 
 	<< m_sOpcodeConstName << ")\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    pFile << "\t{\n";
     string sException = pNF->GetCorbaEnvironmentVariable();
-    *pFile << "\t" << sSetFunc << "(" << sException << ",\n";
-    pFile->IncIndent();
-    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
-    *pFile << "\tCORBA_DICE_EXCEPTION_WRONG_OPCODE,\n";
-    *pFile << "\t0);\n";
-    pFile->DecIndent();
+    ++pFile << "\t" << sSetFunc << "(" << sException << ",\n";
+    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+    pFile << "\tCORBA_DICE_EXCEPTION_WRONG_OPCODE,\n";
+    pFile << "\t0);\n";
+    --pFile;
     WriteReturn(pFile);
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile;
+    pFile << "\t}\n";
 }
 
 /** \brief calculates the size of the function's parameters

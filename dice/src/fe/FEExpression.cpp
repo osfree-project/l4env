@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEExpression.h"
-#include "File.h"
 #include <string>
 
 CFEExpression::CFEExpression()

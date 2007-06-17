@@ -55,7 +55,7 @@ protected:
 public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
     virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
-    virtual void WriteReturn(CBEFile * pFile);
+    virtual void WriteReturn(CBEFile& pFile);
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual DIRECTION_TYPE GetReceiveDirection();
@@ -73,9 +73,9 @@ protected:
     virtual int GetReturnSize(DIRECTION_TYPE nDirection);
     virtual int GetFixedReturnSize(DIRECTION_TYPE nDirection);
     virtual int GetMaxReturnSize(DIRECTION_TYPE nDirection);
-    virtual void WriteInvocation(CBEFile * pFile);
-    virtual void WriteVariableInitialization(CBEFile * pFile);
-    virtual void WriteCallParameter(CBEFile *pFile, 
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteCallParameter(CBEFile& pFile, 
 	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
     virtual void AddAfterParameters();
     virtual void AddBeforeParameters();

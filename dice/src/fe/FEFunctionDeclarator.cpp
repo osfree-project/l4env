@@ -29,7 +29,6 @@
 #include "fe/FEFunctionDeclarator.h"
 #include "fe/FEDeclarator.h"
 #include "fe/FETypedDeclarator.h"
-#include "File.h"
 
 CFEFunctionDeclarator::CFEFunctionDeclarator(CFEDeclarator * pDecl,
     vector<CFETypedDeclarator*> * pParams)

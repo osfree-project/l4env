@@ -27,7 +27,6 @@
 
 #include "fe/FESizeOfExpression.h"
 #include "fe/FETypeSpec.h"
-#include "File.h"
 
 CFESizeOfExpression::CFESizeOfExpression()
  : CFEExpression()

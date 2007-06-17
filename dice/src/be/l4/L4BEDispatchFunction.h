@@ -53,7 +53,7 @@ protected:
     CL4BEDispatchFunction(CL4BEDispatchFunction &src);
 
 protected:
-    virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile* pFile);
+    virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile);
 };
 
 #endif

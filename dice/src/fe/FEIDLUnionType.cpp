@@ -30,7 +30,6 @@
 #include "FEUnionCase.h"
 #include "FEFile.h"
 #include "Compiler.h"
-#include "File.h"
 #include <iostream>
 
 CFEIDLUnionType::CFEIDLUnionType(string sTag,

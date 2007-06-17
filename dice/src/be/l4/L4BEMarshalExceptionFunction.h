@@ -54,7 +54,7 @@ protected:
     CL4BEMarshalExceptionFunction(CL4BEMarshalExceptionFunction &src);
 
 protected:
-    virtual void WriteMarshalling(CBEFile* pFile);
+    virtual void WriteMarshalling(CBEFile& pFile);
 };
 
 #endif

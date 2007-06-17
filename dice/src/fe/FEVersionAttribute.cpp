@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEVersionAttribute.h"
-#include "File.h"
 
 CFEVersionAttribute::CFEVersionAttribute(int nMajor, int nMinor):CFEAttribute
     (ATTR_VERSION)

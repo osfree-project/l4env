@@ -42,7 +42,6 @@
 #include "FEAttributeDeclarator.h"
 #include "FELibrary.h"
 #include "Compiler.h"
-#include "File.h"
 #include "Visitor.h"
 #include <string>
 #include <iostream>

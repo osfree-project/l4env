@@ -120,7 +120,7 @@ CBEMarshalExceptionFunction::AddParameter(CFETypedDeclarator * /*pFEParameter*/)
  * and one of the parameters has an OUT or we have an exception to transmit.
  */
 bool
-CBEMarshalExceptionFunction::DoWriteFunction(CBEHeaderFile * pFile)
+CBEMarshalExceptionFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -151,7 +151,7 @@ CBEMarshalExceptionFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * and one of the parameters has an OUT or we have an exception to transmit.
  */
 bool
-CBEMarshalExceptionFunction::DoWriteFunction(CBEImplementationFile * pFile)
+CBEMarshalExceptionFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -250,7 +250,7 @@ CBEMarshalExceptionFunction::FindParameterType(string sTypeName)
  * unmarshal.
  */
 void 
-CBEMarshalExceptionFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
+CBEMarshalExceptionFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {
 }
 
@@ -261,7 +261,7 @@ CBEMarshalExceptionFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
  * contain a message transfer.
  */
 void
-CBEMarshalExceptionFunction::WriteInvocation(CBEFile * /*pFile*/)
+CBEMarshalExceptionFunction::WriteInvocation(CBEFile& /*pFile*/)
 {
 }
 
@@ -274,7 +274,7 @@ CBEMarshalExceptionFunction::WriteInvocation(CBEFile * /*pFile*/)
  * because otherwise the compiler issues warnings.
  */
 void 
-CBEMarshalExceptionFunction::WriteCallParameter(CBEFile * pFile,
+CBEMarshalExceptionFunction::WriteCallParameter(CBEFile& pFile,
     CBETypedDeclarator * pParameter,
     bool bCallFromSameClass)
 {

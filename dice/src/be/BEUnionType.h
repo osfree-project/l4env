@@ -60,12 +60,12 @@ protected:
     CBEUnionType(CBEUnionType & src);
     
     virtual int GetFixedSize();
-    virtual void WriteGetMaxSize(CBEFile *pFile,
+    virtual void WriteGetMaxSize(CBEFile& pFile,
     	const vector<CBEUnionCase*> *pMembers,
     	vector<CBEUnionCase*>::iterator iter,
     	CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
-    virtual void WriteGetMemberSize(CBEFile *pFile,
+    virtual void WriteGetMemberSize(CBEFile& pFile,
     	CBEUnionCase *pMember,
     	CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
@@ -73,7 +73,7 @@ protected:
 public:
     virtual CObject *Clone();
 
-    virtual void Write(CBEFile * pFile);
+    virtual void Write(CBEFile& pFile);
     
     virtual CBETypedDeclarator* FindMember(
 	CDeclStack* pStack,
@@ -85,12 +85,12 @@ public:
     virtual int GetSize();
     virtual int GetMaxSize();
     virtual int GetUnionCaseCount();
-    virtual void WriteCast(CBEFile * pFile, bool bPointer);
-    virtual void WriteZeroInit(CBEFile * pFile);
+    virtual void WriteCast(CBEFile& pFile, bool bPointer);
+    virtual void WriteZeroInit(CBEFile& pFile);
     virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile * pFile, 
+    virtual void WriteGetSize(CBEFile& pFile, 
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
-    virtual void WriteDeclaration(CBEFile * pFile);
+    virtual void WriteDeclaration(CBEFile& pFile);
 
     /** \brief return the tag
      *  \return the tag

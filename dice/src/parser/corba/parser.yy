@@ -344,7 +344,7 @@ module :
       MODULE ID
     {
         // check if we can find a library with this name
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+        CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
         assert(pRoot);
 	CFELibrary *pFEPrevLib = pRoot->FindLibrary($2);
 	CFELibrary *pFELibrary = new CFELibrary(string($2), NULL, 
@@ -415,7 +415,7 @@ interface_dcl    :
       ABSTRACT INTERFACE ID interface_inheritance_spec
     {
         // test base interfaces
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+        CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
         assert(pRoot);
         vector<CFEIdentifier*>::iterator iter;
         for (iter = $4->begin(); iter != $4->end(); iter++) {
@@ -472,7 +472,7 @@ interface_dcl    :
     }
     | ABSTRACT INTERFACE ID
     {
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+        CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
         assert(pRoot);
         if (pRoot->FindInterface($3) != NULL)
         {
@@ -520,7 +520,7 @@ interface_dcl    :
     | INTERFACE ID interface_inheritance_spec
     {
         // test base interfaces
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+        CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
         assert(pRoot);
         vector<CFEIdentifier*>::iterator iter;
         for (iter = $3->begin(); iter != $3->end(); iter++)
@@ -572,7 +572,7 @@ interface_dcl    :
     }
     | INTERFACE ID
     {
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+        CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
         assert(pRoot);
         if (pRoot->FindInterface($2) != NULL)
         {
@@ -1073,7 +1073,7 @@ type_dcl :
       TYPEDEF type_spec declarators
     {
         // check if type_names already exist
-        CFEFile *pRoot = dynamic_cast<CFEFile*>(CParser::GetCurrentFile()->GetRoot());
+        CFEFile *pRoot = CParser::GetCurrentFile()->GetRoot();
         assert(pRoot);
         vector<CFEDeclarator*>::iterator iter;
         for (iter = $3->begin(); iter != $3->end(); iter++)

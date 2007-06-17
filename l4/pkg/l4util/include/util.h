@@ -10,19 +10,10 @@ EXTERN_C_BEGIN
 /** Calculate l4 timeouts
  * \param mus   time in microseconds. Special cases:
  *              - 0 - > timeout 0
- *              - -1 -> timeout NEVER
+ *              - ~0U -> timeout NEVER
  * \return the corresponding l4_timeout value
  */
-l4_timeout_s l4util_micros2l4to(int mus);
-
-/** Calculate l4 timeouts
- * \param to_m  contains l4-mantissa
- * \param to_e  contains l4-exponent
- * \returns     time in microseconds. Special cases:
- *              - 0 - > timeout 0
- *              - -1 -> timeout NEVER or invalid params
- */
-int l4util_l4to2micros(int to_m, int to_e);
+l4_timeout_s l4util_micros2l4to(unsigned int mus);
 
 /** Suspend thread for a period of <ms> milliseconds */
 void l4_sleep(int ms);

@@ -88,7 +88,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 
     string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEOperation, FILETYPE_CLIENTHEADER);
+    CBEHeaderFile* pHeader = FindHeaderFile(pFEOperation, FILETYPE_CLIENTHEADER);
     if (!pHeader)
     {
 	exc += "failed, because header file could not be found";
@@ -96,7 +96,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
     }
     // create the file
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
     pImpl->CreateBackEnd(pFEOperation, FILETYPE_CLIENTIMPLEMENTATION);
@@ -189,14 +189,14 @@ CBEClient::CreateBackEndHeader(CFEFile * pFEFile)
     // the header files are created on a per IDL file basis, no matter
     // which option is set
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEHeaderFile *pHeader = pCF->GetNewHeaderFile();
+    CBEHeaderFile* pHeader = pCF->GetNewHeaderFile();
     m_HeaderFiles.Add(pHeader);
     pHeader->CreateBackEnd(pFEFile, FILETYPE_CLIENTHEADER);
     pRoot->AddToHeader(pHeader);
     // create opcode files per IDL file
     if (!CCompiler::IsOptionSet(PROGRAM_NO_OPCODES))
     {
-        CBEHeaderFile *pOpcodes = pCF->GetNewHeaderFile();
+        CBEHeaderFile* pOpcodes = pCF->GetNewHeaderFile();
         m_HeaderFiles.Add(pOpcodes);
 	pOpcodes->CreateBackEnd(pFEFile, FILETYPE_OPCODE);
         pRoot->AddOpcodesToFile(pOpcodes, pFEFile);
@@ -249,7 +249,7 @@ CBEClient::CreateBackEndFile(CFEFile *pFEFile)
 
     string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEFile, FILETYPE_CLIENTHEADER);
+    CBEHeaderFile* pHeader = FindHeaderFile(pFEFile, FILETYPE_CLIENTHEADER);
     if (!pHeader)
     {
 	exc += " failed, because could not find header file for ";
@@ -259,7 +259,7 @@ CBEClient::CreateBackEndFile(CFEFile *pFEFile)
 
     // create file
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
     pImpl->CreateBackEnd(pFEFile, FILETYPE_CLIENTIMPLEMENTATION);
@@ -275,7 +275,7 @@ CBEClient::CreateBackEndFile(CFEFile *pFEFile)
  */
 void 
 CBEClient::CreateBackEndFile(CFEFile * pFEFile, 
-    CBEImplementationFile *pImpl)
+    CBEImplementationFile* pImpl)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndFile(file: %s, impl: %s) called\n",
         pFEFile->GetFileName().c_str(), pImpl->GetFileName().c_str());
@@ -364,7 +364,7 @@ CBEClient::CreateBackEndModule(CFEFile *pFEFile)
     
     string exc = string (__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEFile, FILETYPE_CLIENTHEADER);
+    CBEHeaderFile* pHeader = FindHeaderFile(pFEFile, FILETYPE_CLIENTHEADER);
     if (!pHeader)
     {
 	exc += " failed, because header file could not be found for ";
@@ -382,7 +382,7 @@ CBEClient::CreateBackEndModule(CFEFile *pFEFile)
         // we do have interfaces
         // create file
 	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-        CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+        CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
         m_ImplementationFiles.Add(pImpl);
         pImpl->SetHeaderFile(pHeader);
 	pImpl->CreateBackEnd(pFEFile, FILETYPE_CLIENTIMPLEMENTATION);
@@ -428,7 +428,7 @@ CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
 
     string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFELibrary, FILETYPE_CLIENTHEADER);
+    CBEHeaderFile* pHeader = FindHeaderFile(pFELibrary, FILETYPE_CLIENTHEADER);
     if (!pHeader)
     {
 	exc += " failed, beacuse header file could not be found";
@@ -445,7 +445,7 @@ CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
     }
     // create the file
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
     pImpl->CreateBackEnd(pFELibrary, FILETYPE_CLIENTIMPLEMENTATION);
@@ -511,7 +511,7 @@ CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
 
     string exc = string(__func__);
     // find appropriate header file
-    CBEHeaderFile *pHeader = FindHeaderFile(pFEInterface, FILETYPE_CLIENTHEADER);
+    CBEHeaderFile* pHeader = FindHeaderFile(pFEInterface, FILETYPE_CLIENTHEADER);
     if (!pHeader)
     {
 	exc += " failed, because no header file could be found";
@@ -528,7 +528,7 @@ CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
     }
     // create the file
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEImplementationFile *pImpl = pCF->GetNewImplementationFile();
+    CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
     m_ImplementationFiles.Add(pImpl);
     pImpl->SetHeaderFile(pHeader);
     pImpl->CreateBackEnd(pFEInterface, FILETYPE_CLIENTIMPLEMENTATION);

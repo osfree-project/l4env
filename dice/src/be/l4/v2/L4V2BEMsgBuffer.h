@@ -53,18 +53,18 @@ public: // public methods
     virtual CObject* Clone();
     virtual int GetPayloadOffset();
 
-    virtual void WriteDopeShortInitialization(CBEFile *pFile, int nType,
+    virtual void WriteDopeShortInitialization(CBEFile& pFile, int nType,
 	CMsgStructType nStructType);
 
     virtual int GetMemberPosition(string sName, CMsgStructType nType);
 
 protected: // protected methods
-    virtual void WriteRefstringInitParameter(CBEFile *pFile,
+    virtual void WriteRefstringInitParameter(CBEFile& pFile,
 	CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
 	CMsgStructType nType);
-    virtual bool WriteRefstringInitFunction(CBEFile *pFile,
+    virtual bool WriteRefstringInitFunction(CBEFile& pFile,
 	CBEFunction *pFunction,	CBEClass *pClass, int nIndex, CMsgStructType nType);
-    virtual void WriteRcvFlexpageInitialization(CBEFile *pFile,	CMsgStructType nType);
+    virtual void WriteRcvFlexpageInitialization(CBEFile& pFile,	CMsgStructType nType);
 	
     CBETypedDeclarator* GetRefstringMemberVariable(int nNumber);
 

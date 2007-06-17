@@ -226,20 +226,21 @@ int Gdb_serv::write( char const *str, size_t len )
  //   return _o->write(str,len);
 
   char *ptr;
-  unsigned l,lx;
+  unsigned l,lx, obl;
 
   lx = len;
   while (lx)
     {
       ptr = (char*)out_buffer();
       *ptr++ = 'O';
-      l = lx <? (out_buffer_len()/2 -1);
+      obl = out_buffer_len()/2 -1;
+      l = lx < obl ? lx : obl;
       ptr = mem2hex((unsigned char const *)str, ptr, l, 0);
       str += l;
       *ptr = 0;
-      
+
       put_packet(out_buffer());
-      
+
       lx -= l;
       lx = 0;
     }

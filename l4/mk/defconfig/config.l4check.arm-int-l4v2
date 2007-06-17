@@ -8,7 +8,6 @@
 BUILD_ARCH_x86=n
 BUILD_ARCH_arm=y
 BUILD_ARCH_amd64=n
-BUILD_ARCH_ppc32=n
 BUILD_ARCH='arm'
 CPU='int'
 BUILD_ABI='l4v2'

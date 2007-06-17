@@ -135,7 +135,7 @@ CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
  * unmarshal.
  */
 void 
-CBEUnmarshalFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
+CBEUnmarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the invocation of the message transfer
@@ -145,7 +145,7 @@ CBEUnmarshalFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
  * contain a message transfer.
  */
 void 
-CBEUnmarshalFunction::WriteInvocation(CBEFile * /*pFile*/)
+CBEUnmarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes a single parameter for the function call
@@ -157,7 +157,7 @@ CBEUnmarshalFunction::WriteInvocation(CBEFile * /*pFile*/)
  * because otherwise the compiler issues warnings.
  */
 void 
-CBEUnmarshalFunction::WriteCallParameter(CBEFile * pFile,
+CBEUnmarshalFunction::WriteCallParameter(CBEFile& pFile,
     CBETypedDeclarator * pParameter,
     bool bCallFromSameClass)
 {
@@ -307,7 +307,7 @@ CBEUnmarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  * side and one of the parameters has an IN.
  */
 bool 
-CBEUnmarshalFunction::DoWriteFunction(CBEHeaderFile * pFile)
+CBEUnmarshalFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -340,7 +340,7 @@ CBEUnmarshalFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * side and one of the parameters has an IN.
  */
 bool 
-CBEUnmarshalFunction::DoWriteFunction(CBEImplementationFile * pFile)
+CBEUnmarshalFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;

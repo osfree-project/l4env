@@ -30,7 +30,6 @@
 #include "FEUnionCase.h"
 #include "FEFile.h"
 #include "Compiler.h"
-#include "File.h"
 #include "Visitor.h"
 #include <iostream>
 
@@ -62,6 +61,14 @@ CFEUnionType::~CFEUnionType()
 CObject* CFEUnionType::Clone()
 { 
     return new CFEUnionType(*this);
+}
+
+/** \brief test a type whether it is a constructed type or not
+ *  \return true 
+ */
+bool CFEUnionType::IsConstructedType()
+{
+    return true;
 }
 
 /** \brief accept the iterations of the visitors

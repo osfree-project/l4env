@@ -107,8 +107,8 @@ public:
 
 public: // Public methods
     void CreateBackEnd(CFEInterface *pFEInterface);
-    void AddToHeader(CBEHeaderFile *pHeader);
-    void AddToImpl(CBEImplementationFile *pImpl);
+    void AddToHeader(CBEHeaderFile* pHeader);
+    void AddToImpl(CBEImplementationFile* pImpl);
     int GetParameterCount(int nFEType, bool& bSameCount, DIRECTION_TYPE nDirection);
     int GetStringParameterCount(DIRECTION_TYPE nDirection,
 	ATTR_TYPE nMustAttrs = ATTR_NONE, ATTR_TYPE nMustNotAttrs = ATTR_NONE);
@@ -122,11 +122,11 @@ public: // Public methods
     bool Match(string sName)
     { return GetName() == sName; }
 
-    void Write(CBEHeaderFile *pFile);
-    void Write(CBEImplementationFile *pFile);
-    void WriteClassName(CBEFile *pFile);
+    void Write(CBEHeaderFile& pFile);
+    void Write(CBEImplementationFile& pFile);
+    void WriteClassName(CBEFile& pFile);
 
-    bool AddOpcodesToFile(CBEHeaderFile *pFile);
+    bool AddOpcodesToFile(CBEHeaderFile* pFile);
     int GetClassNumber();
 
     CFunctionGroup* FindFunctionGroup(CBEFunction *pFunction);
@@ -135,10 +135,10 @@ public: // Public methods
     CBETypedef* FindTypedef(string sTypeName);
     CBEFunction* FindFunction(string sFunctionName, FUNCTION_TYPE nFunctionType);
 
-    bool IsTargetFile(CBEHeaderFile * pFile);
-    bool IsTargetFile(CBEImplementationFile * pFile);
+    bool IsTargetFile(CBEHeaderFile* pFile);
+    bool IsTargetFile(CBEImplementationFile* pFile);
 
-    bool HasFunctionWithUserType(string sTypeName, CBEFile *pFile);
+    bool HasFunctionWithUserType(string sTypeName, CBEFile* pFile);
     int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs,
 	DIRECTION_TYPE nDirection);
 
@@ -169,26 +169,26 @@ protected:
     void AddMessageBuffer(CFEInterface* pFEInterface);
 
     void CreateAliasForClass(CFEInterface *pFEInterface);
-    bool AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile *pFile);
+    bool AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile* pFile);
 
-    void WriteElements(CBEHeaderFile *pFile);
-    void WriteElements(CBEImplementationFile *pFile);
-    void WriteFunctions(CBEHeaderFile *pFile);
-    void WriteFunctions(CBEImplementationFile *pFile);
-    void WriteBaseClasses(CBEFile *pFile);
+    void WriteElements(CBEHeaderFile& pFile);
+    void WriteElements(CBEImplementationFile& pFile);
+    void WriteFunctions(CBEHeaderFile& pFile);
+    void WriteFunctions(CBEImplementationFile& pFile);
+    void WriteBaseClasses(CBEFile& pFile);
 
-    virtual void WriteMemberVariables(CBEHeaderFile *pFile);
-    virtual void WriteConstructor(CBEHeaderFile *pFile);
-    virtual void WriteDestructor(CBEHeaderFile *pFile);
+    virtual void WriteMemberVariables(CBEHeaderFile& pFile);
+    virtual void WriteConstructor(CBEHeaderFile& pFile);
+    virtual void WriteDestructor(CBEHeaderFile& pFile);
 
-    void WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile *pFile);
-    void WriteTaggedType(CBEType *pType, CBEHeaderFile *pFile);
-    void WriteException(CBEException *pException, CBEHeaderFile *pFile);
-    void WriteConstant(CBEConstant *pConstant, CBEHeaderFile *pFile);
-    void WriteFunction(CBEFunction *pFunction, CBEHeaderFile *pFile);
-    void WriteFunction(CBEFunction *pFunction, CBEImplementationFile *pFile);
-    virtual void WriteHelperFunctions(CBEHeaderFile *pFile);
-    virtual void WriteHelperFunctions(CBEImplementationFile *pFile);
+    void WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile& pFile);
+    void WriteTaggedType(CBEType *pType, CBEHeaderFile& pFile);
+    void WriteException(CBEException *pException, CBEHeaderFile& pFile);
+    void WriteConstant(CBEConstant *pConstant, CBEHeaderFile& pFile);
+    void WriteFunction(CBEFunction *pFunction, CBEHeaderFile& pFile);
+    void WriteFunction(CBEFunction *pFunction, CBEImplementationFile& pFile);
+    virtual void WriteHelperFunctions(CBEHeaderFile& pFile);
+    virtual void WriteHelperFunctions(CBEImplementationFile& pFile);
 
     int GetOperationNumber(CFEOperation *pFEOperation);
     bool IsPredefinedID(map<unsigned int, string> *pFunctionIDs,
@@ -210,16 +210,16 @@ protected:
     void CheckOpcodeCollision(CFEInterface *pFirst, CFEInterface *pSecond);
     void AddBaseClass(string sName);
     int GetFunctionCount(void);
-    int GetFunctionWriteCount(CBEFile *pFile);
+    int GetFunctionWriteCount(CBEFile& pFile);
     
     virtual void MsgBufferInitialization(void);
 
     void CreateOrderedElementList(void);
     void InsertOrderedElement(CObject *pObj);
 
-    void WriteExternCStart(CBEFile *pFile);
-    void WriteExternCEnd(CBEFile *pFile);
-    void WriteLineDirective(CBEFile *pFile, CObject *pObj);
+    void WriteExternCStart(CBEFile& pFile);
+    void WriteExternCEnd(CBEFile& pFile);
+    void WriteLineDirective(CBEFile& pFile, CObject *pObj);
 
 protected: // Protected members
     /** \var string m_sName

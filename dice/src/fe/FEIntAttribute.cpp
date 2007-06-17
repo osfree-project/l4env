@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEIntAttribute.h"
-#include "File.h"
 
 CFEIntAttribute::CFEIntAttribute(ATTR_TYPE nType, int nValue)
 :CFEAttribute(nType)

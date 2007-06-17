@@ -47,7 +47,7 @@ SECTIONS
  * loader, and we do not need to copy images around at runtime (e.g. with
  * compression) */
 #if defined(PLACE_MODULES_AT_MODADDR) && !defined(SINGLE_SECTION)
-  . = MODADDR;
+  . = RAM_BASE + MODADDR;
 #endif
   _module_data_start = .;
   .module_data : { *(.module_data) }

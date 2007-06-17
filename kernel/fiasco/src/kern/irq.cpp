@@ -182,7 +182,7 @@ Irq::hit()
 	       && !(_irq_thread->state() & 
 		               (Thread_ready | Thread_delayed_deadline))
 	       && !_irq_thread->thread_lock()->test() // irq_thread not locked?
-	       && !Context::schedule_in_progress())) // no schedule in progress
+	       && !current()->schedule_in_progress())) // no schedule in progress
 	    {
     	      // we don't need to manipulate the state in a safe way
     	      // because we are still running with interrupts turned off

@@ -31,10 +31,10 @@
 #include "FEConstructedType.h"
 #include "FEFile.h"
 #include "FELibrary.h"
-#include "File.h"
 // needed for Error function
 #include "Compiler.h"
 #include "Visitor.h"
+#include "Messages.h"
 #include <iostream>
 #include <cassert>
 
@@ -63,6 +63,63 @@ CFEUserDefinedType::~CFEUserDefinedType()
 CObject *CFEUserDefinedType::Clone()
 {
     return new CFEUserDefinedType(*this);
+}
+
+/** \brief test a type whether it is a constructed type or not
+ *  \return true 
+ */
+bool CFEUserDefinedType::IsConstructedType()
+{
+    CFEFile *pRoot = GetRoot();
+    assert(pRoot);
+    // find type
+    CFETypedDeclarator *pUserDecl = pRoot->FindUserDefinedType(m_sName);
+    // check if we found the user defined type (if not: panic)
+    if (!pUserDecl)
+    {
+ 	// if not found now, this can be an interface
+	if (pRoot->FindInterface(m_sName))
+	    return true; // is CORBA_Object a constructed type?
+     	CMessages::GccError(this, 0,
+	    "User defined type \"%s\" not defined\n",
+	    m_sName.c_str());
+	return false;
+    }
+    // test the found type
+    return pUserDecl->GetType()->IsConstructedType();
+}
+
+/** \brief test if a type is a pointered type
+ *  \param pType the type to test
+ *  \return true if it is a pointered type, false if not
+ *
+ * This function also follows user-defined types
+ */
+bool CFEUserDefinedType::IsPointerType()
+{
+    // if user defined -> follow the definition
+    CFEFile *pRoot = GetRoot();
+    assert(pRoot);
+    // find type
+    CFETypedDeclarator *pUserDecl = pRoot->FindUserDefinedType(m_sName);
+    // if not found now, this can be an interface
+    if (!pUserDecl)
+	if (pRoot->FindInterface(m_sName))
+	    pUserDecl = pRoot->FindUserDefinedType(string("CORBA_Object"));
+    // check if we found the user defined type (if not: panic)
+    if (!pUserDecl)
+    {
+	CMessages::GccError(this, 0,
+	    "User defined type \"%s\" not defined\n",
+	    m_sName.c_str());
+	return false;
+    }
+    // test decls for pointers
+    CFEDeclarator *pDecl = pUserDecl->m_Declarators.First();
+    if (pDecl && (pDecl->GetStars() > 0))
+	return true;
+    // test the found type
+    return pUserDecl->GetType()->IsPointerType();
 }
 
 /**
@@ -107,7 +164,7 @@ bool CFEUserDefinedType::Ignore()
  */
 unsigned int CFEUserDefinedType::GetOriginalType()
 {
-    CFEFile *pFile = dynamic_cast<CFEFile*>(GetRoot());
+    CFEFile *pFile = GetRoot();
     assert(pFile);
     assert(!m_sName.empty());
     CFETypedDeclarator *pTypedef = pFile->FindUserDefinedType(m_sName);

@@ -40,6 +40,7 @@ l4ore_handle_t ore_manager_open_component(CORBA_Object _dice_corba_obj,
         // init connection
         ret = setup_connection((char *)device_name, mac, 
               global_mac_address_head, conf, handle, _dice_corba_obj);
+		LOG_MAC_s(ORE_DEBUG_COMPONENTS, "initialized: ", ore_connection_table[handle].mac);
         // return the worker thread on success
         if (ret == 0)
             return ore_connection_table[handle].worker;
@@ -60,6 +61,7 @@ CORBA_void ore_manager_close_component(CORBA_Object _dice_corba_obj,
   l4_threadid_t worker = ore_connection_table[channel].worker;
     
   LOGd_Enter(ORE_DEBUG_COMPONENTS);
+  LOGd(ORE_DEBUG_COMPONENTS, "closing connection for client "l4util_idfmt, l4util_idstr(*_dice_corba_obj));
 
   // kill worker
   l4thread_shutdown(l4thread_id(worker));

@@ -11,6 +11,10 @@ PREPROCESS_PARTS 	+= arch $(CONFIG_ABI) 32bit iofp         \
 			   $(CONFIG_XARCH) apic abs-timeout-hack \
 			   i8259 pc i8254 fpu jdb_thread_names 
 
+ifeq ("$(CONFIG_MP)","y")
+  PREPROCESS_PARTS	+= mp
+endif
+
 ifeq ("$(CONFIG_LIST_ALLOC_SANITY)","y")
   PREPROCESS_PARTS	+= list_alloc_debug
 endif
@@ -121,7 +125,8 @@ KERNEL			:= kernel.image
 VPATH			+= kern/$(CONFIG_XARCH) kern/shared kern
 PRIVATE_INCDIR		+= kern/$(CONFIG_XARCH) kern/shared kern 
 
-INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
+INTERFACES_KERNEL	:= per_cpu_data startup boot_info cmdline __main \
+			   mapping \
 			   mapping_tree mappable simple_mapdb    \
 			   mapdb region pic \
 			   obj_space obj_space_alloc \
@@ -131,7 +136,7 @@ INTERFACES_KERNEL	:= startup boot_info cmdline __main mapping \
 			   kmem_slab_simple kmem_slab switch_lock kip_init   \
 			   thread_lock helping_lock cpu_lock timer timeout   \
 			   ipc_timeout deadline_timeout timeslice_timeout    \
-			   ram_quota_alloc		                     \
+			   ram_quota_alloc per_cpu_data_alloc                \
 			   thread_state context sender receiver mem_unit     \
 			   thread syscalls kernel_thread map_util irq banner \
 			   warn                                              \

@@ -63,6 +63,8 @@ public:
     virtual string GetName();
     virtual bool Ignore();
     virtual unsigned int GetOriginalType();
+    virtual bool IsConstructedType();
+    virtual bool IsPointerType();
 
 // attributes
 protected:

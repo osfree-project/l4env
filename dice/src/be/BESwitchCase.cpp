@@ -252,7 +252,7 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
 /** \brief tests if this function should be written
  *  \return true if successful
  */
-bool CBESwitchCase::DoWriteFunction(CBEHeaderFile * /*pFile*/) 
+bool CBESwitchCase::DoWriteFunction(CBEHeaderFile* /*pFile*/) 
 { 
     return true; 
 }
@@ -260,7 +260,7 @@ bool CBESwitchCase::DoWriteFunction(CBEHeaderFile * /*pFile*/)
 /** \brief tests if this function should be written
  *  \return true if successful
  */
-bool CBESwitchCase::DoWriteFunction(CBEImplementationFile * /*pFile*/)
+bool CBESwitchCase::DoWriteFunction(CBEImplementationFile* /*pFile*/)
 { 
     return true; 
 }
@@ -268,12 +268,11 @@ bool CBESwitchCase::DoWriteFunction(CBEImplementationFile * /*pFile*/)
 /** \brief writes the target code
  *  \param pFile the target file
  */
-void CBESwitchCase::Write(CBEFile * pFile)
+void CBESwitchCase::Write(CBEFile& pFile)
 {
-    *pFile << "\tcase " << m_sOpcode << ":\n";
-    pFile->IncIndent();
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    pFile << "\tcase " << m_sOpcode << ":\n";
+    ++pFile << "\t{\n";
+    ++pFile;
 
     WriteVariableDeclaration(pFile);
     WriteVariableInitialization(pFile, DIRECTION_IN);
@@ -310,8 +309,8 @@ void CBESwitchCase::Write(CBEFile * pFile)
     {
         if (m_Attributes.Find(ATTR_ALLOW_REPLY_ONLY))
         {
-            *pFile << "\tif (" << sReply << " == DICE_REPLY)\n";
-            pFile->IncIndent();
+            pFile << "\tif (" << sReply << " == DICE_REPLY)\n";
+            ++pFile;
         }
 
 	// check for exceptions
@@ -322,42 +321,37 @@ void CBESwitchCase::Write(CBEFile * pFile)
 	    if (pEnv->GetStars() == 0)
 		sEnv = "&";
 	    sEnv += pEnv->GetName();
-	    *pFile << "\tif (DICE_EXCEPTION_MAJOR(" << sEnv << ") == CORBA_USER_EXCEPTION)\n";
-	    *pFile << "\t{\n";
-	    pFile->IncIndent();
+	    pFile << "\tif (DICE_EXCEPTION_MAJOR(" << sEnv << ") == CORBA_USER_EXCEPTION)\n";
+	    pFile << "\t{\n";
+	    ++pFile;
 
 	    m_pMarshalExceptionFunction->WriteCall(pFile, string(), m_bSameClass);
 
-	    pFile->DecIndent();
-	    *pFile << "\t}\n";
-	    *pFile << "\telse\n";
-	    *pFile << "\t{\n";
-	    pFile->IncIndent();
+	    --pFile << "\t}\n";
+	    pFile << "\telse\n";
+	    pFile << "\t{\n";
+	    ++pFile;
 	}
 
         m_pMarshalFunction->WriteCall(pFile, string(), m_bSameClass);
 
 	if (m_pMarshalExceptionFunction)
-	{
-	    pFile->DecIndent();
-	    *pFile << "\t}\n";
-	}
+	    --pFile << "\t}\n";
 
         if (m_Attributes.Find(ATTR_ALLOW_REPLY_ONLY))
-            pFile->DecIndent();
+            --pFile;
     }
     else if (m_Attributes.Find(ATTR_IN))
     {
         /* this is a send-only function */
-        *pFile << "\t" << sReply << " = DICE_NEVER_REPLY;\n";
+        pFile << "\t" << sReply << " = DICE_NEVER_REPLY;\n";
     }
 
     WriteCleanup(pFile);
 
-    pFile->DecIndent();
-    *pFile << "\t}\n";
-    *pFile << "\tbreak;\n";
-    pFile->DecIndent();
+    --pFile << "\t}\n";
+    pFile << "\tbreak;\n";
+    --pFile;
 }
 
 /** \brief writes the variable declaration inside the switch case
@@ -382,7 +376,7 @@ void CBESwitchCase::Write(CBEFile * pFile)
  * to be initialized on declaration.
  */
 void
-CBESwitchCase::WriteVariableDeclaration(CBEFile * pFile)
+CBESwitchCase::WriteVariableDeclaration(CBEFile& pFile)
 {
     // write local variable declaration
     CBEOperationFunction::WriteVariableDeclaration(pFile);
@@ -397,9 +391,9 @@ CBESwitchCase::WriteVariableDeclaration(CBEFile * pFile)
 	// skip "special" parameters
 	if (!DoWriteVariable(*iter))
 	    continue;
-	*pFile << "\t";
+	pFile << "\t";
         (*iter)->WriteIndirect(pFile);
-	*pFile << ";\n";
+	pFile << ";\n";
     }
 }
 
@@ -431,7 +425,7 @@ CBESwitchCase::DoWriteVariable(CBETypedDeclarator *pParameter)
  * This function takes care of the initialization of the indirect variables.
  */
 void 
-CBESwitchCase::WriteVariableInitialization(CBEFile * pFile, 
+CBESwitchCase::WriteVariableInitialization(CBEFile& pFile, 
     DIRECTION_TYPE nDirection)
 {
     // initailize indirect variables
@@ -476,7 +470,7 @@ CBESwitchCase::WriteVariableInitialization(CBEFile * pFile,
  * because only for those parameters a memory allocation took
  * place.
  */
-void CBESwitchCase::WriteCleanup(CBEFile * pFile)
+void CBESwitchCase::WriteCleanup(CBEFile& pFile)
 {
     // cleanup indirect variables
     vector<CBETypedDeclarator*>::iterator iter;
@@ -496,12 +490,12 @@ void CBESwitchCase::WriteCleanup(CBEFile * pFile)
 
 /** \brief writes the initialization of the variables
  */
-void CBESwitchCase::WriteVariableInitialization(CBEFile * /*pFile*/)
+void CBESwitchCase::WriteVariableInitialization(CBEFile& /*pFile*/)
 { }
 
 /** \brief writes the invocation of the message transfer
  */
-void CBESwitchCase::WriteInvocation(CBEFile * /*pFile*/)
+void CBESwitchCase::WriteInvocation(CBEFile& /*pFile*/)
 { }
 
 /** \brief resets the message buffer type of the respective functions

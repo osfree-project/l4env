@@ -258,7 +258,7 @@ CBESrvLoopFunction::CreateObject()
  * server loop parameter to the CORBA_Environment if it is used.
  */
 void
-CBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
+CBESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     if (m_pTrace)
 	m_pTrace->InitServer(pFile, this);
@@ -278,15 +278,15 @@ CBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
  * This implementation calls the underlying message trasnfer mechanisms
  */
 void
-CBESrvLoopFunction::WriteInvocation(CBEFile * pFile)
+CBESrvLoopFunction::WriteInvocation(CBEFile& pFile)
 {
-    *pFile << "\t/* invoke */\n";
+    pFile << "\t/* invoke */\n";
 }
 
 /** \brief writes the server loop's function body
  *  \param pFile the target file
  */
-void CBESrvLoopFunction::WriteBody(CBEFile * pFile)
+void CBESrvLoopFunction::WriteBody(CBEFile& pFile)
 {
     // write variable declaration and initialization
     WriteVariableDeclaration(pFile);
@@ -303,7 +303,7 @@ void CBESrvLoopFunction::WriteBody(CBEFile * pFile)
  * For C++ do not declare object and environment (they are class members);
  */
 void 
-CBESrvLoopFunction::WriteVariableDeclaration(CBEFile * pFile)
+CBESrvLoopFunction::WriteVariableDeclaration(CBEFile& pFile)
 {
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
@@ -333,7 +333,7 @@ CBESrvLoopFunction::WriteVariableDeclaration(CBEFile * pFile)
 /** \brief writes the loop
  *  \param pFile the file to write to
  */
-void CBESrvLoopFunction::WriteLoop(CBEFile * pFile)
+void CBESrvLoopFunction::WriteLoop(CBEFile& pFile)
 {
     if (m_pTrace)
 	m_pTrace->BeforeLoop(pFile, this);
@@ -342,33 +342,29 @@ void CBESrvLoopFunction::WriteLoop(CBEFile * pFile)
     string sOpcodeVar = pNF->GetOpcodeVariable();
     m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
 
-    *pFile << "\twhile (1)\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    pFile << "\twhile (1)\n";
+    pFile << "\t{\n";
+    ++pFile;
 
     // write switch
     WriteDispatchInvocation(pFile);
 
     string sReply = pNF->GetReplyCodeVariable();
     // check if we should reply or not
-    *pFile << "\tif (" << sReply << " == DICE_REPLY)\n";
-    pFile->IncIndent();
+    pFile << "\tif (" << sReply << " == DICE_REPLY)\n";
+    ++pFile;
     m_pReplyAnyWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
-    pFile->DecIndent();
-    *pFile << "\telse\n";
-    pFile->IncIndent();
+    --pFile << "\telse\n";
+    ++pFile;
     m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
-    pFile->DecIndent();
-
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --(--pFile) << "\t}\n";
 }
 
 /** \brief writes the dispatcher invocation
  *  \param pFile the file to write to
  */
 void
-CBESrvLoopFunction::WriteDispatchInvocation(CBEFile *pFile)
+CBESrvLoopFunction::WriteDispatchInvocation(CBEFile& pFile)
 {
     if (m_pDispatchFunction)
     {
@@ -390,7 +386,7 @@ CBESrvLoopFunction::WriteDispatchInvocation(CBEFile *pFile)
  * Never write this function inline.
  */
 bool
-CBESrvLoopFunction::DoWriteFunctionInline(CBEFile* /*pFile*/)
+CBESrvLoopFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
 {
     return false;
 }
@@ -402,7 +398,7 @@ CBESrvLoopFunction::DoWriteFunctionInline(CBEFile* /*pFile*/)
  * A server loop is only written at the component's side.
  */
 bool
-CBESrvLoopFunction::DoWriteFunction(CBEHeaderFile * pFile)
+CBESrvLoopFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBESrvLoopFunction::%s(%s) called for %s\n", __func__, 
@@ -427,7 +423,7 @@ CBESrvLoopFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * A server loop is only written at the component's side.
  */
 bool
-CBESrvLoopFunction::DoWriteFunction(CBEImplementationFile * pFile)
+CBESrvLoopFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBESrvLoopFunction::%s(%s) called for %s\n", __func__, 
@@ -465,7 +461,7 @@ DIRECTION_TYPE CBESrvLoopFunction::GetReceiveDirection()
  *  \param pFile the file to write to
  */
 void 
-CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile *pFile)
+CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sServerParam = pNF->GetServerParameterName();
@@ -473,59 +469,53 @@ CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile *pFile)
     CBEDeclarator *pDecl = pEnv->m_Declarators.First();
     // if (server-param)
     //   corba-env = (CORBA_Env*)server-param;
-    *pFile << "\tif (" << sServerParam << ")\n";
-    pFile->IncIndent();
-    *pFile << "\t" << pDecl->GetName() << " = (";
+    pFile << "\tif (" << sServerParam << ")\n";
+    ++pFile << "\t" << pDecl->GetName() << " = (";
     pEnv->WriteType(pFile);
-    *pFile << "*)" << sServerParam << ";\n";
-    pFile->DecIndent();
+    pFile << "*)" << sServerParam << ";\n";
     
     // should be set to default environment, but if
     // it is a pointer, we cannot, but have to allocate memory first...
-    *pFile << "\telse\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    --pFile << "\telse\n";
+    pFile << "\t{\n";
     // corba-env = (CORBA_Env*)malloc(sizeof(CORBA_Env));
-    *pFile << "\t" << pDecl->GetName() << " = ";
+    ++pFile << "\t" << pDecl->GetName() << " = ";
     pEnv->GetType()->WriteCast(pFile, true);
-    *pFile << "_dice_alloca(sizeof";
+    pFile << "_dice_alloca(sizeof";
     pEnv->GetType()->WriteCast(pFile, false);
-    *pFile << ");\n";
+    pFile << ");\n";
     
     WriteDefaultEnvAssignment(pFile);
     
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 
 /** \brief writes the assignment of the default environment to the env var
  *  \param pFile the file to write to
  */
 void
-CBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile *pFile)
+CBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
 {
     string sName = GetEnvironment()->m_Declarators.First()->GetName();
 
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
 	// *corba-env = dice_default_env;
-	*pFile << "\t*" << sName << " = ";
+	pFile << "\t*" << sName << " = ";
 	GetEnvironment()->GetType()->WriteCast(pFile, false);
-	*pFile << "dice_default_server_environment;\n";
+	pFile << "dice_default_server_environment;\n";
     }
     else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
     {
-	*pFile << "\tDICE_EXCEPTION_MAJOR(" << sName << 
+	pFile << "\tDICE_EXCEPTION_MAJOR(" << sName << 
 	    ") = CORBA_NO_EXCEPTION;\n";
-	*pFile << "\tDICE_EXCEPTION_MINOR(" << sName << 
+	pFile << "\tDICE_EXCEPTION_MINOR(" << sName << 
 	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
-	*pFile << "\t" << sName << "->_p.param = 0;\n";
-	*pFile << "\t" << sName << "->user_data = 0;\n";
-	*pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
-	pFile->IncIndent();
-	*pFile << "\t" << sName << "->ptrs[i] = 0;\n";
-	pFile->DecIndent();
-	*pFile << "\t" << sName << "->ptrs_cur = 0;\n";
+	pFile << "\t" << sName << "->_p.param = 0;\n";
+	pFile << "\t" << sName << "->user_data = 0;\n";
+	pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
+	++pFile << "\t" << sName << "->ptrs[i] = 0;\n";
+	--pFile << "\t" << sName << "->ptrs_cur = 0;\n";
     }
 }
 
@@ -533,13 +523,13 @@ CBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile *pFile)
  *  \param pFile the file to write to
  */
 void 
-CBESrvLoopFunction::WriteObjectInitialization(CBEFile *pFile)
+CBESrvLoopFunction::WriteObjectInitialization(CBEFile& pFile)
 {
     // set init string: "<corba obj> = &<corba obj base>;"
     CBETypedDeclarator *pObj = GetObject();
     assert(pObj);
     string sObj = pObj->m_Declarators.First()->GetName();
-    *pFile << "\t" << sObj << " = &_" << sObj << ";\n";
+    pFile << "\t" << sObj << " = &_" << sObj << ";\n";
 }
 
 /** \brief writes the attributes for the function
@@ -548,9 +538,9 @@ CBESrvLoopFunction::WriteObjectInitialization(CBEFile *pFile)
  * This implementation adds the "noreturn" attribute to the declaration
  */
 void 
-CBESrvLoopFunction::WriteFunctionAttributes(CBEFile* pFile)
+CBESrvLoopFunction::WriteFunctionAttributes(CBEFile& pFile)
 {
-    *pFile << " __attribute__((noreturn))";
+    pFile << " __attribute__((noreturn))";
 }
 
 /** \brief writes the return statement of this function
@@ -560,7 +550,7 @@ CBESrvLoopFunction::WriteFunctionAttributes(CBEFile* pFile)
  * statement.
  */
 void 
-CBESrvLoopFunction::WriteReturn(CBEFile* /*pFile*/)
+CBESrvLoopFunction::WriteReturn(CBEFile& /*pFile*/)
 {}
 
 /** \brief manipulates the message buffer

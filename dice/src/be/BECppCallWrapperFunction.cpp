@@ -88,7 +88,7 @@ CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation,
  *  \param pFile the file to write to
  */
 void
-CBECppCallWrapperFunction::WriteBody(CBEFile * pFile)
+CBECppCallWrapperFunction::WriteBody(CBEFile& pFile)
 {
     if (m_nSkipParameter == 1)
     {
@@ -119,7 +119,7 @@ CBECppCallWrapperFunction::WriteBody(CBEFile * pFile)
     if (m_nSkipParameter == 3)
     {
 	// construct a default environment and call the next function
-	*pFile << "\tCORBA_Environment _env;\n";
+	pFile << "\tCORBA_Environment _env;\n";
 	CBEDeclarator *pEnv = GetEnvironment()->m_Declarators.First();
 	string sEnv = string("_env");
 	SetCallVariable(pEnv->GetName(), 0, sEnv);

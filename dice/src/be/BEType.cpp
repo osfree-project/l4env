@@ -153,11 +153,11 @@ CBEType::CreateBackEnd(bool bUnsigned,
  * function.
  *
  */
-void CBEType::Write(CBEFile * pFile)
+void CBEType::Write(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
-    *pFile << m_sName;
+    pFile << m_sName;
 }
 
 /** \brief write the type to the string
@@ -235,22 +235,22 @@ CObject *CBEType::Clone()
  * (TYPE_INTEGER, TYPE_BYTE, TYPE_CHAR). Type TYPE_FLOAT and TYPE_DOUBLE
  * are initialized with 0.0 instead of 0.
  */
-void CBEType::WriteZeroInit(CBEFile * pFile)
+void CBEType::WriteZeroInit(CBEFile& pFile)
 {
     switch (m_nFEType)
     {
     case TYPE_INTEGER:
     case TYPE_LONG:
     case TYPE_BYTE:
-	*pFile << "0";
+	pFile << "0";
         break;
     case TYPE_FLOAT:
     case TYPE_DOUBLE:
-	*pFile << "0.0";
+	pFile << "0.0";
         break;
     default:
         WriteCast(pFile, IsPointerType());
-	*pFile << "0";
+	pFile << "0";
         break;
     }
 }
@@ -296,7 +296,7 @@ bool CBEType::HasTag(string /*sTag*/)
  * E.g., int. Since we usually require correct bracing for the cast, we
  * will print (int).
  */
-void CBEType::WriteCast(CBEFile *pFile, bool bPointer)
+void CBEType::WriteCast(CBEFile& pFile, bool bPointer)
 {
     if (IsPointerType() && !bPointer)
     {
@@ -315,14 +315,14 @@ void CBEType::WriteCast(CBEFile *pFile, bool bPointer)
         }
 	CBENameFactory *pNF = CCompiler::GetNameFactory();
         string sName = pNF->GetTypeName(nBaseType, false, nBaseSize);
-	*pFile << "(" << sName;
+	pFile << "(" << sName;
     }
     else
-	*pFile << "(" << m_sName;
+	pFile << "(" << m_sName;
     // if type is pointer itself, we need no extra asterisk
     if (bPointer && !IsPointerType())
-	*pFile << "*";
-    *pFile << ")";
+	pFile << "*";
+    pFile << ")";
 }
 
 /** \brief searches for a parent, which is a typedef
@@ -368,7 +368,7 @@ bool CBEType::IsArrayType()
  *
  * For simple types this is the same as Write, so we call this one here.
  */
-void CBEType::WriteDeclaration(CBEFile *pFile)
+void CBEType::WriteDeclaration(CBEFile& pFile)
 {
     Write(pFile);
 }
@@ -391,7 +391,7 @@ bool CBEType::DoWriteZeroInit()
  * This function commonly issues an assert. Only types, which really can
  * be variable sized overload this function to print the correct size.
  */
-void CBEType::WriteGetSize(CBEFile* /*pFile*/,
+void CBEType::WriteGetSize(CBEFile& /*pFile*/,
     CDeclStack* /*sStack*/,
     CBEFunction* /*pUsingFunc*/)
 {
@@ -403,11 +403,11 @@ void CBEType::WriteGetSize(CBEFile* /*pFile*/,
  *  \param pStack the declarator stack that contains the variable sized declarators
  *  \param pUsingFunc the function to use as reference for members
  */
-void CBEType::WriteGetMaxSize(CBEFile *pFile,
+void CBEType::WriteGetMaxSize(CBEFile& pFile,
     CDeclStack* /*pStack*/,
     CBEFunction* /*pUsingFunc*/)
 {
-    *pFile << GetMaxSize();
+    pFile << GetMaxSize();
 }
 
 /** \brief test if this is a simple type
@@ -427,7 +427,7 @@ bool CBEType::IsSimpleType()
  *  \param iterB the iterator pointing to the next level if there are multiple array dimensions
  */
 void 
-CBEType::WriteZeroInitArray(CBEFile *pFile,
+CBEType::WriteZeroInitArray(CBEFile& pFile,
     CBEType *pType,
     CBEDeclarator *pAlias,
     vector<CBEExpression*>::iterator iterB)
@@ -440,7 +440,7 @@ CBEType::WriteZeroInitArray(CBEFile *pFile,
     int nBound = pBound->GetIntValue();
     if (nBound == 0)
         return;
-    *pFile << "{ ";
+    pFile << "{ ";
     for (int i=0; i<nBound; i++)
     {
         // if there is another level, we have to step down into it,
@@ -448,23 +448,23 @@ CBEType::WriteZeroInitArray(CBEFile *pFile,
         vector<CBEExpression*>::iterator iTemp = iterB;
 	if (iTemp != pAlias->m_Bounds.end() && *iTemp)
         {
-	    *pFile << "\n";
-            pFile->IncIndent(2);
-	    *pFile << "\t";
+	    pFile << "\n";
+            pFile+=2;
+	    pFile << "\t";
             WriteZeroInitArray(pFile, pType, pAlias, iterB);
-            pFile->DecIndent(2);
+	    pFile-=2;
         }
         else
             pType->WriteZeroInit(pFile);
         if (i < nBound-1)
         {
-	    *pFile << ", ";
+	    pFile << ", ";
             iTemp = iterB;
 	    if (iTemp != pAlias->m_Bounds.end() && *iTemp)
-		*pFile << "\n";
+		pFile << "\n";
         }
     }
-    *pFile << " }";
+    pFile << " }";
 }
 
 /** \brief tries to get the maximum array dimension count of this type
@@ -479,7 +479,7 @@ int CBEType::GetArrayDimensionCount()
  *  \param pHeader the header file to add this type to
  *  \return if the adding succeeded
  */
-void CBEType::AddToHeader(CBEHeaderFile *pHeader)
+void CBEType::AddToHeader(CBEHeaderFile* pHeader)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBEType::%s(header: %s) for type %d called\n", __func__,
@@ -491,7 +491,7 @@ void CBEType::AddToHeader(CBEHeaderFile *pHeader)
 /** \brief writes the type for an indirect declaration
  *  \param pFile the file to write to
  */
-void CBEType::WriteIndirect(CBEFile* pFile)
+void CBEType::WriteIndirect(CBEFile& pFile)
 {
     Write(pFile);
 }

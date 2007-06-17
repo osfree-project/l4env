@@ -61,6 +61,7 @@ protected:
 public:
     virtual void Accept(CVisitor&);
     virtual CObject* Clone();
+    virtual bool IsConstructedType();
 
     CFETypedDeclarator* FindMember(string sName);
 

@@ -28,7 +28,6 @@
 
 #include "fe/FEArrayDeclarator.h"
 #include "fe/FEExpression.h"
-#include "File.h"
 
 CFEArrayDeclarator::CFEArrayDeclarator(CFEDeclarator * pDecl)
 : CFEDeclarator(*pDecl)

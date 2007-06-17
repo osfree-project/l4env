@@ -251,9 +251,9 @@ CBEComponentFunction::AddAfterParameters()
  * we need a temporary variable.
  */
 void
-CBEComponentFunction::WriteVariableDeclaration(CBEFile * pFile)
+CBEComponentFunction::WriteVariableDeclaration(CBEFile& pFile)
 {
-    *pFile << "\t#warning \"" << GetName() << " is not implemented!\"\n";
+    pFile << "\t#warning \"" << GetName() << " is not implemented!\"\n";
     return;
 }
 
@@ -264,7 +264,7 @@ CBEComponentFunction::WriteVariableDeclaration(CBEFile * pFile)
  * of the out variables.
  */
 void
-CBEComponentFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
+CBEComponentFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the marshalling of the message
@@ -275,7 +275,7 @@ CBEComponentFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
  * operations instead of parameter marshalling.
  */
 void
-CBEComponentFunction::WriteMarshalling(CBEFile * /*pFile*/)
+CBEComponentFunction::WriteMarshalling(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the invocation of the message transfer
@@ -284,7 +284,7 @@ CBEComponentFunction::WriteMarshalling(CBEFile * /*pFile*/)
  * This implementation calls the underlying message trasnfer mechanisms
  */
 void 
-CBEComponentFunction::WriteInvocation(CBEFile * /*pFile*/)
+CBEComponentFunction::WriteInvocation(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the unmarshalling of the message
@@ -294,7 +294,7 @@ CBEComponentFunction::WriteInvocation(CBEFile * /*pFile*/)
  * message structure
  */
 void
-CBEComponentFunction::WriteUnmarshalling(CBEFile * /*pFile*/)
+CBEComponentFunction::WriteUnmarshalling(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the return statement
@@ -303,7 +303,7 @@ CBEComponentFunction::WriteUnmarshalling(CBEFile * /*pFile*/)
  * This implementation should write the return statement if one is necessary.
  * (return type != void)
  */
-void CBEComponentFunction::WriteReturn(CBEFile * /*pFile*/)
+void CBEComponentFunction::WriteReturn(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the declaration of a function to the target file
@@ -312,7 +312,7 @@ void CBEComponentFunction::WriteReturn(CBEFile * /*pFile*/)
  * For C write normal function declaration. For C++ write abstract function.
  */
 void 
-CBEComponentFunction::WriteFunctionDeclaration(CBEFile * pFile)
+CBEComponentFunction::WriteFunctionDeclaration(CBEFile& pFile)
 {
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
@@ -328,23 +328,23 @@ CBEComponentFunction::WriteFunctionDeclaration(CBEFile * pFile)
 	// TODO: interface functions and component functions are public,
 	// everything else should be protected
 
-	m_nParameterIndent = pFile->GetIndent();
-	*pFile << "\tvirtual ";
+	m_nParameterIndent = pFile.GetIndent();
+	pFile << "\tvirtual ";
 	// <return type>
 	WriteReturnType(pFile);
 	// in the header file we add function attributes
 	WriteFunctionAttributes(pFile);
-	*pFile << "\n";
+	pFile << "\n";
 	// <name> (
-	*pFile << "\t" << GetName() << " (";
+	pFile << "\t" << GetName() << " (";
 	m_nParameterIndent += GetName().length() + 2;
 	
 	// <parameter list>
 	if (!WriteParameterList(pFile))
-	    *pFile << "void";
+	    pFile << "void";
 	
 	// ); newline
-	*pFile << ") = 0;\n";
+	pFile << ") = 0;\n";
     }
 }
 
@@ -356,7 +356,7 @@ CBEComponentFunction::WriteFunctionDeclaration(CBEFile * pFile)
  * write nothing.
  */
 void 
-CBEComponentFunction::WriteFunctionDefinition(CBEFile * pFile)
+CBEComponentFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
@@ -371,7 +371,7 @@ CBEComponentFunction::WriteFunctionDefinition(CBEFile * pFile)
  * Never write inline function for component function.
  */
 bool
-CBEComponentFunction::DoWriteFunctionInline(CBEFile* /*pFile*/)
+CBEComponentFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
 {
     return false;
 }
@@ -384,7 +384,7 @@ CBEComponentFunction::DoWriteFunctionInline(CBEFile* /*pFile*/)
  * option is set.
  */
 void
-CBEComponentFunction::AddToImpl(CBEImplementationFile * pImpl)
+CBEComponentFunction::AddToImpl(CBEImplementationFile* pImpl)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
         return;  // fake success, without adding function
@@ -412,7 +412,7 @@ CBEComponentFunction::SetTargetFileName(CFEBase * pFEObject)
  *  \return true if is the target file
  */
 bool 
-CBEComponentFunction::IsTargetFile(CBEImplementationFile * pFile)
+CBEComponentFunction::IsTargetFile(CBEImplementationFile* pFile)
 {
     long length = m_sTargetImplementation.length();
     if (!pFile->IsOfFileType(FILETYPE_TEMPLATE))
@@ -448,7 +448,7 @@ CBEComponentFunction::IsTargetFile(CBEImplementationFile * pFile)
  * attributes (IN,OUT) were not empty).
  */
 bool
-CBEComponentFunction::DoWriteFunction(CBEHeaderFile * pFile)
+CBEComponentFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!dynamic_cast<CBEComponent*>(pFile->GetTarget()))
         return false;
@@ -468,7 +468,7 @@ CBEComponentFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * attributes (IN,OUT) were not empty).
  */
 bool
-CBEComponentFunction::DoWriteFunction(CBEImplementationFile * pFile)
+CBEComponentFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!dynamic_cast<CBEComponent*>(pFile->GetTarget()))
         return false;

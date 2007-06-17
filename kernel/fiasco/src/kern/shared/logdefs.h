@@ -60,8 +60,8 @@
   Tb_entry_ctx_sw *tb =                                                 \
      static_cast<Tb_entry_ctx_sw*>(Jdb_tbuf::new_entry());              \
   tb->set(this, space(), regs()->ip(), t, t_orig,	\
-          t_orig->lock_cnt(), current_sched(),                          \
-          current_sched() ? current_sched()->prio() : 0,                \
+          t_orig->lock_cnt(), current_sched(cpu()),                     \
+          current_sched(cpu()) ? current_sched(cpu())->prio() : 0,      \
           (Mword)__builtin_return_address(0));                          \
   Jdb_tbuf::commit_entry();                                             \
   END_LOG_EVENT
@@ -171,11 +171,11 @@
   Tb_entry_sched *tb =							\
      static_cast<Tb_entry_sched*>(Jdb_tbuf::new_entry());		\
   tb->set (current(), current()->regs()->ip(), 0,			\
-           current_sched()->owner(),					\
-           current_sched()->id(),					\
-           current_sched()->prio(),					\
-           current_sched()->left(),					\
-           current_sched()->quantum());					\
+           current_sched(cpu())->owner(),				\
+           current_sched(cpu())->id(),					\
+           current_sched(cpu())->prio(),				\
+           current_sched(cpu())->left(),				\
+           current_sched(cpu())->quantum());				\
   Jdb_tbuf::commit_entry();						\
   END_LOG_EVENT
 
@@ -184,11 +184,11 @@
   Tb_entry_sched *tb =							\
      static_cast<Tb_entry_sched*>(Jdb_tbuf::new_entry());		\
   tb->set (current(), current()->regs()->ip(), 1,			\
-           current_sched()->owner(),					\
-           current_sched()->id(),					\
-           current_sched()->prio(),					\
-           current_sched()->left(),					\
-           current_sched()->quantum());					\
+           current_sched(cpu())->owner(),				\
+           current_sched(cpu())->id(),					\
+           current_sched(cpu())->prio(),				\
+           current_sched(cpu())->left(),				\
+           current_sched(cpu())->quantum());				\
   Jdb_tbuf::commit_entry();						\
   END_LOG_EVENT
 
@@ -197,11 +197,11 @@
   Tb_entry_sched *tb =							\
      static_cast<Tb_entry_sched*>(Jdb_tbuf::new_entry());		\
   tb->set (current(), current()->regs()->ip(), 2,			\
-           current_sched()->owner(),					\
-           current_sched()->id(),					\
-           current_sched()->prio(),					\
-           timeslice_timeout->get_timeout(),				\
-           current_sched()->quantum());					\
+           current_sched(cpu())->owner(),				\
+           current_sched(cpu())->id(),					\
+           current_sched(cpu())->prio(),				\
+           timeslice_timeout.cpu(cpu())->get_timeout(),			\
+           current_sched(cpu())->quantum());				\
   Jdb_tbuf::commit_entry();						\
   END_LOG_EVENT
 

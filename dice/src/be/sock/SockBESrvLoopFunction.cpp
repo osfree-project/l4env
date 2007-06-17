@@ -73,7 +73,7 @@ CSockBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
  * and bind to socket.
  */
 void 
-CSockBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
+CSockBESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     WriteObjectInitialization(pFile);
     // if server-parameter is given, we init CORBA_Env with it
@@ -88,10 +88,10 @@ CSockBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
 	CCompiler::GetNameFactory()->GetCorbaEnvironmentVariable();
 
     // init socket address
-    *pFile << "\tbzero(" << sObj << ", sizeof(struct sockaddr));\n";
-    *pFile << "\t" << sObj << "->sin_family = AF_INET;\n";
-    *pFile << "\t" << sObj << "->sin_port = " << sEnv << "->srv_port;\n";
-    *pFile << "\t" << sObj << "->sin_addr.s_addr = INADDR_ANY;\n";
+    pFile << "\tbzero(" << sObj << ", sizeof(struct sockaddr));\n";
+    pFile << "\t" << sObj << "->sin_family = AF_INET;\n";
+    pFile << "\t" << sObj << "->sin_port = " << sEnv << "->srv_port;\n";
+    pFile << "\t" << sObj << "->sin_addr.s_addr = INADDR_ANY;\n";
 
     pComm->WriteBind(pFile, this);
 }
@@ -100,34 +100,32 @@ CSockBESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
  *  \param pFile the file to write to
  */
 void
-CSockBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile *pFile)
+CSockBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
 {
     string sName = GetEnvironment()->m_Declarators.First()->GetName();
 
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
 	// *corba-env = dice_default_env;
-	*pFile << "\t*" << sName << " = ";
+	pFile << "\t*" << sName << " = ";
 	GetEnvironment()->GetType()->WriteCast(pFile, false);
-	*pFile << "dice_default_server_environment;\n";
+	pFile << "dice_default_server_environment;\n";
     }
     else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
     {
-	*pFile << "\tDICE_EXCEPTION_MAJOR(" << sName << 
+	pFile << "\tDICE_EXCEPTION_MAJOR(" << sName << 
 	    ") = CORBA_NO_EXCEPTION;\n";
-	*pFile << "\tDICE_EXCEPTION_MINOR(" << sName << 
+	pFile << "\tDICE_EXCEPTION_MINOR(" << sName << 
 	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
-	*pFile << "\t" << sName << "->param = 0;\n";
-	*pFile << "\t" << sName << "->srv_port = 9999;\n";
-	*pFile << "\t" << sName << "->cur_socket = -1;\n";
-	*pFile << "\t" << sName << "->user_data = 0;\n";
-	*pFile << "\t" << sName << "->malloc = ::malloc;\n";
-	*pFile << "\t" << sName << "->free = ::free;\n";
-	*pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
-	pFile->IncIndent();
-	*pFile << "\t" << sName << "->ptrs[i] = 0;\n";
-	pFile->DecIndent();
-	*pFile << "\t" << sName << "->ptrs_cur = 0;\n";
+	pFile << "\t" << sName << "->param = 0;\n";
+	pFile << "\t" << sName << "->srv_port = 9999;\n";
+	pFile << "\t" << sName << "->cur_socket = -1;\n";
+	pFile << "\t" << sName << "->user_data = 0;\n";
+	pFile << "\t" << sName << "->malloc = ::malloc;\n";
+	pFile << "\t" << sName << "->free = ::free;\n";
+	pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
+	++pFile << "\t" << sName << "->ptrs[i] = 0;\n";
+	--pFile << "\t" << sName << "->ptrs_cur = 0;\n";
     }
 }
 
@@ -139,7 +137,7 @@ CSockBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile *pFile)
  * in the environment variable.
  */
 void 
-CSockBESrvLoopFunction::WriteCleanup(CBEFile * pFile)
+CSockBESrvLoopFunction::WriteCleanup(CBEFile& pFile)
 {
     CBECommunication *pComm = GetCommunication();
     assert(pComm);

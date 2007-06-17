@@ -49,7 +49,7 @@ protected:
     /** \brief copy constructor */
     CBECppCallWrapperFunction(CBECppCallWrapperFunction &src);
 
-    virtual void WriteBody(CBEFile * pFile);
+    virtual void WriteBody(CBEFile& pFile);
 
 public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation, int nSkipParameter);

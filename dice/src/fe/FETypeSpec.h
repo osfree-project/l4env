@@ -55,8 +55,8 @@ protected:
 
 // operations
 public:
-    static bool IsConstructedType(CFETypeSpec *pType);
-    static bool IsPointerType(CFETypeSpec * pType);
+    virtual bool IsConstructedType();
+    virtual bool IsPointerType();
     virtual unsigned int GetType();
 
 // attributes

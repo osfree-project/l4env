@@ -164,6 +164,8 @@ l4_timeout_s l4_timeout_rel(unsigned man, unsigned exp)
 L4_INLINE
 l4_kernel_clock_t l4_timeout_rel_get(l4_timeout_s to)
 {
+  if (to.t == 0)
+    return ~0ULL;
   return (l4_kernel_clock_t)(to.t & 0x3ff) << ((to.t >> 10) & 0x1f);
 }
 
@@ -173,7 +175,7 @@ l4_kernel_clock_t l4_timeout_abs_get(l4_kernel_clock_t cur, l4_timeout_s to)
 {
   unsigned long e = (to.t >> 11) & 0xf;
   l4_kernel_clock_t timeout = (cur & ~((1 << (e + 10)) - 1)) | ((to.t & 0x3ff) << e);
-  if (((cur >> (e + 10)) & 1) != ((to.t >> 10) & 1))
+  if (((cur >> (e + 10)) & 1) != ((to.t >> 10) & 1U))
     timeout += 1 << (e + 10);
 
   if (timeout < cur)

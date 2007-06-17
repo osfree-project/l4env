@@ -54,9 +54,9 @@ protected:
     /** \brief copy constructor */
     CSockBESrvLoopFunction(CSockBESrvLoopFunction &src);
 
-    virtual void WriteVariableInitialization(CBEFile * pFile);
-    virtual void WriteCleanup(CBEFile * pFile);
-    virtual void WriteDefaultEnvAssignment(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteCleanup(CBEFile& pFile);
+    virtual void WriteDefaultEnvAssignment(CBEFile& pFile);
 
 public:
     virtual void CreateBackEnd(CFEInterface *pFEInterface);

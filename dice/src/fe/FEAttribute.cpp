@@ -27,7 +27,6 @@
  */
 
 #include "FEAttribute.h"
-#include "File.h"
 
 CFEAttribute::CFEAttribute()
 {

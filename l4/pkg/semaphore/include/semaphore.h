@@ -181,9 +181,13 @@ l4semaphore_down(l4semaphore_t * sem);
  * \ingroup api_sem
  *
  * \param   sem          Semaphore structure
- * \param   timeout      Timeout (in ms)
+ * \param   timeout      Timeout (in ms), timeout must be positive
  * \return  0 if semaphore successfully decremented within given time,
  *          != 0 otherwise.
+ *
+ * @Note: A timeout of 0 ms means promptly checkin to enter the
+ *        critical section. If infinitive timeouts are required, use
+ *        l4semaphore_down instead.
  *
  * Decrement semaphore counter by 1. If the result is \< 0,
  * \a l4semaphore_down_timed blocks for \a time ms and waits for the release
@@ -227,6 +231,8 @@ __END_DECLS;
 /*****************************************************************************
  *** implementation
  *****************************************************************************/
+
+#include <l4/semaphore/archindep.h>
 
 #if L4SEMAPHORE_ASM
 #  include <l4/semaphore/asm.h>

@@ -42,6 +42,8 @@ class CBETypedef;
 class CBEType;
 class CBEConstant;
 
+class CObject;
+
 /** \class CBEHeaderFile
  *  \ingroup backend
  *  \brief the header file class
@@ -63,6 +65,8 @@ protected:
 
 public:
     virtual void Write(void);
+
+    virtual CObject* Clone(void);
 
     virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType);
     virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType);

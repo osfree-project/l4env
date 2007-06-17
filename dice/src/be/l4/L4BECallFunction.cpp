@@ -83,7 +83,7 @@ CL4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation)
  * Because this is the call function, we can use the IPC call of L4.
  */
 void 
-CL4BECallFunction::WriteInvocation(CBEFile * pFile)
+CL4BECallFunction::WriteInvocation(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BECallFunction::WriteInvocation(%s) called\n",
         GetName().c_str());
@@ -99,9 +99,9 @@ CL4BECallFunction::WriteInvocation(CBEFile * pFile)
         // sometimes it's possible to abort a call of a client.
         // but the client wants his call made, so we try until
         // the call completes
-	*pFile << "\tdo\n";
-	*pFile << "\t{\n";
-        pFile->IncIndent();
+	pFile << "\tdo\n";
+	pFile << "\t{\n";
+        ++pFile;
     }
     WriteIPC(pFile);
     if (!CCompiler::IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
@@ -109,8 +109,7 @@ CL4BECallFunction::WriteInvocation(CBEFile * pFile)
 	CBENameFactory *pNF = CCompiler::GetNameFactory();
         // now check if call has been canceled
         string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-        pFile->DecIndent();
-	*pFile << "\t} while ((L4_IPC_ERROR(" << sResult <<
+	--pFile << "\t} while ((L4_IPC_ERROR(" << sResult <<
 	    ") == L4_IPC_SEABORTED) ||\n" <<
 	    "\t         (L4_IPC_ERROR(" << sResult <<
 	    ") == L4_IPC_SECANCELED));\n";
@@ -131,46 +130,42 @@ CL4BECallFunction::WriteInvocation(CBEFile * pFile)
  * L4_IPC_ERROR(result).
  */
 void 
-CL4BECallFunction::WriteIPCErrorCheck(CBEFile * pFile)
+CL4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
-    *pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n" 
+    pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n" 
 	<< "\t{\n";
-    pFile->IncIndent();
     // env.major = CORBA_SYSTEM_EXCEPTION;
     // env.repos_id = DICE_IPC_ERROR;
-    *pFile << "\tCORBA_exception_set(";
+    ++pFile << "\tCORBA_exception_set(";
     if (pDecl->GetStars() == 0)
-        *pFile << "&";
+        pFile << "&";
     pDecl->WriteName(pFile);
-    *pFile << ",\n";
-    pFile->IncIndent();
-    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
+    pFile << ",\n";
+    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
               "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
               "\t0);\n";
-    pFile->DecIndent();
     // DICE_IPC_ERROR(env) = L4_IPC_ERROR(result);
     string sEnv;
     if (pDecl->GetStars() == 0)
 	sEnv = "&";
     sEnv += pDecl->GetName();
-    *pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" 
+    --pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" 
 	<< sResult << ");\n";
     // return
     WriteReturn(pFile);
     // close }
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 
 /** \brief initializes message size dopes
  *  \param pFile the file to write to
  */
 void
-CL4BECallFunction::WriteVariableInitialization(CBEFile * pFile)
+CL4BECallFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     CBECallFunction::WriteVariableInitialization(pFile);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
@@ -192,7 +187,7 @@ CL4BECallFunction::WriteVariableInitialization(CBEFile * pFile)
  * return values.
  */
 void 
-CL4BECallFunction::WriteUnmarshalling(CBEFile * pFile)
+CL4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
 	GetName().c_str());
@@ -210,14 +205,13 @@ CL4BECallFunction::WriteUnmarshalling(CBEFile * pFile)
     {
         // we have to always check if this was a flexpage IPC
         string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-	*pFile << "\tif (!l4_ipc_fpage_received(" << sResult << "))\n";
-	*pFile << "\t{\n";
-        pFile->IncIndent();
+	pFile << "\tif (!l4_ipc_fpage_received(" << sResult << "))\n";
+	pFile << "\t{\n";
+        ++pFile;
         // unmarshal exception and test if we really received an exception. If
 	// so, we return
         WriteMarshalException(pFile, false, false);
-        pFile->DecIndent();
-	*pFile << "\t}\n";
+	--pFile << "\t}\n";
     }
     // unmarshal rest (skip CBECallFunction)
     // unmarshals flexpages if there are any...
@@ -238,7 +232,7 @@ CL4BECallFunction::WriteUnmarshalling(CBEFile * pFile)
  *
  * This implementation writes the L4 V2 IPC code.
  */
-void CL4BECallFunction::WriteIPC(CBEFile* pFile)
+void CL4BECallFunction::WriteIPC(CBEFile& pFile)
 {
     if (m_pTrace)
 	m_pTrace->BeforeCall(pFile, this);

@@ -103,7 +103,7 @@ CBEWaitAnyFunction *CL4BEClassFactory::GetNewWaitAnyFunction()
 /** \brief creates a new instance of the class CBEHeaderFile
  *  \return a reference to the new instance
  */
-CBEHeaderFile *CL4BEClassFactory::GetNewHeaderFile()
+CBEHeaderFile* CL4BEClassFactory::GetNewHeaderFile()
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEClassFactory: created class CL4BEHeaderFile\n");
     return new CL4BEHeaderFile();

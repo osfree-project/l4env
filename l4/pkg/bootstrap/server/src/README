@@ -50,7 +50,7 @@ Local customization:
  You can put a Makeconf.local file right into this directory where you
  can specify your own search paths etc. Something like this:
 
-  LOCAL_SEARCH_PATH_x86 := ../stuff:/home/joe/dev/l4/kernel/fiasco/build-ia32
+  BOOTSTRAP_SEARCH_PATH_x86 := ../stuff:/home/joe/dev/l4/kernel/fiasco/build-ia32
 
   KERN_ARM := build-arm
 
@@ -60,7 +60,7 @@ Local customization:
   endif
 
   KERN_PATH := /home/joe/dev/l4/kernel/fiasco/$(KERN_ARM)
-  LOCAL_SEARCH_PATH_arm = ../stuff:$(KERN_PATH):../../../../../bin/arm_sa
+  BOOTSTRAP_SEARCH_PATH_arm = ../stuff:$(KERN_PATH):../../../../../bin/arm_sa
 
-  LOCAL_SEARCH_PATH     = $(LOCAL_SEARCH_PATH_$(ARCH))
+  BOOTSTRAP_SEARCH_PATH     = $(BOOTSTRAP_SEARCH_PATH_$(ARCH))
 

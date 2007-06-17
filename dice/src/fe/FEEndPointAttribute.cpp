@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEEndPointAttribute.h"
-#include "File.h"
 
 CFEEndPointAttribute::CFEEndPointAttribute(vector<PortSpec> *pPortSpecs)
 : CFEAttribute(ATTR_ENDPOINT),

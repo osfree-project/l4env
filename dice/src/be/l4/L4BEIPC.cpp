@@ -98,7 +98,7 @@ CL4BEIPC::IsShortIPC(CBEFunction *pFunction,
  * Invoke the specialized method with default parameters.
  */
 void
-CL4BEIPC::WriteReplyAndWait(CBEFile* pFile,
+CL4BEIPC::WriteReplyAndWait(CBEFile& pFile,
     CBEFunction* pFunction)
 { 
     WriteReplyAndWait(pFile, pFunction, false, false);

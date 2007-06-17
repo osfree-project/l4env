@@ -183,20 +183,20 @@ CBEFunction::AddAfterParameters(void)
  * internal Write function to call.
  */
 void 
-CBEFunction::Write(CBEHeaderFile * pFile) 
+CBEFunction::Write(CBEHeaderFile& pFile) 
 { 
-    if (!pFile->IsOpen()) 
+    if (!pFile.is_open()) 
 	return;
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEFunction::%s(%s) in %s called\n", __func__, 
-	pFile->GetFileName().c_str(), GetName().c_str());
+	pFile.GetFileName().c_str(), GetName().c_str());
     
     // write inline preix
     if (DoWriteFunctionInline(pFile))
     {
 	string sInline = CCompiler::GetNameFactory()->GetInlinePrefix();
-	*pFile << sInline << " ";
+	pFile << sInline << " ";
 
         WriteFunctionDefinition(pFile);
     }
@@ -212,14 +212,14 @@ CBEFunction::Write(CBEHeaderFile * pFile)
  *
  * Only write function definition if not inlining.
  */
-void CBEFunction::Write(CBEImplementationFile * pFile)
+void CBEFunction::Write(CBEImplementationFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEFunction::%s(%s) in %s called\n", __func__, 
-	pFile->GetFileName().c_str(), GetName().c_str());
+	pFile.GetFileName().c_str(), GetName().c_str());
     
     if (!DoWriteFunctionInline(pFile))
     	WriteFunctionDefinition(pFile);
@@ -232,7 +232,7 @@ void CBEFunction::Write(CBEImplementationFile * pFile)
  *  \param pFile the file to write to
  */
 bool
-CBEFunction::DoWriteFunctionInline(CBEFile* /*pFile*/)
+CBEFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
 {
     return CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE);
 }
@@ -247,13 +247,13 @@ CBEFunction::DoWriteFunctionInline(CBEFile* /*pFile*/)
  * The \<name\> of the function is created by the name factory
  */
 void 
-CBEFunction::WriteFunctionDeclaration(CBEFile * pFile)
+CBEFunction::WriteFunctionDeclaration(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) in %s called\n",
-	__func__, pFile->GetFileName().c_str(), GetName().c_str());
+	__func__, pFile.GetFileName().c_str(), GetName().c_str());
 
     // CPP TODOs:
     // TODO: component functions at server side could be pure virtual to be 
@@ -261,23 +261,23 @@ CBEFunction::WriteFunctionDeclaration(CBEFile * pFile)
     // TODO: interface functions and component functions are public,
     // everything else should be protected
 
-    m_nParameterIndent = pFile->GetIndent();
-    *pFile << "\t";
+    m_nParameterIndent = pFile.GetIndent();
+    pFile << "\t";
     // <return type>
     WriteReturnType(pFile);
     // in the header file we add function attributes
     WriteFunctionAttributes(pFile);
-    *pFile << "\n";
+    pFile << "\n";
     // <name> (
-    *pFile << "\t" << m_sName << " (";
+    pFile << "\t" << m_sName << " (";
     m_nParameterIndent += m_sName.length() + 2;
 
     // <parameter list>
     if (!WriteParameterList(pFile))
-	*pFile << "void";
+	pFile << "void";
 
     // ); newline
-    *pFile << ");\n";
+    pFile << ");\n";
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s returns\n", __func__);
 }
@@ -294,51 +294,50 @@ CBEFunction::WriteFunctionDeclaration(CBEFile * pFile)
  * </code>
  */
 void 
-CBEFunction::WriteFunctionDefinition(CBEFile * pFile)
+CBEFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEFunction::%s(%s) in %s called\n", __func__, 
-	pFile->GetFileName().c_str(), GetName().c_str());
+	pFile.GetFileName().c_str(), GetName().c_str());
 
-    m_nParameterIndent = pFile->GetIndent();
-    *pFile << "\t";
+    m_nParameterIndent = pFile.GetIndent();
+    pFile << "\t";
     // return type
     WriteReturnType(pFile);
-    *pFile << "\n";
+    pFile << "\n";
     // <name>(
-    *pFile << "\t";
+    pFile << "\t";
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	pFile->IsOfFileType(FILETYPE_IMPLEMENTATION))
+	pFile.IsOfFileType(FILETYPE_IMPLEMENTATION))
     {
 	// get class and write <class>::
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
 	if (pClass)
 	{
 	    pClass->WriteClassName(pFile);
-	    *pFile << "::";
+	    pFile << "::";
 	}
     }
-    *pFile << m_sName << " (";
+    pFile << m_sName << " (";
     m_nParameterIndent += m_sName.length() + 2;
 
     // <parameter list>
     if (!WriteParameterList(pFile))
-	*pFile << "void";
+	pFile << "void";
 
     // ) newline { newline
-    *pFile << ")\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    pFile << ")\n";
+    pFile << "\t{\n";
+    ++pFile;
 
     // writes the body
     WriteBody(pFile);
 
     // } newline
-    pFile->DecIndent();
-    *pFile << "\t}\n\n";
+    --pFile << "\t}\n\n";
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s returns\n", 
 	__func__);
@@ -350,12 +349,12 @@ CBEFunction::WriteFunctionDefinition(CBEFile * pFile)
  * Because the return type differs for every kind of function, we use an
  * overloadable function here.
  */
-void CBEFunction::WriteReturnType(CBEFile * pFile)
+void CBEFunction::WriteReturnType(CBEFile& pFile)
 {
     CBEType *pRetType = GetReturnType();
     if (!pRetType)
     {
-	*pFile << "void";
+	pFile << "void";
         return;
     }
     pRetType->Write(pFile);
@@ -367,12 +366,12 @@ void CBEFunction::WriteReturnType(CBEFile * pFile)
  * The parameter list contains the parameters of the function,speerated by
  * commas.
  */
-bool CBEFunction::WriteParameterList(CBEFile * pFile)
+bool CBEFunction::WriteParameterList(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for %s\n", __func__,
 	GetName().c_str());
-    int nDiffIndent = m_nParameterIndent - pFile->GetIndent();
-    pFile->IncIndent(nDiffIndent);
+    int nDiffIndent = m_nParameterIndent - pFile.GetIndent();
+    pFile+=nDiffIndent;
     // remember if we wrote something
     bool bComma = false;
     // write own parameters
@@ -384,13 +383,13 @@ bool CBEFunction::WriteParameterList(CBEFile * pFile)
 	if (DoWriteParameter(*iter))
 	{
 	    if (bComma)
-		*pFile << ",\n\t";
+		pFile << ",\n\t";
 	    WriteParameter(pFile, *iter);
 	    bComma = true;
 	}
     }
     // after parameter list decrement indent
-    pFile->DecIndent(nDiffIndent);
+    pFile-=nDiffIndent;
 
     return bComma;
 }
@@ -404,25 +403,25 @@ bool CBEFunction::WriteParameterList(CBEFile * pFile)
  * and writes its names plus type.
  */
 void
-CBEFunction::WriteParameter(CBEFile * pFile,
+CBEFunction::WriteParameter(CBEFile& pFile,
     CBETypedDeclarator * pParameter,
     bool bUseConst)
 {
     CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
     assert(pDeclarator);
     pParameter->WriteType(pFile, bUseConst);
-    *pFile << " ";
+    pFile << " ";
     pDeclarator->WriteDeclaration(pFile);
 }
 
 /** \brief writes the body of the function to the target file
  *  \param pFile the file to write to
  */
-void CBEFunction::WriteBody(CBEFile * pFile)
+void CBEFunction::WriteBody(CBEFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEFunction::%s(%s) in %s called\n", __func__, 
-	pFile->GetFileName().c_str(), GetName().c_str());
+	pFile.GetFileName().c_str(), GetName().c_str());
 
     // variable declaration and initialization
     WriteVariableDeclaration(pFile);
@@ -447,7 +446,7 @@ void CBEFunction::WriteBody(CBEFile * pFile)
  * Write declaration of local variables
  */
 void 
-CBEFunction::WriteVariableDeclaration(CBEFile * pFile)
+CBEFunction::WriteVariableDeclaration(CBEFile& pFile)
 {
     vector<CBETypedDeclarator*>::iterator iter;
     for (iter = m_LocalVariables.begin();
@@ -467,7 +466,7 @@ CBEFunction::WriteVariableDeclaration(CBEFile * pFile)
  * This function creates a marshaller and lets it marshal this function.
  */
 void 
-CBEFunction::WriteMarshalling(CBEFile * pFile)
+CBEFunction::WriteMarshalling(CBEFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n", 
 	__func__, GetName().c_str());
@@ -497,7 +496,7 @@ CBEFunction::WriteMarshalling(CBEFile * pFile)
  *
  * \todo check if this belongs to CBEOperationFunction
  */
-void CBEFunction::WriteCleanup(CBEFile * /*pFile*/)
+void CBEFunction::WriteCleanup(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the return statement of the function
@@ -510,7 +509,7 @@ void CBEFunction::WriteCleanup(CBEFile * /*pFile*/)
  * If the return type is void, an empty return statement is written.
  * We do this to allow usage of WriteReturn conditionally.
  */
-void CBEFunction::WriteReturn(CBEFile * pFile)
+void CBEFunction::WriteReturn(CBEFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n", 
 	__func__, GetName().c_str());
@@ -518,17 +517,17 @@ void CBEFunction::WriteReturn(CBEFile * pFile)
     CBETypedDeclarator *pReturn = GetReturnVariable();
     if (!pReturn || GetReturnType()->IsVoid())
     {
-	*pFile << "\treturn;\n";
+	pFile << "\treturn;\n";
         CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	    "CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
         return;
     }
 
-    *pFile << "\treturn ";
+    pFile << "\treturn ";
     // get return var name, which is first declarator
     CBEDeclarator *pRetVar = pReturn->m_Declarators.First();
     pRetVar->WriteDeclaration(pFile);
-    *pFile << ";\n";
+    pFile << ";\n";
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	"CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
@@ -540,7 +539,7 @@ void CBEFunction::WriteReturn(CBEFile * pFile)
  * This function creates a marshaller and lets it unmarshal this function
  */
 void 
-CBEFunction::WriteUnmarshalling(CBEFile * pFile)
+CBEFunction::WriteUnmarshalling(CBEFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n", 
 	__func__, GetName().c_str());
@@ -577,31 +576,31 @@ CBEFunction::WriteUnmarshalling(CBEFile * pFile)
  * given to us. If it is 0 the caller wants no return value.
  */
 void 
-CBEFunction::WriteCall(CBEFile * pFile,
+CBEFunction::WriteCall(CBEFile& pFile,
 	string sReturnVar,
 	bool bCallFromSameClass)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n", 
 	__func__, GetName().c_str());
 
-    *pFile << "\t";
+    pFile << "\t";
     m_nParameterIndent = 0;
     CBEType *pRetType = GetReturnType();
     if (pRetType)
     {
         if ((!sReturnVar.empty()) && (!pRetType->IsVoid()))
         {
-	    *pFile << sReturnVar << " = ";
+	    pFile << sReturnVar << " = ";
             m_nParameterIndent += sReturnVar.length() + 3;
         }
     }
 
-    *pFile << GetName() << " (";
+    pFile << GetName() << " (";
     m_nParameterIndent += GetName().length() + 2;
-    pFile->IncIndent(m_nParameterIndent);
+    pFile+=m_nParameterIndent;
     WriteCallParameterList(pFile, bCallFromSameClass);
-    pFile->DecIndent(m_nParameterIndent);
-    *pFile << ");\n";
+    pFile-=m_nParameterIndent;
+    pFile << ");\n";
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 	"CBEFunction::%s(%s) finished\n", __func__, GetName().c_str());
@@ -612,7 +611,7 @@ CBEFunction::WriteCall(CBEFile * pFile,
  *  \param bCallFromSameClass true if call is made from same class
  */
 void
-CBEFunction::WriteCallParameterList(CBEFile * pFile,
+CBEFunction::WriteCallParameterList(CBEFile& pFile,
     bool bCallFromSameClass)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for %s\n", __func__,
@@ -629,7 +628,7 @@ CBEFunction::WriteCallParameterList(CBEFile * pFile,
 	if (DoWriteParameter(pOrig))
 	{
 	    if (bComma)
-		*pFile << ",\n\t";
+		pFile << ",\n\t";
 	    WriteCallParameter(pFile, *iter, bCallFromSameClass);
 	    bComma = true;
 	}
@@ -642,7 +641,7 @@ CBEFunction::WriteCallParameterList(CBEFile * pFile,
  *  \param bCallFromSameClass true if called from same class
  */
 void 
-CBEFunction::WriteCallParameter(CBEFile * pFile,
+CBEFunction::WriteCallParameter(CBEFile& pFile,
 	CBETypedDeclarator * pParameter,
 	bool /*bCallFromSameClass*/)
 {
@@ -676,7 +675,7 @@ CBEFunction::WriteCallParameter(CBEFile * pFile,
  * # the stars of external == stars of internal we need nothing.
  */
 void 
-CBEFunction::WriteCallParameterName(CBEFile * pFile,
+CBEFunction::WriteCallParameterName(CBEFile& pFile,
 	CBEDeclarator * pInternalDecl,
 	CBEDeclarator * pExternalDecl)
 {
@@ -693,19 +692,19 @@ CBEFunction::WriteCallParameterName(CBEFile * pFile,
     int nCount;
     for (nCount = nDiffStars; nCount < 0; nCount++)
     {
-	*pFile << "&";
+	pFile << "&";
         if (nCount+1 < 0)
-	    *pFile << "(";
+	    pFile << "(";
     }
     for (nCount = nDiffStars; nCount > 0; nCount--)
-	*pFile << "*";
+	pFile << "*";
     if (nDiffStars > 0)
-	*pFile << "(";
-    *pFile << pExternalDecl->GetName();
+	pFile << "(";
+    pFile << pExternalDecl->GetName();
     if (nDiffStars > 0)
-	*pFile << ")";
+	pFile << ")";
     for (nCount = nDiffStars+1; nCount < 0; nCount++)
-	*pFile << ")";
+	pFile << ")";
 
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s returns\n", __func__);
 }
@@ -1192,7 +1191,7 @@ CBEFunction::MsgBufferInitialization(CBEMsgBuffer*)
  * parameters.
  */
 int 
-CBEFunction::WriteMarshalReturn(CBEFile * pFile, 
+CBEFunction::WriteMarshalReturn(CBEFile& pFile, 
     bool bMarshal)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
@@ -1219,7 +1218,7 @@ CBEFunction::WriteMarshalReturn(CBEFile * pFile,
  * unmarshalling.
  */
 int
-CBEFunction::WriteMarshalOpcode(CBEFile *pFile,
+CBEFunction::WriteMarshalOpcode(CBEFile& pFile,
     bool bMarshal)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
@@ -1252,7 +1251,7 @@ CBEFunction::WriteMarshalOpcode(CBEFile *pFile,
  * skip for now.
  */
 void
-CBEFunction::WriteMarshalException(CBEFile* pFile,
+CBEFunction::WriteMarshalException(CBEFile& pFile,
     bool bMarshal, 
     bool bReturn)
 {
@@ -1272,10 +1271,10 @@ CBEFunction::WriteMarshalException(CBEFile* pFile,
 	if (pEnv->GetStars() == 0)
 	    sName = "&";
 	sName += pEnv->GetName();
-	*pFile << "\tif (DICE_HAS_EXCEPTION(" << sName << "))\n";
-	pFile->IncIndent();
+	pFile << "\tif (DICE_HAS_EXCEPTION(" << sName << "))\n";
+	++pFile;
 	WriteReturn(pFile);
-	pFile->DecIndent();
+	--pFile;
     }
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__,
@@ -1695,7 +1694,7 @@ void CBEFunction::SetMsgBufferCastOnCall(bool bCastMsgBufferOnCall)
  * This function should be overloaded, because the functions should be added to the
  * files depending on their instance and attributes.
  */
-void CBEFunction::AddToHeader(CBEHeaderFile *pHeader)
+void CBEFunction::AddToHeader(CBEHeaderFile* pHeader)
 {
     if (IsTargetFile(pHeader))
         pHeader->m_Functions.Add(this);
@@ -1722,7 +1721,7 @@ void CBEFunction::SetComponentSide(bool bComponentSide)
  *
  * This is usually only used for global functions.
  */
-void CBEFunction::AddToImpl(CBEImplementationFile *pImpl)
+void CBEFunction::AddToImpl(CBEImplementationFile* pImpl)
 {
     if (IsTargetFile(pImpl))
         pImpl->m_Functions.Add(this);
@@ -2084,7 +2083,7 @@ CBEFunction::GetParameter(CBEDeclarator *pDeclarator, bool bCall)
 /** \brief writes the attributes for the function
  *  \param pFile the file to write to
  */
-void CBEFunction::WriteFunctionAttributes(CBEFile* /*pFile*/)
+void CBEFunction::WriteFunctionAttributes(CBEFile& /*pFile*/)
 {}
 
 /** \brief access to opcode constant names
@@ -2173,7 +2172,7 @@ string CBEFunction::GetExceptionWordInitString()
 /** \brief writes the initialization of the exception word variable
  *  \param pFile the file to write to
  */
-void CBEFunction::WriteExceptionWordInitialization(CBEFile* pFile)
+void CBEFunction::WriteExceptionWordInitialization(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
 	GetName().c_str());
@@ -2186,7 +2185,7 @@ void CBEFunction::WriteExceptionWordInitialization(CBEFile* pFile)
     CBEDeclarator *pDecl = pExceptionVar->m_Declarators.First();
     string sInitString = GetExceptionWordInitString();
     // get name of exception word
-    *pFile << "\t" << pDecl->GetName() << " = " << sInitString << ";\n";
+    pFile << "\t" << pDecl->GetName() << " = " << sInitString << ";\n";
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s returns\n", __func__,
 	GetName().c_str());
@@ -2195,7 +2194,7 @@ void CBEFunction::WriteExceptionWordInitialization(CBEFile* pFile)
 /** \brief writes the check of the exception members of the environment
  *  \param pFile the file to write to
  */
-void CBEFunction::WriteExceptionCheck(CBEFile * /*pFile*/)
+void CBEFunction::WriteExceptionCheck(CBEFile& /*pFile*/)
 {}
 
 /** \brief returns the bytes to use for padding a parameter to its size

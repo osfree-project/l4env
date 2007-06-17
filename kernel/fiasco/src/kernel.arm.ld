@@ -37,7 +37,7 @@ SECTIONS {
 		*(.exitcall.exit)
 	      }
 	      
-  . = kernel_load_addr;
+  . = kernel_load_addr + 0x1000;
 	      
   .text : {
     bootstrap*(.init)
@@ -126,6 +126,14 @@ SECTIONS {
 
     PROVIDE(_edata  =  .);
 
+  }
+
+  . = ALIGN(8);
+  .per_cpu_data : AT (ADDR(.per_cpu_data) - phys_offset) {
+    PROVIDE (_per_cpu_data_start = .);
+    *(.per_cpu.data)
+    . = ALIGN(8);
+    PROVIDE (_per_cpu_data_end = .);
   }
 
   . = ALIGN(4K);

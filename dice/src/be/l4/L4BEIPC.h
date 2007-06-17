@@ -48,8 +48,8 @@ public:
     virtual ~CL4BEIPC();
 
     /** \brief write the reply-and-wait invocation */
-    virtual void WriteReplyAndWait(CBEFile*, CBEFunction*, bool, bool) = 0;
-    virtual void WriteReplyAndWait(CBEFile*, CBEFunction*);
+    virtual void WriteReplyAndWait(CBEFile& , CBEFunction*, bool, bool) = 0;
+    virtual void WriteReplyAndWait(CBEFile& , CBEFunction*);
 
 protected:
     virtual bool IsShortIPC(CBEFunction *pFunction, 

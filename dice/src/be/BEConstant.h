@@ -60,11 +60,11 @@ protected:
     CBEConstant(CBEConstant &src);
 
 public:
-    virtual void Write(CBEHeaderFile *pFile);
+    virtual void Write(CBEHeaderFile& pFile);
     virtual void CreateBackEnd(CBEType* pType, string sName, 
 	CBEExpression* pValue, bool bAlwaysDefine);
     virtual void CreateBackEnd(CFEConstDeclarator *pFEConstDeclarator);
-    virtual void AddToHeader(CBEHeaderFile *pHeader);
+    virtual void AddToHeader(CBEHeaderFile* pHeader);
     virtual string GetName();
     virtual CBEExpression *GetValue();
 

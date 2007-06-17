@@ -30,10 +30,10 @@
 #ifndef __DICE_BEFILE_H__
 #define __DICE_BEFILE_H__
 
-#include "File.h"
 #include "BEContext.h" // for FILE_TYPE
 #include "template.h"
 #include <vector>
+#include <fstream>
 
 class CBEFunction;
 class CBETarget;
@@ -54,7 +54,7 @@ class CIncludeStatement;
  * CBEImplementationFile. These common properties are that both contain
  * functions and include files.
  */
-class CBEFile : public CFile
+class CBEFile : public std::ofstream, public CObject
 {
 // Constructor
 public:
@@ -62,6 +62,11 @@ public:
      */
     CBEFile();
     virtual ~CBEFile();
+
+    /** maimum possible indent */
+    const static unsigned int MAX_INDENT;
+    /** the standard indentation value */
+    const static unsigned int STD_INDENT;
 
 protected:
     /** \brief copy constructor */
@@ -93,6 +98,16 @@ public:
      *  \param nFileType the type of the file
      */
     virtual void CreateBackEnd(CFEFile *pFEFile, FILE_TYPE nFileType) = 0;
+    /** \brief return the name of the file
+     *  \return the name of the currently open file, 0 if no file is open
+     */
+    string GetFileName() const
+    { return m_sFilename; }
+    /** \brief return the current indent
+     *  \return the current indent
+     */
+    unsigned int GetIndent() const
+    { return m_nIndent; }
 
     virtual CBEFunction* FindFunction(string sFunctionName,
 	FUNCTION_TYPE nFunctionType);
@@ -105,6 +120,15 @@ public:
     virtual bool IsOfFileType(FILE_TYPE nFileType);
     virtual bool HasFunctionWithUserType(string sTypeName);
     virtual int GetSourceLineEnd();
+
+    CBEFile& operator++();
+    CBEFile& operator--();
+    CBEFile& operator+=(int);
+    CBEFile& operator-=(int);
+    using std::ofstream::operator<<;
+    __ostream_type& operator<<(string s);
+    __ostream_type& operator<<(char const * s);
+    __ostream_type& operator<<(char* s);
 
 protected:
     /** \brief write a function
@@ -129,6 +153,8 @@ protected:
     virtual void CreateOrderedElementList(void);
     void InsertOrderedElement(CObject *pObj);
 
+    virtual void PrintIndent(void);
+
 protected:
     /** \var FILE_TYPE m_nFileType
      *  \brief contains the type of the file
@@ -138,6 +164,19 @@ protected:
      *  \brief contains ordered list of elements
      */
     vector<CObject*> m_vOrderedElements;
+    /** \var string m_sFilename
+     *  \brief the file's name
+     */
+    string m_sFilename;
+    /** \var int m_nIndent
+     *  \brief the current valid indent, when printing to the file
+     */
+    unsigned int m_nIndent;
+    /** \var m_nLastIndent
+     *  \brief remembers last increment
+     */
+    int m_nLastIndent;
+
 
 public:
     /** \var CSearchableCollection<CBEClass, string> m_Classes

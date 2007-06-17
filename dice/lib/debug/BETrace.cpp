@@ -65,7 +65,7 @@ CBETrace::AddLocalVariable(CBEFunction *pFunction)
  * variables. The preferred way sould be to use \a AddLocalVariable instead.
  */
 void
-CBETrace::VariableDeclaration(CBEFile* /*pFile*/,
+CBETrace::VariableDeclaration(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }
@@ -75,7 +75,7 @@ CBETrace::VariableDeclaration(CBEFile* /*pFile*/,
  *  \param pFunction the server loop function calling this hook
  */
 void
-CBETrace::InitServer(CBEFile* /*pFile*/,
+CBETrace::InitServer(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }
@@ -89,7 +89,7 @@ CBETrace::InitServer(CBEFile* /*pFile*/,
  * are initialized and just before the loop actually starts doing something.
  */
 void
-CBETrace::BeforeLoop(CBEFile* /*pFile*/,
+CBETrace::BeforeLoop(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }
@@ -98,29 +98,35 @@ CBETrace::BeforeLoop(CBEFile* /*pFile*/,
  *  \param pFile the file to write to
  */
 void
-CBETrace::DefaultIncludes(CBEFile *pFile)
+CBETrace::DefaultIncludes(CBEFile& pFile)
 {
-    if (!pFile->IsOfFileType(FILETYPE_HEADER))
+    if (!pFile.IsOfFileType(FILETYPE_HEADER))
 	return;
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBETrace::%s called\n", __func__);
  
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
     {
-	*pFile << "#ifndef DICE_TRACE_SERVER\n";
-	*pFile << "#define DICE_TRACE_SERVER 1\n";
-	*pFile << "#endif /* DICE_TRACE_SERVER */\n";
+	pFile << "#ifndef DICE_TRACE_SERVER\n";
+	pFile << "#define DICE_TRACE_SERVER 1\n";
+	pFile << "#endif /* DICE_TRACE_SERVER */\n";
     }
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_CLIENT))
     {
-	*pFile << "#ifndef DICE_TRACE_CLIENT\n";
-	*pFile << "#define DICE_TRACE_CLIENT 1\n";
-	*pFile << "#endif /* DICE_TRACE_CLIENT */\n";
+	pFile << "#ifndef DICE_TRACE_CLIENT\n";
+	pFile << "#define DICE_TRACE_CLIENT 1\n";
+	pFile << "#endif /* DICE_TRACE_CLIENT */\n";
     }
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF))
     {
- 	*pFile << "#ifndef DICE_TRACE_MSGBUF\n";
- 	*pFile << "#define DICE_TRACE_MSGBUF 1\n";
- 	*pFile << "#endif /* DICE_TRACE_MSGBUF */\n";
+ 	pFile << "#ifndef DICE_TRACE_MSGBUF\n";
+ 	pFile << "#define DICE_TRACE_MSGBUF 1\n";
+ 	pFile << "#endif /* DICE_TRACE_MSGBUF */\n";
     }
+ 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBETrace::%s returns\n", __func__);
 }
 
 /** \brief prints the tracing message before a call
@@ -128,7 +134,7 @@ CBETrace::DefaultIncludes(CBEFile *pFile)
  *  \param pFunction the function to write for
  */
 void
-CBETrace::BeforeCall(CBEFile *pFile,
+CBETrace::BeforeCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF))
@@ -140,7 +146,7 @@ CBETrace::BeforeCall(CBEFile *pFile,
     string sFunc;
     CCompiler::GetBackEndOption("trace-client-func", sFunc);
     
-    *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+    pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": before call\\n\");\n";
     pMsgBuffer->WriteDump(pFile);
 }
@@ -150,7 +156,7 @@ CBETrace::BeforeCall(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::AfterCall(CBEFile *pFile,
+CBETrace::AfterCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF))
@@ -162,7 +168,7 @@ CBETrace::AfterCall(CBEFile *pFile,
     string sFunc;
     CCompiler::GetBackEndOption("trace-client-func", sFunc);
 
-    *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+    pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": after call\\n\");\n";
     pMsgBuffer->WriteDump(pFile);
 }
@@ -172,7 +178,7 @@ CBETrace::AfterCall(CBEFile *pFile,
  *  \param pFunction the dispatch function to write for
  */
 void
-CBETrace::BeforeDispatch(CBEFile *pFile,
+CBETrace::BeforeDispatch(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!pFunction->IsComponentSide())
@@ -185,7 +191,7 @@ CBETrace::BeforeDispatch(CBEFile *pFile,
     string sFunc;
     CCompiler::GetBackEndOption("trace-server-func", sFunc);
 
-    *pFile << "\t" << sFunc << " (\"opcode %x received\\n\", "
+    pFile << "\t" << sFunc << " (\"opcode %x received\\n\", "
 	<< sOpcodeVar << ");\n";
 }
 
@@ -194,7 +200,7 @@ CBETrace::BeforeDispatch(CBEFile *pFile,
  *  \param pFunction the dispatch function to write for
  */
 void
-CBETrace::AfterDispatch(CBEFile *pFile,
+CBETrace::AfterDispatch(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!pFunction->IsComponentSide())
@@ -207,7 +213,7 @@ CBETrace::AfterDispatch(CBEFile *pFile,
     CCompiler::GetBackEndOption("trace-server-func", sFunc);
     string sReply = pNF->GetReplyCodeVariable();
 
-    *pFile << "\t" << sFunc << " (\"reply %s\\n\", (" <<
+    pFile << "\t" << sFunc << " (\"reply %s\\n\", (" <<
 	sReply << "==DICE_REPLY)?\"DICE_REPLY\":" <<
 	"((" << sReply << "==DICE_DEFERRED_REPLY)?\"DICE_DEFERRED_REPLY\":" <<
 	"\"DICE_NEVER_REPLY\"));\n";
@@ -218,7 +224,7 @@ CBETrace::AfterDispatch(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::BeforeReplyOnly(CBEFile *pFile,
+CBETrace::BeforeReplyOnly(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     BeforeCall(pFile, pFunction);
@@ -229,7 +235,7 @@ CBETrace::BeforeReplyOnly(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::AfterReplyOnly(CBEFile *pFile,
+CBETrace::AfterReplyOnly(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     AfterCall(pFile, pFunction);
@@ -240,7 +246,7 @@ CBETrace::AfterReplyOnly(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::BeforeReplyWait(CBEFile* /*pFile*/,
+CBETrace::BeforeReplyWait(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }
@@ -250,7 +256,7 @@ CBETrace::BeforeReplyWait(CBEFile* /*pFile*/,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::AfterReplyWait(CBEFile *pFile,
+CBETrace::AfterReplyWait(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF))
@@ -262,7 +268,7 @@ CBETrace::AfterReplyWait(CBEFile *pFile,
     string sFunc;
     CCompiler::GetBackEndOption("trace-client-func", sFunc);
 
-    *pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
+    pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": after wait\\n\");\n";
     pMsgBuffer->WriteDump(pFile);
 }
@@ -272,7 +278,7 @@ CBETrace::AfterReplyWait(CBEFile *pFile,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::BeforeComponent(CBEFile* /*pFile*/,
+CBETrace::BeforeComponent(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }
@@ -282,7 +288,7 @@ CBETrace::BeforeComponent(CBEFile* /*pFile*/,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::AfterComponent(CBEFile* /*pFile*/,
+CBETrace::AfterComponent(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }
@@ -292,7 +298,7 @@ CBETrace::AfterComponent(CBEFile* /*pFile*/,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::BeforeMarshalling(CBEFile* /*pFile*/,
+CBETrace::BeforeMarshalling(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }
@@ -302,7 +308,7 @@ CBETrace::BeforeMarshalling(CBEFile* /*pFile*/,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::AfterMarshalling(CBEFile* /*pFile*/,
+CBETrace::AfterMarshalling(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }
@@ -312,7 +318,7 @@ CBETrace::AfterMarshalling(CBEFile* /*pFile*/,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::BeforeUnmarshalling(CBEFile* /*pFile*/,
+CBETrace::BeforeUnmarshalling(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }
@@ -322,7 +328,7 @@ CBETrace::BeforeUnmarshalling(CBEFile* /*pFile*/,
  *  \param pFunction the function to write for
  */
 void
-CBETrace::AfterUnmarshalling(CBEFile* /*pFile*/,
+CBETrace::AfterUnmarshalling(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {
 }

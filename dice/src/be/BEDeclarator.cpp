@@ -55,13 +55,13 @@
  *  \param pStack the declarator stack to write
  *  \param bUsePointer true if one star should be ignored
  */
-void CDeclaratorStackLocation::Write(CBEFile *pFile,
+void CDeclaratorStackLocation::Write(CBEFile& pFile,
     CDeclStack* pStack,
     bool bUsePointer)
 {
     string sOut;
     CDeclaratorStackLocation::WriteToString(sOut, pStack, bUsePointer);
-    *pFile << sOut;
+    pFile << sOut;
 }
 
 /** \brief writes the declarator stack to a string
@@ -344,7 +344,7 @@ CBEDeclarator::CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator)
  * etc.).
  */
 void 
-CBEDeclarator::WriteDeclaration(CBEFile * pFile)
+CBEDeclarator::WriteDeclaration(CBEFile& pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
 	"CBEDeclarator::%s called for %s\n", __func__,
@@ -358,12 +358,12 @@ CBEDeclarator::WriteDeclaration(CBEFile * pFile)
     }
     // write stars
     for (int i = 0; i < m_nStars; i++)
-        *pFile << "*";
+        pFile << "*";
     // write name
-    *pFile << m_sName;
+    pFile << m_sName;
     // write bitfields
     if (m_nBitfields > 0)
-        *pFile << ":" << m_nBitfields;
+        pFile << ":" << m_nBitfields;
     // array dimensions
     if (IsArray())
         WriteArray(pFile);
@@ -379,16 +379,16 @@ CBEDeclarator::WriteDeclaration(CBEFile * pFile)
  * iterating over them and writing them into brackets ('[]').
  */
 void
-CBEDeclarator::WriteArray(CBEFile * pFile)
+CBEDeclarator::WriteArray(CBEFile& pFile)
 {
     vector<CBEExpression*>::iterator iterB;
     for (iterB = m_Bounds.begin();
 	 iterB != m_Bounds.end();
 	 iterB++)
     {
-	*pFile << "[";
+	pFile << "[";
         (*iterB)->Write(pFile);
-	*pFile << "]";
+	pFile << "]";
     }
 }
 
@@ -400,7 +400,7 @@ CBEDeclarator::WriteArray(CBEFile * pFile)
  * It it is 0 then its an unbound dimension.
  */
 void 
-CBEDeclarator::WriteArrayIndirect(CBEFile * pFile)
+CBEDeclarator::WriteArrayIndirect(CBEFile& pFile)
 {
     vector<CBEExpression*>::iterator iterB;
     for (iterB = m_Bounds.begin();
@@ -409,9 +409,9 @@ CBEDeclarator::WriteArrayIndirect(CBEFile * pFile)
     {
         if ((*iterB)->GetIntValue() == 0)
             continue;
-	*pFile << "[";
+	pFile << "[";
         (*iterB)->Write(pFile);
-	*pFile << "]";
+	pFile << "]";
     }
 }
 
@@ -419,7 +419,7 @@ CBEDeclarator::WriteArrayIndirect(CBEFile * pFile)
  *  \param pFile the file to write to
  */
 void 
-CBEDeclarator::WriteEnum(CBEFile* /*pFile*/)
+CBEDeclarator::WriteEnum(CBEFile& /*pFile*/)
 {
     assert(false);
 }
@@ -642,9 +642,9 @@ int CBEDeclarator::GetMaxSize()
 /** \brief simply prints the name of the declarator
  *  \param pFile the file to write to
  */
-void CBEDeclarator::WriteName(CBEFile * pFile)
+void CBEDeclarator::WriteName(CBEFile& pFile)
 {
-    *pFile << m_sName;
+    pFile << m_sName;
 }
 
 /** \brief simply prints the name of the declarator
@@ -669,7 +669,7 @@ void CBEDeclarator::WriteNameToStr(string& str)
  * \todo indirect var by underscore hard coded => replace with configurable
  */
 void
-CBEDeclarator::WriteIndirect(CBEFile * pFile,
+CBEDeclarator::WriteIndirect(CBEFile& pFile,
     bool bUsePointer,
     bool bHasPointerType)
 {
@@ -707,19 +707,19 @@ CBEDeclarator::WriteIndirect(CBEFile * pFile,
     for (int nStars = nStartStars; nStars >= nFakeStars; nStars--)
     {
         if (bComma)
-	    *pFile << ", ";
+	    pFile << ", ";
         int i;
         // if not first and we have pointer type, write a stars for it
         if (bComma && bHasPointerType)
-	    *pFile << "*";
+	    pFile << "*";
         // write stars
         for (i = 0; i < nStars; i++)
-	    *pFile << "*";
+	    pFile << "*";
         // write underscores
         for (i = 0; i < (nStartStars - nStars); i++)
-	    *pFile << "_";
+	    pFile << "_";
         // write name
-	*pFile << m_sName;
+	pFile << m_sName;
         // next please
         bComma = true;
     }
@@ -730,7 +730,7 @@ CBEDeclarator::WriteIndirect(CBEFile * pFile,
 
     // write bitfields
     //     if (m_nBitfields > 0)
-    //         *pFile << ":" << m_nBitfields;
+    //         pFile << ":" << m_nBitfields;
 }
 
 /** \brief assigns pointered variables a reference to "unpointered" variables
@@ -742,7 +742,7 @@ CBEDeclarator::WriteIndirect(CBEFile * pFile,
  * \todo indirect var by underscore hard coded => replace with configurable
  */
 void 
-CBEDeclarator::WriteIndirectInitialization(CBEFile * pFile,
+CBEDeclarator::WriteIndirectInitialization(CBEFile& pFile,
     bool bUsePointer)
 {
     // get function and parameter
@@ -759,16 +759,16 @@ CBEDeclarator::WriteIndirectInitialization(CBEFile * pFile,
     // FIXME: when adding variable declaration use "temp" var for indirection
     for (int nStars = nStartStars; nStars > nFakeStars; nStars--)
     {
-	*pFile << "\t";
+	pFile << "\t";
         // write name (one _ less)
         for (i = 0; i < (nStartStars - nStars); i++)
-	    *pFile << "_";
-	*pFile << m_sName << " = ";
+	    pFile << "_";
+	pFile << m_sName << " = ";
         // write name (one more _)
-	*pFile << "&";
+	pFile << "&";
         for (i = 0; i < (nStartStars - nStars) + 1; i++)
-	    *pFile << "_";
-	*pFile << m_sName << ";\n";
+	    pFile << "_";
+	pFile << m_sName << ";\n";
     }
 }
 
@@ -781,10 +781,9 @@ CBEDeclarator::WriteIndirectInitialization(CBEFile * pFile,
  * \todo indirect var by underscore hard coded => replace with configurable
  */
 void
-CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
+CBEDeclarator::WriteIndirectInitializationMemory(CBEFile& pFile,
     bool bUsePointer)
 {
-    assert(pFile);
     // get function and parameter
     CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
     assert(pFunction);
@@ -825,14 +824,14 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
     {
         CDeclStack vStack;
         vStack.push_back(this);
-	*pFile << "\t";
+	pFile << "\t";
         for (int j = 0; j < nStartStars - nStars + nOffset; j++)
-	    *pFile << "_";
-	*pFile << m_sName << " = ";
+	    pFile << "_";
+	pFile << m_sName << " = ";
 	// use original parameter type (not transmit type)
         pParameter->GetType()->WriteCast(pFile, true);
         CBEContext::WriteMalloc(pFile, pFunction);
-	*pFile << "(";
+	pFile << "(";
         /**
          * if the parameter is out and size parameter, then this
          * initialization is done before a component function.
@@ -861,7 +860,7 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
             pParameter->WriteGetSize(pFile, &vStack, pFunction);
 	    if (pType->GetSize() > 1)
 	    {
-		*pFile << "*sizeof";
+		pFile << "*sizeof";
 		pType->WriteCast(pFile, false);
 		sAppend = " /* allocated for unbound array dimensions */";
 	    }
@@ -880,9 +879,9 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
 		pParameter->GetMaxSize(nSize);
 		sAppend = " /* allocated using max size of type */";
 	    }
-            *pFile << nSize;
+            pFile << nSize;
         }
-	*pFile << ");" << sAppend << "\n";
+	pFile << ");" << sAppend << "\n";
     }
 }
 
@@ -891,7 +890,7 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile * pFile,
  *  \param bUsePointer true if the variable uses a pointer
  *  \param bDeferred true if deferred cleanup is intended
  */
-void CBEDeclarator::WriteCleanup(CBEFile * pFile, bool bUsePointer,
+void CBEDeclarator::WriteCleanup(CBEFile& pFile, bool bUsePointer,
     bool bDeferred)
 {
     // get function and parameter
@@ -922,23 +921,23 @@ void CBEDeclarator::WriteCleanup(CBEFile * pFile, bool bUsePointer,
 	nOffset = 0;
     for (int nStars = nStartStars; nStars > nFakeStars; nStars--)
     {
-	*pFile << "\t";
+	pFile << "\t";
 	if (bDeferred)
 	{
-	    *pFile << "dice_set_ptr(";
+	    pFile << "dice_set_ptr(";
 	    if (pDecl->GetStars() == 0)
-		*pFile << "&";
+		pFile << "&";
 	    pDecl->WriteName(pFile);
-	    *pFile << ", ";
+	    pFile << ", ";
 	}
 	else
 	{
 	    CBEContext::WriteFree(pFile, GetSpecificParent<CBEFunction>());
-	    *pFile << "(";
+	    pFile << "(";
 	}
         for (int j = 0; j < nStartStars - nStars + nOffset; j++)
-	    *pFile << "_";
-	*pFile << m_sName << ");\n";
+	    pFile << "_";
+	pFile << m_sName << ");\n";
     }
 }
 

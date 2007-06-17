@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEUnaryExpression.h"
-#include "File.h"
 
 CFEUnaryExpression::CFEUnaryExpression(EXPR_TYPE nType, EXPT_OPERATOR Operator, CFEExpression * pOperand)
 : CFEPrimaryExpression(nType, pOperand)

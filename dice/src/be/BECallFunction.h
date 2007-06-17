@@ -63,10 +63,10 @@ public:
     virtual void MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
 protected:
-    virtual void WriteUnmarshalling(CBEFile *pFile);
-    virtual void WriteInvocation(CBEFile *pFile);
-    virtual void WriteVariableInitialization(CBEFile *pFile);
-    virtual void WriteReturnType(CBEFile * pFile);
+    virtual void WriteUnmarshalling(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteReturnType(CBEFile& pFile);
 };
 
 #endif // !__DICE_BECALLFUNCTION_H__

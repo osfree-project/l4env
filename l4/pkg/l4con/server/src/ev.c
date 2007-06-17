@@ -33,7 +33,6 @@
 #include "main.h"
 #include "vc.h"
 
-int use_omega0;
 int nomouse;
 int noshift;
 

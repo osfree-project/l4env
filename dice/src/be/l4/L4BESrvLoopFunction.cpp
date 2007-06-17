@@ -62,7 +62,7 @@ CL4BESrvLoopFunction::~CL4BESrvLoopFunction()
  *  \param pFile the file to write to
  */
 void
-CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
+CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     // call base class - initializes opcode
     CBESrvLoopFunction::WriteVariableInitialization(pFile);
@@ -90,7 +90,7 @@ CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
        CL4BENameFactory *pNF =
            static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
        string sPartner = pNF->GetPartnerVariable();
-       *pFile << "\t_" << sObj << " = " << sPartner << ";\n";
+       pFile << "\t_" << sObj << " = " << sPartner << ";\n";
     }
 }
 
@@ -98,7 +98,7 @@ CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile * pFile)
  *  \param pFile the file to write to
  */
 void
-CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile *pFile)
+CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
 {
     CBETypedDeclarator *pEnv = GetEnvironment();
     CBEDeclarator *pDecl = pEnv->m_Declarators.First();
@@ -106,34 +106,32 @@ CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile *pFile)
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
     {
 	// *corba-env = dice_default_env;
-	*pFile << "\t*" << pDecl->GetName() << " = ";
+	pFile << "\t*" << pDecl->GetName() << " = ";
 	pEnv->GetType()->WriteCast(pFile, false);
-	*pFile << "dice_default_server_environment" << ";\n";
+	pFile << "dice_default_server_environment" << ";\n";
     }
     else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
     {
-	*pFile << "\tDICE_EXCEPTION_MAJOR(" << pDecl->GetName() << 
+	pFile << "\tDICE_EXCEPTION_MAJOR(" << pDecl->GetName() << 
 	    ") = CORBA_NO_EXCEPTION;\n";
-	*pFile << "\tDICE_EXCEPTION_MINOR(" << pDecl->GetName() << 
+	pFile << "\tDICE_EXCEPTION_MINOR(" << pDecl->GetName() << 
 	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
-	*pFile << "\t" << pDecl->GetName() << "->_p.param = 0;\n";
-	*pFile << "\t" << pDecl->GetName() << 
+	pFile << "\t" << pDecl->GetName() << "->_p.param = 0;\n";
+	pFile << "\t" << pDecl->GetName() << 
 	    "->timeout = L4_IPC_SEND_TIMEOUT_0;\n";
-	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.grant = 1;\n";
-	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.write = 1;\n";
-	*pFile << "\t" << pDecl->GetName() << 
+	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.grant = 1;\n";
+	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.write = 1;\n";
+	pFile << "\t" << pDecl->GetName() << 
 	    "->rcv_fpage.fp.size = L4_WHOLE_ADDRESS_SPACE;\n";
-	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.zero = 0;\n";
-	*pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.page = 0;\n";
-	*pFile << "\t" << pDecl->GetName() << "->malloc = malloc_warning;\n";
-	*pFile << "\t" << pDecl->GetName() << "->free = free_warning;\n";
-	*pFile << "\t" << pDecl->GetName() << "->partner = L4_INVALID_ID;\n";
-	*pFile << "\t" << pDecl->GetName() << "->user_data = 0;\n";
-	*pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
-	pFile->IncIndent();
-	*pFile << "\t" << pDecl->GetName() << "->ptrs[i] = 0;\n";
-	pFile->DecIndent();
-	*pFile << "\t" << pDecl->GetName() << "->ptrs_cur = 0;\n";
+	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.zero = 0;\n";
+	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.page = 0;\n";
+	pFile << "\t" << pDecl->GetName() << "->malloc = malloc_warning;\n";
+	pFile << "\t" << pDecl->GetName() << "->free = free_warning;\n";
+	pFile << "\t" << pDecl->GetName() << "->partner = L4_INVALID_ID;\n";
+	pFile << "\t" << pDecl->GetName() << "->user_data = 0;\n";
+	pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
+	++pFile << "\t" << pDecl->GetName() << "->ptrs[i] = 0;\n";
+	--pFile << "\t" << pDecl->GetName() << "->ptrs_cur = 0;\n";
     }
 }
 
@@ -174,7 +172,7 @@ CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
 /** \brief writes the dispatcher invocation
  *  \param pFile the file to write to
  */
-void CL4BESrvLoopFunction::WriteDispatchInvocation(CBEFile *pFile)
+void CL4BESrvLoopFunction::WriteDispatchInvocation(CBEFile& pFile)
 {
     CBESrvLoopFunction::WriteDispatchInvocation(pFile);
 
@@ -189,10 +187,9 @@ void CL4BESrvLoopFunction::WriteDispatchInvocation(CBEFile *pFile)
 	CL4BENameFactory *pNF =
 	    static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
 	string sPartner = pNF->GetPartnerVariable();
-	*pFile << "\tif (!l4_is_invalid_id(" << sPartner << "))\n";
-	pFile->IncIndent();
-	*pFile << "\t_" << sObj << " = " << sPartner << ";\n";
-	pFile->DecIndent();
+	pFile << "\tif (!l4_is_invalid_id(" << sPartner << "))\n";
+	++pFile << "\t_" << sObj << " = " << sPartner << ";\n";
+	--pFile;
     }
 }
 

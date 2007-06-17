@@ -103,9 +103,9 @@ CObject *CBETypedDeclarator::Clone()
  * optional attributes.
  */
 void
-CBETypedDeclarator::WriteDeclaration(CBEFile * pFile)
+CBETypedDeclarator::WriteDeclaration(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
@@ -114,7 +114,7 @@ CBETypedDeclarator::WriteDeclaration(CBEFile * pFile)
     
     WriteAttributes(pFile);
     WriteType(pFile);
-    *pFile << " ";
+    pFile << " ";
     WriteDeclarators(pFile);
     WriteProperties(pFile);
     
@@ -126,7 +126,7 @@ CBETypedDeclarator::WriteDeclaration(CBEFile * pFile)
  *  \param pFile the file to write to
  */
 void
-CBETypedDeclarator::WriteSetZero(CBEFile* pFile)
+CBETypedDeclarator::WriteSetZero(CBEFile& pFile)
 {
     CBEType *pType = GetType();
     if (pType->IsVoid())
@@ -140,14 +140,14 @@ CBETypedDeclarator::WriteSetZero(CBEFile* pFile)
 	 iterD != m_Declarators.end();
 	 iterD++)
     {
-	*pFile << "\t";
+	pFile << "\t";
         (*iterD)->WriteDeclaration(pFile);
         if (pType->DoWriteZeroInit())
         {
-	    *pFile << " = ";
+	    pFile << " = ";
             pType->WriteZeroInit(pFile);
         }
-	*pFile << ";\n";
+	pFile << ";\n";
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -167,7 +167,7 @@ CBETypedDeclarator::WriteSetZero(CBEFile* pFile)
  * strlen function.
  */
 void
-CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
+CBETypedDeclarator::WriteGetSize(CBEFile& pFile,
     CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
@@ -194,7 +194,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
                 CBEDeclarator *pDecl = m_Declarators.First();
                 if (pDecl)
                 {
-		    *pFile << "strlen(";
+		    pFile << "strlen(";
 		    if (!pStack)
 		    {
 			CDeclStack vStack;
@@ -204,7 +204,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
 		    else
 			CDeclaratorStackLocation::Write(pFile, pStack, true);
                     // restore old number of stars
-		    *pFile << ")";
+		    pFile << ")";
                 }
                 // wrote size parameter
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -260,7 +260,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
 	{
 	    CDeclaratorStackLocation::Write(pFile, &vStack, false);
 	    if (vStack.size() > 0)
-		*pFile << ".";
+		pFile << ".";
 	    // has only one declarator
     	    pSizeParameter->WriteDeclarators(pFile);
 
@@ -292,15 +292,15 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
 		pSizeName->GetName().c_str());
 	}
 	assert(pConstant);
-	*pFile << pConstant->GetName();
+	pFile << pConstant->GetName();
     }
     else if (pAttr->IsOfType(ATTR_CLASS_INT))
     {
-	*pFile << pAttr->GetIntValue();
+	pFile << pAttr->GetIntValue();
     }
     else if (pAttr->IsOfType(ATTR_CLASS_STRING))
     {
-	*pFile << pAttr->GetString();
+	pFile << pAttr->GetString();
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
@@ -313,7 +313,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile * pFile,
  *  \param pUsingFunc the function to use as reference for members
  */
 void
-CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
+CBETypedDeclarator::WriteGetMaxSize(CBEFile& pFile,
     CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
@@ -359,7 +359,7 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
 	{
 	    int nMaxSize = pSizes->GetMaxSizeOfType(pType->GetFEType());
 	    WarnNoMax(nMaxSize);
-	    *pFile << nMaxSize;
+	    pFile << nMaxSize;
 	    // wrote string size parameter
 	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
 		"CBETypedDeclarator::%s returns\n", __func__);
@@ -378,10 +378,10 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
 	if (pDecl->IsArray() &&
 	    nMaxSize > 0)
 	{
-	    *pFile << nMaxSize;
+	    pFile << nMaxSize;
 	    if (pType->GetSize() > 1)
 	    {
-		*pFile << "*sizeof";
+		pFile << "*sizeof";
 		pType->WriteCast(pFile, false);
 	    }
 	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -398,7 +398,7 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
 	{
 	    nMaxSize = pSizes->GetMaxSizeOfType(pType->GetFEType());
 	    WarnNoMax(nMaxSize);
-	    *pFile << nMaxSize;
+	    pFile << nMaxSize;
 	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s returns\n", __func__);
 	    return;
@@ -438,7 +438,7 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
 	{
 	    CDeclaratorStackLocation::Write(pFile, pStack, false);
 	    if (pStack->size() > 0)
-		*pFile << ".";
+		pFile << ".";
 	    // has only one declarator
     	    pSizeParameter->WriteDeclarators(pFile);
 
@@ -469,15 +469,15 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile * pFile,
 		pSizeName->GetName().c_str());
 	}
 	assert(pConstant);
-	*pFile << pConstant->GetName();
+	pFile << pConstant->GetName();
     }
     else if (pAttr->IsOfType(ATTR_CLASS_INT))
     {
-	*pFile << pAttr->GetIntValue();
+	pFile << pAttr->GetIntValue();
     }
     else if (pAttr->IsOfType(ATTR_CLASS_STRING))
     {
-	*pFile << pAttr->GetString();
+	pFile << pAttr->GetString();
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -681,7 +681,7 @@ CBETypedDeclarator::GetSizeConstant(CBEAttribute *pIsAttribute)
  *  \param bDeferred true if deferred cleanup
  */
 void
-CBETypedDeclarator::WriteCleanup(CBEFile* pFile, bool bDeferred)
+CBETypedDeclarator::WriteCleanup(CBEFile& pFile, bool bDeferred)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"CBETypedDeclarator::%s called\n", __func__);
@@ -705,7 +705,7 @@ CBETypedDeclarator::WriteCleanup(CBEFile* pFile, bool bDeferred)
  *  \param bUseConst true if type should be const
  */
 void
-CBETypedDeclarator::WriteType(CBEFile * pFile,
+CBETypedDeclarator::WriteType(CBEFile& pFile,
     bool bUseConst)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -729,16 +729,16 @@ CBETypedDeclarator::WriteType(CBEFile * pFile,
  * written as stars, bound array dimension are written correctly.
  */
 void
-CBETypedDeclarator::WriteIndirect(CBEFile * pFile)
+CBETypedDeclarator::WriteIndirect(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called\n", __func__);
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     CBEType *pType = GetType();
     pType->WriteIndirect(pFile);
-    *pFile << " ";
+    pFile << " ";
 
     // test for pointer types
     bool bIsPointerType = pType->IsPointerType();
@@ -764,7 +764,7 @@ CBETypedDeclarator::WriteIndirect(CBEFile * pFile)
 	 iterD++)
     {
         if (bComma)
-	    *pFile << ", ";
+	    pFile << ", ";
         (*iterD)->WriteIndirect(pFile, bUsePointer, bIsPointerType);
         bComma = true;
     }
@@ -778,13 +778,13 @@ CBETypedDeclarator::WriteIndirect(CBEFile * pFile)
  * memory is allocated.
  */
 bool
-CBETypedDeclarator::DoAllocateMemory(CBEFile *pFile)
+CBETypedDeclarator::DoAllocateMemory(CBEFile& pFile)
 {
     // skip the memory allocation if not preallocated
-    if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+    if (pFile.IsOfFileType(FILETYPE_CLIENT) &&
 	!m_Attributes.Find(ATTR_PREALLOC_CLIENT))
 	return false;
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+    if (pFile.IsOfFileType(FILETYPE_COMPONENT) &&
 	!m_Attributes.Find(ATTR_PREALLOC_SERVER))
 	return false;
 
@@ -799,7 +799,7 @@ CBETypedDeclarator::DoAllocateMemory(CBEFile *pFile)
  * "unpointered" variable or a dynamic memory region depending on \a bMemory.
  */
 void
-CBETypedDeclarator::WriteIndirectInitialization(CBEFile * pFile, 
+CBETypedDeclarator::WriteIndirectInitialization(CBEFile& pFile, 
     bool bMemory)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
@@ -845,7 +845,7 @@ CBETypedDeclarator::UsePointer(void)
  *  \param sInitString the string to use for initialization
  */
 void
-CBETypedDeclarator::WriteInitDeclaration(CBEFile* pFile,
+CBETypedDeclarator::WriteInitDeclaration(CBEFile& pFile,
 	string sInitString)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
@@ -858,28 +858,28 @@ CBETypedDeclarator::WriteInitDeclaration(CBEFile* pFile,
 	 iterD != m_Declarators.end();
 	 iterD++)
     {
-	*pFile << "\t";
+	pFile << "\t";
         WriteType(pFile);
-	*pFile << " ";
+	pFile << " ";
         (*iterD)->WriteDeclaration(pFile);
 	WriteProperties(pFile);
         string sDefault = GetDefaultInitString();
         if (!sInitString.empty())
-            *pFile << " = " << sInitString;
+            pFile << " = " << sInitString;
         else if (!sDefault.empty())
         {
             if (sDefault == "0")
             {
                 if (pType->DoWriteZeroInit())
                 {
-                    *pFile << " = ";
+                    pFile << " = ";
                     pType->WriteZeroInit(pFile);
                 }
             }
             else
-                *pFile << " = " << sDefault;
+                pFile << " = " << sDefault;
         }
-	*pFile << ";\n";
+	pFile << ";\n";
     }
 }
 
@@ -1823,11 +1823,11 @@ CBETypedDeclarator::FindLanguageProperty(string sProperty,
  *  \param pFile the file to write to
  */
 void 
-CBETypedDeclarator::WriteDeclarators(CBEFile * pFile)
+CBETypedDeclarator::WriteDeclarators(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called\n", __func__);
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     bool bComma = false;
@@ -1837,7 +1837,7 @@ CBETypedDeclarator::WriteDeclarators(CBEFile * pFile)
 	 iterD++)
     {
         if (bComma)
-	    *pFile << ", ";
+	    pFile << ", ";
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s for %s (%d) in %s (%p -> %p)\n",
             __func__, (*iterD)->GetName().c_str(),
@@ -1869,7 +1869,7 @@ CBETypedDeclarator::WriteDeclarators(CBEFile * pFile)
  * define a '' as 'const_CORBA_char_ptr'
  */
 void
-CBETypedDeclarator::WriteConstPrefix(CBEFile *pFile)
+CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called\n", __func__);
     // check if no-const property is set
@@ -1965,30 +1965,30 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile *pFile)
 	    m_Declarators.First()->GetName().c_str(), 
 	    (bConstructed) ? "true" : "false",
 	    (bIsArray) ? "true" : "false",
-	    (pFile->IsOfFileType(FILETYPE_CLIENT)) ? "yes" : "no",
+	    (pFile.IsOfFileType(FILETYPE_CLIENT)) ? "yes" : "no",
 	    (bNoCorbaType) ? "yes" : "no",
 	    (pType->IsPointerType()) ? "yes" : "no");
-        if (pFile->IsOfFileType(FILETYPE_CLIENT))
+        if (pFile.IsOfFileType(FILETYPE_CLIENT))
         {
             if ((m_Attributes.Find(ATTR_IN)) && (!m_Attributes.Find(ATTR_OUT)))
             {
                 if (!bNoCorbaType && pType->IsPointerType())
-		    *pFile << "const_";
+		    pFile << "const_";
                 else
-		    *pFile << "const ";
+		    pFile << "const ";
             }
         }
-        if (pFile->IsOfFileType(FILETYPE_COMPONENT) ||
-            pFile->IsOfFileType(FILETYPE_TEMPLATE))
+        if (pFile.IsOfFileType(FILETYPE_COMPONENT) ||
+            pFile.IsOfFileType(FILETYPE_TEMPLATE))
         {
             if ((m_Attributes.Find(ATTR_IN)) &&
                 (!m_Attributes.Find(ATTR_OUT)) &&
                 (GetSpecificParent<CBEComponentFunction>()))
             {
                 if (!bNoCorbaType && pType->IsPointerType())
-		    *pFile << "const_";
+		    pFile << "const_";
                 else
-		    *pFile << "const ";
+		    pFile << "const ";
             }
         }
     }
@@ -2002,7 +2002,7 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile *pFile)
  * Calls the WriteDeclaration operation of the type.
  */
 void
-CBETypedDeclarator::WriteForwardTypeDeclaration(CBEFile * pFile, 
+CBETypedDeclarator::WriteForwardTypeDeclaration(CBEFile& pFile, 
     bool bUseConst)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called\n", __func__);
@@ -2018,15 +2018,15 @@ CBETypedDeclarator::WriteForwardTypeDeclaration(CBEFile * pFile,
  *  \param pFile the file to write to
  */
 void
-CBETypedDeclarator::WriteForwardDeclaration(CBEFile * pFile)
+CBETypedDeclarator::WriteForwardDeclaration(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called for %s\n", __func__,
         m_Declarators.First()->GetName().c_str());
     WriteForwardTypeDeclaration(pFile);
-    *pFile << " ";
+    pFile << " ";
     WriteDeclarators(pFile);
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s returned\n", __func__);
 }
@@ -2035,9 +2035,9 @@ CBETypedDeclarator::WriteForwardDeclaration(CBEFile * pFile)
  *  \param pFile the file to write to
  */
 void
-CBETypedDeclarator::WriteDefinition(CBEFile * pFile)
+CBETypedDeclarator::WriteDefinition(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called for %s\n", __func__,
@@ -2053,7 +2053,7 @@ CBETypedDeclarator::WriteDefinition(CBEFile * pFile)
  * The current implementation does nothing.
  */
 void
-CBETypedDeclarator::WriteAttributes(CBEFile * /*pFile*/)
+CBETypedDeclarator::WriteAttributes(CBEFile& /*pFile*/)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called\n", __func__);
 }
@@ -2062,7 +2062,7 @@ CBETypedDeclarator::WriteAttributes(CBEFile * /*pFile*/)
  *  \param pFile the file to write to
  */
 void
-CBETypedDeclarator::WriteProperties(CBEFile *pFile)
+CBETypedDeclarator::WriteProperties(CBEFile& pFile)
 {
     // check if we have something like "asm" or "__attribute__"
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s: writing properties\n", __func__);
@@ -2070,7 +2070,7 @@ CBETypedDeclarator::WriteProperties(CBEFile *pFile)
     for (; iter != m_mProperties.end(); iter++)
     {
         if ((*iter).first == string("attribute"))
-            *pFile << " " << (*iter).second;
+            pFile << " " << (*iter).second;
     }
 }
 

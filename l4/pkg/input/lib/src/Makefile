@@ -9,7 +9,7 @@ SRC_C = emul_time.c emul_irq.c emul_wait.c emul_res.c \
 PRIVATE_INCDIR = $(PKGDIR)/lib/include
 
 DEFINES = -D__KERNEL__ -DL4INPUT
-WARNINGS = -Wall -Wstrict-prototypes
+WARNINGS = -Wall -Wstrict-prototypes $(call checkcc,-Wno-pointer-sign)
 
 # gather Linux sources
 VPATH += $(PKGDIR)/lib/contrib

@@ -53,7 +53,7 @@ protected:
     CL4V2BEDispatchFunction(CL4V2BEDispatchFunction &src);
 
 protected:
-    virtual void WriteSetWrongOpcodeException(CBEFile* pFile);
+    virtual void WriteSetWrongOpcodeException(CBEFile& pFile);
 };
 
 #endif

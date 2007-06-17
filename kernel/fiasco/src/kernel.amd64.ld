@@ -84,6 +84,14 @@ SECTIONS {
     PROVIDE (_edata = .);
   } : kdata = 0x90909090
 
+  . = ALIGN(8);
+  .per_cpu_data : AT (ADDR(.per_cpu_data) - 0xfffffffff0000000) {
+    PROVIDE (_per_cpu_data_start = .);
+    *(.per_cpu.data)
+    . = ALIGN(8);
+    PROVIDE (_per_cpu_data_end = .);
+  } : kdata
+
   . = ALIGN(0x10);
   .bss : AT (ADDR(.bss) - 0xfffffffff0000000) {
     PROVIDE (_bss_start = .);

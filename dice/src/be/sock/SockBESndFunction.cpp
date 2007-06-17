@@ -67,7 +67,7 @@ CSockBESndFunction::~CSockBESndFunction()
  * -# clode socket
  */
 void
-CSockBESndFunction::WriteInvocation(CBEFile * pFile)
+CSockBESndFunction::WriteInvocation(CBEFile& pFile)
 {
     CBECommunication *pComm = GetCommunication();
     assert(pComm);
@@ -83,7 +83,7 @@ CSockBESndFunction::WriteInvocation(CBEFile * pFile)
  *  \param pFile the file to write to
  */
 void 
-CSockBESndFunction::WriteVariableInitialization(CBEFile * pFile)
+CSockBESndFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     CBESndFunction::WriteVariableInitialization(pFile);
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -97,7 +97,7 @@ CSockBESndFunction::WriteVariableInitialization(CBEFile * pFile)
     sPtrName += pMsgBuffer->m_Declarators.First()->GetName();
     sSizeName += pMsgBuffer->m_Declarators.First()->GetName(); 
 
-    *pFile << "\tbzero(" << sPtrName << ", sizeof(" << sSizeName << "));\n";
+    pFile << "\tbzero(" << sPtrName << ", sizeof(" << sSizeName << "));\n";
 }
 
 /** \brief initialize the instance of this class

@@ -7,6 +7,8 @@
 
 #include <asm/semaphore.h>
 
+#include <l4/sys/kdebug.h> /* for enter_kdebug() */
+
 #ifndef PIT_TICK_RATE
 # define PIT_TICK_RATE 1193182
 #endif

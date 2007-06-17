@@ -55,6 +55,8 @@ Syscalls::sys_thread_switch()
 
   // Protect against timer interrupt
   Lock_guard <Cpu_lock> guard (&cpu_lock);
+      
+  Sched_context * const cs = current_sched(cpu());
 
   if (regs->dst().is_nil())
     {
@@ -66,8 +68,8 @@ Syscalls::sys_thread_switch()
         }
 
       // Compute remaining quantum length of timeslice
-      regs->left (sched() == current_sched()
-                           ? timeslice_timeout->get_timeout()
+      regs->left (sched() == cs
+                           ? timeslice_timeout.cpu(cpu())->get_timeout()
                            : sched()->left());
 
       // Yield own current timeslice
@@ -86,12 +88,10 @@ Syscalls::sys_thread_switch()
         }
 
       // Compute remaining quantum length of timeslice
-      regs->left (timeslice_timeout->get_timeout());
+      regs->left (timeslice_timeout.cpu(cpu())->get_timeout());
 
       // Yield current global timeslice
-      current_sched()->owner()->switch_sched (current_sched()->id()   ?
-                                              current_sched()->next() :
-                                              current_sched());
+      cs->owner()->switch_sched (cs->id() ? cs->next() : cs);
     }
 
   schedule();
@@ -258,7 +258,7 @@ Syscalls::begin_periodic (Unsigned64 clock, Mword const type)
   set_mode (Sched_mode (type));
 
   // Program deadline timeout
-  _deadline_timeout.set (clock);
+  _deadline_timeout.set (clock, cpu());
 
   return 0;
 }

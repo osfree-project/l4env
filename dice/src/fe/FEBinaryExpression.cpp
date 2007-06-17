@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEBinaryExpression.h"
-#include "File.h"
 
 CFEBinaryExpression::CFEBinaryExpression(EXPR_TYPE nType,
                      CFEExpression * pOperand,

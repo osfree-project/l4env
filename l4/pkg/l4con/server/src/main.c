@@ -928,8 +928,6 @@ main(int argc, const char *argv[])
 		    PARSE_CMD_SWITCH, 1, &nomouse,
 		    'n', "nofastmemcpy", "force to not use fast memcpy",
 		    PARSE_CMD_SWITCH, 0, &use_fastmemcpy,
-		    'o', "omega0", "use omega0 for IRQ management",
-		    PARSE_CMD_SWITCH, 1, &use_omega0,
 		    'p', "pan", "use panning to restrict client window",
 		    PARSE_CMD_SWITCH, 1, &pan,
 		    ' ', "noshift", "no shift key for console switching",

@@ -92,9 +92,9 @@ public:
 
 // Operations
 public:
-    static void WriteMalloc(CBEFile* pFile, CBEFunction* pFunction);
-    static void WriteFree(CBEFile* pFile, CBEFunction* pFunction);
-    static void WriteMemory(CBEFile *pFile, CBEFunction *pFunction,
+    static void WriteMalloc(CBEFile& pFile, CBEFunction* pFunction);
+    static void WriteFree(CBEFile& pFile, CBEFunction* pFunction);
+    static void WriteMemory(CBEFile& pFile, CBEFunction *pFunction,
 	string sEnv, string sCorba);
 };
 

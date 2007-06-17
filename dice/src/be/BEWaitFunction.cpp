@@ -70,7 +70,7 @@ CBEWaitFunction::~CBEWaitFunction()
  * of the out variables.
  */
 void 
-CBEWaitFunction::WriteVariableInitialization(CBEFile * pFile)
+CBEWaitFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     // initialize message buffer
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
@@ -82,9 +82,9 @@ CBEWaitFunction::WriteVariableInitialization(CBEFile * pFile)
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
-void CBEWaitFunction::WriteInvocation(CBEFile * pFile)
+void CBEWaitFunction::WriteInvocation(CBEFile& pFile)
 {
-    *pFile << "\t/* invoke */\n";
+    pFile << "\t/* invoke */\n";
 
     WriteOpcodeCheck(pFile);
 }
@@ -183,7 +183,7 @@ CBEWaitFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  *  \param pFile the file to write to
  */
 void
-CBEWaitFunction::WriteOpcodeCheck(CBEFile *pFile)
+CBEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
 {
     /* if the noopcode option is set, we cannot check for the correct opcode */
     if (m_Attributes.Find(ATTR_NOOPCODE))
@@ -209,21 +209,18 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile *pFile)
     
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    *pFile << "\tif (";
+    pFile << "\tif (";
     pMsgBuffer->WriteAccess(pFile, this, GetReceiveDirection(), &vStack);
-    *pFile << " != " << m_sOpcodeConstName << ")\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    pFile << " != " << m_sOpcodeConstName << ")\n";
+    pFile << "\t{\n";
     string sException = pNF->GetCorbaEnvironmentVariable();
-    *pFile << "\t" << sSetFunc << "(" << sException << ",\n";
-    pFile->IncIndent();
-    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
-    *pFile << "\tCORBA_DICE_EXCEPTION_WRONG_OPCODE,\n";
-    *pFile << "\t0);\n";
-    pFile->DecIndent();
+    ++pFile << "\t" << sSetFunc << "(" << sException << ",\n";
+    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+    pFile << "\tCORBA_DICE_EXCEPTION_WRONG_OPCODE,\n";
+    pFile << "\t0);\n";
+    --pFile;
     WriteReturn(pFile);
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 
 /** \brief test if this function should be written
@@ -233,7 +230,7 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile *pFile)
  * A wait function should be written at client's side if OUT attribute or
  * at component's side if IN attribute.
  */
-bool CBEWaitFunction::DoWriteFunction(CBEHeaderFile * pFile)
+bool CBEWaitFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -253,7 +250,7 @@ bool CBEWaitFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * A wait function should be written at client's side if OUT attribute or
  * at component's side if IN attribute.
  */
-bool CBEWaitFunction::DoWriteFunction(CBEImplementationFile * pFile)
+bool CBEWaitFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;

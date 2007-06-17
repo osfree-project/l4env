@@ -27,7 +27,7 @@ void
 Context::init_switch_time()
 {
   if (Config::fine_grained_cputime)
-    _switch_time = Cpu::rdtsc();
+    _switch_time.cpu(cpu()) = Cpu::rdtsc();
 }
 
 /**
@@ -41,8 +41,8 @@ Context::update_consumed_time()
   if (Config::fine_grained_cputime)
     {
       Cpu_time tsc = Cpu::rdtsc();
-      consume_time (tsc - _switch_time);
-      _switch_time = tsc;
+      consume_time (tsc - _switch_time.cpu(cpu()));
+      _switch_time.cpu(cpu()) = tsc;
     }
 }
 
@@ -52,7 +52,8 @@ Context::update_kip_switch_time(Context * t)
 {
   if (Config::fine_grained_cputime)
     {
-      Kip::k()->switch_time = _switch_time;
+      // XXX: does not work with MP
+      Kip::k()->switch_time = _switch_time.cpu(0);
       Kip::k()->thread_time = t->_consumed_time;
     }
 }

@@ -54,7 +54,7 @@ CL4V4BEMarshalFunction::~CL4V4BEMarshalFunction()
  *  \param pFile the file to write to
  */
 void
-CL4V4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
+CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 {
     assert (m_pTrace);
     bool bLocalTrace = false;
@@ -68,7 +68,7 @@ CL4V4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
     string sMsgBuffer =
         CCompiler::GetNameFactory()->GetMessageBufferVariable();
     // clear message
-    *pFile << "\tL4_MsgClear ( (L4_Msg_t*) " << sMsgBuffer << " );\n";
+    pFile << "\tL4_MsgClear ( (L4_Msg_t*) " << sMsgBuffer << " );\n";
     // set exception in msgbuffer and return if there was an exception.
     WriteMarshalException(pFile, true, true);
     // call base class

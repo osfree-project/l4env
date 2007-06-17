@@ -51,8 +51,8 @@ protected:
     CL4BESwitchCase(CL4BESwitchCase &src);
 
 protected:
-    virtual void WriteVariableInitialization(CBEFile *pFile, DIRECTION_TYPE nDirection);
-    virtual void WriteCleanup(CBEFile *pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile, DIRECTION_TYPE nDirection);
+    virtual void WriteCleanup(CBEFile& pFile);
 };
 
 #endif

@@ -56,7 +56,7 @@ protected:
     /** \brief copy constructor */
     CSockBEWaitAnyFunction(CSockBEWaitAnyFunction &src);
 
-    virtual void WriteInvocation(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
 };
 
 #endif

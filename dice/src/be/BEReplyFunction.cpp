@@ -62,7 +62,7 @@ CBEReplyFunction::~CBEReplyFunction()
  * This implementation cannot initialize the message buffer, because we might
  * overwrite preset values, such as the specific communication partner.
  */
-void CBEReplyFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
+void CBEReplyFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the invocation of the message transfer
@@ -70,7 +70,7 @@ void CBEReplyFunction::WriteVariableInitialization(CBEFile * /*pFile*/)
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
-void CBEReplyFunction::WriteInvocation(CBEFile * /*pFile*/)
+void CBEReplyFunction::WriteInvocation(CBEFile& /*pFile*/)
 {}
 
 /** \brief writes the unmarshalling of the message
@@ -78,7 +78,7 @@ void CBEReplyFunction::WriteInvocation(CBEFile * /*pFile*/)
  *
  * This implementation unmarshals nothing because we expect no answer.
  */
-void CBEReplyFunction::WriteUnmarshalling(CBEFile * /*pFile*/)
+void CBEReplyFunction::WriteUnmarshalling(CBEFile& /*pFile*/)
 {}
 
 /** \brief clean up the mess
@@ -86,7 +86,7 @@ void CBEReplyFunction::WriteUnmarshalling(CBEFile * /*pFile*/)
  *
  * This implementation cleans up allocated memory inside this function
  */
-void CBEReplyFunction::WriteCleanup(CBEFile * /*pFile*/)
+void CBEReplyFunction::WriteCleanup(CBEFile& /*pFile*/)
 {}
 
 /** \brief creates the back-end reply only function
@@ -175,7 +175,7 @@ CBEReplyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  * A reply-only function is written at the component's side only.
  */
 bool 
-CBEReplyFunction::DoWriteFunction(CBEHeaderFile * pFile)
+CBEReplyFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -189,7 +189,7 @@ CBEReplyFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * A reply-only function is written at the component's side only.
  */
 bool 
-CBEReplyFunction::DoWriteFunction(CBEImplementationFile * pFile)
+CBEReplyFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;

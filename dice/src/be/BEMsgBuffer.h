@@ -76,18 +76,18 @@ public: // public methods
     virtual bool Sort(CBEFunction *pFunction);
     virtual bool Sort(CBEStructType *pStruct);
     
-    virtual void WriteAccess(CBEFile *pFile, CBEFunction *pFunction, 
+    virtual void WriteAccess(CBEFile& pFile, CBEFunction *pFunction, 
 	CMsgStructType nType, CDeclStack* pStack);
-    virtual void WriteMemberAccess(CBEFile *pFile, CBEFunction *pFunction,
+    virtual void WriteMemberAccess(CBEFile& pFile, CBEFunction *pFunction,
 	CMsgStructType nType, int nFEType, int nIndex);
-    virtual void WriteGenericMemberAccess(CBEFile *pFile, int nIndex);
-    void WriteAccessToStruct(CBEFile *pFile, CBEFunction *pFunction,
+    virtual void WriteGenericMemberAccess(CBEFile& pFile, int nIndex);
+    void WriteAccessToStruct(CBEFile& pFile, CBEFunction *pFunction,
 	CMsgStructType nType);
-    CBETypedDeclarator* WriteAccessToVariable(CBEFile *pFile,
+    CBETypedDeclarator* WriteAccessToVariable(CBEFile& pFile,
 	CBEFunction *pFunction, bool bPointer);
-    virtual void WriteInitialization(CBEFile *pFile, CBEFunction *pFunction,
+    virtual void WriteInitialization(CBEFile& pFile, CBEFunction *pFunction,
 	int nType, CMsgStructType nStructType);
-    virtual void WriteDump(CBEFile *pFile);
+    virtual void WriteDump(CBEFile& pFile);
     
     virtual bool HasProperty(int nProperty, CMsgStructType nType);
 
@@ -140,7 +140,7 @@ protected: // protected methods
     virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst,
 	    CBETypedDeclarator *pSecond);
 
-    void WriteAccess(CBEFile *pFile, CBEFunction *pFunction, CMsgStructType nType,
+    void WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType,
 	CBETypedDeclarator *pMember);
     
     CBEFunction* GetAnyFunctionFromClass(CBEClass *pClass);

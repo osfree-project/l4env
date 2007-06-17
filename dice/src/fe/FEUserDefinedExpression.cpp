@@ -30,7 +30,6 @@
 #include "fe/FEConstDeclarator.h"
 #include "fe/FEFile.h"
 #include "fe/FEInterface.h"
-#include "File.h"
 // needed for Error function
 #include "Compiler.h"
 #include "Messages.h"
@@ -86,7 +85,7 @@ long CFEUserDefinedExpression::GetIntValue()
         pInterface = pInterface->m_BaseInterfaces.First();
     }
     // now check if global const with name exists
-    pConst = dynamic_cast<CFEFile*>(GetRoot())->FindConstDeclarator(GetExpName());
+    pConst = GetRoot()->FindConstDeclarator(GetExpName());
     if (pConst)
         return pConst->GetValue()->GetIntValue();
     // not found
@@ -116,7 +115,7 @@ bool CFEUserDefinedExpression::IsOfType(unsigned int nType)
         pInterface = pInterface->m_BaseInterfaces.First();
     }
     // now check if global const with name exists
-    pConst = dynamic_cast<CFEFile*>(GetRoot())->FindConstDeclarator(GetExpName());
+    pConst = GetRoot()->FindConstDeclarator(GetExpName());
     if (pConst)
         return pConst->GetValue()->IsOfType(nType);
     // not found

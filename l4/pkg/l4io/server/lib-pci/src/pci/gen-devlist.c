@@ -72,8 +72,8 @@ main(void)
 						if (bra && bra > c && bra[-1] == ' ')
 							bra[-1] = 0;
 						if (vendor_len + strlen(c) + 1 > MAX_NAME_SIZE) {
-							fprintf(stderr, "Line %d: Device name too long\n", lino);
-							fprintf(stderr, "%s\n", c);
+//							fprintf(stderr, "Line %d: Device name too long\n", lino);
+//							fprintf(stderr, "%s\n", c);
 							c[MAX_NAME_SIZE-1-vendor_len] = 0;
 						}
 					}

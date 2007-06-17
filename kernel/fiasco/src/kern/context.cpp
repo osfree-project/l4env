@@ -4,6 +4,7 @@ INTERFACE:
 #include "config.h"
 #include "fpu_state.h"
 #include "l4_types.h"
+#include "per_cpu_data.h"
 #include "sched_context.h"
 
 class Entry_frame;
@@ -142,11 +143,11 @@ private:
   Context *		_ready_next;
   Context *		_ready_prev;
 
-  static bool		_schedule_in_progress;
-  static Sched_context *_current_sched		asm ("CONTEXT_CURRENT_SCHED");
-  static Cpu_time	_switch_time		asm ("CONTEXT_SWITCH_TIME");
-  static unsigned	_prio_highest		asm ("CONTEXT_PRIO_HIGHEST");
-  static Context *	_prio_next[256]		asm ("CONTEXT_PRIO_NEXT");
+  static Per_cpu<bool> _schedule_in_progress;
+  static Per_cpu<Sched_context *> _current_sched asm ("CONTEXT_CURRENT_SCHED");
+  static Per_cpu<Cpu_time> _switch_time asm ("CONTEXT_SWITCH_TIME");
+  static Per_cpu<unsigned> _prio_highest asm ("CONTEXT_PRIO_HIGHEST");
+  static Per_cpu<Context *[256]> _prio_next asm ("CONTEXT_PRIO_NEXT");
 };
 
 
@@ -168,11 +169,18 @@ IMPLEMENTATION:
 #include "timer.h"
 #include "timeout.h"
 
-Sched_context *		Context::_current_sched;
-bool			Context::_schedule_in_progress;
-Context *		Context::_prio_next[256];
-unsigned		Context::_prio_highest;
-Cpu_time		Context::_switch_time;
+Per_cpu<Sched_context *> Context::_current_sched DEFINE_PER_CPU;
+Per_cpu<bool> Context::_schedule_in_progress DEFINE_PER_CPU;
+Per_cpu<Context *[256]> Context::_prio_next DEFINE_PER_CPU;
+Per_cpu<unsigned> Context::_prio_highest DEFINE_PER_CPU;
+Per_cpu<Cpu_time> Context::_switch_time DEFINE_PER_CPU;
+
+PUBLIC inline
+unsigned
+Context::cpu() const
+{ return 0; }
+
+
 
 /** Initialize a context.  After setup, a switch_exec to this context results
     in a return to user code using the return registers at regs().  The
@@ -458,7 +466,7 @@ Context::switch_sched (Sched_context * const next)
 
   // If we're leaving the global timeslice, invalidate it
   // This causes schedule() to select a new timeslice via set_current_sched()
-  if (sched() == current_sched())
+  if (sched() == current_sched(cpu()))
     invalidate_sched();
 
   // Refill old timeslice
@@ -473,7 +481,8 @@ Context::switch_sched (Sched_context * const next)
       ready_enqueue();
     }
 
-  else if (sched()->prio() != next->prio() || _prio_next[next->prio()] != this)
+  else if (sched()->prio() != next->prio() 
+      || _prio_next.cpu(cpu())[next->prio()] != this)
     {
       ready_dequeue();
       set_sched (next);
@@ -483,7 +492,7 @@ Context::switch_sched (Sched_context * const next)
   else if (next->prio())
     {
       set_sched (next);
-      _prio_next[next->prio()] = _ready_next;
+      _prio_next.cpu(cpu())[next->prio()] = _ready_next;
     }
 }
 
@@ -496,13 +505,18 @@ Context::schedule()
 {
   Lock_guard <Cpu_lock> guard (&cpu_lock);
 
+
   CNT_SCHEDULE;
 
   // Ensure only the current thread calls schedule
   assert (this == current());
+  
+  Context ** const prio_next = _prio_next.cpu(cpu());
+  unsigned &prio_highest = _prio_highest.cpu(cpu());
+  bool &schedule_in_progress = _schedule_in_progress.cpu(cpu());
 
   // Nested invocations of schedule() are bugs
-  assert (!_schedule_in_progress);
+  assert (!schedule_in_progress);
 
   // Enqueue current thread into ready-list to schedule correctly
   update_ready_list();
@@ -512,7 +526,7 @@ Context::schedule()
 
   for (;;)
     {
-      next_to_run = _prio_next[_prio_highest];
+      next_to_run = prio_next[prio_highest];
 
       // Ensure ready-list sanity
       assert (next_to_run);
@@ -522,13 +536,13 @@ Context::schedule()
 
       next_to_run->ready_dequeue();
  
-      _schedule_in_progress = true;
+      schedule_in_progress = true;
 
       cpu_lock.clear();
       Proc::irq_chance();
       cpu_lock.lock();
 
-      _schedule_in_progress = false;
+      schedule_in_progress = false;
     }
 
   switch_to_locked (next_to_run);
@@ -537,11 +551,11 @@ Context::schedule()
 /**
  * Return if there is currently a schedule() in progress
  */
-PUBLIC static inline
+PUBLIC inline
 bool
 Context::schedule_in_progress()
 {
-  return _schedule_in_progress;
+  return _schedule_in_progress.cpu(cpu());
 }
 
 /**
@@ -551,13 +565,15 @@ PUBLIC static inline NEEDS ["globals.h"]
 bool
 Context::can_preempt_current (Sched_context const * const s)
 {
+  assert (current()->cpu() == s->owner()->cpu());
+
   // XXX: Workaround for missing priority boost implementation
   if (current()->sched()->prio() >= s->prio())
     return false;
+  
+  Sched_context const * const cs = current_sched(s->owner()->cpu());
 
-  return !current_sched() ||
-          current_sched()->prio() < s->prio() ||
-          current_sched() == s;
+  return !cs || cs->prio() < s->prio() || cs == s;
 }
 
 /**
@@ -565,35 +581,37 @@ Context::can_preempt_current (Sched_context const * const s)
  */
 PUBLIC static inline
 Sched_context *
-Context::current_sched()
+Context::current_sched(unsigned cpu)
 {
-  return _current_sched;
+  return _current_sched.cpu(cpu);
 }
 
 /**
  * Set currently active global Sched_context.
  */
-PROTECTED static
+PROTECTED
 void
 Context::set_current_sched (Sched_context * const sched)
 {
   // Save remainder of previous timeslice or refresh it, unless it had
   // been invalidated
-  if (_current_sched)
+  Sched_context *&s = _current_sched.cpu(cpu());
+  Timeout * const tt = timeslice_timeout.cpu(cpu());
+  if (s)
     {
-      Signed64 left = timeslice_timeout->get_timeout();
-      _current_sched->set_left (left > 0 ? left : _current_sched->quantum ());
+      Signed64 left = tt->get_timeout();
+      s->set_left (left > 0 ? left : s->quantum ());
       LOG_SCHED_SAVE;
     }
 
   assert (sched);
 
   // Program new end-of-timeslice timeout
-  timeslice_timeout->reset();
-  timeslice_timeout->set (Timer::system_clock() + sched->left());
+  tt->reset();
+  tt->set (Timer::system_clock() + sched->left(), cpu());
 
   // Make this timeslice current
-  _current_sched = sched;
+  s = sched;
 
   LOG_SCHED_LOAD;
 }
@@ -601,12 +619,12 @@ Context::set_current_sched (Sched_context * const sched)
 /**
  * Invalidate (expire) currently active global Sched_context.
  */
-PROTECTED static inline NEEDS["logdefs.h","timeout.h"]
+PROTECTED inline NEEDS["logdefs.h","timeout.h"]
 void
 Context::invalidate_sched()
 {
   LOG_SCHED_INVALIDATE;
-  _current_sched = 0;
+  _current_sched.cpu(cpu()) = 0;
 }
 
 /**
@@ -742,22 +760,26 @@ Context::ready_enqueue()
 
   unsigned short prio = sched()->prio();
 
-  if (prio > _prio_highest)
-    _prio_highest = prio;
+  unsigned &prio_highest = _prio_highest.cpu(cpu());
 
-  if (!_prio_next[prio])
-    _prio_next[prio] = _ready_next = _ready_prev = this;
+  if (prio > prio_highest)
+    prio_highest = prio;
+
+  Context ** const prio_next = _prio_next.cpu(cpu());
+
+  if (!prio_next[prio])
+    prio_next[prio] = _ready_next = _ready_prev = this;
 
   else
     {
-      _ready_next = _prio_next[prio];
-      _ready_prev = _prio_next[prio]->_ready_prev;
-      _prio_next[prio]->_ready_prev = _ready_prev->_ready_next = this;
+      _ready_next = prio_next[prio];
+      _ready_prev = prio_next[prio]->_ready_prev;
+      prio_next[prio]->_ready_prev = _ready_prev->_ready_next = this;
 
       // Special care must be taken wrt. the position of current() in the ready
       // list. Logically current() is the next thread to run at its priority.
       if (this == current())
-        _prio_next[prio] = this;
+        prio_next[prio] = this;
     }
 }
 
@@ -776,15 +798,19 @@ Context::ready_dequeue()
 
   unsigned short prio = sched()->prio();
 
-  if (_prio_next[prio] == this)
-    _prio_next[prio] = _ready_next == this ? 0 : _ready_next;
+  Context ** const prio_next = _prio_next.cpu(cpu());
+
+  if (prio_next[prio] == this)
+    prio_next[prio] = _ready_next == this ? 0 : _ready_next;
 
   _ready_prev->_ready_next = _ready_next;
   _ready_next->_ready_prev = _ready_prev;
   _ready_next = 0;				// Mark dequeued
 
-  while (!_prio_next[_prio_highest] && _prio_highest)
-    _prio_highest--;
+  unsigned &prio_highest = _prio_highest.cpu(cpu());
+
+  while (!prio_next[prio_highest] && prio_highest)
+    prio_highest--;
 }
 
 /** Helper.  Context that helps us by donating its time to us. It is
@@ -897,7 +923,7 @@ Context::switch_to_locked (Context *t)
   assert (cpu_lock.test());
 
   // Switch to destination thread's scheduling context
-  if (current_sched() != t->sched())
+  if (current_sched(cpu()) != t->sched())
     set_current_sched (t->sched());
 
   // XXX: IPC dependency tracking belongs here.
@@ -940,7 +966,7 @@ Context::switch_exec_locked (Context *t, enum Helping_mode mode)
   assert (cpu_lock.test());
   assert (current() != t);
   assert (current() == this);
-  assert (timeslice_timeout->is_set());		// Coma check
+  assert (timeslice_timeout.cpu(cpu())->is_set()); // Coma check
 
   // only for logging
   Context *t_orig = t;

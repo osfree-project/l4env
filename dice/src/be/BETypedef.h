@@ -57,13 +57,13 @@ public:
     using CBETypedDeclarator::CreateBackEnd;
     virtual void CreateBackEnd(CFETypedDeclarator *pFETypedef);
     virtual void CreateBackEnd(CBEType * pType, string sName, CFEBase *pFERefObject);
-    virtual void AddToHeader(CBEHeaderFile *pHeader);
+    virtual void AddToHeader(CBEHeaderFile* pHeader);
 
     virtual CObject *Clone();
 
-    virtual void WriteForwardDeclaration(CBEFile *pFile);
-    virtual void WriteDefinition(CBEFile *pFile);
-    virtual void WriteDeclaration(CBEFile * pFile);
+    virtual void WriteForwardDeclaration(CBEFile& pFile);
+    virtual void WriteDefinition(CBEFile& pFile);
+    virtual void WriteDeclaration(CBEFile& pFile);
 
 protected:
     /** \var string m_sDefine

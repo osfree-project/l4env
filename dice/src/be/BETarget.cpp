@@ -110,7 +110,7 @@ void CBETarget::WriteImplementationFiles()
  * it. And the implementation also call AddConstantToFile for all constants of
  * the file.
  */
-bool CBETarget::AddConstantToFile(CBEFile * pFile, CFEFile * pFEFile)
+bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEFile * pFEFile)
 {
     if (!pFEFile)
     {
@@ -177,7 +177,7 @@ bool CBETarget::AddConstantToFile(CBEFile * pFile, CFEFile * pFEFile)
  * current library.  It also calls AddConstantToFile for every constant of the
  * library.
  */
-bool CBETarget::AddConstantToFile(CBEFile * pFile, CFELibrary * pFELibrary)
+bool CBETarget::AddConstantToFile(CBEFile& pFile, CFELibrary * pFELibrary)
 {
     vector<CFEInterface*>::iterator iterI;
     for (iterI = pFELibrary->m_Interfaces.begin();
@@ -216,7 +216,7 @@ bool CBETarget::AddConstantToFile(CBEFile * pFile, CFELibrary * pFELibrary)
  *
  * This implementation iterates over the constants of the current interface
  */
-bool CBETarget::AddConstantToFile(CBEFile * pFile, CFEInterface * pFEInterface)
+bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEInterface * pFEInterface)
 {
     if (!pFEInterface)
     {
@@ -245,23 +245,25 @@ bool CBETarget::AddConstantToFile(CBEFile * pFile, CFEInterface * pFEInterface)
  *
  * This implementation generates a back-end constant and adds it to the header file.
  */
-bool CBETarget::AddConstantToFile(CBEFile * pFile, CFEConstDeclarator * pFEConstant)
+bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEConstDeclarator * pFEConstant)
 {
-    CBEHeaderFile *pF = dynamic_cast<CBEHeaderFile*>(pFile);
-    if (pF)
+    try
     {
+	CBEHeaderFile& pF = dynamic_cast<CBEHeaderFile&>(pFile);
         CBERoot *pRoot = GetSpecificParent<CBERoot>();
         assert(pRoot);
         CBEConstant *pConstant = pRoot->FindConstant(pFEConstant->GetName());
         if (!pConstant)
         {
             pConstant = CCompiler::GetClassFactory()->GetNewConstant();
-            pF->m_Constants.Add(pConstant);
+            pF.m_Constants.Add(pConstant);
 	    pConstant->CreateBackEnd(pFEConstant);
         }
         else
-            pF->m_Constants.Add(pConstant);
+            pF.m_Constants.Add(pConstant);
     }
+    catch (std::bad_cast)
+    { } // not a header file
 
     return true;
 }
@@ -275,7 +277,7 @@ bool CBETarget::AddConstantToFile(CBEFile * pFile, CFEConstDeclarator * pFEConst
  * also iterates over the included files if the program options allow it. And it calls
  * AddTypedefToFile for the type definitions of the file
  */
-bool CBETarget::AddTypedefToFile(CBEFile * pFile, CFEFile * pFEFile)
+bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFEFile * pFEFile)
 {
     if (!pFEFile)
         return true;
@@ -333,7 +335,7 @@ bool CBETarget::AddTypedefToFile(CBEFile * pFile, CFEFile * pFEFile)
  * current library.  And it calls AddTypedefToFile for the type definitions in
  * the library.
  */
-bool CBETarget::AddTypedefToFile(CBEFile * pFile, CFELibrary * pFELibrary)
+bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFELibrary * pFELibrary)
 {
     vector<CFEInterface*>::iterator iterI;
     for (iterI = pFELibrary->m_Interfaces.begin();
@@ -374,7 +376,7 @@ bool CBETarget::AddTypedefToFile(CBEFile * pFile, CFELibrary * pFELibrary)
  * interface.  It also adds one message buffer per interface to the header
  * file.
  */
-bool CBETarget::AddTypedefToFile(CBEFile * pFile, CFEInterface * pFEInterface)
+bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFEInterface * pFEInterface)
 {
     vector<CFETypedDeclarator*>::iterator iter;
     for (iter = pFEInterface->m_Typedefs.begin();
@@ -396,19 +398,21 @@ bool CBETarget::AddTypedefToFile(CBEFile * pFile, CFEInterface * pFEInterface)
  * This implementation adds the type definition to the header file, but skips the implementation file.
  * It searches for the typedef at the root and then adds a reference to its own collection.
  */
-bool CBETarget::AddTypedefToFile(CBEFile * pFile,
+bool CBETarget::AddTypedefToFile(CBEFile& pFile,
                  CFETypedDeclarator * pFETypedDeclarator)
 {
-    CBEHeaderFile *pF = dynamic_cast<CBEHeaderFile*>(pFile);
-    if (pF)
+    try
     {
+	CBEHeaderFile& pF = dynamic_cast<CBEHeaderFile&>(pFile);
         CBERoot *pRoot = GetSpecificParent<CBERoot>();
         assert(pRoot);
         CFEDeclarator *pDecl = pFETypedDeclarator->m_Declarators.First();
         CBETypedef *pTypedef = pRoot->FindTypedef(pDecl->GetName());
         assert(pTypedef);
-        pF->m_Typedefs.Add(pTypedef);
+        pF.m_Typedefs.Add(pTypedef);
     }
+    catch (std::bad_cast)
+    { } // not a header file
     return true;
 }
 
@@ -421,7 +425,7 @@ bool CBETarget::AddTypedefToFile(CBEFile * pFile,
  * file-name based on the front-end file and this name is used to find the
  * file.
  */
-CBEHeaderFile*
+CBEHeaderFile* 
 CBETarget::FindHeaderFile(CFEFile * pFEFile,
     FILE_TYPE nFileType)
 {
@@ -441,7 +445,7 @@ CBETarget::FindHeaderFile(CFEFile * pFEFile,
  * file-name based on the front-end library and this name is used to find the
  * file.
  */
-CBEHeaderFile*
+CBEHeaderFile* 
 CBETarget::FindHeaderFile(CFELibrary * pFELibrary,
     FILE_TYPE nFileType)
 {
@@ -462,7 +466,7 @@ CBETarget::FindHeaderFile(CFELibrary * pFELibrary,
  * file-name based on the front-end interface and this name is used to find
  * the file.
  */
-CBEHeaderFile*
+CBEHeaderFile* 
 CBETarget::FindHeaderFile(CFEInterface * pFEInterface,
     FILE_TYPE nFileType)
 {
@@ -483,7 +487,7 @@ CBETarget::FindHeaderFile(CFEInterface * pFEInterface,
  * file-name based on the front-end operation and this name is used to find
  * the file.
  */
-CBEHeaderFile*
+CBEHeaderFile* 
 CBETarget::FindHeaderFile(CFEOperation * pFEOperation,
     FILE_TYPE nFileType)
 {

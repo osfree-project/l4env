@@ -256,13 +256,37 @@ report:
 	@echo
 	@echo "uname -a: "; uname -a
 	@echo
-	@echo "Distriubtion"
-	@if [ -e "/etc/debian_version" ]; then    \
-	  echo -n "Debian: ";                     \
-	  cat /etc/debian_version;                \
-	elif [ -e /etc/gentoo-release ]; then     \
-	  echo -n "Gentoo: ";                     \
-	  cat /etc/gentoo-release;                \
+	@echo "Distribution"
+	@if [ -e "/etc/debian_version" ]; then                 \
+	  if grep -qi ubuntu /etc/issue; then                  \
+	    echo -n "Ubuntu: ";                                \
+	    cat /etc/issue;                                    \
+	  else                                                 \
+	    echo -n "Debian: ";                                \
+	  fi;                                                  \
+	  cat /etc/debian_version;                             \
+	elif [ -e /etc/gentoo-release ]; then                  \
+	  echo -n "Gentoo: ";                                  \
+	  cat /etc/gentoo-release;                             \
+	elif [ -e /etc/SuSE-release ]; then                    \
+	  echo -n "SuSE: ";                                    \
+	  cat /etc/SuSE-release;                               \
+	elif [ -e /etc/fedora-release ]; then                  \
+	  echo -n "Fedora: ";                                  \
+	  cat /etc/fedora-release;                             \
+	elif [ -e /etc/redhat-release ]; then                  \
+	  echo -n "Redhat: ";                                  \
+	  cat /etc/redhat-release;                             \
+	  [ -e /etc/redhat_version ]                           \
+	    && echo "  Version: `cat /etc/redhat_version`";    \
+	elif [ -e /etc/slackware-release ]; then               \
+	  echo -n "Slackware: ";                               \
+	  cat /etc/slackware-release;                          \
+	  [ -e /etc/slackware-version ]                        \
+	    && echo "  Version: `cat /etc/slackware-version`"; \
+	elif [ -e /etc/mandrake-release ]; then                \
+	  echo -n "Mandrake: ";                                \
+	  cat /etc/mandrake-release;                           \
 	fi
 	@lsb_release -a || true
 	@echo
@@ -294,6 +318,13 @@ report:
 	    echo PATH $$i IS NOT AVAILABLE; \
 	  fi \
 	done
+	@echo
+	@echo "DICE = $(DICE)"
+	@if [ -x "$(DICE)" ]; then                             \
+	   echo -n "Dice version: "; $(DICE) --version;        \
+	 else                                                  \
+	   echo "No Dice binary";                              \
+	 fi
 	@echo
 	@echo "============================================================="
 	@echo " Note, this report might disclose private information"

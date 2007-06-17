@@ -15,18 +15,18 @@
 #include "be/BEFile.h"
 #include "Compiler.h"
 
-void Sensor::DefaultIncludes(CBEFile *pFile)
+void Sensor::DefaultIncludes(CBEFile& pFile)
 {
-    if (!pFile->IsOfFileType(FILETYPE_COMPONENTIMPLEMENTATION))
+    if (!pFile.IsOfFileType(FILETYPE_COMPONENTIMPLEMENTATION))
 	return;
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 	return;
 
-    *pFile << "#include <l4/util/l4_macros.h>\n";
-    *pFile << "#include <l4/util/util.h>\n";
-    *pFile << "#include <stdio.h>\n";
+    pFile << "#include <l4/util/l4_macros.h>\n";
+    pFile << "#include <l4/util/util.h>\n";
+    pFile << "#include <stdio.h>\n";
 }
-void Sensor::BeforeDispatch(CBEFile *pFile, CBEFunction *pFunction)
+void Sensor::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
 {
     if (!pFunction->IsComponentSide())
 	return;
@@ -40,16 +40,14 @@ void Sensor::BeforeDispatch(CBEFile *pFile, CBEFunction *pFunction)
     CCompiler::GetBackEndOption("trace-server-func", sFunc);
     CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
 
-    *pFile << "\t{\n"; // outer 1
-    pFile->IncIndent();
-    *pFile << "\tint op = " << sOpcodeVar << " & DICE_FID_MASK, i = " << sOpcodeVar << 
+    pFile << "\t{\n"; // outer 1
+    ++pFile << "\tint op = " << sOpcodeVar << " & DICE_FID_MASK, i = " << sOpcodeVar << 
 	" >> DICE_IID_BITS;\n";
 
-    *pFile << "\t" << sFunc << " (\"" << pClass->GetName() << 
+    pFile << "\t" << sFunc << " (\"" << pClass->GetName() << 
 	" %02x %06x in \"l4util_idfmt\" from \"l4util_idfmt\"\\n\", i, op, "
 	<< "l4util_idstr(l4_myself()), l4util_idstr(*" << sObj << "));\n";
 
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 

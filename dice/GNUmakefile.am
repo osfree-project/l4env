@@ -1,12 +1,16 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS=	lib src include doc
+SUBDIRS=	libltdl src include lib doc
 
 DISTCLEANFILES= GNUmakefile GNUmakefile.in
 MAINTAINERCLEANFILES= mkinstalldirs stamp-h depcomp install-sh \
 		      config.h.in config.guess config.sub configure \
 		      missing ylwrap aclocal.m4 \
 		      $(PACKAGE)-$(VERSION).tar.gz
+
+LIBTOOL_DEPS = @LIBTOOL_DEPS@
+libtool: $(LIBTOOL_DEPS)
+	$(SHELL) ./config.status --recheck
 
 dist-hook:
 	@perl -p -i -e 's/doc\/html\/Makefile//g' $(distdir)/configure

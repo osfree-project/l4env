@@ -1,4 +1,4 @@
-#include "uart_integrator.h"
+#include "uart_pl011.h"
 
 namespace L4
 {
@@ -43,19 +43,19 @@ namespace L4
   };
 
 
-  unsigned long Uart_integrator::rd(unsigned long reg) const
+  unsigned long Uart_pl011::rd(unsigned long reg) const
   {
     volatile unsigned long *r = (unsigned long*)(_base + reg);
     return *r;
   }
 
-  void Uart_integrator::wr(unsigned long reg, unsigned long val) const
+  void Uart_pl011::wr(unsigned long reg, unsigned long val) const
   {
     volatile unsigned long *r = (unsigned long*)(_base + reg);
     *r = val;
   }
 
-  bool Uart_integrator::startup(unsigned long base)
+  bool Uart_pl011::startup(unsigned long base)
   {
     _base = base;
     wr(UART011_CR, UART01x_CR_UARTEN | UART011_CR_TXE | UART011_CR_RXE);
@@ -67,14 +67,14 @@ namespace L4
     return true;
   }
   
-  void Uart_integrator::shutdown()
+  void Uart_pl011::shutdown()
   {
     wr(UART011_IMSC,0);
     wr(UART011_ICR, 0xffff);
     wr(UART011_CR, 0);
   }
 
-  bool Uart_integrator::enable_rx_irq(bool enable) 
+  bool Uart_pl011::enable_rx_irq(bool enable) 
   {
     unsigned long mask = UART011_RXIM | UART011_RTIM;
 
@@ -86,8 +86,8 @@ namespace L4
       wr(UART011_IMSC, rd(UART011_IMSC) & ~mask);
     return true; 
   }
-  bool Uart_integrator::enable_tx_irq(bool /*enable*/) { return false; }
-  bool Uart_integrator::change_mode(Transfer_mode, Baud_rate r)
+  bool Uart_pl011::enable_tx_irq(bool /*enable*/) { return false; }
+  bool Uart_pl011::change_mode(Transfer_mode, Baud_rate r)
   {
     if (r != 115200)
       return false;
@@ -104,7 +104,7 @@ namespace L4
     return true;
   }
 
-  int Uart_integrator::get_char(bool blocking) const
+  int Uart_pl011::get_char(bool blocking) const
   { 
     while (!char_avail()) 
       if (!blocking) return -1;
@@ -116,19 +116,19 @@ namespace L4
     return c;
   }
 
-  int Uart_integrator::char_avail() const 
+  int Uart_pl011::char_avail() const 
   { 
     return !(rd(UART01x_FR) & UART01x_FR_RXFE); 
   }
 
-  void Uart_integrator::out_char(char c) const
+  void Uart_pl011::out_char(char c) const
   {
     while (rd(UART01x_FR) & UART01x_FR_TXFF)
       ;
     wr(UART01x_DR,c);
   }
 
-  int Uart_integrator::write(char const *s, unsigned long count) const
+  int Uart_pl011::write(char const *s, unsigned long count) const
   {
     unsigned long c = count;
     while (c)

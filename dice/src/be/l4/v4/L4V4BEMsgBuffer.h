@@ -54,19 +54,19 @@ public:
     virtual void PostCreate(CBEClass *pClass, CFEInterface *pFEInterface);
     virtual void PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation);
 
-    virtual void WriteInitialization(CBEFile *pFile, CBEFunction *pFunction,
+    virtual void WriteInitialization(CBEFile& pFile, CBEFunction *pFunction,
 	int nType, CMsgStructType nStructType);
 
 protected:
     virtual bool AddPlatformSpecificMembers(CBEFunction *pFunction,
 	CBEStructType *pStruct, CMsgStructType nType);
-    virtual void WriteRcvFlexpageInitialization(CBEFile *pFile,	
+    virtual void WriteRcvFlexpageInitialization(CBEFile& pFile,	
 	CMsgStructType nType);
-    virtual bool WriteRefstringInitialization(CBEFile *pFile, CMsgStructType nType);
-    virtual void WriteRefstringInitParameter(CBEFile *pFile,
+    virtual bool WriteRefstringInitialization(CBEFile& pFile, CMsgStructType nType);
+    virtual void WriteRefstringInitParameter(CBEFile& pFile,
 	CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
 	CMsgStructType nType);
-    virtual bool WriteRefstringInitFunction(CBEFile *pFile,
+    virtual bool WriteRefstringInitFunction(CBEFile& pFile,
 	CBEFunction *pFunction,	CBEClass *pClass, int nIndex, CMsgStructType nType);
     
     virtual bool AddMsgTagMember(CBEFunction *pFunction,

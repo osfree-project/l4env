@@ -56,6 +56,11 @@ extern const char* dice_version;
 extern const char* dice_build;
 //@}
 
+/** maimum possible indent */
+const unsigned int CBEFile::MAX_INDENT = 80;
+/** the standard indentation value */
+const unsigned int CBEFile::STD_INDENT = 4;
+
 CBEFile::CBEFile()
 : m_Classes(0, (CObject*)0),
   m_NameSpaces(0, (CObject*)0),
@@ -66,7 +71,9 @@ CBEFile::CBEFile()
 }
 
 CBEFile::CBEFile(CBEFile & src)
-: CFile(src),
+: std::ios(),
+  std::ofstream(), 
+  CObject(src),
   m_Classes(0,(CObject*)0),
   m_NameSpaces(0, (CObject*)0),
   m_Functions(0, (CObject*)0),
@@ -214,21 +221,21 @@ void CBEFile::WriteInclude(CIncludeStatement *pInclude)
     if (!sFileName.empty())
     {
         if (pInclude->m_bStandard)
-	    m_file << "#include <";
+	    *this << "#include <";
         else
-	    m_file << "#include \"";
+	    *this << "#include \"";
         if (!pInclude->m_bIDLFile || sPrefix.empty())
         {
-	    m_file << sFileName;
+	    *this << sFileName;
         }
         else // bIDLFile && !sPrefix.empty()()
         {
-	    m_file << sPrefix << "/" << sFileName;
+	    *this << sPrefix << "/" << sFileName;
         }
         if (pInclude->m_bStandard)
-	    m_file << ">\n";
+	    *this << ">\n";
         else
-	    m_file << "\"\n";
+	    *this << "\"\n";
     }
 }
 
@@ -364,42 +371,44 @@ bool CBEFile::HasFunctionWithUserType(string sTypeName)
  */
 void CBEFile::WriteIntro()
 {
-    m_file <<
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFile::%s called\n", __func__);
+
+    *this <<
 	"/*\n" <<
 	" * THIS FILE IS MACHINE GENERATED!";
     if (m_nFileType == FILETYPE_TEMPLATE)
     {
-	m_file << "\n" <<
+	*this << "\n" <<
 	    " *\n" <<
 	    " * Implement the server templates here.\n" <<
 	    " * This file is regenerated with every run of 'dice -t ...'.\n" <<
-	    " * Move it to another location after changing to\n" <<
+	    " * Move it to another location after modifications to\n" <<
 	    " * keep your changes!\n";
     }
     else
-	m_file << " DO NOT EDIT!\n";
-    m_file << " *\n";
-    m_file << " * " << m_sFilename << "\n";
-    m_file << " * created ";
+	*this << " DO NOT EDIT!\n";
+    *this << " *\n";
+    *this << " * " << m_sFilename << "\n";
+    *this << " * created ";
 
     char * user = getlogin();
     if (user)
     {
-	m_file << "by " << user;
+	*this << "by " << user;
 	
 	char host[255];
 	if (!gethostname(host, sizeof(host)))
-	    m_file << "@" << host;
+	    *this << "@" << host;
 	
-	m_file << " ";
+	*this << " ";
     }
 
     time_t t = time(NULL);
-    m_file << "on " << ctime(&t);
-    m_file << " * with Dice version " << dice_version << " (compiled on " << 
+    *this << "on " << ctime(&t);
+    *this << " * with Dice version " << dice_version << " (compiled on " << 
 	dice_build << ")\n";
-    m_file << " * send bug reports to <dice@os.inf.tu-dresden.de>\n";
-    m_file << " */\n\n";
+    *this << " * send bug reports to <dice@os.inf.tu-dresden.de>\n";
+    *this << " */\n\n";
 }
 
 /** \brief creates a list of ordered elements
@@ -526,3 +535,132 @@ CBEFile::GetSourceLineEnd()
 
     return m_nSourceLineNbEnd;
 }
+
+/** \brief specializaion of stream operator for strings
+ *  \param s string parameter
+ *
+ * Here we implement the special treatment for indentation. To make it right
+ * we have to check if there are tabs after line-breaks.
+ */
+std::ostream::__ostream_type& CBEFile::operator<<(string s)
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEFile::%s(str:\"%s\") called\n", __func__, s.c_str());
+
+    if (s.empty())
+	return *this;
+
+    if (s[0] == '\t')
+    {
+	PrintIndent();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEFile::%s(str) print substr after indent\n", __func__);
+	*this << s.substr(1);
+	return *this;
+    }
+
+    string::size_type pos = s.find('\n');
+    if (pos != string::npos &&
+	pos != s.length())
+    {
+	/* first print everything up to \n */
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEFile::%s(str) print substr 1\n", __func__);
+	write(s.substr(0, pos + 1).c_str(), s.substr(0, pos + 1).length());
+
+	/* then call ourselves with the rest */
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEFile::%s(str) print substr 2\n", __func__);
+	*this << s.substr(pos + 1);
+	return *this;
+    }
+
+    /* simple string */
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEFile::%s(str) calling base class\n", __func__);
+    write(s.c_str(), s.length());
+    return *this;
+}
+
+/** \brief specialization of stream operator for character arrays
+ *  \param s character array to print
+ */
+std::ostream::__ostream_type& CBEFile::operator<<(char const * s)
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEFile::%s(char const:%s) called\n", __func__, s);
+
+    this->operator<<(string(s));
+    return *this;
+}
+
+/** \brief specialization of stream operator for character arrays
+ *  \param s character array to print
+ */
+std::ostream::__ostream_type& CBEFile::operator<<(char* s)
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEFile::%s(char:%s) called\n", __func__, s);
+
+    this->operator<<(string(s));
+    return *this;
+}
+
+/** \brief prints the indentation
+ */
+void CBEFile::PrintIndent(void)
+{
+    for (unsigned int i = 0; i < m_nIndent; i++)
+	this->operator<<(" ");
+}
+
+/** \brief increases the identation for this file
+ *
+ * The standard value to increase the ident is specified in the constant
+ * STD_INDENT.  If the ident reaches the values specified in MAX_IDENT it
+ * ignores the ident increase.
+ */
+CBEFile& CBEFile::operator++(void)
+{
+    return this->operator+=(STD_INDENT);
+}
+
+/** \brief increases the identation for this file
+ *  \param by the number of characters, the ident should be increased.
+ *
+ * The standard value to increase the ident is specified in the constant
+ * STD_INDENT.  If the ident reaches the values specified in MAX_IDENT it
+ * ignores the ident increase.
+ */
+CBEFile& CBEFile::operator+=(int by)
+{
+    m_nLastIndent = (m_nIndent + by > MAX_INDENT) ? MAX_INDENT - m_nIndent : by;
+    m_nIndent = std::min(m_nIndent + by, MAX_INDENT);
+    return *this;
+}
+
+/** \brief decreases the ident
+ *
+ * The standard value for the decrement operation is STD_IDENT. If the ident
+ * reaches zero (0) the operation ignores the decrement.  If by is -1 the
+ * indent is decremented by the value of the last increment.
+ */
+CBEFile& CBEFile::operator--(void)
+{
+    return this->operator-=(STD_INDENT);
+}
+
+/** \brief decreases the ident
+ *  \param by the number of character, by which the ident should be decreased
+ *
+ * The standard value for the decrement operation is STD_IDENT. If the ident
+ * reaches zero (0) the operation ignores the decrement.  If by is -1 the
+ * indent is decremented by the value of the last increment.
+ */
+CBEFile& CBEFile::operator-=(int by)
+{
+    m_nIndent = std::max((int)m_nIndent - ((by == -1) ? m_nLastIndent : by), 0);
+    m_nLastIndent = 0;
+    return *this;
+}
+

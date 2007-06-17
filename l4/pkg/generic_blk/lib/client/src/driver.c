@@ -110,7 +110,7 @@ l4blk_open_driver(const char * name, l4blk_driver_t * driver,
   /* find driver descriptor */
   for (d = 0; d < BLKCLIENT_MAX_DRIVERS; d++)
     {
-      if (l4util_cmpxchg32(&drivers[d].notify_thread, -1, 0))
+      if (l4util_cmpxchg32((volatile l4_uint32_t *)&drivers[d].notify_thread, ~0, 0))
 	/* found */
 	break;
     }

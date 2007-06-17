@@ -43,26 +43,26 @@ public:
     /** destructor of object */
     virtual ~CBETrace();
     
-    virtual void DefaultIncludes(CBEFile *pFile);
+    virtual void DefaultIncludes(CBEFile& pFile);
     virtual void AddLocalVariable(CBEFunction *pFunction);
-    virtual void VariableDeclaration(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeCall(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterCall(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void InitServer(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeLoop(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeDispatch(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterDispatch(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeReplyOnly(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterReplyOnly(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeReplyWait(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterReplyWait(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeComponent(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterComponent(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeMarshalling(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterMarshalling(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void BeforeUnmarshalling(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void AfterUnmarshalling(CBEFile *pFile, CBEFunction *pFunction);
-    virtual void WaitCommError(CBEFile*, CBEFunction*) {}
+    virtual void VariableDeclaration(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeCall(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterCall(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void InitServer(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeLoop(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterDispatch(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeReplyOnly(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterReplyOnly(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeReplyWait(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterReplyWait(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeComponent(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterComponent(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeMarshalling(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterMarshalling(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void BeforeUnmarshalling(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void AfterUnmarshalling(CBEFile& pFile, CBEFunction *pFunction);
+    virtual void WaitCommError(CBEFile& , CBEFunction*) {}
 };
 
 #endif /* __DICE_BE_BETRACE_H__ */

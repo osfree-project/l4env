@@ -398,6 +398,15 @@ Enable this option if you want to use l4_ulock or l4_usem calls for
 kernel-provided user-level locks (FAST).
 .
 
+DEVEL			'Development stuff, leave disabled!' text
+Usually does NEITHER compile NOR work for you!
+Do NEVER enable this.
+.
+
+MP			'Enable multi processor support'		text
+Enable support for machines with multiple processors.
+.
+
 abi_extensions		'ABI Extensions'
 target_system		'Target System Options'
 platform		'Target Platform'
@@ -421,12 +430,20 @@ req_one_shot_apic	'One-shot mode needs APIC as scheduling timer'
 req_one_shot_sync_tsc	'One-shot mode requires synchronous kernel clock'
 
 warndepend EXPERIMENTAL
+warndepend DEVEL
 
 ###########################################################################
 # Specify which items/menus to hide (in order of appearance in main menu) #
 ###########################################################################
 unless  EXPERIMENTAL suppress dependent PF_ISG
-  PL0_HACK USER_LOCKS
+  PL0_HACK USER_LOCKS DEVEL MP
+
+unless DEVEL suppress dependent MP
+require EXPERIMENTAL == n implies DEVEL == n
+require DEVEL == n implies MP == n
+
+when MP suppress ASSEMBLER_IPC_SHORTCUT
+require MP implies ASSEMBLER_IPC_SHORTCUT == n
 
 unless  TASK_CAPS suppress dependent USER_LOCKS
 require TASK_CAPS == n implies USER_LOCKS == n
@@ -538,6 +555,7 @@ default DEBUG_KERNEL_PAGE_FAULTS	from n
 default PL0_HACK			from n
 default WORKAROUND_AMD_FPU_LEAK		from n
 default MAINTAINER_MODE			from y
+default DEVEL				from n
 
 ###############################################
 # Specify consistency rules with explanations #
@@ -639,6 +657,7 @@ menu kernel_options
 	abi_version
 	abi_extensions
   		
+	MP
 	ASSEMBLER_IPC_SHORTCUT
 	SMALL_SPACES
 	CONTEXT_4K
@@ -685,6 +704,7 @@ menu compiling			# Compiling and Building
 
 menu main			# Main menu
 	EXPERIMENTAL
+	DEVEL
 	target_system
 	kernel_options
 	debugging

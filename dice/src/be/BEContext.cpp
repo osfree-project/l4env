@@ -55,7 +55,7 @@ CBEContext::~CBEContext()
  *
  * Another option is to force the usage of env.malloc.
  */
-void CBEContext::WriteMalloc(CBEFile* pFile, CBEFunction* pFunction)
+void CBEContext::WriteMalloc(CBEFile& pFile, CBEFunction* pFunction)
 {
     WriteMemory(pFile, pFunction, string("malloc"), string("CORBA_alloc"));
 }
@@ -64,7 +64,7 @@ void CBEContext::WriteMalloc(CBEFile* pFile, CBEFunction* pFunction)
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void CBEContext::WriteFree(CBEFile* pFile, CBEFunction* pFunction)
+void CBEContext::WriteFree(CBEFile& pFile, CBEFunction* pFunction)
 {
     WriteMemory(pFile, pFunction, string("free"), string("CORBA_free"));
 }
@@ -75,7 +75,7 @@ void CBEContext::WriteFree(CBEFile* pFile, CBEFunction* pFunction)
  *  \param sEnv the environment function
  *  \param sCorba the CORBA function
  */
-void CBEContext::WriteMemory(CBEFile *pFile,
+void CBEContext::WriteMemory(CBEFile& pFile,
     CBEFunction *pFunction,
     string sEnv,
     string sCorba)
@@ -95,7 +95,7 @@ void CBEContext::WriteMemory(CBEFile *pFile,
             else
 		sFree += ".";
 	    sFree += sEnv + ")";
-	    *pFile << sFree;
+	    pFile << sFree;
             if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
                 CMessages::Warning("CORBA_Environment.%s is used to set receive buffer in %s.",
 		    sEnv.c_str(), sFuncName.c_str());
@@ -108,7 +108,7 @@ void CBEContext::WriteMemory(CBEFile *pFile,
             if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
                 CMessages::Warning("%s is used to set receive buffer in %s.",
 		    sCorba.c_str(), sFuncName.c_str());
-            *pFile << sCorba;
+            pFile << sCorba;
         }
     }
     else
@@ -116,7 +116,7 @@ void CBEContext::WriteMemory(CBEFile *pFile,
         if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
             CMessages::Warning("%s is used to set receive buffer in %s.",
 		sCorba.c_str(), sFuncName.c_str());
-        *pFile << sCorba;
+        pFile << sCorba;
     }
 }
 

@@ -62,10 +62,10 @@ public:
 
 protected:
     virtual void AddBeforeParameters(void);
-    virtual void WriteCleanup(CBEFile * pFile);
-    virtual void WriteUnmarshalling(CBEFile * pFile);
-    virtual void WriteInvocation(CBEFile * pFile);
-    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void WriteCleanup(CBEFile& pFile);
+    virtual void WriteUnmarshalling(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual void AddParameter(CFETypedDeclarator * pFEParameter);
 };
 

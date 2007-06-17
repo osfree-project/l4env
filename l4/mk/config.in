@@ -9,8 +9,7 @@ comment 'Target Architecture'
 choice 'Target Architecture' \
 	"x86              BUILD_ARCH_x86 \
 	 arm              BUILD_ARCH_arm \
-	 amd64            BUILD_ARCH_amd64 \
-	 ppc32            BUILD_ARCH_ppc32" x86
+	 amd64            BUILD_ARCH_amd64" x86
 
 if [ "$BUILD_ARCH_x86" = "y" ] ; then
   define_string BUILD_ARCH "x86"
@@ -52,12 +51,6 @@ if [ "$BUILD_ARCH_amd64" = "y" ] ; then
   else
     define_string BUILD_ABI "l4x2"
   fi
-fi
-
-if [ "$BUILD_ARCH_ppc32" = "y" ] ; then
-  define_string BUILD_ARCH "ppc32"
-  string " CPU type" CPU '750'
-  define_string BUILD_ABI "l4x2"
 fi
 
 endmenu
@@ -103,10 +96,6 @@ if [ "$BIDc_USE_SPECIAL_CC" = "y" ] ; then
         string 'CC'  CC  '$(SYSTEM_TARGET_amd64)gcc'
         string 'CXX' CXX '$(SYSTEM_TARGET_amd64)g++'
     fi
-    if [ "$BUILD_ARCH" = "ppc32" ] ; then
-        string 'CC'  CC  '$(SYSTEM_TARGET_ppc32)gcc'
-        string 'CXX' CXX '$(SYSTEM_TARGET_ppc32)g++'
-    fi
 else
     define_string HOST_CC   'gcc'
     define_string HOST_CXX  'g++'
@@ -121,10 +110,6 @@ else
     if [ "$BUILD_ARCH" = "amd64" ] ; then
       define_string CC  '$(SYSTEM_TARGET_amd64)gcc'
       define_string CXX '$(SYSTEM_TARGET_amd64)g++'
-    fi
-    if [ "$BUILD_ARCH" = "ppc32" ] ; then
-      define_string CC  '$(SYSTEM_TARGET_ppc32)gcc'
-      define_string CXX '$(SYSTEM_TARGET_ppc32)g++'
     fi
 fi
 comment "Tools"
@@ -150,10 +135,6 @@ if [ "$HAVE_LDSO" = "y" ] ; then
           string 'Internal name of amd64 gcc preprocessor' INT_CPP_NAME "cpp0"
           string 'Internal name of amd64 g++ preprocessor' INT_CXX_NAME "cpp0"
 	fi
-	if [ "$BUILD_ARCH" = "ppc32" ] ; then
-          string 'Internal name of ppc32 gcc preprocessor' INT_CPP_NAME "cpp0"
-          string 'Internal name of ppc32 g++ preprocessor' INT_CXX_NAME "cpp0"
-	fi
     fi
     bool 'Automatically determine internal ld names' INT_LD_NAME_SWITCH
     if [ "$INT_LD_NAME_SWITCH" = "n" ] ; then
@@ -165,9 +146,6 @@ if [ "$HAVE_LDSO" = "y" ] ; then
 	fi
         if [ "$BUILD_ARCH" = "amd64" ] ; then
           string 'Internal name of amd64 gcc/g++ linker' INT_LD_amd64_NAME "ld"
-	fi
-	if [ "$BUILD_ARCH" = "ppc32" ] ; then
-          string 'Internal name of ppc32 gcc/g++ linker' INT_LD_NAME "ld"
 	fi
     fi
 fi
@@ -188,9 +166,8 @@ endmenu
 mainmenu_option next_comment
   comment 'Advanced'
 
-  choice 'LibC to use' \
-	"uclibc           USE_UCLIBC \
-	 dietlibc         USE_DIETLIBC" uclibc
+  define_bool USE_UCLIBC   "y"
+  define_bool USE_DIETLIBC "n"
 
   bool 'Build shared libloaders.s.so' 'BUILD_LOADER'
   if [ "$BUILD_LOADER" = "y" ] ; then

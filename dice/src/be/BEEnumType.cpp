@@ -119,29 +119,29 @@ CBEEnumType::CreateBackEnd(CFETypeSpec *pFEType)
 /** \brief writes the enum type to the target file
  *  \param pFile the file to write to
  */
-void CBEEnumType::Write(CBEFile * pFile)
+void CBEEnumType::Write(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     // open enum
-    *pFile << m_sName;
+    pFile << m_sName;
     if (!m_sTag.empty())
-	*pFile << " " << m_sTag;
+	pFile << " " << m_sTag;
     // only print member if we got some
     unsigned int nMax = m_vMembers.size();
     if (nMax > 0)
     {
-	*pFile << "\t { ";
+	pFile << "\t { ";
         // print members
         for (unsigned int nCurr = 0; nCurr < nMax; nCurr++)
         {
-            *pFile << m_vMembers[nCurr];
+            pFile << m_vMembers[nCurr];
             if (nCurr < nMax-1)
-                *pFile << ", ";
+                pFile << ", ";
         }
         // close enum
-	*pFile << "\t } ";
+	pFile << "\t } ";
     }
 }
 
@@ -151,14 +151,14 @@ void CBEEnumType::Write(CBEFile * pFile)
  *  The 'zero' or initial element of an enum is associated with its declarator. Therefore we could
  * only guess. What we can do is to use the first element of the enum.
  */
-void CBEEnumType::WriteZeroInit(CBEFile * pFile)
+void CBEEnumType::WriteZeroInit(CBEFile& pFile)
 {
     if (m_vMembers.empty())
     {
-	*pFile << "0";
+	pFile << "0";
         return;
     }
-    *pFile << m_vMembers[0];
+    pFile << m_vMembers[0];
 }
 
 /** \brief tests if the enum type has the given tag
@@ -176,9 +176,9 @@ bool CBEEnumType::HasTag(string sTag)
  *
  * A enum cast is '(enum tag)'.
  */
-void CBEEnumType::WriteCast(CBEFile* pFile,  bool bPointer)
+void CBEEnumType::WriteCast(CBEFile& pFile,  bool bPointer)
 {
-    *pFile << "(";
+    pFile << "(";
     if (m_sTag.empty())
     {
         // no tag -> we need a typedef to save us
@@ -195,15 +195,15 @@ void CBEEnumType::WriteCast(CBEFile* pFile,  bool bPointer)
                 break;
         }
         assert(iterD != pTypedef->m_Declarators.end());
-	*pFile << (*iterD)->GetName();
+	pFile << (*iterD)->GetName();
         if (bPointer && ((*iterD)->GetStars() == 0))
-	    *pFile << "*";
+	    pFile << "*";
     }
     else
     {
-	*pFile << m_sName << " " << m_sTag;
+	pFile << m_sName << " " << m_sTag;
         if (bPointer)
-	    *pFile << "*";
+	    pFile << "*";
     }
-    *pFile << ")";
+    pFile << ")";
 }

@@ -336,14 +336,14 @@ CBEExpression::CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression)
 /** \brief write the content of the expression to the target file
  *  \param pFile the target file to write to
  */
-void CBEExpression::Write(CBEFile *pFile)
+void CBEExpression::Write(CBEFile& pFile)
 {
-    if (!pFile->IsOpen())
+    if (!pFile.is_open())
         return;
 
     string sOut;
     WriteToStr(sOut);
-    *pFile << sOut;
+    pFile << sOut;
 }
 
 /** \brief write the content of the expression to the string

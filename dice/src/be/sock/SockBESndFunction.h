@@ -57,8 +57,8 @@ protected:
     /** \brief copy constructor */
     CSockBESndFunction(CSockBESndFunction &src);
 
-    virtual void WriteInvocation(CBEFile * pFile);
-    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
 
 public:
 };

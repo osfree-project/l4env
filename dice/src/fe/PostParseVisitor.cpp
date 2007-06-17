@@ -55,7 +55,7 @@ CPostParseVisitor::~CPostParseVisitor()
 void CPostParseVisitor::Visit(CFEInterface& interface)
 {
     // set base interfaces
-    CFEFile *pRoot = dynamic_cast<CFEFile*>(interface.GetRoot());
+    CFEFile *pRoot = interface.GetRoot();
     assert(pRoot);
     vector<CFEIdentifier*>::iterator iterBIN;
     for (iterBIN = interface.m_BaseInterfaceNames.begin();
@@ -413,8 +413,8 @@ CPostParseVisitor::CheckInConstructed(CFETypedDeclarator& typeddecl)
    
     // make structs reference parameters
     // except they are pointers already.
-    if (CFETypeSpec::IsConstructedType(typeddecl.GetType()) &&
-	!CFETypeSpec::IsPointerType(typeddecl.GetType()))
+    if (typeddecl.GetType()->IsConstructedType() &&
+	!typeddecl.GetType()->IsPointerType())
     {
 	vector<CFEDeclarator*>::iterator iterD;
 	for (iterD = typeddecl.m_Declarators.begin();
@@ -499,8 +499,7 @@ CPostParseVisitor::CheckIsArray(CFETypedDeclarator& typeddecl)
 		if (pDAttr)
 		{
 		    // find constant
-		    CFEFile *pFERoot = dynamic_cast<CFEFile*>(
-			typeddecl.GetRoot());
+		    CFEFile *pFERoot = typeddecl.GetRoot();
 		    assert(pFERoot);
 		    CFEConstDeclarator *pConstant = 
 			pFERoot->FindConstDeclarator(pDAttr->GetName());

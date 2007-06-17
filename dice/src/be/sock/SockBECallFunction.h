@@ -54,8 +54,8 @@ protected:
     /** \brief copy constructor */
     CSockBECallFunction(CSockBECallFunction &src);
 
-    virtual void WriteInvocation(CBEFile * pFile);
-    virtual void WriteVariableInitialization(CBEFile * pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
 };
 
 #endif

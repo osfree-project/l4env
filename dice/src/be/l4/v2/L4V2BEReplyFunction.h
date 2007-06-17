@@ -42,7 +42,7 @@ public:
     virtual ~CL4V2BEReplyFunction();
 
 protected:
-    virtual void WriteVariableDeclaration(CBEFile * pFile);
+    virtual void WriteVariableDeclaration(CBEFile& pFile);
 };
 
 #endif

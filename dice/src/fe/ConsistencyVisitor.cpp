@@ -123,7 +123,7 @@ void CConsistencyVisitor::CheckForOpInInterface(CFEOperation *pFEOperation,
  */
 void CConsistencyVisitor::Visit(CFEConstDeclarator& constant)
 {
-    CFEFile *pRoot = dynamic_cast<CFEFile*>(constant.GetRoot());
+    CFEFile *pRoot = constant.GetRoot();
     assert(pRoot);
     // try to find me
     string sName = constant.GetName();
@@ -238,7 +238,7 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
 	    CFEDeclarator *pD = (*iterP)->m_Declarators.First();
 	    assert(pD);
 	    int nStars = pD->GetStars();
-	    if (CFETypeSpec::IsPointerType((*iterP)->GetType()))
+	    if ((*iterP)->GetType()->IsPointerType())
 		nStars++;
 	    CFEArrayDeclarator *pAD = dynamic_cast<CFEArrayDeclarator*>(pD);
 	    int nAD = 0;
@@ -350,7 +350,7 @@ CConsistencyVisitor::CheckAttributeParameters(CFEOperation& operation,
     assert(pParameter);
     CFEDeclarator *pDecl = pParameter->m_Declarators.First();
     assert(pDecl);
-    CFEFile *pRoot = dynamic_cast<CFEFile*>(operation.GetRoot());
+    CFEFile *pRoot = operation.GetRoot();
     assert(pRoot);
     CFEAttribute *pAttr;
     if ((pAttr = pParameter->m_Attributes.Find(nAttribute)) != 0)
@@ -551,7 +551,7 @@ void CConsistencyVisitor::Visit(CFEStructType& type)
 	pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
     }
 
-    CFEFile *pFEFile = dynamic_cast<CFEFile*>(type.GetRoot());
+    CFEFile *pFEFile = type.GetRoot();
     if (pFEFile && ((pType = pFEFile->FindUserDefinedType(sTag)) != 0))
     {
 	pType->Accept(*this);
@@ -572,7 +572,7 @@ void CConsistencyVisitor::Visit(CFEUnionType& type)
 {
     if (type.IsForwardDeclaration())
     {
-	CFEFile *pRoot = dynamic_cast<CFEFile*>(type.GetRoot());
+	CFEFile *pRoot = type.GetRoot();
 	if (pRoot->FindTaggedDecl(type.GetTag()))
 	    return;
     }
@@ -607,7 +607,7 @@ void CConsistencyVisitor::Visit(CFESimpleType& type)
 void CConsistencyVisitor::Visit(CFEUserDefinedType& type)
 {
     string sName = type.GetName();
-    CFEFile *pFile = dynamic_cast<CFEFile*>(type.GetRoot());
+    CFEFile *pFile = type.GetRoot();
     assert(pFile);
     if (sName.empty())
     {
@@ -687,7 +687,7 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
     // check declarators
     if (typeddecl.IsTypedef())
     {
-    	CFEFile *pRoot = dynamic_cast<CFEFile*>(typeddecl.GetRoot());
+    	CFEFile *pRoot = typeddecl.GetRoot();
     	assert(pRoot);
         CFEFile *pMyFile = typeddecl.GetSpecificParent<CFEFile>(0);
         vector<CFEDeclarator*>::iterator iterD;

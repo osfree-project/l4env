@@ -29,13 +29,13 @@ protected:
     Head **prev_next;
     unsigned long index;
 
-    void unlink() 
+    void unlink()
     { 
       assert (prev_next);
 
-      if (next) 
-	next->prev_next = prev_next; 
-      *prev_next = next; 
+      if (next)
+	next->prev_next = prev_next;
+      *prev_next = next;
     }
 
     static void link(Head **h, void *b, unsigned idx)
@@ -135,7 +135,7 @@ Buddy_t_base<A,B,M>::buddy(void *block, unsigned long index, Head **new_block)
 }
 
 PUBLIC
-template<int A, int B, int M> 
+template<int A, int B, int M>
 inline
 void
 Buddy_t_base<A,B,M>::free(void *block, unsigned long size)
@@ -146,7 +146,7 @@ Buddy_t_base<A,B,M>::free(void *block, unsigned long size)
   //bool _b = 0;
   //if (_debug) printf("Buddy::free(%p, %ld)\n", block, size);
   unsigned size_index = 0;
-  while (((unsigned long)Min_size << size_index) < size) 
+  while (((unsigned long)Min_size << size_index) < size)
     ++size_index;
 
   assert (size == (unsigned long)Min_size << size_index);
@@ -176,7 +176,7 @@ Buddy_t_base<A,B,M>::free(void *block, unsigned long size)
 
 
 PUBLIC
-template<int A, int B, int M> 
+template<int A, int B, int M>
 void
 Buddy_t_base<A,B,M>::add_mem(void *b, unsigned long size)
 {
@@ -206,7 +206,7 @@ Buddy_t_base<A,B,M>::add_mem(void *b, unsigned long size)
 
 
 PRIVATE
-template<int A, int B, int M> 
+template<int A, int B, int M>
 inline
 void
 Buddy_t_base<A,B,M>::split(Head *b, unsigned size_index, unsigned i)
@@ -224,13 +224,13 @@ Buddy_t_base<A,B,M>::split(Head *b, unsigned size_index, unsigned i)
 }
 
 PUBLIC
-template<int A, int B, int M> 
+template<int A, int B, int M>
 inline
 void *
 Buddy_t_base<A,B,M>::alloc(unsigned long size)
 {
   unsigned size_index = 0;
-  while (((unsigned long)Min_size << size_index) < size) 
+  while (((unsigned long)Min_size << size_index) < size)
     ++size_index;
 
   //printf("Buddy::alloc(%ld): size_index=%d ", size, size_index);

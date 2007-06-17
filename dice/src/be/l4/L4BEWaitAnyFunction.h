@@ -56,22 +56,22 @@ protected:
     CL4BEWaitAnyFunction(CL4BEWaitAnyFunction &src);
 
 protected:
-    virtual void WriteIPCErrorCheck(CBEFile *pFile);
-    virtual void WriteExceptionCheck(CBEFile * pFile);
-    virtual void WriteUnmarshalling(CBEFile *pFile);
-    virtual void WriteInvocation(CBEFile *pFile);
-    virtual void WriteFlexpageOpcodePatch(CBEFile *pFile);
-    virtual void WriteVariableInitialization(CBEFile * pFile);
-    virtual void WriteIPC(CBEFile *pFile);
-    virtual void WriteIPCReplyWait(CBEFile *pFile);
-    virtual void WriteLongIPC(CBEFile *pFile);
-    virtual void WriteLongFlexpageIPC(CBEFile *pFile);
-    virtual void WriteShortIPC(CBEFile *pFile);
-    virtual void WriteShortFlexpageIPC(CBEFile *pFile);
-    virtual void WriteReleaseMemory(CBEFile *pFile);
-    virtual void WriteDedicatedWait(CBEFile *pFile);
+    virtual void WriteIPCErrorCheck(CBEFile& pFile);
+    virtual void WriteExceptionCheck(CBEFile& pFile);
+    virtual void WriteUnmarshalling(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteFlexpageOpcodePatch(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteIPC(CBEFile& pFile);
+    virtual void WriteIPCReplyWait(CBEFile& pFile);
+    virtual void WriteLongIPC(CBEFile& pFile);
+    virtual void WriteLongFlexpageIPC(CBEFile& pFile);
+    virtual void WriteShortIPC(CBEFile& pFile);
+    virtual void WriteShortFlexpageIPC(CBEFile& pFile);
+    virtual void WriteReleaseMemory(CBEFile& pFile);
+    virtual void WriteDedicatedWait(CBEFile& pFile);
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
-    virtual void WriteCleanup(CBEFile * pFile);
+    virtual void WriteCleanup(CBEFile& pFile);
 };
 
 #endif // !__DICE_L4BEWAITANYFUNCTION_H__

@@ -445,7 +445,7 @@ __builtin_va_list   {
                     return TYPENAME;
                 }
                 // typename in scope not found, check else-where
-                pFile = dynamic_cast<CFEFile*>(pFile->GetRoot());
+                pFile = pFile->GetRoot();
                 if (pFile && pFile->FindUserDefinedType(yytext))
                 {
                     bTaggedTypeAllowed = false;

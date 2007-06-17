@@ -92,7 +92,7 @@ my %modules =
 
    l4env => {
       pub_module => 1,
-      modules => [ qw(l4env_uclibc l4env_pkg) ],
+      modules => [ qw(l4env_uclibc l4env_pkg dice) ],
    },
 
    hello_pkg => {
@@ -114,7 +114,7 @@ my %modules =
 
    hello => {
       pub_module => 1,
-      modules => [ qw(fiasco bid hello_pkg l4env_tools) ],
+      modules => [ qw(fiasco bid dice hello_pkg l4env_tools) ],
    },
 
    misc => {
@@ -195,7 +195,7 @@ my %modules =
                      ) ],
    },
 
-   remote_repo => { modules => [ qw(fiasco dice remote_repo_l4) ], },
+   remote_repo => { modules => [ qw(fiasco remote_repo_l4) ], },
 
    all => {
       modules => [ qw(remote_repo) ],

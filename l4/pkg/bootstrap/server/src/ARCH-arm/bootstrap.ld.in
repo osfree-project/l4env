@@ -41,6 +41,11 @@ SECTIONS
     *(.module.data)
     . = ALIGN(4K);
     _modules_end   = .;
+
+    . = ALIGN(4K);
+    _module_data_start = .;
+    *(.module_data)
+    _module_data_end = .;
   }
   /* exception frames for C++ */
   .eh_frame : 
@@ -80,11 +85,6 @@ SECTIONS
 #else
   . = ALIGN(4K);
 #endif
-  .module_data : { 
-    _module_data_start = .;
-    *(.module_data)
-    _module_data_end = .;
-  }
 
   /* drop the following sections since we do not need them for DROPS */
   /DISCARD/ : {

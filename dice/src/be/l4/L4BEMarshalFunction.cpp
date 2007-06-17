@@ -69,7 +69,7 @@ CL4BEMarshalFunction::~CL4BEMarshalFunction()
  * marshal rest
  */
 void
-CL4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
+CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 {
     bool bLocalTrace = false;
     if (!m_bTraceOn && m_pTrace)
@@ -100,26 +100,24 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
 	    sEnv = "&";
 	sEnv += pDecl->GetName();
 
-	*pFile << "\tif (DICE_EXPECT_TRUE(DICE_IS_NO_EXCEPTION(" << 
+	pFile << "\tif (DICE_EXPECT_TRUE(DICE_IS_NO_EXCEPTION(" << 
 	    sEnv << ")))\n";
-	*pFile << "\t{\n";
-        pFile->IncIndent();
+	pFile << "\t{\n";
+        ++pFile;
         CBEOperationFunction::WriteMarshalling(pFile);
-        pFile->DecIndent();
-	*pFile << "\t}\n";
-	*pFile << "\telse\n";
-	*pFile << "\t{\n";
-        pFile->IncIndent();
+	--pFile << "\t}\n";
+	pFile << "\telse\n";
+	pFile << "\t{\n";
+        ++pFile;
         WriteMarshalException(pFile, true, false);
         // clear exception
-        *pFile << "\t" << sFreeFunc << "(" << sEnv << ");\n";
+        pFile << "\t" << sFreeFunc << "(" << sEnv << ");\n";
 	// set send dope
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
 	    nType); 
 	// write return (don't marshal any parameters if exception)
 	WriteReturn(pFile);
-        pFile->DecIndent();
-	*pFile << "\t}\n";
+	--pFile << "\t}\n";
     }
     else
         CBEMarshalFunction::WriteMarshalling(pFile);
@@ -130,10 +128,10 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile* pFile)
     // if we had send flexpages,we have to set the flexpage bit
     if (bSendFpages)
     {
-	*pFile << "\t";
+	pFile << "\t";
 	pMsgBuffer->WriteMemberAccess(pFile, this, nType, 
 	    TYPE_MSGDOPE_SEND, 0);
-	*pFile << ".md.fpage_received = 1;\n";
+	pFile << ".md.fpage_received = 1;\n";
     }
 
     if (bLocalTrace)

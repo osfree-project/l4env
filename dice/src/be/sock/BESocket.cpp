@@ -53,7 +53,7 @@ CBESocket::~CBESocket()
  *  \param sFunc the name of the calling function
  */
 void
-CBESocket::WriteSendTo(CBEFile* pFile,
+CBESocket::WriteSendTo(CBEFile& pFile,
     CBEFunction* pFunction,
     bool bUseEnv,
     const char* sFunc)
@@ -70,18 +70,16 @@ CBESocket::WriteSendTo(CBEFile* pFile,
     sPtrName += pMsgBuffer->m_Declarators.First()->GetName();
     sSizeName += pMsgBuffer->m_Declarators.First()->GetName();
 
-    *pFile << "\tdice_ret_size = sendto (";
+    pFile << "\tdice_ret_size = sendto (";
     WriteSocketDescriptor(pFile, pFunction, bUseEnv);
-    *pFile << ", " << sPtrName << ", sizeof(" << sSizeName << "), 0, " <<
+    pFile << ", " << sPtrName << ", sizeof(" << sSizeName << "), 0, " <<
 	"(struct sockaddr*)" << sCorbaObj << ", dice_fromlen);\n";
 
-    *pFile << "\tif (dice_ret_size < sizeof(" << sSizeName << "))\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
-    *pFile << "\tperror(\"" << sFunc << "\");\n";
+    pFile << "\tif (dice_ret_size < sizeof(" << sSizeName << "))\n";
+    pFile << "\t{\n";
+    ++pFile << "\tperror(\"" << sFunc << "\");\n";
     pFunction->WriteReturn(pFile);
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 
 /** \brief writes the receiving of a message
@@ -90,7 +88,7 @@ CBESocket::WriteSendTo(CBEFile* pFile,
  *  \param bUseEnv true if environment contains socket descriptor
  */
 void
-CBESocket::WriteReceiveFrom(CBEFile* pFile,
+CBESocket::WriteReceiveFrom(CBEFile& pFile,
     CBEFunction* pFunction,
     bool bUseEnv)
 {
@@ -106,9 +104,9 @@ CBESocket::WriteReceiveFrom(CBEFile* pFile,
     sPtrName += pMsgBuffer->m_Declarators.First()->GetName();
     sSizeName += pMsgBuffer->m_Declarators.First()->GetName();
 
-    *pFile << "\tdice_ret_size = recvfrom(";
+    pFile << "\tdice_ret_size = recvfrom(";
     WriteSocketDescriptor(pFile, pFunction, bUseEnv);
-    *pFile << ", " << sPtrName << ", sizeof(" << sSizeName << "), 0, " <<
+    pFile << ", " << sPtrName << ", sizeof(" << sSizeName << "), 0, " <<
 	"(struct sockaddr*)" << sCorbaObj << ", &dice_fromlen);\n";
 }
 
@@ -116,21 +114,20 @@ CBESocket::WriteReceiveFrom(CBEFile* pFile,
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void CBESocket::WriteExceptionClear(CBEFile* pFile,
+void CBESocket::WriteExceptionClear(CBEFile& pFile,
     CBEFunction* pFunction)
 {
     /* write exception check (clear any existing exception) */
-    *pFile << "\tif (";
+    pFile << "\tif (";
     WriteEnvironmentField(pFile, pFunction, "_exception._corba.major");
-    *pFile << " != CORBA_NO_EXCEPTION)\n";
-    pFile->IncIndent();
-    *pFile << "\tCORBA_server_exception_set(";
+    pFile << " != CORBA_NO_EXCEPTION)\n";
+    ++pFile << "\tCORBA_server_exception_set(";
     WriteEnvironment(pFile, pFunction);
-    *pFile << ",\n";
-    *pFile << "\t\tCORBA_NO_EXCEPTION,\n";
-    *pFile << "\t\tCORBA_DICE_EXCEPTION_NONE,\n";
-    *pFile << "\t\t0);\n";
-    pFile->DecIndent();
+    pFile << ",\n";
+    pFile << "\t\tCORBA_NO_EXCEPTION,\n";
+    pFile << "\t\tCORBA_DICE_EXCEPTION_NONE,\n";
+    pFile << "\t\t0);\n";
+    --pFile;
 }
 
 /** \brief writes error-handling, as should follow a recvfrom() call
@@ -138,30 +135,27 @@ void CBESocket::WriteExceptionClear(CBEFile* pFile,
  *  \param pFunction the function to write for
  *  \param sFunc the name of the calling function
  */
-void CBESocket::WriteErrorCheck(CBEFile* pFile,
+void CBESocket::WriteErrorCheck(CBEFile& pFile,
     CBEFunction* pFunction, const char* sFunc)
 {
-    *pFile << "\tif (dice_ret_size < 0)\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    pFile << "\tif (dice_ret_size < 0)\n";
+    pFile << "\t{\n";
     /* set exception */
-    *pFile << "\tif (";
+    ++pFile << "\tif (";
     WriteEnvironmentField(pFile, pFunction, "_exception._corba.major");
-    *pFile << " == CORBA_NO_EXCEPTION)\n";
-    pFile->IncIndent();
-    *pFile << "\tCORBA_server_exception_set(";
+    pFile << " == CORBA_NO_EXCEPTION)\n";
+    ++pFile << "\tCORBA_server_exception_set(";
     WriteEnvironment(pFile, pFunction);
-    *pFile << ",\n";
-    *pFile << "\t\tCORBA_SYSTEM_EXCEPTION,\n";
-    *pFile << "\t\tCORBA_DICE_INTERNAL_IPC_ERROR,\n";
-    *pFile << "\t\t0);\n";
-    pFile->DecIndent();
+    pFile << ",\n";
+    pFile << "\t\tCORBA_SYSTEM_EXCEPTION,\n";
+    pFile << "\t\tCORBA_DICE_INTERNAL_IPC_ERROR,\n";
+    pFile << "\t\t0);\n";
+    --pFile;
 
     /* don't perror if the error was a timeout */
-    *pFile << "\tif (errno != EAGAIN) perror (\"" << sFunc << "\");\n";	
+    pFile << "\tif (errno != EAGAIN) perror (\"" << sFunc << "\");\n";	
     pFunction->WriteReturn(pFile);
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 
 /** \brief prints the socket descriptor to the target file
@@ -169,7 +163,7 @@ void CBESocket::WriteErrorCheck(CBEFile* pFile,
  *  \param pFunction the function to write for
  *  \param bUseEnv true if environment variable should be used
  */
-void CBESocket::WriteSocketDescriptor(CBEFile* pFile,
+void CBESocket::WriteSocketDescriptor(CBEFile& pFile,
     CBEFunction* pFunction,
     bool bUseEnv)
 {
@@ -182,7 +176,7 @@ void CBESocket::WriteSocketDescriptor(CBEFile* pFile,
 	}
     }
     /* either bUseEnv is false, or WriteEnvironmentField failed */
-    *pFile << "sd";
+    pFile << "sd";
 }
 
 /** \brief prints an environment field expression to the target file
@@ -190,7 +184,7 @@ void CBESocket::WriteSocketDescriptor(CBEFile* pFile,
  *  \param pFunction the function to write for
  *  \param sFieldName the name of the field in the environment
  */
-bool CBESocket::WriteEnvironmentField(CBEFile* pFile, CBEFunction* pFunction,
+bool CBESocket::WriteEnvironmentField(CBEFile& pFile, CBEFunction* pFunction,
     const char* sFieldName)
 {
     CBEDeclarator* pEnvDecl = 0;
@@ -200,9 +194,9 @@ bool CBESocket::WriteEnvironmentField(CBEFile* pFile, CBEFunction* pFunction,
     {
 	/* we have both environment and declarator, so
 	 * print the field name */
-	*pFile << pEnvDecl->GetName();
-	*pFile << ((pEnvDecl->GetStars() != 0) ? "->" : ".");
-	*pFile << sFieldName;
+	pFile << pEnvDecl->GetName();
+	pFile << ((pEnvDecl->GetStars() != 0) ? "->" : ".");
+	pFile << sFieldName;
 	return true;
     }
     else return false;
@@ -212,13 +206,13 @@ bool CBESocket::WriteEnvironmentField(CBEFile* pFile, CBEFunction* pFunction,
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void CBESocket::WriteEnvironment(CBEFile* pFile, CBEFunction* pFunction)
+void CBESocket::WriteEnvironment(CBEFile& pFile, CBEFunction* pFunction)
 {
     CBETypedDeclarator* pEnv = pFunction->GetEnvironment();
     CBEDeclarator* pEnvDecl = (pEnv) ? pEnv->m_Declarators.First() : 0;
     if (pEnvDecl)
     {
-	if (pEnvDecl->GetStars() == 0) *pFile << "&";
+	if (pEnvDecl->GetStars() == 0) pFile << "&";
 	pEnvDecl->WriteName(pFile);
     }
     else
@@ -232,23 +226,23 @@ void CBESocket::WriteEnvironment(CBEFile* pFile, CBEFunction* pFunction)
  *  \param pFunction the function to write for
  *  \param bUseEnv true if the environment should be used
  */
-void CBESocket::WriteTimeoutOptionCall(CBEFile* pFile, CBEFunction* pFunction,
+void CBESocket::WriteTimeoutOptionCall(CBEFile& pFile, CBEFunction* pFunction,
     bool bUseEnv)
 {
     /* first, write the setsockopt call to enable timeouts 
      * TODO: move this code into a separate function */
-    *pFile << "\tsetsockopt(";
+    pFile << "\tsetsockopt(";
     WriteSocketDescriptor(pFile, pFunction, bUseEnv);
-    *pFile << ", SOL_SOCKET, SO_RCVTIMEO, (void*) &";
+    pFile << ", SOL_SOCKET, SO_RCVTIMEO, (void*) &";
     WriteEnvironmentField(pFile, pFunction, "receive_timeout");
-    *pFile << ", sizeof (struct timeval));\n";
+    pFile << ", sizeof (struct timeval));\n";
 }
 
 /** \brief writes the call implementation of the socket layer
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void CBESocket::WriteCall(CBEFile* pFile, CBEFunction* pFunction)
+void CBESocket::WriteCall(CBEFile& pFile, CBEFunction* pFunction)
 {
     // send message
     WriteSendTo(pFile, pFunction, false, "call");
@@ -267,7 +261,7 @@ void CBESocket::WriteCall(CBEFile* pFile, CBEFunction* pFunction)
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void CBESocket::WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction)
+void CBESocket::WriteReplyAndWait(CBEFile& pFile, CBEFunction* pFunction)
 {
     // send message
     WriteSendTo(pFile, pFunction, true, "reply-wait");
@@ -275,7 +269,7 @@ void CBESocket::WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction)
     WriteZeroMsgBuffer(pFile, pFunction);
     // want to receive from any client again
     string sCorbaObj = CCompiler::GetNameFactory()->GetCorbaObjectVariable();
-    *pFile << "\t" << sCorbaObj << "->sin_addr.s_addr = INADDR_ANY;\n";
+    pFile << "\t" << sCorbaObj << "->sin_addr.s_addr = INADDR_ANY;\n";
     // wait for new request, with receive timeout
     WriteTimeoutOptionCall(pFile, pFunction, true);
     WriteReceiveFrom(pFile, pFunction, true);
@@ -287,7 +281,7 @@ void CBESocket::WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction)
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void CBESocket::WriteZeroMsgBuffer(CBEFile* pFile,
+void CBESocket::WriteZeroMsgBuffer(CBEFile& pFile,
     CBEFunction* pFunction)
 {
     string sOffset = CCompiler::GetNameFactory()->GetOffsetVariable();
@@ -301,14 +295,14 @@ void CBESocket::WriteZeroMsgBuffer(CBEFile* pFile,
     sPtrName += pMsgBuffer->m_Declarators.First()->GetName();
     sSizeName += pMsgBuffer->m_Declarators.First()->GetName();
 
-    *pFile << "\tbzero (" << sPtrName << ", sizeof(" << sSizeName << ") );\n";
+    pFile << "\tbzero (" << sPtrName << ", sizeof(" << sSizeName << ") );\n";
 }
 
 /** \brief writes the wait implementation of the socket layer
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void CBESocket::WriteWait(CBEFile* pFile, CBEFunction* pFunction)
+void CBESocket::WriteWait(CBEFile& pFile, CBEFunction* pFunction)
 {
     WriteZeroMsgBuffer(pFile, pFunction);
     // wait for new request, using timeout
@@ -322,58 +316,54 @@ void CBESocket::WriteWait(CBEFile* pFile, CBEFunction* pFunction)
  *  \param pFile the file to write to
  *  \param pFunction the funtion to write for
  */
-void CBESocket::WriteInitialization(CBEFile *pFile,
+void CBESocket::WriteInitialization(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     bool bUseEnv = pFunction->IsComponentSide();
 
-    *pFile << "\t";
+    pFile << "\t";
     WriteSocketDescriptor(pFile, pFunction, bUseEnv);
-    *pFile << " = socket(PF_INET, SOCK_DGRAM, 0);\n";
+    pFile << " = socket(PF_INET, SOCK_DGRAM, 0);\n";
 
-    *pFile << "\tif (";
+    pFile << "\tif (";
     WriteSocketDescriptor(pFile, pFunction, bUseEnv);
-    *pFile << " < 0)\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
-    *pFile << "\tperror(\"socket creation\");\n";
+    pFile << " < 0)\n";
+    pFile << "\t{\n";
+    ++pFile << "\tperror(\"socket creation\");\n";
     pFunction->WriteReturn(pFile);
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 
 /** \brief writes the assigning of a local name to a communication port
  *  \param pFile the file to write to
  *  \param pFunction the funtion to write for
  */
-void CBESocket::WriteBind(CBEFile *pFile,
+void CBESocket::WriteBind(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     bool bUseEnv = pFunction->IsComponentSide();
     string sCorbaObj = CCompiler::GetNameFactory()->GetCorbaObjectVariable();
 
-    *pFile << "\tif (bind(";
+    pFile << "\tif (bind(";
     WriteSocketDescriptor(pFile, pFunction, bUseEnv);
-    *pFile << ", (struct sockaddr*)" << sCorbaObj << 
+    pFile << ", (struct sockaddr*)" << sCorbaObj << 
 	", sizeof(struct sockaddr)) < 0)\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
-    *pFile << "\tperror(\"bind\");\n";
+    pFile << "\t{\n";
+    ++pFile << "\tperror(\"bind\");\n";
     pFunction->WriteReturn(pFile);
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 
 /** \brief writes the clean up code
  *  \param pFile the file to write to
  *  \param pFunction the funtion to write for
  */
-void CBESocket::WriteCleanup(CBEFile *pFile,
+void CBESocket::WriteCleanup(CBEFile& pFile,
     CBEFunction *pFunction)
 {
-    *pFile << "\tclose (";
+    pFile << "\tclose (";
     WriteSocketDescriptor(pFile, pFunction, pFunction->IsComponentSide());
-    *pFile << ");\n";
+    pFile << ");\n";
 }
 
 /** \brief writes a send
@@ -381,7 +371,7 @@ void CBESocket::WriteCleanup(CBEFile *pFile,
  *  \param pFunction the funtion to write for
  */
 void
-CBESocket::WriteSend(CBEFile* pFile,
+CBESocket::WriteSend(CBEFile& pFile,
     CBEFunction* pFunction)
 {
     // send message
@@ -393,7 +383,7 @@ CBESocket::WriteSend(CBEFile* pFile,
  *  \param pFunction the funtion to write for
  */
 void
-CBESocket::WriteReply(CBEFile* /*pFile*/,
+CBESocket::WriteReply(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {}
 
@@ -402,7 +392,7 @@ CBESocket::WriteReply(CBEFile* /*pFile*/,
  *  \param pFunction the funtion to write for
  */
 void 
-CBESocket::WriteReceive(CBEFile* /*pFile*/,
+CBESocket::WriteReceive(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {}
 

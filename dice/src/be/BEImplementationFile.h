@@ -60,6 +60,8 @@ protected:
 
 public:
     virtual void Write(void);
+
+    virtual CObject* Clone(void);
     
     virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType);
     virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType);
@@ -67,7 +69,7 @@ public:
     virtual void CreateBackEnd(CFEFile *pFEFile, FILE_TYPE nFileType);
     
     virtual CBEHeaderFile* GetHeaderFile();
-    virtual void SetHeaderFile(CBEHeaderFile *pHeaderFile);
+    virtual void SetHeaderFile(CBEHeaderFile* pHeaderFile);
 
 protected:  // Protected methods
     virtual void WriteNameSpace(CBENameSpace *pNameSpace);
@@ -76,10 +78,10 @@ protected:  // Protected methods
     virtual void WriteDefaultIncludes(void);
 
 protected: // Protected members
-    /** \var CBEHeaderFile *m_pHeaderFile
+    /** \var CBEHeaderFile& m_pHeaderFile
      *  \brief reference to the corresponding header file
      */
-    CBEHeaderFile *m_pHeaderFile;
+    CBEHeaderFile* m_pHeaderFile;
 };
 
 #endif // !__DICE_BEIMPLEMENTATIONFILE_H__

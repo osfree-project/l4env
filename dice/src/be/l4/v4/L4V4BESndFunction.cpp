@@ -75,16 +75,16 @@ CL4V4BESndFunction::CreateBackEnd(CFEOperation *pFEOperation)
  * marshalling into the message registers.
  */
 void
-CL4V4BESndFunction::WriteMarshalling(CBEFile * pFile)
+CL4V4BESndFunction::WriteMarshalling(CBEFile& pFile)
 {
     CL4BESndFunction::WriteMarshalling(pFile);
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     // first clear message tag
-    *pFile << "\tL4_MsgClear ( (L4_Msg_t *) &" << sMsgBuffer << " );\n";
+    pFile << "\tL4_MsgClear ( (L4_Msg_t *) &" << sMsgBuffer << " );\n";
     // load msgtag into message buffer
-    *pFile << "\tL4_Set_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ", " <<
+    pFile << "\tL4_Set_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ", " <<
         m_sOpcodeConstName << " );\n";
     // set dopes
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
@@ -92,7 +92,7 @@ CL4V4BESndFunction::WriteMarshalling(CBEFile * pFile)
     pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
 	GetSendDirection());
     // load the message into the UTCB
-    *pFile << "\tL4_MsgLoad ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
+    pFile << "\tL4_MsgLoad ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
 }
 
 /** \brief writes the invocation of the message transfer
@@ -101,7 +101,7 @@ CL4V4BESndFunction::WriteMarshalling(CBEFile * pFile)
  * Because this is the call function, we can use the IPC call of L4.
  */
 void
-CL4V4BESndFunction::WriteInvocation(CBEFile * pFile)
+CL4V4BESndFunction::WriteInvocation(CBEFile& pFile)
 {
     // invocate
     WriteIPC(pFile);
@@ -118,15 +118,14 @@ CL4V4BESndFunction::WriteInvocation(CBEFile * pFile)
  * L4_IPC_ERROR(result).
  */
 void
-CL4V4BESndFunction::WriteIPCErrorCheck(CBEFile * pFile)
+CL4V4BESndFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sResult = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
-    *pFile << "\tif (L4_IpcFailed (" << sResult << "))\n" <<
+    pFile << "\tif (L4_IpcFailed (" << sResult << "))\n" <<
               "\t{\n";
-    pFile->IncIndent();
     // env.major = CORBA_SYSTEM_EXCEPTION;
     // env.repos_id = DICE_IPC_ERROR;
     string sSetFunc;
@@ -135,27 +134,24 @@ CL4V4BESndFunction::WriteIPCErrorCheck(CBEFile * pFile)
         sSetFunc = "CORBA_server_exception_set";
     else
         sSetFunc = "CORBA_exception_set";
-    *pFile << "\t" << sSetFunc << " (";
+    ++pFile << "\t" << sSetFunc << " (";
     if (pDecl->GetStars() == 0)
-        *pFile << "&";
+        pFile << "&";
     pDecl->WriteName(pFile);
-    *pFile << ",\n";
-    pFile->IncIndent();
-    *pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
+    pFile << ",\n";
+    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
               "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
               "\t0);\n";
-    pFile->DecIndent();
     // env.ipc_error = L4_IPC_ERROR(result);
     string sEnv;
     if (pDecl->GetStars() == 0)
 	sEnv = "&";
     sEnv += pDecl->GetName();
-    *pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_ErrorCode();\n";
+    --pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_ErrorCode();\n";
     // return
     WriteReturn(pFile);
     // close }
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --pFile << "\t}\n";
 }
 
 /** \brief calculates the size of the function's parameters

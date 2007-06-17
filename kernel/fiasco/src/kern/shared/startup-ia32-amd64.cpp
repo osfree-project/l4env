@@ -19,6 +19,7 @@ IMPLEMENTATION[ia32,amd64]:
 #include "kip_init.h"
 #include "kmem.h"
 #include "kmem_alloc.h"
+#include "per_cpu_data.h"
 #include "pic.h"
 #include "static_init.h"
 #include "std_macros.h"

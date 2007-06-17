@@ -27,7 +27,6 @@
  */
 
 #include "fe/FEStringAttribute.h"
-#include "File.h"
 
 CFEStringAttribute::CFEStringAttribute(ATTR_TYPE nType, string string)
 :CFEAttribute(nType)

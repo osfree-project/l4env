@@ -38,9 +38,9 @@ LDFLAGS_amd64      += $(LDNMAGIC)
 
 # Default memory backend when linking against dietlibc or uClibc. The -u
 # switch is necessary since mmap_anon is referenced using a weak symbol.
-MALLOC_BACKEND      ?= -u mmap_anon -lc_be_simple_mem
+MALLOC_BACKEND     ?= -u mmap_anon -lc_be_simple_mem
 
-MMAP_BACKEND		?= -lc_be_sigma0_mem
+MMAP_BACKEND       ?= -lc_be_sigma0_mem
 
 # Default is dietlibc and uClibc without reentrant functions. If, for example
 # two independant threads of the same application call malloc at the same

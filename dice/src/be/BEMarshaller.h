@@ -63,12 +63,12 @@ public:
     virtual ~CBEMarshaller();
 
 public:
-    virtual void MarshalFunction(CBEFile *pFile, DIRECTION_TYPE nDirection);
-    virtual void MarshalFunction(CBEFile *pFile, CBEFunction *pFunction, 
+    virtual void MarshalFunction(CBEFile& pFile, DIRECTION_TYPE nDirection);
+    virtual void MarshalFunction(CBEFile& pFile, CBEFunction *pFunction, 
 	DIRECTION_TYPE nDirection);
-    virtual void MarshalParameter(CBEFile *pFile, CBEFunction *pFunction, 
+    virtual void MarshalParameter(CBEFile& pFile, CBEFunction *pFunction, 
 	CBETypedDeclarator *pParameter, bool bMarshal);
-    virtual void MarshalValue(CBEFile *pFile, CBEFunction *pFunction, 
+    virtual void MarshalValue(CBEFile& pFile, CBEFunction *pFunction, 
 	CBETypedDeclarator *pParameter, int nValue);
 
     virtual bool AddLocalVariable(CBEFunction *pFunction);
@@ -78,27 +78,28 @@ protected:
     CBEStructType* GetStruct(CBEFunction *pFunction, CMsgStructType& nType);
     CBEMsgBuffer* GetMessageBuffer(CBEFunction *pFunction);
 
-    virtual void MarshalParameterIntern(CBETypedDeclarator *pParameter,
+    virtual void MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
-    virtual bool MarshalSpecialMember(CBETypedDeclarator *pMember);
-    virtual bool MarshalOpcode(CBETypedDeclarator *pMember);
-    virtual bool MarshalException(CBETypedDeclarator *pMember);
-    virtual bool MarshalReturn(CBETypedDeclarator *pMember);
-    virtual void MarshalGenericMember(int nPosition,
+    virtual bool MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMember);
+    virtual bool MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember);
+    virtual bool MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember);
+    virtual bool MarshalReturn(CBEFile& pFile, CBETypedDeclarator *pMember);
+    virtual void MarshalGenericMember(CBEFile& pFile, int nPosition,
 	CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
-    virtual void MarshalGenericValue(int nPosition, int nValue);
-    virtual bool MarshalString(CBETypedDeclarator *pParameter, 
+    virtual void MarshalGenericValue(CBEFile& pFile, int nPosition, int nValue);
+    virtual bool MarshalString(CBEFile& pFile, CBETypedDeclarator *pParameter, 
 	CDeclStack* pStack);
-    virtual bool MarshalArray(CBETypedDeclarator *pParameter, 
+    virtual bool MarshalArray(CBEFile& pFile, CBETypedDeclarator *pParameter, 
 	CDeclStack* pStack);
-    virtual void MarshalArrayIntern(CBETypedDeclarator *pParameter, 
+    virtual void MarshalArrayIntern(CBEFile& pFile,
+	CBETypedDeclarator *pParameter, 
 	CBEType *pType, CDeclStack* pStack);
-    virtual void MarshalArrayInternRef(CBETypedDeclarator *pParameter,
+    virtual void MarshalArrayInternRef(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
-    virtual bool MarshalStruct(CBETypedDeclarator *pParameter, 
+    virtual bool MarshalStruct(CBEFile& pFile, CBETypedDeclarator *pParameter, 
 	CDeclStack* pStack);
-    virtual bool MarshalUnion(CBETypedDeclarator *pParameter,
+    virtual bool MarshalUnion(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
 
     virtual bool DoSkipParameter(CBEFunction *pFunction, 
@@ -106,11 +107,11 @@ protected:
     virtual CBETypedDeclarator* FindMarshalMember(
 	CDeclStack* pStack);
     
-    virtual void WriteMember(CMsgStructType nType, CBEMsgBuffer *pMsgBuffer,
+    virtual void WriteMember(CBEFile& pFile, CMsgStructType nType, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember, CDeclStack* pStack);
-    virtual void WriteParameter(CBETypedDeclarator *pParameter, 
+    virtual void WriteParameter(CBEFile& pFile, CBETypedDeclarator *pParameter, 
 	CDeclStack* pStack, bool bPointer);
-    virtual void WriteAssignment(CBETypedDeclarator *pParameter,
+    virtual void WriteAssignment(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
 
 protected:
@@ -118,10 +119,6 @@ protected:
      *  \brief true if marshaling, false if unmarshaling
      */
     bool m_bMarshal;
-    /** \var CBEFile *m_pFile
-     *  \brief reference to the file to write to
-     */
-    CBEFile *m_pFile;
     /** \var CBEFunction *m_pFunction
      *  \brief reference to the function the parameters belong to
      */

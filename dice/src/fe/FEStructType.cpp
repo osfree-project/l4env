@@ -31,7 +31,6 @@
 #include "FEInterface.h"
 #include "FELibrary.h"
 #include "FEFile.h"
-#include "File.h"
 #include "Compiler.h"
 #include "Visitor.h"
 #include <iostream>
@@ -64,6 +63,14 @@ CFEStructType::~CFEStructType()
 CObject* CFEStructType::Clone()
 { 
     return new CFEStructType(*this);
+}
+
+/** \brief test a type whether it is a constructed type or not
+ *  \return true 
+ */
+bool CFEStructType::IsConstructedType()
+{
+    return true;
 }
 
 /** tries to find a member by its name

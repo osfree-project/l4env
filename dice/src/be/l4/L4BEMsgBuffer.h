@@ -60,7 +60,7 @@ protected:
 public: // public methods
     virtual CObject* Clone();
 
-    virtual void WriteInitialization(CBEFile *pFile, CBEFunction *pFunction,
+    virtual void WriteInitialization(CBEFile& pFile, CBEFunction *pFunction,
 	int nType, CMsgStructType nStructType);
 
     virtual bool HasWordMembers(CBEFunction *pFunction, CMsgStructType nType);
@@ -71,14 +71,14 @@ protected: // protected methods
     virtual CBETypedDeclarator* GetSizeDopeVariable();
     virtual CBETypedDeclarator* GetSendDopeVariable();
 
-    virtual bool WriteRefstringInitialization(CBEFile *pFile, CMsgStructType nType);
-    virtual bool WriteRefstringInitFunction(CBEFile *pFile,
+    virtual bool WriteRefstringInitialization(CBEFile& pFile, CMsgStructType nType);
+    virtual bool WriteRefstringInitFunction(CBEFile& pFile,
         CBEFunction *pFunction, CBEClass *pClass, int nIndex, CMsgStructType nType);
-    virtual void WriteRcvFlexpageInitialization(CBEFile *pFile, CMsgStructType nType);
-    virtual void WriteRefstringInitParameter(CBEFile *pFile,
+    virtual void WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgStructType nType);
+    virtual void WriteRefstringInitParameter(CBEFile& pFile,
         CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
         CMsgStructType nType);
-    virtual void WriteMaxRefstringSize(CBEFile *pFile, CBEFunction *pFunction,
+    virtual void WriteMaxRefstringSize(CBEFile& pFile, CBEFunction *pFunction,
 	CBETypedDeclarator *pMember, CBETypedDeclarator *pParameter,
 	int nIndex);
 	

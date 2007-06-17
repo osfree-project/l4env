@@ -43,7 +43,6 @@
 #include "FEConstDeclarator.h"
 #include "FEAttribute.h"
 #include "Compiler.h"
-#include "File.h"
 #include "Visitor.h"
 #include <iostream>
 #include <cassert>

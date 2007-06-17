@@ -51,49 +51,49 @@ public:
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteCall(CBEFile *pFile, CBEFunction* pFunction) = 0;
+    virtual void WriteCall(CBEFile& pFile, CBEFunction* pFunction) = 0;
     /** \brief write the receive implementation
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteReceive(CBEFile *pFile, CBEFunction* pFunction) = 0;
+    virtual void WriteReceive(CBEFile& pFile, CBEFunction* pFunction) = 0;
     /** \brief write the reply and receive implementation
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteReplyAndWait(CBEFile* pFile, CBEFunction* pFunction) = 0;
+    virtual void WriteReplyAndWait(CBEFile& pFile, CBEFunction* pFunction) = 0;
     /** \brief write the wait implementation
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteWait(CBEFile* pFile, CBEFunction *pFunction) = 0;
+    virtual void WriteWait(CBEFile& pFile, CBEFunction *pFunction) = 0;
     /** \brief write the send implementation
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteSend(CBEFile* pFile, CBEFunction* pFunction) = 0;
+    virtual void WriteSend(CBEFile& pFile, CBEFunction* pFunction) = 0;
     /** \brief write the reply implementation
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteReply(CBEFile* pFile, CBEFunction* pFunction) = 0;
+    virtual void WriteReply(CBEFile& pFile, CBEFunction* pFunction) = 0;
     /** \brief write the initialization code for the communication
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteInitialization(CBEFile *pFile, 
+    virtual void WriteInitialization(CBEFile& pFile, 
 	CBEFunction *pFunction) = 0;
     /** \brief write the binding code of the application to the communication
      *         socket
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteBind(CBEFile *pFile, CBEFunction *pFunction) = 0;
+    virtual void WriteBind(CBEFile& pFile, CBEFunction *pFunction) = 0;
     /** \brief write the clean up code for the communication
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteCleanup(CBEFile *pFile, CBEFunction *pFunction) = 0;
+    virtual void WriteCleanup(CBEFile& pFile, CBEFunction *pFunction) = 0;
 
     virtual bool AddLocalVariable(CBEFunction *pFunction);
 };

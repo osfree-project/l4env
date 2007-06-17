@@ -53,7 +53,6 @@ CL4BEMarshaller::PositionMarshaller::PositionMarshaller(
     m_pParent = pParent;
     m_nPosSize = 0;
     m_bReference = false;
-    m_pFile = (CBEFile*)0;
 }
 
 /** deletes the instance of this class */
@@ -83,7 +82,7 @@ CL4BEMarshaller::PositionMarshaller::~PositionMarshaller()
  * try the special struct with the word sized members.
  */
 bool
-CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile, 
+CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile, 
 	CBEFunction *pFunction, 
 	CMsgStructType nType, 
 	int nPosition,
@@ -92,13 +91,12 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile,
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
 	"PositionMarshaller::%s(%s, %s, %d, %d, %s, %s) called\n", __func__,
-	pFile->GetFileName().c_str(), pFunction ? pFunction->GetName().c_str() : "", 
+	pFile.GetFileName().c_str(), pFunction ? pFunction->GetName().c_str() : "", 
 	(int)nType, nPosition, bReference ? "true" : "false",
 	bLValue ? "true" : "false");
 
     m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
     m_bReference = bReference;
-    m_pFile = pFile;
     
     // get the message buffer type
     CBEMsgBufferType *pMsgType = GetMessageBufferType(pFunction);
@@ -147,7 +145,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile,
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	    "PositionMarshaller::%s: member of different size\n", __func__);
 	if (bReference)
-	    *pFile << "&";
+	    pFile << "&";
 	pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
     }
     else
@@ -226,7 +224,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile,
 		!pTransmitType)
 	    {
 		if (bReference)
-    		    *pFile << "&";
+    		    pFile << "&";
 		pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
 	    }
 	    else
@@ -266,7 +264,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile *pFile,
 			pMemType->WriteCast(pFile, false);
 		    else
 		    {
-			*pFile << "*";
+			pFile << "*";
 			bReference = true;
 		    }
 		}
@@ -380,7 +378,7 @@ CL4BEMarshaller::PositionMarshaller::GetMemberSize(CBETypedDeclarator *pMember)
  * parameter is special.
  */
 void
-CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile *pFile,
+CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile& pFile,
     CBEFunction *pFunction,
     CBETypedDeclarator *pMember,
     CMsgStructType nType,
@@ -398,7 +396,7 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile *pFile,
     if ((pDecl->GetName() == pNF->GetOpcodeVariable()) &&
 	!bReference)
     {
-	*pFile <<  pFunction->GetOpcodeConstName();
+	pFile <<  pFunction->GetOpcodeConstName();
 	return;
     }
 
@@ -409,7 +407,7 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile *pFile,
     // But do not dereference if bReference is set
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"PositionMarshaller::%s(%s, %s, %s, %d, %s, %s)\n", __func__,
-	pFile->GetFileName().c_str(), pFunction->GetName().c_str(),
+	pFile.GetFileName().c_str(), pFunction->GetName().c_str(),
 	pDecl->GetName().c_str(), (int)nType,
 	bReference ? "true" : "false",
 	bLValue ? "true" : "false");
@@ -417,7 +415,7 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile *pFile,
 	    pMember->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
 	!bReference)
     {
-	*pFile << "*";
+	pFile << "*";
 	bReference = true;
     }
 
@@ -426,25 +424,25 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile *pFile,
 	!bLValue)
     {
 	string sName = pNF->GetTypeName(TYPE_MWORD, true);
-	*pFile << "(" << sName;
+	pFile << "(" << sName;
 	if (bReference)
-	    *pFile << "*";
-	*pFile << ")";
+	    pFile << "*";
+	pFile << ")";
     }
     if (bReference)
-	*pFile << "&";
+	pFile << "&";
     // test for return variable
     CBETypedDeclarator *pReturn = pFunction->GetReturnVariable();
     if (pReturn && pReturn->m_Declarators.Find(pDecl->GetName()))
     {
 	pReturn = pFunction->m_LocalVariables.Find(pDecl->GetName());
-	*pFile << pReturn->m_Declarators.First()->GetName();	
+	pFile << pReturn->m_Declarators.First()->GetName();	
 	return;
     }
 
     // no special member we know of: access in struct
     assert(m_pParent);
-    m_pParent->WriteMember(nType, pMsgBuffer, pMember, NULL);
+    m_pParent->WriteMember(pFile, nType, pMsgBuffer, pMember, NULL);
 }
 
 /** \brief writes the access to a parameter
@@ -465,7 +463,7 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile *pFile,
  * size but is for instance different in sign.
  */
 void
-CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile *pFile,
+CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile& pFile,
     CBETypedDeclarator *pParameter,
     bool bReference,
     bool bLValue)
@@ -513,15 +511,15 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile *pFile,
 		" parameter %s (%s: %d).\n", pDecl->GetName().c_str(),
 		__FILE__, __LINE__);
 	
-	*pFile << "&";
+	pFile << "&";
     }
     // dereference if necessary
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"PositionMarshaller::%s stars(3)=%d\n", __func__, nStars);
     for (int nIndx = 0; nIndx < nStars; nIndx++)
-	*pFile << "*";
+	pFile << "*";
     // print name
-    *pFile << pDecl->GetName();
+    pFile << pDecl->GetName();
     
     // FIXME test array
     // FIXME test complex type?

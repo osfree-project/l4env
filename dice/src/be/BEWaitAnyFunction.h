@@ -64,10 +64,10 @@ public:
     virtual DIRECTION_TYPE GetSendDirection();
 
 protected:
-    virtual void WriteUnmarshalling(CBEFile *pFile);
-    virtual void WriteInvocation(CBEFile *pFile);
-    virtual void WriteVariableInitialization(CBEFile *pFile);
-    virtual void WriteParameter(CBEFile * pFile, 
+    virtual void WriteUnmarshalling(CBEFile& pFile);
+    virtual void WriteInvocation(CBEFile& pFile);
+    virtual void WriteVariableInitialization(CBEFile& pFile);
+    virtual void WriteParameter(CBEFile& pFile, 
 	CBETypedDeclarator * pParameter, bool bUseConst = true);
 
 protected:

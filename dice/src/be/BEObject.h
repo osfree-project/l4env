@@ -69,8 +69,8 @@ protected:
 // Operations
 public:
     virtual CObject * Clone();
-    virtual bool IsTargetFile(CBEImplementationFile *pFile);
-    virtual bool IsTargetFile(CBEHeaderFile *pFile);
+    virtual bool IsTargetFile(CBEImplementationFile* pFile);
+    virtual bool IsTargetFile(CBEHeaderFile* pFile);
     virtual string GetTargetHeaderFileName();
     virtual string GetTargetImplementationFileName();
 

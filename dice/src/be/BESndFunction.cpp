@@ -63,7 +63,7 @@ CBESndFunction::~CBESndFunction()
  * of the out variables.
  */
 void
-CBESndFunction::WriteVariableInitialization(CBEFile * pFile)
+CBESndFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     // init message buffer
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
@@ -75,9 +75,9 @@ CBESndFunction::WriteVariableInitialization(CBEFile * pFile)
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
-void CBESndFunction::WriteInvocation(CBEFile * pFile)
+void CBESndFunction::WriteInvocation(CBEFile& pFile)
 {
-    *pFile << "\t/* send */\n";
+    pFile << "\t/* send */\n";
 }
 
 /** \brief writes the return statement
@@ -86,9 +86,9 @@ void CBESndFunction::WriteInvocation(CBEFile * pFile)
  * This implementation is empty, because a send function does not return a
  * value.
  */
-void CBESndFunction::WriteReturn(CBEFile * pFile)
+void CBESndFunction::WriteReturn(CBEFile& pFile)
 {
-    *pFile << "\treturn;\n";
+    pFile << "\treturn;\n";
 }
 
 /** \brief creates the back-end send function
@@ -150,7 +150,7 @@ CBESndFunction::AddBeforeParameters()
  * and at the component's side if the OUT attribute is set. And of course, only
  * if the target file is suitable.
  */
-bool CBESndFunction::DoWriteFunction(CBEHeaderFile * pFile)
+bool CBESndFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -169,7 +169,7 @@ bool CBESndFunction::DoWriteFunction(CBEHeaderFile * pFile)
  * and at the component's side if the OUT attribute is set. And of course, only
  * if the target file is suitable.
  */
-bool CBESndFunction::DoWriteFunction(CBEImplementationFile * pFile)
+bool CBESndFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
@@ -234,7 +234,7 @@ int CBESndFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  * parameters.
  */
 int 
-CBESndFunction::WriteMarshalReturn(CBEFile * pFile, 
+CBESndFunction::WriteMarshalReturn(CBEFile& pFile, 
     bool bMarshal)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());

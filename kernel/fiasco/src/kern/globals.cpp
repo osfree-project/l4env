@@ -4,6 +4,7 @@ INTERFACE:
 
 #include "mem_layout.h"
 #include "panic.h"
+#include "per_cpu_data.h"
 #include "types.h"
 
 class Context;
@@ -15,7 +16,7 @@ class Timeout;
 extern Task *sigma0_task;
 extern Mem_space *sigma0_space;
 extern Thread *sigma0_thread;
-extern Timeout *timeslice_timeout;
+extern Per_cpu<Timeout *> timeslice_timeout;
 extern bool running;
 extern unsigned boot_stack;
 
@@ -51,7 +52,7 @@ IMPLEMENTATION:
 Task  *sigma0_task;
 Mem_space *sigma0_space;
 Thread *sigma0_thread;
-Timeout *timeslice_timeout;
+Per_cpu<Timeout *> timeslice_timeout DEFINE_PER_CPU;
 bool running = true;
 unsigned boot_stack;
 

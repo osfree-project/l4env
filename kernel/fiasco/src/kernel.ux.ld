@@ -93,6 +93,14 @@ SECTIONS {
     *(.got)
   }
 
+  . = ALIGN(8);
+  .per_cpu_data : {
+    PROVIDE (_per_cpu_data_start = .);
+    *(.per_cpu.data)
+    . = ALIGN(8);
+    PROVIDE (_per_cpu_data_end = .);
+  }
+
   PROVIDE (_edata = .);
 
   . = ALIGN(4096);

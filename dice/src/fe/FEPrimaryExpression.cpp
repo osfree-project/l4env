@@ -27,7 +27,6 @@
  */
 
 #include "FEPrimaryExpression.h"
-#include "File.h"
 #include "Compiler.h"
 #include "Messages.h"
 #include <sstream>

@@ -989,17 +989,17 @@ CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst,
  * \<buf name\>.\<struct name\>.\<member\>.
  */
 void
-CBEMsgBuffer::WriteAccess(CBEFile *pFile,
+CBEMsgBuffer::WriteAccess(CBEFile& pFile,
     CBEFunction *pFunction,
     CMsgStructType nType,
     CDeclStack* pStack)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CBEMsgBuffer::%s (%s, %s, %d, stack @ %p (%d)) called\n", __func__,
-	pFile->GetFileName().c_str(),
+	pFile.GetFileName().c_str(),
 	pFunction->GetName().c_str(),
 	(int)nType,
-	pStack, pStack ? pStack->size() : 0);
+	pStack, pStack ? (int)pStack->size() : 0);
     // struct
     WriteAccessToStruct(pFile, pFunction, nType);
     // actual member
@@ -1009,7 +1009,7 @@ CBEMsgBuffer::WriteAccess(CBEFile *pFile,
     CDeclStack::iterator iter = pStack->begin();
     for (; iter != pStack->end(); iter++)
     {
-	*pFile << "." << iter->pDeclarator->GetName();
+	pFile << "." << iter->pDeclarator->GetName();
     }
 }
 
@@ -1022,14 +1022,14 @@ CBEMsgBuffer::WriteAccess(CBEFile *pFile,
  * This is an internal function to allow for flat member access.
  */
 void
-CBEMsgBuffer::WriteAccess(CBEFile *pFile,
+CBEMsgBuffer::WriteAccess(CBEFile& pFile,
     CBEFunction *pFunction,
     CMsgStructType nType,
     CBETypedDeclarator* pMember)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CBEMsgBuffer::%s (%s, %s, %d, %s) called\n",
-	__func__, pFile->GetFileName().c_str(),
+	__func__, pFile.GetFileName().c_str(),
 	pFunction->GetName().c_str(),
 	(int)nType,
 	pMember->m_Declarators.First()->GetName().c_str());
@@ -1045,13 +1045,13 @@ CBEMsgBuffer::WriteAccess(CBEFile *pFile,
  *  \param nType the type of the message buffer struct
  */
 void
-CBEMsgBuffer::WriteAccessToStruct(CBEFile *pFile,
+CBEMsgBuffer::WriteAccessToStruct(CBEFile& pFile,
     CBEFunction *pFunction,
     CMsgStructType nType)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
 	"CBEMsgBuffer::%s (%s, %s, %d) called\n", __func__,
-	pFile->GetFileName().c_str(),
+	pFile.GetFileName().c_str(),
 	pFunction->GetName().c_str(),
 	(int)nType);
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -1080,7 +1080,7 @@ CBEMsgBuffer::WriteAccessToStruct(CBEFile *pFile,
 	sName = "->";
     else
 	sName = ".";
-    *pFile << sName << sStructName;
+    pFile << sName << sStructName;
 }
  
 /** \brief writes the access to the variable pointing to the message buffer
@@ -1092,7 +1092,7 @@ CBEMsgBuffer::WriteAccessToStruct(CBEFile *pFile,
  *          buffer, NULL if no message buffer parameter
  */
 CBETypedDeclarator*
-CBEMsgBuffer::WriteAccessToVariable(CBEFile *pFile,
+CBEMsgBuffer::WriteAccessToVariable(CBEFile& pFile,
     CBEFunction *pFunction,
     bool bPointer)
 {
@@ -1117,8 +1117,8 @@ CBEMsgBuffer::WriteAccessToVariable(CBEFile *pFile,
 		sName.c_str(), pFunction->GetName().c_str());
     }
     if (bPointer && !bHasPointer)
-	*pFile << "&";
-    *pFile << sName;
+	pFile << "&";
+    pFile << sName;
 
     return pMsgBufParam;
 }
@@ -1134,7 +1134,7 @@ CBEMsgBuffer::WriteAccessToVariable(CBEFile *pFile,
  * with the member.
  */
 void
-CBEMsgBuffer::WriteMemberAccess(CBEFile *pFile,
+CBEMsgBuffer::WriteMemberAccess(CBEFile& pFile,
     CBEFunction *pFunction,
     CMsgStructType nType,
     int nFEType,
@@ -1168,7 +1168,7 @@ CBEMsgBuffer::WriteMemberAccess(CBEFile *pFile,
 		// call WriteAccess
 		WriteAccess(pFile, pFunction, nType, *iter);
 		if (pBound)
-		    *pFile << "[" << nCurArrayIndex << "]";
+		    pFile << "[" << nCurArrayIndex << "]";
 		return;
 	    }
 	    nIndex--;
@@ -1184,7 +1184,7 @@ CBEMsgBuffer::WriteMemberAccess(CBEFile *pFile,
  * index.
  */
 void
-CBEMsgBuffer::WriteGenericMemberAccess(CBEFile *pFile,
+CBEMsgBuffer::WriteGenericMemberAccess(CBEFile& pFile,
     int nIndex)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -1199,7 +1199,7 @@ CBEMsgBuffer::WriteGenericMemberAccess(CBEFile *pFile,
 	sName += ".";
     // get name of word sized member
     string sMember = pNF->GetWordMemberVariable();
-    *pFile << sName << sStructName << "." << sMember << "[" << nIndex << "]";
+    pFile << sName << sStructName << "." << sMember << "[" << nIndex << "]";
 }
 
 /** \brief retrieve a reference to one of the structs
@@ -1295,7 +1295,7 @@ CBEMsgBuffer::HasProperty(int /*nProperty*/,
  * sized members.
  */
 void
-CBEMsgBuffer::WriteInitialization(CBEFile* /*pFile*/,
+CBEMsgBuffer::WriteInitialization(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/,
     int /*nType*/,
     CMsgStructType /*nStructType*/)
@@ -1400,7 +1400,7 @@ CBEMsgBuffer::GetMemberPosition(string sName,
  * We have to respect the -ftrace-msgbuf-dump-words settings
  */
 void
-CBEMsgBuffer::WriteDump(CBEFile *pFile)
+CBEMsgBuffer::WriteDump(CBEFile& pFile)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF))
 	return;
@@ -1413,41 +1413,35 @@ CBEMsgBuffer::WriteDump(CBEFile *pFile)
     CBEDeclarator *pDecl = m_Declarators.First();
 
     // cast message buffer to word buffer and start iterating
-    *pFile << "\tfor (" << sVar << "=0; " << sVar << "<";
+    pFile << "\tfor (" << sVar << "=0; " << sVar << "<";
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_MSGBUF_DWORDS))
-	*pFile << CCompiler::GetTraceMsgBufDwords();
+	pFile << CCompiler::GetTraceMsgBufDwords();
     else
     {
-	*pFile << "sizeof(";
+	pFile << "sizeof(";
 	if (pDecl->GetStars() > 0)
-	    *pFile << "*";
-	*pFile << pDecl->GetName() << ")/4";
+	    pFile << "*";
+	pFile << pDecl->GetName() << ")/4";
     }
-    *pFile << "; " << sVar << "++)\n";
-    *pFile << "\t{\n";
-    pFile->IncIndent();
+    pFile << "; " << sVar << "++)\n";
+    pFile << "\t{\n";
     // print four words in one line:
     // test for begin of wrap-around
-    *pFile << "\tif (" << sVar << "%4 == 0)\n";
-    pFile->IncIndent();
-    *pFile << "\t" << sFunc << " (\"dwords[%d]: \", " << sVar << ");\n";
-    pFile->DecIndent();
+    ++pFile << "\tif (" << sVar << "%4 == 0)\n";
+    ++pFile << "\t" << sFunc << " (\"dwords[%d]: \", " << sVar << ");\n";
 
     // print current word
-    *pFile << "\t" << sFunc << " (\"%08x \", ((unsigned long*)(";
+    --pFile << "\t" << sFunc << " (\"%08x \", ((unsigned long*)(";
     if (pDecl->GetStars() == 0)
-	*pFile << "&";
-    *pFile << pDecl->GetName() << "))[" << sVar << "]);\n";
+	pFile << "&";
+    pFile << pDecl->GetName() << "))[" << sVar << "]);\n";
 
     // print newline
-    *pFile << "\tif (" << sVar << "%4 == 3)\n";
-    pFile->IncIndent();
-    *pFile << "\t" << sFunc << " (\"\\n\");\n";
-    pFile->DecIndent();
+    pFile << "\tif (" << sVar << "%4 == 3)\n";
+    ++pFile << "\t" << sFunc << " (\"\\n\");\n";
     
     // for loop end
-    pFile->DecIndent();
-    *pFile << "\t}\n";
+    --(--pFile) << "\t}\n";
 }
 
 /** \brief the post-create (and post-sort) step during creation
