@@ -41,6 +41,7 @@ uclibc++.headers:	uclibc.headers
 l4con.bin:		lxfuxlibc.lib
 input.bin:		omega0.lib
 cunit.lib:		dde.bin
+examples.bin:		dope.bin
 ifeq ($(USE_UCLIBC),y)
 qt3.bin:		uclibc_r.lib
 log.headers:		uclibc.headers

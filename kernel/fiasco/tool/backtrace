@@ -5,6 +5,7 @@ use Math::BigInt;
 my %sym_tab = (new Math::BigInt(0) => "ERRRRRRROR");
 my $sections = "BdDdTtVvWwuU";
 my $img = shift;
+my %sec_tab;
 
 my %test;
 
@@ -16,22 +17,36 @@ sub as_hex($)
   return $h;
 }
 
-foreach my $l (split('\n', qx{nm $img | c++filt}))
+my $nm = 'nm';
+$nm = 'arm-linux-nm' if !(system("file $img | grep -qw ARM") >> 8);
+
+foreach my $l (split('\n', qx{$nm $img | c++filt}))
 {
   if ($l =~ /^([0-9a-fA-F]*)\s+([$sections])\s+(.*)$/)
   {
     my ($addr, $sec, $sym) = (new Math::BigInt("0x$1"), $2, $3);
-    $sym_tab{as_hex($addr)} = $sym 
-      if defined $addr && ref $addr && !$addr->is_nan();
+    if (defined $addr && ref $addr && !$addr->is_nan())
+    {
+      $sym_tab{as_hex($addr)} = $sym;
+      $sec_tab{as_hex($addr)} = $sec;
+    }
   }
 }
+my @sorted_sym_tab_keys = sort keys %sym_tab;
+my $min_addr = $sorted_sym_tab_keys[0];
+my $max_addr = $sorted_sym_tab_keys[@sorted_sym_tab_keys - 1];
+
+print "Scanning image done, proceed.\n";
 
 sub find_sym($)
 {
   my $addr = as_hex(shift);
   my $hit = '0';
 
-  foreach my $s (sort keys %sym_tab)
+  return new Math::BigInt(0)
+    if $addr lt $min_addr or $addr gt $max_addr;
+
+  foreach my $s (@sorted_sym_tab_keys)
   {
     if ($s gt $addr)
     {
@@ -51,16 +66,18 @@ sub print_func($)
   my $offset = $addr-$hit;
   my $o = $hit->as_hex();
 
-  printf " %s %s + %s = %s\n",
-	 $addr->as_hex(), $sym_tab{as_hex($hit)}, $offset->as_hex(), 
-	 $hit->as_hex();
+  return unless $hit;
+
+  printf " %s %30s(%s) + %6s = %s\n",
+	 $addr->as_hex(), $sym_tab{as_hex($hit)}, $sec_tab{as_hex($hit)},
+	 $offset->as_hex(), $hit->as_hex();
 }
 
 
 my $last_f = 0;
 while (<>)
 {
-  if (/#(\d+)\s+([0-9a-fA-F]+)\s+([0-9a-fA-F]+)/)
+  if (/^\s+#(\d+)\s+([0-9a-f]+)\s+([0-9a-f]+)/i)
   {
     my $fn = $1;
     my $stack = new Math::BigInt("0x$2");
@@ -77,9 +94,17 @@ while (<>)
     }
     print_func($addr);
   }
-  elsif (/^\s*(0x)?([0-9a-fA-F]+)\s*$/)
+  elsif (/^\s*(0x)?([0-9a-f]+)\s*$/i)
   {
     print_func($2);
+  }
+  elsif (/^[\da-f]+:([\d\sa-f]+)$/i)
+  {
+    my $l = $1;
+    for my $addr (split(/\s+/, $l))
+    {
+      print_func($addr);
+    }
   }
 }
 
