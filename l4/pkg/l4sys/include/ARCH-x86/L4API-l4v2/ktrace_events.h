@@ -30,7 +30,7 @@ enum
     l4_ktrace_tbuf_pf_res             = 14,
     l4_ktrace_tbuf_sched              = 15,
     l4_ktrace_tbuf_preemption         = 16,
-    l4_ktrace_tbuf_lipc               = 17,
+    l4_ktrace_tbuf_id_nearest         = 17,
     l4_ktrace_tbuf_jean1              = 18,
     l4_ktrace_tbuf_task_new           = 19,
     l4_ktrace_tbuf_max                = 32,
@@ -52,6 +52,7 @@ typedef void *             Address;
 typedef unsigned int       Mword;
 typedef unsigned int       L4_snd_desc;
 typedef unsigned int       L4_rcv_desc;
+typedef unsigned long      L4_msg_tag;
 typedef l4_threadid_t      Global_id;
 typedef l4_msgdope_t       L4_msgdope;
 typedef unsigned int       L4_timeout;
@@ -108,6 +109,7 @@ typedef struct __attribute__((packed))
             char        _pad[3];
             L4_snd_desc snd_desc;
             L4_rcv_desc rcv_desc;
+	    L4_msg_tag  tag;
             Mword       dword[2];
             L4_uid      dest;
             L4_timeout  timeout;
@@ -115,7 +117,9 @@ typedef struct __attribute__((packed))
         struct __attribute__((__packed__))
         {
             Unsigned8   have_sent;
-            char        _pad[2];
+	    Unsigned8   is_np;
+            char        _pad[1];
+	    L4_msg_tag  tag;
             Mword       dword[2];
             L4_msgdope  result;
             L4_uid      rcv_src;
@@ -232,11 +236,8 @@ typedef struct __attribute__((packed))
         } preemption;
         struct __attribute__((__packed__))
         {
-            short int type;
-            Global_id _old;
-            Global_id _new;
-            Address   c_utcb_ptr;
-        } lipc;
+            Global_id dest;
+        } id_nearest;
         struct __attribute__((__packed__))
         {
             Context * sched_owner1;

@@ -46,7 +46,7 @@
 #define RMGR_IRQ_FREE (3)	/*!< free an interrupt number */
 #define RMGR_IRQ_FREE_ALL (4)	/*!< free all irqs belonging to a client */
 
-#define RMGR_IRQ_MAX 16		/*!< max number of IRQs rmgr can handle */
+#define RMGR_IRQ_MAX 18		/*!< max number of IRQs rmgr can handle */
 #define RMGR_IRQ_LTHREAD 16	/*!< base thread for IRQ threads */
 
 #define RMGR_MEM_RES_FLAGS_MASK	0x0FC0  /*!< bit-mask for memory reservation */

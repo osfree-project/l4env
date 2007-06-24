@@ -40,7 +40,7 @@
 #define LOG_EVENT_PREEMPTION       8  /**< Event: Preemption IPC sent
 				       **  \ingroup api_calls_fiasco
 				       **/
-#define LOG_EVENT_LIPC             9  /**< Event: ???
+#define LOG_EVENT_ID_NEAREST       9  /**< Event: ID nearest
 				       **  \ingroup api_calls_fiasco
 				       **/
 #define LOG_EVENT_TASK_NEW        10  /**< Event: New task created

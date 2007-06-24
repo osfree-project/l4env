@@ -17,6 +17,13 @@ sub as_hex($)
   return $h;
 }
 
+if (!defined $img)
+{
+  print "$0 image\n";
+  print " input is read from stdin\n";
+  exit 1;
+}
+
 my $nm = 'nm';
 $nm = 'arm-linux-nm' if !(system("file $img | grep -qw ARM") >> 8);
 

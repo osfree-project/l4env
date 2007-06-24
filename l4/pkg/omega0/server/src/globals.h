@@ -19,7 +19,7 @@
 #include <l4/omega0/client.h>
 #include "config.h"
 
-#define IRQ_NUMS 16	// 16 at standard-x86-pc architecture 
+#define IRQ_NUMS 18	// 16 at standard-x86-pc architecture 
 #define STACKSIZE 4096	// 4KB of stack per irq handler
 
 typedef struct client_chain{

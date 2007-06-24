@@ -35,7 +35,7 @@ void rmgr_main(int memdump) L4_NORETURN;
 #define RMGR_SMALL_MAX	128		/* max number of small spaces */
 #define RMGR_CFG_MAX	128		/* max number of configurations */
 
-/* x = 0..15  -> threadno 16..31*/
+/* x = 0..17  -> threadno 16..33*/
 #define LTHREAD_NO_IRQ(x) (RMGR_IRQ_LTHREAD + (x))
 
 #endif

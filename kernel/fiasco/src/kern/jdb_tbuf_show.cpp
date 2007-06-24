@@ -739,15 +739,15 @@ restart:
 
 	  switch (c)
 	    {
-	    case 'o':
-	      if (y_offset>10) 
+	    case 'h':
+	      if (y_offset>10)
 		y_offset -= 10;
 	      else
 		y_offset = 0;
 
 	      redraw = true;
 	      break;
-	    case 'p':
+	    case 'l':
 	      if (y_offset<sizeof(_buffer_str)-82)
 		y_offset += 10;
 	      else

@@ -97,7 +97,7 @@ formatter_ipc(Tb_entry *tb, const char *tidstr, unsigned tidlen,
       ? (e->rcv_desc().open_wait()) ? "waits"  : "recv from"
       : "(no ipc) ";
 
-  my_snprintf(buf, maxlen, "%s%-*s %s", 
+  my_snprintf(buf, maxlen, "%s%-*s %s",
       /*e->dst().next_period() ? "[NP] " :*/ "", tidlen, tidstr, m);
 
   // print destination id
@@ -120,8 +120,8 @@ formatter_ipc(Tb_entry *tb, const char *tidstr, unsigned tidlen,
 #if 0 // XXX: next_period
       if (!e->dst().next_period())
 #endif
-	my_snprintf(buf, maxlen, " ("L4_PTR_FMT","L4_PTR_FMT")", 
-	    e->dword(0), e->dword(1));
+	my_snprintf(buf, maxlen, " [" L4_PTR_FMT "] ("L4_PTR_FMT","L4_PTR_FMT")",
+                    e->tag().raw(), e->dword(0), e->dword(1));
     }
 
   my_snprintf(buf, maxlen, " TO=");
@@ -143,7 +143,7 @@ formatter_ipc(Tb_entry *tb, const char *tidstr, unsigned tidlen,
 	  else if (to.snd.is_zero())
 	    my_snprintf(buf, maxlen, "0");
 	  else
-    	    format_timeout((Mword)to.snd.microsecs_rel(0), buf, maxlen);
+            format_timeout((Mword)to.snd.microsecs_rel(0), buf, maxlen);
 	}
     }
   if (e->snd_desc().has_snd() && e->rcv_desc().has_receive())
@@ -165,7 +165,7 @@ formatter_ipc(Tb_entry *tb, const char *tidstr, unsigned tidlen,
 	  else if (to.rcv.is_zero())
 	    my_snprintf(buf, maxlen, "0");
 	  else
-    	    format_timeout((Mword)to.rcv.microsecs_rel(0), buf, maxlen);
+            format_timeout((Mword)to.rcv.microsecs_rel(0), buf, maxlen);
 	}
     }
 #if 0
@@ -285,11 +285,12 @@ formatter_ipc_res(Tb_entry *tb, const char *tidstr, unsigned tidlen,
 				 e->rcv_src().d_task(), e->rcv_src().d_thread());
       if (!error)
 	{
-     	  if (e->result().fpage_received())
-	    my_snprintf(buf, maxlen, "%s", 
-		e->dword(1) & 1 ? " grant" : " map");
+          if (e->result().fpage_received())
+	    my_snprintf(buf, maxlen, "%s",
+                        e->dword(1) & 1 ? " grant" : " map");
 	  my_snprintf(buf, maxlen, 
-	      " ("L4_PTR_FMT","L4_PTR_FMT")", e->dword(0), e->dword(1));
+                      " ["L4_PTR_FMT"] ("L4_PTR_FMT","L4_PTR_FMT")",
+                      e->tag().raw(), e->dword(0), e->dword(1));
 	}
     }
 
@@ -420,26 +421,23 @@ formatter_ctx_switch(Tb_entry *tb, const char *tidstr, unsigned tidlen,
   char symstr[24], spcstr[16] = "";
   Tb_entry_ctx_sw *e = static_cast<Tb_entry_ctx_sw*>(tb);
   unsigned  spc      = (unsigned)((Space*)(e->from_space()))->id();
-  
+
   Context   *sctx    = 0;
-  Global_id sctxid; 
-  Global_id src;     
-  Global_id dst;     
+  Global_id sctxid;
+  Global_id src;
+  Global_id dst;
   Global_id dst_orig;
-  
-  if (Jdb_util::is_mapped(e->from_sched()) 
+
+  if (Jdb_util::is_mapped(e->from_sched())
       && Jdb_util::is_mapped(e->from_sched()->owner()))
     {
       sctx = e->from_sched()->owner();
       sctxid = Thread::lookup(sctx)->id();
     }
 
-  if (Jdb_util::is_mapped(e->ctx()))
-    src = Thread::lookup(e->ctx())->id();
-  if (Jdb_util::is_mapped(e->dst()))
-    dst = Thread::lookup(e->dst())->id();
-  if (Jdb_util::is_mapped(e->dst_orig()))
-    dst_orig = Thread::lookup(e->dst_orig())->id();
+  src = L4_uid(e->ctx(), Mem_layout::Tcbs, THREAD_BLOCK_SIZE);
+  dst = L4_uid(e->dst(), Mem_layout::Tcbs, THREAD_BLOCK_SIZE);
+  dst_orig = L4_uid(e->dst_orig(), Mem_layout::Tcbs, THREAD_BLOCK_SIZE);
 
   Address addr       = e->kernel_ip();
 

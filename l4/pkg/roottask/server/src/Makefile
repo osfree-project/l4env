@@ -74,6 +74,8 @@ roottask.ld: roottask.ld.in Makefile
 
 OBJS_root_inits.o = $(patsubst %.c,%.o,$(SRC_C_root_inits.o))
 
+$(OBJS_root_inits.o): .general.d
+
 root_inits.o: $(OBJS_root_inits.o)
 	@$(LINK_MESSAGE)
 	$(VERBOSE)$(LD) $(findstring -m elf_x86_64, $(LDFLAGS)) -r -o $@ $(OBJS_root_inits.o) $(addprefix -L,$(L4LIBDIR)) -ldemangle

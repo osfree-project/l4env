@@ -46,7 +46,7 @@ protected:
   Unsigned64	_tsc;		///< time stamp counter
   Unsigned32	_pmc1;		///< performance counter value 1
   Unsigned32	_pmc2;		///< performance counter value 2
-  Unsigned32	_kclock;	///< lower 32 bits of kernel clock 
+  Unsigned32	_kclock;	///< lower 32 bits of kernel clock
   Unsigned8	_type;		///< type of entry
   static Mword (*rdcnt1)();
   static Mword (*rdcnt2)();
@@ -64,10 +64,10 @@ class Tb_entry_ipc : public Tb_entry
 private:
   L4_snd_desc	_snd_desc;	///< ipc send descriptor
   L4_rcv_desc	_rcv_desc;	///< ipc receive descriptor
-  Mword		_dword[2]; 	///< first two message words
+  L4_msg_tag	_tag;           ///< message tag
+  Mword		_dword[2];	///< first two message words
   Global_id	_dst;		///< destination id
-  Mword		_flags;         ///< flags
-  L4_timeout_pair	_timeout;	///< timeout
+  L4_timeout_pair _timeout;	///< timeout
 };
 
 /** logged ipc result. */
@@ -76,6 +76,7 @@ class Tb_entry_ipc_res : public Tb_entry
 private:
   Unsigned8	_have_snd;	///< ipc had send part
   Unsigned8	_is_np;		///< next period bit set
+  L4_msg_tag	_tag;		///< message tag
   Mword		_dword[2];	///< first two dwords
   L4_msgdope	_result;	///< result
   Global_id	_rcv_src;	///< partner
@@ -410,6 +411,7 @@ Tb_entry_ipc::set(Context *ctx, Mword ip, Sys_ipc_frame *ipc_regs,
   _rcv_desc  = ipc_regs->rcv_desc();
   _dst       = ipc_regs->snd_dst();
   _timeout   = ipc_regs->timeout();
+  _tag       = ipc_regs->tag();
   if (ipc_regs->next_period())
     {
       _dword[0]  = (Unsigned32)(left & 0xffffffff);
@@ -481,6 +483,11 @@ Tb_entry_ipc::timeout() const
 { return _timeout; }
 
 PUBLIC inline
+L4_msg_tag
+Tb_entry_ipc::tag() const
+{ return _tag; }
+
+PUBLIC inline
 Mword
 Tb_entry_ipc::dword(unsigned index) const
 { return _dword[index]; }
@@ -498,6 +505,7 @@ Tb_entry_ipc_res::set(Context *ctx, Mword ip, Sys_ipc_frame *ipc_regs,
   register Mword tmp1 = ipc_regs->msg_word(1);
   _dword[0]   = tmp0;
   _dword[1]   = tmp1;
+  _tag        = ipc_regs->tag();
   _pair_event = pair_event;
   _result     = result;
   _rcv_desc   = ipc_regs->rcv_desc();
@@ -530,6 +538,11 @@ PUBLIC inline
 Global_id
 Tb_entry_ipc_res::rcv_src() const
 { return _rcv_src; }
+
+PUBLIC inline
+L4_msg_tag
+Tb_entry_ipc_res::tag() const
+{ return _tag; }
 
 PUBLIC inline
 Mword
