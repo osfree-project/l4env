@@ -38,7 +38,7 @@ l4_int32_t list_network_devices(void)
 /*****************************************************************************
  * Open the "real" network devices. Return the number of opened interfaces.
  *****************************************************************************/
-l4_int32_t open_network_devices(void)
+l4_int32_t open_network_devices(int promisc)
 {
   struct net_device *dev;
   l4_int32_t err, cnt = 0;
@@ -52,6 +52,7 @@ l4_int32_t open_network_devices(void)
       // beam us to promiscuous mode, so that we can receive packets that
       // are not meant for the NIC's MAC address --> we need that, because
       // ORe clients have different MAC addresses
+      if (promisc) {
       if ((err = dev_change_flags(dev, dev->flags | IFF_PROMISC)) != 0)
         {
           LOGd(ORE_DEBUG_INIT, "%s could not be set to promiscuous mode.",
@@ -61,6 +62,7 @@ l4_int32_t open_network_devices(void)
         {
           LOGd(ORE_DEBUG_INIT, "set interface to promiscuous mode: %d", err);
         }
+      }
 
       err = dev_open(dev);
       if (err)

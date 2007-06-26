@@ -28,7 +28,7 @@
 #define ICMP_REQ          8
 #define ETH_ALEN          6
 
-#define REPLY_PACKET_LEN  80
+#define REPLY_PACKET_LEN  500
 #define RECV_PACKET_LEN   500
 #define DATASPACE_SIZE    (1024 * 1024)
 
@@ -150,6 +150,26 @@ static int parse_icmp_packet(char *rx_buf, struct ethernet_hdr *eth_hdr,
     return 0;
 }
 
+static u_short mip_cksum_update(u_short sum, u_short old_val, u_short new_val)
+{
+    u_long x = sum ^ 0xffff;
+
+    x -= old_val;
+
+    while( (x & 0xffff0000) != 0) {
+        x &= 0xffff;
+        x--;
+    }
+
+    x += new_val;
+
+    while( (x & 0xffff0000) != 0) {
+        x &= 0xffff;
+        x++;
+    }
+    return ~(u_short)x;
+}
+
 static void create_icmp_reply(void *buf, struct ethernet_hdr *eth,
                               struct ip_hdr *ip, struct icmp_hdr *icmp)
 {
@@ -172,9 +192,10 @@ static void create_icmp_reply(void *buf, struct ethernet_hdr *eth,
     iphdr->src_ip  = ip->dest_ip;
     iphdr->dest_ip = ip->src_ip;
 
-    i = (struct icmp_hdr *)(iphdr + sizeof(struct ip_hdr));
+    i = (struct icmp_hdr *)(iphdr + 1);
     *i         = *icmp;
     i->type    = ICMP_REPLY;
+    i->checksum = mip_cksum_update(i->checksum, ICMP_REQ, ICMP_REPLY);
 }
 
 int main(int argc, const char **argv)
@@ -195,6 +216,7 @@ int main(int argc, const char **argv)
     l4ore_config ore_conf = L4ORE_DEFAULT_CONFIG;
 
     LOG("Hello from the ORe arping shared memory client");
+	LOG("verbosity: %d", arping_verbose);
 
     if (parse_cmdline(&argc, &argv,
               'b', "broadcast", "receive broadcast packets",
@@ -221,6 +243,8 @@ int main(int argc, const char **argv)
     }
     else
         LOG("connecting to 'ORe'");
+
+	LOG("verbosity: %d", arping_verbose);
 
     if (recv_broadcast)
         ore_conf.rw_broadcast = 1;
@@ -320,10 +344,11 @@ int main(int argc, const char **argv)
             }
 #endif
             LOGd(arping_verbose, "correctly parsed ICMP packet.");
+            memcpy(next_addr, rx_buf, REPLY_PACKET_LEN);
             create_icmp_reply((char *)next_addr, &eth, &ip, &icmp);
             LOGd(arping_verbose, "sending ICMP reply %p", next_addr);
-            retval[3] = l4ore_send(handle, next_addr, REPLY_PACKET_LEN);
-            next_addr += REPLY_PACKET_LEN;
+            retval[3] = l4ore_send(handle, next_addr, size);
+            next_addr += size;
             if (next_addr >= (send_start + DATASPACE_SIZE - REPLY_PACKET_LEN))
                 next_addr = send_start;
         }

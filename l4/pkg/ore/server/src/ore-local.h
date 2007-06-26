@@ -159,7 +159,7 @@ extern void irq_handler(l4_int32_t irq, void *arg);
 
 /* netdevice handling */
 extern l4_int32_t list_network_devices(void);
-extern l4_int32_t open_network_devices(void);
+extern l4_int32_t open_network_devices(int promisc);
 
 /* in a multithreaded server we need to lock hard_start_xmit for every
  * device

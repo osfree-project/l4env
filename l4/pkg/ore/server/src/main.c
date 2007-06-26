@@ -39,6 +39,7 @@ unsigned char global_mac_address_head[4] = { 0x00, 0x00, 0x00, 0x00};
 static   int  use_events;
 static   int  unittest = 0;
 int loopback_only = 0;
+static int promisc = 1;
 
 ore_connection_t ore_connection_table[ORE_CONFIG_MAX_CONNECTIONS];
 l4_threadid_t ore_main_server   = L4_INVALID_ID;
@@ -137,6 +138,8 @@ int main(int argc, const char **argv)
   if (parse_cmdline(&argc, &argv,
                     'd', "debug", "debug on",
                     PARSE_CMD_SWITCH, 1, &ore_debug,
+                    'p', "nopromiscuous", "promiscuous off",
+                    PARSE_CMD_SWITCH, 0, &promisc,
                     'e', "events", "use events to detect broken connections",
                     PARSE_CMD_SWITCH, 1, &use_events,
                     'l', "loopback-only", "use only a loopback device",
@@ -171,7 +174,7 @@ int main(int argc, const char **argv)
 
   LOG("loopback: %d", loopback_only);
   // initialize network devices
-  ret = open_network_devices();
+  ret = open_network_devices(promisc);
   LOG("Initialized %d network devices.", ret);
 
   // always list devices at start time

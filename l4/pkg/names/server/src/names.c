@@ -333,19 +333,48 @@ names_unregister_task_component (CORBA_Object _dice_corba_obj,
   return 1;
 }
 
+#define TASK_SHIFT	7	/* number of thread bits */
 void
 names_dump_component(CORBA_Object _dice_corba_obj,
                      CORBA_Server_Environment *_dice_corba_env)
 {
-  int i;
+  int i, last = -1;
+  l4_threadid_t t = L4_NIL_ID;
+  int idx;
+
   printf("dumping names server:\n");
 
-  for (i = 0; i < NAMES_MAX_ENTRIES; i++) {
-    if (!l4_is_invalid_id(entries[i].id)) {
-      printf("taskid:" l4util_idfmt " name:%s\n",
-             l4util_idstr(entries[i].id), entries[i].name);
-    }
-  }
+  do {
+	  int dist = (1 << 20);
+	  idx = -1;
+	  /* For all entries (except 1st), determine the distance to the last found entry. */
+	  for (i = 0; i < NAMES_MAX_ENTRIES; ++i) {
+		  /* Skip entries, if they are
+		   *   - invalid (trivial), or
+		   *   - the last found entry (this is because the first entry we will find is
+		   *     identical to L4_NIL_ID and we don't want to find it again and again.)
+		   */
+		  if (!l4_is_invalid_id(entries[i].id) && i != last) {
+			  /* Ensure that task IDs have a larger weight than thread IDs 
+			   * so that e.g., the distance of 4.3 to 4.2 is smaller than 
+			   * the distance of 5.2 to 4.2 */
+			  int d = ((entries[i].id.id.task - t.id.task) << TASK_SHIFT) 
+			         + (entries[i].id.id.lthread - t.id.lthread);
+			  /* Ignore negative distances. These point to entries lying 
+			   * before the current one. */
+			  if (d >= 0 && d < dist) {
+				  idx = i;
+				  dist = d;
+			  }
+		  }
+	  }
+	  if (idx >= 0) {
+		  t = entries[idx].id;
+		  last = idx;
+		  printf("taskid "l4util_idfmt" name %s\n",
+				 l4util_idstr(entries[idx].id), entries[idx].name);
+	  }
+  } while (idx > -1);
 }
 
 void
