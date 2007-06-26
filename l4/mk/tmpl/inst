@@ -5,9 +5,4 @@
 # Call this script from a newly created package directory.
 
 set -e
-
-SRCDIR="${0%/*}"
-TARGETDIR="`pwd`"
-TOINSTALL="MAINTAINER Makefile idl include lib server examples doc ptest"
-
-tar c -C $SRCDIR -f- --exclude=CVS $TOINSTALL | tar xvf -
+tar c -C "${0%/*}" -f- --exclude=.svn --exclude=inst . | tar xvf -
