@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 #DEFAULT_RELOC_arm := 0x02000000
-DEFAULT_RELOC_arm := 0x01000000
+DEFAULT_RELOC_arm := 0x01800000
 
 include $(L4DIR)/mk/Makeconf
 -include $(OBJ_DIR)/Makeconf.local
