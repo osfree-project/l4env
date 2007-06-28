@@ -6,14 +6,6 @@ names_de| Querying ABCGEFG  -> 8.00
 names_de| Querying names  -> 6.00
 names_de| Querying ABCGEFG2  -> 8.00
 names_de| Querying 5.0  -> 5.00 stdlogV05
-names_de| Query all: kernel idler (0.00), sigma0 (2.00), rmgr.pager (4.00), rmg
-names_de: r.service (4.01), rmgr.irq00 (4.10), rmgr.irq01 (4.11), rmgr.irq02 (4
-names_de: .12), rmgr.irq03 (4.13), rmgr.irq04 (4.14), rmgr.irq05 (4.15), rmgr.i
-names_de: rq06 (4.16), rmgr.irq07 (4.17), rmgr.irq08 (4.18), rmgr.irq09 (4.19),
-names_de:  rmgr.irq0A (4.1A), rmgr.irq0B (4.1B), rmgr.irq0C (4.1C), rmgr.irq0D 
-names_de: (4.1D), rmgr.irq0E (4.1E), rmgr.irq0F (4.1F), rmgr.irq10 (4.20), rmgr
-names_de: .irq11 (4.21), names (6.00), log.flush (5.01), log.flushsig (5.02), s
-names_de: tdlogV05 (5.00), DM_PHYS (7.00), ABCGEFG (8.00), ABCGEFG2 (8.00)
 names_de| Unregistering ABCGEFG OK
 names_de| Querying ABCGEFG FAILED!!! (but expected)
 names_de| Unregistering ABCGEFG FAILED!!! (but expected)

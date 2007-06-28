@@ -1,5 +1,9 @@
 ENTRY(_start)
 
+PHDRS {
+  data PT_LOAD;
+}
+
 SECTIONS
 {
 #ifdef ARCH_amd64
@@ -29,7 +33,7 @@ SECTIONS
     _modules_end = .;
     
     CONSTRUCTORS
-  }
+  } : data
   _edata  =  .;
   PROVIDE (edata = .);
   . = ALIGN(4K);
@@ -39,7 +43,7 @@ SECTIONS
    *(.bss)
    *(COMMON)
    *(.bss_memmap)
-  }
+  } : data
   _end = . ;
   PROVIDE (end = .);
 
@@ -58,5 +62,7 @@ SECTIONS
     *(.comment)
     *(.note)
     *(.eh_frame)
+    *(.stab)
+    *(.stabstr)
   }
 }

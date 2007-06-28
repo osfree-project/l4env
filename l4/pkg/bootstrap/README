@@ -1,6 +1,6 @@
 L4 Bootstrapper for booting Fiasco and other L4 compatible kernels.
 
-Command line parameters (in alphabetical oreder):
+Command line parameters (in alphabetical order):
 
   -comport=<port>
       If serial logging is enabled, <port> defines which serial port to use,
@@ -16,7 +16,7 @@ Command line parameters (in alphabetical oreder):
 
   -patch=<modname>,<text>=<replacement>,...
       <modname> is compared with the path name of each module to decide which
-      module should be patched. If the module was found, each occurence of
+      module should be patched. If the module was found, each occurrence of
       <text> is replaced by <replacement>. <replacement> can also be quoted
       text. Otherwise no spaces are allowed.
 
@@ -34,3 +34,7 @@ Command line parameters (in alphabetical oreder):
 
   -sigma0
       No effect -- Provided for compatibility with RMGR.
+
+  -modaddr=<addr>
+      Relocate modules to the physical address ADDR.  Eliminates the
+      need for a specialized GRUB that supports the modaddr command.

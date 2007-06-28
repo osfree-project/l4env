@@ -1,4 +1,3 @@
-/* $Id$ */
 /*****************************************************************************/
 /**
  * \file    l4sys/include/ARCH-x86/L4API-l4v2/types.h
@@ -19,8 +18,8 @@
  * \ingroup api_types_common
  */
 typedef struct {
-  l4_umword_t low;  ///< Low 32 Bits
-  l4_umword_t high; ///< High 32 Bits
+  l4_uint32_t low;  ///< Low 32 Bits
+  l4_uint32_t high; ///< High 32 Bits
 } l4_low_high_t;
 
 /*****************************************************************************
@@ -42,7 +41,7 @@ typedef struct {
  * L4 thread id
  * \ingroup api_types_id
  */
-typedef union l4_threadid_t {
+typedef union {
   l4_uint32_t raw;
   l4_threadid_struct_t id;   ///< Thread id struct
 } l4_threadid_t;
@@ -232,31 +231,6 @@ typedef struct {
 
 #include <l4/sys/__timeout.h>
 
-#if 0
-/**
- * L4 timeout structure
- * \ingroup api_types_timeout
- */
-typedef struct {
-  unsigned rcv_exp:4;        ///< Receive timeout exponent
-  unsigned snd_exp:4;        ///< Send timeout exponent
-  unsigned rcv_pfault:4;     ///< Receive pagefault timeout
-  unsigned snd_pfault:4;     ///< Send pagefault timeout
-  unsigned snd_man:8;        ///< Send timeout mantissa
-  unsigned rcv_man:8;        ///< Receive timeout mantissa
-} l4_timeout_struct_t;
-
-/**
- * L4 timeout type
- * \ingroup api_types_timeout
- */
-typedef union {
-  l4_umword_t timeout;       ///< Plain 32 bit value
-  l4_timeout_struct_t to;    ///< Timeout structure
-} l4_timeout_t;
-#endif
-
-
 /*****************************************************************************
  *** l4_schedule param word
  *****************************************************************************/
@@ -324,12 +298,28 @@ typedef union {
   l4_sched_param_struct_t sp;///< Scheduling parameter structure
 } l4_sched_param_t;
 
+
+/**
+ * Quota type structure
+ */
+typedef union l4_quota_desc_t
+{
+  l4_umword_t raw;
+  struct
+  {
+    unsigned long id: 12;
+    unsigned long amount: 16;
+    unsigned long cmd: 4;
+  } q;
+} l4_quota_desc_t;
+
+
 /**
  * Invalid scheduling parameter
  * \ingroup api_types_sched
  * \hideinitializer
  */
-#define L4_INVALID_SCHED_PARAM ((l4_sched_param_t){sched_param:(unsigned)-1})
+#define L4_INVALID_SCHED_PARAM ((l4_sched_param_t){sched_param:~0UL})
 
 /**
  * Compute l4_sched_param_struct_t->small argument
@@ -362,18 +352,6 @@ L4_INLINE void
 l4_sched_param_set_time(int us, l4_sched_param_t *p);
 
 
-
-
-typedef union l4_quota_desc_t
-{
-  l4_umword_t raw;
-  struct 
-  {
-    unsigned long id: 12;
-    unsigned long amount: 16;
-    unsigned long cmd: 4;
-  } q;
-} l4_quota_desc_t;
 
 /*****************************************************************************
  *** implementations

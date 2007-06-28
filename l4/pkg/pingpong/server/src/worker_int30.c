@@ -135,9 +135,6 @@ exception_IPC_pong_handler(void)
   l4_touch_ro(&_stext, &_etext-&_stext);
   l4_touch_rw(&_etext, &_end-&_etext);
 
-  /* I want exception IPC */
-  l4_utcb_exception_ipc_enable();
-
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
 
