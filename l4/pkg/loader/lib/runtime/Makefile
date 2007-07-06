@@ -15,10 +15,6 @@ SYSTEMS		= x86-l4v2 arm-l4v2
 
 include $(L4DIR)/mk/Makeconf
 
-ifneq ($(BUILD_LOADER),y)
-$(error Please activate BUILD_LOADER in your l4/ config)
-endif
-
 LOADERLIBS_diet	= -lc_be_l4env_start_stop.p	\
 		  -lc_be_minimal_log_io.p	\
 		  -lc_be_simple_mem.p		\

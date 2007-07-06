@@ -2,10 +2,9 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 TARGET		= simple-exit
 DEFAULT_RELOC	= 0x01300000
-SYSTEMS		= x86-l4v2
+SYSTEMS		= x86-l4v2 arm-l4v2
 SRC_C		= main.c
-MODE		= $(if $(filter y,$(BUILD_LOADER)),loader,l4env)
-DEFINES		= -DUSERNAME=\"$(shell whoami)\"
+MODE		= loader
 LIBS		= -lcontxt -lcon -lconstream-server -lloaderif \
 		  -ldm_phys -levents -ll4util
 

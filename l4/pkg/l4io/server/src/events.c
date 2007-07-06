@@ -62,9 +62,11 @@ events_init_and_wait(void *dummy)
         LOG_Error("handle exit event: call to service thread failed " \
                   "(exc %d)!", DICE_EXCEPTION_MAJOR(&_env));
 
+#ifndef ARCH_arm
       /* call the OMEGA0lib service thread to detach all interrupts of
        * that client. */
       OMEGA0_free_resources(tid);
+#endif
     }
 }
 

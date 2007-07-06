@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 TARGET		 = libdl.s.so
 MODE		 = l4env
-SYSTEMS		 = x86-l4v2 arm-l4v2
+SYSTEMS		 = x86-l4v2 arm-l4v2 amd64-l4v2
 PRIVATE_INCDIR	 = $(PKGDIR)/lib/libdl \
 		   $(PKGDIR)/lib/ldso \
 		   $(PKGDIR)/lib/ldso/include \
@@ -10,14 +10,15 @@ PRIVATE_INCDIR	 = $(PKGDIR)/lib/libdl \
 		   $(PKGDIR)/lib/ldso/include/sysdeps/linux/common \
 		   $(PKGDIR)/lib/ldso/include/ldso/$(LDSO_ARCH_NAME) \
 		   $(PKGDIR)/lib/ldso/include/ldso
-LDSO_ARCH_NAME_x86 = i386
-LDSO_ARCH_NAME_arm = arm
+LDSO_ARCH_NAME_x86   = i386
+LDSO_ARCH_NAME_amd64 = x86_64
+LDSO_ARCH_NAME_arm   = arm
 LDSO_ARCH_NAME	= $(LDSO_ARCH_NAME_$(ARCH))
 DEFINES		 = -D__LIBDL_SHARED__ -DUCLIBC_RUNTIME_PREFIX=\"/\"
 SRC_C		 = libdl.c
 LDFLAGS		 = -Bsymbolic --warn-common --export-dynamic --sort-common \
 		   --discard-locals --discard-all -soname=$(TARGET)
-LIBS		 = -lld-l4.s
+LIBS		 = -Bdynamic -lld-l4.s
 OPTS		 = -Os -fno-strict-aliasing
 CRT0		 =
 

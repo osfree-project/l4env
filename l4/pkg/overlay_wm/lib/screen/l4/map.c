@@ -51,8 +51,8 @@ void *ovl_screen_get_framebuffer(char *smb_ident) {
 	printf("get_framebuffer: smb_ident = %s\n",smb_ident);
 	
 	ds.manager.raw = hex2u32(smb_ident+7);
-	ds.id          = hex2u32(smb_ident+33);
-	smb_size       = hex2u32(smb_ident+49);
+	ds.id          = hex2u32(smb_ident+24);
+	smb_size       = hex2u32(smb_ident+40);
 
 	res = l4rm_attach(&ds, smb_size, 0, L4DM_RW, (void *)&fb_adr);
 	printf("get_framebuffer: l4rm_attach = %d, fb_adr = %p\n", res, fb_adr);

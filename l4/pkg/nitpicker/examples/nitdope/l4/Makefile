@@ -4,18 +4,16 @@ L4DIR          ?= $(PKGDIR)/../..
 
 include $(L4DIR)/mk/Makeconf
 
-DOPEDIR        ?= $(L4DIR_ABS)/pkg/dopeng
-DOPEOBJDIR     ?= $(OBJ_BASE)/pkg/dopeng
+DOPEDIR        ?= $(L4DIR_ABS)/pkg/dope
+DOPEOBJDIR     ?= $(OBJ_BASE)/pkg/dope
 
-TARGET          = nitdope nitdope-ux
+TARGET          = nitdope
 DEFAULT_RELOC   = 0x01b80000
 
 PRIVATE_LIBDIR  = $(DOPEOBJDIR)/server/common/OBJ-$(SYSTEM) \
                   $(DOPEOBJDIR)/server/gfx/OBJ-$(SYSTEM)
 
-LIBS_ALL        = -ldm_phys -lio -lomega0 -ll4env -levents $(GCCLIB)
-LIBS_nitdope    = -linput $(LIBS_ALL)
-LIBS_nitdope-ux = -linput-ux $(LIBS_ALL)
+LIBS            = -ldm_phys -lio -lomega0 -ll4env -levents $(GCCLIB)
 
 PRIVATE_INCDIR  = $(DOPEDIR)/server/include \
                   $(DOPEDIR)/include \

@@ -51,7 +51,7 @@ load_file(const char *fname_and_arg,
 {
   DICE_DECLARE_ENV(_env);
   char *pathname = malloc(MAX_PATHLEN);
-  l4_size_t fname_len = strlen(fname_and_arg);
+  int fname_len = strlen(fname_and_arg);
   const char *path, *o;
   int error = -L4_ENOTFOUND;
 
@@ -76,7 +76,7 @@ load_file(const char *fname_and_arg,
 
   do
     {
-      l4_size_t l, ln;
+      int l, ln;
       const char *colon;
 
       colon = strchr(path, ':');
@@ -122,7 +122,7 @@ load_file(const char *fname_and_arg,
       /* attach dataspace to region manager */
       if ((error = l4rm_attach(ds, *size, 0, L4DM_RW, (void **)addr)))
 	{
-	  printf("Error %d attaching ds size %d\n", error, *size);
+	  printf("Error %d attaching ds size %zd\n", error, *size);
 	  return error;
 	}
     }

@@ -50,10 +50,13 @@ public:
   Mword frequency_cpu;
   Mword frequency_bus;
   Mword user_ptr;
-  Unsigned8 vkey_irq;
-  char _res8[3];
+  Mword vhw_offset;
 
   /* 0xC0 */
+  Unsigned8 vkey_irq;
+  char _res8[15];
+
+  /* 0xD0 */
 
 //  Mem_desc _mem[];
 };

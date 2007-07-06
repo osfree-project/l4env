@@ -32,7 +32,6 @@ loader.lib:		semaphore.lib thread.lib dm_generic.lib dm_mem.lib \
 			l4sys.lib libc_backends_l4env.lib crtx.lib
 l4util.lib:		roottask.lib
 l4io.lib:		omega0.lib
-usb.bin:		dope.bin
 cebit04.bin:		nethub.bin
 oshkosh.headers:	dsi.headers
 flips.headers:		l4vfs.headers
@@ -41,7 +40,7 @@ uclibc++.headers:	uclibc.headers
 l4con.bin:		lxfuxlibc.lib
 input.bin:		omega0.lib
 cunit.lib:		dde.bin
-examples.bin:		dope.bin
+nitpicker.bin:		dope.bin
 ifeq ($(USE_UCLIBC),y)
 qt3.bin:		uclibc_r.lib
 log.headers:		uclibc.headers
@@ -78,23 +77,26 @@ L4ENV_SUBDIRS = \
 	l4sys \
 	l4util \
 	loader \
-        lock \
+	lock \
 	log \
 	names \
 	pci \
 	omega0 \
-        semaphore \
+	semaphore \
 	serial \
 	sigma0 \
 	simple_ts \
 	slab \
+	task \
 	tftp \
 	thread \
 	x86emu \
 	libc_support \
 	roottask \
 	libc_backends \
-	libc_backends_l4env
+	libc_backends_l4env \
+	lxfuxlibc \
+	zlib
 
 
 ifeq ($(USE_UCLIBC),y)

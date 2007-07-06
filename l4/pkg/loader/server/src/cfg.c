@@ -259,7 +259,7 @@ cfg_new_mem(l4_size_t size, l4_addr_t low, l4_addr_t high, l4_umword_t flags)
   *((*cfg_task_current)->next_mem++) = cm;
   
   if (cfg_verbose>0)
-    printf("  <%s>: mem: %6d kB at %08lx-%08lx flags %02x pool %d\n",
+    printf("  <%s>: mem: %6zd kB at %08lx-%08lx flags %02x pool %d\n",
 	(*cfg_task_current)->task.fname, size / 1024,
 	low, high, cm.flags, cm.pool);
 

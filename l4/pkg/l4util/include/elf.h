@@ -41,6 +41,14 @@ typedef	l4_int32_t	Elf64_Sword;		/* size 4 align 4 */
 typedef	l4_uint64_t	Elf64_Xword;		/* size 8 align 8 */
 typedef	l4_int64_t	Elf64_Sxword;		/* size 8 align 8 */
 
+#if L4_MWORD_BITS == 64
+#define ElfW(type)      _ElfW(Elf, 64, type)
+#else
+#define ElfW(type)      _ElfW(Elf, 32, type)
+#endif
+#define _ElfW(e,w,t)    __ElfW(e, w, _##t)
+#define __ElfW(e,w,t)   e##w##t
+
 
 /*************************************/
 /* ELF Header - figure 1-3, page 1-3 */

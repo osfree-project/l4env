@@ -11,11 +11,6 @@ LDSCRIPT	= $(call findfile,main_rel.ld,$(L4LIBDIR))
 
 include $(L4DIR)/mk/Makeconf
 
-ifneq ($(BUILD_LOADER),y)
-# We must compile as PIC otherwise KIP syscalls don't work
-$(error Please activate BUILD_LOADER in your l4/ config)
-endif
-
 CRT0		= $(CRTP_DEFAULT)
 
 # Set to the Xorg/XFree86 xc directory. You have to invoke "make World" in

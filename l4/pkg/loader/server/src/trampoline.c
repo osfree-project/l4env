@@ -37,24 +37,17 @@ task_trampoline(l4_addr_t entry, void *mbi, void *env, unsigned mb_flag)
 #endif
 
 #ifdef ARCH_amd64
-void
-task_trampoline(l4_addr_t entry, void *mbi, void *env, unsigned mb_flag)
-{
-  unsigned dummy1, dummy2, dummy3;
-
-  asm volatile("pop %%rcx		\n\t" // remove dummy
-               "pop %%rcx		\n\t" // entry point
-	       "pop %%rbx		\n\t" // mbi
-	       "pop %%rsi		\n\t" // env
-               "call *%%rcx		\n\t"
-               ".globl _task_trampoline_end\n"
-	       "_task_trampoline_end:\n\t"
-	       : "=rax"(dummy1), "=rcx" (dummy2), "=rsi" (dummy3)
-	       : "0"(mb_flag)
-	       );
-  /* NORETURN */
-}
-
+asm (
+".global task_trampoline            \n"
+"task_trampoline:                   \n"
+"	pop %rcx                    \n" // remove dummy
+"	pop %rcx                    \n" // entry point
+"	pop %rbx                    \n" // mbi
+"	pop %rsi                    \n" // env
+"	pop %rax                    \n" // mb_flag
+"	call *%rcx                  \n"
+".global _task_trampoline_end       \n"
+"_task_trampoline_end:              \n");
 #endif
 
 /* See also roottask/server/src/trampoline.c */

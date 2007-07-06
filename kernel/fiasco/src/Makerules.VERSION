@@ -1,9 +1,10 @@
 # -*- makefile -*-
 # vim:set ft=make:
 
-kip.o:		$(VERSION)
+kip.o kip-debug.o kip-arm.o kip-ia32.o: $(VERSION)
 
 $(VERSION): FORCE
+		$(GENVER_MESSAGE)
 		$(VERBOSE)if [ -d $(srcdir)/.svn ]; then           \
 		   v=`svnversion -nc $(srcdir)`; v=$${v%[A-Z]};    \
 		   echo "#define CODE_VERSION \"r$${v#*:}\"" > $@; \

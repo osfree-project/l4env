@@ -91,7 +91,7 @@ typedef struct l4io_pci_dev
   unsigned short device;
   unsigned short sub_vendor;
   unsigned short sub_device;
-  unsigned dev_class;         /* 3 bytes: (base,sub,prog-if) */
+  unsigned long dev_class;    /* 3 bytes: (base,sub,prog-if) */
 
   unsigned long irq;
 #define L4IO_PCIDEV_RES 12    /**< number of PCI resource regions */

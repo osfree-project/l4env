@@ -278,7 +278,8 @@ typedef struct
 
 
 /** If we are multiboot-compliant, this value is present in the eax register */
-#define L4UTIL_MB_VALID			0x2BADB002
+#define L4UTIL_MB_VALID			0x2BADB002UL
+#define L4UTIL_MB_VALID_ASM		0x2BADB002
 
 
 #endif

@@ -35,6 +35,18 @@ extern l4_uint32_t l4_scaler_tsc_linux;
 L4_INLINE l4_cpu_time_t
 l4_rdtsc (void);
 
+/** Return current value of CPU-internal performance measurement counter
+ * \ingroup rdtsc
+ * \param  nr		Number of counter (0 or 1)
+ * \return 64-bit PMC */
+L4_INLINE l4_cpu_time_t
+l4_rdpmc (int nr);
+
+/* the same, but only 32 bit. Useful for smaller differences,
+   needs less cycles. */
+L4_INLINE
+l4_uint32_t l4_rdpmc_32(int nr);
+
 /** Convert time stamp counter into ns
  * \ingroup rdtsc
  * \param tsc time value in CPU ticks
@@ -85,7 +97,9 @@ l4_busy_wait_us (l4_uint64_t us);
 EXTERN_C_BEGIN
 
 /** Determine some scalers to be able to convert between real time and CPU
- * ticks. This test uses channel 0 of the PIT (i8254)
+ * ticks. This test uses channel 0 of the PIT (i8254) or the kernel KIP,
+ * depending on availability.
+ * Just calls l4_tsc_init(L4_TSC_INIT_AUTO).
  * \ingroup rdtsc
  */
 L4_INLINE l4_uint32_t
@@ -110,8 +124,8 @@ l4_calibrate_tsc (void);
  * \return 0 on error (no scalers exported by kernel, calibrating failed ...)
  *         otherwise returns (2^32 / (tsc per µsec)). This value has the
  *         same semantics as the value returned by the calibrate_delay_loop()
- *         function of the Linux kernel. 
- * \ingroup rdtsc 
+ *         function of the Linux kernel.
+ * \ingroup rdtsc
  */
 l4_uint32_t
 l4_tsc_init (int constraint);
@@ -140,7 +154,7 @@ l4_rdtsc (void)
     
     __asm__ __volatile__ 
 	(".byte 0x0f, 0x31		\n\t"
-	 "movabsq $0x00000000ffffffff, %%rcx \n\t"
+	 "mov   $0xffffffff, %%rcx      \n\t" /* clears the upper 32 bits! */
 	 "and   %%rcx,%%rax		\n\t"
 	 "shlq  $32,%%rdx		\n\t"
 	 "orq	%%rdx,%%rax		\n\t"
@@ -153,6 +167,45 @@ l4_rdtsc (void)
 	);
     
     return v;
+}
+
+L4_INLINE l4_cpu_time_t
+l4_rdpmc (int nr)
+{
+    l4_cpu_time_t v;
+    l4_uint64_t dummy;
+
+    __asm__ __volatile__ (
+	 "rdpmc				\n\t"
+	 "mov   $0xffffffff, %%rcx      \n\t" /* clears the upper 32 bits! */
+	 "and   %%rcx,%%rax		\n\t"
+	 "shlq  $32,%%rdx		\n\t"
+	 "orq	%%rdx,%%rax		\n\t"
+	:
+	"=a" (v), "=c"(dummy)
+	: "c" (nr)
+        : "rdx"
+	);
+
+    return v;
+}
+
+/* the same, but only 32 bit. Useful for smaller differences */
+L4_INLINE
+l4_uint32_t l4_rdpmc_32(int nr)
+{
+  l4_uint32_t x;
+  l4_uint64_t dummy;
+
+  __asm__ __volatile__ (
+         "rdpmc				\n\t"
+	 "mov   $0xffffffff, %%rcx      \n\t" /* clears the upper 32 bits! */
+	 "and   %%rcx,%%rax		\n\t"
+       : "=a" (x), "=c"(dummy)
+       : "c" (nr)
+       : "rdx");
+
+  return x;
 }
 
 /* the same, but only 32 bit. Useful for smaller differences, 

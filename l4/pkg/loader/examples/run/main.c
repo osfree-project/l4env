@@ -274,7 +274,7 @@ restart:
 	goto restart;
       if (!l4_is_invalid_id(tid) && !l4_tasknum_equal(owner, tid))
 	continue;
-      printf("%5u:  size %08x (%7uKB,%4uMB)  owner"
+      printf("%5u:  size %08zx (%7zuKB,%4zuMB)  owner"
 	     l4util_idfmt_adjust"  %s\n",
 	  ds.id, size, (size+(1<<9)-1)/(1<<10), (size+(1<<19)-1)/(1<<20),
 	  l4util_idstr(owner), name);
@@ -285,7 +285,7 @@ restart:
     {
       printf("==========================================================="
 	     "=====================\n"
-	     "       total %08x (%7uKB,%4uMB)\n",
+	     "       total %08zx (%7zuKB,%4zuMB)\n",
 	     total_size,
 	     (total_size+(1<<9 )-1)/(1<<10),
 	     (total_size+(1<<19)-1)/(1<<20));
@@ -638,7 +638,7 @@ restart:
       for (k=0, size=0; k<sizeof(t)/sizeof(t[0]); k++)
 	if (t[k].task == j)
 	  size += t[k].size;
-      printf("  %3X  %7uKB  (%4uMB)  \n",
+      printf("  %3X  %7zuKB  (%4zuMB)  \n",
 	  j, (size+(1<<9)-1)/(1<<10), (size+(1<<19)-1)/(1<<20));
       total_size += size;
       i = j;
@@ -646,7 +646,7 @@ restart:
   if (t[0].task)
     {
       printf("===========================\n"
-	     " total%8uKB  (%4uMB)\n",
+	     " total%8zuKB  (%4zuMB)\n",
 	     (total_size+(1<<9)-1)/(1<<10), (total_size+(1<<19)-1)/(1<<20));
     }
 }

@@ -77,7 +77,7 @@ static void init_buffer(void){
 
   if(buffer_size > sizeof(buffer_array)){
     LOGd(CONFIG_LOG_NOTICE,
-	    "requested buffersize of %d, shrinking to %d\n",
+	    "requested buffersize of %d, shrinking to %zd\n",
 	    buffer_size, sizeof(buffer_array));
     buffer_size = sizeof(buffer_array);
   }

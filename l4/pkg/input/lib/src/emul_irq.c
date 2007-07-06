@@ -158,9 +158,10 @@ static void __irq_handler(struct irq_desc *irq_desc)
 
 		/* read spurious interrupts */
 		for (;;) {
-			error = l4_ipc_receive(irq_id,
-			                       L4_IPC_SHORT_MSG, &dw0, &dw1,
-			                       l4_ipc_timeout(0, 0, 1, 0), &result);
+			error = l4_ipc_call(irq_id,
+			                    L4_IPC_SHORT_MSG, 0, 0,
+			                    L4_IPC_SHORT_MSG, &dw0, &dw1,
+			                    l4_ipc_timeout(0, 0, 1, 0), &result);
 			if (error == L4_IPC_RETIMEOUT)
 				break;
 		}
@@ -183,9 +184,10 @@ static void __irq_handler(struct irq_desc *irq_desc)
 		if (use_omega0)
 			error = __omega0_wait(irq, irq_handle, om_flags);
 		else
-			error = l4_ipc_receive(irq_id,
-			                       L4_IPC_SHORT_MSG, &dw0, &dw1,
-			                       IRQ_TIMEOUT, &result);
+			error = l4_ipc_call(irq_id,
+			                    L4_IPC_SHORT_MSG, 0, 0,
+			                    L4_IPC_SHORT_MSG, &dw0, &dw1,
+			                    IRQ_TIMEOUT, &result);
 
 		switch (error) {
 		case 0:

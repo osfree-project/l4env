@@ -7,7 +7,7 @@ SYSTEMS          = x86-l4v2
 
 LIBCINCDIR       = $(addprefix -I,$(L4INCDIR))
 LIBS             = -ll4lxovlwindow -lsemaphore -lsigma0 \
-                   -Wl,-dynamic -lXext -Wl,-dynamic -lX11 -pthread
+                   -lXext -lX11 -pthread
 
 PRIVATE_INCDIR   = $(PKGDIR)/include \
                    $(XF86TREE)/include \

@@ -94,7 +94,7 @@ typedef struct
 } app_t;
 
 #define HERE_TO_APP(addr, base) \
-  (base).app + (((unsigned int)(addr) - (base).here))
+  (base).app + (((l4_addr_t)(addr) - (base).here))
 
 app_t* task_to_app(l4_threadid_t tid);
 int  create_app_desc(app_t **new_app);

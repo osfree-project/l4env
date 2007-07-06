@@ -78,12 +78,12 @@ static void do_switch(int i_new, int i_old);
 static void
 fast_memcpy(l4_uint8_t *dst, l4_uint8_t *src, l4_size_t size)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   l4_umword_t dummy;
 
   asm volatile ("cld ; rep movsl"
 		:"=S"(dummy), "=D"(dummy), "=c"(dummy)
-                :"S"(src), "D"(dst),"c"(size/4));
+                :"S"(src), "D"(dst),"c"(size/sizeof(l4_umword_t)));
 #else
   memcpy(dst, src, size);
 #endif
@@ -94,7 +94,7 @@ fast_memcpy(l4_uint8_t *dst, l4_uint8_t *src, l4_size_t size)
 static void
 fast_memcpy_mmx2_32(l4_uint8_t *dst, l4_uint8_t *src, l4_size_t size)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   l4_mword_t dummy;
 
   /* don't execute emms in side the timer loop because at this point the
@@ -832,9 +832,11 @@ exception6_handler_start(void)
 static void
 check_fast_memcpy(void)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   if (use_fastmemcpy)
     {
+      /* assume AMD64 has SSE */
+# ifdef ARCH_x86
       exception6_handler_start();
       if (!setjmp(exception6_jmp_buf))
 	{
@@ -842,7 +844,9 @@ check_fast_memcpy(void)
 	  asm volatile("emms; movq (%0),%%mm0; movntq %%mm0,(%1); sfence; emms"
                        : : "r"(&src), "r"(&dst) , "m"(src) : "memory");
           exception6_handler_done();
+# endif
 	  printf("Using fast memcpy.\n");
+# ifdef ARCH_x86
 	}
       else
 	{
@@ -850,6 +854,7 @@ check_fast_memcpy(void)
 	  printf("Fast memcpy not supported by this CPU.\n");
 	  use_fastmemcpy = 0;
 	}
+# endif
       return;
     }
 #else

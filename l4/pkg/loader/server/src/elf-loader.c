@@ -29,10 +29,10 @@ const char * const interp = "libld-l4.s.so";
 
 static int
 elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
-	l4_uint32_t *save_phnum, l4_addr_t *save_phdr)
+	l4_uint32_t *save_phnum, l4_addr_t *save_phdr, int load_hdrs)
 {
-  Elf32_Ehdr *ehdr = (Elf32_Ehdr*)image;
-  Elf32_Phdr *phdr;
+  ElfW(Ehdr) *ehdr = (ElfW(Ehdr*))image;
+  ElfW(Phdr) *phdr;
   l4env_infopage_t *env = app->env;
   l4exec_section_t *l4exc;
   l4exec_section_t section[8];
@@ -40,17 +40,18 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
   l4_addr_t map_offs;
   int i, j, error;
   unsigned section_num = 0;
+  int ehdr_loaded = 0, phdr_loaded = 0;
 
   assert(ehdr);
 
   *entry = ehdr->e_entry + base;
 
-  phdr = (Elf32_Phdr*)(image + ehdr->e_phoff);
+  phdr = (ElfW(Phdr*))(image + ehdr->e_phoff);
   assert(phdr);
 
   for (i=0; i<ehdr->e_phnum; i++)
     {
-      Elf32_Phdr *ph = (Elf32_Phdr *)((l4_addr_t)phdr + i*ehdr->e_phentsize);
+      ElfW(Phdr) *ph = (ElfW(Phdr *))((l4_addr_t)phdr + i*ehdr->e_phentsize);
 
       if (ph->p_type == PT_PHDR ||
 	  ph->p_type == PT_LOAD ||
@@ -61,7 +62,9 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 				? "pt_phdr"
 				: ph->p_type == PT_LOAD
 					? "pt_load"
-					: "pt_dynamic";
+					: ph->p_type == PT_INTERP
+                                                ? "pt_interp"
+                                                : "pt_dynamic";
 
 	  l4_addr_t beg  = l4_trunc_page(ph->p_vaddr);
 	  l4_addr_t end  = l4_round_page(ph->p_vaddr+ph->p_memsz);
@@ -69,6 +72,13 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 #ifdef DEBUG
 	  app_msg(app, "sec%02d %08lx-%08lx (%s)", i, beg, end, name);
 #endif
+
+	  if (size == 0)
+	    {
+	      app_msg(app, "Skipping empty section sec%02d at %08lx (%s)",
+                           i, beg, name);
+	      continue;
+	    }
 
 	  if (ph->p_type == PT_PHDR)
 	    {
@@ -95,21 +105,26 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 			        beg, end, sec_beg, sec_end);
 #endif
 
-		  add_beg  = beg < sec_beg ? sec_beg - beg : 0;
-		  add_end  = end > sec_end ? end - sec_end : 0;
-		  new_size = add_beg + sec_size + add_end;
+                  add_beg  = beg < sec_beg ? sec_beg - beg : 0;
+                  add_end  = end > sec_end ? end - sec_end : 0;
+                  new_size = add_beg + sec_size + add_end;
 
-		  if ((error = l4dm_mem_resize(&l4exc->ds, new_size)))
-		    {
-		      app_msg(app, "Error %d resizing ds to %dkB",
-				   error, new_size/1024);
-		      return error;
-		    }
+                  if (new_size > sec_size)
+                    {
+                      if ((error = l4dm_mem_resize(&l4exc->ds, new_size)))
+                        {
+                          app_msg(app, "Error %d resizing ds to %zdkB",
+			          error, new_size/1024);
+                          return error;
+                        }
+                    }
+                  else
+                    new_size = sec_size;
 
 		  if ((error = l4rm_attach(&l4exc->ds, new_size,
 					   0, L4RM_MAP|L4DM_RW, &map_addr)))
 		    {
-		      app_msg(app, "Error %d attaching ds size %dkB",
+		      app_msg(app, "Error %d attaching ds size %zdkB",
 				   error, new_size/1024);
 		      return error;
 		    }
@@ -156,7 +171,7 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 	  if ((error = l4rm_attach(&l4exc->ds, l4exc->size, 0,
 				   L4RM_MAP|L4DM_RW, &map_addr)) < 0)
 	    {
-	      app_msg(app, "Error %d attaching ds size %dkB",
+	      app_msg(app, "Error %d attaching ds size %zdkB",
 			   error, l4exc->size/1024);
 	      return error;
 	    }
@@ -172,6 +187,28 @@ next_iter:
 	  /* copy content of program section into dataspace */
 	  memcpy(map_addr+map_offs, (char*)image+ph->p_offset, ph->p_filesz);
 
+          /* XXX Copy ELF header and program sections. The ldso interpreter
+           *     needs both structures for linking. If I would find a way
+           *     to explicitely add these structions to the ldso binary we
+           *     would not need this hack. */
+          if (load_hdrs)
+            {
+              if (beg        <= 0 &&
+                  beg + size >= sizeof(ElfW(Ehdr)))
+                {
+                  memcpy(map_addr+0, (char*)image, sizeof(ElfW(Ehdr)));
+                  ehdr_loaded = 1;
+                }
+              if (beg        <= ehdr->e_phoff &&
+                  beg + size >= ehdr->e_phoff + ehdr->e_phnum *
+                                                sizeof(ElfW(Phdr)))
+                {
+                  memcpy(map_addr+ehdr->e_phoff, (char*)image+ehdr->e_phoff,
+                         ehdr->e_phnum * sizeof(ElfW(Phdr)));
+                  phdr_loaded = 1;
+                }
+            }
+
 	  if ((error = l4rm_detach(map_addr)))
 	    {
 	      app_msg(app, "Error %d detaching ds", error);
@@ -184,6 +221,12 @@ next_iter:
   if (env->section_num + section_num > L4ENV_MAXSECT)
     {
       app_msg(app, "Cannot pass sections to application");
+      return -L4_ENOMEM;
+    }
+
+  if (load_hdrs && (!ehdr_loaded || !phdr_loaded))
+    {
+      app_msg(app, "Cannot allocate phdr for ehdr/phdr");
       return -L4_ENOMEM;
     }
 
@@ -222,7 +265,7 @@ elf_map_binary(app_t *app)
 
   app_msg(app, "Loading binary");
   return elf_map(app, app->image, /*base=*/0,
-		 &env->entry_2nd, &env->phnum, &env->phdr);
+		 &env->entry_2nd, &env->phnum, &env->phdr, 0);
 }
 
 
@@ -249,7 +292,7 @@ elf_map_ldso(app_t *app, l4_addr_t app_addr)
     }
 
   app_msg(app, "Loading ldso");
-  if ((error = elf_map(app, addr, /*base=*/app_addr, &env->entry_1st, 0, 0)))
+  if ((error = elf_map(app, addr, /*base=*/app_addr, &env->entry_1st, 0, 0, 1)))
     return error;
 
   junk_ds(&ds, addr);
@@ -273,16 +316,16 @@ int
 elf_check_ftype(const l4_addr_t img, const l4_size_t size,
                 const l4env_infopage_t *env)
 {
-  Elf32_Ehdr *ehdr = (Elf32_Ehdr*)img;
-  Elf32_Phdr *phdr;
-  Elf32_Phdr *ph;
+  ElfW(Ehdr) *ehdr = (ElfW(Ehdr*))img;
+  ElfW(Phdr) *phdr;
+  ElfW(Phdr) *ph;
   int i, j;
 
   if (!ehdr)
     return -L4_EINVAL;
 
   /* access ELF header */
-  if (size < sizeof(Elf32_Ehdr))
+  if (size < sizeof(ElfW(Ehdr)))
     return -ELF_BADFORMAT;
 
   /* sanity check for valid ELF header */
@@ -298,7 +341,7 @@ elf_check_ftype(const l4_addr_t img, const l4_size_t size,
     return -ELF_BADFORMAT;
 
   /* some more ELF sanity checks */
-  if (size < ehdr->e_phoff + sizeof(Elf32_Phdr))
+  if (size < ehdr->e_phoff + sizeof(ElfW(Phdr)))
     return -ELF_CORRUPT;
 
   /* ELF sanity check */
@@ -307,7 +350,7 @@ elf_check_ftype(const l4_addr_t img, const l4_size_t size,
     return -ELF_CORRUPT;
 
   /* ELF sanity check */
-  if (size < ehdr->e_shoff + sizeof(Elf32_Shdr))
+  if (size < ehdr->e_shoff + sizeof(ElfW(Shdr)))
     return -ELF_CORRUPT;
 
   /* ELF sanity check */
@@ -315,13 +358,13 @@ elf_check_ftype(const l4_addr_t img, const l4_size_t size,
     return -ELF_CORRUPT;
 
   /* Check interpreter */
-  phdr = (Elf32_Phdr*)(img + ehdr->e_phoff);
+  phdr = (ElfW(Phdr*))(img + ehdr->e_phoff);
   if (!phdr)
     return -ELF_CORRUPT;
 
   for (i = 0, j = 0; i < ehdr->e_phnum; i++)
     {
-      ph = (Elf32_Phdr *)((l4_addr_t)phdr + i*ehdr->e_phentsize);
+      ph = (ElfW(Phdr *))((l4_addr_t)phdr + i*ehdr->e_phentsize);
 
       if (ph->p_type == PT_INTERP)
 	{
@@ -337,7 +380,6 @@ elf_check_ftype(const l4_addr_t img, const l4_size_t size,
 	  return -ELF_INTERPRETER;
 	}
     }
-
 
   return 0;
 }

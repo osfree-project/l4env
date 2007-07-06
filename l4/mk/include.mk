@@ -27,9 +27,9 @@ INSTALLDIR_LOCAL	= $(INSTALLDIR_INC_LOCAL)
 
 ifeq ($(origin TARGET),undefined)
 # use POSIX -print here
-TARGET_CMD		:= find . -name '*.[ih]' -print
+TARGET_CMD		= (cd $(INCSRC_DIR); find . -name '*.[ih]' -print)
 else
-TARGET_CMD		:= echo $(TARGET)
+TARGET_CMD		= echo $(TARGET)
 endif
 INSTALL_INC_PREFIX	?= l4/$(PKGNAME)
 INCSRC_DIR		?= $(SRC_DIR)
@@ -64,7 +64,9 @@ installscript = perl -e '                                                     \
     }                                                                         \
   }'
 
-all::
+headers::
+
+all:: headers
 	@$(TARGET_CMD) | $(call installscript,1)
 
 install::

@@ -14,8 +14,7 @@ EXTERN_C_BEGIN
  * \param mus	time in microseconds. Special cases:
  *		- 0 - > timeout 0
  *		- ~0U -> timeout NEVER
- * \param to_m	contains l4-mantissa after return
- * \param to_e	contains l4-exponent after return
+ * \return the corresponding l4_timeout value
  */
 l4_timeout_s l4util_micros2l4to(unsigned int mus);
 
@@ -68,7 +67,7 @@ static inline void
 l4_touch_rw(const void*addr, unsigned size)
 {
   const char *bptr, *eptr;
-      
+
   bptr = (const char*)(((l4_addr_t)addr) & L4_PAGEMASK);
   eptr = (const char*)(((l4_addr_t)addr+size-1) & L4_PAGEMASK);
   for(;bptr<=eptr;bptr+=L4_PAGESIZE){

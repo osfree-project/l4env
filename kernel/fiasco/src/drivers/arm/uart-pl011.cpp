@@ -8,7 +8,7 @@ IMPLEMENT L4::Uart *Uart::uart()
   return &uart;
 }
 
-IMPLEMENTATION [realview && 926]:
+IMPLEMENTATION [realview && !mpcore]:
 
 #include "arm/uart_pl011.h"
 

@@ -53,7 +53,7 @@ asm (".globl task_trampoline         \n"
      "  ldr r0, .LC_l4util_mb_valid  \n" // load MB-Magic to r0
      "  mov pc, r3                   \n" // jump to entry
      ".LC_l4util_mb_valid:           \n"
-     "  .word " L4_stringify(L4UTIL_MB_VALID) "\n"
+     "  .word " L4_stringify(L4UTIL_MB_VALID_ASM) "\n"
      "                               \n"
      ".globl _task_trampoline_end    \n"
      "_task_trampoline_end:          \n");

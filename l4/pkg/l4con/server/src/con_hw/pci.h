@@ -13,8 +13,8 @@
 #ifndef __PCI_H_
 #define __PCI_H_
 
-#include <l4/pci/libpci.h>
 #include <l4/generic_io/libio.h>
+#include <linux/pci.h>
 #include "iomem.h"
 #include "init.h"
 
@@ -45,49 +45,31 @@ void pci_resource(unsigned int bus, unsigned int devfn, int num,
 
 #define PCIBIOS_READ_CONFIG_BYTE(bus, devfn, where, val)	\
 	do {							\
-	  if (con_hw_not_use_l4io)				\
-	    pcibios_read_config_byte(bus, devfn, where, val);	\
-	  else							\
 	    l4io_pci_readb_cfg((bus<<8)|devfn, where, val);	\
 	} while (0)
 
 #define PCIBIOS_READ_CONFIG_WORD(bus, devfn, where, val)	\
 	do {							\
-	  if (con_hw_not_use_l4io)				\
-	    pcibios_read_config_word(bus, devfn, where, val);	\
-	  else							\
 	    l4io_pci_readw_cfg((bus<<8)|devfn, where, val);	\
 	} while (0)
 
 #define PCIBIOS_READ_CONFIG_DWORD(bus, devfn, where, val)	\
 	do {							\
-	  if (con_hw_not_use_l4io)				\
-	    pcibios_read_config_dword(bus, devfn, where, val);	\
-	  else							\
 	    l4io_pci_readl_cfg((bus<<8)|devfn, where, val);	\
 	} while (0)
 
 #define PCIBIOS_WRITE_CONFIG_BYTE(bus, devfn, where, val)	\
 	do {							\
-	  if (con_hw_not_use_l4io)				\
-	    pcibios_write_config_byte(bus, devfn, where, val);	\
-	  else							\
 	    l4io_pci_writeb_cfg((bus<<8)|devfn, where, val);	\
 	} while (0)
 
 #define PCIBIOS_WRITE_CONFIG_WORD(bus, devfn, where, val)	\
 	do {							\
-	  if (con_hw_not_use_l4io)				\
-	    pcibios_write_config_word(bus, devfn, where, val);	\
-	  else							\
 	    l4io_pci_writew_cfg((bus<<8)|devfn, where, val);	\
 	} while (0)
 
 #define PCIBIOS_WRITE_CONFIG_DWORD(bus, devfn, where, val)	\
 	do {							\
-	  if (con_hw_not_use_l4io)				\
-	    pcibios_write_config_dword(bus, devfn, where, val);	\
-	  else							\
 	    l4io_pci_writel_cfg((bus<<8)|devfn, where, val);	\
 	} while (0)
 

@@ -365,6 +365,7 @@ l4_io_request_region_component (CORBA_Object _dice_corba_obj,
                                 l4_snd_fpage_t regions[],
                                 CORBA_Server_Environment *_dice_corba_env)
 {
+#ifndef ARCH_arm
   int err;
 
   /* set to 0 here to avoid copying an arbitrary number of elements,
@@ -413,6 +414,10 @@ l4_io_request_region_component (CORBA_Object _dice_corba_obj,
   }
 
   return 0;
+
+#else
+  return -L4_EINVAL;
+#endif
 }
 
 /** Release I/O port region.
@@ -960,6 +965,7 @@ int add_device_exclusion(const char *s)
   return -L4_EINVAL;
 }
 
+#ifndef ARCH_arm
 /** Map the BIOS32 service area
  *
  * \param vaddr  virtual address on successfull mapping (undefined on errors!)
@@ -1006,6 +1012,7 @@ int bios_map_area(unsigned long *ret_vaddr)
     }
   return 0;
 }
+#endif
 
 /** BIOS32 service area-specific address translation
  *
@@ -1039,6 +1046,7 @@ void * bios_phys_to_virt(unsigned long paddr)
  */
 int io_res_init(io_client_t *c)
 {
+#ifndef ARCH_arm
   int err;
 
   /* save self reference */
@@ -1082,6 +1090,10 @@ int io_res_init(io_client_t *c)
 err:
   Panic("claiming reserved resource failed (%d)\n", err);
   return err;
+
+#else
+  return 0;
+#endif
 }
 
 /*

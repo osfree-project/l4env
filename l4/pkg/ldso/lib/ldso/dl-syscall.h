@@ -27,7 +27,7 @@
 #define _dl_MAX_ERRNO	 4096
 
 #define _dl_mmap_check_error(__res)     \
-          (((int)__res) < 0 && ((int)__res) >= -_dl_MAX_ERRNO)
+          (((long)__res) < 0 && ((long)__res) >= -_dl_MAX_ERRNO)
 
 void _dl_exit(int code);
 void _dl_close(int fd);

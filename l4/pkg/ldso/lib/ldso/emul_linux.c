@@ -197,7 +197,7 @@ _dl_mmap_list_regions(int only_unseen)
   for (m=mmap_region_list; m; m=m->next)
     if (!only_unseen || m->unseen)
       {
-	printf("  "l4_addr_fmt" - "l4_addr_fmt" ds %4d (%4dKB) %s\n", 
+	printf("  "l4_addr_fmt" - "l4_addr_fmt" ds %4d (%4zdKB) %s\n", 
 	    m->addr, m->addr+m->size, m->ds.id, m->size/1024, m->name);
 	m->unseen = 0;
       }

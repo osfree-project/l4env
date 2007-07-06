@@ -18,6 +18,7 @@
 #include <l4/util/macros.h>
 
 #include "gmode.h"
+#include "vc.h"
 
 void
 init_gmode(void)
@@ -32,12 +33,13 @@ init_gmode(void)
 
   printf("Using LCD driver: %s\n", lcd->get_info());
 
-  gr_vmem_size    = lcd->get_video_mem_size();
-  VESA_YRES       = lcd->get_screen_height();
-  VESA_XRES       = lcd->get_screen_width();
-  VESA_BITS       = lcd->get_bpp();
-  VESA_BPL        = lcd->get_bytes_per_line();
-  VESA_RES        = 0;
+  gr_vmem_size     = lcd->get_video_mem_size();
+  VESA_XRES        = lcd->get_screen_width();
+  VESA_YRES        = lcd->get_screen_height();
+  VESA_YRES_CLIENT = lcd->get_screen_height() - status_area;
+  VESA_BITS        = lcd->get_bpp();
+  VESA_BPL         = lcd->get_bytes_per_line();
+  VESA_RES         = 0;
   if (VESA_BITS == 32)
     {
       VESA_RED_OFFS   = 16;

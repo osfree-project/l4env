@@ -65,7 +65,6 @@ CONFIG_REGPARM3=n
 # Kernel ABI Version
 #
 CONFIG_ABI_V2=y
-CONFIG_ABI_X0=n
 
 
 #

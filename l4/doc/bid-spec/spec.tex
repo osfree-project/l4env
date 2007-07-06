@@ -2274,21 +2274,31 @@ variables of lib and prog make roles.
 
 \subsubsection{Purpose}
 
-The purpose of the include role is to install the local include-files
-into the local install-tree or into the drops install-tree. The
-role-file achieves two goals when managing include-files:
+The purpose of the include role is to install all .h and .i under
+INCSRC_DIR into the local install-tree or into the drops
+install-tree. This role facilitates two goals with respect to managing
+include-files:
+
 \begin{enumerate}
-\item The path where the include-files are to be found in is entirely
+\item The path where the include-files are found is entirely
   defined by the package name and the target system of the
   include-files.
-\item Once written, the makefile needs not to be modified, even if new
-  include files are added or old include files are removed from the package.
+\item Once written, the make file need not be modified, even when new
+  include files are added or old include files are removed from the
+  package.
 \end{enumerate}
 
 The target system of an include file is determined by putting it into
-a specific subdirectory. The role-file will install it accordingly
-then. The following table defines the subdirectories depending on the
-target systems.
+a specific subdirectory. The role-file will then install it
+accordingly.  By default, INCSRC_DIR points is set to the source
+directory.  To install generated header files, set INCSRC_DIR to
+OBJ_DIR.  There is currently no mechanism to exclude header files.
+
+When generating header files, add them to the headers target (which
+all depends on).
+
+The following table defines the subdirectories depending on the target
+systems.
 
 \begin{center}
 \begin{tabular}{|l|l|}

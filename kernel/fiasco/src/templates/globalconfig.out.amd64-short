@@ -6,6 +6,7 @@
 # Main menu
 #
 CONFIG_EXPERIMENTAL=y
+CONFIG_DEVEL=n
 
 #
 # Target System Options

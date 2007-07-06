@@ -53,6 +53,7 @@ my %modules =
 		    l4/pkg/serial
 		    l4/pkg/simple_ts
 		    l4/pkg/slab
+		    l4/pkg/task
 		    l4/pkg/tftp
 		    l4/pkg/x86emu
                     l4/pkg/crtx

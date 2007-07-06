@@ -5,3 +5,4 @@ M: INFO_JIFFIES l4io_info_t jiffies
 M: INFO_HZ      l4io_info_t hz
 M: INFO_XTIME   l4io_info_t xtime
 C: L4_PAGESIZE L4_PAGESIZE
+C: L4_LOG2_PAGESIZE L4_LOG2_PAGESIZE

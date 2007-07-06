@@ -102,6 +102,18 @@ static inline void free_lock(LOCK_TYPE *l)
     l4_fpage_unmap(fp, L4_FP_ALL_SPACES);
 }
 
+#elif LOCAL_DP_SEM_NOSERTHREAD
+#include "dp_sem.h"
+
+#define LOCK_TYPE dp_sem_t
+#define LOCK_SIZE sizeof(dp_sem_t)
+#define LOCK_INIT(lock) dp_sem_init(lock)
+#define LOCK_DOWN(lock) dp_sem_down(lock)
+#define LOCK_UP(lock) dp_sem_up(lock)
+static inline void lock_map_to(l4_threadid_t t, LOCK_TYPE *l) {}
+static inline void lock_rcv_map(LOCK_TYPE *l) {}
+static inline void free_lock(LOCK_TYPE *l) {}
+
 #endif
 
 #ifndef LOCK_TYPE

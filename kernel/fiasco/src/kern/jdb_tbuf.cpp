@@ -182,12 +182,14 @@ Jdb_tbuf::commit_entry()
       else
 	status()->version1++; // 64-bit value!
 
+#if 0 // disbale Tbuf vIRQ for the time beeing (see bug #357)
       // fire the virtual 'buffer full' irq
       if (_observer)
         {
           Lock_guard<Cpu_lock> guard(&cpu_lock);
 	  _observer->notify();
 	}
+#endif
     }
 }
 

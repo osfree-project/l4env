@@ -47,18 +47,18 @@ main(int argc, char** argv)
       memset(addr, i, L4_PAGESIZE);
     }
 
-  printf("calling dl_open at %08x\n", (unsigned)dlopen);
+  printf("calling dl_open at %08lx\n", (l4_addr_t)dlopen);
   handle1 = dlopen("libsimple1_dyn.s.so", 2);
-  printf("handle lib1=%08x\n", (unsigned)handle1);
+  printf("handle lib1=%08lx\n", (l4_addr_t)handle1);
   func    = dlsym(handle1, "foo_in_library_1");
-  printf("func1=%08x\n", (unsigned)func);
+  printf("func1=%08lx\n", (l4_addr_t)func);
   foo_in_library_1 = func;
   foo_in_library_1();
 
   handle2 = dlopen("libsimple2_dyn.s.so", 2);
-  printf("handle lib2=%08x\n", (unsigned)handle2);
+  printf("handle lib2=%08lx\n", (l4_addr_t)handle2);
   func    = dlsym(handle2, "foo_in_library_2");
-  printf("func2=%08x\n", (unsigned)func);
+  printf("func2=%08lx\n", (l4_addr_t)func);
   foo_in_library_2 = func;
   foo_in_library_2();
 

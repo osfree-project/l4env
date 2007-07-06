@@ -366,7 +366,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 
 		    /* Debug helper: Addresses within the first 1K are
 		       treated as errors */
-		    if ((unsigned)p < 1024)
+		    if ((unsigned long)p < 1024UL)
 			p = "(NULL)";
 
 		    if (length > 0 && !ladjust) {

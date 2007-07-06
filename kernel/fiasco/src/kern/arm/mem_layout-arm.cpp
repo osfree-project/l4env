@@ -160,17 +160,17 @@ public:
   };
 };
 
-INTERFACE [arm && realview && 926]: //-------------------------------------
+INTERFACE [arm && realview && !mpcore]: //--------------------------------
 
 EXTENSION class Mem_layout
 {
 public:
-  enum Virt_layout_realview_926 {
+  enum Virt_layout_realview_single {
     Gic_cpu_map_base     = Devices_map_base + 0x00040000,
     Gic_dist_map_base    = Gic_cpu_map_base + 0x00001000,
   };
 
-  enum Phys_layout_realview_926 {
+  enum Phys_layout_realview_single {
     Gic_cpu_phys_base    = Devices_phys_base + 0x00040000,
     Gic_dist_phys_base   = Gic_cpu_phys_base + 0x00001000,
   };

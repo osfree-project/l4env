@@ -680,7 +680,7 @@ init_infopage(l4env_infopage_t *env)
 }
 
 /** allocate space from a "page" _downwards_. */
-static int
+static l4_addr_t
 alloc_from_tramp_page(l4_size_t size,
 		      app_addr_t *tramp_page, l4_addr_t *tramp_page_addr)
 {
@@ -721,8 +721,8 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	    alloc_from_tramp_page(mods_count*sizeof(l4util_mb_mod_t),
 				  tramp_page, tramp_page_addr)))
 	{
-	  app_msg(app, "No space left for multiboot modules in \
-		        trampoline page");
+	  app_msg(app, "No space left for multiboot modules in "
+		       "trampoline page");
 	  return -L4_ENOMEM;
 	}
 
@@ -771,7 +771,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	      if (!(addr = app_find_free_virtual_area(app, mod_size,
 						ct_mod->low, ct_mod->high)))
 		{
-		  app_msg(app, "Couldn't find a free vm area of size %08x"
+		  app_msg(app, "Couldn't find a free vm area of size %08zx"
 			       " in [%08lx-%08lx] for module \"%s\"",
 			       mod_size, ct_mod->low, ct_mod->high,
 			       ct_mod->fname);
@@ -802,7 +802,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	      if (!(addr = app_find_free_virtual_area(app, mod_size,
 						      0, L4_MAX_ADDRESS)))
 		{
-		  app_msg(app, "Couldn't find a free vm area of size %08x"
+		  app_msg(app, "Couldn't find a free vm area of size %08zx"
 			       " for module \"%s\"", mod_size, ct_mod->fname);
 		  app_list_addr(app);
 		  return -L4_EINVAL;
@@ -941,10 +941,12 @@ load_vbe_info(app_t *app,
 					  tramp_page, &tmp_tramp_page_addr))
 	      )
 	    {
+              /* XXX ensure this structure is located below 4GB */
 	      *vbe_mode = *((l4util_mb_vbe_mode_t*)
-			     l4env_multiboot_info->vbe_mode_info);
+			     (l4_addr_t)l4env_multiboot_info->vbe_mode_info);
+              /* XXX ensure this structure is located below 4GB */
 	      *vbe_ctrl = *((l4util_mb_vbe_ctrl_t*)
-			     l4env_multiboot_info->vbe_ctrl_info);
+			     (l4_addr_t)l4env_multiboot_info->vbe_ctrl_info);
 	      mbi->vbe_mode_info = HERE_TO_APP(vbe_mode, *tramp_page);
 	      mbi->vbe_ctrl_info = HERE_TO_APP(vbe_ctrl, *tramp_page);
 	      mbi->flags        |= L4UTIL_MB_VIDEO_INFO;
@@ -953,7 +955,7 @@ load_vbe_info(app_t *app,
 	  else
 	    {
 	      app_msg(app, "Can't pass VBE video info to trampoline page \
-			   (needs %d bytes)",
+			   (needs %zd bytes)",
 			   sizeof(l4util_mb_vbe_ctrl_t)+
 			   sizeof(l4util_mb_vbe_mode_t));
 	    }
@@ -1090,7 +1092,7 @@ app_create_phys_memory(app_t *app, l4_size_t size, int cfg_flags, int pool)
   if ((error = l4dm_memphys_open(pool, L4DM_MEMPHYS_ANY_ADDR,
 				 size, 0, flags, ds_name, &ds)))
     {
-      app_msg(app, "Error %d reserving %08x of physical memory (%s)",
+      app_msg(app, "Error %d reserving %08zx of physical memory (%s)",
 		   error, size, ds_flags);
       return error;
     }
@@ -1104,7 +1106,7 @@ app_create_phys_memory(app_t *app, l4_size_t size, int cfg_flags, int pool)
 
   if (psize != size)
     {
-      app_msg(app, "only %08x/%08x bytes of physmem contiguous",
+      app_msg(app, "only %08zx/%08zx bytes of physmem contiguous",
 		   psize, size);
       return -L4_ENOMEM;
     }
@@ -1119,7 +1121,7 @@ app_create_phys_memory(app_t *app, l4_size_t size, int cfg_flags, int pool)
   if (cfg_flags & CFG_M_NOSUPERPAGES)
     aa->flags |= APP_AREA_NOSUP;
 
-  app_msg(app, "Reserved %08x memory at %08lx-%08lx",
+  app_msg(app, "Reserved %08zx memory at %08lx-%08lx",
 	      size, aa->beg.app, aa->beg.app+aa->size);
 
   return 0;
@@ -1254,6 +1256,8 @@ app_start_static(cfg_task_t *ct, app_t *app)
 #ifdef IPCMON
 static int app_setup_caps(app_t *app)
 {
+  app_msg(app, "Setting up capabilities");
+
   if (l4_is_invalid_id(app->caphandler))
     return 0;
 
@@ -1283,7 +1287,6 @@ static int app_setup_caps(app_t *app)
 #else
 static int app_setup_caps(app_t *app)
 {
-  printf("Capability support not enabled.\n");
   return 0;
 }
 #endif

@@ -59,7 +59,7 @@ static long num_clients;
 static long run_time = 60;
 static long use_threads;
 static long verbose;
-static double rounds_per_msec = 0.0;
+//static double rounds_per_msec = 0.0;
 static int running = 1;
 static long long start_time;
 
@@ -71,7 +71,7 @@ static unsigned long stats_offset;
 
 static l4_threadid_t master;
 
-
+const int l4thread_max_threads = 128;
 
 static void work(void)
 {

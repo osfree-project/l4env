@@ -33,7 +33,7 @@ src-$(CONFIG_ORE_NE2000) += ne2k-pci.c 8390.c
 #FIXME Intel PRO/1000
 src-$(CONFIG_ORE_PRO1000) += $(addprefix e1000/, e1000_main.c e1000_hw.c \
                                e1000_ethtool.c e1000_param.c)
-src-$(CONFIG_ORE_TIGON3) += tg3.c
+#src-$(CONFIG_ORE_TIGON3) += tg3.c
 
 ifneq ($(CONFIG_ORE_TIGON3)$(CONFIG_ORE_PRO1000)$(CONFIG_ORE_RHINE)$(CONFIG_ORE_PCNET32),)
  ethtool-y += ethtool.c

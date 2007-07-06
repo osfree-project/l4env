@@ -323,16 +323,16 @@ l4_ipc_call(l4_threadid_t dest,
 
 L4_INLINE int
 l4_ipc_call_tag(l4_threadid_t dest,
-            const void *snd_msg,
-            l4_umword_t snd_w0,
-            l4_umword_t snd_w1,
-            l4_msgtag_t tag,
-            void *rcv_msg,
-            l4_umword_t *rcv_w0,
-            l4_umword_t *rcv_w1,
-            l4_timeout_t timeout,
-            l4_msgdope_t *result,
-            l4_msgtag_t *rtag);
+                const void *snd_msg,
+                l4_umword_t snd_w0,
+                l4_umword_t snd_w1,
+                l4_msgtag_t tag,
+                void *rcv_msg,
+                l4_umword_t *rcv_w0,
+                l4_umword_t *rcv_w1,
+                l4_timeout_t timeout,
+                l4_msgdope_t *result,
+                l4_msgtag_t *rtag);
 
 /**
  * IPC reply and wait, send a reply to a client and wait for next message
@@ -422,17 +422,17 @@ l4_ipc_reply_and_wait(l4_threadid_t dest,
 
 L4_INLINE int
 l4_ipc_reply_and_wait_tag(l4_threadid_t dest,
-                      const void *snd_msg,
-                      l4_umword_t snd_dword0,
-                      l4_umword_t snd_dword1,
-                      l4_msgtag_t tag,
-                      l4_threadid_t *src,
-                      void *rcv_msg,
-                      l4_umword_t *rcv_dword0,
-                      l4_umword_t *rcv_dword1,
-                      l4_timeout_t timeout,
-                      l4_msgdope_t *result,
-                      l4_msgtag_t *rtag);
+                          const void *snd_msg,
+                          l4_umword_t snd_dword0,
+                          l4_umword_t snd_dword1,
+                          l4_msgtag_t tag,
+                          l4_threadid_t *src,
+                          void *rcv_msg,
+                          l4_umword_t *rcv_dword0,
+                          l4_umword_t *rcv_dword1,
+                          l4_timeout_t timeout,
+                          l4_msgdope_t *result,
+                          l4_msgtag_t *rtag);
 
 
 L4_INLINE int
@@ -499,14 +499,14 @@ l4_ipc_send(l4_threadid_t dest,
             l4_timeout_t timeout,
             l4_msgdope_t *result);
 
-L4_INLINE int 
+L4_INLINE int
 l4_ipc_send_tag(l4_threadid_t dest,
-            const void *snd_msg,
-            l4_umword_t w0,
-            l4_umword_t w1,
-            l4_msgtag_t tag,
-            l4_timeout_t timeout,
-            l4_msgdope_t *result);
+                const void *snd_msg,
+                l4_umword_t w0,
+                l4_umword_t w1,
+                l4_msgtag_t tag,
+                l4_timeout_t timeout,
+                l4_msgdope_t *result);
 /**
  * IPC wait, wait for message from any source
  * \ingroup api_calls_ipc
@@ -567,12 +567,12 @@ l4_ipc_wait(l4_threadid_t *src,
 
 L4_INLINE int
 l4_ipc_wait_tag(l4_threadid_t *src,
-            void *rcv_msg,
-            l4_umword_t *rcv_dword0,
-            l4_umword_t *rcv_dword1,
-            l4_timeout_t timeout,
-            l4_msgdope_t *result,
-	    l4_msgtag_t *tag);
+                void *rcv_msg,
+                l4_umword_t *rcv_dword0,
+                l4_umword_t *rcv_dword1,
+                l4_timeout_t timeout,
+                l4_msgdope_t *result,
+	        l4_msgtag_t *tag);
 
 /**
  * IPC receive, wait for a message from a specified thread
@@ -635,12 +635,12 @@ l4_ipc_receive(l4_threadid_t src,
 
 L4_INLINE int
 l4_ipc_receive_tag(l4_threadid_t src,
-               void *rcv_msg,
-               l4_umword_t *rcv_w0,
-               l4_umword_t *rcv_w1,
-               l4_timeout_t timeout,
-               l4_msgdope_t *result,
-               l4_msgtag_t *tag);
+                   void *rcv_msg,
+                   l4_umword_t *rcv_w0,
+                   l4_umword_t *rcv_w1,
+                   l4_timeout_t timeout,
+                   l4_msgdope_t *result,
+                   l4_msgtag_t *tag);
 
 /**
  * Sleep for an amount of time.
@@ -648,7 +648,7 @@ l4_ipc_receive_tag(l4_threadid_t src,
  *
  * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  *
- * \return  error code: 
+ * \return  error code:
  *          - #L4_IPC_RETIMEOUT Timeout during receive operation (expected!)
  *          - #L4_IPC_RECANCELED Receive operation canceled by another thread.
  *          - #L4_IPC_REABORTED Receive operation aborted by another thread.
@@ -731,10 +731,10 @@ l4_ipc_call(l4_threadid_t dest,
             l4_timeout_t timeout,
             l4_msgdope_t *result)
 {
-  l4_msgtag_t tag;
+  l4_msgtag_t dummytag;
   return l4_ipc_call_tag(dest, snd_msg, snd_dword0, snd_dword1,
-      l4_msgtag(0,0,0,0), rcv_msg, rcv_dword0, rcv_dword1, timeout, result,
-      &tag);
+                         l4_msgtag(0,0,0,0), rcv_msg,
+                         rcv_dword0, rcv_dword1, timeout, result, &dummytag);
 }
 
 L4_INLINE int
@@ -749,10 +749,11 @@ l4_ipc_reply_and_wait(l4_threadid_t dest,
                       l4_timeout_t timeout,
                       l4_msgdope_t *result)
 {
-  l4_msgtag_t dummy;
+  l4_msgtag_t dummytag;
   return l4_ipc_reply_and_wait_tag(dest, snd_msg, snd_dword0, snd_dword1,
-      l4_msgtag(0,0,0,0), src, rcv_msg, rcv_dword0, rcv_dword1,
-      timeout, result, &dummy);
+                                   l4_msgtag(0,0,0,0), src,
+                                   rcv_msg, rcv_dword0, rcv_dword1,
+                                   timeout, result, &dummytag);
 }
 
 L4_INLINE int
@@ -763,9 +764,9 @@ l4_ipc_wait(l4_threadid_t *src,
             l4_timeout_t timeout,
             l4_msgdope_t *result)
 {
-  l4_msgtag_t tag;
+  l4_msgtag_t dummytag;
   return l4_ipc_wait_tag(src, rcv_msg, rcv_dword0, rcv_dword1, timeout, result,
-      &tag);
+                         &dummytag);
 }
 
 L4_INLINE int
@@ -777,7 +778,7 @@ l4_ipc_send(l4_threadid_t dest,
             l4_msgdope_t *result)
 {
   return l4_ipc_send_tag(dest, snd_msg, snd_dword0, snd_dword1,
-      l4_msgtag(0,0,0,0), timeout, result);
+                         l4_msgtag(0,0,0,0), timeout, result);
 }
 
 L4_INLINE int
@@ -788,9 +789,9 @@ l4_ipc_receive(l4_threadid_t src,
                l4_timeout_t timeout,
                l4_msgdope_t *result)
 {
-  l4_msgtag_t tag;
+  l4_msgtag_t dummytag;
   return l4_ipc_receive_tag(src, rcv_msg, rcv_dword0, rcv_dword1, timeout,
-      result, &tag);
+                            result, &dummytag);
 }
 
 L4_INLINE int

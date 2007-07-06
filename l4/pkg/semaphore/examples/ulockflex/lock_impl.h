@@ -18,6 +18,15 @@
 #define LOCK_INIT(lock) l4_simple_unlock(lock)
 #define LOCK_DOWN(lock) l4_simple_lock(lock)
 #define LOCK_UP(lock) l4_simple_unlock(lock)
+
+#elif LOCAL_DP_SEM_NOSERTHREAD
+#include "dp_sem.h"
+
+#define LOCK_TYPE dp_sem_t
+#define LOCK_SIZE sizeof(dp_sem_t)
+#define LOCK_INIT(lock) dp_sem_init(lock)
+#define LOCK_DOWN(lock) dp_sem_down(lock)
+#define LOCK_UP(lock) dp_sem_up(lock)
 #endif
 
 #ifndef LOCK_TYPE

@@ -88,7 +88,7 @@ pan_vmem(void)
 
   if (next_super_offs + status_area*VESA_BPL > gr_vmem_size)
     {
-      printf("WARNING: Can't pan display: Only have %dkB video memory "
+      printf("WARNING: Can't pan display: Only have %zdkB video memory "
 	     "need %ldkB\n", gr_vmem_size >> 10, 
 	     (next_super_offs + status_area*VESA_BPL) >> 10);
       return;
@@ -130,9 +130,6 @@ init_gmode(void)
   l4util_mb_vbe_mode_t *vbi;
   l4util_mb_vbe_ctrl_t *vbe;
 
-  /* tell con_hw lib if l4io should be used */
-  con_hw_set_l4io(use_s0);
-
   /* 1) Mode switch */
   if (vbemode == 0 || x86emu_int10_set_vbemode(vbemode, &vbe, &vbi) != 0)
     {
@@ -162,7 +159,7 @@ init_gmode(void)
   VESA_BLUE_OFFS   = vbi->blue_field_position;
   VESA_BLUE_SIZE   = vbi->blue_mask_size;
 
-  printf("VESA reports %dx%d@%d %dbpl (%04x) [%dkB]\n"
+  printf("VESA reports %dx%d@%d %dbpl (%04x) [%zdkB]\n"
          "Color mapping: red=%d:%d green=%d:%d blue=%d:%d res=%d:%d\n",
 	 VESA_XRES, VESA_YRES, vbi->bits_per_pixel, vbi->bytes_per_scanline,
 	 vbi->mode_attributes, gr_vmem_size >> 10,

@@ -19,54 +19,26 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef USE_OSKIT
-#include "stdint_oskit.h"
-#else
 #include <stdint.h>
-#endif
+#include <l4/util/cpu.h>
 #include "mm_accel.h"
 
 static uint32_t x86_accel (void)
 {
-    uint32_t eax, ebx, ecx, edx;
+    unsigned long eax, ebx, ecx, edx;
     int AMD;
     uint32_t caps;
 
-#define cpuid(op,eax,ebx,ecx,edx)	\
-    asm ("pushl %%ebx\n\t"		\
-         "cpuid\n\t"			\
-	 "movl  %%ebx, %%esi\n\t"	\
-	 "popl %%ebx\n\t"		\
-	 : "=a" (eax),			\
-	   "=S" (ebx),			\
-	   "=c" (ecx),			\
-	   "=d" (edx)			\
-	 : "a" (op)			\
-	 : "cc")
-
-    asm ("pushfl\n\t"
-	 "popl %0\n\t"
-	 "movl %0,%1\n\t"
-	 "xorl $0x200000,%0\n\t"
-	 "pushl %0\n\t"
-	 "popfl\n\t"
-	 "pushfl\n\t"
-	 "popl %0"
-         : "=a" (eax),
-	   "=c" (ecx)
-	 :
-	 : "cc");
-
-    if (eax == ecx)		// no cpuid
+    if (!l4util_cpu_has_cpuid())
 	return 0;
 
-    cpuid (0x00000000, eax, ebx, ecx, edx);
+    l4util_cpu_cpuid (0x00000000, &eax, &ebx, &ecx, &edx);
     if (!eax)			// vendor string only
 	return 0;
 
     AMD = (ebx == 0x68747541) && (ecx == 0x444d4163) && (edx == 0x69746e65);
 
-    cpuid (0x00000001, eax, ebx, ecx, edx);
+    l4util_cpu_cpuid (0x00000001, &eax, &ebx, &ecx, &edx);
     if (! (edx & 0x00800000))	// no MMX
 	return 0;
 
@@ -74,11 +46,11 @@ static uint32_t x86_accel (void)
     if (edx & 0x02000000)	// SSE - identical to AMD MMX extensions
 	caps = MM_ACCEL_X86_MMX | MM_ACCEL_X86_MMXEXT;
 
-    cpuid (0x80000000, eax, ebx, ecx, edx);
+    l4util_cpu_cpuid (0x80000000, &eax, &ebx, &ecx, &edx);
     if (eax < 0x80000001)	// no extended capabilities
 	return caps;
 
-    cpuid (0x80000001, eax, ebx, ecx, edx);
+    l4util_cpu_cpuid (0x80000001, &eax, &ebx, &ecx, &edx);
 
     if (edx & 0x80000000)
 	caps |= MM_ACCEL_X86_3DNOW;

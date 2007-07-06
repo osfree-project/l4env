@@ -38,7 +38,7 @@ binary_name(char *buffer, l4_size_t size)
       if (!(mbi->flags & L4UTIL_MB_CMDLINE))
 	return 0;
 
-      if (!(n = (char*)mbi->cmdline))
+      if (!(n = (char*)(l4_addr_t)mbi->cmdline))
 	return 0;
     }
 

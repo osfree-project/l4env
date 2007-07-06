@@ -4,6 +4,8 @@
 #include <l4/sys/types.h>
 #include <l4/crtx/ctor.h>
 
+EXTERN_C_BEGIN
+
 struct arm_lcd_ops {
   int          (*probe)(void);
   void *       (*get_fb)(void);
@@ -38,5 +40,6 @@ void arm_lcd_register_driver(struct arm_lcd_ops *);
     static void __register_ops(void) { arm_lcd_register_driver(ops); }  \
     L4C_CTOR(__register_ops, L4CTOR_AFTER_BACKEND)
 
+EXTERN_C_END
 
 #endif /* ! __ARM_DRIVERS__LCD__INCLUDE__LCD_H__ */

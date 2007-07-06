@@ -26,22 +26,84 @@
 #include <l4/sigma0/sigma0.h>
 #include <l4/arm_drivers/common.h>
 
-static unsigned long kmi0_base;
+#define AMBA_NR_IRQS	2
+
+struct amba_device {
+	struct device		dev;
+	struct resource		res;
+	u64			dma_mask;
+	unsigned int		periphid;
+	unsigned int		irq[AMBA_NR_IRQS];
+};
+
+#define __RV_EB_926
+//#define __RV_EB_MC
+//#define __INTEGRATOR
+
+#ifdef __RV_EB_926
+static struct amba_device dev_kmi_k = {
+	.dev = {
+		.bus_id = "fpga:06",
+	},
+	.res = {
+		.start = 0x10006000,
+		.end   = 0x10006fff,
+	},
+	.irq = { 32+20, 0},
+};
+static struct amba_device dev_kmi_m = {
+	.dev = {
+		.bus_id = "fpga:07",
+	},
+	.res = {
+		.start = 0x10007000,
+		.end   = 0x10007fff,
+	},
+	.irq = { 32+21, 0},
+};
+#endif
+
+#ifdef __RV_EB_MC
+static struct amba_device dev_kmi_k = {
+	.dev = {
+		.bus_id = "fpga:06",
+	},
+	.res = {
+		.start = 0x10006000,
+		.end   = 0x10006fff,
+	},
+	.irq = { 39, 0},
+};
+static struct amba_device dev_kmi_m = {
+	.dev = {
+		.bus_id = "fpga:07",
+	},
+	.res = {
+		.start = 0x10007000,
+		.end   = 0x10007fff,
+	},
+	.irq = { 40, 0},
+};
+#endif
+
+#ifdef __INTEGRATOR
+static struct amba_device dev_kmi_k = {
+	.res = {
+		.start = 0x18000000,
+		.end   = 0x18000fff,
+	},
+	.irq = { 20, 0},
+};
+static struct amba_device dev_kmi_m = {
+	.res = {
+		.start = 0x19000000,
+		.end   = 0x19000fff,
+	},
+	.irq = { 21, 0},
+};
+#endif
 
 enum {
-  // realview eb
-#if 0
-  KMI0_PHYS_BASE = 0x10006000,
-  KMI0_SIZE      = 0x1000,
-#endif
-  // integrator cp
-#if 1
-  KMI0_PHYS_BASE = 0x18000000,
-  KMI0_SIZE      = 0x1000,
-#endif
-
-
-
   // DATA
   DATA_RESET          = 0xff,
   DATA_RESET_RESPONSE = 0xaa,
@@ -51,7 +113,7 @@ enum {
 };
 
 
-#define KMI_BASE	(kmi0_base)
+#define KMI_BASE	(kmi->base)
 
 struct amba_kmi_port {
 	struct serio		*io;
@@ -64,11 +126,12 @@ struct amba_kmi_port {
 
 static irqreturn_t amba_kmi_int(int irq, void *dev_id, struct pt_regs *regs)
 {
+	struct amba_kmi_port *kmi = dev_id;
 	unsigned int status = readb(KMIIR);
 	int handled = IRQ_NONE;
 
 	while (status & KMIIR_RXINTR) {
-		serio_interrupt(dev_id, readb(KMIDATA), 0, regs);
+		serio_interrupt(kmi->io, readb(KMIDATA), 0, regs);
 		status = readb(KMIIR);
 		handled = IRQ_HANDLED;
 	}
@@ -78,6 +141,7 @@ static irqreturn_t amba_kmi_int(int irq, void *dev_id, struct pt_regs *regs)
 
 static int amba_kmi_write(struct serio *io, unsigned char val)
 {
+	struct amba_kmi_port *kmi = io->port_data;
 	unsigned int timeleft = 10000; /* timeout in 100ms */
 
 	while ((readb(KMISTAT) & KMISTAT_TXEMPTY) == 0 && timeleft--)
@@ -91,6 +155,7 @@ static int amba_kmi_write(struct serio *io, unsigned char val)
 
 static int amba_kmi_open(struct serio *io)
 {
+	struct amba_kmi_port *kmi = io->port_data;
 	unsigned int divisor;
 	int ret;
 
@@ -98,9 +163,9 @@ static int amba_kmi_open(struct serio *io)
 	writeb(divisor, KMICLKDIV);
 	writeb(KMICR_EN, KMICR);
 
-	ret = request_irq(20, amba_kmi_int, 0, "kmi-pl050", io);
+	ret = request_irq(kmi->irq, amba_kmi_int, 0, "kmi-pl050", kmi);
 	if (ret) {
-		printk(KERN_ERR "kmi: failed to claim IRQ%d\n", 20);
+		printk(KERN_ERR "kmi: failed to claim IRQ%d\n", kmi->irq);
 		writeb(0, KMICR);
 		return ret;
 	}
@@ -111,25 +176,50 @@ static int amba_kmi_open(struct serio *io)
 
 static void amba_kmi_close(struct serio *io)
 {
+	struct amba_kmi_port *kmi = io->port_data;
+
 	writeb(0, KMICR);
-	free_irq(20, NULL);
+
+	free_irq(kmi->irq, kmi);
 }
 
-static int amba_kmi_probe(struct device *dev, void *id)
+static int amba_kmi_probe(struct amba_device *dev, void *id)
 {
+	struct amba_kmi_port *kmi;
 	struct serio *io;
 	int ret;
-	l4_threadid_t s0 = L4_NIL_ID;
 
-	/* Initialize keyboard */
-	s0.id.task = 2;
+	kmi = kmalloc(sizeof(struct amba_kmi_port), GFP_KERNEL);
+	io = kmalloc(sizeof(struct serio), GFP_KERNEL);
+	if (!kmi || !io) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
-	if ((kmi0_base = arm_driver_map_io_region(KMI0_PHYS_BASE, KMI0_SIZE)) == -1)
-	  {
-	    printf("arm_driver_map_io_region failed\n");
-	    return -1;
-	  }
-	printf("pl050: got memory, virtual base at %lx\n", kmi0_base);
+	memset(kmi, 0, sizeof(struct amba_kmi_port));
+	memset(io, 0, sizeof(struct serio));
+
+	io->type	= SERIO_8042;
+	io->write	= amba_kmi_write;
+	io->open	= amba_kmi_open;
+	io->close	= amba_kmi_close;
+	strlcpy(io->name, dev->dev.bus_id, sizeof(io->name));
+	strlcpy(io->phys, dev->dev.bus_id, sizeof(io->phys));
+	io->port_data   = kmi;
+	//io->dev.parent	= &dev->dev;
+
+	if (KMI_SIZE > 0x1000) {
+		printk("KMI_SIZE greater than expected (%x)\n", KMI_SIZE);
+		return -1;
+	}
+
+	kmi->io		= io;
+	if ((kmi->base = (void *)arm_driver_map_io_region(dev->res.start, 0x1000))
+	    == (void *)-1) {
+		printf("arm_driver_map_io_region failed\n");
+		return -1;
+	}
+	printf("pl050: got memory %lx, virtual base at %p\n", dev->res.start, kmi->base);
 
 	// setup clock and enable
 	writeb(0, KMICR);
@@ -141,35 +231,22 @@ static int amba_kmi_probe(struct device *dev, void *id)
 	// clear data again
 	readb(KMIDATA);
 
-	printf("pl050: waiting for reset %lx %lx\n", KMIDATA, KMISTAT);
+	printf("pl050: waiting for reset %p %p\n", KMIDATA, KMISTAT);
 	// wait for reset response
 	while (1) {
 		if (readb(KMISTAT) & KMISTAT_RXFULL) {
-		  unsigned long val = readb(KMIDATA);
-		  printf("val = %ld\n", val);
-		//	if (val == DATA_RESET_RESPONSE)
+			unsigned long val = readb(KMIDATA);
+			printf("val = %ld\n", val);
+			if (val == DATA_RESET_RESPONSE)
 				break;
 		}
 
-		l4_sleep(2);
+		l4_sleep(10);
 	}
-	printf("received kbd reset\n");
+	printf("received kmi reset\n");
 
-	io = kmalloc(sizeof(struct serio), GFP_KERNEL);
-	if (!io) {
-		ret = -ENOMEM;
-		goto out;
-	}
+	kmi->irq	= dev->irq[0];
 
-	memset(io, 0, sizeof(struct serio));
-
-	io->type	= SERIO_8042;
-	io->write	= amba_kmi_write;
-	io->open	= amba_kmi_open;
-	io->close	= amba_kmi_close;
-	strlcpy(io->name, "1", sizeof(io->name));
-	strlcpy(io->phys, "2", sizeof(io->phys));
-	//io->dev.parent	= &dev->dev;
 
 	serio_register_port(io);
 	return 0;
@@ -179,17 +256,27 @@ static int amba_kmi_probe(struct device *dev, void *id)
 	return ret;
 }
 
-static int __init amba_kmi_init(void)
+static int __init amba_kmi_init_k(void)
 {
-	return amba_kmi_probe(NULL, NULL);
+	return amba_kmi_probe(&dev_kmi_k, NULL);
 }
 
-static void __exit amba_kmi_exit(void)
+static int __init amba_kmi_init_m(void)
+{
+	return amba_kmi_probe(&dev_kmi_m, NULL);
+}
+
+static void __exit amba_kmi_exit_k(void)
+{
+}
+static void __exit amba_kmi_exit_m(void)
 {
 }
 
-module_init(amba_kmi_init);
-module_exit(amba_kmi_exit);
+module_init(amba_kmi_init_k);
+module_init(amba_kmi_init_m);
+module_exit(amba_kmi_exit_k);
+module_exit(amba_kmi_exit_m);
 
 MODULE_AUTHOR("Russell King <rmk@arm.linux.org.uk>");
 MODULE_DESCRIPTION("AMBA KMI controller driver");

@@ -5,7 +5,7 @@ include $(L4DIR)/mk/Makeconf
 
 TARGET		 = libld-l4.s.so
 MODE		 = l4env
-SYSTEMS		 = x86-l4v2 arm-l4v2
+SYSTEMS		 = x86-l4v2 arm-l4v2 amd64-l4v2
 PRIVATE_INCDIR	 = $(PKGDIR)/lib/ldso \
 		   $(PKGDIR)/lib/ldso/include \
 		   $(PKGDIR)/lib/ldso/include/sysdeps/linux/$(LDSO_ARCH_NAME) \
@@ -13,6 +13,7 @@ PRIVATE_INCDIR	 = $(PKGDIR)/lib/ldso \
 		   $(PKGDIR)/lib/ldso/include/ldso/$(LDSO_ARCH_NAME) \
 		   $(PKGDIR)/lib/ldso/include/ldso
 LDSO_ARCH_NAME_x86 = i386
+LDSO_ARCH_NAME_amd64 = x86_64
 LDSO_ARCH_NAME_arm = arm
 LDSO_ARCH_NAME	= $(LDSO_ARCH_NAME_$(ARCH))
 DEFINES		 += -D__LIBDL_SHARED__ \

@@ -261,7 +261,7 @@ static void io_loop(void)
  */
 static void do_args(int argc, char *argv[])
 {
-  char c;
+  signed char c;
 
   static int long_check;
   static int long_optind;
@@ -368,12 +368,14 @@ int main(int argc, char *argv[])
       /* init Fiasco's virtual H/W */
       if ((error = io_ux_init())) return error;
 
+#ifndef ARCH_arm
   if ((error = OMEGA0_init()))
     {
       LOGdL(DEBUG_ERRORS, "omega0 initialization failed (%d)\n", error);
       return error;
     }
   io_info.omega0 = 1;
+#endif
 
   /* we are up -> register at names */
   if (!names_register(IO_NAMES_STR))

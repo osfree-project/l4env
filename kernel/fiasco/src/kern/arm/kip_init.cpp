@@ -52,7 +52,7 @@ namespace
 	0, (sizeof(Kip) << (sizeof(Mword)*4)) | Num_mem_descs, 0, 0,
 	0, {},
 	0, {},
-	0, 0, 0,
+	0, 0, 0, 0,
 	Config::Vkey_irq, {}
       },
       "",

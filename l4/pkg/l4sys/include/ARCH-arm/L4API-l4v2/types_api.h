@@ -14,11 +14,11 @@ typedef struct {
   l4_umword_t version_high:4;
 } l4_threadid_struct_t;
 
-/* 
- * L4 unique identifiers 
+/*
+ * L4 unique identifiers
  */
 typedef union l4_threadid_t {
-#ifdef __cplusplus 
+#ifdef __cplusplus
   // fake the compiler in syscall bindings
   static l4_threadid_t _convert(l4_threadid_t in) { return in; }
 #endif
@@ -36,7 +36,7 @@ typedef union {
   l4_umword_t raw;
 } l4_intrid_t;
 
-#define L4_NIL_ID_INIT 	     {raw:0}
+#define L4_NIL_ID_INIT	     {raw:0}
 #define L4_NIL_ID	     ((l4_threadid_t)L4_NIL_ID_INIT)
 #define L4_INVALID_ID_INIT   {raw:(l4_umword_t)-1}
 #define L4_INVALID_ID        ((l4_threadid_t)L4_INVALID_ID_INIT)
@@ -63,11 +63,11 @@ L4_INLINE int l4_is_invalid_id(l4_threadid_t id)
   return id.raw == (l4_umword_t)-1;
 }
 
-L4_INLINE l4_threadid_t 
+L4_INLINE l4_threadid_t
 l4_get_taskid(l4_threadid_t t)
 {
   t.id.lthread = 0;
-  return t; 
+  return t;
 }
 
 L4_INLINE int

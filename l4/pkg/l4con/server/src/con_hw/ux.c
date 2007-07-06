@@ -137,8 +137,3 @@ ux_probe(con_accel_t *accel)
   /* Do not unmap KIP, l4con needs it */
   return 0;
 }
-
-void
-con_hw_set_l4io(int use_l4io)
-{
-}

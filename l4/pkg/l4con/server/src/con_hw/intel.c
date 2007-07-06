@@ -49,7 +49,7 @@ static l4_addr_t   fb_offset;
 static l4_uint32_t pitch;
 static int         blitter_may_be_busy;
 
-static l4_uint32_t ring_base, ring_base_phys;
+static l4_addr_t   ring_base, ring_base_phys;
 static l4_uint32_t ring_space;
 static l4_uint32_t ring_head, ring_tail;
 const  l4_uint32_t ring_size      = 64*1024;
@@ -362,7 +362,7 @@ intel_probe(unsigned int bus, unsigned int devfn,
 
   if (size < hw_vid_mem_size)
     {
-      printf("Aperture size = %dKB (< %ldKB)\n", 
+      printf("Aperture size = %zdKB (< %ldKB)\n", 
 	    size/1024, hw_vid_mem_size/1024);
       return -L4_ENOTFOUND;
     }

@@ -4,6 +4,14 @@
 #include <dl-sysdep.h> // for do_rem
 #include <dl-features.h>
 
+/* provide some sane defaults */
+#ifndef do_rem
+# define do_rem(result, n, base) ((result) = (n) % (base))
+#endif
+#ifndef do_div_10
+# define do_div_10(result, remain) ((result) /= 10)
+#endif
+
 static size_t _dl_strlen(const char * str);
 static char *_dl_strcat(char *dst, const char *src);
 static char * _dl_strcpy(char * dst,const char *src);

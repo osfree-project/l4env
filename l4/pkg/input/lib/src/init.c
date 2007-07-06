@@ -93,11 +93,13 @@ int l4input_init(int prio, void (*handler)(struct l4input *))
 		if ((error=l4input_internal_input_init()) ||
 #ifndef ARCH_arm
 		    (error=l4input_internal_i8042_init()) ||
-		    (error=l4input_internal_psmouse_init()) ||
-#else
-		    (error=l4input_internal_amba_kmi_init()) ||
 #endif
+		    (error=l4input_internal_psmouse_init()) ||
 		    (error=l4input_internal_atkbd_init()) ||
+#ifdef ARCH_arm
+		    (error=l4input_internal_amba_kmi_init_k()) ||
+		    (error=l4input_internal_amba_kmi_init_m()) ||
+#endif
 #ifndef ARCH_arm
 		    (error=l4input_internal_pcspkr_init()) ||
 #endif

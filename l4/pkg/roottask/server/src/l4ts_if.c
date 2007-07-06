@@ -1,7 +1,7 @@
 /* l4ts interface for roottask */
 #include "task.h"
 #include "pager.h"
-#include <l4/generic_ts/generic_ts-server.h>
+#include <l4/task/generic_ts-server.h>
 
 #include <stdio.h>
 

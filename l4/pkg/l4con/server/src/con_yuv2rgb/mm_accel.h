@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
 uint32_t mm_accel (void);
 #else
 uint32_t inline mm_accel (void);

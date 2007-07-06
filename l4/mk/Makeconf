@@ -266,6 +266,8 @@ ifeq ($(USE_DIETLIBC),y)
   DEFINES	+= -DUSE_DIETLIBC=y
   USE_DIETLIBC	= y
   LIBC_TYPE	= diet
+  $(warning The use of dietlibc is deprecated, please switch to uclibc.)
+  $(warning Dietlibc will soon be removed from the tree.)
 else
   # uClibc explicitly set for all architectures
   DEFINES	+= -DUSE_UCLIBC=y

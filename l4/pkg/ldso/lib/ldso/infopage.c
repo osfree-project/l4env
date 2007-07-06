@@ -58,10 +58,10 @@ infopage_add_mmap_area(void)
     {
       if (l4exc->addr < MMAP_END && l4exc->addr+l4exc->size > MMAP_START)
 	{
-	  LOGd(DBG, "mmap area ("l4_addr_fmt"-"l4_addr_fmt") overlaps region %d"
+	  LOGd(DBG, "mmap area ("l4_addr_fmt"-"l4_addr_fmt") overlaps region %ld"
 	            " ("l4_addr_fmt"-"l4_addr_fmt")",
 		    (l4_addr_t)MMAP_START, (l4_addr_t)MMAP_END,
-		    l4exc-global_env->section,
+		    (unsigned long)(l4exc - global_env->section),
 		    l4exc->addr, l4exc->addr+l4exc->size);
 	  _dl_exit(1);
 	}

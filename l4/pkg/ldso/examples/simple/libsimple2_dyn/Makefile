@@ -3,7 +3,7 @@ L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= libsimple2_dyn.s.so
 MODE		= l4env
-SYSTEMS		= x86-l4v2 arm-l4v2
+SYSTEMS		= x86-l4v2 arm-l4v2 amd64-l4v2
 SRC_C		= main.c
 
 include $(L4DIR)/mk/lib.mk

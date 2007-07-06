@@ -45,15 +45,11 @@ int  con_hw_init(unsigned short xres, unsigned short yres, unsigned char *bits,
 		 l4_addr_t vid_mem_addr, l4_size_t vid_mem_size,
      		 con_accel_t *accel, l4_uint8_t **map_vid_mem_addr);
 
-void con_hw_set_l4io(int l4io);
-
 extern l4_addr_t      hw_vid_mem_addr, hw_vid_mem_size;
 extern l4_addr_t      hw_map_vid_mem_addr;
 extern unsigned short hw_xres, hw_yres;
 extern unsigned char  hw_bits;
 extern unsigned short hw_bpl;
-
-extern int            con_hw_not_use_l4io;
 
 #define ACCEL_FAST_COPY		0x00000001
 #define ACCEL_FAST_FILL		0x00000002

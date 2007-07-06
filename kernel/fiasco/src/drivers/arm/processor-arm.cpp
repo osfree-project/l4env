@@ -165,7 +165,7 @@ void Proc::halt()
 }
 
 //----------------------------------------------------------------
-IMPLEMENTATION[arm && realview]:
+IMPLEMENTATION[arm && mpcore]:
 
 IMPLEMENT static inline
 void Proc::halt()

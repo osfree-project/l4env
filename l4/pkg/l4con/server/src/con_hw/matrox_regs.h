@@ -16,40 +16,40 @@
 extern l4_addr_t mga_mmio_vbase;
 
 
-static inline unsigned 
-mga_readb(unsigned va, unsigned offs) 
+static inline l4_uint8_t
+mga_readb(l4_addr_t va, unsigned offs) 
 {
-  return *(volatile unsigned char*)(va + offs);
+  return *(volatile l4_uint8_t*)(va + offs);
 }
 
-static inline unsigned 
-mga_readw(unsigned va, unsigned offs) 
+static inline l4_uint16_t
+mga_readw(l4_addr_t va, unsigned offs) 
 {
-  return *(volatile unsigned short*)(va + offs);
+  return *(volatile l4_uint16_t*)(va + offs);
 }
 
-static inline unsigned 
-mga_readl(unsigned va, unsigned offs) 
+static inline l4_uint32_t
+mga_readl(l4_addr_t va, unsigned offs) 
 {
-  return *(volatile unsigned*)(va + offs);
+  return *(volatile l4_uint32_t*)(va + offs);
 }
 
-static inline void 
-mga_writeb(unsigned va, unsigned offs, unsigned char value) 
+static inline void
+mga_writeb(l4_addr_t va, unsigned offs, unsigned char value) 
 {
-  *(volatile unsigned char*)(va + offs) = value;
+  *(volatile l4_uint8_t*)(va + offs) = value;
 }
 
-static inline void 
-mga_writew(unsigned va, unsigned offs, unsigned short value) 
+static inline void
+mga_writew(l4_addr_t va, unsigned offs, unsigned short value) 
 {
-  *(volatile unsigned short*)(va + offs) = value;
+  *(volatile l4_uint16_t*)(va + offs) = value;
 }
 
-static inline void 
-mga_writel(unsigned va, unsigned offs, unsigned value) 
+static inline void
+mga_writel(l4_addr_t va, unsigned offs, unsigned value) 
 {
-  *(volatile unsigned *)(va + offs) = value;
+  *(volatile l4_uint32_t*)(va + offs) = value;
 }
 
 #define mga_inb(addr)      mga_readb(mga_mmio_vbase, (addr))

@@ -21,17 +21,19 @@ ROOT_SRC_C            = reboot.c $(ROOT_SRC_C_only_$(ARCH))
 
 
 SRC_C_libl4util.a_x86            = $(ALL_SRC_C_NOAPI)
+SRC_C_libl4util.a_amd64          = $(ALL_SRC_C_NOAPI)
 SRC_C_libl4util.a_x86-l4v2       = $(ALL_SRC_C_L4API) ARCH-x86/setjmp.c
 SRC_C_libl4util.a_amd64-l4v2     = $(ALL_SRC_C_L4API) ARCH-amd64/setjmp.c
 SRC_C_libl4util.a_arm-l4v2       = $(ALL_SRC_C_L4API)
 SRC_C_libl4util.p.a_x86-l4v2     = $(ALL_SRC_C_L4API) ARCH-x86/setjmp.c
+SRC_C_libl4util.p.a_amd64-l4v2   = $(ALL_SRC_C_L4API) ARCH-amd64/setjmp.c
 SRC_C_libl4util.p.a_arm-l4v2     = $(ALL_SRC_C_L4API)
 SRC_S_libl4util.a_x86-l4v2       = $(SRC_S_$(ARCH))
+SRC_S_libl4util.a_amd64-l4v2     = $(SRC_S_$(ARCH))
 SRC_S_libl4util.a_arm-l4v2       = $(SRC_S_$(ARCH))
 SRC_S_libl4util.p.a_x86-l4v2     = $(SRC_S_$(ARCH))
+SRC_S_libl4util.p.a_amd64-l4v2   = $(SRC_S_$(ARCH))
 SRC_S_libl4util.p.a_arm-l4v2     = $(SRC_S_$(ARCH))
-SRC_C_libl4util.a_amd64          = $(ALL_SRC_C_NOAPI)
-SRC_S_libl4util.a_amd64-l4v2     = $(SRC_S_$(ARCH))
 
 SRC_C_libl4util_root.a_x86-l4v2    = $(ROOT_SRC_C)
 SRC_C_libl4util_root.a_amd64-l4v2  = $(ROOT_SRC_C)

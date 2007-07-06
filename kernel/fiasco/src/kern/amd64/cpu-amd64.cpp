@@ -177,10 +177,13 @@ PUBLIC static inline
 Unsigned64
 Cpu::rdpmc (Unsigned32 idx, Unsigned32)
 {
-  Unsigned64 pmc;
+  union {
+    Unsigned64 pmc;
+    Unsigned32 lh[2];
+  } m;
 
-  asm volatile ("rdpmc" : "=A" (pmc) : "c" (idx));
-  return pmc;
+  asm volatile ("rdpmc" : "=a" (m.lh[0]), "=d" (m.lh[1]) : "c" (idx));
+  return m.pmc;
 }
 
 PUBLIC static inline

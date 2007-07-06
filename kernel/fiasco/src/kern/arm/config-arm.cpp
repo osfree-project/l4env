@@ -81,7 +81,7 @@ public:
   };
 };
 
-INTERFACE [arm && realview && 926]:
+INTERFACE [arm && realview && !mpcore]:
 
 EXTENSION class Config
 {

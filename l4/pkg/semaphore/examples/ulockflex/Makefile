@@ -17,7 +17,9 @@ DEFAULT_RELOC = 0x00440000
 # semaphore lib
 CFLAGS += -DLOCAL_SEM
 # l4util lock
-# CFLAGS += -DL4UTIL_LOCK
+#CFLAGS += -DL4UTIL_LOCK
+# semaphore lib without serializer thread
+#CFLAGS += -DLOCAL_DP_SEM_NOSERTHREAD
 
 # include prog role
 include $(L4DIR)/mk/prog.mk

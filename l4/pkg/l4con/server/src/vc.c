@@ -22,7 +22,7 @@
 #include <l4/util/macros.h>
 #include <l4/dm_mem/dm_mem.h>
 #include <l4/dm_phys/dm_phys.h>
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
 #include <l4/util/rdtsc.h>
 #include <l4/util/idt.h>
 #include <l4/generic_io/libio.h>
@@ -118,7 +118,7 @@ convert_color(struct l4con_vc *vc, l4con_pslim_color_t *color)
 static int
 vc_l4io_init(void)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   l4io_info_t *io_info_addr = (l4io_info_t*)0;
 
   if (l4io_init(&io_info_addr, L4IO_DRV_INVALID))
@@ -621,11 +621,11 @@ vc_show_dmphys_poolsize(struct l4con_vc *this_vc)
   l4con_pslim_rect_t rect = 
     { this_vc->xres - 180, this_vc->client_yres, 80, status_area };
   vc_fill(this_vc, 0, &rect, bgc);
-  sprintf(str, "%3d/%dMB", free/(1<<20), size/(1<<20));
+  sprintf(str, "%3zd/%zdMB", free/(1<<20), size/(1<<20));
   vc_puts(this_vc, 0, str, strlen(str), rect.x, rect.y+2, fgc, bgc);
 }
 
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
 static void
 show_counters(struct l4con_vc *this_vc)
 {
@@ -674,7 +674,7 @@ vc_show_history(struct l4con_vc *this_vc,
 void
 vc_show_cpu_load(struct l4con_vc *this_vc)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   static l4_uint32_t tsc, pmc;
   static l4_uint8_t  history_val[6*8]; // 6 characters == "xxx.x%"!
   l4_uint32_t new_tsc = l4_rdtsc_32(), new_pmc = l4_rdpmc_32(0);
@@ -1342,7 +1342,7 @@ con_vc_direct_setfb_component(CORBA_Object _dice_corba_obj,
       return -L4_EINVAL;
     }
 
-  LOG_printf("Mapped client FB to %08lx size %08x\n",
+  LOG_printf("Mapped client FB to %08lx size %08zx\n",
             (l4_addr_t)vc->vfb, size);
 
   return 0;
@@ -1493,7 +1493,7 @@ con_vc_stream_cscs_component(CORBA_Object _dice_corba_obj,
 
   printf("Opening cscs stream %dx%d => %dx%d\n",
          config.src.w, config.src.h, config.dest.w, config.dest.h);
-  buffer->fpage = l4_fpage((l4_uint32_t)config.dga_addr, 
+  buffer->fpage = l4_fpage((l4_addr_t)config.dga_addr, 
 			    l4util_log2(config.frame_size),
 			   L4_FPAGE_RW, L4_FPAGE_MAP);
 

@@ -1,20 +1,27 @@
-# -*- Makefile -*-
+# vim:set ft=make:
 
 TARGET_x86	= con con-ux
+TARGET_amd64	= con
 TARGET_arm	= con
 TARGET		= $(TARGET_$(ARCH))
-DEFAULT_RELOC_x86 = 0x00b00000
-DEFAULT_RELOC_arm = 0x00320000
+DEFAULT_RELOC_x86   = 0x00b00000
+DEFAULT_RELOC_amd64 = 0x00b00000
+DEFAULT_RELOC_arm   = 0x00320000
 
 DEPENDS_PKGS	= x86emu
 
+_LIBS_vmm	= -ll4vmm -ll4vmm-cxx
+
 PRIVATE_INCDIR	= $(SRC_DIR)
 LIBS_x86	= -lomega0
+LIBS_amd64	= -lomega0
 LIBS_ALL	= -L$(OBJ_DIR)/con_yuv2rgb/OBJ-$(ARCH)_$(CPU) -lcon_yuv2rgb \
 		  $(LIBS_$(ARCH)) -levents -lparsecmdline -ldm_phys
 LIBS_con_x86	= -lio -linput  $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
-		  -lcon_hw -lx86emu_int10 -lpci -lio -lx86emu
-LIBS_con_arm	= -linput $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
+		  -lcon_hw -lx86emu_int10 -lx86emu $(LIBS_vmm) \
+		  -lomega0 -lio -lgeneric_fprov
+LIBS_con_amd64	= $(LIBS_con_x86)
+LIBS_con_arm	= -lio -linput $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
 		  -lcon_hw -larm_lcd.o -larm_drv_common.o
 LIBS_con	= $(LIBS_con_$(ARCH))
 LIBS_con-ux	= -lio -linput $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
@@ -24,9 +31,6 @@ SRC_C_con	= $(SRC_C_con_$(ARCH))
 SRC_C_con-ux	= $(SRC_C_con-ux_$(ARCH))
 CPPFLAGS	+= -DDEBUG
 
-LDFLAGS_arm	= -Wl,--no-warn-mismatch
-LDFLAGS		= $(LDFLAGS_$(ARCH))
-
 OBJS		+= font.o
 
 CLIENTIDL	= l4con.idl stream.idl
@@ -34,12 +38,20 @@ SERVERIDL	= l4con.idl
 
 all::
 
+ifeq ($(ARCH),amd64)
+vpath %.c $(SRC_DIR)/ARCH-x86
+else
 vpath %.c $(SRC_DIR)/ARCH-$(ARCH)
+endif
 vpath %.psf $(SRC_DIR)/
 
 %.o: %.psf
 	@$(COMP_MESSAGE)
+ifeq ($(ARCH),amd64)
+	$(VERBOSE)$(LD) -r --oformat elf64-x86-64 -o $@ -b binary $^
+else
 	$(VERBOSE)$(LD) -r --oformat default -o $@ -b binary $^
+endif
 
 font.psf: lat0-14.psf
 	@ln -s $? $@

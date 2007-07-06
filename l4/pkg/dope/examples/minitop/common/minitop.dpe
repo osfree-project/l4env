@@ -1,0 +1,45 @@
+### CONFIGURATION WINDOW ###
+
+swg = new Grid()
+
+laber = new Label(-text "Update Rate")
+swg.place(laber, -column 1 -row 2)
+
+update = new Variable()
+
+upsca = new Scale(-from 0.1 -to 2.0 -variable update)
+swg.place(upsca, -column 2 -row 2 -align ew)
+
+uplab = new Label(-variable update)
+swg.place(uplab, -column 3 -row 2)
+
+update.set(-value 1.0)
+
+swg.columnconfig(1, -size 70)
+swg.columnconfig(3, -size 40)
+
+setwin = new Window(-content swg -workw 270 -workh 30)
+setwin.open()
+
+
+### THREAD LIST WINDOW ###
+
+df = new Frame(-scrollx yes -scrolly yes)
+dispwin = new Window(-content df)
+
+dg = new Grid()
+
+threadlab = new Label(-text "Thread")
+dg.place(threadlab, -column 1 -row 0)
+
+loadlab = new Label(-text "CPU Load")
+dg.place(loadlab, -column 2 -row 0)
+
+useclab = new Label(-text "Microseconds")
+dg.place(useclab, -column 3 -row 0)
+
+dg.columnconfig(1, -size 50)
+dg.columnconfig(2, -size 150)
+dg.columnconfig(3, -size 80)
+
+dispwin.open()
