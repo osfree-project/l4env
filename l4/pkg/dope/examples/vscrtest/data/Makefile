@@ -9,10 +9,10 @@ vpath %.xga $(SRC_DIR)
 
 include $(L4DIR)/mk/lib.mk
 
-ifeq ($(ARCH),x86)
-OFORMAT := default
-else
+ifeq ($(ARCH),amd64)
 OFORMAT := elf64-x86-64
+else
+OFORMAT := default
 endif
 
 %.o: %.xga

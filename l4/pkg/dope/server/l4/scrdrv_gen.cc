@@ -30,6 +30,12 @@
 #include "clipping.h"
 #include "gfx_colors.h"
 
+#ifdef ARCH_arm
+#include <l4/arm_drivers/lcd.h>
+
+static struct arm_lcd_ops *lcd;
+#endif
+
 #if USE_RT_MON
 #include <l4/rt_mon/histogram2d.h>
 
@@ -52,6 +58,7 @@ extern int config_use_vidfix;
 static s32    scr_width, scr_height;         /* screen dimensions              */
 static s32    scr_depth;                     /* color depth                    */
 static s32    scr_linelength;                /* bytes per scanline             */
+static s32    scr_bytes_per_scanline;        /* bytes per scanline             */
 static void  *scr_adr;                       /* physical screen adress         */
 static void  *buf_adr;                       /* adress of double screen buffer */
 static s32    curr_mx = 100, curr_my = 100;  /* current mouse cursor position  */
@@ -240,6 +247,7 @@ static void update_area(long x1, long y1, long x2, long y2) {
  *** SERVICE FUNCTIONS ***
  *************************/
 
+#ifndef ARCH_arm
 static int
 vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
                  l4_addr_t *vaddr, l4_offs_t *offset) {
@@ -257,6 +265,7 @@ vc_map_video_mem(l4_addr_t paddr, l4_size_t size,
 
 	return 0;
 }
+#endif
 
 
 /*** wide spread video modes ***/
@@ -268,6 +277,7 @@ static Scr_drv_x<Rgb32> drv_rgb32;
 /*** SET UP SCREEN ***/
 static long set_screen(long width, long height, long depth) {
 
+#ifndef ARCH_arm
 	l4util_mb_vbe_ctrl_t *vbe;
 	l4util_mb_vbe_mode_t *vbi;
 	l4util_mb_info_t *mbi = l4env_multiboot_info;
@@ -304,14 +314,44 @@ static long set_screen(long width, long height, long depth) {
 	scr_height      = vbi->y_resolution;
 	scr_width       = vbi->x_resolution;
 	scr_depth       = vbi->bits_per_pixel;
-	scr_linelength  = vbi->bytes_per_scanline / (scr_depth/8); //scr_width;
+	scr_bytes_per_scanline = vbi->bytes_per_scanline;
+	scr_linelength  = scr_bytes_per_scanline / (scr_depth/8); //scr_width;
 
 	if (config_use_vidfix) {
-	    scr_linelength = vbi->bytes_per_scanline/2;
+	    scr_linelength = scr_bytes_per_scanline/2;
+	}
+#endif
+#ifdef ARCH_arm
+	if (!(lcd = arm_lcd_probe())) {
+		printf("Could not find LCD.\n");
+		return 0;
 	}
 
+	printf("Using LCD driver: %s\n", lcd->get_info());
+
+	scr_height = lcd->get_screen_height();
+	scr_width  = lcd->get_screen_width();
+	scr_depth  = lcd->get_bpp();
+	scr_bytes_per_scanline = lcd->get_bytes_per_line();
+	scr_linelength = lcd->get_bytes_per_line() / ((scr_depth + 7) >> 3);
+
+	scr_adr = lcd->get_fb();
+	if (!scr_adr) {
+		printf("Cannot get vidmemory\n");
+		return 0;
+	}
+
+	lcd->enable();
+
+	printf("video memory is at %p (size: %x)\n", scr_adr, lcd->get_video_mem_size());
+#endif
+
 	/* get memory for the screen buffer */
-	buf_adr = malloc((scr_height+16)*vbi->bytes_per_scanline);
+	buf_adr = malloc((scr_height+16)*scr_bytes_per_scanline);
+	if (!buf_adr) {
+		INFO(printf("Screen(set_screen): out of memory!\n");)
+		return 0;
+	}
 
 	/* select the drawing routines for the current color mode */
 	switch (scr_depth) {
@@ -322,18 +362,16 @@ static long set_screen(long width, long height, long depth) {
 		default: enter_kdebug("unsuported color depth"); return 0;
 	}
 
-	if (!buf_adr) {
-		INFO(printf("Screen(set_screen): out of memory!\n");)
-		return 0;
-	}
+	printf("Current video mode is %dx%d@%d\n",
+	       scr_width, scr_height, scr_depth);
 
-	printf("Current video mode is %dx%d "
-	       "red=%d:%d green=%d:%d blue=%d:%d res=%d:%d\n",
-	       vbi->x_resolution, vbi->y_resolution,
+#ifndef ARCH_arm
+	printf("  red=%d:%d green=%d:%d blue=%d:%d res=%d:%d\n",
 	       vbi->red_field_position, vbi->red_mask_size,
 	       vbi->green_field_position, vbi->green_mask_size,
 	       vbi->blue_field_position, vbi->blue_mask_size,
 	       vbi->reserved_field_position, vbi->reserved_mask_size);
+#endif
 
 	return 1;
 }

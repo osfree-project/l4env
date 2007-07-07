@@ -62,7 +62,7 @@ asm (".globl jiffies");
 
 /*** PARSE COMMAND LINE ARGUMENTS AND SET GLOBAL CONFIG VARIABLES ***/
 static void do_args(int argc, char **argv) {
-	char c;
+	signed char c;
 
 	static struct option long_options[] = {
 		{"vidfix",        0, 0, 'f'},

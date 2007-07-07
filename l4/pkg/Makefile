@@ -41,6 +41,7 @@ l4con.bin:		lxfuxlibc.lib
 input.bin:		omega0.lib
 cunit.lib:		dde.bin
 nitpicker.bin:		dope.bin
+examples.bin:		dope.bin l4con.bin
 ifeq ($(USE_UCLIBC),y)
 qt3.bin:		uclibc_r.lib
 log.headers:		uclibc.headers
@@ -299,19 +300,14 @@ update.log:
 	$(VERBOSE)$(RM) $(UPDATE_LOG)
 
 l4env_update: l4conf_update dice_update l4env_tools_update BID_cont_reset update.log
-	$(VERBOSE)set -e; for i in $(L4ENV_SUBDIRS); do \
-	  if [ "$$i" != linux-24-headers -o -d $$i -o \( "$(LINUX24_AVAIL)" = "n" \) ] ; then \
-	    $(call UPDATE_MESSAGE,$(BID_DOLLARQUOTE)$$i); \
-	    $(SVN) update $$i 2>&1 | tee -a $(UPDATE_LOG); \
-	  fi; \
-	done
-	$(VERBOSE)$(SVN) update pkg.Makefile.tmpl | tee -a $(UPDATE_LOG)
+	$(VERBOSE)$(call UPDATE_MESSAGE,L4Env packages)
+	$(VERBOSE)set -e; \
+	  $(SVN) update $(sort $(L4ENV_SUBDIRS)) 2>&1 | tee -a $(UPDATE_LOG);
 
 update: l4env_update update.log
+	$(VERBOSE)$(call UPDATE_MESSAGE,Auxiliary packages)
 	$(VERBOSE)set -e ; \
-	  for i in $(filter-out $(L4ENV_SUBDIRS),$(ALL_SUBDIRS)) ; do \
-	    $(call UPDATE_MESSAGE,$(BID_DOLLARQUOTE)$$i); \
-	    $(SVN) update $$i 2>&1 | tee -a $(UPDATE_LOG); done
+	    $(SVN) update $(sort $(patsubst %/.svn,%,$(wildcard $(addsuffix /.svn,(filter-out $(L4ENV_SUBDIRS),$(ALL_SUBDIRS)))))) 2>&1 | tee -a $(UPDATE_LOG)
 
 dice_update: update.log
 	$(VERBOSE)if [ -d $(DICEDIR) ] ; then \

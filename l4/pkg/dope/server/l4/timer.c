@@ -15,43 +15,25 @@
 
 #include "dopestd.h"
 
-#include <l4/util/rdtsc.h>
+#include <l4/sigma0/kip.h>
 #include <l4/util/macros.h>
 #include <l4/names/libnames.h>
 #include <l4/thread/thread.h>
 
 #include "timer.h"
 
+static l4_kernel_info_t *kip;
+
 int init_timer(struct dope_services *d);
+
 
 /*************************
  *** SERVICE FUNCTIONS ***
  *************************/
 
-
 /*** RETURN CURRENT SYSTEM TIME COUNTER IN MICROSECONDS ***/
 static u32 get_time(void) {
-#define TICKS_PER_SEC 1000000
-  long long usecs;
-  long long ns = l4_tsc_to_ns(l4_rdtsc());
-
-//  u32 usecs;
-//  u32 ns = (u32)(l4_tsc_to_ns(l4_rdtsc()) & 0xffffffff);
-
-  usecs = ns / 1000;
-
-#if 0
-  __asm__ __volatile__
-    ("                                      \n\t"
-     "divl  %%esi                           \n\t"
-     :"=a" (usecs)
-     :"A" (ns),
-     "S" (1000000000 / TICKS_PER_SEC)
-     );
-#endif
-
-  return usecs & 0xffffffff;
-//  return usecs;
+  return (u32)kip->clock;
 }
 
 
@@ -88,9 +70,8 @@ static struct timer_services services = {
  **************************/
 
 int init_timer(struct dope_services *d) {
-	u32 scaler;
-
-	if (!(scaler=l4_calibrate_tsc())) Panic("l4_calibrate_tsc: fucked up");
+	kip = l4sigma0_kip();
+	if (!kip) Panic("kip map failed");
 
 	d->register_module("Timer 1.0", &services);
 	return 1;
