@@ -2,6 +2,7 @@
 
 #include <l4/util/slmap.h>
 #include <l4/log/l4log.h>
+#include <l4/sys/l4int.h>
 
 l4_ssize_t l4libc_heapsize = 100*1024;
 

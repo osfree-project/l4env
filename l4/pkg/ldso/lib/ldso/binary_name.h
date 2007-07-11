@@ -12,6 +12,8 @@
 #ifndef _BINARY_NAME_H_
 #define _BINARY_NAME_H_
 
+#include <l4/sys/l4int.h>
+
 const char* binary_name(char *buffer, l4_size_t size);
 
 #endif

@@ -167,14 +167,14 @@ static void* slab_grow(l4slab_cache_t *slab, void**data){
     LOGd_Enter(LOG_MALLOC_SLAB, "getting new page...");
     addr = l4buddy_alloc(buddy, slab->slab_size);
     if(addr){
-	set_owner_slab(addr, (slab->slab_size-1)>>L4_PAGESHIFT);
+	set_owner_slab(addr, ((slab->slab_size-1)>>L4_PAGESHIFT)+1);
     }
     return addr;
 }
 static void  slab_release(l4slab_cache_t *slab, void*addr, void*data){
     LOGd_Enter(LOG_MALLOC_SLAB, "releasing page at %p", addr);
     l4buddy_free(buddy, addr);
-    set_owner_buddy(addr, (slab->slab_size-1)>>L4_PAGESHIFT);
+    set_owner_buddy(addr, ((slab->slab_size-1)>>L4_PAGESHIFT)+1);
 }
 
 void* malloc(size_t size){

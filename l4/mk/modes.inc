@@ -1,40 +1,7 @@
 # -*- Makefile -*-
-# vim:et:ts=4:ft=make:
+# vim:et:ts=8:ft=make:
 #
-# DROPS (Dresden Realtime OPerating System) Component
-#
-# Makefile-Include for defining the modes and architecture-specific flags
-
-# we use these variables to define compiler-switches depending on the system
-# we compile for. These variables are evaluated using the target-dependent
-# variables ARCH and CPU
-CARCHFLAGS_x86_586        = -march=i586
-CARCHFLAGS_x86_pentium    = -march=i586
-CARCHFLAGS_x86_pentiummmx = -march=pentium-mmx
-CARCHFLAGS_x86_pentiumpro = -march=pentiumpro
-CARCHFLAGS_x86_686        = -march=i686
-CARCHFLAGS_x86_pentium2   = -march=pentium2
-CARCHFLAGS_x86_pentium3   = -march=pentium3
-CARCHFLAGS_x86_pentiumm   = -march=pentium-m
-CARCHFLAGS_x86_pentium4   = -march=pentium4
-CARCHFLAGS_x86_prescott   = -march=prescott
-CARCHFLAGS_x86_nocona     = -march=nocona
-CARCHFLAGS_x86_K6         = -march=k6
-CARCHFLAGS_x86_K7         = -march=athlon
-CARCHFLAGS_x86_athlon4    = -march=athlon-4
-CARCHFLAGS_x86_K8         = -march=k8
-CARCHFLAGS_x86_opteron    = -march=opteron
-
-CARCHFLAGS_amd64    = -m64 -mno-red-zone
-ASFLAGS_amd64       = -m64
-LDFLAGS_amd64       = -m elf_x86_64
-
-LDNMAGIC           ?= -n
-
-# This is quite bad: There is no other chance to disable the page-alignedment
-# of the linker. The linker aligns the first section at 0x100000 for AMD64!
-# We don't want this. Be careful for interactions with objcopy -S!
-LDFLAGS_amd64      += $(LDNMAGIC)
+# Makefile-Include for defining modes
 
 # Default memory backend when linking against dietlibc or uClibc. The -u
 # switch is necessary since mmap_anon is referenced using a weak symbol.
@@ -256,9 +223,9 @@ BID_SUPPORTED_x86_l4linux       = y
 LIBCINCDIR_x86_l4linux          = -I$(GCCINCDIR)
 LIBCLIBDIR_x86_l4linux          = -L$(DROPS_STDDIR)/lib
 LIBCLIBS_x86_l4linux            = -ldm_generic -ldm_mem -lnames             \
-                                  -ll4util_root -ll4util $(ROOTLIB)         \
-                                  -lloaderif -ll4env                        \
-                                  -ll4env_err -lslab -ll4sys
+                                  $(ROOTLIB) -lloaderif -ll4env             \
+                                  -ll4env_err -lslab                        \
+                                  -llogserver_capsule -ll4util -ll4sys
 CRT0_x86_l4linux                =
 CRTN_x86_l4linux                =
 LDSCRIPT_x86_l4linux            =
@@ -780,9 +747,9 @@ BID_SUPPORTED_arm_l4linux       = y
 LIBCINCDIR_arm_l4linux          = -I$(GCCINCDIR)
 LIBCLIBDIR_arm_l4linux          = -L$(DROPS_STDDIR)/lib
 LIBCLIBS_arm_l4linux            = -ldm_generic -ldm_mem -lnames             \
-                                  -ll4util_root -ll4util $(ROOTLIB)         \
-                                  -lloaderif -ll4env -ll4env_err            \
-                                  -lslab
+                                  $(ROOTLIB) -lloaderif -ll4env             \
+                                  -ll4env_err -lslab                        \
+                                  -llogserver_capsule -ll4util -ll4sys
 CRT0_arm_l4linux                =
 CRTN_arm_l4linux                =
 LDSCRIPT_arm_l4linux            =

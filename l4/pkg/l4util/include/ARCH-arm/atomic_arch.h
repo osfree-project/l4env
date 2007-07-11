@@ -4,6 +4,8 @@
 #ifndef __L4UTIL__INCLUDE__ARCH_ARM__ATOMIC_ARCH_H__
 #define __L4UTIL__INCLUDE__ARCH_ARM__ATOMIC_ARCH_H__
 
+#ifdef __GNUC__
+
 #include <l4/sys/kdebug.h>
 
 EXTERN_C_BEGIN
@@ -55,5 +57,7 @@ l4util_atomic_inc(volatile long *dest)
 }
 
 EXTERN_C_END
+
+#endif //__GNUC__
 
 #endif /* ! __L4UTIL__INCLUDE__ARCH_ARM__ATOMIC_ARCH_H__ */

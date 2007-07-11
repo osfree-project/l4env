@@ -573,7 +573,7 @@ dump_stack:
 		  continue;
 		}
 
-	      char *s1="", *s2 = "";
+	      const char *s1="", *s2 = "";
     	      if (p.is_user_value())
 		{
 		  s1 = Jdb::esc_iret;

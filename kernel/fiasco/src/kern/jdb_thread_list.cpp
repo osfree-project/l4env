@@ -492,7 +492,7 @@ Jdb_list_threads::list_threads_show_thread(Thread *t)
     {
       if (Config::stack_depth)
 	{
-	  unsigned i, stack_depth;
+	  Mword i, stack_depth;
 	  char *c  = (char*)t + sizeof(Thread);
 	  for (i=sizeof(Thread), stack_depth=Config::thread_block_size; 
 	      i<Config::thread_block_size; 
@@ -500,7 +500,7 @@ Jdb_list_threads::list_threads_show_thread(Thread *t)
 	    if (*c != '5')
 	      break;
 
-	  printf("(%4d) ", stack_depth-sizeof(Thread));
+	  printf("(%4ld) ", stack_depth-sizeof(Thread));
 	  t->print_state_long(29);
 	}
       else

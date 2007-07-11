@@ -37,9 +37,35 @@ all::
 # make .general.d dependent on the role-file
 $(if $(ROLE),$(OBJ_DIR)/.general.d: $(L4DIR)/mk/$(ROLE))
 
-SYSTEM_TARGET	= $(SYSTEM_TARGET_$(ARCH))
+SYSTEM_TARGET	  = $(SYSTEM_TARGET_$(ARCH))
 SYSTEM_TARGET_arm = arm-linux-
-CARCHFLAGS_amd64 = -m64
+CARCHFLAGS_amd64  = -mno-red-zone
+ASFLAGS_amd64     = -m64
+LDFLAGS_amd64     = -m elf_x86_64
+
+# This is quite bad: There is no other chance to disable the page-alignedment
+# of the linker. The linker aligns the first section at 0x100000 for AMD64!
+# We don't want this. Be careful for interactions with objcopy -S!
+LDNMAGIC           ?= -n
+LDFLAGS_amd64      += $(LDNMAGIC)
+
+CARCHFLAGS_x86_586        = -march=i586
+CARCHFLAGS_x86_pentium    = -march=i586
+CARCHFLAGS_x86_pentiummmx = -march=pentium-mmx
+CARCHFLAGS_x86_pentiumpro = -march=pentiumpro
+CARCHFLAGS_x86_686        = -march=i686
+CARCHFLAGS_x86_pentium2   = -march=pentium2
+CARCHFLAGS_x86_pentium3   = -march=pentium3
+CARCHFLAGS_x86_pentiumm   = -march=pentium-m
+CARCHFLAGS_x86_pentium4   = -march=pentium4
+CARCHFLAGS_x86_prescott   = -march=prescott
+CARCHFLAGS_x86_nocona     = -march=nocona
+CARCHFLAGS_x86_K6         = -march=k6
+CARCHFLAGS_x86_K7         = -march=athlon
+CARCHFLAGS_x86_athlon4    = -march=athlon-4
+CARCHFLAGS_x86_K8         = -march=k8
+CARCHFLAGS_x86_opteron    = -march=opteron
+
 IDL_SYSTEMS 	= x86-l4v2
 
 AR		= $(SYSTEM_TARGET)ar

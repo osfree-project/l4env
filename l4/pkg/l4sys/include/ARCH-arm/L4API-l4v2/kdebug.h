@@ -5,6 +5,8 @@
 
 #include <l4/sys/types.h>
 
+#ifdef __GNUC__
+
 L4_INLINE void
 fiasco_register_thread_name(l4_threadid_t tid, const char *name);
 
@@ -18,5 +20,7 @@ fiasco_register_thread_name(l4_threadid_t tid, const char *name)
 {
   __KDEBUG_ARM_PARAM_2(0x10, tid.raw, name);
 }
+
+#endif //__GNUC__
 
 #endif /* ! __L4SYS__INCLUDE__ARCH_ARM__L4API_X0__KDEBUG_H__ */

@@ -1,6 +1,8 @@
 #ifndef __L4UTIL__ARCH_ARCH__IRQ_H__
 #define __L4UTIL__ARCH_ARCH__IRQ_H__
 
+#ifdef __GNUC__
+
 #include <l4/sys/kdebug.h>
 #include <l4/sys/compiler.h>
 
@@ -48,5 +50,7 @@ l4util_flags_restore(l4_umword_t *flags)
 }
 
 EXTERN_C_END
+
+#endif //__GNUC__
 
 #endif /* ! __L4UTIL__ARCH_ARCH__IRQ_H__ */

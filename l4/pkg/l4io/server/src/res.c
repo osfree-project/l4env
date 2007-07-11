@@ -1081,9 +1081,6 @@ int io_res_init(io_client_t *c)
   /* allocate ISA DMA CASCADE */
   isa_dma[4].used = 1;
   isa_dma[4].client = c;
-  
-  /* announce TPM 1.2 TIS area (see TPM 1.2 spec) */
-  callback_announce_mem_region(0xfed40000, 0x5000);
 
   return 0;
 

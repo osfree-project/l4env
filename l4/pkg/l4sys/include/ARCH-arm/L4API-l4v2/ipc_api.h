@@ -8,10 +8,17 @@
 #endif
 #define L4_SYSCALL_IPC			(-0x00000004-L4_SYSCALL_MAGIC_OFFSET)
 
+/*
+ * Internal defines used to build IPC parameters for the L4 kernel
+ */
+
+#define L4_IPC_DECEIT           1
+#define L4_IPC_OPEN_IPC         1
+
+#ifdef __GNUC__
 /*----------------------------------------------------------------------------
  * 2 words in registers
  *--------------------------------------------------------------------------*/
-
 L4_INLINE int 
 l4_ipc_call_tag(l4_threadid_t dest, 
             const void *snd_msg, 
@@ -25,13 +32,13 @@ l4_ipc_call_tag(l4_threadid_t dest,
             l4_msgdope_t *result,
             l4_msgtag_t *rtag)
 {
-  register l4_umword_t _dest     asm("r0") = dest.raw;
-  register l4_umword_t _snd_desc asm("r1") = (l4_umword_t)snd_msg;
-  register l4_umword_t _rcv_desc asm("r2") = (l4_umword_t)rcv_msg;
-  register l4_umword_t _timeout  asm("r3") = timeout.raw;
-  register l4_umword_t _w0       asm("r5") = snd_w0;
-  register l4_umword_t _w1       asm("r6") = snd_w1;
-  register l4_umword_t _tag      asm("r4") = tag.raw;
+  register l4_umword_t _dest     __asm__("r0") = dest.raw;
+  register l4_umword_t _snd_desc __asm__("r1") = (l4_umword_t)snd_msg;
+  register l4_umword_t _rcv_desc __asm__("r2") = (l4_umword_t)rcv_msg;
+  register l4_umword_t _timeout  __asm__("r3") = timeout.raw;
+  register l4_umword_t _w0       __asm__("r5") = snd_w0;
+  register l4_umword_t _w1       __asm__("r6") = snd_w1;
+  register l4_umword_t _tag      __asm__("r4") = tag.raw;
   __asm__ __volatile__ 
     ("@ l4_ipc_call(start) \n\t"
      PIC_SAVE_ASM
@@ -101,13 +108,13 @@ l4_ipc_reply_and_wait_tag(l4_threadid_t dest,
 		      l4_msgtag_t *rtag)
 {
   
-  register l4_umword_t _dest     asm("r0") = dest.raw;
-  register l4_umword_t _snd_desc asm("r1") = (l4_umword_t)snd_msg;
-  register l4_umword_t _rcv_desc asm("r2") = (l4_umword_t)rcv_msg | L4_IPC_OPEN_IPC;
-  register l4_umword_t _timeout  asm("r3") = timeout.raw;
-  register l4_umword_t _tag      asm("r4") = tag.raw;
-  register l4_umword_t _w0       asm("r5") = snd_w0;
-  register l4_umword_t _w1       asm("r6") = snd_w1;
+  register l4_umword_t _dest     __asm__("r0") = dest.raw;
+  register l4_umword_t _snd_desc __asm__("r1") = (l4_umword_t)snd_msg;
+  register l4_umword_t _rcv_desc __asm__("r2") = (l4_umword_t)rcv_msg | L4_IPC_OPEN_IPC;
+  register l4_umword_t _timeout  __asm__("r3") = timeout.raw;
+  register l4_umword_t _tag      __asm__("r4") = tag.raw;
+  register l4_umword_t _w0       __asm__("r5") = snd_w0;
+  register l4_umword_t _w1       __asm__("r6") = snd_w1;
 
   __asm__ __volatile__ 
     ("@ l4_ipc_reply_and_wait(start) \n\t"
@@ -173,13 +180,13 @@ l4_ipc_send_tag(l4_threadid_t dest,
             l4_timeout_t timeout,
             l4_msgdope_t *result)
 {
-  register l4_umword_t _dest     asm("r0") = dest.raw;
-  register l4_umword_t _snd_desc asm("r1") = (l4_umword_t)snd_msg;
-  register l4_umword_t _rcv_desc asm("r2") = ~0U;
-  register l4_umword_t _timeout  asm("r3") = timeout.raw;
-  register l4_umword_t _w0       asm("r5") = w0;
-  register l4_umword_t _w1       asm("r6") = w1;
-  register l4_umword_t _tag	 asm("r4") = tag.raw;
+  register l4_umword_t _dest     __asm__("r0") = dest.raw;
+  register l4_umword_t _snd_desc __asm__("r1") = (l4_umword_t)snd_msg;
+  register l4_umword_t _rcv_desc __asm__("r2") = ~0U;
+  register l4_umword_t _timeout  __asm__("r3") = timeout.raw;
+  register l4_umword_t _w0       __asm__("r5") = w0;
+  register l4_umword_t _w1       __asm__("r6") = w1;
+  register l4_umword_t _tag	 __asm__("r4") = tag.raw;
 
   __asm__ __volatile__ 
     ("@  l4_ipc_send(start) \n\t"
@@ -236,13 +243,13 @@ l4_ipc_wait_tag(l4_threadid_t *src,
             l4_msgtag_t *tag)
 {
   
-  register l4_umword_t _res      asm("r0") = 0;
-  register l4_umword_t _snd_desc asm("r1") = ~0U;
-  register l4_umword_t _rcv_desc asm("r2") = (l4_umword_t)rcv_msg | L4_IPC_OPEN_IPC;
-  register l4_umword_t _timeout  asm("r3") = timeout.raw;
-  register l4_umword_t _tag      asm("r4");
-  register l4_umword_t _w0       asm("r5");
-  register l4_umword_t _w1       asm("r6");
+  register l4_umword_t _res      __asm__("r0") = 0;
+  register l4_umword_t _snd_desc __asm__("r1") = ~0U;
+  register l4_umword_t _rcv_desc __asm__("r2") = (l4_umword_t)rcv_msg | L4_IPC_OPEN_IPC;
+  register l4_umword_t _timeout  __asm__("r3") = timeout.raw;
+  register l4_umword_t _tag      __asm__("r4");
+  register l4_umword_t _w0       __asm__("r5");
+  register l4_umword_t _w1       __asm__("r6");
 
   __asm__ __volatile__
     ("@ l4_ipc_wait(start) \n\t"
@@ -299,13 +306,13 @@ l4_ipc_receive_tag(l4_threadid_t src,
                l4_msgdope_t *result,
                l4_msgtag_t *tag)
 {
-  register l4_umword_t _res      asm("r0") = src.raw;
-  register l4_umword_t _snd_desc asm("r1") = ~0U;
-  register l4_umword_t _rcv_desc asm("r2") = (l4_umword_t)rcv_msg;
-  register l4_umword_t _timeout  asm("r3") = timeout.raw;
-  register l4_umword_t _tag      asm("r4");
-  register l4_umword_t _w0       asm("r5");
-  register l4_umword_t _w1       asm("r6");
+  register l4_umword_t _res      __asm__("r0") = src.raw;
+  register l4_umword_t _snd_desc __asm__("r1") = ~0U;
+  register l4_umword_t _rcv_desc __asm__("r2") = (l4_umword_t)rcv_msg;
+  register l4_umword_t _timeout  __asm__("r3") = timeout.raw;
+  register l4_umword_t _tag      __asm__("r4");
+  register l4_umword_t _w0       __asm__("r5");
+  register l4_umword_t _w1       __asm__("r6");
 
   __asm__ __volatile__
     ("@ l4_ipc_receive(start)  \n\t"
@@ -361,6 +368,8 @@ l4_ipc_sleep(l4_timeout_t timeout)
   return l4_ipc_receive(L4_NIL_ID, L4_IPC_SHORT_MSG, &dummy, &dummy,
                         timeout,  &result);
 }
+
+#endif //__GNUC__
 
 
 #endif /* L4_IPC_API_H */

@@ -16,44 +16,61 @@ PUBLIC static inline
 Unsigned64
 Cpu::ns_to_tsc (Unsigned64 ns)
 {
-  return (ns * scaler_ns_to_tsc) >> 27;
+  Unsigned64 tsc, dummy;
+  __asm__
+      ("                              \n\t"
+       "mulq	%3			\n\t"
+       "shrd  $27, %%rdx, %%rax       \n\t"
+       :"=a" (tsc), "=d" (dummy)
+       :"a" (ns), "r" ((Unsigned64)scaler_ns_to_tsc)
+      );
+  return tsc;
 }
 
 PUBLIC static inline
 Unsigned64
 Cpu::tsc_to_ns (Unsigned64 tsc)
 {
-  return (tsc * scaler_tsc_to_ns) >> 27;
+  Unsigned64 ns, dummy;
+  __asm__
+      ("				\n\t"
+       "mulq	%3			\n\t"
+       "shrd  $27, %%rdx, %%rax       \n\t"
+       :"=a" (ns), "=d"(dummy)
+       :"a" (tsc), "r" ((Unsigned64)scaler_tsc_to_ns)
+      );
+  return ns;
 }
 
 PUBLIC static inline
 Unsigned64
 Cpu::tsc_to_us (Unsigned64 tsc)
 {
-  return (tsc * scaler_tsc_to_us) >> 32;
+  Unsigned64 ns, dummy;
+  __asm__
+      ("				\n\t"
+       "mulq	%3			\n\t"
+       "shrd  $32, %%rdx, %%rax       \n\t"
+       :"=a" (ns), "=d" (dummy)
+       :"a" (tsc), "r" ((Unsigned64)scaler_tsc_to_us)
+      );
+  return ns;
 }
 
 PUBLIC static inline
 void
 Cpu::tsc_to_s_and_ns (Unsigned64 tsc, Unsigned32 *s, Unsigned32 *ns)
 {
-    Unsigned32 dummy;
-    __asm__
-	("				\n\t"
-	 "movl  %%edx, %%ecx		\n\t"
-	 "mull	%5			\n\t"
-	 "movl	%%ecx, %%eax		\n\t"
-	 "movl	%%edx, %%ecx		\n\t"
-	 "mull	%5			\n\t"
-	 "addl	%%ecx, %%eax		\n\t"
-	 "adcl	$0, %%edx		\n\t"
-	 "movl  $1000000000, %%ecx	\n\t"
-	 "shld	$5, %%eax, %%edx	\n\t"
-	 "shll	$5, %%eax		\n\t"
-	 "divl  %%ecx			\n\t"
-	:"=a" (*s), "=d" (*ns), "=c" (dummy)
-	: "d" (tsc>>32), "a"(tsc), "g" (scaler_tsc_to_ns)
-	);
+  __asm__
+      ("				\n\t"
+       "mulq	%3			\n\t"
+       "shrd  $27, %%rdx, %%rax         \n\t"
+       "xorq  %%rdx, %%rdx              \n\t"
+       "divq  %4			\n\t"
+       :"=a" (*s), "=&d" (*ns)
+       : "a" (tsc), "r" ((Unsigned64)scaler_tsc_to_ns),
+         "rm"(1000000000ULL)
+      );
 }
 
 PUBLIC static inline

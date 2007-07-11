@@ -13,10 +13,6 @@
 #ifndef __LOG_INCLUDE_L4LOG_H_
 #define __LOG_INCLUDE_L4LOG_H_
 
-#if defined L4API_l4v2 || defined L4API_l4x0
-#include <l4/log/server.h>
-#include <l4/sys/ktrace.h>
-#endif
 #include <l4/sys/compiler.h>
 
 EXTERN_C_BEGIN
@@ -147,14 +143,6 @@ extern void LOG_format_check(const char*format,...)
 #define LOGdk(doit,msg...)
 #define LOG_Error(msg...)
 #endif
-
-#if defined L4API_l4v2 || defined L4API_l4x0
-#define LOG_logk(format...) do{				\
-    char buf[50];					\
-    LOG_snprintf(buf,sizeof(buf),format);		\
-    fiasco_tbuf_log(buf);				\
-}while(0)
-#endif /* defined L4API_l4v2 || defined L4API_l4x0 */
 
 EXTERN_C_END
 #endif

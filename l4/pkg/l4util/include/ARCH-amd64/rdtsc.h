@@ -158,8 +158,6 @@ l4_rdtsc (void)
 	 "and   %%rcx,%%rax		\n\t"
 	 "shlq  $32,%%rdx		\n\t"
 	 "orq	%%rdx,%%rax		\n\t"
-	 
-	/*"rdtsc\n\t"*/
 	:
 	"=a" (v)
 	: /* no inputs */
@@ -219,7 +217,7 @@ l4_uint32_t l4_rdtsc_32(void)
        ".byte 0x0f, 0x31\n\t"	// rdtsc
        : "=a" (x)
        :
-       : "edx");
+       : "rdx");
     
   return x;
 }
@@ -227,23 +225,13 @@ l4_uint32_t l4_rdtsc_32(void)
 L4_INLINE l4_uint64_t
 l4_tsc_to_ns (l4_cpu_time_t tsc)
 {
-    l4_uint32_t dummy;
-    l4_uint64_t ns;
+    l4_uint64_t ns, dummy;
     __asm__
 	("				\n\t"
-	 "mov	%%rdx, %%rcx		\n\t"
 	 "mulq	%3			\n\t"
-	 "mov	%%rcx, %%rax		\n\t"
-	 "mov	%%rdx, %%rcx		\n\t"
-	 "mulq	%3			\n\t"
-	 "add	%%rcx, %%rax		\n\t"
-	 "adc	$0, %%rdx		\n\t"
-	 "shld	$5, %%rax, %%rdx	\n\t"
-	 "shlq	$5, %%rax		\n\t"
-	:"=A" (ns),
-	 "=&c" (dummy)
-	:"0" (tsc),
-	 "g" (l4_scaler_tsc_to_ns)
+         "shrd  $27, %%rdx, %%rax       \n\t"
+	:"=a" (ns), "=d"(dummy)
+	:"a" (tsc), "r" ((l4_uint64_t)l4_scaler_tsc_to_ns)
 	);
     return ns;
 }
@@ -251,21 +239,13 @@ l4_tsc_to_ns (l4_cpu_time_t tsc)
 L4_INLINE l4_uint64_t
 l4_tsc_to_us (l4_cpu_time_t tsc)
 {
-    l4_uint32_t dummy;
-    l4_uint64_t ns;
+    l4_uint64_t ns, dummy;
     __asm__
 	("				\n\t"
-	 "movq  %%rdx, %%rcx		\n\t"
 	 "mulq	%3			\n\t"
-	 "movq	%%rcx, %%rax		\n\t"
-	 "movq	%%rdx, %%rcx		\n\t"
-	 "mulq	%3			\n\t"
-	 "addq	%%rcx, %%rax		\n\t"
-	 "adcq	$0, %%rdx		\n\t"
-	:"=A" (ns),
-	 "=&c" (dummy)
-	:"0" (tsc),
-	 "g" (l4_scaler_tsc_to_us)
+         "shrd  $32, %%rdx, %%rax       \n\t"
+	:"=a" (ns), "=d" (dummy)
+	:"a" (tsc), "r" ((l4_uint64_t)l4_scaler_tsc_to_us)
 	);
     return ns;
 }
@@ -273,29 +253,30 @@ l4_tsc_to_us (l4_cpu_time_t tsc)
 L4_INLINE void
 l4_tsc_to_s_and_ns (l4_cpu_time_t tsc, l4_uint32_t *s, l4_uint32_t *ns)
 {
-    l4_uint32_t dummy;
     __asm__
 	("				\n\t"
-	 "movq  %%rdx, %%rcx		\n\t"
-	 "mulq	%4			\n\t"
-	 "movq	%%rcx, %%rax		\n\t"
-	 "movq	%%rdx, %%rcx		\n\t"
-	 "mulq	%4			\n\t"
-	 "addq	%%rcx, %%rax		\n\t"
-	 "adcq	$0, %%rdx		\n\t"
-	 "movq  $1000000000, %%rcx	\n\t"
-	 "shld	$5, %%rax, %%rdx	\n\t"
-	 "shlq	$5, %%rax		\n\t"
-	 "divq  %%rcx			\n\t"
-	:"=a" (*s), "=d" (*ns), "=c" (dummy)
-	: "A" (tsc), "g" (l4_scaler_tsc_to_ns)
+	 "mulq	%3			\n\t"
+         "shrd  $27, %%rdx, %%rax       \n\t"
+         "xorq  %%rdx, %%rdx            \n\t"
+	 "divq  %4			\n\t"
+	:"=a" (*s), "=&d" (*ns)
+	: "a" (tsc), "r" ((l4_uint64_t)l4_scaler_tsc_to_ns),
+          "rm"(1000000000ULL)
 	);
 }
 
 L4_INLINE l4_cpu_time_t
 l4_ns_to_tsc (l4_uint64_t ns)
 {
-    return (ns * l4_scaler_ns_to_tsc) >> 27;
+    l4_uint64_t tsc, dummy;
+    __asm__
+        ("                              \n\t"
+	 "mulq	%3			\n\t"
+         "shrd  $27, %%rdx, %%rax       \n\t"
+	:"=a" (tsc), "=d" (dummy)
+	:"a" (ns), "r" ((l4_uint64_t)l4_scaler_ns_to_tsc)
+	);
+    return tsc;
 }
 
 L4_INLINE void

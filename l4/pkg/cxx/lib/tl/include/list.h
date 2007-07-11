@@ -2,12 +2,25 @@
 #define CXX_LIST_H__
 
 #include <l4/cxx/std_tmpl.h>
+#include <l4/cxx/std_alloc.h>
+#include <l4/cxx/std_ops.h>
 
 namespace cxx {
+/*
+ * Classes: List_item, List<D, Alloc>
+ */
 
+/**
+ * Basic list item.
+ * Basic item that can be member of a doubly linked, cyclic list.
+ */
 class List_item 
 {
 public:
+  /**
+   * Iterator for a list of ListItem-s.
+   * The Iterator iterates til it finds the first element again.
+   */
   class Iter
   {
   public:
@@ -48,6 +61,7 @@ public:
     Iter operator -- (int) 
     { Iter o = *this; operator -- (); return o; }
 
+    /** Remove item pointed to by iterator, and return pointer to element. */
     List_item *remove_me()
     {
       if (!_c)
@@ -67,6 +81,18 @@ public:
     List_item *_c, *_f;
   };
   
+  /**
+   * Iterator for derived classes from ListItem.
+   * Allows direct access to derived classes by * operator.
+   *
+   * Example:
+   * class Foo : public ListItem
+   * {
+   * public:
+   *   typedef T_iter<Foo> Iter;
+   *   ...
+   * };
+   */
   template< typename T, bool Poly = false>
   class T_iter : public Iter
   {
@@ -119,9 +145,13 @@ protected:
   List_item(List_item const &o) : _n(this), _p(this) {}
   
 public:
+  /** Get previous item. */
   List_item *get_prev_item() const { return _p; }
+
+  /** Get next item. */
   List_item *get_next_item() const { return _n; }
-  
+ 
+  /** Insert item p before this item. */
   void insert_prev_item(List_item *p)
   {
     p->_p->_n = this;
@@ -131,6 +161,7 @@ public:
     _p = pr;
   }
   
+  /** Insert item p after this item. */
   void insert_next_item(List_item *p)
   {
     p->_p->_n = _n;
@@ -139,6 +170,7 @@ public:
     _n = p;
   }
 
+  /** Remove this item from the list. */
   void remove_me()
   {
     if (_p != this)
@@ -149,12 +181,33 @@ public:
     _p = _n = this;
   }
 
+  /** 
+   * Append item to a list.
+   * Convinience function for empty-head corner case.
+   * \param h pointer to the current list head.
+   * \param p pointer to new item.
+   * \return the pointer to the new head.
+   */
   template< typename C, typename N >
   static inline C *push_back(C *head, N *p);
 
+  /** 
+   * Prepend item to a list.
+   * Convinience function for empty-head corner case.
+   * \param head pointer to the current list head.
+   * \param p pointer to new item.
+   * \return the pointer to the new head.
+   */
   template< typename C, typename N >
   static inline C *push_front(C *head, N *p);
   
+  /** 
+   * Remove item from a list.
+   * Convinience function for remove-head corner case.
+   * \param head pointer to the current list head.
+   * \param p pointer to the item to remove.
+   * \return the pointer to the new head.
+   */
   template< typename C, typename N >
   static inline C *remove(C *head, N *p);
 
@@ -162,6 +215,8 @@ private:
   List_item *_n, *_p;
 };
 
+
+/* IMPLEMENTATION -----------------------------------------------------------*/
 template< typename C, typename N >
 C *List_item::push_back(C *h, N *p)
 {
@@ -207,6 +262,102 @@ inline
 T *List_item::T_iter<T, Poly>::remove_me()
 { return cast_to_type(Iter::remove_me(), Int_to_type<P>()); }
 
+
+/**
+ * Doubly linked list, with internal allocation.
+ * Container for items of type D, implemented by a doubly linked list.
+ * Alloc defines the allocator policy.
+ */
+template< typename D, template<typename A> class Alloc = New_allocator >
+class List
+{
+private:
+  class E : public List_item
+  {
+  public:
+    E(D const &d) : data(d) {}
+    D data;
+  };
+  
+
+public:
+  class Node : private E
+  {};
+  
+  typedef Alloc<Node> Node_alloc;
+
+  /**
+   * Iterator.
+   * Forward and backward iteratable.
+   */
+  class Iter
+  {
+  private:
+    List_item::T_iter<E> _i;
+
+  public:
+    Iter(E *e) : _i(e) {}
+
+    D &operator * () const  { return (*_i)->data; }
+    D &operator -> () const { return (*_i)->data; }
+
+    Iter operator ++ (int) 
+    { Iter o = *this; operator ++ (); return o; }
+    Iter operator -- (int) 
+    { Iter o = *this; operator -- (); return o; }
+    Iter &operator ++ () { ++_i; return *this; }
+    Iter &operator -- () { --_i; return *this; }
+
+    /** operator for testing validity (syntactiaclly equal to pointers) */
+    operator E* () const { return *_i; }
+  };
+
+  List(Alloc<Node> const &a = Alloc<Node>()) : _h(0), _l(0), _a(a) {}
+
+  /** Add element at the end of the list. */
+  void push_back(D const &d)
+  { 
+    void *n = _a.alloc();
+    if (!n) return;
+    _h = E::push_back(_h, new (n) E(d));
+    ++_l;
+  }
+
+  /** Add element at the beginning of the list. */
+  void push_front(D const &d)
+  { 
+    void *n = _a.alloc();
+    if (!n) return;
+    _h = E::push_front(_h, new (n) E(d));
+    ++_l;
+  }
+
+  /** Remove element pointed to by the iterator. */
+  void remove(Iter const &i)
+  { E *e = i; _h = E::remove(_h, e); --_l; _a.free(e); }
+
+  /** Get the length of the list. */
+  unsigned long size() const { return _l; }
+ 
+  /** Random access. Complexity is O(n). */
+  D const &operator [] (unsigned long idx) const
+  { Iter i = _h; for (; idx && *i; ++i, --idx); return *i; }
+
+  /** Random access. Complexity is O(n). */
+  D &operator [] (unsigned long idx)
+  { Iter i = _h; for (; idx && *i; ++i, --idx); return *i; }
+
+  /** Get iterator for the list elements. */
+  Iter items() { return Iter(_h); }
+
+private:
+  E *_h;
+  unsigned _l;
+  Alloc<Node> _a;
 };
+
+
+};
+
 #endif
 

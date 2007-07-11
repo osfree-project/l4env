@@ -228,6 +228,8 @@ l4semaphore_up(l4semaphore_t * sem);
 
 __END_DECLS;
 
+
+#ifdef __GNUC__
 /*****************************************************************************
  *** implementation
  *****************************************************************************/
@@ -239,5 +241,7 @@ __END_DECLS;
 #else
 #  include <l4/semaphore/generic.h>
 #endif
+
+#endif //__GNUC__
 
 #endif /* !_L4_SEMAPHORE_SEMAPHORE_H */

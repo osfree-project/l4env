@@ -16,6 +16,7 @@
 /*** L4 INCLUDES ***/
 #include <l4/util/getopt.h>
 #include <l4/log/l4log.h>
+#include <l4/sys/l4int.h>
 
 /*** LOCAL INCLUDES ***/
 #include "startup.h"

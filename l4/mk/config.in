@@ -93,8 +93,8 @@ if [ "$BIDc_USE_SPECIAL_CC" = "y" ] ; then
         string 'CXX' CXX '$(SYSTEM_TARGET_arm)g++'
     fi
     if [ "$BUILD_ARCH" = "amd64" ] ; then
-        string 'CC'  CC  '$(SYSTEM_TARGET_amd64)gcc'
-        string 'CXX' CXX '$(SYSTEM_TARGET_amd64)g++'
+        string 'CC'  CC  '$(SYSTEM_TARGET_amd64)gcc -m64'
+        string 'CXX' CXX '$(SYSTEM_TARGET_amd64)g++ -m64'
     fi
 else
     define_string HOST_CC   'gcc'
@@ -108,8 +108,8 @@ else
       define_string CXX '$(SYSTEM_TARGET_arm)g++'
     fi
     if [ "$BUILD_ARCH" = "amd64" ] ; then
-      define_string CC  '$(SYSTEM_TARGET_amd64)gcc'
-      define_string CXX '$(SYSTEM_TARGET_amd64)g++'
+      define_string CC  '$(SYSTEM_TARGET_amd64)gcc -m64'
+      define_string CXX '$(SYSTEM_TARGET_amd64)g++ -m64'
     fi
 fi
 comment "Tools"

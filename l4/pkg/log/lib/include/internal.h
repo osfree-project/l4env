@@ -21,6 +21,8 @@
 #ifdef __L4__
 /* L4 part */
 
+#include <l4/sys/ipc.h>
+
 /* under L4 we might use the logserver */
 #include "log_comm.h"
 

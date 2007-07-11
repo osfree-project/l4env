@@ -307,7 +307,7 @@ l4env_update: l4conf_update dice_update l4env_tools_update BID_cont_reset update
 update: l4env_update update.log
 	$(VERBOSE)$(call UPDATE_MESSAGE,Auxiliary packages)
 	$(VERBOSE)set -e ; \
-	    $(SVN) update $(sort $(patsubst %/.svn,%,$(wildcard $(addsuffix /.svn,(filter-out $(L4ENV_SUBDIRS),$(ALL_SUBDIRS)))))) 2>&1 | tee -a $(UPDATE_LOG)
+	    $(SVN) update $(sort $(patsubst %/.svn,%,$(wildcard $(addsuffix /.svn,$(filter-out $(L4ENV_SUBDIRS),$(ALL_SUBDIRS)))))) 2>&1 | tee -a $(UPDATE_LOG)
 
 dice_update: update.log
 	$(VERBOSE)if [ -d $(DICEDIR) ] ; then \

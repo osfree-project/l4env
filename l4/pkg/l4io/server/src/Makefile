@@ -6,7 +6,7 @@ MODE            = l4env
 DEFAULT_RELOC   = 0x00c20000
 SYSTEMS         = x86-l4v2 amd64-l4v2 arm-l4v2
 
-SRC_C           = main.c res.c jiffies.c events.c ux.c
+SRC_C           = main.c res.c jiffies.c events.c ux.c static_cfg.c
 SRC_C_x86-l4v2  = pci.c
 SRC_C_amd64-l4v2= pci.c
 SRC_C_arm-l4v2  = nopci.c

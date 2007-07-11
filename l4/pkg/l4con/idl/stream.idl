@@ -15,8 +15,7 @@
 /** time value */
 typedef struct stream_io_timeval
 {
-  long tv_sec;
-  long tv_usec;
+  unsigned long long timeval;
 } stream_io_timeval_t;
 
 /** event type */
@@ -25,7 +24,7 @@ typedef struct stream_io_input_event
   stream_io_timeval_t time;  /* not used */
   unsigned short type;
   unsigned short code;
-  unsigned long value;
+  unsigned int value;
 } stream_io_input_event_t;
 
 /** stream interface */

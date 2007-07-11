@@ -1,16 +1,17 @@
 # -*- makefile -*-
 # vim:set ft=make:
 
-kip.o kip-debug.o kip-arm.o kip-ia32.o: $(VERSION)
+kip.o kip-debug.o kip-arm.o kip-ia32.o kip-ia32-debug.o: $(VERSION)
 
 $(VERSION): FORCE
 		$(GENVER_MESSAGE)
-		$(VERBOSE)if [ -d $(srcdir)/.svn ]; then           \
-		   v=`svnversion -nc $(srcdir)`; v=$${v%[A-Z]};    \
-		   echo "#define CODE_VERSION \"r$${v#*:}\"" > $@; \
-		else                                               \
-		   echo "#define CODE_VERSION \"rUNKNOWN\"" > $@;  \
+		$(VERBOSE)if [ -d $(srcdir)/.svn ]; then               \
+		   v=`svnversion -nc $(srcdir)`; v=$${v%[A-Z]};        \
+		   echo "#define CODE_VERSION \"r$${v#*:}\"" > $@.tmp; \
+		else                                                   \
+		   echo "#define CODE_VERSION \"rUNKNOWN\"" > $@.tmp;  \
 		fi
+		$(VERBOSE)$(MOVE_IF_CHANGE) $@.tmp $@ || true
 
 clean-VERSION:
 		rm -f $(VERSION)

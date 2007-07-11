@@ -11,9 +11,9 @@
 
 #if !defined(__ASSEMBLY__) && !defined(__ASSEMBLER__)
 
-#ifndef __GNUC__
-#error "The libl4sys library must be used with Gcc."
-#endif
+//#ifndef __GNUC__
+//#error "The libl4sys library must be used with Gcc."
+//#endif
 
 /**
  * L4 Inline function attribute

@@ -3,6 +3,8 @@
 
 #include <l4/sys/compiler.h>
 
+#ifdef __GNUC__
+
 #ifndef L4_SYSCALL_MAGIC_OFFSET
 #  define L4_SYSCALL_MAGIC_OFFSET	8
 #endif
@@ -246,5 +248,7 @@ l4_kdebug_imb(void)
 {
   __KDEBUG_ARM_PARAM_0(0x3f);
 }
+
+#endif //__GNUC__
 
 #endif /* ! __L4SYS__INCLUDE__ARCH_ARM__KDEBUG_H__ */

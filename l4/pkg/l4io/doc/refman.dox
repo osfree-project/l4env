@@ -40,10 +40,12 @@ Possible command line arguments are:
   </dd>
 <dt><tt> --nolist </tt></dt>
   <dd> Disables PCI device list at startup. </dd>
-<dt><tt> --nomtrr </tt></dt>
-  <dd> Disables MTRR programming. </dd>
 <dt><tt> --events </tt></dt>
   <dd> Enable event server support. If a client exits, then all its resources
   will be freed. </dd>
+<dt><tt> --platform <i>name</i> </tt></dt>
+  <dd> (ARM only) This parameter selects the static I/O resource
+  configuration to be used. Valid values for <i>name</i> are: integrator, 926, mc.
+  </dd>
 </dl>
 */

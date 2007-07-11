@@ -8,7 +8,7 @@
 #include <l4/sys/compiler.h>
 #include <l4/sys/l4int.h>
 #include <l4/sys/types.h>
-#include <l4/sys/consts_arch.h>
+#include <l4/sys/consts.h>
 
 /*
  * prototypes

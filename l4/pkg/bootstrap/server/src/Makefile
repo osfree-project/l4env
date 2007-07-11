@@ -119,9 +119,7 @@ endif
 
 ifeq ($(ARCH),amd64)
 all:: libc32.a bootstrap32
-ifeq ($(INSTALL_TARGET),bootstrap)
 INSTALL_TARGET	:= bootstrap32
-endif
 TARGET_BIN	:= bootstrap32
 endif
 

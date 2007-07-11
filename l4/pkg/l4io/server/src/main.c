@@ -65,6 +65,7 @@ const l4_size_t l4thread_stack_size = 16 << 10;
 
 static int cfg_events;            /* receive exit events            (default off) */
 static int cfg_dev_list = 1;      /* list PCI devices at bootup     (default on)  */
+static int cfg_token = CFG_STD;   /* runtime configration token for static cfg    */
 
 /*
  * module vars
@@ -271,6 +272,7 @@ static void do_args(int argc, char *argv[])
     {"include", required_argument, &long_check, 4},
     {"exclude", required_argument, &long_check, 5},
     {"events", no_argument, &long_check, 7},
+    {"platform", required_argument, &long_check, 99},
     {0, 0, 0, 0}
   };
 
@@ -307,6 +309,21 @@ static void do_args(int argc, char *argv[])
               break;
             default:
               /* ignore unknown */
+              break;
+            case 99:
+#if defined(ARCH_arm)
+              if (strcmp(optarg, "integrator") == 0)
+                cfg_token = CFG_INTEGRATOR;
+              else if (strcmp(optarg, "926") == 0)
+                cfg_token = CFG_RV_EB_926;
+              else if (strcmp(optarg, "mc") == 0)
+                cfg_token = CFG_RV_EB_MC;
+              else
+                Panic("ARM platform \"%s\" not supported.", optarg);
+              LOG_printf("Selected ARM platform is: %s\n", optarg);
+#else
+              LOG_printf("The current architecure does not support \"--platform\" parameter.\n");
+#endif
               break;
             }
           break;
@@ -358,6 +375,12 @@ int main(int argc, char *argv[])
 
   if (!l4sigma0_kip_kernel_is_ux())
     {
+      if ((error = io_static_cfg_init(cfg_token)))
+        {
+          LOGdL(DEBUG_ERRORS, "static cfg initialization failed (%d)\n", error);
+          return error;
+        }
+
       if ((error = io_pci_init(cfg_dev_list)))
         {
           LOGdL(DEBUG_ERRORS, "pci initialization failed (%d)\n", error);

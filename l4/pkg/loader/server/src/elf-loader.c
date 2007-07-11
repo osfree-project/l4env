@@ -31,25 +31,32 @@ static int
 elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 	l4_uint32_t *save_phnum, l4_addr_t *save_phdr, int load_hdrs)
 {
+  struct
+  {
+    l4_addr_t beg;
+    l4_addr_t end;
+  } s[32];
   ElfW(Ehdr) *ehdr = (ElfW(Ehdr*))image;
   ElfW(Phdr) *phdr;
   l4env_infopage_t *env = app->env;
   l4exec_section_t *l4exc;
-  l4exec_section_t section[8];
-  void *map_addr;
+  l4exec_section_t section[16];
+  void *map_addr, *section_map[16];
   l4_addr_t map_offs;
-  int i, j, error;
-  unsigned section_num = 0;
-  int ehdr_loaded = 0, phdr_loaded = 0;
+  unsigned s_num, section_num = 0;
+  int i, j, error = 0, ehdr_loaded = 0, phdr_loaded = 0;
+
+  memset(section_map, 0, sizeof(section_map));
 
   assert(ehdr);
-
   *entry = ehdr->e_entry + base;
 
   phdr = (ElfW(Phdr*))(image + ehdr->e_phoff);
   assert(phdr);
 
-  for (i=0; i<ehdr->e_phnum; i++)
+  /* at first scan all input sections to determine which program sections we
+   * have to create */
+  for (i = 0, s_num = 0; i < ehdr->e_phnum; i++)
     {
       ElfW(Phdr) *ph = (ElfW(Phdr *))((l4_addr_t)phdr + i*ehdr->e_phentsize);
 
@@ -58,27 +65,90 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 	  ph->p_type == PT_INTERP ||
 	  ph->p_type == PT_DYNAMIC)
 	{
+          s[s_num].beg  = l4_trunc_page(ph->p_vaddr);
+          s[s_num].end  = l4_round_page(ph->p_vaddr+ph->p_memsz);
+          s_num++;
+        }
+    }
+
+  /* now merge overlapping sections */
+restart:
+  for (i = 0; i < s_num; i++)
+    {
+      if (s[i].end)
+        {
+          for (j = 0; j < s_num; j++)
+            {
+              if (i != j &&
+                  s[j].end &&
+                  (s[i].beg >= s[j].beg || s[i].end >= s[j].beg) &&
+                  (s[i].beg <  s[j].end || s[i].end <  s[j].end))
+                {
+                  s[j].beg = s[i].beg < s[j].beg ? s[i].beg : s[j].beg;
+                  s[j].end = s[i].end > s[j].end ? s[i].end : s[j].end;
+                  s[i].end = 0;
+                  goto restart;
+                }
+            }
+        }
+    }
+
+  /* now actually create the sections */
+  for (i = 0, l4exc = section; i < s_num; i++)
+    {
+      if (s[i].end)
+        {
+          l4exc->addr = s[i].beg;
+          l4exc->size = s[i].end - s[i].beg;
+	  if ((error = l4dm_mem_open(env->memserv_id, l4exc->size,
+				     0, 0, "program section", &l4exc->ds)))
+	    {
+	      app_msg(app, "Error %d allocating %zdMB memory for program headers",
+			    error, (l4exc->size + (1<<19) - 1) / (1 << 20));
+              goto cleanup;
+            }
+	  if ((error = l4rm_attach(&l4exc->ds, l4exc->size, 0,
+				   L4RM_MAP|L4DM_RW, &map_addr)) < 0)
+	    {
+	      app_msg(app, "Error %d attaching ds size %zdkB",
+			   error, l4exc->size/1024);
+	      goto cleanup;
+	    }
+          l4exc->info.id   = 0;
+          l4exc->info.type = 0;
+	  memset(map_addr, 0, l4exc->size);
+          section_map[l4exc-section] = map_addr;
+          l4exc++;
+        }
+    }
+  section_num = l4exc - section;
+
+  /* fill the pre-created sections */
+  for (i = 0; i < ehdr->e_phnum; i++)
+    {
+      ElfW(Phdr) *ph = (ElfW(Phdr *))((l4_addr_t)phdr + i*ehdr->e_phentsize);
+
+      if (ph->p_type == PT_PHDR ||
+	  ph->p_type == PT_LOAD ||
+	  ph->p_type == PT_INTERP ||
+	  ph->p_type == PT_DYNAMIC)
+	{
+#ifdef DEBUG
 	  const char *name = ph->p_type == PT_PHDR
 				? "pt_phdr"
 				: ph->p_type == PT_LOAD
 					? "pt_load"
-					: ph->p_type == PT_INTERP
+                                        : ph->p_type == PT_INTERP
                                                 ? "pt_interp"
                                                 : "pt_dynamic";
+#endif
 
 	  l4_addr_t beg  = l4_trunc_page(ph->p_vaddr);
 	  l4_addr_t end  = l4_round_page(ph->p_vaddr+ph->p_memsz);
 	  l4_size_t size = end - beg;
 #ifdef DEBUG
-	  app_msg(app, "sec%02d %08lx-%08lx (%s)", i, beg, end, name);
+	  app_msg(app, "  sec %02d %08lx-%08lx (%s)", i, beg, end, name);
 #endif
-
-	  if (size == 0)
-	    {
-	      app_msg(app, "Skipping empty section sec%02d at %08lx (%s)",
-                           i, beg, name);
-	      continue;
-	    }
 
 	  if (ph->p_type == PT_PHDR)
 	    {
@@ -88,102 +158,30 @@ elf_map(app_t *app, l4_addr_t image, l4_addr_t base, l4_addr_t *entry,
 		*save_phdr = base + ph->p_vaddr;
 	    }
 
-	  /* check for overlap */
-	  for (j=0, l4exc=section; j<section_num; j++, l4exc++)
-	    {
-	      l4_addr_t sec_beg  = l4exc->addr;
-	      l4_size_t sec_size = l4exc->size;
-	      l4_addr_t sec_end  = sec_beg + sec_size;
+          for (j = 0; j < section_num; j++)
+            {
+              if (ph->p_vaddr             >= section[j].addr &&
+                  ph->p_vaddr+ph->p_memsz <= section[j].addr+section[j].size)
+                break;
+            }
 
-	      if ((beg >= sec_beg || end >= sec_beg) &&
-		  (beg <  sec_end || end <  sec_end))
-		{
-		  l4_size_t new_size, add_beg, add_end;
+          if (j >= section_num)
+            {
+              app_msg(app, "Huh? Did not found pre-allocated section");
+              error = -L4_ENOTFOUND;
+              goto cleanup;
+            }
 
-#ifdef DEBUG
-		  app_msg(app, "Merge %08lx-%08lx / %08lx-%08lx",
-			        beg, end, sec_beg, sec_end);
-#endif
-
-                  add_beg  = beg < sec_beg ? sec_beg - beg : 0;
-                  add_end  = end > sec_end ? end - sec_end : 0;
-                  new_size = add_beg + sec_size + add_end;
-
-                  if (new_size > sec_size)
-                    {
-                      if ((error = l4dm_mem_resize(&l4exc->ds, new_size)))
-                        {
-                          app_msg(app, "Error %d resizing ds to %zdkB",
-			          error, new_size/1024);
-                          return error;
-                        }
-                    }
-                  else
-                    new_size = sec_size;
-
-		  if ((error = l4rm_attach(&l4exc->ds, new_size,
-					   0, L4RM_MAP|L4DM_RW, &map_addr)))
-		    {
-		      app_msg(app, "Error %d attaching ds size %zdkB",
-				   error, new_size/1024);
-		      return error;
-		    }
-		  if (add_beg)
-		    memmove(map_addr+add_beg, map_addr, sec_size);
-		  if (add_beg)
-		    memset(map_addr, 0, add_beg);
-		  if (add_end)
-		    memset(map_addr+add_beg+sec_size, 0, add_end);
-
-		  l4exc->addr -= add_beg;
-		  l4exc->size += add_beg + add_end;
-
-		  /* merge type */
-		  l4exc->info.type |=
-				(ph->p_flags & PF_R ? L4_DSTYPE_READ    : 0) |
-				(ph->p_flags & PF_W ? L4_DSTYPE_WRITE   : 0) |
-				(ph->p_flags & PF_X ? L4_DSTYPE_EXECUTE : 0);
-
-		  map_offs = ph->p_vaddr-l4exc->addr;
-		  goto next_iter;
-		}
-	    }
-
-	  /* cannot merge, open new section */
-	  if ((error = l4dm_mem_open(env->memserv_id, size,
-				     0, 0, name, &l4exc->ds)))
-	    {
-	      app_msg(app, "Error %d allocating memory for program headers",
-			    error);
-	      return error;
-	    }
-
-	  l4exc->addr      = beg;
-	  l4exc->size      = size;
-	  l4exc->info.id   = 0;
-	  l4exc->info.type = (ph->p_flags & PF_R ? L4_DSTYPE_READ    : 0)
-			   | (ph->p_flags & PF_W ? L4_DSTYPE_WRITE   : 0)
-			   | (ph->p_flags & PF_X ? L4_DSTYPE_EXECUTE : 0);
+	  section[j].info.type |= (ph->p_flags & PF_R ? L4_DSTYPE_READ    : 0) |
+                                  (ph->p_flags & PF_W ? L4_DSTYPE_WRITE   : 0) |
+                                  (ph->p_flags & PF_X ? L4_DSTYPE_EXECUTE : 0);
 
 	  if (app->flags & APP_ALL_WRITBLE)
-	    l4exc->info.type |= L4_DSTYPE_WRITE;
+	    section[j].info.type |= L4_DSTYPE_WRITE;
 
-	  if ((error = l4rm_attach(&l4exc->ds, l4exc->size, 0,
-				   L4RM_MAP|L4DM_RW, &map_addr)) < 0)
-	    {
-	      app_msg(app, "Error %d attaching ds size %zdkB",
-			   error, l4exc->size/1024);
-	      return error;
-	    }
+          map_addr = section_map[j];
+	  map_offs = ph->p_vaddr - section[j].addr;
 
-	  /* zero memory */
-	  memset(map_addr, 0, l4exc->size);
-	  map_offs = ph->p_vaddr-l4exc->addr;
-
-	  l4exc++;
-	  section_num++;
-
-next_iter:
 	  /* copy content of program section into dataspace */
 	  memcpy(map_addr+map_offs, (char*)image+ph->p_offset, ph->p_filesz);
 
@@ -209,11 +207,6 @@ next_iter:
                 }
             }
 
-	  if ((error = l4rm_detach(map_addr)))
-	    {
-	      app_msg(app, "Error %d detaching ds", error);
-	      return error;
-	    }
 	}
     }
 
@@ -221,17 +214,19 @@ next_iter:
   if (env->section_num + section_num > L4ENV_MAXSECT)
     {
       app_msg(app, "Cannot pass sections to application");
-      return -L4_ENOMEM;
+      error = -L4_ENOMEM;
+      goto cleanup;
     }
 
   if (load_hdrs && (!ehdr_loaded || !phdr_loaded))
     {
       app_msg(app, "Cannot allocate phdr for ehdr/phdr");
-      return -L4_ENOMEM;
+      error = -L4_ENOMEM;
+      goto cleanup;
     }
 
   /* attach all allocated dataspaces to our pager */
-  for (i=0, l4exc=section; i<section_num; i++, l4exc++)
+  for (i = 0, l4exc = section; i < section_num; i++, l4exc++)
     {
       app_area_t *aa;
 
@@ -248,10 +243,15 @@ next_iter:
 						  : L4DM_RO,
 					  /*attach=*/0,
 					  "program section", &aa)))
-	return error;
+	goto cleanup;
     }
 
-  return 0;
+cleanup:
+  for (i = 0; i < sizeof(section_map) / sizeof(section_map[0]); i++)
+    if (section_map[i])
+      l4rm_detach(section_map[i]);
+
+  return error;
 }
 
 

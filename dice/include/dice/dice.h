@@ -154,7 +154,7 @@ extern "C" {
 #endif
 
 /* common functions for the CORBA environement */
-static CORBA_char* __CORBA_Exception_Repository[CORBA_DICE_EXCEPTION_COUNT+1] = { "none", "wrong opcode", "ipc error", "internal ipc error", 0 };
+static const CORBA_char* __CORBA_Exception_Repository[CORBA_DICE_EXCEPTION_COUNT+1] = { "none", "wrong opcode", "ipc error", "internal ipc error", 0 };
 
 static inline
 void CORBA_exception_free(CORBA_Environment *ev)
@@ -186,7 +186,7 @@ void CORBA_exception_set(
 }
 
 static inline
-CORBA_char* CORBA_exception_id(CORBA_Environment *ev)
+const CORBA_char* CORBA_exception_id(CORBA_Environment *ev)
 {
     // string can be found using repository id (repos_id)
     if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&
@@ -243,7 +243,7 @@ void CORBA_server_exception_set(
 }
 
 static inline
-CORBA_char* CORBA_server_exception_id(CORBA_Server_Environment *ev)
+const CORBA_char* CORBA_server_exception_id(CORBA_Server_Environment *ev)
 {
     // string can be found using repository id (repos_id)
     if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&

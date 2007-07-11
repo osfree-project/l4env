@@ -336,6 +336,8 @@ EXTERN_C_END
  ***  architecture!
  *****************************************************************************/
 
+#ifdef __GNUC__
+
 #ifndef __L4UTIL_ATOMIC_HAVE_ARCH_CMPXCHG16
 #include <l4/util/irq.h>
 
@@ -510,5 +512,7 @@ l4util_atomic_inc(volatile long *dest)
   l4util_sti();
 }
 #endif
+
+#endif //_GNUC__
 
 #endif /* ! __L4UTIL__INCLUDE__ATOMIC_H__ */
