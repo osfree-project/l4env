@@ -888,6 +888,7 @@ Thread::switch_exception_context(Thread *sender, Thread* receiver)
 #else
   (void)sender; (void)receiver;
 #endif
+  Mem_layout::user_utcb_ptr(receiver->local_id());
 }
 
 extern "C"  FIASCO_FASTCALL __attribute__((section(".text.asmshortcut")))

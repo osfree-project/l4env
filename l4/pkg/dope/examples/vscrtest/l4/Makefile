@@ -1,4 +1,4 @@
-SYSTEMS         := x86-l4v2 amd64-l4v2
+SYSTEMS         := x86-l4v2 amd64-l4v2 arm-l4v2
 PKGDIR          ?= ../../..
 L4DIR           ?= $(PKGDIR)/../..
 
@@ -19,7 +19,3 @@ SRC_C            = vscrtest.c voxel.c thread.c startup.c \
                    bump.c feedback.c fountain.c 
 
 include $(L4DIR)/mk/prog.mk
-
-ifeq ($(USE_OSKIT),y)
-LIBS		+= -loskit_freebsd_m
-endif

@@ -8,10 +8,6 @@ MAINTAINERCLEANFILES= mkinstalldirs stamp-h depcomp install-sh \
 		      missing ylwrap aclocal.m4 \
 		      $(PACKAGE)-$(VERSION).tar.gz
 
-LIBTOOL_DEPS = @LIBTOOL_DEPS@
-libtool: $(LIBTOOL_DEPS)
-	$(SHELL) ./config.status --recheck
-
 dist-hook:
 	@perl -p -i -e 's/doc\/html\/Makefile//g' $(distdir)/configure
 

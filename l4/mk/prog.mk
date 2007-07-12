@@ -21,8 +21,13 @@ include $(L4DIR)/mk/Makeconf
 
 # define INSTALLDIRs prior to including install.inc, where the install-
 # rules are defined.
+ifeq ($(MODE),host)
+INSTALLDIR_BIN		?= $(DROPS_STDDIR)/bin/host
+INSTALLDIR_BIN_LOCAL	?= $(OBJ_BASE)/bin/host
+else
 INSTALLDIR_BIN		?= $(DROPS_STDDIR)/bin/$(subst -,/,$(SYSTEM))
 INSTALLDIR_BIN_LOCAL	?= $(OBJ_BASE)/bin/$(subst -,/,$(SYSTEM))
+endif
 ifeq ($(BID_STRIP_PROGS),y)
 INSTALLFILE_BIN 	?= $(STRIP) --strip-unneeded $(1) -o $(2) && \
 			   chmod 755 $(2)

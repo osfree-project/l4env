@@ -1,6 +1,6 @@
 PKGDIR        ?= ../../..
 L4DIR         ?= $(PKGDIR)/../..
-SYSTEMS        = x86-l4v2 x86-linux amd64-l4v2
+SYSTEMS        = x86-l4v2 x86-linux amd64-l4v2 arm-l4v2
 TARGET         = libdata.a
 OBJS           = bumpmap.o light.o
 INSTALL_TARGET =

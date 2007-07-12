@@ -20,13 +20,8 @@ dnl check for dlopen support
 AC_LIBTOOL_DLOPEN
 dnl check for libtool
 AM_PROG_LIBTOOL
-dnl ensure that dependencies are properly set
-AC_SUBST(LIBTOOL_DEPS)
 dnl build libltdl subdir
 AC_CONFIG_SUBDIRS(libltdl)
-dnl explicetly check for ltdl.h header
-AC_CHECK_HEADER(ltdl.h,
-	[AC_DEFINE(HAVE_LTDL_H, 1, needed by libtool)])
 AC_SUBST(LTDLINCL)
 AC_SUBST(LIBLTDL)
 
