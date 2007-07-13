@@ -89,9 +89,7 @@
 #include "fe/PostParseVisitor.h"
 
 // dynamic loadable modules
-#if defined(HAVE_LTDL_H)
 #include <ltdl.h>
-#endif
 
 //@{
 /** some config variables */
@@ -1134,7 +1132,6 @@ void CCompiler::InitTraceLib(int argc, char *argv[])
     if (!CCompiler::GetBackEndOption("trace-lib", sTraceLib))
 	return;
 
-#if defined(HAVE_LTDL_H)
     if (lt_dlinit())
     {
 	std::cerr << lt_dlerror() << std::endl;
@@ -1166,10 +1163,6 @@ void CCompiler::InitTraceLib(int argc, char *argv[])
 
     // call init function
     (*init) (argc, argv);
-#else
-    CMessages::Error("Dynamic loading not supported.\n"
-	"Please install `libtool' development files and rebuild Dice.\n");
-#endif
 }
 
 /** displays a copyright notice of this compiler */

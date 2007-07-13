@@ -96,9 +96,9 @@ public:
 
 	void draw_cursor(short *data, s32 x, s32 y) const {
 		short i, j;
-		Pixel dst, d;
-		dst = Pixel(buf_adr) + y*scr_width + x;
-		short *s = data;
+		Pixel *dst, *d;
+		dst = (Pixel*)buf_adr + y*scr_width + x;
+		short const *s = data;
 		short w = *(data++), h = *(data++);
 		short linelen = w;
 
@@ -119,9 +119,9 @@ public:
 	}
 
 	void save_background(s32 x, s32 y) const {
-		Pixel src = Pixel(buf_adr) + y*scr_width + x;
+		Pixel const *src = (Pixel const *)buf_adr + y*scr_width + x;
 		Color *dst = (Color*)&bg_buffer;
-		Pixel s;
+		Pixel const *s;
 		short h = 16;
 		int i, j;
 
@@ -138,9 +138,9 @@ public:
 
 
 	void restore_background(s32 x, s32 y) const {
-		Color *src = (Color*)&bg_buffer;
-		Pixel dst = Pixel(buf_adr) + y*scr_width + x;
-		Pixel d;
+		Color const *src = (Color*)&bg_buffer;
+		Pixel *dst = (Pixel*)buf_adr + y*scr_width + x;
+		Pixel *d;
 		short h = 16;
 		int i, j;
 		

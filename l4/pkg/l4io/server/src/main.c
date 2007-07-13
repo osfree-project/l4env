@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
 
   if (!l4sigma0_kip_kernel_is_ux())
     {
-      if ((error = io_static_cfg_init(cfg_token)))
+      if ((error = io_static_cfg_init(&io_info, cfg_token)))
         {
           LOGdL(DEBUG_ERRORS, "static cfg initialization failed (%d)\n", error);
           return error;

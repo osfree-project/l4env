@@ -66,7 +66,7 @@ enum
 };
 
 /** Init static resource configuration */
-extern int io_static_cfg_init(int cfg_token);
+extern int io_static_cfg_init(l4io_info_t *info, int cfg_token);
 
 
 /** Init Fiasco-UX H/W resources */

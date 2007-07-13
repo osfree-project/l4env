@@ -18,7 +18,7 @@ all-local:	$(man_MANS)
 # dependency list of all, we have to
 # add version.dox here
 $(man_MANS):	version.dox $(DOXFILES) Doxyfile
-	$(VERBOSE)$(DOXYGEN)
+	$(VERBOSE)DOX_SRCDIR=$(srcdir) $(DOXYGEN) $(srcdir)/Doxyfile
 	$(VERBOSE)$(LN_S) -f man/man1/dice.1
 
 else
@@ -36,6 +36,6 @@ version.dox:
 	echo PROJECT_NUMBER = \"Version ${VERSION}\" > $@
 
 clean-local:
-	rm -rf man/
+	rm -rf man/ man1/
 	rm -f dice.1
 

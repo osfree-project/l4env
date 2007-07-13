@@ -74,11 +74,11 @@ Y = py_2[2*i];\
 /* This is exactly the same code as yuv2rgb_c_32 except for the types of */
 /* r, g, b, dst_1, dst_2 */
 
-static void convert_yuv420_to_16(int width, int height, u8 *src_yuv420, u16 *dst_rgb16) {
+static void convert_yuv420_to_16(int width, int height, u8 const *src_yuv420, u16 *dst_rgb16) {
 	void *dst =dst_rgb16;
-	u8 *py = src_yuv420;
-	u8 *pu = src_yuv420 + width*height;
-	u8 *pv = src_yuv420 + width*height + width*height/4;
+	u8 const *py = src_yuv420;
+	u8 const *pu = src_yuv420 + width*height;
+	u8 const *pv = src_yuv420 + width*height + width*height/4;
 	int rgb_stride = width*2;
 	int y_stride = width;
 	int uv_stride = width/2;
@@ -89,10 +89,10 @@ static void convert_yuv420_to_16(int width, int height, u8 *src_yuv420, u16 *dst
 	height >>= 1;
 	do {
 
-		u8 * py_1 = py;
-		u8 * py_2 = py + y_stride;
-		u8 * pu_  = pu;
-		u8 * pv_  = pv;
+		u8 const * py_1 = py;
+		u8 const * py_2 = py + y_stride;
+		u8 const * pu_  = pu;
+		u8 const * pv_  = pv;
 		void * _dst_1 = dst;
 		void * _dst_2 = ((u8 *)dst) + rgb_stride;
 		int width_ = width;
@@ -302,26 +302,26 @@ private:
 
 private:
 	/*** DRAW A SOLID HORIZONTAL LINE IN 16BIT COLOR MODE ***/
-	static void solid_hline(Pixel dst, u32 width, Color col) {
+	static void solid_hline(Pixel *dst, u32 width, Color col) {
 		for (;width--;dst++) *dst = col;
 	}
 
 
 	/*** DRAW A SOLID VERTICAL LINE IN 16BIT COLOR MODE ***/
-	static void solid_vline(Pixel dst, u32 height, u32 scr_w, Color col) {
+	static void solid_vline(Pixel *dst, u32 height, u32 scr_w, Color col) {
 		for (;height--;dst+=scr_w) *dst = col;
 	}
 
 
 	/*** DRAW A TRANSPARENT HORIZONTAL LINE IN 16BIT COLOR MODE ***/
-	static void mixed_hline(Pixel dst, u32 width, Color mixcol) {
+	static void mixed_hline(Pixel *dst, u32 width, Color mixcol) {
 		mixcol=(mixcol&Traits::C_space::Mix_mask)>>1;
 		for (;width--;dst++) *dst = (((*dst)&Traits::C_space::Mix_mask)>>1) + mixcol;
 	}
 
 
 	/*** DRAW A TRANSPARENT VERTICAL LINE IN 16BIT COLOR MODE ***/
-	static void mixed_vline(Pixel dst, u32 height, u32 scr_w, Color mixcol) {
+	static void mixed_vline(Pixel *dst, u32 height, u32 scr_w, Color mixcol) {
 		mixcol=(mixcol&Traits::C_space::Mix_mask)>>1;
 		for (;height--;dst+=scr_w) *dst = (((*dst)&Traits::C_space::Mix_mask)>>1) + mixcol;
 	}
@@ -333,8 +333,8 @@ private:
 	                      typename T::Pixel src) {
 		int i, j;
 		int w = img_w, h = img_h;
-		Pixel dst, d;
-		typename T::Pixel s;
+		Pixel *dst, *d;
+		typename T::Pixel const *s;
 		int sx = 0, sy = 0;
 
 		if (!clip_img(clip_x1, clip_y1, clip_x2, clip_y2,
@@ -360,12 +360,12 @@ private:
 	template< typename T >
 	static void paint_scaled_img(int x, int y, int w, int h,
 	                             int linewidth, int sw, int sh,
-	                             typename T::Pixel src) {
+	                             typename T::Pixel const *src) {
 		int mx, my;
 		int i, j;
 		int sx = 0, sy = 0;
-		Pixel dst, d;
-		typename T::Pixel s;
+		Pixel *dst, *d;
+		typename T::Pixel const *s;
 
 		/* sanity check */
 		if (!src) return;
@@ -383,7 +383,7 @@ private:
 		              &x, &y, &w, &h, &sx, &sy, mx, my)) return;
 
 		/* calculate start address */
-		dst = Pixel(scr_adr) + y*scr_width + x;
+		dst = (Pixel*)scr_adr + y*scr_width + x;
 
 		/* calculate x offsets */
 		for (i = w; i--; sx += mx)
@@ -414,9 +414,9 @@ public:
 		if (beg_x > end_x) return 0;
 	
 		if (Rgba32::A::get(rgba) > 127) {
-			solid_hline(Pixel(scr_adr) + y*scr_width + beg_x, end_x - beg_x + 1, Conv<Rgba32, Traits>::convert(rgba));
+			solid_hline((Pixel*)scr_adr + y*scr_width + beg_x, end_x - beg_x + 1, Conv<Rgba32, Traits>::convert(rgba));
 		} else {
-			mixed_hline(Pixel(scr_adr) + y*scr_width + beg_x, end_x - beg_x + 1, Conv<Rgba32, Traits>::convert(rgba));
+			mixed_hline((Pixel*)scr_adr + y*scr_width + beg_x, end_x - beg_x + 1, Conv<Rgba32, Traits>::convert(rgba));
 		}
 		return 0;
 	}
@@ -431,9 +431,9 @@ public:
 		if (beg_y > end_y) return 0;
 
 		if (GFX_A(rgba) > 127) {
-			solid_vline(Pixel(scr_adr) + beg_y*scr_width + x, end_y - beg_y + 1, scr_width, Conv<Rgba32, Traits>::convert(rgba));
+			solid_vline((Pixel*)scr_adr + beg_y*scr_width + x, end_y - beg_y + 1, scr_width, Conv<Rgba32, Traits>::convert(rgba));
 		} else {
-			mixed_vline(Pixel(scr_adr) + beg_y*scr_width + x, end_y - beg_y + 1, scr_width, Conv<Rgba32, Traits>::convert(rgba));
+			mixed_vline((Pixel*)scr_adr + beg_y*scr_width + x, end_y - beg_y + 1, scr_width, Conv<Rgba32, Traits>::convert(rgba));
 		}
 		return 0;
 	}
@@ -441,7 +441,7 @@ public:
 
 	static s32 scr_draw_fill(struct gfx_ds_data *s, s16 x1, s16 y1, s16 w, s16 h, u32 rgba) {
 		s16 x, y;
-		Pixel dst, dst_line;
+		Pixel *dst, *dst_line;
 		Color color;
 		u16 alpha;
 		s16 x2 = x1 + w - 1;
@@ -459,7 +459,7 @@ public:
 		alpha = Rgba32::A::get(rgba);
 
 
-		dst_line = Pixel(scr_adr) + scr_width*y1;
+		dst_line = (Pixel*)scr_adr + scr_width*y1;
 
 		/* solid fill for 100% alpha */
 		if (alpha == 0xff) {
@@ -497,30 +497,30 @@ public:
 		switch (type) {
 		case GFX_IMG_TYPE_NATIVE:
 			{
-				typename Traits::Pixel src = (typename Traits::Pixel)(img->handler->map(img->data));
+				typename Traits::Pixel const *src = (typename Traits::Pixel const *)(img->handler->map(img->data));
 				paint_scaled_img<Traits>(x, y, w, h, img_w, sw, sh, src + img_w*sy + sx);
 				break;
 			}
 
 		case GFX_IMG_TYPE_RGB16:
 			{
-				Rgb16::Pixel src = (Rgb16::Pixel)img->handler->map(img->data);
+				Rgb16::Pixel const *src = (Rgb16::Pixel const *)img->handler->map(img->data);
 				paint_scaled_img<Rgb16>(x, y, w, h, img_w, sw, sh, src + img_w*sy + sx);
 				break;
 			}
 
 		case GFX_IMG_TYPE_RGBA32:
 			{
-				Rgba32::Pixel src = (Rgba32::Pixel)img->handler->map(img->data);
+				Rgba32::Pixel const *src = (Rgba32::Pixel const *)img->handler->map(img->data);
 				paint_scaled_img<Rgba32>(x, y, w, h, img_w, sw, sh, src + img_w*sy + sx);
 				break;
 			}
 
 		case GFX_IMG_TYPE_YUV420:
 			{
-			  Rgb16::Pixel src = (Rgb16::Pixel)cache->get_elem(imgcache, img->cache_idx, 123);
+			  Rgb16::Pixel *src = (Rgb16::Pixel *)cache->get_elem(imgcache, img->cache_idx, 123);
 				if (!src) {
-					src = (Rgb16::Pixel)malloc(img_w*img_h*2);
+					src = (Rgb16::Pixel *)malloc(img_w*img_h*2);
 					img->cache_idx = cache->add_elem(imgcache, src, img_w*img_h*2, 123, NULL);
 				}
 				convert_yuv420_to_16(img_w, img_h, (u8*)(img->handler->map(img->data)), src);
@@ -546,10 +546,10 @@ public:
 		s32 *otab = font->offset_table;
 		s32 img_w = font->img_w;
 		s32 img_h = font->img_h;
-		Pixel dst = Pixel(scr_adr) + y*scr_width + x;
-		u8  *src = font->image;
-		u8  *s;
-		Pixel d;
+		Pixel *dst = (Pixel*)scr_adr + y*scr_width + x;
+		u8  const *src = font->image;
+		u8  const *s;
+		Pixel *d;
 		s16 i, j;
 		s32 w;
 		s32 h = font->img_h;

@@ -37,10 +37,6 @@ install: build
 	# Add here commands to install the package into debian/tmp.
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/dice
 
-	mkdir -p $(CURDIR)/debian/dice/usr/share/doc/dice
-	gzip -9c $(CURDIR)/ChangeLog > $(CURDIR)/debian/dice/usr/share/doc/dice/changelog
-
-
 # Build architecture-independent files here.
 binary-indep: build install
 # We have nothing to do by default.

@@ -12,8 +12,8 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
-#ifndef __GENERIC_IO_INCLUDE_ARCH_X86_TYPES_H_
-#define __GENERIC_IO_INCLUDE_ARCH_X86_TYPES_H_
+#ifndef __GENERIC_IO_INCLUDE_TYPES_H_
+#define __GENERIC_IO_INCLUDE_TYPES_H_
 
 /* L4 includes */
 #include <l4/sys/types.h>
@@ -105,6 +105,34 @@ typedef struct l4io_pci_dev
   l4io_pdev_t handle;         /* handle for this device */
 } l4io_pci_dev_t;
 
+
+/** Infopage descriptors */
+enum
+{
+	L4IO_RESOURCE_MEM, L4IO_RESOURCE_PORT, L4IO_RESOURCE_IRQ,
+	L4IO_DEVICE_NAME_LEN = 32
+};
+
+
+/** Infopage resource descriptor */
+typedef struct
+{
+	unsigned long type;   /* resource type (see above) */
+	unsigned long start;  /* start of resource */
+	unsigned long end;    /* end of resource (last resource item) */
+} l4io_desc_resource_t;
+
+
+/** Infopage device descriptor */
+typedef struct
+{
+	unsigned char id[L4IO_DEVICE_NAME_LEN];  /* device identifier */
+	unsigned char num_resources;             /* number of resource descriptors;
+	                                            invalid device if 0 */
+	l4io_desc_resource_t resources[];        /* resources of this device */
+} l4io_desc_device_t;
+
+
 /*****************************************************************************/
 /**
  * \brief   I/O Info Page Structure.
@@ -129,6 +157,8 @@ struct l4io_info
       unsigned long hz;                                 /**< update frequency for jiffies (HZ) */
       volatile struct { long tv_sec, tv_usec; } xtime;  /**< xtime */
       unsigned long omega0;                             /**< omega0 flag (1 if started) */
+
+      l4io_desc_device_t devices[];                     /**< device descriptors */
     };
 
     char padding[L4_PAGESIZE];
@@ -141,5 +171,20 @@ typedef struct l4io_info l4io_info_t;   /**< io info page type */
 
 #define L4IO_MEM_CACHED			0x0001
 #define L4IO_MEM_WRITE_COMBINED		0x0003
+
+
+/** Returns first device descriptor in infopage or 0 */
+static inline l4io_desc_device_t * l4io_desc_first_device(l4io_info_t *info)
+{
+	return info->devices->num_resources ? info->devices : 0;
+}
+
+
+/** Returns subsequent device descriptor in infopage or 0 */
+static inline l4io_desc_device_t * l4io_desc_next_device(l4io_desc_device_t *dev)
+{
+	dev = (l4io_desc_device_t *) &dev->resources[dev->num_resources];
+	return dev->num_resources ? dev : 0;
+}
 
 #endif

@@ -1,5 +1,20 @@
 $Log, ChangeLog,v $
 
+3.1.3
+ - [fix] building user's manual in builddir != srcdir
+ - [fix] build fixes for Ubuntu
+ - [fix] really scrub dice dir on 'make cleanall' - fixes some subsequent
+   build errors experienced by some users
+ - [fix] no dependency on a configured L4 object-dir anymore
+ - [fix] C++ back-end fixes
+ - [fix] -s option did not generate *-sys.h[h] file
+ - [fix] sending array of flexpages works for L4 V2
+ - [fix] signdness issues in generated code
+ - [feature] simplistic exception support for C back-end
+ - [feature] add -fsyscall= option to allow optimization of kernel entry.
+ - [feature] removed --with-l4dir configure option.
+ - [feature] libltdl is shipped with Dice now
+
 3.1.2
  - [feature] only set receive window in message buffer to environment's
    receive flexpage if we really receive a flexpage

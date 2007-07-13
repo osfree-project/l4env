@@ -15,8 +15,9 @@ template<>
 class Pixel_traits<2>
 {
 public:
+	enum { Bpp = 2 };
 	typedef u16 Color;  /* color value for computations */
-	typedef u16 *Pixel; /* refernece to video memory representation */
+	typedef u16 Pixel; /* refernece to video memory representation */
 };
 
 /*** Spezialization for 4byte */
@@ -24,8 +25,9 @@ template<>
 class Pixel_traits<4>
 {
 public:
+	enum { Bpp = 4 };
 	typedef u32 Color;
-	typedef u32 *Pixel;
+	typedef u32 Pixel;
 };
 
 
@@ -34,6 +36,7 @@ template<>
 class Pixel_traits<3>
 {
 public:
+	enum { Bpp = 3 };
 	typedef u32 Color; /* use 32bit for arithmetic */
 
 	/*** Encapsulation for 3byte memory references */
@@ -41,49 +44,28 @@ public:
 	class Pixel
 	{
 	private:
-		class V
+		char _b[3];
+		u32 get() const 
 		{
-		private:
-			char *_b;
-			u32 get() const { return  *((u32*)_b); }
+			return (u32)(*(u16 const *)_b) | ((u32)_b[2] << 16) ;
+		}
 
+	public:
+		Pixel(u32 c) 
+		{
+			*(u16*)_b = (u16)c;
+			_b[2] = c >> 16;
+		}
 
-		public:
-			V(char *b) : _b(b) {}
-			V &operator = (u32 c)
-			{
-				union { u32 c; char b[1]; } 
-				v = {c};
-				_b[0] = v.b[0];
-				_b[1] = v.b[1];
-				_b[2] = v.b[2];
-				return *this;
-			}
+		Pixel &operator = (u32 c)
+		{
+			*(u16*)_b = (u16)c;
+			_b[2] = c >> 16;
+			return *this;
+		}
 
-			operator u32 () const { return get(); }
-		};
-
-		public:
-		Pixel() {}
-		Pixel(void *adr) : _bytes((char *)adr) {}
-
-		Pixel operator + (unsigned diff) const
-		{ return Pixel(_bytes + (3*diff)); }
-
-		void operator += (unsigned diff)
-		{ _bytes += 3*diff; }
-
-		Pixel operator ++ (int) 
-		{ Pixel v = *this; _bytes += 3; return v; }
-
-		V operator * () const { return V(_bytes); }
-		V operator [] (int i) const { return V(_bytes + (3*i)); }
-
-		bool operator ! () const { return _bytes == 0; }
-
-		private:
-		char *_bytes;
-	};
+		operator u32 () const { return get(); }
+	} __attribute__((packed));
 };
 
 
@@ -114,7 +96,8 @@ template<
 class Color_traits
 {
 public:
-  	typedef typename _Pixel::Color Color;
+	enum { Bpp = _Pixel::Bpp };
+	typedef typename _Pixel::Color Color;
 	typedef typename _Pixel::Pixel Pixel;
 
 	typedef Color_traits<
@@ -284,7 +267,7 @@ public:
 		       | Conv_local::convert_comp<FB, TB>(c);
 	}
 
-	static void blit(F_color c, T_pixel d) {
+	static void blit(F_color c, T_pixel *d) {
 		if (From::A::Size > 0)
 			*d = To::blend(convert(c), From::A::get(c))
 			       + To::blend(*d, 255 - From::A::get(c));
@@ -304,7 +287,7 @@ public:
 	typedef typename T::Color F_color;
 
 	static T_color convert(F_color c) { return c; }
-	static void blit(F_color c, T_pixel d) {
+	static void blit(F_color c, T_pixel *d) {
 		if (T::A::Size > 0)
 			*d = T::blend(c, T::A::get(c)) + T::blend(*d, 255 - T::A::get(c));
 		else

@@ -74,9 +74,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#if defined(HAVE_LTDL_H)
 #include <ltdl.h>
-#endif
 #include <iostream>
 
 CBEClassFactory::CBEClassFactory()
@@ -547,7 +545,6 @@ CTrace* CBEClassFactory::GetNewTrace()
 	return 0;
 
     // get handle for lib
-#if defined(HAVE_LTDL_H)
     lt_dlhandle lib = lt_dlopen(sTraceLib.c_str());
     if (lib == NULL)
 	return 0;
@@ -568,10 +565,5 @@ CTrace* CBEClassFactory::GetNewTrace()
 	"CBEClassFactory: create class CTrace from lib \"%s\".\n",
 	sTraceLib.c_str());
     return (*func) ();
-#else
-    CMessages::Error("Dynamic loading not supported.\n"
-	"Please install the `libtool' development package and rebuild Dice.\n");
-    return 0;
-#endif
 }
 

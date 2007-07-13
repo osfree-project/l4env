@@ -14,7 +14,6 @@
 #include <l4/util/util.h>
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
-#include <l4/util/rdtsc.h>  /* read time-stamp counter */
 
 #include <l4/generic_io/libio.h>
 
@@ -24,32 +23,21 @@ char LOG_tag[9] = "io_dummy";
 extern unsigned long jiffies;
 extern unsigned long HZ;
 
-static l4io_info_t *io_info_addr = NULL;
+static l4io_info_t *io_info_addr;
 
-/* use symbol "jiffies" for measurement */
-static void measure_jiffies(unsigned int num)
+static void do_jiffies(unsigned int num)
 {
 	unsigned long stamp;
 
 	LOG_Enter("HZ = %lu jiffies = %lu @ %p num = %u", HZ, jiffies, &jiffies, num);
 
-	l4_calibrate_tsc();
-
 	for (; num; num--) {
-		l4_cpu_time_t stamp0 = 0;
-		l4_cpu_time_t diff;
-
-		stamp0 = l4_rdtsc();
 		/* wait HZ jiffies (1 s) */
 		stamp = jiffies + HZ;
 		while (jiffies < stamp) l4_usleep(900*(stamp-jiffies));
-		diff = l4_rdtsc();
 
-		diff -= stamp0;
-
-		LOG_printf("period = %lu jiffies (%u ms) ... xtime = {%ld, %ld}\n",
-		           HZ, ((l4_uint32_t) l4_tsc_to_ns(diff)) / 1000000,
-		           io_info_addr->xtime.tv_sec, io_info_addr->xtime.tv_usec);
+		LOG_printf("period = %lu jiffies ... xtime = {%ld, %ld}\n",
+		           HZ, io_info_addr->xtime.tv_sec, io_info_addr->xtime.tv_usec);
 	}
 }
 
@@ -135,6 +123,27 @@ static void list_pcidevs()
 	}
 }
 
+
+static void list_descriptors()
+{
+	LOG_printf("Device descriptor list:\n");
+	l4io_desc_device_t *dev = l4io_desc_first_device(io_info_addr);
+
+	while (dev) {
+		LOG_printf("  device \"%s\" has %d resource descriptors:\n", dev->id, dev->num_resources);
+
+		int i;
+		for (i = 0; i < dev->num_resources; i++)
+			LOG_printf("    %s: %08lx-%08lx\n",
+			           dev->resources[i].type == L4IO_RESOURCE_IRQ ? " IRQ" :
+			           dev->resources[i].type == L4IO_RESOURCE_MEM ? " MEM" :
+			           dev->resources[i].type == L4IO_RESOURCE_PORT ? "PORT" : "????",
+			           dev->resources[i].start, dev->resources[i].end);
+
+		dev = l4io_desc_next_device(dev);
+	}
+}
+
 int main(void)
 {
 	int error;
@@ -154,7 +163,8 @@ int main(void)
 		LOG_printf("L4IO doesn't handle Interrupts.\n");
 
 	list_pcidevs();
-	measure_jiffies(99);
+	list_descriptors();
+	do_jiffies(13);
 
 	return 0;
 }

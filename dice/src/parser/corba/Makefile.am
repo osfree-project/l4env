@@ -8,7 +8,8 @@ AM_LFLAGS=         -Pcorba -d -o$(LEX_OUTPUT_ROOT).c
 AM_YFLAGS=		-pcorba -d -v
 
 CLEANFILES=             parser.cc $(LEX_OUTPUT_ROOT).c \
-			scanner.cc scanner.h y.output
+			scanner.cc scanner.h y.output \
+			parser.h parser.output
 
 dist-hook:
 	rm -f $(distdir)/parser.cc $(distdir)/$(LEX_OUTPUT_ROOT).c \

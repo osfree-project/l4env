@@ -3,7 +3,7 @@ L4DIR           ?= $(PKGDIR)/../..
 
 TARGET          = l4io_dummy_cpp
 DEFAULT_RELOC   = 0x00900000
-SYSTEMS         = x86-l4v2
+SYSTEMS         = x86-l4v2 amd64-l4v2 arm-l4v2
 
 LIBS            = -lio
 SRC_CC          = main.cc

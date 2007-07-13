@@ -1,7 +1,7 @@
 /* $Id$ */
 /*****************************************************************************/
 /**
- * \file   generic_io/include/ARCH-x86/libio.h
+ * \file   generic_io/include/libio.h
  * \brief  L4Env I/O Client API
  *
  * \date   2007-03-23
@@ -13,8 +13,8 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
-#ifndef __GENERIC_IO_INCLUDE_ARCH_X86_LIBIO_H_
-#define __GENERIC_IO_INCLUDE_ARCH_X86_LIBIO_H_
+#ifndef __GENERIC_IO_INCLUDE_LIBIO_H_
+#define __GENERIC_IO_INCLUDE_LIBIO_H_
 
 /* L4 includes */
 #include <l4/sys/types.h>
