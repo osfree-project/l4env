@@ -7,6 +7,8 @@ libbe_a_SOURCES = BEAttribute.cpp BEInterfaceFunction.cpp BESrvLoopFunction.cpp 
 
 noinst_HEADERS = BEAttribute.h BEInterfaceFunction.h BESrvLoopFunction.h BECallFunction.h BEMarshaller.h BEStructType.h BEClass.h BESwitchCase.h BEClassFactory.h BENameFactory.h BETarget.h BEClient.h BENameSpace.h BEComponent.h BEComponentFunction.h BEObject.h BEConstant.h BEOpcodeType.h BEContext.h BEOperationFunction.h BEType.h BEDeclarator.h BETypedDeclarator.h BEEnumType.h BETypedef.h BEException.h BEUnionCase.h BEExpression.h BEUnionType.h BEIDLUnionType.h BEFile.h BEUnmarshalFunction.h BEFunction.h BERoot.h BEUserDefinedType.h BEHeaderFile.h BESizes.h BEWaitAnyFunction.h BEImplementationFile.h BESndFunction.h BEReplyFunction.h BEWaitFunction.h BECommunication.h BEMarshalFunction.h BEMarshalExceptionFunction.h BEDispatchFunction.h BEReplyCodeType.h BEMsgBuffer.h BEMsgBufferType.h BEMarshaller.h Trace.h BECppCallWrapperFunction.h MsgStructType.h
 
+AM_CPPFLAGS = $(LTDLINCL)
+
 AM_CXXFLAGS = -Wunused -Wunused-parameter -Wall -W \
 	      -Wcast-align -Wcast-qual -Wconversion -Wformat=2 \
 	      -Wmissing-format-attribute -Wpointer-arith -Wshadow -Wwrite-strings \
