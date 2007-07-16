@@ -10,10 +10,10 @@
 #include <elf.h>
 /* Initialization sequence for the GOT.  */
 #define INIT_GOT(GOT_BASE,MODULE) \
-{				\
+do {				\
   GOT_BASE[2] = (unsigned long) _dl_linux_resolve; \
   GOT_BASE[1] = (unsigned long) MODULE; \
-}
+} while (0)
 
 static inline unsigned long arm_modulus(unsigned long m, unsigned long p)
 {

@@ -691,7 +691,7 @@ struct elf_resolve *_dl_load_elf_shared_library(int secure,
 	tpnt->usage_count++;
 	tpnt->libtype = elf_lib;
 
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
 	/* fm3: extract symbols/lines from this object */
 	_dl_debug_info_add(tpnt, infile, header, piclib ? libaddr : 0);
 #endif

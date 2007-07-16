@@ -457,6 +457,44 @@ SYSTEM_CALL(0x35,sys_thread_ex_regs)
 SYSTEM_CALL(0x36,sys_task_new)
 SYSTEM_CALL(0x39,sys_u_lock)
 
+#ifdef CONFIG_PL0_HACK
+SYSTEM_CALL(0x37,sys_priv_control)
+
+GATE_ENTRY(0x38,entry_sys_priv_entry,ACC_PL_U | ACC_INTR_GATE)
+	.p2align 4
+entry_sys_priv_entry:
+        push	$0
+	pushf
+	push	%rax
+	push	%rcx
+	push	%rdx
+	push	%rsi
+	push	%rdi
+	push	%r8
+	push	%r9
+	push	%r10
+	push	%r11
+	lea	80(%rsp),%rdi
+	call	sys_priv_entry_wrapper
+	or	%rax,%rax
+	jz	1f
+	pop	%r11
+	pop	%r10
+	pop	%r9
+	pop	%r8
+	pop	%rdi
+	pop	%rsi
+	pop	%rdx
+	pop	%rcx
+	pop	%rax
+	popf
+	add	$8,%rsp
+	jmp	*-8(%rsp)
+
+1:	add	$88,%rsp
+	iret
+#endif
+
 
 /* these functions are implemented in entry-ia32.S */
 GATE_ENTRY(0x0a,entry_vec0a_invalid_tss,ACC_PL_K | ACC_INTR_GATE)

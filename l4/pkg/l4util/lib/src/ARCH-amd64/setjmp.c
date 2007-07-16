@@ -28,7 +28,7 @@ __asm__ (
     "mov	%rsi, 0x48(%rdi)	\n\t"
     "mov	%rbp, 0x50(%rdi)	\n\t"
     "mov	%rdi, 0x58(%rdi)	\n\t"	/* rsp */
-    "lea	1f, %rcx		\n\t"
+    "movabs	$1f, %rcx		\n\t"
     "mov	%rcx, 0x60(%rdi)	\n\t"	/* rip */
     "mov	(%rsp), %rcx		\n\t"
     "mov	%rcx, 0x68(%rdi)	\n\t"	/* rip caller */

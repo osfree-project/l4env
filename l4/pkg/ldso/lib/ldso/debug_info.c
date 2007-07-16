@@ -16,6 +16,7 @@
 #include <l4/demangle/demangle.h>
 #include <l4/log/l4log.h>
 #include <l4/util/l4_macros.h>
+#include <link.h>
 #include <elf.h>
 #include <string.h>
 #include <stdio.h>
@@ -36,11 +37,11 @@
 
 typedef struct
 {
-  unsigned long  n_strx;        /* index into string table of name */
+  unsigned int   n_strx;        /* index into string table of name */
   unsigned char  n_type;        /* type of symbol */
   unsigned char  n_other;       /* misc info (usually empty) */
   unsigned short n_desc;        /* description field */
-  unsigned long  n_value;       /* value of symbol */
+  unsigned int   n_value;       /* value of symbol */
 } __attribute__ ((packed)) stab_entry_t;
 
 typedef struct
@@ -60,7 +61,8 @@ typedef struct
   struct elf_resolve *tpnt;
 } debug_info_t;
 
-static debug_info_t debug_info[10];
+
+static debug_info_t debug_info[32];
 static unsigned     nr_debug_info;
 static char        *glob_symbols;
 static l4_size_t    size_symbols;
@@ -237,10 +239,10 @@ add_section(const stab_entry_t *se, const char *str,
 static void
 lines_add(int infile, const char *header, l4_addr_t libaddr,
 	  void *scratch_mem, l4_size_t scratch_size,
-	  Elf32_Shdr *sh_base, int nr_lin, debug_info_t *d)
+	  ElfW(Shdr) *sh_base, int nr_lin, debug_info_t *d)
 {
-  Elf32_Shdr   *sh_lin = sh_base + nr_lin;
-  Elf32_Shdr   *sh_str = sh_base + sh_lin->sh_link;
+  ElfW(Shdr)   *sh_lin = sh_base + nr_lin;
+  ElfW(Shdr)   *sh_str = sh_base + sh_lin->sh_link;
   stab_entry_t *lin_stab = 0;
   char         *lin_str = 0;
 
@@ -299,15 +301,15 @@ error:
 static void
 symbols_add(int infile, l4_addr_t libaddr,
 	    void *scratch_mem, l4_size_t scratch_size,
-	    Elf32_Shdr *sh_base, int nr_sym, debug_info_t *d)
+	    ElfW(Shdr) *sh_base, int nr_sym, debug_info_t *d)
 {
-  Elf32_Shdr *sh_sym = sh_base + nr_sym;
-  Elf32_Shdr *sh_str = sh_base + sh_sym->sh_link;
+  ElfW(Shdr) *sh_sym = sh_base + nr_sym;
+  ElfW(Shdr) *sh_str = sh_base + sh_sym->sh_link;
   char       *sym_strtab = 0;
-  Elf32_Sym  *sym_symtab = 0;
-  unsigned    num_symtab = sh_sym->sh_size / sizeof(Elf32_Sym);
+  ElfW(Sym)  *sym_symtab = 0;
+  unsigned    num_symtab = sh_sym->sh_size / sizeof(ElfW(Sym));
   unsigned    size;
-  Elf32_Sym  *sym;
+  ElfW(Sym)  *sym;
   int         i;
   char       *str = 0;
 
@@ -373,8 +375,8 @@ void
 _dl_debug_info_add(struct elf_resolve *tpnt, int infile,
 		   const char *header, l4_addr_t libaddr)
 {
-  Elf32_Ehdr *e = (Elf32_Ehdr*)header;
-  Elf32_Shdr *sh_base = 0, *sh_sym, *sh_str;
+  ElfW(Ehdr) *e = (ElfW(Ehdr)*)header;
+  ElfW(Shdr) *sh_base = 0, *sh_sym, *sh_str;
   unsigned    sh_base_sz = 0;
   char       *strtab = 0;
   unsigned    strtab_sz = 0;
@@ -451,7 +453,7 @@ _dl_debug_info_add_bin(void)
   char buffer[128];
   const char *fname = binary_name(buffer, sizeof(buffer));
   int infile;
-  Elf32_Ehdr *e;
+  ElfW(Ehdr) *e;
 
   if ((infile = _dl_open(fname, O_RDONLY, 0)) < 0)
     {
@@ -496,7 +498,7 @@ _dl_debug_info_combine(void)
 				     "[SYMBOLS (combined)]");
       if (glob_symbols == (char*)~0U)
 	{
-	  LOGd(DBG, "Cannot allocate space for combined symbols (need %dKB)!",
+	  LOGd(DBG, "Cannot allocate space for combined symbols (need %zdKB)!",
 		     size_symbols/1024);
 	  return;
 	}
@@ -522,7 +524,7 @@ _dl_debug_info_combine(void)
 				   "[LINES (combined)]");
       if (glob_lines == (char*)0U)
 	{
-	  LOGd(DBG, "Cannot allocate for combined lines (need %dKB)!",
+	  LOGd(DBG, "Cannot allocate for combined lines (need %zdKB)!",
 		    size_lines/1024);
 	  return;
 	}

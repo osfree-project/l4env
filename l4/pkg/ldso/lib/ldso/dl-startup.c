@@ -336,7 +336,7 @@ static void __attribute_used__ _dl_start(l4env_infopage_t *env)
 	_dl_elf_main = (int (*)(int, char **, char **)) auxvt[AT_ENTRY].a_un.a_val;
 	SEND_ADDRESS_STDERR_DEBUG(_dl_elf_main, 1);
 
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
 	/* fm3: load symbols of binary, register combined symbols at kernel */
 	_dl_debug_info_sum();
 #endif

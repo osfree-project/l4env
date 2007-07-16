@@ -14,8 +14,13 @@
 
 #include <l4/sys/l4int.h>
 
+#ifdef ARCH_amd64
+#define MMAP_START	0x70000000
+#define MMAP_END	0x78000000
+#else
 #define MMAP_START	0xA0000000
 #define MMAP_END	0xA8000000
+#endif
 
 #if (__GNUC__ == 3 && __GNUC_MINOR__ >= 3) || __GNUC__ > 3
 #define HIDDEN __attribute__((visibility("hidden")))

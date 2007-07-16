@@ -166,8 +166,8 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, unsigned long load_addr,
 	 * will need to properly deal with that as well.
 	 */
 	rpnt = NULL;
-	if (_dl_getenv("LD_BIND_NOW", envp))
-		unlazy = RTLD_NOW;
+//	if (_dl_getenv("LD_BIND_NOW", envp)) // l4: XXX Force RTLD_NOW.
+		unlazy = RTLD_NOW;               //      XXX Important for x86_64.
 
 	/* Now we need to figure out what kind of options are selected.
 	 * Note that for SUID programs we ignore the settings in
@@ -283,6 +283,10 @@ void _dl_get_ready_to_run(struct elf_resolve *tpnt, unsigned long load_addr,
 			if (lpnt)
 #endif
 				INIT_GOT(lpnt, _dl_loaded_modules);
+#ifdef ALLOW_ZERO_PLTGOT
+            else
+                _dl_dprintf(1, "Warning: No DT_PLTGOT!\n");
+#endif
 		}
 
 		/* OK, fill this in - we did not have this before */

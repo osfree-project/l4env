@@ -20,10 +20,10 @@ public:
     // don't allow more than 2048 tasks to register their symbols to save space
     Max_tasks = L4_uid::Max_tasks < 2048 ? L4_uid::Max_tasks : 2048,
 #ifdef CONFIG_BIT32
-    Digits = 7,
+    Digits = 8,
     Start  = 11,
 #else
-    Digits = 15,
+    Digits = 16,
     Start  = 19,
 #endif
   };
@@ -92,7 +92,7 @@ Jdb_symbol_info::string_to_addr (const char *symstr)
 {
   Address addr = 0;
 
-  for (int i=0; i<= Jdb_symbol::Digits; i++)
+  for (int i=0; i< Jdb_symbol::Digits; i++)
     {
       switch (Address c = *symstr++)
 	{
@@ -317,7 +317,7 @@ repeat:
       for (sym=_task_symbols[task].str(); sym; sym=symnext)
 	{
 	  symnext = *((const char**)sym+1);
-	  sym += 11;
+	  sym += Start;
       
 	  // search symbol
 	  if (strstr(sym, symbol) == sym)
@@ -392,10 +392,10 @@ Jdb_symbol::match_addr_to_symbol (Address addr, Task_num task)
   for (sym = _task_symbols[task].str(); sym; sym = *((const char**)sym+1))
     {
       if (   (*(Address*)sym == addr)
-	  && (memcmp((void*)(sym+11), "Letext", 6))		// ignore
-	  && (memcmp((void*)(sym+11), "patch_log_", 10))	// ignore
+	  && (memcmp((void*)(sym+Start), "Letext", 6))		// ignore
+	  && (memcmp((void*)(sym+Start), "patch_log_", 10))	// ignore
 	 )
-	return sym+11;
+	return sym+Start;
     }
 
   return 0;
@@ -420,8 +420,8 @@ Jdb_symbol::match_addr_to_symbol_fuzzy (Address *addr_ptr, Task_num task,
     {
       Address addr = *(Address*)sym;
       if (   addr > max_addr && addr <= *addr_ptr
-	  && (memcmp((void*)(sym+11), "Letext", 6))		// ignore
-	  && (memcmp((void*)(sym+11), "patch_log_", 10))	// ignore
+	  && (memcmp((void*)(sym+Start), "Letext", 6))		// ignore
+	  && (memcmp((void*)(sym+Start), "patch_log_", 10))	// ignore
 	 )
 	{
 	  max_addr = addr;
@@ -431,7 +431,7 @@ Jdb_symbol::match_addr_to_symbol_fuzzy (Address *addr_ptr, Task_num task,
       
   if (max_sym)
     {
-      const char *t = max_sym + 11;
+      const char *t = max_sym + Start;
 
       while (*t != '\n' && *t != '\0' && --s_symbol)
 	{

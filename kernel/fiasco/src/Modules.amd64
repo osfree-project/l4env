@@ -56,6 +56,10 @@ ifeq ("$(CONFIG_PERF_CNT)","y")
   PREPROCESS_PARTS	+= perf_cnt
 endif
 
+ifeq ("$(CONFIG_PL0_HACK)","y")
+  PREPROCESS_PARTS	+= pl0_hack
+endif
+
 
 #
 # TYPES subsystem
@@ -265,6 +269,12 @@ jdb_trace_set_IMPL	:= jdb_trace_set jdb_trace_set-ia32-ux
     INTERFACES_KERNEL	+= jdb_tetris
 #  endif
 endif
+
+ifeq ($(CONFIG_PL0_HACK),y)
+space_index_IMPL        := space_index space_index-priv
+thread_IMPL             += thread-privilege
+endif
+
 
 CXXSRC_KERNEL		:= kernel_panic.cc 
 ASSRC_KERNEL		:= entry-amd64-ux.S entry-amd64.S shortcut-amd64-ux.S

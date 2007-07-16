@@ -146,13 +146,19 @@ _dl_parse(struct elf_resolve *tpnt, struct dyn_elf *scope,
 
 		if (unlikely(res < 0)) {
 			int reloc_type = ELF32_R_TYPE(rpnt->r_info);
+            if (reloc_type == 0x23)
+            {
+                _dl_dprintf(2, "ignoring reloc entry 0x23 at %s:%x\n",
+                        tpnt->libname, rpnt->r_offset);
+                continue;
+            }
 
 #if defined (__SUPPORT_LD_DEBUG__)
 			_dl_dprintf(2, "can't handle reloc type %s\n",
 				    _dl_reltypes(reloc_type));
 #else
-			_dl_dprintf(2, "can't handle reloc type %x\n",
-				    reloc_type);
+			_dl_dprintf(2, "%s: can't handle reloc type %x, %x\n",
+				    tpnt->libname, reloc_type, rpnt->r_offset);
 #endif
 			_dl_exit(-res);
 		} else if (unlikely(res > 0)) {

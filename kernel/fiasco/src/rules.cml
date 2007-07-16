@@ -491,10 +491,8 @@ unless PF_PC or PF_UX suppress ASSEMBLER_IPC_SHORTCUT
 unless IA32 suppress dependent JDB_ACCOUNTING ia32_processor
 unless AMD64 suppress dependent amd64_processor
 require AMD64 implies WATCHDOG==n and GSTABS==n and
-                      KDB==n and HANDLE_SEGMENTS==n and PL0_HACK==n and
-		      CONTEXT_4K
+                      KDB==n and HANDLE_SEGMENTS==n and CONTEXT_4K
 when AMD64 suppress WATCHDOG GSTABS KDB HANDLE_SEGMENTS
-		PL0_HACK
 
 unless ARM  suppress dependent DEBUG_KERNEL_PAGE_FAULTS VMEM_ALLOC_TEST 
                                arm_processor

@@ -2494,7 +2494,11 @@ print_insn (bfd_vma pc, disassemble_info *info)
   for (i = 0; i < 3; i++)
     if (op_index[i] != -1 && op_riprel[i])
       {
+#if 0 // l4
 	(*info->fprintf_func) (info->stream, "        # ");
+#else
+	(*info->fprintf_func) (info->stream, "  # ");
+#endif
 	(*info->print_address_func) ((bfd_vma) (start_pc + codep - start_codep
 						+ op_address[op_index[i]]), info);
       }

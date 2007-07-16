@@ -36,8 +36,11 @@ vpath %.S $(PKGDIR)/lib/ldso/ARCH-$(ARCH)
 SRC_C_libld-l4.s.so = ldso.c emul_linux.c infopage.c helper.c log_init.c \
 		      binary_name.c
 SRC_S_libld-l4.s.so = resolve.S
+ifneq ($(filter x86 amd64,$(ARCH)),)
+SRC_C_libld-l4.s.so += debug_info.c malloc.c 
+endif
 ifeq ($(ARCH),x86)
-SRC_C_libld-l4.s.so += debug_info.c malloc.c syscall.c
+SRC_C_libld-l4.s.so += syscall.c
 endif
 LDFLAGS		 = -Bsymbolic --warn-common --export-dynamic --sort-common \
 		   --discard-locals --discard-all --no-undefined -e _start \
@@ -45,10 +48,10 @@ LDFLAGS		 = -Bsymbolic --warn-common --export-dynamic --sort-common \
 LIBS		 = -ldm_generic.p -ldm_mem.p -lgeneric_fprov.p \
 		   -lgeneric_ts.p -llogserver.p -lnames.p $(ROOTPLIB) \
 		   -ll4util.p -lsigma0.p -llist_alloc.p -ll4sys.p $(GCCLIB)
-ifeq ($(ARCH),x86)
+ifneq ($(filter x86 amd64,$(ARCH)),)
 LIBS		+= -ldemangle.p
 endif
-OPTS		 = -Os -fno-strict-aliasing
+OPTS		 = -g -Os -fno-strict-aliasing
 
 include $(L4DIR)/mk/lib.mk
 

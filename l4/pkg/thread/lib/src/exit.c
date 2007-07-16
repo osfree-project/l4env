@@ -93,6 +93,19 @@ asm(
 
 static void __attribute((used))
 __do_cleanup_and_block_real(l4th_tcb_t * tcb)
+#elif defined(ARCH_amd64)
+void
+__do_cleanup_and_block(l4th_tcb_t * tcb);
+
+asm(
+"__do_cleanup_and_block:		\n\t"
+"       pop %rdi			\n\t"
+"	pop %rdi			\n\t"
+"	jmp __do_cleanup_and_block_real	\n\t"
+);
+
+static void __attribute__((used))
+__do_cleanup_and_block_real(l4th_tcb_t * tcb)
 #else
 /* Other archs have parameters on the stack itself */
 static void
@@ -165,6 +178,7 @@ __do_exit(void)
   l4th_tcb_t * tcb;
   l4thread_exit_desc_t * exit_fn;
   l4_addr_t * sp;
+  l4_umword_t pc;
   l4_threadid_t foo;
   l4_umword_t dummy;
   
@@ -214,8 +228,15 @@ __do_exit(void)
   *(--sp) = 0;
   
   foo = L4_INVALID_ID;
-  l4_thread_ex_regs(tcb->l4_id, (l4_umword_t)__do_cleanup_and_block,
-		    (l4_umword_t)sp, &foo, &foo, &dummy, &dummy, &dummy);
+#ifdef ARCH_amd64
+  /* This is necessary when building shared libraries. &__do_cleanup_and_block
+   * would deliver and content of that address, not the address itself. :-( */
+  asm ("movabs $__do_cleanup_and_block, %0" : "=rm"(pc));
+#else
+  pc = (l4_umword_t)&__do_cleanup_and_block;
+#endif
+  l4_thread_ex_regs(tcb->l4_id, pc, (l4_umword_t)sp,
+                    &foo, &foo, &dummy, &dummy, &dummy);
 }
 
 /*****************************************************************************

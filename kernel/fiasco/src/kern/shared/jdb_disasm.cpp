@@ -142,7 +142,7 @@ Jdb_disasm::show_disasm_line(int len, Address &addr,
   if (line && disasm_line(line, len, addr, show_symbols, task))
     {
       if (clreol)
-	printf("%s\033[K\n", line);
+	printf("%.*s\033[K\n", len, line);
       else
 	printf("%-*s\n", len, line);
       return true;
@@ -216,10 +216,16 @@ Jdb_disasm::show(Address virt, Task_num task, int level)
 		}
 	    }
 
-	  printf("%s"L4_PTR_FMT" %s%s    ", 
+	  printf("%s"L4_PTR_FMT"%s%s  ", 
 	         addr == enter_addr ? Jdb::esc_emph : "", addr, stat_str,
 		 addr == enter_addr ? "\033[m" : "");
-	  show_disasm_line(-64, addr, 1, task);
+	  show_disasm_line(
+#ifdef CONFIG_BIT32
+		           -64,
+#else
+			   -58,
+#endif
+			   addr, 1, task);
 	}
 
       static char const * const line_mode[] = { "", "[Source]", "[Headers]" };

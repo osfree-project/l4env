@@ -5,6 +5,7 @@
 #define L4_PTR_ARG(a) ((Address)(a))
 
 #define L4_PTR_FMT             "%08lx"
+#define L4_MWORD_FMT           "%08lx"
 #define L4_X64_FMT             "%016llx"
 #define L4_ADDR_INPUT_FMT      "%8x"
 #define L4_FRAME_INPUT_FMT     "%5x"

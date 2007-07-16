@@ -22,8 +22,8 @@ typedef union l4_threadid_t {
   // fake the compiler in syscall bindings
   static l4_threadid_t _convert(l4_threadid_t in) { return in; }
 #endif
+  l4_uint32_t raw;
   l4_threadid_struct_t id;
-  l4_umword_t raw;
 } l4_threadid_t;
 
 typedef l4_threadid_t l4_taskid_t;

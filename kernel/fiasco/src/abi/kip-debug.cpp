@@ -86,8 +86,9 @@ void Kip::print() const
   printf("root_ip:   "L4_PTR_FMT" root_sp:   "L4_PTR_FMT"\n", root_ip,   root_sp);
   debug_print_memory();
   debug_print_syscalls();
+
+  printf("user_ptr: %p   vhw_offset: " L4_MWORD_FMT "    vkey_irq:  %u\n",
+         (void*)user_ptr, vhw_offset, vkey_irq);
+
   debug_print_features();
-
-  printf("user_ptr: %p\n", (void*)user_ptr);
-
 }
