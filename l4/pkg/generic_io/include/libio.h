@@ -51,6 +51,45 @@ int l4io_init(l4io_info_t **io_info_addr, l4io_drv_t drv_type);
 
 /*****************************************************************************/
 /**
+ * \brief Return pointer to L4IO info page
+ * \ingroup grp_misc
+ *
+ * \return Pointer to info page, 0 if unavailable.
+ */
+/*****************************************************************************/
+l4io_info_t *l4io_info_page(void);
+
+/*****************************************************************************/
+/**
+ * \brief Find device structure by name.
+ * \ingrp grp_misc
+ *
+ * \param name   Name of device to look for
+ * \param iopage IO info page to use, must be a valid pointer.
+ *
+ * \return Pointer to device structure, 0 if not found
+ */
+/*****************************************************************************/
+l4io_desc_device_t *l4io_desc_lookup_device(const char *name,
+                                            l4io_info_t *iopage);
+
+/*****************************************************************************/
+/**
+ * \brief Find specific resouce within device descriptor.
+ * \ingrp grp_misc
+ *
+ * \param d    Device descriptor to look at
+ * \param type Type of resource to look for.
+ * \param i    Index to start at (0 for first call on device structure,
+ *             return of previous calls plus 1 for consecutive calls.
+ *
+ * \return -1 if nothing found, index otherwise
+ */
+/*****************************************************************************/
+int l4io_desc_lookup_resource(l4io_desc_device_t *d, unsigned long type, int i);
+
+/*****************************************************************************/
+/**
  * \brief  Request I/O memory region.
  * \ingroup grp_res
  *

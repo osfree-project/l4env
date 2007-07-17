@@ -312,11 +312,11 @@ static void do_args(int argc, char *argv[])
               break;
             case 99:
 #if defined(ARCH_arm)
-              if (strcmp(optarg, "integrator") == 0)
+              if (strcmp(optarg, "int") == 0)
                 cfg_token = CFG_INTEGRATOR;
-              else if (strcmp(optarg, "926") == 0)
+              else if (strcmp(optarg, "rv-926") == 0)
                 cfg_token = CFG_RV_EB_926;
-              else if (strcmp(optarg, "mc") == 0)
+              else if (strcmp(optarg, "rv-mc") == 0)
                 cfg_token = CFG_RV_EB_MC;
               else
                 Panic("ARM platform \"%s\" not supported.", optarg);

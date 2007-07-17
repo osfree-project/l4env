@@ -23,8 +23,7 @@
 #include <asm/io.h>
 #include <asm/hardware/amba_kmi.h>
 
-#include <l4/sigma0/sigma0.h>
-#include <l4/arm_drivers/common.h>
+#include <l4/generic_io/libio.h>
 
 #define AMBA_NR_IRQS	2
 
@@ -36,72 +35,8 @@ struct amba_device {
 	unsigned int		irq[AMBA_NR_IRQS];
 };
 
-#define __RV_EB_926
-//#define __RV_EB_MC
-//#define __INTEGRATOR
-
-#ifdef __RV_EB_926
-static struct amba_device dev_kmi_k = {
-	.dev = {
-		.bus_id = "fpga:06",
-	},
-	.res = {
-		.start = 0x10006000,
-		.end   = 0x10006fff,
-	},
-	.irq = { 32+20, 0},
-};
-static struct amba_device dev_kmi_m = {
-	.dev = {
-		.bus_id = "fpga:07",
-	},
-	.res = {
-		.start = 0x10007000,
-		.end   = 0x10007fff,
-	},
-	.irq = { 32+21, 0},
-};
-#endif
-
-#ifdef __RV_EB_MC
-static struct amba_device dev_kmi_k = {
-	.dev = {
-		.bus_id = "fpga:06",
-	},
-	.res = {
-		.start = 0x10006000,
-		.end   = 0x10006fff,
-	},
-	.irq = { 39, 0},
-};
-static struct amba_device dev_kmi_m = {
-	.dev = {
-		.bus_id = "fpga:07",
-	},
-	.res = {
-		.start = 0x10007000,
-		.end   = 0x10007fff,
-	},
-	.irq = { 40, 0},
-};
-#endif
-
-#ifdef __INTEGRATOR
-static struct amba_device dev_kmi_k = {
-	.res = {
-		.start = 0x18000000,
-		.end   = 0x18000fff,
-	},
-	.irq = { 20, 0},
-};
-static struct amba_device dev_kmi_m = {
-	.res = {
-		.start = 0x19000000,
-		.end   = 0x19000fff,
-	},
-	.irq = { 21, 0},
-};
-#endif
+static struct amba_device dev_kmi_k;
+static struct amba_device dev_kmi_m;
 
 enum {
   // DATA
@@ -214,39 +149,15 @@ static int amba_kmi_probe(struct amba_device *dev, void *id)
 	}
 
 	kmi->io		= io;
-	if ((kmi->base = (void *)arm_driver_map_io_region(dev->res.start, 0x1000))
-	    == (void *)-1) {
-		printf("arm_driver_map_io_region failed\n");
+	if ((kmi->base = (void *)l4io_request_mem_region(dev->res.start, 0x1000, 0))
+	    == NULL) {
+		printf("l4io_request_mem_region(%lx, 0x1000, 0) failed\n",
+		       dev->res.start);
 		return -1;
 	}
 	printf("pl050: got memory %lx, virtual base at %p\n", dev->res.start, kmi->base);
 
-	// setup clock and enable
-	writeb(0, KMICR);
-	writeb(CLKDIV_DIVISOR, KMICLKDIV);
-	writeb(KMICR_EN | KMICR_RXINTREN, KMICR);
-
-	// reset controller
-	writeb(DATA_RESET, KMIDATA);
-	// clear data again
-	readb(KMIDATA);
-
-	printf("pl050: waiting for reset %p %p\n", KMIDATA, KMISTAT);
-	// wait for reset response
-	while (1) {
-		if (readb(KMISTAT) & KMISTAT_RXFULL) {
-			unsigned long val = readb(KMIDATA);
-			printf("val = %ld\n", val);
-			if (val == DATA_RESET_RESPONSE)
-				break;
-		}
-
-		l4_sleep(10);
-	}
-	printf("received kmi reset\n");
-
 	kmi->irq	= dev->irq[0];
-
 
 	serio_register_port(io);
 	return 0;
@@ -256,21 +167,49 @@ static int amba_kmi_probe(struct amba_device *dev, void *id)
 	return ret;
 }
 
+static int __init amba_kmi_pre_probe(const char *name, struct amba_device *d)
+{
+	l4io_desc_device_t *l4dev;
+	int i;
+
+	if (!l4io_info_page())
+		return -ENODEV;
+
+	if ((l4dev = l4io_desc_lookup_device(name, l4io_info_page())) == NULL)
+		return -ENODEV;
+
+	if ((i = l4io_desc_lookup_resource(l4dev, L4IO_RESOURCE_IRQ, 0)) == -1)
+		return -ENODEV;
+	d->irq[0] = l4dev->resources[i].start;
+
+	if ((i = l4io_desc_lookup_resource(l4dev, L4IO_RESOURCE_MEM, 0)) == -1)
+		return -ENODEV;
+	d->res.start = l4dev->resources[i].start;
+	d->res.end   = l4dev->resources[i].end;
+
+	strncpy(d->dev.bus_id, name, sizeof(d->dev.bus_id));
+	d->dev.bus_id[sizeof(d->dev.bus_id) - 1] = 0;
+
+	return amba_kmi_probe(d, NULL);
+}
+
 static int __init amba_kmi_init_k(void)
 {
-	return amba_kmi_probe(&dev_kmi_k, NULL);
+	return amba_kmi_pre_probe("AMBA KMI kbd", &dev_kmi_k);
 }
 
 static int __init amba_kmi_init_m(void)
 {
-	return amba_kmi_probe(&dev_kmi_m, NULL);
+	return amba_kmi_pre_probe("AMBA KMI mou", &dev_kmi_m);
 }
 
 static void __exit amba_kmi_exit_k(void)
 {
+	// XXX: return resources
 }
 static void __exit amba_kmi_exit_m(void)
 {
+	// XXX: return resources
 }
 
 module_init(amba_kmi_init_k);

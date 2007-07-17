@@ -13,15 +13,14 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
+#include <stdio.h>
+
 /* L4 includes */
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
 #include <l4/sys/syscalls.h>
 #include <l4/l4rm/l4rm.h>
 #include <l4/names/libnames.h>
-
-/* OSKit includes */
-#include <stdio.h>
 
 /* io includes */
 #include <l4/generic_io/libio.h>
@@ -36,11 +35,10 @@ char *IO_NAMES_STR = "io";  /**< unique name of io server */
 /* Do we want logging of IO Infopage mapping? */
 #define CONFIG_LOG_INFOPAGE_MAPPING 0
 
-extern  l4io_info_t io_info;
-
 l4_threadid_t io_l4id = L4_INVALID_ID;  /**< io's thread id */
 
 static int _initialized = 0;  /**< initialization flag */
+static l4io_info_t *io_info_page_pointer;
 
 /*****************************************************************************/
 /**
@@ -134,6 +132,8 @@ static int __io_mapping(l4io_info_t **addr)
        (char)(((*addr)->magic) >> 8 & 0xff),
        (char)(((*addr)->magic) & 0xff));
 
+  io_info_page_pointer = *addr;
+
   return 0;
 }
 
@@ -194,4 +194,13 @@ int l4io_init(l4io_info_t **io_info_addr, l4io_drv_t type)
 
   ++_initialized;
   return 0;
+}
+
+/*****************************************************************************/
+/* return pointer to info page                                               */
+/*****************************************************************************/
+l4io_info_t *l4io_info_page(void)
+{
+  return io_info_page_pointer;
+
 }

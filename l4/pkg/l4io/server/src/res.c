@@ -1046,11 +1046,12 @@ void * bios_phys_to_virt(unsigned long paddr)
  */
 int io_res_init(io_client_t *c)
 {
-#ifndef ARCH_arm
-  int err;
 
   /* save self reference */
   io_self = c;
+
+#ifndef ARCH_arm
+  int err;
 
   /* DMA controller #1 */
   if ((err = __request_region(0, 0x20, MAX_IO_PORT, &io_port_res, c)))
