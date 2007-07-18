@@ -8,7 +8,7 @@
  * \ingroup api_types_msg
  * \hideinitializer
  */
-#define L4_IPC_NIL_DESCRIPTOR   (-1)
+#define L4_IPC_NIL_DESCRIPTOR   (~0UL)
 
 /**
  * Short IPC (register-only) message descriptor

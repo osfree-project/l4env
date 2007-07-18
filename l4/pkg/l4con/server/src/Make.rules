@@ -15,16 +15,17 @@ _LIBS_vmm	= -ll4vmm -ll4vmm-cxx
 PRIVATE_INCDIR	= $(SRC_DIR)
 LIBS_x86	= -lomega0
 LIBS_amd64	= -lomega0
-LIBS_ALL	= -L$(OBJ_DIR)/con_yuv2rgb/OBJ-$(ARCH)_$(CPU) -lcon_yuv2rgb \
-		  $(LIBS_$(ARCH)) -levents -lparsecmdline -ldm_phys
-LIBS_con_x86	= -lio -linput  $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
+LIBS_ALL	= -lio -linput -L$(OBJ_DIR)/con_yuv2rgb/OBJ-$(ARCH)_$(CPU) \
+		  -lcon_yuv2rgb $(LIBS_$(ARCH)) \
+		  -levents -lparsecmdline -ldm_phys
+LIBS_con_x86	= $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
 		  -lcon_hw -lx86emu_int10 -lx86emu $(LIBS_vmm) \
 		  -lomega0 -lio -lgeneric_fprov
 LIBS_con_amd64	= $(LIBS_con_x86)
-LIBS_con_arm	= -lio -linput $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
-		  -lcon_hw -larm_lcd.o -larm_drv_common.o
+LIBS_con_arm	= $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
+		  -lcon_hw -larm_lcd.o -larm_drv_common.o -lio
 LIBS_con	= $(LIBS_con_$(ARCH))
-LIBS_con-ux	= -lio -linput $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
+LIBS_con-ux	= $(LIBS_ALL) -L$(OBJ_DIR)/con_hw/OBJ-$(SYSTEM) \
 		  -lcon_hw-ux -lx86emu_int10-ux -lio -lclxfux.o
 SRC_C		= main.c pslim.c ev.c vc.c events.c gmode.c gmode-arch.c
 SRC_C_con	= $(SRC_C_con_$(ARCH))
