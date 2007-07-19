@@ -203,7 +203,7 @@ void overlay_set_background_component(CORBA_Object _dice_corba_obj, int win_id,
 
 /*** IDL INTERFACE: REGISTER WINDOW EVENT LISTENER THREAD ***/
 void overlay_window_listener_component(CORBA_Object _dice_corba_obj,
-                                       const_CORBA_Object listener,
+                                       const CORBA_Object_base *listener,
                                        CORBA_Server_Environment *_dice_corba_env) {
 //	printf("overlay_window_listener_component: called\n");
 	window_event_listener_base = *listener;

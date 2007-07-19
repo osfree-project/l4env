@@ -191,7 +191,7 @@ overlay_refresh_screen_component(CORBA_Object _dice_corba_obj,
 /*** IDL INTERFACE: REGISTER LISTENER THREAD FOR INPUT EVENTS ***/
 void
 overlay_input_listener_component(CORBA_Object _dice_corba_obj,
-                                 const_CORBA_Object listener,
+                                 const CORBA_Object_base *listener,
                                  CORBA_Server_Environment *_dice_corba_env) {
 	client_listener = *listener;
 }
@@ -203,7 +203,7 @@ overlay_input_listener_component(CORBA_Object _dice_corba_obj,
  */
 void
 overlay_window_listener_component(CORBA_Object _dice_corba_obj,
-                                  const_CORBA_Object window_listener,
+                                  const CORBA_Object_base *window_listener,
                                   CORBA_Server_Environment *_dice_corba_env) {
 }
 

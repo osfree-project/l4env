@@ -72,7 +72,8 @@ endif
 Checkinitcalls: $(KERNEL) $(OBJ_KERNEL)
 ifneq ($(shell $(CXX) -dumpversion | cut -d . -f1-2),3.4)
 	@echo "Checking initcalls"
-	$(VERBOSE)$(srcdir)/../tool/checkinitcalls -k kernel.image \
+	$(VERBOSE)$(srcdir)/../tool/checkinitcalls \
+	  -k $(if $(wildcard fiasco.image),fiasco.image,kernel.image) \
 	  -Werror $(filter-out kernel.image, $^) \
 	  $(if $(SYSTEM_TARGET),-t $(SYSTEM_TARGET)) && \
 	echo "Initcalls OK"

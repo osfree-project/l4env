@@ -33,10 +33,10 @@ interface overlay {
 	void refresh_screen([in] int x, [in] int y, [in] int w, [in] int h);
 
 	/*** REGISTER LISTENER THREAD FOR INPUT EVENTS ***/
-	void input_listener([in] CORBA_Object input_listener);
+	void input_listener([in] CORBA_Object_base input_listener);
 
 	/*** REGISTER LISTENER THREAD FOR WINDOW EVENTS ***/
-	void window_listener([in] CORBA_Object window_listener);
+	void window_listener([in] CORBA_Object_base window_listener);
 
 	/*** CREATE NEW OVERLAY WINDOW ***/
 	int  create_window(void);
