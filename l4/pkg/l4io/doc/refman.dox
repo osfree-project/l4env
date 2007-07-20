@@ -45,7 +45,7 @@ Possible command line arguments are:
   will be freed. </dd>
 <dt><tt> --platform <i>name</i> </tt></dt>
   <dd> (ARM only) This parameter selects the static I/O resource
-  configuration to be used. Valid values for <i>name</i> are: integrator, 926, mc.
+  configuration to be used. Valid values for <i>name</i> are: int, rv-926, rv-mc.
   </dd>
 </dl>
 */

@@ -156,7 +156,7 @@ extern "C" {
 /* common functions for the CORBA environement */
 static const CORBA_char* __CORBA_Exception_Repository[CORBA_DICE_EXCEPTION_COUNT+1] = { "none", "wrong opcode", "ipc error", "internal ipc error", 0 };
 
-static inline
+DICE_INLINE
 void CORBA_exception_free(CORBA_Environment *ev)
 {
     if (DICE_HAS_EXCEPTION(ev))
@@ -168,7 +168,7 @@ void CORBA_exception_free(CORBA_Environment *ev)
     DICE_EXCEPTION_MINOR(ev) = CORBA_DICE_EXCEPTION_NONE;
 }
 
-static inline
+DICE_INLINE
 void CORBA_exception_set(
     CORBA_Environment *ev,
     CORBA_exception_type major,
@@ -185,25 +185,24 @@ void CORBA_exception_set(
     }
 }
 
-static inline
+DICE_INLINE
 const CORBA_char* CORBA_exception_id(CORBA_Environment *ev)
 {
     // string can be found using repository id (repos_id)
     if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&
-	(DICE_EXCEPTION_MINOR(ev) >= 0) &&
 	(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
 	return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];
     else
 	return 0;
 }
 
-static inline
+DICE_INLINE
 void* CORBA_exception_value(CORBA_Environment *ev)
 {
     return DICE_EXCEPTION_PARAM(ev);
 }
 
-static inline
+DICE_INLINE
 CORBA_any* CORBA_exception_as_any(CORBA_Environment *ev)
 {
   // not supported
@@ -213,7 +212,7 @@ CORBA_any* CORBA_exception_as_any(CORBA_Environment *ev)
 /*************************************************************
  * For the server environement as well
  *************************************************************/
-static inline
+DICE_INLINE
 void CORBA_server_exception_free(CORBA_Server_Environment *ev)
 {
     if (DICE_HAS_EXCEPTION(ev))
@@ -225,7 +224,7 @@ void CORBA_server_exception_free(CORBA_Server_Environment *ev)
     DICE_EXCEPTION_MINOR(ev) = CORBA_DICE_EXCEPTION_NONE;
 }
 
-static inline
+DICE_INLINE
 void CORBA_server_exception_set(
     CORBA_Server_Environment *ev,
     CORBA_exception_type major,
@@ -242,25 +241,24 @@ void CORBA_server_exception_set(
     }
 }
 
-static inline
+DICE_INLINE
 const CORBA_char* CORBA_server_exception_id(CORBA_Server_Environment *ev)
 {
     // string can be found using repository id (repos_id)
     if ((DICE_EXCEPTION_MAJOR(ev) == CORBA_SYSTEM_EXCEPTION) &&
-	(DICE_EXCEPTION_MINOR(ev) >= 0) &&
 	(DICE_EXCEPTION_MINOR(ev) < CORBA_DICE_EXCEPTION_COUNT))
 	return __CORBA_Exception_Repository[DICE_EXCEPTION_MINOR(ev)];
     else
 	return 0;
 }
 
-static inline
+DICE_INLINE
 void* CORBA_server_exception_value(CORBA_Server_Environment *ev)
 {
     return DICE_EXCEPTION_PARAM(ev);
 }
 
-static inline
+DICE_INLINE
 CORBA_any* CORBA_server_exception_as_any(CORBA_Server_Environment *ev)
 {
   // not supported
@@ -270,7 +268,7 @@ CORBA_any* CORBA_server_exception_as_any(CORBA_Server_Environment *ev)
 /***********************************************************************
  * DICE specific environment functions 
  ***********************************************************************/
-static inline
+DICE_INLINE
 int dice_set_ptr(CORBA_Server_Environment *ev, void* ptr)
 {
   if (!ev || !ptr)
@@ -281,7 +279,7 @@ int dice_set_ptr(CORBA_Server_Environment *ev, void* ptr)
   return 0;
 }
 
-static inline
+DICE_INLINE
 void* dice_get_last_ptr(CORBA_Server_Environment *ev)
 {
   void *ptr = 0;
@@ -295,7 +293,7 @@ void* dice_get_last_ptr(CORBA_Server_Environment *ev)
   return ptr;
 }
 
-static inline
+DICE_INLINE
 void* dice_get_nth_ptr(CORBA_Server_Environment *ev, int i)
 {
   void *ptr = 0;
@@ -314,7 +312,7 @@ void* dice_get_nth_ptr(CORBA_Server_Environment *ev, int i)
   return ptr;
 }
 
-static inline
+DICE_INLINE
 const void* dice_get_ptr(CORBA_Server_Environment *ev, const void* p)
 {
   int i;

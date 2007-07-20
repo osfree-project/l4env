@@ -66,11 +66,11 @@ Mword Sys_ipc_frame::next_period() const
 
 IMPLEMENT inline
 void Sys_ipc_frame::rcv_src( L4_uid const &id )
-{ r[1] = id.raw(); }
+{ r[0] = id.raw(); }
 
 IMPLEMENT inline
 L4_uid Sys_ipc_frame::rcv_src() const
-{ return L4_uid(r[1]); }
+{ return L4_uid(r[0]); }
 
 IMPLEMENT inline
 L4_uid Sys_ipc_frame::snd_dst() const
@@ -135,20 +135,20 @@ void Sys_ipc_frame::rcv_desc( L4_rcv_desc d )
 
 IMPLEMENT inline
 L4_msgdope Sys_ipc_frame::msg_dope() const
-{ return L4_msgdope(r[0]); }
+{ return L4_msgdope(r[1]); }
 
 IMPLEMENT inline
 void Sys_ipc_frame::msg_dope_set_error( Mword e )
 { 
   // only type-punning via char* is permitted
-  char *l = reinterpret_cast<char*>(&r[0]);
+  char *l = reinterpret_cast<char*>(&r[1]);
   reinterpret_cast<L4_msgdope*>(l)->error(e);
 }
 
 IMPLEMENT inline
 unsigned Sys_ipc_frame::num_reg_words()
-{ return 2; } /* This should be 9 but is 3 to make long-IPC compatible with the
-               * current scheme (3 dwords in IPC) */
+{ return 2; } /* This should be 9 but is 2 to make long-IPC compatible with the
+               * current scheme (2 dwords in IPC) */
 
 IMPLEMENT inline
 unsigned Sys_ipc_frame::num_snd_reg_words()
@@ -160,14 +160,14 @@ unsigned Sys_ipc_frame::num_rcv_reg_words()
 
 IMPLEMENT inline
 void Sys_ipc_frame::msg_dope( L4_msgdope d )
-{ r[0] = d.raw(); }
+{ r[1] = d.raw(); }
 
 IMPLEMENT inline
 void Sys_ipc_frame::msg_dope_combine( Ipc_err d )
 {
-  L4_msgdope m(r[0]);
+  L4_msgdope m(r[1]);
   m.combine(d);
-  r[0] = m.raw();
+  r[1] = m.raw();
 }
 
 IMPLEMENT inline

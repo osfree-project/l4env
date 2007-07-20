@@ -13,9 +13,14 @@
 #endif
 
 #ifdef __cplusplus
-namespace dice 
-{
+#define NAMESPACE_DICE_BEG namespace dice {
+#define NAMESPACE_DICE_END }
+#else
+#define NAMESPACE_DICE_BEG
+#define NAMESPACE_DICE_END
 #endif
+
+NAMESPACE_DICE_BEG
 
 /*
  * CORBA language mapping types
@@ -74,40 +79,28 @@ typedef union
 #endif // dice_CORBA_exception_type_typedef
 
 /* close dice namespace before includes */
-#ifdef __cplusplus
-}
-#endif
+NAMESPACE_DICE_END
 
 #ifndef CORBA_Object_typedef
 #define CORBA_Object_typedef
 
 #ifdef L4API_linux
 
-#ifdef __cplusplus
-namespace dice
-{
-#endif /* __cplusplus */
+NAMESPACE_DICE_BEG
 
 typedef struct sockaddr_in CORBA_Object_base;
 
-#ifdef __cplusplus
-} /* namespace dice */
-#endif
+NAMESPACE_DICE_END
 
 #elif defined(L4API_l4v2) || defined(L4API_l4x0)
 
 #include <l4/sys/types.h>
 
-#ifdef __cplusplus
-namespace dice
-{
-#endif /* __cplusplus */
+NAMESPACE_DICE_BEG
 
 typedef l4_threadid_t CORBA_Object_base;
 
-#ifdef __cplusplus
-} /* namespace dice */
-#endif
+NAMESPACE_DICE_END
 
 #elif defined(L4API_l4x2) || defined(L4API_l4v4)
 // KA:
@@ -117,30 +110,20 @@ typedef l4_threadid_t CORBA_Object_base;
 #include <l4/types.h>
 #include <l4/message.h>
 
-#ifdef __cplusplus
-namespace dice
-{
-#endif /* __cplusplus */
+NAMESPACE_DICE_BEG
 
 typedef L4_ThreadId_t CORBA_Object_base;
 
-#ifdef __cplusplus
-} /* namespace dice */
-#endif
+NAMESPACE_DICE_END
 
 #endif /* L4API_ */
 
-#ifdef __cplusplus
-namespace dice
-{
-#endif /* __cplusplus */
+NAMESPACE_DICE_BEG
 
 typedef CORBA_Object_base* CORBA_Object;
 typedef const CORBA_Object_base * const_CORBA_Object;
 
-#ifdef __cplusplus
-} /* namespace dice */
-#endif
+NAMESPACE_DICE_END
 
 #endif // CORBA_Object_typedef
 
@@ -164,25 +147,17 @@ typedef const CORBA_Object_base * const_CORBA_Object;
 
 #ifdef L4API_linux
 
-#ifdef __cplusplus
-namespace dice
-{
-#endif /* __cplusplus */
+NAMESPACE_DICE_BEG
 
 typedef void* (*dice_malloc_func)(size_t);
 typedef void (*dice_free_func)(void*);
 
-#ifdef __cplusplus
-} /* namespace dice */
-#endif
+NAMESPACE_DICE_END
 
 #include <netinet/in.h>
 #include <sys/time.h>
 
-#ifdef __cplusplus
-namespace dice
-{
-#endif /* __cplusplus */
+NAMESPACE_DICE_BEG
 
 typedef struct CORBA_Environment
 {
@@ -210,17 +185,12 @@ private:
 #endif
 } CORBA_Environment;
 
-#ifdef __cplusplus
-} /* namespace dice */
-#endif
+NAMESPACE_DICE_END
 
 #define CORBA_Server_Environment CORBA_Environment
 #elif defined(L4API_l4v2) || defined(L4API_l4x0) 
 
-#ifdef __cplusplus
-namespace dice
-{
-#endif /* __cplusplus */
+NAMESPACE_DICE_BEG
 
 typedef void* (*dice_malloc_func)(unsigned long);
 typedef void (*dice_free_func)(void*);
@@ -279,16 +249,11 @@ private:
 #endif
 } CORBA_Server_Environment;
 
-#ifdef __cplusplus
-} /* namespace dice */
-#endif
+NAMESPACE_DICE_END
 
 #elif defined(L4API_l4x2) || defined(L4API_l4v4)
 
-#ifdef __cplusplus
-namespace dice
-{
-#endif /* __cplusplus */
+NAMESPACE_DICE_BEG
 
 typedef void* (*dice_malloc_func)(unsigned long);
 typedef void (*dice_free_func)(void*);
@@ -347,9 +312,7 @@ private:
 #endif
 } CORBA_Server_Environment;
 
-#ifdef __cplusplus
-} /* namespace dice */
-#endif
+NAMESPACE_DICE_END
 
 #endif /* x2 || v4 */
 
@@ -399,17 +362,23 @@ private:
  */
 
 #ifndef DICE_INLINE
-#ifdef L4_INLINE
-#define DICE_INLINE L4_INLINE
-#else
+#ifdef __GNUC__
 #define DICE_INLINE static inline
-#endif /* L4_INLINE */
+#else
+#define DICE_INLINE inline
+#endif /* __GNUC__ */
 #endif /* !DICE_INLINE */
 
-#ifdef __cplusplus
-namespace dice
-{
-#endif
+#ifndef DICE_EXTERN_INLINE
+#ifdef __GNUC__
+#define DICE_EXTERN_INLINE extern inline
+#else
+#define DICE_EXTERN_INLINE inline
+#endif /* __GNUC__ */
+#endif /* !DICE_EXTERN_INLINE */
+
+
+NAMESPACE_DICE_BEG
 
 /**
  * \brief test if two CORBA_Objects are equal
@@ -505,7 +474,11 @@ dice_is_obj_equal(CORBA_Object o1, CORBA_Object o2)
     return l4_thread_equal(*o1, *o2);
 }
 
+NAMESPACE_DICE_END /* exclude included files */
+
 #include <l4/sys/ipc.h> /* for L4_IPC_DECEIT_MASK */
+
+NAMESPACE_DICE_BEG
 
 DICE_INLINE void
 dice_l4_sched_donate(CORBA_Environment *env)
@@ -559,9 +532,9 @@ dice_l4_sched_nodonate_srv(CORBA_Server_Environment *env)
 
 #endif /* L4API_* */
 
-#ifdef __cplusplus
-} /* namespace dice */
+NAMESPACE_DICE_END
 
+#ifdef __cplusplus
 using namespace dice;
 #endif
 

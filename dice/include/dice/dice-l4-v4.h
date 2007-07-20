@@ -10,14 +10,14 @@
 extern "C" {
 #endif
 
-static inline
+DICE_INLINE
 void* malloc_warning(unsigned long size)
 {
     L4_KDB_Enter("malloc not set in environment");
     return 0;
 };
 
-static inline
+DICE_INLINE
 void free_warning(void* addr)
 {
     L4_KDB_Enter("free not set in environment");
@@ -40,7 +40,7 @@ void free_warning(void* addr)
 #ifdef __cplusplus
 namespace dice
 {
-    extern inline
+    DICE_EXTERN_INLINE
     CORBA_Environment::CORBA_Environment()
     : _exception(),
       _p(),
@@ -56,7 +56,7 @@ namespace dice
 	rcv_fpage = L4_CompleteAddressSpace;
     }
 
-    extern inline
+    DICE_EXTERN_INLINE
     CORBA_Server_Environment::CORBA_Server_Environment()
     : _exception(),
       _p(),

@@ -70,7 +70,7 @@ l4_ipc_call_tag(l4_threadid_t dest,
 
   *rcv_w0 = _w0;
   *rcv_w1 = _w1;
-  result->raw = _dest;
+  result->raw = _snd_desc;
   rtag->raw = _tag;
 
   return L4_IPC_ERROR(*result);
@@ -146,8 +146,8 @@ l4_ipc_reply_and_wait_tag(l4_threadid_t dest,
      "r7", "r8", "r9" PIC_CLOBBER, "r12", "r14", "memory");
   *rcv_w0 = _w0;
   *rcv_w1 = _w1;
-  src->raw = _snd_desc;
-  result->raw = _dest;
+  src->raw = _dest;
+  result->raw = _snd_desc;
   rtag->raw = _tag;
   
   return L4_IPC_ERROR(*result);
@@ -182,7 +182,7 @@ l4_ipc_send_tag(l4_threadid_t dest,
 {
   register l4_umword_t _dest     __asm__("r0") = dest.raw;
   register l4_umword_t _snd_desc __asm__("r1") = (l4_umword_t)snd_msg;
-  register l4_umword_t _rcv_desc __asm__("r2") = ~0U;
+  register l4_umword_t _rcv_desc __asm__("r2") = L4_IPC_NIL_DESCRIPTOR;
   register l4_umword_t _timeout  __asm__("r3") = timeout.raw;
   register l4_umword_t _w0       __asm__("r5") = w0;
   register l4_umword_t _w1       __asm__("r6") = w1;
@@ -216,7 +216,7 @@ l4_ipc_send_tag(l4_threadid_t dest,
      "6" (_tag)
      : 
      "r7", "r8", "r9" PIC_CLOBBER, "r12", "r14", "memory");
-  result->raw = _dest;
+  result->raw = _snd_desc;
 
   return L4_IPC_ERROR(*result);
 }
@@ -244,7 +244,7 @@ l4_ipc_wait_tag(l4_threadid_t *src,
 {
   
   register l4_umword_t _res      __asm__("r0") = 0;
-  register l4_umword_t _snd_desc __asm__("r1") = ~0U;
+  register l4_umword_t _snd_desc __asm__("r1") = L4_IPC_NIL_DESCRIPTOR;
   register l4_umword_t _rcv_desc __asm__("r2") = (l4_umword_t)rcv_msg | L4_IPC_OPEN_IPC;
   register l4_umword_t _timeout  __asm__("r3") = timeout.raw;
   register l4_umword_t _tag      __asm__("r4");
@@ -278,8 +278,8 @@ l4_ipc_wait_tag(l4_threadid_t *src,
      "r7", "r8", "r9" PIC_CLOBBER, "r12", "r14", "memory");
   *rcv_w0     = _w0;
   *rcv_w1     = _w1;
-  result->raw	= _res;
-  src->raw	= _snd_desc;
+  result->raw	= _snd_desc;
+  src->raw	= _res;
   tag->raw = _tag;
 
   return L4_IPC_ERROR(*result);
@@ -307,7 +307,7 @@ l4_ipc_receive_tag(l4_threadid_t src,
                l4_msgtag_t *tag)
 {
   register l4_umword_t _res      __asm__("r0") = src.raw;
-  register l4_umword_t _snd_desc __asm__("r1") = ~0U;
+  register l4_umword_t _snd_desc __asm__("r1") = L4_IPC_NIL_DESCRIPTOR;
   register l4_umword_t _rcv_desc __asm__("r2") = (l4_umword_t)rcv_msg;
   register l4_umword_t _timeout  __asm__("r3") = timeout.raw;
   register l4_umword_t _tag      __asm__("r4");
@@ -341,7 +341,7 @@ l4_ipc_receive_tag(l4_threadid_t src,
      "r7", "r8", "r9" PIC_CLOBBER, "r12", "r14", "memory");
   *rcv_w0 = _w0;
   *rcv_w1 = _w1;
-  result->raw	= _res;
+  result->raw	= _snd_desc;
   tag->raw = _tag;
 
   return L4_IPC_ERROR(*result);
