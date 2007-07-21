@@ -307,7 +307,7 @@ i30_test_tcb_mapped:
 #endif
 
 	andl	$(Thread_receiving | Thread_send_in_progress | \
-                | Thread_delayed_deadline | Thread_delayed_ipc | \
+                Thread_delayed_deadline | Thread_delayed_ipc | \
 		Thread_ipc_in_progress), %eax
 
 	movl	OFS__THREAD__PARTNER (DEST_esi), %edx

@@ -72,73 +72,73 @@ L4_INLINE l4_msgtag_t l4_msgtag(long label, unsigned words, unsigned items,
 
 /**
  * Get the label of tag.
- * \param tag the tag.
+ * \param t the tag.
  */
 L4_INLINE long l4_msgtag_label(l4_msgtag_t t);
 
 /**
  * Get the number of words.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_words(l4_msgtag_t t);
 
 /**
  * Get the number of items.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_items(l4_msgtag_t t);
 
 /**
  * Get the flags.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_flags(l4_msgtag_t t);
 
 /**
  * Was the message an IRQ.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_is_irq(l4_msgtag_t t);
 
 /**
  * Was the message a page fault.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_is_page_fault(l4_msgtag_t t);
 
 /**
  * Was the message a preemption IPC.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_is_preemption(l4_msgtag_t t);
 
 /**
  * Was the message an system exception.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_is_sys_exception(l4_msgtag_t t);
 
 /**
  * Was the message an exception.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_is_exception(l4_msgtag_t t);
 
 /**
  * Was the message desired for sigma0.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_is_sigma0(l4_msgtag_t t);
 
 /**
  * Was the message an I/O page fault.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_is_io_page_fault(l4_msgtag_t t);
 
 /**
  * Was the message a cap fault.
- * \param tag the tag
+ * \param t the tag
  */
 L4_INLINE unsigned l4_msgtag_is_cap_fault(l4_msgtag_t t);
 

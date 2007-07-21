@@ -15,7 +15,7 @@ WARNINGS ?= -Wall -Wno-unused
 .general.d: $(PKGDIR_OBJ)/server/Makeconf.bid.local
 
 src-$(CONFIG_ORE_NE2000) += 8390.c ne2k-pci.c
-src-$(CONFIG_ORE_EEPRO100) += eepro100.c #e100.c
+src-$(CONFIG_ORE_EEPRO100) += e100.c #eepro100.c
 src-$(CONFIG_ORE_RTL8139) += 8139too.c
 src-$(CONFIG_ORE_RTL8139CP) += 8139cp.c
 src-$(CONFIG_ORE_PCNET32) += pcnet32.c

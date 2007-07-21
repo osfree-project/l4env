@@ -17,6 +17,5 @@
 #define __GENERIC_IO_LIB_INCLUDE_INTERNAL_H_
 
 extern l4_threadid_t io_l4id;
-extern l4io_info_t io_info;
 
 #endif

@@ -40,6 +40,8 @@ l4_threadid_t io_l4id = L4_INVALID_ID;  /**< io's thread id */
 static int _initialized = 0;  /**< initialization flag */
 static l4io_info_t *io_info_page_pointer;
 
+extern l4io_info_t io_info;  /* this is in io_info.S */
+
 /*****************************************************************************/
 /**
  * \brief  Registration wrapper

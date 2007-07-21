@@ -488,15 +488,25 @@ pager(void)
   l4_threadid_t src;
   l4_umword_t pfa,eip,snd_base,fp;
   l4_msgdope_t result;
+  l4_msgtag_t tag;
   extern char _start;
   extern char _end;
 
   while (1)
     {
-      l4_ipc_wait(&src, L4_IPC_SHORT_MSG, &pfa, &eip, L4_IPC_NEVER, &result);
+      l4_ipc_wait_tag(&src, L4_IPC_SHORT_MSG,
+                      &pfa, &eip, L4_IPC_NEVER, &result, &tag);
       while (1)
 	{
           int fn = pfa & SIGMA0_REQ_ID_MASK;
+
+          if (l4_msgtag_label(tag) != 0
+              && !l4_msgtag_is_page_fault(tag))
+            {
+              printf("pingpong pager: invalid message type: %ld\n",
+                     l4_msgtag_label(tag));
+              enter_kdebug("PINGPONG PAGER");
+            }
 
 	  if (SIGMA0_IS_MAGIC_REQ(pfa) && fn == SIGMA0_REQ_ID_FPAGE_RAM)
 	    {
@@ -545,9 +555,9 @@ pager(void)
 	  if (pfa & 2 || pager_always_map_writable)
 	    fp |= 2;
 
-	  l4_ipc_reply_and_wait(src,L4_IPC_SHORT_FPAGE,snd_base,fp,
-				     &src,L4_IPC_SHORT_MSG,&pfa,&eip,
-			    	     L4_IPC_NEVER,&result);
+	  l4_ipc_reply_and_wait_tag(src,L4_IPC_SHORT_FPAGE, snd_base, fp, l4_msgtag(0, 0, 0, 0),
+                                    &src, L4_IPC_SHORT_MSG, &pfa, &eip,
+                                    L4_IPC_NEVER, &result, &tag);
 	  if (L4_IPC_IS_ERROR(result))
 	    {
 	      printf("pager: IPC error (dope=0x%08lx) "
