@@ -1,6 +1,0 @@
-0.2 - Marek
-Adaption to Linux 2.6.6
-Added CTRL function L4IDE_CTRL_DISK_NAME to get a disk number's device name
-
-0.1 - Marek
-First public version based on Linux 2.6.2
