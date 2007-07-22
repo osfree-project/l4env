@@ -34,13 +34,17 @@ WRAP_SYMBOLS += -Wl,-wrap,puts,-wrap,putchar,-wrap,vfprintf
 
 $(KERNEL):	$(srcdir)/kernel.ux.ld $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(KERNEL_EXTRA_LIBS) $(ABI) $(JABI) $(DRIVERS) $(CXXLIB)
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(CXX) -Wl,-T$< -static -o $@ $(KERNEL_UNRES_SYMS) $(filter-out $<,$+) -lutil $(WRAP_SYMBOLS)
+		$(VERBOSE)$(CXX) -m32 -Wl,-T$< -static -o $@ $(KERNEL_UNRES_SYMS) $(filter-out $<,$+) -lutil $(WRAP_SYMBOLS)
 		chmod 755 $@
 		ln -sf $@ fiasco
 
+irq0.o:		irq0.c
+		$(COMP_MESSAGE)
+		$(VERBOSE)$(HOST_CC) -O2 -Wall -W -c -o $@ $<
+
 irq0:		irq0.o
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(CC) -static -o $@ $<
+		$(VERBOSE)$(HOST_CC) -static -o $@ $<
 		$(STRIP_MESSAGE)
 		$(VERBOSE)$(STRIP) $@
 
@@ -55,11 +59,11 @@ endif
 
 ux_con.o:	ux_con.c
 		$(COMP_MESSAGE)
-		$(VERBOSE)$(CC) -O2 -Wall -W -g $(SDL_CFLAGS) -c $<
+		$(VERBOSE)$(HOST_CC) -O2 -Wall -W -g $(SDL_CFLAGS) -c $<
 
 ux_con:		ux_con.o
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(CC) $(SDL_LDFLAGS) $< -o $@
+		$(VERBOSE)$(HOST_CC) $(SDL_LDFLAGS) $< -o $@
 		$(STRIP_MESSAGE)
 		$(VERBOSE)$(STRIP) $@
 endif
@@ -67,11 +71,11 @@ endif
 ifeq ($(CONFIG_UX_NET),y)
 ux_net.o:	ux_net.c
 		$(COMP_MESSAGE)
-		$(VERBOSE)$(CC) -O2 -Wall -W -g -c $<
+		$(VERBOSE)$(HOST_CC) -O2 -Wall -W -g -c $<
 
 ux_net:		ux_net.o
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(CC) $< -o $@
+		$(VERBOSE)$(HOST_CC) $< -o $@
 		$(STRIP_MESSAGE)
 		$(VERBOSE)$(STRIP) $@
 endif

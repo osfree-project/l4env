@@ -22,3 +22,4 @@ endif
 
 ASFLAGS			+= -m64 -mcmodel=kernel
 OFORMAT			:= elf64-x86-64
+LD_EMULATION		:= elf_x86_64

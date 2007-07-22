@@ -1,6 +1,10 @@
 
 /* Extract debug lines info from an ELF binary stab section */
 
+/*
+ * Adam: Note, this file works on 32-bit files only.
+ */
+
 #include <stdio.h>
 #include <elf.h>
 #include <fcntl.h>
@@ -17,16 +21,16 @@
 
 typedef struct 
 {
-  unsigned long n_strx;         /* index into string table of name */
+  unsigned int  n_strx;         /* index into string table of name */
   unsigned char n_type;         /* type of symbol */
   unsigned char n_other;        /* misc info (usually empty) */
   unsigned short n_desc;        /* description field */
-  unsigned long n_value;        /* value of symbol */
+  unsigned int   n_value;        /* value of symbol */
 } __attribute__ ((packed)) Stab_entry;
 
 typedef struct
 {
-  unsigned long addr;
+  unsigned int  addr;
   unsigned short line;
 } __attribute__ ((packed)) Stab_line;
 

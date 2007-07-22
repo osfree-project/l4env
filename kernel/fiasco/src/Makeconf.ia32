@@ -7,7 +7,7 @@ OPT_CFLAGS		+= $(call CHECKCC,--param large-function-insns=10000)
 # The -Os option of gcc-4.0 sets max-inline-insns-single to 5 which prevents
 # inlining of almost every function
 NOOPT_SHARED_FLAGS	+= $(call CHECKCC,--param max-inline-insns-single=50)
-SHARED_FLAGS		+= -mpreferred-stack-boundary=2
+SHARED_FLAGS		+= -mpreferred-stack-boundary=2 -m32
 
 ifeq ($(CONFIG_REGPARM3),y)
   SHARED_FLAGS		+= -mregparm=3
@@ -47,4 +47,6 @@ ifeq ($(CONFIG_IA32_K8),y)
   SHARED_FLAGS		+= $(call CHECKCC,-march=k8,-march=i686)
 endif
 
-OFORMAT			:= default
+ASFLAGS			+= -m32
+OFORMAT			:= elf32-i386
+LD_EMULATION		:= elf_i386

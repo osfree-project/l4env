@@ -11,16 +11,16 @@
 
 boot_img.o:	$(OBJ_BOOT) $(DRIVERS) $(MINILIBC) 
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(LD) -r -s -o $@_x.o \
-		-T $(srcdir)/boot/ia32/bootstrap.ld $^
+		$(VERBOSE)$(LD) -m elf_i386 -r -s -o $@_x.o \
+		   -T $(srcdir)/boot/ia32/bootstrap.ld $^
 		$(VERBOSE)$(OBJCOPY) -G _boot_start $@_x.o $@
 		$(VERBOSE)$(RM) $@_x.o
 
 $(KERNEL):	$(srcdir)/kernel.ia32.ld boot_img.o $(CRT0) $(OBJ_KERNEL) $(LIBK) $(LIBAMM) $(KERNEL_EXTRA_LIBS) $(ABI) $(JABI) libdrivers.a $(CXXLIB) $(LIBKERN) $(MINILIBC) libgluedriverslibc.a
 		$(LINK_MESSAGE)
-		$(VERBOSE)$(LD)	-N -o $@ \
-		-T $< -gc-sections $(filter-out $<,$+) \
-		$(KERNEL_UNRES_SYMS)
+		$(VERBOSE)$(LD)	-m elf_i386 -N -o $@ \
+		   -T $< -gc-sections $(filter-out $<,$+) \
+		   $(KERNEL_UNRES_SYMS)
 
 $(BOOT): $(KERNEL)
 		$(LINK_MESSAGE)
