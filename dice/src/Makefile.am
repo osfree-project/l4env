@@ -54,10 +54,7 @@ AM_CPPFLAGS=	-D__USER__="\"$(USER)@`hostname`\"" \
 		-D__DICEINCDIR__="\"${includedir}\"" \
 		$(LTDLINCL)
 
-AM_CXXFLAGS = -Wunused -Wunused-parameter -Wall -W \
-	      -Wcast-align -Wcast-qual -Wconversion -Wformat=2 \
-	      -Wmissing-format-attribute -Wpointer-arith -Wshadow -Wwrite-strings \
-	      -Wstrict-aliasing=2
+AM_CXXFLAGS = @DICE_CXXFLAGS@
 
 CLEANFILES  = svnversion.h
 

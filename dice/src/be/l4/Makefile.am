@@ -7,7 +7,4 @@ libl4_a_SOURCES = L4BECallFunction.cpp L4BEHeaderFile.cpp L4BESizes.cpp L4BEType
 
 noinst_HEADERS = L4BECallFunction.h L4BEHeaderFile.h L4BESizes.h L4BETypedDeclarator.h L4BESndFunction.h L4BEUnmarshalFunction.h L4BESrvLoopFunction.h L4BEWaitAnyFunction.h L4BEWaitFunction.h L4BEClass.h L4BENameFactory.h L4BEClassFactory.h L4BEReplyFunction.h L4BEMarshalFunction.h L4BEDispatchFunction.h L4BESwitchCase.h L4BEMsgBuffer.h L4BEMarshaller.h L4BEMsgBufferType.h L4BEIPC.h L4BEMarshalExceptionFunction.h TypeSpec-L4Types.h
 
-AM_CXXFLAGS = -Wunused -Wunused-parameter -Wall -W \
-	      -Wcast-align -Wcast-qual -Wconversion -Wformat=2 \
-	      -Wmissing-format-attribute -Wpointer-arith -Wshadow -Wwrite-strings \
-	      -Wstrict-aliasing=2
+AM_CXXFLAGS = @DICE_CXXFLAGS@

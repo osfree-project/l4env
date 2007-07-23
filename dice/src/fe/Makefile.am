@@ -5,7 +5,4 @@ libfe_a_SOURCES = FEArrayDeclarator.cpp FEFileComponent.cpp FEStructType.cpp FEA
 
 noinst_HEADERS = FEArrayDeclarator.h FEFileComponent.h FEStructType.h FEArrayType.h FEFunctionDeclarator.h FEAttribute.h FEIdentifier.h FEBase.h FEIntAttribute.h FEBinaryExpression.h FEInterface.h FETypeAttribute.h FEConditionalExpression.h FEInterfaceComponent.h FETypeSpec.h FEConstDeclarator.h FEIsAttribute.h FETypedDeclarator.h FEConstructedType.h FELibrary.h FEUnaryExpression.h FEDeclarator.h FEUnionCase.h FEEndPointAttribute.h FEOperation.h FEUnionType.h FEIDLUnionType.h FEEnumDeclarator.h FEPipeType.h FEUserDefinedExpression.h FEEnumType.h FEPrimaryExpression.h FEUserDefinedType.h FEExceptionAttribute.h FEPtrDefaultAttribute.h FEVersionAttribute.h FEExpression.h FESimpleType.h FEFile.h FEStringAttribute.h FESizeOfExpression.h FEAttributeDeclarator.h ConsistencyVisitor.h PostParseVisitor.h
 
-AM_CXXFLAGS = -Wunused -Wunused-parameter -Wall -W \
-	      -Wcast-align -Wcast-qual -Wconversion -Wformat=2 \
-	      -Wmissing-format-attribute -Wpointer-arith -Wshadow -Wwrite-strings \
-	      -Wstrict-aliasing=2
+AM_CXXFLAGS = @DICE_CXXFLAGS@

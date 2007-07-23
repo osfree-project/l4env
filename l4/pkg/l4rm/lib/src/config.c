@@ -52,8 +52,8 @@ l4rm_get_vm_start(void)
   /* query environment */
   if (l4env_request_config_u32(L4ENV_VM_LOW, &vm_start) == 0)
     return vm_start;
-  else
-    return L4RM_VM_START;
+
+  return L4RM_VM_START;
 }
 
 /*****************************************************************************/
@@ -71,13 +71,11 @@ l4rm_get_vm_end(void)
   /* query environment */
   if (l4env_request_config_u32(L4ENV_VM_HIGH, &vm_end) == 0)
     return vm_end;
-  else
-    {
-      if ((vm_end = l4util_memdesc_vm_high()))
-	return vm_end;
 
-      Panic("No virtual memory descriptor available in the KIP!");
-    }
+  if ((vm_end = l4util_memdesc_vm_high()))
+    return vm_end;
+
+  Panic("No virtual memory descriptor available in the KIP!");
 }
 
 /*****************************************************************************/
