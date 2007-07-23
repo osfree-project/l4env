@@ -131,7 +131,8 @@ case "$cmd" in
 	CON=(-l l4dope)
 	RUN="$L4PATH/proxygon $L4PATH/run"
 	LOG=(-l dmon)
-	LAUNCHPAD=(-l $L4PATH/launchpad" -a $CFGPATH/$LOADERAPP -n L4Linux -a $L4PATH/vscrtest -s")
+	#LAUNCHPAD=(-l $L4PATH/launchpad" -a $CFGPATH/$LOADERAPP -n L4Linux -a $L4PATH/vscrtest -s")
+	LAUNCHPAD=()
   	;;
   con|c)
 	RES="-G 640x480@16"
