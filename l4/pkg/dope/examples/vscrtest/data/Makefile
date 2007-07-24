@@ -9,15 +9,8 @@ vpath %.xga $(SRC_DIR)
 
 include $(L4DIR)/mk/lib.mk
 
-ifeq ($(ARCH),amd64)
-OFORMAT := elf64-x86-64
-else
-OFORMAT := default
-endif
-
 %.o: %.xga
 	@$(COMP_MESSAGE)
 	$(VERBOSE)outputto=$$(pwd)/$@;                                    \
 	   (cd $(SRC_DIR) && \
 	    $(LD) -r --oformat $(OFORMAT) -o $$outputto -b binary $(notdir $^))
-

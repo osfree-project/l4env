@@ -75,7 +75,8 @@ $(filter-out %.s.so %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS)
 # shared lib
 $(filter %.s.so, $(TARGET)):%.s.so: $(OBJS) $(CRTP) $(LIBDEPS)
 	@$(AR_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -o $@ -shared $(addprefix -T,$(LDSCRIPT)) $(CRTP) $(OBJS) $(LDFLAGS)
+	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -m $(LD_EMULATION) \
+	   -o $@ -shared $(addprefix -T,$(LDSCRIPT)) $(CRTP) $(OBJS) $(LDFLAGS)
 	@$(BUILT_MESSAGE)
 
 # build an object file (which looks like a lib to a later link-call), which
@@ -83,7 +84,8 @@ $(filter %.s.so, $(TARGET)):%.s.so: $(OBJS) $(CRTP) $(LIBDEPS)
 # constructors)
 $(filter %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS) $(LIBDEPS)
 	@$(AR_MESSAGE)
-	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -o $@ -r $(OBJS) $(LDFLAGS)
+	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -m $(LD_EMULATION) \
+	   -o $@ -r $(OBJS) $(LDFLAGS)
 	@$(BUILT_MESSAGE)
 
 endif	# architecture is defined, really build

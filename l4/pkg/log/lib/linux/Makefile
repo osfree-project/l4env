@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 TARGET		= libloglinux.a
-MODE		= host
+MODE		= linux
 SYSTEMS		= x86
 
 PRIVATE_INCDIR	= $(L4INCDIR) $(PKGDIR)/server/include $(PKGDIR)/lib/include

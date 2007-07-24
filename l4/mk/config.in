@@ -85,8 +85,8 @@ if [ "$BIDc_USE_SPECIAL_CC" = "y" ] ; then
     string 'HOST_CC'  HOST_CC  'gcc'
     string 'HOST_CXX' HOST_CXX 'g++'
     if [ "$BUILD_ARCH" = "x86" ] ; then
-        string 'CC'  CC  '$(SYSTEM_TARGET_x86)gcc'
-        string 'CXX' CXX '$(SYSTEM_TARGET_x86)g++'
+        string 'CC'  CC  '$(SYSTEM_TARGET_x86)gcc -m32'
+        string 'CXX' CXX '$(SYSTEM_TARGET_x86)g++ -m32'
     fi
     if [ "$BUILD_ARCH" = "arm" ] ; then
         string 'CC'  CC  '$(SYSTEM_TARGET_arm)gcc'
@@ -100,8 +100,8 @@ else
     define_string HOST_CC   'gcc'
     define_string HOST_CXX  'g++'
     if [ "$BUILD_ARCH" = "x86" ] ; then
-      define_string CC  '$(SYSTEM_TARGET_x86)gcc'
-      define_string CXX '$(SYSTEM_TARGET_x86)g++'
+      define_string CC  '$(SYSTEM_TARGET_x86)gcc -m32'
+      define_string CXX '$(SYSTEM_TARGET_x86)g++ -m32'
     fi
     if [ "$BUILD_ARCH" = "arm" ] ; then
       define_string CC  '$(SYSTEM_TARGET_arm)gcc'

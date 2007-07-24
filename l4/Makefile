@@ -16,7 +16,7 @@ install-dirs_L4DIR  = tool pkg
 clean-dirs_L4DIR    = tool pkg doc
 cleanall-dirs_L4DIR = tool pkg doc
 
-BUILD_TOOLS	= gawk
+BUILD_TOOLS	= gawk byacc
 
 # our default target is all::
 all::
@@ -287,6 +287,8 @@ report:
 	elif [ -e /etc/mandrake-release ]; then                \
 	  echo -n "Mandrake: ";                                \
 	  cat /etc/mandrake-release;                           \
+	else                                                   \
+	  echo "Unknown distribution";                         \
 	fi
 	@lsb_release -a || true
 	@echo

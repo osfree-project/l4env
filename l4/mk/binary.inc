@@ -241,7 +241,6 @@ endif
 endif
 
 OPTS	?= -g -O2 -fno-strict-aliasing
-OPTS	+= $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 WARNINGS?= -Wall -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations $(WARNINGS_$@)
 
 ifeq ($(MODE),host)
@@ -249,6 +248,9 @@ ifeq ($(MODE),host)
 SYSTEM_TARGET = 
 CC            = $(HOST_CC)
 CXX           = $(HOST_CXX)
+else
+# no architecture specific flags in host mode
+OPTS	+= $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 endif
 
 

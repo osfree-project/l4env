@@ -7,7 +7,7 @@ PKGDIR ?= ../..
 L4DIR  ?= $(PKGDIR)/../..
 
 TARGET  = linux-log
-MODE    = host
+MODE    = linux
 SRC_C   = main.c
 LIBS	= -lloglinux
 

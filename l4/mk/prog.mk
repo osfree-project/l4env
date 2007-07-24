@@ -119,7 +119,7 @@ LINK_PROGRAM  := $(LINK_PROGRAM-CXX-host-$(HOST_LINK))
 endif
 
 ifeq ($(LINK_PROGRAM),)
-LINK_PROGRAM  := $(LD)
+LINK_PROGRAM  := $(LD) -m $(LD_EMULATION)
 endif
 
 $(TARGET): $(OBJS) $(LIBDEPS) $(CRT0) $(CRTN)

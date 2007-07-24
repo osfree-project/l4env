@@ -78,5 +78,6 @@ $(OBJS_root_inits.o): .general.d
 
 root_inits.o: $(OBJS_root_inits.o)
 	@$(LINK_MESSAGE)
-	$(VERBOSE)$(LD) $(findstring -m elf_x86_64, $(LDFLAGS)) -r -o $@ $(OBJS_root_inits.o) $(addprefix -L,$(L4LIBDIR)) -ldemangle
+	$(VERBOSE)$(LD) -m $(LD_EMULATION) -r -o $@ \
+	  $(OBJS_root_inits.o) $(addprefix -L,$(L4LIBDIR)) -ldemangle
 
