@@ -67,7 +67,10 @@ Mword Thread::update_ipc_window (Address pfa, Address remote_pfa, Mword error)
   
   (void)error;
 
-  if (receiver()->mem_space()->dir()->walk((void*)remote_pfa,0,false,0).valid())
+  Pte pte = receiver()->mem_space()->dir()->walk((void*)remote_pfa,0,false,0);
+
+  if (pte.valid()
+      && pte.attr().permits(Mem_page_attr::Write | Mem_page_attr::User))
     {
       mem_space()->dir()->copy_in((void*)pfa, 
 				  receiver()->mem_space()->dir(), 

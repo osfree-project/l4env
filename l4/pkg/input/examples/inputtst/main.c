@@ -369,10 +369,8 @@ int main(int argc, char **argv)
 	if (argc < 2)
 		return usage();
 
-#ifndef ARCH_arm
 	l4io_info_t *io_info_addr = 0;
 	l4io_init(&io_info_addr, L4IO_DRV_INVALID);
-#endif
 
 	if (strcmp(argv[1], "-cb") == 0) {
 		printf("Testing L4INPUT callback mode...\n");

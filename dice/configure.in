@@ -132,7 +132,7 @@ dnl AM_CXXFLAGS = -Wunused-parameter -Wall -W -Wcast-align
 dnl -Wcast-qual -Wconversion -Wformat=2 -Wmissing-format-attribute
 dnl -Wpointer-arith -Wshadow -Wwrite-strings -Wstrict-aliasing=2
 DICE_CXXFLAGS=""
-for f in "-Wunused-parameter" "-Wall" "-W" "-Wcast-align" "-Wcast-qual" "-Wconversion" "-Wformat=2" "-Wmissing-format-attribute" "-Wpointer-arith" "-Wshadow" "-Wwrite-strings" "-fstrict-aliasing -Wstrict-aliasing=2"; do
+for f in "-Wunused-parameter" "-Wall" "-W" "-Wcast-align" "-Wcast-qual" "-Wconversion" "-Wformat" "-Wformat=2" "-Wmissing-format-attribute" "-Wpointer-arith" "-Wshadow" "-Wwrite-strings" "-fstrict-aliasing" "-Wstrict-aliasing" "-Wstrict-aliasing=2"; do
     AC_MSG_CHECKING([$CXX supports $f])
     if `$CXX $f -o /dev/null -c -x c++ /dev/null >/dev/null 2>&1`; then
 	AC_MSG_RESULT([yes])

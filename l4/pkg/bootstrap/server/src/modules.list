@@ -73,7 +73,7 @@ bin bmodfs
 data  libloader.s.so
 data  libld-l4.s.so
 data  shared_test
-data  vmlinuz26.arm
+data  vmlinuz.arm
 data  rd
 data  l4linux.cfg
 bin loader --fprov=BMODFS l4linux.cfg
@@ -100,6 +100,6 @@ data     v2/libloader.s.so
 data     v2/libld-l4.s.so
 data     cfg/ldr_run.bmodfs
 data     v2/run
-data     lx/vmlinuz26
+data     lx/vmlinuz
 data     cfg/ldr_l4linux26.cd
 data     rd/initrd.gz

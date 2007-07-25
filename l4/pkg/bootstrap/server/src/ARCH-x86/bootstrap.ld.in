@@ -2,6 +2,7 @@ ENTRY(_start)
 
 PHDRS {
   data PT_LOAD;
+  mods PT_LOAD;
 }
 
 SECTIONS
@@ -54,7 +55,7 @@ SECTIONS
   . = RAM_BASE + MODADDR;
 #endif
   _module_data_start = .;
-  .module_data : { *(.module_data) }
+  .module_data : { *(.module_data) } : mods
   _module_data_end = .;
 
   /DISCARD/ : {

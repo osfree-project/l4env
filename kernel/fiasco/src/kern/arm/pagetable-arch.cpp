@@ -157,6 +157,12 @@ Mem_page_attr::set_abstract(unsigned long a)
   set_ap(a);
 }
 
+PUBLIC inline NEEDS[Mem_page_attr::get_ap]
+bool
+Mem_page_attr::permits(unsigned long attr)
+{ return (get_ap() & attr) == attr; }
+
+
 Page_table *Page_table::_current;
   
 PUBLIC inline
