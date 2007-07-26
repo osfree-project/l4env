@@ -148,7 +148,7 @@ __handle_iopf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
     have_all_ioports = 1;
 
   /* done */
-  return L4RM_REPLY_SUCCESS;
+  return result.md.fpage_received ? L4RM_REPLY_SUCCESS :  L4RM_REPLY_EMPTY;
 }
 #endif
 

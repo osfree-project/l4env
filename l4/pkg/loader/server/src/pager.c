@@ -213,7 +213,7 @@ resolve_iopf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
 	}
     }
 
-  if (!ioports_mapped)
+  if (ioports_mapped == 0)
     {
       /* This is the first time an I/O pagefault occured. Map in the
        * whole I/O address space */
@@ -232,13 +232,23 @@ resolve_iopf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
 	}
       if (error || !l4_ipc_fpage_received(result))
 	{
-	  app_msg(app, "Can't map I/O space, ROOT denies page (result=%08lx)",
-			result.msgdope);
-	  enter_kdebug("app_pager");
-	  *reply = L4_IPC_SHORT_MSG;
-	  return;
+	  app_msg(app, "WARNING: Can't map I/O space, ROOT denies page (result=%08lx)",
+                       result.msgdope);
+	  /* never try again */
+	  ioports_mapped = 2;
+	  /* return in ioports_mapped == 2 block */
 	}
-      ioports_mapped = 1;
+      else
+        /* successfully mapped */
+        ioports_mapped = 1;
+    }
+
+  if (ioports_mapped == 2)
+    {
+      /* no I/O ports mapped */
+      *dw1 = *dw2 = 0;
+      *reply = L4_IPC_SHORT_MSG;
+      return;
     }
 
   if (port == 0 && size == L4_WHOLE_IOADDRESS_SPACE
