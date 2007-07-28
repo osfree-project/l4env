@@ -350,8 +350,8 @@ or find it in \cite{dice-man}.
 Next we implement the server-side functionality. Copy the generated
 skeleton file into the already known «server/src/» directory.
 
-|~/build/pkg/hiworld/idl> cp OBJ-x86_586-l4v2/hiworld-template.c \|
-|    ../server/src/server.c|
+|~/build/pkg/hiworld/idl/OBJ-x86_586-l4v2> cp hiworld-template.c \|
+|    ~/src/l4/pkg/hiworld/server/src/server.c|
 
 Modify the functions so they do what we want, write code that
 registers at the DROPS name server and calls the main server loop:
@@ -426,12 +426,12 @@ Create a new subdirectory there:
 Switch into it and create the source file «main.c» for sending
 requests to our server:
 
-\examplefile{hiworld/example/client/main.c}{hi-client.c}
+\examplefile{hiworld/examples/client/main.c}{hi-client.c}
 
 Create a makefile that compiles a binary, and tell BID to link the
 client library created in Section~\ref{sec:helloserver.client}.
 
-\examplefile{hiworld/example/client/Makefile}{hi-client-makefile}
+\examplefile{hiworld/examples/client/Makefile}{hi-client-makefile}
 
 Compile the program:
 

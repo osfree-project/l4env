@@ -1,6 +1,7 @@
-#! /usr/bin/perl
+#! /usr/bin/perl -W
 
 use Math::BigInt;
+use strict;
 
 my %sym_tab = (new Math::BigInt(0) => "ERRRRRRROR");
 my $sections = "BdDdTtVvWwuU";
@@ -84,7 +85,7 @@ sub print_func($)
 my $last_f = 0;
 while (<>)
 {
-  if (/^\s+#(\d+)\s+([0-9a-f]+)\s+([0-9a-f]+)/i)
+  if (/^\s+#(\d+)\s+([0-9a-f]+)\s+([0-9a-f]+)/i) # fiasco bt without debuginfo
   {
     my $fn = $1;
     my $stack = new Math::BigInt("0x$2");
@@ -101,16 +102,29 @@ while (<>)
     }
     print_func($addr);
   }
-  elsif (/^\s*(0x)?([0-9a-f]+)\s*$/i)
+  elsif (/^\s*(0x)?([0-9a-f]+)\s*$/i) # simple figure
   {
     print_func($2);
   }
-  elsif (/^[\da-f]+:([\d\sa-f]+)$/i)
+  elsif (/^[\da-f]+:([\d\sa-f]+)$/i) # fiasco memory dump (mostly user stack)
   {
     my $l = $1;
     for my $addr (split(/\s+/, $l))
     {
       print_func($addr);
+    }
+  }
+  elsif (/^\s*[\da-f]+\s+([\d\sa-f]+)\s*$/i) # fiasco tcb view stack
+  {
+    my $l = $1;
+    for my $val (split(/\s+/, $l))
+    {
+      next if $val eq '35353535'; # stack poison
+      if ($val =~ /^f.......$/i) { # XXX fix 64 bit
+        print_func($val);
+      } else {
+	print " 0x$val  ... value ...\n";
+      }
     }
   }
 }

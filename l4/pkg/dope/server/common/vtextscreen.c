@@ -323,7 +323,7 @@ static void vtextscr_refresh(VTEXTSCREEN *vts, s32 x, s32 y, s32 w, s32 h) {
 static char *vtextscr_map(VTEXTSCREEN *vts, char *dst_thread_ident) {
 	s32 app_id;
 	char dst_th_buf[16];
-	THREAD *dst_th = (THREAD *)dst_th_buf;
+	THREAD *dst_th = (THREAD *)(void *)dst_th_buf;
 	
 	if (!vts->vd->smb) return "Error: VTextScreen mode not initialized.";
 

@@ -245,8 +245,12 @@ static void create_desktop(SCREEN *scr) {
 	desk->win->set_content(desk, (WIDGET *)b);
 	desk->gen->update((WIDGET *)desk);
 
-	scr->scr->place(scr, (WIDGET *)desk, -50, -50, scr_w + 100, scr_h + 100);
+	/* place desktop window outside of the screen */
+	scr->scr->place(scr, (WIDGET *)desk, scr_w + 50, -50, scr_w + 100, scr_h + 100);
 	viewman->set_bg(desk->wd->context);
+
+	/* move desktop window to the screen area */
+	scr->scr->place(scr, (WIDGET *)desk, -50, -50, scr_w + 100, scr_h + 100);
 }
 
 

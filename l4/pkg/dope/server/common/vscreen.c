@@ -503,7 +503,7 @@ static void vscr_refresh(VSCREEN *vs, s32 x, s32 y, s32 w, s32 h) {
 static char *vscr_map(VSCREEN *vs, char *dst_thread_ident) {
 	s32 app_id;
 	char dst_th_buf[16];
-	THREAD *dst_th = (THREAD *)dst_th_buf;
+	THREAD *dst_th = (THREAD *)(void *)dst_th_buf;
 	
 	if (!vs->vd->image) return "Error: VScreen mode not initialized.";
 

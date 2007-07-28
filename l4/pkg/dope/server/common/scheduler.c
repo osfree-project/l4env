@@ -176,7 +176,9 @@ static void process_mainloop(void) {
 
 		/*** pay some attentation to the user ***/
 		start_time = timer->get_time();
+		curr_scr->gen->lock((WIDGET *)curr_scr);
 		userstate->handle();
+		curr_scr->gen->unlock((WIDGET *)curr_scr);
 		usr_end_time = timer->get_time();
 
 		/*** process real-time widgets ***/
