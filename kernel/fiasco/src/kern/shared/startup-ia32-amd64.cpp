@@ -46,9 +46,9 @@ Startup::stage2()
   Banner::init();
   Cpu::init();
   Pic::init();
+  Kip_init::init();
   Kmem::init();
   Kernel_task::init();		// enables current_mem_space()
-  Kip_init::init();
   Kmem_alloc::init();
   Vmem_alloc::init();
   Utcb_init::init();

@@ -446,7 +446,7 @@ pdir_map_range(Address pml4_pa, Address la, Address pa,
       if (!(*pml4e & INTEL_PML4E_VALID))
 	{
 	  Address pdp_pa;
-	  
+
 	  /* Allocate new page for pdp. */
 	  ptab_alloc(&pdp_pa);
 
@@ -507,7 +507,7 @@ pdir_map_range(Address pml4_pa, Address la, Address pa,
 			| INTEL_PDE_VALID | INTEL_PDE_USER | INTEL_PDE_WRITE;
 		    }
 		  assert(!(*pde & INTEL_PDE_SUPERPAGE));
-		  
+
 
 		  /* Use normal 4KB page mappings.  */
 		  do
@@ -534,11 +534,8 @@ pdir_map_range(Address pml4_pa, Address la, Address pa,
 }
 
 void
-base_paging_init(Unsigned64 phys_mem_max)
+base_paging_init(void)
 {
-  // XXX ugly, works only if kernel is in highest memory range
-  Address size_kmem = 0 - Mem_layout::Physmem;
-  Address phys_kmem = phys_mem_max > size_kmem ? phys_mem_max - size_kmem : 0;
   extern char _end;
 
   // we assume that we only have to map the first 4MB page ...
@@ -547,23 +544,31 @@ base_paging_init(Unsigned64 phys_mem_max)
 
   ptab_alloc(&base_pml4_pa);
 
-  // Establish one-to-one mappings for the physical memory
-  pdir_map_range(base_pml4_pa, 0, 0, phys_mem_max,
+  // Establish one-to-one mappings for the first 4MB of physical memory
+  pdir_map_range(base_pml4_pa, /*virt*/0, /*phys*/0, /*size*/4 << 20,
 		 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
 
-  // map in the first 4MB of physical memory to 0xf0000000
-  pdir_map_range(base_pml4_pa, Mem_layout::Boot_state_start, 0,
-  		 Mem_layout::Boot_state_end - Mem_layout::Boot_state_start,
-  		 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
-
-  // map in the last 64MB of physical memory to 0xfc000000 XXX wrong
-  pdir_map_range(base_pml4_pa, Mem_layout::Physmem, phys_kmem, 
-  		 0 - Mem_layout::Physmem,
-  		 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
-
+  // map in the first 4MB of physical memory to 0xfffffffff0000000
+  pdir_map_range(base_pml4_pa, Mem_layout::Boot_state_start, /*phys*/0,
+                 /*size*/Mem_layout::Boot_state_end -
+		         Mem_layout::Boot_state_start,
+                 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
 
   // XXX Turn on paging and activate 64Bit mode
   paging_enable(base_pml4_pa);
+}
+
+void base_map_physical_memory_for_kernel(Unsigned64 phys_mem_max)
+{
+  // XXX ugly, works only if kernel is in highest memory range
+  Address size_kmem = 0 - Mem_layout::Physmem;
+  Address phys_kmem = phys_mem_max > size_kmem ? phys_mem_max - size_kmem : 0;
+
+  // map in the last 64MB of physical memory to 0xfc000000 XXX wrong
+  pdir_map_range(base_pml4_pa, Mem_layout::Physmem, /*phys*/phys_kmem,
+                 /*size*/size_kmem,
+                 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
+
 }
 
 extern "C" void

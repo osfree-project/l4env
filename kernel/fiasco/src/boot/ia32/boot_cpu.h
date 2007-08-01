@@ -3,7 +3,8 @@
 
 #include "types.h"
 
-void base_paging_init (Unsigned32);
+void base_paging_init (void);
+void base_map_physical_memory_for_kernel (Unsigned32);
 void base_cpu_setup (void);
 
 #endif

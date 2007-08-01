@@ -217,8 +217,7 @@ Kmem::init()
   // We also can assume that Cpu has already been initialized.
 
   // find the highest memory address
-  mem_max  = (Boot_info::mbi_virt()->mem_upper + 1024) << 10;
-  mem_max &= Config::PAGE_MASK;
+  mem_max = (Kip::k()->last_free().end + 1) & Config::PAGE_MASK;
 
   if (Config::old_sigma0_adapter_hack)
     {

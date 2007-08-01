@@ -1,4 +1,3 @@
-/* $Id$ */
 /*****************************************************************************/
 /**
  * \file    l4sys/include/ARCH-x86/L4API-l4v2/syscalls.h
@@ -136,11 +135,11 @@ l4_nchief(l4_threadid_t destination,
  * \param   eip          The new instruction pointer of the thread. It must
  *                       point into the user-accessible part of the address
  *                       space. The existing instruction pointer is not
- *                       modified if \c 0xFFFFFFFF is given.
+ *                       modified if \c ~0UL is given.
  * \param   esp          The new stack pointer for the thread. It must point
  *                       into the user-accessible part of the address space.
  *                       The existing stack pointer is not modified if
- *                       \c 0xFFFFFFFF is given.
+ *                       \c ~0UL is given.
  * \param   preempter    Defines the internal preempter used by the thread.
  *                       The current preempter id is not modified if
  *                       #L4_INVALID_ID is given.
@@ -428,7 +427,7 @@ enum {
 
   /* Mask of all flags */
   L4_TASK_NEW_FLAGS_MASK      = ((1 << L4_TASK_NEW_NR_OF_FLAGS) - 1)
-                                  << (sizeof(l4_umword_t) * 8 - L4_TASK_NEW_NR_OF_FLAGS),
+                                << (32 - L4_TASK_NEW_NR_OF_FLAGS),
 };
 
 
@@ -448,8 +447,8 @@ l4_privctrl(l4_umword_t cmd,
  */
 L4_INLINE void
 __do_l4_thread_ex_regs(l4_umword_t val0,
-                       l4_umword_t eip,
-                       l4_umword_t esp,
+                       l4_umword_t ip,
+                       l4_umword_t sp,
                        l4_threadid_t *preempter,
                        l4_threadid_t *pager,
                        l4_umword_t *old_eflags,
@@ -458,8 +457,8 @@ __do_l4_thread_ex_regs(l4_umword_t val0,
 L4_INLINE l4_taskid_t
 __do_l4_task_new(l4_taskid_t destination,
                  l4_umword_t mcp_or_new_chief_and_flags,
-                 l4_umword_t esp,
-                 l4_umword_t eip,
+                 l4_umword_t sp,
+                 l4_umword_t ip,
                  l4_threadid_t pager);
 
 

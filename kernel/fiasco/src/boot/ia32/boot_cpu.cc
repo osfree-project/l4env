@@ -454,11 +454,8 @@ pdir_map_range(Address pdir_pa, Address la, Address pa,
 }
 
 void
-base_paging_init(Unsigned32 phys_mem_max)
+base_paging_init(void)
 {
-  Address size_kmem = 0 - Mem_layout::Physmem;
-  Address phys_kmem = phys_mem_max > size_kmem ? phys_mem_max - size_kmem : 0;
-
   // We assume that we only have to map the first 4MB page. This has
   // to be checked before base_paging_init was called.
   ptab_alloc(&base_pdir_pa);
@@ -481,6 +478,13 @@ base_paging_init(Unsigned32 phys_mem_max)
 		 /*size*/Mem_layout::Boot_state_end -
 			 Mem_layout::Boot_state_start,
 		 INTEL_PDE_VALID | INTEL_PDE_WRITE | INTEL_PDE_USER);
+}
+
+void
+base_map_physical_memory_for_kernel(Unsigned32 phys_mem_max)
+{
+  Address size_kmem = 0 - Mem_layout::Physmem;
+  Address phys_kmem = phys_mem_max > size_kmem ? phys_mem_max - size_kmem : 0;
 
   // map in the last 60MB of physical memory to 0xfc400000
   pdir_map_range(base_pdir_pa, /*virt*/Mem_layout::Physmem, /*phys*/phys_kmem,

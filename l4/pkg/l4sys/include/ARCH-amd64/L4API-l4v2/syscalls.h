@@ -135,11 +135,11 @@ l4_nchief(l4_threadid_t destination,
  * \param   eip          The new instruction pointer of the thread. It must
  *                       point into the user-accessible part of the address
  *                       space. The existing instruction pointer is not
- *                       modified if \c 0xFFFFFFFF is given.
+ *                       modified if \c ~0UL is given.
  * \param   esp          The new stack pointer for the thread. It must point
  *                       into the user-accessible part of the address space.
  *                       The existing stack pointer is not modified if
- *                       \c 0xFFFFFFFF is given.
+ *                       \c ~0UL is given.
  * \param   preempter    Defines the internal preempter used by the thread.
  *                       The current preempter id is not modified if
  *                       #L4_INVALID_ID is given.
@@ -415,13 +415,19 @@ l4_task_new_cap(l4_taskid_t destination,
 	        l4_threadid_t cap_handler);
 
 enum {
+  /* Start task in IPC monitor mode */
   L4_TASK_NEW_IPC_MONITOR     = 1 << 29,
+  /* Raise exception upon start of thread 0 */
   L4_TASK_NEW_RAISE_EXCEPTION = 1 << 30,
   /* Start thread 0 in alien mode */
   L4_TASK_NEW_ALIEN           = 1 << 31,
+
+  /* Number of flags */
   L4_TASK_NEW_NR_OF_FLAGS     = 3,
+
+  /* Mask of all flags */
   L4_TASK_NEW_FLAGS_MASK      = ((1 << L4_TASK_NEW_NR_OF_FLAGS) - 1)
-                                 << (32 - L4_TASK_NEW_NR_OF_FLAGS),
+                                << (32 - L4_TASK_NEW_NR_OF_FLAGS),
 };
 
 
@@ -441,8 +447,8 @@ l4_privctrl(l4_umword_t cmd,
  */
 L4_INLINE void
 __do_l4_thread_ex_regs(l4_umword_t val0,
-                       l4_umword_t rip,
-                       l4_umword_t rsp,
+                       l4_umword_t ip,
+                       l4_umword_t sp,
                        l4_threadid_t *preempter,
                        l4_threadid_t *pager,
                        l4_umword_t *old_eflags,

@@ -55,6 +55,7 @@ extern "C" FIASCO_FASTCALL
 void
 bootstrap (Multiboot_info *mbi, unsigned int flag)
 {
+  extern Kip my_kernel_info_page;
   Address mem_max;
   Start start;
 
@@ -62,9 +63,16 @@ bootstrap (Multiboot_info *mbi, unsigned int flag)
 
   // setup stuff for base_paging_init() 
   base_cpu_setup();
+  // now do base_paging_init(): sets up paging with one-to-one mapping
+  base_paging_init();
+
+  asm volatile ("" ::: "memory");
 
   // this calculation must fit Kmem::init()!
-  mem_max = trunc_page((mbi->mem_upper + 1024) << 10);
+  mem_max = (my_kernel_info_page.last_free().end + 1) & Config::PAGE_MASK;
+
+  if (mem_max > (3048UL << 20))
+    mem_max = 3048UL << 20;
 
   if (Config::old_sigma0_adapter_hack)
     {
@@ -73,9 +81,9 @@ bootstrap (Multiboot_info *mbi, unsigned int flag)
 	mem_max = 1<<30;
     }
 
-  // check if mbi->mem_upper contains a bogus value (e.g. >=4096KB)
+  // check if mem_max contains a bogus value (e.g. <4096KB)
   if (mem_max < 4<<20)
-    panic("Need at least 4MB of RAM (mem_upper=%u)", mbi->mem_upper);
+    panic("Need at least 4MB of RAM (mem_max=%u)", mem_max);
 
   // make sure that we did not forgot to discard an unused header section
   // (compare "objdump -p kernel.image")
@@ -86,11 +94,10 @@ bootstrap (Multiboot_info *mbi, unsigned int flag)
   if ((Address)&_end - Mem_layout::Kernel_image > 4<<20)
     panic("Fiasco boot system occupies more than 4MB");
 
-  // now do base_paging_init(): sets up paging with one-to-one mapping
-  base_paging_init(round_superpage(mem_max));
+  base_map_physical_memory_for_kernel(round_superpage(mem_max));
 
   start = (Start)_start;
-  
+
   // check if kernel overwrites something important
   if (mbi->flags & Multiboot_info::Cmdline)
     {

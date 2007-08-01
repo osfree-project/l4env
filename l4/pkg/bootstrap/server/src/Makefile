@@ -4,6 +4,8 @@ L4DIR		?= $(PKGDIR)/../..
 #DEFAULT_RELOC_arm := 0x02000000
 DEFAULT_RELOC_arm := 0x01400000
 
+LINK_ADDR	 = 0x002c0000
+
 include $(L4DIR)/mk/Makeconf
 -include $(OBJ_DIR)/Makeconf.local
 
@@ -40,7 +42,6 @@ SRC_CC_arm-l4v2	+= $(LIBC_SUPPORT_CC_$(ARCH)-$(ARM_PLATFORM_TYPE))
 
 OPTS		 = -g -Os $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 
-LINK_ADDR	 = 0x00100000
 MOD_ADDR         = 0x02000000
 SRC_S		:= crt0.S
 ifeq ($(ARCH),arm)
@@ -208,7 +209,7 @@ $(TARGET): $(LDSCRIPT) $(OBJS_$(TARGET))
 
 startup.o: $(STARTUP_C_dep)
 
-$(LDSCRIPT): $(LDSCRIPT).in Makefile $(BOOTSTRAP_LD_dep)
+$(LDSCRIPT): $(LDSCRIPT).in $(SRC_DIR)/Makefile $(BOOTSTRAP_LD_dep)
 	@$(GEN_MESSAGE)
 	$(VERBOSE)cpp -P $(CPPFLAGS) -DLINKADDR=$(LINK_ADDR) $< $@;
 

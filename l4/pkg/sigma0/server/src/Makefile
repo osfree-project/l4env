@@ -10,8 +10,8 @@ LIBCLIBS	= -nostdlib $(LIBCLIBS_X86) $(GCCLIB)
 L4LIBS		= -lcxx_io -lcxx_io_kdebug -lcxx_base -ll4sys
 CRT0		=
 MODE		= tiny
-DEFAULT_RELOC_x86   := 0x00090000
-DEFAULT_RELOC_amd64 := 0x00090000
+DEFAULT_RELOC_x86   := 0x00100000
+DEFAULT_RELOC_amd64 := 0x00100000
 DEFAULT_RELOC_arm   := 0x00050000
 
 vpath %.c $(L4DIR)/pkg/crtx/lib/src

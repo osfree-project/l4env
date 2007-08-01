@@ -104,9 +104,8 @@ void Kip_init::setup_kmem_region (Address, Address)
 	Kmem::get_mem_max() - 1, Mem_desc::Reserved));
 }
 
-namespace 
-{
-  enum 
+namespace KIP_namespace {
+  enum
   {
     Num_mem_descs = 20,
     Max_len_version = 512,
@@ -119,12 +118,12 @@ namespace
     Kip kip;
     char mem_descs[Size_mem_descs];
   };
-  
-  KIP my_kernel_info_page __attribute__((section(".kernel_info_page"))) =
-    { 
-      { 
-	L4_KERNEL_INFO_MAGIC, 
-	Config::kernel_version_id, 
+
+  KIP my_kernel_info_page asm("my_kernel_info_page") __attribute__((section(".kernel_info_page"))) =
+    {
+      {
+	L4_KERNEL_INFO_MAGIC,
+	Config::kernel_version_id,
 	(Size_mem_descs + sizeof(Kip)) >> 4, {0, 0, 0},
 	0, {0,0,0}, // KIP SYSCALLS
 	0, 0, 0, 0,
@@ -141,14 +140,13 @@ namespace
       },
       {}
     };
-
 };
 
 PUBLIC static FIASCO_INIT
 //IMPLEMENT
 void Kip_init::init()
 {
-  Kip *kinfo = reinterpret_cast<Kip*>(&my_kernel_info_page);
+  Kip *kinfo = reinterpret_cast<Kip*>(&KIP_namespace::my_kernel_info_page);
   Kip::init_global_kip(kinfo);
   Kip_init::init_x();
   kinfo->add_mem_region(Mem_desc(0, Mem_layout::User_max - 1, 

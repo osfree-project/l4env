@@ -221,7 +221,6 @@ void
 Kmem::init()
 {
   Address kphys_start, kphys_end;
-  // XXX ugly arithmetic
   const Address kphys_size = 0 - Mem_layout::Physmem;
   // There are several things to note here: first, we run before main()
   // has been started, i.e., before any constructors for static objects
@@ -232,8 +231,7 @@ Kmem::init()
   // We also can assume that Cpu has already been initialized.
 
   // find the highest memory address
-  mem_max  = 1024 * (1024 + Boot_info::mbi_virt()->mem_upper);
-  mem_max &= Config::PAGE_MASK;
+  mem_max = (Kip::k()->last_free().end + 1) & Config::PAGE_MASK;
 
   if (Config::old_sigma0_adapter_hack)
     {
@@ -285,29 +283,24 @@ Kmem::init()
   //     sometimes comes in handy (mostly useful for debugging)
   Address pt_phys;
 
-#define SIZE_4MB	2*Config::SUPERPAGE_SIZE
-  
-  // first 4MB page 
-  kdir->map_range(0, SIZE_4MB, Mem_layout::Boot_state_start, himem_alloc,
-		   Paging::Valid | Paging::Writable |
-	      	   Paging::Referenced);
+  // first 4MB page
+  kdir->map_range(0, 4 << 20, Mem_layout::Boot_state_start, himem_alloc,
+                  Paging::Valid | Paging::Writable | Paging::Referenced);
   // map the last 64MB of physical memory as kernel memory
   kdir->map_range(kphys_start, kphys_end, Mem_layout::Physmem, himem_alloc,
-      		   Paging::Valid | Paging::Writable |
-      		   Paging::Referenced);
+                  Paging::Valid | Paging::Writable | Paging::Referenced);
   // map the whole physical memory one-to-one
-  kdir->map_range(0, mem_max, 0, himem_alloc,
-		   Paging::Valid | Paging::Writable |
-		   Paging::Referenced);
-  
+  kdir->map_range(0, 4 << 20, 0, himem_alloc,
+                  Paging::Valid | Paging::Writable | Paging::Referenced);
+
   // The service page directory entry points to an universal usable
-  // page table which is currently used for the Local APIC and the 
+  // page table which is currently used for the Local APIC and the
   // jdb adapter page.
   assert((Mem_layout::Service_page & ~Config::SUPERPAGE_MASK) == 0);
 
   pt_phys = himem_alloc();
   kdir->map_page(pt_phys, Mem_layout::Service_page, himem_alloc,
-		  Paging::Valid | Paging::Writable | 
+		  Paging::Valid | Paging::Writable |
 		  Paging::Referenced | Paging::User);
 
 
@@ -316,7 +309,7 @@ Kmem::init()
   // Sorry about the bare numbers. See corresponding code in space_context.
   if (Config::Small_spaces)
     {
-      *(kdir->lookup(Mem_layout::Smas_area))    = 
+      *(kdir->lookup(Mem_layout::Smas_area))    =
 	    ((mem_user_max-1) >> 12) & 0xFFF00;
       *(kdir->lookup(Mem_layout::Smas_version)) = 0;
     }
@@ -412,24 +405,7 @@ Kmem::init()
   Cpu::set_tss();
 
   Cpu::init_syscall(reinterpret_cast<Address>(kernel_sp()));
-
   // CPU initialization done
-
-  // allocate the kernel info page
-  Kip *kinfo = static_cast<Kip*>(phys_to_virt (himem_alloc()));
-
-  // initialize global pointer to the KIP
-  Kip::init_global_kip (kinfo);
-
-  // initialize kernel info page from prototype
-  char *sub = strstr (Cmdline::cmdline(), " proto=");
-  if (sub)
-    {
-      Address proto = strtoul(sub + 7, 0, 16);
-      if (proto)
-	Cpu::memcpy_mwords (kinfo, Mem_layout::boot_data((void*)proto),
-			    Config::PAGE_SIZE / sizeof(Mword));
-    }
 }
 
 //---------------------------------------------------------------------------
