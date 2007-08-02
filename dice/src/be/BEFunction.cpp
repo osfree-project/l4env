@@ -1609,7 +1609,7 @@ CBEFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
  */
 int CBEFunction::GetParameterCount(int nFEType, DIRECTION_TYPE nDirection)
 {
-    if (nDirection == 0)
+    if (nDirection == DIRECTION_INOUT)
     {
         int nCountIn = GetParameterCount(nFEType, DIRECTION_IN);
         int nCountOut = GetParameterCount(nFEType, DIRECTION_OUT);
@@ -1630,8 +1630,22 @@ int CBEFunction::GetParameterCount(int nFEType, DIRECTION_TYPE nDirection)
         pType = (*iter)->GetType();
         if ((pAttr = (*iter)->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
             pType = pAttr->GetAttrType();
-        if (pType->IsOfType(nFEType))
-            nCount++;
+        if (!pType->IsOfType(nFEType))
+	    continue;
+
+	// to catch array parameters, we have to get the maximum size and
+	// divide by the size of the type
+	int nParamSize = 0;
+	CBESizes *pSizes = CCompiler::GetSizes();
+	int nTypeSize = pSizes->GetSizeOfType(nFEType);
+	if ((*iter)->GetMaxSize(nParamSize))
+	    nParamSize /= nTypeSize;
+	else
+	    nParamSize = 1; // it's variable size, so count it at least once
+	if (nParamSize > 0)
+	    nCount += nParamSize;
+	else
+	    nCount++;
     }
 
     return nCount;
@@ -1648,7 +1662,7 @@ CBEFunction::GetParameterCount(ATTR_TYPE nMustAttrs,
     ATTR_TYPE nMustNotAttrs, 
     DIRECTION_TYPE nDirection)
 {
-    if (nDirection == 0)
+    if (nDirection == DIRECTION_INOUT)
     {
         int nCountIn = GetParameterCount(nMustAttrs, nMustNotAttrs, 
 	    DIRECTION_IN);

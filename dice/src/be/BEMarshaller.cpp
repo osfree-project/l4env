@@ -583,7 +583,7 @@ CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
 	// unmarshal into opcode variable
 	pFile << "\t" << sName << " = ";
 	// access message buffer
-	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer,pMember,
+	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember,
 	    NULL);
 	pFile << ";\n";
     }

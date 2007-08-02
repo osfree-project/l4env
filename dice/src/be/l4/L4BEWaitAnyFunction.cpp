@@ -78,6 +78,16 @@ CL4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
 
     string sCurr = sResult;
     AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
+
+    // if we have flexible number of flexpages, we need a temporary variable
+    bool bFixedNumberOfFlexpages = true;
+    m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
+    if (!bFixedNumberOfFlexpages)
+    {
+	string sTempVar = pNF->GetTempOffsetVariable();
+	string sTempType = pNF->GetTypeName(TYPE_MWORD, false);
+	AddLocalVariable(sTempType, sTempVar, 0);
+    }
 }
 
 /** \brief initializes the variables
@@ -561,14 +571,14 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
     CBESizes *pSizes = CCompiler::GetSizes();
     int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
 	             pSizes->GetSizeOfType(TYPE_MWORD);
+    CBETypedDeclarator *pReturn = GetReturnVariable();
+    if (!pReturn)
+	return;
     // if fixed number  (should be true for only one flexpage as well)
     if (bFixedNumberOfFlexpages)
     {
 	// the fixed offset (where to find the opcode) is:
 	// offset = 8*nMaxNumberOfFlexpages + 8
-	CBETypedDeclarator *pReturn = GetReturnVariable();
-	if (!pReturn)
-	    return;
 	CL4BEMarshaller *pMarshaller = 
 	    dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
 	assert(pMarshaller);
@@ -588,10 +598,10 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 	// init temp var
 	++pFile << "\t" << sTempVar << " = 0;\n";
 	pFile << "\twhile ((";
-	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
-	pFile << "[" << sTempVar << "++] != 0) && (";
-	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
-	pFile << "[" << sTempVar << "++] != 0)) /* empty */;\n";
+	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar);
+	pFile << " != 0) && (";
+	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar + "+1");
+	pFile << " != 0)) " << sTempVar << " += 2;\n";
 
 	// now sTempVar points to the delimiter flexpage
 	// we have to add another 8 bytes to find the opcode, because
@@ -599,7 +609,9 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 	pFile << "\t/* skip zero fpage */\n";
 	pFile << "\t" << sTempVar << " += 2;\n";
 	// now unmarshal opcode
-	WriteMarshalReturn(pFile, false);
+	pFile << "\t" << pReturn->m_Declarators.First()->GetName() << " = ";
+	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar);
+	pFile << ";\n";
 	--pFile << "\t}\n";
     }
 }

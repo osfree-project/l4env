@@ -16,7 +16,7 @@ install-dirs_L4DIR  = tool pkg
 clean-dirs_L4DIR    = tool pkg doc
 cleanall-dirs_L4DIR = tool pkg doc
 
-BUILD_TOOLS	= gawk byacc
+BUILD_TOOLS	= gawk $(YACC)
 
 # our default target is all::
 all::

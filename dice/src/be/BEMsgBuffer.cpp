@@ -1176,6 +1176,42 @@ CBEMsgBuffer::WriteMemberAccess(CBEFile& pFile,
     }
 }
 
+/** \brief writes the access to a member of a specific type
+ *  \param pFile the file to write to
+ *  \param pFunction the function to write the member for
+ *  \param nType the type of the message buffer struct
+ *  \param nFEType the type of the member
+ *  \param sIndex the string used as index into the array, not used if empty
+ *
+ * First we look for the specific member and then call the WriteAccess method
+ * with the member.
+ */
+void
+CBEMsgBuffer::WriteMemberAccess(CBEFile& pFile,
+    CBEFunction *pFunction,
+    CMsgStructType nType,
+    int nFEType,
+    string sIndex)
+{
+    // get struct
+    CBEStructType *pStruct = GetStruct(pFunction, nType);
+    assert(pStruct);
+    // iterate members and count to the wanted type (remember: 0-based)
+    vector<CBETypedDeclarator*>::iterator iter;
+    for (iter = pStruct->m_Members.begin();
+	 iter != pStruct->m_Members.end();
+	 iter++)
+    {
+	if ((*iter)->GetType()->GetFEType() != nFEType)
+	    continue;
+	
+	WriteAccess(pFile, pFunction, nType, *iter);
+	if (!sIndex.empty())
+	    pFile << "[" << sIndex << "]";
+	return;
+    }
+}
+
 /** \brief write the access to a member of the generic struct
  *  \param pFile the file to write to
  *  \param nIndex the index into the word array of the generic struct

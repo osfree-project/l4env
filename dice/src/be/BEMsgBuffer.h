@@ -80,6 +80,8 @@ public: // public methods
 	CMsgStructType nType, CDeclStack* pStack);
     virtual void WriteMemberAccess(CBEFile& pFile, CBEFunction *pFunction,
 	CMsgStructType nType, int nFEType, int nIndex);
+    virtual void WriteMemberAccess(CBEFile& pFile, CBEFunction *pFunction,
+	CMsgStructType nType, int nFEType, string sIndex);
     virtual void WriteGenericMemberAccess(CBEFile& pFile, int nIndex);
     void WriteAccessToStruct(CBEFile& pFile, CBEFunction *pFunction,
 	CMsgStructType nType);

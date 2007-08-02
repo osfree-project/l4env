@@ -881,26 +881,35 @@ CBEClass::GetParameterCount(int nFEType,
     bool& bSameCount,
     DIRECTION_TYPE nDirection)
 {
-    if (nDirection == 0)
+    if (nDirection == DIRECTION_INOUT)
     {
         // count both and return max
         int nCountIn = GetParameterCount(nFEType, bSameCount, DIRECTION_IN);
         int nCountOut = GetParameterCount(nFEType, bSameCount, DIRECTION_OUT);
-        return (nCountIn > nCountOut) ? nCountIn : nCountOut;
+        return std::max(nCountIn, nCountOut);
     }
 
     int nCount = 0, nCurr;
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s(%d, %s, %d) called: max is %d\n", __func__,
+	nFEType, bSameCount ? "true" : "false", nDirection, nCount);
     vector<CBEFunction*>::iterator iter;
     for (iter = m_Functions.begin();
 	 iter != m_Functions.end();
 	 iter++)
     {
-        nCurr = (*iter)->GetParameterCount(nFEType, nDirection);
-         if ((nCount > 0) && (nCurr != nCount) && (nCurr > 0))
-            bSameCount = false;
-        if (nCurr > nCount) nCount = nCurr;
+	nCurr = (*iter)->GetParameterCount(nFEType, nDirection);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "%s: checking %s: has %d parameter of type %d, max is %d\n", __func__,
+	    (*iter)->GetName().c_str(), nCurr, nFEType, nCount);
+	if ((nCount > 0) && (nCurr != nCount) && (nCurr > 0))
+	    bSameCount = false;
+	nCount = std::max(nCurr, nCount);
     }
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s: returns %d (same %s)\n", __func__,
+	nCount, bSameCount ? "true" : "false");
     return nCount;
 }
 
@@ -915,7 +924,7 @@ CBEClass::GetStringParameterCount(DIRECTION_TYPE nDirection,
     ATTR_TYPE nMustAttrs,
     ATTR_TYPE nMustNotAttrs)
 {
-    if (nDirection == 0)
+    if (nDirection == DIRECTION_INOUT)
     {
         int nStringsIn = GetStringParameterCount(DIRECTION_IN, nMustAttrs,
 	    nMustNotAttrs);
@@ -953,7 +962,7 @@ CBEClass::GetStringParameterCount(DIRECTION_TYPE nDirection,
  */
 int CBEClass::GetSize(DIRECTION_TYPE nDirection)
 {
-    if (nDirection == 0)
+    if (nDirection == DIRECTION_INOUT)
     {
         int nSizeIn = GetSize(DIRECTION_IN);
         int nSizeOut = GetSize(DIRECTION_OUT);
@@ -2349,7 +2358,7 @@ CBEClass::GetParameterCount(ATTR_TYPE nMustAttrs,
     ATTR_TYPE nMustNotAttrs,
     DIRECTION_TYPE nDirection)
 {
-    if (nDirection == 0)
+    if (nDirection == DIRECTION_INOUT)
     {
         int nCountIn = GetParameterCount(nMustAttrs, nMustNotAttrs,
 	    DIRECTION_IN);
