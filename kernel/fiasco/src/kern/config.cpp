@@ -144,49 +144,27 @@ public:
   };
 };
 
-INTERFACE [v2]:
-
 #define GREETING_COLOR_ANSI_TITLE  "\033[1;32m"
 #define GREETING_COLOR_ANSI_INFO   "\033[0;32m"
 
-EXTENSION class Config
-{
-public:
-  enum 
-  { 
-    Abi_v2 = 1,
-  };
-};
+INTERFACE[ia32,ux]:
+#define ARCH_NAME "ia32"
+#define TARGET_NAME CONFIG_IA32_TARGET
 
-INTERFACE [x0]:
+INTERFACE[arm]:
+#define ARCH_NAME "arm"
 
-#define GREETING_COLOR_ANSI_TITLE  "\033[1;33m"
-#define GREETING_COLOR_ANSI_INFO   "\033[0;33m"
-
-EXTENSION class Config
-{
-public:
-  enum
-  {
-    Abi_v2 = 0,
-  };
-};
+INTERFACE[amd64]:
+#define ARCH_NAME "amd64"
+#define TARGET_NAME CONFIG_IA32_TARGET
 
 INTERFACE:
-// don't change the part "DD-L4(xx)/x86 microkernel" -- Rmgr depends on it.
-#ifdef CONFIG_ARM
-#define ARCH_NAME "arm"
-#else
-#define ARCH_NAME "x86"
-#endif
-
-INTERFACE[ia32,ux,amd64]:
 #define CONFIG_KERNEL_VERSION_STRING \
-  GREETING_COLOR_ANSI_TITLE "Welcome to Fiasco("CONFIG_XARCH")!\\n"             \
-  GREETING_COLOR_ANSI_INFO "DD-L4("CONFIG_ABI")/" ARCH_NAME " "                 \
-                           "microkernel (C) 1998-2007 TU Dresden\\n"            \
+  GREETING_COLOR_ANSI_TITLE "Welcome to Fiasco("CONFIG_XARCH")!\\n"            \
+  GREETING_COLOR_ANSI_INFO "DD-L4("CONFIG_ABI")/" ARCH_NAME " "                \
+                           "microkernel (C) 1998-2007 TU Dresden\\n"           \
                            "Rev: " CODE_VERSION " compiled with gcc " COMPILER \
-                            " for " CONFIG_IA32_TARGET                         \
+                            " for " TARGET_NAME "    [" CONFIG_LABEL "] "      \
   GREETING_COLOR_ANSI_OFF
 
 

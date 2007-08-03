@@ -382,6 +382,11 @@ This enables the circular dependency and initcall checks.
 Say 'Yes' here if you do kernel hacking.
 .
 
+LABEL			'Configuration label'				text
+Text string with a name for this configuration. To be displayed in the
+kernel boot-up.
+.
+
 DEBUG_KERNEL_PAGE_FAULTS 'Debugging of kernel page-faults'              text
 This option enables logging of kernel page-faults (aka page faults from 
 kernel mode). The page faults are logged to the normal console in the format
@@ -553,6 +558,7 @@ default DEBUG_KERNEL_PAGE_FAULTS	from n
 default PL0_HACK			from n
 default WORKAROUND_AMD_FPU_LEAK		from n
 default MAINTAINER_MODE			from y
+default LABEL				from ''
 default DEVEL				from n
 
 ###############################################
@@ -699,6 +705,7 @@ menu compiling			# Compiling and Building
 	HOST_CXX$
 	VERBOSE
 	MAINTAINER_MODE
+	LABEL$
 
 menu main			# Main menu
 	EXPERIMENTAL

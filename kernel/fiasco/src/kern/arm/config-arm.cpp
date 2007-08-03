@@ -114,28 +114,20 @@ public:
 };
 
 INTERFACE[arm && pxa]:
-#define CONFIG_TARGET "XScale"
+#define TARGET_NAME "XScale"
 
 INTERFACE[arm && sa1100]:
-#define CONFIG_TARGET "StrongARM"
+#define TARGET_NAME "StrongARM"
 
 INTERFACE[arm && integrator]:
-#define CONFIG_TARGET "Integrator"
+#define TARGET_NAME "Integrator"
 
 INTERFACE[arm && realview]:
-#define CONFIG_TARGET "Realview"
+#define TARGET_NAME "Realview"
 
 INTERFACE[arm && isg]:
-#define CONFIG_TARGET "ISG"
+#define TARGET_NAME "ISG"
 
-INTERFACE[arm]:
-#define CONFIG_KERNEL_VERSION_STRING \
-  GREETING_COLOR_ANSI_TITLE "Welcome to Fiasco("CONFIG_XARCH")!\\n"             \
-  GREETING_COLOR_ANSI_INFO "DD-L4("CONFIG_ABI")/" ARCH_NAME " "                 \
-                           "microkernel (C) 1998-2007 TU Dresden\\n"            \
-                           "Rev: " CODE_VERSION " compiled with gcc " COMPILER \
-                            " for " CONFIG_TARGET                         \
-  GREETING_COLOR_ANSI_OFF
 //---------------------------------------------------------------------------
 IMPLEMENTATION [arm]:
 
