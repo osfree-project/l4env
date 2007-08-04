@@ -92,9 +92,9 @@ L4_INLINE void l4_utcb_inherit_fpu(l4_utcb_t *u, int switch_on);
 
 L4_INLINE l4_utcb_t *l4_utcb_get(void)
 {
-  l4_utcb_t *utcb;
-  __asm__ __volatile__ ("ldr %0, [%1]" : "=r" (utcb) : "r"(0xffffd000));
-  return utcb;
+  volatile l4_utcb_t *utcb;
+  utcb = *(volatile l4_utcb_t **)0xffffd000;
+  return (l4_utcb_t *)utcb;
 }
 
 L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u)

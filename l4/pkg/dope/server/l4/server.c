@@ -107,7 +107,7 @@ void dope_manager_deinit_app_component(CORBA_Object _dice_corba_obj,
 		return;
 	}
 
-	INFO(printf("Server(deinit_app): application (id=%lu) deinit requested\n", (u32)app_id);)
+	INFO(printf("Server(deinit_app): application (id=%u) deinit requested\n", (u32)app_id);)
 	scheduler->release_app(app_id);
 	userstate->release_app(app_id);
 	screen->forget_children(app_id);
@@ -129,8 +129,8 @@ long dope_manager_exec_cmd_component(CORBA_Object _dice_corba_obj,
 	}
 
 	appman->reg_app_thread(app_id, (THREAD *)&client_thread);
-	INFO(printf("Server(exec_cmd): cmd %s execution requested by app_id=%lu\n", cmd, (u32)app_id);)
-//	printf("Server(exec_cmd): cmd %s execution requested by app_id=%lu\n", cmd, (u32)app_id);
+	INFO(printf("Server(exec_cmd): cmd %s execution requested by app_id=%u\n", cmd, (u32)app_id);)
+//	printf("Server(exec_cmd): cmd %s execution requested by app_id=%u\n", cmd, (u32)app_id);
 	appman->lock(app_id);
 	ret = script->exec_command(app_id, (char *)cmd, NULL, 0);
 	appman->unlock(app_id);
@@ -156,7 +156,7 @@ long dope_manager_exec_req_component(CORBA_Object _dice_corba_obj,
 
 	appman->reg_app_thread(app_id, (THREAD *)&client_thread);
 
-	INFO(printf("Server(exec_req): cmd %s execution requested by app_id=%lu\n", cmd, (u32)app_id);)
+	INFO(printf("Server(exec_req): cmd %s execution requested by app_id=%u\n", cmd, (u32)app_id);)
 	appman->lock(app_id);
 	result[0] = 0;
 	ret = script->exec_command(app_id, (char *)cmd, &result[0], *res_len);

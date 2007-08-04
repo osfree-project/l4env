@@ -133,13 +133,13 @@ static s16 font_probe(struct fntfile_hdr *fnt) {
 	top        = get_u16(&fnt->top);
 	bottom     = get_u16(&fnt->bottom);
 
-	INFO(printf("%s image width:  %lu\n",dbg,img_w));
-	INFO(printf("%s image height: %lu\n",dbg,img_h));
-	INFO(printf("%s points:       %lu\n",dbg,point));
-	INFO(printf("%s first_ade:    %lu\n",dbg,first_ade));
-	INFO(printf("%s last_ade:     %lu\n",dbg,last_ade));
-	INFO(printf("%s top:          %lu\n",dbg,top));
-	INFO(printf("%s bottom:       %lu\n",dbg,bottom));
+	INFO(printf("%s image width:  %u\n",dbg,img_w));
+	INFO(printf("%s image height: %u\n",dbg,img_h));
+	INFO(printf("%s points:       %u\n",dbg,point));
+	INFO(printf("%s first_ade:    %u\n",dbg,first_ade));
+	INFO(printf("%s last_ade:     %u\n",dbg,last_ade));
+	INFO(printf("%s top:          %u\n",dbg,top));
+	INFO(printf("%s bottom:       %u\n",dbg,bottom));
 	INFO(printf("%s name:         %s\n",dbg,fnt->name));
 
 	/* strange values -> seems not to be a valid fnt */

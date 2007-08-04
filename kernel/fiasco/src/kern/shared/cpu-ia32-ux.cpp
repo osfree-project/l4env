@@ -28,7 +28,7 @@ Cpu::ns_to_tsc (Unsigned64 ns)
 	 "adcl	$0, %%edx		\n\t"
 	 "shld	$5, %%eax, %%edx	\n\t"
 	 "shll	$5, %%eax		\n\t"
-	:"=A" (tsc), "=c" (dummy)
+	:"=A" (tsc), "=&c" (dummy)
 	: "0" (ns),  "b" (scaler_ns_to_tsc)
 	);
   return tsc;
@@ -50,7 +50,7 @@ Cpu::tsc_to_ns (Unsigned64 tsc)
 	 "adcl	$0, %%edx		\n\t"
 	 "shld	$5, %%eax, %%edx	\n\t"
 	 "shll	$5, %%eax		\n\t"
-	:"=A" (ns), "=c" (dummy)
+	:"=A" (ns), "=&c" (dummy)
 	: "0" (tsc), "b" (scaler_tsc_to_ns)
 	);
   return ns;
@@ -70,7 +70,7 @@ Cpu::tsc_to_us (Unsigned64 tsc)
 	 "mull	%3			\n\t"
 	 "addl	%%ecx, %%eax		\n\t"
 	 "adcl	$0, %%edx		\n\t"
-	:"=A" (us), "=c" (dummy)
+	:"=A" (us), "=&c" (dummy)
 	: "0" (tsc), "S" (scaler_tsc_to_us)
 	);
   return us;
@@ -94,7 +94,7 @@ Cpu::tsc_to_s_and_ns (Unsigned64 tsc, Unsigned32 *s, Unsigned32 *ns)
 	 "shld	$5, %%eax, %%edx	\n\t"
 	 "shll	$5, %%eax		\n\t"
 	 "divl  %%ecx			\n\t"
-	:"=a" (*s), "=d" (*ns), "=c" (dummy)
+	:"=a" (*s), "=d" (*ns), "=&c" (dummy)
 	: "A" (tsc), "g" (scaler_tsc_to_ns)
 	);
 }

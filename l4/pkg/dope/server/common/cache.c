@@ -79,7 +79,7 @@ static void remove_elem(CACHE *cache,s32 index) {
 		return;
 	}
 	e=cache->elem + index;
-	INFO(printf("Cache(remove_element): removing element %lu\n",index);)
+	INFO(printf("Cache(remove_element): removing element %u\n",index);)
 	if (e->data) {
 		if (e->destroy) e->destroy(e->data);
 		else free(e->data);
@@ -105,12 +105,12 @@ static void destroy(CACHE *cache) {
 static void reduce_cachesize(CACHE *cache,long needed_size) {
 	if (!cache) return;
 
-	INFO(printf("Cache(reduce_cachesize): old size is %lu\n",cache->curr_size);)
+	INFO(printf("Cache(reduce_cachesize): old size is %u\n",cache->curr_size);)
 	while (cache->curr_size > needed_size) {
 		remove_elem(cache,cache->idxtokill);
 		cache->idxtokill = (cache->idxtokill + 1)%(cache->max_entries);
 	}
-	INFO(printf("Cache(reduce_cachesize): new size is %lu\n",cache->curr_size);)
+	INFO(printf("Cache(reduce_cachesize): new size is %u\n",cache->curr_size);)
 }
 
 
@@ -140,7 +140,7 @@ static s32 add_elem(CACHE *cache,void *elem,s32 elemsize,s32 ident,void (*destro
 
 	new_idx = cache->idxtoadd;
 	e=cache->elem + new_idx;
-	INFO(printf("Cache(add_elem): add element at index %lu\n",new_idx);)
+	INFO(printf("Cache(add_elem): add element at index %u\n",new_idx);)
 
 	/* gets another cache element overwritten? */
 	if (e->data) {
@@ -171,13 +171,13 @@ static void *get_elem(struct cache *cache,s32 index,s32 ident) {
 		return NULL;
 	}
 	if (index >= cache->max_entries) {
-		INFO(printf("Cache(get_elem): index %lu out of range\n",index);)
+		INFO(printf("Cache(get_elem): index %u out of range\n",index);)
 		return NULL;
 	}
 	if ((cache->elem + index)->ident == ident) {
 		return (cache->elem + index)->data;
 	}
-	INFO(printf("Cache(get_elem): element %lu is not cached anymore\n",index);)
+	INFO(printf("Cache(get_elem): element %u is not cached anymore\n",index);)
 	return NULL;
 }
 
