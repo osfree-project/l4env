@@ -196,6 +196,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 	int		base;
 	char		c;
 	int		longopt;
+        int             is_size_t;
 #ifdef DOPRNT_FLOATS
 	int		float_hack;
 	char		*p;
@@ -222,6 +223,7 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 	    sign_char = 0;
 	    altfmt = 0;
 	    longopt = 0;
+            is_size_t = 0;
 
 	    for (;;) {
 		if (*fmt == '#') {
@@ -285,6 +287,12 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 	        longopt--;
 		fmt++;	/* need it if sizeof(int) < sizeof(long) */
 	    }
+
+            if (*fmt == 'z') {
+                longopt = 0;
+                is_size_t = 1;
+                fmt++;
+            }
 
 	    truncate = 0;
 #ifdef DOPRNT_FLOATS
@@ -516,14 +524,6 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		    base = 16;
 		    goto print_unsigned;
 
-		case 'z':
- 		    truncate = _doprnt_truncates;
-		    capital -=1;
-		case 'Z':
-		    capital +=1;
-		    base = 16;
-		    goto print_signed;
-
 		case 'r':
  		    truncate = _doprnt_truncates;
 		case 'R':
@@ -540,7 +540,9 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		    goto print_unsigned;
 
 		print_signed:
-		    if (longopt>1)
+                    if (is_size_t)
+                        n = va_arg(args, size_t);
+                    else if (longopt>1)
 			n = va_arg(args, long long);
 		    else
 		    	n = va_arg(args, long);
@@ -557,7 +559,9 @@ void _doprnt(register const char *fmt, va_list args, int radix,
 		    goto print_num;
 
 		print_unsigned:
-		    if (longopt>1)
+                    if (is_size_t)
+                        u = va_arg(args, size_t);
+                    else if (longopt>1)
 			u = va_arg(args, unsigned long long);
 		    else
 			u = va_arg(args, unsigned long);

@@ -75,7 +75,7 @@ __create_ds(l4_threadid_t owner, page_pool_t * pool, l4_addr_t addr,
   else
     align = 1UL << (l4util_bsr(align));
 
-  LOGdL(DEBUG_OPEN, "size %u, pool %u, alignment 0x%08lx, flags 0x%08x",
+  LOGdL(DEBUG_OPEN, "size %zu, pool %u, alignment 0x%08lx, flags 0x%08x",
         size, pool->pool, align, flags);
 
   /* create dataspace descriptor */
@@ -94,7 +94,7 @@ __create_ds(l4_threadid_t owner, page_pool_t * pool, l4_addr_t addr,
   if (ret < 0)
     {
       /* allocation failed */
-      LOGdL(DEBUG_ERRORS, "DMphys: memory allocation size %dKB pool %d"
+      LOGdL(DEBUG_ERRORS, "DMphys: memory allocation size %zdKB pool %d"
 	                  " failed!", size/1024, pool->pool);
       dmphys_ds_release(desc);
       return -L4_ENOMEM;

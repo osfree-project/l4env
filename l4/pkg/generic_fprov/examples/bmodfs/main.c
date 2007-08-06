@@ -66,11 +66,11 @@ main(int argc, const char *argv[])
 
   dm_start();
 
-  mod = (l4util_mb_mod_t*)mbi->mods_addr;
+  mod = (l4util_mb_mod_t*)(l4_addr_t)mbi->mods_addr;
   printf("Passed the following modules:\n");
   for (i=0; i<mbi->mods_count; i++)
     printf("  module \"%s\" (%dkB)\n",
-           (const char*)mod[i].cmdline,
+           (const char*)(l4_addr_t)mod[i].cmdline,
            (mod[i].mod_end-mod[i].mod_start+1023)/1024);
 
   if (!names_register("BMODFS"))

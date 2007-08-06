@@ -354,7 +354,7 @@ __unmap_area(l4_addr_t adr, l4_size_t size)
 
   while (size > 0)
     {
-      LOGdL(DEBUG_UNMAP, "0x%08lx, size %u (0x%08x)", map_addr, size, size);
+      LOGdL(DEBUG_UNMAP, "0x%08lx, size %zu (0x%08zx)", map_addr, size, size);
 
       /* calculate the largest fpage we can unmap at address addr,
        * it depends on the alignment of addr and of the size */
@@ -522,9 +522,9 @@ if_l4dm_generic_map_component (CORBA_Object _dice_corba_obj,
     }
 
 #if DEBUG_MAP
-  LOG_printf(" aligned offset 0x%08x, size2 %d\n"
+  LOG_printf(" aligned offset 0x%08lx, size2 %d\n"
              " page area 0x%08lx-0x%08lx, area offset 0x%08lx\n"
-             " rcv_size %u, rcv_offs 0x%08x\n",
+             " rcv_size %lu, rcv_offs 0x%08lx\n",
          offset, size2,
          area->addr, area->addr + area->size, area_offset,
 	 rcv_size2, rcv_offs);
@@ -548,7 +548,7 @@ if_l4dm_generic_map_component (CORBA_Object _dice_corba_obj,
     }
 
 #if DEBUG_MAP
-  LOG_printf(" aligned rcv_offs 0x%08x\n", rcv_offs);
+  LOG_printf(" aligned rcv_offs 0x%08lx\n", rcv_offs);
 #endif
 
   /* build map fpage */

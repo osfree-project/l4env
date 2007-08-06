@@ -209,7 +209,7 @@ __get_free_list(l4_size_t size)
   if (i < 0)
     {
       /* this should never happen, size should be at least 4096 */
-      LOGdL(DEBUG_ERRORS, "DMphys: invalid area size (%u)", size);
+      LOGdL(DEBUG_ERRORS, "DMphys: invalid area size (%zu)", size);
       return 0;
     }
 
@@ -462,7 +462,7 @@ __add_free_area(page_pool_t * pool, l4_addr_t addr, l4_size_t size)
 {
   page_area_t * area;
 
-  LOGdL(DEBUG_PAGES_ADD, "pool %d: area 0x%08lx-0x%08lx (%6uKB)",
+  LOGdL(DEBUG_PAGES_ADD, "pool %d: area 0x%08lx-0x%08lx (%6zuKB)",
         pool->pool, addr, addr + size, size >> 10);
 
   /* allocate area descriptor */
@@ -784,7 +784,7 @@ __find_single_area(page_pool_t * pool, l4_size_t size, l4_addr_t alignment)
   int num = __get_free_list(size);
   page_area_t * pa;
 
-  LOGdL(DEBUG_PAGES_FIND_SINGLE, "pool %d: size 0x%08x, alignment 0x%08lx",
+  LOGdL(DEBUG_PAGES_FIND_SINGLE, "pool %d: size 0x%08zx, alignment 0x%08lx",
         pool->pool, size, alignment);
 
   /* search in free lists */
@@ -845,7 +845,7 @@ __allocate_pages(page_pool_t * pool, l4_size_t size, int max_areas,
   int list,n,found;
   page_area_t * pl, * pa;
 
-  LOGdL(DEBUG_PAGES_ALLOCATE, "pool %d: size 0x%x (%uKb)",
+  LOGdL(DEBUG_PAGES_ALLOCATE, "pool %d: size 0x%zx (%zuKb)",
         pool->pool, size, size >> 10);
 
   n = max_areas;
@@ -980,7 +980,7 @@ __allocate_area(page_pool_t * pool, l4_addr_t addr, l4_size_t size)
   l4_addr_t ra;
   l4_size_t rs;
 
-  LOGdL(DEBUG_PAGES_ALLOCATE_AREA, "pool %d: area 0x%08lx-0x%08lx (%uKB)",
+  LOGdL(DEBUG_PAGES_ALLOCATE_AREA, "pool %d: area 0x%08lx-0x%08lx (%zuKB)",
         pool->pool, addr, addr + size, size >> 10);
 
   /* find area */
@@ -1072,7 +1072,7 @@ __enlarge_area(page_pool_t * pool, page_area_t * area, l4_size_t size)
 {
   page_area_t * pa = area->area_next;
 
-  LOGdL(DEBUG_PAGES_ENLARGE, "area 0x%08lx-0x%08lx, add 0x%x",
+  LOGdL(DEBUG_PAGES_ENLARGE, "area 0x%08lx-0x%08lx, add 0x%zx",
         area->addr, area->addr + area->size, size);
 
   if (pa == NULL)
@@ -1214,14 +1214,14 @@ dmphys_pages_allocate(page_pool_t * pool, l4_size_t size, l4_addr_t alignment,
   /* check available memory */
   if (pool->free < size)
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB",
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %zuKB, left %zuKB",
 	    size / 1024, pool->free / 1024);
       return -L4_ENOMEM;
     }
 
   if ((prio == PAGES_USER) && ((pool->free - size) < pool->reserved))
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB, res. %uKB",
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %zuKB, left %zuKB, res. %zuKB",
 	    size / 1024, pool->free / 1024, pool->reserved / 1024);
       return -L4_ENOMEM ;
     }
@@ -1279,14 +1279,14 @@ dmphys_pages_allocate_area(page_pool_t * pool, l4_addr_t addr, l4_size_t size,
   /* check available memory */
   if (pool->free < size)
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB",
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %zuKB, left %zuKB",
 	    size / 1024, pool->free / 1024);
       return -L4_ENOMEM;
     }
 
   if ((prio == PAGES_USER) && ((pool->free - size) < pool->reserved))
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB, res. %uKB",
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %zuKB, left %zuKB, res. %zuKB",
 	    size / 1024, pool->free / 1024, pool->reserved / 1024);
       return -L4_ENOMEM;
     }
@@ -1358,14 +1358,14 @@ dmphys_pages_enlarge(page_pool_t * pool, page_area_t * area, l4_size_t size,
   /* check available memory */
   if (pool->free < size)
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB",
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %zuKB, left %zuKB",
 	    size / 1024, pool->free / 1024);
       return -L4_ENOMEM;
     }
 
   if ((prio == PAGES_USER) && ((pool->free - size) < pool->reserved))
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB, res. %uKB",
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %zuKB, left %zuKB, res. %zuKB",
 	    size / 1024, pool->free / 1024, pool->reserved / 1024);
       return -L4_ENOMEM;
     }
@@ -1408,14 +1408,14 @@ dmphys_pages_add(page_pool_t * pool, page_area_t * pages, l4_size_t size,
   /* check available memory */
   if (pool->free < size)
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB",
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %zuKB, left %zuKB",
 	    size / 1024, pool->free / 1024);
       return -L4_ENOMEM;
     }
 
   if ((prio == PAGES_USER) && ((pool->free - size) < pool->reserved))
     {
-      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %uKB, left %uKB, res. %uKB",
+      LOGdL(DEBUG_ERRORS, "DMphys: no memory, size %zuKB, left %zuKB, res. %zuKB",
 	    size / 1024, pool->free / 1024, pool->reserved / 1024);
       return -L4_ENOMEM;
     }
@@ -1427,7 +1427,7 @@ dmphys_pages_add(page_pool_t * pool, page_area_t * pages, l4_size_t size,
   else
     max_new = DMPHYS_MAX_DS_AREAS - num_old;
 
-  LOGdL(DEBUG_PAGES_ALLOCATE_ADD, "add 0x%x, max. %d area(s)", size, max_new);
+  LOGdL(DEBUG_PAGES_ALLOCATE_ADD, "add 0x%zx, max. %d area(s)", size, max_new);
 
   /* allocate new pages */
   new_pages = __allocate_pages(pool, size, max_new, DMPHYS_PAGESIZE);
@@ -1487,7 +1487,7 @@ dmphys_pages_shrink(page_pool_t * pool, page_area_t * pages, l4_size_t size)
   last_size++;
 
   LOGdL(DEBUG_PAGES_SHRINK,
-        "new size 0x%x, new last area 0x%08lx-0x%08lx, new size 0x%x",
+        "new size 0x%zx, new last area 0x%08lx-0x%08lx, new size 0x%zx",
         size, last->addr, last->addr + last->size, last_size);
 
   /* shrink last page area */
@@ -1709,12 +1709,12 @@ dmphys_pages_dump_used_pools(void)
 	    LOG_printf(" pool %d (%s):\n", pool->pool, pool->name);
 	  else
 	    LOG_printf(" pool %d:\n", pool->pool);
-	  LOG_printf(" size: %6uKB total, %6uKB free, %3uKB reserved\n",
+	  LOG_printf(" size: %6zuKB total, %6zuKB free, %3zuKB reserved\n",
                  pool->size / 1024, pool->free / 1024, pool->reserved / 1024);
 
 	  while (pa)
 	    {
-	      LOG_printf("  0x%08lx-0x%08lx (%6uKB, %4uMB) %s DS:",
+	      LOG_printf("  0x%08lx-0x%08lx (%6zuKB, %4zuMB) %s DS:",
                      pa->addr, pa->addr + pa->size, 
 		     (pa->size+(1<<9)-1) >> 10, (pa->size+(1<<19)-1) >> 20,
                      IS_USED_AREA(pa) ? "used" : "free");
@@ -1748,12 +1748,12 @@ dmphys_pages_dump_areas(page_pool_t * pool)
     LOG_printf("  pool %d (%s)\n", pool->pool, pool->name);
   else
     LOG_printf("  pool %d\n", pool->pool);
-  LOG_printf("  size: %6uKB total, %6uKB free, %3uKB reserved\n",
+  LOG_printf("  size: %6zuKB total, %6zuKB free, %3zuKB reserved\n",
          pool->size / 1024, pool->free / 1024, pool->reserved / 1024);
 
   while (pa)
     {
-      LOG_printf("    0x%08lx-0x%08lx (%6uKB, %4uMB), ",
+      LOG_printf("    0x%08lx-0x%08lx (%6zuKB, %4zuMB), ",
              pa->addr, pa->addr + pa->size,
 	     (pa->size+(1<<9)-1) >> 10, (pa->size+(1<<19)-1) >> 20);
       if (IS_UNUSED_AREA(pa))
@@ -1783,7 +1783,7 @@ dmphys_pages_dump_free(page_pool_t * pool)
     LOG_printf("  pool %d (%s)\n", pool->pool, pool->name);
   else
     LOG_printf("  pool %d\n", pool->pool);
-  LOG_printf("  size: %6uKB total, %6uKB free, %3uKB reserved\n",
+  LOG_printf("  size: %6zuKB total, %6zuKB free, %3zuKB reserved\n",
          pool->size / 1024, pool->free / 1024, pool->reserved / 1024);
 
   for (i = 0; i < DMPHYS_NUM_FREE_LISTS; i++)
@@ -1794,7 +1794,7 @@ dmphys_pages_dump_free(page_pool_t * pool)
       pa = pool->free_list[i];
       while (pa)
 	{
-	  LOG_printf("       0x%08lx-0x%08lx (%6uKB, %4uMB)\n",
+	  LOG_printf("       0x%08lx-0x%08lx (%6zuKB, %4zuMB)\n",
                  pa->addr, pa->addr + pa->size,
 		 (pa->size+(1<<9)-1) >> 10, (pa->size+(1<<19)-1) >> 20);
 	  pa = pa->free_next;
@@ -1817,7 +1817,7 @@ dmphys_pages_list(page_area_t * list)
   /* show list dataspace page area list */
   while (area != NULL)
     {
-      LOG_printf("    0x%08lx - 0x%08lx (%uKB)\n",
+      LOG_printf("    0x%08lx - 0x%08lx (%zuKB)\n",
              area->addr, area->addr + area->size, area->size / 1024);
       area = area->ds_next;
     }

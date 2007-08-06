@@ -259,7 +259,7 @@ if_l4dm_generic_copy_component (CORBA_Object _dice_corba_obj,
     {
       /* offset points beyound the end of the dataspace */
       LOGdL(DEBUG_ERRORS,
-            "DMphys: invalid source offset 0x%08lx, dataspace size 0x%08x\n",
+            "DMphys: invalid source offset 0x%08lx, dataspace size 0x%08zx\n",
 	    src_offs, src_size);
       return -L4_EINVAL_OFFS;
     }
@@ -280,9 +280,9 @@ if_l4dm_generic_copy_component (CORBA_Object _dice_corba_obj,
     dst_size = num + dst_offs;
   dst_size = (dst_size + DMPHYS_PAGESIZE - 1) & DMPHYS_PAGEMASK;
 
-  LOGdL(DEBUG_COPY, "copy %u bytes\n" \
-        "  source size 0x%08x, offset 0x%08lx\n" \
-        "  destination size 0x%08x, offset 0x%08lx, num 0x%08lx",
+  LOGdL(DEBUG_COPY, "copy %zu bytes\n" \
+        "  source size 0x%08zx, offset 0x%08lx\n" \
+        "  destination size 0x%08zx, offset 0x%08lx, num 0x%08lx",
         num_copy, src_size, src_offs, dst_size, dst_offs, num);
 
   /* create copy */
@@ -378,7 +378,7 @@ if_l4dm_memphys_dmphys_copy_component (CORBA_Object _dice_corba_obj,
     {
       /* offset points beyound the end of the dataspace */
       LOGdL(DEBUG_ERRORS,
-            "DMphys: invalid source offset 0x%08lx, dataspace size 0x%08x",
+            "DMphys: invalid source offset 0x%08lx, dataspace size 0x%08zx",
 	    src_offs, src_size);
       return -L4_EINVAL_OFFS;
     }
@@ -396,10 +396,10 @@ if_l4dm_memphys_dmphys_copy_component (CORBA_Object _dice_corba_obj,
   if (dst_size > dst_ds_size)
     dst_ds_size = dst_size;
 
-  LOGdL(DEBUG_COPY, "ds %lu, caller "l4util_idfmt", copy %u bytes\n" \
-        " source size 0x%08x, offset 0x%08lx\n" \
+  LOGdL(DEBUG_COPY, "ds %lu, caller "l4util_idfmt", copy %zu bytes\n" \
+        " source size 0x%08zx, offset 0x%08lx\n" \
         " destination offset 0x%08lx, num 0x%08lx\n" \
-        " destination size 0x%08x (caller 0x%08lx)\n" \
+        " destination size 0x%08zx (caller 0x%08lx)\n" \
         " destination at 0x%08lx, align 0x%08lx",
         ds_id, l4util_idstr(*_dice_corba_obj), num_copy,
         src_size, src_offs, dst_offs, num, dst_ds_size, dst_size,

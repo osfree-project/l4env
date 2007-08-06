@@ -75,7 +75,7 @@ if_l4dm_mem_lock_component (CORBA_Object _dice_corba_obj,
     return -L4_EINVAL_OFFS;
 
   LOGdL(DEBUG_LOCK, "ds %lu, caller "l4util_idfmt",  offset 0x%08lx, " \
-        "size 0x%08lx, ds size 0x%08x", ds_id,
+        "size 0x%08lx, ds size 0x%08zx", ds_id,
         l4util_idstr(*_dice_corba_obj), offset, size, ds_size);
 
   /* done */
@@ -129,7 +129,7 @@ if_l4dm_mem_unlock_component (CORBA_Object _dice_corba_obj,
     return -L4_EINVAL_OFFS;
 
   LOGdL(DEBUG_LOCK, "ds %lu, caller "l4util_idfmt" offset 0x%08lx, " \
-        "size 0x%08lx, ds size 0x%08x", ds_id, l4util_idstr(*_dice_corba_obj),
+        "size 0x%08lx, ds size 0x%08zx", ds_id, l4util_idstr(*_dice_corba_obj),
         offset, size, ds_size);
   
   /* done */

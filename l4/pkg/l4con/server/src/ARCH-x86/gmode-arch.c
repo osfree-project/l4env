@@ -140,8 +140,8 @@ init_gmode(void)
 	      "\n"
 	      "Alternatively, try passing the --vbemode=<mode> switch.\n");
 
-      vbe = (l4util_mb_vbe_ctrl_t*) mbi->vbe_ctrl_info;
-      vbi = (l4util_mb_vbe_mode_t*) mbi->vbe_mode_info;
+      vbe = (l4util_mb_vbe_ctrl_t*)(l4_addr_t)mbi->vbe_ctrl_info;
+      vbi = (l4util_mb_vbe_mode_t*)(l4_addr_t)mbi->vbe_mode_info;
     }
 
   /* 2) Read graphics mode parameters from VESA controller/mode info */

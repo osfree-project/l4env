@@ -25,8 +25,8 @@
 #if defined(ARCH_x86) || defined(ARCH_amd64)
 #include <l4/util/rdtsc.h>
 #include <l4/util/idt.h>
-#include <l4/generic_io/libio.h>
 #endif
+#include <l4/generic_io/libio.h>
 #include "l4/l4con/l4con-server.h"
 
 /* libc includes */
@@ -118,7 +118,6 @@ convert_color(struct l4con_vc *vc, l4con_pslim_color_t *color)
 static int
 vc_l4io_init(void)
 {
-#if defined(ARCH_x86) || defined(ARCH_amd64)
   l4io_info_t *io_info_addr = (l4io_info_t*)0;
 
   if (l4io_init(&io_info_addr, L4IO_DRV_INVALID))
@@ -126,6 +125,7 @@ vc_l4io_init(void)
       Panic("Couldn't connect to L4 IO server!");
       return 1;
     }
+#ifndef ARCH_arm
   if (!io_info_addr->omega0)
     Panic("l4io has no omega0 mode enabled!");
 #endif
@@ -646,6 +646,7 @@ show_counters(struct l4con_vc *this_vc)
 }
 #endif
 
+#if defined(ARCH_x86) || defined(ARCH_amd64)
 static void
 vc_show_history(struct l4con_vc *this_vc,
 		l4_uint8_t *history_val, l4_size_t history_size,
@@ -670,6 +671,7 @@ vc_show_history(struct l4con_vc *this_vc,
     }
   pslim_bmap(this_vc, 0, rect, fgc, bgc, history_map, pSLIM_BMAP_START_MSB);
 }
+#endif
 
 void
 vc_show_cpu_load(struct l4con_vc *this_vc)

@@ -76,6 +76,9 @@
  *                           remain mapped.
  *                         - #L4_FP_ALL_SPACES additionally, also unmap the
  *                           pages in the own address space.
+ *                       - bits 8:19 may contain a task ID for a specific
+ *                         unmap in a task, has no effect if
+ *                         L4_FP_ALL_SPACES set
  *
  * The l4_fpage_unmap() system call unmaps the specified flex page
  * in all address spaces into which the invoker mapped it directly or

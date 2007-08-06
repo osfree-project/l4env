@@ -86,7 +86,7 @@ if_l4dm_mem_phys_addr_component (CORBA_Object _dice_corba_obj,
     {
       /* offset points beyond end of dataspace */      
       LOGdL(DEBUG_ERRORS,
-            "DMphys: invalid offset 0x%08lx in dataspace %lu (size 0x%08x)!",
+            "DMphys: invalid offset 0x%08lx in dataspace %lu (size 0x%08zx)!",
 	    offset, ds_id, dmphys_ds_get_size(ds));
       return -L4_EINVAL_OFFS;
     }
@@ -99,7 +99,7 @@ if_l4dm_mem_phys_addr_component (CORBA_Object _dice_corba_obj,
 
   LOGdL(DEBUG_PHYS_ADDR, "offset 0x%08lx\n" \
         " area 0x%08lx-0x%08lx, area offset 0x%08lx\n" \
-        " phys. addr 0x%08lx, region size 0x%08x",
+        " phys. addr 0x%08lx, region size 0x%08zx",
         offset, area->addr, area->addr + area->size, area_offs, *paddr, *psize);
 
   /* done */

@@ -298,6 +298,7 @@ fpage_map(Space *from, L4_fpage fp_from, Space *to,
                  be flushed
     @param me_too If false, only flush recursive mappings.  If true,
                  additionally flush the region in the given address space.
+    @restriction Only flush specific task id
     @param flush_mode determines which access privileges to remove.
     @return combined (bit-ORed) access status of unmapped physical pages
 */

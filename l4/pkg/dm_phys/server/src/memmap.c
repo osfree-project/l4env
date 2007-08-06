@@ -312,8 +312,8 @@ __map(l4_addr_t low, l4_addr_t high, l4_size_t size, int pool,
   else
     need = size;
 
-  LOGdL(DEBUG_MEMMAP_MAP, "pool %d range 0x%08lx-0x%08lx, need 0x%08x",
-        pool, low, high, need);
+  LOGdL(DEBUG_MEMMAP_MAP, "pool %d range "l4_addr_fmt"-"l4_addr_fmt", need "
+        "%08zx", pool, low, high, need);
 
   /* find area which contains memory range start address */
   mp = __find_addr(addr);
@@ -564,7 +564,7 @@ __allocate_rmgr(int use_4M_pages)
 	    {
 	      rmgr_dump_mem();
 	      Panic("DMphys: failed to reserve memory at rmgr "
-		    "(pool %d, size %u)!", i, cfg[i].size);
+		    "(pool %d, size %zu)!", i, cfg[i].size);
 	      return -1;
 	    }
 
@@ -1147,7 +1147,7 @@ dmphys_memmap_set_pool_config(int pool, l4_size_t size,
       cfg[pool].name[DMPHYS_MEM_POOL_NAME_LEN - 1] = 0;
     }
 
-  LOGdL(DEBUG_MEMMAP_POOLS, "pool %d: size 0x%08x, range 0x%08lx-0x%08lx",
+  LOGdL(DEBUG_MEMMAP_POOLS, "pool %d: size 0x%08zx, range 0x%08lx-0x%08lx",
         pool, size, low, high);
 
   /* done */

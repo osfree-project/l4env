@@ -71,7 +71,7 @@ __resize(dmphys_dataspace_t * ds, l4_size_t new_size)
       pages = dmphys_ds_get_pages(ds);
       pool = dmphys_ds_get_pool(ds);
 
-      LOGdL(DEBUG_RESIZE, "size new 0x%x, old 0x%x", new_size, old_size);
+      LOGdL(DEBUG_RESIZE, "size new 0x%zx, old 0x%zx", new_size, old_size);
 
       if (new_size > old_size)
 	{

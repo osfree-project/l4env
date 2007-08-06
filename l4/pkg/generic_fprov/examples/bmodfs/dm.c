@@ -104,10 +104,10 @@ get_desc(int id)
  */
 l4_int32_t
 dm_open(const char* fname, l4_uint32_t flags, l4_threadid_t mem_dm_id,
-        l4_threadid_t client, l4dm_dataspace_t *ds, l4_uint32_t *ds_size)
+        l4_threadid_t client, l4dm_dataspace_t *ds, l4_size_t *ds_size)
 {
-  l4util_mb_info_t *mbi = (l4util_mb_info_t*)crt0_multiboot_info;
-  l4util_mb_mod_t  *mod = (l4util_mb_mod_t*)mbi->mods_addr;
+  l4util_mb_info_t *mbi = (l4util_mb_info_t*)(l4_addr_t)crt0_multiboot_info;
+  l4util_mb_mod_t  *mod = (l4util_mb_mod_t*)(l4_addr_t)mbi->mods_addr;
   int i, found;
   const char *fname_file = strrchr(fname, '/');
 
@@ -120,10 +120,10 @@ dm_open(const char* fname, l4_uint32_t flags, l4_threadid_t mem_dm_id,
     {
       char *f;
 
-      if ((f = strrchr((const char*)mod[i].cmdline, '/')))
+      if ((f = strrchr((const char*)(l4_addr_t)mod[i].cmdline, '/')))
         found = !strcmp(f + 1, fname_file);
       else
-        found = !strcmp((const char*)mod[i].cmdline, fname_file);
+        found = !strcmp((const char*)(l4_addr_t)mod[i].cmdline, fname_file);
 
       if (found)
         {
@@ -328,9 +328,10 @@ if_l4dm_generic_close_component (CORBA_Object _dice_corba_obj,
       LOGd(DEBUG, "align: addr %d, size %d, fpage %d",
 	   addr_align, log2_size, fpage_size);
 
-      /* unmap page */
+      /* selective unmap page from client */
       l4_fpage_unmap(l4_fpage(dd->addr, fpage_size, 0, 0),
-		     L4_FP_FLUSH_PAGE | L4_FP_OTHER_SPACES);
+     	             (_dice_corba_obj->id.task << 8) |
+                     L4_FP_FLUSH_PAGE | L4_FP_OTHER_SPACES);
 
       dd->addr += (1UL << fpage_size);
       dd->size -= (1UL << fpage_size);

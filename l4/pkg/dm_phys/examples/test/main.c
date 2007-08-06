@@ -555,10 +555,10 @@ test_resize(void)
     Panic("get phys. address failed (%d)", ret);
   else
     {
-      LOGL("got %d region(s) (size 0x%08x):", ret, psize);
+      LOGL("got %d region(s) (size 0x%08zx):", ret, psize);
       for (i = 0; i < ret; i++)
 	{
-	  printf("  0x%08lx-0x%08lx, size 0x%08x\n", paddrs[i].addr, 
+	  printf("  0x%08lx-0x%08lx, size 0x%08zx\n", paddrs[i].addr, 
                  paddrs[i].addr + paddrs[i].size, paddrs[i].size);
 	}
     }
@@ -663,7 +663,7 @@ test_paddr(void)
   if (ret < 0)
     Panic("get phys. address failed (%d)", ret);
   else
-    LOGL("phys. addr 0x%08lx,  size 0x%08x", paddr, psize);
+    LOGL("phys. addr 0x%08lx,  size 0x%08zx", paddr, psize);
 
   ret = l4rm_attach(&ds, size, 0, L4DM_RW, &addr);
   if (ret < 0)
@@ -691,10 +691,10 @@ test_paddr(void)
 	  (l4_addr_t)addr, (l4_addr_t)addr + size, ret);
   else
     {
-      LOGL("got %d region(s) (size 0x%08x):", ret, psize);
+      LOGL("got %d region(s) (size 0x%08zx):", ret, psize);
       for (i = 0; i < ret; i++)
 	{
-	  printf("  0x%08lx-0x%08lx,  size 0x%08x\n", paddrs[i].addr,
+	  printf("  0x%08lx-0x%08lx,  size 0x%08zx\n", paddrs[i].addr,
                  paddrs[i].addr + paddrs[i].size, paddrs[i].size);
 	}
     }
@@ -747,7 +747,7 @@ test_copy(void)
   if (ret < 0)
     Panic("get size failed (%d)", ret);
   else
-    LOGL("copy size: 0x%08x", ds_size);
+    LOGL("copy size: 0x%08zx", ds_size);
 
   LOG("copied.");
 }

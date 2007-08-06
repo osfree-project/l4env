@@ -244,7 +244,7 @@ l4dm_memphys_check_pagesize(const void * ptr, l4_size_t size, int pagesize)
 	     ((addr + ((page_addr + page_size + ps) - addr)) <= end))
 	page_size += ps;
 
-      LOGdL(DEBUG_PAGESIZE, " page at 0x%08lx, offs 0x%08lx, size 0x%08x\n",
+      LOGdL(DEBUG_PAGESIZE, " page at 0x%08lx, offs 0x%08lx, size 0x%08zx\n",
                             page_addr, page_offs, page_size);
 
       ret = __check_pagesize(&ds, page_offs, page_size, pagesize, &ok);

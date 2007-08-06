@@ -363,7 +363,7 @@ dmphys_ds_show(dmphys_dataspace_t * ds)
   LOG_printf("DMphys dataspace %u:\n", dsmlib_get_id(ds->desc));
   if (strlen(name) > 0)
     LOG_printf("  name \"%s\"\n", name);
-  LOG_printf("  owner "l4util_idfmt", size 0x%08x (%uKB)\n",
+  LOG_printf("  owner "l4util_idfmt", size 0x%08zx (%zuKB)\n",
          l4util_idstr(ds_owner), ds->size, ds->size / 1024);
   LOG_printf("  clients: ");
   dsmlib_list_ds_clients(ds->desc);

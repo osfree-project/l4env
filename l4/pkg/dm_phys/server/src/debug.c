@@ -62,7 +62,7 @@ __ds_list_iterator(dmphys_dataspace_t * ds, void * data)
   l4_size_t * sum = data;
   l4_threadid_t ds_owner = dsmlib_get_owner(ds->desc);
 
-  LOG_printf("%4d: size=%08x  owner="l4util_idfmt"  name=\"%s\"\n",
+  LOG_printf("%4d: size=%08zx  owner="l4util_idfmt"  name=\"%s\"\n",
          dmphys_ds_get_id(ds), ds->size, l4util_idstr(ds_owner),
          dmphys_ds_get_name(ds));
   *sum += ds->size;
@@ -220,7 +220,7 @@ if_l4dm_generic_list_component (CORBA_Object _dice_corba_obj,
 
   if (sum > 0)
     LOG_printf("===========================================================\n"
-           "total size %08x (%dkB, %dMB)\n", 
+           "total size %08zx (%zdkB, %zdMB)\n", 
 	   sum, (sum+(1<<9)-1)/(1<<10), (sum+(1<<19)-1)/(1<<20));
   else
     LOG_printf("no suitable dataspace found\n");
