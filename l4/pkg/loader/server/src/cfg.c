@@ -673,8 +673,7 @@ load_config_script(const char *fname_and_arg, l4_threadid_t fprov_id,
     fname_len = o-fname_and_arg;
 
   error = elf_check_ftype(cfg_addr, cfg_size, cfg_env);
-  if (!(!(error = elf_check_ftype(cfg_addr, cfg_size, cfg_env))
-        || error == -ELF_INTERPRETER || error == -ELF_BADFORMAT))
+  if ((error && error != -ELF_INTERPRETER && error != -ELF_BADFORMAT))
     return return_error_msg(error, "checking file type of \"%s\"",
 			    fname_and_arg);
 

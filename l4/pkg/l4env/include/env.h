@@ -9,19 +9,19 @@
  * \author Frank Mehnert <fm3@os.inf.tu-dresden.de>
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>
  *
- * Copyright (C) 2000-2002
+ * Copyright (C) 2000-2007
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
+ *
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
@@ -41,15 +41,15 @@
 #define L4ENV_MAXSECT	64		///< max # of loadable sections
 #define L4ENV_MAXPATH	256		///< max length of pathname
 
-/** 
+/**
  * Defines some L4 kernel information - some of them (arch, data, arch_class)
- * needed for loading an ELF binary. 
+ * needed for loading an ELF binary.
  * \ingroup env
  */
-typedef struct 
+typedef struct
 {
   l4_uint32_t		major_id;	///< L4 major version id
-  l4_uint32_t		minor_id;	///< L4 minor version id 
+  l4_uint32_t		minor_id;	///< L4 minor version id
   l4_uint8_t		arch_data;	///< see ELF data enc.: little/big end.
   l4_uint8_t		arch_class;	///< see ELF class enc.: 32/64 bit
   l4_uint16_t		arch;		///< use values here defined in elf.h
@@ -104,21 +104,24 @@ typedef struct
 /** this section is owned by l4exec */
 #define L4_DSTYPE_EXEC_IS_OWNER	0x2000
 
+/** value of l4env_infopage->magic */
+#define L4ENV_INFOPAGE_MAGIC 0x7634456e
+
 /**
  * Section Info
  * \ingroup env
  */
-typedef struct 
+typedef struct
 {
   unsigned		id:16;		///< unique section id
   unsigned		type:16;	///< type info */
 } l4exec_info_t;
 
-/** 
+/**
  * Defines a section of an executable file (binary or shared library)
  * \ingroup env
  */
-typedef struct 
+typedef struct
 {
   l4_addr_t		addr;		///< virtual address of the first byte
   l4_size_t		size;		///< size of the section
@@ -136,18 +139,12 @@ typedef struct
   int		has_x86_bios : 1;	///< program has access to BIOS memory
 } l4env_loader_info_t;
 
-/** 
+/**
  * The environment info page - should consider 64-bit architectures too.
- * With L4ENV_MAXSECT = 64 and L4ENV_MAXPATH = 256, 
- * l4env_infopage_t occupies 632 dwords 
  * \ingroup env
  */
-typedef struct 
+typedef struct
 {
-  /** Unique number, set by exec server. The exec server uses this id to
-   *  refind the appropriate binary object to this infopage. */
-  int                   id;
-  
   /* system information provided by the loader */
   l4env_system_info_t   sys_info;		///< system info (proz, mem)
   l4env_version_info_t  ver_info;		///< kernel info (ver, arch)
@@ -199,6 +196,7 @@ typedef struct
 
   l4env_loader_info_t	loader_info;		///< loader info for app
 
+  l4_uint32_t		magic;			///< must be 0x7634456e
 } l4env_infopage_t;
 
 

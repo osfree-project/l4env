@@ -1563,6 +1563,7 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
     }
 
   env             = app->env;
+  env->magic      = L4ENV_INFOPAGE_MAGIC;
   env->fprov_id   = ct->fprov_id;
   env->memserv_id = ct->dsm_id;
   app->prio       = ct->prio;

@@ -372,7 +372,7 @@ elf_check_ftype(const l4_addr_t img, const l4_size_t size,
 
 	  if (strcmp(interp, "libld-l4.s.so"))
 	    {
-	      printf("Invalid interpreter found: %s", interp);
+	      printf("Invalid interpreter found: %s\n", interp);
 	      return -L4_EINVAL;
 	    }
 

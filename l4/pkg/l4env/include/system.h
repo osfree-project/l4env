@@ -131,6 +131,9 @@ typedef struct {
     /* smp systems */
     l4_uint32_t		number_cpus;
 
+    /* padding for next 8byte alignment */
+    l4_uint32_t		_reserved0;
+
     /* virtual memory sizes */
     l4_uint64_t		mem_page_sizes;
     l4_uint64_t		mem_virt_sugg_max;
