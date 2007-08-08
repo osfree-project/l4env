@@ -6,6 +6,8 @@ PKGDIR = .
 SYSTEMS = $(BUILD_ARCH)-$(BUILD_ABI)
 MODE	= l4env
 
+OBJ_DIR = $(SRC_DIR)/build
+
 ifneq ($(SYSTEM),)
 
 # take crt0.o from the install directory
@@ -17,7 +19,7 @@ L4_LDFLAGS  = $(filter-out -L$(L4_BUILDDIR)%, $(patsubst -T$(L4_BUILDDIR)%, -T$(
 L4_CPPFLAGS = $(filter-out -I$(L4_BUILDDIR)%, $(patsubst -I$(DICE_INCDIR), -I$(L4_DICEDIR), $(CPPFLAGS)))
 
 # the target file
-L4DEF_FILE ?= $(DROPS_STDDIR)/l4defs.inc
+L4DEF_FILE ?= l4defs.inc
 
 all::
 	@echo -e $(EMPHSTART)"Creating $(L4DEF_FILE)"$(EMPHSTOP)

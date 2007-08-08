@@ -1028,8 +1028,9 @@ Thread::ex_regs_permission_inter_task(Sys_ex_regs_frame *regs,
     dst_check = *dst_thread0;
 
   if (dst_check->_pager->id().task() != id().task()
+      && dst_check->space()->chief() != space()->id()
 #ifdef CONFIG_TASK_CAPS
-      && dst_check->_cap_handler->id().task() != id().task()
+      && (!dst_check->_cap_handler || dst_check->_cap_handler->id().task() != id().task())
 #endif
       )
     {

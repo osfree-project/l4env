@@ -112,13 +112,22 @@ clean cleanall install::
 	  if [ -r $$i/Makefile -o -r $$i/GNUmakefile ] ; then \
 		PWD=$(PWD)/$$i $(MAKE) -C $$i $@ ; fi ; done
 
-install::
-	$(VERBOSE)tmpdir=$$(mktemp -d -t l4bid.defs.XXXXXX) &&       \
-	echo "L4DIR = $(L4DIR_ABS)"       > $$tmpdir/Makefile &&     \
-	echo "L4_BUILDDIR = $(OBJ_BASE)" >> $$tmpdir/Makefile &&     \
-	cat $(L4DIR)/mk/export_defs.inc  >> $$tmpdir/Makefile &&     \
-	$(MAKE) -C $$tmpdir;                                         \
+
+install:: l4defs
+
+L4DEF_FILE ?= $(DROPS_STDDIR)/l4defs.inc
+
+l4defs: $(L4DEF_FILE)
+
+$(L4DEF_FILE): $(CONFIG_MK_REAL)
+	$(VERBOSE)tmpdir=$$(mktemp -d -t l4bid.defs.XXXXXX) &&   \
+	echo "L4DIR = $(L4DIR_ABS)"       > $$tmpdir/Makefile && \
+	echo "L4_BUILDDIR = $(OBJ_BASE)" >> $$tmpdir/Makefile && \
+	cat $(L4DIR)/mk/export_defs.inc  >> $$tmpdir/Makefile && \
+	$(MAKE) -C $$tmpdir L4DEF_FILE=$@ &&                     \
 	$(RM) -r $$tmpdir
+
+.PHONY: l4defs
 
 
 #####################
