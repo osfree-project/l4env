@@ -344,7 +344,7 @@ l4_thread_schedule(l4_threadid_t dest,
  *                       call has no effect. Simultaneously, a new task with
  *                       the same task number is created. It may be active
  *                       or inactive.
- * \param   mcp_or_new_chief
+ * \param   mcp_or_new_chief_and_flags
  *                       Depending on the state of the task (active or
  *                       inactive), two variants are possible here:
  *                       - \c \<mcp\> Maximum controlled priority defines
@@ -360,6 +360,24 @@ l4_thread_schedule(l4_threadid_t dest,
  *                         transfer the related right to create a task. Use
  *                         this parameter if the newly generated task is an
  *                         inactive task.
+ *                       .
+ *                       Additionally, the following flags may be bitwise
+ *                       or'ed with this parameter when starting an active
+ *                       task:
+ *                       - \c #L4_TASK_NEW_IPC_MONITOR: Start the task in
+ *                         monitored mode. The task is only allowed to
+ *                         communicate with its creator and itself (+NIL).
+ *                         Every other IPC will raise a capability fault
+ *                         that is sent to a specified capability fault
+ *                         handler. The fault handler can be set in UTCB
+ *                         word 3.
+ *                       - \c #L4_TASK_NEW_RAISE_EXCEPTION: Raise an
+ *                         exception in thread 0 before executing any user
+ *                         code. The exception will be sent to the task's
+ *                         exception handler.
+ *                       - \c #L4_TASK_NEW_ALIEN: Start thread 0 as alien.
+ *                         Exceptions are generated for system calls and
+ *                         page faults.
  * \param   esp          Initial stack pointer for lthread 0 if the new task is
  *                       created as an active one. Ignore otherwise.
  * \param   eip          Initial instruction pointer for lthread 0 if the new
@@ -396,34 +414,41 @@ l4_thread_schedule(l4_threadid_t dest,
  * A newly created task gets the creator as its chief, i.e. it is created
  * inside the creator's clan. Symmetrically, a task can only be deleted
  * either directly by its chief or indirectly by a higher-level chief.
- *
- * The mcp_or_new_chief argument can also be or'ed with the
- * L4_TASK_NEW_ALIEN flag. This flag sets the alien bit for the newly
- * created thread which means that it will trigger exception whenever it
- * executes a system call.
  */
 L4_INLINE l4_taskid_t
 l4_task_new(l4_taskid_t destination,
-	    l4_umword_t mcp_or_new_chief,
+	    l4_umword_t mcp_or_new_chief_and_flags,
 	    l4_umword_t esp,
 	    l4_umword_t eip,
 	    l4_threadid_t pager);
 
+/**
+ * Create or delete a task, extended version.
+ * \ingroup api_calls_other
+ *
+ * \param destination    See l4_task_new description.
+ * \param mcp_or_new_chief_and_flags
+ *                       See l4_task_new description.
+ * \param esp            See l4_task_new description.
+ * \param eip            See l4_task_new description.
+ * \param pager          See l4_task_new description.
+ * \param cap_handler    Set the capability fault handler for this task.
+ *                       effect if the task is started with the \c
+ *                       #L4_TASK_NEW_IPC_MONITOR flag set.
+ */
+
 L4_INLINE l4_taskid_t
 l4_task_new_cap(l4_taskid_t destination,
-	        l4_umword_t mcp_or_new_chief,
+	        l4_umword_t mcp_or_new_chief_and_flags,
 	        l4_umword_t esp,
 	        l4_umword_t eip,
 	        l4_threadid_t pager,
 	        l4_threadid_t cap_handler);
 
 enum {
-  /* Start task in IPC monitor mode */
-  L4_TASK_NEW_IPC_MONITOR     = 1 << 29,
-  /* Raise exception upon start of thread 0 */
-  L4_TASK_NEW_RAISE_EXCEPTION = 1 << 30,
-  /* Start thread 0 in alien mode */
-  L4_TASK_NEW_ALIEN           = 1 << 31,
+  L4_TASK_NEW_IPC_MONITOR     = 1 << 29,    /**< Start task in IPC monitor mode */
+  L4_TASK_NEW_RAISE_EXCEPTION = 1 << 30,    /**< Raise exception upon start of thread 0 */
+  L4_TASK_NEW_ALIEN           = 1 << 31,    /**< Start thread 0 in alien mode */
 
   /* Number of flags */
   L4_TASK_NEW_NR_OF_FLAGS     = 3,

@@ -42,7 +42,7 @@ typedef struct {
  * \ingroup api_types_id
  */
 typedef union {
-  l4_uint32_t raw;
+  l4_uint32_t raw;           ///< raw id
   l4_threadid_struct_t id;   ///< Thread id struct
 } l4_threadid_t;
 

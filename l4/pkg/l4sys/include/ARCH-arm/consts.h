@@ -135,7 +135,7 @@ enum {
   L4_TASK_NEW_ALIEN           = 1UL << 31,
   L4_TASK_NEW_NR_OF_FLAGS     = 3,
   L4_TASK_NEW_FLAGS_MASK      = ((1 << L4_TASK_NEW_NR_OF_FLAGS) - 1)
-                                  << (sizeof(l4_umword_t) * 8 - L4_TASK_NEW_NR_OF_FLAGS),
+                                  << (32 - L4_TASK_NEW_NR_OF_FLAGS),
 };
 
 enum {

@@ -1,6 +1,6 @@
 /*****************************************************************************/
 /**
- * \file    l4sys/include/ARCH-x86/vhw.h
+ * \file    l4sys/include/vhw.h
  * \brief   Descriptors for virtual hardware (under UX).
  * \ingroup api_types
  */

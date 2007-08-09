@@ -179,7 +179,7 @@ l4_thread_schedule(l4_threadid_t dest,
  */
 L4_INLINE l4_taskid_t
 l4_task_new(l4_taskid_t destination,
-	    l4_umword_t mcp_or_new_chief,
+	    l4_umword_t mcp_or_new_chief_and_flags,
 	    l4_umword_t rsp,
 	    l4_umword_t rip,
 	    l4_threadid_t pager)
@@ -200,7 +200,7 @@ l4_task_new(l4_taskid_t destination,
 	  "=S" (new_task)
 	 :
 	  "r" (r8),
-	  "a" (mcp_or_new_chief),
+	  "a" (mcp_or_new_chief_and_flags),
 	  "c" (rsp),
 	  "d" (rip),
 	  "S" (destination)

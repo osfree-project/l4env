@@ -72,6 +72,16 @@ l4_timeout_s l4_timeout_abs(l4_kernel_clock_t pint,
                     enum l4_timeout_abs_validity v);
 
 
+/**
+ * Convert explicit timeout values to L4 type
+ * \ingroup api_calls_ipc
+ *
+ * \param  snd_man    Mantissa of send timeout.
+ * \param  snd_exp    Exponent of send timeout.
+ * \param  rcv_man    Mantissa of receive timeout.
+ * \param  rcv_exp    Exponent of receive timeout.
+ */
+
 L4_INLINE
 l4_timeout_t l4_ipc_timeout(unsigned snd_man, unsigned snd_exp,
     unsigned rcv_man, unsigned rcv_exp);

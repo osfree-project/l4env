@@ -2,7 +2,7 @@
 /* $Id$ */
 
 /**
-\mainpage L4 System Call C-Bindings Reference Manual (L4 Version 2)
+\mainpage Fiasco/L4 System Call C-Bindings Reference Manual
 
 \section content Contents
 
@@ -44,7 +44,7 @@
 
 \section intro Introduction
 
-This manual describes the C-Bindings for the L4 system calls (L4 version 2). 
+This manual describes the C-Bindings for the Fiasco/L4 system calls. 
 See also \htmlonly
 <a href="http://i30www.ira.uka.de/research/documents/l4ka/Ln-86-21.pdf">
 \endhtmlonly Jochen Liedtke: Lava Nucleus (LN) Reference Manual
