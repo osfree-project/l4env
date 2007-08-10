@@ -10,6 +10,8 @@
 #define __L4_IPC_H__
 
 #include <l4/sys/types.h>
+
+#define L4_IPC_IOMAPMSG_BASE 0xf0000000
 #include <l4/sys/consts_ipc.h>
 
 /*****************************************************************************
@@ -303,6 +305,7 @@ l4_ipc_send_tag(l4_threadid_t dest,
                 l4_msgtag_t tag,
                 l4_timeout_t timeout,
                 l4_msgdope_t *result);
+
 /**
  * IPC wait, wait for message from any source
  * \ingroup api_calls_ipc

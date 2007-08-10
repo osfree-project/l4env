@@ -5,7 +5,7 @@ __l4sys_direct_syscalls = 0xeacff000
 	.macro	direct_syscall syscall,offset
 \syscall = __l4sys_direct_syscalls + \offset
 .global \syscall
-;.hidden \syscall
+.hidden \syscall
 	.endm
 
 	direct_syscall	__l4sys_fpage_unmap_direct, 0x200

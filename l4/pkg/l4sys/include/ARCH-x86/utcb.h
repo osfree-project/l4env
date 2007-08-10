@@ -111,7 +111,15 @@ L4_INLINE l4_utcb_t *l4_utcb_get(void);
 L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u);
 
 /**
- * Function to check whether an exception IPC is a page fault.
+ * Get the value out of an exception UTCB that describes the type of
+ * exception.
+ * \ingroup api_utcb
+ */
+L4_INLINE unsigned long l4_utcb_exc_typeval(l4_utcb_t *u);
+
+/**
+ * Function to check whether an exception IPC is a page fault, also applies
+ * to I/O pagefaults.
  *
  * \returns 0 if not, != 0 if yes
  * \ingroup api_utcb
@@ -145,6 +153,11 @@ L4_INLINE l4_utcb_t *l4_utcb_get(void)
 L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u)
 {
   return u->exc.eip;
+}
+
+L4_INLINE unsigned long l4_utcb_exc_typeval(l4_utcb_t *u)
+{
+  return u->exc.trapno;
 }
 
 L4_INLINE int l4_utcb_exc_is_pf(l4_utcb_t *u)

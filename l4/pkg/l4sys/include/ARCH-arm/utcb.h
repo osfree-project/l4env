@@ -67,17 +67,11 @@ typedef struct
   l4_timeout_t xfer;
 } l4_utcb_t;
 
-/**
- * Get the address to a thread's UTCB.
- * \ingroup api_utcb
- */
 L4_INLINE l4_utcb_t *l4_utcb_get(void);
 
-/**
- * Access function to get the program counter of the exception state.
- * \ingroup api_utcb
- */
 L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u);
+
+L4_INLINE unsigned long l4_utcb_exc_typeval(l4_utcb_t *u);
 
 L4_INLINE int l4_utcb_exc_is_pf(l4_utcb_t *u);
 
@@ -100,6 +94,11 @@ L4_INLINE l4_utcb_t *l4_utcb_get(void)
 L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u)
 {
   return u->exc.pc;
+}
+
+L4_INLINE unsigned long l4_utcb_exc_typeval(l4_utcb_t *u)
+{
+  return u->exc.err;
 }
 
 L4_INLINE int l4_utcb_exc_is_pf(l4_utcb_t *u)

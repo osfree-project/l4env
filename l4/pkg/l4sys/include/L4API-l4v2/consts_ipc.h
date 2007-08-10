@@ -63,7 +63,7 @@
  * \param   iosize       Receive window size
  */
 #define L4_IPC_IOMAPMSG(port, iosize)  \
-     ((void *)(l4_umword_t)( 0xf0000000 | ((port) << 12) | ((iosize) << 2) \
+     ((void *)(l4_umword_t)( L4_IPC_IOMAPMSG_BASE | ((port) << 12) | ((iosize) << 2) \
                              | (unsigned long)L4_IPC_SHORT_FPAGE))
 
 

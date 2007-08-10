@@ -1,8 +1,8 @@
-/* 
+/*
  * $Id$
  */
 
-#ifndef L4_IPC_H 
+#ifndef L4_IPC_H
 #define L4_IPC_H
 
 /*
@@ -22,14 +22,14 @@
  * 2 words in registers
  *--------------------------------------------------------------------------*/
 L4_INLINE int
-l4_ipc_call(l4_threadid_t dest, 
-            const void *snd_msg, 
-            l4_umword_t snd_word0, 
-            l4_umword_t snd_word1, 
-            void *rcv_msg, 
-            l4_umword_t *rcv_word0, 
-            l4_umword_t *rcv_word1, 
-            l4_timeout_t timeout, 
+l4_ipc_call(l4_threadid_t dest,
+            const void *snd_msg,
+            l4_umword_t snd_word0,
+            l4_umword_t snd_word1,
+            void *rcv_msg,
+            l4_umword_t *rcv_word0,
+            l4_umword_t *rcv_word1,
+            l4_timeout_t timeout,
             l4_msgdope_t *result);
 
 L4_INLINE int
@@ -46,15 +46,15 @@ l4_ipc_call_tag(l4_threadid_t dest,
             l4_msgtag_t *rtag);
 
 L4_INLINE int
-l4_ipc_reply_and_wait(l4_threadid_t dest, 
-                      const void *snd_msg, 
-                      l4_umword_t snd_word0, 
-                      l4_umword_t snd_word1, 
+l4_ipc_reply_and_wait(l4_threadid_t dest,
+                      const void *snd_msg,
+                      l4_umword_t snd_word0,
+                      l4_umword_t snd_word1,
                       l4_threadid_t *src,
-                      void *rcv_msg, 
-                      l4_umword_t *rcv_word0, 
-                      l4_umword_t *rcv_word1, 
-                      l4_timeout_t timeout, 
+                      void *rcv_msg,
+                      l4_umword_t *rcv_word0,
+                      l4_umword_t *rcv_word1,
+                      l4_timeout_t timeout,
                       l4_msgdope_t *result);
 
 L4_INLINE int
@@ -72,14 +72,14 @@ l4_ipc_reply_and_wait_tag(l4_threadid_t dest,
                       l4_msgtag_t *rtag);
 
 L4_INLINE int
-l4_ipc_send(l4_threadid_t dest, 
+l4_ipc_send(l4_threadid_t dest,
             const void *snd_msg,
-            l4_umword_t snd_word0, 
-            l4_umword_t snd_word1, 
-            l4_timeout_t timeout, 
+            l4_umword_t snd_word0,
+            l4_umword_t snd_word1,
+            l4_timeout_t timeout,
             l4_msgdope_t *result);
 
-L4_INLINE int 
+L4_INLINE int
 l4_ipc_send_tag(l4_threadid_t dest,
             const void *snd_msg,
             l4_umword_t w0,
@@ -90,10 +90,10 @@ l4_ipc_send_tag(l4_threadid_t dest,
 
 L4_INLINE int
 l4_ipc_wait(l4_threadid_t *src,
-            void *rcv_msg, 
-            l4_umword_t *rcv_word0, 
-            l4_umword_t *rcv_word1, 
-            l4_timeout_t timeout, 
+            void *rcv_msg,
+            l4_umword_t *rcv_word0,
+            l4_umword_t *rcv_word1,
+            l4_timeout_t timeout,
             l4_msgdope_t *result);
 
 L4_INLINE int
@@ -107,10 +107,10 @@ l4_ipc_wait_tag(l4_threadid_t *src,
 
 L4_INLINE int
 l4_ipc_receive(l4_threadid_t src,
-               void *rcv_msg, 
-               l4_umword_t *rcv_word0, 
-               l4_umword_t *rcv_word1, 
-               l4_timeout_t timeout, 
+               void *rcv_msg,
+               l4_umword_t *rcv_word0,
+               l4_umword_t *rcv_word1,
+               l4_timeout_t timeout,
                l4_msgdope_t *result);
 
 L4_INLINE int
@@ -127,16 +127,16 @@ l4_ipc_sleep(l4_timeout_t timeout);
 
 #endif //__GNUC__
 
-L4_INLINE int 
+L4_INLINE int
 l4_ipc_fpage_received(l4_msgdope_t msgdope);
 
-L4_INLINE int 
+L4_INLINE int
 l4_ipc_is_fpage_granted(l4_fpage_t fp);
 
-L4_INLINE int 
+L4_INLINE int
 l4_ipc_is_fpage_writable(l4_fpage_t fp);
 
-L4_INLINE int 
+L4_INLINE int
 l4_is_rcv_map_descr(const void *msg);
 
 L4_INLINE int
@@ -157,19 +157,19 @@ l4_get_rcv_msg_from_descr(void *msg);
  * IMPLEMENTATION
  *--------------------------------------------------------------------------*/
 
-L4_INLINE int 
+L4_INLINE int
 l4_ipc_fpage_received(l4_msgdope_t msgdope)
 {
   return msgdope.md.fpage_received != 0;
 }
 
-L4_INLINE int 
+L4_INLINE int
 l4_ipc_is_fpage_granted(l4_fpage_t fp)
 {
   return fp.fp.grant != 0;
 }
 
-L4_INLINE int 
+L4_INLINE int
 l4_ipc_is_fpage_writable(l4_fpage_t fp)
 {
   return fp.fp.write != 0;
