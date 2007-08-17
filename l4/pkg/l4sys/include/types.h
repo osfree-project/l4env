@@ -5,6 +5,30 @@
 #include <l4/sys/compiler.h>
 
 
+
+/**
+ * Quota type structure
+ * \ingroup api_types
+ */
+typedef union l4_quota_desc_t
+{
+  l4_umword_t raw;
+  struct
+  {
+    unsigned long id: 12;
+    unsigned long amount: 16;
+    unsigned long cmd: 4;
+  } q;
+} l4_quota_desc_t;
+
+enum {
+  L4_KQUOTA_CMD_NOOP,
+  L4_KQUOTA_CMD_SHARE,
+  L4_KQUOTA_CMD_NEW
+};
+
+#define L4_INVALID_KQUOTA  ((l4_quota_desc_t){ .raw = 0 })
+
 /**
  * Message tag for IPC operations.
  * \ingroup api_types
@@ -143,6 +167,11 @@ L4_INLINE unsigned l4_msgtag_is_io_page_fault(l4_msgtag_t t);
 L4_INLINE unsigned l4_msgtag_is_cap_fault(l4_msgtag_t t);
 
 
+
+
+/* **************************************************************************
+ * Implementations
+ */
 
 L4_INLINE
 l4_msgtag_t l4_msgtag(long label, unsigned words, unsigned items,

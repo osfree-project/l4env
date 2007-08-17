@@ -390,7 +390,7 @@ L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* utcb) const
   if (! extra_args())
     return L4_quota_desc(0);
 
-  return L4_quota_desc(utcb->values[4]);
+  return L4_quota_desc(utcb->values[2]);
 }
 
 //////////////////////////////////////////////////////////////////////

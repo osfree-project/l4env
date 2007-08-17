@@ -70,6 +70,7 @@ L4ENV_SUBDIRS = \
 	generic_io \
 	generic_ts \
 	input \
+	ipcmon \
 	l4env \
 	libsigma0 \
 	linux-24-headers \

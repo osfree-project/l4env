@@ -344,9 +344,17 @@ static int win_get_workh(WINDOW *w) {
 
 static void (*orig_set_app_id) (WIDGET *w, s32 app_id);
 static void win_set_app_id(WINDOW *w, s32 app_id) {
-	char *app_name;
-	app_name = appman->get_app_name(app_id);
-	if (app_name) winlayout->set_win_title(w->wind->elem, app_name);
+
+	SCREEN *scr = (SCREEN *)w->gen->get_parent(w);
+	char *app_name = appman->get_app_name(app_id);
+
+	if (app_name) {
+		winlayout->set_win_title(w->wind->elem, app_name);
+
+		/* register window title at screen */
+		if (scr) scr->scr->set_title(scr, w, app_name);;
+	}
+
 	if (orig_set_app_id) orig_set_app_id((WIDGET *)w, app_id);
 }
 
@@ -780,8 +788,13 @@ static void win_set_state(WINDOW *w, s32 state) {
 
 
 static void win_set_title(WINDOW *w, char *new_title) {
+	SCREEN *scr = (SCREEN *)w->gen->get_parent(w);
+
 	if (!new_title) return;
 	winlayout->set_win_title(w->wind->elem, new_title);
+
+	/* register window title at screen */
+	if (scr) scr->scr->set_title(scr, w, new_title);;
 }
 
 

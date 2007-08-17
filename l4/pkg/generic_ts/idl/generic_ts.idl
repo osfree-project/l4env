@@ -49,14 +49,16 @@ library l4
        * \param  stack		Initial stack pointer of first thread
        * \param  mcp		Maximum allowed priority
        * \param  pager		Id of first thread's pager
+       * \param  caphandler	Capfault handler
+       * \param  kquota		In-kernel memory quota
        * \param  prio		Priority of first thread
        * \param  resname	Module name as reserved in RMGR.
        * \param  flags		Flags */
       long create([in,out] l4_taskid_t *taskid, [in] l4_addr_t entry,
-		  [in] l4_addr_t stack,         [in] unsigned long mcp,
-		  [in] l4_taskid_t pager,       [in] l4_taskid_t caphandler,
-		  [in] long prio,               [in, string] char* resname,
-		  [in] unsigned long flags);
+                  [in] l4_addr_t stack,         [in] unsigned long mcp,
+                  [in] l4_taskid_t pager,       [in] l4_taskid_t caphandler,
+                  [in] l4_quota_desc_t kquota,  [in] long prio,
+                  [in, string] char* resname,   [in] unsigned long flags);
 
       /**
        * Free previously allocated task id.

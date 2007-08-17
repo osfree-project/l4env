@@ -2,7 +2,7 @@ PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
 MODE		:= l4env
-SYSTEMS		:= x86-l4v2
+SYSTEMS		:= x86-l4v2 amd64-l4v2 arm-l4v2
 DEFAULT_RELOC_x86 = 0x01000000
 
 include $(L4DIR)/mk/Makeconf

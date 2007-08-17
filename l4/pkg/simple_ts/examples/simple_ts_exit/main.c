@@ -59,6 +59,7 @@ app(int id, int num_create, l4_threadid_t caller)
   int i;
   char name[NAMES_MAX_NAME_LEN];
   l4dm_dataspace_t ds;
+  l4_quota_desc_t invquota = L4_INVALID_KQUOTA;
 
   printf("--> App %d: Hello World!\n", id);
 
@@ -106,7 +107,8 @@ app(int id, int num_create, l4_threadid_t caller)
       /* Create task. We choose a priority of 19 and an mcp of 0xe0. */
       if ((error = l4_ts_create_call(&ts_id, &tid,
 				     (l4_addr_t)app, esp, 0xe0,
-				     &pager, &invalid, 21, "",  0, &_env))
+				     &pager,
+                                     &invalid, &invquota, 21, "",  0, &_env))
 	  || DICE_HAS_EXCEPTION(&_env))
 	{
 	  printf("Error %d creating task\n", error);
@@ -117,15 +119,15 @@ app(int id, int num_create, l4_threadid_t caller)
       l4_ipc_receive(tid, 0, &dummy, &dummy, L4_IPC_NEVER, &result);
 
       if (debug_pager)
-        printf("Task "l4util_idfmt" (%08lx) stack at %08lx..%08lx is up\n",
-	     l4util_idstr(tid),tid.raw,
+        printf("Task "l4util_idfmt" (%08x) stack at %08lx..%08lx is up\n",
+	     l4util_idstr(tid), tid.raw,
 	     esp & L4_PAGEMASK, (esp & L4_PAGEMASK)+L4_PAGESIZE-1);
     }
 
   if (id != 0)
     {
-      l4_ipc_send(caller, 
-		  L4_IPC_SHORT_MSG, 0, 0, 
+      l4_ipc_send(caller,
+		  L4_IPC_SHORT_MSG, 0, 0,
 		  L4_IPC_NEVER, &result);
 
       l4_sleep_forever();
@@ -136,7 +138,9 @@ app(int id, int num_create, l4_threadid_t caller)
 static void
 app_pager(void *unused)
 {
-  extern char _end;
+  extern char _end[];
+  extern char _stext[];
+  extern char _etext[];
   l4_umword_t dw1, dw2;
   void *reply_type;
   l4_msgdope_t result;
@@ -182,16 +186,16 @@ app_pager(void *unused)
 		     l4util_idstr(src_thread), dw1, dw2);
 	      enter_kdebug("stop");
 	    }
-	  else if ((dw1 >= (l4_umword_t)&app) &&
-		   (dw1  < (l4_umword_t)&task2app))
+	  else if ((dw1 >= (l4_umword_t)&_stext) &&
+		   (dw1  < (l4_umword_t)&_etext))
 	    {
 	      /* pf in text section (a bit tricky, normally we should
 	       * have knowledge about the ELF file sections) */
 	      dw1 &= L4_PAGEMASK;
-	      dw2 = l4_fpage(dw1, L4_LOG2_PAGESIZE, 
+	      dw2 = l4_fpage(dw1, L4_LOG2_PAGESIZE,
 		                  L4_FPAGE_RO, L4_FPAGE_MAP).fpage;
 	    }
-	  else if ((dw1 >= (l4_umword_t)&task2app) &&
+	  else if ((dw1 >= (l4_umword_t)&_etext) &&
 	           (dw1 < (l4_umword_t)&_end))
 	    {
 	      /* pf in data section (remarks like text section) */
@@ -219,7 +223,7 @@ app_pager(void *unused)
 
 	  error = l4_ipc_reply_and_wait(src_thread, reply_type, dw1, dw2,
 	      				&src_thread, L4_IPC_SHORT_MSG,
-					&dw1, &dw2, 
+					&dw1, &dw2,
 					L4_IPC_SEND_TIMEOUT_0,
 					&result);
 	}
@@ -242,9 +246,9 @@ main(void)
     }
 
   dsm_id = l4dm_memphys_find_dmphys();
-  if (l4_is_invalid_id(dsm_id)) 
+  if (l4_is_invalid_id(dsm_id))
     {
-      printf("dm_phys not found!"); 
+      printf("dm_phys not found!");
       return -1;
     }
   my_id = l4_myself();
@@ -255,7 +259,7 @@ main(void)
 
   printf("Pager is up.\n");
 
-  app_stack_mem = (l4_addr_t)l4dm_mem_ds_allocate(MAX_TASK_CNT*L4_PAGESIZE, 
+  app_stack_mem = (l4_addr_t)l4dm_mem_ds_allocate(MAX_TASK_CNT*L4_PAGESIZE,
 						  0, &app_stack_ds);
   l4_touch_rw((const void*)app_stack_mem, MAX_TASK_CNT*L4_PAGESIZE);
 
@@ -289,9 +293,9 @@ main(void)
   printf("\n");
   l4dm_ds_list_all(dsm_id);
   printf("\n");
-  
+
   printf("Well done!\n");
-  
+
   return 0;
 }
 

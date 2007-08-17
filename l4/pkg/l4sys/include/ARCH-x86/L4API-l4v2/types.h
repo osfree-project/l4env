@@ -298,22 +298,6 @@ typedef union {
   l4_sched_param_struct_t sp;///< Scheduling parameter structure
 } l4_sched_param_t;
 
-
-/**
- * Quota type structure
- */
-typedef union l4_quota_desc_t
-{
-  l4_umword_t raw;
-  struct
-  {
-    unsigned long id: 12;
-    unsigned long amount: 16;
-    unsigned long cmd: 4;
-  } q;
-} l4_quota_desc_t;
-
-
 /**
  * Invalid scheduling parameter
  * \ingroup api_types_sched

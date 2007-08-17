@@ -3,12 +3,9 @@ L4DIR		= $(PKGDIR)/../..
 SYSTEMS		= x86-l4v2 arm-l4v2 amd64-l4v2
 TARGET		= loader
 
-WITH_IPC_MON	= n
-
 DEFAULT_RELOC   = 0x01300000
 DEFAULT_RELOC_arm = 0x002c0000
 PRIVATE_INCDIR	= $(PKGDIR)/server/src .
-LIB_IPCMON-y	= -lipcmon
 LIB_TASK-y	= -ltask_server.o
 LIBS		= \
 		-lgeneric_ts \
@@ -18,18 +15,13 @@ LIBS		= \
 		-levents \
 		-lparsecmdline \
 		-ll4util_root \
-		$(LIB_IPCMON-$(WITH_IPC_MON))
+		-lipcmon
 SRC_C		= main.c cfg-parse.c cfg.c pager.c app.c fprov-if.c dm-if.c \
-		  idl.c events.c elf-loader.c
+		  idl.c events.c elf-loader.c kquota.c
 SERVERIDL	= loader.idl
 OBJS		= trampoline.s.o
 
 include $(L4DIR)/mk/prog.mk
-
-DEFINES_IPCMON-y = -DIPCMON
-DEFINES		+= $(DEFINES_IPCMON-$(WITH_IPC_MON))
-
-DEFINES		+= -DUSE_LDSO
 
 # create Makeconf.local with EMULATE_MMIO = 1 to activate this
 ifeq ($(EMULATE_MMIO),1)

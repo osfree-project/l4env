@@ -36,6 +36,7 @@ my %modules =
 		    l4/pkg/generic_fprov
 		    l4/pkg/generic_ts
 		    l4/pkg/input
+		    l4/pkg/ipcmon
                     l4/pkg/l4con
 		    l4/pkg/l4env
 		    l4/pkg/l4io
@@ -172,7 +173,6 @@ my %modules =
                       l4/pkg/dsi
                       l4/pkg/dsi_example
                       l4/pkg/flips
-                      l4/pkg/ipcmon
                       l4/pkg/ipreg
                       l4/pkg/l4ide
                       l4/pkg/l4vfs

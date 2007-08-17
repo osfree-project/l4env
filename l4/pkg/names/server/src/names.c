@@ -23,11 +23,13 @@
 #include <string.h>
 
 #include <l4/util/util.h>
+#include <l4/util/bitops.h>
 #include <l4/util/getopt.h>
 #include <l4/util/l4_macros.h>
 #include <l4/sigma0/kip.h>
 
 #include <l4/log/l4log.h>
+#include <l4/log/server.h>
 
 #include <l4/rmgr/librmgr.h>
 
@@ -338,10 +340,16 @@ void
 names_dump_component(CORBA_Object _dice_corba_obj,
                      CORBA_Server_Environment *_dice_corba_env)
 {
-  int i, last = -1;
+  int i;
+  /* 
+   * We need to keep track of all the names we already found, so we don't
+   * display them twice.
+   */
+  l4_uint32_t found_bits[NAMES_MAX_ENTRIES / 8 + 1];
   l4_threadid_t t = L4_NIL_ID;
   int idx;
 
+  memset(found_bits, 0, NAMES_MAX_ENTRIES / 8 + 1);
   printf("dumping names server:\n");
 
   do {
@@ -351,10 +359,10 @@ names_dump_component(CORBA_Object _dice_corba_obj,
 	  for (i = 0; i < NAMES_MAX_ENTRIES; ++i) {
 		  /* Skip entries, if they are
 		   *   - invalid (trivial), or
-		   *   - the last found entry (this is because the first entry we will find is
-		   *     identical to L4_NIL_ID and we don't want to find it again and again.)
+		   *   - we already found this entry. This may occur if we get a
+		   *   distance of 0, because a thread registered multiple names.
 		   */
-		  if (!l4_is_invalid_id(entries[i].id) && i != last) {
+		  if (!l4_is_invalid_id(entries[i].id) && !l4util_test_bit32(i, found_bits)) {
 			  /* Ensure that task IDs have a larger weight than thread IDs 
 			   * so that e.g., the distance of 4.3 to 4.2 is smaller than 
 			   * the distance of 5.2 to 4.2 */
@@ -370,7 +378,7 @@ names_dump_component(CORBA_Object _dice_corba_obj,
 	  }
 	  if (idx >= 0) {
 		  t = entries[idx].id;
-		  last = idx;
+		  l4util_set_bit32(idx, found_bits);
 		  printf("taskid "l4util_idfmt" name %s\n",
 				 l4util_idstr(entries[idx].id), entries[idx].name);
 	  }

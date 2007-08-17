@@ -446,29 +446,41 @@ IMPLEMENT inline
 void Sys_task_new_frame::new_taskid( L4_uid const &id )
 { r[0] = id.raw(); }
 
-//////////////////////////////////////////////////////////////////////
+IMPLEMENT inline
+Mword Sys_task_new_frame::extra_args() const
+{ return r[0] & (1 << 29); }
 
+//////////////////////////////////////////////////////////////////////
 IMPLEMENTATION[caps]:
 
-IMPLEMENT inline 
-L4_uid Sys_task_new_frame::cap_handler(const Utcb* /*utcb*/) const
-{ return r[6]; }
+#include "utcb.h"
 
-IMPLEMENT inline 
+IMPLEMENT inline
+L4_uid Sys_task_new_frame::cap_handler(const Utcb* utcb) const
+{
+  if (!extra_args())
+    return L4_uid::Invalid;
+  return utcb->values[1];
+}
+
+IMPLEMENT inline
 L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* /*utcb*/) const
-{ return L4_quota_desc(r[7]); }
+{
+  if (!extra_args())
+    return L4_quota_desc(0);
+  return L4_quota_desc(utcb->values[2]);
+}
 
 //////////////////////////////////////////////////////////////////////
-
 IMPLEMENTATION [!caps]:
+
+#include "utcb.h"
 
 IMPLEMENT inline NEEDS["utcb.h"]
 L4_uid Sys_task_new_frame::cap_handler(const Utcb* /*utcb*/) const
-{
-  return L4_uid::Invalid;
-}
+{ return L4_uid::Invalid; }
 
-IMPLEMENT inline 
+IMPLEMENT inline
 L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* /*utcb*/) const
 { return L4_quota_desc(0); }
 

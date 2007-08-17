@@ -61,11 +61,12 @@ cfg_make_template(void)
   ct->fprov_id    = L4_INVALID_ID;
   ct->dsm_id      = app_dsm_id;
   ct->caplist     = NULL;
+  ct->kquota      = NULL;
 }
 
 static void
-cfg_init_task(cfg_task_t *ct, l4dm_dataspace_t ds, l4_threadid_t dsm_id, 
-	      l4_threadid_t fprov_id, const char *fname)
+cfg_init_task(cfg_task_t *ct, l4dm_dataspace_t ds, l4_threadid_t dsm_id,
+              l4_threadid_t fprov_id, const char *fname)
 {
   memset(ct, 0, sizeof(*ct));
 
@@ -80,6 +81,7 @@ cfg_init_task(cfg_task_t *ct, l4dm_dataspace_t ds, l4_threadid_t dsm_id,
   ct->dsm_id      = dsm_id;
   ct->caphandler  = L4_INVALID_ID;
   ct->caplist     = NULL;
+  ct->kquota      = NULL;
 
   if (cfg_task_template.iobitmap)
     {
@@ -472,6 +474,26 @@ cfg_task_ipc(const char *name, int type)
     return -L4_ENOMEM;
 
   caplist_add(*cfg_task_current, cap);
+
+  return 0;
+}
+
+int cfg_task_kquota(const char *name)
+{
+  if (!*cfg_task_current)
+    {
+      printf("Don't know which task the '%s' kquota belongs to.\n", name);
+      return -L4_EINVAL;
+    }
+  (*cfg_task_current)->kquota = get_kquota(name);
+  if (!(*cfg_task_current)->kquota)
+    {
+      printf("kquota '%s' is unknown.\n", name);
+      return -L4_EINVAL;
+    }
+
+  printf("Set kquota of task %s to kquota %s.\n",
+         (*cfg_task_current)->task.fname, (*cfg_task_current)->kquota->name);
 
   return 0;
 }

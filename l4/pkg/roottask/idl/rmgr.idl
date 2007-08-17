@@ -102,15 +102,17 @@ interface rmgr
    * \param   eip           instruction pointer of initial function
    * \param   pager         ID of task's pager
    * \param   caphandler    ID of task's capability fault handler
+   * \param   kquota        kernel memory quota
    * \param   sched_param   scheduling parameter
    * \retval  ntid          the acually allocated thread ID
    *
    * \return  0 on success, 1 otherwise.
    */
   long task_new([in] l4_taskid_t tid, [in] l4_umword_t mcp_or_chief,
-		[in] l4_umword_t esp, [in] l4_umword_t eip,
-		[in] l4_threadid_t pager, [in] l4_threadid_t caphandler,
-		[in] l4_umword_t sched_param, [out] l4_taskid_t *ntid);
+                [in] l4_umword_t esp, [in] l4_umword_t eip,
+                [in] l4_threadid_t pager, [in] l4_threadid_t caphandler,
+                [in] l4_quota_desc_t kquota, [in] l4_umword_t sched_param,
+                [out] l4_taskid_t *ntid);
 
   /**
    * \brief   Request riht to associate with IRQ to the caller.

@@ -91,14 +91,9 @@ static Log_event le4("timer irq raised",
 		      Log_event_timer_irq, 1, &lp8);
 
 DECLARE_PATCH (lp9, log_thread_ex_regs);
-#ifdef CONFIG_SYSCALL_ITER
 DECLARE_PATCH (lp10, log_thread_ex_regs_failed);
 static Log_event le5("thread_ex_regs",
 		      Log_event_thread_ex_regs, 2, &lp9, &lp10);
-#else
-static Log_event le5("thread_ex_regs",
-		      Log_event_thread_ex_regs, 1, &lp9);
-#endif
 
 #ifdef CONFIG_PF_UX
 DECLARE_PATCH (lp11, log_trap);

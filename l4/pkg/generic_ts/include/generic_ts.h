@@ -70,12 +70,11 @@ l4ts_allocate_task2(l4_taskid_t *taskid);
  */
 int
 l4ts_create_task(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
-		 l4_uint32_t mcp, const l4_taskid_t *pager, l4_int32_t prio,
-		 const char *resname, l4_uint32_t flags);
+                 l4_uint32_t mcp, const l4_taskid_t *pager, l4_int32_t prio,
+                 const char *resname, l4_uint32_t flags);
 
 /**
- * \brief Start a previously allocated task and setup the task's capability
- *        fault handler.
+ * \brief Start a previously allocated task, long version.
  *
  * \param taskid       ID of the previos allocated task
  * \param entry        Initial instruction pointer
@@ -83,6 +82,7 @@ l4ts_create_task(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
  * \param mcp          Maximum controlled priority (see L4-Spec)
  * \param pager        Pager of first thread
  * \param caphandler   The task's capability handler
+ * \param kquota       In-kernel quota of the task
  * \param prio         Priority of first thread
  * \param resname      Module name as specified in the RMGR (subject of
  *                     future changes)
@@ -91,8 +91,8 @@ l4ts_create_task(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
 int
 l4ts_create_task2(l4_taskid_t *taskid, l4_addr_t entry, l4_addr_t stack,
                   l4_uint32_t mcp, const l4_taskid_t *pager,
-                  const l4_taskid_t *caphandler, l4_int32_t prio,
-                  const char *resname, l4_uint32_t flags);
+                  const l4_taskid_t *caphandler, l4_quota_desc_t kquota,
+                  l4_int32_t prio, const char *resname, l4_uint32_t flags);
 
 /**
  * \brief Free a task number.

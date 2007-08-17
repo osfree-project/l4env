@@ -75,7 +75,7 @@ struct l4_utcb_ex_regs_args
 
 struct l4_utcb_task_new_args
 {
-  l4_umword_t     _res0[2];
+  l4_umword_t     _res0;
   l4_threadid_t   caphandler;
   l4_quota_desc_t quota;
   l4_threadid_t   _res1;
@@ -155,7 +155,7 @@ L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u)
   return u->exc.eip;
 }
 
-L4_INLINE unsigned long l4_utcb_exc_typeval(l4_utcb_t *u)
+L4_INLINE l4_umword_t l4_utcb_exc_typeval(l4_utcb_t *u)
 {
   return u->exc.trapno;
 }

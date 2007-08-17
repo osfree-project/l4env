@@ -91,6 +91,7 @@ typedef struct
   l4_taskid_t		owner;		/**< owner of that task. */
   l4_threadid_t         caphandler;     /**< capability fault handler */
   cfg_cap_t             *caplist;       /**< list of capabilities */
+  cfg_kquota_t          *kquota;        /**< kernel quota of this app */
 } app_t;
 
 #define HERE_TO_APP(addr, base) \

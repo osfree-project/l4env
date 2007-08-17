@@ -15,24 +15,24 @@
 #define L4_ROOT_TASKNO 4
 
 /**
- * \ingroup api_types_common 
+ * \ingroup api_types_common
  */
 #define L4_PAGESHIFT		12
 
 /**
- * \ingroup api_types_common 
+ * \ingroup api_types_common
  * \hideinitializer
  */
-#define L4_PAGESIZE 		(1U << L4_PAGESHIFT)
+#define L4_PAGESIZE		(1U << L4_PAGESHIFT)
 
 /**
- * \ingroup api_types_common 
+ * \ingroup api_types_common
  * \hideinitializer
  */
 #define L4_PAGEMASK		(~(L4_PAGESIZE - 1))
 
 /**
- * \ingroup api_types_common 
+ * \ingroup api_types_common
  * \hideinitializer
  */
 #define L4_LOG2_PAGESIZE	L4_PAGESHIFT
@@ -120,7 +120,7 @@
 #define L4_FP_OTHER_SPACES	0x00	/* Page is flushed in all other */
 					/* address spaces */
 #define L4_FP_ALL_SPACES	0x80000000U
-					/* Page is flushed in own address */ 
+					/* Page is flushed in own address */
 					/* space too */
 
 #define L4_NC_SAME_CLAN		0x00	/* destination resides within the */
@@ -130,7 +130,7 @@
 					/* invoker's clan */
 
 enum {
-  L4_TASK_NEW_IPC_MONITOR     = 1UL << 29,
+  L4_TASK_NEW_UTCB_ARGS       = 1UL << 29,
   L4_TASK_NEW_RAISE_EXCEPTION = 1UL << 30,
   L4_TASK_NEW_ALIEN           = 1UL << 31,
   L4_TASK_NEW_NR_OF_FLAGS     = 3,

@@ -35,9 +35,7 @@
 #include <l4/generic_ts/generic_ts.h>
 #include <l4/loader/loader.h>
 #include <l4/util/elf.h>
-#ifdef IPCMON
 #include <l4/ipcmon/ipcmon.h>
-#endif
 #ifdef USE_TASKLIB
 #include <l4/task/task_server.h>
 #endif
@@ -1253,13 +1251,12 @@ app_start_static(cfg_task_t *ct, app_t *app)
   return 0;
 }
 
-#ifdef IPCMON
-static int app_setup_caps(app_t *app)
+static void app_setup_caps(app_t *app)
 {
-  app_msg(app, "Setting up capabilities");
-
   if (l4_is_invalid_id(app->caphandler))
-    return 0;
+    return;
+
+  app_msg(app, "Setting up capabilities");
 
   cfg_cap_t *c = app->caplist;
   while (c)
@@ -1281,29 +1278,57 @@ static int app_setup_caps(app_t *app)
       free(h->dest); // allocated with strdup
       free(h);
     }
+}
 
-  return L4_TASK_NEW_IPC_MONITOR;
-}
-#else
-static int app_setup_caps(app_t *app)
+static l4_quota_desc_t app_setup_kquota(app_t *app)
 {
-  return 0;
+  l4_quota_desc_t kquota = L4_INVALID_KQUOTA;
+  int e;
+
+  if (!app->kquota)
+    return L4_INVALID_KQUOTA;
+
+  kquota.q.amount = app->kquota->size;
+
+  if (!app->kquota->users)
+    {
+      /* We are the first to use this quota, so we need to create a
+       * new kernel quota from loader's quota. */
+      kquota.q.id = l4_myself().id.task;
+      kquota.q.cmd = L4_KQUOTA_CMD_NEW;
+    }
+  else
+    {
+      /* This quota is already in use, so we share it. For sharing we
+       * use the first task that is in the kquota's user list. */
+      kquota.q.id = app->kquota->users->tid.id.task;
+      kquota.q.cmd = L4_KQUOTA_CMD_SHARE;
+    }
+
+  if ((e = kquota_add_user(app->kquota, app->tid)))
+    {
+      app_msg(app, "Could not add app to kquota %s.", app->kquota->name);
+      return L4_INVALID_KQUOTA;
+    }
+
+  return kquota;
 }
-#endif
 
 static int
 app_cont_static(app_t *app)
 {
   int error;
-  int create_flag = app_setup_caps(app);
+  l4_quota_desc_t kquota = app_setup_kquota(app);
+
+  app_setup_caps(app);
 
   app_msg(app, "Entry at %08lx => %08lx", app->eip, app->env->entry_2nd);
 
   /* request task creating at task server */
   if ((error = l4ts_create_task2(&app->tid, app->eip, app->esp,
-                                 app->mcp | create_flag,
+                                 app->mcp,
                                  &app_pager_id, &app->caphandler,
-                                 app->prio, app->fname, 0)))
+                                 kquota, app->prio, app->fname, 0)))
     {
       int ferror;
 
@@ -1423,7 +1448,9 @@ static int
 app_cont_interp(app_t *app)
 {
   int error;
-  int create_flag = app_setup_caps(app);
+  l4_quota_desc_t kquota = app_setup_kquota(app);
+
+  app_setup_caps(app);
 
   app_msg(app, "Starting %s at %08lx via %08lx",
 	       interp, app->env->entry_1st, app->eip);
@@ -1431,9 +1458,9 @@ app_cont_interp(app_t *app)
   l4_imb();
 
   if ((error = l4ts_create_task2(&app->tid, app->eip, app->esp,
-                                 app->mcp | create_flag,
+                                 app->mcp,
                                  &app_pager_id, &app->caphandler,
-                                 app->prio, app->fname, 0)))
+                                 kquota, app->prio, app->fname, 0)))
     {
       int ferror;
 
@@ -1524,6 +1551,9 @@ app_cleanup_intern(app_t *app)
 
   app->caphandler = L4_INVALID_ID;
   app->caplist    = NULL;
+  if (app->kquota) // If we were user of a kquota, remove us from user list.
+    kquota_del_user(app->kquota, app->tid);
+  app->kquota     = NULL;
 
   /* mark app descriptor as free */
   app->tid = L4_INVALID_ID;
@@ -1601,6 +1631,7 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
   app->owner      = owner;
   app->caphandler = ct->caphandler;
   app->caplist    = ct->caplist;
+  app->kquota     = ct->kquota;
 
   if (ct->flags & CFG_F_INTERPRETER)
     {

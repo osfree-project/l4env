@@ -15,6 +15,7 @@
 #include <l4/sys/types.h>
 #include <l4/dm_generic/types.h>
 #include <l4/env/env.h>
+#include "kquota.h"
 
 #define CFG_MAX_MODULE		16	/* max # of modules per task */
 #define CFG_MAX_MEM		4	/* max # of mem regions per task */
@@ -66,6 +67,7 @@ typedef struct
 					        sections and modules */
   l4_threadid_t    caphandler;             /**< capability fault handler */
   cfg_cap_t        *caplist;               /**< list of capabilities */
+  cfg_kquota_t     *kquota;                /**< kernel memory quota */
   l4_addr_t        image;                  /**< attached binary image */
   l4_size_t        sz_image;               /**< size of binary image */
   l4dm_dataspace_t ds_image;               /**< dataspace of program image */
@@ -108,6 +110,7 @@ int  cfg_task_flag(unsigned int flag);
 int  cfg_task_fprov(const char *fname);
 int  cfg_task_dsm(const char *fname);
 int  cfg_task_caphandler(const char *fname);
+int  cfg_task_kquota(const char *name);
 int  cfg_task_ipc(const char *name, int type);
 
 int cfg_lookup_name(const char *name, l4_threadid_t *id);

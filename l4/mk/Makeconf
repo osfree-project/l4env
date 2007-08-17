@@ -364,10 +364,10 @@ $(OBJ_DIR)/Makefile: $(L4DIR)/mk/Makeconf
 	$(VERBOSE)echo '# automatically created -- modifications will be lost' > $@
 	$(VERBOSE)echo 'SRC := $(SRC_DIR)'                                    >> $@
 	$(VERBOSE)echo 'OBJ := $(OBJ_BASE)'                                   >> $@
-	$(VERBOSE)echo '.PHONY: x $$(MAKECMDGOALGS)'                          >> $@
+	$(VERBOSE)echo '.PHONY: x $$(MAKECMDGOALS)'                           >> $@
 	$(VERBOSE)echo 'x:'                                                   >> $@
 	$(VERBOSE)echo '	$$(MAKE) -C $$(SRC) O=$$(OBJ)'                >> $@
-	$(VERBOSE)echo '$$(MAKECMDGOALGS):'                                   >> $@
+	$(VERBOSE)echo '$$(MAKECMDGOALS):'                                    >> $@
 	$(VERBOSE)echo '	$$(MAKE) -C $$(SRC) O=$$(OBJ) $$@'            >> $@
 
 else

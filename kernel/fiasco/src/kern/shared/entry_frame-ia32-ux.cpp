@@ -257,14 +257,14 @@ L4_uid Sys_ex_regs_frame::cap_handler(const Utcb* utcb) const
   if (!utcb_args())
     return L4_uid::Invalid;
 
-  return L4_uid(utcb->values[2]);
+  return L4_uid(utcb->values[1]);
 }
 
 IMPLEMENT inline NEEDS["utcb.h", Sys_ex_regs_frame::utcb_args]
 void Sys_ex_regs_frame::old_cap_handler(L4_uid const &id, Utcb* utcb)
 {
   if (utcb_args())
-    utcb->values[2] = id.raw();
+    utcb->values[1] = id.raw();
 }
 
 
@@ -416,7 +416,6 @@ Mword Sys_task_new_frame::extra_args() const
 { return _eax & (1 << 29); }
 
 //////////////////////////////////////////////////////////////////////
-
 IMPLEMENTATION [(ia32 | ux) & caps]:
 
 #include "utcb.h"
@@ -426,41 +425,25 @@ L4_uid Sys_task_new_frame::cap_handler(const Utcb* utcb) const
 {
   if (! extra_args())
     return L4_uid::Invalid;
-
-  return utcb->values[2];
+  return utcb->values[1];
 }
 
-
+IMPLEMENT inline NEEDS["utcb.h"]
+L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* utcb) const
+{
+  if (! extra_args())
+    return L4_quota_desc(0);
+  return L4_quota_desc(utcb->values[2]);
+}
 
 //////////////////////////////////////////////////////////////////////
-
-IMPLEMENTATION [(ia32|ux) & !caps]:
+IMPLEMENTATION [(ia32 || ux) && !caps]:
 
 #include "utcb.h"
-
-// If UTCBs are not available, changing or requesting the
-// task-capability fault handler is not supported on IA32.
 
 IMPLEMENT inline NEEDS["utcb.h"]
 L4_uid Sys_task_new_frame::cap_handler(const Utcb* /*utcb*/) const
 { return L4_uid::Invalid; }
-
-//////////////////////////////////////////////////////////////////////
-IMPLEMENTATION [(ia32 || ux) && caps]:
-
-#include "utcb.h"
-
-IMPLEMENT inline NEEDS["utcb.h"]
-L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* utcb) const
-{ 
-  if (! extra_args())
-    return L4_quota_desc(0);
-
-  return L4_quota_desc(utcb->values[4]); 
-}
-
-//////////////////////////////////////////////////////////////////////
-IMPLEMENTATION [(ia32|ux) && !caps]:
 
 IMPLEMENT inline
 L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb*) const

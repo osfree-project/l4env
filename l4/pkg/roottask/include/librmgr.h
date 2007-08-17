@@ -204,14 +204,16 @@ l4_taskid_t rmgr_task_new(l4_taskid_t dest, l4_umword_t mcp_or_new_chief,
  * \param   eip               new instruction pointer
  * \param   pager             pager of the new task
  * \param   caphandler        the capability fault handler
+ * \param   kquota            kernel quota
  *
  * \return  a valid task ID on success, L4_NIL_ID otherwise
  */
-l4_taskid_t rmgr_task_new_with_cap(l4_taskid_t dest,
-                                   l4_umword_t mcp_or_new_chief,
-                                   l4_umword_t esp, l4_umword_t eip,
-                                   l4_threadid_t pager,
-                                   l4_threadid_t caphandler);
+l4_taskid_t rmgr_task_new_long(l4_taskid_t dest,
+                               l4_umword_t mcp_or_new_chief,
+                               l4_umword_t esp, l4_umword_t eip,
+                               l4_threadid_t pager,
+                               l4_threadid_t caphandler,
+                               l4_quota_desc_t kquota);
 
 /**
  * \brief   Create an L4 task with capability handler

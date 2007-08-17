@@ -206,6 +206,7 @@ rmgr_task_new_component(CORBA_Object _dice_corba_obj,
                         l4_umword_t ip,
                         const l4_threadid_t *pager,
                         const l4_threadid_t *caphandler,
+                        const l4_quota_desc_t *kquota,
                         l4_umword_t sched_param,
                         l4_taskid_t *ntid,
                         CORBA_Server_Environment *_dice_corba_env)
@@ -239,17 +240,7 @@ rmgr_task_new_component(CORBA_Object _dice_corba_obj,
            l4util_idstr(n), (void *)sp, (void *)ip,
            l4util_idstr(*pager), mcp);
 
-  if (l4_is_invalid_id(*caphandler))
-    n = l4_task_new(n, mcp | flags, sp, ip, *pager);
-  else
-    {
-#ifdef ARCH_x86
-      n = l4_task_new_cap(n, mcp | flags, sp, ip, *pager, *caphandler);
-#else
-      printf("roottask: ipcmon not implemented\n");
-      n = L4_NIL_ID;
-#endif
-    }
+  n = l4_task_new_long(n, mcp | flags, sp, ip, *pager, *caphandler, *kquota);
 
   if (l4_is_nil_id(n))
     {

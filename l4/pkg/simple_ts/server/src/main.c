@@ -32,11 +32,7 @@
 /* local includes */
 #include "timeout_queue.h"
 
-#ifdef L4API_l4x0
-#define TASK_CNT_MAX	451
-#else
 #define TASK_CNT_MAX	901
-#endif
 #define TASK_CNT_DFL	64
 #define TASK_FIRST	10
 
@@ -472,22 +468,28 @@ l4_ts_taskno_to_taskid_component (CORBA_Object _dice_corba_obj,
  * \param stack		initial stack pointer
  * \param mcp_or_chief	maximum controlled priority
  * \param pager		initial pager
+ * \param caphandler    Capability handler of the task
+ * \param kquota        Kernel quota of the task
+ * \param prio          Prio of the task
+ * \param resname       Name
+ * \param flags         Flags
  * \retval taskid	Task ID of new task
  * \return		0 on success
  *			-L4_ENOTASK if no task is available
  */
 long
-l4_ts_create_component (CORBA_Object client,
-                        l4_taskid_t *taskid,
-                        l4_addr_t entry,
-                        l4_addr_t stack,
-                        unsigned long mcp,
-                        const l4_taskid_t *pager,
-                        const l4_taskid_t *caphandler,
-                        long prio,
-                        const char* resname,
-                        unsigned long flags,
-                        CORBA_Server_Environment *_dice_corba_env)
+l4_ts_create_component(CORBA_Object client,
+                       l4_taskid_t *taskid,
+                       l4_addr_t entry,
+                       l4_addr_t stack,
+                       unsigned long mcp,
+                       const l4_taskid_t *pager,
+                       const l4_taskid_t *caphandler,
+                       const l4_quota_desc_t *kquota,
+                       long prio,
+                       const char* resname,
+                       unsigned long flags,
+                       CORBA_Server_Environment *_dice_corba_env)
 {
   l4_threadid_t tid = *taskid;
 
@@ -511,7 +513,8 @@ l4_ts_create_component (CORBA_Object client,
     }
 
   /* create an active L4 task */
-  tid = rmgr_task_new_with_cap(tid, mcp, stack, entry, *pager, *caphandler);
+  tid = rmgr_task_new_long(tid, mcp, stack, entry, *pager,
+                           *caphandler, *kquota);
   if (l4_is_nil_id(tid) || l4_is_invalid_id(tid))
     return -L4_EINVAL;
 

@@ -37,6 +37,7 @@ struct screen_methods {
 	void (*remove)      (SCREEN *scr, WIDGET *win);
 	void (*top)         (SCREEN *scr, WIDGET *win);
 	void (*back)        (SCREEN *scr, WIDGET *win);
+	void (*set_title)   (SCREEN *scr, WIDGET *win, char *title);
 	void (*reorder)     (SCREEN *scr);
 	void (*set_act_win) (SCREEN *scr, WIDGET *win);
 };

@@ -55,7 +55,7 @@ int yyparse(void);
 %token <string>  TASK TEMPLATE MODULE BINPATH LIBPATH MODPATH
 %token <string>  VERBOSE MEMDUMP SLEEP MEMORY IOPORT
 %token <string>  IN IS AT MB KB MS S MIN H POO POOL NOSUPERPAGES
-%token <string>  FIASCO_SYMBOLS FIASCO_LINES
+%token <string>  FIASCO_SYMBOLS FIASCO_LINES KERNEL_QUOTA USE_QUOTA
 %token <string>  DIRECT_MAPPED CONTIGUOUS DMAABLE ALLOW_VGA ALLOW_BIOS
 %token <string>  PRIORITY MCP ALLOW_CLI FILE_PROVIDER DS_MANAGER CAP_HANDLER
 %token <string>  NO_SIGMA0 SHOW_APP_AREAS ALL_SECTS_WRITABLE
@@ -135,6 +135,14 @@ global_setting	: VERBOSE number
 			  if (cfg_verbose>1)
 			    printf("module path <%s>\n", cfg_modpath);
 			  free($2);
+			}
+		| KERNEL_QUOTA string number
+			{
+			  if (add_kquota($2, $3))
+			    {
+			      yyerror("Cannot add quota.");
+			      YYABORT;
+			    }
 			}
 		;
 
@@ -232,6 +240,14 @@ task_constraint	: task_modspec
 			  if (cfg_task_flag($1))
 			    {
 			      yyerror("Error setting task flag");
+			      YYABORT;
+			    }
+			}
+		| USE_QUOTA string
+			{
+			  if (cfg_task_kquota($2))
+			    {
+			      yyerror("Error setting kernel memory quota.");
 			      YYABORT;
 			    }
 			}

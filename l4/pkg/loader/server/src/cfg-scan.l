@@ -76,6 +76,8 @@ ds_manager		{ count(); return DS_MANAGER; }
 cap_handler             { count(); return CAP_HANDLER; }
 allow_ipc               { count(); return ALLOW_IPC; }
 deny_ipc                { count(); return DENY_IPC; }
+kernel_quota            { count(); return KERNEL_QUOTA; }
+use_quota               { count(); return USE_QUOTA; }
 mcp			{ count(); return MCP; }
 allow_cli		{ count(); return ALLOW_CLI; }
 show_app_areas		{ count(); return SHOW_APP_AREAS; }

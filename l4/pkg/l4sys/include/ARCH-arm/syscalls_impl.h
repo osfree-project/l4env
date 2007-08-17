@@ -2,6 +2,7 @@
 #define L4_SYSCALLS_IMPL_H
 
 #include <l4/sys/compiler.h>
+#include <l4/sys/utcb.h>
 
 #ifndef L4_SYSCALL_MAGIC_OFFSET
 #  define L4_SYSCALL_MAGIC_OFFSET	8
@@ -202,82 +203,19 @@ __do_l4_thread_ex_regs(l4_umword_t val0,
   if(old_cpsr) *old_cpsr = _flags;
 }
 
-L4_INLINE void
-l4_thread_ex_regs(l4_threadid_t destination,
-                  l4_umword_t ip,
-                  l4_umword_t sp,
-                  l4_threadid_t *preempter,
-                  l4_threadid_t *pager,
-                  l4_umword_t *old_cpsr,
-                  l4_umword_t *old_ip,
-                  l4_umword_t *old_sp)
-{
-  __do_l4_thread_ex_regs(destination.id.lthread,
-                         ip, sp, preempter, pager,
-                         old_cpsr, old_ip, old_sp);
-}
-
-L4_INLINE void
-l4_thread_ex_regs_flags(l4_threadid_t destination,
-                        l4_umword_t ip,
-                        l4_umword_t sp,
-                        l4_threadid_t *preempter,
-                        l4_threadid_t *pager,
-                        l4_umword_t *old_cpsr,
-                        l4_umword_t *old_ip,
-                        l4_umword_t *old_sp,
-                        unsigned long flags)
-{
-  __do_l4_thread_ex_regs(destination.id.lthread | flags,
-                         ip, sp, preempter, pager,
-                         old_cpsr, old_ip, old_sp);
-}
-
-L4_INLINE void
-l4_inter_task_ex_regs(l4_threadid_t destination,
-                      l4_umword_t ip,
-                      l4_umword_t sp,
-                      l4_threadid_t *preempter,
-                      l4_threadid_t *pager,
-                      l4_umword_t *old_cpsr,
-                      l4_umword_t *old_ip,
-                      l4_umword_t *old_sp,
-                      unsigned long flags)
-{
-  __do_l4_thread_ex_regs(destination.id.lthread
-                          | (destination.id.task << 7) | flags,
-                         ip, sp, preempter, pager,
-                         old_cpsr, old_ip, old_sp);
-}
-
-L4_INLINE l4_threadid_t
-l4_thread_ex_regs_pager(l4_threadid_t destination)
-{
-  l4_umword_t dummy;
-  l4_threadid_t preempter = L4_INVALID_ID;
-  l4_threadid_t pager     = L4_INVALID_ID;
-
-  l4_thread_ex_regs_flags(destination, (l4_umword_t)-1, (l4_umword_t)-1,
-                          &preempter, &pager, &dummy, &dummy, &dummy,
-                          L4_THREAD_EX_REGS_NO_CANCEL);
-  return pager;
-}
-
-
 L4_INLINE l4_taskid_t
-l4_task_new(l4_threadid_t dest,
-            l4_umword_t mcp,
-            l4_umword_t usp,
-            l4_umword_t uip,
-            l4_threadid_t pager)
+__do_l4_task_new(l4_threadid_t dest,
+                 l4_umword_t mcp_or_new_chief_and_flags,
+                 l4_umword_t usp,
+                 l4_umword_t uip,
+                 l4_threadid_t pager)
 {
   register l4_umword_t _dest  asm("r0") = dest.raw;
-  register l4_umword_t _mcp   asm("r1") = mcp;
+  register l4_umword_t _mcp   asm("r1") = mcp_or_new_chief_and_flags;
   register l4_umword_t _pager asm("r2") = pager.raw;
   register l4_umword_t _uip   asm("r3") = uip;
   register l4_umword_t _usp   asm("r4") = usp;
-  register l4_umword_t _cap   asm("r6") = ~0UL; // invalid id
-  register l4_umword_t _quota asm("r7") = 0;
+
   __asm__ __volatile__
     ("@ l4_task_new()   \n\t"
      PIC_SAVE_ASM
@@ -291,24 +229,19 @@ l4_task_new(l4_threadid_t dest,
      "=r"(_mcp),
      "=r"(_pager),
      "=r"(_uip),
-     "=r"(_usp),
-     "=r"(_cap),
-     "=r"(_quota)
+     "=r"(_usp)
      :
      [syscall] "i" (L4_SYSCALL_TASK_NEW),
      "0"(_dest),
      "1"(_mcp),
      "2"(_pager),
      "3"(_uip),
-     "4"(_usp),
-     "5"(_cap),
-     "6"(_quota)
+     "4"(_usp)
      :
-     "r5", "r8", "r9" PIC_CLOBBER,
+     "r5", "r6", "r7", "r8", "r9" PIC_CLOBBER,
      "r12", "r14");
 
   return (l4_taskid_t){raw:_dest};
-
 }
 
 L4_INLINE l4_cpu_time_t

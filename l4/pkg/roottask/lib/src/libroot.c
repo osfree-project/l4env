@@ -299,14 +299,15 @@ rmgr_set_task_id(const char *modname, l4_threadid_t tid)
  */
 l4_taskid_t
 rmgr_task_new(l4_taskid_t tid, l4_umword_t mcp_or_chief,
-	      l4_umword_t esp, l4_umword_t eip, l4_threadid_t pager)
+              l4_umword_t esp, l4_umword_t eip, l4_threadid_t pager)
 {
   DICE_DECLARE_ENV(env);
   l4_threadid_t ntid = L4_NIL_ID;
   l4_threadid_t inv = L4_INVALID_ID;
+  l4_quota_desc_t q = L4_INVALID_KQUOTA;
 
   if (rmgr_task_new_call(&rmgr_id, &tid, mcp_or_chief, esp, eip,
-                         &pager, &inv, -1, &ntid, &env))
+                         &pager, &inv, &q, -1, &ntid, &env))
     return L4_NIL_ID;
 
   return ntid;
@@ -317,15 +318,16 @@ rmgr_task_new(l4_taskid_t tid, l4_umword_t mcp_or_chief,
  * \return a valid task ID on success, L4_NIL_ID otherwise
  */
 l4_taskid_t
-rmgr_task_new_with_cap(l4_taskid_t tid, l4_umword_t mcp_or_chief,
-                       l4_umword_t esp, l4_umword_t eip,
-                       l4_threadid_t pager, l4_threadid_t caphandler)
+rmgr_task_new_long(l4_taskid_t tid, l4_umword_t mcp_or_chief,
+                   l4_umword_t esp, l4_umword_t eip,
+                   l4_threadid_t pager, l4_threadid_t caphandler,
+                   l4_quota_desc_t kquota)
 {
   DICE_DECLARE_ENV(env);
   l4_threadid_t ntid = L4_NIL_ID;
 
   if (rmgr_task_new_call(&rmgr_id, &tid, mcp_or_chief, esp, eip,
-                         &pager, &caphandler, -1, &ntid, &env))
+                         &pager, &caphandler, &kquota, -1, &ntid, &env))
     return L4_NIL_ID;
 
   return ntid;
@@ -341,11 +343,13 @@ rmgr_task_new_with_prio(l4_taskid_t tid, l4_umword_t mcp_or_chief,
 			l4_sched_param_t sched_param)
 {
   DICE_DECLARE_ENV(env);
-  l4_threadid_t ntid = L4_NIL_ID;;
+  l4_threadid_t ntid = L4_NIL_ID;
   l4_threadid_t inv = L4_INVALID_ID;
+  l4_quota_desc_t q = L4_INVALID_KQUOTA;
 
   if (rmgr_task_new_call(&rmgr_id, &tid, mcp_or_chief, esp, eip,
-                         &pager, &inv, sched_param.sched_param, &ntid, &env))
+                         &pager, &inv, &q, sched_param.sched_param, &ntid,
+                         &env))
     return L4_NIL_ID;
 
   return ntid;

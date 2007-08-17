@@ -83,17 +83,6 @@ typedef struct {
   l4_umword_t low, high;
 } l4_low_high_t;
 
-typedef union l4_quota_desc_t
-{
-  l4_umword_t raw;
-  struct
-  {
-    unsigned long id: 12;
-    unsigned long amount: 16;
-    unsigned long cmd: 4;
-  } q;
-} l4_quota_desc_t;
-
 /*
  * Some useful operations and test functions for id's and types
  */

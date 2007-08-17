@@ -180,7 +180,7 @@ l4_thread_schedule(l4_threadid_t dest,
 }
 
 /*
- * L4 task new
+ * L4 task new, implementation
  */
 L4_INLINE l4_taskid_t
 __do_l4_task_new(l4_taskid_t destination,
@@ -214,37 +214,6 @@ __do_l4_task_new(l4_taskid_t destination,
 	  "edi"
 	 );
   return new_task;
-}
-
-/*
- * L4 task new
- */
-L4_INLINE l4_taskid_t
-l4_task_new(l4_taskid_t destination,
-	    l4_umword_t mcp_or_new_chief_and_flags,
-	    l4_umword_t esp,
-	    l4_umword_t eip,
-	    l4_threadid_t pager)
-{
-  return __do_l4_task_new(destination, mcp_or_new_chief_and_flags, esp, eip, pager);
-}
-
-/*
- * L4 task new with cap
- */
-L4_INLINE l4_taskid_t
-l4_task_new_cap(l4_taskid_t destination,
-	        l4_umword_t mcp_or_new_chief_and_flags,
-	        l4_umword_t esp,
-	        l4_umword_t eip,
-	        l4_threadid_t pager,
-	        l4_threadid_t cap_handler)
-{
-  l4_utcb_get()->task_new.caphandler = cap_handler;
-  l4_utcb_get()->task_new.quota.raw = 0;
-  return __do_l4_task_new(destination,
-                          mcp_or_new_chief_and_flags | L4_TASK_NEW_IPC_MONITOR,
-                          esp, eip, pager);
 }
 
 L4_INLINE int

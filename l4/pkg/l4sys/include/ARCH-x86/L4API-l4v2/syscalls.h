@@ -193,18 +193,30 @@ l4_thread_ex_regs_flags(l4_threadid_t destination,
                         l4_umword_t *old_esp,
 		        unsigned long flags);
 
+/**
+ * Flags for l4_thread_ex_regs
+ * \ingroup api_calls_other
+ */
 enum {
-  /* Additional arguments are delivered in the UTCB */
-  L4_THREAD_EX_REGS_UTCB_ARGS       = 1 << 27,
-  /* The target thread will raise an exception immediately just before
+  /** The target thread will raise an exception immediately just before
    * returning to userland. */
   L4_THREAD_EX_REGS_RAISE_EXCEPTION = 1 << 28,
-  /* The target thread is handled as alien, that is every L4 syscall
+  /** The target thread is handled as alien, that is every L4 syscall
    * will generate an exception IPC. */
   L4_THREAD_EX_REGS_ALIEN           = 1 << 29,
-  /* Don't cancel ongoing IPC. */
+  /** Don't cancel ongoing IPC. */
   L4_THREAD_EX_REGS_NO_CANCEL       = 1 << 30,
-  /* Reserved for backward compatibility with older L4 versions. */
+};
+
+/**
+ * Internal flags for l4_thread_ex_regs
+ * \internal
+ * \ingroup api_calls_other
+ */
+enum {
+  /** Additional arguments are delivered in the UTCB */
+  L4_THREAD_EX_REGS_UTCB_ARGS       = 1 << 27,
+  /** Reserved for backward compatibility with older L4 versions. */
   L4_THREAD_EX_REGS_VM86            = 1 << 31,
 };
 
@@ -364,13 +376,6 @@ l4_thread_schedule(l4_threadid_t dest,
  *                       Additionally, the following flags may be bitwise
  *                       or'ed with this parameter when starting an active
  *                       task:
- *                       - \c #L4_TASK_NEW_IPC_MONITOR: Start the task in
- *                         monitored mode. The task is only allowed to
- *                         communicate with its creator and itself (+NIL).
- *                         Every other IPC will raise a capability fault
- *                         that is sent to a specified capability fault
- *                         handler. The fault handler can be set in UTCB
- *                         word 3.
  *                       - \c #L4_TASK_NEW_RAISE_EXCEPTION: Raise an
  *                         exception in thread 0 before executing any user
  *                         code. The exception will be sent to the task's
@@ -432,28 +437,46 @@ l4_task_new(l4_taskid_t destination,
  * \param esp            See l4_task_new description.
  * \param eip            See l4_task_new description.
  * \param pager          See l4_task_new description.
- * \param cap_handler    Set the capability fault handler for this task.
- *                       effect if the task is started with the \c
- *                       #L4_TASK_NEW_IPC_MONITOR flag set.
+ * \param cap_handler    Set the capability fault handler for this task
+ *                       and starts the task in monitored mode. The task
+ *                       is only allowed to communicate with its creator
+ *                       and itself (+NIL). Every other IPC will raise a
+ *                       capability fault that is sent to the cap_handler
+ *                       thread.
+ * \see l4_task_new
  */
 
 L4_INLINE l4_taskid_t
-l4_task_new_cap(l4_taskid_t destination,
-	        l4_umword_t mcp_or_new_chief_and_flags,
-	        l4_umword_t esp,
-	        l4_umword_t eip,
-	        l4_threadid_t pager,
-	        l4_threadid_t cap_handler);
+l4_task_new_long(l4_taskid_t destination,
+	         l4_umword_t mcp_or_new_chief_and_flags,
+	         l4_umword_t esp,
+	         l4_umword_t eip,
+	         l4_threadid_t pager,
+	         l4_threadid_t cap_handler,
+	         l4_quota_desc_t kquota);
 
+/**
+ * Flags for l4_task_new
+ * \ingroup api_calls_other
+ */
 enum {
-  L4_TASK_NEW_IPC_MONITOR     = 1 << 29,    /**< Start task in IPC monitor mode */
   L4_TASK_NEW_RAISE_EXCEPTION = 1 << 30,    /**< Raise exception upon start of thread 0 */
   L4_TASK_NEW_ALIEN           = 1 << 31,    /**< Start thread 0 in alien mode */
+};
 
-  /* Number of flags */
+/**
+ * Internal flags for l4_task_new
+ * \internal
+ * \ingroup api_calls_other
+ */
+enum {
+  /** Additional arguments in UTCB */
+  L4_TASK_NEW_UTCB_ARGS       = 1 << 29,
+
+  /** Number of flags */
   L4_TASK_NEW_NR_OF_FLAGS     = 3,
 
-  /* Mask of all flags */
+  /** Mask of all flags */
   L4_TASK_NEW_FLAGS_MASK      = ((1 << L4_TASK_NEW_NR_OF_FLAGS) - 1)
                                 << (32 - L4_TASK_NEW_NR_OF_FLAGS),
 };
@@ -519,7 +542,7 @@ l4_myself_noprof(void)
 /* ================ lthread_ex_regs variants =================== */
 
 /*
- * L4 lthread_ex_regs without IPC canceling
+ * L4 lthread_ex_regs
  */
 L4_INLINE void
 l4_thread_ex_regs(l4_threadid_t destination,
@@ -612,6 +635,39 @@ l4_thread_ex_regs_pager(l4_threadid_t destination)
                           &preempter, &pager, &dummy, &dummy, &dummy,
                           L4_THREAD_EX_REGS_NO_CANCEL);
   return pager;
+}
+
+/* ================ l4_task_new variants =================== */
+
+
+L4_INLINE l4_taskid_t
+l4_task_new(l4_taskid_t destination,
+	    l4_umword_t mcp_or_new_chief_and_flags,
+	    l4_umword_t esp,
+	    l4_umword_t eip,
+	    l4_threadid_t pager)
+{
+  return __do_l4_task_new(destination, mcp_or_new_chief_and_flags,
+                          esp, eip, pager);
+}
+
+/*
+ * L4 task new with cap
+ */
+L4_INLINE l4_taskid_t
+l4_task_new_long(l4_taskid_t destination,
+	         l4_umword_t mcp_or_new_chief_and_flags,
+	         l4_umword_t esp,
+	         l4_umword_t eip,
+	         l4_threadid_t pager,
+	         l4_threadid_t cap_handler,
+	         l4_quota_desc_t kquota)
+{
+  l4_utcb_get()->task_new.caphandler = cap_handler;
+  l4_utcb_get()->task_new.quota = kquota;
+  return __do_l4_task_new(destination,
+                          mcp_or_new_chief_and_flags | L4_TASK_NEW_UTCB_ARGS,
+                          esp, eip, pager);
 }
 
 

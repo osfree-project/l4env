@@ -622,6 +622,16 @@ static void scr_back(SCREEN *scr, WIDGET *win) {
 }
 
 
+/*** REGISTER WINDOW TITLE ***/
+static void scr_set_title(SCREEN *scr, WIDGET *win, char *title) {
+
+	if (!win || (win->wd->parent != scr)) return;
+
+	/* notify view manager */
+	viewman->set_title(win->wd->context, title);
+}
+
+
 /*** PULL ALL 'STAYTOP'-WINDOWS TO THE BEGIN OF THE WINDOW STACK ***/
 static void scr_reorder(SCREEN *scr) {
 	WINDOW *cw = (WINDOW *)scr->sd->first_win, *stw;
@@ -663,6 +673,7 @@ static struct screen_methods scr_methods = {
 	scr_remove,
 	scr_top,
 	scr_back,
+	scr_set_title,
 	scr_reorder,
 	scr_set_act_win,
 };
