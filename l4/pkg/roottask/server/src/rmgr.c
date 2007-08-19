@@ -240,7 +240,8 @@ rmgr_task_new_component(CORBA_Object _dice_corba_obj,
            l4util_idstr(n), (void *)sp, (void *)ip,
            l4util_idstr(*pager), mcp);
 
-  n = l4_task_new_long(n, mcp | flags, sp, ip, *pager, *caphandler, *kquota);
+  n = l4_task_new_long(n, mcp | flags, sp, ip, *pager, *caphandler, *kquota,
+                       l4_utcb_get());
 
   if (l4_is_nil_id(n))
     {

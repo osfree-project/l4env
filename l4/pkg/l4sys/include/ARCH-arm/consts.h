@@ -129,19 +129,4 @@
 #define L4_NC_OUTER_CLAN	0x04	/* destination is outside the */
 					/* invoker's clan */
 
-enum {
-  L4_TASK_NEW_UTCB_ARGS       = 1UL << 29,
-  L4_TASK_NEW_RAISE_EXCEPTION = 1UL << 30,
-  L4_TASK_NEW_ALIEN           = 1UL << 31,
-  L4_TASK_NEW_NR_OF_FLAGS     = 3,
-  L4_TASK_NEW_FLAGS_MASK      = ((1 << L4_TASK_NEW_NR_OF_FLAGS) - 1)
-                                  << (32 - L4_TASK_NEW_NR_OF_FLAGS),
-};
-
-enum {
-  L4_THREAD_EX_REGS_RAISE_EXCEPTION = 1UL << 28,
-  L4_THREAD_EX_REGS_ALIEN           = 1UL << 29,
-  L4_THREAD_EX_REGS_NO_CANCEL       = 1UL << 30,
-};
-
 #endif /* !_L4_SYS_CONSTS_H */

@@ -84,14 +84,14 @@ l4_nchief(l4_threadid_t destination,
  * L4 lthread_ex_regs
  */
 L4_INLINE void
-__do_l4_thread_ex_regs(l4_umword_t val0,
-                       l4_umword_t eip,
-                       l4_umword_t esp,
-                       l4_threadid_t *preempter,
-                       l4_threadid_t *pager,
-                       l4_umword_t *old_eflags,
-                       l4_umword_t *old_eip,
-                       l4_umword_t *old_esp)
+l4_thread_ex_regs_sc(l4_umword_t val0,
+                     l4_umword_t eip,
+                     l4_umword_t esp,
+                     l4_threadid_t *preempter,
+                     l4_threadid_t *pager,
+                     l4_umword_t *old_eflags,
+                     l4_umword_t *old_eip,
+                     l4_umword_t *old_esp)
 {
   __asm__ __volatile__(
 	  "pushl %%ebp		\n\t"	/* save ebp, no memory  references
@@ -183,11 +183,11 @@ l4_thread_schedule(l4_threadid_t dest,
  * L4 task new, implementation
  */
 L4_INLINE l4_taskid_t
-__do_l4_task_new(l4_taskid_t destination,
-	         l4_umword_t mcp_or_new_chief_and_flags,
-	         l4_umword_t esp,
-	         l4_umword_t eip,
-	         l4_threadid_t pager)
+l4_task_new_sc(l4_taskid_t destination,
+	       l4_umword_t mcp_or_new_chief_and_flags,
+	       l4_umword_t esp,
+	       l4_umword_t eip,
+	       l4_threadid_t pager)
 {
   unsigned dummy1, dummy2, dummy3, dummy4;
   l4_taskid_t new_task;

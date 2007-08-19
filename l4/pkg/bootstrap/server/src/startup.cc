@@ -349,7 +349,7 @@ add_boot_modules_region(l4util_mb_info_t *mbi)
  */
 static void
 add_elf_regions(l4util_mb_info_t *mbi, l4_umword_t module,
-    Region::Type type)
+                Region::Type type)
 {
   exec_task_t exec_task;
   l4_addr_t entry;
@@ -370,6 +370,9 @@ add_elf_regions(l4util_mb_info_t *mbi, l4_umword_t module,
 
   r = exec_load_elf(l4_exec_add_region, &exec_task,
                     &error_msg, &entry);
+
+  if (r)
+    panic("\nThis is an invalid binary, fix it.");
 }
 
 

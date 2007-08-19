@@ -80,14 +80,14 @@ l4_nchief(l4_threadid_t destination,
  * L4 lthread_ex_regs
  */
 L4_INLINE void
-__do_l4_thread_ex_regs(l4_umword_t val0,
-                       l4_umword_t rip,
-		       l4_umword_t rsp,
-		       l4_threadid_t *preempter,
-		       l4_threadid_t *pager,
-		       l4_umword_t *old_rflags,
-		       l4_umword_t *old_rip,
-		       l4_umword_t *old_rsp)
+l4_thread_ex_regs_sc(l4_umword_t val0,
+                     l4_umword_t rip,
+		     l4_umword_t rsp,
+		     l4_threadid_t *preempter,
+		     l4_threadid_t *pager,
+		     l4_umword_t *old_rflags,
+		     l4_umword_t *old_rip,
+		     l4_umword_t *old_rsp)
 {
   register l4_umword_t r8 asm("r8") = preempter->raw;
   l4_umword_t dummy;
@@ -178,11 +178,11 @@ l4_thread_schedule(l4_threadid_t dest,
  * L4 task new
  */
 L4_INLINE l4_taskid_t
-__do_l4_task_new(l4_taskid_t destination,
-                 l4_umword_t mcp_or_new_chief_and_flags,
-                 l4_umword_t rsp,
-                 l4_umword_t rip,
-                 l4_threadid_t pager)
+l4_task_new_sc(l4_taskid_t destination,
+               l4_umword_t mcp_or_new_chief_and_flags,
+               l4_umword_t rsp,
+               l4_umword_t rip,
+               l4_threadid_t pager)
 {
   l4_umword_t dummy2, dummy3, dummy4, dummy5;
   l4_taskid_t new_task;

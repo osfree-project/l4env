@@ -154,14 +154,14 @@ l4_thread_switch(l4_threadid_t dest)
 }
 
 L4_INLINE void
-__do_l4_thread_ex_regs(l4_umword_t val0,
-                       l4_umword_t ip,
-                       l4_umword_t sp,
-                       l4_threadid_t *preempter,
-                       l4_threadid_t *pager,
-                       l4_umword_t *old_cpsr,
-                       l4_umword_t *old_ip,
-                       l4_umword_t *old_sp)
+l4_thread_ex_regs_sc(l4_umword_t val0,
+                     l4_umword_t ip,
+                     l4_umword_t sp,
+                     l4_threadid_t *preempter,
+                     l4_threadid_t *pager,
+                     l4_umword_t *old_cpsr,
+                     l4_umword_t *old_ip,
+                     l4_umword_t *old_sp)
 {
   register l4_umword_t _dst   asm("r0") = val0;
   register l4_umword_t _ip    asm("r1") = ip;
@@ -204,11 +204,11 @@ __do_l4_thread_ex_regs(l4_umword_t val0,
 }
 
 L4_INLINE l4_taskid_t
-__do_l4_task_new(l4_threadid_t dest,
-                 l4_umword_t mcp_or_new_chief_and_flags,
-                 l4_umword_t usp,
-                 l4_umword_t uip,
-                 l4_threadid_t pager)
+l4_task_new_sc(l4_threadid_t dest,
+               l4_umword_t mcp_or_new_chief_and_flags,
+               l4_umword_t usp,
+               l4_umword_t uip,
+               l4_threadid_t pager)
 {
   register l4_umword_t _dest  asm("r0") = dest.raw;
   register l4_umword_t _mcp   asm("r1") = mcp_or_new_chief_and_flags;
