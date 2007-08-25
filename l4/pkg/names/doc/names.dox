@@ -32,9 +32,9 @@ for an arbitrary thread_id - and unregister it as well.
 The DROPS Name Service is implemented as an L4 server. Currently it has only
 one command line option:
 
-\par -verbose <verbosity>
-If <verbosity> is 1 all register and unregister requests are logged.
-With <verbosity> set to 2 also all query requests are logged.
+\par -verbose &lt;verbosity&gt;
+If %lt;verbosity%gt; is 1 all register and unregister requests are logged.
+With %lt;verbosity%gt; set to 2 also all query requests are logged.
 
 The library \ref clientapi provides a convenient way to access
 the DROPS Name Service through a set of C function calls.

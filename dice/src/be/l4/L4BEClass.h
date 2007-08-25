@@ -50,6 +50,8 @@ public:
 
 protected: // Protected methods
     virtual void WriteHelperFunctions(CBEHeaderFile& pFile);
+    virtual void WriteErrorFunctions(CBEHeaderFile& pFile);
+    virtual void WriteInitRcvStringFunctions(CBEHeaderFile& pFile);
 };
 
 #endif

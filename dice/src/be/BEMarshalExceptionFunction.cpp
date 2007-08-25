@@ -72,9 +72,9 @@ CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation)
     if (IsComponentSide())
 	SetReturnVar(false, 0, TYPE_VOID, string());
 
-    // add message buffer 
+    // add message buffer
     AddMessageBuffer(pFEOperation);
-    
+
     // add marshaller and communication class
     CreateMarshaller();
     CreateCommunication();
@@ -87,7 +87,7 @@ CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation)
  *
  * Make the message buffer variable a reference
  */
-void 
+void
 CBEMarshalExceptionFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
@@ -202,7 +202,7 @@ CBEMarshalExceptionFunction::GetExceptionVariable()
     CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
     if (pRet)
 	return pRet;
-    
+
     // if no parameter, then try to find it in the message buffer
     CBEMsgBuffer *pMsgBuf = m_pClass->GetMessageBuffer();
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
@@ -249,7 +249,7 @@ CBEMarshalExceptionFunction::FindParameterType(string sTypeName)
  * not initialize the message buffer - this may overwrite the values we try to
  * unmarshal.
  */
-void 
+void
 CBEMarshalExceptionFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {
 }
@@ -273,7 +273,7 @@ CBEMarshalExceptionFunction::WriteInvocation(CBEFile& /*pFile*/)
  * If the parameter is the message buffer we cast to this function's type,
  * because otherwise the compiler issues warnings.
  */
-void 
+void
 CBEMarshalExceptionFunction::WriteCallParameter(CBEFile& pFile,
     CBETypedDeclarator * pParameter,
     bool bCallFromSameClass)
@@ -299,7 +299,7 @@ void CBEMarshalExceptionFunction::AddAfterParameters()
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEMarshalExceptionFunction::%s called\n", __func__);
-    
+
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     // get class' message buffer
@@ -331,8 +331,8 @@ void CBEMarshalExceptionFunction::AddAfterParameters()
  * Return true if the at component's side, the parameter has an OUT attribute,
  * or if at client's side the parameter has an IN attribute.
  */
-bool 
-CBEMarshalExceptionFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, 
+bool
+CBEMarshalExceptionFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
 	bool bMarshal)
 {
     if (!bMarshal)

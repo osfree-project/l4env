@@ -33,8 +33,8 @@
 #include "fe/FEBase.h"
 #include <string>
 
-/**    \class CFEIdentifier
- *    \ingroup frontend
+/** \class CFEIdentifier
+ *  \ingroup frontend
  *  \brief represents any identifier in the IDL
  *
  * This class is used to represent any identifier in the IDL
@@ -49,7 +49,7 @@ public:
     /** constructs an identifier object
      *  \param sName a string, defining the name of the identifier
      */
-    CFEIdentifier(string sName);
+    CFEIdentifier(std::string sName);
     /** copy constructor for this class
      *  \param src the source object for this new object
      */
@@ -62,22 +62,22 @@ public:
 
 //operations
 public:
-    virtual string ReplaceName(string sNewName);
-    virtual void Suffix(string sSuffix);
-    virtual void Prefix(string sPrefix);
+    virtual std::string ReplaceName(std::string sNewName);
+    virtual void Suffix(std::string sSuffix);
+    virtual void Prefix(std::string sPrefix);
     virtual CObject* Clone();
-    virtual string GetName();
+    virtual std::string GetName();
     bool operator==(CFEIdentifier&);
-    bool operator==(string& Name);
+    bool operator==(std::string& Name);
 
-    bool Match(string sName);
+    bool Match(std::string sName);
 
 // attributes
 protected:
-    /**    \var string m_sName
+    /** \var std::string m_sName
      *  \brief the name of the identifier
      */
-    string m_sName;
+    std::string m_sName;
 };
 
 #endif /* __DICE_FE_FEIDENTIFIER_H__ */

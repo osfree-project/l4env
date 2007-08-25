@@ -63,15 +63,15 @@ protected:
 public:
     virtual bool GetBoolValue();
     virtual int GetIntValue();
-    virtual string GetStringValue();
+    virtual std::string GetStringValue();
     virtual bool IsOfType(int nFEType);
     virtual CObject* Clone();
     virtual void Write(CBEFile& pFile);
-    virtual void WriteToStr(string &sStr);
+    virtual void WriteToStr(std::string &sStr);
 
-    virtual void CreateBackEndBinary(CBEExpression *pOperand1, int nOperator, 
+    virtual void CreateBackEndBinary(CBEExpression *pOperand1, int nOperator,
 	CBEExpression *pOperand2);
-    virtual void CreateBackEnd(string sValue);
+    virtual void CreateBackEnd(std::string sValue);
     virtual void CreateBackEnd(int nValue);
     virtual void CreateBackEnd(CFEExpression *pFEExpression);
     virtual void CreateBackEndUnary(int nOperator, CBEExpression *pOperand);
@@ -84,15 +84,15 @@ protected:
     virtual void CreateBackEndConditional(CFEConditionalExpression *pFEExpression);
     virtual void CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression);
 
-    virtual void WriteUnaryToStr(string &sStr);
-    virtual void WriteBinaryToStr(string &sStr);
-    virtual void WriteConditionalToStr(string &sStr);
+    virtual void WriteUnaryToStr(std::string &sStr);
+    virtual void WriteBinaryToStr(std::string &sStr);
+    virtual void WriteConditionalToStr(std::string &sStr);
     virtual bool GetBoolValueUnary();
     virtual bool GetBoolValueBinary();
     virtual int GetIntValueUnary();
     virtual int GetIntValueBinary();
-    virtual string GetStringValueUnary();
-    virtual string GetStringValueBinary();
+    virtual std::string GetStringValueUnary();
+    virtual std::string GetStringValueBinary();
 
 protected:
     /**    \var int m_nType
@@ -114,10 +114,10 @@ protected:
      *  \brief contains the float value of the expression
      */
     long double m_fFloatValue;
-    /**    \var string m_sStringValue
-     *  \brief contains the string value of the expression
+    /**    \var std::string m_sStringValue
+     *  \brief contains the std::string value of the expression
      */
-    string m_sStringValue;
+    std::string m_sStringValue;
     /**    \var CBEExpression m_pOperand1
      *  \brief contains the first operand
      */

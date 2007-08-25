@@ -48,9 +48,9 @@ CL4V2AMD64BENameFactory::~CL4V2AMD64BENameFactory()
 
  *  \param nSize the size of the type
  */
-string CL4V2AMD64BENameFactory::GetTypeName(int nType, bool bUnsigned, int nSize)
+std::string CL4V2AMD64BENameFactory::GetTypeName(int nType, bool bUnsigned, int nSize)
 {
-    string sReturn;
+    std::string sReturn;
     switch (nType)
     {
     case TYPE_INTEGER:

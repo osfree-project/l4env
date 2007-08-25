@@ -36,6 +36,7 @@ enum EXPR_TYPE {
   EXPR_TRUE,
   EXPR_FALSE,
   EXPR_CHAR,
+  EXPR_WCHAR,
   EXPR_STRING,
   EXPR_USER_DEFINED,
   EXPR_INT,                 // primary
@@ -71,15 +72,17 @@ public:
      *  \param nType the type of the expression (NULL, TRUE, FALSE, derived expressions) */
     CFEExpression(EXPR_TYPE nType); // NULL, TRUE, FALSE, derived
     /** construct expression object
-     *  \param nType the type of the expression (CHAR)
      *  \param nChar the single character
      */
-    CFEExpression(EXPR_TYPE nType, char nChar); // single char
+    CFEExpression(signed char nChar); // single char
+    /** construct expression object
+     *  \param nWChar the single wide character
+     */
+    CFEExpression(short nWChar); // single char
     /** constructs an expression
-     *  \param nType the type of the expression (string)
      *  \param sString the string
      */
-    CFEExpression(EXPR_TYPE nType, string sString); // string
+    CFEExpression(std::string sString); // string
     virtual ~CFEExpression();
 
 protected:
@@ -90,13 +93,14 @@ protected:
 
 // Operations
 public:
-    virtual string ToString();
+    virtual std::string ToString();
     virtual CObject* Clone();
     virtual bool IsOfType(unsigned int nType);
-    virtual long GetIntValue();
+    virtual int GetIntValue();
     virtual EXPR_TYPE GetType();
     virtual char GetChar();
-    virtual string GetString();
+    virtual short GetWChar();
+    virtual std::string GetString();
 
 // attributes
 protected:
@@ -104,14 +108,18 @@ protected:
      *  \brief the type of the expression
      */
     EXPR_TYPE m_nType;
-    /**    \var char m_Char
+    /** \var char m_Char
      *  \brief if this is a character expression: the character
      */
     char m_Char;
-    /**    \var string m_String
+    /** \var short m_WChar
+     *  \brief if this is a character expression: the wide character
+     */
+    short m_WChar;
+    /** \var std::string m_String
      *  \brief if this is a string expression: the string
      */
-    string m_String;
+    std::string m_String;
 };
 
 #endif /* __DICE_FE_FEEXPRESSION_H__ */

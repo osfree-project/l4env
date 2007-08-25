@@ -82,6 +82,24 @@ namespace error
 	std::string m_reason;
     };
 
+    /** \class parse_error
+     *  \ingroup error
+     *  \brief exception class for parsing
+     */
+    class parse_error : public std::exception
+    {
+    public:
+	/** \brief the constructor for the class */
+	explicit parse_error(void) throw()
+	{ }
+
+	/** \brief returns the string of the exception */
+	virtual const char* what() const throw()
+	{
+	    return "Parse exception.";
+	}
+    };
+
     /** \class postparse_error
      *  \ingroup error
      *  \brief exception class for preprocessing

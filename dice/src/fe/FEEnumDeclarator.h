@@ -35,7 +35,7 @@
 class CFEExpression;
 
 /** \class CFEEnumDeclarator
- *    \ingroup frontend
+ *  \ingroup frontend
  *  \brief describes an enumeration's declarator
  *
  * This class is used to describe a enumeration's declarator. A declarator can be, for instance,
@@ -55,7 +55,7 @@ public:
      *  \param sName the name of this declarator
      *  \param pInitialValue the initial value of the enum member
      */
-    CFEEnumDeclarator(string sName, CFEExpression *pInitialValue = 0);
+    CFEEnumDeclarator(std::string sName, CFEExpression *pInitialValue = 0);
     virtual ~CFEEnumDeclarator();
 
 public:
@@ -63,7 +63,7 @@ public:
     virtual CFEExpression* GetInitialValue();
 
 protected:
-    /**    \var CFEExpression* m_pInitialValue
+    /** \var CFEExpression* m_pInitialValue
      *  \brief a reference to the initial value
      */
     CFEExpression* m_pInitialValue;

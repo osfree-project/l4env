@@ -45,8 +45,8 @@ public:
     CL4V2BENameFactory();
     virtual ~CL4V2BENameFactory();
 
-    virtual string GetTimeoutServerVariable(CBEFunction *pFunction);
-    virtual string GetTimeoutClientVariable(CBEFunction *pFunction);
+    virtual std::string GetTimeoutServerVariable(CBEFunction *pFunction);
+    virtual std::string GetTimeoutClientVariable(CBEFunction *pFunction);
 };
 
 #endif

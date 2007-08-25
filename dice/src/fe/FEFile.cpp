@@ -27,7 +27,6 @@
  */
 
 #include "IncludeStatement.h"
-#include "CPreProcess.h" // needed to get include statements
 #include "FEFile.h"
 #include "FETypedDeclarator.h"
 #include "FEConstDeclarator.h"
@@ -53,8 +52,7 @@ CFEFile::CFEFile(string sFileName,
     m_TaggedDeclarators(0, this),
     m_Libraries(0, this),
     m_Interfaces(0, this),
-    m_ChildFiles(0, this),
-    m_Includes(0, this)
+    m_ChildFiles(0, this)
 {
     // this procedure is interesting for included files:
     // if the statement was: #include "l4/sys/types.h" and the path where the
@@ -66,10 +64,10 @@ CFEFile::CFEFile(string sFileName,
     // m_sFileWithPath = "../../include/l4/sys/types.h"
     assert(!sFileName.empty());
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s, %s, %d, %d) called\n", 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s, %s, %d, %d) called\n",
 	__func__, sFileName.c_str(), sPath.c_str(), nIncludedOnLine,
 	nStdInclude);
-    
+
     m_sFilename = sFileName;
     // first strip of extension  (the string after the last '.')
     int iDot = m_sFilename.rfind('.');
@@ -91,16 +89,7 @@ CFEFile::CFEFile(string sFileName,
 	    m_sFilenameWithoutExtension.substr(iSlash + 1);
     }
     // now generate full filename with path
-    if (!sPath.empty())
-    {
-	bool bLastSlash = sPath[sPath.length()-1] == '/';
-	m_sFileWithPath = sPath;
-	if (!bLastSlash)
-	    m_sFileWithPath += "/";
-	m_sFileWithPath += m_sFilename;
-    }
-    else
-	m_sFileWithPath = m_sFilename;
+    SetPath(sPath);
     m_nStdInclude = nStdInclude;
     m_nIncludedOnLine = nIncludedOnLine;
 
@@ -108,33 +97,7 @@ CFEFile::CFEFile(string sFileName,
     transform(m_sFileExtension.begin(), m_sFileExtension.end(),
         m_sFileExtension.begin(), _tolower);
 
-    // get includes from preprocessor
-    CPreProcess *pPreprocess = CPreProcess::GetPreProcessor();
-    vector<CIncludeStatement>::iterator i = pPreprocess->GetFirstIncludeInFile();
-    CIncludeStatement *b;
-    while ((b = pPreprocess->GetNextIncludeInFile(m_sFilename, i)) != 0)
-    {
-        string sIncName = b->m_sFilename;
-        // test if idl file
-        bool bIDL = false;
-        int iPos = sIncName.rfind('.');
-        if (iPos > 0)
-        {
-            string s = sIncName.substr(sIncName.length() - (iPos + 1));
-            transform(s.begin(), s.end(), s.begin(), _tolower);
-            if (s == "idl")
-                bIDL = true;
-        }
-        // extract include information and add it to m_vIncludes
-        CIncludeStatement *pNew = new CIncludeStatement(*b);
-	pNew->m_bIDLFile = bIDL;
-        m_Includes.Add(pNew);
-        // set source file info
-        pNew->SetSourceLine(b->m_nLineNb);
-        pNew->SetSourceFileName(m_sFilename);
-    }
-
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFilename: %s\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFilename: %s\n", __func__,
 	m_sFilename.c_str());
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s has m_sFilenameWithoutExtension: %s\n",
 	__func__, m_sFilenameWithoutExtension.c_str());
@@ -151,8 +114,7 @@ CFEFile::CFEFile(CFEFile & src)
     m_TaggedDeclarators(src.m_TaggedDeclarators),
     m_Libraries(src.m_Libraries),
     m_Interfaces(src.m_Interfaces),
-    m_ChildFiles(src.m_ChildFiles),
-    m_Includes(src.m_Includes)
+    m_ChildFiles(src.m_ChildFiles)
 {
     m_sFilename = src.m_sFilename;
     m_sFileExtension = src.m_sFileExtension;
@@ -180,6 +142,23 @@ CObject *CFEFile::Clone()
 string CFEFile::GetFileName()
 {
     return m_sFilename;
+}
+
+/** sets the path of the file
+ *  \param sPath the new path
+ */
+void CFEFile::SetPath(std::string sPath)
+{
+    if (!sPath.empty())
+    {
+	bool bLastSlash = sPath[sPath.length()-1] == '/';
+	m_sFileWithPath = sPath;
+	if (!bLastSlash)
+	    m_sFileWithPath += "/";
+	m_sFileWithPath += m_sFilename;
+    }
+    else
+	m_sFileWithPath = m_sFilename;
 }
 
 /** returns a reference to the user defined type
@@ -288,12 +267,18 @@ CFEInterface *CFEFile::FindInterface(string sName)
     if (sName.empty())
         return 0;
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s(%s) called\n", __func__, sName.c_str());
+
     // if scoped name
     string::size_type nScopePos;
     if ((nScopePos = sName.find("::")) != string::npos)
     {
         string sRest = sName.substr(nScopePos+2);
         string sScope = sName.substr(0, nScopePos);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "%s: bisected name into \"%s\"::\"%s\"\n", __func__,
+	    sScope.c_str(), sRest.c_str());
         if (sScope.empty())
         {
             // has been a "::<name>"
@@ -302,12 +287,21 @@ CFEInterface *CFEFile::FindInterface(string sName)
         else
         {
             CFELibrary *pFELibrary = FindLibrary(sScope);
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"%s: search for interface in lib (%p)\n", __func__,
+		pFELibrary);
             if (pFELibrary == 0)
                 return 0;
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"%s: search for interface \"%s\" in lib \"%s\"\n", __func__,
+		sRest.c_str(), sScope.c_str());
             return pFELibrary->FindInterface(sRest);
         }
     }
     // first search the interfaces in this file
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s: search in interface of file %s\n", __func__,
+	GetFileName().c_str());
     CFEInterface *pInterface = m_Interfaces.Find(sName);
     if (pInterface)
 	return pInterface;
@@ -318,10 +312,15 @@ CFEInterface *CFEFile::FindInterface(string sName)
 	 iterF != m_ChildFiles.end();
 	 iterF++)
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "%s: search in included file %s\n", __func__,
+	    (*iterF)->GetFileName().c_str());
         if ((pInterface = (*iterF)->FindInterface(sName)))
             return pInterface;
     }
     // none found
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s: returns NULL\n", __func__);
     return 0;
 }
 
@@ -460,7 +459,7 @@ string CFEFile::GetFileNameWithoutExtension()
  */
 void CFEFile::Accept(CVisitor &v)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for file %s\n", 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CFEFile::%s called for file %s\n",
 	__func__, GetFileName().c_str());
     // only check consistency if this is an IDL file!
     if (!IsIDLFile())
@@ -610,82 +609,5 @@ CFEFile* CFEFile::FindFile(string sFileName)
             return pFoundFile;
     }
     return 0;
-}
-
-/** \brief retrieves the maximum line number in the file
- *  \return the maximum line number in this file
- *
- * If line number is not that, i.e., is zero, then we iterate the elements and
- * check their end line number. The maximum is out desired maximum line
- * number.
- */
-int
-CFEFile::GetSourceLineEnd()
-{
-    if (m_nSourceLineNbEnd != 0)
-       return m_nSourceLineNbEnd;
-
-    // Includes
-    vector<CIncludeStatement*>::iterator iterI;
-    for (iterI = m_Includes.begin();
-	 iterI != m_Includes.end();
-	 iterI++)
-    {
-       int sLine = (*iterI)->GetSourceLine();
-       int eLine = (*iterI)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // libraries
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = m_Libraries.begin();
-	 iterL != m_Libraries.end();
-	 iterL++)
-    {
-       int sLine = (*iterL)->GetSourceLine();
-       int eLine = (*iterL)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // interfaces
-    vector<CFEInterface*>::iterator iterIF;
-    for (iterIF = m_Interfaces.begin();
-	 iterIF != m_Interfaces.end();
-	 iterIF++)
-    {
-       int sLine = (*iterIF)->GetSourceLine();
-       int eLine = (*iterIF)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // typedefs
-    vector<CFETypedDeclarator*>::iterator iterTD;
-    for (iterTD = m_Typedefs.begin();
-	 iterTD != m_Typedefs.end();
-	 iterTD++)
-    {
-       int sLine = (*iterTD)->GetSourceLine();
-       int eLine = (*iterTD)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // tagged types
-    vector<CFEConstructedType*>::iterator iterCT;
-    for (iterCT = m_TaggedDeclarators.begin();
-	 iterCT != m_TaggedDeclarators.end();
-	 iterCT++)
-    {
-       int sLine = (*iterCT)->GetSourceLine();
-       int eLine = (*iterCT)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // tagged types
-    vector<CFEConstDeclarator*>::iterator iterC;
-    for (iterC = m_Constants.begin();
-	 iterC != m_Constants.end();
-	 iterC++)
-    {
-       int sLine = (*iterC)->GetSourceLine();
-       int eLine = (*iterC)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-
-    return m_nSourceLineNbEnd;
 }
 

@@ -87,6 +87,7 @@ enum ATTR_TYPE {
     ATTR_SCHED_DONATE,    /**< function: L4 scheduling specific: enable usage of deceit bit */
     ATTR_DEDICATED_PARTNER, /**< interface: only receive messages from a dedicated partner */
     ATTR_DEFAULT_TIMEOUT,   /**< interface, function: use default timeout instead timeout from environment */
+    ATTR_C,               /**< a C-language attribute */
     ATTR_LAST_ATTR        /**< the last attribute (used for iteration */
 };
 

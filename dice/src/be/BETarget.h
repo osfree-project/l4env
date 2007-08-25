@@ -79,28 +79,28 @@ protected:
 
 public:
     virtual void CreateBackEnd(CFEFile *pFEFile);
-    
-    virtual CBEFunction* FindFunction(string sFunctionName,
+
+    virtual CBEFunction* FindFunction(std::string sFunctionName,
 	FUNCTION_TYPE nFunctionType);
-    virtual CBETypedef* FindTypedef(string sTypeName);
-    
+    virtual CBETypedef* FindTypedef(std::string sTypeName);
+
     /** \brief generates the output files and code */
     virtual void Write() = 0;
     virtual void PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol);
-    virtual bool HasFunctionWithUserType(string sTypeName);
+    virtual bool HasFunctionWithUserType(std::string sTypeName);
 
 protected:
     virtual void WriteImplementationFiles();
     virtual void WriteHeaderFiles();
     virtual bool DoAddIncludedFiles();
     // constants
-    virtual bool AddConstantToFile(CBEFile& pFile, 
+    virtual bool AddConstantToFile(CBEFile& pFile,
 	CFEConstDeclarator *pFEConstant);
     virtual bool AddConstantToFile(CBEFile& pFile, CFEInterface *pFEInterface);
     virtual bool AddConstantToFile(CBEFile& pFile, CFELibrary *pFELibrary);
     virtual bool AddConstantToFile(CBEFile& pFile, CFEFile *pFEFile);
     // type definitions
-    virtual bool AddTypedefToFile(CBEFile& pFile, 
+    virtual bool AddTypedefToFile(CBEFile& pFile,
 	CFETypedDeclarator *pFETypedDeclarator);
     virtual bool AddTypedefToFile(CBEFile& pFile, CFEInterface *pFEInterface);
     virtual bool AddTypedefToFile(CBEFile& pFile, CFELibrary *pFELibrary);
@@ -112,28 +112,28 @@ protected:
 	FILE_TYPE nFileType);
     virtual CBEHeaderFile* FindHeaderFile(CFELibrary *pFELibrary,
 	FILE_TYPE nFileType);
-    virtual CBEHeaderFile* FindHeaderFile(CFEFile *pFEFile, FILE_TYPE nFileType); 
+    virtual CBEHeaderFile* FindHeaderFile(CFEFile *pFEFile, FILE_TYPE nFileType);
 
-    /** \brief create target for header file 
+    /** \brief create target for header file
      *  \param pFEFile the front-end file to use as reference
      */
     virtual void CreateBackEndHeader(CFEFile *pFEFile) = 0;
-    /** \brief create target for implementation file 
+    /** \brief create target for implementation file
      *  \param pFEFile the front-end file to use as reference
      */
     virtual void CreateBackEndImplementation(CFEFile *pFEFile) = 0;
-    
-    virtual void PrintTargetFileName(ostream& output, string sFilename, 
+
+    virtual void PrintTargetFileName(ostream& output, std::string sFilename,
 	int &nCurCol, int nMaxCol);
 
 public:
-    /** \var CSearchableCollection<CBEHeaderFile, string> m_HeaderFiles
+    /** \var CSearchableCollection<CBEHeaderFile, std::string> m_HeaderFiles
      *  \brief contains the header files of the respective target part
      *
      * Because the handling for header and implementation files is different
      * at some points, we keep them in different vectors.
      */
-    CSearchableCollection<CBEHeaderFile, string> m_HeaderFiles;
+    CSearchableCollection<CBEHeaderFile, std::string> m_HeaderFiles;
     /** \var CCollection<CBEImplementationFile> m_ImplementationFiles
      *  \brief contains the implementation files for the respective target part
      */

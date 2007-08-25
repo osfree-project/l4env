@@ -63,9 +63,9 @@ CL4BEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
 	sEnv = "&";
     sEnv += pDecl->GetName();
 
-    pFile << "\tif (DICE_IS_EXCEPTION(" << sEnv << 
+    pFile << "\tif (DICE_IS_EXCEPTION(" << sEnv <<
 	", CORBA_SYSTEM_EXCEPTION) &&\n";
-    ++pFile << "\t(DICE_EXCEPTION_MINOR(" << sEnv << 
+    ++pFile << "\t(DICE_EXCEPTION_MINOR(" << sEnv <<
 	") == CORBA_DICE_INTERNAL_IPC_ERROR))\n";
     --pFile << "\t{\n";
     // clear exception

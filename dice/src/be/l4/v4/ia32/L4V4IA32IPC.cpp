@@ -49,7 +49,7 @@ CL4V4IA32IPC::~CL4V4IA32IPC()
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void 
+void
 CL4V4IA32IPC::WriteCall(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
@@ -62,7 +62,7 @@ CL4V4IA32IPC::WriteCall(CBEFile& pFile,
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
-    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     CBEDeclarator *pObjName = pFunction->GetObject()->m_Declarators.First();;
     // Call(to, sndtimeout, rcvtimeout)

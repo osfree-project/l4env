@@ -8,30 +8,20 @@ specific IPC, some special types and attributes have been added to the IDLs.
 
 Compiling for the first time:
 =============================
- If you have checked out a fresh version from the remote CVS, you will have
+ If you have checked out a fresh version from the remote SVN, you will have
 noticed that there is no Makefile. Please run
 
-'make -f Makefile.drops', 
+'make -f Makefile.drops',
 
 which invokes the bootstrap script, then configure, and eventually make again
-to build Dice. If you wish to configure Dice manually, run the bootstrap
-script first to create the configure script.
+to build Dice. On platforms other than default Linux installations, you might
+want to rerun the bootstrap script (you will need to have the auto* tools
+installed).
 
  If you obtained a tarball or zip file, unpack the compressed file. Change
 into the generated directory (dice-<version>) and call './configure', which
 will test your local build environment and generate appropriate Makefiles.
 Then simply run 'make'.
-
-Used Header Files
-=================
- Dice comes with some header files (include directory), which are used to
-compile IDL files and in the generated files.  When compiling IDL files you
-may (unlikely) encounter the following error:
-
-"<idlfile>:1: dice/dice-corba-types.h: No such file or directory"
-
-Add the path to the Dice include directory to the include paths with the -I
-option.
 
 Bugs
 ====
@@ -53,4 +43,4 @@ or question, send an email to dice@os.inf.tu-dresden.de.
 Thank you for using DICE
 Ronald Aigner
 
-file last modified: 03/15/07
+file last modified: 08/20/07

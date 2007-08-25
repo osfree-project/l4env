@@ -71,15 +71,15 @@ protected:
     CBETypedDeclarator(CBETypedDeclarator & src);
 
 public:
-    virtual void CreateBackEnd(CBEType * pType, string sName);
-    virtual void CreateBackEnd(string sUserDefinedType, string sName, int nStars);
+    virtual void CreateBackEnd(CBEType * pType, std::string sName);
+    virtual void CreateBackEnd(std::string sUserDefinedType, std::string sName, int nStars);
     virtual void CreateBackEnd(CFETypedDeclarator * pFEParameter);
 
     int GetSize();
-    int GetSize(string sName);
+    int GetSize(std::string sName);
     CBEType *GetType();
     int GetBitfieldSize();
-    virtual bool GetMaxSize(int & nSize, string sName = string());
+    virtual bool GetMaxSize(int & nSize, std::string sName = std::string());
 
     void ReplaceType(CBEType * pNewType);
 
@@ -89,13 +89,13 @@ public:
     bool IsFixedSized();
     bool HasReference();
 
-    bool Match(string sName);
+    bool Match(std::string sName);
     CBEDeclarator *GetCallDeclarator();
     void RemoveCallDeclarator();
     void AddDeclarator(CFEDeclarator * pFEDeclarator);
-    void AddDeclarator(string sName, int nStars);
+    void AddDeclarator(std::string sName, int nStars);
 
-    CBEAttribute* FindIsAttribute(string sDeclName);
+    CBEAttribute* FindIsAttribute(std::string sDeclName);
     void AddAttribute(CFEAttribute *pFEAttribute);
 
     virtual CObject *Clone();
@@ -103,16 +103,16 @@ public:
     /** \brief sets the default initialization string
      *  \param sInitString the new initializatio string (may be empty)
      */
-    void SetDefaultInitString(string sInitString)
+    void SetDefaultInitString(std::string sInitString)
     { m_sDefaultInitString = sInitString; }
     /** \brief accesses the default initialization string
      *  \return the value of the default initialization string
      */
-    string GetDefaultInitString(void)
+    std::string GetDefaultInitString(void)
     { return m_sDefaultInitString; }
 
-    bool AddLanguageProperty(string sProperty, string sPropertyString);
-    bool FindLanguageProperty(string sProperty, string& sPropertyString);
+    bool AddLanguageProperty(std::string sProperty, std::string sPropertyString);
+    bool FindLanguageProperty(std::string sProperty, std::string& sPropertyString);
 
     void WriteDeclarators(CBEFile& pFile);
 
@@ -120,15 +120,15 @@ public:
     virtual void WriteDefinition(CBEFile& pFile);
     virtual void WriteDeclaration(CBEFile& pFile);
     void WriteSetZero(CBEFile& pFile);
-    void WriteGetSize(CBEFile& pFile, 
+    void WriteGetSize(CBEFile& pFile,
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
-    void WriteGetMaxSize(CBEFile& pFile, 
+    void WriteGetMaxSize(CBEFile& pFile,
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
     void WriteCleanup(CBEFile& pFile, bool bDeferred);
     void WriteType(CBEFile& pFile, bool bUseConst = true);
     void WriteIndirect(CBEFile& pFile);
     void WriteIndirectInitialization(CBEFile& pFile, bool bMemory);
-    void WriteInitDeclaration(CBEFile& pFile, string sInitString);
+    void WriteInitDeclaration(CBEFile& pFile, std::string sInitString);
     // language specific
     virtual void WriteForwardDeclaration(CBEFile& pFile);
     virtual void WriteForwardTypeDeclaration(CBEFile& pFile,
@@ -158,24 +158,24 @@ protected:
      *  \brief the type of the parameter
      */
     CBEType * m_pType;
-    /** \var string m_sDefaultInitString
+    /** \var std::string m_sDefaultInitString
      *  \brief contains the initialization sequence if no other is given
      */
-    string m_sDefaultInitString;
-    /** \var map<string, string> m_mProperties
+    std::string m_sDefaultInitString;
+    /** \var map<std::string, std::string> m_mProperties
      *  \brief map with language specific properties
      */
-    multimap<string, string> m_mProperties;
+    multimap<std::string, std::string> m_mProperties;
 
 public:
     /** \var CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes
      *  \brief contains the type's attributes
      */
     CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes;
-    /** \var CSearchableCollection<CBEDeclarator, string> m_Declarators
+    /** \var CSearchableCollection<CBEDeclarator, std::string> m_Declarators
      *  \brief the names of the parameter
      */
-    CSearchableCollection<CBEDeclarator, string> m_Declarators;
+    CSearchableCollection<CBEDeclarator, std::string> m_Declarators;
 };
 
 #endif                //*/ !__DICE_BETYPEDDECLARATOR_H__

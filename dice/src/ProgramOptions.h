@@ -120,11 +120,11 @@ enum ProgramVerbose_Type
  */
 enum ProgramWarning_Type
 {
-    PROGRAM_WARNING_IGNORE_DUPLICATE_FID, /**< ignore duplicated function IDs */
-    PROGRAM_WARNING_PREALLOC,             /**< allocating memory for unbound strings */
-    PROGRAM_WARNING_NO_MAXSIZE,           /**< warn on missing max-size attributes */
-    PROGRAM_WARNING_ALL,                  /**< warn on everything */
-    PROGRAM_WARNING_MAX                   /**< maximum index */
+    PROGRAM_WARNING_IGNORE_DUPLICATE_FID,	/**< ignore duplicated function IDs */
+    PROGRAM_WARNING_PREALLOC,			/**< allocating memory for unbound strings */
+    PROGRAM_WARNING_NO_MAXSIZE,			/**< warn on missing max-size attributes */
+    PROGRAM_WARNING_ALL,			/**< warn on everything */
+    PROGRAM_WARNING_MAX				/**< maximum index */
 };
 
 /** \enum BackEnd_Interface_Type
@@ -132,12 +132,12 @@ enum ProgramWarning_Type
  */
 enum BackEnd_Interface_Type
 {
-    PROGRAM_BE_NONE_I,    /**< nothing set */
-    PROGRAM_BE_V2,        /**< defines the back-end for L4 version 2 */
-    PROGRAM_BE_X0,        /**< defines the back-end for L4 version X.0 */
-    PROGRAM_BE_V4,        /**< defines the back-end for L4 version X.2 */
-    PROGRAM_BE_SOCKETS,   /**< defines the back-end for the Linux Sockets */
-    PROGRAM_BE_INTERFACE  /**< max-value for interface values */
+    PROGRAM_BE_NONE_I,		/**< nothing set */
+    PROGRAM_BE_V2,		/**< defines the back-end for L4 version 2 */
+    PROGRAM_BE_V4,		/**< defines the back-end for L4 version X.2 */
+    PROGRAM_BE_SOCKETS,		/**< defines the back-end for the Linux Sockets */
+    PROGRAM_BE_FIASCO,		/**< defines the back-end for the Fiasco */
+    PROGRAM_BE_INTERFACE	/**< max-value for interface values */
 };
 
 /** \enum BackEnd_Platform_Type

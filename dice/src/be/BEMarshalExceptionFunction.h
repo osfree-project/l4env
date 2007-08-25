@@ -58,15 +58,15 @@ public:
     virtual DIRECTION_TYPE GetSendDirection();
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual CBETypedDeclarator* GetExceptionVariable(void);
-    virtual CBETypedDeclarator* FindParameterType(string sTypeName);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, 
+    virtual CBETypedDeclarator* FindParameterType(std::string sTypeName);
+    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
 
 protected:
     virtual void AddAfterParameters();
     virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual void WriteInvocation(CBEFile& pFile);
-    virtual void WriteCallParameter(CBEFile& pFile, 
+    virtual void WriteCallParameter(CBEFile& pFile,
 	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
 };
 

@@ -37,18 +37,18 @@ class CFEBase;
 class CMessages
 {
 public:
-    static void Error(const char *sMsg, ...) 
+    static void Error(const char *sMsg, ...)
 	__attribute__(( format(printf, 1, 2) ));
     static void Warning(const char *sMsg, ...)
 	__attribute__(( format(printf, 1, 2) ));
-    static void GccError(CFEBase * pFEObject, int nLinenb,
-	const char *sMsg, ...) __attribute__(( format(printf, 3, 4) ));
-    static void GccErrorVL(CFEBase * pFEObject, int nLinenb,
-	const char *sMsg, va_list vl);
-    static void GccWarning(CFEBase * pFEObject, int nLinenb,
-	const char *sMsg, ...) __attribute__(( format(printf, 3, 4) ));
-    static void GccWarningVL(CFEBase * pFEObject, int nLinenb,
-	const char *sMsg, va_list vl);
+    static void GccError(CFEBase * pFEObject, const char *sMsg, ...)
+	__attribute__(( format(printf, 2, 3) ));
+    static void GccErrorVL(CFEBase * pFEObject,	const char *sMsg, va_list vl)
+	__attribute__(( format(printf, 2, 0) ));
+    static void GccWarning(CFEBase * pFEObject, const char *sMsg, ...)
+	__attribute__(( format(printf, 2, 3) ));
+    static void GccWarningVL(CFEBase * pFEObject, const char *sMsg, va_list vl)
+	__attribute__(( format(printf, 2, 0) ));
 };
 
 #endif /* __DICE_MESSAGES_H__ */

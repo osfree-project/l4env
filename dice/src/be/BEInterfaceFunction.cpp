@@ -65,11 +65,15 @@ CBEInterfaceFunction::CreateBackEnd(CFEInterface *pFEInterface)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
     // basic init
     CBEFunction::CreateBackEnd(pFEInterface);
-    
+
     // search for our interface
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
-    m_pClass = pRoot->FindClass(pFEInterface->GetName());
+    m_pClass = NULL;
+    do
+    {
+	m_pClass = pRoot->FindClass(pFEInterface->GetName(), m_pClass);
+    } while (m_pClass && m_pClass != m_pParent);
     assert(m_pClass);
     // should be parent
     assert(m_pClass == m_pParent);
@@ -121,7 +125,7 @@ CBEInterfaceFunction::AddParameters()
     CBETypedDeclarator *pMsgBuf = GetMessageBuffer();
     if (pMsgBuf)
 	m_Parameters.Add(pMsgBuf);
-    
+
     // this adds the environment
     AddAfterParameters();
 

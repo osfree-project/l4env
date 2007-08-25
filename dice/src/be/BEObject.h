@@ -71,22 +71,22 @@ public:
     virtual CObject * Clone();
     virtual bool IsTargetFile(CBEImplementationFile* pFile);
     virtual bool IsTargetFile(CBEHeaderFile* pFile);
-    virtual string GetTargetHeaderFileName();
-    virtual string GetTargetImplementationFileName();
+    virtual std::string GetTargetHeaderFileName();
+    virtual std::string GetTargetImplementationFileName();
 
 protected:
     virtual void SetTargetFileName(CFEBase *pFEObject);
     virtual void CreateBackEnd(CFEBase* pFEObject);
 
 protected:
-    /** \var string m_sTargetHeader
+    /** \var std::string m_sTargetHeader
      *  \brief contains the calculated target file name  for the header file
      */
-    string m_sTargetHeader;
-    /** \var string m_sTargetImplementation
+    std::string m_sTargetHeader;
+    /** \var std::string m_sTargetImplementation
      *  \brief contains the calculated target file name  for the implementation file
      */
-    string m_sTargetImplementation;
+    std::string m_sTargetImplementation;
 };
 
 #endif // !__DICE_FE_BEOBJECT_H__

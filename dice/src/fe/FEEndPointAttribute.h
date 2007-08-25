@@ -41,14 +41,14 @@ using std::vector;
  */
 struct PortSpec
 {
-    /** \var string sFamily
+    /** \var std::string sFamily
      *  \brief the family of the port (udp, tcp, ...)
      */
-    string sFamily;
-    /** \var string sPort
+    std::string sFamily;
+    /** \var std::string sPort
      *  \brief the port of endpoint
      */
-    string sPort;
+    std::string sPort;
 };
 
 /** \class CFEEndPointAttribute

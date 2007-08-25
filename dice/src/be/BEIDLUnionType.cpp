@@ -60,9 +60,9 @@ CBEIDLUnionType::~CBEIDLUnionType()
 void
 CBEIDLUnionType::CreateBackEnd(CFETypeSpec * pFEType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEIDLUnionType::%s(fe) called\n", __func__);
-    
+
     // get union type
     CFEIDLUnionType *pFEUnion = dynamic_cast<CFEIDLUnionType*>(pFEType);
     assert (pFEUnion);
@@ -82,7 +82,7 @@ CBEIDLUnionType::CreateBackEnd(CFETypeSpec * pFEType)
     if (m_sSwitchName.empty())
 	m_sSwitchName = "_d";
     pSwitchVar->CreateBackEnd(pType, m_sSwitchName);
-    
+
     // create union
     CBETypedDeclarator *pUnionVar = pCF->GetNewTypedDeclarator();
     m_Members.Add(pUnionVar);
@@ -92,7 +92,7 @@ CBEIDLUnionType::CreateBackEnd(CFETypeSpec * pFEType)
     // remove tag, because union is without tag
     pFEUnion->SetTag(string());
     pType->CreateBackEnd(pFEUnion);
-    
+
     m_sUnionName = pFEUnion->GetUnionName();
     if (m_sUnionName.empty())
 	m_sUnionName = "_u";

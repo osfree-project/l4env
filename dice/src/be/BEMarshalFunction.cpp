@@ -77,11 +77,11 @@ CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation)
     // add parameters
     CBEOperationFunction::CreateBackEnd(pFEOperation);
 
-    // add message buffer 
+    // add message buffer
     // (called before return type replacement, so we can add the "old" return
     // type
     AddMessageBuffer(pFEOperation);
-    
+
     // replace return type after parameters are added, so the parameters can
     // add the original return type as extra parameter
     // set return type
@@ -104,7 +104,7 @@ CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation)
  * function does not add the return variable to the struct if the return type
  * of the function is void, which is always true for marshal function.
  */
-void 
+void
 CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
@@ -132,7 +132,7 @@ CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
  * not initialize the message buffer - this may overwrite the values we try to
  * unmarshal.
  */
-void 
+void
 CBEMarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {
 }
@@ -156,7 +156,7 @@ CBEMarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
  * If the parameter is the message buffer we cast to this function's type,
  * because otherwise the compiler issues warnings.
  */
-void 
+void
 CBEMarshalFunction::WriteCallParameter(CBEFile& pFile,
     CBETypedDeclarator * pParameter,
     bool bCallFromSameClass)
@@ -179,7 +179,7 @@ CBEMarshalFunction::GetExceptionVariable()
     CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
     if (pRet)
 	return pRet;
-    
+
     // if no parameter, then try to find it in the message buffer
     CBEMsgBuffer *pMsgBuf = m_pClass->GetMessageBuffer();
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
@@ -210,21 +210,21 @@ CBEMarshalFunction::GetExceptionVariable()
 void
 CBEMarshalFunction::AddBeforeParameters()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEMarshalFunction::%s called\n", __func__);
     // call base class to add object
     CBEOperationFunction::AddBeforeParameters();
-    
+
     if (!GetReturnType()->IsVoid())
     {
         // create new parameter
         CBETypedDeclarator *pReturn = GetReturnVariable();
-        CBETypedDeclarator *pReturnParam = 
+        CBETypedDeclarator *pReturnParam =
 	    (CBETypedDeclarator*)(pReturn->Clone());
         m_Parameters.Add(pReturnParam);
     }
-    
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEMarshalFunction::%s returns\n", __func__);
 }
 
@@ -240,7 +240,7 @@ void CBEMarshalFunction::AddAfterParameters()
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEMarshalFunction::%s called\n", __func__);
-    
+
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     // get class' message buffer
@@ -299,8 +299,8 @@ CBEMarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
  * Return true if the at component's side, the parameter has an OUT attribute,
  * or if at client's side the parameter has an IN attribute.
  */
-bool 
-CBEMarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, 
+bool
+CBEMarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
 	bool bMarshal)
 {
     if (!bMarshal)
@@ -499,5 +499,35 @@ CBEMarshalFunction::DoWriteFunction(CBEImplementationFile* pFile)
             return true;
     }
     return false;
+}
+
+/** \brief writes the definition of the function to the target file
+ *  \param pFile the target file to write to
+ *
+ * If the given file is an implementation file, we write an inline prefix.
+ * This allows the target compiler to optimize cross function calls when
+ * inlining the unmarshal function into the dispatcher.
+ *
+ * We only use "inline", because this function might be used in a derived
+ * interface's dispatch function. Thus it cannot be static inline. Simple
+ * inline allows the target compiler to inline it locally, that is, into the
+ * same interface's dispatch function and also provide an implementation for
+ * external calls.
+ */
+void
+CBEMarshalFunction::WriteFunctionDefinition(CBEFile& pFile)
+{
+    if (!pFile.is_open())
+        return;
+
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBEUnmarshalFunction::%s(%s) in %s called\n", __func__,
+	pFile.GetFileName().c_str(), GetName().c_str());
+
+    if (pFile.IsOfFileType(FILETYPE_IMPLEMENTATION) &&
+	!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	pFile << "\tinline" << std::endl;
+
+    CBEOperationFunction::WriteFunctionDefinition(pFile);
 }
 

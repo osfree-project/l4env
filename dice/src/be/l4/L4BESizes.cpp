@@ -51,6 +51,7 @@ int CL4BESizes::GetSizeOfType(int nFEType, int nFESize)
     case TYPE_RCV_FLEXPAGE:
     case TYPE_MSGDOPE_SEND:
     case TYPE_MSGDOPE_SIZE:
+    case TYPE_MSGTAG:
 	return GetSizeOfType(TYPE_MWORD, 4);
         break;
     case TYPE_FLEXPAGE:

@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FELibrary.h
+ *  \file    dice/src/fe/FELibrary.h
  *  \brief   contains the declaration of the class CFELibrary
  *
- *    \date    02/22/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    02/22/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -57,7 +57,7 @@ public:
      *  \param pAttributes the attributes of the library
      *  \param pParent the parent of this lib
      */
-    CFELibrary(string sName, vector<CFEAttribute*> *pAttributes, 
+    CFELibrary(std::string sName, vector<CFEAttribute*> *pAttributes,
 	CFEBase *pParent);
     virtual ~CFELibrary();
 
@@ -70,26 +70,26 @@ protected:
 // Operations
 public:
     virtual CObject* Clone();
-    CFEInterface* FindInterface(string sName, CFELibrary *pStart = NULL);
-    CFETypedDeclarator* FindUserDefinedType(string sName);
-    CFEConstDeclarator* FindConstant(string sName);
-    CFELibrary* FindLibrary(string sName);
-    CFEConstructedType* FindTaggedDecl(string sName);
+    CFEInterface* FindInterface(std::string sName, CFELibrary *pStart = NULL);
+    CFETypedDeclarator* FindUserDefinedType(std::string sName);
+    CFEConstDeclarator* FindConstant(std::string sName);
+    CFELibrary* FindLibrary(std::string sName);
+    CFEConstructedType* FindTaggedDecl(std::string sName);
 
     void AddSameLibrary(CFELibrary *pLibrary);
     void AddComponents(vector<CFEFileComponent*> *pComponents);
-    
+
     virtual void Accept(CVisitor&);
-    virtual string GetName();
-    bool Match(string sName);
+    virtual std::string GetName();
+    bool Match(std::string sName);
 
 
 // Attributes
 protected:
-    /** \var string m_sLibName
+    /** \var std::string m_sLibName
      *  \brief contains the library's name
      */
-    string m_sLibName;
+    std::string m_sLibName;
     /** \var CFELibrary* m_pSameLibraryNext
      *  \brief the same library in other files (this is like a next pointer)
      */
@@ -107,23 +107,23 @@ public:
     /** \var CSearchableCollection<CFEConstDeclarator> m_Constants
      *  \brief constains the constants defined in the library
      */
-    CSearchableCollection<CFEConstDeclarator, string> m_Constants;
+    CSearchableCollection<CFEConstDeclarator, std::string> m_Constants;
     /** \var CSearchableCollection<CFETypedDeclarator> m_Typedefs
      *  \brief contains the typedefs of this library
      */
-    CSearchableCollection<CFETypedDeclarator, string> m_Typedefs;
+    CSearchableCollection<CFETypedDeclarator, std::string> m_Typedefs;
     /** \var CSearchableCollection<CFEInterface> m_Interfaces
      *  \brief contains the interfaces of this library
      */
-    CSearchableCollection<CFEInterface, string> m_Interfaces;
+    CSearchableCollection<CFEInterface, std::string> m_Interfaces;
     /** \var CSearchableCollection<CFELibrary> m_Libraries
      *  \brief contains the nested libraries
      */
-    CSearchableCollection<CFELibrary, string> m_Libraries;
+    CSearchableCollection<CFELibrary, std::string> m_Libraries;
     /** \var CSearchableCollection<CFEConstructedType> m_TaggedDeclarators
      *  \brief contains the tagged constructed types of this library
      */
-    CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators;
+    CSearchableCollection<CFEConstructedType, std::string> m_TaggedDeclarators;
 };
 
 #endif // __DICE_FE_FELIBRARY_H__

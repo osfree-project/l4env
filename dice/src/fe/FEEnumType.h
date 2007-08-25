@@ -50,7 +50,7 @@ public:
      *  \param sTag the tag of the enum
      *  \param pMembers the members of the enumeration
      */
-    CFEEnumType(string sTag, vector<CFEIdentifier*> *pMembers);
+    CFEEnumType(std::string sTag, vector<CFEIdentifier*> *pMembers);
     virtual ~CFEEnumType();
 
 protected:

@@ -1,11 +1,12 @@
 /* -*- c -*- */
 import <l4/sys/types.h>
 import <l4/dm_generic/types.h>
+
 import <l4/l4vfs/object_server.idl>
 import <l4/rt_mon/rt_mon_reg.idl>
 
-#include <l4/rt_mon/defines.h>
-#include <l4/rt_mon/types.h>
+import <l4/rt_mon/defines.h>
+import <l4/rt_mon/types.h>
 
 library rt_mon
 {

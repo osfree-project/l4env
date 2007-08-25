@@ -43,6 +43,7 @@ class CBEComponent;
 class CBEClass;
 class CBETypedef;
 class CBEType;
+class CBEEnumType;
 class CBEFunction;
 class CBENameSpace;
 class CBEConstant;
@@ -79,12 +80,13 @@ public: // Public methods
     void Write();
     void CreateBE(CFEFile *pFEFile);
 
-    CBETypedef* FindTypedef(string sTypeName);
-    CBEConstant* FindConstant(string sConstantName);
-    CBENameSpace* FindNameSpace(string sNameSpaceName);
-    CBEClass* FindClass(string sClassName);
-    CBEType* FindTaggedType(unsigned int nType, string sTag);
-    CBEFunction* FindFunction(string sFunctionName, FUNCTION_TYPE nFunctionType);
+    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef *pPrev = NULL);
+    CBEConstant* FindConstant(std::string sConstantName);
+    CBENameSpace* FindNameSpace(std::string sNameSpaceName);
+    CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = NULL);
+    CBEType* FindTaggedType(unsigned int nType, std::string sTag);
+    CBEFunction* FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType);
+    CBEEnumType* FindEnum(std::string sEnumerator);
 
     void AddToImpl(CBEImplementationFile* pImpl);
     void AddToHeader(CBEHeaderFile* pHeader);
@@ -116,31 +118,31 @@ protected:
     CBEComponent *m_pComponent;
 
 public:
-    /** \var CSearchableCollection<CBEConstant, string> m_Constants
+    /** \var CSearchableCollection<CBEConstant, std::string> m_Constants
      *  \brief contains the constants of the back-end
      */
-    CSearchableCollection<CBEConstant, string> m_Constants;
+    CSearchableCollection<CBEConstant, std::string> m_Constants;
     /** \var CCollection<CBENameSpace> m_Namespaces
      *  \brief contains the namespaces of the back-end
      */
     CCollection<CBENameSpace> m_Namespaces;
-    /** \var CSearchableCollection<CBEClass, string> m_Classes
+    /** \var CSearchableCollection<CBEClass, std::string> m_Classes
      *  \brief contains the classes of the back-end
      */
-    CSearchableCollection<CBEClass, string> m_Classes;
-    /** \var CSearchableCollection<CBETypedef, string> m_Typedefs
+    CSearchableCollection<CBEClass, std::string> m_Classes;
+    /** \var CSearchableCollection<CBETypedef, std::string> m_Typedefs
      *  \brief contains the type definitions of the back-end
      */
-    CSearchableCollection<CBETypedef, string> m_Typedefs;
+    CSearchableCollection<CBETypedef, std::string> m_Typedefs;
     /** \var CCollection<CBEType> m_TypeDeclarations
      *  \brief contains the type declarations, which are not typedefs (usually
      *         tagged)
      */
     CCollection<CBEType> m_TypeDeclarations;
-    /** \var CSearchableCollection<CBEFunction, string> m_GlobalFunctions
+    /** \var CSearchableCollection<CBEFunction, std::string> m_GlobalFunctions
      *  \brief contains global functions (outside of classes and name-spaces)
      */
-    CSearchableCollection<CBEFunction, string> m_GlobalFunctions;
+    CSearchableCollection<CBEFunction, std::string> m_GlobalFunctions;
 };
 
 #endif // !__DICE_BEROOT_H__

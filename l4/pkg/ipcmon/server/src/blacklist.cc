@@ -11,7 +11,6 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 #include <vector>
-#include <string>
 #include "blacklist.h"
 
 void BlacklistManager::allow(unsigned int src, unsigned int dest)

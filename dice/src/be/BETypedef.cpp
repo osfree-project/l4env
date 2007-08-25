@@ -52,12 +52,12 @@ CBETypedef::CBETypedef(CBETypedef & src)
 CBETypedef::~CBETypedef()
 {}
 
-/** \brief creates a new instance of this object 
+/** \brief creates a new instance of this object
  *  \return reference to copy
  */
 CObject *CBETypedef::Clone()
-{ 
-    return new CBETypedef(*this); 
+{
+    return new CBETypedef(*this);
 }
 
 /** \brief creates the typedef class
@@ -69,7 +69,7 @@ CObject *CBETypedef::Clone()
 void
 CBETypedef::CreateBackEnd(CFETypedDeclarator * pFETypedef)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s called\n", 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s called\n",
 	__func__);
 
     // set target file name
@@ -86,16 +86,16 @@ CBETypedef::CreateBackEnd(CFETypedDeclarator * pFETypedef)
     string sAlias = pNF->GetTypeName(pFETypedef, pDecl->GetName());
     pDecl->CreateBackEnd(sAlias, pDecl->GetStars());
     m_sDefine = pNF->GetTypeDefine(pDecl->GetName());
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedef::%s created typedef <type>(%p) %s (%d stars) at %p\n",
 	__func__, GetType(), sAlias.c_str(), pDecl->GetStars(), this);
-    
+
     if (dynamic_cast<CBEUserDefinedType*>(m_pType))
     {
-	assert(dynamic_cast<CBEUserDefinedType*>(m_pType)->GetName() != 
+	assert(dynamic_cast<CBEUserDefinedType*>(m_pType)->GetName() !=
 	    pDecl->GetName());
     }
-    
+
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedef::%s returns true\n", __func__);
 }
@@ -130,10 +130,7 @@ CBETypedef::CreateBackEnd(CBEType * pType,
     pDecl->CreateBackEnd(sAlias, pDecl->GetStars());
     m_sDefine = pNF->GetTypeDefine(pDecl->GetName());
     // set source file information
-    SetSourceLine(pFERefObject->GetSourceLine());
-    CFEFile *pFEFile = pFERefObject->GetSpecificParent<CFEFile>();
-    if (pFEFile)
-        SetSourceFileName(pFEFile->GetFileName());
+    CBEObject::CreateBackEnd(pFERefObject);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedef::%s(type, name) returns\n",	__func__);
@@ -150,11 +147,11 @@ void CBETypedef::AddToHeader(CBEHeaderFile* pHeader)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedef::%s(header: %s) for typedef %s called\n", __func__,
-        pHeader->GetFileName().c_str(), 
+        pHeader->GetFileName().c_str(),
 	m_Declarators.First()->GetName().c_str());
     if (IsTargetFile(pHeader))
         pHeader->m_Typedefs.Add(this);
-    
+
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedef::%s(header) return true\n", __func__);
 }
@@ -166,10 +163,10 @@ void CBETypedef::AddToHeader(CBEHeaderFile* pHeader)
 void
 CBETypedef::WriteForwardDeclaration(CBEFile& pFile)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
-	"CBETypedef::%s called for %s\n", __func__, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedef::%s called for %s\n", __func__,
 	m_Declarators.First()->GetName().c_str());
-    
+
     if (GetType()->IsConstructedType())
     {
 	bool bNeedDefine = !m_sDefine.empty();
@@ -178,15 +175,15 @@ CBETypedef::WriteForwardDeclaration(CBEFile& pFile)
 	    pFile << "#if !defined(" << m_sDefine << ")\n";
 	    pFile << "#define " << m_sDefine << "\n";
 	}
-	
+
 	int nSize = GetSize();
 	pFile << "\t/* size = " << nSize << " bytes == " << ((nSize+3) >> 2)
 	    << " dwords */\n";
-	
+
 	pFile << "\ttypedef ";
 	CBETypedDeclarator::WriteForwardDeclaration(pFile);
 	pFile << ";\n";
-	
+
 	if (bNeedDefine)
 	{
 	    pFile << "#endif /* " << m_sDefine << " */\n\n";
@@ -194,8 +191,8 @@ CBETypedef::WriteForwardDeclaration(CBEFile& pFile)
     }
     else
 	WriteDeclaration(pFile);
-    
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s returned\n", 
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s returned\n",
 	__func__);
 }
 
@@ -216,10 +213,10 @@ CBETypedef::WriteDefinition(CBEFile& pFile)
 	    pFile << "#if !defined(" << sDefine << ")\n";
 	    pFile << "#define " << sDefine << "\n";
 	}
-	
+
 	CBETypedDeclarator::WriteDefinition(pFile);
 	pFile << ";\n";
-	
+
 	if (bNeedDefine)
 	{
 	    pFile << "#endif /* " << sDefine << " */\n\n";
@@ -238,7 +235,7 @@ CBETypedef::WriteDeclaration(CBEFile& pFile)
 {
     if (!pFile.is_open())
 	return;
-    
+
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s called for %s\n", __func__,
 	m_Declarators.First()->GetName().c_str());
     bool bNeedDefine = !m_sDefine.empty();
@@ -247,20 +244,20 @@ CBETypedef::WriteDeclaration(CBEFile& pFile)
 	pFile << "#if !defined(" << m_sDefine << ")\n";
 	pFile << "#define " << m_sDefine << "\n";
     }
-    
+
     int nSize = GetSize();
     pFile << "\t/* size = " << nSize << " bytes == " << ((nSize+3) >> 2) <<
 	" dwords */\n";
-    
+
     pFile << "\ttypedef ";
     CBETypedDeclarator::WriteDeclaration(pFile);
     pFile << ";\n";
-    
+
     if (bNeedDefine)
     {
 	pFile << "#endif /* " << m_sDefine << " */\n\n";
     }
-    
+
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s returned\n", __func__);
 }
 

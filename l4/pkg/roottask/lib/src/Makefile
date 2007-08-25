@@ -9,8 +9,4 @@ CFLAGS		+= -ffunction-sections
 
 include $(L4DIR)/mk/lib.mk
 
-ifeq ($(USE_TASKLIB),y)
-CLIENTIDL	= rmgr_task.idl
-else
 CLIENTIDL	= rmgr.idl
-endif

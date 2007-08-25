@@ -40,15 +40,22 @@ CFEExpression::CFEExpression(EXPR_TYPE nType)
     m_Char = 0x00;
 }
 
-CFEExpression::CFEExpression(EXPR_TYPE nType, char nChar)
+CFEExpression::CFEExpression(signed char nChar)
 {
-    m_nType = nType;
+    m_nType = EXPR_CHAR;
     m_Char = nChar;
 }
 
-CFEExpression::CFEExpression(EXPR_TYPE nType, string sString)
+CFEExpression::CFEExpression(short nWChar)
 {
-    m_nType = nType;
+    m_nType = EXPR_WCHAR;
+    m_Char = 0x00;
+    m_WChar = nWChar;
+}
+
+CFEExpression::CFEExpression(std::string sString)
+{
+    m_nType = EXPR_STRING;
     m_Char = 0x00;
     m_String = sString;
 }
@@ -56,20 +63,19 @@ CFEExpression::CFEExpression(EXPR_TYPE nType, string sString)
 CFEExpression::CFEExpression(CFEExpression & src):CFEBase(src)
 {
     m_Char = src.m_Char;
+    m_WChar = src.m_WChar;
     m_nType = src.m_nType;
     m_String = src.m_String;
 }
 
 /** cleans up the expression object (frees the string) */
 CFEExpression::~CFEExpression()
-{
-
-}
+{ }
 
 /** returns a reference to the string
  *  \return a reference to the string
  */
-string CFEExpression::GetString()
+std::string CFEExpression::GetString()
 {
     return m_String;
 }
@@ -77,7 +83,7 @@ string CFEExpression::GetString()
 /** returns the integer value
  *  \return the integer value (boolean values are casted into integer, string returns 0)
  */
-long CFEExpression::GetIntValue()
+int CFEExpression::GetIntValue()
 {
     switch (GetType())
     {
@@ -93,6 +99,9 @@ long CFEExpression::GetIntValue()
     case EXPR_CHAR:
         return (int) m_Char;
         break;
+    case EXPR_WCHAR:
+	return (int) m_WChar;
+	break;
     case EXPR_STRING:
         return 0;
         break;
@@ -120,6 +129,7 @@ bool CFEExpression::IsOfType(unsigned int nType)
             || (nType == TYPE_BOOLEAN));
         break;
     case EXPR_CHAR:
+    case EXPR_WCHAR:
         return ((nType == TYPE_INTEGER)
             || (nType == TYPE_LONG)
             || (nType == TYPE_CHAR));
@@ -149,6 +159,14 @@ char CFEExpression::GetChar()
     return m_Char;
 }
 
+/** retrieves the wide character of this expression
+ *  \return the wide character of this expression
+ */
+short CFEExpression::GetWChar()
+{
+    return m_WChar;
+}
+
 /** create a copy of this object
  *  \return a reference to the new object
  */
@@ -160,17 +178,20 @@ CObject *CFEExpression::Clone()
 /** \brief print the object to a string
  *  \return a string with the content of the object
  */
-string CFEExpression::ToString()
+std::string CFEExpression::ToString()
 {
-    string ret;
+    std::string ret;
     switch (m_nType)
     {
     case EXPR_STRING:
         ret = m_String;
         break;
     case EXPR_CHAR:
-        ret = string(1, m_Char);
+        ret = std::string(1, m_Char);
         break;
+    case EXPR_WCHAR:
+	ret = std::string(1, (char)m_WChar);
+	break;
     case EXPR_NULL:
         ret = "null";
         break;

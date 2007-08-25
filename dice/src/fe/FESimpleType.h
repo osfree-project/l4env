@@ -31,6 +31,7 @@
 #define __DICE_FE_FESIMPLETYPE_H__
 
 #include "FETypeSpec.h"
+#include <utility>
 
 /** \class CFESimpleType
  *  \ingroup frontend
@@ -50,6 +51,12 @@ public:
      */
     CFESimpleType(unsigned int nType, bool bUnSigned = false,
 	bool bUnsignedFirst = true, int nSize = 0, bool bShowType = true);
+    /** \brief CFESimpleType constructor
+     *  \param bType the type of the type
+     *  \param nFirst first part of fixed precision
+     *  \param nSecond the second part of the fixed precision
+     */
+    CFESimpleType(unsigned int nType, int nFirst, int nSecond);
     virtual ~CFESimpleType();
 
 protected:
@@ -60,13 +67,22 @@ protected:
 
 // Operations
 public:
-    virtual void SetUnsigned(bool bUnsigned);
     virtual void Accept(CVisitor&);
-    virtual bool IsUnsigned();
     virtual bool IsConstructedType();
     virtual bool IsPointerType();
     virtual CObject* Clone();
     virtual int GetSize();
+
+    /** checks if this type is unsigned
+     *  \return true if unsigned
+     */
+    bool IsUnsigned()
+    { return m_bUnSigned; }
+    /** \brief sets the signedness
+     *  \param bUnsigned the new un-signess
+     */
+    void SetUnsigned(bool bUnSigned)
+    { m_bUnSigned = bUnSigned; }
 
 // attributes
 protected:
@@ -83,6 +99,10 @@ protected:
      *  \brief the size of the type in bytes
      */
     int m_nSize;
+    /** \var std::pair<int, int> m_FixedPrecision
+     *  \brief contains the precision of the fixed statement
+     */
+    std::pair<int, int> m_FixedPrecision;
 };
 
 #endif /* __DICE_FE_FESIMPLETYPE_H__ */

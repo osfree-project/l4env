@@ -68,7 +68,7 @@ CBENameFactory::~CBENameFactory()
  * front-end IDL file.  E.g. one per IDL file, one per module, one per
  * interface or one per function.
  */
-string 
+string
 CBENameFactory::GetFileName(CFEBase * pFEBase,
     FILE_TYPE nFileType)
 {
@@ -77,7 +77,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 
     if (!pFEBase)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBENameFactory::%s failed because front-end class is 0\n", __func__);
 	return string();
     }
@@ -98,7 +98,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 	    // deliver filename
 	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBENameFactory::%s(%s, filetype: %d) = %s (!IDL file)\n",
-		__func__, typeid(*pFEBase).name(), nFileType, 
+		__func__, typeid(*pFEBase).name(), nFileType,
 		sReturn.c_str());
 
 	    return sReturn;
@@ -114,7 +114,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 	// should only be files
 	if (!pFEFile)
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBENameFactory::%s failed because filetype required CFEFile and it wasn't\n",
 		__func__);
 	    return string();
@@ -122,6 +122,9 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 	// assemble string
 	sReturn = sPrefix;
 	sReturn += pFEFile->GetFileNameWithoutExtension();
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "CBENameFactory::%s filename is %s\n", __func__,
+	    pFEFile->GetFileNameWithoutExtension().c_str());
 	switch (nFileType)
 	{
 	case FILETYPE_CLIENTHEADER:
@@ -164,7 +167,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 	default:
 	    break;
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBENameFactory::%s(%s, filetype: %d) = %s (header, opcode)\n",
 	    __func__, typeid(*pFEBase).name(), nFileType, sReturn.c_str());
 	return sReturn;
@@ -177,7 +180,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 	// check FE type
 	if (!pFEFile)
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBENameFactory::%s failed because PROGRAM_FILE_IDLFILE/ALL and not CFEFile\n",
 		__func__);
 	    return string();
@@ -235,7 +238,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 	// check FE type
 	if (!dynamic_cast<CFEInterface*>(pFEBase))
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 "CBENameFactory::%s failed because PROGRAM_FILE_INTERFACE and not CFEInterface\n",
 		__func__);
 	    return string();
@@ -313,7 +316,7 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
 	else
 	    sReturn += ".c";
     }
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBENameFactory::%s(%s, filetype: %d) = %s\n", __func__,
 	typeid(*pFEBase).name(), nFileType, sReturn.c_str());
     return sReturn;
@@ -329,10 +332,12 @@ CBENameFactory::GetFileName(CFEBase * pFEBase,
  * original file was the top file, there is no difference to the GetFileName
  * function.
  */
-string 
+string
 CBENameFactory::GetIncludeFileName(CFEBase * pFEBase,
     FILE_TYPE nFileType)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBENameFactory::%s called\n", __func__);
     // first get the file name as usual
     // adds prefix to non-IDL files
     string sName = GetFileName(pFEBase, nFileType);
@@ -340,6 +345,9 @@ CBENameFactory::GetIncludeFileName(CFEBase * pFEBase,
     CFEFile *pFEFile = pFEBase->GetSpecificParent<CFEFile>(0);
     // if no IDL file, return original name
     string sOriginalName = pFEFile->GetFileName();
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBENameFactory::%s sOriginalName=%s\n", __func__,
+	sOriginalName.c_str());
     if (!pFEFile->IsIDLFile())
 	return sName;
     // get file name (which contains relative path) and extract it
@@ -348,6 +356,9 @@ CBENameFactory::GetIncludeFileName(CFEBase * pFEBase,
     string sPath;
     if (nPos > 0)
 	sPath = sOriginalName.substr(0, nPos + 1);
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBENameFactory::%s sPath=%s -> sPath + sName = %s\n", __func__,
+	sPath.c_str(), (sPath + sName).c_str());
     // concat path and name and return
     return sPath + sName;
 }
@@ -381,9 +392,9 @@ CBENameFactory::GetIncludeFileName(string sBaseName)
  *
  * This function returns the C representations of the given types.
  */
-string 
-CBENameFactory::GetCORBATypeName(int nType, 
-    bool bUnsigned, 
+string
+CBENameFactory::GetCORBATypeName(int nType,
+    bool bUnsigned,
     int nSize)
 {
     string sReturn;
@@ -472,7 +483,7 @@ CBENameFactory::GetCORBATypeName(int nType,
 	break;
     }
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBENameFactory::%s Generated type \"%s\" for code %d\n",
 	__func__, sReturn.c_str(), nType);
     return sReturn;
@@ -487,9 +498,9 @@ CBENameFactory::GetCORBATypeName(int nType,
  * This function skips types, which it won't provide names for. This way the
  * GetTypeName function will set the name for it.
  */
-string 
-CBENameFactory::GetTypeName(int nType, 
-    bool bUnsigned, 
+string
+CBENameFactory::GetTypeName(int nType,
+    bool bUnsigned,
     int nSize)
 {
     string sReturn;
@@ -665,7 +676,7 @@ CBENameFactory::GetTypeName(int nType,
  *
  * \todo if nested library use all lib names
  */
-string 
+string
 CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
     FUNCTION_TYPE nFunctionType)
 {
@@ -676,7 +687,7 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
 	    __func__);
 	return string();
     }
-    CFEInterface *pFEInterface = 
+    CFEInterface *pFEInterface =
 	pFEOperation->GetSpecificParent<CFEInterface>();
     CFELibrary *pFELibrary = pFEOperation->GetSpecificParent<CFELibrary>();
     // check for interface functions
@@ -767,7 +778,7 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
  *
  *    \todo if nested libraries regard them as well
  */
-string 
+string
 CBENameFactory::GetFunctionName(CFEInterface * pFEInterface,
     FUNCTION_TYPE nFunctionType)
 {
@@ -825,7 +836,7 @@ CBENameFactory::GetFunctionName(CFEInterface * pFEInterface,
  * characters" with underscores. Because define labale commonly are uppercase,
  * we do that as well
  */
-string 
+string
 CBENameFactory::GetHeaderDefine(string sFilename)
 {
     if (sFilename.empty())
@@ -913,7 +924,7 @@ string CBENameFactory::GetOpcodeConst(CBEFunction * pFunction)
 {
     if (!pFunction)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBENameFactory::%s failed because function is 0\n", __func__);
 	return string();
     }
@@ -930,7 +941,7 @@ string CBENameFactory::GetOpcodeConst(CBEFunction * pFunction)
 	}
     }
 
-    CBENameSpace *pNameSpace = (pClass) ? 
+    CBENameSpace *pNameSpace = (pClass) ?
 	pClass->GetSpecificParent<CBENameSpace>() : 0;
     if (pNameSpace)
 	sReturn += (pNameSpace->GetName()) + "_";
@@ -952,7 +963,7 @@ string CBENameFactory::GetOpcodeConst(CBEFunction * pFunction)
  * A opcode constant is usually named:
  * [\<library name\>_]\<interface name\>_\<function name\>_opcode
  */
-string 
+string
 CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation)
 {
     if (!pFEOperation)
@@ -964,9 +975,9 @@ CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation)
     }
 
     string sReturn;
-    CFEInterface *pFEInterface = 
+    CFEInterface *pFEInterface =
 	pFEOperation->GetSpecificParent<CFEInterface>();
-    CFELibrary *pFELibrary = (pFEInterface) ? 
+    CFELibrary *pFELibrary = (pFEInterface) ?
 	pFEInterface->GetSpecificParent<CFELibrary>() : 0;
     if (pFELibrary)
 	sReturn += (pFELibrary->GetName()) + "_";
@@ -976,7 +987,7 @@ CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation)
     // make upper case
     transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBENameFactory::%s(FE: %s) = %s\n", __func__,
 	pFEOperation->GetName().c_str(), sReturn.c_str());
     return sReturn;
@@ -993,7 +1004,7 @@ string CBENameFactory::GetOpcodeConst(CBEClass * pClass)
 {
     if (!pClass)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBENameFactory::%s failed because class is 0\n", __func__);
 	return string();
     }
@@ -1006,25 +1017,31 @@ string CBENameFactory::GetOpcodeConst(CBEClass * pClass)
     // make upper case
     transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	"CBENameFactory::%s(C: %s) = %s\n", __func__, 
-	pClass->GetName().c_str(), sReturn.c_str()); 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBENameFactory::%s(C: %s) = %s\n", __func__,
+	pClass->GetName().c_str(), sReturn.c_str());
     return sReturn;
 }
 
 /** \brief generates the inline prefix
  *  \return a string containing the prefix (usually "inline")
  *
- * Default to "static inline" to avoid warnings about non-defined revious
+ * Default to "static inline" to avoid warnings about non-defined previous
  * prototype. This does not allow to use the function where the header is not
  * included but that can be fixed by using -i extern.
+ *
+ * For C++ only return inline for externally used functions.
  */
 string CBENameFactory::GetInlinePrefix()
 {
+    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	return string("inline");
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE_EXTERN))
 	return string("extern inline");
-    else
+    else if (CCompiler::IsOptionSet(PROGRAM_GENERATE_INLINE_STATIC))
 	return string("static inline");
+    else
+	return string("inline");
 }
 
 /** \brief general function for accessing strings of derived name factories
@@ -1303,13 +1320,16 @@ string CBENameFactory::GetConstantName(CFEConstDeclarator* pFEConstant)
 }
 
 /** \brief creates the name of a dummy variable
+ *  \param sPrefix a prefix for the dummy variable
  *  \return the name of the dummy variable
  *
- *  \todo count the dummy variables in the context
+ * We could keep a counter in the name-factory and increment it on every
+ * invocation of this function, but then we could not connect the usage of a
+ * dummy variable to the declaration.
  */
-string CBENameFactory::GetDummyVariable()
+string CBENameFactory::GetDummyVariable(string sPrefix)
 {
-    return string("dummy");
+    return sPrefix + string("dummy");
 }
 
 /** \brief returns the variable name of a exception word variable
@@ -1377,7 +1397,7 @@ CBENameFactory::GetWordMemberVariable(int nNumber)
  *         local variable for
  *  \return the name of the size variable
  */
-string 
+string
 CBENameFactory::GetLocalSizeVariableName(
     CDeclStack* pStack)
 {
@@ -1408,7 +1428,7 @@ CBENameFactory::GetLocalVariableName(
  *  \return the name of this member
  */
 string
-CBENameFactory::GetPaddingMember(int nPadType, 
+CBENameFactory::GetPaddingMember(int nPadType,
     int nPadToType)
 {
     string sReturn = string("_dice_pad_");

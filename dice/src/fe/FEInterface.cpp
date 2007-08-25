@@ -51,7 +51,7 @@
 /////////////////////////////////////////////////////////////////////
 // Interface stuff
 CFEInterface::CFEInterface(vector<CFEAttribute*> * pIAttributes,
-    string sIName,
+    std::string sIName,
     vector<CFEIdentifier*> *pIBaseNames,
     CFEBase *pParent)
 : CFEFileComponent(pParent),
@@ -149,7 +149,7 @@ CFEInterface::~CFEInterface()
  * This function redirects the request to the interface's header, which
  * contains all names and attributes of the interface.
  */
-string CFEInterface::GetName()
+std::string CFEInterface::GetName()
 {
     // if we got an identifier get it's name
     return m_sInterfaceName;
@@ -159,7 +159,7 @@ string CFEInterface::GetName()
  *  \param sName the name to match
  *  \return true if matches, false otherwise
  */
-bool CFEInterface::Match(string sName)
+bool CFEInterface::Match(std::string sName)
 {
     return GetName() == sName;
 }
@@ -210,7 +210,7 @@ int CFEInterface::GetOperationCount(bool bCountBase)
  *  \param sName the name of the base interface
  *  \return a reference to the searched interface, 0 if not found
  */
-CFEInterface *CFEInterface::FindBaseInterface(string sName)
+CFEInterface *CFEInterface::FindBaseInterface(std::string sName)
 {
     if (sName.empty())
         return 0;

@@ -32,7 +32,7 @@
 
 CFEFunctionDeclarator::CFEFunctionDeclarator(CFEDeclarator * pDecl,
     vector<CFETypedDeclarator*> * pParams)
-: CFEDeclarator(DECL_NONE, (pDecl) ? (pDecl->GetName()) : string(), 0),
+: CFEDeclarator(DECL_NONE, (pDecl) ? (pDecl->GetName()) : std::string(), 0),
     m_Parameters(pParams, this)
 {
 }

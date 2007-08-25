@@ -36,12 +36,12 @@ CFEEnumDeclarator::CFEEnumDeclarator(CFEEnumDeclarator & src)
 }
 
 CFEEnumDeclarator::CFEEnumDeclarator()
-:CFEDeclarator(DECL_ENUM, string())
+:CFEDeclarator(DECL_ENUM, std::string())
 {
     m_pInitialValue = 0;
 }
 
-CFEEnumDeclarator::CFEEnumDeclarator(string sName, CFEExpression * pInitialValue)
+CFEEnumDeclarator::CFEEnumDeclarator(std::string sName, CFEExpression * pInitialValue)
 :CFEDeclarator(DECL_ENUM, sName)
 {
     m_pInitialValue = pInitialValue;

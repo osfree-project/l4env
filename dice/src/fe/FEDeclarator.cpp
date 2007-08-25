@@ -27,6 +27,7 @@
  */
 
 #include "fe/FEDeclarator.h"
+#include "Visitor.h"
 
 CFEDeclarator::CFEDeclarator(CFEDeclarator & src)
 :CFEIdentifier(src)
@@ -37,14 +38,14 @@ CFEDeclarator::CFEDeclarator(CFEDeclarator & src)
 }
 
 CFEDeclarator::CFEDeclarator(DECL_TYPE nType)
-:CFEIdentifier(string())
+:CFEIdentifier(std::string())
 {
     m_nType = nType;
     m_nNumStars = 0;
     m_nBitfields = 0;
 }
 
-CFEDeclarator::CFEDeclarator(DECL_TYPE nType, string sName, int nNumStars, int nBitfields)
+CFEDeclarator::CFEDeclarator(DECL_TYPE nType, std::string sName, int nNumStars, int nBitfields)
 :CFEIdentifier(sName)
 {
     m_nType = nType;
@@ -116,4 +117,12 @@ void CFEDeclarator::SetBitfields(int nBitfields)
 void CFEDeclarator::SetType(DECL_TYPE nNewType)
 {
     m_nType = nNewType;
+}
+
+/** \brief accept the visitor
+ *  \param v reference to the visitor
+ */
+void CFEDeclarator::Accept(CVisitor& v)
+{
+    v.Visit(*this);
 }

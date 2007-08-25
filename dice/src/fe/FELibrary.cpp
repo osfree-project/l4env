@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FELibrary.cpp
+ *  \file    dice/src/fe/FELibrary.cpp
  *  \brief   contains the implementation of the class CFELibrary
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -301,6 +301,8 @@ CFELibrary *CFELibrary::FindLibrary(string sName)
     return 0;
 }
 
+#include "fe/FEFile.h"
+
 /** \brief searches for interface
  *  \param sName the name of the interface to search for
  *  \param pStart the start of the search through the same lib
@@ -310,6 +312,11 @@ CFEInterface *CFELibrary::FindInterface(string sName, CFELibrary* pStart)
 {
     if (sName.empty())
         return 0;
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CFELibrary::%s(%s, %s) called (in file %s)\n", __func__,
+	sName.c_str(), pStart ? pStart->GetName().c_str() : "(null)",
+	GetSpecificParent<CFEFile>()->GetFileName().c_str());
 
     // if scoped name
     string::size_type nScopePos;
@@ -332,6 +339,9 @@ CFEInterface *CFELibrary::FindInterface(string sName, CFELibrary* pStart)
     }
 
     CFEInterface *pInterface = m_Interfaces.Find(sName);
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CFELibrary::%s: search for own interface found %p\n", __func__,
+	pInterface);
     if (pInterface)
 	return pInterface;
 
@@ -392,6 +402,7 @@ void CFELibrary::AddSameLibrary(CFELibrary * pLibrary)
 {
     if (!pLibrary)
         return;
+
     // search for last element in list
     CFELibrary *pLast = this;
     while (pLast->m_pSameLibraryNext) pLast = pLast->m_pSameLibraryNext;

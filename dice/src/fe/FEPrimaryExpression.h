@@ -90,11 +90,11 @@ protected:
 
 // Operations
 public:
-    virtual string ToString();
+    virtual std::string ToString();
     virtual CObject* Clone();
     virtual long double GetFloatValue();
     virtual bool IsOfType(unsigned int nType);
-    virtual long GetIntValue();
+    virtual int GetIntValue();
     virtual CFEExpression* GetOperand();
 
 // attributes

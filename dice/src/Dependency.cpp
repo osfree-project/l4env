@@ -69,7 +69,7 @@ void CDependency::PrintDependencies()
 
     std::ofstream *of = new std::ofstream();
     // if file, open file
-    if (CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MD) || 
+    if (CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MD) ||
 	CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MMD) ||
 	CCompiler::IsDependsOptionSet(PROGRAM_DEPEND_MF))
     {
@@ -133,7 +133,7 @@ void CDependency::PrintDependencyTree(CFEFile * pFEFile)
 {
     if (!pFEFile)
         return;
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for \"%s\" called\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for \"%s\" called\n", __func__,
 	pFEFile->GetFileName().c_str());
     // print names
     vector<CFEFile*>::iterator iterF;
@@ -174,7 +174,7 @@ void CDependency::PrintGeneratedFiles(CFEFile * pFEFile)
     if (!pFEFile->IsIDLFile())
         return;
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for \"%s\" called\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for \"%s\" called\n", __func__,
 	pFEFile->GetFileName().c_str());
 
     if (CCompiler::IsFileOptionSet(PROGRAM_FILE_IDLFILE) ||
@@ -239,7 +239,7 @@ void CDependency::PrintGeneratedFiles4File(CFEFile * pFEFile)
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName;
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for %s called\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for %s called\n", __func__,
 	pFEFile->GetFileName().c_str());
 
     // client
@@ -267,7 +267,7 @@ void CDependency::PrintGeneratedFiles4Library(CFEFile * pFEFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for file \"%s\" called\n",
 	__func__, pFEFile->GetFileName().c_str());
-    
+
     // iterate over libraries
     vector<CFELibrary*>::iterator iterL;
     for (iterL = pFEFile->m_Libraries.begin();
@@ -296,7 +296,7 @@ void CDependency::PrintGeneratedFiles4Library(CFELibrary * pFELibrary)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"%s: for lib \"%s\" called\n", __func__,
 	pFELibrary->GetName().c_str());
-    
+
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName;
     // client file
@@ -333,7 +333,7 @@ void CDependency::PrintGeneratedFiles4Library(CFEInterface * pFEInterface)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"%s: for interface \"%s\" called\n", __func__,
 	pFEInterface->GetName().c_str());
-    
+
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName;
     // client file
@@ -347,8 +347,7 @@ void CDependency::PrintGeneratedFiles4Library(CFEInterface * pFEInterface)
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_COMPONENT))
     {
         // implementation
-        sName = pNF->GetFileName(pFEInterface,
-	    FILETYPE_COMPONENTIMPLEMENTATION);
+        sName = pNF->GetFileName(pFEInterface, FILETYPE_COMPONENTIMPLEMENTATION);
         PrintDependentFile(sName);
     }
 
@@ -392,7 +391,7 @@ void CDependency::PrintGeneratedFiles4Interface(
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"%s: for lib \"%s\" called\n", __func__,
 	pFELibrary->GetName().c_str());
-    
+
     // iterate over interfaces
     vector<CFEInterface*>::iterator iterI;
     for (iterI = pFELibrary->m_Interfaces.begin();
@@ -422,7 +421,7 @@ void CDependency::PrintGeneratedFiles4Interface(
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"%s: for interface \"%s\" called\n", __func__,
 	pFEInterface->GetName().c_str());
-    
+
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName;
     // client file
@@ -436,8 +435,7 @@ void CDependency::PrintGeneratedFiles4Interface(
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_COMPONENT))
     {
         // implementation
-        sName = pNF->GetFileName(pFEInterface,
-	    FILETYPE_COMPONENTIMPLEMENTATION);
+        sName = pNF->GetFileName(pFEInterface, FILETYPE_COMPONENTIMPLEMENTATION);
         PrintDependentFile(sName);
     }
 
@@ -451,7 +449,7 @@ void CDependency::PrintGeneratedFiles4Operation(CFEFile * pFEFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for file \"%s\" called\n",
 	__func__, pFEFile->GetFileName().c_str());
-    
+
     // iterate over interfaces
     vector<CFEInterface*>::iterator iterI;
     for (iterI = pFEFile->m_Interfaces.begin();
@@ -480,7 +478,7 @@ void CDependency::PrintGeneratedFiles4Operation(
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for lib \"%s\" called\n",
 	__func__, pFELibrary->GetName().c_str());
-    
+
     // iterate over interfaces
     vector<CFEInterface*>::iterator iterI;
     for (iterI = pFELibrary->m_Interfaces.begin();
@@ -510,7 +508,7 @@ void CDependency::PrintGeneratedFiles4Operation(
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"%s: for interface \"%s\" caled\n", __func__,
 	pFEInterface->GetName().c_str());
-    
+
     // iterate over operations
     vector<CFEOperation*>::iterator iter;
     for (iter = pFEInterface->m_Operations.begin();
@@ -530,9 +528,9 @@ void CDependency::PrintGeneratedFiles4Operation(
     CFEOperation * pFEOperation)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"%s: for op \"%s\" called\n", __func__, 
+	"%s: for op \"%s\" called\n", __func__,
 	pFEOperation->GetName().c_str());
-    
+
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName;
     // client file
@@ -546,8 +544,7 @@ void CDependency::PrintGeneratedFiles4Operation(
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_COMPONENT))
     {
 	// implementation
-	sName = pNF->GetFileName(pFEOperation,
-	    FILETYPE_COMPONENTIMPLEMENTATION);
+	sName = pNF->GetFileName(pFEOperation, FILETYPE_COMPONENTIMPLEMENTATION);
 	PrintDependentFile(sName);
     }
 
@@ -565,7 +562,7 @@ void CDependency::PrintGeneratedFiles4Operation(
 void CDependency::PrintDependentFile(string sFileName)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called\n", __func__, sFileName.c_str());
-    
+
     char real_path_buffer[PATH_MAX];
     /* Cite: Avoid using this function. It is broken by design... */
     char *real_path = realpath(sFileName.c_str(), real_path_buffer);
@@ -574,7 +571,7 @@ void CDependency::PrintDependentFile(string sFileName)
 	CMessages::Error("Calling realpath(%s) returned an error: %s\n",
 	    sFileName.c_str(), strerror(errno));
     }
-    
+
     size_t nLength = strlen(real_path);
     if ((m_nCurCol + nLength + 1) >= MAX_SHELL_COLS)
     {

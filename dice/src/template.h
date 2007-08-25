@@ -32,6 +32,7 @@
 #include <vector>
 using std::vector;
 #include <algorithm>
+#include <iostream>
 
 template<class T>
 class CCollection : public std::vector<T*>
@@ -64,7 +65,7 @@ public:
      *  \param src the source vector (can be NULL)
      *  \param pParent the parent of the elements (can be NULL)
      */
-    CCollection(vector<T*> *src, 
+    CCollection(vector<T*> *src,
 	CObject *pParent)
 	: m_pParent(pParent)
     {
@@ -201,12 +202,19 @@ public:
 
     /** \brief tries to find a member in the collection given a key
      *  \param key the key to find the member
+     *  \param prev the previously found member
      *  \return reference to the found member or NULL if not found
      */
-    T* Find(KeyT key)
+    T* Find(KeyT key, T* prev = NULL)
     {
-	typename vector<T*>::iterator i = std::find_if(vector<T*>::begin(),
-	    vector<T*>::end(), std::bind2nd(std::ptr_fun(Match), key));
+	typename vector<T*>::iterator i = vector<T*>::begin();
+	// if prev, find it in vector (we can savely add one to result,
+	// because prev _has_ to be a member and is thus before end())
+	if (prev)
+	    i = std::find(vector<T*>::begin(), vector<T*>::end(), prev) + 1;
+	// now we have previous member before iterator (or begin if no previous)
+	// and we can start the search
+	i = std::find_if(i, vector<T*>::end(), std::bind2nd(std::ptr_fun(Match), key));
 	if (i != vector<T*>::end())
 	    return *i;
 	return (T*)0;
@@ -219,8 +227,8 @@ private:
      *  \return true if object's Match function with k returns true
      */
     static bool Match(T* o, KeyT k)
-    { 
-	return o->Match(k); 
+    {
+	return o->Match(k);
     }
 };
 

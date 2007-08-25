@@ -92,7 +92,7 @@ public:
     virtual CObject * Clone();
 
     virtual void Write(CBEFile& pFile);
-    virtual void WriteToStr(string &str);
+    virtual void WriteToStr(std::string &str);
 
     /** \brief tries to match the attribute type
      *  \param nType the type to match
@@ -106,13 +106,13 @@ public:
      */
     ATTR_TYPE GetType()
     { return m_nType; }
-    
+
     /** \brief returns class
      *  \return the attribute's class
      */
     ATTR_CLASS GetClass()
     { return m_nAttrClass; }
-    
+
     /** \brief checks the type of an attribute
      *  \param nType the type to compare the own type to
      *  \return true if the types are the same
@@ -124,21 +124,21 @@ public:
      *  \return the value of m_nIntValue or -1 if m_nAttrClass != ATTR_CLASS_INT
      */
     int GetIntValue()
-    { 
-	return (m_nAttrClass == ATTR_CLASS_INT) ? 
+    {
+	return (m_nAttrClass == ATTR_CLASS_INT) ?
 	    m_nIntValue : -1;
     }
 
     /** \brief access string value
      *  \return string member if ATTR_CLASS_STRING
      */
-    string GetString()
+    std::string GetString()
     {
 	return (m_nAttrClass == ATTR_CLASS_STRING) ?
-	    m_sString : string();
+	    m_sString : std::string();
     }
 
-    /** \brief retrieve reference to the type of a type 
+    /** \brief retrieve reference to the type of a type
      *         attribute (such as transmit_as)
      *  \return a reference to the type of a type attribute
      */
@@ -162,14 +162,14 @@ protected:
    *  \brief contains the attribute class
    */
   ATTR_CLASS m_nAttrClass;
-  /** \var vector<string> m_vPortSpecs
+  /** \var vector<std::string> m_vPortSpecs
    *  \brief contains the EndPoint Attributes specs if any
    */
-  vector<string> m_vPortSpecs;
-  /** \var vector<string> m_vExceptions
+  vector<std::string> m_vPortSpecs;
+  /** \var vector<std::string> m_vExceptions
    *  \brief contains the exception attributes if any
    */
-  vector<string> m_vExceptions;
+  vector<std::string> m_vExceptions;
   /** \var int m_nIntValue
    *  \brief contains the int attribute's value if any
    */
@@ -178,10 +178,10 @@ protected:
    *  \brief the Pointer default attribute value
    */
   CBEAttribute *m_pPtrDefault;
-  /** \var string m_sString
+  /** \var std::string m_sString
    *  \brief the value of the string attribute
    */
-  string m_sString;
+  std::string m_sString;
   /** \var CBEType m_pType
    *  \brief contains the type of the type attribute
    */
@@ -196,10 +196,10 @@ protected:
   int m_nMajorVersion;
 
 public:
-  /** \var CSearchableCollection<CBEDeclarator, string> m_Parameters
+  /** \var CSearchableCollection<CBEDeclarator, std::string> m_Parameters
    *  \brief contains the values of the Is attributes (if any)
    */
-  CSearchableCollection<CBEDeclarator, string> m_Parameters;
+  CSearchableCollection<CBEDeclarator, std::string> m_Parameters;
 };
 
 #endif                //*/ !__DICE_BEATTRIBUTE_H__

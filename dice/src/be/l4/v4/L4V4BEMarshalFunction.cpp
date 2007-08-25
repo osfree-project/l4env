@@ -36,7 +36,7 @@
 #include "be/BEMsgBuffer.h"
 #include "be/BEClass.h"
 #include "Attribute-Type.h"
-#include "TypeSpec-L4V4Types.h"
+#include "be/l4/TypeSpec-L4Types.h"
 #include "Compiler.h"
 #include <cassert>
 
@@ -63,12 +63,13 @@ CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 	m_pTrace->BeforeMarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;
     }
-    
+
     // FIXME: get message buffer var and use its declarator
-    string sMsgBuffer =
-        CCompiler::GetNameFactory()->GetMessageBufferVariable();
+    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    string sMsgBuffer = pNF->GetMessageBufferVariable();
+    string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
     // clear message
-    pFile << "\tL4_MsgClear ( (L4_Msg_t*) " << sMsgBuffer << " );\n";
+    pFile << "\tL4_MsgClear ( (" << sType << "*) " << sMsgBuffer << " );\n";
     // set exception in msgbuffer and return if there was an exception.
     WriteMarshalException(pFile, true, true);
     // call base class
@@ -81,7 +82,7 @@ CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
     // set dopes
     CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
     assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
 	GetSendDirection());
 
     if (bLocalTrace)

@@ -52,17 +52,17 @@ public:
      *  \param sUnionName the name of the union
      *  \param sTag the tag if one
      */
-    CFEIDLUnionType(string sTag,
+    CFEIDLUnionType(std::string sTag,
         vector<CFEUnionCase*> *pUnionBody,
 	CFETypeSpec *pSwitchType,
-        string sSwitchVar,
-        string sUnionName);
+        std::string sSwitchVar,
+        std::string sUnionName);
     virtual ~CFEIDLUnionType();
 
 // Operations
 public:
     virtual CObject* Clone();
-    
+
     /** retrieves the type of the switch variable
      *  \return the type of the switch variable
      */
@@ -71,12 +71,12 @@ public:
     /** retrieves the name of the switch variable
      *  \return the name of the switch variable
      */
-    string GetSwitchVar()
+    std::string GetSwitchVar()
     { return m_sSwitchVar; }
     /** retrieves the name of the union
      *  \return an identifier containing the name of the union
      */
-    string GetUnionName()
+    std::string GetUnionName()
     { return m_sUnionName; }
 
 protected:
@@ -89,14 +89,14 @@ protected:
      *  \brief the type of the switch argument
      */
     CFETypeSpec *m_pSwitchType;
-    /** \var string m_sSwitchVar
+    /** \var std::string m_sSwitchVar
      *  \brief the name of the switch variable
      */
-    string m_sSwitchVar;
-    /** \var string m_sUnionName
+    std::string m_sSwitchVar;
+    /** \var std::string m_sUnionName
      *  \brief the name of the union
      */
-    string m_sUnionName;
+    std::string m_sUnionName;
 };
 
 #endif /* __DICE_FE_FEIDLUNIONTYPE_H__ */

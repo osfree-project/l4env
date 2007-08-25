@@ -47,6 +47,7 @@ class CBEConstant;
 class CBEType;
 class CBETypedef;
 class CBETypedDeclarator;
+class CBEEnumType;
 class CBEFunction;
 class CBENameSpace;
 class CBEFile;
@@ -76,7 +77,7 @@ public:
     CFunctionGroup(CFEOperation *pFEOperation);
     ~CFunctionGroup();
 
-    string GetName();
+    std::string GetName();
     CFEOperation *GetOperation();
 
 protected:
@@ -113,13 +114,13 @@ public: // Public methods
     int GetStringParameterCount(DIRECTION_TYPE nDirection,
 	ATTR_TYPE nMustAttrs = ATTR_NONE, ATTR_TYPE nMustNotAttrs = ATTR_NONE);
     int GetSize(DIRECTION_TYPE nDirection);
-    string GetName();
+    std::string GetName();
 
     /** \brief try to match with the name
      *  \param sName the name to match against
      *  \return true if given name matches internal name
      */
-    bool Match(string sName)
+    bool Match(std::string sName)
     { return GetName() == sName; }
 
     void Write(CBEHeaderFile& pFile);
@@ -131,14 +132,15 @@ public: // Public methods
 
     CFunctionGroup* FindFunctionGroup(CBEFunction *pFunction);
     CBESrvLoopFunction* GetSrvLoopFunction();
-    CBEType* FindTaggedType(int nType, string sTag);
-    CBETypedef* FindTypedef(string sTypeName);
-    CBEFunction* FindFunction(string sFunctionName, FUNCTION_TYPE nFunctionType);
+    CBEType* FindTaggedType(int nType, std::string sTag);
+    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef* pPrev = NULL);
+    CBEFunction* FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType);
+    CBEEnumType* FindEnum(std::string sName);
 
     bool IsTargetFile(CBEHeaderFile* pFile);
     bool IsTargetFile(CBEImplementationFile* pFile);
 
-    bool HasFunctionWithUserType(string sTypeName, CBEFile* pFile);
+    bool HasFunctionWithUserType(std::string sTypeName, CBEFile* pFile);
     int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs,
 	DIRECTION_TYPE nDirection);
 
@@ -159,12 +161,12 @@ protected:
     void CreateBackEndAttribute(CFEAttribute *pFEAttribute);
     void CreateBackEndTaggedDecl(CFEConstructedType *pFEType);
     void CreateBackEndException(CFETypedDeclarator *pFEException);
-    
+
     void CreateFunctionsNoClassDependency(CFEOperation *pFEOperation);
     void CreateFunctionsClassDependency(CFEOperation *pFEOperation);
     virtual void CreateObject(void);
     virtual void CreateEnvironment(void);
-    
+
     void AddInterfaceFunctions(CFEInterface* pFEInterface);
     void AddMessageBuffer(CFEInterface* pFEInterface);
 
@@ -189,9 +191,10 @@ protected:
     void WriteFunction(CBEFunction *pFunction, CBEImplementationFile& pFile);
     virtual void WriteHelperFunctions(CBEHeaderFile& pFile);
     virtual void WriteHelperFunctions(CBEImplementationFile& pFile);
+    virtual void WriteDefaultFunction(CBEHeaderFile& pFile);
 
     int GetOperationNumber(CFEOperation *pFEOperation);
-    bool IsPredefinedID(map<unsigned int, string> *pFunctionIDs,
+    bool IsPredefinedID(map<unsigned int, std::string> *pFunctionIDs,
 	int nNumber);
     int GetMaxOpcodeNumber(CFEInterface *pFEInterface);
     int GetUuid(CFEOperation *pFEOperation);
@@ -201,17 +204,17 @@ protected:
         int nNumber,
         vector<CFEInterface*> *pCollection);
     int FindPredefinedNumbers(vector<CFEInterface*> *pCollection,
-        map<unsigned int, string> *pNumbers);
+        map<unsigned int, std::string> *pNumbers);
     int CheckOpcodeCollision(CFEInterface *pFEInterface,
         int nOpNumber,
         vector<CFEInterface*> *pCollection,
         CFEOperation *pFEOperation);
     void CheckOpcodeCollision(CFEInterface *pFEInterface);
     void CheckOpcodeCollision(CFEInterface *pFirst, CFEInterface *pSecond);
-    void AddBaseClass(string sName);
+    void AddBaseClass(std::string sName);
     int GetFunctionCount(void);
     int GetFunctionWriteCount(CBEFile& pFile);
-    
+
     virtual void MsgBufferInitialization(void);
 
     void CreateOrderedElementList(void);
@@ -222,10 +225,10 @@ protected:
     void WriteLineDirective(CBEFile& pFile, CObject *pObj);
 
 protected: // Protected members
-    /** \var string m_sName
+    /** \var std::string m_sName
      *  \brief the name of the class
      */
-    string m_sName;
+    std::string m_sName;
     /** \var CBEMsgBuffer *m_pMsgBuffer
      *  \brief a reference to the server's message buffer
      */
@@ -252,14 +255,14 @@ public:
      *  \brief contains the attributes of the Class
      */
     CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes;
-    /** \var CSearchableCollection<CBEConstant, string> m_Constants
+    /** \var CSearchableCollection<CBEConstant, std::string> m_Constants
      *  \brief the constants of the Class
      */
-    CSearchableCollection<CBEConstant, string> m_Constants;
-    /** \var CSearchableCollection<CBEException> m_Exceptions
+    CSearchableCollection<CBEConstant, std::string> m_Constants;
+    /** \var CSearchableCollection<CBEException, std::string> m_Exceptions
      *  \brief contains the exceptions defined for the interface
      */
-    CSearchableCollection<CBEException, string> m_Exceptions;
+    CSearchableCollection<CBEException, std::string> m_Exceptions;
     /** \var CCollection<CBEType> m_TypeDeclarations
      *  \brief contains the tagged type declarations
      */

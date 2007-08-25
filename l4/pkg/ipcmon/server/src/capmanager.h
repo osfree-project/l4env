@@ -14,7 +14,6 @@
 #define __SERVER_SRC_CAPMANAGER_H_
 
 #include <vector>
-#include <string>
 #include "capdescriptor.h"
 
 /** Base class of capability managers, defines the capmanager interface. */

@@ -11,7 +11,7 @@ PRIVATE_INCDIR	= $(PKGDIR)/server/src .
 
 DEFAULT_RELOC_x86	:= 0x00110000
 DEFAULT_RELOC_amd64	:= 0x00110000
-DEFAULT_RELOC_arm 	:= 0x00060000
+DEFAULT_RELOC_arm 	:= 0x00070000
 
 SRC_C_x86	= iomap.c
 SRC_C_amd64	= iomap.c
@@ -53,11 +53,11 @@ LIBCLIBS        = -nostdlib $(GCCLDNOSTDLIB)                    \
 endif
 L4LIBS          = -lsigma0 -ll4sys
 
-ifeq ($(USE_TASKLIB), y)
-vpath generic_ts-server.c $(OBJ_BASE)/pkg/task/idl/OBJ-$(ARCH)-$(L4API)
-SERVERIDL	+= generic_ts.idl rmgr_task.idl
-else
 SERVERIDL	= rmgr.idl
+
+ifeq ($(USE_TASKLIB),y)
+vpath generic_ts-server.c $(OBJ_BASE)/pkg/task/idl/OBJ-$(ARCH)-$(L4API)
+SERVERIDL	+= generic_ts.idl
 endif
 
 LDFLAGS := $(filter-out -Ttext, $(LDFLAGS))

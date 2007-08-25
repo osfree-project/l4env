@@ -35,21 +35,33 @@ CFESimpleType::CFESimpleType(unsigned int nType,
                  bool bUnsignedFirst,
                  int nSize,
                  bool bShowType)
-:CFETypeSpec(nType)
-{
-    m_bUnSigned = bUnSigned;
-    m_bUnsignedFirst = bUnsignedFirst;
-    m_bShowType = bShowType;
-    m_nSize = nSize;
-}
+  : CFETypeSpec(nType),
+    m_bUnSigned(bUnSigned),
+    m_bUnsignedFirst(bUnsignedFirst),
+    m_bShowType(bShowType),
+    m_nSize(nSize),
+    m_FixedPrecision(0, 0)
+{ }
+
+CFESimpleType::CFESimpleType(unsigned int nType,
+                 int nFirst,
+                 int nSecond)
+  : CFETypeSpec(nType),
+    m_bUnSigned(false),
+    m_bUnsignedFirst(false),
+    m_bShowType(true),
+    m_nSize(0),
+    m_FixedPrecision(nFirst, nSecond)
+{ }
 
 CFESimpleType::CFESimpleType(CFESimpleType & src)
-:CFETypeSpec(src)
+  : CFETypeSpec(src)
 {
     m_bUnSigned = src.m_bUnSigned;
     m_bUnsignedFirst = src.m_bUnsignedFirst;
     m_bShowType = src.m_bShowType;
     m_nSize = src.m_nSize;
+    m_FixedPrecision = src.m_FixedPrecision;
 }
 
 /** CFESimpleType destructor */
@@ -62,14 +74,6 @@ CFESimpleType::~CFESimpleType()
 CObject *CFESimpleType::Clone()
 {
     return new CFESimpleType(*this);
-}
-
-/** checks if this type is unsigned
- *  \return true if unsigned
- */
-bool CFESimpleType::IsUnsigned()
-{
-    return m_bUnSigned;
 }
 
 /** \brief test a type whether it is a constructed type or not
@@ -98,14 +102,6 @@ bool CFESimpleType::IsPointerType()
 void CFESimpleType::Accept(CVisitor& v)
 {
     v.Visit(*this);
-}
-
-/** sets the signed/unsigned variable
- *  \param bUnsigned the new unsigned value
- */
-void CFESimpleType::SetUnsigned(bool bUnsigned)
-{
-    m_bUnSigned = bUnsigned;
 }
 
 /** \brief resturns the size of the type

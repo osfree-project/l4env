@@ -60,8 +60,8 @@ public:
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual DIRECTION_TYPE GetSendDirection();
-    virtual CBETypedDeclarator* FindParameterType(string sTypeName);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, 
+    virtual CBETypedDeclarator* FindParameterType(std::string sTypeName);
+    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
     virtual void AddParameter(CFETypedDeclarator * pFEParameter);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
@@ -75,8 +75,9 @@ protected:
     virtual int GetMaxReturnSize(DIRECTION_TYPE nDirection);
     virtual void WriteInvocation(CBEFile& pFile);
     virtual void WriteVariableInitialization(CBEFile& pFile);
-    virtual void WriteCallParameter(CBEFile& pFile, 
+    virtual void WriteCallParameter(CBEFile& pFile,
 	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
+    virtual void WriteFunctionDefinition(CBEFile& pFile);
     virtual void AddAfterParameters();
     virtual void AddBeforeParameters();
 };

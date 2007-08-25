@@ -35,7 +35,7 @@
 #include "Messages.h"
 #include <cassert>
 
-CFEUserDefinedExpression::CFEUserDefinedExpression(string sExpName)
+CFEUserDefinedExpression::CFEUserDefinedExpression(std::string sExpName)
 : CFEExpression(EXPR_USER_DEFINED)
 {
     m_sExpName = sExpName;
@@ -57,7 +57,7 @@ CFEUserDefinedExpression::~CFEUserDefinedExpression()
  *  \brief returns the expression's name
  *  \return the expression's name
  */
-string CFEUserDefinedExpression::GetExpName()
+std::string CFEUserDefinedExpression::GetExpName()
 {
     return m_sExpName;
 }
@@ -69,7 +69,7 @@ string CFEUserDefinedExpression::GetExpName()
  * Searches for the definition of this expression and delegates the request to the
  * found expression.
  */
-long CFEUserDefinedExpression::GetIntValue()
+int CFEUserDefinedExpression::GetIntValue()
 {
     // find const with root and interface and get its int value
     // because of scope we have to search interface first

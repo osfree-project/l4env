@@ -2,8 +2,8 @@
 import <l4/sys/types.h>
 import <l4/dm_generic/types.h>
 
-#include <l4/rt_mon/defines.h>
-#include <l4/rt_mon/types.h>
+import <l4/rt_mon/defines.h>
+import <l4/rt_mon/types.h>
 
 library rt_mon
 {

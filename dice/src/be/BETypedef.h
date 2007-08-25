@@ -56,7 +56,7 @@ protected:
 public:
     using CBETypedDeclarator::CreateBackEnd;
     virtual void CreateBackEnd(CFETypedDeclarator *pFETypedef);
-    virtual void CreateBackEnd(CBEType * pType, string sName, CFEBase *pFERefObject);
+    virtual void CreateBackEnd(CBEType * pType, std::string sName, CFEBase *pFERefObject);
     virtual void AddToHeader(CBEHeaderFile* pHeader);
 
     virtual CObject *Clone();
@@ -66,10 +66,10 @@ public:
     virtual void WriteDeclaration(CBEFile& pFile);
 
 protected:
-    /** \var string m_sDefine
+    /** \var std::string m_sDefine
      *  \brief the define symbol to brace the type definition
      */
-    string m_sDefine;
+    std::string m_sDefine;
 };
 
 #endif // !__DICE_BETYPEDEF_H__

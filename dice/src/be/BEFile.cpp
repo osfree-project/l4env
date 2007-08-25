@@ -72,7 +72,7 @@ CBEFile::CBEFile()
 
 CBEFile::CBEFile(CBEFile & src)
 : std::ios(),
-  std::ofstream(), 
+  std::ofstream(),
   CObject(src),
   m_Classes(0,(CObject*)0),
   m_NameSpaces(0, (CObject*)0),
@@ -84,18 +84,18 @@ CBEFile::CBEFile(CBEFile & src)
     m_IncludedFiles.Adopt(this);
     // only copy references of the classes, namespaces and functions
     vector<CBEClass*>::iterator iC;
-    for (iC = src.m_Classes.begin(); 
-	 iC != src.m_Classes.end(); 
+    for (iC = src.m_Classes.begin();
+	 iC != src.m_Classes.end();
 	 iC++)
 	m_Classes.Add(*iC);
     vector<CBENameSpace*>::iterator iN;
-    for (iN = src.m_NameSpaces.begin(); 
-	 iN != src.m_NameSpaces.end(); 
+    for (iN = src.m_NameSpaces.begin();
+	 iN != src.m_NameSpaces.end();
 	 iN++)
 	m_NameSpaces.Add(*iN);
     vector<CBEFunction*>::iterator iF;
-    for (iF = src.m_Functions.begin(); 
-	 iF != src.m_Functions.end(); 
+    for (iF = src.m_Functions.begin();
+	 iF != src.m_Functions.end();
 	 iF++)
 	m_Functions.Add(*iF);
 }
@@ -129,18 +129,13 @@ CBEFile::AddIncludedFileName(string sFileName,
     if (m_IncludedFiles.Find(sFileName))
 	return;
     // add new include file
-    CIncludeStatement *pNewInc = new CIncludeStatement(bIDLFile, 
+    CIncludeStatement *pNewInc = new CIncludeStatement(bIDLFile,
 	bIsStandardInclude, false, sFileName, string(),
 	string(), 0);
     m_IncludedFiles.Add(pNewInc);
     // set source file info
     if (pRefObj)
-    {
-        pNewInc->SetSourceLine(pRefObj->GetSourceLine());
-	CFEFile *pFEFile = pRefObj->GetSpecificParent<CFEFile>();
-        if (pFEFile)
-            pNewInc->SetSourceFileName(pFEFile->GetSourceFileName());
-    }
+        pNewInc->m_sourceLoc = pRefObj->m_sourceLoc;
 }
 
 /** \brief tries to find the function with the given name
@@ -163,7 +158,7 @@ CBEFunction *CBEFile::FindFunction(string sFunctionName,
 	 iterC != m_Classes.end();
 	 iterC++)
     {
-        if ((pFunction = (*iterC)->FindFunction(sFunctionName, 
+        if ((pFunction = (*iterC)->FindFunction(sFunctionName,
 		    nFunctionType)) != 0)
             return pFunction;
     }
@@ -173,7 +168,7 @@ CBEFunction *CBEFile::FindFunction(string sFunctionName,
 	 iterN != m_NameSpaces.end();
 	 iterN++)
     {
-        if ((pFunction = (*iterN)->FindFunction(sFunctionName, 
+        if ((pFunction = (*iterN)->FindFunction(sFunctionName,
 		    nFunctionType)) != 0)
             return pFunction;
     }
@@ -241,12 +236,13 @@ void CBEFile::WriteInclude(CIncludeStatement *pInclude)
 
 /** \brief tries to find a class using its name
  *  \param sClassName the name of the searched class
+ *  \param pPrev previously found class
  *  \return a reference to the found class or 0 if not found
  */
-CBEClass* CBEFile::FindClass(string sClassName)
+CBEClass* CBEFile::FindClass(string sClassName, CBEClass *pPrev)
 {
     // first search classes
-    CBEClass *pClass = m_Classes.Find(sClassName);
+    CBEClass *pClass = m_Classes.Find(sClassName, pPrev);
     if (pClass)
 	return pClass;
     // then search namespaces
@@ -255,7 +251,7 @@ CBEClass* CBEFile::FindClass(string sClassName)
 	 iterN != m_NameSpaces.end();
 	 iterN++)
     {
-        if ((pClass = (*iterN)->FindClass(sClassName)) != 0)
+        if ((pClass = (*iterN)->FindClass(sClassName, pPrev)) != 0)
             return pClass;
     }
     // not found
@@ -395,17 +391,17 @@ void CBEFile::WriteIntro()
     if (user)
     {
 	*this << "by " << user;
-	
+
 	char host[255];
 	if (!gethostname(host, sizeof(host)))
 	    *this << "@" << host;
-	
+
 	*this << " ";
     }
 
     time_t t = time(NULL);
     *this << "on " << ctime(&t);
-    *this << " * with Dice version " << dice_version << " (compiled on " << 
+    *this << " * with Dice version " << dice_version << " (compiled on " <<
 	dice_build << ")\n";
     *this << " * send bug reports to <dice@os.inf.tu-dresden.de>\n";
     *this << " */\n\n";
@@ -463,12 +459,12 @@ void CBEFile::CreateOrderedElementList(void)
 void CBEFile::InsertOrderedElement(CObject *pObj)
 {
     // get source line number
-    int nLine = pObj->GetSourceLine();
+    unsigned int nLine = pObj->m_sourceLoc.getBeginLine();
     // search for element with larger number
     vector<CObject*>::iterator iter = m_vOrderedElements.begin();
     for (; iter != m_vOrderedElements.end(); iter++)
     {
-        if ((*iter)->GetSourceLine() > nLine)
+        if ((*iter)->m_sourceLoc.getBeginLine() > nLine)
         {
             // insert before that element
             m_vOrderedElements.insert(iter, pObj);
@@ -479,70 +475,13 @@ void CBEFile::InsertOrderedElement(CObject *pObj)
     m_vOrderedElements.push_back(pObj);
 }
 
-/** \brief retrieves the maximum line number in the file
- *  \return the maximum line number in this file
- *
- * If line number is not that, i.e., is zero, then we iterate the elements and
- * check their end line number. The maximum is out desired maximum line
- * number.
- */
-int
-CBEFile::GetSourceLineEnd()
-{
-    if (m_nSourceLineNbEnd != 0)
-       return m_nSourceLineNbEnd;
-
-    // Includes
-    vector<CIncludeStatement*>::iterator iterI;
-    for (iterI = m_IncludedFiles.begin();
-	 iterI != m_IncludedFiles.end();
-	 iterI++)
-    {
-       int sLine = (*iterI)->GetSourceLine();
-       int eLine = (*iterI)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // namespaces
-    vector<CBENameSpace*>::iterator iterN;
-    for (iterN = m_NameSpaces.begin();
-	 iterN != m_NameSpaces.end();
-	 iterN++)
-    {
-       int sLine = (*iterN)->GetSourceLine();
-       int eLine = (*iterN)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // classes
-    vector<CBEClass*>::iterator iterC;
-    for (iterC = m_Classes.begin();
-	 iterC != m_Classes.end();
-	 iterC++)
-    {
-       int sLine = (*iterC)->GetSourceLine();
-       int eLine = (*iterC)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // functions
-    vector<CBEFunction*>::iterator iterF;
-    for (iterF = m_Functions.begin();
-	 iterF != m_Functions.end();
-	 iterF++)
-    {
-       int sLine = (*iterF)->GetSourceLine();
-       int eLine = (*iterF)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-
-    return m_nSourceLineNbEnd;
-}
-
 /** \brief specializaion of stream operator for strings
  *  \param s string parameter
  *
  * Here we implement the special treatment for indentation. To make it right
  * we have to check if there are tabs after line-breaks.
  */
-std::ostream::__ostream_type& CBEFile::operator<<(string s)
+std::ofstream& CBEFile::operator<<(string s)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEFile::%s(str:\"%s\") called\n", __func__, s.c_str());
@@ -585,7 +524,7 @@ std::ostream::__ostream_type& CBEFile::operator<<(string s)
 /** \brief specialization of stream operator for character arrays
  *  \param s character array to print
  */
-std::ostream::__ostream_type& CBEFile::operator<<(char const * s)
+std::ofstream& CBEFile::operator<<(char const * s)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEFile::%s(char const:%s) called\n", __func__, s);
@@ -597,7 +536,7 @@ std::ostream::__ostream_type& CBEFile::operator<<(char const * s)
 /** \brief specialization of stream operator for character arrays
  *  \param s character array to print
  */
-std::ostream::__ostream_type& CBEFile::operator<<(char* s)
+std::ofstream& CBEFile::operator<<(char* s)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEFile::%s(char:%s) called\n", __func__, s);

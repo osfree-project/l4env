@@ -67,18 +67,18 @@ public:
     /** \brief return the tag of the constructed type
      *  \return the tag
      */
-    string GetTag()
+    std::string GetTag()
     { return m_sTag; }
     /** \brief set the tag of the constructed type
      *  \param sTag the new tag
      */
-    void SetTag(string sTag)
+    void SetTag(std::string sTag)
     { m_sTag = sTag; }
     /** \brief returns true if tag matches
      *  \param sTag the tag to check against
      *  \return true if matches
      */
-    bool Match(string sTag)
+    bool Match(std::string sTag)
     { return m_sTag == sTag; }
 
 protected:
@@ -86,10 +86,10 @@ protected:
      *  \brief true if this struct is a forward declaration
      */
     bool m_bForwardDeclaration;
-    /** \var string m_sTag
+    /** \var std::string m_sTag
      *  \brief the tag of the struct
      */
-    string m_sTag;
+    std::string m_sTag;
 };
 
 #endif /* __DICE_FE_FECONSTRUCTEDTYPE_H__ */

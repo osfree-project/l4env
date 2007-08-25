@@ -45,7 +45,7 @@ class CDeclaratorStackLocation;
  *  \ingroup backend
  *  \brief a special collection class for struct members
  */
-class CStructMembers : public CSearchableCollection<CBETypedDeclarator, string>
+class CStructMembers : public CSearchableCollection<CBETypedDeclarator, std::string>
 {
 public:
     /** \brief constructs struct members collection
@@ -61,8 +61,8 @@ public:
     ~CStructMembers();
 
     void Add(CBETypedDeclarator *pMember);
-    void Move(string sName, int nPos);
-    void Move(string sName, string sBeforeHere);
+    void Move(std::string sName, int nPos);
+    void Move(std::string sName, std::string sBeforeHere);
 };
 
 /** \class CBEStructType
@@ -84,8 +84,8 @@ protected:
      */
     CBEStructType(CBEStructType &src);
 
-    virtual void WriteGetMemberSize(CBEFile& pFile, 
-    	CBETypedDeclarator *pMember, 
+    virtual void WriteGetMemberSize(CBEFile& pFile,
+	CBETypedDeclarator *pMember,
 	CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
     virtual void CreateBackEndSequence(CFEArrayType *pFEType);
@@ -99,27 +99,27 @@ public:
     virtual void Write(CBEFile& pFile);
     virtual bool IsConstructedType();
     virtual int GetMemberCount();
-    virtual bool HasTag(string sTag);
+    virtual bool HasTag(std::string sTag);
     virtual void WriteCast(CBEFile& pFile, bool bPointer);
-    virtual string GetTag();
+    virtual std::string GetTag();
     virtual void WriteDeclaration(CBEFile& pFile);
-    virtual void WriteGetSize(CBEFile& pFile, 
+    virtual void WriteGetSize(CBEFile& pFile,
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
     virtual int GetFixedSize();
     virtual bool IsSimpleType();
     virtual CBETypedDeclarator* FindMember(
 	CDeclStack* pStack, CDeclStack::iterator iCurr);
     virtual CBETypedDeclarator* FindMemberAttribute(ATTR_TYPE nAttributeType);
-    virtual CBETypedDeclarator* FindMemberIsAttribute(ATTR_TYPE nAttributeType, 
-	string sAttributeParameter);
+    virtual CBETypedDeclarator* FindMemberIsAttribute(ATTR_TYPE nAttributeType,
+	std::string sAttributeParameter);
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
-    virtual void CreateBackEnd(string sTag, CFEBase *pRefObj);
+    virtual void CreateBackEnd(std::string sTag, CFEBase *pRefObj);
 
 protected:
-    /** \var string m_sTag
+    /** \var std::string m_sTag
      *  \brief the tag if the source is a tagged struct
      */
-    string m_sTag;
+    std::string m_sTag;
     /** \var bool m_bForwardDeclaration
      *  \brief true if this is a forward declaration
      */

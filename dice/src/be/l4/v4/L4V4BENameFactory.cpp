@@ -26,9 +26,9 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/l4/v4/L4V4BENameFactory.h"
+#include "L4V4BENameFactory.h"
 #include "be/BEContext.h"
-#include "TypeSpec-L4V4Types.h"
+#include "be/l4/TypeSpec-L4Types.h"
 #include "Compiler.h"
 #include <iostream>
 
@@ -55,9 +55,6 @@ string CL4V4BENameFactory::GetString(int nStringCode, void *pParam)
 {
     switch (nStringCode)
     {
-    case STR_MSGTAG_VARIABLE:
-        return GetMsgTagVariable();
-        break;
     case STR_INIT_RCVSTR_VARIABLE:
 	return GetInitRcvstrVariable();
 	break;
@@ -88,9 +85,9 @@ string CL4V4BENameFactory::GetInitRcvstrVariable()
  *  \param bUnsigned true if the type is unsigned
  *  \param nSize the size of the type
  */
-string 
-CL4V4BENameFactory::GetTypeName(int nType, 
-    bool bUnsigned, 
+string
+CL4V4BENameFactory::GetTypeName(int nType,
+    bool bUnsigned,
     int nSize)
 {
     string sReturn;
@@ -117,7 +114,7 @@ CL4V4BENameFactory::GetTypeName(int nType,
     }
     if (sReturn.empty())
         sReturn = CBENameFactory::GetTypeName(nType, bUnsigned, nSize);
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
 	__func__, sReturn.c_str(), nType);
     return sReturn;

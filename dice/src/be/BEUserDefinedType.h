@@ -60,14 +60,14 @@ public:
     virtual void WriteZeroInit(CBEFile& pFile);
     virtual int GetSize();
     virtual int GetMaxSize();
-    virtual string GetName();
+    virtual std::string GetName();
     virtual bool IsConstructedType();
-    
-    virtual void CreateBackEnd(string sName);
+
+    virtual void CreateBackEnd(std::string sName);
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
 
     virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile& pFile, 
+    virtual void WriteGetSize(CBEFile& pFile,
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
     virtual bool IsSimpleType();
     virtual bool IsArrayType();
@@ -80,15 +80,15 @@ public:
     virtual CBEDeclarator* GetRealName();
 
 protected:
-    virtual int GetSizeOfTypedef(string sTypeName);
-    virtual int GetMaxSizeOfTypedef(string sTypeName);
+    virtual int GetSizeOfTypedef(std::string sTypeName);
+    virtual int GetMaxSizeOfTypedef(std::string sTypeName);
 
 protected:
-    /** \var string m_sOriginalName
+    /** \var std::string m_sOriginalName
      *  \brief m_sName is scoped name (with namespace scope), for finding \
      *         the type, the original name is needed.
      */
-    string m_sOriginalName;
+    std::string m_sOriginalName;
 };
 
 #endif // !__DICE_BEUSERDEFINEDTYPE_H__

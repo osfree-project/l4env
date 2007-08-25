@@ -27,8 +27,8 @@
  */
 
 /** preprocessing symbol to check header file */
-#ifndef __ILD4_FE_FEBINARYEXPRESSION_H__
-#define __ILD4_FE_FEBINARYEXPRESSION_H__
+#ifndef __DICE_FE_FEBINARYEXPRESSION_H__
+#define __DICE_FE_FEBINARYEXPRESSION_H__
 
 #include "fe/FEUnaryExpression.h"
 
@@ -61,10 +61,10 @@ protected:
 
 // Operations
 public:
-    virtual string ToString();
+    virtual std::string ToString();
     virtual CObject* Clone();
     virtual bool IsOfType(unsigned int nType);
-    virtual long GetIntValue();
+    virtual int GetIntValue();
     virtual CFEExpression* GetOperand2();
 
 // attributes
@@ -75,5 +75,5 @@ protected:
     CFEExpression *m_pOperand2;
 };
 
-#endif /* __ILD4_FE_FEBINARYEXPRESSION_H__ */
+#endif /* __DICE_FE_FEBINARYEXPRESSION_H__ */
 

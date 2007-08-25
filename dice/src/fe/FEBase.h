@@ -65,12 +65,27 @@ protected:
 
 // Operations
 public:
-    virtual string ToString();
+    virtual std::string ToString();
 
     virtual CObject* Clone();
     virtual CFEFile* GetRoot();
 
+    /** \brief setter function for parent context
+     *  \param pContext reference to the parent context
+     */
+    void setParentContext(CFEBase* pParent)
+    { m_pParentContext = pParent; }
+    /** \brief getter function for parent context
+     *  \return reference to parent context
+     */
+    CFEBase* getParentContext()
+    { return m_pParentContext; }
+
 protected:
+    /** \brief CFEBase* m_pParentContext
+     *  \var reference to surrounding context
+     */
+    CFEBase* m_pParentContext;
 };
 
 #endif /* __DICE_FE_FEBASE_H__ */

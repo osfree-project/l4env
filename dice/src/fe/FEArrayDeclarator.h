@@ -54,7 +54,7 @@ class CFEArrayDeclarator : public CFEDeclarator
      *  \param sName the name of the declarator
      *  \param pUpper its boundary
      */
-    CFEArrayDeclarator(string sName, CFEExpression * pUpper = 0);
+    CFEArrayDeclarator(std::string sName, CFEExpression * pUpper = 0);
     virtual ~ CFEArrayDeclarator();
 
   protected:

@@ -56,7 +56,7 @@ public: // public methods
     virtual void WriteDopeShortInitialization(CBEFile& pFile, int nType,
 	CMsgStructType nStructType);
 
-    virtual int GetMemberPosition(string sName, CMsgStructType nType);
+    virtual int GetMemberPosition(std::string sName, CMsgStructType nType);
 
 protected: // protected methods
     virtual void WriteRefstringInitParameter(CBEFile& pFile,

@@ -73,7 +73,7 @@ bin bmodfs
 data  libloader.s.so
 data  libld-l4.s.so
 data  shared_test
-data  vmlinuz.arm
+data  vmlinuz
 data  rd
 data  l4linux.cfg
 bin loader --fprov=BMODFS l4linux.cfg

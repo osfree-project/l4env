@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEStringAttribute.h
+ *  \file    dice/src/fe/FEStringAttribute.h
  *  \brief   contains the declaration of the class CFEStringAttribute
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -32,8 +32,8 @@
 #include "fe/FEAttribute.h"
 #include <string>
 
-/**    \class CFEStringAttribute
- *    \ingroup frontend
+/** \class CFEStringAttribute
+ *  \ingroup frontend
  *  \brief represents all attributes, which contain a string information
  */
 class CFEStringAttribute : public CFEAttribute
@@ -45,7 +45,7 @@ public:
      *  \param nType which type of attribute
      *  \param string the string contained in the attribute
      */
-    CFEStringAttribute(ATTR_TYPE nType, string string);
+    CFEStringAttribute(ATTR_TYPE nType, std::string string);
     virtual ~CFEStringAttribute();
 
 protected:
@@ -57,14 +57,14 @@ protected:
 // Operations
 public:
     virtual CObject* Clone();
-    virtual string GetString();
+    virtual std::string GetString();
 
 // attributes
 protected:
-    /**    \var string m_String
-     *  \brief the string
+    /** \var std::string m_String
+     *  \brief the std::string
      */
-    string m_String;
+    std::string m_String;
 };
 
 #endif /* __DICE_FE_FESTRINGATTRIBUTE_H__ */

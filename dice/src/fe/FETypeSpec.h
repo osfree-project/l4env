@@ -32,6 +32,11 @@
 
 #include "fe/FEInterfaceComponent.h"
 #include "TypeSpec-Type.h"
+#include "Attribute-Type.h"
+#include "template.h"
+#include <vector>
+
+class CFEAttribute;
 
 /** \class CFETypeSpec
  *  \ingroup frontend
@@ -57,7 +62,14 @@ protected:
 public:
     virtual bool IsConstructedType();
     virtual bool IsPointerType();
-    virtual unsigned int GetType();
+
+    /** retrieves the type of the type spec
+     *  \return the type of the type spec
+     */
+    unsigned int GetType()
+    { return m_nType; }
+
+    void AddAttributes(std::vector<CFEAttribute*> *pAttributes);
 
 // attributes
 protected:
@@ -65,6 +77,12 @@ protected:
      *  \brief which type is represented
      */
     unsigned int m_nType;
+
+public:
+    /** \var CSearchableCollection<CFEAttribute, ATTR_TYPE> m_Attributes
+     *  \brief the interface's attributes
+     */
+    CSearchableCollection<CFEAttribute, ATTR_TYPE> m_Attributes;
 };
 
 #endif /* __DICE_FE_FETYPESPEC_H__ */

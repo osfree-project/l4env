@@ -12,13 +12,18 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 
-#include <l4/sys/types.h>
+import <l4/sys/types.h>
 
 /**
  * Roottask interface
  * \ingroup idl_roottask
  */
+#ifdef USE_TASKLIB
+#include <l4/task/generic_ts.idl>
+interface rmgr : l4::ts
+#else
 interface rmgr
+#endif
 {
   /**
    * \brief   helper function to check for roottask availability

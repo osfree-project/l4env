@@ -12,13 +12,15 @@ all::
 
 # the ifeq prevents the warning regarding overiding rules for Makefile
 ifeq ($(wildcard GNUmakefile),)
-GNUmakefile:
-	@echo "Calling bootstrap..."
-	@./bootstrap
+GNUmakefile: configure
 	@echo "Calling configure..."
 	@MAKE=$(CONFMAKE) ./configure \
 	    $(if $(DROPS_STDDIR),--prefix=$(DROPS_STDDIR) \
 	    --bindir=$(DROPS_STDDIR)/tool/bin --mandir=$(DROPS_STDDIR)/tool/man)
+
+configure:
+	@echo "Calling bootstrap..."
+	@./bootstrap
 endif
 
 all clean cleanall:: GNUmakefile

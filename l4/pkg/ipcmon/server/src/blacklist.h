@@ -14,7 +14,6 @@
 #define __SERVER_SRC_BLACKLIST_H_
 
 #include <vector>
-#include <string>
 #include "capmanager.h"
 
 /* Black list manager. Maintains a blacklist of prohibitted IPC channels,

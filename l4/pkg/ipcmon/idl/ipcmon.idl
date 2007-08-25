@@ -1,4 +1,4 @@
-#include <l4/sys/types.h>
+import <l4/sys/types.h>
 
 library ipcmon
 {

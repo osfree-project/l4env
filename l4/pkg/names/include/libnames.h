@@ -1,5 +1,5 @@
 /*!
- * \file   names/include/ARCH-x86/libnames.h
+ * \file   names/include/libnames.h
  * \brief  names client library header file
  *
  * \date   05/27/2003
@@ -11,20 +11,15 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details.
  */
-#ifndef __NAMES_INCLUDE_ARCH_X86_LIBNAMES_H_
-#define __NAMES_INCLUDE_ARCH_X86_LIBNAMES_H_
+#ifndef __NAMES_INCLUDE_LIBNAMES_H_
+#define __NAMES_INCLUDE_LIBNAMES_H_
 
 #include <l4/sys/types.h>
+#include <l4/sys/compiler.h>
+#include <l4/names/__names_defs.h>
 
-/*!\brief Maximum length of a string to register with names */
-#define NAMES_MAX_NAME_LEN	32
-/*!\brief Maximum number of entries the nameserver handles */
-#define NAMES_MAX_ENTRIES	512
+EXTERN_C_BEGIN
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-  
 int names_register(const char* name);
 int names_register_thread_weak(const char* name, l4_threadid_t id);
 int names_unregister(const char* name);
@@ -35,9 +30,7 @@ int names_waitfor_name(const char* name, l4_threadid_t* id, const int timeout);
 int names_query_nr(int nr, char* name, int length, l4_threadid_t *id);
 int names_unregister_task(l4_threadid_t tid);
 int names_dump(void);
-  
-#ifdef __cplusplus
-}
-#endif
 
-#endif
+EXTERN_C_END
+
+#endif /* ! __NAMES_INCLUDE_LIBNAMES_H_ */

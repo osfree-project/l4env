@@ -27,6 +27,7 @@
 
 #include "fe/FESizeOfExpression.h"
 #include "fe/FETypeSpec.h"
+#include "Visitor.h"
 
 CFESizeOfExpression::CFESizeOfExpression()
  : CFEExpression()
@@ -44,8 +45,8 @@ CFESizeOfExpression::~CFESizeOfExpression()
         delete m_pExpression;
 }
 
-CFESizeOfExpression::CFESizeOfExpression(string sTypeName)
- : CFEExpression(EXPR_SIZEOF, sTypeName)
+CFESizeOfExpression::CFESizeOfExpression(std::string sTypeName)
+ : CFEExpression(sTypeName)
 {
     m_pType = 0;
     m_pExpression = 0;
@@ -99,9 +100,9 @@ CFEExpression* CFESizeOfExpression::GetSizeOfExpression()
 /** \brief print the object to a string
  *  \return a string with the content of the object
  */
-string CFESizeOfExpression::ToString()
+std::string CFESizeOfExpression::ToString()
 {
-    string ret = "sizeof(";
+    std::string ret = "sizeof(";
     if (m_pType)
         ret += m_pType->ToString();
     else if (m_pExpression)
@@ -112,3 +113,10 @@ string CFESizeOfExpression::ToString()
     return ret;
 }
 
+/** \brief the accept method for the visitors
+ *  \param v reference to the current visitor
+ */
+void CFESizeOfExpression::Accept(CVisitor &v)
+{
+    v.Visit(*this);
+}

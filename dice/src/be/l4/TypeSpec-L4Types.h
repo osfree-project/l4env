@@ -34,10 +34,11 @@
 
 enum
 {
-    TYPE_L4_BASE = TYPE_MAX,  /**< ensure that we use distinct numbers */
-    TYPE_MSGDOPE_SIZE,        /**< the l4 message size dope type */
-    TYPE_MSGDOPE_SEND,        /**< the l4 message send dope type */
-    TYPE_L4_MAX               /**< maximum value of the L4 types */
+    TYPE_L4_BASE = TYPE_MAX,	/**< ensure that we use distinct numbers */
+    TYPE_MSGDOPE_SIZE,		/**< the l4 message size dope type */
+    TYPE_MSGDOPE_SEND,		/**< the l4 message send dope type */
+    TYPE_MSGTAG,		/**< the L4 message tag type */
+    TYPE_L4_MAX			/**< maximum value of the L4 types */
 };
 
 #endif /* !__DICE_TYPESPEC_L4TYPES_H__ */

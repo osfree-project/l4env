@@ -217,6 +217,22 @@ Thread::restore_exc_state()
   _exc_ip = ~0UL;
 }
 
+IMPLEMENTATION[(ia32 || ux) && segments]:
+
+PRIVATE static inline
+void
+Thread::copy_utcb_to_ts_reset_segments(Thread *rcv)
+{ rcv->_gs = rcv->_fs = 0; }
+
+IMPLEMENTATION[(ia32 || ux) && !segments]:
+
+PRIVATE static inline
+void
+Thread::copy_utcb_to_ts_reset_segments(Thread *)
+{}
+
+IMPLEMENTATION[ia32 || ux]:
+
 
 PRIVATE static inline
 void
@@ -239,6 +255,8 @@ Thread::copy_utcb_to_ts(L4_msg_tag const &tag, Thread *snd, Thread *rcv)
     }
   else
     Cpu::memcpy_mwords (&ts->_gs, snd->utcb()->values, s > 16 ? 16 : s);
+
+  copy_utcb_to_ts_reset_segments(rcv);
 
   if (tag.transfer_fpu())
     snd->transfer_fpu(rcv);

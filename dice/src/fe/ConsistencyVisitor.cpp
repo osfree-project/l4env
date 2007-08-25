@@ -70,9 +70,10 @@ void CConsistencyVisitor::Visit(CFEInterface& interface)
 	    if (*iO != *iO2 &&
 		(*iO)->GetName() == (*iO2)->GetName())
 	    {
-		CMessages::GccWarning(*iO2, 0,
-		    "Function name \"%s\" used before (here: %d)\n",
-		    (*iO2)->GetName().c_str(), (*iO)->GetSourceLine());
+		CMessages::GccWarning(*iO2,
+		    "Function name \"%s\" used before (here: %s:%d)\n",
+		    (*iO2)->GetName().c_str(), (*iO)->m_sourceLoc.getFilename().c_str(),
+		    (*iO)->m_sourceLoc.getBeginLine());
 		throw error::consistency_error();
 	    }
 	}
@@ -101,7 +102,7 @@ void CConsistencyVisitor::CheckForOpInInterface(CFEOperation *pFEOperation,
     {
 	if ((*iO)->GetName() == pFEOperation->GetName())
 	{
-	    CMessages::GccWarning(pFEOperation, 0,
+	    CMessages::GccWarning(pFEOperation,
 		"Function \"%s\" redefined. Previously defined in interface %s.\n",
 		pFEOperation->GetName().c_str(),
 		pFEInterface->GetName().c_str());
@@ -129,24 +130,24 @@ void CConsistencyVisitor::Visit(CFEConstDeclarator& constant)
     string sName = constant.GetName();
     if (sName.empty())
     {
-        CMessages::GccError(&constant, 0,
-	    "A constant without a name has been defined.");
+        CMessages::GccError(&constant,
+	    "A constant without a name has been defined.\n");
 	throw error::consistency_error();
     }
     // see if this constant exists somewhere
     CFEConstDeclarator *pConstant = pRoot->FindConstDeclarator(sName);
     if (!pConstant)
     {
-        CMessages::GccError(&constant, 0,
+        CMessages::GccError(&constant,
 	    "Internal Compiler Error:\n"
-	    "The chaining of the front-end classes is wrong - please contact\n" \
-	    "dice@os.inf.tu-dresden.de with a description of this error.");
+	    "The chaining of the front-end classes is wrong - please contact\n"
+	    "dice@os.inf.tu-dresden.de with a description of this error.\n");
 	throw error::consistency_error();
     }
     // check if it is really me
     if (pConstant != &constant)
     {
-        CMessages::GccError(&constant, 0, "The constant %s is defined twice.",
+        CMessages::GccError(&constant, "The constant %s is defined twice.\n",
 	    sName.c_str());
 	throw error::consistency_error();
     }
@@ -158,7 +159,7 @@ void CConsistencyVisitor::Visit(CFEConstDeclarator& constant)
         CFETypedDeclarator *pTypedef = pRoot->FindUserDefinedType(sTypeName);
         if (!pTypedef)
         {
-            CMessages::GccError(&constant, 0, 
+            CMessages::GccError(&constant,
 		"The type (%s) of expression \"%s\" is not defined.\n",
 		sTypeName.c_str(), sName.c_str());
 	    throw error::consistency_error();
@@ -167,8 +168,8 @@ void CConsistencyVisitor::Visit(CFEConstDeclarator& constant)
     }
     if (!(constant.GetValue()->IsOfType(pType->GetType())))
     {
-        CMessages::GccError(&constant, 0, 
-	    "The expression of %s does not match its type.", sName.c_str());
+        CMessages::GccError(&constant,
+	    "The expression of %s does not match its type.\n", sName.c_str());
 	throw error::consistency_error();
     }
 }
@@ -188,9 +189,9 @@ void CConsistencyVisitor::Visit(CFEConstDeclarator& constant)
  *
  * Currently this function tests (and corrects the following conditions):
  * - does the operation has a directional IN attribute it may not have any OUT
- *   parameters 
+ *   parameters
  * - the same as above, only the directions exchanged
- * - if the parameter have no directional attribute set, it is replaced with 
+ * - if the parameter have no directional attribute set, it is replaced with
  *   the standard attribute ATTR_IN
  * - do not allow refstring as return type
  * - if an in-parameter is a struct or union type it is referenced
@@ -207,8 +208,8 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
     if (operation.m_Attributes.Find(ATTR_IN) &&
 	operation.GetReturnType()->GetType() != TYPE_VOID)
     {
-	CMessages::GccError(&operation, 0, 
-	    "A function with attribute [in] cannot have a return type (%s).",
+	CMessages::GccError(&operation,
+	    "A function with attribute [in] cannot have a return type (%s).\n",
 	    operation.GetName().c_str());
 	throw error::consistency_error();
     }
@@ -220,7 +221,7 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
     ///////////////////////////////////////////////////////////////
     // check return type
     CheckReturnType(operation);
-     
+
     ////////////////////////////////////////////////////////////////
     // check if [out] parameters are referenced
 // TODO: replace with non-referenced out
@@ -249,8 +250,8 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
 	    // set, then print an error and exit
 	    if (nStars == 0)
             {
-                CMessages::GccError(*iterP, 0, 
-		    "[out] parameter (%s) must be reference", 
+                CMessages::GccError(*iterP,
+		    "[out] parameter (%s) must be reference.\n",
 		    pD->GetName().c_str());
                 throw error::consistency_error();
             }
@@ -267,8 +268,8 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
 		  (*iterP)->m_Attributes.Find(ATTR_PREALLOC_SERVER)) &&
 		(nStars < 2))
 	    {
-		CMessages::GccError(*iterP, 0,
-		    "[out] parameter (%s) with [size_is] must have at least 2 references",
+		CMessages::GccError(*iterP,
+		    "[out] parameter (%s) with [size_is] must have at least 2 references.\n",
 		    pD->GetName().c_str());
 		throw error::consistency_error();
 	    }
@@ -306,7 +307,7 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
 		pDecl = (*iterP2)->m_Declarators.First();
 		if (sName == pDecl->GetName())
 		{
-                    CMessages::GccError(&operation, 0, 
+                    CMessages::GccError(&operation,
 			"The operation %s has the parameter %s defined more than once.\n",
 			operation.GetName().c_str(), sName.c_str());
                     throw error::consistency_error();
@@ -327,7 +328,7 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
 	if (pFEInterface->m_Exceptions.Find(sName))
 	    continue;
 	// not found
-	CMessages::GccError(*iterR, 0,
+	CMessages::GccError(*iterR,
 	    "The raises declaration uses an undefined exception (%s).\n",
 	    sName.c_str());
 	throw error::consistency_error();
@@ -371,7 +372,7 @@ CConsistencyVisitor::CheckAttributeParameters(CFEOperation& operation,
             if (pRoot->FindConstDeclarator((*iterAttr)->GetName()))
                 continue;
             // nothing found, assume its wrongly used
-            CMessages::GccError(&operation, 0,
+            CMessages::GccError(&operation,
 		"The argument \"%s\" of attribute %s for parameter %s is not declared as a parameter or constant.\n",
                 (*iterAttr)->GetName().c_str(), sAttribute,
 		pDecl->GetName().c_str());
@@ -402,7 +403,7 @@ void CConsistencyVisitor::CheckAttributesOfParams(CFEOperation& operation,
 	{
 	    string sAttr = (nAttr == ATTR_IN) ? "[in]" : "[out]";
 	    string sOther = (nOther == ATTR_IN) ? "[in]" : "[out]";
-	    CMessages::GccError(&operation, 0, 
+	    CMessages::GccError(&operation,
 		"Operation %s cannot have %s parameter and operation attribute %s",
 		operation.GetName().c_str(), sOther.c_str(), sAttr.c_str());
 	    throw error::consistency_error();
@@ -450,7 +451,7 @@ void CConsistencyVisitor::CheckReturnType(CFEOperation& operation)
         default:
             if (pReturnType->GetType() == TYPE_VOID)
             {
-                CMessages::GccError(*iterA, 0,
+                CMessages::GccError(*iterA,
                     "Attribute (%d) not allowed for void return type.\n",
                     nType);
                 throw error::consistency_error();
@@ -462,7 +463,7 @@ void CConsistencyVisitor::CheckReturnType(CFEOperation& operation)
     // check if return value is of type refstring
     if (pReturnType->GetType() == TYPE_REFSTRING)
     {
-        CMessages::GccError(&operation, 0, 
+        CMessages::GccError(&operation,
 	    "Type \"refstring\" is not a valid return type of a function (%s).",
 	    operation.GetName().c_str());
 	throw error::consistency_error();
@@ -474,7 +475,7 @@ void CConsistencyVisitor::CheckReturnType(CFEOperation& operation)
  */
 void CConsistencyVisitor::Visit(CFETypeSpec& type)
 {
-    CMessages::GccError(&type, 0,
+    CMessages::GccError(&type,
 	"The type %d has no consistency check implementation.",
 	type.GetType());
     throw error::consistency_error();
@@ -488,7 +489,7 @@ void CConsistencyVisitor::Visit(CFEArrayType& type)
     // check if base type is defined
     if (!type.GetBaseType())
     {
-	CMessages::GccError(&type, 0, "An array-type without a base type.");
+	CMessages::GccError(&type, "An array-type without a base type.");
 	throw error::consistency_error();
     }
 }
@@ -502,7 +503,7 @@ void CConsistencyVisitor::Visit(CFEEnumType& type)
 	return;
     if (dynamic_cast<CFETypedDeclarator*>(type.GetParent()))
 	return;
-    CMessages::GccError(&type, 0, 
+    CMessages::GccError(&type,
 	"An enum should contain at least one member.");
     throw error::consistency_error();
 }
@@ -578,7 +579,7 @@ void CConsistencyVisitor::Visit(CFEUnionType& type)
     }
     if (type.m_UnionCases.empty())
     {
-	CMessages::GccError(&type, 0, 
+	CMessages::GccError(&type,
 	    "A union without members is not allowed.");
 	throw error::consistency_error();
     }
@@ -591,12 +592,12 @@ void CConsistencyVisitor::Visit(CFESimpleType& type)
 {
     if (type.GetType() == TYPE_NONE)
     {
-        CMessages::GccError(&type, 0, "The type has no type?!");
+        CMessages::GccError(&type, "The type has no type?!");
         throw error::consistency_error();
     }
     if (type.GetSize() < 0)
     {
-        CMessages::GccError(&type, 0, "Type with negative size.");
+        CMessages::GccError(&type, "Type with negative size.");
         throw error::consistency_error();
     }
 }
@@ -611,7 +612,7 @@ void CConsistencyVisitor::Visit(CFEUserDefinedType& type)
     assert(pFile);
     if (sName.empty())
     {
-        CMessages::GccError(&type, 0, "A user defined type without a name.");
+        CMessages::GccError(&type, "A user defined type without a name.");
         throw error::consistency_error();
     }
     // the user defined type can also reference an interface
@@ -631,7 +632,7 @@ void CConsistencyVisitor::Visit(CFEUserDefinedType& type)
     // test if type has really been defined
     if (!(pFile->FindUserDefinedType(sName)))
     {
-        CMessages::GccError(&type, 0,
+        CMessages::GccError(&type,
                     "User defined type \"%s\" not defined.",
                     sName.c_str());
         throw error::consistency_error();
@@ -654,7 +655,7 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
     CFETypeSpec *pType = typeddecl.GetType();
     if (!pType)
     {
-        CMessages::GccError(&typeddecl, 0, "Typed Declarator has no type.");
+        CMessages::GccError(&typeddecl, "Typed Declarator has no type.");
 	throw error::consistency_error();
     }
     // check type
@@ -670,7 +671,7 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
     // we have to check if the type is the same as a possible struct parent
     // The latter case is covered by our normal type checkup, so we only test
     // for the first case.
-    CFEStructType *pEnclosingStruct = 
+    CFEStructType *pEnclosingStruct =
 	typeddecl.GetSpecificParent<CFEStructType>();
     if (!(pEnclosingStruct &&
 	    dynamic_cast<CFEStructType*>(pType) &&
@@ -678,12 +679,12 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
 	    ((CFEStructType*)pType)->IsForwardDeclaration() &&
 	    // our type has a tag, so check if this is similar to the
 	    // enclosing struct's tag
-	    (pEnclosingStruct->GetTag() == 
+	    (pEnclosingStruct->GetTag() ==
 	     ((CFEStructType*)pType)->GetTag())))
     {
 	pType->Accept(*this);
     }
-    
+
     // check declarators
     if (typeddecl.IsTypedef())
     {
@@ -699,17 +700,17 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
             // now check if name is unique
             if (!(pRoot->FindUserDefinedType((*iterD)->GetName())))
             {
-                CMessages::GccError(&typeddecl, 0, "The type %s is not defined.", 
+                CMessages::GccError(&typeddecl, "The type %s is not defined.",
 		    (*iterD)->GetName().c_str());
 		throw error::consistency_error();
             }
-            if ((pSecondType = pRoot->FindUserDefinedType((*iterD)->GetName())) != 
+            if ((pSecondType = pRoot->FindUserDefinedType((*iterD)->GetName())) !=
 		&typeddecl)
             {
 		// check if both are in C header files and if they are include
 		// in different trees
 		bool bEqualPath = true;
-                CFEFile *pSecondFile = 
+                CFEFile *pSecondFile =
 		    pSecondType->GetSpecificParent<CFEFile>(0);
                 if (!(pMyFile->IsIDLFile()) && !(pSecondFile->IsIDLFile()) &&
                     (pMyFile->GetFileName() == pSecondFile->GetFileName()))
@@ -722,7 +723,7 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
                             break;
                         // then tey get the next parent file
                         pMyFile = pMyFile->GetSpecificParent<CFEFile>(1);
-                        pSecondFile = 
+                        pSecondFile =
 			    pSecondFile->GetSpecificParent<CFEFile>(1);
                         if (!pSecondFile)
                         {
@@ -730,7 +731,7 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
                             break;
                         }
                         // test if the file names are the same
-                        if (pMyFile->GetFileName() != 
+                        if (pMyFile->GetFileName() !=
 			    pSecondFile->GetFileName())
                         {
                             bEqualPath = false;
@@ -742,12 +743,12 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
 		// first if conditions are met) then we print an error message
                 if (bEqualPath)
                 {
-                    CMessages::GccError(&typeddecl, 0, "The type %s is defined" \
+                    CMessages::GccError(&typeddecl, "The type %s is defined" \
 			" multiple times. Previously defined here: %s at" \
 			" line %d.", (*iterD)->GetName().c_str(),
-			(pSecondFile) ? 
-			(pSecondFile->GetFileName().c_str()) : "", 
-			pSecondType->GetSourceLine());
+			(pSecondFile) ?
+			(pSecondFile->GetFileName().c_str()) : "",
+			pSecondType->m_sourceLoc.getBeginLine());
 		    throw error::consistency_error();
 		}
 	    }
@@ -771,16 +772,17 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
                 nMaxStars = 2;
             if ((*iterD)->GetStars() > nMaxStars)
             {
-		CFEOperation *pFEOperation = 
+		CFEOperation *pFEOperation =
 		    typeddecl.GetSpecificParent<CFEOperation>();
                 if (pFEOperation)
-                    CMessages::GccWarning(&typeddecl, 0, 
-			"\"%s\" in function \"%s\" has more than one" \
-			" pointer (fixed)", (*iterD)->GetName().c_str(), 
+                    CMessages::GccWarning(&typeddecl,
+			"\"%s\" in function \"%s\" has more than one pointer (fixed).\n",
+			(*iterD)->GetName().c_str(),
 			pFEOperation->GetName().c_str());
                 else
-                    CMessages::GccWarning(&typeddecl, 0, "\"%s\" has more than" \
-			" one pointer (fixed)", (*iterD)->GetName().c_str());
+                    CMessages::GccWarning(&typeddecl,
+			"\"%s\" has more than one pointer (fixed).\n",
+			(*iterD)->GetName().c_str());
             }
         }
     }
@@ -806,19 +808,19 @@ void CConsistencyVisitor::Visit(CFETypedDeclarator& typeddecl)
 		    // if OUT it only needs size_is or length_is -> user has
 		    // to provide buffer which is large enough if IN we need
 		    // max_is, so server loop can provide buffer
-                    if ((typeddecl.m_Attributes.Find(ATTR_IN)) && 
+                    if ((typeddecl.m_Attributes.Find(ATTR_IN)) &&
 			(!typeddecl.m_Attributes.Find(ATTR_MAX_IS)))
                     {
-                        CMessages::GccError(&typeddecl, 0, 
+                        CMessages::GccError(&typeddecl,
 			    "Unbound array declarator \"%s\" with direction IN needs max_is attribute",
-	    		    pArray->GetName().c_str());
+			    pArray->GetName().c_str());
 			throw error::consistency_error();
                     }
                     if ((!typeddecl.m_Attributes.Find(ATTR_SIZE_IS)) &&
                         (!typeddecl.m_Attributes.Find(ATTR_MAX_IS)) &&
                         (!typeddecl.m_Attributes.Find(ATTR_LENGTH_IS)))
                     {
-                        CMessages::GccError(&typeddecl, 0, 
+                        CMessages::GccError(&typeddecl,
 			    "Unbound array declarator \"%s\" needs size_is, length_is or max_is attribute",
 			    pArray->GetName().c_str());
                         throw error::consistency_error();
@@ -837,13 +839,13 @@ void CConsistencyVisitor::Visit(CFEUnionCase& ucase)
     if (!ucase.IsDefault() &&
 	ucase.m_UnionCaseLabelList.empty())
     {
-	 CMessages::GccError(&ucase, 0,
+	 CMessages::GccError(&ucase,
 	     "A Union case has to be either default or have a switch value");
 	 throw error::consistency_error();
     }
     if (!ucase.GetUnionArm())
     {
-	CMessages::GccError(&ucase, 0, 
+	CMessages::GccError(&ucase,
 	    "A union case has to have a typed declarator.");
 	throw error::consistency_error();
     }

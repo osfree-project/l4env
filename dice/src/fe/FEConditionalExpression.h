@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/fe/FEConditionalExpression.h
+ *  \file    dice/src/fe/FEConditionalExpression.h
  *  \brief   contains the declaration of the class CFEConditionalExpression
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/31/2001
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -27,8 +27,8 @@
  */
 
 /** preprocessing symbol to check header file */
-#ifndef __ILD4_FE_FECONDITIONALEXPRESSION_H__
-#define __ILD4_FE_FECONDITIONALEXPRESSION_H__
+#ifndef __DICE_FE_FECONDITIONALEXPRESSION_H__
+#define __DICE_FE_FECONDITIONALEXPRESSION_H__
 
 #include "fe/FEBinaryExpression.h"
 
@@ -68,10 +68,10 @@ protected:
 
 // Operations
 public:
-    virtual string ToString();
+    virtual std::string ToString();
     virtual CObject* Clone();
     virtual bool IsOfType(unsigned int nType);
-    virtual long GetIntValue();
+    virtual int GetIntValue();
     virtual CFEExpression* GetCondition();
 
 // attributes
@@ -82,5 +82,5 @@ protected:
     CFEExpression *m_pCondition;
 };
 
-#endif /* __ILD4_FE_FECONDITIONALEXPRESSION_H__ */
+#endif /* __DICE_FE_FECONDITIONALEXPRESSION_H__ */
 

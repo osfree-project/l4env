@@ -50,15 +50,14 @@ public:
     enum
     {
 	STR_L4V4_BASE = STR_L4_MAX, /**< ensure disjunct values */
-	STR_MSGTAG_VARIABLE,        /**< variable name of the MsgTag return variable */
 	STR_INIT_RCVSTR_VARIABLE,   /**< variable to hold string length for init-rcvstr call */
 	STR_L4V4_MAX                /**< maximum L4V4 value */
     };
 
-    virtual string GetString(int nStringCode, void *pParam);
-    virtual string GetMsgTagVariable();
-    virtual string GetInitRcvstrVariable();
-    virtual string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
+    virtual std::string GetString(int nStringCode, void *pParam);
+    virtual std::string GetMsgTagVariable();
+    virtual std::string GetInitRcvstrVariable();
+    virtual std::string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
 
 };
 

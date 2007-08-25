@@ -52,13 +52,13 @@ public:
      */
     CBEUnionType();
     ~ CBEUnionType();
-    
+
 protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
     CBEUnionType(CBEUnionType & src);
-    
+
     virtual int GetFixedSize();
     virtual void WriteGetMaxSize(CBEFile& pFile,
     	const vector<CBEUnionCase*> *pMembers,
@@ -69,18 +69,18 @@ protected:
     	CBEUnionCase *pMember,
     	CDeclStack* pStack,
 	CBEFunction *pUsingFunc);
-    
+
 public:
     virtual CObject *Clone();
 
     virtual void Write(CBEFile& pFile);
-    
+
     virtual CBETypedDeclarator* FindMember(
 	CDeclStack* pStack,
 	CDeclStack::iterator iCurr);
-    
+
     virtual void CreateBackEnd(CFETypeSpec * pFEType);
-    virtual void CreateBackEnd(string sTag);
+    virtual void CreateBackEnd(std::string sTag);
 
     virtual int GetSize();
     virtual int GetMaxSize();
@@ -88,20 +88,20 @@ public:
     virtual void WriteCast(CBEFile& pFile, bool bPointer);
     virtual void WriteZeroInit(CBEFile& pFile);
     virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile& pFile, 
+    virtual void WriteGetSize(CBEFile& pFile,
 	CDeclStack* pStack, CBEFunction *pUsingFunc);
     virtual void WriteDeclaration(CBEFile& pFile);
 
     /** \brief return the tag
      *  \return the tag
      */
-    string GetTag()
+    std::string GetTag()
     { return m_sTag; }
     /** \brief tests if this union has the given tag
      *  \param sTag the tag to test for
      *  \return true if the given tag is the same as the member tag
      */
-    bool HasTag(string sTag)
+    bool HasTag(std::string sTag)
     { return (m_sTag == sTag); }
     /** \brief test if this is a simple type
      *  \return false
@@ -115,16 +115,16 @@ public:
     { return true; }
 
 protected:
-    /** \var string m_sTag
+    /** \var std::string m_sTag
      *  \brief the name of the tag if any
      */
-    string m_sTag;
+    std::string m_sTag;
 
 public:
-    /** \var CSearchableCollection<CBEUnionCase, string> m_UnionCases
+    /** \var CSearchableCollection<CBEUnionCase, std::string> m_UnionCases
      *  \brief contains the union's cases
      */
-    CSearchableCollection<CBEUnionCase, string> m_UnionCases;
+    CSearchableCollection<CBEUnionCase, std::string> m_UnionCases;
 };
 
 #endif                // !__DICE_BEUNIONTYPE_H__

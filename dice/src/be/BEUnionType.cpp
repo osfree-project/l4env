@@ -68,8 +68,8 @@ CBEUnionType::~CBEUnionType()
  *  \return a reference to the new object
  */
 CObject *CBEUnionType::Clone()
-{ 
-    return new CBEUnionType(*this); 
+{
+    return new CBEUnionType(*this);
 }
 
 /** \brief creates this class' part of the back-end
@@ -81,9 +81,9 @@ CObject *CBEUnionType::Clone()
 void
 CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUnionType::%s(fe) called\n", __func__);
-    
+
     // sets m_sName to "union"
     CBEType::CreateBackEnd(pFEType);
 
@@ -91,7 +91,7 @@ CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType)
 
     CFEUnionType *pFEUnion = dynamic_cast<CFEUnionType*>(pFEType);
     assert (pFEUnion);
-    
+
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     vector<CFEUnionCase*>::iterator iterUC;
     for (iterUC = pFEUnion->m_UnionCases.begin();
@@ -116,7 +116,7 @@ CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType)
     }
     m_sTag = sTag;
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEUnionType::%s(fe) returns\n", __func__);
 }
 
@@ -128,7 +128,7 @@ CBEUnionType::CreateBackEnd(string sTag)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUnionType::%s(%s) called\n", __func__, sTag.c_str());
-    
+
     string exc = string(__func__);
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -205,21 +205,21 @@ void CBEUnionType::WriteDeclaration(CBEFile& pFile)
  */
 int CBEUnionType::GetSize()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUnionType::%s\n", __func__);
-    
+
     int nSize = 0;
     vector<CBEUnionCase*>::iterator iter;
     for (iter = m_UnionCases.begin();
 	 iter != m_UnionCases.end();
 	 iter++)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	    "CBEUnionType::%s determining size of union case %s\n", 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	    "CBEUnionType::%s determining size of union case %s\n",
 	    __func__, (*iter)->m_Declarators.First()->GetName().c_str());
-	
+
         int nUnionSize = (*iter)->GetSize();
-	
+
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEUnionType::%s size of union case %s is %d\n", __func__,
 	    (*iter)->m_Declarators.First()->GetName().c_str(), nUnionSize);
@@ -243,7 +243,7 @@ int CBEUnionType::GetSize()
 	// forward declared union -> find definition of union
 	if (m_sTag.empty())
 	{
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBEUnionType::%s returns %d (empty)\n", __func__, nSize);
 	    return nSize;
 	}
@@ -253,7 +253,7 @@ int CBEUnionType::GetSize()
 	CBEType *pType = pRoot->FindTaggedType(TYPE_UNION, m_sTag);
 	if (!pType)
 	{
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBEUnionType::%s returns %d (no union %s found)\n",
 		__func__, nSize, m_sTag.c_str());
 	    return nSize;
@@ -261,7 +261,7 @@ int CBEUnionType::GetSize()
 	nSize = pType->GetSize();
     }
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEUnionType::%s return %d\n", 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEUnionType::%s return %d\n",
 	__func__, nSize);
     return nSize;
 }
@@ -282,7 +282,7 @@ int CBEUnionType::GetMaxSize()
 	"CBEUnionType::%s called, GetSize = %d\n", __func__, nMaxSize);
     if (nMaxSize > 0)
 	return nMaxSize;
-    
+
     // reset nMaxSize, because it could have been negative before
     nMaxSize = 0;
     vector<CBEUnionCase*>::iterator iter;
@@ -304,7 +304,7 @@ int CBEUnionType::GetMaxSize()
         if (nMaxSize < nUnionSize)
             nMaxSize = nUnionSize;
     }
-    
+
     if (m_UnionCases.empty() && (nMaxSize == 0))
     {
 	// forward declared union -> find definition of union
@@ -319,7 +319,7 @@ int CBEUnionType::GetMaxSize()
 	nMaxSize = pType->GetMaxSize();
     }
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"CBEUnionType::%s returns %d\n", __func__, nMaxSize);
     return nMaxSize;
 }
@@ -393,7 +393,7 @@ void CBEUnionType::WriteZeroInit(CBEFile& pFile)
 	    // be C99 compliant:
 	    pFile << (*iterD)->GetName() << " : ";
 	    if ((*iterD)->IsArray())
-		WriteZeroInitArray(pFile, pType, (*iterD), 
+		WriteZeroInitArray(pFile, pType, (*iterD),
 		    (*iterD)->m_Bounds.begin());
 	    else if (pType)
 		pType->WriteZeroInit(pFile);
@@ -413,7 +413,7 @@ bool CBEUnionType::DoWriteZeroInit()
 /** \brief if struct is variable size, it has to write the size
  *  \param pFile the file to write to
  *  \param pStack the declarator stack for constructed types with variable
- *         sized members 
+ *         sized members
  *  \param pUsingFunc the function to use as reference for members
  *
  * This is not the maximum of all cases, because this would mean that all
@@ -552,12 +552,12 @@ void CBEUnionType::WriteGetMemberSize(CBEFile& pFile,
     {
         // add terminating zero
 	pFile << "+1";
-        bool bHasSizeAttr = 
+        bool bHasSizeAttr =
 	    pMember->m_Attributes.Find(ATTR_SIZE_IS) ||
 	    pMember->m_Attributes.Find(ATTR_LENGTH_IS) ||
 	    pMember->m_Attributes.Find(ATTR_MAX_IS);
         if (!bHasSizeAttr)
-	    pFile << "+" << 
+	    pFile << "+" <<
 		CCompiler::GetSizes()->GetSizeOfType(TYPE_INTEGER);
     }
 }
@@ -569,7 +569,7 @@ void CBEUnionType::WriteGetMemberSize(CBEFile& pFile,
  *
  * Gets the first element on the stack and tries to find
  */
-CBETypedDeclarator* 
+CBETypedDeclarator*
 CBEUnionType::FindMember(CDeclStack* pStack,
     CDeclStack::iterator iCurr)
 {

@@ -760,6 +760,7 @@ server_loop(void)
   CORBA_Server_Environment corba_env = dice_default_server_environment;
   CORBA_Object_base corba_obj;
   con_if_msg_buffer_t msg_buffer;
+  l4_msgtag_t tag = l4_msgtag(0, 0, 0, 0);
   l4_int16_t reply;
   l4_int32_t opcode;
 
@@ -768,7 +769,7 @@ server_loop(void)
 
   for (;;)
     {
-      opcode = con_if_wait_any(&corba_obj, &msg_buffer, &corba_env);
+      opcode = con_if_wait_any(&corba_obj, &tag, &msg_buffer, &corba_env);
       for (;;)
 	{
 	  reply = con_if_dispatch(&corba_obj, opcode, &msg_buffer, &corba_env);
@@ -787,7 +788,7 @@ server_loop(void)
 		  opcode, l4util_idstr(corba_obj));
 	      break;
 	    }
-	  opcode = con_if_reply_and_wait(&corba_obj, &msg_buffer, &corba_env);
+	  opcode = con_if_reply_and_wait(&corba_obj, &tag, &msg_buffer, &corba_env);
 	}
     }
 }

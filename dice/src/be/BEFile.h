@@ -101,7 +101,7 @@ public:
     /** \brief return the name of the file
      *  \return the name of the currently open file, 0 if no file is open
      */
-    string GetFileName() const
+    std::string GetFileName() const
     { return m_sFilename; }
     /** \brief return the current indent
      *  \return the current indent
@@ -109,26 +109,25 @@ public:
     unsigned int GetIndent() const
     { return m_nIndent; }
 
-    virtual CBEFunction* FindFunction(string sFunctionName,
+    virtual CBEFunction* FindFunction(std::string sFunctionName,
 	FUNCTION_TYPE nFunctionType);
-    virtual CBEClass* FindClass(string sClassName);
-    virtual CBENameSpace* FindNameSpace(string sNameSpaceName);
+    virtual CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = NULL);
+    virtual CBENameSpace* FindNameSpace(std::string sNameSpaceName);
 
-    virtual void AddIncludedFileName(string sFileName, bool bIDLFile, 
+    virtual void AddIncludedFileName(std::string sFileName, bool bIDLFile,
 	    bool bIsStandardInclude, CObject* pRefObj = 0);
 
     virtual bool IsOfFileType(FILE_TYPE nFileType);
-    virtual bool HasFunctionWithUserType(string sTypeName);
-    virtual int GetSourceLineEnd();
+    virtual bool HasFunctionWithUserType(std::string sTypeName);
 
     CBEFile& operator++();
     CBEFile& operator--();
     CBEFile& operator+=(int);
     CBEFile& operator-=(int);
     using std::ofstream::operator<<;
-    __ostream_type& operator<<(string s);
-    __ostream_type& operator<<(char const * s);
-    __ostream_type& operator<<(char* s);
+    std::ofstream& operator<<(std::string s);
+    std::ofstream& operator<<(char const * s);
+    std::ofstream& operator<<(char* s);
 
 protected:
     /** \brief write a function
@@ -164,10 +163,10 @@ protected:
      *  \brief contains ordered list of elements
      */
     vector<CObject*> m_vOrderedElements;
-    /** \var string m_sFilename
+    /** \var std::string m_sFilename
      *  \brief the file's name
      */
-    string m_sFilename;
+    std::string m_sFilename;
     /** \var int m_nIndent
      *  \brief the current valid indent, when printing to the file
      */
@@ -179,19 +178,19 @@ protected:
 
 
 public:
-    /** \var CSearchableCollection<CBEClass, string> m_Classes
+    /** \var CSearchableCollection<CBEClass, std::string> m_Classes
      *  \brief contains all classes, which belong to this file
      */
-    CSearchableCollection<CBEClass, string> m_Classes;
-    /** \var CSearchableCollection<CBENameSpace, string> m_NameSpaces
+    CSearchableCollection<CBEClass, std::string> m_Classes;
+    /** \var CSearchableCollection<CBENameSpace, std::string> m_NameSpaces
      *  \brief contains all namespaces, which belong to this file
      */
-    CSearchableCollection<CBENameSpace, string> m_NameSpaces;
+    CSearchableCollection<CBENameSpace, std::string> m_NameSpaces;
     /** \var CCollection<CBEFunction> m_Functions
      *  \brief contains the functions, which belong to this file
      */
     CCollection<CBEFunction> m_Functions;
-    /** \var CSearchableCollection<CIncludeStatement, string> m_IncludedFiles
+    /** \var CSearchableCollection<CIncludeStatement, std::string> m_IncludedFiles
      *  \brief contains the names of the included files
      *
      * This is an array of strings, because a file may not only include
@@ -199,7 +198,7 @@ public:
      * files. Therefore it is more convenient to store the names of the files,
      * than to create CBEFiles for the C-header files as well.
      */
-    CSearchableCollection<CIncludeStatement, string> m_IncludedFiles;
+    CSearchableCollection<CIncludeStatement, std::string> m_IncludedFiles;
 };
 
 #endif // !__DICE_BEFILE_H__

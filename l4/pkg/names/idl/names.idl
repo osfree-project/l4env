@@ -1,6 +1,6 @@
-
 import <l4/sys/types.h>
-import <l4/names/libnames.h>
+#pragma force-include
+#include <l4/names/__names_defs.h>
 
 /** IDL interface of the name server. */
 interface names

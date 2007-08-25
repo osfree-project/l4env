@@ -73,18 +73,16 @@ public:
     virtual void CreateBackEnd(CFELibrary *pFELibrary, FILE_TYPE nFileType);
     virtual void CreateBackEnd(CFEFile *pFEFile, FILE_TYPE nFileType);
 
-    virtual int GetSourceLineEnd();
-
     /** \brief tries to match file names
      *  \param sName the name to match
      *  \return true if name matches file name
      */
-    bool Match(string sName)
+    bool Match(std::string sName)
     { return GetFileName() == sName; }
     /** \brief returns the file name used in include statements
      *  \return the file name used in include statements
      */
-    string GetIncludeFileName(void)
+    std::string GetIncludeFileName(void)
     { return m_sIncludeName; }
 
 protected:
@@ -99,24 +97,24 @@ protected:
     void CreateOrderedElementList(void);
 
 protected:
-    /** \var string m_sIncludeName
+    /** \var std::string m_sIncludeName
      *  \brief the file name used in include statements
      */
-    string m_sIncludeName;
+    std::string m_sIncludeName;
 
 public:
     /** \var CCollection<CBEConstant> m_Constants
      *  \brief contains the constant declarators of the header file
      */
     CCollection<CBEConstant> m_Constants;
-    /** \var CSearchableCollection<CBETypedef, string> m_Typedefs
+    /** \var CSearchableCollection<CBETypedef, std::string> m_Typedefs
      *  \brief contains the type definitions of the header file
      */
-    CSearchableCollection<CBETypedef, string> m_Typedefs;
-    /** \var CSearchableCollection<CBEType, string> m_TaggedTypes
+    CSearchableCollection<CBETypedef, std::string> m_Typedefs;
+    /** \var CSearchableCollection<CBEType, std::string> m_TaggedTypes
      *  \brief contains the tagged types of the header files (types without typedef)
      */
-    CSearchableCollection<CBEType, string> m_TaggedTypes;
+    CSearchableCollection<CBEType, std::string> m_TaggedTypes;
 };
 
 #endif // !__DICE_BEHEADERFILE_H__

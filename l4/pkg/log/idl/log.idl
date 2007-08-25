@@ -3,7 +3,7 @@
 interface log
 {
     void outstring([in] int flush_flag,
-		   [in, ref, string, max_is(LOG_BUFFERSIZE)] char* string);
+		   [in, ref, string, max_is(LOG_BUFFERSIZE)] char* str);
     int channel_open([in] flexpage page,
     		     [in] int channel);
     int channel_write([in] int channel,

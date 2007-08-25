@@ -51,6 +51,7 @@ fi
 ## Automake Initialisation. ##
 ## ------------------------ ##
 AM_INIT_AUTOMAKE(AC_PACKAGE_TARNAME, AC_PACKAGE_VERSION, -)
+AM_MAINTAINER_MODE
 AM_CONFIG_HEADER([config.h:config-h.in])
 
 

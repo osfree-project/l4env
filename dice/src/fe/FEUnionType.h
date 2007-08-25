@@ -37,6 +37,7 @@
 #include <vector>
 
 class CFEUnionCase;
+class CFEIdentifier;
 
 /** \class CFEUnionType
  *  \ingroup frontend
@@ -50,9 +51,11 @@ public:
     /** \brief constructor for object of union type
      *  \param pUnionBody the "real" union
      *  \param sTag the tag if one
+     *  \param pBaseUnions list of base unions if any
      */
-    CFEUnionType(string sTag,
-        vector<CFEUnionCase*> *pUnionBody);
+    CFEUnionType(std::string sTag,
+        vector<CFEUnionCase*> *pUnionBody,
+	vector<CFEIdentifier*> *pBaseUnions = NULL);
     virtual ~CFEUnionType();
 
 // Operations
@@ -60,6 +63,8 @@ public:
     virtual void Accept(CVisitor&);
     virtual CObject* Clone();
     virtual bool IsConstructedType();
+
+    void AddMembers(vector<CFEUnionCase*> *pUnionBody);
     
 protected:
     /** a copy construtor used for the tagged union class */
@@ -67,10 +72,14 @@ protected:
 
 // attribute
 public:
-    /** \var CCollection<CFEUnionCase*> m_UnionCases
+    /** \var CCollection<CFEUnionCase> m_UnionCases
      *  \brief the elements of the union (it's body)
      */
     CCollection<CFEUnionCase> m_UnionCases;
+    /** \var CCollection<CFEIdentifier> m_BaseUnions
+     *  \brief the base unions
+     */
+    CCollection<CFEIdentifier> m_BaseUnions;
 };
 
 #endif /* __DICE_FE_FEUNIONTYPE_H__ */

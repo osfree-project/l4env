@@ -61,7 +61,7 @@ public:
      *  \param pRaisesDeclarators the names of the exceptions, which can be raised
      */
     CFEOperation(CFETypeSpec *pReturnType,
-               string sName,
+               std::string sName,
                vector<CFETypedDeclarator*> *pParameters,
                vector<CFEAttribute*> *pAttributes = 0,
                vector<CFEIdentifier*> *pRaisesDeclarators = 0);
@@ -77,9 +77,9 @@ protected:
 public:
     virtual CObject* Clone();
     virtual void Accept(CVisitor&);
-    CFETypedDeclarator *FindParameter(string sName);
+    CFETypedDeclarator *FindParameter(std::string sName);
 
-    string GetName();
+    std::string GetName();
     CFETypeSpec* GetReturnType();
 
 // attributes
@@ -88,10 +88,10 @@ protected:
      *  \brief return type of the function
      */
     CFETypeSpec *m_pReturnType;
-    /** \var string m_sOpName
+    /** \var std::string m_sOpName
      *  \brief the name of the function
      */
-    string m_sOpName;
+    std::string m_sOpName;
 
 public:
     /** \var CSearchableCollection<CFEAttribute> m_Attributes
@@ -101,7 +101,7 @@ public:
     /** \var CSearchableCollection<CFETypedDeclarator> m_Parameters
      *  \brief the parameters of the function
      */
-    CSearchableCollection<CFETypedDeclarator, string> m_Parameters;
+    CSearchableCollection<CFETypedDeclarator, std::string> m_Parameters;
     /** \var CCollection<CFEIdentifier> m_RaisesDeclarators
      *  \brief the exception, which can be raised by the function
      */

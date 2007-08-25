@@ -36,7 +36,7 @@
 #include "be/BESizes.h"
 #include "be/BEMsgBuffer.h"
 #include "be/BEUserDefinedType.h"
-#include "TypeSpec-L4V4Types.h"
+#include "be/l4/TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 
@@ -54,7 +54,7 @@ CL4V4BEWaitFunction::~CL4V4BEWaitFunction()
  *  \param pFEOperation the front-end function to use as reference
  *  \return true if successful
  */
-void 
+void
 CL4V4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
 {
     // do not call direct base class (it adds the result var only)
@@ -62,7 +62,7 @@ CL4V4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
 
     // add local variables
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
     AddLocalVariable(sType, sMsgTag, 0, string("L4_MsgTag()"));
 }
@@ -74,12 +74,12 @@ CL4V4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
  * parameter. Before that we have to load the message registers into te
  * message buffer.
  */
-void 
+void
 CL4V4BEWaitFunction::WriteUnmarshalling(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     // store message
     pFile << "\tL4_MsgStore ( " << sMsgTag << ", (L4_Msg_t*) &" << sMsgBuffer
 	<< " );\n";
@@ -99,7 +99,7 @@ void
 CL4V4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sResult = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sResult = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
     pFile << "\tif (L4_IpcFailed (" << sResult << "))\n" <<
@@ -144,7 +144,7 @@ CL4V4BEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
 
     // unmarshal opcode variable
     WriteMarshalOpcode(pFile, false);
-   
+
     // now check if opcode in variable is our opcode
     string sSetFunc;
     if (((CBEUserDefinedType*)GetEnvironment()->GetType())->GetName() ==
@@ -155,7 +155,7 @@ CL4V4BEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
-    pFile << "\tif (L4_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ") != " 
+    pFile << "\tif (L4_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ") != "
 	<< m_sOpcodeConstName << ")\n";
     pFile << "\t{\n";
     string sException = pNF->GetCorbaEnvironmentVariable();

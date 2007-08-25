@@ -81,6 +81,9 @@ CL4BENameFactory::GetString(int nStringCode,
     case STR_ZERO_FPAGE:
 	return GetZeroFpage();
 	break;
+    case STR_MSGTAG_VARIABLE:
+        return GetMsgTagVariable();
+        break;
     default:
         break;
     }
@@ -103,6 +106,17 @@ string
 CL4BENameFactory::GetZeroFpage()
 {
     return string("_zero_fpage");
+}
+
+/** \brief returns the variable name for the msgtag return variable of an IPC invocation
+ *  \return the name of the variable
+ *
+ * The generic L4 name factory has no idea what a message tag variable is.
+ */
+string
+CL4BENameFactory::GetMsgTagVariable()
+{
+    return string("UNDEFINED_tag_");
 }
 
 /** \brief generates the variable of the client side timeout
@@ -197,7 +211,7 @@ CL4BENameFactory::GetThreadIdVariable()
  *  \param nSize the size of the type
  */
 string
-CL4BENameFactory::GetTypeName(int nType, 
+CL4BENameFactory::GetTypeName(int nType,
     bool bUnsigned,
     int nSize)
 {
@@ -224,11 +238,11 @@ CL4BENameFactory::GetTypeName(int nType,
         sReturn = "l4_strdope_t";
         break;
     default:
-        sReturn = 
+        sReturn =
 	    CBENameFactory::GetTypeName(nType, bUnsigned, nSize);
         break;
     }
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
 	__func__, sReturn.c_str(), nType);
     return sReturn;
@@ -287,7 +301,7 @@ CL4BENameFactory::GetInitRcvStringFunction(string sFuncName)
  *  \param pMsgBuffer the message buffer to write the const for
  *  \return the name of the appropriate constant
  */
-string 
+string
 CL4BENameFactory::GetMsgBufferSizeDopeConst(CBETypedDeclarator* pMsgBuffer)
 {
     string sName;
@@ -307,7 +321,7 @@ CL4BENameFactory::GetMsgBufferSizeDopeConst(CBETypedDeclarator* pMsgBuffer)
  *  \return the name of this member
  */
 string
-CL4BENameFactory::GetPaddingMember(int nPadType, 
+CL4BENameFactory::GetPaddingMember(int nPadType,
     int nPadToType)
 {
     string sReturn = string("_dice_pad_");

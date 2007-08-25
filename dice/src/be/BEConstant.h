@@ -61,18 +61,18 @@ protected:
 
 public:
     virtual void Write(CBEHeaderFile& pFile);
-    virtual void CreateBackEnd(CBEType* pType, string sName, 
+    virtual void CreateBackEnd(CBEType* pType, std::string sName,
 	CBEExpression* pValue, bool bAlwaysDefine);
     virtual void CreateBackEnd(CFEConstDeclarator *pFEConstDeclarator);
     virtual void AddToHeader(CBEHeaderFile* pHeader);
-    virtual string GetName();
+    virtual std::string GetName();
     virtual CBEExpression *GetValue();
 
     /** \brief tries to match against a given name
      *  \param sName the name to match against
      *  \return true if given name matches internal name
      */
-    bool Match(string sName)
+    bool Match(std::string sName)
     { return GetName() == sName; }
 
 protected:
@@ -80,10 +80,10 @@ protected:
      *  \brief true if this const has to be printed as define always
      */
      bool m_bAlwaysDefine;
-    /** \var string m_sName
+    /** \var std::string m_sName
      *  \brief the name of the constant
      */
-    string m_sName;
+    std::string m_sName;
     /** \var CBEType *m_pType
      *  \brief the type of the constant
      *

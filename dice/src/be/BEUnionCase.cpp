@@ -58,8 +58,8 @@ CBEUnionCase::~CBEUnionCase()
  *  \return reference to copy
  */
 CObject* CBEUnionCase::Clone()
-{ 
-    return new CBEUnionCase(*this); 
+{
+    return new CBEUnionCase(*this);
 }
 
 /** \brief creates the back-end structure for a union case
@@ -105,7 +105,7 @@ void CBEUnionCase::CreateBackEnd(CBEType *pType,
     CBEExpression *pCaseLabel,
     bool bDefault)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUnionCase::%s called for %s\n", __func__, sName.c_str());
 
     CBETypedDeclarator::CreateBackEnd(pType, sName);
@@ -115,6 +115,6 @@ void CBEUnionCase::CreateBackEnd(CBEType *pType,
         m_Labels.Add(pCaseLabel);
     }
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEUnionCase::%s returns true\n", __func__);
 }

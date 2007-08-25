@@ -4,6 +4,7 @@ AC_PREREQ(2.50)
 
 AC_INIT(src/main.cpp)
 AM_INIT_AUTOMAKE(dice, 3.1.3)
+AM_MAINTAINER_MODE
 AM_CONFIG_HEADER(config.h)
 
 AC_CANONICAL_HOST
@@ -84,7 +85,7 @@ AC_CHECK_HEADER(getopt.h,
 
 dnl check types
 AC_CHECK_SIZEOF(long long, 8)
-	
+
 dnl check functions:
 dnl check for getopt version
 AC_CHECK_FUNC(getopt_long_only, 
@@ -152,11 +153,8 @@ doc/html/Makefile
 doc/user-man/Makefile
 src/Makefile
 src/parser/Makefile
-src/parser/dce/Makefile
-src/parser/corba/Makefile
-src/parser/inc/Makefile
-src/parser/gcc-c/Makefile
-src/parser/gcc-cxx/Makefile
+src/parser/c-c++/Makefile
+src/parser/idl/Makefile
 src/fe/Makefile
 src/be/Makefile
 src/be/l4/Makefile
@@ -165,6 +163,8 @@ src/be/l4/v2/amd64/Makefile
 src/be/l4/v2/ia32/Makefile
 src/be/l4/v4/Makefile
 src/be/l4/v4/ia32/Makefile
+src/be/l4/fiasco/Makefile
+src/be/l4/fiasco/amd64/Makefile
 src/be/sock/Makefile
 include/Makefile
 include/dice/Makefile

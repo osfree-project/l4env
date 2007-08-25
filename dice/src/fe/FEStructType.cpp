@@ -35,10 +35,12 @@
 #include "Visitor.h"
 #include <iostream>
 
-CFEStructType::CFEStructType(string sTag, 
-    vector<CFETypedDeclarator*> * pMembers)
+CFEStructType::CFEStructType(string sTag,
+    vector<CFETypedDeclarator*> * pMembers,
+    vector<CFEIdentifier*>* pBaseStructs)
 : CFEConstructedType(TYPE_STRUCT),
-    m_Members(pMembers, this)
+    m_Members(pMembers, this),
+    m_BaseStructs(pBaseStructs, this)
 {
     m_sTag = sTag;
     if (!pMembers)
@@ -47,10 +49,12 @@ CFEStructType::CFEStructType(string sTag,
 
 CFEStructType::CFEStructType(CFEStructType & src)
 : CFEConstructedType(src),
-    m_Members(src.m_Members)
+    m_Members(src.m_Members),
+    m_BaseStructs(src.m_BaseStructs)
 {
     m_sTag = src.m_sTag;
     m_Members.Adopt(this);
+    m_BaseStructs.Adopt(this);
 }
 
 /** cleans up the struct object (delete all members) */
@@ -61,16 +65,27 @@ CFEStructType::~CFEStructType()
  *  \return a reference to the new struct object
  */
 CObject* CFEStructType::Clone()
-{ 
+{
     return new CFEStructType(*this);
 }
 
 /** \brief test a type whether it is a constructed type or not
- *  \return true 
+ *  \return true
  */
 bool CFEStructType::IsConstructedType()
 {
     return true;
+}
+
+/** \brief add members after construction
+ *  \param pMembers the members to add
+ */
+void CFEStructType::AddMembers(vector<CFETypedDeclarator*> *pMembers)
+{
+    m_Members.Add(pMembers);
+    m_Members.Adopt(this);
+    if (m_Members.size() > 0)
+	m_bForwardDeclaration = false;
 }
 
 /** tries to find a member by its name
@@ -120,7 +135,7 @@ CFETypedDeclarator *CFEStructType::FindMember(string sName)
 	    {
 		// if the found typed declarator has a constructed type (struct)
 		// search for the second part of the name there
-		CFEStructType *pStruct = 
+		CFEStructType *pStruct =
 		    dynamic_cast<CFEStructType*>((*iter)->GetType());
 		if (pStruct)
 		{

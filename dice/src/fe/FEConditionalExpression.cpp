@@ -56,7 +56,7 @@ CFEConditionalExpression::~CFEConditionalExpression()
 /** returns the integer value of this expression
  *  \return the integer value of the true branch if the condition is true, otherwise the integer value of the false branch
  */
-long CFEConditionalExpression::GetIntValue()
+int CFEConditionalExpression::GetIntValue()
 {
     return GetCondition()->GetIntValue() ? GetOperand()->GetIntValue() : GetOperand2()->GetIntValue();
 }
@@ -93,9 +93,9 @@ CObject *CFEConditionalExpression::Clone()
 /** \brief print the object to a string
  *  \return a string with the content of the object
  */
-string CFEConditionalExpression::ToString()
+std::string CFEConditionalExpression::ToString()
 {
-    string ret;
+    std::string ret;
     if (GetCondition())
         ret += GetCondition()->ToString();
     else

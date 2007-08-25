@@ -27,6 +27,7 @@
  */
 
 #include "FEAttribute.h"
+#include <iostream>
 
 CFEAttribute::CFEAttribute()
 {
@@ -51,7 +52,7 @@ CFEAttribute::~CFEAttribute()
  *  \return a copy of this object
  */
 CObject* CFEAttribute::Clone()
-{ 
+{
     return new CFEAttribute(*this);
 }
 

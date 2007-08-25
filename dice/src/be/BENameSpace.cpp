@@ -39,6 +39,7 @@
 #include "BERoot.h"
 #include "BEStructType.h"
 #include "BEUnionType.h"
+#include "BEEnumType.h"
 #include "BEContext.h"
 #include "Compiler.h"
 #include "fe/FELibrary.h"
@@ -60,12 +61,13 @@ CBENameSpace::CBENameSpace()
 
 /** \brief searches for a specific Class
  *  \param sClassName the name of the Class
+ *  \param pPrev previously found class
  *  \return a reference to the Class or 0 if not found
  */
-CBEClass* CBENameSpace::FindClass(string sClassName)
+CBEClass* CBENameSpace::FindClass(string sClassName, CBEClass *pPrev)
 {
     // first search own Classes
-    CBEClass *pClass = m_Classes.Find(sClassName);
+    CBEClass *pClass = m_Classes.Find(sClassName, pPrev);
     if (pClass)
 	return pClass;
     // then check nested libs
@@ -74,7 +76,7 @@ CBEClass* CBENameSpace::FindClass(string sClassName)
 	 iterN != m_NestedNamespaces.end();
 	 iterN++)
     {
-        if ((pClass = (*iterN)->FindClass(sClassName)) != 0)
+        if ((pClass = (*iterN)->FindClass(sClassName, pPrev)) != 0)
             return pClass;
     }
     return 0 ;
@@ -452,8 +454,8 @@ void CBENameSpace::WriteElements(CBEHeaderFile& pFile)
         if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE) &&
             (nCurrType >= 1) && (nCurrType <= 5))
         {
-            pFile << "# " << (*iter)->GetSourceLine() <<  " \"" <<
-                (*iter)->GetSourceFileName() << "\"\n";
+            pFile << "# " << (*iter)->m_sourceLoc.getBeginLine() <<  " \"" <<
+                (*iter)->m_sourceLoc.getFilename() << "\"\n";
         }
         switch (nCurrType)
         {
@@ -530,8 +532,8 @@ void CBENameSpace::WriteElements(CBEImplementationFile& pFile)
         if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE) &&
             (nCurrType >= 1) && (nCurrType <= 2))
         {
-            pFile << "# " << (*iter)->GetSourceLine() <<  " \"" <<
-                (*iter)->GetSourceFileName() << "\"\n";
+            pFile << "# " << (*iter)->m_sourceLoc.getBeginLine() <<  " \"" <<
+                (*iter)->m_sourceLoc.getFilename() << "\"\n";
         }
         switch (nCurrType)
         {
@@ -690,12 +692,12 @@ CBEFunction* CBENameSpace::FindFunction(string sFunctionName,
  *  \param sTypeName the name of the searched typedef
  *  \return a reference to the found type definition
  */
-CBETypedef* CBENameSpace::FindTypedef(string sTypeName)
+CBETypedef* CBENameSpace::FindTypedef(string sTypeName, CBETypedef* pPrev)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::%s(%s) called\n", __func__,
 	sTypeName.c_str());
 
-    CBETypedef *pTypedef = m_Typedefs.Find(sTypeName);
+    CBETypedef *pTypedef = m_Typedefs.Find(sTypeName, pPrev);
     if (pTypedef)
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
@@ -712,7 +714,7 @@ CBETypedef* CBENameSpace::FindTypedef(string sTypeName)
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBENameSpace::%s: checking class %s\n",
 	    __func__, (*iterC)->GetName().c_str());
-        if ((pTypedDecl = (*iterC)->FindTypedef(sTypeName)) != 0)
+        if ((pTypedDecl = (*iterC)->FindTypedef(sTypeName, pPrev)) != 0)
             if (dynamic_cast<CBETypedef*>(pTypedDecl))
                 return (CBETypedef*)pTypedDecl;
     }
@@ -724,7 +726,7 @@ CBETypedef* CBENameSpace::FindTypedef(string sTypeName)
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBENameSpace::%s: checking namespace %s\n",
 	    __func__, (*iterN)->GetName().c_str());
-        if ((pTypedef = (*iterN)->FindTypedef(sTypeName)) != 0)
+        if ((pTypedef = (*iterN)->FindTypedef(sTypeName, pPrev)) != 0)
             return pTypedef;
     }
 
@@ -939,13 +941,11 @@ void CBENameSpace::CreateOrderedElementList(void)
  */
 void CBENameSpace::InsertOrderedElement(CObject *pObj)
 {
-    // get source line number
-    int nLine = pObj->GetSourceLine();
     // search for element with larger number
     vector<CObject*>::iterator iter = m_vOrderedElements.begin();
     for (; iter != m_vOrderedElements.end(); iter++)
     {
-        if ((*iter)->GetSourceLine() > nLine)
+        if ((*iter)->m_sourceLoc > pObj->m_sourceLoc)
         {
             // insert before that element
             m_vOrderedElements.insert(iter, pObj);
@@ -974,4 +974,53 @@ CBENameSpace::Write(CBEImplementationFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
     WriteElements(pFile);
+}
+
+/** \brief tries to find an enumeration with the given enumerator
+ *  \param sName the name of the enumerator
+ *  \return the type containing the enumerator
+ */
+CBEEnumType*
+CBENameSpace::FindEnum(std::string sName)
+{
+    // search own types
+    CBEEnumType* pEnum;
+    vector<CBEType*>::iterator iterT;
+    for (iterT = m_TypeDeclarations.begin();
+	 iterT != m_TypeDeclarations.end();
+	 iterT++)
+    {
+	pEnum = dynamic_cast<CBEEnumType*>(*iterT);
+	if (pEnum && pEnum->m_Members.Find(sName))
+	    return pEnum;
+    }
+    // search own typedefs
+    vector<CBETypedef*>::iterator iterTD;
+    for (iterTD = m_Typedefs.begin();
+	 iterTD != m_Typedefs.end();
+	 iterTD++)
+    {
+	pEnum = dynamic_cast<CBEEnumType*>((*iterTD)->GetType());
+	if (pEnum && pEnum->m_Members.Find(sName))
+	    return pEnum;
+    }
+    // search classes
+    vector<CBEClass*>::iterator iterC;
+    for (iterC = m_Classes.begin();
+	 iterC != m_Classes.end();
+	 iterC++)
+    {
+        if ((pEnum = (*iterC)->FindEnum(sName)) != 0)
+            return pEnum;
+    }
+    // search namespaces
+    vector<CBENameSpace*>::iterator iterN;
+    for (iterN = m_NestedNamespaces.begin();
+	 iterN != m_NestedNamespaces.end();
+	 iterN++)
+    {
+        if ((pEnum = (*iterN)->FindEnum(sName)) != 0)
+            return pEnum;
+    }
+    return NULL;
 }

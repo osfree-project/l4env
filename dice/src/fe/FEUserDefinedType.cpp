@@ -66,7 +66,7 @@ CObject *CFEUserDefinedType::Clone()
 }
 
 /** \brief test a type whether it is a constructed type or not
- *  \return true 
+ *  \return true
  */
 bool CFEUserDefinedType::IsConstructedType()
 {
@@ -77,11 +77,11 @@ bool CFEUserDefinedType::IsConstructedType()
     // check if we found the user defined type (if not: panic)
     if (!pUserDecl)
     {
- 	// if not found now, this can be an interface
+	// if not found now, this can be an interface
 	if (pRoot->FindInterface(m_sName))
 	    return true; // is CORBA_Object a constructed type?
-     	CMessages::GccError(this, 0,
-	    "User defined type \"%s\" not defined\n",
+	CMessages::GccError(this,
+	    "User defined type \"%s\" not defined.\n",
 	    m_sName.c_str());
 	return false;
     }
@@ -109,8 +109,8 @@ bool CFEUserDefinedType::IsPointerType()
     // check if we found the user defined type (if not: panic)
     if (!pUserDecl)
     {
-	CMessages::GccError(this, 0,
-	    "User defined type \"%s\" not defined\n",
+	CMessages::GccError(this,
+	    "User defined type \"%s\" not defined.\n",
 	    m_sName.c_str());
 	return false;
     }

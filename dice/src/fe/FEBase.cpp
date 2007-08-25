@@ -28,6 +28,7 @@
 
 #include "fe/FEBase.h"
 #include "fe/FEFile.h"
+// #include "Compiler.h"
 
 #include <string>
 #include <typeinfo>
@@ -37,13 +38,14 @@
 // Base class
 
 CFEBase::CFEBase(CObject * pParent)
-:CObject(pParent)
+: CObject(pParent), m_pParentContext(0)
 {
 }
 
 CFEBase::CFEBase(CFEBase & src)
-:CObject(src)
+: CObject(src)
 {
+    m_pParentContext = src.m_pParentContext;
 }
 
 /** cleans up the base object */
@@ -64,7 +66,14 @@ CFEFile *CFEBase::GetRoot()
     CObject *pParent = this;
     while (pParent &&
 	pParent->GetParent())
+//     {
+// 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+// 	    "CFEBase::GetRoot: parent @ %p is %s\n", pParent, typeid(*pParent).name());
 	pParent = pParent->GetParent();
+//     }
+//     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+// 	"CFEBase::GetRoot: parent is @ %p, return %p\n",
+// 	pParent, dynamic_cast<CFEFile*>(pParent));
     return dynamic_cast<CFEFile*>(pParent);
 }
 
@@ -79,8 +88,8 @@ CObject *CFEBase::Clone()
 /** \brief print the object to a string
  *  \return a string with the content of the object
  */
-string CFEBase::ToString()
+std::string CFEBase::ToString()
 {
     // empty ecause this object is nothing
-    return string();
+    return std::string();
 }

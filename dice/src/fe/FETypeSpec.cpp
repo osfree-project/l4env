@@ -40,12 +40,14 @@
 #include <cassert>
 
 CFETypeSpec::CFETypeSpec(unsigned int nType)
+    : m_Attributes(NULL, NULL)
 {
     m_nType = nType;
 }
 
 CFETypeSpec::CFETypeSpec(CFETypeSpec & src)
-: CFEInterfaceComponent(src)
+    : CFEInterfaceComponent(src),
+    m_Attributes(NULL, NULL)
 {
     m_nType = src.m_nType;
 }
@@ -54,14 +56,6 @@ CFETypeSpec::CFETypeSpec(CFETypeSpec & src)
 CFETypeSpec::~CFETypeSpec()
 {
     // nothing to clean up
-}
-
-/** retrieves the type of the type spec
- *  \return the type of the type spec
- */
-unsigned int CFETypeSpec::GetType()
-{
-    return m_nType;
 }
 
 /** \brief test a type whether it is a constructed type or not
@@ -80,4 +74,12 @@ bool CFETypeSpec::IsPointerType()
 {
     // not a pointered type -> return false
     return false;
+}
+
+/** \brief add attributes to a type
+ *  \param pAttributes
+ */
+void CFETypeSpec::AddAttributes(vector<CFEAttribute*> *pAttributes)
+{
+    m_Attributes.Add(pAttributes);
 }

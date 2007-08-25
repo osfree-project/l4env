@@ -8,19 +8,19 @@ DICELIBS=	$(top_builddir)/src/be/l4/libl4.a \
 		$(top_builddir)/src/be/l4/v2/ia32/libv2ia32.a \
 		$(top_builddir)/src/be/l4/v4/libv4.a \
 		$(top_builddir)/src/be/l4/v4/ia32/libv4ia32.a \
+		$(top_builddir)/src/be/l4/fiasco/libfiasco.a \
+		$(top_builddir)/src/be/l4/fiasco/amd64/libfiascoamd64.a \
 		$(top_builddir)/src/be/sock/libsock.a \
 		$(top_builddir)/src/be/libbe.a \
 		$(top_builddir)/src/fe/libfe.a \
-		$(top_builddir)/src/parser/dce/libdce.a \
-		$(top_builddir)/src/parser/corba/libcorba.a \
-		$(top_builddir)/src/parser/gcc-c/libgcc_c.a \
-		$(top_builddir)/src/parser/gcc-cxx/libgcc_cxx.a \
-		$(top_builddir)/src/parser/inc/libinc.a
+		$(top_builddir)/src/parser/idl/libidl.a \
+		$(top_builddir)/src/parser/c-c++/libcparser.a \
+		$(top_builddir)/src/parser/libparser.a
 
 bin_PROGRAMS=	dice
-dice_SOURCES = main.cpp Compiler.cpp CParser.cpp Object.cpp Visitor.cpp version.cpp CCParser.cpp CCXXParser.cpp CDCEParser.cpp CCORBAParser.cpp CPreProcess.cpp IncludeStatement.cpp Dependency.cpp Messages.cpp
+dice_SOURCES = main.cpp Compiler.cpp Visitor.cpp version.cpp IncludeStatement.cpp Dependency.cpp Messages.cpp Object.cpp Location.cpp
 
-noinst_HEADERS = defines.h template.h Compiler.h CParser.h Object.h Visitor.h ProgramOptions.h CCParser.h CCXXParser.h CDCEParser.h CCORBAParser.h CPreProcess.h TypeSpec-Type.h Attribute-Type.h IncludeStatement.h Dependency.h Messages.h Error.h
+noinst_HEADERS = defines.h template.h Compiler.h Object.h Visitor.h ProgramOptions.h TypeSpec-Type.h Attribute-Type.h IncludeStatement.h Dependency.h Messages.h Error.h Location.h
 
 dice_DEPENDENCIES= $(DICELIBS)
 
@@ -30,14 +30,14 @@ dice_LDADD=	-L$(top_builddir)/src/be/l4/v2 -lv2 \
 		-L$(top_builddir)/src/be/l4/v2/ia32 -lv2ia32 \
 		-L$(top_builddir)/src/be/l4/v4 -lv4 \
 		-L$(top_builddir)/src/be/l4/v4/ia32 -lv4ia32 \
+		-L$(top_builddir)/src/be/l4/fiasco -lfiasco \
+		-L$(top_builddir)/src/be/l4/fiasco/amd64 -lfiascoamd64 \
 		-L$(top_builddir)/src/be/l4 -ll4 \
 		-L$(top_builddir)/src/be/sock -lsock \
 		-L$(top_builddir)/src/be -lbe \
-		-L$(top_builddir)/src/parser/dce -ldce \
-		-L$(top_builddir)/src/parser/corba -lcorba \
-		-L$(top_builddir)/src/parser/inc -linc \
-		-L$(top_builddir)/src/parser/gcc-c -lgcc_c \
-		-L$(top_builddir)/src/parser/gcc-cxx -lgcc_cxx \
+		-L$(top_builddir)/src/parser/idl -lidl \
+		-L$(top_builddir)/src/parser/c-c++ -lcparser \
+		-L$(top_builddir)/src/parser -lparser -lcparser \
 		-L$(top_builddir)/src/fe -lfe \
 		-lstdc++ $(LIBLTDL)
 
@@ -51,7 +51,6 @@ endif
 
 LTDLINCL=@LTDLINCL@
 AM_CPPFLAGS=	-D__USER__="\"$(USER)@`hostname`\"" \
-		-D__DICEINCDIR__="\"${includedir}\"" \
 		$(LTDLINCL)
 
 AM_CXXFLAGS = @DICE_CXXFLAGS@

@@ -23,12 +23,7 @@
 #include "task.h"
 #include "iomap.h"
 #include "quota.h"
-
-#ifdef USE_TASKLIB
-#include "rmgr_task-server.h"
-#else
 #include "rmgr-server.h"
-#endif
 
 
 #define MGR_STACKSIZE 8192

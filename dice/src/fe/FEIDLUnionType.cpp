@@ -32,11 +32,11 @@
 #include "Compiler.h"
 #include <iostream>
 
-CFEIDLUnionType::CFEIDLUnionType(string sTag,
+CFEIDLUnionType::CFEIDLUnionType(std::string sTag,
     vector<CFEUnionCase*> *pUnionBody,
     CFETypeSpec * pSwitchType,
-    string sSwitchVar,
-    string sUnionName)
+    std::string sSwitchVar,
+    std::string sUnionName)
 : CFEUnionType(sTag, pUnionBody)
 {
     m_nType = TYPE_IDL_UNION;

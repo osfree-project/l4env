@@ -35,7 +35,7 @@
 #include "be/BECommunication.h"
 #include "be/BEMsgBuffer.h"
 #include "be/Trace.h"
-#include "TypeSpec-Type.h"
+#include "be/l4/TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 #include <cassert>
@@ -80,7 +80,7 @@ CL4V4BEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
 
     // store message
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     pFile << "\tL4_MsgStore (" << sMsgTag << ", (L4_Msg_t*) " <<
 	((bVarSized) ? "" : "&") << pMsgBuffer->m_Declarators.First()->GetName() <<
 	");\n";
@@ -131,7 +131,7 @@ void CL4V4BEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
 
     /* the opcode is the label in the msgtag */
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     /* get name of opcode (return variable) */
     CBETypedDeclarator *pReturn = GetReturnVariable();
     CBEDeclarator *pD = (pReturn) ? pReturn->m_Declarators.First() : 0;
@@ -153,7 +153,8 @@ void
 CL4V4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
     pFile << "\t/* test for IPC errors */\n";
     pFile << "\tif ( L4_IpcFailed ( " << sMsgTag << " ))\n";
     pFile << "\t{\n";
@@ -177,7 +178,7 @@ CL4V4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	((pMsgBuffer->m_Declarators.First()->GetStars() > 0) ||
 	 pMsgBuffer->IsVariableSized(GetReceiveDirection())))
 	bVarSized = true;
-    pFile << "\tL4_Set_MsgLabel ( (L4_Msg_t*) " << ((bVarSized) ? "" : "&") <<
+    pFile << "\tL4_Set_MsgLabel ( (" << sType << "*) " << ((bVarSized) ? "" : "&") <<
 	pMsgBuffer->m_Declarators.First()->GetName() << ", 0);\n";
     // set exception
     CBEDeclarator *pDecl = pEnv->m_Declarators.First();
@@ -212,7 +213,8 @@ CL4V4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
 
     // need message tag
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    AddLocalVariable(string("L4_MsgTag_t"), sMsgTag, 0);
+    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
+    AddLocalVariable(sType, sMsgTag, 0);
 }
 

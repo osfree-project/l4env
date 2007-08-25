@@ -141,7 +141,7 @@ CL4BEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
     // message buffer
     if (m_pTrace)
 	m_pTrace->AfterReplyWait(pFile, this);
-	
+
     WriteIPCErrorCheck(pFile); // set IPC exception
 
     WriteReleaseMemory(pFile);

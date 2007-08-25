@@ -68,7 +68,7 @@ CBEOperationFunction::~CBEOperationFunction()
  * This implementation adds the attributes, types, parameters, exception, etc.
  * given by the front-end function to this instance of the back-end function.
  */
-void 
+void
 CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation)
 {
     assert(pFEOperation);
@@ -103,7 +103,7 @@ CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation)
     // switch case: parent = srv-loop function
 
     // check if interface has error function and add its name if available
-    CFEInterface *pFEInterface = 
+    CFEInterface *pFEInterface =
 	pFEOperation->GetSpecificParent<CFEInterface>();
     if (pFEInterface)
     {
@@ -135,7 +135,7 @@ class AddCall {
     CBEOperationFunction *f;
     std::mem_fun1_t<void, CBEOperationFunction, _Arg*> fun;
 public:
-    AddCall(void (CBEOperationFunction::*__pf)(_Arg*), CBEOperationFunction *ff) : 
+    AddCall(void (CBEOperationFunction::*__pf)(_Arg*), CBEOperationFunction *ff) :
 	f(ff), fun(__pf) { }
     void operator() (_Arg *p) { fun(f, p); }
 };
@@ -143,10 +143,10 @@ public:
 /** \brief adds the parameters of a front-end function to this class
  *  \param pFEOperation the front-end function
  */
-void 
+void
 CBEOperationFunction::AddParameters(CFEOperation * pFEOperation)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEOperationFunction::%s called for %s\n", __func__,
 	pFEOperation->GetName().c_str());
 
@@ -164,10 +164,10 @@ CBEOperationFunction::AddParameters(CFEOperation * pFEOperation)
 /** \brief adds a single parameter to this class
  *  \param pFEParameter the parameter to add
  */
-void 
+void
 CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
-    CBETypedDeclarator *pParameter = 
+    CBETypedDeclarator *pParameter =
 	CCompiler::GetClassFactory()->GetNewTypedDeclarator();
     m_Parameters.Add(pParameter);
     pParameter->CreateBackEnd(pFEParameter);
@@ -193,7 +193,7 @@ CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation)
  *  \param pFEException the exception to add
  *  \return true if successful
  */
-void 
+void
 CBEOperationFunction::AddException(CFEIdentifier * pFEException)
 {
     CBEDeclarator *pException = CCompiler::GetClassFactory()->GetNewDeclarator();
@@ -205,7 +205,7 @@ CBEOperationFunction::AddException(CFEIdentifier * pFEException)
  *  \param pFEOperation the front-end operation
  *  \return true if successful
  */
-void 
+void
 CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -223,7 +223,7 @@ CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation)
  *  \param pFEAttribute the attribute to add
  *  \return true if successful
  */
-void 
+void
 CBEOperationFunction::AddAttribute(CFEAttribute * pFEAttribute)
 {
     // check if attribute is for function or return type

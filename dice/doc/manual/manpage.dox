@@ -359,20 +359,15 @@ assembler inline code.<BR>
 <DD>Defines the back-end to use:
 <BR><i>string</i> starts with a letter specifying the platform,
 kernel interface or language mapping.
-<BR><i>p</i> specifies the platform (IA32, IA64, ARM, AMD64) (default: IA32)
-<BR><i>i</i> specifies the kernel interface (v2, x0, x0adapt, v4, 
-sock[et], cdr) (default: v2)
+<BR><i>p</i> specifies the platform (IA32, ARM, AMD64) (default: IA32)
+<BR><i>i</i> specifies the kernel interface (fiasco, v2, v4, sock[et])
+(default: fiasco)
 <BR><i>m</i> specifies the language mapping (C, CPP) (default: C)
 <BR>(For kernel interface only v4 is not supported.)
 <BR>The kernel interface denotes the ABI used to communicate with
-other threads. The 'x0adapt' kernel interface is a support option
-to allow V2 applications to run on an X0 kernel. The X0 kernel uses
-32Bit thread IDs, wehreas the V2 kernel uses 64Bit thread IDs. X0
-can transmit one more double word in a short IPC. The x0adapt interface
-maps user-level 64Bit thread IDs to 32Bit X0 thread IDs.
-<BR>example: -Bpia32 -Biv2 -BmC
-<BR>The ARM back-end is currently only supported for the X0 interface.
-<BR>The AMD64 back-end is currently only supported for the V2 interface.
+other threads.
+<BR>example: -Bpia32 -Bifiasco -BmC
+<BR>The ARM and AMD64 back-end is currently only supported for the Fiasco interface.
 </DD>
 
 <DT><b>--client, -c</b></DT>

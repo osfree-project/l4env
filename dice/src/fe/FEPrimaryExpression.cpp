@@ -93,7 +93,7 @@ CFEPrimaryExpression::CFEPrimaryExpression(EXPR_TYPE nType, long double fValue)
 }
 
 CFEPrimaryExpression::CFEPrimaryExpression(EXPR_TYPE nType, CFEExpression * pOperand)
-:CFEExpression(nType)
+: CFEExpression(nType)
 {
     m_nValue = 0L;
     m_nuValue = 0UL;
@@ -134,7 +134,7 @@ CFEPrimaryExpression::~CFEPrimaryExpression()
  * - the integer value or
  * - the float value casted into an integer.
  */
-long CFEPrimaryExpression::GetIntValue()
+int CFEPrimaryExpression::GetIntValue()
 {
     switch (GetType())
     {

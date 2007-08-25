@@ -35,7 +35,7 @@ CFEArrayDeclarator::CFEArrayDeclarator(CFEDeclarator * pDecl)
     m_nType = DECL_ARRAY;
 }
 
-CFEArrayDeclarator::CFEArrayDeclarator(string sName, CFEExpression * pUpper)
+CFEArrayDeclarator::CFEArrayDeclarator(std::string sName, CFEExpression * pUpper)
 : CFEDeclarator(DECL_IDENTIFIER, sName)
 {
     m_nType = DECL_ARRAY;

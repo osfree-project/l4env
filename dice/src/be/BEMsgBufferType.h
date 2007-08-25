@@ -60,9 +60,9 @@ public: // public methods
     virtual CObject* Clone();
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
-    CBEStructType* GetStruct(string sFuncName, string sClassName, 
+    CBEStructType* GetStruct(std::string sFuncName, std::string sClassName,
 	CMsgStructType nType);
-    vector<CBETypedDeclarator*>::iterator 
+    vector<CBETypedDeclarator*>::iterator
 	GetStartOfPayload(CBEStructType* pStruct);
 
     virtual bool AddGenericStruct(CFEBase *pFERefObj);
@@ -70,8 +70,8 @@ public: // public methods
 protected:
     void AddStruct(CFEOperation *pFEOperation, CMsgStructType nType);
     void AddStruct(CFEInterface *pFEInterface);
-    void AddStruct(CBEStructType *pStruct, CMsgStructType nType, string sFunctionName,
-	string sClassName);
+    void AddStruct(CBEStructType *pStruct, CMsgStructType nType, std::string sFunctionName,
+	std::string sClassName);
     virtual void AddElements(CFEOperation *pFEOperation, CMsgStructType nType);
     virtual void AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType);
     virtual void AddElement(CBEStructType *pStruct, CBETypedDeclarator *pParameter);
@@ -82,13 +82,13 @@ protected:
 	CBEFunction *pFunction, CBEStructType *pStruct, CDeclStack* pStack);
     void CheckConstructedElementForVariableSize(CBETypedDeclarator *pParameter,
 	CBEFunction *pFunction, CBEStructType *pStruct, CDeclStack* pStack);
-    string CreateInitStringForString(CBEFunction *pFunction, CDeclStack* pStack);
+    std::string CreateInitStringForString(CBEFunction *pFunction, CDeclStack* pStack);
 
     friend class CBEMsgBuffer;
 
 private:
-    bool CreateInitStringForStringIDLUnion(CBETypedDeclarator*& pParameter, string& sUnionStrPre,
-	string& sUnionStrSuf, CDeclStack::iterator& iter, CDeclStack& vStack);
+    bool CreateInitStringForStringIDLUnion(CBETypedDeclarator*& pParameter, std::string& sUnionStrPre,
+	std::string& sUnionStrSuf, CDeclStack::iterator& iter, CDeclStack& vStack);
 };
 
 #endif

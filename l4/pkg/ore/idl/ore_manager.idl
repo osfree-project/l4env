@@ -5,9 +5,9 @@
  * COPYING file for details.                                    *
  ****************************************************************/
 
-#include <l4/sys/types.h>
-#include <l4/dm_generic/types.h>
-#include <l4/ore/ore-types.h>
+import <l4/sys/types.h>
+import <l4/dm_generic/types.h>
+import <l4/ore/ore-types.h>
 
 library ore
 {

@@ -317,6 +317,7 @@ static void process_mainloop(void) {
 	CORBA_Object don_tid;
 	CORBA_Server_Environment env = dice_default_server_environment;
 	donsched_msg_buffer_t msg_buf;
+	l4_msgtag_t tag = l4_msgtag(0, 0, 0, 0);
 	struct job *curr_job = NULL;
 
 	job_queue_mutex = thread->create_mutex(0);
@@ -356,7 +357,7 @@ static void process_mainloop(void) {
 		don_tid  = &(curr_job->don_thread);
 
 		/* receive some time from donating thread */
-		donsched_recv_any(don_tid, &msg_buf, &env);
+		donsched_recv_any(don_tid, &tag, &msg_buf, &env);
 
 		/* use precious time to do something useful */
 		exec_job(curr_job);

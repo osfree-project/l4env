@@ -58,8 +58,8 @@ CBEUserDefinedType::~CBEUserDefinedType()
  *  \return a reference to the new object
  */
 CObject* CBEUserDefinedType::Clone()
-{ 
-    return new CBEUserDefinedType(*this); 
+{
+    return new CBEUserDefinedType(*this);
 }
 
 /** \brief creates a user defined type
@@ -68,9 +68,9 @@ CObject* CBEUserDefinedType::Clone()
 void
 CBEUserDefinedType::CreateBackEnd(string sName)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s(%s) called\n", __func__, sName.c_str());
-    
+
     string exc = string (__func__);
     if (sName.empty())
     {
@@ -104,9 +104,9 @@ CBEUserDefinedType::CreateBackEnd(string sName)
 void
 CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s(fe) called\n", __func__);
-    
+
     // call CBEObject's CreateBackEnd method
     CBEObject::CreateBackEnd(pFEType);
 
@@ -134,9 +134,9 @@ CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType)
         CFEFile *pFERoot = pFEType->GetRoot();
         assert(pFERoot);
         string sName, sUserName = pUserType->GetName();
-        CFETypedDeclarator *pFETypedef = 
+        CFETypedDeclarator *pFETypedef =
 	    pFERoot->FindUserDefinedType(sUserName);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBEUserDefinedType::%s typedef found, use as ref\n",
 	    __func__);
         if (pFETypedef)
@@ -168,9 +168,9 @@ CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType)
  */
 int CBEUserDefinedType::GetSizeOfTypedef(string sTypeName)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s(%s) called\n", __func__, sTypeName.c_str());
-    
+
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
@@ -189,7 +189,7 @@ int CBEUserDefinedType::GetSizeOfTypedef(string sTypeName)
     if (pTypedef->GetType() == this)
     {
 	CBEType *pReal = GetRealType();
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "CBEUserDefinedType::%s(%s) calling GetSize of real type.\n",
 	    __func__, sTypeName.c_str());
 	return pReal ? pReal->GetSize() : 0;
@@ -200,7 +200,7 @@ int CBEUserDefinedType::GetSizeOfTypedef(string sTypeName)
        GetSize function instead of the generic one. */
     int nSize = pTypedef->GetSize(sTypeName);
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s(%s) returns %d\n", __func__, sTypeName.c_str(),
 	nSize);
     return nSize;
@@ -215,9 +215,9 @@ int CBEUserDefinedType::GetSizeOfTypedef(string sTypeName)
  */
 int CBEUserDefinedType::GetMaxSizeOfTypedef(string sTypeName)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s(%s) called\n", __func__, sTypeName.c_str());
-    
+
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
@@ -236,7 +236,7 @@ int CBEUserDefinedType::GetMaxSizeOfTypedef(string sTypeName)
     if (pTypedef->GetType() == this)
     {
 	CBEType *pReal = GetRealType();
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "CBEUserDefinedType::%s(%s) calling GetSize of real type.\n",
 	    __func__, sTypeName.c_str());
 	return pReal ? pReal->GetMaxSize() : 0;
@@ -271,16 +271,16 @@ string CBEUserDefinedType::GetName()
  */
 int CBEUserDefinedType::GetSize()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s called for %s (m_nSize is %d)\n",
 	__func__, m_sName.c_str(), m_nSize);
-    
+
     if (m_nSize == 0)
         m_nSize = GetSizeOfTypedef(m_sName);
     /* if it is still zero, use original name */
     if (m_nSize == 0)
         m_nSize = GetSizeOfTypedef(m_sOriginalName);
-    
+
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s returns %d\n", __func__, m_nSize);
     return m_nSize;
@@ -293,10 +293,10 @@ int CBEUserDefinedType::GetSize()
  */
 int CBEUserDefinedType::GetMaxSize()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s called for %s (m_nMaxSize %d)\n",
 	__func__, m_sName.c_str(), m_nMaxSize);
-   
+
     if (m_nMaxSize == 0)
 	m_nMaxSize = GetMaxSizeOfTypedef(m_sName);
     if (m_nMaxSize == 0)
@@ -322,7 +322,7 @@ void CBEUserDefinedType::WriteZeroInit(CBEFile& pFile)
         CBEDeclarator *pAlias = GetRealName();
         if (pAlias && pAlias->IsArray())
         {
-            WriteZeroInitArray(pFile, pType, pAlias, 
+            WriteZeroInitArray(pFile, pType, pAlias,
 		pAlias->m_Bounds.begin());
             return;
         }
@@ -360,7 +360,7 @@ bool CBEUserDefinedType::DoWriteZeroInit()
 /** \brief calls the WriteGetSize function of the original type
  *  \param pFile the file to write to
  *  \param pStack contains the declarator stack of constructed typed var-sized
- *         parameters 
+ *         parameters
  *  \param pUsingFunc the function to use as reference for members
  */
 void CBEUserDefinedType::WriteGetSize(CBEFile& pFile,
@@ -426,7 +426,7 @@ int CBEUserDefinedType::GetArrayDimensionCount()
     // if the type is simple, but the alias is variable sized
     // then we have at least one array dimensions
     if (pType && pAlias)
-        return pType->GetArrayDimensionCount() + 
+        return pType->GetArrayDimensionCount() +
 	    pAlias->GetArrayDimensionCount();
     return 0;
 }
@@ -438,16 +438,28 @@ int CBEUserDefinedType::GetArrayDimensionCount()
  */
 bool CBEUserDefinedType::IsPointerType()
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEUserDefinedType::%s called\n", __func__);
+
     CBEDeclarator *pAlias = GetRealName();
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEUserDefinedType::%s check if alias %s has stars (%d)\n",
+	__func__, pAlias ? pAlias->GetName().c_str() : "(no alias)",
+	pAlias ? pAlias->GetStars() : 0);
     // if the type is simple, but the alias is variable sized
     // then we have at least one array dimensions
     if (pAlias && (pAlias->GetStars() > 0))
         return true;
     // check the aliased type
     CBEType *pType = GetRealType();
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEUserDefinedType::%s check if real type is pointer (%s)\n",
+	__func__, pType ? (pType->IsPointerType() ? "yes" : "no") : "(no type)");
     if (pType)
         return pType->IsPointerType();
     // no alias; fallback to base type
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEUserDefinedType::%s call base class\n", __func__);
     return CBEType::IsPointerType();
 }
 
@@ -457,17 +469,17 @@ bool CBEUserDefinedType::IsPointerType()
 CBEType* CBEUserDefinedType::GetRealType()
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEUserDefinedType::%s called\n", __func__);
-    
+
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
     CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s found typedef for %s at %p\n",
 	__func__, m_sName.c_str(), pTypedef);
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEUserDefinedType::%s type of typedef is %p, this %p\n",
 	__func__, pTypedef ? pTypedef->GetType() : 0, this);
-    if (pTypedef && 
+    if (pTypedef &&
 	pTypedef->GetType() != this)
         return pTypedef->GetType();
     return 0;

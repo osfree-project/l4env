@@ -53,7 +53,7 @@ CL4V4BEIPC::WriteCall(CBEFile& pFile,
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sServerID = pNF->GetComponentIDVariable();
-    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sTimeout;
     if (pFunction->IsComponentSide())
         sTimeout = pNF->GetTimeoutServerVariable(pFunction);
@@ -75,7 +75,7 @@ CL4V4BEIPC::WriteReceive(CBEFile& pFile,
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sServerID = pNF->GetComponentIDVariable();
-    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sTimeout;
     if (pFunction->IsComponentSide())
         sTimeout = pNF->GetTimeoutServerVariable(pFunction);
@@ -101,7 +101,7 @@ CL4V4BEIPC::WriteReplyAndWait(CBEFile& pFile,
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sServerID = pNF->GetComponentIDVariable();
-    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     // MsgTag ReplyWait(ThreadId to, ThreadId& from) (snd timeout: 0, rcv timeout: never)
     pFile << "\t" << sReturn << " = L4_ReplyWait (*" << sServerID << ", " <<
@@ -112,13 +112,13 @@ CL4V4BEIPC::WriteReplyAndWait(CBEFile& pFile,
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void 
+void
 CL4V4BEIPC::WriteSend(CBEFile& pFile,
     CBEFunction* /*pFunction*/)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sServerID = pNF->GetComponentIDVariable();
-    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     // MsgTag Send(ThreadId to) (timeout: never)
     pFile << "\t" << sReturn << " = L4_Send (*" << sServerID << ");\n";
@@ -134,7 +134,7 @@ CL4V4BEIPC::WriteWait(CBEFile& pFile,
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sServerID = pNF->GetComponentIDVariable();
-    string sReturn = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     // MsgTag Wait(ThreadId to) (timeout: never)
     pFile << "\t" << sReturn << " = L4_Wait (" << sServerID << ");\n";
@@ -154,7 +154,7 @@ CL4V4BEIPC::WriteReply(CBEFile& /*pFile*/,
  *  \param pFunction the funtion to write for
  */
 void
-CL4V4BEIPC::WriteInitialization(CBEFile& /*pFile*/, 
+CL4V4BEIPC::WriteInitialization(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {}
 
@@ -163,7 +163,7 @@ CL4V4BEIPC::WriteInitialization(CBEFile& /*pFile*/,
  *  \param pFunction the funtion to write for
  */
 void
-CL4V4BEIPC::WriteBind(CBEFile& /*pFile*/, 
+CL4V4BEIPC::WriteBind(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {}
 
@@ -172,7 +172,7 @@ CL4V4BEIPC::WriteBind(CBEFile& /*pFile*/,
  *  \param pFunction the funtion to write for
  */
 void
-CL4V4BEIPC::WriteCleanup(CBEFile& /*pFile*/, 
+CL4V4BEIPC::WriteCleanup(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {}
 

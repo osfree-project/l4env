@@ -99,30 +99,30 @@ public:
      *  \return true if successful
      */
     virtual bool DoWriteFunction(CBEImplementationFile* pFile) = 0;
-    
+
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual int GetMaxSize(DIRECTION_TYPE nDirection);
     virtual int GetVariableSizedParameterCount(DIRECTION_TYPE nDirection);
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
-    virtual int GetStringParameterCount(DIRECTION_TYPE nDirection, 
+    virtual int GetStringParameterCount(DIRECTION_TYPE nDirection,
 	    ATTR_TYPE nMustAttrs = ATTR_NONE, ATTR_TYPE nMustNotAttrs = ATTR_NONE);
-    virtual void WriteCall(CBEFile& pFile, string sReturnVar,
+    virtual void WriteCall(CBEFile& pFile, std::string sReturnVar,
 	bool bCallFromSameClass);
     virtual void Write(CBEImplementationFile& pFile);
     virtual void Write(CBEHeaderFile& pFile);
-    
-    virtual CBETypedDeclarator* FindParameter(string sName, bool bCall = false);
+
+    virtual CBETypedDeclarator* FindParameter(std::string sName, bool bCall = false);
     virtual CBETypedDeclarator* FindParameter(CDeclStack* pStack, bool bCall = false);
-    virtual CBETypedDeclarator* FindParameterType(string sTypeName);
+    virtual CBETypedDeclarator* FindParameterType(std::string sTypeName);
     virtual CBETypedDeclarator* FindParameterAttribute(ATTR_TYPE nAttributeType);
-    virtual CBETypedDeclarator* FindParameterIsAttribute(ATTR_TYPE nAttributeType, 
-	    string sAttributeParameter);
+    virtual CBETypedDeclarator* FindParameterIsAttribute(ATTR_TYPE nAttributeType,
+	    std::string sAttributeParameter);
 
     virtual CBEType *GetReturnType(void);
     virtual bool DoMarshalParameter(CBETypedDeclarator *pParameter,
 	    bool bMarshal);
     virtual int GetParameterCount(int nFEType, DIRECTION_TYPE nDirection);
-    virtual int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs, 
+    virtual int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs,
 	    DIRECTION_TYPE nDirection);
     virtual void SetMsgBufferCastOnCall(bool bCastMsgBufferOnCall);
     virtual void AddToHeader(CBEHeaderFile* pHeader);
@@ -133,18 +133,18 @@ public:
     virtual bool HasArrayParameters(DIRECTION_TYPE nDirection);
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual DIRECTION_TYPE GetSendDirection();
-    virtual void SetCallVariable(string sOriginalName, int nStars, 
-	    string sCallName);
-    virtual void RemoveCallVariable(string sCallName);
-    virtual string GetOpcodeConstName();
+    virtual void SetCallVariable(std::string sOriginalName, int nStars,
+	    std::string sCallName);
+    virtual void RemoveCallVariable(std::string sCallName);
+    virtual std::string GetOpcodeConstName();
     virtual void WriteReturn(CBEFile& pFile);
     virtual int GetParameterAlignment(int nCurrentOffset, int nParamSize);
 
-    virtual void AddLocalVariable(string sUserType,
-	string sName, int nStars, string sInit = string());
-    virtual void AddLocalVariable(int nFEType, bool bUnsigned, int nSize, 
-	string sName, int nStars, 
-	string sInit = string());
+    virtual void AddLocalVariable(std::string sUserType,
+	std::string sName, int nStars, std::string sInit = std::string());
+    virtual void AddLocalVariable(int nFEType, bool bUnsigned, int nSize,
+	std::string sName, int nStars,
+	std::string sInit = std::string());
     virtual void MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
     virtual CBETypedDeclarator* GetReturnVariable(void);
@@ -155,11 +155,11 @@ public:
     CBEMarshaller* GetMarshaller() const;
     CBETypedDeclarator* GetObject() const;
     CBETypedDeclarator* GetEnvironment() const;
-    string GetName() const;
+    std::string GetName() const;
     void SetFunctionName(CFEOperation *pFEOperation, FUNCTION_TYPE nFunctionType);
     void SetFunctionName(CFEInterface *pFEInterface, FUNCTION_TYPE nFunctionType);
-    void SetFunctionName(string sName, string sOriginalName = string());
-    string GetOriginalName() const;
+    void SetFunctionName(std::string sName, std::string sOriginalName = std::string());
+    std::string GetOriginalName() const;
 
     /** \brief test if function type matches
      *  \param nFunctionType the type to test for
@@ -189,23 +189,23 @@ protected:
     virtual int WriteMarshalReturn(CBEFile& pFile, bool bMarshal);
     virtual int WriteMarshalOpcode(CBEFile& pFile, bool bMarshal);
     virtual void WriteMarshalException(CBEFile& pFile, bool bMarshal, bool bReturn);
-    virtual void WriteParameter(CBEFile& pFile, 
-	    CBETypedDeclarator * pParameter, 
+    virtual void WriteParameter(CBEFile& pFile,
+	    CBETypedDeclarator * pParameter,
 	    bool bUseConst = true);
     virtual bool DoWriteParameter(CBETypedDeclarator *pParam);
     virtual bool WriteParameterList(CBEFile& pFile);
-    virtual void WriteCallParameterName(CBEFile& pFile, 
+    virtual void WriteCallParameterName(CBEFile& pFile,
 	    CBEDeclarator * pInternalDecl, CBEDeclarator * pExternalDecl);
-    virtual void WriteCallParameter(CBEFile& pFile, 
+    virtual void WriteCallParameter(CBEFile& pFile,
 	    CBETypedDeclarator * pParameter, bool bCallFromSameClass);
     virtual void WriteCallParameterList(CBEFile& pFile, bool bCallFromSameClass);
     virtual void WriteFunctionAttributes(CBEFile& pFile);
     void AddMessageBuffer(void);
     void AddMessageBuffer(CFEOperation *pFEOperation);
-    virtual bool SetReturnVar(bool bUnsigned, int nSize, int nFEType, 
-	    string sName);
-    virtual bool SetReturnVar(CBEType * pType, string sName);
-    virtual bool SetReturnVar(CFETypeSpec * pFEType, string sName);
+    virtual bool SetReturnVar(bool bUnsigned, int nSize, int nFEType,
+	    std::string sName);
+    virtual bool SetReturnVar(CBEType * pType, std::string sName);
+    virtual bool SetReturnVar(CFETypeSpec * pFEType, std::string sName);
     virtual void SetReturnVarAttributes(CBETypedDeclarator *pReturn);
     virtual void CreateBackEnd(CFEBase* pFEObject);
     virtual void CreateObject(void);
@@ -218,11 +218,11 @@ protected:
     virtual int GetFixedReturnSize(DIRECTION_TYPE nDirection);
     virtual int GetReturnSize(DIRECTION_TYPE nDirection);
     virtual int GetMaxReturnSize(DIRECTION_TYPE nDirection);
-    virtual CBETypedDeclarator* GetParameter(CBEDeclarator *pDeclarator, 
+    virtual CBETypedDeclarator* GetParameter(CBEDeclarator *pDeclarator,
 	    bool bCall);
     virtual void WriteExceptionWordInitialization(CBEFile& pFile);
     virtual void WriteExceptionCheck(CBEFile& pFile);
-    virtual string GetExceptionWordInitString();
+    virtual std::string GetExceptionWordInitString();
 
     virtual void AddAfterParameters(void);
     virtual void AddBeforeParameters(void);
@@ -232,11 +232,11 @@ protected:
 	CDeclStack::iterator iter, CDeclStack* pStack);
 
     CBETypedDeclarator* CreateOpcodeVariable(void);
-    
+
 private:
-    void SetCallVariable(CBETypedDeclarator *pTypedDecl, 
-	    string sNewDeclName, int nStars);
-    
+    void SetCallVariable(CBETypedDeclarator *pTypedDecl,
+	    std::string sNewDeclName, int nStars);
+
 protected:
     /**  \var bool m_bComponentSide
     *   \brief true if this function is at the client side
@@ -250,10 +250,10 @@ protected:
     *  \brief the indent of the function's parameters
     */
     int m_nParameterIndent;
-    /** \var string m_sOpcodeConstName
+    /** \var std::string m_sOpcodeConstName
     *  \brief the name of the functions opcode
     */
-    string m_sOpcodeConstName;
+    std::string m_sOpcodeConstName;
     /** \var CBEClass *m_pClass
     *  \brief a reference to the class of this function
     */
@@ -262,10 +262,10 @@ protected:
     *  \brief a reference to the corresponding target class
     */
     CBETarget *m_pTarget;
-    /** \var string m_sErrorFunction
+    /** \var std::string m_sErrorFunction
     *  \brief contains the name of the error function
     */
-    string m_sErrorFunction;
+    std::string m_sErrorFunction;
     /** \var CTrace* m_pTrace
      *  \brief a reference to the tracing class
      */
@@ -289,19 +289,19 @@ public:
     *  \brief contains the exceptions the function may throw
     */
     CCollection<CBEDeclarator> m_Exceptions;
-    /** \var CSearchableCollection<CBETypedDeclarator, string> m_Parameters
+    /** \var CSearchableCollection<CBETypedDeclarator, std::string> m_Parameters
      *  \brief contains the parameters of the functuin (CBETypedDeclarator)
      */
-    CSearchableCollection<CBETypedDeclarator, string> m_Parameters;
-    /** \var CSearchableCollection<CBETypedDeclarator, string> m_CallParameters
+    CSearchableCollection<CBETypedDeclarator, std::string> m_Parameters;
+    /** \var CSearchableCollection<CBETypedDeclarator, std::string> m_CallParameters
     *  \brief a copy of the parameters of the function, which contains the \
     *         names of the variables used to call this function
     */
-    CSearchableCollection<CBETypedDeclarator, string> m_CallParameters;
-    /** \var CSearchableCollection<CBETypedDeclarator, string> m_LocalVariables
+    CSearchableCollection<CBETypedDeclarator, std::string> m_CallParameters;
+    /** \var CSearchableCollection<CBETypedDeclarator, std::string> m_LocalVariables
      *  \brief contains the variables used in this function
      */
-    CSearchableCollection<CBETypedDeclarator, string> m_LocalVariables;
+    CSearchableCollection<CBETypedDeclarator, std::string> m_LocalVariables;
 
 private:
     /** \var FUNCTION_TYPE m_nFunctionType
@@ -336,22 +336,22 @@ private:
      *  \brief references the message buffer of this function
      */
     CBEMsgBuffer *m_pMsgBuffer;
-    /** \var string m_sName
+    /** \var std::string m_sName
      *  \brief the name of the function
      *
      * This is the name of the function as it appears in the target code.
      */
-    string m_sName;
-    /** \var string m_sOriginalName
+    std::string m_sName;
+    /** \var std::string m_sOriginalName
      *  \brief the name of the IDL specified function
      */
-    string m_sOriginalName;
+    std::string m_sOriginalName;
 };
 
 /** \brief access the corba-Object member
  *  \return a reference to the object member
  */
-inline CBETypedDeclarator* 
+inline CBETypedDeclarator*
 CBEFunction::GetObject() const
 {
     return m_pCorbaObject;
@@ -360,7 +360,7 @@ CBEFunction::GetObject() const
 /** \brief access the corba-environment member
  *  \return a reference to the environment member
  */
-inline CBETypedDeclarator* 
+inline CBETypedDeclarator*
 CBEFunction::GetEnvironment() const
 {
     return m_pCorbaEnv;
@@ -372,25 +372,25 @@ CBEFunction::GetEnvironment() const
 inline CBEMsgBuffer*
 CBEFunction::GetMessageBuffer() const
 {
-    return m_pMsgBuffer; 
+    return m_pMsgBuffer;
 }
 
 /** \brief access the communication member
  *  \return a reference to the communication member
  */
-inline CBECommunication* 
+inline CBECommunication*
 CBEFunction::GetCommunication() const
-{ 
-    return m_pComm; 
+{
+    return m_pComm;
 }
 
 /** \brief access the marshaller member
  *  \return reference to the corresponding marshaller
  */
-inline CBEMarshaller* 
+inline CBEMarshaller*
 CBEFunction::GetMarshaller() const
-{ 
-    return m_pMarshaller; 
+{
+    return m_pMarshaller;
 }
 
 /** \brief retrieves the name of the function
@@ -398,7 +398,7 @@ CBEFunction::GetMarshaller() const
  *
  * The returned pointer should not be manipulated.
  */
-inline string 
+inline std::string
 CBEFunction::GetName() const
 {
     return m_sName;
@@ -407,7 +407,7 @@ CBEFunction::GetName() const
 /** \brief retrieves the original name of the function
  *  \return a reference to the name of the IDL function
  */
-inline string 
+inline std::string
 CBEFunction::GetOriginalName() const
 {
     return m_sOriginalName;

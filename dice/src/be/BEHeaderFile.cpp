@@ -37,8 +37,8 @@
 #include "BEClass.h"
 #include "BEStructType.h"
 #include "BEUnionType.h"
-#include "IncludeStatement.h"
 #include "Trace.h"
+#include "IncludeStatement.h"
 #include "Compiler.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
@@ -64,18 +64,18 @@ CBEHeaderFile::CBEHeaderFile(CBEHeaderFile & src)
     m_sIncludeName = src.m_sIncludeName;
     // only copy references
     vector<CBEConstant*>::iterator iC;
-    for (iC = src.m_Constants.begin(); 
-	 iC != src.m_Constants.end(); 
+    for (iC = src.m_Constants.begin();
+	 iC != src.m_Constants.end();
 	 iC++)
 	m_Constants.Add(*iC);
     vector<CBETypedef*>::iterator iT;
-    for (iT = src.m_Typedefs.begin(); 
-	 iT != src.m_Typedefs.end(); 
+    for (iT = src.m_Typedefs.begin();
+	 iT != src.m_Typedefs.end();
 	 iT++)
 	m_Typedefs.Add(*iT);
     vector<CBEType*>::iterator iTa;
-    for (iTa = src.m_TaggedTypes.begin(); 
-	 iTa != src.m_TaggedTypes.end(); 
+    for (iTa = src.m_TaggedTypes.begin();
+	 iTa != src.m_TaggedTypes.end();
 	 iTa++)
 	m_TaggedTypes.Add(*iTa);
 }
@@ -126,29 +126,23 @@ CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
 
     CFEFile *pFERoot = pFEFile->GetRoot();
     assert(pFERoot);
-    vector<CIncludeStatement*>::iterator iterI;
-    for (iterI = pFEFile->m_Includes.begin();
-	 iterI != pFEFile->m_Includes.end();
-	 iterI++)
+    vector<CFEFile*>::iterator iFile;
+    for (iFile = pFEFile->m_ChildFiles.begin();
+	 iFile != pFEFile->m_ChildFiles.end();
+	 iFile++)
     {
-        // find the corresponding file
-        CFEFile *pIncFile = pFERoot->FindFile((*iterI)->m_sFilename);
-        // get name for include (with prefix, etc.)
-        string sIncName;
-        if (pIncFile)
-            sIncName = pNF->GetIncludeFileName(pIncFile, m_nFileType);
-        else
-            sIncName = pNF->GetIncludeFileName((*iterI)->m_sFilename);
+        string sIncName = pNF->GetIncludeFileName(*iFile, m_nFileType);
+
         // if the compiler option is FILE_ALL, then we only add non-IDL files
         if (CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL) &&
-	    (*iterI)->m_bIDLFile)
+	    (*iFile)->IsIDLFile())
             continue;
 
-        AddIncludedFileName(sIncName, (*iterI)->m_bIDLFile,
-	    (*iterI)->m_bStandard, *iterI);
+        AddIncludedFileName(sIncName, (*iFile)->IsIDLFile(),
+	    (*iFile)->IsStdIncludeFile(), *iFile);
     }
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEHeaderFile::%s(file: %s) finished\n", __func__,
 	pFEFile->GetFileName().c_str());
 }
@@ -161,7 +155,7 @@ CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
 void
 CBEHeaderFile::CreateBackEnd(CFELibrary * pFELibrary, FILE_TYPE nFileType)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEHeaderFile::%s(library: %s) called\n", __func__,
         pFELibrary->GetName().c_str());
 
@@ -177,13 +171,13 @@ CBEHeaderFile::CreateBackEnd(CFELibrary * pFELibrary, FILE_TYPE nFileType)
  *  \return true if code generation was successful
  */
 void
-CBEHeaderFile::CreateBackEnd(CFEInterface * pFEInterface, 
+CBEHeaderFile::CreateBackEnd(CFEInterface * pFEInterface,
     FILE_TYPE nFileType)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEHeaderFile::%s(interface: %s) called\n", __func__,
         pFEInterface->GetName().c_str());
-    
+
     m_nFileType = nFileType;
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     m_sFilename = pNF->GetFileName(pFEInterface, m_nFileType);
@@ -196,10 +190,10 @@ CBEHeaderFile::CreateBackEnd(CFEInterface * pFEInterface,
  *  \return true if back-end was created correctly
  */
 void
-CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation, 
+CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation,
     FILE_TYPE nFileType)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEHeaderFile::%s(operation: %s) called\n", __func__,
         pFEOperation->GetName().c_str());
 
@@ -228,7 +222,7 @@ CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation,
  */
 void CBEHeaderFile::Write(void)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEHeaderFile::%s called\n", __func__);
     string sFilename;
     CCompiler::GetBackEndOption(string("output-dir"), sFilename);
@@ -277,9 +271,9 @@ void CBEHeaderFile::Write(void)
     int nLastType = 0, nCurrType = 0;
     for (; iter != m_vOrderedElements.end(); iter++)
     {
-        if (dynamic_cast<CIncludeStatement*>(*iter))
-            nCurrType = 1;
-        else if (dynamic_cast<CBEClass*>(*iter))
+	if (dynamic_cast<CIncludeStatement*>(*iter))
+	    nCurrType = 1;
+	else if (dynamic_cast<CBEClass*>(*iter))
             nCurrType = 2;
         else if (dynamic_cast<CBENameSpace*>(*iter))
             nCurrType = 3;
@@ -321,14 +315,14 @@ void CBEHeaderFile::Write(void)
         // add pre-processor directive to denote source line
         if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
         {
-	    *this << "# " << (*iter)->GetSourceLine() << " \"" <<
-		(*iter)->GetSourceFileName() << "\"\n";
+	    *this << "# " << (*iter)->m_sourceLoc.getBeginLine() << " \"" <<
+		(*iter)->m_sourceLoc.getFilename() << "\"\n";
         }
         switch (nCurrType)
         {
-        case 1:
-            WriteInclude((CIncludeStatement*)(*iter));
-            break;
+	case 1:
+	    WriteInclude((CIncludeStatement*)(*iter));
+	    break;
         case 2:
             WriteClass((CBEClass*)(*iter));
             break;
@@ -402,21 +396,21 @@ void CBEHeaderFile::WriteDefaultIncludes(void)
 	    submin++;
 	}
     }
-    *this << 
+    *this <<
 	"#ifndef DICE_MAJOR_VERSION\n" <<
 	"#define DICE_MAJOR_VERSION " << major << "\n" <<
 	"#define DICE_MINOR_VERSION " << minor << "\n" <<
 	"#define DICE_SUBMINOR_VERSION " << submin << "\n" <<
 	"#endif\n\n";
     free(major);
-    
+
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CTrace *pTrace = pCF->GetNewTrace();
     if (pTrace)
 	pTrace->DefaultIncludes(*this);
     delete pTrace;
 
-    *this << 
+    *this <<
 	"/* needed for CORBA types */\n" <<
 	"#include \"dice/dice.h\"\n" <<
 	"\n";
@@ -523,62 +517,12 @@ void CBEHeaderFile::WriteTypedef(CBETypedef *pTypedef)
     if (dynamic_cast<CBEUnionType*>(pType))
         sTag = ((CBEUnionType*)pType)->GetTag();
     sTag = CCompiler::GetNameFactory()->GetTypeDefine(sTag);
-    *this << 
+    *this <<
 	"#ifndef " << sTag << "\n" <<
 	"#define " << sTag << "\n";
     pType->Write(*this);
     *this << ";\n" <<
 	"#endif /* !" << sTag << " */\n" <<
 	"\n";
-}
-
-/** \brief retrieves the maximum line number in the file
- *  \return the maximum line number in this file
- *
- * If line number is not that, i.e., is zero, then we iterate the elements and
- * check their end line number. The maximum is out desired maximum line
- * number.
- */
-int
-CBEHeaderFile::GetSourceLineEnd()
-{
-    if (m_nSourceLineNbEnd != 0)
-       return m_nSourceLineNbEnd;
-
-    // get maximum of members in base class;
-    CBEFile::GetSourceLineEnd();
-    
-    // constants
-    vector<CBEConstant*>::iterator iterC;
-    for (iterC = m_Constants.begin();
-	 iterC != m_Constants.end();
-	 iterC++)
-    {
-       int sLine = (*iterC)->GetSourceLine();
-       int eLine = (*iterC)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // typedef
-    vector<CBETypedef*>::iterator iterT;
-    for (iterT = m_Typedefs.begin();
-	 iterT != m_Typedefs.end();
-	 iterT++)
-    {
-       int sLine = (*iterT)->GetSourceLine();
-       int eLine = (*iterT)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-    // tagged types
-    vector<CBEType*>::iterator iterTa;
-    for (iterTa = m_TaggedTypes.begin();
-	 iterTa != m_TaggedTypes.end();
-	 iterTa++)
-    {
-       int sLine = (*iterTa)->GetSourceLine();
-       int eLine = (*iterTa)->GetSourceLineEnd();
-       m_nSourceLineNbEnd = std::max(sLine, std::max(eLine, m_nSourceLineNbEnd));
-    }
-
-    return m_nSourceLineNbEnd;
 }
 

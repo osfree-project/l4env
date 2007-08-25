@@ -48,7 +48,8 @@ public:
      *  \param sTag the tag of the struct
      *  \param pMembers the members of the struct object
      */
-    CFEStructType(string sTag, vector<CFETypedDeclarator*> *pMembers);
+    CFEStructType(std::string sTag, vector<CFETypedDeclarator*> *pMembers,
+	vector<CFEIdentifier*>* pBaseStructs = NULL);
     virtual ~CFEStructType();
 
 protected:
@@ -63,14 +64,19 @@ public:
     virtual CObject* Clone();
     virtual bool IsConstructedType();
 
-    CFETypedDeclarator* FindMember(string sName);
+    CFETypedDeclarator* FindMember(std::string sName);
+    void AddMembers(vector<CFETypedDeclarator*> *pMembers);
 
 // Attributes
 public:
-    /** \var CSearchableCollection<CFETypedDeclarator> m_Members
+    /** \var CCollection<CFETypedDeclarator> m_Members
      *  \brief the members of the structure
      */
     CCollection<CFETypedDeclarator> m_Members;
+    /** \var CCollection<CFEIdentifier> m_BaseStructs
+     *  \brief list of base structs (classes)
+     */
+    CCollection<CFEIdentifier> m_BaseStructs;
 };
 
 #endif /* __DICE_FE_FESTRUCTTYPE_H__ */

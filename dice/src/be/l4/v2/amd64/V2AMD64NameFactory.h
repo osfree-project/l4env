@@ -47,7 +47,7 @@ public:
     ~CL4V2AMD64BENameFactory();
 
 public:
-    virtual string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
+    virtual std::string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
 };
 
 #endif // !__DICE_BE_L4_V2_AMD64_V2AMD64NAMEFACTORY_H__

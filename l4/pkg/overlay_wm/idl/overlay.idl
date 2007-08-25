@@ -13,7 +13,7 @@
  * the COPYING file for details.
  */
 
-#include <dice/dice-corba-types.h>
+import <dice/dice-corba-types.h>
 
 interface overlay {
 

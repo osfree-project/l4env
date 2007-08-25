@@ -91,10 +91,10 @@ __unknown_pf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
  * \param  src_id        Pagefault source thread 
  */
 /*****************************************************************************/ 
-#if defined ARCH_x86 || ARCH_amd64
 static inline int
 __handle_iopf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
 {
+#if defined ARCH_x86 || ARCH_amd64
   int error;
   l4_umword_t dw0, dw1;
   l4_msgdope_t result;
@@ -149,8 +149,10 @@ __handle_iopf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
 
   /* done */
   return result.md.fpage_received ? L4RM_REPLY_SUCCESS :  L4RM_REPLY_EMPTY;
-}
+#else
+  return L4RM_REPLY_EMPTY;
 #endif
+}
 
 /*****************************************************************************/
 /**
@@ -270,10 +272,11 @@ __forward_pf(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
  * the pagefault is handled and the IDL code has to reply a dummy short
  * message to the faulting thread only.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 l4_int32_t
-l4rm_handle_pagefault(CORBA_Object src_id, l4_rm_msg_buffer_t * buffer,
-                      CORBA_Server_Environment * _ev)
+l4rm_handle_pagefault(CORBA_Object src_id, l4_msgtag_t *tag,
+                      l4_rm_msg_buffer_t *buffer,
+                      CORBA_Server_Environment *_ev)
 {
   l4rm_region_desc_t * region;
   l4_addr_t addr, ip;
@@ -285,8 +288,8 @@ l4rm_handle_pagefault(CORBA_Object src_id, l4_rm_msg_buffer_t * buffer,
 
   if (EXPECT_FALSE(!l4_task_equal(*src_id, l4rm_service_id)))
     {
-      LOG_printf("L4RM: blocked PF message from outside ("l4util_idfmt")!",
-             l4util_idstr(*src_id));
+      LOG_printf("L4RM: blocked PF/Exceptio message from outside ("
+                 l4util_idfmt")!", l4util_idstr(*src_id));
       return DICE_NO_REPLY;
     }
 
@@ -296,11 +299,7 @@ l4rm_handle_pagefault(CORBA_Object src_id, l4_rm_msg_buffer_t * buffer,
 	 l4util_idstr(*src_id));
 #endif
 
-#if defined ARCH_x86 || ARCH_amd64
-  if (EXPECT_FALSE(l4_is_io_page_fault(addr)))
-    reply = __handle_iopf(addr, ip, src_id);
-  else
-#endif
+  if (EXPECT_TRUE(l4_msgtag_is_page_fault(*tag)))
     {
       /* lookup region */
       region = l4rm_find_used_region(addr);
@@ -342,11 +341,17 @@ l4rm_handle_pagefault(CORBA_Object src_id, l4_rm_msg_buffer_t * buffer,
         /* no entry in region list */
         reply = __unknown_pf(addr, ip, src_id);
     }
+  else if (EXPECT_FALSE(l4_msgtag_is_io_page_fault(*tag)))
+    reply = __handle_iopf(addr, ip, src_id);
+  else
+    {
+      LOG_printf("L4RM: unknown exception src="l4util_idfmt
+                 " exc=%ld data=%lx,%lx\n",
+                 l4util_idstr(*src_id), l4_msgtag_label(*tag), addr, ip);
+      reply = L4RM_REPLY_NO_REPLY;
+    }
 
   DICE_SET_SHORTIPC_COUNT(buffer);
-#ifdef L4API_l4x0
-  DICE_GET_DWORD(buffer, 2) = 0;
-#endif
 
   if (EXPECT_TRUE(reply == L4RM_REPLY_EMPTY))
     {
@@ -376,14 +381,14 @@ l4rm_handle_pagefault(CORBA_Object src_id, l4_rm_msg_buffer_t * buffer,
 /*****************************************************************************/
 /**
  * \brief  Set callback function for unkown pagefaults
- * 
+ *
  * \param  callback      Callback function
  */
 /*****************************************************************************/ 
 void
 l4rm_set_unkown_pagefault_callback(l4rm_callback_fn_t callback)
 {
-  pf_callback = callback;  
+  pf_callback = callback;
 }
 
 /*****************************************************************************/

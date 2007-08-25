@@ -85,59 +85,59 @@ class CBENameFactory : public CBEObject
     CBENameFactory();
     virtual ~ CBENameFactory();
 
-    virtual string GetMessageBufferMember(int nFEType);
-    virtual string GetComponentIDVariable();
-    virtual string GetTimeoutServerVariable(CBEFunction *pFunction);
-    virtual string GetTimeoutClientVariable(CBEFunction *pFunction);
-    virtual string GetScheduleClientVariable();
-    virtual string GetScheduleServerVariable();
-    virtual string GetMessageBufferTypeName(string sInterfaceName);
-    virtual string GetMessageBufferTypeName(CFEInterface * pFEInterface);
-    virtual string GetMessageBufferVariable();
-    virtual string GetCorbaEnvironmentVariable();
-    virtual string GetCorbaObjectVariable();
-    virtual string GetString(int nStringCode,
+    virtual std::string GetMessageBufferMember(int nFEType);
+    virtual std::string GetComponentIDVariable();
+    virtual std::string GetTimeoutServerVariable(CBEFunction *pFunction);
+    virtual std::string GetTimeoutClientVariable(CBEFunction *pFunction);
+    virtual std::string GetScheduleClientVariable();
+    virtual std::string GetScheduleServerVariable();
+    virtual std::string GetMessageBufferTypeName(std::string sInterfaceName);
+    virtual std::string GetMessageBufferTypeName(CFEInterface * pFEInterface);
+    virtual std::string GetMessageBufferVariable();
+    virtual std::string GetCorbaEnvironmentVariable();
+    virtual std::string GetCorbaObjectVariable();
+    virtual std::string GetString(int nStringCode,
 	void *pParam = 0);
-    virtual string GetInlinePrefix();
-    virtual string GetOpcodeConst(CBEClass * pClass);
-    virtual string GetOpcodeConst(CBEFunction * pFunction);
-    virtual string GetOpcodeConst(CFEOperation * pFEOperation);
-    virtual string GetSrvReturnVariable();
-    virtual string GetOpcodeVariable();
-    virtual string GetReplyCodeVariable();
-    virtual string GetReturnVariable();
-    virtual string GetTypeDefine(string sTypedefName);
-    virtual string GetHeaderDefine(string sFilename);
-    virtual string GetTempOffsetVariable();
-    virtual string GetOffsetVariable();
-    virtual string GetFunctionName(CFEInterface * pFEInterface, 
+    virtual std::string GetInlinePrefix();
+    virtual std::string GetOpcodeConst(CBEClass * pClass);
+    virtual std::string GetOpcodeConst(CBEFunction * pFunction);
+    virtual std::string GetOpcodeConst(CFEOperation * pFEOperation);
+    virtual std::string GetSrvReturnVariable();
+    virtual std::string GetOpcodeVariable();
+    virtual std::string GetReplyCodeVariable();
+    virtual std::string GetReturnVariable();
+    virtual std::string GetTypeDefine(std::string sTypedefName);
+    virtual std::string GetHeaderDefine(std::string sFilename);
+    virtual std::string GetTempOffsetVariable();
+    virtual std::string GetOffsetVariable();
+    virtual std::string GetFunctionName(CFEInterface * pFEInterface,
 	FUNCTION_TYPE nFunctionType);
-    virtual string GetFunctionName(CFEOperation * pFEOperation, 
+    virtual std::string GetFunctionName(CFEOperation * pFEOperation,
 	FUNCTION_TYPE nFunctionType);
-    virtual string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
-    virtual string GetTypeName(CFEBase *pFERefType, string sName);
-    virtual string GetFileName(CFEBase *pFEBase, FILE_TYPE nFileType);
-    virtual string GetSwitchVariable();
-    virtual string GetFunctionBitMaskConstant();
-    virtual string GetInterfaceNumberShiftConstant();
-    virtual string GetServerParameterName();
-    virtual string GetIncludeFileName(CFEBase * pFEBase, FILE_TYPE nFileType);
-    virtual string GetIncludeFileName(string sBaseName);
-    virtual string GetMessageBufferTypeName();
-    virtual string GetDummyVariable();
-    virtual string GetExceptionWordVariable();
-    virtual string GetConstantName(CFEConstDeclarator* pFEConstant);
-    virtual string GetMessageBufferStructName(CMsgStructType nType, 
-	string sFuncName, string sClassName);
-    virtual string GetWordMemberVariable();
-    virtual string GetWordMemberVariable(int nNumber);
-    virtual string GetLocalSizeVariableName(CDeclStack* pStack);
-    virtual string GetLocalVariableName(CDeclStack* pStack);
-    virtual string GetPaddingMember(int nPadType, int nPadToType);
-    virtual string GetWrapperVariablePrefix();
+    virtual std::string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
+    virtual std::string GetTypeName(CFEBase *pFERefType, std::string sName);
+    virtual std::string GetFileName(CFEBase *pFEBase, FILE_TYPE nFileType);
+    virtual std::string GetSwitchVariable();
+    virtual std::string GetFunctionBitMaskConstant();
+    virtual std::string GetInterfaceNumberShiftConstant();
+    virtual std::string GetServerParameterName();
+    virtual std::string GetIncludeFileName(CFEBase * pFEBase, FILE_TYPE nFileType);
+    virtual std::string GetIncludeFileName(std::string sBaseName);
+    virtual std::string GetMessageBufferTypeName();
+    virtual std::string GetDummyVariable(std::string sPrefix = std::string());
+    virtual std::string GetExceptionWordVariable();
+    virtual std::string GetConstantName(CFEConstDeclarator* pFEConstant);
+    virtual std::string GetMessageBufferStructName(CMsgStructType nType,
+	std::string sFuncName, std::string sClassName);
+    virtual std::string GetWordMemberVariable();
+    virtual std::string GetWordMemberVariable(int nNumber);
+    virtual std::string GetLocalSizeVariableName(CDeclStack* pStack);
+    virtual std::string GetLocalVariableName(CDeclStack* pStack);
+    virtual std::string GetPaddingMember(int nPadType, int nPadToType);
+    virtual std::string GetWrapperVariablePrefix();
 
 protected:
-    virtual string GetCORBATypeName(int nType, bool bUnsigned, int nSize);
+    virtual std::string GetCORBATypeName(int nType, bool bUnsigned, int nSize);
 };
 
 #endif                // !__DICE_BENAMEFACTORY_H__

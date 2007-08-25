@@ -47,7 +47,7 @@ public:
     /** \brief creates a user defined type
      *  \param sName the name of the user defined type
         */
-    CFEUserDefinedType(string sName);
+    CFEUserDefinedType(std::string sName);
     virtual ~CFEUserDefinedType();
 
 protected:
@@ -60,7 +60,7 @@ protected:
 public:
     virtual void Accept(CVisitor&);
     virtual CObject* Clone();
-    virtual string GetName();
+    virtual std::string GetName();
     virtual bool Ignore();
     virtual unsigned int GetOriginalType();
     virtual bool IsConstructedType();
@@ -68,10 +68,10 @@ public:
 
 // attributes
 protected:
-    /** \var string m_sName
+    /** \var std::string m_sName
      *  \brief the alias name
      */
-    string m_sName;
+    std::string m_sName;
 };
 
 #endif /* __DICE_FE_FEUSERDEFINEDTYPE_H__ */

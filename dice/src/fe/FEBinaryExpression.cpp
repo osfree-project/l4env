@@ -29,9 +29,9 @@
 #include "fe/FEBinaryExpression.h"
 
 CFEBinaryExpression::CFEBinaryExpression(EXPR_TYPE nType,
-                     CFEExpression * pOperand,
-                     EXPT_OPERATOR Operator,
-                     CFEExpression * pOperand2)
+    CFEExpression * pOperand,
+    EXPT_OPERATOR Operator,
+    CFEExpression * pOperand2)
 :CFEUnaryExpression(nType, Operator, pOperand)
 {
     m_pOperand2 = pOperand2;
@@ -41,19 +41,19 @@ CFEBinaryExpression::CFEBinaryExpression(CFEBinaryExpression & src)
 :CFEUnaryExpression(src)
 {
     if (src.m_pOperand2)
-      {
-      m_pOperand2 = (CFEExpression *) (src.m_pOperand2->Clone());
-      m_pOperand2->SetParent(this);
-      }
+    {
+	m_pOperand2 = (CFEExpression *) (src.m_pOperand2->Clone());
+	m_pOperand2->SetParent(this);
+    }
     else
-    m_pOperand2 = 0;
+	m_pOperand2 = 0;
 }
 
 /** cleans up the binary expression (frees the second operand) */
 CFEBinaryExpression::~CFEBinaryExpression()
 {
     if (m_pOperand2)
-    delete m_pOperand2;
+	delete m_pOperand2;
 }
 
 /** returns the integer value of this expression
@@ -61,67 +61,67 @@ CFEBinaryExpression::~CFEBinaryExpression()
  * Depending of the operator, the values of the two operands are combined and the result
  * of this operation returned.
  */
-long CFEBinaryExpression::GetIntValue()
+int CFEBinaryExpression::GetIntValue()
 {
     switch (GetOperator())
-      {
-      case EXPR_MUL:
-      return GetOperand()->GetIntValue() * GetOperand2()->GetIntValue();
-      break;
-      case EXPR_DIV:
-      return GetOperand()->GetIntValue() / GetOperand2()->GetIntValue();
-      break;
-      case EXPR_MOD:
-      return GetOperand()->GetIntValue() % GetOperand2()->GetIntValue();
-      break;
-      case EXPR_PLUS:
-      return GetOperand()->GetIntValue() + GetOperand2()->GetIntValue();
-      break;
-      case EXPR_MINUS:
-      return GetOperand()->GetIntValue() - GetOperand2()->GetIntValue();
-      break;
-      case EXPR_LSHIFT:
-      return GetOperand()->GetIntValue() << GetOperand2()->GetIntValue();
-      break;
-      case EXPR_RSHIFT:
-      return GetOperand()->GetIntValue() >> GetOperand2()->GetIntValue();
-      break;
-      case EXPR_LT:
-      return GetOperand()->GetIntValue() < GetOperand2()->GetIntValue();
-      break;
-      case EXPR_GT:
-      return GetOperand()->GetIntValue() > GetOperand2()->GetIntValue();
-      break;
-      case EXPR_LTEQU:
-      return GetOperand()->GetIntValue() <= GetOperand2()->GetIntValue();
-      break;
-      case EXPR_GTEQU:
-      return GetOperand()->GetIntValue() >= GetOperand2()->GetIntValue();
-      break;
-      case EXPR_EQUALS:
-      return GetOperand()->GetIntValue() == GetOperand2()->GetIntValue();
-      break;
-      case EXPR_NOTEQUAL:
-      return GetOperand()->GetIntValue() != GetOperand2()->GetIntValue();
-      break;
-      case EXPR_BITAND:
-      return GetOperand()->GetIntValue() & GetOperand2()->GetIntValue();
-      break;
-      case EXPR_BITXOR:
-      return GetOperand()->GetIntValue() ^ GetOperand2()->GetIntValue();
-      break;
-      case EXPR_BITOR:
-      return GetOperand()->GetIntValue() | GetOperand2()->GetIntValue();
-      break;
-      case EXPR_LOGAND:
-      return GetOperand()->GetIntValue() && GetOperand2()->GetIntValue();
-      break;
-      case EXPR_LOGOR:
-      return GetOperand()->GetIntValue() || GetOperand2()->GetIntValue();
-      break;
-      default:
-      break;
-      }
+    {
+    case EXPR_MUL:
+	return GetOperand()->GetIntValue() * GetOperand2()->GetIntValue();
+	break;
+    case EXPR_DIV:
+	return GetOperand()->GetIntValue() / GetOperand2()->GetIntValue();
+	break;
+    case EXPR_MOD:
+	return GetOperand()->GetIntValue() % GetOperand2()->GetIntValue();
+	break;
+    case EXPR_PLUS:
+	return GetOperand()->GetIntValue() + GetOperand2()->GetIntValue();
+	break;
+    case EXPR_MINUS:
+	return GetOperand()->GetIntValue() - GetOperand2()->GetIntValue();
+	break;
+    case EXPR_LSHIFT:
+	return GetOperand()->GetIntValue() << GetOperand2()->GetIntValue();
+	break;
+    case EXPR_RSHIFT:
+	return GetOperand()->GetIntValue() >> GetOperand2()->GetIntValue();
+	break;
+    case EXPR_LT:
+	return GetOperand()->GetIntValue() < GetOperand2()->GetIntValue();
+	break;
+    case EXPR_GT:
+	return GetOperand()->GetIntValue() > GetOperand2()->GetIntValue();
+	break;
+    case EXPR_LTEQU:
+	return GetOperand()->GetIntValue() <= GetOperand2()->GetIntValue();
+	break;
+    case EXPR_GTEQU:
+	return GetOperand()->GetIntValue() >= GetOperand2()->GetIntValue();
+	break;
+    case EXPR_EQUALS:
+	return GetOperand()->GetIntValue() == GetOperand2()->GetIntValue();
+	break;
+    case EXPR_NOTEQUAL:
+	return GetOperand()->GetIntValue() != GetOperand2()->GetIntValue();
+	break;
+    case EXPR_BITAND:
+	return GetOperand()->GetIntValue() & GetOperand2()->GetIntValue();
+	break;
+    case EXPR_BITXOR:
+	return GetOperand()->GetIntValue() ^ GetOperand2()->GetIntValue();
+	break;
+    case EXPR_BITOR:
+	return GetOperand()->GetIntValue() | GetOperand2()->GetIntValue();
+	break;
+    case EXPR_LOGAND:
+	return GetOperand()->GetIntValue() && GetOperand2()->GetIntValue();
+	break;
+    case EXPR_LOGOR:
+	return GetOperand()->GetIntValue() || GetOperand2()->GetIntValue();
+	break;
+    default:
+	break;
+    }
     return 0;
 }
 
@@ -207,76 +207,76 @@ CObject *CFEBinaryExpression::Clone()
 /** \brief print the object to a string
  *  \return a string with the content of the object
  */
-string CFEBinaryExpression::ToString()
+std::string CFEBinaryExpression::ToString()
 {
-    string ret;
+    std::string ret;
     if (GetOperand())
-        ret += GetOperand()->ToString();
+	ret += GetOperand()->ToString();
     else
-        ret += "(no 1st operand)";
+	ret += "(no 1st operand)";
     switch (GetOperator())
     {
     case EXPR_MUL:
-        ret += "*";
-        break;
+	ret += "*";
+	break;
     case EXPR_DIV:
-        ret += "/";
-        break;
+	ret += "/";
+	break;
     case EXPR_MOD:
-        ret += "%";
-        break;
+	ret += "%";
+	break;
     case EXPR_PLUS:
-        ret += "+";
-        break;
+	ret += "+";
+	break;
     case EXPR_MINUS:
-        ret += "-";
-        break;
+	ret += "-";
+	break;
     case EXPR_LSHIFT:
-        ret += "<<";
-        break;
+	ret += "<<";
+	break;
     case EXPR_RSHIFT:
-        ret += ">>";
-        break;
+	ret += ">>";
+	break;
     case EXPR_LT:
-        ret += "<";
-        break;
+	ret += "<";
+	break;
     case EXPR_GT:
-        ret += ">";
-        break;
+	ret += ">";
+	break;
     case EXPR_LTEQU:
-        ret += "<=";
-        break;
+	ret += "<=";
+	break;
     case EXPR_GTEQU:
-        ret += ">=";
-        break;
+	ret += ">=";
+	break;
     case EXPR_EQUALS:
-        ret += "==";
-        break;
+	ret += "==";
+	break;
     case EXPR_NOTEQUAL:
-        ret += "!=";
-        break;
+	ret += "!=";
+	break;
     case EXPR_BITAND:
-        ret += "&";
-        break;
+	ret += "&";
+	break;
     case EXPR_BITXOR:
-        ret += "^";
-        break;
+	ret += "^";
+	break;
     case EXPR_BITOR:
-        ret += "|";
-        break;
+	ret += "|";
+	break;
     case EXPR_LOGAND:
-        ret += "&&";
-        break;
+	ret += "&&";
+	break;
     case EXPR_LOGOR:
-        ret += "||";
-        break;
+	ret += "||";
+	break;
     default:
-        break;
+	break;
     }
     if (GetOperand2())
-        ret += GetOperand2()->ToString();
+	ret += GetOperand2()->ToString();
     else
-        ret += "(no 2nd operand)";
+	ret += "(no 2nd operand)";
     return ret;
 }
 

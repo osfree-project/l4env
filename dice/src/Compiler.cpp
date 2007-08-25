@@ -51,13 +51,15 @@
 
 #include "Error.h"
 #include "Messages.h"
-#include "CParser.h"
-#include "CPreProcess.h"
 #include "Dependency.h"
 #include "ProgramOptions.h"
 #include "be/BERoot.h"
 #include "be/BESizes.h"
 #include "be/BEContext.h"
+// parser classes
+#include "parser/Preprocessor.h"
+using dice::parser::CPreprocessor;
+#include "parser/idl/idl-parser-driver.hh"
 // L4 specific
 #include "be/l4/L4BENameFactory.h"
 // L4V2
@@ -68,6 +70,12 @@
 #include "be/l4/v2/amd64/V2AMD64NameFactory.h"
 // L4V2 IA32
 #include "be/l4/v2/ia32/V2IA32ClassFactory.h"
+// L4.Fiasco
+#include "be/l4/fiasco/L4FiascoBEClassFactory.h"
+#include "be/l4/fiasco/L4FiascoBENameFactory.h"
+// L4.Fiasco AMD64
+#include "be/l4/fiasco/amd64/L4FiascoAMD64ClassFactory.h"
+#include "be/l4/fiasco/amd64/L4FiascoAMD64NameFactory.h"
 // L4V4
 #include "be/l4/v4/L4V4BEClassFactory.h"
 #include "be/l4/v4/ia32/L4V4IA32ClassFactory.h"
@@ -87,6 +95,11 @@
 // consitency checker
 #include "fe/ConsistencyVisitor.h"
 #include "fe/PostParseVisitor.h"
+
+#if 0
+// debug visitor
+#include "fe/ASTDumper.h"
+#endif
 
 // dynamic loadable modules
 #include <ltdl.h>
@@ -145,8 +158,8 @@ CCompiler::~CCompiler()
 {
     // we delete the preprocessor here, because ther should be only
     // one for the whole compiler run.
-    CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
-    delete pPreProcess;
+    CPreprocessor *pre = CPreprocessor::GetPreprocessor();
+    delete pre;
 }
 
 /**
@@ -172,7 +185,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         {"create-skeleton", 0, 0, 't'},
         {"template", 0, 0, 't'},
         {"no-opcodes", 0, 0, 'n'},
-        {"create-inline", 2, 0, 'i'},
+        {"inline", 2, 0, 'i'},
         {"filename-prefix", 1, 0, 'F'},
         {"include-prefix", 1, 0, 'p'},
         {"verbose", 2, 0, 'v'},
@@ -202,7 +215,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
     opterr = 0;
     // obtain a reference to the pre-processor
     // and create one if not existent
-    CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
+    CPreprocessor *pPreprocess = CPreprocessor::GetPreprocessor();
 
 
     while (1)
@@ -282,7 +295,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else
                     {
-                        CMessages::Warning("dice: Inline argument \"%s\" not supported. (assume none)", optarg);
+                        CMessages::Warning("dice: Inline argument \"%s\" not supported. (assume none)\n", optarg);
                         UnsetOption(PROGRAM_GENERATE_INLINE_EXTERN);
                         UnsetOption(PROGRAM_GENERATE_INLINE_STATIC);
                     }
@@ -302,7 +315,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                 else if (sArg == "ostdinc")
                 {
                     Verbose(PROGRAM_VERBOSE_OPTIONS, "no standard include paths\n");
-                    pPreProcess->AddCPPArgument(string("-nostdinc"));
+                    pPreprocess->AddArgument(string("-nostdinc"));
                 }
             }
 #else
@@ -321,8 +334,8 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     if ((nVerboseLevel < 0) ||
 			(nVerboseLevel > PROGRAM_VERBOSE_MAXLEVEL))
                     {
-                        CMessages::Warning("dice: Verbose level %d not supported in this version.", nVerboseLevel);
-                        nVerboseLevel = std::max(std::min(nVerboseLevel, 
+                        CMessages::Warning("dice: Verbose level %d not supported in this version.\n", nVerboseLevel);
+                        nVerboseLevel = std::max(std::min(nVerboseLevel,
 				(int)PROGRAM_VERBOSE_MAXLEVEL), 0);
                     }
                     Verbose(PROGRAM_VERBOSE_OPTIONS, "Verbose level %d enabled\n", nVerboseLevel);
@@ -357,11 +370,11 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             {
                 // check for -I arguments, which we preprocess ourselves as well
                 string sArg = optarg;
-                pPreProcess->AddCPPArgument(sArg);
+                pPreprocess->AddArgument(sArg);
                 if (sArg.substr(0, 2) == "-I")
                 {
                     string sPath = sArg.substr(2);
-                    pPreProcess->AddIncludePath(sPath);
+                    pPreprocess->AddIncludePath(sPath);
                     Verbose(PROGRAM_VERBOSE_OPTIONS, "Added %s to include paths\n", sPath.c_str());
                 }
             }
@@ -371,15 +384,15 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             {
                 string sPath("-I");
                 sPath += optarg;
-                pPreProcess->AddCPPArgument(sPath);    // copies sPath
+                pPreprocess->AddArgument(sPath);    // copies sPath
                 // add to own include paths
-                pPreProcess->AddIncludePath(optarg);
+                pPreprocess->AddIncludePath(optarg);
                 Verbose(PROGRAM_VERBOSE_OPTIONS, "Added %s to include paths\n", optarg);
             }
             break;
         case 'N':
             Verbose(PROGRAM_VERBOSE_OPTIONS, "no standard include paths\n");
-            pPreProcess->AddCPPArgument("-nostdinc");
+            pPreprocess->AddArgument("-nostdinc");
             break;
         case 'f':
             {
@@ -512,13 +525,14 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     if (sArg == "KEEP-TEMP-FILES")
                     {
                         SetOption(PROGRAM_KEEP_TMP_FILES);
-                        Verbose(PROGRAM_VERBOSE_OPTIONS, "Keep temporary files generated during preprocessing\n");
+                        Verbose(PROGRAM_VERBOSE_OPTIONS,
+			    "Keep temporary files generated during preprocessing\n");
                     }
                     break;
                 case 'L':
                     if (sArg == "L4TYPES")
                     {
-			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
+			CMessages::Error("Option \"%s\" is deprecated.\n", sOrig.c_str());
                     }
                     break;
                 case 'N':
@@ -581,13 +595,13 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			if (sArg.length() > 8)
 			{
 			    string sName = sOrig.substr(8);
-			    Verbose(PROGRAM_VERBOSE_OPTIONS, "User sets syscall to \"%s\".\n", 
+			    Verbose(PROGRAM_VERBOSE_OPTIONS, "User sets syscall to \"%s\".\n",
 				sName.c_str());
 			    SetBackEndOption("syscall", sName);
 			}
 		    }
                     else if (sArg == "SERVER-PARAMETER")
-			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
+			CMessages::Error("Option \"%s\" is deprecated.\n", sOrig.c_str());
                     break;
                 case 'T':
                     if (sArg.substr(0, 12) == "TRACE-SERVER")
@@ -669,20 +683,20 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			else
 			    CMessages::Error("The option -ftrace-lib expects an argument.\n");
 		    }
-                    else if ((sArg == "TEST-NO-SUCCESS") || 
+                    else if ((sArg == "TEST-NO-SUCCESS") ||
 			     (sArg == "TEST-NO-SUCCESS-MESSAGE"))
                     {
-			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
+			CMessages::Error("Option \"%s\" is deprecated.\n", sOrig.c_str());
                     }
                     else if (sArg == "TESTSUITE-SHUTDOWN")
                     {
-			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
+			CMessages::Error("Option \"%s\" is deprecated.\n", sOrig.c_str());
                     }
                     break;
                 case 'U':
                     if ((sArg == "USE-SYMBOLS") || (sArg == "USE-DEFINES"))
                     {
-			CMessages::Error("Option \"%s\" is deprecated.", sOrig.c_str());
+			CMessages::Error("Option \"%s\" is deprecated.\n", sOrig.c_str());
                     }
                     break;
                 case 'Z':
@@ -720,7 +734,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     }
                     else if (sArg == "IA64")
                     {
-                        CMessages::Warning("IA64 back-end not supported yet!");
+                        CMessages::Warning("IA64 back-end not supported yet!\n");
 			SetBackEndPlatform(PROGRAM_BE_IA32);
                         Verbose(PROGRAM_VERBOSE_OPTIONS, "use back-end for IA64 platform\n");
                     }
@@ -746,22 +760,15 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			SetBackEndInterface(PROGRAM_BE_V2);
                         Verbose(PROGRAM_VERBOSE_OPTIONS, "use back-end L4 version 2\n");
                     }
-                    else if (sArg == "X0")
-                    {
-			CMessages::Error("X0 Back-End deprecated.\n");
-                    }
-                    else if (sArg == "X0ADAPT")
-                    {
-			CMessages::Error("X0adapt Back-End deprecated.\n");
-                    }
+		    else if (sArg == "FIASCO")
+		    {
+			SetBackEndInterface(PROGRAM_BE_FIASCO);
+			Verbose(PROGRAM_VERBOSE_OPTIONS, "use back-end L4.Fiasco\n");
+		    }
                     else if ((sArg == "X2") || (sArg == "V4"))
                     {
 			SetBackEndInterface(PROGRAM_BE_V4);
                         Verbose(PROGRAM_VERBOSE_OPTIONS, "use back-end L4 version 4 (X.2)\n");
-                    }
-                    else if (sArg == "FLICK")
-                    {
-                        CMessages::Error("Flick compatibility mode is no longer supported");
                     }
                     else if ((sArg == "SOCKETS") || (sArg == "SOCK"))
                     {
@@ -808,7 +815,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                 transform(sArg.begin(), sArg.end(), sArg.begin(), _toupper);
                 if (sArg == "XML")
                 {
-		    CMessages::Error("Option -EXML is deprecated.\n"); 
+		    CMessages::Error("Option -EXML is deprecated.\n");
                 }
                 else
                 {
@@ -835,7 +842,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             }
             break;
         case 'T':
-	    CMessages::Error("Option \"-T%s\" is deprecated.", optarg ? optarg : "");
+	    CMessages::Error("Option \"-T%s\" is deprecated.n", optarg ? optarg : "");
             break;
         case 'V':
             ShowVersion();
@@ -875,7 +882,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			if (argv[optind] && (argv[optind])[0] != '-')
 			{
 			    m_sDependsFile = argv[optind++];
-			    Verbose(PROGRAM_VERBOSE_OPTIONS, "Set depends file name to \"%s\".\n", 
+			    Verbose(PROGRAM_VERBOSE_OPTIONS, "Set depends file name to \"%s\".\n",
 				m_sDependsFile.c_str());
 			}
 		    }
@@ -883,7 +890,8 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			SetDependsOption(PROGRAM_DEPEND_MP);
                     else
                     {
-                        CMessages::Warning("dice: Argument \"%s\" of option -M unrecognized: ignoring.", optarg);
+                        CMessages::Warning("dice: Argument \"%s\" of option -M unrecognized: ignoring.\n",
+			    optarg);
                         SetDependsOption(PROGRAM_DEPEND_M);
                     }
                     Verbose(PROGRAM_VERBOSE_OPTIONS, "Create dependencies with argument %s\n", optarg);
@@ -944,13 +952,13 @@ void CCompiler::ParseArguments(int argc, char *argv[])
                     string sTmp(optarg);
                     // remove "p,"
                     string sCppArg = sTmp.substr(2);
-                    pPreProcess->AddCPPArgument(sCppArg);
+                    pPreprocess->AddArgument(sCppArg);
                     Verbose(PROGRAM_VERBOSE_OPTIONS, "preprocessor argument \"%s\" added\n", sCppArg.c_str());
                     // check if CPP argument has special meaning
                     if (sCppArg.substr(0, 2) == "-I")
                     {
                         string sPath = sCppArg.substr(2);
-			pPreProcess->AddIncludePath(sPath);
+			pPreprocess->AddIncludePath(sPath);
                         Verbose(PROGRAM_VERBOSE_OPTIONS, "Added %s to include paths\n", sPath.c_str());
                     }
                 }
@@ -969,16 +977,15 @@ void CCompiler::ParseArguments(int argc, char *argv[])
             {
                 string sArg("-D");
                 sArg += optarg;
-                pPreProcess->AddCPPArgument(sArg);
-                Verbose(PROGRAM_VERBOSE_OPTIONS, "Found symbol \"%s\"\n", 
+                pPreprocess->AddArgument(sArg);
+                Verbose(PROGRAM_VERBOSE_OPTIONS, "Found symbol \"%s\"\n",
 		    optarg);
             }
             break;
         case 'w':
             {
                 string sArg = optarg;
-                if (!pPreProcess->SetCPP(sArg.c_str()))
-                    CMessages::Error("Preprocessor \"%s\" does not exist.\n", optarg);
+                pPreprocess->SetPreprocessor(sArg);
                 Verbose(PROGRAM_VERBOSE_OPTIONS,
 		    "Use \"%s\" as preprocessor\n", optarg);
             }
@@ -1035,24 +1042,26 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         m_nUseFrontEnd = USE_FE_DCE;
 
     if (!IsBackEndInterfaceSet(PROGRAM_BE_INTERFACE))
-	SetBackEndInterface(PROGRAM_BE_V2);
+	SetBackEndInterface(PROGRAM_BE_FIASCO);
     if (!IsBackEndPlatformSet(PROGRAM_BE_PLATFORM))
 	SetBackEndPlatform(PROGRAM_BE_IA32);
     if (!IsBackEndLanguageSet(PROGRAM_BE_LANGUAGE))
 	SetBackEndLanguage(PROGRAM_BE_C);
     if (IsBackEndPlatformSet(PROGRAM_BE_ARM) &&
-        !IsBackEndInterfaceSet(PROGRAM_BE_V2))
+        !IsBackEndInterfaceSet(PROGRAM_BE_FIASCO) &&
+	!IsBackEndInterfaceSet(PROGRAM_BE_V2))
     {
-        CMessages::Warning("The Arm Backend currently works with V2 native only!");
-        CMessages::Warning("  -> Setting interface to V2 native.");
-	SetBackEndInterface(PROGRAM_BE_V2);
+        CMessages::Warning("The Arm Backend currently works with L4.Fiasco or L4 V2 only!\n");
+        CMessages::Warning("  -> Setting interface to L4.Fiasco default.\n");
+	SetBackEndInterface(PROGRAM_BE_FIASCO);
     }
     if (IsBackEndPlatformSet(PROGRAM_BE_AMD64) &&
-        !IsBackEndInterfaceSet(PROGRAM_BE_V2))
+        !IsBackEndInterfaceSet(PROGRAM_BE_FIASCO) &&
+	!IsBackEndInterfaceSet(PROGRAM_BE_V2))
     {
-        CMessages::Warning("The AMD64 Backend currently works with V2 native only!");
-        CMessages::Warning("  -> Setting interface to V2 native.");
-	SetBackEndInterface(PROGRAM_BE_V2);
+        CMessages::Warning("The AMD64 Backend currently works with L4.Fiasco or L4 V2 only!\n");
+        CMessages::Warning("  -> Setting interface to L4.Fiasco default.\n");
+	SetBackEndInterface(PROGRAM_BE_FIASCO);
     }
     // with arm we *have to* marshal type aligned
     if (IsBackEndPlatformSet(PROGRAM_BE_ARM))
@@ -1082,7 +1091,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 	!GetBackEndOption("trace-msgbuf-func", sFunc))
 	SetBackEndOption("trace-msgbuf-func", "printf");
     if (IsOptionSet(PROGRAM_TRACE_SERVER) ||
-    	IsOptionSet(PROGRAM_TRACE_CLIENT) ||
+	IsOptionSet(PROGRAM_TRACE_CLIENT) ||
 	IsOptionSet(PROGRAM_TRACE_MSGBUF))
     {
 	string sLib;
@@ -1098,7 +1107,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 	IsDependsOptionSet(PROGRAM_DEPEND_MP))
     {
 	if (!IsDependsOptionSet(PROGRAM_DEPEND_M) &&
-	    !IsDependsOptionSet(PROGRAM_DEPEND_MM) && 
+	    !IsDependsOptionSet(PROGRAM_DEPEND_MM) &&
 	    !IsDependsOptionSet(PROGRAM_DEPEND_MD) &&
 	    !IsDependsOptionSet(PROGRAM_DEPEND_MMD))
 	{
@@ -1111,11 +1120,11 @@ void CCompiler::ParseArguments(int argc, char *argv[])
     {
 	CMessages::Error("Option -MF requires argument.\n");
     }
-	
+
 
     // init plugins
     InitTraceLib(argc, argv);
-    
+
     if (bShowHelp)
 	ShowHelp();
 }
@@ -1228,7 +1237,7 @@ void CCompiler::ShowHelp(bool bShort)
     "\nBack-End Options:\n"
     " -i"
 #if defined(HAVE_GETOPT_LONG)
-    ", --create-inline"
+    ", --inline"
 #endif
     " <mode>  generate client stubs as inline\n";
     if (!bShort)
@@ -1372,9 +1381,9 @@ void CCompiler::ShowHelp(bool bShort)
     "    <string> starts with a letter specifying platform, kernel interface or\n"
     "    language mapping\n"
     "    p - specifies the platform (IA32, IA64, ARM, AMD64)\n"
-    "    i - specifies the kernel interface (v2, v4, sock)\n"
+    "    i - specifies the kernel interface (fiasco, v2, v4, sock)\n"
     "    m - specifies the language mapping (C, CPP)\n"
-    "    example: -Bpia32 -Biv2 -BmC - which is default\n";
+    "    example: -Bpia32 -Bifiasco -BmC - which is default\n";
     std::cout <<
     " -m"
 #if defined(HAVE_GETOPT_LONG)
@@ -1417,30 +1426,35 @@ void CCompiler::ShowVersion()
 void CCompiler::Parse()
 {
     // if sFilename contains a path, add it to include paths
-    CPreProcess *pPreProcess = CPreProcess::GetPreProcessor();
+    CPreprocessor *pPreprocess = CPreprocessor::GetPreprocessor();
     int nPos;
     if ((nPos = m_sInFileName.rfind('/')) >= 0)
     {
         string sPath("-I");
         sPath += m_sInFileName.substr(0, nPos);
-        pPreProcess->AddCPPArgument(sPath);    // copies sPath
-        pPreProcess->AddIncludePath(m_sInFileName.substr(0, nPos));
+        pPreprocess->AddArgument(sPath);    // copies sPath
+        pPreprocess->AddIncludePath(m_sInFileName.substr(0, nPos));
         Verbose(PROGRAM_VERBOSE_OPTIONS, "Added %s to include paths\n",
 	    m_sInFileName.substr(0, nPos).c_str());
     }
-    // set namespace to uninitialized
-    CParser *pParser = CParser::CreateParser(m_nUseFrontEnd);
-    CParser::SetCurrentParser(pParser);
-    if (!pParser->Parse(0 /* no exitsing scan buffer*/, m_sInFileName,
-        m_nUseFrontEnd, IsOptionSet(PROGRAM_STOP_AFTER_PRE)))
+    try
     {
-        if (!erroccured)
-            CMessages::Error("other parser error.");
+	idl_parser_driver parser;
+	parser.parse(m_sInFileName, IsOptionSet(PROGRAM_STOP_AFTER_PRE), false);
+	// get file
+	m_pRootFE = parser.getCurrentFile();
+	if (m_pRootFE)
+	    m_pRootFE = m_pRootFE->GetRoot();
     }
-    // get file
-    m_pRootFE = pParser->GetTopFileInScope();
-    // now that parsing is over, get rid of it
-    delete pParser;
+    catch (error::parse_error e)
+    {
+	exit(1);
+    }
+    catch (error::preprocess_error e)
+    {
+	std::cerr << "Preprocess error: " << e.what() << std::endl;
+	exit(1);
+    }
     // post parse processing
     CPostParseVisitor v;
     try
@@ -1456,12 +1470,17 @@ void CCompiler::Parse()
     if (erroccured)
     {
         if (errcount > 0)
-            CMessages::Error("%d Error(s) and %d Warning(s) occured.", errcount, 
+            CMessages::Error("%d Error(s) and %d Warning(s) occured.\n", errcount,
 		warningcount);
         else
-            CMessages::Warning("%s: warning: %d Warning(s) occured while parsing.", 
+            CMessages::Warning("%s: warning: %d Warning(s) occured while parsing.\n",
 		m_sInFileName.c_str(), warningcount);
     }
+
+#if 0
+    ASTDumper d(m_sInFileName.substr(0, m_sInFileName.rfind(".idl")).append(".ast"));
+    m_pRootFE->Accept(d);
+#endif
 }
 
 /**
@@ -1487,7 +1506,7 @@ void CCompiler::PrepareWrite()
 
     Verbose(PROGRAM_VERBOSE_NORMAL, "Check consistency of parsed input ...\n");
     if (!m_pRootFE)
-        CMessages::Error("Internal Error: Current file not set");
+        CMessages::Error("Internal Error: Current file not set.\n");
     // consistency check
     CConsistencyVisitor v;
     try
@@ -1514,6 +1533,13 @@ void CCompiler::PrepareWrite()
 	else
 	    pCF = new CL4V2BEClassFactory();
     }
+    else if (IsBackEndInterfaceSet(PROGRAM_BE_FIASCO))
+    {
+	if (IsBackEndPlatformSet(PROGRAM_BE_AMD64))
+	    pCF = new CL4FiascoAMD64BEClassFactory();
+	else
+	    pCF = new CL4FiascoBEClassFactory();
+    }
     else if (IsBackEndInterfaceSet(PROGRAM_BE_V4))
     {
         if (IsBackEndPlatformSet(PROGRAM_BE_IA32))
@@ -1534,6 +1560,13 @@ void CCompiler::PrepareWrite()
 	    pNF = new CL4V2AMD64BENameFactory();
 	else
 	    pNF = new CL4V2BENameFactory();
+    }
+    else if (IsBackEndInterfaceSet(PROGRAM_BE_FIASCO))
+    {
+	if (IsBackEndPlatformSet(PROGRAM_BE_AMD64))
+	    pNF = new CL4FiascoAMD64BENameFactory();
+	else
+	    pNF = new CL4FiascoBENameFactory();
     }
     else if (IsBackEndInterfaceSet(PROGRAM_BE_V4))
         pNF = new CL4V4BENameFactory();
@@ -1620,10 +1653,10 @@ void CCompiler::Verbose(ProgramVerbose_Type level, const char *format, ...)
 {
     if (!IsVerboseLevel(level))
 	return;
-    
+
     if (m_nVerboseInd >= 0)
 	fprintf(stdout, "[%02d] ", m_nVerboseInd);
-    
+
     va_list args;
     va_start(args, format);
     vfprintf(stdout, format, args);
@@ -1639,11 +1672,11 @@ void CCompiler::VerboseI(ProgramVerbose_Type level, const char *format, ...)
 {
     if (!IsVerboseLevel(level))
 	return;
-    
+
     m_nVerboseInd++;
     if (m_nVerboseInd >= 0)
 	fprintf(stdout, "[%02d] ", m_nVerboseInd);
-    
+
     va_list args;
     va_start(args, format);
     vfprintf(stdout, format, args);
@@ -1659,12 +1692,12 @@ void CCompiler::VerboseD(ProgramVerbose_Type level, const char *format, ...)
 {
     if (!IsVerboseLevel(level))
 	return;
-    
+
     if (m_nVerboseInd >= 0)
 	fprintf(stdout, "[%02d] ", m_nVerboseInd);
     if (m_nVerboseInd > 0)
 	m_nVerboseInd--;
-    
+
     va_list args;
     va_start(args, format);
     vfprintf(stdout, format, args);

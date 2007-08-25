@@ -33,6 +33,7 @@
 #include "be/BERoot.h"
 #include "be/BETypedef.h"
 #include "be/BEConstant.h"
+#include "be/BEEnumType.h"
 #include "Compiler.h"
 #include "fe/FEExpression.h"
 #include "fe/FEUserDefinedExpression.h"
@@ -45,6 +46,7 @@
 #include "fe/FEInterface.h"
 #include "fe/FELibrary.h"
 #include "Error.h"
+#include "Messages.h"
 #include <sstream>
 #include <cassert>
 
@@ -117,10 +119,10 @@ CBEExpression::CreateBackEnd(CFEExpression * pFEExpression)
         break;
     case EXPR_USER_DEFINED:
         {
-            m_sStringValue = 
+            m_sStringValue =
 		((CFEUserDefinedExpression *) pFEExpression)->GetExpName();
             // might be constant -> check if we have const with that name
-            CFEInterface *pFEInterface = 
+            CFEInterface *pFEInterface =
 		pFEExpression->GetSpecificParent<CFEInterface>();
             CFEConstDeclarator *pFEConstant = 0;
             if (pFEInterface)
@@ -129,18 +131,18 @@ CBEExpression::CreateBackEnd(CFEExpression * pFEExpression)
                 m_sStringValue = pNF->GetConstantName(pFEConstant);
             else
             {
-                CFELibrary *pFELibrary = 
+                CFELibrary *pFELibrary =
 		    pFEExpression->GetSpecificParent<CFELibrary>();
                 while (pFELibrary)
                 {
-                    if ((pFEConstant = 
+                    if ((pFEConstant =
 			    pFELibrary->FindConstant(m_sStringValue)) != 0)
                     {
                         m_sStringValue = pNF->GetConstantName(pFEConstant);
                         pFELibrary = 0;
                     }
                     else
-                        pFELibrary = 
+                        pFELibrary =
 			    pFELibrary->GetSpecificParent<CFELibrary>();
                 }
             }
@@ -150,7 +152,7 @@ CBEExpression::CreateBackEnd(CFEExpression * pFEExpression)
         m_nIntValue = ((CFEPrimaryExpression *) pFEExpression)->GetIntValue();
         break;
     case EXPR_FLOAT:
-        m_fFloatValue = 
+        m_fFloatValue =
 	    ((CFEPrimaryExpression *) pFEExpression)->GetFloatValue();
         break;
     case EXPR_CONDITIONAL:
@@ -180,7 +182,7 @@ CBEExpression::CreateBackEndConditional(
     CFEConditionalExpression *pFEExpression)
 {
     string exc = string(__func__);
-    
+
     if (!pFEExpression->GetCondition())
     {
 	exc += " failed because no condition.";
@@ -200,7 +202,7 @@ void
 CBEExpression::CreateBackEndBinary(CFEBinaryExpression * pFEExpression)
 {
     string exc = string(__func__);
-    
+
     if (!pFEExpression->GetOperand2())
     {
 	exc += " failed because no second operand.";
@@ -229,7 +231,7 @@ CBEExpression::CreateBackEndUnary(CFEUnaryExpression * pFEExpression)
  *  \return true if successful
  */
 void
-CBEExpression::CreateBackEndUnary(int nOperator, 
+CBEExpression::CreateBackEndUnary(int nOperator,
     CBEExpression *pOperand)
 {
     m_nOperator = nOperator;
@@ -548,8 +550,8 @@ CBEExpression::CreateBackEnd(string sValue)
  *  \return true if successful
  */
 void
-CBEExpression::CreateBackEndBinary(CBEExpression * pOperand1, 
-    int nOperator, 
+CBEExpression::CreateBackEndBinary(CBEExpression * pOperand1,
+    int nOperator,
     CBEExpression * pOperand2)
 {
     m_pOperand1 = pOperand1;
@@ -565,6 +567,9 @@ int CBEExpression::GetIntValue()
 {
     int nValue = 0;
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEExpression::GetIntValue() called, m_nType is %d\n", m_nType);
+
     switch (m_nType)
     {
     case EXPR_NONE:
@@ -572,16 +577,36 @@ int CBEExpression::GetIntValue()
     case EXPR_STRING:
         break;
     case EXPR_USER_DEFINED:
-        // might be constant
         {
             CBERoot *pRoot = GetSpecificParent<CBERoot>();
             assert(pRoot);
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEExpression::GetIntValue() test for constant or enum %s\n",
+		m_sStringValue.c_str());
+	    // might be constant
             CBEConstant *pConst;
             if ((pConst = pRoot->FindConstant(m_sStringValue)) != 0)
             {
                 CBEExpression *pValue = pConst->GetValue();
                 nValue = pValue ? pValue->GetIntValue() : 0;
+
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		    "CBEExpression::GetIntValue() constant has value %d\n", nValue);
             }
+	    // might be an enum
+	    CBEEnumType *pEnum;
+	    if ((pEnum = pRoot->FindEnum(m_sStringValue)) != 0)
+	    {
+		// get the integer value of the enumerator from the enum
+		nValue = pEnum->GetIntValue(m_sStringValue);
+
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		    "CBEExpression::GetIntValue() enum has value %d\n", nValue);
+	    }
+	    // if neither nor, issue an error
+	    if (!pConst && !pEnum)
+		CMessages::Error("Cannot evaluate value of \"%s\". It's neither constant nor enum.\n",
+		    m_sStringValue.c_str());
         }
         break;
     case EXPR_TRUE:
@@ -630,6 +655,9 @@ int CBEExpression::GetIntValue()
         }
         break;
     }
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEExpression::GetIntValue returns %d\n", nValue);
 
     return nValue;
 }
@@ -976,15 +1004,15 @@ bool CBEExpression::GetBoolValueBinary()
     bool bValue1 = m_pOperand1->GetBoolValue();
     bool bValue2 = m_pOperand2->GetBoolValue();
     bool bValue = false;
-    
+
     switch (m_nOperator)
     {
     case EXPR_MUL:
-  	bValue = (bool) ((int) bValue1 * (int) bValue2);
-    	break;
+	bValue = (bool) ((int) bValue1 * (int) bValue2);
+	break;
     case EXPR_DIV:
-    	if ((int) bValue2)
-      	    bValue = (bool) ((int) bValue1 / (int) bValue2);
+	if ((int) bValue2)
+	    bValue = (bool) ((int) bValue1 / (int) bValue2);
 	break;
     case EXPR_MOD:
 	if ((int) bValue2)
@@ -1039,7 +1067,7 @@ bool CBEExpression::GetBoolValueBinary()
 	throw new error::invalid_operator();
 	break;
     }
-    
+
     return bValue;
 }
 
@@ -1049,17 +1077,17 @@ bool CBEExpression::GetBoolValueBinary()
 bool CBEExpression::GetBoolValueUnary()
 {
     bool bValue = m_pOperand1->GetBoolValue();
-    
+
     switch (m_nOperator)
     {
     case EXPR_SPLUS:
-  	bValue = (bool) (+((int) bValue));
-    	break;
+	bValue = (bool) (+((int) bValue));
+	break;
     case EXPR_SMINUS:
-    	bValue = (bool) (-((int) bValue));
-      	break;
+	bValue = (bool) (-((int) bValue));
+	break;
     case EXPR_TILDE:
-      	{
+	{
 	    int iValue = (int) bValue;
 	    iValue = ~iValue;
 	    bValue = (bool) iValue;
@@ -1072,7 +1100,7 @@ bool CBEExpression::GetBoolValueUnary()
 	throw new error::invalid_operator();
 	break;
     }
-    
+
     return bValue;
 }
 

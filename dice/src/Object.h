@@ -31,8 +31,7 @@
 #define __DICE_OBJECT_H__
 
 #include "defines.h"
-#include <string>
-using std::string;
+#include "Location.h"
 
 class CVisitor;
 
@@ -46,26 +45,18 @@ class CVisitor;
  */
 class CObject
 {
-// Constructor
-  public:
+public:
     /** the constructor for this class */
     CObject(CObject * pParent = 0);
     virtual ~ CObject();
 
-  protected:
+protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
     CObject(const CObject & src);
 
-// Operations
-  public:
-    string const GetSourceFileName() const;
-    void SetSourceFileName(const string sFileName);
-    int GetSourceLine() const;
-    void SetSourceLine(const int nLineNb);
-    int GetSourceLineEnd() const;
-    void SetSourceLineEnd(const int nLineNb);
+public:
     virtual CObject * Clone();
     void SetParent(CObject * pParent = 0);
     CObject* GetParent() const;
@@ -73,24 +64,17 @@ class CObject
     bool IsParent(CObject * pParent);
     virtual void Accept(CVisitor&);
 
-// Attributes
-  protected:
+
+    /** \var location sourceLoc
+     *  \brief contains the begin and end position of this object
+     */
+    location m_sourceLoc;
+
+protected:
     /** \var CObject *m_pParent
      *  \brief a reference to the parent object
      */
     CObject * m_pParent;
-    /** \var int m_nSourceLineNb
-     *  \brief the line number where this elements has been declared
-     */
-    int m_nSourceLineNb;
-    /** \var int m_nSourceLineNbEnd
-     *  \brief the line number where this element's declaration ends
-     */
-    int m_nSourceLineNbEnd;
-    /** \var string m_sSourceFileName
-     *  \brief the source file name
-     */
-    string m_sSourceFileName;
 };
 
 /** \brief obtain a reference to a specifc parent
@@ -130,60 +114,6 @@ inline void
 CObject::SetParent(CObject * pParent)
 {
     m_pParent = pParent;
-}
-
-/** \brief sets the source line number of this element
- *  \param nLineNb the line this elements has been declared
- */
-inline void
-CObject::SetSourceLine(const int nLineNb)
-{
-    m_nSourceLineNb = nLineNb;
-}
-
-/** \brief retrieves the source code line number this elements was declared in
- *  \return the line number of declaration
- */
-inline int
-CObject::GetSourceLine(void) const
-{
-    return m_nSourceLineNb;
-}
-
-/** \brief sets the source line number of this element's end of declaration
- *  \param nLineNb the line this elements has been declared
- */
-inline void
-CObject::SetSourceLineEnd(const int nLineNb)
-{
-    m_nSourceLineNbEnd = nLineNb;
-}
-
-/** \brief retrieves the source code line number this element's declaration ends
- *  \return the line number of declaration
- */
-inline int
-CObject::GetSourceLineEnd(void) const
-{
-    return m_nSourceLineNbEnd;
-}
-
-/** \brief sets the file name of the source file
- *  \param sFileName the name of the source file
- */
-inline void
-CObject::SetSourceFileName(const string sFileName)
-{
-    m_sSourceFileName = sFileName;
-}
-
-/** \brief retrieves the name of the source file
- *  \return the name of the source file
- */
-inline string const
-CObject::GetSourceFileName(void) const
-{
-    return m_sSourceFileName;
 }
 
 #endif                // __DICE_OBJECT_H__

@@ -11,8 +11,11 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 import <l4/sys/types.h>
-import <l4/l4vfs/types.h>
 import <l4/l4vfs/common_io.idl>
+import <l4/l4vfs/types.h>
+
+#pragma force-include
+#include <l4/l4vfs/comm_defs.h>
 
 /**
  * @brief L4 virtual file system interface

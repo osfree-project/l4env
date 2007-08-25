@@ -40,7 +40,6 @@ class CFEConstDeclarator;
 class CFEConstructedType;
 class CFEInterface;
 class CFELibrary;
-class CIncludeStatement;
 
 /** \class CFEFile
  *  \ingroup frontend
@@ -52,7 +51,7 @@ class CFEFile : public CFEBase
 // constructor/desctructor
 public:
     /** constructs a idl file representation */
-    CFEFile(string sFileName, string sPath, int nIncludedOnLine = 1, int nStdInclude = 0);
+    CFEFile(std::string sFileName, std::string sPath, int nIncludedOnLine = 1, int nStdInclude = 0);
     virtual ~CFEFile();
 
 protected:
@@ -63,50 +62,50 @@ protected:
 
 // Operations
 public:
-    string GetFullFileName();
+    std::string GetFullFileName();
     bool IsStdIncludeFile();
     int GetTypedefCount(bool bCountIncludes = true);
     int GetConstantCount(bool bCountIncludes = true);
     bool IsIDLFile();
     virtual void Accept(CVisitor&);
-    string GetFileNameWithoutExtension();
-    bool HasExtension(string sExtension);
-    string GetFileName();
-    
-    CFEConstDeclarator* FindConstDeclarator(string sName);
-    CFEConstructedType* FindTaggedDecl(string sName);
-    CFETypedDeclarator* FindUserDefinedType(string sName);
+    std::string GetFileNameWithoutExtension();
+    bool HasExtension(std::string sExtension);
+    std::string GetFileName();
+    void SetPath(std::string sPath);
+
+    CFEConstDeclarator* FindConstDeclarator(std::string sName);
+    CFEConstructedType* FindTaggedDecl(std::string sName);
+    CFETypedDeclarator* FindUserDefinedType(std::string sName);
     CFETypedDeclarator* FindUserDefinedType(const char* sName);
-    CFELibrary* FindLibrary(string sName);
+    CFELibrary* FindLibrary(std::string sName);
     CFELibrary* FindLibrary(const char* sName);
-    CFEInterface* FindInterface(string sName);
+    CFEInterface* FindInterface(std::string sName);
     CFEInterface* FindInterface(const char* sName);
 
     virtual CObject* Clone();
 
     int GetIncludedOnLine();
-    int GetSourceLineEnd();
 
-    virtual CFEFile* FindFile(string sFileName);
+    virtual CFEFile* FindFile(std::string sFileName);
 
 // Attributes
 protected:
-    /** \var string m_sFilename
+    /** \var std::string m_sFilename
      *  \brief contains the file name of the component
      */
-    string m_sFilename;
-    /** \var string m_sFilenameWithoutExtension
+    std::string m_sFilename;
+    /** \var std::string m_sFilenameWithoutExtension
      *  \brief the file name without the extension
      */
-    string m_sFilenameWithoutExtension;
-    /** \var string m_sFileExtension
+    std::string m_sFilenameWithoutExtension;
+    /** \var std::string m_sFileExtension
      *  \brief the extension of the file name
      */
-    string m_sFileExtension;
-    /** \var string m_sFileWithPath
+    std::string m_sFileExtension;
+    /** \var std::string m_sFileWithPath
      *  \brief the file-name with the complete path
      */
-    string m_sFileWithPath;
+    std::string m_sFileWithPath;
     /** \var int m_nStdInclude
      *  \brief set to 1 if this file is a standard include file (\#include <...>)
      *
@@ -120,38 +119,30 @@ protected:
     int m_nIncludedOnLine;
 
 public:
-    /** \var CSearchableCollection<CFEConstDeclarator, string> m_Constants
+    /** \var CSearchableCollection<CFEConstDeclarator, std::string> m_Constants
      *  \brief the constants of this file
      */
-    CSearchableCollection<CFEConstDeclarator, string> m_Constants;
-    /** \var CSearchableCollection<CFETypedDeclarator, string> m_Typedefs
+    CSearchableCollection<CFEConstDeclarator, std::string> m_Constants;
+    /** \var CSearchableCollection<CFETypedDeclarator, std::string> m_Typedefs
      *  \brief the type definitions in this file
      */
-    CSearchableCollection<CFETypedDeclarator, string> m_Typedefs;
-    /** \var CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators
+    CSearchableCollection<CFETypedDeclarator, std::string> m_Typedefs;
+    /** \var CSearchableCollection<CFEConstructedType, std::string> m_TaggedDeclarators
      *  \brief the tagged struct and union declarations
      */
-    CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators;
-    /** \var CSearchableCollection<CFELibrary, string> m_Libraries
+    CSearchableCollection<CFEConstructedType, std::string> m_TaggedDeclarators;
+    /** \var CSearchableCollection<CFELibrary, std::string> m_Libraries
      *  \brief the libraries in this file
      */
-    CSearchableCollection<CFELibrary, string> m_Libraries;
-    /** \var CSearchableCollection<CFEInterface, string> m_Interfaces
+    CSearchableCollection<CFELibrary, std::string> m_Libraries;
+    /** \var CSearchableCollection<CFEInterface, std::string> m_Interfaces
      *  \brief the interfaces in this file
      */
-    CSearchableCollection<CFEInterface, string> m_Interfaces;
+    CSearchableCollection<CFEInterface, std::string> m_Interfaces;
     /** \var CCollection<CFEFile> m_ChildFiles
      *  \brief the child files (included files)
      */
     CCollection<CFEFile> m_ChildFiles;
-    /** \var CCollection<CIncludeStatement> m_Includes
-     *  \brief contains the include statements
-     *
-     * The preprocessor might swallow some included files,
-     * because they have been included elsewhere already.
-     * Therefore we keep an extra list of include statements.
-     */
-    CCollection<CIncludeStatement> m_Includes;
 };
 
 #endif // __DICE_FE_FEFILE_H__

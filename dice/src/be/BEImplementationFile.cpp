@@ -197,9 +197,9 @@ void CBEImplementationFile::Write(void)
     for (; iter != m_vOrderedElements.end(); iter++)
     {
         nCurrType = 0;
-        if (dynamic_cast<CIncludeStatement*>(*iter))
-            nCurrType = 1;
-        else if (dynamic_cast<CBEClass*>(*iter))
+	if (dynamic_cast<CIncludeStatement*>(*iter))
+	    nCurrType = 1;
+	else if (dynamic_cast<CBEClass*>(*iter))
             nCurrType = 2;
         else if (dynamic_cast<CBENameSpace*>(*iter))
             nCurrType = 3;
@@ -211,7 +211,7 @@ void CBEImplementationFile::Write(void)
             // brace functions with extern C
             if (nLastType == 4)
             {
-		*this << 
+		*this <<
 		    "#ifdef __cplusplus\n" <<
 		    "}\n" <<
 		    "#endif\n\n";
@@ -230,15 +230,15 @@ void CBEImplementationFile::Write(void)
         // add pre-processor directive to denote source line
         if (CCompiler::IsOptionSet(PROGRAM_GENERATE_LINE_DIRECTIVE))
         {
-	    *this << "# " << (*iter)->GetSourceLine() << " \"" << 
-		(*iter)->GetSourceFileName() << "\"\n";
+	    *this << "# " << (*iter)->m_sourceLoc.getBeginLine() << " \"" <<
+		(*iter)->m_sourceLoc.getFilename() << "\"\n";
         }
         // now really write the element
         switch (nCurrType)
         {
-        case 1:
-            WriteInclude((CIncludeStatement*)(*iter));
-            break;
+	case 1:
+	    WriteInclude((CIncludeStatement*)(*iter));
+	    break;
         case 2:
             WriteClass((CBEClass*)(*iter));
             break;

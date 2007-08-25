@@ -88,12 +88,12 @@ CBETypedDeclarator::~CBETypedDeclarator()
         delete m_pType;
 }
 
-/** \brief creates a new instance of this class 
+/** \brief creates a new instance of this class
  *  \return a reference to the copy
  */
 CObject *CBETypedDeclarator::Clone()
-{ 
-    return new CBETypedDeclarator(*this); 
+{
+    return new CBETypedDeclarator(*this);
 }
 
 /** \brief writes the declaration of an variable
@@ -108,17 +108,17 @@ CBETypedDeclarator::WriteDeclaration(CBEFile& pFile)
     if (!pFile.is_open())
         return;
 
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called for %s\n",
 	__func__, m_Declarators.First()->GetName().c_str());
-    
+
     WriteAttributes(pFile);
     WriteType(pFile);
     pFile << " ";
     WriteDeclarators(pFile);
     WriteProperties(pFile);
-    
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s returned\n", __func__);
 }
 
@@ -134,7 +134,7 @@ CBETypedDeclarator::WriteSetZero(CBEFile& pFile)
 
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called\n", __func__);
-    
+
     vector<CBEDeclarator*>::iterator iterD;
     for (iterD = m_Declarators.begin();
 	 iterD != m_Declarators.end();
@@ -171,24 +171,24 @@ CBETypedDeclarator::WriteGetSize(CBEFile& pFile,
     CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called for %s\n",
 	__func__, m_Declarators.First()->GetName().c_str());
-    
+
     CBEType *pType = GetType();
     CBEAttribute *pAttr = 0;
     if ((pAttr = m_Attributes.Find(ATTR_SIZE_IS)) == 0)
     {
         if ((pAttr = m_Attributes.Find(ATTR_LENGTH_IS)) == 0)
         {
-	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s no size and length\n", __func__);
             // we prefer the actual size of a string to its max-size,
             // so we first test for the string attribute
             // might be string
             if (m_Attributes.Find(ATTR_STRING))
             {
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		    "CBETypedDeclarator::%s string attr\n", __func__);
                 // get declarator
                 CBEDeclarator *pDecl = m_Declarators.First();
@@ -214,7 +214,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile& pFile,
             // check max-is attribute
             if ((pAttr = m_Attributes.Find(ATTR_MAX_IS)) == 0)
             {
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		    "CBETypedDeclarator::%s no max attr\n", __func__);
                 // this only happends, when this is variable sized
                 // because of its variable sized type
@@ -232,8 +232,8 @@ CBETypedDeclarator::WriteGetSize(CBEFile& pFile,
                     pStack->pop_back();
                 }
 
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
-		    "CBETypedDeclarator::%s wrote type's size\n", 
+		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		    "CBETypedDeclarator::%s wrote type's size\n",
 		    __func__);
                 return;
             }
@@ -241,13 +241,13 @@ CBETypedDeclarator::WriteGetSize(CBEFile& pFile,
     }
     if (!pAttr)
     {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "CBETypedDeclarator::%s returns (no attr)\n", __func__);
         return;
     }
     if (pAttr->IsOfType(ATTR_CLASS_IS))
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBETypedDeclarator::%s an IS attr found\n", __func__);
 	CDeclStack vStack;
 	if (pStack)
@@ -265,19 +265,19 @@ CBETypedDeclarator::WriteGetSize(CBEFile& pFile,
     	    pSizeParameter->WriteDeclarators(pFile);
 
 	    // done
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
-		"CBETypedDeclarator::%s size in struct written\n", 
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBETypedDeclarator::%s size in struct written\n",
 		__func__);
 	    return;
 	}
-	
+
 	if (pSizeParameter)
         {
 	    // has only one declarator
 	    pSizeParameter->WriteDeclarators(pFile);
 
 	    // done
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s size attr written\n", __func__);
 	    return;
 	}
@@ -303,7 +303,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile& pFile,
 	pFile << pAttr->GetString();
     }
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s returns\n", __func__);
 }
 
@@ -317,10 +317,10 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile& pFile,
     CDeclStack* pStack,
     CBEFunction *pUsingFunc)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called for %s\n", __func__,
 	m_Declarators.First()->GetName().c_str());
-    
+
     CBEType *pType = GetTransmitType();
     CBEAttribute *pAttr = 0;
 
@@ -330,12 +330,12 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile& pFile,
     if ((pAttr = m_Attributes.Find(ATTR_MAX_IS)) == 0)
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s no max_is\n", __func__);
-	
+
 	// get declarator
 	CBEDeclarator *pDecl = m_Declarators.First();
 	if (!pDecl)
 	{
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s returns (no decl)\n", __func__);
 	    return;
 	}
@@ -343,7 +343,7 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile& pFile,
 	// so we first test for the string attribute
 	// might be string
 	CBESizes *pSizes = CCompiler::GetSizes();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"%s decl %s has string? %s, length? %s, size? %s, char type? %s, stars? %d\n",
 	    __func__, pDecl->GetName().c_str(),
 	    m_Attributes.Find(ATTR_STRING) ? "yes" : "no",
@@ -361,18 +361,18 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile& pFile,
 	    WarnNoMax(nMaxSize);
 	    pFile << nMaxSize;
 	    // wrote string size parameter
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s returns\n", __func__);
 	    return;
 	}
 
 	// check if the declarator is an array declarator. If so, get its
 	// bounds and write those (if exits)
-	// 
+	//
 	// check max size of decl -> that's the easiest way to find out if
 	// there is a variable sized dimension
 	int nMaxSize = pDecl->GetMaxSize();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	    "%s decl %s max size is %d and is array? %s\n", __func__,
 	    pDecl->GetName().c_str(), nMaxSize, pDecl->IsArray() ? "yes" : "no");
 	if (pDecl->IsArray() &&
@@ -388,10 +388,10 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile& pFile,
 		"CBETypedDeclarator::%s returns\n", __func__);
 	    return;
 	}
-	
+
 	// if max-size is negative, and no array, then we check for size_is
 	// attribute, which may indicate an array none-the-less
-	if (!pDecl->IsArray() && 
+	if (!pDecl->IsArray() &&
 	    nMaxSize < 0 &&
 	    (m_Attributes.Find(ATTR_SIZE_IS) ||
 	     m_Attributes.Find(ATTR_LENGTH_IS)))
@@ -403,7 +403,7 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile& pFile,
 		"CBETypedDeclarator::%s returns\n", __func__);
 	    return;
 	}
-	
+
 	// this only happends, when this is variable sized
 	// because of its variable sized type
 	// => we have to animate the type to write the size
@@ -447,7 +447,7 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile& pFile,
 		"CBETypedDeclarator::%s returns\n", __func__);
 	    return;
 	}
-	
+
 	if (pSizeParameter)
         {
 	    // has only one declarator
@@ -506,11 +506,11 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
     CBEFunction *pUsingFunc,
     bool& bFoundInStruct)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s (%p, %p, %p, %s) called\n", __func__,
-	pIsAttribute, pStack, pUsingFunc, 
+	pIsAttribute, pStack, pUsingFunc,
 	bFoundInStruct ? "true" : "false");
-    
+
     // first: get the name
     CBEDeclarator *pSizeName = pIsAttribute->m_Parameters.First();
     assert(pSizeName);
@@ -530,7 +530,7 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
 	// since we operate on a copy we might simply pop the end (the element
 	// has not been copied, only the vector with the references)
 	pStack->pop_back();
-	
+
 	if (pStruct && pUnion)
 	{
 	    // check if union is parent of struct
@@ -547,7 +547,7 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
 	    pSizeParameter = pStruct->m_Members.Find(sSizeName);
 	if (pUnion)
 	    pSizeParameter = pUnion->m_UnionCases.Find(sSizeName);
-	
+
 	if (!pSizeParameter)
 	{
 	    if (pStruct)
@@ -566,9 +566,9 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
     if (pSizeParameter)
     {
 	bFoundInStruct = true;
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "CBETypedDeclarator::%s returns %p (%s) (found in struct)\n",
-	    __func__, pSizeParameter, 
+	    __func__, pSizeParameter,
 	    pSizeParameter->m_Declarators.First()->GetName().c_str());
 	return pSizeParameter;
     }
@@ -583,22 +583,22 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
 	    "CBETypedDeclarator::%s returns 0 (no func)\n", __func__);
 	return 0;
     }
-    
+
     pSizeParameter = pFunction->FindParameter(sSizeName);
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s tried to find %s as param in func %s (-> %p)\n",
 	__func__, sSizeName.c_str(), pFunction->GetName().c_str(),
 	pSizeParameter);
     if (pSizeParameter)
     {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "CBETypedDeclarator::%s returns param %s\n", __func__,
 	    pSizeParameter->m_Declarators.First()->GetName().c_str());
 	return pSizeParameter;
     }
-    
+
     pSizeParameter = pFunction->m_LocalVariables.Find(sSizeName);
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s tried to find %s as var in func %s (-> %p)\n",
 	__func__, sSizeName.c_str(), pFunction->GetName().c_str(),
 	pSizeParameter);
@@ -623,9 +623,9 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
     else if (pClass)
      	pMsgBuffer = pClass->GetMessageBuffer();
     if (pMsgBuffer)
-	pSizeParameter = pMsgBuffer->FindMember(sSizeName, pFunction ? 
+	pSizeParameter = pMsgBuffer->FindMember(sSizeName, pFunction ?
 	    pFunction : pUsingFunc, nType);
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s tried to find %s as member in msgbuf (-> %p)\n",
 	__func__, sSizeName.c_str(), pSizeParameter);
     if (pSizeParameter)
@@ -641,7 +641,7 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
 	    if (dynamic_cast<CBETypedef*>(pParent) &&
 		!pParent->GetSpecificParent<CBETypedDeclarator>())
 	    {
-		pParent = pFunction ? 
+		pParent = pFunction ?
 		    pFunction->FindParameterType(pDecl->GetName()) :
 			pUsingFunc->FindParameterType(pDecl->GetName());
 		if (!pParent)
@@ -683,7 +683,7 @@ CBETypedDeclarator::GetSizeConstant(CBEAttribute *pIsAttribute)
 void
 CBETypedDeclarator::WriteCleanup(CBEFile& pFile, bool bDeferred)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called\n", __func__);
     // if no memory was allocated, no cleanup required.
     if (!DoAllocateMemory(pFile))
@@ -799,10 +799,10 @@ CBETypedDeclarator::DoAllocateMemory(CBEFile& pFile)
  * "unpointered" variable or a dynamic memory region depending on \a bMemory.
  */
 void
-CBETypedDeclarator::WriteIndirectInitialization(CBEFile& pFile, 
+CBETypedDeclarator::WriteIndirectInitialization(CBEFile& pFile,
     bool bMemory)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called\n", __func__);
 
     bool bUsePointer = UsePointer();
@@ -834,7 +834,7 @@ CBETypedDeclarator::UsePointer(void)
     // size_is or length_is attributes indicate an array, where we will need
     // a pointer to use.  with size_is, length_is we use malloc to init the
     // pointer, we have no indirection variables
-    bUsePointer = bUsePointer || m_Attributes.Find(ATTR_SIZE_IS) || 
+    bUsePointer = bUsePointer || m_Attributes.Find(ATTR_SIZE_IS) ||
 	m_Attributes.Find(ATTR_LENGTH_IS);
 
     return bUsePointer;
@@ -848,7 +848,7 @@ void
 CBETypedDeclarator::WriteInitDeclaration(CBEFile& pFile,
 	string sInitString)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called\n", __func__);
     CBEType *pType = GetType();
     if (pType->IsVoid())
@@ -894,11 +894,11 @@ CBETypedDeclarator::WriteInitDeclaration(CBEFile& pFile,
  * calling function has to take care of creating a seperate parameter for each
  * declarator.
  */
-void 
+void
 CBETypedDeclarator::CreateBackEnd(CFETypedDeclarator * pFEParameter)
 {
     assert(pFEParameter);
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s(fe) called\n", __func__);
 
     // call CBEObject's CreateBackEnd method
@@ -934,7 +934,7 @@ CBETypedDeclarator::CreateBackEnd(CFETypedDeclarator * pFEParameter)
     m_pType = pCF->GetNewType(pFEParameter->GetType()->GetType());
     m_pType->SetParent(this);
     m_pType->CreateBackEnd(pFEParameter->GetType());
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s(fe) type created\n", __func__);
 
     // get attributes
@@ -949,7 +949,7 @@ CBETypedDeclarator::CreateBackEnd(CFETypedDeclarator * pFEParameter)
 	AddAttribute(*iA);
     }
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s(fe) returns true\n", __func__);
 }
 
@@ -964,11 +964,11 @@ CBETypedDeclarator::CreateBackEnd(string sUserDefinedType,
     string sName,
     int nStars)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s(%s, %s, %d) called\n", __func__,
 	sUserDefinedType.c_str(), sName.c_str(), nStars);
 
-    
+
     // create decl
     AddDeclarator(sName, nStars);
     // create type
@@ -989,10 +989,10 @@ CBETypedDeclarator::CreateBackEnd(string sUserDefinedType,
  *  \return true if successful
  */
 void
-CBETypedDeclarator::CreateBackEnd(CBEType * pType, 
+CBETypedDeclarator::CreateBackEnd(CBEType * pType,
     string sName)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s(%p, %s) called\n", __func__, pType,
 	sName.c_str());
 
@@ -1013,7 +1013,7 @@ CBETypedDeclarator::CreateBackEnd(CBEType * pType,
 /** \brief add an attribute constructed from a front-end attribute
  *  \param pFEAttribute the front-end attribute to use as reference
  */
-void 
+void
 CBETypedDeclarator::AddAttribute(CFEAttribute *pFEAttribute)
 {
     CBEAttribute *pAttribute = CCompiler::GetClassFactory()->GetNewAttribute();
@@ -1087,16 +1087,16 @@ CBETypedDeclarator::RemoveCallDeclarator()
 bool CBETypedDeclarator::IsString()
 {
     CBEDeclarator *pDeclarator = m_Declarators.First();
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called for %s in func %s\n",
 	__func__, pDeclarator ? pDeclarator->GetName().c_str() : "(anonym)",
 	GetSpecificParent<CBEFunction>() ?
-	GetSpecificParent<CBEFunction>()->GetName().c_str() : 
+	GetSpecificParent<CBEFunction>()->GetName().c_str() :
 	"(no func)");
 
     if (!m_Attributes.Find(ATTR_STRING))
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBETypedDeclarator::%s returns false: no string attribute\n", __func__);
         return false;
     }
@@ -1107,7 +1107,7 @@ bool CBETypedDeclarator::IsString()
     if (m_pType->IsOfType(TYPE_CHAR_ASTERISK) &&
         !m_pType->IsUnsigned())
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBETypedDeclarator::%s returns true: char* and !unsigned\n", __func__);
         return true;
     }
@@ -1123,14 +1123,14 @@ bool CBETypedDeclarator::IsString()
             // == 0 -> bitfield
             if ((nSize < 0) || (nSize > 1))
 	    {
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-		    "CBETypedDeclarator::%s returns true: size is %d\n", __func__, 
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		    "CBETypedDeclarator::%s returns true: size is %d\n", __func__,
 		    nSize);
                 return true;
 	    }
         }
     }
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s returns false: type is %d\n", __func__,
 	m_pType->GetFEType());
     return false;
@@ -1168,10 +1168,10 @@ bool CBETypedDeclarator::IsString()
 bool CBETypedDeclarator::IsVariableSized()
 {
     CBEDeclarator *pDeclarator = m_Declarators.First();
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called for %s\n", __func__,
 	pDeclarator ? pDeclarator->GetName().c_str() : "(anonym)");
-    
+
     // need the root
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
     assert(pRoot);
@@ -1208,7 +1208,7 @@ bool CBETypedDeclarator::IsVariableSized()
             // not a constant, return true
             if (!pConstant)
 	    {
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		    "CBETypedDeclarator::%s returns true (LENGTH)\n",
 		    __func__);
                 return true;
@@ -1280,7 +1280,7 @@ bool CBETypedDeclarator::IsVariableSized()
 		pConstant = pRoot->FindConstant(pAttrName->GetName());
 	    if (!pConstant)
     	    {
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		    "CBETypedDeclarator::%s return true (var array)\n",
 		    __func__);
 		return true;
@@ -1289,7 +1289,7 @@ bool CBETypedDeclarator::IsVariableSized()
     }
     // no size/max attribute and no unbound array:
     // should be treated as scalar
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s returns false\n", __func__);
     return false;
 }
@@ -1333,10 +1333,10 @@ bool CBETypedDeclarator::IsFixedSized()
  */
 int CBETypedDeclarator::GetSize()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s called (decl %s)\n",
 	__func__, m_Declarators.First()->GetName().c_str());
-    
+
     int nSize = 0;
 
     vector<CBEDeclarator*>::iterator iterD;
@@ -1356,7 +1356,7 @@ int CBETypedDeclarator::GetSize()
 	}
         nSize += nDeclSize;
     }
-    
+
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s returns %d\n", __func__, nSize);
     return nSize;
@@ -1372,14 +1372,14 @@ int CBETypedDeclarator::GetSize(string sName)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s(%s) called\n", __func__, sName.c_str());
-    
-    CBEDeclarator *pDecl = m_Declarators.Find(sName);
-    if (!pDecl)
+
+    CBEDeclarator *pDeclarator = m_Declarators.Find(sName);
+    if (!pDeclarator)
         return 0; // not existent
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBETypedDeclarator::%s(%s) has decl\n", __func__, sName.c_str());
-    return GetSizeOfDeclarator(pDecl);
+	"CBETypedDeclarator::%s(%s) has decl @ %p\n", __func__, sName.c_str(), pDeclarator);
+    return GetSizeOfDeclarator(pDeclarator);
 }
 
 /** \brief get the actually to transmit type
@@ -1389,10 +1389,10 @@ int CBETypedDeclarator::GetSize(string sName)
  */
 CBEType* CBETypedDeclarator::GetTransmitType()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
-	"CBETypedDeclarator::%s called (m_pType is %d)\n", 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedDeclarator::%s called (m_pType is %d)\n",
 	__func__, m_pType->GetFEType());
-    
+
     CBEType *pType = m_pType;
     CBEAttribute *pAttr = m_Attributes.Find(ATTR_TRANSMIT_AS);
     if (pAttr && pAttr->GetType())
@@ -1432,11 +1432,16 @@ int CBETypedDeclarator::GetSizeOfDeclarator(CBEDeclarator *pDeclarator)
         return 0;
     }
 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBETypedDeclarator::%s(%s): type is %s @ %p and transmit type is %s @ %p\n",
+	__func__, pDeclarator->GetName().c_str(), typeid(*GetType()).name(), GetType(),
+	typeid(*pType).name(), pType);
+
     int nTypeSize = pType->GetSize();
     int nDeclSize = pDeclarator->GetSize();
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s %s: type(%d): %d, decl: %d\n", __func__,
-	m_Declarators.First()->GetName().c_str(), pType->GetFEType(), 
+	m_Declarators.First()->GetName().c_str(), pType->GetFEType(),
 	nTypeSize, nDeclSize);
 
     // if referenced OUT, this is the size
@@ -1492,7 +1497,7 @@ void CBETypedDeclarator::WarnNoMax(int nSize)
 	    pD->GetName().c_str(),
 	    nSize);
 }
- 
+
 /** \brief determine the size or dimension encoded in a size attribute
  *  \param nAttr the attribute to test
  *  \param nSize reference to the size variable to increase if appropriate
@@ -1533,18 +1538,18 @@ bool
 CBETypedDeclarator::GetMaxSize(int & nSize,
     string sName)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s(%s) called.\n",
 	__func__, sName.empty() ? "(none)" : sName.c_str());
-    
+
     CBESizes *pSizes = CCompiler::GetSizes();
-    
+
     CBEType *pType = GetTransmitType();
     // no size for void
     nSize = 0;
     if (pType->IsVoid())
     {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "CBETypedDeclarator::%s void type, return 0\n", __func__);
         return true;
     }
@@ -1554,14 +1559,14 @@ CBETypedDeclarator::GetMaxSize(int & nSize,
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s size of type (%d) is %d\n", __func__,
 	pType->GetFEType(), nTypeSize);
-    
+
     bool bVarSized = false;
     vector<CBEDeclarator*>::iterator iterD;
     for (iterD = m_Declarators.begin();
 	 iterD != m_Declarators.end();
 	 iterD++)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBETypedDeclarator::%s sName empty? %s || \"%s\" != \"%s\" (%s)\n",
 	    __func__, sName.empty() ? "true" : "false",
 	    (*iterD)->GetName().c_str(), sName.empty() ? "" : sName.c_str(),
@@ -1569,12 +1574,12 @@ CBETypedDeclarator::GetMaxSize(int & nSize,
 	/* skip if we are looking for a special member */
 	if (!sName.empty() && (*iterD)->GetName() != sName)
 	    continue;
-	
+
         int nDeclSize = (*iterD)->GetMaxSize();
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBETypedDeclarator::%s size of %s is %d with type size being %d\n",
 	    __func__, (*iterD)->GetName().c_str(), nDeclSize, nTypeSize);
-	
+
         // if decl is array, but returns a negative maximum size,
         // it is an unbound array. Its max size is the max size of it's
         // type times the dimensions
@@ -1600,7 +1605,7 @@ CBETypedDeclarator::GetMaxSize(int & nSize,
 		continue;
 	    if (GetSizeOrDimensionOfAttr(ATTR_MAX_IS, nSize, nDimensions))
 		continue;
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CBETypedDeclarator::%s guessing size for size attr\n", __func__);
 	    WarnNoMax(nTypeSize * -nDeclSize);
 	    nSize += pSizes->GetMaxSizeOfType(pType->GetFEType()) * nDimensions;
@@ -1621,11 +1626,11 @@ CBETypedDeclarator::GetMaxSize(int & nSize,
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBETypedDeclarator::%s total now %d\n", __func__,
 	    nSize);
     }
-    
+
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s up to now its %d\n", __func__, nSize);
-    
+
     if (bVarSized || pType->IsPointerType())
     {
         // check max attributes
@@ -1653,7 +1658,7 @@ CBETypedDeclarator::GetMaxSize(int & nSize,
                 // this might by a constant declarator
                 CBERoot *pRoot = GetSpecificParent<CBERoot>();
                 assert(pRoot);
-                CBEConstant *pConstant = 
+                CBEConstant *pConstant =
 		    pRoot->FindConstant(pSizeName->GetName());
                 // set size to value of constant
                 if (pConstant && pConstant->GetValue())
@@ -1662,7 +1667,7 @@ CBETypedDeclarator::GetMaxSize(int & nSize,
         }
     }
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s returning %d\n", __func__, nSize);
     return (nSize > 0);
 }
@@ -1692,7 +1697,7 @@ void CBETypedDeclarator::ReplaceType(CBEType * pNewType)
 {
     if (!pNewType)
         return;
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBETypedDeclarator::%s(%p) called\n", __func__, pNewType);
     if (dynamic_cast<CBEUserDefinedType*>(pNewType))
     {
@@ -1734,7 +1739,7 @@ bool CBETypedDeclarator::IsDirection(DIRECTION_TYPE nDirection)
 	return true;
     if ((nDirection == DIRECTION_OUT) && m_Attributes.Find(ATTR_OUT))
 	return true;
-    if ((nDirection == DIRECTION_INOUT) && 
+    if ((nDirection == DIRECTION_INOUT) &&
 	(m_Attributes.Find(ATTR_IN) || m_Attributes.Find(ATTR_OUT)))
 	return true;
     return false;
@@ -1822,7 +1827,7 @@ CBETypedDeclarator::FindLanguageProperty(string sProperty,
 /** \brief writes the declarators to the target file
  *  \param pFile the file to write to
  */
-void 
+void
 CBETypedDeclarator::WriteDeclarators(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -1842,7 +1847,7 @@ CBETypedDeclarator::WriteDeclarators(CBEFile& pFile)
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s for %s (%d) in %s (%p -> %p)\n",
             __func__, (*iterD)->GetName().c_str(),
             (*iterD)->GetStars(),
-            (GetSpecificParent<CBEFunction>()) ? 
+            (GetSpecificParent<CBEFunction>()) ?
 	    GetSpecificParent<CBEFunction>()->GetName().c_str() : "(none)",
             this, (*iterD));
 
@@ -1878,12 +1883,13 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
 	return;
     CBEType *pType = GetType();
     bool bConstructed = (pType && pType->IsConstructedType());
+    bool bIsPointerType = (pType && pType->IsPointerType());
     // test if string
     bool bIsArray = IsString();
     bool bCheckedArrayDims = false;
     // test all declarators for strings
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	"%s for %s (1): is-array %s, bChecked %s\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s for %s (1): is-array %s, bChecked %s\n", __func__,
 	m_Declarators.First()->GetName().c_str(), (bIsArray) ? "true" : "false",
 	(bCheckedArrayDims) ? "true" : "false");
     if (!bIsArray)
@@ -1902,20 +1908,20 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
 		 iterB++)
 	    {
 		// either fixed number in bound
-	    	// or no fixed array boundary
-		if ((*iterB)->IsOfType(EXPR_INT) || 
-    		    ((*iterB)->GetIntValue() == 0)) 
+		// or no fixed array boundary
+		if ((*iterB)->IsOfType(EXPR_INT) ||
+		    ((*iterB)->GetIntValue() == 0))
 		    bIsArray = true;
 	    }
 
 	    // FIXME: testing for array dimension == 0?
 	    if ((*iterD)->GetArrayDimensionCount() == 0)
-    		bIsArray = true;
+		bIsArray = true;
 	    bCheckedArrayDims = true;
 	}
     }
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	"%s for %s (2): is-array %s, bChecked %s\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s for %s (2): is-array %s, bChecked %s\n", __func__,
 	m_Declarators.First()->GetName().c_str(), (bIsArray) ? "true" : "false",
 	(bCheckedArrayDims) ? "true" : "false");
     // test for size/length/max attributes, which indicate arrays
@@ -1932,8 +1938,8 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
     // if max_is is found now its a pointer, which can use some
     // const, but this has been enabled by the above checks (array-dims == 0)
     // already
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	"%s for %s (3): is-array %s, bChecked %s\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s for %s (3): is-array %s, bChecked %s\n", __func__,
 	m_Declarators.First()->GetName().c_str(), (bIsArray) ? "true" : "false",
 	(bCheckedArrayDims) ? "true" : "false");
     bool bNoCorbaType = !CCompiler::IsOptionSet(PROGRAM_USE_CORBA_TYPES);
@@ -1943,36 +1949,42 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
     if (bNoCorbaType  && pType->IsOfType(TYPE_USER_DEFINED) &&
         dynamic_cast<CBEUserDefinedType*>(pType))
     {
-        CBEUserDefinedType *pUserType = 
+        CBEUserDefinedType *pUserType =
 	    dynamic_cast<CBEUserDefinedType*>(pType);
         string sName = pUserType->GetName();
-        if ((sName.length() > 6) &&
-            (sName.substr(0, 6) == "CORBA_"))
+        if (sName.find("CORBA_") == 0)
             bNoCorbaType = false;
+	// some dirty trick to make CORBA_Object known
+	if (sName == "CORBA_Object")
+	{
+	    bConstructed = true;
+	    bIsPointerType = true;
+	}
     }
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	"%s for %s (4): is-array %s, constr %s, use corba type %s\n", 
-	__func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"%s for %s (4): is-array %s, constr %s, no corba %s\n",
+	__func__,
 	m_Declarators.First()->GetName().c_str(), (bIsArray) ? "true" : "false",
 	(bConstructed) ? "true" : "false",
 	(bNoCorbaType) ? "true" : "false");
     // string check
     if (bConstructed || bIsArray)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	    "%s for %s (5): constr %s, array %s -> client %s, no corba %s, ptr %s\n",
 	    __func__,
-	    m_Declarators.First()->GetName().c_str(), 
-	    (bConstructed) ? "true" : "false",
-	    (bIsArray) ? "true" : "false",
-	    (pFile.IsOfFileType(FILETYPE_CLIENT)) ? "yes" : "no",
-	    (bNoCorbaType) ? "yes" : "no",
-	    (pType->IsPointerType()) ? "yes" : "no");
+	    m_Declarators.First()->GetName().c_str(),
+	    bConstructed ? "true" : "false",
+	    bIsArray ? "true" : "false",
+	    pFile.IsOfFileType(FILETYPE_CLIENT) ? "yes" : "no",
+	    bNoCorbaType ? "yes" : "no",
+	    bIsPointerType ? "yes" : "no");
         if (pFile.IsOfFileType(FILETYPE_CLIENT))
         {
-            if ((m_Attributes.Find(ATTR_IN)) && (!m_Attributes.Find(ATTR_OUT)))
+            if ((m_Attributes.Find(ATTR_IN)) &&
+		(!m_Attributes.Find(ATTR_OUT)))
             {
-                if (!bNoCorbaType && pType->IsPointerType())
+                if (!bNoCorbaType && bIsPointerType)
 		    pFile << "const_";
                 else
 		    pFile << "const ";
@@ -1985,7 +1997,7 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
                 (!m_Attributes.Find(ATTR_OUT)) &&
                 (GetSpecificParent<CBEComponentFunction>()))
             {
-                if (!bNoCorbaType && pType->IsPointerType())
+                if (!bNoCorbaType && bIsPointerType)
 		    pFile << "const_";
                 else
 		    pFile << "const ";
@@ -2002,7 +2014,7 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
  * Calls the WriteDeclaration operation of the type.
  */
 void
-CBETypedDeclarator::WriteForwardTypeDeclaration(CBEFile& pFile, 
+CBETypedDeclarator::WriteForwardTypeDeclaration(CBEFile& pFile,
     bool bUseConst)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called\n", __func__);

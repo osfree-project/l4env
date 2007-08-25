@@ -134,7 +134,7 @@ endif
 BID_STATE_FILE = $(OBJ_BASE)/pkg/BUILD.state
 
 # all our packages
-ALL_SUBDIRS	= $(shell find . -maxdepth 1 -type d ! -name .svn -printf %P\ )
+ALL_SUBDIRS	= $(shell find -L . -maxdepth 1 -type d ! -name .svn -printf %P' ')
 
 # the broken packages
 BROKEN_SUBDIRS	= $(patsubst %/broken, %, \

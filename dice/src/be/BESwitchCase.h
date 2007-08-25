@@ -61,9 +61,9 @@ public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
 
     virtual void SetMessageBufferType();
-    virtual void SetCallVariable(string sOriginalName, int nStars, 
-	string sCallName);
-    
+    virtual void SetCallVariable(std::string sOriginalName, int nStars,
+	std::string sCallName);
+
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
 
@@ -82,10 +82,10 @@ protected:
      *  function
      */
     bool m_bSameClass;
-    /** \var string m_sOpcode
+    /** \var std::string m_sOpcode
      *  \brief the opcode constant
      */
-    string m_sOpcode;
+    std::string m_sOpcode;
     /** \var CBEUnmarshalFunction *m_pUnmarshalFunction
      *  \brief a reference to the corresponding unmarshal function
      */

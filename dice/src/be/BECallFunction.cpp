@@ -64,7 +64,7 @@ CBECallFunction::~CBECallFunction()
 void
 CBECallFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBECallFunction::WriteVariableInitialization called %s in %s\n",
         GetName().c_str(), pFile.GetFileName().c_str());
     // init message buffer
@@ -113,7 +113,7 @@ CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
 	m_bTraceOn = false;
     }
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__,
 	GetName().c_str());
 }
 
@@ -123,7 +123,7 @@ CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
  *
  * This implementation only sets the name of the function.
  */
-void 
+void
 CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
@@ -148,7 +148,7 @@ CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation)
 	// this is a stupid trick: in order to make the marshalling logic
 	// unmarshal the exception into the environment, we need a parameter
 	// or local variable with that name. Even though we never use it.
-	pException->AddLanguageProperty(string("attribute"), 
+	pException->AddLanguageProperty(string("attribute"),
 	    string("__attribute__ ((unused))"));
     }
     // add marshaller and communication class
@@ -168,7 +168,7 @@ CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation)
  *  \param pMsgBuffer the message buffer to initialize
  *  \return true on success
  */
-void 
+void
 CBECallFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
@@ -196,13 +196,13 @@ CBECallFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
  *
  * Only marshal those parameters with an IN attribute
  */
-bool 
+bool
 CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
 	bool bMarshal)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"%s called for %s with marshal=%s and IN=%s, OUT=%s\n",
-    	__func__, pParameter->m_Declarators.First()->GetName().c_str(), 
+    	__func__, pParameter->m_Declarators.First()->GetName().c_str(),
 	(bMarshal) ? "yes" : "no",
 	pParameter->m_Attributes.Find(ATTR_IN) ? "yes" : "no",
 	pParameter->m_Attributes.Find(ATTR_OUT) ? "yes" : "no");
@@ -225,7 +225,7 @@ CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
 bool CBECallFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBECallFunction::%s(%s) called for %s\n", __func__, 
+	"CBECallFunction::%s(%s) called for %s\n", __func__,
 	pFile->GetFileName().c_str(), GetName().c_str());
 
     if (!IsTargetFile(pFile))
@@ -250,7 +250,7 @@ bool CBECallFunction::DoWriteFunction(CBEHeaderFile* pFile)
 bool CBECallFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBECallFunction::%s(%s) called for %s\n", __func__, 
+	"CBECallFunction::%s(%s) called for %s\n", __func__,
 	pFile->GetFileName().c_str(), GetName().c_str());
 
     if (!IsTargetFile(pFile))

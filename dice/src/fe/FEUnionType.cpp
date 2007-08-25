@@ -29,14 +29,17 @@
 #include "FEUnionType.h"
 #include "FEUnionCase.h"
 #include "FEFile.h"
+#include "FEIdentifier.h"
 #include "Compiler.h"
 #include "Visitor.h"
 #include <iostream>
 
 CFEUnionType::CFEUnionType(string sTag,
-    vector<CFEUnionCase*> * pUnionBody)
+    vector<CFEUnionCase*> * pUnionBody,
+    vector<CFEIdentifier*> * pBaseUnions)
 : CFEConstructedType(TYPE_UNION),
-    m_UnionCases(pUnionBody, this)
+    m_UnionCases(pUnionBody, this),
+    m_BaseUnions(pBaseUnions, this)
 {
     m_sTag = sTag;
     if (!pUnionBody)
@@ -45,10 +48,12 @@ CFEUnionType::CFEUnionType(string sTag,
 
 CFEUnionType::CFEUnionType(CFEUnionType & src)
 : CFEConstructedType(src),
-    m_UnionCases(src.m_UnionCases)
+    m_UnionCases(src.m_UnionCases),
+    m_BaseUnions(src.m_BaseUnions)
 {
     m_sTag = src.m_sTag;
     m_UnionCases.Adopt(this);
+    m_BaseUnions.Adopt(this);
 }
 
 /** cleans up a union type object */
@@ -59,16 +64,25 @@ CFEUnionType::~CFEUnionType()
  *  \return a reference to a new union type object
  */
 CObject* CFEUnionType::Clone()
-{ 
+{
     return new CFEUnionType(*this);
 }
 
 /** \brief test a type whether it is a constructed type or not
- *  \return true 
+ *  \return true
  */
 bool CFEUnionType::IsConstructedType()
 {
     return true;
+}
+
+/** \brief add the members after construction
+ *  \param pUnionBody the members added
+ */
+void CFEUnionType::AddMembers(vector<CFEUnionCase*>* pUnionBody)
+{
+    m_UnionCases.Add(pUnionBody);
+    m_UnionCases.Adopt(this);
 }
 
 /** \brief accept the iterations of the visitors

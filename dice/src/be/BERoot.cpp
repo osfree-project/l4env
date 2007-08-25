@@ -35,6 +35,7 @@
 #include "be/BETypedef.h"
 #include "be/BEFunction.h"
 #include "be/BEConstant.h"
+#include "be/BEEnumType.h"
 #include "be/BENameSpace.h"
 #include "be/BEDeclarator.h"
 #include "be/BEImplementationFile.h"
@@ -148,18 +149,19 @@ void CBERoot::Write()
 
 /** \brief tries to find the typedef to the given type-name
  *  \param sTypeName the name of the type to find
+ *  \param pPrev the previous found typedef with the same name
  *  \return a reference to the found typedef or 0
  *
  * Since we have all the elements in the containes types, constants,
  * classes and namespaces, we will search for the typedef first in our
  * own typedefs and then in the classes and namespaces.
  */
-CBETypedef *CBERoot::FindTypedef(string sTypeName)
+CBETypedef *CBERoot::FindTypedef(string sTypeName, CBETypedef *pPrev)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBERoot::%s(%s) called\n", __func__,
 	sTypeName.c_str());
 
-    CBETypedef *pTypedef = m_Typedefs.Find(sTypeName);
+    CBETypedef *pTypedef = m_Typedefs.Find(sTypeName, pPrev);
     if (pTypedef)
 	return pTypedef;
 
@@ -168,7 +170,7 @@ CBETypedef *CBERoot::FindTypedef(string sTypeName)
 	 iterCl != m_Classes.end();
 	 iterCl++)
     {
-        if ((pTypedef = (*iterCl)->FindTypedef(sTypeName)) != 0)
+        if ((pTypedef = (*iterCl)->FindTypedef(sTypeName, pPrev)) != 0)
 	    return pTypedef;
     }
 
@@ -177,7 +179,7 @@ CBETypedef *CBERoot::FindTypedef(string sTypeName)
 	 iterN != m_Namespaces.end();
 	 iterN++)
     {
-        if ((pTypedef = (*iterN)->FindTypedef(sTypeName)) != 0)
+        if ((pTypedef = (*iterN)->FindTypedef(sTypeName, pPrev)) != 0)
             return pTypedef;
     }
 
@@ -191,7 +193,7 @@ CBETypedef *CBERoot::FindTypedef(string sTypeName)
  *
  * To find a function, we search our classes and namespaces
  */
-CBEFunction *CBERoot::FindFunction(string sFunctionName, 
+CBEFunction *CBERoot::FindFunction(string sFunctionName,
     FUNCTION_TYPE nFunctionType)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%s) called\n", __func__,
@@ -202,7 +204,7 @@ CBEFunction *CBERoot::FindFunction(string sFunctionName,
 	 iterC != m_Classes.end();
 	 iterC++)
     {
-        if ((pFunction = (*iterC)->FindFunction(sFunctionName, 
+        if ((pFunction = (*iterC)->FindFunction(sFunctionName,
 		    nFunctionType)) != 0)
             return pFunction;
     }
@@ -212,7 +214,7 @@ CBEFunction *CBERoot::FindFunction(string sFunctionName,
 	 iterN != m_Namespaces.end();
 	 iterN++)
     {
-        if ((pFunction = (*iterN)->FindFunction(sFunctionName, 
+        if ((pFunction = (*iterN)->FindFunction(sFunctionName,
 		    nFunctionType)) != 0)
             return pFunction;
     }
@@ -222,14 +224,15 @@ CBEFunction *CBERoot::FindFunction(string sFunctionName,
 
 /** \brief searches for an class
  *  \param sClassName the name of the class to look for
+ *  \param pPrev the previous class
  *  \return a reference to the found class (or 0)
  *
  * First we search out top-level classes. If we can't find anything we
  * ask the namespaces.
  */
-CBEClass* CBERoot::FindClass(string sClassName)
+CBEClass* CBERoot::FindClass(string sClassName, CBEClass *pPrev)
 {
-    CBEClass *pClass = m_Classes.Find(sClassName);
+    CBEClass *pClass = m_Classes.Find(sClassName, pPrev);
     if (pClass)
 	return pClass;
     vector<CBENameSpace*>::iterator iterN;
@@ -237,7 +240,7 @@ CBEClass* CBERoot::FindClass(string sClassName)
 	 iterN != m_Namespaces.end();
 	 iterN++)
     {
-        if ((pClass = (*iterN)->FindClass(sClassName)) != 0)
+        if ((pClass = (*iterN)->FindClass(sClassName, pPrev)) != 0)
             return pClass;
     }
     return 0;
@@ -252,6 +255,9 @@ CBEClass* CBERoot::FindClass(string sClassName)
  */
 CBEConstant* CBERoot::FindConstant(string sConstantName)
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBERoot::FindConstant(%s) called\n", sConstantName.c_str());
+
     CBEConstant *pConstant = m_Constants.Find(sConstantName);
     if (pConstant)
 	return pConstant;
@@ -261,6 +267,9 @@ CBEConstant* CBERoot::FindConstant(string sConstantName)
 	 iterCl != m_Classes.end();
 	 iterCl++)
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "CBERoot::FindConstant test class %s\n", (*iterCl)->GetName().c_str());
+
         if ((pConstant = (*iterCl)->m_Constants.Find(sConstantName)) != 0)
             return pConstant;
     }
@@ -270,10 +279,15 @@ CBEConstant* CBERoot::FindConstant(string sConstantName)
 	 iterN != m_Namespaces.end();
 	 iterN++)
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "CBERoot::FindConstant test namespace %s\n", (*iterN)->GetName().c_str());
+
         if ((pConstant = (*iterN)->FindConstant(sConstantName)) != 0)
             return pConstant;
     }
     // nothing found
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBERoot::FindConstant return NULL\n");
     return 0;
 }
 
@@ -405,7 +419,7 @@ CBERoot::CreateBackEnd(CFETypedDeclarator *pFETypedef)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBERoot::AddTypedef for %s with type at %p called\n",
 	pTypedef->m_Declarators.First()->GetName().c_str(),
 	pTypedef->GetType());
-	
+
 }
 
 /** \brief creates and stores a new tagged type declaration
@@ -482,7 +496,7 @@ void CBERoot::AddToImpl(CBEImplementationFile* pImpl)
  */
 bool CBERoot::AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"%s(header: %s, file: %s) called\n", __func__,
         pHeader->GetFileName().c_str(), pFEFile->GetFileName().c_str());
     assert(pHeader);
@@ -600,3 +614,69 @@ CBEType* CBERoot::FindTaggedType(unsigned int nType, string sTag)
     return 0;
 }
 
+/** \brief tries to find an enumeration with the given enumerator
+ *  \param sName the name of the enumerator
+ *  \return the type containing the enumerator
+ */
+CBEEnumType*
+CBERoot::FindEnum(std::string sName)
+{
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBERoot::FindEnum(%s) called\n", sName.c_str());
+
+    // search own types
+    CBEEnumType* pEnum;
+    vector<CBEType*>::iterator iterT;
+    for (iterT = m_TypeDeclarations.begin();
+	 iterT != m_TypeDeclarations.end();
+	 iterT++)
+    {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "CBERoot::FindEnum try to find in own types\n");
+
+	pEnum = dynamic_cast<CBEEnumType*>(*iterT);
+	if (pEnum && pEnum->m_Members.Find(sName))
+	    return pEnum;
+    }
+    // search typedef
+    vector<CBETypedef*>::iterator iterTD;
+    for (iterTD = m_Typedefs.begin();
+	 iterTD != m_Typedefs.end();
+	 iterTD++)
+    {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "CBERoot::FindEnum try to find in own typedefs\n");
+
+	pEnum = dynamic_cast<CBEEnumType*>((*iterTD)->GetType());
+	if (pEnum && pEnum->m_Members.Find(sName))
+	    return pEnum;
+    }
+    // search classes
+    vector<CBEClass*>::iterator iterC;
+    for (iterC = m_Classes.begin();
+	 iterC != m_Classes.end();
+	 iterC++)
+    {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "CBERoot::FindEnum check class %s\n", (*iterC)->GetName().c_str());
+
+        if ((pEnum = (*iterC)->FindEnum(sName)) != 0)
+            return pEnum;
+    }
+    // search namespaces
+    vector<CBENameSpace*>::iterator iterN;
+    for (iterN = m_Namespaces.begin();
+	 iterN != m_Namespaces.end();
+	 iterN++)
+    {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "CBERoot::FindEnum check namespace %s\n", (*iterN)->GetName().c_str());
+
+        if ((pEnum = (*iterN)->FindEnum(sName)) != 0)
+            return pEnum;
+    }
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBERoot::FindEnum returns NULL\n");
+    return NULL;
+}

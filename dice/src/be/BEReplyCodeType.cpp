@@ -55,9 +55,9 @@ CBEReplyCodeType::~CBEReplyCodeType()
 void
 CBEReplyCodeType::CreateBackEnd()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEReplyCodeType::%s() called\n", __func__);
-    
+
     m_bUnsigned = false;
     m_nSize = 2;    // bytes
     m_nFEType = TYPE_INTEGER;

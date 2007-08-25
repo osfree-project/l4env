@@ -26,7 +26,7 @@ public:
     /** \brief constructs a size-of class
      *  \param sTypeName a type name alias
      */
-    CFESizeOfExpression(string sTypeName);
+    CFESizeOfExpression(std::string sTypeName);
     /** \brief constructs a size-of class
      *  \param pType the type to take the size of
      */
@@ -36,6 +36,8 @@ public:
      */
     CFESizeOfExpression(CFEExpression *pExpression);
 
+    virtual void Accept(CVisitor&);
+
 protected:
     /** \brief copy constructor
      *  \param src the source to copy from
@@ -43,7 +45,7 @@ protected:
     CFESizeOfExpression(CFESizeOfExpression &src);
 
 public:
-    virtual string ToString();
+    virtual std::string ToString();
     virtual CObject* Clone();
     virtual CFETypeSpec* GetSizeOfType();
     virtual CFEExpression* GetSizeOfExpression();

@@ -95,7 +95,7 @@ public:
     static void WriteMalloc(CBEFile& pFile, CBEFunction* pFunction);
     static void WriteFree(CBEFile& pFile, CBEFunction* pFunction);
     static void WriteMemory(CBEFile& pFile, CBEFunction *pFunction,
-	string sEnv, string sCorba);
+	std::string sEnv, std::string sCorba);
 };
 
 #endif                // __DICE_BE_BECONTEXT_H__

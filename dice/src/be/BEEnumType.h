@@ -32,8 +32,10 @@
 #define BEENUMTYPE_H
 
 #include <be/BEType.h>
+#include "template.h"
 #include <string>
-#include <vector>
+
+class CFEEnumDeclarator;
 
 /** \class CBEEnumType
  *  \ingroup backend
@@ -47,25 +49,30 @@ public:
     ~CBEEnumType();
 
 public: // Public methods
-    virtual int GetMemberCount();
-    virtual string GetMemberAt(unsigned int nIndex);
-    virtual void RemoveMember(string sMember);
-    virtual void AddMember(string sMember);
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
     virtual void WriteZeroInit(CBEFile& pFile);
     virtual void Write(CBEFile& pFile);
     virtual void WriteCast(CBEFile& pFile, bool bPointer);
-    virtual bool HasTag(string sTag);
+
+    virtual bool HasTag(std::string sTag);
+    virtual std::string GetTag();
+
+    virtual long int GetIntValue(std::string sName);
+
+protected:
+    void AddMember(CFEEnumDeclarator* pFEDeclarator);
 
 protected: // Protected attributes
-    /** \var vector<string> m_vMembers
-     *  \brief contains the members of the enum type
-     */
-    vector<string> m_vMembers;
-    /**    \var string m_sTag
+    /** \var std::string m_sTag
      *  \brief the tag if the source is a tagged struct
      */
-    string m_sTag;
+    std::string m_sTag;
+
+public:
+    /** \var CSearchableCollection<CBEDeclarator, std::string> m_Members
+     *  \brief contains the enumerators
+     */
+    CSearchableCollection<CBEDeclarator, std::string> m_Members;
 };
 
 #endif

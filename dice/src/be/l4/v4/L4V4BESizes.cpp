@@ -28,7 +28,7 @@
 
 #include "L4V4BESizes.h"
 #include "be/BENameFactory.h"
-#include "TypeSpec-L4V4Types.h"
+#include "be/l4/TypeSpec-L4Types.h"
 #include "Compiler.h"
 
 CL4V4BESizes::CL4V4BESizes()
@@ -59,19 +59,10 @@ int CL4V4BESizes::GetMaxShortIPCSize()
 int CL4V4BESizes::GetSizeOfType(int nFEType, int nFESize)
 {
     int nSize = 0;
-    switch (nFEType) 
+    switch (nFEType)
     {
-    case TYPE_RCV_FLEXPAGE:
-    case TYPE_MSGDOPE_SEND:
-    case TYPE_MSGDOPE_SIZE:
-    case TYPE_MSGTAG:
-	nSize = 4;
-	break;
     case TYPE_REFSTRING:
-	nSize = 8;
-	break;
-    case TYPE_FLEXPAGE:
-	nSize = 8;
+	return 2 * GetSizeOfType(TYPE_MWORD, 4);
 	break;
     default:
 	nSize = CL4BESizes::GetSizeOfType(nFEType, nFESize);
@@ -89,13 +80,13 @@ int CL4V4BESizes::GetSizeOfType(int nFEType, int nFESize)
 int CL4V4BESizes::GetSizeOfType(string sUserType)
 {
     if (sUserType == "L4_Fpage_t")
-	return TYPE_FLEXPAGE;
+	return GetSizeOfType(TYPE_FLEXPAGE, 0);
     else if (sUserType == "L4_Word_t")
-	return TYPE_MWORD;
+	return GetSizeOfType(TYPE_MWORD, 0);
     else if (sUserType == "L4_MsgTag_t")
-	return TYPE_MSGTAG;
+	return GetSizeOfType(TYPE_MSGTAG, 0);
     else if (sUserType == "L4_StringItem_t")
-	return TYPE_REFSTRING;
+	return GetSizeOfType(TYPE_REFSTRING, 0);
     return CL4BESizes::GetSizeOfType(sUserType);
 }
 

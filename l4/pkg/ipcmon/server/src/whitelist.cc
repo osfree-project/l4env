@@ -11,7 +11,6 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 #include <vector>
-#include <string>
 #include "whitelist.h"
 #include <l4/log/l4log.h>
 

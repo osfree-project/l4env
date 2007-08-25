@@ -32,14 +32,14 @@
 
 // Typed declarator types
 enum TYPEDDECL_TYPE {
-    TYPEDECL_NONE,        /**< empty typed declarator (invalid) */
-    TYPEDECL_VOID,        /**< void typed declarator (empty member branch, etc.) */
-    TYPEDECL_EXCEPTION,    /**< exception declarator */
-    TYPEDECL_PARAM,        /**< parameter declarator */
-    TYPEDECL_FIELD,        /**< field declarator */
-    TYPEDECL_TYPEDEF,    /**< typedef declarator */
-    TYPEDECL_MSGBUF,    /**< is a message buffer type */
-    TYPEDECL_ATTRIBUTE  /**< an interface attribute member */
+    TYPEDECL_NONE = 0,	/**< empty typed declarator (invalid) */
+    TYPEDECL_VOID,	/**< void typed declarator (empty member branch, etc.) */
+    TYPEDECL_EXCEPTION,	/**< exception declarator */
+    TYPEDECL_PARAM,	/**< parameter declarator */
+    TYPEDECL_FIELD,	/**< field declarator */
+    TYPEDECL_TYPEDEF,	/**< typedef declarator */
+    TYPEDECL_MSGBUF,	/**< is a message buffer type */
+    TYPEDECL_ATTRIBUTE	/**< an interface attribute member */
 };
 
 #include "FEInterfaceComponent.h"
@@ -88,7 +88,7 @@ public:
     virtual CFETypeSpec* ReplaceType(CFETypeSpec *pNewType);
     virtual TYPEDDECL_TYPE GetTypedDeclType();
     virtual bool IsTypedef();
-    bool Match(string sName);
+    bool Match(std::string sName);
 
 // attributes
 protected:
@@ -109,7 +109,7 @@ public:
     /** \var CCollection<CFEDeclarator> m_Declarators
      *   \brief the variable names
      */
-    CSearchableCollection<CFEDeclarator, string> m_Declarators;
+    CSearchableCollection<CFEDeclarator, std::string> m_Declarators;
 };
 
 #endif /* __DICE_FE_FETYPEDDECLARATOR_H__ */

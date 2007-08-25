@@ -13,6 +13,9 @@
 import <l4/sys/types.h>
 import <l4/l4vfs/types.h>
 
+#pragma force-include
+#include <l4/l4vfs/comm_defs.h>
+
 /**
  * @brief L4 virtual file system interface
  */

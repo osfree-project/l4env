@@ -94,7 +94,7 @@ CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
 
     CBEInterfaceFunction::CreateBackEnd(pFEInterface);
     // set source line number to last number of interface
-    SetSourceLine(pFEInterface->GetSourceLineEnd());
+    m_sourceLoc.setBeginLine(pFEInterface->m_sourceLoc.getEndLine());
 
     // set own message buffer
     AddMessageBuffer();
@@ -126,7 +126,7 @@ CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
 
     // parameters
     AddParameters();
-   
+
     m_pWaitAnyFunction = static_cast<CBEWaitAnyFunction*>
 	(FindGlobalFunction(pFEInterface, FUNCTION_WAIT_ANY));
     assert(m_pWaitAnyFunction);
@@ -172,13 +172,13 @@ CBESrvLoopFunction::SetCallVariables(CBEFunction *pFunction)
     if (GetObject())
     {
 	CBEDeclarator *pDecl = GetObject()->m_Declarators.First();
-        pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), 
+        pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
 	    pDecl->GetName());
     }
     if (GetEnvironment())
     {
 	CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
-        pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), 
+        pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
 	    pDecl->GetName());
     }
     if (GetMessageBuffer())
@@ -234,7 +234,7 @@ CBESrvLoopFunction::CreateObject()
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    
+
     // create CORBA_Object_base type
     string sTypeName("CORBA_Object_base");
     string sName = string("_") + pNF->GetCorbaObjectVariable();
@@ -302,7 +302,7 @@ void CBESrvLoopFunction::WriteBody(CBEFile& pFile)
  *
  * For C++ do not declare object and environment (they are class members);
  */
-void 
+void
 CBESrvLoopFunction::WriteVariableDeclaration(CBEFile& pFile)
 {
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
@@ -370,7 +370,7 @@ CBESrvLoopFunction::WriteDispatchInvocation(CBEFile& pFile)
     {
 	if (m_pTrace)
 	    m_pTrace->BeforeDispatch(pFile, this);
-	
+
 	CBENameFactory *pNF = CCompiler::GetNameFactory();
 	string sReply = pNF->GetReplyCodeVariable();
         m_pDispatchFunction->WriteCall(pFile, sReply, true);
@@ -401,7 +401,7 @@ bool
 CBESrvLoopFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBESrvLoopFunction::%s(%s) called for %s\n", __func__, 
+	"CBESrvLoopFunction::%s(%s) called for %s\n", __func__,
 	pFile->GetFileName().c_str(), GetName().c_str());
 
     if (!IsTargetFile(pFile))
@@ -426,7 +426,7 @@ bool
 CBESrvLoopFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBESrvLoopFunction::%s(%s) called for %s\n", __func__, 
+	"CBESrvLoopFunction::%s(%s) called for %s\n", __func__,
 	pFile->GetFileName().c_str(), GetName().c_str());
 
     if (!IsTargetFile(pFile))
@@ -460,7 +460,7 @@ DIRECTION_TYPE CBESrvLoopFunction::GetReceiveDirection()
 /** \brief write the initialization code for the CORBA_Environment
  *  \param pFile the file to write to
  */
-void 
+void
 CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -473,7 +473,7 @@ CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile& pFile)
     ++pFile << "\t" << pDecl->GetName() << " = (";
     pEnv->WriteType(pFile);
     pFile << "*)" << sServerParam << ";\n";
-    
+
     // should be set to default environment, but if
     // it is a pointer, we cannot, but have to allocate memory first...
     --pFile << "\telse\n";
@@ -484,9 +484,9 @@ CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile& pFile)
     pFile << "_dice_alloca(sizeof";
     pEnv->GetType()->WriteCast(pFile, false);
     pFile << ");\n";
-    
+
     WriteDefaultEnvAssignment(pFile);
-    
+
     --pFile << "\t}\n";
 }
 
@@ -507,9 +507,9 @@ CBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
     }
     else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
     {
-	pFile << "\tDICE_EXCEPTION_MAJOR(" << sName << 
+	pFile << "\tDICE_EXCEPTION_MAJOR(" << sName <<
 	    ") = CORBA_NO_EXCEPTION;\n";
-	pFile << "\tDICE_EXCEPTION_MINOR(" << sName << 
+	pFile << "\tDICE_EXCEPTION_MINOR(" << sName <<
 	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
 	pFile << "\t" << sName << "->_p.param = 0;\n";
 	pFile << "\t" << sName << "->user_data = 0;\n";
@@ -522,7 +522,7 @@ CBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
 /** \brief write the initialization code for the CORBA_Environment
  *  \param pFile the file to write to
  */
-void 
+void
 CBESrvLoopFunction::WriteObjectInitialization(CBEFile& pFile)
 {
     // set init string: "<corba obj> = &<corba obj base>;"
@@ -537,7 +537,7 @@ CBESrvLoopFunction::WriteObjectInitialization(CBEFile& pFile)
  *
  * This implementation adds the "noreturn" attribute to the declaration
  */
-void 
+void
 CBESrvLoopFunction::WriteFunctionAttributes(CBEFile& pFile)
 {
     pFile << " __attribute__((noreturn))";
@@ -549,7 +549,7 @@ CBESrvLoopFunction::WriteFunctionAttributes(CBEFile& pFile)
  * Since this function is "noreturn" it is not allowed to have a return
  * statement.
  */
-void 
+void
 CBESrvLoopFunction::WriteReturn(CBEFile& /*pFile*/)
 {}
 
@@ -577,7 +577,7 @@ void
 CBESrvLoopFunction::AddParameters()
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    
+
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
     pParameter->SetParent(this);

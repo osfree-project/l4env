@@ -14,7 +14,7 @@
 #include <vector>
 #include <l4/log/l4log.h>
 
-CapManager::CapManager()
+CapManager::CapManager() : _descriptors()
 {
 }
 

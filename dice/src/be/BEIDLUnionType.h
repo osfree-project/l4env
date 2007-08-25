@@ -59,14 +59,14 @@ public:
     CBETypedDeclarator* GetUnionVariable(void);
 
 protected:
-    /** \var string m_sSwitchName
+    /** \var std::string m_sSwitchName
      *  \brief internal name to find switch member
      */
-    string m_sSwitchName;
-    /** \var string m_sUnionName
+    std::string m_sSwitchName;
+    /** \var std::string m_sUnionName
      *  \brief internal name to find union member
      */
-    string m_sUnionName;
+    std::string m_sUnionName;
 };
 
 #endif // !__DICE_BESTRUCTTYPE_H__

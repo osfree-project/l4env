@@ -59,7 +59,7 @@ public:
 	    bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
-    virtual CBETypedDeclarator * FindParameterType(string sTypeName);
+    virtual CBETypedDeclarator * FindParameterType(std::string sTypeName);
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual DIRECTION_TYPE GetSendDirection();
 
@@ -67,8 +67,9 @@ protected:
     virtual void WriteUnmarshalling(CBEFile& pFile);
     virtual void WriteInvocation(CBEFile& pFile);
     virtual void WriteVariableInitialization(CBEFile& pFile);
-    virtual void WriteParameter(CBEFile& pFile, 
+    virtual void WriteParameter(CBEFile& pFile,
 	CBETypedDeclarator * pParameter, bool bUseConst = true);
+    virtual void WriteFunctionDefinition(CBEFile& pFile);
 
 protected:
     /** \var bool m_bOpenWait

@@ -87,7 +87,7 @@ CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation)
     SetTargetFileName(pFEOperation);
     // get own name
     SetFunctionName(pFEOperation, FUNCTION_TEMPLATE);
-    
+
     CBEOperationFunction::CreateBackEnd(pFEOperation);
 
     CBERoot *pRoot = GetSpecificParent<CBERoot>();
@@ -143,8 +143,8 @@ CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation)
                         nArrayDims++;
                 }
                 // calc max
-                nVariableSizedArrayDimensions = 
-		    (nArrayDims > nVariableSizedArrayDimensions) ? 
+                nVariableSizedArrayDimensions =
+		    (nArrayDims > nVariableSizedArrayDimensions) ?
 		    nArrayDims : nVariableSizedArrayDimensions;
             }
             // if type of parameter is array, check that too
@@ -170,7 +170,7 @@ CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation)
 	    AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
 
 	    CBETypedDeclarator *pVariable = m_LocalVariables.Find(sCurr);
-	    pVariable->AddLanguageProperty(string("attribute"), 
+	    pVariable->AddLanguageProperty(string("attribute"),
 		string("__attribute__ ((unused))"));
 	}
 
@@ -179,13 +179,13 @@ CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation)
 	AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 0);
 
 	CBETypedDeclarator *pVariable = m_LocalVariables.Find(sTmpVar);
-	pVariable->AddLanguageProperty(string("attribute"), 
+	pVariable->AddLanguageProperty(string("attribute"),
 	    string("__attribute__ ((unused))"));
 
 	sCurr = pNF->GetOffsetVariable();
 	AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
 	pVariable = m_LocalVariables.Find(sCurr);
-	pVariable->AddLanguageProperty(string("attribute"), 
+	pVariable->AddLanguageProperty(string("attribute"),
 	    string("__attribute__ ((unused))"));
     }
 }
@@ -239,7 +239,7 @@ CBEComponentFunction::AddAfterParameters()
 	// which would omit anything defined in "AddAfterParameters"...
 	// Do it later.
     }
-    
+
     CBEOperationFunction::AddAfterParameters();
 }
 
@@ -283,7 +283,7 @@ CBEComponentFunction::WriteMarshalling(CBEFile& /*pFile*/)
  *
  * This implementation calls the underlying message trasnfer mechanisms
  */
-void 
+void
 CBEComponentFunction::WriteInvocation(CBEFile& /*pFile*/)
 {}
 
@@ -311,7 +311,7 @@ void CBEComponentFunction::WriteReturn(CBEFile& /*pFile*/)
  *
  * For C write normal function declaration. For C++ write abstract function.
  */
-void 
+void
 CBEComponentFunction::WriteFunctionDeclaration(CBEFile& pFile)
 {
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
@@ -323,7 +323,7 @@ CBEComponentFunction::WriteFunctionDeclaration(CBEFile& pFile)
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
     {
 	// CPP TODOs:
-	// TODO: component functions at server side could be pure virtual to be 
+	// TODO: component functions at server side could be pure virtual to be
 	// overloadable
 	// TODO: interface functions and component functions are public,
 	// everything else should be protected
@@ -338,11 +338,11 @@ CBEComponentFunction::WriteFunctionDeclaration(CBEFile& pFile)
 	// <name> (
 	pFile << "\t" << GetName() << " (";
 	m_nParameterIndent += GetName().length() + 2;
-	
+
 	// <parameter list>
 	if (!WriteParameterList(pFile))
 	    pFile << "void";
-	
+
 	// ); newline
 	pFile << ") = 0;\n";
     }
@@ -355,7 +355,7 @@ CBEComponentFunction::WriteFunctionDeclaration(CBEFile& pFile)
  * If C++ do write abstract function declaration if header file otherwise
  * write nothing.
  */
-void 
+void
 CBEComponentFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
@@ -364,7 +364,7 @@ CBEComponentFunction::WriteFunctionDefinition(CBEFile& pFile)
 	return;
     }
 }
-    
+
 /** \brief test if function should be written inline
  *  \param pFile the file to write to
  *
@@ -411,7 +411,7 @@ CBEComponentFunction::SetTargetFileName(CFEBase * pFEObject)
  *  \param pFile the file, which's file name is used for the comparison
  *  \return true if is the target file
  */
-bool 
+bool
 CBEComponentFunction::IsTargetFile(CBEImplementationFile* pFile)
 {
     long length = m_sTargetImplementation.length();
@@ -500,7 +500,7 @@ CBEComponentFunction::DoTestParameter(CBETypedDeclarator *pParameter)
 bool
 CBEComponentFunction::DoWriteParameter(CBETypedDeclarator *pParam)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"%s(%s) called, m_nSkipParameter = %d\n", __func__,
 	pParam->m_Declarators.First()->GetName().c_str(), m_nSkipParameter);
     if ((m_nSkipParameter & 1) &&

@@ -33,6 +33,7 @@
 #include <cstdio>
 #include "defines.h"
 #include <string>
+using std::string;
 #include <vector>
 #include <bitset>
 using std::bitset;
@@ -61,7 +62,8 @@ enum FrontEnd_Type
     USE_FE_CORBA,   /**< defines that the CORBA front-end is used */
     USE_FE_CAPIDL,  /**< defines that the CapIDL front-end is used */
     USE_FILE_C,     /**< defines that a C header file is currently parsed */
-    USE_FILE_CXX    /**< defines that a C++ header file is currently parsed */
+    USE_FILE_CXX,   /**< defines that a C++ header file is currently parsed */
+    USE_FILE_IDL    /**< all IDL files (DCE, CORBA) */
 };
 
 /**
@@ -112,7 +114,7 @@ protected:
     void ShowVersion();
 
     void InitTraceLib(int argc, char* argv[]);
-    
+
     static void SetOption(ProgramOption_Type nOption);
     static void UnsetOption(ProgramOption_Type nOption);
     static void SetVerboseLevel(ProgramVerbose_Type nVerboseLevel);
@@ -224,8 +226,8 @@ protected:
 /** \brief set the option
  *  \param nOption the option in raw format
  */
-inline 
-void 
+inline
+void
 CCompiler::SetOption(ProgramOption_Type nOption)
 {
     m_Options.set(nOption);
@@ -471,7 +473,7 @@ CCompiler::GetClassFactory()
  * Previously set class factory member is deleted.
  */
 inline
-void 
+void
 CCompiler::SetClassFactory(CBEClassFactory *pCF)
 {
     if (m_pClassFactory)
@@ -495,7 +497,7 @@ CCompiler::GetNameFactory()
  * previously set name factory member is deleted.
  */
 inline
-void 
+void
 CCompiler::SetNameFactory(CBENameFactory *pNF)
 {
     if (m_pNameFactory)
@@ -540,8 +542,8 @@ CCompiler::SetDebug(bool bOn)
  *  \param sOption the option
  *  \param sValue the corresponding value
  */
-inline 
-void 
+inline
+void
 CCompiler::SetBackEndOption(const string sOption, const string sValue)
 {
     map<string, string>::value_type e(sOption, sValue);
@@ -559,7 +561,7 @@ CCompiler::SetBackEndOption(const string sOption, const string sValue)
  * The return value can be used to check for an option without a value
  * (although that should be handled with the bitmap).
  */
-inline bool 
+inline bool
 CCompiler::GetBackEndOption(const string sOption, string& sValue)
 {
     if (m_mBackEndOptions.find(sOption) == m_mBackEndOptions.end())

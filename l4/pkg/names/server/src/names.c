@@ -84,12 +84,15 @@ own_output_function(const char*s)
 
 /* ohoh, hackish: we have to define a names_wait_for_name, which is used
    by the loglib. But we do not use this function. */
+int names_waitfor_name(const char *, l4_threadid_t *, const int);
 int
 names_waitfor_name(const char *name, l4_threadid_t *id, const int timeout)
 {
   return 0;
 }
 
+int
+names_query_name(const char*, l4_threadid_t*);
 int
 names_query_name(const char* name, l4_threadid_t* id)
 {

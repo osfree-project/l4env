@@ -5,11 +5,7 @@
 #include <l4/sys/syscalls.h>
 #include <l4/rmgr/proto.h>
 #include <l4/rmgr/librmgr.h>
-#ifdef USE_TASKLIB
-#include <l4/roottask/rmgr_task-client.h>
-#else
 #include <l4/roottask/rmgr-client.h>
-#endif
 
 /* XXX Check return value of DICE environment (e.g. IPC errors!) */
 

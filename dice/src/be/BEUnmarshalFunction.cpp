@@ -86,14 +86,14 @@ CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation)
     // set return type
     if (IsComponentSide())
 	SetReturnVar(false, 0, TYPE_VOID, string());
-    // add message buffer 
+    // add message buffer
     AddMessageBuffer(pFEOperation);
     // add marshaller and communication class
     CreateMarshaller();
     CreateCommunication();
     CreateTrace();
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEUnmarshalFunction::%s returns\n", __func__);
 }
 
@@ -101,10 +101,10 @@ CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation)
  *  \param pMsgBuffer the message buffer to initalize
  *  \return true on success
  */
-void 
+void
 CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEUnmarshalFunction::%s called\n", __func__);
     CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
     // in unmarshal function, the message buffer is a pointer to the server's
@@ -134,7 +134,7 @@ CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
  * not initialize the message buffer - this may overwrite the values we try to
  * unmarshal.
  */
-void 
+void
 CBEUnmarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {}
 
@@ -144,7 +144,7 @@ CBEUnmarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
  * This implementation does nothing, because the unmarshalling does not
  * contain a message transfer.
  */
-void 
+void
 CBEUnmarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
 {}
 
@@ -156,7 +156,7 @@ CBEUnmarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
  * If the parameter is the message buffer we cast to this function's type,
  * because otherwise the compiler issues warnings.
  */
-void 
+void
 CBEUnmarshalFunction::WriteCallParameter(CBEFile& pFile,
     CBETypedDeclarator * pParameter,
     bool bCallFromSameClass)
@@ -208,10 +208,10 @@ CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
         if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
             pType = pAttr->GetAttrType();
 	CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
-        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - 
+        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() -
 	    pType->GetArrayDimensionCount();
 	// if there are no array dimensions, then we need to add a pointer
-        if ((pDeclarator->GetStars() == 0) && !pType->IsPointerType() && 
+        if ((pDeclarator->GetStars() == 0) && !pType->IsPointerType() &&
 	    (nArrayDimensions <= 0))
 	{
 	    pDeclarator->IncStars(1);
@@ -222,7 +222,7 @@ CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 	    pParameter->m_Attributes.Find(ATTR_IN) &&
 	    !pParameter->m_Attributes.Find(ATTR_OUT) &&
 	    ((pType->IsOfType(TYPE_CHAR) && pDeclarator->GetStars() < 2) ||
-	     (pType->IsOfType(TYPE_CHAR_ASTERISK) && 
+	     (pType->IsOfType(TYPE_CHAR_ASTERISK) &&
 	      pDeclarator->GetStars() < 1)))
 	{
 	    pDeclarator->IncStars(1);
@@ -275,7 +275,7 @@ CBEUnmarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
 {
     if (bMarshal)
 	return false;
-    
+
     if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
 	return false;
 
@@ -290,8 +290,8 @@ CBEUnmarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
 	// check other parameters
         if (pParameter->m_Attributes.Find(ATTR_IN))
             return true;
-    } 
-    else 
+    }
+    else
     {
         if (pParameter->m_Attributes.Find(ATTR_OUT))
             return true;
@@ -306,7 +306,7 @@ CBEUnmarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  * An unmarshal function is written if client's side and OUT or if component's
  * side and one of the parameters has an IN.
  */
-bool 
+bool
 CBEUnmarshalFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
@@ -339,7 +339,7 @@ CBEUnmarshalFunction::DoWriteFunction(CBEHeaderFile* pFile)
  * An unmarshal function is written if client's side and OUT or if component's
  * side and one of the parameters has an IN.
  */
-bool 
+bool
 CBEUnmarshalFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
@@ -449,7 +449,7 @@ CBEUnmarshalFunction::GetExceptionVariable()
     CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
     if (pRet)
 	return pRet;
-    
+
     // if no parameter, then try to find it in the message buffer
     CBEMsgBuffer *pMsgBuf = m_pClass->GetMessageBuffer();
     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
@@ -467,3 +467,32 @@ CBEUnmarshalFunction::GetExceptionVariable()
     return pRet;
 }
 
+/** \brief writes the definition of the function to the target file
+ *  \param pFile the target file to write to
+ *
+ * If the given file is an implementation file, we write an inline prefix.
+ * This allows the target compiler to optimize cross function calls when
+ * inlining the unmarshal function into the dispatcher.
+ *
+ * We only use "inline", because this function might be used in a derived
+ * interface's dispatch function. Thus it cannot be static inline. Simple
+ * inline allows the target compiler to inline it locally, that is, into the
+ * same interface's dispatch function and also provide an implementation for
+ * external calls. Does not work for C++.
+ */
+void
+CBEUnmarshalFunction::WriteFunctionDefinition(CBEFile& pFile)
+{
+    if (!pFile.is_open())
+        return;
+
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBEUnmarshalFunction::%s(%s) in %s called\n", __func__,
+	pFile.GetFileName().c_str(), GetName().c_str());
+
+    if (pFile.IsOfFileType(FILETYPE_IMPLEMENTATION) &&
+	!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	pFile << "\tinline" << std::endl;
+
+    CBEOperationFunction::WriteFunctionDefinition(pFile);
+}

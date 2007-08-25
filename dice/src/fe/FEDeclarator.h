@@ -70,20 +70,22 @@ public:
      *  \param nNumStars the number of starisks in front of the declarator
      *  \param nBitfields the bits this declarator should use
      */
-    CFEDeclarator(DECL_TYPE nType, string sName, int nNumStars = 0, int nBitfields = 0);
+    CFEDeclarator(DECL_TYPE nType, std::string sName, int nNumStars = 0, int nBitfields = 0);
     virtual ~CFEDeclarator();
 
 // operations
 public:
-    virtual void SetBitfields(int nBitfields);
-    virtual int GetBitfields();
+    void SetBitfields(int nBitfields);
+    int GetBitfields();
     virtual CObject* Clone();
-    virtual DECL_TYPE GetType();
+    DECL_TYPE GetType();
     int GetStars();
     void SetStars(int nNumStars);
 
+    virtual void Accept(CVisitor& v);
+
 protected:
-    virtual void SetType(DECL_TYPE nNewType);
+    void SetType(DECL_TYPE nNewType);
 
 // attributes
 protected:

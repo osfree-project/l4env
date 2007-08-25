@@ -26,7 +26,7 @@ class CapDescriptor
 		std::vector<unsigned int> _caps;
 
 	public:
-		CapDescriptor(unsigned int task) : _task(task) {};
+		CapDescriptor(unsigned int task) : _task(task), _caps() {};
 		~CapDescriptor() {};
 
 		/*! \brief add capability

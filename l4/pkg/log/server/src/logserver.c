@@ -188,16 +188,16 @@ static void parse_args(int argc, const char**argv){
 void
 log_outstring_component (CORBA_Object _dice_corba_obj,
     int flush_flag,
-    const char* string,
+    const char* str,
     CORBA_Server_Environment *_dice_corba_env)
 {
-    if (verbose && string && string[0])
+    if (verbose && str && str[0])
     {
       char buf[10];
       sprintf(buf, l4util_idfmt_adjust":", l4util_idstr(*_dice_corba_obj));
       print_buffered(buf);
     }
-    print_buffered(string);
+    print_buffered(str);
     if(flush_flag ||
 	strstr(message_buffer, "***"))
 	flush_buffer();

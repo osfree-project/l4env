@@ -65,7 +65,7 @@ CL4BECallFunction::~CL4BECallFunction()
  *
  * The L4 implementation also includes the result variable for the IPC
  */
-void 
+void
 CL4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation)
 {
     CBECallFunction::CreateBackEnd(pFEOperation);
@@ -82,7 +82,7 @@ CL4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation)
  *
  * Because this is the call function, we can use the IPC call of L4.
  */
-void 
+void
 CL4BECallFunction::WriteInvocation(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BECallFunction::WriteInvocation(%s) called\n",
@@ -91,7 +91,7 @@ CL4BECallFunction::WriteInvocation(CBEFile& pFile)
     // set dopes
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
 	GetSendDirection());
     // invocate
     if (!CCompiler::IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
@@ -129,14 +129,14 @@ CL4BECallFunction::WriteInvocation(CBEFile& pFile)
  * CORBA_SYSTEM_EXCEPTION and then sets the ipc_error value to
  * L4_IPC_ERROR(result).
  */
-void 
+void
 CL4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
-    pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n" 
+    pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n"
 	<< "\t{\n";
     // env.major = CORBA_SYSTEM_EXCEPTION;
     // env.repos_id = DICE_IPC_ERROR;
@@ -153,7 +153,7 @@ CL4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
     if (pDecl->GetStars() == 0)
 	sEnv = "&";
     sEnv += pDecl->GetName();
-    --pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" 
+    --pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR("
 	<< sResult << ");\n";
     // return
     WriteReturn(pFile);
@@ -172,9 +172,9 @@ CL4BECallFunction::WriteVariableInitialization(CBEFile& pFile)
     assert(pMsgBuffer);
     if (CCompiler::IsOptionSet(PROGRAM_ZERO_MSGBUF))
 	pMsgBuffer->WriteSetZero(pFile);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE,
 	CMsgStructType::Generic);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING,
 	GetReceiveDirection());
     pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE,
 	GetReceiveDirection());
@@ -186,7 +186,7 @@ CL4BECallFunction::WriteVariableInitialization(CBEFile& pFile)
  * We have to check for any received flexpages and fix the offset for any
  * return values.
  */
-void 
+void
 CL4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
@@ -198,7 +198,7 @@ CL4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 	m_pTrace->BeforeUnmarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;
     }
-    
+
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     // check flexpages
     if (GetParameterCount(TYPE_FLEXPAGE, GetReceiveDirection()) > 0)
@@ -236,7 +236,7 @@ void CL4BECallFunction::WriteIPC(CBEFile& pFile)
 {
     if (m_pTrace)
 	m_pTrace->BeforeCall(pFile, this);
-    
+
     CBECommunication *pComm = GetCommunication();
     assert(pComm);
     pComm->WriteCall(pFile, this);

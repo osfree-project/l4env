@@ -172,6 +172,13 @@ ifeq ($(origin PKGDIR_OBJ),undefined)
 PKGDIR_OBJ     := $(call absfilename,$(OBJ_DIR)/$(PKGDIR))
 endif
 
+# if both are equal, we have an external package, so make up some build-dir
+# for the external package
+ifeq ($(SRC_DIR),$(OBJ_DIR))
+PKGDIR_OBJ     := $(OBJ_BASE)/ext-pkg$(PKGDIR_OBJ)
+OBJ_DIR        := $(OBJ_BASE)/ext-pkg$(OBJ_DIR)
+endif
+
 # sanity check the object dir
 ifneq ($(SRC_BASE_ABS),$(OBJ_BASE))
 ifeq ($(SRC_DIR),$(OBJ_DIR))

@@ -58,8 +58,8 @@ CL4V2BEMsgBuffer::~CL4V2BEMsgBuffer()
  *  \return a reference to the newly created instance
  */
 CObject* CL4V2BEMsgBuffer::Clone()
-{ 
-    return new CL4V2BEMsgBuffer(*this); 
+{
+    return new CL4V2BEMsgBuffer(*this);
 }
 
 /** \brief add platform specific members to specific struct
@@ -76,19 +76,23 @@ CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction,
     CBEStructType *pStruct,
     CMsgStructType nType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s(%s,, %d) called\n", 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s(%s,, %d) called\n",
 	__func__, pFunction->GetName().c_str(), (int)nType);
 
-    if (!CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct, 
+    if (!CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct,
 	    nType))
+    {
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CL4V2BEMsgBuffer::%s could not add platform members\n", __func__);
 	return false;
+    }
 
     // create receive flexpage
     CBETypedDeclarator *pFlexpage = GetFlexpageVariable();
     if (!pFlexpage)
     {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
-	    "%s: no flexpage member created\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CL4V2BEMsgBuffer::%s: no flexpage member created\n", __func__);
 	return false;
     }
     // check if struct already has flexpage
@@ -96,26 +100,26 @@ CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction,
 	delete pFlexpage;
     else
 	pStruct->m_Members.Add(pFlexpage);
-    
+
     // create size dope
     CBETypedDeclarator *pSizeDope = GetSizeDopeVariable();
     if (!pSizeDope)
     {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
-	    "%s: no size dope created\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CL4V2BEMsgBuffer::%s: no size dope created\n", __func__);
 	return false;
     }
     if (pStruct->m_Members.Find(pSizeDope->m_Declarators.First()->GetName()))
 	delete pSizeDope;
     else
 	pStruct->m_Members.Add(pSizeDope);
-    
+
     // create send dope
     CBETypedDeclarator *pSendDope = GetSendDopeVariable();
     if (!pSendDope)
     {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
-	    "%s: no send dope created\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CL4V2BEMsgBuffer::%s: no send dope created\n", __func__);
 	return false;
     }
     if (pStruct->m_Members.Find(pSendDope->m_Declarators.First()->GetName()))
@@ -123,7 +127,7 @@ CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction,
     else
 	pStruct->m_Members.Add(pSendDope);
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s: returns true\n", __func__);
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s: returns true\n", __func__);
     return true;
 }
 /** \brief return the offset where the payload starts
@@ -155,7 +159,7 @@ CL4V2BEMsgBuffer::AddGenericStruct(CBEFunction *pFunction,
     // test if this an interface function
     if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
 	return true;
-   
+
     CMsgStructType nType = pFunction->GetSendDirection();
     bool bWordMembers = HasWordMembers(pFunction, nType);
     if (bWordMembers)
@@ -163,7 +167,7 @@ CL4V2BEMsgBuffer::AddGenericStruct(CBEFunction *pFunction,
 	nType = pFunction->GetReceiveDirection();
 	bWordMembers = HasWordMembers(pFunction, nType);
     }
-   
+
     if (bWordMembers)
 	return true;
 
@@ -186,7 +190,7 @@ CL4V2BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile,
     CMsgStructType nType)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    // check if this is server side, and if so, check for 
+    // check if this is server side, and if so, check for
     // init-rcvstring attribute of class
     if (pFunction->IsComponentSide() &&
 	(CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING) ||
@@ -199,11 +203,11 @@ CL4V2BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile,
 	if (!CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING))
 	{
 	    CBEAttribute *pAttr = 0;
-	    if ((pAttr = pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING)) 
+	    if ((pAttr = pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING))
 		!= 0)
 		sFunction = pAttr->GetString();
 	    if (((pAttr = pClass->m_Attributes.Find(
-			    ATTR_INIT_RCVSTRING_CLIENT)) != 0) && 
+			    ATTR_INIT_RCVSTRING_CLIENT)) != 0) &&
 		pFile.IsOfFileType(FILETYPE_CLIENT))
 		sFunction = pAttr->GetString();
 	    if (((pAttr = pClass->m_Attributes.Find(
@@ -214,7 +218,7 @@ CL4V2BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile,
 	if (sFunction.empty())
 	    sFunction = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
 	else
-	    sFunction = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC, 
+	    sFunction = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC,
 		(void*)&sFunction);
 
 	CBETypedDeclarator *pEnvVar = pFunction->GetEnvironment();
@@ -340,7 +344,7 @@ CL4V2BEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile,
     {
 	return;
     }
-   
+
     // get name of member
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sName = pNF->GetMessageBufferMember(nType);
@@ -387,10 +391,10 @@ CL4V2BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile,
     assert (pEnv);
     string sEnv = pEnv->m_Declarators.First()->GetName();
     if (pEnv->m_Declarators.First()->GetStars() > 0)
-      	sEnv += "->";
+	sEnv += "->";
     else
 	sEnv += ".";
-    
+
     // message buffer's receive window
     pFile << "\t";
     WriteAccess(pFile, pFunction, nType, pFlexpage);
@@ -423,6 +427,6 @@ CL4V2BEMsgBuffer::GetMemberPosition(string sName,
     if (sName == pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE))
 	return -1;
 
-    // not found 
+    // not found
     return CL4BEMsgBuffer::GetMemberPosition(sName, nType);
 }

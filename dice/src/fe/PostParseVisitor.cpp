@@ -62,6 +62,9 @@ void CPostParseVisitor::Visit(CFEInterface& interface)
 	 iterBIN != interface.m_BaseInterfaceNames.end();
 	 iterBIN++)
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "%s: checking base interface \"%s\" of interface \"%s\"\n", __func__,
+	    (*iterBIN)->GetName().c_str(), interface.GetName().c_str());
         CFEInterface *pBase = 0;
         if ((*iterBIN)->GetName().find("::") != string::npos)
             pBase = pRoot->FindInterface((*iterBIN)->GetName());
@@ -83,7 +86,7 @@ void CPostParseVisitor::Visit(CFEInterface& interface)
         }
         else
         {
-            CMessages::GccError(&interface, 0, "Base interface %s not declared.",
+            CMessages::GccError(&interface, "Base interface %s not declared.\n",
                 (*iterBIN)->GetName().c_str());
 	    throw error::postparse_error();
         }

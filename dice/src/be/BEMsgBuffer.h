@@ -53,35 +53,35 @@ protected:
      *  \param src the source to copy from
      */
     CBEMsgBuffer(CBEMsgBuffer & src);
-    
+
 public: // public methods
     virtual CObject* Clone();
     virtual bool IsVariableSized(CMsgStructType nType);
     virtual int GetCount(int nFEType, CMsgStructType nType);
     virtual int GetCountAll(int nFEType, CMsgStructType nType);
     virtual int GetPayloadOffset();
-    
+
     using CBETypedef::CreateBackEnd;
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
     virtual void PostCreate(CBEClass *pClass, CFEInterface *pFEInterface);
     virtual void PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation);
-    
+
     virtual bool AddReturnVariable(CBEFunction *pFunction,
 	CBETypedDeclarator *pReturn = 0);
     virtual bool AddPlatformSpecificMembers(CBEFunction *pFunction);
     virtual bool AddPlatformSpecificMembers(CBEClass *pClass);
-    
+
     virtual bool Sort(CBEClass *pClass);
     virtual bool Sort(CBEFunction *pFunction);
     virtual bool Sort(CBEStructType *pStruct);
-    
-    virtual void WriteAccess(CBEFile& pFile, CBEFunction *pFunction, 
+
+    virtual void WriteAccess(CBEFile& pFile, CBEFunction *pFunction,
 	CMsgStructType nType, CDeclStack* pStack);
     virtual void WriteMemberAccess(CBEFile& pFile, CBEFunction *pFunction,
 	CMsgStructType nType, int nFEType, int nIndex);
     virtual void WriteMemberAccess(CBEFile& pFile, CBEFunction *pFunction,
-	CMsgStructType nType, int nFEType, string sIndex);
+	CMsgStructType nType, int nFEType, std::string sIndex);
     virtual void WriteGenericMemberAccess(CBEFile& pFile, int nIndex);
     void WriteAccessToStruct(CBEFile& pFile, CBEFunction *pFunction,
 	CMsgStructType nType);
@@ -90,25 +90,25 @@ public: // public methods
     virtual void WriteInitialization(CBEFile& pFile, CBEFunction *pFunction,
 	int nType, CMsgStructType nStructType);
     virtual void WriteDump(CBEFile& pFile);
-    
+
     virtual bool HasProperty(int nProperty, CMsgStructType nType);
 
-    virtual CBETypedDeclarator* FindMember(string sName, CMsgStructType nType);
-    virtual CBETypedDeclarator* FindMember(string sName, 
+    virtual CBETypedDeclarator* FindMember(std::string sName, CMsgStructType nType);
+    virtual CBETypedDeclarator* FindMember(std::string sName,
 	CBEFunction *pFunction, CMsgStructType nType);
-    virtual int GetMemberPosition(string sName, CMsgStructType nType);
+    virtual int GetMemberPosition(std::string sName, CMsgStructType nType);
 
-    virtual int GetMemberSize(int nType, CBEFunction *pFunction, 
+    virtual int GetMemberSize(int nType, CBEFunction *pFunction,
 	CMsgStructType nStructType, bool bMax);
     virtual int GetMemberSize(int nType);
 
-    virtual bool IsEarlier(CBEFunction *pFunction, CMsgStructType nType, 
-	string sName1, string sName2);
+    virtual bool IsEarlier(CBEFunction *pFunction, CMsgStructType nType,
+	std::string sName1, std::string sName2);
 
 protected: // protected methods
     virtual CBEType* CreateType(CFEOperation *pFEOperation);
     virtual CBEType* CreateType(CFEInterface *pFEInterface);
-    
+
     virtual bool AddPlatformSpecificMembers(CBEFunction *pFunction,
 	CBEStructType *pStruct, CMsgStructType nType);
     virtual bool AddOpcodeMember(CBEFunction *pFunction,
@@ -120,23 +120,23 @@ protected: // protected methods
     virtual bool AddGenericStruct(CBEClass *pClass, CFEInterface *pFEInterface);
     virtual bool AddGenericStructMembersFunction(CBEStructType *pStruct);
     virtual bool AddGenericStructMembersClass(CBEStructType *pStruct);
-    
+
     virtual int GetWordMemberCountFunction(void);
     virtual int GetWordMemberCountClass(void);
 
     virtual int GetMemberSize(int nType, CBETypedDeclarator *pMember,
 	bool bMax);
-    
+
     CBETypedDeclarator* GetOpcodeVariable(void);
     CBETypedDeclarator* GetExceptionVariable(void);
     CBETypedDeclarator* GetReturnVariable(CBEFunction *pFunction);
     CBETypedDeclarator* GetWordMemberVariable(int nNumber);
     CBETypedDeclarator* GetMemberVariable(int nFEType, bool bUnsigned,
-	string sName, int nArray);
+	std::string sName, int nArray);
 
     CBEStructType* GetStruct(CMsgStructType nType);
     CBEStructType* GetStruct(CBEFunction *pFunction, CMsgStructType nType);
-    
+
     virtual bool Pad();
     virtual bool SortPayload(CBEStructType *pStruct);
     virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst,
@@ -144,7 +144,7 @@ protected: // protected methods
 
     void WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType,
 	CBETypedDeclarator *pMember);
-    
+
     CBEFunction* GetAnyFunctionFromClass(CBEClass *pClass);
 
     friend class CBEMsgBufferType; // accesses GetStruct

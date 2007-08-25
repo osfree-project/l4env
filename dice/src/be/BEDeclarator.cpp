@@ -87,7 +87,7 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
         int nStars = pDecl->GetStars();
         // test for empty array dimensions, which are treated as
         // stars
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	    "CDeclaratorStackLocation::%s for %s with %d stars (1)\n",
 	    __func__, pDecl->GetName().c_str(), nStars);
         if (pDecl->GetArrayDimensionCount())
@@ -105,7 +105,7 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
                 }
             }
         }
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	    "CDeclaratorStackLocation::%s for %s with %d stars (2)\n",
 	    __func__, pDecl->GetName().c_str(), nStars);
         if ((iter + 1)  == pStack->end())
@@ -116,19 +116,19 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
             else
             {
                 // test for an array, which only has stars as array dimensions
-                if (iter->HasIndex() && 
-		    (pDecl->GetArrayDimensionCount() == 0) && 
+                if (iter->HasIndex() &&
+		    (pDecl->GetArrayDimensionCount() == 0) &&
 		    (nStars > 0))
                     nStars--;
             }
         }
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	    "CDeclaratorStackLocation::%s for %s with %d stars func at %p (4)\n",
 	    __func__, pDecl->GetName().c_str(), nStars, pFunction);
         // check if the type is a pointer type
         if (pFunction)
         {
-            CBETypedDeclarator *pParameter = 
+            CBETypedDeclarator *pParameter =
 		pFunction->FindParameter(pDecl->GetName(), false);
 	    if (!pParameter)
 		pParameter = pFunction->m_LocalVariables.Find(pDecl->GetName());
@@ -138,17 +138,17 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
 		pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS) : 0;
 	    if (pAttr)
 		pType = pAttr->GetAttrType();
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"CDeclaratorStackLocation::%s for %s: pType %p, pointer? %s, string: %s\n",
 		__func__, pDecl->GetName().c_str(), pType,
 		pType ? (pType->IsPointerType() ? "yes" : "no") : "(no type)",
-		pParameter ? (pParameter->IsString() ? "yes" : "no") : 
+		pParameter ? (pParameter->IsString() ? "yes" : "no") :
 		"(no param)");
-	    // XXX removed test for string 
+	    // XXX removed test for string
             if (pType && pType->IsPointerType())
                 nStars++;
         }
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CDeclaratorStackLocation::%s for %s with %d stars (5)\n", __func__,
 	    pDecl->GetName().c_str(), nStars);
 	if (nStars > 0)
@@ -175,8 +175,8 @@ void CDeclaratorStackLocation::WriteToString(string &sResult,
 }
 
 /*********************************************************************/
-/* 
- * Declarator 
+/*
+ * Declarator
  */
 
 CBEDeclarator::CBEDeclarator()
@@ -214,8 +214,8 @@ CBEDeclarator::~CBEDeclarator()
  *  \return a reference to the copy
  */
 CObject * CBEDeclarator::Clone()
-{ 
-    return new CBEDeclarator(*this); 
+{
+    return new CBEDeclarator(*this);
 }
 
 /** \brief prepares this instance for the code generation
@@ -224,15 +224,15 @@ CObject * CBEDeclarator::Clone()
  * This implementation extracts the name, stars and bitfields from the
  * front-end declarator.
  */
-void 
+void
 CBEDeclarator::CreateBackEndDecl(CFEDeclarator * pFEDeclarator)
 {
     // call CBEObject's CreateBackEnd method
     CBEObject::CreateBackEnd(pFEDeclarator);
 
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s called\n", 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s called\n",
 	__func__);
-    
+
     m_sName = pFEDeclarator->GetName();
     m_nBitfields = pFEDeclarator->GetBitfields();
     m_nStars = pFEDeclarator->GetStars();
@@ -246,7 +246,7 @@ CBEDeclarator::CreateBackEndDecl(CFEDeclarator * pFEDeclarator)
         CreateBackEndEnum((CFEEnumDeclarator *) pFEDeclarator);
         break;
     }
-    
+
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s done\n",
 	__func__);
 }
@@ -254,19 +254,23 @@ CBEDeclarator::CreateBackEndDecl(CFEDeclarator * pFEDeclarator)
 /** \brief create a simple declarator using a front-end identifier
  *  \param pFEIdentifier the front-end identifier
  */
-void 
+void
 CBEDeclarator::CreateBackEnd(CFEIdentifier * pFEIdentifier)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEDeclarator::%s(identifier)\n", __func__);
 
     if (dynamic_cast<CFEDeclarator*>(pFEIdentifier))
-	return CreateBackEndDecl(dynamic_cast<CFEDeclarator*>(pFEIdentifier));
-    
+    {
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+	    "CBEDeclarator::%s(identifier) delegate call\n", __func__);
+	return CreateBackEndDecl(static_cast<CFEDeclarator*>(pFEIdentifier));
+    }
+
     m_sName = pFEIdentifier->GetName();
     m_nType = DECL_IDENTIFIER;
-    
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEDeclarator::%s(identifier) done\n", __func__);
 }
 
@@ -277,19 +281,19 @@ CBEDeclarator::CreateBackEnd(CFEIdentifier * pFEIdentifier)
  * Do not overwrite type, because this function might be called to
  * reinitialize (set new name) the declarator.
  */
-void 
-CBEDeclarator::CreateBackEnd(string sName, 
+void
+CBEDeclarator::CreateBackEnd(string sName,
     int nStars)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEDeclarator::%s(string: %s)\n", __func__, sName.c_str());
-    
+
     m_sName = sName;
     m_nStars = nStars;
     if (m_nType == DECL_NONE)
 	m_nType = DECL_IDENTIFIER;
-    
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEDeclarator::%s(string) done\n", __func__);
 }
 
@@ -297,12 +301,12 @@ CBEDeclarator::CreateBackEnd(string sName,
  *  \param pFEEnumDeclarator the front-end declarator
  *  \return true if code generation was successful
  */
-void 
+void
 CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s(enum)\n", 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s(enum)\n",
 	__func__);
-    
+
     if (pFEEnumDeclarator->GetInitialValue())
     {
 	CBEClassFactory *pCF = CCompiler::GetClassFactory();
@@ -310,7 +314,7 @@ CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator)
         m_pInitialValue->SetParent(this);
 	m_pInitialValue->CreateBackEnd(pFEEnumDeclarator->GetInitialValue());
     }
-    
+
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEDeclarator::%s(enum) done\n", __func__);
 }
@@ -319,10 +323,10 @@ CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator)
  *  \param pFEArrayDeclarator the respective front-end declarator
  *  \return true if code generation was successful
  */
-void 
+void
 CBEDeclarator::CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s(array)\n", 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s(array)\n",
 	__func__);
     // iterate over front-end bounds
     int nMax = pFEArrayDeclarator->GetDimensionCount();
@@ -333,7 +337,7 @@ CBEDeclarator::CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator)
         CBEExpression *pBound = GetArrayDimension(pLower, pUpper);
         AddArrayBound(pBound);
     }
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEDeclarator::%s(array) done\n", __func__);
 }
 
@@ -343,16 +347,16 @@ CBEDeclarator::CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator)
  * This implementation writes the declarator as is (all stars, bitfields,
  * etc.).
  */
-void 
+void
 CBEDeclarator::WriteDeclaration(CBEFile& pFile)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEDeclarator::%s called for %s\n", __func__,
         m_sName.c_str());
     if (m_nType == DECL_ENUM)
     {
         WriteEnum(pFile);
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "CBEDeclarator::%s returns\n", __func__);
         return;
     }
@@ -367,8 +371,8 @@ CBEDeclarator::WriteDeclaration(CBEFile& pFile)
     // array dimensions
     if (IsArray())
         WriteArray(pFile);
-    
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s returned\n", 
+
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s returned\n",
 	__func__);
 }
 
@@ -399,7 +403,7 @@ CBEDeclarator::WriteArray(CBEFile& pFile)
  * We can determine an unbound array dimension by checking its integer value.
  * It it is 0 then its an unbound dimension.
  */
-void 
+void
 CBEDeclarator::WriteArrayIndirect(CBEFile& pFile)
 {
     vector<CBEExpression*>::iterator iterB;
@@ -417,11 +421,18 @@ CBEDeclarator::WriteArrayIndirect(CBEFile& pFile)
 
 /** \brief writes an enum declarator
  *  \param pFile the file to write to
+ *
+ *  An enum declarator is the name and if it has an init expression "= expr".
  */
-void 
-CBEDeclarator::WriteEnum(CBEFile& /*pFile*/)
+void
+CBEDeclarator::WriteEnum(CBEFile& pFile)
 {
-    assert(false);
+    WriteName(pFile);
+    if (m_pInitialValue)
+    {
+	pFile << " = ";
+	m_pInitialValue->Write(pFile);
+    }
 }
 
 /** \brief creates a new back-end array bound using front-end array bounds
@@ -447,7 +458,7 @@ CBEDeclarator::WriteEnum(CBEFile& /*pFile*/)
  * which are the parenthesis and a binary expression used to subract them.
  */
 CBEExpression*
-CBEDeclarator::GetArrayDimension(CFEExpression * pLower, 
+CBEDeclarator::GetArrayDimension(CFEExpression * pLower,
     CFEExpression * pUpper)
 {
     CFEExpression *pNew = 0;
@@ -477,11 +488,11 @@ CBEDeclarator::GetArrayDimension(CFEExpression * pLower,
         }
         else
         {
-            CFEExpression *pLowerP = new CFEPrimaryExpression(EXPR_PAREN, 
+            CFEExpression *pLowerP = new CFEPrimaryExpression(EXPR_PAREN,
 		pLower);
-            CFEExpression *pUpperP = new CFEPrimaryExpression(EXPR_PAREN, 
+            CFEExpression *pUpperP = new CFEPrimaryExpression(EXPR_PAREN,
 		pUpper);
-            pNew = new CFEBinaryExpression(EXPR_BINARY, pUpperP, EXPR_MINUS, 
+            pNew = new CFEBinaryExpression(EXPR_BINARY, pUpperP, EXPR_MINUS,
 		pLowerP);
         }
     }
@@ -498,7 +509,7 @@ CBEDeclarator::GetArrayDimension(CFEExpression * pLower,
  *
  * This implementation creates the vector if not existing
  */
-void 
+void
 CBEDeclarator::AddArrayBound(CBEExpression * pBound)
 {
     if (!pBound)
@@ -514,7 +525,7 @@ CBEDeclarator::AddArrayBound(CBEExpression * pBound)
 /** \brief removes an array bound from the bounds vector
  *  \param pBound the bound to remove
  */
-void 
+void
 CBEDeclarator::RemoveArrayBound(CBEExpression *pBound)
 {
     m_Bounds.Remove(pBound);
@@ -542,8 +553,15 @@ CBEDeclarator::RemoveArrayBound(CBEExpression *pBound)
  */
 int CBEDeclarator::GetSize()
 {
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEDeclarator::%s called (%s)\n", __func__, GetName().c_str());
+
     if (!IsArray())
     {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	    "CBEDeclarator::%s no array, stars: %d, bitfields: %d\n", __func__,
+	    m_nStars, m_nBitfields);
+
         if (m_nStars > 0)
             return -(m_nStars);
         // if bitfields: return 0
@@ -554,6 +572,9 @@ int CBEDeclarator::GetSize()
 
     int nSize = 1;
     int nFakeStars = 0;
+
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEDeclarator::%s testing bounds (%zu)\n", __func__, m_Bounds.size());
 
     vector<CBEExpression*>::iterator iterB;
     for (iterB = m_Bounds.begin();
@@ -566,6 +587,9 @@ int CBEDeclarator::GetSize()
         else
             nSize *= ((nVal < 0) ? -nVal : nVal);
     }
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CBEDeclarator::%s fake stars %d, stars %d, size %d\n", __func__,
+	nFakeStars, m_nStars, nSize);
     if (nFakeStars > 0)
         return -(nFakeStars + m_nStars);
     return nSize;
@@ -576,19 +600,19 @@ int CBEDeclarator::GetSize()
  */
 int CBEDeclarator::GetMaxSize()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEDeclarator::%s called for %s\n", __func__, GetName().c_str());
-    
+
     int nStars = m_nStars;
     // deduct from stars one if this is an out reference
     CBETypedDeclarator *pParameter = GetSpecificParent<CBETypedDeclarator>();
     if (pParameter && pParameter->m_Attributes.Find(ATTR_OUT))
 	nStars--;
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"CBEDeclarator::%s stars %d array? %s\n", __func__,
 	nStars, IsArray() ? "yes" : "no");
-    
+
     if (!IsArray())
     {
         if (nStars > 0)
@@ -616,7 +640,7 @@ int CBEDeclarator::GetMaxSize()
 
     int nSize = 1;
     int nFakeStars = 0;
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"CBEDeclarator::%s check array bounds\n", __func__);
 
     vector<CBEExpression*>::iterator iterB;
@@ -634,7 +658,7 @@ int CBEDeclarator::GetMaxSize()
     if (nFakeStars > 0)
 	nSize = -(nFakeStars + nStars);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEDeclarator::%s return %d\n", __func__, nSize);
     return nSize;
 }
@@ -688,7 +712,7 @@ CBEDeclarator::WriteIndirect(CBEFile& pFile,
     int nFakeStars = GetEmptyArrayDims();
     int nTypeStars = pParameter->GetType()->GetIndirectionCount();
     int nStartStars = m_nStars + nTypeStars + nFakeStars;
- 
+
     // for something like:
     // 'char *buf' we want a declaration of 'char *buf'
     //  (m_nStars:1 nFakeStars:0 bUsePointer:true -> nStartStars:1 nFakeStars:1)
@@ -700,7 +724,7 @@ CBEDeclarator::WriteIndirect(CBEFile& pFile,
     //  (m_nStars:2 nFakeStars:0 bUsePointer:true -> nStartStars:2 nFakeStars:1)
     if (bUsePointer && (nFakeStars == 0) && (m_nStars > 0))
         nFakeStars = 1;
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	"%s: for %s, nFakeStars: %d, nStartStars: %d\n", __func__,
 	m_sName.c_str(), nFakeStars, nStartStars);
     bool bComma = false;
@@ -741,7 +765,7 @@ CBEDeclarator::WriteIndirect(CBEFile& pFile,
  *
  * \todo indirect var by underscore hard coded => replace with configurable
  */
-void 
+void
 CBEDeclarator::WriteIndirectInitialization(CBEFile& pFile,
     bool bUsePointer)
 {
@@ -946,8 +970,8 @@ void CBEDeclarator::WriteCleanup(CBEFile& pFile, bool bUsePointer,
  */
 bool CBEDeclarator::IsArray()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
-	"CBEDeclarator::%s Test if %s is array (%s)\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+	"CBEDeclarator::%s Test if %s is array (%s)\n", __func__,
 	m_sName.c_str(), (m_nType == DECL_ARRAY) ? "yes" : "no");
     return (m_nType == DECL_ARRAY);
 }

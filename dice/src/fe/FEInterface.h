@@ -64,7 +64,7 @@ public:
      *  \param pParent reference to the parent of the interface
      */
     CFEInterface(vector<CFEAttribute*> *pIAttributes,
-        string sIName,
+        std::string sIName,
         vector<CFEIdentifier*> *pIBaseNames,
         CFEBase* pParent);
     virtual ~CFEInterface();
@@ -78,55 +78,55 @@ protected:
 // Operations
 public:
     virtual CObject* Clone();
-    virtual CFEInterface* FindBaseInterface(string sName);
+    virtual CFEInterface* FindBaseInterface(std::string sName);
     virtual void AddBaseInterface(CFEInterface* pBaseInterface);
 
     virtual void Accept(CVisitor&);
 
     virtual int GetOperationCount(bool bCountBase = true);
 
-    virtual string GetName();
-    bool Match(string sName);
+    virtual std::string GetName();
+    bool Match(std::string sName);
 
     virtual bool IsForward();
     void AddComponents(vector<CFEInterfaceComponent*> *pComponents);
 
 // attributes
 protected:
-    /** \var string m_sInterfaceName
+    /** \var std::string m_sInterfaceName
      *  \brief holds a reference to the name of the interface
      */
-    string m_sInterfaceName;
+    std::string m_sInterfaceName;
 
 public:
     /** \var CSearchableCollection<CFEAttribute, ATTR_TYPE> m_Attributes
      *  \brief the interface's attributes
      */
     CSearchableCollection<CFEAttribute, ATTR_TYPE> m_Attributes;
-    /** \var CSearchableCollection<CFEConstDeclarator, string> m_Constants
+    /** \var CSearchableCollection<CFEConstDeclarator, std::string> m_Constants
      *  \brief the interface's constants
      */
-    CSearchableCollection<CFEConstDeclarator, string> m_Constants;
-    /** \var CSearchableCollection<CFEAttributeDeclarator, string> m_AttributeDeclarators
+    CSearchableCollection<CFEConstDeclarator, std::string> m_Constants;
+    /** \var CSearchableCollection<CFEAttributeDeclarator, std::string> m_AttributeDeclarators
      *  \brief holds interface attribute member declarators
      */
-    CSearchableCollection<CFEAttributeDeclarator, string> m_AttributeDeclarators;
-    /** \var CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators
+    CSearchableCollection<CFEAttributeDeclarator, std::string> m_AttributeDeclarators;
+    /** \var CSearchableCollection<CFEConstructedType, std::string> m_TaggedDeclarators
      *  \brief the interface's constructed types
      */
-    CSearchableCollection<CFEConstructedType, string> m_TaggedDeclarators;
+    CSearchableCollection<CFEConstructedType, std::string> m_TaggedDeclarators;
     /** \var CCollection<CFEOperation> m_Operations
      *  \brief the interface's operations
      */
     CCollection<CFEOperation> m_Operations;
-    /** \var CSearchableCollection<CFETypedDeclarator, string> m_Typedefs
+    /** \var CSearchableCollection<CFETypedDeclarator, std::string> m_Typedefs
      *  \brief the interface's type definitions
      */
-    CSearchableCollection<CFETypedDeclarator, string> m_Typedefs;
-    /** \var CSearchableCollection<CFETypedDeclarator, string> m_Exceptions
+    CSearchableCollection<CFETypedDeclarator, std::string> m_Typedefs;
+    /** \var CSearchableCollection<CFETypedDeclarator, std::string> m_Exceptions
      *  \brief the interface's exceptions
      */
-    CSearchableCollection<CFETypedDeclarator, string> m_Exceptions;
+    CSearchableCollection<CFETypedDeclarator, std::string> m_Exceptions;
     /** \var CCollection<CFEIdentifier> m_BaseInterfaceNames
      *  \brief holds the base interface names
      */

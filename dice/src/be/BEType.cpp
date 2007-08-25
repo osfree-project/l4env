@@ -88,7 +88,7 @@ CBEType::CreateBackEnd(CFETypeSpec * pFEType)
     {
 	CBESizes *pSizes = CCompiler::GetSizes();
         m_bUnsigned = ((CFESimpleType *) pFEType)->IsUnsigned();
-        m_nSize = pSizes->GetSizeOfType(m_nFEType, 
+        m_nSize = pSizes->GetSizeOfType(m_nFEType,
 	    ((CFESimpleType*)pFEType)->GetSize());
 	// for simple types the max size is the same as the size
 	// for pointer types, the maximum size of the type should be used
@@ -102,14 +102,14 @@ CBEType::CreateBackEnd(CFETypeSpec * pFEType)
     m_sName = pNF->GetTypeName(m_nFEType, m_bUnsigned, m_nSize);
     if (m_sName.empty())
     {
-        // user defined type overloads this function -> m_sName.c_str() 
+        // user defined type overloads this function -> m_sName.c_str()
 	// should always be set
 	string exc = string(__func__);
 	exc += " failed because no type name could be assigned";
         throw;
     }
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CEBType::%s(fe) returns\n", 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CEBType::%s(fe) returns\n",
 	__func__);
 }
 
@@ -130,7 +130,7 @@ CBEType::CreateBackEnd(bool bUnsigned,
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CEBType::%s(%s, %d, %d) called\n", __func__,
 	bUnsigned ? "true" : "false", nSize, nFEType);
-    
+
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     CBESizes *pSizes = CCompiler::GetSizes();
     m_bUnsigned = bUnsigned;
@@ -140,7 +140,7 @@ CBEType::CreateBackEnd(bool bUnsigned,
     m_sName = pNF->GetTypeName(nFEType, bUnsigned, m_nSize);
     m_nFEType = nFEType;
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CEBType::%s(,,) returns\n", 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CEBType::%s(,,) returns\n",
 	__func__);
 }
 
@@ -426,7 +426,7 @@ bool CBEType::IsSimpleType()
  *  \param pAlias the decl with the array dimensions
  *  \param iterB the iterator pointing to the next level if there are multiple array dimensions
  */
-void 
+void
 CBEType::WriteZeroInitArray(CBEFile& pFile,
     CBEType *pType,
     CBEDeclarator *pAlias,
@@ -481,7 +481,7 @@ int CBEType::GetArrayDimensionCount()
  */
 void CBEType::AddToHeader(CBEHeaderFile* pHeader)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEType::%s(header: %s) for type %d called\n", __func__,
         pHeader->GetFileName().c_str(), GetFEType());
     if (IsTargetFile(pHeader))

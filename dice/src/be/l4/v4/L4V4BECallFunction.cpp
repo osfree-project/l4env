@@ -26,9 +26,10 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/l4/v4/L4V4BECallFunction.h"
-#include "be/l4/v4/L4V4BENameFactory.h"
+#include "L4V4BECallFunction.h"
+#include "L4V4BENameFactory.h"
 #include "be/l4/L4BEMarshaller.h"
+#include "be/l4/TypeSpec-L4Types.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BEDeclarator.h"
@@ -36,7 +37,6 @@
 #include "be/BESizes.h"
 #include "be/BEMsgBuffer.h"
 #include "be/BEUserDefinedType.h"
-#include "TypeSpec-L4V4Types.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 #include <cassert>
@@ -55,7 +55,7 @@ CL4V4BECallFunction::~CL4V4BECallFunction()
  *  \param pFEOperation the front-end function to use as reference
  *  \return true if successful
  */
-void 
+void
 CL4V4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation)
 {
     // do not call direct base class (it adds the result var only)
@@ -63,7 +63,7 @@ CL4V4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation)
 
     // add local variables
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
     AddLocalVariable(sType, sMsgTag, 0, string("L4_MsgTag()"));
 }
@@ -89,7 +89,7 @@ CL4V4BECallFunction::WriteMarshalling(CBEFile& pFile)
     // set dopes
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
 	GetSendDirection());
     // load the message into the UTCB
     pFile << "\tL4_MsgLoad ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
@@ -116,12 +116,12 @@ CL4V4BECallFunction::WriteInvocation(CBEFile& pFile)
  * parameter. Before that we have to load the message registers into te
  * message buffer.
  */
-void 
+void
 CL4V4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sMsgTag = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     // store message
     pFile << "\tL4_MsgStore ( " << sMsgTag << ", (L4_Msg_t*) &" << sMsgBuffer
 	<< " );\n";
@@ -141,7 +141,7 @@ void
 CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sResult = pNF->GetString(CL4V4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    string sResult = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
     pFile << "\tif (L4_IpcFailed (" << sResult << "))\n" <<

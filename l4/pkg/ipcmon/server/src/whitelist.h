@@ -14,7 +14,6 @@
 #define __SERVER_SRC_WHITELIST_H_
 
 #include <vector>
-#include <string>
 #include "capmanager.h"
 
 #include <l4/log/l4log.h>

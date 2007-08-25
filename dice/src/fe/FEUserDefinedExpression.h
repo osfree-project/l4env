@@ -46,7 +46,7 @@ class CFEUserDefinedExpression : public CFEExpression
 public:
     /** constructs a user defined expression
      *  \param sExpName the name of the user defined expression */
-    CFEUserDefinedExpression(string sExpName);
+    CFEUserDefinedExpression(std::string sExpName);
     virtual ~CFEUserDefinedExpression();
 
 protected:
@@ -59,15 +59,15 @@ protected:
 public:
     virtual CObject* Clone();
     virtual bool IsOfType(unsigned int nType);
-    virtual long GetIntValue();
-    virtual string GetExpName();
+    virtual int GetIntValue();
+    virtual std::string GetExpName();
 
 // attributes
 protected:
-    /**    \var string m_sExpName
+    /**    \var std::string m_sExpName
      *  \brief the name of the expression
      */
-    string m_sExpName;
+    std::string m_sExpName;
 };
 
 #endif /* __DICE_FE_FEUSERDEFINEDEXPRESSION_H__ */

@@ -31,9 +31,9 @@
 CIncludeStatement::CIncludeStatement(bool bIDLFile,
     bool bStdInclude,
     bool bImport,
-    string sFileName,
-    string sFromFile,
-    string sPath,
+    std::string sFileName,
+    std::string sFromFile,
+    std::string sPath,
     int nLineNb)
 : m_bIDLFile(bIDLFile),
   m_bStandard(bStdInclude),

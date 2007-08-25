@@ -32,33 +32,53 @@
 
 enum EXPT_OPERATOR {
     EXPR_NOOPERATOR = 0,
-    EXPR_SPLUS      = 1,    // sign: plus - unary
-    EXPR_SMINUS     = 2,    // sign: minus
-    EXPR_TILDE      = 3,    // ~
-    EXPR_EXCLAM     = 4,    // !
-    EXPR_MUL        = 5,    // * - binary
-    EXPR_DIV        = 6,    // /
-    EXPR_MOD        = 7,    // %
-    EXPR_PLUS       = 8,    // +
-    EXPR_MINUS      = 9,    // -
-    EXPR_LSHIFT     = 10,   // <<
-    EXPR_RSHIFT     = 11,   // >>
-    EXPR_LT         = 12,   // <
-    EXPR_GT         = 13,   // >
-    EXPR_LTEQU      = 14,   // <=
-    EXPR_GTEQU      = 15,   // >=
-    EXPR_EQUALS     = 16,   // ==
-    EXPR_NOTEQUAL   = 17,   // !=
-    EXPR_BITAND     = 18,   // &
-    EXPR_BITXOR     = 19,   // ^
-    EXPR_BITOR      = 20,   // |
-    EXPR_LOGAND     = 21,   // &&
-    EXPR_LOGOR      = 22,   // ||
-    EXPR_INCR       = 23,   // ++
-    EXPR_DECR       = 24    // --
+    EXPR_SPLUS,             /**< sign: plus - unary */
+    EXPR_SMINUS,            /**< sign: minus */
+    EXPR_TILDE,             /**< ~ */
+    EXPR_EXCLAM,            /**< ! */
+    EXPR_MUL,               /**< * - binary */
+    EXPR_DIV,               /**< / */
+    EXPR_MOD,               /**< % */
+    EXPR_PLUS,              /**< + */
+    EXPR_MINUS,             /**< - */
+    EXPR_LSHIFT,            /**< << (10) */
+    EXPR_RSHIFT,            /**< >> */
+    EXPR_LT,                /**< < */
+    EXPR_GT,                /**< > */
+    EXPR_LTEQU,             /**< <= */
+    EXPR_GTEQU,             /**< >= */
+    EXPR_EQUALS,            /**< == */
+    EXPR_NOTEQUAL,          /**< != */
+    EXPR_BITAND,            /**< & */
+    EXPR_BITXOR,            /**< ^ */
+    EXPR_BITOR,             /**< | */
+    EXPR_LOGAND,            /**< && */
+    EXPR_LOGOR,             /**< || */
+    EXPR_ASSIGN,            /**< = */
+    EXPR_MUL_ASSIGN,        /**< *= */
+    EXPR_DIV_ASSIGN,        /**< /= */
+    EXPR_MOD_ASSIGN,        /**< %= */
+    EXPR_PLUS_ASSIGN,       /**< += */
+    EXPR_MINUS_ASSIGN,      /**< -= */
+    EXPR_LSHIFT_ASSIGN,     /**< <<= */
+    EXPR_RSHIFT_ASSIGN,     /**< >>= */
+    EXPR_AND_ASSIGN,        /**< &= */
+    EXPR_OR_ASSIGN,         /**< |= */
+    EXPR_XOR_ASSIGN,        /**< ^= */
+    EXPR_INCR,              /**< ++ */
+    EXPR_DECR,              /**< -- */
+    EXPR_MIN,               /**< <? */
+    EXPR_MAX,               /**< >? */
+    EXPR_MIN_ASSIGN,        /**< <?= */
+    EXPR_MAX_ASSIGN,        /**< >?= */
+    EXPR_CAST,              /**< (type)expr */
+    EXPR_DELETE,            /**< delete expr */
+    EXPR_DELETE_ARRAY       /**< delete[] expr */
 };
 
 #include "fe/FEPrimaryExpression.h"
+
+class CFETypeSpec;
 
 /** \class CFEUnaryExpression
  *  \ingroup frontend
@@ -78,6 +98,11 @@ public:
      *  \param pOperand the first operand of the expression
      */
     CFEUnaryExpression(EXPR_TYPE nType, EXPT_OPERATOR Operator, CFEExpression *pOperand);
+    /** constructs a unary cast expression object
+     *  \param pCastType the cast type of the expression
+     *  \param pOperand the operand of the cast expression
+     */
+    CFEUnaryExpression(CFETypeSpec* pCastType, CFEExpression *pOperand);
     virtual ~CFEUnaryExpression();
 
 protected:
@@ -90,8 +115,9 @@ protected:
 public:
     virtual CObject* Clone();
     virtual bool IsOfType(unsigned int nType);
-    virtual long GetIntValue();
+    virtual int GetIntValue();
     virtual EXPT_OPERATOR GetOperator();
+    virtual CFETypeSpec* GetCastType();
 
 // attributes
 protected:
@@ -99,6 +125,10 @@ protected:
      *  \brief the operator
      */
     EXPT_OPERATOR m_nOperator;
+    /** \var CFETypeSpec* m_pCastType
+     *  \brief contains the type of the cast operation
+     */
+    CFETypeSpec* m_pCastType;
 };
 
 #endif /* __DICE_FE_FEUNARYEXPRESSION_H__ */

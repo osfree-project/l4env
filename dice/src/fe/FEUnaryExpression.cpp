@@ -32,12 +32,21 @@ CFEUnaryExpression::CFEUnaryExpression(EXPR_TYPE nType, EXPT_OPERATOR Operator, 
 : CFEPrimaryExpression(nType, pOperand)
 {
     m_nOperator = Operator;
+    m_pCastType = NULL;
+}
+
+CFEUnaryExpression::CFEUnaryExpression(CFETypeSpec* pCastType, CFEExpression *pOperand)
+: CFEPrimaryExpression(EXPR_UNARY, pOperand)
+{
+    m_nOperator = EXPR_CAST;
+    m_pCastType = pCastType;
 }
 
 CFEUnaryExpression::CFEUnaryExpression(CFEUnaryExpression & src)
 : CFEPrimaryExpression(src)
 {
     m_nOperator = src.m_nOperator;
+    m_pCastType = src.m_pCastType;
 }
 
 /** cleans up the unary expression object */
@@ -49,29 +58,29 @@ CFEUnaryExpression::~CFEUnaryExpression()
 /** retrieves the integer value of the expression
  *  \return the integer value of the expression
  */
-long CFEUnaryExpression::GetIntValue()
+int CFEUnaryExpression::GetIntValue()
 {
     switch (GetOperator())
-      {
-      case EXPR_NOOPERATOR:
-      return GetOperand()->GetIntValue();
-      break;
-      case EXPR_SPLUS:
-      return 0 + (GetOperand()->GetIntValue());
-      break;
-      case EXPR_SMINUS:
-      return 0 - (GetOperand()->GetIntValue());
-      break;
-      case EXPR_TILDE:
-      return ~(GetOperand()->GetIntValue());
-      break;
-      case EXPR_EXCLAM:
-      return !(GetOperand()->GetIntValue());
-      break;
-      default:
-      return GetOperand()->GetIntValue();
-      break;
-      }
+    {
+    case EXPR_NOOPERATOR:
+	return GetOperand()->GetIntValue();
+	break;
+    case EXPR_SPLUS:
+	return 0 + (GetOperand()->GetIntValue());
+	break;
+    case EXPR_SMINUS:
+	return 0 - (GetOperand()->GetIntValue());
+	break;
+    case EXPR_TILDE:
+	return ~(GetOperand()->GetIntValue());
+	break;
+    case EXPR_EXCLAM:
+	return !(GetOperand()->GetIntValue());
+	break;
+    default:
+	return GetOperand()->GetIntValue();
+	break;
+    }
     return 0;
 }
 
@@ -82,19 +91,19 @@ long CFEUnaryExpression::GetIntValue()
 bool CFEUnaryExpression::IsOfType(unsigned int nType)
 {
     switch (GetOperator())
-      {
-      case EXPR_SPLUS:
-      case EXPR_SMINUS:
-      return ((nType == TYPE_INTEGER) || (nType == TYPE_LONG)) && GetOperand()->IsOfType(nType);
-      break;
-      case EXPR_TILDE:
-      case EXPR_EXCLAM:
-      return (nType == TYPE_INTEGER || nType == TYPE_BOOLEAN || nType == TYPE_LONG)
-          && GetOperand()->IsOfType(nType);
-      break;
-      default:
-      break;
-      }
+    {
+    case EXPR_SPLUS:
+    case EXPR_SMINUS:
+	return ((nType == TYPE_INTEGER) || (nType == TYPE_LONG)) && GetOperand()->IsOfType(nType);
+	break;
+    case EXPR_TILDE:
+    case EXPR_EXCLAM:
+	return (nType == TYPE_INTEGER || nType == TYPE_BOOLEAN || nType == TYPE_LONG)
+	    && GetOperand()->IsOfType(nType);
+	break;
+    default:
+	break;
+    }
     return GetOperand()->IsOfType(nType);
 }
 
@@ -112,4 +121,12 @@ EXPT_OPERATOR CFEUnaryExpression::GetOperator()
 CObject *CFEUnaryExpression::Clone()
 {
     return new CFEUnaryExpression(*this);
+}
+
+/** returns a reference to the type of the cast
+ *  \return a reference to the type of the cast
+ */
+CFETypeSpec* CFEUnaryExpression::GetCastType()
+{
+    return m_pCastType;
 }

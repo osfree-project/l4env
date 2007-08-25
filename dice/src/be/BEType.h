@@ -76,9 +76,9 @@ public:
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
     virtual CBETypedef* GetTypedef();
     virtual void Write(CBEFile& pFile);
-    virtual void WriteToStr(string &str);
+    virtual void WriteToStr(std::string &str);
     virtual bool IsConstructedType();
-    virtual bool HasTag(string sTag);
+    virtual bool HasTag(std::string sTag);
     virtual void WriteCast(CBEFile& pFile, bool bPointer);
     virtual bool IsPointerType();
     virtual bool IsArrayType();
@@ -96,7 +96,7 @@ public:
     virtual void AddToHeader(CBEHeaderFile* pHeader);
 
 protected:
-    virtual void WriteZeroInitArray(CBEFile& pFile, CBEType *pType, 
+    virtual void WriteZeroInitArray(CBEFile& pFile, CBEType *pType,
 	CBEDeclarator *pAlias, vector<CBEExpression*>::iterator iter);
 
 protected:
@@ -112,13 +112,13 @@ protected:
      *  \brief cached value of maximum size
      */
     int m_nMaxSize;
-    /** \var string m_sName
+    /** \var std::string m_sName
      *  \brief the fully extended name of the type
      *
      * A type's name might be extended by the library or interface name. These
      * extension are already in this variable.
      */
-    string m_sName;
+    std::string m_sName;
     /** \var in m_nFEType
      *  \brief only used for comparison
      */

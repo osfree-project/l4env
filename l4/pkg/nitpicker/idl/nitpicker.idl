@@ -13,8 +13,8 @@
  * COPYING file for details.
  */
 
-#include <l4/dm_generic/types.h>
-#include <dice/dice-corba-types.h>
+import <l4/dm_generic/types.h>
+import <dice/dice-corba-types.h>
 
 interface nitpicker {
 

@@ -55,7 +55,7 @@ public:
 public: // Public methods
     virtual bool IsVariableSized();
     virtual bool IsFixedSized();
-    virtual bool GetMaxSize(int & nSize, string sName = string());
+    virtual bool GetMaxSize(int & nSize, std::string sName = std::string());
 
 protected:
     virtual bool DoAllocateMemory(CBEFile& pFile);

@@ -36,40 +36,41 @@
 #include <iostream>
 #include <cassert>
 
-CFEConstDeclarator::CFEConstDeclarator(CFETypeSpec * pConstType, string sConstName, CFEExpression * pConstValue)
-{
-    m_pConstType = pConstType;
-    m_sConstName = sConstName;
-    m_pConstValue = pConstValue;
-}
+CFEConstDeclarator::CFEConstDeclarator(CFETypeSpec * pConstType,
+    string sConstName,
+    CFEExpression * pConstValue)
+: m_pConstType(pConstType),
+    m_sConstName(sConstName),
+    m_pConstValue(pConstValue)
+{ }
 
 CFEConstDeclarator::CFEConstDeclarator(CFEConstDeclarator & src)
 :CFEInterfaceComponent(src)
 {
     m_sConstName = src.m_sConstName;
     if (src.m_pConstType)
-      {
-      m_pConstType = (CFETypeSpec *) (src.m_pConstType->Clone());
-      m_pConstType->SetParent(this);
-      }
+    {
+	m_pConstType = (CFETypeSpec *) (src.m_pConstType->Clone());
+	m_pConstType->SetParent(this);
+    }
     else
-    m_pConstType = 0;
+	m_pConstType = 0;
     if (src.m_pConstValue)
-      {
-      m_pConstValue = (CFEExpression *) (src.m_pConstValue->Clone());
-      m_pConstValue->SetParent(this);
-      }
+    {
+	m_pConstValue = (CFEExpression *) (src.m_pConstValue->Clone());
+	m_pConstValue->SetParent(this);
+    }
     else
-    m_pConstValue = 0;
+	m_pConstValue = 0;
 }
 
 /** cleans up the constant declarator (frees all members) */
 CFEConstDeclarator::~CFEConstDeclarator()
 {
     if (m_pConstType)
-    delete m_pConstType;
+	delete m_pConstType;
     if (m_pConstValue)
-    delete m_pConstValue;
+	delete m_pConstValue;
 }
 
 /** returns the type of the constant

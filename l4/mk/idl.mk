@@ -109,7 +109,7 @@ IDL_FLAGS	+= $(addprefix -P,$(CPPFLAGS))
 IDL_FLAGS	+= $(IDL_FLAGS_$(<F))
 
 ifeq ($(L4API),l4v2)
-IDL_FLAGS	+= -Biv2
+IDL_FLAGS	+= -Bifiasco
 endif
 
 ifeq ($(L4API),l4v4)
@@ -129,7 +129,7 @@ IDL_FLAGS	+= -fforce-c-bindings -P-DL4API_l4v2
 endif
 
 ifeq ($(ARCH),x86)
-IDL_FLAGS	+= -fforce-c-bindings
+IDL_FLAGS	+= -Bpia32
 endif
 
 ifeq ($(ARCH),arm)

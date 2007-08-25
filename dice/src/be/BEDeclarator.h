@@ -69,7 +69,7 @@ typedef std::vector<CDeclaratorStackLocation> CDeclStack;
  * The declarator stack location also contains information useful for arrays
  * (even multidimensional ones). This is the purpose of the index members.
  */
-class CDeclaratorStackLocation 
+class CDeclaratorStackLocation
 {
 public:
     /** \brief constructor of this class
@@ -105,10 +105,10 @@ public:
      *         (or -1 if no array)
      */
     int nIndex[MAX_INDEX_NUMBER];
-    /** \var string sIndex
+    /** \var std::string sIndex
      *  \brief the name of the index variable if there is no fixed index
      */
-    string sIndex[MAX_INDEX_NUMBER];
+    std::string sIndex[MAX_INDEX_NUMBER];
     /** \brief sets the index of the stack location
      *  \param nIdx the new index
      *  \param nArrayDim which of the array dimensions is meant
@@ -123,14 +123,14 @@ public:
         if ((nArrayDim < 0) || (nArrayDim >= MAX_INDEX_NUMBER))
             return;
         nIndex[nArrayDim] = nIdx;
-        sIndex[nArrayDim].erase(sIndex[nArrayDim].begin(), 
+        sIndex[nArrayDim].erase(sIndex[nArrayDim].begin(),
 	    sIndex[nArrayDim].end());
     }
     /** \brief sets the index variable of the stack location
      *  \param sIdx the new stack location variable
      *  \param nArrayDim the index where to add the element
      */
-    void SetIndex(string sIdx, int nArrayDim = 0)
+    void SetIndex(std::string sIdx, int nArrayDim = 0)
     {
         if (sIdx.empty())
             return;
@@ -161,9 +161,9 @@ public:
         return nRet;
     }
 
-    static void WriteToString(string &sResult, 
+    static void WriteToString(std::string &sResult,
 	CDeclStack* pStack, bool bUsePointer);
-    static void Write(CBEFile& pFile, 
+    static void Write(CBEFile& pFile,
 	CDeclStack* pStack, bool bUsePointer);
 };
 
@@ -196,46 +196,46 @@ protected:
      *  \param src the source to copy from
      */
     CBEDeclarator(CBEDeclarator & src);
-    
+
 public:
     virtual CObject * Clone();
 
     virtual void WriteName(CBEFile& pFile);
-    virtual void WriteNameToStr(string &str);
-    virtual void WriteIndirectInitialization(CBEFile& pFile, 
+    virtual void WriteNameToStr(std::string &str);
+    virtual void WriteIndirectInitialization(CBEFile& pFile,
 	bool bUsePointer);
-    virtual void WriteIndirectInitializationMemory(CBEFile& pFile, 
+    virtual void WriteIndirectInitializationMemory(CBEFile& pFile,
 	bool bUsePointer);
-    virtual void WriteIndirect(CBEFile& pFile, bool bUsePointer, 
+    virtual void WriteIndirect(CBEFile& pFile, bool bUsePointer,
 	bool bHasPointerType);
     virtual void WriteDeclaration(CBEFile& pFile);
-    virtual void CreateBackEnd(string sName, int nStars);
+    virtual void CreateBackEnd(std::string sName, int nStars);
     virtual void CreateBackEnd(CFEIdentifier * pFEIdentifier);
 
     virtual int GetSize();
-    
+
     virtual int GetArrayDimensionCount();
     virtual bool IsArray();
     virtual int GetRemainingNumberOfArrayBounds(
 	vector<CBEExpression*>::iterator iter);
     virtual void AddArrayBound(CBEExpression * pBound);
     virtual void RemoveArrayBound(CBEExpression *pBound);
-    
+
     /** \brief only returns a reference to the internal name
      *  \return the name of the declarator (without stars and such)
      */
-    string GetName()
+    std::string GetName()
     { return m_sName; }
     /** \brief set the name of the declarator
      *  \param sName the new name
      */
-    void SetName(string sName)
+    void SetName(std::string sName)
     { m_sName = sName; }
     /** \brief matches the given nameto the internally stored name
      *  \param sName the name to match against
      *  \return true if names match
      */
-    bool Match(string sName)
+    bool Match(std::string sName)
     { return m_sName == sName; }
 
     /** \brief returns the number of bitfields used by this declarator
@@ -261,9 +261,14 @@ public:
      */
     int GetStars()
     { return m_nStars; }
+    /** \brief accessor for initial value
+     *  \return reference to initial value
+     */
+    CBEExpression* GetInitialValue()
+    { return m_pInitialValue; }
 
     virtual int GetMaxSize(void);
-    virtual void WriteCleanup(CBEFile& pFile, bool bUsePointer, 
+    virtual void WriteCleanup(CBEFile& pFile, bool bUsePointer,
 	bool bDeferred);
 
 protected:
@@ -271,17 +276,17 @@ protected:
     virtual void CreateBackEndDecl(CFEDeclarator * pFEDeclarator);
     virtual void CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator);
     virtual void CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator);
-    virtual CBEExpression *GetArrayDimension(CFEExpression * pLower, 
+    virtual CBEExpression *GetArrayDimension(CFEExpression * pLower,
 	CFEExpression * pUpper);
     virtual void WriteArray(CBEFile& pFile);
     virtual void WriteArrayIndirect(CBEFile& pFile);
     virtual void WriteEnum(CBEFile& pFile);
 
 protected:
-    /** \var string m_sName
+    /** \var std::string m_sName
      *  \brief the name of the declarator
      */
-    string m_sName;
+    std::string m_sName;
     /** \var int m_nStars
      *  \brief the number of asterisks (indirection) of this declarator
      */

@@ -68,16 +68,17 @@ protected:
     virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile);
     virtual void WriteDefaultCaseWithDefaultFunc(CBEFile& pFile);
     virtual void WriteFunctionDeclaration(CBEFile& pFile);
+    virtual void WriteDefaultFunctionDeclaration(CBEFile& pFile);
     virtual void WriteInvocation(CBEFile& pFile);
     virtual void WriteBody(CBEFile& pFile);
     virtual void AddSwitchCases(CFEInterface *pFEInterface);
     virtual void AddBeforeParameters();
 
 protected:
-    /** \var string m_sDefaultFunction
+    /** \var std::string m_sDefaultFunction
      *  \brief contains the name of the default function
      */
-    string m_sDefaultFunction;
+    std::string m_sDefaultFunction;
 
 public:
     /** \var CCollection<CBESwitchCase> m_SwitchCases

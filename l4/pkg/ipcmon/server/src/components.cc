@@ -11,7 +11,6 @@
  * GNU General Public License 2. Please see the COPYING file for details.
  */
 #include <vector>
-#include <string>
 
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
@@ -34,6 +33,7 @@ static int          allow_roottask = 0;
 #define ROOTTASK_ID         4
 
 int ipcmon_pagefault(CORBA_Object obj,
+                     l4_msgtag_t *tag,
                      ipcmon_monitor_msg_buffer_t *msgbuf,
                      CORBA_Server_Environment *env)
 {
@@ -119,6 +119,10 @@ int main(int argc, const char **argv)
 	if (parse_cmdline(&argc, &argv,
 				'b', "blacklist", "blacklisting IPC monitor",
 				PARSE_CMD_SWITCH, MT_USE_BLACKLIST, &manager_type,
+				/* FIXME: This is a hack. Right now, everyone needs to be allowed to
+				 *        talk to roottask, since this is the point we get the names
+				 *        server ID from. :(
+				 */
 				'r', "roottask-for-all", "allow everyone to communicate with the roottask",
 				PARSE_CMD_SWITCH, 1, &allow_roottask,
 				'w', "whitelist", "whitelisting IPC monitor",

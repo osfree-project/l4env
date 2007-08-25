@@ -29,24 +29,18 @@
 #include "Object.h"
 
 CObject::CObject(CObject * pParent)
-: m_pParent(pParent),
-  m_nSourceLineNb(0),
-  m_nSourceLineNbEnd(0),
-  m_sSourceFileName()
-{
-}
+    : m_sourceLoc(),
+    m_pParent(pParent)
+{ }
 
 CObject::CObject(const CObject & src)
-: m_pParent(src.m_pParent),
-  m_nSourceLineNb(src.m_nSourceLineNb),
-  m_nSourceLineNbEnd(src.m_nSourceLineNbEnd),
-  m_sSourceFileName(src.m_sSourceFileName)
-{
-}
+    : m_sourceLoc(src.m_sourceLoc),
+    m_pParent(src.m_pParent)
+{ }
 
 /** cleans up the object */
 CObject::~CObject()
-{}
+{ }
 
 /** \brief creates a copy of this object
  *  \return a copy of this object
@@ -59,7 +53,7 @@ CObject *CObject::Clone()
 /** \brief accept function for visitors
  */
 void CObject::Accept(CVisitor&)
-{}
+{ }
 
 /** \brief test if an object is parent of this object
  *  \param pParent the alleged parent
@@ -74,3 +68,4 @@ bool CObject::IsParent(CObject * pParent)
 	pP = pP->GetParent();
     return pP == pParent;
 }
+

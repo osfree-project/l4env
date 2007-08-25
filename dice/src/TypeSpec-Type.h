@@ -36,46 +36,48 @@
  * We use an anonymous enum and an integer type wherever we use the types as
  * arguments.
  */
-enum 
+enum
 {
-    TYPE_NONE   = 0,    /**< a non-initialzed type */
-    TYPE_INTEGER,       /**< the integer type */
-    TYPE_LONG,          /**< basically the same as INTEGER, but needed to know them apart */
-    TYPE_VOID,          /**< the void type */
-    TYPE_FLOAT,         /**< the float type */
-    TYPE_DOUBLE,        /**< the double type */
-    TYPE_CHAR,          /**< the character type */
-    TYPE_BOOLEAN,       /**< the boolean type */
-    TYPE_BYTE,          /**< the byte type */
-    TYPE_VOID_ASTERISK, /**< a type for constant expressions: void* (pointer) */
-    TYPE_CHAR_ASTERISK, /**< a type for constant expressions: char* (string) */ // 10
-    TYPE_STRUCT,        /**< the constructed type struct */
-    TYPE_UNION,         /**< the constructed type union */
-    TYPE_IDL_UNION,     /**< an enclosed, aka. IDL, union */
-    TYPE_ENUM,          /**< the constructed type enum */
-    TYPE_PIPE,          /**< the constructed type pipe */
-    TYPE_HANDLE_T,      /**< the predefined type handle_t */
-    TYPE_ISO_LATIN_1,   /**< the predefined type iso_latin_1 (language type) */
-    TYPE_ISO_MULTILINGUAL,  /**< the predefined type iso_multi_lingual (language type) */
-    TYPE_ISO_UCS,       /**< the predefined type iso_ucs (language type) */
-    TYPE_ERROR_STATUS_T,    /**< the predefined type error_status_t */ // 20
-    TYPE_FLEXPAGE,      /**< the predefined type fpage (describes a memory page) */
-    TYPE_RCV_FLEXPAGE,  /**< the helper type rcv_fpage (describes the receive window for mapped memory pages) */
-    TYPE_USER_DEFINED,  /**< a user defined type */
-    TYPE_LONG_DOUBLE,   /**< CORBA: the long double type */
-    TYPE_WCHAR,         /**< CORBA: the wide character type */
-    TYPE_OCTET,         /**< CORBA: the octet type */
-    TYPE_ANY,           /**< CORBA: the any type */
-    TYPE_OBJECT,        /**< CORBA: the object type */
-    TYPE_STRING,        /**< CORBA: an extra string type */
-    TYPE_WSTRING,       /**< CORBA: an extra wide character string type */ // 30
-    TYPE_ARRAY,         /**< CORBA: an sequence type */
-    TYPE_REFSTRING,     /**< CORBA: a refstring */
-    TYPE_GCC,           /**< GCC: gcc specific type (can be ignored) */
-    TYPE_MWORD,         /**< DICE: used to get the size and string for a machine word */
-    TYPE_EXCEPTION,     /**< DICE: CORBA exception type */
-    TYPE_MESSAGE,       /**< DICE: used to determine (maximum) size for messages */
-    TYPE_MAX            /**< delimiter value */
+    TYPE_NONE = 0,		/**< a non-initialzed type */
+    TYPE_INTEGER,		/**< the integer type */
+    TYPE_LONG,			/**< basically the same as INTEGER, but needed to know them apart */
+    TYPE_VOID,			/**< the void type */
+    TYPE_FLOAT,			/**< the float type */
+    TYPE_DOUBLE,		/**< the double type */
+    TYPE_FIXED,			/**< the fixed type */
+    TYPE_CHAR,			/**< the character type */
+    TYPE_BOOLEAN,		/**< the boolean type */
+    TYPE_BYTE,			/**< the byte type */
+    TYPE_VOID_ASTERISK,		/**< a type for constant expressions: void* (pointer) */ // 10
+    TYPE_CHAR_ASTERISK,		/**< a type for constant expressions: char* (string) */
+    TYPE_STRUCT,		/**< the constructed type struct */
+    TYPE_UNION,			/**< the constructed type union */
+    TYPE_IDL_UNION,		/**< an enclosed, aka. IDL, union */
+    TYPE_ENUM,			/**< the constructed type enum */
+    TYPE_PIPE,			/**< the constructed type pipe */
+    TYPE_TYPEOF,		/**< the type_of construct */
+    TYPE_HANDLE_T,		/**< the predefined type handle_t */
+    TYPE_ISO_LATIN_1,		/**< the predefined type iso_latin_1 (language type) */
+    TYPE_ISO_MULTILINGUAL,	/**< the predefined type iso_multi_lingual (language type) */ // 20
+    TYPE_ISO_UCS,		/**< the predefined type iso_ucs (language type) */
+    TYPE_ERROR_STATUS_T,	/**< the predefined type error_status_t */
+    TYPE_FLEXPAGE,		/**< the predefined type fpage (describes a memory page) */
+    TYPE_RCV_FLEXPAGE, /**< the helper type rcv_fpage (describes the receive window for mapped memory pages) */
+    TYPE_USER_DEFINED,		/**< a user defined type */
+    TYPE_LONG_DOUBLE,		/**< CORBA: the long double type */
+    TYPE_WCHAR,			/**< CORBA: the wide character type */
+    TYPE_OCTET,			/**< CORBA: the octet type */
+    TYPE_ANY,			/**< CORBA: the any type */
+    TYPE_OBJECT,		/**< CORBA: the object type */ // 30
+    TYPE_STRING,		/**< CORBA: an extra string type */
+    TYPE_WSTRING,		/**< CORBA: an extra wide character string type */
+    TYPE_ARRAY,			/**< CORBA: an sequence type */
+    TYPE_REFSTRING,		/**< CORBA: a refstring */
+    TYPE_GCC,			/**< GCC: gcc specific type (can be ignored) */
+    TYPE_MWORD,			/**< DICE: used to get the size and string for a machine word */
+    TYPE_EXCEPTION,		/**< DICE: CORBA exception type */
+    TYPE_MESSAGE,		/**< DICE: used to determine (maximum) size for messages */
+    TYPE_MAX			/**< delimiter value */
 };
 
 #endif /* __DICE_TYPESPEC_TYPE_H__ */

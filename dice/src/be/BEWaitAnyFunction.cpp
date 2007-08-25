@@ -46,7 +46,7 @@
 #include <cassert>
 
 CBEWaitAnyFunction::CBEWaitAnyFunction(bool bOpenWait, bool bReply)
-    : CBEInterfaceFunction(bOpenWait ? 
+    : CBEInterfaceFunction(bOpenWait ?
 	(bReply ? FUNCTION_REPLY_WAIT : FUNCTION_WAIT_ANY) :
 	(bReply ? FUNCTION_REPLY_RECV : FUNCTION_RECV_ANY))
 {
@@ -98,7 +98,7 @@ CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface)
 
     CBEInterfaceFunction::CreateBackEnd(pFEInterface);
     // set source line number to last number of interface
-    SetSourceLine(pFEInterface->GetSourceLineEnd());
+    m_sourceLoc.setBeginLine(pFEInterface->m_sourceLoc.getEndLine());
 
     string exc = string(__func__);
     // return type -> set to opcode
@@ -175,7 +175,7 @@ CBEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
 	m_pTrace->BeforeUnmarshalling(pFile, this);
 	m_bTraceOn = bLocalTrace = true;
     }
-    
+
     WriteMarshalReturn(pFile, false);
 
     if (bLocalTrace)
@@ -264,6 +264,36 @@ CBEWaitAnyFunction::WriteParameter(CBEFile& pFile,
 	CBEInterfaceFunction::WriteParameter(pFile, pParameter, false);
     else
 	CBEInterfaceFunction::WriteParameter(pFile, pParameter, bUseConst);
+}
+
+/** \brief writes the definition of the function to the target file
+ *  \param pFile the target file to write to
+ *
+ * If the given file is an implementation file, we write an inline prefix.
+ * This allows the target compiler to optimize cross function calls when
+ * inlining the unmarshal function into the dispatcher.
+ *
+ * We only use "inline", because this function might be used in a derived
+ * interface's dispatch function. Thus it cannot be static inline. Simple
+ * inline allows the target compiler to inline it locally, that is, into the
+ * same interface's dispatch function and also provide an implementation for
+ * external calls.
+ */
+void
+CBEWaitAnyFunction::WriteFunctionDefinition(CBEFile& pFile)
+{
+    if (!pFile.is_open())
+        return;
+
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+	"CBEWaitAnyFunction::%s(%s) in %s called\n", __func__,
+	pFile.GetFileName().c_str(), GetName().c_str());
+
+    if (pFile.IsOfFileType(FILETYPE_IMPLEMENTATION) &&
+	!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	pFile << "\tinline" << std::endl;
+
+    CBEInterfaceFunction::WriteFunctionDefinition(pFile);
 }
 
 /** \brief tries to find a parameter by its type

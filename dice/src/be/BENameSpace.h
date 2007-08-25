@@ -43,6 +43,7 @@ class CBEHeaderFile;
 class CBEImplementationFile;
 class CBEClass;
 class CBEType;
+class CBEEnumType;
 
 class CFELibrary;
 class CFEInterface;
@@ -71,21 +72,22 @@ public: // Public methods
     /** \brief retrieves the name of the NameSpace
      *  \return the name of the lib
      */
-    string GetName(void)
+    std::string GetName(void)
     { return m_sName; }
 
     /** \brief tries to match the name of the namespace
      *  \param sName the name to match against
      *  \return true if name matches parameter
      */
-    bool Match(string sName)
+    bool Match(std::string sName)
     { return GetName() == sName; }
 
-    CBEConstant* FindConstant(string sConstantName);
-    CBETypedef* FindTypedef(string sTypeName);
-    CBEClass* FindClass(string sClassName);
-    CBENameSpace* FindNameSpace(string sNameSpaceName);
-    CBEType* FindTaggedType(int nType, string sTag);
+    CBEConstant* FindConstant(std::string sConstantName);
+    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef* pPrev = NULL);
+    CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = NULL);
+    CBENameSpace* FindNameSpace(std::string sNameSpaceName);
+    CBEType* FindTaggedType(int nType, std::string sTag);
+    CBEEnumType* FindEnum(std::string sName);
 
     virtual bool AddOpcodesToFile(CBEHeaderFile* pFile);
 
@@ -94,12 +96,12 @@ public: // Public methods
     virtual void WriteElements(CBEImplementationFile& pFile);
     virtual void WriteElements(CBEHeaderFile& pFile);
 
-    virtual CBEFunction* FindFunction(string sFunctionName,
+    virtual CBEFunction* FindFunction(std::string sFunctionName,
 	FUNCTION_TYPE nFunctionType);
     virtual bool IsTargetFile(CBEImplementationFile* pFile);
     virtual bool IsTargetFile(CBEHeaderFile* pFile);
 
-    virtual bool HasFunctionWithUserType(string sTypeName, CBEFile* pFile);
+    virtual bool HasFunctionWithUserType(std::string sTypeName, CBEFile* pFile);
 
 protected: // Protected methods
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
@@ -120,32 +122,32 @@ protected: // Protected methods
     void InsertOrderedElement(CObject *pObj);
 
 protected: // Protected attributes
-    /** \var string m_sName
+    /** \var std::string m_sName
      *  \brief the name of the library
      */
-    string m_sName;
+    std::string m_sName;
     /** \var vector<CObject*> m_vOrderedElements
      *  \brief contains ordered list of elements
      */
     vector<CObject*> m_vOrderedElements;
 
 public:
-    /** \var CSearchableCollection<CBEConstant, string> m_Constants
+    /** \var CSearchableCollection<CBEConstant, std::string> m_Constants
      *  \brief contains the constants of this library
      */
-    CSearchableCollection<CBEConstant, string> m_Constants;
-    /** \var CSearchableCollection<CBETypedef, string> m_Typedefs
+    CSearchableCollection<CBEConstant, std::string> m_Constants;
+    /** \var CSearchableCollection<CBETypedef, std::string> m_Typedefs
      *  \brief contains the typedefs of this library
      */
-    CSearchableCollection<CBETypedef, string> m_Typedefs;
+    CSearchableCollection<CBETypedef, std::string> m_Typedefs;
     /** \var CCollection<CBEAttribute> m_Attributes
      *  \brief contains the attributes of this library
      */
     CCollection<CBEAttribute> m_Attributes;
-    /** \var CSearchableCollection<CBEClass, string> m_Classes
+    /** \var CSearchableCollection<CBEClass, std::string> m_Classes
      *  \brief contains the classes of this namespace
      */
-    CSearchableCollection<CBEClass, string> m_Classes;
+    CSearchableCollection<CBEClass, std::string> m_Classes;
     /** \var CCollection<CBENameSpace> m_NestedNamespaces
      *  \brief contains the nested namespaces
      */

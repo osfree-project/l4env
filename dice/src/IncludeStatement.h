@@ -46,7 +46,7 @@ class CIncludeStatement : public CObject
 public:
     /** default constructor */
     CIncludeStatement(bool bIDLFile, bool bStdInclude, bool bImport,
-	string sFileName, string sFromFile, string sPath, int nLineNb);
+	std::string sFileName, std::string sFromFile, std::string sPath, int nLineNb);
     /** copy constructor
      * \param src the source to copy from
      */
@@ -64,7 +64,7 @@ public:
      *  \param sName the file name to match against
      *  \return true if filenames match
      */
-    bool Match(string sName)
+    bool Match(std::string sName)
     { return m_sFilename == sName; }
 
     /** \var bool m_bIDLFile
@@ -80,18 +80,18 @@ public:
      *  \brief true if this is an import statement
      */
     bool m_bImport;
-    /** \var string m_sFilename
+    /** \var std::string m_sFilename
      *  \brief the name of the file to include
      */
-    string m_sFilename;
-    /** \var string m_sFromFile
+    std::string m_sFilename;
+    /** \var std::string m_sFromFile
      *  \brief the name of the file with the include statement
      */
-    string m_sFromFile;
-    /** \var string m_sPath
+    std::string m_sFromFile;
+    /** \var std::string m_sPath
      *  \brief path on which the file was opened
      */
-    string m_sPath;
+    std::string m_sPath;
     /** \var int m_nLineNb
      *  \brief line number of the include statement
      */

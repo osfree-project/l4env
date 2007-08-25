@@ -28,8 +28,8 @@
 
 #include "fe/FEStringAttribute.h"
 
-CFEStringAttribute::CFEStringAttribute(ATTR_TYPE nType, string string)
-:CFEAttribute(nType)
+CFEStringAttribute::CFEStringAttribute(ATTR_TYPE nType, std::string string)
+ : CFEAttribute(nType)
 {
     m_String = string;
 }
@@ -51,7 +51,7 @@ CFEStringAttribute::~CFEStringAttribute()
  * Because the returned string is only a reference to the member data, please copy
  * the string before you manipulate it.
  */
-string CFEStringAttribute::GetString()
+std::string CFEStringAttribute::GetString()
 {
     return m_String;
 }

@@ -33,7 +33,7 @@ CFEIdentifier::CFEIdentifier()
 {
 }
 
-CFEIdentifier::CFEIdentifier(string sName)
+CFEIdentifier::CFEIdentifier(std::string sName)
 {
     m_sName = sName;
 }
@@ -57,8 +57,8 @@ CFEIdentifier::~CFEIdentifier()
 
 /** checks this object for equality with another identifier
  *  \param src the other identifier to compare with
- *  \return true if the two string are identical
- * The two string are identical if both are 0 or both are the same compared with
+ *  \return true if the two std::string are identical
+ * The two std::string are identical if both are 0 or both are the same compared with
  * the strcmp function. They are not the same if only one of them is 0 or if the
  * strings are different.
  */
@@ -72,7 +72,7 @@ bool CFEIdentifier::operator ==(CFEIdentifier & src)
  *  \return true if the string an this object are equal
  * See above function for definition of equal.
  */
-bool CFEIdentifier::operator ==(string & sName)
+bool CFEIdentifier::operator ==(std::string & sName)
 {
     return (m_sName == sName);
 }
@@ -89,7 +89,7 @@ CObject *CFEIdentifier::Clone()
  *  \return a reference to the member string
  * If you intend to modify this string, please copy it beforehand.
  */
-string CFEIdentifier::GetName()
+std::string CFEIdentifier::GetName()
 {
     return m_sName;
 }
@@ -98,7 +98,7 @@ string CFEIdentifier::GetName()
  *  \param sName the name to compare against
  *  \return true if names match
  */
-bool CFEIdentifier::Match(string sName)
+bool CFEIdentifier::Match(std::string sName)
 {
     return m_sName == sName;
 }
@@ -106,7 +106,7 @@ bool CFEIdentifier::Match(string sName)
 /** prefixes the identifier with the string
  *  \param sPrefix the string to prefix
  */
-void CFEIdentifier::Prefix(string sPrefix)
+void CFEIdentifier::Prefix(std::string sPrefix)
 {
     m_sName = sPrefix + m_sName;
 }
@@ -114,7 +114,7 @@ void CFEIdentifier::Prefix(string sPrefix)
 /** suffixes the identifier with the string
  *  \param sSuffix the string to suffix
  */
-void CFEIdentifier::Suffix(string sSuffix)
+void CFEIdentifier::Suffix(std::string sSuffix)
 {
     m_sName += sSuffix;
 }
@@ -128,9 +128,9 @@ void CFEIdentifier::Suffix(string sSuffix)
  * derived from CFEIdentifier, we might want to keep the attributes from the derived
  * objects, but replace the name when we sometime Clone.
  */
-string CFEIdentifier::ReplaceName(string sNewName)
+std::string CFEIdentifier::ReplaceName(std::string sNewName)
 {
-    string ret = m_sName;
+    std::string ret = m_sName;
     m_sName = sNewName;
     return ret;
 }
