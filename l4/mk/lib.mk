@@ -40,7 +40,7 @@ ifneq ($(SYSTEM),) # if we a system, really build
 
 TARGET_LIB      := $(TARGET) $(TARGET_$(OSYSTEM))
 TARGET_SHARED   := $(filter %.s.so,$(TARGET_LIB))
-TARGET_STANDARD := $(filter-out %s.so,$(TARGET_LIB))
+TARGET_STANDARD := $(filter-out %.s.so,$(TARGET_LIB))
 TARGET_PROFILE  := $(patsubst %.a,%.pr.a,\
 			$(filter $(BUILD_PROFILE),$(TARGET_STANDARD)))
 TARGET_PROFILE_SHARED := $(filter %.s.so,$(TARGET_PROFILE))
