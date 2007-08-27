@@ -60,6 +60,7 @@ int yyparse(void);
 %token <string>  PRIORITY MCP ALLOW_CLI FILE_PROVIDER DS_MANAGER CAP_HANDLER
 %token <string>  NO_SIGMA0 SHOW_APP_AREAS ALL_SECTS_WRITABLE
 %token <string>  UNSIGNED STRING L4ENV_BINARY ALLOW_IPC DENY_IPC
+%token <string>  INTEGRITY_PARENT_ID INTEGRITY_ID HASH_MODULES
 
 %type <number>   number memnumber memmodifier task_flag
 %type <number>   memflagspec memflags memflag
@@ -235,6 +236,22 @@ task_constraint	: task_modspec
                               YYABORT;
                             }
                         }
+		| INTEGRITY_ID string
+			{
+                          if (cfg_task_integrity_id($2, CFG_INTEGRITY_ID))
+                            {
+                              yyerror("Error setting integrity ID.");
+                              YYABORT;
+                            }
+			}
+		| INTEGRITY_PARENT_ID string
+			{
+                          if (cfg_task_integrity_id($2, CFG_INTEGRITY_PARENT_ID))
+                            {
+                              yyerror("Error setting integrity ID for parent.");
+                              YYABORT;
+                            }
+			}
 		| task_flag
 			{
 			  if (cfg_task_flag($1))
@@ -269,6 +286,8 @@ task_flag	: DIRECT_MAPPED
 			{ $$ = CFG_F_SHOW_APP_AREAS; }
 		| ALL_SECTS_WRITABLE
 			{ $$ = CFG_F_ALL_WRITABLE; }
+		| HASH_MODULES
+			{ $$ = CFG_F_HASH_BINARY | CFG_F_HASH_MODULES; }
 		| L4ENV_BINARY
 			{ $$ = CFG_F_L4ENV_BINARY; }
 		;

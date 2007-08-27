@@ -137,6 +137,7 @@ typedef struct
 {
   int		has_x86_vga : 1;	///< program has access to VGA memory
   int		has_x86_bios : 1;	///< program has access to BIOS memory
+  int		hash_dyn_libs : 1;	///< integrity measurements for loaded libs
 } l4env_loader_info_t;
 
 /**

@@ -23,6 +23,9 @@
 #include "dm-if.h"
 #include "elf-loader.h"
 #include "fprov-if.h"
+#ifdef USE_INTEGRITY
+#include "integrity.h"
+#endif
 
 //#define DEBUG
 const char * const interp = "libld-l4.s.so";
@@ -146,6 +149,11 @@ restart:
 	  l4_addr_t beg  = l4_trunc_page(ph->p_vaddr);
 	  l4_addr_t end  = l4_round_page(ph->p_vaddr+ph->p_memsz);
 	  l4_size_t size = end - beg;
+#ifdef USE_INTEGRITY
+          /* ph->p_filesz is in potentially untrusted memory, so we must
+           * save it */
+          l4_size_t safe_ph_p_filesz = ph->p_filesz;
+#endif
 #ifdef DEBUG
 	  app_msg(app, "  sec %02d %08lx-%08lx (%s)", i, beg, end, name);
 #endif
@@ -184,6 +192,10 @@ restart:
 
 	  /* copy content of program section into dataspace */
 	  memcpy(map_addr+map_offs, (char*)image+ph->p_offset, ph->p_filesz);
+#ifdef USE_INTEGRITY
+          if (app->flags & APP_HASH_BINARY)
+            integrity_hash_data(app, "[binary_section]", map_addr+map_offs, safe_ph_p_filesz);
+#endif
 
           /* XXX Copy ELF header and program sections. The ldso interpreter
            *     needs both structures for linking. If I would find a way

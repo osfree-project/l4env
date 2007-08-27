@@ -29,7 +29,7 @@
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
 #include <l4/dm_mem/dm_mem.h>
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
 #include <l4/util/rdtsc.h>
 #endif
 
@@ -794,40 +794,16 @@ server_loop(void)
 }
 
 #ifdef ARCH_x86
-#include <l4/util/idt.h>
-static jmp_buf exception6_jmp_buf;
-static int     exception6_handler_active;
+static int sse_faulted;
 
-static void
-my_exception_handler(void)
+static int
+rm_fault_sse(l4_msgtag_t tag, l4_utcb_t *utcb, l4_threadid_t src)
 {
-  longjmp(exception6_jmp_buf, 1);
+  extern char after_sse_insn[];
+  sse_faulted = 1;
+  utcb->exc.eip = (l4_umword_t)after_sse_insn;
+  return L4RM_REPLY_SUCCESS;
 }
-
-static void
-exception6_handler_done(void)
-{
-  if (!exception6_handler_active)
-    enter_kdebug("???");
-  exception6_handler_active = 0;
-}
-
-static void
-exception6_handler_start(void)
-{
-  static struct
-    {
-      l4util_idt_header_t header;
-      l4util_idt_desc_t   desc[0x20];
-    } __attribute__((packed)) idt;
-
-  l4util_idt_init (&idt.header, sizeof(idt.desc)/sizeof(idt.desc[0]));
-  l4util_idt_entry(&idt.header, 6, my_exception_handler);
-  l4util_idt_load (&idt.header);
-
-  exception6_handler_active = 1;
-}
-
 #endif // ARCH_x86
 
 static void
@@ -838,20 +814,20 @@ check_fast_memcpy(void)
     {
       /* assume AMD64 has SSE */
 # ifdef ARCH_x86
-      exception6_handler_start();
-      if (!setjmp(exception6_jmp_buf))
-	{
-          l4_uint64_t src, dst;
-	  asm volatile("emms; movq (%0),%%mm0; movntq %%mm0,(%1); sfence; emms"
-                       : : "r"(&src), "r"(&dst) , "m"(src) : "memory");
-          exception6_handler_done();
+      l4_uint64_t src, dst;
+      l4rm_set_unkown_fault_callback(rm_fault_sse);
+      asm volatile("emms; movq (%0),%%mm0; movntq %%mm0,(%1); sfence; emms"
+                   : : "r"(&src), "r"(&dst) , "m"(src) : "memory");
+      asm volatile(".global after_sse_insn; after_sse_insn:" ::: "memory");
+      l4rm_set_unkown_fault_callback(NULL);
+      if (!sse_faulted)
+        {
 # endif
 	  printf("Using fast memcpy.\n");
 # ifdef ARCH_x86
 	}
       else
 	{
-          exception6_handler_done();
 	  printf("Fast memcpy not supported by this CPU.\n");
 	  use_fastmemcpy = 0;
 	}
@@ -864,31 +840,52 @@ check_fast_memcpy(void)
   printf("Not using fast memcpy\n");
 }
 
+#if defined(ARCH_x86) || defined(ARCH_amd64)
+static int rdpmc_faulted;
+
+static int
+rm_fault_rdpmc(l4_msgtag_t tag, l4_utcb_t *utcb, l4_threadid_t src)
+{
+  extern char after_rdpmc_insn[];
+  if (*(l4_uint16_t *)utcb->exc.eip != 0x330f) // sanity check
+    {
+      printf("Not faulted at rdpmc function (pc = %lx)", utcb->exc.eip);
+      return L4RM_REPLY_NO_REPLY;
+    }
+  utcb->exc.eip = (l4_umword_t)after_rdpmc_insn;
+  rdpmc_faulted = 1;
+  return L4RM_REPLY_SUCCESS;
+}
+
 static void
 check_cpuload(void)
 {
-#ifdef ARCH_x86
   if (cpu_load)
     {
-      exception6_handler_start();
-      if (!setjmp(exception6_jmp_buf))
-	{
-	  l4_rdpmc_32(0);
-          exception6_handler_done();
+      l4rm_set_unkown_fault_callback(rm_fault_rdpmc);
+      asm volatile("" ::: "memory");
+      l4_rdpmc_32(0);
+      asm volatile(".global after_rdpmc_insn; after_rdpmc_insn:" ::: "memory");
+      l4rm_set_unkown_fault_callback(NULL);
+      if (!rdpmc_faulted)
+        {
 	  printf("Enabling CPU load indicator\n"
 	         "\033[32mALTGR+PAUSE switches CPU load indicator!\033[m\n");
 	}
       else
 	{
-          exception6_handler_done();
-	  printf("Disabling CPU load indicator since rdpmc unsupported\n");
+	  printf("Disabling CPU load indicator since rdpmc not available\n");
 	  cpu_load = 0;
 	}
     }
-#else
-  cpu_load = 0;
-#endif
 }
+#else
+static void
+check_cpuload(void)
+{
+  cpu_load = 0;
+}
+#endif
 
 extern int console_puts(const char *s);
 static void
@@ -918,7 +915,7 @@ main(int argc, const char *argv[])
   if ((error = parse_cmdline(&argc, &argv,
 		    'a', "noaccel", "disable hardware acceleration",
 		    PARSE_CMD_SWITCH, 1, &noaccel,
-#ifdef ARCH_x86
+#ifndef ARCH_arm
 		    'c', "cpuload", "show CPU load using rdtsc and rdpmc(0)",
 		    PARSE_CMD_SWITCH, 1, &cpu_load,
 #endif

@@ -82,6 +82,9 @@ mcp			{ count(); return MCP; }
 allow_cli		{ count(); return ALLOW_CLI; }
 show_app_areas		{ count(); return SHOW_APP_AREAS; }
 all_sects_writable	{ count(); return ALL_SECTS_WRITABLE; }
+integrity_id		{ count(); return INTEGRITY_ID; }
+integrity_parent_id	{ count(); return INTEGRITY_PARENT_ID; }
+hash_modules    	{ count(); return HASH_MODULES; }
 ('[^']*'|\"[^\"]*\") 	{ count(); yylval.string = yytext; return STRING; }
 (0[xX]{HEXDIGIT}+|{DIGIT}+) { count();
 				   yylval.string = yytext; return UNSIGNED; }

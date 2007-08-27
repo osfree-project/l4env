@@ -33,6 +33,9 @@
 #include "elf-loader.h"
 #include "idl.h"
 #include "global.h"
+#ifdef USE_INTEGRITY
+#include "integrity.h"
+#endif
 
 static cfg_task_t *cfg_task[CFG_MAX_TASK];
 static cfg_task_t **cfg_task_nextfree = cfg_task;
@@ -474,6 +477,42 @@ cfg_task_ipc(const char *name, int type)
     return -L4_ENOMEM;
 
   caplist_add(*cfg_task_current, cap);
+
+  return 0;
+}
+
+/** Set (parent) ID used in integrity database in external service. */
+int
+cfg_task_integrity_id(const char *id64, int type)
+{
+#ifdef USE_INTEGRITY
+  integrity_id_t  *id;
+  cfg_integrity_t *integrity;
+
+  if (!*cfg_task_current)
+    {
+      printf("I don't know which task this integrity ID belongs to.\n");
+      return -L4_EINVAL;
+    }
+  
+  integrity = &(*cfg_task_current)->integrity;
+
+  /* initialize integrity member once */
+  if (!((*cfg_task_current)->flags & CFG_F_HASH_BINARY))
+    {
+      (*cfg_task_current)->flags |= CFG_F_HASH_BINARY;
+      memset(integrity, 0, sizeof(*integrity));
+    }
+
+  id = type == CFG_INTEGRITY_ID ? &integrity->id : &integrity->parent_id;
+
+  if (integrity_parse_id(id64, id))
+    return -L4_EINVAL;
+
+  printf("%s: %s: '%s'\n", (*cfg_task_current)->task.fname,
+         type == CFG_INTEGRITY_ID ? "integrity ID" : "parent's integrity ID",
+         id64);
+#endif
 
   return 0;
 }

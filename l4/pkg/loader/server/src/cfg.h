@@ -16,6 +16,9 @@
 #include <l4/dm_generic/types.h>
 #include <l4/env/env.h>
 #include "kquota.h"
+#ifdef USE_INTEGRITY
+#include "integrity-types.h"
+#endif
 
 #define CFG_MAX_MODULE		16	/* max # of modules per task */
 #define CFG_MAX_MEM		4	/* max # of mem regions per task */
@@ -51,6 +54,16 @@ typedef struct cfg_cap_t
 #define CAP_TYPE_DENY           2
 } cfg_cap_t;
 
+#ifdef USE_INTEGRITY
+typedef struct
+{
+  integrity_id_t id;
+  integrity_id_t parent_id;
+} cfg_integrity_t;
+#endif
+#define CFG_INTEGRITY_ID        1
+#define CFG_INTEGRITY_PARENT_ID 2
+
 typedef struct
 {
   cfg_module_t     task;                   /**< fname, parameters */
@@ -73,6 +86,9 @@ typedef struct
   l4dm_dataspace_t ds_image;               /**< dataspace of program image */
   l4_taskid_t      task_id;                /**< filled in after task startup */
   l4_uint32_t      flags;                  /**< see CFG_F_ constants */
+#ifdef USE_INTEGRITY
+  cfg_integrity_t  integrity;
+#endif
 #define CFG_F_TEMPLATE		0x00000001 /**< this is a template */
 #define CFG_F_MEMDUMP		0x00000002 /**< dump memory */
 #define CFG_F_DIRECT_MAPPED	0x00000004 /**< sections are mapped 1:1 */
@@ -87,6 +103,8 @@ typedef struct
 #define CFG_F_ALL_WRITABLE	0x00001000 /**< all sections writable */
 #define CFG_F_L4ENV_BINARY	0x00002000 /**< l4env binary with infopage */
 #define CFG_F_ALLOW_BIOS        0x00004000 /**< allow access to BIOS memory */
+#define CFG_F_HASH_BINARY       0x00008000 /**< hash sections of binary */
+#define CFG_F_HASH_MODULES      0x00010000 /**< hash multi-boot modules, too */
 } cfg_task_t;
 
 extern unsigned int cfg_verbose;
@@ -112,6 +130,7 @@ int  cfg_task_dsm(const char *fname);
 int  cfg_task_caphandler(const char *fname);
 int  cfg_task_kquota(const char *name);
 int  cfg_task_ipc(const char *name, int type);
+int  cfg_task_integrity_id(const char *id64, int type);
 
 int cfg_lookup_name(const char *name, l4_threadid_t *id);
 void cfg_setup_input(const char *cfg_buffer, int size);

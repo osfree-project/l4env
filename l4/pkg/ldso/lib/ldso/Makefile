@@ -3,6 +3,8 @@ L4DIR		?= $(PKGDIR)/../..
 
 include $(L4DIR)/mk/Makeconf
 
+WITH_INTEGRITY	?= n
+
 TARGET		 = libld-l4.s.so
 MODE		 = l4env
 SYSTEMS		 = x86-l4v2 arm-l4v2 amd64-l4v2
@@ -31,6 +33,11 @@ DEFINES		+= -DDEBUG_LEVEL=1
 endif
 endif
 
+DEFINES-$(WITH_INTEGRITY) += -DUSE_INTEGRITY=1
+DEFINES		+= $(DEFINES-y)
+
+LIBS-$(WITH_INTEGRITY) += -lcrypto_sha1_linux.p -llyon-client.p
+
 vpath %.c $(PKGDIR)/lib/ldso/ARCH-$(ARCH)
 vpath %.S $(PKGDIR)/lib/ldso/ARCH-$(ARCH)
 SRC_C_libld-l4.s.so = ldso.c emul_linux.c infopage.c helper.c log_init.c \
@@ -47,7 +54,8 @@ LDFLAGS		 = -Bsymbolic --warn-common --export-dynamic --sort-common \
 		   --gc-sections
 LIBS		 = -ldm_generic.p -ldm_mem.p -lgeneric_fprov.p \
 		   -lgeneric_ts.p -llogserver.p -lnames.p $(ROOTPLIB) \
-		   -ll4util.p -lsigma0.p -llist_alloc.p -ll4sys.p $(GCCLIB)
+		   -ll4util.p -lsigma0.p -llist_alloc.p -ll4sys.p \
+		   $(LIBS-y) $(GCCLIB)
 ifneq ($(filter x86 amd64,$(ARCH)),)
 LIBS		+= -ldemangle.p
 endif

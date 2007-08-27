@@ -60,7 +60,7 @@ contxt_init(long max_sbuf_size, int scrbuf_lines)
   /* ask for 'con' */
   if (!names_waitfor_name(CON_NAMES_STR, &con_l4id, CONTXT_TIMEOUT))
     {
-      LOGl("names failed");
+      LOGl("Could not find con at names");
       return -L4_EINVAL;
     }
   

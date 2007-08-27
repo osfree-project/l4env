@@ -20,6 +20,10 @@
 #include <l4/util/util.h>
 #include <l4/generic_ts/generic_ts.h>
 #include <l4/generic_fprov/generic_fprov-client.h>
+#ifdef USE_INTEGRITY
+#include <l4/crypto/sha1.h>
+#include <l4/lyon/lyon.h>
+#endif
 
 #include "dl-syscall.h"
 #include "infopage.h"
@@ -418,6 +422,21 @@ _dl_free_pages(void *addr, l4_size_t size)
     _dl_munmap(addr, size);
 }
 
+#ifdef USE_INTEGRITY
+static int
+integrity_extend_hash(const char *fname, const char *data, l4_size_t size)
+{
+  crypto_sha1_ctx_t ctx;
+  char hash[SHA1_DIGEST_SIZE];
+
+  sha1_digest_setup(&ctx);
+  sha1_digest_update(&ctx, (const unsigned char *)data, size);
+  sha1_digest_final(&ctx, (unsigned char *)hash);
+
+  return lyon_extend(l4_myself(), sizeof(hash), hash);
+}
+#endif
+
 /** Emulation of sys_open(). Get the whole file image from the file provider.
  *  The image is unmapped on sys_close(). */
 int
@@ -498,6 +517,15 @@ _dl_open(const char *name, int flags, unsigned mode)
 		     e->e_ident[0], e->e_ident[1], e->e_ident[2], e->e_ident[3]);
 	      break;
 	    }
+
+#ifdef USE_INTEGRITY
+          if (   (global_env->loader_info.hash_dyn_libs)
+              && (error = integrity_extend_hash(fname, (char *)open_addr, open_size)))
+            {
+              LOG("Failed to report integrity measurments for %s: %d", fname, error);
+              return -1;
+            }
+#endif
 
 	  m->addr = open_addr;
 	  m->size = l4_round_page(open_size);

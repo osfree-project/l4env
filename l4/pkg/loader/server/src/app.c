@@ -45,6 +45,9 @@
 #include "dm-if.h"
 #include "trampoline.h"
 #include "pager.h"
+#ifdef USE_INTEGRITY
+#include "integrity.h"
+#endif
 #include "debug.h"
 
 #define MAX_APP		32
@@ -733,6 +736,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	  l4_size_t file_size;
 	  l4_size_t mod_size;
 	  app_area_t *aa;
+          l4_addr_t map_addr;
 	  int error;
 
 	  app_msg(app, "Loading module \"%s\"", ct_mod->fname);
@@ -743,19 +747,28 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	   * the physical address of the whole dataspace.
 	   *
 	   * We don't attach the module to our address space since we do
-	   * nothing with app modules. These dataspaces get paged by the
-	   * application's region manager. */
+	   * nothing with app modules, unless we need have to hash them to do
+           * the integrity measurements. Later, these dataspaces get paged
+           * by the application's region manager. */
 	  if ((error = load_file(ct_mod->fname, fprov_id,
 				 app->env->memserv_id,
 				 cfg_modpath, /*contiguous=*/
 				 app->flags & APP_DIRECTMAP ? 1 : 0,
-				 0 /*don't attach to our address space*/,
+				 ct->flags & CFG_F_HASH_MODULES ? &map_addr : 0,
 				 &file_size, &ds)))
 	    {
 	      app_msg(app, "Error %d (%s) loading module \"%s\"",
 			   error, l4env_errstr(error), ct_mod->fname);
 	      return error;
 	    }
+
+          if (ct->flags & CFG_F_HASH_MODULES)
+            {
+#ifdef USE_INTEGRITY
+              integrity_hash_data(app, ct_mod->fname, (void *)map_addr, file_size);
+#endif
+              l4rm_detach((void *)map_addr);
+            }
 
 	  /* XXX too restrictive? */
 	  mod_size = l4_round_page(file_size);
@@ -1618,6 +1631,13 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
   app->flags |= ct->flags & CFG_F_NOSUPERPAGES   ? APP_NOSUPER     : 0;
   app->flags |= ct->flags & CFG_F_ALL_WRITABLE   ? APP_ALL_WRITBLE : 0;
 
+#ifdef USE_INTEGRITY
+  app->flags |= ct->flags & CFG_F_HASH_BINARY    ? APP_HASH_BINARY : 0;
+  env->loader_info.hash_dyn_libs = ct->flags & CFG_F_HASH_BINARY ? 1 : 0;
+#else
+  env->loader_info.hash_dyn_libs = 0;
+#endif
+
 #if defined(ARCH_x86) || defined(ARCH_amd64)
   env->loader_info.has_x86_vga  = ct->flags & CFG_F_ALLOW_VGA  ? 1 : 0;
   env->loader_info.has_x86_bios = ct->flags & CFG_F_ALLOW_BIOS ? 1 : 0;
@@ -1645,6 +1665,11 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
 	  || (error = app_start_interp(ct, app)))
 	;
 
+#ifdef USE_INTEGRITY
+      if (!error && ct->flags & CFG_F_HASH_BINARY)
+        integrity_report_hash(ct, app);
+#endif
+
       /* save task id for the client which sent the open() request */
       ct->task_id = app->tid;
 
@@ -1667,6 +1692,11 @@ app_init(cfg_task_t *ct, l4_taskid_t owner, app_t **ret_val)
   if (   (error = app_create_tid(app))
       || (error = app_start_static(ct, app)))
     ;
+
+#ifdef USE_INTEGRITY
+  if (!error && ct->flags & CFG_F_HASH_BINARY)
+    integrity_report_hash(ct, app);
+#endif
 
   /* save task id for the client which sent the open() request */
   ct->task_id = app->tid;

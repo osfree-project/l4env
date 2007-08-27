@@ -17,6 +17,9 @@
 
 #include "cfg.h"
 #include "debug.h"
+#ifdef USE_INTEGRITY
+#include "integrity-types.h"
+#endif
 
 #define MAX_APP_AREA	28		/**< maximum entries for memory
 					  regions of an application */
@@ -75,6 +78,7 @@ typedef struct
 #define APP_ALL_WRITBLE	0x00004000	/**< all sections writable */
 #define APP_ALLOW_BIOS  0x00008000      /**< access to BIOS allowed */
 #define APP_MSG_IO	0x00010000	/**< internal pager flag */
+#define APP_HASH_BINARY	0x00020000	/**< hash sections of binary */
   l4_addr_t		image;		/**< attached image */
   l4_size_t		sz_image;	/**< size of attached image */
   l4dm_dataspace_t	ds_image;	/**< dataspace containing the image */
@@ -91,6 +95,9 @@ typedef struct
   l4_taskid_t		owner;		/**< owner of that task. */
   l4_threadid_t         caphandler;     /**< capability fault handler */
   cfg_cap_t             *caplist;       /**< list of capabilities */
+#ifdef USE_INTEGRITY
+  integrity_hash_t      integrity_hash;
+#endif
   cfg_kquota_t          *kquota;        /**< kernel quota of this app */
 } app_t;
 
@@ -108,15 +115,15 @@ int  app_boot(cfg_task_t *ct, l4_taskid_t owner);
 int  app_cont(app_t *app);
 int  app_kill(l4_taskid_t task_id);
 int  app_dump(unsigned long task_id);
-int  app_info(unsigned long task_id, l4dm_dataspace_t *l4env_ds, 
+int  app_info(unsigned long task_id, l4dm_dataspace_t *l4env_ds,
 	      l4_threadid_t client, char **fname);
 
 void app_share_sections_with_client(app_t *app, l4_threadid_t client);
 int  init_infopage(l4env_infopage_t *env);
 
 int  app_attach_ds_to_pager(app_t *app, l4dm_dataspace_t *ds, l4_addr_t addr,
-                            l4_size_t size, l4_uint16_t type, 
-			    l4_uint32_t rights, 
+                            l4_size_t size, l4_uint16_t type,
+			    l4_uint32_t rights,
 			    int attach, const char *dbg_name, app_area_t **aa);
 
 #endif

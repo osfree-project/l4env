@@ -46,7 +46,10 @@ static int have_all_ioports;
 #endif
 
 /** pagefault callback function */
-static l4rm_callback_fn_t pf_callback = NULL;
+static l4rm_pf_callback_fn_t pf_callback;
+
+/** unknown fault callback function */
+static l4rm_unknown_fault_callback_fn_t unknown_fault_callback;
 
 /** forward exception for unhandled pagefaults */
 static int exception_on_unhandled_pf = 0;
@@ -80,6 +83,19 @@ __unknown_pf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
 
       return L4RM_REPLY_NO_REPLY;
     }
+}
+
+static int
+__handle_unknown_fault(l4_msgtag_t tag, l4_addr_t addr, l4_addr_t ip,
+                       CORBA_Object src_id)
+{
+  if (unknown_fault_callback)
+    return unknown_fault_callback(tag, l4_utcb_get(), *src_id);
+
+  LOG_printf("L4RM: unknown exception src="l4util_idfmt
+             " exc=%ld data=%lx,%lx\n",
+             l4util_idstr(*src_id), l4_msgtag_label(tag), addr, ip);
+  return L4RM_REPLY_NO_REPLY;
 }
 
 /*****************************************************************************/
@@ -344,12 +360,7 @@ l4rm_handle_pagefault(CORBA_Object src_id, l4_msgtag_t *tag,
   else if (EXPECT_FALSE(l4_msgtag_is_io_page_fault(*tag)))
     reply = __handle_iopf(addr, ip, src_id);
   else
-    {
-      LOG_printf("L4RM: unknown exception src="l4util_idfmt
-                 " exc=%ld data=%lx,%lx\n",
-                 l4util_idstr(*src_id), l4_msgtag_label(*tag), addr, ip);
-      reply = L4RM_REPLY_NO_REPLY;
-    }
+    reply = __handle_unknown_fault(*tag, addr, ip, src_id);
 
   DICE_SET_SHORTIPC_COUNT(buffer);
 
@@ -386,9 +397,22 @@ l4rm_handle_pagefault(CORBA_Object src_id, l4_msgtag_t *tag,
  */
 /*****************************************************************************/ 
 void
-l4rm_set_unkown_pagefault_callback(l4rm_callback_fn_t callback)
+l4rm_set_unkown_pagefault_callback(l4rm_pf_callback_fn_t callback)
 {
   pf_callback = callback;
+}
+
+/*****************************************************************************/
+/**
+ * \brief  Set callback function for unkown pagefaults
+ *
+ * \param  callback      Callback function
+ */
+/*****************************************************************************/
+void
+l4rm_set_unkown_fault_callback(l4rm_unknown_fault_callback_fn_t callback)
+{
+  unknown_fault_callback = callback;
 }
 
 /*****************************************************************************/

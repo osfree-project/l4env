@@ -1,0 +1,55 @@
+What is this?
+-------------
+
+Copyfs proxies all requests to another, potentially untrusted file
+provider specified on its command line. Once it retrieved a file from the
+other file provider, copyfs will create a new dataspace containing a copy
+of that file, so as to prevent any further modifications done by the
+potentially malicious file provider.
+
+
+What is it good for?
+--------------------
+
+For example, the loader and libld-l4.s.so may need to hash multiboot modules
+and dynamically loaded libraries, respectively, when doing "authenticated
+booting". To make sure that the measured data/code is actually the data/code
+used by the application, no untrusted service such as a file provider running
+in L4Linux must be allowed to change dataspace contents after the measurements
+are completed and the program is being executed. As copyfs is trusted not
+to alter file contents, it can meet this security requirement even if files
+were originally provided by untrusted sources.
+
+
+How do I use it?
+----------------
+
+Start an instance of copyfs for each untrusted file provider you wish to
+use in a secure way and make the loader and libld-l4.s.so use it instead of
+the untrusted one. For example, if bmodfs would be considered insecure, use a
+menu.lst and a loader config script that looks like the following excerpts:
+
+* menu.lst:
+
+  title "Secure System"
+    kernel ...
+    ...
+    module bmodfs
+      module important_file
+      module secure_app
+      module secure_app.cfg
+    module copyfs BMODFS
+    module loader secure_app.cfg
+
+* secure_app.cfg:
+
+  task "secure_app"
+    module "important_file"
+
+    file_provider COPYFS:BMODFS
+    hash_modules
+    integrity_id "w348zdsfh48z343...="
+    integrity_parent_ID "sd43535646ZEWE...="
+
+Copyfs will register itself with names using the names ID specified on the
+commandline, but with the prefix "COPYFS:" prepended to it.
