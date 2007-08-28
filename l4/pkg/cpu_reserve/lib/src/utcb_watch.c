@@ -323,15 +323,14 @@ static void watch_eval_utcbs(void){
  * and periodically polls the watched threads for events.
  */
 static void watch_thread(void*arg){
-    int err=0, m, e;
+    int err=0;
     l4_msgdope_t result;
     l4_threadid_t sender;
     l4_umword_t dw1;
     watch_cmd_t cmd;
     l4_timeout_t to;
 
-    l4util_micros2l4to((int)arg, &m, &e);
-    to = L4_IPC_TIMEOUT(0, 0, m, e, 0, 0);
+    to = l4_timeout(L4_IPC_TIMEOUT_NEVER, l4util_micros2l4to((int)arg));
 
     while(1){
 	if(err==L4_IPC_RETIMEOUT) watch_eval_utcbs();

@@ -41,7 +41,8 @@ void preempter_thread (void*arg){
     while (1) {
         // wait for preemption IPC
         if (l4_ipc_receive(l4_preemption_id(worker_id),
-                           L4_IPC_SHORT_MSG, &dw.lh.low, &dw.lh.high,
+                           L4_IPC_SHORT_MSG,
+                           (l4_umword_t*)&dw.lh.low, (l4_umword_t*)&dw.lh.high,
                            L4_IPC_NEVER, &result) == 0){
 
             if (dw.p.type == L4_RT_PREEMPT_TIMESLICE) {

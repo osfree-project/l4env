@@ -89,7 +89,7 @@ public: // Public methods
     CBEType* FindTaggedType(int nType, std::string sTag);
     CBEEnumType* FindEnum(std::string sName);
 
-    virtual bool AddOpcodesToFile(CBEHeaderFile* pFile);
+    void AddOpcodesToFile(CBEHeaderFile* pFile);
 
     virtual void Write(CBEImplementationFile& pFile);
     virtual void Write(CBEHeaderFile& pFile);

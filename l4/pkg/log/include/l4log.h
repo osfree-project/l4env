@@ -130,6 +130,12 @@ extern void LOG_format_check(const char*format,...)
 #define LOGdk(doit,msg...)       do { if(doit) LOGk(msg);      } while (0)
 #define LOG_Error(msg...)        LOGL("Error: " msg)
 
+#define LOG_logk(format...)      do {                                     \
+                                   char buf[35];                          \
+                                   LOG_snprintf(buf,sizeof(buf),format);  \
+                                   LOG_outstring_fiasco_tbuf(buf);        \
+                                 } while (0)
+
 #else
 #define LOG(a...)
 #define LOGl(a...)

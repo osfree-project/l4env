@@ -4,58 +4,58 @@
 \b dice [options] <i>&lt;input-file&gt;</i>
 
 \section DESCRIPTION DESCRIPTION
-DICE is an IDL compiler, which translates an Interface Definition 
-Language (IDL) file into communication stubs for the L4 
-micro-kernel. It is mainly used as an tool for the DROPS 
+DICE is an IDL compiler, which translates an Interface Definition
+Language (IDL) file into communication stubs for the L4
+micro-kernel. It is mainly used as an tool for the DROPS
 environment. That's where its name is from:
 <b>D</b>rops <b>I</b>dl <b>C</b>ompil<b>E</b>r.
 
-Input files should be written in either DCE IDL or CORBA IDL. If 
-the IDL file is written using the latter language, the -x option 
-should be used. IDL files should have the suffix <b>.idl</b>. The 
-compiler uses this suffix to differentiate different kinds of input 
-files. Inside an IDL file the <i>include</i> command can be used to 
-include other IDL files. To import the type and constant definitions 
-from an C header file use the <i>import</i> command inside an DCE 
+Input files should be written in either DCE IDL or CORBA IDL. If
+the IDL file is written using the latter language, the -x option
+should be used. IDL files should have the suffix <b>.idl</b>. The
+compiler uses this suffix to differentiate different kinds of input
+files. Inside an IDL file the <i>include</i> command can be used to
+include other IDL files. To import the type and constant definitions
+from an C header file use the <i>import</i> command inside an DCE
 IDL file.
 
-The DCE IDL and CORBA IDL used by the compiler mostly correspond to 
-the public standards, which describe these languages. Some 
-additions have been made to the languages to support kernel data 
-types of L4. In the CORBA IDL exist the keywords <b>refstring</b> 
-to describe a parameter as indirect string and <b>fpage</b> to 
+The DCE IDL and CORBA IDL used by the compiler mostly correspond to
+the public standards, which describe these languages. Some
+additions have been made to the languages to support kernel data
+types of L4. In the CORBA IDL exist the keywords <b>refstring</b>
+to describe a parameter as indirect string and <b>fpage</b> to
 describe a parameter as memory page (flexpage). The DCE IDL has
 been extended by some attributes indicating L4 special types and
 the <b>fpage</b> type.
 
-The compiler generates several files, also depending on the 
-specified options. Using the standard configuration five files are 
-generated. The client header and implementation file, the opcode 
-file - containing the function codes, the server header file and 
-the server-loop file. If the inline code option is specified only 
+The compiler generates several files, also depending on the
+specified options. Using the standard configuration five files are
+generated. The client header and implementation file, the opcode
+file - containing the function codes, the server header file and
+the server-loop file. If the inline code option is specified only
 one client file - the client header file - is generated. If the
-server skeleton option is specified a server template file is 
-generated, which contains function templates for the functions. If 
-the test-suite option is specified the server-template file is 
-generated with server functions to test the transmitted values. 
-There is also a test-suite file generated, which starts the server 
+server skeleton option is specified a server template file is
+generated, which contains function templates for the functions. If
+the test-suite option is specified the server-template file is
+generated with server functions to test the transmitted values.
+There is also a test-suite file generated, which starts the server
 loop threads and calls the client stubs.
 
 \subsection general General Options
 --help, --version, --verbose
 
 \subsection preprocess Preprocessing Options
--E, --preprocess, -I, -D, --with-cpp, -nostdinc, --corba, -M, -MM, -MD, 
+-E, --preprocess, -I, -D, --with-cpp, -nostdinc, --corba, -M, -MM, -MD,
 -MMD, -MF, -MP
 
 \subsection backend Code Generation Options
 --create-inline, --no-opcodes, --create-skeleton, --template,
---filename-prefix, --include-prefix, -f, 
+--filename-prefix, --include-prefix, -f,
 --back-end, --client, --server, --message-passing
 
 \section REQUIREMENTS REQUIREMENTS
-This compiler uses 'cpp' for preprocessing its input files. Thus 
-gcc (at least version 2.95) should be installed.
+This compiler uses 'cpp' for preprocessing its input files. Thus
+gcc should be installed.
 
 \section OPTIONS OPTIONS
 
@@ -67,7 +67,7 @@ Most `<b>-W</b>' options have two contrary forms: <b>-W</b>name and
 <DL>
 
 <DT><b>--help, -h</b></DT>
-<DD>Displays the help for dice, which is a short list of its 
+<DD>Displays the help for dice, which is a short list of its
 options.</DD>
 
 <DT><b>--version, -V</b></DT>
@@ -89,8 +89,8 @@ specifies, how much of the debug output the user will see.
 <DL>
 
 <DT><b>-E</b></DT>
-<DD>Stops the compiler after preprocessing the input file. The 
-output is printed to stdout. 
+<DD>Stops the compiler after preprocessing the input file. The
+output is printed to stdout.
 </DD>
 
 <DT><b>--preprocess, -P</b> &lt;string&gt;</DT>
@@ -158,7 +158,7 @@ in the dependency list.</DD>
 <DL>
 
 <DT><b>--create-inline, -i &lt;mode&gt;</b></DT>
-<DD>Creates the client stubs as inline functions. No client 
+<DD>Creates the client stubs as inline functions. No client
 implementation file is generated. Set &lt;mode&gt; to
 <BR><i>static</i> to generate &quot;static inline&quot; or
 <BR><i>extern</i> to generate &quot;extern inline&quot;.
@@ -166,23 +166,23 @@ implementation file is generated. Set &lt;mode&gt; to
 &quot;inline&quot; is generated.</DD>
 
 <DT><b>--no-opcode, -n</b></DT>
-<DD>Does not generate the opcode header file. The generated code 
-does use the constants as would have been specified in the opcode 
+<DD>Does not generate the opcode header file. The generated code
+does use the constants as would have been specified in the opcode
 file. You could use this option if you already have an opcode
-file with different function codes than the compiler would have 
+file with different function codes than the compiler would have
 generated.</DD>
 
 <DT><b>--create-skeleton, --template, -t</b></DT>
-<DD>Generates a server implementation file, which contains function 
-skeletons for the server functions. You could use this option the 
-first time you compile an IDL file to generate the function 
+<DD>Generates a server implementation file, which contains function
+skeletons for the server functions. You could use this option the
+first time you compile an IDL file to generate the function
 skeletons.</DD>
 
 <DT><b>--filename-prefix, -F</b> &lt;string&gt;</DT>
 <DD>Prefixes each generated file-name with <i>string</i>.</DD>
 
 <DT><b>--include-prefix, -p</b> &lt;string&gt;</DT>
-<DD>Prefixes each filename inside an include statement with 
+<DD>Prefixes each filename inside an include statement with
 <i>string</i>.</DD>
 
 <DT><b>-o</b> &lt;string&gt;</DT>
@@ -195,10 +195,10 @@ with <i>string</i>.)</DD>
 
 <DT><b>-ff</b>&lt;string&gt;</DT>
 <DD>Sets the granularity which is used to generate target files:
-<BR><i>idlfile</i> or 1 to generate one client C file per IDL file 
+<BR><i>idlfile</i> or 1 to generate one client C file per IDL file
 (default)
 <BR><i>module</i> or 2 to generate one client C file per module
-<BR><i>interface</i> or 3 to generate one client C file per 
+<BR><i>interface</i> or 3 to generate one client C file per
 interface
 <BR><i>function</i> or 4 to generate one client C file per function
 </DD>
@@ -230,7 +230,7 @@ is generated.
 in the header file is generated if the server loop function
 is generated. The implementation has to be provided by the user.
 If the server loop function is also absent, the declaration in
-the header file is missing as well (user might define own 
+the header file is missing as well (user might define own
 function).
 </DD>
 
@@ -247,7 +247,7 @@ is passed if there are any user-provided information, etc.
 </DD>
 
 <DT><b>-fforce-corba-alloc</b></DT>
-<DD>Force the use of the 'CORBA_alloc' function. Otherwise the 
+<DD>Force the use of the 'CORBA_alloc' function. Otherwise the
 'malloc' function pointer in the CORBA_Environment structure
 would be used. These functions are only invoked to allocate
 memory for variable or fixed sized arrays dynamically.
@@ -257,7 +257,7 @@ memory for variable or fixed sized arrays dynamically.
 <DD>Force the use of CORBA_Environment's malloc member. Otherwise
 CORBA_alloc is used, because it is assumed that the server has
 a default CORBA_Environment, which does not contain a valid malloc
-function. 
+function.
 </DD>
 
 <DT><b>-fforce-c-bindings</b></DT>
@@ -398,14 +398,14 @@ initiate a warning.</DD>
 <DT><b>-Wprealloc</b></DT>
 <DD>Warn if CORBA_alloc is used to allocate memory for unbound
 variable sized parameters. CORBA_alloc has to be implemented by
-the user, the syntax of this function is the same as malloc, 
+the user, the syntax of this function is the same as malloc,
 which would make a simple implementation simply wrap malloc.</DD>
 
 <DT><b>-Wmaxsize</b></DT>
 <DD>Warn if no maximum size is given for a variable sized parameter.
 This usually means that the compiler has to guess the size of the
 receive buffer and may choose an value wich is either far to large
-or far to small. Sometimes the receive buffer is then allocated 
+or far to small. Sometimes the receive buffer is then allocated
 using CORBA_alloc (see -Wprealloc for details on that).</DD>
 
 </DL>
@@ -416,8 +416,8 @@ Ronald Aigner <ra3@os.inf.tu-dresden.de>
 \section SEE SEE ALSO
 cpp(1) for preprocessing options.
 
-http://www.omg.org/ for a specification of the CORBA IDL (or OMG 
-IDL). 
+http://www.omg.org/ for a specification of the CORBA IDL (or OMG
+IDL).
 or http://www.infosys.tuwien.ac.at/Research/Corba/OMG/corb2prf.htm
 
 http://www.opengroup.org/onlinepubs/9629399/chap4.htm for the DCE IDL

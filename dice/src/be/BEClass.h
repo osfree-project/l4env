@@ -127,7 +127,7 @@ public: // Public methods
     void Write(CBEImplementationFile& pFile);
     void WriteClassName(CBEFile& pFile);
 
-    bool AddOpcodesToFile(CBEHeaderFile* pFile);
+    void AddOpcodesToFile(CBEHeaderFile* pFile);
     int GetClassNumber();
 
     CFunctionGroup* FindFunctionGroup(CBEFunction *pFunction);
@@ -171,7 +171,7 @@ protected:
     void AddMessageBuffer(CFEInterface* pFEInterface);
 
     void CreateAliasForClass(CFEInterface *pFEInterface);
-    bool AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile* pFile);
+    void AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile* pFile);
 
     void WriteElements(CBEHeaderFile& pFile);
     void WriteElements(CBEImplementationFile& pFile);

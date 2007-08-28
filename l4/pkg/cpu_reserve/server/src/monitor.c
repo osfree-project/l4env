@@ -19,7 +19,8 @@
 int enable_rt_mon;
 
 static inline int thread_equal(l4_threadid_t a, l4_threadid_t b){
-    return a.lh.low == b.lh.low;
+    return a.id.lthread == b.id.lthread &&
+	a.id.task == b.id.task;
 }
 
 /*!\brief Start the histogramm of dl overflow of a thread

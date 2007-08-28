@@ -26,7 +26,8 @@ extern int watch_verbose;
 /*!\brief Compare threads, ignoring chief, nest and site
  */
 static inline int thread_equal(l4_threadid_t a, l4_threadid_t b){
-    return a.lh.low == b.lh.low;
+    return a.id.lthread == b.id.lthread &&
+	a.id.task == b.id.task;
 }
 
 /*!\brief Will be called by our own watcher thread on timeslice overrrun
@@ -60,7 +61,7 @@ void watcher_fn(void*arg){
     while (1) {
         // wait for preemption IPC
         if (l4_ipc_wait(&thread,
-			L4_IPC_SHORT_MSG, &dw.lh.low, &dw.lh.high,
+			L4_IPC_SHORT_MSG, (l4_umword_t*)&dw.lh.low, (l4_umword_t*)&dw.lh.high,
 			L4_IPC_NEVER, &result) == 0){
 
 	    if(l4_thread_equal(thread, main_id)){

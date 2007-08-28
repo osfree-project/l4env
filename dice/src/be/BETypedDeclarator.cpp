@@ -288,7 +288,7 @@ CBETypedDeclarator::WriteGetSize(CBEFile& pFile,
 	{
     	    CBEDeclarator *pSizeName = pAttr->m_Parameters.First();
 	    CMessages::Warning(
-	"Size attribute (%s) is neither parameter nor defined as constant.",
+	"Size attribute (%s) is neither parameter nor defined as constant.\n",
 		pSizeName->GetName().c_str());
 	}
 	assert(pConstant);
@@ -465,7 +465,7 @@ CBETypedDeclarator::WriteGetMaxSize(CBEFile& pFile,
 	{
     	    CBEDeclarator *pSizeName = pAttr->m_Parameters.First();
 	    CMessages::Warning(
-"Size attribute (%s) is neither parameter nor defined as constant.",
+"Size attribute (%s) is neither parameter nor defined as constant.\n",
 		pSizeName->GetName().c_str());
 	}
 	assert(pConstant);

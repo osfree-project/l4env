@@ -90,7 +90,7 @@ public: // Public methods
 
     void AddToImpl(CBEImplementationFile* pImpl);
     void AddToHeader(CBEHeaderFile* pHeader);
-    bool AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile);
+    void AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile);
 
     void PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol);
 

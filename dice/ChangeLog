@@ -1,7 +1,8 @@
 $Log, ChangeLog,v $
 
-x.x.x
+3.2.0
  - [feature] add L4.Fiasco backend to reflect changes in L4.Fiasco API
+   (uses ipc_*_tag variants of IPC C-Bindings)
  - [feature] replace parsers with new C/C++ and IDL parsers
    * import/include changes: import for C header files, include for IDL files
      only

@@ -62,7 +62,7 @@ int l4cpu_dp_begin(void){
     } else {
 	LOGdk(CONFIG_LOG_DP,"cli'd by %x", thread);
     }
-    if(l4util_inc32_res(&preempt_counter)==1){
+    if(l4util_inc32_res((l4_uint32_t*)&preempt_counter)==1){
 	LOGdk(CONFIG_LOG_DP, "delayed_preempt: started");
 	if(l4cpu_dp_start_callback) l4cpu_dp_start_callback();
 
@@ -89,7 +89,7 @@ int l4cpu_dp_begin(void){
 int l4cpu_dp_end(void){
     int err;
 
-    if((err=l4util_dec32_res(&preempt_counter))==0){
+    if((err=l4util_dec32_res((l4_uint32_t*)&preempt_counter))==0){
 	l4_cpu_time_t diff;
 
 	LOGdk(CONFIG_LOG_DP, "delayed_preempt: done now");

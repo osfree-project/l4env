@@ -1028,7 +1028,7 @@ CBEFunction* CBEClass::FindFunction(string sFunctionName,
  * This implementation adds the base opcode for this class and all opcodes for
  * its functions.
  */
-bool CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
+void CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(header: %s) called\n",
 	__func__, pFile->GetFileName().c_str());
@@ -1037,7 +1037,7 @@ bool CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
     {
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	    "CBEClass::%s wrong target file\n", __func__);
-        return true;
+        return;
     }
 
     // first create classes in reverse order, so we can build correct parent
@@ -1084,23 +1084,17 @@ bool CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
 	 iter != m_FunctionGroups.end();
 	 iter++)
     {
-        if (!AddOpcodesToFile((*iter)->GetOperation(), pFile))
-	{
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s could not add opcodes of function group\n", __func__);
-            return false;
-	}
+        AddOpcodesToFile((*iter)->GetOperation(), pFile);
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
-    return true;
 }
 
 /** \brief adds the opcode for a single function
  *  \param pFEOperation the function to add the opcode for
  *  \param pFile the file to add the opcode to
  */
-bool
+void
 CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation,
     CBEHeaderFile* pFile)
 {
@@ -1157,7 +1151,6 @@ CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation,
     pOpcode->CreateBackEnd(pType, sName, pTopBrace, true/*always defined*/);
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
-    return true;
 }
 
 /** \brief calculates the number used as base opcode number

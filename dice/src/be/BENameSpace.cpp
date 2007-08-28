@@ -172,7 +172,7 @@ void CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary)
 	     iterBIN++)
         {
             // search for interface
-            CFEInterface *pFEBaseInterface = 
+            CFEInterface *pFEBaseInterface =
 		pFELibrary->FindInterface((*iterBIN)->GetName());
             if (pFEBaseInterface)
             {
@@ -180,7 +180,7 @@ void CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary)
                 if (pNestedLib && (pNestedLib != pFELibrary))
                 {
                     // init nested library
-                    CBENameSpace *pNameSpace = 
+                    CBENameSpace *pNameSpace =
 			FindNameSpace(pNestedLib->GetName());
                     if (!pNameSpace)
                     {
@@ -385,27 +385,13 @@ void CBENameSpace::AddToImpl(CBEImplementationFile* pImpl)
  *
  * This implements the opcodes of the included classes and nested namespaces.
  */
-bool CBENameSpace::AddOpcodesToFile(CBEHeaderFile* pFile)
+void CBENameSpace::AddOpcodesToFile(CBEHeaderFile* pFile)
 {
-    vector<CBEClass*>::iterator iterC;
-    for (iterC = m_Classes.begin();
-	 iterC != m_Classes.end();
-	 iterC++)
-    {
-        if (!(*iterC)->AddOpcodesToFile(pFile))
-            return false;
-    }
+    for_each(m_Classes.begin(), m_Classes.end(),
+	std::bind2nd(std::mem_fun(&CBEClass::AddOpcodesToFile), pFile));
 
-    vector<CBENameSpace*>::iterator iterN;
-    for (iterN = m_NestedNamespaces.begin();
-	 iterN != m_NestedNamespaces.end();
-	 iterN++)
-    {
-        if (!(*iterN)->AddOpcodesToFile(pFile))
-            return false;
-    }
-
-    return true;
+    for_each(m_NestedNamespaces.begin(), m_NestedNamespaces.end(),
+	std::bind2nd(std::mem_fun(&CBENameSpace::AddOpcodesToFile), pFile));
 }
 
 /** \brief writes the name-space to the header file
@@ -604,7 +590,7 @@ void CBENameSpace::WriteClass(CBEClass *pClass, CBEHeaderFile& pFile)
  *  \param pNameSpace the namespace to write
  *  \param pFile the file to write to
  */
-void CBENameSpace::WriteNameSpace(CBENameSpace *pNameSpace, 
+void CBENameSpace::WriteNameSpace(CBENameSpace *pNameSpace,
     CBEImplementationFile& pFile)
 {
     assert(pNameSpace);
@@ -628,8 +614,8 @@ void CBENameSpace::WriteNameSpace(CBENameSpace *pNameSpace,
  *
  * Writing a tagged type highly depends on language.
  */
-void 
-CBENameSpace::WriteTaggedType(CBEType *pType, 
+void
+CBENameSpace::WriteTaggedType(CBEType *pType,
     CBEHeaderFile& pFile)
 {
     assert(pType);
@@ -700,7 +686,7 @@ CBETypedef* CBENameSpace::FindTypedef(string sTypeName, CBETypedef* pPrev)
     CBETypedef *pTypedef = m_Typedefs.Find(sTypeName, pPrev);
     if (pTypedef)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	    "CBENameSpace::%s: typedef found in namespace, return %p\n", __func__,
 	    pTypedef);
 	return pTypedef;

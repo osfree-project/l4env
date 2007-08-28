@@ -494,7 +494,7 @@ void CBERoot::AddToImpl(CBEImplementationFile* pImpl)
  * only add the opcodes of the current IDL file, it is used as reference to
  * find these classes and namespaces
  */
-bool CBERoot::AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile)
+void CBERoot::AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"%s(header: %s, file: %s) called\n", __func__,
@@ -510,8 +510,7 @@ bool CBERoot::AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile)
 	    iterF != pFEFile->m_ChildFiles.end();
 	    iterF++)
 	{
-	    if (!AddOpcodesToFile(pHeader, *iterF))
-		return false;
+	    AddOpcodesToFile(pHeader, *iterF);
         }
     }
     // classes
@@ -521,15 +520,8 @@ bool CBERoot::AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile)
 	 iterI++)
     {
         CBEClass *pClass = FindClass((*iterI)->GetName());
-        if (!pClass)
-        {
-            CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s failed because class %s could not be found\n",
-                __func__, (*iterI)->GetName().c_str());
-            return false;
-        }
-        if (!pClass->AddOpcodesToFile(pHeader))
-            return false;
+	assert(pClass);
+        pClass->AddOpcodesToFile(pHeader);
     }
     // namespaces
     vector<CFELibrary*>::iterator iterL;
@@ -538,17 +530,9 @@ bool CBERoot::AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile)
 	 iterL++)
     {
         CBENameSpace *pNameSpace = FindNameSpace((*iterL)->GetName());
-        if (!pNameSpace)
-        {
-            CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"%s failed because namespace %s could not be found\n",
-                __func__, (*iterL)->GetName().c_str());
-            return false;
-        }
-        if (!pNameSpace->AddOpcodesToFile(pHeader))
-            return false;
+	assert(pNameSpace);
+        pNameSpace->AddOpcodesToFile(pHeader);
     }
-    return true;
 }
 
 /** \brief prints the generated target files to the given output
@@ -559,13 +543,9 @@ bool CBERoot::AddOpcodesToFile(CBEHeaderFile* pHeader, CFEFile *pFEFile)
 void CBERoot::PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol)
 {
     if (m_pClient)
-    {
         m_pClient->PrintTargetFiles(output, nCurCol, nMaxCol);
-    }
     if (m_pComponent)
-    {
         m_pComponent->PrintTargetFiles(output, nCurCol, nMaxCol);
-    }
 }
 
 /** \brief searches for a type with the given tag

@@ -5,11 +5,13 @@ current
 
 revision
     The implementation number of the current interface.
-    
+
 age
     The difference between the newest and oldest interfaces that this library
     implements. In other words, the library implements all the interface
-    numbers in the range from number current - age to current. 
+    numbers in the range from number current - age to current.
+
+current:revision:age
 
 
 Rules to change the numbers:
@@ -28,4 +30,4 @@ Rules to change the numbers:
 
 4. If the new interface has removed elements with respect to the previous
    interface, then you have broken backward compatibility and age must be
-   reset to `0'. This release has a new, but backwards incompatible interface. 
+   reset to `0'. This release has a new, but backwards incompatible interface.
