@@ -430,8 +430,8 @@ integrity_extend_hash(const char *fname, const char *data, l4_size_t size)
   char hash[SHA1_DIGEST_SIZE];
 
   sha1_digest_setup(&ctx);
-  sha1_digest_update(&ctx, (const unsigned char *)data, size);
-  sha1_digest_final(&ctx, (unsigned char *)hash);
+  sha1_digest_update(&ctx, data, size);
+  sha1_digest_final(&ctx, hash);
 
   return lyon_extend(l4_myself(), sizeof(hash), hash);
 }

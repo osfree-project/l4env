@@ -65,16 +65,13 @@ DEPS	+= $(foreach file,$(TARGET), $(dir $(file)).$(notdir $(file)).d)
 
 $(filter-out %.s.so %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS)
 	@$(AR_MESSAGE)
-#	$(AR) rvs $@ $(foreach obj, $(OBJS_$@),		\
-             $(firstword $(foreach dir, . $(VPATH),	\
-                  $(wildcard $(dir)/$(obj)))))
 	$(VERBOSE)$(RM) $@
 	$(VERBOSE)$(AR) crs $@ $(OBJS)
 	@$(BUILT_MESSAGE)
 
 # shared lib
 $(filter %.s.so, $(TARGET)):%.s.so: $(OBJS) $(CRTP) $(LIBDEPS)
-	@$(AR_MESSAGE)
+	@$(LINK_SHARED_MESSAGE)
 	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -m $(LD_EMULATION) \
 	   -o $@ -shared $(addprefix -T,$(LDSCRIPT)) $(CRTP) $(OBJS) $(LDFLAGS)
 	@$(BUILT_MESSAGE)
@@ -83,7 +80,7 @@ $(filter %.s.so, $(TARGET)):%.s.so: $(OBJS) $(CRTP) $(LIBDEPS)
 # is either later included as a whole or not at all (important for static
 # constructors)
 $(filter %.o.a %.o.pr.a, $(TARGET)):%.a: $(OBJS) $(LIBDEPS)
-	@$(AR_MESSAGE)
+	@$(LINK_PARTIAL_MESSAGE)
 	$(VERBOSE)$(call MAKEDEP,$(LD)) $(LD) -m $(LD_EMULATION) \
 	   -o $@ -r $(OBJS) $(LDFLAGS)
 	@$(BUILT_MESSAGE)

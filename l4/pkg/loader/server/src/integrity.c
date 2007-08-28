@@ -40,16 +40,16 @@ integrity_parse_id(const char *id64, integrity_id_t *id)
 }
 
 void
-integrity_hash_data(app_t *app, const char *name, const unsigned char *data, size_t size)
+integrity_hash_data(app_t *app, const char *name, const char *data, size_t size)
 {
   crypto_sha1_ctx_t ctx;
 
   sha1_digest_setup(&ctx);
-  sha1_digest_update(&ctx, (const unsigned char *)app->integrity_hash, sizeof(app->integrity_hash));
+  sha1_digest_update(&ctx, app->integrity_hash, sizeof(app->integrity_hash));
   if (name)
-    sha1_digest_update(&ctx, (const unsigned char *)name, strlen(name));
+    sha1_digest_update(&ctx, name, strlen(name));
   sha1_digest_update(&ctx, data, size);
-  sha1_digest_final(&ctx, (unsigned char *)app->integrity_hash);
+  sha1_digest_final(&ctx, app->integrity_hash);
 
   app_msg(app, "Hashed %s", name);
 }

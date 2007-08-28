@@ -20,7 +20,7 @@ integrity_parse_id(const char *id64, integrity_id_t *id);
 
 void
 integrity_hash_data(app_t *app, const char *name,
-                    const unsigned char *data, size_t size);
+                    const char *data, size_t size);
 
 int
 integrity_report_hash(const cfg_task_t *cfg, app_t *app);
