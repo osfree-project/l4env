@@ -82,22 +82,22 @@ CL4BEMarshaller::PositionMarshaller::~PositionMarshaller()
  * try the special struct with the word sized members.
  */
 bool
-CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile, 
-	CBEFunction *pFunction, 
-	CMsgStructType nType, 
+CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
+	CBEFunction *pFunction,
+	CMsgStructType nType,
 	int nPosition,
 	bool bReference,
 	bool bLValue)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"PositionMarshaller::%s(%s, %s, %d, %d, %s, %s) called\n", __func__,
-	pFile.GetFileName().c_str(), pFunction ? pFunction->GetName().c_str() : "", 
+	pFile.GetFileName().c_str(), pFunction ? pFunction->GetName().c_str() : "",
 	(int)nType, nPosition, bReference ? "true" : "false",
 	bLValue ? "true" : "false");
 
     m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
     m_bReference = bReference;
-    
+
     // get the message buffer type
     CBEMsgBufferType *pMsgType = GetMessageBufferType(pFunction);
 
@@ -110,7 +110,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 	nType = CMsgStructType::Generic;
 	sClassName = string();
     }
-    CBEStructType *pStruct = pMsgType->GetStruct(sFuncName, sClassName, 
+    CBEStructType *pStruct = pMsgType->GetStruct(sFuncName, sClassName,
 	nType);
     if (!pStruct)
     {
@@ -121,11 +121,11 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
     }
     assert(pStruct);
 
-    CBETypedDeclarator *pMember = 
+    CBETypedDeclarator *pMember =
 	GetMemberAt(pMsgType, pStruct, nPosition);
     if (!pMember)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "PositionMarshaller::%s: could not find a member at pos %d in struct\n",
 	    __func__, nPosition);
 	// struct too small, nothing to put there
@@ -142,7 +142,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
     int nMemberSize = GetMemberSize(pMember);
     if (nMemberSize != m_nPosSize)
     {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 	    "PositionMarshaller::%s: member of different size\n", __func__);
 	if (bReference)
 	    pFile << "&";
@@ -155,17 +155,17 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 	CBETypedDeclarator *pParameter = pFunction->FindParameter(sName);
 	if (!pParameter)
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"PositionMarshaller::%s: parameter %s not found, try special\n", __func__,
 		sName.c_str());
 	    // only call this method if we are sure the member is special
 	    // e.g. return, opcode, etc.
-	    WriteSpecialMember(pFile, pFunction, pMember, nType, 
+	    WriteSpecialMember(pFile, pFunction, pMember, nType,
 		bReference, bLValue);
 	}
 	else
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
+	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"PositionMarshaller::%s: parameter found, write access to member\n", __func__);
 	    // if there is a transmit_as attribute, replace the type
 	    CBEAttribute *pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS);
@@ -177,10 +177,10 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 	    {
 		CBERoot *pRoot = pParameter->GetSpecificParent<CBERoot>();
 		assert(pRoot);
-		
+
 		while (!pAttr && pParamType->IsOfType(TYPE_USER_DEFINED))
 		{
-		    string sTypeName = 
+		    string sTypeName =
 			static_cast<CBEUserDefinedType*>(pParamType)->GetName();
 		    CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
 		    if (pTypedef)
@@ -196,8 +196,8 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 		// get type from attribute
 		pTransmitType = static_cast<CBEType*>(pAttr->GetAttrType());
 	    }
-	    
-	    /* if member is constructed type, cast to word size 
+
+	    /* if member is constructed type, cast to word size
 	     * test for flexpage explicetly, because in C its a constructed
 	     * type but internally handled as simple type
 	     */
@@ -240,12 +240,12 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 		// for simple types here.
 		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		    "PositionMarshaller::%s: bReference=%s, pTransmitType=%p, C++=%s, bLValue=%s\n",
-		    __func__, bReference ? "true" : "false", pTransmitType, 
+		    __func__, bReference ? "true" : "false", pTransmitType,
 		    CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) ? "true" : "false",
 		    bLValue ? "true" : "false");
 		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		    "PositionMarshaller::%s: !%s && %p && !(%s && %s)\n", __func__,
-		    bReference ? "true" : "false", pTransmitType, 
+		    bReference ? "true" : "false", pTransmitType,
 		    CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) ? "true" : "false",
 		    bLValue ? "true" : "false");
 		if (!bReference && pTransmitType &&
@@ -277,7 +277,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
     return true;
 }
 
-/** \brief retrieve the type of the message buffer 
+/** \brief retrieve the type of the message buffer
  *  \param pFunction the function to get the type for
  *  \return a reference to the message buffer type
  *
@@ -298,7 +298,7 @@ CL4BEMarshaller::PositionMarshaller::GetMessageBufferType(
     else
 	pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
-    CBEMsgBufferType *pType = 
+    CBEMsgBufferType *pType =
 	dynamic_cast<CBEMsgBufferType*>(pMsgBuffer->GetType());
     assert (pType);
     return pType;
@@ -372,8 +372,8 @@ CL4BEMarshaller::PositionMarshaller::GetMemberSize(CBETypedDeclarator *pMember)
  *
  * This method first tests for special members, such as the opcode. Such
  * special parameters might be treated differently (e.g. use the opcode
- * constant directly). 
- * Otherwise (no known special parameter) the member of the struct has to be 
+ * constant directly).
+ * Otherwise (no known special parameter) the member of the struct has to be
  * used, because this method is only called if we are sure that the given
  * parameter is special.
  */
@@ -389,7 +389,7 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile& pFile,
     // function to obtain the correct declarator of the function's scope
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
-    
+
     // test for opcode (only if reference false, otherwise use struct member)
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     CBEDeclarator *pDecl = pMember->m_Declarators.First();
@@ -436,7 +436,7 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile& pFile,
     if (pReturn && pReturn->m_Declarators.Find(pDecl->GetName()))
     {
 	pReturn = pFunction->m_LocalVariables.Find(pDecl->GetName());
-	pFile << pReturn->m_Declarators.First()->GetName();	
+	pFile << pReturn->m_Declarators.First()->GetName();
 	return;
     }
 
@@ -486,11 +486,11 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile& pFile,
     // casted automatically. Compiler only complaints about mismatching
     // pointers.
     // Do not cast an l-Value in C++
+    CBEType *pType = pParameter->GetType();
     if (bReference &&
 	!(CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
 	    bLValue))
     {
-	CBEType *pType = pParameter->GetType();
 	int nFEType = pType->GetFEType();
 	bool bUnsigned = pType->IsUnsigned();
 	if (!(bUnsigned && (nFEType == TYPE_MWORD)))
@@ -504,13 +504,13 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile& pFile,
     }
     // create reference if necessary
     // create reference after writing type
-    if (nStars < 0)
+    if (nStars < 0 && !pType->IsPointerType())
     {
 	if (nStars < -1)
 	    CMessages::Error("Cannot create more than one reference to" \
 		" parameter %s (%s: %d).\n", pDecl->GetName().c_str(),
 		__FILE__, __LINE__);
-	
+
 	pFile << "&";
     }
     // dereference if necessary
@@ -520,7 +520,7 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile& pFile,
 	pFile << "*";
     // print name
     pFile << pDecl->GetName();
-    
+
     // FIXME test array
     // FIXME test complex type?
 
