@@ -127,7 +127,7 @@ CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation)
  *  \param pMsgBuffer the message buffer to initialize
  *  \return true on success
  */
-void 
+void
 CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
@@ -155,8 +155,8 @@ CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
  *
  * Only OUT parameters are marshalled by this function
  */
-bool 
-CBEReplyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, 
+bool
+CBEReplyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
 	bool bMarshal)
 {
     if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
@@ -174,12 +174,12 @@ CBEReplyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  *
  * A reply-only function is written at the component's side only.
  */
-bool 
+bool
 CBEReplyFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
-    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
+    return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief test if this function should be written
@@ -188,12 +188,12 @@ CBEReplyFunction::DoWriteFunction(CBEHeaderFile* pFile)
  *
  * A reply-only function is written at the component's side only.
  */
-bool 
+bool
 CBEReplyFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
-    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
+    return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief gets the direction this function sends data to
@@ -228,11 +228,11 @@ CBEReplyFunction::AddBeforeParameters(void)
 {
     // call base class to add object
     CBEOperationFunction::AddBeforeParameters();
-    
+
     if (!GetReturnType()->IsVoid())
     {
         CBETypedDeclarator *pReturn = GetReturnVariable();
-        CBETypedDeclarator *pReturnParam = 
+        CBETypedDeclarator *pReturnParam =
 	    static_cast<CBETypedDeclarator*>(pReturn->Clone());
         m_Parameters.Add(pReturnParam);
     }
@@ -247,7 +247,7 @@ CBEReplyFunction::GetExceptionVariable()
     CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
     if (pRet)
 	return pRet;
-    
+
     // if no parameter, then try to find it in the message buffer
     CBEMsgBuffer *pMsgBuf = GetMessageBuffer();
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s message buffer in class at %p\n",
@@ -298,7 +298,7 @@ int CBEReplyFunction::GetSize(DIRECTION_TYPE nDirection)
  * This function decides, which parameters to add and which not. The
  * parameters to reply are for component-to-client reply the OUT parameters.
  */
-void 
+void
 CBEReplyFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
     if (!(pFEParameter->m_Attributes.Find(ATTR_OUT)))

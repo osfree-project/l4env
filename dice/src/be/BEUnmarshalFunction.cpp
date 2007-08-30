@@ -314,7 +314,7 @@ CBEUnmarshalFunction::DoWriteFunction(CBEHeaderFile* pFile)
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
         (m_Attributes.Find(ATTR_OUT)))
         return true;
-    if (dynamic_cast<CBEComponent*>(pFile->GetTarget()))
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT))
     {
 	CBETypedDeclarator *pObj = GetObject();
 	vector<CBETypedDeclarator*>::iterator iter;
@@ -347,7 +347,7 @@ CBEUnmarshalFunction::DoWriteFunction(CBEImplementationFile* pFile)
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
         (m_Attributes.Find(ATTR_OUT)))
         return true;
-    if (dynamic_cast<CBEComponent*>(pFile->GetTarget()))
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT))
     {
 	CBETypedDeclarator *pObj = GetObject();
 	vector<CBETypedDeclarator*>::iterator iter;

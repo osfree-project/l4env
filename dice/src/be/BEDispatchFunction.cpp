@@ -364,7 +364,7 @@ CBEDispatchFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
-    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
+    return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief test fi this function should be written
@@ -382,7 +382,7 @@ CBEDispatchFunction::DoWriteFunction(CBEImplementationFile* pFile)
     // option NO_DISPATCHER is set
     if (CCompiler::IsOptionSet(PROGRAM_NO_DISPATCHER))
         return false;
-    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
+    return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief writes the invocation of the message transfer

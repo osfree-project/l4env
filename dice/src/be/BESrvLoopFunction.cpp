@@ -413,7 +413,7 @@ CBESrvLoopFunction::DoWriteFunction(CBEHeaderFile* pFile)
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBESrvLoopFunction::%s finished.\n",
 	__func__);
-    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
+    return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief test if this function should be written
@@ -438,7 +438,7 @@ CBESrvLoopFunction::DoWriteFunction(CBEImplementationFile* pFile)
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBESrvLoopFunction::%s finished.\n",
 	__func__);
-    return dynamic_cast<CBEComponent*>(pFile->GetTarget());
+    return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief determines the direction, the server loop sends to

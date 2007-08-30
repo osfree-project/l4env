@@ -857,7 +857,7 @@ void CBEClass::AddToImpl(CBEImplementationFile* pImpl)
         pImpl->GetFileName().c_str(), GetName().c_str());
     // check compiler option
     if (CCompiler::IsFileOptionSet(PROGRAM_FILE_FUNCTION) &&
-        dynamic_cast<CBEClient*>(pImpl->GetTarget()))
+        pImpl->IsOfFileType(FILETYPE_CLIENT))
     {
 	for_each(m_Functions.begin(), m_Functions.end(),
 	    std::bind2nd(std::mem_fun(&CBEFunction::AddToImpl), pImpl));
@@ -1225,7 +1225,7 @@ void CBEClass::Write(CBEHeaderFile& pFile)
 
     // write message buffer type seperately
     CBEMsgBuffer* pMsgBuf = GetMessageBuffer();
-    CBETarget *pTarget = pFile.GetTarget();
+    CBETarget *pTarget = pFile.GetSpecificParent<CBETarget>();
     // test for client and if type is needed
     bool bWriteMsgBuffer = (pMsgBuf != 0) &&
 	 pTarget->HasFunctionWithUserType(

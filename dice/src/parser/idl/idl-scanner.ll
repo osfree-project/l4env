@@ -7,6 +7,7 @@
 # include "idl-parser.tab.hh"
 # include "parser/Converter.h"
 # include "parser/Preprocessor.h"
+# include "Compiler.h"
 
     /* Work around an incompatibility in flex (at least versions
        2.5.31 through 2.5.33): it generates code that does
@@ -32,7 +33,7 @@ static long nFlags;
     /* These are internal state variables for the scanner. They control
      * behaviour and can be set using the #pragma pre-processor directive
      */
-static bool bCheckIncludes = true; /**< use #pragme force-include to set to false */
+static bool bCheckIncludes = true; /**< use #pragma force-include to set to false */
 
 %}
 
@@ -67,6 +68,7 @@ VersionRep      [1-9][0-9]*([.,][0-9]+)?
 %x preproc2
 /* Pragma support */
 %x pragma
+%x require
 
 %{
 #define YY_USER_ACTION  yylloc->columns (yyleng);
@@ -87,7 +89,7 @@ VersionRep      [1-9][0-9]*([.,][0-9]+)?
     nFlags = 0;
     bStdInc = false;
             }
-<preproc,preproc2>[ \t]* /* eat whitespace */
+<preproc,preproc2>[ \t]+ /* eat whitespace */
 <preproc>pragma {
     BEGIN(pragma);
 	    }
@@ -144,17 +146,29 @@ VersionRep      [1-9][0-9]*([.,][0-9]+)?
     if (nFlags == 2)
 	driver.leave_file(sNewFilename);
             }
+
+<pragma,require>[ \t]+ /* eat whitespace */
 <pragma>force-include {
     bCheckIncludes = false;
 	    }
-<pragma>("\r")?"\n" {
+<pragma>require {
+    BEGIN(require);
+            }
+<require>"\"".*"\"" {
+    // strip " from string
+    string s(yytext);
+    s = s.substr(1, s.length()-2);
+    CCompiler::CheckRequire(s.c_str());
+            }
+<pragma,require>("\r")?"\n" {
     BEGIN(INITIAL);
 	    }
 
-[ \t]+      yylloc->step ();
-((\r)?\n)+  yylloc->lines (yyleng); yylloc->step ();
-\f          yylloc->step ();
-"//".*      yylloc->step ();
+[ \t]+		yylloc->step ();
+\r		/* eat cariiage return character */
+[\n]+		yylloc->lines (yyleng); yylloc->step ();
+\f		yylloc->step ();
+"//".*		yylloc->step ();
 
 "/*"        {
     register int c;

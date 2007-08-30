@@ -172,7 +172,7 @@ L4_INLINE int
 l4util_cmpxchg(volatile l4_umword_t * dest,
                l4_umword_t cmp_val, l4_umword_t new_val)
 {
-  return l4util_cmpxchg64((l4_uint64_t *)dest,
+  return l4util_cmpxchg64((volatile l4_uint64_t *)dest,
                           (l4_uint64_t)cmp_val, (l4_uint64_t)new_val);
 }
 
@@ -298,7 +298,7 @@ L4_INLINE l4_umword_t
 l4util_cmpxchg_res(volatile l4_umword_t *dest,
                    l4_umword_t cmp_val, l4_umword_t new_val)
 {
-  return l4util_cmpxchg64_res((l4_uint64_t *)dest,
+  return l4util_cmpxchg64_res((volatile l4_uint64_t *)dest,
                               (l4_uint64_t)cmp_val, (l4_uint64_t)new_val);
 }
 

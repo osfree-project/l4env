@@ -77,7 +77,7 @@ C99string      \"([^\"]|\\\")*\"
     nFlags = 0;
     bStdInc = false;
             }
-<preproc,preproc2>[ \t]* /* eat whitespace */
+<preproc,preproc2>[ \t]+ /* eat whitespace */
 <preproc>[0-9]+ {
     nNewLinenumber = strtol(yytext, NULL, 10);
             }

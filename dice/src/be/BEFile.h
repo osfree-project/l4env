@@ -73,8 +73,6 @@ protected:
     CBEFile(CBEFile &src);
 
 public:
-    virtual CBETarget* GetTarget();
-
     /** \brief write the file */
     virtual void Write(void) = 0;
 

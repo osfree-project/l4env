@@ -20,6 +20,8 @@ _L4DIR_MK_IDL_MK=y
 
 ROLE = idl.mk
 
+DICE_REQ := --require="3.2.0"
+
 # define LOCAL_INSTALLDIR prior to including install.inc, where the install-
 # rules are defined. Same for INSTALLDIR.
 INSTALLDIR_IDL		?= $(DROPS_STDDIR)/include/$(ARCH)/$(L4API)/$(INSTALL_INC_PREFIX)
@@ -149,7 +151,7 @@ endif
 # the preprocessor perform open.
 %-server.$(IDL_C) %-server.$(IDL_H) %-client.$(IDL_C) %-client.$(IDL_H) %-sys.$(IDL_H): %.idl .general.d
 	@$(GEN_MESSAGE)
-	$(VERBOSE)CC="$(IDL_CPP)" $(DICE) $(IDL_FLAGS) -MD $<
+	$(VERBOSE)CC="$(IDL_CPP)" $(DICE) $(DICE_REQ) $(IDL_FLAGS) -MD $<
 	$(VERBOSE)mv $*.d .$(<F).d
 	$(DEPEND_VERBOSE)$(ECHO) "$(call IDL_FILES_EXPAND,$<): $(DICE) $<" >>.$(<F).d
 	$(DEPEND_VERBOSE)$(ECHO) "$(DICE) $<:" >>.$(<F).d

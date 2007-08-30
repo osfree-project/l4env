@@ -19949,44 +19949,6 @@ fi
 done
 test -n "$YACC" || YACC="yacc"
 
-# Extract the first word of "bison-1.35", so it can be a program name with args.
-set dummy bison-1.35; ac_word=$2
-{ echo "$as_me:$LINENO: checking for $ac_word" >&5
-echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
-if test "${ac_cv_prog_YACC+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  if test -n "$YACC"; then
-  ac_cv_prog_YACC="$YACC" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-  for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_prog_YACC="bison-1.35 -y"
-    echo "$as_me:$LINENO: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-done
-IFS=$as_save_IFS
-
-  test -z "$ac_cv_prog_YACC" && ac_cv_prog_YACC="bison -y"
-fi
-fi
-YACC=$ac_cv_prog_YACC
-if test -n "$YACC"; then
-  { echo "$as_me:$LINENO: result: $YACC" >&5
-echo "${ECHO_T}$YACC" >&6; }
-else
-  { echo "$as_me:$LINENO: result: no" >&5
-echo "${ECHO_T}no" >&6; }
-fi
-
-
 if test "$YACC" = byacc; then
   { { echo "$as_me:$LINENO: error: 'bison' is missing from your system." >&5
 echo "$as_me: error: 'bison' is missing from your system." >&2;}
@@ -20003,8 +19965,8 @@ if test "${dice_bison_version+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
 
-  set `$YACC --version|grep 'GNU Bison'|cut -d ' ' -f 4|sed -e 's/\./ /'|tr -d a-z`
-  if test "(" "${1}" = "1" -a "(" "${2}" = "35" -o "${2}" = "75" -o "${2}" = "875" ")" ")" -o "(" "${1}" = "2" ")"; then
+  set `$YACC --version|grep 'GNU Bison'|cut -d ' ' -f 4|sed -e 's/\./ /'`
+  if test "(" "${1}" = "2" -a "(" "${2}" = "1a" -o "${2}" = "1b" -o "${2}" = "2" -o "${2}" = "3" ")" ")"; then
     dice_bison_version="${1}.${2} (ok)"
   else
     dice_bison_version=invalid
@@ -20015,8 +19977,8 @@ fi
 echo "${ECHO_T}$dice_bison_version" >&6; }
 case $dice_bison_version in
 ""|invalid)
-  { { echo "$as_me:$LINENO: error: You will need at lest bison version 1.35 (found ${1}.${2})." >&5
-echo "$as_me: error: You will need at lest bison version 1.35 (found ${1}.${2})." >&2;}
+  { { echo "$as_me:$LINENO: error: You will need at lest bison version 2.1a (found ${1}.${2})." >&5
+echo "$as_me: error: You will need at lest bison version 2.1a (found ${1}.${2})." >&2;}
    { (exit 1); exit 1; }; }
   ;;
 esac

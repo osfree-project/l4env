@@ -127,7 +127,7 @@ CBEMarshalExceptionFunction::DoWriteFunction(CBEHeaderFile* pFile)
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
         (m_Attributes.Find(ATTR_IN)))
         return true;
-    if (dynamic_cast<CBEComponent*>(pFile->GetTarget()))
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT))
     {
         /* look for an OUT parameter */
 	if (FindParameterAttribute(ATTR_OUT))
@@ -158,7 +158,7 @@ CBEMarshalExceptionFunction::DoWriteFunction(CBEImplementationFile* pFile)
     if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
         (m_Attributes.Find(ATTR_IN)))
         return true;
-    if (dynamic_cast<CBEComponent*>(pFile->GetTarget()))
+    if (pFile->IsOfFileType(FILETYPE_COMPONENT))
     {
         /* look for an OUT parameter */
 	if (FindParameterAttribute(ATTR_OUT))

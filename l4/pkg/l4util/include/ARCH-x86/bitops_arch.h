@@ -12,16 +12,16 @@
  * Copyright (C) 2000-2002
  * Dresden University of Technology, Operating Systems Research Group
  *
- * This file contains free software, you can redistribute it and/or modify 
- * it under the terms of the GNU General Public License, Version 2 as 
- * published by the Free Software Foundation (see the file COPYING). 
+ * This file contains free software, you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License, Version 2 as
+ * published by the Free Software Foundation (see the file COPYING).
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
- * For different licensing schemes please contact 
+ *
+ * For different licensing schemes please contact
  * <contact@os.inf.tu-dresden.de>.
  */
 /*****************************************************************************/
@@ -44,7 +44,7 @@ l4util_set_bit32(int b, volatile l4_uint32_t * dest)
      "btsl  %1,%0   \n\t"
      :
      :
-     "m"   (*dest),   /* 0 mem, destination operand */ 
+     "m"   (*dest),   /* 0 mem, destination operand */
      "Ir"  (b)       /* 1,     bit number */
      :
      "memory", "cc"
@@ -68,7 +68,7 @@ l4util_clear_bit32(int b, volatile l4_uint32_t * dest)
      "btrl  %1,%0   \n\t"
      :
      :
-     "m"   (*dest),   /* 0 mem, destination operand */ 
+     "m"   (*dest),   /* 0 mem, destination operand */
      "Ir"  (b)        /* 1,     bit number */
      :
      "memory", "cc"
@@ -92,7 +92,7 @@ l4util_complement_bit(int b, volatile l4_umword_t * dest)
      "btcl  %1,%0   \n\t"
      :
      :
-     "m"   (*dest),   /* 0 mem, destination operand */ 
+     "m"   (*dest),   /* 0 mem, destination operand */
      "Ir"  (b)        /* 1,     bit number */
      :
      "memory", "cc"
@@ -113,7 +113,7 @@ l4util_test_bit32(int b, const volatile l4_uint32_t * dest)
      :
      "=r"  (bit)      /* 0,     old bit value */
      :
-     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "m"   (*dest),   /* 1 mem, destination operand */
      "Ir"  (b)        /* 2,     bit number */
      :
      "memory", "cc"
@@ -127,7 +127,7 @@ l4util_test_bit32(int b, const volatile l4_uint32_t * dest)
 L4_INLINE int
 l4util_test_bit(int b, const volatile l4_umword_t * dest)
 {
-  return l4util_test_bit32(b, (volatile l4_uint32_t*)dest);
+  return l4util_test_bit32(b, (const volatile l4_uint32_t*)dest);
 }
 
 /* bit test and set */
@@ -144,7 +144,7 @@ l4util_bts(int b, volatile l4_umword_t * dest)
      :
      "=r"  (bit)      /* 0,     old bit value */
      :
-     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "m"   (*dest),   /* 1 mem, destination operand */
      "Ir"  (b)        /* 2,     bit number */
      :
      "memory", "cc"
@@ -167,7 +167,7 @@ l4util_btr(int b, volatile l4_umword_t * dest)
      :
      "=r"  (bit)      /* 0,     old bit value */
      :
-     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "m"   (*dest),   /* 1 mem, destination operand */
      "Ir"  (b)        /* 2,     bit number */
      :
      "memory", "cc"
@@ -190,7 +190,7 @@ l4util_btc(int b, volatile l4_umword_t * dest)
      : 
      "=r"  (bit)      /* 0,     old bit value */
      :
-     "m"   (*dest),   /* 1 mem, destination operand */ 
+     "m"   (*dest),   /* 1 mem, destination operand */
      "Ir"  (b)        /* 2,     bit number */
      :
      "memory", "cc"

@@ -300,7 +300,6 @@ parser_driver::error (const std::string& m)
 void
 parser_driver::warning (const yy::location& l, const std::string& m)
 {
-    std::cerr << __func__ << " called.\n";
     print_filestack();
     std::cerr << l << ": warning: " << m << std::endl;
 }

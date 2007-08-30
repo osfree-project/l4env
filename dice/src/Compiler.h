@@ -109,6 +109,7 @@ public:
     static CBESizes* GetSizes();
     static void SetDebug(bool bOn = true);
     static bool GetBackEndOption(const string sOption, string& sValue);
+    static void CheckRequire(const char* str);
 
 protected:
     void ShowVersion();
@@ -130,6 +131,70 @@ protected:
     static void SetClassFactory(CBEClassFactory *pCF);
     static void SetSizes(CBESizes *pSizes);
     static void SetBackEndOption(const string sOption, const string sValue);
+
+    class Version
+    {
+    public:
+	enum oper { LT, EQ, GT, LTE, GTE };
+
+	Version(string s) : maj(0), min(0), sub(0)
+	{
+	    string::size_type l, r;
+	    l = s.find('.');
+	    r = s.rfind('.');
+	    if (l == string::npos)
+		maj = atoi(s.c_str());
+	    else if (l == r)
+	    {
+		maj = atoi(s.substr(0,l).c_str());
+		min = atoi(s.substr(l+1).c_str());
+	    } else
+	    {
+		maj = atoi(s.substr(0,l).c_str());
+		min = atoi(s.substr(l+1,r).c_str());
+		sub = atoi(s.substr(r+1).c_str());
+	    }
+	}
+
+	bool compare(oper o, Version& r)
+	{
+	    if (o == EQ)
+		return maj == r.maj && min == r.min && sub == r.sub;
+	    if ((o == LTE || o == GTE)
+		&& maj == r.maj && min == r.min && sub == r.sub)
+		return true;
+	    if (o == LTE)
+		o = LT;
+	    if (o == GTE)
+		o = GT;
+	    if (_comp(maj, o, r.maj) ||
+		(maj == r.maj && _comp(min, o, r.min)) ||
+		(maj == r.maj && min == r.min && _comp(sub, o, r.sub)))
+		return true;
+	    return false;
+	}
+
+	bool valid()
+	{
+	    return maj > 0;
+	}
+
+    private:
+	int maj, min, sub;
+
+	bool _comp(int l, oper o, int r)
+	{
+	    switch (o)
+	    {
+	    case GT: return l > r; break;
+	    case EQ: return l == r; break;
+	    case LT: return l < r; break;
+	    case GTE: return l >= r; break;
+	    case LTE: return l <= r; break;
+	    }
+	    return false;
+	}
+    };
 
 // Attributes
 protected:

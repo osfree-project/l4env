@@ -114,7 +114,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
         pFunction = pRoot->FindFunction(sFuncName, FUNCTION_SEND);
         if (!pFunction)
         {
-	    exc += " failed because function " + sFuncName + 
+	    exc += " failed because function " + sFuncName +
 		" could not be found";
 	    throw new error::create_error(exc);
         }
@@ -127,7 +127,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
         pFunction = pRoot->FindFunction(sFuncName, FUNCTION_WAIT);
         if (!pFunction)
         {
-	    exc += " failed because function " + sFuncName + 
+	    exc += " failed because function " + sFuncName +
 		" could not be found";
 	    throw new error::create_error(exc);
         }
@@ -137,7 +137,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
         pFunction = pRoot->FindFunction(sFuncName, FUNCTION_RECV);
         if (!pFunction)
         {
-	    exc += " failed because function " + sFuncName + 
+	    exc += " failed because function " + sFuncName +
 		" could not be found";
 	    throw new error::create_error(exc);
         }
@@ -149,7 +149,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
             pFunction = pRoot->FindFunction(sFuncName, FUNCTION_UNMARSHAL);
             if (!pFunction)
             {
-		exc += " failed because function " + sFuncName + 
+		exc += " failed because function " + sFuncName +
 		    " could not be found";
 		throw new error::create_error(exc);
             }
@@ -162,7 +162,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
         pFunction = pRoot->FindFunction(sFuncName, FUNCTION_CALL);
         if (!pFunction)
         {
-	    exc += " failed because function " + sFuncName + 
+	    exc += " failed because function " + sFuncName +
 		" could not be found";
 	    throw new error::create_error(exc);
         }
@@ -203,7 +203,7 @@ CBEClient::CreateBackEndHeader(CFEFile * pFEFile)
         // include opcode file to included files
         // do not use include file name, since the opcode file is
         // assumed to be in the same directory
-        pHeader->AddIncludedFileName(pOpcodes->GetFileName(), true, false, 
+        pHeader->AddIncludedFileName(pOpcodes->GetFileName(), true, false,
 	    pFEFile);
     }
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndHeader(file: %s) return true\n",
@@ -220,7 +220,7 @@ CBEClient::CreateBackEndImplementation(CFEFile * pFEFile)
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndImplementation(file: %s) called\n",
         pFEFile->GetFileName().c_str());
     // depending on options call respective functions
-    if (CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL) || 
+    if (CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL) ||
 	CCompiler::IsFileOptionSet(PROGRAM_FILE_IDLFILE))
 	CreateBackEndFile(pFEFile);
     else if (CCompiler::IsFileOptionSet(PROGRAM_FILE_MODULE))
@@ -273,8 +273,8 @@ CBEClient::CreateBackEndFile(CFEFile *pFEFile)
  *  \param pImpl the implementation file to add the members to
  *  \return true if successful
  */
-void 
-CBEClient::CreateBackEndFile(CFEFile * pFEFile, 
+void
+CBEClient::CreateBackEndFile(CFEFile * pFEFile,
     CBEImplementationFile* pImpl)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::CreateBackEndFile(file: %s, impl: %s) called\n",
@@ -338,7 +338,7 @@ class CreateBackEndCall {
     CBEClient *client;
     std::mem_fun1_t<void, CBEClient, T*> fun;
 public:
-    explicit CreateBackEndCall(CBEClient *c, void (CBEClient::*__pf)(T* arg)) : 
+    explicit CreateBackEndCall(CBEClient *c, void (CBEClient::*__pf)(T* arg)) :
 	client(c), fun(__pf) { }
     void operator() (T* arg) { fun(client, arg); }
 };
@@ -361,7 +361,7 @@ CBEClient::CreateBackEndModule(CFEFile *pFEFile)
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClient::%s(file: %s) called\n",
 	__func__, pFEFile->GetFileName().c_str());
-    
+
     string exc = string (__func__);
     // find appropriate header file
     CBEHeaderFile* pHeader = FindHeaderFile(pFEFile, FILETYPE_CLIENTHEADER);
@@ -398,7 +398,7 @@ CBEClient::CreateBackEndModule(CFEFile *pFEFile)
             {
 		m_ImplementationFiles.Remove(pImpl);
                 delete pImpl;
-		exc += " failed because clas " + (*iterI)->GetName() + 
+		exc += " failed because clas " + (*iterI)->GetName() +
 		    " is not created";
 		throw new error::create_error(exc);
             }
@@ -483,7 +483,7 @@ CBEClient::CreateBackEndInterface(CFEFile *pFEFile)
 void
 CBEClient::CreateBackEndInterface(CFELibrary *pFELibrary)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEClient::CreateBackEndInterface(lib: %s) called\n",
         pFELibrary->GetName().c_str());
     // search for interfaces
@@ -540,7 +540,7 @@ CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
  *  \param pFEFile the file to search for functions
  *  \return true if successful
  */
-void 
+void
 CBEClient::CreateBackEndFunction(CFEFile *pFEFile)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,

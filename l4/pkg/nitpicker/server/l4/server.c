@@ -55,7 +55,7 @@ static void custom_nitpicker_server_loop(void* dice_server_param) {
 	CORBA_Object _dice_corba_obj;
 	short _dice_reply;
 	long _dice_opcode;
-        l4_msgtag_t _dice_tag = l4_msgtag(0,0,0,0);
+	l4_msgtag_t _dice_tag = l4_msgtag(0,0,0,0);
 	_dice_corba_obj = &__dice_corba_obj;
 	if (dice_server_param)
 		_dice_corba_env = (CORBA_Server_Environment*)dice_server_param;
@@ -67,7 +67,7 @@ static void custom_nitpicker_server_loop(void* dice_server_param) {
 	_dice_msg_buffer._word._dice_size_dope = L4_IPC_DOPE( sizeof(_dice_msg_buffer)/sizeof(long)-3, 0);
 	_dice_msg_buffer._word._dice_rcv_fpage = _dice_corba_env->rcv_fpage;
 	_dice_opcode = nitpicker_wait_any (_dice_corba_obj,
-                                           &_dice_tag,
+	                                   &_dice_tag,
 	                                   &_dice_msg_buffer,
 	                                   _dice_corba_env);
 	while (1) {
@@ -77,12 +77,12 @@ static void custom_nitpicker_server_loop(void* dice_server_param) {
 		                                  _dice_corba_env);
 		if (_dice_reply == DICE_REPLY)
 			_dice_opcode = nitpicker_reply_and_wait (_dice_corba_obj,
-                                                                 &_dice_tag,
+			                                         &_dice_tag,
 			                                         &_dice_msg_buffer,
 			                                         _dice_corba_env);
 		else
 			_dice_opcode = nitpicker_wait_any (_dice_corba_obj,
-                                                           &_dice_tag,
+			                                   &_dice_tag,
 			                                   &_dice_msg_buffer,
 			                                   _dice_corba_env);
 		/* handle user input */

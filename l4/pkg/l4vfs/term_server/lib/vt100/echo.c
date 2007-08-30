@@ -17,7 +17,7 @@ void displaymap(unsigned char c, char *buf);
 void vt100_echo(termstate_t *term, l4_int8_t c, l4_int8_t old)
 {
     char buf[2];
-    
+
     switch(c)
     {
     case '\b':
@@ -70,6 +70,6 @@ char uppercase(char c)
         return c;
     if ( c < 'z' && c > 'a' )
         return c - 32;
-    
+
     return c;
 }

@@ -43,6 +43,7 @@
 #include <cassert>
 #include <string>
 #include <algorithm>
+#include <sstream>
 #include <iostream>
 
 #if defined(HAVE_GETOPT_H)
@@ -189,6 +190,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         {"filename-prefix", 1, 0, 'F'},
         {"include-prefix", 1, 0, 'p'},
         {"verbose", 2, 0, 'v'},
+	{"require", 1, 0, 'r'},
         {"corba", 0, 0, 'C'},
         {"preprocess", 1, 0, 'P'},
         {"f", 1, 0, 'f'},
@@ -220,11 +222,13 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 
     while (1)
     {
+	// the first ":" in optstring tells getopt(_long_only) to return ':'
+	// if an argument to an option is missing.
 #if defined(HAVE_GETOPT_LONG)
-        c = getopt_long_only(argc, argv, "cstni::v::hF:p:CP:f:B:E::O::VI:NT::M::W:D:x:o:", long_options, &index);
+        c = getopt_long_only(argc, argv, ":cstni::F:p:v::r:CP:f:B:E::I:NO::T::Vmw:o:M::W:D:x:h", long_options, &index);
 #else
         // n has an optional parameter to recognize -nostdinc and -n (no-opcode)
-        c = getopt(argc, argv, "cstn::i::v::hF:p:CP:f:B:E::O::VI:NT::M::W:D:x:o:");
+        c = getopt(argc, argv, ":cstn::i::F:p:v::r:CP:f:B:E::I:O::T::Vmw:o:M::W:D:x:h");
 #endif
 
         if (c == -1)
@@ -240,12 +244,12 @@ void CCompiler::ParseArguments(int argc, char *argv[])
         case '?':
             // Unknown options might be used by plugins
 #if defined(HAVE_GETOPT_LONG)
-	    CMessages::Warning("unrecognized option: %s (%d)\n", argv[optind - 1],
+	    CMessages::Warning("unrecognized option: %s (position %d)\n", argv[optind - 1],
 		optind);
 	    CMessages::Warning("Use \'--help\' to show valid options.\n");
 	    CMessages::Warning("However, plugins might process this option.\n");
 #else
-            CMessages::Warning("unrecognized option: %s (%d)\n", argv[optind], optind);
+            CMessages::Warning("unrecognized option: %s (position %d)\n", argv[optind], optind);
 	    CMessages::Warning("Use \'-h\' to show valid options.\n");
 	    CMessages::Warning("However, plugins might process this option.\n");
 #endif
@@ -343,6 +347,13 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 		CCompiler::SetVerboseLevel((ProgramVerbose_Type)nVerboseLevel);
             }
             break;
+	case 'r':
+	    // function call either fails or succeeds
+	    CheckRequire(optarg);
+	    if (optind == argc)
+		// that's it folks.
+		exit(0);
+	    break;
         case 'h':
             bShowHelp = true;
             break;
@@ -1401,6 +1412,16 @@ void CCompiler::ShowHelp(bool bShort)
     " -Wno-maxsize                warn if a variable sized parameter has no\n"
     "                             maximum size to bound its required memory\n"
     "                             use\n"
+    "\n"
+    " -r"
+#if defined(HAVE_GETOPT_LONG)
+    ", --require "
+#else
+    "            "
+#endif
+    "<string>      Specify which Dice version is required.\n"
+    "                             <string> contains the minimal required version,\n"
+    "                             for instance, \"3.2.0\".\n"
     "\n\nexample: dice -v -i test.idl\n\n";
     exit(0);
 }
@@ -1705,3 +1726,68 @@ void CCompiler::VerboseD(ProgramVerbose_Type level, const char *format, ...)
     fflush (stdout);
 }
 
+/** \brief check the required version of Dice
+ *  \param str the string containing the required version
+ *
+ * If the current version does not match the required version (is bigger),
+ * this function exits the compiler with an error code. Otherwise (the version
+ * matches) the function simply returns.
+ *
+ * The string may contain comparison operators. Valid are: ">" "=" "<" ">="
+ * "<=".
+ */
+void CCompiler::CheckRequire(const char *str)
+{
+    if (!str)
+	CMessages::Error("Version check \"require\" requires version.\n");
+
+    string sVersion(str);
+    if (sVersion.empty())
+	CMessages::Error("Version check \"require\" received empty version.\n");
+    // first check for comparison operators.
+    Version::oper op = Version::GTE;
+    string sOp;
+    if (sVersion.substr(0, 2) == "<=")
+    {
+	op = Version::LTE;
+	sOp = sVersion.substr(0,2);
+	sVersion = sVersion.substr(2);
+    } else if (sVersion.substr(0,2) == ">=")
+    {
+	op = Version::GTE;
+	sOp = sVersion.substr(0,2);
+	sVersion = sVersion.substr(2);
+    } else if (sVersion[0] == '<')
+    {
+	op = Version::LT;
+	sOp = sVersion.substr(0,1);
+	sVersion = sVersion.substr(1);
+    } else if (sVersion[0] == '=')
+    {
+	op = Version::EQ;
+	sOp = sVersion.substr(0,1);
+	sVersion = sVersion.substr(1);
+    } else if (sVersion[0] == '>')
+    {
+	op = Version::GT;
+	sOp = sVersion.substr(0,1);
+	sVersion = sVersion.substr(1);
+    }
+
+    // extract version numbers
+    Version cur(dice_version);
+    Version req(sVersion.c_str());
+    if (!req.valid())
+	CMessages::Error("Version check \"require\" received malformed version \"%s\".\n",
+	    sVersion.c_str());
+    if (!cur.compare(op, req))
+    {
+	std::ostringstream os;
+	os << "Required version (\"" << sVersion << "\") does not match current version (\"" <<
+	    dice_version << "\")";
+	if (!sOp.empty())
+	    os << " as requested (" << sOp << ")";
+	os << "." << std::endl;
+	CMessages::Error("%s", os.str().c_str());
+    }
+}

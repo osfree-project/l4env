@@ -186,20 +186,6 @@ CBEFunction *CBEFile::FindFunction(string sFunctionName,
     return 0;
 }
 
-/** \brief tries to determine the target this file belongs to
- *  \return a reference to the target or 0 if not found
- */
-CBETarget *CBEFile::GetTarget()
-{
-    CObject *pCur;
-    for (pCur = GetParent(); pCur; pCur = pCur->GetParent())
-    {
-        if (dynamic_cast<CBETarget*>(pCur))
-            return (CBETarget *) pCur;
-    }
-    return 0;
-}
-
 /** \brief writes includes, which always have to be there
  */
 void CBEFile::WriteDefaultIncludes()

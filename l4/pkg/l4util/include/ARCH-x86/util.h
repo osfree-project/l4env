@@ -51,8 +51,8 @@ l4_touch_ro(const void*addr, unsigned size)
 {
   const char *bptr, *eptr;
 
-  bptr = (const char*)(((unsigned)addr) & L4_PAGEMASK);
-  eptr = (const char*)(((unsigned)addr+size-1) & L4_PAGEMASK);
+  bptr = (const char*)(((l4_addr_t)addr) & L4_PAGEMASK);
+  eptr = (const char*)(((l4_addr_t)addr+size-1) & L4_PAGEMASK);
   for(;bptr<=eptr;bptr+=L4_PAGESIZE){
     asm volatile("or	%0,%%eax \n"
                  :
@@ -67,9 +67,9 @@ static inline void
 l4_touch_rw(const void*addr, unsigned size)
 {
   const char *bptr, *eptr;
-      
-  bptr = (const char*)(((unsigned)addr) & L4_PAGEMASK);
-  eptr = (const char*)(((unsigned)addr+size-1) & L4_PAGEMASK);
+
+  bptr = (const char*)(((l4_addr_t)addr) & L4_PAGEMASK);
+  eptr = (const char*)(((l4_addr_t)addr+size-1) & L4_PAGEMASK);
   for(;bptr<=eptr;bptr+=L4_PAGESIZE){
     asm volatile("or	$0,%0 \n"
                  :

@@ -450,7 +450,7 @@ CBEComponentFunction::IsTargetFile(CBEImplementationFile* pFile)
 bool
 CBEComponentFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
-    if (!dynamic_cast<CBEComponent*>(pFile->GetTarget()))
+    if (!pFile->IsOfFileType(FILETYPE_COMPONENT))
         return false;
     if (!CBEOperationFunction::IsTargetFile(pFile))
         return false;
@@ -470,7 +470,7 @@ CBEComponentFunction::DoWriteFunction(CBEHeaderFile* pFile)
 bool
 CBEComponentFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
-    if (!dynamic_cast<CBEComponent*>(pFile->GetTarget()))
+    if (!pFile->IsOfFileType(FILETYPE_COMPONENT))
         return false;
     if (!IsTargetFile(pFile))
         return false;

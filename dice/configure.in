@@ -41,7 +41,6 @@ dnl 2) check for specific bison binary if multiple are installed (-1.35)
 dnl 3) check version of bison binary
 dnl
 AC_PROG_YACC
-AC_CHECK_PROG(YACC, bison-1.35, bison-1.35 -y, bison -y)
 if test "$YACC" = byacc; then
   AC_MSG_ERROR(['bison' is missing from your system.])
 fi
@@ -49,8 +48,8 @@ if test "$YACC" = yacc; then
   AC_MSG_ERROR(['bison' is missing from your system.])
 fi
 AC_CACHE_CHECK([for bison version], dice_bison_version, [
-  set `$YACC --version|grep 'GNU Bison'|cut -d ' ' -f 4|sed -e 's/\./ /'|tr -d a-z`
-  if test "(" "${1}" = "1" -a "(" "${2}" = "35" -o "${2}" = "75" -o "${2}" = "875" ")" ")" -o "(" "${1}" = "2" ")"; then
+  set `$YACC --version|grep 'GNU Bison'|cut -d ' ' -f 4|sed -e 's/\./ /'`
+  if test "(" "${1}" = "2" -a "(" "${2}" = "1a" -o "${2}" = "1b" -o "${2}" = "2" -o "${2}" = "3" ")" ")"; then
     dice_bison_version="${1}.${2} (ok)"
   else
     dice_bison_version=invalid
@@ -58,7 +57,7 @@ AC_CACHE_CHECK([for bison version], dice_bison_version, [
 ])
 case $dice_bison_version in
 ""|invalid[)]
-  AC_MSG_ERROR([You will need at lest bison version 1.35 (found ${1}.${2}).])
+  AC_MSG_ERROR([You will need at lest bison version 2.1a (found ${1}.${2}).])
   ;;
 esac
 AC_PROG_LN_S
