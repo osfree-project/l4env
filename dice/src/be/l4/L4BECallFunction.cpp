@@ -136,8 +136,8 @@ CL4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
-    pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n"
-	<< "\t{\n";
+    pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n";
+    pFile << "\t{\n";
     // env.major = CORBA_SYSTEM_EXCEPTION;
     // env.repos_id = DICE_IPC_ERROR;
     ++pFile << "\tCORBA_exception_set(";
@@ -145,9 +145,9 @@ CL4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
         pFile << "&";
     pDecl->WriteName(pFile);
     pFile << ",\n";
-    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
-              "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
-              "\t0);\n";
+    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+    pFile << "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n";
+    pFile << "\t0);\n";
     // DICE_IPC_ERROR(env) = L4_IPC_ERROR(result);
     string sEnv;
     if (pDecl->GetStars() == 0)

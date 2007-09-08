@@ -200,6 +200,9 @@ protected:
 	    CBETypedDeclarator * pParameter, bool bCallFromSameClass);
     virtual void WriteCallParameterList(CBEFile& pFile, bool bCallFromSameClass);
     virtual void WriteFunctionAttributes(CBEFile& pFile);
+    virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
+
+
     void AddMessageBuffer();
     void AddMessageBuffer(CFEOperation *pFEOperation);
     virtual bool SetReturnVar(bool bUnsigned, int nSize, int nFEType,

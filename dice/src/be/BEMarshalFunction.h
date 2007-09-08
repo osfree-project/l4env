@@ -80,6 +80,7 @@ protected:
     virtual void WriteFunctionDefinition(CBEFile& pFile);
     virtual void AddAfterParameters();
     virtual void AddBeforeParameters();
+    virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
 };
 
 #endif

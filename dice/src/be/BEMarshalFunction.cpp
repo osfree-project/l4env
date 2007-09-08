@@ -531,3 +531,14 @@ CBEMarshalFunction::WriteFunctionDefinition(CBEFile& pFile)
     CBEOperationFunction::WriteFunctionDefinition(pFile);
 }
 
+/** \brief write the access specifier for the marshal function
+ *  \param pFile the file to write to
+ */
+void CBEMarshalFunction::WriteAccessSpecifier(CBEHeaderFile& pFile)
+{
+    if (!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	return;
+
+    --pFile << "\tprotected:\n";
+    ++pFile;
+}

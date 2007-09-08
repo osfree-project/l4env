@@ -70,6 +70,7 @@ protected:
     virtual void WriteParameter(CBEFile& pFile,
 	CBETypedDeclarator * pParameter, bool bUseConst = true);
     virtual void WriteFunctionDefinition(CBEFile& pFile);
+    virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
 
 protected:
     /** \var bool m_bOpenWait

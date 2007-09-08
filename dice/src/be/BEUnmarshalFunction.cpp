@@ -496,3 +496,15 @@ CBEUnmarshalFunction::WriteFunctionDefinition(CBEFile& pFile)
 
     CBEOperationFunction::WriteFunctionDefinition(pFile);
 }
+
+/** \brief write the access specifier for the unmarshal function
+ *  \param pFile the file to write to
+ */
+void CBEUnmarshalFunction::WriteAccessSpecifier(CBEHeaderFile& pFile)
+{
+    if (!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	return;
+
+    --pFile << "\tprotected:\n";
+    ++pFile;
+}

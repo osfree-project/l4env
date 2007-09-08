@@ -192,6 +192,9 @@ CBEFunction::Write(CBEHeaderFile& pFile)
 	"CBEFunction::%s(%s) in %s called\n", __func__,
 	pFile.GetFileName().c_str(), GetName().c_str());
 
+    // in header file write access specifier
+    WriteAccessSpecifier(pFile);
+
     // write inline preix
     if (DoWriteFunctionInline(pFile))
     {
@@ -2448,5 +2451,19 @@ CBEFunction::DoWriteParameter(CBETypedDeclarator* /*pParam*/)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s() called\n", __func__);
     return true;
+}
+
+/** \brief write the C++ access specifier before each function declaration
+ *  \param pFile the file to write to
+ *
+ * per default, all functions are public.
+ */
+void CBEFunction::WriteAccessSpecifier(CBEHeaderFile& pFile)
+{
+    if (!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	return;
+
+    --pFile << "\tpublic:" << std::endl;
+    ++pFile;
 }
 

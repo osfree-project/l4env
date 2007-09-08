@@ -673,8 +673,6 @@ CBENameFactory::GetTypeName(int nType,
  * - FUNCTION_RECV_ANY:   "_recv_any"    (9)
  * - FUNCTION_SRV_LOOP:   "_server_loop" (12)
  * - FUNCTION_DISPATCH:   "_dispatch"    (9)
- *
- * \todo if nested library use all lib names
  */
 string
 CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
@@ -775,8 +773,6 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
  * - FUNCTION_SRV_LOOP: "_server_loop" (12)
  * - FUNCTION_DISPATCH: "_dispatch"    (9)
  * - FUNCTION_REPLY_WAIT: "_reply_and_wait"  (15)
- *
- *    \todo if nested libraries regard them as well
  */
 string
 CBENameFactory::GetFunctionName(CFEInterface * pFEInterface,

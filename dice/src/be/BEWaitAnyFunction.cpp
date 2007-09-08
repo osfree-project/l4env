@@ -336,3 +336,15 @@ DIRECTION_TYPE CBEWaitAnyFunction::GetReceiveDirection()
     return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
 
+/** \brief write the access specifier for the marshal function
+ *  \param pFile the file to write to
+ */
+void CBEWaitAnyFunction::WriteAccessSpecifier(CBEHeaderFile& pFile)
+{
+    if (!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	return;
+
+    --pFile << "\tprotected:\n";
+    ++pFile;
+}
+

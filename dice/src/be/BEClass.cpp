@@ -1304,9 +1304,10 @@ void CBEClass::WriteMemberVariables(CBEHeaderFile& pFile)
     if (!m_BaseClasses.empty())
 	return;
 
+    pFile << "\t/* members */\n";
+    pFile << "\tprotected:\n";
     if (pFile.IsOfFileType(FILETYPE_CLIENTHEADER))
     {
-	pFile << "\tprotected:\n";
 	++pFile << "\t/* contains the address of the server */\n";
 	pFile << "\tCORBA_Object_base _dice_server;\n";
 	pFile << "\n";
@@ -1314,7 +1315,6 @@ void CBEClass::WriteMemberVariables(CBEHeaderFile& pFile)
     }
     if (pFile.IsOfFileType(FILETYPE_COMPONENTHEADER))
     {
-	pFile << "\tprotected:\n";
 	assert(m_pCorbaObject);
 	++pFile << "\t";
 	m_pCorbaObject->WriteDeclaration(pFile);
@@ -1523,13 +1523,8 @@ CBEClass::WriteFunctions(CBEHeaderFile& pFile)
 
     if (nFuncCount > 0)
     {
-	// members are public
-	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	    IsTargetFile(&pFile))
-	{
-	    pFile << "\tpublic:\n";
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	    ++pFile;
-	}
 	WriteExternCStart(pFile);
     }
     // write target functions in ordered appearance
@@ -1545,10 +1540,9 @@ CBEClass::WriteFunctions(CBEHeaderFile& pFile)
     // write helper functions if any
     if (nFuncCount > 0)
     {
-	WriteExternCEnd(pFile);
-	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	    IsTargetFile(&pFile))
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	    --pFile;
+	WriteExternCEnd(pFile);
     }
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(head, %s) finished\n",

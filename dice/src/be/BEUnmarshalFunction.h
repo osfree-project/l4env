@@ -75,6 +75,7 @@ protected:
 	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
     virtual void WriteFunctionDefinition(CBEFile& pFile);
     virtual void AddAfterParameters();
+    virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
 };
 
 #endif // !__DICE_BEUNMARSHALFUNCTION_H__
