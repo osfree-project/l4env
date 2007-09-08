@@ -53,10 +53,10 @@ protected:
 
 public:
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
-    virtual CObject* Clone(void);
+    virtual CObject* Clone();
 
-    CBETypedDeclarator* GetSwitchVariable(void);
-    CBETypedDeclarator* GetUnionVariable(void);
+    CBETypedDeclarator* GetSwitchVariable();
+    CBETypedDeclarator* GetUnionVariable();
 
 protected:
     /** \var std::string m_sSwitchName

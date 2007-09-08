@@ -267,7 +267,7 @@ public:
     CBEExpression* GetInitialValue()
     { return m_pInitialValue; }
 
-    virtual int GetMaxSize(void);
+    virtual int GetMaxSize();
     virtual void WriteCleanup(CBEFile& pFile, bool bUsePointer,
 	bool bDeferred);
 

@@ -65,7 +65,7 @@ CL4BEClassFactory::~CL4BEClassFactory()
  */
 CBECallFunction *CL4BEClassFactory::GetNewCallFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BECallFunction\n");
     return new CL4BECallFunction();
 }
@@ -75,7 +75,7 @@ CBECallFunction *CL4BEClassFactory::GetNewCallFunction()
  */
 CBESrvLoopFunction *CL4BEClassFactory::GetNewSrvLoopFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BESrvLoopFunction\n");
     return new CL4BESrvLoopFunction();
 }
@@ -85,7 +85,7 @@ CBESrvLoopFunction *CL4BEClassFactory::GetNewSrvLoopFunction()
  */
 CBEUnmarshalFunction *CL4BEClassFactory::GetNewUnmarshalFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BEUnmarshalFunction\n");
     return new CL4BEUnmarshalFunction();
 }
@@ -114,7 +114,7 @@ CBEHeaderFile* CL4BEClassFactory::GetNewHeaderFile()
  */
 CBESndFunction * CL4BEClassFactory::GetNewSndFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BESndFunction\n");
     return new CL4BESndFunction();
 }
@@ -124,7 +124,7 @@ CBESndFunction * CL4BEClassFactory::GetNewSndFunction()
  */
 CBEWaitFunction * CL4BEClassFactory::GetNewRcvFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BEWaitFunction\n");
     return new CL4BEWaitFunction(false);
 }
@@ -134,7 +134,7 @@ CBEWaitFunction * CL4BEClassFactory::GetNewRcvFunction()
  */
 CBEWaitFunction * CL4BEClassFactory::GetNewWaitFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BEWaitFunction\n");
     return new CL4BEWaitFunction(true);
 }
@@ -164,7 +164,7 @@ CBEWaitAnyFunction * CL4BEClassFactory::GetNewRcvAnyFunction()
  */
 CBETypedDeclarator* CL4BEClassFactory::GetNewTypedDeclarator()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BETypedDeclarator\n");
     return new CL4BETypedDeclarator();
 }
@@ -183,7 +183,7 @@ CBEClass * CL4BEClassFactory::GetNewClass()
  */
 CBEReplyFunction* CL4BEClassFactory::GetNewReplyFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BEReplyFunction\n");
     return new CL4BEReplyFunction();
 }
@@ -193,7 +193,7 @@ CBEReplyFunction* CL4BEClassFactory::GetNewReplyFunction()
  */
 CBEMarshalFunction* CL4BEClassFactory::GetNewMarshalFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BEMarshalFunction\n");
     return new CL4BEMarshalFunction();
 }
@@ -203,7 +203,7 @@ CBEMarshalFunction* CL4BEClassFactory::GetNewMarshalFunction()
  */
 CBEMarshalExceptionFunction* CL4BEClassFactory::GetNewMarshalExceptionFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created class CL4BEMarshalExceptionFunction\n");
     return new CL4BEMarshalExceptionFunction();
 }
@@ -232,7 +232,7 @@ CBESwitchCase* CL4BEClassFactory::GetNewSwitchCase()
  */
 CBEMsgBuffer* CL4BEClassFactory::GetNewMessageBuffer()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created new instance of CL4BEMsgBuffer\n");
     return new CL4BEMsgBuffer();
 }
@@ -242,7 +242,7 @@ CBEMsgBuffer* CL4BEClassFactory::GetNewMessageBuffer()
  */
 CBEMsgBufferType* CL4BEClassFactory::GetNewMessageBufferType()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: create class CL4BEMsgBufferType\n");
     return new CL4BEMsgBufferType();
 }
@@ -252,7 +252,7 @@ CBEMsgBufferType* CL4BEClassFactory::GetNewMessageBufferType()
  */
 CBEMarshaller* CL4BEClassFactory::GetNewMarshaller()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4BEClassFactory: created new instance of CL4BEMarshaller\n");
     return new CL4BEMarshaller();
 }

@@ -1,0 +1,112 @@
+TCPA Programming in Linux - TPM device driver and example code
+Version 1.1 7/7/2003
+
+This package contains a TPM ("Trusted Platform Module", or TCPA chip)
+device driver for Linux, along with some programs to test and demonstrate
+basic TPM functions via this driver. This code is described in our article
+"Take Control of TCPA", in the August 2003 issue of Linux Journal,
+and reading the article is strongly recommended. Note that the article
+mentions patches for Grub and losetup, which are not yet ready for
+inclusion. They should be included in the near future. All code has been
+tested on IBM T30 Thinkpad systems, running RedHat 8.0. On other systems
+your mileage may vary.
+
+Please send any feedback to Dave Safford at safford@watson.ibm.com.
+
+All source code in this package is copyright IBM. The tpm device driver
+is released under terms of the GNU public license, see file "tpm/COPYING"
+for details. The example files are released under a BSD style license,
+see the file "License" for details.
+
+Order in which to do things:
+
+   0.  Read the Linux Journal article :-)
+   1.  Enable the TCPA chip, and clear it under BIOS:
+           - press and hold the "Fn" key (blue key at bottom left)
+           - power on the Thinkpad
+           - at the BIOS boot screen, release "Fn", and press "F1" for setup
+           - at BIOS setup, choose "Config", "IBM Security Chip", and
+             enable and clear the chip. Press "F10" to save/exit.
+           - boot into linux
+   2.  cd into "tpm", and make and install the tpm driver (see tpm/README)
+   3.  cd into libtcpa, and run make.
+   4.  cd into examples, and run make
+          (For *verbose* debugging versions, run "make debug")
+   5.  run the examples in this order
+          tcpa_demo             (basic tcpa functions, before ownership)
+          takeown               (establish ownership of the chip)
+          sealfile, unsealfile  (use the SRK to encrypt files)
+          createkey             (to create a key for signing)
+          signfile, verifyfile  (use a key created by createkey)
+          evictkey              (free key slots in the TPM)
+
+Here are recordings of running the examples:
+------------------------------------------------------------------------
+      tcpa_demo  - simple TCPA commands that should always work
+------------------------------------------------------------------------
+[root@localhost examples]# ./tcpa_demo
+    TPM successfully reset
+    TPM version 1.1.0.6
+    10 slots are available
+    No keys are loaded
+
+------------------------------------------------------------------------
+      takeown   - take ownership, building SRK, and setting owner and
+                  SRK passwords
+------------------------------------------------------------------------
+[root@localhost examples]# ./takeown
+    Usage: takeown <ownerpass> <SRK password>
+[root@localhost examples]# ./takeown owner_password srk_password
+
+------------------------------------------------------------------------
+      sealfile, unsealfile  - encrypt/decrypt small file under SRK 
+------------------------------------------------------------------------
+[root@localhost examples]# cat test.txt
+    This is a test data file to be sealed.
+[root@localhost examples]# ./sealfile
+    Usage: sealfile <key handle in hex> <key password> <data password> 
+    <input file> <outputfile>
+[root@localhost examples]# ./sealfile 40000000 srk_password data_password 
+    test.txt test.enc
+[root@localhost examples]# ./unsealfile
+    Usage: unsealfile <key handle in hex> <key password> <data password> 
+    <input file> <outputfile>
+[root@localhost examples]# ./unsealfile 40000000 srk_password data_password 
+    test.enc test.out
+[root@localhost examples]# cat test.out
+    This is a test data file to be sealed.
+
+------------------------------------------------------------------------
+    createkey, loadkey, signfile, verifyfile - doing signatures
+------------------------------------------------------------------------
+[root@localhost examples]# ./createkey
+    Usage: createkey <parent key handle in hex> <parent key password> 
+    <new key name> <new key password>
+[root@localhost examples]# ./createkey 40000000 srk_password dave-1 
+    dave-1_password
+    Created key with name dave-1
+[root@localhost examples]# ./signfile
+    Usage: signfile <key handle in hex> <key password> <input file> <outputfile>
+[root@localhost examples]# ./loadkey
+    Usage: loadkey <parent key handle in hex> <parent key password> <key name>
+[root@localhost examples]# ./loadkey 40000000 srk_password dave-1
+    loaded key dave-1, returned handle 6e4e00
+[root@localhost examples]# ./signfile
+    Usage: signfile <key handle in hex> <key password> <input file> <outputfile>
+[root@localhost examples]# ./signfile 6e4e00 dave-1_password test.txt test.sig
+[root@localhost examples]# ./verifyfile
+    Usage: verifyfile <sig file> <data file> <pubkey file>
+[root@localhost examples]# ./verifyfile test.sig test.txt dave-1.pem
+    Verification successful
+
+------------------------------------------------------------------------
+    evictkey  - evicting loaded keys
+------------------------------------------------------------------------
+[root@localhost examples]# ./tcpa_demo
+    TPM successfully reset
+    TPM version 1.1.0.6
+    10 slots are available
+    Key Handle 6E4E00 loaded
+[root@localhost examples]# ./evictkey all
+    Key Handle 6E4E00 being evicted
+

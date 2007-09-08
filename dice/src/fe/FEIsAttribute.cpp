@@ -52,6 +52,6 @@ CFEIsAttribute::~CFEIsAttribute()
  *  \return a copy of this object
  */
 CObject* CFEIsAttribute::Clone()
-{ 
+{
     return new CFEIsAttribute(*this);
 }

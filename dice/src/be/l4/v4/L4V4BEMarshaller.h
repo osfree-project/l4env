@@ -44,16 +44,16 @@ public:
     virtual ~CL4V4BEMarshaller();
 
 protected:
-    virtual bool DoSkipParameter(CBEFunction *pFunction, 
+    virtual bool DoSkipParameter(CBEFunction *pFunction,
 	CBETypedDeclarator *pParameter, DIRECTION_TYPE nDirection);
-    virtual bool MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter, 
+    virtual bool MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
     virtual void WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember);
 
 protected:
     virtual bool MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember);
-    
+
 };
 
 #endif

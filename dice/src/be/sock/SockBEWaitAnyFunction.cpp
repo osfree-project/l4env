@@ -93,7 +93,7 @@ CSockBEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
     pVariable = pCF->GetNewTypedDeclarator();
     AddLocalVariable(pVariable);
     pVariable->CreateBackEnd(string("socklen_t"), string("dice_fromlen"), 0);
-    string sInit = "sizeof(*" + 
+    string sInit = "sizeof(*" +
 	CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
     pVariable->SetDefaultInitString(sInit);
 }

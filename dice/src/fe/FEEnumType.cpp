@@ -56,7 +56,7 @@ CFEEnumType::~CFEEnumType()
  *  \return a reference to a new enumeration type object
  */
 CObject* CFEEnumType::Clone()
-{ 
+{
     return new CFEEnumType(*this);
 }
 

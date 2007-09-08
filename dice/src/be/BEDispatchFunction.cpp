@@ -160,7 +160,7 @@ CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface)
  * CORBA_Object.
  */
 void
-CBEDispatchFunction::AddBeforeParameters(void)
+CBEDispatchFunction::AddBeforeParameters()
 {
     CBEInterfaceFunction::AddBeforeParameters();
 

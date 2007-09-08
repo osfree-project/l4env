@@ -64,8 +64,8 @@ CL4BEMsgBufferType::~CL4BEMsgBufferType()
  *  \return a reference to the new instance
  */
 CObject *CL4BEMsgBufferType::Clone()
-{ 
-    return new CL4BEMsgBufferType(*this); 
+{
+    return new CL4BEMsgBufferType(*this);
 }
 
 /** \brief adds the elements of the structs
@@ -124,9 +124,9 @@ CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
 {
     assert(pFEParameter);
     // get struct
-    CFEOperation *pFEOperation = 
+    CFEOperation *pFEOperation =
 	pFEParameter->GetSpecificParent<CFEOperation>();
-    CFEInterface *pFEInterface = 
+    CFEInterface *pFEInterface =
 	pFEOperation->GetSpecificParent<CFEInterface>();
     CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
 	pFEInterface->GetName(), nType);
@@ -144,7 +144,7 @@ CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
     pMember->ReplaceType(pType);
     // set the pointer of the declarator to zero
     pMember->m_Declarators.First()->SetStars(0);
-    
+
     // add C language property to avoid const qualifier
     // in struct
     pMember->AddLanguageProperty(string("noconst"), string());
@@ -162,7 +162,7 @@ CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
 {
     assert(pFEParameter);
     // get struct
-    CFEOperation *pFEOperation = 
+    CFEOperation *pFEOperation =
 	pFEParameter->GetSpecificParent<CFEOperation>();
     CFEInterface *pFEInterface =
 	pFEOperation->GetSpecificParent<CFEInterface>();
@@ -177,7 +177,7 @@ CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
     pMember->CreateBackEnd(pFEParameter);
     // set the pointer of the declarator to zero
     pMember->m_Declarators.First()->SetStars(0);
-    
+
     // add C language property to avoid const qualifier
     // in struct
     pMember->AddLanguageProperty(string("noconst"), string());
@@ -213,8 +213,8 @@ CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
     }
     if (!bFlexpage)
 	return;
-    
-    CFEInterface *pFEInterface = 
+
+    CFEInterface *pFEInterface =
 	pFEOperation->GetSpecificParent<CFEInterface>();
     CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
 	pFEInterface->GetName(), nType);

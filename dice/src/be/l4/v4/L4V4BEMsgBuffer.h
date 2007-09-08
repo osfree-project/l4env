@@ -60,7 +60,7 @@ public:
 protected:
     virtual bool AddPlatformSpecificMembers(CBEFunction *pFunction,
 	CBEStructType *pStruct, CMsgStructType nType);
-    virtual void WriteRcvFlexpageInitialization(CBEFile& pFile,	
+    virtual void WriteRcvFlexpageInitialization(CBEFile& pFile,
 	CMsgStructType nType);
     virtual bool WriteRefstringInitialization(CBEFile& pFile, CMsgStructType nType);
     virtual void WriteRefstringInitParameter(CBEFile& pFile,
@@ -68,13 +68,13 @@ protected:
 	CMsgStructType nType);
     virtual bool WriteRefstringInitFunction(CBEFile& pFile,
 	CBEFunction *pFunction,	CBEClass *pClass, int nIndex, CMsgStructType nType);
-    
+
     virtual bool AddMsgTagMember(CBEFunction *pFunction,
 	CBEStructType *pStruct, CMsgStructType nType);
     virtual bool AddOpcodeMember(CBEFunction *pFunction,
 	CBEStructType *pStruct, CMsgStructType nType);
 
-    CBETypedDeclarator* GetMsgTagVariable(void);
+    CBETypedDeclarator* GetMsgTagVariable();
     virtual void CheckConvertStruct(CBEStructType *pStruct);
     virtual CBETypedDeclarator* CheckConvertMember(CBEStructType *pStruct,
 	vector<CBETypedDeclarator*>::iterator iter);

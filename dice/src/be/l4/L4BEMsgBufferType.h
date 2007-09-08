@@ -57,7 +57,7 @@ public: // Public methods
 protected:
     virtual void AddElements(CFEOperation *pFEOperation, CMsgStructType nType);
     virtual void AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType);
-    virtual void AddRefstringElement(CFETypedDeclarator *pFEParameter, 
+    virtual void AddRefstringElement(CFETypedDeclarator *pFEParameter,
 	CMsgStructType nType);
     virtual void AddFlexpageElement(CFETypedDeclarator *pFEParameter,
 	CMsgStructType nType);

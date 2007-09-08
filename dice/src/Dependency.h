@@ -51,7 +51,7 @@ class CBERoot;
 class CDependency
 {
 public:
-    /** constructs the dependency object 
+    /** constructs the dependency object
      *  \param sFile the file name to write dependencies to
      *  \param pFERoot the root of the front-end
      *  \param pBERoot the root of the back-end

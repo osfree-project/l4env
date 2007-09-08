@@ -81,7 +81,7 @@ protected: // protected methods
     virtual void WriteMaxRefstringSize(CBEFile& pFile, CBEFunction *pFunction,
 	CBETypedDeclarator *pMember, CBETypedDeclarator *pParameter,
 	int nIndex);
-	
+
     virtual bool Sort(CBEStructType *pStruct);
     virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst,
 	    CBETypedDeclarator *pSecond);
@@ -93,8 +93,8 @@ protected: // protected methods
     virtual bool InsertPadMember(int nFEType, int nSize,
 	CBETypedDeclarator *pMember, CBEStructType *pStruct);
 
-    virtual int GetWordMemberCountFunction(void);
-    virtual int GetWordMemberCountClass(void);
+    virtual int GetWordMemberCountFunction();
+    virtual int GetWordMemberCountClass();
     CBETypedDeclarator* GetRefstringMemberVariable(int nNumber);
 
     virtual int GetMemberSize(int nType, CBETypedDeclarator *pMember,

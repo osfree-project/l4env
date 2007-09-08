@@ -30,7 +30,7 @@
 #define __DICE_PROGRAMOPTIONS_H__
 
 /**
- * \defgroup ProgramOptions Constants to be used for Program Options 
+ * \defgroup ProgramOptions Constants to be used for Program Options
  */
 //@{
 
@@ -71,7 +71,7 @@ enum ProgramOption_Type
 };
 
 /** \enum ProgramFile_Type
- *  \brief defines the valid file options 
+ *  \brief defines the valid file options
  */
 enum ProgramFile_Type
 {

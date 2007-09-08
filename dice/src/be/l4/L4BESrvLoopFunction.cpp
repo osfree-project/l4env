@@ -70,7 +70,7 @@ CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
     // zero msg buffer
-    if (CCompiler::IsOptionSet(PROGRAM_ZERO_MSGBUF)) 
+    if (CCompiler::IsOptionSet(PROGRAM_ZERO_MSGBUF))
 	pMsgBuffer->WriteSetZero(pFile);
     // set the size dope here, so we do not need to set it anywhere else
     pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, CMsgStructType::Generic);
@@ -112,16 +112,16 @@ CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
     }
     else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
     {
-	pFile << "\tDICE_EXCEPTION_MAJOR(" << pDecl->GetName() << 
+	pFile << "\tDICE_EXCEPTION_MAJOR(" << pDecl->GetName() <<
 	    ") = CORBA_NO_EXCEPTION;\n";
-	pFile << "\tDICE_EXCEPTION_MINOR(" << pDecl->GetName() << 
+	pFile << "\tDICE_EXCEPTION_MINOR(" << pDecl->GetName() <<
 	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
 	pFile << "\t" << pDecl->GetName() << "->_p.param = 0;\n";
-	pFile << "\t" << pDecl->GetName() << 
+	pFile << "\t" << pDecl->GetName() <<
 	    "->timeout = L4_IPC_SEND_TIMEOUT_0;\n";
 	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.grant = 1;\n";
 	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.write = 1;\n";
-	pFile << "\t" << pDecl->GetName() << 
+	pFile << "\t" << pDecl->GetName() <<
 	    "->rcv_fpage.fp.size = L4_WHOLE_ADDRESS_SPACE;\n";
 	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.zero = 0;\n";
 	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.page = 0;\n";
@@ -153,7 +153,7 @@ CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
     CMsgStructType nType = GetReceiveDirection();
-    if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nType) > 0) && 
+    if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nType) > 0) &&
 	pEnv)
     {
         CBEDeclarator *pDecl = pEnv->m_Declarators.First();

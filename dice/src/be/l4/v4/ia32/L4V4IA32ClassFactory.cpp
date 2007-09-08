@@ -45,7 +45,7 @@ CL4V4IA32ClassFactory::~CL4V4IA32ClassFactory()
  */
 CBECommunication* CL4V4IA32ClassFactory::GetNewCommunication()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4V4IA32ClassFactory: created class CL4V4IA32IPC\n");
     return new CL4V4IA32IPC();
 }

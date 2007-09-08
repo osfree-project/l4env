@@ -153,7 +153,7 @@ void CBESocket::WriteErrorCheck(CBEFile& pFile,
     --pFile;
 
     /* don't perror if the error was a timeout */
-    pFile << "\tif (errno != EAGAIN) perror (\"" << sFunc << "\");\n";	
+    pFile << "\tif (errno != EAGAIN) perror (\"" << sFunc << "\");\n";
     pFunction->WriteReturn(pFile);
     --pFile << "\t}\n";
 }
@@ -229,7 +229,7 @@ void CBESocket::WriteEnvironment(CBEFile& pFile, CBEFunction* pFunction)
 void CBESocket::WriteTimeoutOptionCall(CBEFile& pFile, CBEFunction* pFunction,
     bool bUseEnv)
 {
-    /* first, write the setsockopt call to enable timeouts 
+    /* first, write the setsockopt call to enable timeouts
      * TODO: move this code into a separate function */
     pFile << "\tsetsockopt(";
     WriteSocketDescriptor(pFile, pFunction, bUseEnv);
@@ -346,7 +346,7 @@ void CBESocket::WriteBind(CBEFile& pFile,
 
     pFile << "\tif (bind(";
     WriteSocketDescriptor(pFile, pFunction, bUseEnv);
-    pFile << ", (struct sockaddr*)" << sCorbaObj << 
+    pFile << ", (struct sockaddr*)" << sCorbaObj <<
 	", sizeof(struct sockaddr)) < 0)\n";
     pFile << "\t{\n";
     ++pFile << "\tperror(\"bind\");\n";
@@ -391,7 +391,7 @@ CBESocket::WriteReply(CBEFile& /*pFile*/,
  *  \param pFile the file to write to
  *  \param pFunction the funtion to write for
  */
-void 
+void
 CBESocket::WriteReceive(CBEFile& /*pFile*/,
     CBEFunction* /*pFunction*/)
 {}

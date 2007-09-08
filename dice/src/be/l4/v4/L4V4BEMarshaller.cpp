@@ -80,7 +80,7 @@ CL4V4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
  * pointer to this parameter has then to be assigned to the snd_str element of
  * the indirect part member. The size has to be assigned to the snd_size
  * element (for sending). For receiving the address of the receive buffer can
- * be used to set the address of the receive buffer. 
+ * be used to set the address of the receive buffer.
  *
  * We have to use the rcv_str member to set incoming strings, because snd_str
  * is not se properly.
@@ -90,8 +90,8 @@ CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile,
     CBETypedDeclarator *pParameter,
     CDeclStack* pStack)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	"CL4BEMarshaller::%s called for %s\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CL4BEMarshaller::%s called for %s\n", __func__,
 	pParameter->m_Declarators.First()->GetName().c_str());
 
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
@@ -158,7 +158,7 @@ CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile,
 	// cast to type of parameter
 	pType->WriteCast(pFile, true);
 	// access message buffer
-	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, 
+	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember,
 	    pStack);
 	// append receive member
 	pFile << ".X.str.string_ptr;\n";
@@ -259,7 +259,7 @@ CL4V4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMemb
     // get message buffer
     CBEMsgBuffer *pMsgBuffer = pMember->GetSpecificParent<CBEMsgBuffer>();
     assert(pMsgBuffer);
-    
+
     if (m_bMarshal)
     {
 	// zero raw member

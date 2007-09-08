@@ -60,7 +60,7 @@ CBEImplementationFile::~CBEImplementationFile()
 
 /** \brief create a clone of this object
  */
-CObject* CBEImplementationFile::Clone(void)
+CObject* CBEImplementationFile::Clone()
 {
     return new CBEImplementationFile(*this);
 }
@@ -161,7 +161,7 @@ CBEImplementationFile::CreateBackEnd(CFEOperation * pFEOperation,
  * the base class' Write
  * function to print the functions.
  */
-void CBEImplementationFile::Write(void)
+void CBEImplementationFile::Write()
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
     string sFilename;
@@ -301,7 +301,7 @@ CBEImplementationFile::WriteFunction(CBEFunction *pFunction)
 /** \brief writes includes, which have to appear before any type definition
  */
 void
-CBEImplementationFile::WriteDefaultIncludes(void)
+CBEImplementationFile::WriteDefaultIncludes()
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 

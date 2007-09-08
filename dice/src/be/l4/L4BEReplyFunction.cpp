@@ -94,13 +94,13 @@ CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation)
  * In L4 this is a send. Do not set size dope, because the size dope is set by
  * the server (wait-any function).
  */
-void 
+void
 CL4BEReplyFunction::WriteInvocation(CBEFile& pFile)
 {
     // set size and send dopes
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
 	GetSendDirection());
 
     // invocate
@@ -118,7 +118,7 @@ CL4BEReplyFunction::WriteInvocation(CBEFile& pFile)
  * \todo: Do we want to block the server, waiting for one client, which might
  * not respond?
  */
-void 
+void
 CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     if (!m_sErrorFunction.empty())
@@ -127,7 +127,7 @@ CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 
 	pFile << "\t/* test for IPC errors */\n";
-	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << 
+	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult <<
 	    ")))\n";
 	++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
 	WriteCallParameter(pFile, GetEnvironment(), true);
@@ -155,13 +155,13 @@ void CL4BEReplyFunction::WriteIPC(CBEFile& pFile)
 /** \brief init message buffer size dope
  *  \param pFile the file to write to
  */
-void 
+void
 CL4BEReplyFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     CBEReplyFunction::WriteVariableInitialization(pFile);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE,
 	GetSendDirection());
 }
 

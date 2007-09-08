@@ -60,7 +60,7 @@ public:
     virtual void CreateBackEnd(CFEInterface *pFEInterface);
 
 protected:
-    virtual void AddParameters(void);
+    virtual void AddParameters();
 };
 
 #endif // !__DICE_BEINTERFACEFUNCTION_H__

@@ -67,7 +67,7 @@ public:
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
 
-    virtual CBETypedDeclarator* GetExceptionVariable(void);
+    virtual CBETypedDeclarator* GetExceptionVariable();
 
 protected:
     virtual int GetReturnSize(DIRECTION_TYPE nDirection);

@@ -1,0 +1,52 @@
+/*
+ * \brief   IDL definition of Lyon client interface.
+ * \date    2006-07-17
+ * \author  Carsten Weinhold <weinhold@os.inf.tu-dresden.de>
+ * \author  Christelle Braun <cbraun@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2006-2007  Carsten Weinhold <weinhold@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the STPM package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+import <l4/sys/types.h>
+import <l4/lyon/lyon.h>
+
+interface lyonif { 
+  int add   ([in] char parent_id[20],
+             [in] l4_threadid_t new_child,
+	     [in] char new_id[20],
+	     [in] char *name,
+	     [in] char *hash);
+
+  int del   ([in] char id[20]);
+
+  int link  ([in] unsigned int keylen,
+	     [in, ref, length_is(keylen), max_is(4096)] char* key, 
+	     [in, out] unsigned int *dstlen,
+	     [out, ref, length_is(dstlen), max_is(4096), prealloc_client, prealloc_server] char** dst);
+
+  int quote ([in] unsigned int nlen,
+	     [in, ref, length_is(nlen), max_is(4096)] char *nonce,
+	     [out, prealloc_client] lyon_quote_t *quote);
+  
+  int extend ([in] unsigned int datalen,
+	     [in, ref, length_is(datalen), max_is(4096)] char *data);
+
+  int seal  ([in] char id[20],
+	     [in] unsigned int hashlen,
+	     [in, ref, length_is(hashlen), max_is(4096)] char *hash,
+	     [in] unsigned int srclen,
+	     [in, ref, length_is(srclen), max_is(4096)] char *src,
+	     [in, out] unsigned int *dstlen,
+	     [out, ref, length_is(dstlen), max_is(4096), prealloc_client, prealloc_server] char **dst);  
+
+  int unseal([in] unsigned int srclen,
+	     [in, ref, length_is(srclen), max_is(4096)] char *src,
+	     [in, out] unsigned int *dstlen,
+	     [out, ref, length_is(dstlen), max_is(4096), prealloc_client, prealloc_server] char **dst);
+};

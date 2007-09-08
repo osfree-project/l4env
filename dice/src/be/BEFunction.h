@@ -118,7 +118,7 @@ public:
     virtual CBETypedDeclarator* FindParameterIsAttribute(ATTR_TYPE nAttributeType,
 	    std::string sAttributeParameter);
 
-    virtual CBEType *GetReturnType(void);
+    virtual CBEType *GetReturnType();
     virtual bool DoMarshalParameter(CBETypedDeclarator *pParameter,
 	    bool bMarshal);
     virtual int GetParameterCount(int nFEType, DIRECTION_TYPE nDirection);
@@ -147,8 +147,8 @@ public:
 	std::string sInit = std::string());
     virtual void MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
-    virtual CBETypedDeclarator* GetReturnVariable(void);
-    virtual CBETypedDeclarator* GetExceptionVariable(void);
+    virtual CBETypedDeclarator* GetReturnVariable();
+    virtual CBETypedDeclarator* GetExceptionVariable();
 
     CBEMsgBuffer* GetMessageBuffer() const;
     CBECommunication* GetCommunication() const;
@@ -200,7 +200,7 @@ protected:
 	    CBETypedDeclarator * pParameter, bool bCallFromSameClass);
     virtual void WriteCallParameterList(CBEFile& pFile, bool bCallFromSameClass);
     virtual void WriteFunctionAttributes(CBEFile& pFile);
-    void AddMessageBuffer(void);
+    void AddMessageBuffer();
     void AddMessageBuffer(CFEOperation *pFEOperation);
     virtual bool SetReturnVar(bool bUnsigned, int nSize, int nFEType,
 	    std::string sName);
@@ -208,11 +208,11 @@ protected:
     virtual bool SetReturnVar(CFETypeSpec * pFEType, std::string sName);
     virtual void SetReturnVarAttributes(CBETypedDeclarator *pReturn);
     virtual void CreateBackEnd(CFEBase* pFEObject);
-    virtual void CreateObject(void);
-    virtual void CreateEnvironment(void);
-    void CreateMarshaller(void);
-    void CreateCommunication(void);
-    void CreateTrace(void);
+    virtual void CreateObject();
+    virtual void CreateEnvironment();
+    void CreateMarshaller();
+    void CreateCommunication();
+    void CreateTrace();
     virtual void AddExceptionVariable();
 
     virtual int GetFixedReturnSize(DIRECTION_TYPE nDirection);
@@ -224,14 +224,14 @@ protected:
     virtual void WriteExceptionCheck(CBEFile& pFile);
     virtual std::string GetExceptionWordInitString();
 
-    virtual void AddAfterParameters(void);
-    virtual void AddBeforeParameters(void);
+    virtual void AddAfterParameters();
+    virtual void AddBeforeParameters();
     void AddLocalVariable(CBETypedDeclarator *pVariable);
 
     CBETypedDeclarator* FindParameterMember(CBETypedDeclarator *pParameter,
 	CDeclStack::iterator iter, CDeclStack* pStack);
 
-    CBETypedDeclarator* CreateOpcodeVariable(void);
+    CBETypedDeclarator* CreateOpcodeVariable();
 
 private:
     void SetCallVariable(CBETypedDeclarator *pTypedDecl,

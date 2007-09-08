@@ -1,0 +1,32 @@
+Experimental Linux Driver for TPM (TCPA chip) - Driver version 1.1
+
+Changes from 1.0:
+  
+   - this driver now has an approved device number (c 10 224)
+   - this driver now handles suspend/resume correctly
+   - compilation against a devfs enabled kernel now works
+
+Building:
+
+    Simply run "make", which should compile a "tpm.o" driver module.
+
+    (Note that we don't a configure script, so you may have to tweak
+    the Makefile for systems other than RedHat 8.)
+
+Installing:
+
+    We don't have an automated install, yet. 
+    As root, simply copy tpm.o to a reasonable place in /lib/modules:
+        cp tpm.o /lib/modules/`uname -r`/misc
+    and run depmod to make it available:
+        depmod -a
+    Then, make the /dev entry:
+        mknod /dev/tpm c 10 224
+
+Running:
+
+    /dev/tmp is a character device tha can be read and written.
+    This character device accepts/returns bytes in accordance with
+    the published TCPA specification, available at
+        http://www.trustedcomputing.org
+

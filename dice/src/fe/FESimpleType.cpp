@@ -77,7 +77,7 @@ CObject *CFESimpleType::Clone()
 }
 
 /** \brief test a type whether it is a constructed type or not
- *  \return true 
+ *  \return true
  */
 bool CFESimpleType::IsConstructedType()
 {

@@ -70,7 +70,7 @@ CBECommunication* CL4V2BEClassFactory::GetNewCommunication()
  */
 CBEDispatchFunction* CL4V2BEClassFactory::GetNewDispatchFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4V2BEClassFactory: created class CL4V2BEDispatchFunction\n");
     return new CL4V2BEDispatchFunction();
 }

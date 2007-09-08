@@ -224,7 +224,7 @@ string CBESizes::WordRoundUpStr(string const &value)
 {
     std::ostringstream os;
     int nWordSize = GetSizeOfType(TYPE_MWORD);
-    os << "((" << value << '+' << nWordSize-1 << ')' << "& ~" << 
+    os << "((" << value << '+' << nWordSize-1 << ')' << "& ~" <<
       nWordSize-1 << ')';
     return os.str();
 }

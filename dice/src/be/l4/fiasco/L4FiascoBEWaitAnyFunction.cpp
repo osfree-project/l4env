@@ -44,7 +44,7 @@ CL4FiascoBEWaitAnyFunction::~CL4FiascoBEWaitAnyFunction()
 }
 
 void
-CL4FiascoBEWaitAnyFunction::AddBeforeParameters(void)
+CL4FiascoBEWaitAnyFunction::AddBeforeParameters()
 {
     CL4BEWaitAnyFunction::AddBeforeParameters();
 

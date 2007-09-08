@@ -196,7 +196,7 @@ CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation)
  * The component function has a _non_const CORBA_Object.
  */
 void
-CBEComponentFunction::AddBeforeParameters(void)
+CBEComponentFunction::AddBeforeParameters()
 {
     CBEOperationFunction::AddBeforeParameters();
     // add no const C attribute

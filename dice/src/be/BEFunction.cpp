@@ -141,7 +141,7 @@ CBEFunction::~CBEFunction()
  *
  * Do not manipulate the returned reference directly!
  */
-CBEType *CBEFunction::GetReturnType(void)
+CBEType *CBEFunction::GetReturnType()
 {
     CBETypedDeclarator *pReturn = GetReturnVariable();
     if (!pReturn)
@@ -154,7 +154,7 @@ CBEType *CBEFunction::GetReturnType(void)
  * The CORBA C mapping specifies a CORBA_object to appear as first parameter.
  */
 void
-CBEFunction::AddBeforeParameters(void)
+CBEFunction::AddBeforeParameters()
 {
     if (m_pCorbaObject)
         m_Parameters.Add(m_pCorbaObject);
@@ -166,7 +166,7 @@ CBEFunction::AddBeforeParameters(void)
  * parameter
  */
 void
-CBEFunction::AddAfterParameters(void)
+CBEFunction::AddAfterParameters()
 {
     if (m_pCorbaEnv)
         m_Parameters.Add(m_pCorbaEnv);
@@ -897,11 +897,11 @@ int CBEFunction::GetReturnSize(DIRECTION_TYPE nDirection)
         if (pReturn->IsVariableSized())
             return pReturn->GetType()->GetSize();
 
-    	int nParamSize = pReturn->GetSize();
+	int nParamSize = pReturn->GetSize();
 	if (nParamSize < 0)
 	    return pReturn->GetType()->GetSize();
 
-    	return nParamSize;
+	return nParamSize;
     }
     return 0;
 }
@@ -1427,7 +1427,7 @@ CBEFunction::SetReturnVarAttributes(CBETypedDeclarator *pReturn)
     {
 	pAttr = pCF->GetNewAttribute();
 	pReturn->m_Attributes.Add(pAttr);
-    	pAttr->CreateBackEnd(ATTR_STRING);
+	pAttr->CreateBackEnd(ATTR_STRING);
     }
 }
 
@@ -2386,7 +2386,7 @@ CBEFunction::SetFunctionName(string sName,
  * If error, throws exception.
  */
 CBETypedDeclarator*
-CBEFunction::CreateOpcodeVariable(void)
+CBEFunction::CreateOpcodeVariable()
 {
     CBEClassFactory *pCF = CCompiler::GetClassFactory();
     CBEOpcodeType *pOpcodeType = pCF->GetNewOpcodeType();
@@ -2405,7 +2405,7 @@ CBEFunction::CreateOpcodeVariable(void)
 /** \brief add the exception variable to the local variables
  */
 void
-CBEFunction::AddExceptionVariable(void)
+CBEFunction::AddExceptionVariable()
 {
     if (m_Attributes.Find(ATTR_NOEXCEPTIONS))
         return;

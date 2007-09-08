@@ -54,7 +54,7 @@ public:
     CL4BEMarshaller();
     virtual ~CL4BEMarshaller();
 
-    virtual void MarshalFunction(CBEFile& pFile, CBEFunction *pFunction, 
+    virtual void MarshalFunction(CBEFile& pFile, CBEFunction *pFunction,
 	DIRECTION_TYPE nDirection);
     virtual bool MarshalWordMember(CBEFile& pFile, CBEFunction *pFunction,
 	CMsgStructType nType, int nPosition, bool bReference, bool bLValue);
@@ -67,22 +67,22 @@ protected:
     virtual bool MarshalSendDope(CBETypedDeclarator *pMember);
     virtual bool MarshalSizeDope(CBETypedDeclarator *pMember);
     virtual bool MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember);
-    
+
     virtual void MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
-    virtual bool MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter, 
+    virtual bool MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
     virtual void WriteMember(CBEFile& pFile, DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember, CDeclStack* pStack);
     virtual void WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember);
 
-    virtual void MarshalArrayIntern(CBEFile& pFile, CBETypedDeclarator *pParameter, 
+    virtual void MarshalArrayIntern(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CBEType *pType, CDeclStack* pStack);
 
-    virtual bool DoSkipParameter(CBEFunction *pFunction, 
+    virtual bool DoSkipParameter(CBEFunction *pFunction,
 	CBETypedDeclarator *pParameter, DIRECTION_TYPE nDirection);
-    
+
 protected:
     /** \var int m_nSkipSize
      *  \brief internal counter to know if the parameter should be skipped
@@ -106,7 +106,7 @@ private:
 	~PositionMarshaller();
 
     public:
-	bool Marshal(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType, 
+	bool Marshal(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType,
     	    int nPosition, bool bReference, bool bLValue);
     private:
 	CBEMsgBufferType* GetMessageBufferType(CBEFunction *pFunction);
@@ -116,7 +116,7 @@ private:
 	void WriteParameter(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	    bool bReference, bool bLValue);
 	void WriteSpecialMember(CBEFile& pFile, CBEFunction *pFunction,
-	    CBETypedDeclarator *pMember, CMsgStructType nType, bool bReference, 
+	    CBETypedDeclarator *pMember, CMsgStructType nType, bool bReference,
 	    bool bLValue);
 
     protected:
@@ -124,7 +124,7 @@ private:
 	 *  \brief reference to calling marshaller
 	 */
 	CL4BEMarshaller* m_pParent;
-	/** \var int m_nPosSize 
+	/** \var int m_nPosSize
 	 *  \brief the size of the position to marshal to
 	 *
 	 * This is the size of a word type, but to spare the permanent lookup
@@ -134,8 +134,8 @@ private:
 	int m_nPosSize;
 	/** \var bool m_bReference
 	 *  \brief true if a reference to the member is needed
-	 * 
-	 * Stored here to avoid passing as parameter (value does not change). 
+	 *
+	 * Stored here to avoid passing as parameter (value does not change).
 	 */
 	bool m_bReference;
 

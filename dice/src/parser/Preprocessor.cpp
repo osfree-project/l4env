@@ -242,7 +242,7 @@ FILE* CPreprocessor::Preprocess(string sFile, string& sPath)
     if (!fInput)
 	return 0; // error message printed by OpenFile
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CPreprocessor::%s: start preprocessing input file \"%s\" ...\n", __func__,
 	sFile.c_str());
 

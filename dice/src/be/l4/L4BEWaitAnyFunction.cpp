@@ -200,7 +200,7 @@ CL4BEWaitAnyFunction::WriteDedicatedWait(CBEFile& pFile)
 void
 CL4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile& pFile)
 {
-    CL4BEMarshaller *pMarshaller = 
+    CL4BEMarshaller *pMarshaller =
 	dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
     assert(pMarshaller);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
@@ -210,7 +210,7 @@ CL4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile& pFile)
 	m_pTrace->BeforeReplyWait(pFile, this);
 
     CL4BESizes *pSizes = (CL4BESizes*)CCompiler::GetSizes();
-    int nShortWords = pSizes->GetMaxShortIPCSize() / 
+    int nShortWords = pSizes->GetMaxShortIPCSize() /
 	pSizes->GetSizeOfType(TYPE_MWORD);
     // to determine if we can send a short IPC we have to test the size dope
     // of the message
@@ -397,7 +397,7 @@ CL4BEWaitAnyFunction::WriteExceptionCheck(CBEFile& pFile)
 /** \brief write the error checking code for the IPC
  *  \param pFile the file to write to
  */
-void 
+void
 CL4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -564,9 +564,9 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
 	return;
-    
+
     bool bFixedNumberOfFlexpages = true;
-    int nNumberOfFlexpages = 
+    int nNumberOfFlexpages =
 	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
     CBESizes *pSizes = CCompiler::GetSizes();
     int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
@@ -579,11 +579,11 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
     {
 	// the fixed offset (where to find the opcode) is:
 	// offset = 8*nMaxNumberOfFlexpages + 8
-	CL4BEMarshaller *pMarshaller = 
+	CL4BEMarshaller *pMarshaller =
 	    dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
 	assert(pMarshaller);
 	++pFile;
-	pMarshaller->MarshalParameter(pFile, this, pReturn, false, 
+	pMarshaller->MarshalParameter(pFile, this, pReturn, false,
 	    (nNumberOfFlexpages+1) * nSizeFpage);
 	--pFile;
     }

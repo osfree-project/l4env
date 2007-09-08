@@ -54,7 +54,7 @@ protected:
 
 public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, 
+    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);

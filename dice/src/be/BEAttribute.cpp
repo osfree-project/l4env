@@ -66,7 +66,7 @@ CBEAttribute::CBEAttribute()
 }
 
 CBEAttribute::CBEAttribute(CBEAttribute & src)
-: CBEObject(src), 
+: CBEObject(src),
   m_pPtrDefault(0),
   m_sString(),
   m_pType(0),
@@ -297,9 +297,9 @@ CBEAttribute::CreateBackEnd(ATTR_TYPE nType)
 	{
 	    std::ostringstream os;
 	    os << m_nType;
-	    
+
 	    string exc = string(__func__);
-	    exc += "Attribute Type " + os.str() + 
+	    exc += "Attribute Type " + os.str() +
 		" requires other CreateBackEnd method.";
 	    throw new error::create_error(exc);
 	}
@@ -365,9 +365,9 @@ CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
         {
             // not found -> the parameter might be declared after its use
             // -> we search the FE function for the parameter
-            CFEOperation *pOperation = 
+            CFEOperation *pOperation =
 		pFEIsAttribute->GetSpecificParent<CFEOperation>();
-            CFEStructType *pFEStruct = 
+            CFEStructType *pFEStruct =
 		pFEIsAttribute->GetSpecificParent<CFEStructType>();
             CFETypedDeclarator *pFEParameter = 0;
             if (pOperation)
@@ -421,7 +421,7 @@ CBEAttribute::CreateBackEndIs(ATTR_TYPE nType,
 {
     string exc = string(__func__);
     // check type
-    switch (nType) 
+    switch (nType)
     {
     case ATTR_SWITCH_IS:    // Is
     case ATTR_FIRST_IS:    // IS
@@ -623,6 +623,6 @@ CBEAttribute::WriteToStr(string& str)
     default:
 	break;
     }
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: str = %s (class is %d)\n", 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: str = %s (class is %d)\n",
 	__func__, str.c_str(), m_nAttrClass);
 }

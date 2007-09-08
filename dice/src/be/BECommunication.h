@@ -81,7 +81,7 @@ public:
      *  \param pFile the file to write to
      *  \param pFunction the function to write for
      */
-    virtual void WriteInitialization(CBEFile& pFile, 
+    virtual void WriteInitialization(CBEFile& pFile,
 	CBEFunction *pFunction) = 0;
     /** \brief write the binding code of the application to the communication
      *         socket

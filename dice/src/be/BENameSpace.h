@@ -72,7 +72,7 @@ public: // Public methods
     /** \brief retrieves the name of the NameSpace
      *  \return the name of the lib
      */
-    std::string GetName(void)
+    std::string GetName()
     { return m_sName; }
 
     /** \brief tries to match the name of the namespace
@@ -118,7 +118,7 @@ protected: // Protected methods
     virtual void WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile& pFile);
     virtual void WriteTaggedType(CBEType *pType, CBEHeaderFile& pFile);
 
-    virtual void CreateOrderedElementList(void);
+    virtual void CreateOrderedElementList();
     void InsertOrderedElement(CObject *pObj);
 
 protected: // Protected attributes

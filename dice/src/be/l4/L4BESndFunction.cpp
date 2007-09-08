@@ -80,7 +80,7 @@ void CL4BESndFunction::WriteInvocation(CBEFile& pFile)
     // after marshalling set the message dope
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
 	GetSendDirection());
     // invocate
     if (!CCompiler::IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
@@ -111,7 +111,7 @@ void CL4BESndFunction::WriteInvocation(CBEFile& pFile)
  *
  * \todo write IPC error checking
  */
-void 
+void
 CL4BESndFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
@@ -119,7 +119,7 @@ CL4BESndFunction::WriteIPCErrorCheck(CBEFile& pFile)
     CBETypedDeclarator *pEnv = GetEnvironment();
     CBEDeclarator *pDecl = pEnv->m_Declarators.First();
 
-    pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n" 
+    pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n"
 	<< "\t{\n";
     // env.major = CORBA_SYSTEM_EXCEPTION;
     // env.repos_id = DICE_IPC_ERROR;
@@ -142,7 +142,7 @@ CL4BESndFunction::WriteIPCErrorCheck(CBEFile& pFile)
     if (pDecl->GetStars() == 0)
 	sEnv = "&";
     sEnv += pDecl->GetName();
-    --pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" 
+    --pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR("
 	<< sResult << ");\n";
     // return
     WriteReturn(pFile);
@@ -159,7 +159,7 @@ CL4BESndFunction::WriteVariableInitialization(CBEFile& pFile)
     CBESndFunction::WriteVariableInitialization(pFile);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE,
 	GetSendDirection());
 }
 
@@ -170,7 +170,7 @@ void CL4BESndFunction::WriteIPC(CBEFile& pFile)
 {
     if (m_pTrace)
 	m_pTrace->BeforeCall(pFile, this);
-    
+
     CBECommunication *pComm = GetCommunication();
     assert(pComm);
     pComm->WriteSend(pFile, this);

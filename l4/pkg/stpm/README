@@ -1,0 +1,5 @@
+TPM support.
+
+This package provides two servers for authenticated booting and sealed
+memory. STPM contains the drivers to access the hardware TPM directly.
+VTPM implements a virtual TPM used at the application layer.

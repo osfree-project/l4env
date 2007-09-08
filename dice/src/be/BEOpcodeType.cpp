@@ -57,11 +57,11 @@ CBEOpcodeType::~CBEOpcodeType()
 void
 CBEOpcodeType::CreateBackEnd()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n", 
+    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n",
 	__func__);
     CBEType::CreateBackEnd(false, CCompiler::GetSizes()->GetOpcodeSize(),
         TYPE_LONG);
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n", 
+    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n",
 	__func__);
 }
 

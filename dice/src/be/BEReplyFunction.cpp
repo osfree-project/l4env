@@ -224,7 +224,7 @@ DIRECTION_TYPE CBEReplyFunction::GetReceiveDirection()
  * value is the value returned by the component-function.
  */
 void
-CBEReplyFunction::AddBeforeParameters(void)
+CBEReplyFunction::AddBeforeParameters()
 {
     // call base class to add object
     CBEOperationFunction::AddBeforeParameters();

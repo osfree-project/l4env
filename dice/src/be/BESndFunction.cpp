@@ -95,7 +95,7 @@ void CBESndFunction::WriteReturn(CBEFile& pFile)
  *  \param pFEOperation the corresponding front-end operation
  *  \return true if successful
  */
-void 
+void
 CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation)
 {
     // set target file name
@@ -125,16 +125,16 @@ void
 CBESndFunction::AddBeforeParameters()
 {
     CBEOperationFunction::AddBeforeParameters();
-    
+
     if (!GetReturnType()->IsVoid())
     {
-        CBETypedDeclarator *pReturn = 
+        CBETypedDeclarator *pReturn =
 	    (CBETypedDeclarator*)GetReturnVariable()->Clone();
 	DIRECTION_TYPE nDir = GetSendDirection();
 	ATTR_TYPE nAttr = (nDir == DIRECTION_IN) ? ATTR_IN : ATTR_OUT;
 	if (!pReturn->m_Attributes.Find(nAttr))
 	{
-	    CBEAttribute *pAttr = pReturn->m_Attributes.Find((nAttr == ATTR_IN) ? 
+	    CBEAttribute *pAttr = pReturn->m_Attributes.Find((nAttr == ATTR_IN) ?
 		ATTR_OUT : ATTR_IN);
 	    pAttr->CreateBackEnd(nAttr);
 	}
@@ -233,8 +233,8 @@ int CBESndFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  * This function assumes that it is called before the marshalling of the other
  * parameters.
  */
-int 
-CBESndFunction::WriteMarshalReturn(CBEFile& pFile, 
+int
+CBESndFunction::WriteMarshalReturn(CBEFile& pFile,
     bool bMarshal)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
@@ -264,7 +264,7 @@ CBESndFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
     // check return type (do test here because sometimes we like to call
     // AddReturnVariable depending on other constraint--return is parameter)
-    
+
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sReturn = pNF->GetReturnVariable();
     CBETypedDeclarator *pReturn = FindParameter(sReturn);

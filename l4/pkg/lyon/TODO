@@ -1,0 +1,16 @@
+- monotonic counter support
+- make quote() actually work
+- think about link() ;-)
+- implement basic stuff for getting the signing key attested:
+  - use TPM_Quote() to get Lyon own TCB attested
+  - do one of the following:
+    - get a TTP to sign the public key after Lyon being remotely attested
+    - use DAA to attest that the signature (created by the TPM) of the
+      signing key has been created by a valid TPM (this means we also need
+      to send the measurements of Lyon's TCB whenever Lyon creates a
+      signature
+- use more secure algorithms for making signatures (-> modify/extend
+  libcrypto)
+- refactoring:
+  - avoid L4 stuff (L4_EPERM, ...)
+  - move the lyon core stuff into a lib

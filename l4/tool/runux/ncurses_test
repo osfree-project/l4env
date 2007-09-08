@@ -1,0 +1,21 @@
+#! /bin/bash
+
+. ${0%/*}/generic.inc
+
+fiasco \
+	-G $UXRES \
+	-l names \
+	-l log \
+	-l dm_phys \
+	-l rtc-ux \
+	-l l4io \
+	-l simple_ts \
+	-l l4dope \
+	-l fuxfprov \
+    -l name_server \
+    -l "fstab -c /term" \
+    -l vc_server \
+    -l signal_server \
+    -l ncurses_example \
+	-n8 -n11 "$@"\
+

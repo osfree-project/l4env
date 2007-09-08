@@ -86,7 +86,7 @@ CFELibrary::~CFELibrary()
  *  \return a copy of this object
  */
 CObject* CFELibrary::Clone()
-{ 
+{
     return new CFELibrary(*this);
 }
 
@@ -99,7 +99,7 @@ CFELibrary::AddComponents(vector<CFEFileComponent*> *pComponents)
     if (pComponents)
     {
         // set parent
-	for_each(pComponents->begin(), pComponents->end(), 
+	for_each(pComponents->begin(), pComponents->end(),
 	    std::bind2nd(std::mem_fun(&CFEFileComponent::SetParent), this));
         vector<CFEFileComponent*>::iterator iterF;
         for (iterF = pComponents->begin(); iterF != pComponents->end(); iterF++)

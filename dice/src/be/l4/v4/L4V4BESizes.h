@@ -44,7 +44,7 @@ public:
     virtual ~CL4V4BESizes();
 
 public:
-    virtual int GetMaxShortIPCSize(void);
+    virtual int GetMaxShortIPCSize();
     virtual int GetSizeOfType(int nFEType, int nFESize = 0);
     virtual int GetSizeOfType(std::string sUserType);
     virtual int GetMaxSizeOfType(int nFEType);

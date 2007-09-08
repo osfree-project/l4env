@@ -72,7 +72,7 @@ CSockBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
  * environment), set the accepted addresses to any address,
  * and bind to socket.
  */
-void 
+void
 CSockBESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     WriteObjectInitialization(pFile);
@@ -84,7 +84,7 @@ CSockBESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
     pComm->WriteInitialization(pFile, this);
 
     string sObj = CCompiler::GetNameFactory()->GetCorbaObjectVariable();
-    string sEnv = 
+    string sEnv =
 	CCompiler::GetNameFactory()->GetCorbaEnvironmentVariable();
 
     // init socket address
@@ -113,9 +113,9 @@ CSockBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
     }
     else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
     {
-	pFile << "\tDICE_EXCEPTION_MAJOR(" << sName << 
+	pFile << "\tDICE_EXCEPTION_MAJOR(" << sName <<
 	    ") = CORBA_NO_EXCEPTION;\n";
-	pFile << "\tDICE_EXCEPTION_MINOR(" << sName << 
+	pFile << "\tDICE_EXCEPTION_MINOR(" << sName <<
 	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
 	pFile << "\t" << sName << "->param = 0;\n";
 	pFile << "\t" << sName << "->srv_port = 9999;\n";
@@ -136,7 +136,7 @@ CSockBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
  * we close the socket here. Use the socket descriptor
  * in the environment variable.
  */
-void 
+void
 CSockBESrvLoopFunction::WriteCleanup(CBEFile& pFile)
 {
     CBECommunication *pComm = GetCommunication();

@@ -65,7 +65,7 @@ public:
     virtual DIRECTION_TYPE GetSendDirection();
     virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
-    virtual CBETypedDeclarator* GetExceptionVariable(void);
+    virtual CBETypedDeclarator* GetExceptionVariable();
 
 protected:
     virtual void AddParameter(CFETypedDeclarator *pFEParameter);

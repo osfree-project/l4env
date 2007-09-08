@@ -74,7 +74,7 @@ protected:
 
 public:
     /** \brief write the file */
-    virtual void Write(void) = 0;
+    virtual void Write() = 0;
 
     /** \brief creating class
      *  \param pFEOperation the operation to use as source
@@ -132,7 +132,7 @@ protected:
      *  \param pFunction the function to write
      */
     virtual void WriteFunction(CBEFunction *pFunction) = 0;
-    virtual void WriteDefaultIncludes(void);
+    virtual void WriteDefaultIncludes();
     virtual void WriteInclude(CIncludeStatement* pInclude);
     /** \brief writes a namespace
      *  \param pNameSpace the namespace to write
@@ -142,15 +142,15 @@ protected:
      *  \param pClass the class to write
      */
     virtual void WriteClass(CBEClass *pClass) = 0;
-    virtual void WriteIntro(void);
-    virtual int GetFunctionCount(void);
+    virtual void WriteIntro();
+    virtual int GetFunctionCount();
 
-    virtual void WriteHelperFunctions(void);
+    virtual void WriteHelperFunctions();
 
-    virtual void CreateOrderedElementList(void);
+    virtual void CreateOrderedElementList();
     void InsertOrderedElement(CObject *pObj);
 
-    virtual void PrintIndent(void);
+    virtual void PrintIndent();
 
 protected:
     /** \var FILE_TYPE m_nFileType

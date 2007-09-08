@@ -66,10 +66,10 @@ CBEWaitFunction::~CBEWaitFunction()
 /** \brief writes the variable initializations of this function
  *  \param pFile the file to write to
  *
- * This implementation should initialize the message buffer and the pointers 
+ * This implementation should initialize the message buffer and the pointers
  * of the out variables.
  */
-void 
+void
 CBEWaitFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     // initialize message buffer
@@ -93,7 +93,7 @@ void CBEWaitFunction::WriteInvocation(CBEFile& pFile)
  *  \param pFEOperation the corresponding front-end operation
  *  \return true if successful
  */
-void 
+void
 CBEWaitFunction::CreateBackEnd(CFEOperation * pFEOperation)
 {
     FUNCTION_TYPE nFunctionType = FUNCTION_NONE;
@@ -102,7 +102,7 @@ CBEWaitFunction::CreateBackEnd(CFEOperation * pFEOperation)
     else
 	nFunctionType = FUNCTION_RECV;
     SetFunctionName(pFEOperation, nFunctionType);
-    
+
     // set target file name
     SetTargetFileName(pFEOperation);
 
@@ -162,7 +162,7 @@ CBEWaitFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
 {
     if (bMarshal)
 	return false;
-    
+
     if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
 	return false;
 
@@ -191,7 +191,7 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
 
     // unmarshal opcode variable
     WriteMarshalOpcode(pFile, false);
-   
+
     // now check if opcode in variable is our opcode
     string sSetFunc;
     if (((CBEUserDefinedType*)GetEnvironment()->GetType())->GetName() ==
@@ -206,7 +206,7 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
     CBETypedDeclarator *pOpcode = m_LocalVariables.Find(sOpcode);
     CDeclStack vStack;
     vStack.push_back(pOpcode->m_Declarators.First());
-    
+
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     pFile << "\tif (";
@@ -337,7 +337,7 @@ void CBEWaitFunction::AddParameter(CFETypedDeclarator * pFEParameter)
         if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
             pType = pAttr->GetAttrType();
 	CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
-        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() - 
+        int nArrayDimensions = pDeclarator->GetArrayDimensionCount() -
 	    pType->GetArrayDimensionCount();
         if ((pDeclarator->GetStars() == 0) && (nArrayDimensions <= 0))
             bAdd = true;

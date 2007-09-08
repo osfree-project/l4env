@@ -53,7 +53,7 @@ CL4V2IA32BEClassFactory::~CL4V2IA32BEClassFactory()
  */
 CBESizes * CL4V2IA32BEClassFactory::GetNewSizes()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4V2IA32BEClassFactory: created class CL4V2IA32BESizes\n");
     return new CL4V2IA32BESizes();
 }
@@ -63,7 +63,7 @@ CBESizes * CL4V2IA32BEClassFactory::GetNewSizes()
  */
 CBECommunication* CL4V2IA32BEClassFactory::GetNewCommunication()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4V2IA32BEClassFactory: created class CL4V2IA32BEIPC\n");
     return new CL4V2IA32BEIPC();
 }

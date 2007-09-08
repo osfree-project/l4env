@@ -1,0 +1,8 @@
+This directory contains:
+
+tpm/ 	- the (nearly) unmodified tpm driver from IBM version 1.1b
+inftpm/	- a linux 2.6 tpm driver for the infineon tpm
+libtcg/	- the modified and extended libtcpa from IBM
+sha1/	- the rfc sha1 code
+rsaref2/- the rsa reference code
+own/	- some diffs to keep

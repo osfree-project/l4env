@@ -124,7 +124,7 @@ C99string      \"([^\"]|\\\")*\"
     yylloc->begin = yylloc->end;
 
     if (driver.trace_scanning)
-	std::cerr << "c-scanner: # " << nNewLinenumber << " \"" << sNewFilename << "\" " << nFlags << 
+	std::cerr << "c-scanner: # " << nNewLinenumber << " \"" << sNewFilename << "\" " << nFlags <<
 	    " (old: " << line << ") found\n";
     /* nFlags == 1: start new file with filename */
     if (nFlags == 1)

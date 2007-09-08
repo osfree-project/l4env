@@ -55,7 +55,7 @@ protected:
 public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
-    	bool bMarshal);
+	bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual DIRECTION_TYPE GetReceiveDirection();
@@ -67,7 +67,7 @@ protected:
     virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual void WriteOpcodeCheck(CBEFile& pFile);
     virtual void AddParameter(CFETypedDeclarator * pFEParameter);
-    virtual void CreateObject(void);
+    virtual void CreateObject();
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
 

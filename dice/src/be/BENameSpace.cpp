@@ -874,7 +874,7 @@ bool CBENameSpace::HasFunctionWithUserType(string sTypeName, CBEFile* pFile)
  * elements into the ordered element list using bubble sort.
  * Sort criteria is the source line number.
  */
-void CBENameSpace::CreateOrderedElementList(void)
+void CBENameSpace::CreateOrderedElementList()
 {
     // clear vector
     m_vOrderedElements.clear();

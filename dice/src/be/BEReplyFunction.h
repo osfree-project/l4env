@@ -48,7 +48,7 @@ public:
     virtual ~CBEReplyFunction();
 
     virtual void CreateBackEnd(CFEOperation* pFEOperation);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, 
+    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
@@ -58,10 +58,10 @@ public:
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual void MsgBufferInitialization(CBEMsgBuffer * pMsgBuffer);
 
-    virtual CBETypedDeclarator* GetExceptionVariable(void);
+    virtual CBETypedDeclarator* GetExceptionVariable();
 
 protected:
-    virtual void AddBeforeParameters(void);
+    virtual void AddBeforeParameters();
     virtual void WriteCleanup(CBEFile& pFile);
     virtual void WriteUnmarshalling(CBEFile& pFile);
     virtual void WriteInvocation(CBEFile& pFile);

@@ -48,7 +48,7 @@ public:
 public:
     virtual void WriteCall(CBEFile& pFile,  CBEFunction* pFunction);
     virtual void WriteReceive(CBEFile& pFile,  CBEFunction* pFunction);
-    virtual void WriteReplyAndWait(CBEFile& pFile,  CBEFunction* pFunction,  
+    virtual void WriteReplyAndWait(CBEFile& pFile,  CBEFunction* pFunction,
 	bool bSendFlexpage,  bool bSendShortIPC);
     virtual void WriteSend(CBEFile& pFile,  CBEFunction* pFunction);
     virtual void WriteWait(CBEFile& pFile,  CBEFunction* pFunction);

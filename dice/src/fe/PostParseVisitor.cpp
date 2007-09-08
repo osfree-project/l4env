@@ -167,7 +167,7 @@ CPostParseVisitor::CheckStrings(CFETypedDeclarator& typeddecl)
     if (pType->GetType() == TYPE_REFSTRING)
     {
         // replace type REFSTRING with type CHAR_ASTERISK
-        CFETypeSpec *pOldType = 
+        CFETypeSpec *pOldType =
 	    typeddecl.ReplaceType(new CFESimpleType(TYPE_CHAR_ASTERISK));
         delete pOldType;
         // add attribute ref
@@ -204,14 +204,14 @@ CPostParseVisitor::CheckStrings(CFETypedDeclarator& typeddecl)
 	     iterD != typeddecl.m_Declarators.end(); )
 	{
 	    CFEDeclarator *pDecl = *iterD;
-	    CFEArrayDeclarator *pArrayDecl = 
+	    CFEArrayDeclarator *pArrayDecl =
 		dynamic_cast<CFEArrayDeclarator*>(pDecl);
 	    if (pArrayDecl)
             {
 		// we also check uninitialized array dimension (create error
 		// in C). We replace these with stars.
-                for (unsigned int i = 0; 
-		     i < pArrayDecl->GetDimensionCount(); 
+                for (unsigned int i = 0;
+		     i < pArrayDecl->GetDimensionCount();
 		     i++)
                 {
                     CFEExpression *pBound = pArrayDecl->GetUpperBound(i);
@@ -225,8 +225,8 @@ CPostParseVisitor::CheckStrings(CFETypedDeclarator& typeddecl)
                 // if we removed all dimension make this a "normal declarator"
                 if (!(pArrayDecl->GetDimensionCount()))
                 {
-                    CFEDeclarator *pNewDecl = 
-			new CFEDeclarator(DECL_IDENTIFIER, 
+                    CFEDeclarator *pNewDecl =
+			new CFEDeclarator(DECL_IDENTIFIER,
 			    pArrayDecl->GetName(), pArrayDecl->GetStars());
 		    typeddecl.m_Declarators.Remove(pArrayDecl);
                     delete pArrayDecl;
@@ -282,7 +282,7 @@ CPostParseVisitor::CheckStrings(CFETypedDeclarator& typeddecl)
         if (bHaveStar)
         {
             // replace type
-            CFETypeSpec *pOldType = 
+            CFETypeSpec *pOldType =
 		typeddecl.ReplaceType(new CFESimpleType(TYPE_CHAR_ASTERISK));
             delete pOldType;
             pType = typeddecl.GetType();
@@ -413,7 +413,7 @@ CPostParseVisitor::CheckInConstructed(CFETypedDeclarator& typeddecl)
     // FIXME is this really what we want? (shouldn't size of struct matter?)
     if (!typeddecl.m_Attributes.Find(ATTR_IN))
 	return;
-   
+
     // make structs reference parameters
     // except they are pointers already.
     if (typeddecl.GetType()->IsConstructedType() &&
@@ -466,7 +466,7 @@ CPostParseVisitor::CheckIsArray(CFETypedDeclarator& typeddecl)
 	iterD != typeddecl.m_Declarators.end();
 	iterD++)
     {
-	CFEArrayDeclarator *pArray = 
+	CFEArrayDeclarator *pArray =
 	    dynamic_cast<CFEArrayDeclarator*>(*iterD);
 	if (!pArray)
 	    continue;
@@ -484,9 +484,9 @@ CPostParseVisitor::CheckIsArray(CFETypedDeclarator& typeddecl)
 	    if (dynamic_cast<CFEIntAttribute*>(pSizeAttrib))
 	    {
 		// use ReplaceUpperBound to set new expression.
-		CFEExpression *pNewBound = 
-		    new CFEPrimaryExpression(EXPR_INT, 
-			(long int) ((CFEIntAttribute *) 
+		CFEExpression *pNewBound =
+		    new CFEPrimaryExpression(EXPR_INT,
+			(long int) ((CFEIntAttribute *)
 			    pSizeAttrib)->GetIntValue());
 		pArray->ReplaceUpperBound(i, pNewBound);
 		// remove attribute
@@ -496,7 +496,7 @@ CPostParseVisitor::CheckIsArray(CFETypedDeclarator& typeddecl)
 	    if (dynamic_cast<CFEIsAttribute*>(pSizeAttrib))
 	    {
 		// test for parameter
-		CFEDeclarator *pDAttr = 
+		CFEDeclarator *pDAttr =
 		    ((CFEIsAttribute*)pSizeAttrib)->
 		    m_AttrParameters.First();
 		if (pDAttr)
@@ -504,13 +504,13 @@ CPostParseVisitor::CheckIsArray(CFETypedDeclarator& typeddecl)
 		    // find constant
 		    CFEFile *pFERoot = typeddecl.GetRoot();
 		    assert(pFERoot);
-		    CFEConstDeclarator *pConstant = 
+		    CFEConstDeclarator *pConstant =
 			pFERoot->FindConstDeclarator(pDAttr->GetName());
 		    if (pConstant && pConstant->GetValue())
 		    {
 			// replace bounds
-			CFEExpression *pNewBound = 
-			    new CFEPrimaryExpression(EXPR_INT, 
+			CFEExpression *pNewBound =
+			    new CFEPrimaryExpression(EXPR_INT,
 				(long)pConstant->GetValue()->GetIntValue());
 			pArray->ReplaceUpperBound(i, pNewBound);
 			// do not delete the size attribute

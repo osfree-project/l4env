@@ -109,12 +109,12 @@ CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator)
  */
 void
 CBEConstant::CreateBackEnd(CBEType * pType,
-    string sName, 
+    string sName,
     CBEExpression * pValue,
     bool bAlwaysDefine)
 {
     string exc = string(__func__);
-    
+
     m_sName = sName;
     m_bAlwaysDefine = bAlwaysDefine;
     m_pType = pType;
@@ -198,7 +198,7 @@ CBEExpression *CBEConstant::GetValue()
  */
 void CBEConstant::AddToHeader(CBEHeaderFile* pHeader)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEConstant::%s(header: %s) for const %s called\n", __func__,
         pHeader->GetFileName().c_str(), m_sName.c_str());
     if (IsTargetFile(pHeader))

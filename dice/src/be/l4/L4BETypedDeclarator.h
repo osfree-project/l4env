@@ -49,7 +49,7 @@ public:
     : CBETypedDeclarator(src)
     {}
 
-    ~CL4BETypedDeclarator(void);
+    ~CL4BETypedDeclarator();
     virtual CObject* Clone();
 
 public: // Public methods

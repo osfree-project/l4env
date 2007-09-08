@@ -61,7 +61,7 @@ void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile& pFile)
 {
     if (m_pTrace)
 	m_pTrace->VariableDeclaration(pFile, this);
-    
+
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
     CBETypedDeclarator* pException = GetExceptionVariable();
@@ -82,7 +82,7 @@ void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile& pFile)
 	pFile << "#if defined(__PIC__)\n";
 	// write result variable
 	pFile << "\tl4_msgdope_t " << sResult << " = { msgdope: 0 };\n";
-	pFile << "\t" << sMWord << " " << sDummy << 
+	pFile << "\t" << sMWord << " " << sDummy <<
 	    " __attribute__((unused));\n",
 	if (!FindAttribute(ATTR_NOEXCEPTIONS))
 	    // declare local exception variable
@@ -109,7 +109,7 @@ void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile& pFile)
 	    string sDummy = pNF->GetDummyVariable();
 	    string sMWord = pNF->GetTypeName(TYPE_MWORD, true, 0);
 	    pFile << "#if defined(__PIC__)\n";
-	    pFile << "\t" << sMWord << " " << sDummy << 
+	    pFile << "\t" << sMWord << " " << sDummy <<
 		" __attribute__((unused));\n";
 	    pFile << "#endif // !PIC\n";
 	}

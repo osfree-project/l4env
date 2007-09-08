@@ -44,7 +44,7 @@ class CCollection : public std::vector<T*>
 
     /** \brief hidden default constructor
      */
-    CCollection(void)
+    CCollection()
     {}
 
 protected:
@@ -95,7 +95,7 @@ public:
      *
      * This implementation will not delete any members.
      */
-    virtual ~CCollection(void)
+    virtual ~CCollection()
     {
 	while (!vector<T*>::empty())
 	{
@@ -133,7 +133,7 @@ public:
     /** \brief return reference to firt element in vector or NULL if empty
      *  \return reference to first element in vector
      */
-    T* First(void)
+    T* First()
     {
 	if (vector<T*>::empty())
 	    return (T*)0;

@@ -1775,19 +1775,83 @@ void CCompiler::CheckRequire(const char *str)
     }
 
     // extract version numbers
-    Version cur(dice_version);
-    Version req(sVersion.c_str());
-    if (!req.valid())
+    try
+    {
+	Version cur(dice_version);
+	Version req(sVersion.c_str());
+	if (!cur.compare(op, req))
+	{
+	    std::ostringstream os;
+	    os << "Current version (\"" << dice_version << "\") ";
+	    if (sOp.empty())
+		os << "does not match";
+	    else
+		os << "is not " << sOp << " then";
+	    os << " required version (\"" << sVersion << "\")." << std::endl;
+	    CMessages::Error("%s", os.str().c_str());
+	}
+    } catch (error::bad_version *e)
+    {
 	CMessages::Error("Version check \"require\" received malformed version \"%s\".\n",
 	    sVersion.c_str());
-    if (!cur.compare(op, req))
-    {
-	std::ostringstream os;
-	os << "Required version (\"" << sVersion << "\") does not match current version (\"" <<
-	    dice_version << "\")";
-	if (!sOp.empty())
-	    os << " as requested (" << sOp << ")";
-	os << "." << std::endl;
-	CMessages::Error("%s", os.str().c_str());
     }
 }
+
+CCompiler::Version::Version(string s) :
+    maj(0), min(0), sub(0),
+    checkMaj(true), checkMin(true), checkSub(true)
+{
+    // check if string contains invalid characters
+    if (s.find_first_not_of("0123456789.") != string::npos)
+	throw new error::bad_version();
+
+    string::size_type l, r;
+    l = s.find('.');
+    r = s.rfind('.');
+    if (l == string::npos)
+    {
+	maj = atoi(s.c_str());
+	checkMin = checkSub = false;
+    } else if (l == r)
+    {
+	maj = atoi(s.substr(0,l).c_str());
+	min = atoi(s.substr(l+1).c_str());
+	checkSub = false;
+    } else
+    {
+	maj = atoi(s.substr(0,l).c_str());
+	min = atoi(s.substr(l+1,r).c_str());
+	sub = atoi(s.substr(r+1).c_str());
+    }
+}
+
+/** \brief compare two version numbers,
+ *  \param o the comparison operator
+ *  \param r the other version to compare to
+ *  \return true if "*this o r" is true
+ */
+bool CCompiler::Version::compare(oper o, Version& r)
+{
+    long ll = maj * 10000;
+    long rl = r.maj * 10000;
+    if (checkMin && r.checkMin)
+    {
+	ll += min * 100;
+	rl += r.min * 100;
+    }
+    if (checkSub && r.checkSub)
+    {
+	ll += sub;
+	rl += r.sub;
+    }
+    switch (o)
+    {
+    case GT: return ll > rl; break;
+    case EQ: return ll == rl; break;
+    case LT: return ll < rl; break;
+    case GTE: return ll >= rl; break;
+    case LTE: return ll <= rl; break;
+    }
+    return false;
+}
+

@@ -1,0 +1,21 @@
+/*
+ * \brief   IDL definition of STPM interface.
+ * \date    2004-06-02
+ * \author  Bernhard Kauer <kauer@tudos.org>
+ */
+/*
+ * Copyright (C) 2004  Bernhard Kauer <kauer@tudos.org>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the STPM package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+interface stpmif { 
+  int transmit([in, length_is(write_count), max_is(4096)] char* write_buf,
+		[in] unsigned int write_count, 
+		[out, length_is(read_count), prealloc_client, prealloc_server] char** read_buf,
+		[in,out] unsigned int *read_count);
+  int abort(void);
+};

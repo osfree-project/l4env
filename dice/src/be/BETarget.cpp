@@ -114,13 +114,13 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEFile * pFEFile)
 {
     if (!pFEFile)
     {
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBETarget::%s aborted because front-end file is 0\n", __func__);
         return true;
     }
     if (!pFEFile->IsIDLFile())
     {
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBETarget::%s aborted because front-end file is not IDL file\n",
 	    __func__);
         return true;
@@ -220,7 +220,7 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEInterface * pFEInterface)
 {
     if (!pFEInterface)
     {
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	    "CBETarget::%s (interface) aborted because FE interface is 0\n",
 	    __func__);
         return true;
@@ -425,7 +425,7 @@ bool CBETarget::AddTypedefToFile(CBEFile& pFile,
  * file-name based on the front-end file and this name is used to find the
  * file.
  */
-CBEHeaderFile* 
+CBEHeaderFile*
 CBETarget::FindHeaderFile(CFEFile * pFEFile,
     FILE_TYPE nFileType)
 {
@@ -445,7 +445,7 @@ CBETarget::FindHeaderFile(CFEFile * pFEFile,
  * file-name based on the front-end library and this name is used to find the
  * file.
  */
-CBEHeaderFile* 
+CBEHeaderFile*
 CBETarget::FindHeaderFile(CFELibrary * pFELibrary,
     FILE_TYPE nFileType)
 {
@@ -466,7 +466,7 @@ CBETarget::FindHeaderFile(CFELibrary * pFELibrary,
  * file-name based on the front-end interface and this name is used to find
  * the file.
  */
-CBEHeaderFile* 
+CBEHeaderFile*
 CBETarget::FindHeaderFile(CFEInterface * pFEInterface,
     FILE_TYPE nFileType)
 {
@@ -487,7 +487,7 @@ CBETarget::FindHeaderFile(CFEInterface * pFEInterface,
  * file-name based on the front-end operation and this name is used to find
  * the file.
  */
-CBEHeaderFile* 
+CBEHeaderFile*
 CBETarget::FindHeaderFile(CFEOperation * pFEOperation,
     FILE_TYPE nFileType)
 {
@@ -574,7 +574,7 @@ CBETarget::CreateBackEnd(CFEFile *pFEFile)
     // might also be included files
     if (!pFEFile->IsIDLFile())
     {
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s aborted because front-end file (%s) is not IDL file\n", 
+        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s aborted because front-end file (%s) is not IDL file\n",
 	    __func__, pFEFile->GetFileName().c_str());
         return;
     }

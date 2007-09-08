@@ -9,7 +9,7 @@ fiasco \
 	-l dm_phys \
 	-l l4io \
 	-l simple_ts \
-	-l l4dope-ux \
+	-l l4dope \
 	-l fuxfprov \
 	-l loader \
     -l name_server \

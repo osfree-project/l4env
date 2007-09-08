@@ -48,7 +48,7 @@ CFEEndPointAttribute::~CFEEndPointAttribute()
  *  \return a copy of this object
  */
 CObject* CFEEndPointAttribute::Clone()
-{ 
+{
     return new CFEEndPointAttribute(*this);
 }
 

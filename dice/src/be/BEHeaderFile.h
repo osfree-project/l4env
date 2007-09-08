@@ -64,9 +64,9 @@ protected:
     CBEHeaderFile(CBEHeaderFile &src);
 
 public:
-    virtual void Write(void);
+    virtual void Write();
 
-    virtual CObject* Clone(void);
+    virtual CObject* Clone();
 
     virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType);
     virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType);
@@ -82,7 +82,7 @@ public:
     /** \brief returns the file name used in include statements
      *  \return the file name used in include statements
      */
-    std::string GetIncludeFileName(void)
+    std::string GetIncludeFileName()
     { return m_sIncludeName; }
 
 protected:
@@ -92,9 +92,9 @@ protected:
     virtual void WriteNameSpace(CBENameSpace *pNameSpace);
     virtual void WriteClass(CBEClass *pClass);
     virtual void WriteFunction(CBEFunction *pFunction);
-    virtual void WriteDefaultIncludes(void);
+    virtual void WriteDefaultIncludes();
 
-    void CreateOrderedElementList(void);
+    void CreateOrderedElementList();
 
 protected:
     /** \var std::string m_sIncludeName

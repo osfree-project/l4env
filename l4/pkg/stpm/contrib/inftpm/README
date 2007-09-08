@@ -1,0 +1,17 @@
+Build instruction
+=================
+
+1. Make sure you have a 2.6.x kernel.
+2. Change KDIR and CC to your kernel dir and to your compiler in the Makefile.
+3. make
+4. insmod ./inftpm_mod.ko
+5. mknod /dev/tpm c 10 224
+
+Usage
+=====
+
+You can use this driver by reading and writing to /dev/tpm according
+to the TCG specification v1.1.
+
+This driver should work e.g. with the examples from IBM 
+found at http://www.research.ibm.com/gsal/tcpa/.

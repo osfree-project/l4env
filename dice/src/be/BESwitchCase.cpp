@@ -252,17 +252,17 @@ CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation)
 /** \brief tests if this function should be written
  *  \return true if successful
  */
-bool CBESwitchCase::DoWriteFunction(CBEHeaderFile* /*pFile*/) 
-{ 
-    return true; 
+bool CBESwitchCase::DoWriteFunction(CBEHeaderFile* /*pFile*/)
+{
+    return true;
 }
 
 /** \brief tests if this function should be written
  *  \return true if successful
  */
 bool CBESwitchCase::DoWriteFunction(CBEImplementationFile* /*pFile*/)
-{ 
-    return true; 
+{
+    return true;
 }
 
 /** \brief writes the target code
@@ -290,13 +290,13 @@ void CBESwitchCase::Write(CBEFile& pFile)
     {
 	if (m_pTrace)
 	    m_pTrace->BeforeComponent(pFile, this);
-	
+
         /* if this function has [allow_reply_only] attribute,
          * it has an additional parameter (_dice_reply)
          */
         CBETypedDeclarator *pReturn = GetReturnVariable();
         CBEDeclarator *pRetVar = (pReturn) ? pReturn->m_Declarators.First() : 0;
-        m_pComponentFunction->WriteCall(pFile, 
+        m_pComponentFunction->WriteCall(pFile,
 	    pRetVar ? pRetVar->GetName() : string(), m_bSameClass);
 
 	if (m_pTrace)
@@ -381,7 +381,7 @@ CBESwitchCase::WriteVariableDeclaration(CBEFile& pFile)
     // write local variable declaration
     CBEOperationFunction::WriteVariableDeclaration(pFile);
     // FIXME: use local variable for rest
-    
+
     // write parameters
     vector<CBETypedDeclarator*>::iterator iter;
     for (iter = m_Parameters.begin();
@@ -424,8 +424,8 @@ CBESwitchCase::DoWriteVariable(CBETypedDeclarator *pParameter)
  *
  * This function takes care of the initialization of the indirect variables.
  */
-void 
-CBESwitchCase::WriteVariableInitialization(CBEFile& pFile, 
+void
+CBESwitchCase::WriteVariableInitialization(CBEFile& pFile,
     DIRECTION_TYPE nDirection)
 {
     // initailize indirect variables
@@ -513,33 +513,33 @@ void CBESwitchCase::SetMessageBufferType()
 	m_pMarshalExceptionFunction->SetMsgBufferCastOnCall(true);
 }
 
-/** \brief propagates the SetCallVariable call if the internal variables are \ 
- * Corba object and environment 
- *  \param sOriginalName the internal name of the variable 
- *  \param nStars the new number of stars of the variable 
- *  \param sCallName the external name 
+/** \brief propagates the SetCallVariable call if the internal variables are \
+ * Corba object and environment
+ *  \param sOriginalName the internal name of the variable
+ *  \param nStars the new number of stars of the variable
+ *  \param sCallName the external name
  *
  * This method is called by the dispatch function to set the reply-code
  * variable according to its internal representation. This may also be used
  * for other local variables of the dispatch function. Because we use the
  * nested functions, we have to propagate the invocation respectively.
- */ 
-void 
-CBESwitchCase::SetCallVariable(string sOriginalName, 
-    int nStars, 
-    string sCallName) 
-{ 
-    if (m_pUnmarshalFunction) 
-	m_pUnmarshalFunction->SetCallVariable(sOriginalName, nStars, 
-	    sCallName); 
-    if (m_pMarshalFunction) 
-	m_pMarshalFunction->SetCallVariable(sOriginalName, nStars, 
-	    sCallName); 
+ */
+void
+CBESwitchCase::SetCallVariable(string sOriginalName,
+    int nStars,
+    string sCallName)
+{
+    if (m_pUnmarshalFunction)
+	m_pUnmarshalFunction->SetCallVariable(sOriginalName, nStars,
+	    sCallName);
+    if (m_pMarshalFunction)
+	m_pMarshalFunction->SetCallVariable(sOriginalName, nStars,
+	    sCallName);
     if (m_pMarshalExceptionFunction)
 	m_pMarshalExceptionFunction->SetCallVariable(sOriginalName, nStars,
 	    sCallName);
-    if (m_pComponentFunction) 
-	m_pComponentFunction->SetCallVariable(sOriginalName, nStars, 
-	    sCallName); 
-} 
+    if (m_pComponentFunction)
+	m_pComponentFunction->SetCallVariable(sOriginalName, nStars,
+	    sCallName);
+}
 

@@ -60,7 +60,7 @@ CL4V2IA32BEIPC::~CL4V2IA32BEIPC()
  * have the short IPC member in the union, we can always access word sized
  * members.
  */
-bool 
+bool
 CL4V2IA32BEIPC::UseAssembler(CBEFunction* /*pFunction*/)
 {
     if (CCompiler::IsOptionSet(PROGRAM_FORCE_C_BINDINGS))
@@ -72,7 +72,7 @@ CL4V2IA32BEIPC::UseAssembler(CBEFunction* /*pFunction*/)
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void 
+void
 CL4V2IA32BEIPC::WriteCall(CBEFile& pFile,
 	CBEFunction * pFunction)
 {
@@ -95,7 +95,7 @@ CL4V2IA32BEIPC::WriteCall(CBEFile& pFile,
  * have a short IPC in both direction. This allows us some optimizations in
  * the assembler code.
  */
-void 
+void
 CL4V2IA32BEIPC::WriteAsmShortCall(CBEFile& pFile,
 	CBEFunction *pFunction)
 {
@@ -114,7 +114,7 @@ CL4V2IA32BEIPC::WriteAsmShortCall(CBEFile& pFile,
  * have a short IPC in both direction. This allows us some optimizations in
  * the assembler code.
  */
-void 
+void
 CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile& pFile,
 	CBEFunction *pFunction)
 {
@@ -127,14 +127,14 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile& pFile,
     bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
     string sScheduling = pNF->GetScheduleClientVariable();
 
-    CL4BEMarshaller *pMarshaller = 
+    CL4BEMarshaller *pMarshaller =
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
     CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
     CMsgStructType nSndDir = pFunction->GetSendDirection();
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
 
-    bool bSendFlexpage = 
+    bool bSendFlexpage =
 	pFunction->GetParameterCount(TYPE_FLEXPAGE, nSndDir) > 0;
 
     // PIC branch
@@ -142,7 +142,7 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile& pFile,
     // eax: scheduling | 0  ( |2 : flexpage)           result
     // ebx: dw1                                        dw1
     // ebp: 0 (SHORT_IPC)
-    // ecx: timeout                                   
+    // ecx: timeout
     // edx: dw0 (opcode)                               dw0
     // ESI: dest.lh.low
     // EDI: dest.lh.high
@@ -164,11 +164,11 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile& pFile,
     // edx: dw0 (opcode)                              (dw0 out)
     // ESI: dest.lh.low
     // EDI: dest.lh.high
-    // 
+    //
     pFile << "\tasm volatile(\n";
     ++pFile << "\t\"pushl %%ebx \\n\\t\"\n";
     pFile << "\t\"pushl %%ebp \\n\\t\"\n";
-    
+
     if (bScheduling)
     {
 	if (bSendFlexpage)
@@ -200,7 +200,7 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile& pFile,
 	pFile << sDummy;
     pFile << "),\n";
     pFile << "\t\"=c\" (";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 1, 
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 1,
 	    false, true))
 	pFile << sDummy;
     pFile << ")\n";
@@ -249,7 +249,7 @@ CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile& pFile,
  * have a short IPC in both direction. This allows us some optimizations in
  * the assembler code.
  */
-void 
+void
 CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
@@ -261,14 +261,14 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile& pFile,
     bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
     string sScheduling = pNF->GetScheduleClientVariable();
 
-    CL4BEMarshaller *pMarshaller = 
+    CL4BEMarshaller *pMarshaller =
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
     CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
     CMsgStructType nSndDir = pFunction->GetSendDirection();
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
 
-    bool bSendFlexpage = 
+    bool bSendFlexpage =
 	pFunction->GetParameterCount(TYPE_FLEXPAGE, nSndDir) > 0;
 
     // !PIC branch
@@ -276,7 +276,7 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile& pFile,
     // eax: scheduling | 0  ( |2 : flexpage)           result
     // ebx: dw1                                        dw1
     // ebp: 0 (SHORT_IPC)
-    // ecx: timeout                                   
+    // ecx: timeout
     // edx: dw0 (opcode)                               dw0
     // ESI: dest.lh.low
     // EDI: dest.lh.high
@@ -298,9 +298,9 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile& pFile,
     // edx: dw0 (opcode)                              (dw0 out)
     // ESI: dest.lh.low
     // EDI: dest.lh.high
-    // 
+    //
     pFile << "\tasm volatile(\n";
-    ++pFile << "\t\"pushl %%ebp \\n\\t\"\n"; 
+    ++pFile << "\t\"pushl %%ebp \\n\\t\"\n";
     if (bScheduling)
     {
 	if (bSendFlexpage)
@@ -321,7 +321,7 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile& pFile,
     pFile << "\t:\n";
     pFile << "\t\"=a\" (" << sResult << "),\n"; /* EAX, 0 */
     pFile << "\t\"=d\" (";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 0, 
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 0,
 	    false, true))
 	pFile << sDummy;
     pFile << "),\n";  /* EDX, 1 */
@@ -336,12 +336,12 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile& pFile,
 	pFile << "\t\"a\" (" << sScheduling << "),\n";
     // if opcode is set, its in the first word
     pFile << "\t\"d\" (";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0, 
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0,
 	    false, false))
 	pFile << "0";
     pFile << "),\n";  /* EDX, 1 */
     pFile << "\t\"b\" (";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1, 
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1,
 	    false, false))
 	pFile << "0";
     pFile << "),\n";  /* EBX, 2 */
@@ -358,8 +358,8 @@ CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile& pFile,
  *  \param pFile the file to write to
  *  \param pFunction the function to write the IPC for
  */
-void 
-CL4V2IA32BEIPC::WriteAsmLongCall(CBEFile& pFile, 
+void
+CL4V2IA32BEIPC::WriteAsmLongCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     pFile << "#ifdef __PIC__\n";
@@ -373,8 +373,8 @@ CL4V2IA32BEIPC::WriteAsmLongCall(CBEFile& pFile,
  *  \param pFile the file to write to
  *  \param pFunction the function to write the IPC for
  */
-void 
-CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile, 
+void
+CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
@@ -385,7 +385,7 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
     string sDummy = pNF->GetDummyVariable();
     bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
     string sScheduling = pNF->GetScheduleClientVariable();
-    CL4BEMarshaller *pMarshaller = 
+    CL4BEMarshaller *pMarshaller =
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
@@ -394,7 +394,7 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
 
     bool bSendShortIPC = IsShortIPC(pFunction, nSndDir);
     bool bRecvShortIPC = IsShortIPC(pFunction, nRcvDir);
-    bool bSendFlexpage = 
+    bool bSendFlexpage =
 	pFunction->GetParameterCount(TYPE_FLEXPAGE, nSndDir) > 0;
 
 
@@ -403,7 +403,7 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
     // eax: msgbuf | scheduling | 0  ( |2 : flexpage)  result
     // ebx: dw1                                        dw1
     // ebp: msgbuf
-    // ecx: timeout                                   
+    // ecx: timeout
     // edx: dw0 (opcode)                               dw0
     // ESI: dest.lh.low
     // EDI: dest.lh.high
@@ -418,7 +418,7 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
     // EDI: dw1              -> ebx
 
     // short recv
-    // eax: msgbuf 
+    // eax: msgbuf
     // ebx: pushed                             -> ecx (dw1 out)
     // ebp: pushed           -> set 0
     // ecx: timeout
@@ -434,11 +434,11 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
     // edx: dw0                                       (dw0 out)
     // ESI: dest -> ESI/EDI
     // EDI: dw1              -> ebx
-    // 
+    //
     pFile << "\tasm volatile(\n";
     ++pFile << "\t\"pushl  %%ebx  \\n\\t\"\n";
     pFile << "\t\"pushl  %%ebp  \\n\\t\"\n";
-    
+
     if (bSendShortIPC)
     {
 	pFile << "\t\"movl %%eax,%%ebp \\n\\t\"\n";
@@ -481,7 +481,7 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
     pFile << "\t:\n";
     pFile << "\t\"=a\" (" << sResult << "),\n";
     pFile << "\t\"=d\" (";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 0, 
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nRcvDir, 0,
 	    false, true))
 	pFile << sDummy;
     pFile << "),\n";
@@ -504,13 +504,13 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
     pFile << "),\n";
     pFile << "\t\"c\" (" << sTimeout << "),\n";
     pFile << "\t\"d\" (";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0, 
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 0,
 	    false, false))
 	pFile << "0";
     pFile << "),\n";
     pFile << "\t\"S\" (" << sObjName << "),\n";
     pFile << "\t\"D\" (";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1, 
+    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nSndDir, 1,
 	    false, false))
 	pFile << "0";
     pFile << ")\n";
@@ -523,8 +523,8 @@ CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
  *  \param pFile the file to write to
  *  \param pFunction the function to write the IPC for
  */
-void 
-CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile, 
+void
+CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
@@ -533,9 +533,9 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile,
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
     string sDummy = pNF->GetDummyVariable();
-    bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE); 
+    bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
     string sScheduling = pNF->GetScheduleClientVariable();
-    CL4BEMarshaller *pMarshaller = 
+    CL4BEMarshaller *pMarshaller =
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
@@ -544,7 +544,7 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile,
 
     bool bSendShortIPC = IsShortIPC(pFunction, nSndDir);
     bool bRecvShortIPC = IsShortIPC(pFunction, nRcvDir);
-    bool bSendFlexpage = 
+    bool bSendFlexpage =
 	pFunction->GetParameterCount(TYPE_FLEXPAGE, nSndDir) > 0;
 
 
@@ -553,7 +553,7 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile,
     // eax: msgbuf | scheduling | 0  ( |2 : flexpage)  result
     // ebx: dw1                                        dw1
     // ebp: msgbuf
-    // ecx: timeout                                   
+    // ecx: timeout
     // edx: dw0 (opcode)                               dw0
     // ESI: dest.lh.low
     // EDI: dest.lh.high
@@ -568,7 +568,7 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile,
     // EDI: dest.lh.high
 
     // short recv
-    // eax: msgbuf 
+    // eax: msgbuf
     // ebx: dw1
     // ebp: pushed           -> set 0
     // ecx: timeout
@@ -584,7 +584,7 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile,
     // edx: dw0                                       (dw0 out)
     // ESI: dest.lh.low
     // EDI: dest.lh.high
-    // 
+    //
     pFile << "\tasm volatile(\n";
     ++pFile << "\t\"pushl %%ebp  \\n\\t\"\n";
 
@@ -667,7 +667,7 @@ CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile,
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void 
+void
 CL4V2IA32BEIPC::WriteReply(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
@@ -681,7 +681,7 @@ CL4V2IA32BEIPC::WriteReply(CBEFile& pFile,
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void 
+void
 CL4V2IA32BEIPC::WriteSend(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
@@ -723,12 +723,12 @@ CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile& pFile,
     string sScheduling = pNF->GetScheduleClientVariable();
 
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
-    CL4BEMarshaller *pMarshaller = 
+    CL4BEMarshaller *pMarshaller =
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
     CMsgStructType nSndDir = pFunction->GetSendDirection();
 
-    bool bSendFlexpage = 
+    bool bSendFlexpage =
 	pFunction->GetParameterCount(TYPE_FLEXPAGE, nSndDir) > 0;
     bool bSendShortIPC = IsShortIPC(pFunction, nSndDir);
 
@@ -737,7 +737,7 @@ CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile& pFile,
     // eax: msgbuf | scheduling | 0  ( |2 : flexpage)  result
     // ebx: dw1                                        dw1
     // ebp: -1 (no recv)
-    // ecx: timeout                                   
+    // ecx: timeout
     // edx: dw0                                        dw0
     // ESI: dest.lh.low
     // EDI: dest.lh.high
@@ -754,7 +754,7 @@ CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile& pFile,
     pFile << "\tasm volatile(\n";
     ++pFile << "\t\"pushl  %%ebx  \\n\\t\"\n";
     pFile << "\t\"pushl  %%ebp  \\n\\t\"\n";
-    
+
     if (bSendFlexpage)
 	pFile << "\t\"orl $0x2,%%eax \\n\\t\"\n";
     pFile << "\t\"movl $0xffffffff,%%ebp \\n\\t\"\n";
@@ -820,11 +820,11 @@ CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile& pFile,
     string sScheduling = pNF->GetScheduleClientVariable();
 
     string sObjName = pFunction->GetObject()->m_Declarators.First()->GetName();
-    CL4BEMarshaller *pMarshaller = 
+    CL4BEMarshaller *pMarshaller =
 	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
     assert(pMarshaller);
     CMsgStructType nSndDir = pFunction->GetSendDirection();
-    bool bSendFlexpage = 
+    bool bSendFlexpage =
 	pFunction->GetParameterCount(TYPE_FLEXPAGE, nSndDir) > 0;
     bool bSendShortIPC = IsShortIPC(pFunction, nSndDir);
 
@@ -833,7 +833,7 @@ CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile& pFile,
     // eax: msgbuf | scheduling | 0  ( |2 : flexpage)  result
     // ebx: dw1                                        dw1
     // ebp: msgbuf
-    // ecx: timeout                                   
+    // ecx: timeout
     // edx: dw0 (opcode)                               dw0
     // ESI: dest.lh.low
     // EDI: dest.lh.high

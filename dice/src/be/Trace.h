@@ -39,7 +39,7 @@ public:
     /** contructor of trace object */
     CTrace() {}
     virtual ~CTrace() {}
-    
+
     virtual void DefaultIncludes(CBEFile& pFile) = 0;
     virtual void AddLocalVariable(CBEFunction *pFunction) = 0;
     virtual void VariableDeclaration(CBEFile& pFile, CBEFunction *pFunction) = 0;

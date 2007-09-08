@@ -77,12 +77,12 @@ protected:
     virtual void WriteObjectInitialization(CBEFile& pFile);
     virtual void WriteFunctionAttributes(CBEFile& pFile);
     virtual void WriteReturn(CBEFile& pFile);
-    virtual void AddParameters(void);
+    virtual void AddParameters();
     virtual bool AddOpcodeVariable();
     virtual bool AddReplyVariable();
     virtual void CreateObject();
 
-    CBEFunction* FindGlobalFunction(CFEInterface *pFEInterface, 
+    CBEFunction* FindGlobalFunction(CFEInterface *pFEInterface,
 	FUNCTION_TYPE nFunctionType);
     void SetCallVariables(CBEFunction *pFunction);
 

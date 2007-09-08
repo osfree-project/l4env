@@ -57,7 +57,7 @@ protected:
     CBEComponent(CBEComponent &src);
 
 public:
-    virtual void Write(void);
+    virtual void Write();
 
 protected:
     virtual bool NeedServerLoop(CFEInterface *pFEInterface);

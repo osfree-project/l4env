@@ -68,7 +68,7 @@ CFEUnionCase::~CFEUnionCase()
  *  \return a copy of this object
  */
 CObject* CFEUnionCase::Clone()
-{ 
+{
     return new CFEUnionCase(*this);
 }
 

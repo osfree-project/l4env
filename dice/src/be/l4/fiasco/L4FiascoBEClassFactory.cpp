@@ -68,7 +68,7 @@ CBECommunication* CL4FiascoBEClassFactory::GetNewCommunication()
  */
 CBEMsgBuffer* CL4FiascoBEClassFactory::GetNewMessageBuffer()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4FiascoBEClassFactory: created class CL4FiascoBEMsgBuffer\n");
     return new CL4FiascoBEMsgBuffer();
 }
@@ -88,7 +88,7 @@ CBEDispatchFunction* CL4FiascoBEClassFactory::GetNewDispatchFunction()
  */
 CBEClass * CL4FiascoBEClassFactory::GetNewClass()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4FiascoBEClassFactory: created class CL4FiascoBEClass\n");
     return new CL4FiascoBEClass;
 }

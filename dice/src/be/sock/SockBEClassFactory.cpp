@@ -55,7 +55,7 @@ CSockBEClassFactory::~CSockBEClassFactory()
  */
 CBECallFunction * CSockBEClassFactory::GetNewCallFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CSockBEClassFactory: created class CSockBECallFunction\n");
     return new CSockBECallFunction();
 }
@@ -74,7 +74,7 @@ CBESizes * CSockBEClassFactory::GetNewSizes()
  */
 CBEWaitAnyFunction * CSockBEClassFactory::GetNewWaitAnyFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CSockBEClassFactory: created class CSockBEWaitAnyFunction\n");
     return new CSockBEWaitAnyFunction(true, false);
 }
@@ -84,7 +84,7 @@ CBEWaitAnyFunction * CSockBEClassFactory::GetNewWaitAnyFunction()
  */
 CBESrvLoopFunction * CSockBEClassFactory::GetNewSrvLoopFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CSockBEClassFactory: created class CSockBESrvLoopFunction\n");
     return new CSockBESrvLoopFunction();
 }
@@ -94,7 +94,7 @@ CBESrvLoopFunction * CSockBEClassFactory::GetNewSrvLoopFunction()
  */
 CBEUnmarshalFunction * CSockBEClassFactory::GetNewUnmarshalFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CSockBEClassFactory: created class CSockBEUnmarshalFunction\n");
     return new CSockBEUnmarshalFunction();
 }
@@ -104,7 +104,7 @@ CBEUnmarshalFunction * CSockBEClassFactory::GetNewUnmarshalFunction()
  */
 CBEMarshalFunction * CSockBEClassFactory::GetNewMarshalFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CSockBEClassFactory: created class CSockBEMarshalFunction\n");
     return new CSockBEMarshalFunction();
 }
@@ -123,7 +123,7 @@ CBECommunication * CSockBEClassFactory::GetNewCommunication()
  */
 CBEWaitAnyFunction* CSockBEClassFactory::GetNewReplyAnyWaitAnyFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CSockBEClassFactory: created class CSockBEReplyAnyWaitAnyFunction\n");
     return new CSockBEWaitAnyFunction(true, true);
 }

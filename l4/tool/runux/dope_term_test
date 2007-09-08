@@ -8,7 +8,7 @@ fiasco \
 	-l log \
 	-l dm_phys \
 	-l simple_ts \
-	-l l4dope-ux \
+	-l l4dope \
 	-l fuxfprov \
 	-l loader \
     -l "name_server -e"\

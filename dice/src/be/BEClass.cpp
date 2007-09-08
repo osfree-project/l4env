@@ -2458,7 +2458,7 @@ CBEClass::HasParametersWithAttribute(ATTR_TYPE nAttribute1,
  * elements into the ordered element list using bubble sort.
  * Sort criteria is the source line number.
  */
-void CBEClass::CreateOrderedElementList(void)
+void CBEClass::CreateOrderedElementList()
 {
     // clear vector
     m_vOrderedElements.clear();

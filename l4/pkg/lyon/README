@@ -1,0 +1,2 @@
+Lyon is a TPM multiplexer and minimalist virtual TPM. It is based on STPM and
+a modified version of libtcpa originally released by IBM.

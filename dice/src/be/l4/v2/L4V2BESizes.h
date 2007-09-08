@@ -45,7 +45,7 @@ public:
     virtual ~CL4V2BESizes();
 
 public: // Public methods
-    virtual int GetMaxShortIPCSize(void);
+    virtual int GetMaxShortIPCSize();
     virtual int GetMaxSizeOfType(int nFEType);
 };
 

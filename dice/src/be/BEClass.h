@@ -164,8 +164,8 @@ protected:
 
     void CreateFunctionsNoClassDependency(CFEOperation *pFEOperation);
     void CreateFunctionsClassDependency(CFEOperation *pFEOperation);
-    virtual void CreateObject(void);
-    virtual void CreateEnvironment(void);
+    virtual void CreateObject();
+    virtual void CreateEnvironment();
 
     void AddInterfaceFunctions(CFEInterface* pFEInterface);
     void AddMessageBuffer(CFEInterface* pFEInterface);
@@ -212,12 +212,12 @@ protected:
     void CheckOpcodeCollision(CFEInterface *pFEInterface);
     void CheckOpcodeCollision(CFEInterface *pFirst, CFEInterface *pSecond);
     void AddBaseClass(std::string sName);
-    int GetFunctionCount(void);
+    int GetFunctionCount();
     int GetFunctionWriteCount(CBEFile& pFile);
 
-    virtual void MsgBufferInitialization(void);
+    virtual void MsgBufferInitialization();
 
-    void CreateOrderedElementList(void);
+    void CreateOrderedElementList();
     void InsertOrderedElement(CObject *pObj);
 
     void WriteExternCStart(CBEFile& pFile);

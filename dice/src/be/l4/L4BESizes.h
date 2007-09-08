@@ -47,7 +47,7 @@ public:
 public: // Public methods
     /** abstract method, which shall determine the maximum number of bytes of
      * a message for a short IPC */
-    virtual int GetMaxShortIPCSize(void) = 0;
+    virtual int GetMaxShortIPCSize() = 0;
     using CBESizes::GetSizeOfType;
     virtual int GetSizeOfType(int nFEType, int nFESize = 0);
 };

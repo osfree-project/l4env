@@ -69,9 +69,9 @@ CL4BEMarshaller::~CL4BEMarshaller()
  * This method initializes some internal counters, then calls the base class'
  * implementation.
  */
-void 
+void
 CL4BEMarshaller::MarshalFunction(CBEFile& pFile,
-	CBEFunction *pFunction, 
+	CBEFunction *pFunction,
 	DIRECTION_TYPE nDirection)
 {
     m_nSkipSize = 0;
@@ -111,7 +111,7 @@ CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
 	m_nSkipSize += pParameter->GetSize();
 	return true;
     }
-    
+
     // skip members used in IPC binding only if we do marshaling, unmarshaling
     // in same function (call, send, reply, wait) Otherwise we have to store
     // the values in the message struct
@@ -138,7 +138,7 @@ CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
     m_nSkipSize += nParamSize;
 
     // do NOT skip exception variable
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "param %p, exc %p\n", pParameter, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "param %p, exc %p\n", pParameter,
 	pFunction->GetExceptionVariable());
     if (pParameter == pFunction->GetExceptionVariable())
 	return false;
@@ -157,7 +157,7 @@ CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
  *  \param pMember the member to test for marshalling
  *  \return true if the member has been marshaled
  */
-bool 
+bool
 CL4BEMarshaller::MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
     assert(pMember);
@@ -192,7 +192,7 @@ bool
 CL4BEMarshaller::MarshalRcvFpage(CBETypedDeclarator *pMember)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sFlexName = 
+    string sFlexName =
 	pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
 
     // is this the flexpage member
@@ -202,7 +202,7 @@ CL4BEMarshaller::MarshalRcvFpage(CBETypedDeclarator *pMember)
     return true;
 }
 
-/** \brief marshals the send dope 
+/** \brief marshals the send dope
  *  \param pMember the member to test for marshalling
  *  \return true if the member has been marshaled
  *
@@ -213,7 +213,7 @@ bool
 CL4BEMarshaller::MarshalSendDope(CBETypedDeclarator *pMember)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sSendName = 
+    string sSendName =
 	pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND);
 
     // is this the send dope
@@ -223,7 +223,7 @@ CL4BEMarshaller::MarshalSendDope(CBETypedDeclarator *pMember)
     return true;
 }
 
-/** \brief marshals the size dope 
+/** \brief marshals the size dope
  *  \param pMember the member to test for marshalling
  *  \return true if the member has been marshaled
  *
@@ -235,7 +235,7 @@ bool
 CL4BEMarshaller::MarshalSizeDope(CBETypedDeclarator *pMember)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sSizeName = 
+    string sSizeName =
 	pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
 
     // is this the size dope
@@ -265,19 +265,19 @@ CL4BEMarshaller::MarshalSizeDope(CBETypedDeclarator *pMember)
  * member is marshalled.
  */
 bool
-CL4BEMarshaller::MarshalWordMember(CBEFile& pFile, 
+CL4BEMarshaller::MarshalWordMember(CBEFile& pFile,
 	CBEFunction *pFunction,
 	CMsgStructType nType,
-	int nPosition, 
+	int nPosition,
 	bool bReference,
 	bool bLValue)
 {
     m_pFunction = pFunction;
     PositionMarshaller *pPosMarshaller = new PositionMarshaller(this);
-    bool bRet = pPosMarshaller->Marshal(pFile, pFunction, nType, 
+    bool bRet = pPosMarshaller->Marshal(pFile, pFunction, nType,
 	    nPosition, bReference, bLValue);
     delete pPosMarshaller;
-    
+
     return bRet;
 }
 
@@ -297,7 +297,7 @@ CL4BEMarshaller::MarshalParameter(CBEFile& pFile,
     int nPosition)
 {
     m_pFunction = pFunction;
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"%s called for func %s and param %s (%s at pos %d)\n",
 	__func__, pFunction ? pFunction->GetName().c_str() : "(none)",
 	pParameter ? pParameter->m_Declarators.First()->GetName().c_str() : "(none)",
@@ -356,7 +356,7 @@ CL4BEMarshaller::MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pPar
  * pointer to this parameter has then to be assigned to the snd_str element of
  * the indirect part member. The size has to be assigned to the snd_size
  * element (for sending). For receiving the address of the receive buffer can
- * be used to set the address of the receive buffer. 
+ * be used to set the address of the receive buffer.
  *
  * We have to use the rcv_str member to set incoming strings, because snd_str
  * is not se properly.
@@ -368,8 +368,8 @@ CL4BEMarshaller::MarshalRefstring(CBEFile& pFile,
 {
     assert(pParameter);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, 
-	"CL4BEMarshaller::%s called for %s with%s [ref]\n", __func__, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+	"CL4BEMarshaller::%s called for %s with%s [ref]\n", __func__,
 	pParameter->m_Declarators.First()->GetName().c_str(),
 	pParameter->m_Attributes.Find(ATTR_REF) ? "" : "out");
     if (!pParameter->m_Attributes.Find(ATTR_REF))
@@ -459,7 +459,7 @@ CL4BEMarshaller::MarshalRefstring(CBEFile& pFile,
 	// buffer we provided.
 	// But we only do this, if the size parameter is a parameter of the
 	// function.
-	
+
 	// now: if we dereference the parameter and we malloced the receive
 	// string, then we should free it now.
 	if (bDeref)
@@ -533,7 +533,7 @@ void CL4BEMarshaller::MarshalArrayIntern(CBEFile& pFile,
 	pFile << "[";
 	pParameter->WriteGetSize(pFile, pStack, m_pFunction);
 	pFile << "].fpage.raw = 0;\n";
-	
+
 	--pFile << "\t}\n";
     }
 
@@ -557,7 +557,7 @@ CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile,
     // get message buffer
     CBEMsgBuffer *pMsgBuffer = pMember->GetSpecificParent<CBEMsgBuffer>();
     assert(pMsgBuffer);
-    
+
     if (m_bMarshal)
     {
 	// zero send base

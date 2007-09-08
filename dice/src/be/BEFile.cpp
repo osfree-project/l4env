@@ -399,7 +399,7 @@ void CBEFile::WriteIntro()
  * elements into the ordered element list using bubble sort.
  * Sort criteria is the source line number.
  */
-void CBEFile::CreateOrderedElementList(void)
+void CBEFile::CreateOrderedElementList()
 {
     // clear vector
     m_vOrderedElements.clear();
@@ -533,7 +533,7 @@ std::ofstream& CBEFile::operator<<(char* s)
 
 /** \brief prints the indentation
  */
-void CBEFile::PrintIndent(void)
+void CBEFile::PrintIndent()
 {
     for (unsigned int i = 0; i < m_nIndent; i++)
 	this->operator<<(" ");
@@ -545,7 +545,7 @@ void CBEFile::PrintIndent(void)
  * STD_INDENT.  If the ident reaches the values specified in MAX_IDENT it
  * ignores the ident increase.
  */
-CBEFile& CBEFile::operator++(void)
+CBEFile& CBEFile::operator++()
 {
     return this->operator+=(STD_INDENT);
 }
@@ -570,7 +570,7 @@ CBEFile& CBEFile::operator+=(int by)
  * reaches zero (0) the operation ignores the decrement.  If by is -1 the
  * indent is decremented by the value of the last increment.
  */
-CBEFile& CBEFile::operator--(void)
+CBEFile& CBEFile::operator--()
 {
     return this->operator-=(STD_INDENT);
 }

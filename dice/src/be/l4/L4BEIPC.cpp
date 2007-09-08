@@ -64,7 +64,7 @@ CL4BEIPC::~CL4BEIPC()
  * This implementation currently always returns false, because assembler code
  * is always ABI specific.
  */
-bool 
+bool
 CL4BEIPC::UseAssembler(CBEFunction *)
 {
     return false;
@@ -78,29 +78,29 @@ CL4BEIPC::UseAssembler(CBEFunction *)
  * This is a simple helper function, which just delegates the call to the
  * function's message buffer.
  */
-bool 
-CL4BEIPC::IsShortIPC(CBEFunction *pFunction, 
+bool
+CL4BEIPC::IsShortIPC(CBEFunction *pFunction,
     DIRECTION_TYPE nDirection)
 {
     if (nDirection == 0)
-       	return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
-    	    IsShortIPC(pFunction, pFunction->GetReceiveDirection());
+	return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
+	    IsShortIPC(pFunction, pFunction->GetReceiveDirection());
 
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, 
+    return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC,
 	nDirection);
 }
 
 /** \brief writes a send with an immediate wait
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
- * 
+ *
  * Invoke the specialized method with default parameters.
  */
 void
 CL4BEIPC::WriteReplyAndWait(CBEFile& pFile,
     CBEFunction* pFunction)
-{ 
+{
     WriteReplyAndWait(pFile, pFunction, false, false);
 }
 

@@ -54,12 +54,12 @@ protected:
     virtual void WriteAsmLongPicCall(CBEFile& pFile, CBEFunction *pFunction);
     virtual void WriteAsmLongNonPicCall(CBEFile& pFile,
 	CBEFunction *pFunction);
-    
+
     virtual void WriteAsmShortCall(CBEFile& pFile, CBEFunction *pFunction);
     virtual void WriteAsmShortPicCall(CBEFile& pFile, CBEFunction *pFunction);
     virtual void WriteAsmShortNonPicCall(CBEFile& pFile,
 	CBEFunction *pFunction);
-    
+
     virtual void WriteAsmSend(CBEFile& pFile, CBEFunction *pFunction);
     virtual void WriteAsmPicSend(CBEFile& pFile, CBEFunction *pFunction);
     virtual void WriteAsmNonPicSend(CBEFile& pFile, CBEFunction *pFunction);

@@ -53,6 +53,6 @@ CFEFunctionDeclarator::~CFEFunctionDeclarator()
  *  \return a copy of this object
  */
 CObject* CFEFunctionDeclarator::Clone()
-{ 
+{
     return new CFEFunctionDeclarator(*this);
 }

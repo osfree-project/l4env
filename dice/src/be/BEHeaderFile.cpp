@@ -87,7 +87,7 @@ CBEHeaderFile::~CBEHeaderFile()
 
 /** \brief create a clone of this object
  */
-CObject* CBEHeaderFile::Clone(void)
+CObject* CBEHeaderFile::Clone()
 {
     return new CBEHeaderFile(*this);
 }
@@ -220,7 +220,7 @@ CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation,
  * use the message buffer type of the derived server-loop for the functions of
  * the base interface.
  */
-void CBEHeaderFile::Write(void)
+void CBEHeaderFile::Write()
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CBEHeaderFile::%s called\n", __func__);
@@ -378,7 +378,7 @@ void CBEHeaderFile::Write(void)
 
 /** \brief writes includes, which have to appear before any type definition
  */
-void CBEHeaderFile::WriteDefaultIncludes(void)
+void CBEHeaderFile::WriteDefaultIncludes()
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEHeaderFile::%s called\n", __func__);
 
@@ -424,7 +424,7 @@ void CBEHeaderFile::WriteDefaultIncludes(void)
  * elements into the ordered element list using bubble sort.
  * Sort criteria is the source line number.
  */
-void CBEHeaderFile::CreateOrderedElementList(void)
+void CBEHeaderFile::CreateOrderedElementList()
 {
     // first call base class
     CBEFile::CreateOrderedElementList();

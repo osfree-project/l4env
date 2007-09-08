@@ -79,7 +79,7 @@ CSockBECallFunction::WriteInvocation(CBEFile& pFile)
 /** \brief initializes the variables
  *  \param pFile the file to write to
  */
-void 
+void
 CSockBECallFunction::WriteVariableInitialization(CBEFile& pFile)
 {
     CBECallFunction::WriteVariableInitialization(pFile);
@@ -92,7 +92,7 @@ CSockBECallFunction::WriteVariableInitialization(CBEFile& pFile)
     else
 	sSizeName = "*";
     sPtrName += pMsgBuffer->m_Declarators.First()->GetName();
-    sSizeName += pMsgBuffer->m_Declarators.First()->GetName(); 
+    sSizeName += pMsgBuffer->m_Declarators.First()->GetName();
 
     pFile << "\tbzero(" << sPtrName << ", sizeof(" << sSizeName << "));\n";
 }
@@ -115,7 +115,7 @@ CSockBECallFunction::CreateBackEnd(CFEOperation *pFEOperation)
     AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
 
     // needed for receive
-    string sInit = "sizeof(*" + 
+    string sInit = "sizeof(*" +
 	CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
     sCurr = string("dice_fromlen");
     AddLocalVariable(string("socklen_t"), sCurr, 0, sInit);

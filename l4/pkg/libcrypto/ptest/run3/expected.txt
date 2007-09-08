@@ -1,0 +1,7 @@
+crypto_t| test_mfg1():       0 (0 expected)
+crypto_t| test_pad_oaep():   0 (0 expected)
+crypto_t| test_rsa1024():    0 (0 expected)
+crypto_t| test_rsa2048():    0 (0 expected)
+crypto_t| test_aes128_cbc(): 0 (0 expected)
+crypto_t| test_sha1():       0 (0 expected)
+Exiting, wait...

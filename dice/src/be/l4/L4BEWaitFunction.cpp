@@ -76,13 +76,13 @@ CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
 /** \brief writes the communication invocation
  *  \param pFile the fiel to write to
  */
-void 
+void
 CL4BEWaitFunction::WriteInvocation(CBEFile& pFile)
 {
     // set size and send dope
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, 
+    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
 	GetReceiveDirection());
 
     // invocate
@@ -103,7 +103,7 @@ CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
     if (!m_sErrorFunction.empty())
     {
 	pFile << "\t/* test for IPC errors */\n";
-	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult 
+	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult
 	    << ")))\n";
         ++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
         WriteCallParameter(pFile, GetEnvironment(), true);
@@ -126,7 +126,7 @@ CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	else
 	    sSetFunc = "CORBA_exception_set";
 
-	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << 
+	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult <<
 	    ")))\n" <<
 	    "\t{\n";
 	// env.major = CORBA_SYSTEM_EXCEPTION;
@@ -136,7 +136,7 @@ CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	    "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
 	    "\t0);\n";
 	// env.ipc_error = L4_IPC_ERROR(result);
-	--pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" << 
+	--pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" <<
 	    sResult << ");\n";
 	// return
 	WriteReturn(pFile);
@@ -169,7 +169,7 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
     if (GetParameterCount(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
         return;
     bool bFixedNumberOfFlexpages = true;
-    int nNumberOfFlexpages = 
+    int nNumberOfFlexpages =
 	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
     CBESizes *pSizes = CCompiler::GetSizes();
     int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
@@ -183,10 +183,10 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 	if (!pReturn)
 	    return;
-	CL4BEMarshaller *pMarshaller = 
+	CL4BEMarshaller *pMarshaller =
 	    dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
 	assert(pMarshaller);
-	pMarshaller->MarshalParameter(pFile, this, pReturn, false, 
+	pMarshaller->MarshalParameter(pFile, this, pReturn, false,
 	    (nNumberOfFlexpages+1) * nSizeFpage);
 	--pFile;
     }
@@ -253,7 +253,7 @@ CL4BEWaitFunction::WriteVariableInitialization(CBEFile& pFile)
  * If we recv flexpages, remove the exception size again, since either the
  * flexpage or the exception is sent.
  */
-int 
+int
 CL4BEWaitFunction::GetSize(DIRECTION_TYPE nDirection)
 {
     // get base class' size

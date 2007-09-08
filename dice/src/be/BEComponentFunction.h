@@ -72,8 +72,8 @@ protected:
     virtual void WriteVariableDeclaration(CBEFile& pFile);
     virtual void WriteMarshalling(CBEFile& pFile);
     virtual bool DoWriteParameter(CBETypedDeclarator *pParam);
-    virtual void AddAfterParameters(void);
-    virtual void AddBeforeParameters(void);
+    virtual void AddAfterParameters();
+    virtual void AddBeforeParameters();
 
     virtual bool DoTestParameter(CBETypedDeclarator *pParameter);
 

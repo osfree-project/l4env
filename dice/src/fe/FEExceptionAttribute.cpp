@@ -50,6 +50,6 @@ CFEExceptionAttribute::~CFEExceptionAttribute()
  *  \return a copy of this object
  */
 CObject* CFEExceptionAttribute::Clone()
-{ 
+{
     return new CFEExceptionAttribute(*this);
 }

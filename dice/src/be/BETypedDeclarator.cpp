@@ -826,7 +826,7 @@ CBETypedDeclarator::WriteIndirectInitialization(CBEFile& pFile,
  *  \return true if so
  */
 bool
-CBETypedDeclarator::UsePointer(void)
+CBETypedDeclarator::UsePointer()
 {
     // test if we need a pointer of this variable
     CBEType *pType = GetTransmitType();

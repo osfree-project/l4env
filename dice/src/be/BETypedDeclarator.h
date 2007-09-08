@@ -108,7 +108,7 @@ public:
     /** \brief accesses the default initialization string
      *  \return the value of the default initialization string
      */
-    std::string GetDefaultInitString(void)
+    std::string GetDefaultInitString()
     { return m_sDefaultInitString; }
 
     bool AddLanguageProperty(std::string sProperty, std::string sPropertyString);
@@ -151,7 +151,7 @@ protected:
     virtual bool DoAllocateMemory(CBEFile& pFile);
 
 private:
-    bool UsePointer(void);
+    bool UsePointer();
 
 protected:
     /** \var CBEType *m_pType

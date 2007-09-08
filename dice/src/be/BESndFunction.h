@@ -66,7 +66,7 @@ protected:
     virtual void WriteInvocation(CBEFile& pFile);
     virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual int WriteMarshalReturn(CBEFile& pFile, bool bMarshal);
-    virtual void AddBeforeParameters(void);
+    virtual void AddBeforeParameters();
 };
 
 #endif // !__DICE_BESNDFUNCTION_H__

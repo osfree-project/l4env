@@ -64,11 +64,11 @@ public:
 
 public:
     virtual void MarshalFunction(CBEFile& pFile, DIRECTION_TYPE nDirection);
-    virtual void MarshalFunction(CBEFile& pFile, CBEFunction *pFunction, 
+    virtual void MarshalFunction(CBEFile& pFile, CBEFunction *pFunction,
 	DIRECTION_TYPE nDirection);
-    virtual void MarshalParameter(CBEFile& pFile, CBEFunction *pFunction, 
+    virtual void MarshalParameter(CBEFile& pFile, CBEFunction *pFunction,
 	CBETypedDeclarator *pParameter, bool bMarshal);
-    virtual void MarshalValue(CBEFile& pFile, CBEFunction *pFunction, 
+    virtual void MarshalValue(CBEFile& pFile, CBEFunction *pFunction,
 	CBETypedDeclarator *pParameter, int nValue);
 
     virtual bool AddLocalVariable(CBEFunction *pFunction);
@@ -88,28 +88,28 @@ protected:
 	CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
     virtual void MarshalGenericValue(CBEFile& pFile, int nPosition, int nValue);
-    virtual bool MarshalString(CBEFile& pFile, CBETypedDeclarator *pParameter, 
+    virtual bool MarshalString(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
-    virtual bool MarshalArray(CBEFile& pFile, CBETypedDeclarator *pParameter, 
+    virtual bool MarshalArray(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
     virtual void MarshalArrayIntern(CBEFile& pFile,
-	CBETypedDeclarator *pParameter, 
+	CBETypedDeclarator *pParameter,
 	CBEType *pType, CDeclStack* pStack);
     virtual void MarshalArrayInternRef(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
-    virtual bool MarshalStruct(CBEFile& pFile, CBETypedDeclarator *pParameter, 
+    virtual bool MarshalStruct(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
     virtual bool MarshalUnion(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);
 
-    virtual bool DoSkipParameter(CBEFunction *pFunction, 
+    virtual bool DoSkipParameter(CBEFunction *pFunction,
 	CBETypedDeclarator *pParameter, DIRECTION_TYPE nDirection);
     virtual CBETypedDeclarator* FindMarshalMember(
 	CDeclStack* pStack);
-    
+
     virtual void WriteMember(CBEFile& pFile, CMsgStructType nType, CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember, CDeclStack* pStack);
-    virtual void WriteParameter(CBEFile& pFile, CBETypedDeclarator *pParameter, 
+    virtual void WriteParameter(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack, bool bPointer);
     virtual void WriteAssignment(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack);

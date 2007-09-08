@@ -39,7 +39,7 @@
  *  \brief contains the platform specific code for the send function
  *
  *  This class represents the send function, which is used at the client's side
- *  to send an RPC to the server when there is no return value.. 
+ *  to send an RPC to the server when there is no return value..
  *  It marshals the parameters and sends the message.
  */
 class CSockBESndFunction : public CBESndFunction

@@ -58,8 +58,8 @@ CL4BESwitchCase::~CL4BESwitchCase()
  * \todo we have to remember which indirect strings are associated with
  * dynamically allocated memory and have to be freed after the IPC.
  */
-void 
-CL4BESwitchCase::WriteVariableInitialization(CBEFile& pFile, 
+void
+CL4BESwitchCase::WriteVariableInitialization(CBEFile& pFile,
     DIRECTION_TYPE nDirection)
 {
     // first call the base class

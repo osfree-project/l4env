@@ -55,10 +55,10 @@ void CL4V2BEDispatchFunction::WriteSetWrongOpcodeException(CBEFile& pFile)
     // first call base class
     CL4BEDispatchFunction::WriteSetWrongOpcodeException(pFile);
     // set short IPC
-    CL4V2BEMsgBuffer *pMsgBuffer = 
+    CL4V2BEMsgBuffer *pMsgBuffer =
 	dynamic_cast<CL4V2BEMsgBuffer*>(GetMessageBuffer());
     assert(pMsgBuffer);
-    pMsgBuffer->WriteDopeShortInitialization(pFile, TYPE_MSGDOPE_SEND, 
+    pMsgBuffer->WriteDopeShortInitialization(pFile, TYPE_MSGDOPE_SEND,
 	CMsgStructType::Generic);
 }
 

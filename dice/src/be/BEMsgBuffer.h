@@ -121,14 +121,14 @@ protected: // protected methods
     virtual bool AddGenericStructMembersFunction(CBEStructType *pStruct);
     virtual bool AddGenericStructMembersClass(CBEStructType *pStruct);
 
-    virtual int GetWordMemberCountFunction(void);
-    virtual int GetWordMemberCountClass(void);
+    virtual int GetWordMemberCountFunction();
+    virtual int GetWordMemberCountClass();
 
     virtual int GetMemberSize(int nType, CBETypedDeclarator *pMember,
 	bool bMax);
 
-    CBETypedDeclarator* GetOpcodeVariable(void);
-    CBETypedDeclarator* GetExceptionVariable(void);
+    CBETypedDeclarator* GetOpcodeVariable();
+    CBETypedDeclarator* GetExceptionVariable();
     CBETypedDeclarator* GetReturnVariable(CBEFunction *pFunction);
     CBETypedDeclarator* GetWordMemberVariable(int nNumber);
     CBETypedDeclarator* GetMemberVariable(int nFEType, bool bUnsigned,

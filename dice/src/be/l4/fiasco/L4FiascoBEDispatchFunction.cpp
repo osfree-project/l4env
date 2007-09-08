@@ -45,7 +45,7 @@ CL4FiascoBEDispatchFunction::~CL4FiascoBEDispatchFunction()
  * We use this function to add the message tag variable.
  */
 void
-CL4FiascoBEDispatchFunction::AddBeforeParameters(void)
+CL4FiascoBEDispatchFunction::AddBeforeParameters()
 {
     CL4BEDispatchFunction::AddBeforeParameters();
 

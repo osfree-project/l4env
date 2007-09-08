@@ -114,7 +114,7 @@ CObject *CBEIDLUnionType::Clone()
  *  \return a reference to the switch variable
  */
 CBETypedDeclarator*
-CBEIDLUnionType::GetSwitchVariable(void)
+CBEIDLUnionType::GetSwitchVariable()
 {
     return m_Members.Find(m_sSwitchName);
 }
@@ -123,7 +123,7 @@ CBEIDLUnionType::GetSwitchVariable(void)
  *  \return a reference to the union member
  */
 CBETypedDeclarator*
-CBEIDLUnionType::GetUnionVariable(void)
+CBEIDLUnionType::GetUnionVariable()
 {
     return m_Members.Find(m_sUnionName);
 }

@@ -43,7 +43,7 @@ namespace error
     {
     public:
 	/** \brief the constructor of the invalid_operator exceptions */
-	explicit invalid_operator(void) throw()
+	explicit invalid_operator() throw()
 	{ }
 
 	/** \brief returns the string specification of the exceptions */
@@ -90,7 +90,7 @@ namespace error
     {
     public:
 	/** \brief the constructor for the class */
-	explicit parse_error(void) throw()
+	explicit parse_error() throw()
 	{ }
 
 	/** \brief returns the string of the exception */
@@ -108,7 +108,7 @@ namespace error
     {
     public:
 	/** \brief the constructor for the class */
-	explicit postparse_error(void) throw()
+	explicit postparse_error() throw()
 	{ }
 
 	/** \brief returns the string of the exception */
@@ -126,7 +126,7 @@ namespace error
     {
     public:
 	/** \brief the constructor of the class */
-	explicit consistency_error(void) throw()
+	explicit consistency_error() throw()
 	{ }
 
 	/** \brief returns the string of the exception */
@@ -154,7 +154,7 @@ namespace error
 	explicit create_error(string r) : reason(r)
 	{ }
 
-	/** \brief destructor 
+	/** \brief destructor
 	 *
 	 * Because the string() constructor can throw exceptions we have to
 	 * catch them here.
@@ -166,6 +166,24 @@ namespace error
 	virtual const char* what() const throw()
 	{
 	    return reason.c_str();
+	}
+    };
+
+    /** \class bad_versin
+     *  \ingroup error
+     *  \brief exception class for version checking
+     */
+    class bad_version : public std::exception
+    {
+    public:
+	/** \brief constructs the exception object */
+	explicit bad_version() throw()
+	{ }
+
+	/** \brief returns the reason this exception was thrown */
+	virtual const char* what() const throw()
+	{
+	    return "Specified version string was invalid.";
 	}
     };
 

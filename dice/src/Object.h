@@ -102,7 +102,7 @@ O* CObject::GetSpecificParent(unsigned nStart)
  *  \return a reference to the parent object
  */
 inline CObject*
-CObject::GetParent(void) const
+CObject::GetParent() const
 {
     return m_pParent;
 }

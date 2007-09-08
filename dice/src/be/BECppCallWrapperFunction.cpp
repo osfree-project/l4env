@@ -54,8 +54,8 @@ CBECppCallWrapperFunction::~CBECppCallWrapperFunction()
  *
  * This implementation only sets the name of the function.
  */
-void 
-CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation, 
+void
+CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation,
     int nSkipParameter)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
@@ -104,7 +104,7 @@ CBECppCallWrapperFunction::WriteBody(CBEFile& pFile)
 	    pReturn->WriteInitDeclaration(pFile, string());
 	    sReturn = pReturn->m_Declarators.First()->GetName();
 	}
-	
+
 	m_nSkipParameter = 0;
 	CBECallFunction::WriteCall(pFile, sReturn, true);
 	m_nSkipParameter = 1;
@@ -131,7 +131,7 @@ CBECppCallWrapperFunction::WriteBody(CBEFile& pFile)
 	    pReturn->WriteInitDeclaration(pFile, string());
 	    sReturn = pReturn->m_Declarators.First()->GetName();
 	}
-	
+
 	m_nSkipParameter = 1;
 	CBECallFunction::WriteCall(pFile, sReturn, true);
 	m_nSkipParameter = 3;

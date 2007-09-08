@@ -52,7 +52,7 @@ public:
 
     // Handling file imports
     void import (std::string f, bool std_inc);
-    void enter_file (std::string new_file, long new_line, bool std_inc, long on_line, 
+    void enter_file (std::string new_file, long new_line, bool std_inc, long on_line,
 	bool check_filetype, bool set_path);
     void leave_file (std::string new_file, bool keep_context = false);
 
@@ -74,7 +74,7 @@ public:
     /** \brief accessor function to get expected token
      *  \return expected token
      */
-    CSymbolTable::SymbolClass expecting_token(void)
+    CSymbolTable::SymbolClass expecting_token()
     { return expectingToken; }
 
     /** \brief accessor function for pCurrentFile

@@ -100,7 +100,7 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 	    sEnv = "&";
 	sEnv += pDecl->GetName();
 
-	pFile << "\tif (DICE_EXPECT_TRUE(DICE_IS_NO_EXCEPTION(" << 
+	pFile << "\tif (DICE_EXPECT_TRUE(DICE_IS_NO_EXCEPTION(" <<
 	    sEnv << ")))\n";
 	pFile << "\t{\n";
         ++pFile;
@@ -114,7 +114,7 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
         pFile << "\t" << sFreeFunc << "(" << sEnv << ");\n";
 	// set send dope
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-	    nType); 
+	    nType);
 	// write return (don't marshal any parameters if exception)
 	WriteReturn(pFile);
 	--pFile << "\t}\n";
@@ -129,7 +129,7 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
     if (bSendFpages)
     {
 	pFile << "\t";
-	pMsgBuffer->WriteMemberAccess(pFile, this, nType, 
+	pMsgBuffer->WriteMemberAccess(pFile, this, nType,
 	    TYPE_MSGDOPE_SEND, 0);
 	pFile << ".md.fpage_received = 1;\n";
     }
@@ -145,10 +145,10 @@ CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
  *         specify temp + offset var)
  *  \return true if variable sized parameters are needed
  */
-bool 
+bool
 CL4BEMarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 {
-    bool bRet = 
+    bool bRet =
 	CBEMarshalFunction::HasVariableSizedParameters(nDirection);
     bool bFixedNumberOfFlexpages = true;
     CBEClass *pClass = GetSpecificParent<CBEClass>();

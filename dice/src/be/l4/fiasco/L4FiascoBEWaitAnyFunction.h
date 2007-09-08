@@ -50,7 +50,7 @@ public:
     virtual ~CL4FiascoBEWaitAnyFunction();
 
 protected:
-    virtual void AddBeforeParameters(void);
+    virtual void AddBeforeParameters();
 };
 
 #endif // !__DICE_L4BEWAITANYFUNCTION_H__

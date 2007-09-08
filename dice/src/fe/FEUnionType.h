@@ -65,7 +65,7 @@ public:
     virtual bool IsConstructedType();
 
     void AddMembers(vector<CFEUnionCase*> *pUnionBody);
-    
+
 protected:
     /** a copy construtor used for the tagged union class */
     CFEUnionType(CFEUnionType& src); // copy constructor for tagged union

@@ -1,0 +1,11 @@
+TIS_OSLO
+########
+
+TIS_OSLO wraps the TIS driver of OSLO to get a linux
+TIS driver for v1.2 TPMs without the need for ACPI or PNP.
+It uses probing to figure out whether and which TPM
+is available.
+
+As it is based on OSLO code, you need to download OSLO at
+http://os.inf.tu-dresden.de/~kauer/oslo/ before you can
+compile this.

@@ -48,7 +48,7 @@ CL4V2AMD64BEClassFactory::~CL4V2AMD64BEClassFactory()
  */
 CBESizes * CL4V2AMD64BEClassFactory::GetNewSizes()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, 
+    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 	"CL4V2AMD64BEClassFactory: created class CL4V2BESizes\n");
     return new CL4V2AMD64BESizes();
 }

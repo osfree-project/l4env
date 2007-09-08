@@ -52,7 +52,7 @@ public:
     virtual void WriteReplyAndWait(CBEFile& , CBEFunction*);
 
 protected:
-    virtual bool IsShortIPC(CBEFunction *pFunction, 
+    virtual bool IsShortIPC(CBEFunction *pFunction,
 	DIRECTION_TYPE nDirection);
     virtual bool UseAssembler(CBEFunction *pFunction);
 };

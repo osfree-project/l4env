@@ -81,7 +81,7 @@ CFEOperation::~CFEOperation()
  *  \return a copy of this object
  */
 CObject* CFEOperation::Clone()
-{ 
+{
     return new CFEOperation(*this);
 }
 
@@ -147,7 +147,7 @@ CFETypedDeclarator *CFEOperation::FindParameter(string sName)
             {
                 // if the found typed declarator has a constructed type (struct)
                 // search for the second part of the name there
-		CFEStructType *pStruct = 
+		CFEStructType *pStruct =
 		    dynamic_cast<CFEStructType*>((*iterP)->GetType());
                 if (pStruct)
                 {

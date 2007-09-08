@@ -137,7 +137,7 @@ VersionRep      [1-9][0-9]*([.,][0-9]+)?
     yylloc->begin = yylloc->end;
 
     if (driver.trace_scanning)
-	std::cerr << "idl-scanner: # " << nNewLinenumber << " \"" << sNewFilename << "\" " << nFlags << 
+	std::cerr << "idl-scanner: # " << nNewLinenumber << " \"" << sNewFilename << "\" " << nFlags <<
 	    " (old: " << line << ") found\n";
     /* nFlags == 1: start new file with filename */
     if (nFlags == 1)

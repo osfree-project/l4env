@@ -37,15 +37,15 @@
 #include "Compiler.h"
 
 /** destroys the typed declarator object */
-CL4BETypedDeclarator::~CL4BETypedDeclarator(void)
+CL4BETypedDeclarator::~CL4BETypedDeclarator()
 {}
 
 /** \brief clones this object
  *  \return reference to copy
  */
 CObject* CL4BETypedDeclarator::Clone()
-{ 
-    return new CL4BETypedDeclarator(*this); 
+{
+    return new CL4BETypedDeclarator(*this);
 }
 
 
