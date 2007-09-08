@@ -50,12 +50,6 @@ public:
     virtual ~CL4BEWaitAnyFunction();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CL4BEWaitAnyFunction(CL4BEWaitAnyFunction &src);
-
-protected:
     virtual void WriteIPCErrorCheck(CBEFile& pFile);
     virtual void WriteExceptionCheck(CBEFile& pFile);
     virtual void WriteUnmarshalling(CBEFile& pFile);
@@ -70,7 +64,8 @@ protected:
     virtual void WriteShortFlexpageIPC(CBEFile& pFile);
     virtual void WriteReleaseMemory(CBEFile& pFile);
     virtual void WriteDedicatedWait(CBEFile& pFile);
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
+    virtual void CreateEnvironment();
     virtual void WriteCleanup(CBEFile& pFile);
 };
 

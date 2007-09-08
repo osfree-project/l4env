@@ -50,7 +50,7 @@ PROGRAMS = $(bin_PROGRAMS)
 am_dice_OBJECTS = main.$(OBJEXT) Compiler.$(OBJEXT) Visitor.$(OBJEXT) \
 	version.$(OBJEXT) IncludeStatement.$(OBJEXT) \
 	Dependency.$(OBJEXT) Messages.$(OBJEXT) Object.$(OBJEXT) \
-	Location.$(OBJEXT)
+	Location.$(OBJEXT) FactoryFactory.$(OBJEXT)
 dice_OBJECTS = $(am_dice_OBJECTS)
 am__DEPENDENCIES_1 =
 dice_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
@@ -224,8 +224,8 @@ DICELIBS = $(top_builddir)/src/be/l4/libl4.a \
 		$(top_builddir)/src/parser/c-c++/libcparser.a \
 		$(top_builddir)/src/parser/libparser.a
 
-dice_SOURCES = main.cpp Compiler.cpp Visitor.cpp version.cpp IncludeStatement.cpp Dependency.cpp Messages.cpp Object.cpp Location.cpp
-noinst_HEADERS = defines.h template.h Compiler.h Object.h Visitor.h ProgramOptions.h TypeSpec-Type.h Attribute-Type.h IncludeStatement.h Dependency.h Messages.h Error.h Location.h
+dice_SOURCES = main.cpp Compiler.cpp Visitor.cpp version.cpp IncludeStatement.cpp Dependency.cpp Messages.cpp Object.cpp Location.cpp FactoryFactory.cpp
+noinst_HEADERS = defines.h template.h Compiler.h Object.h Visitor.h ProgramOptions.h TypeSpec-Type.h Attribute-Type.h IncludeStatement.h Dependency.h Messages.h Error.h Location.h FactoryFactory.h
 dice_DEPENDENCIES = $(DICELIBS)
 dice_LDADD = -L$(top_builddir)/src/be/l4/v2 -lv2 \
 		-L$(top_builddir)/src/be/l4/v2/amd64 -lv2amd64 \
@@ -326,6 +326,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Compiler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Dependency.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FactoryFactory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IncludeStatement.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Location.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Messages.Po@am__quote@

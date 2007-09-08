@@ -48,7 +48,7 @@ public:
     ~CL4FiascoBESrvLoopFunction();
 
 public:
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
 };
 
 #endif // !__DICE_L4FIASCOBESRVLOOPFUNCTION_H__

@@ -41,9 +41,8 @@
 #include <iostream>
 #include <stdexcept>
 
-CFELibrary::CFELibrary(string sName, vector<CFEAttribute*> * pAttributes,
-    CFEBase* pParent)
-: CFEFileComponent(pParent),
+CFELibrary::CFELibrary(string sName, vector<CFEAttribute*> * pAttributes, CFEBase* pParent)
+: CFEFileComponent(static_cast<CObject*>(pParent)),
     m_Attributes(pAttributes, this),
     m_Constants(0, this),
     m_Typedefs(0, this),
@@ -56,16 +55,16 @@ CFELibrary::CFELibrary(string sName, vector<CFEAttribute*> * pAttributes,
     m_pSameLibraryPrev = 0;
 }
 
-CFELibrary::CFELibrary(CFELibrary & src)
+CFELibrary::CFELibrary(CFELibrary* src)
 : CFEFileComponent(src),
-    m_Attributes(src.m_Attributes),
-    m_Constants(src.m_Constants),
-    m_Typedefs(src.m_Typedefs),
-    m_Interfaces(src.m_Interfaces),
-    m_Libraries(src.m_Libraries),
-    m_TaggedDeclarators(src.m_TaggedDeclarators)
+    m_Attributes(src->m_Attributes),
+    m_Constants(src->m_Constants),
+    m_Typedefs(src->m_Typedefs),
+    m_Interfaces(src->m_Interfaces),
+    m_Libraries(src->m_Libraries),
+    m_TaggedDeclarators(src->m_TaggedDeclarators)
 {
-    m_sLibName = src.m_sLibName;
+    m_sLibName = src->m_sLibName;
     m_pSameLibraryNext = 0;
     m_pSameLibraryPrev = 0;
     m_Attributes.Adopt(this);
@@ -75,19 +74,19 @@ CFELibrary::CFELibrary(CFELibrary & src)
     m_Libraries.Adopt(this);
     m_TaggedDeclarators.Adopt(this);
 
-    src.AddSameLibrary(this);
+    src->AddSameLibrary(this);
 }
 
 /** cleans up the library object */
 CFELibrary::~CFELibrary()
 { }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return a reference to the clone
  */
 CObject* CFELibrary::Clone()
 {
-    return new CFELibrary(*this);
+	return new CFELibrary(this);
 }
 
 /** \brief add the components of the library
@@ -310,85 +309,79 @@ CFELibrary *CFELibrary::FindLibrary(string sName)
  */
 CFEInterface *CFELibrary::FindInterface(string sName, CFELibrary* pStart)
 {
-    if (sName.empty())
-        return 0;
+	if (sName.empty())
+		return 0;
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"CFELibrary::%s(%s, %s) called (in file %s)\n", __func__,
-	sName.c_str(), pStart ? pStart->GetName().c_str() : "(null)",
-	GetSpecificParent<CFEFile>()->GetFileName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CFELibrary::%s(%s, %s) called (in file %s)\n", __func__,
+		sName.c_str(), pStart ? pStart->GetName().c_str() : "(null)",
+		GetSpecificParent<CFEFile>()->GetFileName().c_str());
 
-    // if scoped name
-    string::size_type nScopePos;
-    if ((nScopePos = sName.find("::")) != string::npos)
-    {
-        string sRest = sName.substr(sName.length()-nScopePos-2);
-        string sScope = sName.substr(0, nScopePos);
-        if (sScope.empty())
-        {
-            // has been a "::<name>"
-            return FindInterface(sRest);
-        }
-        else
-        {
-            CFELibrary *pFELibrary = FindLibrary(sScope);
-            if (pFELibrary == 0)
-                return 0;
-            return pFELibrary->FindInterface(sRest);
-        }
-    }
+	// if scoped name
+	string::size_type nScopePos;
+	if ((nScopePos = sName.find("::")) != string::npos)
+	{
+		string sRest = sName.substr(sName.length()-nScopePos-2);
+		string sScope = sName.substr(0, nScopePos);
+		if (sScope.empty())
+		{
+			// has been a "::<name>"
+			return FindInterface(sRest);
+		}
+		else
+		{
+			CFELibrary *pFELibrary = FindLibrary(sScope);
+			if (pFELibrary == 0)
+				return 0;
+			return pFELibrary->FindInterface(sRest);
+		}
+	}
 
-    CFEInterface *pInterface = m_Interfaces.Find(sName);
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"CFELibrary::%s: search for own interface found %p\n", __func__,
-	pInterface);
-    if (pInterface)
-	return pInterface;
+	CFEInterface *pInterface = m_Interfaces.Find(sName);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CFELibrary::%s: search for own interface found %p\n", __func__,
+		pInterface);
+	if (pInterface)
+		return pInterface;
 
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = m_Libraries.begin();
-	 iterL != m_Libraries.end();
-	 iterL++)
-    {
-        if ((pInterface = (*iterL)->FindInterface(sName)))
-            return pInterface;
-    }
+	vector<CFELibrary*>::iterator iterL;
+	for (iterL = m_Libraries.begin();
+		iterL != m_Libraries.end();
+		iterL++)
+	{
+		if ((pInterface = (*iterL)->FindInterface(sName)))
+			return pInterface;
+	}
 
-    // if we have "same libraries", maybe interface is defined there
-    // first we check if we are the start. If so, we have to stop.
-    // if not, simply check if we have next lib. If so, call its Find function
-    // if not, go to begin of list and call its Find function
-    //
-    // This way we first check the local members of the originally called
-    // library. If we did not find anything there, we check the next in line
-    // and tell it, that we are the start of the search. When we reach the end
-    // of the list we wrap around to the start of the list (originally called
-    // lib can be anywhere in the middle). Because Find function always test the
-    // next lib, we only have to call Find for our next lib.
-    if (!pStart)
-        pStart = this;
-    else
-        if (pStart == this)
-            // we wrapped around and did not find anything
-            return 0;
+	// if we have "same libraries", maybe interface is defined there
+	// first we check if we are the start. If so, we have to stop.
+	// if not, simply check if we have next lib. If so, call its Find function
+	// if not, go to begin of list and call its Find function
+	//
+	// This way we first check the local members of the originally called
+	// library. If we did not find anything there, we check the next in line
+	// and tell it, that we are the start of the search. When we reach the end
+	// of the list we wrap around to the start of the list (originally called
+	// lib can be anywhere in the middle). Because Find function always test the
+	// next lib, we only have to call Find for our next lib.
+	if (!pStart)
+		pStart = this;
+	else
+		if (pStart == this)
+			// we wrapped around and did not find anything
+			return 0;
 
-    // now check for next member and call it
-    if (m_pSameLibraryNext)
-        // either we find interface there or not. The result is valid.
-        return m_pSameLibraryNext->FindInterface(sName, pStart);
-    else
-    {
-        // no next, go to begin of list (this is end of list)
-        CFELibrary *pSameLib = this;
-        while (pSameLib->m_pSameLibraryPrev)
-            pSameLib = pSameLib->m_pSameLibraryPrev;
-        // and call Find function for begin of list
-        // since any result of this call is valid, simply return it
-        return pSameLib->FindInterface(sName, pStart);
-    }
-
-    // should not be reached
-    return 0;
+	// now check for next member and call it
+	if (m_pSameLibraryNext)
+		// either we find interface there or not. The result is valid.
+		return m_pSameLibraryNext->FindInterface(sName, pStart);
+	// no next, go to begin of list (this is end of list)
+	CFELibrary *pLib = this;
+	while (pLib->m_pSameLibraryPrev)
+		pLib = pLib->m_pSameLibraryPrev;
+	// and call Find function at begin of list
+	// since any result of this call is valid, simply return it
+	return pLib->FindInterface(sName, pStart);
 }
 
 /** \brief adds a library with the same name to the same lib vector
@@ -398,17 +391,17 @@ CFEInterface *CFELibrary::FindInterface(string sName, CFELibrary* pStart)
  * different files. Because we cannot simply add the members of one lib to
  * another lib (they would belong to another file) we have to do it this way.
  */
-void CFELibrary::AddSameLibrary(CFELibrary * pLibrary)
+void CFELibrary::AddSameLibrary(CFELibrary* pLibrary)
 {
-    if (!pLibrary)
-        return;
+	if (!pLibrary)
+		return;
 
-    // search for last element in list
-    CFELibrary *pLast = this;
-    while (pLast->m_pSameLibraryNext) pLast = pLast->m_pSameLibraryNext;
-    // add given lib at end of list
-    pLast->m_pSameLibraryNext = pLibrary;
-    pLibrary->m_pSameLibraryPrev = pLast;
+	// search for last element in list
+	CFELibrary *pLast = this;
+	while (pLast->m_pSameLibraryNext) pLast = pLast->m_pSameLibraryNext;
+	// add given lib at end of list
+	pLast->m_pSameLibraryNext = pLibrary;
+	pLibrary->m_pSameLibraryPrev = pLast;
 }
 
 /** \brief search for a tagged declarator
@@ -417,28 +410,28 @@ void CFELibrary::AddSameLibrary(CFELibrary * pLibrary)
  */
 CFEConstructedType* CFELibrary::FindTaggedDecl(string sName)
 {
-    // own tagged decls
-    CFEConstructedType* pTaggedDecl = m_TaggedDeclarators.Find(sName);
-    if (pTaggedDecl)
-	return pTaggedDecl;
-    // search interfaces
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = m_Interfaces.begin();
-	 iterI != m_Interfaces.end();
-	 iterI++)
-    {
-        if ((pTaggedDecl = (*iterI)->m_TaggedDeclarators.Find(sName)) != 0)
-            return pTaggedDecl;
-    }
-    // search nested libs
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = m_Libraries.begin();
-	 iterL != m_Libraries.end();
-	 iterL++)
-    {
-        if ((pTaggedDecl = (*iterL)->FindTaggedDecl(sName)) != 0)
-            return pTaggedDecl;
-    }
-    // nothing found:
-    return 0;
+	// own tagged decls
+	CFEConstructedType* pTaggedDecl = m_TaggedDeclarators.Find(sName);
+	if (pTaggedDecl)
+		return pTaggedDecl;
+	// search interfaces
+	vector<CFEInterface*>::iterator iterI;
+	for (iterI = m_Interfaces.begin();
+		iterI != m_Interfaces.end();
+		iterI++)
+	{
+		if ((pTaggedDecl = (*iterI)->m_TaggedDeclarators.Find(sName)) != 0)
+			return pTaggedDecl;
+	}
+	// search nested libs
+	vector<CFELibrary*>::iterator iterL;
+	for (iterL = m_Libraries.begin();
+		iterL != m_Libraries.end();
+		iterL++)
+	{
+		if ((pTaggedDecl = (*iterL)->FindTaggedDecl(sName)) != 0)
+			return pTaggedDecl;
+	}
+	// nothing found:
+	return 0;
 }

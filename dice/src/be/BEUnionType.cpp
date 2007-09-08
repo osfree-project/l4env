@@ -52,11 +52,11 @@ CBEUnionType::CBEUnionType()
   m_UnionCases(0, this)
 { }
 
-CBEUnionType::CBEUnionType(CBEUnionType & src)
+CBEUnionType::CBEUnionType(CBEUnionType* src)
 : CBEType(src),
-  m_UnionCases(src.m_UnionCases)
+  m_UnionCases(src->m_UnionCases)
 {
-    m_sTag = src.m_sTag;
+    m_sTag = src->m_sTag;
     m_UnionCases.Adopt(this);
 }
 
@@ -64,12 +64,12 @@ CBEUnionType::CBEUnionType(CBEUnionType & src)
 CBEUnionType::~CBEUnionType()
 { }
 
-/** \brief generates an exact copy of this class
- *  \return a reference to the new object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject *CBEUnionType::Clone()
+CObject* CBEUnionType::Clone()
 {
-    return new CBEUnionType(*this);
+	return new CBEUnionType(this);
 }
 
 /** \brief creates this class' part of the back-end

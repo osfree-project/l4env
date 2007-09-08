@@ -263,6 +263,7 @@ Thread::handle_lldt(Trap_state *ts)
 	  entry_number++;
 	}
 
+      t->thread_lock()->clear();
       return 1;
     }
 

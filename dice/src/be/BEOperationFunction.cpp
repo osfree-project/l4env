@@ -46,19 +46,11 @@
 
 CBEOperationFunction::CBEOperationFunction(FUNCTION_TYPE nFunctionType)
     : CBEFunction(nFunctionType)
-{
-}
-
-CBEOperationFunction::CBEOperationFunction(CBEOperationFunction & src)
- : CBEFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CBEOperationFunction::~CBEOperationFunction()
-{
-
-}
+{ }
 
 /** \brief prepares this class for further deployment using the front-end \
  *         operation
@@ -68,133 +60,118 @@ CBEOperationFunction::~CBEOperationFunction()
  * This implementation adds the attributes, types, parameters, exception, etc.
  * given by the front-end function to this instance of the back-end function.
  */
-void
-CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation)
+void CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
-    assert(pFEOperation);
+	assert(pFEOperation);
 
-    string exc = string(__func__);
-    // basic init
-    CBEFunction::CreateBackEnd(pFEOperation);
-    // add return type
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sReturn = pNF->GetReturnVariable();
-    if (!SetReturnVar(pFEOperation->GetReturnType(), sReturn))
-    {
-	exc += " failed because return var could not be set.";
-        throw new error::create_error(exc);
-    }
-    // add attributes
-    AddAttributes(pFEOperation);
-    // add parameters
-    AddParameters(pFEOperation);
-    // add exceptions
-    AddExceptions(pFEOperation);
-    // set opcode name
-    m_sOpcodeConstName = pNF->GetOpcodeConst(pFEOperation);
-    // set parent
-    CBERoot *pRoot = GetSpecificParent<CBERoot>();
-    assert(pRoot);
-    assert(pFEOperation->GetSpecificParent<CFEInterface>());
-    m_pClass = pRoot->FindClass(
-	    pFEOperation->GetSpecificParent<CFEInterface>()->GetName());
-    assert(m_pClass);
-    // would like to test for class == parent, but this is not the case for
-    // switch case: parent = srv-loop function
+	string exc = string(__func__);
+	// basic init
+	CBEFunction::CreateBackEnd(pFEOperation, bComponentSide);
+	// add return type
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sReturn = pNF->GetReturnVariable();
+	if (!SetReturnVar(pFEOperation->GetReturnType(), sReturn))
+	{
+		exc += " failed because return var could not be set.";
+		throw new error::create_error(exc);
+	}
+	// add attributes
+	AddAttributes(pFEOperation);
+	// add parameters
+	AddParameters(pFEOperation);
+	// add exceptions
+	AddExceptions(pFEOperation);
+	// set opcode name
+	m_sOpcodeConstName = pNF->GetOpcodeConst(pFEOperation);
+	// set parent
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	assert(pFEOperation->GetSpecificParent<CFEInterface>());
+	m_pClass = pRoot->FindClass(
+		pFEOperation->GetSpecificParent<CFEInterface>()->GetName());
+	assert(m_pClass);
+	// would like to test for class == parent, but this is not the case for
+	// switch case: parent = srv-loop function
 
-    // check if interface has error function and add its name if available
-    CFEInterface *pFEInterface =
-	pFEOperation->GetSpecificParent<CFEInterface>();
-    if (pFEInterface)
-    {
-        if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION))
-        {
-            CFEStringAttribute *pErrorFunc = dynamic_cast<CFEStringAttribute*>
-		(pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION));
-            m_sErrorFunction = pErrorFunc->GetString();
-        }
-        if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_CLIENT) &&
-            !IsComponentSide())
-        {
-            CFEStringAttribute *pErrorFunc = dynamic_cast<CFEStringAttribute*>
-		(pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_CLIENT));
-            m_sErrorFunction = pErrorFunc->GetString();
-        }
-        if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_SERVER) &&
-            IsComponentSide())
-        {
-            CFEStringAttribute *pErrorFunc = dynamic_cast<CFEStringAttribute*>
-		(pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_SERVER));
-            m_sErrorFunction = pErrorFunc->GetString();
-        }
-    }
+	// check if interface has error function and add its name if available
+	CFEInterface *pFEInterface =
+		pFEOperation->GetSpecificParent<CFEInterface>();
+	if (pFEInterface)
+	{
+		if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION))
+		{
+			CFEStringAttribute *pErrorFunc = dynamic_cast<CFEStringAttribute*>
+				(pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION));
+			m_sErrorFunction = pErrorFunc->GetString();
+		}
+		if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_CLIENT) &&
+			!IsComponentSide())
+		{
+			CFEStringAttribute *pErrorFunc = dynamic_cast<CFEStringAttribute*>
+				(pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_CLIENT));
+			m_sErrorFunction = pErrorFunc->GetString();
+		}
+		if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_SERVER) &&
+			IsComponentSide())
+		{
+			CFEStringAttribute *pErrorFunc = dynamic_cast<CFEStringAttribute*>
+				(pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION_SERVER));
+			m_sErrorFunction = pErrorFunc->GetString();
+		}
+	}
 }
-
-template<class _Arg>
-class AddCall {
-    CBEOperationFunction *f;
-    std::mem_fun1_t<void, CBEOperationFunction, _Arg*> fun;
-public:
-    AddCall(void (CBEOperationFunction::*__pf)(_Arg*), CBEOperationFunction *ff) :
-	f(ff), fun(__pf) { }
-    void operator() (_Arg *p) { fun(f, p); }
-};
 
 /** \brief adds the parameters of a front-end function to this class
  *  \param pFEOperation the front-end function
  */
-void
-CBEOperationFunction::AddParameters(CFEOperation * pFEOperation)
+void CBEOperationFunction::AddParameters(CFEOperation * pFEOperation)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBEOperationFunction::%s called for %s\n", __func__,
-	pFEOperation->GetName().c_str());
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEOperationFunction::%s called for %s\n", __func__,
+		pFEOperation->GetName().c_str());
 
-    AddBeforeParameters();
+	AddBeforeParameters();
 
-    for_each(pFEOperation->m_Parameters.begin(), pFEOperation->m_Parameters.end(),
-	AddCall<CFETypedDeclarator>(&CBEOperationFunction::AddParameter, this));
+	for_each(pFEOperation->m_Parameters.begin(), pFEOperation->m_Parameters.end(),
+		DoCall<CBEOperationFunction, CFETypedDeclarator>(this, &CBEOperationFunction::AddParameter));
 
-    AddAfterParameters();
+	AddAfterParameters();
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"CBEOperationFunction::%s returns true\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBEOperationFunction::%s returns true\n", __func__);
 }
 
 /** \brief adds a single parameter to this class
  *  \param pFEParameter the parameter to add
  */
-void
-CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter)
+void CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
-    CBETypedDeclarator *pParameter =
-	CCompiler::GetClassFactory()->GetNewTypedDeclarator();
-    m_Parameters.Add(pParameter);
-    pParameter->CreateBackEnd(pFEParameter);
+	CBETypedDeclarator *pParameter =
+		CCompiler::GetClassFactory()->GetNewTypedDeclarator();
+	m_Parameters.Add(pParameter);
+	pParameter->CreateBackEnd(pFEParameter);
 }
 
 /** \brief adds exceptions of a front-end function to this class
  *  \param pFEOperation the front-end function
  *  \return true if successful
  */
-void
-CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation)
+void CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEOperationFunction::%s called for %s\n", __func__,
-        pFEOperation->GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEOperationFunction::%s called for %s\n", __func__,
+		pFEOperation->GetName().c_str());
 
-    for_each(pFEOperation->m_RaisesDeclarators.begin(), pFEOperation->m_RaisesDeclarators.end(),
-	AddCall<CFEIdentifier>(&CBEOperationFunction::AddException, this));
+	for_each(pFEOperation->m_RaisesDeclarators.begin(), pFEOperation->m_RaisesDeclarators.end(),
+		DoCall<CBEOperationFunction, CFEIdentifier>(this, &CBEOperationFunction::AddException));
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEOperationFunction::%s returns true\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEOperationFunction::%s returns true\n", __func__);
 }
 
 /** \brief adds a single exception to this class
  *  \param pFEException the exception to add
  *  \return true if successful
  */
-void
-CBEOperationFunction::AddException(CFEIdentifier * pFEException)
+void CBEOperationFunction::AddException(CFEIdentifier * pFEException)
 {
     CBEDeclarator *pException = CCompiler::GetClassFactory()->GetNewDeclarator();
     m_Exceptions.Add(pException);
@@ -205,18 +182,17 @@ CBEOperationFunction::AddException(CFEIdentifier * pFEException)
  *  \param pFEOperation the front-end operation
  *  \return true if successful
  */
-void
-CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation)
+void CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEOperationFunction::%s called for %s\n", __func__,
-	pFEOperation->GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEOperationFunction::%s called for %s\n", __func__,
+		pFEOperation->GetName().c_str());
 
-    for_each(pFEOperation->m_Attributes.begin(), pFEOperation->m_Attributes.end(),
-	AddCall<CFEAttribute>(&CBEOperationFunction::AddAttribute, this));
+	for_each(pFEOperation->m_Attributes.begin(), pFEOperation->m_Attributes.end(),
+		DoCall<CBEOperationFunction, CFEAttribute>(this, &CBEOperationFunction::AddAttribute));
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEOperationFunction::%s returns true\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEOperationFunction::%s returns true\n", __func__);
 }
 
 /** \brief adds a single attribute to this function

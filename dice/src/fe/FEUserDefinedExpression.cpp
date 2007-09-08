@@ -41,16 +41,22 @@ CFEUserDefinedExpression::CFEUserDefinedExpression(std::string sExpName)
     m_sExpName = sExpName;
 }
 
-CFEUserDefinedExpression::CFEUserDefinedExpression(CFEUserDefinedExpression & src)
+CFEUserDefinedExpression::CFEUserDefinedExpression(CFEUserDefinedExpression* src)
 : CFEExpression(src)
 {
-    m_sExpName = src.m_sExpName;
+    m_sExpName = src->m_sExpName;
 }
 
 /** cleans up user defined expression */
 CFEUserDefinedExpression::~CFEUserDefinedExpression()
-{
+{ }
 
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEUserDefinedExpression::Clone()
+{
+	return new CFEUserDefinedExpression(this);
 }
 
 /**
@@ -122,13 +128,4 @@ bool CFEUserDefinedExpression::IsOfType(unsigned int nType)
     CMessages::Error("The const \"%s\" is not defined in the valid scope(s).\n",
           GetExpName().c_str());
     return false;
-}
-
-/**
- *  \brief creates a perfect copy of this class
- *  \return a new versin of ths object
- */
-CObject *CFEUserDefinedExpression::Clone()
-{
-    return new CFEUserDefinedExpression(*this);
 }

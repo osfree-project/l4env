@@ -53,14 +53,13 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEArrayType(CFEArrayType &src);
+    CFEArrayType(CFEArrayType* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     virtual CFEExpression* GetBound();
     virtual CFETypeSpec* GetBaseType();
-    virtual CObject* Clone();
-
     virtual void Accept(CVisitor&);
 
 protected:

@@ -45,12 +45,8 @@ public:
     CBEMarshalExceptionFunction();
     virtual ~CBEMarshalExceptionFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBEMarshalExceptionFunction(CBEMarshalExceptionFunction &src);
-
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);

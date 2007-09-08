@@ -50,9 +50,6 @@ public:
     virtual ~CSockBEMarshalFunction();
 
 protected:
-    /** \brief copy constructor */
-    CSockBEMarshalFunction(CSockBEMarshalFunction &src);
-
     virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 };
 

@@ -109,11 +109,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEUnaryExpression(CFEUnaryExpression &src);
+    CFEUnaryExpression(CFEUnaryExpression* src);
 
 // Operators
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
     virtual bool IsOfType(unsigned int nType);
     virtual int GetIntValue();
     virtual EXPT_OPERATOR GetOperator();

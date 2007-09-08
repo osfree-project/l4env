@@ -33,29 +33,20 @@
 #include "be/BEMsgBuffer.h"
 
 CSockBEMarshalFunction::CSockBEMarshalFunction()
-{
-}
-
-CSockBEMarshalFunction::CSockBEMarshalFunction(CSockBEMarshalFunction & src)
-: CBEMarshalFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CSockBEMarshalFunction::~CSockBEMarshalFunction()
-{
-
-}
+{ }
 
 /** \brief remove references from message buffer
  *  \param pMsgBuffer the message buffer to initialize
  *  \return true on success
  */
-void
-CSockBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+void CSockBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    CBEMarshalFunction::MsgBufferInitialization(pMsgBuffer);
-    CBEDeclarator *pDecl = pMsgBuffer->m_Declarators.First();
-    pDecl->SetStars(0);
+	CBEMarshalFunction::MsgBufferInitialization(pMsgBuffer);
+	CBEDeclarator *pDecl = pMsgBuffer->m_Declarators.First();
+	pDecl->SetStars(0);
 }
 

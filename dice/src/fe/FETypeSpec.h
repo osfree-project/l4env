@@ -56,10 +56,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFETypeSpec(CFETypeSpec &src);
+    CFETypeSpec(CFETypeSpec* src);
 
 // operations
 public:
+	virtual CObject* Clone();
     virtual bool IsConstructedType();
     virtual bool IsPointerType();
 

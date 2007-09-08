@@ -46,12 +46,12 @@ CFEUnionType::CFEUnionType(string sTag,
         m_bForwardDeclaration = true;
 }
 
-CFEUnionType::CFEUnionType(CFEUnionType & src)
+CFEUnionType::CFEUnionType(CFEUnionType* src)
 : CFEConstructedType(src),
-    m_UnionCases(src.m_UnionCases),
-    m_BaseUnions(src.m_BaseUnions)
+    m_UnionCases(src->m_UnionCases),
+    m_BaseUnions(src->m_BaseUnions)
 {
-    m_sTag = src.m_sTag;
+    m_sTag = src->m_sTag;
     m_UnionCases.Adopt(this);
     m_BaseUnions.Adopt(this);
 }
@@ -60,12 +60,12 @@ CFEUnionType::CFEUnionType(CFEUnionType & src)
 CFEUnionType::~CFEUnionType()
 {}
 
-/** creates a copy of this object
- *  \return a reference to a new union type object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEUnionType::Clone()
 {
-    return new CFEUnionType(*this);
+	return new CFEUnionType(this);
 }
 
 /** \brief test a type whether it is a constructed type or not

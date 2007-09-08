@@ -29,12 +29,12 @@
 #include "fe/FEDeclarator.h"
 #include "Visitor.h"
 
-CFEDeclarator::CFEDeclarator(CFEDeclarator & src)
+CFEDeclarator::CFEDeclarator(CFEDeclarator* src)
 :CFEIdentifier(src)
 {
-    m_nType = src.m_nType;
-    m_nNumStars = src.m_nNumStars;
-    m_nBitfields = src.m_nBitfields;
+    m_nType = src->m_nType;
+    m_nNumStars = src->m_nNumStars;
+    m_nBitfields = src->m_nBitfields;
 }
 
 CFEDeclarator::CFEDeclarator(DECL_TYPE nType)
@@ -55,8 +55,14 @@ CFEDeclarator::CFEDeclarator(DECL_TYPE nType, std::string sName, int nNumStars, 
 
 /** cleans up the declarator */
 CFEDeclarator::~CFEDeclarator()
+{ }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEDeclarator::Clone()
 {
-    // nothing to clean up
+	return new CFEDeclarator(this);
 }
 
 /** returns the number of asterisks
@@ -81,14 +87,6 @@ DECL_TYPE CFEDeclarator::GetType()
 void CFEDeclarator::SetStars(int nNumStars)
 {
     m_nNumStars = nNumStars;
-}
-
-/** creates a copy of this object
- *  \return a reference to the copy of this object
- */
-CObject *CFEDeclarator::Clone()
-{
-    return new CFEDeclarator(*this);
 }
 
 /** \brief returns the bitfields value

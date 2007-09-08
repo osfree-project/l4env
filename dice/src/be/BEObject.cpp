@@ -54,15 +54,23 @@ CBEObject::CBEObject(CObject * pParent)
   m_sTargetImplementation()
 { }
 
-CBEObject::CBEObject(CBEObject & src)
-: CObject(src),
-  m_sTargetHeader(src.m_sTargetHeader),
-  m_sTargetImplementation(src.m_sTargetImplementation)
+CBEObject::CBEObject(CBEObject* src)
+: CObject(*src),
+  m_sTargetHeader(src->m_sTargetHeader),
+  m_sTargetImplementation(src->m_sTargetImplementation)
 { }
 
 /** cleans up the base object */
 CBEObject::~CBEObject()
 { }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CBEObject::Clone()
+{
+	return new CBEObject(this);
+}
 
 /** \brief sets the target file name
  *  \param pFEObject the front-end object to use for the target file generation
@@ -244,15 +252,6 @@ bool CBEObject::IsTargetFile(CBEImplementationFile* pFile)
 	"CBEObject::%s(%s) fails, stems mismatch\n", __func__,
 	pFile->GetFileName().c_str());
     return false;
-}
-
-/** \brief creates a new instance of itself */
-CObject * CBEObject::Clone()
-{
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"%s: Clone() not implemented for %s. Fallback to CBEObject::Clone().\n",
-	__func__, typeid(*this).name());
-    return new CBEObject(*this);
 }
 
 /** \brief returns the name of the target header file

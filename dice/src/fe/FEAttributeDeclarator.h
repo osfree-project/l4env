@@ -54,11 +54,10 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEAttributeDeclarator(CFEAttributeDeclarator &src);
+    CFEAttributeDeclarator(CFEAttributeDeclarator* src);
 
-// operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
 };
 
 #endif

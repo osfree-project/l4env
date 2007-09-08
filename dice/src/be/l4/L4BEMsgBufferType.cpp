@@ -48,24 +48,22 @@
 
 CL4BEMsgBufferType::CL4BEMsgBufferType()
 : CBEMsgBufferType()
-{
-}
+{ }
 
-CL4BEMsgBufferType::CL4BEMsgBufferType(CL4BEMsgBufferType & src)
+CL4BEMsgBufferType::CL4BEMsgBufferType(CL4BEMsgBufferType* src)
 : CBEMsgBufferType(src)
-{
-}
+{ }
 
 /** \brief destructor of this instance */
 CL4BEMsgBufferType::~CL4BEMsgBufferType()
 { }
 
-/** \brief creates a copy of this object
- *  \return a reference to the new instance
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject *CL4BEMsgBufferType::Clone()
+CObject* CL4BEMsgBufferType::Clone()
 {
-    return new CL4BEMsgBufferType(*this);
+	return new CL4BEMsgBufferType(this);
 }
 
 /** \brief adds the elements of the structs
@@ -78,16 +76,16 @@ CObject *CL4BEMsgBufferType::Clone()
  */
 void
 CL4BEMsgBufferType::AddElements(CFEOperation *pFEOperation,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s called for %s\n",
-	__func__, pFEOperation->GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s called for %s\n",
+		__func__, pFEOperation->GetName().c_str());
 
-    CBEMsgBufferType::AddElements(pFEOperation, nType);
+	CBEMsgBufferType::AddElements(pFEOperation, nType);
 
-    AddZeroFlexpage(pFEOperation, nType);
+	AddZeroFlexpage(pFEOperation, nType);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
 }
 
 /** \brief adds elements for a single parameter to the message buffer
@@ -96,22 +94,22 @@ CL4BEMsgBufferType::AddElements(CFEOperation *pFEOperation,
  */
 void
 CL4BEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
-    assert(pFEParameter);
+	assert(pFEParameter);
 
-    if (pFEParameter->m_Attributes.Find(ATTR_REF))
-    {
-	AddRefstringElement(pFEParameter, nType);
-	return;
-    }
-    if (pFEParameter->GetType()->GetType() == TYPE_FLEXPAGE)
-    {
-	AddFlexpageElement(pFEParameter, nType);
-	return;
-    }
+	if (pFEParameter->m_Attributes.Find(ATTR_REF))
+	{
+		AddRefstringElement(pFEParameter, nType);
+		return;
+	}
+	if (pFEParameter->GetType()->GetType() == TYPE_FLEXPAGE)
+	{
+		AddFlexpageElement(pFEParameter, nType);
+		return;
+	}
 
-    CBEMsgBufferType::AddElement(pFEParameter, nType);
+	CBEMsgBufferType::AddElement(pFEParameter, nType);
 }
 
 /** \brief adds elements for a refstring parameter to the message buffer
@@ -120,36 +118,36 @@ CL4BEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
  */
 void
 CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
-    assert(pFEParameter);
-    // get struct
-    CFEOperation *pFEOperation =
-	pFEParameter->GetSpecificParent<CFEOperation>();
-    CFEInterface *pFEInterface =
-	pFEOperation->GetSpecificParent<CFEInterface>();
-    CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
-	pFEInterface->GetName(), nType);
-    assert(pStruct);
+	assert(pFEParameter);
+	// get struct
+	CFEOperation *pFEOperation =
+		pFEParameter->GetSpecificParent<CFEOperation>();
+	CFEInterface *pFEInterface =
+		pFEOperation->GetSpecificParent<CFEInterface>();
+	CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
+		pFEInterface->GetName(), nType);
+	assert(pStruct);
 
-    // we have to create a new element for the indirect string part
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
-    pMember->SetParent(this);
-    pMember->CreateBackEnd(pFEParameter);
-    // set the type to refstring (remember the restring type is only used in
-    // the message buffer -- up to here its a char*)
-    CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
-    pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
-    pMember->ReplaceType(pType);
-    // set the pointer of the declarator to zero
-    pMember->m_Declarators.First()->SetStars(0);
+	// we have to create a new element for the indirect string part
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
+	pMember->SetParent(this);
+	pMember->CreateBackEnd(pFEParameter);
+	// set the type to refstring (remember the restring type is only used in
+	// the message buffer -- up to here its a char*)
+	CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
+	pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
+	pMember->ReplaceType(pType);
+	// set the pointer of the declarator to zero
+	pMember->m_Declarators.First()->SetStars(0);
 
-    // add C language property to avoid const qualifier
-    // in struct
-    pMember->AddLanguageProperty(string("noconst"), string());
-    // add to struct
-    pStruct->m_Members.Add(pMember);
+	// add C language property to avoid const qualifier
+	// in struct
+	pMember->AddLanguageProperty(string("noconst"), string());
+	// add to struct
+	pStruct->m_Members.Add(pMember);
 }
 
 /** \brief adds elements for a flexpage parameter to the message buffer
@@ -158,31 +156,31 @@ CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
  */
 void
 CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
-    assert(pFEParameter);
-    // get struct
-    CFEOperation *pFEOperation =
-	pFEParameter->GetSpecificParent<CFEOperation>();
-    CFEInterface *pFEInterface =
-	pFEOperation->GetSpecificParent<CFEInterface>();
-    CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
-	pFEInterface->GetName(), nType);
-    assert(pStruct);
+	assert(pFEParameter);
+	// get struct
+	CFEOperation *pFEOperation =
+		pFEParameter->GetSpecificParent<CFEOperation>();
+	CFEInterface *pFEInterface =
+		pFEOperation->GetSpecificParent<CFEInterface>();
+	CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
+		pFEInterface->GetName(), nType);
+	assert(pStruct);
 
-    // we have to create a new element for the indirect string part
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
-    pMember->SetParent(this);
-    pMember->CreateBackEnd(pFEParameter);
-    // set the pointer of the declarator to zero
-    pMember->m_Declarators.First()->SetStars(0);
+	// we have to create a new element for the indirect string part
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
+	pMember->SetParent(this);
+	pMember->CreateBackEnd(pFEParameter);
+	// set the pointer of the declarator to zero
+	pMember->m_Declarators.First()->SetStars(0);
 
-    // add C language property to avoid const qualifier
-    // in struct
-    pMember->AddLanguageProperty(string("noconst"), string());
-    // add to struct
-    pStruct->m_Members.Add(pMember);
+	// add C language property to avoid const qualifier
+	// in struct
+	pMember->AddLanguageProperty(string("noconst"), string());
+	// add to struct
+	pStruct->m_Members.Add(pMember);
 }
 
 /** \brief adds a zero flexpage if neccessary
@@ -191,62 +189,62 @@ CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
  */
 void
 CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
-    bool bFlexpage = false;
+	bool bFlexpage = false;
 
-    vector<CFETypedDeclarator*>::iterator iter;
-    for (iter = pFEOperation->m_Parameters.begin();
-	 iter != pFEOperation->m_Parameters.end();
-	 iter++)
-    {
-	if ((*iter)->m_Attributes.Find(ATTR_IGNORE))
-	    continue;
-	if ((nType == CMsgStructType::In) &&
-	    !(*iter)->m_Attributes.Find(ATTR_IN))
-	    continue;
-	if ((nType == CMsgStructType::Out) &&
-	    !(*iter)->m_Attributes.Find(ATTR_OUT))
-	    continue;
-	if ((*iter)->GetType()->GetType() == TYPE_FLEXPAGE)
-	    bFlexpage = true;
-    }
-    if (!bFlexpage)
-	return;
+	vector<CFETypedDeclarator*>::iterator iter;
+	for (iter = pFEOperation->m_Parameters.begin();
+		iter != pFEOperation->m_Parameters.end();
+		iter++)
+	{
+		if ((*iter)->m_Attributes.Find(ATTR_IGNORE))
+			continue;
+		if ((nType == CMsgStructType::In) &&
+			!(*iter)->m_Attributes.Find(ATTR_IN))
+			continue;
+		if ((nType == CMsgStructType::Out) &&
+			!(*iter)->m_Attributes.Find(ATTR_OUT))
+			continue;
+		if ((*iter)->GetType()->GetType() == TYPE_FLEXPAGE)
+			bFlexpage = true;
+	}
+	if (!bFlexpage)
+		return;
 
-    CFEInterface *pFEInterface =
-	pFEOperation->GetSpecificParent<CFEInterface>();
-    CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
-	pFEInterface->GetName(), nType);
-    assert(pStruct);
+	CFEInterface *pFEInterface =
+		pFEOperation->GetSpecificParent<CFEInterface>();
+	CBEStructType *pStruct = GetStruct(pFEOperation->GetName(),
+		pFEInterface->GetName(), nType);
+	assert(pStruct);
 
-    // we have to create a new element for the indirect string part
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
-    pMember->SetParent(this);
-    // create flexpage type
-    CBEType *pType = pCF->GetNewType(TYPE_FLEXPAGE);
-    pType->SetParent(pMember);
-    pType->CreateBackEnd(true, 0, TYPE_FLEXPAGE);
-    // get name for zero fpage
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
-    // now create member
-    pMember->CreateBackEnd(pType, sName);
-    delete pType; /* cloned in CreateBackEnd */
-    // add directional attribute
-    CBEAttribute *pAttr = pCF->GetNewAttribute();
-    pAttr->SetParent(pMember);
-    if (nType == CMsgStructType::In)
-	pAttr->CreateBackEnd(ATTR_IN);
-    else
-	pAttr->CreateBackEnd(ATTR_OUT);
-    pMember->m_Attributes.Add(pAttr);
+	// we have to create a new element for the indirect string part
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
+	pMember->SetParent(this);
+	// create flexpage type
+	CBEType *pType = pCF->GetNewType(TYPE_FLEXPAGE);
+	pType->SetParent(pMember);
+	pType->CreateBackEnd(true, 0, TYPE_FLEXPAGE);
+	// get name for zero fpage
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
+	// now create member
+	pMember->CreateBackEnd(pType, sName);
+	delete pType; /* cloned in CreateBackEnd */
+	// add directional attribute
+	CBEAttribute *pAttr = pCF->GetNewAttribute();
+	pAttr->SetParent(pMember);
+	if (nType == CMsgStructType::In)
+		pAttr->CreateBackEnd(ATTR_IN);
+	else
+		pAttr->CreateBackEnd(ATTR_OUT);
+	pMember->m_Attributes.Add(pAttr);
 
-    // add C language property to avoid const qualifier
-    // in struct
-    pMember->AddLanguageProperty(string("noconst"), string());
-    // add to struct
-    pStruct->m_Members.Add(pMember);
+	// add C language property to avoid const qualifier
+	// in struct
+	pMember->AddLanguageProperty(string("noconst"), string());
+	// add to struct
+	pStruct->m_Members.Add(pMember);
 }
 

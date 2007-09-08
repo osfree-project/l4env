@@ -48,8 +48,6 @@ class CFEConstructedType;
  */
 class CFEBase : public CObject
 {
-
-
 // standard constructor/destructor
 public:
     /** constructs a front-end base object
@@ -61,13 +59,13 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEBase(CFEBase &src);
+    CFEBase(CFEBase* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     virtual std::string ToString();
 
-    virtual CObject* Clone();
     virtual CFEFile* GetRoot();
 
     /** \brief setter function for parent context

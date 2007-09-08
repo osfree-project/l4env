@@ -71,13 +71,13 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEOperation(CFEOperation &src);
+    CFEOperation(CFEOperation* src);
 
 // operations
 public:
-    virtual CObject* Clone();
     virtual void Accept(CVisitor&);
     CFETypedDeclarator *FindParameter(std::string sName);
+	virtual CObject* Clone();
 
     std::string GetName();
     CFETypeSpec* GetReturnType();

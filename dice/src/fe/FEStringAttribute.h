@@ -52,12 +52,19 @@ protected:
     /** \brief copy constrcutor
      *  \param src the source to copy from
      */
-    CFEStringAttribute(CFEStringAttribute & src);
+    CFEStringAttribute(CFEStringAttribute* src);
 
-// Operations
+	// Operations
 public:
-    virtual CObject* Clone();
-    virtual std::string GetString();
+	virtual CObject* Clone();
+
+	/** retrieves the contained string
+	 *  \return a reference to the string, which is parameter of this attribute
+	 * Because the returned string is only a reference to the member data, please copy
+	 * the string before you manipulate it.
+	 */
+	std::string GetString()
+	{ return m_String; }
 
 // attributes
 protected:

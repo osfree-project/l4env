@@ -60,17 +60,26 @@ CFEExpression::CFEExpression(std::string sString)
     m_String = sString;
 }
 
-CFEExpression::CFEExpression(CFEExpression & src):CFEBase(src)
+CFEExpression::CFEExpression(CFEExpression* src)
+: CFEBase(src)
 {
-    m_Char = src.m_Char;
-    m_WChar = src.m_WChar;
-    m_nType = src.m_nType;
-    m_String = src.m_String;
+    m_Char = src->m_Char;
+    m_WChar = src->m_WChar;
+    m_nType = src->m_nType;
+    m_String = src->m_String;
 }
 
 /** cleans up the expression object (frees the string) */
 CFEExpression::~CFEExpression()
 { }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEExpression::Clone()
+{
+	return new CFEExpression(this);
+}
 
 /** returns a reference to the string
  *  \return a reference to the string
@@ -165,14 +174,6 @@ char CFEExpression::GetChar()
 short CFEExpression::GetWChar()
 {
     return m_WChar;
-}
-
-/** create a copy of this object
- *  \return a reference to the new object
- */
-CObject *CFEExpression::Clone()
-{
-    return new CFEExpression(*this);
 }
 
 /** \brief print the object to a string

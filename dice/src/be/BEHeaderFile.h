@@ -57,17 +57,8 @@ public:
     CBEHeaderFile();
     ~CBEHeaderFile();
 
-protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEHeaderFile(CBEHeaderFile &src);
-
 public:
     virtual void Write();
-
-    virtual CObject* Clone();
-
     virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType);
     virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType);
     virtual void CreateBackEnd(CFELibrary *pFELibrary, FILE_TYPE nFileType);

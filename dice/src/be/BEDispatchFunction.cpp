@@ -50,14 +50,6 @@ CBEDispatchFunction::CBEDispatchFunction()
   m_SwitchCases(0, this)
 { }
 
-CBEDispatchFunction::CBEDispatchFunction(CBEDispatchFunction & src)
-: CBEInterfaceFunction(src),
-  m_SwitchCases(src.m_SwitchCases)
-{
-    m_SwitchCases.Adopt(this);
-    m_sDefaultFunction = src.m_sDefaultFunction;
-}
-
 /** \brief destructor of target class */
 CBEDispatchFunction::~CBEDispatchFunction()
 { }
@@ -85,14 +77,15 @@ CBEDispatchFunction::~CBEDispatchFunction()
  * AddAfterParameters respectively.
  */
 void
-CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface)
+CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
     // set target file name
     SetTargetFileName(pFEInterface);
     // set name
+	SetComponentSide(bComponentSide);
     SetFunctionName(pFEInterface, FUNCTION_DISPATCH);
 
-    CBEInterfaceFunction::CreateBackEnd(pFEInterface);
+    CBEInterfaceFunction::CreateBackEnd(pFEInterface, bComponentSide);
     // set source line number to last number of interface
     m_sourceLoc.setBeginLine(pFEInterface->m_sourceLoc.getEndLine());
 
@@ -173,29 +166,29 @@ CBEDispatchFunction::AddBeforeParameters()
  */
 void CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
 {
-    assert(pFEInterface);
+	assert(pFEInterface);
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    vector<CFEOperation*>::iterator iterO;
-    for (iterO = pFEInterface->m_Operations.begin();
-	 iterO != pFEInterface->m_Operations.end();
-	 iterO++)
-    {
-        // skip OUT functions
-        if ((*iterO)->m_Attributes.Find(ATTR_OUT))
-            continue;
-        CBESwitchCase *pFunction = pCF->GetNewSwitchCase();
-        m_SwitchCases.Add(pFunction);
-	pFunction->CreateBackEnd(*iterO);
-    }
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	vector<CFEOperation*>::iterator iterO;
+	for (iterO = pFEInterface->m_Operations.begin();
+		iterO != pFEInterface->m_Operations.end();
+		iterO++)
+	{
+		// skip OUT functions
+		if ((*iterO)->m_Attributes.Find(ATTR_OUT))
+			continue;
+		CBESwitchCase *pFunction = pCF->GetNewSwitchCase();
+		m_SwitchCases.Add(pFunction);
+		pFunction->CreateBackEnd(*iterO, true);
+	}
 
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFEInterface->m_BaseInterfaces.begin();
-	 iterI != pFEInterface->m_BaseInterfaces.end();
-	 iterI++)
-    {
-        AddSwitchCases(*iterI);
-    }
+	vector<CFEInterface*>::iterator iterI;
+	for (iterI = pFEInterface->m_BaseInterfaces.begin();
+		iterI != pFEInterface->m_BaseInterfaces.end();
+		iterI++)
+	{
+		AddSwitchCases(*iterI);
+	}
 }
 
 /** \brief writes the variable initializations of this function
@@ -210,25 +203,24 @@ CBEDispatchFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 /** \brief writes the switch statement
  *  \param pFile the file to write to
  */
-void
-CBEDispatchFunction::WriteSwitch(CBEFile& pFile)
+void CBEDispatchFunction::WriteSwitch(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sOpcodeVar = pNF->GetOpcodeVariable();
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sOpcodeVar = pNF->GetOpcodeVariable();
 
-    pFile << "\tswitch (" << sOpcodeVar << ")\n";
-    pFile << "\t{\n";
+	pFile << "\tswitch (" << sOpcodeVar << ")\n";
+	pFile << "\t{\n";
 
-    // iterate over functions
-    assert(m_pClass);
-    vector<CBESwitchCase*>::iterator i;
-    for (i = m_SwitchCases.begin(); i != m_SwitchCases.end(); i++)
-	(*i)->Write(pFile);
+	// iterate over functions
+	assert(m_pClass);
+	vector<CBESwitchCase*>::iterator i;
+	for (i = m_SwitchCases.begin(); i != m_SwitchCases.end(); i++)
+		(*i)->Write(pFile);
 
-    // writes default case
-    WriteDefaultCase(pFile);
+	// writes default case
+	WriteDefaultCase(pFile);
 
-    pFile << "\t}\n";
+	pFile << "\t}\n";
 }
 
 /** \brief writes the default case of the switch statetment

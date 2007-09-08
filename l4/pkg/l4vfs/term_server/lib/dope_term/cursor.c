@@ -23,6 +23,7 @@ void vt100_show_cursor(termstate_t *term)
     }
 }
 
+extern int _DEBUG;
 void vt100_hide_cursor(termstate_t *term)
 {
     dope_cmd(term->spec->app_id, "v.set(-cursorx -1 -cursory 0)");

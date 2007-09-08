@@ -562,11 +562,11 @@ CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile,
     {
 	// zero send base
 	pFile << "\t";
-	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, 0);
 	pFile << ".snd_base = 0;\n";
 	// zero fpage member
 	pFile << "\t";
-	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, NULL);
+	WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, 0);
 	pFile << ".fpage.raw = 0;\n";
     }
 

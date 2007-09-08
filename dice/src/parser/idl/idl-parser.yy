@@ -656,21 +656,21 @@ import_list :
 library :
 	  if_or_lib_attributes LIBRARY scoped_name LBRACE
 	{
-	    if (driver.trace_scanning)
-		std::cerr << "C-Parser: LIBRARY checking " << *$3 << std::endl;
+		if (driver.trace_scanning)
+			std::cerr << "C-Parser: LIBRARY checking " << *$3 << std::endl;
 
-	    $<lib>$ = new CFELibrary(*$3, $1, driver.getCurrentContext());
-	    // try to find another library with the same name
-	    CFEFile *pFile = driver.getCurrentContext()->GetRoot();
-	    assert(pFile);
-	    CFELibrary *pSameLib = pFile->FindLibrary(*$3);
-	    if (pSameLib)
-		pSameLib->AddSameLibrary($<lib>$);
-	    // always add new lib to current scope
-	    driver.add_token(*$3, dice::parser::CSymbolTable::NAMESPACE, (CFEBase*)0,
-		*@3.begin.filename, @3.begin.line, @3.begin.column);
+		$<lib>$ = new CFELibrary(*$3, $1, driver.getCurrentContext());
+		// try to find another library with the same name
+		CFEFile *pFile = driver.getCurrentContext()->GetRoot();
+		assert(pFile);
+		CFELibrary *pSameLib = pFile->FindLibrary(*$3);
+		if (pSameLib)
+			pSameLib->AddSameLibrary($<lib>$);
+		// always add new lib to current scope
+		driver.add_token(*$3, dice::parser::CSymbolTable::NAMESPACE, (CFEBase*)0,
+			*@3.begin.filename, @3.begin.line, @3.begin.column);
 
-	    driver.setCurrentContext($<lib>$);
+		driver.setCurrentContext($<lib>$);
 	} lib_definition_list RBRACE
 	{
 	    $$ = $<lib>5;

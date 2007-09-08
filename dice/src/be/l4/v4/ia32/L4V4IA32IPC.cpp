@@ -37,21 +37,17 @@
 
 CL4V4IA32IPC::CL4V4IA32IPC()
  : CL4V4BEIPC()
-{
-}
+{ }
 
 /** destroys the IPC object */
 CL4V4IA32IPC::~CL4V4IA32IPC()
-{
-}
+{ }
 
 /** \brief writes the IPC call
  *  \param pFile the file to write to
  *  \param pFunction the function to write for
  */
-void
-CL4V4IA32IPC::WriteCall(CBEFile& pFile,
-	CBEFunction* pFunction)
+void CL4V4IA32IPC::WriteCall(CBEFile& pFile, CBEFunction* pFunction)
 {
     if (CCompiler::IsOptionSet(PROGRAM_FORCE_C_BINDINGS))
     {
@@ -83,12 +79,11 @@ CL4V4IA32IPC::WriteCall(CBEFile& pFile,
     // EBX: MR1
     // EBP: MR2
     pFile << "\tasm volatile (\n";
-    ++pFile;
 
     // do not load to into EAX, because EAX is used
     // during mathematical calculations, such as
     // MR0 bit stuffing
-    pFile << "\t\"mov %%edx, %%eax \\n\\t\" /* from-specifier == to */\n";
+    ++pFile << "\t\"mov %%edx, %%eax \\n\\t\" /* from-specifier == to */\n";
     pFile << "\t\"mov %%gs:[0], %%edi \\n\\t\"\n";
     pFile << "\t\"call Ipc \\n\\t\"\n";
     pFile << "\t\"mov %%ebx, 4(%%edi) \\n\\t\" /* save mr1 */\n";
@@ -102,7 +97,6 @@ CL4V4IA32IPC::WriteCall(CBEFile& pFile,
     pFile << "\t: /* clobber list */\n";
     pFile << "\t\"memory\"\n";
 
-    ++pFile;
-    pFile << "\t);\n";
+    --pFile << "\t);\n";
 }
 

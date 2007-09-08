@@ -53,12 +53,7 @@ public:
     CBEOperationFunction(FUNCTION_TYPE nFunctionType);
     virtual ~CBEOperationFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBEOperationFunction(CBEOperationFunction &src);
-
-public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 
 protected:
     virtual void AddParameters(CFEOperation *pFEOperation);

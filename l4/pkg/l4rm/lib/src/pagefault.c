@@ -114,6 +114,7 @@ __handle_iopf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
   int error;
   l4_umword_t dw0, dw1;
   l4_msgdope_t result;
+  l4_msgtag_t tag;
 
   addr &= ~3;
 
@@ -133,11 +134,12 @@ __handle_iopf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
   for (;;)
     {
       /* we may get l4_thread_ex_regs'ed ... */
-      error = l4_ipc_call(l4rm_task_pager_id,
-			  L4_IPC_SHORT_MSG, addr, ip,
-			  L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE),
-			  &dw0, &dw1,
-			  L4_IPC_NEVER, &result);
+      tag = l4_msgtag(L4_MSGTAG_IO_PAGE_FAULT, 0, 0, 0);
+      error = l4_ipc_call_tag(l4rm_task_pager_id,
+                              L4_IPC_SHORT_MSG, addr, ip, tag,
+                              L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE),
+                              &dw0, &dw1,
+                              L4_IPC_NEVER, &result, &tag);
       if (error != L4_IPC_SECANCELED && error != L4_IPC_SEABORTED)
 	break;
     }
@@ -239,6 +241,7 @@ __forward_pf(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
   int error;
   l4_umword_t dw0, dw1;
   l4_msgdope_t result;
+  l4_msgtag_t tag;
 
   LOGdL(DEBUG_PAGEFAULT, "forward to pager "l4util_idfmt, 
         l4util_idstr(region->data.pager.pager));
@@ -246,11 +249,12 @@ __forward_pf(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
   for (;;)
     {
       /* we may get l4_thread_ex_regs'ed ... */
-      error = l4_ipc_call(region->data.pager.pager,
-			  L4_IPC_SHORT_MSG, addr, ip,
-	       		  L4_IPC_MAPMSG(addr, L4_LOG2_PAGESIZE),
-      			  &dw0, &dw1,
-			  L4_IPC_NEVER, &result);
+      tag = l4_msgtag(L4_MSGTAG_PAGE_FAULT, 0, 0, 0);
+      error = l4_ipc_call_tag(region->data.pager.pager,
+                              L4_IPC_SHORT_MSG, addr, ip, tag,
+                              L4_IPC_MAPMSG(addr, L4_LOG2_PAGESIZE),
+                              &dw0, &dw1,
+                              L4_IPC_NEVER, &result, &tag);
       if (error != L4_IPC_SECANCELED && error != L4_IPC_SEABORTED)
 	break;
     }

@@ -46,13 +46,10 @@ public:
     virtual ~CBECppCallWrapperFunction();
 
 protected:
-    /** \brief copy constructor */
-    CBECppCallWrapperFunction(CBECppCallWrapperFunction &src);
-
     virtual void WriteBody(CBEFile& pFile);
 
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation, int nSkipParameter);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide, int nSkipParameter);
     virtual bool DoWriteParameter(CBETypedDeclarator *pParam);
 
 protected:

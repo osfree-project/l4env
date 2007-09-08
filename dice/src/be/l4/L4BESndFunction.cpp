@@ -61,9 +61,9 @@ CL4BESndFunction::~CL4BESndFunction()
  * For L4 we need result dope for IPC
  */
 void
-CL4BESndFunction::CreateBackEnd(CFEOperation *pFEOperation)
+CL4BESndFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 {
-    CBESndFunction::CreateBackEnd(pFEOperation);
+    CBESndFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
     // add local variables
     CBENameFactory *pNF = CCompiler::GetNameFactory();

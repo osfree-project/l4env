@@ -34,15 +34,21 @@ CFEConstructedType::CFEConstructedType(unsigned int nType)
     m_bForwardDeclaration = false;
 }
 
-CFEConstructedType::CFEConstructedType(CFEConstructedType & src)
+CFEConstructedType::CFEConstructedType(CFEConstructedType* src)
 :CFETypeSpec(src)
 {
     m_bForwardDeclaration = false;
-    m_sTag = src.m_sTag;
+    m_sTag = src->m_sTag;
 }
 
 /** CFEConstructedType destructor */
 CFEConstructedType::~CFEConstructedType()
+{ }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEConstructedType::Clone()
 {
-    // nothing to clean up
+	return new CFEConstructedType(this);
 }

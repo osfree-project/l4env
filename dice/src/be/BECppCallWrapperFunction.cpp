@@ -38,12 +38,6 @@ CBECppCallWrapperFunction::CBECppCallWrapperFunction()
   m_nSkipParameter = 0;
 }
 
-CBECppCallWrapperFunction::CBECppCallWrapperFunction(CBECppCallWrapperFunction & src)
-: CBECallFunction(src)
-{
-  m_nSkipParameter = src.m_nSkipParameter;
-}
-
 /** \brief destructor of target class */
 CBECppCallWrapperFunction::~CBECppCallWrapperFunction()
 { }
@@ -55,13 +49,13 @@ CBECppCallWrapperFunction::~CBECppCallWrapperFunction()
  * This implementation only sets the name of the function.
  */
 void
-CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation,
+CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide,
     int nSkipParameter)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
         pFEOperation->GetName().c_str());
 
-    CBECallFunction::CreateBackEnd(pFEOperation);
+    CBECallFunction::CreateBackEnd(pFEOperation, bComponentSide);
     m_nSkipParameter = nSkipParameter;
 
     // FIXME iterate parameters and prefix them

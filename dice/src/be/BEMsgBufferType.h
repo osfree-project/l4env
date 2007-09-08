@@ -45,50 +45,50 @@ class CFETypedDeclarator;
 class CBEMsgBufferType : public CBEUnionType
 {
 public:
-    /** constructor */
-    CBEMsgBufferType();
-    /** destroys instance of this class */
-    ~CBEMsgBufferType();
+	/** constructor */
+	CBEMsgBufferType();
+	/** destroys instance of this class */
+	~CBEMsgBufferType();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEMsgBufferType(CBEMsgBufferType & src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBEMsgBufferType(CBEMsgBufferType* src);
 
 public: // public methods
-    virtual CObject* Clone();
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
-    CBEStructType* GetStruct(std::string sFuncName, std::string sClassName,
-	CMsgStructType nType);
-    vector<CBETypedDeclarator*>::iterator
-	GetStartOfPayload(CBEStructType* pStruct);
+	virtual CObject* Clone();
+	virtual void CreateBackEnd(CFEOperation *pFEOperation);
+	virtual void CreateBackEnd(CFEInterface *pFEInterface);
+	CBEStructType* GetStruct(std::string sFuncName, std::string sClassName,
+		CMsgStructType nType);
+	vector<CBETypedDeclarator*>::iterator
+		GetStartOfPayload(CBEStructType* pStruct);
 
-    virtual bool AddGenericStruct(CFEBase *pFERefObj);
+	virtual bool AddGenericStruct(CFEBase *pFERefObj);
 
 protected:
-    void AddStruct(CFEOperation *pFEOperation, CMsgStructType nType);
-    void AddStruct(CFEInterface *pFEInterface);
-    void AddStruct(CBEStructType *pStruct, CMsgStructType nType, std::string sFunctionName,
-	std::string sClassName);
-    virtual void AddElements(CFEOperation *pFEOperation, CMsgStructType nType);
-    virtual void AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType);
-    virtual void AddElement(CBEStructType *pStruct, CBETypedDeclarator *pParameter);
-    virtual void FlattenElement(CBETypedDeclarator *pParameter, CBEStructType *pStruct);
-    virtual void FlattenConstructedElement(CBETypedDeclarator *pParameter,
-	CDeclStack* pStack, CBEStructType *pStruct);
-    void CheckElementForString(CBETypedDeclarator *pParameter,
-	CBEFunction *pFunction, CBEStructType *pStruct, CDeclStack* pStack);
-    void CheckConstructedElementForVariableSize(CBETypedDeclarator *pParameter,
-	CBEFunction *pFunction, CBEStructType *pStruct, CDeclStack* pStack);
-    std::string CreateInitStringForString(CBEFunction *pFunction, CDeclStack* pStack);
+	void AddStruct(CFEOperation *pFEOperation, CMsgStructType nType);
+	void AddStruct(CFEInterface *pFEInterface);
+	void AddStruct(CBEStructType *pStruct, CMsgStructType nType, std::string sFunctionName,
+		std::string sClassName);
+	virtual void AddElements(CFEOperation *pFEOperation, CMsgStructType nType);
+	virtual void AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType);
+	virtual void AddElement(CBEStructType *pStruct, CBETypedDeclarator *pParameter);
+	virtual void FlattenElement(CBETypedDeclarator *pParameter, CBEStructType *pStruct);
+	virtual void FlattenConstructedElement(CBETypedDeclarator *pParameter,
+		CDeclStack* pStack, CBEStructType *pStruct);
+	void CheckElementForString(CBETypedDeclarator *pParameter,
+		CBEFunction *pFunction, CBEStructType *pStruct, CDeclStack* pStack);
+	void CheckConstructedElementForVariableSize(CBETypedDeclarator *pParameter,
+		CBEFunction *pFunction, CBEStructType *pStruct, CDeclStack* pStack);
+	std::string CreateInitStringForString(CBEFunction *pFunction, CDeclStack* pStack);
 
-    friend class CBEMsgBuffer;
+	friend class CBEMsgBuffer;
 
 private:
-    bool CreateInitStringForStringIDLUnion(CBETypedDeclarator*& pParameter, std::string& sUnionStrPre,
-	std::string& sUnionStrSuf, CDeclStack::iterator& iter, CDeclStack& vStack);
+	bool CreateInitStringForStringIDLUnion(CBETypedDeclarator*& pParameter, std::string& sUnionStrPre,
+		std::string& sUnionStrSuf, CDeclStack::iterator& iter, CDeclStack& vStack);
 };
 
 #endif

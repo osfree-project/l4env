@@ -57,11 +57,10 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEExceptionAttribute(CFEExceptionAttribute &src);
+    CFEExceptionAttribute(CFEExceptionAttribute* src);
 
-// Operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
 
 // attributes
 public:

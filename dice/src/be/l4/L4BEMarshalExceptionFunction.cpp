@@ -35,10 +35,6 @@
 CL4BEMarshalExceptionFunction::CL4BEMarshalExceptionFunction()
 { }
 
-CL4BEMarshalExceptionFunction::CL4BEMarshalExceptionFunction(CL4BEMarshalExceptionFunction & src)
-: CBEMarshalExceptionFunction(src)
-{ }
-
 /** \brief destructor of target class */
 CL4BEMarshalExceptionFunction::~CL4BEMarshalExceptionFunction()
 { }
@@ -56,28 +52,27 @@ CL4BEMarshalExceptionFunction::~CL4BEMarshalExceptionFunction()
  * marshal exception
  * marshal rest
  */
-void
-CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile& pFile)
+void CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile& pFile)
 {
-    bool bLocalTrace = false;
-    if (!m_bTraceOn && m_pTrace)
-    {
-	m_pTrace->BeforeMarshalling(pFile, this);
-	m_bTraceOn = bLocalTrace = true;
-    }
+	bool bLocalTrace = false;
+	if (!m_bTraceOn && m_pTrace)
+	{
+		m_pTrace->BeforeMarshalling(pFile, this);
+		m_bTraceOn = bLocalTrace = true;
+	}
 
-    CBEMarshalExceptionFunction::WriteMarshalling(pFile);
+	CBEMarshalExceptionFunction::WriteMarshalling(pFile);
 
-    // set send dope
-    CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
-    CMsgStructType nType = GetSendDirection();
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-	nType);
+	// set send dope
+	CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
+	CMsgStructType nType = GetSendDirection();
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
+		nType);
 
-    if (bLocalTrace)
-    {
-	m_pTrace->AfterMarshalling(pFile, this);
-	m_bTraceOn = false;
-    }
+	if (bLocalTrace)
+	{
+		m_pTrace->AfterMarshalling(pFile, this);
+		m_bTraceOn = false;
+	}
 }
 

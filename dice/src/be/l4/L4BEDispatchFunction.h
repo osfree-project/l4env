@@ -49,10 +49,6 @@ public:
     ~CL4BEDispatchFunction();
 
 protected:
-    /** \brief copy constructor */
-    CL4BEDispatchFunction(CL4BEDispatchFunction &src);
-
-protected:
     virtual void WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile);
 };
 

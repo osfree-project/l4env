@@ -38,10 +38,6 @@
 CL4BEDispatchFunction::CL4BEDispatchFunction()
 { }
 
-CL4BEDispatchFunction::CL4BEDispatchFunction(CL4BEDispatchFunction & src)
-: CBEDispatchFunction(src)
-{ }
-
 /** \brief destructor of target class */
 CL4BEDispatchFunction::~CL4BEDispatchFunction()
 { }
@@ -54,34 +50,33 @@ CL4BEDispatchFunction::~CL4BEDispatchFunction()
  * If this is the case, we do not have to send a reply, because this was no
  * real error.
  */
-void
-CL4BEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
+void CL4BEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
 {
-    CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
-    string sEnv;
-    if (pDecl->GetStars() == 0)
-	sEnv = "&";
-    sEnv += pDecl->GetName();
+	CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
+	string sEnv;
+	if (pDecl->GetStars() == 0)
+		sEnv = "&";
+	sEnv += pDecl->GetName();
 
-    pFile << "\tif (DICE_IS_EXCEPTION(" << sEnv <<
-	", CORBA_SYSTEM_EXCEPTION) &&\n";
-    ++pFile << "\t(DICE_EXCEPTION_MINOR(" << sEnv <<
-	") == CORBA_DICE_INTERNAL_IPC_ERROR))\n";
-    --pFile << "\t{\n";
-    // clear exception
-    ++pFile << "\tCORBA_server_exception_free(" << sEnv << ");\n";
-    // wait for next ipc
-    string sReply = CCompiler::GetNameFactory()->GetReplyCodeVariable();
-    pFile << "\t" << sReply << " = DICE_NEVER_REPLY;\n";
+	pFile << "\tif (DICE_IS_EXCEPTION(" << sEnv <<
+		", CORBA_SYSTEM_EXCEPTION) &&\n";
+	++pFile << "\t(DICE_EXCEPTION_MINOR(" << sEnv <<
+		") == CORBA_DICE_INTERNAL_IPC_ERROR))\n";
+	--pFile << "\t{\n";
+	// clear exception
+	++pFile << "\tCORBA_server_exception_free(" << sEnv << ");\n";
+	// wait for next ipc
+	string sReply = CCompiler::GetNameFactory()->GetReplyCodeVariable();
+	pFile << "\t" << sReply << " = DICE_NEVER_REPLY;\n";
 
-    // finished
-    --pFile << "\t}\n";
-    // else: normal handling
-    pFile << "\telse\n";
-    pFile << "\t{\n";
-    ++pFile;
-    CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(pFile);
-    --pFile;
-    pFile << "\t}\n";
+	// finished
+	--pFile << "\t}\n";
+	// else: normal handling
+	pFile << "\telse\n";
+	pFile << "\t{\n";
+	++pFile;
+	CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(pFile);
+	--pFile;
+	pFile << "\t}\n";
 }
 

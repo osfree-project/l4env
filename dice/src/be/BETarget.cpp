@@ -56,17 +56,7 @@
 CBETarget::CBETarget()
 : m_HeaderFiles(0, this),
   m_ImplementationFiles(0, this)
-{
-}
-
-CBETarget::CBETarget(CBETarget & src)
-: CBEObject(src),
-  m_HeaderFiles(src.m_HeaderFiles),
-  m_ImplementationFiles(src.m_ImplementationFiles)
-{
-    m_HeaderFiles.Adopt(this);
-    m_ImplementationFiles.Adopt(this);
-}
+{ }
 
 /** \brief destructor of target class */
 CBETarget::~CBETarget()
@@ -76,28 +66,28 @@ CBETarget::~CBETarget()
  */
 void CBETarget::WriteHeaderFiles()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    vector<CBEHeaderFile*>::iterator iter;
-    for (iter = m_HeaderFiles.begin();
-	 iter != m_HeaderFiles.end();
-	 iter++)
-    {
-        (*iter)->Write();
-    }
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	vector<CBEHeaderFile*>::iterator iter;
+	for (iter = m_HeaderFiles.begin();
+		iter != m_HeaderFiles.end();
+		iter++)
+	{
+		(*iter)->Write();
+	}
 }
 
 /** \brief writes the implementation files
  */
 void CBETarget::WriteImplementationFiles()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    vector<CBEImplementationFile*>::iterator iter;
-    for (iter = m_ImplementationFiles.begin();
-	 iter != m_ImplementationFiles.end();
-	 iter++)
-    {
-        (*iter)->Write();
-    }
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	vector<CBEImplementationFile*>::iterator iter;
+	for (iter = m_ImplementationFiles.begin();
+		iter != m_ImplementationFiles.end();
+		iter++)
+	{
+		(*iter)->Write();
+	}
 }
 
 /** \brief adds the constant of the front-end file to the back-end file
@@ -112,60 +102,60 @@ void CBETarget::WriteImplementationFiles()
  */
 bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEFile * pFEFile)
 {
-    if (!pFEFile)
-    {
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "CBETarget::%s aborted because front-end file is 0\n", __func__);
-        return true;
-    }
-    if (!pFEFile->IsIDLFile())
-    {
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "CBETarget::%s aborted because front-end file is not IDL file\n",
-	    __func__);
-        return true;
-    }
-
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFEFile->m_Interfaces.begin();
-	 iterI != pFEFile->m_Interfaces.end();
-	 iterI++)
-    {
-        if (!AddConstantToFile(pFile, *iterI))
-            return false;
-    }
-
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFEFile->m_Libraries.begin();
-	 iterL != pFEFile->m_Libraries.end();
-	 iterL++)
-    {
-        if (!AddConstantToFile(pFile, *iterL))
-            return false;
-    }
-
-    vector<CFEConstDeclarator*>::iterator iterC;
-    for (iterC = pFEFile->m_Constants.begin();
-	 iterC != pFEFile->m_Constants.end();
-	 iterC++)
-    {
-        if (!AddConstantToFile(pFile, *iterC))
-            return false;
-    }
-
-    if (DoAddIncludedFiles())
-    {
-	vector<CFEFile*>::iterator iterF;
-	for (iterF = pFEFile->m_ChildFiles.begin();
-	    iterF != pFEFile->m_ChildFiles.end();
-	    iterF++)
+	if (!pFEFile)
 	{
-	    if (!AddConstantToFile(pFile, *iterF))
-		return false;
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBETarget::%s aborted because front-end file is 0\n", __func__);
+		return true;
 	}
-    }
+	if (!pFEFile->IsIDLFile())
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBETarget::%s aborted because front-end file is not IDL file\n",
+			__func__);
+		return true;
+	}
 
-    return true;
+	vector<CFEInterface*>::iterator iterI;
+	for (iterI = pFEFile->m_Interfaces.begin();
+		iterI != pFEFile->m_Interfaces.end();
+		iterI++)
+	{
+		if (!AddConstantToFile(pFile, *iterI))
+			return false;
+	}
+
+	vector<CFELibrary*>::iterator iterL;
+	for (iterL = pFEFile->m_Libraries.begin();
+		iterL != pFEFile->m_Libraries.end();
+		iterL++)
+	{
+		if (!AddConstantToFile(pFile, *iterL))
+			return false;
+	}
+
+	vector<CFEConstDeclarator*>::iterator iterC;
+	for (iterC = pFEFile->m_Constants.begin();
+		iterC != pFEFile->m_Constants.end();
+		iterC++)
+	{
+		if (!AddConstantToFile(pFile, *iterC))
+			return false;
+	}
+
+	if (DoAddIncludedFiles())
+	{
+		vector<CFEFile*>::iterator iterF;
+		for (iterF = pFEFile->m_ChildFiles.begin();
+			iterF != pFEFile->m_ChildFiles.end();
+			iterF++)
+		{
+			if (!AddConstantToFile(pFile, *iterF))
+				return false;
+		}
+	}
+
+	return true;
 }
 
 /** \brief adds the constants of the front-end library to the back-end file
@@ -179,34 +169,34 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEFile * pFEFile)
  */
 bool CBETarget::AddConstantToFile(CBEFile& pFile, CFELibrary * pFELibrary)
 {
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFELibrary->m_Interfaces.begin();
-	 iterI != pFELibrary->m_Interfaces.end();
-	 iterI++)
-    {
-        if (!AddConstantToFile(pFile, *iterI))
-            return false;
-    }
+	vector<CFEInterface*>::iterator iterI;
+	for (iterI = pFELibrary->m_Interfaces.begin();
+		iterI != pFELibrary->m_Interfaces.end();
+		iterI++)
+	{
+		if (!AddConstantToFile(pFile, *iterI))
+			return false;
+	}
 
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFELibrary->m_Libraries.begin();
-	 iterL != pFELibrary->m_Libraries.end();
-	 iterL++)
-    {
-        if (!AddConstantToFile(pFile, *iterL))
-            return false;
-    }
+	vector<CFELibrary*>::iterator iterL;
+	for (iterL = pFELibrary->m_Libraries.begin();
+		iterL != pFELibrary->m_Libraries.end();
+		iterL++)
+	{
+		if (!AddConstantToFile(pFile, *iterL))
+			return false;
+	}
 
-    vector<CFEConstDeclarator*>::iterator iterC;
-    for (iterC = pFELibrary->m_Constants.begin();
-	 iterC != pFELibrary->m_Constants.end();
-	 iterC++)
-    {
-        if (!AddConstantToFile(pFile, *iterC))
-            return false;
-    }
+	vector<CFEConstDeclarator*>::iterator iterC;
+	for (iterC = pFELibrary->m_Constants.begin();
+		iterC != pFELibrary->m_Constants.end();
+		iterC++)
+	{
+		if (!AddConstantToFile(pFile, *iterC))
+			return false;
+	}
 
-    return true;
+	return true;
 }
 
 /** \brief adds the constants of the front-end interface to the back-end file
@@ -218,24 +208,24 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFELibrary * pFELibrary)
  */
 bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEInterface * pFEInterface)
 {
-    if (!pFEInterface)
-    {
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "CBETarget::%s (interface) aborted because FE interface is 0\n",
-	    __func__);
-        return true;
-    }
+	if (!pFEInterface)
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBETarget::%s (interface) aborted because FE interface is 0\n",
+			__func__);
+		return true;
+	}
 
-    vector<CFEConstDeclarator*>::iterator iter;
-    for (iter = pFEInterface->m_Constants.begin();
-	 iter != pFEInterface->m_Constants.end();
-	 iter++)
-    {
-        if (!AddConstantToFile(pFile, *iter))
-            return false;
-    }
+	vector<CFEConstDeclarator*>::iterator iter;
+	for (iter = pFEInterface->m_Constants.begin();
+		iter != pFEInterface->m_Constants.end();
+		iter++)
+	{
+		if (!AddConstantToFile(pFile, *iter))
+			return false;
+	}
 
-    return true;
+	return true;
 }
 
 /** \brief adds the constants of the front-end to the back-end file
@@ -247,25 +237,25 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEInterface * pFEInterface)
  */
 bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEConstDeclarator * pFEConstant)
 {
-    try
-    {
-	CBEHeaderFile& pF = dynamic_cast<CBEHeaderFile&>(pFile);
-        CBERoot *pRoot = GetSpecificParent<CBERoot>();
-        assert(pRoot);
-        CBEConstant *pConstant = pRoot->FindConstant(pFEConstant->GetName());
-        if (!pConstant)
-        {
-            pConstant = CCompiler::GetClassFactory()->GetNewConstant();
-            pF.m_Constants.Add(pConstant);
-	    pConstant->CreateBackEnd(pFEConstant);
-        }
-        else
-            pF.m_Constants.Add(pConstant);
-    }
-    catch (std::bad_cast)
-    { } // not a header file
+	try
+	{
+		CBEHeaderFile& pF = dynamic_cast<CBEHeaderFile&>(pFile);
+		CBERoot *pRoot = GetSpecificParent<CBERoot>();
+		assert(pRoot);
+		CBEConstant *pConstant = pRoot->FindConstant(pFEConstant->GetName());
+		if (!pConstant)
+		{
+			pConstant = CCompiler::GetClassFactory()->GetNewConstant();
+			pF.m_Constants.Add(pConstant);
+			pConstant->CreateBackEnd(pFEConstant);
+		}
+		else
+			pF.m_Constants.Add(pConstant);
+	}
+	catch (std::bad_cast)
+	{ } // not a header file
 
-    return true;
+	return true;
 }
 
 /** \brief adds the type definition of the front-end file to the back-end file
@@ -279,51 +269,51 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEConstDeclarator * pFEConsta
  */
 bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFEFile * pFEFile)
 {
-    if (!pFEFile)
-        return true;
-    if (!pFEFile->IsIDLFile())
-        return true;
+	if (!pFEFile)
+		return true;
+	if (!pFEFile->IsIDLFile())
+		return true;
 
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFEFile->m_Interfaces.begin();
-	 iterI != pFEFile->m_Interfaces.end();
-	 iterI++)
-    {
-        if (!AddTypedefToFile(pFile, *iterI))
-            return false;
-    }
-
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFEFile->m_Libraries.begin();
-	 iterL != pFEFile->m_Libraries.end();
-	 iterL++)
-    {
-        if (!AddTypedefToFile(pFile, *iterL))
-            return false;
-    }
-
-    vector<CFETypedDeclarator*>::iterator iterT;
-    for (iterT = pFEFile->m_Typedefs.begin();
-	 iterT != pFEFile->m_Typedefs.end();
-	 iterT++)
-    {
-        if (!AddTypedefToFile(pFile, *iterT))
-            return false;
-    }
-
-    if (DoAddIncludedFiles())
-    {
-	vector<CFEFile*>::iterator iterF;
-	for (iterF = pFEFile->m_ChildFiles.begin();
-	    iterF != pFEFile->m_ChildFiles.end();
-	    iterF++)
+	vector<CFEInterface*>::iterator iterI;
+	for (iterI = pFEFile->m_Interfaces.begin();
+		iterI != pFEFile->m_Interfaces.end();
+		iterI++)
 	{
-	    if (!AddTypedefToFile(pFile, *iterF))
-		return false;
-        }
-    }
+		if (!AddTypedefToFile(pFile, *iterI))
+			return false;
+	}
 
-    return true;
+	vector<CFELibrary*>::iterator iterL;
+	for (iterL = pFEFile->m_Libraries.begin();
+		iterL != pFEFile->m_Libraries.end();
+		iterL++)
+	{
+		if (!AddTypedefToFile(pFile, *iterL))
+			return false;
+	}
+
+	vector<CFETypedDeclarator*>::iterator iterT;
+	for (iterT = pFEFile->m_Typedefs.begin();
+		iterT != pFEFile->m_Typedefs.end();
+		iterT++)
+	{
+		if (!AddTypedefToFile(pFile, *iterT))
+			return false;
+	}
+
+	if (DoAddIncludedFiles())
+	{
+		vector<CFEFile*>::iterator iterF;
+		for (iterF = pFEFile->m_ChildFiles.begin();
+			iterF != pFEFile->m_ChildFiles.end();
+			iterF++)
+		{
+			if (!AddTypedefToFile(pFile, *iterF))
+				return false;
+		}
+	}
+
+	return true;
 }
 
 /** \brief adds the type definitions of the front-end library to the back-end file
@@ -337,34 +327,34 @@ bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFEFile * pFEFile)
  */
 bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFELibrary * pFELibrary)
 {
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = pFELibrary->m_Interfaces.begin();
-	 iterI != pFELibrary->m_Interfaces.end();
-	 iterI++)
-    {
-        if (!AddTypedefToFile(pFile, *iterI))
-            return false;
-    }
+	vector<CFEInterface*>::iterator iterI;
+	for (iterI = pFELibrary->m_Interfaces.begin();
+		iterI != pFELibrary->m_Interfaces.end();
+		iterI++)
+	{
+		if (!AddTypedefToFile(pFile, *iterI))
+			return false;
+	}
 
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = pFELibrary->m_Libraries.begin();
-	 iterL != pFELibrary->m_Libraries.end();
-	 iterL++)
-    {
-        if (!AddTypedefToFile(pFile, *iterL))
-            return false;
-    }
+	vector<CFELibrary*>::iterator iterL;
+	for (iterL = pFELibrary->m_Libraries.begin();
+		iterL != pFELibrary->m_Libraries.end();
+		iterL++)
+	{
+		if (!AddTypedefToFile(pFile, *iterL))
+			return false;
+	}
 
-    vector<CFETypedDeclarator*>::iterator iterT;
-    for (iterT = pFELibrary->m_Typedefs.begin();
-	 iterT != pFELibrary->m_Typedefs.end();
-	 iterT++)
-    {
-        if (!AddTypedefToFile(pFile, *iterT))
-            return false;
-    }
+	vector<CFETypedDeclarator*>::iterator iterT;
+	for (iterT = pFELibrary->m_Typedefs.begin();
+		iterT != pFELibrary->m_Typedefs.end();
+		iterT++)
+	{
+		if (!AddTypedefToFile(pFile, *iterT))
+			return false;
+	}
 
-    return true;
+	return true;
 }
 
 /** \brief adds the type definitions of the front-end interface to the back-end file
@@ -378,16 +368,16 @@ bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFELibrary * pFELibrary)
  */
 bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFEInterface * pFEInterface)
 {
-    vector<CFETypedDeclarator*>::iterator iter;
-    for (iter = pFEInterface->m_Typedefs.begin();
-	 iter != pFEInterface->m_Typedefs.end();
-	 iter++)
-    {
-        if (!AddTypedefToFile(pFile, *iter))
-            return false;
-    }
+	vector<CFETypedDeclarator*>::iterator iter;
+	for (iter = pFEInterface->m_Typedefs.begin();
+		iter != pFEInterface->m_Typedefs.end();
+		iter++)
+	{
+		if (!AddTypedefToFile(pFile, *iter))
+			return false;
+	}
 
-    return true;
+	return true;
 }
 
 /** \brief adds the type definitions of the front-end to the back-end file
@@ -398,22 +388,21 @@ bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFEInterface * pFEInterface)
  * This implementation adds the type definition to the header file, but skips the implementation file.
  * It searches for the typedef at the root and then adds a reference to its own collection.
  */
-bool CBETarget::AddTypedefToFile(CBEFile& pFile,
-                 CFETypedDeclarator * pFETypedDeclarator)
+bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFETypedDeclarator * pFETypedDeclarator)
 {
-    try
-    {
-	CBEHeaderFile& pF = dynamic_cast<CBEHeaderFile&>(pFile);
-        CBERoot *pRoot = GetSpecificParent<CBERoot>();
-        assert(pRoot);
-        CFEDeclarator *pDecl = pFETypedDeclarator->m_Declarators.First();
-        CBETypedef *pTypedef = pRoot->FindTypedef(pDecl->GetName());
-        assert(pTypedef);
-        pF.m_Typedefs.Add(pTypedef);
-    }
-    catch (std::bad_cast)
-    { } // not a header file
-    return true;
+	try
+	{
+		CBEHeaderFile& pF = dynamic_cast<CBEHeaderFile&>(pFile);
+		CBERoot *pRoot = GetSpecificParent<CBERoot>();
+		assert(pRoot);
+		CFEDeclarator *pDecl = pFETypedDeclarator->m_Declarators.First();
+		CBETypedef *pTypedef = pRoot->FindTypedef(pDecl->GetName());
+		assert(pTypedef);
+		pF.m_Typedefs.Add(pTypedef);
+	}
+	catch (std::bad_cast)
+	{ } // not a header file
+	return true;
 }
 
 /** \brief finds a header file which belongs to a certain front-end file
@@ -425,15 +414,13 @@ bool CBETarget::AddTypedefToFile(CBEFile& pFile,
  * file-name based on the front-end file and this name is used to find the
  * file.
  */
-CBEHeaderFile*
-CBETarget::FindHeaderFile(CFEFile * pFEFile,
-    FILE_TYPE nFileType)
+CBEHeaderFile* CBETarget::FindHeaderFile(CFEFile * pFEFile, FILE_TYPE nFileType)
 {
-    // get file name
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sFileName = pNF->GetFileName(pFEFile, nFileType);
-    // search file
-    return m_HeaderFiles.Find(sFileName);
+	// get file name
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sFileName = pNF->GetFileName(pFEFile, nFileType);
+	// search file
+	return m_HeaderFiles.Find(sFileName);
 }
 
 /** \brief finds a header file which belongs to a certain front-end library
@@ -445,16 +432,14 @@ CBETarget::FindHeaderFile(CFEFile * pFEFile,
  * file-name based on the front-end library and this name is used to find the
  * file.
  */
-CBEHeaderFile*
-CBETarget::FindHeaderFile(CFELibrary * pFELibrary,
-    FILE_TYPE nFileType)
+CBEHeaderFile* CBETarget::FindHeaderFile(CFELibrary * pFELibrary, FILE_TYPE nFileType)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    // get file name
-    CFEFile *pFEFile = pFELibrary->GetSpecificParent<CFEFile>(0);
-    string sFileName = pNF->GetFileName(pFEFile, nFileType);
-    // search file
-    return m_HeaderFiles.Find(sFileName);
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	// get file name
+	CFEFile *pFEFile = pFELibrary->GetSpecificParent<CFEFile>(0);
+	string sFileName = pNF->GetFileName(pFEFile, nFileType);
+	// search file
+	return m_HeaderFiles.Find(sFileName);
 }
 
 /** \brief finds a header file which belongs to a certain front-end interface

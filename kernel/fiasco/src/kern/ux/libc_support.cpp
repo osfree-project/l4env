@@ -21,6 +21,7 @@ IMPLEMENTATION:
 #include "globals.h"
 #include "kernel_console.h"
 #include "kmem.h"
+#include "kdb_ke.h"
 #include "lock_guard.h"
 #include "panic.h"
 #include "static_init.h"
@@ -259,7 +260,9 @@ __assert_fail (const char *assertion, const char *file,
           "  in function %s\n"
 	  "  in file %s:%d\n",
           assertion, function, file, line);
-  
+
+  kdb_ke("assert");
+
   if (libc_atexit)
     libc_atexit();
   _exit (EXIT_FAILURE);         // Fatal! No destructors

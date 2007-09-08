@@ -48,27 +48,22 @@ class CObject
 public:
     /** the constructor for this class */
     CObject(CObject * pParent = 0);
-    virtual ~ CObject();
+    virtual ~CObject();
 
-protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CObject(const CObject & src);
-
-public:
-    virtual CObject * Clone();
     void SetParent(CObject * pParent = 0);
     CObject* GetParent() const;
     template< typename O > O* GetSpecificParent(unsigned nStart = 1);
     bool IsParent(CObject * pParent);
     virtual void Accept(CVisitor&);
-
+	virtual CObject* Clone();
 
     /** \var location sourceLoc
      *  \brief contains the begin and end position of this object
      */
     location m_sourceLoc;
+
+protected:
+	CObject(const CObject&);
 
 protected:
     /** \var CObject *m_pParent

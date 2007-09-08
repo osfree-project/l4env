@@ -33,8 +33,8 @@
 #include "fe/FETypeSpec.h"
 #include <string>
 
-/**    \class CFEUserDefinedType
- *    \ingroup frontend
+/** \class CFEUserDefinedType
+ *  \ingroup frontend
  *  \brief contains the alias name of a type
  *
  * The alias name of a type is set by a typedef declaration.
@@ -54,12 +54,12 @@ protected:
     /** \brief copy constructor
      *  \param src the sorce to copy from
      */
-    CFEUserDefinedType(CFEUserDefinedType &src);
+    CFEUserDefinedType(CFEUserDefinedType* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     virtual void Accept(CVisitor&);
-    virtual CObject* Clone();
     virtual std::string GetName();
     virtual bool Ignore();
     virtual unsigned int GetOriginalType();

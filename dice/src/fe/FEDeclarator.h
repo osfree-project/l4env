@@ -56,7 +56,7 @@ class CFEDeclarator : public CFEIdentifier
 protected:
     /** \brief constructs a declarator object (copy constructor)
      *  \param src the source for this object */
-    CFEDeclarator(CFEDeclarator &src);
+    CFEDeclarator(CFEDeclarator* src);
 
 // standard constructor/destructor
 public:
@@ -75,9 +75,9 @@ public:
 
 // operations
 public:
+	virtual CObject* Clone();
     void SetBitfields(int nBitfields);
     int GetBitfields();
-    virtual CObject* Clone();
     DECL_TYPE GetType();
     int GetStars();
     void SetStars(int nNumStars);

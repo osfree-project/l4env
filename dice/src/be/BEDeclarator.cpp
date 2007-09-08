@@ -190,15 +190,15 @@ CBEDeclarator::CBEDeclarator()
     m_pInitialValue = 0;
 }
 
-CBEDeclarator::CBEDeclarator(CBEDeclarator & src)
+CBEDeclarator::CBEDeclarator(CBEDeclarator* src)
 : CBEObject(src),
-  m_Bounds(src.m_Bounds)
+  m_Bounds(src->m_Bounds)
 {
-    m_sName = src.m_sName;
-    m_nStars = src.m_nStars;
-    m_nBitfields = src.m_nBitfields;
-    m_nType = src.m_nType;
-    m_nOldType = src.m_nOldType;
+    m_sName = src->m_sName;
+    m_nStars = src->m_nStars;
+    m_nBitfields = src->m_nBitfields;
+    m_nType = src->m_nType;
+    m_nOldType = src->m_nOldType;
     CLONE_MEM(CBEExpression, m_pInitialValue);
     m_Bounds.Adopt(this);
 }
@@ -210,12 +210,12 @@ CBEDeclarator::~CBEDeclarator()
         delete m_pInitialValue;
 }
 
-/** \brief creates a copy of this object
- *  \return a reference to the copy
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject * CBEDeclarator::Clone()
+CObject* CBEDeclarator::Clone()
 {
-    return new CBEDeclarator(*this);
+	return new CBEDeclarator(this);
 }
 
 /** \brief prepares this instance for the code generation

@@ -968,14 +968,15 @@ Thread::tls_setup_emu(Trap_state *ts, Address *desc_addr, int *size,
   ts->ip(ts->ip() + 3);
 
   *t = id_to_tcb(L4_uid(ts->_esi));
-  if (!*t)
+  if (!*t || (*t)->thread_lock()->lock() == Thread_lock::Invalid)
     {
-      WARN("set_tls: non-existing thread %08lx.%08lx", ts->_edi, ts->_esi);
+      WARN("set_tls: non-existing thread %08lx", ts->_esi);
       return 1;
     }
   if ((*entry_number<<3) + *size > 3*Cpu::Ldt_entry_size)
     {
       WARN("set_tls: entry/size out of range.");
+      (*t)->thread_lock()->clear();
       return 1;
     }
 

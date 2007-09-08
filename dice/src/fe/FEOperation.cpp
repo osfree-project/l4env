@@ -43,12 +43,11 @@
 #include <iostream>
 #include <cassert>
 
-CFEOperation::CFEOperation(CFETypeSpec * pReturnType,
-               string sName,
-               vector<CFETypedDeclarator*> * pParameters,
-               vector<CFEAttribute*> * pAttributes,
-               vector<CFEIdentifier*> * pRaisesDeclarators)
-: m_Attributes(pAttributes, this),
+CFEOperation::CFEOperation(CFETypeSpec * pReturnType, string sName,
+	vector<CFETypedDeclarator*> * pParameters, vector<CFEAttribute*> * pAttributes,
+	vector<CFEIdentifier*> * pRaisesDeclarators)
+: CFEInterfaceComponent(static_cast<CObject*>(0)),
+	m_Attributes(pAttributes, this),
     m_Parameters(pParameters, this),
     m_RaisesDeclarators(pRaisesDeclarators, this)
 {
@@ -56,13 +55,13 @@ CFEOperation::CFEOperation(CFETypeSpec * pReturnType,
     m_sOpName = sName;
 }
 
-CFEOperation::CFEOperation(CFEOperation & src)
+CFEOperation::CFEOperation(CFEOperation* src)
 : CFEInterfaceComponent(src),
-    m_Attributes(src.m_Attributes),
-    m_Parameters(src.m_Parameters),
-    m_RaisesDeclarators(src.m_RaisesDeclarators)
+    m_Attributes(src->m_Attributes),
+    m_Parameters(src->m_Parameters),
+    m_RaisesDeclarators(src->m_RaisesDeclarators)
 {
-    m_sOpName = src.m_sOpName;
+    m_sOpName = src->m_sOpName;
     CLONE_MEM(CFETypeSpec, m_pReturnType);
 
     m_Attributes.Adopt(this);
@@ -77,12 +76,12 @@ CFEOperation::~CFEOperation()
         delete m_pReturnType;
 }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEOperation::Clone()
 {
-    return new CFEOperation(*this);
+	return new CFEOperation(this);
 }
 
 /**

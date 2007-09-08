@@ -56,9 +56,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEConstructedType(CFEConstructedType &src);
+    CFEConstructedType(CFEConstructedType* src);
 
 public:
+	virtual CObject* Clone();
+
     /** \brief returns the value of m_bForwardDeclaration
      *  \return the value of m_bForwardDeclaration
      */

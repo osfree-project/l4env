@@ -47,23 +47,10 @@ CBEImplementationFile::CBEImplementationFile()
     m_pHeaderFile = 0;
 }
 
-CBEImplementationFile::CBEImplementationFile(CBEImplementationFile & src)
- : std::ios(), CBEFile(src)
-{
-    m_pHeaderFile = src.m_pHeaderFile;
-}
-
 /** \brief destructor
  */
 CBEImplementationFile::~CBEImplementationFile()
 { }
-
-/** \brief create a clone of this object
- */
-CObject* CBEImplementationFile::Clone()
-{
-    return new CBEImplementationFile(*this);
-}
 
 /** \brief sets the internal reference to the corresponding header file
  *  \param pHeaderFile points to the header file

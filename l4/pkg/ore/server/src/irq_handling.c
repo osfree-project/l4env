@@ -12,6 +12,8 @@
 
 #include "ore-local.h"
 
+static int __netif_rx(struct sk_buff *);
+
 // TODO: hmmm...
 void irq_handler(l4_int32_t irq, void *arg)
 {
@@ -22,11 +24,17 @@ void irq_handler(l4_int32_t irq, void *arg)
  * cares for delivering incoming packets to the clients' own netif_rx()
  * routines.
  */
-#ifdef CONFIG_ORE_DDE26
-int l4ore_rx_handle(struct sk_buff *skb)
-#else /* DDE2.4 compatibility mode... */
+#ifdef CONFIG_ORE_DDE24
 int netif_rx(struct sk_buff *skb)
+#else /* DDE2.6 callback mode */
+int l4ore_rx_handle(struct sk_buff *skb)
 #endif
+{
+	int ret = __netif_rx(skb);
+	return ret;
+}
+
+static int __netif_rx(struct sk_buff *skb)
 {
 	int channel;
 
@@ -47,9 +55,9 @@ int netif_rx(struct sk_buff *skb)
 		return NET_RX_SUCCESS;
 	}
 
-	// driver pulled eth_header out of data area. we push it back,
-	// so that we can hand out full packets up to our clients.
-	skb_push(skb, skb->dev->hard_header_len);
+		// driver pulled eth_header out of data area. we push it back,
+		// so that we can hand out full packets up to our clients.
+		skb_push(skb, skb->dev->hard_header_len);
 
 	/* the IRQ thread does no longer own this skb, however we don't
 	 * free it, because this is done by the clients afterwards

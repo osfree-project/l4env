@@ -48,11 +48,12 @@ char * keymap;
 
 int main(int argc, const char **argv)
 {
-    l4_threadid_t ns;
+    l4_threadid_t ns, me;
     int ret, i;
     CORBA_Server_Environment env = dice_default_server_environment;
     object_id_t root_id;
 
+    me = l4_myself();
     // call private init (this at least sets up myvolume)
     ret = term_server_init();
 
@@ -91,7 +92,8 @@ int main(int argc, const char **argv)
     // Martin: I think the loop is not needed anymore
     for (i=0; i<3; i++)
     {
-        ret = l4vfs_register_volume(ns, l4_myself(), root_id);
+        LOGd(_DEBUG, "me : "l4util_idfmt, l4util_idstr(me));
+        ret = l4vfs_register_volume(ns, me, root_id);
         // registered ok --> done
         if (ret == 0) break;
         else LOG("error registering: %d", ret);

@@ -50,25 +50,16 @@
 #include <cassert>
 
 CBESrvLoopFunction::CBESrvLoopFunction()
-    : CBEInterfaceFunction(FUNCTION_SRV_LOOP)
+: CBEInterfaceFunction(FUNCTION_SRV_LOOP)
 {
-    m_pWaitAnyFunction = 0;
-    m_pReplyAnyWaitAnyFunction = 0;
-    m_pDispatchFunction = 0;
-}
-
-CBESrvLoopFunction::CBESrvLoopFunction(CBESrvLoopFunction & src)
-: CBEInterfaceFunction(src)
-{
-    m_pWaitAnyFunction = src.m_pWaitAnyFunction;
-    m_pReplyAnyWaitAnyFunction = src.m_pReplyAnyWaitAnyFunction;
-    m_pDispatchFunction = src.m_pDispatchFunction;
+	m_pWaitAnyFunction = 0;
+	m_pReplyAnyWaitAnyFunction = 0;
+	m_pDispatchFunction = 0;
 }
 
 /** \brief destructor of target class */
 CBESrvLoopFunction::~CBESrvLoopFunction()
-{
-}
+{ }
 
 /** \brief creates the server loop function for the given interface
  *  \param pFEInterface the respective front-end interface
@@ -82,67 +73,67 @@ CBESrvLoopFunction::~CBESrvLoopFunction()
  * buffer type of their functions.  This way, we use in all functions the
  * message buffer type of this server loop.
  */
-void
-CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
+void CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
-    // set target file name
-    SetTargetFileName(pFEInterface);
-    // set name
-    SetFunctionName(pFEInterface, FUNCTION_SRV_LOOP);
+	// set target file name
+	SetTargetFileName(pFEInterface);
+	// set name
+	SetComponentSide(bComponentSide);
+	SetFunctionName(pFEInterface, FUNCTION_SRV_LOOP);
 
-    CBEInterfaceFunction::CreateBackEnd(pFEInterface);
-    // set source line number to last number of interface
-    m_sourceLoc.setBeginLine(pFEInterface->m_sourceLoc.getEndLine());
+	CBEInterfaceFunction::CreateBackEnd(pFEInterface, bComponentSide);
+	// set source line number to last number of interface
+	m_sourceLoc.setBeginLine(pFEInterface->m_sourceLoc.getEndLine());
 
-    // set own message buffer
-    AddMessageBuffer();
-    AddLocalVariable(GetMessageBuffer());
+	// set own message buffer
+	AddMessageBuffer();
+	AddLocalVariable(GetMessageBuffer());
 
-    CreateTrace();
-    // CORBA_Object should not have any pointers (its a pointer type itself)
-    // set Corba parameters to variables without pointers
-    CBETypedDeclarator *pCorbaEnv = GetEnvironment();
-    if (pCorbaEnv)
-        AddLocalVariable(pCorbaEnv);
-    if (GetObject())
-        AddLocalVariable(GetObject());
+	CreateTrace();
+	// CORBA_Object should not have any pointers (its a pointer type itself)
+	// set Corba parameters to variables without pointers
+	CBETypedDeclarator *pCorbaEnv = GetEnvironment();
+	if (pCorbaEnv)
+		AddLocalVariable(pCorbaEnv);
+	if (GetObject())
+		AddLocalVariable(GetObject());
 
-    string exc = string(__func__);
-    // create reply code as local variable
-    if (!AddReplyVariable())
-    {
-	exc += " failed, because reply variable could not be added.";
-	throw new error::create_error(exc);
-    }
+	string exc = string(__func__);
+	// create reply code as local variable
+	if (!AddReplyVariable())
+	{
+		exc += " failed, because reply variable could not be added.";
+		throw new error::create_error(exc);
+	}
 
-    // create opcode as local variable
-    if (!AddOpcodeVariable())
-    {
-	exc += " failed, because opcode variable could not be added.";
-	throw new error::create_error(exc);
-    }
+	// create opcode as local variable
+	if (!AddOpcodeVariable())
+	{
+		exc += " failed, because opcode variable could not be added.";
+		throw new error::create_error(exc);
+	}
 
-    // parameters
-    AddParameters();
+	// parameters
+	AddParameters();
 
-    m_pWaitAnyFunction = static_cast<CBEWaitAnyFunction*>
-	(FindGlobalFunction(pFEInterface, FUNCTION_WAIT_ANY));
-    assert(m_pWaitAnyFunction);
-    SetCallVariables(m_pWaitAnyFunction);
+	m_pWaitAnyFunction = static_cast<CBEWaitAnyFunction*>
+		(FindGlobalFunction(pFEInterface, FUNCTION_WAIT_ANY));
+	assert(m_pWaitAnyFunction);
+	SetCallVariables(m_pWaitAnyFunction);
 
-    m_pReplyAnyWaitAnyFunction = static_cast<CBEWaitAnyFunction*>
-	(FindGlobalFunction(pFEInterface, FUNCTION_REPLY_WAIT));
-    assert(m_pReplyAnyWaitAnyFunction);
-    SetCallVariables(m_pReplyAnyWaitAnyFunction);
+	m_pReplyAnyWaitAnyFunction = static_cast<CBEWaitAnyFunction*>
+		(FindGlobalFunction(pFEInterface, FUNCTION_REPLY_WAIT));
+	assert(m_pReplyAnyWaitAnyFunction);
+	SetCallVariables(m_pReplyAnyWaitAnyFunction);
 
-    m_pDispatchFunction = static_cast<CBEDispatchFunction*>
-	(FindGlobalFunction(pFEInterface, FUNCTION_DISPATCH));
-    assert(m_pDispatchFunction);
-    SetCallVariables(m_pDispatchFunction);
+	m_pDispatchFunction = static_cast<CBEDispatchFunction*>
+		(FindGlobalFunction(pFEInterface, FUNCTION_DISPATCH));
+	assert(m_pDispatchFunction);
+	SetCallVariables(m_pDispatchFunction);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
 
 /** \brief looks globally for a function of a specific type
@@ -150,43 +141,40 @@ CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
  *  \param nFunctionType the type of function to look for
  *  \return a reference to the function if found
  */
-CBEFunction*
-CBESrvLoopFunction::FindGlobalFunction(CFEInterface *pFEInterface,
-    FUNCTION_TYPE nFunctionType)
+CBEFunction* CBESrvLoopFunction::FindGlobalFunction(CFEInterface *pFEInterface, FUNCTION_TYPE nFunctionType)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sFuncName = pNF->GetFunctionName(pFEInterface, nFunctionType);
-    CBERoot *pRoot = GetSpecificParent<CBERoot>();
-    assert(pRoot);
-    CBEFunction *pFunction = pRoot->FindFunction(sFuncName, nFunctionType);
-    return pFunction;
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sFuncName = pNF->GetFunctionName(pFEInterface, nFunctionType, IsComponentSide());
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	CBEFunction *pFunction = pRoot->FindFunction(sFuncName, nFunctionType);
+	return pFunction;
 }
 
 /** \brief sets the call variables for a function
  *  \param pFunction the function to set the call vars in
  */
-void
-CBESrvLoopFunction::SetCallVariables(CBEFunction *pFunction)
+void CBESrvLoopFunction::SetCallVariables(CBEFunction *pFunction)
 {
-    assert(pFunction);
-    if (GetObject())
-    {
-	CBEDeclarator *pDecl = GetObject()->m_Declarators.First();
-        pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
-	    pDecl->GetName());
-    }
-    if (GetEnvironment())
-    {
-	CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
-        pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
-	    pDecl->GetName());
-    }
-    if (GetMessageBuffer())
-    {
-	CBEDeclarator *pDecl = GetMessageBuffer()->m_Declarators.First();
-	pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
-	    pDecl->GetName());
-    }
+	assert(pFunction);
+	if (GetObject())
+	{
+		CBEDeclarator *pDecl = GetObject()->m_Declarators.First();
+		pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
+			pDecl->GetName());
+	}
+	if (GetEnvironment())
+	{
+		CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
+		pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
+			pDecl->GetName());
+	}
+	if (GetMessageBuffer())
+	{
+		CBEDeclarator *pDecl = GetMessageBuffer()->m_Declarators.First();
+		pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
+			pDecl->GetName());
+	}
 }
 
 /** \brief adds the reply code variable locally

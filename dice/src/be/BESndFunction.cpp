@@ -48,10 +48,6 @@ CBESndFunction::CBESndFunction()
 : CBEOperationFunction(FUNCTION_SEND)
 { }
 
-CBESndFunction::CBESndFunction(CBESndFunction & src)
-: CBEOperationFunction(src)
-{ }
-
 /** \brief destructor of target class */
 CBESndFunction::~CBESndFunction()
 { }
@@ -96,14 +92,15 @@ void CBESndFunction::WriteReturn(CBEFile& pFile)
  *  \return true if successful
  */
 void
-CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation)
+CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
     // set target file name
     SetTargetFileName(pFEOperation);
     // set name
+	SetComponentSide(bComponentSide);
     SetFunctionName(pFEOperation, FUNCTION_SEND);
 
-    CBEOperationFunction::CreateBackEnd(pFEOperation);
+    CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
     // set return type
     SetReturnVar(false, 0, TYPE_VOID, string());
     // need a message buffer, don't we?

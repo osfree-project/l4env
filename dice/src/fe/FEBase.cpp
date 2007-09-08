@@ -28,7 +28,6 @@
 
 #include "fe/FEBase.h"
 #include "fe/FEFile.h"
-// #include "Compiler.h"
 
 #include <string>
 #include <typeinfo>
@@ -39,20 +38,28 @@
 
 CFEBase::CFEBase(CObject * pParent)
 : CObject(pParent), m_pParentContext(0)
-{
-}
+{ }
 
-CFEBase::CFEBase(CFEBase & src)
-: CObject(src)
+CFEBase::CFEBase(CFEBase* src)
+: CObject(*src)
 {
-    m_pParentContext = src.m_pParentContext;
+    m_pParentContext = src->m_pParentContext;
 }
 
 /** cleans up the base object */
 CFEBase::~CFEBase()
+{ }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEBase::Clone()
 {
-    // do not delete parent !
+	return new CFEBase(this);
 }
+
+#include "Compiler.h"
+#include <typeinfo>
 
 /** \brief returns the root file object
  *  \return the root object
@@ -63,26 +70,16 @@ CFEBase::~CFEBase()
  */
 CFEFile *CFEBase::GetRoot()
 {
-    CObject *pParent = this;
-    while (pParent &&
-	pParent->GetParent())
-//     {
-// 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-// 	    "CFEBase::GetRoot: parent @ %p is %s\n", pParent, typeid(*pParent).name());
-	pParent = pParent->GetParent();
-//     }
-//     CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-// 	"CFEBase::GetRoot: parent is @ %p, return %p\n",
-// 	pParent, dynamic_cast<CFEFile*>(pParent));
-    return dynamic_cast<CFEFile*>(pParent);
-}
-
-/** copies the object
- *  \return a reference to the new base object
- */
-CObject *CFEBase::Clone()
-{
-    return new CFEBase(*this);
+	CObject *pParent = this;
+	while (pParent && pParent->GetParent())
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"%s: current @ %p, parent @ %p\n", __func__, pParent, pParent->GetParent());
+		pParent = pParent->GetParent();
+	}
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"%s: return %p of type %s\n", __func__, pParent, typeid(*pParent).name());
+	return dynamic_cast<CFEFile*>(pParent);
 }
 
 /** \brief print the object to a string

@@ -49,19 +49,19 @@ protected: // Protected methods
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CL4BEMsgBufferType(CL4BEMsgBufferType &src);
+    CL4BEMsgBufferType(CL4BEMsgBufferType* src);
 
-public: // Public methods
-    virtual CObject * Clone();
+public:
+	virtual CObject* Clone();
 
 protected:
-    virtual void AddElements(CFEOperation *pFEOperation, CMsgStructType nType);
-    virtual void AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType);
-    virtual void AddRefstringElement(CFETypedDeclarator *pFEParameter,
-	CMsgStructType nType);
-    virtual void AddFlexpageElement(CFETypedDeclarator *pFEParameter,
-	CMsgStructType nType);
-    virtual void AddZeroFlexpage(CFEOperation *pFEOperation, CMsgStructType nType);
+	virtual void AddElements(CFEOperation *pFEOperation, CMsgStructType nType);
+	virtual void AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType);
+	virtual void AddRefstringElement(CFETypedDeclarator *pFEParameter,
+		CMsgStructType nType);
+	virtual void AddFlexpageElement(CFETypedDeclarator *pFEParameter,
+		CMsgStructType nType);
+	virtual void AddZeroFlexpage(CFEOperation *pFEOperation, CMsgStructType nType);
 };
 
 #endif // !__DICE_L4BEMSGBUFFERTYPE_H__

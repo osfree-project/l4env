@@ -40,14 +40,20 @@
 CL4BETypedDeclarator::~CL4BETypedDeclarator()
 {}
 
-/** \brief clones this object
- *  \return reference to copy
+CL4BETypedDeclarator::CL4BETypedDeclarator()
+{ }
+
+CL4BETypedDeclarator::CL4BETypedDeclarator(CL4BETypedDeclarator* src)
+: CBETypedDeclarator(src)
+{ }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CL4BETypedDeclarator::Clone()
 {
-    return new CL4BETypedDeclarator(*this);
+	return new CL4BETypedDeclarator(this);
 }
-
 
 /** \brief check if this typed decl is regarded as variable sized
  *  \return true if it is

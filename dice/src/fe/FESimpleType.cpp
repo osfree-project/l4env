@@ -31,49 +31,49 @@
 #include "Visitor.h"
 
 CFESimpleType::CFESimpleType(unsigned int nType,
-                 bool bUnSigned,
-                 bool bUnsignedFirst,
-                 int nSize,
-                 bool bShowType)
-  : CFETypeSpec(nType),
-    m_bUnSigned(bUnSigned),
-    m_bUnsignedFirst(bUnsignedFirst),
-    m_bShowType(bShowType),
-    m_nSize(nSize),
-    m_FixedPrecision(0, 0)
+	bool bUnSigned,
+	bool bUnsignedFirst,
+	int nSize,
+	bool bShowType)
+: CFETypeSpec(nType),
+	m_bUnSigned(bUnSigned),
+	m_bUnsignedFirst(bUnsignedFirst),
+	m_bShowType(bShowType),
+	m_nSize(nSize),
+	m_FixedPrecision(0, 0)
 { }
 
 CFESimpleType::CFESimpleType(unsigned int nType,
-                 int nFirst,
-                 int nSecond)
-  : CFETypeSpec(nType),
-    m_bUnSigned(false),
-    m_bUnsignedFirst(false),
-    m_bShowType(true),
-    m_nSize(0),
-    m_FixedPrecision(nFirst, nSecond)
+	int nFirst,
+	int nSecond)
+: CFETypeSpec(nType),
+	m_bUnSigned(false),
+	m_bUnsignedFirst(false),
+	m_bShowType(true),
+	m_nSize(0),
+	m_FixedPrecision(nFirst, nSecond)
 { }
 
-CFESimpleType::CFESimpleType(CFESimpleType & src)
-  : CFETypeSpec(src)
+CFESimpleType::CFESimpleType(CFESimpleType* src)
+: CFETypeSpec(src)
 {
-    m_bUnSigned = src.m_bUnSigned;
-    m_bUnsignedFirst = src.m_bUnsignedFirst;
-    m_bShowType = src.m_bShowType;
-    m_nSize = src.m_nSize;
-    m_FixedPrecision = src.m_FixedPrecision;
+	m_bUnSigned = src->m_bUnSigned;
+	m_bUnsignedFirst = src->m_bUnsignedFirst;
+	m_bShowType = src->m_bShowType;
+	m_nSize = src->m_nSize;
+	m_FixedPrecision = src->m_FixedPrecision;
 }
 
 /** CFESimpleType destructor */
 CFESimpleType::~CFESimpleType()
-{
-    // nothing to clean up
-}
+{ }
 
-/** clones the object using the copy constructor */
-CObject *CFESimpleType::Clone()
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFESimpleType::Clone()
 {
-    return new CFESimpleType(*this);
+	return new CFESimpleType(this);
 }
 
 /** \brief test a type whether it is a constructed type or not
@@ -81,7 +81,7 @@ CObject *CFESimpleType::Clone()
  */
 bool CFESimpleType::IsConstructedType()
 {
-    return false;
+	return false;
 }
 
 /** \brief test if a type is a pointered type
@@ -89,11 +89,11 @@ bool CFESimpleType::IsConstructedType()
  */
 bool CFESimpleType::IsPointerType()
 {
-    // if type is simple -> return false
-    if (m_nType == TYPE_VOID_ASTERISK ||
-	m_nType == TYPE_CHAR_ASTERISK)
-	return true;
-    return false;
+	// if type is simple -> return false
+	if (m_nType == TYPE_VOID_ASTERISK ||
+		m_nType == TYPE_CHAR_ASTERISK)
+		return true;
+	return false;
 }
 
 /** \brief accepts the iterations of the visitors
@@ -101,7 +101,7 @@ bool CFESimpleType::IsPointerType()
  */
 void CFESimpleType::Accept(CVisitor& v)
 {
-    v.Visit(*this);
+	v.Visit(*this);
 }
 
 /** \brief resturns the size of the type
@@ -109,5 +109,5 @@ void CFESimpleType::Accept(CVisitor& v)
  */
 int CFESimpleType::GetSize()
 {
-    return m_nSize;
+	return m_nSize;
 }

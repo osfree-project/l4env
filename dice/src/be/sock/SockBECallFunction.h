@@ -48,12 +48,9 @@ public:
     CSockBECallFunction();
     virtual ~CSockBECallFunction();
 
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 
 protected:
-    /** \brief copy constructor */
-    CSockBECallFunction(CSockBECallFunction &src);
-
     virtual void WriteInvocation(CBEFile& pFile);
     virtual void WriteVariableInitialization(CBEFile& pFile);
 };

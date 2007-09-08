@@ -48,7 +48,7 @@ protected:
     virtual void WriteIPCReplyWait(CBEFile& pFile);
     virtual void WriteUnmarshalling(CBEFile& pFile);
     virtual void WriteIPCErrorCheck(CBEFile& pFile);
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
 };
 
 #endif

@@ -40,48 +40,38 @@
 #include <cassert>
 
 CL4BEUnmarshalFunction::CL4BEUnmarshalFunction()
-{
-}
-
-CL4BEUnmarshalFunction::CL4BEUnmarshalFunction(CL4BEUnmarshalFunction & src)
-:CBEUnmarshalFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CL4BEUnmarshalFunction::~CL4BEUnmarshalFunction()
-{
-
-}
+{ }
 
 /** \brief test if this function has variable sized parameters (needed to \
  *         specify temp + offset var)
  *  \return true if variable sized parameters are needed
  */
-bool
-CL4BEUnmarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
+bool CL4BEUnmarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 {
-    bool bRet = CBEUnmarshalFunction::HasVariableSizedParameters(nDirection);
-    // if we have indirect strings to marshal then we need the offset vars
-    if (GetParameterCount(ATTR_REF, ATTR_NONE, nDirection))
-        return true;
-    return bRet;
+	bool bRet = CBEUnmarshalFunction::HasVariableSizedParameters(nDirection);
+	// if we have indirect strings to marshal then we need the offset vars
+	if (GetParameterCount(ATTR_REF, ATTR_NONE, nDirection))
+		return true;
+	return bRet;
 }
 
 /** \brief adds a single parameter to this function
  *  \param pFEParameter the parameter to add
  */
-void
-CL4BEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
+void CL4BEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
-    CBEUnmarshalFunction::AddParameter(pFEParameter);
-    // retrieve the parameter
-    CBETypedDeclarator* pParameter = m_Parameters.Find(pFEParameter->m_Declarators.First()->GetName());
-    // base class can have decided to skip parameter
-    if (!pParameter)
-	return;
-    // find attribute
-    CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
-    if (pParameter->m_Attributes.Find(ATTR_REF) && (pDeclarator->GetStars() == 0))
-	pDeclarator->IncStars(1);
+	CBEUnmarshalFunction::AddParameter(pFEParameter);
+	// retrieve the parameter
+	CBETypedDeclarator* pParameter = m_Parameters.Find(pFEParameter->m_Declarators.First()->GetName());
+	// base class can have decided to skip parameter
+	if (!pParameter)
+		return;
+	// find attribute
+	CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
+	if (pParameter->m_Attributes.Find(ATTR_REF) && (pDeclarator->GetStars() == 0))
+		pDeclarator->IncStars(1);
 }

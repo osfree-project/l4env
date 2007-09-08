@@ -44,42 +44,42 @@ class CBETypedDeclarator;
  */
 class CBEUnionCase : public CBETypedDeclarator
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEUnionCase();
-    ~CBEUnionCase();
+	/** \brief constructor
+	 */
+	CBEUnionCase();
+	~CBEUnionCase();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEUnionCase(CBEUnionCase & src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBEUnionCase(CBEUnionCase* src);
 
 public:
-    virtual void CreateBackEnd(CFEUnionCase * pFEUnionCase);
-    virtual void CreateBackEnd(CBEType *pType, std::string sName,
-	CBEExpression *pCaseLabel, bool bDefault);
-    virtual CObject* Clone();
+	virtual void CreateBackEnd(CFEUnionCase * pFEUnionCase);
+	virtual void CreateBackEnd(CBEType *pType, std::string sName,
+		CBEExpression *pCaseLabel, bool bDefault);
+	virtual CObject* Clone();
 
-    /** \brief returns true if this is the default case
-     *  \return true if this is the default case
-     */
-    virtual bool IsDefault()
-    { return m_bDefault; }
+	/** \brief returns true if this is the default case
+	 *  \return true if this is the default case
+	 */
+	virtual bool IsDefault()
+	{ return m_bDefault; }
 
 protected:
-    /** \var bool m_bDefault
-     *  \brief true is default branch
-     */
-     bool m_bDefault;
+	/** \var bool m_bDefault
+	 *  \brief true is default branch
+	 */
+	bool m_bDefault;
 
 public:
-    /** \var CCollection<CBEExpression> m_Labels
-     *  \brief contains a list of expressions, or is empoty if default
-     */
-    CCollection<CBEExpression> m_Labels;
+	/** \var CCollection<CBEExpression> m_Labels
+	 *  \brief contains a list of expressions, or is empoty if default
+	 */
+	CCollection<CBEExpression> m_Labels;
 };
 
 #endif    // !__DICE_BEUNIONCASE_H__

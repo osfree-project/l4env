@@ -14,7 +14,9 @@ LINUX_HEADER_DIR = $(PKGDIR_ABS)/server/include/linux_headers
 
 PRIVATE_INCDIR = $(LINUX_HEADER_DIR) \
                  $(DDE_INCDIR) $(LINUX24_INCDIR) \
-                 $(PKGDIR_ABS)/server/include
+				 $(PKGDIR)/server/src \
+                 $(PKGDIR_ABS)/server/include \
+				 $(PKGDIR_OBJ)/server/include
 
 WARNINGS ?= -Wall -Wno-unused
 

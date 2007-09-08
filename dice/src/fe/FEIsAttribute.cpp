@@ -33,25 +33,23 @@ CFEIsAttribute::CFEIsAttribute(ATTR_TYPE nType,
     vector<CFEDeclarator*> *pAttrParameters)
 : CFEAttribute(nType),
     m_AttrParameters(pAttrParameters, this)
-{
-}
+{ }
 
-CFEIsAttribute::CFEIsAttribute(CFEIsAttribute & src)
+CFEIsAttribute::CFEIsAttribute(CFEIsAttribute* src)
 : CFEAttribute(src),
-    m_AttrParameters(src.m_AttrParameters)
+    m_AttrParameters(src->m_AttrParameters)
 {
     m_AttrParameters.Adopt(this);
 }
 
 /** cleans up the attribute object (deletes parameters) */
 CFEIsAttribute::~CFEIsAttribute()
-{
-}
+{ }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEIsAttribute::Clone()
 {
-    return new CFEIsAttribute(*this);
+	return new CFEIsAttribute(this);
 }

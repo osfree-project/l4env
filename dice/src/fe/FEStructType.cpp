@@ -47,12 +47,12 @@ CFEStructType::CFEStructType(string sTag,
         m_bForwardDeclaration = true;
 }
 
-CFEStructType::CFEStructType(CFEStructType & src)
+CFEStructType::CFEStructType(CFEStructType* src)
 : CFEConstructedType(src),
-    m_Members(src.m_Members),
-    m_BaseStructs(src.m_BaseStructs)
+    m_Members(src->m_Members),
+    m_BaseStructs(src->m_BaseStructs)
 {
-    m_sTag = src.m_sTag;
+    m_sTag = src->m_sTag;
     m_Members.Adopt(this);
     m_BaseStructs.Adopt(this);
 }
@@ -61,12 +61,12 @@ CFEStructType::CFEStructType(CFEStructType & src)
 CFEStructType::~CFEStructType()
 { }
 
-/** copies the struct object
- *  \return a reference to the new struct object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEStructType::Clone()
 {
-    return new CFEStructType(*this);
+	return new CFEStructType(this);
 }
 
 /** \brief test a type whether it is a constructed type or not

@@ -106,7 +106,7 @@ l4vfs_select_listener_send_notification_component(CORBA_Object _dice_corba_obj,
                  && (curr_select->mode & mode))
             {
                 /* we have found selected fd, save non blocking mode
-                 * an increment semaphore to wakeup select thread */
+                 * and increment semaphore to wakeup select thread */
                 curr_select->non_block_mode = mode;
                 l4semaphore_up(current->sem);
 

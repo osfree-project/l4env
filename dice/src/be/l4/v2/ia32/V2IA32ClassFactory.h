@@ -49,12 +49,6 @@ public:
     CL4V2IA32BEClassFactory();
     virtual ~CL4V2IA32BEClassFactory();
 
-protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CL4V2IA32BEClassFactory(CL4V2IA32BEClassFactory &src);
-
 public:
     virtual CBESizes * GetNewSizes();
     virtual CBECommunication* GetNewCommunication();

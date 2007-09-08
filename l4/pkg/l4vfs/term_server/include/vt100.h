@@ -13,6 +13,7 @@
 #define __L4VFS_TERM_SERVER_INCLUDE_VT100_H_
 
 #include <l4/sys/types.h>
+#include <l4/l4vfs/types.h>
 #include <l4/semaphore/semaphore.h>
 
 #include <termios.h>
@@ -139,6 +140,12 @@ typedef struct termstate_s
     l4semaphore_t keysem;           // this semaphore is used for a
                                     // classical producer-consumer
                                     // problem on the read buffer
+    /* 
+     * Select info stuff.
+     */
+    l4_threadid_t   select_handler; // whom to call if new data arrives
+    int             select_mode;    // select mode
+    object_handle_t select_fd;      // fd used for select
 
     struct termstate_spec_s * spec; // pointer to specific data structure
 } termstate_t;
@@ -176,16 +183,23 @@ void       vt100_add_ascii(termstate_t *term, unsigned char * c);
 // getchar functions
 int        vt100_getchar(termstate_t *term);
 int        vt100_trygetchar(termstate_t *term);
+int        vt100_char_avail(termstate_t *term);
 
-// functions to implement tcgetattr and tcsetattr
-int         vt100_tcgetattr( termstate_t *term, struct termios *termios_p );
-int         vt100_tcsetattr( termstate_t *term, struct termios *termios_p );
-// function to supply current window size
-int         vt100_getwinsize( termstate_t *term, struct winsize *win );
+// tcgetattr and tcsetattr
+int         vt100_tcgetattr(termstate_t *term, struct termios *termios_p);
+int         vt100_tcsetattr(termstate_t *term, struct termios *termios_p);
+// supply current window size
+int         vt100_getwinsize(termstate_t *term, struct winsize *win);
 
 // 'de', 'us'
 void vt100_set_keymap(char * keymap);
 
+/* Select stuff */
+void vt100_set_select_info(termstate_t *term, object_handle_t handle,
+                           int mode, const l4_threadid_t *notify_handler);
+void vt100_unset_select_info(termstate_t *term);
+void vt100_select_notify(termstate_t *term);
+int vt100_data_avail(termstate_t *term);
 
 /* Must be provided externally, i.e. if you implement a special output
  * lib, e.g. for dope or con, you must provide these functions.

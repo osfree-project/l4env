@@ -48,10 +48,6 @@ CBEReplyFunction::CBEReplyFunction()
 : CBEOperationFunction(FUNCTION_REPLY)
 {}
 
-CBEReplyFunction::CBEReplyFunction(CBEReplyFunction & src)
-: CBEOperationFunction(src)
-{}
-
 /** \brief destructor of target class */
 CBEReplyFunction::~CBEReplyFunction()
 {}
@@ -103,14 +99,15 @@ void CBEReplyFunction::WriteCleanup(CBEFile& /*pFile*/)
  * expect a new message or a reply from the client.
  */
 void
-CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation)
+CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation, bool bComponentSide)
 {
     // set target file name
     SetTargetFileName(pFEOperation);
     // set function name
+	SetComponentSide(bComponentSide);
     SetFunctionName(pFEOperation, FUNCTION_REPLY);
 
-    CBEOperationFunction::CreateBackEnd(pFEOperation);
+    CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
     // need a message buffer, don't we?
     AddMessageBuffer(pFEOperation);
     AddLocalVariable(GetMessageBuffer());

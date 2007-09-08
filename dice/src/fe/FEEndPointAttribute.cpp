@@ -31,24 +31,21 @@
 CFEEndPointAttribute::CFEEndPointAttribute(vector<PortSpec> *pPortSpecs)
 : CFEAttribute(ATTR_ENDPOINT),
     m_PortSpecs(*pPortSpecs)
-{
-}
+{ }
 
-CFEEndPointAttribute::CFEEndPointAttribute(CFEEndPointAttribute & src)
+CFEEndPointAttribute::CFEEndPointAttribute(CFEEndPointAttribute* src)
 : CFEAttribute(src),
-    m_PortSpecs(src.m_PortSpecs)
+    m_PortSpecs(src->m_PortSpecs)
 { }
 
 /** cleans up the end-point attribute (delete all port-specs) */
 CFEEndPointAttribute::~CFEEndPointAttribute()
-{
-}
+{ }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEEndPointAttribute::Clone()
 {
-    return new CFEEndPointAttribute(*this);
+	return new CFEEndPointAttribute(this);
 }
-

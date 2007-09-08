@@ -30,40 +30,12 @@
 #ifndef __DICE_BESTRUCTTYPE_H__
 #define __DICE_BESTRUCTTYPE_H__
 
-#include "be/BEType.h"
+#include "BEType.h"
+#include "BEStructMembers.h"
 #include "Attribute-Type.h"
-#include "template.h"
-#include <vector>
 
-class CBEContext;
 class CBETypedDeclarator;
 class CFEArrayType;
-class CFEObject;
-class CDeclaratorStackLocation;
-
-/** \class CStructMembers
- *  \ingroup backend
- *  \brief a special collection class for struct members
- */
-class CStructMembers : public CSearchableCollection<CBETypedDeclarator, std::string>
-{
-public:
-    /** \brief constructs struct members collection
-     *  \param src the source vector with the members
-     *  \param pParent the parent of the members
-     */
-    CStructMembers(vector<CBETypedDeclarator*> *src, CObject *pParent);
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CStructMembers(CStructMembers &src);
-    /** destroy the collection */
-    ~CStructMembers();
-
-    void Add(CBETypedDeclarator *pMember);
-    void Move(std::string sName, int nPos);
-    void Move(std::string sName, std::string sBeforeHere);
-};
 
 /** \class CBEStructType
  *  \ingroup backend
@@ -71,65 +43,65 @@ public:
  */
 class CBEStructType : public CBEType
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEStructType();
-    virtual ~CBEStructType();
+	/** \brief constructor
+	 */
+	CBEStructType();
+	virtual ~CBEStructType();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEStructType(CBEStructType &src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBEStructType(CBEStructType* src);
 
-    virtual void WriteGetMemberSize(CBEFile& pFile,
-	CBETypedDeclarator *pMember,
-	CDeclStack* pStack,
-	CBEFunction *pUsingFunc);
-    virtual void CreateBackEndSequence(CFEArrayType *pFEType);
+	virtual void WriteGetMemberSize(CBEFile& pFile,
+		CBETypedDeclarator *pMember,
+		CDeclStack* pStack,
+		CBEFunction *pUsingFunc);
+	virtual void CreateBackEndSequence(CFEArrayType *pFEType);
 
 public:
-    virtual void WriteZeroInit(CBEFile& pFile);
-    virtual int GetSize();
-    virtual int GetMaxSize();
-    virtual int GetStringLength();
-    virtual CObject* Clone();
-    virtual void Write(CBEFile& pFile);
-    virtual bool IsConstructedType();
-    virtual int GetMemberCount();
-    virtual bool HasTag(std::string sTag);
-    virtual void WriteCast(CBEFile& pFile, bool bPointer);
-    virtual std::string GetTag();
-    virtual void WriteDeclaration(CBEFile& pFile);
-    virtual void WriteGetSize(CBEFile& pFile,
-	CDeclStack* pStack, CBEFunction *pUsingFunc);
-    virtual int GetFixedSize();
-    virtual bool IsSimpleType();
-    virtual CBETypedDeclarator* FindMember(
-	CDeclStack* pStack, CDeclStack::iterator iCurr);
-    virtual CBETypedDeclarator* FindMemberAttribute(ATTR_TYPE nAttributeType);
-    virtual CBETypedDeclarator* FindMemberIsAttribute(ATTR_TYPE nAttributeType,
-	std::string sAttributeParameter);
-    virtual void CreateBackEnd(CFETypeSpec *pFEType);
-    virtual void CreateBackEnd(std::string sTag, CFEBase *pRefObj);
+	virtual void WriteZeroInit(CBEFile& pFile);
+	virtual int GetSize();
+	virtual int GetMaxSize();
+	virtual int GetStringLength();
+	virtual CObject* Clone();
+	virtual void Write(CBEFile& pFile);
+	virtual bool IsConstructedType();
+	virtual int GetMemberCount();
+	virtual bool HasTag(std::string sTag);
+	virtual void WriteCast(CBEFile& pFile, bool bPointer);
+	virtual std::string GetTag();
+	virtual void WriteDeclaration(CBEFile& pFile);
+	virtual void WriteGetSize(CBEFile& pFile,
+		CDeclStack* pStack, CBEFunction *pUsingFunc);
+	virtual int GetFixedSize();
+	virtual bool IsSimpleType();
+	virtual CBETypedDeclarator* FindMember(
+		CDeclStack* pStack, CDeclStack::iterator iCurr);
+	virtual CBETypedDeclarator* FindMemberAttribute(ATTR_TYPE nAttributeType);
+	virtual CBETypedDeclarator* FindMemberIsAttribute(ATTR_TYPE nAttributeType,
+		std::string sAttributeParameter);
+	virtual void CreateBackEnd(CFETypeSpec *pFEType);
+	virtual void CreateBackEnd(std::string sTag, CFEBase *pRefObj);
 
 protected:
-    /** \var std::string m_sTag
-     *  \brief the tag if the source is a tagged struct
-     */
-    std::string m_sTag;
-    /** \var bool m_bForwardDeclaration
-     *  \brief true if this is a forward declaration
-     */
-    bool m_bForwardDeclaration;
+	/** \var std::string m_sTag
+	 *  \brief the tag if the source is a tagged struct
+	 */
+	std::string m_sTag;
+	/** \var bool m_bForwardDeclaration
+	 *  \brief true if this is a forward declaration
+	 */
+	bool m_bForwardDeclaration;
 
 public:
-    /** \var CStructMembers m_Members
-     *  \brief contains the members of this struct
-     */
-    CStructMembers m_Members;
+	/** \var CStructMembers m_Members
+	 *  \brief contains the members of this struct
+	 */
+	CStructMembers m_Members;
 };
 
 #endif // !__DICE_BESTRUCTTYPE_H__

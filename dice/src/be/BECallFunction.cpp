@@ -50,10 +50,6 @@ CBECallFunction::CBECallFunction()
  : CBEOperationFunction(FUNCTION_CALL)
 { }
 
-CBECallFunction::CBECallFunction(CBECallFunction & src)
- : CBEOperationFunction(src)
-{ }
-
 /** \brief destructor of target class */
 CBECallFunction::~CBECallFunction()
 { }
@@ -124,7 +120,7 @@ CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
  * This implementation only sets the name of the function.
  */
 void
-CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation)
+CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
         pFEOperation->GetName().c_str());
@@ -132,9 +128,10 @@ CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation)
     // set target file name
     SetTargetFileName(pFEOperation);
     // set name
+	SetComponentSide(bComponentSide);
     SetFunctionName(pFEOperation, FUNCTION_CALL);
 
-    CBEOperationFunction::CreateBackEnd(pFEOperation);
+    CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
     // add msg buffer
     // its the last, because it needs the existing BE parameters
     AddMessageBuffer(pFEOperation);

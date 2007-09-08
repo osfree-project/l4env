@@ -45,8 +45,8 @@ class CIncludeStatement : public CObject
 
 public:
     /** default constructor */
-    CIncludeStatement(bool bIDLFile, bool bStdInclude, bool bImport,
-	std::string sFileName, std::string sFromFile, std::string sPath, int nLineNb);
+	CIncludeStatement(bool bIDLFile, bool bStdInclude, bool bImport,
+		std::string sFileName, std::string sFromFile, std::string sPath, int nLineNb);
     /** copy constructor
      * \param src the source to copy from
      */

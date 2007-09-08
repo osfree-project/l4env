@@ -63,14 +63,14 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFESimpleType(CFESimpleType &src);
+    CFESimpleType(CFESimpleType* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     virtual void Accept(CVisitor&);
     virtual bool IsConstructedType();
     virtual bool IsPointerType();
-    virtual CObject* Clone();
     virtual int GetSize();
 
     /** checks if this type is unsigned

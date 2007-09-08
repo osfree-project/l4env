@@ -55,10 +55,10 @@ CL4V4BEWaitFunction::~CL4V4BEWaitFunction()
  *  \return true if successful
  */
 void
-CL4V4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
+CL4V4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 {
     // do not call direct base class (it adds the result var only)
-    CBEWaitFunction::CreateBackEnd(pFEOperation);
+    CBEWaitFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
     // add local variables
     CBENameFactory *pNF = CCompiler::GetNameFactory();

@@ -40,22 +40,29 @@
 #include <cassert>
 
 CFETypeSpec::CFETypeSpec(unsigned int nType)
-    : m_Attributes(NULL, NULL)
+: CFEInterfaceComponent(static_cast<CObject*>(0)),
+	m_Attributes(0, 0)
 {
-    m_nType = nType;
+	m_nType = nType;
 }
 
-CFETypeSpec::CFETypeSpec(CFETypeSpec & src)
-    : CFEInterfaceComponent(src),
-    m_Attributes(NULL, NULL)
+CFETypeSpec::CFETypeSpec(CFETypeSpec* src)
+: CFEInterfaceComponent(src),
+	m_Attributes(0, 0)
 {
-    m_nType = src.m_nType;
+	m_nType = src->m_nType;
 }
 
 /** cleans up the type spec object */
 CFETypeSpec::~CFETypeSpec()
+{ }
+
+/** \brief create a copy of this object
+ *  \return a reference to the clone
+ */
+CObject* CFETypeSpec::Clone()
 {
-    // nothing to clean up
+	return new CFETypeSpec(this);
 }
 
 /** \brief test a type whether it is a constructed type or not
@@ -63,8 +70,8 @@ CFETypeSpec::~CFETypeSpec()
  */
 bool CFETypeSpec::IsConstructedType()
 {
-    // not a constructed type -> return false
-    return false;
+	// not a constructed type -> return false
+	return false;
 }
 
 /** \brief test if a type is a pointered type
@@ -72,8 +79,8 @@ bool CFETypeSpec::IsConstructedType()
  */
 bool CFETypeSpec::IsPointerType()
 {
-    // not a pointered type -> return false
-    return false;
+	// not a pointered type -> return false
+	return false;
 }
 
 /** \brief add attributes to a type
@@ -81,5 +88,5 @@ bool CFETypeSpec::IsPointerType()
  */
 void CFETypeSpec::AddAttributes(vector<CFEAttribute*> *pAttributes)
 {
-    m_Attributes.Add(pAttributes);
+	m_Attributes.Add(pAttributes);
 }

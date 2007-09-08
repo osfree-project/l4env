@@ -40,11 +40,11 @@ CFEEnumType::CFEEnumType(string sTag,
     m_sTag = sTag;
 }
 
-CFEEnumType::CFEEnumType(CFEEnumType & src)
+CFEEnumType::CFEEnumType(CFEEnumType* src)
 : CFEConstructedType(src),
-    m_Members(src.m_Members)
+    m_Members(src->m_Members)
 {
-    m_sTag = src.m_sTag;
+    m_sTag = src->m_sTag;
     m_Members.Adopt(this);
 }
 
@@ -52,12 +52,12 @@ CFEEnumType::CFEEnumType(CFEEnumType & src)
 CFEEnumType::~CFEEnumType()
 { }
 
-/** copies the object
- *  \return a reference to a new enumeration type object
+/** \brief create a copy of this object
+ *  \return a reference to the clone
  */
 CObject* CFEEnumType::Clone()
 {
-    return new CFEEnumType(*this);
+	return new CFEEnumType(this);
 }
 
 /** \brief accepts the iterations of the visitors

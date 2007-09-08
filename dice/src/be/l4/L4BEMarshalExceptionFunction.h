@@ -50,10 +50,6 @@ public:
     ~CL4BEMarshalExceptionFunction();
 
 protected:
-    /** \brief copy constructor */
-    CL4BEMarshalExceptionFunction(CL4BEMarshalExceptionFunction &src);
-
-protected:
     virtual void WriteMarshalling(CBEFile& pFile);
 };
 

@@ -51,14 +51,10 @@ public:
     CBEDispatchFunction();
     virtual ~CBEDispatchFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBEDispatchFunction(CBEDispatchFunction &src);
-
 public:
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
 
 protected:
     virtual void WriteVariableInitialization(CBEFile& pFile);

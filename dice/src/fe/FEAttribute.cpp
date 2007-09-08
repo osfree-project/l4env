@@ -39,21 +39,22 @@ CFEAttribute::CFEAttribute(ATTR_TYPE nType)
 {
 }
 
-CFEAttribute::CFEAttribute(CFEAttribute & src):CFEBase(src)
+CFEAttribute::CFEAttribute(CFEAttribute* src)
+: CFEBase(src)
 {
-    m_nType = src.m_nType;
+    m_nType = src->m_nType;
 }
 
 /** cleans up the attribute */
 CFEAttribute::~CFEAttribute()
 { }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEAttribute::Clone()
 {
-    return new CFEAttribute(*this);
+	return new CFEAttribute(this);
 }
 
 /** returns the attribute's type

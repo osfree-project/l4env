@@ -29,31 +29,33 @@
 #include "fe/FEBinaryExpression.h"
 
 CFEBinaryExpression::CFEBinaryExpression(EXPR_TYPE nType,
-    CFEExpression * pOperand,
-    EXPT_OPERATOR Operator,
-    CFEExpression * pOperand2)
+	CFEExpression * pOperand,
+	EXPT_OPERATOR Operator,
+	CFEExpression * pOperand2)
 :CFEUnaryExpression(nType, Operator, pOperand)
 {
-    m_pOperand2 = pOperand2;
+	m_pOperand2 = pOperand2;
 }
 
-CFEBinaryExpression::CFEBinaryExpression(CFEBinaryExpression & src)
+CFEBinaryExpression::CFEBinaryExpression(CFEBinaryExpression* src)
 :CFEUnaryExpression(src)
 {
-    if (src.m_pOperand2)
-    {
-	m_pOperand2 = (CFEExpression *) (src.m_pOperand2->Clone());
-	m_pOperand2->SetParent(this);
-    }
-    else
-	m_pOperand2 = 0;
+	CLONE_MEM(CFEExpression, m_pOperand2);
 }
 
 /** cleans up the binary expression (frees the second operand) */
 CFEBinaryExpression::~CFEBinaryExpression()
 {
-    if (m_pOperand2)
-	delete m_pOperand2;
+	if (m_pOperand2)
+		delete m_pOperand2;
+}
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEBinaryExpression::Clone()
+{
+	return new CFEBinaryExpression(this);
 }
 
 /** returns the integer value of this expression
@@ -194,14 +196,6 @@ bool CFEBinaryExpression::IsOfType(unsigned int nType)
 CFEExpression *CFEBinaryExpression::GetOperand2()
 {
     return m_pOperand2;
-}
-
-/** creates a copy of this object
- *  \return a reference to the new object
- */
-CObject *CFEBinaryExpression::Clone()
-{
-    return new CFEBinaryExpression(*this);
 }
 
 /** \brief print the object to a string

@@ -42,11 +42,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFESizeOfExpression(CFESizeOfExpression &src);
+    CFESizeOfExpression(CFESizeOfExpression* src);
 
 public:
+	virtual CObject* Clone();
     virtual std::string ToString();
-    virtual CObject* Clone();
     virtual CFETypeSpec* GetSizeOfType();
     virtual CFEExpression* GetSizeOfExpression();
 

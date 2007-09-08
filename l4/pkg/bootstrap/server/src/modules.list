@@ -69,6 +69,7 @@ bin names
 bin log
 bin dm_phys -v
 bin simple_ts -t 10
+bin l4io
 bin bmodfs
 data  libloader.s.so
 data  libld-l4.s.so

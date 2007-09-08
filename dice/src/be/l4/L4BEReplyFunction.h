@@ -35,10 +35,6 @@
  */
 class CL4BEReplyFunction : public CBEReplyFunction
 {
-protected:
-    /** copy constructor */
-    CL4BEReplyFunction(CL4BEReplyFunction& src);
-
 public:
     /** public constructor */
     CL4BEReplyFunction();
@@ -53,7 +49,7 @@ protected:
     virtual void WriteIPC(CBEFile& pFile);
     virtual void WriteIPCErrorCheck(CBEFile& pFile);
     virtual void WriteVariableInitialization(CBEFile& pFile);
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 };
 
 #endif

@@ -68,7 +68,7 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CBETypedDeclarator(CBETypedDeclarator & src);
+    CBETypedDeclarator(CBETypedDeclarator* src);
 
 public:
     virtual void CreateBackEnd(CBEType * pType, std::string sName);
@@ -98,7 +98,7 @@ public:
     CBEAttribute* FindIsAttribute(std::string sDeclName);
     void AddAttribute(CFEAttribute *pFEAttribute);
 
-    virtual CObject *Clone();
+	virtual CObject* Clone();
 
     /** \brief sets the default initialization string
      *  \param sInitString the new initializatio string (may be empty)

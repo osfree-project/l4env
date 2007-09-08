@@ -34,6 +34,7 @@ l4sigma0_kip_map(l4_threadid_t pager)
 {
   l4_snd_fpage_t fp;
   l4_msgdope_t dope;
+  l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
   int e;
 
   if (kip && kip->magic == L4_KERNEL_INFO_MAGIC)
@@ -51,9 +52,9 @@ l4sigma0_kip_map(l4_threadid_t pager)
       pager = rmgr_pager_id;
     }
 
-  e = l4_ipc_call(pager, L4_IPC_SHORT_MSG, SIGMA0_REQ_KIP, 0,
-                  L4_IPC_MAPMSG((l4_addr_t)kip_area, L4_LOG2_PAGESIZE),
-                  &fp.snd_base, &fp.snd_base, L4_IPC_NEVER, &dope);
+  e = l4_ipc_call_tag(pager, L4_IPC_SHORT_MSG, SIGMA0_REQ_KIP, 0, tag,
+                      L4_IPC_MAPMSG((l4_addr_t)kip_area, L4_LOG2_PAGESIZE),
+                      &fp.snd_base, &fp.snd_base, L4_IPC_NEVER, &dope, &tag);
 
   if (e || !l4_ipc_fpage_received(dope))
     return NULL;

@@ -86,7 +86,7 @@ public:
 
 protected:
     /**  \brief copy constructor */
-    CBEFunction(CBEFunction & src);
+    CBEFunction(CBEFunction* src);
 
 public:
     /** \brief tests if this function should be written
@@ -127,8 +127,6 @@ public:
     virtual void SetMsgBufferCastOnCall(bool bCastMsgBufferOnCall);
     virtual void AddToHeader(CBEHeaderFile* pHeader);
     virtual void AddToImpl(CBEImplementationFile* pImpl);
-    bool IsComponentSide();
-    virtual void SetComponentSide(bool bComponentSide);
     virtual bool HasVariableSizedParameters(DIRECTION_TYPE nDirection);
     virtual bool HasArrayParameters(DIRECTION_TYPE nDirection);
     virtual DIRECTION_TYPE GetReceiveDirection();
@@ -161,6 +159,11 @@ public:
     void SetFunctionName(std::string sName, std::string sOriginalName = std::string());
     std::string GetOriginalName() const;
 
+	/** \brief checks if this function belings to the component side
+	 *  \return true if true
+	 */
+	bool IsComponentSide()
+	{ return m_bComponentSide; }
     /** \brief test if function type matches
      *  \param nFunctionType the type to test for
      */
@@ -202,6 +205,7 @@ protected:
     virtual void WriteFunctionAttributes(CBEFile& pFile);
     virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
 
+	void SetEnvironment(CBETypedDeclarator* pEnv);
 
     void AddMessageBuffer();
     void AddMessageBuffer(CFEOperation *pFEOperation);
@@ -210,13 +214,19 @@ protected:
     virtual bool SetReturnVar(CBEType * pType, std::string sName);
     virtual bool SetReturnVar(CFETypeSpec * pFEType, std::string sName);
     virtual void SetReturnVarAttributes(CBETypedDeclarator *pReturn);
-    virtual void CreateBackEnd(CFEBase* pFEObject);
+    virtual void CreateBackEnd(CFEBase* pFEObject, bool bComponentSide);
     virtual void CreateObject();
     virtual void CreateEnvironment();
     void CreateMarshaller();
     void CreateCommunication();
     void CreateTrace();
     virtual void AddExceptionVariable();
+
+	/** \brief sets the communication side
+	 *  \param bComponentSide if true its the component's side, if false the client's
+	 */
+	void SetComponentSide(bool bComponentSide)
+	{ m_bComponentSide = bComponentSide; }
 
     virtual int GetFixedReturnSize(DIRECTION_TYPE nDirection);
     virtual int GetReturnSize(DIRECTION_TYPE nDirection);

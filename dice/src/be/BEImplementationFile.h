@@ -45,43 +45,34 @@ class CFEOperation;
  */
 class CBEImplementationFile : public CBEFile
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEImplementationFile();
-    virtual ~CBEImplementationFile();
-
-protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEImplementationFile(CBEImplementationFile &src);
+	/** \brief constructor
+	 */
+	CBEImplementationFile();
+	virtual ~CBEImplementationFile();
 
 public:
-    virtual void Write();
+	virtual void Write();
+	virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType);
+	virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType);
+	virtual void CreateBackEnd(CFELibrary *pFELibrary, FILE_TYPE nFileType);
+	virtual void CreateBackEnd(CFEFile *pFEFile, FILE_TYPE nFileType);
 
-    virtual CObject* Clone();
-
-    virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType);
-    virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType);
-    virtual void CreateBackEnd(CFELibrary *pFELibrary, FILE_TYPE nFileType);
-    virtual void CreateBackEnd(CFEFile *pFEFile, FILE_TYPE nFileType);
-
-    virtual CBEHeaderFile* GetHeaderFile();
-    virtual void SetHeaderFile(CBEHeaderFile* pHeaderFile);
+	virtual CBEHeaderFile* GetHeaderFile();
+	virtual void SetHeaderFile(CBEHeaderFile* pHeaderFile);
 
 protected:  // Protected methods
-    virtual void WriteNameSpace(CBENameSpace *pNameSpace);
-    virtual void WriteClass(CBEClass *pClass);
-    virtual void WriteFunction(CBEFunction *pFunction);
-    virtual void WriteDefaultIncludes();
+	virtual void WriteNameSpace(CBENameSpace *pNameSpace);
+	virtual void WriteClass(CBEClass *pClass);
+	virtual void WriteFunction(CBEFunction *pFunction);
+	virtual void WriteDefaultIncludes();
 
 protected: // Protected members
-    /** \var CBEHeaderFile& m_pHeaderFile
-     *  \brief reference to the corresponding header file
-     */
-    CBEHeaderFile* m_pHeaderFile;
+	/** \var CBEHeaderFile& m_pHeaderFile
+	 *  \brief reference to the corresponding header file
+	 */
+	CBEHeaderFile* m_pHeaderFile;
 };
 
 #endif // !__DICE_BEIMPLEMENTATIONFILE_H__

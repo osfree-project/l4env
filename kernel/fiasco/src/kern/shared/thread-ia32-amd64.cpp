@@ -707,6 +707,7 @@ Thread::handle_lldt(Trap_state *ts)
 	  if (X86desc(desc).unsafe())
 	    {
 	      WARN("set_tls: Bad descriptor.");
+              t->thread_lock()->clear();
 	      return 0;
 	    }
 
@@ -718,6 +719,8 @@ Thread::handle_lldt(Trap_state *ts)
 
       if (t == current_thread())
 	switch_gdt_user_entries(this);
+
+      t->thread_lock()->clear();
       return 1;
     }
 

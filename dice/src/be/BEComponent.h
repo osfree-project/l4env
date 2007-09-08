@@ -50,12 +50,6 @@ public:
     CBEComponent();
     virtual ~CBEComponent();
 
-protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEComponent(CBEComponent &src);
-
 public:
     virtual void Write();
 

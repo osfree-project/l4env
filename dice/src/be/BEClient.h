@@ -48,12 +48,6 @@ public:
     CBEClient();
     virtual ~CBEClient();
 
-protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEClient(CBEClient &src);
-
 public:
     virtual void Write();
 

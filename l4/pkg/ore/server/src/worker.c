@@ -20,7 +20,6 @@ L4THREAD_EXIT_FN(exit_fn, worker_exit);
 // worker thread for string ipc connections
 void worker_thread_string(void *arg)
 {
-// XXX: dde_add_worker !!!!!!
     int *my_channel = kmalloc(sizeof(int), GFP_KERNEL);
 
     DICE_DECLARE_SERVER_ENV(env);
@@ -35,7 +34,7 @@ void worker_thread_string(void *arg)
 
     l4thread_data_set_current(__l4ore_tls_id_key, my_channel);
 
-#if CONFIG_ORE_DDE26
+#ifndef CONFIG_ORE_DDE24
 	l4dde26_process_add_worker();
 #endif
 

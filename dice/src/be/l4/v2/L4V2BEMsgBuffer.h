@@ -39,39 +39,36 @@
 class CL4V2BEMsgBuffer : public CL4BEMsgBuffer
 {
 public:
-    /** constructor */
-    CL4V2BEMsgBuffer();
-    ~CL4V2BEMsgBuffer();
+	/** constructor */
+	CL4V2BEMsgBuffer();
+	~CL4V2BEMsgBuffer();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CL4V2BEMsgBuffer(CL4V2BEMsgBuffer & src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CL4V2BEMsgBuffer(CL4V2BEMsgBuffer* src);
 
 public: // public methods
-    virtual CObject* Clone();
-    virtual int GetPayloadOffset();
-
-    virtual void WriteDopeShortInitialization(CBEFile& pFile, int nType,
-	CMsgStructType nStructType);
-
-    virtual int GetMemberPosition(std::string sName, CMsgStructType nType);
+	virtual int GetPayloadOffset();
+	virtual void WriteDopeShortInitialization(CBEFile& pFile, int nType,
+		CMsgStructType nStructType);
+	virtual int GetMemberPosition(std::string sName, CMsgStructType nType);
+	virtual CObject* Clone();
 
 protected: // protected methods
-    virtual void WriteRefstringInitParameter(CBEFile& pFile,
-	CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
-	CMsgStructType nType);
-    virtual bool WriteRefstringInitFunction(CBEFile& pFile,
-	CBEFunction *pFunction,	CBEClass *pClass, int nIndex, CMsgStructType nType);
-    virtual void WriteRcvFlexpageInitialization(CBEFile& pFile,	CMsgStructType nType);
-	
-    CBETypedDeclarator* GetRefstringMemberVariable(int nNumber);
+	virtual void WriteRefstringInitParameter(CBEFile& pFile,
+		CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
+		CMsgStructType nType);
+	virtual bool WriteRefstringInitFunction(CBEFile& pFile,
+		CBEFunction *pFunction,	CBEClass *pClass, int nIndex, CMsgStructType nType);
+	virtual void WriteRcvFlexpageInitialization(CBEFile& pFile,	CMsgStructType nType);
 
-    virtual bool AddPlatformSpecificMembers(CBEFunction *pFunction,
-	CBEStructType *pStruct, CMsgStructType nType);
-    virtual bool AddGenericStruct(CBEFunction *pFunction,
-	CFEOperation *pFEOperation);
+	CBETypedDeclarator* GetRefstringMemberVariable(int nNumber);
+
+	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction,
+		CBEStructType *pStruct, CMsgStructType nType);
+	virtual void AddGenericStruct(CBEFunction *pFunction, CFEOperation *pFEOperation);
 };
 
 #endif

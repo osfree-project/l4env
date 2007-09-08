@@ -34,25 +34,23 @@ CFEFunctionDeclarator::CFEFunctionDeclarator(CFEDeclarator * pDecl,
     vector<CFETypedDeclarator*> * pParams)
 : CFEDeclarator(DECL_NONE, (pDecl) ? (pDecl->GetName()) : std::string(), 0),
     m_Parameters(pParams, this)
-{
-}
+{ }
 
-CFEFunctionDeclarator::CFEFunctionDeclarator(CFEFunctionDeclarator & src)
+CFEFunctionDeclarator::CFEFunctionDeclarator(CFEFunctionDeclarator* src)
 : CFEDeclarator(src),
-    m_Parameters(src.m_Parameters)
+    m_Parameters(src->m_Parameters)
 {
     m_Parameters.Adopt(this);
 }
 
 /** cleans up the function declarator */
 CFEFunctionDeclarator::~CFEFunctionDeclarator()
-{
-}
+{ }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEFunctionDeclarator::Clone()
 {
-    return new CFEFunctionDeclarator(*this);
+	return new CFEFunctionDeclarator(this);
 }

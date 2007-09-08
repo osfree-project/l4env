@@ -30,19 +30,11 @@
 #include <sys/socket.h>
 
 CSockBESizes::CSockBESizes()
-{
-}
-
-CSockBESizes::CSockBESizes(CSockBESizes & src)
-: CBESizes(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CSockBESizes::~CSockBESizes()
-{
-
-}
+{ }
 
 /** \brief calculate the maximum for a specific type
  *  \param nFEType the type to get the max-size for
@@ -50,9 +42,9 @@ CSockBESizes::~CSockBESizes()
  */
 int CSockBESizes::GetMaxSizeOfType(int /*nFEType*/)
 {
-    // for sockets, the maximum size is approximately 8KB,
-    // so we restrict this to 2KB, assuming we have a max of 4
-    // var sized parameters
-    // even if we would have more than 4, so what...;)
-    return 2048;
+	// for sockets, the maximum size is approximately 8KB,
+	// so we restrict this to 2KB, assuming we have a max of 4
+	// var sized parameters
+	// even if we would have more than 4, so what...;)
+	return 2048;
 }

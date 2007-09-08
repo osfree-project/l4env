@@ -155,7 +155,7 @@ VersionRep      [1-9][0-9]*([.,][0-9]+)?
     BEGIN(require);
             }
 <require>"\"".*"\"" {
-    // strip " from string
+    // strip "" from string
     string s(yytext);
     s = s.substr(1, s.length()-2);
     CCompiler::CheckRequire(s.c_str());

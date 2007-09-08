@@ -41,28 +41,22 @@
  */
 class CL4BECallFunction : public CBECallFunction
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor */
-    CL4BECallFunction();
-    ~CL4BECallFunction();
+	/** \brief constructor */
+	CL4BECallFunction();
+	~CL4BECallFunction();
 
-public:
-    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
-    virtual int GetSize(DIRECTION_TYPE nDirection);
+	virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+	virtual int GetSize(DIRECTION_TYPE nDirection);
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CL4BECallFunction(CL4BECallFunction & src);
-
-    virtual void WriteInvocation(CBEFile& pFile);
-    virtual void WriteIPCErrorCheck(CBEFile& pFile);
-    virtual void WriteVariableInitialization(CBEFile& pFile);
-    virtual void WriteUnmarshalling(CBEFile& pFile);
-    virtual void WriteIPC(CBEFile& pFile);
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+	virtual void WriteInvocation(CBEFile& pFile);
+	virtual void WriteIPCErrorCheck(CBEFile& pFile);
+	virtual void WriteVariableInitialization(CBEFile& pFile);
+	virtual void WriteUnmarshalling(CBEFile& pFile);
+	virtual void WriteIPC(CBEFile& pFile);
+	virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 };
 
 #endif                // !__DICE_L4BECALLFUNCTION_H__

@@ -32,12 +32,11 @@
 CFEExceptionAttribute::CFEExceptionAttribute(vector<CFEIdentifier*> *pExcepNames)
 : CFEAttribute(ATTR_EXCEPTIONS),
     m_ExceptionNames(pExcepNames, this)
-{
-}
+{ }
 
-CFEExceptionAttribute::CFEExceptionAttribute(CFEExceptionAttribute & src)
+CFEExceptionAttribute::CFEExceptionAttribute(CFEExceptionAttribute* src)
 : CFEAttribute(src),
-    m_ExceptionNames(src.m_ExceptionNames)
+    m_ExceptionNames(src->m_ExceptionNames)
 {
     m_ExceptionNames.Adopt(this);
 }
@@ -46,10 +45,10 @@ CFEExceptionAttribute::CFEExceptionAttribute(CFEExceptionAttribute & src)
 CFEExceptionAttribute::~CFEExceptionAttribute()
 { }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEExceptionAttribute::Clone()
 {
-    return new CFEExceptionAttribute(*this);
+	return new CFEExceptionAttribute(this);
 }

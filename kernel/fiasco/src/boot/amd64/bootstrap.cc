@@ -51,6 +51,31 @@ check_overlap (const char *str,
 
 typedef void (*Start)(Multiboot_info *, unsigned, unsigned) FIASCO_FASTCALL;
 
+void
+tweak_mem_desc(Kip *k, unsigned long limit)
+{
+  Mem_desc *m = k->mem_descs();
+  Mem_desc *const end = m + k->num_mem_descs();
+  for (; m < end; ++m)
+    {
+      if (m->type() == Mem_desc::Conventional)
+        {
+	  if (m->start() >= limit)
+	    {
+	      for (Mem_desc *i = m; i < end - 1; ++i)
+		*i = *(i + 1);
+
+	      (end - 1)->type(Mem_desc::Undefined);
+
+	      --m;
+	      continue;
+	    }
+	  if (m->end() >= limit)
+	      *m = Mem_desc(m->start(), limit - 1, m->type(), false, m->ext_type());
+        }
+    }
+}
+
 extern "C" FIASCO_FASTCALL
 void
 bootstrap (Multiboot_info *mbi, unsigned int flag)
@@ -67,6 +92,8 @@ bootstrap (Multiboot_info *mbi, unsigned int flag)
   base_paging_init();
 
   asm volatile ("" ::: "memory");
+
+  tweak_mem_desc(&my_kernel_info_page, (mbi->mem_upper + 1024) << 10);
 
   // this calculation must fit Kmem::init()!
   mem_max = (my_kernel_info_page.last_free().end + 1) & Config::PAGE_MASK;

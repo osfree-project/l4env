@@ -34,6 +34,7 @@ l4sigma0_map_mem(l4_threadid_t pager,
   l4_fpage_t   fpage;
   l4_umword_t  base;
   int          error;
+  l4_msgtag_t  tag;
 
 #ifndef SIGMA0_REQ_MAGIC
 #error Old sigma0 protocol, not supported anymore, upgrade!
@@ -52,11 +53,12 @@ l4sigma0_map_mem(l4_threadid_t pager,
     {
       do
 	{
-	  error = l4_ipc_call(pager,
-			      L4_IPC_SHORT_MSG, SIGMA0_REQ_FPAGE_RAM,
-			        l4_fpage(phys, l, 0, 0).fpage,
-			      L4_IPC_MAPMSG(virt, l), &base, &fpage.fpage,
-			      L4_IPC_NEVER, &result);
+	  tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
+	  error = l4_ipc_call_tag(pager,
+			          L4_IPC_SHORT_MSG, SIGMA0_REQ_FPAGE_RAM,
+			            l4_fpage(phys, l, 0, 0).fpage, tag,
+			          L4_IPC_MAPMSG(virt, l), &base, &fpage.fpage,
+			          L4_IPC_NEVER, &result, &tag);
 	}
       while (error == L4_IPC_SECANCELED || error == L4_IPC_SEABORTED);
 

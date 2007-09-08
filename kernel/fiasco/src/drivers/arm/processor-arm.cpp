@@ -142,6 +142,12 @@ IMPLEMENTATION[arm && (926 || arm11xx)]:
 IMPLEMENT static inline
 void Proc::pause()
 {
+}
+
+IMPLEMENT static inline
+void Proc::halt()
+{
+  Status f = cli_save();
   asm volatile("mov     r0, #0                                              \n\t"
 	       "mrc     p15, 0, r1, c1, c0, 0       @ Read control register \n\t"
 	       "mcr     p15, 0, r0, c7, c10, 4      @ Drain write buffer    \n\t"
@@ -154,14 +160,7 @@ void Proc::pause()
 	       "r6", "r7", "r8", "r9", "r10", "r11",
 	       "r12", "r13", "r14", "r15"
       );
-}
-
-IMPLEMENT static inline
-void Proc::halt()
-{
-  cli();
-  pause();
-  sti();
+  sti_restore(f);
 }
 
 //----------------------------------------------------------------

@@ -176,8 +176,7 @@ l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
     {
         LOG("invalid read request - not owning object");
         LOGd(_DEBUG,"owner="l4util_idfmt", requester="l4util_idfmt")",
-                l4util_idstr(clients[h].client),
-		l4util_idstr(*_dice_corba_obj));
+                l4util_idstr(clients[h].client), l4util_idstr(*_dice_corba_obj));
         *_dice_reply = DICE_REPLY;
         l4semaphore_up(&(clients[h].client_sem));
         return -EBADF;
@@ -187,6 +186,7 @@ l4vfs_common_io_read_component(CORBA_Object _dice_corba_obj,
     if (l4_is_invalid_id(clients[h].worker))
     {
         LOG("no worker thread for read, client");
+        *_dice_reply = DICE_REPLY;
         l4semaphore_up(&(clients[h].client_sem));
         return -EINVAL;
     }
@@ -218,7 +218,6 @@ void l4vfs_common_io_notify_read_notify_component(
     CORBA_Server_Environment *_dice_corba_env)
 {
     CORBA_Server_Environment env = dice_default_server_environment;
-    env.timeout = L4_IPC_NEVER;
 
     l4semaphore_down(&(clients[fd].client_sem));
     // we do not handle notify-calls from other tasks as a matter of security
@@ -235,7 +234,6 @@ void l4vfs_common_io_notify_read_notify_component(
         return;
     }
 
-    LOGd(_DEBUG, "replying '%s'", buf);
     l4semaphore_up(&(clients[fd].client_sem));
     l4vfs_common_io_read_reply((l4_threadid_t *)source, retval,
                                (char **)&buf, count, &env);
@@ -538,7 +536,7 @@ object_id_t l4vfs_basic_name_server_resolve_component(
 // Martin: this function will most probably never be called!
 // I think it is superflous, or am I wrong?
 //
-// Bjoern: It should not be a mistake to provide this function. At least 
+// Bjoern: It should not be a mistake to provide this function. At least
 //     rev_resolving works - maybe someone wants to use it later.
 char* l4vfs_basic_name_server_rev_resolve_component(
     CORBA_Object _dice_corba_obj,
@@ -708,3 +706,41 @@ l4vfs_basic_io_stat_component(CORBA_Object _dice_corba_obj,
 
     return 0;
 }
+
+void
+l4vfs_select_notify_clear_component(CORBA_Object _dice_corba_obj,
+                                    object_handle_t handle,
+                                    int mode,
+                                    const l4_threadid_t *notif_tid,
+                                    CORBA_Server_Environment *_dice_corba_env)
+{
+    int termno = clients[handle].object_id - 1;
+
+    l4semaphore_down(&clients[handle].client_sem);
+    /* Select cancelled, erase all info. */
+    vt100_unset_select_info(terms[termno].terminal);
+    l4semaphore_up(&clients[handle].client_sem);
+}
+
+
+void
+l4vfs_select_notify_request_component (CORBA_Object _dice_corba_obj,
+                                       object_handle_t handle,
+                                       int mode,
+                                       const l4_threadid_t *notif_tid,
+                                       CORBA_Server_Environment *_dice_corba_env)
+{
+    int termno = clients[handle].object_id - 1;
+
+    l4semaphore_down(&clients[handle].client_sem);
+
+    /* Store select info. */
+    vt100_set_select_info(terms[termno].terminal, handle, mode, notif_tid);
+
+    /* Immediately send notification if possible. */
+    if (vt100_data_avail(terms[termno].terminal)) 
+        vt100_select_notify(terms[termno].terminal);
+
+    l4semaphore_up(&clients[handle].client_sem);
+}
+

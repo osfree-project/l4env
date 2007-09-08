@@ -72,11 +72,10 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEEndPointAttribute(CFEEndPointAttribute &src);
+    CFEEndPointAttribute(CFEEndPointAttribute* src);
 
-// Operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
 
 // attributes
 public:

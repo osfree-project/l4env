@@ -47,9 +47,6 @@ public:
     virtual ~CSockBEUnmarshalFunction();
 
 protected:
-    /** \brief copy constructor */
-    CSockBEUnmarshalFunction(CSockBEUnmarshalFunction &src);
-
     virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 };
 

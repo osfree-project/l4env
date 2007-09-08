@@ -55,10 +55,6 @@ CBEUnmarshalFunction::CBEUnmarshalFunction()
  : CBEOperationFunction(FUNCTION_UNMARSHAL)
 { }
 
-CBEUnmarshalFunction::CBEUnmarshalFunction(CBEUnmarshalFunction & src)
- : CBEOperationFunction(src)
-{ }
-
 /** \brief destructor of target class */
 CBEUnmarshalFunction::~CBEUnmarshalFunction()
 { }
@@ -71,30 +67,31 @@ CBEUnmarshalFunction::~CBEUnmarshalFunction()
  * side an OUT parameters if it is on the client's side.
  */
 void
-CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation)
+CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBEUnmarshalFunction::%s(%s) called\n", __func__,
-	pFEOperation->GetName().c_str());
-    // set target file name
-    SetTargetFileName(pFEOperation);
-    SetFunctionName(pFEOperation, FUNCTION_UNMARSHAL);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEUnmarshalFunction::%s(%s) called\n", __func__,
+		pFEOperation->GetName().c_str());
+	// set target file name
+	SetTargetFileName(pFEOperation);
+	SetComponentSide(bComponentSide);
+	SetFunctionName(pFEOperation, FUNCTION_UNMARSHAL);
 
-    // add parameters
-    CBEOperationFunction::CreateBackEnd(pFEOperation);
+	// add parameters
+	CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
-    // set return type
-    if (IsComponentSide())
-	SetReturnVar(false, 0, TYPE_VOID, string());
-    // add message buffer
-    AddMessageBuffer(pFEOperation);
-    // add marshaller and communication class
-    CreateMarshaller();
-    CreateCommunication();
-    CreateTrace();
+	// set return type
+	if (IsComponentSide())
+		SetReturnVar(false, 0, TYPE_VOID, string());
+	// add message buffer
+	AddMessageBuffer(pFEOperation);
+	// add marshaller and communication class
+	CreateMarshaller();
+	CreateCommunication();
+	CreateTrace();
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"CBEUnmarshalFunction::%s returns\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBEUnmarshalFunction::%s returns\n", __func__);
 }
 
 /** \brief manipulate the message buffer

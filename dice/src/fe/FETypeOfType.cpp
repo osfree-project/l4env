@@ -35,21 +35,23 @@ CFETypeOfType::CFETypeOfType(CFEExpression *pExpression)
     m_pExpression = pExpression;
 }
 
-CFETypeOfType::CFETypeOfType(CFETypeOfType & src)
+CFETypeOfType::CFETypeOfType(CFETypeOfType* src)
   :  CFEConstructedType(src)
 {
-    m_pExpression = static_cast<CFEExpression*>(src.m_pExpression->Clone());
+	CLONE_MEM(CFEExpression, m_pExpression);
 }
 
 /** cleans up the pipe type object */
 CFETypeOfType::~CFETypeOfType()
 {
+	if (m_pExpression)
+		delete m_pExpression;
 }
 
-/** copies this object
- *  \return a reference to a new pipe type object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject *CFETypeOfType::Clone()
+CObject* CFETypeOfType::Clone()
 {
-    return new CFETypeOfType(*this);
+	return new CFETypeOfType(this);
 }

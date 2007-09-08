@@ -34,32 +34,20 @@ CFEStringAttribute::CFEStringAttribute(ATTR_TYPE nType, std::string string)
     m_String = string;
 }
 
-CFEStringAttribute::CFEStringAttribute(CFEStringAttribute & src)
+CFEStringAttribute::CFEStringAttribute(CFEStringAttribute* src)
 :CFEAttribute(src)
 {
-    m_String = src.m_String;
+    m_String = src->m_String;
 }
 
 /** cleans up the string attribute object */
 CFEStringAttribute::~CFEStringAttribute()
-{
+{ }
 
-}
-
-/** retrieves the contained string
- *  \return a reference to the string, which is parameter of this attribute
- * Because the returned string is only a reference to the member data, please copy
- * the string before you manipulate it.
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-std::string CFEStringAttribute::GetString()
+CObject* CFEStringAttribute::Clone()
 {
-    return m_String;
-}
-
-/** creates a copy of this object
- *  \return a copy of this object
- */
-CObject *CFEStringAttribute::Clone()
-{
-    return new CFEStringAttribute(*this);
+	return new CFEStringAttribute(this);
 }

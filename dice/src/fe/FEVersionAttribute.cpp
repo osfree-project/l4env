@@ -28,29 +28,37 @@
 
 #include "fe/FEVersionAttribute.h"
 
-CFEVersionAttribute::CFEVersionAttribute(int nMajor, int nMinor):CFEAttribute
-    (ATTR_VERSION)
+CFEVersionAttribute::CFEVersionAttribute(int nMajor, int nMinor)
+: CFEAttribute(ATTR_VERSION)
 {
     m_nMajor = nMajor;
     m_nMinor = nMinor;
 }
 
-CFEVersionAttribute::CFEVersionAttribute(version_t version):CFEAttribute(ATTR_VERSION)
+CFEVersionAttribute::CFEVersionAttribute(version_t version)
+: CFEAttribute(ATTR_VERSION)
 {
     m_nMajor = version.nMajor;
     m_nMinor = version.nMinor;
 }
 
-CFEVersionAttribute::CFEVersionAttribute(CFEVersionAttribute & src):CFEAttribute(src)
+CFEVersionAttribute::CFEVersionAttribute(CFEVersionAttribute* src)
+: CFEAttribute(src)
 {
-    m_nMajor = src.m_nMajor;
-    m_nMinor = src.m_nMinor;
+    m_nMajor = src->m_nMajor;
+    m_nMinor = src->m_nMinor;
 }
 
 /** clleans up the version attribute */
 CFEVersionAttribute::~CFEVersionAttribute()
+{ }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEVersionAttribute::Clone()
 {
-    // nothing to clean up
+	return new CFEVersionAttribute(this);
 }
 
 /** retrieves the version from the attribute
@@ -72,12 +80,4 @@ void CFEVersionAttribute::GetVersion(int &major, int &minor)
 {
     major = m_nMajor;
     minor = m_nMinor;
-}
-
-/** creates a copy of this object
- *  \return a copy of this object
- */
-CObject *CFEVersionAttribute::Clone()
-{
-    return new CFEVersionAttribute(*this);
 }

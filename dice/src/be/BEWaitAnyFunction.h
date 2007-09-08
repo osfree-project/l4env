@@ -49,12 +49,8 @@ public:
     CBEWaitAnyFunction(bool bOpenWait, bool bReply);
     virtual ~CBEWaitAnyFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBEWaitAnyFunction(CBEWaitAnyFunction &src);
-
 public:
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);

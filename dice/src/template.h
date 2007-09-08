@@ -29,6 +29,7 @@
 #define __DICE_TEMPLATE_H__
 
 #include "defines.h"
+#include "Object.h"
 #include <vector>
 using std::vector;
 #include <algorithm>
@@ -37,199 +38,198 @@ using std::vector;
 template<class T>
 class CCollection : public std::vector<T*>
 {
-    /** \var CObject *m_pParent
-     *  \brief reference to parent of members of this collection
-     */
-    CObject *m_pParent;
+	/** \var CObject *m_pParent
+	 *  \brief reference to parent of members of this collection
+	 */
+	CObject *m_pParent;
 
-    /** \brief hidden default constructor
-     */
-    CCollection()
-    {}
+	/** \brief hidden default constructor */
+	CCollection()
+	{ }
 
 protected:
-    /** \brief set the parent of a member
-     *  \param pNew the member
-     */
-    void SetParent(CObject * pNew)
-    {
-	if (!m_pParent)
-	    return;
-	if (!pNew)
-	    return;
-	pNew->SetParent(m_pParent);
-    }
+	/** \brief set the parent of a member
+	 *  \param pNew the member
+	 */
+	void SetParent(CObject * pNew)
+	{
+		if (!m_pParent)
+			return;
+		if (!pNew)
+			return;
+		pNew->SetParent(m_pParent);
+	}
+
+	class SetParentCall
+	{
+		CCollection *c;
+	public:
+		SetParentCall(CCollection *cc) : c(cc)
+		{ }
+
+		void operator() (T* mem)
+		{ c->SetParent(mem); }
+	};
 
 public:
-    /** \brief constructs new collection object
-     *  \param src the source vector (can be NULL)
-     *  \param pParent the parent of the elements (can be NULL)
-     */
-    CCollection(vector<T*> *src,
-	CObject *pParent)
-	: m_pParent(pParent)
-    {
-	Add(src);
-	Adopt(m_pParent);
-    }
-
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CCollection(CCollection<T> & src)
-	: vector<T*>()
-    {
-	m_pParent = src.m_pParent;
-	typename vector<T*>::iterator i;
-	for (i = src.begin();
-	     i != src.end();
-	     i++)
+	/** \brief constructs new collection object
+	 *  \param src the source vector (can be NULL)
+	 *  \param pParent the parent of the elements (can be NULL)
+	 */
+	CCollection(vector<T*> *src,
+		CObject *pParent)
+		: m_pParent(pParent)
 	{
-	    T* pNew = static_cast<T*>((*i)->Clone());
-	    push_back(pNew);
+		Add(src);
+		Adopt(m_pParent);
 	}
-	Adopt(m_pParent);
-    }
 
-    /** \brief destoys collection
-     *
-     * This implementation will not delete any members.
-     */
-    virtual ~CCollection()
-    {
-	while (!vector<T*>::empty())
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CCollection(CCollection<T>& src)
+		: vector<T*>()
 	{
-	    /* only delete members if we are parent */
-	    if (m_pParent)
-		delete vector<T*>::back();
-	    vector<T*>::pop_back();
+		m_pParent = src.m_pParent;
+		typename CCollection<T>::const_iterator i;
+		for (i = src.begin();
+			i != src.end();
+			i++)
+		{
+			push_back(static_cast<T*>((*i)->Clone()));
+		}
+		Adopt(m_pParent);
 	}
-    }
 
-    /** \brief add a new member and set its parent
-     *  \param pNew reference to new member, if NULL ignored
-     */
-    void Add(T* pNew)
-    {
-	if (!pNew)
-	    return;
-	vector<T*>::push_back(pNew);
-	SetParent(dynamic_cast<CObject*>(pNew));
-    }
+	/** \brief destoys collection
+	 *
+	 * This implementation will not delete any members.
+	 */
+	virtual ~CCollection()
+	{
+		while (!vector<T*>::empty())
+		{
+			/* only delete members if we are parent */
+			if (m_pParent)
+				delete vector<T*>::back();
+			vector<T*>::pop_back();
+		}
+	}
 
-    /** \brief adds a vector of new members
-     *  \param src the source vector
-     *
-     * Swaps the source vector with the internal members. This way all
-     * previous members are lost. Does not set the parent property of the
-     * members.
-     */
-    void Add(vector<T*> *src)
-    {
-        if (src)
-	    vector<T*>::swap(*src);
-    }
+	/** \brief add a new member and set its parent
+	 *  \param pNew reference to new member, if NULL ignored
+	 */
+	void Add(T* pNew)
+	{
+		if (!pNew)
+			return;
+		vector<T*>::push_back(pNew);
+		SetParent(dynamic_cast<CObject*>(pNew));
+	}
 
-    /** \brief return reference to firt element in vector or NULL if empty
-     *  \return reference to first element in vector
-     */
-    T* First()
-    {
-	if (vector<T*>::empty())
-	    return (T*)0;
-	return vector<T*>::front();
-    }
+	/** \brief adds a vector of new members
+	 *  \param src the source vector
+	 *
+	 * Swaps the source vector with the internal members. This way all
+	 * previous members are lost. Does not set the parent property of the
+	 * members.
+	 */
+	void Add(vector<T*> *src)
+	{
+		if (src)
+			vector<T*>::swap(*src);
+	}
 
-    class SetParentCall;
+	/** \brief return reference to firt element in vector or NULL if empty
+	 *  \return reference to first element in vector
+	 */
+	T* First()
+	{
+		if (vector<T*>::empty())
+			return (T*)0;
+		return vector<T*>::front();
+	}
 
-    /** \brief "adopt" all elements of the vector
-     *  \param pParent the new parent
-     */
-    void Adopt(CObject *pParent)
-    {
-	m_pParent = pParent;
+	/** \brief "adopt" all elements of the vector
+	 *  \param pParent the new parent
+	 */
+	void Adopt(CObject *pParent)
+	{
+		m_pParent = pParent;
 
-	for_each(vector<T*>::begin(),
-	    vector<T*>::end(),
-	    SetParentCall(this));
-    }
+		for_each(vector<T*>::begin(), vector<T*>::end(),
+			SetParentCall(this));
+	}
 
-    /** \brief remove an element from the collection
-     *  \param pRem the element to remove
-     */
-    void Remove(T* pRem)
-    {
-	if (!pRem)
-	    return;
-	typename vector<T*>::iterator i = std::find(vector<T*>::begin(),
-	    vector<T*>::end(), pRem);
-	if (i == vector<T*>::end())
-	    return;
-	erase(i);
-    }
+	/** \brief remove an element from the collection
+	 *  \param pRem the element to remove
+	 */
+	void Remove(T* pRem)
+	{
+		if (!pRem)
+			return;
+		typename vector<T*>::iterator i = std::find(vector<T*>::begin(),
+			vector<T*>::end(), pRem);
+		if (i == vector<T*>::end())
+			return;
+		erase(i);
+	}
 };
 
-template<class T>
-class CCollection<T>::SetParentCall {
-    CCollection *c;
-public:
-    SetParentCall(CCollection *cc) : c(cc) { }
-    void operator() (T* mem) { c->SetParent(mem); }
-};
 
 template<class T, typename KeyT>
 class CSearchableCollection : public CCollection<T>
 {
-    /** hidden implicit constructor */
-    CSearchableCollection()
-    { }
+	/** hidden implicit constructor */
+	CSearchableCollection()
+	{ }
 
 public:
-    /** \brief constructs collection from source vector
-     *  \param src the source vector to use
-     *  \param pParent the parent of the elements
-     */
-    CSearchableCollection(vector<T*> *src, CObject *pParent = 0)
-	: CCollection<T>(src, pParent)
-    { }
+	/** \brief constructs collection from source vector
+	 *  \param src the source vector to use
+	 *  \param pParent the parent of the elements
+	 */
+	CSearchableCollection(vector<T*> *src, CObject *pParent)
+		: CCollection<T>(src, pParent)
+	{ }
 
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CSearchableCollection(CSearchableCollection<T, KeyT> & src)
-	: CCollection<T>(src)
-    { }
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CSearchableCollection(CSearchableCollection<T, KeyT>& src)
+		: CCollection<T>(src)
+	{ }
 
-    /** \brief tries to find a member in the collection given a key
-     *  \param key the key to find the member
-     *  \param prev the previously found member
-     *  \return reference to the found member or NULL if not found
-     */
-    T* Find(KeyT key, T* prev = NULL)
-    {
-	typename vector<T*>::iterator i = vector<T*>::begin();
-	// if prev, find it in vector (we can savely add one to result,
-	// because prev _has_ to be a member and is thus before end())
-	if (prev)
-	    i = std::find(vector<T*>::begin(), vector<T*>::end(), prev) + 1;
-	// now we have previous member before iterator (or begin if no previous)
-	// and we can start the search
-	i = std::find_if(i, vector<T*>::end(), std::bind2nd(std::ptr_fun(Match), key));
-	if (i != vector<T*>::end())
-	    return *i;
-	return (T*)0;
-    }
+	/** \brief tries to find a member in the collection given a key
+	 *  \param key the key to find the member
+	 *  \param prev the previously found member
+	 *  \return reference to the found member or NULL if not found
+	 */
+	T* Find(KeyT key, T* prev = 0)
+	{
+		typename vector<T*>::iterator i = vector<T*>::begin();
+		// if prev, find it in vector (we can savely add one to result,
+		// because prev _has_ to be a member and is thus before end())
+		if (prev)
+			i = std::find(vector<T*>::begin(), vector<T*>::end(), prev) + 1;
+		// now we have previous member before iterator (or begin if no previous)
+		// and we can start the search
+		i = std::find_if(i, vector<T*>::end(), std::bind2nd(std::ptr_fun(Match), key));
+		if (i != vector<T*>::end())
+			return *i;
+		return (T*)0;
+	}
 
 private:
-    /** \brief alias function to call object's match function
-     *  \param o the object to use
-     *  \param k the key to find
-     *  \return true if object's Match function with k returns true
-     */
-    static bool Match(T* o, KeyT k)
-    {
-	return o->Match(k);
-    }
+	/** \brief alias function to call object's match function
+	 *  \param o the object to use
+	 *  \param k the key to find
+	 *  \return true if object's Match function with k returns true
+	 */
+	static bool Match(T* o, KeyT k)
+	{
+		return o->Match(k);
+	}
 };
 
 #endif /* __DICE_TEMPLATE_H__ */

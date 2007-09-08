@@ -390,7 +390,7 @@ l4vfs_net_io_getpeername_component (CORBA_Object _dice_corba_obj,
 
 	*actual_len = *addrlen;
 	err = getpeername(s,(struct sockaddr *) addr,actual_len);
-	LOG("Flips code %s", inet_ntoa(((struct sockaddr_in *)addr)->sin_addr));
+	LOGd(_DEBUG, "ip of peer: %s", inet_ntoa(((struct sockaddr_in *)addr)->sin_addr));
 
 	/* compute size of addr to send */
 	if (*addrlen > *actual_len)

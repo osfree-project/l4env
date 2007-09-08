@@ -39,23 +39,15 @@
  */
 class CFEFileComponent : public CFEBase
 {
-
-// standard constructor/destructor
-public:
-    CFEFileComponent(CFEBase* pParent);
-    virtual ~CFEFileComponent();
-
 protected:
-    /** \brief copy consrtructor
-     *  \param src the source to copy from
-     */
-    CFEFileComponent(CFEFileComponent &src);
+	CFEFileComponent(CFEFileComponent* src)
+		: CFEBase(static_cast<CFEBase*>(src))
+	{ }
 
-// Operations
 public:
-
-// Attributes
-protected:
+	CFEFileComponent(CObject* pParent)
+		: CFEBase(pParent)
+	{ }
 };
 
 #endif // __DICE_FE_FEFILECOMPONENT_H__

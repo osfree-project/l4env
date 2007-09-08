@@ -52,41 +52,50 @@ class CBEImplementationFile;
  */
 class CBEObject : public CObject
 {
-
-// standard constructor/destructor
 public:
-    /** constructs a back-end base object
-     *  \param pParent the parent object of this one */
-    CBEObject(CObject* pParent = 0);
-    virtual ~CBEObject();
+	/** constructs a back-end base object
+	 *  \param pParent the parent object of this one */
+	CBEObject(CObject* pParent = 0);
+	virtual ~CBEObject();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEObject(CBEObject &src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBEObject(CBEObject* src);
 
-// Operations
+	// Operations
 public:
-    virtual CObject * Clone();
-    virtual bool IsTargetFile(CBEImplementationFile* pFile);
-    virtual bool IsTargetFile(CBEHeaderFile* pFile);
-    virtual std::string GetTargetHeaderFileName();
-    virtual std::string GetTargetImplementationFileName();
+	virtual CObject* Clone();
+	virtual bool IsTargetFile(CBEImplementationFile* pFile);
+	virtual bool IsTargetFile(CBEHeaderFile* pFile);
+	virtual std::string GetTargetHeaderFileName();
+	virtual std::string GetTargetImplementationFileName();
 
 protected:
-    virtual void SetTargetFileName(CFEBase *pFEObject);
-    virtual void CreateBackEnd(CFEBase* pFEObject);
+	virtual void SetTargetFileName(CFEBase *pFEObject);
+	virtual void CreateBackEnd(CFEBase* pFEObject);
+
+	template<class C, class A>
+	class DoCall
+	{
+		C* c;
+		std::mem_fun1_t<void, C, A*> f;
+	public:
+		explicit DoCall(C* cc, void (C::*ff)(A* arg)) :
+			c(cc), f(ff) { }
+		void operator() (A* arg) { f(c, arg); }
+	};
 
 protected:
-    /** \var std::string m_sTargetHeader
-     *  \brief contains the calculated target file name  for the header file
-     */
-    std::string m_sTargetHeader;
-    /** \var std::string m_sTargetImplementation
-     *  \brief contains the calculated target file name  for the implementation file
-     */
-    std::string m_sTargetImplementation;
+	/** \var std::string m_sTargetHeader
+	 *  \brief contains the calculated target file name  for the header file
+	 */
+	std::string m_sTargetHeader;
+	/** \var std::string m_sTargetImplementation
+	 *  \brief contains the calculated target file name  for the implementation file
+	 */
+	std::string m_sTargetImplementation;
 };
 
 #endif // !__DICE_FE_BEOBJECT_H__

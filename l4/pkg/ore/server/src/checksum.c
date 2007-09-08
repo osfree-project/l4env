@@ -53,7 +53,7 @@ unsigned int adler32(unsigned char *buf, unsigned int len)
 }
 
 /* ORe with DDE2.6 uses the CRC implementations from Linux. */
-#ifndef CONFIG_ORE_DDE26
+#ifdef CONFIG_ORE_DDE24
 /* CRC16 checksum algorithm
  */
 unsigned short crc16(unsigned char *buf, int len, short magic) 

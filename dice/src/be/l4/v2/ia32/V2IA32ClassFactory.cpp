@@ -35,27 +35,20 @@
 
 CL4V2IA32BEClassFactory::CL4V2IA32BEClassFactory()
 : CL4V2BEClassFactory()
-{
-}
-
-CL4V2IA32BEClassFactory::CL4V2IA32BEClassFactory(CL4V2IA32BEClassFactory & src)
-: CL4V2BEClassFactory(src)
-{
-}
+{ }
 
 /**    \brief the destructor of this class */
 CL4V2IA32BEClassFactory::~CL4V2IA32BEClassFactory()
-{
-}
+{ }
 
 /** \brief creates a new sizes class
  *  \return a reference to the new sizes object
  */
 CBESizes * CL4V2IA32BEClassFactory::GetNewSizes()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CL4V2IA32BEClassFactory: created class CL4V2IA32BESizes\n");
-    return new CL4V2IA32BESizes();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4V2IA32BEClassFactory: created class CL4V2IA32BESizes\n");
+	return new CL4V2IA32BESizes();
 }
 
 /** \brief creates new communication class
@@ -63,7 +56,7 @@ CBESizes * CL4V2IA32BEClassFactory::GetNewSizes()
  */
 CBECommunication* CL4V2IA32BEClassFactory::GetNewCommunication()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CL4V2IA32BEClassFactory: created class CL4V2IA32BEIPC\n");
-    return new CL4V2IA32BEIPC();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4V2IA32BEClassFactory: created class CL4V2IA32BEIPC\n");
+	return new CL4V2IA32BEIPC();
 }

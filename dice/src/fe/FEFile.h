@@ -58,10 +58,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEFile(CFEFile &src);
+    CFEFile(CFEFile* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     std::string GetFullFileName();
     bool IsStdIncludeFile();
     int GetTypedefCount(bool bCountIncludes = true);
@@ -81,8 +82,6 @@ public:
     CFELibrary* FindLibrary(const char* sName);
     CFEInterface* FindInterface(std::string sName);
     CFEInterface* FindInterface(const char* sName);
-
-    virtual CObject* Clone();
 
     int GetIncludedOnLine();
 

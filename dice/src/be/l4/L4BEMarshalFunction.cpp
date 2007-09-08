@@ -41,19 +41,11 @@
 #include <cassert>
 
 CL4BEMarshalFunction::CL4BEMarshalFunction()
-{
-}
-
-CL4BEMarshalFunction::CL4BEMarshalFunction(CL4BEMarshalFunction & src)
-: CBEMarshalFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CL4BEMarshalFunction::~CL4BEMarshalFunction()
-{
-
-}
+{ }
 
 /** \brief write the L4 specific unmarshalling code
  *  \param pFile the file to write to
@@ -68,99 +60,97 @@ CL4BEMarshalFunction::~CL4BEMarshalFunction()
  * marshal exception
  * marshal rest
  */
-void
-CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
+void CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 {
-    bool bLocalTrace = false;
-    if (!m_bTraceOn && m_pTrace)
-    {
-	m_pTrace->BeforeMarshalling(pFile, this);
-	m_bTraceOn = bLocalTrace = true;
-    }
+	bool bLocalTrace = false;
+	if (!m_bTraceOn && m_pTrace)
+	{
+		m_pTrace->BeforeMarshalling(pFile, this);
+		m_bTraceOn = bLocalTrace = true;
+	}
 
-    CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
-    CMsgStructType nType = GetSendDirection();
-    bool bSendFpages = GetParameterCount(TYPE_FLEXPAGE, GetSendDirection()) > 0;
-    if (bSendFpages)
-    {
-        // if (env.major == CORBA_NO_EXCEPTION)
-        //   marshal flexpages
-        // else
-        //   marshal exception
-	CBETypedDeclarator *pEnv = GetEnvironment();
-        string sFreeFunc;
-        if (((CBEUserDefinedType*)pEnv->GetType())->GetName() ==
-            "CORBA_Server_Environment")
-            sFreeFunc = "CORBA_server_exception_free";
-        else
-            sFreeFunc = "CORBA_exception_free";
-        CBEDeclarator *pDecl = pEnv->m_Declarators.First();
-	string sEnv;
-	if (pDecl->GetStars() == 0)
-	    sEnv = "&";
-	sEnv += pDecl->GetName();
+	CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
+	CMsgStructType nType = GetSendDirection();
+	bool bSendFpages = GetParameterCount(TYPE_FLEXPAGE, GetSendDirection()) > 0;
+	if (bSendFpages)
+	{
+		// if (env.major == CORBA_NO_EXCEPTION)
+		//   marshal flexpages
+		// else
+		//   marshal exception
+		CBETypedDeclarator *pEnv = GetEnvironment();
+		string sFreeFunc;
+		if (((CBEUserDefinedType*)pEnv->GetType())->GetName() ==
+			"CORBA_Server_Environment")
+			sFreeFunc = "CORBA_server_exception_free";
+		else
+			sFreeFunc = "CORBA_exception_free";
+		CBEDeclarator *pDecl = pEnv->m_Declarators.First();
+		string sEnv;
+		if (pDecl->GetStars() == 0)
+			sEnv = "&";
+		sEnv += pDecl->GetName();
 
-	pFile << "\tif (DICE_EXPECT_TRUE(DICE_IS_NO_EXCEPTION(" <<
-	    sEnv << ")))\n";
-	pFile << "\t{\n";
-        ++pFile;
-        CBEOperationFunction::WriteMarshalling(pFile);
-	--pFile << "\t}\n";
-	pFile << "\telse\n";
-	pFile << "\t{\n";
-        ++pFile;
-        WriteMarshalException(pFile, true, false);
-        // clear exception
-        pFile << "\t" << sFreeFunc << "(" << sEnv << ");\n";
+		pFile << "\tif (DICE_EXPECT_TRUE(DICE_IS_NO_EXCEPTION(" <<
+			sEnv << ")))\n";
+		pFile << "\t{\n";
+		++pFile;
+		CBEOperationFunction::WriteMarshalling(pFile);
+		--pFile << "\t}\n";
+		pFile << "\telse\n";
+		pFile << "\t{\n";
+		++pFile;
+		WriteMarshalException(pFile, true, false);
+		// clear exception
+		pFile << "\t" << sFreeFunc << "(" << sEnv << ");\n";
+		// set send dope
+		pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
+			nType);
+		// write return (don't marshal any parameters if exception)
+		WriteReturn(pFile);
+		--pFile << "\t}\n";
+	}
+	else
+		CBEMarshalFunction::WriteMarshalling(pFile);
+
 	// set send dope
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-	    nType);
-	// write return (don't marshal any parameters if exception)
-	WriteReturn(pFile);
-	--pFile << "\t}\n";
-    }
-    else
-        CBEMarshalFunction::WriteMarshalling(pFile);
+		nType);
+	// if we had send flexpages,we have to set the flexpage bit
+	if (bSendFpages)
+	{
+		pFile << "\t";
+		pMsgBuffer->WriteMemberAccess(pFile, this, nType,
+			TYPE_MSGDOPE_SEND, 0);
+		pFile << ".md.fpage_received = 1;\n";
+	}
 
-    // set send dope
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-	nType);
-    // if we had send flexpages,we have to set the flexpage bit
-    if (bSendFpages)
-    {
-	pFile << "\t";
-	pMsgBuffer->WriteMemberAccess(pFile, this, nType,
-	    TYPE_MSGDOPE_SEND, 0);
-	pFile << ".md.fpage_received = 1;\n";
-    }
-
-    if (bLocalTrace)
-    {
-	m_pTrace->AfterMarshalling(pFile, this);
-	m_bTraceOn = false;
-    }
+	if (bLocalTrace)
+	{
+		m_pTrace->AfterMarshalling(pFile, this);
+		m_bTraceOn = false;
+	}
 }
 
 /** \brief test if this function has variable sized parameters (needed to \
  *         specify temp + offset var)
  *  \return true if variable sized parameters are needed
  */
-bool
-CL4BEMarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
+bool CL4BEMarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 {
-    bool bRet =
-	CBEMarshalFunction::HasVariableSizedParameters(nDirection);
-    bool bFixedNumberOfFlexpages = true;
-    CBEClass *pClass = GetSpecificParent<CBEClass>();
-    assert(pClass);
-    pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
-    // if no flexpages, return
-    if (!bFixedNumberOfFlexpages)
-        return true;
-    // if we have indirect strings to marshal then we need the offset vars
-    if (GetParameterCount(ATTR_REF, ATTR_NONE, nDirection))
-        return true;
-    return bRet;
+	bool bRet =
+		CBEMarshalFunction::HasVariableSizedParameters(nDirection);
+	bool bFixedNumberOfFlexpages = true;
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
+	// if no flexpages, return
+	if (!bFixedNumberOfFlexpages)
+		return true;
+	// if we have indirect strings to marshal then we need the offset vars
+	if (GetParameterCount(ATTR_REF, ATTR_NONE, nDirection))
+		return true;
+	return bRet;
 }
 
 /** \brief calculates the size of the function's parameters
@@ -172,12 +162,12 @@ CL4BEMarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
  */
 int CL4BEMarshalFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
-    int nSize = CBEMarshalFunction::GetFixedSize(nDirection);
-    if ((nDirection & DIRECTION_OUT) &&
-        !m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
-        (GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
-        nSize -= CCompiler::GetSizes()->GetExceptionSize();
-    return nSize;
+	int nSize = CBEMarshalFunction::GetFixedSize(nDirection);
+	if ((nDirection & DIRECTION_OUT) &&
+		!m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
+		(GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
+		nSize -= CCompiler::GetSizes()->GetExceptionSize();
+	return nSize;
 }
 
 /** \brief calculates the size of the function's parameters

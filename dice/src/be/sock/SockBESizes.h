@@ -47,10 +47,6 @@ public:
     CSockBESizes();
     virtual ~CSockBESizes();
 
-protected:
-    /** \brief copy constructor */
-    CSockBESizes(CSockBESizes &src);
-
 public:
     virtual int GetMaxSizeOfType(int nFEType);
 

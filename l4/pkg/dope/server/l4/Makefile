@@ -29,7 +29,6 @@ ifeq ($(ARCH),amd64)
 COL_MODE         = multi
 endif
 
-DEFINES_donsched-client.c = -Ddonsched_recv_any=dummy_donsched_recv_any
 CFLAGS_donsched-client.c = -ffunction-sections
 
 SRC_C            = messenger.c vscr_server.c  donsched.c  \

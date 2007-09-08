@@ -83,8 +83,8 @@ public: // Public methods
     { return GetName() == sName; }
 
     CBEConstant* FindConstant(std::string sConstantName);
-    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef* pPrev = NULL);
-    CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = NULL);
+    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef* pPrev = 0);
+    CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = 0);
     CBENameSpace* FindNameSpace(std::string sNameSpaceName);
     CBEType* FindTaggedType(int nType, std::string sTag);
     CBEEnumType* FindEnum(std::string sName);

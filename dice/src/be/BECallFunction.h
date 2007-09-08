@@ -48,12 +48,8 @@ public:
     CBECallFunction();
     virtual ~CBECallFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBECallFunction(CBECallFunction &src);
-
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);

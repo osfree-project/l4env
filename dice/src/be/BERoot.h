@@ -70,20 +70,14 @@ public:
     CBERoot();
     ~CBERoot();
 
-protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBERoot(CBERoot &src);
-
 public: // Public methods
     void Write();
     void CreateBE(CFEFile *pFEFile);
 
-    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef *pPrev = NULL);
+    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef *pPrev = 0);
     CBEConstant* FindConstant(std::string sConstantName);
     CBENameSpace* FindNameSpace(std::string sNameSpaceName);
-    CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = NULL);
+    CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = 0);
     CBEType* FindTaggedType(unsigned int nType, std::string sTag);
     CBEFunction* FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType);
     CBEEnumType* FindEnum(std::string sEnumerator);
@@ -101,8 +95,6 @@ protected: // Protected methods
     void CreateBackEnd(CFETypedDeclarator *pFETypedef);
     void CreateBackEnd(CFEFile *pFEFile);
     void CreateBackEnd(CFEConstructedType *pFEType);
-
-    template<class T> friend class CreateCall;
 
 protected:
     /** \var CBEClient *m_pClient

@@ -57,12 +57,12 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEEnumType(CFEEnumType &src);
+    CFEEnumType(CFEEnumType* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     virtual void Accept(CVisitor&);
-    virtual CObject* Clone();
 
 // atributes
 public:

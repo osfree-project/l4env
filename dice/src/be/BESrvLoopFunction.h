@@ -52,12 +52,8 @@ public:
     CBESrvLoopFunction();
     virtual ~CBESrvLoopFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBESrvLoopFunction(CBESrvLoopFunction &src);
-
 public:
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual DIRECTION_TYPE GetReceiveDirection();

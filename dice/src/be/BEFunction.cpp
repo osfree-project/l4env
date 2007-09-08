@@ -80,38 +80,39 @@ CBEFunction::CBEFunction(FUNCTION_TYPE nFunctionType)
     m_bTraceOn = false;
 }
 
-CBEFunction::CBEFunction(CBEFunction & src)
-: CBEObject(src),
-  m_Attributes(src.m_Attributes),
-  m_Exceptions(src.m_Exceptions),
-  m_Parameters(src.m_Parameters),
-  m_CallParameters(src.m_CallParameters),
-  m_LocalVariables(src.m_LocalVariables)
+CBEFunction::CBEFunction(CBEFunction* src)
+	: m_Attributes(src->m_Attributes),
+	m_Exceptions(src->m_Exceptions),
+	m_Parameters(src->m_Parameters),
+	m_CallParameters(src->m_CallParameters),
+	m_LocalVariables(src->m_LocalVariables)
 {
-    m_sName = src.m_sName;
-    m_sOriginalName = src.m_sOriginalName;
-    m_sOpcodeConstName = src.m_sOpcodeConstName;
-    m_pClass = src.m_pClass; // don't clone "parent" class -> needs to stay the same
-    m_pTarget = src.m_pTarget; // don't clone target side -> needs to stay the same
-    CLONE_MEM(CBEMsgBuffer, m_pMsgBuffer);
-    CLONE_MEM(CBETypedDeclarator, m_pCorbaObject);
-    CLONE_MEM(CBETypedDeclarator, m_pCorbaEnv);
-    CLONE_MEM(CBECommunication, m_pComm);
-    CLONE_MEM(CBEMarshaller, m_pMarshaller);
+    m_pClass = src->m_pClass;
+    m_pTarget = src->m_pTarget;
+    m_nParameterIndent = src->m_nParameterIndent;
+    m_bComponentSide = src->m_bComponentSide;
+    m_bCastMsgBufferOnCall = src->m_bCastMsgBufferOnCall;
+    m_nFunctionType = src->m_nFunctionType;
+    m_bTraceOn = src->m_bTraceOn;
 
-    m_Attributes.Adopt(this);
-    m_Exceptions.Adopt(this);
-    m_Parameters.Adopt(this);
-    m_CallParameters.Adopt(this);
-    m_LocalVariables.Adopt(this);
+	m_Attributes.Adopt(this);
+	m_Exceptions.Adopt(this);
+	m_Parameters.Adopt(this);
+	m_CallParameters.Adopt(this);
+	m_LocalVariables.Adopt(this);
 
-    m_nParameterIndent = src.m_nParameterIndent;
-    m_bCastMsgBufferOnCall = src.m_bCastMsgBufferOnCall;
-    m_bComponentSide = src.m_bComponentSide;
-    m_nFunctionType = src.m_nFunctionType;
-
-    m_pTrace = 0;
-    m_bTraceOn = false;
+	CLONE_MEM(CBEMsgBuffer, m_pMsgBuffer);
+	CLONE_MEM(CBETypedDeclarator, m_pCorbaObject);
+	CLONE_MEM(CBETypedDeclarator, m_pCorbaEnv);
+	CLONE_MEM(CBECommunication, m_pComm);
+	CLONE_MEM(CBEMarshaller, m_pMarshaller);
+	if (src->m_pTrace)
+	{
+		CBEClassFactory *pCF = CCompiler::GetClassFactory();
+		m_pTrace = pCF->GetNewTrace();
+	}
+	else
+		m_pTrace = 0;
 }
 
 /** \brief destructor of target class
@@ -122,18 +123,18 @@ CBEFunction::CBEFunction(CBEFunction & src)
  */
 CBEFunction::~CBEFunction()
 {
-    if (m_pMsgBuffer)
-        delete m_pMsgBuffer;
-    if (m_pCorbaObject)
-        delete m_pCorbaObject;
-    if (m_pCorbaEnv)
-        delete m_pCorbaEnv;
-    if (m_pComm)
-        delete m_pComm;
-    if (m_pMarshaller)
-	delete m_pMarshaller;
-    if (m_pTrace)
-	delete m_pTrace;
+	if (m_pMsgBuffer)
+		delete m_pMsgBuffer;
+	if (m_pCorbaObject)
+		delete m_pCorbaObject;
+	if (m_pCorbaEnv)
+		delete m_pCorbaEnv;
+	if (m_pComm)
+		delete m_pComm;
+	if (m_pMarshaller)
+		delete m_pMarshaller;
+	if (m_pTrace)
+		delete m_pTrace;
 }
 
 /** \brief retrieves the return type of the function
@@ -1155,12 +1156,7 @@ CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
     m_pMsgBuffer->CreateBackEnd(pFEOperation);
 
     // add platform specific members
-    if (!m_pMsgBuffer->AddPlatformSpecificMembers(this))
-    {
-	exc += " failed because platform specific members caused problems.";
-	throw new error::create_error(exc);
-    }
-
+    m_pMsgBuffer->AddPlatformSpecificMembers(this);
     // function specific initialization
     MsgBufferInitialization(m_pMsgBuffer);
 
@@ -1717,22 +1713,6 @@ void CBEFunction::AddToHeader(CBEHeaderFile* pHeader)
         pHeader->m_Functions.Add(this);
 }
 
-/** \brief checks if this function belings to the component side
- *  \return true if true
- */
-bool CBEFunction::IsComponentSide()
-{
-    return m_bComponentSide;
-}
-
-/** \brief sets the communication side
- *  \param bComponentSide if true its the component's side, if false the client's
- */
-void CBEFunction::SetComponentSide(bool bComponentSide)
-{
-    m_bComponentSide = bComponentSide;
-}
-
 /** \brief adds this function to the implementation file
  *  \param pImpl the implementation file
  *
@@ -1851,11 +1831,12 @@ DIRECTION_TYPE CBEFunction::GetReceiveDirection()
  * I cannot think of a reasonable split structure.
  */
 void
-CBEFunction::CreateBackEnd(CFEBase *pFEObject)
+CBEFunction::CreateBackEnd(CFEBase *pFEObject, bool bComponentSide)
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
     // call CBEObject's CreateBackEnd method
+	SetComponentSide(bComponentSide);
     CBEObject::CreateBackEnd(pFEObject);
 
     // init CORBA Object
@@ -1907,12 +1888,12 @@ CBEFunction::CreateCommunication()
 void
 CBEFunction::CreateTrace()
 {
-    if (m_pTrace)
-	delete m_pTrace;
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    m_pTrace = pCF->GetNewTrace();
-    if (m_pTrace)
-	m_pTrace->AddLocalVariable(this);
+	if (m_pTrace)
+		delete m_pTrace;
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	m_pTrace = pCF->GetNewTrace();
+	if (m_pTrace)
+		m_pTrace->AddLocalVariable(this);
 }
 
 /** \brief creates the CORBA_Object variable (and member)
@@ -1949,25 +1930,35 @@ CBEFunction::CreateObject()
 void
 CBEFunction::CreateEnvironment()
 {
-    // clean up
-    if (m_pCorbaEnv)
-    {
-        delete m_pCorbaEnv;
-        m_pCorbaEnv = 0;
-    }
+	// clean up
+	if (m_pCorbaEnv)
+	{
+		delete m_pCorbaEnv;
+		m_pCorbaEnv = 0;
+	}
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    // if function is at server side, this is a CORBA_Server_Environment
-    string sTypeName;
-    if (IsComponentSide())
-        sTypeName = "CORBA_Server_Environment";
-    else
-        sTypeName = "CORBA_Environment";
-    string sName = pNF->GetCorbaEnvironmentVariable();
-    m_pCorbaEnv = pCF->GetNewTypedDeclarator();
-    m_pCorbaEnv->SetParent(this);
-    m_pCorbaEnv->CreateBackEnd(sTypeName, sName, 1);
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	// if function is at server side, this is a CORBA_Server_Environment
+	string sTypeName;
+	if (IsComponentSide())
+		sTypeName = "CORBA_Server_Environment";
+	else
+		sTypeName = "CORBA_Environment";
+	string sName = pNF->GetCorbaEnvironmentVariable();
+	m_pCorbaEnv = pCF->GetNewTypedDeclarator();
+	m_pCorbaEnv->SetParent(this);
+	m_pCorbaEnv->CreateBackEnd(sTypeName, sName, 1);
+}
+
+/** \brief sets the corba-environment member
+ *  \param pEnv the new member
+ */
+void CBEFunction::SetEnvironment(CBETypedDeclarator* pEnv)
+{
+	if (m_pCorbaEnv)
+		delete m_pCorbaEnv;
+	m_pCorbaEnv = pEnv;
 }
 
 /** \brief sets the second declarator of the typed decl to the name and stars
@@ -2155,35 +2146,35 @@ CBEFunction::FindParameterIsAttribute(ATTR_TYPE nAttributeType,
  */
 string CBEFunction::GetExceptionWordInitString()
 {
-    string sInitString;
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
-    {
-	// ((dice_CORBA_exception_type){ _corba: { .major = env.major, .repos_id = env.repos_id }})._raw
-	sInitString =
-	    string("((dice_CORBA_exception_type){ _corba: { .major = ");
-	// add variable name of envrionment
-	CBEDeclarator *pDecl = m_pCorbaEnv->m_Declarators.First();
-	sInitString += "DICE_EXCEPTION_MAJOR(";
-	if (pDecl->GetStars() == 0)
-	    sInitString += "&";
-	sInitString += pDecl->GetName();
-	sInitString += "), .repos_id = DICE_EXCEPTION_MINOR(";
-	if (pDecl->GetStars() == 0)
-	    sInitString += "&";
-	sInitString += pDecl->GetName();
-	sInitString += ") }})._raw";
-    }
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-    {
-	CBEDeclarator *pDecl = m_pCorbaEnv->m_Declarators.First();
-	sInitString = pDecl->GetName();
-	if (pDecl->GetStars() == 0)
-	    sInitString += ".";
-	else
-	    sInitString += "->";
-	sInitString += "_exception._raw";
-    }
-    return sInitString;
+	string sInitString;
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
+	{
+		// ((dice_CORBA_exception_type){ _corba: { .major = env.major, .repos_id = env.repos_id }})._raw
+		sInitString =
+			string("((dice_CORBA_exception_type){ _corba: { .major = ");
+		// add variable name of envrionment
+		CBEDeclarator *pDecl = m_pCorbaEnv->m_Declarators.First();
+		sInitString += "DICE_EXCEPTION_MAJOR(";
+		if (pDecl->GetStars() == 0)
+			sInitString += "&";
+		sInitString += pDecl->GetName();
+		sInitString += "), .repos_id = DICE_EXCEPTION_MINOR(";
+		if (pDecl->GetStars() == 0)
+			sInitString += "&";
+		sInitString += pDecl->GetName();
+		sInitString += ") }})._raw";
+	}
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	{
+		CBEDeclarator *pDecl = m_pCorbaEnv->m_Declarators.First();
+		sInitString = pDecl->GetName();
+		if (pDecl->GetStars() == 0)
+			sInitString += ".";
+		else
+			sInitString += "->";
+		sInitString += "_exception._raw";
+	}
+	return sInitString;
 }
 
 /** \brief writes the initialization of the exception word variable
@@ -2354,7 +2345,7 @@ CBEFunction::SetFunctionName(CFEOperation *pFEOperation,
     FUNCTION_TYPE nFunctionType)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    m_sName = pNF->GetFunctionName(pFEOperation, nFunctionType);
+    m_sName = pNF->GetFunctionName(pFEOperation, nFunctionType, IsComponentSide());
     m_sOriginalName = pFEOperation->GetName();
 }
 
@@ -2367,7 +2358,7 @@ CBEFunction::SetFunctionName(CFEInterface *pFEInterface,
     FUNCTION_TYPE nFunctionType)
 {
     CBENameFactory *pNF = CCompiler::GetNameFactory();
-    m_sName = pNF->GetFunctionName(pFEInterface, nFunctionType);
+    m_sName = pNF->GetFunctionName(pFEInterface, nFunctionType, IsComponentSide());
     m_sOriginalName = string();
 }
 

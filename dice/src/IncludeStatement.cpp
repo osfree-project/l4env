@@ -46,13 +46,13 @@ CIncludeStatement::CIncludeStatement(bool bIDLFile,
 
 CIncludeStatement::CIncludeStatement(const CIncludeStatement &src)
 : CObject(src),
-  m_bIDLFile(src.m_bIDLFile),
-  m_bStandard(src.m_bStandard),
-  m_bImport(src.m_bImport),
-  m_sFilename(src.m_sFilename),
-  m_sFromFile(src.m_sFromFile),
-  m_sPath(src.m_sPath),
-  m_nLineNb(src.m_nLineNb)
+	m_bIDLFile(src.m_bIDLFile),
+	m_bStandard(src.m_bStandard),
+	m_bImport(src.m_bImport),
+	m_sFilename(src.m_sFilename),
+	m_sFromFile(src.m_sFromFile),
+	m_sPath(src.m_sPath),
+	m_nLineNb(src.m_nLineNb)
 { }
 
 CIncludeStatement::~CIncludeStatement()

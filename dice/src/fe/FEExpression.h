@@ -89,12 +89,12 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEExpression(CFEExpression &src);
+    CFEExpression(CFEExpression* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     virtual std::string ToString();
-    virtual CObject* Clone();
     virtual bool IsOfType(unsigned int nType);
     virtual int GetIntValue();
     virtual EXPR_TYPE GetType();

@@ -33,17 +33,22 @@
 #include "TypeSpec-Type.h"
 
 CBEReplyCodeType::CBEReplyCodeType()
-{
-}
-
-CBEReplyCodeType::CBEReplyCodeType(CBEReplyCodeType & src):CBEType(src)
-{
-}
+{ }
 
 /** \brief destructor of this instance */
 CBEReplyCodeType::~CBEReplyCodeType()
-{
+{ }
 
+CBEReplyCodeType::CBEReplyCodeType(CBEReplyCodeType* src)
+: CBEType(src)
+{ }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CBEReplyCodeType::Clone()
+{
+	return new CBEReplyCodeType(this);
 }
 
 /** \brief creates the back-end structure for a type class for opcodes
@@ -52,27 +57,18 @@ CBEReplyCodeType::~CBEReplyCodeType()
  * This implementation sets the basic members, but uses special values,
  * specific for opcodes.
  */
-void
-CBEReplyCodeType::CreateBackEnd()
+void CBEReplyCodeType::CreateBackEnd()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBEReplyCodeType::%s() called\n", __func__);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEReplyCodeType::%s() called\n", __func__);
 
-    m_bUnsigned = false;
-    m_nSize = 2;    // bytes
-    m_nFEType = TYPE_INTEGER;
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    m_sName = pNF->GetTypeName(m_nFEType, false, m_nSize);
+	m_bUnsigned = false;
+	m_nSize = 2;    // bytes
+	m_nFEType = TYPE_INTEGER;
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	m_sName = pNF->GetTypeName(m_nFEType, false, m_nSize);
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"CBEReplyCodeType::%s() returns\n", __func__);
-}
-
-/** \brief generates an exact copy of this class
- *  \return a reference to the new object
- */
-CObject *CBEReplyCodeType::Clone()
-{
-    return new CBEReplyCodeType(*this);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBEReplyCodeType::%s() returns\n", __func__);
 }
 

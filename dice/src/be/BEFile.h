@@ -56,147 +56,143 @@ class CIncludeStatement;
  */
 class CBEFile : public std::ofstream, public CObject
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEFile();
-    virtual ~CBEFile();
+	/** \brief constructor
+	 */
+	CBEFile();
+	virtual ~CBEFile();
 
-    /** maimum possible indent */
-    const static unsigned int MAX_INDENT;
-    /** the standard indentation value */
-    const static unsigned int STD_INDENT;
-
-protected:
-    /** \brief copy constructor */
-    CBEFile(CBEFile &src);
+	/** maimum possible indent */
+	const static unsigned int MAX_INDENT;
+	/** the standard indentation value */
+	const static unsigned int STD_INDENT;
 
 public:
-    /** \brief write the file */
-    virtual void Write() = 0;
+	/** \brief write the file */
+	virtual void Write() = 0;
 
-    /** \brief creating class
-     *  \param pFEOperation the operation to use as source
-     *  \param nFileType the type of the file
-     */
-    virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType) = 0;
-    /** \brief creating class
-     *  \param pFEInterface the interface to use as source
-     *  \param nFileType the type of the file
-     */
-    virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType) = 0;
-    /** \brief creating class
-     *  \param pFELibrary the library to use as source
-     *  \param nFileType the type of the file
-     */
-    virtual void CreateBackEnd(CFELibrary *pFELibrary, FILE_TYPE nFileType) = 0;
-    /** \brief creating class
-     *  \param pFEFile the file to use as source
-     *  \param nFileType the type of the file
-     */
-    virtual void CreateBackEnd(CFEFile *pFEFile, FILE_TYPE nFileType) = 0;
-    /** \brief return the name of the file
-     *  \return the name of the currently open file, 0 if no file is open
-     */
-    std::string GetFileName() const
-    { return m_sFilename; }
-    /** \brief return the current indent
-     *  \return the current indent
-     */
-    unsigned int GetIndent() const
-    { return m_nIndent; }
+	/** \brief creating class
+	 *  \param pFEOperation the operation to use as source
+	 *  \param nFileType the type of the file
+	 */
+	virtual void CreateBackEnd(CFEOperation *pFEOperation, FILE_TYPE nFileType) = 0;
+	/** \brief creating class
+	 *  \param pFEInterface the interface to use as source
+	 *  \param nFileType the type of the file
+	 */
+	virtual void CreateBackEnd(CFEInterface *pFEInterface, FILE_TYPE nFileType) = 0;
+	/** \brief creating class
+	 *  \param pFELibrary the library to use as source
+	 *  \param nFileType the type of the file
+	 */
+	virtual void CreateBackEnd(CFELibrary *pFELibrary, FILE_TYPE nFileType) = 0;
+	/** \brief creating class
+	 *  \param pFEFile the file to use as source
+	 *  \param nFileType the type of the file
+	 */
+	virtual void CreateBackEnd(CFEFile *pFEFile, FILE_TYPE nFileType) = 0;
+	/** \brief return the name of the file
+	 *  \return the name of the currently open file, 0 if no file is open
+	 */
+	std::string GetFileName() const
+	{ return m_sFilename; }
+	/** \brief return the current indent
+	 *  \return the current indent
+	 */
+	unsigned int GetIndent() const
+	{ return m_nIndent; }
 
-    virtual CBEFunction* FindFunction(std::string sFunctionName,
-	FUNCTION_TYPE nFunctionType);
-    virtual CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = NULL);
-    virtual CBENameSpace* FindNameSpace(std::string sNameSpaceName);
+	virtual CBEFunction* FindFunction(std::string sFunctionName,
+		FUNCTION_TYPE nFunctionType);
+	virtual CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = 0);
+	virtual CBENameSpace* FindNameSpace(std::string sNameSpaceName);
 
-    virtual void AddIncludedFileName(std::string sFileName, bool bIDLFile,
-	    bool bIsStandardInclude, CObject* pRefObj = 0);
+	virtual void AddIncludedFileName(std::string sFileName, bool bIDLFile,
+		bool bIsStandardInclude, CObject* pRefObj = 0);
 
-    virtual bool IsOfFileType(FILE_TYPE nFileType);
-    virtual bool HasFunctionWithUserType(std::string sTypeName);
+	virtual bool IsOfFileType(FILE_TYPE nFileType);
+	virtual bool HasFunctionWithUserType(std::string sTypeName);
 
-    CBEFile& operator++();
-    CBEFile& operator--();
-    CBEFile& operator+=(int);
-    CBEFile& operator-=(int);
-    using std::ofstream::operator<<;
-    std::ofstream& operator<<(std::string s);
-    std::ofstream& operator<<(char const * s);
-    std::ofstream& operator<<(char* s);
-
-protected:
-    /** \brief write a function
-     *  \param pFunction the function to write
-     */
-    virtual void WriteFunction(CBEFunction *pFunction) = 0;
-    virtual void WriteDefaultIncludes();
-    virtual void WriteInclude(CIncludeStatement* pInclude);
-    /** \brief writes a namespace
-     *  \param pNameSpace the namespace to write
-     */
-    virtual void WriteNameSpace(CBENameSpace *pNameSpace) = 0;
-    /** \brief writes a class
-     *  \param pClass the class to write
-     */
-    virtual void WriteClass(CBEClass *pClass) = 0;
-    virtual void WriteIntro();
-    virtual int GetFunctionCount();
-
-    virtual void WriteHelperFunctions();
-
-    virtual void CreateOrderedElementList();
-    void InsertOrderedElement(CObject *pObj);
-
-    virtual void PrintIndent();
+	CBEFile& operator++();
+	CBEFile& operator--();
+	CBEFile& operator+=(int);
+	CBEFile& operator-=(int);
+	using std::ofstream::operator<<;
+	std::ofstream& operator<<(std::string s);
+	std::ofstream& operator<<(char const * s);
+	std::ofstream& operator<<(char* s);
 
 protected:
-    /** \var FILE_TYPE m_nFileType
-     *  \brief contains the type of the file
-     */
-    FILE_TYPE m_nFileType;
-    /** \var vector<CObject*> m_vOrderedElements
-     *  \brief contains ordered list of elements
-     */
-    vector<CObject*> m_vOrderedElements;
-    /** \var std::string m_sFilename
-     *  \brief the file's name
-     */
-    std::string m_sFilename;
-    /** \var int m_nIndent
-     *  \brief the current valid indent, when printing to the file
-     */
-    unsigned int m_nIndent;
-    /** \var m_nLastIndent
-     *  \brief remembers last increment
-     */
-    int m_nLastIndent;
+	/** \brief write a function
+	 *  \param pFunction the function to write
+	 */
+	virtual void WriteFunction(CBEFunction *pFunction) = 0;
+	virtual void WriteDefaultIncludes();
+	virtual void WriteInclude(CIncludeStatement* pInclude);
+	/** \brief writes a namespace
+	 *  \param pNameSpace the namespace to write
+	 */
+	virtual void WriteNameSpace(CBENameSpace *pNameSpace) = 0;
+	/** \brief writes a class
+	 *  \param pClass the class to write
+	 */
+	virtual void WriteClass(CBEClass *pClass) = 0;
+	virtual void WriteIntro();
+	virtual int GetFunctionCount();
+
+	virtual void WriteHelperFunctions();
+
+	virtual void CreateOrderedElementList();
+	void InsertOrderedElement(CObject *pObj);
+
+	virtual void PrintIndent();
+
+protected:
+	/** \var FILE_TYPE m_nFileType
+	 *  \brief contains the type of the file
+	 */
+	FILE_TYPE m_nFileType;
+	/** \var vector<CObject*> m_vOrderedElements
+	 *  \brief contains ordered list of elements
+	 */
+	vector<CObject*> m_vOrderedElements;
+	/** \var std::string m_sFilename
+	 *  \brief the file's name
+	 */
+	std::string m_sFilename;
+	/** \var int m_nIndent
+	 *  \brief the current valid indent, when printing to the file
+	 */
+	unsigned int m_nIndent;
+	/** \var m_nLastIndent
+	 *  \brief remembers last increment
+	 */
+	int m_nLastIndent;
 
 
 public:
-    /** \var CSearchableCollection<CBEClass, std::string> m_Classes
-     *  \brief contains all classes, which belong to this file
-     */
-    CSearchableCollection<CBEClass, std::string> m_Classes;
-    /** \var CSearchableCollection<CBENameSpace, std::string> m_NameSpaces
-     *  \brief contains all namespaces, which belong to this file
-     */
-    CSearchableCollection<CBENameSpace, std::string> m_NameSpaces;
-    /** \var CCollection<CBEFunction> m_Functions
-     *  \brief contains the functions, which belong to this file
-     */
-    CCollection<CBEFunction> m_Functions;
-    /** \var CSearchableCollection<CIncludeStatement, std::string> m_IncludedFiles
-     *  \brief contains the names of the included files
-     *
-     * This is an array of strings, because a file may not only include
-     * CBEFile-represented files, but also other files. For instance C-header
-     * files. Therefore it is more convenient to store the names of the files,
-     * than to create CBEFiles for the C-header files as well.
-     */
-    CSearchableCollection<CIncludeStatement, std::string> m_IncludedFiles;
+	/** \var CSearchableCollection<CBEClass, std::string> m_Classes
+	 *  \brief contains all classes, which belong to this file
+	 */
+	CSearchableCollection<CBEClass, std::string> m_Classes;
+	/** \var CSearchableCollection<CBENameSpace, std::string> m_NameSpaces
+	 *  \brief contains all namespaces, which belong to this file
+	 */
+	CSearchableCollection<CBENameSpace, std::string> m_NameSpaces;
+	/** \var CCollection<CBEFunction> m_Functions
+	 *  \brief contains the functions, which belong to this file
+	 */
+	CCollection<CBEFunction> m_Functions;
+	/** \var CSearchableCollection<CIncludeStatement, std::string> m_IncludedFiles
+	 *  \brief contains the names of the included files
+	 *
+	 * This is an array of strings, because a file may not only include
+	 * CBEFile-represented files, but also other files. For instance C-header
+	 * files. Therefore it is more convenient to store the names of the files,
+	 * than to create CBEFiles for the C-header files as well.
+	 */
+	CSearchableCollection<CIncludeStatement, std::string> m_IncludedFiles;
 };
 
 #endif // !__DICE_BEFILE_H__

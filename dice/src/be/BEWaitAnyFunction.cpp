@@ -50,25 +50,16 @@ CBEWaitAnyFunction::CBEWaitAnyFunction(bool bOpenWait, bool bReply)
 	(bReply ? FUNCTION_REPLY_WAIT : FUNCTION_WAIT_ANY) :
 	(bReply ? FUNCTION_REPLY_RECV : FUNCTION_RECV_ANY))
 {
-    m_bOpenWait = bOpenWait;
-    m_bReply = bReply;
-    /* reply is only allowed with open wait */
-    if (bReply)
-	assert(bOpenWait);
-}
-
-CBEWaitAnyFunction::CBEWaitAnyFunction(CBEWaitAnyFunction & src)
-: CBEInterfaceFunction(src)
-{
-    m_bOpenWait = src.m_bOpenWait;
-    m_bReply = src.m_bReply;
+	m_bOpenWait = bOpenWait;
+	m_bReply = bReply;
+	/* reply is only allowed with open wait */
+	if (bReply)
+		assert(bOpenWait);
 }
 
 /** \brief destructor of target class */
 CBEWaitAnyFunction::~CBEWaitAnyFunction()
-{
-
-}
+{ }
 
 /** \brief creates the wait-any function for the given interface
  *  \param pFEInterface the respective front-end interface
@@ -79,61 +70,62 @@ CBEWaitAnyFunction::~CBEWaitAnyFunction()
  * message buffer.
  */
 void
-CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface)
+CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
-    FUNCTION_TYPE nFunctionType = FUNCTION_NONE;
-    if (m_bOpenWait)
-    {
-	if (m_bReply)
-	    nFunctionType = FUNCTION_REPLY_WAIT;
+	FUNCTION_TYPE nFunctionType = FUNCTION_NONE;
+	if (m_bOpenWait)
+	{
+		if (m_bReply)
+			nFunctionType = FUNCTION_REPLY_WAIT;
+		else
+			nFunctionType = FUNCTION_WAIT_ANY;
+	}
 	else
-	    nFunctionType = FUNCTION_WAIT_ANY;
-    }
-    else
-	nFunctionType = FUNCTION_RECV_ANY;
-    // set target file name
-    SetTargetFileName(pFEInterface);
-    // name of the function
-    SetFunctionName(pFEInterface, nFunctionType);
+		nFunctionType = FUNCTION_RECV_ANY;
+	// set target file name
+	SetTargetFileName(pFEInterface);
+	// name of the function
+	SetComponentSide(bComponentSide);
+	SetFunctionName(pFEInterface, nFunctionType);
 
-    CBEInterfaceFunction::CreateBackEnd(pFEInterface);
-    // set source line number to last number of interface
-    m_sourceLoc.setBeginLine(pFEInterface->m_sourceLoc.getEndLine());
+	CBEInterfaceFunction::CreateBackEnd(pFEInterface, bComponentSide);
+	// set source line number to last number of interface
+	m_sourceLoc.setBeginLine(pFEInterface->m_sourceLoc.getEndLine());
 
-    string exc = string(__func__);
-    // return type -> set to opcode
-    // if return var is parameter do not delete it
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sOpcodeVar = pNF->GetOpcodeVariable();
-    if (!SetReturnVar(CCompiler::GetClassFactory()->GetNewOpcodeType(),
-	    sOpcodeVar))
-    {
-	exc += " failed because return var could not be created.";
-	throw new error::create_error(exc);
-    }
-    // set to zero init it
-    CBETypedDeclarator *pReturn = GetReturnVariable();
-    pReturn->SetDefaultInitString("0");
+	string exc = string(__func__);
+	// return type -> set to opcode
+	// if return var is parameter do not delete it
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sOpcodeVar = pNF->GetOpcodeVariable();
+	if (!SetReturnVar(CCompiler::GetClassFactory()->GetNewOpcodeType(),
+			sOpcodeVar))
+	{
+		exc += " failed because return var could not be created.";
+		throw new error::create_error(exc);
+	}
+	// set to zero init it
+	CBETypedDeclarator *pReturn = GetReturnVariable();
+	pReturn->SetDefaultInitString("0");
 
-    AddMessageBuffer();
-    // add marshaller and communication class
-    CreateMarshaller();
-    CreateCommunication();
-    CreateTrace();
+	AddMessageBuffer();
+	// add marshaller and communication class
+	CreateMarshaller();
+	CreateCommunication();
+	CreateTrace();
 
-    // add parameters
-    AddParameters();
+	// add parameters
+	AddParameters();
 
-    // if any of the interface's functions has the sched_donate attribute set,
-    // we should be able to reply with shceduling donation as well. Search for
-    // this attribute
-    if (m_pClass && m_pClass->HasFunctionWithAttribute(ATTR_SCHED_DONATE))
-    {
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBEAttribute *pAttr = pCF->GetNewAttribute();
-	m_Attributes.Add(pAttr);
-	pAttr->CreateBackEnd(ATTR_SCHED_DONATE);
-    }
+	// if any of the interface's functions has the sched_donate attribute set,
+	// we should be able to reply with shceduling donation as well. Search for
+	// this attribute
+	if (m_pClass && m_pClass->HasFunctionWithAttribute(ATTR_SCHED_DONATE))
+	{
+		CBEClassFactory *pCF = CCompiler::GetClassFactory();
+		CBEAttribute *pAttr = pCF->GetNewAttribute();
+		m_Attributes.Add(pAttr);
+		pAttr->CreateBackEnd(ATTR_SCHED_DONATE);
+	}
 }
 
 /** \brief writes the variable initializations of this function
@@ -169,20 +161,20 @@ CBEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
 void
 CBEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
 {
-    bool bLocalTrace = false;
-    if (!m_bTraceOn && m_pTrace)
-    {
-	m_pTrace->BeforeUnmarshalling(pFile, this);
-	m_bTraceOn = bLocalTrace = true;
-    }
+	bool bLocalTrace = false;
+	if (!m_bTraceOn && m_pTrace)
+	{
+		m_pTrace->BeforeUnmarshalling(pFile, this);
+		m_bTraceOn = bLocalTrace = true;
+	}
 
-    WriteMarshalReturn(pFile, false);
+	WriteMarshalReturn(pFile, false);
 
-    if (bLocalTrace)
-    {
-	m_pTrace->AfterUnmarshalling(pFile, this);
-	m_bTraceOn = false;
-    }
+	if (bLocalTrace)
+	{
+		m_pTrace->AfterUnmarshalling(pFile, this);
+		m_bTraceOn = false;
+	}
 }
 
 /** \brief check if this parameter is marshalled
@@ -197,11 +189,11 @@ bool
 CBEWaitAnyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
     bool bMarshal)
 {
-    CBETypedDeclarator *pReturn = GetReturnVariable();
-    if (!bMarshal &&
-	(pParameter == pReturn))
-	return true;
-    return false;
+	CBETypedDeclarator *pReturn = GetReturnVariable();
+	if (!bMarshal &&
+		(pParameter == pReturn))
+		return true;
+	return false;
 }
 
 /** \brief test if this function should be written
@@ -213,17 +205,30 @@ CBEWaitAnyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  * A receive-any function is only written if the PROGRAM_GENERATE_MESSAGE
  * option is set. Then it is created for the client's as well as the
  * component's side.
+ *
+ * Because the component side determines the function name, we have to
+ * differentiate based on IsComponentSide().
  */
 bool
 CBEWaitAnyFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
-    if (!IsTargetFile(pFile))
+	if (!IsTargetFile(pFile))
+		return false;
+	if (m_bOpenWait)
+		// this test is true for m_bReply (true or false)
+		return pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+			IsComponentSide();
+	// closed wait
+	if (CCompiler::IsOptionSet(PROGRAM_GENERATE_MESSAGE))
+	{
+		if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+			IsComponentSide())
+			return true;
+		if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+			!IsComponentSide())
+			return true;
+	}
 	return false;
-    if (m_bOpenWait)
-	// this test is true for m_bReply (true or false)
-	return pFile->IsOfFileType(FILETYPE_COMPONENT);
-    else
-	return CCompiler::IsOptionSet(PROGRAM_GENERATE_MESSAGE);
 }
 
 /** \brief test if this function should be written
@@ -235,17 +240,30 @@ CBEWaitAnyFunction::DoWriteFunction(CBEHeaderFile* pFile)
  * A receive-any function is only written if the PROGRAM_GENERATE_MESSAGE
  * option is set. Then it is created for the client's as well as the
  * component's side.
+ *
+ * Because the component side determines the function name, we have to
+ * differentiate based on IsComponentSide().
  */
 bool
 CBEWaitAnyFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
-    if (!IsTargetFile(pFile))
+	if (!IsTargetFile(pFile))
+		return false;
+	if (m_bOpenWait)
+		// this test is true for m_bReply (true or false)
+		return pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+			IsComponentSide();
+	// closed wait
+	if (CCompiler::IsOptionSet(PROGRAM_GENERATE_MESSAGE))
+	{
+		if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
+			IsComponentSide())
+			return true;
+		if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
+			!IsComponentSide())
+			return true;
+	}
 	return false;
-    if (m_bOpenWait)
-	// this test is true for m_bReply (true or false)
-	return pFile->IsOfFileType(FILETYPE_COMPONENT);
-    else
-	return CCompiler::IsOptionSet(PROGRAM_GENERATE_MESSAGE);
 }
 
 /** \brief write a single parameter to the target file
@@ -260,10 +278,10 @@ CBEWaitAnyFunction::WriteParameter(CBEFile& pFile,
     CBETypedDeclarator * pParameter,
     bool bUseConst)
 {
-    if (pParameter == GetObject())
-	CBEInterfaceFunction::WriteParameter(pFile, pParameter, false);
-    else
-	CBEInterfaceFunction::WriteParameter(pFile, pParameter, bUseConst);
+	if (pParameter == GetObject())
+		CBEInterfaceFunction::WriteParameter(pFile, pParameter, false);
+	else
+		CBEInterfaceFunction::WriteParameter(pFile, pParameter, bUseConst);
 }
 
 /** \brief writes the definition of the function to the target file
@@ -282,18 +300,18 @@ CBEWaitAnyFunction::WriteParameter(CBEFile& pFile,
 void
 CBEWaitAnyFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-    if (!pFile.is_open())
-        return;
+	if (!pFile.is_open())
+		return;
 
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBEWaitAnyFunction::%s(%s) in %s called\n", __func__,
-	pFile.GetFileName().c_str(), GetName().c_str());
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEWaitAnyFunction::%s(%s) in %s called\n", __func__,
+		pFile.GetFileName().c_str(), GetName().c_str());
 
-    if (pFile.IsOfFileType(FILETYPE_IMPLEMENTATION) &&
-	!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-	pFile << "\tinline" << std::endl;
+	if (pFile.IsOfFileType(FILETYPE_COMPONENTIMPLEMENTATION) &&
+		!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+		pFile << "\tinline" << std::endl;
 
-    CBEInterfaceFunction::WriteFunctionDefinition(pFile);
+	CBEInterfaceFunction::WriteFunctionDefinition(pFile);
 }
 
 /** \brief tries to find a parameter by its type
@@ -302,19 +320,19 @@ CBEWaitAnyFunction::WriteFunctionDefinition(CBEFile& pFile)
  */
 CBETypedDeclarator * CBEWaitAnyFunction::FindParameterType(string sTypeName)
 {
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    if (pMsgBuffer)
-    {
-	CBEType *pType = pMsgBuffer->GetType();
-	if (dynamic_cast<CBEUserDefinedType*>(pType))
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	if (pMsgBuffer)
 	{
-	    if (((CBEUserDefinedType*)pType)->GetName() == sTypeName)
-		return pMsgBuffer;
+		CBEType *pType = pMsgBuffer->GetType();
+		if (dynamic_cast<CBEUserDefinedType*>(pType))
+		{
+			if (((CBEUserDefinedType*)pType)->GetName() == sTypeName)
+				return pMsgBuffer;
+		}
+		if (pType->HasTag(sTypeName))
+			return pMsgBuffer;
 	}
-	if (pType->HasTag(sTypeName))
-	    return pMsgBuffer;
-    }
-    return CBEInterfaceFunction::FindParameterType(sTypeName);
+	return CBEInterfaceFunction::FindParameterType(sTypeName);
 }
 
 /** \brief gets the direction for the sending data
@@ -341,10 +359,10 @@ DIRECTION_TYPE CBEWaitAnyFunction::GetReceiveDirection()
  */
 void CBEWaitAnyFunction::WriteAccessSpecifier(CBEHeaderFile& pFile)
 {
-    if (!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-	return;
+	if (!CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+		return;
 
-    --pFile << "\tprotected:\n";
-    ++pFile;
+	--pFile << "\tprotected:\n";
+	++pFile;
 }
 

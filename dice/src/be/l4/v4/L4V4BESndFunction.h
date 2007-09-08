@@ -47,7 +47,7 @@ public:
 public:
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
     virtual int GetSize(DIRECTION_TYPE nDirection);
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 
 protected:
     virtual void WriteMarshalling(CBEFile& pFile);

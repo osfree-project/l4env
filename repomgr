@@ -70,6 +70,7 @@ my %modules =
                     l4/pkg/roottask
                     l4/pkg/sigma0
                     l4/pkg/thread
+                    l4/pkg/uclibc++
 		    ) ], },
 
    l4env_tools => {
@@ -166,6 +167,7 @@ my %modules =
                       l4/pkg/cpu_reserve
                       l4/pkg/cxx_linux_io
                       l4/pkg/cxx_log_io
+		      l4/pkg/dde
                       l4/pkg/dde_linux
                       l4/pkg/dde_linux26
                       l4/pkg/dice_hello
@@ -176,9 +178,11 @@ my %modules =
                       l4/pkg/ipreg
                       l4/pkg/l4ide
                       l4/pkg/l4vfs
+		      l4/pkg/libcrypto
                       l4/pkg/libpng
                       l4/pkg/libvfb
                       l4/pkg/linux-26-headers
+		      l4/pkg/lyon
                       l4/pkg/local_socks
                       l4/pkg/nethub
                       l4/pkg/nitpicker
@@ -191,7 +195,7 @@ my %modules =
                       l4/pkg/rt_mon
                       l4/pkg/signal
                       l4/pkg/socket_linux
-                      l4/pkg/uclibc++
+		      l4/pkg/stpm
                       l4/pkg/verner
                      ) ],
    },

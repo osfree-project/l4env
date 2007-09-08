@@ -32,12 +32,13 @@ l4sigma0_map_anypage(l4_threadid_t pager, l4_addr_t map_area,
   int error;
   l4_umword_t fpage;
   l4_msgdope_t result;
+  l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
 
-  error = l4_ipc_call(pager,
-		      L4_IPC_SHORT_MSG, SIGMA0_REQ_FPAGE_ANY,
-		        l4_fpage(0, L4_LOG2_PAGESIZE, 0, 0).fpage,
-		      L4_IPC_MAPMSG(map_area, log2_map_size),
-		      base, &fpage, L4_IPC_NEVER, &result);
+  error = l4_ipc_call_tag(pager,
+		          L4_IPC_SHORT_MSG, SIGMA0_REQ_FPAGE_ANY,
+		          l4_fpage(0, L4_LOG2_PAGESIZE, 0, 0).fpage, tag,
+		          L4_IPC_MAPMSG(map_area, log2_map_size),
+		          base, &fpage, L4_IPC_NEVER, &result, &tag);
 
   if (error)
     return -2;

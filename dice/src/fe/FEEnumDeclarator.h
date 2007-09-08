@@ -47,7 +47,7 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEEnumDeclarator(CFEEnumDeclarator &src);
+    CFEEnumDeclarator(CFEEnumDeclarator* src);
 public:
     /** \brief default constructor */
     CFEEnumDeclarator();
@@ -59,8 +59,8 @@ public:
     virtual ~CFEEnumDeclarator();
 
 public:
-    virtual CObject* Clone();
     virtual CFEExpression* GetInitialValue();
+	virtual CObject* Clone();
 
 protected:
     /** \var CFEExpression* m_pInitialValue

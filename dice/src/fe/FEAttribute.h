@@ -41,8 +41,6 @@
  */
 class CFEAttribute : public CFEBase
 {
-
-
 // standard constructor/destructor
 public:
     /** constructs an attrbiute (standard constructor) */
@@ -57,11 +55,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEAttribute(CFEAttribute &src);
+    CFEAttribute(CFEAttribute* src);
 
 //operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
     virtual ATTR_TYPE GetAttrType();
     bool Match(ATTR_TYPE type);
 

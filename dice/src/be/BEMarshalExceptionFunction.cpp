@@ -40,32 +40,26 @@
 
 CBEMarshalExceptionFunction::CBEMarshalExceptionFunction()
  : CBEOperationFunction(FUNCTION_MARSHAL_EXCEPTION)
-{
-}
-
-CBEMarshalExceptionFunction::CBEMarshalExceptionFunction(CBEMarshalExceptionFunction & src)
-: CBEOperationFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CBEMarshalExceptionFunction::~CBEMarshalExceptionFunction()
-{
-}
+{ }
 
 /** \brief creates the back-end marshal function for exceptions
  *  \param pFEOperation the corresponding front-end operation
  */
 void
-CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation)
+CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
     // set target file name
     SetTargetFileName(pFEOperation);
     // set function name
+	SetComponentSide(bComponentSide);
     SetFunctionName(pFEOperation, FUNCTION_MARSHAL_EXCEPTION);
 
     // add parameters
-    CBEOperationFunction::CreateBackEnd(pFEOperation);
+    CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
     // replace return variable. Do this before parameter initialisation, so it
     // will _not_ be added to the message buffer.

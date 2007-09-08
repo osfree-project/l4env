@@ -65,60 +65,60 @@ CBEAttribute::CBEAttribute()
     m_nMinorVersion = 0;
 }
 
-CBEAttribute::CBEAttribute(CBEAttribute & src)
+CBEAttribute::CBEAttribute(CBEAttribute* src)
 : CBEObject(src),
   m_pPtrDefault(0),
   m_sString(),
   m_pType(0),
-  m_Parameters(src.m_Parameters)
+  m_Parameters(src->m_Parameters)
 {
-    // init everything with default values
-    m_vPortSpecs.clear();
-    m_vExceptions.clear();
-    m_nIntValue = 0;
-    m_Parameters.Adopt(this);
-    m_nMajorVersion = 0;
-    m_nMinorVersion = 0;
-    // depending on type do specialized init
-    m_nAttrClass = src.m_nAttrClass;
-    m_nType = src.m_nType;
-    switch (m_nType)
-    {
-    case ATTR_VERSION:    // version
-        m_nMajorVersion = src.m_nMajorVersion;
-        m_nMinorVersion = src.m_nMinorVersion;
-        break;
-    case ATTR_UUID:        // string
-    case ATTR_HELPFILE:    // string
-    case ATTR_HELPSTRING:    // string
-	m_sString = src.m_sString;
-	break;
-    case ATTR_LCID:        // int
-    case ATTR_HELPCONTEXT:    // int
-	m_nIntValue = src.m_nIntValue;
-	break;
-    case ATTR_SWITCH_IS:    // Is
-    case ATTR_FIRST_IS:    // IS
-    case ATTR_LAST_IS:    // Is
-    case ATTR_LENGTH_IS:    // Is
-    case ATTR_MIN_IS:    // Is
-    case ATTR_MAX_IS:    // Is
-    case ATTR_SIZE_IS:    // Is
-    case ATTR_IID_IS:    // Is
-	if (m_nAttrClass == ATTR_CLASS_STRING)
-	    m_sString = src.m_sString;
-	else if (m_nAttrClass == ATTR_CLASS_INT)
-	    m_nIntValue = src.m_nIntValue;
-	// m_Parameters has been copied alread (empty or full)
-        break;
-    case ATTR_TRANSMIT_AS:    // type
-    case ATTR_SWITCH_TYPE:    // type
-	CLONE_MEM(CBEType, m_pType);
-        break;
-    default:
-        // nothing to be done
-        break;
-    }
+	// init everything with default values
+	m_vPortSpecs.clear();
+	m_vExceptions.clear();
+	m_nIntValue = 0;
+	m_Parameters.Adopt(this);
+	m_nMajorVersion = 0;
+	m_nMinorVersion = 0;
+	// depending on type do specialized init
+	m_nAttrClass = src->m_nAttrClass;
+	m_nType = src->m_nType;
+	switch (m_nType)
+	{
+	case ATTR_VERSION:    // version
+		m_nMajorVersion = src->m_nMajorVersion;
+		m_nMinorVersion = src->m_nMinorVersion;
+		break;
+	case ATTR_UUID:        // string
+	case ATTR_HELPFILE:    // string
+	case ATTR_HELPSTRING:    // string
+		m_sString = src->m_sString;
+		break;
+	case ATTR_LCID:        // int
+	case ATTR_HELPCONTEXT:    // int
+		m_nIntValue = src->m_nIntValue;
+		break;
+	case ATTR_SWITCH_IS:    // Is
+	case ATTR_FIRST_IS:    // IS
+	case ATTR_LAST_IS:    // Is
+	case ATTR_LENGTH_IS:    // Is
+	case ATTR_MIN_IS:    // Is
+	case ATTR_MAX_IS:    // Is
+	case ATTR_SIZE_IS:    // Is
+	case ATTR_IID_IS:    // Is
+		if (m_nAttrClass == ATTR_CLASS_STRING)
+			m_sString = src->m_sString;
+		else if (m_nAttrClass == ATTR_CLASS_INT)
+			m_nIntValue = src->m_nIntValue;
+		// m_Parameters has been copied alread (empty or full)
+		break;
+	case ATTR_TRANSMIT_AS:    // type
+	case ATTR_SWITCH_TYPE:    // type
+		CLONE_MEM(CBEType, m_pType);
+		break;
+	default:
+		// nothing to be done
+		break;
+	}
 }
 
 /** \brief destructor of this instance */
@@ -126,6 +126,14 @@ CBEAttribute::~CBEAttribute()
 {
     if (m_pType)
         delete m_pType;
+}
+
+/** \brief create a copy of this object
+ *  \return a reference to the clone
+ */
+CObject* CBEAttribute::Clone()
+{
+	return new CBEAttribute(this);
 }
 
 /** \brief prepares this instance for the code generation
@@ -342,72 +350,72 @@ CBEAttribute::CreateBackEndString(CFEStringAttribute * pFEstringAttribute)
 void
 CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
 {
-    vector<CFEDeclarator*>::iterator iterAP;
-    for (iterAP = pFEIsAttribute->m_AttrParameters.begin();
-	 iterAP != pFEIsAttribute->m_AttrParameters.end();
-	 iterAP++)
-    {
-	string exc = string(__func__);
-        CBEDeclarator *pDeclarator = 0;
-        string sName = (*iterAP)->GetName();
-	// if this attribute belongs to a parameter of a function, we should
-	// get a function here
-	CBETypedDeclarator *pParameter = 0;
-        // check if we can find a parameter of this function with this name
-        CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-        if (pFunction)
-            pParameter = pFunction->FindParameter(sName);
-        // if no function or parameter found, check if constructed type
-        CBEStructType *pStruct = GetSpecificParent<CBEStructType>();
-        if (!pParameter && pStruct)
-            pParameter = pStruct->m_Members.Find(sName);
-        if (!pParameter)
-        {
-            // not found -> the parameter might be declared after its use
-            // -> we search the FE function for the parameter
-            CFEOperation *pOperation =
-		pFEIsAttribute->GetSpecificParent<CFEOperation>();
-            CFEStructType *pFEStruct =
-		pFEIsAttribute->GetSpecificParent<CFEStructType>();
-            CFETypedDeclarator *pFEParameter = 0;
-            if (pOperation)
-                pFEParameter = pOperation->FindParameter(sName);
-            if (!pFEParameter && pFEStruct)
-                pFEParameter = pFEStruct->FindMember(sName);
-            // check const if no parameter or struct member found
-            CFEConstDeclarator *pFEConstant = 0;
-            if (!pFEParameter)
-            {
-                // the declarator might be a constant -> search for this one
-                CFEFile *pFERoot = pFEIsAttribute->GetRoot();
-                assert(pFERoot);
-                pFEConstant = pFERoot->FindConstDeclarator(sName);
-            }
-            if (!pFEParameter && !pFEConstant)
-            {
-                // the is attribute has no parameter
-		exc += " failed because the IS-attribute's parameter (" +
-		    sName + ") is no function parameter or constant.";
-                throw new error::create_error(exc);
-            }
-	    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-            pDeclarator = pCF->GetNewDeclarator();
-            AddIsParameter(pDeclarator);
-    	    pDeclarator->CreateBackEnd(*iterAP);
-        }
-        else
-        {
-            pDeclarator = pParameter->m_Declarators.Find(sName);
-	    assert(pDeclarator);
-	    CBEDeclarator *pNew = static_cast<CBEDeclarator*>(pDeclarator->Clone());
-            AddIsParameter(pNew);
-        }
-        if (!pDeclarator)
-        {
-	    exc += ": Attribute " + sName + " is declared in invalid context.";
-            throw new error::create_error(exc);
-        }
-    }
+	vector<CFEDeclarator*>::iterator iterAP;
+	for (iterAP = pFEIsAttribute->m_AttrParameters.begin();
+		iterAP != pFEIsAttribute->m_AttrParameters.end();
+		iterAP++)
+	{
+		string exc = string(__func__);
+		CBEDeclarator *pDeclarator = 0;
+		string sName = (*iterAP)->GetName();
+		// if this attribute belongs to a parameter of a function, we should
+		// get a function here
+		CBETypedDeclarator *pParameter = 0;
+		// check if we can find a parameter of this function with this name
+		CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+		if (pFunction)
+			pParameter = pFunction->FindParameter(sName);
+		// if no function or parameter found, check if constructed type
+		CBEStructType *pStruct = GetSpecificParent<CBEStructType>();
+		if (!pParameter && pStruct)
+			pParameter = pStruct->m_Members.Find(sName);
+		if (!pParameter)
+		{
+			// not found -> the parameter might be declared after its use
+			// -> we search the FE function for the parameter
+			CFEOperation *pOperation =
+				pFEIsAttribute->GetSpecificParent<CFEOperation>();
+			CFEStructType *pFEStruct =
+				pFEIsAttribute->GetSpecificParent<CFEStructType>();
+			CFETypedDeclarator *pFEParameter = 0;
+			if (pOperation)
+				pFEParameter = pOperation->FindParameter(sName);
+			if (!pFEParameter && pFEStruct)
+				pFEParameter = pFEStruct->FindMember(sName);
+			// check const if no parameter or struct member found
+			CFEConstDeclarator *pFEConstant = 0;
+			if (!pFEParameter)
+			{
+				// the declarator might be a constant -> search for this one
+				CFEFile *pFERoot = pFEIsAttribute->GetRoot();
+				assert(pFERoot);
+				pFEConstant = pFERoot->FindConstDeclarator(sName);
+			}
+			if (!pFEParameter && !pFEConstant)
+			{
+				// the is attribute has no parameter
+				exc += " failed because the IS-attribute's parameter (" +
+					sName + ") is no function parameter or constant.";
+				throw new error::create_error(exc);
+			}
+			CBEClassFactory *pCF = CCompiler::GetClassFactory();
+			pDeclarator = pCF->GetNewDeclarator();
+			AddIsParameter(pDeclarator);
+			pDeclarator->CreateBackEnd(*iterAP);
+		}
+		else
+		{
+			pDeclarator = pParameter->m_Declarators.Find(sName);
+			assert(pDeclarator);
+			CBEDeclarator *pNew = static_cast<CBEDeclarator*>(pDeclarator->Clone());
+			AddIsParameter(pNew);
+		}
+		if (!pDeclarator)
+		{
+			exc += ": Attribute " + sName + " is declared in invalid context.";
+			throw new error::create_error(exc);
+		}
+	}
 }
 
 /** \brief creates the back-end IS attribute for an declarator
@@ -415,97 +423,90 @@ CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
  *  \param pDeclarator the respective declarator
  *  \return true if successful
  */
-void
-CBEAttribute::CreateBackEndIs(ATTR_TYPE nType,
-    CBEDeclarator *pDeclarator)
+void CBEAttribute::CreateBackEndIs(ATTR_TYPE nType, CBEDeclarator *pDeclarator)
 {
-    string exc = string(__func__);
-    // check type
-    switch (nType)
-    {
-    case ATTR_SWITCH_IS:    // Is
-    case ATTR_FIRST_IS:    // IS
-    case ATTR_LAST_IS:    // Is
-    case ATTR_LENGTH_IS:    // Is
-    case ATTR_MIN_IS:    // Is
-    case ATTR_MAX_IS:    // Is
-    case ATTR_SIZE_IS:    // Is
-    case ATTR_IID_IS:    // Is
-	break;
-    default:
-	exc += " failed, beacuse invalid type.";
-	throw new error::create_error(exc);
-    }
-    m_nType = nType;
-    m_nAttrClass = ATTR_CLASS_IS;
-    // check decl
-    assert(pDeclarator);
-    AddIsParameter(pDeclarator);
+	string exc = string(__func__);
+	// check type
+	switch (nType)
+	{
+	case ATTR_SWITCH_IS:    // Is
+	case ATTR_FIRST_IS:    // IS
+	case ATTR_LAST_IS:    // Is
+	case ATTR_LENGTH_IS:    // Is
+	case ATTR_MIN_IS:    // Is
+	case ATTR_MAX_IS:    // Is
+	case ATTR_SIZE_IS:    // Is
+	case ATTR_IID_IS:    // Is
+		break;
+	default:
+		exc += " failed, beacuse invalid type.";
+		throw new error::create_error(exc);
+	}
+	m_nType = nType;
+	m_nAttrClass = ATTR_CLASS_IS;
+	// check decl
+	assert(pDeclarator);
+	AddIsParameter(pDeclarator);
 }
 
 /** \brief creates the back-end INT attribute for an integer value
  *  \param nType the exact type
  *  \param nValue the  the value to set
  */
-void
-CBEAttribute::CreateBackEndInt(ATTR_TYPE nType,
-    int nValue)
+void CBEAttribute::CreateBackEndInt(ATTR_TYPE nType, int nValue)
 {
-    string exc = string(__func__);
-    // check type
-    switch (nType)
-    {
-    case ATTR_LCID:        // int
-    case ATTR_HELPCONTEXT:    // int
-    case ATTR_FIRST_IS:    // IS
-    case ATTR_LAST_IS:    // Is
-    case ATTR_LENGTH_IS:    // Is
-    case ATTR_MIN_IS:    // Is
-    case ATTR_MAX_IS:    // Is
-    case ATTR_SIZE_IS:    // Is
-    case ATTR_IID_IS:    // Is
-        break;
-    default:
-	exc += " failed, because invalid type.";
-	throw new error::create_error(exc);
-    }
-    m_nType = nType;
-    m_nAttrClass = ATTR_CLASS_INT;
-    m_nIntValue = nValue;
+	string exc = string(__func__);
+	// check type
+	switch (nType)
+	{
+	case ATTR_LCID:        // int
+	case ATTR_HELPCONTEXT:    // int
+	case ATTR_FIRST_IS:    // IS
+	case ATTR_LAST_IS:    // Is
+	case ATTR_LENGTH_IS:    // Is
+	case ATTR_MIN_IS:    // Is
+	case ATTR_MAX_IS:    // Is
+	case ATTR_SIZE_IS:    // Is
+	case ATTR_IID_IS:    // Is
+		break;
+	default:
+		exc += " failed, because invalid type.";
+		throw new error::create_error(exc);
+	}
+	m_nType = nType;
+	m_nAttrClass = ATTR_CLASS_INT;
+	m_nIntValue = nValue;
 }
 
 /** \brief prepares this instance for the code generation
  *  \param nType the type of the attribute
  *  \param pType the type to set
  */
-void
-CBEAttribute::CreateBackEndType(ATTR_TYPE nType,
-    CBEType *pType)
+void CBEAttribute::CreateBackEndType(ATTR_TYPE nType, CBEType *pType)
 {
-    string exc = string(__func__);
-    // check type
-    switch (nType)
-    {
-    case ATTR_TRANSMIT_AS:    // type
-    case ATTR_SWITCH_TYPE:    // type
-        break;
-    default:
-	exc += " failed, because invalid type.";
-	throw new error::create_error(exc);
-    }
-    m_nType = nType;
-    m_nAttrClass = ATTR_CLASS_TYPE;
-    m_pType = pType;
+	string exc = string(__func__);
+	// check type
+	switch (nType)
+	{
+	case ATTR_TRANSMIT_AS:    // type
+	case ATTR_SWITCH_TYPE:    // type
+		break;
+	default:
+		exc += " failed, because invalid type.";
+		throw new error::create_error(exc);
+	}
+	m_nType = nType;
+	m_nAttrClass = ATTR_CLASS_TYPE;
+	m_pType = pType;
 }
 
 /** \brief creates the back-end attribute for an integer attribute
  *  \param pFEIntAttribute the repective front-end attribute
  *  \return true if code generation was successful
  */
-void
-CBEAttribute::CreateBackEndInt(CFEIntAttribute * pFEIntAttribute)
+void CBEAttribute::CreateBackEndInt(CFEIntAttribute * pFEIntAttribute)
 {
-    m_nIntValue = pFEIntAttribute->GetIntValue();
+	m_nIntValue = pFEIntAttribute->GetIntValue();
 }
 
 /** \brief creates the back-end attribute for a version attribute
@@ -547,12 +548,6 @@ void CBEAttribute::AddIsParameter(CBEDeclarator * pDecl)
         m_Parameters.Add(pDecl);
         pDecl->SetParent(this);
     }
-}
-
-/** \brief creates a new instance of this class */
-CObject * CBEAttribute::Clone()
-{
-    return new CBEAttribute(*this);
 }
 
 /** \brief delivers the number of is attributes from the given iterator to the end of the list

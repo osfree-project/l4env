@@ -6,7 +6,7 @@ L4DIR	?= $(PKGDIR)/../..
 # the default is to build the listed directories, provided that they
 # contain a Makefile. If you need to change this, uncomment the following
 # line and adapt it.
-ifeq ($(CONFIG_ORE_DDE26),)
+ifeq ($(CONFIG_ORE_DDE24),y)
 TARGET = server-worker linuxemul net
 endif
 

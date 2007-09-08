@@ -55,20 +55,19 @@ public:
      */
     CFEUnionType(std::string sTag,
         vector<CFEUnionCase*> *pUnionBody,
-	vector<CFEIdentifier*> *pBaseUnions = NULL);
+	vector<CFEIdentifier*> *pBaseUnions = 0);
     virtual ~CFEUnionType();
 
 // Operations
 public:
     virtual void Accept(CVisitor&);
-    virtual CObject* Clone();
     virtual bool IsConstructedType();
-
+	virtual CObject* Clone();
     void AddMembers(vector<CFEUnionCase*> *pUnionBody);
 
 protected:
     /** a copy construtor used for the tagged union class */
-    CFEUnionType(CFEUnionType& src); // copy constructor for tagged union
+    CFEUnionType(CFEUnionType* src); // copy constructor for tagged union
 
 // attribute
 public:

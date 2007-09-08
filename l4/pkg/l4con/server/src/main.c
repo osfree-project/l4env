@@ -769,7 +769,7 @@ server_loop(void)
 
   for (;;)
     {
-      opcode = con_if_wait_any(&corba_obj, &tag, &msg_buffer, &corba_env);
+      opcode = con_if_srv_wait_any(&corba_obj, &tag, &msg_buffer, &corba_env);
       for (;;)
 	{
 	  reply = con_if_dispatch(&corba_obj, opcode, &msg_buffer, &corba_env);

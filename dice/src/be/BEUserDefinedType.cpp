@@ -44,22 +44,22 @@
 CBEUserDefinedType::CBEUserDefinedType()
 { }
 
-CBEUserDefinedType::CBEUserDefinedType(CBEUserDefinedType & src)
+CBEUserDefinedType::CBEUserDefinedType(CBEUserDefinedType* src)
  : CBEType(src)
 {
-    m_sOriginalName = src.m_sOriginalName;
+    m_sOriginalName = src->m_sOriginalName;
 }
 
 /** \brief destructor of this instance */
 CBEUserDefinedType::~CBEUserDefinedType()
 { }
 
-/** \brief generates an exact copy of this class
- *  \return a reference to the new object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CBEUserDefinedType::Clone()
 {
-    return new CBEUserDefinedType(*this);
+	return new CBEUserDefinedType(this);
 }
 
 /** \brief creates a user defined type

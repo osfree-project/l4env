@@ -53,9 +53,9 @@ using namespace std;
  *  \brief clones a member of a source class
  */
 #define CLONE_MEM(class, member) \
-    if (src.member) \
+    if (src->member) \
     { \
-	member = (class*)src.member->Clone(); \
+	member = static_cast<class*>(src->member->Clone()); \
 	member->SetParent(this); \
     } \
     else \

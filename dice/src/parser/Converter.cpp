@@ -26,7 +26,6 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-/** preprocessing symbol to check header file */
 #include "Converter.h"
 #include "Messages.h"
 #include "fe/FEFile.h"
@@ -49,34 +48,34 @@ using namespace dice::parser;
  */
 IntType dice::parser::int_type (char *str)
 {
-    // check ending
-    // if "ll" or "ull" -> longlong
-    // could end on u,ul,ull,l,ll,lu,llu
-    std::string s(str);
-    std::transform(s.rbegin(), s.rend(), s.rbegin(), _tolower);
+	// check ending
+	// if "ll" or "ull" -> longlong
+	// could end on u,ul,ull,l,ll,lu,llu
+	std::string s(str);
+	std::transform(s.rbegin(), s.rend(), s.rbegin(), _tolower);
 
-    std::string::size_type l = s.length();
-    if (l > 3 && (s.substr(l-3) == "ull" || s.substr(l-3) == "llu"))
-        return INT_ULLONG;
-    if (l > 2 && s.substr(l-2) == "ll")
-        return INT_LLONG;
-    if (l > 2 && (s.substr(l-2) == "lu" || s.substr(l-2) == "ul"))
-    {
-	// if compiling for amd64, this is unsigned long long
-	if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
-	    return INT_ULLONG;
-        return INT_ULONG;
-    }
-    if (l > 1 && s[l-1] == 'l')
-    {
-	// if compiling for amd64, this is unsigned long long
-	if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
-	    return INT_LLONG;
-	return INT_LONG;
-    }
-    if (l > 1 && s[l-1] == 'u')
-        return INT_ULONG;
-    return INT_INT;
+	std::string::size_type l = s.length();
+	if (l > 3 && (s.substr(l-3) == "ull" || s.substr(l-3) == "llu"))
+		return INT_ULLONG;
+	if (l > 2 && s.substr(l-2) == "ll")
+		return INT_LLONG;
+	if (l > 2 && (s.substr(l-2) == "lu" || s.substr(l-2) == "ul"))
+	{
+		// if compiling for amd64, this is unsigned long long
+		if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
+			return INT_ULLONG;
+		return INT_ULONG;
+	}
+	if (l > 1 && s[l-1] == 'l')
+	{
+		// if compiling for amd64, this is unsigned long long
+		if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
+			return INT_LLONG;
+		return INT_LONG;
+	}
+	if (l > 1 && s[l-1] == 'u')
+		return INT_ULONG;
+	return INT_INT;
 }
 
 /** \brief convert octal coded characters to ASCII char
@@ -85,12 +84,12 @@ IntType dice::parser::int_type (char *str)
  */
 int dice::parser::oct_to_char (char *s)
 {
-     // check for leading 'L'
-     if (s[0] == 'L') s++;
-     // skip the first ' and backslash
-     s += 2;
-     // now we can use the integer converter to obtain ASCII code
-     return (int) strtol (s, NULL, 8);
+	// check for leading 'L'
+	if (s[0] == 'L') s++;
+	// skip the first ' and backslash
+	s += 2;
+	// now we can use the integer converter to obtain ASCII code
+	return (int) strtol (s, 0, 8);
 }
 
 /** \brief convert hexadecimal coded characters to ASCII char
@@ -99,12 +98,12 @@ int dice::parser::oct_to_char (char *s)
  */
 int dice::parser::hex_to_char (char *s)
 {
-     // check for leading 'L'
-     if (s[0] == 'L') s++;
-     // skip the first ' and backslash
-     s += 2;
-     // now we can use the integer converter to obtain ASCII code
-     return (int) strtol (s, NULL, 16);
+	// check for leading 'L'
+	if (s[0] == 'L') s++;
+	// skip the first ' and backslash
+	s += 2;
+	// now we can use the integer converter to obtain ASCII code
+	return (int) strtol (s, 0, 16);
 }
 
 /** \brief converts escape sequences to character
@@ -113,46 +112,46 @@ int dice::parser::hex_to_char (char *s)
  */
 int dice::parser::escape_to_char (char *s)
 {
-     // check for leading 'L'
-     if (s[0] == 'L') s++;
-     // skip the first ' and backslash
-     s += 2; switch (s[0])
-     {
-     case 'n':
-        return '\n';
-        break;
-     case 't':
-        return '\t';
-        break;
-     case 'v':
-        return '\v';
-        break;
-     case 'b':
-        return '\b';
-        break;
-     case 'r':
-        return '\r';
-        break;
-     case 'f':
-        return '\f';
-        break;
-     case 'a':
-        return '\a';
-        break;
-     case '\\':
-        return '\\';
-        break;
-     case '?':
-        return '?';
-        break;
-     case '\'':
-        return '\'';
-        break;
-     case '"':
-         return '"';
-        break;
-     }
-     return 0;
+	// check for leading 'L'
+	if (s[0] == 'L') s++;
+	// skip the first ' and backslash
+	s += 2; switch (s[0])
+	{
+	case 'n':
+		return '\n';
+		break;
+	case 't':
+		return '\t';
+		break;
+	case 'v':
+		return '\v';
+		break;
+	case 'b':
+		return '\b';
+		break;
+	case 'r':
+		return '\r';
+		break;
+	case 'f':
+		return '\f';
+		break;
+	case 'a':
+		return '\a';
+		break;
+	case '\\':
+		return '\\';
+		break;
+	case '?':
+		return '?';
+		break;
+	case '\'':
+		return '\'';
+		break;
+	case '"':
+		return '"';
+		break;
+	}
+	return 0;
 }
 
 /** \brief decode a decimal number from a string containing a hexadecimal number
@@ -165,104 +164,104 @@ long
 #endif
 long dice::parser::hex_to_long (char *s, IntType& t)
 {
-    errno = 0;
-    t = int_type(s);
-    switch (t)
-    {
-    case INT_ULLONG:
-#if HAVE_ATOLL
+	errno = 0;
+	t = int_type(s);
+	switch (t)
 	{
-	    unsigned long long n = strtoull(s, NULL, 16);
-	    if (! (std::numeric_limits<unsigned long long>::min() <= n &&
-		    n <= std::numeric_limits<unsigned long long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
+	case INT_ULLONG:
+#if HAVE_ATOLL
+		{
+			unsigned long long n = strtoull(s, 0, 16);
+			if (! (std::numeric_limits<unsigned long long>::min() <= n &&
+					n <= std::numeric_limits<unsigned long long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
 #else
-	t = INT_ULONG;
+		t = INT_ULONG;
 #endif
-    case INT_ULONG:
-	{
-	    unsigned long n = strtoul(s, NULL, 16);
-	    if (! (std::numeric_limits<unsigned long>::min() <= n &&
-		    n <= std::numeric_limits<unsigned long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
-    case INT_LLONG:
+	case INT_ULONG:
+		{
+			unsigned long n = strtoul(s, 0, 16);
+			if (! (std::numeric_limits<unsigned long>::min() <= n &&
+					n <= std::numeric_limits<unsigned long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
+	case INT_LLONG:
 #if HAVE_ATOLL
-	{
-	    long long n = strtoll(s, NULL, 16);
-	    if (! (std::numeric_limits<long long>::min() <= n &&
-		    n <= std::numeric_limits<long long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
+		{
+			long long n = strtoll(s, 0, 16);
+			if (! (std::numeric_limits<long long>::min() <= n &&
+					n <= std::numeric_limits<long long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
 #else
-	t = INT_LONG;
+		t = INT_LONG;
 #endif
-    case INT_LONG:
-	{
-	    long n = strtol(s, NULL, 16);
-	    if (! (std::numeric_limits<long>::min() <= n &&
-		    n <= std::numeric_limits<long>::max() &&
-		    errno != ERANGE))
-	    {
-#if HAVE_ATOLL
-		// check if this was just unsigned max
-		long long m = strtoll(s, NULL, 16);
-		if (m == std::numeric_limits<unsigned long>::max())
+	case INT_LONG:
 		{
-		    t = INT_ULONG;
-		    return m;
-		}
+			long n = strtol(s, 0, 16);
+			if (! (std::numeric_limits<long>::min() <= n &&
+					n <= std::numeric_limits<long>::max() &&
+					errno != ERANGE))
+			{
+#if HAVE_ATOLL
+				// check if this was just unsigned max
+				long long m = strtoll(s, 0, 16);
+				if (m == std::numeric_limits<unsigned long>::max())
+				{
+					t = INT_ULONG;
+					return m;
+				}
 #endif
-		t = INVALID;
-	    }
-	    return n;
-	}
-	break;
-    case INT_INT:
-	{
-	    long n = strtol(s, NULL, 16);
-	    if (! (std::numeric_limits<int>::min() <= n &&
-		    n <= std::numeric_limits<int>::max() &&
-		    errno != ERANGE))
-	    {
+				t = INVALID;
+			}
+			return n;
+		}
+		break;
+	case INT_INT:
+		{
+			long n = strtol(s, 0, 16);
+			if (! (std::numeric_limits<int>::min() <= n &&
+					n <= std::numeric_limits<int>::max() &&
+					errno != ERANGE))
+			{
 #if HAVE_ATOLL
-		// check if this was just unsigned max
-		long long m = strtoll(s, NULL, 16);
-		if (m == std::numeric_limits<unsigned int>::max())
-		{
-		    t = INT_ULONG;
-		    return m;
-		}
-		n = m;
-		if (n < 0 &&
-		    std::numeric_limits<int>::min() <= n &&
-		    n <= std::numeric_limits<int>::max())
-		{
-		    // first letter was f, so this was a signed long
-		    t = INT_LONG;
-		    return n;
-		}
+				// check if this was just unsigned max
+				long long m = strtoll(s, 0, 16);
+				if (m == std::numeric_limits<unsigned int>::max())
+				{
+					t = INT_ULONG;
+					return m;
+				}
+				n = m;
+				if (n < 0 &&
+					std::numeric_limits<int>::min() <= n &&
+					n <= std::numeric_limits<int>::max())
+				{
+					// first letter was f, so this was a signed long
+					t = INT_LONG;
+					return n;
+				}
 
 #endif
-		t = INVALID;
-	    }
-	    return n;
+				t = INVALID;
+			}
+			return n;
+		}
+		break;
+	default:
+		break;
 	}
-	break;
-    default:
-	break;
-    }
-    return 0;
+	return 0;
 }
 
 /** \brief decode a decimal number from a string containing a octal number
@@ -275,72 +274,72 @@ long
 #endif
 long dice::parser::oct_to_long (char *s, IntType& t)
 {
-    errno = 0;
-    t = int_type(s);
-    switch (t)
-    {
-    case INT_ULLONG:
+	errno = 0;
+	t = int_type(s);
+	switch (t)
+	{
+	case INT_ULLONG:
 #if HAVE_ATOLL
-	{
-	    unsigned long long n = strtoull(s, NULL, 8);
-	    if (! (std::numeric_limits<unsigned long long>::min() <= n &&
-		    n <= std::numeric_limits<unsigned long long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
+		{
+			unsigned long long n = strtoull(s, 0, 8);
+			if (! (std::numeric_limits<unsigned long long>::min() <= n &&
+					n <= std::numeric_limits<unsigned long long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
 #else
-	t = INT_ULONG;
+		t = INT_ULONG;
 #endif
-    case INT_ULONG:
-	{
-	    unsigned long n = strtoul(s, NULL, 8);
-	    if (! (std::numeric_limits<unsigned long>::min() <= n &&
-		    n <= std::numeric_limits<unsigned long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
-    case INT_LLONG:
+	case INT_ULONG:
+		{
+			unsigned long n = strtoul(s, 0, 8);
+			if (! (std::numeric_limits<unsigned long>::min() <= n &&
+					n <= std::numeric_limits<unsigned long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
+	case INT_LLONG:
 #if HAVE_ATOLL
-	{
-	    long long n = strtoll(s, NULL, 8);
-	    if (! (std::numeric_limits<long long>::min() &&
-		    n <= std::numeric_limits<long long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
+		{
+			long long n = strtoll(s, 0, 8);
+			if (! (std::numeric_limits<long long>::min() &&
+					n <= std::numeric_limits<long long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
 #else
-	t = INT_LONG;
+		t = INT_LONG;
 #endif
-    case INT_LONG:
-	{
-	    long n = strtol(s, NULL, 8);
-	    if (! (std::numeric_limits<long>::min() <= n &&
-		    n <= std::numeric_limits<long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
+	case INT_LONG:
+		{
+			long n = strtol(s, 0, 8);
+			if (! (std::numeric_limits<long>::min() <= n &&
+					n <= std::numeric_limits<long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
+	case INT_INT:
+		{
+			long n = strtol(s, 0, 8);
+			if (! (std::numeric_limits<int>::min() <= n &&
+					n <= std::numeric_limits<int>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
+	default:
+		break;
 	}
-	break;
-    case INT_INT:
-	{
-	    long n = strtol(s, NULL, 8);
-	    if (! (std::numeric_limits<int>::min() <= n &&
-		    n <= std::numeric_limits<int>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
-    default:
-	break;
-    }
-    return 0;
+	return 0;
 }
 
 /** \brief decode a decimal number from a string containing a integer number
@@ -353,61 +352,61 @@ long
 #endif
 long dice::parser::int_to_long (char *s, IntType& t)
 {
-    errno = 0;
-    t = int_type(s);
-    switch (t)
-    {
-    case INT_ULLONG:
+	errno = 0;
+	t = int_type(s);
+	switch (t)
+	{
+	case INT_ULLONG:
 #if HAVE_ATOLL
-	{
-	    unsigned long long n = strtoull (s, NULL, 10);
-	    if (! (std::numeric_limits<unsigned long long>::min() <= n &&
-		    n <= std::numeric_limits<unsigned long long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
+		{
+			unsigned long long n = strtoull (s, 0, 10);
+			if (! (std::numeric_limits<unsigned long long>::min() <= n &&
+					n <= std::numeric_limits<unsigned long long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
 #else
-	t = INT_ULONG;
+		t = INT_ULONG;
 #endif
-    case INT_ULONG:
-	{
-	    unsigned long n = strtoul(s, NULL, 10);
-	    if (! (std::numeric_limits<unsigned long>::min() <= n &&
-		    n <= std::numeric_limits<unsigned long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
-    case INT_LLONG:
+	case INT_ULONG:
+		{
+			unsigned long n = strtoul(s, 0, 10);
+			if (! (std::numeric_limits<unsigned long>::min() <= n &&
+					n <= std::numeric_limits<unsigned long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
+	case INT_LLONG:
 #if HAVE_ATOLL
-	{
-	    long long n = strtoll (s, NULL, 10);
-	    if (! (std::numeric_limits<long long>::min() <= n &&
-		    n <= std::numeric_limits<long long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
-	}
-	break;
+		{
+			long long n = strtoll (s, 0, 10);
+			if (! (std::numeric_limits<long long>::min() <= n &&
+					n <= std::numeric_limits<long long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
 #else
-	t = INT_LONG;
+		t = INT_LONG;
 #endif
-    case INT_LONG:
-    case INT_INT:
-	{
-	    long n = strtol (s, NULL, 10);
-	    if (! (std::numeric_limits<long>::min() <= n &&
-		    n <= std::numeric_limits<long>::max() &&
-		    errno != ERANGE))
-		t = INVALID;
-	    return n;
+	case INT_LONG:
+	case INT_INT:
+		{
+			long n = strtol (s, 0, 10);
+			if (! (std::numeric_limits<long>::min() <= n &&
+					n <= std::numeric_limits<long>::max() &&
+					errno != ERANGE))
+				t = INVALID;
+			return n;
+		}
+		break;
+	default:
+		break;
 	}
-	break;
-    default:
-	break;
-    }
-    return 0;
+	return 0;
 }

@@ -34,20 +34,12 @@
 #include "Compiler.h"
 
 CL4BEHeaderFile::CL4BEHeaderFile()
-{
-}
-
-CL4BEHeaderFile::CL4BEHeaderFile(CL4BEHeaderFile & src)
-: std::ios(), CBEHeaderFile(src)
-{
-}
+{ }
 
 /** \brief destructor
  */
 CL4BEHeaderFile::~CL4BEHeaderFile()
-{
-
-}
+{ }
 
 /** \brief write the function declaration for the init-recv string function
  *
@@ -60,36 +52,36 @@ CL4BEHeaderFile::~CL4BEHeaderFile()
  */
 void CL4BEHeaderFile::WriteHelperFunctions()
 {
-    if (CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING))
-    {
-        string sEnvType;
-        if (IsOfFileType(FILETYPE_COMPONENT))
-            sEnvType = "CORBA_Server_Environment";
-        else
-            sEnvType = "CORBA_Environment";
-        /* if function-count is zero, then there is no extern "C" written
-         * before calling this function, so write it now.
-         */
-        if (GetFunctionCount() == 0)
-        {
-	    *this << "#ifdef __cplusplus\n";
-	    *this << "extern \"C\" {\n";
-	    *this << "#endif\n\n";
-        }
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-        string sFuncName = pNF->GetString(
-	    CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
-        string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
-	PrintIndent();
-	*this << "void " << sFuncName << "(int, " << sMWord << "*, "
-	    << sMWord << "*, " << sEnvType << "*);\n\n";
-        if (GetFunctionCount() == 0)
-        {
-	    *this << "#ifdef __cplusplus\n";
-	    *this << "}\n";
-	    *this << "#endif\n\n";
-        }
-    }
-    CBEHeaderFile::WriteHelperFunctions();
+	if (CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING))
+	{
+		string sEnvType;
+		if (IsOfFileType(FILETYPE_COMPONENT))
+			sEnvType = "CORBA_Server_Environment";
+		else
+			sEnvType = "CORBA_Environment";
+		/* if function-count is zero, then there is no extern "C" written
+		 * before calling this function, so write it now.
+		 */
+		if (GetFunctionCount() == 0)
+		{
+			*this << "#ifdef __cplusplus\n";
+			*this << "extern \"C\" {\n";
+			*this << "#endif\n\n";
+		}
+		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		string sFuncName = pNF->GetString(
+			CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
+		string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+		PrintIndent();
+		*this << "void " << sFuncName << "(int, " << sMWord << "*, "
+			<< sMWord << "*, " << sEnvType << "*);\n\n";
+		if (GetFunctionCount() == 0)
+		{
+			*this << "#ifdef __cplusplus\n";
+			*this << "}\n";
+			*this << "#endif\n\n";
+		}
+	}
+	CBEHeaderFile::WriteHelperFunctions();
 }
 

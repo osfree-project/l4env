@@ -44,48 +44,40 @@
 
 CL4BEReplyFunction::CL4BEReplyFunction()
 : CBEReplyFunction()
-{
-}
-
-CL4BEReplyFunction::CL4BEReplyFunction(CL4BEReplyFunction& src)
-: CBEReplyFunction(src)
-{
-}
+{ }
 
 /** destroy the object */
 CL4BEReplyFunction::~CL4BEReplyFunction()
-{
-}
+{ }
 
 /** \brief initializes instance of this class
  *  \param pFEOperation the front-end operation to use as reference
  *  \return true if successful
  */
-void
-CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation)
+void CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 {
-    CBEReplyFunction::CreateBackEnd(pFEOperation);
+	CBEReplyFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
-    string exc = string(__func__);
-    // add local variables
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-    string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
-    string sCurr = sResult;
-    AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
-    // we might need the offset variables if we transmit [ref]
-    // attributes, because strings are found in message buffer by
-    // offset calculation if message buffer is at server side.
-    if (!HasVariableSizedParameters(DIRECTION_INOUT) &&
-	!HasArrayParameters(DIRECTION_INOUT) &&
-	FindParameterAttribute(ATTR_REF))
-    {
-	sCurr = pNF->GetTempOffsetVariable();
-	AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0 /*stars*/);
+	string exc = string(__func__);
+	// add local variables
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
+	string sCurr = sResult;
+	AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
+	// we might need the offset variables if we transmit [ref]
+	// attributes, because strings are found in message buffer by
+	// offset calculation if message buffer is at server side.
+	if (!HasVariableSizedParameters(DIRECTION_INOUT) &&
+		!HasArrayParameters(DIRECTION_INOUT) &&
+		FindParameterAttribute(ATTR_REF))
+	{
+		sCurr = pNF->GetTempOffsetVariable();
+		AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0 /*stars*/);
 
-	sCurr = pNF->GetOffsetVariable();
-	AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
-    }
+		sCurr = pNF->GetOffsetVariable();
+		AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
+	}
 }
 
 /** \brief writes the invocation of the message transfer
@@ -94,18 +86,17 @@ CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation)
  * In L4 this is a send. Do not set size dope, because the size dope is set by
  * the server (wait-any function).
  */
-void
-CL4BEReplyFunction::WriteInvocation(CBEFile& pFile)
+void CL4BEReplyFunction::WriteInvocation(CBEFile& pFile)
 {
-    // set size and send dopes
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-	GetSendDirection());
+	// set size and send dopes
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	assert(pMsgBuffer);
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
+		GetSendDirection());
 
-    // invocate
-    WriteIPC(pFile);
-    WriteIPCErrorCheck(pFile);
+	// invocate
+	WriteIPC(pFile);
+	WriteIPCErrorCheck(pFile);
 }
 
 
@@ -118,22 +109,21 @@ CL4BEReplyFunction::WriteInvocation(CBEFile& pFile)
  * \todo: Do we want to block the server, waiting for one client, which might
  * not respond?
  */
-void
-CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile& pFile)
+void CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
-    if (!m_sErrorFunction.empty())
-    {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	if (!m_sErrorFunction.empty())
+	{
+		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 
-	pFile << "\t/* test for IPC errors */\n";
-	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult <<
-	    ")))\n";
-	++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
-	WriteCallParameter(pFile, GetEnvironment(), true);
-	pFile << ");\n";
-	--pFile;
-    }
+		pFile << "\t/* test for IPC errors */\n";
+		pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult <<
+			")))\n";
+		++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
+		WriteCallParameter(pFile, GetEnvironment(), true);
+		pFile << ");\n";
+		--pFile;
+	}
 }
 
 /** \brief writes the ipc code for this function
@@ -141,28 +131,27 @@ CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile& pFile)
  */
 void CL4BEReplyFunction::WriteIPC(CBEFile& pFile)
 {
-    if (m_pTrace)
-	m_pTrace->BeforeReplyOnly(pFile, this);
+	if (m_pTrace)
+		m_pTrace->BeforeReplyOnly(pFile, this);
 
-    CBECommunication *pComm = GetCommunication();
-    assert(pComm);
-    pComm->WriteReply(pFile, this);
+	CBECommunication *pComm = GetCommunication();
+	assert(pComm);
+	pComm->WriteReply(pFile, this);
 
-    if (m_pTrace)
-	m_pTrace->AfterReplyOnly(pFile, this);
+	if (m_pTrace)
+		m_pTrace->AfterReplyOnly(pFile, this);
 }
 
 /** \brief init message buffer size dope
  *  \param pFile the file to write to
  */
-void
-CL4BEReplyFunction::WriteVariableInitialization(CBEFile& pFile)
+void CL4BEReplyFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-    CBEReplyFunction::WriteVariableInitialization(pFile);
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE,
-	GetSendDirection());
+	CBEReplyFunction::WriteVariableInitialization(pFile);
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	assert(pMsgBuffer);
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE,
+		GetSendDirection());
 }
 
 /** \brief calculates the size of the function's parameters
@@ -174,13 +163,13 @@ CL4BEReplyFunction::WriteVariableInitialization(CBEFile& pFile)
  */
 int CL4BEReplyFunction::GetSize(DIRECTION_TYPE nDirection)
 {
-    // get base class' size
-    int nSize = CBEReplyFunction::GetSize(nDirection);
-    if ((nDirection & DIRECTION_OUT) &&
-	!m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
-	(GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
-	nSize -= CCompiler::GetSizes()->GetExceptionSize();
-    return nSize;
+	// get base class' size
+	int nSize = CBEReplyFunction::GetSize(nDirection);
+	if ((nDirection & DIRECTION_OUT) &&
+		!m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
+		(GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
+		nSize -= CCompiler::GetSizes()->GetExceptionSize();
+	return nSize;
 }
 
 /** \brief calculates the size of the function's fixed-sized parameters
@@ -192,11 +181,11 @@ int CL4BEReplyFunction::GetSize(DIRECTION_TYPE nDirection)
  */
 int CL4BEReplyFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
-    int nSize = CBEReplyFunction::GetFixedSize(nDirection);
-    if ((nDirection & DIRECTION_OUT) &&
-	!m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
-	(GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
-	nSize -= CCompiler::GetSizes()->GetExceptionSize();
-    return nSize;
+	int nSize = CBEReplyFunction::GetFixedSize(nDirection);
+	if ((nDirection & DIRECTION_OUT) &&
+		!m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
+		(GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
+		nSize -= CCompiler::GetSizes()->GetExceptionSize();
+	return nSize;
 }
 

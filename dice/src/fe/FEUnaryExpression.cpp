@@ -31,28 +31,36 @@
 CFEUnaryExpression::CFEUnaryExpression(EXPR_TYPE nType, EXPT_OPERATOR Operator, CFEExpression * pOperand)
 : CFEPrimaryExpression(nType, pOperand)
 {
-    m_nOperator = Operator;
-    m_pCastType = NULL;
+	m_nOperator = Operator;
+	m_pCastType = 0;
 }
 
 CFEUnaryExpression::CFEUnaryExpression(CFETypeSpec* pCastType, CFEExpression *pOperand)
 : CFEPrimaryExpression(EXPR_UNARY, pOperand)
 {
-    m_nOperator = EXPR_CAST;
-    m_pCastType = pCastType;
+	m_nOperator = EXPR_CAST;
+	m_pCastType = pCastType;
 }
 
-CFEUnaryExpression::CFEUnaryExpression(CFEUnaryExpression & src)
+CFEUnaryExpression::CFEUnaryExpression(CFEUnaryExpression* src)
 : CFEPrimaryExpression(src)
 {
-    m_nOperator = src.m_nOperator;
-    m_pCastType = src.m_pCastType;
+	m_nOperator = src->m_nOperator;
+	m_pCastType = src->m_pCastType;
 }
 
 /** cleans up the unary expression object */
 CFEUnaryExpression::~CFEUnaryExpression()
 {
-    // nothing to clean up
+	// nothing to clean up
+}
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEUnaryExpression::Clone()
+{
+	return new CFEUnaryExpression(this);
 }
 
 /** retrieves the integer value of the expression
@@ -60,28 +68,28 @@ CFEUnaryExpression::~CFEUnaryExpression()
  */
 int CFEUnaryExpression::GetIntValue()
 {
-    switch (GetOperator())
-    {
-    case EXPR_NOOPERATOR:
-	return GetOperand()->GetIntValue();
-	break;
-    case EXPR_SPLUS:
-	return 0 + (GetOperand()->GetIntValue());
-	break;
-    case EXPR_SMINUS:
-	return 0 - (GetOperand()->GetIntValue());
-	break;
-    case EXPR_TILDE:
-	return ~(GetOperand()->GetIntValue());
-	break;
-    case EXPR_EXCLAM:
-	return !(GetOperand()->GetIntValue());
-	break;
-    default:
-	return GetOperand()->GetIntValue();
-	break;
-    }
-    return 0;
+	switch (GetOperator())
+	{
+	case EXPR_NOOPERATOR:
+		return GetOperand()->GetIntValue();
+		break;
+	case EXPR_SPLUS:
+		return 0 + (GetOperand()->GetIntValue());
+		break;
+	case EXPR_SMINUS:
+		return 0 - (GetOperand()->GetIntValue());
+		break;
+	case EXPR_TILDE:
+		return ~(GetOperand()->GetIntValue());
+		break;
+	case EXPR_EXCLAM:
+		return !(GetOperand()->GetIntValue());
+		break;
+	default:
+		return GetOperand()->GetIntValue();
+		break;
+	}
+	return 0;
 }
 
 /** checks the type of itself
@@ -90,21 +98,21 @@ int CFEUnaryExpression::GetIntValue()
  */
 bool CFEUnaryExpression::IsOfType(unsigned int nType)
 {
-    switch (GetOperator())
-    {
-    case EXPR_SPLUS:
-    case EXPR_SMINUS:
-	return ((nType == TYPE_INTEGER) || (nType == TYPE_LONG)) && GetOperand()->IsOfType(nType);
-	break;
-    case EXPR_TILDE:
-    case EXPR_EXCLAM:
-	return (nType == TYPE_INTEGER || nType == TYPE_BOOLEAN || nType == TYPE_LONG)
-	    && GetOperand()->IsOfType(nType);
-	break;
-    default:
-	break;
-    }
-    return GetOperand()->IsOfType(nType);
+	switch (GetOperator())
+	{
+	case EXPR_SPLUS:
+	case EXPR_SMINUS:
+		return ((nType == TYPE_INTEGER) || (nType == TYPE_LONG)) && GetOperand()->IsOfType(nType);
+		break;
+	case EXPR_TILDE:
+	case EXPR_EXCLAM:
+		return (nType == TYPE_INTEGER || nType == TYPE_BOOLEAN || nType == TYPE_LONG)
+			&& GetOperand()->IsOfType(nType);
+		break;
+	default:
+		break;
+	}
+	return GetOperand()->IsOfType(nType);
 }
 
 /** retrieves the operator of this expression
@@ -112,15 +120,7 @@ bool CFEUnaryExpression::IsOfType(unsigned int nType)
  */
 EXPT_OPERATOR CFEUnaryExpression::GetOperator()
 {
-    return m_nOperator;
-}
-
-/** creates a copy of this object
- *  \return a reference to the new object
- */
-CObject *CFEUnaryExpression::Clone()
-{
-    return new CFEUnaryExpression(*this);
+	return m_nOperator;
 }
 
 /** returns a reference to the type of the cast
@@ -128,5 +128,5 @@ CObject *CFEUnaryExpression::Clone()
  */
 CFETypeSpec* CFEUnaryExpression::GetCastType()
 {
-    return m_pCastType;
+	return m_pCastType;
 }

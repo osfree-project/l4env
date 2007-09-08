@@ -103,21 +103,15 @@ CFEPrimaryExpression::CFEPrimaryExpression(EXPR_TYPE nType, CFEExpression * pOpe
     m_pOperand = pOperand;
 }
 
-CFEPrimaryExpression::CFEPrimaryExpression(CFEPrimaryExpression & src)
+CFEPrimaryExpression::CFEPrimaryExpression(CFEPrimaryExpression* src)
 :CFEExpression(src)
 {
-    m_fValue = src.m_fValue;
-    m_nValue = src.m_nValue;
-    m_nuValue = src.m_nuValue;
-    m_nlValue = src.m_nlValue;
-    m_nulValue = src.m_nulValue;
-    if (src.m_pOperand)
-    {
-        m_pOperand = (CFEExpression *) (src.m_pOperand->Clone());
-        m_pOperand->SetParent(this);
-    }
-    else
-        m_pOperand = 0;
+    m_fValue = src->m_fValue;
+    m_nValue = src->m_nValue;
+    m_nuValue = src->m_nuValue;
+    m_nlValue = src->m_nlValue;
+    m_nulValue = src->m_nulValue;
+	CLONE_MEM(CFEExpression, m_pOperand);
 }
 
 /** cleans up the primary expression */
@@ -125,6 +119,14 @@ CFEPrimaryExpression::~CFEPrimaryExpression()
 {
     if (m_pOperand)
         delete m_pOperand;
+}
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEPrimaryExpression::Clone()
+{
+	return new CFEPrimaryExpression(this);
 }
 
 /** returns the integer value of the expression
@@ -213,14 +215,6 @@ long double CFEPrimaryExpression::GetFloatValue()
 CFEExpression *CFEPrimaryExpression::GetOperand()
 {
     return m_pOperand;
-}
-
-/** create a copy of this object
- *  \return a reference to the new object
- */
-CObject *CFEPrimaryExpression::Clone()
-{
-    return new CFEPrimaryExpression(*this);
 }
 
 /** \brief print the object to a string

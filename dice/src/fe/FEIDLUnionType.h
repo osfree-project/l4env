@@ -61,8 +61,6 @@ public:
 
 // Operations
 public:
-    virtual CObject* Clone();
-
     /** retrieves the type of the switch variable
      *  \return the type of the switch variable
      */
@@ -81,7 +79,10 @@ public:
 
 protected:
     /** a copy construtor used for the tagged union class */
-    CFEIDLUnionType(CFEIDLUnionType& src); // copy constructor for tagged union
+    CFEIDLUnionType(CFEIDLUnionType* src); // copy constructor for tagged union
+
+public:
+	virtual CObject* Clone();
 
 // attribute
 protected:

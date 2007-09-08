@@ -58,11 +58,10 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEFunctionDeclarator(CFEFunctionDeclarator &src);
+    CFEFunctionDeclarator(CFEFunctionDeclarator* src);
 
-// Operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
 
 // attributes
 public:

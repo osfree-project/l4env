@@ -51,55 +51,53 @@
 /////////////////////////////////////////////////////////////////////
 // Interface stuff
 CFEInterface::CFEInterface(vector<CFEAttribute*> * pIAttributes,
-    std::string sIName,
-    vector<CFEIdentifier*> *pIBaseNames,
-    CFEBase *pParent)
-: CFEFileComponent(pParent),
-    m_Attributes(pIAttributes, this),
-    m_Constants(0, this),
-    m_AttributeDeclarators(0, this),
-    m_TaggedDeclarators(0, this),
-    m_Operations(0, this),
-    m_Typedefs(0, this),
-    m_Exceptions(0, this),
-    m_BaseInterfaceNames(pIBaseNames, this),
-    m_DerivedInterfaces(0, (CObject*)0),
-    m_BaseInterfaces(0, (CObject*)0)
+	std::string sIName, vector<CFEIdentifier*> *pIBaseNames, CFEBase *pParent)
+: CFEFileComponent(static_cast<CObject*>(pParent)),
+	m_Attributes(pIAttributes, this),
+	m_Constants(0, this),
+	m_AttributeDeclarators(0, this),
+	m_TaggedDeclarators(0, this),
+	m_Operations(0, this),
+	m_Typedefs(0, this),
+	m_Exceptions(0, this),
+	m_BaseInterfaceNames(pIBaseNames, this),
+	m_DerivedInterfaces(0, (CObject*)0),
+	m_BaseInterfaces(0, (CObject*)0)
 {
-    m_sInterfaceName = sIName;
+	m_sInterfaceName = sIName;
 }
 
-CFEInterface::CFEInterface(CFEInterface & src)
+CFEInterface::CFEInterface(CFEInterface* src)
 : CFEFileComponent(src),
-    m_Attributes(src.m_Attributes),
-    m_Constants(src.m_Constants),
-    m_AttributeDeclarators(src.m_AttributeDeclarators),
-    m_TaggedDeclarators(src.m_TaggedDeclarators),
-    m_Operations(src.m_Operations),
-    m_Typedefs(src.m_Typedefs),
-    m_Exceptions(src.m_Exceptions),
-    m_BaseInterfaceNames(src.m_BaseInterfaceNames),
-    m_DerivedInterfaces(src.m_DerivedInterfaces),
-    m_BaseInterfaces(src.m_BaseInterfaces)
+	m_Attributes(src->m_Attributes),
+	m_Constants(src->m_Constants),
+	m_AttributeDeclarators(src->m_AttributeDeclarators),
+	m_TaggedDeclarators(src->m_TaggedDeclarators),
+	m_Operations(src->m_Operations),
+	m_Typedefs(src->m_Typedefs),
+	m_Exceptions(src->m_Exceptions),
+	m_BaseInterfaceNames(src->m_BaseInterfaceNames),
+	m_DerivedInterfaces(src->m_DerivedInterfaces),
+	m_BaseInterfaces(src->m_BaseInterfaces)
 {
-    m_sInterfaceName = src.m_sInterfaceName;
-    m_Attributes.Adopt(this);
-    m_Constants.Adopt(this);
-    m_AttributeDeclarators.Adopt(this);
-    m_TaggedDeclarators.Adopt(this);
-    m_Operations.Adopt(this);
-    m_Typedefs.Adopt(this);
-    m_Exceptions.Adopt(this);
-    m_BaseInterfaceNames.Adopt(this);
-    // not for m_DerivedInterfaces, m_BaseInterfaces
+	m_sInterfaceName = src->m_sInterfaceName;
+	m_Attributes.Adopt(this);
+	m_Constants.Adopt(this);
+	m_AttributeDeclarators.Adopt(this);
+	m_TaggedDeclarators.Adopt(this);
+	m_Operations.Adopt(this);
+	m_Typedefs.Adopt(this);
+	m_Exceptions.Adopt(this);
+	m_BaseInterfaceNames.Adopt(this);
+	// not for m_DerivedInterfaces, m_BaseInterfaces
 }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEInterface::Clone()
 {
-    return new CFEInterface(*this);
+	return new CFEInterface(this);
 }
 
 /** \brief add components to this interface
@@ -108,34 +106,34 @@ CObject* CFEInterface::Clone()
 void
 CFEInterface::AddComponents(vector<CFEInterfaceComponent*> *pComponents)
 {
-    if (pComponents)
-    {
-	vector<CFEInterfaceComponent*>::iterator iter;
-	for (iter = pComponents->begin(); iter != pComponents->end(); iter++)
+	if (pComponents)
 	{
-	    if (!*iter)
-		continue;
-	    // parent is set in Add* functions
-	    if (dynamic_cast<CFEConstDeclarator*>(*iter))
-		m_Constants.Add((CFEConstDeclarator*)*iter);
-	    else if (dynamic_cast<CFETypedDeclarator*>(*iter))
-	    {
-		CFETypedDeclarator *pTD = dynamic_cast<CFETypedDeclarator*>(*iter);
-		if (pTD->GetTypedDeclType() == TYPEDECL_EXCEPTION)
-		    m_Exceptions.Add(pTD);
-		else
-    		    m_Typedefs.Add(pTD);
-	    }
-	    else if (dynamic_cast<CFEOperation*>(*iter))
-		m_Operations.Add((CFEOperation*)*iter);
-	    else if (dynamic_cast<CFEConstructedType*>(*iter))
-		m_TaggedDeclarators.Add((CFEConstructedType*)*iter);
-	    else if (dynamic_cast<CFEAttributeDeclarator*>(*iter))
-		m_AttributeDeclarators.Add((CFEAttributeDeclarator*)*iter);
-	    else
-		throw new std::invalid_argument("Unknown interface component");
+		vector<CFEInterfaceComponent*>::iterator iter;
+		for (iter = pComponents->begin(); iter != pComponents->end(); iter++)
+		{
+			if (!*iter)
+				continue;
+			// parent is set in Add* functions
+			if (dynamic_cast<CFEConstDeclarator*>(*iter))
+				m_Constants.Add((CFEConstDeclarator*)*iter);
+			else if (dynamic_cast<CFETypedDeclarator*>(*iter))
+			{
+				CFETypedDeclarator *pTD = dynamic_cast<CFETypedDeclarator*>(*iter);
+				if (pTD->GetTypedDeclType() == TYPEDECL_EXCEPTION)
+					m_Exceptions.Add(pTD);
+				else
+					m_Typedefs.Add(pTD);
+			}
+			else if (dynamic_cast<CFEOperation*>(*iter))
+				m_Operations.Add((CFEOperation*)*iter);
+			else if (dynamic_cast<CFEConstructedType*>(*iter))
+				m_TaggedDeclarators.Add((CFEConstructedType*)*iter);
+			else if (dynamic_cast<CFEAttributeDeclarator*>(*iter))
+				m_AttributeDeclarators.Add((CFEAttributeDeclarator*)*iter);
+			else
+				throw new std::invalid_argument("Unknown interface component");
+		}
 	}
-    }
 }
 
 /** destructs the interface and all its members */
@@ -151,8 +149,8 @@ CFEInterface::~CFEInterface()
  */
 std::string CFEInterface::GetName()
 {
-    // if we got an identifier get it's name
-    return m_sInterfaceName;
+	// if we got an identifier get it's name
+	return m_sInterfaceName;
 }
 
 /** \brief try to match the given name with the own name
@@ -161,7 +159,7 @@ std::string CFEInterface::GetName()
  */
 bool CFEInterface::Match(std::string sName)
 {
-    return GetName() == sName;
+	return GetName() == sName;
 }
 
 /**
@@ -173,10 +171,10 @@ bool CFEInterface::Match(std::string sName)
  */
 void CFEInterface::AddBaseInterface(CFEInterface * pBaseInterface)
 {
-    if (!pBaseInterface)
-        return;
-    m_BaseInterfaces.Add(pBaseInterface);
-    pBaseInterface->m_DerivedInterfaces.Add(this);
+	if (!pBaseInterface)
+		return;
+	m_BaseInterfaces.Add(pBaseInterface);
+	pBaseInterface->m_DerivedInterfaces.Add(this);
 }
 
 /**
@@ -189,20 +187,20 @@ void CFEInterface::AddBaseInterface(CFEInterface * pBaseInterface)
  */
 int CFEInterface::GetOperationCount(bool bCountBase)
 {
-    int count = 0;
-    if (bCountBase)
-    {
-        vector<CFEInterface*>::iterator iterI;
-	for (iterI = m_BaseInterfaces.begin();
-	     iterI != m_BaseInterfaces.end();
-	     iterI++)
-        {
-            count += (*iterI)->GetOperationCount();
-        }
-    }
-    // now count functions
-    count += m_Operations.size();
-    return count;
+	int count = 0;
+	if (bCountBase)
+	{
+		vector<CFEInterface*>::iterator iterI;
+		for (iterI = m_BaseInterfaces.begin();
+			iterI != m_BaseInterfaces.end();
+			iterI++)
+		{
+			count += (*iterI)->GetOperationCount();
+		}
+	}
+	// now count functions
+	count += m_Operations.size();
+	return count;
 }
 
 /**
@@ -212,17 +210,17 @@ int CFEInterface::GetOperationCount(bool bCountBase)
  */
 CFEInterface *CFEInterface::FindBaseInterface(std::string sName)
 {
-    if (sName.empty())
-        return 0;
-    vector<CFEInterface*>::iterator iter;
-    for (iter = m_BaseInterfaces.begin();
-	 iter != m_BaseInterfaces.end();
-	 iter++)
-    {
-        if ((*iter)->GetName() == sName)
-            return *iter;
-    }
-    return 0;
+	if (sName.empty())
+		return 0;
+	vector<CFEInterface*>::iterator iter;
+	for (iter = m_BaseInterfaces.begin();
+		iter != m_BaseInterfaces.end();
+		iter++)
+	{
+		if ((*iter)->GetName() == sName)
+			return *iter;
+	}
+	return 0;
 }
 
 /** \brief the accept method for the visitors
@@ -233,62 +231,62 @@ CFEInterface *CFEInterface::FindBaseInterface(std::string sName)
  */
 void CFEInterface::Accept(CVisitor &v)
 {
-    v.Visit(*this);
-    // iterate attribues
-    vector<CFEAttribute*>::iterator iA;
-    for (iA = m_Attributes.begin();
-	 iA != m_Attributes.end();
-	 iA++)
-    {
-	(*iA)->Accept(v);
-    }
-    // check constants
-    vector<CFEConstDeclarator*>::iterator iC;
-    for (iC = m_Constants.begin();
-	 iC != m_Constants.end();
-	 iC++)
-            {
-	(*iC)->Accept(v);
-    }
-    // iterate attribute declarators
-    vector<CFEAttributeDeclarator*>::iterator iAD;
-    for (iAD = m_AttributeDeclarators.begin();
-	 iAD != m_AttributeDeclarators.end();
-	 iAD++)
+	v.Visit(*this);
+	// iterate attribues
+	vector<CFEAttribute*>::iterator iA;
+	for (iA = m_Attributes.begin();
+		iA != m_Attributes.end();
+		iA++)
 	{
-	(*iAD)->Accept(v);
-    }
-    // iterate tagged declarators
-    vector<CFEConstructedType*>::iterator iTD;
-    for (iTD = m_TaggedDeclarators.begin();
-	 iTD != m_TaggedDeclarators.end();
-	 iTD++)
-    {
-	(*iTD)->Accept(v);
-    }
-    // iterate operations
-    vector<CFEOperation*>::iterator iO;
-    for (iO = m_Operations.begin();
-	 iO != m_Operations.end();
-	 iO++)
+		(*iA)->Accept(v);
+	}
+	// check constants
+	vector<CFEConstDeclarator*>::iterator iC;
+	for (iC = m_Constants.begin();
+		iC != m_Constants.end();
+		iC++)
 	{
-	(*iO)->Accept(v);
-    }
-    // check typedefs
-    vector<CFETypedDeclarator*>::iterator iT;
-    for (iT = m_Typedefs.begin();
-	 iT != m_Typedefs.end();
-	 iT++)
-    {
-	(*iT)->Accept(v);
-    }
-    // check exceptions
-    for (iT = m_Exceptions.begin();
-	 iT != m_Exceptions.end();
-	 iT++)
-    {
-	(*iT)->Accept(v);
-    }
+		(*iC)->Accept(v);
+	}
+	// iterate attribute declarators
+	vector<CFEAttributeDeclarator*>::iterator iAD;
+	for (iAD = m_AttributeDeclarators.begin();
+		iAD != m_AttributeDeclarators.end();
+		iAD++)
+	{
+		(*iAD)->Accept(v);
+	}
+	// iterate tagged declarators
+	vector<CFEConstructedType*>::iterator iTD;
+	for (iTD = m_TaggedDeclarators.begin();
+		iTD != m_TaggedDeclarators.end();
+		iTD++)
+	{
+		(*iTD)->Accept(v);
+	}
+	// iterate operations
+	vector<CFEOperation*>::iterator iO;
+	for (iO = m_Operations.begin();
+		iO != m_Operations.end();
+		iO++)
+	{
+		(*iO)->Accept(v);
+	}
+	// check typedefs
+	vector<CFETypedDeclarator*>::iterator iT;
+	for (iT = m_Typedefs.begin();
+		iT != m_Typedefs.end();
+		iT++)
+	{
+		(*iT)->Accept(v);
+	}
+	// check exceptions
+	for (iT = m_Exceptions.begin();
+		iT != m_Exceptions.end();
+		iT++)
+	{
+		(*iT)->Accept(v);
+	}
 }
 
 /** \brief tests if this is a foward declaration
@@ -298,10 +296,10 @@ void CFEInterface::Accept(CVisitor &v)
  */
 bool CFEInterface::IsForward()
 {
-    return m_Attributes.empty() &&
-           m_Constants.empty() &&
-	   m_Operations.empty() &&
-	   m_TaggedDeclarators.empty() &&
-	   m_Typedefs.empty() &&
-	   m_Exceptions.empty();
+	return m_Attributes.empty() &&
+		m_Constants.empty() &&
+		m_Operations.empty() &&
+		m_TaggedDeclarators.empty() &&
+		m_Typedefs.empty() &&
+		m_Exceptions.empty();
 }

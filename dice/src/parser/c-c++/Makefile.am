@@ -20,7 +20,9 @@ EXTRA_DIST=		c-parser.yy
 dist-hook:
 	rm -f $(addprefix $(distdir)/,$(CLEANFILES))
 
-c-parser.tab.cc c-parser.tab.hh: c-parser.yy
+c-parser.tab.cc: c-parser.yy
 	bison --report=all -d $<
 
-c-scanner.ll: c-parser.tab.hh
+c-parser.tab.hh: c-parser.tab.cc
+
+c-parser-driver.cc c-parser-driver.hh c-scanner.ll: c-parser.tab.hh

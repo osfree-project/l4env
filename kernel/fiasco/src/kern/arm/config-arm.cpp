@@ -36,7 +36,7 @@ public:
   static unsigned const default_console_uart	= 3;
   static unsigned const default_console_uart_baudrate = 115200;
 
-  static const bool getchar_does_hlt = true;
+  static const bool getchar_does_hlt = false;
   static const bool getchar_does_hlt_works_ok = true;
   static const char char_micro;
   static const bool enable_io_protection = false;

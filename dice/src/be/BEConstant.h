@@ -57,9 +57,10 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CBEConstant(CBEConstant &src);
+    CBEConstant(CBEConstant* src);
 
 public:
+	virtual CObject* Clone();
     virtual void Write(CBEHeaderFile& pFile);
     virtual void CreateBackEnd(CBEType* pType, std::string sName,
 	CBEExpression* pValue, bool bAlwaysDefine);

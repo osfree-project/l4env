@@ -46,85 +46,83 @@ class CBEDeclarator;
  */
 class CBEUnionType : public CBEType
 {
-    // Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEUnionType();
-    ~ CBEUnionType();
+	/** \brief constructor
+	 */
+	CBEUnionType();
+	~CBEUnionType();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEUnionType(CBEUnionType & src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBEUnionType(CBEUnionType* src);
 
-    virtual int GetFixedSize();
-    virtual void WriteGetMaxSize(CBEFile& pFile,
-    	const vector<CBEUnionCase*> *pMembers,
-    	vector<CBEUnionCase*>::iterator iter,
-    	CDeclStack* pStack,
-	CBEFunction *pUsingFunc);
-    virtual void WriteGetMemberSize(CBEFile& pFile,
-    	CBEUnionCase *pMember,
-    	CDeclStack* pStack,
-	CBEFunction *pUsingFunc);
+	virtual int GetFixedSize();
+	virtual void WriteGetMaxSize(CBEFile& pFile,
+		const vector<CBEUnionCase*> *pMembers,
+		vector<CBEUnionCase*>::iterator iter,
+		CDeclStack* pStack,
+		CBEFunction *pUsingFunc);
+	virtual void WriteGetMemberSize(CBEFile& pFile,
+		CBEUnionCase *pMember,
+		CDeclStack* pStack,
+		CBEFunction *pUsingFunc);
 
 public:
-    virtual CObject *Clone();
+	virtual void Write(CBEFile& pFile);
+	virtual CObject* Clone();
+	virtual CBETypedDeclarator* FindMember(
+		CDeclStack* pStack,
+		CDeclStack::iterator iCurr);
 
-    virtual void Write(CBEFile& pFile);
+	virtual void CreateBackEnd(CFETypeSpec * pFEType);
+	virtual void CreateBackEnd(std::string sTag);
 
-    virtual CBETypedDeclarator* FindMember(
-	CDeclStack* pStack,
-	CDeclStack::iterator iCurr);
+	virtual int GetSize();
+	virtual int GetMaxSize();
+	virtual int GetUnionCaseCount();
+	virtual void WriteCast(CBEFile& pFile, bool bPointer);
+	virtual void WriteZeroInit(CBEFile& pFile);
+	virtual bool DoWriteZeroInit();
+	virtual void WriteGetSize(CBEFile& pFile,
+		CDeclStack* pStack, CBEFunction *pUsingFunc);
+	virtual void WriteDeclaration(CBEFile& pFile);
 
-    virtual void CreateBackEnd(CFETypeSpec * pFEType);
-    virtual void CreateBackEnd(std::string sTag);
-
-    virtual int GetSize();
-    virtual int GetMaxSize();
-    virtual int GetUnionCaseCount();
-    virtual void WriteCast(CBEFile& pFile, bool bPointer);
-    virtual void WriteZeroInit(CBEFile& pFile);
-    virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile& pFile,
-	CDeclStack* pStack, CBEFunction *pUsingFunc);
-    virtual void WriteDeclaration(CBEFile& pFile);
-
-    /** \brief return the tag
-     *  \return the tag
-     */
-    std::string GetTag()
-    { return m_sTag; }
-    /** \brief tests if this union has the given tag
-     *  \param sTag the tag to test for
-     *  \return true if the given tag is the same as the member tag
-     */
-    bool HasTag(std::string sTag)
-    { return (m_sTag == sTag); }
-    /** \brief test if this is a simple type
-     *  \return false
-     */
-    virtual bool IsSimpleType()
-    { return false; }
-    /** \brief checks if this is a constructed type
-     *  \return true, because a union is usually regarded a constructed type
-     */
-    virtual bool IsConstructedType()
-    { return true; }
+	/** \brief return the tag
+	 *  \return the tag
+	 */
+	std::string GetTag()
+	{ return m_sTag; }
+	/** \brief tests if this union has the given tag
+	 *  \param sTag the tag to test for
+	 *  \return true if the given tag is the same as the member tag
+	 */
+	bool HasTag(std::string sTag)
+	{ return (m_sTag == sTag); }
+	/** \brief test if this is a simple type
+	 *  \return false
+	 */
+	virtual bool IsSimpleType()
+	{ return false; }
+	/** \brief checks if this is a constructed type
+	 *  \return true, because a union is usually regarded a constructed type
+	 */
+	virtual bool IsConstructedType()
+	{ return true; }
 
 protected:
-    /** \var std::string m_sTag
-     *  \brief the name of the tag if any
-     */
-    std::string m_sTag;
+	/** \var std::string m_sTag
+	 *  \brief the name of the tag if any
+	 */
+	std::string m_sTag;
 
 public:
-    /** \var CSearchableCollection<CBEUnionCase, std::string> m_UnionCases
-     *  \brief contains the union's cases
-     */
-    CSearchableCollection<CBEUnionCase, std::string> m_UnionCases;
+	/** \var CSearchableCollection<CBEUnionCase, std::string> m_UnionCases
+	 *  \brief contains the union's cases
+	 */
+	CSearchableCollection<CBEUnionCase, std::string> m_UnionCases;
 };
 
 #endif                // !__DICE_BEUNIONTYPE_H__

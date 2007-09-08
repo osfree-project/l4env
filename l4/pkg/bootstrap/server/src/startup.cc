@@ -218,7 +218,7 @@ get_memory_limit(l4util_mb_info_t *mbi)
   /* maxmem= parameter? */
   if ((mbi->flags & L4UTIL_MB_CMDLINE) &&
       (c = check_arg(L4_CHAR_PTR(mbi->cmdline), "-maxmem=")))
-    return strtoul(c + 9, NULL, 10) << 20;
+    return strtoul(c + 8, NULL, 10) << 20;
   else
 #if defined(ARCH_x86)
     /* Limit memory, we cannot really handle more right now. In fact, the

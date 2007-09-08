@@ -44,61 +44,61 @@ class CFETypedDeclarator;
 class CFEUnionCase : public CFEBase
 {
 
-// standard constructor/destructor
+	// standard constructor/destructor
 public:
-    /** standard constructor for union case object */
-    CFEUnionCase();
-    /** constructor for union case object
-     *  \param pUnionArm the corresponding union arm (a type declarator)
-     *  \param pCaseLabels the labels of the bolonging case statement(s) */
-    CFEUnionCase(CFETypedDeclarator *pUnionArm,
-	vector<CFEExpression*> *pCaseLabels = 0);
-    virtual ~CFEUnionCase();
+	/** standard constructor for union case object */
+	CFEUnionCase();
+	/** constructor for union case object
+	 *  \param pUnionArm the corresponding union arm (a type declarator)
+	 *  \param pCaseLabels the labels of the bolonging case statement(s) */
+	CFEUnionCase(CFETypedDeclarator *pUnionArm,
+		vector<CFEExpression*> *pCaseLabels = 0);
+	virtual ~CFEUnionCase();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CFEUnionCase(CFEUnionCase &src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CFEUnionCase(CFEUnionCase* src);
 
-// operations
+	// operations
 public:
-    virtual void Accept(CVisitor&);
-    virtual CObject* Clone();
+	virtual CObject* Clone();
+	virtual void Accept(CVisitor&);
 
-    /** \brief test this union case for default
-     *  \return true if default case, false if not
-     *
-     * Returns the value of m_bDefault, which is set in the constructor. Usually
-     * all, but one union arm have a case label. The C unions (if included from a
-     * header file) have no case labels at all. Thus you can differentiate the
-     * C unions from IDL unions by testing all union case for default.
-     */
-    bool IsDefault()
-    { return m_bDefault; }
+	/** \brief test this union case for default
+	 *  \return true if default case, false if not
+	 *
+	 * Returns the value of m_bDefault, which is set in the constructor. Usually
+	 * all, but one union arm have a case label. The C unions (if included from a
+	 * header file) have no case labels at all. Thus you can differentiate the
+	 * C unions from IDL unions by testing all union case for default.
+	 */
+	bool IsDefault()
+	{ return m_bDefault; }
 
-    /** retrieves the union arm
-     *  \return the typed declarator, which is this union case's arm
-     */
-    CFETypedDeclarator* GetUnionArm()
-    { return m_pUnionArm; }
+	/** retrieves the union arm
+	 *  \return the typed declarator, which is this union case's arm
+	 */
+	CFETypedDeclarator* GetUnionArm()
+	{ return m_pUnionArm; }
 
-// attributes
+	// attributes
 protected:
-    /** \var bool m_bDefault
-     *  \brief shows, whether this is the default branch
-     */
-    bool m_bDefault;
-    /** \var CFETypedDeclarator *m_pUnionArm
-     *  \brief the variable declaration, which hides in this branch
-     */
-    CFETypedDeclarator *m_pUnionArm;
+	/** \var bool m_bDefault
+	 *  \brief shows, whether this is the default branch
+	 */
+	bool m_bDefault;
+	/** \var CFETypedDeclarator *m_pUnionArm
+	 *  \brief the variable declaration, which hides in this branch
+	 */
+	CFETypedDeclarator *m_pUnionArm;
 
 public:
-    /** \var CCollection<CFEExpression> m_UnionCaseLabelList
-     *  \brief the case labels (if not default) - should be constant values
-     */
-    CCollection<CFEExpression> m_UnionCaseLabelList;
+	/** \var CCollection<CFEExpression> m_UnionCaseLabelList
+	 *  \brief the case labels (if not default) - should be constant values
+	 */
+	CCollection<CFEExpression> m_UnionCaseLabelList;
 };
 
 #endif /* __DICE_FE_FEUNIONCASE_H__ */

@@ -4,6 +4,8 @@ L4DIR		?= $(PKGDIR)/../..
 TARGET		= $(PKGNAME)
 DEFAULT_RELOC	= 0x01800000
 
+SYSTEMS = x86-l4v2
+
 # list your .c files here
 SRC_C		=  main.c		\
 		   openclose.c 		\
@@ -26,7 +28,7 @@ DEFINES 	+= -DL4 -D__KERNEL__ -D__ORE__ -DDDE_LINUX
 -include $(PKGDIR_OBJ)/server/Makeconf.bid.local
 .general.d: $(PKGDIR_OBJ)/server/Makeconf.bid.local
 
-ifeq ($(CONFIG_ORE_DDE26),y)
+ifeq ($(CONFIG_ORE_DDE24),)
 
 # Most paths & co. come from DDE's Makeconf file
 include $(PKGDIR)/../dde/linux26/Makeconf
@@ -36,10 +38,6 @@ PRIVATE_INCDIR += $(PKGDIR_ABS)/server/include \
 
 LIBS 		+= -llinuxnetdrv26.o -ldde_linux26_net -ldde_linux26 -lddekit
 
-ifeq ($(CONFIG_ORE_FERRET),y)
-LIBS        += -lferret_client -lferret_producer -lferret_client
-endif
-
 else # using DDE2.4
 
 PRIVATE_INCDIR += $(PKGDIR_ABS)/server/include/linux_headers 	\
@@ -48,11 +46,16 @@ PRIVATE_INCDIR += $(PKGDIR_ABS)/server/include/linux_headers 	\
 		 $(PKGDIR_ABS)/server/include			\
 		 $(PKGDIR_OBJ)/server/include
 PRIVATE_LIBDIR = $(PKGDIR_OBJ)/server/lib/linuxemul/OBJ-$(SYSTEM)
-LIBS 		+= -llinuxemul -llinuxnetdrv -ldde_linux
+LIBS 		+= -llinuxemul -llinuxnetdrv -llinuxemul -ldde_linux
 LDFLAGS		+= --whole-archive \
 		   $(PKGDIR_OBJ)/server/lib/net/OBJ-$(SYSTEM)/liblinuxnetdrv.a \
 		   --no-whole-archive
 
+endif
+
+ifeq ($(CONFIG_ORE_FERRET),y)
+LIBS        += -lferret_client -lferret_producer -lferret_client -lferret_util \
+			   -lferret_comm -lferret_fpages -lferret_local_names
 endif
 
 LIBCINCDIR     += -nostdinc -I$(GCCINCDIR)

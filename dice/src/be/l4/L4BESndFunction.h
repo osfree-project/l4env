@@ -49,7 +49,7 @@ protected: // Protected methods
     virtual void WriteIPCErrorCheck(CBEFile& pFile);
     virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual void WriteIPC(CBEFile& pFile);
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 };
 
 #endif

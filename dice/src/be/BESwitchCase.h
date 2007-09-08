@@ -52,13 +52,9 @@ public:
     CBESwitchCase();
     virtual ~CBESwitchCase();
 
-protected:
-    /** \brief copy constructor */
-    CBESwitchCase(CBESwitchCase &src);
-
 public:
     virtual void Write(CBEFile& pFile);
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 
     virtual void SetMessageBufferType();
     virtual void SetCallVariable(std::string sOriginalName, int nStars,
@@ -75,6 +71,19 @@ protected:
 
     virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual void WriteInvocation(CBEFile& pFile);
+
+	/** \class SetCallVariableCall
+	 *  \brief used as functor to set call variables
+	 */
+	class SetCallVariableCall
+	{
+		CBEFunction *f;
+	public:
+		SetCallVariableCall(CBEFunction *ff) : f(ff)
+		{ }
+
+		void operator() (CBETypedDeclarator *pParameter);
+	};
 
 protected:
     /** \var bool m_bSameClass

@@ -54,10 +54,10 @@ public:
 
 protected:
     /** \brief copy constructor */
-    CBEInterfaceFunction(CBEInterfaceFunction &src);
+    CBEInterfaceFunction(CBEInterfaceFunction* src);
 
 public:
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
 
 protected:
     virtual void AddParameters();

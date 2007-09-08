@@ -38,18 +38,15 @@
  */
 class CFEInterfaceComponent : public CFEFileComponent
 {
-
-// standard constructor/destructor
-public:
-    /** construct an interface component object */
-    CFEInterfaceComponent();
-    virtual ~CFEInterfaceComponent();
-
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CFEInterfaceComponent(CFEInterfaceComponent &src);
+	CFEInterfaceComponent(CFEInterfaceComponent* src)
+		: CFEFileComponent(src)
+	{ }
+
+public:
+	CFEInterfaceComponent(CObject *pParent)
+		: CFEFileComponent(pParent)
+	{ }
 };
 
 #endif

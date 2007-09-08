@@ -27,7 +27,7 @@
 
 #include "config.h"
 #include "auto_config.h"
-#ifdef CONFIG_ORE_DDE26
+#ifndef CONFIG_ORE_DDE24
 #include <l4/dde/linux26/dde26.h>
 #else
 #include "linuxemul.h"
@@ -37,6 +37,24 @@
 #include <l4/ore/ore_rxtx-server.h>
 #include <l4/ore/ore_notify-server.h>
 #include <l4/ore/ore_notify-client.h>
+
+#ifdef CONFIG_ORE_FERRET
+#include <l4/ferret/sensors/list_producer.h>
+#include <l4/ferret/sensors/list_producer_wrap.h>
+#include <l4/ferret/sensors/list_init.h>
+#include <l4/ferret/client.h>
+#include <l4/ferret/clock.h>
+#include <l4/ferret/maj_min.h>
+
+extern ferret_list_local_t *ferret_ore_sensor;
+
+#define FERRET_EVENT(m) do { \
+                    ferret_list_post_1t(ferret_ore_sensor,    \
+                                        FERRET_ORE_MAJOR, m, \
+                                        0, l4_myself()); \
+                    } while (0);
+
+#endif
 
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
@@ -196,7 +214,7 @@ void worker_thread_dsi(void *);
 /* checksum functions */
 unsigned int adler32(unsigned char *buf, unsigned int len);
 
-#ifndef CONFIG_ORE_DDE26
+#ifdef CONFIG_ORE_DDE24
 unsigned short crc16(unsigned char *buf, int len, short magic);
 unsigned int crc32(unsigned char *buf, int len, short magic);
 #else

@@ -30,10 +30,11 @@ l4sigma0_map_tbuf(l4_threadid_t pager, l4_addr_t virt)
   l4_fpage_t fpage;
   l4_msgdope_t result;
   int error;
+  l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
 
-  error = l4_ipc_call(pager, L4_IPC_SHORT_MSG, SIGMA0_REQ_TBUF, 0,
-                      L4_IPC_MAPMSG(virt, L4_LOG2_PAGESIZE),
-		      &base, &fpage.fpage, L4_IPC_NEVER, &result);
+  error = l4_ipc_call_tag(pager, L4_IPC_SHORT_MSG, SIGMA0_REQ_TBUF, 0, tag,
+                          L4_IPC_MAPMSG(virt, L4_LOG2_PAGESIZE),
+		          &base, &fpage.fpage, L4_IPC_NEVER, &result, &tag);
 
   if (error)
     return -2;

@@ -42,19 +42,11 @@
 #include <cassert>
 
 CSockBESndFunction::CSockBESndFunction()
-{
-}
-
-CSockBESndFunction::CSockBESndFunction(CSockBESndFunction & src)
-: CBESndFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CSockBESndFunction::~CSockBESndFunction()
-{
-
-}
+{ }
 
 /** \brief invoke the call to the server
  *  \param pFile the file to write to
@@ -66,61 +58,58 @@ CSockBESndFunction::~CSockBESndFunction()
  * -# NO NEED TO receive from socket
  * -# clode socket
  */
-void
-CSockBESndFunction::WriteInvocation(CBEFile& pFile)
+void CSockBESndFunction::WriteInvocation(CBEFile& pFile)
 {
-    CBECommunication *pComm = GetCommunication();
-    assert(pComm);
-    // create socket
-    pComm->WriteInitialization(pFile, this);
-    // call
-    pComm->WriteSend(pFile, this);
-    // close socket
-    pComm->WriteCleanup(pFile, this);
+	CBECommunication *pComm = GetCommunication();
+	assert(pComm);
+	// create socket
+	pComm->WriteInitialization(pFile, this);
+	// call
+	pComm->WriteSend(pFile, this);
+	// close socket
+	pComm->WriteCleanup(pFile, this);
 }
 
 /** \brief initializes the variables
  *  \param pFile the file to write to
  */
-void
-CSockBESndFunction::WriteVariableInitialization(CBEFile& pFile)
+void CSockBESndFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-    CBESndFunction::WriteVariableInitialization(pFile);
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sOffset = pNF->GetOffsetVariable();
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    string sPtrName, sSizeName;
-    if (pMsgBuffer->m_Declarators.First()->GetStars() == 0)
-	sPtrName = "&";
-    else
-	sSizeName = "*";
-    sPtrName += pMsgBuffer->m_Declarators.First()->GetName();
-    sSizeName += pMsgBuffer->m_Declarators.First()->GetName();
+	CBESndFunction::WriteVariableInitialization(pFile);
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sOffset = pNF->GetOffsetVariable();
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	string sPtrName, sSizeName;
+	if (pMsgBuffer->m_Declarators.First()->GetStars() == 0)
+		sPtrName = "&";
+	else
+		sSizeName = "*";
+	sPtrName += pMsgBuffer->m_Declarators.First()->GetName();
+	sSizeName += pMsgBuffer->m_Declarators.First()->GetName();
 
-    pFile << "\tbzero(" << sPtrName << ", sizeof(" << sSizeName << "));\n";
+	pFile << "\tbzero(" << sPtrName << ", sizeof(" << sSizeName << "));\n";
 }
 
 /** \brief initialize the instance of this class
  *  \param pFEOperation the front-end operation to use as reference
  *  \return true if successful
  */
-void
-CSockBESndFunction::CreateBackEnd(CFEOperation *pFEOperation)
+void CSockBESndFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 {
-    CBESndFunction::CreateBackEnd(pFEOperation);
+	CBESndFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
-    string exc = string(__func__);
-    // add local variables
-    string sCurr = string("dice_ret_size");
-    AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
-    // reuse pType (its been cloned)
-    sCurr = string("sd");
-    AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
+	string exc = string(__func__);
+	// add local variables
+	string sCurr = string("dice_ret_size");
+	AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
+	// reuse pType (its been cloned)
+	sCurr = string("sd");
+	AddLocalVariable(TYPE_INTEGER, false, 4, sCurr, 0);
 
-    // needed for receive
-    string sInit = "sizeof(*" +
-	CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
-    sCurr = string("dice_fromlen");
-    AddLocalVariable(string("socklen_t"), sCurr, 0, sInit);
+	// needed for receive
+	string sInit = "sizeof(*" +
+		CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
+	sCurr = string("dice_fromlen");
+	AddLocalVariable(string("socklen_t"), sCurr, 0, sInit);
 }
 

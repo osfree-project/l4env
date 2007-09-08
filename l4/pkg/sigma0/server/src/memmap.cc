@@ -2,6 +2,7 @@
 #include <l4/sys/syscalls.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/ktrace.h>
+#include <l4/sigma0/sigma0.h>
 #include <l4/cxx/iostream.h>
 #include <l4/cxx/l4iostream.h>
 
@@ -73,34 +74,34 @@ void
 print_request(enum Requests r)
 {
   static char const * const names[] = { "None", "Map_free_page",
-      "Map_free_superpage", "Map_kip", "Map_tbuf", "Map_ram", 
+      "Map_free_superpage", "Map_kip", "Map_tbuf", "Map_ram",
       "Map_iomem", "Map_iomem_cached", "Debug_dump"};
 
   L4::cout << "Request: " << names[r] << '\n';
 }
 
 /* parser for incoming messages */
-static 
+static
 Requests get_request(unsigned long d0, unsigned long d1, l4_msgtag_t const &tag)
 {
-  if (l4_msgtag_label(tag) != 0 && !l4_msgtag_is_sigma0(tag))
+  if (!l4_msgtag_is_sigma0(tag))
     return None;
 
   if (d0 == 1 && (d1 & 0x0f) == 0x0f)
     return Map_kip;
   else if (d0 == ~3UL)
     return Map_free_page;
-  else if ((d0 & ~0xffUL) == ~0xffUL)
+  else if (SIGMA0_IS_MAGIC_REQ(d0))
     {
       switch (d0 & 0x0f0)
 	{
-	case 0xc0: return Debug_dump;
-	case 0xb0: return Map_tbuf;
-	case 0x60: return Map_ram;
-	case 0x70: return Map_iomem;
-	case 0x80: return Map_iomem_cached;
-	case 0xa0: return Map_kip;
-	case 0x90: 
+	case SIGMA0_REQ_ID_DEBUG_DUMP:         return Debug_dump;
+	case SIGMA0_REQ_ID_TBUF:               return Map_tbuf;
+	case SIGMA0_REQ_ID_FPAGE_RAM:          return Map_ram;
+	case SIGMA0_REQ_ID_FPAGE_IOMEM:        return Map_iomem;
+	case SIGMA0_REQ_ID_FPAGE_IOMEM_CACHED: return Map_iomem_cached;
+	case SIGMA0_REQ_ID_KIP:                return Map_kip;
+	case SIGMA0_REQ_ID_FPAGE_ANY:
 	  {
 	    l4_fpage_t fp = (l4_fpage_t&)d1;
 	    if (fp.fp.size == L4_LOG2_PAGESIZE)
@@ -158,11 +159,11 @@ Answer map_mem(l4_fpage_t fp, Memory_type fn, l4_threadid_t t)
   Mem_man *m;
   switch (fn)
     {
-    case Ram: 
-      m = Mem_man::ram(); 
+    case Ram:
+      m = Mem_man::ram();
       break;
     case Io_mem:
-    case Io_mem_cached: 
+    case Io_mem_cached:
       m = &iomem;
       break;
     default:
@@ -183,21 +184,20 @@ Answer map_mem(l4_fpage_t fp, Memory_type fn, l4_threadid_t t)
   an.snd_fpage(addr, super?L4_LOG2_SUPERPAGESIZE:L4_LOG2_PAGESIZE);
   if (fn == Io_mem)
     an.no_cache();
-  
+
   return an;
 }
 
 /* handler for page fault and io page fault requests */
 static
 Answer
-handle_page_fault(unsigned long d1, unsigned long d2, l4_threadid_t t, 
-    l4_msgtag_t const &tag)
+handle_page_fault(unsigned long d1, unsigned long d2, l4_threadid_t t,
+                  l4_msgtag_t const &tag)
 {
   unsigned long pfa = d1 & ~3UL;
   Answer answer;
 
-  if (l4_msgtag_label(tag) != 0 && !l4_msgtag_is_page_fault(tag)
-      && !l4_msgtag_is_io_page_fault(tag))
+  if (!l4_msgtag_is_page_fault(tag) && !l4_msgtag_is_io_page_fault(tag))
     return answer;
 
   d1 &= ~2UL;	/* the L4 kernel seems to get this bit wrong */

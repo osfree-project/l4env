@@ -32,23 +32,20 @@ CFEAttributeDeclarator::CFEAttributeDeclarator(CFETypeSpec * pType,
                        vector<CFEDeclarator*> * pDeclarators,
                        vector<CFEAttribute*> * pTypeAttributes)
  : CFETypedDeclarator(TYPEDECL_ATTRIBUTE, pType, pDeclarators, pTypeAttributes)
-{
-}
+{ }
 
-CFEAttributeDeclarator::CFEAttributeDeclarator(CFEAttributeDeclarator& src)
+CFEAttributeDeclarator::CFEAttributeDeclarator(CFEAttributeDeclarator* src)
  : CFETypedDeclarator(src)
-{
-}
+{ }
 
 /** deletes this object */
 CFEAttributeDeclarator::~CFEAttributeDeclarator()
-{
-}
+{ }
 
-/** \brief clones this object
- *  \return a reference to a new instance of this class
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEAttributeDeclarator::Clone()
 {
-    return new CFEAttributeDeclarator(*this);
+	return new CFEAttributeDeclarator(this);
 }

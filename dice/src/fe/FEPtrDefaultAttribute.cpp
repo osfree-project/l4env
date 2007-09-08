@@ -34,31 +34,25 @@ CFEPtrDefaultAttribute::CFEPtrDefaultAttribute(CFEAttribute * pPtrAttr)
     m_pPtrAttr = pPtrAttr;
 }
 
-CFEPtrDefaultAttribute::CFEPtrDefaultAttribute(CFEPtrDefaultAttribute & src)
+CFEPtrDefaultAttribute::CFEPtrDefaultAttribute(CFEPtrDefaultAttribute* src)
 :CFEAttribute(src)
 {
-    if (src.m_pPtrAttr)
-      {
-      m_pPtrAttr = (CFEAttribute *) (src.m_pPtrAttr->Clone());
-      m_pPtrAttr->SetParent(this);
-      }
-    else
-    m_pPtrAttr = 0;
+	CLONE_MEM(CFEAttribute, m_pPtrAttr);
 }
 
 /** cleans up the pointer-default attribute object */
 CFEPtrDefaultAttribute::~CFEPtrDefaultAttribute()
 {
-    if (m_pPtrAttr)
-    delete m_pPtrAttr;
+	if (m_pPtrAttr)
+		delete m_pPtrAttr;
 }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject *CFEPtrDefaultAttribute::Clone()
+CObject* CFEPtrDefaultAttribute::Clone()
 {
-    return new CFEPtrDefaultAttribute(*this);
+	return new CFEPtrDefaultAttribute(this);
 }
 
 /** retrieves the pointer attribute

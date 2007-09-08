@@ -91,8 +91,8 @@ CBEClassFactory::~CBEClassFactory()
  */
 CBERoot *CBEClassFactory::GetNewRoot()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClassFactory: created class CBERoot\n");
-    return new CBERoot();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClassFactory: created class CBERoot\n");
+	return new CBERoot();
 }
 
 /** \brief creates a new instance of the class CBEClient
@@ -100,8 +100,8 @@ CBERoot *CBEClassFactory::GetNewRoot()
  */
 CBEClient *CBEClassFactory::GetNewClient()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClassFactory: created class CBEClient\n");
-    return new CBEClient();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClassFactory: created class CBEClient\n");
+	return new CBEClient();
 }
 
 /** \brief creates a new instance of the class CBEComponent
@@ -109,8 +109,8 @@ CBEClient *CBEClassFactory::GetNewClient()
  */
 CBEComponent *CBEClassFactory::GetNewComponent()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClassFactory: created class CBEComponent\n");
-    return new CBEComponent();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClassFactory: created class CBEComponent\n");
+	return new CBEComponent();
 }
 
 /** \brief creates a new instance of the class CBEHeaderFile
@@ -118,9 +118,9 @@ CBEComponent *CBEClassFactory::GetNewComponent()
  */
 CBEHeaderFile *CBEClassFactory::GetNewHeaderFile()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEHeaderFile\n");
-    return new CBEHeaderFile();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEHeaderFile\n");
+	return new CBEHeaderFile();
 }
 
 /** \brief creates a new instance of the class CBEImplementationFile
@@ -128,9 +128,9 @@ CBEHeaderFile *CBEClassFactory::GetNewHeaderFile()
  */
 CBEImplementationFile *CBEClassFactory::GetNewImplementationFile()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEImplementationFile\n");
-    return new CBEImplementationFile();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEImplementationFile\n");
+	return new CBEImplementationFile();
 }
 
 /** \brief creates a new instance of the class CBESndFunction
@@ -138,9 +138,9 @@ CBEImplementationFile *CBEClassFactory::GetNewImplementationFile()
  */
 CBESndFunction *CBEClassFactory::GetNewSndFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBESndFunction\n");
-    return new CBESndFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBESndFunction\n");
+	return new CBESndFunction();
 }
 
 /** \brief creates a new instance of the class CBEWaitFunction
@@ -148,9 +148,9 @@ CBESndFunction *CBEClassFactory::GetNewSndFunction()
  */
 CBEWaitFunction *CBEClassFactory::GetNewRcvFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEWaitFunction\n");
-    return new CBEWaitFunction(false);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEWaitFunction\n");
+	return new CBEWaitFunction(false);
 }
 
 /** \brief creates a new instance of the class CBEWaitFunction
@@ -158,9 +158,9 @@ CBEWaitFunction *CBEClassFactory::GetNewRcvFunction()
  */
 CBEWaitFunction *CBEClassFactory::GetNewWaitFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEWaitFunction\n");
-    return new CBEWaitFunction(true);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEWaitFunction\n");
+	return new CBEWaitFunction(true);
 }
 
 /** \brief creates a new instance of the class CBEReplyFunction
@@ -168,9 +168,9 @@ CBEWaitFunction *CBEClassFactory::GetNewWaitFunction()
  */
 CBEReplyFunction *CBEClassFactory::GetNewReplyFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEReplyFunction\n");
-    return new CBEReplyFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEReplyFunction\n");
+	return new CBEReplyFunction();
 }
 
 /** \brief creates a new instance of the class CBEAttribute
@@ -178,9 +178,9 @@ CBEReplyFunction *CBEClassFactory::GetNewReplyFunction()
  */
 CBEAttribute *CBEClassFactory::GetNewAttribute()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEAttribute\n");
-    return new CBEAttribute();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEAttribute\n");
+	return new CBEAttribute();
 }
 
 /** \brief creates a new instance of the class CBEType
@@ -191,67 +191,67 @@ CBEAttribute *CBEClassFactory::GetNewAttribute()
  */
 CBEType *CBEClassFactory::GetNewType(int nType)
 {
-    switch (nType)
-    {
-    case TYPE_ARRAY:
-    case TYPE_STRUCT:
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-            "CBEClassFactory: created class CBEStructType\n");
-        return new CBEStructType();
-        break;
-    case TYPE_IDL_UNION:
+	switch (nType)
+	{
+	case TYPE_ARRAY:
+	case TYPE_STRUCT:
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEClassFactory: created class CBEStructType\n");
+		return new CBEStructType();
+		break;
+	case TYPE_IDL_UNION:
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEClassFactory: created class CBEIDLUnionType\n");
+		return new CBEIDLUnionType();
+		break;
+	case TYPE_UNION:
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEClassFactory: created class CBEunionType\n");
+		return new CBEUnionType();
+		break;
+	case TYPE_ENUM:
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEClassFactory: created class CBEEnumType\n");
+		return new CBEEnumType();
+		break;
+	case TYPE_USER_DEFINED:
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEClassFactory: created class CBEUserDefinedType\n");
+		return GetNewUserDefinedType();
+		break;
+	case TYPE_NONE:
+	case TYPE_FLEXPAGE:
+	case TYPE_RCV_FLEXPAGE:
+	case TYPE_INTEGER:
+	case TYPE_LONG:
+	case TYPE_VOID:
+	case TYPE_FLOAT:
+	case TYPE_DOUBLE:
+	case TYPE_LONG_DOUBLE:
+	case TYPE_WCHAR:
+	case TYPE_CHAR:
+	case TYPE_BOOLEAN:
+	case TYPE_BYTE:
+	case TYPE_VOID_ASTERISK:
+	case TYPE_CHAR_ASTERISK:
+	case TYPE_PIPE:
+	case TYPE_HANDLE_T:
+	case TYPE_ISO_LATIN_1:
+	case TYPE_ISO_MULTILINGUAL:
+	case TYPE_ISO_UCS:
+	case TYPE_ERROR_STATUS_T:
+	case TYPE_OCTET:
+	case TYPE_ANY:
+	case TYPE_OBJECT:
+	case TYPE_STRING:
+	case TYPE_WSTRING:
+	case TYPE_REFSTRING:
+	default:
+		break;
+	}
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "CBEClassFactory: created class CBEIDLUnionType\n");
-	return new CBEIDLUnionType();
-	break;
-    case TYPE_UNION:
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-            "CBEClassFactory: created class CBEunionType\n");
-        return new CBEUnionType();
-        break;
-    case TYPE_ENUM:
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-            "CBEClassFactory: created class CBEEnumType\n");
-        return new CBEEnumType();
-        break;
-    case TYPE_USER_DEFINED:
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-            "CBEClassFactory: created class CBEUserDefinedType\n");
-        return GetNewUserDefinedType();
-        break;
-    case TYPE_NONE:
-    case TYPE_FLEXPAGE:
-    case TYPE_RCV_FLEXPAGE:
-    case TYPE_INTEGER:
-    case TYPE_LONG:
-    case TYPE_VOID:
-    case TYPE_FLOAT:
-    case TYPE_DOUBLE:
-    case TYPE_LONG_DOUBLE:
-    case TYPE_WCHAR:
-    case TYPE_CHAR:
-    case TYPE_BOOLEAN:
-    case TYPE_BYTE:
-    case TYPE_VOID_ASTERISK:
-    case TYPE_CHAR_ASTERISK:
-    case TYPE_PIPE:
-    case TYPE_HANDLE_T:
-    case TYPE_ISO_LATIN_1:
-    case TYPE_ISO_MULTILINGUAL:
-    case TYPE_ISO_UCS:
-    case TYPE_ERROR_STATUS_T:
-    case TYPE_OCTET:
-    case TYPE_ANY:
-    case TYPE_OBJECT:
-    case TYPE_STRING:
-    case TYPE_WSTRING:
-    case TYPE_REFSTRING:
-    default:
-        break;
-    }
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEType\n");
-    return new CBEType();
+		"CBEClassFactory: created class CBEType\n");
+	return new CBEType();
 }
 
 /** \brief creates a new instance of the class CBETypedDeclarator
@@ -259,9 +259,9 @@ CBEType *CBEClassFactory::GetNewType(int nType)
  */
 CBETypedDeclarator *CBEClassFactory::GetNewTypedDeclarator()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created new instance of CBETypedDeclarator\n");
-    return new CBETypedDeclarator();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created new instance of CBETypedDeclarator\n");
+	return new CBETypedDeclarator();
 }
 
 /** \brief creates a new instance of the class CBETypedef
@@ -269,9 +269,9 @@ CBETypedDeclarator *CBEClassFactory::GetNewTypedDeclarator()
  */
 CBETypedef *CBEClassFactory::GetNewTypedef()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created new instance of CBETypedef\n");
-    return new CBETypedef();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created new instance of CBETypedef\n");
+	return new CBETypedef();
 }
 
 
@@ -280,9 +280,9 @@ CBETypedef *CBEClassFactory::GetNewTypedef()
  */
 CBEMsgBuffer* CBEClassFactory::GetNewMessageBuffer()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created new instance of CBEMsgBuffer\n");
-    return new CBEMsgBuffer();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created new instance of CBEMsgBuffer\n");
+	return new CBEMsgBuffer();
 }
 
 /** \brief creates a new instance of the class CBEException
@@ -290,9 +290,9 @@ CBEMsgBuffer* CBEClassFactory::GetNewMessageBuffer()
  */
 CBEException *CBEClassFactory::GetNewException()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEException\n");
-    return new CBEException();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEException\n");
+	return new CBEException();
 }
 
 /** \brief creates a new instance of the class CBEUnionCase
@@ -300,9 +300,9 @@ CBEException *CBEClassFactory::GetNewException()
  */
 CBEUnionCase *CBEClassFactory::GetNewUnionCase()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEUnionCase\n");
-    return new CBEUnionCase();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEUnionCase\n");
+	return new CBEUnionCase();
 }
 
 /** \brief creates a new instance of the class CBEDeclarator
@@ -310,9 +310,9 @@ CBEUnionCase *CBEClassFactory::GetNewUnionCase()
  */
 CBEDeclarator *CBEClassFactory::GetNewDeclarator()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEDeclarator\n");
-    return new CBEDeclarator();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEDeclarator\n");
+	return new CBEDeclarator();
 }
 
 /** \brief creates a new instance of the class CBEExpression
@@ -320,9 +320,9 @@ CBEDeclarator *CBEClassFactory::GetNewDeclarator()
  */
 CBEExpression *CBEClassFactory::GetNewExpression()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEExpression\n");
-    return new CBEExpression();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEExpression\n");
+	return new CBEExpression();
 }
 
 /** \brief creates a new instance of the class CBECallFunction
@@ -330,9 +330,9 @@ CBEExpression *CBEClassFactory::GetNewExpression()
  */
 CBECallFunction *CBEClassFactory::GetNewCallFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBECallFunction\n");
-    return new CBECallFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBECallFunction\n");
+	return new CBECallFunction();
 }
 
 /** \brief creates a new instance of the class CBECppCallWrapperFunction
@@ -340,9 +340,9 @@ CBECallFunction *CBEClassFactory::GetNewCallFunction()
  */
 CBECppCallWrapperFunction *CBEClassFactory::GetNewCppCallWrapperFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBECppCallWrapperFunction\n");
-    return new CBECppCallWrapperFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBECppCallWrapperFunction\n");
+	return new CBECppCallWrapperFunction();
 }
 
 /** \brief creates a new instance of the class CBEConstant
@@ -350,9 +350,9 @@ CBECppCallWrapperFunction *CBEClassFactory::GetNewCppCallWrapperFunction()
  */
 CBEConstant *CBEClassFactory::GetNewConstant()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEConstant\n");
-    return new CBEConstant();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEConstant\n");
+	return new CBEConstant();
 }
 
 /** \brief creates a new instance of the class CBESrvLoopFunction
@@ -360,9 +360,9 @@ CBEConstant *CBEClassFactory::GetNewConstant()
  */
 CBESrvLoopFunction *CBEClassFactory::GetNewSrvLoopFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBESrvLoopFunction\n");
-    return new CBESrvLoopFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBESrvLoopFunction\n");
+	return new CBESrvLoopFunction();
 }
 
 /** \brief creates a new instance of the class CBERcvAnyFunction
@@ -370,9 +370,9 @@ CBESrvLoopFunction *CBEClassFactory::GetNewSrvLoopFunction()
  */
 CBEWaitAnyFunction *CBEClassFactory::GetNewRcvAnyFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBERcvAnyFunction\n");
-    return new CBEWaitAnyFunction(false, false);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBERcvAnyFunction\n");
+	return new CBEWaitAnyFunction(false, false);
 }
 
 /** \brief creates a new instance of the class CBEWaitAnyFunction
@@ -380,9 +380,9 @@ CBEWaitAnyFunction *CBEClassFactory::GetNewRcvAnyFunction()
  */
 CBEWaitAnyFunction *CBEClassFactory::GetNewWaitAnyFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEWaitAnyFunction\n");
-    return new CBEWaitAnyFunction(true, false);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEWaitAnyFunction\n");
+	return new CBEWaitAnyFunction(true, false);
 }
 
 /** \brief creates a new instance of the class CBEUnmarshalFunction
@@ -390,9 +390,9 @@ CBEWaitAnyFunction *CBEClassFactory::GetNewWaitAnyFunction()
  */
 CBEUnmarshalFunction *CBEClassFactory::GetNewUnmarshalFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEUnmarshalFunction\n");
-    return new CBEUnmarshalFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEUnmarshalFunction\n");
+	return new CBEUnmarshalFunction();
 }
 
 /** \brief creates a new instance of the class CBEMarshalFunction
@@ -400,9 +400,9 @@ CBEUnmarshalFunction *CBEClassFactory::GetNewUnmarshalFunction()
  */
 CBEMarshalFunction *CBEClassFactory::GetNewMarshalFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEMarshalFunction\n");
-    return new CBEMarshalFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEMarshalFunction\n");
+	return new CBEMarshalFunction();
 }
 
 /** \brief creates a new instance of the class CBEMarshalFunction
@@ -410,9 +410,9 @@ CBEMarshalFunction *CBEClassFactory::GetNewMarshalFunction()
  */
 CBEMarshalExceptionFunction *CBEClassFactory::GetNewMarshalExceptionFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEMarshalExceptionFunction\n");
-    return new CBEMarshalExceptionFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEMarshalExceptionFunction\n");
+	return new CBEMarshalExceptionFunction();
 }
 
 /** \brief creates a new instance of the class CBEOpcodeType
@@ -420,9 +420,9 @@ CBEMarshalExceptionFunction *CBEClassFactory::GetNewMarshalExceptionFunction()
  */
 CBEOpcodeType *CBEClassFactory::GetNewOpcodeType()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEOpcodeType\n");
-    return new CBEOpcodeType();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEOpcodeType\n");
+	return new CBEOpcodeType();
 }
 
 /** \brief creates a new instance of the class CBEOpcodeType
@@ -430,9 +430,9 @@ CBEOpcodeType *CBEClassFactory::GetNewOpcodeType()
  */
 CBEReplyCodeType *CBEClassFactory::GetNewReplyCodeType()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEReplyCodeType\n");
-    return new CBEReplyCodeType();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEReplyCodeType\n");
+	return new CBEReplyCodeType();
 }
 
 /** \brief creates a new instance of the class CBEComponentFunction
@@ -440,9 +440,9 @@ CBEReplyCodeType *CBEClassFactory::GetNewReplyCodeType()
  */
 CBEComponentFunction *CBEClassFactory::GetNewComponentFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEComponentFunction\n");
-    return new CBEComponentFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEComponentFunction\n");
+	return new CBEComponentFunction();
 }
 
 /** \brief creates a new instance of the class CBESwitchCase
@@ -450,9 +450,9 @@ CBEComponentFunction *CBEClassFactory::GetNewComponentFunction()
  */
 CBESwitchCase *CBEClassFactory::GetNewSwitchCase()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBESwitchCase\n");
-    return new CBESwitchCase();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBESwitchCase\n");
+	return new CBESwitchCase();
 }
 
 /** \brief creates a new instance of the class CBEUserDefinedType
@@ -460,9 +460,9 @@ CBESwitchCase *CBEClassFactory::GetNewSwitchCase()
  */
 CBEUserDefinedType *CBEClassFactory::GetNewUserDefinedType()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBEUserDefinedType\n");
-    return new CBEUserDefinedType();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBEUserDefinedType\n");
+	return new CBEUserDefinedType();
 }
 
 /** \brief creates a new instance of the class CBEClass
@@ -470,9 +470,9 @@ CBEUserDefinedType *CBEClassFactory::GetNewUserDefinedType()
  */
 CBEClass *CBEClassFactory::GetNewClass()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: create new CBEClass\n");
-    return new CBEClass();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: create new CBEClass\n");
+	return new CBEClass();
 }
 
 /** \brief creates a new instance of the class CBEMarshaller
@@ -480,9 +480,9 @@ CBEClass *CBEClassFactory::GetNewClass()
  */
 CBEMarshaller* CBEClassFactory::GetNewMarshaller()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: create class CBEMarshaller\n");
-    return new CBEMarshaller();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: create class CBEMarshaller\n");
+	return new CBEMarshaller();
 }
 
 /** \brief creates a new instance of the class CBENameSpace
@@ -490,9 +490,9 @@ CBEMarshaller* CBEClassFactory::GetNewMarshaller()
  */
 CBENameSpace* CBEClassFactory::GetNewNameSpace()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: created class CBENameSpace\n");
-    return new CBENameSpace();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: created class CBENameSpace\n");
+	return new CBENameSpace();
 }
 
 /** \brief creates a new instance of the class CBEReplyAnyWayitAnyFunction
@@ -500,9 +500,9 @@ CBENameSpace* CBEClassFactory::GetNewNameSpace()
  */
 CBEWaitAnyFunction* CBEClassFactory::GetNewReplyAnyWaitAnyFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: create class CBEReplyAnyWayitAnyFunction\n");
-    return new CBEWaitAnyFunction(true /* open wait*/, true /* reply */);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: create class CBEReplyAnyWayitAnyFunction\n");
+	return new CBEWaitAnyFunction(true /* open wait*/, true /* reply */);
 }
 
 /** \brief creates a new instance of the class CBESizes
@@ -510,9 +510,9 @@ CBEWaitAnyFunction* CBEClassFactory::GetNewReplyAnyWaitAnyFunction()
  */
 CBESizes* CBEClassFactory::GetNewSizes()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: create class CBESizes\n");
-    return new CBESizes();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: create class CBESizes\n");
+	return new CBESizes();
 }
 
 /** \brief creates a new instance of the class CBEDispatchFunction
@@ -520,9 +520,9 @@ CBESizes* CBEClassFactory::GetNewSizes()
  */
 CBEDispatchFunction* CBEClassFactory::GetNewDispatchFunction()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: create class CBEDispatchFunction\n");
-    return new CBEDispatchFunction();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: create class CBEDispatchFunction\n");
+	return new CBEDispatchFunction();
 }
 
 /** \brief creates a new instance of the message buffer type
@@ -530,9 +530,9 @@ CBEDispatchFunction* CBEClassFactory::GetNewDispatchFunction()
  */
 CBEMsgBufferType* CBEClassFactory::GetNewMessageBufferType()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-        "CBEClassFactory: create class CBEMsgBufferType\n");
-    return new CBEMsgBufferType();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: create class CBEMsgBufferType\n");
+	return new CBEMsgBufferType();
 }
 
 /** \brief creates a new instance of the tracing class CTrace
@@ -540,30 +540,30 @@ CBEMsgBufferType* CBEClassFactory::GetNewMessageBufferType()
  */
 CTrace* CBEClassFactory::GetNewTrace()
 {
-    string sTraceLib;
-    if (!CCompiler::GetBackEndOption(string("trace-lib"), sTraceLib))
-	return 0;
+	string sTraceLib;
+	if (!CCompiler::GetBackEndOption(string("trace-lib"), sTraceLib))
+		return 0;
 
-    // get handle for lib
-    lt_dlhandle lib = lt_dlopen(sTraceLib.c_str());
-    if (lib == NULL)
-	return 0;
+	// get handle for lib
+	lt_dlhandle lib = lt_dlopen(sTraceLib.c_str());
+	if (!lib)
+		return 0;
 
-    // get symbol for create function
-    CTrace* (*func)(void);
-    func = (CTrace* (*)(void))lt_dlsym(lib, "dice_tracing_new_class");
-    // use error message as error indicator
-    const char *errmsg = lt_dlerror();
-    if (errmsg != NULL)
-    {
-	std::cerr << errmsg;
-	return 0;
-    }
+	// get symbol for create function
+	CTrace* (*func)(void);
+	func = (CTrace* (*)(void))lt_dlsym(lib, "dice_tracing_new_class");
+	// use error message as error indicator
+	const char *errmsg = lt_dlerror();
+	if (errmsg)
+	{
+		std::cerr << errmsg;
+		return 0;
+	}
 
-    // call factory function
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEClassFactory: create class CTrace from lib \"%s\".\n",
-	sTraceLib.c_str());
-    return (*func) ();
+	// call factory function
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEClassFactory: create class CTrace from lib \"%s\".\n",
+		sTraceLib.c_str());
+	return (*func) ();
 }
 

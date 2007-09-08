@@ -31,7 +31,7 @@
 CBEException::CBEException()
 {}
 
-CBEException::CBEException(CBEException & src)
+CBEException::CBEException(CBEException* src)
  : CBETypedef(src)
 {}
 
@@ -39,12 +39,10 @@ CBEException::CBEException(CBEException & src)
 CBEException::~CBEException()
 {}
 
-/** \brief prepares the target code generation for this element
- *  \param pFEException the respective front-end exception
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-void
-CBEException::CreateBackEnd(CFETypedDeclarator * pFEException)
+CObject* CBEException::Clone()
 {
-    // call CBEObject's CreateBackEnd method
-    CBETypedef::CreateBackEnd(pFEException);
+	return new CBEException(this);
 }

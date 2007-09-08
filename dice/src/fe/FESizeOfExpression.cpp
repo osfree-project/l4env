@@ -66,19 +66,19 @@ CFESizeOfExpression::CFESizeOfExpression(CFEExpression *pExpression)
     m_pExpression = pExpression;
 }
 
-CFESizeOfExpression::CFESizeOfExpression(CFESizeOfExpression &src)
+CFESizeOfExpression::CFESizeOfExpression(CFESizeOfExpression* src)
  : CFEExpression(src)
 {
     CLONE_MEM(CFETypeSpec, m_pType);
     CLONE_MEM(CFEExpression, m_pExpression);
 }
 
-/** \brief creates a copy of this object
- *  \return a reference to a new object of this class
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFESizeOfExpression::Clone()
 {
-    return new CFESizeOfExpression(*this);
+	return new CFESizeOfExpression(this);
 }
 
 /** \brief access the type member

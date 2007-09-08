@@ -91,17 +91,18 @@ map_kip(l4_addr_t to_addr)
 {
   l4_msgdope_t result;
   l4_snd_fpage_t sfpage;
-  int error;
   l4_kernel_info_t *k = (l4_kernel_info_t *)to_addr;
+  l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
+  int error;
 
   l4_fpage_unmap(l4_fpage((l4_umword_t)k, L4_LOG2_PAGESIZE, 0, 0),
 		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
 
-  error = l4_ipc_call(my_pager,
-		      L4_IPC_SHORT_MSG, SIGMA0_REQ_KIP, 0,
-		      L4_IPC_MAPMSG((l4_umword_t)k, L4_LOG2_PAGESIZE),
-			&sfpage.snd_base, &sfpage.fpage.fpage,
-		      L4_IPC_NEVER, &result);
+  error = l4_ipc_call_tag(my_pager,
+		          L4_IPC_SHORT_MSG, SIGMA0_REQ_KIP, 0, tag,
+		          L4_IPC_MAPMSG((l4_umword_t)k, L4_LOG2_PAGESIZE),
+			    &sfpage.snd_base, &sfpage.fpage.fpage,
+		          L4_IPC_NEVER, &result, &tag);
 
   if (error)
     boot_panic("can't map KIP: IPC error 0x%02x", error);
@@ -578,16 +579,17 @@ pagein_4MB_memory(void)
        address += L4_SUPERPAGESIZE)
     {
       // new
-      error = l4_ipc_call(my_pager,
-			  L4_IPC_SHORT_MSG, SIGMA0_REQ_FPAGE_RAM,
-			    l4_fpage(address, 
-				     (address & (L4_SUPERPAGESIZE-1))
-					? L4_LOG2_PAGESIZE
-					: L4_LOG2_SUPERPAGESIZE,
-				      0, 0).fpage,
-			  L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
-			    &sfpage.snd_base, &sfpage.fpage.fpage,
-	    		  L4_IPC_NEVER, &result);
+      l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
+      error = l4_ipc_call_tag(my_pager,
+			      L4_IPC_SHORT_MSG, SIGMA0_REQ_FPAGE_RAM,
+			        l4_fpage(address, 
+				         (address & (L4_SUPERPAGESIZE-1))
+					    ? L4_LOG2_PAGESIZE
+					    : L4_LOG2_SUPERPAGESIZE,
+				          0, 0).fpage, tag,
+			      L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
+			        &sfpage.snd_base, &sfpage.fpage.fpage,
+	    		      L4_IPC_NEVER, &result, &tag);
       /* XXX should we check for errors? */
 
       if (!l4_ipc_fpage_received(result))
@@ -678,13 +680,14 @@ pagein_bios_memory(void)
 {
   l4_msgdope_t result;
   l4_snd_fpage_t sfpage;
+  l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_PAGE_FAULT, 0, 0, 0);
   int error;
 
-  error = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-		      0, 0,
-		      L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
-		      &sfpage.snd_base, &sfpage.fpage.fpage,
-		      L4_IPC_NEVER, &result);
+  error = l4_ipc_call_tag(my_pager, L4_IPC_SHORT_MSG,
+		          0, 0, tag,
+		          L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
+		          &sfpage.snd_base, &sfpage.fpage.fpage,
+		          L4_IPC_NEVER, &result, &tag);
 
   if (error)
     boot_panic("can't map BIOS area (IPC error 0x%02x)", error);
@@ -702,6 +705,7 @@ pagein_adapter_memory(void)
   l4_addr_t address;
   l4_msgdope_t result;
   l4_snd_fpage_t sfpage;
+  l4_msgtag_t tag;
   int error;
 
   l4_addr_t adapter_space_start = mem_lower ? (mem_lower << 10) : 0x9F000;
@@ -711,12 +715,14 @@ pagein_adapter_memory(void)
        address < adapter_space_end;
        address +=  L4_PAGESIZE)
     {
-      error = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-			  SIGMA0_REQ_FPAGE_IOMEM_CACHED, 
-			  l4_fpage(address, L4_LOG2_PAGESIZE, 0, 0).fpage, 
-			  L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
-			  &sfpage.snd_base, &sfpage.fpage.fpage,
-			  L4_IPC_NEVER, &result);
+      tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
+      error = l4_ipc_call_tag(my_pager, L4_IPC_SHORT_MSG,
+			      SIGMA0_REQ_FPAGE_IOMEM_CACHED,
+			      l4_fpage(address, L4_LOG2_PAGESIZE, 0, 0).fpage,
+                              tag,
+			      L4_IPC_MAPMSG(0, L4_WHOLE_ADDRESS_SPACE),
+			      &sfpage.snd_base, &sfpage.fpage.fpage,
+			      L4_IPC_NEVER, &result, &tag);
 
       if (error)
         boot_panic("can't map adapter space (IPC error 0x%02x)",
@@ -1096,6 +1102,7 @@ init_iomap(void)
   int error;
   unsigned p;
   l4_umword_t ignore;
+  l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_IO_PAGE_FAULT, 0, 0, 0);
 
   /* initialize the IO space to "reserved" */
   iomap_init();
@@ -1105,11 +1112,12 @@ init_iomap(void)
     return;
 
   /* try get the whole IO space at once */
-  error = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-		      l4_iofpage(0, L4_WHOLE_IOADDRESS_SPACE, 0).fpage, 0,
-		      L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE),
-		      &ignore, &fp.fpage,
-		      L4_IPC_NEVER, &result);
+  error = l4_ipc_call_tag(my_pager, L4_IPC_SHORT_MSG,
+		          l4_iofpage(0, L4_WHOLE_IOADDRESS_SPACE, 0).fpage, 0,
+                          tag,
+		          L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE),
+		          &ignore, &fp.fpage,
+		          L4_IPC_NEVER, &result, &tag);
   /* XXX should i check for errors? */
 
   if (l4_ipc_fpage_received(result) /* got something */

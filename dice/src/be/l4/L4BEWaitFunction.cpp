@@ -62,15 +62,35 @@ CL4BEWaitFunction::~CL4BEWaitFunction()
  *  \return true on success
  */
 void
-CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation)
+CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 {
-    CBEWaitFunction::CreateBackEnd(pFEOperation);
+    CBEWaitFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
     // add local variables
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
     AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
+}
+
+/** \brief creates the CORBA_Environment variable (and parameter)
+ *  \return true if successful
+ *
+ * In a wait-function we always use the server environment, because it
+ * contains receive flexpages, etc.
+ */
+void
+CL4BEWaitFunction::CreateEnvironment()
+{
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	// if function is at server side, this is a CORBA_Server_Environment
+	string sTypeName = "CORBA_Server_Environment";
+	string sName = pNF->GetCorbaEnvironmentVariable();
+	CBETypedDeclarator *pEnv = pCF->GetNewTypedDeclarator();
+	pEnv->SetParent(this);
+	pEnv->CreateBackEnd(sTypeName, sName, 1);
+	SetEnvironment(pEnv);
 }
 
 /** \brief writes the communication invocation

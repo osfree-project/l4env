@@ -32,18 +32,11 @@
 #include "Compiler.h"
 
 CL4V4BESrvLoopFunction::CL4V4BESrvLoopFunction()
-{
-}
-
-CL4V4BESrvLoopFunction::CL4V4BESrvLoopFunction(CL4V4BESrvLoopFunction & src)
- : CL4BESrvLoopFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CL4V4BESrvLoopFunction::~CL4V4BESrvLoopFunction()
-{
-}
+{ }
 
 /** \brief create this instance of a server loop function
  *  \param pFEInterface the interface to use as reference
@@ -53,25 +46,24 @@ CL4V4BESrvLoopFunction::~CL4V4BESrvLoopFunction()
  * tries to init the indirect string members with a user-provided init
  * function.
  */
-void
-CL4V4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
+void CL4V4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
-    CL4BESrvLoopFunction::CreateBackEnd(pFEInterface);
+	CL4BESrvLoopFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
-    // init function check
-    CBEClass *pClass = GetSpecificParent<CBEClass>();
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: for func %s and class at %p\n",
-	__func__, GetName().c_str(), pClass);
+	// init function check
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: for func %s and class at %p\n",
+		__func__, GetName().c_str(), pClass);
 
-    if (IsComponentSide() &&
-	(CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING) ||
-	 (pClass &&
-	  (pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING) ||
-	   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_CLIENT) ||
-	   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER)))))
-    {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	string sName = pNF->GetString(CL4V4BENameFactory::STR_INIT_RCVSTR_VARIABLE, 0);
-	AddLocalVariable(TYPE_MWORD, true, 0, sName, 0);
-    }
+	if (IsComponentSide() &&
+		(CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING) ||
+		 (pClass &&
+		  (pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING) ||
+		   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_CLIENT) ||
+		   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER)))))
+	{
+		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		string sName = pNF->GetString(CL4V4BENameFactory::STR_INIT_RCVSTR_VARIABLE, 0);
+		AddLocalVariable(TYPE_MWORD, true, 0, sName, 0);
+	}
 }

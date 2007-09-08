@@ -44,29 +44,30 @@
 #include "be/BEUnionCase.h"
 #include "be/BEClassFactory.h"
 #include "Compiler.h"
+#include "Error.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
 #include "TypeSpec-L4Types.h"
 #include <cassert>
 
 CL4BEMsgBuffer::CL4BEMsgBuffer()
- : CBEMsgBuffer()
+: CBEMsgBuffer()
 {}
 
-CL4BEMsgBuffer::CL4BEMsgBuffer(CL4BEMsgBuffer & src)
- : CBEMsgBuffer(src)
+CL4BEMsgBuffer::CL4BEMsgBuffer(CL4BEMsgBuffer* src)
+: CBEMsgBuffer(src)
 {}
 
 /** destroys the object */
 CL4BEMsgBuffer::~CL4BEMsgBuffer()
 {}
 
-/** \brief creates a copy of the object
- *  \return a reference to the newly created instance
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CL4BEMsgBuffer::Clone()
 {
-    return new CL4BEMsgBuffer(*this);
+	return new CL4BEMsgBuffer(this);
 }
 
 /** \brief creates a member variable for the receive flexpage
@@ -75,29 +76,29 @@ CObject* CL4BEMsgBuffer::Clone()
 CBETypedDeclarator*
 CL4BEMsgBuffer::GetFlexpageVariable()
 {
-    string exc = string(__func__);
+	string exc = string(__func__);
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEType *pType = pCF->GetNewType(TYPE_RCV_FLEXPAGE);
-    string sName = CCompiler::GetNameFactory()->
-	GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
-    CBETypedDeclarator *pFpage = pCF->GetNewTypedDeclarator();
-    pType->CreateBackEnd(false, 0, TYPE_RCV_FLEXPAGE);
-    pFpage->CreateBackEnd(pType, sName);
-    delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEType *pType = pCF->GetNewType(TYPE_RCV_FLEXPAGE);
+	string sName = CCompiler::GetNameFactory()->
+		GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
+	CBETypedDeclarator *pFpage = pCF->GetNewTypedDeclarator();
+	pType->CreateBackEnd(false, 0, TYPE_RCV_FLEXPAGE);
+	pFpage->CreateBackEnd(pType, sName);
+	delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
 
-    CBEAttribute *pAttr = pCF->GetNewAttribute();
-    // add directional attribute so later checks when marshaling work
-    pAttr->SetParent(pFpage);
-    pAttr->CreateBackEnd(ATTR_IN);
-    pFpage->m_Attributes.Add(pAttr);
-    // add directional attribute so later checks when marshaling work
-    pAttr = pCF->GetNewAttribute();
-    pAttr->SetParent(pFpage);
-    pAttr->CreateBackEnd(ATTR_OUT);
-    pFpage->m_Attributes.Add(pAttr);
+	CBEAttribute *pAttr = pCF->GetNewAttribute();
+	// add directional attribute so later checks when marshaling work
+	pAttr->SetParent(pFpage);
+	pAttr->CreateBackEnd(ATTR_IN);
+	pFpage->m_Attributes.Add(pAttr);
+	// add directional attribute so later checks when marshaling work
+	pAttr = pCF->GetNewAttribute();
+	pAttr->SetParent(pFpage);
+	pAttr->CreateBackEnd(ATTR_OUT);
+	pFpage->m_Attributes.Add(pAttr);
 
-    return pFpage;
+	return pFpage;
 }
 
 /** \brief creates a member variable for the size dope
@@ -106,29 +107,29 @@ CL4BEMsgBuffer::GetFlexpageVariable()
 CBETypedDeclarator*
 CL4BEMsgBuffer::GetSizeDopeVariable()
 {
-    string exc = string(__func__);
+	string exc = string(__func__);
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEType *pType = pCF->GetNewType(TYPE_MSGDOPE_SIZE);
-    string sName = CCompiler::GetNameFactory()->
-	GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
-    CBETypedDeclarator *pSize = pCF->GetNewTypedDeclarator();
-    pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SIZE);
-    pSize->CreateBackEnd(pType, sName);
-    delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEType *pType = pCF->GetNewType(TYPE_MSGDOPE_SIZE);
+	string sName = CCompiler::GetNameFactory()->
+		GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
+	CBETypedDeclarator *pSize = pCF->GetNewTypedDeclarator();
+	pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SIZE);
+	pSize->CreateBackEnd(pType, sName);
+	delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
 
-    // add directional attribute so later checks when marshaling work
-    CBEAttribute *pAttr = pCF->GetNewAttribute();
-    pAttr->SetParent(pSize);
-    pAttr->CreateBackEnd(ATTR_IN);
-    pSize->m_Attributes.Add(pAttr);
-    // add directional attribute so later checks when marshaling work
-    pAttr = pCF->GetNewAttribute();
-    pAttr->SetParent(pSize);
-    pAttr->CreateBackEnd(ATTR_OUT);
-    pSize->m_Attributes.Add(pAttr);
+	// add directional attribute so later checks when marshaling work
+	CBEAttribute *pAttr = pCF->GetNewAttribute();
+	pAttr->SetParent(pSize);
+	pAttr->CreateBackEnd(ATTR_IN);
+	pSize->m_Attributes.Add(pAttr);
+	// add directional attribute so later checks when marshaling work
+	pAttr = pCF->GetNewAttribute();
+	pAttr->SetParent(pSize);
+	pAttr->CreateBackEnd(ATTR_OUT);
+	pSize->m_Attributes.Add(pAttr);
 
-    return pSize;
+	return pSize;
 }
 
 /** \brief creates a member variable for the send dope
@@ -137,28 +138,28 @@ CL4BEMsgBuffer::GetSizeDopeVariable()
 CBETypedDeclarator*
 CL4BEMsgBuffer::GetSendDopeVariable()
 {
-    string exc = string(__func__);
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBEType *pType = pCF->GetNewType(TYPE_MSGDOPE_SEND);
-    string sName = CCompiler::GetNameFactory()->
-	GetMessageBufferMember(TYPE_MSGDOPE_SEND);
-    CBETypedDeclarator *pSend = pCF->GetNewTypedDeclarator();
-    pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SEND);
-    pSend->CreateBackEnd(pType, sName);
-    delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
+	string exc = string(__func__);
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEType *pType = pCF->GetNewType(TYPE_MSGDOPE_SEND);
+	string sName = CCompiler::GetNameFactory()->
+		GetMessageBufferMember(TYPE_MSGDOPE_SEND);
+	CBETypedDeclarator *pSend = pCF->GetNewTypedDeclarator();
+	pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SEND);
+	pSend->CreateBackEnd(pType, sName);
+	delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
 
-    // add directional attribute so later checks when marshaling work
-    CBEAttribute *pAttr = pCF->GetNewAttribute();
-    pAttr->SetParent(pSend);
-    pAttr->CreateBackEnd(ATTR_IN);
-    pSend->m_Attributes.Add(pAttr);
-    // add directional attribute so later checks when marshaling work
-    pAttr = pCF->GetNewAttribute();
-    pAttr->SetParent(pSend);
-    pAttr->CreateBackEnd(ATTR_OUT);
-    pSend->m_Attributes.Add(pAttr);
+	// add directional attribute so later checks when marshaling work
+	CBEAttribute *pAttr = pCF->GetNewAttribute();
+	pAttr->SetParent(pSend);
+	pAttr->CreateBackEnd(ATTR_IN);
+	pSend->m_Attributes.Add(pAttr);
+	// add directional attribute so later checks when marshaling work
+	pAttr = pCF->GetNewAttribute();
+	pAttr->SetParent(pSend);
+	pAttr->CreateBackEnd(ATTR_OUT);
+	pSend->m_Attributes.Add(pAttr);
 
-    return pSend;
+	return pSend;
 }
 
 /** \brief sorts one struct in the message buffer
@@ -181,82 +182,82 @@ CL4BEMsgBuffer::GetSendDopeVariable()
 bool
 CL4BEMsgBuffer::Sort(CBEStructType *pStruct)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    // doing this in reverse order, so we can insert them at
-    // position 0
-    // get send dope
-    string sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND);
-    pStruct->m_Members.Move(sName, 0);
-    // get size dope
-    sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
-    pStruct->m_Members.Move(sName, 0);
-    // get flexpage
-    sName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
-    pStruct->m_Members.Move(sName, 0);
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	// doing this in reverse order, so we can insert them at
+	// position 0
+	// get send dope
+	string sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND);
+	pStruct->m_Members.Move(sName, 0);
+	// get size dope
+	sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
+	pStruct->m_Members.Move(sName, 0);
+	// get flexpage
+	sName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
+	pStruct->m_Members.Move(sName, 0);
 
-    // the following call, calls SortPayload which uses DoExchangeMembers to
-    // sort the members.
-    if (!CBEMsgBuffer::Sort(pStruct))
-	return false;
+	// the following call, calls SortPayload which uses DoExchangeMembers to
+	// sort the members.
+	if (!CBEMsgBuffer::Sort(pStruct))
+		return false;
 
-    // move all flexpages to begin (to override opcode and exception
-    // placement) -- therefore we do not start with the payload, but we
-    // iterate all members of the struct
-    vector<CBETypedDeclarator*>::iterator iter = pStruct->m_Members.begin();
-    while (iter != pStruct->m_Members.end())
-    {
-	vector<CBETypedDeclarator*>::iterator iterS = iter + 1;
-	if (iterS == pStruct->m_Members.end())
-	    break; // finished
-
-	int nFirstType = (*iter)->GetType()->GetFEType();
-	int nSecondType = (*iterS)->GetType()->GetFEType();
-
-	if ((nFirstType == TYPE_FLEXPAGE) &&
-	    (nSecondType != TYPE_FLEXPAGE))
+	// move all flexpages to begin (to override opcode and exception
+	// placement) -- therefore we do not start with the payload, but we
+	// iterate all members of the struct
+	vector<CBETypedDeclarator*>::iterator iter = pStruct->m_Members.begin();
+	while (iter != pStruct->m_Members.end())
 	{
-	    iter++;
-	    continue;
+		vector<CBETypedDeclarator*>::iterator iterS = iter + 1;
+		if (iterS == pStruct->m_Members.end())
+			break; // finished
+
+		int nFirstType = (*iter)->GetType()->GetFEType();
+		int nSecondType = (*iterS)->GetType()->GetFEType();
+
+		if ((nFirstType == TYPE_FLEXPAGE) &&
+			(nSecondType != TYPE_FLEXPAGE))
+		{
+			iter++;
+			continue;
+		}
+
+		if ((nFirstType != TYPE_FLEXPAGE) &&
+			(nSecondType == TYPE_FLEXPAGE))
+		{
+			pStruct->m_Members.Move((*iterS)->m_Declarators.First()->GetName(),
+				(*iter)->m_Declarators.First()->GetName());
+			iter = pStruct->m_Members.begin();
+			continue;
+		}
+
+		// if both are flexpages, ensure that zero flexpage comes last
+		if ((nFirstType == TYPE_FLEXPAGE) &&
+			(nSecondType == TYPE_FLEXPAGE))
+		{
+			sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
+			if ((*iter)->m_Declarators.Find(sName))
+			{
+				pStruct->m_Members.Move((*iterS)->m_Declarators.First()->GetName(),
+					(*iter)->m_Declarators.First()->GetName());
+				iter = pStruct->m_Members.begin();
+				continue;
+			}
+		}
+
+		iter++;
 	}
 
-	if ((nFirstType != TYPE_FLEXPAGE) &&
-	    (nSecondType == TYPE_FLEXPAGE))
-	{
-	    pStruct->m_Members.Move((*iterS)->m_Declarators.First()->GetName(),
-		    (*iter)->m_Declarators.First()->GetName());
-	    iter = pStruct->m_Members.begin();
-	    continue;
-	}
+	// and now move the L4 message header back up front
+	// get send dope
+	sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND);
+	pStruct->m_Members.Move(sName, 0);
+	// get size dope
+	sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
+	pStruct->m_Members.Move(sName, 0);
+	// get flexpage
+	sName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
+	pStruct->m_Members.Move(sName, 0);
 
-	// if both are flexpages, ensure that zero flexpage comes last
-	if ((nFirstType == TYPE_FLEXPAGE) &&
-	    (nSecondType == TYPE_FLEXPAGE))
-	{
-	    sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
-	    if ((*iter)->m_Declarators.Find(sName))
-	    {
-		pStruct->m_Members.Move((*iterS)->m_Declarators.First()->GetName(),
-		    (*iter)->m_Declarators.First()->GetName());
-		iter = pStruct->m_Members.begin();
-		continue;
-	    }
-	}
-
-	iter++;
-    }
-
-    // and now move the L4 message header back up front
-    // get send dope
-    sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND);
-    pStruct->m_Members.Move(sName, 0);
-    // get size dope
-    sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
-    pStruct->m_Members.Move(sName, 0);
-    // get flexpage
-    sName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
-    pStruct->m_Members.Move(sName, 0);
-
-    return true;
+	return true;
 }
 
 /** \brief checks if two members of a struct should be exchanged
@@ -271,61 +272,57 @@ bool
 CL4BEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst,
 	CBETypedDeclarator *pSecond)
 {
-    assert(pFirst);
-    assert(pSecond);
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called with (%s, %s)\n", __func__,
-	pFirst->m_Declarators.First()->GetName().c_str(),
-	pSecond->m_Declarators.First()->GetName().c_str());
+	assert(pFirst);
+	assert(pSecond);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called with (%s, %s)\n", __func__,
+		pFirst->m_Declarators.First()->GetName().c_str(),
+		pSecond->m_Declarators.First()->GetName().c_str());
 
-    int nFirstType = pFirst->GetType()->GetFEType();
-    int nSecondType = pSecond->GetType()->GetFEType();
+	int nFirstType = pFirst->GetType()->GetFEType();
+	int nSecondType = pSecond->GetType()->GetFEType();
 
-    // test refstrings
-    if ((nFirstType == TYPE_REFSTRING) &&
-	(nSecondType != TYPE_REFSTRING))
-	return true;
-    if ((nFirstType != TYPE_REFSTRING) &&
-	(nSecondType == TYPE_REFSTRING))
-	return false;
+	// test refstrings
+	if ((nFirstType == TYPE_REFSTRING) &&
+		(nSecondType != TYPE_REFSTRING))
+		return true;
+	if ((nFirstType != TYPE_REFSTRING) &&
+		(nSecondType == TYPE_REFSTRING))
+		return false;
 
-    return CBEMsgBuffer::DoExchangeMembers(pFirst, pSecond);
+	return CBEMsgBuffer::DoExchangeMembers(pFirst, pSecond);
 }
 
 /** \brief adds the members of to the generic struct
  *  \param pStruct the struct to add the members to
  *  \return true if successful
  */
-bool
-CL4BEMsgBuffer::AddGenericStructMembersClass(CBEStructType *pStruct)
+void CL4BEMsgBuffer::AddGenericStructMembersClass(CBEStructType *pStruct)
 {
-    // count word members
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	// count word members
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
-    int nWords = GetWordMemberCountClass();
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s GetWordMemberCount returned %d\n",
-	__func__, nWords);
-    // we use at least one element in the _word array, that is the opcode.
-    // Exception checks regularely reset it to 0. Thus we need at least one
-    // word array dimension in class' word struct.
-    nWords = std::max(nWords, 1);
-    // create word member and add to struct
-    CBETypedDeclarator *pMember = GetWordMemberVariable(nWords);
-    if (!pMember)
-	return false;
-    pStruct->m_Members.Add(pMember);
-    // count refstring members
-    int nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING);
-    // create restring member and add to struct
-    if (nStrings > 0)
-    {
-	pMember = GetRefstringMemberVariable(nStrings);
+	int nWords = GetWordMemberCountClass();
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s GetWordMemberCount returned %d\n",
+		__func__, nWords);
+	// we use at least one element in the _word array, that is the opcode.
+	// Exception checks regularely reset it to 0. Thus we need at least one
+	// word array dimension in class' word struct.
+	nWords = std::max(nWords, 1);
+	// create word member and add to struct
+	CBETypedDeclarator *pMember = GetWordMemberVariable(nWords);
 	if (!pMember)
-	    return false;
+		throw new error::create_error("word member variable could not be created");
 	pStruct->m_Members.Add(pMember);
-    }
-
-    // return status
-    return true;
+	// count refstring members
+	int nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING);
+	// create restring member and add to struct
+	if (nStrings > 0)
+	{
+		pMember = GetRefstringMemberVariable(nStrings);
+		if (!pMember)
+			throw new error::create_error("ref-string member variable could not be created");
+		pStruct->m_Members.Add(pMember);
+	}
 }
 
 /** \brief creates an array member of word sized elements for the message buffer
@@ -335,9 +332,9 @@ CL4BEMsgBuffer::AddGenericStructMembersClass(CBEStructType *pStruct)
 CBETypedDeclarator*
 CL4BEMsgBuffer::GetRefstringMemberVariable(int nNumber)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sName = pNF->GetMessageBufferMember(TYPE_REFSTRING);
-    return GetMemberVariable(TYPE_REFSTRING, false, sName, nNumber);
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sName = pNF->GetMessageBufferMember(TYPE_REFSTRING);
+	return GetMemberVariable(TYPE_REFSTRING, false, sName, nNumber);
 }
 
 /** \brief write the ref string initialisation
@@ -352,12 +349,12 @@ CL4BEMsgBuffer::GetRefstringMemberVariable(int nNumber)
  */
 bool
 CL4BEMsgBuffer::WriteRefstringInitFunction(CBEFile& /*pFile*/,
-    CBEFunction* /*pFunction*/,
-    CBEClass* /*pClass*/,
-    int /*nIndex*/,
-    CMsgStructType /*nType*/)
+	CBEFunction* /*pFunction*/,
+	CBEClass* /*pClass*/,
+	int /*nIndex*/,
+	CMsgStructType /*nType*/)
 {
-    return false;
+	return false;
 }
 
 /** \brief write the refstring initialization for a specific parameter
@@ -371,10 +368,10 @@ CL4BEMsgBuffer::WriteRefstringInitFunction(CBEFile& /*pFile*/,
  */
 void
 CL4BEMsgBuffer::WriteRefstringInitParameter(CBEFile& /*pFile*/,
-    CBEFunction* /*pFunction*/,
-    CBETypedDeclarator* /*pMember*/,
-    int /*nIndex*/,
-    CMsgStructType /*nType*/)
+	CBEFunction* /*pFunction*/,
+	CBETypedDeclarator* /*pMember*/,
+	int /*nIndex*/,
+	CMsgStructType /*nType*/)
 {
 }
 
@@ -386,7 +383,7 @@ CL4BEMsgBuffer::WriteRefstringInitParameter(CBEFile& /*pFile*/,
  */
 void
 CL4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& /*pFile*/,
-    CMsgStructType /*nType*/)
+	CMsgStructType /*nType*/)
 {
 }
 
@@ -442,121 +439,116 @@ CL4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& /*pFile*/,
  */
 void
 CL4BEMsgBuffer::WriteInitialization(CBEFile& pFile,
-    CBEFunction *pFunction,
-    int nType,
-    CMsgStructType nStructType)
+	CBEFunction *pFunction,
+	int nType,
+	CMsgStructType nStructType)
 {
-    if ((nType != TYPE_MSGDOPE_SIZE) &&
-	(nType != TYPE_MSGDOPE_SEND) &&
-	(nType != TYPE_REFSTRING) &&
-	(nType != TYPE_RCV_FLEXPAGE))
-    {
-	CBEMsgBuffer::WriteInitialization(pFile, pFunction, nType, nStructType);
-	return;
-    }
+	if ((nType != TYPE_MSGDOPE_SIZE) &&
+		(nType != TYPE_MSGDOPE_SEND) &&
+		(nType != TYPE_REFSTRING) &&
+		(nType != TYPE_RCV_FLEXPAGE))
+	{
+		CBEMsgBuffer::WriteInitialization(pFile, pFunction, nType, nStructType);
+		return;
+	}
 
-    if (nType == TYPE_REFSTRING)
-    {
-	WriteRefstringInitialization(pFile, nStructType);
-	return;
-    }
-    if (nType == TYPE_RCV_FLEXPAGE)
-    {
-	WriteRcvFlexpageInitialization(pFile, nStructType);
-	return;
-    }
+	if (nType == TYPE_REFSTRING)
+	{
+		WriteRefstringInitialization(pFile, nStructType);
+		return;
+	}
+	if (nType == TYPE_RCV_FLEXPAGE)
+	{
+		WriteRcvFlexpageInitialization(pFile, nStructType);
+		return;
+	}
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s for func %s and dir %d\n",
-	__func__, pFunction ? pFunction->GetName().c_str() : "(no func)",
-	(int)nStructType);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s for func %s and dir %d\n",
+		__func__, pFunction ? pFunction->GetName().c_str() : "(no func)",
+		(int)nStructType);
 
-    // count the indirect strings
-    // if direction is 0 we have to get maximum of IN and OUT
-    int nStrings = 0;
-    CBESizes *pSizes = CCompiler::GetSizes();
-    int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
-    int nRefSize = pSizes->GetSizeOfType(TYPE_REFSTRING) / nWordSize;
-    if (CMsgStructType::Generic == nStructType)
-    {
-	// for generic struct we also have to subtract the strings from the
-	// word count, because the strings have been counted when counting
-	// TYPE_MWORD as well.
-	int nStringsIn = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction,
-	    CMsgStructType::In, false);
+	// count the indirect strings
+	// if direction is 0 we have to get maximum of IN and OUT
+	int nStrings = 0;
+	CBESizes *pSizes = CCompiler::GetSizes();
+	int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
+	int nRefSize = pSizes->GetSizeOfType(TYPE_REFSTRING) / nWordSize;
+	if (CMsgStructType::Generic == nStructType)
+	{
+		// for generic struct we also have to subtract the strings from the
+		// word count, because the strings have been counted when counting
+		// TYPE_MWORD as well.
+		int nStringsIn = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction, CMsgStructType::In, false);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings in: %d\n",
-	    __func__, nStringsIn);
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings in: %d\n", __func__, nStringsIn);
 
-	int nStringsOut = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING,
-	    pFunction, CMsgStructType::Out, false);
+		int nStringsOut = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction, CMsgStructType::Out, false);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings out: %d\n",
-	    __func__, nStringsOut);
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings out: %d\n", __func__, nStringsOut);
 
-	nStrings = std::max(nStringsIn, nStringsOut);
+		nStrings = std::max(nStringsIn, nStringsOut);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings: %d\n", __func__,
-	    nStrings);
-    }
-    else
-    {
-	nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction,
-	    nStructType, false);
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings: %d\n", __func__, nStrings);
+	}
+	else
+	{
+		nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction,
+			nStructType, false);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings: %d\n", __func__,
-	    nStrings);
-    }
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings: %d\n", __func__,
+			nStrings);
+	}
 
-    // get name of member
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sName = pNF->GetMessageBufferMember(nType);
-    // get member
-    CBETypedDeclarator *pMember = FindMember(sName, pFunction, nStructType);
-    // check if we have member of that type
-    if (!pMember && (CMsgStructType::Generic == nStructType))
-    {
-	nStructType = CMsgStructType::In;
-	// maybe we do not have a generic struct
-	pMember = FindMember(sName, nStructType);
-    }
-    if (!pMember)
-	return;
+	// get name of member
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	string sName = pNF->GetMessageBufferMember(nType);
+	// get member
+	CBETypedDeclarator *pMember = FindMember(sName, pFunction, nStructType);
+	// check if we have member of that type
+	if (!pMember && (CMsgStructType::Generic == nStructType))
+	{
+		nStructType = CMsgStructType::In;
+		// maybe we do not have a generic struct
+		pMember = FindMember(sName, nStructType);
+	}
+	if (!pMember)
+		return;
 
-    pFile << "\t";
-    WriteAccess(pFile, pFunction, nStructType, pMember);
-    pFile << " = L4_IPC_DOPE( sizeof(";
-    if (CMsgStructType::Generic == nStructType ||
-	nType == TYPE_MSGDOPE_SIZE)
-    {
-	// sizeof(<msgbufvar>)/sizeof(long)-3
-	WriteAccessToVariable(pFile, pFunction, false);
-    }
-    else
-    {
-	// sizeof(<msgbufvar>.<structname>)/sizeof(long)-3
-	WriteAccessToStruct(pFile, pFunction, nStructType);
-    }
-    pFile << ")/sizeof(long)-" << 3 + nStrings*nRefSize;
-    if (CMsgStructType::Generic != nStructType &&
-	nType == TYPE_MSGDOPE_SEND)
-    {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	    "In func %s try to find padding members:\n", pFunction->GetName().c_str());
-	// if we have any padding members in the send part, subtract their size.
-	// do NOT subtract byte padding, because the byte padding is always
-	// smaller than word size and we have to transmit full words. Thus
-	// only subtract word sized padding.
-	CBEStructType *pStruct = GetStruct(pFunction, nStructType);
-	sName = pNF->GetPaddingMember(TYPE_MWORD, TYPE_REFSTRING);
-	pMember = pStruct->m_Members.Find(sName);
+	pFile << "\t";
+	WriteAccess(pFile, pFunction, nStructType, pMember);
+	pFile << " = L4_IPC_DOPE( sizeof(";
+	if (CMsgStructType::Generic == nStructType ||
+		nType == TYPE_MSGDOPE_SIZE)
+	{
+		// sizeof(<msgbufvar>)/sizeof(long)-3
+		WriteAccessToVariable(pFile, pFunction, false);
+	}
+	else
+	{
+		// sizeof(<msgbufvar>.<structname>)/sizeof(long)-3
+		WriteAccessToStruct(pFile, pFunction, nStructType);
+	}
+	pFile << ")/sizeof(long)-" << 3 + nStrings*nRefSize;
+	if (CMsgStructType::Generic != nStructType &&
+		nType == TYPE_MSGDOPE_SEND)
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"In func %s try to find padding members:\n", pFunction->GetName().c_str());
+		// if we have any padding members in the send part, subtract their size.
+		// do NOT subtract byte padding, because the byte padding is always
+		// smaller than word size and we have to transmit full words. Thus
+		// only subtract word sized padding.
+		CBEStructType *pStruct = GetStruct(pFunction, nStructType);
+		sName = pNF->GetPaddingMember(TYPE_MWORD, TYPE_REFSTRING);
+		pMember = pStruct->m_Members.Find(sName);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "  member %s found at %p\n",
-	    sName.c_str(), pMember);
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "  member %s found at %p\n",
+			sName.c_str(), pMember);
 
-	if (pMember)
-	    pFile << "-" << pMember->GetSize()/nWordSize;
-    }
-    pFile << ", " << nStrings << ");\n";
+		if (pMember)
+			pFile << "-" << pMember->GetSize()/nWordSize;
+	}
+	pFile << ", " << nStrings << ");\n";
 }
 
 /** \brief writes the initialization of the refstring members
@@ -572,61 +564,61 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile& pFile,
  */
 bool
 CL4BEMsgBuffer::WriteRefstringInitialization(CBEFile& pFile,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
-    CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-    if (!pFunction)
-	return false;
-    CBEClass *pClass = GetSpecificParent<CBEClass>();
-    CBEStructType *pStruct = GetStruct(nType);
-    assert(pStruct);
+	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+	if (!pFunction)
+		return false;
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	CBEStructType *pStruct = GetStruct(nType);
+	assert(pStruct);
 
-    int nIndex = -1;
-    bool bRefstring = false;
-    vector<CBETypedDeclarator*>::iterator iter;
-    for (iter = pStruct->m_Members.begin();
-	 iter != pStruct->m_Members.end();
-	 iter++)
-    {
-	if (!(*iter)->GetType()->IsOfType(TYPE_REFSTRING))
-	    continue;
-
-	bRefstring = true;
-
-	// check if declarator is array (as can be for generic part of message
-	// buffer...
-	CBEDeclarator *pMemberDecl = (*iter)->m_Declarators.First();
-	vector<CBEExpression*>::iterator arrIter =
-	    pMemberDecl->m_Bounds.begin();
-	do // using 'do { } while' so we pass here even without array bounds
+	int nIndex = -1;
+	bool bRefstring = false;
+	vector<CBETypedDeclarator*>::iterator iter;
+	for (iter = pStruct->m_Members.begin();
+		iter != pStruct->m_Members.end();
+		iter++)
 	{
-	    // for each element in the array
-	    int nArrayCount = 1;
-	    if (arrIter != pMemberDecl->m_Bounds.end())
-		nArrayCount = (*arrIter)->GetIntValue();
-	    while (nArrayCount--)
-	    {
+		if (!(*iter)->GetType()->IsOfType(TYPE_REFSTRING))
+			continue;
 
-		// increment here, so we catch 'continue' in the middle of the
-		// loop.  Because we increment at begin of loop, we have to
-		// init index with -1, so first iteration makes it zero.
-		nIndex++;
+		bRefstring = true;
 
-		if (WriteRefstringInitFunction(pFile, pFunction, pClass,
-			nIndex, nType))
-		    continue;
+		// check if declarator is array (as can be for generic part of message
+		// buffer...
+		CBEDeclarator *pMemberDecl = (*iter)->m_Declarators.First();
+		vector<CBEExpression*>::iterator arrIter =
+			pMemberDecl->m_Bounds.begin();
+		do // using 'do { } while' so we pass here even without array bounds
+		{
+			// for each element in the array
+			int nArrayCount = 1;
+			if (arrIter != pMemberDecl->m_Bounds.end())
+				nArrayCount = (*arrIter)->GetIntValue();
+			while (nArrayCount--)
+			{
 
-		// member is refstring, initialize:
-		WriteRefstringInitParameter(pFile, pFunction, (*iter), nIndex,
-		    nType);
-	    } // array iteration
-	    // array bound iteration
-	    if (arrIter != pMemberDecl->m_Bounds.end())
-		arrIter++;
-	} while (arrIter != pMemberDecl->m_Bounds.end());
-    }
+				// increment here, so we catch 'continue' in the middle of the
+				// loop.  Because we increment at begin of loop, we have to
+				// init index with -1, so first iteration makes it zero.
+				nIndex++;
 
-    return bRefstring;
+				if (WriteRefstringInitFunction(pFile, pFunction, pClass,
+						nIndex, nType))
+					continue;
+
+				// member is refstring, initialize:
+				WriteRefstringInitParameter(pFile, pFunction, (*iter), nIndex,
+					nType);
+			} // array iteration
+			// array bound iteration
+			if (arrIter != pMemberDecl->m_Bounds.end())
+				arrIter++;
+		} while (arrIter != pMemberDecl->m_Bounds.end());
+	}
+
+	return bRefstring;
 }
 
 /** \brief writes the maximu size of a specific refstring
@@ -647,105 +639,105 @@ CL4BEMsgBuffer::WriteRefstringInitialization(CBEFile& pFile,
  */
 void
 CL4BEMsgBuffer::WriteMaxRefstringSize(CBEFile& pFile,
-    CBEFunction *pFunction,
-    CBETypedDeclarator *pMember,
-    CBETypedDeclarator *pParameter,
-    int nIndex)
+	CBEFunction *pFunction,
+	CBETypedDeclarator *pMember,
+	CBETypedDeclarator *pParameter,
+	int nIndex)
 {
-    // if parameter has a max_is attribute use that
-    CBEAttribute *pMaxAttr = 0;
-    if (pParameter)
-	pMaxAttr = pParameter->m_Attributes.Find(ATTR_MAX_IS);
-    if (!pMaxAttr)
-	pMaxAttr = pMember->m_Attributes.Find(ATTR_MAX_IS);
-    if (pMaxAttr)
-    {
-	pMaxAttr->Write(pFile);
-	return;
-    }
-
-    // ok, seems to be a generic struct, get the maximum of the max-is
-    // attributes of the refstrings of the other message buffer structs
-    if (!pParameter)
-    {
-	string sMaxStr = string();
-
-	bool bInterfaceFunc = (dynamic_cast<CBEInterfaceFunction*>(pFunction));
-	// get type
-	CBEMsgBufferType *pMsgType;
-	if (bInterfaceFunc)
+	// if parameter has a max_is attribute use that
+	CBEAttribute *pMaxAttr = 0;
+	if (pParameter)
+		pMaxAttr = pParameter->m_Attributes.Find(ATTR_MAX_IS);
+	if (!pMaxAttr)
+		pMaxAttr = pMember->m_Attributes.Find(ATTR_MAX_IS);
+	if (pMaxAttr)
 	{
-	    CBEClass *pClass = GetSpecificParent<CBEClass>();
-	    assert(pClass);
-	    pMsgType = dynamic_cast<CBEMsgBufferType*>
-		(pClass->GetMessageBuffer()->GetType());
+		pMaxAttr->Write(pFile);
+		return;
 	}
-	else
-	    pMsgType = dynamic_cast<CBEMsgBufferType*>(GetType());
-	assert(pMsgType);
-	// iterate structs
-	CBEStructType *pStruct = 0;
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	string sNameIn = pNF->GetMessageBufferStructName(CMsgStructType::In,
-	    string(), string());
-	string sNameOut = pNF->GetMessageBufferStructName(CMsgStructType::Out,
-	    string(), string());
-	int nLenIn = sNameIn.length();
-	int nLenOut = sNameOut.length();
-	vector<CBEUnionCase*>::iterator iter;
-	for (iter = pMsgType->m_UnionCases.begin();
-	     iter != pMsgType->m_UnionCases.end();
-	     iter++)
+
+	// ok, seems to be a generic struct, get the maximum of the max-is
+	// attributes of the refstrings of the other message buffer structs
+	if (!pParameter)
 	{
-	    // check direction
-	    string sUnion = (*iter)->m_Declarators.First()->GetName();
-	    if (sUnion.substr(sUnion.length() - nLenIn) == sNameIn ||
-		sUnion.substr(sUnion.length() - nLenOut) == sNameOut)
-	    {
-		pStruct = static_cast<CBEStructType*>((*iter)->GetType());
+		string sMaxStr = string();
 
-		int nCurr = nIndex;
-
-		vector<CBETypedDeclarator*>::iterator iM;
-		for (iM = pMsgType->GetStartOfPayload(pStruct);
-		     iM != pStruct->m_Members.end();
-		     iM++)
+		bool bInterfaceFunc = (dynamic_cast<CBEInterfaceFunction*>(pFunction));
+		// get type
+		CBEMsgBufferType *pMsgType;
+		if (bInterfaceFunc)
 		{
-		    // get refstring member at index
-		    if (!(*iM)->GetType()->IsOfType(TYPE_REFSTRING))
-			continue;
-		    if (nCurr-- > 0)
-			continue;
-
-		    // check max-is attribute of member
-		    CBEAttribute *pA = (*iM)->m_Attributes.Find(ATTR_MAX_IS);
-		    if (!pA)
-			break;
-
-		    if (sMaxStr.empty())
-			pA->WriteToStr(sMaxStr);
-		    else
-		    {
-			string s = "_dice_max(" + sMaxStr + ", ";
-			pA->WriteToStr(s);
-			sMaxStr = s + ")";
-		    }
+			CBEClass *pClass = GetSpecificParent<CBEClass>();
+			assert(pClass);
+			pMsgType = dynamic_cast<CBEMsgBufferType*>
+				(pClass->GetMessageBuffer()->GetType());
 		}
-	    }
+		else
+			pMsgType = dynamic_cast<CBEMsgBufferType*>(GetType());
+		assert(pMsgType);
+		// iterate structs
+		CBEStructType *pStruct = 0;
+		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		string sNameIn = pNF->GetMessageBufferStructName(CMsgStructType::In,
+			string(), string());
+		string sNameOut = pNF->GetMessageBufferStructName(CMsgStructType::Out,
+			string(), string());
+		int nLenIn = sNameIn.length();
+		int nLenOut = sNameOut.length();
+		vector<CBEUnionCase*>::iterator iter;
+		for (iter = pMsgType->m_UnionCases.begin();
+			iter != pMsgType->m_UnionCases.end();
+			iter++)
+		{
+			// check direction
+			string sUnion = (*iter)->m_Declarators.First()->GetName();
+			if (sUnion.substr(sUnion.length() - nLenIn) == sNameIn ||
+				sUnion.substr(sUnion.length() - nLenOut) == sNameOut)
+			{
+				pStruct = static_cast<CBEStructType*>((*iter)->GetType());
+
+				int nCurr = nIndex;
+
+				vector<CBETypedDeclarator*>::iterator iM;
+				for (iM = pMsgType->GetStartOfPayload(pStruct);
+					iM != pStruct->m_Members.end();
+					iM++)
+				{
+					// get refstring member at index
+					if (!(*iM)->GetType()->IsOfType(TYPE_REFSTRING))
+						continue;
+					if (nCurr-- > 0)
+						continue;
+
+					// check max-is attribute of member
+					CBEAttribute *pA = (*iM)->m_Attributes.Find(ATTR_MAX_IS);
+					if (!pA)
+						break;
+
+					if (sMaxStr.empty())
+						pA->WriteToStr(sMaxStr);
+					else
+					{
+						string s = "_dice_max(" + sMaxStr + ", ";
+						pA->WriteToStr(s);
+						sMaxStr = s + ")";
+					}
+				}
+			}
+		}
+
+		// if max-is string is not empty print and return
+		if (!sMaxStr.empty())
+		{
+			pFile << sMaxStr;
+			return;
+		}
 	}
 
-	// if max-is string is not empty print and return
-	if (!sMaxStr.empty())
-	{
-	    pFile << sMaxStr;
-	    return;
-	}
-    }
-
-    // the last resort: use the type's max size
-    CBESizes *pSizes = CCompiler::GetSizes();
-    int nMaxStrSize = pSizes->GetMaxSizeOfType(TYPE_CHAR);
-    pFile << nMaxStrSize;
+	// the last resort: use the type's max size
+	CBESizes *pSizes = CCompiler::GetSizes();
+	int nMaxStrSize = pSizes->GetMaxSizeOfType(TYPE_CHAR);
+	pFile << nMaxStrSize;
 }
 
 /** \brief tests if the struct for a direction has enough word sized members \
@@ -756,50 +748,50 @@ CL4BEMsgBuffer::WriteMaxRefstringSize(CBEFile& pFile,
  */
 bool
 CL4BEMsgBuffer::HasWordMembers(CBEFunction *pFunction,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"%s called for func %s and direction %d\n",
-	__func__, pFunction->GetName().c_str(), (int)nType);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"%s called for func %s and direction %d\n",
+		__func__, pFunction->GetName().c_str(), (int)nType);
 
-    int nWordSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
-    int nShortMembers = GetWordMemberCountFunction();
+	int nWordSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
+	int nShortMembers = GetWordMemberCountFunction();
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: word size %d, short size %d\n",
-	__func__, nWordSize, nShortMembers);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: word size %d, short size %d\n",
+		__func__, nWordSize, nShortMembers);
 
-    // get structure
-    CBEStructType *pStruct = GetStruct(pFunction, nType);
-    assert(pStruct);
-    // test word sized members
-    CBEMsgBufferType *pType = pStruct->GetSpecificParent<CBEMsgBufferType>();
-    assert(pType);
-    vector<CBETypedDeclarator*>::iterator iter;
-    for (iter = pType->GetStartOfPayload(pStruct);
-	 iter != pStruct->m_Members.end() && (nShortMembers-- > 0);
-	 iter++)
-    {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	    "%s: testing member %s %d for word size (short members %d)\n",
-	    __func__, (*iter)->m_Declarators.First()->GetName().c_str(),
-	    (*iter)->GetSize(), nShortMembers);
-
-	if ((*iter)->GetSize() != nWordSize)
+	// get structure
+	CBEStructType *pStruct = GetStruct(pFunction, nType);
+	assert(pStruct);
+	// test word sized members
+	CBEMsgBufferType *pType = pStruct->GetSpecificParent<CBEMsgBufferType>();
+	assert(pType);
+	vector<CBETypedDeclarator*>::iterator iter;
+	for (iter = pType->GetStartOfPayload(pStruct);
+		iter != pStruct->m_Members.end() && (nShortMembers-- > 0);
+		iter++)
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"%s: not word size, return false\n", __func__);
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"%s: testing member %s %d for word size (short members %d)\n",
+			__func__, (*iter)->m_Declarators.First()->GetName().c_str(),
+			(*iter)->GetSize(), nShortMembers);
 
-	    return false;
+		if ((*iter)->GetSize() != nWordSize)
+		{
+			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+				"%s: not word size, return false\n", __func__);
+
+			return false;
+		}
 	}
-    }
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: short members left: %d\n",
-	__func__, nShortMembers);
-    if (nShortMembers > 0)
-	return false;
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: short members left: %d\n",
+		__func__, nShortMembers);
+	if (nShortMembers > 0)
+		return false;
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
-    return true;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	return true;
 }
 
 /** \brief calculate the number of word sized members required for short IPC
@@ -812,15 +804,15 @@ CL4BEMsgBuffer::HasWordMembers(CBEFunction *pFunction,
 int
 CL4BEMsgBuffer::GetWordMemberCountFunction()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
-    CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
-    int nShort = pSizes->GetMaxShortIPCSize();
+	CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
+	int nShort = pSizes->GetMaxShortIPCSize();
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"%s: sizes says, max short size is %d -> make words from that\n",
-	__func__, nShort);
-    return pSizes->WordsFromBytes(nShort);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"%s: sizes says, max short size is %d -> make words from that\n",
+		__func__, nShort);
+	return pSizes->WordsFromBytes(nShort);
 }
 
 /** \brief calculate the number of word sized members required for short IPC
@@ -829,19 +821,19 @@ CL4BEMsgBuffer::GetWordMemberCountFunction()
 int
 CL4BEMsgBuffer::GetWordMemberCountClass()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    // get value from base class
-    int nSize = CBEMsgBuffer::GetWordMemberCountClass();
-    CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
-    int nShort = pSizes->GetMaxShortIPCSize();
-    nShort = pSizes->WordsFromBytes(nShort);
-    // subtract refstrings if any
-    int nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING);
-    nStrings *= pSizes->GetSizeOfType(TYPE_REFSTRING);
-    // check minimum
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s return max(%d, %d)\n", __func__,
-	nSize - nStrings, nShort);
-    return std::max(nSize - nStrings, nShort);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	// get value from base class
+	int nSize = CBEMsgBuffer::GetWordMemberCountClass();
+	CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
+	int nShort = pSizes->GetMaxShortIPCSize();
+	nShort = pSizes->WordsFromBytes(nShort);
+	// subtract refstrings if any
+	int nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING);
+	nStrings *= pSizes->GetSizeOfType(TYPE_REFSTRING);
+	// check minimum
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s return max(%d, %d)\n", __func__,
+		nSize - nStrings, nShort);
+	return std::max(nSize - nStrings, nShort);
 }
 
 /** \brief determine the size of a specific member
@@ -861,23 +853,23 @@ CL4BEMsgBuffer::GetWordMemberCountClass()
  */
 int
 CL4BEMsgBuffer::GetMemberSize(int nType,
-    CBETypedDeclarator *pMember,
-    bool bMax)
+	CBETypedDeclarator *pMember,
+	bool bMax)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%d, %s, %s) called\n", __func__,
-	nType, pMember->m_Declarators.First()->GetName().c_str(),
-	bMax ? "true" : "false");
-    // filter out refstring members
-    CBESizes *pSizes = CCompiler::GetSizes();
-    bool bMemberIsRef = pMember->m_Attributes.Find(ATTR_REF) ||
-	pMember->GetType()->IsOfType(TYPE_REFSTRING);
-    if (bMemberIsRef &&	nType == TYPE_REFSTRING &&
-	pMember->m_Attributes.Find(ATTR_TRANSMIT_AS))
-	return pSizes->GetSizeOfType(TYPE_REFSTRING);
-    if (bMemberIsRef && nType != TYPE_REFSTRING)
-	return 0;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%d, %s, %s) called\n", __func__,
+		nType, pMember->m_Declarators.First()->GetName().c_str(),
+		bMax ? "true" : "false");
+	// filter out refstring members
+	CBESizes *pSizes = CCompiler::GetSizes();
+	bool bMemberIsRef = pMember->m_Attributes.Find(ATTR_REF) ||
+		pMember->GetType()->IsOfType(TYPE_REFSTRING);
+	if (bMemberIsRef &&	nType == TYPE_REFSTRING &&
+		pMember->m_Attributes.Find(ATTR_TRANSMIT_AS))
+		return pSizes->GetSizeOfType(TYPE_REFSTRING);
+	if (bMemberIsRef && nType != TYPE_REFSTRING)
+		return 0;
 
-    return CBEMsgBuffer::GetMemberSize(nType, pMember, bMax);
+	return CBEMsgBuffer::GetMemberSize(nType, pMember, bMax);
 }
 
 /** \brief pads elements of the message buffer
@@ -886,21 +878,20 @@ CL4BEMsgBuffer::GetMemberSize(int nType,
  * This implementation has to pad indirect strings to NOT reside in the first
  * two dwords and aligns all refstrings to the same position.
  */
-bool
-CL4BEMsgBuffer::Pad()
+bool CL4BEMsgBuffer::Pad()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    // get minimal size for short IPC
-    CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
-    int nMinSize = pSizes->GetMaxShortIPCSize();
-    // get maximum position of any refstring in message buffer
-    int nMax = GetMaxPosOfRefstringInMsgBuffer();
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"%s: min size %d, max pos of refstring %d\n", __func__, nMinSize, nMax);
-    if (nMinSize > nMax)
-	nMax = nMinSize;
-    // align refstrings in all message buffers to the max of the two
-    return PadRefstringToPosition (nMax);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	// get minimal size for short IPC
+	CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
+	int nMinSize = pSizes->GetMaxShortIPCSize();
+	// get maximum position of any refstring in message buffer
+	int nMax = GetMaxPosOfRefstringInMsgBuffer();
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"%s: min size %d, max pos of refstring %d\n", __func__, nMinSize, nMax);
+	if (nMinSize > nMax)
+		nMax = nMinSize;
+	// align refstrings in all message buffers to the max of the two
+	return PadRefstringToPosition (nMax);
 }
 
 /** \brief pad refstrings to specified position
@@ -909,25 +900,24 @@ CL4BEMsgBuffer::Pad()
  *
  * Refstrings should start after the short IPC words.
  */
-bool
-CL4BEMsgBuffer::PadRefstringToPosition(int nPosition)
+bool CL4BEMsgBuffer::PadRefstringToPosition(int nPosition)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%d) called\n", __func__, nPosition);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%d) called\n", __func__, nPosition);
 
-    CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
-    assert(pType);
-    vector<CBEUnionCase*>::iterator iter;
-    for (iter = pType->m_UnionCases.begin();
-	 iter != pType->m_UnionCases.end();
-	 iter++)
-    {
-	CBEStructType *pStruct = dynamic_cast<CBEStructType*>((*iter)->GetType());
-	if (!pStruct)
-	    continue;
-	if (!PadRefstringToPosition(pStruct, nPosition))
-	    return false;
-    }
-    return true;
+	CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
+	assert(pType);
+	vector<CBEUnionCase*>::iterator iter;
+	for (iter = pType->m_UnionCases.begin();
+		iter != pType->m_UnionCases.end();
+		iter++)
+	{
+		CBEStructType *pStruct = dynamic_cast<CBEStructType*>((*iter)->GetType());
+		if (!pStruct)
+			continue;
+		if (!PadRefstringToPosition(pStruct, nPosition))
+			return false;
+	}
+	return true;
 }
 
 /** \brief pad refstrings to specified position
@@ -937,55 +927,51 @@ CL4BEMsgBuffer::PadRefstringToPosition(int nPosition)
  *
  * Refstrings should start after the specified position.
  */
-bool
-CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct,
-    int nPosition)
+bool CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct, int nPosition)
 {
-    assert(pStruct);
-    // get start of payload
-    CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
-    assert(pType);
-    vector<CBETypedDeclarator*>::iterator iter;
-    // iterate
-    int nSize = 0;
-    for (iter = pType->GetStartOfPayload(pStruct);
-	 iter != pStruct->m_Members.end();
-	 iter++)
-    {
-	if ((*iter)->GetType()->IsOfType(TYPE_REFSTRING))
-	    break;
-	int nMemberSize = (*iter)->GetSize();
-	if (nMemberSize < 0)
-	    (*iter)->GetMaxSize(nMemberSize);
-	nSize += nMemberSize;
-	if (nSize > nPosition)
-	    return true;
-    }
+	assert(pStruct);
+	// get start of payload
+	CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
+	assert(pType);
+	vector<CBETypedDeclarator*>::iterator iter;
+	// iterate
+	int nSize = 0;
+	for (iter = pType->GetStartOfPayload(pStruct);
+		iter != pStruct->m_Members.end();
+		iter++)
+	{
+		if ((*iter)->GetType()->IsOfType(TYPE_REFSTRING))
+			break;
+		int nMemberSize = (*iter)->GetSize();
+		if (nMemberSize < 0)
+			(*iter)->GetMaxSize(nMemberSize);
+		nSize += nMemberSize;
+		if (nSize > nPosition)
+			return true;
+	}
 
-    // if no member now, than all members are smaller than position
-    if (iter == pStruct->m_Members.end())
+	// if no member now, than all members are smaller than position
+	if (iter == pStruct->m_Members.end())
+		return true;
+
+	assert(*iter);
+	// otherwise, the member is a refstring and the previous members are less
+	// than the minimal position. Pad them with words until minimal size
+	// is reached.
+	if (nSize < nPosition)
+	{
+		int nPadding = nPosition - nSize;
+		int nWordSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
+		// store member before which to insert padding into extra variable,
+		// because if first padding succeeds, the iterator is no longer valid
+		CBETypedDeclarator *pMember = *iter;
+		if (nPadding % nWordSize)
+			InsertPadMember(TYPE_BYTE, nPadding % nWordSize, pMember, pStruct);
+		if (nPadding / nWordSize)
+			InsertPadMember(TYPE_MWORD, nPadding / nWordSize, pMember, pStruct);
+	}
+
 	return true;
-
-    assert(*iter);
-    // otherwise, the member is a refstring and the previous members are less
-    // than the minimal position. Pad them with words until minimal size
-    // is reached.
-    if (nSize < nPosition)
-    {
-	int nPadding = nPosition - nSize;
-    	int nWordSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
-	// store member before which to insert padding into extra variable,
-	// because if first padding succeeds, the iterator is no longer valid
-	CBETypedDeclarator *pMember = *iter;
-	if (nPadding % nWordSize)
-	    InsertPadMember(TYPE_BYTE, nPadding % nWordSize,
-		pMember, pStruct);
-	if (nPadding / nWordSize)
-	    InsertPadMember(TYPE_MWORD, nPadding / nWordSize,
-		pMember, pStruct);
-    }
-
-    return true;
 }
 
 /** \brief insert a padding member
@@ -1003,59 +989,56 @@ CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct,
  * member existed before, then a new member is created and inserted before
  * pMember.
  */
-bool
-CL4BEMsgBuffer::InsertPadMember(int nFEType,
-    int nSize,
-    CBETypedDeclarator *pMember,
-    CBEStructType *pStruct)
+bool CL4BEMsgBuffer::InsertPadMember(int nFEType, int nSize, CBETypedDeclarator *pMember,
+	CBEStructType *pStruct)
 {
-    CBETypedDeclarator *pPadMember = 0;
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBETypedDeclarator *pPadMember = 0;
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
 
-    // get name
-    string sName = pNF->GetPaddingMember(nFEType,
-	TYPE_REFSTRING);
-    // try to find padding member
-    if ((pPadMember = pStruct->m_Members.Find(sName)) == 0)
-    {
-	// create type
-	CBEType *pType = pCF->GetNewType(nFEType);
-	pType->CreateBackEnd(true, 1, nFEType);
-	// create padding member
-	pPadMember = pCF->GetNewTypedDeclarator();
-	pPadMember->CreateBackEnd(pType, sName);
-	delete pType; /* cloned in CBETypedDeclarator::CreateBackEnd */
-	// add array with size difference
-	if (nSize > 1)
+	// get name
+	string sName = pNF->GetPaddingMember(nFEType,
+		TYPE_REFSTRING);
+	// try to find padding member
+	if ((pPadMember = pStruct->m_Members.Find(sName)) == 0)
 	{
-	    CBEExpression *pBound = pCF->GetNewExpression();
-	    pBound->CreateBackEnd(nSize);
-	    pPadMember->m_Declarators.First()->AddArrayBound(pBound);
-	}
-	// add member to struct
-	pStruct->m_Members.Add(pPadMember);
-	// move member just before refstring member
-	pStruct->m_Members.Move(sName, pMember->m_Declarators.First()->GetName());
-    }
-    else
-    {
-	CBEDeclarator *pDecl = pPadMember->m_Declarators.First();
-	CBEExpression *pBound = 0;
-	if (pDecl->IsArray())
-	{
-	    pBound = pDecl->m_Bounds.First();
-	    nSize += pBound->GetIntValue();
+		// create type
+		CBEType *pType = pCF->GetNewType(nFEType);
+		pType->CreateBackEnd(true, 1, nFEType);
+		// create padding member
+		pPadMember = pCF->GetNewTypedDeclarator();
+		pPadMember->CreateBackEnd(pType, sName);
+		delete pType; /* cloned in CBETypedDeclarator::CreateBackEnd */
+		// add array with size difference
+		if (nSize > 1)
+		{
+			CBEExpression *pBound = pCF->GetNewExpression();
+			pBound->CreateBackEnd(nSize);
+			pPadMember->m_Declarators.First()->AddArrayBound(pBound);
+		}
+		// add member to struct
+		pStruct->m_Members.Add(pPadMember);
+		// move member just before refstring member
+		pStruct->m_Members.Move(sName, pMember->m_Declarators.First()->GetName());
 	}
 	else
 	{
-	    pBound = pCF->GetNewExpression();
-	    pDecl->AddArrayBound(pBound);
-	    nSize++;
+		CBEDeclarator *pDecl = pPadMember->m_Declarators.First();
+		CBEExpression *pBound = 0;
+		if (pDecl->IsArray())
+		{
+			pBound = pDecl->m_Bounds.First();
+			nSize += pBound->GetIntValue();
+		}
+		else
+		{
+			pBound = pCF->GetNewExpression();
+			pDecl->AddArrayBound(pBound);
+			nSize++;
+		}
+		pBound->CreateBackEnd(nSize);
 	}
-	pBound->CreateBackEnd(nSize);
-    }
-    return true;
+	return true;
 }
 
 /** \brief determine maximum position of a refstring in the message buffer
@@ -1065,52 +1048,51 @@ CL4BEMsgBuffer::InsertPadMember(int nFEType,
  *  first refstring in the payload. This requires that the structs have been
  *  sorted before!
  */
-int
-CL4BEMsgBuffer::GetMaxPosOfRefstringInMsgBuffer()
+int CL4BEMsgBuffer::GetMaxPosOfRefstringInMsgBuffer()
 {
-    int nMax = 0;
-    // determine maximum distance to refstring parameters
-    CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
-    assert(pType);
-    vector<CBEUnionCase*>::iterator iterS;
-    for (iterS = pType->m_UnionCases.begin();
-	 iterS != pType->m_UnionCases.end();
-	 iterS++)
-    {
-	CBEStructType* pStruct = dynamic_cast<CBEStructType*>((*iterS)->GetType());
-	if (!pStruct)
-	    continue;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: Checking next struct\n",
-	    __func__);
-	// iterate over struct members
-	vector<CBETypedDeclarator*>::iterator iter;
-	int nSize = 0;
-	for (iter = pType->GetStartOfPayload(pStruct);
-	     iter != pStruct->m_Members.end();
-	     iter++)
+	int nMax = 0;
+	// determine maximum distance to refstring parameters
+	CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
+	assert(pType);
+	vector<CBEUnionCase*>::iterator iterS;
+	for (iterS = pType->m_UnionCases.begin();
+		iterS != pType->m_UnionCases.end();
+		iterS++)
 	{
-	    if ((*iter)->GetType()->IsOfType(TYPE_REFSTRING))
-		break;
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: size of member %s is %d\n",
-		__func__, (*iter)->m_Declarators.First()->GetName().c_str(),
-		(*iter)->GetSize());
-	    int nMemberSize = (*iter)->GetSize();
-	    if (nMemberSize < 0)
-		(*iter)->GetMaxSize(nMemberSize);
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: adding size (max?) %d\n",
-		__func__, nMemberSize);
-	    nSize += nMemberSize;
-	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: Size of this struct is %d\n",
-	    __func__, nSize);
-	// check if new max
-	if (nSize > nMax)
-	    nMax = nSize;
-    }
+		CBEStructType* pStruct = dynamic_cast<CBEStructType*>((*iterS)->GetType());
+		if (!pStruct)
+			continue;
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: returns %d\n", __func__, nMax);
-    return nMax;
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: Checking next struct\n",
+			__func__);
+		// iterate over struct members
+		vector<CBETypedDeclarator*>::iterator iter;
+		int nSize = 0;
+		for (iter = pType->GetStartOfPayload(pStruct);
+			iter != pStruct->m_Members.end();
+			iter++)
+		{
+			if ((*iter)->GetType()->IsOfType(TYPE_REFSTRING))
+				break;
+			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: size of member %s is %d\n",
+				__func__, (*iter)->m_Declarators.First()->GetName().c_str(),
+				(*iter)->GetSize());
+			int nMemberSize = (*iter)->GetSize();
+			if (nMemberSize < 0)
+				(*iter)->GetMaxSize(nMemberSize);
+			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: adding size (max?) %d\n",
+				__func__, nMemberSize);
+			nSize += nMemberSize;
+		}
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: Size of this struct is %d\n",
+			__func__, nSize);
+		// check if new max
+		if (nSize > nMax)
+			nMax = nSize;
+	}
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: returns %d\n", __func__, nMax);
+	return nMax;
 }
 
 /** \brief test if the message buffer has a certain property
@@ -1124,49 +1106,49 @@ bool
 CL4BEMsgBuffer::HasProperty(int nProperty,
 	CMsgStructType nType)
 {
-    if (nProperty == MSGBUF_PROP_SHORT_IPC)
-    {
-	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-
-    	// if direction is 0 we have to get maximum of IN and OUT
-	int nWords = 0;
-	int nStrings = 0;
-	CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
-	int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
-	if (CMsgStructType::Generic == nType)
+	if (nProperty == MSGBUF_PROP_SHORT_IPC)
 	{
-	    int nWordsIn = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-		CMsgStructType::In, false);
-	    int nWordsOut = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-		CMsgStructType::Out, false);
+		CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
 
-	    int nStringsIn = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING,
-		pFunction, CMsgStructType::In, false);
-	    int nStringsOut = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING,
-		pFunction, CMsgStructType::Out, false);
-	    nStrings = std::max(nStringsIn, nStringsOut);
-	    if (nWordsIn > 0 && nWordsOut > 0)
-		nWords = std::max(nWordsIn, nWordsOut);
-	    else
-		nWords = std::min(nWordsIn, nWordsOut);
+		// if direction is 0 we have to get maximum of IN and OUT
+		int nWords = 0;
+		int nStrings = 0;
+		CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
+		int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
+		if (CMsgStructType::Generic == nType)
+		{
+			int nWordsIn = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
+				CMsgStructType::In, false);
+			int nWordsOut = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
+				CMsgStructType::Out, false);
+
+			int nStringsIn = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING,
+				pFunction, CMsgStructType::In, false);
+			int nStringsOut = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING,
+				pFunction, CMsgStructType::Out, false);
+			nStrings = std::max(nStringsIn, nStringsOut);
+			if (nWordsIn > 0 && nWordsOut > 0)
+				nWords = std::max(nWordsIn, nWordsOut);
+			else
+				nWords = std::min(nWordsIn, nWordsOut);
+		}
+		else
+		{
+			nWords = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
+				nType, false);
+			nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction,
+				nType, false);
+		}
+		// check minimum number of words
+		int nMinWords = GetWordMemberCountFunction();
+		if (nWords >= 0)
+			nWords = std::max(nWords, nMinWords);
+
+		// get short IPC values
+		int nShortSize = pSizes->GetMaxShortIPCSize() / nWordSize;
+		return (nStrings == 0) && (nWords <= nShortSize) && (nWords > 0);
 	}
-	else
-	{
-	    nWords = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-		nType, false);
-	    nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction,
-		nType, false);
-	}
-	// check minimum number of words
-	int nMinWords = GetWordMemberCountFunction();
-	if (nWords >= 0)
-	    nWords = std::max(nWords, nMinWords);
 
-       	// get short IPC values
-	int nShortSize = pSizes->GetMaxShortIPCSize() / nWordSize;
-	return (nStrings == 0) && (nWords <= nShortSize) && (nWords > 0);
-    }
-
-    // send everything else to base class
-    return CBEMsgBuffer::HasProperty(nProperty, nType);
+	// send everything else to base class
+	return CBEMsgBuffer::HasProperty(nProperty, nType);
 }

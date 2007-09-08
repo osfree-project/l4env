@@ -48,9 +48,9 @@ CL4FiascoBESrvLoopFunction::~CL4FiascoBESrvLoopFunction()
  * Create a message tag variable.
  */
 void
-CL4FiascoBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
+CL4FiascoBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
-    CL4BESrvLoopFunction::CreateBackEnd(pFEInterface);
+    CL4BESrvLoopFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
     CBENameFactory *pNF = CCompiler::GetNameFactory();
     string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);

@@ -48,10 +48,6 @@ public:
     virtual ~CL4BEUnmarshalFunction();
 
 protected:
-    /** \brief copy constructor */
-    CL4BEUnmarshalFunction(CL4BEUnmarshalFunction &src);
-
-protected:
     virtual void AddParameter(CFETypedDeclarator *pFEParameter);
     virtual bool HasVariableSizedParameters(
 	DIRECTION_TYPE nDirection);

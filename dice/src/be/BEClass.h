@@ -133,7 +133,7 @@ public: // Public methods
     CFunctionGroup* FindFunctionGroup(CBEFunction *pFunction);
     CBESrvLoopFunction* GetSrvLoopFunction();
     CBEType* FindTaggedType(int nType, std::string sTag);
-    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef* pPrev = NULL);
+    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef* pPrev = 0);
     CBEFunction* FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType);
     CBEEnumType* FindEnum(std::string sName);
 

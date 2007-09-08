@@ -40,22 +40,20 @@ class CL4BETypedDeclarator : public CBETypedDeclarator
 {
 public:
     /** creates a new object of a typed declarator */
-    CL4BETypedDeclarator() : CBETypedDeclarator()
-    {}
+    CL4BETypedDeclarator();
+    ~CL4BETypedDeclarator();
+
+protected:
     /** copy constructor
      *  \param src the source to copy from
      */
-    CL4BETypedDeclarator(CL4BETypedDeclarator &src)
-    : CBETypedDeclarator(src)
-    {}
-
-    ~CL4BETypedDeclarator();
-    virtual CObject* Clone();
+    CL4BETypedDeclarator(CL4BETypedDeclarator* src);
 
 public: // Public methods
     virtual bool IsVariableSized();
     virtual bool IsFixedSized();
     virtual bool GetMaxSize(int & nSize, std::string sName = std::string());
+	virtual CObject* Clone();
 
 protected:
     virtual bool DoAllocateMemory(CBEFile& pFile);

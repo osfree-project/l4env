@@ -57,7 +57,8 @@ protected: // Protected methods
     virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual void WriteFlexpageOpcodePatch(CBEFile& pFile);
     virtual void WriteIPC(CBEFile& pFile);
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
+    virtual void CreateEnvironment();
 };
 
 #endif

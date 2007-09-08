@@ -51,12 +51,12 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEPtrDefaultAttribute(CFEPtrDefaultAttribute &src);
+    CFEPtrDefaultAttribute(CFEPtrDefaultAttribute* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     virtual CFEAttribute* GetPtrAttribute();
-    virtual CObject* Clone();
 
 // attributes
 protected:

@@ -30,7 +30,7 @@
 #include "fe/FEExpression.h"
 
 CFEArrayDeclarator::CFEArrayDeclarator(CFEDeclarator * pDecl)
-: CFEDeclarator(*pDecl)
+: CFEDeclarator(pDecl)
 {
     m_nType = DECL_ARRAY;
 }
@@ -42,18 +42,18 @@ CFEArrayDeclarator::CFEArrayDeclarator(std::string sName, CFEExpression * pUpper
     AddBounds(0, pUpper);
 }
 
-CFEArrayDeclarator::CFEArrayDeclarator(CFEArrayDeclarator & src)
+CFEArrayDeclarator::CFEArrayDeclarator(CFEArrayDeclarator* src)
 : CFEDeclarator(src)
 {
-    vector<CFEExpression*>::iterator iter = src.m_vLowerBounds.begin();
-    for (; iter != src.m_vLowerBounds.end(); iter++)
+    vector<CFEExpression*>::const_iterator iter = src->m_vLowerBounds.begin();
+    for (; iter != src->m_vLowerBounds.end(); iter++)
     {
         CFEExpression *pNew = (CFEExpression*)((*iter)->Clone());
         m_vLowerBounds.push_back(pNew);
         pNew->SetParent(this);
     }
-    iter = src.m_vUpperBounds.begin();
-    for (; iter != src.m_vUpperBounds.end(); iter++)
+    iter = src->m_vUpperBounds.begin();
+    for (; iter != src->m_vUpperBounds.end(); iter++)
     {
         CFEExpression *pNew = (CFEExpression*)((*iter)->Clone());
         m_vUpperBounds.push_back(pNew);
@@ -74,6 +74,14 @@ CFEArrayDeclarator::~CFEArrayDeclarator()
         delete m_vUpperBounds.back();
         m_vUpperBounds.pop_back();
     }
+}
+
+/** \brief create a copy of this object
+ *  \return a reference to the clone
+ */
+CObject* CFEArrayDeclarator::Clone()
+{
+	return new CFEArrayDeclarator(this);
 }
 
 /** retrieves a lower bound
@@ -138,14 +146,6 @@ unsigned int CFEArrayDeclarator::GetDimensionCount()
     if (m_vLowerBounds.size() != m_vUpperBounds.size())
         return 0;
     return m_vLowerBounds.size();
-}
-
-/** creates a copy of this object
- *  \return a copy of this object
- */
-CObject *CFEArrayDeclarator::Clone()
-{
-    return new CFEArrayDeclarator(*this);
 }
 
 /** \brief deletes a dimension from the vounds vectors

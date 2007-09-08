@@ -75,13 +75,13 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEVersionAttribute(CFEVersionAttribute &src);
+    CFEVersionAttribute(CFEVersionAttribute* src);
 
 // operations
 public:
-    virtual CObject* Clone();
     virtual version_t GetVersion();
     virtual void GetVersion(int& major, int& minor);
+	virtual CObject* Clone();
 
 // attributes
 protected:

@@ -38,6 +38,7 @@ l4sigma0_map_iomem(l4_threadid_t pager,
   l4_fpage_t   fpage;
   l4_umword_t  base;
   l4_msgdope_t result;
+  l4_msgtag_t  tag;
   int error;
 
   if ((phys & (d-1)) || (size & (d-1)) || (virt & (d-1)))
@@ -53,13 +54,14 @@ l4sigma0_map_iomem(l4_threadid_t pager,
     {
       do
 	{
-	  error = l4_ipc_call(pager,
-			      L4_IPC_SHORT_MSG,
-			        cached ? SIGMA0_REQ_FPAGE_IOMEM_CACHED
-				       : SIGMA0_REQ_FPAGE_IOMEM,
-			        l4_fpage(phys, l, 0, 0).fpage,
-			      L4_IPC_MAPMSG(virt, l), &base, &fpage.fpage,
-			      L4_IPC_NEVER, &result);
+	  tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
+	  error = l4_ipc_call_tag(pager,
+			          L4_IPC_SHORT_MSG,
+			            cached ? SIGMA0_REQ_FPAGE_IOMEM_CACHED
+				           : SIGMA0_REQ_FPAGE_IOMEM,
+			            l4_fpage(phys, l, 0, 0).fpage, tag,
+			          L4_IPC_MAPMSG(virt, l), &base, &fpage.fpage,
+			          L4_IPC_NEVER, &result, &tag);
 	}
       while (error == L4_IPC_SECANCELED || error == L4_IPC_SEABORTED);
 

@@ -35,19 +35,25 @@
 
 CBEIDLUnionType::CBEIDLUnionType()
  : CBEStructType()
-{
-}
+{ }
 
-CBEIDLUnionType::CBEIDLUnionType(CBEIDLUnionType & src)
+CBEIDLUnionType::CBEIDLUnionType(CBEIDLUnionType* src)
  : CBEStructType(src)
 {
-    m_sSwitchName = src.m_sSwitchName;
-    m_sUnionName = src.m_sUnionName;
+    m_sSwitchName = src->m_sSwitchName;
+    m_sUnionName = src->m_sUnionName;
 }
 
 /** \brief destructor of this instance */
 CBEIDLUnionType::~CBEIDLUnionType()
+{ }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CBEIDLUnionType::Clone()
 {
+	return new CBEIDLUnionType(this);
 }
 
 /** \brief prepares this instance for the code generation
@@ -100,14 +106,6 @@ CBEIDLUnionType::CreateBackEnd(CFETypeSpec * pFEType)
 
     CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 	"CBEIDLUnionType::%s(fe) returns\n", __func__);
-}
-
-/** \brief generates an exact copy of this class
- *  \return a reference to the new object
- */
-CObject *CBEIDLUnionType::Clone()
-{
-    return new CBEIDLUnionType(*this);
 }
 
 /** \brief try to find the switch variable

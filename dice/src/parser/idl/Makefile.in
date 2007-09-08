@@ -489,10 +489,12 @@ uninstall-am:
 dist-hook:
 	rm -f $(addprefix $(distdir)/,$(CLEANFILES))
 
-idl-parser.tab.cc idl-parser.tab.hh: idl-parser.yy
+idl-parser.tab.cc: idl-parser.yy
 	bison --report=all -d $<
 
-idl-scanner.ll: idl-parser.tab.hh
+idl-parser.tab.hh: idl-parser.tab.cc
+
+idl-parser-driver.cc idl-parser-driver.hh idl-scanner.ll: idl-parser.tab.hh
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

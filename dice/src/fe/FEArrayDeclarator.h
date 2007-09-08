@@ -37,7 +37,7 @@ using std::vector;
 class CFEExpression;
 
 /** \class CFEArrayDeclarator
- *    \ingroup frontend
+ *  \ingroup frontend
  *  \brief represents an array declarator (such as "int t1[]")
  *
  * This class is created to represent an array declarator, which is a simple
@@ -45,45 +45,45 @@ class CFEExpression;
  */
 class CFEArrayDeclarator : public CFEDeclarator
 {
-// standard constructor/destructor
-  public:
-    /** constructs an array declarator
-     *  \param pDecl the declarator the array bounds are added to */
-    CFEArrayDeclarator(CFEDeclarator * pDecl);
-    /** constructs an array declarator
-     *  \param sName the name of the declarator
-     *  \param pUpper its boundary
-     */
-    CFEArrayDeclarator(std::string sName, CFEExpression * pUpper = 0);
-    virtual ~ CFEArrayDeclarator();
+	// standard constructor/destructor
+public:
+	/** constructs an array declarator
+	 *  \param pDecl the declarator the array bounds are added to */
+	CFEArrayDeclarator(CFEDeclarator * pDecl);
+	/** constructs an array declarator
+	 *  \param sName the name of the declarator
+	 *  \param pUpper its boundary
+	 */
+	CFEArrayDeclarator(std::string sName, CFEExpression * pUpper = 0);
+	virtual ~ CFEArrayDeclarator();
 
-  protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CFEArrayDeclarator(CFEArrayDeclarator & src);
+protected:
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CFEArrayDeclarator(CFEArrayDeclarator* src);
 
-// Methods
-  public:
-    virtual void ReplaceUpperBound(unsigned int nIndex, CFEExpression * pUpper);
-    virtual void ReplaceLowerBound(unsigned int nIndex, CFEExpression * pLower);
-    virtual void RemoveBounds(unsigned int nIndex);
-    CObject *Clone();
-    virtual unsigned int GetDimensionCount();
-    virtual int AddBounds(CFEExpression * pLower, CFEExpression * pUpper);
-    virtual CFEExpression *GetUpperBound(unsigned int nDimension = 0);
-    virtual CFEExpression *GetLowerBound(unsigned int nDimension = 0);
+	// Methods
+public:
+	virtual CObject* Clone();
+	virtual void ReplaceUpperBound(unsigned int nIndex, CFEExpression * pUpper);
+	virtual void ReplaceLowerBound(unsigned int nIndex, CFEExpression * pLower);
+	virtual void RemoveBounds(unsigned int nIndex);
+	virtual unsigned int GetDimensionCount();
+	virtual int AddBounds(CFEExpression * pLower, CFEExpression * pUpper);
+	virtual CFEExpression *GetUpperBound(unsigned int nDimension = 0);
+	virtual CFEExpression *GetLowerBound(unsigned int nDimension = 0);
 
-// attributes
-  protected:
-    /** \var vector<CFEExpression*> m_vLowerBounds
-     *  \brief contains the lower bounds of the array definitions
-     */
-     vector<CFEExpression*> m_vLowerBounds;
-    /** \var vector<CFEExpression*> m_vUpperBounds
-     *  \brief contains the upper bound of the array definitions
-     */
-    vector<CFEExpression*> m_vUpperBounds;
+	// attributes
+protected:
+	/** \var vector<CFEExpression*> m_vLowerBounds
+	 *  \brief contains the lower bounds of the array definitions
+	 */
+	vector<CFEExpression*> m_vLowerBounds;
+	/** \var vector<CFEExpression*> m_vUpperBounds
+	 *  \brief contains the upper bound of the array definitions
+	 */
+	vector<CFEExpression*> m_vUpperBounds;
 };
 
 #endif                /* __DICE_FE_FEARRAYDECLARATOR_H__ */

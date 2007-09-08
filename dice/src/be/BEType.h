@@ -60,14 +60,14 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CBEType(CBEType &src);
+    CBEType(CBEType* src);
 
 public:
     virtual bool IsUnsigned();
     virtual int GetFEType();
     virtual void WriteZeroInit(CBEFile& pFile);
     virtual int GetStringLength();
-    virtual CObject* Clone();
+	virtual CObject* Clone();
     virtual bool IsOfType(int nFEType);
     virtual int GetSize();
     virtual int GetMaxSize();

@@ -52,17 +52,15 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CBEUserDefinedType(CBEUserDefinedType &src);
+    CBEUserDefinedType(CBEUserDefinedType* src);
 
 public:
-    virtual CObject* Clone();
-
     virtual void WriteZeroInit(CBEFile& pFile);
     virtual int GetSize();
     virtual int GetMaxSize();
     virtual std::string GetName();
     virtual bool IsConstructedType();
-
+	virtual CObject* Clone();
     virtual void CreateBackEnd(std::string sName);
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
 

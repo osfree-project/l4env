@@ -38,40 +38,28 @@ CFEArrayType::CFEArrayType(CFETypeSpec * pBaseType, CFEExpression * pBound)
     m_pBound = pBound;
 }
 
-CFEArrayType::CFEArrayType(CFEArrayType & src)
+CFEArrayType::CFEArrayType(CFEArrayType* src)
 :CFETypeSpec(src)
 {
-    if (src.m_pBaseType)
-      {
-      m_pBaseType = (CFETypeSpec *) (src.m_pBaseType->Clone());
-      m_pBaseType->SetParent(this);
-      }
-    else
-    m_pBaseType = 0;
-    if (src.m_pBound)
-      {
-      m_pBound = (CFEExpression *) (src.m_pBound->Clone());
-      m_pBound->SetParent(this);
-      }
-    else
-    m_pBound = 0;
+	CLONE_MEM(CFETypeSpec, m_pBaseType);
+	CLONE_MEM(CFEExpression, m_pBound);
 }
 
 /** cleans up the array type object */
 CFEArrayType::~CFEArrayType()
 {
-    if (m_pBaseType)
-    delete m_pBaseType;
-    if (m_pBound)
-    delete m_pBound;
+	if (m_pBaseType)
+		delete m_pBaseType;
+	if (m_pBound)
+		delete m_pBound;
 }
 
-/** creates a copy of this object
- *  \return a reference to the copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject *CFEArrayType::Clone()
+CObject* CFEArrayType::Clone()
 {
-    return new CFEArrayType(this);
+	return new CFEArrayType(this);
 }
 
 /** returns the base type of the sequence

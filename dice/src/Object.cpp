@@ -29,25 +29,26 @@
 #include "Object.h"
 
 CObject::CObject(CObject * pParent)
-    : m_sourceLoc(),
-    m_pParent(pParent)
-{ }
-
-CObject::CObject(const CObject & src)
-    : m_sourceLoc(src.m_sourceLoc),
-    m_pParent(src.m_pParent)
+: m_sourceLoc(),
+	m_pParent(pParent)
 { }
 
 /** cleans up the object */
 CObject::~CObject()
 { }
 
-/** \brief creates a copy of this object
- *  \return a copy of this object
- */
-CObject *CObject::Clone()
+CObject::CObject(const CObject& src)
 {
-    return new CObject(*this);
+	m_pParent = src.m_pParent;
+	m_sourceLoc = src.m_sourceLoc;
+}
+
+/** \brief clone this object
+ *  \return reference to new instance
+ */
+CObject* CObject::Clone()
+{
+	return new CObject(*this);
 }
 
 /** \brief accept function for visitors
@@ -61,11 +62,11 @@ void CObject::Accept(CVisitor&)
  */
 bool CObject::IsParent(CObject * pParent)
 {
-    if (!pParent)
-	return false;
-    CObject *pP = m_pParent;
-    while (pP && pP != pParent)
-	pP = pP->GetParent();
-    return pP == pParent;
+	if (!pParent)
+		return false;
+	CObject *pP = m_pParent;
+	while (pP && pP != pParent)
+		pP = pP->GetParent();
+	return pP == pParent;
 }
 

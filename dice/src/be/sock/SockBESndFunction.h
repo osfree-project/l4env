@@ -51,12 +51,9 @@ public:
     CSockBESndFunction();
     virtual ~CSockBESndFunction();
 
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 
 protected:
-    /** \brief copy constructor */
-    CSockBESndFunction(CSockBESndFunction &src);
-
     virtual void WriteInvocation(CBEFile& pFile);
     virtual void WriteVariableInitialization(CBEFile& pFile);
 

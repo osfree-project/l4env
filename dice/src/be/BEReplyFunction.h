@@ -38,16 +38,12 @@
  */
 class CBEReplyFunction : public CBEOperationFunction
 {
-protected:
-    /** protected copy constructor */
-    CBEReplyFunction(CBEReplyFunction & src);
-
 public:
     /** public constructor */
     CBEReplyFunction();
     virtual ~CBEReplyFunction();
 
-    virtual void CreateBackEnd(CFEOperation* pFEOperation);
+    virtual void CreateBackEnd(CFEOperation* pFEOperation, bool bComponentSide);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);

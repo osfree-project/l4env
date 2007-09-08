@@ -41,7 +41,7 @@ void term_read(void *argp)
 
     l4thread_started(0);
     LOGd(_DEBUG, "read thread created: "l4util_idfmt, 
-	         l4util_idstr(l4_myself()));
+             l4util_idstr(l4_myself()));
 
     env.malloc  = (dice_malloc_func)malloc;
     env.free    = (dice_free_func)free;
@@ -78,19 +78,18 @@ void l4vfs_term_server_internal_start_read_component(
     // ... allocate mem for the buffer
     // fixme: how about alloca?  should be faster and is freed
     //        automatically on return
-    mybuf  = (char *)malloc(*count*sizeof(char));
+    mybuf  = malloc(*count + 1);
 
     l4semaphore_up(&(clients[fd].client_sem));
 
     // call read
-    ret    = vt100_read(term, mybuf, *count, mode);
+    ret    = vt100_read(term, (l4_int8_t*)mybuf, *count, mode);
+    LOGd(_DEBUG, "vt100_read: ret %d, buf %p, count %d", ret, mybuf, *count);
     // count will now give the size of the buffer for sending data
     // back to the main server loop. If ret is negative, read() failed and
     // we then return count=0 bytes. Otherwise we return count=ret bytes
     // as read returns the bytes read.
     *count = MAX(ret, 0);
-
-    LOGd(_DEBUG,"read: '%s', replying", mybuf);
 
     env.malloc = (dice_malloc_func)malloc;
     env.free   = (dice_free_func)free;
@@ -98,11 +97,10 @@ void l4vfs_term_server_internal_start_read_component(
     // return data to the main thread. This is a drawback of L4V2 as the
     // client expects the read()-answer to come from the thread he called.
     // We therefore cannot return the buffer directly to the caller.
-    l4vfs_common_io_notify_read_notify_send((l4_threadid_t *)notifier, fd, ret,
-                                            (l4_int8_t *)mybuf, count,
-                                            source, &env);
+    l4vfs_common_io_notify_read_notify_send(notifier, fd, ret,
+                                            mybuf, count, source, &env);
 
     // free the allocated buffer
     free(mybuf);
 }
-        
+

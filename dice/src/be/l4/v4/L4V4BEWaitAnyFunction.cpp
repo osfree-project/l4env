@@ -207,9 +207,9 @@ CL4V4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
  *  \return true if successful
  */
 void
-CL4V4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
+CL4V4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide)
 {
-    CBEWaitAnyFunction::CreateBackEnd(pFEInterface);
+    CBEWaitAnyFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
     // need message tag
     CBENameFactory *pNF = CCompiler::GetNameFactory();

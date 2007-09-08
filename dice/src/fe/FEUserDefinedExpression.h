@@ -53,11 +53,11 @@ protected:
     /** \brief copy constrcutor
      *  \param src the source to copy from
      */
-    CFEUserDefinedExpression(CFEUserDefinedExpression &src);
+    CFEUserDefinedExpression(CFEUserDefinedExpression* src);
 
 // Operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
     virtual bool IsOfType(unsigned int nType);
     virtual int GetIntValue();
     virtual std::string GetExpName();

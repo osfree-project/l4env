@@ -10,7 +10,7 @@ WANT_THREADSAFE = 1
 SRC_C = dmon.c dumper.c logger.c
 DPE_dmon.c = dmon.dpi
 
-LIBS = -ll4dope -lvscreen -levents -lloaderif -lvt100
+LIBS = -ll4dope -lvscreen -levents -lloaderif -lvt100 -lc_be_select -ll4vfs_select
 
 ifneq ($(WITH_PETZE),)
  LIBS += -lpetze

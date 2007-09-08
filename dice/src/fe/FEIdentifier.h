@@ -53,7 +53,7 @@ public:
     /** copy constructor for this class
      *  \param src the source object for this new object
      */
-    CFEIdentifier(CFEIdentifier& src);
+    CFEIdentifier(CFEIdentifier* src);
     /** constructs an identifier object
      *  \param sName a character string, defining the name of the identifier
      */
@@ -62,10 +62,10 @@ public:
 
 //operations
 public:
+	virtual CObject* Clone();
     virtual std::string ReplaceName(std::string sNewName);
     virtual void Suffix(std::string sSuffix);
     virtual void Prefix(std::string sPrefix);
-    virtual CObject* Clone();
     virtual std::string GetName();
     bool operator==(CFEIdentifier&);
     bool operator==(std::string& Name);

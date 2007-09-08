@@ -47,12 +47,7 @@ public:
     CL4V4BESrvLoopFunction();
     ~CL4V4BESrvLoopFunction();
 
-protected:
-    /** \brief copy constructor */
-    CL4V4BESrvLoopFunction(CL4V4BESrvLoopFunction &src);
-
-public:
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
 };
 
 #endif // !__DICE_L4V4BESRVLOOPFUNCTION_H__

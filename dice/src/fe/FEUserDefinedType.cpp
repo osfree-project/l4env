@@ -44,25 +44,22 @@ CFEUserDefinedType::CFEUserDefinedType(string sName)
     m_sName = sName;
 }
 
-CFEUserDefinedType::CFEUserDefinedType(CFEUserDefinedType & src)
+CFEUserDefinedType::CFEUserDefinedType(CFEUserDefinedType* src)
 : CFETypeSpec(src)
 {
-    m_sName = src.m_sName;
+    m_sName = src->m_sName;
 }
 
 /** cleans up the user defined type */
 CFEUserDefinedType::~CFEUserDefinedType()
-{
+{ }
 
-}
-
-/**
- *  \brief creates a copy of this class
- *  \return the copy of this class
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject *CFEUserDefinedType::Clone()
+CObject* CFEUserDefinedType::Clone()
 {
-    return new CFEUserDefinedType(*this);
+	return new CFEUserDefinedType(this);
 }
 
 /** \brief test a type whether it is a constructed type or not

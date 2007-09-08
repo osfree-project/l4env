@@ -66,140 +66,139 @@ enum ATTR_CLASS
  */
 class CBEAttribute : public CBEObject
 {
-// Constructor
+	// Constructor
 public:
-  /** \brief constructor
-   */
-  CBEAttribute();
-  virtual ~ CBEAttribute();
+	/** \brief constructor
+	 */
+	CBEAttribute();
+	virtual ~ CBEAttribute();
 
 protected:
-  /** \brief copy constructor
-   *  \param src the source to copy from
-   */
-  CBEAttribute(CBEAttribute & src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBEAttribute(CBEAttribute* src);
 
 public:
-    virtual void AddIsParameter(CBEDeclarator * pDecl);
-    virtual int GetRemainingNumberOfIsAttributes(
-	vector<CBEDeclarator*>::iterator iter);
+	virtual void AddIsParameter(CBEDeclarator * pDecl);
+	virtual int GetRemainingNumberOfIsAttributes(
+		vector<CBEDeclarator*>::iterator iter);
+	virtual CObject* Clone();
+	virtual void CreateBackEnd(ATTR_TYPE nType);
+	virtual void CreateBackEnd(CFEAttribute * pFEAttribute);
+	virtual void CreateBackEndIs(ATTR_TYPE nType, CBEDeclarator *pDeclarator);
+	virtual void CreateBackEndInt(ATTR_TYPE nType, int nValue);
+	virtual void CreateBackEndType(ATTR_TYPE nType, CBEType *pType);
 
-    virtual void CreateBackEnd(ATTR_TYPE nType);
-    virtual void CreateBackEnd(CFEAttribute * pFEAttribute);
-    virtual void CreateBackEndIs(ATTR_TYPE nType, CBEDeclarator *pDeclarator);
-    virtual void CreateBackEndInt(ATTR_TYPE nType, int nValue);
-    virtual void CreateBackEndType(ATTR_TYPE nType, CBEType *pType);
-    virtual CObject * Clone();
+	virtual void Write(CBEFile& pFile);
+	virtual void WriteToStr(std::string &str);
 
-    virtual void Write(CBEFile& pFile);
-    virtual void WriteToStr(std::string &str);
+	/** \brief tries to match the attribute type
+	 *  \param nType the type to match
+	 *  \return true if type matches
+	 */
+	bool Match(ATTR_TYPE nType)
+	{ return m_nType == nType; }
 
-    /** \brief tries to match the attribute type
-     *  \param nType the type to match
-     *  \return true if type matches
-     */
-    bool Match(ATTR_TYPE nType)
-    { return m_nType == nType; }
+	/** \brief returns the attribute's type
+	 *  \return the member m_nType
+	 */
+	ATTR_TYPE GetType()
+	{ return m_nType; }
 
-    /** \brief returns the attribute's type
-     *  \return the member m_nType
-     */
-    ATTR_TYPE GetType()
-    { return m_nType; }
+	/** \brief returns class
+	 *  \return the attribute's class
+	 */
+	ATTR_CLASS GetClass()
+	{ return m_nAttrClass; }
 
-    /** \brief returns class
-     *  \return the attribute's class
-     */
-    ATTR_CLASS GetClass()
-    { return m_nAttrClass; }
+	/** \brief checks the type of an attribute
+	 *  \param nType the type to compare the own type to
+	 *  \return true if the types are the same
+	 */
+	bool IsOfType(ATTR_CLASS nType)
+	{ return (m_nAttrClass == nType); }
 
-    /** \brief checks the type of an attribute
-     *  \param nType the type to compare the own type to
-     *  \return true if the types are the same
-     */
-    bool IsOfType(ATTR_CLASS nType)
-    { return (m_nAttrClass == nType); }
+	/** \brief retrieves the integer value of this attribute
+	 *  \return the value of m_nIntValue or -1 if m_nAttrClass != ATTR_CLASS_INT
+	 */
+	int GetIntValue()
+	{
+		return (m_nAttrClass == ATTR_CLASS_INT) ?
+			m_nIntValue : -1;
+	}
 
-    /** \brief retrieves the integer value of this attribute
-     *  \return the value of m_nIntValue or -1 if m_nAttrClass != ATTR_CLASS_INT
-     */
-    int GetIntValue()
-    {
-	return (m_nAttrClass == ATTR_CLASS_INT) ?
-	    m_nIntValue : -1;
-    }
+	/** \brief access string value
+	 *  \return string member if ATTR_CLASS_STRING
+	 */
+	std::string GetString()
+	{
+		return (m_nAttrClass == ATTR_CLASS_STRING) ?
+			m_sString : std::string();
+	}
 
-    /** \brief access string value
-     *  \return string member if ATTR_CLASS_STRING
-     */
-    std::string GetString()
-    {
-	return (m_nAttrClass == ATTR_CLASS_STRING) ?
-	    m_sString : std::string();
-    }
-
-    /** \brief retrieve reference to the type of a type
-     *         attribute (such as transmit_as)
-     *  \return a reference to the type of a type attribute
-     */
-    CBEType* GetAttrType()
-    { return m_pType; }
-
-protected:
-    virtual void CreateBackEndInt(CFEIntAttribute * pFEIntAttribute);
-    virtual void CreateBackEndIs(CFEIsAttribute * pFEIsAttribute);
-    virtual void CreateBackEndString(CFEStringAttribute * pFEStringAttribute);
-    virtual void CreateBackEndType(CFETypeAttribute * pFETypeAttribute);
-    virtual void CreateBackEndVersion(CFEVersionAttribute * pFEVersionAttribute);
+	/** \brief retrieve reference to the type of a type
+	 *         attribute (such as transmit_as)
+	 *  \return a reference to the type of a type attribute
+	 */
+	CBEType* GetAttrType()
+	{ return m_pType; }
 
 protected:
-  /** \var ATTR_TYPE m_nType
-   *  \brief m_nType contains the attribute's type (and helps select which
-   *    of the other members to use)
-   */
-  ATTR_TYPE m_nType;
-  /** \var ATTR_CLASS m_nAttrClass
-   *  \brief contains the attribute class
-   */
-  ATTR_CLASS m_nAttrClass;
-  /** \var vector<std::string> m_vPortSpecs
-   *  \brief contains the EndPoint Attributes specs if any
-   */
-  vector<std::string> m_vPortSpecs;
-  /** \var vector<std::string> m_vExceptions
-   *  \brief contains the exception attributes if any
-   */
-  vector<std::string> m_vExceptions;
-  /** \var int m_nIntValue
-   *  \brief contains the int attribute's value if any
-   */
-  int m_nIntValue;
-  /** \var CBEAttribute m_pPtrDefault
-   *  \brief the Pointer default attribute value
-   */
-  CBEAttribute *m_pPtrDefault;
-  /** \var std::string m_sString
-   *  \brief the value of the string attribute
-   */
-  std::string m_sString;
-  /** \var CBEType m_pType
-   *  \brief contains the type of the type attribute
-   */
-  CBEType *m_pType;
-  /** \var int m_nMinorVersion
-   *  \brief contains the minor version information if this is a version attribute
-   */
-  int m_nMinorVersion;
-  /** \var int m_nMajorVersion
-   *  \brief the major part of the version information
-   */
-  int m_nMajorVersion;
+	virtual void CreateBackEndInt(CFEIntAttribute * pFEIntAttribute);
+	virtual void CreateBackEndIs(CFEIsAttribute * pFEIsAttribute);
+	virtual void CreateBackEndString(CFEStringAttribute * pFEStringAttribute);
+	virtual void CreateBackEndType(CFETypeAttribute * pFETypeAttribute);
+	virtual void CreateBackEndVersion(CFEVersionAttribute * pFEVersionAttribute);
+
+protected:
+	/** \var ATTR_TYPE m_nType
+	 *  \brief m_nType contains the attribute's type (and helps select which
+	 *    of the other members to use)
+	 */
+	ATTR_TYPE m_nType;
+	/** \var ATTR_CLASS m_nAttrClass
+	 *  \brief contains the attribute class
+	 */
+	ATTR_CLASS m_nAttrClass;
+	/** \var vector<std::string> m_vPortSpecs
+	 *  \brief contains the EndPoint Attributes specs if any
+	 */
+	vector<std::string> m_vPortSpecs;
+	/** \var vector<std::string> m_vExceptions
+	 *  \brief contains the exception attributes if any
+	 */
+	vector<std::string> m_vExceptions;
+	/** \var int m_nIntValue
+	 *  \brief contains the int attribute's value if any
+	 */
+	int m_nIntValue;
+	/** \var CBEAttribute m_pPtrDefault
+	 *  \brief the Pointer default attribute value
+	 */
+	CBEAttribute *m_pPtrDefault;
+	/** \var std::string m_sString
+	 *  \brief the value of the string attribute
+	 */
+	std::string m_sString;
+	/** \var CBEType m_pType
+	 *  \brief contains the type of the type attribute
+	 */
+	CBEType *m_pType;
+	/** \var int m_nMinorVersion
+	 *  \brief contains the minor version information if this is a version attribute
+	 */
+	int m_nMinorVersion;
+	/** \var int m_nMajorVersion
+	 *  \brief the major part of the version information
+	 */
+	int m_nMajorVersion;
 
 public:
-  /** \var CSearchableCollection<CBEDeclarator, std::string> m_Parameters
-   *  \brief contains the values of the Is attributes (if any)
-   */
-  CSearchableCollection<CBEDeclarator, std::string> m_Parameters;
+	/** \var CSearchableCollection<CBEDeclarator, std::string> m_Parameters
+	 *  \brief contains the values of the Is attributes (if any)
+	 */
+	CSearchableCollection<CBEDeclarator, std::string> m_Parameters;
 };
 
 #endif                //*/ !__DICE_BEATTRIBUTE_H__

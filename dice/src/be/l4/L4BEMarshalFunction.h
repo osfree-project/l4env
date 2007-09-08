@@ -49,11 +49,6 @@ public:
     CL4BEMarshalFunction();
     ~CL4BEMarshalFunction();
 
-protected:
-    /** \brief copy constructor */
-    CL4BEMarshalFunction(CL4BEMarshalFunction &src);
-
-public:
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
     virtual int GetSize(DIRECTION_TYPE nDirection);
 

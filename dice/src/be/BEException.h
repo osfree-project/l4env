@@ -49,10 +49,10 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CBEException(CBEException &src);
+    CBEException(CBEException* src);
 
 public:
-    virtual void CreateBackEnd(CFETypedDeclarator *pFEException);
+	virtual CObject* Clone();
 };
 
 #endif // !__DICE_BEEXCEPTION_H__

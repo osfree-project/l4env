@@ -48,12 +48,8 @@ public:
     CBEMarshalFunction();
     virtual ~CBEMarshalFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBEMarshalFunction(CBEMarshalFunction &src);
-
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
     virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
     virtual void WriteReturn(CBEFile& pFile);
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);

@@ -52,11 +52,10 @@ protected:
     /** \brief copy constrcutor
      *  \param src the source to copy from
      */
-    CFETypeOfType(CFETypeOfType &src);
+    CFETypeOfType(CFETypeOfType* src);
 
-// Operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
 
 // attributes
 protected:

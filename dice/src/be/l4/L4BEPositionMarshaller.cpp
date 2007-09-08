@@ -48,11 +48,11 @@
 #include <cassert>
 
 CL4BEMarshaller::PositionMarshaller::PositionMarshaller(
-    CL4BEMarshaller *pParent)
+	CL4BEMarshaller *pParent)
 {
-    m_pParent = pParent;
-    m_nPosSize = 0;
-    m_bReference = false;
+	m_pParent = pParent;
+	m_nPosSize = 0;
+	m_bReference = false;
 }
 
 /** deletes the instance of this class */
@@ -89,192 +89,192 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 	bool bReference,
 	bool bLValue)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"PositionMarshaller::%s(%s, %s, %d, %d, %s, %s) called\n", __func__,
-	pFile.GetFileName().c_str(), pFunction ? pFunction->GetName().c_str() : "",
-	(int)nType, nPosition, bReference ? "true" : "false",
-	bLValue ? "true" : "false");
-
-    m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
-    m_bReference = bReference;
-
-    // get the message buffer type
-    CBEMsgBufferType *pMsgType = GetMessageBufferType(pFunction);
-
-    // get the respective struct from the function
-    string sFuncName = pFunction->GetOriginalName();
-    string sClassName = pFunction->GetSpecificParent<CBEClass>()->GetName();
-    // if name is empty, get generic struct
-    if (sFuncName.empty())
-    {
-	nType = CMsgStructType::Generic;
-	sClassName = string();
-    }
-    CBEStructType *pStruct = pMsgType->GetStruct(sFuncName, sClassName,
-	nType);
-    if (!pStruct)
-    {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "PositionMarshaller::%s failed, because no struct could be found for func %s\n",
-	    __func__, pFunction->GetName().c_str());
-	return false;
-    }
-    assert(pStruct);
+		"PositionMarshaller::%s(%s, %s, %d, %d, %s, %s) called\n", __func__,
+		pFile.GetFileName().c_str(), pFunction ? pFunction->GetName().c_str() : "",
+		(int)nType, nPosition, bReference ? "true" : "false",
+		bLValue ? "true" : "false");
 
-    CBETypedDeclarator *pMember =
-	GetMemberAt(pMsgType, pStruct, nPosition);
-    if (!pMember)
-    {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "PositionMarshaller::%s: could not find a member at pos %d in struct\n",
-	    __func__, nPosition);
-	// struct too small, nothing to put there
-	return false;
-    }
+	m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
+	m_bReference = bReference;
 
-    // do not get message buffer as parent of type, but instead get it from
-    // function to obtain the correct declarator of the function's scope
-    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    assert(pMsgBuffer);
-    // Now we test if member if of word size. If not, get the struct with the
-    // word sized members. We also have to test if its type is simple, since
-    // constructed types cannot be put directly into positions.
-    int nMemberSize = GetMemberSize(pMember);
-    if (nMemberSize != m_nPosSize)
-    {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	    "PositionMarshaller::%s: member of different size\n", __func__);
-	if (bReference)
-	    pFile << "&";
-	pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
-    }
-    else
-    {
-	// find respective parameter
-	string sName = pMember->m_Declarators.First()->GetName();
-	CBETypedDeclarator *pParameter = pFunction->FindParameter(sName);
-	if (!pParameter)
+	// get the message buffer type
+	CBEMsgBufferType *pMsgType = GetMessageBufferType(pFunction);
+
+	// get the respective struct from the function
+	string sFuncName = pFunction->GetOriginalName();
+	string sClassName = pFunction->GetSpecificParent<CBEClass>()->GetName();
+	// if name is empty, get generic struct
+	if (sFuncName.empty())
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"PositionMarshaller::%s: parameter %s not found, try special\n", __func__,
-		sName.c_str());
-	    // only call this method if we are sure the member is special
-	    // e.g. return, opcode, etc.
-	    WriteSpecialMember(pFile, pFunction, pMember, nType,
-		bReference, bLValue);
+		nType = CMsgStructType::Generic;
+		sClassName = string();
+	}
+	CBEStructType *pStruct = pMsgType->GetStruct(sFuncName, sClassName,
+		nType);
+	if (!pStruct)
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"PositionMarshaller::%s failed, because no struct could be found for func %s\n",
+			__func__, pFunction->GetName().c_str());
+		return false;
+	}
+	assert(pStruct);
+
+	CBETypedDeclarator *pMember =
+		GetMemberAt(pMsgType, pStruct, nPosition);
+	if (!pMember)
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"PositionMarshaller::%s: could not find a member at pos %d in struct\n",
+			__func__, nPosition);
+		// struct too small, nothing to put there
+		return false;
+	}
+
+	// do not get message buffer as parent of type, but instead get it from
+	// function to obtain the correct declarator of the function's scope
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+	assert(pMsgBuffer);
+	// Now we test if member if of word size. If not, get the struct with the
+	// word sized members. We also have to test if its type is simple, since
+	// constructed types cannot be put directly into positions.
+	int nMemberSize = GetMemberSize(pMember);
+	if (nMemberSize != m_nPosSize)
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"PositionMarshaller::%s: member of different size\n", __func__);
+		if (bReference)
+			pFile << "&";
+		pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
 	}
 	else
 	{
-	    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"PositionMarshaller::%s: parameter found, write access to member\n", __func__);
-	    // if there is a transmit_as attribute, replace the type
-	    CBEAttribute *pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS);
-	    // if user defined type, then the alias might have a transmit as
-	    // attribute as well (the parameter's transmit-as overrides the
-	    // one of the alias)
-	    CBEType *pParamType = pParameter->GetType();
-	    if (!pAttr)
-	    {
-		CBERoot *pRoot = pParameter->GetSpecificParent<CBERoot>();
-		assert(pRoot);
-
-		while (!pAttr && pParamType->IsOfType(TYPE_USER_DEFINED))
+		// find respective parameter
+		string sName = pMember->m_Declarators.First()->GetName();
+		CBETypedDeclarator *pParameter = pFunction->FindParameter(sName);
+		if (!pParameter)
 		{
-		    string sTypeName =
-			static_cast<CBEUserDefinedType*>(pParamType)->GetName();
-		    CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
-		    if (pTypedef)
-		    {
-			pAttr = pTypedef->m_Attributes.Find(ATTR_TRANSMIT_AS);
-			pParamType = pTypedef->GetType();
-		    }
+			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+				"PositionMarshaller::%s: parameter %s not found, try special\n", __func__,
+				sName.c_str());
+			// only call this method if we are sure the member is special
+			// e.g. return, opcode, etc.
+			WriteSpecialMember(pFile, pFunction, pMember, nType,
+				bReference, bLValue);
 		}
-	    }
-	    CBEType *pTransmitType = 0;
-	    if (pAttr)
-	    {
-		// get type from attribute
-		pTransmitType = static_cast<CBEType*>(pAttr->GetAttrType());
-	    }
-
-	    /* if member is constructed type, cast to word size
-	     * test for flexpage explicetly, because in C its a constructed
-	     * type but internally handled as simple type
-	     */
-	    if ((pMember->GetType()->IsConstructedType() ||
-		    pMember->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
-		!pTransmitType)
-	    {
-		CBEClassFactory *pCF = CCompiler::GetClassFactory();
-		pTransmitType = pCF->GetNewType(TYPE_MWORD);
-		pTransmitType->CreateBackEnd(true, m_nPosSize, TYPE_MWORD);
-		/* set lval so that the cast below is actually performed */
-		bLValue = true;
-	    }
-
-	    // get member type (possibly a user defined type as well)
-	    CBEType *pMemType = pMember->GetType();
-	    while (pMemType->IsOfType(TYPE_USER_DEFINED))
-		pMemType =
-		    static_cast<CBEUserDefinedType*>(pMemType)->GetRealType();
-	    // if member and parameter have different types, rely on member
-	    // exception is if transmit type exists, then cast parameter to
-	    // transmit type (is not always == member type)
-	    if (!pMemType->IsOfType(pParamType->GetFEType()) &&
-		!pTransmitType)
-	    {
-		if (bReference)
-    		    pFile << "&";
-		pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
-	    }
-	    else
-	    {
-		// if there is an attribute we have a possibly different type.
-		// Just to be on the safe side, cast the types
-		//
-		// We do so by letting WriteParameter handle the cast. This is
-		// necessary, so all the special cases, such as constructed
-		// types and pointer types are cought. This might look
-		// nasty for simple types, such as float transmitted as long
-		// and generate wrong type casts. Therefore, we have to check
-		// for simple types here.
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		    "PositionMarshaller::%s: bReference=%s, pTransmitType=%p, C++=%s, bLValue=%s\n",
-		    __func__, bReference ? "true" : "false", pTransmitType,
-		    CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) ? "true" : "false",
-		    bLValue ? "true" : "false");
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		    "PositionMarshaller::%s: !%s && %p && !(%s && %s)\n", __func__,
-		    bReference ? "true" : "false", pTransmitType,
-		    CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) ? "true" : "false",
-		    bLValue ? "true" : "false");
-		if (!bReference && pTransmitType &&
-		    !(CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-			bLValue))
+		else
 		{
-		    /* test for that flexpage again */
-		    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"PositionMarshaller::%s: %s && %s && !%s\n", __func__,
-			pMemType->IsSimpleType() ? "true" : "false",
-			pParamType->IsSimpleType() ? "true" : "false",
-			pMemType->IsOfType(TYPE_FLEXPAGE) ? "true" : "false");
-		    if (pMemType->IsSimpleType() &&
-			pParamType->IsSimpleType() &&
-			!pMemType->IsOfType(TYPE_FLEXPAGE))
-			pMemType->WriteCast(pFile, false);
-		    else
-		    {
-			pFile << "*";
-			bReference = true;
-		    }
+			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+				"PositionMarshaller::%s: parameter found, write access to member\n", __func__);
+			// if there is a transmit_as attribute, replace the type
+			CBEAttribute *pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS);
+			// if user defined type, then the alias might have a transmit as
+			// attribute as well (the parameter's transmit-as overrides the
+			// one of the alias)
+			CBEType *pParamType = pParameter->GetType();
+			if (!pAttr)
+			{
+				CBERoot *pRoot = pParameter->GetSpecificParent<CBERoot>();
+				assert(pRoot);
+
+				while (!pAttr && pParamType->IsOfType(TYPE_USER_DEFINED))
+				{
+					string sTypeName =
+						static_cast<CBEUserDefinedType*>(pParamType)->GetName();
+					CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
+					if (pTypedef)
+					{
+						pAttr = pTypedef->m_Attributes.Find(ATTR_TRANSMIT_AS);
+						pParamType = pTypedef->GetType();
+					}
+				}
+			}
+			CBEType *pTransmitType = 0;
+			if (pAttr)
+			{
+				// get type from attribute
+				pTransmitType = static_cast<CBEType*>(pAttr->GetAttrType());
+			}
+
+			/* if member is constructed type, cast to word size
+			 * test for flexpage explicetly, because in C its a constructed
+			 * type but internally handled as simple type
+			 */
+			if ((pMember->GetType()->IsConstructedType() ||
+					pMember->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
+				!pTransmitType)
+			{
+				CBEClassFactory *pCF = CCompiler::GetClassFactory();
+				pTransmitType = pCF->GetNewType(TYPE_MWORD);
+				pTransmitType->CreateBackEnd(true, m_nPosSize, TYPE_MWORD);
+				/* set lval so that the cast below is actually performed */
+				bLValue = true;
+			}
+
+			// get member type (possibly a user defined type as well)
+			CBEType *pMemType = pMember->GetType();
+			while (pMemType->IsOfType(TYPE_USER_DEFINED))
+				pMemType =
+					static_cast<CBEUserDefinedType*>(pMemType)->GetRealType();
+			// if member and parameter have different types, rely on member
+			// exception is if transmit type exists, then cast parameter to
+			// transmit type (is not always == member type)
+			if (!pMemType->IsOfType(pParamType->GetFEType()) &&
+				!pTransmitType)
+			{
+				if (bReference)
+					pFile << "&";
+				pMsgBuffer->WriteGenericMemberAccess(pFile, nPosition);
+			}
+			else
+			{
+				// if there is an attribute we have a possibly different type.
+				// Just to be on the safe side, cast the types
+				//
+				// We do so by letting WriteParameter handle the cast. This is
+				// necessary, so all the special cases, such as constructed
+				// types and pointer types are cought. This might look
+				// nasty for simple types, such as float transmitted as long
+				// and generate wrong type casts. Therefore, we have to check
+				// for simple types here.
+				CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+					"PositionMarshaller::%s: bReference=%s, pTransmitType=%p, C++=%s, bLValue=%s\n",
+					__func__, bReference ? "true" : "false", pTransmitType,
+					CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) ? "true" : "false",
+					bLValue ? "true" : "false");
+				CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+					"PositionMarshaller::%s: !%s && %p && !(%s && %s)\n", __func__,
+					bReference ? "true" : "false", pTransmitType,
+					CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) ? "true" : "false",
+					bLValue ? "true" : "false");
+				if (!bReference && pTransmitType &&
+					!(CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+						bLValue))
+				{
+					/* test for that flexpage again */
+					CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+						"PositionMarshaller::%s: %s && %s && !%s\n", __func__,
+						pMemType->IsSimpleType() ? "true" : "false",
+						pParamType->IsSimpleType() ? "true" : "false",
+						pMemType->IsOfType(TYPE_FLEXPAGE) ? "true" : "false");
+					if (pMemType->IsSimpleType() &&
+						pParamType->IsSimpleType() &&
+						!pMemType->IsOfType(TYPE_FLEXPAGE))
+						pMemType->WriteCast(pFile, false);
+					else
+					{
+						pFile << "*";
+						bReference = true;
+					}
+				}
+				WriteParameter(pFile, pParameter, bReference, bLValue);
+			}
 		}
-		WriteParameter(pFile, pParameter, bReference, bLValue);
-	    }
 	}
-    }
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "PositionMarshaller::%s returns true\n", __func__);
-    return true;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "PositionMarshaller::%s returns true\n", __func__);
+	return true;
 }
 
 /** \brief retrieve the type of the message buffer
@@ -286,22 +286,22 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
  */
 CBEMsgBufferType*
 CL4BEMarshaller::PositionMarshaller::GetMessageBufferType(
-    CBEFunction *pFunction)
+	CBEFunction *pFunction)
 {
-    CBEMsgBuffer *pMsgBuffer;
-    if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
-    {
-	CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
-	assert(pClass);
-	pMsgBuffer = pClass->GetMessageBuffer();
-    }
-    else
-	pMsgBuffer = pFunction->GetMessageBuffer();
-    assert(pMsgBuffer);
-    CBEMsgBufferType *pType =
-	dynamic_cast<CBEMsgBufferType*>(pMsgBuffer->GetType());
-    assert (pType);
-    return pType;
+	CBEMsgBuffer *pMsgBuffer;
+	if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
+	{
+		CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
+		assert(pClass);
+		pMsgBuffer = pClass->GetMessageBuffer();
+	}
+	else
+		pMsgBuffer = pFunction->GetMessageBuffer();
+	assert(pMsgBuffer);
+	CBEMsgBufferType *pType =
+		dynamic_cast<CBEMsgBufferType*>(pMsgBuffer->GetType());
+	assert (pType);
+	return pType;
 }
 
 /** \brief retrieve the member at a given position
@@ -312,30 +312,30 @@ CL4BEMarshaller::PositionMarshaller::GetMessageBufferType(
  */
 CBETypedDeclarator*
 CL4BEMarshaller::PositionMarshaller::GetMemberAt(CBEMsgBufferType *pType,
-    CBEStructType *pStruct,
-    int nPosition)
+	CBEStructType *pStruct,
+	int nPosition)
 {
-    int nCurSize = 0, nMemberSize;
-    // set position size if not set yet
-    if (m_nPosSize == 0)
-	m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
-    // try to find the member for the position
-    vector<CBETypedDeclarator*>::iterator iter;
-    for (iter =	pType->GetStartOfPayload(pStruct);
-	 iter != pStruct->m_Members.end();
-	 iter++)
-    {
-	// direction fits, since this is the struct of our desired direction
-	nMemberSize = GetMemberSize(*iter);
-	// if we cross the border of the parameter position we want to write,
-	// stop
-	if (nPosition*m_nPosSize < (nCurSize + nMemberSize))
-	    break;
-	nCurSize += nMemberSize;
-    }
-    if (iter == pStruct->m_Members.end())
-	return (CBETypedDeclarator*)0;
-    return *iter;
+	int nCurSize = 0, nMemberSize;
+	// set position size if not set yet
+	if (m_nPosSize == 0)
+		m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
+	// try to find the member for the position
+	vector<CBETypedDeclarator*>::iterator iter;
+	for (iter =	pType->GetStartOfPayload(pStruct);
+		iter != pStruct->m_Members.end();
+		iter++)
+	{
+		// direction fits, since this is the struct of our desired direction
+		nMemberSize = GetMemberSize(*iter);
+		// if we cross the border of the parameter position we want to write,
+		// stop
+		if (nPosition*m_nPosSize < (nCurSize + nMemberSize))
+			break;
+		nCurSize += nMemberSize;
+	}
+	if (iter == pStruct->m_Members.end())
+		return (CBETypedDeclarator*)0;
+	return *iter;
 }
 
 /** \brief get the size of a member
@@ -348,18 +348,18 @@ CL4BEMarshaller::PositionMarshaller::GetMemberAt(CBEMsgBufferType *pType,
 int
 CL4BEMarshaller::PositionMarshaller::GetMemberSize(CBETypedDeclarator *pMember)
 {
-    int nMemberSize = pMember->GetSize();
-    // if size is negative (a pointer) test for size attributes, which
-    // would indicate an array. If not, dereference it.
-    if (nMemberSize < 0)
-    {
-	if (pMember->m_Attributes.Find(ATTR_SIZE_IS) ||
-	    pMember->m_Attributes.Find(ATTR_LENGTH_IS) ||
-	    pMember->m_Attributes.Find(ATTR_MAX_IS))
-	    return nMemberSize;
-	nMemberSize = pMember->GetType()->GetSize();
-    }
-    return nMemberSize;
+	int nMemberSize = pMember->GetSize();
+	// if size is negative (a pointer) test for size attributes, which
+	// would indicate an array. If not, dereference it.
+	if (nMemberSize < 0)
+	{
+		if (pMember->m_Attributes.Find(ATTR_SIZE_IS) ||
+			pMember->m_Attributes.Find(ATTR_LENGTH_IS) ||
+			pMember->m_Attributes.Find(ATTR_MAX_IS))
+			return nMemberSize;
+		nMemberSize = pMember->GetType()->GetSize();
+	}
+	return nMemberSize;
 }
 
 /** \brief tests for and writes special members, such as opcode, exception
@@ -379,70 +379,70 @@ CL4BEMarshaller::PositionMarshaller::GetMemberSize(CBETypedDeclarator *pMember)
  */
 void
 CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile& pFile,
-    CBEFunction *pFunction,
-    CBETypedDeclarator *pMember,
-    CMsgStructType nType,
-    bool bReference,
-    bool bLValue)
+	CBEFunction *pFunction,
+	CBETypedDeclarator *pMember,
+	CMsgStructType nType,
+	bool bReference,
+	bool bLValue)
 {
-    // do not get message buffer as parent of type, but instead get it from
-    // function to obtain the correct declarator of the function's scope
-    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    assert(pMsgBuffer);
+	// do not get message buffer as parent of type, but instead get it from
+	// function to obtain the correct declarator of the function's scope
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+	assert(pMsgBuffer);
 
-    // test for opcode (only if reference false, otherwise use struct member)
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    CBEDeclarator *pDecl = pMember->m_Declarators.First();
-    if ((pDecl->GetName() == pNF->GetOpcodeVariable()) &&
-	!bReference)
-    {
-	pFile <<  pFunction->GetOpcodeConstName();
-	return;
-    }
+	// test for opcode (only if reference false, otherwise use struct member)
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEDeclarator *pDecl = pMember->m_Declarators.First();
+	if ((pDecl->GetName() == pNF->GetOpcodeVariable()) &&
+		!bReference)
+	{
+		pFile <<  pFunction->GetOpcodeConstName();
+		return;
+	}
 
-    // if constructed type, then do pointer cast
-    // (we have to test for flexpage type explicetly, because it is of size
-    // word, in C declared as constructed type, but internally handled as
-    // simple type)
-    // But do not dereference if bReference is set
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"PositionMarshaller::%s(%s, %s, %s, %d, %s, %s)\n", __func__,
-	pFile.GetFileName().c_str(), pFunction->GetName().c_str(),
-	pDecl->GetName().c_str(), (int)nType,
-	bReference ? "true" : "false",
-	bLValue ? "true" : "false");
-    if ((pMember->GetType()->IsConstructedType() ||
-	    pMember->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
-	!bReference)
-    {
-	pFile << "*";
-	bReference = true;
-    }
+	// if constructed type, then do pointer cast
+	// (we have to test for flexpage type explicetly, because it is of size
+	// word, in C declared as constructed type, but internally handled as
+	// simple type)
+	// But do not dereference if bReference is set
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"PositionMarshaller::%s(%s, %s, %s, %d, %s, %s)\n", __func__,
+		pFile.GetFileName().c_str(), pFunction->GetName().c_str(),
+		pDecl->GetName().c_str(), (int)nType,
+		bReference ? "true" : "false",
+		bLValue ? "true" : "false");
+	if ((pMember->GetType()->IsConstructedType() ||
+			pMember->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
+		!bReference)
+	{
+		pFile << "*";
+		bReference = true;
+	}
 
-    // cast to mword if the parameters type is not exactly mword
-    if (!pMember->GetType()->IsOfType(TYPE_MWORD) &&
-	!bLValue)
-    {
-	string sName = pNF->GetTypeName(TYPE_MWORD, true);
-	pFile << "(" << sName;
+	// cast to mword if the parameters type is not exactly mword
+	if (!pMember->GetType()->IsOfType(TYPE_MWORD) &&
+		!bLValue)
+	{
+		string sName = pNF->GetTypeName(TYPE_MWORD, true);
+		pFile << "(" << sName;
+		if (bReference)
+			pFile << "*";
+		pFile << ")";
+	}
 	if (bReference)
-	    pFile << "*";
-	pFile << ")";
-    }
-    if (bReference)
-	pFile << "&";
-    // test for return variable
-    CBETypedDeclarator *pReturn = pFunction->GetReturnVariable();
-    if (pReturn && pReturn->m_Declarators.Find(pDecl->GetName()))
-    {
-	pReturn = pFunction->m_LocalVariables.Find(pDecl->GetName());
-	pFile << pReturn->m_Declarators.First()->GetName();
-	return;
-    }
+		pFile << "&";
+	// test for return variable
+	CBETypedDeclarator *pReturn = pFunction->GetReturnVariable();
+	if (pReturn && pReturn->m_Declarators.Find(pDecl->GetName()))
+	{
+		pReturn = pFunction->m_LocalVariables.Find(pDecl->GetName());
+		pFile << pReturn->m_Declarators.First()->GetName();
+		return;
+	}
 
-    // no special member we know of: access in struct
-    assert(m_pParent);
-    m_pParent->WriteMember(pFile, nType, pMsgBuffer, pMember, NULL);
+	// no special member we know of: access in struct
+	assert(m_pParent);
+	m_pParent->WriteMember(pFile, nType, pMsgBuffer, pMember, 0);
 }
 
 /** \brief writes the access to a parameter
@@ -464,67 +464,67 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile& pFile,
  */
 void
 CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile& pFile,
-    CBETypedDeclarator *pParameter,
-    bool bReference,
-    bool bLValue)
+	CBETypedDeclarator *pParameter,
+	bool bReference,
+	bool bLValue)
 {
-    CBEDeclarator *pDecl = pParameter->m_Declarators.First();
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"PositionMarshaller::%s(, %s, ref:%s, lval:%s) called\n", __func__,
-	pDecl->GetName().c_str(), bReference ? "true" : "false",
-	bLValue ? "true" : "false");
-    // get declarator
-    int nStars = pDecl->GetStars();
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"PositionMarshaller::%s stars(1)=%d\n", __func__, nStars);
-    if (bReference)
-	nStars--;
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"PositionMarshaller::%s stars(2)=%d\n", __func__, nStars);
-    // check type equality
-    // (is sufficient for reference, that is, pointers. Simple types are
-    // casted automatically. Compiler only complaints about mismatching
-    // pointers.
-    // Do not cast an l-Value in C++
-    CBEType *pType = pParameter->GetType();
-    if (bReference &&
-	!(CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
-	    bLValue))
-    {
-	int nFEType = pType->GetFEType();
-	bool bUnsigned = pType->IsUnsigned();
-	if (!(bUnsigned && (nFEType == TYPE_MWORD)))
+	CBEDeclarator *pDecl = pParameter->m_Declarators.First();
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"PositionMarshaller::%s(, %s, ref:%s, lval:%s) called\n", __func__,
+		pDecl->GetName().c_str(), bReference ? "true" : "false",
+		bLValue ? "true" : "false");
+	// get declarator
+	int nStars = pDecl->GetStars();
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"PositionMarshaller::%s stars(1)=%d\n", __func__, nStars);
+	if (bReference)
+		nStars--;
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"PositionMarshaller::%s stars(2)=%d\n", __func__, nStars);
+	// check type equality
+	// (is sufficient for reference, that is, pointers. Simple types are
+	// casted automatically. Compiler only complaints about mismatching
+	// pointers.
+	// Do not cast an l-Value in C++
+	CBEType *pType = pParameter->GetType();
+	if (bReference &&
+		!(CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP) &&
+			bLValue))
 	{
-	    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	    CBEType *pMType = pCF->GetNewType(TYPE_MWORD);
-	    pMType->CreateBackEnd(true, 0, TYPE_MWORD);
-	    pMType->WriteCast(pFile, true);
-	    delete pMType;
+		int nFEType = pType->GetFEType();
+		bool bUnsigned = pType->IsUnsigned();
+		if (!(bUnsigned && (nFEType == TYPE_MWORD)))
+		{
+			CBEClassFactory *pCF = CCompiler::GetClassFactory();
+			CBEType *pMType = pCF->GetNewType(TYPE_MWORD);
+			pMType->CreateBackEnd(true, 0, TYPE_MWORD);
+			pMType->WriteCast(pFile, true);
+			delete pMType;
+		}
 	}
-    }
-    // create reference if necessary
-    // create reference after writing type
-    if (nStars < 0 && !pType->IsPointerType())
-    {
-	if (nStars < -1)
-	    CMessages::Error("Cannot create more than one reference to" \
-		" parameter %s (%s: %d).\n", pDecl->GetName().c_str(),
-		__FILE__, __LINE__);
+	// create reference if necessary
+	// create reference after writing type
+	if (nStars < 0 && !pType->IsPointerType())
+	{
+		if (nStars < -1)
+			CMessages::Error("Cannot create more than one reference to" \
+				" parameter %s (%s: %d).\n", pDecl->GetName().c_str(),
+				__FILE__, __LINE__);
 
-	pFile << "&";
-    }
-    // dereference if necessary
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"PositionMarshaller::%s stars(3)=%d\n", __func__, nStars);
-    for (int nIndx = 0; nIndx < nStars; nIndx++)
-	pFile << "*";
-    // print name
-    pFile << pDecl->GetName();
+		pFile << "&";
+	}
+	// dereference if necessary
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"PositionMarshaller::%s stars(3)=%d\n", __func__, nStars);
+	for (int nIndx = 0; nIndx < nStars; nIndx++)
+		pFile << "*";
+	// print name
+	pFile << pDecl->GetName();
 
-    // FIXME test array
-    // FIXME test complex type?
+	// FIXME test array
+	// FIXME test complex type?
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"PositionMarshaller::%s returns\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"PositionMarshaller::%s returns\n", __func__);
 }
 

@@ -41,41 +41,37 @@
  */
 class CBEWaitFunction : public CBEOperationFunction
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEWaitFunction(bool bOpenWait);
-    virtual ~CBEWaitFunction();
-
-protected:
-    /** \brief copy constructor */
-    CBEWaitFunction(CBEWaitFunction &src);
+	/** \brief constructor
+	 */
+	CBEWaitFunction(bool bOpenWait);
+	virtual ~CBEWaitFunction();
 
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
-	bool bMarshal);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
-    virtual DIRECTION_TYPE GetReceiveDirection();
-    virtual DIRECTION_TYPE GetSendDirection();
-    virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+	virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
+	virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
+		bool bMarshal);
+	virtual bool DoWriteFunction(CBEHeaderFile* pFile);
+	virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+	virtual DIRECTION_TYPE GetReceiveDirection();
+	virtual DIRECTION_TYPE GetSendDirection();
+	virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
 protected:
-    virtual void WriteInvocation(CBEFile& pFile);
-    virtual void WriteVariableInitialization(CBEFile& pFile);
-    virtual void WriteOpcodeCheck(CBEFile& pFile);
-    virtual void AddParameter(CFETypedDeclarator * pFEParameter);
-    virtual void CreateObject();
-    virtual int GetSize(DIRECTION_TYPE nDirection);
-    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+	virtual void WriteInvocation(CBEFile& pFile);
+	virtual void WriteVariableInitialization(CBEFile& pFile);
+	virtual void WriteOpcodeCheck(CBEFile& pFile);
+	virtual void AddParameter(CFETypedDeclarator * pFEParameter);
+	virtual void CreateObject();
+	virtual int GetSize(DIRECTION_TYPE nDirection);
+	virtual int GetFixedSize(DIRECTION_TYPE nDirection);
 
 protected:
-    /** \var bool m_bOpenWait
-     *  \brief if true this is a open wait function; if false a closed wait
-     */
-    bool m_bOpenWait;
+	/** \var bool m_bOpenWait
+	 *  \brief if true this is a open wait function; if false a closed wait
+	 */
+	bool m_bOpenWait;
 };
 
 #endif // !__DICE_BEWAITFUNCTION_H__

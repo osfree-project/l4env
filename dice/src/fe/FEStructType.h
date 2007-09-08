@@ -49,19 +49,19 @@ public:
      *  \param pMembers the members of the struct object
      */
     CFEStructType(std::string sTag, vector<CFETypedDeclarator*> *pMembers,
-	vector<CFEIdentifier*>* pBaseStructs = NULL);
+	vector<CFEIdentifier*>* pBaseStructs = 0);
     virtual ~CFEStructType();
 
 protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEStructType(CFEStructType &src);
+    CFEStructType(CFEStructType* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     virtual void Accept(CVisitor&);
-    virtual CObject* Clone();
     virtual bool IsConstructedType();
 
     CFETypedDeclarator* FindMember(std::string sName);

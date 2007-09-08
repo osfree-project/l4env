@@ -29,10 +29,10 @@
 #include "fe/FEEnumDeclarator.h"
 #include "fe/FEExpression.h"
 
-CFEEnumDeclarator::CFEEnumDeclarator(CFEEnumDeclarator & src)
+CFEEnumDeclarator::CFEEnumDeclarator(CFEEnumDeclarator* src)
 :CFEDeclarator(src)
 {
-    m_pInitialValue = (CFEExpression *) (src.m_pInitialValue->Clone());
+	CLONE_MEM(CFEExpression, m_pInitialValue);
 }
 
 CFEEnumDeclarator::CFEEnumDeclarator()
@@ -44,24 +44,24 @@ CFEEnumDeclarator::CFEEnumDeclarator()
 CFEEnumDeclarator::CFEEnumDeclarator(std::string sName, CFEExpression * pInitialValue)
 :CFEDeclarator(DECL_ENUM, sName)
 {
-    m_pInitialValue = pInitialValue;
-    if (m_pInitialValue)
-    m_pInitialValue->SetParent(this);
+	m_pInitialValue = pInitialValue;
+	if (m_pInitialValue)
+		m_pInitialValue->SetParent(this);
 }
 
 /** cleans up the declarator object */
 CFEEnumDeclarator::~CFEEnumDeclarator()
 {
-    if (m_pInitialValue)
-    delete m_pInitialValue;
+	if (m_pInitialValue)
+		delete m_pInitialValue;
 }
 
-/** \brief creates a copy of this object
- *  \return a reference to a new object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject *CFEEnumDeclarator::Clone()
+CObject* CFEEnumDeclarator::Clone()
 {
-    return new CFEEnumDeclarator(*this);
+	return new CFEEnumDeclarator(this);
 }
 
 /** \brief retrieves a reference to the initial value of the enum

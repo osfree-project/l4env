@@ -51,11 +51,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CBEReplyCodeType(CBEReplyCodeType &src);
+    CBEReplyCodeType(CBEReplyCodeType* src);
 
 public:
-    virtual CObject* Clone();
     virtual void CreateBackEnd();
+	virtual CObject* Clone();
 };
 
 #endif

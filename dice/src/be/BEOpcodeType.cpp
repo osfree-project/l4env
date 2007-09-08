@@ -34,18 +34,22 @@
 
 
 CBEOpcodeType::CBEOpcodeType()
-{
-}
+{ }
 
-CBEOpcodeType::CBEOpcodeType(CBEOpcodeType & src)
+CBEOpcodeType::CBEOpcodeType(CBEOpcodeType* src)
 : CBEType(src)
-{
-}
+{ }
 
 /** \brief destructor of this instance */
 CBEOpcodeType::~CBEOpcodeType()
-{
+{ }
 
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CBEOpcodeType::Clone()
+{
+	return new CBEOpcodeType(this);
 }
 
 /** \brief creates the back-end structure for a type class for opcodes
@@ -54,21 +58,12 @@ CBEOpcodeType::~CBEOpcodeType()
  * This implementation sets the basic members, but uses special values,
  * specific for opcodes.
  */
-void
-CBEOpcodeType::CreateBackEnd()
+void CBEOpcodeType::CreateBackEnd()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n",
-	__func__);
-    CBEType::CreateBackEnd(false, CCompiler::GetSizes()->GetOpcodeSize(),
-        TYPE_LONG);
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n",
-	__func__);
-}
-
-/** \brief generates an exact copy of this class
- *  \return a reference to the new object
- */
-CObject *CBEOpcodeType::Clone()
-{
-    return new CBEOpcodeType(*this);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n",
+		__func__);
+	CBEType::CreateBackEnd(false, CCompiler::GetSizes()->GetOpcodeSize(),
+		TYPE_LONG);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEOpcodeType::%s called\n",
+		__func__);
 }

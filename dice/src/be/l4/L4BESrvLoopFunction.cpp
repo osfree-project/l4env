@@ -45,94 +45,85 @@
 #include <cassert>
 
 CL4BESrvLoopFunction::CL4BESrvLoopFunction()
-{
-}
-
-CL4BESrvLoopFunction::CL4BESrvLoopFunction(CL4BESrvLoopFunction & src)
-:CBESrvLoopFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CL4BESrvLoopFunction::~CL4BESrvLoopFunction()
-{
-}
+{ }
 
 /** \brief writes the varaible initialization
  *  \param pFile the file to write to
  */
-void
-CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
+void CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-    // call base class - initializes opcode
-    CBESrvLoopFunction::WriteVariableInitialization(pFile);
+	// call base class - initializes opcode
+	CBESrvLoopFunction::WriteVariableInitialization(pFile);
 
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    // zero msg buffer
-    if (CCompiler::IsOptionSet(PROGRAM_ZERO_MSGBUF))
-	pMsgBuffer->WriteSetZero(pFile);
-    // set the size dope here, so we do not need to set it anywhere else
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, CMsgStructType::Generic);
-    // init receive flexpage
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, CMsgStructType::Generic);
-    // init indirect strings (using generic struct)
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING, CMsgStructType::Generic);
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	assert(pMsgBuffer);
+	// zero msg buffer
+	if (CCompiler::IsOptionSet(PROGRAM_ZERO_MSGBUF))
+		pMsgBuffer->WriteSetZero(pFile);
+	// set the size dope here, so we do not need to set it anywhere else
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, CMsgStructType::Generic);
+	// init receive flexpage
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, CMsgStructType::Generic);
+	// init indirect strings (using generic struct)
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING, CMsgStructType::Generic);
 
-    // set CORBA_Object depending on [dedicated_partner]. Here, the
-    // environment is initialized, so it is save to use the environment's
-    // partner member (independent of server parameter)
-    CBEClass *pClass = GetSpecificParent<CBEClass>();
-    assert(pClass);
-    if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
-    {
-       string sObj = GetObject()->m_Declarators.First()->GetName();
-       CL4BENameFactory *pNF =
-           static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
-       string sPartner = pNF->GetPartnerVariable();
-       pFile << "\t_" << sObj << " = " << sPartner << ";\n";
-    }
+	// set CORBA_Object depending on [dedicated_partner]. Here, the
+	// environment is initialized, so it is save to use the environment's
+	// partner member (independent of server parameter)
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
+	{
+		string sObj = GetObject()->m_Declarators.First()->GetName();
+		CL4BENameFactory *pNF =
+			static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
+		string sPartner = pNF->GetPartnerVariable();
+		pFile << "\t_" << sObj << " = " << sPartner << ";\n";
+	}
 }
 
 /** \brief writes the assignment of the default environment to the env var
  *  \param pFile the file to write to
  */
-void
-CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
+void CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
 {
-    CBETypedDeclarator *pEnv = GetEnvironment();
-    CBEDeclarator *pDecl = pEnv->m_Declarators.First();
+	CBETypedDeclarator *pEnv = GetEnvironment();
+	CBEDeclarator *pDecl = pEnv->m_Declarators.First();
 
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
-    {
-	// *corba-env = dice_default_env;
-	pFile << "\t*" << pDecl->GetName() << " = ";
-	pEnv->GetType()->WriteCast(pFile, false);
-	pFile << "dice_default_server_environment" << ";\n";
-    }
-    else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-    {
-	pFile << "\tDICE_EXCEPTION_MAJOR(" << pDecl->GetName() <<
-	    ") = CORBA_NO_EXCEPTION;\n";
-	pFile << "\tDICE_EXCEPTION_MINOR(" << pDecl->GetName() <<
-	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
-	pFile << "\t" << pDecl->GetName() << "->_p.param = 0;\n";
-	pFile << "\t" << pDecl->GetName() <<
-	    "->timeout = L4_IPC_SEND_TIMEOUT_0;\n";
-	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.grant = 1;\n";
-	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.write = 1;\n";
-	pFile << "\t" << pDecl->GetName() <<
-	    "->rcv_fpage.fp.size = L4_WHOLE_ADDRESS_SPACE;\n";
-	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.zero = 0;\n";
-	pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.page = 0;\n";
-	pFile << "\t" << pDecl->GetName() << "->malloc = malloc_warning;\n";
-	pFile << "\t" << pDecl->GetName() << "->free = free_warning;\n";
-	pFile << "\t" << pDecl->GetName() << "->partner = L4_INVALID_ID;\n";
-	pFile << "\t" << pDecl->GetName() << "->user_data = 0;\n";
-	pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
-	++pFile << "\t" << pDecl->GetName() << "->ptrs[i] = 0;\n";
-	--pFile << "\t" << pDecl->GetName() << "->ptrs_cur = 0;\n";
-    }
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
+	{
+		// *corba-env = dice_default_env;
+		pFile << "\t*" << pDecl->GetName() << " = ";
+		pEnv->GetType()->WriteCast(pFile, false);
+		pFile << "dice_default_server_environment" << ";\n";
+	}
+	else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	{
+		pFile << "\tDICE_EXCEPTION_MAJOR(" << pDecl->GetName() <<
+			") = CORBA_NO_EXCEPTION;\n";
+		pFile << "\tDICE_EXCEPTION_MINOR(" << pDecl->GetName() <<
+			") = CORBA_DICE_EXCEPTION_NONE;\n";
+		pFile << "\t" << pDecl->GetName() << "->_p.param = 0;\n";
+		pFile << "\t" << pDecl->GetName() <<
+			"->timeout = L4_IPC_SEND_TIMEOUT_0;\n";
+		pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.grant = 1;\n";
+		pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.write = 1;\n";
+		pFile << "\t" << pDecl->GetName() <<
+			"->rcv_fpage.fp.size = L4_WHOLE_ADDRESS_SPACE;\n";
+		pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.zero = 0;\n";
+		pFile << "\t" << pDecl->GetName() << "->rcv_fpage.fp.page = 0;\n";
+		pFile << "\t" << pDecl->GetName() << "->malloc = malloc_warning;\n";
+		pFile << "\t" << pDecl->GetName() << "->free = free_warning;\n";
+		pFile << "\t" << pDecl->GetName() << "->partner = L4_INVALID_ID;\n";
+		pFile << "\t" << pDecl->GetName() << "->user_data = 0;\n";
+		pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
+		++pFile << "\t" << pDecl->GetName() << "->ptrs[i] = 0;\n";
+		--pFile << "\t" << pDecl->GetName() << "->ptrs_cur = 0;\n";
+	}
 }
 
 /** \brief create this instance of a server loop function
@@ -144,29 +135,28 @@ CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
  * set the receive flexpage.  To find out if we have receive flexpages, we use
  * the message buffer, but we then have to set the context option.
  */
-void
-CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
+void CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
-    CBESrvLoopFunction::CreateBackEnd(pFEInterface);
-    // test for flexpages
-    CBETypedDeclarator *pEnv = GetEnvironment();
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    CMsgStructType nType = GetReceiveDirection();
-    if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nType) > 0) &&
-	pEnv)
-    {
-        CBEDeclarator *pDecl = pEnv->m_Declarators.First();
-        if (pDecl->GetStars() == 0)
-            pDecl->IncStars(1);
-        // set the call variables
-        if (m_pWaitAnyFunction)
-            m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(),
-                pDecl->GetStars(), pDecl->GetName());
-        if (m_pReplyAnyWaitAnyFunction)
-            m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(),
-                pDecl->GetStars(), pDecl->GetName());
-    }
+	CBESrvLoopFunction::CreateBackEnd(pFEInterface, bComponentSide);
+	// test for flexpages
+	CBETypedDeclarator *pEnv = GetEnvironment();
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	assert(pMsgBuffer);
+	CMsgStructType nType = GetReceiveDirection();
+	if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nType) > 0) &&
+		pEnv)
+	{
+		CBEDeclarator *pDecl = pEnv->m_Declarators.First();
+		if (pDecl->GetStars() == 0)
+			pDecl->IncStars(1);
+		// set the call variables
+		if (m_pWaitAnyFunction)
+			m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(),
+				pDecl->GetStars(), pDecl->GetName());
+		if (m_pReplyAnyWaitAnyFunction)
+			m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(),
+				pDecl->GetStars(), pDecl->GetName());
+	}
 }
 
 /** \brief writes the dispatcher invocation
@@ -174,22 +164,22 @@ CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface)
  */
 void CL4BESrvLoopFunction::WriteDispatchInvocation(CBEFile& pFile)
 {
-    CBESrvLoopFunction::WriteDispatchInvocation(pFile);
+	CBESrvLoopFunction::WriteDispatchInvocation(pFile);
 
-    // set CORBA_Object depending on [dedicated_partner]. Here, the
-    // environment is initialized, so it is save to use the environment's
-    // partner member (independent of server parameter)
-    CBEClass *pClass = GetSpecificParent<CBEClass>();
-    assert(pClass);
-    if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
-    {
-	string sObj = GetObject()->m_Declarators.First()->GetName();
-	CL4BENameFactory *pNF =
-	    static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
-	string sPartner = pNF->GetPartnerVariable();
-	pFile << "\tif (!l4_is_invalid_id(" << sPartner << "))\n";
-	++pFile << "\t_" << sObj << " = " << sPartner << ";\n";
-	--pFile;
-    }
+	// set CORBA_Object depending on [dedicated_partner]. Here, the
+	// environment is initialized, so it is save to use the environment's
+	// partner member (independent of server parameter)
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
+	{
+		string sObj = GetObject()->m_Declarators.First()->GetName();
+		CL4BENameFactory *pNF =
+			static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
+		string sPartner = pNF->GetPartnerVariable();
+		pFile << "\tif (!l4_is_invalid_id(" << sPartner << "))\n";
+		++pFile << "\t_" << sObj << " = " << sPartner << ";\n";
+		--pFile;
+	}
 }
 

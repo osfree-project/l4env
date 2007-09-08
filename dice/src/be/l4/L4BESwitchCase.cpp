@@ -34,18 +34,11 @@
 
 CL4BESwitchCase::CL4BESwitchCase()
  : CBESwitchCase()
-{
-}
-
-CL4BESwitchCase::CL4BESwitchCase(CL4BESwitchCase &src)
- : CBESwitchCase(src)
-{
-}
+{ }
 
 /** destroys this object */
 CL4BESwitchCase::~CL4BESwitchCase()
-{
-}
+{ }
 
 /** \brief initialize local variables
  *  \param pFile the file to write to
@@ -58,28 +51,26 @@ CL4BESwitchCase::~CL4BESwitchCase()
  * \todo we have to remember which indirect strings are associated with
  * dynamically allocated memory and have to be freed after the IPC.
  */
-void
-CL4BESwitchCase::WriteVariableInitialization(CBEFile& pFile,
-    DIRECTION_TYPE nDirection)
+void CL4BESwitchCase::WriteVariableInitialization(CBEFile& pFile, DIRECTION_TYPE nDirection)
 {
-    // first call the base class
-    CBESwitchCase::WriteVariableInitialization(pFile, nDirection);
-    // now check for [out, ref] and call appropriate "deferred" cleanup method
-    vector<CBETypedDeclarator*>::iterator iter;
-    for (iter = m_Parameters.begin();
-	 iter != m_Parameters.end();
-	 iter++)
-    {
-	if (!DoWriteVariable(*iter))
-	    continue;
-        if (!(*iter)->IsDirection(nDirection))
-            continue;
-        if ((*iter)->m_Attributes.Find(ATTR_IN))
-            continue;
-	if (!(*iter)->m_Attributes.Find(ATTR_REF))
-	    continue;
-	(*iter)->WriteCleanup(pFile, true);
-    }
+	// first call the base class
+	CBESwitchCase::WriteVariableInitialization(pFile, nDirection);
+	// now check for [out, ref] and call appropriate "deferred" cleanup method
+	vector<CBETypedDeclarator*>::iterator iter;
+	for (iter = m_Parameters.begin();
+		iter != m_Parameters.end();
+		iter++)
+	{
+		if (!DoWriteVariable(*iter))
+			continue;
+		if (!(*iter)->IsDirection(nDirection))
+			continue;
+		if ((*iter)->m_Attributes.Find(ATTR_IN))
+			continue;
+		if (!(*iter)->m_Attributes.Find(ATTR_REF))
+			continue;
+		(*iter)->WriteCleanup(pFile, true);
+	}
 }
 
 /** \brief writes the clean up code
@@ -90,20 +81,20 @@ CL4BESwitchCase::WriteVariableInitialization(CBEFile& pFile,
  */
 void CL4BESwitchCase::WriteCleanup(CBEFile& pFile)
 {
-    // cleanup indirect variables
-    vector<CBETypedDeclarator*>::iterator iter;
-    for (iter = m_Parameters.begin();
-	 iter != m_Parameters.end();
-	 iter++)
-    {
-	if (!DoWriteVariable(*iter))
-	    continue;
-        if (!(*iter)->IsDirection(DIRECTION_OUT))
-            continue;
-        if ((*iter)->m_Attributes.Find(ATTR_IN))
-            continue;
-	if ((*iter)->m_Attributes.Find(ATTR_REF))
-	    continue;
-        (*iter)->WriteCleanup(pFile, false);
-    }
+	// cleanup indirect variables
+	vector<CBETypedDeclarator*>::iterator iter;
+	for (iter = m_Parameters.begin();
+		iter != m_Parameters.end();
+		iter++)
+	{
+		if (!DoWriteVariable(*iter))
+			continue;
+		if (!(*iter)->IsDirection(DIRECTION_OUT))
+			continue;
+		if ((*iter)->m_Attributes.Find(ATTR_IN))
+			continue;
+		if ((*iter)->m_Attributes.Find(ATTR_REF))
+			continue;
+		(*iter)->WriteCleanup(pFile, false);
+	}
 }

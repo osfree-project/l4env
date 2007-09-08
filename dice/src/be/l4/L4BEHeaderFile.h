@@ -46,12 +46,6 @@ public:
     ~CL4BEHeaderFile();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CL4BEHeaderFile(CL4BEHeaderFile &src);
-
-protected:
     virtual void WriteHelperFunctions();
 };
 

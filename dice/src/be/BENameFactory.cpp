@@ -676,7 +676,7 @@ CBENameFactory::GetTypeName(int nType,
  */
 string
 CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
-    FUNCTION_TYPE nFunctionType)
+    FUNCTION_TYPE nFunctionType, bool bComponentSide)
 {
     if (!pFEOperation)
     {
@@ -694,7 +694,7 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
 	(nFunctionType == FUNCTION_SRV_LOOP) ||
 	(nFunctionType == FUNCTION_DISPATCH) ||
 	(nFunctionType == FUNCTION_REPLY_WAIT))
-	return GetFunctionName(pFEInterface, nFunctionType);
+	return GetFunctionName(pFEInterface, nFunctionType, bComponentSide);
 
     string sReturn;
     if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
@@ -776,50 +776,58 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
  */
 string
 CBENameFactory::GetFunctionName(CFEInterface * pFEInterface,
-    FUNCTION_TYPE nFunctionType)
+    FUNCTION_TYPE nFunctionType, bool bComponentSide)
 {
-    if (!pFEInterface)
-	return string();
+	if (!pFEInterface)
+		return string();
 
-    string sReturn;
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
-    {
-	CFELibrary *pFELibrary = pFEInterface->GetSpecificParent<CFELibrary>();
-	while (pFELibrary)
+	string sReturn;
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 	{
-	    sReturn = pFELibrary->GetName() + "_" + sReturn;
-	    pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
+		CFELibrary *pFELibrary = pFEInterface->GetSpecificParent<CFELibrary>();
+		while (pFELibrary)
+		{
+			sReturn = pFELibrary->GetName() + "_" + sReturn;
+			pFELibrary = pFELibrary->GetSpecificParent<CFELibrary>();
+		}
 	}
-    }
-    else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-	sReturn += "_dice_";
-    sReturn += pFEInterface->GetName();
-    switch (nFunctionType)
-    {
-    case FUNCTION_WAIT_ANY:
-	sReturn += "_wait_any";
-	break;
-    case FUNCTION_RECV_ANY:
-	sReturn += "_recv_any";
-	break;
-    case FUNCTION_SRV_LOOP:
-	sReturn += "_server_loop";
-	break;
-    case FUNCTION_DISPATCH:
-	sReturn += "_dispatch";
-	break;
-    case FUNCTION_REPLY_WAIT:
-	sReturn += "_reply_and_wait";
-	break;
-    default:
-	break;
-    }
+	else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+		sReturn += "_dice_";
+	sReturn += pFEInterface->GetName();
+	switch (nFunctionType)
+	{
+	case FUNCTION_WAIT_ANY:
+		if (bComponentSide)
+			sReturn += "_srv";
+		else
+			sReturn += "_clt";
+		sReturn += "_wait_any";
+		break;
+	case FUNCTION_RECV_ANY:
+		if (bComponentSide)
+			sReturn += "_srv";
+		else
+			sReturn += "_clt";
+		sReturn += "_recv_any";
+		break;
+	case FUNCTION_SRV_LOOP:
+		sReturn += "_server_loop";
+		break;
+	case FUNCTION_DISPATCH:
+		sReturn += "_dispatch";
+		break;
+	case FUNCTION_REPLY_WAIT:
+		sReturn += "_reply_and_wait";
+		break;
+	default:
+		break;
+	}
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBENameFactory::%s(%s, functiontype:%d) = %s\n",
-	__func__, pFEInterface->GetName().c_str(), nFunctionType,
-	sReturn.c_str());
-    return sReturn;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBENameFactory::%s(%s, functiontype:%d) = %s\n",
+		__func__, pFEInterface->GetName().c_str(), nFunctionType,
+		sReturn.c_str());
+	return sReturn;
 }
 
 /** \brief creates a unique define label for a header file name

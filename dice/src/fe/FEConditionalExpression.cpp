@@ -34,16 +34,10 @@ CFEConditionalExpression::CFEConditionalExpression(CFEExpression * pCondition, C
     m_pCondition = pCondition;
 }
 
-CFEConditionalExpression::CFEConditionalExpression(CFEConditionalExpression & src)
+CFEConditionalExpression::CFEConditionalExpression(CFEConditionalExpression* src)
 :CFEBinaryExpression(src)
 {
-    if (src.m_pCondition)
-      {
-      m_pCondition = (CFEExpression *) (src.m_pCondition->Clone());
-      m_pCondition->SetParent(this);
-      }
-    else
-    m_pCondition = 0;
+	CLONE_MEM(CFEExpression, m_pCondition);
 }
 
 /** cleans up the conditional expression (frees the condition) */
@@ -51,6 +45,14 @@ CFEConditionalExpression::~CFEConditionalExpression()
 {
     if (m_pCondition)
     delete m_pCondition;
+}
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEConditionalExpression::Clone()
+{
+	return new CFEConditionalExpression(this);
 }
 
 /** returns the integer value of this expression
@@ -80,14 +82,6 @@ bool CFEConditionalExpression::IsOfType(unsigned int nType)
 CFEExpression *CFEConditionalExpression::GetCondition()
 {
     return m_pCondition;
-}
-
-/** creates a copy of this object
- *  \return a reference to the new object
- */
-CObject *CFEConditionalExpression::Clone()
-{
-    return new CFEConditionalExpression(*this);
 }
 
 /** \brief print the object to a string

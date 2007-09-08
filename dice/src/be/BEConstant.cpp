@@ -39,29 +39,35 @@
 
 CBEConstant::CBEConstant()
 {
-    m_pType = 0;
-    m_pValue = 0;
-    m_bAlwaysDefine = false;
+	m_pType = 0;
+	m_pValue = 0;
+	m_bAlwaysDefine = false;
 }
 
-CBEConstant::CBEConstant(CBEConstant & src)
+CBEConstant::CBEConstant(CBEConstant* src)
 : CBEObject(src)
 {
-    m_sName = src.m_sName;
-    m_bAlwaysDefine = src.m_bAlwaysDefine;
-    m_pType = (CBEType*)src.m_pType->Clone();
-    m_pType->SetParent(this);
-    m_pValue = (CBEExpression*)src.m_pValue->Clone();
-    m_pValue->SetParent(this);
+	m_sName = src->m_sName;
+	m_bAlwaysDefine = src->m_bAlwaysDefine;
+	CLONE_MEM(CBEType, m_pType);
+	CLONE_MEM(CBEExpression, m_pValue);
 }
 
 /** \brief destructor of this instance */
 CBEConstant::~CBEConstant()
 {
-    if (m_pType)
-        delete m_pType;
-    if (m_pValue)
-        delete m_pValue;
+	if (m_pType)
+		delete m_pType;
+	if (m_pValue)
+		delete m_pValue;
+}
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CBEConstant::Clone()
+{
+	return new CBEConstant(this);
 }
 
 /** \brief creates the back-end constant declarator
@@ -73,31 +79,31 @@ CBEConstant::~CBEConstant()
 void
 CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator)
 {
-    // call CBEObject's CreateBackEnd method
-    CBEObject::CreateBackEnd(pFEConstDeclarator);
+	// call CBEObject's CreateBackEnd method
+	CBEObject::CreateBackEnd(pFEConstDeclarator);
 
-    // set target file name
-    SetTargetFileName(pFEConstDeclarator);
-    // get name
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    m_sName = pNF->GetConstantName(pFEConstDeclarator);
-    // get type
-    CFETypeSpec *pFEType = pFEConstDeclarator->GetType();
-    m_pType = pCF->GetNewType(pFEType->GetType());
-    m_pType->SetParent(this);
-    m_pType->CreateBackEnd(pFEType);
-    // check for constant's value
-    if (!pFEConstDeclarator->GetValue())
-    {
-	string exc = string(__func__);
-	exc += " for \"" + m_sName + "\" failed because no value.";
-        throw new error::create_error(exc);
-    }
-    // get value
-    m_pValue = pCF->GetNewExpression();
-    m_pValue->SetParent(this);
-    m_pValue->CreateBackEnd(pFEConstDeclarator->GetValue());
+	// set target file name
+	SetTargetFileName(pFEConstDeclarator);
+	// get name
+	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	m_sName = pNF->GetConstantName(pFEConstDeclarator);
+	// get type
+	CFETypeSpec *pFEType = pFEConstDeclarator->GetType();
+	m_pType = pCF->GetNewType(pFEType->GetType());
+	m_pType->SetParent(this);
+	m_pType->CreateBackEnd(pFEType);
+	// check for constant's value
+	if (!pFEConstDeclarator->GetValue())
+	{
+		string exc = string(__func__);
+		exc += " for \"" + m_sName + "\" failed because no value.";
+		throw new error::create_error(exc);
+	}
+	// get value
+	m_pValue = pCF->GetNewExpression();
+	m_pValue->SetParent(this);
+	m_pValue->CreateBackEnd(pFEConstDeclarator->GetValue());
 }
 
 /** \brief creates the back-end constants declarator
@@ -109,30 +115,30 @@ CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator)
  */
 void
 CBEConstant::CreateBackEnd(CBEType * pType,
-    string sName,
-    CBEExpression * pValue,
-    bool bAlwaysDefine)
+	string sName,
+	CBEExpression * pValue,
+	bool bAlwaysDefine)
 {
-    string exc = string(__func__);
+	string exc = string(__func__);
 
-    m_sName = sName;
-    m_bAlwaysDefine = bAlwaysDefine;
-    m_pType = pType;
-    if (m_pType)
-	m_pType->SetParent(this);
-    else
-    {
-	exc += " failed, beause no type given.";
-	throw new error::create_error(exc);
-    }
-    m_pValue = pValue;
-    if (m_pValue)
-  	m_pValue->SetParent(this);
-    else
-    {
-	exc += " failed, because no value given.";
-	throw new error::create_error(exc);
-    }
+	m_sName = sName;
+	m_bAlwaysDefine = bAlwaysDefine;
+	m_pType = pType;
+	if (m_pType)
+		m_pType->SetParent(this);
+	else
+	{
+		exc += " failed, beause no type given.";
+		throw new error::create_error(exc);
+	}
+	m_pValue = pValue;
+	if (m_pValue)
+		m_pValue->SetParent(this);
+	else
+	{
+		exc += " failed, because no value given.";
+		throw new error::create_error(exc);
+	}
 }
 
 /** \brief writes the constant definition to the header file
@@ -147,30 +153,30 @@ CBEConstant::CreateBackEnd(CBEType * pType,
  */
 void CBEConstant::Write(CBEHeaderFile& pFile)
 {
-    if (!pFile.is_open())
-        return;
+	if (!pFile.is_open())
+		return;
 
-    pFile << "#ifndef _constdef_" << m_sName << "\n";
-    pFile << "#define _constdef_" << m_sName << "\n";
-    if (CCompiler::IsOptionSet(PROGRAM_CONST_AS_DEFINE) || m_bAlwaysDefine)
-    {
-        // #define <name>
-        pFile << "#define " << m_sName << " ";
-        // <expression>
-        m_pValue->Write(pFile);
-        // newline
-        pFile << "\n";
-    }
-    else
-    {
-        // should be static
-        pFile << "static const ";
-        m_pType->Write(pFile);
-        pFile << " " << GetName() << " = ";
-        m_pValue->Write(pFile);
-        pFile << ";\n";
-    }
-    pFile << "#endif /* _constdef_" << m_sName << " */\n";
+	pFile << "#ifndef _constdef_" << m_sName << "\n";
+	pFile << "#define _constdef_" << m_sName << "\n";
+	if (CCompiler::IsOptionSet(PROGRAM_CONST_AS_DEFINE) || m_bAlwaysDefine)
+	{
+		// #define <name>
+		pFile << "#define " << m_sName << " ";
+		// <expression>
+		m_pValue->Write(pFile);
+		// newline
+		pFile << "\n";
+	}
+	else
+	{
+		// should be static
+		pFile << "static const ";
+		m_pType->Write(pFile);
+		pFile << " " << GetName() << " = ";
+		m_pValue->Write(pFile);
+		pFile << ";\n";
+	}
+	pFile << "#endif /* _constdef_" << m_sName << " */\n";
 }
 
 /** \brief returns the name of the constant
@@ -178,7 +184,7 @@ void CBEConstant::Write(CBEHeaderFile& pFile)
  */
 string CBEConstant::GetName()
 {
-    return m_sName;
+	return m_sName;
 }
 
 /** \brief return the value of this constant
@@ -186,7 +192,7 @@ string CBEConstant::GetName()
  */
 CBEExpression *CBEConstant::GetValue()
 {
-    return m_pValue;
+	return m_pValue;
 }
 
 /** \brief checks if this constant is added to the header file
@@ -198,9 +204,9 @@ CBEExpression *CBEConstant::GetValue()
  */
 void CBEConstant::AddToHeader(CBEHeaderFile* pHeader)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEConstant::%s(header: %s) for const %s called\n", __func__,
-        pHeader->GetFileName().c_str(), m_sName.c_str());
-    if (IsTargetFile(pHeader))
-        pHeader->m_Constants.Add(this);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEConstant::%s(header: %s) for const %s called\n", __func__,
+		pHeader->GetFileName().c_str(), m_sName.c_str());
+	if (IsTargetFile(pHeader))
+		pHeader->m_Constants.Add(this);
 }

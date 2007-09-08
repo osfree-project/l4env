@@ -34,29 +34,23 @@ CFEPipeType::CFEPipeType(CFETypeSpec * pType)
     m_pType = pType;
 }
 
-CFEPipeType::CFEPipeType(CFEPipeType & src)
+CFEPipeType::CFEPipeType(CFEPipeType* src)
 :CFEConstructedType(src)
 {
-    if (src.m_pType)
-      {
-      m_pType = (CFETypeSpec *) (src.m_pType->Clone());
-      m_pType->SetParent(this);
-      }
-    else
-    m_pType = 0;
+	CLONE_MEM(CFETypeSpec, m_pType);
 }
 
 /** cleans up the pipe type object */
 CFEPipeType::~CFEPipeType()
 {
-    if (m_pType)
-    delete m_pType;
+	if (m_pType)
+		delete m_pType;
 }
 
-/** copies this object
- *  \return a reference to a new pipe type object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject *CFEPipeType::Clone()
+CObject* CFEPipeType::Clone()
 {
-    return new CFEPipeType(*this);
+	return new CFEPipeType(this);
 }

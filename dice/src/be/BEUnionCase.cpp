@@ -39,27 +39,27 @@
 CBEUnionCase::CBEUnionCase()
 : m_Labels(0, this)
 {
-    m_bDefault = false;
+	m_bDefault = false;
 }
 
-CBEUnionCase::CBEUnionCase(CBEUnionCase & src)
+CBEUnionCase::CBEUnionCase(CBEUnionCase* src)
 : CBETypedDeclarator(src),
-  m_Labels(src.m_Labels)
+	m_Labels(src->m_Labels)
 {
-    m_bDefault = src.m_bDefault;
-    m_Labels.Adopt(this);
+	m_bDefault = src->m_bDefault;
+	m_Labels.Adopt(this);
 }
 
 /** \brief destructor of this instance */
 CBEUnionCase::~CBEUnionCase()
 { }
 
-/** \brief creates a clone of this object
- *  \return reference to copy
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CBEUnionCase::Clone()
 {
-    return new CBEUnionCase(*this);
+	return new CBEUnionCase(this);
 }
 
 /** \brief creates the back-end structure for a union case
@@ -69,25 +69,25 @@ CObject* CBEUnionCase::Clone()
 void
 CBEUnionCase::CreateBackEnd(CFEUnionCase * pFEUnionCase)
 {
-    assert(pFEUnionCase);
-    // the union arm is the typed declarator we initialize the base class with:
-    CBETypedDeclarator::CreateBackEnd(pFEUnionCase->GetUnionArm());
-    // now init union case specific stuff
-    m_bDefault = pFEUnionCase->IsDefault();
-    if (m_bDefault)
-	return;
+	assert(pFEUnionCase);
+	// the union arm is the typed declarator we initialize the base class with:
+	CBETypedDeclarator::CreateBackEnd(pFEUnionCase->GetUnionArm());
+	// now init union case specific stuff
+	m_bDefault = pFEUnionCase->IsDefault();
+	if (m_bDefault)
+		return;
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
 
-    vector<CFEExpression*>::iterator iter;
-    for (iter = pFEUnionCase->m_UnionCaseLabelList.begin();
-	iter != pFEUnionCase->m_UnionCaseLabelList.end();
-	iter++)
-    {
-	CBEExpression *pLabel = pCF->GetNewExpression();
-	m_Labels.Add(pLabel);
-	pLabel->CreateBackEnd(*iter);
-    }
+	vector<CFEExpression*>::iterator iter;
+	for (iter = pFEUnionCase->m_UnionCaseLabelList.begin();
+		iter != pFEUnionCase->m_UnionCaseLabelList.end();
+		iter++)
+	{
+		CBEExpression *pLabel = pCF->GetNewExpression();
+		m_Labels.Add(pLabel);
+		pLabel->CreateBackEnd(*iter);
+	}
 }
 
 /** \brief creates the union case
@@ -101,20 +101,21 @@ CBEUnionCase::CreateBackEnd(CFEUnionCase * pFEUnionCase)
  * style union.
  */
 void CBEUnionCase::CreateBackEnd(CBEType *pType,
-    string sName,
-    CBEExpression *pCaseLabel,
-    bool bDefault)
+	string sName,
+	CBEExpression *pCaseLabel,
+	bool bDefault)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBEUnionCase::%s called for %s\n", __func__, sName.c_str());
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEUnionCase::%s called for %s\n", __func__, sName.c_str());
 
-    CBETypedDeclarator::CreateBackEnd(pType, sName);
-    m_bDefault = bDefault;
-    if (pCaseLabel)
-    {
-        m_Labels.Add(pCaseLabel);
-    }
+	CBETypedDeclarator::CreateBackEnd(pType, sName);
+	m_bDefault = bDefault;
+	if (pCaseLabel)
+	{
+		m_Labels.Add(pCaseLabel);
+	}
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"CBEUnionCase::%s returns true\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBEUnionCase::%s returns true\n", __func__);
 }
+

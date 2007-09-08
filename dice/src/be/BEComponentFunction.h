@@ -49,12 +49,8 @@ public:
     CBEComponentFunction();
     virtual ~CBEComponentFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBEComponentFunction(CBEComponentFunction &src);
-
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
     virtual void AddToImpl(CBEImplementationFile* pImpl);
     virtual bool IsTargetFile(CBEImplementationFile* pFile);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);

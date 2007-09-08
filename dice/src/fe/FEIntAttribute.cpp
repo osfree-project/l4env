@@ -34,16 +34,22 @@ CFEIntAttribute::CFEIntAttribute(ATTR_TYPE nType, int nValue)
     m_nIntValue = nValue;
 }
 
-CFEIntAttribute::CFEIntAttribute(CFEIntAttribute & src)
+CFEIntAttribute::CFEIntAttribute(CFEIntAttribute* src)
 :CFEAttribute(src)
 {
-    m_nIntValue = src.m_nIntValue;
+    m_nIntValue = src->m_nIntValue;
 }
 
 /** cleans up the integer attribute */
 CFEIntAttribute::~CFEIntAttribute()
+{ }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEIntAttribute::Clone()
 {
-    // nothing to clean up
+	return new CFEIntAttribute(this);
 }
 
 /** retrieves the integer values of this attribute
@@ -52,12 +58,4 @@ CFEIntAttribute::~CFEIntAttribute()
 int CFEIntAttribute::GetIntValue()
 {
     return m_nIntValue;
-}
-
-/**    creates a copy of this object
- *  \return a copy of this object
- */
-CObject *CFEIntAttribute::Clone()
-{
-    return new CFEIntAttribute(*this);
 }

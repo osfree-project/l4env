@@ -29,6 +29,7 @@
 #include "L4V2BEMsgBuffer.h"
 #include "be/l4/L4BESizes.h"
 #include "be/l4/L4BENameFactory.h"
+#include "be/l4/TypeSpec-L4Types.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BESrvLoopFunction.h"
@@ -36,30 +37,27 @@
 #include "be/BEAttribute.h"
 #include "be/BEDeclarator.h"
 #include "Compiler.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "Error.h"
 #include <cassert>
 
 CL4V2BEMsgBuffer::CL4V2BEMsgBuffer()
  : CL4BEMsgBuffer()
-{
-}
+{ }
 
-CL4V2BEMsgBuffer::CL4V2BEMsgBuffer(CL4V2BEMsgBuffer & src)
+CL4V2BEMsgBuffer::CL4V2BEMsgBuffer(CL4V2BEMsgBuffer* src)
  : CL4BEMsgBuffer(src)
-{
-}
+{ }
 
 /** destroys the object */
 CL4V2BEMsgBuffer::~CL4V2BEMsgBuffer()
-{
-}
+{ }
 
-/** \brief creates a copy of the object
- *  \return a reference to the newly created instance
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CL4V2BEMsgBuffer::Clone()
 {
-    return new CL4V2BEMsgBuffer(*this);
+	return new CL4V2BEMsgBuffer(this);
 }
 
 /** \brief add platform specific members to specific struct
@@ -71,64 +69,43 @@ CObject* CL4V2BEMsgBuffer::Clone()
  *  In this implementation we should add the L4 specific receive
  *  window for flexpages, the size and the send dope.
  */
-bool
-CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction,
-    CBEStructType *pStruct,
+void CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct,
     CMsgStructType nType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s(%s,, %d) called\n",
-	__func__, pFunction->GetName().c_str(), (int)nType);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s(%s,, %d) called\n",
+		__func__, pFunction->GetName().c_str(), (int)nType);
 
-    if (!CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct,
-	    nType))
-    {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CL4V2BEMsgBuffer::%s could not add platform members\n", __func__);
-	return false;
-    }
+	CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct, nType);
 
-    // create receive flexpage
-    CBETypedDeclarator *pFlexpage = GetFlexpageVariable();
-    if (!pFlexpage)
-    {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CL4V2BEMsgBuffer::%s: no flexpage member created\n", __func__);
-	return false;
-    }
-    // check if struct already has flexpage
-    if (pStruct->m_Members.Find(pFlexpage->m_Declarators.First()->GetName()))
-	delete pFlexpage;
-    else
-	pStruct->m_Members.Add(pFlexpage);
+	// create receive flexpage
+	CBETypedDeclarator *pFlexpage = GetFlexpageVariable();
+	if (!pFlexpage)
+		throw new error::create_error("flexpage member could not be created");
+	// check if struct already has flexpage
+	if (pStruct->m_Members.Find(pFlexpage->m_Declarators.First()->GetName()))
+		delete pFlexpage;
+	else
+		pStruct->m_Members.Add(pFlexpage);
 
-    // create size dope
-    CBETypedDeclarator *pSizeDope = GetSizeDopeVariable();
-    if (!pSizeDope)
-    {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CL4V2BEMsgBuffer::%s: no size dope created\n", __func__);
-	return false;
-    }
-    if (pStruct->m_Members.Find(pSizeDope->m_Declarators.First()->GetName()))
-	delete pSizeDope;
-    else
-	pStruct->m_Members.Add(pSizeDope);
+	// create size dope
+	CBETypedDeclarator *pSizeDope = GetSizeDopeVariable();
+	if (!pSizeDope)
+		throw new error::create_error("size dope could not be created");
+	if (pStruct->m_Members.Find(pSizeDope->m_Declarators.First()->GetName()))
+		delete pSizeDope;
+	else
+		pStruct->m_Members.Add(pSizeDope);
 
-    // create send dope
-    CBETypedDeclarator *pSendDope = GetSendDopeVariable();
-    if (!pSendDope)
-    {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CL4V2BEMsgBuffer::%s: no send dope created\n", __func__);
-	return false;
-    }
-    if (pStruct->m_Members.Find(pSendDope->m_Declarators.First()->GetName()))
-	delete pSendDope;
-    else
-	pStruct->m_Members.Add(pSendDope);
+	// create send dope
+	CBETypedDeclarator *pSendDope = GetSendDopeVariable();
+	if (!pSendDope)
+		throw new error::create_error("send dope could not be created");
+	if (pStruct->m_Members.Find(pSendDope->m_Declarators.First()->GetName()))
+		delete pSendDope;
+	else
+		pStruct->m_Members.Add(pSendDope);
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s: returns true\n", __func__);
-    return true;
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s: returns true\n", __func__);
 }
 /** \brief return the offset where the payload starts
  *  \return the offset in bytes
@@ -152,26 +129,24 @@ CL4V2BEMsgBuffer::GetPayloadOffset()
  * add an extra struct to the union containing base elements and 2/3 word
  * sized members.
  */
-bool
-CL4V2BEMsgBuffer::AddGenericStruct(CBEFunction *pFunction,
-    CFEOperation *pFEOperation)
+void CL4V2BEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation *pFEOperation)
 {
-    // test if this an interface function
-    if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
-	return true;
+	// test if this an interface function
+	if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
+		return;
 
-    CMsgStructType nType = pFunction->GetSendDirection();
-    bool bWordMembers = HasWordMembers(pFunction, nType);
-    if (bWordMembers)
-    {
-	nType = pFunction->GetReceiveDirection();
-	bWordMembers = HasWordMembers(pFunction, nType);
-    }
+	CMsgStructType nType = pFunction->GetSendDirection();
+	bool bWordMembers = HasWordMembers(pFunction, nType);
+	if (bWordMembers)
+	{
+		nType = pFunction->GetReceiveDirection();
+		bWordMembers = HasWordMembers(pFunction, nType);
+	}
 
-    if (bWordMembers)
-	return true;
+	if (bWordMembers)
+		return;
 
-    return CL4BEMsgBuffer::AddGenericStruct(pFunction, pFEOperation);
+	CL4BEMsgBuffer::AddGenericStruct(pFunction, pFEOperation);
 }
 
 /** \brief writes the initialisation of a refstring member with the init func
@@ -284,7 +259,7 @@ CL4V2BEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile,
 	{
 	    if (pType->GetSize() > 1)
 		pFile << "(";
-	    pParameter->WriteGetSize(pFile, NULL, pFunction);
+	    pParameter->WriteGetSize(pFile, 0, pFunction);
 	    if (pType->GetSize() > 1)
 	    {
 		pFile << ")*sizeof";
@@ -296,10 +271,10 @@ CL4V2BEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile,
 	    pParameter->m_Attributes.Find(ATTR_OUT))
 	    // WriteGetSize would write strlen, wich is not quite wha we want
 	    // in this situation
-	    pParameter->WriteGetMaxSize(pFile, NULL, pFunction);
+	    pParameter->WriteGetMaxSize(pFile, 0, pFunction);
 	else
 	    // write max-is
-	    pParameter->WriteGetSize(pFile, NULL, pFunction);
+	    pParameter->WriteGetSize(pFile, 0, pFunction);
 	pFile << ";\n";
 
     }

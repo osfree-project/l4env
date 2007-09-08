@@ -49,19 +49,27 @@ CBEType::CBEType()
     m_nFEType = TYPE_NONE;
 }
 
-CBEType::CBEType(CBEType & src)
+CBEType::CBEType(CBEType* src)
 : CBEObject(src)
 {
-    m_bUnsigned = src.m_bUnsigned;
-    m_nSize = src.m_nSize;
-    m_nMaxSize = src.m_nMaxSize;
-    m_nFEType = src.m_nFEType;
-    m_sName = src.m_sName;
+    m_bUnsigned = src->m_bUnsigned;
+    m_nSize = src->m_nSize;
+    m_nMaxSize = src->m_nMaxSize;
+    m_nFEType = src->m_nFEType;
+    m_sName = src->m_sName;
 }
 
 /** \brief destructor of this instance */
 CBEType::~CBEType()
 { }
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CBEType::Clone()
+{
+	return new CBEType(this);
+}
 
 /** \brief creates the back-end structure for a type class
  *  \param pFEType the respective front-end type class
@@ -217,14 +225,6 @@ int CBEType::GetMaxSize()
 bool CBEType::IsOfType(int nFEType)
 {
     return (m_nFEType == nFEType);
-}
-
-/** \brief generates an exact copy of this class
- *  \return a reference to the new object
- */
-CObject *CBEType::Clone()
-{
-    return new CBEType(*this);
 }
 
 /** \brief write code to initialize a variable of this type with a zero value

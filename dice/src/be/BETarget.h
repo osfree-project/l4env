@@ -73,10 +73,6 @@ public:
     CBETarget();
     virtual ~CBETarget();
 
-protected:
-    /** \brief copy constructor */
-    CBETarget(CBETarget &src);
-
 public:
     virtual void CreateBackEnd(CFEFile *pFEFile);
 

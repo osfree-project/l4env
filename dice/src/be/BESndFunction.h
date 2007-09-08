@@ -47,12 +47,8 @@ public:
     CBESndFunction();
     virtual ~CBESndFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBESndFunction(CBESndFunction &src);
-
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);
     virtual bool DoWriteFunction(CBEImplementationFile* pFile);
     virtual DIRECTION_TYPE GetSendDirection();

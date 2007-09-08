@@ -357,7 +357,7 @@ static void process_mainloop(void) {
 		don_tid  = &(curr_job->don_thread);
 
 		/* receive some time from donating thread */
-		donsched_recv_any(don_tid, &tag, &msg_buf, &env);
+		donsched_srv_recv_any(don_tid, &tag, &msg_buf, &env);
 
 		/* use precious time to do something useful */
 		exec_job(curr_job);

@@ -115,6 +115,7 @@ forward_pf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
   l4_addr_t map_addr;
   l4_msgdope_t result;
   l4_umword_t dummy;
+  l4_msgtag_t tag;
 
   if (*dw1 != 0xfffffffc)
     rw = 2 /* writable */;
@@ -136,11 +137,12 @@ forward_pf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
   for (;;)
     {
       /* we could get l4_thread_ex_regs'd ... */
-      error = l4_ipc_call(rmgr_pager_id,
-			  L4_IPC_SHORT_MSG, *dw1 | rw, 0,
-			  L4_IPC_MAPMSG(map_addr, log2_size),
-			    &dummy, &dummy,
-			  L4_IPC_NEVER, &result);
+      tag = l4_msgtag(L4_MSGTAG_PAGE_FAULT, 0, 0, 0);
+      error = l4_ipc_call_tag(rmgr_pager_id,
+			      L4_IPC_SHORT_MSG, *dw1 | rw, 0, tag,
+			      L4_IPC_MAPMSG(map_addr, log2_size),
+			        &dummy, &dummy,
+			      L4_IPC_NEVER, &result, &tag);
 
       if (error != L4_IPC_SECANCELED && error != L4_IPC_SEABORTED)
 	break;
@@ -182,6 +184,7 @@ resolve_iopf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
   unsigned ports = 1<<size;
   static int ioports_mapped;
   static unsigned last_port = ~0;
+  l4_msgtag_t tag;
 
   if (!(app->flags & APP_ALLOW_CLI) &&
       (port != 0 || size != L4_WHOLE_IOADDRESS_SPACE))
@@ -220,12 +223,12 @@ resolve_iopf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
       for (;;)
 	{
 	  /* we could get l4_thread_ex_regs'd ... */
-	  error = l4_ipc_call(rmgr_pager_id,
-			L4_IPC_SHORT_MSG,
-			  l4_iofpage(0, L4_WHOLE_IOADDRESS_SPACE, 0).fpage, 0,
-		        L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE),
-			  &dummy, &dummy,
-		        L4_IPC_NEVER, &result);
+          tag = l4_msgtag(L4_MSGTAG_IO_PAGE_FAULT, 0, 0, 0);
+	  error = l4_ipc_call_tag
+             (rmgr_pager_id, L4_IPC_SHORT_MSG,
+              l4_iofpage(0, L4_WHOLE_IOADDRESS_SPACE, 0).fpage, 0, tag,
+              L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE),
+              &dummy, &dummy, L4_IPC_NEVER, &result, &tag);
 
 	  if (error != L4_IPC_SECANCELED && error != L4_IPC_SEABORTED)
 	    break;
@@ -274,7 +277,6 @@ resolve_iopf_rmgr(app_t *app, l4_umword_t *dw1, l4_umword_t *dw2,
 }
 #endif
 
-#ifdef SIGMA0_REQ_MAGIC
 /**
  * \param app		application descriptor
  * \param dw1		extended sigma0 code
@@ -288,6 +290,7 @@ handle_extended_sigma0_request(app_t *app, l4_umword_t *dw1,
   l4_addr_t map_addr = 0;
   l4_msgdope_t result;
   l4_umword_t dummy;
+  l4_msgtag_t tag;
   unsigned log2_size = ((l4_fpage_t)(*dw2)).fp.size;
 
   /* We have to take care here to distinguish between 4k- and 4M-mappings
@@ -326,11 +329,12 @@ handle_extended_sigma0_request(app_t *app, l4_umword_t *dw1,
   for (;;)
     {
       /* we could get l4_thread_ex_regs'd ... */
-      error = l4_ipc_call(rmgr_pager_id,
-			  L4_IPC_SHORT_MSG, *dw1, *dw2,
-			  L4_IPC_MAPMSG(map_addr, log2_size),
-			    &dummy, &dummy,
-			  L4_IPC_NEVER, &result);
+      tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
+      error = l4_ipc_call_tag(rmgr_pager_id,
+			      L4_IPC_SHORT_MSG, *dw1, *dw2, tag,
+			      L4_IPC_MAPMSG(map_addr, log2_size),
+			        &dummy, &dummy,
+			      L4_IPC_NEVER, &result, &tag);
 
       if (error != L4_IPC_SECANCELED && error != L4_IPC_SEABORTED)
 	break;
@@ -351,7 +355,6 @@ handle_extended_sigma0_request(app_t *app, l4_umword_t *dw1,
   *dw2   = l4_fpage(map_addr, log2_size, L4_FPAGE_RW, L4_FPAGE_GRANT).fpage;
   *reply = L4_IPC_SHORT_FPAGE;
 }
-#endif
 
 /** Forward a pagefault to dataspace manager.
  *
@@ -539,7 +542,7 @@ app_pager_thread(void *data)
 
 	  if (!l4_msgtag_is_page_fault(tag)
               && !l4_msgtag_is_io_page_fault(tag)
-              && l4_msgtag_label(tag))
+              && !l4_msgtag_is_sigma0(tag))
             {
               printf("Cannot handle IPC type %ld from "
                      l4util_idfmt"\n",
@@ -553,13 +556,14 @@ app_pager_thread(void *data)
 	      rw    = dw1 & 2;
 	      reply = L4_IPC_SHORT_FPAGE;
 
-#ifdef SIGMA0_REQ_MAGIC
-	      if (SIGMA0_IS_MAGIC_REQ(dw1) && !(app->flags & APP_NOSIGMA0))
+	      if (l4_msgtag_is_sigma0(tag)
+                  && SIGMA0_IS_MAGIC_REQ(dw1)
+                  && !(app->flags & APP_NOSIGMA0))
 		handle_extended_sigma0_request(app, &dw1, &dw2, &reply);
 
-	      else
-#endif
-	      if ((dw1 == 0xfffffffc) && !(app->flags & APP_NOSIGMA0))
+	      else if (l4_msgtag_is_sigma0(tag)
+                       && (dw1 == 0xfffffffc)
+                       && !(app->flags & APP_NOSIGMA0))
 		{
 		  /* XXX sigma0 protocol: free page requested. We should
 		   * deliver a page of a dataspace pool here. */
@@ -568,7 +572,9 @@ app_pager_thread(void *data)
 		      dw1, dw2);
 		}
 #ifdef ARCH_x86
-	      else if ((dw1 >= 0x40000000) && !(app->flags & APP_NOSIGMA0))
+	      else if ((l4_msgtag_is_page_fault(tag)
+                        || l4_msgtag_is_io_page_fault(tag))
+                       && (dw1 >= 0x40000000) && !(app->flags & APP_NOSIGMA0))
 		{
 #ifdef EMULATE_MMIO
 		  if (dw1 & 1)
@@ -606,7 +612,8 @@ app_pager_thread(void *data)
 		    }
 		}
 #endif /* ARCH_x86 */
-	      else if (pf_in_app(dw1, app, &aa))
+	      else if (l4_msgtag_is_page_fault(tag)
+                       && pf_in_app(dw1, app, &aa))
 		{
 		  /* consider section attributes (ro or rw) */
 		  if (aa->flags & APP_AREA_PAGE)
@@ -649,7 +656,8 @@ app_pager_thread(void *data)
 				     fpage_rw, L4_FPAGE_MAP).fpage;
 		    }
 		}
-	      else if (dw1 == 1 && (dw2 & 0xff) == 1)
+	      else if (l4_msgtag_is_sigma0(tag)
+                       && dw1 == 1 && (dw2 & 0xff) == 1)
 		{
 		  /* sigma0 protocol: KI page requested */
 		  dbg_pf("PF (%c, eip=%08lx) %08lx in KI page. Sending KI page.",
@@ -661,7 +669,8 @@ app_pager_thread(void *data)
 				 L4_FPAGE_RO, L4_FPAGE_MAP).fpage;
 		}
 #ifdef ARCH_x86
-	      else if (dw1 == 1 && (dw2 & 0xff) == 0xff)
+	      else if (l4_msgtag_is_sigma0(tag)
+                       && dw1 == 1 && (dw2 & 0xff) == 0xff)
 		{
 		  /* sigma0 protocol: Tbuf status page requested */
 		  dbg_pf("PF (%c, eip=%08lx) %08lx in Tbuf status page. Sending.",
@@ -675,7 +684,8 @@ app_pager_thread(void *data)
 		  dw2 = l4_fpage(tb_stat_map_addr, L4_LOG2_PAGESIZE,
 				 L4_FPAGE_RO, L4_FPAGE_MAP).fpage;
 		}
-	      else if (dw1 >= 0x0009F000 && dw1 <= 0x000BFFFF
+	      else if (l4_msgtag_is_page_fault(tag)
+                       && dw1 >= 0x0009F000 && dw1 <= 0x000BFFFF
                        && app->flags & APP_ALLOW_VGA)
 		{
 		  /* graphics memory requested */
@@ -684,7 +694,8 @@ app_pager_thread(void *data)
                          dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
                   forward_pf_rmgr(app, &dw1, &dw2, &reply, L4_LOG2_PAGESIZE);
 		}
-	      else if (dw1 >= 0x000C0000 && dw1 <= 0x000FFFFF
+	      else if (l4_msgtag_is_page_fault(tag)
+                       && dw1 >= 0x000C0000 && dw1 <= 0x000FFFFF
 		       && app->flags & APP_ALLOW_BIOS)
 		{
 		  /* BIOS requested */
@@ -696,9 +707,10 @@ app_pager_thread(void *data)
 #endif
 	      else
 		{
-		  /* unknown pagefault */
-		  dbg_pf("PF (%c, eip=%08lx) %08lx. Can't handle.",
-			  dw1 & 2 ? 'w' : 'r', dw2, dw1 & ~3);
+		  /* unknown fault */
+		  dbg_pf("Fault (%c, eip=%08lx, type=%d) %08lx. Can't handle.",
+			  dw1 & 2 ? 'w' : 'r', l4_msgtag_label(tag),
+                          dw2, dw1 & ~3);
 
 		  /* check for double page faults */
 		  if (dw1 == app->last_pf && dw2 == app->last_pf_eip)
@@ -709,7 +721,7 @@ app_pager_thread(void *data)
 				   l4util_idstr(src_tid));
 		      enter_kdebug("Double PF, 'g' for kill");
 		      if ((error = l4ts_kill_task_recursive(app->tid)))
-			app_msg(app, "Error %d (%s)", 
+			app_msg(app, "Error %d (%s)",
 				     error, l4env_errstr(error));
 		    }
 

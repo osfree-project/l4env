@@ -45,12 +45,12 @@ CFEIDLUnionType::CFEIDLUnionType(std::string sTag,
     m_sUnionName = sUnionName;
 }
 
-CFEIDLUnionType::CFEIDLUnionType(CFEIDLUnionType & src)
+CFEIDLUnionType::CFEIDLUnionType(CFEIDLUnionType* src)
 : CFEUnionType(src)
 {
     m_nType = TYPE_IDL_UNION;
-    m_sSwitchVar = src.m_sSwitchVar;
-    m_sUnionName = src.m_sUnionName;
+    m_sSwitchVar = src->m_sSwitchVar;
+    m_sUnionName = src->m_sUnionName;
     CLONE_MEM(CFETypeSpec, m_pSwitchType);
 }
 
@@ -61,10 +61,10 @@ CFEIDLUnionType::~CFEIDLUnionType()
         delete m_pSwitchType;
 }
 
-/** creates a copy of this object
- *  \return a reference to a new union type object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
-CObject *CFEIDLUnionType::Clone()
+CObject* CFEIDLUnionType::Clone()
 {
-    return new CFEIDLUnionType(*this);
+	return new CFEIDLUnionType(this);
 }

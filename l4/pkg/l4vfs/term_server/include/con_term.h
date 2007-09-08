@@ -27,8 +27,8 @@ typedef struct termstate_spec_s
     unsigned      accel_flags;
     l4_threadid_t con_l4id;      // maybe we want to have several cons later
     l4_threadid_t vtc_l4id;      // we want several terminals
-    int           font_w;        // font size
-    int           font_h;
+    unsigned int  font_w;        // font size
+    unsigned int  font_h;
 
     // event stuff
     l4_threadid_t evh_l4id;	 // L4 thread id of key event handler

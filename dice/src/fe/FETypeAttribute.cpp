@@ -35,16 +35,10 @@ CFETypeAttribute::CFETypeAttribute(ATTR_TYPE nType, CFETypeSpec * pType)
     m_pType = pType;
 }
 
-CFETypeAttribute::CFETypeAttribute(CFETypeAttribute & src)
+CFETypeAttribute::CFETypeAttribute(CFETypeAttribute* src)
 : CFEAttribute(src)
 {
-    if (src.m_pType)
-      {
-      m_pType = (CFETypeSpec *) (src.m_pType->Clone());
-      m_pType->SetParent(this);
-      }
-    else
-    m_pType = 0;
+	CLONE_MEM(CFETypeSpec, m_pType);
 }
 
 /** cleans up the type attribute */
@@ -54,17 +48,17 @@ CFETypeAttribute::~CFETypeAttribute()
     delete m_pType;
 }
 
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFETypeAttribute::Clone()
+{
+	return new CFETypeAttribute(this);
+}
+
 /** retrieves the contained type of the attribute
  *  \return the type, which is the parameter of this attribute */
 CFETypeSpec *CFETypeAttribute::GetType()
 {
     return m_pType;
-}
-
-/** creates a copy of this object
- *  \return a copy of this object
- */
-CObject *CFETypeAttribute::Clone()
-{
-    return new CFETypeAttribute(*this);
 }

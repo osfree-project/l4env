@@ -30,29 +30,34 @@
 #include <string>
 
 CFEIdentifier::CFEIdentifier()
-{
-}
+{ }
 
 CFEIdentifier::CFEIdentifier(std::string sName)
 {
-    m_sName = sName;
+	m_sName = sName;
 }
 
 CFEIdentifier::CFEIdentifier(const char *sName)
 {
-    m_sName = sName;
+	m_sName = sName;
 }
 
-CFEIdentifier::CFEIdentifier(CFEIdentifier & src)
+CFEIdentifier::CFEIdentifier(CFEIdentifier* src)
 : CFEBase(src)
 {
-    m_sName = src.m_sName;
+	m_sName = src->m_sName;
 }
 
 /** cleans up the identifier object (frres the name) */
 CFEIdentifier::~CFEIdentifier()
-{
+{ }
 
+/** \brief create a copy of this object
+ *  \return a reference to the clone
+ */
+CObject* CFEIdentifier::Clone()
+{
+	return new CFEIdentifier(this);
 }
 
 /** checks this object for equality with another identifier
@@ -64,7 +69,7 @@ CFEIdentifier::~CFEIdentifier()
  */
 bool CFEIdentifier::operator ==(CFEIdentifier & src)
 {
-    return (m_sName == src.m_sName);
+	return (m_sName == src.m_sName);
 }
 
 /** checks this object for equality with a string
@@ -74,15 +79,7 @@ bool CFEIdentifier::operator ==(CFEIdentifier & src)
  */
 bool CFEIdentifier::operator ==(std::string & sName)
 {
-    return (m_sName == sName);
-}
-
-/** copies this object
- *  \return a reference to a new identifier object
- */
-CObject *CFEIdentifier::Clone()
-{
-    return new CFEIdentifier(*this);
+	return (m_sName == sName);
 }
 
 /** retrieves the character string from the object
@@ -91,7 +88,7 @@ CObject *CFEIdentifier::Clone()
  */
 std::string CFEIdentifier::GetName()
 {
-    return m_sName;
+	return m_sName;
 }
 
 /** return true if the given name matches the internally stored value
@@ -100,7 +97,7 @@ std::string CFEIdentifier::GetName()
  */
 bool CFEIdentifier::Match(std::string sName)
 {
-    return m_sName == sName;
+	return m_sName == sName;
 }
 
 /** prefixes the identifier with the string
@@ -108,7 +105,7 @@ bool CFEIdentifier::Match(std::string sName)
  */
 void CFEIdentifier::Prefix(std::string sPrefix)
 {
-    m_sName = sPrefix + m_sName;
+	m_sName = sPrefix + m_sName;
 }
 
 /** suffixes the identifier with the string
@@ -116,7 +113,7 @@ void CFEIdentifier::Prefix(std::string sPrefix)
  */
 void CFEIdentifier::Suffix(std::string sSuffix)
 {
-    m_sName += sSuffix;
+	m_sName += sSuffix;
 }
 
 /** \brief exchanges the names of this identifier
@@ -130,7 +127,7 @@ void CFEIdentifier::Suffix(std::string sSuffix)
  */
 std::string CFEIdentifier::ReplaceName(std::string sNewName)
 {
-    std::string ret = m_sName;
-    m_sName = sNewName;
-    return ret;
+	std::string ret = m_sName;
+	m_sName = sNewName;
+	return ret;
 }

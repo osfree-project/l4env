@@ -76,7 +76,7 @@ typedef struct ore_connection_configuration
     LOG("packet number = %d", (p)->no);
 
 #define mac_fmt       "%02X:%02X:%02X:%02X:%02X:%02X"
-#define mac_str(mac)  (mac)[0],(mac)[1],(mac)[2],(mac)[3],(mac)[4],(mac)[5]
+#define mac_str(mac)  (unsigned char)((mac)[0]), (unsigned char)((mac)[1]),(mac)[2],(mac)[3],(mac)[4],(mac)[5]
 
 #define LOG_MAC_s(cond, str, mac)  LOGd(cond, "%s " mac_fmt, (str), mac_str(mac))
 

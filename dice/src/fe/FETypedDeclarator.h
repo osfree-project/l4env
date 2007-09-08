@@ -78,11 +78,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFETypedDeclarator(CFETypedDeclarator &src);
+    CFETypedDeclarator(CFETypedDeclarator* src);
 
 // operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
     virtual CFETypeSpec* GetType();
     virtual void Accept(CVisitor&);
     virtual CFETypeSpec* ReplaceType(CFETypeSpec *pNewType);

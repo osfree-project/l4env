@@ -20,7 +20,9 @@ EXTRA_DIST=		idl-parser.yy
 dist-hook:
 	rm -f $(addprefix $(distdir)/,$(CLEANFILES))
 
-idl-parser.tab.cc idl-parser.tab.hh: idl-parser.yy
+idl-parser.tab.cc: idl-parser.yy
 	bison --report=all -d $<
 
-idl-scanner.ll: idl-parser.tab.hh
+idl-parser.tab.hh: idl-parser.tab.cc
+
+idl-parser-driver.cc idl-parser-driver.hh idl-scanner.ll: idl-parser.tab.hh

@@ -64,15 +64,15 @@ CBEExpression::CBEExpression()
     m_pType = 0;
 }
 
-CBEExpression::CBEExpression(CBEExpression & src)
+CBEExpression::CBEExpression(CBEExpression* src)
 : CBEObject(src)
 {
-    m_nType = src.m_nType;
-    m_nIntValue = src.m_nIntValue;
-    m_fFloatValue = src.m_fFloatValue;
-    m_cCharValue = src.m_cCharValue;
-    m_sStringValue = src.m_sStringValue;
-    m_nOperator = src.m_nOperator;
+    m_nType = src->m_nType;
+    m_nIntValue = src->m_nIntValue;
+    m_fFloatValue = src->m_fFloatValue;
+    m_cCharValue = src->m_cCharValue;
+    m_sStringValue = src->m_sStringValue;
+    m_nOperator = src->m_nOperator;
     CLONE_MEM(CBEExpression, m_pOperand1);
     CLONE_MEM(CBEExpression, m_pCondition);
     CLONE_MEM(CBEExpression, m_pOperand2);
@@ -90,6 +90,14 @@ CBEExpression::~CBEExpression()
         delete m_pCondition;
     if (m_pType)
         delete m_pType;
+}
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CBEExpression::Clone()
+{
+	return new CBEExpression(this);
 }
 
 /** \brief creates the back-end representation of an expression
@@ -1111,13 +1119,5 @@ bool CBEExpression::GetBoolValueUnary()
 bool CBEExpression::IsOfType(int nFEType)
 {
     return (m_nType == nFEType);
-}
-
-/** \brief creates a new instance of the expression object
- *  \return a reference to the new instance
- */
-CObject* CBEExpression::Clone()
-{
-    return new CBEExpression(*this);
 }
 

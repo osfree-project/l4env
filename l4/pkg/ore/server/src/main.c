@@ -24,11 +24,15 @@
 
 #include "ore-local.h"
 
-#ifndef CONFIG_ORE_DDE26
+#ifdef CONFIG_ORE_DDE24
 #include <l4/dde_linux/dde.h>
 #else /* DDE26 */
 #include <l4/dde/linux26/dde26.h>
 #include <l4/dde/linux26/dde26_net.h>
+#endif
+
+#ifdef CONFIG_ORE_FERRET
+ferret_list_local_t *ferret_ore_sensor;
 #endif
 
 static char *_oreName = "ORe";
@@ -74,11 +78,16 @@ extern unsigned long int strtoul(const char *, char **, int);
  */
 void *CORBA_alloc(unsigned long size)
 {
+#ifndef CONFIG_ORE_FERRET
   if (size == ORE_CONFIG_MAX_BUF_SIZE)
     return kmalloc(size, GFP_KERNEL);
+#else
+  return kmalloc(size, GFP_KERNEL);
+#endif
 
   return NULL;
 }
+
 
 /* CORBA_free() - not that tricky. We only free ptr if it is != NULL. */
 void CORBA_free(void *ptr)
@@ -88,6 +97,32 @@ void CORBA_free(void *ptr)
 
   kfree(ptr);
 }
+
+
+#ifdef CONFIG_ORE_FERRET
+static char ferret_mem[256];
+static void *ferret_malloc_wrap(size_t size)
+{
+	LOG("size: %d", size);
+	return ferret_mem;
+}
+
+static void init_ferret(void)
+{
+	int ret, inst;
+	inst = ferret_create_instance();
+	if ((ret = ferret_create(FERRET_ORE_MAJOR, FERRET_ORE_MINOR,
+							 inst, FERRET_LIST, 0, "64:50000",
+							 ferret_ore_sensor, 
+							 ferret_malloc_wrap))) {
+		LOG_Error("Could not create ORe sensor (retval %d)",
+				  ret);
+	}
+	else
+		LOG("Registered ferret_ore_sensor.");
+}
+#endif
+
 
 /** Copy mac address from command line
  */
@@ -102,7 +137,7 @@ static void copy_mac(int id, const char *arg, int num)
 }
 
 
-#ifdef CONFIG_ORE_DDE26
+#ifndef CONFIG_ORE_DDE24
 extern int l4ore_rx_handle(struct sk_buff *s);
 extern void loopback_init(void);
 
@@ -119,7 +154,7 @@ static void init_dde(void)
 	l4dde26_register_rx_callback(l4ore_rx_handle);
 	loopback_init();
 }
-#endif /* DDE26 */
+#endif /* !DDE24 */
 
 
 /* Basic initialization. */
@@ -159,9 +194,13 @@ int main(int argc, const char **argv)
 
   rmgr_init();
 
+#ifdef CONFIG_ORE_FERRET
+  init_ferret();
+#endif
+
   LOGd(ore_debug, "debug is on");
 
-#ifndef CONFIG_ORE_DDE26
+#ifdef CONFIG_ORE_DDE24
   // initialize linux emulation library
   LOGd(ORE_DEBUG_INIT, "memsize = %d", ORE_LINUXEMUL_MEMSIZE);
   ret = init_emulation(ORE_LINUXEMUL_MEMSIZE);
@@ -170,7 +209,7 @@ int main(int argc, const char **argv)
 #else /* DDE26 */
   init_dde();
   LOG("initialized DDELinux2.6");
-#endif /* DDE26 */
+#endif /* !DDE24 */
 
   LOG("loopback: %d", loopback_only);
   // initialize network devices

@@ -40,61 +40,51 @@
 
 CSockBEWaitAnyFunction::CSockBEWaitAnyFunction(bool bOpenWait, bool bReply)
 : CBEWaitAnyFunction(bOpenWait, bReply)
-{
-}
-
-CSockBEWaitAnyFunction::CSockBEWaitAnyFunction(CSockBEWaitAnyFunction & src)
-: CBEWaitAnyFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CSockBEWaitAnyFunction::~CSockBEWaitAnyFunction()
-{
-
-}
+{ }
 
 /** \brief writes the message invocation
  *  \param pFile the file to write to
  *
  * The socket has to be open already.
  */
-void
-CSockBEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
+void CSockBEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
 {
-    // wait for new request
-    CBECommunication *pComm = GetCommunication();
-    assert(pComm);
-    if (m_bReply)
-        pComm->WriteReplyAndWait(pFile, this);
-    else
-        pComm->WriteWait(pFile, this);
+	// wait for new request
+	CBECommunication *pComm = GetCommunication();
+	assert(pComm);
+	if (m_bReply)
+		pComm->WriteReplyAndWait(pFile, this);
+	else
+		pComm->WriteWait(pFile, this);
 }
 
 /** \brief initializes this instance of the class
  *  \param pFEInterface the front-end interface to use as reference
  *  \return true if successful
  */
-void
-CSockBEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface)
+void CSockBEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide)
 {
-    CBEWaitAnyFunction::CreateBackEnd(pFEInterface);
+	CBEWaitAnyFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
-    // add local variables
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
-    CBEType *pType = pCF->GetNewType(TYPE_INTEGER);
-    pType->SetParent(pVariable);
-    AddLocalVariable(pVariable);
-    pType->CreateBackEnd(false, 4, TYPE_INTEGER);
-    pVariable->CreateBackEnd(pType, string("dice_ret_size"));
-    delete pType; // has been cloned by typed decl.
+	// add local variables
+	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
+	CBEType *pType = pCF->GetNewType(TYPE_INTEGER);
+	pType->SetParent(pVariable);
+	AddLocalVariable(pVariable);
+	pType->CreateBackEnd(false, 4, TYPE_INTEGER);
+	pVariable->CreateBackEnd(pType, string("dice_ret_size"));
+	delete pType; // has been cloned by typed decl.
 
-    pVariable = pCF->GetNewTypedDeclarator();
-    AddLocalVariable(pVariable);
-    pVariable->CreateBackEnd(string("socklen_t"), string("dice_fromlen"), 0);
-    string sInit = "sizeof(*" +
-	CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
-    pVariable->SetDefaultInitString(sInit);
+	pVariable = pCF->GetNewTypedDeclarator();
+	AddLocalVariable(pVariable);
+	pVariable->CreateBackEnd(string("socklen_t"), string("dice_fromlen"), 0);
+	string sInit = "sizeof(*" +
+		CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
+	pVariable->SetDefaultInitString(sInit);
 }
 

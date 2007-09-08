@@ -11,6 +11,7 @@
  */
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <fcntl.h>
 
 #include <l4/log/l4log.h>
@@ -48,7 +49,7 @@ int vt100_read(termstate_t *term, l4_int8_t *buf, int count, int rw_mode)
      * In blocked raw mode, we return exactly <asked> chars.
      *
      * In unblocked raw mode, we return
-     * MIN(<asked>, <current_line_buffer_length> chars.
+     * MIN(<asked>, <current_line_buffer_length>) chars.
      */
 
     // no complete line in buffer, return 
@@ -154,6 +155,7 @@ int vt100_write(termstate_t *term, const l4_int8_t * buf, int count)
 
     // show the cursor
     vt100_show_cursor(term);
+
     // redraw
     vt100_redraw(term);
 
@@ -169,7 +171,8 @@ int vt100_write(termstate_t *term, const l4_int8_t * buf, int count)
 void vt100_add_key(termstate_t *term, int code)
 {
     int new_top;
-    unsigned char * result, oldchar = 'a';
+    unsigned char * result;
+    unsigned char oldchar = 'a';
 
     // wrong keycode?
     if (code > 127)
@@ -179,8 +182,6 @@ void vt100_add_key(termstate_t *term, int code)
         result = (*(vt100_keymap))[code][1];
     else
         result = (*(vt100_keymap))[code][0];
-
-    LOGd(_DEBUG,"keycode: %d, char='%s'", code, result);
 
     l4semaphore_down(&term->keybufsem);
     while (*result)
@@ -221,12 +222,13 @@ void vt100_add_key(termstate_t *term, int code)
             if (*result == '\r')  // atomically count returns in buffer
                 l4util_inc32(&term->returns);
 
-            if (! term->__ctrl)
+            if (!term->__ctrl) 
                 term->keylist[term->keylist_next_write] = *result;
             else
                 term->keylist[term->keylist_next_write] = CTRL(*result);
 
             term->keylist_next_write = new_top;
+
             l4semaphore_up(&term->keysem);
         }
 
@@ -235,7 +237,9 @@ void vt100_add_key(termstate_t *term, int code)
             vt100_echo(term, *result, oldchar);
         result++;
     }
+
     l4semaphore_up(&term->keybufsem);
+    vt100_select_notify(term);
 }
 
 // this one is probably obsolete

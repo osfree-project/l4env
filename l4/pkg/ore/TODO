@@ -16,7 +16,7 @@
 
 4                   incorporate more NIC drivers from Linux
 
-5                   build a version using dde_linux26 - This is absolutely
+5       DONE        build a version using dde_linux26 - This is absolutely
                     necessary, as GCC4 is not supported by 2.4 kernels
 
 6       DONE        special case: packets for local ORe clients need to be 

@@ -51,16 +51,14 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CBETypedef(CBETypedef &src);
+    CBETypedef(CBETypedef* src);
 
 public:
     using CBETypedDeclarator::CreateBackEnd;
     virtual void CreateBackEnd(CFETypedDeclarator *pFETypedef);
     virtual void CreateBackEnd(CBEType * pType, std::string sName, CFEBase *pFERefObject);
     virtual void AddToHeader(CBEHeaderFile* pHeader);
-
-    virtual CObject *Clone();
-
+	virtual CObject* Clone();
     virtual void WriteForwardDeclaration(CBEFile& pFile);
     virtual void WriteDefinition(CBEFile& pFile);
     virtual void WriteDeclaration(CBEFile& pFile);

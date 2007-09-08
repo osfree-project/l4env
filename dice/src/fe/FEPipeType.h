@@ -50,11 +50,10 @@ protected:
     /** \brief copy constrcutor
      *  \param src the source to copy from
      */
-    CFEPipeType(CFEPipeType &src);
+    CFEPipeType(CFEPipeType* src);
 
-// Operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
 
 // attributes
 protected:

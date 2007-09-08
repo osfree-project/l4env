@@ -401,10 +401,11 @@ l4_io_request_region_component (CORBA_Object _dice_corba_obj,
     {
       l4_umword_t dw0, dw1;
       l4_msgdope_t result;
-      int err = l4_ipc_call(pager,
-                            L4_IPC_SHORT_MSG, regions[i].fpage.fpage, 0,
-                            L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE), &dw0, &dw1,
-                            L4_IPC_NEVER, &result);
+      l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_IO_PAGE_FAULT, 0, 0, 0);
+      int err = l4_ipc_call_tag(pager,
+                                L4_IPC_SHORT_MSG, regions[i].fpage.fpage, 0, tag,
+                                L4_IPC_IOMAPMSG(0, L4_WHOLE_IOADDRESS_SPACE), &dw0, &dw1,
+                                L4_IPC_NEVER, &result, &tag);
       /* IPC error || no fpage received */
       if (err || !dw1)
           Panic("sigma0 request for I/O ports [%04x,%04x) failed (err=%d dw1=%ld)\n",
@@ -985,6 +986,7 @@ int bios_map_area(unsigned long *ret_vaddr)
   l4_msgdope_t result;
   l4_threadid_t pager = rmgr_pager_id;
   l4_uint32_t vaddr_area;  /* ??? */
+  l4_msgtag_t tag;
 
   /* reserve area at L4RM */
   error = l4rm_area_reserve(size, L4RM_LOG2_ALIGNED,
@@ -997,10 +999,11 @@ int bios_map_area(unsigned long *ret_vaddr)
   /* request memory from sigma0/RMGR */
   while (size)
     {
-      error = l4_ipc_call(pager,
-                          L4_IPC_SHORT_MSG, paddr, 0,
-                          L4_IPC_MAPMSG(vaddr, L4_LOG2_PAGESIZE), &dw0, &dw1,
-                          L4_IPC_NEVER, &result);
+      tag = l4_msgtag(L4_MSGTAG_PAGE_FAULT, 0, 0, 0);
+      error = l4_ipc_call_tag(pager,
+                              L4_IPC_SHORT_MSG, paddr, 0, tag,
+                              L4_IPC_MAPMSG(vaddr, L4_LOG2_PAGESIZE), &dw0, &dw1,
+                              L4_IPC_NEVER, &result, &tag);
       /* IPC error || no fpage received */
       if (error || !dw1)
           Panic("sigma0 request for phys addr %p failed (err=%d dw1=%ld)\n",

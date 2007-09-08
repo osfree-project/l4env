@@ -53,11 +53,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEIntAttribute(CFEIntAttribute &src);
+    CFEIntAttribute(CFEIntAttribute* src);
 
 // Operations
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
     virtual int GetIntValue();
 
 // Attributes

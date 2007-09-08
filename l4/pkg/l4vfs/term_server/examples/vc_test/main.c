@@ -46,9 +46,9 @@ char LOG_tag[9]="vc_test";
 #define TERM_TEST
 //#define READ_TEST
 //#define SIMPLE_TEST
-//#define PRINT_TEST
+#define PRINT_TEST
 //#define MOVE_TEST
-#define ANIMATION_TEST
+//#define ANIMATION_TEST
 //#define CURSOR_TEST
 //#define CUR_STORE_TEST
 //#define FOPEN_TEST

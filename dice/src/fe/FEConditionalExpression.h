@@ -32,8 +32,8 @@
 
 #include "fe/FEBinaryExpression.h"
 
-/**    \class CFEConditionalExpression
- *    \ingroup frontend
+/** \class CFEConditionalExpression
+ *  \ingroup frontend
  *  \brief represents a conditional expression
  *
  * This class is used to represent a conditional expression. This
@@ -64,12 +64,12 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEConditionalExpression(CFEConditionalExpression &src);
+    CFEConditionalExpression(CFEConditionalExpression* src);
 
 // Operations
 public:
+	virtual CObject* Clone();
     virtual std::string ToString();
-    virtual CObject* Clone();
     virtual bool IsOfType(unsigned int nType);
     virtual int GetIntValue();
     virtual CFEExpression* GetCondition();

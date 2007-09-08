@@ -4,7 +4,7 @@ L4DIR		?= $(PKGDIR)/../..
 #DEFAULT_RELOC_arm := 0x02000000
 DEFAULT_RELOC_arm := 0x01400000
 
-LINK_ADDR	 = 0x002c0000
+LINK_ADDR	 = 0x002d0000
 
 include $(L4DIR)/mk/Makeconf
 -include $(OBJ_DIR)/Makeconf.local
@@ -20,8 +20,10 @@ endif
 PRIVATE_INCDIR	 = $(SRC_DIR) $(SRC_DIR)/ARCH-$(ARCH)
 
 # special include directories only needed for <l4/sys/kernel.h>
-PRIVATE_INCDIR_init_kip_v2.o      = $(OBJ_BASE)/include/$(ARCH)/l4v2
-PRIVATE_INCDIR_init_arm_kip.o     = $(OBJ_BASE)/include/$(ARCH)/$(L4ABI)
+PRIVATE_INCDIR_init_kip_v2.o      = $(OBJ_BASE)/include/$(ARCH)/l4v2 \
+                                    $(DROPS_STDDIR)/include/$(ARCH)/l4v2
+PRIVATE_INCDIR_init_arm_kip.o     = $(OBJ_BASE)/include/$(ARCH)/$(L4ABI) \
+                                    $(DROPS_STDDIR)/include/$(ARCH)/$(L4ABI)
 
 TARGET		:= bootstrap
 TARGET_BIN	 = $(TARGET)

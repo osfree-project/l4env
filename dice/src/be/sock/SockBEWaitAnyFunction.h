@@ -50,12 +50,9 @@ public:
     CSockBEWaitAnyFunction(bool bOpenWait, bool bReply);
     virtual ~CSockBEWaitAnyFunction();
 
-    virtual void CreateBackEnd(CFEInterface *pFEInterface);
+    virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
 
 protected:
-    /** \brief copy constructor */
-    CSockBEWaitAnyFunction(CSockBEWaitAnyFunction &src);
-
     virtual void WriteInvocation(CBEFile& pFile);
 };
 

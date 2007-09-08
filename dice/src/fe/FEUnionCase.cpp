@@ -48,11 +48,11 @@ CFEUnionCase::CFEUnionCase(CFETypedDeclarator * pUnionArm,
     m_pUnionArm = pUnionArm;
 }
 
-CFEUnionCase::CFEUnionCase(CFEUnionCase & src)
+CFEUnionCase::CFEUnionCase(CFEUnionCase* src)
 : CFEBase(src),
-    m_UnionCaseLabelList(src.m_UnionCaseLabelList)
+    m_UnionCaseLabelList(src->m_UnionCaseLabelList)
 {
-    m_bDefault = src.m_bDefault;
+    m_bDefault = src->m_bDefault;
     CLONE_MEM(CFETypedDeclarator, m_pUnionArm);
     m_UnionCaseLabelList.Adopt(this);
 }
@@ -64,12 +64,12 @@ CFEUnionCase::~CFEUnionCase()
         delete m_pUnionArm;
 }
 
-/** creates a copy of this object
- *  \return a copy of this object
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEUnionCase::Clone()
 {
-    return new CFEUnionCase(*this);
+	return new CFEUnionCase(this);
 }
 
 /** \brief accept the iterations of the visitors

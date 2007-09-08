@@ -265,12 +265,13 @@ handle_extended_sigma0(l4_threadid_t t, l4_umword_t *d1, l4_umword_t *d2)
 	  l4_umword_t res1, res2;
 	  l4_msgdope_t result;
 	  l4_addr_t scratch = super ? scratch_4M : scratch_4K;
+          l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
 
 	  l4_fpage_unmap(l4_fpage(scratch, fp.fp.size, 0, 0),
 				  L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-	  l4_ipc_call(my_pager, L4_IPC_SHORT_MSG, *d1, *d2,
-		      L4_IPC_MAPMSG(scratch, fp.fp.size),
-	    	      &res1, &res2, L4_IPC_NEVER, &result);
+	  l4_ipc_call_tag(my_pager, L4_IPC_SHORT_MSG, *d1, *d2, tag,
+		          L4_IPC_MAPMSG(scratch, fp.fp.size),
+	    	          &res1, &res2, L4_IPC_NEVER, &result, &tag);
 	  *d1 = addr;
     	  *d2 = l4_fpage(scratch, fp.fp.size,
 			 L4_FPAGE_RW, L4_FPAGE_GRANT).fpage;
@@ -303,12 +304,13 @@ handle_extended_sigma0(l4_threadid_t t, l4_umword_t *d1, l4_umword_t *d2)
 	  l4_umword_t res1, res2;
 	  int ret;
 	  l4_msgdope_t result;
+          l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
 
 	  l4_fpage_unmap(l4_fpage(scratch_4K, L4_LOG2_PAGESIZE, 0, 0),
 	                          L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-	  ret = l4_ipc_call(my_pager, L4_IPC_SHORT_MSG, *d1, *d2,
-                            L4_IPC_MAPMSG(scratch_4K, L4_LOG2_PAGESIZE),
-                            &res1, &res2, L4_IPC_NEVER, &result);
+	  ret = l4_ipc_call_tag(my_pager, L4_IPC_SHORT_MSG, *d1, *d2, tag,
+                                L4_IPC_MAPMSG(scratch_4K, L4_LOG2_PAGESIZE),
+                                &res1, &res2, L4_IPC_NEVER, &result, &tag);
 	  if ((res1 == 0 && res2 == 0) || ret)
 	    /* no tbuf status from sigma0 */
 	    return 0;
@@ -361,15 +363,16 @@ handle_tbuf_status(l4_threadid_t t,l4_umword_t pfa,
 		   l4_umword_t *d1, l4_umword_t *d2)
 {
   l4_msgdope_t result;
+  l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
 
   warn_old(t, *d1, *d2);
 
   l4_fpage_unmap(l4_fpage(scratch_4K, L4_LOG2_SUPERPAGESIZE, 0, 0),
 		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-  l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-	      1, 0xff,
-	      L4_IPC_MAPMSG(scratch_4K, L4_LOG2_PAGESIZE),
-	      d1, d2, L4_IPC_NEVER, &result);
+  l4_ipc_call_tag(my_pager, L4_IPC_SHORT_MSG,
+	          1, 0xff, tag,
+	          L4_IPC_MAPMSG(scratch_4K, L4_LOG2_PAGESIZE),
+	          d1, d2, L4_IPC_NEVER, &result, &tag);
 
   if (*d1 == 0 && *d2 == 0)
     /* no tbuf status from sigma0 */
@@ -475,6 +478,7 @@ handle_adapterpage(l4_threadid_t t,l4_umword_t pfa,
 {
   /* XXX UGLY HACK! */
   l4_msgdope_t result;
+  l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_PAGE_FAULT, 0, 0, 0);
 
   warn_old(t, *d1, *d2);
 
@@ -486,10 +490,10 @@ handle_adapterpage(l4_threadid_t t,l4_umword_t pfa,
       /* map the superpage into a scratch area */
       l4_fpage_unmap(l4_fpage(scratch_4M, L4_LOG2_SUPERPAGESIZE, 0,0),
 		     L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-      l4_ipc_call(my_pager, L4_IPC_SHORT_MSG,
-		  pfa, 0,
-		  L4_IPC_MAPMSG(scratch_4M, L4_LOG2_SUPERPAGESIZE),
-		  d1, d2, L4_IPC_NEVER, &result);
+      l4_ipc_call_tag(my_pager, L4_IPC_SHORT_MSG,
+		      pfa, 0, tag,
+		      L4_IPC_MAPMSG(scratch_4M, L4_LOG2_SUPERPAGESIZE),
+		      d1, d2, L4_IPC_NEVER, &result, &tag);
 
       /* grant the superpage to the subtask */
       *d1 = pfa;
@@ -628,39 +632,52 @@ pager(void)
 
 	  if (l4_msgtag_is_page_fault(tag)
               || l4_msgtag_is_io_page_fault(tag)
-              || l4_msgtag_label(tag) == 0)
+              || l4_msgtag_is_sigma0(tag))
             {
               if (t.id.task <= O_MAX)
                 /* valid requester */
                 {
                   pfa = d1 & 0xfffffffc;
 
-                  if (SIGMA0_IS_MAGIC_REQ(d1))
-                    handled = handle_extended_sigma0(t, &d1, &d2);
-                  else if (d1 == 0xfffffffc)
-                    handled = handle_anypage(t, pfa, &d1, &d2);
-                  else if (d1 == 1 && (d2 & 0xff) == 1)
-                    handled=handle_kip(t,pfa,&d1,&d2);
-                  else if (d1 == 1 && (d2 & 0xff) == 0xff)
-                    handled = handle_tbuf_status(t, pfa, &d1, &d2);
+                  if (l4_msgtag_is_sigma0(tag))
+                    {
+                      if (SIGMA0_IS_MAGIC_REQ(d1))
+                        handled = handle_extended_sigma0(t, &d1, &d2);
+                      else if (d1 == 0xfffffffc)
+                        handled = handle_anypage(t, pfa, &d1, &d2);
+                      else if (d1 == 1 && (d2 & 0xff) == 1)
+                        handled=handle_kip(t,pfa,&d1,&d2);
+                      else if (d1 == 1 && (d2 & 0xff) == 0xff)
+                        handled = handle_tbuf_status(t, pfa, &d1, &d2);
+                      else
+                        print_err("\r\nROOT: can't handle sigma0 request "
+                                  "d1=0x%08lx, d2=0x%08lx from " l4util_idfmt "\n",
+                                  d1, d2, l4util_idstr(t));
+                    }
+                  else if (l4_msgtag_is_page_fault(tag))
+                    {
 #if defined ARCH_x86 | ARCH_amd64
-                  else if (pfa < 0x40000000)
-                    handled = handle_physicalpage(t, pfa, &d1, &d2);
+                       if (pfa < 0x40000000)
+                         handled = handle_physicalpage(t, pfa, &d1, &d2);
+                       else if (pfa >= 0x40000000 && pfa < 0xC0000000 && !(d1 & 1))
+                         handled = handle_adapterpage(t, pfa, &d1, &d2);
 #else
-                  else if (pfa > ram_base && (pfa - ram_base) < mem_high)
-                    handled = handle_physicalpage(t, pfa, &d1, &d2);
+                       if (pfa > ram_base && (pfa - ram_base) < mem_high)
+                         handled = handle_physicalpage(t, pfa, &d1, &d2);
 #endif
-#if defined ARCH_x86 | ARCH_amd64
-                  else if (pfa >= 0x40000000 && pfa < 0xC0000000 && !(d1 & 1))
-                    handled = handle_adapterpage(t, pfa, &d1, &d2);
-                  else if ((l4_version == VERSION_FIASCO)
-                      && l4_is_io_page_fault(d1))
+                       else
+                         print_err("\r\nROOT: can't handle page-fault request "
+                                   "d1=0x%08lx, d2=0x%08lx from " l4util_idfmt "\n",
+                                   d1, d2, l4util_idstr(t));
+                    }
+                  else if (l4_msgtag_is_io_page_fault(tag)
+                           && l4_version == VERSION_FIASCO
+                           && l4_is_io_page_fault(d1))
                     handled = handle_io(t, pfa, &d1, &d2);
-#endif
                   else
-                    print_err("\r\nROOT: can't handle d1=0x%08lx, d2=0x%08lx "
-                        "from thread="l4util_idfmt"\n",
-                        d1, d2, l4util_idstr(t));
+                    print_err("\r\nROOT: can't handle IO page-fault request "
+                              "d1=0x%08lx, d2=0x%08lx from thread="l4util_idfmt"\n",
+                              d1, d2, l4util_idstr(t));
                 }
               else
                 /* OOPS.. can't map to this sender. */
@@ -675,8 +692,9 @@ pager(void)
             }
           else
             {
-              print_err("ROOT: cannot handle message of type %d.\n",
-                        l4_msgtag_label(tag));
+              print_err("ROOT: cannot handle message of type %d from "
+                        l4util_idfmt".\n",
+                        l4_msgtag_label(tag), l4util_idstr(t));
               skip = 1;
             }
 

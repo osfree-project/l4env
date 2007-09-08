@@ -47,11 +47,10 @@
 #include <iostream>
 #include <cassert>
 
-CFETypedDeclarator::CFETypedDeclarator(TYPEDDECL_TYPE nType,
-    CFETypeSpec * pType,
-    vector<CFEDeclarator*>* pDeclarators,
-    vector<CFEAttribute*>* pTypeAttributes)
-: m_Attributes(pTypeAttributes, this),
+CFETypedDeclarator::CFETypedDeclarator(TYPEDDECL_TYPE nType, CFETypeSpec * pType,
+	vector<CFEDeclarator*>* pDeclarators, vector<CFEAttribute*>* pTypeAttributes)
+: CFEInterfaceComponent(static_cast<CObject*>(0)),
+	m_Attributes(pTypeAttributes, this),
     m_Declarators(pDeclarators, this)
 {
     m_nType = nType;
@@ -60,12 +59,12 @@ CFETypedDeclarator::CFETypedDeclarator(TYPEDDECL_TYPE nType,
         m_pType->SetParent(this);
 }
 
-CFETypedDeclarator::CFETypedDeclarator(CFETypedDeclarator & src)
+CFETypedDeclarator::CFETypedDeclarator(CFETypedDeclarator* src)
 : CFEInterfaceComponent(src),
-    m_Attributes(src.m_Attributes),
-    m_Declarators(src.m_Declarators)
+    m_Attributes(src->m_Attributes),
+    m_Declarators(src->m_Declarators)
 {
-    m_nType = src.m_nType;
+    m_nType = src->m_nType;
     CLONE_MEM(CFETypeSpec, m_pType);
 }
 
@@ -74,6 +73,14 @@ CFETypedDeclarator::~CFETypedDeclarator()
 {
     if (m_pType)
         delete m_pType;
+}
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFETypedDeclarator::Clone()
+{
+	return new CFETypedDeclarator(this);
 }
 
 /**
@@ -113,14 +120,6 @@ CFETypeSpec *CFETypedDeclarator::ReplaceType(CFETypeSpec * pNewType)
 void CFETypedDeclarator::Accept(CVisitor& v)
 {
     v.Visit(*this);
-}
-
-/** \brief creates a copy of this object
- *  \return an exact copy of this object
- */
-CObject* CFETypedDeclarator::Clone()
-{
-    return new CFETypedDeclarator(*this);
 }
 
 /** \brief returns the contained type

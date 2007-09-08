@@ -65,19 +65,19 @@ CFEAlignOfExpression::CFEAlignOfExpression(CFEExpression *pExpression)
     m_pExpression = pExpression;
 }
 
-CFEAlignOfExpression::CFEAlignOfExpression(CFEAlignOfExpression &src)
+CFEAlignOfExpression::CFEAlignOfExpression(CFEAlignOfExpression* src)
  : CFEExpression(src)
 {
     CLONE_MEM(CFETypeSpec, m_pType);
     CLONE_MEM(CFEExpression, m_pExpression);
 }
 
-/** \brief creates a copy of this object
- *  \return a reference to a new object of this class
+/** \brief create a copy of this object
+ *  \return reference to clone
  */
 CObject* CFEAlignOfExpression::Clone()
 {
-    return new CFEAlignOfExpression(*this);
+	return new CFEAlignOfExpression(this);
 }
 
 /** \brief access the type member

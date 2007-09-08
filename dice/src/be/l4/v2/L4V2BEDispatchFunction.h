@@ -49,10 +49,6 @@ public:
     ~CL4V2BEDispatchFunction();
 
 protected:
-    /** \brief copy constructor */
-    CL4V2BEDispatchFunction(CL4V2BEDispatchFunction &src);
-
-protected:
     virtual void WriteSetWrongOpcodeException(CBEFile& pFile);
 };
 

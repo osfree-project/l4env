@@ -59,16 +59,15 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEConstDeclarator(CFEConstDeclarator &src);
+    CFEConstDeclarator(CFEConstDeclarator* src);
 
 // Operations
 public:
-    virtual CObject* Clone();
     virtual CFEExpression* GetValue();
     virtual std::string GetName();
     virtual CFETypeSpec* GetType();
     bool Match(std::string sName);
-
+	virtual CObject* Clone();
     virtual void Accept(CVisitor&);
 
 // attributes

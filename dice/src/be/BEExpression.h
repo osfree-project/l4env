@@ -1,9 +1,9 @@
 /**
- *    \file    dice/src/be/BEExpression.h
+ *  \file    dice/src/be/BEExpression.h
  *  \brief   contains the declaration of the class CBEExpression
  *
- *    \date    01/17/2002
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    01/17/2002
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
  * Copyright (C) 2001-2004
@@ -58,14 +58,14 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CBEExpression(CBEExpression &src);
+    CBEExpression(CBEExpression* src);
 
 public:
     virtual bool GetBoolValue();
     virtual int GetIntValue();
     virtual std::string GetStringValue();
     virtual bool IsOfType(int nFEType);
-    virtual CObject* Clone();
+	virtual CObject* Clone();
     virtual void Write(CBEFile& pFile);
     virtual void WriteToStr(std::string &sStr);
 

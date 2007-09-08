@@ -50,12 +50,8 @@ public:
     CBEUnmarshalFunction();
     virtual ~CBEUnmarshalFunction();
 
-protected:
-    /** \brief copy constructor */
-    CBEUnmarshalFunction(CBEUnmarshalFunction &src);
-
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation);
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
     virtual bool DoWriteFunction(CBEHeaderFile* pFile);

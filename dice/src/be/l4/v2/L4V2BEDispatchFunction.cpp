@@ -32,19 +32,11 @@
 #include <cassert>
 
 CL4V2BEDispatchFunction::CL4V2BEDispatchFunction()
-{
-}
-
-CL4V2BEDispatchFunction::CL4V2BEDispatchFunction(CL4V2BEDispatchFunction & src)
-: CL4BEDispatchFunction(src)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CL4V2BEDispatchFunction::~CL4V2BEDispatchFunction()
-{
-
-}
+{ }
 
 /** \brief write the L4 specific code when setting the opcode exception in \
  *         the message buffer
@@ -52,13 +44,13 @@ CL4V2BEDispatchFunction::~CL4V2BEDispatchFunction()
  */
 void CL4V2BEDispatchFunction::WriteSetWrongOpcodeException(CBEFile& pFile)
 {
-    // first call base class
-    CL4BEDispatchFunction::WriteSetWrongOpcodeException(pFile);
-    // set short IPC
-    CL4V2BEMsgBuffer *pMsgBuffer =
-	dynamic_cast<CL4V2BEMsgBuffer*>(GetMessageBuffer());
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteDopeShortInitialization(pFile, TYPE_MSGDOPE_SEND,
-	CMsgStructType::Generic);
+	// first call base class
+	CL4BEDispatchFunction::WriteSetWrongOpcodeException(pFile);
+	// set short IPC
+	CL4V2BEMsgBuffer *pMsgBuffer =
+		dynamic_cast<CL4V2BEMsgBuffer*>(GetMessageBuffer());
+	assert(pMsgBuffer);
+	pMsgBuffer->WriteDopeShortInitialization(pFile, TYPE_MSGDOPE_SEND,
+		CMsgStructType::Generic);
 }
 

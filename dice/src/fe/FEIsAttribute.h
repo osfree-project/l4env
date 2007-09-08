@@ -59,10 +59,10 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEIsAttribute(CFEIsAttribute &src);
+    CFEIsAttribute(CFEIsAttribute* src);
 
 public:
-    virtual CObject* Clone();
+	virtual CObject* Clone();
 
 // attributes
 public:

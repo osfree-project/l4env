@@ -73,16 +73,15 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CFEInterface(CFEInterface &src);
+    CFEInterface(CFEInterface* src);
 
 // Operations
 public:
-    virtual CObject* Clone();
     virtual CFEInterface* FindBaseInterface(std::string sName);
     virtual void AddBaseInterface(CFEInterface* pBaseInterface);
 
     virtual void Accept(CVisitor&);
-
+	virtual CObject* Clone();
     virtual int GetOperationCount(bool bCountBase = true);
 
     virtual std::string GetName();

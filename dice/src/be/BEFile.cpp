@@ -70,36 +70,6 @@ CBEFile::CBEFile()
     m_nFileType = FILETYPE_NONE;
 }
 
-CBEFile::CBEFile(CBEFile & src)
-: std::ios(),
-  std::ofstream(),
-  CObject(src),
-  m_Classes(0,(CObject*)0),
-  m_NameSpaces(0, (CObject*)0),
-  m_Functions(0, (CObject*)0),
-  m_IncludedFiles(src.m_IncludedFiles)
-{
-    m_nFileType = src.m_nFileType;
-
-    m_IncludedFiles.Adopt(this);
-    // only copy references of the classes, namespaces and functions
-    vector<CBEClass*>::iterator iC;
-    for (iC = src.m_Classes.begin();
-	 iC != src.m_Classes.end();
-	 iC++)
-	m_Classes.Add(*iC);
-    vector<CBENameSpace*>::iterator iN;
-    for (iN = src.m_NameSpaces.begin();
-	 iN != src.m_NameSpaces.end();
-	 iN++)
-	m_NameSpaces.Add(*iN);
-    vector<CBEFunction*>::iterator iF;
-    for (iF = src.m_Functions.begin();
-	 iF != src.m_Functions.end();
-	 iF++)
-	m_Functions.Add(*iF);
-}
-
 /** \brief class destructor
  */
 CBEFile::~CBEFile()
@@ -123,19 +93,18 @@ CBEFile::AddIncludedFileName(string sFileName,
     bool bIsStandardInclude,
     CObject* pRefObj)
 {
-    if (sFileName.empty())
-        return;
-    // first check if we have this name already registered
-    if (m_IncludedFiles.Find(sFileName))
-	return;
-    // add new include file
-    CIncludeStatement *pNewInc = new CIncludeStatement(bIDLFile,
-	bIsStandardInclude, false, sFileName, string(),
-	string(), 0);
-    m_IncludedFiles.Add(pNewInc);
-    // set source file info
-    if (pRefObj)
-        pNewInc->m_sourceLoc = pRefObj->m_sourceLoc;
+	if (sFileName.empty())
+		return;
+	// first check if we have this name already registered
+	if (m_IncludedFiles.Find(sFileName))
+		return;
+	// add new include file
+	CIncludeStatement *pNewInc = new CIncludeStatement(bIDLFile,
+		bIsStandardInclude, false, sFileName, string(),
+		string(), 0);
+	m_IncludedFiles.Add(pNewInc);
+	if (pRefObj)
+		pNewInc->m_sourceLoc = pRefObj->m_sourceLoc;
 }
 
 /** \brief tries to find the function with the given name
@@ -148,42 +117,42 @@ CBEFile::AddIncludedFileName(string sFileName,
 CBEFunction *CBEFile::FindFunction(string sFunctionName,
     FUNCTION_TYPE nFunctionType)
 {
-    if (sFunctionName.empty())
-        return 0;
+	if (sFunctionName.empty())
+		return 0;
 
-    // classes
-    CBEFunction *pFunction = 0;
-    vector<CBEClass*>::iterator iterC;
-    for (iterC = m_Classes.begin();
-	 iterC != m_Classes.end();
-	 iterC++)
-    {
-        if ((pFunction = (*iterC)->FindFunction(sFunctionName,
-		    nFunctionType)) != 0)
-            return pFunction;
-    }
-    // namespaces
-    vector<CBENameSpace*>::iterator iterN;
-    for (iterN = m_NameSpaces.begin();
-	 iterN != m_NameSpaces.end();
-	 iterN++)
-    {
-        if ((pFunction = (*iterN)->FindFunction(sFunctionName,
-		    nFunctionType)) != 0)
-            return pFunction;
-    }
-    // search own functions
-    vector<CBEFunction*>::iterator iterF;
-    for (iterF = m_Functions.begin();
-	 iterF != m_Functions.end();
-	 iterF++)
-    {
-        if ((*iterF)->GetName() == sFunctionName &&
-	    (*iterF)->IsFunctionType(nFunctionType))
-            return *iterF;
-    }
-    // no match found -> return 0
-    return 0;
+	// classes
+	CBEFunction *pFunction = 0;
+	vector<CBEClass*>::iterator iterC;
+	for (iterC = m_Classes.begin();
+		iterC != m_Classes.end();
+		iterC++)
+	{
+		if ((pFunction = (*iterC)->FindFunction(sFunctionName,
+					nFunctionType)) != 0)
+			return pFunction;
+	}
+	// namespaces
+	vector<CBENameSpace*>::iterator iterN;
+	for (iterN = m_NameSpaces.begin();
+		iterN != m_NameSpaces.end();
+		iterN++)
+	{
+		if ((pFunction = (*iterN)->FindFunction(sFunctionName,
+					nFunctionType)) != 0)
+			return pFunction;
+	}
+	// search own functions
+	vector<CBEFunction*>::iterator iterF;
+	for (iterF = m_Functions.begin();
+		iterF != m_Functions.end();
+		iterF++)
+	{
+		if ((*iterF)->GetName() == sFunctionName &&
+			(*iterF)->IsFunctionType(nFunctionType))
+			return *iterF;
+	}
+	// no match found -> return 0
+	return 0;
 }
 
 /** \brief writes includes, which always have to be there
@@ -196,28 +165,28 @@ void CBEFile::WriteDefaultIncludes()
  */
 void CBEFile::WriteInclude(CIncludeStatement *pInclude)
 {
-    string sPrefix;
-    CCompiler::GetBackEndOption(string("include-prefix"), sPrefix);
-    string sFileName = pInclude->m_sFilename;
-    if (!sFileName.empty())
-    {
-        if (pInclude->m_bStandard)
-	    *this << "#include <";
-        else
-	    *this << "#include \"";
-        if (!pInclude->m_bIDLFile || sPrefix.empty())
-        {
-	    *this << sFileName;
-        }
-        else // bIDLFile && !sPrefix.empty()()
-        {
-	    *this << sPrefix << "/" << sFileName;
-        }
-        if (pInclude->m_bStandard)
-	    *this << ">\n";
-        else
-	    *this << "\"\n";
-    }
+	string sPrefix;
+	CCompiler::GetBackEndOption(string("include-prefix"), sPrefix);
+	string sFileName = pInclude->m_sFilename;
+	if (!sFileName.empty())
+	{
+		if (pInclude->m_bStandard)
+			*this << "#include <";
+		else
+			*this << "#include \"";
+		if (!pInclude->m_bIDLFile || sPrefix.empty())
+		{
+			*this << sFileName;
+		}
+		else // bIDLFile && !sPrefix.empty()()
+		{
+			*this << sPrefix << "/" << sFileName;
+		}
+		if (pInclude->m_bStandard)
+			*this << ">\n";
+		else
+			*this << "\"\n";
+	}
 }
 
 /** \brief tries to find a class using its name
@@ -227,21 +196,21 @@ void CBEFile::WriteInclude(CIncludeStatement *pInclude)
  */
 CBEClass* CBEFile::FindClass(string sClassName, CBEClass *pPrev)
 {
-    // first search classes
-    CBEClass *pClass = m_Classes.Find(sClassName, pPrev);
-    if (pClass)
-	return pClass;
-    // then search namespaces
-    vector<CBENameSpace*>::iterator iterN;
-    for (iterN = m_NameSpaces.begin();
-	 iterN != m_NameSpaces.end();
-	 iterN++)
-    {
-        if ((pClass = (*iterN)->FindClass(sClassName, pPrev)) != 0)
-            return pClass;
-    }
-    // not found
-    return 0;
+	// first search classes
+	CBEClass *pClass = m_Classes.Find(sClassName, pPrev);
+	if (pClass)
+		return pClass;
+	// then search namespaces
+	vector<CBENameSpace*>::iterator iterN;
+	for (iterN = m_NameSpaces.begin();
+		iterN != m_NameSpaces.end();
+		iterN++)
+	{
+		if ((pClass = (*iterN)->FindClass(sClassName, pPrev)) != 0)
+			return pClass;
+	}
+	// not found
+	return 0;
 }
 
 /** \brief tries to find a namespace using a name
@@ -250,22 +219,22 @@ CBEClass* CBEFile::FindClass(string sClassName, CBEClass *pPrev)
  */
 CBENameSpace* CBEFile::FindNameSpace(string sNameSpaceName)
 {
-    // search the namespace
-    CBENameSpace *pNameSpace = m_NameSpaces.Find(sNameSpaceName);
-    if (pNameSpace)
-	return pNameSpace;
-    // search nested namespaces
-    CBENameSpace *pFoundNameSpace = 0;
-    vector<CBENameSpace*>::iterator iterN;
-    for (iterN = m_NameSpaces.begin();
-	 iterN != m_NameSpaces.end();
-	 iterN++)
-    {
-        if ((pFoundNameSpace = (*iterN)->FindNameSpace(sNameSpaceName)) != 0)
-            return pFoundNameSpace;
-    }
-    // nothing found
-    return 0;
+	// search the namespace
+	CBENameSpace *pNameSpace = m_NameSpaces.Find(sNameSpaceName);
+	if (pNameSpace)
+		return pNameSpace;
+	// search nested namespaces
+	CBENameSpace *pFoundNameSpace = 0;
+	vector<CBENameSpace*>::iterator iterN;
+	for (iterN = m_NameSpaces.begin();
+		iterN != m_NameSpaces.end();
+		iterN++)
+	{
+		if ((pFoundNameSpace = (*iterN)->FindNameSpace(sNameSpaceName)) != 0)
+			return pFoundNameSpace;
+	}
+	// nothing found
+	return 0;
 }
 
 /** \brief returns the number of functions in the function vector
@@ -285,26 +254,26 @@ int CBEFile::GetFunctionCount()
  */
 bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
 {
-    if (m_nFileType == nFileType)
-        return true;
-    if ((nFileType == FILETYPE_CLIENT) &&
-        ((m_nFileType == FILETYPE_CLIENTHEADER) ||
-         (m_nFileType == FILETYPE_CLIENTIMPLEMENTATION)))
-        return true;
-    if ((nFileType == FILETYPE_COMPONENT) &&
-        ((m_nFileType == FILETYPE_COMPONENTHEADER) ||
-         (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION)))
-        return true;
-    if ((nFileType == FILETYPE_HEADER) &&
-	((m_nFileType == FILETYPE_CLIENTHEADER) ||
-	 (m_nFileType == FILETYPE_COMPONENTHEADER) ||
-	 (m_nFileType == FILETYPE_OPCODE)))
-	return true;
-    if ((nFileType == FILETYPE_IMPLEMENTATION) &&
-	((m_nFileType == FILETYPE_CLIENTIMPLEMENTATION) ||
-	 (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION)))
-	return true;
-    return false;
+	if (m_nFileType == nFileType)
+		return true;
+	if ((nFileType == FILETYPE_CLIENT) &&
+		((m_nFileType == FILETYPE_CLIENTHEADER) ||
+		 (m_nFileType == FILETYPE_CLIENTIMPLEMENTATION)))
+		return true;
+	if ((nFileType == FILETYPE_COMPONENT) &&
+		((m_nFileType == FILETYPE_COMPONENTHEADER) ||
+		 (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION)))
+		return true;
+	if ((nFileType == FILETYPE_HEADER) &&
+		((m_nFileType == FILETYPE_CLIENTHEADER) ||
+		 (m_nFileType == FILETYPE_COMPONENTHEADER) ||
+		 (m_nFileType == FILETYPE_OPCODE)))
+		return true;
+	if ((nFileType == FILETYPE_IMPLEMENTATION) &&
+		((m_nFileType == FILETYPE_CLIENTIMPLEMENTATION) ||
+		 (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION)))
+		return true;
+	return false;
 }
 
 /** \brief test if this file contains a function with a given type
@@ -313,37 +282,37 @@ bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
  */
 bool CBEFile::HasFunctionWithUserType(string sTypeName)
 {
-    vector<CBENameSpace*>::iterator iterN;
-    for (iterN = m_NameSpaces.begin();
-	 iterN != m_NameSpaces.end();
-	 iterN++)
-    {
-        if ((*iterN)->HasFunctionWithUserType(sTypeName, this))
-            return true;
-    }
-    vector<CBEClass*>::iterator iterC;
-    for (iterC = m_Classes.begin();
-	 iterC != m_Classes.end();
-	 iterC++)
-    {
-        if ((*iterC)->HasFunctionWithUserType(sTypeName, this))
-           return true;
-    }
-    vector<CBEFunction*>::iterator iterF;
-    for (iterF = m_Functions.begin();
-	 iterF != m_Functions.end();
-	 iterF++)
-    {
-        if (dynamic_cast<CBEHeaderFile*>(this) &&
-            (*iterF)->DoWriteFunction((CBEHeaderFile*)this) &&
-            (*iterF)->FindParameterType(sTypeName))
-            return true;
-        if (dynamic_cast<CBEImplementationFile*>(this) &&
-            (*iterF)->DoWriteFunction((CBEImplementationFile*)this) &&
-            (*iterF)->FindParameterType(sTypeName))
-            return true;
-    }
-    return false;
+	vector<CBENameSpace*>::iterator iterN;
+	for (iterN = m_NameSpaces.begin();
+		iterN != m_NameSpaces.end();
+		iterN++)
+	{
+		if ((*iterN)->HasFunctionWithUserType(sTypeName, this))
+			return true;
+	}
+	vector<CBEClass*>::iterator iterC;
+	for (iterC = m_Classes.begin();
+		iterC != m_Classes.end();
+		iterC++)
+	{
+		if ((*iterC)->HasFunctionWithUserType(sTypeName, this))
+			return true;
+	}
+	vector<CBEFunction*>::iterator iterF;
+	for (iterF = m_Functions.begin();
+		iterF != m_Functions.end();
+		iterF++)
+	{
+		if (dynamic_cast<CBEHeaderFile*>(this) &&
+			(*iterF)->DoWriteFunction((CBEHeaderFile*)this) &&
+			(*iterF)->FindParameterType(sTypeName))
+			return true;
+		if (dynamic_cast<CBEImplementationFile*>(this) &&
+			(*iterF)->DoWriteFunction((CBEImplementationFile*)this) &&
+			(*iterF)->FindParameterType(sTypeName))
+			return true;
+	}
+	return false;
 }
 
 /** \brief writes an introductionary notice
@@ -353,44 +322,44 @@ bool CBEFile::HasFunctionWithUserType(string sTypeName)
  */
 void CBEFile::WriteIntro()
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFile::%s called\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFile::%s called\n", __func__);
 
-    *this <<
-	"/*\n" <<
-	" * THIS FILE IS MACHINE GENERATED!";
-    if (m_nFileType == FILETYPE_TEMPLATE)
-    {
-	*this << "\n" <<
-	    " *\n" <<
-	    " * Implement the server templates here.\n" <<
-	    " * This file is regenerated with every run of 'dice -t ...'.\n" <<
-	    " * Move it to another location after modifications to\n" <<
-	    " * keep your changes!\n";
-    }
-    else
-	*this << " DO NOT EDIT!\n";
-    *this << " *\n";
-    *this << " * " << m_sFilename << "\n";
-    *this << " * created ";
+	*this <<
+		"/*\n" <<
+		" * THIS FILE IS MACHINE GENERATED!";
+	if (m_nFileType == FILETYPE_TEMPLATE)
+	{
+		*this << "\n" <<
+			" *\n" <<
+			" * Implement the server templates here.\n" <<
+			" * This file is regenerated with every run of 'dice -t ...'.\n" <<
+			" * Move it to another location after modifications to\n" <<
+			" * keep your changes!\n";
+	}
+	else
+		*this << " DO NOT EDIT!\n";
+	*this << " *\n";
+	*this << " * " << m_sFilename << "\n";
+	*this << " * created ";
 
-    char * user = getlogin();
-    if (user)
-    {
-	*this << "by " << user;
+	char * user = getlogin();
+	if (user)
+	{
+		*this << "by " << user;
 
-	char host[255];
-	if (!gethostname(host, sizeof(host)))
-	    *this << "@" << host;
+		char host[255];
+		if (!gethostname(host, sizeof(host)))
+			*this << "@" << host;
 
-	*this << " ";
-    }
+		*this << " ";
+	}
 
-    time_t t = time(NULL);
-    *this << "on " << ctime(&t);
-    *this << " * with Dice version " << dice_version << " (compiled on " <<
-	dice_build << ")\n";
-    *this << " * send bug reports to <dice@os.inf.tu-dresden.de>\n";
-    *this << " */\n\n";
+	time_t t = time(0);
+	*this << "on " << ctime(&t);
+	*this << " * with Dice version " << dice_version << " (compiled on " <<
+		dice_build << ")\n";
+	*this << " * send bug reports to <dice@os.inf.tu-dresden.de>\n";
+	*this << " */\n\n";
 }
 
 /** \brief creates a list of ordered elements
@@ -401,40 +370,40 @@ void CBEFile::WriteIntro()
  */
 void CBEFile::CreateOrderedElementList()
 {
-    // clear vector
-    m_vOrderedElements.clear();
-    // Includes
-    vector<CIncludeStatement*>::iterator iterI;
-    for (iterI = m_IncludedFiles.begin();
-	 iterI != m_IncludedFiles.end();
-	 iterI++)
-    {
-        InsertOrderedElement(*iterI);
-    }
-    // namespaces
-    vector<CBENameSpace*>::iterator iterN;
-    for (iterN = m_NameSpaces.begin();
-	 iterN != m_NameSpaces.end();
-	 iterN++)
-    {
-        InsertOrderedElement(*iterN);
-    }
-    // classes
-    vector<CBEClass*>::iterator iterC;
-    for (iterC = m_Classes.begin();
-	 iterC != m_Classes.end();
-	 iterC++)
-    {
-        InsertOrderedElement(*iterC);
-    }
-    // functions
-    vector<CBEFunction*>::iterator iterF;
-    for (iterF = m_Functions.begin();
-	 iterF != m_Functions.end();
-	 iterF++)
-    {
-        InsertOrderedElement(*iterF);
-    }
+	// clear vector
+	m_vOrderedElements.clear();
+	// Includes
+	vector<CIncludeStatement*>::iterator iterI;
+	for (iterI = m_IncludedFiles.begin();
+		iterI != m_IncludedFiles.end();
+		iterI++)
+	{
+		InsertOrderedElement(*iterI);
+	}
+	// namespaces
+	vector<CBENameSpace*>::iterator iterN;
+	for (iterN = m_NameSpaces.begin();
+		iterN != m_NameSpaces.end();
+		iterN++)
+	{
+		InsertOrderedElement(*iterN);
+	}
+	// classes
+	vector<CBEClass*>::iterator iterC;
+	for (iterC = m_Classes.begin();
+		iterC != m_Classes.end();
+		iterC++)
+	{
+		InsertOrderedElement(*iterC);
+	}
+	// functions
+	vector<CBEFunction*>::iterator iterF;
+	for (iterF = m_Functions.begin();
+		iterF != m_Functions.end();
+		iterF++)
+	{
+		InsertOrderedElement(*iterF);
+	}
 }
 
 /** \brief insert one element into the ordered list
@@ -444,21 +413,21 @@ void CBEFile::CreateOrderedElementList()
  */
 void CBEFile::InsertOrderedElement(CObject *pObj)
 {
-    // get source line number
-    unsigned int nLine = pObj->m_sourceLoc.getBeginLine();
-    // search for element with larger number
-    vector<CObject*>::iterator iter = m_vOrderedElements.begin();
-    for (; iter != m_vOrderedElements.end(); iter++)
-    {
-        if ((*iter)->m_sourceLoc.getBeginLine() > nLine)
-        {
-            // insert before that element
-            m_vOrderedElements.insert(iter, pObj);
-            return;
-        }
-    }
-    // new object is bigger that all existing
-    m_vOrderedElements.push_back(pObj);
+	// get source line number
+	unsigned int nLine = pObj->m_sourceLoc.getBeginLine();
+	// search for element with larger number
+	vector<CObject*>::iterator iter = m_vOrderedElements.begin();
+	for (; iter != m_vOrderedElements.end(); iter++)
+	{
+		if ((*iter)->m_sourceLoc.getBeginLine() > nLine)
+		{
+			// insert before that element
+			m_vOrderedElements.insert(iter, pObj);
+			return;
+		}
+	}
+	// new object is bigger that all existing
+	m_vOrderedElements.push_back(pObj);
 }
 
 /** \brief specializaion of stream operator for strings
@@ -469,42 +438,42 @@ void CBEFile::InsertOrderedElement(CObject *pObj)
  */
 std::ofstream& CBEFile::operator<<(string s)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEFile::%s(str:\"%s\") called\n", __func__, s.c_str());
-
-    if (s.empty())
-	return *this;
-
-    if (s[0] == '\t')
-    {
-	PrintIndent();
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "CBEFile::%s(str) print substr after indent\n", __func__);
-	*this << s.substr(1);
-	return *this;
-    }
+		"CBEFile::%s(str:\"%s\") called\n", __func__, s.c_str());
 
-    string::size_type pos = s.find('\n');
-    if (pos != string::npos &&
-	pos != s.length())
-    {
-	/* first print everything up to \n */
+	if (s.empty())
+		return *this;
+
+	if (s[0] == '\t')
+	{
+		PrintIndent();
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEFile::%s(str) print substr after indent\n", __func__);
+		*this << s.substr(1);
+		return *this;
+	}
+
+	string::size_type pos = s.find('\n');
+	if (pos != string::npos &&
+		pos != s.length())
+	{
+		/* first print everything up to \n */
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEFile::%s(str) print substr 1\n", __func__);
+		write(s.substr(0, pos + 1).c_str(), s.substr(0, pos + 1).length());
+
+		/* then call ourselves with the rest */
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEFile::%s(str) print substr 2\n", __func__);
+		*this << s.substr(pos + 1);
+		return *this;
+	}
+
+	/* simple string */
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "CBEFile::%s(str) print substr 1\n", __func__);
-	write(s.substr(0, pos + 1).c_str(), s.substr(0, pos + 1).length());
-
-	/* then call ourselves with the rest */
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "CBEFile::%s(str) print substr 2\n", __func__);
-	*this << s.substr(pos + 1);
+		"CBEFile::%s(str) calling base class\n", __func__);
+	write(s.c_str(), s.length());
 	return *this;
-    }
-
-    /* simple string */
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEFile::%s(str) calling base class\n", __func__);
-    write(s.c_str(), s.length());
-    return *this;
 }
 
 /** \brief specialization of stream operator for character arrays

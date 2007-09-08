@@ -37,40 +37,37 @@
 #include <cassert>
 
 CFEConstDeclarator::CFEConstDeclarator(CFETypeSpec * pConstType,
-    string sConstName,
-    CFEExpression * pConstValue)
-: m_pConstType(pConstType),
-    m_sConstName(sConstName),
-    m_pConstValue(pConstValue)
+	string sConstName,
+	CFEExpression * pConstValue)
+: CFEInterfaceComponent(static_cast<CObject*>(0)),
+	m_pConstType(pConstType),
+	m_sConstName(sConstName),
+	m_pConstValue(pConstValue)
 { }
 
-CFEConstDeclarator::CFEConstDeclarator(CFEConstDeclarator & src)
-:CFEInterfaceComponent(src)
+CFEConstDeclarator::CFEConstDeclarator(CFEConstDeclarator* src)
+: CFEInterfaceComponent(src)
 {
-    m_sConstName = src.m_sConstName;
-    if (src.m_pConstType)
-    {
-	m_pConstType = (CFETypeSpec *) (src.m_pConstType->Clone());
-	m_pConstType->SetParent(this);
-    }
-    else
-	m_pConstType = 0;
-    if (src.m_pConstValue)
-    {
-	m_pConstValue = (CFEExpression *) (src.m_pConstValue->Clone());
-	m_pConstValue->SetParent(this);
-    }
-    else
-	m_pConstValue = 0;
+	m_sConstName = src->m_sConstName;
+	CLONE_MEM(CFETypeSpec, m_pConstType);
+	CLONE_MEM(CFEExpression, m_pConstValue);
 }
 
 /** cleans up the constant declarator (frees all members) */
 CFEConstDeclarator::~CFEConstDeclarator()
 {
-    if (m_pConstType)
-	delete m_pConstType;
-    if (m_pConstValue)
-	delete m_pConstValue;
+	if (m_pConstType)
+		delete m_pConstType;
+	if (m_pConstValue)
+		delete m_pConstValue;
+}
+
+/** \brief create a copy of this object
+ *  \return reference to clone
+ */
+CObject* CFEConstDeclarator::Clone()
+{
+	return new CFEConstDeclarator(this);
 }
 
 /** returns the type of the constant
@@ -78,7 +75,7 @@ CFEConstDeclarator::~CFEConstDeclarator()
  */
 CFETypeSpec *CFEConstDeclarator::GetType()
 {
-    return m_pConstType;
+	return m_pConstType;
 }
 
 /** returns the name of the constant
@@ -86,7 +83,7 @@ CFETypeSpec *CFEConstDeclarator::GetType()
  */
 string CFEConstDeclarator::GetName()
 {
-    return m_sConstName;
+	return m_sConstName;
 }
 
 /** \brief tries to match the internal name with the given argument
@@ -95,7 +92,7 @@ string CFEConstDeclarator::GetName()
  */
 bool CFEConstDeclarator::Match(string sName)
 {
-    return GetName() == sName;
+	return GetName() == sName;
 }
 
 /** returns the value (the expression) of the constant
@@ -103,15 +100,7 @@ bool CFEConstDeclarator::Match(string sName)
  */
 CFEExpression *CFEConstDeclarator::GetValue()
 {
-    return m_pConstValue;
-}
-
-/** \brief creates a copy of this object
- *  \return a copy of this object
- */
-CObject *CFEConstDeclarator::Clone()
-{
-    return new CFEConstDeclarator(*this);
+	return m_pConstValue;
 }
 
 /** \brief accepts the iteration of the visitors
@@ -119,5 +108,5 @@ CObject *CFEConstDeclarator::Clone()
  */
 void CFEConstDeclarator::Accept(CVisitor& v)
 {
-    v.Visit(*this);
+	v.Visit(*this);
 }

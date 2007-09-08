@@ -4,6 +4,7 @@ import <l4/l4vfs/types.h>
 
 import <l4/l4vfs/common_io_notify.idl>
 import <l4/l4vfs/object_server.idl>
+import <l4/l4vfs/select_notify.idl>
 
 library l4vfs_term_server
 {
@@ -11,7 +12,9 @@ library l4vfs_term_server
      * by the term server for internal use only.
      */
     [uuid(64)]
-    interface main : l4vfs::object_server, l4vfs::common_io_notify
+    interface main : l4vfs::object_server,
+	                 l4vfs::common_io_notify,
+					 l4vfs::select_notify
     {
     };
 };

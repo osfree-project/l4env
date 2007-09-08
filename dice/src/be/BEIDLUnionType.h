@@ -49,11 +49,11 @@ protected:
     /** \brief copy constructor
      *  \param src the source to copy from
      */
-    CBEIDLUnionType(CBEIDLUnionType &src);
+    CBEIDLUnionType(CBEIDLUnionType* src);
 
 public:
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
-    virtual CObject* Clone();
+	virtual CObject* Clone();
 
     CBETypedDeclarator* GetSwitchVariable();
     CBETypedDeclarator* GetUnionVariable();

@@ -66,6 +66,9 @@ int init_termstate(termstate_t * term, int w, int h, int hist)
     term->scroll_top        = 0;
     term->scroll_bottom     = term->phys_h - 1;
     term->tab_last          = -1;
+
+    vt100_unset_select_info(term);
+
     LOG("cols:%d, lines:%d, hist:%d", term->w, term->phys_h, hist);
 
     free(term->text);
