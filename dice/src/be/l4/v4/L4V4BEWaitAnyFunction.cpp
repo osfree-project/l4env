@@ -79,7 +79,7 @@ CL4V4BEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
     WriteIPC(pFile);
 
     // store message
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     pFile << "\tL4_MsgStore (" << sMsgTag << ", (L4_Msg_t*) " <<
 	((bVarSized) ? "" : "&") << pMsgBuffer->m_Declarators.First()->GetName() <<
@@ -130,7 +130,7 @@ void CL4V4BEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
     }
 
     /* the opcode is the label in the msgtag */
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     /* get name of opcode (return variable) */
     CBETypedDeclarator *pReturn = GetReturnVariable();
@@ -152,7 +152,7 @@ void CL4V4BEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
 void
 CL4V4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
     pFile << "\t/* test for IPC errors */\n";
@@ -212,7 +212,7 @@ CL4V4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bComponen
     CBEWaitAnyFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
     // need message tag
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
     AddLocalVariable(sType, sMsgTag, 0);

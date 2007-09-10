@@ -154,7 +154,7 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
 int
 CBESizes::GetSizeOfType(string sUserType)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     int nType;
     for (nType = TYPE_NONE; nType < TYPE_MAX; nType++)
     {

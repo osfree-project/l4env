@@ -40,6 +40,8 @@
 #include "BESwitchCase.h"
 #include "BEStructType.h"
 #include "BEUnionType.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Attribute-Type.h"
 #include "fe/FEDeclarator.h"
@@ -309,7 +311,7 @@ CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator)
 
     if (pFEEnumDeclarator->GetInitialValue())
     {
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
         m_pInitialValue = pCF->GetNewExpression();
         m_pInitialValue->SetParent(this);
 	m_pInitialValue->CreateBackEnd(pFEEnumDeclarator->GetInitialValue());
@@ -497,7 +499,7 @@ CBEDeclarator::GetArrayDimension(CFEExpression * pLower,
         }
     }
     // create new back-end expression
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBEExpression *pReturn = pCF->GetNewExpression();
     pReturn->SetParent(this);
     pReturn->CreateBackEnd(pNew);

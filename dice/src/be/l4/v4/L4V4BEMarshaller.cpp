@@ -247,7 +247,7 @@ void CL4V4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE 
 	pFile << "(*";
 
 	// write type cast for restring
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
 	pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
 	pType->WriteCast(pFile, true);
@@ -276,7 +276,7 @@ void CL4V4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE 
  */
 bool CL4V4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
 	if (!pMember->m_Declarators.Find(sName))
 		return false;

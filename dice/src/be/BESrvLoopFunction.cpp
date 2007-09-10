@@ -40,6 +40,8 @@
 #include "BEHeaderFile.h"
 #include "BEDeclarator.h"
 #include "BEMsgBuffer.h"
+#include "BEClassFactory.h"
+#include "BENameFactory.h"
 #include "Trace.h"
 #include "TypeSpec-Type.h"
 #include "fe/FEInterface.h"
@@ -143,7 +145,7 @@ void CBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bCompon
  */
 CBEFunction* CBESrvLoopFunction::FindGlobalFunction(CFEInterface *pFEInterface, FUNCTION_TYPE nFunctionType)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sFuncName = pNF->GetFunctionName(pFEInterface, nFunctionType, IsComponentSide());
 	CBERoot *pRoot = GetSpecificParent<CBERoot>();
 	assert(pRoot);
@@ -183,13 +185,13 @@ void CBESrvLoopFunction::SetCallVariables(CBEFunction *pFunction)
 bool
 CBESrvLoopFunction::AddReplyVariable()
 {
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBEReplyCodeType *pReplyType = pCF->GetNewReplyCodeType();
     CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
     pReplyType->SetParent(pVariable);
     AddLocalVariable(pVariable);
     pReplyType->CreateBackEnd();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sReply = pNF->GetReplyCodeVariable();
     pVariable->CreateBackEnd(pReplyType, sReply);
     delete pReplyType;
@@ -220,8 +222,8 @@ CBESrvLoopFunction::CreateObject()
 {
     CBEInterfaceFunction::CreateObject();
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
 
     // create CORBA_Object_base type
     string sTypeName("CORBA_Object_base");
@@ -326,7 +328,7 @@ void CBESrvLoopFunction::WriteLoop(CBEFile& pFile)
     if (m_pTrace)
 	m_pTrace->BeforeLoop(pFile, this);
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sOpcodeVar = pNF->GetOpcodeVariable();
     m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
 
@@ -359,7 +361,7 @@ CBESrvLoopFunction::WriteDispatchInvocation(CBEFile& pFile)
 	if (m_pTrace)
 	    m_pTrace->BeforeDispatch(pFile, this);
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sReply = pNF->GetReplyCodeVariable();
         m_pDispatchFunction->WriteCall(pFile, sReply, true);
 
@@ -451,7 +453,7 @@ DIRECTION_TYPE CBESrvLoopFunction::GetReceiveDirection()
 void
 CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerParam = pNF->GetServerParameterName();
     CBETypedDeclarator *pEnv = GetEnvironment();
     CBEDeclarator *pDecl = pEnv->m_Declarators.First();
@@ -566,7 +568,7 @@ CBESrvLoopFunction::AddParameters()
 {
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
     pParameter->SetParent(this);
 
@@ -574,7 +576,7 @@ CBESrvLoopFunction::AddParameters()
     pType->SetParent(pParameter);
     pType->CreateBackEnd(false, 0, TYPE_VOID);
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName = pNF->GetServerParameterName();
     pParameter->CreateBackEnd(pType, sName);
     delete pType; // cloned in CBETypedDeclarator::CreateBackEnd

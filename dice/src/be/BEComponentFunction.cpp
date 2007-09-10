@@ -41,6 +41,8 @@
 #include "BEExpression.h"
 #include "BEReplyCodeType.h"
 #include "BEAttribute.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "Attribute-Type.h"
@@ -94,7 +96,7 @@ void CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
 		nFunctionType = FUNCTION_CALL;
 
 	string exc = string(__func__);
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sFunctionName = pNF->GetFunctionName(pFEOperation, nFunctionType, bComponentSide);
 	m_pFunction = pRoot->FindFunction(sFunctionName, nFunctionType);
 	if (!m_pFunction)
@@ -205,11 +207,11 @@ void CBEComponentFunction::AddAfterParameters()
 	if (m_Attributes.Find(ATTR_ALLOW_REPLY_ONLY))
 	{
 		// return type -> set to IPC reply code
-		CBEClassFactory *pCF = CCompiler::GetClassFactory();
+		CBEClassFactory *pCF = CBEClassFactory::Instance();
 		CBEReplyCodeType *pReplyType = pCF->GetNewReplyCodeType();
 		pReplyType->CreateBackEnd();
 
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sReply = pNF->GetReplyCodeVariable();
 		CBETypedDeclarator *pReplyVar = new CBETypedDeclarator();
 		pReplyVar->CreateBackEnd(pReplyType, sReply);
@@ -382,7 +384,7 @@ CBEComponentFunction::AddToImpl(CBEImplementationFile* pImpl)
  */
 void CBEComponentFunction::SetTargetFileName(CFEBase * pFEObject)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	CBEOperationFunction::SetTargetFileName(pFEObject);
 	if (!dynamic_cast<CFEFile*>(pFEObject))
 		pFEObject = pFEObject->GetSpecificParent<CFEFile>(0);

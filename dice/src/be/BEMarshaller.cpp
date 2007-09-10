@@ -559,7 +559,7 @@ CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 		__func__, pMember->m_Declarators.First()->GetName().c_str());
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetOpcodeVariable();
 	// check name of member
 	if (!pMember->m_Declarators.Find(sName))
@@ -606,7 +606,7 @@ CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember)
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 		__func__, pMember->m_Declarators.First()->GetName().c_str());
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetExceptionWordVariable();
 	if (!pMember->m_Declarators.Find(sName))
 		return false;
@@ -711,7 +711,7 @@ CBEMarshaller::MarshalReturn(CBEFile& pFile, CBETypedDeclarator *pMember)
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 		__func__, pMember->m_Declarators.First()->GetName().c_str());
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// check if member is return variable
 	string sName = pNF->GetReturnVariable();
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -839,7 +839,7 @@ CBEMarshaller::WriteMember(CBEFile& pFile,
 	// variable sized members of constructed types can have an "alias" member
 	// in the message buffer. We test for these variable sized members and try
 	// to find the alias. If one exists, we have to construct a new stack.
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetLocalVariableName(pStack);
 	CBETypedDeclarator *pAlias = pMsgBuffer->FindMember(sName, m_pFunction,
 		nType);
@@ -986,7 +986,7 @@ CBEMarshaller::MarshalString(CBEFile& pFile,
 	assert(pStruct);
 
 	// get name of size variable added by us
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sSize = pNF->GetLocalSizeVariableName(pStack);
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBEMarshaller::%s determined size var as %s\n", __func__,

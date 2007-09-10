@@ -67,7 +67,7 @@ CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide
     CBEWaitFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
     // add local variables
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
     AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
@@ -82,8 +82,8 @@ CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide
 void
 CL4BEWaitFunction::CreateEnvironment()
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// if function is at server side, this is a CORBA_Server_Environment
 	string sTypeName = "CORBA_Server_Environment";
 	string sName = pNF->GetCorbaEnvironmentVariable();
@@ -118,7 +118,7 @@ CL4BEWaitFunction::WriteInvocation(CBEFile& pFile)
 void
 CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     if (!m_sErrorFunction.empty())
     {
@@ -216,7 +216,7 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 	// delimiter flexpage which is two zero dwords
 	pFile << "\t{\n";
 	// search for delimiter flexpage
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sTempVar = pNF->GetTempOffsetVariable();
 	// init temp var
 	++pFile << "\t" << sTempVar << " = 0;\n";

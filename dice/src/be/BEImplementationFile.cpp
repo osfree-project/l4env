@@ -32,6 +32,8 @@
 #include "BEFunction.h"
 #include "BEClass.h"
 #include "BENameSpace.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Trace.h"
 #include "IncludeStatement.h"
 #include "Compiler.h"
@@ -83,7 +85,7 @@ CBEImplementationFile::CreateBackEnd(CFEFile * pFEFile,
     FILE_TYPE nFileType)
 {
     m_nFileType = nFileType;
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     m_sFilename = pNF->GetFileName(pFEFile, m_nFileType);
     CBEHeaderFile* pHeader = GetHeaderFile();
     if (pHeader)
@@ -100,7 +102,7 @@ CBEImplementationFile::CreateBackEnd(CFELibrary * pFELibrary,
     FILE_TYPE nFileType)
 {
     m_nFileType = nFileType;
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     m_sFilename = pNF->GetFileName(pFELibrary, m_nFileType);
     CBEHeaderFile* pHeader = GetHeaderFile();
     if (pHeader)
@@ -117,7 +119,7 @@ CBEImplementationFile::CreateBackEnd(CFEInterface *pFEInterface,
     FILE_TYPE nFileType)
 {
     m_nFileType = nFileType;
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     m_sFilename = pNF->GetFileName(pFEInterface, m_nFileType);
     CBEHeaderFile* pHeader = GetHeaderFile();
     if (pHeader)
@@ -134,7 +136,7 @@ CBEImplementationFile::CreateBackEnd(CFEOperation * pFEOperation,
     FILE_TYPE nFileType)
 {
     m_nFileType = nFileType;
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     m_sFilename = pNF->GetFileName(pFEOperation, m_nFileType);
     CBEHeaderFile* pHeader = GetHeaderFile();
     if (pHeader)
@@ -292,7 +294,7 @@ CBEImplementationFile::WriteDefaultIncludes()
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CTrace *pTrace = pCF->GetNewTrace();
     if (pTrace)
 	pTrace->DefaultIncludes(*(CBEFile*)this);

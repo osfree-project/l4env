@@ -37,6 +37,8 @@
 #include "BEClass.h"
 #include "BEStructType.h"
 #include "BEUnionType.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Trace.h"
 #include "IncludeStatement.h"
 #include "Compiler.h"
@@ -82,7 +84,7 @@ void CBEHeaderFile::CreateBackEnd(CFEFile * pFEFile, FILE_TYPE nFileType)
 		__func__, pFEFile->GetFileName().c_str());
 
 	m_nFileType = nFileType;
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	m_sFilename = pNF->GetFileName(pFEFile, m_nFileType);
 	m_sIncludeName = pNF->GetIncludeFileName(pFEFile, m_nFileType);
 
@@ -125,7 +127,7 @@ void CBEHeaderFile::CreateBackEnd(CFELibrary * pFELibrary, FILE_TYPE nFileType)
 		pFELibrary->GetName().c_str());
 
 	m_nFileType = nFileType;
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	m_sFilename = pNF->GetFileName(pFELibrary, m_nFileType);
 	m_sIncludeName = pNF->GetIncludeFileName(pFELibrary, m_nFileType);
 }
@@ -142,7 +144,7 @@ void CBEHeaderFile::CreateBackEnd(CFEInterface * pFEInterface, FILE_TYPE nFileTy
 		pFEInterface->GetName().c_str());
 
 	m_nFileType = nFileType;
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	m_sFilename = pNF->GetFileName(pFEInterface, m_nFileType);
 	m_sIncludeName = pNF->GetIncludeFileName(pFEInterface, m_nFileType);
 }
@@ -159,7 +161,7 @@ void CBEHeaderFile::CreateBackEnd(CFEOperation * pFEOperation, FILE_TYPE nFileTy
 		pFEOperation->GetName().c_str());
 
 	m_nFileType = nFileType;
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	m_sFilename = pNF->GetFileName(pFEOperation, m_nFileType);
 	m_sIncludeName= pNF->GetIncludeFileName(pFEOperation, m_nFileType);
 }
@@ -212,7 +214,7 @@ void CBEHeaderFile::Write()
 		"CBEHeaderFile::%s write intro\n", __func__);
 	WriteIntro();
 	// write include define
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sDefine = pNF->GetHeaderDefine(GetFileName());
 	if (!sDefine.empty())
 	{
@@ -354,7 +356,7 @@ void CBEHeaderFile::WriteDefaultIncludes()
 		"#define DICE_SUBMINOR_VERSION " << ver.substr(r+1) << "\n" <<
 		"#endif\n\n";
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CTrace *pTrace = pCF->GetNewTrace();
 	if (pTrace)
 		pTrace->DefaultIncludes(*this);
@@ -466,7 +468,7 @@ void CBEHeaderFile::WriteTaggedType(CBEType *pType)
 		sTag = ((CBEStructType*)pType)->GetTag();
 	if (dynamic_cast<CBEUnionType*>(pType))
 		sTag = ((CBEUnionType*)pType)->GetTag();
-	sTag = CCompiler::GetNameFactory()->GetTypeDefine(sTag);
+	sTag = CBENameFactory::Instance()->GetTypeDefine(sTag);
 	*this <<
 		"#ifndef " << sTag << "\n" <<
 		"#define " << sTag << "\n";

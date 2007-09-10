@@ -26,15 +26,17 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEOperationFunction.h"
-#include "be/BEContext.h"
-#include "be/BEAttribute.h"
-#include "be/BEType.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BEDeclarator.h"
-#include "be/BEClass.h"
-#include "be/BEMarshaller.h"
-#include "be/BERoot.h"
+#include "BEOperationFunction.h"
+#include "BEContext.h"
+#include "BEAttribute.h"
+#include "BEType.h"
+#include "BETypedDeclarator.h"
+#include "BEDeclarator.h"
+#include "BEClass.h"
+#include "BEMarshaller.h"
+#include "BERoot.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "fe/FEOperation.h"
@@ -68,7 +70,7 @@ void CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
 	// basic init
 	CBEFunction::CreateBackEnd(pFEOperation, bComponentSide);
 	// add return type
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sReturn = pNF->GetReturnVariable();
 	if (!SetReturnVar(pFEOperation->GetReturnType(), sReturn))
 	{
@@ -147,7 +149,7 @@ void CBEOperationFunction::AddParameters(CFEOperation * pFEOperation)
 void CBEOperationFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
 	CBETypedDeclarator *pParameter =
-		CCompiler::GetClassFactory()->GetNewTypedDeclarator();
+		CBEClassFactory::Instance()->GetNewTypedDeclarator();
 	m_Parameters.Add(pParameter);
 	pParameter->CreateBackEnd(pFEParameter);
 }
@@ -173,7 +175,7 @@ void CBEOperationFunction::AddExceptions(CFEOperation * pFEOperation)
  */
 void CBEOperationFunction::AddException(CFEIdentifier * pFEException)
 {
-    CBEDeclarator *pException = CCompiler::GetClassFactory()->GetNewDeclarator();
+    CBEDeclarator *pException = CBEClassFactory::Instance()->GetNewDeclarator();
     m_Exceptions.Add(pException);
     pException->CreateBackEnd(pFEException);
 }
@@ -222,7 +224,7 @@ CBEOperationFunction::AddAttribute(CFEAttribute * pFEAttribute)
     case ATTR_DEFAULT_TIMEOUT:
 	/* keep attribute */
 	{
-	    CBEAttribute *pAttribute = CCompiler::GetClassFactory()->GetNewAttribute();
+	    CBEAttribute *pAttribute = CBEClassFactory::Instance()->GetNewAttribute();
 	    m_Attributes.Add(pAttribute);
 	    pAttribute->CreateBackEnd(pFEAttribute);
 	}

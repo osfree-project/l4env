@@ -65,7 +65,7 @@ void CBEReplyCodeType::CreateBackEnd()
 	m_bUnsigned = false;
 	m_nSize = 2;    // bytes
 	m_nFEType = TYPE_INTEGER;
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	m_sName = pNF->GetTypeName(m_nFEType, false, m_nSize);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,

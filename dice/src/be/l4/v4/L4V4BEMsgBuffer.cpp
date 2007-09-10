@@ -38,6 +38,7 @@
 #include "be/BEContext.h"
 #include "be/BEUserDefinedType.h"
 #include "be/BEMsgBufferType.h"
+#include "be/BEClassFactory.h"
 #include "fe/FEOperation.h"
 #include "Compiler.h"
 #include "Error.h"
@@ -91,22 +92,20 @@ void CL4V4BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStr
  *
  * Do sort the message tag up front.
  */
-bool CL4V4BEMsgBuffer::Sort(CBEStructType *pStruct)
+void CL4V4BEMsgBuffer::Sort(CBEStructType *pStruct)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"%s called for struct\n", __func__);
 
 	// sort payload
-	if (!CL4BEMsgBuffer::Sort(pStruct))
-		return false;
+	CL4BEMsgBuffer::Sort(pStruct);
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// find msgtag
 	string sName = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 	pStruct->m_Members.Move(sName, 0);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
-	return true;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
 }
 
 /** \brief writes the initialization of specific members
@@ -218,7 +217,7 @@ void CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile, CBEFunction *pFunctio
 		nWords);
 
 	// get name of member
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
 	pFile << "\t";
@@ -314,11 +313,11 @@ int CL4V4BEMsgBuffer::GetPayloadOffset()
 CBETypedDeclarator* CL4V4BEMsgBuffer::GetMsgTagVariable()
 {
 	// get name
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 	string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
 	// create var
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedDeclarator *pMsgTag = pCF->GetNewTypedDeclarator();
 	pMsgTag->SetParent(this);
 	pMsgTag->CreateBackEnd(sType, sName, 0);
@@ -352,7 +351,7 @@ CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile,
     int nIndex,
     CMsgStructType nType)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// check if this is server side, and if so, check for
 	// init-rcvstring attribute of class
 	if (pFunction->IsComponentSide() &&
@@ -512,7 +511,7 @@ void CL4V4BEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile, CBEFunction *
 		pFile << ";\n";
 
 		// load into respective buffer register
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sMWord = pNF->GetTypeName(TYPE_MWORD, false);
 		pFile << "\tL4_LoadBRs (" << (nIndex*2+1) << ", 2, (" << sMWord << "*)&(";
 		WriteAccess(pFile, pFunction, nType, pMember);
@@ -702,7 +701,7 @@ CL4V4BEMsgBuffer::ConvertMember(CBETypedDeclarator* pMember)
 	"CL4V4BEMsgBuffer::%s(%s) called\n", __func__,
 	pMember->m_Declarators.First()->GetName().c_str());
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
     pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
     pMember->ReplaceType(pType);

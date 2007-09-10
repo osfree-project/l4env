@@ -74,16 +74,45 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+#include "FactoryFactory.h"
+
 #include <ltdl.h>
 #include <iostream>
+#include <cassert>
+
+CBEClassFactory *CBEClassFactory::m_pInstance = 0;
 
 CBEClassFactory::CBEClassFactory()
-{
-}
+{ }
 
 /** \brief the destructor of this class */
 CBEClassFactory::~CBEClassFactory()
+{ }
+
+/** \brief return the instance of the class factory
+ *  \return a reference to the class factory
+ *
+ * The intention was to move the factory creation code from the
+ * factory-factory here, but this didn't work: this class is in the basic
+ * back-end lib (libbe.a) and uses methods from other back-end libs. When
+ * linking dice the libs are linked with the most derived one first so that
+ * basic libs can provide the missing methods. Placing the factory creation
+ * code here would require the back-end libs to be placed in a group that is
+ * linked until all dependencies are met. I couldn't get automake to obey my
+ * will, thus I had to find another solution: I placed the factory creation
+ * code at the top level into the factory-factory. This class gets added to
+ * the binary last and because its an object file when linking the binary it
+ * somehow works.
+ */
+CBEClassFactory* CBEClassFactory::Instance()
 {
+	if (!m_pInstance)
+	{
+		CFactoryFactory ff;
+		m_pInstance = ff.GetNewClassFactory();
+	}
+	return m_pInstance;
 }
 
 /** \brief creates a new instance of the class CBERoot

@@ -62,7 +62,7 @@ void CL4V4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bCo
 		   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_CLIENT) ||
 		   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER)))))
 	{
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sName = pNF->GetString(CL4V4BENameFactory::STR_INIT_RCVSTR_VARIABLE, 0);
 		AddLocalVariable(TYPE_MWORD, true, 0, sName, 0);
 	}

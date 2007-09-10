@@ -31,6 +31,7 @@
 #include "be/BEFile.h"
 #include "be/BEDeclarator.h"
 #include "be/BETypedDeclarator.h"
+#include "be/BENameFactory.h"
 #include "TypeSpec-Type.h"
 #include "Compiler.h"
 #include <cassert>
@@ -66,7 +67,7 @@ void CL4BEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
 	// clear exception
 	++pFile << "\tCORBA_server_exception_free(" << sEnv << ");\n";
 	// wait for next ipc
-	string sReply = CCompiler::GetNameFactory()->GetReplyCodeVariable();
+	string sReply = CBENameFactory::Instance()->GetReplyCodeVariable();
 	pFile << "\t" << sReply << " = DICE_NEVER_REPLY;\n";
 
 	// finished

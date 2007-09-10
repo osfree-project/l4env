@@ -75,7 +75,7 @@ CBEIDLUnionType::CreateBackEnd(CFETypeSpec * pFEType)
     // basic init for struct
     CBEStructType::CreateBackEnd(pFEUnion->GetTag(), pFEUnion);
     // create switch variable
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBETypedDeclarator *pSwitchVar = pCF->GetNewTypedDeclarator();
     m_Members.Add(pSwitchVar);
 

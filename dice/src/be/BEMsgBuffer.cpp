@@ -45,6 +45,7 @@
 #include "BEExpression.h"
 #include "BEUnionCase.h"
 #include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "BESizes.h"
 #include "Compiler.h"
 #include "Error.h"
@@ -184,7 +185,7 @@ CBEMsgBuffer::GetCountAll(int nFEType,
 
     // get struct
     CBEStructType *pStruct = 0;
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName = pNF->GetMessageBufferStructName(nType, string(), string());
     int nLen = sName.length();
     int nMaxCount = 0;
@@ -228,7 +229,7 @@ CBEMsgBuffer::CreateBackEnd(CFEOperation *pFEOperation)
 	"CBEMsgBuffer::%s(op: %s) called\n", __func__,
 	pFEOperation->GetName().c_str());
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     CBEType *pType = CreateType(pFEOperation);
     assert(pType);
     string sName = pNF->GetMessageBufferVariable();
@@ -252,7 +253,7 @@ CBEMsgBuffer::CreateBackEnd(CFEInterface *pFEInterface)
 	"CBEMsgBuffer::%s(if: %s) called\n", __func__,
 	pFEInterface->GetName().c_str());
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     CBEType *pType = CreateType(pFEInterface);
     assert(pType);
     string sName = pNF->GetMessageBufferTypeName(pFEInterface);
@@ -270,7 +271,7 @@ CBEMsgBuffer::CreateBackEnd(CFEInterface *pFEInterface)
 CBEType*
 CBEMsgBuffer::CreateType(CFEOperation *pFEOperation)
 {
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBEMsgBufferType *pType = pCF->GetNewMessageBufferType();
     pType->SetParent(this);
     pType->CreateBackEnd(pFEOperation);
@@ -286,7 +287,7 @@ CBEMsgBuffer::CreateType(CFEOperation *pFEOperation)
 CBEType*
 CBEMsgBuffer::CreateType(CFEInterface *pFEInterface)
 {
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBEMsgBufferType *pType = pCF->GetNewMessageBufferType();
     pType->SetParent(this);
     pType->CreateBackEnd(pFEInterface);
@@ -299,10 +300,10 @@ CBEMsgBuffer::CreateType(CFEInterface *pFEInterface)
 CBETypedDeclarator*
 CBEMsgBuffer::GetOpcodeVariable()
 {
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBEOpcodeType *pType = pCF->GetNewOpcodeType();
     pType->CreateBackEnd();
-    string sName = CCompiler::GetNameFactory()->GetOpcodeVariable();
+    string sName = CBENameFactory::Instance()->GetOpcodeVariable();
     CBETypedDeclarator *pOpcode = pCF->GetNewTypedDeclarator();
     pOpcode->CreateBackEnd(pType, sName);
     delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
@@ -323,12 +324,12 @@ CBEMsgBuffer::GetExceptionVariable()
     CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 	"CBEMsgBuffer::%s called\n", __func__);
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     // create type
     CBEType *pType = pCF->GetNewType(TYPE_MWORD);
     pType->CreateBackEnd(true, 0, TYPE_MWORD);
     // get name
-    string sName = CCompiler::GetNameFactory()->
+    string sName = CBENameFactory::Instance()->
 	GetExceptionWordVariable();
     // create var
     CBETypedDeclarator *pException = pCF->GetNewTypedDeclarator();
@@ -626,7 +627,7 @@ void CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction, CBEStructType *pSt
  *  This method propagates the call to invoke a \c Sort method on both
  *  structs.
  */
-bool CBEMsgBuffer::Sort(CBEFunction *pFunction)
+void CBEMsgBuffer::Sort(CBEFunction *pFunction)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for function %s\n", __func__,
 		pFunction->GetName().c_str());
@@ -640,13 +641,7 @@ bool CBEMsgBuffer::Sort(CBEFunction *pFunction)
 	{
 		pStruct = GetStruct(pFunction, nType);
 		assert(pStruct);
-		// sort it
-		if (!Sort(pStruct))
-		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"%s failed, because receive struct could not be sorted.\n", __func__);
-			return false;
-		}
+		Sort(pStruct);
 	}
 
 	// get SEND  structure
@@ -656,24 +651,17 @@ bool CBEMsgBuffer::Sort(CBEFunction *pFunction)
 	{
 		pStruct = GetStruct(pFunction, nType);
 		assert(pStruct);
-		if (!Sort(pStruct))
-		{
-			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-				"CBEMsgBuffer::%s failed, because send struct could not be sorted.\n",
-				__func__);
-			return false;
-		}
+		Sort(pStruct);
 	}
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
-	return true;
 }
 
 /** \brief sorts the parameters in the message buffer structs
  *  \param pClass the class to which that message buffer belongs
  *  \return true if success
  */
-bool CBEMsgBuffer::Sort(CBEClass *pClass)
+void CBEMsgBuffer::Sort(CBEClass *pClass)
 {
 	// iterate function groups of class, pick a function and use it to
 	// initialize struct
@@ -692,8 +680,7 @@ bool CBEMsgBuffer::Sort(CBEClass *pClass)
 				(dynamic_cast<CBESndFunction*>(*iF) != 0) ||
 				(dynamic_cast<CBEWaitFunction*>(*iF) != 0))
 			{
-				if (!Sort(*iF))
-					return false;
+				Sort(*iF);
 			}
 		}
 	}
@@ -702,8 +689,6 @@ bool CBEMsgBuffer::Sort(CBEClass *pClass)
 	vector<CBEClass*>::iterator iC = pClass->m_BaseClasses.begin();
 	for (; iC != pClass->m_BaseClasses.end(); iC++)
 		Sort(*iC);
-
-	return true;
 }
 
 /** \brief sorts one struct in the message buffer
@@ -716,15 +701,14 @@ bool CBEMsgBuffer::Sort(CBEClass *pClass)
  * can move both to the absolute front, since one of the invocations will
  * fail.
  */
-bool CBEMsgBuffer::Sort(CBEStructType *pStruct)
+void CBEMsgBuffer::Sort(CBEStructType *pStruct)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for struct\n", __func__);
 
 	// sort payload
-	if (!SortPayload(pStruct))
-		return false;
+	SortPayload(pStruct);
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// find opcode
 	string sName = pNF->GetOpcodeVariable();
 	pStruct->m_Members.Move(sName, 0);
@@ -734,7 +718,6 @@ bool CBEMsgBuffer::Sort(CBEStructType *pStruct)
 	pStruct->m_Members.Move(sName, 0);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
-	return true;
 }
 
 /** \brief sorts the payload of a message buffer
@@ -762,10 +745,9 @@ bool CBEMsgBuffer::Sort(CBEStructType *pStruct)
  * It would be much simpler to create a new vector with sorted elements, but
  * then: how to swap it with struct's vector?
  */
-bool CBEMsgBuffer::SortPayload(CBEStructType *pStruct)
+void CBEMsgBuffer::SortPayload(CBEStructType *pStruct)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called for struct\n",
-		__func__);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called for struct\n", __func__);
 
 	CBEMsgBufferType *pType = pStruct->GetSpecificParent<CBEMsgBufferType>();
 	assert(pType);
@@ -794,7 +776,6 @@ bool CBEMsgBuffer::SortPayload(CBEStructType *pStruct)
 	}
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
-	return true;
 }
 
 /** \brief checks if two members of a struct should be exchanged
@@ -971,7 +952,7 @@ void CBEMsgBuffer::WriteAccessToStruct(CBEFile& pFile, CBEFunction *pFunction, C
 		pFile.GetFileName().c_str(),
 		pFunction->GetName().c_str(),
 		(int)nType);
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// get struct name
 	// if direction is zero, do not use a function name
 	string sFuncName = (CMsgStructType::Generic == nType) ?
@@ -1130,7 +1111,7 @@ void
 CBEMsgBuffer::WriteGenericMemberAccess(CBEFile& pFile,
     int nIndex)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sStructName = pNF->GetMessageBufferStructName(CMsgStructType::Generic,
 	string(), string());
     // FIXME: build declarator stack
@@ -1231,7 +1212,7 @@ CMsgStructType CBEMsgBuffer::GetStructType(CBEStructType *pStruct)
 	assert(pUnion);
 	string sStructName = pUnion->m_Declarators.First()->GetName();
 	// check name of union case
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetMessageBufferStructName(CMsgStructType::In, string(), string());
 	if (sStructName.substr(sStructName.length() - sName.length()) == sName)
 		return CMsgStructType::In;
@@ -1323,7 +1304,7 @@ CBETypedDeclarator* CBEMsgBuffer::FindMember(string sName, CBEFunction *pFunctio
  */
 int CBEMsgBuffer::GetMemberPosition(string sName, CMsgStructType nType)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// test opcode
 	if (sName == pNF->GetOpcodeVariable())
 		return 0;
@@ -1507,8 +1488,7 @@ void CBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation *pFEOpe
 	AddGenericStructMembersFunction(pStruct);
 	// now we have to repeat the initialization steps (if they apply)
 	AddPlatformSpecificMembers(pFunction, pStruct, CMsgStructType::Generic);
-	if (!Sort(pStruct))
-		throw new error::create_error("generic struct could not be sorted");
+	Sort(pStruct);
 }
 
 /** \brief adds the members of to the generic struct
@@ -1534,7 +1514,7 @@ void CBEMsgBuffer::AddGenericStructMembersFunction(CBEStructType *pStruct)
  */
 CBETypedDeclarator* CBEMsgBuffer::GetMemberVariable(int nFEType, bool bUnsigned, string sName, int nArray)
 {
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(nFEType);
 	pType->CreateBackEnd(bUnsigned, 0, nFEType);
 	CBETypedDeclarator *pWordMember = pCF->GetNewTypedDeclarator();
@@ -1567,7 +1547,7 @@ CBETypedDeclarator* CBEMsgBuffer::GetMemberVariable(int nFEType, bool bUnsigned,
  */
 CBETypedDeclarator* CBEMsgBuffer::GetWordMemberVariable(int nNumber)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetWordMemberVariable();
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"%s: creating member %s with %d dimensions\n", __func__,
@@ -1597,8 +1577,7 @@ void CBEMsgBuffer::AddGenericStruct(CBEClass *pClass, CFEInterface *pFEInterface
 	AddGenericStructMembersClass(pStruct);
 	// now we have to repeat the initialization steps (if they apply)
 	AddPlatformSpecificMembers(pFunction, pStruct, CMsgStructType::Generic);
-	if (!Sort(pStruct))
-		throw new error::create_error("generic struct could not be sorted");
+	Sort(pStruct);
 }
 
 /** \brief try to extract any function from a class

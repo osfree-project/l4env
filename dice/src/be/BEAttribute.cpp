@@ -323,7 +323,7 @@ void
 CBEAttribute::CreateBackEndType(CFETypeAttribute * pFETypeAttribute)
 {
     CFETypeSpec *pType = pFETypeAttribute->GetType();
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     m_pType = pCF->GetNewType(pType->GetType());
     m_pType->SetParent(this);
     m_pType->CreateBackEnd(pType);
@@ -398,7 +398,7 @@ CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
 					sName + ") is no function parameter or constant.";
 				throw new error::create_error(exc);
 			}
-			CBEClassFactory *pCF = CCompiler::GetClassFactory();
+			CBEClassFactory *pCF = CBEClassFactory::Instance();
 			pDeclarator = pCF->GetNewDeclarator();
 			AddIsParameter(pDeclarator);
 			pDeclarator->CreateBackEnd(*iterAP);

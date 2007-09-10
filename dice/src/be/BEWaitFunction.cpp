@@ -39,6 +39,8 @@
 #include "BEMsgBuffer.h"
 #include "BEMarshaller.h"
 #include "BESizes.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "TypeSpec-Type.h"
@@ -136,7 +138,7 @@ CBEWaitFunction::CreateObject()
 
 	// get object
 	CBETypedDeclarator *pObj = GetObject();
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEAttribute *pAttr = pCF->GetNewAttribute();
 	pAttr->CreateBackEnd(ATTR_OUT);
 	pObj->m_Attributes.Add(pAttr);
@@ -194,7 +196,7 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
 		sSetFunc = "CORBA_exception_set";
 
 	/* now check for correct opcode and set exception */
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcode = pNF->GetOpcodeVariable();
 	CBETypedDeclarator *pOpcode = m_LocalVariables.Find(sOpcode);
 	CDeclStack vStack;

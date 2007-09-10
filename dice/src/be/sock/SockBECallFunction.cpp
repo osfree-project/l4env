@@ -73,7 +73,7 @@ void CSockBECallFunction::WriteInvocation(CBEFile& pFile)
 void CSockBECallFunction::WriteVariableInitialization(CBEFile& pFile)
 {
 	CBECallFunction::WriteVariableInitialization(pFile);
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOffset = pNF->GetOffsetVariable();
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	string sPtrName, sSizeName;
@@ -105,7 +105,7 @@ void CSockBECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bCompon
 
 	// needed for receive
 	string sInit = "sizeof(*" +
-		CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
+		CBENameFactory::Instance()->GetCorbaObjectVariable() + ")";
 	sCurr = string("dice_fromlen");
 	AddLocalVariable(string("socklen_t"), sCurr, 0, sInit);
 }

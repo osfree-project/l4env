@@ -41,8 +41,6 @@ using std::bitset;
 using std::map;
 
 #include "ProgramOptions.h"
-#include "be/BENameFactory.h"
-#include "be/BEClassFactory.h"
 
 class CBERoot;
 class CFEBase;
@@ -104,8 +102,6 @@ public:
     static bool IsBackEndLanguageSet(BackEnd_Language_Type nOption);
     static bool IsWarningSet(ProgramWarning_Type nLevel);
     static int GetTraceMsgBufDwords();
-    static CBENameFactory *GetNameFactory();
-    static CBEClassFactory *GetClassFactory();
     static CBESizes* GetSizes();
     static void SetDebug(bool bOn = true);
     static bool GetBackEndOption(const string sOption, string& sValue);
@@ -127,8 +123,6 @@ protected:
     static void SetWarningLevel(ProgramWarning_Type nLevel);
     static void UnsetWarningLevel(ProgramWarning_Type nLevel);
     static void SetTraceMsgBufDwords(int nDwords);
-    static void SetNameFactory(CBENameFactory *pNF);
-    static void SetClassFactory(CBEClassFactory *pCF);
     static void SetSizes(CBESizes *pSizes);
     static void SetBackEndOption(const string sOption, const string sValue);
 
@@ -228,14 +222,6 @@ protected:
      *  \brief contains the number of dwords to dump
      */
     static int m_nDumpMsgBufDwords;
-    /** \var CBEClassFactory *m_pClassFactory
-     *  \brief a reference to the class factory
-     */
-    static CBEClassFactory *m_pClassFactory;
-    /** \var CBENameFactory *m_pNameFactory
-     *  \brief a reference to the name factory
-     */
-    static CBENameFactory *m_pNameFactory;
     /** \var CBESizes *m_pSizes
      *  \brief contains a reference to the sizes class of a traget architecture
      */
@@ -478,54 +464,6 @@ int
 CCompiler::GetTraceMsgBufDwords()
 {
     return m_nDumpMsgBufDwords;
-}
-
-/** \brief returns a reference to the class factory
- *  \return the reference to the class-factory
- */
-inline
-CBEClassFactory*
-CCompiler::GetClassFactory()
-{
-    return m_pClassFactory;
-}
-
-/** \brief set the class factory member
- *  \param pCF the new class factory variable
- *
- * Previously set class factory member is deleted.
- */
-inline
-void
-CCompiler::SetClassFactory(CBEClassFactory *pCF)
-{
-    if (m_pClassFactory)
-       delete m_pClassFactory;
-    m_pClassFactory = pCF;
-}
-
-/** \brief returns a reference to the name factory
- *  \return the reference to the name factory
- */
-inline
-CBENameFactory*
-CCompiler::GetNameFactory()
-{
-    return m_pNameFactory;
-}
-
-/** \brief sets the name factory member
- *  \param pNF the new name factory variable
- *
- * previously set name factory member is deleted.
- */
-inline
-void
-CCompiler::SetNameFactory(CBENameFactory *pNF)
-{
-    if (m_pNameFactory)
-       delete m_pNameFactory;
-    m_pNameFactory = pNF;
 }
 
 /** \brief restrieves a reference to the sizes class

@@ -63,7 +63,7 @@ void CL4FiascoBEClass::WriteDefaultFunction(CBEHeaderFile& pFile)
 
     CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
     string sMsgBuffer = pMsgBuffer->m_Declarators.First()->GetName();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sTagType = pNF->GetTypeName(TYPE_MSGTAG, false);
     // int \<name\>(\<corba object\>, \<msg buffer type\>*,
     //              \<corba environment\>*)

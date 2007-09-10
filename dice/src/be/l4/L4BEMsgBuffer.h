@@ -80,7 +80,7 @@ protected: // protected methods
 		CBETypedDeclarator *pMember, CBETypedDeclarator *pParameter,
 		int nIndex);
 
-	virtual bool Sort(CBEStructType *pStruct);
+	virtual void Sort(CBEStructType *pStruct);
 	virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst,
 		CBETypedDeclarator *pSecond);
 

@@ -31,28 +31,26 @@
 #include "be/l4/TypeSpec-L4Types.h"
 #include "be/BEClassFactory.h"
 #include "be/BETypedDeclarator.h"
-#include "Compiler.h"
+#include "be/BEClassFactory.h"
 
 CL4FiascoBEWaitAnyFunction::CL4FiascoBEWaitAnyFunction(bool bOpenWait, bool bReply)
 : CL4BEWaitAnyFunction(bOpenWait, bReply)
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CL4FiascoBEWaitAnyFunction::~CL4FiascoBEWaitAnyFunction()
-{
-}
+{ }
 
 void
 CL4FiascoBEWaitAnyFunction::AddBeforeParameters()
 {
     CL4BEWaitAnyFunction::AddBeforeParameters();
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
+    CBENameFactory *pNF = CBENameFactory::Instance();
+	std::string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	std::string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
     m_Parameters.Add(pParameter);
     pParameter->CreateBackEnd(sTagType, sTagVar, 1);

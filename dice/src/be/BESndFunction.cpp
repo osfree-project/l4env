@@ -39,6 +39,8 @@
 #include "BEAttribute.h"
 #include "BEMarshaller.h"
 #include "BEDeclarator.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "TypeSpec-Type.h"
@@ -236,7 +238,7 @@ CBESndFunction::WriteMarshalReturn(CBEFile& pFile,
 {
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sReturn = pNF->GetReturnVariable();
     CBETypedDeclarator *pReturn = FindParameter(sReturn);
     if (!pReturn)
@@ -262,7 +264,7 @@ CBESndFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
     // check return type (do test here because sometimes we like to call
     // AddReturnVariable depending on other constraint--return is parameter)
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sReturn = pNF->GetReturnVariable();
     CBETypedDeclarator *pReturn = FindParameter(sReturn);
     if (!pReturn)

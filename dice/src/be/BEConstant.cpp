@@ -26,12 +26,14 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEConstant.h"
-#include "be/BEContext.h"
-#include "be/BEExpression.h"
-#include "be/BEType.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
+#include "BEConstant.h"
+#include "BEContext.h"
+#include "BEExpression.h"
+#include "BEType.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "fe/FEConstDeclarator.h"
@@ -85,8 +87,8 @@ CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator)
 	// set target file name
 	SetTargetFileName(pFEConstDeclarator);
 	// get name
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	m_sName = pNF->GetConstantName(pFEConstDeclarator);
 	// get type
 	CFETypeSpec *pFEType = pFEConstDeclarator->GetType();

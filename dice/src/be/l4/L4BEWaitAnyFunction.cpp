@@ -39,6 +39,7 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BEOperationFunction.h"
 #include "be/BEMsgBuffer.h"
+#include "be/BEClassFactory.h"
 #include "be/Trace.h"
 #include "TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
@@ -65,7 +66,7 @@ CL4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bComponentS
 
 	string exc = string(__func__);
 	// add local variables
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
 
@@ -92,8 +93,8 @@ CL4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bComponentS
 void
 CL4BEWaitAnyFunction::CreateEnvironment()
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// if function is at server side, this is a CORBA_Server_Environment
 	string sTypeName = "CORBA_Server_Environment";
 	string sName = pNF->GetCorbaEnvironmentVariable();
@@ -193,7 +194,7 @@ void
 CL4BEWaitAnyFunction::WriteDedicatedWait(CBEFile& pFile)
 {
 	CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
-		CCompiler::GetNameFactory());
+		CBENameFactory::Instance());
 	string sPartner = pNF->GetPartnerVariable();
 	pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
 		" /* no dedicated partner */\n";
@@ -278,7 +279,7 @@ CL4BEWaitAnyFunction::WriteShortFlexpageIPC(CBEFile& pFile)
 	if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
 	{
 		CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
-			CCompiler::GetNameFactory());
+			CBENameFactory::Instance());
 		string sPartner = pNF->GetPartnerVariable();
 		pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
 			" /* no dedicated partner */\n";
@@ -306,7 +307,7 @@ void CL4BEWaitAnyFunction::WriteShortIPC(CBEFile& pFile)
 	if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
 	{
 		CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
-			CCompiler::GetNameFactory());
+			CBENameFactory::Instance());
 		string sPartner = pNF->GetPartnerVariable();
 		pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
 			" /* no dedicated partner */\n";
@@ -335,7 +336,7 @@ CL4BEWaitAnyFunction::WriteLongFlexpageIPC(CBEFile& pFile)
 	if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
 	{
 		CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
-			CCompiler::GetNameFactory());
+			CBENameFactory::Instance());
 		string sPartner = pNF->GetPartnerVariable();
 		pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
 			" /* no dedicated partner */\n";
@@ -363,7 +364,7 @@ void CL4BEWaitAnyFunction::WriteLongIPC(CBEFile& pFile)
 	if (pClass->m_Attributes.Find(ATTR_DEDICATED_PARTNER))
 	{
 		CL4BENameFactory *pNF = static_cast<CL4BENameFactory*>(
-			CCompiler::GetNameFactory());
+			CBENameFactory::Instance());
 		string sPartner = pNF->GetPartnerVariable();
 		pFile << "\tif (l4_is_invalid_id(" << sPartner << "))" <<
 			" /* no dedicated partner */\n";
@@ -417,7 +418,7 @@ void CL4BEWaitAnyFunction::WriteExceptionCheck(CBEFile& pFile)
  */
 void CL4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	pFile << "\t/* test for IPC errors */\n";
 	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult << ")))\n";
@@ -538,7 +539,7 @@ void CL4BEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
 		// Because the wait-any function always has a return type (the opcode)
 		// we do not have to check for it separately
 		string sResult =
-			CCompiler::GetNameFactory()->GetString(CL4BENameFactory::STR_RESULT_VAR);
+			CBENameFactory::Instance()->GetString(CL4BENameFactory::STR_RESULT_VAR);
 		pFile << "\tif (l4_ipc_fpage_received(" << sResult << "))\n";
 		WriteFlexpageOpcodePatch(pFile);  // does indent itself
 		pFile << "\telse\n";
@@ -610,7 +611,7 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 		// delimiter flexpage which is two zero dwords
 		pFile << "\t{\n";
 		// search for delimiter flexpage
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sTempVar = pNF->GetTempOffsetVariable();
 		// init temp var
 		++pFile << "\t" << sTempVar << " = 0;\n";

@@ -26,14 +26,16 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEUserDefinedType.h"
-#include "be/BEContext.h"
+#include "BEUserDefinedType.h"
+#include "BEContext.h"
 #include "BEFile.h"
-#include "be/BERoot.h"
-#include "be/BETypedef.h"
-#include "be/BEDeclarator.h"
-#include "be/BEExpression.h"
-#include "be/BESizes.h"
+#include "BERoot.h"
+#include "BETypedef.h"
+#include "BEDeclarator.h"
+#include "BEExpression.h"
+#include "BESizes.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "TypeSpec-Type.h"
@@ -124,7 +126,7 @@ CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType)
 	throw new error::create_error(exc);
     }
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     if (!pUserType->GetName().empty())
     {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,

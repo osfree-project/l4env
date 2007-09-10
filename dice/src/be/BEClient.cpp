@@ -26,20 +26,22 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEClient.h"
-#include "be/BEFile.h"
-#include "be/BEContext.h"
-#include "be/BESndFunction.h"
-#include "be/BEWaitFunction.h"
-#include "be/BECallFunction.h"
-#include "be/BEUnmarshalFunction.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEExpression.h"
-#include "be/BEConstant.h"
-#include "be/BERoot.h"
-#include "be/BEClass.h"
-#include "be/BENameSpace.h"
+#include "BEClient.h"
+#include "BEFile.h"
+#include "BEContext.h"
+#include "BESndFunction.h"
+#include "BEWaitFunction.h"
+#include "BECallFunction.h"
+#include "BEUnmarshalFunction.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BEExpression.h"
+#include "BEConstant.h"
+#include "BERoot.h"
+#include "BEClass.h"
+#include "BENameSpace.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "fe/FEFile.h"
@@ -87,7 +89,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 	CBEHeaderFile* pHeader = FindHeaderFile(pFEOperation, FILETYPE_CLIENTHEADER);
 	assert(pHeader);
 	// create the file
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
 	m_ImplementationFiles.Add(pImpl);
 	pImpl->SetHeaderFile(pHeader);
@@ -97,7 +99,7 @@ CBEClient::CreateBackEndFunction(CFEOperation *pFEOperation)
 	// if attribute == IN, we need send
 	// if attribute == OUT, we need wait, recv, unmarshal
 	// if attribute == empty, we need call if test, we need test
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sFuncName;
 	CBEFunction *pFunction;
 	if (pFEOperation->m_Attributes.Find(ATTR_IN))
@@ -154,7 +156,7 @@ void CBEClient::CreateBackEndHeader(CFEFile * pFEFile)
 	assert(pRoot);
 	// the header files are created on a per IDL file basis, no matter
 	// which option is set
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEHeaderFile* pHeader = pCF->GetNewHeaderFile();
 	m_HeaderFiles.Add(pHeader);
 	pHeader->CreateBackEnd(pFEFile, FILETYPE_CLIENTHEADER);
@@ -216,7 +218,7 @@ void CBEClient::CreateBackEndFile(CFEFile *pFEFile)
 	CBEHeaderFile* pHeader = FindHeaderFile(pFEFile, FILETYPE_CLIENTHEADER);
 	assert(pHeader);
 	// create file
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
 	m_ImplementationFiles.Add(pImpl);
 	pImpl->SetHeaderFile(pHeader);
@@ -326,7 +328,7 @@ void CBEClient::CreateBackEndModule(CFEFile *pFEFile)
 	{
 		// we do have interfaces
 		// create file
-		CBEClassFactory *pCF = CCompiler::GetClassFactory();
+		CBEClassFactory *pCF = CBEClassFactory::Instance();
 		CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
 		m_ImplementationFiles.Add(pImpl);
 		pImpl->SetHeaderFile(pHeader);
@@ -387,7 +389,7 @@ void CBEClient::CreateBackEndModule(CFELibrary *pFELibrary)
 		throw new error::create_error(exc);
 	}
 	// create the file
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
 	m_ImplementationFiles.Add(pImpl);
 	pImpl->SetHeaderFile(pHeader);
@@ -462,7 +464,7 @@ void CBEClient::CreateBackEndInterface(CFEInterface *pFEInterface)
 		throw new error::create_error(exc);
 	}
 	// create the file
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
 	m_ImplementationFiles.Add(pImpl);
 	pImpl->SetHeaderFile(pHeader);

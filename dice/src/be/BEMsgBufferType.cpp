@@ -131,7 +131,7 @@ CBEMsgBufferType::CreateBackEnd(CFEInterface *pFEInterface)
 		"CBEMsgBufferType::%s(fe-if) called\n",	__func__);
 
 	// get tag
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sTag = pNF->GetMessageBufferTypeName(pFEInterface);
 	sTag = pNF->GetTypeName(pFEInterface, sTag);
 	CBEUnionType::CreateBackEnd(sTag);
@@ -202,7 +202,7 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
 {
 	string exc = string(__func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	assert(pFEOperation);
 	// struct type
 	CBEStructType *pType = (CBEStructType*)pCF->GetNewType(TYPE_STRUCT);
@@ -212,7 +212,7 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
 	// create struct type
 	pType->CreateBackEnd(string(), pFEOperation);
 	// get name of struct
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sTag = pNF->GetMessageBufferStructName(nType,
 		pFEOperation->GetName(),
 		pFEOperation->GetSpecificParent<CFEInterface>()->GetName());
@@ -296,7 +296,7 @@ CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
 		pFEInterface->GetName(), nType);
 	assert(pStruct);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// get function
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
 	// create a member, by either cloning a parameter or if parent is class,
@@ -433,7 +433,7 @@ CBEMsgBufferType::AddElement(CBEStructType *pStruct,
 bool
 CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
 {
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// struct type
 	CBEStructType *pType = static_cast<CBEStructType*>(
 		pCF->GetNewType(TYPE_STRUCT));
@@ -443,7 +443,7 @@ CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
 	// create struct type
 	pType->CreateBackEnd(string(), pFERefObj);
 	// get name of struct
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sTag = pNF->GetMessageBufferStructName(CMsgStructType::Generic,
 		string(), string());
 	// create union case
@@ -469,7 +469,7 @@ CBEStructType* CBEMsgBufferType::GetStruct(string sFuncName, string sClassName, 
 		"CBEMsgBufferType::%s called for func %s, class %s and %d\n", __func__,
 		sFuncName.c_str(), sClassName.c_str(), (int)nType);
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetMessageBufferStructName(nType, string(), string());
 	sFuncName = pNF->GetMessageBufferStructName(nType, sFuncName, sClassName);
 	vector<CBEUnionCase*>::iterator iter;
@@ -550,7 +550,7 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
 	}
 	// if string, check for max_is and set it as array boundary. Also set type
 	// to basic type
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	if (pParameter->IsString())
 	{
 		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -855,7 +855,7 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 			pParameter->Clone());
 		pStruct->m_Members.Add(pMember);
 		// replace declarator
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sName = pNF->GetLocalVariableName(pStack);
 		CBEDeclarator *pDecl = pMember->m_Declarators.First();
 		pDecl->SetName(sName);
@@ -979,14 +979,14 @@ CBEMsgBufferType::AddStruct(CBEStructType *pStruct,
 	string sFunctionName,
 	string sClassName)
 {
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// clone struct type
 	CBEStructType *pType = static_cast<CBEStructType*>(pStruct->Clone());
 	CBEUnionCase *pCase = pCF->GetNewUnionCase();
 	pType->SetParent(pCase);
 	m_UnionCases.Add(pCase);
 	// get name of struct
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sTag = pNF->GetMessageBufferStructName(nType, sFunctionName, sClassName);
 	// create union case
 	pCase->CreateBackEnd(pType, sTag, 0, false);
@@ -1024,7 +1024,7 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 	// both directions, and we have to add the size variable to the other
 	// struct as well. First check if variable of size_is is length variable
 	// and then check if we have this length variable as member. If not, pass.
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetLocalSizeVariableName(pStack);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s size name should be %s\n",
@@ -1055,7 +1055,7 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 
 	CBETypedDeclarator *pSizeVar, *pMember;
 	// add local variable
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	if (pFunction)
 	{
 		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,

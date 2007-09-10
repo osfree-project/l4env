@@ -39,6 +39,8 @@
 #include "BESizes.h"
 #include "BEStructType.h"
 #include "BEUserDefinedType.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "fe/FEFile.h"
@@ -92,7 +94,7 @@ CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType)
     CFEUnionType *pFEUnion = dynamic_cast<CFEUnionType*>(pFEType);
     assert (pFEUnion);
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     vector<CFEUnionCase*>::iterator iterUC;
     for (iterUC = pFEUnion->m_UnionCases.begin();
 	 iterUC != pFEUnion->m_UnionCases.end();
@@ -106,7 +108,7 @@ CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType)
     string sTag = pFEUnion->GetTag();
     if (!sTag.empty())
     {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
         // see if we can find the original struct
         CFEFile *pFERoot = pFEType->GetRoot();
         assert(pFERoot);
@@ -131,7 +133,7 @@ CBEUnionType::CreateBackEnd(string sTag)
 
     string exc = string(__func__);
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     m_sName = pNF->GetTypeName(TYPE_UNION, false);
     if (m_sName.empty())
     {

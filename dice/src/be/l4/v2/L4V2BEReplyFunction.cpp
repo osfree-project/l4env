@@ -73,7 +73,7 @@ void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile& pFile)
     if (bUseAssembler && bShortIPC)
     {
 	// write dummys
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sDummy = pNF->GetDummyVariable();
 	string sMWord = pNF->GetTypeName(TYPE_MWORD, true, 0);
 	string sResult = pNF->GetString(STR_RESULT_VAR);
@@ -105,7 +105,7 @@ void CL4V2BEReplyFunction::WriteVariableDeclaration(CBEFile& pFile)
 	if (bUseAssembler)
 	{
 	    // need dummies
-	    CBENameFactory *pNF = CCompiler::GetNameFactory();
+	    CBENameFactory *pNF = CBENameFactory::Instance();
 	    string sDummy = pNF->GetDummyVariable();
 	    string sMWord = pNF->GetTypeName(TYPE_MWORD, true, 0);
 	    pFile << "#if defined(__PIC__)\n";

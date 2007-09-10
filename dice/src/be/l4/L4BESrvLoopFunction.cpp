@@ -80,7 +80,7 @@ void CL4BESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
 	{
 		string sObj = GetObject()->m_Declarators.First()->GetName();
 		CL4BENameFactory *pNF =
-			static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
+			static_cast<CL4BENameFactory*>(CBENameFactory::Instance());
 		string sPartner = pNF->GetPartnerVariable();
 		pFile << "\t_" << sObj << " = " << sPartner << ";\n";
 	}
@@ -175,7 +175,7 @@ void CL4BESrvLoopFunction::WriteDispatchInvocation(CBEFile& pFile)
 	{
 		string sObj = GetObject()->m_Declarators.First()->GetName();
 		CL4BENameFactory *pNF =
-			static_cast<CL4BENameFactory*>(CCompiler::GetNameFactory());
+			static_cast<CL4BENameFactory*>(CBENameFactory::Instance());
 		string sPartner = pNF->GetPartnerVariable();
 		pFile << "\tif (!l4_is_invalid_id(" << sPartner << "))\n";
 		++pFile << "\t_" << sObj << " = " << sPartner << ";\n";

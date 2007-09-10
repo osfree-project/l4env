@@ -136,6 +136,14 @@ public:
     virtual CBEMsgBuffer* GetNewMessageBuffer();
     virtual CBEMsgBufferType* GetNewMessageBufferType();
     virtual CTrace* GetNewTrace();
+
+	static CBEClassFactory* Instance();
+
+private:
+    /** \var CBEClassFactory *m_pInstance
+     *  \brief a reference to the class factory
+     */
+    static CBEClassFactory *m_pInstance;
 };
 
 #endif // !__DICE_BECLASSFACTORY_H__

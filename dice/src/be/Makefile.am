@@ -9,4 +9,4 @@ noinst_HEADERS = BEAttribute.h BEInterfaceFunction.h BESrvLoopFunction.h BECallF
 
 AM_CPPFLAGS = $(LTDLINCL)
 
-AM_CXXFLAGS = @DICE_CXXFLAGS@
+M_CXXFLAGS = @DICE_CXXFLAGS@

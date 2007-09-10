@@ -90,7 +90,7 @@ void CL4BEClass::WriteInitRcvStringFunctions(CBEHeaderFile& pFile)
     if (((pAttr = m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER)) != 0) &&
 	pFile.IsOfFileType(FILETYPE_COMPONENT))
 	sFuncName = pAttr->GetString();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     if (sFuncName.empty())
 	sFuncName = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
     else

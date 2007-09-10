@@ -62,7 +62,7 @@ CL4V4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSi
     CBECallFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
     // add local variables
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
     AddLocalVariable(sType, sMsgTag, 0, string("L4_MsgTag()"));
@@ -79,7 +79,7 @@ CL4V4BECallFunction::WriteMarshalling(CBEFile& pFile)
 {
     CL4BECallFunction::WriteMarshalling(pFile);
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     // first clear mr0 in message buffer
     pFile << "\tL4_MsgClear ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
@@ -119,7 +119,7 @@ CL4V4BECallFunction::WriteInvocation(CBEFile& pFile)
 void
 CL4V4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     // store message
@@ -140,7 +140,7 @@ CL4V4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 void
 CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sResult = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 

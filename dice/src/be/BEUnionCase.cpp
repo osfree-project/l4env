@@ -26,11 +26,11 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEUnionCase.h"
-#include "be/BEContext.h"
-#include "be/BEExpression.h"
-#include "be/BETypedDeclarator.h"
-#include "be/BEDeclarator.h"
+#include "BEUnionCase.h"
+#include "BEContext.h"
+#include "BEExpression.h"
+#include "BETypedDeclarator.h"
+#include "BEDeclarator.h"
 #include "BEClassFactory.h"
 #include "fe/FEUnionCase.h"
 #include "Compiler.h"
@@ -77,7 +77,7 @@ CBEUnionCase::CreateBackEnd(CFEUnionCase * pFEUnionCase)
 	if (m_bDefault)
 		return;
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 
 	vector<CFEExpression*>::iterator iter;
 	for (iter = pFEUnionCase->m_UnionCaseLabelList.begin();

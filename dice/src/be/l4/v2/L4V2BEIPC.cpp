@@ -68,7 +68,7 @@ void
 CL4V2BEIPC::WriteCall(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
@@ -164,7 +164,7 @@ void
 CL4V2BEIPC::WriteReceive(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
@@ -218,7 +218,7 @@ void
 CL4V2BEIPC::WriteWait(CBEFile& pFile,
 	CBEFunction *pFunction)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
@@ -276,7 +276,7 @@ CL4V2BEIPC::WriteReplyAndWait(CBEFile& pFile,
 	bool bSendFlexpage,
 	bool bSendShortIPC)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
     if (pFunction->IsComponentSide())
@@ -363,7 +363,7 @@ CL4V2BEIPC::WriteSend(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
     CMsgStructType nDirection = pFunction->GetSendDirection();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
@@ -489,7 +489,7 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
 {
     CMsgStructType nSndDir = pFunction->GetSendDirection();
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     assert(pFunction);
 
     // temp offset and offset variable

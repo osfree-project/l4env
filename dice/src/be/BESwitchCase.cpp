@@ -92,7 +92,7 @@ void CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 	CreateTrace();
 
 	// get opcode const
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	m_sOpcode = pNF->GetOpcodeConst(pFEOperation);
 
 	// check if this switch case is from the same class as the surrounding
@@ -249,7 +249,7 @@ void CBESwitchCase::Write(CBEFile& pFile)
 	}
 
 	// write marshalling
-	string sReply = CCompiler::GetNameFactory()->GetReplyCodeVariable();
+	string sReply = CBENameFactory::Instance()->GetReplyCodeVariable();
 	if (m_pMarshalFunction)
 	{
 		if (m_Attributes.Find(ATTR_ALLOW_REPLY_ONLY))
@@ -489,7 +489,7 @@ void CBESwitchCase::SetCallVariableCall::operator() (CBETypedDeclarator *pParame
 	 * created. If we have no parameter to prefix we still need that
 	 * call-parameter list.
 	 */
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sPrefix;
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
 	{

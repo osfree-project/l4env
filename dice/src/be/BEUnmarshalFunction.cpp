@@ -43,6 +43,8 @@
 #include "BETypedDeclarator.h"
 #include "BESizes.h"
 #include "BEMarshaller.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "TypeSpec-Type.h"
@@ -159,7 +161,7 @@ CBEUnmarshalFunction::WriteCallParameter(CBEFile& pFile,
     bool bCallFromSameClass)
 {
     // write own message buffer's name
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName = pNF->GetMessageBufferVariable();
     if (!bCallFromSameClass && pParameter->m_Declarators.Find(sName))
 	pParameter->GetType()->WriteCast(pFile, pParameter->HasReference());
@@ -232,7 +234,7 @@ CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 	{
 	    CDeclStack vStack;
 	    vStack.push_back(pParameter->m_Declarators.First());
-	    CBENameFactory *pNF = CCompiler::GetNameFactory();
+	    CBENameFactory *pNF = CBENameFactory::Instance();
 	    string sName = pNF->GetLocalSizeVariableName(&vStack);
 
 	    // compare to size declarator -> if no such declarator is present,
@@ -279,7 +281,7 @@ CBEUnmarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
     if (IsComponentSide())
     {
 	// get opcode's name
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcode = pNF->GetOpcodeVariable();
 	// now check if this is the opcode parameter
 	if (pParameter->m_Declarators.Find(sOpcode))
@@ -409,8 +411,8 @@ DIRECTION_TYPE CBEUnmarshalFunction::GetReceiveDirection()
 void
 CBEUnmarshalFunction::AddAfterParameters()
 {
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     // create the msg buffer parameter
     CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
     pParameter->SetParent(this);
@@ -453,7 +455,7 @@ CBEUnmarshalFunction::GetExceptionVariable()
 	__func__, pMsgBuf);
     if (!pMsgBuf)
 	return 0;
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName = pNF->GetExceptionWordVariable();
     pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
     if (!pRet)

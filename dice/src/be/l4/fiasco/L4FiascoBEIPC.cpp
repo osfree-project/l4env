@@ -66,7 +66,7 @@ void
 CL4FiascoBEIPC::WriteCall(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
@@ -166,7 +166,7 @@ void
 CL4FiascoBEIPC::WriteReceive(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
@@ -222,7 +222,7 @@ void
 CL4FiascoBEIPC::WriteWait(CBEFile& pFile,
 	CBEFunction *pFunction)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
@@ -283,7 +283,7 @@ CL4FiascoBEIPC::WriteReplyAndWait(CBEFile& pFile,
 	bool bSendFlexpage,
 	bool bSendShortIPC)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
     if (pFunction->IsComponentSide())
@@ -376,7 +376,7 @@ CL4FiascoBEIPC::WriteSend(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
     CMsgStructType nDirection = pFunction->GetSendDirection();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
     string sTimeout;
@@ -504,7 +504,7 @@ CL4FiascoBEIPC::AddLocalVariable(CBEFunction *pFunction)
 {
     CMsgStructType nSndDir = pFunction->GetSendDirection();
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     assert(pFunction);
 
     // temp offset and offset variable
@@ -619,7 +619,7 @@ CL4FiascoBEIPC::WriteCleanup(CBEFile& /*pFile*/,
 void
 CL4FiascoBEIPC::WriteTag(CBEFile& pFile, CBEFunction *pFunction, bool bReference)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     CBETypedDeclarator *pParameter = pFunction->m_Parameters.Find(sTag);
     if (pParameter)

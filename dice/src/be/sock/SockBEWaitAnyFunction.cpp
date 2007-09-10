@@ -33,6 +33,7 @@
 #include "be/BEDeclarator.h"
 #include "be/BEMsgBuffer.h"
 #include "be/BEClassFactory.h"
+#include "be/BENameFactory.h"
 #include "be/sock/BESocket.h"
 #include "Compiler.h"
 #include "TypeSpec-Type.h"
@@ -71,7 +72,7 @@ void CSockBEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bCom
 	CBEWaitAnyFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
 	// add local variables
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
 	CBEType *pType = pCF->GetNewType(TYPE_INTEGER);
 	pType->SetParent(pVariable);
@@ -84,7 +85,7 @@ void CSockBEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bCom
 	AddLocalVariable(pVariable);
 	pVariable->CreateBackEnd(string("socklen_t"), string("dice_fromlen"), 0);
 	string sInit = "sizeof(*" +
-		CCompiler::GetNameFactory()->GetCorbaObjectVariable() + ")";
+		CBENameFactory::Instance()->GetCorbaObjectVariable() + ")";
 	pVariable->SetDefaultInitString(sInit);
 }
 

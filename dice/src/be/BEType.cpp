@@ -26,15 +26,16 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEType.h"
-#include "be/BEContext.h"
-#include "be/BEFile.h"
-#include "be/BETypedef.h"
-#include "be/BEDeclarator.h"
-#include "be/BEType.h"
-#include "be/BEExpression.h"
-#include "be/BEHeaderFile.h"
-#include "be/BESizes.h"
+#include "BEType.h"
+#include "BEContext.h"
+#include "BEFile.h"
+#include "BETypedef.h"
+#include "BEDeclarator.h"
+#include "BEType.h"
+#include "BEExpression.h"
+#include "BEHeaderFile.h"
+#include "BESizes.h"
+#include "BENameFactory.h"
 #include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include "fe/FESimpleType.h"
@@ -106,7 +107,7 @@ CBEType::CreateBackEnd(CFETypeSpec * pFEType)
 	    m_nMaxSize = m_nSize;
     }
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     m_sName = pNF->GetTypeName(m_nFEType, m_bUnsigned, m_nSize);
     if (m_sName.empty())
     {
@@ -139,7 +140,7 @@ CBEType::CreateBackEnd(bool bUnsigned,
 	"CEBType::%s(%s, %d, %d) called\n", __func__,
 	bUnsigned ? "true" : "false", nSize, nFEType);
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     CBESizes *pSizes = CCompiler::GetSizes();
     m_bUnsigned = bUnsigned;
     m_nSize = pSizes->GetSizeOfType(nFEType, nSize);
@@ -313,7 +314,7 @@ void CBEType::WriteCast(CBEFile& pFile, bool bPointer)
         default:
             break;
         }
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
         string sName = pNF->GetTypeName(nBaseType, false, nBaseSize);
 	pFile << "(" << sName;
     }

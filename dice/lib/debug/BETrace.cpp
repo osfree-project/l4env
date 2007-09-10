@@ -32,6 +32,7 @@
 #include "be/BEFunction.h"
 #include "be/BEMsgBuffer.h"
 #include "be/BETypedDeclarator.h"
+#include "be/BENameFactory.h"
 #include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include <cassert>
@@ -167,7 +168,7 @@ void CBETrace::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
 	if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 		return;
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcodeVar = pNF->GetOpcodeVariable();
 	string sFunc;
 	CCompiler::GetBackEndOption("trace-server-func", sFunc);
@@ -187,7 +188,7 @@ void CBETrace::AfterDispatch(CBEFile& pFile, CBEFunction *pFunction)
 	if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 		return;
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sFunc;
 	CCompiler::GetBackEndOption("trace-server-func", sFunc);
 	string sReply = pNF->GetReplyCodeVariable();

@@ -63,7 +63,7 @@ void CL4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponen
 	CBECallFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
 	// add local variables
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
 	AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
@@ -97,7 +97,7 @@ void CL4BECallFunction::WriteInvocation(CBEFile& pFile)
 	WriteIPC(pFile);
 	if (!CCompiler::IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
 	{
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		// now check if call has been canceled
 		string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 		--pFile << "\t} while ((L4_IPC_ERROR(" << sResult <<
@@ -122,7 +122,7 @@ void CL4BECallFunction::WriteInvocation(CBEFile& pFile)
  */
 void CL4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
@@ -187,7 +187,7 @@ void CL4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 		m_bTraceOn = bLocalTrace = true;
 	}
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// check flexpages
 	if (GetParameterCount(TYPE_FLEXPAGE, GetReceiveDirection()) > 0)
 	{

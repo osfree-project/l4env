@@ -28,6 +28,8 @@
 
 #include "BECppCallWrapperFunction.h"
 #include "BETypedDeclarator.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "BEFile.h"
 #include "fe/FEOperation.h"
@@ -59,7 +61,7 @@ CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
     m_nSkipParameter = nSkipParameter;
 
     // FIXME iterate parameters and prefix them
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sPrefix = pNF->GetWrapperVariablePrefix();
     vector<CBETypedDeclarator*>::iterator iter = m_Parameters.begin();
     for (; iter != m_Parameters.end(); iter++)

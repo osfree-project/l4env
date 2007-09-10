@@ -4,7 +4,6 @@
 #include "svnversion.h"
 
 const char* dice_build   = __DATE__ " " __TIME__;
-const char* dice_version = VERSION;
 #ifdef __USER__
 const char* dice_user    = __USER__;
 #else

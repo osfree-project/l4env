@@ -52,7 +52,6 @@
 
 //@{
 /** some config variables */
-extern const char* dice_version;
 extern const char* dice_build;
 //@}
 
@@ -356,9 +355,9 @@ void CBEFile::WriteIntro()
 
 	time_t t = time(0);
 	*this << "on " << ctime(&t);
-	*this << " * with Dice version " << dice_version << " (compiled on " <<
+	*this << " * with Dice version " << PACKAGE_VERSION << " (compiled on " <<
 		dice_build << ")\n";
-	*this << " * send bug reports to <dice@os.inf.tu-dresden.de>\n";
+	*this << " * send bug reports to <" << PACKAGE_BUGREPORT << ">\n";
 	*this << " */\n\n";
 }
 

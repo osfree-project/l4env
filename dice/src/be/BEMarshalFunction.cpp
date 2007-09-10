@@ -37,6 +37,7 @@
 #include "BEClass.h"
 #include "BESrvLoopFunction.h"
 #include "BESizes.h"
+#include "BENameFactory.h"
 #include "BEClassFactory.h"
 #include "BEMarshaller.h"
 #include "Compiler.h"
@@ -107,7 +108,7 @@ CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
 	// add return variable if we have a return parameter
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sReturn = pNF->GetReturnVariable();
 	if (FindParameter(sReturn) &&
 		!pMsgBuffer->AddReturnVariable(this))
@@ -159,7 +160,7 @@ CBEMarshalFunction::WriteCallParameter(CBEFile& pFile,
 	bool bCallFromSameClass)
 {
 	// write own message buffer's name
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetMessageBufferVariable();
 	if (!bCallFromSameClass && pParameter->m_Declarators.Find(sName))
 		pParameter->GetType()->WriteCast(pFile, pParameter->HasReference());
@@ -183,7 +184,7 @@ CBEMarshalFunction::GetExceptionVariable()
 		__func__, pMsgBuf);
 	if (!pMsgBuf)
 		return 0;
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetExceptionWordVariable();
 	pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
 	if (!pRet)
@@ -238,8 +239,8 @@ void CBEMarshalFunction::AddAfterParameters()
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMarshalFunction::%s called\n", __func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// get class' message buffer
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
 	assert(pClass);

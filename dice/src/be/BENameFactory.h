@@ -67,8 +67,8 @@ class CDeclaratorStackLocation;
  * wish to add some new string to a derived class, then you have to cast the
  * name factory to the derived class to be able to use this function.  E.g.:
  * add GetNewVar() to CDerivedNF then you can only use it by
- * ((CDerivedNF*)(CCompiler::GetNameFactory())->GetNewVar() but if using
- * GetString(NEW_VAR) you do CCompiler::GetNameFactory()->GetString(NEW_VAR,
+ * ((CDerivedNF*)(CBENameFactory::Instance())->GetNewVar() but if using
+ * GetString(NEW_VAR) you do CBENameFactory::Instance()->GetString(NEW_VAR,
  * ...).
  *
  * Because most of the functions which are present in this class became
@@ -136,8 +136,16 @@ public:
 	virtual std::string GetPaddingMember(int nPadType, int nPadToType);
 	virtual std::string GetWrapperVariablePrefix();
 
+	static CBENameFactory* Instance();
+
 protected:
 	virtual std::string GetCORBATypeName(int nType, bool bUnsigned, int nSize);
+
+private:
+    /** \var CBENameFactory *m_pInstance
+     *  \brief a reference to the name factory
+     */
+    static CBENameFactory *m_pInstance;
 };
 
 #endif                // !__DICE_BENAMEFACTORY_H__

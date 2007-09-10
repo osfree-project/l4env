@@ -55,7 +55,7 @@ void CL4V4IA32IPC::WriteCall(CBEFile& pFile, CBEFunction* pFunction)
         return;
     }
 
-    CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
+    CL4BENameFactory *pNF = (CL4BENameFactory*)CBENameFactory::Instance();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);

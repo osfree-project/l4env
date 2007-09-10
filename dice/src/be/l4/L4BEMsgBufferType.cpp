@@ -131,7 +131,7 @@ CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
 	assert(pStruct);
 
 	// we have to create a new element for the indirect string part
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
 	pMember->SetParent(this);
 	pMember->CreateBackEnd(pFEParameter);
@@ -169,7 +169,7 @@ CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
 	assert(pStruct);
 
 	// we have to create a new element for the indirect string part
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
 	pMember->SetParent(this);
 	pMember->CreateBackEnd(pFEParameter);
@@ -219,7 +219,7 @@ CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
 	assert(pStruct);
 
 	// we have to create a new element for the indirect string part
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedDeclarator *pMember = pCF->GetNewTypedDeclarator();
 	pMember->SetParent(this);
 	// create flexpage type
@@ -227,7 +227,7 @@ CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
 	pType->SetParent(pMember);
 	pType->CreateBackEnd(true, 0, TYPE_FLEXPAGE);
 	// get name for zero fpage
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
 	// now create member
 	pMember->CreateBackEnd(pType, sName);

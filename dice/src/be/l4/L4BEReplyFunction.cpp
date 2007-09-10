@@ -60,7 +60,7 @@ void CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bCompone
 
 	string exc = string(__func__);
 	// add local variables
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
 	string sCurr = sResult;
@@ -113,7 +113,7 @@ void CL4BEReplyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
 	if (!m_sErrorFunction.empty())
 	{
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 
 		pFile << "\t/* test for IPC errors */\n";

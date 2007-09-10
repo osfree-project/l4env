@@ -37,6 +37,7 @@
 #include "BEHeaderFile.h"
 #include "BEUserDefinedType.h"
 #include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Trace.h"
 #include "BEAttribute.h"
 #include "Compiler.h"
@@ -95,9 +96,9 @@ CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSi
 	string exc = string(__func__);
 	// return type -> set to opcode
 	// if return var is parameter do not delete it
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcodeVar = pNF->GetOpcodeVariable();
-	if (!SetReturnVar(CCompiler::GetClassFactory()->GetNewOpcodeType(),
+	if (!SetReturnVar(CBEClassFactory::Instance()->GetNewOpcodeType(),
 			sOpcodeVar))
 	{
 		exc += " failed because return var could not be created.";
@@ -121,7 +122,7 @@ CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSi
 	// this attribute
 	if (m_pClass && m_pClass->HasFunctionWithAttribute(ATTR_SCHED_DONATE))
 	{
-		CBEClassFactory *pCF = CCompiler::GetClassFactory();
+		CBEClassFactory *pCF = CBEClassFactory::Instance();
 		CBEAttribute *pAttr = pCF->GetNewAttribute();
 		m_Attributes.Add(pAttr);
 		pAttr->CreateBackEnd(ATTR_SCHED_DONATE);

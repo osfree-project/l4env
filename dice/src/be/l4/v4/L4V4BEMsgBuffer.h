@@ -81,7 +81,7 @@ protected:
 	virtual void ConvertMember(CBETypedDeclarator* pMember);
 
 	virtual bool PadRefstringToPosition(CBEStructType *pStruct, int nPosition);
-	virtual bool Sort(CBEStructType *pStruct);
+	virtual void Sort(CBEStructType *pStruct);
 };
 
 #endif

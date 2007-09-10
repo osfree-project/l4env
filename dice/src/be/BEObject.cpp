@@ -26,16 +26,17 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEObject.h"
-#include "be/BERoot.h"
-#include "be/BEFunction.h"
-#include "be/BEStructType.h"
-#include "be/BEUnionType.h"
-#include "be/BEContext.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEClient.h"
-#include "be/BEComponent.h"
+#include "BEObject.h"
+#include "BERoot.h"
+#include "BEFunction.h"
+#include "BEStructType.h"
+#include "BEUnionType.h"
+#include "BEContext.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BEClient.h"
+#include "BEComponent.h"
+#include "BENameFactory.h"
 #include "Compiler.h"
 #include "fe/FEBase.h"
 #include "fe/FEFile.h"
@@ -106,7 +107,7 @@ void CBEObject::SetTargetFileName(CFEBase *pFEObject)
             (pFEObject->GetSpecificParent<CFEOperation>()))
             pFEObject = pFEObject->GetSpecificParent<CFEOperation>();
     }
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     m_sTargetImplementation = pNF->GetFileName(pFEObject,
 	FILETYPE_CLIENTIMPLEMENTATION);
     // get the FEObject's file, because the header file is always for the

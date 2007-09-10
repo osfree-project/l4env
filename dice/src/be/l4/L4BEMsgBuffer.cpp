@@ -78,9 +78,9 @@ CL4BEMsgBuffer::GetFlexpageVariable()
 {
 	string exc = string(__func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(TYPE_RCV_FLEXPAGE);
-	string sName = CCompiler::GetNameFactory()->
+	string sName = CBENameFactory::Instance()->
 		GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
 	CBETypedDeclarator *pFpage = pCF->GetNewTypedDeclarator();
 	pType->CreateBackEnd(false, 0, TYPE_RCV_FLEXPAGE);
@@ -109,9 +109,9 @@ CL4BEMsgBuffer::GetSizeDopeVariable()
 {
 	string exc = string(__func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(TYPE_MSGDOPE_SIZE);
-	string sName = CCompiler::GetNameFactory()->
+	string sName = CBENameFactory::Instance()->
 		GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
 	CBETypedDeclarator *pSize = pCF->GetNewTypedDeclarator();
 	pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SIZE);
@@ -139,9 +139,9 @@ CBETypedDeclarator*
 CL4BEMsgBuffer::GetSendDopeVariable()
 {
 	string exc = string(__func__);
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(TYPE_MSGDOPE_SEND);
-	string sName = CCompiler::GetNameFactory()->
+	string sName = CBENameFactory::Instance()->
 		GetMessageBufferMember(TYPE_MSGDOPE_SEND);
 	CBETypedDeclarator *pSend = pCF->GetNewTypedDeclarator();
 	pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SEND);
@@ -179,10 +179,9 @@ CL4BEMsgBuffer::GetSendDopeVariable()
  *
  * This implementation takes also care of flexpages and indirect strings.
  */
-bool
-CL4BEMsgBuffer::Sort(CBEStructType *pStruct)
+void CL4BEMsgBuffer::Sort(CBEStructType *pStruct)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// doing this in reverse order, so we can insert them at
 	// position 0
 	// get send dope
@@ -197,8 +196,7 @@ CL4BEMsgBuffer::Sort(CBEStructType *pStruct)
 
 	// the following call, calls SortPayload which uses DoExchangeMembers to
 	// sort the members.
-	if (!CBEMsgBuffer::Sort(pStruct))
-		return false;
+	CBEMsgBuffer::Sort(pStruct);
 
 	// move all flexpages to begin (to override opcode and exception
 	// placement) -- therefore we do not start with the payload, but we
@@ -256,8 +254,6 @@ CL4BEMsgBuffer::Sort(CBEStructType *pStruct)
 	// get flexpage
 	sName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
 	pStruct->m_Members.Move(sName, 0);
-
-	return true;
 }
 
 /** \brief checks if two members of a struct should be exchanged
@@ -332,7 +328,7 @@ void CL4BEMsgBuffer::AddGenericStructMembersClass(CBEStructType *pStruct)
 CBETypedDeclarator*
 CL4BEMsgBuffer::GetRefstringMemberVariable(int nNumber)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetMessageBufferMember(TYPE_REFSTRING);
 	return GetMemberVariable(TYPE_REFSTRING, false, sName, nNumber);
 }
@@ -500,7 +496,7 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile& pFile,
 	}
 
 	// get name of member
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetMessageBufferMember(nType);
 	// get member
 	CBETypedDeclarator *pMember = FindMember(sName, pFunction, nStructType);
@@ -677,7 +673,7 @@ CL4BEMsgBuffer::WriteMaxRefstringSize(CBEFile& pFile,
 		assert(pMsgType);
 		// iterate structs
 		CBEStructType *pStruct = 0;
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sNameIn = pNF->GetMessageBufferStructName(CMsgStructType::In,
 			string(), string());
 		string sNameOut = pNF->GetMessageBufferStructName(CMsgStructType::Out,
@@ -993,8 +989,8 @@ bool CL4BEMsgBuffer::InsertPadMember(int nFEType, int nSize, CBETypedDeclarator 
 	CBEStructType *pStruct)
 {
 	CBETypedDeclarator *pPadMember = 0;
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 
 	// get name
 	string sName = pNF->GetPaddingMember(nFEType,

@@ -36,6 +36,7 @@
 #include "BEAttribute.h"
 #include "BEStructType.h"
 #include "BEClassFactory.h"
+#include "BENameFactory.h"
 #include "BESizes.h"
 #include "BEUnionType.h"
 #include "Compiler.h"
@@ -106,8 +107,8 @@ CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
 	// get forward declaration
 	m_bForwardDeclaration =
 		((CFEConstructedType*) pFEType)->IsForwardDeclaration();
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// iterate over members
 	CFEStructType *pFEStruct = (CFEStructType *) pFEType;
 	vector<CFETypedDeclarator*>::iterator iterM;
@@ -186,7 +187,7 @@ CBEStructType::CreateBackEnd(string sTag,
 	CBEObject::CreateBackEnd(pRefObj);
 	m_nFEType = TYPE_STRUCT;
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	m_sName = pNF->GetTypeName(TYPE_STRUCT, false);
 	m_sTag = sTag;
 

@@ -29,7 +29,6 @@
 #include "BENameSpace.h"
 #include "BEContext.h"
 #include "BEClass.h"
-#include "BENameSpace.h"
 #include "BEConstant.h"
 #include "BEType.h"
 #include "BETypedef.h"
@@ -41,6 +40,8 @@
 #include "BEUnionType.h"
 #include "BEEnumType.h"
 #include "BEContext.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
@@ -184,7 +185,7 @@ void CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary)
 					if (!pNameSpace)
 					{
 						pNameSpace =
-							CCompiler::GetClassFactory()->GetNewNameSpace();
+							CBEClassFactory::Instance()->GetNewNameSpace();
 						m_NestedNamespaces.Add(pNameSpace);
 						pNameSpace->CreateBackEnd(pNestedLib);
 					}
@@ -231,7 +232,7 @@ void CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary)
 		CBENameSpace *pNameSpace = FindNameSpace((*iterL)->GetName());
 		if (!pNameSpace)
 		{
-			pNameSpace = CCompiler::GetClassFactory()->GetNewNameSpace();
+			pNameSpace = CBEClassFactory::Instance()->GetNewNameSpace();
 			m_NestedNamespaces.Add(pNameSpace);
 			pNameSpace->CreateBackEnd(*iterL);
 		}
@@ -258,7 +259,7 @@ CBENameSpace::CreateBackEnd(CFEInterface *pFEInterface)
 	pClass = pRoot->FindClass(pFEInterface->GetName());
 	if (!pClass)
 	{
-		pClass = CCompiler::GetClassFactory()->GetNewClass();
+		pClass = CBEClassFactory::Instance()->GetNewClass();
 		m_Classes.Add(pClass);
 		// recreate class to add additional members
 		pClass->CreateBackEnd(pFEInterface);
@@ -274,7 +275,7 @@ CBENameSpace::CreateBackEnd(CFEInterface *pFEInterface)
 void
 CBENameSpace::CreateBackEnd(CFEConstDeclarator *pFEConstant)
 {
-	CBEConstant *pConstant = CCompiler::GetClassFactory()->GetNewConstant();
+	CBEConstant *pConstant = CBEClassFactory::Instance()->GetNewConstant();
 	m_Constants.Add(pConstant);
 	pConstant->CreateBackEnd(pFEConstant);
 }
@@ -286,7 +287,7 @@ CBENameSpace::CreateBackEnd(CFEConstDeclarator *pFEConstant)
 void
 CBENameSpace::CreateBackEnd(CFETypedDeclarator *pFETypedef)
 {
-	CBETypedef *pTypedef = CCompiler::GetClassFactory()->GetNewTypedef();
+	CBETypedef *pTypedef = CBEClassFactory::Instance()->GetNewTypedef();
 	m_Typedefs.Add(pTypedef);
 	pTypedef->SetParent(this);
 	pTypedef->CreateBackEnd(pFETypedef);
@@ -299,7 +300,7 @@ CBENameSpace::CreateBackEnd(CFETypedDeclarator *pFETypedef)
 void
 CBENameSpace::CreateBackEnd(CFEAttribute *pFEAttribute)
 {
-	CBEAttribute *pAttribute = CCompiler::GetClassFactory()->GetNewAttribute();
+	CBEAttribute *pAttribute = CBEClassFactory::Instance()->GetNewAttribute();
 	m_Attributes.Add(pAttribute);
 	pAttribute->CreateBackEnd(pFEAttribute);
 }
@@ -615,7 +616,7 @@ void CBENameSpace::WriteTaggedType(CBEType *pType, CBEHeaderFile& pFile)
 		sTag = ((CBEStructType*)pType)->GetTag();
 	if (dynamic_cast<CBEUnionType*>(pType))
 		sTag = ((CBEUnionType*)pType)->GetTag();
-	sTag = CCompiler::GetNameFactory()->GetTypeDefine(sTag);
+	sTag = CBENameFactory::Instance()->GetTypeDefine(sTag);
 	pFile << "#ifndef " << sTag << "\n";
 	pFile << "#define " << sTag << "\n";
 	pType->Write(pFile);
@@ -821,7 +822,7 @@ CBEType* CBENameSpace::FindTaggedType(int nType, string sTag)
  */
 void CBENameSpace::CreateBackEnd(CFEConstructedType *pFEType)
 {
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(pFEType->GetType());
 	m_TypeDeclarations.Add(pType);
 	pType->SetParent(this);

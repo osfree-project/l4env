@@ -164,7 +164,7 @@ CL4V2BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile,
     int nIndex,
     CMsgStructType nType)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     // check if this is server side, and if so, check for
     // init-rcvstring attribute of class
     if (pFunction->IsComponentSide() &&
@@ -227,7 +227,7 @@ CL4V2BEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile,
     int nIndex,
     CMsgStructType nType)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sWord = pNF->GetTypeName(TYPE_MWORD, true);
     // get parameter
     CBETypedDeclarator *pParameter = pFunction->FindParameter(
@@ -321,7 +321,7 @@ CL4V2BEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile,
     }
 
     // get name of member
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName = pNF->GetMessageBufferMember(nType);
     // get member
     CBETypedDeclarator *pMember = FindMember(sName, nStructType);
@@ -354,7 +354,7 @@ CL4V2BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile,
     CMsgStructType nType)
 {
     // get receive flexpage member
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sFlexName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
 
     CBETypedDeclarator *pFlexpage = FindMember(sFlexName, nType);
@@ -392,7 +392,7 @@ int
 CL4V2BEMsgBuffer::GetMemberPosition(string sName,
     CMsgStructType nType)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     if (sName == pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE))
 	return -1;
     // test send dope

@@ -73,9 +73,9 @@ public: // public methods
 	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction);
 	virtual void AddPlatformSpecificMembers(CBEClass *pClass);
 
-	virtual bool Sort(CBEClass *pClass);
-	virtual bool Sort(CBEFunction *pFunction);
-	virtual bool Sort(CBEStructType *pStruct);
+	virtual void Sort(CBEClass *pClass);
+	virtual void Sort(CBEFunction *pFunction);
+	virtual void Sort(CBEStructType *pStruct);
 
 	virtual void WriteAccess(CBEFile& pFile, CBEFunction *pFunction,
 		CMsgStructType nType, CDeclStack* pStack);
@@ -139,7 +139,7 @@ protected: // protected methods
 	vector<CBETypedDeclarator*>::iterator GetStartOfPayload(CBEStructType *pStruct);
 
 	virtual bool Pad();
-	virtual bool SortPayload(CBEStructType *pStruct);
+	virtual void SortPayload(CBEStructType *pStruct);
 	virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst,
 		CBETypedDeclarator *pSecond);
 

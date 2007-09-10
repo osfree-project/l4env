@@ -33,6 +33,7 @@
 #include "be/BEFunction.h"
 #include "be/BEFile.h"
 #include "be/BEDeclarator.h"
+#include "be/BEClassFactory.h"
 #include "Compiler.h"
 #include "TypeSpec-Type.h"
 #include <cassert>
@@ -92,7 +93,7 @@ CL4V4BETrace::BeforeCall(CBEFile& pFile,
     CBEDeclarator *pObjName = pObj->m_Declarators.First();
 
     // get tracing function
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sFunc;
     CCompiler::GetBackEndOption(string("trace-client-func"), sFunc);
@@ -146,7 +147,7 @@ CL4V4BETrace::AfterCall(CBEFile& pFile,
     if (CCompiler::IsOptionSet(PROGRAM_TRACE_CLIENT) ||
 	CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
     {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
 	pFile << "\tif (L4_IpcFailed (" << sMsgTag << "))\n";
@@ -178,7 +179,7 @@ CL4V4BETrace::BeforeDispatch(CBEFile& pFile,
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 	return;
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sOpcodeVar = pNF->GetOpcodeVariable();
     string sObjectVar = pNF->GetCorbaObjectVariable();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
@@ -217,8 +218,8 @@ CL4V4BETrace::AfterDispatch(CBEFile& pFile,
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 	return;
 
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sFunc;
     CCompiler::GetBackEndOption(string("trace-server-func"), sFunc);
     string sReply = pNF->GetReplyCodeVariable();
@@ -276,7 +277,7 @@ CL4V4BETrace::BeforeReplyWait(CBEFile& pFile,
 
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sObjectVar = pNF->GetCorbaObjectVariable();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sFunc;
@@ -302,7 +303,7 @@ CL4V4BETrace::AfterReplyWait(CBEFile& pFile,
 	!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 	return;
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sObjectVar = pNF->GetCorbaObjectVariable();
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sFunc;

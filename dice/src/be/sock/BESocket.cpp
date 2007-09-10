@@ -58,7 +58,7 @@ CBESocket::WriteSendTo(CBEFile& pFile,
     bool bUseEnv,
     const char* sFunc)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sCorbaObj = pNF->GetCorbaObjectVariable();
 
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
@@ -92,7 +92,7 @@ CBESocket::WriteReceiveFrom(CBEFile& pFile,
     CBEFunction* pFunction,
     bool bUseEnv)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sCorbaObj = pNF->GetCorbaObjectVariable();
     string sOffset = pNF->GetOffsetVariable();
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
@@ -268,7 +268,7 @@ void CBESocket::WriteReplyAndWait(CBEFile& pFile, CBEFunction* pFunction)
     // reset msg buffer to zeros
     WriteZeroMsgBuffer(pFile, pFunction);
     // want to receive from any client again
-    string sCorbaObj = CCompiler::GetNameFactory()->GetCorbaObjectVariable();
+    string sCorbaObj = CBENameFactory::Instance()->GetCorbaObjectVariable();
     pFile << "\t" << sCorbaObj << "->sin_addr.s_addr = INADDR_ANY;\n";
     // wait for new request, with receive timeout
     WriteTimeoutOptionCall(pFile, pFunction, true);
@@ -284,7 +284,7 @@ void CBESocket::WriteReplyAndWait(CBEFile& pFile, CBEFunction* pFunction)
 void CBESocket::WriteZeroMsgBuffer(CBEFile& pFile,
     CBEFunction* pFunction)
 {
-    string sOffset = CCompiler::GetNameFactory()->GetOffsetVariable();
+    string sOffset = CBENameFactory::Instance()->GetOffsetVariable();
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     // msgbuffer is always a pointer: either variable sized or char[]
     string sPtrName, sSizeName;
@@ -342,7 +342,7 @@ void CBESocket::WriteBind(CBEFile& pFile,
     CBEFunction *pFunction)
 {
     bool bUseEnv = pFunction->IsComponentSide();
-    string sCorbaObj = CCompiler::GetNameFactory()->GetCorbaObjectVariable();
+    string sCorbaObj = CBENameFactory::Instance()->GetCorbaObjectVariable();
 
     pFile << "\tif (bind(";
     WriteSocketDescriptor(pFile, pFunction, bUseEnv);

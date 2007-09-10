@@ -26,14 +26,16 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEExpression.h"
-#include "be/BEContext.h"
-#include "be/BEFile.h"
-#include "be/BEType.h"
-#include "be/BERoot.h"
-#include "be/BETypedef.h"
-#include "be/BEConstant.h"
-#include "be/BEEnumType.h"
+#include "BEExpression.h"
+#include "BEContext.h"
+#include "BEFile.h"
+#include "BEType.h"
+#include "BERoot.h"
+#include "BETypedef.h"
+#include "BEConstant.h"
+#include "BEEnumType.h"
+#include "BEClassFactory.h"
+#include "BENameFactory.h"
 #include "Compiler.h"
 #include "fe/FEExpression.h"
 #include "fe/FEUserDefinedExpression.h"
@@ -110,7 +112,7 @@ CBEExpression::CreateBackEnd(CFEExpression * pFEExpression)
     // call CBEObject's CreateBackEnd method
     CBEObject::CreateBackEnd(pFEExpression);
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     m_nType = pFEExpression->GetType();
     switch (m_nType)
     {
@@ -196,7 +198,7 @@ CBEExpression::CreateBackEndConditional(
 	exc += " failed because no condition.";
 	throw new error::create_error(exc);
     }
-    m_pCondition = CCompiler::GetClassFactory()->GetNewExpression();
+    m_pCondition = CBEClassFactory::Instance()->GetNewExpression();
     m_pCondition->SetParent(this);
     m_pCondition->CreateBackEnd(pFEExpression->GetCondition());
     CreateBackEndBinary(pFEExpression);
@@ -216,7 +218,7 @@ CBEExpression::CreateBackEndBinary(CFEBinaryExpression * pFEExpression)
 	exc += " failed because no second operand.";
 	throw new error::create_error(exc);
     }
-    m_pOperand2 = CCompiler::GetClassFactory()->GetNewExpression();
+    m_pOperand2 = CBEClassFactory::Instance()->GetNewExpression();
     m_pOperand2->SetParent(this);
     m_pOperand2->CreateBackEnd(pFEExpression->GetOperand2());
     CreateBackEndUnary(pFEExpression);
@@ -263,7 +265,7 @@ CBEExpression::CreateBackEndPrimary(CFEPrimaryExpression * pFEExpression)
 	exc += " failed because no expression.";
 	throw new error::create_error(exc);
     }
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBEExpression *pExpression = pCF->GetNewExpression();
     pExpression->SetParent(this);
     pExpression->CreateBackEnd(pFEOperand);
@@ -321,7 +323,7 @@ void
 CBEExpression::CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression)
 {
     // can be type
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CFETypeSpec *pFEType = pFEExpression->GetSizeOfType();
     if (pFEType)
     {

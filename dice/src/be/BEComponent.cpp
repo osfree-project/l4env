@@ -26,18 +26,20 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BEComponent.h"
-#include "be/BEFile.h"
-#include "be/BEContext.h"
-#include "be/BEWaitFunction.h"
-#include "be/BESrvLoopFunction.h"
-#include "be/BEUnmarshalFunction.h"
-#include "be/BEComponentFunction.h"
-#include "be/BEWaitAnyFunction.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BERoot.h"
-#include "be/BENameSpace.h"
+#include "BEComponent.h"
+#include "BEFile.h"
+#include "BEContext.h"
+#include "BEWaitFunction.h"
+#include "BESrvLoopFunction.h"
+#include "BEUnmarshalFunction.h"
+#include "BEComponentFunction.h"
+#include "BEWaitAnyFunction.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BERoot.h"
+#include "BENameSpace.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "fe/FEFile.h"
@@ -118,7 +120,7 @@ CBEComponent::CreateBackEndHeader(CFEFile * pFEFile)
 {
 	// the header files are created on a per IDL file basis, no matter
 	// which option is set
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEHeaderFile* pHeader = pCF->GetNewHeaderFile();
 	m_HeaderFiles.Add(pHeader);
 	pHeader->CreateBackEnd(pFEFile, FILETYPE_COMPONENTHEADER);
@@ -146,7 +148,7 @@ CBEComponent::CreateBackEndHeader(CFEFile * pFEFile)
 			// get name
 			// do not use include file name, since we assume, that opcode
 			// file is in same directory
-			CBENameFactory *pNF = CCompiler::GetNameFactory();
+			CBENameFactory *pNF = CBENameFactory::Instance();
 			string sOpcode = pNF->GetFileName(pFEFile, FILETYPE_OPCODE);
 			pHeader->AddIncludedFileName(sOpcode, true, false, pFEFile);
 		}
@@ -171,7 +173,7 @@ CBEComponent::CreateBackEndImplementation(CFEFile * pFEFile)
 	}
 	// the implementation files are created on a per IDL file basis, no matter
 	// which option is set
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEImplementationFile* pImpl = pCF->GetNewImplementationFile();
 	m_ImplementationFiles.Add(pImpl);
 	pImpl->SetHeaderFile(pHeader);

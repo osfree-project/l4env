@@ -33,7 +33,7 @@ void Sensor::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
     if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 	return;
     
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sOpcodeVar = pNF->GetOpcodeVariable();
     string sObj = pFunction->GetObject()->m_Declarators.First()->GetName();
     string sFunc;

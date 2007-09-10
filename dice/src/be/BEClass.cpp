@@ -64,6 +64,8 @@
 #include "BEMsgBuffer.h"
 #include "BEClass.h"
 #include "BEException.h"
+#include "BEClassFactory.h"
+#include "BENameFactory.h"
 
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
@@ -355,7 +357,7 @@ void CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
 	if (m_pMsgBuffer)
 		delete m_pMsgBuffer;
 	string exc = string(__func__);
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	m_pMsgBuffer = pCF->GetNewMessageBuffer();
 	m_pMsgBuffer->SetParent(this);
 	m_pMsgBuffer->CreateBackEnd(pFEInterface);
@@ -370,22 +372,14 @@ void CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
 	// function specific initialization
 	MsgBufferInitialization();
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s MB initialized\n",
-		__func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s MB initialized\n", __func__);
 	// sort message buffer
-	if (!m_pMsgBuffer->Sort(this))
-	{
-		exc += " failed, because Sort failed.";
-		throw new error::create_error(exc);
-	}
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass:%s MB sorted\n",
-		__func__);
+	m_pMsgBuffer->Sort(this);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass:%s MB sorted\n", __func__);
 	// do post creation stuff
 	m_pMsgBuffer->PostCreate(this, pFEInterface);
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s returns\n",
-		__func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s returns\n", __func__);
 }
 
 /** \brief make function specific initialization
@@ -426,7 +420,7 @@ CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	/* wait any */
 	CBEInterfaceFunction *pFunction = pCF->GetNewWaitAnyFunction();
 	m_Functions.Add(pFunction);
@@ -473,7 +467,7 @@ CBEClass::CreateAliasForClass(CFEInterface *pFEInterface)
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEClass::%s(interface) called\n", __func__);
 	// create the BE type
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedef *pTypedef = pCF->GetNewTypedef();
 	m_Typedefs.Add(pTypedef);
 	// create CORBA_Object type
@@ -501,7 +495,7 @@ CBEClass::CreateBackEndConst(CFEConstDeclarator *pFEConstant)
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(const) called\n",
 		__func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEConstant *pConstant = pCF->GetNewConstant();
 	m_Constants.Add(pConstant);
 	pConstant->SetParent(this);
@@ -520,7 +514,7 @@ CBEClass::CreateBackEndTypedef(CFETypedDeclarator *pFETypedef)
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEClass::%s(typedef) called\n", __func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedef *pTypedef = pCF->GetNewTypedef();
 	m_Typedefs.Add(pTypedef);
 	pTypedef->SetParent(this);
@@ -625,7 +619,7 @@ void CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
 
 	CFunctionGroup *pGroup = new CFunctionGroup(pFEOperation);
 	m_FunctionGroups.Add(pGroup);
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 
 	string exc = string(__func__);
 
@@ -731,7 +725,7 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
 	}
 	assert(iterFG != m_FunctionGroups.end());
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	if (!(pFEOperation->m_Attributes.Find(ATTR_IN)) &&
 		!(pFEOperation->m_Attributes.Find(ATTR_OUT)))
 	{
@@ -778,7 +772,7 @@ CBEClass::CreateBackEndAttribute(CFEAttribute *pFEAttribute)
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(attr) called\n",
 		__func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEAttribute *pAttribute = pCF->GetNewAttribute();
 	m_Attributes.Add(pAttribute);
 	pAttribute->CreateBackEnd(pFEAttribute);
@@ -795,7 +789,7 @@ CBEClass::CreateBackEndException(CFETypedDeclarator* pFEException)
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s called\n",
 		__func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEException *pException = pCF->GetNewException();
 	m_Exceptions.Add(pException);
 	pException->CreateBackEnd(pFEException);
@@ -1024,8 +1018,8 @@ void CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
 
 	// first create classes in reverse order, so we can build correct parent
 	// relationships
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	CBEConstant *pOpcode = pCF->GetNewConstant();
 	CBEOpcodeType *pType = pCF->GetNewOpcodeType();
 	pType->SetParent(pOpcode);
@@ -1084,8 +1078,8 @@ CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation,
 		"CBEClass::AddOpcodesToFile(operation: %s) called\n",
 		pFEOperation->GetName().c_str());
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// first create classes, so we can build parent relationship correctly
 	CBEConstant *pOpcode = pCF->GetNewConstant();
 	CBEOpcodeType *pType = pCF->GetNewOpcodeType();
@@ -2247,7 +2241,7 @@ CBEClass::CreateBackEndTaggedDecl(CFEConstructedType *pFEType)
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(constr type) called\n",
 		__func__);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(pFEType->GetType());
 	m_TypeDeclarations.Add(pType);
 	pType->SetParent(this);
@@ -2272,7 +2266,7 @@ void CBEClass::WriteTaggedType(CBEType *pType,
 		sTag = ((CBEStructType*)pType)->GetTag();
 	if (dynamic_cast<CBEUnionType*>(pType))
 		sTag = ((CBEUnionType*)pType)->GetTag();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	sTag = pNF->GetTypeDefine(sTag);
 	pFile << "#ifndef " << sTag << "\n";
 	pFile << "#define " << sTag << "\n";
@@ -2607,8 +2601,8 @@ CBEClass::CreateObject()
 		m_pCorbaObject = 0;
 	}
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	string exc = string(__func__);
 
 	string sTypeName("CORBA_Object");
@@ -2635,8 +2629,8 @@ CBEClass::CreateEnvironment()
 		m_pCorbaEnv = 0;
 	}
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// if function is at server side, this is a CORBA_Server_Environment
 	string sTypeName = "CORBA_Server_Environment";
 	string sName = pNF->GetCorbaEnvironmentVariable();

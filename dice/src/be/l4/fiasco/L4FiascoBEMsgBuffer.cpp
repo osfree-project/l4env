@@ -160,7 +160,7 @@ void CL4FiascoBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation
 bool CL4FiascoBEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile, CBEFunction *pFunction,
 	CBEClass *pClass, int nIndex, CMsgStructType nType)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// check if this is server side, and if so, check for
 	// init-rcvstring attribute of class
 	if (pFunction->IsComponentSide() &&
@@ -219,7 +219,7 @@ bool CL4FiascoBEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile, CBEFunctio
 void CL4FiascoBEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile, CBEFunction *pFunction,
     CBETypedDeclarator *pMember, int nIndex, CMsgStructType nType)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sWord = pNF->GetTypeName(TYPE_MWORD, true);
 	// get parameter
 	CBETypedDeclarator *pParameter = pFunction->FindParameter(
@@ -310,7 +310,7 @@ void CL4FiascoBEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile, int nTyp
 	}
 
 	// get name of member
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetMessageBufferMember(nType);
 	// get member
 	CBETypedDeclarator *pMember = FindMember(sName, nStructType);
@@ -341,7 +341,7 @@ void CL4FiascoBEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile, int nTyp
 void CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgStructType nType)
 {
 	// get receive flexpage member
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sFlexName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
 
 	CBETypedDeclarator *pFlexpage = FindMember(sFlexName, nType);
@@ -377,7 +377,7 @@ void CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgSt
  */
 int CL4FiascoBEMsgBuffer::GetMemberPosition(string sName, CMsgStructType nType)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	if (sName == pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE))
 		return -1;
 	// test send dope

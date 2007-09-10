@@ -40,6 +40,7 @@
 #include "be/BEDeclarator.h"
 #include "be/BESizes.h"
 #include "be/BEClass.h"
+#include "be/BEClassFactory.h"
 #include "Compiler.h"
 #include <cassert>
 
@@ -135,8 +136,8 @@ void CL4BETrace::BeforeCall(CBEFile& pFile, CBEFunction *pFunction)
 	assert(pObj);
 	CBEDeclarator *pObjName = pObj->m_Declarators.First();
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 
 	// get tracing function
 	string sFunc;
@@ -213,7 +214,7 @@ void CL4BETrace::AfterCall(CBEFile& pFile, CBEFunction *pFunction)
 		pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nSndDir) &&
 		pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nRcvDir);
 
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 
 	// get tracing function
@@ -249,8 +250,8 @@ void CL4BETrace::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
 	if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 		return;
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcodeVar = pNF->GetOpcodeVariable();
 	string sObjectVar = pNF->GetCorbaObjectVariable();
 	string sFunc;
@@ -285,8 +286,8 @@ void CL4BETrace::AfterDispatch(CBEFile& pFile, CBEFunction *pFunction)
 	if (!CCompiler::IsOptionSet(PROGRAM_TRACE_SERVER))
 		return;
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sFunc;
 	CCompiler::GetBackEndOption("trace-server-func", sFunc);
 	string sReply = pNF->GetReplyCodeVariable();
@@ -328,8 +329,8 @@ void CL4BETrace::BeforeReplyWait(CBEFile& pFile, CBEFunction *pFunction)
 
 	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sMWord = pNF->GetTypeName(TYPE_MWORD, false);
 	string sFunc;
 	CCompiler::GetBackEndOption("trace-server-func", sFunc);
@@ -374,7 +375,7 @@ void CL4BETrace::AfterReplyWait(CBEFile& pFile, CBEFunction *pFunction)
 
 	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 	// get tracing function
 	string sFunc;
@@ -411,7 +412,7 @@ void CL4BETrace::WaitCommError(CBEFile& pFile, CBEFunction *pFunction)
 	CBETypedDeclarator *pReturn = pFunction->GetReturnVariable();
 	string sTraceFunc;
 	CCompiler::GetBackEndOption("trace-server-func", sTraceFunc);
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
 
 	pFile << "\t" << sTraceFunc <<

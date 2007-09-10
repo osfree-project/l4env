@@ -28,9 +28,9 @@
 #include "L4FiascoBEDispatchFunction.h"
 #include "be/BEFile.h"
 #include "be/BEMsgBuffer.h"
+#include "be/BEClassFactory.h"
 #include "be/l4/L4BENameFactory.h"
 #include "be/l4/TypeSpec-L4Types.h"
-#include "Compiler.h"
 #include <cassert>
 
 CL4FiascoBEDispatchFunction::CL4FiascoBEDispatchFunction()
@@ -51,11 +51,11 @@ CL4FiascoBEDispatchFunction::AddBeforeParameters()
 
     if (!m_sDefaultFunction.empty())
     {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
-	string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-	string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	std::string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	std::string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
 	m_Parameters.Add(pParameter);
 	pParameter->CreateBackEnd(sTagType, sTagVar, 1);
@@ -68,11 +68,11 @@ CL4FiascoBEDispatchFunction::AddBeforeParameters()
 void
 CL4FiascoBEDispatchFunction::WriteDefaultCaseWithDefaultFunc(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sObj = pNF->GetCorbaObjectVariable();
-    string sEnv = pNF->GetCorbaEnvironmentVariable();
-    string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+    CBENameFactory *pNF = CBENameFactory::Instance();
+	std::string sMsgBuffer = pNF->GetMessageBufferVariable();
+	std::string sObj = pNF->GetCorbaObjectVariable();
+	std::string sEnv = pNF->GetCorbaEnvironmentVariable();
+	std::string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
     pFile << "\treturn " << m_sDefaultFunction << " (" << sObj <<
 	", " << sTagVar << ", " << sMsgBuffer << ", " << sEnv << ");\n";
@@ -94,9 +94,9 @@ CL4FiascoBEDispatchFunction::WriteDefaultFunctionDeclaration(CBEFile& pFile)
     assert(pClass);
     CBEMsgBuffer *pMsgBuffer = pClass->GetMessageBuffer();
     assert(pMsgBuffer);
-    string sMsgBufferType = pMsgBuffer->m_Declarators.First()->GetName();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
-    string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
+	std::string sMsgBufferType = pMsgBuffer->m_Declarators.First()->GetName();
+    CBENameFactory *pNF = CBENameFactory::Instance();
+	std::string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
     // int \<name\>(\<corba object\>, \<msg buffer type\>*,
     //              \<corba environment\>*)
     pFile << "int " << m_sDefaultFunction << " (CORBA_Object, " << sTagType <<

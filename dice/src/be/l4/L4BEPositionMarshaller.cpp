@@ -41,6 +41,8 @@
 #include "be/BESizes.h"
 #include "be/BEAttribute.h"
 #include "be/BEUserDefinedType.h"
+#include "be/BEClassFactory.h"
+#include "be/BENameFactory.h"
 #include "Compiler.h"
 #include "Messages.h"
 #include "TypeSpec-Type.h"
@@ -205,7 +207,7 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 					pMember->GetType()->IsOfType(TYPE_FLEXPAGE)) &&
 				!pTransmitType)
 			{
-				CBEClassFactory *pCF = CCompiler::GetClassFactory();
+				CBEClassFactory *pCF = CBEClassFactory::Instance();
 				pTransmitType = pCF->GetNewType(TYPE_MWORD);
 				pTransmitType->CreateBackEnd(true, m_nPosSize, TYPE_MWORD);
 				/* set lval so that the cast below is actually performed */
@@ -391,7 +393,7 @@ CL4BEMarshaller::PositionMarshaller::WriteSpecialMember(CBEFile& pFile,
 	assert(pMsgBuffer);
 
 	// test for opcode (only if reference false, otherwise use struct member)
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	CBEDeclarator *pDecl = pMember->m_Declarators.First();
 	if ((pDecl->GetName() == pNF->GetOpcodeVariable()) &&
 		!bReference)
@@ -495,7 +497,7 @@ CL4BEMarshaller::PositionMarshaller::WriteParameter(CBEFile& pFile,
 		bool bUnsigned = pType->IsUnsigned();
 		if (!(bUnsigned && (nFEType == TYPE_MWORD)))
 		{
-			CBEClassFactory *pCF = CCompiler::GetClassFactory();
+			CBEClassFactory *pCF = CBEClassFactory::Instance();
 			CBEType *pMType = pCF->GetNewType(TYPE_MWORD);
 			pMType->CreateBackEnd(true, 0, TYPE_MWORD);
 			pMType->WriteCast(pFile, true);

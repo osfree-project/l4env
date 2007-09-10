@@ -37,6 +37,8 @@
 #include "BEUserDefinedType.h"
 #include "BEMsgBuffer.h"
 #include "BEAttribute.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "TypeSpec-Type.h"
 #include "Compiler.h"
 #include "Error.h"
@@ -100,10 +102,10 @@ CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentS
     CreateCommunication();
 
     // return type -> set to IPC reply code
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBEReplyCodeType *pReplyType = pCF->GetNewReplyCodeType();
     pReplyType->CreateBackEnd();
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sReply = pNF->GetReplyCodeVariable();
     if (!SetReturnVar(pReplyType, sReply))
     {
@@ -168,7 +170,7 @@ void CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
 {
 	assert(pFEInterface);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	vector<CFEOperation*>::iterator iterO;
 	for (iterO = pFEInterface->m_Operations.begin();
 		iterO != pFEInterface->m_Operations.end();
@@ -205,7 +207,7 @@ CBEDispatchFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
  */
 void CBEDispatchFunction::WriteSwitch(CBEFile& pFile)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcodeVar = pNF->GetOpcodeVariable();
 
 	pFile << "\tswitch (" << sOpcodeVar << ")\n";
@@ -257,7 +259,7 @@ CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
     pFile << "\t/* unknown opcode */\n";
     WriteSetWrongOpcodeException(pFile);
     // send reply
-    string sReply = CCompiler::GetNameFactory()->GetReplyCodeVariable();
+    string sReply = CBENameFactory::Instance()->GetReplyCodeVariable();
     pFile << "\t" << sReply << " = DICE_REPLY;\n";
 }
 
@@ -268,7 +270,7 @@ CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
 void
 CBEDispatchFunction::WriteDefaultCaseWithDefaultFunc(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sObj = pNF->GetCorbaObjectVariable();
     string sEnv = pNF->GetCorbaEnvironmentVariable();

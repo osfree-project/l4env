@@ -52,7 +52,7 @@ CL4FiascoBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bCom
 {
     CL4BESrvLoopFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
     AddLocalVariable(sTagType, sTagVar, 0, string("l4_msgtag(0,0,0,0)"));

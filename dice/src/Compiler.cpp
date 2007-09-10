@@ -62,7 +62,6 @@
 using dice::parser::CPreprocessor;
 #include "parser/idl/idl-parser-driver.hh"
 // factories
-#include "FactoryFactory.h"
 #include "be/BEClassFactory.h"
 #include "be/BENameFactory.h"
 
@@ -85,7 +84,6 @@ using dice::parser::CPreprocessor;
 
 //@{
 /** some config variables */
-extern const char* dice_version;
 extern const char* dice_build;
 extern const char* dice_user;
 extern const char* dice_svnrev;
@@ -118,8 +116,6 @@ int CCompiler::m_nVerboseInd = -1;
 ProgramVerbose_Type CCompiler::m_VerboseLevel = PROGRAM_VERBOSE_NONE;
 bitset<PROGRAM_WARNING_MAX> CCompiler::m_WarningLevel;
 int CCompiler::m_nDumpMsgBufDwords = 0;
-CBENameFactory *CCompiler::m_pNameFactory = 0;
-CBEClassFactory *CCompiler::m_pClassFactory = 0;
 CBESizes *CCompiler::m_pSizes = 0;
 map<string, string> CCompiler::m_mBackEndOptions;
 //@}
@@ -1170,7 +1166,7 @@ void CCompiler::ShowCopyright()
 		return;
 	std::cout << "DICE (c) 2001-2006 Dresden University of Technology" << std::endl;
 	std::cout << "Author: Ronald Aigner <ra3@os.inf.tu-dresden.de>" << std::endl;
-	std::cout << "e-Mail: dice@os.inf.tu-dresden.de" << std::endl << std::endl;
+	std::cout << "e-Mail: " << PACKAGE_BUGREPORT << std::endl << std::endl;
 }
 
 /** displays a help for this compiler */
@@ -1408,7 +1404,7 @@ void CCompiler::ShowHelp(bool bShort)
 void CCompiler::ShowVersion()
 {
 	ShowCopyright();
-	std::cout << "DICE " << dice_version;
+	std::cout << "DICE " << PACKAGE_VERSION;
 	if (dice_svnrev)
 		std::cout << " (" << dice_svnrev << ")";
 	std::cout << " - built on " << dice_build;
@@ -1521,13 +1517,8 @@ void CCompiler::PrepareWrite()
 	// create context
 	Verbose(PROGRAM_VERBOSE_NORMAL, "Create Context...\n");
 
-	// set platform factories depending on arguments
-	CFactoryFactory ff;
-	SetClassFactory(ff.GetNewClassFactory());
-	SetNameFactory(ff.GetNewNameFactory());
-
 	// set sizes
-	CBESizes *pSizes = GetClassFactory()->GetNewSizes();
+	CBESizes *pSizes = CBEClassFactory::Instance()->GetNewSizes();
 	if (m_nOpcodeSize > 0)
 		pSizes->SetOpcodeSize(m_nOpcodeSize);
 	SetSizes(pSizes);
@@ -1536,7 +1527,7 @@ void CCompiler::PrepareWrite()
 	 * performed during the write run.
 	 */
 	Verbose(PROGRAM_VERBOSE_NORMAL, "Create backend...\n");
-	m_pRootBE = GetClassFactory()->GetNewRoot();
+	m_pRootBE = CBEClassFactory::Instance()->GetNewRoot();
 	try
 	{
 		m_pRootBE->CreateBE(m_pRootFE);
@@ -1705,12 +1696,12 @@ void CCompiler::CheckRequire(const char *str)
 	// extract version numbers
 	try
 	{
-		Version cur(dice_version);
+		Version cur(PACKAGE_VERSION);
 		Version req(sVersion.c_str());
 		if (!cur.compare(op, req))
 		{
 			std::ostringstream os;
-			os << "Current version (\"" << dice_version << "\") ";
+			os << "Current version (\"" << PACKAGE_VERSION << "\") ";
 			if (sOp.empty())
 				os << "does not match";
 			else

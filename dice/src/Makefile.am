@@ -25,7 +25,8 @@ noinst_HEADERS = defines.h template.h Compiler.h Object.h Visitor.h ProgramOptio
 dice_DEPENDENCIES= $(DICELIBS)
 
 LIBLTDL=@LIBLTDL@
-dice_LDADD=	-L$(top_builddir)/src/be/l4/v2 -lv2 \
+dice_LDADD=	\
+		-L$(top_builddir)/src/be/l4/v2 -lv2 \
 		-L$(top_builddir)/src/be/l4/v2/amd64 -lv2amd64 \
 		-L$(top_builddir)/src/be/l4/v2/ia32 -lv2ia32 \
 		-L$(top_builddir)/src/be/l4/v4 -lv4 \

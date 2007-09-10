@@ -30,6 +30,7 @@
 #include "Compiler.h"
 #include "Messages.h"
 #include "ProgramOptions.h"
+#include "be/BENameFactory.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
 #include "fe/FEInterface.h"
@@ -195,7 +196,7 @@ void CDependency::PrintGeneratedFiles(CFEFile * pFEFile)
         PrintGeneratedFiles4Operation(pFEFile);
     }
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName;
     // create client header file
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_CLIENT))
@@ -236,7 +237,7 @@ void CDependency::PrintGeneratedFiles(CFEFile * pFEFile)
  */
 void CDependency::PrintGeneratedFiles4File(CFEFile * pFEFile)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName;
 
     CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s: for %s called\n", __func__,
@@ -297,7 +298,7 @@ void CDependency::PrintGeneratedFiles4Library(CFELibrary * pFELibrary)
 	"%s: for lib \"%s\" called\n", __func__,
 	pFELibrary->GetName().c_str());
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName;
     // client file
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_CLIENT))
@@ -334,7 +335,7 @@ void CDependency::PrintGeneratedFiles4Library(CFEInterface * pFEInterface)
 	"%s: for interface \"%s\" called\n", __func__,
 	pFEInterface->GetName().c_str());
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName;
     // client file
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_CLIENT))
@@ -422,7 +423,7 @@ void CDependency::PrintGeneratedFiles4Interface(
 	"%s: for interface \"%s\" called\n", __func__,
 	pFEInterface->GetName().c_str());
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName;
     // client file
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_CLIENT))
@@ -531,7 +532,7 @@ void CDependency::PrintGeneratedFiles4Operation(
 	"%s: for op \"%s\" called\n", __func__,
 	pFEOperation->GetName().c_str());
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName;
     // client file
     if (CCompiler::IsOptionSet(PROGRAM_GENERATE_CLIENT))

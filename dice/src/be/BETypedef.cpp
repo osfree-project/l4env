@@ -33,6 +33,8 @@
 #include "BEDeclarator.h"
 #include "BEStructType.h"
 #include "BEUserDefinedType.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "fe/FETypedDeclarator.h"
 #include "fe/FEDeclarator.h"
@@ -80,7 +82,7 @@ CBETypedef::CreateBackEnd(CFETypedDeclarator * pFETypedef)
 	// we are making a globalized name out of the declarator here by
 	// extracting the name, getting a typename for it from the name factory
 	// and recreating the declarator
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	CBEDeclarator *pDecl = m_Declarators.First();
 	assert(pDecl);
 	string sAlias = pNF->GetTypeName(pFETypedef, pDecl->GetName());
@@ -123,7 +125,7 @@ CBETypedef::CreateBackEnd(CBEType * pType,
 	}
 	CBETypedDeclarator::CreateBackEnd(pType, sName);
 	// a typedef can have only one name
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	CBEDeclarator *pDecl = m_Declarators.First();
 	string sAlias = pNF->GetTypeName(pFERefObject, pDecl->GetName());
 	// recreate decl
@@ -204,7 +206,7 @@ CBETypedef::WriteDefinition(CBEFile& pFile)
 {
 	if (GetType()->IsConstructedType())
 	{
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sDefine = pNF->GetTypeName(GetType()->GetFEType(), true);
 		sDefine += m_sDefine;
 		bool bNeedDefine = !m_sDefine.empty();

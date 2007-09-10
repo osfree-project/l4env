@@ -37,6 +37,8 @@
 #include "BESizes.h"
 #include "BEClass.h"
 #include "BEMarshaller.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "fe/FEOperation.h"
@@ -251,7 +253,7 @@ CBEReplyFunction::GetExceptionVariable()
 	__func__, pMsgBuf);
     if (!pMsgBuf)
 	return 0;
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName = pNF->GetExceptionWordVariable();
     pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
     if (!pRet)

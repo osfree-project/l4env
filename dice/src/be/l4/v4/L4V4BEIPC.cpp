@@ -51,7 +51,7 @@ void
 CL4V4BEIPC::WriteCall(CBEFile& pFile,
     CBEFunction* pFunction)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sTimeout;
@@ -73,7 +73,7 @@ void
 CL4V4BEIPC::WriteReceive(CBEFile& pFile,
     CBEFunction* pFunction)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sTimeout;
@@ -99,7 +99,7 @@ CL4V4BEIPC::WriteReplyAndWait(CBEFile& pFile,
     bool /*bSendFlexpage*/,
     bool /*bSendShortIPC*/)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
@@ -116,7 +116,7 @@ void
 CL4V4BEIPC::WriteSend(CBEFile& pFile,
     CBEFunction* /*pFunction*/)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
@@ -132,7 +132,7 @@ void
 CL4V4BEIPC::WriteWait(CBEFile& pFile,
     CBEFunction* /*pFunction*/)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sServerID = pNF->GetComponentIDVariable();
     string sReturn = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 

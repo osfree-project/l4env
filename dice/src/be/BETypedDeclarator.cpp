@@ -47,6 +47,8 @@
 #include "BEMsgBufferType.h"
 #include "BEMsgBuffer.h"
 #include "BEClass.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "fe/FETypedDeclarator.h"
 #include "fe/FEDeclarator.h"
 #include "fe/FETypeSpec.h"
@@ -903,7 +905,7 @@ CBETypedDeclarator::CreateBackEnd(CFETypedDeclarator * pFEParameter)
 	// call CBEObject's CreateBackEnd method
 	CBEObject::CreateBackEnd(pFEParameter);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// if we already have declarators, attributes or type, remove them (clean
 	// myself)
 	if (m_pType)
@@ -973,7 +975,7 @@ CBETypedDeclarator::CreateBackEnd(string sUserDefinedType,
 	// create type
 	if (m_pType)
 		delete m_pType;
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	m_pType = pCF->GetNewUserDefinedType();
 	m_pType->SetParent(this);    // has to be set before calling CreateBE
 	CBEUserDefinedType *pType = static_cast<CBEUserDefinedType*>(m_pType);
@@ -1015,7 +1017,7 @@ CBETypedDeclarator::CreateBackEnd(CBEType * pType,
 void
 CBETypedDeclarator::AddAttribute(CFEAttribute *pFEAttribute)
 {
-	CBEAttribute *pAttribute = CCompiler::GetClassFactory()->GetNewAttribute();
+	CBEAttribute *pAttribute = CBEClassFactory::Instance()->GetNewAttribute();
 	m_Attributes.Add(pAttribute);
 	pAttribute->CreateBackEnd(pFEAttribute);
 }
@@ -1025,7 +1027,7 @@ CBETypedDeclarator::AddAttribute(CFEAttribute *pFEAttribute)
  */
 void CBETypedDeclarator::AddDeclarator(CFEDeclarator * pFEDeclarator)
 {
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEDeclarator *pDecl = pCF->GetNewDeclarator();
 	m_Declarators.Add(pDecl);
 	pDecl->CreateBackEnd(pFEDeclarator);
@@ -1041,7 +1043,7 @@ void CBETypedDeclarator::AddDeclarator(string sName, int nStars)
 		"CBETypedDeclarator::%s(%s, %d) called\n", __func__,
 		sName.c_str(), nStars);
 
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEDeclarator *pDecl = pCF->GetNewDeclarator();
 	m_Declarators.Add(pDecl);
 	pDecl->CreateBackEnd(sName, nStars);

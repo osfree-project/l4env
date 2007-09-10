@@ -32,6 +32,7 @@
 #include "be/BETypedDeclarator.h"
 #include "be/BEDeclarator.h"
 #include "be/BEType.h"
+#include "be/BENameFactory.h"
 #include "BESocket.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
@@ -72,9 +73,9 @@ void CSockBESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
 	assert(pComm);
 	pComm->WriteInitialization(pFile, this);
 
-	string sObj = CCompiler::GetNameFactory()->GetCorbaObjectVariable();
-	string sEnv =
-		CCompiler::GetNameFactory()->GetCorbaEnvironmentVariable();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sObj = pNF->GetCorbaObjectVariable();
+	string sEnv = pNF->GetCorbaEnvironmentVariable();
 
 	// init socket address
 	pFile << "\tbzero(" << sObj << ", sizeof(struct sockaddr));\n";

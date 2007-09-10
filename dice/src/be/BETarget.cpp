@@ -26,20 +26,22 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BETarget.h"
-#include "be/BENameSpace.h"
-#include "be/BEContext.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEHeaderFile.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEWaitFunction.h"
-#include "be/BEWaitAnyFunction.h"
-#include "be/BEConstant.h"
-#include "be/BETypedef.h"
-#include "be/BEFunction.h"
-#include "be/BERoot.h"
-#include "be/BEDeclarator.h"
+#include "BETarget.h"
+#include "BENameSpace.h"
+#include "BEClassFactory.h"
+#include "BENameFactory.h"
+#include "BEContext.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BEHeaderFile.h"
+#include "BEImplementationFile.h"
+#include "BEWaitFunction.h"
+#include "BEWaitAnyFunction.h"
+#include "BEConstant.h"
+#include "BETypedef.h"
+#include "BEFunction.h"
+#include "BERoot.h"
+#include "BEDeclarator.h"
 
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
@@ -245,7 +247,7 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEConstDeclarator * pFEConsta
 		CBEConstant *pConstant = pRoot->FindConstant(pFEConstant->GetName());
 		if (!pConstant)
 		{
-			pConstant = CCompiler::GetClassFactory()->GetNewConstant();
+			pConstant = CBEClassFactory::Instance()->GetNewConstant();
 			pF.m_Constants.Add(pConstant);
 			pConstant->CreateBackEnd(pFEConstant);
 		}
@@ -417,7 +419,7 @@ bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFETypedDeclarator * pFETypedDe
 CBEHeaderFile* CBETarget::FindHeaderFile(CFEFile * pFEFile, FILE_TYPE nFileType)
 {
 	// get file name
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sFileName = pNF->GetFileName(pFEFile, nFileType);
 	// search file
 	return m_HeaderFiles.Find(sFileName);
@@ -434,7 +436,7 @@ CBEHeaderFile* CBETarget::FindHeaderFile(CFEFile * pFEFile, FILE_TYPE nFileType)
  */
 CBEHeaderFile* CBETarget::FindHeaderFile(CFELibrary * pFELibrary, FILE_TYPE nFileType)
 {
-	CBENameFactory *pNF = CCompiler::GetNameFactory();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	// get file name
 	CFEFile *pFEFile = pFELibrary->GetSpecificParent<CFEFile>(0);
 	string sFileName = pNF->GetFileName(pFEFile, nFileType);
@@ -455,7 +457,7 @@ CBEHeaderFile*
 CBETarget::FindHeaderFile(CFEInterface * pFEInterface,
     FILE_TYPE nFileType)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     // get file name
     CFEFile *pFEFile = pFEInterface->GetSpecificParent<CFEFile>(0);
     string sFileName = pNF->GetFileName(pFEFile, nFileType);
@@ -477,7 +479,7 @@ CBETarget::FindHeaderFile(CFEOperation * pFEOperation,
     FILE_TYPE nFileType)
 {
     // get file name
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     CFEFile *pFEFile = pFEOperation->GetSpecificParent<CFEFile>(0);
     string sFileName = pNF->GetFileName(pFEFile, nFileType);
     // search file

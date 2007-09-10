@@ -26,20 +26,22 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/BERoot.h"
-#include "be/BEContext.h"
-#include "be/BEClient.h"
-#include "be/BEComponent.h"
-#include "be/BEClass.h"
-#include "be/BEType.h"
-#include "be/BETypedef.h"
-#include "be/BEFunction.h"
-#include "be/BEConstant.h"
-#include "be/BEEnumType.h"
-#include "be/BENameSpace.h"
-#include "be/BEDeclarator.h"
-#include "be/BEImplementationFile.h"
-#include "be/BEHeaderFile.h"
+#include "BERoot.h"
+#include "BEContext.h"
+#include "BEClient.h"
+#include "BEComponent.h"
+#include "BEClass.h"
+#include "BEType.h"
+#include "BETypedef.h"
+#include "BEFunction.h"
+#include "BEConstant.h"
+#include "BEEnumType.h"
+#include "BENameSpace.h"
+#include "BEDeclarator.h"
+#include "BEImplementationFile.h"
+#include "BEHeaderFile.h"
+#include "BENameFactory.h"
+#include "BEClassFactory.h"
 #include "Compiler.h"
 #include "fe/FEFile.h"
 #include "fe/FELibrary.h"
@@ -99,7 +101,7 @@ void CBERoot::CreateBE(CFEFile * pFEFile)
 	// client and component depend on its existence
 	CreateBackEnd(pFEFile);
 	// create new client
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	if (CCompiler::IsOptionSet(PROGRAM_GENERATE_CLIENT))
 	{
 		m_pClient = pCF->GetNewClient();
@@ -335,7 +337,7 @@ void CBERoot::CreateBackEnd(CFELibrary *pFELibrary)
 	if (!pNameSpace)
 	{
 		// create NameSpace itself
-		pNameSpace = CCompiler::GetClassFactory()->GetNewNameSpace();
+		pNameSpace = CBEClassFactory::Instance()->GetNewNameSpace();
 		m_Namespaces.Add(pNameSpace);
 		pNameSpace->CreateBackEnd(pFELibrary);
 	}
@@ -353,7 +355,7 @@ void CBERoot::CreateBackEnd(CFEInterface *pFEInterface)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
 		pFEInterface->GetName().c_str());
-	CBEClass *pClass = CCompiler::GetClassFactory()->GetNewClass();
+	CBEClass *pClass = CBEClassFactory::Instance()->GetNewClass();
 	m_Classes.Add(pClass);
 	pClass->CreateBackEnd(pFEInterface);
 }
@@ -366,7 +368,7 @@ CBERoot::CreateBackEnd(CFEConstDeclarator *pFEConstant)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
 		pFEConstant->GetName().c_str());
-	CBEConstant *pConstant = CCompiler::GetClassFactory()->GetNewConstant();
+	CBEConstant *pConstant = CBEClassFactory::Instance()->GetNewConstant();
 	m_Constants.Add(pConstant);
 	pConstant->CreateBackEnd(pFEConstant);
 }
@@ -378,7 +380,7 @@ void
 CBERoot::CreateBackEnd(CFETypedDeclarator *pFETypedef)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-	CBETypedef *pTypedef = CCompiler::GetClassFactory()->GetNewTypedef();
+	CBETypedef *pTypedef = CBEClassFactory::Instance()->GetNewTypedef();
 	m_Typedefs.Add(pTypedef);
 	pTypedef->CreateBackEnd(pFETypedef);
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBERoot::AddTypedef for %s with type at %p called\n",
@@ -393,7 +395,7 @@ CBERoot::CreateBackEnd(CFETypedDeclarator *pFETypedef)
 void
 CBERoot::CreateBackEnd(CFEConstructedType *pFEType)
 {
-	CBEClassFactory *pCF = CCompiler::GetClassFactory();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(pFEType->GetType());
 	m_TypeDeclarations.Add(pType);
 	pType->SetParent(this);

@@ -43,6 +43,7 @@
 #include "be/BEWaitFunction.h"
 #include "be/BEDeclarator.h"
 #include "be/BEExpression.h"
+#include "be/BEClassFactory.h"
 #include "TypeSpec-L4Types.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
@@ -191,7 +192,7 @@ CL4BEMarshaller::MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMembe
 bool
 CL4BEMarshaller::MarshalRcvFpage(CBETypedDeclarator *pMember)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sFlexName =
 	pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
 
@@ -212,7 +213,7 @@ CL4BEMarshaller::MarshalRcvFpage(CBETypedDeclarator *pMember)
 bool
 CL4BEMarshaller::MarshalSendDope(CBETypedDeclarator *pMember)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sSendName =
 	pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND);
 
@@ -234,7 +235,7 @@ CL4BEMarshaller::MarshalSendDope(CBETypedDeclarator *pMember)
 bool
 CL4BEMarshaller::MarshalSizeDope(CBETypedDeclarator *pMember)
 {
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sSizeName =
 	pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
 
@@ -549,7 +550,7 @@ CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile,
 {
     assert(pMember);
 
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sName = pNF->GetString(CL4BENameFactory::STR_ZERO_FPAGE);
     if (!pMember->m_Declarators.Find(sName))
 	return false;
@@ -665,11 +666,11 @@ CL4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile,
     //     + nIndex]))
 
     // get name of word sized member
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMember = pNF->GetWordMemberVariable();
     pFile << "(*";
     // write type cast for restring
-    CBEClassFactory *pCF = CCompiler::GetClassFactory();
+    CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBEType *pType = pCF->GetNewType(TYPE_REFSTRING);
     pType->CreateBackEnd(true, 0, TYPE_REFSTRING);
     pType->WriteCast(pFile, true);

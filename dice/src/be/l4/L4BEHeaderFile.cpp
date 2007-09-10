@@ -68,7 +68,7 @@ void CL4BEHeaderFile::WriteHelperFunctions()
 			*this << "extern \"C\" {\n";
 			*this << "#endif\n\n";
 		}
-		CBENameFactory *pNF = CCompiler::GetNameFactory();
+		CBENameFactory *pNF = CBENameFactory::Instance();
 		string sFuncName = pNF->GetString(
 			CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
 		string sMWord = pNF->GetTypeName(TYPE_MWORD, true);

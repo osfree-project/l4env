@@ -65,7 +65,7 @@ CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
     }
 
     // FIXME: get message buffer var and use its declarator
-    CBENameFactory *pNF = CCompiler::GetNameFactory();
+    CBENameFactory *pNF = CBENameFactory::Instance();
     string sMsgBuffer = pNF->GetMessageBufferVariable();
     string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
     // clear message

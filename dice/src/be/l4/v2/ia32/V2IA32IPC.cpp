@@ -118,7 +118,7 @@ void
 CL4V2IA32BEIPC::WriteAsmShortPicCall(CBEFile& pFile,
 	CBEFunction *pFunction)
 {
-    CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
+    CL4BENameFactory *pNF = (CL4BENameFactory*)CBENameFactory::Instance();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     bool bDefaultTimeout = pFunction->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT) != 0;
@@ -253,7 +253,7 @@ void
 CL4V2IA32BEIPC::WriteAsmShortNonPicCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
-    CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
+    CL4BENameFactory *pNF = (CL4BENameFactory*)CBENameFactory::Instance();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     bool bDefaultTimeout = pFunction->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT) != 0;
@@ -377,7 +377,7 @@ void
 CL4V2IA32BEIPC::WriteAsmLongPicCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
-    CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
+    CL4BENameFactory *pNF = (CL4BENameFactory*)CBENameFactory::Instance();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sMsgBuffer = pNF->GetMessageBufferVariable();
@@ -527,7 +527,7 @@ void
 CL4V2IA32BEIPC::WriteAsmLongNonPicCall(CBEFile& pFile,
     CBEFunction *pFunction)
 {
-    CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
+    CL4BENameFactory *pNF = (CL4BENameFactory*)CBENameFactory::Instance();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sMsgBuffer = pNF->GetMessageBufferVariable();
@@ -714,7 +714,7 @@ void
 CL4V2IA32BEIPC::WriteAsmPicSend(CBEFile& pFile,
     CBEFunction* pFunction)
 {
-    CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
+    CL4BENameFactory *pNF = (CL4BENameFactory*)CBENameFactory::Instance();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sDummy = pNF->GetDummyVariable();
@@ -811,7 +811,7 @@ void
 CL4V2IA32BEIPC::WriteAsmNonPicSend(CBEFile& pFile,
     CBEFunction* pFunction)
 {
-    CL4BENameFactory *pNF = (CL4BENameFactory*)CCompiler::GetNameFactory();
+    CL4BENameFactory *pNF = (CL4BENameFactory*)CBENameFactory::Instance();
     string sResult = pNF->GetResultName();
     string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
     string sDummy = pNF->GetDummyVariable();
