@@ -79,6 +79,7 @@ extern initcall_t __security_initcall_start[], __security_initcall_end[];
 
 /* Defined in init/main.c */
 extern char saved_command_line[];
+extern unsigned int reset_devices;
 
 /* used by init/main.c */
 extern void setup_arch(char **);
@@ -94,6 +95,9 @@ extern void setup_arch(char **);
  * by link order. 
  * For backwards compatibility, initcall() puts the call in 
  * the device init subsection.
+ *
+ * The `id' arg to __define_initcall() is needed so that multiple initcalls
+ * can point at the same handler without causing duplicate-symbol build errors.
  */
 
 #ifndef DDE_LINUX
@@ -123,6 +127,7 @@ extern void setup_arch(char **);
 #define subsys_initcall_sync(fn)	__define_initcall("4s",fn,4s)
 #define fs_initcall(fn)			__define_initcall("5",fn,5)
 #define fs_initcall_sync(fn)		__define_initcall("5s",fn,5s)
+#define rootfs_initcall(fn)		__define_initcall("rootfs",fn,rootfs)
 #define device_initcall(fn)		__define_initcall("6",fn,6)
 #define device_initcall_sync(fn)	__define_initcall("6s",fn,6s)
 #define late_initcall(fn)		__define_initcall("7",fn,7)

@@ -264,7 +264,6 @@ int sock_sendmsg(struct socket *sock, struct msghdr *msg, int size)
  */
 
 //int socketpair (int d, int type, int protocol, int *sv[2]) {}
-//int getpeername (int s, struct sockaddr *name, int *namelen) {}
 
 /** SOCKET INTERFACE: SENDMSG
  */
@@ -661,6 +660,7 @@ sendto(int sd, void *msgbuff, size_t len, int flags,
 	}
 	msg.msg_flags = flags;
 	err = sock->ops->sendmsg(sock, &msg, len, &scm);
+
 	return err;
 }
 
@@ -869,4 +869,22 @@ int getpeername(int s, struct sockaddr *name, int *namelen)
 
 	return err;
 }
-       
+    
+int fcntl(int fd, int cmd, long arg)
+{
+	int err;
+	struct socket *sock;
+
+	sock = sockfd_lookup(fd, &err);
+
+	if (!sock)
+	{
+		LOG("fcntl !sock, err=%d", err);
+		return err;
+	}
+
+	err = sock_no_fcntl(sock, cmd, arg);	
+
+        //LOG("fcntl return, err=%d", err);
+	return err;
+} 

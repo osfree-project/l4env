@@ -11,19 +11,9 @@
  * the  terms  of the  GNU General Public Licence 2.  Please see the
  * COPYING file for details.
  */
-
-#include <stdlib.h>
 #include <l4/crtx/ctor.h>
-#include <l4/sys/types.h>
-#include <l4/sys/syscalls.h>
-#include <l4/sys/ipc.h>
-#include <l4/util/macros.h>
-#include <l4/util/rdtsc.h>
-#include <l4/generic_io/libio.h>
-#include <l4/dde_linux/dde.h>
-#include <l4/dde_linux/ctor.h>
-#include <l4/log/l4log.h>
-
+#include <l4/dde/linux26/dde26.h>
+#include <l4/dde/ddekit/assert.h>
 
 /* Linux */
 #include <linux/kernel.h>
@@ -36,17 +26,17 @@
 #include "my_cfg.h"
 
 // we need this for the reading and writing
-struct file_operations *fops;
+const struct file_operations *fops;
 
 /**
  * Set the fops from the given device.
  */
 int misc_register(struct miscdevice *tpm_dev){
-  LOG_printf("misc_register()\n");
+  printk("misc_register()\n");
   Assert(!fops);
   if (fops)
   {
-        LOG_printf("registering driver twice - perhaps used more than one driver!\n");
+        printk("registering driver twice - perhaps used more than one driver!\n");
 	return -ENODEV;
   }
   fops=tpm_dev->fops;
@@ -57,7 +47,7 @@ int misc_register(struct miscdevice *tpm_dev){
  * Remove the fops.
  */
 int misc_deregister(struct miscdevice *tpm_dev){
-  LOG_printf("misc_deregister()\n");
+  printk("misc_deregister()\n");
   fops=0;
   return 0;  
 }
@@ -109,9 +99,9 @@ int stpm_abort(void)
 static inline int
 Error(char *fmt,int param)
 {
-  LOG_printf("Error: ");
-  LOG_printf(fmt,param);
-  LOG_printf("\n");
+  printk("Error: ");
+  printk(fmt,param);
+  printk("\n");
   return 0;
 }
 
@@ -121,40 +111,11 @@ Error(char *fmt,int param)
 static void
 init_dde(void)
 {
-  l4io_info_t *io_info_addr = NULL;
-  int err;
- 
-
-  l4_calibrate_tsc();
-  
-   /* request io info page for "jiffies" and "HZ" */
-  l4io_init(&io_info_addr, L4IO_DRV_INVALID);
-  
-  /* initialize all DDE modules required ... */
-  if ( (err = l4dde_mm_init(VMEM_SIZE, KMEM_SIZE) ) ) {
-    Error("initializing mm (%d)", err);
-    exit(-1);
-  }  
-
-  if ( ( err = l4dde_process_init() ) ) {
-    Error("initializing process-level (%d)", err);
-    exit(-1);
-  }
-
-  // we need time for schedule...
-  if ( ( err = l4dde_time_init() ) ) {
-    Error("initializing time (%d)", err);
-    exit(-1);
-  }
-
-  // we have an pci driver
-  if ((err = l4dde_pci_init())) {
-    Error("initializing pci (%d)", err);
-    exit(-1);
-  }
-
-  /* and initialize our drivers.*/
-  l4dde_do_initcalls();
+  l4dde26_init();
+  l4dde26_kmalloc_init();
+  l4dde26_process_init();
+  l4dde26_init_timers();
+  l4dde26_do_initcalls();
 }
 
 L4C_CTOR(init_dde, L4CTOR_AFTER_BACKEND);

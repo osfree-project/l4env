@@ -65,8 +65,10 @@ extern inline int DICE_ERR(int ret, CORBA_Environment *_env)
 #endif
   )
     {
-      LOG_Error("call failed (ret %d \"%s\", exc %d) --- maybe this is okay for you!",
-                ret, l4env_strerror(-ret), DICE_EXCEPTION_MAJOR(_env));
+      LOG_Error("call failed (ret %d \"%s\", exc %d, ipc_error %x) "
+                "--- maybe this is okay for you!",
+                ret, l4env_errstr(ret),
+                DICE_EXCEPTION_MAJOR(_env), DICE_IPC_ERROR(_env));
       return ret ? ret : -L4_EIPC;
     }
   else

@@ -3,12 +3,6 @@
 
 #undef CONFIG_MODULES
 
-/* Because of DDE SMP model */
-#undef CONFIG_SMP
-#define CONFIG_SMP
-#undef CONFIG_NR_CPUS
-#define CONFIG_NR_CPUS 16
-
 /* Because we don't need INET support */
 #undef CONFIG_INET
 #undef CONFIG_XFRM
@@ -22,6 +16,11 @@
 #undef CONFIG_IP_NF_FILTER
 #undef CONFIG_IP_NF_FTP
 #undef CONFIG_IP_NF_TARGET_LOG
+
+/* No highmem for our drivers */
+#undef CONFIG_HIGHMEM
+#undef CONFIG_HIGHMEM4G
+#define CONFIG_NOHIGHMEM 1
 
 /* No PROC fs for us */
 #undef CONFIG_PROC_FS
@@ -40,3 +39,6 @@
 
 /* irqs assigned statically */
 #undef CONFIG_GENERIC_IRQ_PROBE
+
+/* No message-signalled interrupts for PCI. */
+#undef CONFIG_PCI_MSI

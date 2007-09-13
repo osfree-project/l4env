@@ -14,8 +14,8 @@ WARNINGS	= -Wall -Wstrict-prototypes
 CFLAGS = -ffunction-sections
 
 include $(L4DIR)/mk/Makeconf
-ifeq ($(LINUX24_AVAIL),n)
-  $(error library needs Linux-2.4 sources! Enable LINUX24_AVAIL via "make config".)
+ifeq ($(LINUX24_DIR),)
+  $(error library needs Linux-2.4 sources! Set LINUX24_DIR to Linux 2.4.34.4 source tree to change that.)
 endif
 
 vpath %.c $(LINUX24_DIR)

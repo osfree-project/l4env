@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	unsigned long pcrs;
 	unsigned short num;
 	unsigned long keys[256];
-	char pcr_data[20];
+	unsigned char pcr_data[20];
 	int major, minor, version, rev, i, j;
 
 	printf("started\n");
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	{
 		int ret;
 		// extend the last pcr
-		strncpy(pcr_data,"12345678901234567890",20);
+		strncpy((char *)pcr_data,"12345678901234567890",20);
 		ret=TPM_Extend(15,(unsigned char*)pcr_data);
 		printf("Extended: %d\n",ret);
 	}

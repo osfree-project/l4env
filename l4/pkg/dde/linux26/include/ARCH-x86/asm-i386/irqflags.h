@@ -10,6 +10,9 @@
 #ifndef _ASM_IRQFLAGS_H
 #define _ASM_IRQFLAGS_H
 
+#ifdef CONFIG_PARAVIRT
+#include <asm/paravirt.h>
+#else
 #ifndef __ASSEMBLY__
 
 #ifndef DDE_LINUX
@@ -28,9 +31,6 @@ static inline unsigned long __raw_local_save_flags(void)
 #else /* DDE_LINUX */
 unsigned long __raw_local_save_flags(void);
 #endif /* DDE_LINUX */
-
-#define raw_local_save_flags(flags) \
-		do { (flags) = __raw_local_save_flags(); } while (0)
 
 #ifndef DDE_LINUX
 static inline void raw_local_irq_restore(unsigned long flags)
@@ -78,18 +78,6 @@ void raw_safe_halt(void);
 void halt(void);
 #endif /* DDE_LINUX */
 
-static inline int raw_irqs_disabled_flags(unsigned long flags)
-{
-	return !(flags & (1 << 9));
-}
-
-static inline int raw_irqs_disabled(void)
-{
-	unsigned long flags = __raw_local_save_flags();
-
-	return raw_irqs_disabled_flags(flags);
-}
-
 /*
  * For spinlocks, etc:
  */
@@ -102,9 +90,33 @@ static inline unsigned long __raw_local_irq_save(void)
 	return flags;
 }
 
+#else
+#define DISABLE_INTERRUPTS(clobbers)	cli
+#define ENABLE_INTERRUPTS(clobbers)	sti
+#define ENABLE_INTERRUPTS_SYSEXIT	sti; sysexit
+#define INTERRUPT_RETURN		iret
+#define GET_CR0_INTO_EAX		movl %cr0, %eax
+#endif /* __ASSEMBLY__ */
+#endif /* CONFIG_PARAVIRT */
+
+#ifndef __ASSEMBLY__
+#define raw_local_save_flags(flags) \
+		do { (flags) = __raw_local_save_flags(); } while (0)
+
 #define raw_local_irq_save(flags) \
 		do { (flags) = __raw_local_irq_save(); } while (0)
 
+static inline int raw_irqs_disabled_flags(unsigned long flags)
+{
+	return !(flags & (1 << 9));
+}
+
+static inline int raw_irqs_disabled(void)
+{
+	unsigned long flags = __raw_local_save_flags();
+
+	return raw_irqs_disabled_flags(flags);
+}
 #endif /* __ASSEMBLY__ */
 
 /*

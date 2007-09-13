@@ -11,7 +11,7 @@
  **  the sysctl() binary interface.  Do *NOT* change the
  **  numbering of any existing values here, and do not change
  **  any numbers within any one set of values.  If you have to
- **  have to redefine an existing interface, use a new number for it.
+ **  redefine an existing interface, use a new number for it.
  **  The kernel will then return -ENOTDIR to any application using
  **  the old binary interface.
  **
@@ -426,6 +426,8 @@ enum
 	NET_CIPSOV4_CACHE_BUCKET_SIZE=119,
 	NET_CIPSOV4_RBM_OPTFMT=120,
 	NET_CIPSOV4_RBM_STRICTVALID=121,
+	NET_TCP_AVAIL_CONG_CONTROL=122,
+	NET_TCP_ALLOWED_CONG_CONTROL=123,
 };
 
 enum {
@@ -568,6 +570,7 @@ enum {
 	NET_IPV6_RTR_PROBE_INTERVAL=21,
 	NET_IPV6_ACCEPT_RA_RT_INFO_MAX_PLEN=22,
 	NET_IPV6_PROXY_NDP=23,
+	NET_IPV6_ACCEPT_SOURCE_ROUTE=25,
 	__NET_IPV6_MAX
 };
 
@@ -602,16 +605,6 @@ enum {
 /* /proc/sys/net/dccp */
 enum {
 	NET_DCCP_DEFAULT=1,
-};
-
-/* /proc/sys/net/dccp/default */
-enum {
-	NET_DCCP_DEFAULT_SEQ_WINDOW  = 1,
-	NET_DCCP_DEFAULT_RX_CCID     = 2,
-	NET_DCCP_DEFAULT_TX_CCID     = 3,
-	NET_DCCP_DEFAULT_ACK_RATIO   = 4,
-	NET_DCCP_DEFAULT_SEND_ACKVEC = 5,
-	NET_DCCP_DEFAULT_SEND_NDP    = 6,
 };
 
 /* /proc/sys/net/ipx */
@@ -926,8 +919,7 @@ typedef struct ctl_table ctl_table;
 
 typedef int ctl_handler (ctl_table *table, int __user *name, int nlen,
 			 void __user *oldval, size_t __user *oldlenp,
-			 void __user *newval, size_t newlen, 
-			 void **context);
+			 void __user *newval, size_t newlen);
 
 typedef int proc_handler (ctl_table *ctl, int write, struct file * filp,
 			  void __user *buffer, size_t *lenp, loff_t *ppos);
@@ -958,7 +950,7 @@ extern int do_sysctl (int __user *name, int nlen,
 extern int do_sysctl_strategy (ctl_table *table, 
 			       int __user *name, int nlen,
 			       void __user *oldval, size_t __user *oldlenp,
-			       void __user *newval, size_t newlen, void ** context);
+			       void __user *newval, size_t newlen);
 
 extern ctl_handler sysctl_string;
 extern ctl_handler sysctl_intvec;

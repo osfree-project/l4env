@@ -46,11 +46,11 @@ typedef struct hmac_handle HMAC1_CTX;
 
 
 int SHA1_init  (SHA1_CTX * ctx);
-int SHA1_update(SHA1_CTX * ctx, void * value, int len);
+int SHA1_update(SHA1_CTX * ctx, void * value, unsigned int len);
 int SHA1_final (SHA1_CTX * ctx, void * output);
 
-int HMAC_SHA1_init(HMAC1_CTX * ctx, void * key,    int keylen);
-int HMAC_update   (HMAC1_CTX * ctx, void * value,  int len);
-int HMAC_final    (HMAC1_CTX * ctx, void * output, int *len);
+int HMAC_SHA1_init(HMAC1_CTX * ctx, void * key,    unsigned int keylen);
+int HMAC_update   (HMAC1_CTX * ctx, void * value,  unsigned int len);
+int HMAC_final    (HMAC1_CTX * ctx, void * output, unsigned int *len);
 
 #endif

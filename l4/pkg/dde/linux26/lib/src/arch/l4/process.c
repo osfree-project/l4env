@@ -21,6 +21,11 @@ struct thread_info *current_thread_info(void)
 	return &LX_THREAD(cur);
 }
 
+struct task_struct *get_current(void)
+{
+	return current_thread_info()->task;
+}
+
 /*****************************************************************************
  ** PID-related stuff                                                       **
  **                                                                         **

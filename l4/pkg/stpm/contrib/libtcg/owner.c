@@ -103,8 +103,8 @@ pubkey_t *convpubkey(pubkeydata *k)
 uint32_t TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
                            keydata *key)
 {
-    unsigned char take_owner_fmt[] = "00 c2 T l s @ @ % L % 00 %";
-    unsigned char tcpa_oaep_pad_str[] = { 'T', 'C', 'P', 'A' };
+    char take_owner_fmt[] = "00 c2 T l s @ @ % L % 00 %";
+    char tcpa_oaep_pad_str[] = { 'T', 'C', 'P', 'A' };
     //unsigned char tcpa_oaep_pad_str[] = { 'T', 'C', 'G', 0};
     unsigned char tcpadata[TCG_MAX_BUFF_SIZE]; /* request/response buffer */
     pubkeydata tcpapubkey;      /* public endorsement key data */
@@ -176,9 +176,9 @@ uint32_t TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
 
 #else
     /* pad and encrypt the owner auth data */
-    ret = pad_oaep(ownpass, TCG_HASH_SIZE,
+    ret = pad_oaep((char *)ownpass, TCG_HASH_SIZE,
                    tcpa_oaep_pad_str, sizeof(tcpa_oaep_pad_str),
-                   RSA_MODULUS_BYTE_SIZE, padded);
+                   RSA_MODULUS_BYTE_SIZE, (char *)padded);
     if (ret != 0)
         return -13;
 
@@ -189,9 +189,9 @@ uint32_t TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
     oencdatasize = htonl(rsa_output_len);
 
     /* pad and encrypt the srk auth data */
-    ret = pad_oaep(srkpass, TCG_HASH_SIZE,
+    ret = pad_oaep((char *)srkpass, TCG_HASH_SIZE,
                    tcpa_oaep_pad_str, sizeof(tcpa_oaep_pad_str),
-                   RSA_MODULUS_BYTE_SIZE, padded);
+                   RSA_MODULUS_BYTE_SIZE, (char *)padded);
     if (ret != 0)
         return -15;
 

@@ -367,14 +367,14 @@ void kthread_test(void)
 /****************************************************************************
  ** Test 8: Work queues                                                    **
  ****************************************************************************/
-static void work_queue_func(void *data);
-static void work_queue_func2(void *data);
+static void work_queue_func(struct work_struct *data);
+static void work_queue_func2(struct work_struct *data);
 static struct workqueue_struct *_wq;
-static DECLARE_WORK(_wobj, work_queue_func, NULL);
-static DECLARE_WORK(_wobj2, work_queue_func2, NULL);
+static DECLARE_WORK(_wobj, work_queue_func);
+static DECLARE_WORK(_wobj2, work_queue_func2);
 static int wq_cnt = 0;
 
-static void work_queue_func(void *data)
+static void work_queue_func(struct work_struct *data)
 {
 	printk("Work queue function... Do some work here...\n");
 	if (++wq_cnt < 5)
@@ -382,7 +382,7 @@ static void work_queue_func(void *data)
 }
 
 
-static void work_queue_func2(void *data)
+static void work_queue_func2(struct work_struct *data)
 {
 	printk("Work queue function 2... Do some work here...\n");
 	if (++wq_cnt < 5)

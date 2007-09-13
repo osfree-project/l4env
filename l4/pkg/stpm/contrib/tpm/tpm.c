@@ -130,8 +130,11 @@ tpm_init(struct pci_dev *pci_dev, struct tpm_chip *chip)
 		tmp |= 0x00000004; /* enable CLKRUN */
 		pci_write_config_dword(pci_dev, PCI_GEN_PMCON_1, tmp);
 	}
-
+#if 0
 	save_flags(flags); cli();
+#else
+	local_irq_save(flags);
+#endif
         outb(0x0D, TPM_ADDR);		/* unlock 4F */
         outb(0x55, TPM_DATA);
         outb(0x0A, TPM_ADDR);		/* int disable */
@@ -142,7 +145,11 @@ tpm_init(struct pci_dev *pci_dev, struct tpm_chip *chip)
         outb((chip->base & 0xFF00) >> 8, TPM_DATA);
         outb(0x0D, TPM_ADDR);          /* lock 4F */
         outb(0xAA, TPM_DATA);
+#if 0
 	restore_flags(flags);
+#else
+	local_irq_restore(flags);
+#endif
 
 	return 0;
 }
@@ -217,7 +224,9 @@ tpm_open(struct inode *inode, struct file *file)
 	if (tpm_chip.open)
 		return -EBUSY;
 	tpm_chip.open = 1;
+#if 0
 	MOD_INC_USE_COUNT;
+#endif
 	return 0;
 }
 
@@ -225,7 +234,9 @@ static int
 tpm_release(struct inode *inode, struct file *file)
 {
 	tpm_chip.open = 0;
+#if 0
 	MOD_DEC_USE_COUNT;
+#endif
 	return 0;
 }
 
@@ -569,8 +580,11 @@ static struct miscdevice tpm_dev = {
 static int __init
 init_tpm(void)
 {
+#if 0
 	if (!pci_present())
 		return -ENODEV;
+#endif
+
 	if (!pci_register_driver(&tpm_pci_driver)) {
 		pci_unregister_driver(&tpm_pci_driver);
 		return -ENODEV;

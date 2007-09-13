@@ -27,9 +27,6 @@ endif
 
 PRIVATE_INCDIR += $(MY_DDE_INCDIR) $(MY_LINUX26_INCDIR)
 
-# prevent libc includes
-LIBCINCDIR += -nostdinc -I$(GCCINCDIR)
-
 DEFINES += -D__KERNEL__ -DDDE_LINUX $(KBUILD_DEFINES)
 CPPFLAGS += $(KBUILD_CPPFLAGS)
 CFLAGS += -ffunction-sections

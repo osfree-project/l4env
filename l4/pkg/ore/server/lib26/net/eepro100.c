@@ -572,7 +572,6 @@ static int __devinit eepro100_init_one (struct pci_dev *pdev,
 		       pci_base, irq);
 
 	ioaddr = pci_iomap(pdev, pci_bar, 0);
-	printk("--> eepro100: ioaddr = %p\n", ioaddr);
 	if (!ioaddr) {
 		dev_err(&pdev->dev, "eepro100: cannot remap IO\n");
 		goto err_out_free_mmio_region;
@@ -698,7 +697,6 @@ static int __devinit speedo_found1(struct pci_dev *pdev,
 	/* Reset the chip: stop Tx and Rx processes and clear counters.
 	   This takes less than 10usec and will easily finish before the next
 	   action. */
-	printk("--> iowrite32(val = %x, addr = %p)\n", PortReset, ioaddr + SCBPort);
 	iowrite32(PortReset, ioaddr + SCBPort);
 	ioread32(ioaddr + SCBPort);
 	udelay(10);

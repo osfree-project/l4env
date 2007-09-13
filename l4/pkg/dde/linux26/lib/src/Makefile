@@ -28,7 +28,7 @@ vpath %.S    $(CONTRIB)
 
 PRIVATE_INCDIR += $(CONTRIB)/drivers/pci $(PKGDIR)/linux26/lib/src/arch/l4 \
                   $(CONTRIB)/$(ARCH_DIR)/pci $(CONTRIB)/drivers/base/ \
-                  $(CONTRIB)/lib $(PKGDIR_OBJ)
+                  $(CONTRIB)/lib $(PKGDIR_OBJ) $(CONTRIB)/net/core
 
 ##################################################################
 # Sources for libdde_linux.a                                     #
@@ -62,6 +62,7 @@ SRC_C_libdde_linux26.a += \
                           kernel/wait.c \
                           kernel/workqueue.c \
                           lib/bitmap.c \
+						  lib/bitrev.c \
                           lib/crc32.c \
                           lib/ctype.c \
                           lib/cpumask.c \

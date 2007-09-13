@@ -35,5 +35,5 @@ int main(int argc, char *argv[])
 
 	printf("hash done\n");
 
-	return quote_stdout(argc,argv);
+	return quote_stdout(argc,(unsigned char **)argv);
 }

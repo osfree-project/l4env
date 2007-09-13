@@ -162,6 +162,12 @@ int pci_enable_wake(struct pci_dev *dev, pci_power_t state, int enable)
 }
 
 
+int __pci_enable_device(struct pci_dev *dev)
+{
+	return ddekit_pci_enable_device(_linux_to_ddekit(dev));
+}
+
+
 /**
   * pci_enable_device - Initialize device before it's used by a driver.
   *
@@ -176,7 +182,7 @@ int
 pci_enable_device(struct pci_dev *dev)
 {
 	CHECK_INITVAR(dde26_pci);
-	return ddekit_pci_enable_device(_linux_to_ddekit(dev));
+	return __pci_enable_device(dev);
 }
 
 

@@ -5,6 +5,7 @@
 #include <sys/uio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <fcntl.h>
 
 /*** L4-SPECIFIC INCLUDES ***/
 #include <l4/log/l4log.h>
@@ -396,5 +397,22 @@ l4vfs_net_io_getpeername_component (CORBA_Object _dice_corba_obj,
 	if (*addrlen > *actual_len)
 	        *addrlen = *actual_len;
 
+	return err;
+}
+
+l4_int32_t
+l4vfs_common_io_fcntl_component(CORBA_Object _dice_corba_obj,
+                                object_handle_t fd,
+                                int cmd,
+                                long *arg,
+                                CORBA_Server_Environment *_dice_corba_env)
+{
+	l4_int32_t err;
+	if (!client_owns_sid(CORBA_Object, fd))
+		return -1;
+
+	err=fcntl(fd, cmd, arg);
+
+	LOGd(_DEBUG, "fcntl of FLIPS; returning err=%d cmd=%d", err, cmd);
 	return err;
 }

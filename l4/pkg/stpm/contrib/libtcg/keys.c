@@ -133,7 +133,7 @@ TPM_TRANSMIT_FUNC(EvictKey,
 /****************************************************************************/
 int BuildKey(unsigned char *buffer, keydata * k)
 {
-    unsigned char build_key_fmt[] = "% S L o L S S L L L L @ @ @";
+    char build_key_fmt[] = "% S L o L S S L L L L @ @ @";
     int ret;
 
     PRINT_HASH_SIZE(((unsigned char *) k), sizeof(*k));

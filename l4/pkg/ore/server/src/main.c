@@ -139,7 +139,6 @@ static void copy_mac(int id, const char *arg, int num)
 
 #ifndef CONFIG_ORE_DDE24
 extern int l4ore_rx_handle(struct sk_buff *s);
-extern void loopback_init(void);
 
 static void init_dde(void);
 static void init_dde(void)
@@ -152,7 +151,6 @@ static void init_dde(void)
 	skb_init();
 	l4dde26_do_initcalls();
 	l4dde26_register_rx_callback(l4ore_rx_handle);
-	loopback_init();
 }
 #endif /* !DDE24 */
 

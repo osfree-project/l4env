@@ -17,7 +17,7 @@
 #define _RAND_H
 
 
-int rand_buffer(char *buffer,int num);
+int rand_buffer(unsigned char *buffer,int num);
 
 unsigned long
 TPM_GetRandom(unsigned long count,

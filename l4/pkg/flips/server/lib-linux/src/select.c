@@ -180,7 +180,7 @@ int liblinux_select(int fd)
 
 	/* check for each nonblock operation */
 	if (mask & POLLIN_SET) {
-	sp->non_block_mode = SELECT_READ;
+		sp->non_block_mode = SELECT_READ;
 	}
 
 	if (mask & POLLOUT_SET) {

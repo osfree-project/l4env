@@ -52,12 +52,12 @@ TPM_TRANSMIT_OSAP_FUNC(Quote,
 /**
  * XXX This is a test function for quote...
  */
-int quote_stdout(int argc, char *argv[])
+int quote_stdout(int argc, unsigned char *argv[])
 {
 	int major, minor, version, rev, i, j;
 
 	if (argc<4){
-		printf("Usage: %s keyhandle keypassword nounce\n",argv[0]?argv[0]:__func__);
+		printf("Usage: %s keyhandle keypassword nounce\n",argv[0]?(char *)argv[0]:__func__);
 		return(-1);
 	}
 
@@ -87,15 +87,15 @@ int quote_stdout(int argc, char *argv[])
 		pcrselect.size=0x0200;
 		pcrselect.select=0xFFFF;
       
-		keyhandle=strtol(argv[1],NULL,16);
+		keyhandle=strtol((char *)argv[1],NULL,16);
 		// fill the variables to find bugs
 		for (i=0; i<20; i++)
 			passhash[i]=i;
 		for (i=0; i<20; i++)
 			nouncehash[i]=i;
 
-		sha1(argv[2], strlen(argv[2]), passhash);
-		sha1(argv[3], strlen(argv[3]), nouncehash);
+		sha1(argv[2], strlen((char *)argv[2]), passhash);
+		sha1(argv[3], strlen((char *)argv[3]), nouncehash);
 
 		printf("keyhandle: %#x\n",keyhandle);
 		res=TPM_Quote(keyhandle, passhash, 

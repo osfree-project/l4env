@@ -186,7 +186,7 @@ unsigned long get_api_version(void *kip)
  * return pointer after argument, NULL if not found
  */
 static char *
-check_arg(char *cmdline, char *arg)
+check_arg(char *cmdline, const char *arg)
 {
   char *s = cmdline;
   while ((s = strstr(s, arg)))
@@ -531,10 +531,10 @@ print_e820_map(l4util_mb_info_t *mbi)
 	  (unsigned long)mmap < mbi->mmap_addr + mbi->mmap_length;
 	  mmap = (l4util_mb_addr_range_t *) ((unsigned long)mmap + mmap->struct_size + sizeof (mmap->struct_size)))
 	{
-	  char *types[] = { "unknown", "RAM", "reserved", "ACPI",
-                            "ACPI NVS", "unusable" };
-	  char *type_str = (mmap->type < (sizeof(types) / sizeof(types[0])))
-                           ? types[mmap->type] : types[0];
+	  const char *types[] = { "unknown", "RAM", "reserved", "ACPI",
+                                  "ACPI NVS", "unusable" };
+	  const char *type_str = (mmap->type < (sizeof(types) / sizeof(types[0])))
+                                 ? types[mmap->type] : types[0];
 
 	  printf("    [%9llx, %9llx) %s (%d)\n",
                  (unsigned long long) mmap->addr,

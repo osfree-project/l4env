@@ -1,5 +1,3 @@
-/* Taken from Linux 2.6.19.7 */
-
 /*
  * New driver for Marvell Yukon chipset and SysKonnect Gigabit
  * Ethernet adapters. Based on earlier sk98lin, e100 and
@@ -62,7 +60,7 @@
 #define LINK_HZ			(HZ/2)
 
 MODULE_DESCRIPTION("SysKonnect Gigabit Ethernet driver");
-MODULE_AUTHOR("Stephen Hemminger <shemminger@osdl.org>");
+MODULE_AUTHOR("Stephen Hemminger <shemminger@linux-foundation.org>");
 MODULE_LICENSE("GPL");
 MODULE_VERSION(DRV_VERSION);
 
@@ -751,7 +749,7 @@ static int skge_ring_alloc(struct skge_ring *ring, void *vaddr, u32 base)
 	struct skge_element *e;
 	int i;
 
-	ring->start = kcalloc(sizeof(*e), ring->count, GFP_KERNEL);
+	ring->start = kcalloc(ring->count, sizeof(*e), GFP_KERNEL);
 	if (!ring->start)
 		return -ENOMEM;
 
@@ -1329,10 +1327,11 @@ static void xm_check_link(struct net_device *dev)
  * Since internal PHY is wired to a level triggered pin, can't
  * get an interrupt when carrier is detected.
  */
-static void xm_link_timer(void *arg)
+static void xm_link_timer(struct work_struct *work)
 {
-	struct net_device *dev = arg;
-	struct skge_port *skge = netdev_priv(arg);
+	struct skge_port *skge =
+		container_of(work, struct skge_port, link_thread.work);
+	struct net_device *dev = skge->netdev;
  	struct skge_hw *hw = skge->hw;
 	int port = skge->port;
 
@@ -2156,8 +2155,6 @@ static void yukon_link_down(struct skge_port *skge)
 	int port = skge->port;
 	u16 ctrl;
 
-	gm_phy_write(hw, port, PHY_MARV_INT_MASK, 0);
-
 	ctrl = gma_read16(hw, port, GM_GP_CTRL);
 	ctrl &= ~(GM_GPCR_RX_ENA | GM_GPCR_TX_ENA);
 	gma_write16(hw, port, GM_GP_CTRL, ctrl);
@@ -2169,7 +2166,6 @@ static void yukon_link_down(struct skge_port *skge)
 		gm_phy_write(hw, port, PHY_MARV_AUNE_ADV, ctrl);
 	}
 
-	yukon_reset(hw, port);
 	skge_link_down(skge);
 
 	yukon_init(hw, port);
@@ -2257,6 +2253,7 @@ static void skge_phy_reset(struct skge_port *skge)
 {
 	struct skge_hw *hw = skge->hw;
 	int port = skge->port;
+	struct net_device *dev = hw->dev[port];
 
 	netif_stop_queue(skge->netdev);
 	netif_carrier_off(skge->netdev);
@@ -2270,6 +2267,8 @@ static void skge_phy_reset(struct skge_port *skge)
 		yukon_init(hw, port);
 	}
 	mutex_unlock(&hw->phy_mutex);
+
+	dev->set_multicast_list(dev);
 }
 
 /* Basic MII support */
@@ -2463,6 +2462,7 @@ static int skge_down(struct net_device *dev)
 		printk(KERN_INFO PFX "%s: disabling interface\n", dev->name);
 
 	netif_stop_queue(dev);
+	netif_carrier_off(dev);
 	if (hw->chip_id == CHIP_ID_GENESIS && hw->phy_type == SK_PHY_XMAC)
 		cancel_rearming_delayed_work(&skge->link_thread);
 
@@ -2567,14 +2567,13 @@ static int skge_xmit_frame(struct sk_buff *skb, struct net_device *dev)
 
 		td->csum_offs = 0;
 		td->csum_start = offset;
-		td->csum_write = offset + skb->csum;
+		td->csum_write = offset + skb->csum_offset;
 	} else
 		control = BMU_CHECK;
 
 	if (!skb_shinfo(skb)->nr_frags) /* single buffer i.e. no fragments */
 		control |= BMU_EOF| BMU_IRQ_EOF;
 	else {
-#if 0 /* DDE */
 		struct skge_tx_desc *tf = td;
 
 		control |= BMU_STFWD;
@@ -2597,9 +2596,6 @@ static int skge_xmit_frame(struct sk_buff *skb, struct net_device *dev)
 			tf->control = BMU_OWN | BMU_SW | control | frag->size;
 		}
 		tf->control |= BMU_EOF | BMU_IRQ_EOF;
-#else
-		BUG();
-#endif
 	}
 	/* Make sure all the descriptors written */
 	wmb();
@@ -3079,9 +3075,9 @@ static void skge_error_irq(struct skge_hw *hw)
  * because accessing phy registers requires spin wait which might
  * cause excess interrupt latency.
  */
-static void skge_extirq(void *arg)
+static void skge_extirq(struct work_struct *work)
 {
-	struct skge_hw *hw = arg;
+	struct skge_hw *hw = container_of(work, struct skge_hw, phy_work);
 	int port;
 
 	mutex_lock(&hw->phy_mutex);
@@ -3159,7 +3155,7 @@ static irqreturn_t skge_intr(int irq, void *dev_id)
 			skge_write16(hw, B3_PA_CTRL, PA_CLR_TO_TX2);
 
 		if (status & IS_MAC2)
-			skge_mac_intr(hw, 1); 
+			skge_mac_intr(hw, 1);
 	}
 
 	if (status & IS_HW_ERR)
@@ -3463,7 +3459,7 @@ static struct net_device *skge_devinit(struct skge_hw *hw, int port,
 	skge->port = port;
 
 	/* Only used for Genesis XMAC */
-	INIT_WORK(&skge->link_thread, xm_link_timer, dev);
+	INIT_DELAYED_WORK(&skge->link_thread, xm_link_timer);
 
 	if (hw->chip_id != CHIP_ID_GENESIS) {
 		dev->features |= NETIF_F_IP_CSUM | NETIF_F_SG;
@@ -3550,7 +3546,7 @@ static int __devinit skge_probe(struct pci_dev *pdev,
 
 	hw->pdev = pdev;
 	mutex_init(&hw->phy_mutex);
-	INIT_WORK(&hw->phy_work, skge_extirq, hw);
+	INIT_WORK(&hw->phy_work, skge_extirq);
 	spin_lock_init(&hw->hw_lock);
 
 	hw->regs = ioremap_nocache(pci_resource_start(pdev, 0), 0x4000);

@@ -22,7 +22,7 @@ int SHA1_init  (SHA1_CTX * ctx)
   return 0;
 }
 
-int SHA1_update(SHA1_CTX * ctx, void * value, int len)
+int SHA1_update(SHA1_CTX * ctx, void * value, unsigned int len)
 {
   // we hope the sha1 code can handle large strings to hash
   sha1_digest_update(ctx, value, len);
@@ -48,7 +48,7 @@ int SHA1_final (SHA1_CTX * ctx, void * output)
   return 0;
 }
 
-int HMAC_SHA1_init(HMAC1_CTX * ctx, void * key, int keylen)
+int HMAC_SHA1_init(HMAC1_CTX * ctx, void * key, unsigned int keylen)
 {
   int res;
   unsigned char h_key[64];
@@ -95,12 +95,12 @@ int HMAC_SHA1_init(HMAC1_CTX * ctx, void * key, int keylen)
 }
 
 
-int HMAC_update   (HMAC1_CTX * ctx, void * value,  int len)
+int HMAC_update   (HMAC1_CTX * ctx, void * value, unsigned int len)
 {
   return SHA1_update(&ctx->hash, value, len);
 }
 
-int HMAC_final    (HMAC1_CTX * ctx, void * output, int *len)
+int HMAC_final    (HMAC1_CTX * ctx, void * output, unsigned int *len)
 {
   int res;
   char digest[SHA1HashSize];

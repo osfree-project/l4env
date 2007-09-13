@@ -39,9 +39,9 @@ void notify_select(void)
 				{
 					/* send message to notify thread */
 					l4vfs_select_listener_send_notification(
-                            (l4_threadid_t) *(sp->notif_tid),
-                             fd,
-                             ret);
+		                            (l4_threadid_t) *(sp->notif_tid),
+                		             fd,
+		                             ret);
 				}
 			}
 		}

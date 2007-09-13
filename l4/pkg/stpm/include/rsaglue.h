@@ -34,7 +34,7 @@ typedef struct
 
 
 int
-rsa_sign(rsa_key_t *key, int dstlen, char *dst, ...);
+rsa_sign(rsa_key_t *key, int dstlen, unsigned char *dst, ...);
 
 int
 rsa_create(rsa_key_t *key, int bits);
@@ -43,12 +43,12 @@ int
 rsa_initrandom(rsa_key_t *key);
 
 int
-rsa_insertrandom(rsa_key_t *key, int srclen, char *src);
+rsa_insertrandom(rsa_key_t *key, int srclen, unsigned char *src);
 
 int
-rsa_encrypt(rsa_key_t *key, int dstlen, char *dst, ... );
+rsa_encrypt(rsa_key_t *key, int dstlen, unsigned char *dst, ... );
 
 int
-rsa_decrypt(rsa_key_t *key, int dstlen, char *dst, ...);
+rsa_decrypt(rsa_key_t *key, int dstlen, unsigned char *dst, ...);
 
 #endif /* _STPM_RSAGLUE_H */

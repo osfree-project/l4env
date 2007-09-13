@@ -45,6 +45,6 @@ TPM_Quote(unsigned long keyhandle,
 	  unsigned char *blob, 
 	  unsigned int *bloblen);
 
-int quote_stdout(int argc, char *argv[]);
+int quote_stdout(int argc, unsigned char *argv[]);
 
 #endif

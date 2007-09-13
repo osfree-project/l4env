@@ -59,6 +59,7 @@ extern void *__alloc_bootmem_core(struct bootmem_data *bdata,
 				  unsigned long align,
 				  unsigned long goal,
 				  unsigned long limit);
+extern void *alloc_bootmem_high_node(pg_data_t *pgdat, unsigned long size);
 
 #ifndef CONFIG_HAVE_ARCH_BOOTMEM_NODE
 extern void reserve_bootmem(unsigned long addr, unsigned long size);
@@ -119,8 +120,7 @@ extern void *alloc_large_system_hash(const char *tablename,
 				     unsigned int *_hash_mask,
 				     unsigned long limit);
 
-#define HASH_HIGHMEM	0x00000001	/* Consider highmem? */
-#define HASH_EARLY	0x00000002	/* Allocating during early boot? */
+#define HASH_EARLY	0x00000001	/* Allocating during early boot? */
 
 /* Only NUMA needs hash distribution.
  * IA64 is known to have sufficient vmalloc space.

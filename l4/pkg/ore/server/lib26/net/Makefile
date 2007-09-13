@@ -13,6 +13,8 @@ TARGET = liblinuxnetdrv26.o.a
 
 WARNINGS ?= -Wall -Wno-unused 
 
+DEFINES += -D__ORE__
+
 -include $(PKGDIR_OBJ)/server/Makeconf.bid.local
 .general.d: $(PKGDIR_OBJ)/server/Makeconf.bid.local
 

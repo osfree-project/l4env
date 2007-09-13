@@ -7,7 +7,7 @@
  *
  * I'll disregard the following function currently...
  *
- * extern kmem_cache_t *kmem_find_general_cachep(size_t size, gfp_t gfpflags);
+ * extern struct kmem_cache *kmem_find_general_cachep(size_t size, gfp_t gfpflags);
  * extern void *kmem_cache_zalloc(struct kmem_cache *, gfp_t);
  */
 
@@ -47,7 +47,7 @@ struct kmem_cache
 /**
  * Return size of objects in cache
  */
-unsigned int kmem_cache_size(kmem_cache_t *cache)
+unsigned int kmem_cache_size(struct kmem_cache *cache)
 {
 	return cache->size;
 }
@@ -56,7 +56,7 @@ unsigned int kmem_cache_size(kmem_cache_t *cache)
 /**
  * Return name of cache
  */
-const char *kmem_cache_name(kmem_cache_t *cache)
+const char *kmem_cache_name(struct kmem_cache *cache)
 {
 	return cache->name;
 }
@@ -69,7 +69,7 @@ const char *kmem_cache_name(kmem_cache_t *cache)
  * Releases as many slabs as possible for a cache.
  * To help debugging, a zero exit status indicates all slabs were released.
  */
-int kmem_cache_shrink(kmem_cache_t *cache)
+int kmem_cache_shrink(struct kmem_cache *cache)
 {
 	/* noop */
 	return 1;
@@ -84,7 +84,7 @@ int kmem_cache_shrink(kmem_cache_t *cache)
  * Free an object which was previously allocated from this
  * cache.
  */
-void kmem_cache_free(kmem_cache_t *cache, void *objp)
+void kmem_cache_free(struct kmem_cache *cache, void *objp)
 {
 	ddekit_log(DEBUG_SLAB_ALLOC, "\"%s\" (%p)", cache->name, objp);
 
@@ -102,7 +102,7 @@ void kmem_cache_free(kmem_cache_t *cache, void *objp)
  * Allocate an object from this cache.  The flags are only relevant
  * if the cache has no available objects.
  */
-void *kmem_cache_alloc(kmem_cache_t *cache, gfp_t flags)
+void *kmem_cache_alloc(struct kmem_cache *cache, gfp_t flags)
 {
 	void *ret;
 
@@ -133,7 +133,7 @@ void *kmem_cache_alloc(kmem_cache_t *cache, gfp_t flags)
  * The caller must guarantee that noone will allocate memory from the cache
  * during the kmem_cache_destroy().
  */
-void kmem_cache_destroy(kmem_cache_t *cache)
+void kmem_cache_destroy(struct kmem_cache *cache)
 {
 	ddekit_log(DEBUG_SLAB, "\"%s\"", cache->name);
 
@@ -173,8 +173,8 @@ void kmem_cache_destroy(kmem_cache_t *cache)
  */
 struct kmem_cache * kmem_cache_create(const char *name, size_t size, size_t align,
                                       unsigned long flags,
-                                      void (*ctor)(void *, kmem_cache_t *, unsigned long),
-                                      void (*dtor)(void *, kmem_cache_t *, unsigned long))
+                                      void (*ctor)(void *, struct kmem_cache *, unsigned long),
+                                      void (*dtor)(void *, struct kmem_cache *, unsigned long))
 {
 	ddekit_log(DEBUG_SLAB, "\"%s\" obj_size=%d", name, size);
 

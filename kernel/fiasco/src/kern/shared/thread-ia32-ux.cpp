@@ -859,8 +859,8 @@ PUBLIC inline
 int
 Thread::send_exception(Trap_state *ts)
 {
-  if (//ts->_trapno != 1 && ts->_trapno != 3 &&
-      _pager != kernel_thread)
+  if (((state() & Thread_alien) || (ts->_trapno != 1 && ts->_trapno != 3))
+      && _pager != kernel_thread)
     {
       if (ts->_trapno == 3)
 	{

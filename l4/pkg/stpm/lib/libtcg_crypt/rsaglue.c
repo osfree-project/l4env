@@ -23,7 +23,7 @@
 
 
 #define RSA_FUNCTION(NAME, VARS, INIT, BODY, END)		\
-int rsa_##NAME(rsa_key_t *key, int enclen, char *enc, ...)	\
+int rsa_##NAME(rsa_key_t *key, int enclen, unsigned char *enc, ...)	\
 {								\
 	int res;						\
 	va_list argp;						\
@@ -103,7 +103,7 @@ RSA_FUNCTION(encrypt,
 			     &key->random);
 
 	      // correct outlen
-	      l=sizeof(unsigned int)+(*(unsigned int *)enc);
+	      l=sizeof(unsigned int)+(*enc);
 	      assert(l<=outlen);
 	      outlen=l;
 	      ,
@@ -112,13 +112,13 @@ RSA_FUNCTION(encrypt,
 		  printf("=%s() enclen %d outlen %d len %d\n",__func__,enclen,outlen,len);
 		  return -2;
 		}
-	      res=R_SealUpdate(&ctx,(unsigned char*)enc+outlen,&l,(unsigned char*)data,len);
+	      res=R_SealUpdate(&ctx,enc+outlen,&l,(unsigned char*)data,len);
 	      assert(l>0);
 	      outlen+=l;
 	      ,
 	      if (enclen<(outlen+8))
 	        return -3;
-	      res=R_SealFinal(&ctx,(unsigned char*)enc,(unsigned int*)&l);
+	      res=R_SealFinal(&ctx,enc,(unsigned int*)&l);
 	      if (res)
 	      return -4;
 	      assert(l==8);
@@ -200,7 +200,7 @@ rsa_initrandom(rsa_key_t *key)
  * Returns the bytes of random needed after this insert.
  */
 int
-rsa_insertrandom(rsa_key_t *key, int srclen, char *src)
+rsa_insertrandom(rsa_key_t *key, int srclen, unsigned char *src)
 {
 	int res;
         unsigned int needed;

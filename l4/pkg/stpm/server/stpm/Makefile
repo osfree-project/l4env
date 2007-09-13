@@ -14,7 +14,7 @@ SRC_C 	 	= server.c
 SERVERIDL	= stpm.idl
 
 # list additional library paths and libraries here
-LIBS_stpm-l4		= -lstpm-l4.o -ldde_linux -lio -llist_alloc
+LIBS_stpm-l4		= -lstpm-l4.o -ldde_linux26 -lddekit -lio -llist_alloc
 LIBS_stpm-l4-tis	= -lstpm-l4-tis.o -lio
 LIBS_stpm-ux 		= -lstpm-ux -lclxfux.o -llist_alloc
 LIBS_stpm-emu 		= -lstpm-emu -lclxfux.o -llist_alloc

@@ -74,7 +74,7 @@ map_tis_area(l4_addr_t *map_base_out)
         return ret;
     }
 
-    *map_base_out = l4io_request_mem_region(TIS_BASE, 0x2000, 0);
+    *map_base_out = l4io_request_mem_region(TIS_BASE, 0x5000, 0);
     if (*map_base_out == 0)
     {
         printf("Failed to get TIS area from L4IO");
@@ -109,7 +109,7 @@ init(void)
        exit(-1);
     }
 
-    ret = tis_access(map_base + TIS_LOCALITY_0, 0);
+    ret = tis_access(TIS_LOCALITY_0, 0);
     if (ret == 0)
     {
        printf("Failed to activate locality: %d\n", ret);
