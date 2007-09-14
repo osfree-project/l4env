@@ -98,7 +98,7 @@ template< unsigned long Flush_area, bool Ram >
 void Mmu<Flush_area, Ram>::flush_cache(void const *start,
 				       void const *end)
 {
-#if 1
+#if 0
   __asm__ __volatile__ (
       "    mcr p15, 0, r0, c7, c10, 4       \n"
       "1:  mcr p15, 0, %0, c7, c14, 1       \n"
@@ -108,27 +108,32 @@ void Mmu<Flush_area, Ram>::flush_cache(void const *start,
       "    blo 1b                           \n"
       : "=r" (start) : "0"(start), "r"(end)
       : "r0", "memory");
+#else
+  (void)start;
+  (void)end;
+  flush_cache();
 #endif
-//  flush_cache();
 }
 
 IMPLEMENT inline
 template< unsigned long Flush_area , bool Ram >
 void Mmu<Flush_area, Ram>::clean_dcache(void const *va)
 {
-#if 1
+#if 0
   __asm__ __volatile__ (
       "mcr p15, 0, %0, c7, c10, 1       \n"
       : : "r"(va) : "memory");
+#else
+  (void)va;
+  clean_dcache();
 #endif
-  //clean_dcache();
 }
 
 IMPLEMENT inline
 template< unsigned long Flush_area , bool Ram >
 void Mmu<Flush_area, Ram>::clean_dcache(void const *start, void const *end)
 {
-#if 1
+#if 0
   __asm__ __volatile__ (
       "    mov %0, %1                       \n"
       "    mcr p15, 0, %0, c7, c10, 4       \n"
@@ -138,15 +143,18 @@ void Mmu<Flush_area, Ram>::clean_dcache(void const *start, void const *end)
       "    blo 1b                           \n"
       : "=&r" (start) : "r"(start), "r"(end)
       : "memory");
+#else
+  (void)start;
+  (void)end;
+  clean_dcache();
 #endif
-  //clean_dcache();
 }
 
 IMPLEMENT
 template< unsigned long Flush_area, bool Ram >
 void Mmu<Flush_area, Ram>::flush_dcache(void const *start, void const *end)
 {
-#if 1
+#if 0
   __asm__ __volatile__ (
       "    mcr p15, 0, r0, c7, c10, 4       \n"
       "1:  mcr p15, 0, %0, c7, c14, 1       \n"
@@ -155,8 +163,11 @@ void Mmu<Flush_area, Ram>::flush_dcache(void const *start, void const *end)
       "    blo 1b                           \n"
       : "=r" (start) : "0"(start), "r"(end)
       : "r0", "memory");
+#else
+  (void)start;
+  (void)end;
+  flush_dcache();
 #endif
-  //flush_dcache();
 }
 
 IMPLEMENT

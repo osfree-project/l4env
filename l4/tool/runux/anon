@@ -4,6 +4,7 @@
 
 [ -n "$UXRES"    ] || UXRES=800x600@16
 ENABLE_NET=y
+sed -e "s.REPLACE_ME.$L4PATH.g" <$CFGPATH/mix.cfg >/tmp/mix_tmp.cfg
 
 fiasco -N -m128 \
 	-G $UXRES \
@@ -19,12 +20,13 @@ fiasco -N -m128 \
         -l con-ux			\
 	-l name_server			\
         -l fstab" -v132 -b/ -m/linux -v15 -b/ -m/anon_cfg" \
-	-l flips-ore					\
+	-l flips-ore			\
 	-l mini_ifconfig" -n eth0 192.168.2.4 255.255.255.0 192.168.2.1 -n lo 127.0.0.1 255.0.0.0" \
         -l "simple_file_server -v15"	\
            "-d$CFGPATH/config/mix1.xml"	\
            "-d$CFGPATH/config/mix2.xml"	\
            "-d$CFGPATH/config/mix3.xml"	\
+           "-d$L4PATH/signal_server"	\
 	-l local_socks			\
-	-l loader" $L4PATH/term_con $CFGPATH/mix.cfg"	\
+	-l loader" $L4PATH/term_con /tmp/mix_tmp.cfg" \
 	"$@"

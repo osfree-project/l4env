@@ -116,6 +116,11 @@ void ddekit_thread_usleep(unsigned long usecs) {
 	l4_busy_wait_us(usecs);
 }
 
+
+void ddekit_thread_nsleep(unsigned long nsecs) {
+	l4_busy_wait_ns(nsecs);
+}
+
 void ddekit_thread_sleep(ddekit_lock_t *lock) {
 	ddekit_thread_t *td;
 

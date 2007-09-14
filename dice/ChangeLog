@@ -1,5 +1,16 @@
 $Log, ChangeLog,v $
 
+3.2.1
+ - [feature] new compiler option --require <string> that specifies the minimal
+   version the currently running Dice has to be.
+ - [feature] new #pragam require <string> with same semantic
+ - [fix] rcv_any and wait_any functions have different names on client and
+   server side
+ - [fix] marshalling of pointer types as parameter of ipc_call did not work
+ - [fix] whitespace output when parsing fies using #pragma
+ - [fix] make unmarshal/marshal/wait_any functions protected in generated
+   server classes (C++ backend)
+
 3.2.0
  - [feature] add L4.Fiasco backend to reflect changes in L4.Fiasco API
    (uses ipc_*_tag variants of IPC C-Bindings)
