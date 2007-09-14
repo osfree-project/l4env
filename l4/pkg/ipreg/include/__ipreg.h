@@ -1,4 +1,0 @@
-#define IPREG_MAX_NAME_LEN 64
-#define IPREG_MAX_ADDR_LEN 64
-
-#define IPREG_NAMES_NAME "IPREG"
