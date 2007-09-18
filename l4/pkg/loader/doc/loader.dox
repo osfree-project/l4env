@@ -408,6 +408,25 @@ The following information can be find there (see the
   Make sure that the memory is mapped using 4kB pages. Useful for performance
   comparisons.
 
+\section integrity Integrity measurement
+
+\par integrity_id \<integrity ID\>
+  Specify the ID under which the newly started task should be registered in the
+  integrity-measurement database (provided by the external virtual TPM service).
+  The ID is specified as the base64 representation of a 20-byte string, for
+  example, "MDEyMzQ1Njc4OTEyMzQ1Njc4AAA=".
+
+\par integrity_parent_id \<integrity ID\>
+  Specify the ID of the parent task that is registered in the
+  integrity-measurement database (provided by the external virtual TPM service).
+  The format of the ID is the same as for integrity_id
+
+\par hash_modules
+  Specifies that any modules that are passed to the newly started task should
+  be measured as well.
+  Attention: This requires addional memory, because a copy of the module has to
+  be created, as the file provider may not be part of the trusted computing
+  base.
 
 */
 
