@@ -86,6 +86,8 @@ NAMESPACE_DICE_END
 
 #ifdef L4API_linux
 
+#include <sys/types.h>
+
 NAMESPACE_DICE_BEG
 
 typedef struct sockaddr_in CORBA_Object_base;

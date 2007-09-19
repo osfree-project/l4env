@@ -461,31 +461,31 @@ primary_expression :
 	}
 	| SCOPE qualified_id
 	{
-	    std::string s("::");
-	    if ($2)
-		s += $2->GetName();
-	    $$ = new CFEUserDefinedExpression(s);
-	    $$->m_sourceLoc = @$;
-	    if ($2)
-		delete $2;
+		std::string s("::");
+		if ($2)
+			s += $2->GetName();
+		$$ = new CFEUserDefinedExpression(s);
+		$$->m_sourceLoc = @$;
+		if ($2)
+			delete $2;
 	}
 	| id_expression
 	{
-	    std::string s = $1 ? $1->GetName() : std::string();
-	    $$ = new CFEUserDefinedExpression(s);
-	    $$->m_sourceLoc = @$;
-	    if ($1)
-		delete $1;
+		std::string s = $1 ? $1->GetName() : std::string();
+		$$ = new CFEUserDefinedExpression(s);
+		$$->m_sourceLoc = @$;
+		if ($1)
+			delete $1;
 	}
 	| LPAREN expression RPAREN
 	{
-	    if ($2)
-	    {
-		$$ = new CFEPrimaryExpression(EXPR_PAREN, $2);
-		$2->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($2)
+		{
+			$$ = new CFEPrimaryExpression(EXPR_PAREN, $2);
+			$2->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -658,104 +658,104 @@ unary_expression :
 	  postfix_expression
 	| INC_OP cast_expression
 	{
-	    if ($2)
-	    {
-		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_INCR, $2);
-		$2->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($2)
+		{
+			$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_INCR, $2);
+			$2->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| DEC_OP cast_expression
 	{
-	    if ($2)
-	    {
-		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DECR, $2);
-		$2->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($2)
+		{
+			$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DECR, $2);
+			$2->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	/* ASTERISK, BITAND, TILDE inlined to avoid reduce/reduce conflicts */
 	| ASTERISK cast_expression
 	{
-	    if ($2)
-	    {
-		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_MUL, $2);
-		$2->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($2)
+		{
+			$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_MUL, $2);
+			$2->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| BITAND cast_expression
 	{
-	    if ($2)
-	    {
-		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_BITAND, $2);
-		$2->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($2)
+		{
+			$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_BITAND, $2);
+			$2->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| TILDE cast_expression
 	{
-	    if ($2)
-	    {
-		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_TILDE, $2);
-		$2->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($2)
+		{
+			$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_TILDE, $2);
+			$2->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| unary_operator cast_expression
 	{
-	    if ($2)
-	    {
-		$$ = new CFEUnaryExpression(EXPR_UNARY, $1, $2);
-		$2->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($2)
+		{
+			$$ = new CFEUnaryExpression(EXPR_UNARY, $1, $2);
+			$2->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| SIZEOF unary_expression
 	{
-	    if ($2)
-	    {
-		$$ = new CFESizeOfExpression($2);
-		$2->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($2)
+		{
+			$$ = new CFESizeOfExpression($2);
+			$2->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| SIZEOF LPAREN type_id RPAREN
 	{
-	    if ($3)
-	    {
-		$$ = new CFESizeOfExpression($3);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($3)
+		{
+			$$ = new CFESizeOfExpression($3);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| ALIGNOF unary_expression
 	{
-	    if ($2)
-	    {
-		$$ = new CFEAlignOfExpression($2);
-		$2->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($2)
+		{
+			$$ = new CFEAlignOfExpression($2);
+			$2->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| ALIGNOF LPAREN type_id RPAREN
 	{
-	    if ($3)
-	    {
-		$$ = new CFEAlignOfExpression($3);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($3)
+		{
+			$$ = new CFEAlignOfExpression($3);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| new_expression
 	{
@@ -840,27 +840,27 @@ direct_new_declarator :
 delete_expression :
 	  SCOPE DELETE                   cast_expression
 	{
-	    $$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DELETE, $3);
-	    if ($3)
-		$3->SetParent($$);
+		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DELETE, $3);
+		if ($3)
+			$3->SetParent($$);
 	}
 	|       DELETE                   cast_expression
 	{
-	    $$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DELETE, $2);
-	    if ($2)
-		$2->SetParent($$);
+		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DELETE, $2);
+		if ($2)
+			$2->SetParent($$);
 	}
 	| SCOPE DELETE LBRACKET RBRACKET cast_expression
 	{
-	    $$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DELETE_ARRAY, $5);
-	    if ($5)
-		$5->SetParent($$);
+		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DELETE_ARRAY, $5);
+		if ($5)
+			$5->SetParent($$);
 	}
 	|       DELETE LBRACKET RBRACKET cast_expression
 	{
-	    $$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DELETE_ARRAY, $4);
-	    if ($4)
-		$4->SetParent($$);
+		$$ = new CFEUnaryExpression(EXPR_UNARY, EXPR_DELETE_ARRAY, $4);
+		if ($4)
+			$4->SetParent($$);
 	}
 	;
 
@@ -868,19 +868,19 @@ cast_expression :
 	  unary_expression
 	| LPAREN type_id RPAREN cast_expression
 	{
-	    if ($4)
-	    {
-		if ($2)
+		if ($4)
 		{
-		    $$ = new CFEUnaryExpression($2, $4);
-		    $2->SetParent($$);
-		    $4->SetParent($$);
+			if ($2)
+			{
+				$$ = new CFEUnaryExpression($2, $4);
+				$2->SetParent($$);
+				$4->SetParent($$);
+			}
+			else
+				$$ = $4;
 		}
 		else
-		    $$ = $4;
-	    }
-	    else
-		$$ = NULL;
+			$$ = NULL;
 	}
 	;
 
@@ -900,36 +900,36 @@ multiplicative_expression :
 	  pm_expression
 	| multiplicative_expression ASTERISK pm_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MUL, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MUL, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| multiplicative_expression DIV pm_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_DIV, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_DIV, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| multiplicative_expression MOD pm_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MOD, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MOD, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -937,64 +937,64 @@ additive_expression :
 	  multiplicative_expression
 	| additive_expression PLUS multiplicative_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_PLUS, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_PLUS, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| additive_expression MINUS multiplicative_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MINUS, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MINUS, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| additive_expression LIT_INT
 	{
-	    if ($2 >= 0)
-	    {
-		driver.error(@2, "Invalid expression.");
-		YYABORT;
-	    }
-	    CFEExpression *t = new CFEPrimaryExpression(EXPR_INT, (long)-$2);
-	    $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MINUS, t);
-	    t->SetParent($$);
-	    if ($1)
-		$1->SetParent($$);
+		if ($2 >= 0)
+		{
+			driver.error(@2, "Invalid expression.");
+			YYABORT;
+		}
+		CFEExpression *t = new CFEPrimaryExpression(EXPR_INT, (long)-$2);
+		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MINUS, t);
+		t->SetParent($$);
+		if ($1)
+			$1->SetParent($$);
 	}
 	| additive_expression LIT_LONG
 	{
-	    if ($2 >= 0)
-	    {
-		driver.error(@2, "Invalid expression.");
-		YYABORT;
-	    }
-	    CFEExpression *t = new CFEPrimaryExpression(EXPR_INT, -$2);
-	    $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MINUS, t);
-	    t->SetParent($$);
-	    if ($1)
-		$1->SetParent($$);
+		if ($2 >= 0)
+		{
+			driver.error(@2, "Invalid expression.");
+			YYABORT;
+		}
+		CFEExpression *t = new CFEPrimaryExpression(EXPR_INT, -$2);
+		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MINUS, t);
+		t->SetParent($$);
+		if ($1)
+			$1->SetParent($$);
 	}
 	| additive_expression LIT_LLONG
 	{
-	    if ($2 >= 0)
-	    {
-		driver.error(@2, "Invalid expression.");
-		YYABORT;
-	    }
-	    CFEExpression *t = new CFEPrimaryExpression(EXPR_LLONG, -$2);
-	    $$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MINUS, t);
-	    t->SetParent($$);
-	    if ($1)
-		$1->SetParent($$);
+		if ($2 >= 0)
+		{
+			driver.error(@2, "Invalid expression.");
+			YYABORT;
+		}
+		CFEExpression *t = new CFEPrimaryExpression(EXPR_LLONG, -$2);
+		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MINUS, t);
+		t->SetParent($$);
+		if ($1)
+			$1->SetParent($$);
 	}
 	;
 
@@ -1002,25 +1002,25 @@ shift_expression :
 	  additive_expression
 	| shift_expression LSHIFT additive_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LSHIFT, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LSHIFT, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| shift_expression RSHIFT additive_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_RSHIFT, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_RSHIFT, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -1028,47 +1028,47 @@ relational_expression :
 	  shift_expression
 	| relational_expression LT shift_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LT, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LT, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| relational_expression GT shift_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_GT, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_GT, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| relational_expression LTEQUAL shift_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LTEQU, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LTEQU, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| relational_expression GTEQUAL shift_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_GTEQU, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_GTEQU, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -1076,37 +1076,37 @@ equality_expression :
 	  relational_expression
 	| equality_expression EQUAL relational_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_EQUALS, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-	    {
-		if ($1)
-		    delete $1;
-		if ($3)
-		    delete $3;
-		$$ = NULL;
-	    }
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_EQUALS, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+		{
+			if ($1)
+				delete $1;
+			if ($3)
+				delete $3;
+			$$ = NULL;
+		}
 	}
 	| equality_expression NOTEQUAL relational_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_NOTEQUAL, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-	    {
-		if ($1)
-		    delete $1;
-		if ($3)
-		    delete $3;
-		$$ = NULL;
-	    }
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_NOTEQUAL, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+		{
+			if ($1)
+				delete $1;
+			if ($3)
+				delete $3;
+			$$ = NULL;
+		}
 	}
 	;
 
@@ -1114,14 +1114,14 @@ and_expression :
 	  equality_expression
 	| and_expression BITAND equality_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITAND, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITAND, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -1129,14 +1129,14 @@ exclusive_or_expression :
 	  and_expression
 	| exclusive_or_expression BITXOR and_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITXOR, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITXOR, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -1144,14 +1144,14 @@ inclusive_or_expression :
 	  exclusive_or_expression
 	| inclusive_or_expression BITOR exclusive_or_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITOR, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_BITOR, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -1159,14 +1159,14 @@ logical_and_expression :
 	  inclusive_or_expression
 	| logical_and_expression LOGICALAND inclusive_or_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LOGAND, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LOGAND, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -1174,14 +1174,14 @@ logical_or_expression :
 	  logical_and_expression
 	| logical_or_expression LOGICALOR logical_and_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LOGOR, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_LOGOR, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -1189,44 +1189,44 @@ conditional_expression :
 	  logical_or_expression
 	| logical_or_expression QUESTION expression COLON assignment_expression
 	{
-	    $$ = new CFEConditionalExpression($1, $3, $5);
-	    if ($1)
-		$1->SetParent($$);
-	    if ($3)
-		$3->SetParent($$);
-	    if ($5)
-		$5->SetParent($$);
+		$$ = new CFEConditionalExpression($1, $3, $5);
+		if ($1)
+			$1->SetParent($$);
+		if ($3)
+			$3->SetParent($$);
+		if ($5)
+			$5->SetParent($$);
 	}
 	/* gnu99 */
 	| logical_or_expression QUESTION COLON assignment_expression
 	{
-	    $$ = new CFEConditionalExpression($1, NULL, $4);
-	    if ($1)
-		$1->SetParent($$);
-	    if ($4)
-		$4->SetParent($$);
+		$$ = new CFEConditionalExpression($1, NULL, $4);
+		if ($1)
+			$1->SetParent($$);
+		if ($4)
+			$4->SetParent($$);
 	}
 	| logical_or_expression MIN expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MIN, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MIN, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| logical_or_expression MAX expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MAX, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, EXPR_MAX, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
@@ -1234,14 +1234,14 @@ assignment_expression :
 	  conditional_expression
 	| logical_or_expression assignment_operator assignment_expression
 	{
-	    if ($1 && $3)
-	    {
-		$$ = new CFEBinaryExpression(EXPR_BINARY, $1, $2, $3);
-		$1->SetParent($$);
-		$3->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1 && $3)
+		{
+			$$ = new CFEBinaryExpression(EXPR_BINARY, $1, $2, $3);
+			$1->SetParent($$);
+			$3->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	| throw_expression
 	;
@@ -1418,166 +1418,166 @@ simple_declaration :
 	   */
 	  TYPEDEF decl_specifier_seq init_declarator_list SEMICOLON
 	{
-	    if ($3)
-	    {
-		std::vector<CFEDeclarator*>::iterator i;
-		for (i = $3->begin(); i != $3->end(); i++)
+		if ($3)
 		{
-		    std::string sName = (*i)->GetName();
-		    if (driver.trace_scanning)
-			std::cerr << "C-Parser: TYPEDEF checking " << sName << "\n";
-		    // check if any of the aliases has been declared before (as type)
-		    if (driver.check_token(sName, dice::parser::CSymbolTable::TYPENAME))
-			driver.error(@3, "Type \"" + sName + "\" already defined.");
-		    // add aliases to symbol table
-		    driver.add_token(sName, dice::parser::CSymbolTable::TYPENAME, (CFEBase*)0,
-			*@3.begin.filename, @3.begin.line, @3.begin.column);
+			std::vector<CFEDeclarator*>::iterator i;
+			for (i = $3->begin(); i != $3->end(); i++)
+			{
+				std::string sName = (*i)->GetName();
+				if (driver.trace_scanning)
+					std::cerr << "C-Parser: TYPEDEF checking " << sName << "\n";
+				// check if any of the aliases has been declared before (as type)
+				if (driver.check_token(sName, dice::parser::CSymbolTable::TYPENAME))
+					driver.error(@3, "Type \"" + sName + "\" already defined.");
+				// add aliases to symbol table
+				driver.add_token(sName, dice::parser::CSymbolTable::TYPENAME, (CFEBase*)0,
+					*@3.begin.filename, @3.begin.line, @3.begin.column);
+			}
 		}
-	    }
-	    // as type $2 is used
-	    CFETypeSpec *type = NULL;
-	    if ($2->size() > 0)
-		type = *$2->begin();
-	    // $4 contains the defined aliases
-	    CFETypedDeclarator *t = new CFETypedDeclarator(TYPEDECL_TYPEDEF, type, $3);
-	    t->m_sourceLoc = @$;
-	    type->SetParent(t);
+		// as type $2 is used
+		CFETypeSpec *type = NULL;
+		if ($2->size() > 0)
+			type = *$2->begin();
+		// $4 contains the defined aliases
+		CFETypedDeclarator *t = new CFETypedDeclarator(TYPEDECL_TYPEDEF, type, $3);
+		t->m_sourceLoc = @$;
+		type->SetParent(t);
 
-	    // add typedef to current context
-	    CFEBase *pContext = driver.getCurrentContext();
-	    CFEFile *pFile = dynamic_cast<CFEFile*>(pContext);
-	    CFELibrary *pLib = dynamic_cast<CFELibrary*>(pContext);
-	    CFEInterface *pInterface = dynamic_cast<CFEInterface*>(pContext);
-	    if (pFile)
-	    {
-		pFile->m_Typedefs.Add(t);
-		pFile->m_sourceLoc += @$;
-	    }
-	    else if (pLib)
-	    {
-		pLib->m_Typedefs.Add(t);
-		pLib->m_sourceLoc += @$;
-	    }
-	    else if (pInterface)
-	    {
-		pInterface->m_Typedefs.Add(t);
-		pInterface->m_sourceLoc += @$;
-	    }
-	    else
-	    {
-		// something else is context, which is not possible: throw error
-		driver.error(@$, "Typedef declared in invalid context.");
-		YYABORT;
-	    }
+		// add typedef to current context
+		CFEBase *pContext = driver.getCurrentContext();
+		CFEFile *pFile = dynamic_cast<CFEFile*>(pContext);
+		CFELibrary *pLib = dynamic_cast<CFELibrary*>(pContext);
+		CFEInterface *pInterface = dynamic_cast<CFEInterface*>(pContext);
+		if (pFile)
+		{
+			pFile->m_Typedefs.Add(t);
+			pFile->m_sourceLoc += @$;
+		}
+		else if (pLib)
+		{
+			pLib->m_Typedefs.Add(t);
+			pLib->m_sourceLoc += @$;
+		}
+		else if (pInterface)
+		{
+			pInterface->m_Typedefs.Add(t);
+			pInterface->m_sourceLoc += @$;
+		}
+		else
+		{
+			// something else is context, which is not possible: throw error
+			driver.error(@$, "Typedef declared in invalid context.");
+			YYABORT;
+		}
 	}
 	| TYPEDEF decl_specifier_seq SEMICOLON
 	{
-	    // the declarator is the last element of the decl_specifier_seq
-	    // and is probably a user defined type
-	    CFEDeclarator *decl = NULL;
-	    if ($2->size() >= 2) // at least the type and the alias
-	    {
-		CFEUserDefinedType *user = dynamic_cast<CFEUserDefinedType*>($2->back());
-		if (user)
+		// the declarator is the last element of the decl_specifier_seq
+		// and is probably a user defined type
+		CFEDeclarator *decl = NULL;
+		if ($2->size() >= 2) // at least the type and the alias
 		{
-		    decl = new CFEDeclarator(DECL_IDENTIFIER, user->GetName());
-		    $2->erase($2->end()-1);
-		    delete user;
+			CFEUserDefinedType *user = dynamic_cast<CFEUserDefinedType*>($2->back());
+			if (user)
+			{
+				decl = new CFEDeclarator(DECL_IDENTIFIER, user->GetName());
+				$2->erase($2->end()-1);
+				delete user;
+			}
 		}
-	    }
-	    else
-		driver.error(@2, "Either type or declarator are missing.\n");
-	    if (decl)
-	    {
-		std::string sName = decl->GetName();
-		if (driver.trace_scanning)
-		    std::cerr << "C-Parser: TYPEDEF checking " << sName << "\n";
-		// check if any of the aliases has been declared before (as type)
-		if (driver.check_token(sName, dice::parser::CSymbolTable::TYPENAME))
-		    driver.error(@2, "Type \"" + sName + "\" already defined.");
-		// add aliases to symbol table
-		driver.add_token(sName, dice::parser::CSymbolTable::TYPENAME, (CFEBase*)0,
-		    *@2.begin.filename, @2.begin.line, @2.begin.column);
-	    }
-	    else
-		driver.error(@2, "Scribble, scrabble, call the debb'l.\n");
-	    vector<CFEDeclarator*> *tVecD = new vector<CFEDeclarator*>();
-	    tVecD->push_back(decl);
-	    // as type $2 is used
-	    CFETypeSpec *type = NULL;
-	    if ($2->size() > 0)
-		type = *$2->begin();
-	    // $4 contains the defined aliases
-	    CFETypedDeclarator *t = new CFETypedDeclarator(TYPEDECL_TYPEDEF, type, tVecD);
-	    t->m_sourceLoc = @$;
-	    type->SetParent(t);
-	    if (decl)
-		decl->SetParent(t);
+		else
+			driver.error(@2, "Either type or declarator are missing.\n");
+		if (decl)
+		{
+			std::string sName = decl->GetName();
+			if (driver.trace_scanning)
+				std::cerr << "C-Parser: TYPEDEF checking " << sName << "\n";
+			// check if any of the aliases has been declared before (as type)
+			if (driver.check_token(sName, dice::parser::CSymbolTable::TYPENAME))
+				driver.error(@2, "Type \"" + sName + "\" already defined.");
+			// add aliases to symbol table
+			driver.add_token(sName, dice::parser::CSymbolTable::TYPENAME, (CFEBase*)0,
+				*@2.begin.filename, @2.begin.line, @2.begin.column);
+		}
+		else
+			driver.error(@2, "Scribble, scrabble, call the debb'l.\n");
+		vector<CFEDeclarator*> *tVecD = new vector<CFEDeclarator*>();
+		tVecD->push_back(decl);
+		// as type $2 is used
+		CFETypeSpec *type = NULL;
+		if ($2->size() > 0)
+			type = *$2->begin();
+		// $4 contains the defined aliases
+		CFETypedDeclarator *t = new CFETypedDeclarator(TYPEDECL_TYPEDEF, type, tVecD);
+		t->m_sourceLoc = @$;
+		type->SetParent(t);
+		if (decl)
+			decl->SetParent(t);
 
-	    // add typedef to current context
-	    CFEBase *pContext = driver.getCurrentContext();
-	    CFEFile *pFile = dynamic_cast<CFEFile*>(pContext);
-	    CFELibrary *pLib = dynamic_cast<CFELibrary*>(pContext);
-	    CFEInterface *pInterface = dynamic_cast<CFEInterface*>(pContext);
-	    if (pFile)
-	    {
-		pFile->m_Typedefs.Add(t);
-		pFile->m_sourceLoc += @$;
-	    }
-	    else if (pLib)
-	    {
-		pLib->m_Typedefs.Add(t);
-		pLib->m_sourceLoc += @$;
-	    }
-	    else if (pInterface)
-	    {
-		pInterface->m_Typedefs.Add(t);
-		pInterface->m_sourceLoc += @$;
-	    }
-	    else
-	    {
-		// something else is context, which is not possible: throw error
-		driver.error(@$, "Typedef declared in invalid context.");
-		YYABORT;
-	    }
+		// add typedef to current context
+		CFEBase *pContext = driver.getCurrentContext();
+		CFEFile *pFile = dynamic_cast<CFEFile*>(pContext);
+		CFELibrary *pLib = dynamic_cast<CFELibrary*>(pContext);
+		CFEInterface *pInterface = dynamic_cast<CFEInterface*>(pContext);
+		if (pFile)
+		{
+			pFile->m_Typedefs.Add(t);
+			pFile->m_sourceLoc += @$;
+		}
+		else if (pLib)
+		{
+			pLib->m_Typedefs.Add(t);
+			pLib->m_sourceLoc += @$;
+		}
+		else if (pInterface)
+		{
+			pInterface->m_Typedefs.Add(t);
+			pInterface->m_sourceLoc += @$;
+		}
+		else
+		{
+			// something else is context, which is not possible: throw error
+			driver.error(@$, "Typedef declared in invalid context.");
+			YYABORT;
+		}
 	}
 	| decl_specifier_seq init_declarator_list SEMICOLON
 	|                    init_declarator_list SEMICOLON
 	| decl_specifier_seq                      SEMICOLON
 	{
-	    CFEBase *pContext = driver.getCurrentContext();
-	    CFEFile *pFile = dynamic_cast<CFEFile*>(pContext);
-	    CFELibrary *pLib = dynamic_cast<CFELibrary*>(pContext);
-	    CFEInterface *pInterface = dynamic_cast<CFEInterface*>(pContext);
-	    // iterate types and add them to local scope
-	    vector<CFETypeSpec*>::iterator i;
-	    for (i = $1->begin(); i != $1->end(); i++)
-	    {
-		CFEConstructedType *t = dynamic_cast<CFEConstructedType*>(*i);
-		if (!t)
-		    continue;
-		if (pFile)
+		CFEBase *pContext = driver.getCurrentContext();
+		CFEFile *pFile = dynamic_cast<CFEFile*>(pContext);
+		CFELibrary *pLib = dynamic_cast<CFELibrary*>(pContext);
+		CFEInterface *pInterface = dynamic_cast<CFEInterface*>(pContext);
+		// iterate types and add them to local scope
+		vector<CFETypeSpec*>::iterator i;
+		for (i = $1->begin(); i != $1->end(); i++)
 		{
-		    pFile->m_TaggedDeclarators.Add(t);
-		    pFile->m_sourceLoc += @$;
+			CFEConstructedType *t = dynamic_cast<CFEConstructedType*>(*i);
+			if (!t)
+				continue;
+			if (pFile)
+			{
+				pFile->m_TaggedDeclarators.Add(t);
+				pFile->m_sourceLoc += @$;
+			}
+			else if (pLib)
+			{
+				pLib->m_TaggedDeclarators.Add(t);
+				pLib->m_sourceLoc += @$;
+			}
+			else if (pInterface)
+			{
+				pInterface->m_TaggedDeclarators.Add(t);
+				pInterface->m_sourceLoc += @$;
+			}
+			else
+			{
+				// something else is context, which is not possible: throw error
+				driver.error(@$, "Type declared in invalid context.");
+				YYABORT;
+			}
 		}
-		else if (pLib)
-		{
-		    pLib->m_TaggedDeclarators.Add(t);
-		    pLib->m_sourceLoc += @$;
-		}
-		else if (pInterface)
-		{
-		    pInterface->m_TaggedDeclarators.Add(t);
-		    pInterface->m_sourceLoc += @$;
-		}
-		else
-		{
-		    // something else is context, which is not possible: throw error
-		    driver.error(@$, "Type declared in invalid context.");
-		    YYABORT;
-		}
-	    }
 	}
 	/* explicetly specify TYPEDEF here, so we can add it to the namespace
 	 * and scope */
@@ -1893,17 +1893,17 @@ enum_specifier :
 	 */
 	  ENUM ID LBRACE enumerator_list_opt RBRACE
 	{
-	    if (driver.trace_scanning)
-		std::cerr << "C-Parser: ENUM checking " << *$2 << "\n";
-	    // check if any of the aliases has been declared before (as type)
-	    if (driver.check_token(*$2, dice::parser::CSymbolTable::TYPENAME))
-		driver.error(@2, "Enum \"" + *$2 + "\" already defined.");
-	    // add aliases to symbol table
-	    driver.add_token(*$2, dice::parser::CSymbolTable::TYPENAME, (CFEBase*)0,
-		*@2.begin.filename, @2.begin.line, @2.begin.column);
+		if (driver.trace_scanning)
+			std::cerr << "C-Parser: ENUM checking " << *$2 << "\n";
+		// check if any of the aliases has been declared before (as type)
+		if (driver.check_token(*$2, dice::parser::CSymbolTable::TYPENAME))
+			driver.error(@2, "Enum \"" + *$2 + "\" already defined.");
+		// add aliases to symbol table
+		driver.add_token(*$2, dice::parser::CSymbolTable::TYPENAME, (CFEBase*)0,
+			*@2.begin.filename, @2.begin.line, @2.begin.column);
 
-	    // create type
-	    $$ = new CFEEnumType(*$2, $4);
+		// create type
+		$$ = new CFEEnumType(*$2, $4);
 	}
 	| ENUM LBRACE enumerator_list_opt RBRACE
 	{
@@ -1945,15 +1945,15 @@ enumerator_list_opt :
 enumerator_list :
 	  enumerator_definition
 	{
-	    $$ = new std::vector<CFEIdentifier*>();
-	    if ($1)
-		$$->push_back($1);
+		$$ = new std::vector<CFEIdentifier*>();
+		if ($1)
+			$$->push_back($1);
 	}
 	| enumerator_list COMMA enumerator_definition
 	{
-	    $$ = $1;
-	    if ($3)
-		$$->push_back($3);
+		$$ = $1;
+		if ($3)
+			$$->push_back($3);
 	}
 	;
 
@@ -1965,87 +1965,87 @@ enumerator_definition :
 	/* replace constant_expression with conditional_expression */
 	| enumerator IS conditional_expression
 	{
-	    $$ = new CFEEnumDeclarator(*$1, $3);
-	    if ($3)
-		$3->SetParent($$);
+		$$ = new CFEEnumDeclarator(*$1, $3);
+		if ($3)
+			$3->SetParent($$);
 	}
 	;
 
 enumerator :
 	  ID
 	{
-	    if (driver.trace_scanning)
-		std::cerr << "C-Parser: Enumerator checking " << *$1 << "\n";
-	    // check if identifier is already used as enumerator in current scope
-	    if (driver.check_token(*$1, dice::parser::CSymbolTable::ENUM))
-		driver.error(@1, "Enumerator \"" + *$1 + "\" already defined.");
-	    // add aliases to symbol table
-	    driver.add_token(*$1, dice::parser::CSymbolTable::ENUM, (CFEBase*)0,
-		*@1.begin.filename, @1.begin.line, @1.begin.column);
+		if (driver.trace_scanning)
+			std::cerr << "C-Parser: Enumerator checking " << *$1 << "\n";
+		// check if identifier is already used as enumerator in current scope
+		if (driver.check_token(*$1, dice::parser::CSymbolTable::ENUM))
+			driver.error(@1, "Enumerator \"" + *$1 + "\" already defined.");
+		// add aliases to symbol table
+		driver.add_token(*$1, dice::parser::CSymbolTable::ENUM, (CFEBase*)0,
+			*@1.begin.filename, @1.begin.line, @1.begin.column);
 
-	    // return the name
-	    $$ = $1;
+		// return the name
+		$$ = $1;
 	}
 	;
 
 namespace_definition :
 	  NAMESPACE ID
 	{
-	    if (driver.trace_scanning)
-		std::cerr << "C-Parser: NAMESPACE checking " << *$2 << "\n";
-	    // check if identifier is already used as namespace id
-	    if (driver.check_token(*$2, dice::parser::CSymbolTable::NAMESPACE))
-		driver.error(@2, "Namespace ID \"" + *$2 + "\" already defined.");
-	    // add aliases to symbol table
-	    driver.add_token(*$2, dice::parser::CSymbolTable::NAMESPACE, (CFEBase*)0,
-		*@2.begin.filename, @2.begin.line, @2.begin.column);
+		if (driver.trace_scanning)
+			std::cerr << "C-Parser: NAMESPACE checking " << *$2 << "\n";
+		// check if identifier is already used as namespace id
+		if (driver.check_token(*$2, dice::parser::CSymbolTable::NAMESPACE))
+			driver.error(@2, "Namespace ID \"" + *$2 + "\" already defined.");
+		// add aliases to symbol table
+		driver.add_token(*$2, dice::parser::CSymbolTable::NAMESPACE, (CFEBase*)0,
+			*@2.begin.filename, @2.begin.line, @2.begin.column);
 
-	    // create a library (i.e., namespace) object and add it to the current
-	    // context
-	    CFELibrary *pFELibrary = new CFELibrary(*$2, NULL, driver.getCurrentContext());
-	    driver.setCurrentContext(pFELibrary);
-	    // becase the name is not known, this is the first library with this
-	    // name in the current scope, so no need to set the same libarary
+		// create a library (i.e., namespace) object and add it to the current
+		// context
+		CFELibrary *pFELibrary = new CFELibrary(*$2, NULL, driver.getCurrentContext());
+		driver.setCurrentContext(pFELibrary);
+		// becase the name is not known, this is the first library with this
+		// name in the current scope, so no need to set the same libarary
 	} LBRACE namespace_body RBRACE
 	{
 	    driver.leaveCurrentContext();
 	}
 	| NAMESPACE NAMESPACE_ID
 	{
-	    if (driver.trace_scanning)
-		std::cerr << "C-Parser: NAMESPACE checking " << *$2 << "\n";
-	    // NAMESPACE_ID identicates that the identifier is already defined as
-	    // namespace, so this is a namespace extension
-	    CFEBase *pContext = driver.getCurrentContext();
-	    CFELibrary *pFELibrary = new CFELibrary(*$2, NULL, pContext);
-	    driver.setCurrentContext(pFELibrary);
-	    // check the context for the library. The context can either be a file
-	    // or a library itself
-	    CFEFile *pFEFile = dynamic_cast<CFEFile*>(pContext);
-	    while (pFEFile)
-	    {
-		CFELibrary *pSameLib = pFEFile->FindLibrary(*$2);
-		if (pSameLib)
+		if (driver.trace_scanning)
+			std::cerr << "C-Parser: NAMESPACE checking " << *$2 << "\n";
+		// NAMESPACE_ID identicates that the identifier is already defined as
+		// namespace, so this is a namespace extension
+		CFEBase *pContext = driver.getCurrentContext();
+		CFELibrary *pFELibrary = new CFELibrary(*$2, NULL, pContext);
+		driver.setCurrentContext(pFELibrary);
+		// check the context for the library. The context can either be a file
+		// or a library itself
+		CFEFile *pFEFile = dynamic_cast<CFEFile*>(pContext);
+		while (pFEFile)
 		{
-		    pSameLib->AddSameLibrary(pFELibrary);
-		    break;
+			CFELibrary *pSameLib = pFEFile->FindLibrary(*$2);
+			if (pSameLib)
+			{
+				pSameLib->AddSameLibrary(pFELibrary);
+				break;
+			}
+			pFEFile = pFEFile->GetSpecificParent<CFEFile>();
 		}
-		pFEFile = pFEFile->GetSpecificParent<CFEFile>();
-	    }
-	    CFELibrary *pParentLib = dynamic_cast<CFELibrary*>(pContext);
-	    if (!dynamic_cast<CFEFile*>(pContext))
-	    {
-		while (pParentLib)
+		CFELibrary *pParentLib = dynamic_cast<CFELibrary*>(pContext);
+		if (!dynamic_cast<CFEFile*>(pContext))
 		{
-		    CFELibrary *pSameLib = pParentLib->FindLibrary(*$2);
-		    if (pSameLib)
-		    {
-			pSameLib->AddSameLibrary(pFELibrary);
-			break;
-		    }
-		    pParentLib = pParentLib->GetSpecificParent<CFELibrary>();
+			while (pParentLib)
+			{
+				CFELibrary *pSameLib = pParentLib->FindLibrary(*$2);
+				if (pSameLib)
+				{
+					pSameLib->AddSameLibrary(pFELibrary);
+					break;
+				}
+				pParentLib = pParentLib->GetSpecificParent<CFELibrary>();
+			}
 		}
-	    }
 	} LBRACE namespace_body RBRACE
 	{
 	    driver.leaveCurrentContext();
@@ -2070,26 +2070,26 @@ namespace_body :
 namespace_alias_definition :
 	  NAMESPACE ID IS qualified_namespace_specifier SEMICOLON
 	{
-	    // add ID as new namespace name, but keep the current context. This is
-	    // a simple alias definition which allows to access the
-	    // qualified_namespace_specifier namespace with the ID alias.
-	    if (driver.trace_scanning)
-		std::cerr << "C-Parser: NAMESPACE checking " << *$2 << "\n";
-	    // check if identifier is already used as namespace id
-	    if (driver.check_token(*$2, dice::parser::CSymbolTable::NAMESPACE))
-		driver.error(@2, "Namespace ID \"" + *$2 + "\" already defined.");
-	    // add aliases to symbol table
-	    driver.add_token(*$2, dice::parser::CSymbolTable::NAMESPACE, (CFEBase*)0,
-		*@2.begin.filename, @2.begin.line, @2.begin.column);
+		// add ID as new namespace name, but keep the current context. This is
+		// a simple alias definition which allows to access the
+		// qualified_namespace_specifier namespace with the ID alias.
+		if (driver.trace_scanning)
+			std::cerr << "C-Parser: NAMESPACE checking " << *$2 << "\n";
+		// check if identifier is already used as namespace id
+		if (driver.check_token(*$2, dice::parser::CSymbolTable::NAMESPACE))
+			driver.error(@2, "Namespace ID \"" + *$2 + "\" already defined.");
+		// add aliases to symbol table
+		driver.add_token(*$2, dice::parser::CSymbolTable::NAMESPACE, (CFEBase*)0,
+			*@2.begin.filename, @2.begin.line, @2.begin.column);
 	}
 	;
 
 qualified_namespace_specifier :
 	  SCOPE nested_name_specifier NAMESPACE_ID
 	{
-	    $$ = new std::string("::");
-	    $$->append(*$2);
-	    $$->append(*$3);
+		$$ = new std::string("::");
+		$$->append(*$2);
+		$$->append(*$3);
 	}
 	|       nested_name_specifier NAMESPACE_ID
 	{
@@ -2172,15 +2172,15 @@ linkage_specification :
 init_declarator_list :
 	  init_declarator
 	{
-	    $$ = new std::vector<CFEDeclarator*>();
-	    if ($1)
-		$$->push_back($1);
+		$$ = new std::vector<CFEDeclarator*>();
+		if ($1)
+			$$->push_back($1);
 	}
 	| init_declarator_list COMMA init_declarator
 	{
-	    $$ = $1;
-	    if ($3)
-		$$->push_back($3);
+		$$ = $1;
+		if ($3)
+			$$->push_back($3);
 	}
 	;
 
@@ -2214,8 +2214,8 @@ declarator :
 	  direct_declarator
 	| ptr_operator_seq direct_declarator
 	{
-	    $$ = $2;
-	    $$->SetStars($1);
+		$$ = $2;
+		$$->SetStars($1);
 	}
 	;
 
@@ -2264,44 +2264,44 @@ array_declarator :
 	/* replace constant_expression with conditional_expression */
 	  direct_declarator LBRACKET conditional_expression RBRACKET
 	{
-	    if ($1)
-	    {
-		if ($1->GetType() == DECL_ARRAY)
-		    $$ = static_cast<CFEArrayDeclarator*>($1);
-		else
+		if ($1)
 		{
-		    $$ = new CFEArrayDeclarator($1);
-		    delete $1;
+			if ($1->GetType() == DECL_ARRAY)
+				$$ = static_cast<CFEArrayDeclarator*>($1);
+			else
+			{
+				$$ = new CFEArrayDeclarator($1);
+				delete $1;
+			}
 		}
-	    }
-	    $$->AddBounds(NULL, $3);
-	    if ($3)
-		$3->SetParent($$);
+		$$->AddBounds(NULL, $3);
+		if ($3)
+			$3->SetParent($$);
 	}
 	| direct_declarator LBRACKET RBRACKET
 	{
-	    if ($1 && $1->GetType() == DECL_ARRAY)
-		$$ = static_cast<CFEArrayDeclarator*>($1);
-	    else
-	    {
-		$$ = new CFEArrayDeclarator($1);
-		delete $1;
-	    }
-	    $$->AddBounds(NULL, NULL);
+		if ($1 && $1->GetType() == DECL_ARRAY)
+			$$ = static_cast<CFEArrayDeclarator*>($1);
+		else
+		{
+			$$ = new CFEArrayDeclarator($1);
+			delete $1;
+		}
+		$$->AddBounds(NULL, NULL);
 	}
 	/* C99 */
 	| direct_declarator LBRACKET ASTERISK RBRACKET
 	{
-	    if ($1 && $1->GetType() == DECL_ARRAY)
-		$$ = static_cast<CFEArrayDeclarator*>($1);
-	    else
-	    {
-		$$ = new CFEArrayDeclarator($1);
-		delete $1;
-	    }
-	    CFEExpression *bound = new CFEExpression(static_cast<signed char>('*'));
-	    $$->AddBounds(NULL, bound);
-	    bound->SetParent($$);
+		if ($1 && $1->GetType() == DECL_ARRAY)
+			$$ = static_cast<CFEArrayDeclarator*>($1);
+		else
+		{
+			$$ = new CFEArrayDeclarator($1);
+			delete $1;
+		}
+		CFEExpression *bound = new CFEExpression(static_cast<signed char>('*'));
+		$$->AddBounds(NULL, bound);
+		bound->SetParent($$);
 	}
 	;
 
@@ -2393,30 +2393,30 @@ declarator_id :
 type_id :
 	  type_specifier_seq abstract_declarator
 	{
-	    if ($1->size() > 0)
-		$$ = *($1->begin());
-	    if ($2)
-		delete $2;
+		if ($1->size() > 0)
+			$$ = *($1->begin());
+		if ($2)
+			delete $2;
 	}
 	| type_specifier_seq
 	{
-	    if ($1->size() > 0)
-		$$ = *($1->begin());
+		if ($1->size() > 0)
+			$$ = *($1->begin());
 	}
 	;
 
 type_specifier_seq :
 	  type_specifier_seq type_specifier
 	{
-	    $$ = $1;
-	    if ($2)
-		$$->push_back($2);
+		$$ = $1;
+		if ($2)
+			$$->push_back($2);
 	}
 	| type_specifier
 	{
-	    $$ = new vector<CFETypeSpec*>();
-	    if ($1)
-		$$->push_back($1);
+		$$ = new vector<CFETypeSpec*>();
+		if ($1)
+			$$->push_back($1);
 	}
 	;
 
@@ -2483,43 +2483,31 @@ parameter_declaration_clause :
 parameter_declaration_list :
 	  parameter_declaration
 	{
-	    $$ = new std::vector<CFETypedDeclarator*>();
-	    if ($1)
-		$$->push_back($1);
+		$$ = new std::vector<CFETypedDeclarator*>();
+		if ($1)
+			$$->push_back($1);
 	}
 	| parameter_declaration_list COMMA parameter_declaration
 	{
-	    $$ = $1;
-	    if ($3)
-		$$->push_back($3);
+		$$ = $1;
+		if ($3)
+			$$->push_back($3);
 	}
 	;
 
 parameter_declaration :
 	  decl_specifier_seq declarator
-	{
-	    $$ = NULL;
-	}
+	{ $$ = NULL; }
 	| decl_specifier_seq declarator IS assignment_expression
-	{
-	    $$ = NULL;
-	}
+	{ $$ = NULL; }
 	| decl_specifier_seq abstract_declarator
-	{
-	    $$ = NULL;
-	}
+	{ $$ = NULL; }
 	| decl_specifier_seq
-	{
-	    $$ = NULL;
-	}
+	{ $$ = NULL; }
 	| decl_specifier_seq abstract_declarator IS assignment_expression
-	{
-	    $$ = NULL;
-	}
+	{ $$ = NULL; }
 	| decl_specifier_seq IS assignment_expression
-	{
-	    $$ = NULL;
-	}
+	{ $$ = NULL; }
 	;
 
 function_definition :
@@ -2593,28 +2581,28 @@ class_head :
 struct_specifier :
 	  struct_head maybeattribute LBRACE
 	{
-	    std::string sName = $1->GetTag();
+		std::string sName = $1->GetTag();
 
-	    if (!sName.empty())
-	    {
-		if (driver.trace_scanning)
-		    std::cerr << "C-Parser: STRUCT checking " << sName << "\n";
-		// check if identifier is already used as class id (structs are
-		// classes)
-		if (driver.check_token(sName, dice::parser::CSymbolTable::CLASS))
-		    driver.error(@1, "Struct ID \"" + sName + "\" already defined.");
-		// add aliases to symbol table
-		driver.add_token(sName, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
-		    *@1.begin.filename, @1.begin.line, @1.begin.column);
-	    }
+		if (!sName.empty())
+		{
+			if (driver.trace_scanning)
+				std::cerr << "C-Parser: STRUCT checking " << sName << "\n";
+			// check if identifier is already used as class id (structs are
+			// classes)
+			if (driver.check_token(sName, dice::parser::CSymbolTable::CLASS))
+				driver.error(@1, "Struct ID \"" + sName + "\" already defined.");
+			// add aliases to symbol table
+			driver.add_token(sName, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
+				*@1.begin.filename, @1.begin.line, @1.begin.column);
+		}
 
-	    // set "class" as new scope
-	    driver.setCurrentContext($1);
+		// set "class" as new scope
+		driver.setCurrentContext($1);
 	} member_specification_opt RBRACE
 	{
-	    $$ = $1;
-	    $$->AddMembers($5);
-	    driver.leaveCurrentContext();
+		$$ = $1;
+		$$->AddMembers($5);
+		driver.leaveCurrentContext();
 	}
 	/* elaborated_type_specifier */
 	| STRUCT CLASS_ID
@@ -2674,23 +2662,23 @@ struct_head :
 union_specifier :
 	  union_head LBRACE
 	{
-	    std::string sName = $1->GetTag();
+		std::string sName = $1->GetTag();
 
-	    if (!sName.empty())
-	    {
-		if (driver.trace_scanning)
-		    std::cerr << "C-Parser: UNION checking " << sName << "\n";
-		// check if identifier is already used as class id (unions are
-		// classes)
-		if (driver.check_token(sName, dice::parser::CSymbolTable::CLASS))
-		    driver.error(@1, "Union ID \"" + sName + "\" already defined.");
-		// add aliases to symbol table
-		driver.add_token(sName, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
-		    *@1.begin.filename, @1.begin.line, @1.begin.column);
-	    }
+		if (!sName.empty())
+		{
+			if (driver.trace_scanning)
+				std::cerr << "C-Parser: UNION checking " << sName << "\n";
+			// check if identifier is already used as class id (unions are
+			// classes)
+			if (driver.check_token(sName, dice::parser::CSymbolTable::CLASS))
+				driver.error(@1, "Union ID \"" + sName + "\" already defined.");
+			// add aliases to symbol table
+			driver.add_token(sName, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
+				*@1.begin.filename, @1.begin.line, @1.begin.column);
+		}
 
-	    // set "class" as new scope
-	    driver.setCurrentContext($1);
+		// set "class" as new scope
+		driver.setCurrentContext($1);
 	} union_body_opt RBRACE
 	{
 	    $$ = $1;
@@ -2773,16 +2761,16 @@ union_body_opt :
 union_body :
 	  union_body union_arm
 	{
-	    $$ = $1;
-	    if ($2)
-		$$->push_back($2);
+		$$ = $1;
+		if ($2)
+			$$->push_back($2);
 	}
 	| union_body access_specifier COLON
 	| union_arm
 	{
-	    $$ = new vector<CFEUnionCase*>();
-	    if ($1)
-		$$->push_back($1);
+		$$ = new vector<CFEUnionCase*>();
+		if ($1)
+			$$->push_back($1);
 	}
 	| access_specifier COLON
 	{
@@ -2793,30 +2781,30 @@ union_body :
 union_arm :
 	  member_declaration
 	{
-	    if ($1)
-	    {
-		$$ = new CFEUnionCase($1);
-		$1->SetParent($$);
-	    }
-	    else
-		$$ = NULL;
+		if ($1)
+		{
+			$$ = new CFEUnionCase($1);
+			$1->SetParent($$);
+		}
+		else
+			$$ = NULL;
 	}
 	;
 
 member_specification :
 	  member_specification member_declaration
 	{
-	    $$ = $1;
-	    if ($2)
-		$$->push_back($2);
+		$$ = $1;
+		if ($2)
+			$$->push_back($2);
 	}
 	// we ignore the access specifier: it defines the scope of the members
 	| member_specification access_specifier COLON
 	| member_declaration
 	{
-	    $$ = new vector<CFETypedDeclarator*>();
-	    if ($1)
-		$$->push_back($1);
+		$$ = new vector<CFETypedDeclarator*>();
+		if ($1)
+			$$->push_back($1);
 	}
 	| access_specifier COLON
 	{
@@ -2828,33 +2816,33 @@ member_specification :
 member_declaration :
 	  decl_specifier_seq member_declarator_list SEMICOLON
 	{
-	    CFETypeSpec *t = NULL;
-	    if ($1 && $1->size() > 0)
-		t = *$1->begin();
-	    if (t)
-	    {
-		$$ = new CFETypedDeclarator(TYPEDECL_FIELD, t, $2);
-		$$->m_sourceLoc = @$;
-	    }
-	    else
-		$$ = NULL;
+		CFETypeSpec *t = NULL;
+		if ($1 && $1->size() > 0)
+			t = *$1->begin();
+		if (t)
+		{
+			$$ = new CFETypedDeclarator(TYPEDECL_FIELD, t, $2);
+			$$->m_sourceLoc = @$;
+		}
+		else
+			$$ = NULL;
 	}
 	/* decl_specifier_seq omitted in constructor, destructor, and
 	 * conversion function decarations only */
 	|                    member_declarator_list SEMICOLON
 	{
-	    if ($1)
-		delete $1;
-	    $$ = NULL;
+		if ($1)
+			delete $1;
+		$$ = NULL;
 	}
 	/* member_declarator_list can be omitted only after a class-specifier,
 	 * an enum-specifier, or a decl-specifier-seq of the form friend
 	 * elaborated-type-specifier */
 	| decl_specifier_seq                        SEMICOLON
 	{
-	    if ($1)
-		delete $1;
-	    $$ = NULL;
+		if ($1)
+			delete $1;
+		$$ = NULL;
 	}
 	| SEMICOLON
 	{
@@ -2887,15 +2875,15 @@ member_declaration :
 member_declarator_list :
 	  member_declarator
 	{
-	    $$ = new vector<CFEDeclarator*>();
-	    if ($1)
-		$$->push_back($1);
+		$$ = new vector<CFEDeclarator*>();
+		if ($1)
+			$$->push_back($1);
 	}
 	| member_declarator_list COMMA member_declarator
 	{
-	    $$ = $1;
-	    if ($3)
-		$$->push_back($3);
+		$$ = $1;
+		if ($3)
+			$$->push_back($3);
 	}
 	;
 
@@ -2905,16 +2893,16 @@ member_declarator :
 	/* replace constant_expression with conditional_expression */
 	| declarator maybeasm maybeattribute IS conditional_expression
 	{
-	    $$ = $1;
-	    if ($5)
-		delete $5;
+		$$ = $1;
+		if ($5)
+			delete $5;
 	}
 	/* bitfield specification */
 	| ID COLON conditional_expression
 	{
-	    $$ = new CFEDeclarator(DECL_IDENTIFIER, *$1);
-	    if ($3)
-		$$->SetBitfields($3->GetIntValue());
+		$$ = new CFEDeclarator(DECL_IDENTIFIER, *$1);
+		if ($3)
+			$$->SetBitfields($3->GetIntValue());
 	}
 	/* unnamed bitfield */
 	|    COLON conditional_expression
@@ -2940,15 +2928,15 @@ base_clause :
 base_specifier_list :
 	  base_specifier
 	{
-	    $$ = new vector<CFEIdentifier*>();
-	    if ($1)
-		$$->push_back($1);
+		$$ = new vector<CFEIdentifier*>();
+		if ($1)
+			$$->push_back($1);
 	}
 	| base_specifier_list COMMA base_specifier
 	{
-	    $$ = $1;
-	    if ($3)
-		$$->push_back($3);
+		$$ = $1;
+		if ($3)
+			$$->push_back($3);
 	}
 	;
 
@@ -3334,15 +3322,15 @@ attribute :
 attribute_list :
 	  attribute_parameter
 	{
-	    $$ = new std::vector<CFEAttribute*>();
-	    if ($1)
-		$$->push_back($1);
+		$$ = new std::vector<CFEAttribute*>();
+		if ($1)
+			$$->push_back($1);
 	}
 	| attribute_list COMMA attribute_parameter
 	{
-	    $$ = $1;
-	    if ($3)
-		$$->push_back($3);
+		$$ = $1;
+		if ($3)
+			$$->push_back($3);
 	}
 	;
 

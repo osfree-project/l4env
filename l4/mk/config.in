@@ -26,7 +26,17 @@ if [ "$BUILD_ARCH_amd64" = "y" ] ; then
   string " CPU type" CPU 'k8'
 fi
 
-define_string BUILD_ABI "l4v2"
+
+choice ' ABI' \
+  "L4.Fiasco BUILD_ABI_l4v2 \
+   Linux     BUILD_ABI_linux" L4.Fiasco
+
+if [ "$BUILD_ABI_l4v2" = "y" ] ; then
+  define_string BUILD_ABI "l4v2"
+fi
+if [ "$BUILD_ABI_linux" = "y" ] ; then
+  define_string BUILD_ABI "linux"
+fi
 
 endmenu
 

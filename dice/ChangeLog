@@ -1,5 +1,9 @@
 $Log, ChangeLog,v $
 
+x.x.x
+ - [fix] compilation for Socket Back-End (C/C++ parser choked on some Linux
+   headers)
+
 3.2.1
  - [feature] new compiler option --require <string> that specifies the minimal
    version the currently running Dice has to be.

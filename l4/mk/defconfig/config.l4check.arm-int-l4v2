@@ -10,6 +10,8 @@ BUILD_ARCH_arm=y
 BUILD_ARCH_amd64=n
 BUILD_ARCH='arm'
 CPU='int'
+BUILD_ABI_l4v2=y
+BUILD_ABI_linux=n
 BUILD_ABI='l4v2'
 
 #

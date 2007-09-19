@@ -11,7 +11,7 @@ BUILD_ARCH_amd64=y
 BUILD_ARCH='amd64'
 CPU='k8'
 BUILD_ABI_l4v2=y
-BUILD_ABI_l4x2=n
+BUILD_ABI_linux=n
 BUILD_ABI='l4v2'
 
 #
@@ -34,8 +34,8 @@ BID_COLORED_PHASES=y
 BIDc_USE_SPECIAL_CC=n
 HOST_CC='gcc'
 HOST_CXX='g++'
-CC='$(SYSTEM_TARGET_amd64)gcc'
-CXX='$(SYSTEM_TARGET_amd64)g++'
+CC='$(SYSTEM_TARGET_amd64)gcc -m64'
+CXX='$(SYSTEM_TARGET_amd64)g++ -m64'
 
 #
 # Tools

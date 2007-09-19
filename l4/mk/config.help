@@ -1,55 +1,25 @@
-Build for x86 architecture
-BUILD_SYSTEMS_x86_s
-  If you want to build code for the x86 architecture (PC), say Y here.
-
-  You can build for multiple architectures, the code will be stored in
-  different directories.
-
-  Most users will say Y here.
+CPU architecture
+BUILD_ARCH_x86
+  Specify for which processor architecture you want to build. You may
+  select between x86 (PC), arm, and amd64.
 
 
-CPU-Types for x86 architecture
-CPU_x86
-  Specify for which x86 architecture CPU types you want to build code.
-  Specify at least one CPU type. Supported CPUs are: 586, 686, K6, K7.
+CPU-Types for architecture
+CPU
+  Specify for which CPU types you want to build code.
+  Specify at least one CPU type.
+
+  Supported CPUs for x86 architecture are: 586, 686, K6, K7.
+  Supported CPUs for arm architecture are: sa, int.
 
   You can build for multiple CPU types, the code will be stored in
   different directories.
 
 
-Build code using L4V2 API
-BUILD_SYSTEMS_x86_l4v2
-  If you want to build L4 programs using the conservative
-  L4 version 2 API (L4 V2), specify Y here.
-  
-  You can build for multiple L4 API versions, the code will be stored
-  in different directories.
-
-  Most users will say Y here.
-
-
-Build code using L4V4 API
-BUILD_SYSTEMS_x86_l4v4
-  If you want to build L4 programs using the L4 version V4 API (L4 V4)
-  as used in Pistachio, specify Y here.
-  
-  You can build for multiple L4 API versions, the code will be stored
-  in different directories.
-
-  Note that this is work-in-progress. You will find few applications
-  that build for this API.
-
-  Most users will say N here.
-
-Build code using V2-Emulation on L4.Sec
-BUILD_SYSTEMS_x86_l4secv2emu
-  If you want to build old L4 programs using the new
-  L4.Sec version API via V2.Emu, specify Y here.
-  
-  You can build for multiple L4 API versions, the code will be stored
-  in different directories.
-
-  Most users will say N here.
+Build code using API
+BUILD_ABI_l4v2
+  Specify the version of the Kernel Programming Interface. You may
+  select between L4.Fiasco (previously V2) or Linux.
 
 
 Build for arm architecture
@@ -68,16 +38,6 @@ CPU_arm
 
   You can build for multiple CPU types, the code will be stored in
   different directories.
-
-Build code using L4X0 API
-BUILD_SYSTEMS_arm_l4x0
-  If you want to build L4 programs using the L4 version X0 API (L4 X0),
-  specify Y here.
-  
-  You can build for multiple L4 API versions, the code will be stored
-  in different directories.
-
-  Most users will say Y here.
 
 Build for amd64 architecture
 BUILD_SYSTEMS_amd64_s

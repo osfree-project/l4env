@@ -77,8 +77,8 @@ static char * isa_dma_pool_name = "ISA DMA memory pool";
  *** external symbols
  *****************************************************************************/
 
-extern char _stext;  ///< DMphys binary start
-extern char _end;    ///< DMphys binary end
+extern char _stext;         ///< DMphys binary start
+extern char _prog_img_end;  ///< DMphys binary end
 
 /*****************************************************************************
  *** helpers
@@ -815,7 +815,7 @@ __setup_reserved(void)
 
   /* DMphys binary */
   addr = l4_trunc_page((l4_addr_t)&_stext);
-  size = l4_round_page((l4_addr_t)&_end) - addr;
+  size = l4_round_page((l4_addr_t)&_prog_img_end) - addr;
   if (__reserve(addr, size) < 0)
     Panic("DMphys: reserve DMphys binary at 0x%08lx-0x%08lx failed!",
           addr, addr + size);

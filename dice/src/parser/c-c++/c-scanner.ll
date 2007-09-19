@@ -334,152 +334,152 @@ __null     {
            }
 
 {Id}       {
-    token::yytokentype ret = token::ID;
-    yylval->sval = new std::string(yytext);
-    // check if this is a defined type
-    if (driver.check_token(yytext, CSymbolTable::TYPENAME))
-	ret = token::TYPEDEF_ID;
-    else if (driver.check_token(yytext, CSymbolTable::CLASS))
-	ret = token::CLASS_ID;
-    return ret;
+	token::yytokentype ret = token::ID;
+	yylval->sval = new std::string(yytext);
+	// check if this is a defined type
+	if (driver.check_token(yytext, CSymbolTable::TYPENAME))
+		ret = token::TYPEDEF_ID;
+// 	else if (driver.check_token(yytext, CSymbolTable::CLASS))
+// 		ret = token::CLASS_ID;
+	return ret;
 	   }
 
 
 {Integer}  {
-    using namespace dice::parser;
-    IntType t;
+	using namespace dice::parser;
+	IntType t;
 #if HAVE_ATOLL
-    long
+	long
 #endif
-	long n = int_to_long (yytext, t);
-    switch (t)
-    {
-    case INT_ULLONG:
+		long n = int_to_long (yytext, t);
+	switch (t)
+	{
+	case INT_ULLONG:
 #if HAVE_ATOLL
-	yylval->ullval = static_cast<unsigned long long>(n);
-	return token::LIT_ULLONG;
-	break;
+		yylval->ullval = static_cast<unsigned long long>(n);
+		return token::LIT_ULLONG;
+		break;
 #endif
-    case INT_ULONG:
-	yylval->ulval = static_cast<unsigned long>(n);
-	return token::LIT_ULONG;
-	break;
-    case INT_LLONG:
+	case INT_ULONG:
+		yylval->ulval = static_cast<unsigned long>(n);
+		return token::LIT_ULONG;
+		break;
+	case INT_LLONG:
 #if HAVE_ATOLL
-	yylval->llval = n;
-	return token::LIT_LLONG;
-	break;
+		yylval->llval = n;
+		return token::LIT_LLONG;
+		break;
 #endif
-    case INT_LONG:
-	yylval->lval = static_cast<long>(n);
-	return token::LIT_LONG;
-	break;
-    case INT_INT:
-	yylval->ival = static_cast<int>(n);
-	return token::LIT_INT;
-	break;
-    case INVALID:
-	driver.error(*yylloc, "value out of range");
-	break;
-    }
+	case INT_LONG:
+		yylval->lval = static_cast<long>(n);
+		return token::LIT_LONG;
+		break;
+	case INT_INT:
+		yylval->ival = static_cast<int>(n);
+		return token::LIT_INT;
+		break;
+	case INVALID:
+		driver.error(*yylloc, "value out of range");
+		break;
+	}
 	   }
 {Hexadec}  {
-    using namespace dice::parser;
-    IntType t;
+	using namespace dice::parser;
+	IntType t;
 #if HAVE_ATOLL
-    long
+	long
 #endif
-	long n = hex_to_long (yytext, t);
-    switch (t)
-    {
-    case INT_ULLONG:
+		long n = hex_to_long (yytext, t);
+	switch (t)
+	{
+	case INT_ULLONG:
 #if HAVE_ATOLL
-	yylval->ullval = static_cast<unsigned long long>(n);
-	return token::LIT_ULLONG;
-	break;
+		yylval->ullval = static_cast<unsigned long long>(n);
+		return token::LIT_ULLONG;
+		break;
 #endif
-    case INT_ULONG:
-	yylval->ulval = static_cast<unsigned long>(n);
-	return token::LIT_ULONG;
-	break;
-    case INT_LLONG:
+	case INT_ULONG:
+		yylval->ulval = static_cast<unsigned long>(n);
+		return token::LIT_ULONG;
+		break;
+	case INT_LLONG:
 #if HAVE_ATOLL
-	yylval->llval = n;
-	return token::LIT_LLONG;
-	break;
+		yylval->llval = n;
+		return token::LIT_LLONG;
+		break;
 #endif
-    case INT_LONG:
-	yylval->lval = static_cast<long>(n);
-	return token::LIT_LONG;
-	break;
-    case INT_INT:
-	yylval->ival = static_cast<int>(n);
-	return token::LIT_INT;
-	break;
-    case INVALID:
-	driver.error(*yylloc, "value is out of range");
-	break;
-    }
+	case INT_LONG:
+		yylval->lval = static_cast<long>(n);
+		return token::LIT_LONG;
+		break;
+	case INT_INT:
+		yylval->ival = static_cast<int>(n);
+		return token::LIT_INT;
+		break;
+	case INVALID:
+		driver.error(*yylloc, "value is out of range");
+		break;
+	}
 	   }
 {Octal}    {
-    using namespace dice::parser;
-    IntType t;
+	using namespace dice::parser;
+	IntType t;
 #if HAVE_ATOLL
-    long
+	long
 #endif
-	long n = oct_to_long (yytext, t);
-    switch (t)
-    {
-    case INT_ULLONG:
+		long n = oct_to_long (yytext, t);
+	switch (t)
+	{
+	case INT_ULLONG:
 #if HAVE_ATOLL
-	yylval->ullval = static_cast<unsigned long long>(n);
-	return token::LIT_ULLONG;
-	break;
+		yylval->ullval = static_cast<unsigned long long>(n);
+		return token::LIT_ULLONG;
+		break;
 #endif
-    case INT_ULONG:
-	yylval->ulval = static_cast<unsigned long>(n);
-	return token::LIT_ULONG;
-	break;
-    case INT_LLONG:
+	case INT_ULONG:
+		yylval->ulval = static_cast<unsigned long>(n);
+		return token::LIT_ULONG;
+		break;
+	case INT_LLONG:
 #if HAVE_ATOLL
-	yylval->llval = n;
-	return token::LIT_LLONG;
-	break;
+		yylval->llval = n;
+		return token::LIT_LLONG;
+		break;
 #endif
-    case INT_LONG:
-	yylval->lval = static_cast<long>(n);
-	return token::LIT_LONG;
-	break;
-    case INT_INT:
-	yylval->ival = static_cast<int>(n);
-	return token::LIT_INT;
-	break;
-    case INVALID:
-	driver.error(*yylloc, "value is out of range");
-	break;
-    }
-	   }
+	case INT_LONG:
+		yylval->lval = static_cast<long>(n);
+		return token::LIT_LONG;
+		break;
+	case INT_INT:
+		yylval->ival = static_cast<int>(n);
+		return token::LIT_INT;
+		break;
+	case INVALID:
+		driver.error(*yylloc, "value is out of range");
+		break;
+	}
+		   }
 
 {Float}    {
-    errno = 0;
-    double d = strtod (yytext, NULL);
-    if (! (std::numeric_limits<double>::min() <= d &&
-	    d <= std::numeric_limits<double>::max() &&
-	    errno != ERANGE))
-	driver.error (*yylloc, "floating number out of range");
-    yylval->dval = d;
-    return token::LIT_FLOAT;
+	errno = 0;
+	double d = strtod (yytext, NULL);
+	if (! (std::numeric_limits<double>::min() <= d &&
+			d <= std::numeric_limits<double>::max() &&
+			errno != ERANGE))
+		driver.error (*yylloc, "floating number out of range");
+	yylval->dval = d;
+	return token::LIT_FLOAT;
 	   }
 {Char_lit} {
-    if (yytext[0] == 'L')
-	yylval->cval = yytext[2];
-    else
-	yylval->cval = yytext[1];
-    return token::LIT_CHAR;
+	if (yytext[0] == 'L')
+		yylval->cval = yytext[2];
+	else
+		yylval->cval = yytext[1];
+	return token::LIT_CHAR;
 	   }
 {Escape}   {
-    yylval->cval = dice::parser::escape_to_char (yytext);
-    return token::LIT_CHAR;
+	yylval->cval = dice::parser::escape_to_char (yytext);
+	return token::LIT_CHAR;
 	   }
 {Oct_char} {
     yylval->cval = dice::parser::oct_to_char (yytext);
@@ -490,30 +490,30 @@ __null     {
     return token::LIT_CHAR;
 	   }
 {string}   {
-    // check if first is 'L'
-    if (yytext[0] == 'L')
-	yylval->sval = new std::string (&yytext[2]);
-    else
-	yylval->sval = new std::string (&yytext[1]);
-    while (*(yylval->sval->end()-1) == '"')
-	yylval->sval->erase(yylval->sval->end()-1);
-    return token::LIT_STR;
+	// check if first is 'L'
+	if (yytext[0] == 'L')
+		yylval->sval = new std::string (&yytext[2]);
+	else
+		yylval->sval = new std::string (&yytext[1]);
+	while (*(yylval->sval->end()-1) == '"')
+		yylval->sval->erase(yylval->sval->end()-1);
+	return token::LIT_STR;
 	   }
 {C99string} {
-    // allows embedded newlines
-    if (yytext[0] == 'L')
-	yylval->sval = new std::string (&yytext[2]);
-    else
-	yylval->sval = new std::string (&yytext[1]);
-    while (*(yylval->sval->end()-1) == '"')
-	yylval->sval->erase(yylval->sval->end()-1);
-    // replace \n with \\n
-    string::size_type pos;
-    while ((pos = yylval->sval->find("\n")) != string::npos)
-    {
-	yylval->sval->replace(pos, strlen("\n"), "\\n", strlen("\\n"));
-    }
-    return token::LIT_STR;
+	// allows embedded newlines
+	if (yytext[0] == 'L')
+		yylval->sval = new std::string (&yytext[2]);
+	else
+		yylval->sval = new std::string (&yytext[1]);
+	while (*(yylval->sval->end()-1) == '"')
+		yylval->sval->erase(yylval->sval->end()-1);
+	// replace \n with \\n
+	string::size_type pos;
+	while ((pos = yylval->sval->find("\n")) != string::npos)
+	{
+		yylval->sval->replace(pos, strlen("\n"), "\\n", strlen("\\n"));
+	}
+	return token::LIT_STR;
 	   }
 
 <<EOF>>    yyterminate();
@@ -524,38 +524,38 @@ __null     {
 void
 c_parser_driver::scan_begin ()
 {
-    using dice::parser::CPreprocessor;
+	using dice::parser::CPreprocessor;
 
-    // save currently used input buffer
-    previousBuffer = YY_CURRENT_BUFFER;
+	// save currently used input buffer
+	previousBuffer = YY_CURRENT_BUFFER;
 
-    yy_flex_debug = trace_scanning;
-    CPreprocessor *pre = CPreprocessor::GetPreprocessor();
-    if (!(yyin = pre->Preprocess(file, lastPath)))
-	error (std::string ("cannot open ") + file);
+	yy_flex_debug = trace_scanning;
+	CPreprocessor *pre = CPreprocessor::GetPreprocessor();
+	if (!(yyin = pre->Preprocess(file, lastPath)))
+		error (std::string ("cannot open ") + file);
 
-    // only if we already parsed something, we need to switch to a new input
-    // buffer
-    if (previousBuffer)
-    {
-	yy_switch_to_buffer( yy_create_buffer( yyin, YY_BUF_SIZE ) );
-	BEGIN(INITIAL);
-    }
+	// only if we already parsed something, we need to switch to a new input
+	// buffer
+	if (previousBuffer)
+	{
+		yy_switch_to_buffer( yy_create_buffer( yyin, YY_BUF_SIZE ) );
+		BEGIN(INITIAL);
+	}
 }
 
 void
 c_parser_driver::scan_end ()
 {
-    if (yyin)
-	fclose (yyin);
+	if (yyin)
+		fclose (yyin);
 
-    // if we stored a previous buffer, restore it
-    if (previousBuffer)
-    {
-	if (YY_CURRENT_BUFFER)
-	    yy_delete_buffer(YY_CURRENT_BUFFER);
-	yy_switch_to_buffer(previousBuffer);
-	previousBuffer = 0;
-    }
+	// if we stored a previous buffer, restore it
+	if (previousBuffer)
+	{
+		if (YY_CURRENT_BUFFER)
+			yy_delete_buffer(YY_CURRENT_BUFFER);
+		yy_switch_to_buffer(previousBuffer);
+		previousBuffer = 0;
+	}
 }
 
