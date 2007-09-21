@@ -49,8 +49,8 @@ public:
      *  \param nSize the size of the type (number of bytes)
      *  \param bShowType true if the basic type is shown
      */
-    CFESimpleType(unsigned int nType, bool bUnSigned = false,
-	bool bUnsignedFirst = true, int nSize = 0, bool bShowType = true);
+	CFESimpleType(unsigned int nType, bool bUnSigned = false,
+		bool bUnsignedFirst = true, int nSize = 0, bool bShowType = true);
     /** \brief CFESimpleType constructor
      *  \param bType the type of the type
      *  \param nFirst first part of fixed precision
@@ -72,6 +72,7 @@ public:
     virtual bool IsConstructedType();
     virtual bool IsPointerType();
     virtual int GetSize();
+	virtual std::string ToString();
 
     /** checks if this type is unsigned
      *  \return true if unsigned
@@ -83,6 +84,11 @@ public:
      */
     void SetUnsigned(bool bUnSigned)
     { m_bUnSigned = bUnSigned; }
+	/** \brief sets the string representation
+	 *  \param strRep the new string representation
+	 */
+	void SetStringRep(std::string strRep)
+	{ m_strRep = strRep; }
 
 // attributes
 protected:
@@ -103,6 +109,10 @@ protected:
      *  \brief contains the precision of the fixed statement
      */
     std::pair<int, int> m_FixedPrecision;
+	/** \var std:string m_strRep
+	 *  \brief the original string that lead to this type
+	 */
+	std::string m_strRep;
 };
 
 #endif /* __DICE_FE_FESIMPLETYPE_H__ */

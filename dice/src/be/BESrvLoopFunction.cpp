@@ -185,17 +185,17 @@ void CBESrvLoopFunction::SetCallVariables(CBEFunction *pFunction)
 bool
 CBESrvLoopFunction::AddReplyVariable()
 {
-    CBEClassFactory *pCF = CBEClassFactory::Instance();
-    CBEReplyCodeType *pReplyType = pCF->GetNewReplyCodeType();
-    CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
-    pReplyType->SetParent(pVariable);
-    AddLocalVariable(pVariable);
-    pReplyType->CreateBackEnd();
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sReply = pNF->GetReplyCodeVariable();
-    pVariable->CreateBackEnd(pReplyType, sReply);
-    delete pReplyType;
-    return true;
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBEReplyCodeType *pReplyType = pCF->GetNewReplyCodeType();
+	CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
+	pReplyType->SetParent(pVariable);
+	AddLocalVariable(pVariable);
+	pReplyType->CreateBackEnd();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sReply = pNF->GetReplyCodeVariable();
+	pVariable->CreateBackEnd(pReplyType, sReply);
+	delete pReplyType;
+	return true;
 }
 
 /** \brief adds the opcode variable locally
@@ -204,9 +204,9 @@ CBESrvLoopFunction::AddReplyVariable()
 bool
 CBESrvLoopFunction::AddOpcodeVariable()
 {
-    CBETypedDeclarator *pOpcode = CreateOpcodeVariable();
-    AddLocalVariable(pOpcode);
-    return true;
+	CBETypedDeclarator *pOpcode = CreateOpcodeVariable();
+	AddLocalVariable(pOpcode);
+	return true;
 }
 
 /** \brief creates the corba object variable
@@ -220,23 +220,23 @@ CBESrvLoopFunction::AddOpcodeVariable()
 void
 CBESrvLoopFunction::CreateObject()
 {
-    CBEInterfaceFunction::CreateObject();
+	CBEInterfaceFunction::CreateObject();
 
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
 
-    // create CORBA_Object_base type
-    string sTypeName("CORBA_Object_base");
-    string sName = string("_") + pNF->GetCorbaObjectVariable();
-    CBETypedDeclarator *pBaseObject = pCF->GetNewTypedDeclarator();
-    pBaseObject->SetParent(this);
-    pBaseObject->CreateBackEnd(sTypeName, sName, 0);
-    // add as local variable
-    AddLocalVariable(pBaseObject);
-    // set init string to invalid id
-    pBaseObject->SetDefaultInitString(string("INVALID_CORBA_OBJECT_BASE"));
-    // do not set init string for corba object, since we don't know in which
-    // order they are declared -> use WriteVariableInitialization instead
+	// create CORBA_Object_base type
+	string sTypeName("CORBA_Object_base");
+	string sName = string("_") + pNF->GetCorbaObjectVariable();
+	CBETypedDeclarator *pBaseObject = pCF->GetNewTypedDeclarator();
+	pBaseObject->SetParent(this);
+	pBaseObject->CreateBackEnd(sTypeName, sName, 0);
+	// add as local variable
+	AddLocalVariable(pBaseObject);
+	// set init string to invalid id
+	pBaseObject->SetDefaultInitString(string("INVALID_CORBA_OBJECT_BASE"));
+	// do not set init string for corba object, since we don't know in which
+	// order they are declared -> use WriteVariableInitialization instead
 }
 
 /** \brief writes the variable initializations of this function
@@ -250,16 +250,16 @@ CBESrvLoopFunction::CreateObject()
 void
 CBESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-    if (m_pTrace)
-	m_pTrace->InitServer(pFile, this);
+	if (m_pTrace)
+		m_pTrace->InitServer(pFile, this);
 
-    WriteObjectInitialization(pFile);
-    // do CORBA_ENvironment cast before message buffer init, because it might
-    // contain values used to init message buffer
-    WriteEnvironmentInitialization(pFile);
-    // init message buffer
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    pMsgBuffer->WriteInitialization(pFile, this, 0 , CMsgStructType::Generic);
+	WriteObjectInitialization(pFile);
+	// do CORBA_ENvironment cast before message buffer init, because it might
+	// contain values used to init message buffer
+	WriteEnvironmentInitialization(pFile);
+	// init message buffer
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	pMsgBuffer->WriteInitialization(pFile, this, 0 , CMsgStructType::Generic);
 }
 
 /** \brief writes the invocation of the message transfer
@@ -270,7 +270,7 @@ CBESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
 void
 CBESrvLoopFunction::WriteInvocation(CBEFile& pFile)
 {
-    pFile << "\t/* invoke */\n";
+	pFile << "\t/* invoke */\n";
 }
 
 /** \brief writes the server loop's function body
@@ -278,13 +278,13 @@ CBESrvLoopFunction::WriteInvocation(CBEFile& pFile)
  */
 void CBESrvLoopFunction::WriteBody(CBEFile& pFile)
 {
-    // write variable declaration and initialization
-    WriteVariableDeclaration(pFile);
-    WriteVariableInitialization(pFile);
-    // write loop (contains switch)
-    WriteLoop(pFile);
-    // write return
-    WriteReturn(pFile);
+	// write variable declaration and initialization
+	WriteVariableDeclaration(pFile);
+	WriteVariableInitialization(pFile);
+	// write loop (contains switch)
+	WriteLoop(pFile);
+	// write return
+	WriteReturn(pFile);
 }
 
 /** \brief writes the declaration of the variables
@@ -295,29 +295,29 @@ void CBESrvLoopFunction::WriteBody(CBEFile& pFile)
 void
 CBESrvLoopFunction::WriteVariableDeclaration(CBEFile& pFile)
 {
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
-    {
-	CBEInterfaceFunction::WriteVariableDeclaration(pFile);
-	return;
-    }
-
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-    {
-	vector<CBETypedDeclarator*>::iterator iter;
-	for (iter = m_LocalVariables.begin();
-	     iter != m_LocalVariables.end();
-	     iter++)
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 	{
-	    if (*iter == GetObject())
-		continue;
-	    if (*iter == GetEnvironment())
-		continue;
-	    (*iter)->WriteInitDeclaration(pFile, string());
+		CBEInterfaceFunction::WriteVariableDeclaration(pFile);
+		return;
 	}
 
-	if (m_pTrace)
-	    m_pTrace->VariableDeclaration(pFile, this);
-    }
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	{
+		vector<CBETypedDeclarator*>::iterator iter;
+		for (iter = m_LocalVariables.begin();
+			iter != m_LocalVariables.end();
+			iter++)
+		{
+			if (*iter == GetObject())
+				continue;
+			if (*iter == GetEnvironment())
+				continue;
+			(*iter)->WriteInitDeclaration(pFile, string());
+		}
+
+		if (m_pTrace)
+			m_pTrace->VariableDeclaration(pFile, this);
+	}
 }
 
 /** \brief writes the loop
@@ -325,29 +325,29 @@ CBESrvLoopFunction::WriteVariableDeclaration(CBEFile& pFile)
  */
 void CBESrvLoopFunction::WriteLoop(CBEFile& pFile)
 {
-    if (m_pTrace)
-	m_pTrace->BeforeLoop(pFile, this);
+	if (m_pTrace)
+		m_pTrace->BeforeLoop(pFile, this);
 
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sOpcodeVar = pNF->GetOpcodeVariable();
-    m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sOpcodeVar = pNF->GetOpcodeVariable();
+	m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
 
-    pFile << "\twhile (1)\n";
-    pFile << "\t{\n";
-    ++pFile;
+	pFile << "\twhile (1)\n";
+	pFile << "\t{\n";
+	++pFile;
 
-    // write switch
-    WriteDispatchInvocation(pFile);
+	// write switch
+	WriteDispatchInvocation(pFile);
 
-    string sReply = pNF->GetReplyCodeVariable();
-    // check if we should reply or not
-    pFile << "\tif (" << sReply << " == DICE_REPLY)\n";
-    ++pFile;
-    m_pReplyAnyWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
-    --pFile << "\telse\n";
-    ++pFile;
-    m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
-    --(--pFile) << "\t}\n";
+	string sReply = pNF->GetReplyCodeVariable();
+	// check if we should reply or not
+	pFile << "\tif (" << sReply << " == DICE_REPLY)\n";
+	++pFile;
+	m_pReplyAnyWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
+	--pFile << "\telse\n";
+	++pFile;
+	m_pWaitAnyFunction->WriteCall(pFile, sOpcodeVar, true);
+	--(--pFile) << "\t}\n";
 }
 
 /** \brief writes the dispatcher invocation
@@ -356,18 +356,18 @@ void CBESrvLoopFunction::WriteLoop(CBEFile& pFile)
 void
 CBESrvLoopFunction::WriteDispatchInvocation(CBEFile& pFile)
 {
-    if (m_pDispatchFunction)
-    {
-	if (m_pTrace)
-	    m_pTrace->BeforeDispatch(pFile, this);
+	if (m_pDispatchFunction)
+	{
+		if (m_pTrace)
+			m_pTrace->BeforeDispatch(pFile, this);
 
-	CBENameFactory *pNF = CBENameFactory::Instance();
-	string sReply = pNF->GetReplyCodeVariable();
-        m_pDispatchFunction->WriteCall(pFile, sReply, true);
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		string sReply = pNF->GetReplyCodeVariable();
+		m_pDispatchFunction->WriteCall(pFile, sReply, true);
 
-	if (m_pTrace)
-	    m_pTrace->AfterDispatch(pFile, this);
-    }
+		if (m_pTrace)
+			m_pTrace->AfterDispatch(pFile, this);
+	}
 }
 
 /** \brief test if this function should be written inline
@@ -378,7 +378,7 @@ CBESrvLoopFunction::WriteDispatchInvocation(CBEFile& pFile)
 bool
 CBESrvLoopFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
 {
-    return false;
+	return false;
 }
 
 /** \brief test if this function should be written
@@ -390,20 +390,20 @@ CBESrvLoopFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
 bool
 CBESrvLoopFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBESrvLoopFunction::%s(%s) called for %s\n", __func__,
-	pFile->GetFileName().c_str(), GetName().c_str());
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBESrvLoopFunction::%s(%s) called for %s\n", __func__,
+		pFile->GetFileName().c_str(), GetName().c_str());
 
-    if (!IsTargetFile(pFile))
-    {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CBESrvLoopFunction::%s failed: wrong target file\n", __func__);
-        return false;
-    }
+	if (!IsTargetFile(pFile))
+	{
+		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+			"CBESrvLoopFunction::%s failed: wrong target file\n", __func__);
+		return false;
+	}
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBESrvLoopFunction::%s finished.\n",
-	__func__);
-    return pFile->IsOfFileType(FILETYPE_COMPONENT);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBESrvLoopFunction::%s finished.\n",
+		__func__);
+	return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief test if this function should be written
@@ -415,20 +415,20 @@ CBESrvLoopFunction::DoWriteFunction(CBEHeaderFile* pFile)
 bool
 CBESrvLoopFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBESrvLoopFunction::%s(%s) called for %s\n", __func__,
-	pFile->GetFileName().c_str(), GetName().c_str());
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBESrvLoopFunction::%s(%s) called for %s\n", __func__,
+		pFile->GetFileName().c_str(), GetName().c_str());
 
-    if (!IsTargetFile(pFile))
-    {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CBESrvLoopFunction::%s failed: wrong target file\n", __func__);
-        return false;
-    }
+	if (!IsTargetFile(pFile))
+	{
+		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+			"CBESrvLoopFunction::%s failed: wrong target file\n", __func__);
+		return false;
+	}
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBESrvLoopFunction::%s finished.\n",
-	__func__);
-    return pFile->IsOfFileType(FILETYPE_COMPONENT);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBESrvLoopFunction::%s finished.\n",
+		__func__);
+	return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief determines the direction, the server loop sends to
@@ -436,7 +436,7 @@ CBESrvLoopFunction::DoWriteFunction(CBEImplementationFile* pFile)
  */
 DIRECTION_TYPE CBESrvLoopFunction::GetSendDirection()
 {
-    return DIRECTION_OUT;
+	return DIRECTION_OUT;
 }
 
 /** \brief determined the direction the server loop receives from
@@ -444,7 +444,7 @@ DIRECTION_TYPE CBESrvLoopFunction::GetSendDirection()
  */
 DIRECTION_TYPE CBESrvLoopFunction::GetReceiveDirection()
 {
-    return DIRECTION_IN;
+	return DIRECTION_IN;
 }
 
 /** \brief write the initialization code for the CORBA_Environment
@@ -453,31 +453,31 @@ DIRECTION_TYPE CBESrvLoopFunction::GetReceiveDirection()
 void
 CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sServerParam = pNF->GetServerParameterName();
-    CBETypedDeclarator *pEnv = GetEnvironment();
-    CBEDeclarator *pDecl = pEnv->m_Declarators.First();
-    // if (server-param)
-    //   corba-env = (CORBA_Env*)server-param;
-    pFile << "\tif (" << sServerParam << ")\n";
-    ++pFile << "\t" << pDecl->GetName() << " = (";
-    pEnv->WriteType(pFile);
-    pFile << "*)" << sServerParam << ";\n";
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sServerParam = pNF->GetServerParameterName();
+	CBETypedDeclarator *pEnv = GetEnvironment();
+	CBEDeclarator *pDecl = pEnv->m_Declarators.First();
+	// if (server-param)
+	//   corba-env = (CORBA_Env*)server-param;
+	pFile << "\tif (" << sServerParam << ")\n";
+	++pFile << "\t" << pDecl->GetName() << " = (";
+	pEnv->WriteType(pFile);
+	pFile << "*)" << sServerParam << ";\n";
 
-    // should be set to default environment, but if
-    // it is a pointer, we cannot, but have to allocate memory first...
-    --pFile << "\telse\n";
-    pFile << "\t{\n";
-    // corba-env = (CORBA_Env*)malloc(sizeof(CORBA_Env));
-    ++pFile << "\t" << pDecl->GetName() << " = ";
-    pEnv->GetType()->WriteCast(pFile, true);
-    pFile << "_dice_alloca(sizeof";
-    pEnv->GetType()->WriteCast(pFile, false);
-    pFile << ");\n";
+	// should be set to default environment, but if
+	// it is a pointer, we cannot, but have to allocate memory first...
+	--pFile << "\telse\n";
+	pFile << "\t{\n";
+	// corba-env = (CORBA_Env*)malloc(sizeof(CORBA_Env));
+	++pFile << "\t" << pDecl->GetName() << " = ";
+	pEnv->GetType()->WriteCast(pFile, true);
+	pFile << "_dice_alloca(sizeof";
+	pEnv->GetType()->WriteCast(pFile, false);
+	pFile << ");\n";
 
-    WriteDefaultEnvAssignment(pFile);
+	WriteDefaultEnvAssignment(pFile);
 
-    --pFile << "\t}\n";
+	--pFile << "\t}\n";
 }
 
 /** \brief writes the assignment of the default environment to the env var
@@ -486,27 +486,27 @@ CBESrvLoopFunction::WriteEnvironmentInitialization(CBEFile& pFile)
 void
 CBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
 {
-    string sName = GetEnvironment()->m_Declarators.First()->GetName();
+	string sName = GetEnvironment()->m_Declarators.First()->GetName();
 
-    if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
-    {
-	// *corba-env = dice_default_env;
-	pFile << "\t*" << sName << " = ";
-	GetEnvironment()->GetType()->WriteCast(pFile, false);
-	pFile << "dice_default_server_environment;\n";
-    }
-    else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-    {
-	pFile << "\tDICE_EXCEPTION_MAJOR(" << sName <<
-	    ") = CORBA_NO_EXCEPTION;\n";
-	pFile << "\tDICE_EXCEPTION_MINOR(" << sName <<
-	    ") = CORBA_DICE_EXCEPTION_NONE;\n";
-	pFile << "\t" << sName << "->_p.param = 0;\n";
-	pFile << "\t" << sName << "->user_data = 0;\n";
-	pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
-	++pFile << "\t" << sName << "->ptrs[i] = 0;\n";
-	--pFile << "\t" << sName << "->ptrs_cur = 0;\n";
-    }
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
+	{
+		// *corba-env = dice_default_env;
+		pFile << "\t*" << sName << " = ";
+		GetEnvironment()->GetType()->WriteCast(pFile, false);
+		pFile << "dice_default_server_environment;\n";
+	}
+	else if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	{
+		pFile << "\tDICE_EXCEPTION_MAJOR(" << sName <<
+			") = CORBA_NO_EXCEPTION;\n";
+		pFile << "\tDICE_EXCEPTION_MINOR(" << sName <<
+			") = CORBA_DICE_EXCEPTION_NONE;\n";
+		pFile << "\t" << sName << "->_p.param = 0;\n";
+		pFile << "\t" << sName << "->user_data = 0;\n";
+		pFile << "\tfor (int i=0; i<DICE_PTRS_MAX; i++)\n";
+		++pFile << "\t" << sName << "->ptrs[i] = 0;\n";
+		--pFile << "\t" << sName << "->ptrs_cur = 0;\n";
+	}
 }
 
 /** \brief write the initialization code for the CORBA_Environment
@@ -515,11 +515,11 @@ CBESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
 void
 CBESrvLoopFunction::WriteObjectInitialization(CBEFile& pFile)
 {
-    // set init string: "<corba obj> = &<corba obj base>;"
-    CBETypedDeclarator *pObj = GetObject();
-    assert(pObj);
-    string sObj = pObj->m_Declarators.First()->GetName();
-    pFile << "\t" << sObj << " = &_" << sObj << ";\n";
+	// set init string: "<corba obj> = &<corba obj base>;"
+	CBETypedDeclarator *pObj = GetObject();
+	assert(pObj);
+	string sObj = pObj->m_Declarators.First()->GetName();
+	pFile << "\t" << sObj << " = &_" << sObj << ";\n";
 }
 
 /** \brief writes the attributes for the function
@@ -530,7 +530,7 @@ CBESrvLoopFunction::WriteObjectInitialization(CBEFile& pFile)
 void
 CBESrvLoopFunction::WriteFunctionAttributes(CBEFile& pFile)
 {
-    pFile << " __attribute__((noreturn))";
+	pFile << " __attribute__((noreturn))";
 }
 
 /** \brief writes the return statement of this function
@@ -550,10 +550,10 @@ CBESrvLoopFunction::WriteReturn(CBEFile& /*pFile*/)
 void
 CBESrvLoopFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    CBEInterfaceFunction::MsgBufferInitialization(pMsgBuffer);
-    // add as local variable and remove pointer
-    CBEDeclarator *pDecl = pMsgBuffer->m_Declarators.First();
-    pDecl->SetStars(0);
+	CBEInterfaceFunction::MsgBufferInitialization(pMsgBuffer);
+	// add as local variable and remove pointer
+	CBEDeclarator *pDecl = pMsgBuffer->m_Declarators.First();
+	pDecl->SetStars(0);
 }
 
 /** \brief add parameters after all other parameters
@@ -566,24 +566,24 @@ CBESrvLoopFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 void
 CBESrvLoopFunction::AddParameters()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
-    CBEClassFactory *pCF = CBEClassFactory::Instance();
-    CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
-    pParameter->SetParent(this);
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
+	pParameter->SetParent(this);
 
-    CBEType *pType = pCF->GetNewType(TYPE_VOID);
-    pType->SetParent(pParameter);
-    pType->CreateBackEnd(false, 0, TYPE_VOID);
+	CBEType *pType = pCF->GetNewType(TYPE_VOID);
+	pType->SetParent(pParameter);
+	pType->CreateBackEnd(false, 0, TYPE_VOID);
 
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sName = pNF->GetServerParameterName();
-    pParameter->CreateBackEnd(pType, sName);
-    delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
-    pParameter->m_Declarators.First()->IncStars(1);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sName = pNF->GetServerParameterName();
+	pParameter->CreateBackEnd(pType, sName);
+	delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
+	pParameter->m_Declarators.First()->IncStars(1);
 
-    m_Parameters.Add(pParameter);
+	m_Parameters.Add(pParameter);
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s returns true.\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s returns true.\n", __func__);
 }
 

@@ -38,7 +38,7 @@
 #include <cassert>
 
 CBEEnumType::CBEEnumType()
-    : m_Members(0, this)
+: m_Members(0, this)
 { }
 
 /** destroys the enum type */
@@ -52,44 +52,44 @@ CBEEnumType::~CBEEnumType()
 void
 CBEEnumType::CreateBackEnd(CFETypeSpec *pFEType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEEnumType::%s(fe) called\n",
-	__func__);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEEnumType::%s(fe) called\n",
+		__func__);
 
-    CBEType::CreateBackEnd(pFEType);
+	CBEType::CreateBackEnd(pFEType);
 
-    // extract members
-    CFEEnumType *pFEEnumType = static_cast<CFEEnumType*>(pFEType);
-    vector<CFEIdentifier*>::iterator iterI;
-    for (iterI =  pFEEnumType->m_Members.begin();
-	 iterI != pFEEnumType->m_Members.end();
-	 iterI++)
-    {
-        AddMember(dynamic_cast<CFEEnumDeclarator*>(*iterI));
-    }
-    // check tagged
-    m_sTag = pFEEnumType->GetTag();
-    // try to figure out size for enum
-    // get last element and calculate it's integer value. Test this for
-    // unsigned char, unsigned short, unsigned int
-    if (m_Members.size() > 0)
-    {
-	CBESizes *pSizes = CCompiler::GetSizes();
-	CBEDeclarator *pDeclarator = m_Members.back();
-	unsigned long nVal = GetIntValue(pDeclarator->GetName());
-	if (nVal < std::numeric_limits<unsigned char>::max())
-	    m_nSize = pSizes->GetSizeOfType(TYPE_BYTE);
-	else if (nVal < std::numeric_limits<unsigned short>::max())
-	    m_nSize = pSizes->GetSizeOfType(TYPE_INTEGER, 2);
-	else if (nVal < std::numeric_limits<unsigned int>::max())
-	    m_nSize = pSizes->GetSizeOfType(TYPE_INTEGER, 4);
-	else
-	    // default to mword
-	    m_nSize = pSizes->GetSizeOfType(TYPE_MWORD);
-	m_nMaxSize = m_nSize;
-    }
+	// extract members
+	CFEEnumType *pFEEnumType = static_cast<CFEEnumType*>(pFEType);
+	vector<CFEIdentifier*>::iterator iterI;
+	for (iterI =  pFEEnumType->m_Members.begin();
+		iterI != pFEEnumType->m_Members.end();
+		iterI++)
+	{
+		AddMember(dynamic_cast<CFEEnumDeclarator*>(*iterI));
+	}
+	// check tagged
+	m_sTag = pFEEnumType->GetTag();
+	// try to figure out size for enum
+	// get last element and calculate it's integer value. Test this for
+	// unsigned char, unsigned short, unsigned int
+	if (m_Members.size() > 0)
+	{
+		CBESizes *pSizes = CCompiler::GetSizes();
+		CBEDeclarator *pDeclarator = m_Members.back();
+		unsigned long nVal = GetIntValue(pDeclarator->GetName());
+		if (nVal < std::numeric_limits<unsigned char>::max())
+			m_nSize = pSizes->GetSizeOfType(TYPE_BYTE);
+		else if (nVal < std::numeric_limits<unsigned short>::max())
+			m_nSize = pSizes->GetSizeOfType(TYPE_INTEGER, 2);
+		else if (nVal < std::numeric_limits<unsigned int>::max())
+			m_nSize = pSizes->GetSizeOfType(TYPE_INTEGER, 4);
+		else
+			// default to mword
+			m_nSize = pSizes->GetSizeOfType(TYPE_MWORD);
+		m_nMaxSize = m_nSize;
+	}
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEEnumType::%s(fe) returns\n",
-	__func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEEnumType::%s(fe) returns\n",
+		__func__);
 }
 
 /** \brief adds a member to this enumeration
@@ -97,12 +97,12 @@ CBEEnumType::CreateBackEnd(CFETypeSpec *pFEType)
  */
 void CBEEnumType::AddMember(CFEEnumDeclarator* pFEDeclarator)
 {
-    if (!pFEDeclarator)
-	return;
+	if (!pFEDeclarator)
+		return;
 
-    CBEDeclarator *pDeclarator = new CBEDeclarator();
-    pDeclarator->CreateBackEnd(pFEDeclarator);
-    m_Members.Add(pDeclarator);
+	CBEDeclarator *pDeclarator = new CBEDeclarator();
+	m_Members.Add(pDeclarator);
+	pDeclarator->CreateBackEnd(pFEDeclarator);
 }
 
 /** \brief writes the enum type to the target file
@@ -110,29 +110,29 @@ void CBEEnumType::AddMember(CFEEnumDeclarator* pFEDeclarator)
  */
 void CBEEnumType::Write(CBEFile& pFile)
 {
-    if (!pFile.is_open())
-        return;
+	if (!pFile.is_open())
+		return;
 
-    // open enum
-    pFile << m_sName;
-    if (!m_sTag.empty())
-	pFile << " " << m_sTag;
+	// open enum
+	pFile << m_sName;
+	if (!m_sTag.empty())
+		pFile << " " << m_sTag;
 
-    if (!m_Members.empty())
-	pFile << "\t { ";
-    // only print member if we got some
-    bool bComma = false;
-    vector<CBEDeclarator*>::iterator i;
-    for (i = m_Members.begin(); i != m_Members.end(); i++)
-    {
-	if (bComma)
-	    pFile << ", ";
-	(*i)->WriteDeclaration(pFile);
-    }
+	if (!m_Members.empty())
+		pFile << "\t { ";
+	// only print member if we got some
+	bool bComma = false;
+	vector<CBEDeclarator*>::iterator i;
+	for (i = m_Members.begin(); i != m_Members.end(); i++)
+	{
+		if (bComma)
+			pFile << ", ";
+		(*i)->WriteDeclaration(pFile);
+	}
 
-    // close enum
-    if (!m_Members.empty())
-	pFile << "\t } ";
+	// close enum
+	if (!m_Members.empty())
+		pFile << "\t } ";
 }
 
 /** \brief write the initialization of a enum with the 'zero' element
@@ -143,16 +143,16 @@ void CBEEnumType::Write(CBEFile& pFile)
  */
 void CBEEnumType::WriteZeroInit(CBEFile& pFile)
 {
-    if (m_Members.empty())
-	pFile << "0";
-    else
-    {
-	CBEExpression *pExpr = m_Members[0]->GetInitialValue();
-	if (pExpr)
-	    pFile << pExpr->GetIntValue();
+	if (m_Members.empty())
+		pFile << "0";
 	else
-	    pFile << "0";
-    }
+	{
+		CBEExpression *pExpr = m_Members[0]->GetInitialValue();
+		if (pExpr)
+			pFile << pExpr->GetIntValue();
+		else
+			pFile << "0";
+	}
 }
 
 /** \brief tests if the enum type has the given tag
@@ -161,7 +161,7 @@ void CBEEnumType::WriteZeroInit(CBEFile& pFile)
  */
 bool CBEEnumType::HasTag(string sTag)
 {
-    return (m_sTag == sTag);
+	return (m_sTag == sTag);
 }
 
 /** \brief return tag on demand
@@ -169,7 +169,7 @@ bool CBEEnumType::HasTag(string sTag)
  */
 std::string CBEEnumType::GetTag()
 {
-    return m_sTag;
+	return m_sTag;
 }
 
 /** \brief writes a cast of this type
@@ -180,34 +180,34 @@ std::string CBEEnumType::GetTag()
  */
 void CBEEnumType::WriteCast(CBEFile& pFile,  bool bPointer)
 {
-    pFile << "(";
-    if (m_sTag.empty())
-    {
-        // no tag -> we need a typedef to save us
-        // the alias can be used for the cast
-        CBETypedef *pTypedef = GetTypedef();
-        assert(pTypedef);
-        // get first declarator (without stars)
-        vector<CBEDeclarator*>::iterator iterD;
-	for (iterD = pTypedef->m_Declarators.begin();
-	     iterD != pTypedef->m_Declarators.end();
-	     iterD++)
-        {
-            if ((*iterD)->GetStars() <= (bPointer?1:0))
-                break;
-        }
-        assert(iterD != pTypedef->m_Declarators.end());
-	pFile << (*iterD)->GetName();
-        if (bPointer && ((*iterD)->GetStars() == 0))
-	    pFile << "*";
-    }
-    else
-    {
-	pFile << m_sName << " " << m_sTag;
-        if (bPointer)
-	    pFile << "*";
-    }
-    pFile << ")";
+	pFile << "(";
+	if (m_sTag.empty())
+	{
+		// no tag -> we need a typedef to save us
+		// the alias can be used for the cast
+		CBETypedef *pTypedef = GetTypedef();
+		assert(pTypedef);
+		// get first declarator (without stars)
+		vector<CBEDeclarator*>::iterator iterD;
+		for (iterD = pTypedef->m_Declarators.begin();
+			iterD != pTypedef->m_Declarators.end();
+			iterD++)
+		{
+			if ((*iterD)->GetStars() <= (bPointer?1:0))
+				break;
+		}
+		assert(iterD != pTypedef->m_Declarators.end());
+		pFile << (*iterD)->GetName();
+		if (bPointer && ((*iterD)->GetStars() == 0))
+			pFile << "*";
+	}
+	else
+	{
+		pFile << m_sName << " " << m_sTag;
+		if (bPointer)
+			pFile << "*";
+	}
+	pFile << ")";
 }
 
 /** \brief calculate the enumeration value of the given member
@@ -220,23 +220,23 @@ void CBEEnumType::WriteCast(CBEFile& pFile,  bool bPointer)
  */
 long int CBEEnumType::GetIntValue(std::string sName)
 {
-    CBEDeclarator *pDeclarator = m_Members.Find(sName);
-    if (!pDeclarator)
+	CBEDeclarator *pDeclarator = m_Members.Find(sName);
+	if (!pDeclarator)
+		return -1;
+
+	long nValue = -1;
+	vector<CBEDeclarator*>::iterator i;
+	for (i = m_Members.begin(); i != m_Members.end(); i++)
+	{
+		CBEExpression *pValue = (*i)->GetInitialValue();
+		if (pValue)
+			nValue = pValue->GetIntValue();
+		else
+			nValue++;
+
+		if (pDeclarator == *i)
+			return nValue;
+	}
+
 	return -1;
-
-    long nValue = -1;
-    vector<CBEDeclarator*>::iterator i;
-    for (i = m_Members.begin(); i != m_Members.end(); i++)
-    {
-	CBEExpression *pValue = (*i)->GetInitialValue();
-	if (pValue)
-	    nValue = pValue->GetIntValue();
-	else
-	    nValue++;
-
-	if (pDeclarator == *i)
-	    return nValue;
-    }
-
-    return -1;
 }

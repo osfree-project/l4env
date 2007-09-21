@@ -232,8 +232,14 @@ attribute       return token::ATTRIBUTE;
 __attribute     return token::ATTRIBUTE;
 __attribute__   return token::ATTRIBUTE;
 auto            return token::AUTO;
-boolean         return token::BOOLEAN;
-_Bool           return token::BOOLEAN;
+boolean         {
+    yylval->sval = new string(yytext);
+	return token::BOOLEAN;
+				}
+_Bool           {
+    yylval->sval = new string(yytext);
+	return token::BOOLEAN;
+				}
 break           return token::BREAK;
 bycopy          return token::BYCOPY;
 byref           return token::BYREF;
@@ -321,12 +327,15 @@ void            return token::VOID;
 volatile        return token::VOLATILE;
 __volatile__    return token::VOLATILE;
 __volatile      return token::VOLATILE;
-wchar_t         return token::WCHAR;
+wchar_t         {
+    yylval->sval = new string(yytext);
+	return token::WCHAR;
+				}
 while           return token::WHILE;
 
 __builtin_va_list   {
     yylval->sval = new string(yytext);
-    return token::ID;
+    return token::VA_LIST;
            }
 __null     {
     yylval->ival = 0;

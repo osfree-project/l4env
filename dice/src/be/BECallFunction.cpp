@@ -47,7 +47,7 @@
 #include <cassert>
 
 CBECallFunction::CBECallFunction()
- : CBEOperationFunction(FUNCTION_CALL)
+: CBEOperationFunction(FUNCTION_CALL)
 { }
 
 /** \brief destructor of target class */
@@ -60,12 +60,12 @@ CBECallFunction::~CBECallFunction()
 void
 CBECallFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBECallFunction::WriteVariableInitialization called %s in %s\n",
-        GetName().c_str(), pFile.GetFileName().c_str());
-    // init message buffer
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBECallFunction::WriteVariableInitialization called %s in %s\n",
+		GetName().c_str(), pFile.GetFileName().c_str());
+	// init message buffer
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
 }
 
 /** \brief writes the invocation of the message transfer
@@ -85,32 +85,32 @@ void CBECallFunction::WriteInvocation(CBEFile& /*pFile*/)
 void
 CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
-	GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
+		GetName().c_str());
 
-    bool bLocalTrace = false;
-    if (!m_bTraceOn && m_pTrace)
-    {
-	m_pTrace->BeforeUnmarshalling(pFile, this);
-	m_bTraceOn = bLocalTrace = true;
-    }
+	bool bLocalTrace = false;
+	if (!m_bTraceOn && m_pTrace)
+	{
+		m_pTrace->BeforeUnmarshalling(pFile, this);
+		m_bTraceOn = bLocalTrace = true;
+	}
 
-    // unmarshal exception first
-    WriteMarshalException(pFile, false, true);
-    // unmarshal return variable
-    WriteMarshalReturn(pFile, false);
+	// unmarshal exception first
+	WriteMarshalException(pFile, false, true);
+	// unmarshal return variable
+	WriteMarshalReturn(pFile, false);
 
-    // now unmarshal rest
-    CBEOperationFunction::WriteUnmarshalling(pFile);
+	// now unmarshal rest
+	CBEOperationFunction::WriteUnmarshalling(pFile);
 
-    if (bLocalTrace)
-    {
-	m_pTrace->AfterUnmarshalling(pFile, this);
-	m_bTraceOn = false;
-    }
+	if (bLocalTrace)
+	{
+		m_pTrace->AfterUnmarshalling(pFile, this);
+		m_bTraceOn = false;
+	}
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__,
-	GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__,
+		GetName().c_str());
 }
 
 /** \brief creates the call function
@@ -122,43 +122,43 @@ CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
 void
 CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
-        pFEOperation->GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
+		pFEOperation->GetName().c_str());
 
-    // set target file name
-    SetTargetFileName(pFEOperation);
-    // set name
+	// set target file name
+	SetTargetFileName(pFEOperation);
+	// set name
 	SetComponentSide(bComponentSide);
-    SetFunctionName(pFEOperation, FUNCTION_CALL);
+	SetFunctionName(pFEOperation, FUNCTION_CALL);
 
-    CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
-    // add msg buffer
-    // its the last, because it needs the existing BE parameters
-    AddMessageBuffer(pFEOperation);
-    // then add as local variable
-    AddLocalVariable(GetMessageBuffer());
-    // add exception variable
-    AddExceptionVariable();
-    CBETypedDeclarator *pException = GetExceptionVariable();
-    if (pException)
-    {
-	// this is a stupid trick: in order to make the marshalling logic
-	// unmarshal the exception into the environment, we need a parameter
-	// or local variable with that name. Even though we never use it.
-	pException->AddLanguageProperty(string("attribute"),
-	    string("__attribute__ ((unused))"));
-    }
-    // add marshaller and communication class
-    CreateMarshaller();
-    CreateCommunication();
-    CreateTrace();
+	CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
+	// add msg buffer
+	// its the last, because it needs the existing BE parameters
+	AddMessageBuffer(pFEOperation);
+	// then add as local variable
+	AddLocalVariable(GetMessageBuffer());
+	// add exception variable
+	AddExceptionVariable();
+	CBETypedDeclarator *pException = GetExceptionVariable();
+	if (pException)
+	{
+		// this is a stupid trick: in order to make the marshalling logic
+		// unmarshal the exception into the environment, we need a parameter
+		// or local variable with that name. Even though we never use it.
+		pException->AddLanguageProperty(string("attribute"),
+			string("__attribute__ ((unused))"));
+	}
+	// add marshaller and communication class
+	CreateMarshaller();
+	CreateCommunication();
+	CreateTrace();
 
-    // set initializer of return variable to zero
-    CBETypedDeclarator *pVariable = GetReturnVariable();
-    if (pVariable)
-        pVariable->SetDefaultInitString(string("0"));
+	// set initializer of return variable to zero
+	CBETypedDeclarator *pVariable = GetReturnVariable();
+	if (pVariable)
+		pVariable->SetDefaultInitString(string("0"));
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
 
 /** \brief manipulate the message buffer
@@ -168,22 +168,22 @@ CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 void
 CBECallFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
-    // check return type (do test here because sometimes we like to call
-    // AddReturnVariable under different constraints--return parameter)
-    CBEType *pType = GetReturnType();
-    assert(pType);
-    if (pType->IsVoid())
-	return; // having a void return type is not an error
-    // add return variable
-    if (!pMsgBuffer->AddReturnVariable(this))
-    {
-	string exc = string(__func__);
-	exc += " failed, because return variable could not be added to message buffer.";
-	throw new error::create_error(exc);
-    }
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
+	// check return type (do test here because sometimes we like to call
+	// AddReturnVariable under different constraints--return parameter)
+	CBEType *pType = GetReturnType();
+	assert(pType);
+	if (pType->IsVoid())
+		return; // having a void return type is not an error
+	// add return variable
+	if (!pMsgBuffer->AddReturnVariable(this))
+	{
+		string exc = string(__func__);
+		exc += " failed, because return variable could not be added to message buffer.";
+		throw new error::create_error(exc);
+	}
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
 
 /** \brief checks if this parameter has to be marshalled or not
@@ -197,19 +197,19 @@ bool
 CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
 	bool bMarshal)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"%s called for %s with marshal=%s and IN=%s, OUT=%s\n",
-    	__func__, pParameter->m_Declarators.First()->GetName().c_str(),
-	(bMarshal) ? "yes" : "no",
-	pParameter->m_Attributes.Find(ATTR_IN) ? "yes" : "no",
-	pParameter->m_Attributes.Find(ATTR_OUT) ? "yes" : "no");
-    if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"%s called for %s with marshal=%s and IN=%s, OUT=%s\n",
+		__func__, pParameter->m_Declarators.First()->GetName().c_str(),
+		(bMarshal) ? "yes" : "no",
+		pParameter->m_Attributes.Find(ATTR_IN) ? "yes" : "no",
+		pParameter->m_Attributes.Find(ATTR_OUT) ? "yes" : "no");
+	if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
+		return false;
+	if (bMarshal && pParameter->m_Attributes.Find(ATTR_IN))
+		return true;
+	if (!bMarshal && pParameter->m_Attributes.Find(ATTR_OUT))
+		return true;
 	return false;
-    if (bMarshal && pParameter->m_Attributes.Find(ATTR_IN))
-        return true;
-    if (!bMarshal && pParameter->m_Attributes.Find(ATTR_OUT))
-	return true;
-    return false;
 }
 
 /** \brief checks if this function should be written
@@ -221,20 +221,20 @@ CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
  */
 bool CBECallFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBECallFunction::%s(%s) called for %s\n", __func__,
-	pFile->GetFileName().c_str(), GetName().c_str());
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBECallFunction::%s(%s) called for %s\n", __func__,
+		pFile->GetFileName().c_str(), GetName().c_str());
 
-    if (!IsTargetFile(pFile))
-    {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CBECallFunction::%s failed: wrong target file\n", __func__);
-        return false;
-    }
+	if (!IsTargetFile(pFile))
+	{
+		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+			"CBECallFunction::%s failed: wrong target file\n", __func__);
+		return false;
+	}
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
-	__func__);
-    return pFile->IsOfFileType(FILETYPE_CLIENT);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
+		__func__);
+	return pFile->IsOfFileType(FILETYPE_CLIENT);
 }
 
 /** \brief checks if this function should be written
@@ -246,20 +246,20 @@ bool CBECallFunction::DoWriteFunction(CBEHeaderFile* pFile)
  */
 bool CBECallFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBECallFunction::%s(%s) called for %s\n", __func__,
-	pFile->GetFileName().c_str(), GetName().c_str());
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBECallFunction::%s(%s) called for %s\n", __func__,
+		pFile->GetFileName().c_str(), GetName().c_str());
 
-    if (!IsTargetFile(pFile))
-    {
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	    "CBECallFunction::%s failed: wrong target file\n", __func__);
-        return false;
-    }
+	if (!IsTargetFile(pFile))
+	{
+		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+			"CBECallFunction::%s failed: wrong target file\n", __func__);
+		return false;
+	}
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
-	__func__);
-    return pFile->IsOfFileType(FILETYPE_CLIENT);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
+		__func__);
+	return pFile->IsOfFileType(FILETYPE_CLIENT);
 }
 
 /** \brief calcualtes the size of this function
@@ -268,15 +268,15 @@ bool CBECallFunction::DoWriteFunction(CBEImplementationFile* pFile)
  */
 int CBECallFunction::GetSize(DIRECTION_TYPE nDirection)
 {
-    // get base class' size
-    int nSize = CBEOperationFunction::GetSize(nDirection);
-    if ((nDirection & DIRECTION_IN) &&
-        !m_Attributes.Find(ATTR_NOOPCODE))
-        nSize += CCompiler::GetSizes()->GetOpcodeSize();
-    if ((nDirection & DIRECTION_OUT) &&
-        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
-        nSize += CCompiler::GetSizes()->GetExceptionSize();
-    return nSize;
+	// get base class' size
+	int nSize = CBEOperationFunction::GetSize(nDirection);
+	if ((nDirection & DIRECTION_IN) &&
+		!m_Attributes.Find(ATTR_NOOPCODE))
+		nSize += CCompiler::GetSizes()->GetOpcodeSize();
+	if ((nDirection & DIRECTION_OUT) &&
+		!m_Attributes.Find(ATTR_NOEXCEPTIONS))
+		nSize += CCompiler::GetSizes()->GetExceptionSize();
+	return nSize;
 }
 
 /** \brief calculates the size of the fixed sized params of this function
@@ -285,14 +285,14 @@ int CBECallFunction::GetSize(DIRECTION_TYPE nDirection)
  */
 int CBECallFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
-    int nSize = CBEOperationFunction::GetFixedSize(nDirection);
-    if ((nDirection & DIRECTION_IN) &&
-        !m_Attributes.Find(ATTR_NOOPCODE))
-        nSize += CCompiler::GetSizes()->GetOpcodeSize();
-    if ((nDirection & DIRECTION_OUT) &&
-        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
-        nSize += CCompiler::GetSizes()->GetExceptionSize();
-    return nSize;
+	int nSize = CBEOperationFunction::GetFixedSize(nDirection);
+	if ((nDirection & DIRECTION_IN) &&
+		!m_Attributes.Find(ATTR_NOOPCODE))
+		nSize += CCompiler::GetSizes()->GetOpcodeSize();
+	if ((nDirection & DIRECTION_OUT) &&
+		!m_Attributes.Find(ATTR_NOEXCEPTIONS))
+		nSize += CCompiler::GetSizes()->GetExceptionSize();
+	return nSize;
 }
 
 /** \brief writes the return type of a function
@@ -303,8 +303,8 @@ int CBECallFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 void
 CBECallFunction::WriteReturnType(CBEFile& pFile)
 {
-    if (pFile.IsOfFileType(FILETYPE_HEADER) &&
-	CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
-	pFile << "virtual ";
-    CBEOperationFunction::WriteReturnType(pFile);
+	if (pFile.IsOfFileType(FILETYPE_HEADER) &&
+		CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+		pFile << "virtual ";
+	CBEOperationFunction::WriteReturnType(pFile);
 }

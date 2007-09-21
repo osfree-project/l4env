@@ -1027,6 +1027,9 @@ CBETypedDeclarator::AddAttribute(CFEAttribute *pFEAttribute)
  */
 void CBETypedDeclarator::AddDeclarator(CFEDeclarator * pFEDeclarator)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBETypedDeclarator::AddDeclarator(decl) called\n");
+
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEDeclarator *pDecl = pCF->GetNewDeclarator();
 	m_Declarators.Add(pDecl);

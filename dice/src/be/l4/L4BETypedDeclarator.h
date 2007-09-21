@@ -54,9 +54,6 @@ public: // Public methods
     virtual bool IsFixedSized();
     virtual bool GetMaxSize(int & nSize, std::string sName = std::string());
 	virtual CObject* Clone();
-
-protected:
-    virtual bool DoAllocateMemory(CBEFile& pFile);
 };
 
 #endif

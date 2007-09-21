@@ -40,7 +40,8 @@ CFESimpleType::CFESimpleType(unsigned int nType,
 	m_bUnsignedFirst(bUnsignedFirst),
 	m_bShowType(bShowType),
 	m_nSize(nSize),
-	m_FixedPrecision(0, 0)
+	m_FixedPrecision(0, 0),
+	m_strRep()
 { }
 
 CFESimpleType::CFESimpleType(unsigned int nType,
@@ -51,7 +52,8 @@ CFESimpleType::CFESimpleType(unsigned int nType,
 	m_bUnsignedFirst(false),
 	m_bShowType(true),
 	m_nSize(0),
-	m_FixedPrecision(nFirst, nSecond)
+	m_FixedPrecision(nFirst, nSecond),
+	m_strRep()
 { }
 
 CFESimpleType::CFESimpleType(CFESimpleType* src)
@@ -62,6 +64,7 @@ CFESimpleType::CFESimpleType(CFESimpleType* src)
 	m_bShowType = src->m_bShowType;
 	m_nSize = src->m_nSize;
 	m_FixedPrecision = src->m_FixedPrecision;
+	m_strRep = src->m_strRep;
 }
 
 /** CFESimpleType destructor */
@@ -110,4 +113,48 @@ void CFESimpleType::Accept(CVisitor& v)
 int CFESimpleType::GetSize()
 {
 	return m_nSize;
+}
+
+/** \brief return the type as string
+ *  \return the string of the type
+ */
+std::string CFESimpleType::ToString()
+{
+	if (!m_strRep.empty())
+		return m_strRep;
+
+	std::string ret;
+	switch (m_nType)
+	{
+	case TYPE_CHAR:
+		ret = "char";
+		break;
+	case TYPE_BOOLEAN:
+		ret = "boolean";
+		break;
+	case TYPE_VOID:
+		ret = "void";
+		break;
+	case TYPE_WCHAR:
+		ret = "wchar_t";
+		break;
+	case TYPE_LONG:
+		ret = "long";
+		break;
+	case TYPE_INTEGER:
+		ret = "int";
+		break;
+	case TYPE_FLOAT:
+		ret = "float";
+		break;
+	case TYPE_DOUBLE:
+		ret = "double";
+		break;
+	case TYPE_LONG_DOUBLE:
+		ret = "long double";
+		break;
+	default:
+		ret = "__UNDEFINED__";
+	}
+	return ret;
 }

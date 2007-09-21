@@ -105,7 +105,7 @@ class c_parser_driver;
 %token		BITAND		"&"
 %token		BITOR		"|"
 %token		BITXOR		"^"
-%token		BOOLEAN		"boolean"
+%token	<sval>	BOOLEAN		"boolean"
 %token		BREAK		"break"
 %token		BYCOPY		"bycopy"
 %token		BYREF		"byref"
@@ -231,6 +231,7 @@ class c_parser_driver;
 %token		UNION		"union"
 %token		UNSIGNED	"unsigned"
 %token		USING		"using"
+%token	<sval>	VA_LIST	"__builtin_va_list"
 %token		VIRTUAL		"virtual"
 %token		VOID		"void"
 %token		VOLATILE	"volatile"
@@ -1484,6 +1485,17 @@ simple_declaration :
 				$2->erase($2->end()-1);
 				delete user;
 			}
+			// a rare case: somebody redefines a type we already know, such as
+			// wchar_t, which is then stored as simple-type
+			CFESimpleType *type = dynamic_cast<CFESimpleType*>($2->back());
+			if (!user && type)
+			{
+				decl = new CFEDeclarator(DECL_IDENTIFIER, type->ToString());
+				$2->erase($2->end()-1);
+				delete type;
+			}
+			else
+				driver.error(@2, std::string("decl is of type ") + typeid(*$2->back()).name());
 		}
 		else
 			driver.error(@2, "Either type or declarator are missing.\n");
@@ -1739,13 +1751,20 @@ simple_type_specifier :
 	| char_type
 	| BOOLEAN
 	{
-	    $$ = new CFESimpleType(TYPE_BOOLEAN);
+		CFESimpleType *t = new CFESimpleType(TYPE_BOOLEAN);
+		t->SetStringRep(*$1);
+		$$ = t;
 	}
 	| integer_type
 	| floating_pt_type
 	| VOID
 	{
 	    $$ = new CFESimpleType(TYPE_VOID);
+	}
+	/* gcc specific */
+	| VA_LIST
+	{
+		$$ = new CFESimpleType(TYPE_GCC);
 	}
 	;
 

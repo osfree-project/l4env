@@ -3,6 +3,8 @@ $Log, ChangeLog,v $
 x.x.x
  - [fix] compilation for Socket Back-End (C/C++ parser choked on some Linux
    headers)
+ - [fix] memory allocation for [out, ref] parameters at server side is not
+   intended
 
 3.2.1
  - [feature] new compiler option --require <string> that specifies the minimal

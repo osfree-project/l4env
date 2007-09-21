@@ -20,6 +20,10 @@
 #include <l4/names/libnames.h>
 #include <l4/thread/thread.h>
 
+#ifndef ARCH_arm
+#include <l4/util/thread_time.h>
+#endif
+
 #include "timer.h"
 
 static l4_kernel_info_t *kip;
@@ -33,7 +37,11 @@ int init_timer(struct dope_services *d);
 
 /*** RETURN CURRENT SYSTEM TIME COUNTER IN MICROSECONDS ***/
 static u32 get_time(void) {
-  return (u32)kip->clock;
+#ifdef ARCH_arm
+	return (u32)kip->clock;
+#else
+	return l4_tsc_to_us(l4util_thread_time(kip));
+#endif
 }
 
 
@@ -72,6 +80,10 @@ static struct timer_services services = {
 int init_timer(struct dope_services *d) {
 	kip = l4sigma0_kip();
 	if (!kip) Panic("kip map failed");
+
+#ifndef ARCH_arm
+	l4_calibrate_tsc();
+#endif
 
 	d->register_module("Timer 1.0", &services);
 	return 1;

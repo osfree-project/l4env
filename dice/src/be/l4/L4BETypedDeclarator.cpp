@@ -74,9 +74,9 @@ CObject* CL4BETypedDeclarator::Clone()
  */
 bool CL4BETypedDeclarator::IsVariableSized()
 {
-    if (m_Attributes.Find(ATTR_REF))
-        return false;
-    return CBETypedDeclarator::IsVariableSized();
+	if (m_Attributes.Find(ATTR_REF))
+		return false;
+	return CBETypedDeclarator::IsVariableSized();
 }
 
 /** \brief checks if this parameter is of fixed size
@@ -88,9 +88,9 @@ bool CL4BETypedDeclarator::IsVariableSized()
  */
 bool CL4BETypedDeclarator::IsFixedSized()
 {
-    if (m_Attributes.Find(ATTR_REF))
-        return false;
-    return CBETypedDeclarator::IsFixedSized();
+	if (m_Attributes.Find(ATTR_REF))
+		return false;
+	return CBETypedDeclarator::IsFixedSized();
 }
 
 /** \brief calculates the max size of the paramater
@@ -103,37 +103,16 @@ bool CL4BETypedDeclarator::IsFixedSized()
  */
 bool
 CL4BETypedDeclarator::GetMaxSize(int & nSize,
-    string sName)
+	string sName)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"CL4BETypedDeclarator::%s called\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CL4BETypedDeclarator::%s called\n", __func__);
 
-    if (m_Attributes.Find(ATTR_REF))
-    {
-	CBESizes *pSizes = CCompiler::GetSizes();
-        nSize = pSizes->GetSizeOfType(TYPE_REFSTRING);
-        return true;
-    }
-    return CBETypedDeclarator::GetMaxSize(nSize, sName);
-}
-
-/** \brief check if we really have to allocate memory for the parameter
- *  \param pFile the file to write to
- *  \return true if we have to allocate memory
- *
- * This function checks the preallocation attributes.
- *
- * Usually no memory is allocated (in switch) for a parameter if the
- * preallocation attribute is not set. But we have to allocate memory also if
- * the [ref] attribute is set, because this stores the memory in the indirect
- * string and only frees it after the reply.
- */
-bool
-CL4BETypedDeclarator::DoAllocateMemory(CBEFile& pFile)
-{
-    if (pFile.IsOfFileType(FILETYPE_COMPONENT) &&
-	m_Attributes.Find(ATTR_REF))
-	return true;
-
-    return CBETypedDeclarator::DoAllocateMemory(pFile);
+	if (m_Attributes.Find(ATTR_REF))
+	{
+		CBESizes *pSizes = CCompiler::GetSizes();
+		nSize = pSizes->GetSizeOfType(TYPE_REFSTRING);
+		return true;
+	}
+	return CBETypedDeclarator::GetMaxSize(nSize, sName);
 }

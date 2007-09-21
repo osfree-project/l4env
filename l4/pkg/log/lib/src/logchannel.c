@@ -15,6 +15,7 @@
 #include "log_comm.h"
 #include "internal.h"
 #include <l4/log/l4log.h>
+#include <l4/log/server.h>
 #include <l4/env/errno.h>
 #include "log-client.h"
 
