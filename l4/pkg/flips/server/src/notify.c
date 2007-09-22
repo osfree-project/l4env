@@ -37,6 +37,7 @@ void notify_select(void)
 				sp = socket_get_private_data(fd);
 				if (sp)
 				{
+					//LOG("send notification foundfd=%d maxfd=%d", fd, n);
 					/* send message to notify thread */
 					l4vfs_select_listener_send_notification(
 		                            (l4_threadid_t) *(sp->notif_tid),

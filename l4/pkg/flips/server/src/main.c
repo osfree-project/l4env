@@ -13,6 +13,7 @@
 char LOG_tag[9] = "flips";
 
 l4_ssize_t l4libc_heapsize = 1024 * 1024;
+const int l4thread_max_threads = 64;
 
 /** MAIN */
 int main(int argc, const char **argv)
@@ -39,7 +40,7 @@ int main(int argc, const char **argv)
 
 	LOG_printf("Starting FLIPS server\n");
 
-	if (liblinux_init(640*1024, 1024*1024, use_dhcp))
+	if (liblinux_init(1024*1024, 1024*1024, use_dhcp))
 		exit(1);
 	l4dde_do_initcalls();
 

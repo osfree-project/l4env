@@ -17,7 +17,7 @@ import <l4/sys/types.h>
 import  <l4/l4vfs/network_server.idl>
 import  <l4/l4vfs/select_notify.idl>
 
-[error_function(dice_ipc_error)]
+//[error_function(dice_ipc_error)]
 
 interface flips : l4vfs::network_server, l4vfs::select_notify {
 
@@ -31,4 +31,7 @@ interface flips : l4vfs::network_server, l4vfs::select_notify {
 	int proc_write ([in, string] char *path,
 	                [in, ref, size_is(len)] char *src,
 	                [in] int len);
+	// internal function, to be called from worker thread
+        // to send information to loop/service thread
+	int notify ([in] unsigned long addr);
 };

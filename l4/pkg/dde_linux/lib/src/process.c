@@ -97,6 +97,32 @@ int l4dde_process_add_worker()
   return 0;
 }
 
+/** Remove a caller as process level worker
+ * \ingroup mod_proc
+ *
+ * \return 0 on success; negative error code otherwise
+ *
+ * This deallocates a task_struct of the worker thread.
+ */
+int l4dde_process_remove_worker()
+{
+  void *data = NULL;
+
+  /* thread data key allocation failed */
+  if (_key < 0)
+    return _key;
+
+  /* free current struct */
+  data = l4thread_data_get_current(_key);
+  vfree(data);
+
+#if DEBUG_PROCESS
+  LOG("removed task struct @ %p\n", data);
+#endif
+ 
+  return 0;
+}
+
 /** Initalize process module
  * \ingroup mod_proc
  *

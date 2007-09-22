@@ -40,6 +40,9 @@ SYSTEMS        = x86-l4v2
 SERVERIDL_flips       = flips.idl
 SERVERIDL_flips-lxdrv = flips.idl
 SERVERIDL_flips-ore   = flips.idl
+CLIENTIDL_flips       = flips.idl
+CLIENTIDL_flips-lxdrv = flips.idl
+CLIENTIDL_flips-ore   = flips.idl
 
 PRIVATE_INCDIR = $(PKGDIR)/server/lib-linux/include \
                  $(PKGDIR)/server/lib-lxdrv/include \

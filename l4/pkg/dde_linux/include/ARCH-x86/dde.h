@@ -148,6 +148,14 @@ int l4dde_process_init(void);
  */
 int l4dde_process_add_worker(void);
 
+/** Remove caller as process level worker
+ *
+ * \return 0 on success; negative error code otherwise
+ *
+ * This deallocates a task_struct of a worker thread.
+ */
+int l4dde_process_remove_worker(void);
+
 /** BUG handler function ptr
  *
  * This function-ptr is called when BUG() is called in Linux code
