@@ -4,7 +4,7 @@
 #include <l4/names/libnames.h>
 
 /* local */
-#include "flips-server.h"
+#include "flips-internal-server.h"
 #include "local.h"
 
 /* loglib tag */
@@ -59,7 +59,7 @@ int main(int argc, const char **argv)
 		exit(1);
 	}
 
-	flips_server_loop(&env);
+	flipsinternal_server_loop(&env);
 
 	return 0;
 }

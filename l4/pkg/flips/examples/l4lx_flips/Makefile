@@ -8,7 +8,7 @@ MODE = l4linux
 
 SRC_C = server.c net_io.c notify.c events.c
 
-SERVERIDL = flips.idl
+SERVERIDL = flips.idl flips-internal.idl
 
 LIBS = -levents -ll4vfs_connection -ll4vfs_network_server-server -ll4vfs_select \
        -ll4vfs_select_notify-server \

@@ -16,8 +16,8 @@
 #include <stdlib.h>
 
 /*** LOCAL INCLUDES ***/
-#include "flips-server.h"
-#include "flips-client.h"
+#include "flips-internal-server.h"
+#include "flips-internal-client.h"
 
 #ifdef DEBUG
 static int _DEBUG = 1;
@@ -232,7 +232,7 @@ static void flips_recv_thread (void * _arg) {
  
   // send notification to service/loop thread
   // so that it can notify the caller
-  result = flips_notify_call(&arg->service, (unsigned long)arg, &env);
+  result = flipsinternal_notify_call(&arg->service, (unsigned long)arg, &env);
 
   if (result != 23) {
     LOG_Error("Worker thread "l4util_idfmt" couldn't notify the caller "
@@ -542,7 +542,7 @@ l4vfs_common_io_fcntl_component(CORBA_Object _dice_corba_obj,
  * the application caller thread
  */
 int
-flips_notify_component (CORBA_Object _dice_corba_obj,
+flipsinternal_notify_component (CORBA_Object _dice_corba_obj,
                         unsigned long addr,
                         CORBA_Server_Environment *_dice_corba_env)
 {

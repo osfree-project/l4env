@@ -1,7 +1,7 @@
 PKGDIR ?= ..
 L4DIR  ?= $(PKGDIR)/../..
 
-IDL = flips.idl
+IDL = flips.idl flips-internal.idl
 
 IDL_FLAGS =
 

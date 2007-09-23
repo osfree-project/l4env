@@ -43,7 +43,7 @@
 #include <string.h>
 
 /*** IDL INCLUDES ***/
-#include <flips-server.h>
+#include <flips-internal-server.h>
 
 char LOG_tag[9] = "lxflips";
 
@@ -224,7 +224,7 @@ static void session_thread(struct session_thread_info *info)
 	sem_post(&info->started);
 
 	/* enter connection server loop */
-	flips_server_loop(&env);
+	flipsinternal_server_loop(&env);
 }
 
 /*** CREATE SESSION THREAD ***/

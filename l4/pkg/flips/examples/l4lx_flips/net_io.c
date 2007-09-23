@@ -30,7 +30,7 @@
 #include <l4/log/l4log.h>
 
 /*** IDL INCLUDES ***/
-#include <flips-server.h>
+#include <flips-internal-server.h>
 
 /****************************/
 /*** NET IO IDL INTERFACE ***/
@@ -346,4 +346,13 @@ l4vfs_net_io_getpeername_component(CORBA_Object _dice_corba_obj,
 		*addrlen = *actual_len;
 
 	return err;
+}
+
+int
+flipsinternal_notify_component (CORBA_Object _dice_corba_obj,
+                        unsigned long addr,
+                        CORBA_Server_Environment *_dice_corba_env)
+{
+	LOG("implement me!");
+	return 0;
 }
