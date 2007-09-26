@@ -285,7 +285,7 @@ prefetch_abort: @ A real prefetch abort occured --- handled as a page fault
 	orr	r1, r1, #0x00330000     @ Set read bit and prefetch abort
 	ldr	r0, [sp, #(9*4)]
 	mov	r2, r0
-	mov 	r3, sp
+	add 	r3, sp, #(5*4)
 	stmdb	sp!, {r0, r1}
 	adr	lr, pagefault_return
 	ldr	pc,  .LCpagefault_entry	@ Jump to C code
@@ -346,18 +346,32 @@ data_abort_entry:
 	bic	r1, r1, #0x00ff0000
 	mrc     p15, 0, r0, c6, c0, 0	@ Load FAR into r0
 	ldr	r2, [sp, #(9*4)]
+	tst	lr, #0x20		@ comes from thumb mode?
+	bne	.LChandle_thumb
+	@ arm insns
 	ldr	r3, [r2]		@ Load faulting insn
 	tst	r3, #(1<<20)
+.LCret_handle_thumb:
 	orrne	r1, r1, #0x00020000	@ Set read fault bit
 	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
 					@ NE -> kernel
-	mov 	r3, sp
+	add 	r3, sp, #(5*4)
 	orreq	r1, r1, #0x00010000
 	orr	r1, r1, #0x00400000     @ Set error code to data abort
 	stmdb	sp!, {r0, r1}
 	adr	lr, pagefault_return	@ set return address
 
 	ldr	pc, .LCpagefault_entry	@ page fault	
+
+.LChandle_thumb:
+	@ thumb insns
+	ldrh	r3, [r2]
+	and     r3, r3, #0xfe00
+	teq     r3, #0x5600
+	orreq   r1, r1, #0x00020000	@ Set read fault bit
+	beq     .LCret_handle_thumb
+	tstne   r3, #(1<<11)
+	b .LCret_handle_thumb
 
 .LCpagefault_entry:	.word	pagefault_entry
 .LCslowtrap_entry:	.word	slowtrap_entry
@@ -538,8 +552,6 @@ leave_by_trigger_exception:
 	/* restore original IP */
 	CONTEXT_OF r1, sp
 	ldr 	r0, [r1, #(OFS__THREAD__EXCEPTION_IP)]
-	and	r2, r0, #0x03  /* cut out IRQ flags */
-	and 	r0, r0, #~0x03 /* mask out lowest two bits */
 	str	r0, [sp, #(13*4 + 16)]
 	mov     r0, #~0
 	str	r0, [r1, #(OFS__THREAD__EXCEPTION_IP)]
@@ -547,7 +559,6 @@ leave_by_trigger_exception:
 	/* enforce user mode */
 	ldr	r0, [sp, #(13*4 + 12)]
 	and 	r0, r0, #~0xcf /* mask out mode bits and IRQ flags */
-	orr	r0, r0, r2, LSL #6 /* restore IRQ flags to old values */
 	str	r0, [sp, #(13*4 + 12)]
 
 	enter_slowtrap_w_stack 0x00500000

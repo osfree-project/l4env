@@ -464,7 +464,7 @@ L4_uid Sys_task_new_frame::cap_handler(const Utcb* utcb) const
 }
 
 IMPLEMENT inline
-L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* /*utcb*/) const
+L4_quota_desc Sys_task_new_frame::quota_descriptor(const Utcb* utcb) const
 {
   if (!extra_args())
     return L4_quota_desc(0);

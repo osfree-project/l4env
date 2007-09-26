@@ -135,7 +135,7 @@ void CBEObject::SetTargetFileName(CFEBase *pFEObject)
 bool CBEObject::IsTargetFile(CBEHeaderFile* pFile)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEObject::%s(header: %s) called; m_sTargetHeader=%s (%d)\n",
+		"CBEObject::%s(header: %s) called; m_sTargetHeader=%s (%zd)\n",
 		__func__, pFile->GetFileName().c_str(), m_sTargetHeader.c_str(),
 		m_sTargetHeader.length());
 

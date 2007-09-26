@@ -311,9 +311,9 @@ formatter_pf(Tb_entry *tb, const char *tidstr, unsigned tidlen,
   snprintf(ip_buf, sizeof(ip_buf), L4_PTR_FMT, e->ip());
   my_snprintf(buf, maxlen, "pf:  %-*s pfa="L4_PTR_FMT" ip=%s (%c%c) spc=%02x",
       tidlen, tidstr, e->pfa(), e->ip() ? ip_buf : "unknown",
-      e->error() & 2 ? (e->error() & 4 ? 'w' : 'W')
-		     : (e->error() & 4 ? 'r' : 'R'),
-      e->error() & 1 ? 'p' : '-',
+      !PF::is_read_error(e->error()) ? (e->error() & 4 ? 'w' : 'W')
+                                     : (e->error() & 4 ? 'r' : 'R'),
+      !PF::is_translation_error(e->error()) ? 'p' : '-',
       (unsigned)e->space()->id());
 
   return maxlen;

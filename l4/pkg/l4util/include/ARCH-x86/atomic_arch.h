@@ -41,20 +41,37 @@ l4util_cmpxchg64(volatile l4_uint64_t * dest,
 		 l4_uint64_t cmp_val, l4_uint64_t new_val)
 {
   unsigned char ret;
+  l4_umword_t dummy;
 
   __asm__ __volatile__
     (
-     "cmpxchg8b	%4\n\t"
+#if __PIC__
+     "push %%ebx\n\t"
+     "movl %%esi,%%ebx\n\t"
+#endif
+     "cmpxchg8b	%5\n\t"
      "sete	%0\n\t"
+#if __PIC__
+     "pop %%ebx\n\t"
+#endif
      :
-     "=q" (ret)      /* return val, 0 or 1 */
+     "=a" (ret),      /* return val, 0 or 1 */
+     "=d" (dummy)
      :
      "A"  (cmp_val),
      "c"  ((unsigned int)(new_val>>32ULL)),
-     "b"  ((unsigned int)new_val),
+#if __PIC__
+     "S"
+#else
+     "b"
+#endif
+          ((unsigned int)new_val),
      "m"  (*dest)    /* 3 mem, destination operand */
      :
      "memory", "cc"
+#ifdef __PIC
+      , "ebx"
+#endif
      );
 
   return ret;

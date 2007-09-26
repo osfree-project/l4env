@@ -165,7 +165,6 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 		{"include-prefix", 1, 0, 'p'},
 		{"verbose", 2, 0, 'v'},
 		{"require", 1, 0, 'r'},
-		{"corba", 0, 0, 'C'},
 		{"preprocess", 1, 0, 'P'},
 		{"f", 1, 0, 'f'},
 		{"B", 1, 0, 'B'},
@@ -199,10 +198,10 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 		// the first ":" in optstring tells getopt(_long_only) to return ':'
 		// if an argument to an option is missing.
 #if defined(HAVE_GETOPT_LONG)
-		c = getopt_long_only(argc, argv, ":cstni::F:p:v::r:CP:f:B:E::I:NO::T::Vmw:o:M::W:D:x:h", long_options, &index);
+		c = getopt_long_only(argc, argv, ":cstni::F:p:v::r:P:f:B:E::I:NO::T::Vmw:o:M::W:D:x:h", long_options, &index);
 #else
 		// n has an optional parameter to recognize -nostdinc and -n (no-opcode)
-		c = getopt(argc, argv, ":cstn::i::F:p:v::r:CP:f:B:E::I:O::T::Vmw:o:M::W:D:x:h");
+		c = getopt(argc, argv, ":cstn::i::F:p:v::r:P:f:B:E::I:O::T::Vmw:o:M::W:D:x:h");
 #endif
 
 		if (c == -1)
@@ -319,6 +318,8 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 					Verbose(PROGRAM_VERBOSE_OPTIONS, "Verbose level %d enabled\n", nVerboseLevel);
 				}
 				CCompiler::SetVerboseLevel((ProgramVerbose_Type)nVerboseLevel);
+				if (nVerboseLevel >= PROGRAM_VERBOSE_NORMAL)
+					ShowVersion();
 			}
 			break;
 		case 'r':
@@ -344,11 +345,6 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 					sPrefix.erase(sPrefix.end()-1);
 				SetBackEndOption("include-prefix", sPrefix);
 			}
-			break;
-		case 'C':
-			CMessages::Warning("Option -C is deprecated. Use '-x corba' instead.\n");
-			Verbose(PROGRAM_VERBOSE_OPTIONS, "use the CORBA frontend\n");
-			m_nUseFrontEnd = USE_FE_CORBA;
 			break;
 		case 'P':
 			Verbose(PROGRAM_VERBOSE_OPTIONS, "preprocessor option %s added\n", optarg);
@@ -831,6 +827,7 @@ void CCompiler::ParseArguments(int argc, char *argv[])
 			break;
 		case 'V':
 			ShowVersion();
+			exit (0);
 			break;
 		case 'm':
 			Verbose(PROGRAM_VERBOSE_OPTIONS, "generate message passing functions.\n");
@@ -1411,7 +1408,6 @@ void CCompiler::ShowVersion()
 	if (dice_user)
 		std::cout << " by " << dice_user;
 	std::cout << "." << std::endl;
-	exit(0);
 }
 
 /** \brief creates a parser object and initializes it

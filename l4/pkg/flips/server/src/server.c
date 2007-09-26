@@ -7,7 +7,7 @@
 
 /*** LOCAL INCLUDES ***/
 #include "local.h"
-#include "flips-internal-server.h"
+#include "flips-server.h"
 
 #define FLIPS_DEBUG         0
 #define FLIPS_DEBUG_VERBOSE 0
@@ -50,7 +50,7 @@ void flips_session_thread(void *arg)
 		my_tid.id.task, my_tid.id.lthread);
 	l4dde_process_add_worker();
 	l4thread_started(NULL);
-	flipsinternal_server_loop(&env);
+	flips_server_loop(&env);
 }
 
 /** IDL INTERFACE: CLOSE SOCKET

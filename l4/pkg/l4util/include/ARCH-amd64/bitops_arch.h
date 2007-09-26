@@ -319,7 +319,9 @@ l4util_find_first_set_bit(const void * dest, l4_size_t size)
      :
      "=a" (res), "=&c" (dummy0), "=&D" (dummy1)
      :
-     "1" ((size + 31) >> 5), "2" (dest), "b" (dest));
+     "1" ((size + 31) >> 5), "2" (dest), "b" (dest)
+     :
+     "cc", "memory");
 
   return res;
 }
@@ -349,7 +351,9 @@ l4util_find_first_zero_bit(const void * dest, l4_size_t size)
      :
      "=d" (res), "=&c" (dummy0), "=&D" (dummy1), "=&a" (dummy2)
      :
-     "1" ((size + 31) >> 5), "2" (dest), [dest] "S" (dest));
+     "1" ((size + 31) >> 5), "2" (dest), [dest] "S" (dest)
+     :
+     "cc", "memory");
 
   return res;
 }

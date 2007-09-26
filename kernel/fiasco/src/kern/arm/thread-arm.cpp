@@ -117,7 +117,7 @@ extern "C" {
    * @return true if page fault could be resolved, false otherwise
    */
   Mword pagefault_entry(const Mword pfa, const Mword error_code,
-                        const Mword pc, Mword *const sp)
+                        const Mword pc, Return_frame *ret_frame)
   {
 #if 0 // Doubvle PF detect
     static unsigned long last_pfa = ~0UL;
@@ -133,7 +133,7 @@ extern "C" {
         Proc::sti();
       }
     // or interrupts were enabled
-    else if (!(sp[5] /*spsr*/ & Proc::Status_IRQ_disabled))
+    else if (!(ret_frame->psr & Proc::Status_IRQ_disabled))
       Proc::sti();
 
       // Pagefault in kernel mode and interrupts were disabled
@@ -172,8 +172,7 @@ extern "C" {
         return false;
       }
 
-    return current_thread()->handle_page_fault(pfa, error_code, pc, 
-	(Return_frame*)(sp+5));
+    return current_thread()->handle_page_fault(pfa, error_code, pc, ret_frame);
   }
 
   void slowtrap_entry(Trap_state *ts)
@@ -348,7 +347,7 @@ Thread::user_sp(Mword sp)
 IMPLEMENT inline NEEDS[Thread::exception_triggered]
 Mword
 Thread::user_ip() const
-{ return exception_triggered()?(_exc_ip & ~0x03):regs()->ip(); }
+{ return exception_triggered()?_exc_ip:regs()->ip(); }
 
 IMPLEMENT inline
 Mword
@@ -360,7 +359,7 @@ void
 Thread::user_ip(Mword ip)
 { 
   if (exception_triggered())
-    _exc_ip = (_exc_ip & 0x03) | ip;
+    _exc_ip = ip;
   else
     {
       Entry_frame *r = regs();
@@ -409,9 +408,6 @@ Thread::do_trigger_exception(Entry_frame *r)
     {
       Lock_guard<Cpu_lock> lock(&cpu_lock);
       _exc_ip = r->ip();
-      // store FIQ and IRQ Mask bits in lowest two bits of exception IP
-      // (PC ist always word aligned --> no Thumb support yet)
-      _exc_ip |= (r->psr >> 6) & 0x03; 
       
       extern char leave_by_trigger_exception[];
       r->pc = (Mword)leave_by_trigger_exception;
@@ -443,9 +439,6 @@ Thread::copy_utcb_to_ts(L4_msg_tag const &tag, Thread *snd, Thread *rcv)
     {
       // triggered exception pending
       Cpu::memcpy_mwords (ts, snd_utcb->values, s > 19 ? 19 : s);
-      if (EXPECT_TRUE(s > 15))
-	rcv->_exc_ip = (rcv->_exc_ip & ~0x3) 
-	  | ((snd_utcb->values[15] >> 6) & 3);
       if (EXPECT_TRUE(s > 19))
 	rcv->user_ip(snd_utcb->values[19]);
 
@@ -480,8 +473,6 @@ Thread::copy_ts_to_utcb(L4_msg_tag const &, Thread *snd, Thread *rcv)
     if (EXPECT_FALSE(snd->exception_triggered()))
       {
 	Cpu::memcpy_mwords (rcv_utcb->values, ts, 19);
-	rcv_utcb->values[15] = (ts->cpsr & ~(0x3 << 6)) 
-	  | ((snd->_exc_ip & 0x3) << 6);
 	rcv_utcb->values[19] = snd->user_ip();
       }
     else

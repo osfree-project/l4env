@@ -15,13 +15,37 @@
 static int cmpxchg(void)
 {
   l4_umword_t val = 345;
+  l4_uint16_t val2b = 789;
+  l4_uint8_t  val1b = 111;
+  l4_uint64_t val8b = 0x1234567812345678ULL;
 
   if (!l4util_cmpxchg(&val, 345, 678) || val != 678)
     return 1;
 
   if (l4util_cmpxchg(&val, 123, 456))
     return 2;
-  
+
+  if (!l4util_cmpxchg16(&val2b, 789, 456) || val2b != 456)
+    return 3;
+
+  if (l4util_cmpxchg16(&val2b, 4, 5))
+    return 4;
+
+#if defined(ARCH_x86) || defined(ARCH_amd64)
+  if (!l4util_cmpxchg8(&val1b, 111, 122) || val1b != 122)
+    return 5;
+
+  if (l4util_cmpxchg8(&val1b, 9, 2))
+    return 6;
+
+  if (!l4util_cmpxchg64(&val8b, 0x1234567812345678ULL, 0x8765432198765432ULL)
+      || val8b != 0x8765432198765432ULL)
+    return 7;
+
+  if (l4util_cmpxchg64(&val8b, 9, 2))
+    return 8;
+#endif
+
   return 0;
 }
 
@@ -34,7 +58,7 @@ static int cmpxchg_res(void)
 
   if (l4util_cmpxchg_res(&val, 123, 456) != 678)
     return 2;
-  
+
   return 0;
 }
 

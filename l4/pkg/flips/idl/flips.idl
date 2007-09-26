@@ -17,9 +17,10 @@ import <l4/sys/types.h>
 import  <l4/l4vfs/network_server.idl>
 import  <l4/l4vfs/select_notify.idl>
 
+import  <flips-internal.idl>
 //[error_function(dice_ipc_error)]
 
-interface flips : l4vfs::network_server, l4vfs::select_notify {
+interface flips : l4vfs::network_server, l4vfs::select_notify, flipsinternal {
 
 	/*** PROC INTERFACE ***/
 	

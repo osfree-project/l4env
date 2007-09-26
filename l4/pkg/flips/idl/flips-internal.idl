@@ -1,0 +1,19 @@
+/**
+ * \brief   IDL interface extension for FLIPS
+ *
+ * \date    09/22/2007
+ * \author  Alexander Boettcher <boettcher@os.inf.tu-dresden.de>
+ *
+ * This interface extends the socket interface of FLIPS by an internal
+ * method. The method is called by worker threads of FLIPS to notify the
+ * service/loop thread about a finished job. The answer must be sent by
+ * the service/loop thread to application threads because of the 
+ * l4v2 IPC call characteristic/limitation.
+ */
+
+interface flipsinternal {
+
+	// internal function, to be called from worker thread
+        // to send information to loop/service thread
+	int notify ([in] unsigned long addr);
+};

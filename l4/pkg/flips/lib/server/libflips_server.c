@@ -16,8 +16,8 @@
 #include <stdlib.h>
 
 /*** LOCAL INCLUDES ***/
-#include "flips-internal-server.h"
-#include "flips-internal-client.h"
+#include "flips-server.h"
+#include "flips-client.h"
 
 #ifdef DEBUG
 static int _DEBUG = 1;
