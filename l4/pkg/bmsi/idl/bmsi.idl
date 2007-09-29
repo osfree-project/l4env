@@ -1,0 +1,70 @@
+/*
+ * \brief   BMSI interface definition.
+ * \date    2007-07-14
+ * \author  Christelle Braun <cbraun@os.inf.tu-dresden.de>
+ */
+/*
+ * Copyright (C) 2007 Christelle Braun <cbraun@os.inf.tu-dresden.de>
+ * Technische Universitaet Dresden, Operating Systems Research Group
+ *
+ * This file is part of the BMSI package, which is distributed under
+ * the  terms  of the  GNU General Public Licence 2.  Please see the
+ * COPYING file for details.
+ */
+
+interface bmsi
+{
+        /* IDL functions, necessary for the interface. */  
+        
+        int getVersion([out] int *version);
+
+        int getBuilder([in,string] char *params, 
+                       [out] int *pdbid);
+
+        int destroyBuilder([in] int Self);
+        
+        int createPD([in] int Self, 
+                     [in, string] char *params, 
+                     [out] int *pdid);
+
+        int findPD([in] int Self, 
+                   [in] int locid, 
+                   [out] int *pdid);
+
+        int setResources([in] int Self, 
+                         [in] long MemoryMax, 
+                         [in] long MemoryCurrent, 
+                         [in] int Priority, 
+                         [in] unsigned char NbrCpu);
+         
+        int getResources([in] int Self, 
+                         [out] long *MemoryMax, 
+                         [out] long *MemoryCurrent, 
+                         [out] int *Priority, 
+                         [out] unsigned char *NbrCpu);
+
+        int setConnection([in] int Self, 
+                          [in] int Dest, 
+                          [in] int Allow);
+        
+        int build([in] int Self, 
+                  [in] char islx, 
+                  [in, string] char *Name, 
+                  [in] int Mem, 
+                  [in, string] char *Params );
+
+        int setStatus([in] int Self, 
+                      [in] int Status);
+         
+        int getStatus([in] int Self, 
+                      [out] int *Status);
+        
+        int destroy([in] int Self);
+
+        /* IDL functions for debugging. */
+        
+        int printPDBMap();
+        int printPDommap();
+
+
+};

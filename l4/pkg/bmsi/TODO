@@ -1,0 +1,55 @@
+TODO items for BMSI implementation
+==================================
+
+questions
+---------
+
+- why is possible to create more than one instance of an integrity interface?
+
+
+all
+---
+
+- perhaps: casting all those Self pointers to integers is ugly
+- error codes
+- check malloc()/free() everywhere
+
+
+libb
+----
+
+- perhaps: cache BMSI server thread ID
+- run(), pause() instead of setStatus()
+
+
+libu
+----
+
+- cache Lyon ID needed for seal()
+- obtain random nonce for sealing
+- check creator of unsealed data in unseal() ?? Not supported by BMSI
+
+
+BMSI server
+-----------
+
+- perhaps: cache thread ID of dataspace manager, loader, ipcmon (fprov too?)
+- detach dataspace into which the loader script has been copied
+- do not start newly built PD immediately, but wait until the client calls run()
+- implement state changes (run and pause; might be tricky ...)
+- access control in server: do not allow arbitrary clients to modify PD states;
+  PD--PDBuilder relation ??
+
+
+loader
+------
+
+- complete Lyon support for loader support (ldso, proxy fprov)
+
+
+Lyon
+----
+
+- make quote() do something real
+- check/rethink the use of parent IDs when sealing and unsealing
+- check that hash is respected when sealing and unsealing
