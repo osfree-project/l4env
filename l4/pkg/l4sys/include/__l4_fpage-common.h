@@ -1,5 +1,10 @@
-#ifndef L4_FPAGE_COMMON_H__
-#define L4_FPAGE_COMMON_H__
+/*!
+ * \file    l4sys/include/__l4_fpage-common.h
+ * \brief   Common fpage definitions
+ * \ingroup api_calls
+ */
+#ifndef __L4_FPAGE_COMMON_H__
+#define __L4_FPAGE_COMMON_H__
 
 /**
  * Send flexpage types
@@ -98,4 +103,4 @@ l4_iofpage(unsigned port, unsigned int size, unsigned char grant);
 L4_INLINE int
 l4_is_io_page_fault(unsigned long address);
 
-#endif
+#endif /* ! __L4_FPAGE_COMMON_H__ */

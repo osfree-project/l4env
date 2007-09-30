@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-x86/L4API-l4v2/types.h
  * \brief   L4 kernel API type definitions, L4 v2 version
  * \ingroup api_types

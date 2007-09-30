@@ -8,7 +8,4 @@
 #include "bootp.h"
 #include "tftp.h"
 #include "igmp.h"
-//#include "nfs.h"
-//#include "nic.h"
-#include "pci.h"
 #include "grub.h"

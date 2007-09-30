@@ -1,9 +1,6 @@
 #ifndef _DEV_H
 #define _DEV_H
 
-#include "isa.h"
-#include "pci.h"
-
 /* Need to check the packing of this struct if Etherboot is ported */
 struct dev_id
 {
@@ -20,21 +17,11 @@ struct dev_id
 
 struct pci_probe_state 
 {
-#ifdef CONFIG_PCI
-	struct pci_device dev;
-	int advance;
-#else
 	int dummy;
-#endif
 };
 struct isa_probe_state
 {
-#ifdef CONFIG_ISA
-	const struct isa_driver *driver;
-	int advance;
-#else
 	int dummy;
-#endif
 };
 
 union probe_state
@@ -54,9 +41,6 @@ struct dev
 	int		failsafe;	/* Failsafe probe requested */
 	int		type_index;	/* Index of this device (within type) */
 #define	PROBE_NONE 0
-#define PROBE_OSHK 1
-#define PROBE_PCI  2
-#define PROBE_ISA  3
 #define PROBE_ORE  4
 	union probe_state state;
 };

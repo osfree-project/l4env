@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-x86/L4API-l4v2/syscalls.h
  * \brief   L4 System calls (except for IPC)
  * \ingroup api_calls

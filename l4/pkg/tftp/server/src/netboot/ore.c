@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include "etherboot.h"
 #include "nic.h"
-#include "pci.h"
 #include <l4/log/l4log.h>
 #include <l4/env/errno.h>
 #include <l4/ore/ore.h>
@@ -50,7 +49,7 @@ static inline ore_client_state *get_ore_state(struct nic*nic){
  *            char *p:            the data for the packet.
  * returns:   void.
  */
-static void ore_transmit(struct nic *nic, const char *d,
+static void ore_transmit(struct nic *nic, const unsigned char *d,
                          unsigned int t, unsigned int s, const char *p)
 {
   static struct {
@@ -97,11 +96,13 @@ extern int rx_drain_flag;
 static int ore_poll(struct nic *nic)
 {
   int handle = my_state.handle;
-  int ret, size = ETH_FRAME_LEN;
+  int ret;
+  size_t size = ETH_FRAME_LEN;
 
   LOGd_Enter(CONFIG_LOG_TRACE);
 
-  ret = l4ore_recv_blocking(handle, (char **)&nic->packet, &size, my_state.recv_to);
+  ret = l4ore_recv_blocking(handle, (char **)&nic->packet,
+                            &size, my_state.recv_to);
 
   if (ret == 0)
     {
@@ -143,15 +144,15 @@ static void ore_disable(struct dev* dev)
 
 char tftp_orename[16] = "ORe";
 
-int ore_probe(struct dev *dev, const char *type_name);
-int ore_probe(struct dev *dev, const char *type_name)
+int ore_probe(struct dev *dev);
+int ore_probe(struct dev *dev)
 {
 
   struct nic *nic        = (struct nic*)dev;
   int        err         = 0;
   static int initialized = PROBE_FAILED;
   l4ore_config ore_conf  = L4ORE_DEFAULT_CONFIG;
-  int exp, mant;
+  l4_timeout_s to;
 
 #if 1
   ore_conf.ro_keep_device_mac = 1;
@@ -177,10 +178,10 @@ int ore_probe(struct dev *dev, const char *type_name)
     }
 
   LOGdl(CONFIG_LOG_TRACE, "opened ORe channel: %d", err);
-  l4util_micros2l4to(500000, &mant, &exp);
+  to = l4util_micros2l4to(500000);
   my_state.handle = err;
   memcpy(my_state.mac, nic->node_addr, 6);
-  my_state.recv_to = l4_timeout(0,0,mant,exp);
+  my_state.recv_to = l4_timeout(L4_IPC_TIMEOUT_NEVER, to);
 
   initialized    = PROBE_WORKED;
   nic->priv_data = (void*)&my_state;

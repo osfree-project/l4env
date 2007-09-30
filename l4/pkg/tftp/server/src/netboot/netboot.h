@@ -4,11 +4,11 @@
 #define NETBUF_SIZE	0x8000
 #define GUNZIP_SIZE	0x8000
 
-int  netboot_init (unsigned bufaddr, unsigned gunzipaddr, int use_l4io);
+int  netboot_init (unsigned bufaddr, unsigned gunzipaddr);
 int  netboot_open (char *filename);
 int  netboot_seek (int offset);
 int  netboot_dir (char *dirname);
-int  netboot_read (char *buf, int len);
+int  netboot_read (unsigned char *buf, int len);
 void netboot_close (void);
 void netboot_media_change (void);
 void netboot_set_server (in_addr server_addr);

@@ -1,6 +1,6 @@
 /* $Id$ */
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-x86/L4API-l4v2/kernel.h
  * \brief   Kernel Info Page (KIP)
  * \ingroup api_types

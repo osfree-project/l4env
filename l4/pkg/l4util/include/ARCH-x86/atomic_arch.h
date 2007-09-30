@@ -45,13 +45,13 @@ l4util_cmpxchg64(volatile l4_uint64_t * dest,
 
   __asm__ __volatile__
     (
-#if __PIC__
+#ifdef __PIC__
      "push %%ebx\n\t"
      "movl %%esi,%%ebx\n\t"
 #endif
      "cmpxchg8b	%5\n\t"
      "sete	%0\n\t"
-#if __PIC__
+#ifdef __PIC__
      "pop %%ebx\n\t"
 #endif
      :
@@ -60,7 +60,7 @@ l4util_cmpxchg64(volatile l4_uint64_t * dest,
      :
      "A"  (cmp_val),
      "c"  ((unsigned int)(new_val>>32ULL)),
-#if __PIC__
+#ifdef __PIC__
      "S"
 #else
      "b"

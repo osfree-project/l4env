@@ -1,6 +1,5 @@
-/* $Id$ */
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-x86/L4API-l4v2/ipc.h
  * \brief   L4 IPC System Calls
  * \ingroup api_calls

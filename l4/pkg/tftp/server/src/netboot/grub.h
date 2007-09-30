@@ -11,7 +11,6 @@
 #include "udp.h"
 #include "if_ether.h"
 #include "latch.h"
-#include "io.h"
 #include "nic.h"
 #include "shared.h"
 #include "grub_emu.h"

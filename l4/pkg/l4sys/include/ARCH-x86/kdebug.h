@@ -1,6 +1,5 @@
-/* $Id$ */
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-x86/kdebug.h
  * \brief   Kernel debugger macros
  * \ingroup api_calls

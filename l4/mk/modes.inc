@@ -698,6 +698,38 @@ else
   LDSCRIPT_arm_l4env            = $(LDSCRIPT_arm_l4env_diet)
 endif
 
+BID_SUPPORTED_arm_l4env_base = y
+LIBCINCDIR_arm_l4env_base    = $(LIBC_INCLUDE_uc)
+LIBCLIBDIR_arm_l4env_base    =
+LIBCLIBS_arm_l4env_base      = -nostdlib $(GCCLDNOSTDLIB)                \
+                                  -u printf -lc_be_io.o $(MALLOC_BACKEND)   \
+                                  -lc_be_time -lrtc -ll4rm -ldm_mem         \
+                                  -ldm_generic -lthread -lsemaphore -ll4env \
+                                  -ll4env_err -lslab -llogserver_capsule    \
+                                  -ll4rm -lthread -ldm_generic -lnames      \
+                                  -ll4util_root -ll4util -lsigma0           \
+                                  $(UCLIBC_IMPLEMENTATION)                  \
+                                  $(GCCLIB) $(UCLIBC_IMPLEMENTATION)        \
+                                  $(MALLOC_BACKEND) -ll4rm -ldm_mem         \
+                                  -ldm_generic -lc_be_time -lc_be_mmap      \
+                                  -lc_be_mmap_util -lc_be_l4env_start_stop  \
+                                  -lgeneric_ts                              \
+                                  -lc_be_syslog -lc_be_file-table           \
+                                  -luc_be_simple_sleep -ll4vfs_common_io    \
+                                  -ll4vfs_basic_io -ll4vfs_connection       \
+                                  -ll4vfs_basic_name_server                 \
+                                  -ll4vfs_name_server                       \
+                                  -ll4vfs_name_space_provider               \
+                                  -ll4vfs_extendable -ll4sys
+L4LIBS_arm_l4env_base_diet      = -static -ll4rm -ldm_mem -ldm_generic      \
+                                  -lthread -lsemaphore -ll4env -ll4env_err  \
+                                  -lslab -llogserver_capsule -ll4rm         \
+                                  -lthread -ldm_generic -lnames             \
+                                  -ll4util_root -ll4util -lsigma0           \
+                                  $(ROOTLIB) -ll4sys
+CRT0_arm_l4env_base          = $(CRT0_DEFAULT)
+CRTN_arm_l4env_base          =
+LDSCRIPT_arm_l4env_base      = $(LDS_DEFAULT)
 
 #
 # arm_loader - applications to be loaded by the L4Env loader.
@@ -955,6 +987,39 @@ ifeq ($(USE_UCLIBC),y)
   CRTN_amd64_l4env              = $(CRTN_amd64_l4env_uc)
   LDSCRIPT_amd64_l4env          = $(LDSCRIPT_amd64_l4env_uc)
 endif
+
+BID_SUPPORTED_amd64_l4env_base = y
+LIBCINCDIR_amd64_l4env_base    = $(LIBC_INCLUDE_uc)
+LIBCLIBDIR_amd64_l4env_base    =
+LIBCLIBS_amd64_l4env_base      = -nostdlib $(GCCLDNOSTDLIB)                \
+                               -u printf -lc_be_io.o $(MALLOC_BACKEND)   \
+                               -lc_be_time -lrtc -ll4rm -ldm_mem         \
+                               -ldm_generic -lthread -lsemaphore -ll4env \
+                               -ll4env_err -lslab -llogserver_capsule    \
+                               -ll4rm -lthread -ldm_generic -lnames      \
+                               -ll4util_root -ll4util -lsigma0           \
+                               $(UCLIBC_IMPLEMENTATION)                  \
+                               $(GCCLIB) $(UCLIBC_IMPLEMENTATION)        \
+                               $(MALLOC_BACKEND) -ll4rm -ldm_mem         \
+                               -ldm_generic -lc_be_time -lc_be_mmap      \
+                               -lc_be_mmap_util -lc_be_l4env_start_stop  \
+                               -lgeneric_ts                              \
+                               -lc_be_syslog -lc_be_file-table           \
+                               -luc_be_simple_sleep -ll4vfs_common_io    \
+                               -ll4vfs_basic_io -ll4vfs_connection       \
+                               -ll4vfs_basic_name_server                 \
+                               -ll4vfs_name_server                       \
+                               -ll4vfs_name_space_provider               \
+                               -ll4vfs_extendable -ll4sys
+L4LIBS_amd64_l4env_base_diet   = -static -ll4rm -ldm_mem -ldm_generic    \
+                               -lthread -lsemaphore -ll4env -ll4env_err  \
+                               -lslab -llogserver_capsule -ll4rm         \
+                               -lthread -ldm_generic -lnames             \
+                               -ll4util_root -ll4util -lsigma0           \
+                               $(ROOTLIB) -ll4sys
+CRT0_amd64_l4env_base         = $(CRT0_DEFAULT)
+CRTN_amd64_l4env_base         =
+LDSCRIPT_amd64_l4env_base     = $(LDS_DEFAULT)
 
 #
 # amd64_l4env_minimal - dietlibc with just write(1, ...) as io backend

@@ -4,14 +4,12 @@
  * \brief   L4 IPC System Call Invoking in Assembler
  * \ingroup api_calls
  *
- * These code fragments can be shared between v2 and x0, so they're just in
- * the x86 directory. When adding another L4 API we'll need a solution here.
  * This file can also be used in asm-files, so don't include C statements.
  */
 #ifndef __L4_IPC_INVOKE_H__
 #define __L4_IPC_INVOKE_H__
 
-/** 
+/**
  * Some words about the sysenter entry frame: Since the sysenter instruction
  * automatically reloads the instruction pointer (eip) and the stack pointer
  * (esp) after kernel entry, we have to save both registers preliminary to
@@ -25,7 +23,7 @@
 
 #ifndef CONFIG_L4_CALL_SYSCALLS
 
-# if !defined(L4V2_IPC_SYSENTER) && !defined(L4X0_IPC_SYSENTER)
+# ifndef L4V2_IPC_SYSENTER
 
 #  define IPC_SYSENTER       "int  $0x30              \n\t"
 #  define IPC_SYSENTER_ASM    int  $0x30;

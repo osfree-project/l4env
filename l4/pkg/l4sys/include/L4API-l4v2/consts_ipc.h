@@ -1,3 +1,8 @@
+/*!
+ * \file    l4sys/include/L4API-l4v2/consts_ipc.h
+ * \brief   Common IPC definitions
+ * \ingroup api_calls
+ */
 #ifndef __L4_IPC_CONSTS_H__
 #define __L4_IPC_CONSTS_H__
 

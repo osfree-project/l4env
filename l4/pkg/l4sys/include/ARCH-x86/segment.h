@@ -1,6 +1,6 @@
 /* $Id$ */
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-x86/segment.h
  * \brief   Segment handling.
  * \ingroup api_calls
@@ -9,7 +9,7 @@
 #ifndef __L4_SYS__ARCH_X86__SEGMENT_H__
 #define __L4_SYS__ARCH_X86__SEGMENT_H__
 
-#if !defined(L4API_l4v2) && !defined(L4API_l4x0)
+#ifndef L4API_l4v2
 #error This header file can only be used with a L4API version!
 #endif
 

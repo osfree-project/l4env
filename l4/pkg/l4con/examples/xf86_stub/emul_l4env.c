@@ -36,9 +36,15 @@
  *
  */
 
+#ifndef XORG73
 #include "xf86_ansic.h"
 #include "xf86_libc.h"
-
+#else
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#endif
 
 #include <l4/sys/syscalls.h>
 #include <l4/sys/consts.h>
@@ -70,7 +76,7 @@ static struct vm_area_struct *reserve_virtual_area(l4_size_t size)
   if (!fd && (fd = open("/dev/zero", O_RDONLY)) < 0)
     return NULL;
 
-  if ((addr = xf86mmap(0, size, XF86_PROT_NONE, XF86_MAP_SHARED, fd, 0)) == MAP_FAILED)
+  if ((addr = mmap(0, size, PROT_NONE, MAP_SHARED, fd, 0)) == MAP_FAILED)
     return NULL;
 
   if (!(vm = malloc(sizeof(struct vm_area_struct))))
@@ -90,7 +96,7 @@ static struct vm_area_struct *reserve_virtual_area(l4_size_t size)
 
 static void free_virtual_area(struct vm_area_struct *vm)
 {
-  xf86munmap(vm->addr, vm->size);
+  munmap(vm->addr, vm->size);
   free(vm);
 }
 

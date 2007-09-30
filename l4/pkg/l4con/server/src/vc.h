@@ -20,12 +20,13 @@
 
 extern void vc_init(void);
 extern void vc_loop(struct l4con_vc *this_vc);
-extern void vc_show_id(struct l4con_vc *vc);
+extern void vc_show_id(struct l4con_vc *this_vc);
 extern void vc_show_dmphys_poolsize(struct l4con_vc *this_vc);
 extern void vc_show_cpu_load(struct l4con_vc *this_vc);
+extern void vc_show_timer_ticks(struct l4con_vc *this_vc);
 extern void vc_show_drops_cscs_logo(void);
-extern void vc_clear(struct l4con_vc *vc);
-extern int  vc_close(struct l4con_vc *vc);
+extern void vc_clear(struct l4con_vc *this_vc);
+extern int  vc_close(struct l4con_vc *this_vc);
 
 extern void vc_brightness_contrast(int diff_brightness, int diff_contrast);
 

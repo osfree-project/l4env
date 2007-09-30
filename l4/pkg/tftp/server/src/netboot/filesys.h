@@ -98,7 +98,7 @@ int xfs_dir (char *dirname);
 #ifdef FSYS_TFTP
 #define FSYS_TFTP_NUM 1
 int tftp_mount (void);
-int tftp_read (char *buf, int len);
+int tftp_read (unsigned char *buf, int len);
 int tftp_dir (char *dirname);
 void tftp_close (void);
 #else
@@ -115,7 +115,7 @@ struct fsys_entry
 {
   char *name;
   int (*mount_func) (void);
-  int (*read_func) (char *buf, int len);
+  int (*read_func) (unsigned char *buf, int len);
   int (*dir_func) (char *dirname);
   void (*close_func) (void);
   int (*embed_func) (int *start_sector, int needed_sectors);

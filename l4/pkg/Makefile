@@ -44,6 +44,7 @@ nitpicker.bin:		dope.bin
 examples.bin:		dope.bin l4con.bin
 lyon.headers:		stpm.headers
 stpm.headers:		libcrypto.headers
+tftp.bin:		ore.lib
 ifeq ($(USE_UCLIBC),y)
 qt3.bin:		uclibc_r.lib
 log.headers:		uclibc.headers

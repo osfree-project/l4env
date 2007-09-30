@@ -18,7 +18,6 @@
 
 #include "netboot/etherboot.h"
 #include "netboot/netboot.h"
-#include "../tftp_config.h"
 
 #include <l4/sys/types.h>
 #include <l4/env/errno.h>
@@ -34,7 +33,6 @@
 #include <l4/util/getopt.h>
 #include <l4/util/macros.h>
 #include <l4/util/util.h>
-#include <l4/generic_io/libio.h>
 
 // #define DEBUG_LOAD
 // #define DEBUG_REQUEST
@@ -44,14 +42,10 @@ static in_addr tftp_server_addr;
 static int have_tftp_server_addr = 0;
 static char real_main_stack[2*L4_PAGESIZE];
 
-int use_l4io = 0;	/* whether to use L4IO server or not, default no */
-
 extern int disp_filesizebarrier;
 extern int disp_filesize;
 
-#if CONFIG_ORE
 extern char tftp_orename[16];
-#endif
 
 /**
  * Parse command line
@@ -66,7 +60,6 @@ __parse_command_line(int argc, char * argv[])
   static struct option long_options[] =
   {
     {"server", 1, 0, 's'},
-    {"l4io", 0, 0, 'i'},
     {"orename", 1, 0, 'o'},
     {0, 0, 0, 0}
   };
@@ -100,28 +93,10 @@ __parse_command_line(int argc, char * argv[])
 	  /* done */
 	  break;
 
-	case 'i':
-#if CONFIG_PCI
-	  {
-	    l4io_info_t *io_info_addr = (l4io_info_t*)-1;
-
-	    if (l4io_init(&io_info_addr, L4IO_DRV_INVALID))
-	      {
-		enter_kdebug("Couldn't connect to L4 IO server!");
-
-		/* Just go on without the IO server */
-	      }
-	    else
-	      use_l4io = 1;
-	  }
-#endif
-	  break;
         case 'o':
-#if CONFIG_ORE
           LOG("orename: %s", optarg);
           strncpy(tftp_orename, optarg, sizeof(tftp_orename));
           tftp_orename[sizeof(tftp_orename)-1] = 0;
-#endif
           break;
 
 	default:
@@ -152,7 +127,7 @@ l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
 {
   int read_size;
   int error;
-  char *addr;
+  unsigned char *addr;
   char buf[L4DM_DS_NAME_MAX_LEN];
   const char *ptr;
 
@@ -187,12 +162,12 @@ l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
   /* Reset display file position */
   disp_filesizebarrier = disp_filesize = 0;
 
-  read_size = netboot_read((char*) addr, *size);
+  read_size = netboot_read(addr, *size);
 
   netboot_close();
 
   /* file image is not mapped to our address space anymore */
-  if ((error = l4rm_detach((void *)addr)))
+  if ((error = l4rm_detach(addr)))
     {
       printf("Error %d detaching dataspace\n", error);
       l4dm_close((l4dm_dataspace_t*)ds);
@@ -252,7 +227,7 @@ real_main (void *dummy)
       exit(-1);
     }
 
-  if (netboot_init(netbuf, gunzipbuf, use_l4io))
+  if (netboot_init(netbuf, gunzipbuf))
     {
       printf("Can't determine network card\n");
       exit(-1);

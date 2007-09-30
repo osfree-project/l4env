@@ -1,3 +1,8 @@
+/*!
+ * \file    l4sys/include/__timeout.h
+ * \brief   Timeout definitions
+ * \ingroup api_calls
+ */
 #ifndef L4_SYS_TIMEOUT_H__
 #define L4_SYS_TIMEOUT_H__
 

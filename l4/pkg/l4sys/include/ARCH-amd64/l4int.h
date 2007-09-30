@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-amd64/l4int.h
  * \brief   Fixed sized integer types, amd64 version
  * \ingroup api_types

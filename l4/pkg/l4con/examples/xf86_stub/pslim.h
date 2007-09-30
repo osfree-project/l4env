@@ -40,8 +40,15 @@
 #include "xf86_OSproc.h"
 #include "xf86Resources.h"
 
+#ifndef XORG73
 /* All drivers need this */
 #include "xf86_ansic.h"
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#endif
 
 #include "compiler.h"
 

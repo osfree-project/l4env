@@ -1,6 +1,10 @@
-#ifndef L4_FPAGE_H__
-#define L4_FPAGE_H__
-
+/*!
+ * \file    l4sys/include/__l4_fpage-64bit.h
+ * \brief   Fpage definitions for 64bit systems
+ * \ingroup api_calls
+ */
+#ifndef __L4_FPAGE_64BIT_H__
+#define __L4_FPAGE_64BIT_H__
 
 /*****************************************************************************
  *** L4 flexpages
@@ -73,4 +77,4 @@ l4_iofpage(unsigned port, unsigned int size,
   return ((l4_fpage_t){iofp:{grant, 0, size, 0, port, 0xfffffffff}});
 }
 
-#endif
+#endif /* ! __L4_FPAGE_64BIT_H__ */

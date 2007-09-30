@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/**
+/*1
  * \file    l4sys/includes/ARCH-amd64/L4API-l4v2/ktrace.h
  * \brief   L4 kernel event tracing
  * \ingroup api_calls

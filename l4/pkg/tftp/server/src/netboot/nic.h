@@ -25,7 +25,7 @@ struct nic
 {
 	struct dev	dev;  /* This must come first */
 	int		(*poll)P((struct nic *));
-	void		(*transmit)P((struct nic *, const char *d,
+	void		(*transmit)P((struct nic *, const unsigned char *d,
 				unsigned int t, unsigned int s, const char *p));
 	int		flags;	/* driver specific flags */
 	struct rom_info	*rom_info;	/* -> rom_info from main */
@@ -55,7 +55,7 @@ extern int  eth_probe(void);
 
 extern int  eth_poll(void);
 
-extern void eth_transmit(const char * __d, unsigned int __t, 
+extern void eth_transmit(const unsigned char * __d, unsigned int __t,
 			 unsigned int __s, const void * __p);
 
 extern void eth_disable(void);

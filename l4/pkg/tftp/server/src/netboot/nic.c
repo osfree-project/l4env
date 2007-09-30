@@ -40,7 +40,7 @@ static uint32_t xid;
 static unsigned char *end_of_rfc1533 = NULL;
 static const unsigned char broadcast[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 static const in_addr zeroIP = { 0L };
-static char rfc1533_venddata[MAX_RFC1533_VENDLEN];
+static unsigned char rfc1533_venddata[MAX_RFC1533_VENDLEN];
 static unsigned char rfc1533_cookie[4] = { RFC1533_COOKIE };
 static unsigned char rfc1533_cookie_bootp[5] = { RFC1533_COOKIE, RFC1533_END };
 static unsigned char rfc1533_cookie_dhcp[] = { RFC1533_COOKIE };
@@ -92,7 +92,7 @@ static int dummy(void *unused __unused)
  * leaving the ethernet data 16 byte aligned.  Beyond this
  * we use memmove but this makes the common cast simple and fast.
  */
-static char	packet[ETH_FRAME_LEN + ETH_DATA_ALIGN] __aligned;
+static unsigned char	packet[ETH_FRAME_LEN + ETH_DATA_ALIGN] __aligned;
 
 struct nic	nic =
 {
@@ -112,7 +112,7 @@ struct nic	nic =
 		{},				/* state */
 	},
 	(int (*)(struct nic *))dummy,		/* poll */
-	(void (*)(struct nic *, const char *,
+	(void (*)(struct nic *, const unsigned char *,
 		unsigned int, unsigned int,
 		const char *))dummy,		/* transmit */
 	0,					/* flags */
@@ -152,7 +152,7 @@ int eth_poll(void)
 	return ((*nic.poll)(&nic));
 }
 
-void eth_transmit(const char *d, unsigned int t, unsigned int s, const void *p)
+void eth_transmit(const unsigned char *d, unsigned int t, unsigned int s, const void *p)
 {
 	(*nic.transmit)(&nic, d, t, s, p);
 	if (t == IP) twiddle();
@@ -1034,7 +1034,7 @@ int decode_rfc1533(unsigned char *p, unsigned int block, unsigned int len, int e
 		else if (c == RFC2132_SRV_ID)
 			memcpy(&dhcp_server, p+2, sizeof(in_addr));
 		else if (c == RFC1533_HOSTNAME) {
-			hostname = p + 2;
+			hostname = (char *)(p + 2);
 			hostnamelen = *(p + 1);
 		}
 		else if (c == RFC1533_VENDOR_CONFIGFILE){

@@ -89,12 +89,20 @@ static int
 __handle_unknown_fault(l4_msgtag_t tag, l4_addr_t addr, l4_addr_t ip,
                        CORBA_Object src_id)
 {
+#if DEBUG_UNKNOWN_FAULT
+  LOG_printf("L4RM: [FAULT] %ld at ip "l4_addr_fmt", src "
+             l4util_idfmt"\n", l4_msgtag_label(tag),
+             l4_utcb_exc_pc(l4_utcb_get()),
+             l4util_idstr(*src_id));
+#endif
+
   if (unknown_fault_callback)
     return unknown_fault_callback(tag, l4_utcb_get(), *src_id);
 
   LOG_printf("L4RM: unknown exception src="l4util_idfmt
-             " exc=%ld data=%lx,%lx\n",
-             l4util_idstr(*src_id), l4_msgtag_label(tag), addr, ip);
+             " exc=%ld ip="l4_addr_fmt" data=%lx,%lx\n",
+             l4util_idstr(*src_id), l4_msgtag_label(tag),
+             l4_utcb_exc_pc(l4_utcb_get()), addr, ip);
   return L4RM_REPLY_NO_REPLY;
 }
 
@@ -281,11 +289,11 @@ __forward_pf(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
 
 /*****************************************************************************/
 /**
- * \brief Handle pagefault.
- * 
- * \param  src_id        source thread id
- * \param  buffer        Dice message buffer
- * \param  _ev           Dice environment
+ * \brief Handle page fault.
+ *
+ * \param  addr     Page fault address
+ * \param  _ev      Corresponding PC
+ * \param  src_id   source thread id
  *
  * Handle pagefault. Find the VM region the pagefault address belongs to
  * and ask its dataspace manager to pagein the appropriate page. On success,
@@ -293,18 +301,83 @@ __forward_pf(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
  * message to the faulting thread only.
  */
 /*****************************************************************************/
-l4_int32_t
-l4rm_handle_pagefault(CORBA_Object src_id, l4_msgtag_t *tag,
-                      l4_rm_msg_buffer_t *buffer,
-                      CORBA_Server_Environment *_ev)
+static inline int
+__handle_pf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
 {
   l4rm_region_desc_t * region;
+  int reply;
+
+#if DEBUG_PAGEFAULT
+  LOG_printf("L4RM: [PF] %s at "l4_addr_fmt", ip "l4_addr_fmt", src "
+             l4util_idfmt"\n", (addr & 2) ? "write" : "read", addr & ~3, ip,
+             l4util_idstr(*src_id));
+#endif
+
+  /* lookup region */
+  region = l4rm_find_used_region(addr);
+  if (EXPECT_TRUE(region != NULL))
+    {
+      switch(REGION_TYPE(region))
+        {
+        case REGION_DATASPACE:
+          /* call dataspace manager */
+          reply = __call_dm(addr, ip, region, src_id);
+          break;
+
+        case REGION_PAGER:
+          /* call external pager */
+          reply = __forward_pf(addr, ip, region, src_id);
+          break;
+
+        case REGION_EXCEPTION:
+          /* forward pagefault exception */
+          reply = L4RM_REPLY_EXCEPTION;
+          break;
+
+        case REGION_BLOCKED:
+          /* pagefault to blocked region, whats that? */
+          LOG_printf("L4RM: page fault in blocked region 0x"l4_addr_fmt
+                     "-0x"l4_addr_fmt"\n", region->start, region->end);
+          reply = __unknown_pf(addr, ip, src_id);
+          break;
+
+        default:
+          /* Ooops, unknwown region type */
+          LOG_printf("L4RM: page fault in unknown region 0x"l4_addr_fmt
+                     "-0x"l4_addr_fmt", flags 0x%08x\n",
+                     region->start, region->end, region->flags);
+          reply = __unknown_pf(addr, ip, src_id);
+        }
+    }
+  else
+    /* no entry in region list */
+    reply = __unknown_pf(addr, ip, src_id);
+
+  return reply;
+}
+
+/*****************************************************************************/
+/**
+ * \brief Handle fault.
+ *
+ * \param  src_id        source thread id
+ * \param  buffer        Dice message buffer
+ * \param  _ev           Dice environment
+ *
+ * Handle fault (pagefault, exception, etc.). Decode message and feed to
+ * appropriate handler.
+ */
+/*****************************************************************************/
+l4_int32_t
+l4rm_handle_fault(CORBA_Object src_id, l4_msgtag_t *tag,
+                  l4_rm_msg_buffer_t *buffer,
+                  CORBA_Server_Environment *_ev)
+{
   l4_addr_t addr, ip;
-  int rw, reply;
+  int reply;
 
   addr = DICE_GET_DWORD(buffer, DW_ADDR);
   ip   = DICE_GET_DWORD(buffer, DW_IP);
-  rw   = addr & 2;
 
   if (EXPECT_FALSE(!l4_task_equal(*src_id, l4rm_service_id)))
     {
@@ -313,55 +386,9 @@ l4rm_handle_pagefault(CORBA_Object src_id, l4_msgtag_t *tag,
       return DICE_NO_REPLY;
     }
 
-#if DEBUG_PAGEFAULT
-  LOG_printf("L4RM: [PF] %s at "l4_addr_fmt", ip "l4_addr_fmt", src "
-         l4util_idfmt"\n", rw ? "write" : "read", addr & ~3, ip,
-	 l4util_idstr(*src_id));
-#endif
-
   if (EXPECT_TRUE(l4_msgtag_is_page_fault(*tag)))
-    {
-      /* lookup region */
-      region = l4rm_find_used_region(addr);
-      if (EXPECT_TRUE(region != NULL))
-        {
-          switch(REGION_TYPE(region))
-            {
-            case REGION_DATASPACE:
-              /* call dataspace manager */
-              reply = __call_dm(addr, ip, region, src_id);
-              break;
-
-            case REGION_PAGER:
-              /* call external pager */
-              reply = __forward_pf(addr, ip, region, src_id);
-              break;
-
-            case REGION_EXCEPTION:
-              /* forward pagefault exception */
-              reply = L4RM_REPLY_EXCEPTION;
-              break;
-
-            case REGION_BLOCKED:
-              /* pagefault to blocked region, whats that? */
-              LOG_printf("L4RM: page fault in blocked region 0x"l4_addr_fmt
-		     "-0x"l4_addr_fmt"\n", region->start, region->end);
-              reply = __unknown_pf(addr, ip, src_id);
-              break;
-
-            default:
-              /* Ooops, unknwown region type */
-              LOG_printf("L4RM: page fault in unknown region 0x"l4_addr_fmt
-		     "-0x"l4_addr_fmt", flags 0x%08x\n",
-                     region->start, region->end, region->flags);
-              reply = __unknown_pf(addr, ip, src_id);
-            }
-        }
-      else
-        /* no entry in region list */
-        reply = __unknown_pf(addr, ip, src_id);
-    }
-  else if (EXPECT_FALSE(l4_msgtag_is_io_page_fault(*tag)))
+    reply = __handle_pf(addr, ip, src_id);
+  else if (l4_msgtag_is_io_page_fault(*tag))
     reply = __handle_iopf(addr, ip, src_id);
   else
     reply = __handle_unknown_fault(*tag, addr, ip, src_id);

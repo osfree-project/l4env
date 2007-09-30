@@ -4,8 +4,6 @@ TARGET		= libnetboot.a
 NOTARGETSTOINSTALL = y
 
 all::
-include $(OBJ_DIR)/../Makeconf
-Makefile.inc: $(OBJ_DIR)/../Makeconf
 
 SRC_C		= fsys_tftp.c nic.c netboot.c config.c misc.c gunzip.c \
 		  timer.c 
@@ -14,45 +12,4 @@ DEFINES		= -DWITHOUT_LIBC_STUBS -DFSYS_TFTP=1
 CFLAGS		= -fno-strict-aliasing
 PRIVATE_INCDIR	= $(OBJ_DIR)
 
-ifeq ($(CONFIG_OSHKOSH),y)
-SRC_C		+= oshkosh.c 
-endif
-ifeq ($(CONFIG_ORE),y)
 SRC_C		+= ore.c 
-endif
-
-ifeq ($(CONFIG_REAL_HW),y)
-ifeq ($(CONFIG_PCI),y)
-SRC_C		+= pci.c io_support.c
-endif
-ifeq ($(CONFIG_EEPRO100),y)
-SRC_C		+= eepro100.c
-endif
-ifeq ($(CONFIG_E1000),y)
-SRC_C		+= e1000.c
-endif
-ifeq ($(CONFIG_PCNET32),y)
-SRC_C		+= pcnet32.c
-endif
-ifeq ($(CONFIG_TULIP),y)
-SRC_C		+= tulip.c
-endif
-ifeq ($(CONFIG_3C595),y)
-SRC_C		+= 3c595.c
-endif
-ifeq ($(CONFIG_3C90X),y)
-SRC_C		+= 3c90x.c
-endif
-ifeq ($(CONFIG_3C509),y)
-SRC_C		+= 3c509.c
-endif
-ifeq ($(CONFIG_RTL8139),y)
-SRC_C		+= rtl8139.c
-endif
-ifeq ($(CONFIG_VIA_RHINE),y)
-SRC_C		+= via-rhine.c
-endif
-ifeq ($(CONFIG_NS8390),y)
-SRC_C		+= ns8390.c
-endif
-endif

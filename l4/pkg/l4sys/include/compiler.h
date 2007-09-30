@@ -1,13 +1,12 @@
-/* $Id$ */
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/compiler.h
  * \brief   L4 compiler defines
  * \ingroup api_types
  */
 /*****************************************************************************/
-#ifndef __L4_COMPILER_H__ 
-#define __L4_COMPILER_H__ 
+#ifndef __L4_COMPILER_H__
+#define __L4_COMPILER_H__
 
 #if !defined(__ASSEMBLY__) && !defined(__ASSEMBLER__)
 

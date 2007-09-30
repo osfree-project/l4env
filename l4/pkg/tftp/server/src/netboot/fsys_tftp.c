@@ -138,7 +138,7 @@ int tftp_file_read(const char *name, int (*fnc)(unsigned char *, unsigned int, u
 		}
 
 		if (tr->opcode == ntohs(TFTP_OACK)) {
-			const char *p = tr->u.oack.data, *e;
+			const unsigned char *p = tr->u.oack.data, *e;
 
 			if (prevblock)		/* shouldn't happen */
 				continue;	/* ignore it */
@@ -148,10 +148,10 @@ int tftp_file_read(const char *name, int (*fnc)(unsigned char *, unsigned int, u
 			e = p + len;
 			while (*p != '\0' && p < e) {
 /* 				if (!strcasecmp("blksize", p)) { */
-				if (!grub_strcmp("blksize", p)) {
+				if (!grub_strcmp("blksize", (char *)p)) {
 					p += 8;
 /* 					if ((packetsize = strtoul(p, &p, 10)) < */
-					if ((packetsize = getdec(&p)) < TFTP_DEFAULTSIZE_PACKET)
+					if ((packetsize = getdec((char const **)&p)) < TFTP_DEFAULTSIZE_PACKET)
 						goto noak;
 					while (p < e && *p) p++;
 					if (p < e)
@@ -290,7 +290,7 @@ buf_fill (int abort)
       
       if (tr->opcode == ntohs (TFTP_OACK))
 	{
-	  const char *p = tr->u.oack.data, *e;
+	  const unsigned char *p = tr->u.oack.data, *e;
 
 #ifdef TFTP_DEBUG
 	  grub_printf ("OACK ");
@@ -311,19 +311,19 @@ buf_fill (int abort)
 	  e = p + len;
 	  while (*p != '\000' && p < e)
 	    {
-	      if (! grub_strcmp ("blksize", p))
+	      if (! grub_strcmp ("blksize", (char *)p))
 		{
 		  p += 8;
-		  if ((packetsize = getdec (&p)) < TFTP_DEFAULTSIZE_PACKET)
+		  if ((packetsize = getdec ((char const **)&p)) < TFTP_DEFAULTSIZE_PACKET)
 		    goto noak;
 #ifdef TFTP_DEBUG
 		  grub_printf ("blksize = %d\n", packetsize);
 #endif
 		}
-	      else if (! grub_strcmp ("tsize", p))
+	      else if (! grub_strcmp ("tsize", (char *)p))
 		{
 		  p += 6;
-		  if ((filemax = getdec (&p)) < 0)
+		  if ((filemax = getdec ((char const **)&p)) < 0)
 		    {
 		      filemax = -1;
 		      goto noak;
@@ -491,7 +491,7 @@ tftp_mount (void)
 
 /* Read up to SIZE bytes, returned in ADDR.  */
 int
-tftp_read (char *addr, int size)
+tftp_read (unsigned char *addr, int size)
 {
   /* How many bytes is read?  */
   int ret = 0;

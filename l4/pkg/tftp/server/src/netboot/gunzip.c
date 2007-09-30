@@ -206,7 +206,7 @@ gunzip_swap_values (void)
 static int
 bad_field (int len)
 {
-  char ch = 1;
+  unsigned char ch = 1;
   int not_retval = 1;
 
   do
@@ -274,7 +274,7 @@ int
 gunzip_test_header (void)
 {
   unsigned char buf[10];
-  
+
   /* "compressed_file" is already reset to zero by this point */
 
   /*
@@ -1185,7 +1185,7 @@ initialize_tables (void)
 
 
 int
-gunzip_read (char *buf, int len)
+gunzip_read (unsigned char *buf, int len)
 {
   int ret = 0;
 

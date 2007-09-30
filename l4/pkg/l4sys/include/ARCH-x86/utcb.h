@@ -1,6 +1,6 @@
 /* $Id$ */
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-x86/utcb.h
  * \brief   UTCB definitions.
  * \ingroup api_types

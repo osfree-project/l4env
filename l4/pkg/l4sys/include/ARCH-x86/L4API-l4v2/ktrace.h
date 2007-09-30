@@ -1,6 +1,6 @@
 /* $Id$ */
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-x86/L4API-l4v2/ktrace.h
  * \brief   L4 kernel event tracing
  * \ingroup api_calls

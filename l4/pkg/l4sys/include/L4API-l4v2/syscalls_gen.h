@@ -1,3 +1,8 @@
+/*!
+ * \file    l4sys/include/L4API-l4v2/syscalls_gen.h
+ * \brief   Common syscall definitions
+ * \ingroup api_calls
+ */
 #ifndef __L4_SYS__L4API_l4v2__SYSCALLS_GEN_H__
 #define __L4_SYS__L4API_l4v2__SYSCALLS_GEN_H__
 

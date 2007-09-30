@@ -1,6 +1,6 @@
 /* $Id$ */
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-arm/l4int.h
  * \brief   Fixed sized integer types, arm version
  * \ingroup api_types

@@ -26,6 +26,7 @@
 /* 1 enables debug output, 0 disables */
 #define DEBUG_PAGEFAULT         0 /* be careful: both DEBUG_PAGEFAULT and */
 #define DEBUG_IO_PAGEFAULT	0
+#define DEBUG_UNKNOWN_FAULT	0
 #define DEBUG_REQUEST           0 /* DEBUG_REQUEST might cause deadlocks if
 				   * used with the log server */
 #define DEBUG_ATTACH            0

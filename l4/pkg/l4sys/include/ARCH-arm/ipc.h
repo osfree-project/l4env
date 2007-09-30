@@ -1,9 +1,5 @@
-/*
- * $Id$
- */
-
-#ifndef L4_IPC_H
-#define L4_IPC_H
+#ifndef __L4__ARCH_ARM__IPC_H__
+#define __L4__ARCH_ARM__IPC_H__
 
 /*
  * L4 ipc
@@ -211,6 +207,4 @@ l4_get_rcv_msg_from_descr(void *msg)
 
 #include <l4/sys/ipc_api.h>
 
-
-#endif
-
+#endif /* ! __L4__ARCH_ARM__IPC_H__ */

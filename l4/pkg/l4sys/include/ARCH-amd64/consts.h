@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-amd64/consts.h
  * \brief   Common L4 constants, amd64 version
  * \ingroup api_types
@@ -12,24 +12,24 @@
 #include <l4/sys/l4int.h>
 
 /**
- * \ingroup api_types_common 
+ * \ingroup api_types_common
  */
 #define L4_PAGESHIFT		12
 
 /**
- * \ingroup api_types_common 
+ * \ingroup api_types_common
  * \hideinitializer
  */
-#define L4_PAGESIZE 		(1UL << L4_PAGESHIFT)
+#define L4_PAGESIZE		(1UL << L4_PAGESHIFT)
 
 /**
- * \ingroup api_types_common 
+ * \ingroup api_types_common
  * \hideinitializer
  */
 #define L4_PAGEMASK		(~(L4_PAGESIZE - 1))
 
 /**
- * \ingroup api_types_common 
+ * \ingroup api_types_common
  * \hideinitializer
  */
 #define L4_LOG2_PAGESIZE	L4_PAGESHIFT

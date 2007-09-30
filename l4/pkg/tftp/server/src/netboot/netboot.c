@@ -3,7 +3,6 @@
 #include "etherboot.h"
 #include "netboot.h"
 #include "filesys.h"
-#include "io_support.h"
 
 static int block_file = 0;
 
@@ -272,7 +271,7 @@ netboot_open (char *filename)
 }
 
 int
-netboot_read (char *buf, int len)
+netboot_read (unsigned char *buf, int len)
 {
   /* Make sure "filepos" is a sane value */
   if ((filepos < 0) || (filepos > filemax))
@@ -313,14 +312,11 @@ netboot_close (void)
 }
 
 int
-netboot_init (unsigned bufaddr, unsigned gunzipaddr, int usel4io)
+netboot_init (unsigned bufaddr, unsigned gunzipaddr)
 {
   extern unsigned gunzip_buf;
 
   l4_calibrate_tsc ();
-#ifdef CONFIG_PCI
-  io_support_init(usel4io);
-#endif
   gunzip_buf = gunzipaddr;
   netboot_buf = bufaddr;
   dhcp();
@@ -339,8 +335,6 @@ netboot_set_server (in_addr server_addr)
   print_network_configuration ();
 }
 
-extern void show_pci_drivers (int *col, int *comma);
-
 void
 netboot_show_drivers (void)
 {
@@ -349,19 +343,10 @@ netboot_show_drivers (void)
   printf("NICs supported: ");
   col   = 16;
   comma = 0;
-#ifdef CONFIG_OSHKOSH
-  // unfortunately, OshKosh is no PCI device
-  printf("OshKosh");
-  comma = 1;
-  col += 7;
-#endif
 #ifdef CONFIG_ORE
   printf("ORe");
   comma = 1;
   col += 3;
-#endif
-#ifdef CONFIG_PCI
-  show_pci_drivers (&col, &comma);
 #endif
   putchar('\n');
 }

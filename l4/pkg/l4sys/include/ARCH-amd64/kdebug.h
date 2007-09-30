@@ -1,5 +1,5 @@
 /*****************************************************************************/
-/**
+/*!
  * \file    l4sys/include/ARCH-amd64/kdebug.h
  * \brief   Kernel debugger macros
  * \ingroup api_calls

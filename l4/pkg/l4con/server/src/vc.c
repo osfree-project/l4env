@@ -963,34 +963,49 @@ con_vc_graph_mapfb_component(CORBA_Object _dice_corba_obj,
 			     unsigned long *page_offset,
 			     CORBA_Server_Environment *_dice_corba_env)
 {
-  struct l4con_vc *vc = (struct l4con_vc *)(_dice_corba_env->user_data);
+  struct l4con_vc *this_vc = (struct l4con_vc *)(_dice_corba_env->user_data);
   l4_addr_t base = l4_trunc_superpage(vis_vmem);
   l4_offs_t offs = (l4_addr_t)vis_vmem - base;
 
   /* deliver offset in any case! */
   *page_offset = fb_offset == 0 ? offs : 0;
 
+  l4lock_lock(&want_vc_lock);
+
   /* don't allow a client in the background to map the framebuffer! */
   if (!l4_tasknum_equal(*_dice_corba_obj, vc_partner_l4id))
     {
       /* scan clients */
       int i;
-      
+
       for (i=0; i<CONFIG_MAX_CLIENTS; i++)
-        if (l4_tasknum_equal(*_dice_corba_obj, vc->clients[i]))
+        if (l4_tasknum_equal(*_dice_corba_obj, vc[fg_vc]->clients[i]))
           break;
 
       if (i >= CONFIG_MAX_CLIENTS)
         {
-          /* not found */
+          /* Not found! */
           /* XXX No support from DICE to prevent setting bit 1 of the send message
            *     descriptor. Therefore we invalidate the flexpage */
-          LOG_printf("mapfb: not allowed to map FB. Currently allowed:\n");
+          int msg_first = 1;
+          LOG_printf("mapfb: not allowed to map FB. Currently allowed: ");
           for (i=0; i<CONFIG_MAX_CLIENTS; i++)
-              if (!l4_is_invalid_id(vc->clients[i]))
-                  LOG_printf("  "l4util_idfmt"\n", l4util_idstr(vc->clients[i]));
+            {
+              if (!l4_is_invalid_id(vc[fg_vc]->clients[i]))
+                {
+                  if (msg_first)
+                    {
+                      LOG_printf("\n");
+                      msg_first = 0;
+                    }
+                  LOG_printf("  "l4util_idfmt"\n", l4util_idstr(vc[fg_vc]->clients[i]));
+                }
+            }
+          if (msg_first)
+            LOG_printf("None.\n");
           page->snd_base  = 0;
           page->fpage.raw = 0;
+          l4lock_unlock(&want_vc_lock);
           return -L4_EPERM;
         }
     }
@@ -1002,14 +1017,17 @@ con_vc_graph_mapfb_component(CORBA_Object _dice_corba_obj,
        *     descriptor. Therefore we invalidate the flexpage */
       page->snd_base  = 0;
       page->fpage.raw = 0;
+      l4lock_unlock(&want_vc_lock);
       return -L4_EINVAL_OFFS;
     }
 
   page->snd_base = 0;
   page->fpage    = l4_fpage(base+fb_offset, L4_LOG2_SUPERPAGESIZE,
 		            L4_FPAGE_RW, L4_FPAGE_MAP);
-  vc->fb_mapped = 1;
+  this_vc->fb_mapped = 1;
   update_id = 1;
+
+  l4lock_unlock(&want_vc_lock);
 
   return 0;
 }
@@ -1094,20 +1112,20 @@ con_vc_pslim_bmap_component(CORBA_Object _dice_corba_obj,
 			    CORBA_Server_Environment *_dice_corba_env)
 {
   void *map = (void*)bmap;
-  struct l4con_vc *vc = (struct l4con_vc*)(_dice_corba_env->user_data);
+  struct l4con_vc *this_vc = (struct l4con_vc*)(_dice_corba_env->user_data);
   
-  if ((vc->mode & CON_OUT)==0)
+  if ((this_vc->mode & CON_OUT)==0)
     return -CON_EPERM;
 
-  convert_color(vc, &fg_color);
-  convert_color(vc, &bg_color);
+  convert_color(this_vc, &fg_color);
+  convert_color(this_vc, &bg_color);
 
   /* need fb_lock for drawing */
-  l4lock_lock(&vc->fb_lock);
-  if(vc->fb != 0)
-    pslim_bmap(vc, 1, (l4con_pslim_rect_t*)rect, 
+  l4lock_lock(&this_vc->fb_lock);
+  if(this_vc->fb != 0)
+    pslim_bmap(this_vc, 1, (l4con_pslim_rect_t*)rect, 
 	       fg_color, bg_color, map, bmap_type);
-  l4lock_unlock(&vc->fb_lock);
+  l4lock_unlock(&this_vc->fb_lock);
 
   return 0;
 }

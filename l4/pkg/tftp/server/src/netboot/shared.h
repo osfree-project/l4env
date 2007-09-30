@@ -909,7 +909,7 @@ void grub_putstr (const char *str);
 #ifndef NO_DECOMPRESSION
 /* Compression support. */
 int gunzip_test_header (void);
-int gunzip_read (char *buf, int len);
+int gunzip_read (unsigned char *buf, int len);
 #endif /* NO_DECOMPRESSION */
 
 int rawread (int drive, int sector, int byte_offset, int byte_len, char *buf);

@@ -16,6 +16,11 @@
    Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
    02111-1307 USA.  */
 
+#ifdef XORG73
+#include_next <endian.h>
+
+#else
+
 #ifndef	_ENDIAN_H
 #define	_ENDIAN_H	1
 
@@ -59,3 +64,5 @@
 #endif
 
 #endif	/* endian.h */
+
+#endif
