@@ -23,10 +23,9 @@
  * \return           #0  on success
  *                  -#2  IPC error
  *                  -#3  no fpage received
- *                  -#5  invalid size (old protocol)
  */
 int
-l4sigma0_map_anypage(l4_threadid_t pager, l4_addr_t map_area, 
+l4sigma0_map_anypage(l4_threadid_t pager, l4_addr_t map_area,
 		     unsigned log2_map_size, l4_addr_t *base)
 {
   int error;

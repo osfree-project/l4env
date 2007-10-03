@@ -1,7 +1,6 @@
 PKGDIR        ?= ../..
 L4DIR         ?= $(PKGDIR)/../..
 
-MODE           = l4env_base
 TARGET         = mini_http_uip
 DEFAULT_RELOC  = 0x01ad0000
 SRC_C          = main.c log.c oredev.c uip.c uip_arch.c uip_arp.c 

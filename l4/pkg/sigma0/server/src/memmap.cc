@@ -122,7 +122,11 @@ Requests get_request(unsigned long d0, unsigned long d1, l4_msgtag_t const &tag)
 
 static
 Answer map_kip(void)
-{ return Answer((l4_umword_t) l4_info, L4_LOG2_PAGESIZE, true); }
+{
+  Answer a((l4_umword_t) l4_info, L4_LOG2_PAGESIZE, true);
+  a.snd_base((l4_umword_t) l4_info);
+  return a;
+}
 
 static
 Answer map_tbuf(void)
@@ -138,11 +142,12 @@ Answer map_free_page(unsigned superpage, l4_threadid_t t)
 {
   Answer a;
   unsigned long addr;
-  addr = Mem_man::ram()->alloc_first(superpage?L4_SUPERPAGESIZE:L4_PAGESIZE, t.id.task);
+  addr = Mem_man::ram()->alloc_first(superpage ? L4_SUPERPAGESIZE : L4_PAGESIZE,
+                                     t.id.task);
   if (addr != ~0UL)
     {
       a.snd_base(addr);
-      a.snd_fpage(addr, superpage?L4_LOG2_SUPERPAGESIZE:L4_LOG2_PAGESIZE);
+      a.snd_fpage(addr, superpage ? L4_LOG2_SUPERPAGESIZE : L4_LOG2_PAGESIZE);
 
       if (t.id.task < root_taskno) /* sender == kernel? */
 	a.d2 |= 1; /* kernel wants page granted */

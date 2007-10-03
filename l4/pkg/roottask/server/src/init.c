@@ -23,6 +23,7 @@
 #include <l4/util/port_io.h>
 #endif
 #include <l4/sigma0/sigma0.h>
+#include <l4/sigma0/kip.h>
 
 #include "bootquota.h"
 #include "memmap.h"
@@ -59,7 +60,6 @@ static int fiasco_lines;		/* found fiasco lines */
 static int configfile;			/* found config file */
 static int memdump;
 
-       l4util_mb_info_t *mb_ptr;	/* is written by crt */
 static l4util_mb_info_t *mb_info;
 static l4util_mb_vbe_ctrl_t *mb_vbe_ctrl; /* VESA contr. info  */
 static l4util_mb_vbe_mode_t *mb_vbe_mode; /* VESA mode info  */
@@ -83,34 +83,12 @@ extern void reset_malloc(void);
 #error Update your sigma0/libsigma0
 #endif
 
-/*
- * Map the KIP to the given address 'to_addr'
- */
-static l4_kernel_info_t *
-map_kip(l4_addr_t to_addr)
+/* Map the KIP */
+static void
+map_kip(void)
 {
-  l4_msgdope_t result;
-  l4_snd_fpage_t sfpage;
-  l4_kernel_info_t *k = (l4_kernel_info_t *)to_addr;
-  l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
-  int error;
-
-  l4_fpage_unmap(l4_fpage((l4_umword_t)k, L4_LOG2_PAGESIZE, 0, 0),
-		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-
-  error = l4_ipc_call_tag(my_pager,
-		          L4_IPC_SHORT_MSG, SIGMA0_REQ_KIP, 0, tag,
-		          L4_IPC_MAPMSG((l4_umword_t)k, L4_LOG2_PAGESIZE),
-			    &sfpage.snd_base, &sfpage.fpage.fpage,
-		          L4_IPC_NEVER, &result, &tag);
-
-  if (error)
-    boot_panic("can't map KIP: IPC error 0x%02x", error);
-
-  if (k->magic != L4_KERNEL_INFO_MAGIC)
-    boot_panic("invalid KIP magic %08x", k->magic);
-
-  return k;
+  if ((kip = l4sigma0_kip_map(my_pager)) == NULL)
+    boot_panic("Could not map KIP");
 }
 
 /* find the corresponding module for a name */
@@ -345,8 +323,6 @@ static void
 init_config(void)
 {
   /* init multiboot info structures provided by bootstrap */
-  kip = map_kip(0x1000);
-
   if (kip->version >> 24 == 0x87)
     l4_version = VERSION_FIASCO;
 
@@ -541,7 +517,7 @@ static void
 init_task(void)
 {
   task_init();
-  task_set(myself.id.task, RMGR_TASK_MAX, O_FREE);
+  task_set(TASKNO_ROOT, RMGR_TASK_MAX, O_FREE);
 }
 
 /**
@@ -899,24 +875,19 @@ reserve_lines_memory(void)
 static void
 check_for_ux(void)
 {
-  const char *version_str;
-
-  kip = map_kip(0x1000);
-
-  version_str = (const char*)
-		    ((l4_addr_t)kip + (kip->offset_version_strings << 4));
-
-  if (strstr(version_str, "(ux)"))
+  if (l4sigma0_kip_kernel_is_ux())
     {
       puts("  Found Fiasco-UX.");
       ux_running = 1;
     }
-
-  l4_fpage_unmap(l4_fpage((l4_umword_t) kip, L4_LOG2_PAGESIZE, 0, 0),
-		 L4_FP_FLUSH_PAGE|L4_FP_ALL_SPACES);
-  kip = 0;
 }
 
+#if 0
+/**
+ * Note on why this is commented out:
+ *  - We need to find a hole in our VAS to map the kip into, so later on we
+ *    will still need the reserve_KIP function.
+ */
 /**
  * Reserve address 0x1000 for the kernel info page.
  *
@@ -929,13 +900,12 @@ check_for_ux(void)
 static void
 reserve_KIP(void)
 {
-  kip = map_kip(0x1000+ram_base);
-
   memmap_set_page((l4_umword_t) kip, O_RESERVED);
   reserved_size += L4_PAGESIZE;
 
   region_add((l4_addr_t)kip, (l4_addr_t)kip + L4_PAGESIZE, -1, "KIP");
 }
+#endif
 
 /**
  * This function reserves memory occupied by loaded modules in the
@@ -1063,7 +1033,6 @@ init_memmap(void)
     reserve_symbols_memory();
   if (fiasco_lines)
     reserve_lines_memory();
-  reserve_KIP();
 
   free_high_ram();
 
@@ -1564,6 +1533,7 @@ init(void)
   puts("\n\nRoottask.");
 
   init_rmgr();
+  map_kip();
   check_for_ux();
 
   reset_malloc();

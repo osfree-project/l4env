@@ -55,7 +55,7 @@ create_keys(char *aes_key_out, unsigned int aes_key_bits,
     while (ret > 0)
     {
         rand_buffer(buf, sizeof(buf));
-        ret = rsa_insertrandom(rsa_key_out, sizeof(buf), buf);
+        ret = rsa_insertrandom(rsa_key_out, sizeof(buf), (unsigned char *) buf);
     }
 
     return rsa_create(rsa_key_out, rsa_key_bits);

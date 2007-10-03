@@ -93,7 +93,6 @@ L4ENV_SUBDIRS = \
 	simple_ts \
 	slab \
 	task \
-	tftp \
 	thread \
 	x86emu \
 	libc_support \

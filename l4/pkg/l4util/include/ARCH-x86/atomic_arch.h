@@ -46,13 +46,12 @@ l4util_cmpxchg64(volatile l4_uint64_t * dest,
   __asm__ __volatile__
     (
 #ifdef __PIC__
-     "push %%ebx\n\t"
-     "movl %%esi,%%ebx\n\t"
+     "xchg %%esi,%%ebx\n\t"
 #endif
      "cmpxchg8b	%5\n\t"
      "sete	%0\n\t"
 #ifdef __PIC__
-     "pop %%ebx\n\t"
+     "xchg %%esi,%%ebx\n\t"
 #endif
      :
      "=a" (ret),      /* return val, 0 or 1 */
@@ -69,9 +68,6 @@ l4util_cmpxchg64(volatile l4_uint64_t * dest,
      "m"  (*dest)    /* 3 mem, destination operand */
      :
      "memory", "cc"
-#ifdef __PIC
-      , "ebx"
-#endif
      );
 
   return ret;

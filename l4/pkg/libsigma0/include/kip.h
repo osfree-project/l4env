@@ -21,14 +21,23 @@ EXTERN_C_BEGIN
 l4_kernel_info_t *l4sigma0_kip(void);
 
 /**
+ * \brief  Map the kernel info page from pager to addr.
+ * \ingroup kip
+ *
+ * \param  pager  pager implementing the Sigma0 protocol
+ * \param  addr   address to map KIP to
+ * \return 0 on success, !=0 on error
+ */
+int l4sigma0_kip_map_to(l4_threadid_t pager, void *addr);
+
+/**
  * \brief  Map the kernel info page.
  * \ingroup kip
  *
  * Maps the kernel info page to a library private address.
  *
  * \param  pager  pager implementing the Sigma0 protocol
- *                (use L4_INVALID_ID to call rmgr_init() and use
- *                 rmgr_pager_id)
+ *                (use L4_INVALID_ID to call sigma0)
  * \return Address to the kernel info page or 0 if page is invalid.
  */
 l4_kernel_info_t *l4sigma0_kip_map(l4_threadid_t pager);

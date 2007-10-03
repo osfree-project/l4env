@@ -8,15 +8,10 @@
 start:
 _start:
 #if defined(ARCH_x86)
-# ifdef L4API_l4secv2emu
-	movl	%esp, mb_ptr
-# else
-	movl	%ebx, mb_ptr	/* for FIASCO_UX */
-# endif	
 	leal	_stack, %esp
 	jmp	init
 #elif defined (ARCH_amd64)
-	lea	_stack,%rsp
+	lea	_stack, %rsp
 	jmp	init
 #elif defined (ARCH_arm)
 	ldr	sp, .LCstack_top

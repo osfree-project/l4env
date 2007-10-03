@@ -47,7 +47,7 @@ init_kip_v2(void *_l4i, boot_info_t *bi, l4util_mb_info_t *mbi,
 	case Region::Boot:
 	  continue;
 	case Region::Kernel:
-	  /* do not add physicalle mapped bootup code of the kernel.
+	  /* do not add physically mapped bootup code of the kernel.
 	   * the loader set sub_type to 1 for every section with 
 	   * l_addr == v_addr
 	   */

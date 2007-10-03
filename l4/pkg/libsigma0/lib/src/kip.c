@@ -26,37 +26,42 @@ extern int rmgr_init(void);
 extern l4_threadid_t rmgr_pager_id;
 static l4_kernel_info_t *kip;
 
-/**
- * Map kernel info page into kip_area.
+/*
+ * \return 0 if ok, !=0 on error
  */
-l4_kernel_info_t*
-l4sigma0_kip_map(l4_threadid_t pager)
+int
+l4sigma0_kip_map_to(l4_threadid_t pager, void *addr)
 {
   l4_snd_fpage_t fp;
   l4_msgdope_t dope;
   l4_msgtag_t tag = l4_msgtag(L4_MSGTAG_SIGMA0, 0, 0, 0);
   int e;
 
+  e = l4_ipc_call_tag(pager, L4_IPC_SHORT_MSG, SIGMA0_REQ_KIP, 0, tag,
+                      L4_IPC_MAPMSG((l4_addr_t)addr, L4_LOG2_PAGESIZE),
+                      &fp.snd_base, &fp.snd_base, L4_IPC_NEVER, &dope, &tag);
+
+  if (e || !l4_ipc_fpage_received(dope))
+    return 1;
+
+  return 0;
+}
+
+/**
+ * Map kernel info page into kip_area.
+ */
+l4_kernel_info_t*
+l4sigma0_kip_map(l4_threadid_t pager)
+{
   if (kip && kip->magic == L4_KERNEL_INFO_MAGIC)
     return kip;
 
   l4sigma0_kip_unmap();
 
   if (l4_is_invalid_id(pager))
-    {
-      if (!rmgr_init())
-	{
-	  printf("rmgr_init() failed\n");
-	  return 0;
-	}
-      pager = rmgr_pager_id;
-    }
+    pager = SIGMA0_ID;
 
-  e = l4_ipc_call_tag(pager, L4_IPC_SHORT_MSG, SIGMA0_REQ_KIP, 0, tag,
-                      L4_IPC_MAPMSG((l4_addr_t)kip_area, L4_LOG2_PAGESIZE),
-                      &fp.snd_base, &fp.snd_base, L4_IPC_NEVER, &dope, &tag);
-
-  if (e || !l4_ipc_fpage_received(dope))
+  if (l4sigma0_kip_map_to(pager, kip_area))
     return NULL;
 
   kip = (l4_kernel_info_t*)kip_area;

@@ -407,7 +407,7 @@ LIBCLIBS_x86_l4env_base_diet    = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ll4rm -lthread -ldm_generic -lnames      \
                                   -ll4util_root -ll4util -lsigma0           \
                                   $(DIETLIBC_IMPLEMENTATION)                \
-                                  $(GCCLIB) $(DIETLIBC_IMPLEMENTATION)      \
+                                  $(GCCLIB)                                 \
                                   $(MALLOC_BACKEND) -ll4rm -ldm_mem         \
                                   -ldm_generic -lc_be_time -lc_be_mmap      \
                                   -lc_be_mmap_util -lc_be_l4env_start_stop  \
@@ -418,7 +418,8 @@ LIBCLIBS_x86_l4env_base_diet    = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ll4vfs_basic_name_server                 \
                                   -ll4vfs_name_server                       \
                                   -ll4vfs_name_space_provider               \
-                                  -ll4vfs_extendable
+                                  -ll4vfs_extendable                        \
+                                  $(DIETLIBC_IMPLEMENTATION)
 L4LIBS_x86_l4env_base_diet      = -static -ll4rm -ldm_mem -ldm_generic      \
                                   -lthread -lsemaphore -ll4env -ll4env_err  \
                                   -lslab -llogserver_capsule -ll4rm         \
@@ -440,7 +441,7 @@ LIBCLIBS_x86_l4env_base_uc      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ll4rm -lthread -ldm_generic -lnames      \
                                   -ll4util_root -ll4util -lsigma0           \
                                   $(UCLIBC_IMPLEMENTATION)                  \
-                                  $(GCCLIB) $(UCLIBC_IMPLEMENTATION)        \
+                                  $(GCCLIB)                                 \
                                   $(MALLOC_BACKEND) -ll4rm -ldm_mem         \
                                   -ldm_generic -lc_be_time -lc_be_mmap      \
                                   -lc_be_mmap_util -lc_be_l4env_start_stop  \
@@ -451,7 +452,8 @@ LIBCLIBS_x86_l4env_base_uc      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ll4vfs_basic_name_server                 \
                                   -ll4vfs_name_server                       \
                                   -ll4vfs_name_space_provider               \
-                                  -ll4vfs_extendable -ll4sys
+                                  -ll4vfs_extendable -ll4sys                \
+                                  $(UCLIBC_IMPLEMENTATION)
 L4LIBS_x86_l4env_base_uc        = $(L4LIBS_x86_l4env_base_diet)
 CRT0_x86_l4env_base_uc          = $(CRT0_DEFAULT)
 CRTN_x86_l4env_base_uc          =
@@ -709,7 +711,7 @@ LIBCLIBS_arm_l4env_base      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ll4rm -lthread -ldm_generic -lnames      \
                                   -ll4util_root -ll4util -lsigma0           \
                                   $(UCLIBC_IMPLEMENTATION)                  \
-                                  $(GCCLIB) $(UCLIBC_IMPLEMENTATION)        \
+                                  $(GCCLIB)                                 \
                                   $(MALLOC_BACKEND) -ll4rm -ldm_mem         \
                                   -ldm_generic -lc_be_time -lc_be_mmap      \
                                   -lc_be_mmap_util -lc_be_l4env_start_stop  \
@@ -720,8 +722,9 @@ LIBCLIBS_arm_l4env_base      = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ll4vfs_basic_name_server                 \
                                   -ll4vfs_name_server                       \
                                   -ll4vfs_name_space_provider               \
-                                  -ll4vfs_extendable -ll4sys
-L4LIBS_arm_l4env_base_diet      = -static -ll4rm -ldm_mem -ldm_generic      \
+                                  -ll4vfs_extendable -ll4sys                \
+                                  $(UCLIBC_IMPLEMENTATION)
+L4LIBS_arm_l4env_base           = -static -ll4rm -ldm_mem -ldm_generic      \
                                   -lthread -lsemaphore -ll4env -ll4env_err  \
                                   -lslab -llogserver_capsule -ll4rm         \
                                   -lthread -ldm_generic -lnames             \
@@ -962,7 +965,7 @@ LIBCLIBS_amd64_l4env_uc           = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -ll4env -llogserver_capsule -ll4rm        \
                                   -ldm_generic -ldm_mem -lthread            \
                                   -lgeneric_ts -lsigma0                     \
-								  $(UCLIBC_IMPLEMENTATION)     \
+				  $(UCLIBC_IMPLEMENTATION)     \
                                   $(GCCLIB) $(UCLIBC_IMPLEMENTATION)        \
                                   -ll4sys
 CRT0_amd64_l4env_uc               = $(CRT0_DEFAULT)
@@ -999,7 +1002,7 @@ LIBCLIBS_amd64_l4env_base      = -nostdlib $(GCCLDNOSTDLIB)                \
                                -ll4rm -lthread -ldm_generic -lnames      \
                                -ll4util_root -ll4util -lsigma0           \
                                $(UCLIBC_IMPLEMENTATION)                  \
-                               $(GCCLIB) $(UCLIBC_IMPLEMENTATION)        \
+                               $(GCCLIB)                                 \
                                $(MALLOC_BACKEND) -ll4rm -ldm_mem         \
                                -ldm_generic -lc_be_time -lc_be_mmap      \
                                -lc_be_mmap_util -lc_be_l4env_start_stop  \
@@ -1010,8 +1013,9 @@ LIBCLIBS_amd64_l4env_base      = -nostdlib $(GCCLDNOSTDLIB)                \
                                -ll4vfs_basic_name_server                 \
                                -ll4vfs_name_server                       \
                                -ll4vfs_name_space_provider               \
-                               -ll4vfs_extendable -ll4sys
-L4LIBS_amd64_l4env_base_diet   = -static -ll4rm -ldm_mem -ldm_generic    \
+                               -ll4vfs_extendable -ll4sys                \
+                               $(UCLIBC_IMPLEMENTATION)
+L4LIBS_amd64_l4env_base        = -static -ll4rm -ldm_mem -ldm_generic    \
                                -lthread -lsemaphore -ll4env -ll4env_err  \
                                -lslab -llogserver_capsule -ll4rm         \
                                -lthread -ldm_generic -lnames             \

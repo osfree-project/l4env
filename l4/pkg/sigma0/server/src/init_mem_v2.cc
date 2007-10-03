@@ -10,7 +10,7 @@ using L4::Kip::Mem_desc;
 void
 init_memory(l4_kernel_info_t *info)
 {
-  if (l4_info->version >> 24 == 0x87 /*KIP_VERSION_FIASCO*/ )
+  if (info->version >> 24 == 0x87 /*KIP_VERSION_FIASCO*/ )
     {
       char kip_syscalls = l4_info->kip_sys_calls;
       tbuf_status = fiasco_tbuf_get_status_phys();
