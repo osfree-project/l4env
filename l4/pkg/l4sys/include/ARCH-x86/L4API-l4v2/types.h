@@ -75,7 +75,7 @@ typedef union {
  * \hideinitializer
  */
 #define L4_NIL_ID_INIT	     {0}
-#define L4_NIL_ID	     ((l4_threadid_t)L4_NIL_ID_INIT)
+#define L4_NIL_ID	     ((l4_threadid_t)L4_NIL_ID_INIT)  ///< L4 nil thread id
 
 /**
  * L4 invalid thread id
@@ -83,7 +83,7 @@ typedef union {
  * \hideinitializer
  */
 #define L4_INVALID_ID_INIT   {0xffffffff}
-#define L4_INVALID_ID        ((l4_threadid_t)L4_INVALID_ID_INIT)
+#define L4_INVALID_ID        ((l4_threadid_t)L4_INVALID_ID_INIT) ///< L4 invalid thread id
 
 /**
  * \brief   Test if \a id is nil thread id
@@ -211,7 +211,7 @@ typedef struct {
 typedef union {
   l4_umword_t msgdope;       ///< Plain 32 Bit value
   l4_msgdope_struct_t md;    ///< Message dope structure
-  l4_umword_t raw;
+  l4_umword_t raw;           ///< Raw value
 } l4_msgdope_t;
 
 /**
@@ -332,6 +332,13 @@ typedef union {
 L4_INLINE int
 l4_is_invalid_sched_param(l4_sched_param_t sp);
 
+/**
+ * \brief  Set time in scheduling parameter
+ * \ingroup api_types_sched
+ *
+ * \param  us         Time in micro-seconds
+ * \param  p          Scheduling parameter
+ */
 L4_INLINE void
 l4_sched_param_set_time(int us, l4_sched_param_t *p);
 
@@ -384,7 +391,7 @@ l4_thread_equal(l4_threadid_t t1, l4_threadid_t t2)
   return t1.raw == t2.raw;
 }
 
-#define TASK_MASK 0xfffe03ff
+#define TASK_MASK 0xfffe03ff          ///< Mask of threadid excluding threads
 L4_INLINE int
 l4_task_equal(l4_threadid_t t1, l4_threadid_t t2)
 {

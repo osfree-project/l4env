@@ -441,12 +441,19 @@ l4_task_new_long(l4_taskid_t destination,
 L4_INLINE void *
 l4_kernel_interface(void);
 
+/**
+ * Privctrl system call
+ * \ingroup api_calls_other
+ */
 L4_INLINE int
 l4_privctrl(l4_umword_t cmd,
 	    l4_umword_t param);
 
-
-
+/**
+ * Pure l4_thread_ex_regs syscall version.
+ * \ingroup api_calls_other
+ * \internal
+ */
 L4_INLINE void
 l4_thread_ex_regs_sc(l4_umword_t val0,
                      l4_umword_t ip,
@@ -457,6 +464,11 @@ l4_thread_ex_regs_sc(l4_umword_t val0,
                      l4_umword_t *old_eip,
                      l4_umword_t *old_esp);
 
+/**
+ * Pure l4_task_new syscall version.
+ * \ingroup api_calls_other
+ * \internal
+ */
 L4_INLINE l4_taskid_t
 l4_task_new_sc(l4_taskid_t destination,
                l4_umword_t mcp_or_new_chief_and_flags,
@@ -471,7 +483,7 @@ l4_task_new_sc(l4_taskid_t destination,
 
 #include <l4/sys/syscall-invoke.h>
 
-#define GCC_VERSION	(__GNUC__ * 100 + __GNUC_MINOR__)
+#define GCC_VERSION	(__GNUC__ * 100 + __GNUC_MINOR__)  ///< GCC version as one figure (e.g. 402 for gcc-4.2)
 
 #ifdef PROFILE
 #include "syscalls-l42-profile.h"

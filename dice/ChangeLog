@@ -9,6 +9,8 @@ x.x.x
  - [fix] when using the -o option, target files were sometimes empty
  - [fix] in C/C++ parser: recognize __builtin_va_list as type not ID
  - [fix] defining C++ built-in types in C headers failed (wchar_t)
+ - [fix] parsing of concatenated literal strings in C/C++ files
+ - fail on deprecated -C option
 
 3.2.1
  - [feature] new compiler option --require <string> that specifies the minimal

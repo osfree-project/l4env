@@ -19,13 +19,13 @@
  */
 typedef union l4_quota_desc_t
 {
-  l4_umword_t raw;
+  l4_umword_t raw;              /**< raw value */
   struct
   {
-    unsigned long id: 12;
-    unsigned long amount: 16;
-    unsigned long cmd: 4;
-  } q;
+    unsigned long id: 12;      /**< id value */
+    unsigned long amount: 16;  /**< amount value */
+    unsigned long cmd: 4;      /**< cmd value */
+  } q;                         /**< quota structure */
 } l4_quota_desc_t;
 
 enum {
@@ -34,7 +34,7 @@ enum {
   L4_KQUOTA_CMD_NEW
 };
 
-#define L4_INVALID_KQUOTA  ((l4_quota_desc_t){ .raw = 0 })
+#define L4_INVALID_KQUOTA  ((l4_quota_desc_t){ .raw = 0 })  ///< Invalid kernel quota
 
 /**
  * Message tag for IPC operations.
@@ -71,7 +71,7 @@ enum l4_msgtag_protocol
  */
 typedef struct l4_msgtag_t
 {
-  l4_mword_t raw;
+  l4_mword_t raw;   ///< raw value
 #ifdef __cplusplus
   long label() const { return raw >> 16; }
   unsigned words() const { return raw & 0x3f; }

@@ -310,6 +310,7 @@ class c_parser_driver;
 %type	<type>		simple_type_specifier
 %type	<expr>		shift_expression
 %type	<sval>		storage_class_specifier
+%type	<sval>		string
 %type	<struct_t>	struct_head
 %type	<struct_t>	struct_specifier
 %type	<sval>		template_id
@@ -418,7 +419,7 @@ literal :
 	{
 	    $$ = new CFEPrimaryExpression(EXPR_ULLONG, $1);
 	}
-	| LIT_STR
+	| string
 	{
 	    $$ = new CFEUserDefinedExpression(*$1);
 	}
@@ -3307,7 +3308,17 @@ type_id_list :
 /* Dice internal helper rules */
 string :
 	  LIT_STR
+	{ $$ = $1; }
 	| string LIT_STR
+	{
+		if ($1)
+		{
+			$1->append(*$2);
+			$$ = $1;
+		}
+		else
+			$$ = $2;
+	}
 	;
 
 /* gcc extensions */

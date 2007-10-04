@@ -1,10 +1,6 @@
 
 #include <l4/sys/syscalls.h>
 
-#ifdef L4_API_L4X0
-#  error "L4 X.0 adaption not available!"
-#endif
-
 /*
  * L4 flex page unmap
  */

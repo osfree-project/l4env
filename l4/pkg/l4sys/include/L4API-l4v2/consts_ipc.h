@@ -30,10 +30,10 @@
  */
 #define L4_IPC_SHORT_FPAGE      ((void *)2)
 
-#define L4_IPC_STRING_SHIFT     8    /**< \ingroup api_types_msg */
-#define L4_IPC_DWORD_SHIFT      13   /**< \ingroup api_types_msg */
+#define L4_IPC_STRING_SHIFT     8    /**< IPC string shift */
+#define L4_IPC_DWORD_SHIFT      13   /**< IPC dword shift */
 
-#define L4_IPC_FLAG_NEXT_PERIOD 0x10000
+#define L4_IPC_FLAG_NEXT_PERIOD 0x10000 ///< next period flag
 
 /**
  * Build IPC message dope
@@ -79,12 +79,12 @@
  *** IPC result checking
  *****************************************************************************/
 
-#define L4_IPC_ERROR_MASK       0xF0    /**< \ingroup api_types_msg */
-#define L4_IPC_DECEIT_MASK      0x01    /**< \ingroup api_types_msg */
-#define L4_IPC_FPAGE_MASK       0x02    /**< \ingroup api_types_msg */
-#define L4_IPC_REDIRECT_MASK    0x04    /**< \ingroup api_types_msg */
-#define L4_IPC_SRC_MASK         0x08    /**< \ingroup api_types_msg */
-#define L4_IPC_SND_ERR_MASK     0x10    /**< \ingroup api_types_msg */
+#define L4_IPC_ERROR_MASK       0xF0    /**< IPC error mask */
+#define L4_IPC_DECEIT_MASK      0x01    /**< Deceit mask */
+#define L4_IPC_FPAGE_MASK       0x02    /**< Fpage mask */
+#define L4_IPC_REDIRECT_MASK    0x04    /**< Redirect mask */
+#define L4_IPC_SRC_MASK         0x08    /**< Source mask */
+#define L4_IPC_SND_ERR_MASK     0x10    /**< Send error mask */
 
 /**
  * Test if IPC error occurred

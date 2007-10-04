@@ -1,10 +1,6 @@
 
 #include <l4/sys/ipc.h>
 
-#ifdef L4_API_L4X0
-#  error "L4 X.0 adaption not available!"
-#endif
-
 int
 l4_ipc_call_static(l4_threadid_t dest, 
 		   const void *snd_msg, l4_umword_t snd_dword0, l4_umword_t snd_dword1, 

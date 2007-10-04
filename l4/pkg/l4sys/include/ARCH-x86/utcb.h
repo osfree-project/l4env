@@ -1,16 +1,48 @@
-/* $Id$ */
 /*****************************************************************************/
 /*!
  * \file    l4sys/include/ARCH-x86/utcb.h
- * \brief   UTCB definitions.
+ * \brief   UTCB definitions for X86.
  * \ingroup api_types
  */
 /*****************************************************************************/
-#ifndef _L4_SYS_UTCB_H
-#define _L4_SYS_UTCB_H
+#ifndef __L4_SYS__INCLUDE__ARCH_X86__UTCB_H__
+#define __L4_SYS__INCLUDE__ARCH_X86__UTCB_H__
 
 #include <l4/sys/types.h>
 
+/**
+ * \defgroup api_utcb_x86 UTCB functionality for x86
+ * \ingroup  api_utcb
+ */
+
+/**
+ * UTCB structure for l4_thread_ex_regs arguments
+ *
+ * \ingroup api_utcb_x86
+ */
+struct l4_utcb_ex_regs_args
+{
+  l4_threadid_t _res0;        /**< reserved \internal */
+  l4_threadid_t caphandler;   /**< Capability handler */
+  l4_threadid_t _res1;        /**< reserved \internal */
+};
+
+/**
+ * UTCB structure for l4_task_new arguments
+ *
+ * \ingroup api_utcb_x86
+ */
+struct l4_utcb_task_new_args
+{
+  l4_umword_t     _res0;      /**< reserved \internal */
+  l4_threadid_t   caphandler; /**< Capability handler */
+  l4_quota_desc_t quota;      /**< Quota for tasks */
+  l4_threadid_t   _res1;      /**< reserved \internal */
+};
+
+/**
+ * \ingroup api_utcb_x86
+ */
 enum {
   L4_EXCEPTION_REPLY_DW0_DEALIEN = 1,
 
@@ -23,120 +55,35 @@ enum {
 };
 
 /**
- * \defgroup api_utcb UTCB functionality
- * \ingroup  api_calls
- * \brief    Defines UTCB related functions and types.
- */
-
-/**
  * UTCB structure for exceptions.
  *
- * Structure size: 4*16=64 Bytes
- *
- * \ingroup api_utcb
+ * \ingroup api_utcb_x86
  */
 struct l4_utcb_exception
 {
-  l4_umword_t gs;
-  l4_umword_t fs;
+  l4_umword_t gs;      /**< gs register */
+  l4_umword_t fs;      /**< fs register */
 
-  l4_umword_t edi;
-  l4_umword_t esi;
-  l4_umword_t ebp;
-  l4_umword_t pfa;
-  l4_umword_t ebx;
-  l4_umword_t edx;
-  l4_umword_t ecx;
-  l4_umword_t eax;
+  l4_umword_t edi;     /**< edi register */
+  l4_umword_t esi;     /**< esi register */
+  l4_umword_t ebp;     /**< ebp register */
+  l4_umword_t pfa;     /**< page fault address */
+  l4_umword_t ebx;     /**< ebx register */
+  l4_umword_t edx;     /**< edx register */
+  l4_umword_t ecx;     /**< ecx register */
+  l4_umword_t eax;     /**< eax register */
 
-  l4_umword_t trapno;
-  l4_umword_t err;
+  l4_umword_t trapno;  /**< trap number */
+  l4_umword_t err;     /**< error code */
 
-  l4_umword_t eip;
-  l4_umword_t dummy1;
-  l4_umword_t eflags;
-  l4_umword_t esp;
+  l4_umword_t eip;     /**< instruction pointer */
+  l4_umword_t dummy1;  /**< dummy \internal */
+  l4_umword_t eflags;  /**< eflags */
+  l4_umword_t esp;     /**< stack pointer */
 };
 
 
-/**
- * UTCB structure for l4_thread_ex_regs arguments
- *
- * Structure size: 12 Bytes
- *
- * \ingroup api_utcb
- */
-struct l4_utcb_ex_regs_args
-{
-  l4_threadid_t _res0;
-  l4_threadid_t caphandler;
-  l4_threadid_t _res1;
-};
-
-struct l4_utcb_task_new_args
-{
-  l4_umword_t     _res0;
-  l4_threadid_t   caphandler;
-  l4_quota_desc_t quota;
-  l4_threadid_t   _res1;
-};
-
-/**
- * UTCB.
- * \ingroup api_utcb
- */
-typedef struct
-{
-  union {
-    l4_umword_t                  values[L4_UTCB_GENERIC_DATA_SIZE];
-    struct l4_utcb_exception     exc;
-    struct l4_utcb_ex_regs_args  ex_regs;
-    struct l4_utcb_task_new_args task_new;
-  };
-
-  l4_umword_t buffers[31];
-  l4_timeout_t xfer;
-} l4_utcb_t;
-
-/**
- * Get the address to a thread's UTCB.
- * \ingroup api_utcb
- */
-L4_INLINE l4_utcb_t *l4_utcb_get(void);
-
-/**
- * Access function to get the program counter of the exception state.
- * \ingroup api_utcb
- */
-L4_INLINE l4_umword_t l4_utcb_exc_pc(l4_utcb_t *u);
-
-/**
- * Get the value out of an exception UTCB that describes the type of
- * exception.
- * \ingroup api_utcb
- */
-L4_INLINE unsigned long l4_utcb_exc_typeval(l4_utcb_t *u);
-
-/**
- * Function to check whether an exception IPC is a page fault, also applies
- * to I/O pagefaults.
- *
- * \returns 0 if not, != 0 if yes
- * \ingroup api_utcb
- */
-L4_INLINE int l4_utcb_exc_is_pf(l4_utcb_t *u);
-
-/**
- * Function to get the L4 style page fault address out of an exception.
- * \ingroup api_utcb
- */
-L4_INLINE l4_addr_t l4_utcb_exc_pfa(l4_utcb_t *u);
-
-/**
- * Enable or disable inheritence of FPU state to receiver.
- * \ingroup api_utcb
- */
-L4_INLINE void l4_utcb_inherit_fpu(l4_utcb_t *u, int switch_on);
+#include_next <l4/sys/utcb.h>
 
 /*
  * ==================================================================
@@ -178,4 +125,4 @@ L4_INLINE void l4_utcb_inherit_fpu(l4_utcb_t *u, int switch_on)
     u->buffers[L4_UTCB_BUFFER_ACCEPTOR] &= ~L4_UTCB_INHERIT_FPU;
 }
 
-#endif /* ! _L4_SYS_UTCB_H */
+#endif /* ! __L4_SYS__INCLUDE__ARCH_X86__UTCB_H__ */

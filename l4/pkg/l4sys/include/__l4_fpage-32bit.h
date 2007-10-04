@@ -11,8 +11,13 @@
  *****************************************************************************/
 
 /**
- * L4 flexpage structure
+ * \defgroup api_types_fpage_32 Fpage types for 32bit
  * \ingroup api_types_fpage
+ */
+
+/**
+ * L4 flexpage structure
+ * \ingroup api_types_fpage_32
  */
 typedef struct {
   unsigned grant:1;          ///< Grant page (send flexpage)
@@ -25,7 +30,7 @@ typedef struct {
 
 /**
  * L4 I/O flexpage structure
- * \ingroup api_types_fpage
+ * \ingroup api_types_fpage_32
  */
 typedef struct {
   unsigned grant:1;          ///< Grant I/O page (send I/O flexpage)
@@ -38,17 +43,17 @@ typedef struct {
 
 /**
  * L4 flexpage type
- * \ingroup api_types_fpage
+ * \ingroup api_types_fpage_32
  */
 typedef union {
   l4_umword_t fpage;         ///< Plain 32 bit value
-  l4_umword_t raw;
+  l4_umword_t raw;           ///< Raw value
   l4_fpage_struct_t fp;      ///< Flexpage structure
   l4_iofpage_struct_t iofp;  ///< I/O Flexpage structure
 } l4_fpage_t;
 
-/** Constants for flexpages 
- * \ingroup api_types_fpage
+/** Constants for flexpages
+ * \ingroup api_types_fpage_32
  */
 enum
 {

@@ -11,8 +11,13 @@
  *****************************************************************************/
 
 /**
- * L4 flexpage structure
+ * \defgroup api_types_fpage_64 Fpage types for 64bit
  * \ingroup api_types_fpage
+ */
+
+/**
+ * L4 flexpage structure
+ * \ingroup api_types_fpage_64
  */
 typedef struct {
   unsigned grant:1;          ///< Grant page (send flexpage)
@@ -24,7 +29,7 @@ typedef struct {
 
 /**
  * L4 I/O flexpage structure
- * \ingroup api_types_fpage
+ * \ingroup api_types_fpage_64
  */
 typedef struct {
   unsigned long grant:1;          ///< Grant I/O page (send I/O flexpage)
@@ -37,7 +42,7 @@ typedef struct {
 
 /**
  * L4 flexpage type
- * \ingroup api_types_fpage
+ * \ingroup api_types_fpage_64
  */
 typedef union {
   l4_umword_t fpage;         ///< Plain 64 bit value
@@ -47,11 +52,11 @@ typedef union {
 } l4_fpage_t;
 
 /** Constants for flexpages 
- * \ingroup api_types_fpage
+ * \ingroup api_types_fpage_64
  */
 enum
 {
-  L4_WHOLE_ADDRESS_SPACE =64 /**< Whole address space size */
+  L4_WHOLE_ADDRESS_SPACE = 64 /**< Whole address space size */
 };
 
 #include <l4/sys/__l4_fpage-common.h>

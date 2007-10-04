@@ -10,7 +10,7 @@
 
 #include <l4/sys/types.h>
 
-#define L4_IPC_IOMAPMSG_BASE 0xf0000000
+#define L4_IPC_IOMAPMSG_BASE 0xf0000000   ///< I/O mapmsg base
 #include <l4/sys/consts_ipc.h>
 
 /*****************************************************************************
@@ -33,7 +33,7 @@ typedef struct {
  *****************************************************************************/
 
 /**
- * IPC Call, usual blocking RPC
+ * IPC Call, usual blocking RPC, tagged version
  * \ingroup api_calls_ipc
  *
  * \param   dest         Thread id of the call destination
@@ -53,6 +53,7 @@ typedef struct {
  *                         \a snd_dword0 and \a snd_dword1.
  * \param   snd_dword0   The first dword to be transmitted.
  * \param   snd_dword1   The second dword to be transmitted.
+ * \param   tag          Message tag of the sending IPC
  * \param   rcv_msg      Pointer to the receive message descriptor. It can
  *                       contain the following values:
  *                       - #L4_IPC_NIL_DESCRIPTOR the IPC does not include a
@@ -77,6 +78,7 @@ typedef struct {
  *                       undefined if no message was received.
  * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
+ * \retval  rtag         Message tag of the receiving IPC
  *
  * \return  0 if no error occurred. The send operation (if specified) was
  *          successful, and if a receive operation was also specified, a
@@ -108,6 +110,25 @@ typedef struct {
  * sends the reply to the client and waits for the client's next order.
  */
 L4_INLINE int
+l4_ipc_call_tag(l4_threadid_t dest,
+                const void *snd_msg,
+                l4_umword_t snd_dword0,
+                l4_umword_t snd_dword1,
+                l4_msgtag_t tag,
+                void *rcv_msg,
+                l4_umword_t *rcv_dword0,
+                l4_umword_t *rcv_dword1,
+                l4_timeout_t timeout,
+                l4_msgdope_t *result,
+                l4_msgtag_t *rtag);
+
+/**
+ * IPC Call, usual blocking RPC
+ * \ingroup api_calls_ipc
+ *
+ * \see l4_ipc_call_tag
+ */
+L4_INLINE int
 l4_ipc_call(l4_threadid_t dest,
             const void *snd_msg,
             l4_umword_t snd_dword0,
@@ -118,21 +139,10 @@ l4_ipc_call(l4_threadid_t dest,
             l4_timeout_t timeout,
             l4_msgdope_t *result);
 
-L4_INLINE int
-l4_ipc_call_tag(l4_threadid_t dest,
-                const void *snd_msg,
-                l4_umword_t snd_w0,
-                l4_umword_t snd_w1,
-                l4_msgtag_t tag,
-                void *rcv_msg,
-                l4_umword_t *rcv_w0,
-                l4_umword_t *rcv_w1,
-                l4_timeout_t timeout,
-                l4_msgdope_t *result,
-                l4_msgtag_t *rtag);
 
 /**
- * IPC reply and wait, send a reply to a client and wait for next message
+ * IPC reply and wait, send a reply to a client and wait for next message,
+ * tagged version
  * \ingroup api_calls_ipc
  *
  * \param   dest         Thread id of the send destination
@@ -152,6 +162,7 @@ l4_ipc_call_tag(l4_threadid_t dest,
  *                         \a snd_dword0 and \a snd_dword1.
  * \param   snd_dword0   The first dword to be transmitted.
  * \param   snd_dword1   The second dword to be transmitted.
+ * \param   tag          Message tag of the sending IPC
  * \retval  src          Source thread id of the received message
  * \param   rcv_msg      Pointer to the receive message descriptor. It can
  *                       contain the following values:
@@ -177,6 +188,7 @@ l4_ipc_call_tag(l4_threadid_t dest,
  *                       undefined if no message was received.
  * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
+ * \retval  rtag         Message tag of the receiving IPC
  *
  * \return  0 if no error occurred. The send operation (if specified) was
  *          successful, and if a receive operation was also specified, a
@@ -205,19 +217,6 @@ l4_ipc_call_tag(l4_threadid_t dest,
  * come from a different client.
  */
 L4_INLINE int
-l4_ipc_reply_and_wait(l4_threadid_t dest,
-                      const void *snd_msg,
-                      l4_umword_t snd_dword0,
-                      l4_umword_t snd_dword1,
-                      l4_threadid_t *src,
-                      void *rcv_msg,
-                      l4_umword_t *rcv_dword0,
-                      l4_umword_t *rcv_dword1,
-                      l4_timeout_t timeout,
-                      l4_msgdope_t *result);
-
-
-L4_INLINE int
 l4_ipc_reply_and_wait_tag(l4_threadid_t dest,
                           const void *snd_msg,
                           l4_umword_t snd_dword0,
@@ -231,7 +230,29 @@ l4_ipc_reply_and_wait_tag(l4_threadid_t dest,
                           l4_msgdope_t *result,
                           l4_msgtag_t *rtag);
 
+/**
+ * IPC reply and wait, send a reply to a client and wait for next message
+ * \ingroup api_calls_ipc
+ *
+ * \see l4_ipc_reply_and_wait_tag
+ */
+L4_INLINE int
+l4_ipc_reply_and_wait(l4_threadid_t dest,
+                      const void *snd_msg,
+                      l4_umword_t snd_dword0,
+                      l4_umword_t snd_dword1,
+                      l4_threadid_t *src,
+                      void *rcv_msg,
+                      l4_umword_t *rcv_dword0,
+                      l4_umword_t *rcv_dword1,
+                      l4_timeout_t timeout,
+                      l4_msgdope_t *result);
 
+
+/**
+ * Wait for next period.
+ * \ingroup api_calls_ipc
+ */
 L4_INLINE int
 l4_ipc_wait_next_period(l4_threadid_t *src,
 			void *rcv_msg,
@@ -242,7 +263,7 @@ l4_ipc_wait_next_period(l4_threadid_t *src,
 
 
 /**
- * IPC send, send a message to a thread
+ * IPC send, send a message to a thread, tagged version
  * \ingroup api_calls_ipc
  *
  * \param   dest         Thread id of the send destination
@@ -260,6 +281,7 @@ l4_ipc_wait_next_period(l4_threadid_t *src,
  *                         \a snd_dword0 and \a snd_dword1.
  * \param   snd_dword0   The first dword to be transmitted.
  * \param   snd_dword1   The second dword to be transmitted.
+ * \param   tag          Message tag
  * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
  *
@@ -289,6 +311,21 @@ l4_ipc_wait_next_period(l4_threadid_t *src,
  * the message.
  */
 L4_INLINE int
+l4_ipc_send_tag(l4_threadid_t dest,
+                const void *snd_msg,
+                l4_umword_t snd_dword0,
+                l4_umword_t snd_dword1,
+                l4_msgtag_t tag,
+                l4_timeout_t timeout,
+                l4_msgdope_t *result);
+
+/**
+ * IPC send, send a message to a thread
+ * \ingroup api_calls_ipc
+ *
+ * \see l4_ipc_send_tag
+ */
+L4_INLINE int
 l4_ipc_send(l4_threadid_t dest,
             const void *snd_msg,
             l4_umword_t snd_dword0,
@@ -296,17 +333,8 @@ l4_ipc_send(l4_threadid_t dest,
             l4_timeout_t timeout,
             l4_msgdope_t *result);
 
-L4_INLINE int
-l4_ipc_send_tag(l4_threadid_t dest,
-                const void *snd_msg,
-                l4_umword_t w0,
-                l4_umword_t w1,
-                l4_msgtag_t tag,
-                l4_timeout_t timeout,
-                l4_msgdope_t *result);
-
 /**
- * IPC wait, wait for message from any source
+ * IPC wait, wait for message from any source, tagged version
  * \ingroup api_calls_ipc
  *
  * \retval  src          Source thread id of the received message
@@ -330,6 +358,7 @@ l4_ipc_send_tag(l4_threadid_t dest,
  * \retval  rcv_dword1   The second dword of the received message.
  * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
+ * \retval  tag          Message tag
  *
  * \return  0 if no error occurred. The send operation (if specified) was
  *          successful, and if a receive operation was also specified, a
@@ -356,14 +385,6 @@ l4_ipc_send_tag(l4_threadid_t dest,
  * from any source (including a hardware interrupt).
  */
 L4_INLINE int
-l4_ipc_wait(l4_threadid_t *src,
-            void *rcv_msg,
-            l4_umword_t *rcv_dword0,
-            l4_umword_t *rcv_dword1,
-            l4_timeout_t timeout,
-            l4_msgdope_t *result);
-
-L4_INLINE int
 l4_ipc_wait_tag(l4_threadid_t *src,
                 void *rcv_msg,
                 l4_umword_t *rcv_dword0,
@@ -373,7 +394,22 @@ l4_ipc_wait_tag(l4_threadid_t *src,
 	        l4_msgtag_t *tag);
 
 /**
- * IPC receive, wait for a message from a specified thread
+ * IPC wait, wait for message from any source
+ * \ingroup api_calls_ipc
+ *
+ * \see l4_ipc_wait_tag
+ */
+L4_INLINE int
+l4_ipc_wait(l4_threadid_t *src,
+            void *rcv_msg,
+            l4_umword_t *rcv_dword0,
+            l4_umword_t *rcv_dword1,
+            l4_timeout_t timeout,
+            l4_msgdope_t *result);
+
+
+/**
+ * IPC receive, wait for a message from a specified thread, tagged version
  * \ingroup api_calls_ipc
  *
  * \param   src          Thread to receive message from
@@ -397,6 +433,7 @@ l4_ipc_wait_tag(l4_threadid_t *src,
  * \retval  rcv_dword1   The second dword of the received message.
  * \param   timeout      IPC timeout (see #l4_ipc_timeout).
  * \retval  result       Result message dope
+ * \retval  tag          Message tag
  *
  * \return  0 if no error occurred. The send operation (if specified) was
  *          successful, and if a receive operation was also specified, a
@@ -424,6 +461,20 @@ l4_ipc_wait_tag(l4_threadid_t *src,
  * that also a hardware interrupt might be specified as source.
  */
 L4_INLINE int
+l4_ipc_receive_tag(l4_threadid_t src,
+                   void *rcv_msg,
+                   l4_umword_t *rcv_dword0,
+                   l4_umword_t *rcv_dword1,
+                   l4_timeout_t timeout,
+                   l4_msgdope_t *result,
+                   l4_msgtag_t *tag);
+/**
+ * IPC receive, wait for a message from a specified thread
+ * \ingroup api_calls_ipc
+ *
+ * \see l4_ipc_receive_tag
+ */
+L4_INLINE int
 l4_ipc_receive(l4_threadid_t src,
                void *rcv_msg,
                l4_umword_t *rcv_dword0,
@@ -431,14 +482,6 @@ l4_ipc_receive(l4_threadid_t src,
                l4_timeout_t timeout,
                l4_msgdope_t *result);
 
-L4_INLINE int
-l4_ipc_receive_tag(l4_threadid_t src,
-                   void *rcv_msg,
-                   l4_umword_t *rcv_w0,
-                   l4_umword_t *rcv_w1,
-                   l4_timeout_t timeout,
-                   l4_msgdope_t *result,
-                   l4_msgtag_t *tag);
 
 /**
  * Sleep for an amount of time.
@@ -492,8 +535,8 @@ l4_ipc_is_fpage_writable(l4_fpage_t fp);
  * Internal defines used to build IPC parameters for the L4 kernel
  */
 
-#define L4_IPC_DECEIT           1
-#define L4_IPC_OPEN_IPC         1
+#define L4_IPC_DECEIT           1     ///< IPC: deceit bit \internal
+#define L4_IPC_OPEN_IPC         1     ///< IPC: open IPC   \internal
 
 /*****************************************************************************
  *** Implementation
@@ -502,7 +545,7 @@ l4_ipc_is_fpage_writable(l4_fpage_t fp);
 #include <l4/sys/rt_sched-proto.h>
 #include <l4/sys/ipc-invoke.h>
 
-#define GCC_VERSION	(__GNUC__ * 100 + __GNUC_MINOR__)
+#define GCC_VERSION	(__GNUC__ * 100 + __GNUC_MINOR__)  ///< GCC in a single figure (e.g. 402 for gcc-4.2)
 
 #ifdef PROFILE
 #  include "ipc-l42-profile.h"

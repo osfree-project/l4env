@@ -82,24 +82,24 @@
 #define __builtin_expect(x, expected_value) (x)
 #endif
 
-#define EXPECT_TRUE(x)	__builtin_expect((x),1)
-#define EXPECT_FALSE(x)	__builtin_expect((x),0)
+#define EXPECT_TRUE(x)	__builtin_expect((x),1)   ///< Expression is likely to execute
+#define EXPECT_FALSE(x)	__builtin_expect((x),0)   ///< Expression is unlikely to execute
 
 #if (__GNUC__ == 3 && __GNUC_MINOR__ >= 3) || __GNUC__ >= 4
 /* Make sure that the function is not removed by optimization. Without the
  * "used" attribute, unreferenced static functions are removed. */
-#define L4_STICKY(x)	__attribute__((used)) x
+#define L4_STICKY(x)	__attribute__((used)) x         ///< Mark symbol sticky (even not there)
 /* The deprecated attribute is available with 3.1 and higher (3.3 as here
  * is ok for us */
-#define L4_DEPRECATED	__attribute__((deprecated))
+#define L4_DEPRECATED	__attribute__((deprecated))     ///< Mark symbol deprecated
 #else
 /* The "used" attribute is not available with older gcc versions so simply
  * make sure that gcc doesn't warn about unused functions. */
-#define L4_STICKY(x)	__attribute__((unused)) x
-#define L4_DEPRECATED
+#define L4_STICKY(x)	__attribute__((unused)) x       ///< Mark symbol sticky (even not there)
+#define L4_DEPRECATED                                   ///< Mark symbol deprecated
 #endif
 
-#define L4_stringify_helper(x) #x
-#define L4_stringify(x)        L4_stringify_helper(x)
+#define L4_stringify_helper(x) #x                       ///< stringify helper
+#define L4_stringify(x)        L4_stringify_helper(x)   ///< stringify
 
 #endif /* !__L4_COMPILER_H__ */

@@ -6,8 +6,6 @@ DEFAULT_RELOC  = 0x01ad0000
 SRC_C          = main.c log.c oredev.c uip.c uip_arch.c uip_arp.c 
 SYSTEMS        = x86-l4v2
 
-DEPENDS_PKGS    = l4vfs
-
 UIP_DIR		= $(PKGDIR)/lib/uip/contrib/uip
 UIP_ORE_DIR = $(PKGDIR)/lib/uip/uip-ore
 

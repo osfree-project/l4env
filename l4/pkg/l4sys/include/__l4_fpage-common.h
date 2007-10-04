@@ -7,6 +7,11 @@
 #define __L4_FPAGE_COMMON_H__
 
 /**
+ * \defgroup api_types_fpage Flexpages
+ * \brief Fpages
+ */
+
+/**
  * Send flexpage types
  * \ingroup api_types_fpage
  */
@@ -65,7 +70,7 @@ enum
  * \ingroup api_types_fpage
  * 
  * \param   address      Flexpage source address
- * \param   size         Flexpage size (log2), #L4_WHOLE_ADDRESS_SPACE to 
+ * \param   size         Flexpage size (log2), #L4_WHOLE_ADDRESS_SPACE to
  *                       specify the whole address space (with \a address 0)
  * \param   write        Read-write flexpage (#L4_FPAGE_RW) or read-only
  *                       flexpage (#L4_FPAGE_RO)
@@ -81,9 +86,9 @@ l4_fpage(unsigned long address, unsigned int size,
 /**
  * \brief   Build I/O flexpage descriptor
  * \ingroup api_types_fpage
- * 
+ *
  * \param   port         I/O flexpage port base
- * \param   size         I/O flexpage size, #L4_WHOLE_IOADDRESS_SPACE to 
+ * \param   size         I/O flexpage size, #L4_WHOLE_IOADDRESS_SPACE to
  *                       specify the whole I/O address space (with \a port 0)
  * \param   grant        Grant flexpage (#L4_FPAGE_GRANT) or map flexpage
  *                       (#L4_FPAGE_MAP)
