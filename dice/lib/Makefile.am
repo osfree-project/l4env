@@ -1,1 +1,1 @@
-SUBDIRS = debug invocations sizes opcodes
+SUBDIRS = debug invocations sizes opcodes ferret-opcodes tracebuf-opcodes

@@ -19996,8 +19996,8 @@ fi
 echo "${ECHO_T}$dice_bison_version" >&6; }
 case $dice_bison_version in
 ""|invalid)
-  { { echo "$as_me:$LINENO: error: You will need at lest bison version 2.1a (found ${1}.${2})." >&5
-echo "$as_me: error: You will need at lest bison version 2.1a (found ${1}.${2})." >&2;}
+  { { echo "$as_me:$LINENO: error: You will need at least bison version 2.1a (found ${1}.${2})." >&5
+echo "$as_me: error: You will need at least bison version 2.1a (found ${1}.${2})." >&2;}
    { (exit 1); exit 1; }; }
   ;;
 esac
@@ -21097,7 +21097,7 @@ echo "${ECHO_T}no" >&6; }
 done
 
 
-ac_config_files="$ac_config_files GNUmakefile doc/Makefile doc/manual/Makefile doc/html/Makefile doc/user-man/Makefile src/Makefile src/parser/Makefile src/parser/c-c++/Makefile src/parser/idl/Makefile src/fe/Makefile src/be/Makefile src/be/l4/Makefile src/be/l4/v2/Makefile src/be/l4/v2/amd64/Makefile src/be/l4/v2/ia32/Makefile src/be/l4/v4/Makefile src/be/l4/v4/ia32/Makefile src/be/l4/fiasco/Makefile src/be/l4/fiasco/amd64/Makefile src/be/sock/Makefile include/Makefile include/dice/Makefile lib/Makefile lib/debug/Makefile lib/invocations/Makefile lib/sizes/Makefile lib/opcodes/Makefile"
+ac_config_files="$ac_config_files GNUmakefile doc/Makefile doc/manual/Makefile doc/html/Makefile doc/user-man/Makefile src/Makefile src/parser/Makefile src/parser/c-c++/Makefile src/parser/idl/Makefile src/fe/Makefile src/be/Makefile src/be/l4/Makefile src/be/l4/v2/Makefile src/be/l4/v2/amd64/Makefile src/be/l4/v2/ia32/Makefile src/be/l4/v4/Makefile src/be/l4/v4/ia32/Makefile src/be/l4/fiasco/Makefile src/be/l4/fiasco/amd64/Makefile src/be/sock/Makefile include/Makefile include/dice/Makefile lib/Makefile lib/debug/Makefile lib/invocations/Makefile lib/sizes/Makefile lib/opcodes/Makefile lib/ferret-opcodes/Makefile lib/tracebuf-opcodes/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -21769,6 +21769,8 @@ do
     "lib/invocations/Makefile") CONFIG_FILES="$CONFIG_FILES lib/invocations/Makefile" ;;
     "lib/sizes/Makefile") CONFIG_FILES="$CONFIG_FILES lib/sizes/Makefile" ;;
     "lib/opcodes/Makefile") CONFIG_FILES="$CONFIG_FILES lib/opcodes/Makefile" ;;
+    "lib/ferret-opcodes/Makefile") CONFIG_FILES="$CONFIG_FILES lib/ferret-opcodes/Makefile" ;;
+    "lib/tracebuf-opcodes/Makefile") CONFIG_FILES="$CONFIG_FILES lib/tracebuf-opcodes/Makefile" ;;
 
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}

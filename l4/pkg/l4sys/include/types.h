@@ -22,16 +22,16 @@ typedef union l4_quota_desc_t
   l4_umword_t raw;              /**< raw value */
   struct
   {
-    unsigned long id: 12;      /**< id value */
-    unsigned long amount: 16;  /**< amount value */
-    unsigned long cmd: 4;      /**< cmd value */
+    unsigned long id: 12;      /**< task id of the quota source */
+    unsigned long amount: 16;  /**< amount in 4k blocks */
+    unsigned long cmd: 4;      /**< command */
   } q;                         /**< quota structure */
 } l4_quota_desc_t;
 
 enum {
-  L4_KQUOTA_CMD_NOOP,
-  L4_KQUOTA_CMD_SHARE,
-  L4_KQUOTA_CMD_NEW
+  L4_KQUOTA_CMD_NOOP,    ///< Share quota with creator (id and amount irrelavant)
+  L4_KQUOTA_CMD_SHARE,   ///< Share quota with source id
+  L4_KQUOTA_CMD_NEW      ///< New quota, allocated from source id's quota
 };
 
 #define L4_INVALID_KQUOTA  ((l4_quota_desc_t){ .raw = 0 })  ///< Invalid kernel quota

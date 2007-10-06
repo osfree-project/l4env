@@ -70,15 +70,6 @@ typedef union {
    Liedtke: ``L4 Pentium implementation'' */
 #define L4_SMALL_SPACE(size_mb, nr) ((size_mb >> 2) + nr * (size_mb >> 1))
 
-
-typedef struct {
-  l4_fpage_t   fpage;
-  l4_msgdope_t size;
-  l4_msgdope_t send;
-  l4_umword_t  word[1];
-} l4_msg_t;
-
-
 typedef struct {
   l4_umword_t low, high;
 } l4_low_high_t;

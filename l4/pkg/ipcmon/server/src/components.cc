@@ -41,7 +41,7 @@ int ipcmon_pagefault(CORBA_Object obj,
 	l4_snd_fpage_t sfp;
 
 	fp.raw = DICE_GET_DWORD(msgbuf, 0);
-	LOGd(verbose, l4util_idfmt" trying to do IPC to %X", 
+	LOGd(verbose, l4util_idfmt" trying to do IPC to %lX", 
 	    l4util_idstr(*obj), fp.iofp.iopage);
 
 	if ((allow_roottask && fp.iofp.iopage == ROOTTASK_ID)
@@ -54,7 +54,7 @@ int ipcmon_pagefault(CORBA_Object obj,
 	}
 	else
 	{
-		LOG("\033[31;1mipc %X -> %X DENIED!\033[0m", (*obj).id.task, fp.iofp.iopage);
+		LOG("\033[31;1mipc %X -> %lX DENIED!\033[0m", (*obj).id.task, fp.iofp.iopage);
 		sfp.fpage = l4_iofpage(0, 0, 0);
 		sfp.snd_base  = 0;
 	}

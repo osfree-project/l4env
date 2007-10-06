@@ -58,7 +58,7 @@ AC_CACHE_CHECK([for bison version], dice_bison_version, [
 ])
 case $dice_bison_version in
 ""|invalid[)]
-  AC_MSG_ERROR([You will need at lest bison version 2.1a (found ${1}.${2}).])
+  AC_MSG_ERROR([You will need at least bison version 2.1a (found ${1}.${2}).])
   ;;
 esac
 AC_PROG_LN_S
@@ -173,6 +173,8 @@ lib/debug/Makefile
 lib/invocations/Makefile
 lib/sizes/Makefile
 lib/opcodes/Makefile
+lib/ferret-opcodes/Makefile
+lib/tracebuf-opcodes/Makefile
 ])
 
 AC_OUTPUT
