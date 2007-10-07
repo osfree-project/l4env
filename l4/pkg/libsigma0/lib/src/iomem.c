@@ -43,8 +43,8 @@ l4sigma0_map_iomem(l4_threadid_t pager,
 
   if ((phys & (d-1)) || (size & (d-1)) || (virt & (d-1)))
     {
-      l          = L4_LOG2_PAGESIZE;
-      d          = L4_PAGESIZE;
+      l = L4_LOG2_PAGESIZE;
+      d = L4_PAGESIZE;
     }
 
   if ((phys & (d-1)) || (size & (d-1)) || (virt & (d-1)))

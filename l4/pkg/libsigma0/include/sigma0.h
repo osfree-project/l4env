@@ -138,7 +138,7 @@ void l4sigma0_debug_dump(l4_threadid_t pager);
  * @param err the error code rported by the *map* functions.
  * @return a string containing the error message.
  */
-static inline const char *l4sigma0_map_errstr(int err)
+static inline char const *l4sigma0_map_errstr(int err)
 {
   switch (err)
     {
