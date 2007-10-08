@@ -1,12 +1,12 @@
 /*****************************************************************************/
 /*!
  * \file    l4sys/include/ARCH-amd64/L4API-l4v2/ipc.h
- * \brief   L4 IPC System Calls
+ * \brief   L4 IPC System Calls, amd64
  * \ingroup api_calls
  */
 /*****************************************************************************/
-#ifndef __L4_IPC_H__
-#define __L4_IPC_H__
+#ifndef __L4SYS__INCLUDE__ARCH_AMD64__L4API_L4V2__IPC_H__
+#define __L4SYS__INCLUDE__ARCH_AMD64__L4API_L4V2__IPC_H__
 
 #include <l4/sys/types.h>
 
@@ -28,4 +28,4 @@
 #  endif
 #endif
 
-#endif /* !__L4_IPC_H__ */
+#endif /* ! __L4SYS__INCLUDE__ARCH_AMD64__L4API_L4V2__IPC_H__ */

@@ -1,5 +1,10 @@
-#ifndef __L4__ARCH_ARM__IPC_H__
-#define __L4__ARCH_ARM__IPC_H__
+/*!
+ * \file    l4sys/include/ARCH-arm/L4API-l4v2/ipc.h
+ * \brief   L4 IPC System Calls, ARM
+ * \ingroup api_calls
+ */
+#ifndef __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__IPC_H__
+#define __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__IPC_H__
 
 #ifdef __GNUC__
 
@@ -281,4 +286,4 @@ l4_ipc_receive_tag(l4_threadid_t src,
 
 #endif //__GNUC__
 
-#endif /* ! __L4__ARCH_ARM__IPC_H__ */
+#endif /* ! __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__IPC_H__ */

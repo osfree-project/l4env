@@ -1,7 +1,7 @@
 /*****************************************************************************/
 /*!
  * \file    l4sys/include/ARCH-amd64/utcb.h
- * \brief   UTCB definitions for ARM64.
+ * \brief   UTCB definitions for amd64.
  * \ingroup api_types
  */
 /*****************************************************************************/
