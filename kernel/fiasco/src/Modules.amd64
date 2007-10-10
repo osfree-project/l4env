@@ -169,7 +169,7 @@ mapping_IMPL		:= mapping-amd64 mapping
 map_util_IMPL		:= map_util map_util-mem map_util-io map_util-caps
 mem_layout_IMPL		:= mem_layout mem_layout-amd64
 mem_space_IMPL		:= mem_space mem_space-user mem_space-amd64-ux \
-			   mem_space-amd64
+			   mem_space-amd64 mem_space-ia32-ux
 mem_unit_IMPL		:= mem_unit-amd64
 paging_IMPL		:= paging paging-amd64
 perf_cnt_IMPL		:= perf_cnt perf_cnt-ia32-ux

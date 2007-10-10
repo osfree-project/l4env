@@ -34,21 +34,30 @@ void Sensor::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
 	string sOpcodeVar = pNF->GetOpcodeVariable();
 	string sObj = pFunction->GetObject()->m_Declarators.First()->GetName();
 	CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
+	string dot(".");
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+		dot.clear();
+	string del;
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+		del = ":";
+	else /* C */
+		del = "=";
 
 	pFile << "\t{\n";
 	++pFile << "\tunion {\n";
 	++pFile << "\tchar msg[31];\n";
 	pFile << "\tstruct {\n";
 	++pFile << "\tunsigned char _pad1;\n";
-	pFile << "\tunsigned long if;\n";
+	pFile << "\tunsigned long if_id;\n";
 	pFile << "\tunsigned long op;\n";
 	pFile << "\tl4_threadid_t tid;\n";
 	pFile << "\tl4_threadid_t from;\n";
 	pFile << "\tchar iname[14];\n";
 	--pFile << "\t} entry;\n";
-	--pFile << "\t} msg = { .entry: { ._pad1: 0, .if: " << sOpcodeVar << " >> DICE_IID_BITS, " <<
-		".op: " << sOpcodeVar << " & DICE_FID_MASK, .tid: l4_myself(), .from: *(" << sObj <<
-		"), .iname: \"" << pClass->GetName().substr(0,14) << "} };\n";
+	--pFile << "\t} msg = { " << dot << "entry" << del << " { " << dot << "_pad1" << del << "0, " << dot <<
+		"if_id" << del << sOpcodeVar << " >> DICE_IID_BITS, " << dot << "op" << del << " " << sOpcodeVar <<
+		" & DICE_FID_MASK, " << dot << "tid" << del << " l4_myself(), " << dot << "from" << del << " *(" << 
+		sObj <<	"), " << dot << "iname" << del << " \"" << pClass->GetName().substr(0,14) << "\"} };\n";
 	pFile << "\tfiasco_tbuf_log(msg.msg);\n";
 
 	--pFile << "\t}\n";

@@ -432,3 +432,38 @@ void
 Mem_space::free_ldt_memory()
 {}
 
+
+// --------------------------------------------------------------------
+INTERFACE [(ia32 || amd64) && !smas]:
+
+EXTENSION class Mem_space
+{
+private:
+  void *_ldt_addr;
+  Mword _ldt_size;
+};
+
+// --------------------------------------------------------------------
+IMPLEMENTATION [(ia32 || amd64) && !smas]:
+
+PUBLIC inline
+void
+Mem_space::ldt_addr(void *addr)
+{ _ldt_addr = addr; }
+
+PUBLIC inline
+Address
+Mem_space::ldt_addr() const
+{ return (Address)_ldt_addr; }
+
+PUBLIC inline
+void
+Mem_space::ldt_size(Mword size)
+{ _ldt_size = size; }
+
+PUBLIC inline
+Mword
+Mem_space::ldt_size() const
+{ return _ldt_size; }
+
+

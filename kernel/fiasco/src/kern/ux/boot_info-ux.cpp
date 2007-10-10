@@ -389,6 +389,13 @@ Boot_info::init()
       == -1)
     panic ("cannot create physmem: %s", strerror (errno));
 
+  // check if we really got exec-rights on physmem, /tmp might be mounted noexec
+  if (access(physmem_file, R_OK | W_OK | X_OK))
+    {
+      unlink (physmem_file);
+      panic ("Invalid permissions for physmem file");
+    }
+
   unlink (physmem_file);
 
   // Cannot handle more physical memory than roottask can handle (currently 1 GB).

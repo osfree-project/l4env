@@ -29,8 +29,6 @@ public:
     Syscalls          = Service_page + 0xff000,  ///< % 4KB syscall page
     Tbuf_buffer_area  = Service_page + 0x200000, ///< % 2MB
     Tbuf_ubuffer_area = Tbuf_buffer_area,
-    Ldt_addr          = 0xeb000000,    ///< % 4MB
-    Ldt_size          = 0xeb400000,    ///< % 4MB
     // 0xeb800000-0xec000000 (8MB) free
     Smas_version      = 0xec000000,    ///< % 4MB   SMAS pdir version counter
     Smas_area         = 0xec400000,    ///< % 4MB   SMAS segment base/limit
@@ -43,7 +41,6 @@ public:
     // 0xef000000-0xef800000 (8MB) free
     Kstatic           = 0xef800000,    ///< Io_bitmap - 4MB
     Io_bitmap         = 0xefc00000,    ///< % 4MB
-    Io_counter        = 0xefc80000,    ///< % 4KB, same 4MB page as Io_bitmap
     Vmem_end          = 0xf0000000,
     Adap_vram_mda_beg = 0xf00b0000,    ///< % 8KB video RAM MDA memory
     Adap_vram_mda_end = 0xf00b8000,

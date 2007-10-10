@@ -1,6 +1,7 @@
 PKGDIR ?= ../..
 L4DIR  ?= $(PKGDIR)/../..
 
+SYSTEMS = x86-l4v2 amd64-l4v2 arm-l4v2
 TARGET = $(PKGNAME)
 DEFAULT_RELOC = 0x00400000
 

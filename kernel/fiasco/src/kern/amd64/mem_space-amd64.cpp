@@ -51,55 +51,6 @@ IMPLEMENTATION [amd64-!smas]:
 #include "kmem.h"
 #include "logdefs.h"
 
-PUBLIC inline
-void
-Mem_space::ldt_addr(void *addr)
-{
-  Pd_entry *p = _dir->lookup(Mem_layout::Ldt_addr)
-    		  ->pdp()->lookup(Mem_layout::Ldt_addr)
-		    ->pdir()->lookup(Mem_layout::Ldt_addr);
-  assert(!p->valid());
-  assert(!((Address)addr & 1));
-
-  *p = (Address)addr & ~1;
-}
-
-PUBLIC inline
-Address
-Mem_space::ldt_addr() const
-{
-  Pd_entry p = _dir->lookup(Mem_layout::Ldt_addr)
-  		 ->pdp()->lookup(Mem_layout::Ldt_addr)
-		   ->pdir()->entry(Mem_layout::Ldt_addr);
-  assert(!p.valid());
-
-  return p.raw();
-}
-
-PUBLIC inline
-void
-Mem_space::ldt_size(Mword size)
-{
-  Pd_entry *p = _dir->lookup(Mem_layout::Ldt_size)
-    		  ->pdp()->lookup(Mem_layout::Ldt_size)
-		    ->pdir()->lookup(Mem_layout::Ldt_size);
-  assert(!p->valid());
-  assert(!(size & 1));
-
-  *p = size & ~1;
-}
-
-PUBLIC inline
-Mword
-Mem_space::ldt_size() 
-{
-  Pd_entry p = _dir->lookup(Mem_layout::Ldt_size)
-    		 ->pdp()->lookup(Mem_layout::Ldt_size)
-		   ->pdir()->entry(Mem_layout::Ldt_size);
-  assert(!p.valid());
-
-  return p.raw();
-}
 
 IMPLEMENT inline NEEDS["kmem.h","logdefs.h"]
 void

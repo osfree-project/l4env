@@ -8,12 +8,14 @@ name:					;\
 #define	GATE_ENTRY(n,entry,type)	\
 	.text	1			;\
 	.long	entry			;\
+	.long	0			;\
 	.word	n			;\
 	.word	type			;\
 	.text
 
 #define GATE_INITTAB_END		\
 	.text	1			;\
+	.long	0			;\
 	.long	0			;\
 	.text
 

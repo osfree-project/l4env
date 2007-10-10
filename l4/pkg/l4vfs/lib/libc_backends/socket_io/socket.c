@@ -368,7 +368,7 @@ int connect(int s, const struct sockaddr *serv_addr, socklen_t addrlen)
 }
 
 
-int recv(int s, void *buf, size_t len, int flags)
+ssize_t recv(int s, void *buf, size_t len, int flags)
 {
     int ret;
     file_desc_t file_desc;
@@ -407,8 +407,8 @@ int recv(int s, void *buf, size_t len, int flags)
     return ret;
 }
 
-int recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from,
-             socklen_t *fromlen)
+ssize_t recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from,
+                 socklen_t *fromlen)
 {
     int ret;
     file_desc_t file_desc;
@@ -453,7 +453,7 @@ int recvfrom(int s, void *buf, size_t len, int flags, struct sockaddr *from,
     return ret;
 }
 
-int send(int s, const void *msg, size_t len, int flags)
+ssize_t send(int s, const void *msg, size_t len, int flags)
 {
     int ret;
     file_desc_t file_desc;
@@ -485,7 +485,7 @@ int send(int s, const void *msg, size_t len, int flags)
     return ret;
 }
 
-int sendmsg(int s, const struct msghdr *msg, int flags)
+ssize_t sendmsg(int s, const struct msghdr *msg, int flags)
 {
     int ret,i;
     size_t msg_iov_size = 0;
@@ -526,7 +526,7 @@ int sendmsg(int s, const struct msghdr *msg, int flags)
         msg_iov_size += io_vec[i].iov_len + sizeof(struct iovec);
     }
 
-    LOGd(_DEBUG,"msg_iov_size: %d",msg_iov_size);
+    LOGd(_DEBUG,"msg_iov_size: %zd",msg_iov_size);
 
     msg_iov = malloc (msg_iov_size);
 
@@ -572,8 +572,8 @@ int sendmsg(int s, const struct msghdr *msg, int flags)
     return ret;
 }
 
-int sendto(int s, const void *msg, size_t len, int flags,
-           const struct sockaddr *to, socklen_t tolen)
+ssize_t sendto(int s, const void *msg, size_t len, int flags,
+               const struct sockaddr *to, socklen_t tolen)
 {
     int ret;
     file_desc_t file_desc;

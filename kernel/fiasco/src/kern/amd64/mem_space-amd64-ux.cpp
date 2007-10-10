@@ -519,11 +519,3 @@ Mem_space::is_mappable(Address addr, size_t size)
   return false;
 }
 
-// --------------------------------------------------------------------
-IMPLEMENTATION [!segments,ux]:
-
-PRIVATE inline
-void
-Mem_space::free_ldt_memory()
-{}
-

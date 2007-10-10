@@ -3,7 +3,7 @@ L4DIR              ?= $(PKGDIR)/../..
 
 MODE                = l4env_base
 
-SYSTEMS             = x86-l4v2
+SYSTEMS             = x86-l4v2 amd64-l4v2 arm-l4v2
 
 IDL                 = basic_io.idl              \
                       basic_name_server.idl     \

@@ -13,7 +13,9 @@
 
 /* L4 */
 #include <l4/util/reboot.h>
+#ifndef ARCH_arm
 #include <l4/util/rdtsc.h>
+#endif
 #include <l4/log/l4log.h>
 #include <l4/thread/thread.h>
 #include <l4/dope/dopelib.h>
@@ -33,6 +35,7 @@ static void reboot_callback(dope_event * ev, void *priv)
 	l4util_reboot();
 }
 
+#ifndef ARCH_arm
 static void time_loop(void *data)
 {
 	long app_id = (long)data;
@@ -45,6 +48,7 @@ static void time_loop(void *data)
 		          s / 60 / 60, (s / 60) % 60, s % 60);
 	}
 }
+#endif
 
 /*** DUMPER WINDOW ACTIVATE BUTTON ***/
 static void dumper_callback(dope_event *ev, void *priv)
@@ -76,9 +80,11 @@ static int gui_init(long app_id)
 	dope_bind(app_id, "b_reboot", "commit", reboot_callback, NULL);
 
 	/* fancy stuff */
+#ifndef ARCH_arm
 	l4_calibrate_tsc();
 	dope_cmdf(app_id, "l_mhz.set(-text \"%d MHz\")", l4_get_hz()/1000000);
 	l4thread_create(time_loop, (void *)app_id, L4THREAD_CREATE_ASYNC);
+#endif
 
 	return 0;
 }

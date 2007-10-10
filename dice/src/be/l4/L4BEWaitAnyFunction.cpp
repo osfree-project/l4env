@@ -75,7 +75,7 @@ CL4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bComponentS
 
 	// if we have flexible number of flexpages, we need a temporary variable
 	bool bFixedNumberOfFlexpages = true;
-	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
+	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, GetReceiveDirection());
 	if (!bFixedNumberOfFlexpages)
 	{
 		string sTempVar = pNF->GetTempOffsetVariable();
@@ -585,7 +585,7 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 
 	bool bFixedNumberOfFlexpages = true;
 	int nNumberOfFlexpages =
-		m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
+		m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, GetReceiveDirection());
 	CBESizes *pSizes = CCompiler::GetSizes();
 	int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
 		pSizes->GetSizeOfType(TYPE_MWORD);

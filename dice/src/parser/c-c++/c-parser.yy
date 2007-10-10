@@ -643,6 +643,9 @@ expression :
 	  assignment_expression
 	| expression COMMA assignment_expression
 	{ $$ = $1; }
+	/* Gcc extension */
+	| compound_statement
+	{ $$ = NULL; }
 	;
 
 pseudo_destructor_name :
@@ -2269,15 +2272,6 @@ function_declarator :
 	{
 	    $$ = new CFEFunctionDeclarator($1, NULL);
 	}
-	/* Dice specific:
-	 * struct foo {}; will define "foo" a class-id
-	 * int foo(params); will recognize foo as class and add it to the
-	 * decl_spec_seq, thus no function can be recognized properly
-	 */
-	| LPAREN parameter_declaration_clause RPAREN cv_qualifier_seq exception_specification maybeattribute
-	{ $$ = NULL; }
-	| LPAREN parameter_declaration_clause RPAREN cv_qualifier_seq maybeattribute
-	{ $$ = NULL; }
 	;
 
 array_declarator :

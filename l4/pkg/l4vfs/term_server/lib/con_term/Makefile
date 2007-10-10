@@ -10,6 +10,6 @@ IDL_PKGDIR = $(OBJ_BASE)/pkg/l4con
 
 SRC_C     = open.c close.c evh.c helper.c color.c cursor.c
 
-WARNINGS += -Wno-pointer-sign
+WARNINGS += $(call checkcc, -Wno-pointer-sign, )
 
 include $(L4DIR)/mk/lib.mk

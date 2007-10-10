@@ -56,6 +56,18 @@ l4util_atomic_inc(volatile long *dest)
   l4_atomic_add(dest, 1);
 }
 
+L4_INLINE void
+l4util_inc32(volatile l4_uint32_t *dest)
+{
+  l4_atomic_add((volatile long int *)dest, 1);
+}
+
+L4_INLINE void
+l4util_dec32(volatile l4_uint32_t *dest)
+{
+  l4_atomic_add((volatile long int *)dest, -1);
+}
+
 EXTERN_C_END
 
 #endif //__GNUC__
