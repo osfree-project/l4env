@@ -233,9 +233,7 @@ bool CBEObject::IsTargetFile(CBEImplementationFile* pFile)
 		"CBEObject::%s(%s) sBaseTarget=%s, sBaseLocal=%s\n", __func__,
 		pFile->GetFileName().c_str(), sBaseTarget.c_str(), sBaseLocal.c_str());
 
-	if (sBaseTarget == sBaseLocal)
-		return true;
-	return false;
+	return sBaseTarget == sBaseLocal;
 }
 
 /** \brief returns the name of the target header file

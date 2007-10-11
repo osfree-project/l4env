@@ -218,6 +218,9 @@ CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
  *
  * A call function is only written for a client file (it sould not have been
  * created if the attributes (IN,OUT) would not fit).
+ *
+ * A call function is not written if it has a uuid-range attribute. The the
+ * call function is only used to initialize message buffers.
  */
 bool CBECallFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
@@ -226,11 +229,10 @@ bool CBECallFunction::DoWriteFunction(CBEHeaderFile* pFile)
 		pFile->GetFileName().c_str(), GetName().c_str());
 
 	if (!IsTargetFile(pFile))
-	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBECallFunction::%s failed: wrong target file\n", __func__);
 		return false;
-	}
+
+	if (m_Attributes.Find(ATTR_UUID_RANGE))
+		return false;
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
 		__func__);
@@ -251,11 +253,10 @@ bool CBECallFunction::DoWriteFunction(CBEImplementationFile* pFile)
 		pFile->GetFileName().c_str(), GetName().c_str());
 
 	if (!IsTargetFile(pFile))
-	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBECallFunction::%s failed: wrong target file\n", __func__);
 		return false;
-	}
+
+	if (m_Attributes.Find(ATTR_UUID_RANGE))
+		return false;
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
 		__func__);

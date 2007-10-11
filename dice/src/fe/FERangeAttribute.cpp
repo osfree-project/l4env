@@ -1,12 +1,12 @@
 /**
- *    \file    dice/src/fe/FEIntAttribute.cpp
- *  \brief   contains the implementation of the class CFEIntAttribute
+ *  \file    dice/src/fe/FERangeAttribute.cpp
+ *  \brief   contains the implementation of the class CFERangeAttribute
  *
- *    \date    01/31/2001
- *    \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
+ *  \date    10/08/2007
+ *  \author  Ronald Aigner <ra3@os.inf.tu-dresden.de>
  */
 /*
- * Copyright (C) 2001-2004
+ * Copyright (C) 2007
  * Dresden University of Technology, Operating Systems Research Group
  *
  * This file contains free software, you can redistribute it and/or modify
@@ -26,28 +26,30 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "fe/FEIntAttribute.h"
+#include "fe/FERangeAttribute.h"
 
-CFEIntAttribute::CFEIntAttribute(ATTR_TYPE nType, int nValue, bool bAbs)
+CFERangeAttribute::CFERangeAttribute(ATTR_TYPE nType, int nLower, int nUpper, bool bAbs)
 : CFEAttribute(nType),
-	m_nIntValue(nValue),
-	m_bAbsoluteValue(bAbs)
+	m_nLower(nLower),
+	m_nUpper(nUpper),
+	m_bAbsolute(bAbs)
 { }
 
-CFEIntAttribute::CFEIntAttribute(CFEIntAttribute* src)
+CFERangeAttribute::CFERangeAttribute(CFERangeAttribute* src)
 : CFEAttribute(src),
-	m_nIntValue(src->m_nIntValue),
-	m_bAbsoluteValue(src->m_bAbsoluteValue)
+	m_nLower(src->m_nLower),
+	m_nUpper(src->m_nUpper),
+	m_bAbsolute(src->m_bAbsolute)
 { }
 
 /** cleans up the integer attribute */
-CFEIntAttribute::~CFEIntAttribute()
+CFERangeAttribute::~CFERangeAttribute()
 { }
 
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEIntAttribute::Clone()
+CObject* CFERangeAttribute::Clone()
 {
-	return new CFEIntAttribute(this);
+	return new CFERangeAttribute(this);
 }

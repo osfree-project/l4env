@@ -1286,9 +1286,7 @@ CBEFunction::WriteMarshalException(CBEFile& pFile,
  * The type and the name should not be initialized yet. This is all done by
  * this function.
  */
-bool
-CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType,
-	string sName)
+bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType, string sName)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 	// recycle old var

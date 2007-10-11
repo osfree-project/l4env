@@ -329,118 +329,118 @@ wstring         return token::WSTRING;
 	   }
 
 {Integer}  {
-    using namespace dice::parser;
-    IntType t;
+	using namespace dice::parser;
+	IntType t;
 #if HAVE_ATOLL
-    long
+	long
 #endif
-	long n = int_to_long (yytext, t);
-    switch (t)
-    {
-    case INT_ULLONG:
+		long n = int_to_long (yytext, t);
+	switch (t)
+	{
+	case INT_ULLONG:
 #if HAVE_ATOLL
-	yylval->ullval = static_cast<unsigned long long>(n);
-	return token::LIT_ULLONG;
-	break;
+		yylval->ullval = static_cast<unsigned long long>(n);
+		return token::LIT_ULLONG;
+		break;
 #endif
-    case INT_ULONG:
-	yylval->ulval = static_cast<unsigned long>(n);
-	return token::LIT_ULONG;
-	break;
-    case INT_LLONG:
+	case INT_ULONG:
+		yylval->ulval = static_cast<unsigned long>(n);
+		return token::LIT_ULONG;
+		break;
+	case INT_LLONG:
 #if HAVE_ATOLL
-	yylval->llval = n;
-	return token::LIT_LLONG;
-	break;
+		yylval->llval = n;
+		return token::LIT_LLONG;
+		break;
 #endif
-    case INT_LONG:
-	yylval->lval = static_cast<long>(n);
-	return token::LIT_LONG;
-	break;
-    case INT_INT:
-	yylval->ival = static_cast<int>(n);
-	return token::LIT_INT;
-	break;
-    case INVALID:
-	driver.error(*yylloc, "value out of range");
-	break;
-    }
+	case INT_LONG:
+		yylval->lval = static_cast<long>(n);
+		return token::LIT_LONG;
+		break;
+	case INT_INT:
+		yylval->ival = static_cast<int>(n);
+		return token::LIT_INT;
+		break;
+	case INVALID:
+		driver.error(*yylloc, "value out of range");
+		break;
+	}
 	   }
 {Hexadec}  {
-    using namespace dice::parser;
-    IntType t;
+	using namespace dice::parser;
+	IntType t;
 #if HAVE_ATOLL
-    long
+	long
 #endif
-	long n = hex_to_long (yytext, t);
-    switch (t)
-    {
-    case INT_ULLONG:
+		long n = hex_to_long (yytext, t);
+	switch (t)
+	{
+	case INT_ULLONG:
 #if HAVE_ATOLL
-	yylval->ullval = static_cast<unsigned long long>(n);
-	return token::LIT_ULLONG;
-	break;
+		yylval->ullval = static_cast<unsigned long long>(n);
+		return token::LIT_ULLONG;
+		break;
 #endif
-    case INT_ULONG:
-	yylval->ulval = static_cast<unsigned long>(n);
-	return token::LIT_ULONG;
-	break;
-    case INT_LLONG:
+	case INT_ULONG:
+		yylval->ulval = static_cast<unsigned long>(n);
+		return token::LIT_ULONG;
+		break;
+	case INT_LLONG:
 #if HAVE_ATOLL
-	yylval->llval = n;
-	return token::LIT_LLONG;
-	break;
+		yylval->llval = n;
+		return token::LIT_LLONG;
+		break;
 #endif
-    case INT_LONG:
-	yylval->lval = static_cast<long>(n);
-	return token::LIT_LONG;
-	break;
-    case INT_INT:
-	yylval->ival = static_cast<int>(n);
-	return token::LIT_INT;
-	break;
-    case INVALID:
-	driver.error(*yylloc, "value is out of range");
-	break;
-    }
+	case INT_LONG:
+		yylval->lval = static_cast<long>(n);
+		return token::LIT_LONG;
+		break;
+	case INT_INT:
+		yylval->ival = static_cast<int>(n);
+		return token::LIT_INT;
+		break;
+	case INVALID:
+		driver.error(*yylloc, "value is out of range");
+		break;
+	}
 	   }
 {Octal}    {
-    using namespace dice::parser;
-    IntType t;
+	using namespace dice::parser;
+	IntType t;
 #if HAVE_ATOLL
-    long
+	long
 #endif
-	long n = oct_to_long (yytext, t);
-    switch (t)
-    {
-    case INT_ULLONG:
+		long n = oct_to_long (yytext, t);
+	switch (t)
+	{
+	case INT_ULLONG:
 #if HAVE_ATOLL
-	yylval->ullval = static_cast<unsigned long long>(n);
-	return token::LIT_ULLONG;
-	break;
+		yylval->ullval = static_cast<unsigned long long>(n);
+		return token::LIT_ULLONG;
+		break;
 #endif
-    case INT_ULONG:
-	yylval->ulval = static_cast<unsigned long>(n);
-	return token::LIT_ULONG;
-	break;
-    case INT_LLONG:
+	case INT_ULONG:
+		yylval->ulval = static_cast<unsigned long>(n);
+		return token::LIT_ULONG;
+		break;
+	case INT_LLONG:
 #if HAVE_ATOLL
-	yylval->llval = n;
-	return token::LIT_LLONG;
-	break;
+		yylval->llval = n;
+		return token::LIT_LLONG;
+		break;
 #endif
-    case INT_LONG:
-	yylval->lval = static_cast<long>(n);
-	return token::LIT_LONG;
-	break;
-    case INT_INT:
-	yylval->ival = static_cast<int>(n);
-	return token::LIT_INT;
-	break;
-    case INVALID:
-	driver.error(*yylloc, "value is out of range");
-	break;
-    }
+	case INT_LONG:
+		yylval->lval = static_cast<long>(n);
+		return token::LIT_LONG;
+		break;
+	case INT_INT:
+		yylval->ival = static_cast<int>(n);
+		return token::LIT_INT;
+		break;
+	case INVALID:
+		driver.error(*yylloc, "value is out of range");
+		break;
+	}
 	   }
 {VersionRep} {
     yylval->sval = new std::string(yytext);

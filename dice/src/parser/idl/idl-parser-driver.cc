@@ -12,6 +12,7 @@ idl_parser_driver::idl_parser_driver ()
     typedef yy::idl_parser::token token;
     // intialize symbol table with known attributes
     attr_table.clear();
+    attr_table["abs"] = token::ABS;
     attr_table["abstract"] = token::ABSTRACT;
     attr_table["allow_reply_only"] = token::ALLOW_REPLY_ONLY;
     attr_table["auto_handle"] = token::AUTO_HANDLE;

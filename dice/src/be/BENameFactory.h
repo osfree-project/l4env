@@ -101,7 +101,7 @@ public:
 	virtual std::string GetInlinePrefix();
 	virtual std::string GetOpcodeConst(CBEClass * pClass);
 	virtual std::string GetOpcodeConst(CBEFunction * pFunction);
-	virtual std::string GetOpcodeConst(CFEOperation * pFEOperation);
+	virtual std::string GetOpcodeConst(CFEOperation * pFEOperation, bool bSecond = false);
 	virtual std::string GetSrvReturnVariable();
 	virtual std::string GetOpcodeVariable();
 	virtual std::string GetReplyCodeVariable();

@@ -989,13 +989,13 @@ string CBENameFactory::GetOpcodeConst(CBEFunction * pFunction)
 
 /** \brief generate the constant name of the function's opcode
  *  \param pFEOperation the operation to generate the opcode for
+ *  \param bSecond true if a second opcode const name is required
  *  \return a string containing the opcode constant name
  *
  * A opcode constant is usually named:
  * [\<library name\>_]\<interface name\>_\<function name\>_opcode
  */
-string
-CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation)
+string CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation, bool bSecond)
 {
 	if (!pFEOperation)
 	{
@@ -1015,6 +1015,8 @@ CBENameFactory::GetOpcodeConst(CFEOperation * pFEOperation)
 	if (pFEInterface)
 		sReturn += (pFEInterface->GetName()) + "_";
 	sReturn += pFEOperation->GetName() + "_opcode";
+	if (bSecond)
+		sReturn += "_2";
 	// make upper case
 	transform(sReturn.begin(), sReturn.end(), sReturn.begin(), _toupper);
 

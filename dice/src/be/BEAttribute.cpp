@@ -37,6 +37,7 @@
 #include "be/BEClassFactory.h"
 #include "fe/FEAttribute.h"
 #include "fe/FEIntAttribute.h"
+#include "fe/FERangeAttribute.h"
 #include "fe/FEIsAttribute.h"
 #include "fe/FEStringAttribute.h"
 #include "fe/FETypeAttribute.h"
@@ -63,6 +64,8 @@ CBEAttribute::CBEAttribute()
     m_nIntValue = 0;
     m_nMajorVersion = 0;
     m_nMinorVersion = 0;
+	m_nLowerInt = 0;
+	m_nUpperInt = 0;
 }
 
 CBEAttribute::CBEAttribute(CBEAttribute* src)
@@ -96,6 +99,10 @@ CBEAttribute::CBEAttribute(CBEAttribute* src)
 	case ATTR_LCID:        // int
 	case ATTR_HELPCONTEXT:    // int
 		m_nIntValue = src->m_nIntValue;
+		break;
+	case ATTR_UUID_RANGE:
+		m_nLowerInt = src->m_nLowerInt;
+		m_nUpperInt = src->m_nUpperInt;
 		break;
 	case ATTR_SWITCH_IS:    // Is
 	case ATTR_FIRST_IS:    // IS
@@ -144,8 +151,7 @@ CObject* CBEAttribute::Clone()
  * should also contain the different members of the front-end attributes.
  * Because we do not really support those, we ignore them for now.
  */
-void
-CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute)
+void CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute)
 {
     // call CBEObject's CreateBackEnd method
     CBEObject::CreateBackEnd(pFEAttribute);
@@ -169,6 +175,10 @@ CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute)
             CreateBackEndString((CFEStringAttribute *) pFEAttribute);
         }
         break;
+	case ATTR_UUID_RANGE:
+		m_nAttrClass = ATTR_CLASS_RANGE;
+		CreateBackEndRange((CFERangeAttribute *) pFEAttribute);
+		break;
     case ATTR_HELPFILE:    // string
     case ATTR_HELPSTRING:    // string
     case ATTR_DEFAULT_FUNCTION: // string
@@ -303,13 +313,12 @@ CBEAttribute::CreateBackEnd(ATTR_TYPE nType)
         break;
     default:
 	{
-	    std::ostringstream os;
-	    os << m_nType;
+		std::ostringstream os;
+		os << m_nType;
 
-	    string exc = string(__func__);
-	    exc += "Attribute Type " + os.str() +
-		" requires other CreateBackEnd method.";
-	    throw new error::create_error(exc);
+		string exc = string(__func__);
+		exc += "Attribute Type " + os.str() + " requires different CreateBackEnd method.";
+		throw new error::create_error(exc);
 	}
 	break;
     }
@@ -319,8 +328,7 @@ CBEAttribute::CreateBackEnd(ATTR_TYPE nType)
  *  \param pFETypeAttribute the type attribute to use
  *  \return true if code generation was successful
  */
-void
-CBEAttribute::CreateBackEndType(CFETypeAttribute * pFETypeAttribute)
+void CBEAttribute::CreateBackEndType(CFETypeAttribute * pFETypeAttribute)
 {
     CFETypeSpec *pType = pFETypeAttribute->GetType();
     CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -333,8 +341,7 @@ CBEAttribute::CreateBackEndType(CFETypeAttribute * pFETypeAttribute)
  *  \param pFEstringAttribute the respective string attribute
  *  \return true if the code generation was successful
  */
-void
-CBEAttribute::CreateBackEndString(CFEStringAttribute * pFEstringAttribute)
+void CBEAttribute::CreateBackEndString(CFEStringAttribute * pFEstringAttribute)
 {
     m_sString = pFEstringAttribute->GetString();
 }
@@ -347,8 +354,7 @@ CBEAttribute::CreateBackEndString(CFEStringAttribute * pFEstringAttribute)
  * something dynamically. To write this variable later correctly, we search
  * for a reference to it instead of creating an own instance.
  */
-void
-CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
+void CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
 {
 	vector<CFEDeclarator*>::iterator iterAP;
 	for (iterAP = pFEIsAttribute->m_AttrParameters.begin();
@@ -478,6 +484,29 @@ void CBEAttribute::CreateBackEndInt(ATTR_TYPE nType, int nValue)
 	m_nIntValue = nValue;
 }
 
+/** \brief creates the back-end range attribute
+ *  \param nType the exact type
+ *  \param nLower the lower bound of the range
+ *  \param nUpper the upper bound of the range
+ */
+void CBEAttribute::CreateBackEndRange(ATTR_TYPE nType, int nLower, int nUpper)
+{
+	string exc = string(__func__);
+	// check type
+	switch (nType)
+	{
+	case ATTR_UUID_RANGE:
+		break;
+	default:
+		exc += " failed, because invalid type.";
+		throw new error::create_error(exc);
+	}
+	m_nType = nType;
+	m_nAttrClass = ATTR_CLASS_RANGE;
+	m_nLowerInt = nLower;
+	m_nUpperInt = nUpper;
+}
+
 /** \brief prepares this instance for the code generation
  *  \param nType the type of the attribute
  *  \param pType the type to set
@@ -507,6 +536,14 @@ void CBEAttribute::CreateBackEndType(ATTR_TYPE nType, CBEType *pType)
 void CBEAttribute::CreateBackEndInt(CFEIntAttribute * pFEIntAttribute)
 {
 	m_nIntValue = pFEIntAttribute->GetIntValue();
+}
+
+/** \brief creates the back-end attribute for a range attribute
+ *  \param pFERangeAttribute the respective front-end attribute
+ */
+void CBEAttribute::CreateBackEndRange(CFERangeAttribute * pFERangeAttribute)
+{
+	pFERangeAttribute->GetValues(m_nLowerInt, m_nUpperInt);
 }
 
 /** \brief creates the back-end attribute for a version attribute

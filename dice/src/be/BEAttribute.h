@@ -38,6 +38,7 @@
 
 class CFEAttribute;
 class CFEIntAttribute;
+class CFERangeAttribute;
 class CFEIsAttribute;
 class CFEStringAttribute;
 class CFETypeAttribute;
@@ -51,13 +52,14 @@ class CBEDeclarator;
  */
 enum ATTR_CLASS
 {
-    ATTR_CLASS_NONE    = 0,   /**< the attribute belongs to no attribute class */
-    ATTR_CLASS_SIMPLE  = 1,   /**< the attribute is a simple attribute */
-    ATTR_CLASS_INT     = 2,   /**< the attribute is an integer attribute */
-    ATTR_CLASS_IS      = 3,   /**< the attribute is an IS attribute */
-    ATTR_CLASS_STRING  = 4,   /**< the attribute is a string attribute */
-    ATTR_CLASS_TYPE    = 5,   /**< the attribute is a type attribute */
-    ATTR_CLASS_VERSION = 6    /**< the attribute is a version attribute */
+    ATTR_CLASS_NONE		= 0,	/**< the attribute belongs to no attribute class */
+    ATTR_CLASS_SIMPLE,			/**< the attribute is a simple attribute */
+    ATTR_CLASS_INT,				/**< the attribute is an integer attribute */
+    ATTR_CLASS_IS,				/**< the attribute is an IS attribute */
+    ATTR_CLASS_STRING,			/**< the attribute is a string attribute */
+    ATTR_CLASS_TYPE,			/**< the attribute is a type attribute */
+    ATTR_CLASS_VERSION,			/**< the attribute is a version attribute */
+	ATTR_CLASS_RANGE			/**< the attribute is a range of integer values */
 };
 
 /** \class CBEAttribute
@@ -88,6 +90,7 @@ public:
 	virtual void CreateBackEnd(CFEAttribute * pFEAttribute);
 	virtual void CreateBackEndIs(ATTR_TYPE nType, CBEDeclarator *pDeclarator);
 	virtual void CreateBackEndInt(ATTR_TYPE nType, int nValue);
+	virtual void CreateBackEndRange(ATTR_TYPE nType, int nLower, int nUpper);
 	virtual void CreateBackEndType(ATTR_TYPE nType, CBEType *pType);
 
 	virtual void Write(CBEFile& pFile);
@@ -144,7 +147,32 @@ public:
 	CBEType* GetAttrType()
 	{ return m_pType; }
 
+	/** \brief retrieve the range information
+	 *  \param nLower the lower bound
+	 *  \param nUpper the upper bound
+	 */
+	void GetRange(int& nLower, int& nUpper)
+	{
+		if (m_nAttrClass == ATTR_CLASS_RANGE)
+		{
+			nLower = m_nLowerInt;
+			nUpper = m_nUpperInt;
+		}
+	}
+
+	/** \brief return if the values are absolute or relative
+	 *  \return true if absolute values
+	 */
+	bool IsValueAbsolute()
+	{
+		if (m_nAttrClass == ATTR_CLASS_RANGE ||
+			m_nAttrClass == ATTR_CLASS_INT)
+			return m_bIsAbsolute;
+		return false;
+	}
+
 protected:
+	virtual void CreateBackEndRange(CFERangeAttribute * pFERangeAttribute);
 	virtual void CreateBackEndInt(CFEIntAttribute * pFEIntAttribute);
 	virtual void CreateBackEndIs(CFEIsAttribute * pFEIsAttribute);
 	virtual void CreateBackEndString(CFEStringAttribute * pFEStringAttribute);
@@ -193,6 +221,18 @@ protected:
 	 *  \brief the major part of the version information
 	 */
 	int m_nMajorVersion;
+	/** \var int m_nLowerInt;
+	 *  \brief if a range, this is the lower bound
+	 */
+	int m_nLowerInt;
+	/** \var int m_nUpperInt;
+	 *  \brief if a range, this is the upper bound
+	 */
+	int m_nUpperInt;
+	/** \var bool m_bIsAbsolute
+	 *  \brief if Int or Range attribute this determines if the value is absolute
+	 */
+	bool m_bIsAbsolute;
 
 public:
 	/** \var CSearchableCollection<CBEDeclarator, std::string> m_Parameters

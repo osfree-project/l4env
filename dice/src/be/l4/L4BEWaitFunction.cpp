@@ -49,20 +49,17 @@
 
 CL4BEWaitFunction::CL4BEWaitFunction(bool bOpenWait)
 : CBEWaitFunction(bOpenWait)
-{
-}
+{ }
 
 /** destroys this object */
 CL4BEWaitFunction::~CL4BEWaitFunction()
-{
-}
+{ }
 
 /** \brief initialize instance of class
  *  \param pFEOperation the front-end function to use as reference
  *  \return true on success
  */
-void
-CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
+void CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 {
     CBEWaitFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
@@ -79,8 +76,7 @@ CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide
  * In a wait-function we always use the server environment, because it
  * contains receive flexpages, etc.
  */
-void
-CL4BEWaitFunction::CreateEnvironment()
+void CL4BEWaitFunction::CreateEnvironment()
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	CBEClassFactory *pCF = CBEClassFactory::Instance();

@@ -148,11 +148,15 @@ CBESndFunction::AddBeforeParameters()
  * A send function is written at the client's side if the IN attribute is set,
  * and at the component's side if the OUT attribute is set. And of course, only
  * if the target file is suitable.
+ *
+ * A send function is not written if it has a uuid-range attribute.
  */
 bool CBESndFunction::DoWriteFunction(CBEHeaderFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
+	if (m_Attributes.Find(ATTR_UUID_RANGE))
+		return false;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) && (m_Attributes.Find(ATTR_IN)))
         return true;
     if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (m_Attributes.Find(ATTR_OUT)))
@@ -167,11 +171,15 @@ bool CBESndFunction::DoWriteFunction(CBEHeaderFile* pFile)
  * A send function is written at the client's side if the IN attribute is set,
  * and at the component's side if the OUT attribute is set. And of course, only
  * if the target file is suitable.
+ *
+ * A send function is not written if it has a uuid-range attribute.
  */
 bool CBESndFunction::DoWriteFunction(CBEImplementationFile* pFile)
 {
     if (!IsTargetFile(pFile))
         return false;
+	if (m_Attributes.Find(ATTR_UUID_RANGE))
+		return false;
     if (pFile->IsOfFileType(FILETYPE_CLIENT) && (m_Attributes.Find(ATTR_IN)))
         return true;
     if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (m_Attributes.Find(ATTR_OUT)))

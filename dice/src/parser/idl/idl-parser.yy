@@ -21,6 +21,7 @@
 #include "fe/FEExceptionAttribute.h"
 #include "fe/FEEndPointAttribute.h"
 #include "fe/FEIntAttribute.h"
+#include "fe/FERangeAttribute.h"
 #include "fe/FEVersionAttribute.h"
 #include "fe/FEStringAttribute.h"
 #include "fe/FETypeAttribute.h"
@@ -225,7 +226,7 @@ class idl_parser_driver;
 %token		VOID_PTR	"void*"
 %token		XOR_ASSIGN	"^="
 
-
+%token		ABS			"abs"
 %token		ABSTRACT	"abstract"
 %token		ANY		"any"
 %token		ALLOW_REPLY_ONLY	"allow_reply_only"
@@ -424,6 +425,7 @@ class idl_parser_driver;
 %type	<utype>		union_type_header
 %type	<attr>		union_type_switch_attr
 %type	<attr>		usage_attribute
+%type	<ival>		uuid_absolute
 
 %start file
 
@@ -945,29 +947,29 @@ interface :
 	;
 
 interface_attribute :
-	  UUID LPAREN LIT_INT RPAREN
+	  UUID LPAREN const_expr RPAREN
 	{
-	    $$ = new CFEIntAttribute(ATTR_UUID, $3);
+	    $$ = new CFEIntAttribute(ATTR_UUID, $3->GetIntValue());
 	    $$->m_sourceLoc = @$;
 	}
 	| VERSION_ATTR LPAREN VERSION_STR RPAREN
 	{
-	    version_t t;
-	    std::string::size_type pos = $3->find('.');
-	    if (pos == std::string::npos)
-		pos = $3->find(',');
-	    if (pos != std::string::npos)
-	    {
-		t.nMajor = std::atoi($3->substr(0, pos).c_str());
-		t.nMinor = std::atoi($3->substr(pos).c_str());
-	    }
-	    else
-	    {
-		t.nMajor = std::atoi($3->c_str());
-		t.nMinor = 0;
-	    }
-	    $$ = new CFEVersionAttribute(t);
-	    $$->m_sourceLoc = @$;
+		version_t t;
+		std::string::size_type pos = $3->find('.');
+		if (pos == std::string::npos)
+			pos = $3->find(',');
+		if (pos != std::string::npos)
+		{
+			t.nMajor = std::atoi($3->substr(0, pos).c_str());
+			t.nMinor = std::atoi($3->substr(pos).c_str());
+		}
+		else
+		{
+			t.nMajor = std::atoi($3->c_str());
+			t.nMinor = 0;
+		}
+		$$ = new CFEVersionAttribute(t);
+		$$->m_sourceLoc = @$;
 	}
 	| ENDPOINT LPAREN PORTSPEC RPAREN
 	{
@@ -1459,10 +1461,15 @@ operation_attribute :
 	    $$ = new CFEAttribute(ATTR_REFLECT_DELETIONS);
 	    $$->m_sourceLoc = @$;
 	}
-	| UUID LPAREN LIT_INT RPAREN
+	| UUID LPAREN const_expr uuid_absolute RPAREN
 	{
-	    $$ = new CFEIntAttribute(ATTR_UUID, $3);
+	    $$ = new CFEIntAttribute(ATTR_UUID, $3->GetIntValue(), $4);
 	    $$->m_sourceLoc = @$;
+	}
+	| UUID LPAREN const_expr DOTDOT const_expr uuid_absolute RPAREN
+	{
+		$$ = new CFERangeAttribute(ATTR_UUID_RANGE, $3->GetIntValue(), $5->GetIntValue(), $6);
+		$$->m_sourceLoc = @$;
 	}
 	| usage_attribute
 	| ptr_attr
@@ -1501,6 +1508,17 @@ operation_attribute :
 	{
 	    $$ = new CFEAttribute(ATTR_DEFAULT_TIMEOUT);
 	    $$->m_sourceLoc = @$;
+	}
+	;
+
+uuid_absolute :
+	  /* empty */
+	{
+		$$ = 0;
+	}
+	| COMMA ABS
+	{
+		$$ = 1;
 	}
 	;
 
@@ -1738,11 +1756,11 @@ declarator :
 	}
 	| pointer attribute_list direct_declarator COLON const_expr
 	{
-	    $$ = $3;
-	    if ($5)
-		$$->SetBitfields($5->GetIntValue());
-	    $$->SetStars($1);
-	    $$->m_sourceLoc = @$;
+		$$ = $3;
+		if ($5)
+			$$->SetBitfields($5->GetIntValue());
+		$$->SetStars($1);
+		$$->m_sourceLoc = @$;
 	}
 	| attribute_list direct_declarator
 	{
@@ -1750,10 +1768,10 @@ declarator :
 	}
 	| attribute_list direct_declarator COLON const_expr
 	{
-	    $$ = $2;
-	    if ($4)
-		$$->SetBitfields($4->GetIntValue());
-	    $$->m_sourceLoc = @$;
+		$$ = $2;
+		if ($4)
+			$$->SetBitfields($4->GetIntValue());
+		$$->m_sourceLoc = @$;
 	}
 	;
 
@@ -1943,14 +1961,14 @@ floating_pt_type :
 fixed_type :
 	  FIXED LT const_expr COMMA const_expr GT
 	{
-	    int nFirst = $3 ? $3->GetIntValue() : 0;
-	    int nSecond = $5 ? $5->GetIntValue() : 0;
-	    $$ = new CFESimpleType(TYPE_FIXED, nFirst, nSecond);
-	    $$->m_sourceLoc = @$;
-	    if ($3)
-		delete $3;
-	    if ($5)
-		delete $5;
+		int nFirst = $3 ? $3->GetIntValue() : 0;
+		int nSecond = $5 ? $5->GetIntValue() : 0;
+		$$ = new CFESimpleType(TYPE_FIXED, nFirst, nSecond);
+		$$->m_sourceLoc = @$;
+		if ($3)
+			delete $3;
+		if ($5)
+			delete $5;
 	}
 	| FIXED
 	{
@@ -1967,11 +1985,11 @@ integer_type :
 	}
 	| SIGNED integer_size
 	{
-	    if ($2 == 4) // it was LONG
-		$$ = new CFESimpleType(TYPE_LONG, false, false, $2, false);
-	    else
-		$$ = new CFESimpleType(TYPE_INTEGER, false, false, $2, false);
-	    $$->m_sourceLoc = @$;
+		if ($2 == 4) // it was LONG
+			$$ = new CFESimpleType(TYPE_LONG, false, false, $2, false);
+		else
+			$$ = new CFESimpleType(TYPE_INTEGER, false, false, $2, false);
+		$$->m_sourceLoc = @$;
 	}
 	| SIGNED integer_size INT
 	{
@@ -3061,6 +3079,34 @@ primary_expr :
 	{
 	    $$ = new CFEPrimaryExpression(EXPR_INT, static_cast<long int>($1));
 	    $$->m_sourceLoc = @$;
+	}
+	| LIT_LONG
+	{
+	    $$ = new CFEPrimaryExpression(EXPR_INT, static_cast<long int>($1));
+	    $$->m_sourceLoc = @$;
+	}
+	| LIT_ULONG
+	{
+	    $$ = new CFEPrimaryExpression(EXPR_UINT, static_cast<unsigned long int>($1));
+	    $$->m_sourceLoc = @$;
+	}
+	| LIT_LLONG
+	{
+#if HAVE_ATOLL
+		$$ = new CFEPrimaryExpression(EXPR_LLONG, static_cast<long long int>($1));
+#else
+		$$ = new CFEPrimaryExpression(EXPR_INT, static_cast<long int>($1));
+#endif
+		$$->m_sourceLoc = @$;
+	}
+	| LIT_ULLONG
+	{
+#if HAVE_ATOLL
+		$$ = new CFEPrimaryExpression(EXPR_ULLONG, static_cast<unsigned long long int>($1));
+#else
+		$$ = new CFEPrimaryExpression(EXPR_UINT, static_cast<unsigned long int>($1));
+#endif
+		$$->m_sourceLoc = @$;
 	}
 	| LIT_FLOAT
 	{

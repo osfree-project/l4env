@@ -37,8 +37,10 @@ CFEPrimaryExpression::CFEPrimaryExpression(EXPR_TYPE nType, long int nValue)
 {
     m_nValue = nValue;
     m_nuValue = 0UL;
+#if SIZEOF_LONG_LONG > 0
     m_nlValue = 0LL;
     m_nulValue = 0ULL;
+#endif
     m_fValue = 0.0f;
     m_pOperand = 0;
 }
@@ -48,8 +50,10 @@ CFEPrimaryExpression::CFEPrimaryExpression(EXPR_TYPE nType, unsigned long int nV
 {
     m_nuValue = nValue;
     m_nValue = 0L;
+#if SIZEOF_LONG_LONG > 0
     m_nlValue = 0LL;
     m_nulValue = 0ULL;
+#endif
     m_fValue = 0.0f;
     m_pOperand = 0;
 }
@@ -86,8 +90,10 @@ CFEPrimaryExpression::CFEPrimaryExpression(EXPR_TYPE nType, long double fValue)
 {
     m_nValue = 0L;
     m_nuValue = 0UL;
+#if SIZEOF_LONG_LONG > 0
     m_nlValue = 0LL;
     m_nulValue = 0ULL;
+#endif
     m_fValue = fValue;
     m_pOperand = 0;
 }
@@ -97,8 +103,10 @@ CFEPrimaryExpression::CFEPrimaryExpression(EXPR_TYPE nType, CFEExpression * pOpe
 {
     m_nValue = 0L;
     m_nuValue = 0UL;
+#if SIZEOF_LONG_LONG > 0
     m_nlValue = 0LL;
     m_nulValue = 0ULL;
+#endif
     m_fValue = 0.0f;
     m_pOperand = pOperand;
 }
@@ -109,8 +117,10 @@ CFEPrimaryExpression::CFEPrimaryExpression(CFEPrimaryExpression* src)
     m_fValue = src->m_fValue;
     m_nValue = src->m_nValue;
     m_nuValue = src->m_nuValue;
+#if SIZEOF_LONG_LONG > 0
     m_nlValue = src->m_nlValue;
     m_nulValue = src->m_nulValue;
+#endif
 	CLONE_MEM(CFEExpression, m_pOperand);
 }
 
@@ -222,57 +232,57 @@ CFEExpression *CFEPrimaryExpression::GetOperand()
  */
 string CFEPrimaryExpression::ToString()
 {
-    string ret;
-    switch (m_nType)
-    {
-    case EXPR_INT:
+	string ret;
+	switch (m_nType)
 	{
-	    std::ostringstream os;
-	    os << m_nValue;
-	    ret += os.str();
-	}
-        break;
-    case EXPR_UINT:
-	{
-	    std::ostringstream os;
-	    os << m_nuValue;
-	    ret += os.str();
-	}
-        break;
+	case EXPR_INT:
+		{
+			std::ostringstream os;
+			os << m_nValue;
+			ret += os.str();
+		}
+		break;
+	case EXPR_UINT:
+		{
+			std::ostringstream os;
+			os << m_nuValue;
+			ret += os.str();
+		}
+		break;
 #if SIZEOF_LONG_LONG > 0
-    case EXPR_LLONG:
-	{
-	    std::ostringstream os;
-	    os << m_nlValue;
-	    ret += os.str();
-	}
-        break;
-    case EXPR_ULLONG:
-	{
-	    std::ostringstream os;
-	    os << m_nulValue;
-	    ret += os.str();
-	}
-        break;
+	case EXPR_LLONG:
+		{
+			std::ostringstream os;
+			os << m_nlValue;
+			ret += os.str();
+		}
+		break;
+	case EXPR_ULLONG:
+		{
+			std::ostringstream os;
+			os << m_nulValue;
+			ret += os.str();
+		}
+		break;
 #endif
-    case EXPR_FLOAT:
-	{
-	    std::ostringstream os;
-	    os << m_fValue;
-	    ret += os.str();
+	case EXPR_FLOAT:
+		{
+			std::ostringstream os;
+			os << m_fValue;
+			ret += os.str();
+		}
+		break;
+	case EXPR_PAREN:
+		ret += "(";
+		if (GetOperand())
+			ret += GetOperand()->ToString();
+		else
+			ret += "(no operand)";
+		ret += ")";
+		break;
+	default:
+		break;
 	}
-        break;
-    case EXPR_PAREN:
-        ret += "(";
-        if (GetOperand())
-            ret += GetOperand()->ToString();
-        else
-            ret += "(no operand)";
-        ret += ")";
-        break;
-    default:
-        break;
-    }
-    return ret;
+	return ret;
 }
 

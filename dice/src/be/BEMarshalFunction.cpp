@@ -63,8 +63,7 @@ CBEMarshalFunction::~CBEMarshalFunction()
  * This function should only contain OUT parameters if it is on the
  * component's side an IN parameters if it is on the client's side.
  */
-void
-CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
+void CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
 	// set target file name
 	SetTargetFileName(pFEOperation);
@@ -77,7 +76,7 @@ CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 
 	// add message buffer
 	// (called before return type replacement, so we can add the "old" return
-	// type
+	// type)
 	AddMessageBuffer(pFEOperation);
 
 	// replace return type after parameters are added, so the parameters can

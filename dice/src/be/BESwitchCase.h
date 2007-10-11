@@ -72,6 +72,9 @@ protected:
     virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual void WriteInvocation(CBEFile& pFile);
 
+	virtual void WriteCaseStart(CBEFile& pFile);
+	virtual void WriteCaseEnd(CBEFile& pFile);
+
 	/** \class SetCallVariableCall
 	 *  \brief used as functor to set call variables
 	 */
@@ -87,14 +90,17 @@ protected:
 
 protected:
     /** \var bool m_bSameClass
-     *  \brief true if switch case is from the same class as the dispatcher
-     *  function
+     *  \brief true if switch case is from the same class as the dispatcher function
      */
     bool m_bSameClass;
     /** \var std::string m_sOpcode
      *  \brief the opcode constant
      */
     std::string m_sOpcode;
+	/** \var std::string m_sUpper;
+	 *  \brief if this is a switch-case for a uuid-range, then store upper bound here
+	 */
+	std::string m_sUpper;
     /** \var CBEUnmarshalFunction *m_pUnmarshalFunction
      *  \brief a reference to the corresponding unmarshal function
      */

@@ -95,6 +95,10 @@ void CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	m_sOpcode = pNF->GetOpcodeConst(pFEOperation);
 
+	// check for uuid-range
+	if (pFEOperation->m_Attributes.Find(ATTR_UUID_RANGE))
+		m_sUpper = pNF->GetOpcodeConst(pFEOperation, true);
+
 	// check if this switch case is from the same class as the surrounding
 	// dispatcher function or if this is from a base class.
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
@@ -210,14 +214,50 @@ bool CBESwitchCase::DoWriteFunction(CBEImplementationFile* /*pFile*/)
 	return true;
 }
 
+/** \brief write the start of the case statement
+ *  \param pFile the file to write to
+ *
+ * if the second opcode const string is empty, then this is a simple case.
+ * Otherwise its a range and we have to write an if statement.
+ */
+void CBESwitchCase::WriteCaseStart(CBEFile& pFile)
+{
+	if (m_sUpper.empty())
+	{
+		pFile << "\tcase " << m_sOpcode << ":\n";
+		++pFile << "\t{\n";
+	}
+	else
+	{
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		string sOpcodeVar = pNF->GetOpcodeVariable();
+
+		pFile << "\tif (" << m_sOpcode << " <= " << sOpcodeVar << " && " <<
+			sOpcodeVar << " < " << m_sUpper << ")\n";
+		pFile << "\t{\n";
+	}
+	++pFile;
+}
+
+/** \brief write the end of the case statement
+ *  \param pFile the file to write to
+ */
+void CBESwitchCase::WriteCaseEnd(CBEFile& pFile)
+{
+	--pFile << "\t}\n";
+	if (m_sUpper.empty())
+	{
+		pFile << "\tbreak;\n";
+		--pFile;
+	}
+}
+
 /** \brief writes the target code
  *  \param pFile the target file
  */
 void CBESwitchCase::Write(CBEFile& pFile)
 {
-	pFile << "\tcase " << m_sOpcode << ":\n";
-	++pFile << "\t{\n";
-	++pFile;
+	WriteCaseStart(pFile);
 
 	WriteVariableDeclaration(pFile);
 	WriteVariableInitialization(pFile, DIRECTION_IN);
@@ -294,9 +334,7 @@ void CBESwitchCase::Write(CBEFile& pFile)
 
 	WriteCleanup(pFile);
 
-	--pFile << "\t}\n";
-	pFile << "\tbreak;\n";
-	--pFile;
+	WriteCaseEnd(pFile);
 }
 
 /** \brief writes the variable declaration inside the switch case

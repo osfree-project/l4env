@@ -67,6 +67,7 @@ protected:
     virtual void WriteDefaultFunctionDeclaration(CBEFile& pFile);
     virtual void WriteInvocation(CBEFile& pFile);
     virtual void WriteBody(CBEFile& pFile);
+	virtual void WriteRanges(CBEFile& pFile);
     virtual void AddSwitchCases(CFEInterface *pFEInterface);
     virtual void AddBeforeParameters();
 
@@ -81,6 +82,10 @@ public:
      *  \brief contains references to the interface's functions
      */
     CCollection<CBESwitchCase> m_SwitchCases;
+	/** \var CCollection<CBESwitchCase> m_RangeCases
+	 *  \brief contains references to the functions with ID ranges
+	 */
+	CCollection<CBESwitchCase> m_RangeCases;
 };
 
 #endif

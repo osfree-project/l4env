@@ -45,8 +45,9 @@ public:
     /** constructs an int attribute
      *  \param nType the type of the attribute
      *  \param nValue the integer value of the attribute
+	 *  \param bAbs true if absolute value
      */
-    CFEIntAttribute(ATTR_TYPE nType, int nValue);
+    CFEIntAttribute(ATTR_TYPE nType, int nValue, bool bAbs = true);
     virtual ~CFEIntAttribute();
 
 protected:
@@ -58,7 +59,18 @@ protected:
 // Operations
 public:
 	virtual CObject* Clone();
-    virtual int GetIntValue();
+
+	/** \brief retrieves the integer values of this attribute
+	 *  \return  the integer values of this attribute
+	 */
+	int GetIntValue()
+	{ return m_nIntValue; }
+
+	/** \brief return whether or not this is an absolute value
+	 *  \return true if absolute value
+	 */
+	bool IsAbsolute()
+	{ return m_bAbsoluteValue; }
 
 // Attributes
 protected:
@@ -66,6 +78,10 @@ protected:
      *  \brief the integer value, which is associated with this attribute
      */
     int m_nIntValue;
+	/** \var bool m_bAbsoluteValue
+	 *  \brief differentiates between absolute and relative values
+	 */
+	bool m_bAbsoluteValue;
 };
 
 #endif /* __DICE_FE_FEINTATTRIBUTE_H__ */

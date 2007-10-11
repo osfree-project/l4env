@@ -34,8 +34,6 @@
 #include "BEFunction.h"
 #include "BEDeclarator.h"
 #include "BEClass.h"
-#include "BECallFunction.h"
-#include "BEWaitFunction.h"
 #include "BEMsgBuffer.h"
 #include "BEIDLUnionType.h"
 #include "BEAttribute.h"

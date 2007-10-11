@@ -51,21 +51,22 @@ am_libfe_a_OBJECTS = FEArrayDeclarator.$(OBJEXT) \
 	FEStructType.$(OBJEXT) FEArrayType.$(OBJEXT) \
 	FEFunctionDeclarator.$(OBJEXT) FEAttribute.$(OBJEXT) \
 	FEIdentifier.$(OBJEXT) FEBase.$(OBJEXT) \
-	FEIntAttribute.$(OBJEXT) FEBinaryExpression.$(OBJEXT) \
-	FEInterface.$(OBJEXT) FETypeAttribute.$(OBJEXT) \
-	FEConditionalExpression.$(OBJEXT) FETypeSpec.$(OBJEXT) \
-	FEConstDeclarator.$(OBJEXT) FEIsAttribute.$(OBJEXT) \
-	FETypedDeclarator.$(OBJEXT) FEConstructedType.$(OBJEXT) \
-	FELibrary.$(OBJEXT) FEUnaryExpression.$(OBJEXT) \
-	FEDeclarator.$(OBJEXT) FEUnionCase.$(OBJEXT) \
-	FEEndPointAttribute.$(OBJEXT) FEOperation.$(OBJEXT) \
-	FEUnionType.$(OBJEXT) FEIDLUnionType.$(OBJEXT) \
-	FEEnumDeclarator.$(OBJEXT) FEPipeType.$(OBJEXT) \
-	FETypeOfType.$(OBJEXT) FEUserDefinedExpression.$(OBJEXT) \
-	FEEnumType.$(OBJEXT) FEPrimaryExpression.$(OBJEXT) \
-	FEUserDefinedType.$(OBJEXT) FEExceptionAttribute.$(OBJEXT) \
-	FEPtrDefaultAttribute.$(OBJEXT) FEVersionAttribute.$(OBJEXT) \
-	FEExpression.$(OBJEXT) FESimpleType.$(OBJEXT) FEFile.$(OBJEXT) \
+	FEIntAttribute.$(OBJEXT) FERangeAttribute.$(OBJEXT) \
+	FEBinaryExpression.$(OBJEXT) FEInterface.$(OBJEXT) \
+	FETypeAttribute.$(OBJEXT) FEConditionalExpression.$(OBJEXT) \
+	FETypeSpec.$(OBJEXT) FEConstDeclarator.$(OBJEXT) \
+	FEIsAttribute.$(OBJEXT) FETypedDeclarator.$(OBJEXT) \
+	FEConstructedType.$(OBJEXT) FELibrary.$(OBJEXT) \
+	FEUnaryExpression.$(OBJEXT) FEDeclarator.$(OBJEXT) \
+	FEUnionCase.$(OBJEXT) FEEndPointAttribute.$(OBJEXT) \
+	FEOperation.$(OBJEXT) FEUnionType.$(OBJEXT) \
+	FEIDLUnionType.$(OBJEXT) FEEnumDeclarator.$(OBJEXT) \
+	FEPipeType.$(OBJEXT) FETypeOfType.$(OBJEXT) \
+	FEUserDefinedExpression.$(OBJEXT) FEEnumType.$(OBJEXT) \
+	FEPrimaryExpression.$(OBJEXT) FEUserDefinedType.$(OBJEXT) \
+	FEExceptionAttribute.$(OBJEXT) FEPtrDefaultAttribute.$(OBJEXT) \
+	FEVersionAttribute.$(OBJEXT) FEExpression.$(OBJEXT) \
+	FESimpleType.$(OBJEXT) FEFile.$(OBJEXT) \
 	FEStringAttribute.$(OBJEXT) FESizeOfExpression.$(OBJEXT) \
 	FEAlignOfExpression.$(OBJEXT) FEAttributeDeclarator.$(OBJEXT) \
 	ConsistencyVisitor.$(OBJEXT) PostParseVisitor.$(OBJEXT) \
@@ -214,8 +215,8 @@ target_alias = @target_alias@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 noinst_LIBRARIES = libfe.a
-libfe_a_SOURCES = FEArrayDeclarator.cpp FEStructType.cpp FEArrayType.cpp FEFunctionDeclarator.cpp FEAttribute.cpp FEIdentifier.cpp FEBase.cpp FEIntAttribute.cpp FEBinaryExpression.cpp FEInterface.cpp FETypeAttribute.cpp FEConditionalExpression.cpp FETypeSpec.cpp FEConstDeclarator.cpp FEIsAttribute.cpp FETypedDeclarator.cpp FEConstructedType.cpp FELibrary.cpp FEUnaryExpression.cpp FEDeclarator.cpp FEUnionCase.cpp FEEndPointAttribute.cpp FEOperation.cpp FEUnionType.cpp FEIDLUnionType.cpp FEEnumDeclarator.cpp FEPipeType.cpp FETypeOfType.cpp FEUserDefinedExpression.cpp FEEnumType.cpp FEPrimaryExpression.cpp FEUserDefinedType.cpp FEExceptionAttribute.cpp FEPtrDefaultAttribute.cpp FEVersionAttribute.cpp FEExpression.cpp FESimpleType.cpp FEFile.cpp FEStringAttribute.cpp FESizeOfExpression.cpp FEAlignOfExpression.cpp FEAttributeDeclarator.cpp ConsistencyVisitor.cpp PostParseVisitor.cpp ASTDumper.cpp
-noinst_HEADERS = FEArrayDeclarator.h FEFileComponent.h FEStructType.h FEArrayType.h FEFunctionDeclarator.h FEAttribute.h FEIdentifier.h FEBase.h FEIntAttribute.h FEBinaryExpression.h FEInterface.h FETypeAttribute.h FEConditionalExpression.h FEInterfaceComponent.h FETypeSpec.h FEConstDeclarator.h FEIsAttribute.h FETypedDeclarator.h FEConstructedType.h FELibrary.h FEUnaryExpression.h FEDeclarator.h FEUnionCase.h FEEndPointAttribute.h FEOperation.h FEUnionType.h FEIDLUnionType.h FEEnumDeclarator.h FEPipeType.h FETypeOfType.h FEUserDefinedExpression.h FEEnumType.h FEPrimaryExpression.h FEUserDefinedType.h FEExceptionAttribute.h FEPtrDefaultAttribute.h FEVersionAttribute.h FEExpression.h FESimpleType.h FEFile.h FEStringAttribute.h FESizeOfExpression.h FEAlignOfExpression.h FEAttributeDeclarator.h ConsistencyVisitor.h PostParseVisitor.h ASTDumper.h
+libfe_a_SOURCES = FEArrayDeclarator.cpp FEStructType.cpp FEArrayType.cpp FEFunctionDeclarator.cpp FEAttribute.cpp FEIdentifier.cpp FEBase.cpp FEIntAttribute.cpp FERangeAttribute.cpp FEBinaryExpression.cpp FEInterface.cpp FETypeAttribute.cpp FEConditionalExpression.cpp FETypeSpec.cpp FEConstDeclarator.cpp FEIsAttribute.cpp FETypedDeclarator.cpp FEConstructedType.cpp FELibrary.cpp FEUnaryExpression.cpp FEDeclarator.cpp FEUnionCase.cpp FEEndPointAttribute.cpp FEOperation.cpp FEUnionType.cpp FEIDLUnionType.cpp FEEnumDeclarator.cpp FEPipeType.cpp FETypeOfType.cpp FEUserDefinedExpression.cpp FEEnumType.cpp FEPrimaryExpression.cpp FEUserDefinedType.cpp FEExceptionAttribute.cpp FEPtrDefaultAttribute.cpp FEVersionAttribute.cpp FEExpression.cpp FESimpleType.cpp FEFile.cpp FEStringAttribute.cpp FESizeOfExpression.cpp FEAlignOfExpression.cpp FEAttributeDeclarator.cpp ConsistencyVisitor.cpp PostParseVisitor.cpp ASTDumper.cpp
+noinst_HEADERS = FEArrayDeclarator.h FEFileComponent.h FEStructType.h FEArrayType.h FEFunctionDeclarator.h FEAttribute.h FEIdentifier.h FEBase.h FEIntAttribute.h FERangeAttribute.h FEBinaryExpression.h FEInterface.h FETypeAttribute.h FEConditionalExpression.h FEInterfaceComponent.h FETypeSpec.h FEConstDeclarator.h FEIsAttribute.h FETypedDeclarator.h FEConstructedType.h FELibrary.h FEUnaryExpression.h FEDeclarator.h FEUnionCase.h FEEndPointAttribute.h FEOperation.h FEUnionType.h FEIDLUnionType.h FEEnumDeclarator.h FEPipeType.h FETypeOfType.h FEUserDefinedExpression.h FEEnumType.h FEPrimaryExpression.h FEUserDefinedType.h FEExceptionAttribute.h FEPtrDefaultAttribute.h FEVersionAttribute.h FEExpression.h FESimpleType.h FEFile.h FEStringAttribute.h FESizeOfExpression.h FEAlignOfExpression.h FEAttributeDeclarator.h ConsistencyVisitor.h PostParseVisitor.h ASTDumper.h
 AM_CXXFLAGS = @DICE_CXXFLAGS@
 all: all-am
 
@@ -294,6 +295,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FEPipeType.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FEPrimaryExpression.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FEPtrDefaultAttribute.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FERangeAttribute.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FESimpleType.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FESizeOfExpression.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/FEStringAttribute.Po@am__quote@

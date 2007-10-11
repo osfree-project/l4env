@@ -201,40 +201,40 @@ void CBEOperationFunction::AddAttributes(CFEOperation * pFEOperation)
  *  \param pFEAttribute the attribute to add
  *  \return true if successful
  */
-void
-CBEOperationFunction::AddAttribute(CFEAttribute * pFEAttribute)
+void CBEOperationFunction::AddAttribute(CFEAttribute * pFEAttribute)
 {
-    // check if attribute is for function or return type
-    ATTR_TYPE nType = pFEAttribute->GetAttrType();
-    switch (nType)
-    {
-    case ATTR_IDEMPOTENT:
-    case ATTR_BROADCAST:
-    case ATTR_MAYBE:
-    case ATTR_REFLECT_DELETIONS:
-    case ATTR_UUID:
-    case ATTR_NOOPCODE:
-    case ATTR_NOEXCEPTIONS:
-    case ATTR_ALLOW_REPLY_ONLY:
-    case ATTR_IN:
-    case ATTR_OUT:
-    case ATTR_STRING:
-    case ATTR_CONTEXT_HANDLE:
-    case ATTR_SCHED_DONATE:
-    case ATTR_DEFAULT_TIMEOUT:
-	/* keep attribute */
+	// check if attribute is for function or return type
+	ATTR_TYPE nType = pFEAttribute->GetAttrType();
+	switch (nType)
 	{
-	    CBEAttribute *pAttribute = CBEClassFactory::Instance()->GetNewAttribute();
-	    m_Attributes.Add(pAttribute);
-	    pAttribute->CreateBackEnd(pFEAttribute);
+	case ATTR_IDEMPOTENT:
+	case ATTR_BROADCAST:
+	case ATTR_MAYBE:
+	case ATTR_REFLECT_DELETIONS:
+	case ATTR_UUID:
+	case ATTR_UUID_RANGE:
+	case ATTR_NOOPCODE:
+	case ATTR_NOEXCEPTIONS:
+	case ATTR_ALLOW_REPLY_ONLY:
+	case ATTR_IN:
+	case ATTR_OUT:
+	case ATTR_STRING:
+	case ATTR_CONTEXT_HANDLE:
+	case ATTR_SCHED_DONATE:
+	case ATTR_DEFAULT_TIMEOUT:
+		/* keep attribute */
+		{
+			CBEAttribute *pAttribute = CBEClassFactory::Instance()->GetNewAttribute();
+			m_Attributes.Add(pAttribute);
+			pAttribute->CreateBackEnd(pFEAttribute);
+		}
+		break;
+	default:
+		{
+			CBETypedDeclarator *pReturn = GetReturnVariable();
+			pReturn->AddAttribute(pFEAttribute);
+		}
+		break;
 	}
-	break;
-    default:
-	{
-	    CBETypedDeclarator *pReturn = GetReturnVariable();
-	    pReturn->AddAttribute(pFEAttribute);
-	}
-	break;
-    }
 }
 

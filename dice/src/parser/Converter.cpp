@@ -247,7 +247,7 @@ long dice::parser::hex_to_long (char *s, IntType& t)
 					std::numeric_limits<int>::min() <= n &&
 					n <= std::numeric_limits<int>::max())
 				{
-					// first letter was f, so this was a signed long
+					// first bit was set, so this was a signed long
 					t = INT_LONG;
 					return n;
 				}

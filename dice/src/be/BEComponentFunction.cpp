@@ -56,7 +56,6 @@
 CBEComponentFunction::CBEComponentFunction()
  : CBEOperationFunction(FUNCTION_TEMPLATE)
 {
-	m_pFunction = 0;
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 		m_nSkipParameter = 0;
 	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
@@ -84,105 +83,6 @@ void CBEComponentFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
 	SetFunctionName(pFEOperation, FUNCTION_TEMPLATE);
 
 	CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
-
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-
-	// check the attribute
-	FUNCTION_TYPE nFunctionType = FUNCTION_NONE;
-	if (pFEOperation->m_Attributes.Find(ATTR_IN))
-		nFunctionType = FUNCTION_SEND;
-	else
-		nFunctionType = FUNCTION_CALL;
-
-	string exc = string(__func__);
-	CBENameFactory *pNF = CBENameFactory::Instance();
-	string sFunctionName = pNF->GetFunctionName(pFEOperation, nFunctionType, bComponentSide);
-	m_pFunction = pRoot->FindFunction(sFunctionName, nFunctionType);
-	if (!m_pFunction)
-	{
-		exc += " failed because component's function (" + sFunctionName +
-			") could not be found.";
-		throw new error::create_error(exc);
-	}
-
-	// the return value "belongs" to the client function (needed to determine
-	// global test variable's name)
-	CBETypedDeclarator *pReturn = GetReturnVariable();
-	pReturn->SetParent(m_pFunction);
-
-	// check for temp
-	if (m_pFunction->HasVariableSizedParameters(DIRECTION_INOUT) ||
-		m_pFunction->HasArrayParameters(DIRECTION_INOUT))
-	{
-		int nVariableSizedArrayDimensions = 0;
-		vector<CBETypedDeclarator*>::iterator iterP;
-		for (iterP = m_pFunction->m_Parameters.begin();
-			iterP != m_pFunction->m_Parameters.end();
-			iterP++)
-		{
-			// now check each decl for array dimensions
-			vector<CBEDeclarator*>::iterator iterD;
-			for (iterD = (*iterP)->m_Declarators.begin();
-				iterD != (*iterP)->m_Declarators.end();
-				iterD++)
-			{
-				int nArrayDims = (*iterD)->GetStars();
-				// get array bounds
-				vector<CBEExpression*>::iterator iterB;
-				for (iterB = (*iterD)->m_Bounds.begin();
-					iterB != (*iterD)->m_Bounds.end();
-					iterB++)
-				{
-					if (!(*iterB)->IsOfType(EXPR_INT))
-						nArrayDims++;
-				}
-				// calc max
-				nVariableSizedArrayDimensions =
-					(nArrayDims > nVariableSizedArrayDimensions) ?
-					nArrayDims : nVariableSizedArrayDimensions;
-			}
-			// if type of parameter is array, check that too
-			if ((*iterP)->GetType()->GetSize() < 0)
-				nVariableSizedArrayDimensions++;
-			// if array dims
-			// if parameter has size attributes, we assume
-			// that it is an array of some sort
-			if (((*iterP)->m_Attributes.Find(ATTR_SIZE_IS) ||
-					(*iterP)->m_Attributes.Find(ATTR_LENGTH_IS)) &&
-				(nVariableSizedArrayDimensions == 0))
-				nVariableSizedArrayDimensions = 1;
-		}
-
-		string sCurr;
-		// for variable sized arrays we need a temporary variable
-		string sTmpVar = pNF->GetTempOffsetVariable();
-		for (int i=0; i < nVariableSizedArrayDimensions; i++)
-		{
-			std::ostringstream os;
-			os << i;
-			sCurr = sTmpVar + os.str();
-			AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
-
-			CBETypedDeclarator *pVariable = m_LocalVariables.Find(sCurr);
-			pVariable->AddLanguageProperty(string("attribute"),
-				string("__attribute__ ((unused))"));
-		}
-
-		// need a "pure" temp var as well
-		sCurr = sTmpVar;
-		AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 0);
-
-		CBETypedDeclarator *pVariable = m_LocalVariables.Find(sTmpVar);
-		pVariable->AddLanguageProperty(string("attribute"),
-			string("__attribute__ ((unused))"));
-
-		sCurr = pNF->GetOffsetVariable();
-		AddLocalVariable(TYPE_INTEGER, true, 4, sCurr, 0);
-		pVariable = m_LocalVariables.Find(sCurr);
-		pVariable->AddLanguageProperty(string("attribute"),
-			string("__attribute__ ((unused))"));
-	}
 }
 
 /** \brief adds parameters before all other parameters
@@ -266,7 +166,7 @@ void CBEComponentFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
  * operations instead of parameter marshalling.
  */
 void CBEComponentFunction::WriteMarshalling(CBEFile& /*pFile*/)
-{}
+{ }
 
 /** \brief writes the invocation of the message transfer
  *  \param pFile the file to write to
@@ -274,7 +174,7 @@ void CBEComponentFunction::WriteMarshalling(CBEFile& /*pFile*/)
  * This implementation calls the underlying message trasnfer mechanisms
  */
 void CBEComponentFunction::WriteInvocation(CBEFile& /*pFile*/)
-{}
+{ }
 
 /** \brief writes the unmarshalling of the message
  *  \param pFile the file to write to
@@ -283,7 +183,7 @@ void CBEComponentFunction::WriteInvocation(CBEFile& /*pFile*/)
  * message structure
  */
 void CBEComponentFunction::WriteUnmarshalling(CBEFile& /*pFile*/)
-{}
+{ }
 
 /** \brief writes the return statement
  *  \param pFile the file to write to
@@ -292,7 +192,7 @@ void CBEComponentFunction::WriteUnmarshalling(CBEFile& /*pFile*/)
  * (return type != void)
  */
 void CBEComponentFunction::WriteReturn(CBEFile& /*pFile*/)
-{}
+{ }
 
 /** \brief writes the declaration of a function to the target file
  *  \param pFile the target file to write to
@@ -368,8 +268,7 @@ bool CBEComponentFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
  * A component function is only added if the create-skeleton
  * option is set.
  */
-void
-CBEComponentFunction::AddToImpl(CBEImplementationFile* pImpl)
+void CBEComponentFunction::AddToImpl(CBEImplementationFile* pImpl)
 {
     if (!CCompiler::IsOptionSet(PROGRAM_GENERATE_TEMPLATE))
         return;  // fake success, without adding function
@@ -407,6 +306,11 @@ bool CBEComponentFunction::IsTargetFile(CBEImplementationFile* pFile)
 	string sBaseLocal = m_sTargetImplementation.substr(0, length - 11);
 	// check filename
 	string sBaseTarget = pFile->GetFileName();
+	string sOutputDir;
+	CCompiler::GetBackEndOption(string("output-dir"), sOutputDir);
+	if (sBaseTarget.find(sOutputDir) == 0)
+		sBaseTarget = sBaseTarget.substr(sOutputDir.length());
+
 	length = sBaseTarget.length();
 	if (length <= 11)
 		return false;
@@ -415,9 +319,7 @@ bool CBEComponentFunction::IsTargetFile(CBEImplementationFile* pFile)
 		return false;
 	sBaseTarget = sBaseTarget.substr(0, length - 11);
 	// compare common parts
-	if (sBaseLocal == sBaseTarget)
-		return true;
-	return false;
+	return sBaseLocal == sBaseTarget;
 }
 
 /** \brief test if this function should be written
@@ -456,19 +358,6 @@ bool CBEComponentFunction::DoWriteFunction(CBEImplementationFile* pFile)
     if (!IsTargetFile(pFile))
         return false;
     return CCompiler::IsOptionSet(PROGRAM_GENERATE_TEMPLATE);
-}
-
-/** \brief test if a specific parameter should be tested
- *  \param pParameter the parameter to test
- *  \return true if this parameter should be tested
- */
-bool CBEComponentFunction::DoTestParameter(CBETypedDeclarator *pParameter)
-{
-	if (pParameter == m_pFunction->GetObject())
-		return false;
-	if (pParameter == m_pFunction->GetEnvironment())
-		return false;
-	return true;
 }
 
 /** \brief check if parameter should be written

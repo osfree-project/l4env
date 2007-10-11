@@ -441,6 +441,7 @@ void CConsistencyVisitor::CheckReturnType(CFEOperation& operation)
 		case ATTR_MAYBE:
 		case ATTR_REFLECT_DELETIONS:
 		case ATTR_UUID:
+		case ATTR_UUID_RANGE:
 		case ATTR_NOOPCODE:
 		case ATTR_NOEXCEPTIONS:
 		case ATTR_ALLOW_REPLY_ONLY:

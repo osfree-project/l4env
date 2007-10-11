@@ -73,6 +73,7 @@
 #include "fe/FEOperation.h"
 #include "fe/FEUnaryExpression.h"
 #include "fe/FEIntAttribute.h"
+#include "fe/FERangeAttribute.h"
 #include "fe/FEConstructedType.h"
 #include "fe/FEUserDefinedType.h"
 #include "fe/FETypedDeclarator.h"
@@ -385,8 +386,7 @@ void CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
 /** \brief make function specific initialization
  *  \return true if successful
  */
-void
-CBEClass::MsgBufferInitialization()
+void CBEClass::MsgBufferInitialization()
 {
 	// iterate function groups of class, pick a function and use it to
 	// initialize struct
@@ -415,8 +415,7 @@ CBEClass::MsgBufferInitialization()
  *  \param pFEInterface the interface to add the functions for
  *  \return true if successful
  */
-void
-CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
+void CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
@@ -460,8 +459,7 @@ CBEClass::AddInterfaceFunctions(CFEInterface* pFEInterface)
  * In C we have an alias of CORBA_Object type to the name if the interface.
  * In C++ this is not needed, because the class is derived from CORBA_Object
  */
-void
-CBEClass::CreateAliasForClass(CFEInterface *pFEInterface)
+void CBEClass::CreateAliasForClass(CFEInterface *pFEInterface)
 {
 	assert(pFEInterface);
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
@@ -489,8 +487,7 @@ CBEClass::CreateAliasForClass(CFEInterface *pFEInterface)
 /** \brief internal function to create a constant
  *  \param pFEConstant the respective front-end constant
  */
-void
-CBEClass::CreateBackEndConst(CFEConstDeclarator *pFEConstant)
+void CBEClass::CreateBackEndConst(CFEConstDeclarator *pFEConstant)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(const) called\n",
 		__func__);
@@ -508,8 +505,7 @@ CBEClass::CreateBackEndConst(CFEConstDeclarator *pFEConstant)
 /** \brief internal function to create a typedefinition
  *  \param pFETypedef the respective front-end type definition
  */
-void
-CBEClass::CreateBackEndTypedef(CFETypedDeclarator *pFETypedef)
+void CBEClass::CreateBackEndTypedef(CFETypedDeclarator *pFETypedef)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEClass::%s(typedef) called\n", __func__);
@@ -629,7 +625,6 @@ void CBEClass::CreateFunctionsNoClassDependency(CFEOperation *pFEOperation)
 		// the call case:
 		// we need the functions call, unmarshal, reply-and-wait, skeleton,
 		// reply-and-recv
-		// for client side: call
 		CBEOperationFunction *pFunction = pCF->GetNewCallFunction();
 		m_Functions.Add(pFunction);
 		pGroup->m_Functions.Add(pFunction);
@@ -1068,11 +1063,11 @@ void CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
 
 /** \brief adds the opcode for a single function
  *  \param pFEOperation the function to add the opcode for
+ *  \param nNumber the opcode number to add
+ *  \param sName the name of the opcode
  *  \param pFile the file to add the opcode to
  */
-void
-CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation,
-	CBEHeaderFile* pFile)
+void CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, int nNumber, string sName, CBEHeaderFile* pFile)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEClass::AddOpcodesToFile(operation: %s) called\n",
@@ -1105,26 +1100,73 @@ CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation,
 	string sBase = pNF->GetOpcodeConst(this);
 	pBase->CreateBackEnd(sBase);
 	// create number
-	int nOperationNb = GetOperationNumber(pFEOperation);
-	pNumber->CreateBackEnd(nOperationNb);
-	// create bitmask
-	string sBitMask =  pNF->GetFunctionBitMaskConstant();
-	pBitMask->CreateBackEnd(sBitMask);
-	// create function code
-	pFuncCode->CreateBackEndBinary(pNumber, EXPR_BITAND, pBitMask);
-	// create braces
-	pBrace->CreateBackEndPrimary(EXPR_PAREN, pFuncCode);
-	// create value
-	pValue->CreateBackEndBinary(pBase, EXPR_PLUS, pBrace);
-	// create top brace
-	pTopBrace->CreateBackEndPrimary(EXPR_PAREN, pValue);
+	pNumber->CreateBackEnd(nNumber);
+	// if the function has an absolute uuid, then use it directly withoud
+	// bitmask and base
+	CFEIntAttribute *pFEAttribute = dynamic_cast<CFEIntAttribute*>(
+		pFEOperation->m_Attributes.Find(ATTR_UUID));
+	CFERangeAttribute *pFERangeAttribute = dynamic_cast<CFERangeAttribute*>(
+		pFEOperation->m_Attributes.Find(ATTR_UUID_RANGE));
+	if (HasUuid(pFEOperation) && (
+			(pFEAttribute && pFEAttribute->IsAbsolute()) ||
+			(pFERangeAttribute && pFERangeAttribute->IsAbsolute()) ) )
+	{
+		pTopBrace->CreateBackEndPrimary(EXPR_PAREN, pNumber);
+		pNumber->SetParent(pTopBrace);
+		// cleanup
+		delete pBitMask;
+		delete pFuncCode;
+		delete pBrace;
+		delete pValue;
+	}
+	else
+	{
+		// create bitmask
+		string sBitMask =  pNF->GetFunctionBitMaskConstant();
+		pBitMask->CreateBackEnd(sBitMask);
+		// create function code
+		pFuncCode->CreateBackEndBinary(pNumber, EXPR_BITAND, pBitMask);
+		// create braces
+		pBrace->CreateBackEndPrimary(EXPR_PAREN, pFuncCode);
+		// create value
+		pValue->CreateBackEndBinary(pBase, EXPR_PLUS, pBrace);
+		// create top brace
+		pTopBrace->CreateBackEndPrimary(EXPR_PAREN, pValue);
+	}
 	// create opcode type
 	pType->CreateBackEnd();
-	// create opcode name
-	string sName = pNF->GetOpcodeConst(pFEOperation);
 	// create constant
 	pFile->m_Constants.Add(pOpcode);
 	pOpcode->CreateBackEnd(pType, sName, pTopBrace, true/*always defined*/);
+
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
+}
+
+
+/** \brief adds the opcode for a single function
+ *  \param pFEOperation the function to add the opcode for
+ *  \param pFile the file to add the opcode to
+ */
+void CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile* pFile)
+{
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEClass::AddOpcodesToFile(operation: %s) called\n",
+		pFEOperation->GetName().c_str());
+
+	int nOperationNb = GetOperationNumber(pFEOperation);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sName = pNF->GetOpcodeConst(pFEOperation);
+	AddOpcodesToFile(pFEOperation, nOperationNb, sName, pFile);
+
+	// if the operation has the uuid-range attribute, we have to add another
+	// constants for the upper bound
+	CFERangeAttribute *pFERangeAttribute = dynamic_cast<CFERangeAttribute*>(
+		pFEOperation->m_Attributes.Find(ATTR_UUID_RANGE));
+	if (pFERangeAttribute)
+	{
+		string sName = pNF->GetOpcodeConst(pFEOperation, true);
+		AddOpcodesToFile(pFEOperation, pFERangeAttribute->GetUpperValue(), sName, pFile);
+	}
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n", __func__);
 }
@@ -1700,8 +1742,7 @@ void CBEClass::WriteFunction(CBEFunction *pFunction,
 int CBEClass::GetOperationNumber(CFEOperation *pFEOperation)
 {
 	assert(pFEOperation);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::GetOperationNumber for %s\n",
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::GetOperationNumber for %s\n",
 		pFEOperation->GetName().c_str());
 	CFEInterface *pFEInterface = pFEOperation->GetSpecificParent<CFEInterface>();
 	int nInterfaceNumber = GetInterfaceNumber(pFEInterface);
@@ -1807,13 +1848,12 @@ int CBEClass::GetMaxOpcodeNumber(CFEInterface *pFEInterface)
 int CBEClass::GetUuid(CFEOperation *pFEOperation)
 {
 	CFEAttribute *pUuidAttr = pFEOperation->m_Attributes.Find(ATTR_UUID);
-	if (pUuidAttr)
-	{
-		if (dynamic_cast<CFEIntAttribute*>(pUuidAttr))
-		{
-			return ((CFEIntAttribute*)pUuidAttr)->GetIntValue();
-		}
-	}
+	if (pUuidAttr && dynamic_cast<CFEIntAttribute*>(pUuidAttr))
+		return static_cast<CFEIntAttribute*>(pUuidAttr)->GetIntValue();
+	// also check for uuid-range
+	pUuidAttr = pFEOperation->m_Attributes.Find(ATTR_UUID_RANGE);
+	if (pUuidAttr && dynamic_cast<CFERangeAttribute*>(pUuidAttr))
+		return static_cast<CFERangeAttribute*>(pUuidAttr)->GetLowerValue();
 	return -1;
 }
 
@@ -1824,13 +1864,12 @@ int CBEClass::GetUuid(CFEOperation *pFEOperation)
 bool CBEClass::HasUuid(CFEOperation *pFEOperation)
 {
 	CFEAttribute *pUuidAttr = pFEOperation->m_Attributes.Find(ATTR_UUID);
-	if (pUuidAttr)
-	{
-		if (dynamic_cast<CFEIntAttribute*>(pUuidAttr))
-		{
-			return true;
-		}
-	}
+	if (pUuidAttr && dynamic_cast<CFEIntAttribute*>(pUuidAttr))
+		return true;
+	// also check for uuid-range
+	pUuidAttr = pFEOperation->m_Attributes.Find(ATTR_UUID_RANGE);
+	if (pUuidAttr && dynamic_cast<CFERangeAttribute*>(pUuidAttr))
+		return true;
 	return false;
 }
 
@@ -2009,6 +2048,8 @@ void
 CBEClass::CheckOpcodeCollision(CFEInterface *pFirst,
 	CFEInterface *pSecond)
 {
+	std::cerr << "CBEClass::CheckOpcodeCollision(" << pFirst->GetName() << ", " <<
+		pSecond->GetName() << ") called\n";
 	// check base interfaces of first interface (will eventually also include
 	// second interfaces)
 	CheckOpcodeCollision(pFirst);

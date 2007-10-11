@@ -49,7 +49,8 @@
 
 CBEDispatchFunction::CBEDispatchFunction()
 : CBEInterfaceFunction(FUNCTION_DISPATCH),
-  m_SwitchCases(0, this)
+	m_SwitchCases(0, this),
+	m_RangeCases(0, this)
 { }
 
 /** \brief destructor of target class */
@@ -180,7 +181,10 @@ void CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
 		if ((*iterO)->m_Attributes.Find(ATTR_OUT))
 			continue;
 		CBESwitchCase *pFunction = pCF->GetNewSwitchCase();
-		m_SwitchCases.Add(pFunction);
+		if ((*iterO)->m_Attributes.Find(ATTR_UUID_RANGE))
+			m_RangeCases.Add(pFunction);
+		else
+			m_SwitchCases.Add(pFunction);
 		pFunction->CreateBackEnd(*iterO, true);
 	}
 
@@ -198,9 +202,21 @@ void CBEDispatchFunction::AddSwitchCases(CFEInterface * pFEInterface)
  *
  * don't do anything (no variables to initialize)
  */
-void
-CBEDispatchFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
+void CBEDispatchFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
 {}
+
+/** \brief writes the switch cases with uuid ranges
+ *  \param pFile the file to write to
+ */
+void CBEDispatchFunction::WriteRanges(CBEFile& pFile)
+{
+	vector<CBESwitchCase*>::iterator i;
+	for (i = m_RangeCases.begin(); i != m_RangeCases.end(); i++)
+	{
+		(*i)->Write(pFile);
+		pFile << "\telse\n";
+	}
+}
 
 /** \brief writes the switch statement
  *  \param pFile the file to write to
@@ -209,6 +225,8 @@ void CBEDispatchFunction::WriteSwitch(CBEFile& pFile)
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcodeVar = pNF->GetOpcodeVariable();
+
+	WriteRanges(pFile);
 
 	pFile << "\tswitch (" << sOpcodeVar << ")\n";
 	pFile << "\t{\n";
@@ -235,6 +253,9 @@ void CBEDispatchFunction::WriteSwitch(CBEFile& pFile)
  *                          \<corba environment\>*)
  *
  * An alternative is to call the wait-any function.
+ *
+ * If you want to check for the ranges after checking for specific opcodes, do
+ * call WriteRanges here.
  */
 void
 CBEDispatchFunction::WriteDefaultCase(CBEFile& pFile)

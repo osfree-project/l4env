@@ -1,6 +1,9 @@
 $Log, ChangeLog,v $
 
 x.x.x
+ - [feature] allow to specify absolute [uuid] attributes for operations
+   (without interface ID)
+ - [feature] allow to specify ranges in [uuid] attribute for operations
  - [fix] compilation for Socket Back-End (C/C++ parser choked on some Linux
    headers)
  - [fix] memory allocation for [out, ref] parameters at server side is not
@@ -12,6 +15,7 @@ x.x.x
  - [fix] parsing of concatenated literal strings in C/C++ files
  - [fix] parsing of compound statements as expressions (gcc C extension)
  - [fix] parsing of casting statements
+ - [fix] more usage of long long only if available
  - fail on deprecated -C option
 
 3.2.1

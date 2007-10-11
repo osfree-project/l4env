@@ -110,7 +110,8 @@ public:
 		while (!vector<T*>::empty())
 		{
 			/* only delete members if we are parent */
-			if (m_pParent)
+			if (m_pParent &&
+				vector<T*>::back()->IsParent(m_pParent))
 				delete vector<T*>::back();
 			vector<T*>::pop_back();
 		}

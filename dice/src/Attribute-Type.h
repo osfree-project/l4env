@@ -41,7 +41,7 @@ enum ATTR_TYPE {
     ATTR_OBJECT,          /**< interface: object attribute */
     ATTR_UUID_REP,        /**< library: uuid attribute */
     ATTR_CONTROL,         /**< library: control attribute */
-    ATTR_HELPCONTEXT,     /**< library: helpcontext attribute */
+    ATTR_HELPCONTEXT,     /**< library: helpcontext attribute */ // 10
     ATTR_HELPFILE,        /**< library: helpfile attribute */
     ATTR_HELPSTRING,      /**< library: helpstring attribute */
     ATTR_HIDDEN,          /**< library: hidden attribute */
@@ -51,7 +51,8 @@ enum ATTR_TYPE {
     ATTR_IDEMPOTENT,      /**< operation: idempotent attribute */
     ATTR_BROADCAST,       /**< operation: broadcast attribute */
     ATTR_MAYBE,           /**< operation: maybe attribute */
-    ATTR_REFLECT_DELETIONS, /**< operation: reflect_deletions attribute */
+    ATTR_REFLECT_DELETIONS, /**< operation: reflect_deletions attribute */ // 20
+	ATTR_UUID_RANGE,	  /**< operation: range of uuids */
     ATTR_TRANSMIT_AS,     /**< type: transmit_as attribute */
     ATTR_HANDLE,          /**< type: handle attribute */
     ATTR_FIRST_IS,        /**< parameter: field attribute first_is */
@@ -60,7 +61,7 @@ enum ATTR_TYPE {
     ATTR_SIZE_IS,         /**< parameter: field attribute size_is */
     ATTR_MAX_IS,          /**< parameter: field attribute max_is */
     ATTR_MIN_IS,          /**< parameter: field attribute min_is */
-    ATTR_IGNORE,          /**< parameter: field attribute ignore - ignores this member of a struct */
+    ATTR_IGNORE,          /**< parameter: field attribute ignore - ignores this member of a struct */ // 30
     ATTR_IN,              /**< parameter: directional attribute in */
     ATTR_OUT,             /**< parameter: directional attribute out */
     ATTR_REF,             /**< parameter: pointer attribute ref */
@@ -70,7 +71,7 @@ enum ATTR_TYPE {
     ATTR_STRING,          /**< parameter: usage attribute string */
     ATTR_CONTEXT_HANDLE,  /**< parameter: usage attribute context_handle */
     ATTR_SWITCH_TYPE,     /**< parameter: attribute switch_type defines the type of the switch variable */
-    ATTR_ABSTRACT,        /**< CORBA: abstract interfaces */
+    ATTR_ABSTRACT,        /**< CORBA: abstract interfaces */ // 40
     ATTR_DEFAULT_FUNCTION, /**< interface: default function (if no opcode matches) */
     ATTR_ERROR_FUNCTION,  /**< interface: error function (if IPC wait returns without receiving a message) */
     ATTR_ERROR_FUNCTION_CLIENT, /**< interface: error function to be used at client side */
@@ -80,7 +81,7 @@ enum ATTR_TYPE {
     ATTR_INIT_RCVSTRING_SERVER, /**< interface: same as -finit-rcvstring on per interface basis (function is valid for server only) */
     ATTR_PREALLOC_CLIENT, /**< parameter: same as prealloc; only client side */
     ATTR_PREALLOC_SERVER, /**< parameter: same as prealloc; only server side */
-    ATTR_ALLOW_REPLY_ONLY, /**< function: allow that function can reply only to the client */
+    ATTR_ALLOW_REPLY_ONLY, /**< function: allow that function can reply only to the client */ // 50
     ATTR_READONLY,        /**< attribute: readonly interface attribute */
     ATTR_NOOPCODE,        /**< function: allow that function does not send an opcode */
     ATTR_NOEXCEPTIONS,    /**< function: do not transmit exceptions */

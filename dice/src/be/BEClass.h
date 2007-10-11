@@ -172,6 +172,7 @@ protected:
 
     void CreateAliasForClass(CFEInterface *pFEInterface);
     void AddOpcodesToFile(CFEOperation *pFEOperation, CBEHeaderFile* pFile);
+	void AddOpcodesToFile(CFEOperation *pFEOperation, int nNumber, std::string sName, CBEHeaderFile* pFile);
 
     void WriteElements(CBEHeaderFile& pFile);
     void WriteElements(CBEImplementationFile& pFile);

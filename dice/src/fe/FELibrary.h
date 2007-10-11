@@ -40,7 +40,7 @@ class CFEIdentifier;
 class CFETypedDeclarator;
 class CFEConstDeclarator;
 class CFETypedDeclarator;
-class CFEinterface;
+class CFEInterface;
 class CFEAttribute;
 
 /**    \class CFELibrary

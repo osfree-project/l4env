@@ -71,13 +71,7 @@ protected:
     virtual void AddAfterParameters();
     virtual void AddBeforeParameters();
 
-    virtual bool DoTestParameter(CBETypedDeclarator *pParameter);
-
 protected:
-    /** \var CBEFunction *m_pFunction
-     *  \brief a reference to the function which is tested (if we test at all)
-     */
-    CBEFunction *m_pFunction;
     /** \var int m_nSkipParameter
      *  \brief bitmap indication whether to skip CORBA Object or Env
      */
