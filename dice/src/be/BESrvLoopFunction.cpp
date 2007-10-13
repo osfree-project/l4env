@@ -239,29 +239,6 @@ CBESrvLoopFunction::CreateObject()
 	// order they are declared -> use WriteVariableInitialization instead
 }
 
-/** \brief writes the variable initializations of this function
- *  \param pFile the file to write to
- *
- * This implementation should initialize the message buffer and the pointers
- * of the out variables.  The CROBA stuff does not need to be set, because it
- * is set by the first wait function.  This function is also used to cast the
- * server loop parameter to the CORBA_Environment if it is used.
- */
-void
-CBESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
-{
-	if (m_pTrace)
-		m_pTrace->InitServer(pFile, this);
-
-	WriteObjectInitialization(pFile);
-	// do CORBA_ENvironment cast before message buffer init, because it might
-	// contain values used to init message buffer
-	WriteEnvironmentInitialization(pFile);
-	// init message buffer
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-	pMsgBuffer->WriteInitialization(pFile, this, 0 , CMsgStructType::Generic);
-}
-
 /** \brief writes the invocation of the message transfer
  *  \param pFile the file to write to
  *
@@ -318,6 +295,29 @@ CBESrvLoopFunction::WriteVariableDeclaration(CBEFile& pFile)
 		if (m_pTrace)
 			m_pTrace->VariableDeclaration(pFile, this);
 	}
+}
+
+/** \brief writes the variable initializations of this function
+ *  \param pFile the file to write to
+ *
+ * This implementation should initialize the message buffer and the pointers
+ * of the out variables.  The CROBA stuff does not need to be set, because it
+ * is set by the first wait function.  This function is also used to cast the
+ * server loop parameter to the CORBA_Environment if it is used.
+ */
+void
+CBESrvLoopFunction::WriteVariableInitialization(CBEFile& pFile)
+{
+	if (m_pTrace)
+		m_pTrace->InitServer(pFile, this);
+
+	WriteObjectInitialization(pFile);
+	// do CORBA_ENvironment cast before message buffer init, because it might
+	// contain values used to init message buffer
+	WriteEnvironmentInitialization(pFile);
+	// init message buffer
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	pMsgBuffer->WriteInitialization(pFile, this, 0 , CMsgStructType::Generic);
 }
 
 /** \brief writes the loop

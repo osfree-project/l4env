@@ -2011,58 +2011,6 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s returned\n", __func__);
 }
 
-/** \brief writes a forward type declaration
- *  \param pFile the file to write to
- *  \param bUseConst true if the 'const' keyword should be used
- *
- * Calls the WriteDeclaration operation of the type.
- */
-void
-CBETypedDeclarator::WriteForwardTypeDeclaration(CBEFile& pFile,
-	bool bUseConst)
-{
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called\n", __func__);
-	if (bUseConst)
-		WriteConstPrefix(pFile);
-	CBEType *pType = GetType();
-	if (pType)
-		pType->WriteDeclaration(pFile);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s returned\n", __func__);
-}
-
-/** \brief writes a forward declaration of the typed declarator
- *  \param pFile the file to write to
- */
-void
-CBETypedDeclarator::WriteForwardDeclaration(CBEFile& pFile)
-{
-	if (!pFile.is_open())
-		return;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called for %s\n", __func__,
-		m_Declarators.First()->GetName().c_str());
-	WriteForwardTypeDeclaration(pFile);
-	pFile << " ";
-	WriteDeclarators(pFile);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s returned\n", __func__);
-}
-
-/** \brief writes the definition of a typed declarator to the target file
- *  \param pFile the file to write to
- */
-void
-CBETypedDeclarator::WriteDefinition(CBEFile& pFile)
-{
-	if (!pFile.is_open())
-		return;
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called for %s\n", __func__,
-		m_Declarators.First()->GetName().c_str());
-	WriteType(pFile);
-	WriteProperties(pFile);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s returned\n", __func__);
-}
-
 /** \brief writes the attributes of the typed declarator
  *  \param pFile the file to write to
  *

@@ -2,10 +2,9 @@ INTERFACE [ia32]:
 
 EXTENSION class Mem_space
 {
-private:
-  void switch_ldt();
-
 public:
+  void switch_ldt(); // for Thread::switch_exception_context
+
   typedef Pdir Dir_type;
 
 protected:

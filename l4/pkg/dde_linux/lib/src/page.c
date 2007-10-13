@@ -44,9 +44,6 @@
 
 #include "fastcall.h"
 
-/** XXX Dummy Page structure */
-struct page l4dde_dummy_page;
-
 /** Allocate Free Memory Pages
  * \ingroup mod_mm_p
  *
@@ -132,10 +129,71 @@ unsigned long FASTCALL(get_zeroed_page(unsigned int gfp_mask))
  * \param  order  log2(size)
  *
  * Release 2^order contiguous pages.
- *
- * \todo implementation
  */
 void FASTCALL(free_pages(unsigned long addr, unsigned int order))
 {
-  LOG_Error("%s for 2^%d pages not implemented", __FUNCTION__, order);
+  int ret;
+  l4_addr_t start;
+  l4_size_t size;
+  l4dm_dataspace_t ds;
+  l4_offs_t offset;
+  l4_threadid_t pager;
+
+  ret = l4rm_lookup((void *)addr, &start, &size, &ds, &offset, &pager);
+
+  if (ret == L4RM_REGION_DATASPACE) 
+    {
+      if (size == (L4_PAGESIZE << order))
+        {
+          l4dm_mem_release((const void *)addr);
+
+          LOGd(DEBUG_PALLOC, "%s 2^%d pages released, addr= 0x%08lx, ",
+               __FUNCTION__, order, addr);
+        }
+      else
+        LOG_Error("size (%u) != mapped size (%u), skip release of addr=%08lx\n",
+                  L4_PAGESIZE << order, size, addr);
+    }
+  else
+    LOG_Error("Couldn't release memory of addr=%08lx\n", addr);
+}
+
+/** Release Memory Pages
+ * \ingroup mod_mm_p
+ *
+ * \param  addr   start address of region
+ * \param  order  log2(size)
+ *
+ * Release struct page * and calls free_page to
+ * release page.
+ */
+void FASTCALL(__free_pages(struct page *page, unsigned int order))
+{
+  //sanity check
+  if (page == NULL)
+    {
+      LOG_Error("attempt to free NULL page ...\n");
+      return;
+    }
+
+  if (!put_page_testzero(page))
+    {
+      LOGd(DEBUG_PALLOC, "free page=%p denied, page->virtual=%p,"
+           " because counter (%d) > 0 \n", page, page->virtual, page_count(page));
+      return;
+    }
+  else
+    {
+      if (page->virtual != NULL)
+        {
+          LOGd(DEBUG_PALLOC, "free_pages: %p count=%d\n",
+               page->virtual, page_count(page));
+
+          free_pages((unsigned long)page->virtual, order);
+        }
+      else
+        LOG_Error("attempt to free page->virtual==NULL, page=%p\n", page);
+    }
+
+  kfree(page);
 }

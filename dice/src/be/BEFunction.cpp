@@ -1150,7 +1150,6 @@ CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
-	string exc = string(__func__);
 	if (m_pMsgBuffer)
 		delete m_pMsgBuffer;
 	m_pMsgBuffer = CBEClassFactory::Instance()->GetNewMessageBuffer();
@@ -1328,9 +1327,7 @@ bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType, string sN
  * The type and the name should not be initialized yet. This is all done by
  * this function.
  */
-bool
-CBEFunction::SetReturnVar(CBEType * pType,
-	string sName)
+bool CBEFunction::SetReturnVar(CBEType * pType, string sName)
 {
 	if (!pType)
 		return false;
@@ -1359,9 +1356,7 @@ CBEFunction::SetReturnVar(CBEType * pType,
  *  \param sName the name of the variable
  *  \return true if successful
  */
-bool
-CBEFunction::SetReturnVar(CFETypeSpec * pFEType,
-	string sName)
+bool CBEFunction::SetReturnVar(CFETypeSpec * pFEType, string sName)
 {
 	if (!pFEType)
 		return false;

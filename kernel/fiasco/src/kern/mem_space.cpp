@@ -117,7 +117,11 @@ Mem_space *Mem_space::_current;
 
 PUBLIC
 Mem_space::Mem_space (Ram_quota *q)
-  : _quota(q), _dir (0)
+  : _quota(q)
+#if defined(CONFIG_PF_PC) && !defined(CONFIG_SMALL_SPACES)
+    , _ldt_addr(0), _ldt_size(0)
+#endif
+    , _dir (0)
 {
   void *b;
   if (EXPECT_FALSE(! (b = Mapped_allocator::allocator()

@@ -903,8 +903,10 @@ Thread::switch_exception_context(Thread *sender, Thread* receiver)
   sender->store_segments();
   sender->switch_gdt_user_entries(receiver);
   receiver->load_segments();
+  if (sender->space() != receiver->space())
+    receiver->space()->mem_space()->switch_ldt();
 #else
-  (void)sender; (void)receiver;
+  (void)sender;
 #endif
   Mem_layout::user_utcb_ptr(receiver->local_id());
 }

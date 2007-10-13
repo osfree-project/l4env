@@ -117,7 +117,6 @@ public:
     void WriteDeclarators(CBEFile& pFile);
 
     // delegated to langauge dependent part
-    virtual void WriteDefinition(CBEFile& pFile);
     virtual void WriteDeclaration(CBEFile& pFile);
     void WriteSetZero(CBEFile& pFile);
     void WriteGetSize(CBEFile& pFile,
@@ -129,10 +128,6 @@ public:
     void WriteIndirect(CBEFile& pFile);
     void WriteIndirectInitialization(CBEFile& pFile, bool bMemory);
     void WriteInitDeclaration(CBEFile& pFile, std::string sInitString);
-    // language specific
-    virtual void WriteForwardDeclaration(CBEFile& pFile);
-    virtual void WriteForwardTypeDeclaration(CBEFile& pFile,
-	bool bUseConst = true);
 
     CBEType* GetTransmitType();
 

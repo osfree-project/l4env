@@ -59,8 +59,6 @@ public:
     virtual void CreateBackEnd(CBEType * pType, std::string sName, CFEBase *pFERefObject);
     virtual void AddToHeader(CBEHeaderFile* pHeader);
 	virtual CObject* Clone();
-    virtual void WriteForwardDeclaration(CBEFile& pFile);
-    virtual void WriteDefinition(CBEFile& pFile);
     virtual void WriteDeclaration(CBEFile& pFile);
 
 protected:

@@ -357,26 +357,17 @@ void CBEClass::AddMessageBuffer(CFEInterface *pFEInterface)
 
 	if (m_pMsgBuffer)
 		delete m_pMsgBuffer;
-	string exc = string(__func__);
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	m_pMsgBuffer = pCF->GetNewMessageBuffer();
 	m_pMsgBuffer->SetParent(this);
 	m_pMsgBuffer->CreateBackEnd(pFEInterface);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s MB created at %p\n", __func__, m_pMsgBuffer);
 	// add platform specific members
 	m_pMsgBuffer->AddPlatformSpecificMembers(this);
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::%s MB added platform members\n", __func__);
 	// function specific initialization
 	MsgBufferInitialization();
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s MB initialized\n", __func__);
 	// sort message buffer
 	m_pMsgBuffer->Sort(this);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass:%s MB sorted\n", __func__);
 	// do post creation stuff
 	m_pMsgBuffer->PostCreate(this, pFEInterface);
 
