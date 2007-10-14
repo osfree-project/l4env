@@ -73,4 +73,16 @@ L4_INLINE l4_addr_t l4_utcb_exc_pfa(l4_utcb_t *u);
  */
 L4_INLINE void l4_utcb_inherit_fpu(l4_utcb_t *u, int switch_on);
 
+/**************************************************************************
+ * Implementations
+ **************************************************************************/
+
+L4_INLINE void l4_utcb_inherit_fpu(l4_utcb_t *u, int switch_on)
+{
+  if (switch_on)
+    u->buffers[L4_UTCB_BUFFER_ACCEPTOR] |= L4_UTCB_INHERIT_FPU;
+  else
+    u->buffers[L4_UTCB_BUFFER_ACCEPTOR] &= ~L4_UTCB_INHERIT_FPU;
+}
+
 #endif /* ! _L4_SYS_UTCB_H */

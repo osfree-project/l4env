@@ -12,6 +12,8 @@ INTERFACE[ux]:
 EXTENSION class Mem_space
 {
 public:
+  void switch_ldt(); // for Thread::switch_exception_context
+
   typedef Pdir Dir_type;
 
 protected:
@@ -137,4 +139,9 @@ Mem_space::remote_update (const Address, const Mem_space *, const Address, size_
 IMPLEMENT inline
 void
 Mem_space::update_small (Address, bool)
+{}
+
+IMPLEMENT inline
+void
+Mem_space::switch_ldt ()
 {}

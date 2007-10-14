@@ -106,12 +106,4 @@ L4_INLINE l4_addr_t l4_utcb_exc_pfa(l4_utcb_t *u)
   return (u->exc.pfa & ~3) | (!(u->exc.err & 0x00020000) << 1);
 }
 
-L4_INLINE void l4_utcb_inherit_fpu(l4_utcb_t *u, int switch_on)
-{
-  if (switch_on)
-    u->buffers[L4_UTCB_BUFFER_ACCEPTOR] |= L4_UTCB_INHERIT_FPU;
-  else
-    u->buffers[L4_UTCB_BUFFER_ACCEPTOR] &= ~L4_UTCB_INHERIT_FPU;
-}
-
 #endif /* ! __L4_SYS__INCLUDE__ARCH_ARM__UTCB_H__ */
