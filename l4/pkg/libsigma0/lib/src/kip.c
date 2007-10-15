@@ -99,7 +99,9 @@ l4sigma0_kip()
 l4_umword_t
 l4sigma0_kip_version()
 {
-  return l4sigma0_kip_map(L4_INVALID_ID) ? kip->version : 0;
+  return l4sigma0_kip_map(L4_INVALID_ID)
+          ? (kip->version & L4SIGMA0_KIP_VERSION_FIASCO_MASK)
+          : 0;
 }
 
 const char*

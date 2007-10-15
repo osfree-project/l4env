@@ -6,7 +6,8 @@
 
 EXTERN_C_BEGIN
 
-#define L4SIGMA0_KIP_VERSION_FIASCO	0x87004444
+#define L4SIGMA0_KIP_VERSION_FIASCO		0x87004444
+#define L4SIGMA0_KIP_VERSION_FIASCO_MASK	0xff00ffff
 
 /** \defgroup kip Kernel Info Page handling functions 
  * This group of functions should be moved to l4sys!
