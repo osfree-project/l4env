@@ -41,6 +41,8 @@ ifeq ($(CONFIG_IA32_K8),y)
   SHARED_FLAGS		+= $(call CHECKCC,-march=k8,-march=i686)
 endif
 
-ASFLAGS			+= -m32
-OFORMAT			:= elf32-i386
-LD_EMULATION		:= elf_i386
+ASFLAGS				+= -m32
+OFORMAT				:= elf32-i386
+LD_EMULATION-SYSTEM-FreeBSD	:= elf_i386_fbsd
+LD_EMULATION-SYSTEM-Linux	:= elf_i386
+LD_EMULATION			:= $(LD_EMULATION-SYSTEM-$(SYSTEM))
