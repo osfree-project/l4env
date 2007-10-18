@@ -363,9 +363,6 @@ CBEExpression::CreateBackEndSizeOf(CFESizeOfExpression *pFEExpression)
  */
 void CBEExpression::Write(CBEFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	string sOut;
 	WriteToStr(sOut);
 	pFile << sOut;

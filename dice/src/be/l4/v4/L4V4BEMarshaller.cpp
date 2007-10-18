@@ -223,7 +223,7 @@ void CL4V4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE 
 	assert(pMsgBuffer);
 
 	// get index in refstring field
-	CMsgStructType nType = nDirection;
+	CMsgStructType nType(nDirection);
 	CBEStructType *pStruct = GetStruct(m_pFunction, nType);
 	assert(pStruct);
 	// iterate members of struct, when member of struct matches pMember, then
@@ -258,11 +258,13 @@ void CL4V4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE 
 	// into the word member and casting the result to a string dope.
 	//
 	// ((L4_Msg_t*)<msgbuf>)->msg[((L4_Msg_t*)<msgbuf>)->tag.X.u + nIndex]
-	pFile << "&( ((L4_Msg_t*)";
-	pMsgBuffer->WriteAccessToVariable(pFile, m_pFunction, true);
-	pFile << ")->msg[((L4_Msg_t*)";
-	pMsgBuffer->WriteAccessToVariable(pFile, m_pFunction, true);
-	pFile << ")->tag.X.u";
+	CBETypedDeclarator* pVar = pMsgBuffer->GetVariable(m_pFunction);
+	string sVar;
+	if (!pVar->HasReference())
+		sVar = "&";
+	sVar += pVar->m_Declarators.First()->GetName();
+
+	pFile << "&( ((L4_Msg_t*)" << sVar << ")->msg[((L4_Msg_t*)" << sVar << ")->tag.X.u";
 	ostringstream os;
 	os << nIndex;
 	if (nIndex > 0)

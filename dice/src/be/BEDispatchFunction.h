@@ -52,8 +52,7 @@ public:
     virtual ~CBEDispatchFunction();
 
 public:
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+    virtual bool DoWriteFunction(CBEFile* pFile);
     virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
 
 protected:

@@ -542,9 +542,7 @@ void CL4BEMarshaller::MarshalArrayIntern(CBEFile& pFile,
  *  \param pMember the parameter to marshal
  *  \return true if zero flexpage marshalled
  */
-bool
-CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile,
-	CBETypedDeclarator *pMember)
+bool CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
 	assert(pMember);
 
@@ -554,7 +552,7 @@ CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile,
 		return false;
 
 	// get message buffer
-	CBEMsgBuffer *pMsgBuffer = pMember->GetSpecificParent<CBEMsgBuffer>();
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
 	assert(pMsgBuffer);
 
 	if (m_bMarshal)
@@ -603,7 +601,7 @@ CL4BEMarshaller::WriteMember(CBEFile& pFile,
 		return;
 	}
 
-	CBEMarshaller::WriteMember(pFile, nDirection, pMsgBuffer, pMember, pStack);
+	CBEMarshaller::WriteMember(pFile, CMsgStructType(nDirection), pMsgBuffer, pMember, pStack);
 }
 
 /** \brief writes the access to a refstring member in the message buffer

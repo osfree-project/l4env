@@ -1531,10 +1531,10 @@ void CCompiler::PrepareWrite()
 	catch (error::create_error *e)
 	{
 		Verbose(PROGRAM_VERBOSE_NORMAL, "Back-End creation failed\n");
-		delete m_pRootBE;
-		m_pRootBE = 0;
 		std::cerr << e->what();
 		delete e;
+		delete m_pRootBE;
+		m_pRootBE = 0;
 		CMessages::Error("Creating back-end failed.\n");
 	}
 	Verbose(PROGRAM_VERBOSE_NORMAL, "...done.\n");

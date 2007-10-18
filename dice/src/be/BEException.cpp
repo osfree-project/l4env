@@ -29,15 +29,15 @@
 #include "be/BEException.h"
 
 CBEException::CBEException()
-{}
+{ }
 
-CBEException::CBEException(CBEException* src)
- : CBETypedef(src)
-{}
+CBEException::CBEException(CBEException * src)
+	: CBETypedef(src)
+{ }
 
 /** \brief destructor of this instance */
 CBEException::~CBEException()
-{}
+{ }
 
 /** \brief create a copy of this object
  *  \return reference to clone

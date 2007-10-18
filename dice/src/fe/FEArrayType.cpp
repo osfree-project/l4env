@@ -29,6 +29,7 @@
 #include "FEArrayType.h"
 #include "FEExpression.h"
 #include "Compiler.h"
+#include "Visitor.h"
 #include <iostream>
 
 CFEArrayType::CFEArrayType(CFETypeSpec * pBaseType, CFEExpression * pBound)
@@ -83,8 +84,5 @@ CFEExpression *CFEArrayType::GetBound()
  */
 void CFEArrayType::Accept(CVisitor& v)
 {
-    if (m_pBaseType)
-	m_pBaseType->Accept(v);
-    if (m_pBound)
-	m_pBound->Accept(v);
+	v.Visit(*this);
 }

@@ -65,7 +65,7 @@ CBESwitchCase::CBESwitchCase()
 CBESwitchCase::~CBESwitchCase()
 { }
 
-bool checkForInAttr(CFETypedDeclarator *pParameter)
+static bool checkForInAttr(CFETypedDeclarator *pParameter)
 {
 	return pParameter->m_Attributes.Find(ATTR_IN) != 0;
 }
@@ -153,23 +153,23 @@ void CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 		for_each(m_Parameters.begin(), m_Parameters.end(),
 			SetCallVariableCall(m_pMarshalFunction));
 	}
-	if (!pFEOperation->m_RaisesDeclarators.empty())
-	{
-		sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_MARSHAL_EXCEPTION, IsComponentSide());
-		m_pMarshalExceptionFunction = static_cast<CBEMarshalExceptionFunction*>(
-			pRoot->FindFunction(sFunctionName, FUNCTION_MARSHAL_EXCEPTION));
-		// marshal_exc function has to be here, because we have raises
-		// declarators
-		if (!m_pMarshalExceptionFunction)
-		{
-			exc += " failed, because marshal_exc function (" + sFunctionName +
-				") could not be found.";
-			throw new error::create_error(exc);
-		}
-		// set call parameters
-		for_each(m_Parameters.begin(), m_Parameters.end(),
-			SetCallVariableCall(m_pMarshalExceptionFunction));
-	}
+// 	if (!pFEOperation->m_RaisesDeclarators.empty())
+// 	{
+// 		sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_MARSHAL_EXCEPTION, IsComponentSide());
+// 		m_pMarshalExceptionFunction = static_cast<CBEMarshalExceptionFunction*>(
+// 			pRoot->FindFunction(sFunctionName, FUNCTION_MARSHAL_EXCEPTION));
+// 		// marshal_exc function has to be here, because we have raises
+// 		// declarators
+// 		if (!m_pMarshalExceptionFunction)
+// 		{
+// 			exc += " failed, because marshal_exc function (" + sFunctionName +
+// 				") could not be found.";
+// 			throw new error::create_error(exc);
+// 		}
+// 		// set call parameters
+// 		for_each(m_Parameters.begin(), m_Parameters.end(),
+// 			SetCallVariableCall(m_pMarshalExceptionFunction));
+// 	}
 	// create reference to component function
 	sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_TEMPLATE, IsComponentSide());
 	m_pComponentFunction = static_cast<CBEComponentFunction *>(
@@ -201,15 +201,7 @@ void CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 /** \brief tests if this function should be written
  *  \return true if successful
  */
-bool CBESwitchCase::DoWriteFunction(CBEHeaderFile* /*pFile*/)
-{
-	return true;
-}
-
-/** \brief tests if this function should be written
- *  \return true if successful
- */
-bool CBESwitchCase::DoWriteFunction(CBEImplementationFile* /*pFile*/)
+bool CBESwitchCase::DoWriteFunction(CBEFile* /*pFile*/)
 {
 	return true;
 }

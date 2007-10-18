@@ -38,32 +38,33 @@
  */
 class CBEMarshalExceptionFunction : public CBEOperationFunction
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEMarshalExceptionFunction();
-    virtual ~CBEMarshalExceptionFunction();
+	/** \brief constructor
+	 */
+	CBEMarshalExceptionFunction();
+	virtual ~CBEMarshalExceptionFunction();
 
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
-    virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
-    virtual void AddParameter(CFETypedDeclarator * pFEParameter);
-    virtual DIRECTION_TYPE GetSendDirection();
-    virtual DIRECTION_TYPE GetReceiveDirection();
-    virtual CBETypedDeclarator* GetExceptionVariable();
-    virtual CBETypedDeclarator* FindParameterType(std::string sTypeName);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
-	    bool bMarshal);
+	virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
+	virtual bool DoWriteFunction(CBEFile* pFile);
+	virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+	virtual void AddParameter(CFETypedDeclarator * pFEParameter);
+	virtual DIRECTION_TYPE GetSendDirection();
+	virtual DIRECTION_TYPE GetReceiveDirection();
+	virtual CBETypedDeclarator* GetExceptionVariable();
+	virtual CBETypedDeclarator* FindParameterType(std::string sTypeName);
+	virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
+		bool bMarshal);
 
 protected:
-    virtual void AddAfterParameters();
-    virtual void WriteVariableInitialization(CBEFile& pFile);
-    virtual void WriteInvocation(CBEFile& pFile);
-    virtual void WriteCallParameter(CBEFile& pFile,
-	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
+	virtual void AddAfterParameters();
+	virtual void WriteVariableInitialization(CBEFile& pFile);
+	virtual void WriteInvocation(CBEFile& pFile);
+	virtual void WriteCallParameter(CBEFile& pFile,
+		CBETypedDeclarator *pParameter, bool bCallFromSameClass);
+	virtual void WriteFunctionDefinition(CBEFile& pFile);
+	virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
 };
 
 #endif

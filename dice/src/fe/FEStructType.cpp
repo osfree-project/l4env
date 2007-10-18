@@ -36,25 +36,25 @@
 #include <iostream>
 
 CFEStructType::CFEStructType(string sTag,
-    vector<CFETypedDeclarator*> * pMembers,
-    vector<CFEIdentifier*>* pBaseStructs)
+	vector<CFETypedDeclarator*> * pMembers,
+	vector<CFEIdentifier*>* pBaseStructs)
 : CFEConstructedType(TYPE_STRUCT),
-    m_Members(pMembers, this),
-    m_BaseStructs(pBaseStructs, this)
+	m_Members(pMembers, this),
+	m_BaseStructs(pBaseStructs, this)
 {
-    m_sTag = sTag;
-    if (!pMembers)
-        m_bForwardDeclaration = true;
+	m_sTag = sTag;
+	if (!pMembers)
+		m_bForwardDeclaration = true;
 }
 
 CFEStructType::CFEStructType(CFEStructType* src)
 : CFEConstructedType(src),
-    m_Members(src->m_Members),
-    m_BaseStructs(src->m_BaseStructs)
+	m_Members(src->m_Members),
+	m_BaseStructs(src->m_BaseStructs)
 {
-    m_sTag = src->m_sTag;
-    m_Members.Adopt(this);
-    m_BaseStructs.Adopt(this);
+	m_sTag = src->m_sTag;
+	m_Members.Adopt(this);
+	m_BaseStructs.Adopt(this);
 }
 
 /** cleans up the struct object (delete all members) */
@@ -74,7 +74,7 @@ CObject* CFEStructType::Clone()
  */
 bool CFEStructType::IsConstructedType()
 {
-    return true;
+	return true;
 }
 
 /** \brief add members after construction
@@ -82,10 +82,10 @@ bool CFEStructType::IsConstructedType()
  */
 void CFEStructType::AddMembers(vector<CFETypedDeclarator*> *pMembers)
 {
-    m_Members.Add(pMembers);
-    m_Members.Adopt(this);
-    if (m_Members.size() > 0)
-	m_bForwardDeclaration = false;
+	m_Members.Add(pMembers);
+	m_Members.Adopt(this);
+	if (m_Members.size() > 0)
+		m_bForwardDeclaration = false;
 }
 
 /** tries to find a member by its name
@@ -94,79 +94,70 @@ void CFEStructType::AddMembers(vector<CFETypedDeclarator*> *pMembers)
  */
 CFETypedDeclarator *CFEStructType::FindMember(string sName)
 {
-    if (m_Members.empty())
-        return 0;
-    if (sName.empty())
-        return 0;
+	if (m_Members.empty())
+		return 0;
+	if (sName.empty())
+		return 0;
 
-    // check for a structural seperator ("." or "->")
-    string::size_type iDot = sName.find('.');
-    string::size_type iPtr = sName.find("->");
-    string::size_type iUse;
-    if ((iDot == string::npos) && (iPtr == string::npos))
-	iUse = string::npos;
-    else if ((iDot == string::npos) && (iPtr != string::npos))
-	iUse = iPtr;
-    else if ((iDot != string::npos) && (iPtr == string::npos))
-	iUse = iDot;
-    else
-	iUse = (iDot < iPtr) ? iDot : iPtr;
-    string sBase,
-	   sMember;
-    if ((iUse != string::npos) && (iUse > 0))
-    {
-	sBase = sName.substr(0, iUse);
-	if (iUse == iDot)
-	    sMember = sName.substr(sName.length() - (iDot + 1));
+	// check for a structural seperator ("." or "->")
+	string::size_type iDot = sName.find('.');
+	string::size_type iPtr = sName.find("->");
+	string::size_type iUse;
+	if ((iDot == string::npos) && (iPtr == string::npos))
+		iUse = string::npos;
+	else if ((iDot == string::npos) && (iPtr != string::npos))
+		iUse = iPtr;
+	else if ((iDot != string::npos) && (iPtr == string::npos))
+		iUse = iDot;
 	else
-	    sMember = sName.substr(sName.length() - (iDot + 2));
-    }
-    else
-	sBase = sName;
-
-    vector<CFETypedDeclarator*>::iterator iter;
-    for (iter = m_Members.begin();
-	 iter != m_Members.end();
-	 iter++)
-    {
-	if ((*iter)->m_Declarators.Find(sBase))
+		iUse = (iDot < iPtr) ? iDot : iPtr;
+	string sBase,
+		   sMember;
+	if ((iUse != string::npos) && (iUse > 0))
 	{
-	    if ((iUse != string::npos) && (iUse > 0))
-	    {
-		// if the found typed declarator has a constructed type (struct)
-		// search for the second part of the name there
-		CFEStructType *pStruct =
-		    dynamic_cast<CFEStructType*>((*iter)->GetType());
-		if (pStruct)
-		{
-		    if (!pStruct->FindMember(sMember))
-		    {
-			// no nested member with that name found
-			return 0;
-		    }
-		}
-	    }
-	    // return the found typed declarator
-	    return *iter;
+		sBase = sName.substr(0, iUse);
+		if (iUse == iDot)
+			sMember = sName.substr(sName.length() - (iDot + 1));
+		else
+			sMember = sName.substr(sName.length() - (iDot + 2));
 	}
-    }
+	else
+		sBase = sName;
 
-    return (CFETypedDeclarator*)0;
+	vector<CFETypedDeclarator*>::iterator iter;
+	for (iter = m_Members.begin();
+		iter != m_Members.end();
+		iter++)
+	{
+		if ((*iter)->m_Declarators.Find(sBase))
+		{
+			if ((iUse != string::npos) && (iUse > 0))
+			{
+				// if the found typed declarator has a constructed type (struct)
+				// search for the second part of the name there
+				CFEStructType *pStruct =
+					dynamic_cast<CFEStructType*>((*iter)->GetType());
+				if (pStruct)
+				{
+					if (!pStruct->FindMember(sMember))
+					{
+						// no nested member with that name found
+						return 0;
+					}
+				}
+			}
+			// return the found typed declarator
+			return *iter;
+		}
+	}
+
+	return (CFETypedDeclarator*)0;
 }
 
 /** \brief accepts the iterations of the visitor
  *  \param v reference to the visitor
  */
-void
-CFEStructType::Accept(CVisitor& v)
+void CFEStructType::Accept(CVisitor& v)
 {
-    v.Visit(*this);
-
-    vector<CFETypedDeclarator*>::iterator iter;
-    for (iter = m_Members.begin();
-	iter != m_Members.end();
-	iter++)
-    {
-	(*iter)->Accept(v);
-    }
+	v.Visit(*this);
 }

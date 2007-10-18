@@ -180,22 +180,5 @@ CFETypeSpec *CFEOperation::GetReturnType()
  */
 void CFEOperation::Accept(CVisitor& v)
 {
-    // first check ourself
-    v.Visit(*this);
-    // now iterate attributes
-    vector<CFEAttribute*>::iterator iterA;
-    for (iterA = m_Attributes.begin();
-	iterA != m_Attributes.end();
-	iterA++)
-    {
-	(*iterA)->Accept(v);
-    }
-    // and parameters
-    vector<CFETypedDeclarator*>::iterator iterP;
-    for (iterP = m_Parameters.begin();
-	iterP != m_Parameters.end();
-	iterP++)
-    {
-	(*iterP)->Accept(v);
-    }
+	v.Visit(*this);
 }

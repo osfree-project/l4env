@@ -82,71 +82,64 @@ CBEDispatchFunction::~CBEDispatchFunction()
 void
 CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
-    // set target file name
-    SetTargetFileName(pFEInterface);
-    // set name
+	// set target file name
+	SetTargetFileName(pFEInterface);
+	// set name
 	SetComponentSide(bComponentSide);
-    SetFunctionName(pFEInterface, FUNCTION_DISPATCH);
+	SetFunctionName(pFEInterface, FUNCTION_DISPATCH);
 
-    CBEInterfaceFunction::CreateBackEnd(pFEInterface, bComponentSide);
-    // set source line number to last number of interface
-    m_sourceLoc.setBeginLine(pFEInterface->m_sourceLoc.getEndLine());
+	CBEInterfaceFunction::CreateBackEnd(pFEInterface, bComponentSide);
+	// set source line number to last number of interface
+	m_sourceLoc.setBeginLine(pFEInterface->m_sourceLoc.getEndLine());
 
-    string exc = string(__func__);
+	// add functions
+	AddSwitchCases(pFEInterface);
+	// set own message buffer
+	AddMessageBuffer();
+	// add marshaller and communication class
+	CreateMarshaller();
+	CreateCommunication();
 
-    // add functions
-    AddSwitchCases(pFEInterface);
-    // set own message buffer
-    AddMessageBuffer();
-    // add marshaller and communication class
-    CreateMarshaller();
-    CreateCommunication();
+	// return type -> set to IPC reply code
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBEReplyCodeType *pReplyType = pCF->GetNewReplyCodeType();
+	pReplyType->CreateBackEnd();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sReply = pNF->GetReplyCodeVariable();
+	SetReturnVar(pReplyType, sReply);
+	// set initializer of reply variable
+	CBETypedDeclarator *pReturn = GetReturnVariable();
+	pReturn->SetDefaultInitString(string("DICE_REPLY"));
 
-    // return type -> set to IPC reply code
-    CBEClassFactory *pCF = CBEClassFactory::Instance();
-    CBEReplyCodeType *pReplyType = pCF->GetNewReplyCodeType();
-    pReplyType->CreateBackEnd();
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sReply = pNF->GetReplyCodeVariable();
-    if (!SetReturnVar(pReplyType, sReply))
-    {
-        delete pReplyType;
-	exc += " failed because return var could not be set.";
-	throw new error::create_error(exc);
-    }
-    // set initializer of reply variable
-    CBETypedDeclarator *pReturn = GetReturnVariable();
-    pReturn->SetDefaultInitString(string("DICE_REPLY"));
+	// set message buffer type
+	vector<CBESwitchCase*>::iterator iterS;
+	for (iterS = m_SwitchCases.begin();
+		iterS != m_SwitchCases.end();
+		iterS++)
+	{
+		(*iterS)->SetMessageBufferType();
+		// also set the call variable value of our return variable, which is
+		// the reply code. The switch case' SetCallVariable method propagates
+		// the call to its respective nested functions.
+		CBEDeclarator *pDecl = pReturn->m_Declarators.First();
+		(*iterS)->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
+			pDecl->GetName());
+	}
 
-    // set message buffer type
-    vector<CBESwitchCase*>::iterator iterS;
-    for (iterS = m_SwitchCases.begin();
-	 iterS != m_SwitchCases.end();
-	 iterS++)
-    {
-        (*iterS)->SetMessageBufferType();
-	// also set the call variable value of our return variable, which is
-	// the reply code. The switch case' SetCallVariable method propagates
-	// the call to its respective nested functions.
-	CBEDeclarator *pDecl = pReturn->m_Declarators.First();
-	(*iterS)->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
-	    pDecl->GetName());
-    }
+	// check if interface has default function and add its name if available
+	if (pFEInterface->m_Attributes.Find(ATTR_DEFAULT_FUNCTION))
+	{
+		CFEStringAttribute *pDefaultFunc = dynamic_cast<CFEStringAttribute*>
+			(pFEInterface->m_Attributes.Find(ATTR_DEFAULT_FUNCTION));
+		assert(pDefaultFunc);
+		m_sDefaultFunction = pDefaultFunc->GetString();
+	}
+	// create exception word local variable
+	if (m_sDefaultFunction.empty())
+		AddExceptionVariable();
 
-    // check if interface has default function and add its name if available
-    if (pFEInterface->m_Attributes.Find(ATTR_DEFAULT_FUNCTION))
-    {
-        CFEStringAttribute *pDefaultFunc = dynamic_cast<CFEStringAttribute*>
-	    (pFEInterface->m_Attributes.Find(ATTR_DEFAULT_FUNCTION));
-	assert(pDefaultFunc);
-        m_sDefaultFunction = pDefaultFunc->GetString();
-    }
-    // create exception word local variable
-    if (m_sDefaultFunction.empty())
-	AddExceptionVariable();
-
-    // add parameters (eventually adds opcode and message buffer)
-    AddParameters();
+	// add parameters (eventually adds opcode and message buffer)
+	AddParameters();
 }
 
 /** \brief adds parameters before all other parameters
@@ -158,10 +151,10 @@ CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentS
 void
 CBEDispatchFunction::AddBeforeParameters()
 {
-    CBEInterfaceFunction::AddBeforeParameters();
+	CBEInterfaceFunction::AddBeforeParameters();
 
-    CBETypedDeclarator *pParameter = CreateOpcodeVariable();
-    m_Parameters.Add(pParameter);
+	CBETypedDeclarator *pParameter = CreateOpcodeVariable();
+	m_Parameters.Add(pParameter);
 }
 
 /** \brief adds the functions for the given front-end interface
@@ -260,14 +253,14 @@ void CBEDispatchFunction::WriteSwitch(CBEFile& pFile)
 void
 CBEDispatchFunction::WriteDefaultCase(CBEFile& pFile)
 {
-    pFile << "\tdefault:\n";
-    ++pFile;
-    if (m_sDefaultFunction.empty())
-        WriteDefaultCaseWithoutDefaultFunc(pFile);
-    else
-        WriteDefaultCaseWithDefaultFunc(pFile);
-    pFile << "\tbreak;\n";
-    --pFile;
+	pFile << "\tdefault:\n";
+	++pFile;
+	if (m_sDefaultFunction.empty())
+		WriteDefaultCaseWithoutDefaultFunc(pFile);
+	else
+		WriteDefaultCaseWithDefaultFunc(pFile);
+	pFile << "\tbreak;\n";
+	--pFile;
 }
 
 /** \brief writes the code in the default case if the default function is not \
@@ -277,11 +270,11 @@ CBEDispatchFunction::WriteDefaultCase(CBEFile& pFile)
 void
 CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
 {
-    pFile << "\t/* unknown opcode */\n";
-    WriteSetWrongOpcodeException(pFile);
-    // send reply
-    string sReply = CBENameFactory::Instance()->GetReplyCodeVariable();
-    pFile << "\t" << sReply << " = DICE_REPLY;\n";
+	pFile << "\t/* unknown opcode */\n";
+	WriteSetWrongOpcodeException(pFile);
+	// send reply
+	string sReply = CBENameFactory::Instance()->GetReplyCodeVariable();
+	pFile << "\t" << sReply << " = DICE_REPLY;\n";
 }
 
 /** \brief writes the code in the default case if the default function is \
@@ -291,13 +284,13 @@ CBEDispatchFunction::WriteDefaultCaseWithoutDefaultFunc(CBEFile& pFile)
 void
 CBEDispatchFunction::WriteDefaultCaseWithDefaultFunc(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sObj = pNF->GetCorbaObjectVariable();
-    string sEnv = pNF->GetCorbaEnvironmentVariable();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sMsgBuffer = pNF->GetMessageBufferVariable();
+	string sObj = pNF->GetCorbaObjectVariable();
+	string sEnv = pNF->GetCorbaEnvironmentVariable();
 
-    pFile << "\treturn " << m_sDefaultFunction << " (" << sObj <<
-	", " << sMsgBuffer << ", " << sEnv << ");\n";
+	pFile << "\treturn " << m_sDefaultFunction << " (" << sObj <<
+		", " << sMsgBuffer << ", " << sEnv << ");\n";
 }
 
 /** \brief writes function declaration
@@ -309,9 +302,9 @@ CBEDispatchFunction::WriteDefaultCaseWithDefaultFunc(CBEFile& pFile)
 void
 CBEDispatchFunction::WriteFunctionDeclaration(CBEFile& pFile)
 {
-    // call base
-    CBEInterfaceFunction::WriteFunctionDeclaration(pFile);
-    WriteDefaultFunctionDeclaration(pFile);
+	// call base
+	CBEInterfaceFunction::WriteFunctionDeclaration(pFile);
+	WriteDefaultFunctionDeclaration(pFile);
 }
 
 /** \brief writes the decalaration of the default function
@@ -320,21 +313,21 @@ CBEDispatchFunction::WriteFunctionDeclaration(CBEFile& pFile)
 void
 CBEDispatchFunction::WriteDefaultFunctionDeclaration(CBEFile& pFile)
 {
-    // add declaration of default function
-    if (m_sDefaultFunction.empty())
-	return;
+	// add declaration of default function
+	if (m_sDefaultFunction.empty())
+		return;
 
-    pFile << "\n/* CBEDispatchFunction::WriteDefaultFunctionDeclaration */\n";
-    // get the class' message buffer to get the correct type
-    CBEClass *pClass = GetSpecificParent<CBEClass>();
-    assert(pClass);
-    CBEMsgBuffer *pMsgBuffer = pClass->GetMessageBuffer();
-    assert(pMsgBuffer);
-    string sMsgBufferType = pMsgBuffer->m_Declarators.First()->GetName();
-    // int \<name\>(\<corba object\>, \<msg buffer type\>*,
-    //              \<corba environment\>*)
-    pFile << "int " << m_sDefaultFunction << " (CORBA_Object, " <<
-	sMsgBufferType << "*, CORBA_Server_Environment*);\n";
+	pFile << "\n/* CBEDispatchFunction::WriteDefaultFunctionDeclaration */\n";
+	// get the class' message buffer to get the correct type
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	CBEMsgBuffer *pMsgBuffer = pClass->GetMessageBuffer();
+	assert(pMsgBuffer);
+	string sMsgBufferType = pMsgBuffer->m_Declarators.First()->GetName();
+	// int \<name\>(\<corba object\>, \<msg buffer type\>*,
+	//              \<corba environment\>*)
+	pFile << "int " << m_sDefaultFunction << " (CORBA_Object, " <<
+		sMsgBufferType << "*, CORBA_Server_Environment*);\n";
 }
 
 /** \brief writes the code to set and marshal the exception codes for a wrong
@@ -344,28 +337,28 @@ CBEDispatchFunction::WriteDefaultFunctionDeclaration(CBEFile& pFile)
 void
 CBEDispatchFunction::WriteSetWrongOpcodeException(CBEFile& pFile)
 {
-    // set the exception in the environment
-    string sSetFunc;
-    CBETypedDeclarator *pEnv = GetEnvironment();
-    if (((CBEUserDefinedType*)pEnv->GetType())->GetName() ==
-        "CORBA_Server_Environment")
-        sSetFunc = "CORBA_server_exception_set";
-    else
-        sSetFunc = "CORBA_exception_set";
-    CBEDeclarator *pDecl = pEnv->m_Declarators.First();
-    pFile << "\t" << sSetFunc << "(";
-    if (pDecl->GetStars() == 0)
-	pFile << "&";
-    pDecl->WriteName(pFile);
-    pFile << ",\n";
-    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
-    pFile << "\tCORBA_DICE_EXCEPTION_WRONG_OPCODE,\n";
-    pFile << "\t0);\n";
-    --pFile;
-    // copy from environment to local exception variable
-    WriteExceptionWordInitialization(pFile);
-    // marshal exception variable
-    WriteMarshalException(pFile, true, false);
+	// set the exception in the environment
+	string sSetFunc;
+	CBETypedDeclarator *pEnv = GetEnvironment();
+	if (((CBEUserDefinedType*)pEnv->GetType())->GetName() ==
+		"CORBA_Server_Environment")
+		sSetFunc = "CORBA_server_exception_set";
+	else
+		sSetFunc = "CORBA_exception_set";
+	CBEDeclarator *pDecl = pEnv->m_Declarators.First();
+	pFile << "\t" << sSetFunc << "(";
+	if (pDecl->GetStars() == 0)
+		pFile << "&";
+	pDecl->WriteName(pFile);
+	pFile << ",\n";
+	++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+	pFile << "\tCORBA_DICE_EXCEPTION_WRONG_OPCODE,\n";
+	pFile << "\t0);\n";
+	--pFile;
+	// copy from environment to local exception variable
+	WriteExceptionWordInitialization(pFile);
+	// marshal exception variable
+	WriteMarshalException(pFile, true, false);
 }
 
 /** \brief test fi this function should be written
@@ -374,30 +367,16 @@ CBEDispatchFunction::WriteSetWrongOpcodeException(CBEFile& pFile)
  *
  * A server loop is only written at the component's side.
  */
-bool
-CBEDispatchFunction::DoWriteFunction(CBEHeaderFile* pFile)
+bool CBEDispatchFunction::DoWriteFunction(CBEFile* pFile)
 {
-    if (!IsTargetFile(pFile))
-        return false;
-    return pFile->IsOfFileType(FILETYPE_COMPONENT);
-}
-
-/** \brief test fi this function should be written
- *  \param pFile the file to write to
- *  \return  true if this function should be written
- *
- * A server loop is only written at the component's side.
- */
-bool
-CBEDispatchFunction::DoWriteFunction(CBEImplementationFile* pFile)
-{
-    if (!IsTargetFile(pFile))
-        return false;
-    // do not write this function implementation if
-    // option NO_DISPATCHER is set
-    if (CCompiler::IsOptionSet(PROGRAM_NO_DISPATCHER))
-        return false;
-    return pFile->IsOfFileType(FILETYPE_COMPONENT);
+	if (!IsTargetFile(pFile))
+		return false;
+	// do not write this function implementation if
+	// option NO_DISPATCHER is set
+	if (CCompiler::IsOptionSet(PROGRAM_NO_DISPATCHER) &&
+		pFile->IsOfFileType(FILETYPE_IMPLEMENTATION))
+		return false;
+	return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief writes the invocation of the message transfer
@@ -412,13 +391,13 @@ CBEDispatchFunction::WriteInvocation(CBEFile& /*pFile*/)
  */
 void CBEDispatchFunction::WriteBody(CBEFile& pFile)
 {
-    // write variable declaration and initialization
-    WriteVariableDeclaration(pFile);
-    WriteVariableInitialization(pFile);
-    // write loop (contains switch)
-    WriteSwitch(pFile);
-    // write clean up
-    WriteCleanup(pFile);
-    // write return
-    WriteReturn(pFile);
+	// write variable declaration and initialization
+	WriteVariableDeclaration(pFile);
+	WriteVariableInitialization(pFile);
+	// write loop (contains switch)
+	WriteSwitch(pFile);
+	// write clean up
+	WriteCleanup(pFile);
+	// write return
+	WriteReturn(pFile);
 }

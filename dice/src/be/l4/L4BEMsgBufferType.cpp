@@ -78,14 +78,14 @@ void
 CL4BEMsgBufferType::AddElements(CFEOperation *pFEOperation,
 	CMsgStructType nType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s called for %s\n",
-		__func__, pFEOperation->GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+		__func__, pFEOperation->GetName().c_str(), (int)nType);
 
 	CBEMsgBufferType::AddElements(pFEOperation, nType);
 
 	AddZeroFlexpage(pFEOperation, nType);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s returns\n", __func__);
 }
 
 /** \brief adds elements for a single parameter to the message buffer
@@ -97,6 +97,8 @@ CL4BEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
 	CMsgStructType nType)
 {
 	assert(pFEParameter);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+		__func__, pFEParameter->m_Declarators.First()->GetName().c_str(), (int)nType);
 
 	if (pFEParameter->m_Attributes.Find(ATTR_REF))
 	{
@@ -121,6 +123,8 @@ CL4BEMsgBufferType::AddRefstringElement(CFETypedDeclarator *pFEParameter,
 	CMsgStructType nType)
 {
 	assert(pFEParameter);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+		__func__, pFEParameter->m_Declarators.First()->GetName().c_str(), (int)nType);
 	// get struct
 	CFEOperation *pFEOperation =
 		pFEParameter->GetSpecificParent<CFEOperation>();
@@ -159,6 +163,8 @@ CL4BEMsgBufferType::AddFlexpageElement(CFETypedDeclarator *pFEParameter,
 	CMsgStructType nType)
 {
 	assert(pFEParameter);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+		__func__, pFEParameter->m_Declarators.First()->GetName().c_str(), (int)nType);
 	// get struct
 	CFEOperation *pFEOperation =
 		pFEParameter->GetSpecificParent<CFEOperation>();
@@ -191,6 +197,8 @@ void
 CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
 	CMsgStructType nType)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CL4BEMsgBufferType::%s(%s, %d) called\n",
+		__func__, pFEOperation->GetName().c_str(), (int)nType);
 	bool bFlexpage = false;
 
 	vector<CFETypedDeclarator*>::iterator iter;

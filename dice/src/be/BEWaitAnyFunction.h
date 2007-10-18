@@ -53,8 +53,7 @@ public:
     virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
     virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 	    bool bMarshal);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+    virtual bool DoWriteFunction(CBEFile* pFile);
     virtual CBETypedDeclarator * FindParameterType(std::string sTypeName);
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual DIRECTION_TYPE GetSendDirection();

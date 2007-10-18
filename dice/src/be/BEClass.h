@@ -137,8 +137,7 @@ public: // Public methods
     CBEFunction* FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType);
     CBEEnumType* FindEnum(std::string sName);
 
-    bool IsTargetFile(CBEHeaderFile* pFile);
-    bool IsTargetFile(CBEImplementationFile* pFile);
+    bool IsTargetFile(CBEFile* pFile);
 
     bool HasFunctionWithUserType(std::string sTypeName, CBEFile* pFile);
     int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs,

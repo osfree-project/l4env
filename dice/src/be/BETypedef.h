@@ -48,24 +48,19 @@ public:
     ~CBETypedef();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBETypedef(CBETypedef* src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBETypedef(CBETypedef* src);
 
 public:
     using CBETypedDeclarator::CreateBackEnd;
     virtual void CreateBackEnd(CFETypedDeclarator *pFETypedef);
     virtual void CreateBackEnd(CBEType * pType, std::string sName, CFEBase *pFERefObject);
     virtual void AddToHeader(CBEHeaderFile* pHeader);
-	virtual CObject* Clone();
     virtual void WriteDeclaration(CBEFile& pFile);
 
-protected:
-    /** \var std::string m_sDefine
-     *  \brief the define symbol to brace the type definition
-     */
-    std::string m_sDefine;
+	virtual CObject* Clone();
 };
 
 #endif // !__DICE_BETYPEDEF_H__

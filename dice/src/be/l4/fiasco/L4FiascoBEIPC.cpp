@@ -66,96 +66,96 @@ void
 CL4FiascoBEIPC::WriteCall(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sServerID = pNF->GetComponentIDVariable();
-    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-    string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
-    string sScheduling = pNF->GetScheduleClientVariable();
-    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    CMsgStructType nDirection = pFunction->GetSendDirection();
-    bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
-    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    CL4BEMarshaller *pMarshaller =
-	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
-    assert(pMarshaller);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sServerID = pNF->GetComponentIDVariable();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	string sTimeout = pNF->GetTimeoutClientVariable(pFunction);
+	string sScheduling = pNF->GetScheduleClientVariable();
+	string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+	string sMsgBuffer = pNF->GetMessageBufferVariable();
+	CMsgStructType nDirection(pFunction->GetSendDirection());
+	bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+	CL4BEMarshaller *pMarshaller =
+		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+	assert(pMarshaller);
 
-    bool bFlexpage =
-	pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
+	bool bFlexpage =
+		pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
 
-    pFile << "\tl4_ipc_call_tag(*" << sServerID << ",\n";
-    ++pFile << "\t";
-    if (IsShortIPC(pFunction, nDirection))
-    {
-	if (bScheduling)
-	    pFile << "(" << sMWord << "*)(";
-	if (bFlexpage)
-	    pFile << "L4_IPC_SHORT_FPAGE";
+	pFile << "\tl4_ipc_call_tag(*" << sServerID << ",\n";
+	++pFile << "\t";
+	if (IsShortIPC(pFunction, nDirection))
+	{
+		if (bScheduling)
+			pFile << "(" << sMWord << "*)(";
+		if (bFlexpage)
+			pFile << "L4_IPC_SHORT_FPAGE";
+		else
+			pFile << "L4_IPC_SHORT_MSG";
+		if (bScheduling)
+			pFile << " | " << sScheduling << ")";
+	}
 	else
-	    pFile << "L4_IPC_SHORT_MSG";
-        if (bScheduling)
-            pFile << " | " << sScheduling << ")";
-    }
-    else
-    {
-        if (bFlexpage || bScheduling)
-	    pFile << "(" << sMWord << "*)((" << sMWord << ")";
+	{
+		if (bFlexpage || bScheduling)
+			pFile << "(" << sMWord << "*)((" << sMWord << ")";
 
-        if (!pMsgBuffer->HasReference())
-	    pFile << "&";
-	pFile << sMsgBuffer;
+		if (!pMsgBuffer->HasReference())
+			pFile << "&";
+		pFile << sMsgBuffer;
 
-        if (bFlexpage)
-	    pFile << "|2";
-        if (bScheduling)
-            pFile << "|" << sScheduling;
-        if (bFlexpage || bScheduling)
-	    pFile << ")";
-    }
-    pFile << ",\n";
+		if (bFlexpage)
+			pFile << "|2";
+		if (bScheduling)
+			pFile << "|" << sScheduling;
+		if (bFlexpage || bScheduling)
+			pFile << ")";
+	}
+	pFile << ",\n";
 
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
-	    false, false))
-	pFile << "0";
-    pFile << ",\n";
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
-	    false, false))
-	pFile << "0";
-    pFile << ",\n";
-
-    pFile << "\tl4_msgtag(0,0,0,0),\n";
-
-    nDirection = pFunction->GetReceiveDirection();
-    if (IsShortIPC(pFunction, nDirection))
-	pFile << "\tL4_IPC_SHORT_MSG,\n";
-    else
-    {
 	pFile << "\t";
-        if (!pMsgBuffer->HasReference())
-	    pFile << "&";
-	pFile << sMsgBuffer << ",\n";
-    }
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
+			false, false))
+		pFile << "0";
+	pFile << ",\n";
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
+			false, false))
+		pFile << "0";
+	pFile << ",\n";
 
-    string sDummy = pNF->GetDummyVariable();
-    pFile << "\t";
-    // if no member for this direction can be found, use dummy
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
-	    true, false))
-	pFile << "&" << sDummy;
-    pFile << ",\n";
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
-	    true, false))
-	pFile << "&" << sDummy;
-    pFile << ",\n";
+	pFile << "\tl4_msgtag(0,0,0,0),\n";
 
-    pFile << "\t" << sTimeout << ", &" << sResult << ", ";
-    WriteTag(pFile, pFunction, true);
-    pFile << ");\n";
+	nDirection = pFunction->GetReceiveDirection();
+	if (IsShortIPC(pFunction, nDirection))
+		pFile << "\tL4_IPC_SHORT_MSG,\n";
+	else
+	{
+		pFile << "\t";
+		if (!pMsgBuffer->HasReference())
+			pFile << "&";
+		pFile << sMsgBuffer << ",\n";
+	}
 
-    --pFile;
+	string sDummy = pNF->GetDummyVariable();
+	pFile << "\t";
+	// if no member for this direction can be found, use dummy
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
+			true, false))
+		pFile << "&" << sDummy;
+	pFile << ",\n";
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
+			true, false))
+		pFile << "&" << sDummy;
+	pFile << ",\n";
+
+	pFile << "\t" << sTimeout << ", &" << sResult << ", ";
+	WriteTag(pFile, pFunction, true);
+	pFile << ");\n";
+
+	--pFile;
 }
 
 /** \brief write an IPC receive operation
@@ -166,52 +166,52 @@ void
 CL4FiascoBEIPC::WriteReceive(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sServerID = pNF->GetComponentIDVariable();
-    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-    string sTimeout;
-    if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
-    else
-        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
-    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    CL4BEMarshaller *pMarshaller =
-	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
-    assert(pMarshaller);
-    CMsgStructType nDirection = pFunction->GetReceiveDirection();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sServerID = pNF->GetComponentIDVariable();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	string sTimeout;
+	if (pFunction->IsComponentSide())
+		sTimeout = pNF->GetTimeoutServerVariable(pFunction);
+	else
+		sTimeout = pNF->GetTimeoutClientVariable(pFunction);
+	string sMsgBuffer = pNF->GetMessageBufferVariable();
+	string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+	CL4BEMarshaller *pMarshaller =
+		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+	assert(pMarshaller);
+	CMsgStructType nDirection(pFunction->GetReceiveDirection());
 
-    pFile << "\t" << "l4_ipc_receive_tag(*(l4_threadid_t*)" << sServerID << ",\n";
-    ++pFile;
+	pFile << "\t" << "l4_ipc_receive_tag(*(l4_threadid_t*)" << sServerID << ",\n";
+	++pFile;
 
-    if (IsShortIPC(pFunction, nDirection))
-	pFile << "\tL4_IPC_SHORT_MSG,\n";
-    else
-    {
+	if (IsShortIPC(pFunction, nDirection))
+		pFile << "\tL4_IPC_SHORT_MSG,\n";
+	else
+	{
+		pFile << "\t";
+		if (!pMsgBuffer->HasReference())
+			pFile << "&";
+		pFile << sMsgBuffer << ",\n";
+	}
+
+	string sDummy = pNF->GetDummyVariable();
 	pFile << "\t";
-        if (!pMsgBuffer->HasReference())
-	    pFile << "&";
-	pFile << sMsgBuffer << ",\n";
-    }
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
+			true, false))
+		pFile << "&" << sDummy;
+	pFile << ",\n";
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
+			true, false))
+		pFile << "&" << sDummy;
+	pFile << ",\n";
 
-    string sDummy = pNF->GetDummyVariable();
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
-	    true, false))
-	pFile << "&" << sDummy;
-    pFile << ",\n";
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
-	    true, false))
-	pFile << "&" << sDummy;
-    pFile << ",\n";
+	pFile << "\t" << sTimeout << ", &" << sResult << ", ";
+	WriteTag(pFile, pFunction, true);
+	pFile << ");\n";
 
-    pFile << "\t" << sTimeout << ", &" << sResult << ", ";
-    WriteTag(pFile, pFunction, true);
-    pFile << ");\n";
-
-    --pFile;
+	--pFile;
 }
 
 /** \brief write an IPC wait operation
@@ -222,51 +222,51 @@ void
 CL4FiascoBEIPC::WriteWait(CBEFile& pFile,
 	CBEFunction *pFunction)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sServerID = pNF->GetComponentIDVariable();
-    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-    string sTimeout;
-    if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
-    else
-        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
-    CMsgStructType nDirection = pFunction->GetReceiveDirection();
-    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    CL4BEMarshaller *pMarshaller =
-	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
-    assert(pMarshaller);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sServerID = pNF->GetComponentIDVariable();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	string sTimeout;
+	if (pFunction->IsComponentSide())
+		sTimeout = pNF->GetTimeoutServerVariable(pFunction);
+	else
+		sTimeout = pNF->GetTimeoutClientVariable(pFunction);
+	string sMsgBuffer = pNF->GetMessageBufferVariable();
+	string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+	CMsgStructType nDirection(pFunction->GetReceiveDirection());
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+	CL4BEMarshaller *pMarshaller =
+		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+	assert(pMarshaller);
 
-    pFile << "\tl4_ipc_wait_tag( (l4_threadid_t*)" << sServerID << ",\n";
-    ++pFile;
-    if (IsShortIPC(pFunction, nDirection))
-	pFile << "\tL4_IPC_SHORT_MSG,\n";
-    else
-    {
+	pFile << "\tl4_ipc_wait_tag( (l4_threadid_t*)" << sServerID << ",\n";
+	++pFile;
+	if (IsShortIPC(pFunction, nDirection))
+		pFile << "\tL4_IPC_SHORT_MSG,\n";
+	else
+	{
+		pFile << "\t";
+		if (!pMsgBuffer->HasReference())
+			pFile << "&";
+		pFile << sMsgBuffer << ",\n";
+	}
+
+	string sDummy = pNF->GetDummyVariable();
 	pFile << "\t";
-        if (!pMsgBuffer->HasReference())
-	    pFile << "&";
-	pFile << sMsgBuffer << ",\n";
-    }
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
+			true, false))
+		pFile << "&" << sDummy;
+	pFile << ",\n";
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
+			true, false))
+		pFile << "&" << sDummy;
+	pFile << ",\n";
 
-    string sDummy = pNF->GetDummyVariable();
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
-	    true, false))
-	pFile << "&" << sDummy;
-    pFile << ",\n";
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
-	    true, false))
-	pFile << "&" << sDummy;
-    pFile << ",\n";
+	pFile << "\t" << sTimeout << ", &" << sResult << ", ";
+	WriteTag(pFile, pFunction, true);
+	pFile << ");\n";
 
-    pFile << "\t" << sTimeout << ", &" << sResult << ", ";
-    WriteTag(pFile, pFunction, true);
-    pFile << ");\n";
-
-    --pFile;
+	--pFile;
 }
 
 /** \brief write an IPC reply and receive operation
@@ -283,88 +283,88 @@ CL4FiascoBEIPC::WriteReplyAndWait(CBEFile& pFile,
 	bool bSendFlexpage,
 	bool bSendShortIPC)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-    string sTimeout;
-    if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
-    else
-        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
-    string sServerID = pNF->GetComponentIDVariable();
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
-    CL4BEMarshaller *pMarshaller =
-	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
-    assert(pMarshaller);
-    bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
-    string sScheduling = pNF->GetScheduleServerVariable();
-
-    pFile << "\tl4_ipc_reply_and_wait_tag(*" << sServerID << ",\n";
-    ++pFile << "\t";
-    if (bSendShortIPC)
-    {
-	pFile << "(const void*)(";
-	if (bSendFlexpage && bScheduling)
-	    pFile << "(unsigned)";
-        if (bSendFlexpage)
-            pFile << "L4_IPC_SHORT_FPAGE";
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	string sTimeout;
+	if (pFunction->IsComponentSide())
+		sTimeout = pNF->GetTimeoutServerVariable(pFunction);
 	else
-	    pFile << "L4_IPC_SHORT_MSG";
-        if (bScheduling)
-            pFile << " | " << sScheduling;
-	pFile << ")";
-    }
-    else
-    {
-        if (bSendFlexpage || bScheduling)
-            pFile << "(" << sMWord << "*)((" << sMWord << ")";
-        pFile << sMsgBuffer;
-        if (bSendFlexpage)
-	    pFile << "|2";
-	if (bScheduling)
-	    pFile << "|" << sScheduling;
-	if (bSendFlexpage || bScheduling)
-	    pFile << ")";
-    }
-    pFile << ",\n";
+		sTimeout = pNF->GetTimeoutClientVariable(pFunction);
+	string sServerID = pNF->GetComponentIDVariable();
+	string sMsgBuffer = pNF->GetMessageBufferVariable();
+	string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+	CL4BEMarshaller *pMarshaller =
+		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+	assert(pMarshaller);
+	bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
+	string sScheduling = pNF->GetScheduleServerVariable();
 
-    CMsgStructType nDirection = pFunction->GetSendDirection();
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
-	    false, false))
-	pFile << "0";
-    pFile << ",\n";
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
-	    false, false))
-	pFile << "0";
-    pFile << ",\n";
+	pFile << "\tl4_ipc_reply_and_wait_tag(*" << sServerID << ",\n";
+	++pFile << "\t";
+	if (bSendShortIPC)
+	{
+		pFile << "(const void*)(";
+		if (bSendFlexpage && bScheduling)
+			pFile << "(unsigned)";
+		if (bSendFlexpage)
+			pFile << "L4_IPC_SHORT_FPAGE";
+		else
+			pFile << "L4_IPC_SHORT_MSG";
+		if (bScheduling)
+			pFile << " | " << sScheduling;
+		pFile << ")";
+	}
+	else
+	{
+		if (bSendFlexpage || bScheduling)
+			pFile << "(" << sMWord << "*)((" << sMWord << ")";
+		pFile << sMsgBuffer;
+		if (bSendFlexpage)
+			pFile << "|2";
+		if (bScheduling)
+			pFile << "|" << sScheduling;
+		if (bSendFlexpage || bScheduling)
+			pFile << ")";
+	}
+	pFile << ",\n";
 
-    pFile << "\t";
-    WriteTag(pFile, pFunction, false);
-    pFile << ",\n";
+	CMsgStructType nDirection(pFunction->GetSendDirection());
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
+			false, false))
+		pFile << "0";
+	pFile << ",\n";
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
+			false, false))
+		pFile << "0";
+	pFile << ",\n";
 
-    pFile << "\t" << sServerID << ",\n";
-    pFile << "\t" << sMsgBuffer << ",\n";
+	pFile << "\t";
+	WriteTag(pFile, pFunction, false);
+	pFile << ",\n";
 
-    nDirection = pFunction->GetReceiveDirection();
-    string sDummy = pNF->GetDummyVariable();
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
-	    true, false))
-	pFile << "&" << sDummy;
-    pFile << ",\n";
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
-	    true, false))
-	pFile << "&" << sDummy;
-    pFile << ",\n";
+	pFile << "\t" << sServerID << ",\n";
+	pFile << "\t" << sMsgBuffer << ",\n";
 
-    pFile << "\t" << sTimeout << ", &" << sResult << ", ";
-    WriteTag(pFile, pFunction, true);
-    pFile << ");\n";
+	nDirection = pFunction->GetReceiveDirection();
+	string sDummy = pNF->GetDummyVariable();
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
+			true, false))
+		pFile << "&" << sDummy;
+	pFile << ",\n";
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
+			true, false))
+		pFile << "&" << sDummy;
+	pFile << ",\n";
 
-    --pFile;
+	pFile << "\t" << sTimeout << ", &" << sResult << ", ";
+	WriteTag(pFile, pFunction, true);
+	pFile << ");\n";
+
+	--pFile;
 }
 
 /** \brief write an IPC send operation
@@ -375,75 +375,75 @@ void
 CL4FiascoBEIPC::WriteSend(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
-    CMsgStructType nDirection = pFunction->GetSendDirection();
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sServerID = pNF->GetComponentIDVariable();
-    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-    string sTimeout;
-    if (pFunction->IsComponentSide())
-        sTimeout = pNF->GetTimeoutServerVariable(pFunction);
-    else
-        sTimeout = pNF->GetTimeoutClientVariable(pFunction);
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
-    string sScheduling = pNF->GetScheduleClientVariable();
-    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    assert(pMsgBuffer);
-    CL4BEMarshaller *pMarshaller =
-	dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
-    assert(pMarshaller);
-
-    pFile << "\tl4_ipc_send_tag(*" << sServerID << ",\n";
-    ++pFile << "\t";
-    bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
-
-    bool bFlexpage = pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0;
-
-    if (IsShortIPC(pFunction, nDirection))
-    {
-	if (bScheduling)
-	    pFile << "(" << sMWord << "*)(";
-	if (bFlexpage)
-	    pFile << "L4_IPC_SHORT_FPAGE";
+	CMsgStructType nDirection(pFunction->GetSendDirection());
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sServerID = pNF->GetComponentIDVariable();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	string sTimeout;
+	if (pFunction->IsComponentSide())
+		sTimeout = pNF->GetTimeoutServerVariable(pFunction);
 	else
-	    pFile << "L4_IPC_SHORT_MSG";
-        if (bScheduling)
-            pFile << "|" << sScheduling << ")";
-    }
-    else
-    {
-        if (bFlexpage || bScheduling)
-	    pFile << "(" << sMWord << "*)((" << sMWord << ")";
+		sTimeout = pNF->GetTimeoutClientVariable(pFunction);
+	string sMsgBuffer = pNF->GetMessageBufferVariable();
+	string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
+	string sScheduling = pNF->GetScheduleClientVariable();
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+	assert(pMsgBuffer);
+	CL4BEMarshaller *pMarshaller =
+		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
+	assert(pMarshaller);
 
-        if (!pMsgBuffer->HasReference())
-            pFile << "&";
-        pFile << sMsgBuffer;
+	pFile << "\tl4_ipc_send_tag(*" << sServerID << ",\n";
+	++pFile << "\t";
+	bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
 
-        if (bFlexpage)
-	    pFile << "|2";
-        if (bScheduling)
-            pFile << "|" << sScheduling;
-        if (bFlexpage || bScheduling)
-            pFile << ")";
-    }
-    pFile << ",\n";
+	bool bFlexpage = pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0;
 
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
-	    false, false))
-	pFile << "0";
-    pFile << ",\n";
-    pFile << "\t";
-    if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
-	    false, false))
-	pFile << "0";
-    pFile << ",\n";
+	if (IsShortIPC(pFunction, nDirection))
+	{
+		if (bScheduling)
+			pFile << "(" << sMWord << "*)(";
+		if (bFlexpage)
+			pFile << "L4_IPC_SHORT_FPAGE";
+		else
+			pFile << "L4_IPC_SHORT_MSG";
+		if (bScheduling)
+			pFile << "|" << sScheduling << ")";
+	}
+	else
+	{
+		if (bFlexpage || bScheduling)
+			pFile << "(" << sMWord << "*)((" << sMWord << ")";
 
-    pFile << "\tl4_msgtag(0,0,0,0),\n";
+		if (!pMsgBuffer->HasReference())
+			pFile << "&";
+		pFile << sMsgBuffer;
 
-    pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+		if (bFlexpage)
+			pFile << "|2";
+		if (bScheduling)
+			pFile << "|" << sScheduling;
+		if (bFlexpage || bScheduling)
+			pFile << ")";
+	}
+	pFile << ",\n";
 
-    --pFile;
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
+			false, false))
+		pFile << "0";
+	pFile << ",\n";
+	pFile << "\t";
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
+			false, false))
+		pFile << "0";
+	pFile << ",\n";
+
+	pFile << "\tl4_msgtag(0,0,0,0),\n";
+
+	pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
+
+	--pFile;
 }
 
 /** \brief write an IPC reply operation
@@ -459,7 +459,7 @@ void
 CL4FiascoBEIPC::WriteReply(CBEFile& pFile,
 	CBEFunction* pFunction)
 {
-    WriteSend(pFile, pFunction);
+	WriteSend(pFile, pFunction);
 }
 
 /** \brief determine if we should use assembler for the IPCs
@@ -472,7 +472,7 @@ CL4FiascoBEIPC::WriteReply(CBEFile& pFile,
 bool
 CL4FiascoBEIPC::UseAssembler(CBEFunction *)
 {
-    return false;
+	return false;
 }
 
 /** \brief helper function to test for short IPC
@@ -485,14 +485,15 @@ CL4FiascoBEIPC::UseAssembler(CBEFunction *)
  */
 bool
 CL4FiascoBEIPC::IsShortIPC(CBEFunction *pFunction,
-    DIRECTION_TYPE nDirection)
+	DIRECTION_TYPE nDirection)
 {
-    if (nDirection == 0)
-	return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
-	    IsShortIPC(pFunction, pFunction->GetReceiveDirection());
+	if (nDirection == 0)
+		return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
+			IsShortIPC(pFunction, pFunction->GetReceiveDirection());
 
-    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nDirection);
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, 
+		CMsgStructType(nDirection));
 }
 
 /** \brief add local variables required in functions
@@ -502,86 +503,86 @@ CL4FiascoBEIPC::IsShortIPC(CBEFunction *pFunction,
 bool
 CL4FiascoBEIPC::AddLocalVariable(CBEFunction *pFunction)
 {
-    CMsgStructType nSndDir = pFunction->GetSendDirection();
+	CMsgStructType nSndDir(pFunction->GetSendDirection());
 
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    assert(pFunction);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	assert(pFunction);
 
-    // temp offset and offset variable
-    if (dynamic_cast<CBEMarshalFunction*>(pFunction) ||
-	dynamic_cast<CBEMarshalExceptionFunction*>(pFunction) ||
-        dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
-        dynamic_cast<CBEReplyFunction*>(pFunction) ||
-        dynamic_cast<CBESndFunction*>(pFunction) ||
-        dynamic_cast<CBEWaitFunction*>(pFunction))
-    {
-        // check for temp
-        if (pFunction->HasVariableSizedParameters(nSndDir) ||
-            pFunction->HasArrayParameters(nSndDir))
-        {
-	    string sTmpVar = pNF->GetTempOffsetVariable();
-	    pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar,
-		0);
-	    CBETypedDeclarator *pVariable =
-		pFunction->m_LocalVariables.Find(sTmpVar);
-	    pVariable->AddLanguageProperty(string("attribute"),
-		string("__attribute__ ((unused))"));
+	// temp offset and offset variable
+	if (dynamic_cast<CBEMarshalFunction*>(pFunction) ||
+		dynamic_cast<CBEMarshalExceptionFunction*>(pFunction) ||
+		dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
+		dynamic_cast<CBEReplyFunction*>(pFunction) ||
+		dynamic_cast<CBESndFunction*>(pFunction) ||
+		dynamic_cast<CBEWaitFunction*>(pFunction))
+	{
+		// check for temp
+		if (pFunction->HasVariableSizedParameters(nSndDir) ||
+			pFunction->HasArrayParameters(nSndDir))
+		{
+			string sTmpVar = pNF->GetTempOffsetVariable();
+			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar,
+				0);
+			CBETypedDeclarator *pVariable =
+				pFunction->m_LocalVariables.Find(sTmpVar);
+			pVariable->AddLanguageProperty(string("attribute"),
+				string("__attribute__ ((unused))"));
 
-	    string sOffsetVar = pNF->GetOffsetVariable();
-	    pFunction->AddLocalVariable(TYPE_INTEGER, true, 4,
-		sOffsetVar, 0);
-	    pVariable = pFunction->m_LocalVariables.Find(sOffsetVar);
-	    pVariable->AddLanguageProperty(string("attribute"),
-		string("__attribute__ ((unused))"));
-        }
-    }
+			string sOffsetVar = pNF->GetOffsetVariable();
+			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4,
+				sOffsetVar, 0);
+			pVariable = pFunction->m_LocalVariables.Find(sOffsetVar);
+			pVariable->AddLanguageProperty(string("attribute"),
+				string("__attribute__ ((unused))"));
+		}
+	}
 
-    // Dummy Variable
-    if (dynamic_cast<CBECallFunction*>(pFunction) ||
-        dynamic_cast<CBEWaitAnyFunction*>(pFunction) ||
-        dynamic_cast<CBEWaitFunction*>(pFunction) ||
-        dynamic_cast<CBEReplyFunction*>(pFunction) ||
-        dynamic_cast<CBESndFunction*>(pFunction))
-    {
-	// depends on the availability of enough members for registers or
-	// parameters of IPC call
-	CL4BEMsgBuffer *pMsgBuffer = dynamic_cast<CL4BEMsgBuffer*>
-	    (pFunction->GetMessageBuffer());
-	assert(pMsgBuffer);
-	CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
-	// interface functions use generic struct, instead of using dummys
-	bool bUseDummy = dynamic_cast<CBEOperationFunction*>(pFunction) &&
-	    !pMsgBuffer->HasWordMembers(pFunction, nRcvDir);
-        // should not depend on DEFINES
-	bool bUseAssembler = UseAssembler(pFunction);
-        if (bUseAssembler || bUseDummy)
-        {
-            string sDummy = pNF->GetDummyVariable();
-	    pFunction->AddLocalVariable(TYPE_MWORD, true, 0, sDummy, 0);
-            CBETypedDeclarator *pVariable =
-		pFunction->m_LocalVariables.Find(sDummy);
-            pVariable->AddLanguageProperty(string("attribute"),
-		    string("__attribute__ ((unused))"));
-            pVariable->AddLanguageProperty(string("defined"),
-		    string("__PIC__"));
-        }
-    }
+	// Dummy Variable
+	if (dynamic_cast<CBECallFunction*>(pFunction) ||
+		dynamic_cast<CBEWaitAnyFunction*>(pFunction) ||
+		dynamic_cast<CBEWaitFunction*>(pFunction) ||
+		dynamic_cast<CBEReplyFunction*>(pFunction) ||
+		dynamic_cast<CBESndFunction*>(pFunction))
+	{
+		// depends on the availability of enough members for registers or
+		// parameters of IPC call
+		CL4BEMsgBuffer *pMsgBuffer = dynamic_cast<CL4BEMsgBuffer*>
+			(pFunction->GetMessageBuffer());
+		assert(pMsgBuffer);
+		CMsgStructType nRcvDir(pFunction->GetReceiveDirection());
+		// interface functions use generic struct, instead of using dummys
+		bool bUseDummy = dynamic_cast<CBEOperationFunction*>(pFunction) &&
+			!pMsgBuffer->HasWordMembers(pFunction, nRcvDir);
+		// should not depend on DEFINES
+		bool bUseAssembler = UseAssembler(pFunction);
+		if (bUseAssembler || bUseDummy)
+		{
+			string sDummy = pNF->GetDummyVariable();
+			pFunction->AddLocalVariable(TYPE_MWORD, true, 0, sDummy, 0);
+			CBETypedDeclarator *pVariable =
+				pFunction->m_LocalVariables.Find(sDummy);
+			pVariable->AddLanguageProperty(string("attribute"),
+				string("__attribute__ ((unused))"));
+			pVariable->AddLanguageProperty(string("defined"),
+				string("__PIC__"));
+		}
+	}
 
-    // dummy receive tag
-    if (dynamic_cast<CBEWaitAnyFunction*>(pFunction) ||
-	dynamic_cast<CBECallFunction*>(pFunction) ||
-	dynamic_cast<CBEWaitFunction*>(pFunction))
-    {
-	// if function already has a tag parameter, no need for a tag dummy...
-	string sTagDummy = pNF->GetDummyVariable(string("tag"));
-	string sTagType = pNF->GetTypeName(TYPE_MSGTAG, false);
-	pFunction->AddLocalVariable(sTagType, sTagDummy, 0);
-	CBETypedDeclarator *pParameter = pFunction->m_LocalVariables.Find(sTagDummy);
-	pParameter->SetDefaultInitString(string("l4_msgtag(0,0,0,0)"));
-	pParameter->AddLanguageProperty(string("attribute"), string("__attribute__ ((unused))"));
-    }
+	// dummy receive tag
+	if (dynamic_cast<CBEWaitAnyFunction*>(pFunction) ||
+		dynamic_cast<CBECallFunction*>(pFunction) ||
+		dynamic_cast<CBEWaitFunction*>(pFunction))
+	{
+		// if function already has a tag parameter, no need for a tag dummy...
+		string sTagDummy = pNF->GetDummyVariable(string("tag"));
+		string sTagType = pNF->GetTypeName(TYPE_MSGTAG, false);
+		pFunction->AddLocalVariable(sTagType, sTagDummy, 0);
+		CBETypedDeclarator *pParameter = pFunction->m_LocalVariables.Find(sTagDummy);
+		pParameter->SetDefaultInitString(string("l4_msgtag(0,0,0,0)"));
+		pParameter->AddLanguageProperty(string("attribute"), string("__attribute__ ((unused))"));
+	}
 
-    return true;
+	return true;
 }
 
 /** \brief writes the initialization
@@ -590,7 +591,7 @@ CL4FiascoBEIPC::AddLocalVariable(CBEFunction *pFunction)
  */
 void
 CL4FiascoBEIPC::WriteInitialization(CBEFile& /*pFile*/,
-    CBEFunction* /*pFunction*/)
+	CBEFunction* /*pFunction*/)
 {}
 
 /** \brief writes the assigning of a local name to a communication port
@@ -599,7 +600,7 @@ CL4FiascoBEIPC::WriteInitialization(CBEFile& /*pFile*/,
  */
 void
 CL4FiascoBEIPC::WriteBind(CBEFile& /*pFile*/,
-    CBEFunction* /*pFunction*/)
+	CBEFunction* /*pFunction*/)
 {}
 
 /** \brief writes the initialization
@@ -608,7 +609,7 @@ CL4FiascoBEIPC::WriteBind(CBEFile& /*pFile*/,
  */
 void
 CL4FiascoBEIPC::WriteCleanup(CBEFile& /*pFile*/,
-    CBEFunction* /*pFunction*/)
+	CBEFunction* /*pFunction*/)
 {}
 
 /** \brief write the message tag to the IPC invocation
@@ -619,24 +620,24 @@ CL4FiascoBEIPC::WriteCleanup(CBEFile& /*pFile*/,
 void
 CL4FiascoBEIPC::WriteTag(CBEFile& pFile, CBEFunction *pFunction, bool bReference)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    CBETypedDeclarator *pParameter = pFunction->m_Parameters.Find(sTag);
-    if (pParameter)
-    {
-	CBEDeclarator *pDecl = pParameter->m_Declarators.Find(sTag);
-	if (bReference && pDecl->GetStars() == 0)
-	    pFile << "&";
-	if (!bReference && pDecl->GetStars() > 0)
-	    pFile << "*";
-	pFile << sTag;
-    }
-    else
-    {
-	string sTagDummy = pNF->GetDummyVariable(string("tag"));
-	if (bReference)
-	    pFile << "&";
-	pFile << sTagDummy;
-    }
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	CBETypedDeclarator *pParameter = pFunction->m_Parameters.Find(sTag);
+	if (pParameter)
+	{
+		CBEDeclarator *pDecl = pParameter->m_Declarators.Find(sTag);
+		if (bReference && pDecl->GetStars() == 0)
+			pFile << "&";
+		if (!bReference && pDecl->GetStars() > 0)
+			pFile << "*";
+		pFile << sTag;
+	}
+	else
+	{
+		string sTagDummy = pNF->GetDummyVariable(string("tag"));
+		if (bReference)
+			pFile << "&";
+		pFile << sTagDummy;
+	}
 }
 

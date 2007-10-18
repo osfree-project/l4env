@@ -49,13 +49,11 @@
 #include "Attribute-Type.h"
 
 CL4BEIPC::CL4BEIPC()
-{
-}
+{ }
 
 /** \brief destructor of target class */
 CL4BEIPC::~CL4BEIPC()
-{
-}
+{ }
 
 /** \brief determine if we should use assembler for the IPCs
  *  \param pFunction the function to write the call for
@@ -67,7 +65,7 @@ CL4BEIPC::~CL4BEIPC()
 bool
 CL4BEIPC::UseAssembler(CBEFunction *)
 {
-    return false;
+	return false;
 }
 
 /** \brief helper function to test for short IPC
@@ -80,15 +78,15 @@ CL4BEIPC::UseAssembler(CBEFunction *)
  */
 bool
 CL4BEIPC::IsShortIPC(CBEFunction *pFunction,
-    DIRECTION_TYPE nDirection)
+	DIRECTION_TYPE nDirection)
 {
-    if (nDirection == 0)
-	return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
-	    IsShortIPC(pFunction, pFunction->GetReceiveDirection());
+	if (nDirection == 0)
+		return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
+			IsShortIPC(pFunction, pFunction->GetReceiveDirection());
 
-    CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-    return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC,
-	nDirection);
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC,
+		CMsgStructType(nDirection));
 }
 
 /** \brief writes a send with an immediate wait
@@ -99,8 +97,8 @@ CL4BEIPC::IsShortIPC(CBEFunction *pFunction,
  */
 void
 CL4BEIPC::WriteReplyAndWait(CBEFile& pFile,
-    CBEFunction* pFunction)
+	CBEFunction* pFunction)
 {
-    WriteReplyAndWait(pFile, pFunction, false, false);
+	WriteReplyAndWait(pFile, pFunction, false, false);
 }
 

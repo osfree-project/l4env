@@ -66,17 +66,12 @@ void CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
 {
 	assert(pFEOperation);
 
-	string exc = string(__func__);
 	// basic init
 	CBEFunction::CreateBackEnd(pFEOperation, bComponentSide);
 	// add return type
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sReturn = pNF->GetReturnVariable();
-	if (!SetReturnVar(pFEOperation->GetReturnType(), sReturn))
-	{
-		exc += " failed because return var could not be set.";
-		throw new error::create_error(exc);
-	}
+	SetReturnVar(pFEOperation->GetReturnType(), sReturn);
 	// add attributes
 	AddAttributes(pFEOperation);
 	// add parameters

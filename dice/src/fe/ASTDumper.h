@@ -71,7 +71,6 @@ public:
     virtual void Visit(CFEConstDeclarator&); // derives from CFEInterfaceComponent
     virtual void Visit(CFEOperation&); // derives from CFEInterfaceComponent
     virtual void Visit(CFETypeSpec&); // derives from CFEInterfaceComponent
-    virtual void Visit(CFEArrayType&); // derives from CFETypeSpec
     virtual void Visit(CFEConstructedType&); // derives from CFETypeSpec
     virtual void Visit(CFEEnumType&); // derives from CFEConstructedType
     virtual void Visit(CFEPipeType&); // derives from CFEConstructedType

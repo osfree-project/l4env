@@ -93,6 +93,7 @@ public:
 	virtual std::string GetScheduleServerVariable();
 	virtual std::string GetMessageBufferTypeName(std::string sInterfaceName);
 	virtual std::string GetMessageBufferTypeName(CFEInterface * pFEInterface);
+	virtual std::string GetMessageBufferTypeName(CFEOperation * pFEOperation);
 	virtual std::string GetMessageBufferVariable();
 	virtual std::string GetCorbaEnvironmentVariable();
 	virtual std::string GetCorbaObjectVariable();
@@ -121,6 +122,7 @@ public:
 	virtual std::string GetFunctionBitMaskConstant();
 	virtual std::string GetInterfaceNumberShiftConstant();
 	virtual std::string GetServerParameterName();
+	virtual std::string GetServerVariable();
 	virtual std::string GetIncludeFileName(CFEBase * pFEBase, FILE_TYPE nFileType);
 	virtual std::string GetIncludeFileName(std::string sBaseName);
 	virtual std::string GetMessageBufferTypeName();

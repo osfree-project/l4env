@@ -43,38 +43,38 @@
 
 CFELibrary::CFELibrary(string sName, vector<CFEAttribute*> * pAttributes, CFEBase* pParent)
 : CFEFileComponent(static_cast<CObject*>(pParent)),
-    m_Attributes(pAttributes, this),
-    m_Constants(0, this),
-    m_Typedefs(0, this),
-    m_Interfaces(0, this),
-    m_Libraries(0, this),
-    m_TaggedDeclarators(0, this)
+	m_Attributes(pAttributes, this),
+	m_Constants(0, this),
+	m_Typedefs(0, this),
+	m_Interfaces(0, this),
+	m_Libraries(0, this),
+	m_TaggedDeclarators(0, this)
 {
-    m_sLibName = sName;
-    m_pSameLibraryNext = 0;
-    m_pSameLibraryPrev = 0;
+	m_sLibName = sName;
+	m_pSameLibraryNext = 0;
+	m_pSameLibraryPrev = 0;
 }
 
 CFELibrary::CFELibrary(CFELibrary* src)
 : CFEFileComponent(src),
-    m_Attributes(src->m_Attributes),
-    m_Constants(src->m_Constants),
-    m_Typedefs(src->m_Typedefs),
-    m_Interfaces(src->m_Interfaces),
-    m_Libraries(src->m_Libraries),
-    m_TaggedDeclarators(src->m_TaggedDeclarators)
+	m_Attributes(src->m_Attributes),
+	m_Constants(src->m_Constants),
+	m_Typedefs(src->m_Typedefs),
+	m_Interfaces(src->m_Interfaces),
+	m_Libraries(src->m_Libraries),
+	m_TaggedDeclarators(src->m_TaggedDeclarators)
 {
-    m_sLibName = src->m_sLibName;
-    m_pSameLibraryNext = 0;
-    m_pSameLibraryPrev = 0;
-    m_Attributes.Adopt(this);
-    m_Constants.Adopt(this);
-    m_Typedefs.Adopt(this);
-    m_Interfaces.Adopt(this);
-    m_Libraries.Adopt(this);
-    m_TaggedDeclarators.Adopt(this);
+	m_sLibName = src->m_sLibName;
+	m_pSameLibraryNext = 0;
+	m_pSameLibraryPrev = 0;
+	m_Attributes.Adopt(this);
+	m_Constants.Adopt(this);
+	m_Typedefs.Adopt(this);
+	m_Interfaces.Adopt(this);
+	m_Libraries.Adopt(this);
+	m_TaggedDeclarators.Adopt(this);
 
-    src->AddSameLibrary(this);
+	src->AddSameLibrary(this);
 }
 
 /** cleans up the library object */
@@ -95,30 +95,30 @@ CObject* CFELibrary::Clone()
 void
 CFELibrary::AddComponents(vector<CFEFileComponent*> *pComponents)
 {
-    if (pComponents)
-    {
-        // set parent
-	for_each(pComponents->begin(), pComponents->end(),
-	    std::bind2nd(std::mem_fun(&CFEFileComponent::SetParent), this));
-        vector<CFEFileComponent*>::iterator iterF;
-        for (iterF = pComponents->begin(); iterF != pComponents->end(); iterF++)
-        {
-            if (!(*iterF))
-                continue;
-            if (dynamic_cast<CFEConstDeclarator*>(*iterF))
-                m_Constants.Add(static_cast<CFEConstDeclarator*>(*iterF));
-            else if (dynamic_cast<CFETypedDeclarator*>(*iterF))
-                m_Typedefs.Add(static_cast<CFETypedDeclarator*>(*iterF));
-            else if (dynamic_cast<CFEInterface*>(*iterF))
-                m_Interfaces.Add(static_cast<CFEInterface*>(*iterF));
-            else if (dynamic_cast<CFELibrary*>(*iterF))
-                m_Libraries.Add(static_cast<CFELibrary*>(*iterF));
-            else if (dynamic_cast<CFEConstructedType*>(*iterF))
-                m_TaggedDeclarators.Add(static_cast<CFEConstructedType*>(*iterF));
-            else
-		throw new std::invalid_argument("Unknown lib element");
-        }
-    }
+	if (pComponents)
+	{
+		// set parent
+		for_each(pComponents->begin(), pComponents->end(),
+			std::bind2nd(std::mem_fun(&CFEFileComponent::SetParent), this));
+		vector<CFEFileComponent*>::iterator iterF;
+		for (iterF = pComponents->begin(); iterF != pComponents->end(); iterF++)
+		{
+			if (!(*iterF))
+				continue;
+			if (dynamic_cast<CFEConstDeclarator*>(*iterF))
+				m_Constants.Add(static_cast<CFEConstDeclarator*>(*iterF));
+			else if (dynamic_cast<CFETypedDeclarator*>(*iterF))
+				m_Typedefs.Add(static_cast<CFETypedDeclarator*>(*iterF));
+			else if (dynamic_cast<CFEInterface*>(*iterF))
+				m_Interfaces.Add(static_cast<CFEInterface*>(*iterF));
+			else if (dynamic_cast<CFELibrary*>(*iterF))
+				m_Libraries.Add(static_cast<CFELibrary*>(*iterF));
+			else if (dynamic_cast<CFEConstructedType*>(*iterF))
+				m_TaggedDeclarators.Add(static_cast<CFEConstructedType*>(*iterF));
+			else
+				throw new std::invalid_argument("Unknown lib element");
+		}
+	}
 }
 
 /**
@@ -127,7 +127,7 @@ CFELibrary::AddComponents(vector<CFEFileComponent*> *pComponents)
  */
 string CFELibrary::GetName()
 {
-    return m_sLibName;
+	return m_sLibName;
 }
 
 /** \brief returns true if this library is the one we are looking for
@@ -136,7 +136,7 @@ string CFELibrary::GetName()
  */
 bool CFELibrary::Match(string sName)
 {
-    return GetName() == sName;
+	return GetName() == sName;
 }
 
 /** \brief accept iterations of the visitors
@@ -144,55 +144,7 @@ bool CFELibrary::Match(string sName)
  */
 void CFELibrary::Accept(CVisitor& v)
 {
-    v.Visit(*this);
-    // attributes
-    vector<CFEAttribute*>::iterator iterA;
-    for (iterA = m_Attributes.begin();
-	 iterA != m_Attributes.end();
-	 iterA++)
-    {
-	(*iterA)->Accept(v);
-    }
-    // constants
-    vector<CFEConstDeclarator*>::iterator iterC;
-    for (iterC = m_Constants.begin();
-	 iterC != m_Constants.end();
-	 iterC++)
-    {
-	(*iterC)->Accept(v);
-    }
-    // typedefs
-    vector<CFETypedDeclarator*>::iterator iterT;
-    for (iterT = m_Typedefs.begin();
-	 iterT != m_Typedefs.end();
-	 iterT++)
-    {
-	(*iterT)->Accept(v);
-    }
-    // tagged decls
-    vector<CFEConstructedType*>::iterator iterTa;
-    for (iterTa = m_TaggedDeclarators.begin();
-	 iterTa != m_TaggedDeclarators.end();
-	 iterTa++)
-    {
-	(*iterTa)->Accept(v);
-    }
-    // interfaces
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = m_Interfaces.begin();
-	 iterI != m_Interfaces.end();
-	 iterI++)
-    {
-	(*iterI)->Accept(v);
-    }
-    // nested libraries
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = m_Libraries.begin();
-	 iterL != m_Libraries.end();
-	 iterL++)
-    {
-	(*iterL)->Accept(v);
-    }
+	v.Visit(*this);
 }
 
 /**
@@ -202,30 +154,30 @@ void CFELibrary::Accept(CVisitor& v)
  */
 CFETypedDeclarator *CFELibrary::FindUserDefinedType(string sName)
 {
-    // search own types
-    CFETypedDeclarator *pTypedef = m_Typedefs.Find(sName);
-    if (pTypedef)
-	return pTypedef;
-    // search interfaces
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = m_Interfaces.begin();
-	 iterI != m_Interfaces.end();
-	 iterI++)
-    {
-	if ((pTypedef = (*iterI)->m_Typedefs.Find(sName)))
-            return pTypedef;
-    }
-    // search nested libraries
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = m_Libraries.begin();
-	 iterL != m_Libraries.end();
-	 iterL++)
-    {
-        if ((pTypedef = (*iterL)->FindUserDefinedType(sName)))
-            return pTypedef;
-    }
-    // nothing found
-    return 0;
+	// search own types
+	CFETypedDeclarator *pTypedef = m_Typedefs.Find(sName);
+	if (pTypedef)
+		return pTypedef;
+	// search interfaces
+	vector<CFEInterface*>::iterator iterI;
+	for (iterI = m_Interfaces.begin();
+		iterI != m_Interfaces.end();
+		iterI++)
+	{
+		if ((pTypedef = (*iterI)->m_Typedefs.Find(sName)))
+			return pTypedef;
+	}
+	// search nested libraries
+	vector<CFELibrary*>::iterator iterL;
+	for (iterL = m_Libraries.begin();
+		iterL != m_Libraries.end();
+		iterL++)
+	{
+		if ((pTypedef = (*iterL)->FindUserDefinedType(sName)))
+			return pTypedef;
+	}
+	// nothing found
+	return 0;
 }
 
 /** \brief tries to find a constant
@@ -234,32 +186,32 @@ CFETypedDeclarator *CFELibrary::FindUserDefinedType(string sName)
  */
 CFEConstDeclarator *CFELibrary::FindConstant(string sName)
 {
-    if (sName.empty())
-        return 0;
-    // first search own constants
-    CFEConstDeclarator *pConst = m_Constants.Find(sName);
-    if (pConst)
-	return pConst;
-    // next search interfaces
-    vector<CFEInterface*>::iterator iterI;
-    for (iterI = m_Interfaces.begin();
-	 iterI != m_Interfaces.end();
-	 iterI++)
-    {
-        if ((pConst = (*iterI)->m_Constants.Find(sName)))
-            return pConst;
-    }
-    // next search nested libraries
-    vector<CFELibrary*>::iterator iterL;
-    for (iterL = m_Libraries.begin();
-	 iterL != m_Libraries.end();
-	 iterL++)
-    {
-        if ((pConst = (*iterL)->FindConstant(sName)))
-            return pConst;
-    }
-    // nothing found
-    return 0;
+	if (sName.empty())
+		return 0;
+	// first search own constants
+	CFEConstDeclarator *pConst = m_Constants.Find(sName);
+	if (pConst)
+		return pConst;
+	// next search interfaces
+	vector<CFEInterface*>::iterator iterI;
+	for (iterI = m_Interfaces.begin();
+		iterI != m_Interfaces.end();
+		iterI++)
+	{
+		if ((pConst = (*iterI)->m_Constants.Find(sName)))
+			return pConst;
+	}
+	// next search nested libraries
+	vector<CFELibrary*>::iterator iterL;
+	for (iterL = m_Libraries.begin();
+		iterL != m_Libraries.end();
+		iterL++)
+	{
+		if ((pConst = (*iterL)->FindConstant(sName)))
+			return pConst;
+	}
+	// nothing found
+	return 0;
 }
 
 /** \brief searches for a library in the nested libs
@@ -268,36 +220,36 @@ CFEConstDeclarator *CFELibrary::FindConstant(string sName)
  */
 CFELibrary *CFELibrary::FindLibrary(string sName)
 {
-    if (sName.empty())
-        return 0;
+	if (sName.empty())
+		return 0;
 
-    // if scoped name
-    string::size_type nScopePos;
-    if ((nScopePos = sName.find("::")) != string::npos)
-    {
-        string sRest = sName.substr(nScopePos+2);
-        string sScope = sName.substr(0, nScopePos);
-        if (sScope.empty())
-        {
-            // has been a "::<name>"
-            // should not happend -> always ask root for this
-            return 0;
-        }
-        else
-        {
-            CFELibrary *pFELibrary = FindLibrary(sScope);
-            if (pFELibrary == 0)
-                return 0;
-            return pFELibrary->FindLibrary(sRest);
-        }
-    }
+	// if scoped name
+	string::size_type nScopePos;
+	if ((nScopePos = sName.find("::")) != string::npos)
+	{
+		string sRest = sName.substr(nScopePos+2);
+		string sScope = sName.substr(0, nScopePos);
+		if (sScope.empty())
+		{
+			// has been a "::<name>"
+			// should not happend -> always ask root for this
+			return 0;
+		}
+		else
+		{
+			CFELibrary *pFELibrary = FindLibrary(sScope);
+			if (pFELibrary == 0)
+				return 0;
+			return pFELibrary->FindLibrary(sRest);
+		}
+	}
 
-    CFELibrary *pLib = m_Libraries.Find(sName);
-    if (pLib)
-	return pLib;
-// do not search lib in nested libs (breaks scope)
+	CFELibrary *pLib = m_Libraries.Find(sName);
+	if (pLib)
+		return pLib;
+	// do not search lib in nested libs (breaks scope)
 
-    return 0;
+	return 0;
 }
 
 #include "fe/FEFile.h"

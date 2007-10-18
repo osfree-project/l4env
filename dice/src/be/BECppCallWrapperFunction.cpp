@@ -35,9 +35,9 @@
 #include "fe/FEOperation.h"
 
 CBECppCallWrapperFunction::CBECppCallWrapperFunction()
-    : CBECallFunction()
+: CBECallFunction()
 {
-  m_nSkipParameter = 0;
+	m_nSkipParameter = 0;
 }
 
 /** \brief destructor of target class */
@@ -52,32 +52,32 @@ CBECppCallWrapperFunction::~CBECppCallWrapperFunction()
  */
 void
 CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide,
-    int nSkipParameter)
+	int nSkipParameter)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
-        pFEOperation->GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
+		pFEOperation->GetName().c_str());
 
-    CBECallFunction::CreateBackEnd(pFEOperation, bComponentSide);
-    m_nSkipParameter = nSkipParameter;
+	CBECallFunction::CreateBackEnd(pFEOperation, bComponentSide);
+	m_nSkipParameter = nSkipParameter;
 
-    // FIXME iterate parameters and prefix them
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sPrefix = pNF->GetWrapperVariablePrefix();
-    vector<CBETypedDeclarator*>::iterator iter = m_Parameters.begin();
-    for (; iter != m_Parameters.end(); iter++)
-    {
-	if (*iter == GetObject())
-	    continue;
-	if (*iter == GetEnvironment())
-	    continue;
-	// if name is not already prefixed, prefix it with special string
-	CBEDeclarator *pDeclarator = (*iter)->m_Declarators.First();
-	string sName = pDeclarator->GetName();
-	if (sName.find(sPrefix) != 0)
-	    pDeclarator->CreateBackEnd(sPrefix + sName, pDeclarator->GetStars());
-    }
+	// FIXME iterate parameters and prefix them
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sPrefix = pNF->GetWrapperVariablePrefix();
+	vector<CBETypedDeclarator*>::iterator iter = m_Parameters.begin();
+	for (; iter != m_Parameters.end(); iter++)
+	{
+		if (*iter == GetObject())
+			continue;
+		if (*iter == GetEnvironment())
+			continue;
+		// if name is not already prefixed, prefix it with special string
+		CBEDeclarator *pDeclarator = (*iter)->m_Declarators.First();
+		string sName = pDeclarator->GetName();
+		if (sName.find(sPrefix) != 0)
+			pDeclarator->CreateBackEnd(sPrefix + sName, pDeclarator->GetStars());
+	}
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
 
 /** \brief writes the body of the function to the target file
@@ -86,57 +86,64 @@ CBECppCallWrapperFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
 void
 CBECppCallWrapperFunction::WriteBody(CBEFile& pFile)
 {
-    if (m_nSkipParameter == 1)
-    {
-	// use the _dice_server member to call one of the other functions
-	CBEDeclarator *pObj = GetObject()->m_Declarators.First();
-	string sObj = string("&_dice_server");
-	SetCallVariable(pObj->GetName(), 0, sObj);
-
-	CBETypedDeclarator *pReturn = GetReturnVariable();
-	string sReturn;
-	if (!pReturn->GetType()->IsVoid())
+	if (m_nSkipParameter == 1)
 	{
-	    pReturn->WriteInitDeclaration(pFile, string());
-	    sReturn = pReturn->m_Declarators.First()->GetName();
+		// use the _dice_server member to call one of the other functions
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		/* This is hacky: because the server variable (sObj) is of type
+		 * CORBA_Object_base, bt the function parameter is of type
+		 * CORBA_Object, we have to manually add an ampersand to the
+		 * parameter.
+		 */
+		string sObj = "&" + pNF->GetServerVariable();
+		CBEDeclarator *pObj = GetObject()->m_Declarators.First();
+		SetCallVariable(pObj->GetName(), 0, sObj);
+
+		CBETypedDeclarator *pReturn = GetReturnVariable();
+		string sReturn;
+		if (!pReturn->GetType()->IsVoid())
+		{
+			pReturn->WriteInitDeclaration(pFile);
+			sReturn = pReturn->m_Declarators.First()->GetName();
+		}
+
+		m_nSkipParameter = 0;
+		CBECallFunction::WriteCall(pFile, sReturn, true);
+		m_nSkipParameter = 1;
+
+		if (!pReturn->GetType()->IsVoid())
+			WriteReturn(pFile);
+
+		RemoveCallVariable(sObj);
+		return;
 	}
 
-	m_nSkipParameter = 0;
-	CBECallFunction::WriteCall(pFile, sReturn, true);
-	m_nSkipParameter = 1;
-
-	if (!pReturn->GetType()->IsVoid())
-	    WriteReturn(pFile);
-
-	RemoveCallVariable(sObj);
-	return;
-    }
-
-    if (m_nSkipParameter == 3)
-    {
-	// construct a default environment and call the next function
-	pFile << "\tCORBA_Environment _env;\n";
-	CBEDeclarator *pEnv = GetEnvironment()->m_Declarators.First();
-	string sEnv = string("_env");
-	SetCallVariable(pEnv->GetName(), 0, sEnv);
-
-	CBETypedDeclarator *pReturn = GetReturnVariable();
-	string sReturn;
-	if (!pReturn->GetType()->IsVoid())
+	if (m_nSkipParameter == 3)
 	{
-	    pReturn->WriteInitDeclaration(pFile, string());
-	    sReturn = pReturn->m_Declarators.First()->GetName();
+		// construct a default environment and call the next function
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		string sEnv = pNF->GetCorbaEnvironmentVariable();
+		pFile << "\tCORBA_Environment " << sEnv << ";\n";
+		CBEDeclarator *pEnv = GetEnvironment()->m_Declarators.First();
+		SetCallVariable(pEnv->GetName(), 0, sEnv);
+
+		CBETypedDeclarator *pReturn = GetReturnVariable();
+		string sReturn;
+		if (!pReturn->GetType()->IsVoid())
+		{
+			pReturn->WriteInitDeclaration(pFile);
+			sReturn = pReturn->m_Declarators.First()->GetName();
+		}
+
+		m_nSkipParameter = 1;
+		CBECallFunction::WriteCall(pFile, sReturn, true);
+		m_nSkipParameter = 3;
+
+		if (!pReturn->GetType()->IsVoid())
+			WriteReturn(pFile);
+
+		RemoveCallVariable(sEnv);
 	}
-
-	m_nSkipParameter = 1;
-	CBECallFunction::WriteCall(pFile, sReturn, true);
-	m_nSkipParameter = 3;
-
-	if (!pReturn->GetType()->IsVoid())
-	    WriteReturn(pFile);
-
-	RemoveCallVariable(sEnv);
-    }
 }
 
 /** \brief check if parameter should be written
@@ -148,11 +155,11 @@ CBECppCallWrapperFunction::WriteBody(CBEFile& pFile)
 bool
 CBECppCallWrapperFunction::DoWriteParameter(CBETypedDeclarator *pParam)
 {
-    if ((m_nSkipParameter & 1) &&
-	pParam == GetObject())
-	return false;
-    if ((m_nSkipParameter & 2) &&
-	pParam == GetEnvironment())
-	return false;
-    return CBECallFunction::DoWriteParameter(pParam);
+	if ((m_nSkipParameter & 1) &&
+		pParam == GetObject())
+		return false;
+	if ((m_nSkipParameter & 2) &&
+		pParam == GetEnvironment())
+		return false;
+	return CBECallFunction::DoWriteParameter(pParam);
 }

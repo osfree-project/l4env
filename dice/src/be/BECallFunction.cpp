@@ -74,7 +74,7 @@ CBECallFunction::WriteVariableInitialization(CBEFile& pFile)
  * This implementation calls the underlying message trasnfer mechanisms
  */
 void CBECallFunction::WriteInvocation(CBEFile& /*pFile*/)
-{}
+{ }
 
 /** \brief writes the unmarshalling of the message
  *  \param pFile the file to write to
@@ -177,12 +177,7 @@ CBECallFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 	if (pType->IsVoid())
 		return; // having a void return type is not an error
 	// add return variable
-	if (!pMsgBuffer->AddReturnVariable(this))
-	{
-		string exc = string(__func__);
-		exc += " failed, because return variable could not be added to message buffer.";
-		throw new error::create_error(exc);
-	}
+	pMsgBuffer->AddReturnVariable(this);
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
 
@@ -222,44 +217,14 @@ CBECallFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
  * A call function is not written if it has a uuid-range attribute. The the
  * call function is only used to initialize message buffers.
  */
-bool CBECallFunction::DoWriteFunction(CBEHeaderFile* pFile)
+bool CBECallFunction::DoWriteFunction(CBEFile* pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBECallFunction::%s(%s) called for %s\n", __func__,
-		pFile->GetFileName().c_str(), GetName().c_str());
-
 	if (!IsTargetFile(pFile))
 		return false;
 
 	if (m_Attributes.Find(ATTR_UUID_RANGE))
 		return false;
 
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
-		__func__);
-	return pFile->IsOfFileType(FILETYPE_CLIENT);
-}
-
-/** \brief checks if this function should be written
- *  \param pFile the target file to write to
- *  \return true if successful
- *
- * A call function is only written for a client file (it sould not have been
- * created if the attributes (IN,OUT) would not fit).
- */
-bool CBECallFunction::DoWriteFunction(CBEImplementationFile* pFile)
-{
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBECallFunction::%s(%s) called for %s\n", __func__,
-		pFile->GetFileName().c_str(), GetName().c_str());
-
-	if (!IsTargetFile(pFile))
-		return false;
-
-	if (m_Attributes.Find(ATTR_UUID_RANGE))
-		return false;
-
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBECallFunction::%s finished.\n",
-		__func__);
 	return pFile->IsOfFileType(FILETYPE_CLIENT);
 }
 

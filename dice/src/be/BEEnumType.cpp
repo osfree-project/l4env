@@ -110,9 +110,6 @@ void CBEEnumType::AddMember(CFEEnumDeclarator* pFEDeclarator)
  */
 void CBEEnumType::Write(CBEFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	// open enum
 	pFile << m_sName;
 	if (!m_sTag.empty())

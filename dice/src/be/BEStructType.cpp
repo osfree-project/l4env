@@ -311,9 +311,6 @@ CBEStructType::CreateBackEndSequence(CFEArrayType * pFEType)
  */
 void CBEStructType::Write(CBEFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called.\n", __func__);
 	// open struct
 	pFile << m_sName;

@@ -164,8 +164,6 @@ CBEType::CreateBackEnd(bool bUnsigned,
  */
 void CBEType::Write(CBEFile& pFile)
 {
-    if (!pFile.is_open())
-        return;
     pFile << m_sName;
 }
 

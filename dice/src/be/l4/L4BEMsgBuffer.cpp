@@ -517,7 +517,10 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile& pFile,
 		nType == TYPE_MSGDOPE_SIZE)
 	{
 		// sizeof(<msgbufvar>)/sizeof(long)-3
-		WriteAccessToVariable(pFile, pFunction, false);
+		CBETypedDeclarator *pMsgBuffer = GetVariable(pFunction);
+		if (pMsgBuffer->HasReference())
+			pFile << "*";
+		pFile << pMsgBuffer->m_Declarators.First()->GetName();
 	}
 	else
 	{
@@ -657,20 +660,8 @@ CL4BEMsgBuffer::WriteMaxRefstringSize(CBEFile& pFile,
 	if (!pParameter)
 	{
 		string sMaxStr = string();
-
-		bool bInterfaceFunc = (dynamic_cast<CBEInterfaceFunction*>(pFunction));
 		// get type
-		CBEMsgBufferType *pMsgType;
-		if (bInterfaceFunc)
-		{
-			CBEClass *pClass = GetSpecificParent<CBEClass>();
-			assert(pClass);
-			pMsgType = dynamic_cast<CBEMsgBufferType*>
-				(pClass->GetMessageBuffer()->GetType());
-		}
-		else
-			pMsgType = dynamic_cast<CBEMsgBufferType*>(GetType());
-		assert(pMsgType);
+		CBEMsgBufferType *pMsgType = GetType(pFunction);
 		// iterate structs
 		CBEStructType *pStruct = 0;
 		CBENameFactory *pNF = CBENameFactory::Instance();
@@ -900,8 +891,7 @@ bool CL4BEMsgBuffer::PadRefstringToPosition(int nPosition)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%d) called\n", __func__, nPosition);
 
-	CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
-	assert(pType);
+	CBEMsgBufferType *pType = GetType(0);
 	vector<CBEUnionCase*>::iterator iter;
 	for (iter = pType->m_UnionCases.begin();
 		iter != pType->m_UnionCases.end();
@@ -927,8 +917,7 @@ bool CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct, int nPositio
 {
 	assert(pStruct);
 	// get start of payload
-	CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
-	assert(pType);
+	CBEMsgBufferType *pType = GetType(0);
 	vector<CBETypedDeclarator*>::iterator iter;
 	// iterate
 	int nSize = 0;
@@ -1048,8 +1037,7 @@ int CL4BEMsgBuffer::GetMaxPosOfRefstringInMsgBuffer()
 {
 	int nMax = 0;
 	// determine maximum distance to refstring parameters
-	CBEMsgBufferType *pType = dynamic_cast<CBEMsgBufferType*>(GetType());
-	assert(pType);
+	CBEMsgBufferType *pType = GetType(0);
 	vector<CBEUnionCase*>::iterator iterS;
 	for (iterS = pType->m_UnionCases.begin();
 		iterS != pType->m_UnionCases.end();

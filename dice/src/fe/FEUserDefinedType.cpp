@@ -131,8 +131,7 @@ string CFEUserDefinedType::GetName()
 /** \brief accept the iterations of the visitor
  *  \param v reference to the current visitor
  */
-void
-CFEUserDefinedType::Accept(CVisitor& v)
+void CFEUserDefinedType::Accept(CVisitor& v)
 {
     v.Visit(*this);
 }

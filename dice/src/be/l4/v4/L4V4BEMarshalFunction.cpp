@@ -41,14 +41,12 @@
 #include <cassert>
 
 CL4V4BEMarshalFunction::CL4V4BEMarshalFunction()
- : CL4BEMarshalFunction()
-{
-}
+: CL4BEMarshalFunction()
+{ }
 
 /** destroys the instance of this class */
 CL4V4BEMarshalFunction::~CL4V4BEMarshalFunction()
-{
-}
+{ }
 
 /** \brief write the L4 specific marshalling code
  *  \param pFile the file to write to
@@ -56,39 +54,39 @@ CL4V4BEMarshalFunction::~CL4V4BEMarshalFunction()
 void
 CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 {
-    assert (m_pTrace);
-    bool bLocalTrace = false;
-    if (!m_bTraceOn)
-    {
-	m_pTrace->BeforeMarshalling(pFile, this);
-	m_bTraceOn = bLocalTrace = true;
-    }
+	assert (m_pTrace);
+	bool bLocalTrace = false;
+	if (!m_bTraceOn)
+	{
+		m_pTrace->BeforeMarshalling(pFile, this);
+		m_bTraceOn = bLocalTrace = true;
+	}
 
-    // FIXME: get message buffer var and use its declarator
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
-    // clear message
-    pFile << "\tL4_MsgClear ( (" << sType << "*) " << sMsgBuffer << " );\n";
-    // set exception in msgbuffer and return if there was an exception.
-    WriteMarshalException(pFile, true, true);
-    // call base class
-    // we skip L4 specific implementation, because it marshals flexpages
-    // or exceptions (we don't need this) and it sets the send dope, which
-    // is set by convenience functions automatically.
-    // we also skip basic backend marshalling, because it starts marshalling
-    // after the opcode, which is in the tag as well
-    CBEOperationFunction::WriteMarshalling(pFile);
-    // set dopes
-    CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-	GetSendDirection());
+	// FIXME: get message buffer var and use its declarator
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sMsgBuffer = pNF->GetMessageBufferVariable();
+	string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
+	// clear message
+	pFile << "\tL4_MsgClear ( (" << sType << "*) " << sMsgBuffer << " );\n";
+	// set exception in msgbuffer and return if there was an exception.
+	WriteMarshalException(pFile, true, true);
+	// call base class
+	// we skip L4 specific implementation, because it marshals flexpages
+	// or exceptions (we don't need this) and it sets the send dope, which
+	// is set by convenience functions automatically.
+	// we also skip basic backend marshalling, because it starts marshalling
+	// after the opcode, which is in the tag as well
+	CBEOperationFunction::WriteMarshalling(pFile);
+	// set dopes
+	CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
+	assert(pMsgBuffer);
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
+		CMsgStructType(GetSendDirection()));
 
-    if (bLocalTrace)
-    {
-	m_pTrace->AfterMarshalling(pFile, this);
-	m_bTraceOn = false;
-    }
+	if (bLocalTrace)
+	{
+		m_pTrace->AfterMarshalling(pFile, this);
+		m_bTraceOn = false;
+	}
 }
 

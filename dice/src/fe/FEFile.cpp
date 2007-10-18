@@ -466,56 +466,6 @@ void CFEFile::Accept(CVisitor &v)
 		return;
 	// call visitor
 	v.Visit(*this);
-	// included files
-	//     for_each(m_ChildFiles.begin(), m_ChildFiles.end(),
-	// 	std::bind2nd(std::mem_fun(&CFEFile::Accept), v));
-	vector<CFEFile*>::iterator iterF;
-	for (iterF = m_ChildFiles.begin();
-		iterF != m_ChildFiles.end();
-		iterF++)
-	{
-		(*iterF)->Accept(v);
-	}
-	// check constants
-	vector<CFEConstDeclarator*>::iterator iterC;
-	for (iterC = m_Constants.begin();
-		iterC != m_Constants.end();
-		iterC++)
-	{
-		(*iterC)->Accept(v);
-	}
-	// check types
-	vector<CFETypedDeclarator*>::iterator iterT;
-	for (iterT = m_Typedefs.begin();
-		iterT != m_Typedefs.end();
-		iterT++)
-	{
-		(*iterT)->Accept(v);
-	}
-	// check type declarations
-	vector<CFEConstructedType*>::iterator iterCT;
-	for (iterCT = m_TaggedDeclarators.begin();
-		iterCT != m_TaggedDeclarators.end();
-		iterCT++)
-	{
-		(*iterCT)->Accept(v);
-	}
-	// check interfaces
-	vector<CFEInterface*>::iterator iterI;
-	for (iterI = m_Interfaces.begin();
-		iterI != m_Interfaces.end();
-		iterI++)
-	{
-		(*iterI)->Accept(v);
-	}
-	// check libraries
-	vector<CFELibrary*>::iterator iterL;
-	for (iterL = m_Libraries.begin();
-		iterL != m_Libraries.end();
-		iterL++)
-	{
-		(*iterL)->Accept(v);
-	}
 }
 
 class ConstantSum {

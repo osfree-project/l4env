@@ -98,8 +98,7 @@ public: // Public methods
 
     virtual CBEFunction* FindFunction(std::string sFunctionName,
 	FUNCTION_TYPE nFunctionType);
-    virtual bool IsTargetFile(CBEImplementationFile* pFile);
-    virtual bool IsTargetFile(CBEHeaderFile* pFile);
+    virtual bool IsTargetFile(CBEFile* pFile);
 
     virtual bool HasFunctionWithUserType(std::string sTypeName, CBEFile* pFile);
 

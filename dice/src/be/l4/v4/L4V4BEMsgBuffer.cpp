@@ -764,13 +764,7 @@ void CL4V4BEMsgBuffer::PostCreate(CBEClass *pClass, CFEInterface *pFEInterface)
 		"CL4V4BEMsgBuffer::%s(class %s) called\n", __func__,
 		pClass->GetName().c_str());
 
-	CBEUserDefinedType *pUsrType = dynamic_cast<CBEUserDefinedType*>(GetType());
-	CBEMsgBufferType *pMsgType = 0;
-	if (pUsrType)
-		pMsgType = dynamic_cast<CBEMsgBufferType*>(pUsrType->GetRealType());
-	else
-		pMsgType = dynamic_cast<CBEMsgBufferType*>(GetType());
-	assert(pMsgType);
+	CBEMsgBufferType *pMsgType = GetType(0);
 	// iterate the structures and test each
 	string sClassName = pClass->GetName();
 	vector<CFunctionGroup*>::iterator i;

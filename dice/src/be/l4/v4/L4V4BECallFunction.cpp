@@ -42,14 +42,12 @@
 #include <cassert>
 
 CL4V4BECallFunction::CL4V4BECallFunction()
- : CL4BECallFunction()
-{
-}
+: CL4BECallFunction()
+{ }
 
 /** destroy the object of this class */
 CL4V4BECallFunction::~CL4V4BECallFunction()
-{
-}
+{ }
 
 /** \brief initialize instance of class
  *  \param pFEOperation the front-end function to use as reference
@@ -58,14 +56,14 @@ CL4V4BECallFunction::~CL4V4BECallFunction()
 void
 CL4V4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 {
-    // do not call direct base class (it adds the result var only)
-    CBECallFunction::CreateBackEnd(pFEOperation, bComponentSide);
+	// do not call direct base class (it adds the result var only)
+	CBECallFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
-    // add local variables
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
-    AddLocalVariable(sType, sMsgTag, 0, string("L4_MsgTag()"));
+	// add local variables
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	string sType = pNF->GetTypeName(TYPE_MSGTAG, false);
+	AddLocalVariable(sType, sMsgTag, 0, string("L4_MsgTag()"));
 }
 
 /** \brief writes the marshaling of the message
@@ -77,22 +75,21 @@ CL4V4BECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSi
 void
 CL4V4BECallFunction::WriteMarshalling(CBEFile& pFile)
 {
-    CL4BECallFunction::WriteMarshalling(pFile);
+	CL4BECallFunction::WriteMarshalling(pFile);
 
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    // first clear mr0 in message buffer
-    pFile << "\tL4_MsgClear ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
-    // load msgtag into message buffer
-    pFile << "\tL4_Set_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ", " <<
-        m_sOpcodeConstName << " );\n";
-    // set dopes
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-	GetSendDirection());
-    // load the message into the UTCB
-    pFile << "\tL4_MsgLoad ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sMsgBuffer = pNF->GetMessageBufferVariable();
+	// first clear mr0 in message buffer
+	pFile << "\tL4_MsgClear ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
+	// load msgtag into message buffer
+	pFile << "\tL4_Set_MsgLabel ( (L4_Msg_t*) &" << sMsgBuffer << ", " <<
+		m_sOpcodeConstName << " );\n";
+	// set dopes
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	assert(pMsgBuffer);
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, CMsgStructType(GetSendDirection()));
+	// load the message into the UTCB
+	pFile << "\tL4_MsgLoad ( (L4_Msg_t*) &" << sMsgBuffer << " );\n";
 }
 
 /** \brief writes the invocation of the message transfer
@@ -103,10 +100,10 @@ CL4V4BECallFunction::WriteMarshalling(CBEFile& pFile)
 void
 CL4V4BECallFunction::WriteInvocation(CBEFile& pFile)
 {
-    // invocate
-    WriteIPC(pFile);
-    // check for errors
-    WriteIPCErrorCheck(pFile);
+	// invocate
+	WriteIPC(pFile);
+	// check for errors
+	WriteIPCErrorCheck(pFile);
 }
 
 /** \brief write L4 specific unmarshalling code
@@ -119,14 +116,14 @@ CL4V4BECallFunction::WriteInvocation(CBEFile& pFile)
 void
 CL4V4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sMsgBuffer = pNF->GetMessageBufferVariable();
-    string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    // store message
-    pFile << "\tL4_MsgStore ( " << sMsgTag << ", (L4_Msg_t*) &" << sMsgBuffer
-	<< " );\n";
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sMsgBuffer = pNF->GetMessageBufferVariable();
+	string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	// store message
+	pFile << "\tL4_MsgStore ( " << sMsgTag << ", (L4_Msg_t*) &" << sMsgBuffer
+		<< " );\n";
 
-    CBECallFunction::WriteUnmarshalling(pFile);
+	CBECallFunction::WriteUnmarshalling(pFile);
 }
 
 /** \brief write the error checking code for the IPC
@@ -140,39 +137,39 @@ CL4V4BECallFunction::WriteUnmarshalling(CBEFile& pFile)
 void
 CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sResult = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
 
-    pFile << "\tif (L4_IpcFailed (" << sResult << "))\n" <<
-              "\t{\n";
-    // env.major = CORBA_SYSTEM_EXCEPTION;
-    // env.repos_id = DICE_IPC_ERROR;
-    string sSetFunc;
-    if (((CBEUserDefinedType*)GetEnvironment()->GetType())->GetName() ==
-        "CORBA_Server_Environment")
-        sSetFunc = "CORBA_server_exception_set";
-    else
-        sSetFunc = "CORBA_exception_set";
-    ++pFile << "\t" << sSetFunc << " (";
-    if (pDecl->GetStars() == 0)
-        pFile << "&";
-    pDecl->WriteName(pFile);
-    pFile << ",\n";
-    ++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
-              "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
-              "\t0);\n";
-    // env.ipc_error = L4_IPC_ERROR(result);
-    string sEnv;
-    if (pDecl->GetStars() == 0)
-	sEnv = "&";
-    sEnv += pDecl->GetName();
-    --pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_ErrorCode();\n";
-    // return
-    WriteReturn(pFile);
-    // close }
-    --pFile << "\t}\n";
-}
+	pFile << "\tif (L4_IpcFailed (" << sResult << "))\n" <<
+		"\t{\n";
+	// env.major = CORBA_SYSTEM_EXCEPTION;
+	// env.repos_id = DICE_IPC_ERROR;
+	string sSetFunc;
+	if (((CBEUserDefinedType*)GetEnvironment()->GetType())->GetName() ==
+		"CORBA_Server_Environment")
+		sSetFunc = "CORBA_server_exception_set";
+	else
+		sSetFunc = "CORBA_exception_set";
+	++pFile << "\t" << sSetFunc << " (";
+	if (pDecl->GetStars() == 0)
+		pFile << "&";
+	pDecl->WriteName(pFile);
+	pFile << ",\n";
+	++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
+		"\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
+		"\t0);\n";
+	// env.ipc_error = L4_IPC_ERROR(result);
+	string sEnv;
+	if (pDecl->GetStars() == 0)
+		sEnv = "&";
+	sEnv += pDecl->GetName();
+	--pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_ErrorCode();\n";
+	// return
+	WriteReturn(pFile);
+	// close }
+	--pFile << "\t}\n";
+	}
 
 /** \brief calculates the size of the function's parameters
  *  \param nDirection the direction to count
@@ -183,11 +180,11 @@ CL4V4BECallFunction::WriteIPCErrorCheck(CBEFile& pFile)
  */
 int CL4V4BECallFunction::GetSize(DIRECTION_TYPE nDirection)
 {
-    // get base class' size
-    int nSize = CBECallFunction::GetSize(nDirection);
-    if (nDirection & DIRECTION_IN)
-        nSize -= CCompiler::GetSizes()->GetOpcodeSize();
-    return nSize;
+	// get base class' size
+	int nSize = CBECallFunction::GetSize(nDirection);
+	if (nDirection & DIRECTION_IN)
+		nSize -= CCompiler::GetSizes()->GetOpcodeSize();
+	return nSize;
 }
 
 /** \brief calculates the size of the function's fixed-sized parameters
@@ -199,9 +196,9 @@ int CL4V4BECallFunction::GetSize(DIRECTION_TYPE nDirection)
  */
 int CL4V4BECallFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
-    int nSize = CBECallFunction::GetFixedSize(nDirection);
-    if (nDirection & DIRECTION_IN)
-        nSize -= CCompiler::GetSizes()->GetOpcodeSize();
-    return nSize;
+	int nSize = CBECallFunction::GetFixedSize(nDirection);
+	if (nDirection & DIRECTION_IN)
+		nSize -= CCompiler::GetSizes()->GetOpcodeSize();
+	return nSize;
 }
 

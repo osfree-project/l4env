@@ -62,11 +62,11 @@ const unsigned int CBEFile::STD_INDENT = 4;
 
 CBEFile::CBEFile()
 : m_Classes(0, (CObject*)0),
-  m_NameSpaces(0, (CObject*)0),
-  m_Functions(0, (CObject*)0),
-  m_IncludedFiles(0, this)
+	m_NameSpaces(0, (CObject*)0),
+	m_Functions(0, (CObject*)0),
+	m_IncludedFiles(0, this)
 {
-    m_nFileType = FILETYPE_NONE;
+	m_nFileType = FILETYPE_NONE;
 }
 
 /** \brief class destructor
@@ -88,9 +88,9 @@ void CBEFile::WriteHelperFunctions()
  */
 void
 CBEFile::AddIncludedFileName(string sFileName,
-    bool bIDLFile,
-    bool bIsStandardInclude,
-    CObject* pRefObj)
+	bool bIDLFile,
+	bool bIsStandardInclude,
+	CObject* pRefObj)
 {
 	if (sFileName.empty())
 		return;
@@ -114,7 +114,7 @@ CBEFile::AddIncludedFileName(string sFileName,
  * To find a function, we iterate over the classes and namespaces.
  */
 CBEFunction *CBEFile::FindFunction(string sFunctionName,
-    FUNCTION_TYPE nFunctionType)
+	FUNCTION_TYPE nFunctionType)
 {
 	if (sFunctionName.empty())
 		return 0;
@@ -241,7 +241,7 @@ CBENameSpace* CBEFile::FindNameSpace(string sNameSpaceName)
  */
 int CBEFile::GetFunctionCount()
 {
-    return m_Functions.size();
+	return m_Functions.size();
 }
 
 /** \brief test if the target file is of a certain type
@@ -302,12 +302,7 @@ bool CBEFile::HasFunctionWithUserType(string sTypeName)
 		iterF != m_Functions.end();
 		iterF++)
 	{
-		if (dynamic_cast<CBEHeaderFile*>(this) &&
-			(*iterF)->DoWriteFunction((CBEHeaderFile*)this) &&
-			(*iterF)->FindParameterType(sTypeName))
-			return true;
-		if (dynamic_cast<CBEImplementationFile*>(this) &&
-			(*iterF)->DoWriteFunction((CBEImplementationFile*)this) &&
+		if ((*iterF)->DoWriteFunction(this) &&
 			(*iterF)->FindParameterType(sTypeName))
 			return true;
 	}
@@ -480,11 +475,11 @@ std::ofstream& CBEFile::operator<<(string s)
  */
 std::ofstream& CBEFile::operator<<(char const * s)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEFile::%s(char const:%s) called\n", __func__, s);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEFile::%s(char const:\"%s\") called\n", __func__, s);
 
-    this->operator<<(string(s));
-    return *this;
+	this->operator<<(string(s));
+	return *this;
 }
 
 /** \brief specialization of stream operator for character arrays
@@ -492,19 +487,19 @@ std::ofstream& CBEFile::operator<<(char const * s)
  */
 std::ofstream& CBEFile::operator<<(char* s)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CBEFile::%s(char:%s) called\n", __func__, s);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEFile::%s(char:%s) called\n", __func__, s);
 
-    this->operator<<(string(s));
-    return *this;
+	this->operator<<(string(s));
+	return *this;
 }
 
 /** \brief prints the indentation
  */
 void CBEFile::PrintIndent()
 {
-    for (unsigned int i = 0; i < m_nIndent; i++)
-	this->operator<<(" ");
+	for (unsigned int i = 0; i < m_nIndent; i++)
+		this->operator<<(" ");
 }
 
 /** \brief increases the identation for this file
@@ -515,7 +510,7 @@ void CBEFile::PrintIndent()
  */
 CBEFile& CBEFile::operator++()
 {
-    return this->operator+=(STD_INDENT);
+	return this->operator+=(STD_INDENT);
 }
 
 /** \brief increases the identation for this file
@@ -527,9 +522,9 @@ CBEFile& CBEFile::operator++()
  */
 CBEFile& CBEFile::operator+=(int by)
 {
-    m_nLastIndent = (m_nIndent + by > MAX_INDENT) ? MAX_INDENT - m_nIndent : by;
-    m_nIndent = std::min(m_nIndent + by, MAX_INDENT);
-    return *this;
+	m_nLastIndent = (m_nIndent + by > MAX_INDENT) ? MAX_INDENT - m_nIndent : by;
+	m_nIndent = std::min(m_nIndent + by, MAX_INDENT);
+	return *this;
 }
 
 /** \brief decreases the ident
@@ -540,7 +535,7 @@ CBEFile& CBEFile::operator+=(int by)
  */
 CBEFile& CBEFile::operator--()
 {
-    return this->operator-=(STD_INDENT);
+	return this->operator-=(STD_INDENT);
 }
 
 /** \brief decreases the ident
@@ -552,8 +547,8 @@ CBEFile& CBEFile::operator--()
  */
 CBEFile& CBEFile::operator-=(int by)
 {
-    m_nIndent = std::max((int)m_nIndent - ((by == -1) ? m_nLastIndent : by), 0);
-    m_nLastIndent = 0;
-    return *this;
+	m_nIndent = std::max((int)m_nIndent - ((by == -1) ? m_nLastIndent : by), 0);
+	m_nLastIndent = 0;
+	return *this;
 }
 

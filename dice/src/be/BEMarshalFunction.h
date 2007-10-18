@@ -41,42 +41,41 @@
  */
 class CBEMarshalFunction : public CBEOperationFunction
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEMarshalFunction();
-    virtual ~CBEMarshalFunction();
+	/** \brief constructor
+	 */
+	CBEMarshalFunction();
+	virtual ~CBEMarshalFunction();
 
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
-    virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
-    virtual void WriteReturn(CBEFile& pFile);
-    virtual int GetFixedSize(DIRECTION_TYPE nDirection);
-    virtual int GetSize(DIRECTION_TYPE nDirection);
-    virtual DIRECTION_TYPE GetReceiveDirection();
-    virtual DIRECTION_TYPE GetSendDirection();
-    virtual CBETypedDeclarator* FindParameterType(std::string sTypeName);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
-	    bool bMarshal);
-    virtual void AddParameter(CFETypedDeclarator * pFEParameter);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+	virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
+	virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+	virtual void WriteReturn(CBEFile& pFile);
+	virtual int GetFixedSize(DIRECTION_TYPE nDirection);
+	virtual int GetSize(DIRECTION_TYPE nDirection);
+	virtual DIRECTION_TYPE GetReceiveDirection();
+	virtual DIRECTION_TYPE GetSendDirection();
+	virtual CBETypedDeclarator* FindParameterType(std::string sTypeName);
+	virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
+		bool bMarshal);
+	virtual void AddParameter(CFETypedDeclarator * pFEParameter);
+	virtual bool DoWriteFunction(CBEFile* pFile);
 
-    virtual CBETypedDeclarator* GetExceptionVariable();
+	virtual CBETypedDeclarator* GetExceptionVariable();
 
 protected:
-    virtual int GetReturnSize(DIRECTION_TYPE nDirection);
-    virtual int GetFixedReturnSize(DIRECTION_TYPE nDirection);
-    virtual int GetMaxReturnSize(DIRECTION_TYPE nDirection);
-    virtual void WriteInvocation(CBEFile& pFile);
-    virtual void WriteVariableInitialization(CBEFile& pFile);
-    virtual void WriteCallParameter(CBEFile& pFile,
-	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
-    virtual void WriteFunctionDefinition(CBEFile& pFile);
-    virtual void AddAfterParameters();
-    virtual void AddBeforeParameters();
-    virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
+	virtual int GetReturnSize(DIRECTION_TYPE nDirection);
+	virtual int GetFixedReturnSize(DIRECTION_TYPE nDirection);
+	virtual int GetMaxReturnSize(DIRECTION_TYPE nDirection);
+	virtual void WriteInvocation(CBEFile& pFile);
+	virtual void WriteVariableInitialization(CBEFile& pFile);
+	virtual void WriteCallParameter(CBEFile& pFile,
+		CBETypedDeclarator *pParameter, bool bCallFromSameClass);
+	virtual void WriteFunctionDefinition(CBEFile& pFile);
+	virtual void AddAfterParameters();
+	virtual void AddBeforeParameters();
+	virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
 };
 
 #endif

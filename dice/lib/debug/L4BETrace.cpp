@@ -120,8 +120,8 @@ void CL4BETrace::BeforeCall(CBEFile& pFile, CBEFunction *pFunction)
 		pFunction->IsComponentSide())
 		return;
 
-	CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
-	CMsgStructType nSndDir = pFunction->GetSendDirection();
+	CMsgStructType nRcvDir(pFunction->GetReceiveDirection());
+	CMsgStructType nSndDir(pFunction->GetSendDirection());
 	// check if we send a short IPC
 	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
@@ -205,8 +205,8 @@ void CL4BETrace::AfterCall(CBEFile& pFile, CBEFunction *pFunction)
 		pFunction->IsComponentSide())
 		return;
 
-	CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
-	CMsgStructType nSndDir = pFunction->GetSendDirection();
+	CMsgStructType nRcvDir(pFunction->GetReceiveDirection());
+	CMsgStructType nSndDir(pFunction->GetSendDirection());
 	// check if we send a short IPC
 	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
@@ -256,7 +256,7 @@ void CL4BETrace::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
 	string sObjectVar = pNF->GetCorbaObjectVariable();
 	string sFunc;
 	CCompiler::GetBackEndOption("trace-server-func", sFunc);
-	CMsgStructType nDirection = pFunction->GetReceiveDirection();
+	CMsgStructType nDirection(pFunction->GetReceiveDirection());
 	CL4BEMarshaller *pMarshaller = static_cast<CL4BEMarshaller*>(
 		pCF->GetNewMarshaller());
 
@@ -293,7 +293,7 @@ void CL4BETrace::AfterDispatch(CBEFile& pFile, CBEFunction *pFunction)
 	string sReply = pNF->GetReplyCodeVariable();
 	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
-	CMsgStructType nDirection = pFunction->GetSendDirection();
+	CMsgStructType nDirection(pFunction->GetSendDirection());
 	CL4BEMarshaller *pMarshaller = static_cast<CL4BEMarshaller*>(
 		pCF->GetNewMarshaller());
 

@@ -49,80 +49,80 @@ class CDeclaratorStackLocation;
 class CBEType : public CBEObject
 {
 
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEType();
-    virtual ~CBEType();
+	/** \brief constructor
+	 */
+	CBEType();
+	virtual ~CBEType();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEType(CBEType* src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBEType(CBEType* src);
 
 public:
-    virtual bool IsUnsigned();
-    virtual int GetFEType();
-    virtual void WriteZeroInit(CBEFile& pFile);
-    virtual int GetStringLength();
+	virtual bool IsUnsigned();
+	virtual int GetFEType();
+	virtual void WriteZeroInit(CBEFile& pFile);
+	virtual int GetStringLength();
 	virtual CObject* Clone();
-    virtual bool IsOfType(int nFEType);
-    virtual int GetSize();
-    virtual int GetMaxSize();
-    virtual bool IsVoid();
-    virtual void CreateBackEnd(bool bUnsigned, int nSize, int nFEType);
-    virtual void CreateBackEnd(CFETypeSpec *pFEType);
-    virtual CBETypedef* GetTypedef();
-    virtual void Write(CBEFile& pFile);
-    virtual void WriteToStr(std::string &str);
-    virtual bool IsConstructedType();
-    virtual bool HasTag(std::string sTag);
-    virtual void WriteCast(CBEFile& pFile, bool bPointer);
-    virtual bool IsPointerType();
-    virtual bool IsArrayType();
-    virtual void WriteDeclaration(CBEFile& pFile);
-    virtual bool DoWriteZeroInit();
-    virtual void WriteGetSize(CBEFile& pFile, CDeclStack* pStack,
-	CBEFunction *pUsingFunc);
-    virtual void WriteGetMaxSize(CBEFile& pFile, CDeclStack* pStack,
-	CBEFunction *pUsingFunc);
-    virtual bool IsSimpleType();
-    virtual int GetArrayDimensionCount();
-    virtual int GetIndirectionCount();
-    virtual void WriteIndirect(CBEFile& pFile);
+	virtual bool IsOfType(int nFEType);
+	virtual int GetSize();
+	virtual int GetMaxSize();
+	virtual bool IsVoid();
+	virtual void CreateBackEnd(bool bUnsigned, int nSize, int nFEType);
+	virtual void CreateBackEnd(CFETypeSpec *pFEType);
+	virtual CBETypedef* GetTypedef();
+	virtual void Write(CBEFile& pFile);
+	virtual void WriteToStr(std::string &str);
+	virtual bool IsConstructedType();
+	virtual bool HasTag(std::string sTag);
+	virtual void WriteCast(CBEFile& pFile, bool bPointer);
+	virtual bool IsPointerType();
+	virtual bool IsArrayType();
+	virtual void WriteDeclaration(CBEFile& pFile);
+	virtual bool DoWriteZeroInit();
+	virtual void WriteGetSize(CBEFile& pFile, CDeclStack* pStack,
+		CBEFunction *pUsingFunc);
+	virtual void WriteGetMaxSize(CBEFile& pFile, CDeclStack* pStack,
+		CBEFunction *pUsingFunc);
+	virtual bool IsSimpleType();
+	virtual int GetArrayDimensionCount();
+	virtual int GetIndirectionCount();
+	virtual void WriteIndirect(CBEFile& pFile);
 
-    virtual void AddToHeader(CBEHeaderFile* pHeader);
-
-protected:
-    virtual void WriteZeroInitArray(CBEFile& pFile, CBEType *pType,
-	CBEDeclarator *pAlias, vector<CBEExpression*>::iterator iter);
+	virtual void AddToHeader(CBEHeaderFile* pHeader);
 
 protected:
-    /** \var bool m_bUnsigned
-     *  \brief indicates if this type is unsigned
-     */
-    bool m_bUnsigned;
-    /** \var int m_nSize
-     *  \brief cached value of size
-     */
-    int m_nSize;
-    /** \var int m_nMaxSize
-     *  \brief cached value of maximum size
-     */
-    int m_nMaxSize;
-    /** \var std::string m_sName
-     *  \brief the fully extended name of the type
-     *
-     * A type's name might be extended by the library or interface name. These
-     * extension are already in this variable.
-     */
-    std::string m_sName;
-    /** \var in m_nFEType
-     *  \brief only used for comparison
-     */
-    int m_nFEType;
+	virtual void WriteZeroInitArray(CBEFile& pFile, CBEType *pType,
+		CBEDeclarator *pAlias, vector<CBEExpression*>::iterator iter);
+
+protected:
+	/** \var bool m_bUnsigned
+	 *  \brief indicates if this type is unsigned
+	 */
+	bool m_bUnsigned;
+	/** \var int m_nSize
+	 *  \brief cached value of size
+	 */
+	int m_nSize;
+	/** \var int m_nMaxSize
+	 *  \brief cached value of maximum size
+	 */
+	int m_nMaxSize;
+	/** \var std::string m_sName
+	 *  \brief the fully extended name of the type
+	 *
+	 * A type's name might be extended by the library or interface name. These
+	 * extension are already in this variable.
+	 */
+	std::string m_sName;
+	/** \var in m_nFEType
+	 *  \brief only used for comparison
+	 */
+	int m_nFEType;
 };
 
 #endif /* !__DICE_BETYPE_H__ */

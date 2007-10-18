@@ -155,9 +155,6 @@ CBEConstant::CreateBackEnd(CBEType * pType,
  */
 void CBEConstant::Write(CBEHeaderFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	pFile << "#ifndef _constdef_" << m_sName << "\n";
 	pFile << "#define _constdef_" << m_sName << "\n";
 	if (CCompiler::IsOptionSet(PROGRAM_CONST_AS_DEFINE) || m_bAlwaysDefine)

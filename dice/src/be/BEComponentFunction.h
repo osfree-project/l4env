@@ -52,9 +52,8 @@ public:
 public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
     virtual void AddToImpl(CBEImplementationFile* pImpl);
-    virtual bool IsTargetFile(CBEImplementationFile* pFile);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+    virtual bool IsTargetFile(CBEFile* pFile);
+    virtual bool DoWriteFunction(CBEFile* pFile);
     virtual void WriteReturn(CBEFile& pFile);
 
 protected:

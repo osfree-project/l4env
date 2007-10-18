@@ -98,12 +98,7 @@ CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSi
 	// if return var is parameter do not delete it
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcodeVar = pNF->GetOpcodeVariable();
-	if (!SetReturnVar(CBEClassFactory::Instance()->GetNewOpcodeType(),
-			sOpcodeVar))
-	{
-		exc += " failed because return var could not be created.";
-		throw new error::create_error(exc);
-	}
+	SetReturnVar(CBEClassFactory::Instance()->GetNewOpcodeType(), sOpcodeVar);
 	// set to zero init it
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 	pReturn->SetDefaultInitString("0");
@@ -210,43 +205,7 @@ CBEWaitAnyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  * Because the component side determines the function name, we have to
  * differentiate based on IsComponentSide().
  */
-bool
-CBEWaitAnyFunction::DoWriteFunction(CBEHeaderFile* pFile)
-{
-	if (!IsTargetFile(pFile))
-		return false;
-	if (m_bOpenWait)
-		// this test is true for m_bReply (true or false)
-		return pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-			IsComponentSide();
-	// closed wait
-	if (CCompiler::IsOptionSet(PROGRAM_GENERATE_MESSAGE))
-	{
-		if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-			IsComponentSide())
-			return true;
-		if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-			!IsComponentSide())
-			return true;
-	}
-	return false;
-}
-
-/** \brief test if this function should be written
- *  \param pFile the file to write to
- *  \return true if should be written
- *
- * A wait-any function is written at the component's side.
- *
- * A receive-any function is only written if the PROGRAM_GENERATE_MESSAGE
- * option is set. Then it is created for the client's as well as the
- * component's side.
- *
- * Because the component side determines the function name, we have to
- * differentiate based on IsComponentSide().
- */
-bool
-CBEWaitAnyFunction::DoWriteFunction(CBEImplementationFile* pFile)
+bool CBEWaitAnyFunction::DoWriteFunction(CBEFile* pFile)
 {
 	if (!IsTargetFile(pFile))
 		return false;
@@ -301,9 +260,6 @@ CBEWaitAnyFunction::WriteParameter(CBEFile& pFile,
 void
 CBEWaitAnyFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEWaitAnyFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
@@ -322,17 +278,8 @@ CBEWaitAnyFunction::WriteFunctionDefinition(CBEFile& pFile)
 CBETypedDeclarator * CBEWaitAnyFunction::FindParameterType(string sTypeName)
 {
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-	if (pMsgBuffer)
-	{
-		CBEType *pType = pMsgBuffer->GetType();
-		if (dynamic_cast<CBEUserDefinedType*>(pType))
-		{
-			if (((CBEUserDefinedType*)pType)->GetName() == sTypeName)
-				return pMsgBuffer;
-		}
-		if (pType->HasTag(sTypeName))
-			return pMsgBuffer;
-	}
+	if (pMsgBuffer && pMsgBuffer->HasType(sTypeName))
+		return pMsgBuffer;
 	return CBEInterfaceFunction::FindParameterType(sTypeName);
 }
 

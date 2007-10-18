@@ -88,16 +88,7 @@ void CFEUnionType::AddMembers(vector<CFEUnionCase*>* pUnionBody)
 /** \brief accept the iterations of the visitors
  *  \param v reference to the current visitor
  */
-void
-CFEUnionType::Accept(CVisitor& v)
+void CFEUnionType::Accept(CVisitor& v)
 {
     v.Visit(*this);
-
-    vector<CFEUnionCase*>::iterator iter;
-    for (iter = m_UnionCases.begin();
-	 iter != m_UnionCases.end();
-	 iter++)
-    {
-	(*iter)->Accept(v);
-    }
 }

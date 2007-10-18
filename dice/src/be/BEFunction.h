@@ -39,6 +39,7 @@
 
 class CBETypedDeclarator;
 class CBEType;
+class CBETypedef;
 class CBEFile;
 class CBEHeaderFile;
 class CBEImplementationFile;
@@ -93,12 +94,7 @@ public:
      *  \param pFile the target file this function should be added to
      *  \return true if successful
      */
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile) = 0;
-    /** \brief tests if this function should be written
-     *  \param pFile the target file this function should be added to
-     *  \return true if successful
-     */
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile) = 0;
+    virtual bool DoWriteFunction(CBEFile* pFile) = 0;
 
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual int GetMaxSize(DIRECTION_TYPE nDirection);
@@ -117,6 +113,7 @@ public:
     virtual CBETypedDeclarator* FindParameterAttribute(ATTR_TYPE nAttributeType);
     virtual CBETypedDeclarator* FindParameterIsAttribute(ATTR_TYPE nAttributeType,
 	    std::string sAttributeParameter);
+    CBETypedef* FindTypedef(std::string sTypeName, CBETypedef* pPrev = 0);
 
     virtual CBEType *GetReturnType();
     virtual bool DoMarshalParameter(CBETypedDeclarator *pParameter,
@@ -204,16 +201,16 @@ protected:
     virtual void WriteCallParameterList(CBEFile& pFile, bool bCallFromSameClass);
     virtual void WriteFunctionAttributes(CBEFile& pFile);
     virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
+	virtual void WriteTypedefs(CBEFile& pFile);
 
 	void SetEnvironment(CBETypedDeclarator* pEnv);
 
     void AddMessageBuffer();
     void AddMessageBuffer(CFEOperation *pFEOperation);
-    virtual bool SetReturnVar(bool bUnsigned, int nSize, int nFEType,
-	    std::string sName);
-    virtual bool SetReturnVar(CBEType * pType, std::string sName);
-    virtual bool SetReturnVar(CFETypeSpec * pFEType, std::string sName);
-    virtual void SetReturnVarAttributes(CBETypedDeclarator *pReturn);
+	void SetNoReturnVar();
+    void SetReturnVar(CBEType * pType, std::string sName);
+    void SetReturnVar(CFETypeSpec * pFEType, std::string sName);
+    void SetReturnVarAttributes(CBETypedDeclarator *pReturn);
     virtual void CreateBackEnd(CFEBase* pFEObject, bool bComponentSide);
     virtual void CreateObject();
     virtual void CreateEnvironment();
@@ -315,6 +312,10 @@ public:
      *  \brief contains the variables used in this function
      */
     CSearchableCollection<CBETypedDeclarator, std::string> m_LocalVariables;
+    /** \var CCollection<CBETypedef> m_Typedefs
+     *  \brief the type definition of the function
+     */
+    CCollection<CBETypedef> m_Typedefs;
 
 private:
     /** \var FUNCTION_TYPE m_nFunctionType

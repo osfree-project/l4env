@@ -232,61 +232,6 @@ CFEInterface *CFEInterface::FindBaseInterface(std::string sName)
 void CFEInterface::Accept(CVisitor &v)
 {
 	v.Visit(*this);
-	// iterate attribues
-	vector<CFEAttribute*>::iterator iA;
-	for (iA = m_Attributes.begin();
-		iA != m_Attributes.end();
-		iA++)
-	{
-		(*iA)->Accept(v);
-	}
-	// check constants
-	vector<CFEConstDeclarator*>::iterator iC;
-	for (iC = m_Constants.begin();
-		iC != m_Constants.end();
-		iC++)
-	{
-		(*iC)->Accept(v);
-	}
-	// iterate attribute declarators
-	vector<CFEAttributeDeclarator*>::iterator iAD;
-	for (iAD = m_AttributeDeclarators.begin();
-		iAD != m_AttributeDeclarators.end();
-		iAD++)
-	{
-		(*iAD)->Accept(v);
-	}
-	// iterate tagged declarators
-	vector<CFEConstructedType*>::iterator iTD;
-	for (iTD = m_TaggedDeclarators.begin();
-		iTD != m_TaggedDeclarators.end();
-		iTD++)
-	{
-		(*iTD)->Accept(v);
-	}
-	// iterate operations
-	vector<CFEOperation*>::iterator iO;
-	for (iO = m_Operations.begin();
-		iO != m_Operations.end();
-		iO++)
-	{
-		(*iO)->Accept(v);
-	}
-	// check typedefs
-	vector<CFETypedDeclarator*>::iterator iT;
-	for (iT = m_Typedefs.begin();
-		iT != m_Typedefs.end();
-		iT++)
-	{
-		(*iT)->Accept(v);
-	}
-	// check exceptions
-	for (iT = m_Exceptions.begin();
-		iT != m_Exceptions.end();
-		iT++)
-	{
-		(*iT)->Accept(v);
-	}
 }
 
 /** \brief tests if this is a foward declaration

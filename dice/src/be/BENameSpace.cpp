@@ -719,36 +719,7 @@ CBETypedef* CBENameSpace::FindTypedef(string sTypeName, CBETypedef* pPrev)
  * A file is target file of a name-space if at least one of its classes or
  * nested name-spaces belongs to this class.
  */
-bool CBENameSpace::IsTargetFile(CBEHeaderFile* pFile)
-{
-	vector<CBEClass*>::iterator iterC;
-	for (iterC = m_Classes.begin();
-		iterC != m_Classes.end();
-		iterC++)
-	{
-		if ((*iterC)->IsTargetFile(pFile))
-			return true;
-	}
-
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NestedNamespaces.begin();
-		iterN != m_NestedNamespaces.end();
-		iterN++)
-	{
-		if ((*iterN)->IsTargetFile(pFile))
-			return true;
-	}
-	return false;
-}
-
-/** \brief test if the given file is a target file for the namespace
- *  \param pFile the file to test
- *  \return true if name-space should be added to file
- *
- * A file is target file of a name-space if at least one of its classes or
- * nested name-spaces belongs to this class.
- */
-bool CBENameSpace::IsTargetFile(CBEImplementationFile* pFile)
+bool CBENameSpace::IsTargetFile(CBEFile* pFile)
 {
 	vector<CBEClass*>::iterator iterC;
 	for (iterC = m_Classes.begin();

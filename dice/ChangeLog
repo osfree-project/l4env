@@ -17,6 +17,7 @@ x.x.x
  - [fix] parsing of casting statements
  - [fix] more usage of long long only if available
  - fail on deprecated -C option
+ - always typedef the message buffer type (now in functions as well)
 
 3.2.1
  - [feature] new compiler option --require <string> that specifies the minimal

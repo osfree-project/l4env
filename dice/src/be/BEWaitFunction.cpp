@@ -50,9 +50,9 @@
 #include <cassert>
 
 CBEWaitFunction::CBEWaitFunction(bool bOpenWait)
-    : CBEOperationFunction(bOpenWait ? FUNCTION_WAIT : FUNCTION_RECV)
+: CBEOperationFunction(bOpenWait ? FUNCTION_WAIT : FUNCTION_RECV)
 {
-    m_bOpenWait = bOpenWait;
+	m_bOpenWait = bOpenWait;
 }
 
 /** \brief destructor of target class */
@@ -67,9 +67,9 @@ CBEWaitFunction::~CBEWaitFunction()
  */
 void CBEWaitFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-    // initialize message buffer
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
+	// initialize message buffer
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
 }
 
 /** \brief writes the invocation of the message transfer
@@ -79,9 +79,9 @@ void CBEWaitFunction::WriteVariableInitialization(CBEFile& pFile)
  */
 void CBEWaitFunction::WriteInvocation(CBEFile& pFile)
 {
-    pFile << "\t/* invoke */\n";
+	pFile << "\t/* invoke */\n";
 
-    WriteOpcodeCheck(pFile);
+	WriteOpcodeCheck(pFile);
 }
 
 /** \brief creates the back-end wait function
@@ -90,38 +90,38 @@ void CBEWaitFunction::WriteInvocation(CBEFile& pFile)
  */
 void CBEWaitFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
-    FUNCTION_TYPE nFunctionType = FUNCTION_NONE;
+	FUNCTION_TYPE nFunctionType = FUNCTION_NONE;
 	if (m_bOpenWait)
 		nFunctionType = FUNCTION_WAIT;
 	else
 		nFunctionType = FUNCTION_RECV;
 	SetComponentSide(bComponentSide);
-    SetFunctionName(pFEOperation, nFunctionType);
+	SetFunctionName(pFEOperation, nFunctionType);
 
-    // set target file name
-    SetTargetFileName(pFEOperation);
+	// set target file name
+	SetTargetFileName(pFEOperation);
 
-    CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
+	CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
-    // add message buffer as local variable
-    AddMessageBuffer(pFEOperation);
-    // then add as local variable
-    AddLocalVariable(GetMessageBuffer());
-    // add opcode as local variable
-    CBETypedDeclarator *pOpcode = CreateOpcodeVariable();
-    AddLocalVariable(pOpcode);
-    // opcode var might not be used
-    pOpcode->AddLanguageProperty(string("attribute"),
-	string("__attribute__ ((unused))"));
-    // add marshaller and communication class
-    CreateMarshaller();
-    CreateCommunication();
-    CreateTrace();
+	// add message buffer as local variable
+	AddMessageBuffer(pFEOperation);
+	// then add as local variable
+	AddLocalVariable(GetMessageBuffer());
+	// add opcode as local variable
+	CBETypedDeclarator *pOpcode = CreateOpcodeVariable();
+	AddLocalVariable(pOpcode);
+	// opcode var might not be used
+	pOpcode->AddLanguageProperty(string("attribute"),
+		string("__attribute__ ((unused))"));
+	// add marshaller and communication class
+	CreateMarshaller();
+	CreateCommunication();
+	CreateTrace();
 
-    // set initializer of return variable to zero
-    CBETypedDeclarator *pVariable = GetReturnVariable();
-    if (pVariable)
-        pVariable->SetDefaultInitString(string("0"));
+	// set initializer of return variable to zero
+	CBETypedDeclarator *pVariable = GetReturnVariable();
+	if (pVariable)
+		pVariable->SetDefaultInitString(string("0"));
 }
 
 /** \brief adds the OUT attribute to open wait CORBA_Object variable
@@ -205,7 +205,7 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
 	string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	pFile << "\tif (";
-	pMsgBuffer->WriteAccess(pFile, this, GetReceiveDirection(), &vStack);
+	pMsgBuffer->WriteAccess(pFile, this, CMsgStructType(GetReceiveDirection()), &vStack);
 	pFile << " != " << m_sOpcodeConstName << ")\n";
 	pFile << "\t{\n";
 	string sException = pNF->GetCorbaEnvironmentVariable();
@@ -225,27 +225,7 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
  * A wait function should be written at client's side if OUT attribute or
  * at component's side if IN attribute.
  */
-bool CBEWaitFunction::DoWriteFunction(CBEHeaderFile* pFile)
-{
-	if (!IsTargetFile(pFile))
-		return false;
-	if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-		(m_Attributes.Find(ATTR_OUT)))
-		return true;
-	if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-		(m_Attributes.Find(ATTR_IN)))
-		return true;
-	return false;
-}
-
-/** \brief test if this function should be written
- *  \param pFile the file to write to
- *  \return true if should be written
- *
- * A wait function should be written at client's side if OUT attribute or
- * at component's side if IN attribute.
- */
-bool CBEWaitFunction::DoWriteFunction(CBEImplementationFile* pFile)
+bool CBEWaitFunction::DoWriteFunction(CBEFile* pFile)
 {
 	if (!IsTargetFile(pFile))
 		return false;
@@ -268,7 +248,7 @@ bool CBEWaitFunction::DoWriteFunction(CBEImplementationFile* pFile)
  */
 DIRECTION_TYPE CBEWaitFunction::GetSendDirection()
 {
-    return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
+	return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
 }
 
 /** \brief gets the direction for the receiving data
@@ -276,7 +256,7 @@ DIRECTION_TYPE CBEWaitFunction::GetSendDirection()
  */
 DIRECTION_TYPE CBEWaitFunction::GetReceiveDirection()
 {
-    return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
+	return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
 
 /** \brief adds a single parameter to this function
@@ -403,7 +383,7 @@ int CBEWaitFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  * * WaitFunction::MsgBufferInitialization
  */
 void
-CBEWaitFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+	CBEWaitFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
 	// check return type (do test here because sometimes we like to call
@@ -413,11 +393,6 @@ CBEWaitFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 	if (pType->IsVoid())
 		return; // having a void return type is not an error
 	// add return variable
-	if (!pMsgBuffer->AddReturnVariable(this))
-	{
-		string exc = string(__func__);
-		exc += " failed, because return variable could not be added to message buffer.";
-		throw new error::create_error(exc);
-	}
+	pMsgBuffer->AddReturnVariable(this);
 }
 

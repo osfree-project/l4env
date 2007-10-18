@@ -289,7 +289,7 @@ CBESrvLoopFunction::WriteVariableDeclaration(CBEFile& pFile)
 				continue;
 			if (*iter == GetEnvironment())
 				continue;
-			(*iter)->WriteInitDeclaration(pFile, string());
+			(*iter)->WriteInitDeclaration(pFile);
 		}
 
 		if (m_pTrace)
@@ -387,47 +387,10 @@ CBESrvLoopFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
  *
  * A server loop is only written at the component's side.
  */
-bool
-CBESrvLoopFunction::DoWriteFunction(CBEHeaderFile* pFile)
+bool CBESrvLoopFunction::DoWriteFunction(CBEFile* pFile)
 {
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBESrvLoopFunction::%s(%s) called for %s\n", __func__,
-		pFile->GetFileName().c_str(), GetName().c_str());
-
 	if (!IsTargetFile(pFile))
-	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBESrvLoopFunction::%s failed: wrong target file\n", __func__);
 		return false;
-	}
-
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBESrvLoopFunction::%s finished.\n",
-		__func__);
-	return pFile->IsOfFileType(FILETYPE_COMPONENT);
-}
-
-/** \brief test if this function should be written
- *  \param pFile the file to write to
- *  \return  true if this function should be written
- *
- * A server loop is only written at the component's side.
- */
-bool
-CBESrvLoopFunction::DoWriteFunction(CBEImplementationFile* pFile)
-{
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBESrvLoopFunction::%s(%s) called for %s\n", __func__,
-		pFile->GetFileName().c_str(), GetName().c_str());
-
-	if (!IsTargetFile(pFile))
-	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBESrvLoopFunction::%s failed: wrong target file\n", __func__);
-		return false;
-	}
-
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBESrvLoopFunction::%s finished.\n",
-		__func__);
 	return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 

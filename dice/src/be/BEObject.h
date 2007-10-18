@@ -67,10 +67,7 @@ protected:
 	// Operations
 public:
 	virtual CObject* Clone();
-	virtual bool IsTargetFile(CBEImplementationFile* pFile);
-	virtual bool IsTargetFile(CBEHeaderFile* pFile);
-	virtual std::string GetTargetHeaderFileName();
-	virtual std::string GetTargetImplementationFileName();
+	virtual bool IsTargetFile(CBEFile* pFile);
 
 protected:
 	virtual void SetTargetFileName(CFEBase *pFEObject);

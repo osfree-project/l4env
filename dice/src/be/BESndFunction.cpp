@@ -63,9 +63,9 @@ CBESndFunction::~CBESndFunction()
 void
 CBESndFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-    // init message buffer
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
+	// init message buffer
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	pMsgBuffer->WriteInitialization(pFile, this, 0, CMsgStructType::Generic);
 }
 
 /** \brief writes the invocation of the message transfer
@@ -75,7 +75,7 @@ CBESndFunction::WriteVariableInitialization(CBEFile& pFile)
  */
 void CBESndFunction::WriteInvocation(CBEFile& pFile)
 {
-    pFile << "\t/* send */\n";
+	pFile << "\t/* send */\n";
 }
 
 /** \brief writes the return statement
@@ -86,7 +86,7 @@ void CBESndFunction::WriteInvocation(CBEFile& pFile)
  */
 void CBESndFunction::WriteReturn(CBEFile& pFile)
 {
-    pFile << "\treturn;\n";
+	pFile << "\treturn;\n";
 }
 
 /** \brief creates the back-end send function
@@ -96,22 +96,22 @@ void CBESndFunction::WriteReturn(CBEFile& pFile)
 void
 CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
-    // set target file name
-    SetTargetFileName(pFEOperation);
-    // set name
+	// set target file name
+	SetTargetFileName(pFEOperation);
+	// set name
 	SetComponentSide(bComponentSide);
-    SetFunctionName(pFEOperation, FUNCTION_SEND);
+	SetFunctionName(pFEOperation, FUNCTION_SEND);
 
-    CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
-    // set return type
-    SetReturnVar(false, 0, TYPE_VOID, string());
-    // need a message buffer, don't we?
-    AddMessageBuffer(pFEOperation);
-    AddLocalVariable(GetMessageBuffer());
-    // add marshaller and communication class
-    CreateMarshaller();
-    CreateCommunication();
-    CreateTrace();
+	CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
+	// set return type
+	SetNoReturnVar();
+	// need a message buffer, don't we?
+	AddMessageBuffer(pFEOperation);
+	AddLocalVariable(GetMessageBuffer());
+	// add marshaller and communication class
+	CreateMarshaller();
+	CreateCommunication();
+	CreateTrace();
 }
 
 /** \brief adds the parameters of a front-end function to this function
@@ -123,22 +123,22 @@ CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 void
 CBESndFunction::AddBeforeParameters()
 {
-    CBEOperationFunction::AddBeforeParameters();
+	CBEOperationFunction::AddBeforeParameters();
 
-    if (!GetReturnType()->IsVoid())
-    {
-        CBETypedDeclarator *pReturn =
-	    (CBETypedDeclarator*)GetReturnVariable()->Clone();
-	DIRECTION_TYPE nDir = GetSendDirection();
-	ATTR_TYPE nAttr = (nDir == DIRECTION_IN) ? ATTR_IN : ATTR_OUT;
-	if (!pReturn->m_Attributes.Find(nAttr))
+	if (!GetReturnType()->IsVoid())
 	{
-	    CBEAttribute *pAttr = pReturn->m_Attributes.Find((nAttr == ATTR_IN) ?
-		ATTR_OUT : ATTR_IN);
-	    pAttr->CreateBackEnd(nAttr);
+		CBETypedDeclarator *pReturn =
+			(CBETypedDeclarator*)GetReturnVariable()->Clone();
+		DIRECTION_TYPE nDir = GetSendDirection();
+		ATTR_TYPE nAttr = (nDir == DIRECTION_IN) ? ATTR_IN : ATTR_OUT;
+		if (!pReturn->m_Attributes.Find(nAttr))
+		{
+			CBEAttribute *pAttr = pReturn->m_Attributes.Find((nAttr == ATTR_IN) ?
+				ATTR_OUT : ATTR_IN);
+			pAttr->CreateBackEnd(nAttr);
+		}
+		m_Parameters.Add(pReturn);
 	}
-	m_Parameters.Add(pReturn);
-    }
 }
 
 /** \brief test if this function should be written to the target file
@@ -151,40 +151,17 @@ CBESndFunction::AddBeforeParameters()
  *
  * A send function is not written if it has a uuid-range attribute.
  */
-bool CBESndFunction::DoWriteFunction(CBEHeaderFile* pFile)
+bool CBESndFunction::DoWriteFunction(CBEFile* pFile)
 {
-    if (!IsTargetFile(pFile))
-        return false;
+	if (!IsTargetFile(pFile))
+		return false;
 	if (m_Attributes.Find(ATTR_UUID_RANGE))
 		return false;
-    if (pFile->IsOfFileType(FILETYPE_CLIENT) && (m_Attributes.Find(ATTR_IN)))
-        return true;
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (m_Attributes.Find(ATTR_OUT)))
-        return true;
-    return false;
-}
-
-/** \brief test if this function should be written to the target file
- *  \param pFile the file to write to
- *  \return true if successful
- *
- * A send function is written at the client's side if the IN attribute is set,
- * and at the component's side if the OUT attribute is set. And of course, only
- * if the target file is suitable.
- *
- * A send function is not written if it has a uuid-range attribute.
- */
-bool CBESndFunction::DoWriteFunction(CBEImplementationFile* pFile)
-{
-    if (!IsTargetFile(pFile))
-        return false;
-	if (m_Attributes.Find(ATTR_UUID_RANGE))
-		return false;
-    if (pFile->IsOfFileType(FILETYPE_CLIENT) && (m_Attributes.Find(ATTR_IN)))
-        return true;
-    if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (m_Attributes.Find(ATTR_OUT)))
-        return true;
-    return false;
+	if (pFile->IsOfFileType(FILETYPE_CLIENT) && (m_Attributes.Find(ATTR_IN)))
+		return true;
+	if (pFile->IsOfFileType(FILETYPE_COMPONENT) && (m_Attributes.Find(ATTR_OUT)))
+		return true;
+	return false;
 }
 
 /** \brief return the direction, which this functions sends to
@@ -192,7 +169,7 @@ bool CBESndFunction::DoWriteFunction(CBEImplementationFile* pFile)
  */
 DIRECTION_TYPE CBESndFunction::GetSendDirection()
 {
-    return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
+	return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
 }
 
 /** \brief get the direction this function receives data from
@@ -202,7 +179,7 @@ DIRECTION_TYPE CBESndFunction::GetSendDirection()
  */
 DIRECTION_TYPE CBESndFunction::GetReceiveDirection()
 {
-    return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
+	return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
 
 /** \brief calcualtes the size of this function
@@ -211,12 +188,12 @@ DIRECTION_TYPE CBESndFunction::GetReceiveDirection()
  */
 int CBESndFunction::GetSize(DIRECTION_TYPE nDirection)
 {
-    // get base class' size
-    int nSize = CBEOperationFunction::GetSize(nDirection);
-    if ((nDirection & GetSendDirection()) &&
-        !m_Attributes.Find(ATTR_NOOPCODE))
-        nSize += CCompiler::GetSizes()->GetOpcodeSize();
-    return nSize;
+	// get base class' size
+	int nSize = CBEOperationFunction::GetSize(nDirection);
+	if ((nDirection & GetSendDirection()) &&
+		!m_Attributes.Find(ATTR_NOOPCODE))
+		nSize += CCompiler::GetSizes()->GetOpcodeSize();
+	return nSize;
 }
 
 /** \brief calculates the size of the fixed sized params of this function
@@ -225,11 +202,11 @@ int CBESndFunction::GetSize(DIRECTION_TYPE nDirection)
  */
 int CBESndFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
-    int nSize = CBEOperationFunction::GetFixedSize(nDirection);
-    if ((nDirection & GetSendDirection()) &&
-        !m_Attributes.Find(ATTR_NOOPCODE))
-        nSize += CCompiler::GetSizes()->GetOpcodeSize();
-    return nSize;
+	int nSize = CBEOperationFunction::GetFixedSize(nDirection);
+	if ((nDirection & GetSendDirection()) &&
+		!m_Attributes.Find(ATTR_NOOPCODE))
+		nSize += CCompiler::GetSizes()->GetOpcodeSize();
+	return nSize;
 }
 
 /** \brief marshals the return value
@@ -242,23 +219,23 @@ int CBESndFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  */
 int
 CBESndFunction::WriteMarshalReturn(CBEFile& pFile,
-    bool bMarshal)
+	bool bMarshal)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
 
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sReturn = pNF->GetReturnVariable();
-    CBETypedDeclarator *pReturn = FindParameter(sReturn);
-    if (!pReturn)
-        return 0;
-    CBEType *pType = pReturn->GetType();
-    if (pType->IsVoid())
-        return 0;
-    CBEMarshaller *pMarshaller = GetMarshaller();
-    pMarshaller->MarshalParameter(pFile, this, pReturn, bMarshal);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sReturn = pNF->GetReturnVariable();
+	CBETypedDeclarator *pReturn = FindParameter(sReturn);
+	if (!pReturn)
+		return 0;
+	CBEType *pType = pReturn->GetType();
+	if (pType->IsVoid())
+		return 0;
+	CBEMarshaller *pMarshaller = GetMarshaller();
+	pMarshaller->MarshalParameter(pFile, this, pReturn, bMarshal);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s returns\n", __func__, GetName().c_str());
-    return pType->GetSize();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s returns\n", __func__, GetName().c_str());
+	return pType->GetSize();
 }
 
 /** \brief manipulates the  message buffer
@@ -268,24 +245,19 @@ CBESndFunction::WriteMarshalReturn(CBEFile& pFile,
 void
 CBESndFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
-    // check return type (do test here because sometimes we like to call
-    // AddReturnVariable depending on other constraint--return is parameter)
+	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
+	// check return type (do test here because sometimes we like to call
+	// AddReturnVariable depending on other constraint--return is parameter)
 
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sReturn = pNF->GetReturnVariable();
-    CBETypedDeclarator *pReturn = FindParameter(sReturn);
-    if (!pReturn)
-        return;
-    CBEType *pType = pReturn->GetType();
-    if (pType->IsVoid())
-        return;
-    // add return variable
-    if (!pMsgBuffer->AddReturnVariable(this, pReturn))
-    {
-	string exc = string(__func__);
-	exc += " failed, because return variable could not be added to message buffer.";
-	throw new error::create_error(exc);
-    }
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sReturn = pNF->GetReturnVariable();
+	CBETypedDeclarator *pReturn = FindParameter(sReturn);
+	if (!pReturn)
+		return;
+	CBEType *pType = pReturn->GetType();
+	if (pType->IsVoid())
+		return;
+	// add return variable
+	pMsgBuffer->AddReturnVariable(this, pReturn);
 }
 

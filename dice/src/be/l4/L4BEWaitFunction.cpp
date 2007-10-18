@@ -61,13 +61,13 @@ CL4BEWaitFunction::~CL4BEWaitFunction()
  */
 void CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)
 {
-    CBEWaitFunction::CreateBackEnd(pFEOperation, bComponentSide);
+	CBEWaitFunction::CreateBackEnd(pFEOperation, bComponentSide);
 
-    // add local variables
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-    string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
-    AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
+	// add local variables
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	string sDope = pNF->GetTypeName(TYPE_MSGDOPE_SEND, false);
+	AddLocalVariable(sDope, sResult, 0, string("{ msgdope: 0 }"));
 }
 
 /** \brief creates the CORBA_Environment variable (and parameter)
@@ -95,17 +95,17 @@ void CL4BEWaitFunction::CreateEnvironment()
 void
 CL4BEWaitFunction::WriteInvocation(CBEFile& pFile)
 {
-    // set size and send dope
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-	GetReceiveDirection());
+	// set size and send dope
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	assert(pMsgBuffer);
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
+		CMsgStructType(GetReceiveDirection()));
 
-    // invocate
-    WriteIPC(pFile);
-    WriteIPCErrorCheck(pFile);
-    // write opcode check
-    WriteOpcodeCheck(pFile);
+	// invocate
+	WriteIPC(pFile);
+	WriteIPCErrorCheck(pFile);
+	// write opcode check
+	WriteOpcodeCheck(pFile);
 }
 
 /** \brief writes the IPC error checking code
@@ -114,51 +114,51 @@ CL4BEWaitFunction::WriteInvocation(CBEFile& pFile)
 void
 CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
-    if (!m_sErrorFunction.empty())
-    {
-	pFile << "\t/* test for IPC errors */\n";
-	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult
-	    << ")))\n";
-        ++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
-        WriteCallParameter(pFile, GetEnvironment(), true);
-        pFile << ");\n";
-        --pFile;
-    }
-    else if (!IsComponentSide())
-    {
-	CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
-	string sEnv;
-	if (pDecl->GetStars() == 0)
-	    sEnv = "&";
-	sEnv += pDecl->GetName();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	if (!m_sErrorFunction.empty())
+	{
+		pFile << "\t/* test for IPC errors */\n";
+		pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult
+			<< ")))\n";
+		++pFile << "\t" << m_sErrorFunction << "(" << sResult << ", ";
+		WriteCallParameter(pFile, GetEnvironment(), true);
+		pFile << ");\n";
+		--pFile;
+	}
+	else if (!IsComponentSide())
+	{
+		CBEDeclarator *pDecl = GetEnvironment()->m_Declarators.First();
+		string sEnv;
+		if (pDecl->GetStars() == 0)
+			sEnv = "&";
+		sEnv += pDecl->GetName();
 
-	CBEType *pType = GetEnvironment()->GetType();
-	string sSetFunc;
-	if (static_cast<CBEUserDefinedType*>(pType)->GetName() ==
-	    "CORBA_Server_Environment")
-	    sSetFunc = "CORBA_server_exception_set";
-	else
-	    sSetFunc = "CORBA_exception_set";
+		CBEType *pType = GetEnvironment()->GetType();
+		string sSetFunc;
+		if (static_cast<CBEUserDefinedType*>(pType)->GetName() ==
+			"CORBA_Server_Environment")
+			sSetFunc = "CORBA_server_exception_set";
+		else
+			sSetFunc = "CORBA_exception_set";
 
-	pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult <<
-	    ")))\n" <<
-	    "\t{\n";
-	// env.major = CORBA_SYSTEM_EXCEPTION;
-	// env.repos_id = DICE_IPC_ERROR;
-	++pFile << "\t" << sSetFunc << " (" << sEnv << ",\n";
-	++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
-	    "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
-	    "\t0);\n";
-	// env.ipc_error = L4_IPC_ERROR(result);
-	--pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" <<
-	    sResult << ");\n";
-	// return
-	WriteReturn(pFile);
-	// close }
-	--pFile << "\t}\n";
-    }
+		pFile << "\tif (DICE_EXPECT_FALSE(L4_IPC_IS_ERROR(" << sResult <<
+			")))\n" <<
+			"\t{\n";
+		// env.major = CORBA_SYSTEM_EXCEPTION;
+		// env.repos_id = DICE_IPC_ERROR;
+		++pFile << "\t" << sSetFunc << " (" << sEnv << ",\n";
+		++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
+			"\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
+			"\t0);\n";
+		// env.ipc_error = L4_IPC_ERROR(result);
+		--pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" <<
+			sResult << ");\n";
+		// return
+		WriteReturn(pFile);
+		// close }
+		--pFile << "\t}\n";
+}
 }
 
 /** \brief writes a patch to find the opcode if flexpage were received
@@ -182,56 +182,56 @@ CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 void
 CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 {
-    if (GetParameterCount(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
-        return;
-    bool bFixedNumberOfFlexpages = true;
-    int nNumberOfFlexpages =
-	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
-    CBESizes *pSizes = CCompiler::GetSizes();
-    int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
-	             pSizes->GetSizeOfType(TYPE_MWORD);
-    // if fixed number  (should be true for only one flexpage as well)
-    if (bFixedNumberOfFlexpages)
-    {
-	// the fixed offset (where to find the opcode) is:
-	// offset = 8*nMaxNumberOfFlexpages + 8
-	++pFile;
-	CBETypedDeclarator *pReturn = GetReturnVariable();
-	if (!pReturn)
-	    return;
-	CL4BEMarshaller *pMarshaller =
-	    dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
-	assert(pMarshaller);
-	pMarshaller->MarshalParameter(pFile, this, pReturn, false,
-	    (nNumberOfFlexpages+1) * nSizeFpage);
-	--pFile;
-    }
-    else
-    {
-	// the variable offset can be determined by searching for the
-	// delimiter flexpage which is two zero dwords
-	pFile << "\t{\n";
-	// search for delimiter flexpage
-	CBENameFactory *pNF = CBENameFactory::Instance();
-	string sTempVar = pNF->GetTempOffsetVariable();
-	// init temp var
-	++pFile << "\t" << sTempVar << " = 0;\n";
-	pFile << "\twhile ((";
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
-	pFile << "[" << sTempVar << "++] != 0) && (";
-	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
-	pFile << "[" << sTempVar << "++] != 0)) /* empty */;\n";
+	if (GetParameterCount(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
+		return;
+	bool bFixedNumberOfFlexpages = true;
+	int nNumberOfFlexpages =
+		m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
+	CBESizes *pSizes = CCompiler::GetSizes();
+	int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
+		pSizes->GetSizeOfType(TYPE_MWORD);
+	// if fixed number  (should be true for only one flexpage as well)
+	if (bFixedNumberOfFlexpages)
+	{
+		// the fixed offset (where to find the opcode) is:
+		// offset = 8*nMaxNumberOfFlexpages + 8
+		++pFile;
+		CBETypedDeclarator *pReturn = GetReturnVariable();
+		if (!pReturn)
+			return;
+		CL4BEMarshaller *pMarshaller =
+			dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
+		assert(pMarshaller);
+		pMarshaller->MarshalParameter(pFile, this, pReturn, false,
+			(nNumberOfFlexpages+1) * nSizeFpage);
+		--pFile;
+	}
+	else
+	{
+		// the variable offset can be determined by searching for the
+		// delimiter flexpage which is two zero dwords
+		pFile << "\t{\n";
+		// search for delimiter flexpage
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		string sTempVar = pNF->GetTempOffsetVariable();
+		// init temp var
+		++pFile << "\t" << sTempVar << " = 0;\n";
+		pFile << "\twhile ((";
+		CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+		pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
+		pFile << "[" << sTempVar << "++] != 0) && (";
+		pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
+		pFile << "[" << sTempVar << "++] != 0)) /* empty */;\n";
 
-	// now sTempVar points to the delimiter flexpage
-	// we have to add another 8 bytes to find the opcode, because
-	// UnmarshalReturn does only use temp-var
-	pFile << "\t/* skip zero fpage */\n";
-	pFile << "\t" << sTempVar << " += 2;\n";
-	// now unmarshal opcode
-	WriteMarshalReturn(pFile, false);
-	++pFile << "\t}\n";
-    }
+		// now sTempVar points to the delimiter flexpage
+		// we have to add another 8 bytes to find the opcode, because
+		// UnmarshalReturn does only use temp-var
+		pFile << "\t/* skip zero fpage */\n";
+		pFile << "\t" << sTempVar << " += 2;\n";
+		// now unmarshal opcode
+		WriteMarshalReturn(pFile, false);
+		++pFile << "\t}\n";
+	}
 }
 
 /** \brief writes the ipc code
@@ -240,12 +240,12 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 void
 CL4BEWaitFunction::WriteIPC(CBEFile& pFile)
 {
-    CBECommunication *pComm = GetCommunication();
-    assert(pComm);
-    if (m_bOpenWait)
-        pComm->WriteWait(pFile, this);
-    else
-        pComm->WriteReceive(pFile, this);
+	CBECommunication *pComm = GetCommunication();
+	assert(pComm);
+	if (m_bOpenWait)
+		pComm->WriteWait(pFile, this);
+	else
+		pComm->WriteReceive(pFile, this);
 }
 
 /** \brief init message receive flexpage
@@ -254,12 +254,12 @@ CL4BEWaitFunction::WriteIPC(CBEFile& pFile)
 void
 CL4BEWaitFunction::WriteVariableInitialization(CBEFile& pFile)
 {
-    CBEWaitFunction::WriteVariableInitialization(pFile);
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    assert(pMsgBuffer);
-    CMsgStructType nType = GetReceiveDirection();
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, nType);
-    pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, nType);
+	CBEWaitFunction::WriteVariableInitialization(pFile);
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	assert(pMsgBuffer);
+	CMsgStructType nType(GetReceiveDirection());
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, nType);
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, nType);
 }
 
 /** \brief calculates the size of the function's parameters
@@ -272,13 +272,13 @@ CL4BEWaitFunction::WriteVariableInitialization(CBEFile& pFile)
 int
 CL4BEWaitFunction::GetSize(DIRECTION_TYPE nDirection)
 {
-    // get base class' size
-    int nSize = CBEWaitFunction::GetSize(nDirection);
-    if ((nDirection & DIRECTION_OUT) &&
-        !m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
-        (GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
-        nSize -= CCompiler::GetSizes()->GetExceptionSize();
-    return nSize;
+	// get base class' size
+	int nSize = CBEWaitFunction::GetSize(nDirection);
+	if ((nDirection & DIRECTION_OUT) &&
+		!m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
+		(GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
+		nSize -= CCompiler::GetSizes()->GetExceptionSize();
+	return nSize;
 }
 
 /** \brief calculates the size of the function's fixed-sized parameters
@@ -291,12 +291,12 @@ CL4BEWaitFunction::GetSize(DIRECTION_TYPE nDirection)
 int
 CL4BEWaitFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
-    int nSize = CBEWaitFunction::GetFixedSize(nDirection);
-    if ((nDirection & DIRECTION_OUT) &&
-        !m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
-        (GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
-        nSize -= CCompiler::GetSizes()->GetExceptionSize();
-    return nSize;
+	int nSize = CBEWaitFunction::GetFixedSize(nDirection);
+	if ((nDirection & DIRECTION_OUT) &&
+		!m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
+		(GetParameterCount(TYPE_FLEXPAGE, DIRECTION_OUT) > 0))
+		nSize -= CCompiler::GetSizes()->GetExceptionSize();
+	return nSize;
 }
 
 /** \brief test if this function has variable sized parameters
@@ -307,10 +307,10 @@ CL4BEWaitFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 bool
 CL4BEWaitFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 {
-    bool bRet = CBEWaitFunction::HasVariableSizedParameters(nDirection);
-    // if we have indirect strings to marshal then we need the offset vars
-    if (GetParameterCount(ATTR_REF, ATTR_NONE, nDirection))
-        return true;
-    return bRet;
+	bool bRet = CBEWaitFunction::HasVariableSizedParameters(nDirection);
+	// if we have indirect strings to marshal then we need the offset vars
+	if (GetParameterCount(ATTR_REF, ATTR_NONE, nDirection))
+		return true;
+	return bRet;
 }
 

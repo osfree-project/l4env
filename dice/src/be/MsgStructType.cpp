@@ -88,3 +88,28 @@ bool operator!= (const CMsgStructType& l, const CMsgStructType::Type& r)
     return l.nType != r;
 }
 
+/** \brief assignment operator
+ *  \param l the message buffer struct to assign a value
+ *  \param r the direction value to assign
+ *  \return the original message buffer struct type
+ */
+CMsgStructType& CMsgStructType::operator= (DIRECTION_TYPE r)
+{
+	switch (r) {
+	case 0:
+	case DIRECTION_INOUT:
+		nType = Generic;
+		break;
+	case DIRECTION_IN:
+		nType = In;
+		break;
+	case DIRECTION_OUT:
+		nType = Out;
+		break;
+	default:
+		nType = Exc;
+	}
+	return *this;
+}
+
+

@@ -92,7 +92,7 @@ void CL4BEReplyFunction::WriteInvocation(CBEFile& pFile)
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-		GetSendDirection());
+		CMsgStructType(GetSendDirection()));
 
 	// invocate
 	WriteIPC(pFile);
@@ -151,7 +151,7 @@ void CL4BEReplyFunction::WriteVariableInitialization(CBEFile& pFile)
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE,
-		GetSendDirection());
+		CMsgStructType(GetSendDirection()));
 }
 
 /** \brief calculates the size of the function's parameters

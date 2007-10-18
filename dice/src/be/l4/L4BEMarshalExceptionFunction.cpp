@@ -30,6 +30,7 @@
 #include "be/BEClass.h"
 #include "be/BEMsgBuffer.h"
 #include "TypeSpec-L4Types.h"
+#include "Compiler.h"
 #include <cassert>
 
 CL4BEMarshalExceptionFunction::CL4BEMarshalExceptionFunction()
@@ -65,7 +66,7 @@ void CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile& pFile)
 
 	// set send dope
 	CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
-	CMsgStructType nType = GetSendDirection();
+	CMsgStructType nType(GetSendDirection());
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
 		nType);
 

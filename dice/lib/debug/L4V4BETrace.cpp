@@ -109,7 +109,7 @@ CL4V4BETrace::BeforeCall(CBEFile& pFile,
 	    ": server %lX (mr0 %08lx)\\n\", " << pObjName->GetName() <<
 	    "->raw, ";
 	pMsgBuffer->WriteAccessToStruct(pFile, pFunction,
-	    pFunction->GetSendDirection());
+	    CMsgStructType(pFunction->GetSendDirection()));
 	pFile << "." << sMsgTag << ".raw);\n";
     }
 }
@@ -131,8 +131,8 @@ CL4V4BETrace::AfterCall(CBEFile& pFile,
 	pFunction->IsComponentSide())
 	return;
 
-    CMsgStructType nRcvDir = pFunction->GetReceiveDirection();
-    CMsgStructType nSndDir = pFunction->GetSendDirection();
+    CMsgStructType nRcvDir(pFunction->GetReceiveDirection());
+    CMsgStructType nSndDir(pFunction->GetSendDirection());
     // check if we send a short IPC
     CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
     assert(pMsgBuffer);
@@ -185,7 +185,7 @@ CL4V4BETrace::BeforeDispatch(CBEFile& pFile,
     string sMsgTag = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
     string sFunc;
     CCompiler::GetBackEndOption(string("trace-server-func"), sFunc);
-    CMsgStructType nDirection = pFunction->GetReceiveDirection();
+    CMsgStructType nDirection(pFunction->GetReceiveDirection());
 
     pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": opcode %lx received from %lX\\n\",\n";
@@ -223,7 +223,7 @@ CL4V4BETrace::AfterDispatch(CBEFile& pFile,
     string sFunc;
     CCompiler::GetBackEndOption(string("trace-server-func"), sFunc);
     string sReply = pNF->GetReplyCodeVariable();
-    CMsgStructType nDirection = pFunction->GetSendDirection();
+    CMsgStructType nDirection(pFunction->GetSendDirection());
     CL4BEMarshaller *pMarshaller = static_cast<CL4BEMarshaller*>(
 	pCF->GetNewMarshaller());
 
@@ -286,7 +286,7 @@ CL4V4BETrace::BeforeReplyWait(CBEFile& pFile,
     pFile << "\t" << sFunc << " (\"" << pFunction->GetName() <<
 	": send reply to %lX (label %08lx)\\n\", " << sObjectVar <<
 	"->raw, ";
-    pMsgBuffer->WriteAccessToStruct(pFile, pFunction, DIRECTION_INOUT);
+    pMsgBuffer->WriteAccessToStruct(pFile, pFunction, CMsgStructType::Generic);
     pFile << "." << sMsgTag << ".raw);\n";
 }
 

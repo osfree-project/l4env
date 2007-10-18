@@ -83,7 +83,7 @@ void CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bCompon
 	// add the original return type as extra parameter
 	// set return type
 	if (IsComponentSide())
-		SetReturnVar(false, 0, TYPE_VOID, string());
+		SetNoReturnVar();
 
 	// add marshaller and communication class
 	CreateMarshaller();
@@ -109,13 +109,8 @@ CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 	// add return variable if we have a return parameter
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sReturn = pNF->GetReturnVariable();
-	if (FindParameter(sReturn) &&
-		!pMsgBuffer->AddReturnVariable(this))
-	{
-		string exc = string(__func__);
-		exc += " failed, because return variable could not be added to message buffer.";
-		throw new error::create_error(exc);
-	}
+	if (FindParameter(sReturn))
+		pMsgBuffer->AddReturnVariable(this);
 	// in marshal function, the message buffer is a pointer to the server's
 	// message buffer
 	pMsgBuffer->m_Declarators.First()->SetStars(1);
@@ -129,10 +124,8 @@ CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
  * not initialize the message buffer - this may overwrite the values we try to
  * unmarshal.
  */
-void
-CBEMarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
-{
-}
+void CBEMarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
+{ }
 
 /** \brief writes the invocation of the message transfer
  *  \param pFile the file to write to
@@ -140,10 +133,8 @@ CBEMarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
  * This implementation does nothing, because the unmarshalling does not
  * contain a message transfer.
  */
-void
-CBEMarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
-{
-}
+void CBEMarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
+{ }
 
 /** \brief writes a single parameter for the function call
  *  \param pFile the file to write to
@@ -185,9 +176,9 @@ CBEMarshalFunction::GetExceptionVariable()
 		return 0;
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetExceptionWordVariable();
-	pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
+	pRet = pMsgBuf->FindMember(sName, this, CMsgStructType(GetSendDirection()));
 	if (!pRet)
-		pRet = pMsgBuf->FindMember(sName, this, GetReceiveDirection());
+		pRet = pMsgBuf->FindMember(sName, this, CMsgStructType(GetReceiveDirection()));
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s exception var %s at %p\n", __func__,
 		sName.c_str(), pRet);
 
@@ -326,17 +317,8 @@ CBEMarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
 CBETypedDeclarator * CBEMarshalFunction::FindParameterType(string sTypeName)
 {
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-	if (pMsgBuffer)
-	{
-		CBEType *pType = pMsgBuffer->GetType();
-		if (dynamic_cast<CBEUserDefinedType*>(pType))
-		{
-			if (((CBEUserDefinedType*)pType)->GetName() == sTypeName)
-				return pMsgBuffer;
-		}
-		if (pType->HasTag(sTypeName))
-			return pMsgBuffer;
-	}
+	if (pMsgBuffer && pMsgBuffer->HasType(sTypeName))
+		return pMsgBuffer;
 	return CBEOperationFunction::FindParameterType(sTypeName);
 }
 
@@ -443,39 +425,7 @@ void CBEMarshalFunction::WriteReturn(CBEFile& pFile)
  * A marshal function is written if client's side and IN or if component's side
  * and one of the parameters has an OUT or we have an exception to transmit.
  */
-bool
-CBEMarshalFunction::DoWriteFunction(CBEHeaderFile* pFile)
-{
-	if (!IsTargetFile(pFile))
-		return false;
-	if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-		(m_Attributes.Find(ATTR_IN)))
-		return true;
-	if (pFile->IsOfFileType(FILETYPE_COMPONENT))
-	{
-		/* look for an OUT parameter */
-		if (FindParameterAttribute(ATTR_OUT))
-			return true;
-		/* look for return type */
-		if (GetReturnType() &&
-			!GetReturnType()->IsVoid())
-			return true;
-		/* check for exceptions */
-		if (!m_Attributes.Find(ATTR_NOEXCEPTIONS))
-			return true;
-	}
-	return false;
-}
-
-/** \brief test if this function should be written
- *  \param pFile the file to write to
- *  \return true if should be written
- *
- * A marshal function is written if client's side and IN or if component's side
- * and one of the parameters has an OUT or we have an exception to transmit.
- */
-bool
-CBEMarshalFunction::DoWriteFunction(CBEImplementationFile* pFile)
+bool CBEMarshalFunction::DoWriteFunction(CBEFile* pFile)
 {
 	if (!IsTargetFile(pFile))
 		return false;
@@ -514,9 +464,6 @@ CBEMarshalFunction::DoWriteFunction(CBEImplementationFile* pFile)
 void
 CBEMarshalFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEUnmarshalFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());

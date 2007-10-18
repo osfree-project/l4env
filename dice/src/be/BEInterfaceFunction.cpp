@@ -73,12 +73,7 @@ void CBEInterfaceFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bCompo
 	// should be parent
 	assert(m_pClass == m_pParent);
 	// set return type
-	if (!SetReturnVar(false, 0, TYPE_VOID, string()))
-	{
-		string exc = string(__func__);
-		exc += " failed because return var could not be set.";
-		throw new error::create_error(exc);
-	}
+	SetNoReturnVar();
 
 	// check if interface has error function and add its name if available
 	if (pFEInterface->m_Attributes.Find(ATTR_ERROR_FUNCTION))

@@ -49,8 +49,7 @@ public:
 
 public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+    virtual bool DoWriteFunction(CBEFile* pFile);
     virtual DIRECTION_TYPE GetSendDirection();
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual int GetSize(DIRECTION_TYPE nDirection);

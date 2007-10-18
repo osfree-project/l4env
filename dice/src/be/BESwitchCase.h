@@ -60,8 +60,7 @@ public:
     virtual void SetCallVariable(std::string sOriginalName, int nStars,
 	std::string sCallName);
 
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+    virtual bool DoWriteFunction(CBEFile* pFile);
 
 protected:
     virtual void WriteVariableInitialization(CBEFile& pFile, DIRECTION_TYPE nDirection);

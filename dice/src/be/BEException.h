@@ -45,14 +45,13 @@ public:
     CBEException();
     virtual ~CBEException();
 
-protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBEException(CBEException* src);
-
-public:
 	virtual CObject* Clone();
+
+protected:
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBEException(CBEException * src);
 };
 
 #endif // !__DICE_BEEXCEPTION_H__

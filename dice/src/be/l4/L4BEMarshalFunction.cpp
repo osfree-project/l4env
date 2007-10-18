@@ -70,7 +70,7 @@ void CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 	}
 
 	CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
-	CMsgStructType nType = GetSendDirection();
+	CMsgStructType nType(GetSendDirection());
 	bool bSendFpages = GetParameterCount(TYPE_FLEXPAGE, GetSendDirection()) > 0;
 	if (bSendFpages)
 	{

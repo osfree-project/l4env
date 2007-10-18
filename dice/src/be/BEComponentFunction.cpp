@@ -293,17 +293,29 @@ void CBEComponentFunction::SetTargetFileName(CFEBase * pFEObject)
 /** \brief test the target file name with the locally stored file name
  *  \param pFile the file, which's file name is used for the comparison
  *  \return true if is the target file
+ *
+ * Check if the given implementation file is a template file. Header files are
+ * checked by the base class' implementation.
  */
-bool CBEComponentFunction::IsTargetFile(CBEImplementationFile* pFile)
+bool CBEComponentFunction::IsTargetFile(CBEFile* pFile)
 {
-	long length = m_sTargetImplementation.length();
+	if (pFile->IsOfFileType(FILETYPE_HEADER))
+		return CBEOperationFunction::IsTargetFile(pFile);
 	if (!pFile->IsOfFileType(FILETYPE_TEMPLATE))
 		return false;
-	// check internal (local) name
-	if ((m_sTargetImplementation.substr(length - 11) != "-template.c") &&
-		(m_sTargetImplementation.substr(length - 12) != "-template.cc"))
+
+	string sSuffix = "-template.";
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+		sSuffix += "cc";
+	else
+		sSuffix += "c";
+	unsigned long length = m_sTargetImplementation.length();
+	if (length < sSuffix.length())
 		return false;
-	string sBaseLocal = m_sTargetImplementation.substr(0, length - 11);
+	// check internal (local) name
+	if (m_sTargetImplementation.substr(length - sSuffix.length()) != sSuffix)
+		return false;
+	string sBaseLocal = m_sTargetImplementation.substr(0, length - sSuffix.length());
 	// check filename
 	string sBaseTarget = pFile->GetFileName();
 	string sOutputDir;
@@ -312,12 +324,11 @@ bool CBEComponentFunction::IsTargetFile(CBEImplementationFile* pFile)
 		sBaseTarget = sBaseTarget.substr(sOutputDir.length());
 
 	length = sBaseTarget.length();
-	if (length <= 11)
+	if (length < sSuffix.length())
 		return false;
-	if ((sBaseTarget.substr(length - 11) != "-template.c") &&
-		(sBaseTarget.substr(length - 12) != "-template.cc"))
+	if (sBaseTarget.substr(length - sSuffix.length()) != sSuffix)
 		return false;
-	sBaseTarget = sBaseTarget.substr(0, length - 11);
+	sBaseTarget = sBaseTarget.substr(0, length - sSuffix.length());
 	// compare common parts
 	return sBaseLocal == sBaseTarget;
 }
@@ -332,32 +343,15 @@ bool CBEComponentFunction::IsTargetFile(CBEImplementationFile* pFile)
  * for the component's side. (The function would not have been created if the
  * attributes (IN,OUT) were not empty).
  */
-bool CBEComponentFunction::DoWriteFunction(CBEHeaderFile* pFile)
+bool CBEComponentFunction::DoWriteFunction(CBEFile* pFile)
 {
 	if (!pFile->IsOfFileType(FILETYPE_COMPONENT))
 		return false;
-	if (!CBEOperationFunction::IsTargetFile(pFile))
+	if (!IsTargetFile(pFile))
 		return false;
+	if (pFile->IsOfFileType(FILETYPE_IMPLEMENTATION))
+		return CCompiler::IsOptionSet(PROGRAM_GENERATE_TEMPLATE);
 	return true;
-}
-
-/** \brief test if this function should be written
- *  \param pFile the file to write to
- *  \return true if successful
- *
- * A component function is written to an implementation file only if the
- * options PROGRAM_GENERATE_TEMPLATE are set.
- * It is always written to an header file. These two conditions are only true
- * for the component's side. (The function would not have been created if the
- * attributes (IN,OUT) were not empty).
- */
-bool CBEComponentFunction::DoWriteFunction(CBEImplementationFile* pFile)
-{
-    if (!pFile->IsOfFileType(FILETYPE_COMPONENT))
-        return false;
-    if (!IsTargetFile(pFile))
-        return false;
-    return CCompiler::IsOptionSet(PROGRAM_GENERATE_TEMPLATE);
 }
 
 /** \brief check if parameter should be written

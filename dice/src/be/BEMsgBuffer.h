@@ -61,6 +61,7 @@ public: // public methods
 	virtual int GetCount(int nFEType, CMsgStructType nType);
 	virtual int GetCountAll(int nFEType, CMsgStructType nType);
 	virtual int GetPayloadOffset();
+	CBEMsgBufferType* GetType(CBEFunction *pFunction);
 
 	using CBETypedef::CreateBackEnd;
 	virtual void CreateBackEnd(CFEOperation *pFEOperation);
@@ -68,7 +69,7 @@ public: // public methods
 	virtual void PostCreate(CBEClass *pClass, CFEInterface *pFEInterface);
 	virtual void PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation);
 
-	virtual bool AddReturnVariable(CBEFunction *pFunction,
+	void AddReturnVariable(CBEFunction *pFunction,
 		CBETypedDeclarator *pReturn = 0);
 	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction);
 	virtual void AddPlatformSpecificMembers(CBEClass *pClass);
@@ -86,8 +87,7 @@ public: // public methods
 	virtual void WriteGenericMemberAccess(CBEFile& pFile, int nIndex);
 	void WriteAccessToStruct(CBEFile& pFile, CBEFunction *pFunction,
 		CMsgStructType nType);
-	CBETypedDeclarator* WriteAccessToVariable(CBEFile& pFile,
-		CBEFunction *pFunction, bool bPointer);
+	CBETypedDeclarator* GetVariable(CBEFunction *pFunction);
 	virtual void WriteInitialization(CBEFile& pFile, CBEFunction *pFunction,
 		int nType, CMsgStructType nStructType);
 	virtual void WriteDump(CBEFile& pFile);
@@ -107,8 +107,7 @@ public: // public methods
 		std::string sName1, std::string sName2);
 
 protected: // protected methods
-	virtual CBEType* CreateType(CFEOperation *pFEOperation);
-	virtual CBEType* CreateType(CFEInterface *pFEInterface);
+	template<class T> CBEType* CreateType(T * pFEObject);
 
 	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction,
 		CBEStructType *pStruct, CMsgStructType nType);

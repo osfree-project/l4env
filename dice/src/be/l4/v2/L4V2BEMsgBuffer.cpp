@@ -135,7 +135,7 @@ void CL4V2BEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation *pF
 	if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
 		return;
 
-	CMsgStructType nType = pFunction->GetSendDirection();
+	CMsgStructType nType(pFunction->GetSendDirection());
 	bool bWordMembers = HasWordMembers(pFunction, nType);
 	if (bWordMembers)
 	{

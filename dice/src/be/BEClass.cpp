@@ -176,13 +176,7 @@ public:
 	GetFunctionWriteCountPred(CBEFile *ff) : f(ff) { }
 	bool operator() (CBEFunction *fun)
 	{
-		CBEHeaderFile *h = dynamic_cast<CBEHeaderFile*>(f);
-		if (h && fun->DoWriteFunction(h))
-			return true;
-		CBEImplementationFile *i = dynamic_cast<CBEImplementationFile*>(f);
-		if (i && fun->DoWriteFunction(i))
-			return true;
-		return false;
+		return fun->DoWriteFunction(f);
 	}
 };
 
@@ -728,13 +722,13 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
 		(*iterFG)->m_Functions.Add(pFunction);
 		pFunction->CreateBackEnd(pFEOperation, true);
 
-		if (!pFEOperation->m_RaisesDeclarators.empty())
-		{
-			pFunction = pCF->GetNewMarshalExceptionFunction();
-			m_Functions.Add(pFunction);
-			(*iterFG)->m_Functions.Add(pFunction);
-			pFunction->CreateBackEnd(pFEOperation, true);
-		}
+// 		if (!pFEOperation->m_RaisesDeclarators.empty())
+// 		{
+// 			pFunction = pCF->GetNewMarshalExceptionFunction();
+// 			m_Functions.Add(pFunction);
+// 			(*iterFG)->m_Functions.Add(pFunction);
+// 			pFunction->CreateBackEnd(pFEOperation, true);
+// 		}
 	}
 	else
 	{
@@ -1318,7 +1312,9 @@ void CBEClass::WriteMemberVariables(CBEHeaderFile& pFile)
 	if (pFile.IsOfFileType(FILETYPE_CLIENTHEADER))
 	{
 		++pFile << "\t/* contains the address of the server */\n";
-		pFile << "\tCORBA_Object_base _dice_server;\n";
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		string sObj = pNF->GetServerVariable();
+		pFile << "\tCORBA_Object_base " << sObj << ";\n";
 		pFile << "\n";
 		--pFile;
 	}
@@ -1358,7 +1354,11 @@ void CBEClass::WriteConstructor(CBEHeaderFile& pFile)
 		pFile << "\t : ";
 		// if we do not have a base class, we initialize our server member
 		if (m_BaseClasses.empty())
-			pFile << "_dice_server(_server)";
+		{
+			CBENameFactory *pNF = CBENameFactory::Instance();
+			string sObj = pNF->GetServerVariable();
+			pFile << sObj << "(_server)";
+		}
 		else
 		{
 			// initialize the base classes
@@ -1558,26 +1558,6 @@ CBEClass::WriteFunctions(CBEHeaderFile& pFile)
 		__func__, GetName().c_str());
 }
 
-/** \brief writes the class to the target file
- *  \param pFile the file to write to
- *
- * With the C implementation the class simply calls it's
- * function's Write method.
- */
-void CBEClass::WriteElements(CBEImplementationFile& pFile)
-{
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::Write(impl, %s) called\n", GetName().c_str());
-
-	// sort our members/elements depending on source line number
-	// into extra vector
-	CreateOrderedElementList();
-	WriteFunctions(pFile);
-
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEClass::Write(impl, %s) finished\n", GetName().c_str());
-}
-
 /** \brief writes the function declarations for the implementation file
  *  \param pFile the implementation file to write to
  */
@@ -1614,6 +1594,26 @@ CBEClass::WriteFunctions(CBEImplementationFile& pFile)
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(impl, %s) finished\n",
 		__func__, GetName().c_str());
+}
+
+/** \brief writes the class to the target file
+ *  \param pFile the file to write to
+ *
+ * With the C implementation the class simply calls it's
+ * function's Write method.
+ */
+void CBEClass::WriteElements(CBEImplementationFile& pFile)
+{
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEClass::Write(impl, %s) called\n", GetName().c_str());
+
+	// sort our members/elements depending on source line number
+	// into extra vector
+	CreateOrderedElementList();
+	WriteFunctions(pFile);
+
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBEClass::Write(impl, %s) finished\n", GetName().c_str());
 }
 
 /** \brief writes the line directive
@@ -2039,8 +2039,6 @@ void
 CBEClass::CheckOpcodeCollision(CFEInterface *pFirst,
 	CFEInterface *pSecond)
 {
-	std::cerr << "CBEClass::CheckOpcodeCollision(" << pFirst->GetName() << ", " <<
-		pSecond->GetName() << ") called\n";
 	// check base interfaces of first interface (will eventually also include
 	// second interfaces)
 	CheckOpcodeCollision(pFirst);
@@ -2191,6 +2189,15 @@ CBETypedef* CBEClass::FindTypedef(string sTypeName, CBETypedef *pPrev)
 			pMsgBuf->GetType()->HasTag(sTypeName))
 			return pMsgBuf;
 	}
+	/* look in functions */
+	vector<CBEFunction*>::iterator iterF;
+	for (iterF = m_Functions.begin();
+		 iterF != m_Functions.end();
+		 iterF++)
+	{
+		if ((pMsgBuf = (*iterF)->FindTypedef(sTypeName, pPrev)) != 0)
+			return pMsgBuf;
+	}
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEClass::%s returns 0\n",
 		__func__);
@@ -2204,27 +2211,7 @@ CBETypedef* CBEClass::FindTypedef(string sTypeName, CBETypedef *pPrev)
  * A file is a target file for the class if its the target file for at least
  * one function.
  */
-bool CBEClass::IsTargetFile(CBEImplementationFile* pFile)
-{
-	vector<CBEFunction*>::iterator iter;
-	for (iter = m_Functions.begin();
-		iter != m_Functions.end();
-		iter++)
-	{
-		if ((*iter)->IsTargetFile(pFile))
-			return true;
-	}
-	return false;
-}
-
-/** \brief test if this class belongs to the file
- *  \param pFile the file to test
- *  \return true if the given file is a target file for the class
- *
- * A file is a target file for the class if its teh target class for at least
- * one function.
- */
-bool CBEClass::IsTargetFile(CBEHeaderFile* pFile)
+bool CBEClass::IsTargetFile(CBEFile* pFile)
 {
 	vector<CBEFunction*>::iterator iter;
 	for (iter = m_Functions.begin();
@@ -2334,12 +2321,7 @@ bool CBEClass::HasFunctionWithUserType(string sTypeName, CBEFile* pFile)
 		iter != m_Functions.end();
 		iter++)
 	{
-		CBEHeaderFile *h = dynamic_cast<CBEHeaderFile*>(pFile);
-		if (h && (*iter)->DoWriteFunction(h) &&
-			(*iter)->FindParameterType(sTypeName))
-			return true;
-		CBEImplementationFile *i = dynamic_cast<CBEImplementationFile*>(pFile);
-		if (i && (*iter)->DoWriteFunction(i) &&
+		if ((*iter)->DoWriteFunction(pFile) &&
 			(*iter)->FindParameterType(sTypeName))
 			return true;
 	}

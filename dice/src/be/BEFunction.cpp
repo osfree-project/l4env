@@ -64,7 +64,8 @@ CBEFunction::CBEFunction(FUNCTION_TYPE nFunctionType)
 	m_Exceptions(0, this),
 	m_Parameters(0, this),
 	m_CallParameters(0, this),
-	m_LocalVariables(0, this)
+	m_LocalVariables(0, this),
+	m_Typedefs(0, this)
 {
 	m_pClass = 0;
 	m_pTarget = 0;
@@ -87,7 +88,8 @@ CBEFunction::CBEFunction(CBEFunction* src)
 	m_Exceptions(src->m_Exceptions),
 	m_Parameters(src->m_Parameters),
 	m_CallParameters(src->m_CallParameters),
-	m_LocalVariables(src->m_LocalVariables)
+	m_LocalVariables(src->m_LocalVariables),
+	m_Typedefs(src->m_Typedefs)
 {
 	m_pClass = src->m_pClass;
 	m_pTarget = src->m_pTarget;
@@ -102,6 +104,7 @@ CBEFunction::CBEFunction(CBEFunction* src)
 	m_Parameters.Adopt(this);
 	m_CallParameters.Adopt(this);
 	m_LocalVariables.Adopt(this);
+	m_Typedefs.Adopt(this);
 
 	CLONE_MEM(CBEMsgBuffer, m_pMsgBuffer);
 	CLONE_MEM(CBETypedDeclarator, m_pCorbaObject);
@@ -188,9 +191,6 @@ CBEFunction::AddAfterParameters()
 void
 CBEFunction::Write(CBEHeaderFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
@@ -220,9 +220,6 @@ CBEFunction::Write(CBEHeaderFile& pFile)
  */
 void CBEFunction::Write(CBEImplementationFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
@@ -255,9 +252,6 @@ CBEFunction::DoWriteFunctionInline(CBEFile& /*pFile*/)
 void
 CBEFunction::WriteFunctionDeclaration(CBEFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) in %s called\n",
 		__func__, pFile.GetFileName().c_str(), GetName().c_str());
 
@@ -302,9 +296,6 @@ CBEFunction::WriteFunctionDeclaration(CBEFile& pFile)
 void
 CBEFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
@@ -429,6 +420,9 @@ void CBEFunction::WriteBody(CBEFile& pFile)
 		"CBEFunction::%s(%s) in %s called\n", __func__,
 		pFile.GetFileName().c_str(), GetName().c_str());
 
+	// function local typedefs
+	WriteTypedefs(pFile);
+
 	// variable declaration and initialization
 	WriteVariableDeclaration(pFile);
 	WriteVariableInitialization(pFile);
@@ -446,6 +440,21 @@ void CBEFunction::WriteBody(CBEFile& pFile)
 		__func__);
 }
 
+/** \brief writes the declaration of the function local typedefs
+ *  \param pFile the file to write to
+ */
+void
+CBEFunction::WriteTypedefs(CBEFile& pFile)
+{
+	vector<CBETypedef*>::iterator iter;
+	for (iter = m_Typedefs.begin();
+		 iter != m_Typedefs.end();
+		 iter++)
+	{
+		(*iter)->WriteDeclaration(pFile);
+	}
+}
+
 /** \brief writes the declaration of the variables
  *  \param pFile the file to write to
  *
@@ -459,7 +468,7 @@ CBEFunction::WriteVariableDeclaration(CBEFile& pFile)
 		iter != m_LocalVariables.end();
 		iter++)
 	{
-		(*iter)->WriteInitDeclaration(pFile, string());
+		(*iter)->WriteInitDeclaration(pFile);
 	}
 
 	if (m_pTrace)
@@ -1150,20 +1159,31 @@ CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
+	/* create the function local typedef */
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBEMsgBuffer *pLocal = pCF->GetNewMessageBuffer();
+	m_Typedefs.Add(pLocal);
+	pLocal->CreateBackEnd(pFEOperation);
+	// add platform specific members
+	pLocal->AddPlatformSpecificMembers(this);
+	// function specific initialization
+	MsgBufferInitialization(pLocal);
+	// sort message buffer
+	pLocal->Sort(this);
+	// post create stuff
+	pLocal->PostCreate(this, pFEOperation);
+
+	// create variable with the type of typedef
 	if (m_pMsgBuffer)
 		delete m_pMsgBuffer;
-	m_pMsgBuffer = CBEClassFactory::Instance()->GetNewMessageBuffer();
+	m_pMsgBuffer = pCF->GetNewMessageBuffer();
 	m_pMsgBuffer->SetParent(this);
-	m_pMsgBuffer->CreateBackEnd(pFEOperation);
-
-	// add platform specific members
-	m_pMsgBuffer->AddPlatformSpecificMembers(this);
-	// function specific initialization
-	MsgBufferInitialization(m_pMsgBuffer);
-	// sort message buffer
-	m_pMsgBuffer->Sort(this);
-	// post create stuff
-	m_pMsgBuffer->PostCreate(this, pFEOperation);
+	string sTypeName = pLocal->m_Declarators.First()->GetName();
+	// get local variable name
+	string sName =
+		CBENameFactory::Instance()->GetMessageBufferVariable();
+	// add as user defined type
+	m_pMsgBuffer->CreateBackEnd(sTypeName, sName, 0);
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
 }
@@ -1275,62 +1295,53 @@ CBEFunction::WriteMarshalException(CBEFile& pFile,
 		GetName().c_str());
 }
 
-/** \brief initializes and sets the return var to a new value
- *  \param bUnsigned if the new return type should be unsigned
- *  \param nSize the size of the type
- *  \param nFEType the front-end type number
- *  \param sName the new name of the return variable
- *  \return true if successful
+/** \brief initializes and sets the return variable to void
  *
- * The type and the name should not be initialized yet. This is all done by
- * this function.
+ * Resets the return variable to a void type and no name.
  */
-bool CBEFunction::SetReturnVar(bool bUnsigned, int nSize, int nFEType, string sName)
+void CBEFunction::SetNoReturnVar()
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s called\n", __func__);
 	// recycle old var
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
-	CBEType *pType = pCF->GetNewType(nFEType);
+	CBEType *pType = pCF->GetNewType(TYPE_VOID);
 	// set type
 	if (!pReturn)
 	{
 		pReturn = pCF->GetNewTypedDeclarator();
 		AddLocalVariable(pReturn);
 		pType->SetParent(pReturn);
-		pType->CreateBackEnd(bUnsigned, nSize, nFEType);
-		pReturn->CreateBackEnd(pType, sName);
+		pType->CreateBackEnd(false, 0, TYPE_VOID);
+		pReturn->CreateBackEnd(pType, string());
 		delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
 	}
 	else
 	{
 		pType->SetParent(pReturn);
-		pType->CreateBackEnd(bUnsigned, nSize, nFEType);
+		pType->CreateBackEnd(false, 0, TYPE_VOID);
 		pReturn->ReplaceType(pType);
 
 		// set name
 		CBEDeclarator *pDecl = pReturn->m_Declarators.First();
-		pDecl->CreateBackEnd(sName, pDecl->GetStars());
+		pDecl->CreateBackEnd(string(), pDecl->GetStars());
 	}
 
 	SetReturnVarAttributes(pReturn);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns\n", __func__);
-	return true;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s returns\n", __func__);
 }
 
 /** \brief initializes and sets the return var to a new value
  *  \param pType the new type of the return variable
  *  \param sName the new name of the return variable
- *  \return true if successful
  *
  * The type and the name should not be initialized yet. This is all done by
  * this function.
  */
-bool CBEFunction::SetReturnVar(CBEType * pType, string sName)
+void CBEFunction::SetReturnVar(CBEType * pType, string sName)
 {
-	if (!pType)
-		return false;
+	assert(pType);
 	// delete old
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 	m_LocalVariables.Remove(pReturn);
@@ -1348,18 +1359,15 @@ bool CBEFunction::SetReturnVar(CBEType * pType, string sName)
 	delete pType;        // is cloned by typed decl
 
 	SetReturnVarAttributes(pReturn);
-	return true;
 }
 
 /** \brief initializes and sets the return var to a new value
  *  \param pFEType the front-end type to use as reference for the new type
  *  \param sName the name of the variable
- *  \return true if successful
  */
-bool CBEFunction::SetReturnVar(CFETypeSpec * pFEType, string sName)
+void CBEFunction::SetReturnVar(CFETypeSpec * pFEType, string sName)
 {
-	if (!pFEType)
-		return false;
+	assert(pFEType);
 	// delete old
 	CBETypedDeclarator *pReturn = GetReturnVariable();
 	m_LocalVariables.Remove(pReturn);
@@ -1375,7 +1383,6 @@ bool CBEFunction::SetReturnVar(CFETypeSpec * pFEType, string sName)
 	delete pType;        // cloned by typed declarator
 
 	SetReturnVarAttributes(pReturn);
-	return true;
 }
 
 /** \brief set some attributes of the return variable
@@ -1752,21 +1759,11 @@ bool CBEFunction::HasArrayParameters(DIRECTION_TYPE nDirection)
  */
 CBETypedDeclarator* CBEFunction::FindParameterType(string sTypeName)
 {
-	vector<CBETypedDeclarator*>::iterator iter;
-	for (iter = m_Parameters.begin();
-		iter != m_Parameters.end();
-		iter++)
-	{
-		CBEType *pType = (*iter)->GetType();
-		if (dynamic_cast<CBEUserDefinedType*>(pType))
-		{
-			if (((CBEUserDefinedType*)pType)->GetName() == sTypeName)
-				return *iter;
-		}
-		if (pType->HasTag(sTypeName))
-			return *iter;
-	}
-	return 0;
+	vector<CBETypedDeclarator*>::iterator i = std::find_if(m_Parameters.begin(), m_Parameters.end(),
+		std::bind2nd(std::mem_fun(&CBETypedDeclarator::HasType), sTypeName));
+	if (i == m_Parameters.end())
+		return 0;
+	return *i;
 }
 
 /** \brief get the direction in which this function sends
@@ -2125,6 +2122,28 @@ CBEFunction::FindParameterIsAttribute(ATTR_TYPE nAttributeType,
 	{
 		CBEAttribute *pAttr = (*iter)->m_Attributes.Find(nAttributeType);
 		if (pAttr && pAttr->m_Parameters.Find(sAttributeParameter))
+			return *iter;
+	}
+	return 0;
+}
+
+/** \brief tries to find a typedef local to this function
+ *  \param sTypeName the name of the typedef
+ *  \param pPrev if set, the previously found typedef
+ *  \return a reference to the found typedef or NULL if nothing found
+ */
+CBETypedef* CBEFunction::FindTypedef(std::string sTypeName, CBETypedef* pPrev)
+{
+	vector<CBETypedef*>::iterator iter = m_Typedefs.begin();
+	if (pPrev)
+		iter = std::find(m_Typedefs.begin(), m_Typedefs.end(), pPrev);
+	for (; iter != m_Typedefs.end();
+		iter++)
+	{
+		if ((*iter)->m_Declarators.Find(sTypeName))
+			return *iter;
+		if ((*iter)->GetType() &&
+			(*iter)->GetType()->HasTag(sTypeName))
 			return *iter;
 	}
 	return 0;

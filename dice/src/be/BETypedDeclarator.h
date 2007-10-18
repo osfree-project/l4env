@@ -57,120 +57,120 @@ class CBEConstant;
  */
 class CBETypedDeclarator : public CBEObject
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBETypedDeclarator();
-    virtual ~CBETypedDeclarator();
+	/** \brief constructor
+	 */
+	CBETypedDeclarator();
+	virtual ~CBETypedDeclarator();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CBETypedDeclarator(CBETypedDeclarator* src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CBETypedDeclarator(CBETypedDeclarator* src);
 
 public:
-    virtual void CreateBackEnd(CBEType * pType, std::string sName);
-    virtual void CreateBackEnd(std::string sUserDefinedType, std::string sName, int nStars);
-    virtual void CreateBackEnd(CFETypedDeclarator * pFEParameter);
+	virtual void CreateBackEnd(CBEType * pType, std::string sName);
+	virtual void CreateBackEnd(std::string sUserDefinedType, std::string sName, int nStars);
+	virtual void CreateBackEnd(CFETypedDeclarator * pFEParameter);
 
-    int GetSize();
-    int GetSize(std::string sName);
-    CBEType *GetType();
-    int GetBitfieldSize();
-    virtual bool GetMaxSize(int & nSize, std::string sName = std::string());
+	int GetSize();
+	int GetSize(std::string sName);
+	CBEType *GetType();
+	int GetBitfieldSize();
+	virtual bool GetMaxSize(int & nSize, std::string sName = std::string());
 
-    void ReplaceType(CBEType * pNewType);
+	void ReplaceType(CBEType * pNewType);
+	bool HasType(std::string sName);
 
-    virtual bool IsVariableSized();
-    bool IsString();
-    bool IsDirection(DIRECTION_TYPE nDirection);
-    bool IsFixedSized();
-    bool HasReference();
+	virtual bool IsVariableSized();
+	bool IsString();
+	bool IsDirection(DIRECTION_TYPE nDirection);
+	bool IsFixedSized();
+	bool HasReference();
 
-    bool Match(std::string sName);
-    CBEDeclarator *GetCallDeclarator();
-    void RemoveCallDeclarator();
-    void AddDeclarator(CFEDeclarator * pFEDeclarator);
-    void AddDeclarator(std::string sName, int nStars);
+	bool Match(std::string sName);
+	CBEDeclarator *GetCallDeclarator();
+	void RemoveCallDeclarator();
+	void AddDeclarator(CFEDeclarator * pFEDeclarator);
+	void AddDeclarator(std::string sName, int nStars);
 
-    CBEAttribute* FindIsAttribute(std::string sDeclName);
-    void AddAttribute(CFEAttribute *pFEAttribute);
+	CBEAttribute* FindIsAttribute(std::string sDeclName);
+	void AddAttribute(CFEAttribute *pFEAttribute);
 
 	virtual CObject* Clone();
 
-    /** \brief sets the default initialization string
-     *  \param sInitString the new initializatio string (may be empty)
-     */
-    void SetDefaultInitString(std::string sInitString)
-    { m_sDefaultInitString = sInitString; }
-    /** \brief accesses the default initialization string
-     *  \return the value of the default initialization string
-     */
-    std::string GetDefaultInitString()
-    { return m_sDefaultInitString; }
+	/** \brief sets the default initialization string
+	 *  \param sInitString the new initializatio string (may be empty)
+	 */
+	void SetDefaultInitString(std::string sInitString)
+	{ m_sDefaultInitString = sInitString; }
+	/** \brief accesses the default initialization string
+	 *  \return the value of the default initialization string
+	 */
+	std::string GetDefaultInitString()
+	{ return m_sDefaultInitString; }
 
-    bool AddLanguageProperty(std::string sProperty, std::string sPropertyString);
-    bool FindLanguageProperty(std::string sProperty, std::string& sPropertyString);
+	bool AddLanguageProperty(std::string sProperty, std::string sPropertyString);
+	bool FindLanguageProperty(std::string sProperty, std::string& sPropertyString);
 
-    void WriteDeclarators(CBEFile& pFile);
+	// delegated to langauge dependent part
+	virtual void WriteDeclaration(CBEFile& pFile);
+	void WriteSetZero(CBEFile& pFile);
+	void WriteGetSize(CBEFile& pFile,
+		CDeclStack* pStack, CBEFunction *pUsingFunc);
+	void WriteGetMaxSize(CBEFile& pFile,
+		CDeclStack* pStack, CBEFunction *pUsingFunc);
+	void WriteCleanup(CBEFile& pFile, bool bDeferred);
+	void WriteType(CBEFile& pFile, bool bUseConst = true);
+	void WriteIndirect(CBEFile& pFile);
+	void WriteIndirectInitialization(CBEFile& pFile, bool bMemory);
+	void WriteInitDeclaration(CBEFile& pFile);
 
-    // delegated to langauge dependent part
-    virtual void WriteDeclaration(CBEFile& pFile);
-    void WriteSetZero(CBEFile& pFile);
-    void WriteGetSize(CBEFile& pFile,
-	CDeclStack* pStack, CBEFunction *pUsingFunc);
-    void WriteGetMaxSize(CBEFile& pFile,
-	CDeclStack* pStack, CBEFunction *pUsingFunc);
-    void WriteCleanup(CBEFile& pFile, bool bDeferred);
-    void WriteType(CBEFile& pFile, bool bUseConst = true);
-    void WriteIndirect(CBEFile& pFile);
-    void WriteIndirectInitialization(CBEFile& pFile, bool bMemory);
-    void WriteInitDeclaration(CBEFile& pFile, std::string sInitString);
-
-    CBEType* GetTransmitType();
+	CBEType* GetTransmitType();
 
 protected:
-    int GetSizeOfDeclarator(CBEDeclarator *pDeclarator);
-    CBETypedDeclarator* GetSizeVariable(CBEAttribute *pIsAttribute,
-	CDeclStack* pStack, CBEFunction *pUsingFunc,
-	bool& bFoundInStruct);
-    CBEConstant* GetSizeConstant(CBEAttribute *pIsAttribute);
-    void WarnNoMax(int nSize);
-    bool GetSizeOrDimensionOfAttr(ATTR_TYPE nAttr, int& nSize, int& nDimension);
+	int GetSizeOfDeclarator(CBEDeclarator *pDeclarator);
+	CBETypedDeclarator* GetSizeVariable(CBEAttribute *pIsAttribute,
+		CDeclStack* pStack, CBEFunction *pUsingFunc,
+		bool& bFoundInStruct);
+	CBEConstant* GetSizeConstant(CBEAttribute *pIsAttribute);
+	void WarnNoMax(int nSize);
+	bool GetSizeOrDimensionOfAttr(ATTR_TYPE nAttr, int& nSize, int& nDimension);
 
-    virtual void WriteAttributes(CBEFile& pFile);
-    virtual void WriteConstPrefix(CBEFile& pFile);
-    virtual void WriteProperties(CBEFile& pFile);
-    virtual bool DoAllocateMemory(CBEFile& pFile);
+	void WriteConstPrefix(CBEFile& pFile);
+	void WriteProperties(CBEFile& pFile);
+	void WriteDeclarators(CBEFile& pFile);
+
+	virtual bool DoAllocateMemory(CBEFile& pFile);
 
 private:
-    bool UsePointer();
+	bool UsePointer();
 
 protected:
-    /** \var CBEType *m_pType
-     *  \brief the type of the parameter
-     */
-    CBEType * m_pType;
-    /** \var std::string m_sDefaultInitString
-     *  \brief contains the initialization sequence if no other is given
-     */
-    std::string m_sDefaultInitString;
-    /** \var map<std::string, std::string> m_mProperties
-     *  \brief map with language specific properties
-     */
-    multimap<std::string, std::string> m_mProperties;
+	/** \var CBEType *m_pType
+	 *  \brief the type of the parameter
+	 */
+	CBEType * m_pType;
+	/** \var std::string m_sDefaultInitString
+	 *  \brief contains the initialization sequence if no other is given
+	 */
+	std::string m_sDefaultInitString;
+	/** \var map<std::string, std::string> m_mProperties
+	 *  \brief map with language specific properties
+	 */
+	multimap<std::string, std::string> m_mProperties;
 
 public:
-    /** \var CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes
-     *  \brief contains the type's attributes
-     */
-    CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes;
-    /** \var CSearchableCollection<CBEDeclarator, std::string> m_Declarators
-     *  \brief the names of the parameter
-     */
-    CSearchableCollection<CBEDeclarator, std::string> m_Declarators;
+	/** \var CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes
+	 *  \brief contains the type's attributes
+	 */
+	CSearchableCollection<CBEAttribute, ATTR_TYPE> m_Attributes;
+	/** \var CSearchableCollection<CBEDeclarator, std::string> m_Declarators
+	 *  \brief the names of the parameter
+	 */
+	CSearchableCollection<CBEDeclarator, std::string> m_Declarators;
 };
 
 #endif                //*/ !__DICE_BETYPEDDECLARATOR_H__

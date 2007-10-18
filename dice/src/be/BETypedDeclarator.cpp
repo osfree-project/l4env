@@ -107,21 +107,54 @@ CObject* CBETypedDeclarator::Clone()
 void
 CBETypedDeclarator::WriteDeclaration(CBEFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s called for %s\n",
 		__func__, m_Declarators.First()->GetName().c_str());
 
-	WriteAttributes(pFile);
 	WriteType(pFile);
 	pFile << " ";
 	WriteDeclarators(pFile);
-	WriteProperties(pFile);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s returned\n", __func__);
+}
+
+/** \brief writes init declaration
+ *  \param pFile the file to write to
+ */
+void CBETypedDeclarator::WriteInitDeclaration(CBEFile& pFile)
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBETypedDeclarator::%s called\n", __func__);
+	CBEType *pType = GetType();
+	if (pType->IsVoid())
+		return;
+	vector<CBEDeclarator*>::iterator iterD;
+	for (iterD = m_Declarators.begin();
+		iterD != m_Declarators.end();
+		iterD++)
+	{
+		pFile << "\t";
+		WriteType(pFile);
+		pFile << " ";
+		(*iterD)->WriteDeclaration(pFile);
+		WriteProperties(pFile);
+		string sDefault = GetDefaultInitString();
+		if (!sDefault.empty())
+		{
+			if (sDefault == "0")
+			{
+				if (pType->DoWriteZeroInit())
+				{
+					pFile << " = ";
+					pType->WriteZeroInit(pFile);
+				}
+			}
+			else
+				pFile << " = " << sDefault;
+		}
+		pFile << ";\n";
+	}
 }
 
 /** \brief writes the code to set a variable to a zero value
@@ -615,8 +648,8 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
 	// get class before resetting function
 	CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
 	// get direction before getting real message buffer
-	CMsgStructType nType = (m_Attributes.Find(ATTR_IN)) ? pFunction->GetSendDirection() :
-		pFunction->GetReceiveDirection();
+	CMsgStructType nType((m_Attributes.Find(ATTR_IN)) ? pFunction->GetSendDirection() :
+		pFunction->GetReceiveDirection());
 	// check message buffer
 	pFunction = GetSpecificParent<CBEFunction>();
 	CBEMsgBuffer *pMsgBuffer = 0;
@@ -734,9 +767,6 @@ CBETypedDeclarator::WriteIndirect(CBEFile& pFile)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s called\n", __func__);
-	if (!pFile.is_open())
-		return;
-
 	CBEType *pType = GetType();
 	pType->WriteIndirect(pFile);
 	pFile << " ";
@@ -839,49 +869,6 @@ CBETypedDeclarator::UsePointer()
 		m_Attributes.Find(ATTR_LENGTH_IS);
 
 	return bUsePointer;
-}
-
-/** \brief writes init declaration
- *  \param pFile the file to write to
- *  \param sInitString the string to use for initialization
- */
-void
-CBETypedDeclarator::WriteInitDeclaration(CBEFile& pFile,
-	string sInitString)
-{
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBETypedDeclarator::%s called\n", __func__);
-	CBEType *pType = GetType();
-	if (pType->IsVoid())
-		return;
-	vector<CBEDeclarator*>::iterator iterD;
-	for (iterD = m_Declarators.begin();
-		iterD != m_Declarators.end();
-		iterD++)
-	{
-		pFile << "\t";
-		WriteType(pFile);
-		pFile << " ";
-		(*iterD)->WriteDeclaration(pFile);
-		WriteProperties(pFile);
-		string sDefault = GetDefaultInitString();
-		if (!sInitString.empty())
-			pFile << " = " << sInitString;
-		else if (!sDefault.empty())
-		{
-			if (sDefault == "0")
-			{
-				if (pType->DoWriteZeroInit())
-				{
-					pFile << " = ";
-					pType->WriteZeroInit(pFile);
-				}
-			}
-			else
-				pFile << " = " << sDefault;
-		}
-		pFile << ";\n";
-	}
 }
 
 /** \brief creates the back-end structure for a parameter
@@ -1717,6 +1704,25 @@ void CBETypedDeclarator::ReplaceType(CBEType * pNewType)
 		"CBETypedDeclarator::%s returns\n", __func__);
 }
 
+/** \brief checks if the given type-name matches with type
+ *  \param sName the type-name
+ *  \return true if matching, false if not
+ *
+ * This implementation only tests user-defined types and constructed types.
+ */
+bool CBETypedDeclarator::HasType(string sName)
+{
+	CBEType *pType = GetType();
+	if (dynamic_cast<CBEUserDefinedType*>(pType))
+	{
+		if (((CBEUserDefinedType*)pType)->GetName() == sName)
+			return true;
+	}
+	if (pType->HasTag(sName))
+		return true;
+	return false;
+}
+
 /** \brief returns the size of the bitfield declarator in bits
  *  \return the bitfields of the declarator
  */
@@ -1836,9 +1842,6 @@ CBETypedDeclarator::WriteDeclarators(CBEFile& pFile)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s called\n", __func__);
-	if (!pFile.is_open())
-		return;
-
 	bool bComma = false;
 	vector<CBEDeclarator*>::iterator iterD;
 	for (iterD = m_Declarators.begin();
@@ -1856,6 +1859,7 @@ CBETypedDeclarator::WriteDeclarators(CBEFile& pFile)
 			this, (*iterD));
 
 		(*iterD)->WriteDeclaration(pFile);
+		WriteProperties(pFile);
 		bComma = true;
 	}
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -2009,17 +2013,6 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
 		}
 	}
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s returned\n", __func__);
-}
-
-/** \brief writes the attributes of the typed declarator
- *  \param pFile the file to write to
- *
- * The current implementation does nothing.
- */
-void
-CBETypedDeclarator::WriteAttributes(CBEFile& /*pFile*/)
-{
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedDeclarator::%s called\n", __func__);
 }
 
 /** \brief writes the specific properties

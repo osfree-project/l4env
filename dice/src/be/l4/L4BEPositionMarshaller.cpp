@@ -300,9 +300,7 @@ CL4BEMarshaller::PositionMarshaller::GetMessageBufferType(
 	else
 		pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
-	CBEMsgBufferType *pType =
-		dynamic_cast<CBEMsgBufferType*>(pMsgBuffer->GetType());
-	assert (pType);
+	CBEMsgBufferType *pType = pMsgBuffer->GetType(pFunction);
 	return pType;
 }
 

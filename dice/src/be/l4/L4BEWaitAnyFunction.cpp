@@ -125,7 +125,7 @@ CL4BEWaitAnyFunction::WriteVariableInitialization(CBEFile& pFile)
 	{
 		// init receive flexpage
 		pMsgBuffer->WriteInitialization(pFile, this, TYPE_FLEXPAGE,
-			GetReceiveDirection());
+			CMsgStructType(GetReceiveDirection()));
 	}
 }
 
@@ -218,7 +218,7 @@ CL4BEWaitAnyFunction::WriteIPCReplyWait(CBEFile& pFile)
 		dynamic_cast<CL4BEMarshaller*>(GetMarshaller());
 	assert(pMarshaller);
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-	CMsgStructType nType = GetSendDirection();
+	CMsgStructType nType(GetSendDirection());
 
 	if (m_pTrace)
 		m_pTrace->BeforeReplyWait(pFile, this);
@@ -532,7 +532,7 @@ void CL4BEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
 	if (m_Attributes.Find(ATTR_NOOPCODE))
 		return;
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-	if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, GetReceiveDirection()) > 0)
+	if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, CMsgStructType(GetReceiveDirection())) > 0)
 	{
 		// we have to always check if this was a flexpage IPC
 		//
@@ -580,7 +580,7 @@ void CL4BEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
 void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 {
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-	if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
+	if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, CMsgStructType(GetReceiveDirection())) == 0)
 		return;
 
 	bool bFixedNumberOfFlexpages = true;

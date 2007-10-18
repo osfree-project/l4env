@@ -90,6 +90,8 @@ void CConsistencyVisitor::Visit(CFEInterface& interface)
 			CheckForOpInInterface(*iO, *iI);
 		}
 	}
+
+	CVisitor::Visit(interface);
 }
 
 /** \brief check if an operation is already defined in an interface
@@ -337,6 +339,7 @@ void CConsistencyVisitor::Visit(CFEOperation& operation)
 			sName.c_str());
 		throw error::consistency_error();
 	}
+	CVisitor::Visit(operation);
 }
 
 /** \brief checks if the parameter of IS attributes are declared somewhere
@@ -497,6 +500,7 @@ void CConsistencyVisitor::Visit(CFEArrayType& type)
 		CMessages::GccError(&type, "An array-type without a base type.");
 		throw error::consistency_error();
 	}
+	CVisitor::Visit(type);
 }
 
 /** \brief check the consistency of an enum type
@@ -519,7 +523,10 @@ void CConsistencyVisitor::Visit(CFEEnumType& type)
 void CConsistencyVisitor::Visit(CFEStructType& type)
 {
 	if (!type.IsForwardDeclaration())
+	{
+		CVisitor::Visit(type);
 		return;
+	}
 
 	/* no members: try to find typedef for this */
 	string sTag = type.GetTag();
@@ -569,6 +576,8 @@ void CConsistencyVisitor::Visit(CFEStructType& type)
 		pTagType->Accept(*this);
 		return;
 	}
+
+	CVisitor::Visit(type);
 }
 
 /** \brief check the consistency of a union type
@@ -588,6 +597,8 @@ void CConsistencyVisitor::Visit(CFEUnionType& type)
 			"A union without members is not allowed.");
 		throw error::consistency_error();
 	}
+
+	CVisitor::Visit(type);
 }
 
 /** \brief check the consistency of a simple type

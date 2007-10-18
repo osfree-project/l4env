@@ -55,7 +55,7 @@ public:
 	/** \brief constructor
 	 *  \param nDir a DIRECTION_TYPE initializer
 	 */
-	CMsgStructType(DIRECTION_TYPE nDir)
+	explicit CMsgStructType(DIRECTION_TYPE nDir)
 	{
 		switch (nDir) {
 		case 0:
@@ -103,6 +103,7 @@ public:
 	friend bool operator!= (const CMsgStructType&, const CMsgStructType&);
 	friend bool operator!= (const CMsgStructType::Type&, const CMsgStructType&);
 	friend bool operator!= (const CMsgStructType&, const CMsgStructType::Type&);
+	CMsgStructType& operator= (DIRECTION_TYPE);
 private:
 	/** \var Type nType
 	 *  \brief the message buffer struct type

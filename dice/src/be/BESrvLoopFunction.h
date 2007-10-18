@@ -54,8 +54,7 @@ public:
 
 public:
     virtual void CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide);
-    virtual bool DoWriteFunction(CBEHeaderFile* pFile);
-    virtual bool DoWriteFunction(CBEImplementationFile* pFile);
+    virtual bool DoWriteFunction(CBEFile* pFile);
     virtual DIRECTION_TYPE GetReceiveDirection();
     virtual DIRECTION_TYPE GetSendDirection();
     virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);

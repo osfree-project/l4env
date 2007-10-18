@@ -42,17 +42,15 @@
 #include <cassert>
 
 CBETypedef::CBETypedef()
-: m_sDefine()
-{}
+{ }
 
-CBETypedef::CBETypedef(CBETypedef* src)
-: CBETypedDeclarator(src),
-	m_sDefine(src->m_sDefine)
-{}
+CBETypedef::CBETypedef(CBETypedef * src)
+	: CBETypedDeclarator(src)
+{ }
 
 /** \brief destructor of this instance */
 CBETypedef::~CBETypedef()
-{}
+{ }
 
 /** \brief create a copy of this object
  *  \return reference to clone
@@ -87,7 +85,6 @@ CBETypedef::CreateBackEnd(CFETypedDeclarator * pFETypedef)
 	assert(pDecl);
 	string sAlias = pNF->GetTypeName(pFETypedef, pDecl->GetName());
 	pDecl->CreateBackEnd(sAlias, pDecl->GetStars());
-	m_sDefine = pNF->GetTypeDefine(pDecl->GetName());
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedef::%s created typedef <type>(%p) %s (%d stars) at %p\n",
 		__func__, GetType(), sAlias.c_str(), pDecl->GetStars(), this);
@@ -130,7 +127,6 @@ CBETypedef::CreateBackEnd(CBEType * pType,
 	string sAlias = pNF->GetTypeName(pFERefObject, pDecl->GetName());
 	// recreate decl
 	pDecl->CreateBackEnd(sAlias, pDecl->GetStars());
-	m_sDefine = pNF->GetTypeDefine(pDecl->GetName());
 	// set source file information
 	CBEObject::CreateBackEnd(pFERefObject);
 
@@ -167,16 +163,18 @@ void CBETypedef::AddToHeader(CBEHeaderFile* pHeader)
 void
 CBETypedef::WriteDeclaration(CBEFile& pFile)
 {
-	if (!pFile.is_open())
-		return;
-
+	CBEDeclarator *pDecl = m_Declarators.First();
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s called for %s\n", __func__,
-		m_Declarators.First()->GetName().c_str());
-	bool bNeedDefine = !m_sDefine.empty();
+		pDecl->GetName().c_str());
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sDefine = pNF->GetTypeDefine(pDecl->GetName());
+	// we need to write the define statement if the typedef does not belong to
+	// a function.
+	bool bNeedDefine = !sDefine.empty() && !GetSpecificParent<CBEFunction>();
 	if (bNeedDefine)
 	{
-		pFile << "#if !defined(" << m_sDefine << ")\n";
-		pFile << "#define " << m_sDefine << "\n";
+		pFile << "#if !defined(" << sDefine << ")\n";
+		pFile << "#define " << sDefine << "\n";
 	}
 
 	int nSize = GetSize();
@@ -189,7 +187,7 @@ CBETypedef::WriteDeclaration(CBEFile& pFile)
 
 	if (bNeedDefine)
 	{
-		pFile << "#endif /* " << m_sDefine << " */\n\n";
+		pFile << "#endif /* " << sDefine << " */\n\n";
 	}
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETypedef::%s returned\n", __func__);

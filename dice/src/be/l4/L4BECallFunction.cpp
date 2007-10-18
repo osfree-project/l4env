@@ -83,7 +83,7 @@ void CL4BECallFunction::WriteInvocation(CBEFile& pFile)
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-		GetSendDirection());
+		CMsgStructType(GetSendDirection()));
 	// invocate
 	if (!CCompiler::IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
 	{
@@ -164,9 +164,9 @@ void CL4BECallFunction::WriteVariableInitialization(CBEFile& pFile)
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE,
 		CMsgStructType::Generic);
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING,
-		GetReceiveDirection());
+		CMsgStructType(GetReceiveDirection()));
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE,
-		GetReceiveDirection());
+		CMsgStructType(GetReceiveDirection()));
 }
 
 /** \brief write L4 specific unmarshalling code

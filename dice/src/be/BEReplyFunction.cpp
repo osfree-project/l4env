@@ -103,23 +103,23 @@ void CBEReplyFunction::WriteCleanup(CBEFile& /*pFile*/)
 void
 CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation, bool bComponentSide)
 {
-    // set target file name
-    SetTargetFileName(pFEOperation);
-    // set function name
+	// set target file name
+	SetTargetFileName(pFEOperation);
+	// set function name
 	SetComponentSide(bComponentSide);
-    SetFunctionName(pFEOperation, FUNCTION_REPLY);
+	SetFunctionName(pFEOperation, FUNCTION_REPLY);
 
-    CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
-    // need a message buffer, don't we?
-    AddMessageBuffer(pFEOperation);
-    AddLocalVariable(GetMessageBuffer());
-    // set return type
-    SetReturnVar(false, 0, TYPE_VOID, string());
+	CBEOperationFunction::CreateBackEnd(pFEOperation, bComponentSide);
+	// need a message buffer, don't we?
+	AddMessageBuffer(pFEOperation);
+	AddLocalVariable(GetMessageBuffer());
+	// set return type
+	SetNoReturnVar();
 
-    // add marshaller and communication class
-    CreateMarshaller();
-    CreateCommunication();
-    CreateTrace();
+	// add marshaller and communication class
+	CreateMarshaller();
+	CreateCommunication();
+	CreateTrace();
 }
 
 /** \brief manipulate the message buffer
@@ -129,22 +129,17 @@ CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation, bool bComponentSide)
 void
 CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-    CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
-    // check return type (do test here because sometimes we like to call
-    // AddReturnVariable under different constraints--return parameter)
-    CBEType *pType = GetReturnType();
-    assert(pType);
-    if (pType->IsVoid())
-	return; // having a void return type is not an error
-    // add return variable
-    if (!pMsgBuffer->AddReturnVariable(this))
-    {
-	string exc = string(__func__);
-	exc += " failed, because return variable could not be added to message buffer.";
-	throw new error::create_error(exc);
-    }
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
+	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
+	// check return type (do test here because sometimes we like to call
+	// AddReturnVariable under different constraints--return parameter)
+	CBEType *pType = GetReturnType();
+	assert(pType);
+	if (pType->IsVoid())
+		return; // having a void return type is not an error
+	// add return variable
+	pMsgBuffer->AddReturnVariable(this);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
 
 /** \brief checks of this parameter is marshalled or not
@@ -158,13 +153,13 @@ bool
 CBEReplyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
 	bool bMarshal)
 {
-    if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
+	if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
+		return false;
+	if (!bMarshal)
+		return false;
+	if (pParameter->m_Attributes.Find(ATTR_OUT))
+		return true;
 	return false;
-    if (!bMarshal)
-	return false;
-    if (pParameter->m_Attributes.Find(ATTR_OUT))
-        return true;
-    return false;
 }
 
 /** \brief test if this function should be written
@@ -174,25 +169,11 @@ CBEReplyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  * A reply-only function is written at the component's side only.
  */
 bool
-CBEReplyFunction::DoWriteFunction(CBEHeaderFile* pFile)
+CBEReplyFunction::DoWriteFunction(CBEFile* pFile)
 {
-    if (!IsTargetFile(pFile))
-        return false;
-    return pFile->IsOfFileType(FILETYPE_COMPONENT);
-}
-
-/** \brief test if this function should be written
- *  \param pFile the file to write to
- *  \return true if should be written
- *
- * A reply-only function is written at the component's side only.
- */
-bool
-CBEReplyFunction::DoWriteFunction(CBEImplementationFile* pFile)
-{
-    if (!IsTargetFile(pFile))
-        return false;
-    return pFile->IsOfFileType(FILETYPE_COMPONENT);
+	if (!IsTargetFile(pFile))
+		return false;
+	return pFile->IsOfFileType(FILETYPE_COMPONENT);
 }
 
 /** \brief gets the direction this function sends data to
@@ -203,7 +184,7 @@ CBEReplyFunction::DoWriteFunction(CBEImplementationFile* pFile)
  */
 DIRECTION_TYPE CBEReplyFunction::GetSendDirection()
 {
-    return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
+	return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
 }
 
 /** \brief gets the direction this function receives data from
@@ -214,7 +195,7 @@ DIRECTION_TYPE CBEReplyFunction::GetSendDirection()
  */
 DIRECTION_TYPE CBEReplyFunction::GetReceiveDirection()
 {
-    return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
+	return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
 }
 
 /** \brief adds the parameters before "normal" parameters
@@ -225,16 +206,16 @@ DIRECTION_TYPE CBEReplyFunction::GetReceiveDirection()
 void
 CBEReplyFunction::AddBeforeParameters()
 {
-    // call base class to add object
-    CBEOperationFunction::AddBeforeParameters();
+	// call base class to add object
+	CBEOperationFunction::AddBeforeParameters();
 
-    if (!GetReturnType()->IsVoid())
-    {
-        CBETypedDeclarator *pReturn = GetReturnVariable();
-        CBETypedDeclarator *pReturnParam =
-	    static_cast<CBETypedDeclarator*>(pReturn->Clone());
-        m_Parameters.Add(pReturnParam);
-    }
+	if (!GetReturnType()->IsVoid())
+	{
+		CBETypedDeclarator *pReturn = GetReturnVariable();
+		CBETypedDeclarator *pReturnParam =
+			static_cast<CBETypedDeclarator*>(pReturn->Clone());
+		m_Parameters.Add(pReturnParam);
+	}
 }
 
 /** \brief get exception variable
@@ -243,25 +224,25 @@ CBEReplyFunction::AddBeforeParameters()
 CBETypedDeclarator*
 CBEReplyFunction::GetExceptionVariable()
 {
-    CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
-    if (pRet)
+	CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
+	if (pRet)
+		return pRet;
+
+	// if no parameter, then try to find it in the message buffer
+	CBEMsgBuffer *pMsgBuf = GetMessageBuffer();
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s message buffer in class at %p\n",
+		__func__, pMsgBuf);
+	if (!pMsgBuf)
+		return 0;
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sName = pNF->GetExceptionWordVariable();
+	pRet = pMsgBuf->FindMember(sName, this, CMsgStructType(GetSendDirection()));
+	if (!pRet)
+		pRet = pMsgBuf->FindMember(sName, this, CMsgStructType(GetReceiveDirection()));
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s exception var %s at %p\n",
+		__func__, sName.c_str(), pRet);
+
 	return pRet;
-
-    // if no parameter, then try to find it in the message buffer
-    CBEMsgBuffer *pMsgBuf = GetMessageBuffer();
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s message buffer in class at %p\n",
-	__func__, pMsgBuf);
-    if (!pMsgBuf)
-	return 0;
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sName = pNF->GetExceptionWordVariable();
-    pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
-    if (!pRet)
-	pRet = pMsgBuf->FindMember(sName, this, GetReceiveDirection());
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s exception var %s at %p\n",
-	__func__, sName.c_str(), pRet);
-
-    return pRet;
 }
 
 /** \brief get the size of fixed size parameters
@@ -270,11 +251,11 @@ CBEReplyFunction::GetExceptionVariable()
  */
 int CBEReplyFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
-    int nSize = CBEOperationFunction::GetFixedSize(nDirection);
-    if ((nDirection & DIRECTION_OUT) &&
-        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
-        nSize += CCompiler::GetSizes()->GetExceptionSize();
-    return nSize;
+	int nSize = CBEOperationFunction::GetFixedSize(nDirection);
+	if ((nDirection & DIRECTION_OUT) &&
+		!m_Attributes.Find(ATTR_NOEXCEPTIONS))
+		nSize += CCompiler::GetSizes()->GetExceptionSize();
+	return nSize;
 }
 
 /** \brief get the size of parameters
@@ -283,11 +264,11 @@ int CBEReplyFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  */
 int CBEReplyFunction::GetSize(DIRECTION_TYPE nDirection)
 {
-    int nSize = CBEOperationFunction::GetSize(nDirection);
-    if ((nDirection & DIRECTION_OUT) &&
-        !m_Attributes.Find(ATTR_NOEXCEPTIONS))
-        nSize += CCompiler::GetSizes()->GetExceptionSize();
-    return nSize;
+	int nSize = CBEOperationFunction::GetSize(nDirection);
+	if ((nDirection & DIRECTION_OUT) &&
+		!m_Attributes.Find(ATTR_NOEXCEPTIONS))
+		nSize += CCompiler::GetSizes()->GetExceptionSize();
+	return nSize;
 }
 
 
@@ -300,9 +281,9 @@ int CBEReplyFunction::GetSize(DIRECTION_TYPE nDirection)
 void
 CBEReplyFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
-    if (!(pFEParameter->m_Attributes.Find(ATTR_OUT)))
-        // skip adding a parameter if it has no OUT
-        return;
-    CBEOperationFunction::AddParameter(pFEParameter);
+	if (!(pFEParameter->m_Attributes.Find(ATTR_OUT)))
+		// skip adding a parameter if it has no OUT
+		return;
+	CBEOperationFunction::AddParameter(pFEParameter);
 }
 

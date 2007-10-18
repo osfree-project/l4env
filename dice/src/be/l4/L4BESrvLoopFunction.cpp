@@ -142,7 +142,7 @@ void CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComp
 	CBETypedDeclarator *pEnv = GetEnvironment();
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
-	CMsgStructType nType = GetReceiveDirection();
+	CMsgStructType nType(GetReceiveDirection());
 	if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nType) > 0) &&
 		pEnv)
 	{

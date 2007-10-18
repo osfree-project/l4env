@@ -118,138 +118,88 @@ void CBEObject::SetTargetFileName(CFEBase *pFEObject)
 	m_sTargetHeader = pNF->GetFileName(pFEObject, FILETYPE_CLIENTHEADER);
 }
 
-/** \brief checks if the target header file is the calculated target file
- *  \param pFile the target header file
- *  \return true if this element can be added to this file
- *
- * If the target header file is generated from an IDL file, then it should end on
- * "-client.h", "-server.h", or "-sys.h". If it doesn't
- * it's no IDL file, and we return false. If it does, we truncate this and
- * compare what is left. It should be exactly the same. The locally stored
- * target file-name always ends on "-client.h" (see above) if derived from a
- * IDL file.
- *
- * Before comparing we have to check if the output directory if used and strip
- * it.
- */
-bool CBEObject::IsTargetFile(CBEHeaderFile* pFile)
-{
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEObject::%s(header: %s) called; m_sTargetHeader=%s (%zd)\n",
-		__func__, pFile->GetFileName().c_str(), m_sTargetHeader.c_str(),
-		m_sTargetHeader.length());
-
-	long length = m_sTargetHeader.length();
-	if (length <= 9)
-		return false;
-	if ((m_sTargetHeader.substr(length-9) != "-client.h") &&
-		(m_sTargetHeader.substr(length-10) != "-client.hh"))
-		return false;
-	string sBaseTarget = pFile->GetFileName();
-	string sOutputDir;
-	CCompiler::GetBackEndOption(string("output-dir"), sOutputDir);
-	if (sBaseTarget.find(sOutputDir) == 0)
-		sBaseTarget = sBaseTarget.substr(sOutputDir.length());
-	int nPos = 0;
-	length = sBaseTarget.length();
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"IsTargetFile(head: %s) sBaseTarget=%s\n",
-		pFile->GetFileName().c_str(), sBaseTarget.c_str());
-	if ((length > 9) &&
-		((sBaseTarget.substr(length - 9) == "-client.h") ||
-		 (sBaseTarget.substr(length - 9) == "-server.h")))
-		nPos = 9;
-	if ((length > 10) &&
-		((sBaseTarget.substr(length - 10) == "-client.hh") ||
-		 (sBaseTarget.substr(length - 10) == "-server.hh")))
-		nPos = 10;
-	if ((length > 6) &&
-		(sBaseTarget.substr(length - 6) == "-sys.h"))
-		nPos = 6;
-	if ((length > 7) &&
-		(sBaseTarget.substr(length - 7) == "-sys.hh"))
-		nPos = 7;
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"IsTargetFile(head: %s) pos = %d\n", pFile->GetFileName().c_str(),
-		nPos);
-	if (nPos == 0)
-		return false;
-	sBaseTarget = sBaseTarget.substr(0, length-nPos);
-	string sBaseLocal = m_sTargetHeader.substr(0, sBaseTarget.length());
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"IsTargetFile(head: %s) sBaseTarget=%s sBaseLocal=%s\n",
-		pFile->GetFileName().c_str(), sBaseTarget.c_str(),
-		sBaseLocal.c_str());
-	if (sBaseTarget == sBaseLocal)
-		return true;
-	return false;
-}
-
 /** \brief checks if the target implementation file is the calculated target file
  *  \param pFile the target implementation file
  *  \return true if this element can be added to this file
  *
  * If the target file is generated from an IDL file, then it should end on
- * "-client.c" or "-server.c". If it doesn't
- * it's no IDL file, and we return false. If it does, we truncate this and
- * compare what is left. It should be exactly the same. The locally stored
- * target file-name always ends on "-client.c" (see above) if derived from a
- * IDL file.
+ * "-client.c" or "-server.c". If it doesn't it's no IDL file, and we return
+ * false. If it does, we truncate this and compare what is left. It should be
+ * exactly the same. The locally stored target file-name always ends on
+ * "-client.c" (see above) if derived from a IDL file.
  */
-bool CBEObject::IsTargetFile(CBEImplementationFile* pFile)
+bool CBEObject::IsTargetFile(CBEFile* pFile)
 {
+	string sTargetFile;
+	if (pFile->IsOfFileType(FILETYPE_IMPLEMENTATION))
+		sTargetFile = m_sTargetImplementation;
+	else
+		sTargetFile = m_sTargetHeader;
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEObject::%s(impl: %s) called; m_sTargetImplementation=%s\n",
-		__func__, pFile->GetFileName().c_str(), m_sTargetImplementation.c_str());
+		"CBEObject::%s(%s) called; sTargetFile=%s\n",
+		__func__, pFile->GetFileName().c_str(), sTargetFile.c_str());
 
-	long length = m_sTargetImplementation.length();
+	// first check if the target file was generated from an IDL file
+	unsigned long length = sTargetFile.length();
 	if (length <= 9)
 		return false;
-	if ((m_sTargetImplementation.substr(length - 9) != "-client.c") &&
-		(m_sTargetImplementation.substr(length - 10) != "-client.cc"))
+	string sSuffix("-client.");
+	if (pFile->IsOfFileType(FILETYPE_IMPLEMENTATION))
+	{
+		if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+			sSuffix += "cc";
+		else
+			sSuffix += "c";
+	}
+	else if (pFile->IsOfFileType(FILETYPE_HEADER))
+	{
+		if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+			sSuffix += "hh";
+		else
+			sSuffix += "h";
+	}
+	if (sTargetFile.substr(length - sSuffix.length()) != sSuffix)
 		return false;
+
+	// now check if given file has the same stem as the target file
+	if (pFile->IsOfFileType(FILETYPE_CLIENT))
+		sSuffix = "-client.";
+	else if (pFile->IsOfFileType(FILETYPE_COMPONENT))
+		sSuffix = "-server.";
+	else if (pFile->IsOfFileType(FILETYPE_OPCODE))
+		sSuffix = "-sys.";
+	if (pFile->IsOfFileType(FILETYPE_IMPLEMENTATION))
+	{
+		if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+			sSuffix += "cc";
+		else
+			sSuffix += "c";
+	}
+	else if (pFile->IsOfFileType(FILETYPE_HEADER))
+	{
+		if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+			sSuffix += "hh";
+		else
+			sSuffix += "h";
+	}
+
 	string sBaseTarget = pFile->GetFileName();
 	string sOutputDir;
 	CCompiler::GetBackEndOption(string("output-dir"), sOutputDir);
 	if (sBaseTarget.find(sOutputDir) == 0)
 		sBaseTarget = sBaseTarget.substr(sOutputDir.length());
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEObject::%s(%s) sBaseTarget=%s\n",
-		__func__, pFile->GetFileName().c_str(), sBaseTarget.c_str());
-
 	length = sBaseTarget.length();
-	if (pFile->IsOfFileType(FILETYPE_CLIENT) &&
-		(sBaseTarget.substr(length - 9) != "-client.c") &&
-		(sBaseTarget.substr(length -10) != "-client.cc"))
+	if (length > sSuffix.length() &&
+		sBaseTarget.substr(length - sSuffix.length()) != sSuffix)
 		return false;
-	if (pFile->IsOfFileType(FILETYPE_COMPONENT) &&
-		(sBaseTarget.substr(length - 9) != "-server.c") &&
-		(sBaseTarget.substr(length - 10) != "-server.cc"))
-		return false;
-	sBaseTarget = sBaseTarget.substr(0, length-9);
-	string sBaseLocal = m_sTargetImplementation.substr(0, sBaseTarget.length());
+	sBaseTarget = sBaseTarget.substr(0, length - sSuffix.length());
+	string sBaseLocal = sTargetFile.substr(0, sBaseTarget.length());
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CBEObject::%s(%s) sBaseTarget=%s, sBaseLocal=%s\n", __func__,
 		pFile->GetFileName().c_str(), sBaseTarget.c_str(), sBaseLocal.c_str());
 
 	return sBaseTarget == sBaseLocal;
-}
-
-/** \brief returns the name of the target header file
- *  \return the name of the target header file name
- */
-string CBEObject::GetTargetHeaderFileName()
-{
-	return m_sTargetHeader;
-}
-
-/** \brief return the name of the target implementation file
- *  \return the name of the target implementation file
- */
-string CBEObject::GetTargetImplementationFileName()
-{
-	return m_sTargetImplementation;
 }
 
 /** \brief sets source file information

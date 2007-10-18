@@ -1125,6 +1125,17 @@ string CBENameFactory::GetMessageBufferTypeName(CFEInterface * pFEInterface)
 	return GetMessageBufferTypeName(pFEInterface->GetName());
 }
 
+/** \brief generates a name of a function's message buffer type
+ *  \param pFEOperation the operation this name is for
+ *  \return the name of the type
+ */
+string CBENameFactory::GetMessageBufferTypeName(CFEOperation * pFEOperation)
+{
+	CFEInterface *pFEInterface = pFEOperation->GetSpecificParent<CFEInterface>();
+	string sBase = pFEInterface->GetName() + "_" + pFEOperation->GetName();
+	return GetMessageBufferTypeName(sBase);
+}
+
 /** \brief generates the name of the message buffer's type
  *  \param sInterfaceName the name of the interface this message buffer is for
  *  \return the name of the type;
@@ -1296,6 +1307,14 @@ string CBENameFactory::GetInterfaceNumberShiftConstant()
 string CBENameFactory::GetServerParameterName()
 {
 	return string("dice_server_param");
+}
+
+/** \brief generates the name of a server class internal variable
+ *  \return a variable name
+ */
+string CBENameFactory::GetServerVariable()
+{
+	return string("_dice_server");
 }
 
 /** \brief get a scoped name for a tagged declarator or typedef
