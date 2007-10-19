@@ -1373,8 +1373,7 @@ void CBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation
 	AddGenericStruct(pFunction, pFEOperation);
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s calling Pad for func %s\n",
 		__func__, pFunction->GetName().c_str());
-	if (!Pad())
-		throw new error::create_error("could not pad message buffer");
+	Pad();
 }
 
 /** \brief the post-create (and post-sort) step during creation
@@ -1387,8 +1386,7 @@ void CBEMsgBuffer::PostCreate(CBEClass *pClass, CFEInterface *pFEInterface)
 	AddGenericStruct(pClass, pFEInterface);
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s calling Pad for class %s\n",
 		__func__, pClass->GetName().c_str());
-	if (!Pad())
-		throw new error::create_error("could not pad message buffer");
+	Pad();
 }
 
 /** \brief calculate the number of word sized members required for generic \
@@ -1730,10 +1728,8 @@ int CBEMsgBuffer::GetMemberSize(int nType, CBETypedDeclarator *pMember, bool bMa
  * underlying communication platform or for optimization purposes (if send
  * buffer should be reused as receive buffer).
  */
-bool CBEMsgBuffer::Pad()
-{
-	return true;
-}
+void CBEMsgBuffer::Pad()
+{ }
 
 /** \brief check if one member comes before another in the message buffer
  *  \param pFunction the function for which the message buffer is needed

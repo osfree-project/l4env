@@ -98,8 +98,7 @@ CL4BEWaitFunction::WriteInvocation(CBEFile& pFile)
 	// set size and send dope
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
-	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-		CMsgStructType(GetReceiveDirection()));
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, GetReceiveDirection());
 
 	// invocate
 	WriteIPC(pFile);

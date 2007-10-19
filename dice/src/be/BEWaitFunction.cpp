@@ -205,7 +205,7 @@ CBEWaitFunction::WriteOpcodeCheck(CBEFile& pFile)
 	string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	pFile << "\tif (";
-	pMsgBuffer->WriteAccess(pFile, this, CMsgStructType(GetReceiveDirection()), &vStack);
+	pMsgBuffer->WriteAccess(pFile, this, GetReceiveDirection(), &vStack);
 	pFile << " != " << m_sOpcodeConstName << ")\n";
 	pFile << "\t{\n";
 	string sException = pNF->GetCorbaEnvironmentVariable();
@@ -246,17 +246,17 @@ bool CBEWaitFunction::DoWriteFunction(CBEFile* pFile)
  * At the server side, a wait function receives IN parameters, thus its send
  * direction is OUT. At the client side its vice versa.
  */
-DIRECTION_TYPE CBEWaitFunction::GetSendDirection()
+CMsgStructType CBEWaitFunction::GetSendDirection()
 {
-	return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
+	return IsComponentSide() ? CMsgStructType::Out : CMsgStructType::In;
 }
 
 /** \brief gets the direction for the receiving data
  *  \return if at client's side DIRECTION_OUT, else DIRECTION_IN
  */
-DIRECTION_TYPE CBEWaitFunction::GetReceiveDirection()
+CMsgStructType CBEWaitFunction::GetReceiveDirection()
 {
-	return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
+	return IsComponentSide() ? CMsgStructType::In : CMsgStructType::Out;
 }
 
 /** \brief adds a single parameter to this function

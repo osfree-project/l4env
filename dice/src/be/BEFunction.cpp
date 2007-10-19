@@ -1778,9 +1778,9 @@ CBETypedDeclarator* CBEFunction::FindParameterType(string sTypeName)
  * Use the function IsComponentSide() to determine if this function is at the
  * sever's side or not.
  */
-DIRECTION_TYPE CBEFunction::GetSendDirection()
+CMsgStructType CBEFunction::GetSendDirection()
 {
-	return DIRECTION_IN;
+	return CMsgStructType::In;
 }
 
 /** \brief get the direction from which this function receives
@@ -1795,9 +1795,9 @@ DIRECTION_TYPE CBEFunction::GetSendDirection()
  * Use the function IsComponentSide() to determine if this function is at the
  * sever's side or not.
  */
-DIRECTION_TYPE CBEFunction::GetReceiveDirection()
+CMsgStructType CBEFunction::GetReceiveDirection()
 {
-	return DIRECTION_OUT;
+	return CMsgStructType::Out;
 }
 
 /** \brief performs basic initializations

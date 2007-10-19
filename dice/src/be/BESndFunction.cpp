@@ -129,8 +129,7 @@ CBESndFunction::AddBeforeParameters()
 	{
 		CBETypedDeclarator *pReturn =
 			(CBETypedDeclarator*)GetReturnVariable()->Clone();
-		DIRECTION_TYPE nDir = GetSendDirection();
-		ATTR_TYPE nAttr = (nDir == DIRECTION_IN) ? ATTR_IN : ATTR_OUT;
+		ATTR_TYPE nAttr = !IsComponentSide() ? ATTR_IN : ATTR_OUT;
 		if (!pReturn->m_Attributes.Find(nAttr))
 		{
 			CBEAttribute *pAttr = pReturn->m_Attributes.Find((nAttr == ATTR_IN) ?
@@ -167,9 +166,9 @@ bool CBESndFunction::DoWriteFunction(CBEFile* pFile)
 /** \brief return the direction, which this functions sends to
  *  \return DIRECTION_IN if sending to server, DIRECTION_OUT if sending to client
  */
-DIRECTION_TYPE CBESndFunction::GetSendDirection()
+CMsgStructType CBESndFunction::GetSendDirection()
 {
-	return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
+	return IsComponentSide() ? CMsgStructType::Out : CMsgStructType::In;
 }
 
 /** \brief get the direction this function receives data from
@@ -177,9 +176,9 @@ DIRECTION_TYPE CBESndFunction::GetSendDirection()
  *
  * Since this function only sends data, the value should be superfluous.
  */
-DIRECTION_TYPE CBESndFunction::GetReceiveDirection()
+CMsgStructType CBESndFunction::GetReceiveDirection()
 {
-	return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
+	return IsComponentSide() ? CMsgStructType::In : CMsgStructType::Out;
 }
 
 /** \brief calcualtes the size of this function
@@ -190,7 +189,7 @@ int CBESndFunction::GetSize(DIRECTION_TYPE nDirection)
 {
 	// get base class' size
 	int nSize = CBEOperationFunction::GetSize(nDirection);
-	if ((nDirection & GetSendDirection()) &&
+	if ((nDirection == GetSendDirection()) &&
 		!m_Attributes.Find(ATTR_NOOPCODE))
 		nSize += CCompiler::GetSizes()->GetOpcodeSize();
 	return nSize;
@@ -203,7 +202,7 @@ int CBESndFunction::GetSize(DIRECTION_TYPE nDirection)
 int CBESndFunction::GetFixedSize(DIRECTION_TYPE nDirection)
 {
 	int nSize = CBEOperationFunction::GetFixedSize(nDirection);
-	if ((nDirection & GetSendDirection()) &&
+	if ((nDirection == GetSendDirection()) &&
 		!m_Attributes.Find(ATTR_NOOPCODE))
 		nSize += CCompiler::GetSizes()->GetOpcodeSize();
 	return nSize;
@@ -217,9 +216,7 @@ int CBESndFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  * This function assumes that it is called before the marshalling of the other
  * parameters.
  */
-int
-CBESndFunction::WriteMarshalReturn(CBEFile& pFile,
-	bool bMarshal)
+int CBESndFunction::WriteMarshalReturn(CBEFile& pFile, bool bMarshal)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__, GetName().c_str());
 

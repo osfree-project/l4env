@@ -483,17 +483,14 @@ CL4FiascoBEIPC::UseAssembler(CBEFunction *)
  * This is a simple helper function, which just delegates the call to the
  * function's message buffer.
  */
-bool
-CL4FiascoBEIPC::IsShortIPC(CBEFunction *pFunction,
-	DIRECTION_TYPE nDirection)
+bool CL4FiascoBEIPC::IsShortIPC(CBEFunction *pFunction, CMsgStructType nType)
 {
-	if (nDirection == 0)
+	if (CMsgStructType::Generic == nType)
 		return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
 			IsShortIPC(pFunction, pFunction->GetReceiveDirection());
 
 	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, 
-		CMsgStructType(nDirection));
+	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nType);
 }
 
 /** \brief add local variables required in functions

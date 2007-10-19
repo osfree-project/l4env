@@ -55,8 +55,8 @@ public:
 	    bool bMarshal);
     virtual bool DoWriteFunction(CBEFile* pFile);
     virtual CBETypedDeclarator * FindParameterType(std::string sTypeName);
-    virtual DIRECTION_TYPE GetReceiveDirection();
-    virtual DIRECTION_TYPE GetSendDirection();
+    virtual CMsgStructType GetReceiveDirection();
+    virtual CMsgStructType GetSendDirection();
 
 protected:
     virtual void WriteUnmarshalling(CBEFile& pFile);

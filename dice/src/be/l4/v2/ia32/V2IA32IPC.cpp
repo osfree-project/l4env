@@ -78,7 +78,7 @@ CL4V2IA32BEIPC::WriteCall(CBEFile& pFile,
 {
 	if (UseAssembler(pFunction))
 	{
-		if (IsShortIPC(pFunction, DIRECTION_INOUT))
+		if (IsShortIPC(pFunction, CMsgStructType::Generic))
 			WriteAsmShortCall(pFile, pFunction);
 		else
 			WriteAsmLongCall(pFile, pFunction);

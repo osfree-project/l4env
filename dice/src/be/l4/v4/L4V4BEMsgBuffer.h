@@ -80,7 +80,7 @@ protected:
 		vector<CBETypedDeclarator*>::iterator iter);
 	virtual void ConvertMember(CBETypedDeclarator* pMember);
 
-	virtual bool PadRefstringToPosition(CBEStructType *pStruct, int nPosition);
+	virtual void PadRefstringToPosition(CBEStructType *pStruct, int nPosition);
 	virtual void Sort(CBEStructType *pStruct);
 };
 

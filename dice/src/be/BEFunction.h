@@ -34,6 +34,8 @@
 #include "BEContext.h" // FUNCTION_TYPE
 #include "BEAttribute.h"
 #include "BEDeclarator.h"
+#include "DirectionType.h"
+#include "MsgStructType.h"
 #include "Attribute-Type.h"
 #include "template.h"
 
@@ -58,16 +60,6 @@ class CBEMsgBuffer;
 class CFEInterface;
 class CFEOperation;
 class CFETypeSpec;
-
-/** \enum DIRECTION_TYPE
- *  \brief the directions possible
- */
-enum DIRECTION_TYPE {
-    DIRECTION_NONE,
-    DIRECTION_IN,
-    DIRECTION_OUT,
-    DIRECTION_INOUT
-};
 
 /** \class CBEFunction
  *  \ingroup backend
@@ -126,8 +118,8 @@ public:
     virtual void AddToImpl(CBEImplementationFile* pImpl);
     virtual bool HasVariableSizedParameters(DIRECTION_TYPE nDirection);
     virtual bool HasArrayParameters(DIRECTION_TYPE nDirection);
-    virtual DIRECTION_TYPE GetReceiveDirection();
-    virtual DIRECTION_TYPE GetSendDirection();
+    virtual CMsgStructType GetReceiveDirection();
+    virtual CMsgStructType GetSendDirection();
     virtual void SetCallVariable(std::string sOriginalName, int nStars,
 	    std::string sCallName);
     virtual void RemoveCallVariable(std::string sCallName);

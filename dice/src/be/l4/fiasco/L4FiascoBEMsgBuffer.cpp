@@ -79,31 +79,13 @@ void CL4FiascoBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CB
 
 	// create receive flexpage
 	CBETypedDeclarator *pFlexpage = GetFlexpageVariable();
-	if (!pFlexpage)
-		throw new error::create_error("flexpage could not be created");
-	// check if struct already has flexpage
-	if (pStruct->m_Members.Find(pFlexpage->m_Declarators.First()->GetName()))
-		delete pFlexpage;
-	else
-		pStruct->m_Members.Add(pFlexpage);
-
+	pStruct->m_Members.Add(pFlexpage);
 	// create size dope
 	CBETypedDeclarator *pSizeDope = GetSizeDopeVariable();
-	if (!pSizeDope)
-		throw new error::create_error("size dope could not be created");
-	if (pStruct->m_Members.Find(pSizeDope->m_Declarators.First()->GetName()))
-		delete pSizeDope;
-	else
-		pStruct->m_Members.Add(pSizeDope);
-
+	pStruct->m_Members.Add(pSizeDope);
 	// create send dope
 	CBETypedDeclarator *pSendDope = GetSendDopeVariable();
-	if (!pSendDope)
-		throw new error::create_error("send dope could not be created");
-	if (pStruct->m_Members.Find(pSendDope->m_Declarators.First()->GetName()))
-		delete pSendDope;
-	else
-		pStruct->m_Members.Add(pSendDope);
+	pStruct->m_Members.Add(pSendDope);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CL4FiascoBEMsgBuffer::%s: returns true\n", __func__);
 }

@@ -289,17 +289,17 @@ CBETypedDeclarator * CBEWaitAnyFunction::FindParameterType(string sTypeName)
  * Since this function ignores the send part, this value should be not
  * interesting
  */
-DIRECTION_TYPE CBEWaitAnyFunction::GetSendDirection()
+CMsgStructType CBEWaitAnyFunction::GetSendDirection()
 {
-    return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
+    return IsComponentSide() ? CMsgStructType::Out : CMsgStructType::In;
 }
 
 /** \brief gets the direction for the receiving data
  *  \return if at client's side DIRECTION_OUT, else DIRECTION_IN
  */
-DIRECTION_TYPE CBEWaitAnyFunction::GetReceiveDirection()
+CMsgStructType CBEWaitAnyFunction::GetReceiveDirection()
 {
-    return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
+    return IsComponentSide() ? CMsgStructType::In : CMsgStructType::Out;
 }
 
 /** \brief write the access specifier for the marshal function

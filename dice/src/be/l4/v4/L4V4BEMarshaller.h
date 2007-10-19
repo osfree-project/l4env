@@ -39,20 +39,20 @@
 class CL4V4BEMarshaller : public CL4BEMarshaller
 {
 public:
-    /** constructor */
-    CL4V4BEMarshaller();
-    virtual ~CL4V4BEMarshaller();
+	/** constructor */
+	CL4V4BEMarshaller();
+	virtual ~CL4V4BEMarshaller();
 
 protected:
-    virtual bool DoSkipParameter(CBEFunction *pFunction,
-	CBETypedDeclarator *pParameter, DIRECTION_TYPE nDirection);
-    virtual bool MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter,
-	CDeclStack* pStack);
-    virtual void WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE nDirection, CBEMsgBuffer *pMsgBuffer,
-	CBETypedDeclarator *pMember);
+	virtual bool DoSkipParameter(CBEFunction *pFunction,
+		CBETypedDeclarator *pParameter, CMsgStructType nType);
+	virtual bool MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pParameter,
+		CDeclStack* pStack);
+	virtual void WriteRefstringCastMember(CBEFile& pFile, CMsgStructType nType, CBEMsgBuffer *pMsgBuffer,
+		CBETypedDeclarator *pMember);
 
 protected:
-    virtual bool MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember);
+	virtual bool MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pMember);
 
 };
 

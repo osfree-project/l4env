@@ -63,7 +63,7 @@ CL4V4BEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	if (pMsgBuffer->m_Declarators.First() &&
 		((pMsgBuffer->m_Declarators.First()->GetStars() > 0) ||
-		 pMsgBuffer->IsVariableSized(CMsgStructType(GetReceiveDirection()))))
+		 pMsgBuffer->IsVariableSized(GetReceiveDirection())))
 		bVarSized = true;
 
 	if (m_bReply)
@@ -174,7 +174,7 @@ CL4V4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	if (pMsgBuffer->m_Declarators.First() &&
 		((pMsgBuffer->m_Declarators.First()->GetStars() > 0) ||
-		 pMsgBuffer->IsVariableSized(CMsgStructType(GetReceiveDirection()))))
+		 pMsgBuffer->IsVariableSized(GetReceiveDirection())))
 		bVarSized = true;
 	pFile << "\tL4_Set_MsgLabel ( (" << sType << "*) " << ((bVarSized) ? "" : "&") <<
 		pMsgBuffer->m_Declarators.First()->GetName() << ", 0);\n";

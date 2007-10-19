@@ -41,11 +41,11 @@
 #include <cassert>
 
 CL4V2BEMsgBuffer::CL4V2BEMsgBuffer()
- : CL4BEMsgBuffer()
+: CL4BEMsgBuffer()
 { }
 
 CL4V2BEMsgBuffer::CL4V2BEMsgBuffer(CL4V2BEMsgBuffer* src)
- : CL4BEMsgBuffer(src)
+: CL4BEMsgBuffer(src)
 { }
 
 /** destroys the object */
@@ -70,7 +70,7 @@ CObject* CL4V2BEMsgBuffer::Clone()
  *  window for flexpages, the size and the send dope.
  */
 void CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s(%s,, %d) called\n",
 		__func__, pFunction->GetName().c_str(), (int)nType);
@@ -79,31 +79,13 @@ void CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStr
 
 	// create receive flexpage
 	CBETypedDeclarator *pFlexpage = GetFlexpageVariable();
-	if (!pFlexpage)
-		throw new error::create_error("flexpage member could not be created");
-	// check if struct already has flexpage
-	if (pStruct->m_Members.Find(pFlexpage->m_Declarators.First()->GetName()))
-		delete pFlexpage;
-	else
-		pStruct->m_Members.Add(pFlexpage);
-
+	pStruct->m_Members.Add(pFlexpage);
 	// create size dope
 	CBETypedDeclarator *pSizeDope = GetSizeDopeVariable();
-	if (!pSizeDope)
-		throw new error::create_error("size dope could not be created");
-	if (pStruct->m_Members.Find(pSizeDope->m_Declarators.First()->GetName()))
-		delete pSizeDope;
-	else
-		pStruct->m_Members.Add(pSizeDope);
-
+	pStruct->m_Members.Add(pSizeDope);
 	// create send dope
 	CBETypedDeclarator *pSendDope = GetSendDopeVariable();
-	if (!pSendDope)
-		throw new error::create_error("send dope could not be created");
-	if (pStruct->m_Members.Find(pSendDope->m_Declarators.First()->GetName()))
-		delete pSendDope;
-	else
-		pStruct->m_Members.Add(pSendDope);
+	pStruct->m_Members.Add(pSendDope);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s: returns true\n", __func__);
 }
@@ -113,10 +95,10 @@ void CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStr
 int
 CL4V2BEMsgBuffer::GetPayloadOffset()
 {
-    CBESizes *pSizes = CCompiler::GetSizes();
-    int nPage = pSizes->GetSizeOfType(TYPE_RCV_FLEXPAGE);
-    int nDope = pSizes->GetSizeOfType(TYPE_MSGDOPE_SEND);
-    return nPage + 2*nDope;
+	CBESizes *pSizes = CCompiler::GetSizes();
+	int nPage = pSizes->GetSizeOfType(TYPE_RCV_FLEXPAGE);
+	int nDope = pSizes->GetSizeOfType(TYPE_MSGDOPE_SEND);
+	return nPage + 2*nDope;
 }
 
 /** \brief adds a generic structure to the message buffer
@@ -159,58 +141,52 @@ void CL4V2BEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation *pF
  */
 bool
 CL4V2BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile,
-    CBEFunction *pFunction,
-    CBEClass *pClass,
-    int nIndex,
-    CMsgStructType nType)
+	CBEFunction *pFunction,
+	CBEClass *pClass,
+	int nIndex,
+	CMsgStructType nType)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    // check if this is server side, and if so, check for
-    // init-rcvstring attribute of class
-    if (pFunction->IsComponentSide() &&
-	(CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING) ||
-	 (pClass &&
-	  (pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING) ||
-	   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_CLIENT) ||
-	   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER)))))
-    {
-	string sFunction;
-	if (!CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING))
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	// check if this is server side, and if so, check for
+	// init-rcvstring attribute of class
+	if (pFunction->IsComponentSide() &&
+		(CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING) ||
+		 (pClass &&
+		  (pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING) ||
+		   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_CLIENT) ||
+		   pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER)))))
 	{
-	    CBEAttribute *pAttr = 0;
-	    if ((pAttr = pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING))
-		!= 0)
-		sFunction = pAttr->GetString();
-	    if (((pAttr = pClass->m_Attributes.Find(
-			    ATTR_INIT_RCVSTRING_CLIENT)) != 0) &&
-		pFile.IsOfFileType(FILETYPE_CLIENT))
-		sFunction = pAttr->GetString();
-	    if (((pAttr = pClass->m_Attributes.Find(
-			    ATTR_INIT_RCVSTRING_SERVER)) != 0) &&
-		pFile.IsOfFileType(FILETYPE_COMPONENT))
-		sFunction = pAttr->GetString();
+		string sFunction;
+		if (!CCompiler::IsOptionSet(PROGRAM_INIT_RCVSTRING))
+		{
+			CBEAttribute *pAttr = 0;
+			if ((pAttr = pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING)) != 0)
+				sFunction = pAttr->GetString();
+			if (((pAttr = pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_CLIENT)) != 0) &&
+				pFile.IsOfFileType(FILETYPE_CLIENT))
+				sFunction = pAttr->GetString();
+			if (((pAttr = pClass->m_Attributes.Find(ATTR_INIT_RCVSTRING_SERVER)) != 0) &&
+				pFile.IsOfFileType(FILETYPE_COMPONENT))
+				sFunction = pAttr->GetString();
+		}
+		if (sFunction.empty())
+			sFunction = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
+		else
+			sFunction = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC, (void*)&sFunction);
+
+		CBETypedDeclarator *pEnvVar = pFunction->GetEnvironment();
+		CBEDeclarator *pEnv = pEnvVar->m_Declarators.First();
+		// call the init function for the indirect string
+		pFile << "\t" << sFunction << " ( " << nIndex << ", &(";
+		WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING, nIndex);
+		pFile << ".rcv_str), &(";
+		WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING, nIndex);
+		pFile << ".rcv_size), " << pEnv->GetName() << ");\n";
+
+		// OK, next!
+		return true;
 	}
-	if (sFunction.empty())
-	    sFunction = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC);
-	else
-	    sFunction = pNF->GetString(CL4BENameFactory::STR_INIT_RCVSTRING_FUNC,
-		(void*)&sFunction);
-
-	CBETypedDeclarator *pEnvVar = pFunction->GetEnvironment();
-	CBEDeclarator *pEnv = pEnvVar->m_Declarators.First();
-	// call the init function for the indirect string
-	pFile << "\t" << sFunction << " ( " << nIndex << ", &(";
-	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
-	    nIndex);
-	pFile << ".rcv_str), &(";
-	WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
-	    nIndex);
-	pFile << ".rcv_size), " << pEnv->GetName() << ");\n";
-
-	// OK, next!
-	return true;
-    }
-    return false;
+	return false;
 }
 
 /** \brief writes the refstring member init for given parameter
@@ -222,84 +198,84 @@ CL4V2BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile,
  */
 void
 CL4V2BEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile,
-    CBEFunction *pFunction,
-    CBETypedDeclarator *pMember,
-    int nIndex,
-    CMsgStructType nType)
+	CBEFunction *pFunction,
+	CBETypedDeclarator *pMember,
+	int nIndex,
+	CMsgStructType nType)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sWord = pNF->GetTypeName(TYPE_MWORD, true);
-    // get parameter
-    CBETypedDeclarator *pParameter = pFunction->FindParameter(
-	pMember->m_Declarators.First()->GetName());
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sWord = pNF->GetTypeName(TYPE_MWORD, true);
+	// get parameter
+	CBETypedDeclarator *pParameter = pFunction->FindParameter(
+		pMember->m_Declarators.First()->GetName());
 
-    if (pParameter && (
-	    (pFile.IsOfFileType(FILETYPE_CLIENT) &&
-	     pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT)) ||
-	    (pFile.IsOfFileType(FILETYPE_COMPONENT) &&
-	     pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER))) )
-    {
-	pFile << "\t";
-	WriteAccess(pFile, pFunction, nType, pMember);
-	pFile << ".rcv_str = (" << sWord << ")(";
-	CBEDeclarator *pDecl = pParameter->m_Declarators.First();
-	int nStars = pDecl->GetStars();
-	CBEType *pType = pParameter->GetType();
-	if (!pType->IsPointerType())
-	    nStars--;
-	for (; nStars > 0; nStars--)
-	    pFile << "*";
-	pFile << pDecl->GetName() << ");\n";
-
-	pFile << "\t";
-	WriteAccess(pFile, pFunction, nType, pMember);
-	pFile << ".rcv_size = ";
-	if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS)) ||
-	    (pParameter->m_Attributes.Find(ATTR_LENGTH_IS)))
+	if (pParameter && (
+			(pFile.IsOfFileType(FILETYPE_CLIENT) &&
+			 pParameter->m_Attributes.Find(ATTR_PREALLOC_CLIENT)) ||
+			(pFile.IsOfFileType(FILETYPE_COMPONENT) &&
+			 pParameter->m_Attributes.Find(ATTR_PREALLOC_SERVER))) )
 	{
-	    if (pType->GetSize() > 1)
-		pFile << "(";
-	    pParameter->WriteGetSize(pFile, 0, pFunction);
-	    if (pType->GetSize() > 1)
-	    {
-		pFile << ")*sizeof";
-		pType->WriteCast(pFile, false);
-	    }
+		pFile << "\t";
+		WriteAccess(pFile, pFunction, nType, pMember);
+		pFile << ".rcv_str = (" << sWord << ")(";
+		CBEDeclarator *pDecl = pParameter->m_Declarators.First();
+		int nStars = pDecl->GetStars();
+		CBEType *pType = pParameter->GetType();
+		if (!pType->IsPointerType())
+			nStars--;
+		for (; nStars > 0; nStars--)
+			pFile << "*";
+		pFile << pDecl->GetName() << ");\n";
+
+		pFile << "\t";
+		WriteAccess(pFile, pFunction, nType, pMember);
+		pFile << ".rcv_size = ";
+		if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS)) ||
+			(pParameter->m_Attributes.Find(ATTR_LENGTH_IS)))
+		{
+			if (pType->GetSize() > 1)
+				pFile << "(";
+			pParameter->WriteGetSize(pFile, 0, pFunction);
+			if (pType->GetSize() > 1)
+			{
+				pFile << ")*sizeof";
+				pType->WriteCast(pFile, false);
+			}
+		}
+		else if (pParameter->m_Attributes.Find(ATTR_STRING) &&
+			pParameter->m_Attributes.Find(ATTR_MAX_IS) &&
+			pParameter->m_Attributes.Find(ATTR_OUT))
+			// WriteGetSize would write strlen, wich is not quite wha we want
+			// in this situation
+			pParameter->WriteGetMaxSize(pFile, 0, pFunction);
+		else
+			// write max-is
+			pParameter->WriteGetSize(pFile, 0, pFunction);
+		pFile << ";\n";
+
 	}
-	else if (pParameter->m_Attributes.Find(ATTR_STRING) &&
-	    pParameter->m_Attributes.Find(ATTR_MAX_IS) &&
-	    pParameter->m_Attributes.Find(ATTR_OUT))
-	    // WriteGetSize would write strlen, wich is not quite wha we want
-	    // in this situation
-	    pParameter->WriteGetMaxSize(pFile, 0, pFunction);
 	else
-	    // write max-is
-	    pParameter->WriteGetSize(pFile, 0, pFunction);
-	pFile << ";\n";
+	{
+		bool bUseArray = pMember->m_Declarators.First()->IsArray() &&
+			pMember->m_Declarators.First()->GetArrayDimensionCount() > 0;
+		pFile << "\t";
+		WriteAccess(pFile, pFunction, nType, pMember);
+		if (bUseArray)
+			pFile << "[" << nIndex << "]";
+		pFile << ".rcv_str = (" << sWord << ")";
+		CBEContext::WriteMalloc(pFile, pFunction);
+		pFile << "(";
+		WriteMaxRefstringSize(pFile, pFunction, pMember, pParameter, nIndex);
+		pFile << ");\n";
 
-    }
-    else
-    {
-	bool bUseArray = pMember->m_Declarators.First()->IsArray() &&
-	    pMember->m_Declarators.First()->GetArrayDimensionCount() > 0;
-	pFile << "\t";
-	WriteAccess(pFile, pFunction, nType, pMember);
-	if (bUseArray)
-	    pFile << "[" << nIndex << "]";
-	pFile << ".rcv_str = (" << sWord << ")";
-	CBEContext::WriteMalloc(pFile, pFunction);
-	pFile << "(";
-	WriteMaxRefstringSize(pFile, pFunction, pMember, pParameter, nIndex);
-	pFile << ");\n";
-
-	pFile << "\t";
-	WriteAccess(pFile, pFunction, nType, pMember);
-	if (bUseArray)
-	    pFile << "[" << nIndex << "]";
-	pFile << ".rcv_size = ";
-	WriteMaxRefstringSize(pFile, pFunction, pMember, pParameter, nIndex);
-	pFile << ";\n";
-    }
+		pFile << "\t";
+		WriteAccess(pFile, pFunction, nType, pMember);
+		if (bUseArray)
+			pFile << "[" << nIndex << "]";
+		pFile << ".rcv_size = ";
+		WriteMaxRefstringSize(pFile, pFunction, pMember, pParameter, nIndex);
+		pFile << ";\n";
+	}
 }
 
 /** \brief initializes the dopes to a value pair for short IPC
@@ -311,33 +287,33 @@ CL4V2BEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile,
  */
 void
 CL4V2BEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile,
-    int nType,
-    CMsgStructType nStructType)
+	int nType,
+	CMsgStructType nStructType)
 {
-    if ((nType != TYPE_MSGDOPE_SIZE) &&
-	(nType != TYPE_MSGDOPE_SEND))
-    {
-	return;
-    }
+	if ((nType != TYPE_MSGDOPE_SIZE) &&
+		(nType != TYPE_MSGDOPE_SEND))
+	{
+		return;
+	}
 
-    // get name of member
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sName = pNF->GetMessageBufferMember(nType);
-    // get member
-    CBETypedDeclarator *pMember = FindMember(sName, nStructType);
-    // check if we have member of that type
-    if (!pMember)
-	return;
-    CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+	// get name of member
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sName = pNF->GetMessageBufferMember(nType);
+	// get member
+	CBETypedDeclarator *pMember = FindMember(sName, nStructType);
+	// check if we have member of that type
+	if (!pMember)
+		return;
+	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
 
-    pFile << "\t";
-    WriteAccess(pFile, pFunction, nStructType, pMember);
-    // get short IPC values
-    CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
-    int nMinSize = pSizes->GetMaxShortIPCSize();
-    int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
-    // set short IPC dope
-    pFile << " = L4_IPC_DOPE(" << nMinSize / nWordSize << ", 0);\n";
+	pFile << "\t";
+	WriteAccess(pFile, pFunction, nStructType, pMember);
+	// get short IPC values
+	CL4BESizes *pSizes = static_cast<CL4BESizes*>(CCompiler::GetSizes());
+	int nMinSize = pSizes->GetMaxShortIPCSize();
+	int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
+	// set short IPC dope
+	pFile << " = L4_IPC_DOPE(" << nMinSize / nWordSize << ", 0);\n";
 }
 
 /** \brief writes the initialization of the receive flexpage
@@ -351,32 +327,32 @@ CL4V2BEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile,
  */
 void
 CL4V2BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
-    // get receive flexpage member
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sFlexName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
+	// get receive flexpage member
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sFlexName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
 
-    CBETypedDeclarator *pFlexpage = FindMember(sFlexName, nType);
-    assert (pFlexpage);
+	CBETypedDeclarator *pFlexpage = FindMember(sFlexName, nType);
+	assert (pFlexpage);
 
-    // get environment
-    CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-    CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
-    assert (pEnv);
-    string sEnv = pEnv->m_Declarators.First()->GetName();
-    if (pEnv->m_Declarators.First()->GetStars() > 0)
-	sEnv += "->";
-    else
-	sEnv += ".";
+	// get environment
+	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+	CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
+	assert (pEnv);
+	string sEnv = pEnv->m_Declarators.First()->GetName();
+	if (pEnv->m_Declarators.First()->GetStars() > 0)
+		sEnv += "->";
+	else
+		sEnv += ".";
 
-    // message buffer's receive window
-    pFile << "\t";
-    WriteAccess(pFile, pFunction, nType, pFlexpage);
-    if ((CMsgStructType::Generic != nType) && (GetCount(TYPE_FLEXPAGE, nType) == 0))
-	pFile << ".raw = 0;\n";
-    else
-	pFile << " = " << sEnv << "rcv_fpage;\n";
+	// message buffer's receive window
+	pFile << "\t";
+	WriteAccess(pFile, pFunction, nType, pFlexpage);
+	if ((CMsgStructType::Generic != nType) && (GetCount(TYPE_FLEXPAGE, nType) == 0))
+		pFile << ".raw = 0;\n";
+	else
+		pFile << " = " << sEnv << "rcv_fpage;\n";
 }
 
 /** \brief try to get the position of a member counting word sizes
@@ -390,18 +366,18 @@ CL4V2BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile,
  */
 int
 CL4V2BEMsgBuffer::GetMemberPosition(string sName,
-    CMsgStructType nType)
+	CMsgStructType nType)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    if (sName == pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE))
-	return -1;
-    // test send dope
-    if (sName == pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND))
-	return -1;
-    // test size dope
-    if (sName == pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE))
-	return -1;
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	if (sName == pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE))
+		return -1;
+	// test send dope
+	if (sName == pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND))
+		return -1;
+	// test size dope
+	if (sName == pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE))
+		return -1;
 
-    // not found
-    return CL4BEMsgBuffer::GetMemberPosition(sName, nType);
+	// not found
+	return CL4BEMsgBuffer::GetMemberPosition(sName, nType);
 }

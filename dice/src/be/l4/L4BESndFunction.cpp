@@ -78,8 +78,7 @@ void CL4BESndFunction::WriteInvocation(CBEFile& pFile)
 	// after marshalling set the message dope
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
-	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-		CMsgStructType(GetSendDirection()));
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, GetSendDirection());
 	// invocate
 	if (!CCompiler::IsOptionSet(PROGRAM_NO_SEND_CANCELED_CHECK))
 	{
@@ -157,8 +156,7 @@ CL4BESndFunction::WriteVariableInitialization(CBEFile& pFile)
 	CBESndFunction::WriteVariableInitialization(pFile);
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
-	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE,
-		CMsgStructType(GetSendDirection()));
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, GetSendDirection());
 }
 
 /** \brief write the IPC code

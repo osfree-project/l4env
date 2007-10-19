@@ -182,9 +182,9 @@ CBEReplyFunction::DoWriteFunction(CBEFile* pFile)
  * If this function is used at the server's side it sends data to the client,
  * which is DIRECTION_OUT.
  */
-DIRECTION_TYPE CBEReplyFunction::GetSendDirection()
+CMsgStructType CBEReplyFunction::GetSendDirection()
 {
-	return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
+	return IsComponentSide() ? CMsgStructType::Out : CMsgStructType::In;
 }
 
 /** \brief gets the direction this function receives data from
@@ -193,9 +193,9 @@ DIRECTION_TYPE CBEReplyFunction::GetSendDirection()
  * If this function is used at the server's side its DIRECTION_IN, which means
  * receiving data from the client.
  */
-DIRECTION_TYPE CBEReplyFunction::GetReceiveDirection()
+CMsgStructType CBEReplyFunction::GetReceiveDirection()
 {
-	return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
+	return IsComponentSide() ? CMsgStructType::In: CMsgStructType::Out;
 }
 
 /** \brief adds the parameters before "normal" parameters
@@ -236,9 +236,9 @@ CBEReplyFunction::GetExceptionVariable()
 		return 0;
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetExceptionWordVariable();
-	pRet = pMsgBuf->FindMember(sName, this, CMsgStructType(GetSendDirection()));
+	pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
 	if (!pRet)
-		pRet = pMsgBuf->FindMember(sName, this, CMsgStructType(GetReceiveDirection()));
+		pRet = pMsgBuf->FindMember(sName, this, GetReceiveDirection());
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s exception var %s at %p\n",
 		__func__, sName.c_str(), pRet);
 

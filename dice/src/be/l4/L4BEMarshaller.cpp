@@ -63,7 +63,7 @@ CL4BEMarshaller::~CL4BEMarshaller()
 /** \brief write the marshaling code for a whole function
  *  \param pFile the file to write to
  *  \param pFunction the function to write the marshaling code for
- *  \param nDirection the direction to marshal
+ *  \param nType the direction to marshal
  *
  * This method initializes some internal counters, then calls the base class'
  * implementation.
@@ -71,16 +71,16 @@ CL4BEMarshaller::~CL4BEMarshaller()
 void
 CL4BEMarshaller::MarshalFunction(CBEFile& pFile,
 	CBEFunction *pFunction,
-	DIRECTION_TYPE nDirection)
+	CMsgStructType nType)
 {
 	m_nSkipSize = 0;
-	CBEMarshaller::MarshalFunction(pFile, pFunction, nDirection);
+	CBEMarshaller::MarshalFunction(pFile, pFunction, nType);
 }
 
 /** \brief tests if this parameter should be marshalled
  *  \param pFunction the function the parameter belongs to
  *  \param pParameter the parameter (!) to be tested
- *  \param nDirection the direction of the marshalling
+ *  \param nType the direction of the marshalling
  *  \return true if this parameter should be skipped
  *
  * Additionally to the base class' tests this method skips the number of
@@ -100,10 +100,10 @@ CL4BEMarshaller::MarshalFunction(CBEFile& pFile,
 bool
 CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
 	CBETypedDeclarator *pParameter,
-	DIRECTION_TYPE nDirection)
+	CMsgStructType nType)
 {
 	// first test base class
-	if (CBEMarshaller::DoSkipParameter(pFunction, pParameter, nDirection))
+	if (CBEMarshaller::DoSkipParameter(pFunction, pParameter, nType))
 	{
 		// because this parameter is skipped, we have to add its size to the
 		// m_nSkipSize member. Otherwise we ignore some members of struct.
@@ -302,11 +302,11 @@ CL4BEMarshaller::MarshalParameter(CBEFile& pFile,
 		pParameter ? pParameter->m_Declarators.First()->GetName().c_str() : "(none)",
 		bMarshal ? "marshalling" : "unmarshalling", nPosition);
 
-	CMsgStructType nDirection(CMsgStructType::Generic);
+	CMsgStructType nType(CMsgStructType::Generic);
 	if (bMarshal)
-		nDirection = pFunction->GetSendDirection();
+		nType = pFunction->GetSendDirection();
 	else
-		nDirection = pFunction->GetReceiveDirection();
+		nType = pFunction->GetReceiveDirection();
 
 	CDeclStack stack;
 	stack.push_back(pParameter->m_Declarators.First());
@@ -314,7 +314,7 @@ CL4BEMarshaller::MarshalParameter(CBEFile& pFile,
 	if (bMarshal)
 	{
 		pFile << "\t";
-		MarshalWordMember(pFile, pFunction, nDirection, nPosition, false, true);
+		MarshalWordMember(pFile, pFunction, nType, nPosition, false, true);
 		pFile << " = ";
 		WriteParameter(pFile, pParameter, &stack, false);
 		pFile << ";\n";
@@ -324,7 +324,7 @@ CL4BEMarshaller::MarshalParameter(CBEFile& pFile,
 		pFile << "\t";
 		WriteParameter(pFile, pParameter, &stack, false);
 		pFile << " = ";
-		MarshalWordMember(pFile, pFunction, nDirection, nPosition, false, false);
+		MarshalWordMember(pFile, pFunction, nType, nPosition, false, false);
 		pFile << ";\n";
 	}
 }
@@ -571,7 +571,7 @@ bool CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pM
 }
 
 /** \brief writes the access to a specific member in the message buffer
- *  \param nDirection the direction of the parameter
+ *  \param nType the direction of the parameter
  *  \param pMsgBuffer the message buffer containing the members
  *  \param pMember the member to access
  *  \param stack set if a stack is to be used
@@ -587,7 +587,7 @@ bool CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pM
  */
 void
 CL4BEMarshaller::WriteMember(CBEFile& pFile,
-	DIRECTION_TYPE nDirection,
+	CMsgStructType nType,
 	CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember,
 	CDeclStack* pStack)
@@ -597,15 +597,15 @@ CL4BEMarshaller::WriteMember(CBEFile& pFile,
 		!dynamic_cast<CBESndFunction*>(m_pFunction) &&
 		!dynamic_cast<CBEReplyFunction*>(m_pFunction))
 	{
-		WriteRefstringCastMember(pFile, nDirection, pMsgBuffer, pMember);
+		WriteRefstringCastMember(pFile, nType, pMsgBuffer, pMember);
 		return;
 	}
 
-	CBEMarshaller::WriteMember(pFile, CMsgStructType(nDirection), pMsgBuffer, pMember, pStack);
+	CBEMarshaller::WriteMember(pFile, nType, pMsgBuffer, pMember, pStack);
 }
 
 /** \brief writes the access to a refstring member in the message buffer
- *  \param nDirection the direction of the parameter
+ *  \param nType the direction of the parameter
  *  \param pMsgBuffer the message buffer containing the members
  *  \param pMember the member to access
  *
@@ -620,7 +620,7 @@ CL4BEMarshaller::WriteMember(CBEFile& pFile,
  */
 void
 CL4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile,
-	DIRECTION_TYPE nDirection,
+	CMsgStructType nType,
 	CBEMsgBuffer *pMsgBuffer,
 	CBETypedDeclarator *pMember)
 {
@@ -628,7 +628,6 @@ CL4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile,
 	assert(pMsgBuffer);
 
 	// get index in refstring field
-	CMsgStructType nType(nDirection);
 	CBEStructType *pStruct = GetStruct(m_pFunction, nType);
 	assert(pStruct);
 	// iterate members of struct, when member of struct matches pMember, then

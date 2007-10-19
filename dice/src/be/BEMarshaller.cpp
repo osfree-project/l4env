@@ -149,22 +149,22 @@ CBEMarshaller::GetMessageBuffer(CBEFunction *pFunction)
 
 /** \brief write the marshaling code for a whole function
  *  \param pFile the file to marshal to
- *  \param nDirection the direction to marshal
+ *  \param nType the direction to marshal
  */
 void
 CBEMarshaller::MarshalFunction(CBEFile& pFile,
-	DIRECTION_TYPE nDirection)
+	CMsgStructType nType)
 {
 	// get function
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
 	assert(pFunction);
-	MarshalFunction(pFile, pFunction, nDirection);
+	MarshalFunction(pFile, pFunction, nType);
 }
 
 /** \brief write the marshaling code for a whole function
  *  \param pFile the file to write to
  *  \param pFunction the function to write the marshaling code for
- *  \param nDirection the direction to marshal
+ *  \param nType the direction to marshal
  *
  * This method simply iterates the parameters of the function, tests if they
  * should be marshaled and calls the marshal method. We do NOT use the
@@ -175,17 +175,13 @@ CBEMarshaller::MarshalFunction(CBEFile& pFile,
 void
 CBEMarshaller::MarshalFunction(CBEFile& pFile,
 	CBEFunction *pFunction,
-	DIRECTION_TYPE nDirection)
+	CMsgStructType nType)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMarshaller::%s(%s, %s, %d) called\n", __func__,
-		pFile.GetFileName().c_str(), pFunction->GetName().c_str(), nDirection);
+		pFile.GetFileName().c_str(), pFunction->GetName().c_str(), (int)nType);
 
 	// get struct
-	CMsgStructType nType(nDirection);
-	if (nDirection == pFunction->GetSendDirection() &&
-		dynamic_cast<CBEMarshalExceptionFunction*>(pFunction))
-		nType = CMsgStructType::Exc;
 	CBEStructType *pStruct = GetStruct(pFunction, nType);
 	// if the function has no struct, then it should not be marshalled. E.g.
 	// wait-any
@@ -197,12 +193,12 @@ CBEMarshaller::MarshalFunction(CBEFile& pFile,
 	}
 
 	// set member variables
-	m_bMarshal = nDirection == pFunction->GetSendDirection();
+	m_bMarshal = nType == pFunction->GetSendDirection();
 	m_pFunction = pFunction;
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBEMarshaller::%s %smarshals function %s for dir %d\n", __func__,
 		m_bMarshal ? "" : "un", pFunction->GetName().c_str(),
-		nDirection);
+		(int)nType);
 
 	// to maintain the order of the members in the struct, we iterate
 	// the struct members, get the respective parameter or local variable
@@ -240,7 +236,7 @@ CBEMarshaller::MarshalFunction(CBEFile& pFile,
 		// member may influence later skip decisions (other member come later
 		// and DoSkipParameter increments m_nSkipSize).
 		if (DoSkipParameter(pFunction, pParameter ? pParameter : *iter,
-				nDirection))
+				nType))
 			continue;
 
 		// if the member does not have a corresponding parameter, it might be
@@ -265,7 +261,7 @@ CBEMarshaller::MarshalFunction(CBEFile& pFile,
 /** \brief tests if this parameter should be marshalled
  *  \param pFunction the function the parameter belongs to
  *  \param pParameter the parameter (!) to be tested
- *  \param nDirection the direction of the marshalling
+ *  \param nType the direction of the marshalling
  *  \return true if this parameter should be skipped
  *
  * Test if the direction fits, if the parameter has the IGNORE attribute and
@@ -274,14 +270,14 @@ CBEMarshaller::MarshalFunction(CBEFile& pFile,
 bool
 CBEMarshaller::DoSkipParameter(CBEFunction* pFunction,
 	CBETypedDeclarator *pParameter,
-	DIRECTION_TYPE nDirection)
+	CMsgStructType nType)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMarshaller::%s(%s, %s, %d) called\n", __func__,
 		pFunction->GetName().c_str(),
 		pParameter->m_Declarators.First()->GetName().c_str(),
-		nDirection);
-	if (!pParameter->IsDirection(nDirection))
+		(int)nType);
+	if (!pParameter->IsDirection(nType))
 	{
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 			"CBEMarshaller::%s: wrong direction\n", __func__);
@@ -576,7 +572,7 @@ CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
 	{
 		// marshal opcode
 		pFile << "\t";
-		WriteMember(pFile, CMsgStructType(m_pFunction->GetSendDirection()), pMsgBuffer, pMember, 0);
+		WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, 0);
 		pFile << " = ";
 		pFile << m_pFunction->GetOpcodeConstName();
 		pFile << ";\n";
@@ -586,7 +582,7 @@ CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
 		// unmarshal into opcode variable
 		pFile << "\t" << sName << " = ";
 		// access message buffer
-		WriteMember(pFile, CMsgStructType(m_pFunction->GetReceiveDirection()), pMsgBuffer, pMember, 0);
+		WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, 0);
 		pFile << ";\n";
 	}
 
@@ -630,7 +626,7 @@ CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember)
 		if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_C))
 		{
 			pFile << "\t";
-			WriteMember(pFile, CMsgStructType(m_pFunction->GetSendDirection()), pMsgBuffer, pMember, 0);
+			WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, 0);
 			pFile << " = ((" << sType << "){ _corba: { .major = " <<
 				"DICE_EXCEPTION_MAJOR(" << sEnvPtr << "), .repos_id = " <<
 				"DICE_EXCEPTION_MINOR(" << sEnvPtr << ") }})._raw;\n";
@@ -643,7 +639,7 @@ CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember)
 			else
 				sEnv += "->";
 			pFile << "\t";
-			WriteMember(pFile, CMsgStructType(m_pFunction->GetSendDirection()), pMsgBuffer, pMember, 0);
+			WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, 0);
 			pFile << " = " << sEnv << "_exception._raw;\n";
 		}
 	}
@@ -792,7 +788,7 @@ CBEMarshaller::WriteAssignment(CBEFile& pFile,
 	pFile << "\t";
 	if (m_bMarshal)
 	{
-		WriteMember(pFile, CMsgStructType(m_pFunction->GetSendDirection()), pMsgBuffer, pMember, pStack);
+		WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, pStack);
 		pFile << " = ";
 		// if type of member and parameter are different, cast to member type
 		WriteParameter(pFile, pParameter, pStack, false);
@@ -801,7 +797,7 @@ CBEMarshaller::WriteAssignment(CBEFile& pFile,
 	{
 		WriteParameter(pFile, pParameter, pStack, false);
 		pFile << " = ";
-		WriteMember(pFile, CMsgStructType(m_pFunction->GetReceiveDirection()), pMsgBuffer, pMember, pStack);
+		WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
 	}
 	pFile << ";\n";
 }
@@ -1362,7 +1358,7 @@ void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
 			CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
 			assert(pMsgBuffer);
 
-			if (pMsgBuffer->IsEarlier(m_pFunction, CMsgStructType(m_pFunction->GetReceiveDirection()),
+			if (pMsgBuffer->IsEarlier(m_pFunction, m_pFunction->GetReceiveDirection(),
 					pParameter->m_Declarators.First()->GetName(),
 					pSizeDecl->GetName()))
 			{
@@ -1451,7 +1447,7 @@ void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
 	pFile << "\t_dice_memcpy (";
 	if (m_bMarshal)
 	{
-		WriteMember(pFile, CMsgStructType(m_pFunction->GetSendDirection()), pMsgBuffer, pMember, pStack);
+		WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, pStack);
 		pFile << ", ";
 		WriteParameter(pFile, pParameter, pStack, true);
 	}
@@ -1459,7 +1455,7 @@ void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
 	{
 		WriteParameter(pFile, pParameter, pStack, true);
 		pFile << ", ";
-		WriteMember(pFile, CMsgStructType(m_pFunction->GetReceiveDirection()), pMsgBuffer, pMember, pStack);
+		WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
 	}
 	pFile << ", ";
 	// only call WriteGetSize if this is variable sized.
@@ -1525,7 +1521,7 @@ CBEMarshaller::MarshalArrayInternRef(CBEFile& pFile,
 	pFile << " = ";
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
 	CBETypedDeclarator *pMember = FindMarshalMember(pStack);
-	WriteMember(pFile, CMsgStructType(m_pFunction->GetReceiveDirection()), pMsgBuffer, pMember, pStack);
+	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
 	pFile << ";\n";
 }
 

@@ -30,7 +30,7 @@
 #ifndef __DICE_BE_MSGSTRUCTTYPE_H__
 #define __DICE_BE_MSGSTRUCTTYPE_H__
 
-#include "BEFunction.h"
+#include "DirectionType.h"
 
 /** \class CMsgStructType
  *  \ingroup backend
@@ -90,7 +90,10 @@ public:
 		case In:
 			return DIRECTION_IN;
 		case Out:
+		case Exc:
 			return DIRECTION_OUT;
+		case Generic:
+			return DIRECTION_INOUT;
 		default:
 			break;
 		}
@@ -110,4 +113,5 @@ private:
 	 */
 	Type nType;
 };
+
 #endif

@@ -397,17 +397,17 @@ bool CBESrvLoopFunction::DoWriteFunction(CBEFile* pFile)
 /** \brief determines the direction, the server loop sends to
  *  \return DIRECTION_OUT
  */
-DIRECTION_TYPE CBESrvLoopFunction::GetSendDirection()
+CMsgStructType CBESrvLoopFunction::GetSendDirection()
 {
-	return DIRECTION_OUT;
+	return CMsgStructType::Out;
 }
 
 /** \brief determined the direction the server loop receives from
  *  \return DIRECTION_IN
  */
-DIRECTION_TYPE CBESrvLoopFunction::GetReceiveDirection()
+CMsgStructType CBESrvLoopFunction::GetReceiveDirection()
 {
-	return DIRECTION_IN;
+	return CMsgStructType::In;
 }
 
 /** \brief write the initialization code for the CORBA_Environment

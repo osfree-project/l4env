@@ -91,8 +91,8 @@ CBEMsgBufferType::CreateBackEnd(CFEOperation *pFEOperation)
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
 	assert(pFunction);
 
-	AddStruct(pFEOperation, CMsgStructType(pFunction->GetSendDirection()));
-	AddStruct(pFEOperation, CMsgStructType(pFunction->GetReceiveDirection()));
+	AddStruct(pFEOperation, pFunction->GetSendDirection());
+	AddStruct(pFEOperation, pFunction->GetReceiveDirection());
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s(fe-op) returns\n", __func__);

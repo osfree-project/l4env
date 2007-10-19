@@ -61,8 +61,7 @@ public:
     virtual bool AddLocalVariable(CBEFunction *pFunction);
 
 protected:
-    virtual bool IsShortIPC(CBEFunction *pFunction,
-	DIRECTION_TYPE nDirection);
+    virtual bool IsShortIPC(CBEFunction *pFunction, CMsgStructType nType);
     virtual bool UseAssembler(CBEFunction *pFunction);
 };
 

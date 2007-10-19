@@ -144,17 +144,17 @@ bool CBEMarshalExceptionFunction::DoWriteFunction(CBEFile* pFile)
  * Since this function ignores marshalling parameter this value should be
  * irrelevant
  */
-DIRECTION_TYPE CBEMarshalExceptionFunction::GetSendDirection()
+CMsgStructType CBEMarshalExceptionFunction::GetSendDirection()
 {
-	return IsComponentSide() ? DIRECTION_OUT : DIRECTION_IN;
+	return IsComponentSide() ? CMsgStructType::Exc : CMsgStructType::In;
 }
 
 /** \brief gets the direction of the unmarshal-parameters
  *  \return if at client's side DIRECTION_OUT, if at server's side DIRECTION_IN
  */
-DIRECTION_TYPE CBEMarshalExceptionFunction::GetReceiveDirection()
+CMsgStructType CBEMarshalExceptionFunction::GetReceiveDirection()
 {
-	return IsComponentSide() ? DIRECTION_IN : DIRECTION_OUT;
+	return IsComponentSide() ? CMsgStructType::In : CMsgStructType::Exc;
 }
 
 /** \brief get exception variable
@@ -175,9 +175,9 @@ CBEMarshalExceptionFunction::GetExceptionVariable()
 		return 0;
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetExceptionWordVariable();
-	pRet = pMsgBuf->FindMember(sName, this, CMsgStructType(GetSendDirection()));
+	pRet = pMsgBuf->FindMember(sName, this, GetSendDirection());
 	if (!pRet)
-		pRet = pMsgBuf->FindMember(sName, this, CMsgStructType(GetReceiveDirection()));
+		pRet = pMsgBuf->FindMember(sName, this, GetReceiveDirection());
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s exception var %s at %p\n", __func__,
 		sName.c_str(), pRet);
 

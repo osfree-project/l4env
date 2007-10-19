@@ -50,8 +50,8 @@ public:
 	virtual bool DoWriteFunction(CBEFile* pFile);
 	virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 	virtual void AddParameter(CFETypedDeclarator * pFEParameter);
-	virtual DIRECTION_TYPE GetSendDirection();
-	virtual DIRECTION_TYPE GetReceiveDirection();
+	virtual CMsgStructType GetSendDirection();
+	virtual CMsgStructType GetReceiveDirection();
 	virtual CBETypedDeclarator* GetExceptionVariable();
 	virtual CBETypedDeclarator* FindParameterType(std::string sTypeName);
 	virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,

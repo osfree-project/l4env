@@ -84,9 +84,9 @@ protected: // protected methods
 	virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst,
 		CBETypedDeclarator *pSecond);
 
-	virtual bool Pad();
-	virtual bool PadRefstringToPosition(int nPosition);
-	virtual bool PadRefstringToPosition(CBEStructType *pStruct, int nPosition);
+	virtual void Pad();
+	virtual void PadRefstringToPosition(int nPosition);
+	virtual void PadRefstringToPosition(CBEStructType *pStruct, int nPosition);
 	virtual int GetMaxPosOfRefstringInMsgBuffer();
 	virtual bool InsertPadMember(int nFEType, int nSize,
 		CBETypedDeclarator *pMember, CBEStructType *pStruct);

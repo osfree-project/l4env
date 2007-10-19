@@ -50,8 +50,8 @@ public:
 public:
     virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
     virtual bool DoWriteFunction(CBEFile* pFile);
-    virtual DIRECTION_TYPE GetSendDirection();
-    virtual DIRECTION_TYPE GetReceiveDirection();
+    virtual CMsgStructType GetSendDirection();
+    virtual CMsgStructType GetReceiveDirection();
     virtual int GetSize(DIRECTION_TYPE nDirection);
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);
     virtual void WriteReturn(CBEFile& pFile);

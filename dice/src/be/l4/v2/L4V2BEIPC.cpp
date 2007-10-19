@@ -454,8 +454,7 @@ CL4V2BEIPC::WriteReply(CBEFile& pFile,
  * This implementation currently always returns false, because assembler code
  * is always ABI specific.
  */
-bool
-CL4V2BEIPC::UseAssembler(CBEFunction *)
+bool CL4V2BEIPC::UseAssembler(CBEFunction *)
 {
 	return false;
 }
@@ -468,16 +467,14 @@ CL4V2BEIPC::UseAssembler(CBEFunction *)
  * This is a simple helper function, which just delegates the call to the
  * function's message buffer.
  */
-bool
-CL4V2BEIPC::IsShortIPC(CBEFunction *pFunction,
-	DIRECTION_TYPE nDirection)
+bool CL4V2BEIPC::IsShortIPC(CBEFunction *pFunction, CMsgStructType nType)
 {
-	if (nDirection == 0)
+	if (CMsgStructType::Generic == nType)
 		return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
 			IsShortIPC(pFunction, pFunction->GetReceiveDirection());
 
 	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, CMsgStructType(nDirection));
+	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nType);
 }
 
 /** \brief add local variables required in functions

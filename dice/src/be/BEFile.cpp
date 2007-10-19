@@ -253,6 +253,8 @@ int CBEFile::GetFunctionCount()
  */
 bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFile::IsOfFileType(%d) called m_nFileType=%d\n",
+		nFileType, m_nFileType);
 	if (m_nFileType == nFileType)
 		return true;
 	if ((nFileType == FILETYPE_CLIENT) &&
@@ -261,7 +263,8 @@ bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
 		return true;
 	if ((nFileType == FILETYPE_COMPONENT) &&
 		((m_nFileType == FILETYPE_COMPONENTHEADER) ||
-		 (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION)))
+		 (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION) ||
+		 (m_nFileType == FILETYPE_TEMPLATE)))
 		return true;
 	if ((nFileType == FILETYPE_HEADER) &&
 		((m_nFileType == FILETYPE_CLIENTHEADER) ||
@@ -270,7 +273,8 @@ bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
 		return true;
 	if ((nFileType == FILETYPE_IMPLEMENTATION) &&
 		((m_nFileType == FILETYPE_CLIENTIMPLEMENTATION) ||
-		 (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION)))
+		 (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION) ||
+		 (m_nFileType == FILETYPE_TEMPLATE)))
 		return true;
 	return false;
 }

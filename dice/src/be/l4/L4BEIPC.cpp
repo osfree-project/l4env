@@ -62,31 +62,27 @@ CL4BEIPC::~CL4BEIPC()
  * This implementation currently always returns false, because assembler code
  * is always ABI specific.
  */
-bool
-CL4BEIPC::UseAssembler(CBEFunction *)
+bool CL4BEIPC::UseAssembler(CBEFunction *)
 {
 	return false;
 }
 
 /** \brief helper function to test for short IPC
  *  \param pFunction the function to test
- *  \param nDirection the direction to test
+ *  \param nType the direction to test
  *  \return true if the function uses short IPC in the specified direction
  *
  * This is a simple helper function, which just delegates the call to the
  * function's message buffer.
  */
-bool
-CL4BEIPC::IsShortIPC(CBEFunction *pFunction,
-	DIRECTION_TYPE nDirection)
+bool CL4BEIPC::IsShortIPC(CBEFunction *pFunction, CMsgStructType nType)
 {
-	if (nDirection == 0)
+	if (CMsgStructType::Generic == nType)
 		return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
 			IsShortIPC(pFunction, pFunction->GetReceiveDirection());
 
 	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC,
-		CMsgStructType(nDirection));
+	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nType);
 }
 
 /** \brief writes a send with an immediate wait

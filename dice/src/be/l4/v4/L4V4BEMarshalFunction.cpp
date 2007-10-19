@@ -80,8 +80,7 @@ CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 	// set dopes
 	CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
 	assert(pMsgBuffer);
-	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-		CMsgStructType(GetSendDirection()));
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, GetSendDirection());
 
 	if (bLocalTrace)
 	{

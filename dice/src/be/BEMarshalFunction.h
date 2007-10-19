@@ -54,8 +54,8 @@ public:
 	virtual void WriteReturn(CBEFile& pFile);
 	virtual int GetFixedSize(DIRECTION_TYPE nDirection);
 	virtual int GetSize(DIRECTION_TYPE nDirection);
-	virtual DIRECTION_TYPE GetReceiveDirection();
-	virtual DIRECTION_TYPE GetSendDirection();
+	virtual CMsgStructType GetReceiveDirection();
+	virtual CMsgStructType GetSendDirection();
 	virtual CBETypedDeclarator* FindParameterType(std::string sTypeName);
 	virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
 		bool bMarshal);

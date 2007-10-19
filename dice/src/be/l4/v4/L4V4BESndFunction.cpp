@@ -88,8 +88,7 @@ CL4V4BESndFunction::WriteMarshalling(CBEFile& pFile)
 	// set dopes
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
-	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-		CMsgStructType(GetSendDirection()));
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, GetSendDirection());
 	// load the message into the UTCB
 	pFile << "\tL4_MsgLoad ( (" << sType << "*) &" << sMsgBuffer << " );\n";
 }

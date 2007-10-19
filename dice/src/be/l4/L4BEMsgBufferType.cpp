@@ -208,10 +208,10 @@ CL4BEMsgBufferType::AddZeroFlexpage(CFEOperation *pFEOperation,
 	{
 		if ((*iter)->m_Attributes.Find(ATTR_IGNORE))
 			continue;
-		if ((nType == CMsgStructType::In) &&
+		if ((CMsgStructType::In == nType) &&
 			!(*iter)->m_Attributes.Find(ATTR_IN))
 			continue;
-		if ((nType == CMsgStructType::Out) &&
+		if ((CMsgStructType::Out == nType) &&
 			!(*iter)->m_Attributes.Find(ATTR_OUT))
 			continue;
 		if ((*iter)->GetType()->GetType() == TYPE_FLEXPAGE)

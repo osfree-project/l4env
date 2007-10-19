@@ -137,7 +137,7 @@ protected: // protected methods
 	CMsgStructType GetStructType(CBEStructType *pStruct);
 	vector<CBETypedDeclarator*>::iterator GetStartOfPayload(CBEStructType *pStruct);
 
-	virtual bool Pad();
+	virtual void Pad();
 	virtual void SortPayload(CBEStructType *pStruct);
 	virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst,
 		CBETypedDeclarator *pSecond);

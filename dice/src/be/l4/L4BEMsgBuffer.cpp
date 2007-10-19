@@ -83,6 +83,7 @@ CL4BEMsgBuffer::GetFlexpageVariable()
 	string sName = CBENameFactory::Instance()->
 		GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
 	CBETypedDeclarator *pFpage = pCF->GetNewTypedDeclarator();
+	assert(pFpage);
 	pType->CreateBackEnd(false, 0, TYPE_RCV_FLEXPAGE);
 	pFpage->CreateBackEnd(pType, sName);
 	delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
@@ -104,8 +105,7 @@ CL4BEMsgBuffer::GetFlexpageVariable()
 /** \brief creates a member variable for the size dope
  *  \return a reference to the created variable or NULL if failed
  */
-CBETypedDeclarator*
-CL4BEMsgBuffer::GetSizeDopeVariable()
+CBETypedDeclarator* CL4BEMsgBuffer::GetSizeDopeVariable()
 {
 	string exc = string(__func__);
 
@@ -114,6 +114,7 @@ CL4BEMsgBuffer::GetSizeDopeVariable()
 	string sName = CBENameFactory::Instance()->
 		GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
 	CBETypedDeclarator *pSize = pCF->GetNewTypedDeclarator();
+	assert(pSize);
 	pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SIZE);
 	pSize->CreateBackEnd(pType, sName);
 	delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
@@ -135,8 +136,7 @@ CL4BEMsgBuffer::GetSizeDopeVariable()
 /** \brief creates a member variable for the send dope
  *  \return a reference to the send dope variable
  */
-CBETypedDeclarator*
-CL4BEMsgBuffer::GetSendDopeVariable()
+CBETypedDeclarator* CL4BEMsgBuffer::GetSendDopeVariable()
 {
 	string exc = string(__func__);
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -144,6 +144,7 @@ CL4BEMsgBuffer::GetSendDopeVariable()
 	string sName = CBENameFactory::Instance()->
 		GetMessageBufferMember(TYPE_MSGDOPE_SEND);
 	CBETypedDeclarator *pSend = pCF->GetNewTypedDeclarator();
+	assert(pSend);
 	pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SEND);
 	pSend->CreateBackEnd(pType, sName);
 	delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
@@ -865,7 +866,7 @@ CL4BEMsgBuffer::GetMemberSize(int nType,
  * This implementation has to pad indirect strings to NOT reside in the first
  * two dwords and aligns all refstrings to the same position.
  */
-bool CL4BEMsgBuffer::Pad()
+void CL4BEMsgBuffer::Pad()
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 	// get minimal size for short IPC
@@ -878,7 +879,7 @@ bool CL4BEMsgBuffer::Pad()
 	if (nMinSize > nMax)
 		nMax = nMinSize;
 	// align refstrings in all message buffers to the max of the two
-	return PadRefstringToPosition (nMax);
+	PadRefstringToPosition (nMax);
 }
 
 /** \brief pad refstrings to specified position
@@ -887,7 +888,7 @@ bool CL4BEMsgBuffer::Pad()
  *
  * Refstrings should start after the short IPC words.
  */
-bool CL4BEMsgBuffer::PadRefstringToPosition(int nPosition)
+void CL4BEMsgBuffer::PadRefstringToPosition(int nPosition)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%d) called\n", __func__, nPosition);
 
@@ -900,10 +901,8 @@ bool CL4BEMsgBuffer::PadRefstringToPosition(int nPosition)
 		CBEStructType *pStruct = dynamic_cast<CBEStructType*>((*iter)->GetType());
 		if (!pStruct)
 			continue;
-		if (!PadRefstringToPosition(pStruct, nPosition))
-			return false;
+		PadRefstringToPosition(pStruct, nPosition);
 	}
-	return true;
 }
 
 /** \brief pad refstrings to specified position
@@ -913,7 +912,7 @@ bool CL4BEMsgBuffer::PadRefstringToPosition(int nPosition)
  *
  * Refstrings should start after the specified position.
  */
-bool CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct, int nPosition)
+void CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct, int nPosition)
 {
 	assert(pStruct);
 	// get start of payload
@@ -932,12 +931,12 @@ bool CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct, int nPositio
 			(*iter)->GetMaxSize(nMemberSize);
 		nSize += nMemberSize;
 		if (nSize > nPosition)
-			return true;
+			return;
 	}
 
 	// if no member now, than all members are smaller than position
 	if (iter == pStruct->m_Members.end())
-		return true;
+		return;
 
 	assert(*iter);
 	// otherwise, the member is a refstring and the previous members are less
@@ -956,7 +955,7 @@ bool CL4BEMsgBuffer::PadRefstringToPosition(CBEStructType *pStruct, int nPositio
 			InsertPadMember(TYPE_MWORD, nPadding / nWordSize, pMember, pStruct);
 	}
 
-	return true;
+	return;
 }
 
 /** \brief insert a padding member

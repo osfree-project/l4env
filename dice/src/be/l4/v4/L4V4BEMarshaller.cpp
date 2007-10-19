@@ -55,16 +55,16 @@ CL4V4BEMarshaller::~CL4V4BEMarshaller()
 /** \brief tests if this parameter should be marshalled
  *  \param pFunction the function the parameter belongs to
  *  \param pParameter the parameter (!) to be tested
- *  \param nDirection the direction of the marshalling
+ *  \param nType the direction of the marshalling
  *  \return true if this parameter should be skipped
  *
  * Do not skip any parameters for V4 (all parameters have to be stuffed into
  * the message buffer).
  */
 bool CL4V4BEMarshaller::DoSkipParameter(CBEFunction *pFunction, CBETypedDeclarator *pParameter,
-    DIRECTION_TYPE nDirection)
+    CMsgStructType nType)
 {
-	return CBEMarshaller::DoSkipParameter(pFunction, pParameter, nDirection);
+	return CBEMarshaller::DoSkipParameter(pFunction, pParameter, nType);
 }
 
 /** \brief marshal an indirect string parameter
@@ -111,8 +111,7 @@ bool CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pPa
 	if (m_bMarshal)
 	{
 		pFile << "\t";
-		WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember,
-			pStack);
+		WriteMember(pFile, m_pFunction->GetSendDirection(), pMsgBuffer, pMember, pStack);
 		// write access to snd_str part of indirect string
 		pFile << " = L4_StringItem ( (";
 		// size with max constraint
@@ -203,7 +202,7 @@ bool CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pPa
 }
 
 /** \brief writes the access to a refstring member in the message buffer
- *  \param nDirection the direction of the parameter
+ *  \param nType the direction of the parameter
  *  \param pMsgBuffer the message buffer containing the members
  *  \param pMember the member to access
  *
@@ -216,14 +215,13 @@ bool CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pPa
  * To allow multiple indirect strings, we first have to know at which position
  * in the indirect string list the current member is.
  */
-void CL4V4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile, DIRECTION_TYPE nDirection,
+void CL4V4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile, CMsgStructType nType,
     CBEMsgBuffer *pMsgBuffer, CBETypedDeclarator *pMember)
 {
 	assert(pMember);
 	assert(pMsgBuffer);
 
 	// get index in refstring field
-	CMsgStructType nType(nDirection);
 	CBEStructType *pStruct = GetStruct(m_pFunction, nType);
 	assert(pStruct);
 	// iterate members of struct, when member of struct matches pMember, then
