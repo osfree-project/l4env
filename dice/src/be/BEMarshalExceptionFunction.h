@@ -49,7 +49,6 @@ public:
 	virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 	virtual bool DoWriteFunction(CBEFile* pFile);
 	virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
-	virtual void AddParameter(CFETypedDeclarator * pFEParameter);
 	virtual CMsgStructType GetSendDirection();
 	virtual CMsgStructType GetReceiveDirection();
 	virtual CBETypedDeclarator* GetExceptionVariable();
@@ -58,6 +57,8 @@ public:
 		bool bMarshal);
 
 protected:
+	virtual void AddParameters(CFEOperation *pFEOperation);
+	virtual void AddParameter(CFEIdentifier * pFEIdentifier);
 	virtual void AddAfterParameters();
 	virtual void WriteVariableInitialization(CBEFile& pFile);
 	virtual void WriteInvocation(CBEFile& pFile);

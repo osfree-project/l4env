@@ -29,6 +29,7 @@
 #include "be/Trace.h"
 #include "be/BEClass.h"
 #include "be/BEMsgBuffer.h"
+#include "be/BEFile.h"
 #include "TypeSpec-L4Types.h"
 #include "Compiler.h"
 #include <cassert>
@@ -55,6 +56,10 @@ CL4BEMarshalExceptionFunction::~CL4BEMarshalExceptionFunction()
  */
 void CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile& pFile)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4BEMarshalExceptionFunction::WriteMarshalling(%s) called\n",
+		pFile.GetFileName().c_str());
+
 	bool bLocalTrace = false;
 	if (!m_bTraceOn && m_pTrace)
 	{
@@ -75,5 +80,8 @@ void CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile& pFile)
 		m_pTrace->AfterMarshalling(pFile, this);
 		m_bTraceOn = false;
 	}
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4BEMarshalExceptionFunction::WriteMarshalling returns\n");
 }
 

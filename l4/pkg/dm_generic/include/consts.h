@@ -37,55 +37,52 @@
 
 /* Access rights bits */
 #define L4DM_READ             0x00000001               /**< \ingroup api_map
-							**  Read access 
-							**/
+                                                        **  Read access
+                                                        **/
 #define L4DM_WRITE            0x00000002               /**< \ingroup api_map
-							**  Write access 
-							**/
+                                                        **  Write access
+                                                        **/
 #define L4DM_RESIZE           0x00000080               /**< \ingroup api_open
-							**  Allow resize
-							**/
- 
+                                                        **  Allow resize
+                                                        **/
 #define L4DM_RO               (L4DM_READ)              /**< \ingroup api_map
-							**  read-only access 
-							**/
+                                                        **  read-only access
+                                                        **/
 #define L4DM_RW               (L4DM_READ | L4DM_WRITE) /**< \ingroup api_map
-							**  read-write access 
-							**/
-
+                                                        **  read-write access
+                                                        **/
 #define L4DM_ALL_RIGHTS       0x000000FF               /**< \ingroup api_client
                                                         **  all rights
                                                         **/
-
 #define L4DM_RIGHTS_MASK      0x000000FF
 
 /* Flags open / copy */
 #define L4DM_CONTIGUOUS       0x00000100     /**< \ingroup api_open
-					      **  Allocate phys. contiguous 
-					      **  memory 
-					      **/
+                                              **  Allocate phys. contiguous
+                                              **  memory
+                                              **/
 #define L4DM_PINNED           0x00000200     /**< \ingroup api_open
-					      **  Allocated pinned memory 
-					      **/
+                                              **  Allocated pinned memory
+                                              **/
 #define L4DM_COW              0x00000400     /**< \ingroup api_open
-					      **  Create copy-on-write
-					      **  dataspace copy 
-					      **/
+                                              **  Create copy-on-write
+                                              **  dataspace copy
+                                              **/
 
 /* Flags map */
 #define L4DM_MAP_PARTIAL      0x00000800     /**< \ingroup api_map
-					      **  Allow partial mappings 
-					      **/
+                                              **  Allow partial mappings
+                                              **/
 #define L4DM_MAP_MORE         0x00001000     /**< \ingroup api_map
-					      **  Allow larger mappings 
-					      **  than requested 
-					      **/
+                                              **  Allow larger mappings
+                                              **  than requested
+                                              **/
 
 /* Flags close_all */
 #define L4DM_SAME_TASK        0x00002000     /**< \ingroup api_open
-					      **  Close dataspace owned by
-					      **  threads of the same task
-					      **/
+                                              **  Close dataspace owned by
+                                              **  threads of the same task
+                                              **/
 
 /*****************************************************************************
  *** Misc.
@@ -96,17 +93,17 @@
 
 /* Special arguments */
 #define L4DM_WHOLE_DS         (-1)           /**< \ingroup api_open
-					      **  Copy: create copy of the 
-					      **    whole dataspace,
-					      **  phys_addr: return the phys.
-					      **    addresses of the whole
-					      **    dataspace 
-					      **/ 
+                                              **  Copy: create copy of the
+                                              **    whole dataspace,
+                                              **  phys_addr: return the phys.
+                                              **    addresses of the whole
+                                              **    dataspace
+                                              **/
 
 /* Dataspace manager */
 #define L4DM_DEFAULT_DSM      L4_INVALID_ID  /**< \ingroup api_open
-					      **  Open: use default dataspcae
-					      **    manager 
-					      **/
+                                              **  Open: use default dataspcae
+                                              **    manager
+                                              **/
 
 #endif /* !_L4_DM_GENERIC_CONSTS_H */

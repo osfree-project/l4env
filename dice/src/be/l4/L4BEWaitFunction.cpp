@@ -147,9 +147,9 @@ CL4BEWaitFunction::WriteIPCErrorCheck(CBEFile& pFile)
 		// env.major = CORBA_SYSTEM_EXCEPTION;
 		// env.repos_id = DICE_IPC_ERROR;
 		++pFile << "\t" << sSetFunc << " (" << sEnv << ",\n";
-		++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
-			"\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
-			"\t0);\n";
+		++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+		pFile << "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n";
+		pFile << "\t0);\n";
 		// env.ipc_error = L4_IPC_ERROR(result);
 		--pFile << "\tDICE_IPC_ERROR(" << sEnv << ") = L4_IPC_ERROR(" <<
 			sResult << ");\n";
@@ -308,7 +308,7 @@ CL4BEWaitFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 {
 	bool bRet = CBEWaitFunction::HasVariableSizedParameters(nDirection);
 	// if we have indirect strings to marshal then we need the offset vars
-	if (GetParameterCount(ATTR_REF, ATTR_NONE, nDirection))
+	if (HasParameterWithAttributes(ATTR_REF, (DIRECTION_OUT == nDirection) ? ATTR_OUT : ATTR_IN))
 		return true;
 	return bRet;
 }

@@ -30,26 +30,26 @@
 /*****************************************************************************/
 /**
  * \brief Grant dataspace access rights to a client
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  client        Client thread id
  * \param  rights        Access rights:
  *                       - #L4DM_RO  read-only
  *                       - #L4DM_RW  read/write
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_EIPC    IPC error calling dataspace manager
  *         - -#L4_EINVAL  invalid dataspace id
- *         - -#L4_EPERM   the requested rights for the new client exceed 
+ *         - -#L4_EPERM   the requested rights for the new client exceed
  *                        the rights of the caller for the dataspace
- * 
- * Grant / extend dataspace access rights to a client. If the client already 
- * has access to the dataspace, the new rights are added to the existing 
+ *
+ * Grant / extend dataspace access rights to a client. If the client already
+ * has access to the dataspace, the new rights are added to the existing
  * rights.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-l4dm_share(const l4dm_dataspace_t * ds, 
+l4dm_share(const l4dm_dataspace_t * ds,
            l4_threadid_t client, l4_uint32_t rights)
 {
   int ret;
@@ -63,15 +63,15 @@ l4dm_share(const l4dm_dataspace_t * ds,
                                    rights, &_env);
   if (ret || DICE_HAS_EXCEPTION(&_env))
     {
-      LOGdL(DEBUG_ERRORS, 
+      LOGdL(DEBUG_ERRORS,
             "libdm_generic: share failed, ds %u at "l4util_idfmt \
             ", client "l4util_idfmt" (ret %d, exc %d)!",
-	    ds->id, l4util_idstr(ds->manager), l4util_idstr(client), 
+            ds->id, l4util_idstr(ds->manager), l4util_idstr(client),
             ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
-	return ret;
+        return ret;
       else
-	return -L4_EIPC;
+        return -L4_EIPC;
     }
 
   /* done */
@@ -81,22 +81,22 @@ l4dm_share(const l4dm_dataspace_t * ds,
 /*****************************************************************************/
 /**
  * \brief Revoke dataspace access rights.
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  client        Client thread id
  * \param  rights        Access rights:
  *                       - #L4DM_WRITE       revoke write access
  *                       - #L4DM_ALL_RIGHTS  revoke all rights, the client
  *                                           is removed from the client list
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_EIPC    IPC error calling dataspace manager
  *         - -#L4_EINVAL  invalid dataspace id
  *         - -#L4_EPERM   caller has not the right to revoke access rights
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-l4dm_revoke(const l4dm_dataspace_t * ds, 
+l4dm_revoke(const l4dm_dataspace_t * ds,
             l4_threadid_t client, l4_uint32_t rights)
 {
   int ret;
@@ -113,14 +113,14 @@ l4dm_revoke(const l4dm_dataspace_t * ds,
       LOGdL(DEBUG_ERRORS,
             "libdm_generic: revoke failed, ds %u at "l4util_idfmt \
             ", client "l4util_idfmt" (ret %d, exc %d)!",
-	    ds->id, l4util_idstr(ds->manager), l4util_idstr(client), 
+            ds->id, l4util_idstr(ds->manager), l4util_idstr(client),
             ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
-	return ret;
+        return ret;
       else
-	return -L4_EIPC;
+        return -L4_EIPC;
     }
-  
+
   /* done */
   return 0;
 }
@@ -128,16 +128,16 @@ l4dm_revoke(const l4dm_dataspace_t * ds,
 /*****************************************************************************/
 /**
  * \brief Check dataspace access rights
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  rights        Access rights
- *	
+ *
  * \return 0 if caller has the access rights, error code otherwise:
  *         - -#L4_EIPC    IPC error calling dataspace manager
  *         - -#L4_EINVAL  invalid dataspace id
  *         - -#L4_EPERM   requested operations not allowed
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 l4dm_check_rights(const l4dm_dataspace_t * ds, l4_uint32_t rights)
 {
@@ -148,18 +148,18 @@ l4dm_check_rights(const l4dm_dataspace_t * ds, l4_uint32_t rights)
     return -L4_EINVAL;
 
   /* call dataspace manager */
-  ret = if_l4dm_generic_check_rights_call(&(ds->manager), ds->id, 
+  ret = if_l4dm_generic_check_rights_call(&(ds->manager), ds->id,
                                           rights, &_env);
   if (((ret < 0) && (ret != -L4_EPERM)) || DICE_HAS_EXCEPTION(&_env))
     {
-      LOGdL(DEBUG_ERRORS, 
+      LOGdL(DEBUG_ERRORS,
             "libdm_generic: check rights failed, ds %u at "l4util_idfmt \
-	    " (ret %d, exc %d)!",ds->id, l4util_idstr(ds->manager), 
-	    ret, DICE_EXCEPTION_MAJOR(&_env));
-      if (ret) 
-	return ret;
+            " (ret %d, exc %d)!",ds->id, l4util_idstr(ds->manager),
+            ret, DICE_EXCEPTION_MAJOR(&_env));
+      if (ret)
+        return ret;
       else
-	return -L4_EIPC;
+        return -L4_EIPC;
     }
 
   /* done */

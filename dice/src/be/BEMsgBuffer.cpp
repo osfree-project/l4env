@@ -299,6 +299,7 @@ CBEMsgBuffer::GetOpcodeVariable()
 	pType->CreateBackEnd();
 	string sName = CBENameFactory::Instance()->GetOpcodeVariable();
 	CBETypedDeclarator *pOpcode = pCF->GetNewTypedDeclarator();
+	assert(pOpcode);
 	pOpcode->CreateBackEnd(pType, sName);
 	delete pType; // cloned in CBETypedDeclarator::CreateBackEnd
 	// add directional attribute so later checks when marshaling work
@@ -415,7 +416,9 @@ CBEMsgBuffer::GetReturnVariable(CBEFunction *pFunction)
 
 /** \brief adds platform specific members to this class
  *  \param pFunction the function to add the members for
- *  \return true if successful
+ *
+ * We can always initialize the platform specific members, becuase the are
+ * added to all structs in the message union and thus add no memory overhead.
  */
 void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction)
 {
@@ -423,36 +426,11 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction)
 		"CBEMsgBuffer::%s(func: %s) called\n", __func__,
 		pFunction->GetName().c_str());
 
-	// get RECEIVE structure
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "Try to get struct for func %s\n",
-		pFunction->GetName().c_str());
-	CBEStructType *pStruct;
-	CMsgStructType nType(pFunction->GetReceiveDirection());
-	// if the function's receive direction is OUT then the function should not
-	// have an IN attribute (that would indicate an IN only function)
-	ATTR_TYPE nAttr = (CMsgStructType::Out == nType) ? ATTR_IN : ATTR_OUT;
-	if (!pFunction->m_Attributes.Find(nAttr))
-	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"func %s does not have attribute %s\n",
-			pFunction->GetName().c_str(), (nAttr == ATTR_IN) ? "in" : "out");
-		pStruct = GetStruct(pFunction, nType);
-		assert(pStruct);
-		AddPlatformSpecificMembers(pFunction, pStruct, nType);
-	}
-
-	// get SEND structure
-	nType = pFunction->GetSendDirection();
-	nAttr = (CMsgStructType::In == nType) ? ATTR_OUT : ATTR_IN;
-	if (!pFunction->m_Attributes.Find(nAttr))
-	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"func %s does not have attribute %s\n",
-			pFunction->GetName().c_str(), (nAttr == ATTR_IN) ? "in" : "out");
-		pStruct = GetStruct(pFunction, nType);
-		assert(pStruct);
-		AddPlatformSpecificMembers(pFunction, pStruct, nType);
-	}
+	AddPlatformSpecificMembers(pFunction, CMsgStructType::In);
+	AddPlatformSpecificMembers(pFunction, CMsgStructType::Out);
+	// init exception struct only if exceptions
+	if (!pFunction->m_Exceptions.empty())
+		AddPlatformSpecificMembers(pFunction, CMsgStructType::Exc);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBuffer::%s: return true\n", __func__);
@@ -475,15 +453,18 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEClass *pClass)
 		iter != pClass->m_FunctionGroups.end();
 		iter++)
 	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"CBEMsgBuffer::AddPlatformSpecificMembers: checking function group of operation %s\n",
+			(*iter)->GetOperation()->GetName().c_str());
 		// iterate the functions of the function group
 		vector<CBEFunction*>::iterator iF;
 		for (iF = (*iter)->m_Functions.begin();
 			iF != (*iter)->m_Functions.end();
 			iF++)
 		{
-			if ((dynamic_cast<CBECallFunction*>(*iF) != 0) ||
-				(dynamic_cast<CBESndFunction*>(*iF) != 0) ||
-				(dynamic_cast<CBEWaitFunction*>(*iF) != 0))
+			if (dynamic_cast<CBECallFunction*>(*iF) ||
+				dynamic_cast<CBESndFunction*>(*iF) ||
+				dynamic_cast<CBEWaitFunction*>(*iF))
 			{
 				AddPlatformSpecificMembers(*iF);
 			}
@@ -499,26 +480,34 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEClass *pClass)
 		"CBEMsgBuffer::%s returns true\n", __func__);
 }
 
+/** \brief adds the platform specific members for a specific function and struct type
+ *  \param pFunction the function to add the members for
+ *  \param nType the type of the message buffer struct to add the members to
+ */
+void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CMsgStructType nType)
+{
+	CBEStructType *pStruct = GetStruct(pFunction, nType);
+	assert(pStruct);
+	AddPlatformSpecificMembers(pFunction, pStruct);
+}
+
 /** \brief adds platform specific members to this class
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nType the type of the message buffer struct
- *  \return true if successful
  *
  * This implementaion adds the opcode member and the exception member to the
  * message buffer struct. The opcode is usually added in the IN struct, except
  * when the function is a wait function, then it is added to the struct of the
  * receiving direction.
  */
-void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct,
-	CMsgStructType nType)
+void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBuffer::%s(%s,, %d) called\n", __func__,
-		pFunction->GetName().c_str(), (int)nType);
+		pFunction->GetName().c_str(), (int)GetStructType(pStruct));
 
-	AddOpcodeMember(pFunction, pStruct, nType);
-	AddExceptionMember(pFunction, pStruct, nType);
+	AddOpcodeMember(pFunction, pStruct);
+	AddExceptionMember(pFunction, pStruct);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBuffer::%s returns true\n", __func__);
@@ -527,41 +516,26 @@ void CBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructT
 /** \brief adds platform specific opcode member
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nType the type of the message buffer struct
  *  \return true if successful
  */
-void CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction, CBEStructType *pStruct,
-	CMsgStructType nType)
+void CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction, CBEStructType *pStruct)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(%s,, %d) called\n", __func__,
-		pFunction->GetName().c_str(), int(nType));
+		"CBEMsgBuffer::%s(%s, struct %d) called\n", __func__,
+		pFunction->GetName().c_str(), (int)GetStructType(pStruct));
 
-	CMsgStructType nFuncOpcodeType(pFunction->GetSendDirection());
+	CMsgStructType nOpType = pFunction->GetSendDirection();
 	if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
 		dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
 		dynamic_cast<CBEMarshalFunction*>(pFunction) ||
-// 		dynamic_cast<CBEMarshalExceptionFunction*>(pFunction) ||
+		dynamic_cast<CBEMarshalExceptionFunction*>(pFunction) ||
 		dynamic_cast<CBEReplyFunction*>(pFunction))
-		nFuncOpcodeType = pFunction->GetReceiveDirection();
-	// add opcode
-	if (!pFunction->m_Attributes.Find(ATTR_NOOPCODE) &&
-		(nType == nFuncOpcodeType))
-	{
-		// we are using DIRECTION_IN here, because we need an "absolute"
-		// direction, in contrary to the relative Send direction of a
-		// function.  For instance does the marshal function have
-		// DIRECTION_OUT as SendDirection, which is not where we want to put
-		// the opcode
-		CBETypedDeclarator *pOpcode = GetOpcodeVariable();
-		if (!pOpcode)
-			throw new error::create_error("opcode member could not be created");
-		// check if there already is a member with that name
-		if (pStruct->m_Members.Find(pOpcode->m_Declarators.First()->GetName()))
-			delete pOpcode;
-		else
-			pStruct->m_Members.Add(pOpcode);
-	}
+		nOpType = pFunction->GetReceiveDirection();
+	if (pFunction->m_Attributes.Find(ATTR_NOOPCODE) ||
+	    nOpType != GetStructType(pStruct))
+		return;
+	CBETypedDeclarator *pOpcode = GetOpcodeVariable();
+	pStruct->m_Members.Add(pOpcode);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBuffer::%s returns true\n", __func__);
@@ -570,51 +544,30 @@ void CBEMsgBuffer::AddOpcodeMember(CBEFunction *pFunction, CBEStructType *pStruc
 /** \brief adds platform specific exception member
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nType the type of the message buffer struct
  *  \return true if successful
  */
-void CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction, CBEStructType *pStruct,
-	CMsgStructType nType)
+void CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction, CBEStructType *pStruct)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s(%s,, %d) called\n", __func__,
-		pFunction->GetName().c_str(), int(nType));
+		"CBEMsgBuffer::%s(%s, struct %d) called\n", __func__,
+		pFunction->GetName().c_str(), (int)GetStructType(pStruct));
 
-	CMsgStructType nFuncExceptionType(pFunction->GetReceiveDirection());
-	if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
-		dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
+	CMsgStructType nExType = pFunction->GetReceiveDirection();
+	if (dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
 		dynamic_cast<CBEMarshalFunction*>(pFunction) ||
-// 		dynamic_cast<CBEMarshalExceptionFunction*>(pFunction) ||
-		dynamic_cast<CBEReplyFunction*>(pFunction))
-		nFuncExceptionType = pFunction->GetSendDirection();
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-		"CBEMsgBuffer::%s exception dir is %d and struct at %p (type at %p)\n",
-		__func__, (int)nFuncExceptionType, pStruct,
-		pStruct->GetSpecificParent<CBEMsgBufferType>());
-	// add exception
-	if (!pFunction->m_Attributes.Find(ATTR_NOEXCEPTIONS) &&
-		(nType == nFuncExceptionType))
-	{
-		// we get the OUT direction, because we need an "absolute" direction,
-		// in contrary to the relative direction of GetReceiveDirection
-		CBETypedDeclarator *pException = GetExceptionVariable();
-		if (!pException)
-			throw new error::create_error("exception could not be created");
-		// check if struct already has member with that name
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s decl at %p\n", __func__, pException->m_Declarators.First());
-		if (pStruct->m_Members.Find(pException->m_Declarators.First()->GetName()))
-		{
-			delete pException;
-			pException = 0;
-		}
-		else
-			pStruct->m_Members.Add(pException);
-
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBuffer::%s exception %sadded to struct %p\n", __func__,
-			pException ? "" : "not ", pStruct);
-	}
+		dynamic_cast<CBEMarshalExceptionFunction*>(pFunction) ||
+		dynamic_cast<CBEReplyFunction*>(pFunction) ||
+		dynamic_cast<CBEWaitFunction*>(pFunction))
+		nExType = pFunction->GetSendDirection();
+	// because the exception can be in two structs: out and exc
+	if (pFunction->m_Attributes.Find(ATTR_NOEXCEPTIONS) ||
+		(CMsgStructType::Out != GetStructType(pStruct) &&
+		 CMsgStructType::Exc != GetStructType(pStruct)))
+		return;
+	// we get the OUT direction, because we need an "absolute" direction,
+	// in contrary to the relative direction of GetReceiveDirection
+	CBETypedDeclarator *pException = GetExceptionVariable();
+	pStruct->m_Members.Add(pException);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBuffer::%s returned true\n", __func__);
@@ -624,32 +577,26 @@ void CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction, CBEStructType *pSt
  *  \param pFunction the funtion owning the message buffer
  *  \return true if Sort succeeded
  *
- *  This method propagates the call to invoke a \c Sort method on both
+ *  This method propagates the call to invoke a \c Sort method on all
  *  structs.
  */
 void CBEMsgBuffer::Sort(CBEFunction *pFunction)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for function %s\n", __func__,
 		pFunction->GetName().c_str());
-	// get RECEIVE structure
-	CBEStructType *pStruct;
-	CMsgStructType nType(pFunction->GetReceiveDirection());
-	// if the function's receive direction is OUT then the function should not
-	// have an IN attribute (that would indicate an IN only function)
-	ATTR_TYPE nAttr = (CMsgStructType::Out == nType) ? ATTR_IN : ATTR_OUT;
-	if (!pFunction->m_Attributes.Find(nAttr))
-	{
-		pStruct = GetStruct(pFunction, nType);
-		assert(pStruct);
-		Sort(pStruct);
-	}
 
-	// get SEND  structure
-	nType = pFunction->GetSendDirection();
-	nAttr = (CMsgStructType::In == nType) ? ATTR_OUT : ATTR_IN;
-	if (!pFunction->m_Attributes.Find(nAttr))
+	// IN
+	CBEStructType *pStruct = GetStruct(pFunction, CMsgStructType::In);
+	assert(pStruct);
+	Sort(pStruct);
+	// OUT
+	pStruct = GetStruct(pFunction, CMsgStructType::Out);
+	assert(pStruct);
+	Sort(pStruct);
+	// EXC
+	if (!pFunction->m_Exceptions.empty())
 	{
-		pStruct = GetStruct(pFunction, nType);
+		pStruct = GetStruct(pFunction, CMsgStructType::Exc);
 		assert(pStruct);
 		Sort(pStruct);
 	}
@@ -804,7 +751,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 {
 	assert(pFirst);
 	assert(pSecond);
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "%s called with (%s, %s)\n",
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s called with (%s, %s)\n",
 		__func__, pFirst->m_Declarators.First()->GetName().c_str(),
 		pSecond->m_Declarators.First()->GetName().c_str());
 	// check variable size
@@ -813,7 +760,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	if (bVarFirst && !bVarSecond)
 	{
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"%s (%s, %s) returns true\n", __func__,
+			"CBEMsgBuffer::%s (%s, %s) returns true\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return true;
@@ -828,7 +775,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 		!bConstructedFirst && bConstructedSecond)
 	{
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"%s (%s, %s) returns true\n", __func__,
+			"CBEMsgBuffer::%s (%s, %s) returns true\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return true;
@@ -838,7 +785,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	if (bVarSecond)
 	{
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"%s (%s, %s) returns true\n", __func__,
+			"CBEMsgBuffer::%s (%s, %s) returns true\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return false;
@@ -850,7 +797,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	if ((nFirstSize > nWordSize) &&
 		(nSecondSize > nWordSize))
 	{
-		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s (%s, %s) returns %s\n",
+		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s (%s, %s) returns %s\n",
 			__func__, pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str(),
 			(nFirstSize > nSecondSize) ? "true" : "false");
@@ -859,7 +806,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	if (nSecondSize > nWordSize)
 	{
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"%s (%s, %s) returns true\n", __func__,
+			"CBEMsgBuffer::%s (%s, %s) returns true\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return false;
@@ -867,7 +814,7 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	if (nFirstSize > nWordSize)
 	{
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"%s (%s, %s) returns true\n", __func__,
+			"CBEMsgBuffer::%s (%s, %s) returns true\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return true;
@@ -875,12 +822,12 @@ bool CBEMsgBuffer::DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclara
 	if (nFirstSize < nSecondSize)
 	{
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"%s (%s, %s) returns true\n", __func__,
+			"CBEMsgBuffer::%s (%s, %s) returns true\n", __func__,
 			pFirst->m_Declarators.First()->GetName().c_str(),
 			pSecond->m_Declarators.First()->GetName().c_str());
 		return true;
 	}
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s (%s, %s) returns false\n",
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s (%s, %s) returns false\n",
 		__func__, pFirst->m_Declarators.First()->GetName().c_str(),
 		pSecond->m_Declarators.First()->GetName().c_str());
 	return false;
@@ -915,6 +862,9 @@ void CBEMsgBuffer::WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStruc
 	{
 		pFile << "." << iter->pDeclarator->GetName();
 	}
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEMsgBuffer::WriteAccess finished\n");
 }
 
 /** \brief wraps write access with stack
@@ -930,14 +880,16 @@ void CBEMsgBuffer::WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStruc
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CBEMsgBuffer::%s (%s, %s, %d, %s) called\n",
-		__func__, pFile.GetFileName().c_str(),
-		pFunction->GetName().c_str(),
-		(int)nType,
+		__func__, pFile.GetFileName().c_str(), pFunction->GetName().c_str(), (int)nType,
 		pMember->m_Declarators.First()->GetName().c_str());
+
 	CDeclStack vStack;
 	vStack.push_back(pMember->m_Declarators.First());
 
 	WriteAccess(pFile, pFunction, nType, &vStack);
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEMsgBuffer::WriteAccess finished\n");
 }
 
 /** \brief write the part of the access to a member that contains the struct
@@ -949,9 +901,8 @@ void CBEMsgBuffer::WriteAccessToStruct(CBEFile& pFile, CBEFunction *pFunction, C
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CBEMsgBuffer::%s (%s, %s, %d) called\n", __func__,
-		pFile.GetFileName().c_str(),
-		pFunction->GetName().c_str(),
-		(int)nType);
+		pFile.GetFileName().c_str(), pFunction->GetName().c_str(), (int)nType);
+
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	// get struct name
 	// if direction is zero, do not use a function name
@@ -978,6 +929,9 @@ void CBEMsgBuffer::WriteAccessToStruct(CBEFile& pFile, CBEFunction *pFunction, C
 	else
 		sName += ".";
 	pFile << sName << sStructName;
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEMsgBuffer::WriteAccessToStruct finished\n");
 }
 
 /** \brief writes the access to the variable pointing to the message buffer
@@ -1460,7 +1414,7 @@ void CBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation *pFEOpe
 	// add the required members
 	AddGenericStructMembersFunction(pStruct);
 	// now we have to repeat the initialization steps (if they apply)
-	AddPlatformSpecificMembers(pFunction, pStruct, CMsgStructType::Generic);
+	AddPlatformSpecificMembers(pFunction, pStruct);
 	Sort(pStruct);
 }
 
@@ -1534,7 +1488,7 @@ void CBEMsgBuffer::AddGenericStruct(CBEClass *pClass, CFEInterface *pFEInterface
 	// add the members
 	AddGenericStructMembersClass(pStruct);
 	// now we have to repeat the initialization steps (if they apply)
-	AddPlatformSpecificMembers(pFunction, pStruct, CMsgStructType::Generic);
+	AddPlatformSpecificMembers(pFunction, pStruct);
 	Sort(pStruct);
 }
 

@@ -20001,6 +20001,8 @@ echo "$as_me: error: You will need at least bison version 2.1a (found ${1}.${2})
    { (exit 1); exit 1; }; }
   ;;
 esac
+YACC=`echo -n $YACC|sed -e 's/ -y//'`
+
 { echo "$as_me:$LINENO: checking whether ln -s works" >&5
 echo $ECHO_N "checking whether ln -s works... $ECHO_C" >&6; }
 LN_S=$as_ln_s

@@ -42,7 +42,7 @@ Mword
 Context::state() const
 {
   Mword res;
-  asm volatile ("mov (%1), %0		\n\t"
+  asm volatile ("clc; mov (%1), %0		\n\t"
 		: "=acd" (res) : "acdbSD" (&_state));
   return res;
 

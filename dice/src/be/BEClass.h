@@ -140,11 +140,9 @@ public: // Public methods
     bool IsTargetFile(CBEFile* pFile);
 
     bool HasFunctionWithUserType(std::string sTypeName, CBEFile* pFile);
-    int GetParameterCount(ATTR_TYPE nMustAttrs, ATTR_TYPE nMustNotAttrs,
-	DIRECTION_TYPE nDirection);
+	bool HasParameterWithAttributes(ATTR_TYPE nAttribute1, ATTR_TYPE nAttribute2);
 
-    bool HasParametersWithAttribute(ATTR_TYPE nAttribute1,
-	ATTR_TYPE nAttribute2 = ATTR_NONE);
+	bool HasMallocParameters();
     bool HasFunctionWithAttribute(ATTR_TYPE nAttribute);
 
     /** \brief retrieve a handle to the message buffer
@@ -185,7 +183,6 @@ protected:
 
     void WriteTypedef(CBETypedef *pTypedef, CBEHeaderFile& pFile);
     void WriteTaggedType(CBEType *pType, CBEHeaderFile& pFile);
-    void WriteException(CBEException *pException, CBEHeaderFile& pFile);
     void WriteConstant(CBEConstant *pConstant, CBEHeaderFile& pFile);
     void WriteFunction(CBEFunction *pFunction, CBEHeaderFile& pFile);
     void WriteFunction(CBEFunction *pFunction, CBEImplementationFile& pFile);
@@ -259,10 +256,6 @@ public:
      *  \brief the constants of the Class
      */
     CSearchableCollection<CBEConstant, std::string> m_Constants;
-    /** \var CSearchableCollection<CBEException, std::string> m_Exceptions
-     *  \brief contains the exceptions defined for the interface
-     */
-    CSearchableCollection<CBEException, std::string> m_Exceptions;
     /** \var CCollection<CBEType> m_TypeDeclarations
      *  \brief contains the tagged type declarations
      */

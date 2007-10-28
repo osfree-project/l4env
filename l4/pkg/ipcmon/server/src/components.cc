@@ -39,19 +39,28 @@ int ipcmon_pagefault(CORBA_Object obj,
 {
 	l4_fpage_t fp;
 	l4_snd_fpage_t sfp;
+	int val;
 
 	fp.raw = DICE_GET_DWORD(msgbuf, 0);
 	LOGd(verbose, l4util_idfmt" trying to do IPC to %lX", 
 	    l4util_idstr(*obj), fp.iofp.iopage);
 
-	if ((allow_roottask && fp.iofp.iopage == ROOTTASK_ID)
-		|| theManager->check(obj->id.task, fp.iofp.iopage))
+	val = theManager->check(obj->id.task, fp.iofp.iopage);
+
+	if ((allow_roottask && fp.iofp.iopage == ROOTTASK_ID) ||
+		val == CapManager::IPC_TRUE)
 	{
 		LOGd(verbose, "ipc allowed");
 		sfp.fpage = l4_iofpage(fp.iofp.iopage, 0, L4_FPAGE_MAP);
 		sfp.fpage.iofp.zero2 = 1;
 		sfp.snd_base = 0;
 	}
+#if 0
+	else if (val == CapManager::IPC_UNKNWON)
+	{
+		/* XXX: ask someone else. */
+	}
+#endif
 	else
 	{
 		LOG("\033[31;1mipc %X -> %lX DENIED!\033[0m", (*obj).id.task, fp.iofp.iopage);
@@ -72,7 +81,7 @@ ipcmon_monitor_query_component (CORBA_Object _dice_corba_obj,
                                 const l4_taskid_t *dest,
                                 CORBA_Server_Environment *_dice_corba_env)
 {
-	if (theManager->check(src->id.task, dest->id.task))
+	if (theManager->check(src->id.task, dest->id.task) == CapManager::IPC_TRUE)
 		return 1;
 
 	return 0;

@@ -19,7 +19,7 @@
 
 int
 __do_map(const l4dm_dataspace_t *ds, l4_offs_t offs, l4_size_t size,
-	 l4_addr_t rcv_addr, int rcv_size2, l4_offs_t rcv_offs, 
-	 l4_uint32_t flags, l4_addr_t *fpage_addr, l4_size_t *fpage_size);
+         l4_addr_t rcv_addr, int rcv_size2, l4_offs_t rcv_offs,
+         l4_uint32_t flags, l4_addr_t *fpage_addr, l4_size_t *fpage_size);
 
 #endif

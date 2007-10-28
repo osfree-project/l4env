@@ -60,12 +60,12 @@ static l4_uint32_t last_id = 0;
 /*****************************************************************************/
 /**
  * \brief Find dataspace descriptor
- * 
+ *
  * \param  id            Dataspace id
- *	
+ *
  * \return Pointer to dataspace descriptor, NULL if not found.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static inline dsmlib_ds_desc_t *
 __hash_find_ds(l4_uint32_t id)
 {
@@ -87,12 +87,12 @@ __hash_find_ds(l4_uint32_t id)
 /*****************************************************************************/
 /**
  * \brief Add dataspace to hash table
- * 
+ *
  * \param  ds            Dataspace descriptor
- *	
+ *
  * \return 0 on success, -1 if dataspace already exists
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static int
 __hash_add_dataspace(dsmlib_ds_desc_t * ds)
 {
@@ -107,48 +107,48 @@ __hash_add_dataspace(dsmlib_ds_desc_t * ds)
       d = dataspaces[idx];
       tmp = NULL;
       while ((d != NULL) && (d->id < ds->id))
-	{
-	  tmp = d;
-	  d = d->next;
-	}
-      
+        {
+          tmp = d;
+          d = d->next;
+        }
+
       if (d == NULL)
-	/* last element */
-	tmp->next = ds;
+        /* last element */
+        tmp->next = ds;
       else if (d->id == ds->id)
-	{
-	  /* dataspace id already exists */
-	  LOGdL(DEBUG_ERRORS, "DSMlib: dataspace %u already exists", ds->id);
-	  return -1;
-	}
+        {
+          /* dataspace id already exists */
+          LOGdL(DEBUG_ERRORS, "DSMlib: dataspace %u already exists", ds->id);
+          return -1;
+        }
       else if (tmp == NULL)
-	{
-	  /* first element */
-	  ds->next = dataspaces[idx];
-	  dataspaces[idx] = ds;
-	}
+        {
+          /* first element */
+          ds->next = dataspaces[idx];
+          dataspaces[idx] = ds;
+        }
       else
-	{
-	  ds->next = d;
-	  tmp->next = ds;
-	}
+        {
+          ds->next = d;
+          tmp->next = ds;
+        }
     }
 
   return 0;
 }
-	
+
 /*****************************************************************************/
 /**
  * \brief Remove dataspace from hash table
- * 
+ *
  * \param  ds            Dataspace descriptor
- *	
+ *
  * \return 0 on success, -1 if dataspace not found
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static int
 __hash_remove_dataspace(dsmlib_ds_desc_t * ds)
-{	
+{
   int idx = HASH_IDX(ds->id);
   dsmlib_ds_desc_t * d, * tmp;
 
@@ -162,7 +162,7 @@ __hash_remove_dataspace(dsmlib_ds_desc_t * ds)
       tmp = d;
       d = d->next;
     }
-  
+
   if (d == NULL)
     {
       /* dataspace not found */
@@ -175,21 +175,21 @@ __hash_remove_dataspace(dsmlib_ds_desc_t * ds)
     dataspaces[idx] = dataspaces[idx]->next;
   else
     tmp->next = d->next;
-  
+
   return 0;
 }
 
 /*****************************************************************************/
 /**
- * \brief Add dataspace to dataspace list 
- * 
+ * \brief Add dataspace to dataspace list
+ *
  * \param  ds            Dataspace descriptor
  *
- * This function just adds the dataspace at the beginning of the dataspace 
+ * This function just adds the dataspace at the beginning of the dataspace
  * list, it does not check whether the dataspace id already exists. Use it
  * together with __hash_add_dataspace()!
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static inline void
 __list_add_dataspace(dsmlib_ds_desc_t * ds)
 {
@@ -203,27 +203,27 @@ __list_add_dataspace(dsmlib_ds_desc_t * ds)
 /*****************************************************************************/
 /**
  * \brief Remove dataspace from dataspace list
- * 
+ *
  * \param  ds            Dataspace descriptor
  */
-/*****************************************************************************/ 
-static inline void 
+/*****************************************************************************/
+static inline void
 __list_remove_dataspace(dsmlib_ds_desc_t * ds)
 {
   if (ds->ds_prev == NULL)
     {
       ds_list = ds_list->ds_next;
       if (ds_list != NULL)
-	ds_list->ds_prev = NULL;
+        ds_list->ds_prev = NULL;
     }
-  else 
+  else
     {
       ds->ds_prev->ds_next = ds->ds_next;
       if (ds->ds_next != NULL)
-	ds->ds_next->ds_prev = ds->ds_prev;
+        ds->ds_next->ds_prev = ds->ds_prev;
     }
 }
-    
+
 /*****************************************************************************/
 /**
  * \brief Find unused dataspace id
@@ -232,7 +232,7 @@ __list_remove_dataspace(dsmlib_ds_desc_t * ds)
  *
  * \return 0 on success, -1 if no id found.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static inline int
 __find_id(l4_uint32_t * id)
 {
@@ -259,23 +259,23 @@ __find_id(l4_uint32_t * id)
 /*****************************************************************************/
 /**
  * \brief Init dataspace manager library
- * 
+ *
  * \param  get_page_fn   Page allocation callback function
  * \param  free_page_fn  Page release callback function
- *	
+ *
  * \return 0 on succes, -1 if initialization failed
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-dsmlib_init(dsmlib_get_page_fn_t get_page_fn, 
-	    dsmlib_free_page_fn_t free_page_fn)
+dsmlib_init(dsmlib_get_page_fn_t get_page_fn,
+            dsmlib_free_page_fn_t free_page_fn)
 {
   int i;
 
   /* initialize descriptor allocation */
   if (dsmlib_init_desc_alloc(get_page_fn, free_page_fn) < 0)
     {
-      LOGdL(DEBUG_ERRORS, 
+      LOGdL(DEBUG_ERRORS,
             "DSMlib: descriptor allocation initialization failed!");
       return -1;
     }
@@ -290,19 +290,19 @@ dsmlib_init(dsmlib_get_page_fn_t get_page_fn,
 /*****************************************************************************/
 /**
  * \brief Create new dataspace
- *	
+ *
  * \return Pointer to new dataspace descriptor, NULL if creation failed.
  *
- * Allocate new dataspace descriptor, find unused dataspace id and add 
+ * Allocate new dataspace descriptor, find unused dataspace id and add
  * descriptor to hash table / dataspace list.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 dsmlib_ds_desc_t *
 dsmlib_create_dataspace(void)
 {
   dsmlib_ds_desc_t * ds;
   l4_uint32_t id;
-  
+
   ds = dsmlib_alloc_ds_desc();
   if (ds == NULL)
     {
@@ -329,7 +329,7 @@ dsmlib_create_dataspace(void)
 
   if (__hash_add_dataspace(ds) < 0)
     {
-      LOGdL(DEBUG_ERRORS, 
+      LOGdL(DEBUG_ERRORS,
             "DSMlib: add dataspace %u to hash table failed!", ds->id);
       dsmlib_free_ds_desc(ds);
       return NULL;
@@ -344,19 +344,19 @@ dsmlib_create_dataspace(void)
 /*****************************************************************************/
 /**
  * \brief Release dataspace
- * 
+ *
  * \param  ds            Dataspace descriptor
  *
  * Remove dataspace from hash table, release dataspace descriptor
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dsmlib_release_dataspace(dsmlib_ds_desc_t * ds)
 {
   /* remove dataspace from hash table */
   if (__hash_remove_dataspace(ds) < 0)
     {
-      LOGdL(DEBUG_ERRORS, 
+      LOGdL(DEBUG_ERRORS,
             "DSMlib: remove dataspace %u from hash table failed!", ds->id);
       return;
     }
@@ -366,7 +366,7 @@ dsmlib_release_dataspace(dsmlib_ds_desc_t * ds)
 
   /* release all client descriptors */
   dsmlib_remove_all_clients(ds);
-  
+
   /* done */
   dsmlib_free_ds_desc(ds);
 }
@@ -374,12 +374,12 @@ dsmlib_release_dataspace(dsmlib_ds_desc_t * ds)
 /*****************************************************************************/
 /**
  * \brief Return dataspace descriptor
- * 
+ *
  * \param  id            Dataspace id
- *	
+ *
  * \return Pointer to dataspace descriptor, NULL if dataspace does not exist
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 dsmlib_ds_desc_t *
 dsmlib_get_dataspace(l4_uint32_t id)
 {
@@ -389,11 +389,11 @@ dsmlib_get_dataspace(l4_uint32_t id)
 /*****************************************************************************/
 /**
  * \brief Set dataspace owner
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  owner         Dataspace owner
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dsmlib_set_owner(dsmlib_ds_desc_t * ds, l4_threadid_t owner)
 {
@@ -406,13 +406,13 @@ dsmlib_set_owner(dsmlib_ds_desc_t * ds, l4_threadid_t owner)
 /*****************************************************************************/
 /**
  * \brief Return owner of the dataspace
- * 
+ *
  * \param  ds            Dataspace descriptor
- *	
+ *
  * \return owner thread id, #L4_INVALID_ID if invalid dataspace id
  */
-/*****************************************************************************/ 
-l4_threadid_t 
+/*****************************************************************************/
+l4_threadid_t
 dsmlib_get_owner(const dsmlib_ds_desc_t * ds)
 {
   if (ds == NULL)
@@ -424,13 +424,13 @@ dsmlib_get_owner(const dsmlib_ds_desc_t * ds)
 /*****************************************************************************/
 /**
  * \brief Check owner of dataspace
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  client        Client thread id
- *	
+ *
  * \return 1 if the client owns the dataspace, 0 otherwise.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 dsmlib_is_owner(const dsmlib_ds_desc_t * ds, l4_threadid_t client)
 {
@@ -443,11 +443,11 @@ dsmlib_is_owner(const dsmlib_ds_desc_t * ds, l4_threadid_t client)
 /*****************************************************************************/
 /**
  * \brief Set dataspace name
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  name          Dataspace name
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dsmlib_set_name(dsmlib_ds_desc_t * ds, const char * name)
 {
@@ -466,13 +466,13 @@ dsmlib_set_name(dsmlib_ds_desc_t * ds, const char * name)
 /*****************************************************************************/
 /**
  * \brief Get dataspace name
- * 
+ *
  * \param  ds            Dataspace descriptor
- *	
+ *
  * \return Pointer to dataspace name, NULL if invalid dataspace descriptor
  */
-/*****************************************************************************/ 
-char * 
+/*****************************************************************************/
+char *
 dsmlib_get_name(dsmlib_ds_desc_t * ds)
 {
   if (ds == NULL)
@@ -484,11 +484,11 @@ dsmlib_get_name(dsmlib_ds_desc_t * ds)
 /*****************************************************************************/
 /**
  * \brief Set dataspace manager data
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  ptr           Dataspace manager data
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dsmlib_set_dsm_ptr(dsmlib_ds_desc_t * ds, void * ptr)
 {
@@ -501,12 +501,12 @@ dsmlib_set_dsm_ptr(dsmlib_ds_desc_t * ds, void * ptr)
 /*****************************************************************************/
 /**
  * \brief Get dataspace manager data
- * 
+ *
  * \param  ds            Dataspace descriptor
- *	
+ *
  * \return Pointer to dataspace manager data
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void *
 dsmlib_get_dsm_ptr(const dsmlib_ds_desc_t * ds)
 {
@@ -519,10 +519,10 @@ dsmlib_get_dsm_ptr(const dsmlib_ds_desc_t * ds)
 /*****************************************************************************/
 /**
  * \brief  Return dataspace list head
- * 
+ *
  * \return Pointer to dataspace list, NULL if list empty.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 dsmlib_ds_desc_t *
 dsmlib_get_dataspace_list(void)
 {
@@ -532,11 +532,11 @@ dsmlib_get_dataspace_list(void)
 /*****************************************************************************/
 /**
  * \brief  Iterate dataspace list
- * 
+ *
  * \param  fn            Iterator function
  * \param  data          Iterator function data
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dsmlib_dataspaces_iterate(dsmlib_iterator_fn_t fn, void * data)
 {
@@ -547,7 +547,7 @@ dsmlib_dataspaces_iterate(dsmlib_iterator_fn_t fn, void * data)
   while (pd != NULL)
     {
       /* get next dataspace in list prior calling the iterate function,
-       * this allows to remove the dataspace from the list by the 
+       * this allows to remove the dataspace from the list by the
        * iterate function (-> close)
        */
       next = pd->ds_next;
@@ -567,7 +567,7 @@ dsmlib_dataspaces_iterate(dsmlib_iterator_fn_t fn, void * data)
 /**
  * \brief Show dataspace hash table
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dsmlib_show_ds_hash(void)
 {
@@ -580,23 +580,23 @@ dsmlib_show_ds_hash(void)
       LOG_printf("  Hash idx %d:\n   ", i);
       d = dataspaces[i];
       while (d != NULL)
-	{
-	  LOG_printf(" %2u", d->id);
-	  d = d->next;
-	}
+        {
+          LOG_printf(" %2u", d->id);
+          d = d->next;
+        }
       LOG_putchar('\n');
-    } 
+    }
 }
 
 /*****************************************************************************/
 /**
  * \brief Lists dataspaces
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dsmlib_list_ds(void)
 {
-  dsmlib_ds_desc_t * d; 
+  dsmlib_ds_desc_t * d;
 
   LOG_printf("Dataspace list:");
   d = ds_list;

@@ -68,8 +68,7 @@ CBEUnmarshalFunction::~CBEUnmarshalFunction()
  * This function should only contain IN parameters if it is on the component's
  * side an OUT parameters if it is on the client's side.
  */
-void
-CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
+void CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEUnmarshalFunction::%s(%s) called\n", __func__,
@@ -85,6 +84,13 @@ CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponent
 	// set return type
 	if (IsComponentSide())
 		SetNoReturnVar();
+	else
+	{
+		// set initializer of return variable to zero
+		CBETypedDeclarator *pVariable = GetReturnVariable();
+		if (pVariable)
+			pVariable->SetDefaultInitString(string("0"));
+	}
 	// add message buffer
 	AddMessageBuffer(pFEOperation);
 	// add marshaller and communication class
@@ -100,8 +106,7 @@ CBEUnmarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponent
  *  \param pMsgBuffer the message buffer to initalize
  *  \return true on success
  */
-void
-CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+void CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBEUnmarshalFunction::%s called\n", __func__);
@@ -128,9 +133,8 @@ CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
  * not initialize the message buffer - this may overwrite the values we try to
  * unmarshal.
  */
-void
-CBEUnmarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
-{}
+void CBEUnmarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
+{ }
 
 /** \brief writes the invocation of the message transfer
  *  \param pFile the file to write to
@@ -138,9 +142,8 @@ CBEUnmarshalFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
  * This implementation does nothing, because the unmarshalling does not
  * contain a message transfer.
  */
-void
-CBEUnmarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
-{}
+void CBEUnmarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
+{ }
 
 /** \brief writes a single parameter for the function call
  *  \param pFile the file to write to
@@ -150,8 +153,7 @@ CBEUnmarshalFunction::WriteInvocation(CBEFile& /*pFile*/)
  * If the parameter is the message buffer we cast to this function's type,
  * because otherwise the compiler issues warnings.
  */
-void
-CBEUnmarshalFunction::WriteCallParameter(CBEFile& pFile,
+void CBEUnmarshalFunction::WriteCallParameter(CBEFile& pFile,
 	CBETypedDeclarator * pParameter,
 	bool bCallFromSameClass)
 {
@@ -175,16 +177,13 @@ CBEUnmarshalFunction::WriteCallParameter(CBEFile& pFile,
 void
 CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
-	if (IsComponentSide())
-	{
-		if (!(pFEParameter->m_Attributes.Find(ATTR_IN)))
-			return;
-	}
-	else
-	{
-		if (!(pFEParameter->m_Attributes.Find(ATTR_OUT)))
-			return;
-	}
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEUnmarshalFunction::AddParameter(%s) called\n",
+		pFEParameter->m_Declarators.First()->GetName().c_str());
+
+	ATTR_TYPE nDirection = IsComponentSide() ? ATTR_IN : ATTR_OUT;
+	if (!(pFEParameter->m_Attributes.Find(nDirection)))
+		return;
 	CBEOperationFunction::AddParameter(pFEParameter);
 	// retrieve the parameter
 	CBETypedDeclarator* pParameter = m_Parameters.Find(pFEParameter->m_Declarators.First()->GetName());
@@ -194,63 +193,66 @@ CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 	// skip CORBA_Object
 	if (pParameter == GetObject())
 		return;
-	ATTR_TYPE nDirection = IsComponentSide() ? ATTR_IN : ATTR_OUT;
-	if (pParameter->m_Attributes.Find(nDirection))
+	if (!pParameter->m_Attributes.Find(nDirection))
+		return;
+
+	CBEType *pType = pParameter->GetTransmitType();
+	CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEUnmarshalFunction::AddParameter: array dims in decl %d, array dims in type %d\n",
+		pDeclarator->GetArrayDimensionCount(), pType->GetArrayDimensionCount());
+	int nArrayDimensions = pDeclarator->GetArrayDimensionCount() + pType->GetArrayDimensionCount();
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEUnmarshalFunction::AddParameter: decl->stars %d, is ptr type %s, array dims diff %d\n",
+		pDeclarator->GetStars(), pType->IsPointerType() ? "yes" : "no", nArrayDimensions);
+	// if there are no array dimensions, then we need to add a pointer
+	if ((pDeclarator->GetStars() == 0) && !pType->IsPointerType() &&
+		(nArrayDimensions <= 0))
 	{
-		CBEType *pType = pParameter->GetType();
-		CBEAttribute *pAttr;
-		if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
-			pType = pAttr->GetAttrType();
-		CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
-		int nArrayDimensions = pDeclarator->GetArrayDimensionCount() -
-			pType->GetArrayDimensionCount();
-		// if there are no array dimensions, then we need to add a pointer
-		if ((pDeclarator->GetStars() == 0) && !pType->IsPointerType() &&
-			(nArrayDimensions <= 0))
-		{
-			pDeclarator->IncStars(1);
-			return;
-		}
-		// checking string
-		if (pParameter->m_Attributes.Find(ATTR_STRING) &&
-			pParameter->m_Attributes.Find(ATTR_IN) &&
-			!pParameter->m_Attributes.Find(ATTR_OUT) &&
-			((pType->IsOfType(TYPE_CHAR) && pDeclarator->GetStars() < 2) ||
-			 (pType->IsOfType(TYPE_CHAR_ASTERISK) &&
-			  pDeclarator->GetStars() < 1)))
+		pDeclarator->IncStars(1);
+		return;
+	}
+	// checking string
+	if (pParameter->m_Attributes.Find(ATTR_STRING) &&
+		pParameter->m_Attributes.Find(ATTR_IN) &&
+		!pParameter->m_Attributes.Find(ATTR_OUT) &&
+		((pType->IsOfType(TYPE_CHAR) && pDeclarator->GetStars() < 2) ||
+		 (pType->IsOfType(TYPE_CHAR_ASTERISK) &&
+		  pDeclarator->GetStars() < 1)))
+	{
+		pDeclarator->IncStars(1);
+		return;
+	}
+
+	// check for size attribute and if found, check if it is ours, then it
+	// should not be respected when determining additional reference
+	CBEAttribute *pAttr;
+	if ((pAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS)) != 0)
+	{
+		CDeclStack vStack;
+		vStack.push_back(pParameter->m_Declarators.First());
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		string sName = pNF->GetLocalSizeVariableName(&vStack);
+
+		// compare to size declarator -> if no such declarator is present,
+		// this is not one of our size attributes -> do the normal check
+		// with the array dimensions and return if true
+		if (!pAttr->m_Parameters.Find(sName) && nArrayDimensions <= 0)
 		{
 			pDeclarator->IncStars(1);
 			return;
 		}
 
-		// check for size attribute and if found, check if it is ours, then it
-		// should not be resprected when determining additional reference
-		if ((pAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS)) != 0)
-		{
-			CDeclStack vStack;
-			vStack.push_back(pParameter->m_Declarators.First());
-			CBENameFactory *pNF = CBENameFactory::Instance();
-			string sName = pNF->GetLocalSizeVariableName(&vStack);
-
-			// compare to size declarator -> if no such declarator is present,
-			// this is not one of our size attributes -> do the normal check
-			// with the array dimensions and return if true
-			if (!pAttr->m_Parameters.Find(sName) && nArrayDimensions <= 0)
-			{
-				pDeclarator->IncStars(1);
-				return;
-			}
-
-			// otherwise either it was one of our own size attributes or the
-			// array dimensions were > 0
-		}
-		if ((pParameter->m_Attributes.Find(ATTR_LENGTH_IS) ||
-				pParameter->m_Attributes.Find(ATTR_MAX_IS)) &&
-			(nArrayDimensions <= 0))
-		{
-			pDeclarator->IncStars(1);
-			return;
-		}
+		// otherwise either it was one of our own size attributes or the
+		// array dimensions were > 0
+	}
+	if ((pParameter->m_Attributes.Find(ATTR_LENGTH_IS) ||
+			pParameter->m_Attributes.Find(ATTR_MAX_IS)) &&
+		(nArrayDimensions <= 0))
+	{
+		pDeclarator->IncStars(1);
+		return;
 	}
 }
 
@@ -263,9 +265,7 @@ CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
  * unmarshal parameters. We also have to check for the opcode at the server's
  * side, because it is unmarshaled some other place.
  */
-bool
-CBEUnmarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
-	bool bMarshal)
+bool CBEUnmarshalFunction::DoMarshalParameter(CBETypedDeclarator *pParameter, bool bMarshal)
 {
 	if (bMarshal)
 		return false;
@@ -329,8 +329,7 @@ bool CBEUnmarshalFunction::DoWriteFunction(CBEFile* pFile)
  *  \param sTypeName the name of the type
  *  \return a reference to the found parameter
  */
-CBETypedDeclarator*
-CBEUnmarshalFunction::FindParameterType(string sTypeName)
+CBETypedDeclarator* CBEUnmarshalFunction::FindParameterType(string sTypeName)
 {
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	if (pMsgBuffer && pMsgBuffer->HasType(sTypeName))
@@ -394,8 +393,7 @@ CBEUnmarshalFunction::AddAfterParameters()
 /** \brief get exception variable
  *  \return a reference to the exception variable
  */
-CBETypedDeclarator*
-CBEUnmarshalFunction::GetExceptionVariable()
+CBETypedDeclarator* CBEUnmarshalFunction::GetExceptionVariable()
 {
 	CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
 	if (pRet)
@@ -431,8 +429,7 @@ CBEUnmarshalFunction::GetExceptionVariable()
  * same interface's dispatch function and also provide an implementation for
  * external calls. Does not work for C++.
  */
-void
-CBEUnmarshalFunction::WriteFunctionDefinition(CBEFile& pFile)
+void CBEUnmarshalFunction::WriteFunctionDefinition(CBEFile& pFile)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEUnmarshalFunction::%s(%s) in %s called\n", __func__,
@@ -456,3 +453,4 @@ void CBEUnmarshalFunction::WriteAccessSpecifier(CBEHeaderFile& pFile)
 	--pFile << "\tprotected:\n";
 	++pFile;
 }
+

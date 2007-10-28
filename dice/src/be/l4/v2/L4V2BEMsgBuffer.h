@@ -66,8 +66,7 @@ protected: // protected methods
 
 	CBETypedDeclarator* GetRefstringMemberVariable(int nNumber);
 
-	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction,
-		CBEStructType *pStruct, CMsgStructType nType);
+	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct);
 	virtual void AddGenericStruct(CBEFunction *pFunction, CFEOperation *pFEOperation);
 };
 

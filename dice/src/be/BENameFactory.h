@@ -128,6 +128,7 @@ public:
 	virtual std::string GetMessageBufferTypeName();
 	virtual std::string GetDummyVariable(std::string sPrefix = std::string());
 	virtual std::string GetExceptionWordVariable();
+	virtual std::string GetUserExceptionVariable(std::string sTypeName);
 	virtual std::string GetConstantName(CFEConstDeclarator* pFEConstant);
 	virtual std::string GetMessageBufferStructName(CMsgStructType nType,
 		std::string sFuncName, std::string sClassName);

@@ -19,7 +19,7 @@
 #include <l4/dm_mem/dm_mem.idl>
 
 /**
- * Dataspace manager interface 
+ * Dataspace manager interface
  */
 library if_l4dm
 {
@@ -33,7 +33,7 @@ library if_l4dm
       /**
        * \brief   Create a new dataspace
        * \ingroup idl_phys
-       * 
+       *
        * \param   pool        Memory pool
        * \param   addr        Physical address
        * \param   size        Dataspace size
@@ -41,25 +41,25 @@ library if_l4dm
        * \param   flags       Flags
        * \param   name        Dataspace name
        * \retval  ds          Dataspace id
-       *	
-       * \return  0 on success (\a ds contains the id of the newly created 
+       *
+       * \return  0 on success (\a ds contains the id of the newly created
        *          dataspace), error code otherwise:
        *          - -#L4_ENOMEM  out of memory
        */
-      /***********************************************************************/ 
-      long dmphys_open([in] unsigned long pool, 
-		       [in] unsigned long addr, 
-		       [in] unsigned long size, 
-		       [in] unsigned long align, 
-		       [in] unsigned long flags, 
-		       [in, string] char* name,
-		       [out] l4dm_dataspace_t *ds);
+      /***********************************************************************/
+      long dmphys_open([in] unsigned long pool,
+                       [in] unsigned long addr,
+                       [in] unsigned long size,
+                       [in] unsigned long align,
+                       [in] unsigned long flags,
+                       [in, string] char* name,
+                       [out] l4dm_dataspace_t *ds);
 
       /***********************************************************************/
       /**
        * \brief   Create a copy of a dataspace
        * \ingroup idl_phys
-       * 
+       *
        * \param   ds_id       Source dataspace id
        * \param   src_offs    Offset in source dataspace
        * \param   dst_offs    Offset in destination dataspace
@@ -72,46 +72,46 @@ library if_l4dm
        * \param   name        Destination dataspace name
        * \retval  copy        Copy dataspace id
        *
-       * \return  0 on success (\a ds contains the id of the newly created 
+       * \return  0 on success (\a ds contains the id of the newly created
        *          dataspace), error code otherwise:
        *          - -#L4_ENOMEM  out of memory
        */
-      /***********************************************************************/ 
-      long dmphys_copy([in] unsigned long ds_id, 
-		       [in] unsigned long src_offs, 
-		       [in] unsigned long dst_offs, 
-		       [in] unsigned long num,
-		       [in] unsigned long dst_pool, 
-		       [in] unsigned long dst_addr, 
-		       [in] unsigned long dst_size, 
-		       [in] unsigned long dst_align, 
-		       [in] unsigned long flags, 
-		       [in, string] char* name,
-		       [out] l4dm_dataspace_t *copy);
+      /***********************************************************************/
+      long dmphys_copy([in] unsigned long ds_id,
+                       [in] unsigned long src_offs,
+                       [in] unsigned long dst_offs,
+                       [in] unsigned long num,
+                       [in] unsigned long dst_pool,
+                       [in] unsigned long dst_addr,
+                       [in] unsigned long dst_size,
+                       [in] unsigned long dst_align,
+                       [in] unsigned long flags,
+                       [in, string] char* name,
+                       [out] l4dm_dataspace_t *copy);
 
       /***********************************************************************/
       /**
        * \brief   Check phys. pagesize for dataspace region
        * \ingroup idl_phys
-       * 
+       *
        * \param   ds_id       Datasspace id
-       * \param   offs        Offset in dataspace 
+       * \param   offs        Offset in dataspace
        * \param   size        Dataspace area size
        * \param   pagesize    Log2 pagesize
        * \retval  ok          1 if dataspace region can be mapped with given
        *                      pagesize, 0 if not
-       * 
+       *
        * \return  0 on success, error code otherwise:
        *          - -#L4_EPERM       operation not permitted
        *          - -#L4_EINVAL      invalid dataspace id
        *          - -#L4_EINVAL_OFFS offset points beyond end of dataspace
        */
-      /***********************************************************************/ 
-      long dmphys_pagesize([in] unsigned long ds_id, 
-			   [in] unsigned long offs,
-			   [in] unsigned long size, 
-			   [in] unsigned long pagesize, 
-			   [out] int *ok);
+      /***********************************************************************/
+      long dmphys_pagesize([in] unsigned long ds_id,
+                           [in] unsigned long offs,
+                           [in] unsigned long size,
+                           [in] unsigned long pagesize,
+                           [out] int *ok);
 
        /***********************************************************************/
        /**
@@ -120,7 +120,7 @@ library if_l4dm
         *
         * \param   pool  The id of the pool
         * \retval  size  Size of the pool
-	* \retval  free  Amount of unused memory of the pool
+        * \retval  free  Amount of unused memory of the pool
         *
         * \return  0 on success, error code otherwise:
         *          - -#L4EINVAL  invalid pool number
@@ -128,18 +128,18 @@ library if_l4dm
       /***********************************************************************/
       long dmphys_poolsize([in] unsigned long pool,
                            [out] l4_size_t *size,
-			   [out] l4_size_t *free);
-      
+                           [out] l4_size_t *free);
+
       /***********************************************************************/
       /**
        * \brief   DEBUG: show DMphys debug information
        * \ingroup idl_phys
-       * 
+       *
        * \param   key         Debug key
        * \param   data        Data
        */
-      /***********************************************************************/ 
-      void dmphys_debug([in] unsigned long key, 
-			[in] unsigned long data);
+      /***********************************************************************/
+      void dmphys_debug([in] unsigned long key,
+                        [in] unsigned long data);
     };
 };

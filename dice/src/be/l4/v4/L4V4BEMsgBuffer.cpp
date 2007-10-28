@@ -68,7 +68,6 @@ CObject* CL4V4BEMsgBuffer::Clone()
 /** \brief add platform specific members to specific struct
  *  \param pFunction the function of the message buffer
  *  \param pStruct the struct to add the members to
- *  \param nType the type of the message buffer struct
  *  \return true if successful
  *
  * We have to skip the V2 specific message buffer members. Instead we have to
@@ -77,13 +76,12 @@ CObject* CL4V4BEMsgBuffer::Clone()
  * the message registers. This requires the message tag to be located at pos
  * 0.
  */
-void CL4V4BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct,
-	CMsgStructType nType)
+void CL4V4BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct)
 {
-	CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct, nType);
+	CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct);
 
 	// add message tag member
-	AddMsgTagMember(pFunction, pStruct, nType);
+	AddMsgTagMember(pFunction, pStruct);
 }
 
 /** \brief sorts one struct in the message buffer
@@ -245,7 +243,6 @@ void CL4V4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgStruct
 /** \brief adds platform specific opcode member
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nType the type of the message buffer struct
  *  \return true if successful
  *
  * The opcode member is transmitted in the message tag. Do not create an
@@ -254,18 +251,15 @@ void CL4V4BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgStruct
  * However, we do create an exception member, because we might transmit
  * complex exceptions.
  */
-void CL4V4BEMsgBuffer::AddOpcodeMember(CBEFunction* /*pFunction*/, CBEStructType* /*pStruct*/,
-	CMsgStructType /*nType*/)
+void CL4V4BEMsgBuffer::AddOpcodeMember(CBEFunction* /*pFunction*/, CBEStructType* /*pStruct*/)
 { }
 
 /** \brief adds platform specific msgtag member
  *  \param pFunction the function to add the members for
  *  \param pStruct the struct to add to
- *  \param nType the type of the message buffer struct
  *  \return true if successful
  */
-void CL4V4BEMsgBuffer::AddMsgTagMember(CBEFunction* /*pFunction*/, CBEStructType *pStruct,
-	CMsgStructType /*nType*/)
+void CL4V4BEMsgBuffer::AddMsgTagMember(CBEFunction* /*pFunction*/, CBEStructType *pStruct)
 {
 	CBETypedDeclarator *pMsgTag = GetMsgTagVariable();
 	pStruct->m_Members.Add(pMsgTag);

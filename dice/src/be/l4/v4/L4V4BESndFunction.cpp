@@ -137,9 +137,9 @@ CL4V4BESndFunction::WriteIPCErrorCheck(CBEFile& pFile)
 		pFile << "&";
 	pDecl->WriteName(pFile);
 	pFile << ",\n";
-	++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n" <<
-		"\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n" <<
-		"\t0);\n";
+	++pFile << "\tCORBA_SYSTEM_EXCEPTION,\n";
+	pFile << "\tCORBA_DICE_EXCEPTION_IPC_ERROR,\n";
+	pFile << "\t0);\n";
 	// env.ipc_error = L4_IPC_ERROR(result);
 	string sEnv;
 	if (pDecl->GetStars() == 0)

@@ -13,6 +13,9 @@
 // from dde_linux/ARCH-x86/ctor.h
 typedef void (*l4ddekit_initcall_t)(void);
 
+#define __l4ddekit_initcall(p) \
+	__attribute__ ((__section__ (".l4dde_ctors." l4str(p))))
+
 /** Define a function to be a DDEKit initcall. 
  *
  *  Define a function to be a DDEKit initcall. This function will then be placed
@@ -24,17 +27,7 @@ typedef void (*l4ddekit_initcall_t)(void);
  *
  *  \param fn    function
  */
-#define DDEKIT_INITCALL(fn)	\
-	static l4ddekit_initcall_t \
-	L4_STICKY(__l4ddekit_initcall_##fn) __l4ddekit_init_call(1) = (void *)fn
-
-#if 0
-#define __l4ddekit_init_call 	\
-	__attribute__ ((__section__ (".l4dde_ctors")))
-#endif
-
-#define __l4ddekit_initcall(p) \
-	__attribute__ ((__section__ (".l4dde_ctors." l4str(p))))
+#define DDEKIT_INITCALL(fn)	DDEKIT_CTOR(fn, 1)
 
 #define DDEKIT_CTOR(fn, prio) \
 	static l4ddekit_initcall_t \

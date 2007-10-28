@@ -55,4 +55,6 @@ l4_kernel_interface(void)
   return ret;
 }
 
+#include <l4/sys/syscalls-impl.h>
+
 #endif /* ! __L4SYS__INCLUDE__ARCH_AMD64__L4API_L4V2__SYSCALLS_H__ */

@@ -4,5 +4,4 @@ SYSTEM_TARGET			:= arm-linux-
 SHARED_FLAGS			+= -msoft-float
 LDFLAGS 			+= --no-warn-mismatch
 LD_EMULATION-SYSTEM-FreeBSD	:= armelf_fbsd
-LD_EMULATION-SYSTEM-Linux	:= armelf
-LD_EMULATION			:= $(LD_EMULATION-SYSTEM-$(SYSTEM))
+LD_EMULATION-SYSTEM-default	:= armelf

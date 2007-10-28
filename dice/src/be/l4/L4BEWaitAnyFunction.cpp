@@ -485,16 +485,16 @@ void CL4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
  *
  * This function uses the dice_get_last_ptr method to free memory
  *
- * Only print this if the class has any [out, ref] parameters and if the option
- * -ffree_mem_after_reply is set
+ * Only print this if the class has any [out, ref] or [out] variable sized parameters
+ * and if the option -ffree_mem_after_reply is set
  */
-void
-CL4BEWaitAnyFunction::WriteReleaseMemory(CBEFile& pFile)
+void CL4BEWaitAnyFunction::WriteReleaseMemory(CBEFile& pFile)
 {
 	// check [out, ref] parameters
 	assert(m_pClass);
 	if (!CCompiler::IsOptionSet(PROGRAM_FREE_MEM_AFTER_REPLY) &&
-		!m_pClass->HasParametersWithAttribute(ATTR_REF, ATTR_OUT))
+		!m_pClass->HasParameterWithAttributes(ATTR_REF, ATTR_OUT) &&
+		!m_pClass->HasMallocParameters())
 		return;
 
 	pFile << "\t{\n";

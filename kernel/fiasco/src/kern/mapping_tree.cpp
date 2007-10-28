@@ -952,10 +952,9 @@ Base_mappable::pack()
 	  && (static_cast<unsigned>(t->_count) << 2) < t->number_of_entries())
 	{
 	  unsigned sid = t->_size_id - 1;
-	  while (sid > 0 && ((t->_count << 2)
-		< ((unsigned)Size_factor << sid))) --sid;
+	  while (sid > 0 && ((t->_count << 2) < (Size_factor << sid))) --sid;
 
-	  auto_ptr<Mapping_tree> new_t ( 
+	  auto_ptr<Mapping_tree> new_t (
 	    new (sid) Mapping_tree (sid, t));
 
 	  if (new_t.get())

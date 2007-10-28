@@ -2,7 +2,7 @@
 /*****************************************************************************/
 /**
  * \file   dm_generic/client-lib/include/__debug.h
- * \brief  Debug config. 
+ * \brief  Debug config.
  *
  * \date   11/23/2001
  * \author Lars Reuther <reuther@os.inf.tu-dresden.de>

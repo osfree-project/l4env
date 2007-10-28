@@ -37,4 +37,6 @@
 #  endif
 #endif
 
+#include <l4/sys/ipc-impl.h>
+
 #endif /* !__L4_IPC_H__ */

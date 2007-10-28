@@ -490,7 +490,7 @@ dist-hook:
 	rm -f $(addprefix $(distdir)/,$(CLEANFILES))
 
 c-parser.tab.cc: c-parser.yy
-	bison --report=all -d $<
+	$(YACC) --report=all -d $<
 
 c-parser.tab.hh: c-parser.tab.cc
 

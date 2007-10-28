@@ -24,22 +24,22 @@
 #include "__debug.h"
 
 /*****************************************************************************
- *** libdm_generic API functions 
+ *** libdm_generic API functions
  *****************************************************************************/
 
 /*****************************************************************************/
 /**
  * \brief Close dataspace.
- * 
+ *
  * \param  ds            Dataspace id
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_EIPC    IPC error calling dataspace manager
  *         - -#L4_EINVAL  invalid dataspace id
- *         - -#L4_EPERM   operation not permitted, only the owner can 
+ *         - -#L4_EPERM   operation not permitted, only the owner can
  *                        close a dataspace
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 l4dm_close(const l4dm_dataspace_t * ds)
 {
@@ -54,12 +54,12 @@ l4dm_close(const l4dm_dataspace_t * ds)
   if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: close dataspace %u at "l4util_idfmt \
-            " failed (ret %d, exc %d)!",ds->id, l4util_idstr(ds->manager), 
+            " failed (ret %d, exc %d)!",ds->id, l4util_idstr(ds->manager),
             ret, DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else
-	return -L4_EIPC;
+        return -L4_EIPC;
     }
 
   /* done */
@@ -69,20 +69,20 @@ l4dm_close(const l4dm_dataspace_t * ds)
 /*****************************************************************************/
 /**
  * \brief  Close all dataspaces of a client
- * 
+ *
  * \param  dsm_id        Dataspace manager thread id
  * \param  client        Client thread id
  * \param  flags         Flags:
  *                       - #L4DM_SAME_TASK  close all dataspaces owned by
  *                                          threads of the task specified by
  *                                          \a client.
- *	
+ *
  * \return 0 on success, error code otherwise:
  *         - -#L4_EINVAL  invalid client thread id
  *         - -#L4_EPERM   permission denied
  *         - -#L4_EIPC    IPC error calling dataspace manager
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 l4dm_close_all(l4_threadid_t dsm_id, l4_threadid_t client, l4_uint32_t flags)
 {
@@ -94,11 +94,12 @@ l4dm_close_all(l4_threadid_t dsm_id, l4_threadid_t client, l4_uint32_t flags)
   if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: close dataspaces of "l4util_idfmt \
-            " failed (ret %d, exc %d)!", l4util_idstr(client), ret, DICE_EXCEPTION_MAJOR(&_env));
+            " failed (ret %d, exc %d)!", l4util_idstr(client), ret,
+            DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
         return ret;
       else
-	return -L4_EIPC;
+        return -L4_EIPC;
     }
 
   /* done */

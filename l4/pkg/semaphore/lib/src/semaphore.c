@@ -298,9 +298,9 @@ __wakeup_thread(l4_threadid_t t, int nowait)
 static void 
 l4semaphore_thread(void * data)
 {
-  int error,i,datakey,found;
-  l4_umword_t dw0,dw1;
-  l4_threadid_t me,src,wakeup;
+  int error, i, datakey;
+  l4_umword_t dw0, dw1;
+  l4_threadid_t me, src, wakeup;
   l4semaphore_t * sem;
   l4sem_wq_t * wp;
   l4_msgdope_t result;
@@ -356,7 +356,7 @@ l4semaphore_thread(void * data)
                 {
                   /* we already got the wakeup message, return immediately */
                   sem->pending--;
-                  __wakeup_thread(src,WAKEUP_WAIT);
+                  __wakeup_thread(src, WAKEUP_WAIT);
                 }
               else 
                 __enqueue_thread(sem, src);
@@ -367,7 +367,7 @@ l4semaphore_thread(void * data)
               if (sem->pending > 0)
 	        {
                   /* we already got the wakeup message, return immediately */
-                  if (__wakeup_thread(src,WAKEUP_NOWAIT))
+                  if (__wakeup_thread(src, WAKEUP_NOWAIT))
                     /* the IPC was received by the waiting thread*/
                     sem->pending--;
                     /*else - thread did not wait, because of a time out*/
@@ -377,7 +377,7 @@ l4semaphore_thread(void * data)
                   wp = __enqueue_thread(sem, src);
                   /* mark thread, set the pointer of the entry in the queue 
 		   * to find it later easily */
-                  l4thread_data_set(l4thread_id(src),datakey,wp);
+                  l4thread_data_set(l4thread_id(src), datakey, wp);
                 }
               break;
             case L4SEMAPHORE_RELEASE:
@@ -392,9 +392,12 @@ l4semaphore_thread(void * data)
 			  0, 0, L4_IPC_SEND_TIMEOUT_0, &result);
 #endif
 #endif
-              found = 0;
-              /* look for a waiting thread*/
-              while (sem->queue != NULL)
+              if (sem->queue == NULL)
+                sem->pending ++; /* store wakeup  */
+              else
+              {
+                /* look for a waiting thread*/
+                while (sem->queue != NULL)
 	        {
                   wp               = sem->queue;
                   sem->queue       = wp->next;
@@ -405,25 +408,23 @@ l4semaphore_thread(void * data)
                   /* thread exists ?*/
                   if (!l4_is_invalid_id(wakeup))
 		    {
-                      vwp = l4thread_data_get(l4thread_id(wakeup),datakey);
+                      vwp = l4thread_data_get(l4thread_id(wakeup), datakey);
                       if (vwp != NULL)
 		        {
                           /* thread, which called semaphore_down_timed*/
                           /* unmark thread*/
-                          l4thread_data_set(l4thread_id(wakeup),datakey,NULL);
+                          l4thread_data_set(l4thread_id(wakeup), datakey, NULL);
                           /* try to notify the thread*/
-                          if (__wakeup_thread(wakeup,WAKEUP_NOWAIT))
+                          if (__wakeup_thread(wakeup, WAKEUP_NOWAIT))
 			    {
-                              found = 1; /* success, thread wait */
-                              break;
+                              break; /* success, thread wait */
                             } 
 			  /* else: thread did not wait - forget this thread */
                         }
                       else
 		        {
                           /* thread, which called semaphore_down */
-                          found = 1; /* found a thread*/
-                          __wakeup_thread(wakeup,WAKEUP_WAIT);
+                          __wakeup_thread(wakeup, WAKEUP_WAIT);
                           break;
                         }
 		    }
@@ -431,13 +432,11 @@ l4semaphore_thread(void * data)
                     LOG_Error("L4semaphore: invalid thread "l4util_idfmt"!"
 			      "Maybe not alive ?", l4util_idstr(wakeup));
                 }
-
-              if (!found)
-                sem->pending ++; /* store wakeup  */
+              }
               /* done */
               break;
             case L4SEMAPHORE_RELEASETIMED:
-              vwp = l4thread_data_get(l4thread_id(src),datakey);
+              vwp = l4thread_data_get(l4thread_id(src), datakey);
               /* vwp==NULL - another thread, which called L4SEMAPHORE_RELEASE, 
                              already dequeued the thread 'src' */
               if (vwp != NULL)
@@ -451,7 +450,7 @@ l4semaphore_thread(void * data)
                   /* remove thread from wait queue*/
                   __free_entry(wp);
                   /* unmark thread */
-                  l4thread_data_set(l4thread_id(src),datakey,NULL);
+                  l4thread_data_set(l4thread_id(src), datakey, NULL);
                 }
               /* done */
               break;

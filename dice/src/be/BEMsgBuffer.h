@@ -109,12 +109,11 @@ public: // public methods
 protected: // protected methods
 	template<class T> CBEType* CreateType(T * pFEObject);
 
-	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction,
-		CBEStructType *pStruct, CMsgStructType nType);
-	virtual void AddOpcodeMember(CBEFunction *pFunction, CBEStructType *pStruct, CMsgStructType nType);
-	virtual void AddExceptionMember(CBEFunction *pFunction,	CBEStructType *pStruct, CMsgStructType nType);
-	virtual void AddGenericStruct(CBEFunction *pFunction,
-		CFEOperation *pFEOperation);
+	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction, CMsgStructType nType);
+	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct);
+	virtual void AddOpcodeMember(CBEFunction *pFunction, CBEStructType *pStruct);
+	virtual void AddExceptionMember(CBEFunction *pFunction,	CBEStructType *pStruct);
+	virtual void AddGenericStruct(CBEFunction *pFunction, CFEOperation *pFEOperation);
 	virtual void AddGenericStruct(CBEClass *pClass, CFEInterface *pFEInterface);
 	virtual void AddGenericStructMembersFunction(CBEStructType *pStruct);
 	virtual void AddGenericStructMembersClass(CBEStructType *pStruct);
@@ -122,8 +121,7 @@ protected: // protected methods
 	virtual int GetWordMemberCountFunction();
 	virtual int GetWordMemberCountClass();
 
-	virtual int GetMemberSize(int nType, CBETypedDeclarator *pMember,
-		bool bMax);
+	virtual int GetMemberSize(int nType, CBETypedDeclarator *pMember, bool bMax);
 
 	CBETypedDeclarator* GetOpcodeVariable();
 	CBETypedDeclarator* GetExceptionVariable();

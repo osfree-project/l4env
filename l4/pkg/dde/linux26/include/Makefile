@@ -4,8 +4,12 @@ L4DIR	?= $(PKGDIR)/../..
 # Force these include files to appear in a special subfolder of dde/
 INSTALL_INC_PREFIX = l4/dde/linux26
 
+include $(L4DIR)/mk/Makeconf
+-include $(PKGDIR_OBJ)/Makeconf
+
 include $(L4DIR)/mk/include.mk
 
+ifeq ($(CONFIG_DDE26),y)
 ifeq ($(BUILD_ARCH),x86)
 SUFFIX_amd64 = x86_64
 SUFFIX_x86   = i386
@@ -24,4 +28,5 @@ install::
 	$(VERBOSE)$(call MAKELINK, \
 		$(INSTALLDIR)/$(ARCH)/$(INSTALL_INC_PREFIX)/asm-$(SUFFIX_$(ARCH)),\
 		$(INSTALLDIR)/$(ARCH)/$(INSTALL_INC_PREFIX)/asm, asm-$(SUFFIX_$(ARCH)))
+endif
 endif

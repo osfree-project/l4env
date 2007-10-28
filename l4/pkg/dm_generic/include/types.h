@@ -39,7 +39,8 @@ typedef struct l4dm_dataspace
  * Invalid dataspace id initializer
  * \ingroup api_types
  */
-#define L4DM_INVALID_DATASPACE_INITIALIZER  { (l4_uint32_t)-1, L4_INVALID_ID_INIT }
+#define L4DM_INVALID_DATASPACE_INITIALIZER \
+               { (l4_uint32_t)-1, L4_INVALID_ID_INIT }
 
 /**
  * Invalid dataspace id
@@ -102,7 +103,7 @@ L4_INLINE int
 l4dm_is_invalid_ds(l4dm_dataspace_t ds)
 {
   return ((ds.id == L4DM_INVALID_DATASPACE.id) &&
-	  (l4_thread_equal(ds.manager, L4DM_INVALID_DATASPACE.manager)));
+          (l4_thread_equal(ds.manager, L4DM_INVALID_DATASPACE.manager)));
 }
 
 #endif /* !_L4_DM_GENERIC_TYPES_H */

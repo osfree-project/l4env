@@ -54,7 +54,7 @@ bool CL4BEUnmarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirectio
 {
 	bool bRet = CBEUnmarshalFunction::HasVariableSizedParameters(nDirection);
 	// if we have indirect strings to marshal then we need the offset vars
-	if (GetParameterCount(ATTR_REF, ATTR_NONE, nDirection))
+	if (HasParameterWithAttributes(ATTR_REF, (nDirection == DIRECTION_IN) ? ATTR_IN : ATTR_OUT))
 		return true;
 	return bRet;
 }

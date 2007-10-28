@@ -43,6 +43,7 @@
 #include "BEClassFactory.h"
 #include "Compiler.h"
 #include "Error.h"
+#include "Trace.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "fe/FEOperation.h"
@@ -107,12 +108,23 @@ void CBEWaitFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponent
 	AddMessageBuffer(pFEOperation);
 	// then add as local variable
 	AddLocalVariable(GetMessageBuffer());
-	// add opcode as local variable
+	// add opcode as local variable (this is needed to make the marshal check
+	// return true - it check if the struct member has a parameter or local
+	// variable; this check is also used if the member is directly
+	// returned--as parameter--from the message invocation)
 	CBETypedDeclarator *pOpcode = CreateOpcodeVariable();
 	AddLocalVariable(pOpcode);
-	// opcode var might not be used
 	pOpcode->AddLanguageProperty(string("attribute"),
 		string("__attribute__ ((unused))"));
+	// if receiving on client side, add exception variable
+	if (!IsComponentSide())
+	{
+		AddExceptionVariable();
+		CBETypedDeclarator *pException = GetExceptionVariable();
+		if (pException)
+			pException->AddLanguageProperty(string("attribute"),
+				string("__attribute__ ((unused))"));
+	}
 	// add marshaller and communication class
 	CreateMarshaller();
 	CreateCommunication();
@@ -382,8 +394,7 @@ int CBEWaitFunction::GetFixedSize(DIRECTION_TYPE nDirection)
  * * Class::MsgBufferInitialization
  * * WaitFunction::MsgBufferInitialization
  */
-void
-	CBEWaitFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+void CBEWaitFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
 	// check return type (do test here because sometimes we like to call

@@ -126,6 +126,9 @@ l4sigma0_kip_kernel_has_feature(const char *str)
 {
   const char *s = l4sigma0_kip_version_string();
 
+  if (!s)
+    return 0;
+
   l4sigma0_kip_for_each_feature(s)
     {
       if (strcmp(s, str) == 0)
@@ -140,7 +143,7 @@ l4sigma0_kip_kernel_abi_version(void)
 {
   const char *s = l4sigma0_kip_version_string();
 
-  if (!kip)
+  if (!s)
     return 0;
 
   l4sigma0_kip_for_each_feature(s)

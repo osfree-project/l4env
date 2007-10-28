@@ -63,19 +63,17 @@ CObject* CL4V2BEMsgBuffer::Clone()
 /** \brief add platform specific members to specific struct
  *  \param pFunction the function of the message buffer
  *  \param pStruct the struct to add the members to
- *  \param nType the type of the message buffer struct
  *  \return true if successful
  *
  *  In this implementation we should add the L4 specific receive
  *  window for flexpages, the size and the send dope.
  */
-void CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct,
-	CMsgStructType nType)
+void CL4V2BEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CL4V2BEMsgBuffer::%s(%s,, %d) called\n",
-		__func__, pFunction->GetName().c_str(), (int)nType);
+		__func__, pFunction->GetName().c_str(), (int)GetStructType(pStruct));
 
-	CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct, nType);
+	CL4BEMsgBuffer::AddPlatformSpecificMembers(pFunction, pStruct);
 
 	// create receive flexpage
 	CBETypedDeclarator *pFlexpage = GetFlexpageVariable();

@@ -30,9 +30,9 @@ void CapManager::deny(unsigned int src_task, unsigned int dest_task)
 {
 }
 
-bool CapManager::check(unsigned int src_task, unsigned int dest_task)
+int CapManager::check(unsigned int src_task, unsigned int dest_task)
 {
-	return false;
+	return IPC_FALSE;
 }
 
 CapDescriptor *CapManager::getDescriptorForTask(unsigned int task)

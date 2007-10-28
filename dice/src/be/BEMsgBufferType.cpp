@@ -87,12 +87,7 @@ CBEMsgBufferType::CreateBackEnd(CFEOperation *pFEOperation)
 		"CBEMsgBufferType::%s(fe-op) called\n",	__func__);
 
 	CBEUnionType::CreateBackEnd(string());
-
-	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
-	assert(pFunction);
-
-	AddStruct(pFEOperation, pFunction->GetSendDirection());
-	AddStruct(pFEOperation, pFunction->GetReceiveDirection());
+	AddStruct(pFEOperation);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s(fe-op) returns\n", __func__);
@@ -133,7 +128,6 @@ CBEMsgBufferType::CreateBackEnd(CFEInterface *pFEInterface)
 	string sTag = pNF->GetMessageBufferTypeName(pFEInterface);
 	sTag = pNF->GetTypeName(pFEInterface, sTag);
 	CBEUnionType::CreateBackEnd(sTag);
-
 	AddStruct(pFEInterface);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -158,12 +152,7 @@ CBEMsgBufferType::AddStruct(CFEInterface *pFEInterface)
 		iter != pFEInterface->m_Operations.end();
 		iter++)
 	{
-		if (!(*iter)->m_Attributes.Find(ATTR_OUT))
-			AddStruct(*iter, CMsgStructType::In);
-		if (!(*iter)->m_Attributes.Find(ATTR_IN))
-			AddStruct(*iter, CMsgStructType::Out);
-// 		if (!(*iter)->m_RaisesDeclarators.empty())
-// 			AddStruct(*iter, CMsgStructType::Exc);
+		AddStruct(*iter);
 	}
 
 	// because the server loop of an interface should also be able to handle
@@ -179,6 +168,17 @@ CBEMsgBufferType::AddStruct(CFEInterface *pFEInterface)
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s(fe-if) called\n", __func__);
+}
+
+/** \brief helper function to add struct for a specific operation
+ *  \param pFEOperation the operation to add the struct for
+ */
+void CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation)
+{
+	AddStruct(pFEOperation, CMsgStructType::In);
+	AddStruct(pFEOperation, CMsgStructType::Out);
+	if (!pFEOperation->m_RaisesDeclarators.empty())
+		AddStruct(pFEOperation, CMsgStructType::Exc);
 }
 
 /** \brief adds a struct to the union
@@ -200,8 +200,6 @@ void
 CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
 	CMsgStructType nType)
 {
-	string exc = string(__func__);
-
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	assert(pFEOperation);
 	// struct type
@@ -219,9 +217,14 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
 	// create union case
 	pCase->CreateBackEnd(pType, sTag, 0, false);
 	delete pType; // cloned in CBEUnionCase::CBETypedDeclarator::CreateBackEnd
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEMsgBufferType::AddStruct(%s, %d) created struct @ %p with name %s\n",
+		pFEOperation->GetName().c_str(), (int)nType, pType, sTag.c_str());
 
 	// add the elements
 	AddElements(pFEOperation, nType);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEMsgBufferType::AddStruct returns\n");
 }
 
 /** \brief adds the elements of the structs
@@ -245,20 +248,34 @@ CBEMsgBufferType::AddElements(CFEOperation *pFEOperation,
 		"CBEMsgBufferType::%s called for %s\n", __func__,
 		pFEOperation->GetName().c_str());
 
-	vector<CFETypedDeclarator*>::iterator iter;
-	for (iter = pFEOperation->m_Parameters.begin();
-		iter != pFEOperation->m_Parameters.end();
-		iter++)
+	if (CMsgStructType::In == nType)
 	{
-		if ((*iter)->m_Attributes.Find(ATTR_IGNORE))
-			continue;
-		if (CMsgStructType::In == nType &&
-			!(*iter)->m_Attributes.Find(ATTR_IN))
-			continue;
-		if ((CMsgStructType::Out == nType || CMsgStructType::Exc == nType) &&
-			!(*iter)->m_Attributes.Find(ATTR_OUT))
-			continue;
-		AddElement(*iter, nType);
+		vector<CFETypedDeclarator*>::iterator iter;
+		for (iter = pFEOperation->m_Parameters.begin();
+			iter != pFEOperation->m_Parameters.end();
+			iter++)
+		{
+			if ((*iter)->m_Attributes.Find(ATTR_IGNORE))
+				continue;
+			if (!(*iter)->m_Attributes.Find(ATTR_IN))
+				continue;
+			AddElement(*iter, nType);
+		}
+	}
+	if (CMsgStructType::Out == nType ||
+		CMsgStructType::Exc == nType)
+	{
+		vector<CFETypedDeclarator*>::iterator iter;
+		for (iter = pFEOperation->m_Parameters.begin();
+			iter != pFEOperation->m_Parameters.end();
+			iter++)
+		{
+			if ((*iter)->m_Attributes.Find(ATTR_IGNORE))
+				continue;
+			if (!(*iter)->m_Attributes.Find(ATTR_OUT))
+				continue;
+			AddElement(*iter, nType);
+		}
 	}
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -994,6 +1011,9 @@ CBEMsgBufferType::AddStruct(CBEStructType *pStruct,
 	// get name of struct
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sTag = pNF->GetMessageBufferStructName(nType, sFunctionName, sClassName);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEMsgBufferType::AddStruct(%p, %d, %s, %s) create struct with name %s\n",
+		pStruct, (int)nType, sFunctionName.c_str(), sClassName.c_str(), sTag.c_str());
 	// create union case
 	pCase->CreateBackEnd(pType, sTag, 0, false);
 	delete pType; /* cloned in CBETypedDeclarator::CreateBackEnd */

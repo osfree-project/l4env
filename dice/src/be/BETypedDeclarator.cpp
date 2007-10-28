@@ -2001,9 +2001,9 @@ CBETypedDeclarator::WriteConstPrefix(CBEFile& pFile)
 		if (pFile.IsOfFileType(FILETYPE_COMPONENT) ||
 			pFile.IsOfFileType(FILETYPE_TEMPLATE))
 		{
-			if ((m_Attributes.Find(ATTR_IN)) &&
-				(!m_Attributes.Find(ATTR_OUT)) &&
-				(GetSpecificParent<CBEComponentFunction>()))
+			if (m_Attributes.Find(ATTR_IN) &&
+				!m_Attributes.Find(ATTR_OUT) &&
+				GetSpecificParent<CBEComponentFunction>())
 			{
 				if (!bNoCorbaType && bIsPointerType)
 					pFile << "const_";

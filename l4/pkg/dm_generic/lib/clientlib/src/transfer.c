@@ -2,7 +2,7 @@
 /*****************************************************************************/
 /**
  * \file   dm_generic/client-lib/src/transfer.c
- * \brief  Generic dataspace manager client library, 
+ * \brief  Generic dataspace manager client library,
  *         transfer dataspace ownership
  *
  * \date   01/23/2002
@@ -31,17 +31,17 @@
 /*****************************************************************************/
 /**
  * \brief Transfer dataspace ownership
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  new_owner     New dataspace owner
- *	
+ *
  * \return 0 on success (set owner to \a new_owner), error code otherwise:
  *         - -#L4_EIPC   IPC error calling dataspace manager
  *         - -#L4_EINVAL Invalid dataspace descriptor
- *         - -#L4_EPERM  Permission denied, only the current owner can 
+ *         - -#L4_EPERM  Permission denied, only the current owner can
  *                         transfer the ownership
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
 l4dm_transfer(const l4dm_dataspace_t * ds, l4_threadid_t new_owner)
 {
@@ -56,13 +56,13 @@ l4dm_transfer(const l4dm_dataspace_t * ds, l4_threadid_t new_owner)
   if (ret || DICE_HAS_EXCEPTION(&_env))
     {
       LOGdL(DEBUG_ERRORS, "libdm_generic: transfer ownership failed, ds %u at "\
-            l4util_idfmt", new owner "l4util_idfmt" (ret %d, exc %d)!", ds->id, 
+            l4util_idfmt", new owner "l4util_idfmt" (ret %d, exc %d)!", ds->id,
             l4util_idstr(ds->manager), l4util_idstr(new_owner), ret,
-	    DICE_EXCEPTION_MAJOR(&_env));
+            DICE_EXCEPTION_MAJOR(&_env));
       if (ret)
-	return ret;
+        return ret;
       else
-	return -L4_EIPC;
+        return -L4_EIPC;
     }
 
   /* done */

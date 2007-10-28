@@ -2,7 +2,7 @@
 /*****************************************************************************/
 /**
  * \file   dm_generic/server-lib/include/__desc_alloc.h
- * \brief  Generic dataspace manager library, dataspace/client descriptor 
+ * \brief  Generic dataspace manager library, dataspace/client descriptor
  *         allocation
  *
  * \date   11/21/2001
@@ -27,8 +27,8 @@
 
 /* init descriptor allocation */
 int
-dsmlib_init_desc_alloc(dsmlib_get_page_fn_t get_page_fn, 
-		       dsmlib_free_page_fn_t free_page_fn);
+dsmlib_init_desc_alloc(dsmlib_get_page_fn_t get_page_fn,
+                       dsmlib_free_page_fn_t free_page_fn);
 
 /* allocate dataspace descriptor */
 dsmlib_ds_desc_t *

@@ -28,4 +28,6 @@
 #  endif
 #endif
 
+#include <l4/sys/ipc-impl.h>
+
 #endif /* ! __L4SYS__INCLUDE__ARCH_AMD64__L4API_L4V2__IPC_H__ */

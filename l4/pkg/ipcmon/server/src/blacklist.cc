@@ -39,11 +39,11 @@ void BlacklistManager::deny(unsigned int src, unsigned int dest)
 		d->add_cap(dest);
 }
 
-bool BlacklistManager::check(unsigned int src, unsigned int dest)
+int BlacklistManager::check(unsigned int src, unsigned int dest)
 {
 	CapDescriptor *d = getDescriptorForTask(src);
 	if (d)
-		return !d->has_cap(dest);
+		return (!d->has_cap(dest) ? IPC_TRUE : IPC_FALSE);
 
-	return true;
+	return IPC_UNKNOWN;
 }

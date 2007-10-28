@@ -808,15 +808,16 @@ CBEMarshaller::WriteAssignment(CBEFile& pFile,
  *  \param pMember the member to access
  *  \param pStack set if a stack is to be used
  */
-void
-CBEMarshaller::WriteMember(CBEFile& pFile,
-	CMsgStructType nType,
-	CBEMsgBuffer *pMsgBuffer,
-	CBETypedDeclarator *pMember,
-	CDeclStack* pStack)
+void CBEMarshaller::WriteMember(CBEFile& pFile, CMsgStructType nType, CBEMsgBuffer *pMsgBuffer,
+	CBETypedDeclarator *pMember, CDeclStack* pStack)
 {
 	assert(pMember);
 	assert(pMsgBuffer);
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEMarshaller::WriteMember(%s, %d, %p, %s, %p) called\n",
+		pFile.GetFileName().c_str(), (int)nType, pMsgBuffer,
+		pMember->m_Declarators.First()->GetName().c_str(), pStack);
 
 	bool bMine = false;
 	if (!pStack)
@@ -847,6 +848,9 @@ CBEMarshaller::WriteMember(CBEFile& pFile,
 
 	if (bMine)
 		delete pStack;
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEMarshaller::WriteMember finished\n");
 }
 
 /** \brief writes the access to a parameter
@@ -1465,8 +1469,18 @@ void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
 	{
 		pParameter->WriteGetSize(pFile, pStack, m_pFunction);
 		// we make the cast here, because WriteGetSize will not write the size
-		// in bytes?
-		if (pType->GetSize() > 1)
+		// in bytes, also check the size of the direct type of the parameter,
+		// because something like:
+		// typedef char foo[20];
+		// [size_if(len)] foo param[10];
+		// will rely on len as parameter to memcpy and pType is the 'char'
+		// type. Thus check for parameter type.
+		if (pParameter->GetType() != pType &&
+			pParameter->GetType()->GetSize() > 1)
+		{
+			pFile << "*sizeof";
+			pParameter->GetType()->WriteCast(pFile, false);
+		} else if (pType->GetSize() > 1)
 		{
 			pFile << "*sizeof";
 			pType->WriteCast(pFile, false);
@@ -1699,7 +1713,7 @@ CBEMarshaller::FindMarshalMember(CDeclStack* pStack)
 		nType = m_pFunction->GetSendDirection();
 	else
 		nType = m_pFunction->GetReceiveDirection();
-	assert(CMsgStructType::In == nType || CMsgStructType::Out == nType);
+	assert(CMsgStructType::In == nType || CMsgStructType::Out == nType || CMsgStructType::Exc == nType);
 	CBEStructType *pStruct = GetStruct(m_pFunction, nType);
 	assert(pStruct);
 

@@ -27,7 +27,7 @@ LIBCLIBS	+= -ll4util
 L4LIBS		+= -luc_c++ -lc++start.o $(CXXLIB) -lmain -lcxx_base
 
 CFLAGS		+= -g
-CXXFLAGS	+= -g -fno-rtti
+CXXFLAGS	+= -g -fno-rtti -fno-exceptions
 
 else
 all::

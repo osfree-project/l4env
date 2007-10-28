@@ -1,9 +1,8 @@
-PKGDIR		?= ..
-L4DIR		?= $(PKGDIR)/../..
+PKGDIR             ?= ..
+L4DIR              ?= $(PKGDIR)/../..
 
-IDL 		= $(PKGNAME).idl
+IDL                 = $(PKGNAME).idl
 IDL_EXPORT_SKELETON = $(PKGNAME).idl
-SYSTEMS		= x86-l4v2 arm-l4v2 amd64-l4v2
-IDL_FLAGS	= -fforce-corba-alloc
+SYSTEMS             = x86-l4v2 arm-l4v2 amd64-l4v2
 
 include $(L4DIR)/mk/idl.mk

@@ -56,10 +56,8 @@ public:
 		int nType, CMsgStructType nStructType);
 
 protected:
-	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction,
-		CBEStructType *pStruct, CMsgStructType nType);
-	virtual void WriteRcvFlexpageInitialization(CBEFile& pFile,
-		CMsgStructType nType);
+	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction, CBEStructType *pStruct);
+	virtual void WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgStructType nType);
 	virtual bool WriteRefstringInitialization(CBEFile& pFile, CMsgStructType nType);
 	virtual void WriteRefstringInitParameter(CBEFile& pFile,
 		CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
@@ -67,10 +65,8 @@ protected:
 	virtual bool WriteRefstringInitFunction(CBEFile& pFile,
 		CBEFunction *pFunction,	CBEClass *pClass, int nIndex, CMsgStructType nType);
 
-	virtual void AddMsgTagMember(CBEFunction *pFunction,
-		CBEStructType *pStruct, CMsgStructType nType);
-	virtual void AddOpcodeMember(CBEFunction *pFunction,
-		CBEStructType *pStruct, CMsgStructType nType);
+	virtual void AddMsgTagMember(CBEFunction *pFunction, CBEStructType *pStruct);
+	virtual void AddOpcodeMember(CBEFunction *pFunction, CBEStructType *pStruct);
 
 	virtual int GetWordMemberCountClass(void);
 

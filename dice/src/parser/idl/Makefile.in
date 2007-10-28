@@ -490,7 +490,7 @@ dist-hook:
 	rm -f $(addprefix $(distdir)/,$(CLEANFILES))
 
 idl-parser.tab.cc: idl-parser.yy
-	bison --report=all -d $<
+	$(YACC) --report=all -d $<
 
 idl-parser.tab.hh: idl-parser.tab.cc
 

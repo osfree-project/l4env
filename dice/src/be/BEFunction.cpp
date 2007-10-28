@@ -1108,8 +1108,7 @@ int CBEFunction::GetFixedReturnSize(DIRECTION_TYPE nDirection)
  * We create a new message buffer for an interface. This implementation
  * is usually called by CBEWaitAnyFunction, CBESrvLoopFunction, ???
  */
-void
-CBEFunction::AddMessageBuffer()
+void CBEFunction::AddMessageBuffer()
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
@@ -1154,8 +1153,7 @@ CBEFunction::AddMessageBuffer()
  * - MsgBufferInitialization adds return code, sets pointer of msgbuf, etc.
  * - PostCreate can create additional structs or add alignment, padding
  */
-void
-CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
+void CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
@@ -1192,8 +1190,7 @@ CBEFunction::AddMessageBuffer(CFEOperation *pFEOperation)
  *  \param pMsgBuffer the message buffer to manipulate
  *  \return true on success
  */
-void
-CBEFunction::MsgBufferInitialization(CBEMsgBuffer*)
+void CBEFunction::MsgBufferInitialization(CBEMsgBuffer*)
 { }
 
 /** \brief marshals the return value
@@ -1269,12 +1266,18 @@ CBEFunction::WriteMarshalException(CBEFile& pFile,
 	bool bMarshal,
 	bool bReturn)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s called\n", __func__,
-		GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEFunction::WriteMarshalException(%s, %s, %s) for %s called\n",
+		pFile.GetFileName().c_str(), bMarshal ? "true" : "false",
+		bReturn ? "true" : "false", GetName().c_str());
 
 	CBETypedDeclarator *pExceptionVar = GetExceptionVariable();
 	if (!pExceptionVar)
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"CBEFunction::WriteMarshalException no exception variable found\n");
 		return;
+	}
 	CBEMarshaller *pMarshaller = GetMarshaller();
 	pMarshaller->MarshalParameter(pFile, this, pExceptionVar, bMarshal);
 
@@ -1291,7 +1294,8 @@ CBEFunction::WriteMarshalException(CBEFile& pFile,
 		--pFile;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s finished\n", __func__,
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBEFunction::WriteMarshalException for %s finished\n",
 		GetName().c_str());
 }
 
@@ -1548,8 +1552,7 @@ CBEFunction::FindParameterMember(CBETypedDeclarator *pParameter,
  *
  * By default we marshal all parameters, so simply return true.
  */
-bool
-CBEFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
+bool CBEFunction::DoMarshalParameter(CBETypedDeclarator *pParameter,
 	bool /* bMarshal */)
 {
 	if (pParameter == m_pCorbaObject)
@@ -1646,44 +1649,48 @@ int CBEFunction::GetParameterCount(int nFEType, DIRECTION_TYPE nDirection)
 	return nCount;
 }
 
-/** \brief counts parameters by their attributes
- *  \param nMustAttrs the attribute that must be set for the parameter
- *  \param nMustNotAttrs the attribute that must _not_ be set for the parameter
- *  \param nDirection the direction to count
- *  \return the number of parameters with or without the specified attributes
+/** \brief checks if there are parameters with given attributes
+ *  \param nAttribute1 the first attribute that must be set for the parameter
+ *  \param nAttribute2 the second attribute that must be set for the parameter
+ *  \return true if one parameter with the attributes found
  */
-int
-CBEFunction::GetParameterCount(ATTR_TYPE nMustAttrs,
-	ATTR_TYPE nMustNotAttrs,
-	DIRECTION_TYPE nDirection)
+bool CBEFunction::HasParameterWithAttributes(ATTR_TYPE nAttribute1, ATTR_TYPE nAttribute2)
 {
-	if (nDirection == DIRECTION_INOUT)
+	CBETypedDeclarator *pParameter;
+	if ((pParameter = FindParameterAttribute(nAttribute1)))
 	{
-		int nCountIn = GetParameterCount(nMustAttrs, nMustNotAttrs,
-			DIRECTION_IN);
-		int nCountOut = GetParameterCount(nMustAttrs, nMustNotAttrs,
-			DIRECTION_OUT);
-		return std::max(nCountIn, nCountOut);
+		if (nAttribute2 == ATTR_NONE)
+			return true;
+		if (pParameter->m_Attributes.Find(nAttribute2))
+			return true;
+	}
+	return false;
 	}
 
-	int nCount = 0;
+/** \brief check if this function has parameters that should be malloced by the user
+ *  \return true if so
+ *
+ * A user should malloc a parameter if: it is varibale sized, out, has no
+ * max-is attribute and is not prealloced at the server.
+ */
+bool CBEFunction::HasMallocParameters()
+{
 	vector<CBETypedDeclarator*>::iterator iter;
-	for (iter = m_Parameters.begin();
-		iter != m_Parameters.end();
-		iter++)
+	for (iter = m_Parameters.begin(); iter != m_Parameters.end(); iter++)
 	{
-		if (!(*iter)->IsDirection(nDirection))
+		if (!(*iter)->m_Attributes.Find(ATTR_OUT))
 			continue;
-		// test for attributes that it must have (if it hasn't, skip count)
-		if (!(*iter)->m_Attributes.Find(nMustAttrs))
+		if (!(*iter)->IsVariableSized())
 			continue;
-		// test for attributes that it must NOT have (skip count)
-		if ((*iter)->m_Attributes.Find(nMustNotAttrs))
+		if ((*iter)->m_Attributes.Find(ATTR_MAX_IS))
 			continue;
-		// count
-		nCount++;
+		if ((*iter)->m_Attributes.Find(ATTR_PREALLOC_SERVER))
+			continue;
+		if ((*iter)->GetSize() > 0)
+			continue;
+		return true;
 	}
-	return nCount;
+	return false;
 }
 
 /** \brief sets the m_bCastMsgBufferOnCall member
@@ -2240,7 +2247,7 @@ int CBEFunction::GetParameterAlignment(int nCurrentOffset, int nParamSize)
  */
 void CBEFunction::AddLocalVariable(CBETypedDeclarator *pVariable)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%p) called\n", __func__,
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s (%p) called\n", __func__,
 		pVariable);
 	if (!pVariable)
 		return;
@@ -2255,8 +2262,7 @@ void CBEFunction::AddLocalVariable(CBETypedDeclarator *pVariable)
  *
  * Searches the local variables for the exception variable.
  */
-CBETypedDeclarator*
-CBEFunction::GetExceptionVariable()
+CBETypedDeclarator* CBEFunction::GetExceptionVariable()
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetExceptionWordVariable();
@@ -2271,8 +2277,7 @@ CBEFunction::GetExceptionVariable()
  * that has been set by the SetReturnVar methods. Simply
  * search local variables for the OUT attribute.
  */
-CBETypedDeclarator*
-CBEFunction::GetReturnVariable()
+CBETypedDeclarator* CBEFunction::GetReturnVariable()
 {
 	vector<CBETypedDeclarator*>::iterator iter;
 	for (iter = m_LocalVariables.begin();
@@ -2301,6 +2306,10 @@ CBEFunction::AddLocalVariable(string sUserType,
 	int nStars,
 	string sInit)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEFunction::AddLocalVariable(%s, %s, %d, %s) called\n",
+		sUserType.c_str(), sName.c_str(), nStars, sInit.c_str());
+
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBETypedDeclarator *pVariable = pCF->GetNewTypedDeclarator();
 	AddLocalVariable(pVariable);
@@ -2374,9 +2383,7 @@ CBEFunction::SetFunctionName(CFEInterface *pFEInterface,
  *  \param sName the function name
  *  \param sOriginalName the original name
  */
-void
-CBEFunction::SetFunctionName(string sName,
-	string sOriginalName)
+void CBEFunction::SetFunctionName(string sName, string sOriginalName)
 {
 	m_sName = sName;
 	m_sOriginalName = sOriginalName;
@@ -2387,12 +2394,13 @@ CBEFunction::SetFunctionName(string sName,
  *
  * If error, throws exception.
  */
-CBETypedDeclarator*
-CBEFunction::CreateOpcodeVariable()
+CBETypedDeclarator* CBEFunction::CreateOpcodeVariable()
 {
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEOpcodeType *pOpcodeType = pCF->GetNewOpcodeType();
+	assert(pOpcodeType);
 	CBETypedDeclarator *pOpcode = pCF->GetNewTypedDeclarator();
+	assert(pOpcode);
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sOpcode = pNF->GetOpcodeVariable();
 	pOpcode->SetParent(this);
@@ -2406,8 +2414,7 @@ CBEFunction::CreateOpcodeVariable()
 
 /** \brief add the exception variable to the local variables
  */
-void
-CBEFunction::AddExceptionVariable()
+void CBEFunction::AddExceptionVariable()
 {
 	if (m_Attributes.Find(ATTR_NOEXCEPTIONS))
 		return;

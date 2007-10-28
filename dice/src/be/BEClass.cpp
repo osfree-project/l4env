@@ -130,7 +130,6 @@ CFEOperation *CFunctionGroup::GetOperation()
 CBEClass::CBEClass()
 : m_Attributes(0, this),
 	m_Constants(0, this),
-	m_Exceptions(0, this),
 	m_TypeDeclarations(0, this),
 	m_Typedefs(0, this),
 	m_Functions(0, this),
@@ -722,13 +721,13 @@ CBEClass::CreateFunctionsClassDependency(CFEOperation *pFEOperation)
 		(*iterFG)->m_Functions.Add(pFunction);
 		pFunction->CreateBackEnd(pFEOperation, true);
 
-// 		if (!pFEOperation->m_RaisesDeclarators.empty())
-// 		{
-// 			pFunction = pCF->GetNewMarshalExceptionFunction();
-// 			m_Functions.Add(pFunction);
-// 			(*iterFG)->m_Functions.Add(pFunction);
-// 			pFunction->CreateBackEnd(pFEOperation, true);
-// 		}
+		if (!pFEOperation->m_RaisesDeclarators.empty())
+		{
+			pFunction = pCF->GetNewMarshalExceptionFunction();
+			m_Functions.Add(pFunction);
+			(*iterFG)->m_Functions.Add(pFunction);
+			pFunction->CreateBackEnd(pFEOperation, true);
+		}
 	}
 	else
 	{
@@ -771,7 +770,7 @@ CBEClass::CreateBackEndException(CFETypedDeclarator* pFEException)
 
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEException *pException = pCF->GetNewException();
-	m_Exceptions.Add(pException);
+	m_Typedefs.Add(pException);
 	pException->CreateBackEnd(pFEException);
 
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s finished\n",
@@ -1500,8 +1499,6 @@ void CBEClass::WriteElements(CBEHeaderFile& pFile)
 		WriteLineDirective(pFile, *iter);
 		if (dynamic_cast<CBEConstant*>(*iter))
 			WriteConstant((CBEConstant*)(*iter), pFile);
-		else if (dynamic_cast<CBEException*>(*iter))
-			WriteException((CBEException*)(*iter), pFile);
 		else if (dynamic_cast<CBETypedef*>(*iter))
 			WriteTypedef((CBETypedef*)(*iter), pFile);
 		else if (dynamic_cast<CBEType*>(*iter))
@@ -2295,18 +2292,6 @@ void CBEClass::WriteTaggedType(CBEType *pType,
 	pFile << "\n";
 }
 
-/** \brief writes the declaration of the exception
- *  \param pException the exception to write
- *  \param pFile the file to write to
- *
- * We first define the type of the exception, which is a simple typedef.
- */
-void CBEClass::WriteException(CBEException *pException,
-	CBEHeaderFile& pFile)
-{
-	WriteTypedef(pException, pFile);
-}
-
 /** \brief searches for a function with the given type
  *  \param sTypeName the name of the type to look for
  *  \param pFile the file to write to (its used to test if a function shall be written)
@@ -2328,54 +2313,38 @@ bool CBEClass::HasFunctionWithUserType(string sTypeName, CBEFile* pFile)
 	return false;
 }
 
-/** \brief count parameters according to their set and not set attributes
- *  \param nMustAttrs the attribute that must be set to count a parameter
- *  \param nMustNotAttrs the attribute that must not be set to count a parameter
- *  \param nDirection the direction to count
- *  \return the number of parameter with or without the specified attributes
+/** \brief check if functions have parameters with given attributes
+ *  \param nAttribute1 the first attribute
+ *  \param nAttribute2 the second attribte
+ *  \return true if one such function could be found
  */
-int
-CBEClass::GetParameterCount(ATTR_TYPE nMustAttrs,
-	ATTR_TYPE nMustNotAttrs,
-	DIRECTION_TYPE nDirection)
-{
-	if (nDirection == DIRECTION_INOUT)
+bool CBEClass::HasParameterWithAttributes(ATTR_TYPE nAttribute1, ATTR_TYPE nAttribute2)
 	{
-		int nCountIn = GetParameterCount(nMustAttrs, nMustNotAttrs,
-			DIRECTION_IN);
-		int nCountOut = GetParameterCount(nMustAttrs, nMustNotAttrs,
-			DIRECTION_OUT);
-		return std::max(nCountIn, nCountOut);
-	}
-
-	int nCount = 0, nCurr;
-	vector<CFunctionGroup*>::iterator iterG;
-	for (iterG = m_FunctionGroups.begin();
-		iterG != m_FunctionGroups.end();
-		iterG++)
-	{
-		vector<CBEFunction*>::iterator iterF;
-		for (iterF = (*iterG)->m_Functions.begin();
-			iterF != (*iterG)->m_Functions.end();
-			iterF++)
+	vector<CBEFunction*>::iterator iter;
+	for (iter = m_Functions.begin();
+		iter != m_Functions.end();
+		iter++)
 		{
-			if (!dynamic_cast<CBEOperationFunction*>(*iterF))
-				continue;
-			nCurr = (*iterF)->GetParameterCount(nMustAttrs, nMustNotAttrs,
-				nDirection);
-			nCount = std::max(nCount, nCurr);
+		if ((*iter)->HasParameterWithAttributes(nAttribute1, nAttribute2))
+			return true;
 		}
+	// check base classes
+	vector<CBEClass*>::iterator iterC;
+	for (iterC = m_BaseClasses.begin();
+		iterC != m_BaseClasses.end();
+		iterC++)
+	{
+		if ((*iterC)->HasParameterWithAttributes(nAttribute1, nAttribute2))
+			return true;
 	}
-
-	return nCount;
+	return false;
 }
 
 /** \brief try to find functions with the given attribute
  *  \param nAttribute the attribute to find
  *  \return true if such a function could be found
  */
-bool
-CBEClass::HasFunctionWithAttribute(ATTR_TYPE nAttribute)
+bool CBEClass::HasFunctionWithAttribute(ATTR_TYPE nAttribute)
 {
 	// check own functions
 	vector<CBEFunction*>::iterator iter;
@@ -2399,14 +2368,10 @@ CBEClass::HasFunctionWithAttribute(ATTR_TYPE nAttribute)
 	return false;
 }
 
-/** \brief try to find functions with parameters with the given attributes
- *  \param nAttribute1 the first attribute
- *  \param nAttribute2 the second attribute
+/** \brief try to find functions with parameters that should be allocated by the user
  *  \return true if such function exists
  */
-bool
-CBEClass::HasParametersWithAttribute(ATTR_TYPE nAttribute1,
-	ATTR_TYPE nAttribute2)
+bool CBEClass::HasMallocParameters()
 {
 	// check own functions
 	vector<CBEFunction*>::iterator iter;
@@ -2414,14 +2379,8 @@ CBEClass::HasParametersWithAttribute(ATTR_TYPE nAttribute1,
 		iter != m_Functions.end();
 		iter++)
 	{
-		CBETypedDeclarator *pParameter;
-		if ((pParameter = (*iter)->FindParameterAttribute(nAttribute1)) != 0)
-		{
-			if (nAttribute2 == ATTR_NONE)
+		if ((*iter)->HasMallocParameters())
 				return true;
-			if (pParameter->m_Attributes.Find(nAttribute2))
-				return true;
-		}
 	}
 	// check base classes
 	vector<CBEClass*>::iterator iterC;
@@ -2429,7 +2388,7 @@ CBEClass::HasParametersWithAttribute(ATTR_TYPE nAttribute1,
 		iterC != m_BaseClasses.end();
 		iterC++)
 	{
-		if ((*iterC)->HasParametersWithAttribute(nAttribute1, nAttribute2))
+		if ((*iterC)->HasMallocParameters())
 			return true;
 	}
 	// nothing found
@@ -2454,7 +2413,7 @@ void CBEClass::CreateOrderedElementList()
 	{
 		InsertOrderedElement(*iterF);
 	}
-	// typedef
+	// typedef and exceptions
 	vector<CBETypedef*>::iterator iterT;
 	for (iterT = m_Typedefs.begin();
 		iterT != m_Typedefs.end();
@@ -2477,14 +2436,6 @@ void CBEClass::CreateOrderedElementList()
 		iterC++)
 	{
 		InsertOrderedElement(*iterC);
-	}
-	// exceptions
-	vector<CBEException*>::iterator iterE;
-	for (iterE = m_Exceptions.begin();
-		iterE != m_Exceptions.end();
-		iterE++)
-	{
-		InsertOrderedElement(*iterE);
 	}
 }
 

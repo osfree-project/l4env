@@ -36,6 +36,7 @@
 #include "BENameFactory.h"
 #include "BEClassFactory.h"
 #include "fe/FEOperation.h"
+#include "fe/FEIdentifier.h"
 #include "TypeSpec-Type.h"
 #include "Compiler.h"
 #include <cassert>
@@ -51,8 +52,7 @@ CBEMarshalExceptionFunction::~CBEMarshalExceptionFunction()
 /** \brief creates the back-end marshal function for exceptions
  *  \param pFEOperation the corresponding front-end operation
  */
-void
-CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
+void CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
 	// set target file name
 	SetTargetFileName(pFEOperation);
@@ -83,8 +83,7 @@ CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bCo
  *
  * Make the message buffer variable a reference
  */
-void
-CBEMarshalExceptionFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+void CBEMarshalExceptionFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
@@ -94,19 +93,84 @@ CBEMarshalExceptionFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
 
-/** \brief adds a single parameter to this function
- *  \param pFEParameter the parameter to add
- *
- * This function decides, which parameters to add and which not. In the
- * marshal_exc function we do not take any parameters, because we only marshal
- * the exception which is in the environment.
- *
- * \todo change this for C++ if we catch exceptions and hand them to this
- * function as parameters
+/** \brief adds the parameters of a front-end function to this class
+ *  \param pFEOperation the front-end function
  */
-void
-CBEMarshalExceptionFunction::AddParameter(CFETypedDeclarator * /*pFEParameter*/)
-{}
+void CBEMarshalExceptionFunction::AddParameters(CFEOperation *pFEOperation)
+{
+	AddBeforeParameters();
+
+	// create parameter for exception
+	if (CCompiler::IsBackEndLanguageSet(PROGRAM_BE_CPP))
+	{
+		for_each(pFEOperation->m_RaisesDeclarators.begin(), pFEOperation->m_RaisesDeclarators.end(),
+			DoCall<CBEMarshalExceptionFunction, CFEIdentifier>(this,
+				&CBEMarshalExceptionFunction::AddParameter));
+	}
+
+	AddAfterParameters();
+}
+
+/** \brief adds a single parameter to this function
+ *  \param pFEIdentifier the excepition to add
+ *
+ * This function adds the single exceptions as parameters
+ */
+void CBEMarshalExceptionFunction::AddParameter(CFEIdentifier * pFEIdentifier)
+{
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+
+	CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
+	pParameter->SetParent(this);
+	string sExceptionName = pFEIdentifier->GetName();
+	string sTypeName = pNF->GetTypeName(pFEIdentifier, sExceptionName);
+	string sName = pNF->GetUserExceptionVariable(sExceptionName);
+	m_Parameters.Add(pParameter);
+	pParameter->CreateBackEnd(sTypeName, sName, 0);
+	// create out attribute
+	CBEAttribute *pAttr = pCF->GetNewAttribute();
+	pAttr->CreateBackEnd(ATTR_OUT);
+	pParameter->m_Attributes.Add(pAttr);
+}
+
+/** \brief add parameters after all other parameters
+ *  \return true if successful
+ *
+ * We get the exceptions of this function and add them as parameters.
+ *
+ * We have to write the server's message buffer type and the local variable
+ * name. We cannot use the local type, because it's not defined anywhere.
+ * To write it correctly, we have to obtain the server's message buffer's
+ * declarator, which is the name of the type.
+ */
+void CBEMarshalExceptionFunction::AddAfterParameters()
+{
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEMarshalExceptionFunction::%s called\n", __func__);
+
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	// get class' message buffer
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	// get its message buffer
+	CBEMsgBuffer *pSrvMsgBuffer = pClass->GetMessageBuffer();
+	assert(pSrvMsgBuffer);
+	string sTypeName = pSrvMsgBuffer->m_Declarators.First()->GetName();
+	// write own message buffer's name
+	string sName = pNF->GetMessageBufferVariable();
+	// create declarator
+	CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
+	pParameter->SetParent(this);
+	pParameter->CreateBackEnd(sTypeName, sName, 1);
+	m_Parameters.Add(pParameter);
+
+	CBEOperationFunction::AddAfterParameters();
+
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBEMarshalExceptionFunction::%s returns\n", __func__);
+}
 
 /** \brief test if this function should be written
  *  \param pFile the file to write to
@@ -160,8 +224,7 @@ CMsgStructType CBEMarshalExceptionFunction::GetReceiveDirection()
 /** \brief get exception variable
  *  \return a reference to the exception variable
  */
-CBETypedDeclarator*
-CBEMarshalExceptionFunction::GetExceptionVariable()
+CBETypedDeclarator* CBEMarshalExceptionFunction::GetExceptionVariable()
 {
 	CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
 	if (pRet)
@@ -188,8 +251,7 @@ CBEMarshalExceptionFunction::GetExceptionVariable()
  *  \param sTypeName the name of the type
  *  \return a reference to the found parameter
  */
-CBETypedDeclarator*
-CBEMarshalExceptionFunction::FindParameterType(string sTypeName)
+CBETypedDeclarator* CBEMarshalExceptionFunction::FindParameterType(string sTypeName)
 {
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	if (pMsgBuffer && pMsgBuffer->HasType(sTypeName))
@@ -204,10 +266,8 @@ CBEMarshalExceptionFunction::FindParameterType(string sTypeName)
  * not initialize the message buffer - this may overwrite the values we try to
  * unmarshal.
  */
-void
-CBEMarshalExceptionFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
-{
-}
+void CBEMarshalExceptionFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
+{ }
 
 /** \brief writes the invocation of the message transfer
  *  \param pFile the file to write to
@@ -215,10 +275,8 @@ CBEMarshalExceptionFunction::WriteVariableInitialization(CBEFile& /*pFile*/)
  * This implementation does nothing, because the unmarshalling does not
  * contain a message transfer.
  */
-void
-CBEMarshalExceptionFunction::WriteInvocation(CBEFile& /*pFile*/)
-{
-}
+void CBEMarshalExceptionFunction::WriteInvocation(CBEFile& /*pFile*/)
+{ }
 
 /** \brief writes a single parameter for the function call
  *  \param pFile the file to write to
@@ -240,42 +298,6 @@ CBEMarshalExceptionFunction::WriteCallParameter(CBEFile& pFile,
 		pParameter->GetType()->WriteCast(pFile, pParameter->HasReference());
 	// call base class
 	CBEOperationFunction::WriteCallParameter(pFile, pParameter, bCallFromSameClass);
-}
-
-/** \brief add parameters after all other parameters
- *  \return true if successful
- *
- * We have to write the server's message buffer type and the local variable
- * name. We cannot use the local type, because it's not defined anywhere.
- * To write it correctly, we have to obtain the server's message buffer's
- * declarator, which is the name of the type.
- */
-void CBEMarshalExceptionFunction::AddAfterParameters()
-{
-	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-		"CBEMarshalExceptionFunction::%s called\n", __func__);
-
-	CBEClassFactory *pCF = CBEClassFactory::Instance();
-	CBENameFactory *pNF = CBENameFactory::Instance();
-	// get class' message buffer
-	CBEClass *pClass = GetSpecificParent<CBEClass>();
-	assert(pClass);
-	// get its message buffer
-	CBEMsgBuffer *pSrvMsgBuffer = pClass->GetMessageBuffer();
-	assert(pSrvMsgBuffer);
-	string sTypeName = pSrvMsgBuffer->m_Declarators.First()->GetName();
-	// write own message buffer's name
-	string sName = pNF->GetMessageBufferVariable();
-	// create declarator
-	CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
-	pParameter->SetParent(this);
-	pParameter->CreateBackEnd(sTypeName, sName, 1);
-	m_Parameters.Add(pParameter);
-
-	CBEOperationFunction::AddAfterParameters();
-
-	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEMarshalExceptionFunction::%s returns\n", __func__);
 }
 
 /** \brief checks if this parameter should be marshalled or not

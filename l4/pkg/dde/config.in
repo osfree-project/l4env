@@ -12,5 +12,5 @@ if [ "$CONFIG_DDE26" = "y" ]; then
 	bool '  Block device layer support library' CONFIG_DDE26_BLOCK
 fi
 
-#bool 'Build DDE FreeBSD'	CONFIG_FBSD
+bool 'Build DDE FreeBSD'	CONFIG_FBSD
 

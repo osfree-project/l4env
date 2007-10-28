@@ -38,7 +38,6 @@ dnl
 dnl check for bison
 dnl
 dnl 1) use generic check
-dnl 2) check for specific bison binary if multiple are installed (-1.35)
 dnl 3) check version of bison binary
 dnl
 AC_PROG_YACC
@@ -61,6 +60,14 @@ case $dice_bison_version in
   AC_MSG_ERROR([You will need at least bison version 2.1a (found ${1}.${2}).])
   ;;
 esac
+dnl
+dnl now YACC is most probably `bison -y', thus replace the ` -y' -- we need the original bison invocation
+dnl
+YACC=`echo -n $YACC|sed -e 's/ -y//'`
+AC_SUBST(YACC)
+dnl
+dnl check for `ln -s'
+dnl
 AC_PROG_LN_S
 
 dnl check for documentation programs

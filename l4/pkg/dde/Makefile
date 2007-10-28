@@ -8,7 +8,7 @@ export MAKEFLAGS=--no-print-directory
 # line and adapt it.
 # TARGET = idl include src lib server examples doc
 
-TARGET = include ddekit linux26 examples doc
+TARGET = include ddekit linux26 fbsd examples doc
 
 DROPSCONF 				= y
 DROPSCONF_CONFIG_MK		= $(OBJ_DIR)/Makeconf

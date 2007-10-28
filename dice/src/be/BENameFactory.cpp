@@ -1392,6 +1392,15 @@ string CBENameFactory::GetExceptionWordVariable()
 	return string("_exception");
 }
 
+/** \brief returns the variable name of a user defined exception
+ *  \param sTypeName the name of the exception time
+ *  \return the name of the variable
+ */
+string CBENameFactory::GetUserExceptionVariable(string sTypeName)
+{
+	return string("_exc_") + sTypeName;
+}
+
 /** \brief returns the name of the message buffer struct member
  *  \param nType the transfer direction of the struct
  *  \param sFuncName if not empty the operation's name should be added

@@ -284,6 +284,8 @@ l4_ipc_receive_tag(l4_threadid_t src,
   return L4_IPC_ERROR(*result);
 }
 
+#include <l4/sys/ipc-impl.h>
+
 #endif //__GNUC__
 
 #endif /* ! __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__IPC_H__ */

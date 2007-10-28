@@ -49,12 +49,12 @@ void WhitelistManager::deny(unsigned int src, unsigned int dest)
 		d->remove_cap(dest);
 }
 
-bool WhitelistManager::check(unsigned int src, unsigned int dest)
+int WhitelistManager::check(unsigned int src, unsigned int dest)
 {
 	CapDescriptor *d = getDescriptorForTask(src);
 
 	if (d)
-		return d->has_cap(dest);
+		return (d->has_cap(dest) ? IPC_TRUE : IPC_FALSE);
 
-	return false;
+	return IPC_UNKNOWN;
 }

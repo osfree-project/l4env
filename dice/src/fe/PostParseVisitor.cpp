@@ -334,22 +334,21 @@ CPostParseVisitor::CheckStrings(CFETypedDeclarator& typeddecl)
 				iterD != typeddecl.m_Declarators.end();
 				iterD++)
 			{
-				CFEDeclarator *pArray = (CFEDeclarator*)0;
 				// if declarator is simple, we make it an array now
-				if (((*iterD)->GetType() != DECL_ARRAY) &&
-					((*iterD)->GetType() != DECL_ENUM))
-				{
-					pArray = new CFEArrayDeclarator(*iterD);
-					CFEDeclarator *pDecl = *iterD;
-					typeddecl.m_Declarators.Remove(pDecl);
-					delete pDecl;
-					typeddecl.m_Declarators.Add(pArray);
-					// because pDecl has been removed, reset iterator
-					iterD = typeddecl.m_Declarators.begin();
-				}
-				// first add the pointer from char*
-				if (pArray)
-					pArray->SetStars(pArray->GetStars()+1);
+				if ((*iterD)->GetType() == DECL_ARRAY ||
+					(*iterD)->GetType() == DECL_ENUM)
+					continue;
+
+				CFEDeclarator *pDecl = *iterD;
+				CFEDeclarator *pArray = new CFEArrayDeclarator(pDecl);
+				assert(pArray);
+				typeddecl.m_Declarators.Remove(pDecl);
+				delete pDecl;
+				typeddecl.m_Declarators.Add(pArray);
+				// because pDecl has been removed, reset iterator
+				iterD = typeddecl.m_Declarators.begin();
+				// add the pointer from char*
+				pArray->SetStars(pArray->GetStars()+1);
 			}
 		}
 	}

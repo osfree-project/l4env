@@ -27,7 +27,7 @@ class BlacklistManager : public CapManager
 
 		virtual void allow(unsigned int src_task, unsigned int dest_task);
 		virtual void deny(unsigned int src_task, unsigned int dest_task);
-		virtual bool check(unsigned int src_task, unsigned int dest_task);
+		virtual int check(unsigned int src_task, unsigned int dest_task);
 };
 
 #endif

@@ -61,6 +61,34 @@ ddekit_addr_t ddekit_pgtab_get_physaddr(const void *virtual)
 }
 
 
+int ddekit_pgtab_get_type(const void *virtual)
+{
+	/* find pgtab object */
+	struct pgtab_object *p = l4rm_get_userptr(virtual);
+	if (!p) {
+		/* XXX this is verbose */
+		LOG_Error("no virt->phys mapping for %p", virtual);
+		return -1;
+	}
+
+	return p->type;
+}
+
+
+int ddekit_pgtab_get_size(const void *virtual)
+{
+	/* find pgtab object */
+	struct pgtab_object *p = l4rm_get_userptr(virtual);
+	if (!p) {
+		/* XXX this is verbose */
+		LOG_Error("no virt->phys mapping for %p", virtual);
+		return -1;
+	}
+
+	return p->size;
+}
+
+
 /**
  * Clear virtual->physical mapping for VM region
  *

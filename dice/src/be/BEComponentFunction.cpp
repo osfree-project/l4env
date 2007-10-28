@@ -347,7 +347,6 @@ bool CBEComponentFunction::DoWriteFunction(CBEFile* pFile)
 {
 	if (!pFile->IsOfFileType(FILETYPE_COMPONENT))
 		return false;
-	CCompiler::SetDebug(false);
 	if (!IsTargetFile(pFile))
 		return false;
 	if (pFile->IsOfFileType(FILETYPE_IMPLEMENTATION))

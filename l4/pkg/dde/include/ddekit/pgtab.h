@@ -56,4 +56,22 @@ void ddekit_pgtab_clear_region(void *virtual, int type);
  */
 ddekit_addr_t ddekit_pgtab_get_physaddr(const void *virtual);
 
+/**
+ * Get type of VM region.
+ *
+ * \param virtual   virtual address
+
+ * \return VM region type
+ */
+int ddekit_pgtab_get_type(const void *virtual);
+
+/**
+ * Get size of VM region.
+ *
+ * \param virtual   virtual address
+ *
+ * \return VM region size (in bytes)
+ */
+int ddekit_pgtab_get_size(const void *virtual);
+
 #endif

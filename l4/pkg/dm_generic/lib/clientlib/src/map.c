@@ -33,7 +33,7 @@
 /*****************************************************************************/
 /**
  * \brief  Map dataspace region
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  offs          Offset in dataspace
  * \param  size          Region size
@@ -41,7 +41,7 @@
  * \param  rcv_size2     Receive window size (log2)
  * \param  rcv_offs      Offset in receive window
  * \param  flags	 Map flags
- * \retval fpage_addr    Map address of receive flexpage 
+ * \retval fpage_addr    Map address of receive flexpage
  * \retval fpage_size    Size of received flexpage
  *
  * \return 0 on success (mapped page), error code otherwise:
@@ -50,11 +50,11 @@
  * Preconditions:
  * - correct receive window specification
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-__do_map(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size, 
-	 l4_addr_t rcv_addr, int rcv_size2, l4_offs_t rcv_offs, 
-	 l4_uint32_t flags, l4_addr_t * fpage_addr, l4_size_t * fpage_size)
+__do_map(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
+         l4_addr_t rcv_addr, int rcv_size2, l4_offs_t rcv_offs,
+         l4_uint32_t flags, l4_addr_t * fpage_addr, l4_size_t * fpage_size)
 {
   int ret;
   l4_snd_fpage_t page;
@@ -72,9 +72,9 @@ __do_map(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
   if ((ret < 0) || DICE_HAS_EXCEPTION(&_env))
     {
       if (ret < 0)
-	return ret;
+        return ret;
       else
-	return -L4_EIPC;
+        return -L4_EIPC;
     }
 
   /* analyze received fpage */
@@ -97,7 +97,7 @@ __do_map(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
 /*****************************************************************************/
 /**
  * \brief Map dataspace region (IDL wrapper)
- * 
+ *
  * \param  ds            Dataspace descriptor
  * \param  offs          Offset in dataspace
  * \param  size          Region size
@@ -107,15 +107,15 @@ __do_map(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
  * \param  flags         Flags:
  *                       - #L4DM_RO          map read-only
  *                       - #L4DM_RW          map read/write
- *                       - #L4DM_MAP_PARTIAL allow partial mappings 
- *                       - #L4DM_MAP_MORE    if possible, map more than the 
+ *                       - #L4DM_MAP_PARTIAL allow partial mappings
+ *                       - #L4DM_MAP_MORE    if possible, map more than the
  *                                           specified dataspace region
  * \retval fpage_addr    Map address of receive fpage
  * \retval fpage_size    Size of receive fpage
  *
  * \return 0 on success (got fpage), error code otherwise:
  *         - -#L4_EIPC         IPC error calling dataspace manager
- *         - -#L4_EINVAL       invalid dataspace id or map / receive window 
+ *         - -#L4_EINVAL       invalid dataspace id or map / receive window
  *                             size
  *         - -#L4_EINVAL_OFFS  invalid dataspace / receive window offset
  *         - -#L4_EPERM        permission denied
@@ -123,26 +123,26 @@ __do_map(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
  * For a detailed description of #L4DM_MAP_PARTIAL and #L4DM_MAP_MORE
  * see l4dm_map_pages().
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-l4dm_map_pages(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size, 
-	       l4_addr_t rcv_addr, int rcv_size2, l4_offs_t rcv_offs, 
-	       l4_uint32_t flags, l4_addr_t * fpage_addr, 
-	       l4_size_t * fpage_size)
+l4dm_map_pages(const l4dm_dataspace_t * ds, l4_offs_t offs, l4_size_t size,
+               l4_addr_t rcv_addr, int rcv_size2, l4_offs_t rcv_offs,
+               l4_uint32_t flags, l4_addr_t * fpage_addr,
+               l4_size_t * fpage_size)
 {
   int ret;
 
   /* do map */
   ret = __do_map(ds, offs, size, rcv_addr, rcv_size2, rcv_offs, flags,
-		 fpage_addr, fpage_size);
+                 fpage_addr, fpage_size);
   if (ret < 0)
     {
 #if DEBUG_ERRORS
       LOG_printf("ds %u at "l4util_idfmt", offset 0x"l4_addr_fmt"\n", ds->id,
-             l4util_idstr(ds->manager), offs);
+                 l4util_idstr(ds->manager), offs);
       LOG_printf("receive window at 0x"l4_addr_fmt
-	     ", size2 %d, offset 0x"l4_addr_fmt"\n",
-             rcv_addr, rcv_size2, rcv_offs);
+                 ", size2 %d, offset 0x"l4_addr_fmt"\n",
+                 rcv_addr, rcv_size2, rcv_offs);
       LOGL("libdm_generic: map page failed: %d!", ret);
 #endif
     }

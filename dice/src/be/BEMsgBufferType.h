@@ -69,6 +69,7 @@ public: // public methods
 
 protected:
 	void AddStruct(CFEOperation *pFEOperation, CMsgStructType nType);
+	void AddStruct(CFEOperation *pFEOperation);
 	void AddStruct(CFEInterface *pFEInterface);
 	void AddStruct(CBEStructType *pStruct, CMsgStructType nType, std::string sFunctionName,
 		std::string sClassName);

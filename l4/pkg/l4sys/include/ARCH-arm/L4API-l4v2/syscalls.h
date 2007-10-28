@@ -271,4 +271,6 @@ l4_privctrl(l4_umword_t cmd,
   return -1;
 }
 
+#include <l4/sys/syscalls-impl.h>
+
 #endif /* ! __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__SYSCALLS_H__ */

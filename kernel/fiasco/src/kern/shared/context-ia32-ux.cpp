@@ -119,7 +119,7 @@ Context::is_tcb_mapped() const
   // the handler doesn't handle it but returns immediatly after
   // setting eax to 0xffffffff
   Mword pagefault_if_0;
-  asm volatile ("mov (%2), %0		\n\t"
+  asm volatile ("clc; mov (%2), %0	\n\t"
 		"setnc %b0		\n\t"
 		: "=acd" (pagefault_if_0) : "0"(0UL), "acdbSD" (&_state));
   return pagefault_if_0;

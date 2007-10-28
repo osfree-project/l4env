@@ -209,11 +209,16 @@ Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code,
 
   if (! revalidate (pager))
     {
+      Lock_guard<Cpu_lock> guard(&cpu_lock);
+
+      L4_uid pager_id = pager && pager->state()
+	? pager->id()
+	: L4_uid::Invalid;
+
       WARN ("Denying %x.%x to send fault message (pfa=" L4_PTR_FMT
 	    ", code=" L4_PTR_FMT ") to %x.%x",
 	    id().task(), id().lthread(), pfa, error_code,
-	    pager ? pager->id().task() : L4_uid (L4_uid::Invalid).task(),
-	    pager ? pager->id().lthread() : L4_uid (L4_uid::Invalid).lthread());
+	    pager_id.task(), pager_id.lthread());
       return Ipc_err(Ipc_err::Enot_existent);
     }
 
@@ -413,6 +418,7 @@ Thread::ipc_short_cut()
   regs->copy_msg (dst_regs);
 
   copy_utcb_to(regs->tag(), dst);
+  dst_regs->tag(regs->tag());
 
   // copy sender ID
   dst_regs->rcv_src( current_thread()->id() );

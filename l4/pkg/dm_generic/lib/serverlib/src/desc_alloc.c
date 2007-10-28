@@ -34,7 +34,7 @@
 static l4slab_cache_t ds_desc_cache;
 
 /**
- * Client descriptor slab cache 
+ * Client descriptor slab cache
  */
 static l4slab_cache_t client_desc_cache;
 
@@ -54,14 +54,14 @@ static dsmlib_free_page_fn_t free_page = NULL;
 
 /*****************************************************************************/
 /**
- * \brief Slab cache grow callback 
- * 
+ * \brief Slab cache grow callback
+ *
  * \param  cache         Slab cache descriptor
  * \param  data          Page data pointer
  *
  * \return pointer to allocated page
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void *
 __grow(l4slab_cache_t * cache, void ** data)
 {
@@ -77,12 +77,12 @@ __grow(l4slab_cache_t * cache, void ** data)
 /*****************************************************************************/
 /**
  * \brief Slab cache release callback
- * 
+ *
  * \param  cache         Slab cache descriptor
  * \param  page          Page address
  * \param  data          Page data pointer
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 static void
 __release(l4slab_cache_t * cache, void * page, void * data)
 {
@@ -98,16 +98,16 @@ __release(l4slab_cache_t * cache, void * page, void * data)
 /*****************************************************************************/
 /**
  * \brief Initialize descriptor allocation
- * 
+ *
  * \param  get_page_fn   Page allocation callback function
  * \param  free_page_fn  Page release callback function
- *	
+ *
  * \return 0 on succes, -1 if initialization failed.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 int
-dsmlib_init_desc_alloc(dsmlib_get_page_fn_t get_page_fn, 
-		       dsmlib_free_page_fn_t free_page_fn)
+dsmlib_init_desc_alloc(dsmlib_get_page_fn_t get_page_fn,
+                       dsmlib_free_page_fn_t free_page_fn)
 {
   /* we need at least a page allocation function */
   if (get_page_fn == NULL)
@@ -118,14 +118,14 @@ dsmlib_init_desc_alloc(dsmlib_get_page_fn_t get_page_fn,
 
   /* initialize slab caches */
   if (l4slab_cache_init(&ds_desc_cache, sizeof(dsmlib_ds_desc_t), 0,
-			__grow, __release) < 0)
+                        __grow, __release) < 0)
     {
       LOGdL(DEBUG_ERRORS, "DSMlib: descriptor slab cache init failed!");
       return -1;
     }
-  
+
   if (l4slab_cache_init(&client_desc_cache, sizeof(dsmlib_client_desc_t),
-			0, __grow, __release) < 0)
+                        0, __grow, __release) < 0)
     {
       LOGdL(DEBUG_ERRORS, "DSMlib: descriptor slab cache init failed!");
       l4slab_destroy(&ds_desc_cache);
@@ -139,10 +139,10 @@ dsmlib_init_desc_alloc(dsmlib_get_page_fn_t get_page_fn,
 /*****************************************************************************/
 /**
  * \brief Allocate dataspace descriptor
- * 
+ *
  * \return Pointer to new dataspace descriptor, NULL if allocation failed.
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 dsmlib_ds_desc_t *
 dsmlib_alloc_ds_desc(void)
 {
@@ -152,10 +152,10 @@ dsmlib_alloc_ds_desc(void)
 /*****************************************************************************/
 /**
  * \brief Release dataspace descriptor
- * 
+ *
  * \param  desc          Pointer to dataspace descriptor
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dsmlib_free_ds_desc(dsmlib_ds_desc_t * desc)
 {
@@ -165,10 +165,10 @@ dsmlib_free_ds_desc(dsmlib_ds_desc_t * desc)
 /*****************************************************************************/
 /**
  * \brief Allocate client descriptor
- *	
+ *
  * \return Pointer to new client descriptor, NULL if allocation failed
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 dsmlib_client_desc_t *
 dsmlib_alloc_client_desc(void)
 {
@@ -178,10 +178,10 @@ dsmlib_alloc_client_desc(void)
 /*****************************************************************************/
 /**
  * \brief Release client descriptor
- * 
+ *
  * \param  desc          Pointer to client descriptor
  */
-/*****************************************************************************/ 
+/*****************************************************************************/
 void
 dsmlib_free_client_desc(dsmlib_client_desc_t * desc)
 {

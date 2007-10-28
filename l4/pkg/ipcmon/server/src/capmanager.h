@@ -38,6 +38,8 @@ class CapManager
 		CapDescriptor *removeDescriptorForTask(unsigned int task);
 
 	public:
+		enum CheckValues { IPC_TRUE, IPC_FALSE, IPC_UNKNOWN };
+
 		CapManager();
 		virtual ~CapManager();
 
@@ -59,10 +61,11 @@ class CapManager
 		 *
 		 * \param  src_task    source task
 		 * \param  dest_task   destination task
-		 * \return true        IPC allowed
-		 * \return false       IPC denied
+		 * \return IPC_TRUE    IPC allowed
+		 * \return IPC_FALSE   IPC denied
+		 * \return IPC_UNKNOWN I don't know
 		 */
-		virtual bool check(unsigned int src_task, unsigned int dest_task);
+		virtual int check(unsigned int src_task, unsigned int dest_task);
 };
 
 #endif

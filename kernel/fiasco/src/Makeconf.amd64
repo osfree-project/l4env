@@ -23,5 +23,4 @@ endif
 ASFLAGS				+= -m64 -mcmodel=kernel
 OFORMAT				:= elf64-x86-64
 LD_EMULATION-SYSTEM-FreeBSD	:= elf_x86_64_fbsd
-LD_EMULATION-SYSTEM-Linux	:= elf_x86_64
-LD_EMULATION			:= $(LD_EMULATION-SYSTEM-$(SYSTEM))
+LD_EMULATION-SYSTEM-default	:= elf_x86_64

@@ -260,22 +260,11 @@ void CBEMarshalFunction::AddAfterParameters()
  * parameters and for component-to-client transfer the OUT and return
  * parameters. We depend on the information set in m_bComponentSide.
  */
-void
-CBEMarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
+void CBEMarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
-	if (IsComponentSide())
-	{
-		// we transfer from the component to the client
-		if (!(pFEParameter->m_Attributes.Find(ATTR_OUT)))
-			// skip adding a parameter if it has no OUT
-			return;
-	}
-	else
-	{
-		if (!(pFEParameter->m_Attributes.Find(ATTR_IN)))
-			// skip parameter if it has no IN
-			return;
-	}
+	ATTR_TYPE nDirection = IsComponentSide() ? ATTR_OUT : ATTR_IN;
+	if (!pFEParameter->m_Attributes.Find(nDirection))
+		return;
 	return CBEOperationFunction::AddParameter(pFEParameter);
 }
 
@@ -287,9 +276,7 @@ CBEMarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
  * Return true if the at component's side, the parameter has an OUT attribute,
  * or if at client's side the parameter has an IN attribute.
  */
-bool
-CBEMarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
-	bool bMarshal)
+bool CBEMarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, bool bMarshal)
 {
 	if (!bMarshal)
 		return false;
@@ -297,16 +284,9 @@ CBEMarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
 	if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
 		return false;
 
-	if (IsComponentSide())
-	{
-		if (pParameter->m_Attributes.Find(ATTR_OUT))
-			return true;
-	}
-	else
-	{
-		if (pParameter->m_Attributes.Find(ATTR_IN))
-			return true;
-	}
+	ATTR_TYPE nDirection = IsComponentSide() ? ATTR_OUT : ATTR_IN;
+	if (pParameter->m_Attributes.Find(nDirection))
+		return true;
 	return false;
 }
 

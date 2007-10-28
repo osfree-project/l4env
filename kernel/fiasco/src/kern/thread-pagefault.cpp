@@ -157,16 +157,21 @@ int Thread::handle_page_fault (Address pfa, Mword error_code, Mword pc,
       if (pagein_tcb_request(regs))
 	 return 2;
 
-      printf("Fiasco BUG: pfa=%lx err=%lx pc=%lx\n", pfa, error_code, pc);
-      if (cpu_lock.test())
 	{
-	  //LOG_MSG_3VAL(current(), "Bad", pfa, error_code, pc);
-	  kdb_ke("Fiasco BUG: Invalid TCB access (locked)");
-	}
-      else
-	{
-	  //LOG_MSG_3VAL(current(), "TCBA", pfa, pc, 0);
-	  kdb_ke("Fiasco BUG: Invalid TCB access (not locked)");
+	  bool const locked = cpu_lock.test();
+	  Lock_guard<Cpu_lock> guard(&cpu_lock);
+
+	  printf("Fiasco BUG: pfa=%lx err=%lx pc=%lx\n", pfa, error_code, pc);
+	  if (locked)
+	    {
+	      //LOG_MSG_3VAL(current(), "Bad", pfa, error_code, pc);
+	      kdb_ke("Fiasco BUG: Invalid TCB access (locked)");
+	    }
+	  else
+	    {
+	      //LOG_MSG_3VAL(current(), "TCBA", pfa, pc, 0);
+	      kdb_ke("Fiasco BUG: Invalid TCB access (not locked)");
+	    }
 	}
 
       current_mem_space()->kmem_update((void*)pfa);

@@ -148,7 +148,7 @@ bool CL4BEMarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 	if (!bFixedNumberOfFlexpages)
 		return true;
 	// if we have indirect strings to marshal then we need the offset vars
-	if (GetParameterCount(ATTR_REF, ATTR_NONE, nDirection))
+	if (HasParameterWithAttributes(ATTR_REF, (DIRECTION_OUT == nDirection) ? ATTR_OUT : ATTR_IN))
 		return true;
 	return bRet;
 }
