@@ -1667,9 +1667,15 @@ int CBEMsgBuffer::GetMemberSize(int nType, CBETypedDeclarator *pMember, bool bMa
 		pMember->GetType()->IsOfType(nType))
 	{
 		if (bMax)
+		{
 			pMember->GetMaxSize(nMemberSize);
+		}
 		else
+		{
 			nMemberSize = pMember->GetSize();
+			if (nMemberSize < 0 && pMember->m_Attributes.Find(ATTR_STRING))
+				nMemberSize = 1;
+		}
 	}
 
 	return nMemberSize;

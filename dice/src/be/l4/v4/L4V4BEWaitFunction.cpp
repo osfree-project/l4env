@@ -36,19 +36,17 @@
 #include "be/BESizes.h"
 #include "be/BEMsgBuffer.h"
 #include "be/BEUserDefinedType.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 
 CL4V4BEWaitFunction::CL4V4BEWaitFunction(bool bOpenWait)
  : CL4BEWaitFunction(bOpenWait)
-{
-}
+{ }
 
 /** destroy the object of this class */
 CL4V4BEWaitFunction::~CL4V4BEWaitFunction()
-{
-}
+{ }
 
 /** \brief initialize instance of class
  *  \param pFEOperation the front-end function to use as reference

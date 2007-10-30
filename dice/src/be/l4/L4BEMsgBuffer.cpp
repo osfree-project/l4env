@@ -47,7 +47,7 @@
 #include "Error.h"
 #include "fe/FEInterface.h"
 #include "fe/FEOperation.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include <cassert>
 
 CL4BEMsgBuffer::CL4BEMsgBuffer()
@@ -141,8 +141,8 @@ CBETypedDeclarator* CL4BEMsgBuffer::GetSendDopeVariable()
 	string exc = string(__func__);
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(TYPE_MSGDOPE_SEND);
-	string sName = CBENameFactory::Instance()->
-		GetMessageBufferMember(TYPE_MSGDOPE_SEND);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND);
 	CBETypedDeclarator *pSend = pCF->GetNewTypedDeclarator();
 	assert(pSend);
 	pType->CreateBackEnd(false, 0, TYPE_MSGDOPE_SEND);
@@ -311,7 +311,7 @@ void CL4BEMsgBuffer::AddGenericStructMembersClass(CBEStructType *pStruct)
 		throw new error::create_error("word member variable could not be created");
 	pStruct->m_Members.Add(pMember);
 	// count refstring members
-	int nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING);
+	int nStrings = GetMemberSize(TYPE_REFSTRING);
 	// create restring member and add to struct
 	if (nStrings > 0)
 	{
@@ -468,33 +468,18 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile& pFile,
 	// if direction is 0 we have to get maximum of IN and OUT
 	int nStrings = 0;
 	CBESizes *pSizes = CCompiler::GetSizes();
-	int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
-	int nRefSize = pSizes->GetSizeOfType(TYPE_REFSTRING) / nWordSize;
+	int nRefSize = pSizes->WordsFromBytes(pSizes->GetSizeOfType(TYPE_REFSTRING));
 	if (CMsgStructType::Generic == nStructType)
 	{
 		// for generic struct we also have to subtract the strings from the
 		// word count, because the strings have been counted when counting
 		// TYPE_MWORD as well.
-		int nStringsIn = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction, CMsgStructType::In, false);
-
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings in: %d\n", __func__, nStringsIn);
-
-		int nStringsOut = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction, CMsgStructType::Out, false);
-
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings out: %d\n", __func__, nStringsOut);
-
+		int nStringsIn = GetMemberSize(TYPE_REFSTRING, pFunction, CMsgStructType::In, false);
+		int nStringsOut = GetMemberSize(TYPE_REFSTRING, pFunction, CMsgStructType::Out, false);
 		nStrings = std::max(nStringsIn, nStringsOut);
-
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings: %d\n", __func__, nStrings);
 	}
 	else
-	{
-		nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction,
-			nStructType, false);
-
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s strings: %d\n", __func__,
-			nStrings);
-	}
+		nStrings = GetMemberSize(TYPE_REFSTRING, pFunction,	nStructType, false);
 
 	// get name of member
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -546,7 +531,7 @@ CL4BEMsgBuffer::WriteInitialization(CBEFile& pFile,
 			sName.c_str(), pMember);
 
 		if (pMember)
-			pFile << "-" << pMember->GetSize()/nWordSize;
+			pFile << "-" << pSizes->WordsFromBytes(pMember->GetSize());
 	}
 	pFile << ", " << nStrings << ");\n";
 }
@@ -816,7 +801,7 @@ CL4BEMsgBuffer::GetWordMemberCountClass()
 	int nShort = pSizes->GetMaxShortIPCSize();
 	nShort = pSizes->WordsFromBytes(nShort);
 	// subtract refstrings if any
-	int nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING);
+	int nStrings = GetMemberSize(TYPE_REFSTRING);
 	nStrings *= pSizes->GetSizeOfType(TYPE_REFSTRING);
 	// check minimum
 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "%s return max(%d, %d)\n", __func__,
@@ -839,23 +824,23 @@ CL4BEMsgBuffer::GetWordMemberCountClass()
  * (Maybe we should remove automatically added transmit-as types when creating
  * a refstring member).
  */
-int
-CL4BEMsgBuffer::GetMemberSize(int nType,
-	CBETypedDeclarator *pMember,
-	bool bMax)
+int CL4BEMsgBuffer::GetMemberSize(int nType, CBETypedDeclarator *pMember, bool bMax)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (%d, %s, %s) called\n", __func__,
 		nType, pMember->m_Declarators.First()->GetName().c_str(),
 		bMax ? "true" : "false");
 	// filter out refstring members
+	if (pMember->m_Attributes.Find(ATTR_REF) ||
+		pMember->GetType()->IsOfType(TYPE_REFSTRING))
+	{
+		// if the member has the type ref-string check what we look for:
+		// * we do not look for ref-strings, return 0
+		if (nType != TYPE_REFSTRING)
+			return 0;
+		// * we look for ref-strings, return size of a ref-string
 	CBESizes *pSizes = CCompiler::GetSizes();
-	bool bMemberIsRef = pMember->m_Attributes.Find(ATTR_REF) ||
-		pMember->GetType()->IsOfType(TYPE_REFSTRING);
-	if (bMemberIsRef &&	nType == TYPE_REFSTRING &&
-		pMember->m_Attributes.Find(ATTR_TRANSMIT_AS))
 		return pSizes->GetSizeOfType(TYPE_REFSTRING);
-	if (bMemberIsRef && nType != TYPE_REFSTRING)
-		return 0;
+	}
 
 	return CBEMsgBuffer::GetMemberSize(nType, pMember, bMax);
 }
@@ -1085,9 +1070,7 @@ int CL4BEMsgBuffer::GetMaxPosOfRefstringInMsgBuffer()
  *
  * This implementation checks the short IPC property.
  */
-bool
-CL4BEMsgBuffer::HasProperty(int nProperty,
-	CMsgStructType nType)
+bool CL4BEMsgBuffer::HasProperty(int nProperty, CMsgStructType nType)
 {
 	if (nProperty == MSGBUF_PROP_SHORT_IPC)
 	{
@@ -1100,15 +1083,11 @@ CL4BEMsgBuffer::HasProperty(int nProperty,
 		int nWordSize = pSizes->GetSizeOfType(TYPE_MWORD);
 		if (CMsgStructType::Generic == nType)
 		{
-			int nWordsIn = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-				CMsgStructType::In, false);
-			int nWordsOut = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-				CMsgStructType::Out, false);
+			int nWordsIn = GetMemberSize(TYPE_MWORD, pFunction, CMsgStructType::In, false);
+			int nWordsOut = GetMemberSize(TYPE_MWORD, pFunction, CMsgStructType::Out, false);
 
-			int nStringsIn = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING,
-				pFunction, CMsgStructType::In, false);
-			int nStringsOut = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING,
-				pFunction, CMsgStructType::Out, false);
+			int nStringsIn = GetMemberSize(TYPE_REFSTRING, pFunction, CMsgStructType::In, false);
+			int nStringsOut = GetMemberSize(TYPE_REFSTRING, pFunction, CMsgStructType::Out, false);
 			nStrings = std::max(nStringsIn, nStringsOut);
 			if (nWordsIn > 0 && nWordsOut > 0)
 				nWords = std::max(nWordsIn, nWordsOut);
@@ -1117,10 +1096,8 @@ CL4BEMsgBuffer::HasProperty(int nProperty,
 		}
 		else
 		{
-			nWords = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction,
-				nType, false);
-			nStrings = CBEMsgBuffer::GetMemberSize(TYPE_REFSTRING, pFunction,
-				nType, false);
+			nWords = GetMemberSize(TYPE_MWORD, pFunction, nType, false);
+			nStrings = GetMemberSize(TYPE_REFSTRING, pFunction, nType, false);
 		}
 		// check minimum number of words
 		int nMinWords = GetWordMemberCountFunction();

@@ -26,11 +26,11 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 #include "L4FiascoBEDispatchFunction.h"
+#include "L4FiascoBEMsgBuffer.h"
 #include "be/BEFile.h"
-#include "be/BEMsgBuffer.h"
 #include "be/BEClassFactory.h"
 #include "be/l4/L4BENameFactory.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include <cassert>
 
 CL4FiascoBEDispatchFunction::CL4FiascoBEDispatchFunction()

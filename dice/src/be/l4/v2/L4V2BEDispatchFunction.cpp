@@ -27,7 +27,7 @@
  */
 #include "L4V2BEDispatchFunction.h"
 #include "L4V2BEMsgBuffer.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Compiler.h"
 #include <cassert>
 

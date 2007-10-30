@@ -28,21 +28,18 @@
 
 #include "L4V4BENameFactory.h"
 #include "be/BEContext.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Compiler.h"
 #include <iostream>
 
 CL4V4BENameFactory::CL4V4BENameFactory()
  : CL4BENameFactory()
-{
-}
+{ }
 
 /** \brief destructs this instance
  */
 CL4V4BENameFactory::~CL4V4BENameFactory()
-{
-}
-
+{ }
 
 /** \brief general access function to generate strings
  *  \param nStringCode specifying the requested code

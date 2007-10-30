@@ -40,7 +40,7 @@
 #include "be/Trace.h"
 #include "be/l4/L4BESizes.h"
 #include "be/l4/v2/L4V2BEIPC.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 #include <cassert>

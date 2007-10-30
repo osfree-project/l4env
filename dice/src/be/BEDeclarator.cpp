@@ -589,6 +589,8 @@ int CBEDeclarator::GetSize()
 		else
 			nSize *= ((nVal < 0) ? -nVal : nVal);
 	}
+	if (nFakeStars == 0 && m_Bounds.empty())
+		nFakeStars++;
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CBEDeclarator::%s fake stars %d, stars %d, size %d\n", __func__,
 		nFakeStars, m_nStars, nSize);

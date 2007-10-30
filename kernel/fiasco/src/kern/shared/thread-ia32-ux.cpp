@@ -859,8 +859,14 @@ PUBLIC inline
 int
 Thread::send_exception(Trap_state *ts)
 {
-  if (((state() & Thread_alien) || (ts->_trapno != 1 && ts->_trapno != 3))
-      && _pager != kernel_thread)
+  if (EXPECT_FALSE(_pager == kernel_thread))
+    return 0;
+
+  if (EXPECT_FALSE(!_pager || !_pager->state()))
+    /* no pager (anymore), just ignore the exception, return success */
+    return 1;
+
+  if ((state() & Thread_alien) || (ts->_trapno != 1 && ts->_trapno != 3))
     {
       if (ts->_trapno == 3)
 	{

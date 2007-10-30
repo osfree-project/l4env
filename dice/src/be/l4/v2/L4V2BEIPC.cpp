@@ -479,10 +479,8 @@ bool CL4V2BEIPC::IsShortIPC(CBEFunction *pFunction, CMsgStructType nType)
 
 /** \brief add local variables required in functions
  *  \param pFunction the function to add the local variables to
- *  \return true if successful
  */
-bool
-CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
+void CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
 {
 	CMsgStructType nSndDir(pFunction->GetSendDirection());
 
@@ -502,16 +500,14 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
 			pFunction->HasArrayParameters(nSndDir))
 		{
 			string sTmpVar = pNF->GetTempOffsetVariable();
-			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar,
-				0);
+			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 0);
 			CBETypedDeclarator *pVariable =
 				pFunction->m_LocalVariables.Find(sTmpVar);
 			pVariable->AddLanguageProperty(string("attribute"),
 				string("__attribute__ ((unused))"));
 
 			string sOffsetVar = pNF->GetOffsetVariable();
-			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4,
-				sOffsetVar, 0);
+			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sOffsetVar, 0);
 			pVariable = pFunction->m_LocalVariables.Find(sOffsetVar);
 			pVariable->AddLanguageProperty(string("attribute"),
 				string("__attribute__ ((unused))"));
@@ -548,8 +544,6 @@ CL4V2BEIPC::AddLocalVariable(CBEFunction *pFunction)
 				string("__PIC__"));
 		}
 	}
-
-	return true;
 }
 
 /** \brief writes the initialization

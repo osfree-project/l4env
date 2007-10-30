@@ -30,7 +30,6 @@
 #include "be/l4/L4BENameFactory.h"
 #include "be/l4/L4BEMsgBuffer.h"
 #include "be/l4/L4BEMarshaller.h"
-#include "be/l4/TypeSpec-L4Types.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BEFunction.h"
@@ -45,9 +44,11 @@
 #include "be/BEReplyFunction.h"
 #include "be/BEWaitFunction.h"
 #include "be/BEWaitAnyFunction.h"
+#include "be/BESizes.h"
 
 #include "Compiler.h"
 #include "Attribute-Type.h"
+#include "TypeSpec-Type.h"
 
 #include <cassert>
 
@@ -495,10 +496,8 @@ bool CL4FiascoBEIPC::IsShortIPC(CBEFunction *pFunction, CMsgStructType nType)
 
 /** \brief add local variables required in functions
  *  \param pFunction the function to add the local variables to
- *  \return true if successful
  */
-bool
-CL4FiascoBEIPC::AddLocalVariable(CBEFunction *pFunction)
+void CL4FiascoBEIPC::AddLocalVariable(CBEFunction *pFunction)
 {
 	CMsgStructType nSndDir(pFunction->GetSendDirection());
 
@@ -518,16 +517,14 @@ CL4FiascoBEIPC::AddLocalVariable(CBEFunction *pFunction)
 			pFunction->HasArrayParameters(nSndDir))
 		{
 			string sTmpVar = pNF->GetTempOffsetVariable();
-			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar,
-				0);
+			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sTmpVar, 0);
 			CBETypedDeclarator *pVariable =
 				pFunction->m_LocalVariables.Find(sTmpVar);
 			pVariable->AddLanguageProperty(string("attribute"),
 				string("__attribute__ ((unused))"));
 
 			string sOffsetVar = pNF->GetOffsetVariable();
-			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4,
-				sOffsetVar, 0);
+			pFunction->AddLocalVariable(TYPE_INTEGER, true, 4, sOffsetVar, 0);
 			pVariable = pFunction->m_LocalVariables.Find(sOffsetVar);
 			pVariable->AddLanguageProperty(string("attribute"),
 				string("__attribute__ ((unused))"));
@@ -578,8 +575,6 @@ CL4FiascoBEIPC::AddLocalVariable(CBEFunction *pFunction)
 		pParameter->SetDefaultInitString(string("l4_msgtag(0,0,0,0)"));
 		pParameter->AddLanguageProperty(string("attribute"), string("__attribute__ ((unused))"));
 	}
-
-	return true;
 }
 
 /** \brief writes the initialization

@@ -58,7 +58,7 @@ public:
     virtual void WriteBind(CBEFile& pFile, CBEFunction* pFunction);
     virtual void WriteCleanup(CBEFile& pFile, CBEFunction* pFunction);
 
-    virtual bool AddLocalVariable(CBEFunction *pFunction);
+    virtual void AddLocalVariable(CBEFunction *pFunction);
 
 protected:
     virtual bool IsShortIPC(CBEFunction *pFunction, CMsgStructType nType);

@@ -27,16 +27,14 @@
  */
 
 #include "L4BESizes.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 
 CL4BESizes::CL4BESizes()
-{
-}
+{ }
 
 /** \brief destroys an object of this class */
 CL4BESizes::~CL4BESizes()
-{
-}
+{ }
 
 /** \brief gets the size of a type
  *  \param nFEType the type to look up

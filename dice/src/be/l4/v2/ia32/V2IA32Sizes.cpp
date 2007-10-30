@@ -27,16 +27,14 @@
  */
 
 #include "V2IA32Sizes.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 
 CL4V2IA32BESizes::CL4V2IA32BESizes()
-{
-}
+{ }
 
 /** \brief destroys object of this class */
 CL4V2IA32BESizes::~CL4V2IA32BESizes()
-{
-}
+{ }
 
 /** \brief gets the size of a type
  *  \param nFEType the type to look up

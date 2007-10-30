@@ -27,7 +27,6 @@
  */
 #include "L4V4BEMsgBuffer.h"
 #include "L4V4BENameFactory.h"
-#include "be/l4/TypeSpec-L4Types.h"
 #include "be/BEInterfaceFunction.h"
 #include "be/BEDeclarator.h"
 #include "be/BEFile.h"
@@ -43,6 +42,7 @@
 #include "Compiler.h"
 #include "Error.h"
 #include "Attribute-Type.h"
+#include "TypeSpec-Type.h"
 #include <cassert>
 
 CL4V4BEMsgBuffer::CL4V4BEMsgBuffer()

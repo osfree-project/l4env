@@ -28,10 +28,10 @@
 
 #include "L4FiascoBEWaitAnyFunction.h"
 #include "be/l4/L4BENameFactory.h"
-#include "be/l4/TypeSpec-L4Types.h"
 #include "be/BEClassFactory.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEClassFactory.h"
+#include "TypeSpec-Type.h"
 
 CL4FiascoBEWaitAnyFunction::CL4FiascoBEWaitAnyFunction(bool bOpenWait, bool bReply)
 : CL4BEWaitAnyFunction(bOpenWait, bReply)

@@ -28,11 +28,11 @@
 
 #include "L4FiascoBESrvLoopFunction.h"
 #include "be/l4/L4BENameFactory.h"
-#include "be/l4/TypeSpec-L4Types.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEWaitAnyFunction.h"
 #include "be/BEDispatchFunction.h"
 #include "Compiler.h"
+#include "TypeSpec-Type.h"
 
 CL4FiascoBESrvLoopFunction::CL4FiascoBESrvLoopFunction()
 { }

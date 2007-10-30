@@ -42,7 +42,7 @@
 #include "be/BEMsgBuffer.h"
 #include "be/BEClass.h"
 #include "be/BEUserDefinedType.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 #include <cassert>

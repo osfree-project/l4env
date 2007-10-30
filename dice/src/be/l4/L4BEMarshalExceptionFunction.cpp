@@ -30,7 +30,7 @@
 #include "be/BEClass.h"
 #include "be/BEMsgBuffer.h"
 #include "be/BEFile.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Compiler.h"
 #include <cassert>
 

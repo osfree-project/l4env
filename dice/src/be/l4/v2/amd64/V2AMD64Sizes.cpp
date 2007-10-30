@@ -26,17 +26,15 @@
  * <contact@os.inf.tu-dresden.de>.
  */
 
-#include "be/l4/v2/amd64/V2AMD64Sizes.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "V2AMD64Sizes.h"
+#include "TypeSpec-Type.h"
 
 CL4V2AMD64BESizes::CL4V2AMD64BESizes()
-{
-}
+{ }
 
 /** \brief destroys object of this class */
 CL4V2AMD64BESizes::~CL4V2AMD64BESizes()
-{
-}
+{ }
 
 /** \brief gets the size of a type
  *  \param nFEType the type to look up

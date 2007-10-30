@@ -95,8 +95,8 @@ protected: // protected methods
 	virtual int GetWordMemberCountClass();
 	CBETypedDeclarator* GetRefstringMemberVariable(int nNumber);
 
-	virtual int GetMemberSize(int nType, CBETypedDeclarator *pMember,
-		bool bMax);
+	using CBEMsgBuffer::GetMemberSize;
+	virtual int GetMemberSize(int nType, CBETypedDeclarator *pMember, bool bMax);
 
 	virtual void AddGenericStructMembersClass(CBEStructType *pStruct);
 };

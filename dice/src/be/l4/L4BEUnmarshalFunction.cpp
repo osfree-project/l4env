@@ -75,3 +75,4 @@ void CL4BEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 	if (pParameter->m_Attributes.Find(ATTR_REF) && (pDeclarator->GetStars() == 0))
 		pDeclarator->IncStars(1);
 }
+

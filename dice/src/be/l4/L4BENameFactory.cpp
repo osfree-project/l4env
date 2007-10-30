@@ -30,7 +30,7 @@
 #include "be/BEContext.h"
 #include "be/BEDeclarator.h"
 #include "be/BETypedDeclarator.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Compiler.h"
 #include <iostream>
 #include <cctype>

@@ -27,19 +27,17 @@
  */
 
 #include "L4FiascoBENameFactory.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Compiler.h"
 
 CL4FiascoBENameFactory::CL4FiascoBENameFactory()
  : CL4BENameFactory()
-{
-}
+{ }
 
 /** \brief destructs this instance
  */
 CL4FiascoBENameFactory::~CL4FiascoBENameFactory()
-{
-}
+{ }
 
 /** \brief create L4 specific type names
  *  \param nType the type number

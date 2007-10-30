@@ -28,7 +28,7 @@
 
 #include "L4FiascoBEClass.h"
 #include "be/l4/L4BENameFactory.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "be/BEHeaderFile.h"
 #include "be/BEMsgBuffer.h"
 #include "Compiler.h"

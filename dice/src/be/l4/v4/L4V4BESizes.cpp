@@ -28,18 +28,16 @@
 
 #include "L4V4BESizes.h"
 #include "be/BENameFactory.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Compiler.h"
 
 CL4V4BESizes::CL4V4BESizes()
  : CL4BESizes()
-{
-}
+{ }
 
 /** \brief destroys object of this class */
 CL4V4BESizes::~CL4V4BESizes()
-{
-}
+{ }
 
 /** \brief get the maximum message size in bytes for a short IPC
  *  \return the max size in bytes

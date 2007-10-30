@@ -1436,18 +1436,19 @@ int CBETypedDeclarator::GetSizeOfDeclarator(CBEDeclarator *pDeclarator)
 		nTypeSize, nDeclSize);
 
 	// if referenced OUT, this is the size
-	if ((nDeclSize == -1) &&
-		(pDeclarator->GetStars() == 1) &&
-		(m_Attributes.Find(ATTR_OUT)))
+	if (nDeclSize == -1 &&
+		pDeclarator->GetStars() == 1 &&
+		m_Attributes.Find(ATTR_OUT) &&
+		!m_Attributes.Find(ATTR_STRING))
 	{
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 			"CBETypedDeclarator::%s returns ref-out %d\n", __func__, nTypeSize);
 		return nTypeSize;
 	}
 	// if reference struct, this is the size
-	if ((nDeclSize == -1) &&
-		(pDeclarator->GetStars() == 1) &&
-		(pType->IsConstructedType()))
+	if (nDeclSize == -1 &&
+		pDeclarator->GetStars() == 1 &&
+		pType->IsConstructedType())
 	{
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
 			"CBETypedDeclarator::%s returns ts:%d\n", __func__, nTypeSize);

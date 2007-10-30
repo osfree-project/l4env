@@ -95,7 +95,7 @@ public:
      */
     virtual void WriteCleanup(CBEFile& pFile, CBEFunction *pFunction) = 0;
 
-    virtual bool AddLocalVariable(CBEFunction *pFunction);
+    virtual void AddLocalVariable(CBEFunction *pFunction);
 };
 
 #endif

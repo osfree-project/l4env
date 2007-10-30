@@ -27,7 +27,7 @@
  */
 
 #include "L4FiascoBESizes.h"
-#include "be/l4/TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 
 CL4FiascoBESizes::CL4FiascoBESizes()
 { }

@@ -35,7 +35,7 @@
 #include "be/BEMsgBuffer.h"
 #include "be/BESizes.h"
 #include "be/Trace.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 #include <cassert>

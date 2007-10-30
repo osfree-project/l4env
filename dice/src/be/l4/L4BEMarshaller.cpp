@@ -44,7 +44,7 @@
 #include "be/BEDeclarator.h"
 #include "be/BEExpression.h"
 #include "be/BEClassFactory.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 #include "Messages.h"

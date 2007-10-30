@@ -30,19 +30,15 @@
 
 CBECommunication::CBECommunication()
  : CBEObject()
-{
-}
+{ }
 
 /** clean up this object */
 CBECommunication::~CBECommunication()
-{
-}
+{ }
 
 /** \brief add local variable needed by the communication layer to the function
  *  \param pFunction the function to add the variables to
  *  \return true if successful
  */
-bool CBECommunication::AddLocalVariable(CBEFunction* /*pFunction*/)
-{
-    return true;
-}
+void CBECommunication::AddLocalVariable(CBEFunction* /*pFunction*/)
+{ }

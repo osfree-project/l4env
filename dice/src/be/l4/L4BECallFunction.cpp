@@ -40,7 +40,7 @@
 #include "be/BEMsgBuffer.h"
 #include "be/Trace.h"
 #include "be/BEClass.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
 #include <cassert>
@@ -160,8 +160,7 @@ void CL4BECallFunction::WriteVariableInitialization(CBEFile& pFile)
 	assert(pMsgBuffer);
 	if (CCompiler::IsOptionSet(PROGRAM_ZERO_MSGBUF))
 		pMsgBuffer->WriteSetZero(pFile);
-	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE,
-		CMsgStructType::Generic);
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SIZE, CMsgStructType::Generic);
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_REFSTRING, GetReceiveDirection());
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_RCV_FLEXPAGE, GetReceiveDirection());
 }

@@ -38,7 +38,7 @@
 #include "be/Trace.h"
 #include "be/BESizes.h"
 #include "Compiler.h"
-#include "TypeSpec-L4Types.h"
+#include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include <cassert>
 

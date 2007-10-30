@@ -119,8 +119,7 @@ CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
  *
  * This implementation only sets the name of the function.
  */
-void
-CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
+void CBECallFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for operation %s called\n", __func__,
 		pFEOperation->GetName().c_str());

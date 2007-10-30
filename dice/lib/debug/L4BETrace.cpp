@@ -31,7 +31,6 @@
 #include "be/l4/L4BEIPC.h"
 #include "be/l4/L4BENameFactory.h"
 #include "be/l4/L4BEMarshaller.h"
-#include "be/l4/TypeSpec-L4Types.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BEFunction.h"
@@ -42,6 +41,7 @@
 #include "be/BEClass.h"
 #include "be/BEClassFactory.h"
 #include "Compiler.h"
+#include "TypeSpec-Type.h"
 #include <cassert>
 
 CL4BETrace::CL4BETrace()
