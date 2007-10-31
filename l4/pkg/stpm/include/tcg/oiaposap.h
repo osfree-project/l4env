@@ -43,7 +43,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
  * Defines an OIAP authenticated transmit function, which is used several times in
  * the lib, e.g. TPM_LoadKey
  */
-#define TPM_TRANSMIT_OIAP_FUNC(NAME,PARAMS,KEY_AUTH,PRECOND,POSTCOND,AUTHFMT,FMT,...)\
+#define TPM_TRANSMIT_OIAP_FUNC(NAME,PARAMS,KEY_AUTH,PRECOND,POSTCOND,DATA_SKIP,AUTHFMT,FMT,...)\
   unsigned long TPM_##NAME PARAMS {					\
     unsigned char buffer[TCG_MAX_BUFF_SIZE];				\
     oiapsess sess;							\
@@ -98,13 +98,14 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
     {									\
       unsigned count = TPM_EXTRACT_LONG(-8)				\
 	- TCG_DATA_OFFSET						\
+        - DATA_SKIP                                                     \
 	- TCG_NONCE_SIZE						\
 	- 1								\
 	- TCG_HASH_SIZE;						\
       ret = checkhmac(buffer, TPM_ORD_##NAME,				\
 		      sess.ononce,					\
 		      KEY_AUTH,						\
-		      count);						\
+                      count, DATA_SKIP);                                \
       if (ret < 0) {							\
 	TPM_Terminate_Handle(sess.handle);				\
 	return -50;							\
@@ -187,7 +188,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
       ret = checkhmac(buffer, TPM_ORD_##NAME,				\
 		      sess.ononce,					\
 		      sess.ssecret,					\
-		      count);						\
+		      count, 0);					\
       if (ret < 0) {							\
 	TPM_Terminate_Handle(sess.handle);				\
 	return -50;							\
@@ -284,7 +285,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
       ret = checkhmac(buffer, TPM_ORD_##NAME,				\
 		      sess2.ononce,					\
 		      KEY2_AUTH,					\
-		      count);						\
+		      count, 0);					\
       if (ret < 0) {							\
 	TPM_Terminate_Handle(sess1.handle);				\
 	TPM_Terminate_Handle(sess2.handle);				\
@@ -297,7 +298,7 @@ unsigned long TPM_Terminate_Handle(unsigned long handle);
       ret = checkhmac(buffer, TPM_ORD_##NAME,				\
 		      sess1.ononce,					\
 		      KEY1_AUTH,					\
-		      count);						\
+		      count, 0);					\
       if (ret < 0) {							\
 	TPM_Terminate_Handle(sess1.handle);				\
 	TPM_Terminate_Handle(sess2.handle);				\

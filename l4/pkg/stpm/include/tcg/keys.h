@@ -40,10 +40,25 @@ unsigned long TPM_CreateWrapKey(unsigned long keyhandle,
 				unsigned char *newauth,
 				unsigned char *migauth,
 				keydata *keyparms, keydata *key);
+/**
+ * Deprecated in TCGA 1.2 spec
+ */
 unsigned long TPM_LoadKey(unsigned long keyhandle, unsigned char *keyauth,
 			  keydata *keyparms, unsigned long *newhandle);
+/**
+ * Load a given key into TPM. Replacement of TPM_Loadkey.
+ */
+unsigned long TPM_LoadKey2(unsigned long keyhandle, unsigned char *keyauth,
+ 			   keydata *keyparms, unsigned long *newhandle);
+/**
+ * Deprecated in TCGA 1.2 spec
+ */
 unsigned long TPM_EvictKey(unsigned long keyhandle);
 
+/**
+ * Replacement of TPM_EvictKey in TCGA 1.2 spec
+ */
+unsigned long TPM_FlushSpecific(unsigned long keyhandle, unsigned long type);
 
 int KeyExtract(unsigned char *keybuff, keydata *k);
 int PubKeyExtract(unsigned char *pkeybuff, pubkeydata *k, int pcrpresent);

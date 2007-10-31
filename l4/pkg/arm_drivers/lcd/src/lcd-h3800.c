@@ -142,11 +142,11 @@ static void arm_lcd_h3800_enable(void)
  */
 static void *arm_lcd_h3800_fb(void)
 {
-  if (arm_lcd_get_region(H3800_ASIC_BASE, 0x100000))
+  if (arm_driver_reserve_region(H3800_ASIC_BASE, 0x100000))
     return NULL;
-  if (arm_lcd_get_region(_LCCR0, 0x100000))
+  if (arm_driver_reserve_region(_LCCR0, 0x100000))
     return NULL;
-  if (arm_lcd_get_region(GPIO_BASE, 0x100000))
+  if (arm_driver_reserve_region(GPIO_BASE, 0x100000))
     return NULL;
 
   // get some frame buffer memory

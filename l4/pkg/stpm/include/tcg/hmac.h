@@ -12,7 +12,7 @@ int authhmac(unsigned char *digest, unsigned char *key,
              unsigned int keylen, unsigned char *h1, unsigned char *h2,
              unsigned char h3, ...);
 int checkhmac(unsigned char *buffer, unsigned long command,
-	      unsigned char *ononce, unsigned char *key, int data_len);
+              unsigned char *ononce, unsigned char *key, int data_len, int data_skip);
 int rawhmac(unsigned char *digest, unsigned char *key,
             unsigned int keylen, ...);
 

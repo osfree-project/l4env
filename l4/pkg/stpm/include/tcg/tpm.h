@@ -35,7 +35,7 @@
 
 /**
  * Defines a simple transmit function, which is used several times in
- * the lib, e.g. TPM_PcrRead or TPM_EvictKey.
+ * the lib, e.g. TPM_PcrRead, TPM_EvictKey, TPM_FlushSpecific.
  */
 #define TPM_TRANSMIT_FUNC(NAME,PARAMS,PRECOND,POSTCOND,FMT,...) \
 unsigned long TPM_##NAME PARAMS { \
@@ -72,7 +72,7 @@ unsigned long TPM_##NAME PARAMS { \
 
 // Debugging
 
-#define DEBUG_PRINT_HASH 1
+#define DEBUG_PRINT_HASH 0
 
 #if DEBUG_PRINT_HASH
 

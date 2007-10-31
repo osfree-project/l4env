@@ -234,7 +234,7 @@ LThread_num Sys_ex_regs_frame::lthread() const
 
 IMPLEMENT inline
 Task_num Sys_ex_regs_frame::task() const
-{ return (r[0] >> 7) & 0xffff; }
+{ return (r[0] >> 7) & ((1 << 11) - 1); }
 
 IMPLEMENT inline
 Mword Sys_ex_regs_frame::no_cancel() const

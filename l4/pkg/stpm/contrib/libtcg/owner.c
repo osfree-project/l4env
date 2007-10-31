@@ -265,7 +265,7 @@ uint32_t TPM_TakeOwnership(unsigned char *ownpass, unsigned char *srkpass,
     /* check the response HMAC */
     srkparamsize = KeySize(tcpadata + TCG_DATA_OFFSET);
     ret = checkhmac(tcpadata, ntohl(command), sess.ononce, ownpass,
-		    srkparamsize);
+                    srkparamsize, 0);
     if (ret != 0)
         return -22;
     if (key == NULL)

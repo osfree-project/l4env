@@ -1,7 +1,7 @@
 PKGDIR        ?= ../..
 L4DIR         ?= $(PKGDIR)/../..
 
-SYSTEMS        = x86-l4v2 x86-l4x0
+SYSTEMS        = x86-l4v2
 
 DEFAULT_RELOC  = 0x00980000
 TARGET         = ipcmon_test2

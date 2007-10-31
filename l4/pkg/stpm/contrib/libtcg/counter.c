@@ -60,6 +60,7 @@ TPM_TRANSMIT_OIAP_FUNC(IncrementCounter,
 		       ,
 		       TPM_COPY_FROM(value, 0, 10);
 		       ,
+                       0,
 		       "L",
 		       "L",
 		       id);
@@ -84,6 +85,7 @@ TPM_TRANSMIT_OIAP_FUNC(ReleaseCounter,
 		       auth,
 		       ,		       
 		       ,
+                       0,
 		       "L",
 		       "L",
 		       id);

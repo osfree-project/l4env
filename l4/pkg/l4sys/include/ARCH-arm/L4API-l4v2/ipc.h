@@ -6,11 +6,11 @@
 #ifndef __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__IPC_H__
 #define __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__IPC_H__
 
+#include_next <l4/sys/ipc.h>
+
 #ifdef __GNUC__
 
 #include <l4/sys/compiler.h>
-
-#include_next <l4/sys/ipc.h>
 
 #ifndef L4_SYSCALL_MAGIC_OFFSET
 #  define L4_SYSCALL_MAGIC_OFFSET	8

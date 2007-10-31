@@ -32,7 +32,7 @@
 
 int 
 checkhmac(unsigned char *buffer, unsigned long command,
-	   unsigned char *ononce, unsigned char *key, int data_len)
+          unsigned char *ononce, unsigned char *key, int data_len, int data_skip)
 {
 	unsigned long bufsize;
 	unsigned short tag;
@@ -50,7 +50,9 @@ checkhmac(unsigned char *buffer, unsigned long command,
 	ordinal = ntohl(command);
 	result = *(unsigned long *) (buffer + TCG_RETURN_OFFSET);
 
+#ifdef DEBUG
 	printf("> checkhmac1 %ld %x %lx %lx\n", bufsize, tag, ordinal, result);
+#endif
 
 	if (tag == TPM_TAG_RSP_COMMAND)
 		return 0;
@@ -63,8 +65,8 @@ checkhmac(unsigned char *buffer, unsigned long command,
 	SHA1_init(&sha);
 	SHA1_update(&sha, &result, 4);
 	SHA1_update(&sha, &ordinal, 4);
-	SHA1_update(&sha, buffer + TCG_DATA_OFFSET, data_len);
-	PRINT_HASH_SIZE((buffer + TCG_DATA_OFFSET), data_len);
+        SHA1_update(&sha, buffer + TCG_DATA_OFFSET+data_skip, data_len);
+        PRINT_HASH_SIZE((buffer + TCG_DATA_OFFSET+data_skip), data_len);
 	SHA1_final(&sha, paramdigest);
 
 	rawhmac(testhmac, key, TCG_HASH_SIZE, TCG_HASH_SIZE, paramdigest,
@@ -74,11 +76,12 @@ checkhmac(unsigned char *buffer, unsigned long command,
 	PRINT_HASH(authdata);
 	if (memcmp(testhmac, authdata, TCG_HASH_SIZE) != 0)
 		return -2;
+#ifdef DEBUG
 	printf("< checkhmac1()\n");
+#endif
 	return 0;
 }
 
-#define DEBUG
 /**
  * Helper function to split paramdigest calulation from hmac
  */

@@ -109,6 +109,7 @@ TPM_TRANSMIT_OIAP_FUNC(LoadKey,
 		       ,
 		       *newhandle = TPM_EXTRACT_LONG(0);
 		       ,
+                       0,
 		       "I %",
 		       "L %",
 		       keyhandle,
@@ -117,7 +118,43 @@ TPM_TRANSMIT_OIAP_FUNC(LoadKey,
 
 
 /**
+ * Load a key into a TPM.
+ * @param keyhandle the handle of the parent key.
+ * @param keyauth   the auth for the parent key.
+ * @param keyparams the key created via CreateWrapKey
+ * @param newhandle the handle of the loaded key
+ */
+TPM_TRANSMIT_OIAP_FUNC(LoadKey2,
+                      (unsigned long keyhandle,
+                       unsigned char *keyauth,
+                       keydata *keyparms,
+                       unsigned long *newhandle),
+                      keyauth,
+
+                      unsigned char kparmbuf[TCG_MAX_BUFF_SIZE];
+                      int kparmbufsize;
+
+                      if (keyauth == NULL || keyparms == NULL || newhandle == NULL)
+                        return -1;
+
+                      kparmbufsize = BuildKey(kparmbuf, keyparms);
+                      if (0 > (kparmbufsize = BuildKey(kparmbuf, keyparms)))
+                        return -2;
+
+                      ,
+                      *newhandle = TPM_EXTRACT_LONG(0);
+                      ,
+                      4,
+                      "I %",
+                      "L %",
+                      keyhandle,
+                      kparmbufsize,
+                      kparmbuf);
+
+
+/**
  * Delete a key from the tpm.
+ * Deprecated since TCGA 1.2 spec.
  */
 TPM_TRANSMIT_FUNC(EvictKey,
 		      (unsigned long keyhandle),
@@ -125,6 +162,19 @@ TPM_TRANSMIT_FUNC(EvictKey,
 		      ,
 		      "L",
 		      keyhandle);
+
+/**
+ * Delete various handles, for example keys.
+ * Replacement of EvictKey
+ */
+TPM_TRANSMIT_FUNC(FlushSpecific,
+                     (unsigned long keyhandle,
+                      unsigned long restype),
+                     ,
+                     ,
+                     "L L",
+                     keyhandle,
+                     restype);
 
 /****************************************************************************/
 /*                                                                          */

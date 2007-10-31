@@ -6,6 +6,8 @@
 
 EXTERN_C_BEGIN
 
+#include <l4/arm_drivers/common.h>
+
 struct arm_lcd_ops {
   int          (*probe)(void);
   void *       (*get_fb)(void);
@@ -30,8 +32,6 @@ struct arm_lcd_ops {
 };
 
 struct arm_lcd_ops *arm_lcd_probe(void);
-
-int arm_lcd_get_region(l4_addr_t addr, l4_size_t size);
 
 void arm_lcd_register_driver(struct arm_lcd_ops *);
 
