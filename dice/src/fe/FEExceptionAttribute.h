@@ -60,7 +60,7 @@ protected:
     CFEExceptionAttribute(CFEExceptionAttribute* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFEExceptionAttribute* Clone();
 
 // attributes
 public:

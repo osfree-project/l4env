@@ -51,7 +51,7 @@ CFETypeOfType::~CFETypeOfType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFETypeOfType::Clone()
+CFETypeOfType* CFETypeOfType::Clone()
 {
 	return new CFETypeOfType(this);
 }

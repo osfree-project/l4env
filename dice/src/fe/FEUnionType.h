@@ -62,7 +62,7 @@ public:
 public:
     virtual void Accept(CVisitor&);
     virtual bool IsConstructedType();
-	virtual CObject* Clone();
+	virtual CFEUnionType* Clone();
     void AddMembers(vector<CFEUnionCase*> *pUnionBody);
 
 protected:

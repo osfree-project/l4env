@@ -50,7 +50,7 @@ CFEPipeType::~CFEPipeType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEPipeType::Clone()
+CFEPipeType* CFEPipeType::Clone()
 {
 	return new CFEPipeType(this);
 }

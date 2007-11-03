@@ -85,7 +85,7 @@ public:
 	virtual void AddIsParameter(CBEDeclarator * pDecl);
 	virtual int GetRemainingNumberOfIsAttributes(
 		vector<CBEDeclarator*>::iterator iter);
-	virtual CObject* Clone();
+	virtual CBEAttribute* Clone();
 	virtual void CreateBackEnd(ATTR_TYPE nType);
 	virtual void CreateBackEnd(CFEAttribute * pFEAttribute);
 	virtual void CreateBackEndIs(ATTR_TYPE nType, CBEDeclarator *pDeclarator);

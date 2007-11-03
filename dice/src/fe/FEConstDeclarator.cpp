@@ -65,7 +65,7 @@ CFEConstDeclarator::~CFEConstDeclarator()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEConstDeclarator::Clone()
+CFEConstDeclarator* CFEConstDeclarator::Clone()
 {
 	return new CFEConstDeclarator(this);
 }

@@ -30,13 +30,11 @@
 #include "TypeSpec-Type.h"
 
 CL4V2BESizes::CL4V2BESizes()
-{
-}
+{ }
 
 /** \brief destroys object of this class */
 CL4V2BESizes::~CL4V2BESizes()
-{
-}
+{ }
 
 /** \brief get the maximum message size in bytes for a short IPC
  *  \return the max size in bytes
@@ -58,19 +56,22 @@ int CL4V2BESizes::GetMaxShortIPCSize()
  */
 int CL4V2BESizes::GetMaxSizeOfType(int nFEType)
 {
-    int nSize = CBESizes::GetMaxSizeOfType(nFEType);
-    switch (nFEType)
-    {
-    case TYPE_CHAR:
-    case TYPE_CHAR_ASTERISK:
-        nSize = 1024;
-        break;
-    case TYPE_MESSAGE:
-	nSize = (1 << 19) * GetSizeOfType(TYPE_MWORD); /* maximum of 2^19 dwords */
-	break;
-    default:
-        break;
-    }
-    return nSize;
+	int nSize = CBESizes::GetMaxSizeOfType(nFEType);
+	switch (nFEType)
+	{
+	case TYPE_CHAR:
+	case TYPE_CHAR_ASTERISK:
+		nSize = 1024;
+		break;
+	case TYPE_MESSAGE:
+		nSize = (1 << 19) * GetSizeOfType(TYPE_MWORD); /* maximum of 2^19 dwords */
+		break;
+	case TYPE_UTCB:
+		nSize = 0; /* V2 does not support UTCB IPC */
+		break;
+	default:
+		break;
+	}
+	return nSize;
 }
 

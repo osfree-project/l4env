@@ -55,6 +55,7 @@ public:
     virtual CBEMsgBuffer* GetNewMessageBuffer();
     virtual CBEClass* GetNewClass();
     virtual CBEDispatchFunction* GetNewDispatchFunction();
+    virtual CBECallFunction* GetNewCallFunction();
     virtual CBESrvLoopFunction* GetNewSrvLoopFunction();
     virtual CBEWaitAnyFunction* GetNewWaitAnyFunction();
     virtual CBEWaitAnyFunction* GetNewRcvAnyFunction();

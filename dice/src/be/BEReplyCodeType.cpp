@@ -46,7 +46,7 @@ CBEReplyCodeType::CBEReplyCodeType(CBEReplyCodeType* src)
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEReplyCodeType::Clone()
+CBEReplyCodeType* CBEReplyCodeType::Clone()
 {
 	return new CBEReplyCodeType(this);
 }

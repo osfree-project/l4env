@@ -52,7 +52,7 @@ protected: // Protected methods
     CL4BEMsgBufferType(CL4BEMsgBufferType* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CL4BEMsgBufferType* Clone();
 
 protected:
 	virtual void AddElements(CFEOperation *pFEOperation, CMsgStructType nType);

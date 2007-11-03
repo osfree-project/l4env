@@ -43,15 +43,15 @@ CL4V2IA32BESizes::~CL4V2IA32BESizes()
  */
 int CL4V2IA32BESizes::GetSizeOfType(int nFEType, int nFESize)
 {
-    int nSize = 0;
-    switch (nFEType)
-    {
-    case TYPE_MWORD:
-	nSize = 4;
-	break;
-    default:
-	nSize = CL4V2BESizes::GetSizeOfType(nFEType, nFESize);
-    }
-    return nSize;
+	int nSize = 0;
+	switch (nFEType)
+	{
+	case TYPE_MWORD:
+		nSize = 4;
+		break;
+	default:
+		nSize = CL4V2BESizes::GetSizeOfType(nFEType, nFESize);
+	}
+	return nSize;
 }
 

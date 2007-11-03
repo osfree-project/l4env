@@ -82,7 +82,7 @@ protected:
 
 // operations
 public:
-	virtual CObject* Clone();
+	virtual CFETypedDeclarator* Clone();
     virtual CFETypeSpec* GetType();
     virtual void Accept(CVisitor&);
     virtual CFETypeSpec* ReplaceType(CFETypeSpec *pNewType);

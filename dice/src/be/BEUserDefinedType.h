@@ -60,7 +60,7 @@ public:
     virtual int GetMaxSize();
     virtual std::string GetName();
     virtual bool IsConstructedType();
-	virtual CObject* Clone();
+	virtual CBEUserDefinedType* Clone();
     virtual void CreateBackEnd(std::string sName);
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
 

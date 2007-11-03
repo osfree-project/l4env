@@ -55,7 +55,7 @@ CFEIdentifier::~CFEIdentifier()
 /** \brief create a copy of this object
  *  \return a reference to the clone
  */
-CObject* CFEIdentifier::Clone()
+CFEIdentifier* CFEIdentifier::Clone()
 {
 	return new CFEIdentifier(this);
 }

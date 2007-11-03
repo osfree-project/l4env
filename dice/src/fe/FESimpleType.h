@@ -67,7 +67,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFESimpleType* Clone();
     virtual void Accept(CVisitor&);
     virtual bool IsConstructedType();
     virtual bool IsPointerType();

@@ -134,7 +134,7 @@ CFEPrimaryExpression::~CFEPrimaryExpression()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEPrimaryExpression::Clone()
+CFEPrimaryExpression* CFEPrimaryExpression::Clone()
 {
 	return new CFEPrimaryExpression(this);
 }

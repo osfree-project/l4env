@@ -62,7 +62,7 @@ public:
 
 //operations
 public:
-	virtual CObject* Clone();
+	virtual CFEIdentifier* Clone();
     virtual std::string ReplaceName(std::string sNewName);
     virtual void Suffix(std::string sSuffix);
     virtual void Prefix(std::string sPrefix);

@@ -81,7 +81,7 @@ protected:
 public:
     virtual version_t GetVersion();
     virtual void GetVersion(int& major, int& minor);
-	virtual CObject* Clone();
+	virtual CFEVersionAttribute* Clone();
 
 // attributes
 protected:

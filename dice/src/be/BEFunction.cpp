@@ -67,7 +67,6 @@ CBEFunction::CBEFunction(FUNCTION_TYPE nFunctionType)
 	m_LocalVariables(0, this),
 	m_Typedefs(0, this)
 {
-	m_pClass = 0;
 	m_pTarget = 0;
 	m_pMsgBuffer = 0;
 	m_pCorbaObject = 0;
@@ -91,13 +90,14 @@ CBEFunction::CBEFunction(CBEFunction* src)
 	m_LocalVariables(src->m_LocalVariables),
 	m_Typedefs(src->m_Typedefs)
 {
-	m_pClass = src->m_pClass;
 	m_pTarget = src->m_pTarget;
 	m_nParameterIndent = src->m_nParameterIndent;
 	m_bComponentSide = src->m_bComponentSide;
 	m_bCastMsgBufferOnCall = src->m_bCastMsgBufferOnCall;
 	m_nFunctionType = src->m_nFunctionType;
 	m_bTraceOn = src->m_bTraceOn;
+	m_pComm = src->m_pComm;
+	m_pMarshaller = src->m_pMarshaller;
 
 	m_Attributes.Adopt(this);
 	m_Exceptions.Adopt(this);
@@ -109,8 +109,6 @@ CBEFunction::CBEFunction(CBEFunction* src)
 	CLONE_MEM(CBEMsgBuffer, m_pMsgBuffer);
 	CLONE_MEM(CBETypedDeclarator, m_pCorbaObject);
 	CLONE_MEM(CBETypedDeclarator, m_pCorbaEnv);
-	CLONE_MEM(CBECommunication, m_pComm);
-	CLONE_MEM(CBEMarshaller, m_pMarshaller);
 	if (src->m_pTrace)
 	{
 		CBEClassFactory *pCF = CBEClassFactory::Instance();
@@ -1665,7 +1663,7 @@ bool CBEFunction::HasParameterWithAttributes(ATTR_TYPE nAttribute1, ATTR_TYPE nA
 			return true;
 	}
 	return false;
-	}
+}
 
 /** \brief check if this function has parameters that should be malloced by the user
  *  \return true if so
@@ -2025,9 +2023,7 @@ CBEFunction::SetCallVariable(string sOriginalName,
 			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 				"CBEFunction::%s cloning %s\n", __func__,
 				(*iter)->m_Declarators.First()->GetName().c_str());
-			CBETypedDeclarator *pParam =
-				(CBETypedDeclarator*)((*iter)->Clone());
-			m_CallParameters.Add(pParam);
+			m_CallParameters.Add((*iter)->Clone());
 		}
 	}
 	// search for original name

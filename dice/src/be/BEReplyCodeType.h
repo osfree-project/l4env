@@ -55,7 +55,7 @@ protected:
 
 public:
     virtual void CreateBackEnd();
-	virtual CObject* Clone();
+	virtual CBEReplyCodeType* Clone();
 };
 
 #endif

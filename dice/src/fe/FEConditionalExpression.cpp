@@ -50,7 +50,7 @@ CFEConditionalExpression::~CFEConditionalExpression()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEConditionalExpression::Clone()
+CFEConditionalExpression* CFEConditionalExpression::Clone()
 {
 	return new CFEConditionalExpression(this);
 }

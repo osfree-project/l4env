@@ -49,7 +49,7 @@ CFERangeAttribute::~CFERangeAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFERangeAttribute::Clone()
+CFERangeAttribute* CFERangeAttribute::Clone()
 {
 	return new CFERangeAttribute(this);
 }

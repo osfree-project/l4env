@@ -45,7 +45,7 @@ protected:
     CFESizeOfExpression(CFESizeOfExpression* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFESizeOfExpression* Clone();
     virtual std::string ToString();
     virtual CFETypeSpec* GetSizeOfType();
     virtual CFEExpression* GetSizeOfExpression();

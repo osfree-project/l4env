@@ -58,7 +58,7 @@ CFEUnaryExpression::~CFEUnaryExpression()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEUnaryExpression::Clone()
+CFEUnaryExpression* CFEUnaryExpression::Clone()
 {
 	return new CFEUnaryExpression(this);
 }

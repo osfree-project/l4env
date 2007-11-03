@@ -57,7 +57,7 @@ CBEUnionCase::~CBEUnionCase()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEUnionCase::Clone()
+CBEUnionCase* CBEUnionCase::Clone()
 {
 	return new CBEUnionCase(this);
 }

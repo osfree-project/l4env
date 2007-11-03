@@ -55,7 +55,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEPtrDefaultAttribute* Clone();
     virtual CFEAttribute* GetPtrAttribute();
 
 // attributes

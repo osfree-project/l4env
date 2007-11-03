@@ -47,7 +47,7 @@ CFEIntAttribute::~CFEIntAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEIntAttribute::Clone()
+CFEIntAttribute* CFEIntAttribute::Clone()
 {
 	return new CFEIntAttribute(this);
 }

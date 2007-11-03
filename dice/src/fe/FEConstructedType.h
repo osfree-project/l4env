@@ -59,7 +59,7 @@ protected:
     CFEConstructedType(CFEConstructedType* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFEConstructedType* Clone();
 
     /** \brief returns the value of m_bForwardDeclaration
      *  \return the value of m_bForwardDeclaration

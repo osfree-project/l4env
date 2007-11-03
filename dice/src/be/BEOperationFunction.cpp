@@ -80,13 +80,6 @@ void CBEOperationFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComp
 	AddExceptions(pFEOperation);
 	// set opcode name
 	m_sOpcodeConstName = pNF->GetOpcodeConst(pFEOperation);
-	// set parent
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	assert(pFEOperation->GetSpecificParent<CFEInterface>());
-	m_pClass = pRoot->FindClass(
-		pFEOperation->GetSpecificParent<CFEInterface>()->GetName());
-	assert(m_pClass);
 	// would like to test for class == parent, but this is not the case for
 	// switch case: parent = srv-loop function
 

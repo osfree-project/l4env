@@ -68,7 +68,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEConditionalExpression* Clone();
     virtual std::string ToString();
     virtual bool IsOfType(unsigned int nType);
     virtual int GetIntValue();

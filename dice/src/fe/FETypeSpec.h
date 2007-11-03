@@ -60,7 +60,7 @@ protected:
 
 // operations
 public:
-	virtual CObject* Clone();
+	virtual CFETypeSpec* Clone();
     virtual bool IsConstructedType();
     virtual bool IsPointerType();
 

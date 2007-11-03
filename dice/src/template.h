@@ -96,7 +96,7 @@ public:
 			i != src.end();
 			i++)
 		{
-			push_back(static_cast<T*>((*i)->Clone()));
+			push_back((*i)->Clone());
 		}
 		Adopt(m_pParent);
 	}

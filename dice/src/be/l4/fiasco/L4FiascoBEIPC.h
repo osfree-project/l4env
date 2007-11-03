@@ -61,7 +61,6 @@ public:
     virtual void AddLocalVariable(CBEFunction *pFunction);
 
 protected:
-    virtual bool IsShortIPC(CBEFunction *pFunction, CMsgStructType nType);
     virtual bool UseAssembler(CBEFunction *pFunction);
     virtual void WriteTag(CBEFile& pFile, CBEFunction *pFunction, bool bReference);
 };

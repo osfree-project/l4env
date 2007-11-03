@@ -231,7 +231,9 @@ CBETypedDeclarator* CBEMarshalExceptionFunction::GetExceptionVariable()
 		return pRet;
 
 	// if no parameter, then try to find it in the message buffer
-	CBEMsgBuffer *pMsgBuf = m_pClass->GetMessageBuffer();
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	CBEMsgBuffer *pMsgBuf = IsComponentSide() ? pClass->GetMessageBuffer() : GetMessageBuffer();
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
 		__func__, pMsgBuf);
 	if (!pMsgBuf)

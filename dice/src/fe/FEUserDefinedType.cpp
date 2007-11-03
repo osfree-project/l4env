@@ -57,7 +57,7 @@ CFEUserDefinedType::~CFEUserDefinedType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEUserDefinedType::Clone()
+CFEUserDefinedType* CFEUserDefinedType::Clone()
 {
 	return new CFEUserDefinedType(this);
 }

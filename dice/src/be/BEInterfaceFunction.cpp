@@ -61,17 +61,6 @@ void CBEInterfaceFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bCompo
 	// basic init
 	CBEFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
-	// search for our interface
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	m_pClass = 0;
-	do
-	{
-		m_pClass = pRoot->FindClass(pFEInterface->GetName(), m_pClass);
-	} while (m_pClass && m_pClass != m_pParent);
-	assert(m_pClass);
-	// should be parent
-	assert(m_pClass == m_pParent);
 	// set return type
 	SetNoReturnVar();
 

@@ -64,7 +64,7 @@ CFEStructType::~CFEStructType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEStructType::Clone()
+CFEStructType* CFEStructType::Clone()
 {
 	return new CFEStructType(this);
 }

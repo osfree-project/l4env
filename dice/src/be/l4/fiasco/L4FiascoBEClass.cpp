@@ -50,25 +50,25 @@ CL4FiascoBEClass::~CL4FiascoBEClass()
  */
 void CL4FiascoBEClass::WriteDefaultFunction(CBEHeaderFile& pFile)
 {
-    // check for function prototypes
-    if (!pFile.IsOfFileType(FILETYPE_COMPONENT))
-	return;
+	// check for function prototypes
+	if (!pFile.IsOfFileType(FILETYPE_COMPONENT))
+		return;
 
-    CBEAttribute *pAttr = m_Attributes.Find(ATTR_DEFAULT_FUNCTION);
-    if (!pAttr)
-	return;
-    string sDefaultFunction = pAttr->GetString();
-    if (sDefaultFunction.empty())
-	return;
+	CBEAttribute *pAttr = m_Attributes.Find(ATTR_DEFAULT_FUNCTION);
+	if (!pAttr)
+		return;
+	string sDefaultFunction = pAttr->GetString();
+	if (sDefaultFunction.empty())
+		return;
 
-    CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-    string sMsgBuffer = pMsgBuffer->m_Declarators.First()->GetName();
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sTagType = pNF->GetTypeName(TYPE_MSGTAG, false);
-    // int \<name\>(\<corba object\>, \<msg buffer type\>*,
-    //              \<corba environment\>*)
-    WriteExternCStart(pFile);
-    pFile << "\tint " << sDefaultFunction << " (CORBA_Object, " << sTagType <<
-	"*, " << sMsgBuffer << "*, CORBA_Server_Environment*);\n";
-    WriteExternCEnd(pFile);
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	string sMsgBuffer = pMsgBuffer->m_Declarators.First()->GetName();
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sTagType = pNF->GetTypeName(TYPE_MSGTAG, false);
+	// int \<name\>(\<corba object\>, \<msg buffer type\>*,
+	//              \<corba environment\>*)
+	WriteExternCStart(pFile);
+	pFile << "\tint " << sDefaultFunction << " (CORBA_Object, " << sTagType <<
+		"*, " << sMsgBuffer << "*, CORBA_Server_Environment*);\n";
+	WriteExternCEnd(pFile);
 }

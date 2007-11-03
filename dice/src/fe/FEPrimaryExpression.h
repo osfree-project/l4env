@@ -90,7 +90,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEPrimaryExpression* Clone();
     virtual std::string ToString();
     virtual long double GetFloatValue();
     virtual bool IsOfType(unsigned int nType);

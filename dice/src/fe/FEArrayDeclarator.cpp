@@ -43,23 +43,10 @@ CFEArrayDeclarator::CFEArrayDeclarator(std::string sName, CFEExpression * pUpper
 }
 
 CFEArrayDeclarator::CFEArrayDeclarator(CFEArrayDeclarator* src)
-: CFEDeclarator(src)
-{
-    vector<CFEExpression*>::const_iterator iter = src->m_vLowerBounds.begin();
-    for (; iter != src->m_vLowerBounds.end(); iter++)
-    {
-        CFEExpression *pNew = (CFEExpression*)((*iter)->Clone());
-        m_vLowerBounds.push_back(pNew);
-        pNew->SetParent(this);
-    }
-    iter = src->m_vUpperBounds.begin();
-    for (; iter != src->m_vUpperBounds.end(); iter++)
-    {
-        CFEExpression *pNew = (CFEExpression*)((*iter)->Clone());
-        m_vUpperBounds.push_back(pNew);
-        pNew->SetParent(this);
-    }
-}
+: CFEDeclarator(src),
+	m_vLowerBounds(src->m_vLowerBounds),
+	m_vUpperBounds(src->m_vUpperBounds)
+{ }
 
 /** cleans up the array declarator (deletes the bounds) */
 CFEArrayDeclarator::~CFEArrayDeclarator()
@@ -79,7 +66,7 @@ CFEArrayDeclarator::~CFEArrayDeclarator()
 /** \brief create a copy of this object
  *  \return a reference to the clone
  */
-CObject* CFEArrayDeclarator::Clone()
+CFEArrayDeclarator* CFEArrayDeclarator::Clone()
 {
 	return new CFEArrayDeclarator(this);
 }

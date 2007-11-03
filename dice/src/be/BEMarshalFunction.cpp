@@ -101,8 +101,7 @@ void CBEMarshalFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bCompon
  * function does not add the return variable to the struct if the return type
  * of the function is void, which is always true for marshal function.
  */
-void
-CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+void CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
@@ -111,9 +110,6 @@ CBEMarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 	string sReturn = pNF->GetReturnVariable();
 	if (FindParameter(sReturn))
 		pMsgBuffer->AddReturnVariable(this);
-	// in marshal function, the message buffer is a pointer to the server's
-	// message buffer
-	pMsgBuffer->m_Declarators.First()->SetStars(1);
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
 
@@ -161,15 +157,16 @@ CBEMarshalFunction::WriteCallParameter(CBEFile& pFile,
 /** \brief get exception variable
  *  \return a reference to the exception variable
  */
-CBETypedDeclarator*
-CBEMarshalFunction::GetExceptionVariable()
+CBETypedDeclarator* CBEMarshalFunction::GetExceptionVariable()
 {
 	CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
 	if (pRet)
 		return pRet;
 
 	// if no parameter, then try to find it in the message buffer
-	CBEMsgBuffer *pMsgBuf = m_pClass->GetMessageBuffer();
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	CBEMsgBuffer *pMsgBuf = IsComponentSide() ? pClass->GetMessageBuffer() : GetMessageBuffer();
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
 		__func__, pMsgBuf);
 	if (!pMsgBuf)
@@ -207,8 +204,7 @@ CBEMarshalFunction::AddBeforeParameters()
 	{
 		// create new parameter
 		CBETypedDeclarator *pReturn = GetReturnVariable();
-		CBETypedDeclarator *pReturnParam =
-			(CBETypedDeclarator*)(pReturn->Clone());
+		CBETypedDeclarator *pReturnParam = pReturn->Clone();
 		m_Parameters.Add(pReturnParam);
 	}
 
@@ -234,7 +230,6 @@ void CBEMarshalFunction::AddAfterParameters()
 	// get class' message buffer
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
 	assert(pClass);
-	// get its message buffer
 	CBEMsgBuffer *pSrvMsgBuffer = pClass->GetMessageBuffer();
 	assert(pSrvMsgBuffer);
 	string sTypeName = pSrvMsgBuffer->m_Declarators.First()->GetName();

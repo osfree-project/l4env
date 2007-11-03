@@ -66,7 +66,7 @@ protected:
 
 	// Operations
 public:
-	virtual CObject* Clone();
+	virtual CBEObject* Clone();
 	virtual bool IsTargetFile(CBEFile* pFile);
 
 protected:

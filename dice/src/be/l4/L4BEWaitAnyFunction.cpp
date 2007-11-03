@@ -75,7 +75,9 @@ CL4BEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bComponentS
 
 	// if we have flexible number of flexpages, we need a temporary variable
 	bool bFixedNumberOfFlexpages = true;
-	m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, GetReceiveDirection());
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, GetReceiveDirection());
 	if (!bFixedNumberOfFlexpages)
 	{
 		string sTempVar = pNF->GetTempOffsetVariable();
@@ -491,10 +493,11 @@ void CL4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 void CL4BEWaitAnyFunction::WriteReleaseMemory(CBEFile& pFile)
 {
 	// check [out, ref] parameters
-	assert(m_pClass);
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
 	if (!CCompiler::IsOptionSet(PROGRAM_FREE_MEM_AFTER_REPLY) &&
-		!m_pClass->HasParameterWithAttributes(ATTR_REF, ATTR_OUT) &&
-		!m_pClass->HasMallocParameters())
+		!pClass->HasParameterWithAttributes(ATTR_REF, ATTR_OUT) &&
+		!pClass->HasMallocParameters())
 		return;
 
 	pFile << "\t{\n";
@@ -578,13 +581,11 @@ void CL4BEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
  */
 void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 {
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
-	if (pMsgBuffer->GetCountAll(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
-		return;
-
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
 	bool bFixedNumberOfFlexpages = true;
-	int nNumberOfFlexpages =
-		m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, GetReceiveDirection());
+	int nNumberOfFlexpages = pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages,
+		GetReceiveDirection());
 	CBESizes *pSizes = CCompiler::GetSizes();
 	int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
 		pSizes->GetSizeOfType(TYPE_MWORD);
@@ -615,6 +616,7 @@ void CL4BEWaitAnyFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 		// init temp var
 		++pFile << "\t" << sTempVar << " = 0;\n";
 		pFile << "\twhile ((";
+		CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 		pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar);
 		pFile << " != 0) && (";
 		pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, sTempVar + "+1");

@@ -53,13 +53,12 @@ CFEBase::~CFEBase()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEBase::Clone()
+CFEBase* CFEBase::Clone()
 {
 	return new CFEBase(this);
 }
 
 #include "Compiler.h"
-#include <typeinfo>
 
 /** \brief returns the root file object
  *  \return the root object
@@ -77,8 +76,6 @@ CFEFile *CFEBase::GetRoot()
 			"%s: current @ %p, parent @ %p\n", __func__, pParent, pParent->GetParent());
 		pParent = pParent->GetParent();
 	}
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"%s: return %p of type %s\n", __func__, pParent, typeid(*pParent).name());
 	return dynamic_cast<CFEFile*>(pParent);
 }
 

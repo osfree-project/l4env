@@ -43,24 +43,24 @@ CL4BESizes::~CL4BESizes()
  */
 int CL4BESizes::GetSizeOfType(int nFEType, int nFESize)
 {
-    int nSize = 0;
-    switch (nFEType)
-    {
-    case TYPE_RCV_FLEXPAGE:
-    case TYPE_MSGDOPE_SEND:
-    case TYPE_MSGDOPE_SIZE:
-    case TYPE_MSGTAG:
-	return GetSizeOfType(TYPE_MWORD, 4);
-        break;
-    case TYPE_FLEXPAGE:
-	return 2 * GetSizeOfType(TYPE_MWORD, 4);
-	break;
-    case TYPE_REFSTRING:
-	return 4 * GetSizeOfType(TYPE_MWORD, 4);
-        break;
-    default:
-        nSize = CBESizes::GetSizeOfType(nFEType, nFESize);
-    }
-    return nSize;
+	int nSize = 0;
+	switch (nFEType)
+	{
+	case TYPE_RCV_FLEXPAGE:
+	case TYPE_MSGDOPE_SEND:
+	case TYPE_MSGDOPE_SIZE:
+	case TYPE_MSGTAG:
+		return GetSizeOfType(TYPE_MWORD, 4);
+		break;
+	case TYPE_FLEXPAGE:
+		return 2 * GetSizeOfType(TYPE_MWORD, 4);
+		break;
+	case TYPE_REFSTRING:
+		return 4 * GetSizeOfType(TYPE_MWORD, 4);
+		break;
+	default:
+		nSize = CBESizes::GetSizeOfType(nFEType, nFESize);
+	}
+	return nSize;
 }
 

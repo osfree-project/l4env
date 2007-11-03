@@ -63,7 +63,7 @@ protected:
 
 	// operations
 public:
-	virtual CObject* Clone();
+	virtual CFEUnionCase* Clone();
 	virtual void Accept(CVisitor&);
 
 	/** \brief test this union case for default

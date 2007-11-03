@@ -58,7 +58,7 @@ CFEArrayType::~CFEArrayType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEArrayType::Clone()
+CFEArrayType* CFEArrayType::Clone()
 {
 	return new CFEArrayType(this);
 }

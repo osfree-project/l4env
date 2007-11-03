@@ -67,7 +67,7 @@ CBEType::~CBEType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEType::Clone()
+CBEType* CBEType::Clone()
 {
 	return new CBEType(this);
 }
@@ -297,31 +297,46 @@ bool CBEType::HasTag(string /*sTag*/)
  */
 void CBEType::WriteCast(CBEFile& pFile, bool bPointer)
 {
-    if (IsPointerType() && !bPointer)
-    {
-        // this is a pointer-type, but to cast pointer-less,
-        // we need the pointer's base type
-        int nBaseType = TYPE_NONE;
-        int nBaseSize = 0;
-        switch (m_nFEType)
-        {
-        case TYPE_CHAR_ASTERISK:
-            nBaseType = TYPE_CHAR;
-            nBaseSize = 1;
-            break;
-        default:
-            break;
-        }
-	CBENameFactory *pNF = CBENameFactory::Instance();
-        string sName = pNF->GetTypeName(nBaseType, false, nBaseSize);
-	pFile << "(" << sName;
-    }
-    else
-	pFile << "(" << m_sName;
-    // if type is pointer itself, we need no extra asterisk
-    if (bPointer && !IsPointerType())
-	pFile << "*";
-    pFile << ")";
+	string str;
+	WriteCastToStr(str, bPointer);
+	pFile << str;
+}
+
+/** \brief writes a cast string for this type
+ *  \param str the string to write to
+ *  \param bPointer true if the cast should produce a pointer
+ *
+ * The cast is usually the name of the type.
+ * E.g., int. Since we usually require correct bracing for the cast, we
+ * will print (int).
+ */
+void CBEType::WriteCastToStr(std::string &str, bool bPointer)
+{
+	if (IsPointerType() && !bPointer)
+	{
+		// this is a pointer-type, but to cast pointer-less,
+		// we need the pointer's base type
+		int nBaseType = TYPE_NONE;
+		int nBaseSize = 0;
+		switch (m_nFEType)
+		{
+		case TYPE_CHAR_ASTERISK:
+			nBaseType = TYPE_CHAR;
+			nBaseSize = 1;
+			break;
+		default:
+			break;
+		}
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		string sName = pNF->GetTypeName(nBaseType, false, nBaseSize);
+		str += "(" + sName;
+	}
+	else
+		str += "(" + m_sName;
+	// if type is pointer itself, we need no extra asterisk
+	if (bPointer && !IsPointerType())
+		str += "*";
+	str += ")";
 }
 
 /** \brief searches for a parent, which is a typedef

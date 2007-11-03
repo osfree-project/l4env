@@ -111,10 +111,6 @@ void CBEUnmarshalFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBEUnmarshalFunction::%s called\n", __func__);
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
-	// in unmarshal function, the message buffer is a pointer to the server's
-	// message buffer
-	if (IsComponentSide())
-		pMsgBuffer->m_Declarators.First()->SetStars(1);
 	// check return type (do test here because sometimes we like to call
 	// AddReturnVariable depending on other constraint--return is parameter)
 	CBEType *pType = GetReturnType();
@@ -400,7 +396,9 @@ CBETypedDeclarator* CBEUnmarshalFunction::GetExceptionVariable()
 		return pRet;
 
 	// if no parameter, then try to find it in the message buffer
-	CBEMsgBuffer *pMsgBuf = m_pClass->GetMessageBuffer();
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	CBEMsgBuffer *pMsgBuf = IsComponentSide() ? pClass->GetMessageBuffer() : GetMessageBuffer();
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s message buffer in class at %p\n",
 		__func__, pMsgBuf);
 	if (!pMsgBuf)

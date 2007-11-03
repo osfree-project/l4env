@@ -52,7 +52,7 @@ CFEAttribute::~CFEAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEAttribute::Clone()
+CFEAttribute* CFEAttribute::Clone()
 {
 	return new CFEAttribute(this);
 }

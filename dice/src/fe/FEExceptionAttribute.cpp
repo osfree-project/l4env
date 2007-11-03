@@ -48,7 +48,7 @@ CFEExceptionAttribute::~CFEExceptionAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEExceptionAttribute::Clone()
+CFEExceptionAttribute* CFEExceptionAttribute::Clone()
 {
 	return new CFEExceptionAttribute(this);
 }

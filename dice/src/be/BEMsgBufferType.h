@@ -57,7 +57,7 @@ protected:
 	CBEMsgBufferType(CBEMsgBufferType* src);
 
 public: // public methods
-	virtual CObject* Clone();
+	virtual CBEMsgBufferType* Clone();
 	virtual void CreateBackEnd(CFEOperation *pFEOperation);
 	virtual void CreateBackEnd(CFEInterface *pFEInterface);
 	CBEStructType* GetStruct(std::string sFuncName, std::string sClassName,

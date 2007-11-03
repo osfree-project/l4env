@@ -47,6 +47,25 @@ int CL4FiascoBESizes::GetMaxShortIPCSize()
     return 2 * GetSizeOfType(TYPE_MWORD);
 }
 
+/** \brief gets the size of a type
+ *  \param nFEType the type to look up
+ *  \param nFESize the size in the front-end
+ *  \return the size of the type in bytes
+ */
+int CL4FiascoBESizes::GetSizeOfType(int nFEType, int nFESize)
+{
+	switch (nFEType)
+	{
+	case TYPE_UTCB:
+		return GetMaxSizeOfType(TYPE_MWORD);
+		break;
+	default:
+		return CL4BESizes::GetSizeOfType(nFEType, nFESize);
+		break;
+	}
+	return 0;
+}
+
 /** \brief returns a value for the maximum  size of a specific type
  *  \param nFEType the type to get the max size for
  *  \return the maximum size of an array of that type
@@ -56,20 +75,23 @@ int CL4FiascoBESizes::GetMaxShortIPCSize()
  */
 int CL4FiascoBESizes::GetMaxSizeOfType(int nFEType)
 {
-    int nSize = CBESizes::GetMaxSizeOfType(nFEType);
-    switch (nFEType)
-    {
-    case TYPE_CHAR:
-    case TYPE_CHAR_ASTERISK:
-        nSize = 1024;
-        break;
-    case TYPE_MESSAGE:
-	nSize = (1 << 19) * GetSizeOfType(TYPE_MWORD); /* maximum of 2^19 dwords */
-	break;
-    default:
-        break;
-    }
-    return nSize;
+	int nSize = CBESizes::GetMaxSizeOfType(nFEType);
+	switch (nFEType)
+	{
+	case TYPE_CHAR:
+	case TYPE_CHAR_ASTERISK:
+		nSize = 1024;
+		break;
+	case TYPE_MESSAGE:
+		nSize = (1 << 19) * GetSizeOfType(TYPE_MWORD); /* maximum of 2^19 dwords */
+		break;
+	case TYPE_UTCB:
+		nSize = 32 * GetSizeOfType(TYPE_MWORD);
+		break;
+	default:
+		break;
+	}
+	return nSize;
 }
 
 /** \brief try to determine the size of a user defined type based on its name
@@ -80,7 +102,7 @@ int CL4FiascoBESizes::GetMaxSizeOfType(int nFEType)
  */
 int CL4FiascoBESizes::GetSizeOfType(std::string sUserType)
 {
-    if (sUserType == "l4_msgtag_t")
-	return GetSizeOfType(TYPE_MSGTAG, 0);
-    return CL4BESizes::GetSizeOfType(sUserType);
+	if (sUserType == "l4_msgtag_t")
+		return GetSizeOfType(TYPE_MSGTAG, 0);
+	return CL4BESizes::GetSizeOfType(sUserType);
 }

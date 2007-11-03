@@ -1,12 +1,8 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
-include $(L4DIR)/mk/Makeconf
-
-ifeq ($(USE_UCLIBC),y)
 TARGET		= uclibc_thread_unsafe
-endif
-MODE		= l4env_uclibc_minimal
+MODE		= l4env_minimal
 SYSTEMS		= x86-l4v2
 SRC_C		= main.c
 DEFAULT_RELOC	= 0x00A00000

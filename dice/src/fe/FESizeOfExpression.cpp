@@ -76,7 +76,7 @@ CFESizeOfExpression::CFESizeOfExpression(CFESizeOfExpression* src)
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFESizeOfExpression::Clone()
+CFESizeOfExpression* CFESizeOfExpression::Clone()
 {
 	return new CFESizeOfExpression(this);
 }

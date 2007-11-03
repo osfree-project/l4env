@@ -45,7 +45,7 @@ public:
     CBEException();
     virtual ~CBEException();
 
-	virtual CObject* Clone();
+	virtual CBEException* Clone();
 
 protected:
 	/** \brief copy constructor

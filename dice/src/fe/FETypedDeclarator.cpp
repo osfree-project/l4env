@@ -78,7 +78,7 @@ CFETypedDeclarator::~CFETypedDeclarator()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFETypedDeclarator::Clone()
+CFETypedDeclarator* CFETypedDeclarator::Clone()
 {
 	return new CFETypedDeclarator(this);
 }

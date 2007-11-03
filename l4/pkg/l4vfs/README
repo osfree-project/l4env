@@ -22,3 +22,10 @@ FAQ
   and clients please make sure you do use the same definition of
   constants like (O_RDONLY, ...) or you must provide a wrapper
   (oskit defines O_RDONLY to 1, nearly all other libcs to 0).
+
+* I'm starting my programs with the loader and they simply don't
+  startup. Why?
+
+  The problem is, that the name_server must by started via RMGR, as
+  its client-lib uses RMGR functions to get the task_id.  Don't start
+  the name_server with loader.

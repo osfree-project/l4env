@@ -56,7 +56,7 @@ CFEVersionAttribute::~CFEVersionAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEVersionAttribute::Clone()
+CFEVersionAttribute* CFEVersionAttribute::Clone()
 {
 	return new CFEVersionAttribute(this);
 }

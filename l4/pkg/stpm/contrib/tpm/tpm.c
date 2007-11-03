@@ -585,7 +585,7 @@ init_tpm(void)
 		return -ENODEV;
 #endif
 
-	if (!pci_register_driver(&tpm_pci_driver)) {
+	if (pci_register_driver(&tpm_pci_driver) || !tpm_chip.initialized) {
 		pci_unregister_driver(&tpm_pci_driver);
 		return -ENODEV;
         }

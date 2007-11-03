@@ -67,12 +67,12 @@ public:
 	virtual int GetSize();
 	virtual int GetMaxSize();
 	virtual int GetStringLength();
-	virtual CObject* Clone();
+	virtual CBEStructType* Clone();
 	virtual void Write(CBEFile& pFile);
 	virtual bool IsConstructedType();
 	virtual int GetMemberCount();
 	virtual bool HasTag(std::string sTag);
-	virtual void WriteCast(CBEFile& pFile, bool bPointer);
+	virtual void WriteCastToStr(std::string &str, bool bPointer);
 	virtual std::string GetTag();
 	virtual void WriteDeclaration(CBEFile& pFile);
 	virtual void WriteGetSize(CBEFile& pFile,

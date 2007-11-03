@@ -45,7 +45,7 @@ CFEAttributeDeclarator::~CFEAttributeDeclarator()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEAttributeDeclarator::Clone()
+CFEAttributeDeclarator* CFEAttributeDeclarator::Clone()
 {
 	return new CFEAttributeDeclarator(this);
 }

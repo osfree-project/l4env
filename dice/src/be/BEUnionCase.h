@@ -61,7 +61,7 @@ public:
 	virtual void CreateBackEnd(CFEUnionCase * pFEUnionCase);
 	virtual void CreateBackEnd(CBEType *pType, std::string sName,
 		CBEExpression *pCaseLabel, bool bDefault);
-	virtual CObject* Clone();
+	virtual CBEUnionCase* Clone();
 
 	/** \brief returns true if this is the default case
 	 *  \return true if this is the default case

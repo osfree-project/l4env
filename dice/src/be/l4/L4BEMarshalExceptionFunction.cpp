@@ -70,10 +70,11 @@ void CL4BEMarshalExceptionFunction::WriteMarshalling(CBEFile& pFile)
 	CBEMarshalExceptionFunction::WriteMarshalling(pFile);
 
 	// set send dope
-	CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	CBEMsgBuffer *pMsgBuffer = IsComponentSide() ? pClass->GetMessageBuffer() : GetMessageBuffer();
 	CMsgStructType nType(GetSendDirection());
-	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-		nType);
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, nType);
 
 	if (bLocalTrace)
 	{

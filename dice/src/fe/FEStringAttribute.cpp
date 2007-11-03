@@ -47,7 +47,7 @@ CFEStringAttribute::~CFEStringAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEStringAttribute::Clone()
+CFEStringAttribute* CFEStringAttribute::Clone()
 {
 	return new CFEStringAttribute(this);
 }

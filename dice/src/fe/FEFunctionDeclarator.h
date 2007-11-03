@@ -61,7 +61,7 @@ protected:
     CFEFunctionDeclarator(CFEFunctionDeclarator* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFEFunctionDeclarator* Clone();
 
 // attributes
 public:

@@ -52,7 +52,7 @@ public: // Public methods
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
     virtual void WriteZeroInit(CBEFile& pFile);
     virtual void Write(CBEFile& pFile);
-    virtual void WriteCast(CBEFile& pFile, bool bPointer);
+    virtual void WriteCastToStr(std::string& str, bool bPointer);
 
     virtual bool HasTag(std::string sTag);
     virtual std::string GetTag();

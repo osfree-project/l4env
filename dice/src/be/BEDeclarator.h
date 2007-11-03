@@ -198,7 +198,7 @@ protected:
 	CBEDeclarator(CBEDeclarator* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CBEDeclarator* Clone();
 
 	virtual void WriteName(CBEFile& pFile);
 	virtual void WriteNameToStr(std::string &str);

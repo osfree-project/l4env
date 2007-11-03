@@ -76,7 +76,7 @@ public:
 	void AddSameLibrary(CFELibrary *pLibrary);
 	void AddComponents(vector<CFEFileComponent*> *pComponents);
 
-	virtual CObject* Clone();
+	virtual CFELibrary* Clone();
 	virtual void Accept(CVisitor&);
 	virtual std::string GetName();
 	bool Match(std::string sName);

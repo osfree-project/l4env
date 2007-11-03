@@ -47,26 +47,22 @@ CL4FiascoBESrvLoopFunction::~CL4FiascoBESrvLoopFunction()
  *
  * Create a message tag variable.
  */
-void
-CL4FiascoBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
+void CL4FiascoBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
-    CL4BESrvLoopFunction::CreateBackEnd(pFEInterface, bComponentSide);
+	CL4BESrvLoopFunction::CreateBackEnd(pFEInterface, bComponentSide);
 
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-    string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
-    AddLocalVariable(sTagType, sTagVar, 0, string("l4_msgtag(0,0,0,0)"));
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
+	AddLocalVariable(sTagType, sTagVar, 0, string("l4_msgtag(0,0,0,0)"));
 
-    // reset the call variables
-    CBEDeclarator *pDecl = m_LocalVariables.Find(sTagVar)->m_Declarators.First();
-    if (m_pWaitAnyFunction)
-	m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(),
-	    pDecl->GetStars(), pDecl->GetName());
-    if (m_pReplyAnyWaitAnyFunction)
-	m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(),
-	    pDecl->GetStars(), pDecl->GetName());
-    if (m_pDispatchFunction)
-	m_pDispatchFunction->SetCallVariable(pDecl->GetName(),
-	    pDecl->GetStars(), pDecl->GetName());
+	// reset the call variables
+	CBEDeclarator *pDecl = m_LocalVariables.Find(sTagVar)->m_Declarators.First();
+	if (m_pWaitAnyFunction)
+		m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName());
+	if (m_pReplyAnyWaitAnyFunction)
+		m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName());
+	if (m_pDispatchFunction)
+		m_pDispatchFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName());
 }
 

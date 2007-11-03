@@ -49,7 +49,7 @@ CFEIsAttribute::~CFEIsAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEIsAttribute::Clone()
+CFEIsAttribute* CFEIsAttribute::Clone()
 {
 	return new CFEIsAttribute(this);
 }

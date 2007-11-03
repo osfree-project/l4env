@@ -63,7 +63,7 @@ CFEUnionType::~CFEUnionType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEUnionType::Clone()
+CFEUnionType* CFEUnionType::Clone()
 {
 	return new CFEUnionType(this);
 }

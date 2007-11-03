@@ -57,7 +57,7 @@ protected:
     CFEAttributeDeclarator(CFEAttributeDeclarator* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFEAttributeDeclarator* Clone();
 };
 
 #endif

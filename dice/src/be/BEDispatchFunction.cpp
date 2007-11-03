@@ -225,7 +225,6 @@ void CBEDispatchFunction::WriteSwitch(CBEFile& pFile)
 	pFile << "\t{\n";
 
 	// iterate over functions
-	assert(m_pClass);
 	vector<CBESwitchCase*>::iterator i;
 	for (i = m_SwitchCases.begin(); i != m_SwitchCases.end(); i++)
 		(*i)->Write(pFile);

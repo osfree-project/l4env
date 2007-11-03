@@ -4,7 +4,7 @@ L4DIR		?= $(PKGDIR)/../..
 TARGET		= $(PKGNAME)-l4 $(PKGNAME)-l4-tis $(PKGNAME)-ux $(PKGNAME)-emu
 
 # the default relocation address. This may be superseded by a STATIC file.
-DEFAULT_RELOC	= 0x01700000
+DEFAULT_RELOC	= 0x01740000
 
 # list your .c files here
 SRC_C 	 	= server.c

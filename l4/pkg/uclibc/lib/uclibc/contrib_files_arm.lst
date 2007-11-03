@@ -9,7 +9,7 @@ libc/string/arm/strcmp.S
 libc/string/arm/strlen.S
 libc/string/arm/strncmp.S
 libc/string/generic/memmem.c
-libc/string/arm/mempcpy.c
+libc/string/generic/mempcpy.c
 libc/string/generic/memchr.c
 libc/string/generic/memcopy.h
 libc/string/generic/memrchr.c

@@ -56,9 +56,9 @@ protected:
 	CBEMsgBuffer(CBEMsgBuffer* src);
 
 public: // public methods
-	virtual CObject* Clone();
+	virtual CBEMsgBuffer* Clone();
 	virtual bool IsVariableSized(CMsgStructType nType);
-	virtual int GetCount(int nFEType, CMsgStructType nType);
+	virtual int GetCount(CBEFunction *pFunction, int nFEType, CMsgStructType nType);
 	virtual int GetCountAll(int nFEType, CMsgStructType nType);
 	virtual int GetPayloadOffset();
 	CBEMsgBufferType* GetType(CBEFunction *pFunction);

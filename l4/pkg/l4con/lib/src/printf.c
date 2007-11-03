@@ -36,12 +36,8 @@ printchar(char*arg, int c)
 }
 
 
-int 
-#ifdef USE_OSKIT
-vprintf(const char*format, oskit_va_list list)
-#else
+int
 vprintf(const char*format, va_list list)
-#endif
 {
   int i = 0;
 
@@ -59,12 +55,12 @@ vprintf(const char*format, va_list list)
 }
 
 
-int 
+int
 printf(const char *format,...)
 {
   va_list list;
   int err;
- 
+
   va_start(list, format);
   err=vprintf(format, list);
   va_end(list);
@@ -77,7 +73,7 @@ printf_flush(void)
 {}
 
 
-int 
+int
 fprintf(FILE *__stream, const char *format, ...)
 {
   va_list list;

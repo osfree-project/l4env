@@ -59,7 +59,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFERangeAttribute* Clone();
 
 	/** \brief retrieves the lower integer values of this attribute
 	 *  \return  the integer values of this attribute

@@ -50,15 +50,15 @@ CL4V4BENameFactory::~CL4V4BENameFactory()
  */
 string CL4V4BENameFactory::GetString(int nStringCode, void *pParam)
 {
-    switch (nStringCode)
-    {
-    case STR_INIT_RCVSTR_VARIABLE:
-	return GetInitRcvstrVariable();
-	break;
-    default:
-        break;
-    }
-    return CL4BENameFactory::GetString(nStringCode, pParam);
+	switch (nStringCode)
+	{
+	case STR_INIT_RCVSTR_VARIABLE:
+		return GetInitRcvstrVariable();
+		break;
+	default:
+		break;
+	}
+	return CL4BENameFactory::GetString(nStringCode, pParam);
 }
 
 /** \brief returns the variable name for the msgtag return variable of an IPC invocation
@@ -66,7 +66,7 @@ string CL4V4BENameFactory::GetString(int nStringCode, void *pParam)
  */
 string CL4V4BENameFactory::GetMsgTagVariable()
 {
-    return string("mr0");
+	return string("mr0");
 }
 
 /** \brief return the variable name for a temporary string length variable
@@ -74,7 +74,7 @@ string CL4V4BENameFactory::GetMsgTagVariable()
  */
 string CL4V4BENameFactory::GetInitRcvstrVariable()
 {
-    return string("_dice_str_len");
+	return string("_dice_str_len");
 }
 
 /** \brief create L4 specific type names
@@ -84,35 +84,35 @@ string CL4V4BENameFactory::GetInitRcvstrVariable()
  */
 string
 CL4V4BENameFactory::GetTypeName(int nType,
-    bool bUnsigned,
-    int nSize)
+	bool bUnsigned,
+	int nSize)
 {
-    string sReturn;
-    switch (nType)
-    {
-    case TYPE_FLEXPAGE:
-        sReturn = "L4_Fpage_t";
-        break;
-    case TYPE_RCV_FLEXPAGE:
-        sReturn = "L4_Fpage_t";
-        break;
-    case TYPE_MWORD:
-        if (bUnsigned)
-            sReturn = "L4_Word_t";
-        break;
-    case TYPE_MSGTAG:
-        sReturn = "L4_MsgTag_t";
-        break;
-    case TYPE_REFSTRING:
-        sReturn = "L4_StringItem_t";
-        break;
-    default:
-        break;
-    }
-    if (sReturn.empty())
-        sReturn = CBENameFactory::GetTypeName(nType, bUnsigned, nSize);
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	"CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
-	__func__, sReturn.c_str(), nType);
-    return sReturn;
+	string sReturn;
+	switch (nType)
+	{
+	case TYPE_FLEXPAGE:
+		sReturn = "L4_Fpage_t";
+		break;
+	case TYPE_RCV_FLEXPAGE:
+		sReturn = "L4_Fpage_t";
+		break;
+	case TYPE_MWORD:
+		if (bUnsigned)
+			sReturn = "L4_Word_t";
+		break;
+	case TYPE_MSGTAG:
+		sReturn = "L4_MsgTag_t";
+		break;
+	case TYPE_REFSTRING:
+		sReturn = "L4_StringItem_t";
+		break;
+	default:
+		break;
+	}
+	if (sReturn.empty())
+		sReturn = CBENameFactory::GetTypeName(nType, bUnsigned, nSize);
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4BENameFactory::%s Generated type name \"%s\" for type code %d\n",
+		__func__, sReturn.c_str(), nType);
+	return sReturn;
 }

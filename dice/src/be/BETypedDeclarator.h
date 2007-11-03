@@ -99,7 +99,7 @@ public:
 	CBEAttribute* FindIsAttribute(std::string sDeclName);
 	void AddAttribute(CFEAttribute *pFEAttribute);
 
-	virtual CObject* Clone();
+	virtual CBETypedDeclarator* Clone();
 
 	/** \brief sets the default initialization string
 	 *  \param sInitString the new initializatio string (may be empty)

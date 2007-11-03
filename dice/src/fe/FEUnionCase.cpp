@@ -67,7 +67,7 @@ CFEUnionCase::~CFEUnionCase()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEUnionCase::Clone()
+CFEUnionCase* CFEUnionCase::Clone()
 {
 	return new CFEUnionCase(this);
 }

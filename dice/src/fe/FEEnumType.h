@@ -61,7 +61,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEEnumType* Clone();
     virtual void Accept(CVisitor&);
 
 // atributes

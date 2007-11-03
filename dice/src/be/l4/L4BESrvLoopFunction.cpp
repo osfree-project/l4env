@@ -143,7 +143,7 @@ void CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComp
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	assert(pMsgBuffer);
 	CMsgStructType nType(GetReceiveDirection());
-	if ((pMsgBuffer->GetCount(TYPE_FLEXPAGE, nType) > 0) &&
+	if ((pMsgBuffer->GetCount(this, TYPE_FLEXPAGE, nType) > 0) &&
 		pEnv)
 	{
 		CBEDeclarator *pDecl = pEnv->m_Declarators.First();
@@ -151,11 +151,9 @@ void CL4BESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComp
 			pDecl->IncStars(1);
 		// set the call variables
 		if (m_pWaitAnyFunction)
-			m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(),
-				pDecl->GetStars(), pDecl->GetName());
+			m_pWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName());
 		if (m_pReplyAnyWaitAnyFunction)
-			m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(),
-				pDecl->GetStars(), pDecl->GetName());
+			m_pReplyAnyWaitAnyFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(), pDecl->GetName());
 	}
 }
 

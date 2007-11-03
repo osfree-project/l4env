@@ -67,7 +67,7 @@ public:
     virtual std::string GetName();
     virtual CFETypeSpec* GetType();
     bool Match(std::string sName);
-	virtual CObject* Clone();
+	virtual CFEConstDeclarator* Clone();
     virtual void Accept(CVisitor&);
 
 // attributes

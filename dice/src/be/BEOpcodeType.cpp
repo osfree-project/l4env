@@ -47,7 +47,7 @@ CBEOpcodeType::~CBEOpcodeType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEOpcodeType::Clone()
+CBEOpcodeType* CBEOpcodeType::Clone()
 {
 	return new CBEOpcodeType(this);
 }

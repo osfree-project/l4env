@@ -76,7 +76,7 @@ CFEExpression::~CFEExpression()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEExpression::Clone()
+CFEExpression* CFEExpression::Clone()
 {
 	return new CFEExpression(this);
 }

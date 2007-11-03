@@ -55,7 +55,7 @@ CL4V2BEMsgBuffer::~CL4V2BEMsgBuffer()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CL4V2BEMsgBuffer::Clone()
+CL4V2BEMsgBuffer* CL4V2BEMsgBuffer::Clone()
 {
 	return new CL4V2BEMsgBuffer(this);
 }
@@ -336,6 +336,7 @@ CL4V2BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile,
 
 	// get environment
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+	assert(pFunction);
 	CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
 	assert (pEnv);
 	string sEnv = pEnv->m_Declarators.First()->GetName();
@@ -347,7 +348,7 @@ CL4V2BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile,
 	// message buffer's receive window
 	pFile << "\t";
 	WriteAccess(pFile, pFunction, nType, pFlexpage);
-	if ((CMsgStructType::Generic != nType) && (GetCount(TYPE_FLEXPAGE, nType) == 0))
+	if ((CMsgStructType::Generic != nType) && (GetCount(pFunction, TYPE_FLEXPAGE, nType) == 0))
 		pFile << ".raw = 0;\n";
 	else
 		pFile << " = " << sEnv << "rcv_fpage;\n";

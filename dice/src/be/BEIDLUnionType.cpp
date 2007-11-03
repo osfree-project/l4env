@@ -51,7 +51,7 @@ CBEIDLUnionType::~CBEIDLUnionType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEIDLUnionType::Clone()
+CBEIDLUnionType* CBEIDLUnionType::Clone()
 {
 	return new CBEIDLUnionType(this);
 }

@@ -95,7 +95,7 @@ CFEInterface::CFEInterface(CFEInterface* src)
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEInterface::Clone()
+CFEInterface* CFEInterface::Clone()
 {
 	return new CFEInterface(this);
 }

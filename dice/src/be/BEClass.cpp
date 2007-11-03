@@ -531,7 +531,7 @@ void CBEClass::CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl)
 		// get function
 		string sName = string("_get_");
 		sName += (*iterD)->GetName();
-		CFETypeSpec *pFEType = static_cast<CFETypeSpec*>(pFEAttrDecl->GetType()->Clone());
+		CFETypeSpec *pFEType = pFEAttrDecl->GetType()->Clone();
 		CFEOperation *pFEOperation = new CFEOperation(pFEType, sName, 0);
 		pFEType->SetParent(pFEOperation);
 		// get parent interface
@@ -551,7 +551,7 @@ void CBEClass::CreateBackEndAttrDecl(CFEAttributeDeclarator *pFEAttrDecl)
 			vector<CFEAttribute*> *pFEAttributes = new vector<CFEAttribute*>();
 			pFEAttributes->push_back(pFEAttr);
 			pFEType = new CFESimpleType(TYPE_VOID);
-			CFETypeSpec *pFEParamType = static_cast<CFETypeSpec*>(pFEAttrDecl->GetType()->Clone());
+			CFETypeSpec *pFEParamType = pFEAttrDecl->GetType()->Clone();
 			CFEDeclarator *pFEParamDecl = new CFEDeclarator(DECL_IDENTIFIER,
 				(*iterD)->GetName().substr(0,1));
 			vector<CFEDeclarator*> *pFEParameters = new vector<CFEDeclarator*>();
@@ -2189,8 +2189,8 @@ CBETypedef* CBEClass::FindTypedef(string sTypeName, CBETypedef *pPrev)
 	/* look in functions */
 	vector<CBEFunction*>::iterator iterF;
 	for (iterF = m_Functions.begin();
-		 iterF != m_Functions.end();
-		 iterF++)
+		iterF != m_Functions.end();
+		iterF++)
 	{
 		if ((pMsgBuf = (*iterF)->FindTypedef(sTypeName, pPrev)) != 0)
 			return pMsgBuf;
@@ -2319,15 +2319,15 @@ bool CBEClass::HasFunctionWithUserType(string sTypeName, CBEFile* pFile)
  *  \return true if one such function could be found
  */
 bool CBEClass::HasParameterWithAttributes(ATTR_TYPE nAttribute1, ATTR_TYPE nAttribute2)
-	{
+{
 	vector<CBEFunction*>::iterator iter;
 	for (iter = m_Functions.begin();
 		iter != m_Functions.end();
 		iter++)
-		{
+	{
 		if ((*iter)->HasParameterWithAttributes(nAttribute1, nAttribute2))
 			return true;
-		}
+	}
 	// check base classes
 	vector<CBEClass*>::iterator iterC;
 	for (iterC = m_BaseClasses.begin();
@@ -2380,7 +2380,7 @@ bool CBEClass::HasMallocParameters()
 		iter++)
 	{
 		if ((*iter)->HasMallocParameters())
-				return true;
+			return true;
 	}
 	// check base classes
 	vector<CBEClass*>::iterator iterC;

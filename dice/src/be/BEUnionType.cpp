@@ -69,7 +69,7 @@ CBEUnionType::~CBEUnionType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEUnionType::Clone()
+CBEUnionType* CBEUnionType::Clone()
 {
 	return new CBEUnionType(this);
 }
@@ -335,41 +335,41 @@ int CBEUnionType::GetUnionCaseCount()
 }
 
 /** \brief writes the cast for this type
- *  \param pFile the file to write to
+ *  \param str the string to write to
  *  \param bPointer true if the cast should produce a pointer
  *
  * The cast of a union type is '(union tag)'.
  */
-void CBEUnionType::WriteCast(CBEFile& pFile, bool bPointer)
+void CBEUnionType::WriteCastToStr(std::string& str, bool bPointer)
 {
-    pFile << "(";
-    if (m_sTag.empty())
-    {
-	// no tag -> we need a typedef to save us
-	// the alias can be used for the cast
-	CBETypedef *pTypedef = GetTypedef();
-	assert(pTypedef);
-	// get first declarator (without stars)
-	vector<CBEDeclarator*>::iterator iterD;
-	for (iterD = pTypedef->m_Declarators.begin();
-	    iterD != pTypedef->m_Declarators.end();
-	    iterD++)
+	str += "(";
+	if (m_sTag.empty())
 	{
-	    if ((*iterD)->GetStars() <= (bPointer?1:0))
-		break;
+		// no tag -> we need a typedef to save us
+		// the alias can be used for the cast
+		CBETypedef *pTypedef = GetTypedef();
+		assert(pTypedef);
+		// get first declarator (without stars)
+		vector<CBEDeclarator*>::iterator iterD;
+		for (iterD = pTypedef->m_Declarators.begin();
+			iterD != pTypedef->m_Declarators.end();
+			iterD++)
+		{
+			if ((*iterD)->GetStars() <= (bPointer?1:0))
+				break;
+		}
+		assert(iterD != pTypedef->m_Declarators.end());
+		str +=  (*iterD)->GetName();
+		if (bPointer && ((*iterD)->GetStars() == 0))
+			str += "*";
 	}
-        assert(iterD != pTypedef->m_Declarators.end());
-	pFile << (*iterD)->GetName();
-        if (bPointer && ((*iterD)->GetStars() == 0))
-	    pFile << "*";
-    }
-    else
-    {
-	pFile << m_sName << " " << m_sTag;
-        if (bPointer)
-	    pFile << "*";
-    }
-    pFile << ")";
+	else
+	{
+		str += m_sName + " " + m_sTag;
+		if (bPointer)
+			str += "*";
+	}
+	str += ")";
 }
 
 /** \brief write the zero init code for a union

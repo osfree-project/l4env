@@ -64,18 +64,13 @@ CBEMarshaller::CBEMarshaller()
 
 /** destroys the object */
 CBEMarshaller::~CBEMarshaller()
-{
-}
+{ }
 
 /** \brief adds local variables to a function
  *  \param pFunction the function to add the variables to
- *  \return true if successful
  */
-bool
-CBEMarshaller::AddLocalVariable(CBEFunction*)
-{
-	return true;
-}
+void CBEMarshaller::AddLocalVariable(CBEFunction*)
+{ }
 
 /** \brief retrieve a reference to the struct member of the message buffer
  *  \param nType the type of the message buffer struct

@@ -93,7 +93,7 @@ CBETypedDeclarator::~CBETypedDeclarator()
 /** \brief create a copy of this object
  *  \return a reference to the clone
  */
-CObject* CBETypedDeclarator::Clone()
+CBETypedDeclarator* CBETypedDeclarator::Clone()
 {
 	return new CBETypedDeclarator(this);
 }
@@ -990,7 +990,7 @@ CBETypedDeclarator::CreateBackEnd(CBEType * pType,
 	assert(pType);
 	if (m_pType)
 		delete m_pType;
-	m_pType = (CBEType *) pType->Clone();
+	m_pType = pType->Clone();
 	m_pType->SetParent(this);
 	// do not need to call create, because original has been created before.
 

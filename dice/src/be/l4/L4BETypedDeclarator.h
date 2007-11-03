@@ -53,7 +53,7 @@ public: // Public methods
     virtual bool IsVariableSized();
     virtual bool IsFixedSized();
     virtual bool GetMaxSize(int & nSize, std::string sName = std::string());
-	virtual CObject* Clone();
+	virtual CL4BETypedDeclarator* Clone();
 };
 
 #endif

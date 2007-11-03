@@ -215,7 +215,7 @@ CBEDeclarator::~CBEDeclarator()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEDeclarator::Clone()
+CBEDeclarator* CBEDeclarator::Clone()
 {
 	return new CBEDeclarator(this);
 }

@@ -131,7 +131,7 @@ CFEFile::~CFEFile()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEFile::Clone()
+CFEFile* CFEFile::Clone()
 {
 	return new CFEFile(this);
 }

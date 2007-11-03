@@ -5,16 +5,11 @@
 fiasco \
 	-G $UXRES \
 	-l names \
+	-l l4io \
 	-l log \
 	-l dm_phys \
-	-l simple_ts \
 	-l l4dope \
-	-l fuxfprov \
-	-l loader \
     -l "name_server -e"\
     -l vc_server \
-    -l vc_test \
-    -l simple_file_server\
-    -d "/home/mp26/boot/ascii/bambi_godzila Mr_Pumpkin" \
-	-n9 "$@"\
+    -l vc_test
 

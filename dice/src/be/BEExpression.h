@@ -65,7 +65,7 @@ public:
     virtual int GetIntValue();
     virtual std::string GetStringValue();
     virtual bool IsOfType(int nFEType);
-	virtual CObject* Clone();
+	virtual CBEExpression* Clone();
     virtual void Write(CBEFile& pFile);
     virtual void WriteToStr(std::string &sStr);
 

@@ -44,61 +44,75 @@ CL4FiascoBEDispatchFunction::~CL4FiascoBEDispatchFunction()
  *
  * We use this function to add the message tag variable.
  */
-void
-CL4FiascoBEDispatchFunction::AddBeforeParameters()
+void CL4FiascoBEDispatchFunction::AddBeforeParameters()
 {
-    CL4BEDispatchFunction::AddBeforeParameters();
+	CL4BEDispatchFunction::AddBeforeParameters();
 
-    if (!m_sDefaultFunction.empty())
-    {
-	CBENameFactory *pNF = CBENameFactory::Instance();
-	std::string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-	std::string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
+	if (!m_sDefaultFunction.empty())
+	{
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		std::string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+		std::string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
 
-	CBEClassFactory *pCF = CBEClassFactory::Instance();
-	CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
-	m_Parameters.Add(pParameter);
-	pParameter->CreateBackEnd(sTagType, sTagVar, 1);
-    }
+		CBEClassFactory *pCF = CBEClassFactory::Instance();
+		CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
+		m_Parameters.Add(pParameter);
+		pParameter->CreateBackEnd(sTagType, sTagVar, 1);
+	}
 }
 
 /** \brief writes the default case if there is a default function
  *  \param pFile the file to write to
  */
-void
-CL4FiascoBEDispatchFunction::WriteDefaultCaseWithDefaultFunc(CBEFile& pFile)
+void CL4FiascoBEDispatchFunction::WriteDefaultCaseWithDefaultFunc(CBEFile& pFile)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	std::string sMsgBuffer = pNF->GetMessageBufferVariable();
 	std::string sObj = pNF->GetCorbaObjectVariable();
 	std::string sEnv = pNF->GetCorbaEnvironmentVariable();
 	std::string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
 
-    pFile << "\treturn " << m_sDefaultFunction << " (" << sObj <<
-	", " << sTagVar << ", " << sMsgBuffer << ", " << sEnv << ");\n";
+	pFile << "\treturn " << m_sDefaultFunction << " (" << sObj <<
+		", " << sTagVar << ", " << sMsgBuffer << ", " << sEnv << ");\n";
+}
+
+/** \brief write the L4 specific code when setting the opcode exception in \
+ *         the message buffer
+ *  \param pFile the file to write to
+ *
+ * If we have a wrong opcode, then we have to send a reply to the client that
+ * is an exception and fits (currently) into a short IPC.
+ */
+void CL4FiascoBEDispatchFunction::WriteSetWrongOpcodeException(CBEFile& pFile)
+{
+	// first call base class
+	CL4BEDispatchFunction::WriteSetWrongOpcodeException(pFile);
+	// set short IPC
+	CL4FiascoBEMsgBuffer *pMsgBuffer = dynamic_cast<CL4FiascoBEMsgBuffer*>(GetMessageBuffer());
+	assert(pMsgBuffer);
+	pMsgBuffer->WriteDopeShortInitialization(pFile, TYPE_MSGDOPE_SEND, CMsgStructType::Generic);
 }
 
 /** \brief writes the decalaration of the default function
  *  \param pFile the file to write to
  */
-void
-CL4FiascoBEDispatchFunction::WriteDefaultFunctionDeclaration(CBEFile& pFile)
+void CL4FiascoBEDispatchFunction::WriteDefaultFunctionDeclaration(CBEFile& pFile)
 {
-    // add declaration of default function
-    if (m_sDefaultFunction.empty())
-	return;
+	// add declaration of default function
+	if (m_sDefaultFunction.empty())
+		return;
 
-    pFile << "\n/* CL4FiascoBEDispatchFunction::WriteDefaultFunctionDeclaration */\n";
-    // get the class' message buffer to get the correct type
-    CBEClass *pClass = GetSpecificParent<CBEClass>();
-    assert(pClass);
-    CBEMsgBuffer *pMsgBuffer = pClass->GetMessageBuffer();
-    assert(pMsgBuffer);
+	// get the class' message buffer to get the correct type
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	CBEMsgBuffer *pMsgBuffer = pClass->GetMessageBuffer();
+	assert(pMsgBuffer);
 	std::string sMsgBufferType = pMsgBuffer->m_Declarators.First()->GetName();
-    CBENameFactory *pNF = CBENameFactory::Instance();
+	CBENameFactory *pNF = CBENameFactory::Instance();
 	std::string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
-    // int \<name\>(\<corba object\>, \<msg buffer type\>*,
-    //              \<corba environment\>*)
-    pFile << "int " << m_sDefaultFunction << " (CORBA_Object, " << sTagType <<
-	"*, " << sMsgBufferType << "*, CORBA_Server_Environment*);\n";
+	// int \<name\>(\<corba object\>, \<msg buffer type\>*,
+	//              \<corba environment\>*)
+	pFile << "int " << m_sDefaultFunction << " (CORBA_Object, " << sTagType <<
+		"*, " << sMsgBufferType << "*, CORBA_Server_Environment*);\n";
 }
+

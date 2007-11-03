@@ -67,7 +67,7 @@ CBEConstant::~CBEConstant()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEConstant::Clone()
+CBEConstant* CBEConstant::Clone()
 {
 	return new CBEConstant(this);
 }

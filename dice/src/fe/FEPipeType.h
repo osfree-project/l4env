@@ -53,7 +53,7 @@ protected:
     CFEPipeType(CFEPipeType* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFEPipeType* Clone();
 
 // attributes
 protected:

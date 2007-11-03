@@ -219,13 +219,6 @@ FAQ
    you have to open these file descriptors manually.  You might want
    to consult the examples in l4/l4vfs/term_server/examples/.
 
- * I'm starting my programs with the loader and they simply don't
-   startup. Why?
-
-   The problem is, that the name_server must by started via RMGR, as
-   its client-lib uses RMGR functions to get the task_id.  Don't start
-   the name_server with loader.
-
 
 Current Stuff
 =============

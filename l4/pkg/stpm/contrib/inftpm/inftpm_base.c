@@ -284,8 +284,7 @@ static struct miscdevice tpm_dev = {
 static int __init
 tpm_mod_init(void)
 {
-	if (!pci_register_driver(&tpm_pci_driver)) {
-		error("unable to pci_register");
+	if (pci_register_driver(&tpm_pci_driver) || !tpm_data.unused) {
 		pci_unregister_driver(&tpm_pci_driver);
 		return -ENODEV;
         }

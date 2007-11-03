@@ -51,12 +51,13 @@ protected:
 
 public: // public methods
 	virtual int GetPayloadOffset();
-	virtual CObject* Clone();
-	virtual void WriteDopeShortInitialization(CBEFile& pFile, int nType,
-		CMsgStructType nStructType);
+	virtual CL4FiascoBEMsgBuffer* Clone();
+	virtual void WriteDopeShortInitialization(CBEFile& pFile, int nType, CMsgStructType nStructType);
 	virtual int GetMemberPosition(std::string sName, CMsgStructType nType);
+	virtual bool HasProperty(int nProperty, CMsgStructType nType);
 
 protected: // protected methods
+	virtual void PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation);
 	virtual void WriteRefstringInitParameter(CBEFile& pFile,
 		CBEFunction *pFunction, CBETypedDeclarator *pMember, int nIndex,
 		CMsgStructType nType);
@@ -68,6 +69,14 @@ protected: // protected methods
 
 	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction,	CBEStructType *pStruct);
 	virtual void AddGenericStruct(CBEFunction *pFunction, CFEOperation *pFEOperation);
+
+	bool IsUtcb();
+
+protected:
+	/** \var bool m_bIsUtcb
+	 *  \brief cached value if this message buffer fits into UTCB IPC
+	 */
+	bool m_bIsUtcb;
 };
 
 #endif

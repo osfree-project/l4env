@@ -8,12 +8,14 @@ fiasco \
 	-l log \
 	-l dm_phys \
 	-l l4io \
-	-l simple_ts \
 	-l l4dope \
 	-l fuxfprov \
-	-l loader \
-    -l name_server \
+	-l "fstab -c /tty -v 1000 -b / -m /tty" \
+	-l bmodfs \
+	   -d $L4PATH/rl_ex \
+	   -d $CFGPATH/rl_ex.cfg \
+	-l "loader --fprov=BMODFS rl_ex.cfg" \
+    -l "name_server"\
     -l vc_server \
-    -l rl_ex \
 	-n10 "$@"\
 

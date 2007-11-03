@@ -58,7 +58,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEUserDefinedType* Clone();
     virtual void Accept(CVisitor&);
     virtual std::string GetName();
     virtual bool Ignore();

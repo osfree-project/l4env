@@ -75,7 +75,7 @@ protected:
     CFEEndPointAttribute(CFEEndPointAttribute* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFEEndPointAttribute* Clone();
 
 // attributes
 public:

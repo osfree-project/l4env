@@ -54,7 +54,7 @@ CFEUserDefinedExpression::~CFEUserDefinedExpression()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEUserDefinedExpression::Clone()
+CFEUserDefinedExpression* CFEUserDefinedExpression::Clone()
 {
 	return new CFEUserDefinedExpression(this);
 }

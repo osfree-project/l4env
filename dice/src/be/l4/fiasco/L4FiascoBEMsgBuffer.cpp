@@ -33,19 +33,23 @@
 #include "be/BEFile.h"
 #include "be/BESrvLoopFunction.h"
 #include "be/BEStructType.h"
+#include "be/BEUserDefinedType.h"
 #include "be/BEAttribute.h"
 #include "be/BEDeclarator.h"
+#include "be/BERoot.h"
 #include "TypeSpec-Type.h"
 #include "Compiler.h"
 #include "Error.h"
 #include <cassert>
 
 CL4FiascoBEMsgBuffer::CL4FiascoBEMsgBuffer()
- : CL4BEMsgBuffer()
+ : CL4BEMsgBuffer(),
+	m_bIsUtcb(false)
 { }
 
 CL4FiascoBEMsgBuffer::CL4FiascoBEMsgBuffer(CL4FiascoBEMsgBuffer* src)
- : CL4BEMsgBuffer(src)
+ : CL4BEMsgBuffer(src),
+	m_bIsUtcb(src->m_bIsUtcb)
 { }
 
 /** destroys the object */
@@ -55,7 +59,7 @@ CL4FiascoBEMsgBuffer::~CL4FiascoBEMsgBuffer()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CL4FiascoBEMsgBuffer::Clone()
+CL4FiascoBEMsgBuffer* CL4FiascoBEMsgBuffer::Clone()
 {
 	return new CL4FiascoBEMsgBuffer(this);
 }
@@ -93,6 +97,12 @@ void CL4FiascoBEMsgBuffer::AddPlatformSpecificMembers(CBEFunction *pFunction, CB
  */
 int CL4FiascoBEMsgBuffer::GetPayloadOffset()
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CL4FiascoBEMsgBuffer::GetPayloadOffset called\n");
+
+	if (IsUtcb())
+		return 0;
+
 	CBESizes *pSizes = CCompiler::GetSizes();
 	int nPage = pSizes->GetSizeOfType(TYPE_RCV_FLEXPAGE);
 	int nDope = pSizes->GetSizeOfType(TYPE_MSGDOPE_SEND);
@@ -127,6 +137,95 @@ void CL4FiascoBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation
 		return;
 
 	CL4BEMsgBuffer::AddGenericStruct(pFunction, pFEOperation);
+}
+
+/** \brief the post-create (and post-sort) step during creation
+ *  \param pFunction the function owning this message buffer
+ *  \param pFEOperation the front-end reference operation
+ *  \return true if successful
+ *
+ * If this is a utcb IPC message buffer we remove the size and send dope and
+ * the receive flexpage.
+ *
+ * We also have to do the check if this is a UTCB IPC here, using a function
+ * that dynamically checks on each invocation will cause an recursive loop
+ * because it uses function which then again use IsUtcb and so on.
+ *
+ * For the fiasco back-end we migrate slowly to fully using UTCBs:
+ * # first only direct items are supported in the UTCB, thus we check here if
+ *   the message buffer is smaller than the desired UTCB size and if it has no
+ *   refstrings nor flexpages.
+ * # second, when typed items are supported in the UTCB, we use the same
+ *   conversion functions as the V4 backend, which are already present in the
+ *   L4 generic message buffer
+ *
+ * For the first step we get the size of the maximum size of the message
+ * buffer and compare it to the size of the UTCB area. Then we check for
+ * members with ATTR_REF and with type FLEXPAGE.
+ */
+void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation)
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CL4FiascoBEMsgBuffer::PostCreate called\n");
+
+	CL4BEMsgBuffer::PostCreate(pFunction, pFEOperation);
+
+	// detecting if this message buffer fits into a UTCB for IPC
+	int nMaxSize = 0;
+	GetMaxSize(nMaxSize);
+	nMaxSize -= GetPayloadOffset();
+
+	CBESizes *pSizes = CCompiler::GetSizes();
+	int nUtcbSize = pSizes->GetSizeOfType(TYPE_UTCB);
+	if (0 < nMaxSize && nMaxSize < nUtcbSize &&
+		// if using generic as struct type, all types are counted
+		GetCountAll(TYPE_FLEXPAGE, CMsgStructType::Generic) == 0)
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"CL4FiascoBEMsgBuffer::PostCreate: size fits and no flexpages, testing ref\n");
+		bool bRefFound = false;
+		CBEStructType *pStruct = GetStruct(CMsgStructType::In);
+		if (pStruct && pStruct->FindMemberAttribute(ATTR_REF))
+			bRefFound = true;
+		pStruct = GetStruct(CMsgStructType::Out);
+		if (pStruct && pStruct->FindMemberAttribute(ATTR_REF))
+			bRefFound = true;
+		pStruct = GetStruct(CMsgStructType::Exc);
+		if (pStruct && pStruct->FindMemberAttribute(ATTR_REF))
+			bRefFound = true;
+		m_bIsUtcb = !bRefFound;
+		m_bIsUtcb = false;
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"CL4FiascoBEMsgBuffer::PostCreate: m_bIsUtcb is now %s\n", m_bIsUtcb ? "true" : "false");
+	}
+
+	if (m_bIsUtcb)
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"CL4FiascoBEMsgBuffer::PostCreate: removing superfluous members\n");
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		CMsgStructType nType(CMsgStructType::Generic);
+		for (; CMsgStructType::Max != nType; ++nType)
+		{
+			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+				"CL4FiascoBEMsgBuffer::PostCreate: checking struct for dir %d\n", (int)nType);
+			CBEStructType *pStruct = GetStruct(pFunction, nType);
+			if (!pStruct)
+				continue;
+			// remove receive flexpage
+			string sName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
+			CBETypedDeclarator *pMember = FindMember(sName, pFunction, nType);
+			pStruct->m_Members.Remove(pMember);
+			// remove size dope
+			sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SIZE);
+			pMember = FindMember(sName, pFunction, nType);
+			pStruct->m_Members.Remove(pMember);
+			// remove send dope
+			sName = pNF->GetMessageBufferMember(TYPE_MSGDOPE_SEND);
+			pMember = FindMember(sName, pFunction, nType);
+			pStruct->m_Members.Remove(pMember);
+		}
+	}
 }
 
 /** \brief writes the initialisation of a refstring member with the init func
@@ -176,11 +275,9 @@ bool CL4FiascoBEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile, CBEFunctio
 		CBEDeclarator *pEnv = pEnvVar->m_Declarators.First();
 		// call the init function for the indirect string
 		pFile << "\t" << sFunction << " ( " << nIndex << ", &(";
-		WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
-			nIndex);
+		WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING, nIndex);
 		pFile << ".rcv_str), &(";
-		WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING,
-			nIndex);
+		WriteMemberAccess(pFile, pFunction, nType, TYPE_REFSTRING, nIndex);
 		pFile << ".rcv_size), " << pEnv->GetName() << ");\n";
 
 		// OK, next!
@@ -288,13 +385,16 @@ void CL4FiascoBEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile, int nTyp
 	{
 		return;
 	}
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CL4FiascoBEMsgBuffer::WriteDopeShortInitialization called\n");
+	if (IsUtcb())
+		return;
 
 	// get name of member
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetMessageBufferMember(nType);
 	// get member
 	CBETypedDeclarator *pMember = FindMember(sName, nStructType);
-	// check if we have member of that type
 	if (!pMember)
 		return;
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -309,6 +409,51 @@ void CL4FiascoBEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile, int nTyp
 	pFile << " = L4_IPC_DOPE(" << nMinSize / nWordSize << ", 0);\n";
 }
 
+/** \brief test if the message buffer has a certain property
+ *  \param nProperty the property to test for
+ *  \param nType the type of the message buffer struct
+ *  \return true if property is available for direction
+ *
+ * This implementation checks the short IPC property.
+ */
+bool CL4FiascoBEMsgBuffer::HasProperty(int nProperty, CMsgStructType nType)
+{
+	if (nProperty == MSGBUF_PROP_UTCB_IPC)
+		return IsUtcb();
+	return CL4BEMsgBuffer::HasProperty(nProperty, nType);
+}
+
+/** \brief return if message buffer fits into UTCB
+ *  \return true if it fits
+ *
+ * We use a cached value here, because otherwise the IsUtcb call would be
+ * recursive and cause an endless loop. Thus, do the detection once in
+ * PostCreate and then stor it.
+ */
+bool CL4FiascoBEMsgBuffer::IsUtcb()
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CL4FiascoBEMsgBuffer::IsUtcb() called for msgbuf @ %p\n",
+		this);
+
+	CBEType *pBaseType = CBETypedef::GetType();
+	CBEUserDefinedType *pUserType = dynamic_cast<CBEUserDefinedType*>(pBaseType);
+	if (pUserType)
+	{
+		CBERoot *pRoot = pUserType->GetSpecificParent<CBERoot>();
+		assert(pRoot);
+		CL4FiascoBEMsgBuffer *pMsgBuf = dynamic_cast<CL4FiascoBEMsgBuffer*>(
+			pRoot->FindTypedef(pUserType->GetName()));
+		if (pMsgBuf)
+			return pMsgBuf->IsUtcb();
+	}
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CL4FiascoBEMsgBuffer::IsUtcb: returns %s\n",
+		m_bIsUtcb ? "true" : "false");
+	return m_bIsUtcb;
+}
+
 /** \brief writes the initialization of the receive flexpage
  *  \param pFile the file to write to
  *  \param nType the type of the message buffer struct
@@ -320,6 +465,12 @@ void CL4FiascoBEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile, int nTyp
  */
 void CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgStructType nType)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(%s, %d) called\n",
+		pFile.GetFileName().c_str(), (int)nType);
+	if (IsUtcb())
+		return;
+
 	// get receive flexpage member
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sFlexName = pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE);
@@ -329,6 +480,7 @@ void CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgSt
 
 	// get environment
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+	assert(pFunction);
 	CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
 	assert (pEnv);
 	string sEnv = pEnv->m_Declarators.First()->GetName();
@@ -340,7 +492,8 @@ void CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgSt
 	// message buffer's receive window
 	pFile << "\t";
 	WriteAccess(pFile, pFunction, nType, pFlexpage);
-	if ((CMsgStructType::Generic != nType) && (GetCount(TYPE_FLEXPAGE, nType) == 0))
+	if (CMsgStructType::Generic != nType &&
+		GetCount(pFunction, TYPE_FLEXPAGE, nType) == 0)
 		pFile << ".raw = 0;\n";
 	else
 		pFile << " = " << sEnv << "rcv_fpage;\n";

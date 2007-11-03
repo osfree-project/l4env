@@ -56,7 +56,7 @@ protected:
 
 	// Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEStringAttribute* Clone();
 
 	/** retrieves the contained string
 	 *  \return a reference to the string, which is parameter of this attribute

@@ -58,7 +58,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEIntAttribute* Clone();
 
 	/** \brief retrieves the integer values of this attribute
 	 *  \return  the integer values of this attribute

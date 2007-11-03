@@ -97,7 +97,7 @@ CBEExpression::~CBEExpression()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEExpression::Clone()
+CBEExpression* CBEExpression::Clone()
 {
 	return new CBEExpression(this);
 }

@@ -78,7 +78,9 @@ CL4V4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 	// after the opcode, which is in the tag as well
 	CBEOperationFunction::WriteMarshalling(pFile);
 	// set dopes
-	CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	CBEMsgBuffer *pMsgBuffer = IsComponentSide() ? pClass->GetMessageBuffer() : GetMessageBuffer();
 	assert(pMsgBuffer);
 	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, GetSendDirection());
 

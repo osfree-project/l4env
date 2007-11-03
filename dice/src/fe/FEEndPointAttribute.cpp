@@ -45,7 +45,7 @@ CFEEndPointAttribute::~CFEEndPointAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEEndPointAttribute::Clone()
+CFEEndPointAttribute* CFEEndPointAttribute::Clone()
 {
 	return new CFEEndPointAttribute(this);
 }

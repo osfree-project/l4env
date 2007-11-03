@@ -50,7 +50,7 @@ CFEPtrDefaultAttribute::~CFEPtrDefaultAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEPtrDefaultAttribute::Clone()
+CFEPtrDefaultAttribute* CFEPtrDefaultAttribute::Clone()
 {
 	return new CFEPtrDefaultAttribute(this);
 }

@@ -54,7 +54,7 @@ protected:
     CBEOpcodeType(CBEOpcodeType* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CBEOpcodeType* Clone();
     virtual void CreateBackEnd();
 };
 

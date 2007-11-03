@@ -68,7 +68,7 @@ CBEObject::~CBEObject()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEObject::Clone()
+CBEObject* CBEObject::Clone()
 {
 	return new CBEObject(this);
 }

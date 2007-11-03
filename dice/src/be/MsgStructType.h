@@ -42,7 +42,7 @@ public:
 	/** \enum Type
 	 *  \brief contains the valid message buffer struct types
 	 */
-	enum Type { Generic, In, Out, Exc };
+	enum Type { Generic, In, Out, Exc, Max };
 
 	/** \brief constructor
 	 *  \param type a message buffer struct type initializer
@@ -98,6 +98,31 @@ public:
 			break;
 		}
 		return DIRECTION_NONE;
+	}
+
+	/** \brief iteration operator
+	 *  \return reference on self
+	 */
+	CMsgStructType& operator++ ()
+	{
+		switch (nType)
+		{
+		case Generic:
+			nType = In;
+			break;
+		case In:
+			nType = Out;
+			break;
+		case Out:
+			nType = Exc;
+			break;
+		case Exc:
+			nType = Max;
+			break;
+		case Max:
+			nType = Generic;
+		}
+		return *this;
 	}
 
 	friend bool operator== (const CMsgStructType&, const CMsgStructType&);

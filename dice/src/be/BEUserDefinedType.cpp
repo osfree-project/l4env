@@ -59,7 +59,7 @@ CBEUserDefinedType::~CBEUserDefinedType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEUserDefinedType::Clone()
+CBEUserDefinedType* CBEUserDefinedType::Clone()
 {
 	return new CBEUserDefinedType(this);
 }

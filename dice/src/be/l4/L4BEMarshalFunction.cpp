@@ -69,7 +69,9 @@ void CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 		m_bTraceOn = bLocalTrace = true;
 	}
 
-	CBEMsgBuffer *pMsgBuffer = m_pClass->GetMessageBuffer();
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	CBEMsgBuffer *pMsgBuffer = IsComponentSide() ? pClass->GetMessageBuffer() : GetMessageBuffer();
 	CMsgStructType nType(GetSendDirection());
 	bool bSendFpages = GetParameterCount(TYPE_FLEXPAGE, GetSendDirection()) > 0;
 	if (bSendFpages)
@@ -104,8 +106,7 @@ void CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 		// clear exception
 		pFile << "\t" << sFreeFunc << "(" << sEnv << ");\n";
 		// set send dope
-		pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-			nType);
+		pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, nType);
 		// write return (don't marshal any parameters if exception)
 		WriteReturn(pFile);
 		--pFile << "\t}\n";
@@ -114,14 +115,12 @@ void CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
 		CBEMarshalFunction::WriteMarshalling(pFile);
 
 	// set send dope
-	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND,
-		nType);
+	pMsgBuffer->WriteInitialization(pFile, this, TYPE_MSGDOPE_SEND, nType);
 	// if we had send flexpages,we have to set the flexpage bit
 	if (bSendFpages)
 	{
 		pFile << "\t";
-		pMsgBuffer->WriteMemberAccess(pFile, this, nType,
-			TYPE_MSGDOPE_SEND, 0);
+		pMsgBuffer->WriteMemberAccess(pFile, this, nType, TYPE_MSGDOPE_SEND, 0);
 		pFile << ".md.fpage_received = 1;\n";
 	}
 
@@ -138,8 +137,7 @@ void CL4BEMarshalFunction::WriteMarshalling(CBEFile& pFile)
  */
 bool CL4BEMarshalFunction::HasVariableSizedParameters(DIRECTION_TYPE nDirection)
 {
-	bool bRet =
-		CBEMarshalFunction::HasVariableSizedParameters(nDirection);
+	bool bRet = CBEMarshalFunction::HasVariableSizedParameters(nDirection);
 	bool bFixedNumberOfFlexpages = true;
 	CBEClass *pClass = GetSpecificParent<CBEClass>();
 	assert(pClass);

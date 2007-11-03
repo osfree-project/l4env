@@ -60,7 +60,7 @@ public:
 
 public:
     virtual CFEExpression* GetInitialValue();
-	virtual CObject* Clone();
+	virtual CFEEnumDeclarator* Clone();
 
 protected:
     /** \var CFEExpression* m_pInitialValue

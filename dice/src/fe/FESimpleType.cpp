@@ -74,7 +74,7 @@ CFESimpleType::~CFESimpleType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFESimpleType::Clone()
+CFESimpleType* CFESimpleType::Clone()
 {
 	return new CFESimpleType(this);
 }

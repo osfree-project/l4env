@@ -57,7 +57,7 @@ public:
     /** \brief creates a copy of this object
      *  \return reference to new instance
      */
-    CObject* Clone()
+    CIncludeStatement* Clone()
     { return new CIncludeStatement(*this); }
 
     /** \brief tries to make a simple match

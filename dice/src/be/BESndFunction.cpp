@@ -131,15 +131,13 @@ CBESndFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
  * This implementation adds the return value to the parameter list. The return
  * value is the value returned by the component-function.
  */
-void
-CBESndFunction::AddBeforeParameters()
+void CBESndFunction::AddBeforeParameters()
 {
 	CBEOperationFunction::AddBeforeParameters();
 
 	if (!GetReturnType()->IsVoid())
 	{
-		CBETypedDeclarator *pReturn =
-			(CBETypedDeclarator*)GetReturnVariable()->Clone();
+		CBETypedDeclarator *pReturn = GetReturnVariable()->Clone();
 		ATTR_TYPE nAttr = !IsComponentSide() ? ATTR_IN : ATTR_OUT;
 		if (!pReturn->m_Attributes.Find(nAttr))
 		{

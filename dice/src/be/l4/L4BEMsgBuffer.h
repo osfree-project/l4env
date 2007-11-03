@@ -47,8 +47,9 @@ public:
 	 */
 	enum
 	{
-		MSGBUF_PROP_SHORT_IPC = 1, /**< check if short IPC can be used */
-		MSGBUF_L4_MAX,             /**< maximum value */
+		MSGBUF_PROP_SHORT_IPC = 1,	/**< check if short IPC can be used */
+		MSGBUF_PROP_UTCB_IPC  = 2,	/**< check if UTCB IPC can be used */
+		MSGBUF_L4_MAX,				/**< maximum value */
 	};
 
 protected:
@@ -60,7 +61,7 @@ protected:
 public: // public methods
 	virtual void WriteInitialization(CBEFile& pFile, CBEFunction *pFunction,
 		int nType, CMsgStructType nStructType);
-	virtual CObject* Clone();
+	virtual CL4BEMsgBuffer* Clone();
 	virtual bool HasWordMembers(CBEFunction *pFunction, CMsgStructType nType);
 	virtual bool HasProperty(int nProperty, CMsgStructType nType);
 
@@ -99,6 +100,11 @@ protected: // protected methods
 	virtual int GetMemberSize(int nType, CBETypedDeclarator *pMember, bool bMax);
 
 	virtual void AddGenericStructMembersClass(CBEStructType *pStruct);
+
+	virtual void CheckConvertStruct(CBEStructType *pStruct);
+	virtual CBETypedDeclarator* CheckConvertMember(CBEStructType *pStruct,
+		vector<CBETypedDeclarator*>::iterator iter);
+	virtual void ConvertMember(CBETypedDeclarator* pMember);
 };
 
 #endif

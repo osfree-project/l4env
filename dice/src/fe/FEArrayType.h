@@ -57,7 +57,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEArrayType* Clone();
     virtual CFEExpression* GetBound();
     virtual CFETypeSpec* GetBaseType();
     virtual void Accept(CVisitor&);

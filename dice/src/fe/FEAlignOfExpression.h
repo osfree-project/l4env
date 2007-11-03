@@ -43,7 +43,7 @@ protected:
     CFEAlignOfExpression(CFEAlignOfExpression* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFEAlignOfExpression* Clone();
     virtual std::string ToString();
     virtual CFETypeSpec* GetSizeOfType();
     virtual CFEExpression* GetSizeOfExpression();

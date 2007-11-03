@@ -76,7 +76,7 @@ CBEStructType::~CBEStructType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEStructType::Clone()
+CBEStructType* CBEStructType::Clone()
 {
 	return new CBEStructType(this);
 }
@@ -804,14 +804,14 @@ bool CBEStructType::HasTag(string sTag)
 }
 
 /** \brief writes a cast of this type
- *  \param pFile the file to write to
+ *  \param str the string to write to
  *  \param bPointer true if the cast should produce a pointer
  *
  * A struct cast is '(struct tag)'.
  */
-void CBEStructType::WriteCast(CBEFile& pFile, bool bPointer)
+void CBEStructType::WriteCastToStr(std::string& str, bool bPointer)
 {
-	pFile << "(";
+	str += "(";
 	if (m_sTag.empty())
 	{
 		// no tag -> we need a typedef to save us
@@ -828,17 +828,17 @@ void CBEStructType::WriteCast(CBEFile& pFile, bool bPointer)
 				break;
 		}
 		assert(iterD != pTypedef->m_Declarators.end());
-		pFile << (*iterD)->GetName();
+		str += (*iterD)->GetName();
 		if (bPointer && ((*iterD)->GetStars() == 0))
-			pFile << "*";
+			str += "*";
 	}
 	else
 	{
-		pFile << m_sName << " " << m_sTag;
+		str += m_sName + " " + m_sTag;
 		if (bPointer)
-			pFile << "*";
+			str += "*";
 	}
-	pFile << ")";
+	str += ")";
 }
 
 /** \brief allows to access tag member

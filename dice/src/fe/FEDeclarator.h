@@ -75,7 +75,7 @@ public:
 
 // operations
 public:
-	virtual CObject* Clone();
+	virtual CFEDeclarator* Clone();
     void SetBitfields(int nBitfields);
     int GetBitfields();
     DECL_TYPE GetType();

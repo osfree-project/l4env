@@ -49,6 +49,7 @@ public:
     ~CL4FiascoBEDispatchFunction();
 
 protected:
+    virtual void WriteSetWrongOpcodeException(CBEFile& pFile);
     virtual void WriteDefaultCaseWithDefaultFunc(CBEFile& pFile);
     virtual void WriteDefaultFunctionDeclaration(CBEFile& pFile);
 

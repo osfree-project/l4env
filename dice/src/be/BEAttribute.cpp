@@ -138,7 +138,7 @@ CBEAttribute::~CBEAttribute()
 /** \brief create a copy of this object
  *  \return a reference to the clone
  */
-CObject* CBEAttribute::Clone()
+CBEAttribute* CBEAttribute::Clone()
 {
 	return new CBEAttribute(this);
 }
@@ -413,7 +413,7 @@ void CBEAttribute::CreateBackEndIs(CFEIsAttribute * pFEIsAttribute)
 		{
 			pDeclarator = pParameter->m_Declarators.Find(sName);
 			assert(pDeclarator);
-			CBEDeclarator *pNew = static_cast<CBEDeclarator*>(pDeclarator->Clone());
+			CBEDeclarator *pNew = pDeclarator->Clone();
 			AddIsParameter(pNew);
 		}
 		if (!pDeclarator)

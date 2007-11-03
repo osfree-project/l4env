@@ -59,7 +59,7 @@ protected:
 // Operations
 public:
     virtual CFETypeSpec* GetType();
-	virtual CObject* Clone();
+	virtual CFETypeAttribute* Clone();
 
 // attributes
 protected:

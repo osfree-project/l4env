@@ -46,7 +46,7 @@ CL4V4BESizes::~CL4V4BESizes()
  */
 int CL4V4BESizes::GetMaxShortIPCSize()
 {
-    return 0;
+	return 0;
 }
 
 /** \brief gets the size of a type
@@ -56,17 +56,17 @@ int CL4V4BESizes::GetMaxShortIPCSize()
  */
 int CL4V4BESizes::GetSizeOfType(int nFEType, int nFESize)
 {
-    int nSize = 0;
-    switch (nFEType)
-    {
-    case TYPE_REFSTRING:
-	return 2 * GetSizeOfType(TYPE_MWORD, 4);
-	break;
-    default:
-	nSize = CL4BESizes::GetSizeOfType(nFEType, nFESize);
-	break;
-    }
-    return nSize;
+	int nSize = 0;
+	switch (nFEType)
+	{
+	case TYPE_REFSTRING:
+		return 2 * GetSizeOfType(TYPE_MWORD, 4);
+		break;
+	default:
+		nSize = CL4BESizes::GetSizeOfType(nFEType, nFESize);
+		break;
+	}
+	return nSize;
 }
 
 /** \brief try to determine the size of a user defined type based on its name
@@ -77,15 +77,15 @@ int CL4V4BESizes::GetSizeOfType(int nFEType, int nFESize)
  */
 int CL4V4BESizes::GetSizeOfType(string sUserType)
 {
-    if (sUserType == "L4_Fpage_t")
-	return GetSizeOfType(TYPE_FLEXPAGE, 0);
-    else if (sUserType == "L4_Word_t")
-	return GetSizeOfType(TYPE_MWORD, 0);
-    else if (sUserType == "L4_MsgTag_t")
-	return GetSizeOfType(TYPE_MSGTAG, 0);
-    else if (sUserType == "L4_StringItem_t")
-	return GetSizeOfType(TYPE_REFSTRING, 0);
-    return CL4BESizes::GetSizeOfType(sUserType);
+	if (sUserType == "L4_Fpage_t")
+		return GetSizeOfType(TYPE_FLEXPAGE, 0);
+	else if (sUserType == "L4_Word_t")
+		return GetSizeOfType(TYPE_MWORD, 0);
+	else if (sUserType == "L4_MsgTag_t")
+		return GetSizeOfType(TYPE_MSGTAG, 0);
+	else if (sUserType == "L4_StringItem_t")
+		return GetSizeOfType(TYPE_REFSTRING, 0);
+	return CL4BESizes::GetSizeOfType(sUserType);
 }
 
 /** \brief returns a value for the maximum  size of a specific type
@@ -94,15 +94,16 @@ int CL4V4BESizes::GetSizeOfType(string sUserType)
  */
 int CL4V4BESizes::GetMaxSizeOfType(int nFEType)
 {
-    int nSize = CBESizes::GetMaxSizeOfType(nFEType);
-    switch (nFEType)
-    {
-    case TYPE_MESSAGE:
-	nSize = 64 * GetSizeOfType(TYPE_MWORD); /* maximum of 2^19 dwords */
-	break;
-    default:
-        break;
-    }
-    return nSize;
+	int nSize = CBESizes::GetMaxSizeOfType(nFEType);
+	switch (nFEType)
+	{
+	case TYPE_MESSAGE:
+	case TYPE_UTCB:
+		nSize = 64 * GetSizeOfType(TYPE_MWORD); /* maximum of 64 dwords */
+		break;
+	default:
+		break;
+	}
+	return nSize;
 }
 

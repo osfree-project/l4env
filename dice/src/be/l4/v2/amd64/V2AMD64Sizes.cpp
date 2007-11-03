@@ -43,22 +43,22 @@ CL4V2AMD64BESizes::~CL4V2AMD64BESizes()
  */
 int CL4V2AMD64BESizes::GetSizeOfType(int nFEType, int nFESize)
 {
-    int nSize = 0;
-    switch (nFEType)
-    {
-    case TYPE_LONG:
-	if (nFESize >= 4)
-	    nSize = 8;
-	else
-	    nSize = CL4V2BESizes::GetSizeOfType(nFEType, nFESize);
-	break;
-    case TYPE_MWORD:
-	nSize = 8;
-	break;
-    default:
-	nSize = CL4V2BESizes::GetSizeOfType(nFEType, nFESize);
-	break;
-    }
-    return nSize;
+	int nSize = 0;
+	switch (nFEType)
+	{
+	case TYPE_LONG:
+		if (nFESize >= 4)
+			nSize = 8;
+		else
+			nSize = CL4V2BESizes::GetSizeOfType(nFEType, nFESize);
+		break;
+	case TYPE_MWORD:
+		nSize = 8;
+		break;
+	default:
+		nSize = CL4V2BESizes::GetSizeOfType(nFEType, nFESize);
+		break;
+	}
+	return nSize;
 }
 

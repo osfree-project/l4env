@@ -62,7 +62,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEFile* Clone();
     std::string GetFullFileName();
     bool IsStdIncludeFile();
     int GetTypedefCount(bool bCountIncludes = true);

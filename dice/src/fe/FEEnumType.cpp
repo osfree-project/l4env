@@ -55,7 +55,7 @@ CFEEnumType::~CFEEnumType()
 /** \brief create a copy of this object
  *  \return a reference to the clone
  */
-CObject* CFEEnumType::Clone()
+CFEEnumType* CFEEnumType::Clone()
 {
 	return new CFEEnumType(this);
 }

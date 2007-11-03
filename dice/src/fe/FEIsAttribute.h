@@ -62,7 +62,7 @@ protected:
     CFEIsAttribute(CFEIsAttribute* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFEIsAttribute* Clone();
 
 // attributes
 public:

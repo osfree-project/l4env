@@ -61,7 +61,7 @@ CL4BEMsgBufferType::~CL4BEMsgBufferType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CL4BEMsgBufferType::Clone()
+CL4BEMsgBufferType* CL4BEMsgBufferType::Clone()
 {
 	return new CL4BEMsgBufferType(this);
 }

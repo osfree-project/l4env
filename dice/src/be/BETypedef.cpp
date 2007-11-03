@@ -55,7 +55,7 @@ CBETypedef::~CBETypedef()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBETypedef::Clone()
+CBETypedef* CBETypedef::Clone()
 {
 	return new CBETypedef(this);
 }

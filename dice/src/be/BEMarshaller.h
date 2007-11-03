@@ -70,7 +70,7 @@ public:
 	virtual void MarshalValue(CBEFile& pFile, CBEFunction *pFunction,
 		CBETypedDeclarator *pParameter, int nValue);
 
-	virtual bool AddLocalVariable(CBEFunction *pFunction);
+	virtual void AddLocalVariable(CBEFunction *pFunction);
 
 protected:
 	CBEStructType* GetStruct(CMsgStructType& nType);

@@ -79,7 +79,7 @@ CFEOperation::~CFEOperation()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEOperation::Clone()
+CFEOperation* CFEOperation::Clone()
 {
 	return new CFEOperation(this);
 }

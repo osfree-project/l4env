@@ -82,7 +82,7 @@ protected:
     CFEIDLUnionType(CFEIDLUnionType* src); // copy constructor for tagged union
 
 public:
-	virtual CObject* Clone();
+	virtual CFEIDLUnionType* Clone();
 
 // attribute
 protected:

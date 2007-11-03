@@ -59,7 +59,7 @@ protected:
 
 //operations
 public:
-	virtual CObject* Clone();
+	virtual CFEAttribute* Clone();
     virtual ATTR_TYPE GetAttrType();
     bool Match(ATTR_TYPE type);
 

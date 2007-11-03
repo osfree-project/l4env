@@ -60,7 +60,7 @@ CFETypeSpec::~CFETypeSpec()
 /** \brief create a copy of this object
  *  \return a reference to the clone
  */
-CObject* CFETypeSpec::Clone()
+CFETypeSpec* CFETypeSpec::Clone()
 {
 	return new CFETypeSpec(this);
 }

@@ -48,7 +48,7 @@ protected:
 
 public:
 	virtual int GetPayloadOffset();
-	virtual CObject* Clone();
+	virtual CL4V4BEMsgBuffer* Clone();
 	virtual void PostCreate(CBEClass *pClass, CFEInterface *pFEInterface);
 	virtual void PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation);
 
@@ -71,10 +71,6 @@ protected:
 	virtual int GetWordMemberCountClass(void);
 
 	CBETypedDeclarator* GetMsgTagVariable();
-	virtual void CheckConvertStruct(CBEStructType *pStruct);
-	virtual CBETypedDeclarator* CheckConvertMember(CBEStructType *pStruct,
-		vector<CBETypedDeclarator*>::iterator iter);
-	virtual void ConvertMember(CBETypedDeclarator* pMember);
 
 	virtual void PadRefstringToPosition(CBEStructType *pStruct, int nPosition);
 	virtual void Sort(CBEStructType *pStruct);

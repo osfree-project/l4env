@@ -53,7 +53,7 @@ CFEBinaryExpression::~CFEBinaryExpression()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEBinaryExpression::Clone()
+CFEBinaryExpression* CFEBinaryExpression::Clone()
 {
 	return new CFEBinaryExpression(this);
 }

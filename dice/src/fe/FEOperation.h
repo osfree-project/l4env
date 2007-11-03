@@ -77,7 +77,7 @@ protected:
 public:
     virtual void Accept(CVisitor&);
     CFETypedDeclarator *FindParameter(std::string sName);
-	virtual CObject* Clone();
+	virtual CFEOperation* Clone();
 
     std::string GetName();
     CFETypeSpec* GetReturnType();

@@ -50,7 +50,7 @@ CFEFunctionDeclarator::~CFEFunctionDeclarator()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEFunctionDeclarator::Clone()
+CFEFunctionDeclarator* CFEFunctionDeclarator::Clone()
 {
 	return new CFEFunctionDeclarator(this);
 }

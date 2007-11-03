@@ -55,7 +55,7 @@ protected:
     CFETypeOfType(CFETypeOfType* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CFETypeOfType* Clone();
 
 // attributes
 protected:

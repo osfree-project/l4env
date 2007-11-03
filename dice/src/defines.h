@@ -55,7 +55,7 @@ using namespace std;
 #define CLONE_MEM(class, member) \
     if (src->member) \
     { \
-	member = static_cast<class*>(src->member->Clone()); \
+	member = src->member->Clone(); \
 	member->SetParent(this); \
     } \
     else \

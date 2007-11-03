@@ -65,7 +65,7 @@ protected:
 
 	// Methods
 public:
-	virtual CObject* Clone();
+	virtual CFEArrayDeclarator* Clone();
 	virtual void ReplaceUpperBound(unsigned int nIndex, CFEExpression * pUpper);
 	virtual void ReplaceLowerBound(unsigned int nIndex, CFEExpression * pLower);
 	virtual void RemoveBounds(unsigned int nIndex);

@@ -48,7 +48,7 @@ CFEConstructedType::~CFEConstructedType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEConstructedType::Clone()
+CFEConstructedType* CFEConstructedType::Clone()
 {
 	return new CFEConstructedType(this);
 }

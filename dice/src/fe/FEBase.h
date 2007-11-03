@@ -63,7 +63,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEBase* Clone();
     virtual std::string ToString();
 
     virtual CFEFile* GetRoot();

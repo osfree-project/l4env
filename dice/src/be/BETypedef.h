@@ -60,7 +60,7 @@ public:
     virtual void AddToHeader(CBEHeaderFile* pHeader);
     virtual void WriteDeclaration(CBEFile& pFile);
 
-	virtual CObject* Clone();
+	virtual CBETypedef* Clone();
 };
 
 #endif // !__DICE_BETYPEDEF_H__

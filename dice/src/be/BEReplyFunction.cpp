@@ -212,8 +212,7 @@ CBEReplyFunction::AddBeforeParameters()
 	if (!GetReturnType()->IsVoid())
 	{
 		CBETypedDeclarator *pReturn = GetReturnVariable();
-		CBETypedDeclarator *pReturnParam =
-			static_cast<CBETypedDeclarator*>(pReturn->Clone());
+		CBETypedDeclarator *pReturnParam = pReturn->Clone();
 		m_Parameters.Add(pReturnParam);
 	}
 }

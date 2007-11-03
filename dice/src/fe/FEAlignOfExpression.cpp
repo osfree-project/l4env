@@ -75,7 +75,7 @@ CFEAlignOfExpression::CFEAlignOfExpression(CFEAlignOfExpression* src)
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEAlignOfExpression::Clone()
+CFEAlignOfExpression* CFEAlignOfExpression::Clone()
 {
 	return new CFEAlignOfExpression(this);
 }

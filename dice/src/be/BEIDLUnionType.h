@@ -53,7 +53,7 @@ protected:
 
 public:
     virtual void CreateBackEnd(CFETypeSpec *pFEType);
-	virtual CObject* Clone();
+	virtual CBEIDLUnionType* Clone();
 
     CBETypedDeclarator* GetSwitchVariable();
     CBETypedDeclarator* GetUnionVariable();

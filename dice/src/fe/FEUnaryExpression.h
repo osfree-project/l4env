@@ -113,7 +113,7 @@ protected:
 
 // Operators
 public:
-	virtual CObject* Clone();
+	virtual CFEUnaryExpression* Clone();
     virtual bool IsOfType(unsigned int nType);
     virtual int GetIntValue();
     virtual EXPT_OPERATOR GetOperator();

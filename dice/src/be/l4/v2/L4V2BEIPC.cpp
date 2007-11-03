@@ -76,14 +76,13 @@ CL4V2BEIPC::WriteCall(CBEFile& pFile,
 	string sMWord = pNF->GetTypeName(TYPE_MWORD, true);
 	string sMsgBuffer = pNF->GetMessageBufferVariable();
 	CMsgStructType nDirection(pFunction->GetSendDirection());
-	bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
 	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	CL4BEMarshaller *pMarshaller =
 		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
 	assert(pMarshaller);
 
-	bool bFlexpage =
-		pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
+	bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
+	bool bFlexpage = pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
 
 	pFile << "\tl4_ipc_call(*" << sServerID << ",\n";
 	++pFile << "\t";
@@ -383,8 +382,7 @@ CL4V2BEIPC::WriteSend(CBEFile& pFile,
 	pFile << "\tl4_ipc_send(*" << sServerID << ",\n";
 	++pFile << "\t";
 	bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
-
-	bool bFlexpage = pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0;
+	bool bFlexpage = pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
 
 	if (IsShortIPC(pFunction, nDirection))
 	{
@@ -457,24 +455,6 @@ CL4V2BEIPC::WriteReply(CBEFile& pFile,
 bool CL4V2BEIPC::UseAssembler(CBEFunction *)
 {
 	return false;
-}
-
-/** \brief helper function to test for short IPC
- *  \param pFunction the function to test
- *  \param nDirection the direction to test
- *  \return true if the function uses short IPC in the specified direction
- *
- * This is a simple helper function, which just delegates the call to the
- * function's message buffer.
- */
-bool CL4V2BEIPC::IsShortIPC(CBEFunction *pFunction, CMsgStructType nType)
-{
-	if (CMsgStructType::Generic == nType)
-		return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
-			IsShortIPC(pFunction, pFunction->GetReceiveDirection());
-
-	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nType);
 }
 
 /** \brief add local variables required in functions

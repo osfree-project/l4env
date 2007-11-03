@@ -72,7 +72,7 @@ protected:
 
 public:
 	virtual void Write(CBEFile& pFile);
-	virtual CObject* Clone();
+	virtual CBEUnionType* Clone();
 	virtual CBETypedDeclarator* FindMember(
 		CDeclStack* pStack,
 		CDeclStack::iterator iCurr);
@@ -83,7 +83,7 @@ public:
 	virtual int GetSize();
 	virtual int GetMaxSize();
 	virtual int GetUnionCaseCount();
-	virtual void WriteCast(CBEFile& pFile, bool bPointer);
+	virtual void WriteCastToStr(std::string& str, bool bPointer);
 	virtual void WriteZeroInit(CBEFile& pFile);
 	virtual bool DoWriteZeroInit();
 	virtual void WriteGetSize(CBEFile& pFile,

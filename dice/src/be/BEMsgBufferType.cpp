@@ -68,7 +68,7 @@ CBEMsgBufferType::~CBEMsgBufferType()
 /** \brief create a copy of this object
  *  \return a reference to the clone
  */
-CObject* CBEMsgBufferType::Clone()
+CBEMsgBufferType* CBEMsgBufferType::Clone()
 {
 	return new CBEMsgBufferType(this);
 }
@@ -341,7 +341,7 @@ CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
 			return;
 		}
 		// clone it
-		pParameter = static_cast<CBETypedDeclarator*>(pOriginal->Clone());
+		pParameter = pOriginal->Clone();
 		pParameter->SetParent(pStruct);
 	}
 	else
@@ -403,7 +403,7 @@ CBEMsgBufferType::AddElement(CBEStructType *pStruct,
 	if (pAttr)
 	{
 		// get type from attribute
-		CBEType *pType = static_cast<CBEType*>(pAttr->GetAttrType()->Clone());
+		CBEType *pType = pAttr->GetAttrType()->Clone();
 		// replace type
 		pParameter->ReplaceType(pType);
 	}
@@ -825,7 +825,7 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
 		// replace type (clone type, because this is usually a reference to a
 		// global type that whould be destroyed if this message buffer type is
 		// destroyed. The global type might be "in use" somewhere else)
-		pParameter->ReplaceType(static_cast<CBEType*>(pType->Clone()));
+		pParameter->ReplaceType(pType->Clone());
 		// call FlattenElement again to apply flattening technology (tm)
 		// again
 		FlattenElement(pParameter, pStruct);
@@ -874,8 +874,7 @@ CBEMsgBufferType::FlattenConstructedElement(CBETypedDeclarator *pParameter,
 
 		// FIXME: found the variable sized member, create new member of fixed
 		// size
-		CBETypedDeclarator *pMember = static_cast<CBETypedDeclarator*>(
-			pParameter->Clone());
+		CBETypedDeclarator *pMember = pParameter->Clone();
 		pStruct->m_Members.Add(pMember);
 		// replace declarator
 		CBENameFactory *pNF = CBENameFactory::Instance();
@@ -1004,7 +1003,7 @@ CBEMsgBufferType::AddStruct(CBEStructType *pStruct,
 {
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// clone struct type
-	CBEStructType *pType = static_cast<CBEStructType*>(pStruct->Clone());
+	CBEStructType *pType = pStruct->Clone();
 	CBEUnionCase *pCase = pCF->GetNewUnionCase();
 	pType->SetParent(pCase);
 	m_UnionCases.Add(pCase);
@@ -1159,22 +1158,20 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 		pAttr = pCF->GetNewAttribute();
 		pAttr->SetParent(pParameter);
 		// declarator has to be cloned, otherwise it will be destroyed twice
-		CBEDeclarator *pNew = static_cast<CBEDeclarator*>(
-			pSizeVar->m_Declarators.First()->Clone());
+		CBEDeclarator *pNew = pSizeVar->m_Declarators.First()->Clone();
 		pAttr->CreateBackEndIs(ATTR_SIZE_IS, pNew);
 		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 			"CBEMsgBufferType::%s: size_is attribute %s added to %s\n", __func__,
 			pNew->GetName().c_str(),
 			pParameter->m_Declarators.First()->GetName().c_str());
 		pParameter->m_Attributes.Add(pAttr);
-		pAttr = static_cast<CBEAttribute*>(pAttr->Clone());
+		pAttr = pAttr->Clone();
 		pTrueParameter->m_Attributes.Add(pAttr);
 		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 			"CBEMsgBufferType::%s size_is attribute added to member and true param\n",
 			__func__);
 		// clone member
-		pMember = static_cast<CBETypedDeclarator*>(
-			pSizeVar->Clone());
+		pMember = pSizeVar->Clone();
 		// add member
 		pStruct->m_Members.Add(pMember);
 
@@ -1216,8 +1213,7 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
 		pAttr = pCF->GetNewAttribute();
 		pAttr->SetParent(pParameter);
 		// declarator has to be cloned, otherwise it would be destroyed twice
-		CBEDeclarator *pNew = static_cast<CBEDeclarator*>(
-			pSizeVar->m_Declarators.First()->Clone());
+		CBEDeclarator *pNew = pSizeVar->m_Declarators.First()->Clone();
 		pAttr->CreateBackEndIs(ATTR_SIZE_IS, pNew);
 		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 			"%s: size_is attributbute %s added to %s\n", __func__,

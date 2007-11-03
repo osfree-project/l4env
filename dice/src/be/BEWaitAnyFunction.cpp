@@ -115,7 +115,8 @@ CBEWaitAnyFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSi
 	// if any of the interface's functions has the sched_donate attribute set,
 	// we should be able to reply with shceduling donation as well. Search for
 	// this attribute
-	if (m_pClass && m_pClass->HasFunctionWithAttribute(ATTR_SCHED_DONATE))
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	if (pClass && pClass->HasFunctionWithAttribute(ATTR_SCHED_DONATE))
 	{
 		CBEClassFactory *pCF = CBEClassFactory::Instance();
 		CBEAttribute *pAttr = pCF->GetNewAttribute();

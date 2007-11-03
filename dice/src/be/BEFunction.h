@@ -285,10 +285,6 @@ protected:
 	 *  \brief the name of the functions opcode
 	 */
 	std::string m_sOpcodeConstName;
-	/** \var CBEClass *m_pClass
-	 *  \brief a reference to the class of this function
-	 */
-	CBEClass* m_pClass;
 	/** \var CBETarget *m_pTarget
 	 *  \brief a reference to the corresponding target class
 	 */

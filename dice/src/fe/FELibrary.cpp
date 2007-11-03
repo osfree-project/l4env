@@ -84,7 +84,7 @@ CFELibrary::~CFELibrary()
 /** \brief create a copy of this object
  *  \return a reference to the clone
  */
-CObject* CFELibrary::Clone()
+CFELibrary* CFELibrary::Clone()
 {
 	return new CFELibrary(this);
 }

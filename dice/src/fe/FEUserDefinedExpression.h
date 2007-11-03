@@ -57,7 +57,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEUserDefinedExpression* Clone();
     virtual bool IsOfType(unsigned int nType);
     virtual int GetIntValue();
     virtual std::string GetExpName();

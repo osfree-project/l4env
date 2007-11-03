@@ -81,7 +81,7 @@ public:
     virtual void AddBaseInterface(CFEInterface* pBaseInterface);
 
     virtual void Accept(CVisitor&);
-	virtual CObject* Clone();
+	virtual CFEInterface* Clone();
     virtual int GetOperationCount(bool bCountBase = true);
 
     virtual std::string GetName();

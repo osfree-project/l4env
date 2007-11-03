@@ -64,7 +64,7 @@ CFEIDLUnionType::~CFEIDLUnionType()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEIDLUnionType::Clone()
+CFEIDLUnionType* CFEIDLUnionType::Clone()
 {
 	return new CFEIDLUnionType(this);
 }

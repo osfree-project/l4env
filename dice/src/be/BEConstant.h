@@ -60,7 +60,7 @@ protected:
     CBEConstant(CBEConstant* src);
 
 public:
-	virtual CObject* Clone();
+	virtual CBEConstant* Clone();
     virtual void Write(CBEHeaderFile& pFile);
     virtual void CreateBackEnd(CBEType* pType, std::string sName,
 	CBEExpression* pValue, bool bAlwaysDefine);

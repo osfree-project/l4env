@@ -67,7 +67,7 @@ public:
 	virtual int GetFEType();
 	virtual void WriteZeroInit(CBEFile& pFile);
 	virtual int GetStringLength();
-	virtual CObject* Clone();
+	virtual CBEType* Clone();
 	virtual bool IsOfType(int nFEType);
 	virtual int GetSize();
 	virtual int GetMaxSize();
@@ -80,6 +80,7 @@ public:
 	virtual bool IsConstructedType();
 	virtual bool HasTag(std::string sTag);
 	virtual void WriteCast(CBEFile& pFile, bool bPointer);
+	virtual void WriteCastToStr(std::string &str, bool bPointer);
 	virtual bool IsPointerType();
 	virtual bool IsArrayType();
 	virtual void WriteDeclaration(CBEFile& pFile);

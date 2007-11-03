@@ -60,7 +60,7 @@ protected:
 
 // Operations
 public:
-	virtual CObject* Clone();
+	virtual CFEStructType* Clone();
     virtual void Accept(CVisitor&);
     virtual bool IsConstructedType();
 

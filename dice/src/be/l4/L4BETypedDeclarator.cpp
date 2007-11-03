@@ -50,7 +50,7 @@ CL4BETypedDeclarator::CL4BETypedDeclarator(CL4BETypedDeclarator* src)
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CL4BETypedDeclarator::Clone()
+CL4BETypedDeclarator* CL4BETypedDeclarator::Clone()
 {
 	return new CL4BETypedDeclarator(this);
 }
@@ -101,9 +101,7 @@ bool CL4BETypedDeclarator::IsFixedSized()
  * If bGuessSize is false, then this is for message buffer size calculation
  * and we have to check for [ref] attribute.
  */
-bool
-CL4BETypedDeclarator::GetMaxSize(int & nSize,
-	string sName)
+bool CL4BETypedDeclarator::GetMaxSize(int & nSize, string sName)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CL4BETypedDeclarator::%s called\n", __func__);

@@ -170,14 +170,14 @@ std::string CBEEnumType::GetTag()
 }
 
 /** \brief writes a cast of this type
- *  \param pFile the file to write to
+ *  \param str the string to write to
  *  \param bPointer true if the cast should produce a pointer
  *
  * A enum cast is '(enum tag)'.
  */
-void CBEEnumType::WriteCast(CBEFile& pFile,  bool bPointer)
+void CBEEnumType::WriteCastToStr(std::string& str,  bool bPointer)
 {
-	pFile << "(";
+	str += "(";
 	if (m_sTag.empty())
 	{
 		// no tag -> we need a typedef to save us
@@ -194,17 +194,17 @@ void CBEEnumType::WriteCast(CBEFile& pFile,  bool bPointer)
 				break;
 		}
 		assert(iterD != pTypedef->m_Declarators.end());
-		pFile << (*iterD)->GetName();
+		str += (*iterD)->GetName();
 		if (bPointer && ((*iterD)->GetStars() == 0))
-			pFile << "*";
+			str += "*";
 	}
 	else
 	{
-		pFile << m_sName << " " << m_sTag;
+		str += m_sName + " " + m_sTag;
 		if (bPointer)
-			pFile << "*";
+			str += "*";
 	}
-	pFile << ")";
+	str += ")";
 }
 
 /** \brief calculate the enumeration value of the given member

@@ -59,7 +59,7 @@ CFEEnumDeclarator::~CFEEnumDeclarator()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFEEnumDeclarator::Clone()
+CFEEnumDeclarator* CFEEnumDeclarator::Clone()
 {
 	return new CFEEnumDeclarator(this);
 }

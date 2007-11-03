@@ -51,7 +51,7 @@ CFETypeAttribute::~CFETypeAttribute()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CFETypeAttribute::Clone()
+CFETypeAttribute* CFETypeAttribute::Clone()
 {
 	return new CFETypeAttribute(this);
 }

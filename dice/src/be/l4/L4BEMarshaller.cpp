@@ -585,12 +585,8 @@ bool CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pM
  * To allow multiple indirect strings, we first have to know at which position
  * in the indirect string list the current member is.
  */
-void
-CL4BEMarshaller::WriteMember(CBEFile& pFile,
-	CMsgStructType nType,
-	CBEMsgBuffer *pMsgBuffer,
-	CBETypedDeclarator *pMember,
-	CDeclStack* pStack)
+void CL4BEMarshaller::WriteMember(CBEFile& pFile, CMsgStructType nType, CBEMsgBuffer *pMsgBuffer,
+	CBETypedDeclarator *pMember, CDeclStack* pStack)
 {
 	if (pMember->m_Attributes.Find(ATTR_REF) &&
 		m_pFunction->IsComponentSide() &&
@@ -613,16 +609,13 @@ CL4BEMarshaller::WriteMember(CBEFile& pFile,
  * strings may start can vary greatly. For marshalling we cannot directly use
  * the indirect part member, but have to use an offset into the word buffer
  * (size dope's word value) and cast that location to a stringdope. (This only
- * applies when marshalling at server side.)
+ * applies when marshalling ior unmarshalling at server side.)
  *
  * To allow multiple indirect strings, we first have to know at which position
  * in the indirect string list the current member is.
  */
-void
-CL4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile,
-	CMsgStructType nType,
-	CBEMsgBuffer *pMsgBuffer,
-	CBETypedDeclarator *pMember)
+void CL4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile, CMsgStructType nType,
+	CBEMsgBuffer *pMsgBuffer, CBETypedDeclarator *pMember)
 {
 	assert(pMember);
 	assert(pMsgBuffer);
@@ -674,7 +667,7 @@ CL4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile,
 	pFile << "(&(";
 	pMsgBuffer->WriteAccessToStruct(pFile, m_pFunction, CMsgStructType::Generic);
 	pFile << "." << sMember << "[";
-	pMsgBuffer->WriteMemberAccess(pFile, m_pFunction, nType, TYPE_MSGDOPE_SIZE, 0);
+	pMsgBuffer->WriteMemberAccess(pFile, m_pFunction, CMsgStructType::Generic, TYPE_MSGDOPE_SIZE, 0);
 	pFile << ".md.dwords";
 	if (nIndex > 0)
 		pFile << " + " << os.str();

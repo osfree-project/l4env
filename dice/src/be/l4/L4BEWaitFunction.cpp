@@ -183,9 +183,12 @@ CL4BEWaitFunction::WriteFlexpageOpcodePatch(CBEFile& pFile)
 {
 	if (GetParameterCount(TYPE_FLEXPAGE, GetReceiveDirection()) == 0)
 		return;
+
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
 	bool bFixedNumberOfFlexpages = true;
-	int nNumberOfFlexpages =
-		m_pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages, DIRECTION_INOUT);
+	int nNumberOfFlexpages = pClass->GetParameterCount(TYPE_FLEXPAGE, bFixedNumberOfFlexpages,
+		DIRECTION_INOUT);
 	CBESizes *pSizes = CCompiler::GetSizes();
 	int nSizeFpage = pSizes->GetSizeOfType(TYPE_FLEXPAGE) /
 		pSizes->GetSizeOfType(TYPE_MWORD);

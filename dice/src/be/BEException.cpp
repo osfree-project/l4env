@@ -42,7 +42,7 @@ CBEException::~CBEException()
 /** \brief create a copy of this object
  *  \return reference to clone
  */
-CObject* CBEException::Clone()
+CBEException* CBEException::Clone()
 {
 	return new CBEException(this);
 }

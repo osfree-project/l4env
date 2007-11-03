@@ -81,8 +81,8 @@ CL4FiascoBEIPC::WriteCall(CBEFile& pFile,
 		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
 	assert(pMarshaller);
 
-	bool bFlexpage =
-		pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
+	bool bFlexpage = pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
+	bool bUtcb = pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_UTCB_IPC, CMsgStructType::Generic);
 
 	pFile << "\tl4_ipc_call_tag(*" << sServerID << ",\n";
 	++pFile << "\t";
@@ -126,7 +126,15 @@ CL4FiascoBEIPC::WriteCall(CBEFile& pFile,
 		pFile << "0";
 	pFile << ",\n";
 
-	pFile << "\tl4_msgtag(0,0,0,0),\n";
+	if (bUtcb)
+	{
+		int nSize = pMsgBuffer->GetSize();
+		CBESizes *pSizes = CCompiler::GetSizes();
+		nSize = pSizes->WordsFromBytes(nSize);
+		pFile << "\tl4_msgtag(0, " << nSize << ", 0, 0),\n";
+	}
+	else
+		pFile << "\tl4_msgtag(0,0,0,0),\n";
 
 	nDirection = pFunction->GetReceiveDirection();
 	if (IsShortIPC(pFunction, nDirection))
@@ -397,8 +405,7 @@ CL4FiascoBEIPC::WriteSend(CBEFile& pFile,
 	pFile << "\tl4_ipc_send_tag(*" << sServerID << ",\n";
 	++pFile << "\t";
 	bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
-
-	bool bFlexpage = pMsgBuffer->GetCount(TYPE_FLEXPAGE, nDirection) > 0;
+	bool bFlexpage = pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
 
 	if (IsShortIPC(pFunction, nDirection))
 	{
@@ -474,24 +481,6 @@ bool
 CL4FiascoBEIPC::UseAssembler(CBEFunction *)
 {
 	return false;
-}
-
-/** \brief helper function to test for short IPC
- *  \param pFunction the function to test
- *  \param nDirection the direction to test
- *  \return true if the function uses short IPC in the specified direction
- *
- * This is a simple helper function, which just delegates the call to the
- * function's message buffer.
- */
-bool CL4FiascoBEIPC::IsShortIPC(CBEFunction *pFunction, CMsgStructType nType)
-{
-	if (CMsgStructType::Generic == nType)
-		return IsShortIPC(pFunction, pFunction->GetSendDirection()) &&
-			IsShortIPC(pFunction, pFunction->GetReceiveDirection());
-
-	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-	return pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_SHORT_IPC, nType);
 }
 
 /** \brief add local variables required in functions

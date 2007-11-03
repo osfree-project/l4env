@@ -158,11 +158,11 @@ PRIVATE_INCDIR_helper_71.o     = $(INCDIR_XORG71)
 PRIVATE_INCDIR_emul_l4env_71.o = $(INCDIR_XORG71)
 
 PRIVATE_INCDIR_pslim_73.o      = $(INCDIR_XORG73) \
-				 $(patsubst -I%,%,$(LIBC_INCLUDE_uc))
+				 $(patsubst -I%,%,$(LIBC_INCLUDE))
 PRIVATE_INCDIR_helper_73.o     = $(INCDIR_XORG73) \
-				 $(patsubst -I%,%,$(LIBC_INCLUDE_uc))
+				 $(patsubst -I%,%,$(LIBC_INCLUDE))
 PRIVATE_INCDIR_emul_l4env_73.o = $(INCDIR_XORG73) \
-				 $(patsubst -I%,%,$(LIBC_INCLUDE_uc))
+				 $(patsubst -I%,%,$(LIBC_INCLUDE))
 
 # !!! Please don't link against -l4env-l4lx. Need special compiler flags !!!
 # !!! for emul_l4env.c (mmap => xf86mmap).                               !!!
