@@ -31,6 +31,7 @@
 #include <l4/lxfuxlibc/lxfuxlc.h>
 #include <l4/zlib/zlib.h>
 #include <l4/util/l4_macros.h>
+#include <l4/util/parse_cmd.h>
 
 #include <stdio.h>
 
@@ -43,13 +44,13 @@ const l4_ssize_t l4libc_heapsize = -128*1024;
 
 typedef char l4_page_t[L4_PAGESIZE];
 
-//static l4_threadid_t loader_id;
 static l4_threadid_t dm_id;
 
 /* placeholder for mapping a L4 page */
 static l4_page_t io_buf __attribute__ ((aligned(L4_PAGESIZE)));
 static l4_page_t map_page __attribute__ ((aligned(L4_PAGESIZE)));
 static int       mapped = 1;
+static char *search_path;
 
 static void
 free_map_area(void)
@@ -100,6 +101,36 @@ l4fprov_file_open_component (CORBA_Object _dice_corba_obj,
    * Linux can access it. */
   memset(buf, 0, sizeof(buf));
 
+  if (!strchr(fname, '/'))
+    {
+      // no path in fname, look in search path
+      struct lx_stat stat_buf;
+      char *s = search_path;
+      char *a;
+      int done = 0;
+      while (!done)
+        {
+          a = s;
+          if ((s = strchr(s, ':')))
+            *s = 0;
+
+          snprintf(cbuf, sizeof(cbuf), "%s/%s", a, fname);
+          if (!lx_stat(cbuf, &stat_buf))
+            {
+              fname = cbuf;
+              done = 1;
+            }
+
+          if (!s)
+            break;
+          else
+            {
+              *s = ':';
+              s++;
+            }
+        }
+    }
+  else // else because of cbuf usage
   /* if pathname is (nd)/tftpboot/user/ ignore leading path
    * and convert to /home/user/boot/
    * could be too OS specific!
@@ -232,34 +263,16 @@ server_loop(void)
 }
 
 int
-main(int argc, char **argv)
+main(int argc, const char **argv)
 {
-  l4_threadid_t me;
   const char *fname = strrchr(argv[0], '/');
 
-  me = l4_myself();
-  if (!fname)
-    fname = argv[0];
-  else
-    fname++;
+  fname = fname ? fname + 1 : argv[0];
 
-  if (argc > 1)
-    {
-      printf("L4 file provider\n"
-	     "Usage:\n"
-	     "  %s (no arguments)\n",
-	     fname);
-      return -1;
-    }
-
-#if 0
-  /* we need the loader */
-  if (!names_waitfor_name("LOADER", &loader_id, 3000))
-    {
-      printf("LOADER not found\n");
-      return 2;
-    }
-#endif
+  parse_cmdline(&argc, &argv,
+                's', "searchpath", "Search path",
+                PARSE_CMD_STRING, "", &search_path,
+                0);
 
   /* we need a dataspace manager */
   dm_id = l4env_get_default_dsm();
@@ -272,7 +285,7 @@ main(int argc, char **argv)
     }
 
   printf("File provider started, registered as "l4util_idfmt"\n",
-         l4util_idstr(me));
+         l4util_idstr(l4_myself()));
 
   /* go into server mode */
   server_loop();

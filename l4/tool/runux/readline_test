@@ -9,13 +9,8 @@ fiasco \
 	-l dm_phys \
 	-l l4io \
 	-l l4dope \
-	-l fuxfprov \
-	-l "fstab -c /tty -v 1000 -b / -m /tty" \
-	-l bmodfs \
-	   -d $L4PATH/rl_ex \
-	   -d $CFGPATH/rl_ex.cfg \
-	-l "loader --fprov=BMODFS rl_ex.cfg" \
-    -l "name_server"\
-    -l vc_server \
-	-n10 "$@"\
-
+	-l "fuxfprov --searchpath $L4PATH:$CFGPATH" \
+	-l simple_ts \
+        -l "name_server" \
+	-l "loader rl_ex.cfg" \
+	-n10 "$@"

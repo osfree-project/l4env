@@ -9,7 +9,8 @@ SYSTEMS		= x86-l4v2
 DEPENDS_PKGS	= zlib
 
 SRC_C		= main.c
-LIBS		= -lclxfux.o -ll4z -lstdio_zlib_ux -lgeneric_fprov-server
+LIBS		= -lclxfux.o -ll4z -lstdio_zlib_ux -lgeneric_fprov-server \
+		  -lparsecmdline
 
 include $(L4DIR)/mk/prog.mk
 
