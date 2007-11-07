@@ -57,7 +57,11 @@
 	msr	spsr, lr		@ Load SPSR from kernel_lr
 	ands	lr, lr, #0x0f		@ Mask all but relevant mode bits
 					@ NE -> kernel
-	ldmeqdb	sp, {sp,lr}^		@ restore user sp and lr
+	moveq	lr, sp			@ restore user lr and user sp by
+					@ using lr as source register for
+					@ ldmeqdb ('ldmsqdb sp, {sp,lr}^'
+					@ does not work on arm920t)
+	ldmeqdb	lr, {sp,lr}^		@ restore user sp and lr
 	add	sp, sp, #8		@ Read return address
 	ldr	lr, [sp, #-4]		@ Read return address
 	moveqs	pc, lr			@ return and switch mode

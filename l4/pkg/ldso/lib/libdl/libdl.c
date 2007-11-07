@@ -615,7 +615,7 @@ int dlinfo(void)
 	/* First start with a complete list of all of the loaded files. */
 	for (tpnt = _dl_loaded_modules; tpnt; tpnt = tpnt->next) {
 		fprintf(stderr, "\t%p %p %p %s %d %s\n",
-		        DL_LOADADDR_BASE(tpnt->loadaddr), tpnt, tpnt->symbol_scope,
+		        (void *)DL_LOADADDR_BASE(tpnt->loadaddr), tpnt, tpnt->symbol_scope,
 		        type[tpnt->libtype],
 		        tpnt->usage_count, tpnt->libname);
 	}

@@ -352,7 +352,7 @@ void CBEHeaderFile::WriteDefaultIncludes()
 	*this <<
 		"#ifndef DICE_MAJOR_VERSION\n" <<
 		"#define DICE_MAJOR_VERSION " << ver.substr(0,l) << "\n" <<
-		"#define DICE_MINOR_VERSION " << ver.substr(l+1,r) << "\n" <<
+		"#define DICE_MINOR_VERSION " << ver.substr(l+1,r-l-1) << "\n" <<
 		"#define DICE_SUBMINOR_VERSION " << ver.substr(r+1) << "\n" <<
 		"#endif\n\n";
 

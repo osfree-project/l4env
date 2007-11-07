@@ -71,7 +71,9 @@ L4_INLINE l4_threadid_t l4_myself()
      );
 
 #ifdef __cplusplus
-  return l4_threadid_t::_convert(id);
+  l4_threadid_t idx;
+  idx.raw = id.raw;
+  return idx;
 #else
   return id;
 #endif

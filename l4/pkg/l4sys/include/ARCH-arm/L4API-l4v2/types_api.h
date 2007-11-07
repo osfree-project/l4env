@@ -18,10 +18,6 @@ typedef struct {
  * L4 unique identifiers
  */
 typedef union l4_threadid_t {
-#ifdef __cplusplus
-  // fake the compiler in syscall bindings
-  static l4_threadid_t _convert(l4_threadid_t in) { return in; }
-#endif
   l4_uint32_t raw;
   l4_threadid_struct_t id;
 } l4_threadid_t;

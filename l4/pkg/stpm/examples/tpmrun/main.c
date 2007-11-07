@@ -27,9 +27,11 @@
 
 #include "tpmrun.h"
 
-static unsigned char   srk_auth [20]; //password of SRK 
-static unsigned char owner_auth [20]; //password of owner
-static unsigned char   anything [20]; //password of any keys
+static unsigned char   srk_auth  [20]; //password of SRK 
+static unsigned char owner_auth  [20]; //password of owner
+static unsigned char   anything  [20]; //password of any keys
+static unsigned char   anything2 [20]; //password of any keys
+static unsigned char   quote   [1024];
 
 static void show_loaded_keys()
 {
@@ -46,13 +48,13 @@ static void show_loaded_keys()
     printf("No keys are loaded\n");
   else
     for(i=0; i<max; i++)
-      printf("Key handle: %04lX\n", keys[i]);
+      printf("Key handle: 0x%04lx\n", keys[i]);
 }
 
 static void show_help_info()
 {
   printf("h ... this help info\n");
-  printf("a ... set authentification of owner or SRK to be used\n");
+  printf("a ... set authentication of owner or SRK to be used\n");
   printf("c ... create a new RSA key for signing in tmp buffer\n");
   printf("e ... evict loaded key from TPM\n");
   printf("E ... evict loaded key from TPM, TCGA 1.2 \n");
@@ -70,13 +72,33 @@ static void show_help_info()
 static void command_loop()
 {
   keydata key;
-  int argc = 4;
-  char * argv [4];
-  unsigned long foranything;
+  unsigned long foranything, keyhandle;
+  unsigned int len;
   int error;
   int c, i;
   int major, minor, version, rev;
+  int maxpcrs = 16;
 
+  printf("Try to detect version of TPM ...");
+  error = TPM_GetCapability_Version(&major, &minor, &version, &rev);
+
+  if (error)
+    printf(" failed (error=%d)\n", error); 
+  else
+  {
+    printf(" found version: %d.%d.%d.%d ", major, minor, version, rev);
+
+    if (major == 1 && minor == 1)
+      if (version == 0 && rev == 0)
+      {
+        printf("... TPM specification 1.2\n");
+        maxpcrs = 24;
+      }
+      else
+        printf("... TPM specification 1.1\n");
+    else
+      printf("... unknown TPM specification version\n");
+  }
 
   while(1)
   {
@@ -127,7 +149,7 @@ static void command_loop()
         break;
       case 'c':
         memset(anything, 0, sizeof(anything));
-        printf("Enter a new authentification for new key: ");
+        printf("Enter a new authentication for new key: ");
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         sha1(anything, strlen((char *)anything), anything);
 
@@ -142,6 +164,7 @@ static void command_loop()
 
         break;
       case 'e':
+        memset(anything, 0, sizeof(anything));
         printf("Key to be deleted (hex): 0x");
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         printf(" ...");
@@ -155,6 +178,7 @@ static void command_loop()
 
         break;
       case 'E':
+        memset(anything, 0, sizeof(anything));
         printf("Key to be deleted (hex): 0x");
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         printf(" ...");
@@ -223,11 +247,34 @@ static void command_loop()
 
         break;
       case 'q':
-        argv[1] = "21ac06";
-        argv[2] = "c";
-        argv[3] = "nounce";
+        memset(anything, 0, sizeof(anything));
+        memset(anything2, 0, sizeof(anything2));
 
-	quote_stdout(argc, (unsigned char **)argv);
+        printf("Key to be used for signing (hex): 0x");
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        keyhandle = strtol((char *)anything, NULL, 16);
+
+        printf("\nAuthentication/password of key 0x%08lx to be used: ", keyhandle);
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        sha1(anything, strlen((char *)anything), anything);
+
+        printf("\nStart quoting ... ");
+        //TODO
+        anything2[0] = 'n';
+        anything2[1] = 'o';
+        anything2[2] = 'u';
+        anything2[3] = 'n';
+        anything2[4] = 'c';
+        anything2[5] = 'e';
+        anything2[6] = 0;
+        sha1(anything2, strlen((char *)anything2), anything2);
+
+	error = quotePCRs(keyhandle, anything, anything2, quote, &len, maxpcrs);
+
+        if (error)
+          printf(" failed (error=%d)\n", error);
+        else
+          printf(" success.");
 
         break;
       case 'r':
@@ -281,8 +328,6 @@ int main(int argc, const char * argv []) {
       LOG("Error %d opening contxt lib -- terminating", error);
       return error;
     }
-
-  // Hash key auths (as required by TCG?!)
 
   command_loop();
 

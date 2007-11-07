@@ -1,7 +1,8 @@
 #ifndef __L4__SYS__ARCH_ARM__LINKAGE_H__
 #define __L4__SYS__ARCH_ARM__LINKAGE_H__
 
-#ifdef __PIC__
+#if defined(__PIC__) \
+    && ((__GNUC__ < 4) || (__GNUC__ == 4 && __GNUC_MINOR__ < 2))
 # define PIC_SAVE_ASM    "str r10, [sp, #-4]!  \n\t"
 # define PIC_RESTORE_ASM "ldr r10, [sp], #4    \n\t"
 # define PIC_CLOBBER
