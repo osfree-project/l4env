@@ -7,8 +7,6 @@
  * DDEKit supports registration of one handler function per interrupt. If any
  * specific DDE implementation needs to register more than one handler,
  * multiplexing has to be implemented there!
- *
- * FIXME IRQ detach missing
  */
 
 #ifndef _ddekit_interrupt_h
@@ -32,5 +30,26 @@
 ddekit_thread_t *ddekit_interrupt_attach(int irq, int shared,
                                          void(*thread_init)(void *),
                                          void(*handler)(void *), void *priv);
+
+/**
+ * Detach from a previously attached interrupt.
+ *
+ * \param irq          IRQ number
+ */
+void ddekit_interrupt_detach(int irq);
+
+/**
+ * Block interrupt.
+ *
+ * \param irq          IRQ number to block
+ */
+void ddekit_interrupt_disable(int irq);
+
+/**
+ * Enable interrupt.
+ *
+ * \param irq          IRQ number to block
+ */
+void ddekit_interrupt_enable(int irq);
 
 #endif

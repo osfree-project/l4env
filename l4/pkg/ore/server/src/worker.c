@@ -15,7 +15,7 @@
 int __l4ore_tls_id_key = -1;
 
 static void worker_exit(l4thread_t thread, void *data);
-L4THREAD_EXIT_FN(exit_fn, worker_exit);
+L4THREAD_EXIT_FN_STATIC(exit_fn, worker_exit);
 
 // worker thread for string ipc connections
 void worker_thread_string(void *arg)

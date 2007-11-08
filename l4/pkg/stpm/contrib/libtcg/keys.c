@@ -151,6 +151,29 @@ TPM_TRANSMIT_OIAP_FUNC(LoadKey2,
                       kparmbufsize,
                       kparmbuf);
 
+/**
+ * Read the public part of an loaded key from TPM
+ */
+TPM_TRANSMIT_OIAP_FUNC(GetPubKey,
+                  (unsigned long keyhandle,
+                   unsigned char * keyauth,
+                   pubkeydata * pubkey),
+                  keyauth,
+
+                  if (keyauth == NULL)
+                    return -1;
+
+                  if (pubkey == NULL)
+                    return -2;
+                  ,
+		  PubKeyExtract(buffer + TCG_DATA_OFFSET, pubkey, 0);
+                  ,
+                  0,
+                  ,
+                  "L",
+                  keyhandle
+                  );
+
 
 /**
  * Delete a key from the tpm.

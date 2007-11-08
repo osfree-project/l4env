@@ -27,11 +27,18 @@
 
 #include "tpmrun.h"
 
-static unsigned char   srk_auth  [20]; //password of SRK 
-static unsigned char owner_auth  [20]; //password of owner
-static unsigned char   anything  [20]; //password of any keys
-static unsigned char   anything2 [20]; //password of any keys
-static unsigned char   quote   [1024];
+static unsigned char srk_auth   [20];   //password of SRK 
+static unsigned char owner_auth [20];   //password of owner
+static unsigned char anything   [20];   //password of any keys
+static unsigned char anything2  [20];   //password of any keys
+static unsigned char quote      [1024]; //temp storage for quotes
+static unsigned int  quotelen;
+static pubkeydata    pubkey;            //temp storage for a pubkey
+static unsigned char pcrcomposite [1024];
+//#define _LOG_OUTPUT
+#ifdef _LOG_OUTPUT
+char log [1024];
+#endif
 
 static void show_loaded_keys()
 {
@@ -63,23 +70,87 @@ static void show_help_info()
   printf("L ... load a key to TPM from tmp buffer, TCGA 1.2\n");
   printf("o ... take ownership of TPM\n");
   printf("q ... quote of current pcrs with a loaded key\n");
+  printf("p ... print public key of loaded key\n");
   printf("r ... generate random numbers\n");
   printf("s ... selftest of TPM\n");
   printf("v ... version information of the TPM\n");
   printf("w ... clear owner of TPM\n");    
 }
 
+static void show_quote()
+{
+  int i,j;
+  unsigned long value_count;
+  unsigned long select_count;
+  #ifdef _LOG_OUTPUT
+  char * log2;
+  #endif
+
+  select_count = ntohs(*(unsigned short *)&pcrcomposite[0]);
+  value_count = ntohl(*(unsigned long *)&pcrcomposite[2 + select_count]) / 20;   
+
+  printf("\npcrcomposite select count %d, pcrs %lu:\n",
+         ntohs(*(unsigned short *)&pcrcomposite[0]) * 8,
+          value_count);
+
+  #ifdef _LOG_OUTPUT
+  log2 = log;  
+  #endif
+  for(i=0; i < value_count; i++)
+  {
+    printf("%8s%02d: ", "PCR-", i);
+    for(j=0;j<20;j++)
+    {
+      printf("%02x", pcrcomposite[2 + select_count + 4 + i * 20 + j]);
+      #ifdef _LOG_OUTPUT
+      sprintf(log2, "%02x", pcrcomposite[2 + select_count + 4 + i * 20 + j]);
+      log2 += 2;
+      #endif
+    }
+    printf("\n");
+  }
+  #ifdef _LOG_OUTPUT
+  *log2 = 0;
+  LOG("%s\n", log);
+  #endif
+  printf("signature (%d Bytes):\n", quotelen);
+
+  #ifdef _LOG_OUTPUT
+  log2 = log;  
+  #endif
+  for(i=0; i < (quotelen>>4); i++)
+  {
+    printf("    ");
+    for(j=0;j<16;j++)
+    {
+      printf("%02x", quote[(i<<4)+j]);      
+      #ifdef _LOG_OUTPUT
+      sprintf(log2, "%02x", quote[(i<<4)+j]);      
+      log2 += 2;
+      #endif
+    }
+    printf("\n");
+  }
+  printf("signature end\n");
+  #ifdef _LOG_OUTPUT
+  LOG("%s\n", log);
+  #endif
+
+}
+
 static void command_loop()
 {
   keydata key;
   unsigned long foranything, keyhandle;
-  unsigned int len;
   int error;
   int c, i;
   int major, minor, version, rev;
   int maxpcrs = 16;
+  #ifdef _LOG_OUTPUT
+  char * log2;
+  #endif
 
-  printf("Try to detect version of TPM ...");
+  printf("Detecting version of TPM ...");
   error = TPM_GetCapability_Version(&major, &minor, &version, &rev);
 
   if (error)
@@ -99,6 +170,8 @@ static void command_loop()
     else
       printf("... unknown TPM specification version\n");
   }
+
+  printf("\nWelcome ... press 'h' for a list of supported commands\n");
 
   while(1)
   {
@@ -149,7 +222,7 @@ static void command_loop()
         break;
       case 'c':
         memset(anything, 0, sizeof(anything));
-        printf("Enter a new authentication for new key: ");
+        printf("Enter a authentication to be used for new key: ");
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         sha1(anything, strlen((char *)anything), anything);
 
@@ -246,6 +319,72 @@ static void command_loop()
           printf(" success.\n");
 
         break;
+      case 'p':
+        memset(anything, 0, sizeof(anything));
+        
+        printf("Public key of key handle (hex): 0x");
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        keyhandle = strtol((char *)anything, NULL, 16);
+
+        printf("\nAuthentication/password of key 0x%08lx: ", keyhandle);
+        contxt_ihb_read((char *)anything, sizeof(anything), NULL);
+        sha1(anything, strlen((char *)anything), anything);
+
+        error = TPM_GetPubKey(keyhandle, anything, &pubkey);
+
+        if (error)
+          printf(" failed (error=%d)\n", error);
+        else
+        {
+          printf(" success.\n");
+
+          if (pubkey.keylength > 256)
+            printf("Problem with public key data structure. Key length is greater than 256 (%lu)\n", pubkey.keylength);
+          else
+          {
+            #ifdef _LOG_OUTPUT
+            log2 = log;
+            #endif
+            printf("exponent: ");
+            for (i=0; i < pubkey.expsize; i++)
+            {
+              printf("%02x", pubkey.exponent[i]);
+              #ifdef _LOG_OUTPUT
+              sprintf(log2, "%02x", pubkey.exponent[i]);
+              log2 += 2;
+              #endif
+              if ((i + 1) % 30 == 0)
+                printf("\n        ");
+            }
+            #ifdef _LOG_OUTPUT
+            *log2 = 0;
+            LOG("%s\n", log);
+            #endif
+            printf("\n");
+
+            printf("modulus: ");
+            #ifdef _LOG_OUTPUT
+            log2 = log;
+            #endif
+            for (i=0; i < pubkey.keylength; i++)
+            {
+              printf("%02x", pubkey.modulus[i]);
+              #ifdef _LOG_OUTPUT
+              sprintf(log2, "%02x", pubkey.modulus[i]);
+              log2 += 2;
+              #endif
+              if ((i + 1) % 30 == 0)
+                printf("\n        ");
+            }
+            printf("\n");
+            #ifdef _LOG_OUTPUT
+            *log2 = 0;
+            LOG("%s\n", log);
+            #endif
+          }
+        }
+      
+        break;
       case 'q':
         memset(anything, 0, sizeof(anything));
         memset(anything2, 0, sizeof(anything2));
@@ -254,11 +393,10 @@ static void command_loop()
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         keyhandle = strtol((char *)anything, NULL, 16);
 
-        printf("\nAuthentication/password of key 0x%08lx to be used: ", keyhandle);
+        printf("\nAuthentication/password of key 0x%08lx: ", keyhandle);
         contxt_ihb_read((char *)anything, sizeof(anything), NULL);
         sha1(anything, strlen((char *)anything), anything);
 
-        printf("\nStart quoting ... ");
         //TODO
         anything2[0] = 'n';
         anything2[1] = 'o';
@@ -269,12 +407,18 @@ static void command_loop()
         anything2[6] = 0;
         sha1(anything2, strlen((char *)anything2), anything2);
 
-	error = quotePCRs(keyhandle, anything, anything2, quote, &len, maxpcrs);
+        printf("\nStart quoting ... ");
+
+	error = quotePCRs(keyhandle, anything, anything2, quote, &quotelen,
+                          pcrcomposite, sizeof(pcrcomposite), maxpcrs);
 
         if (error)
           printf(" failed (error=%d)\n", error);
         else
+        {
           printf(" success.");
+          show_quote();
+        }
 
         break;
       case 'r':

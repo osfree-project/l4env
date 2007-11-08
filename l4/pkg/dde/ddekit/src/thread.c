@@ -137,6 +137,11 @@ void  ddekit_thread_exit() {
 	l4thread_exit();
 }
 
+void ddekit_thread_terminate(ddekit_thread_t *t)
+{
+	l4thread_shutdown(t->l4thread);
+}
+
 const char *ddekit_thread_get_name(ddekit_thread_t *thread) {
 	return thread->name;
 }

@@ -41,6 +41,14 @@ unsigned long TPM_CreateWrapKey(unsigned long keyhandle,
 				unsigned char *migauth,
 				keydata *keyparms, keydata *key);
 /**
+ * Reads the public key of a loaded key specified by keyhandle
+ * from TPM
+ */
+unsigned long TPM_GetPubKey(unsigned long   keyhandle,
+                            unsigned char * keyauth,
+                            pubkeydata    * pubkey);
+
+/**
  * Deprecated in TCGA 1.2 spec
  */
 unsigned long TPM_LoadKey(unsigned long keyhandle, unsigned char *keyauth,

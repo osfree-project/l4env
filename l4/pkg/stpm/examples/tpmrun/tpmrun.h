@@ -20,6 +20,8 @@ int quotePCRs(unsigned int keyhandle,
               unsigned char * nouncehash,
               unsigned char * output,
               unsigned int  * outputlen,
+              unsigned char * pcrs,
+              unsigned int  pcrlen,
               unsigned int maxpcrs);
 
 // TPM_RESOURCE_TYPE

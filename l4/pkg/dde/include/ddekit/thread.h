@@ -92,6 +92,14 @@ void  ddekit_thread_msleep(unsigned long msecs);
  */
 void  ddekit_thread_usleep(unsigned long usecs);
 
+/** Sleep for some nanoseconds.
+ *
+ * \ingroup DDEKit_threads
+ *
+ * \param usecs      time to sleep in ns.
+ */
+void  ddekit_thread_nsleep(unsigned long nsecs);
+
 /** Sleep until a lock becomes unlocked.
  *
  * \ingroup DDEKit_threads
@@ -109,6 +117,12 @@ void  ddekit_thread_wakeup(ddekit_thread_t *thread);
  * \ingroup DDEKit_threads
  */
 void  ddekit_thread_exit(void) __attribute__((noreturn));
+
+/** Terminate a thread 
+ *
+ * \ingroup DDEKit_threads
+ */
+void  ddekit_thread_terminate(ddekit_thread_t *thread);
 
 /** Get the name, a thread registered with DDEKit. 
  *

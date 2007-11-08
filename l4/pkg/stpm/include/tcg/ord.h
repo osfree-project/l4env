@@ -25,6 +25,7 @@ enum tpm_ords {
         TPM_ORD_Unseal,
 	TPM_ORD_CreateWrapKey=31,
 	TPM_ORD_LoadKey=32,
+        TPM_ORD_GetPubKey=33,
 	TPM_ORD_EvictKey=34,
 	TPM_ORD_LoadKey2=65,
 	TPM_ORD_GetRandom = 70,

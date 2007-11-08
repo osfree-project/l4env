@@ -36,6 +36,7 @@
 static int arping_verbose = 0;  // verbose
 static int recv_broadcast = 0;  // recv broadcast packets
 static char *ore_name     = NULL;
+static char *interface_name = NULL;
 static int use_phys       = 0;
 //static int send_dsi       = 0;  // send through dsi
 //static int recv_dsi       = 0;  // receive through dsi
@@ -133,7 +134,7 @@ static int parse_icmp_packet(char *rx_buf, struct ethernet_hdr *eth_hdr,
 
     if (icmp->type != ICMP_REQ)
     {
-        LOG("This is no ICMP request.");
+        LOG("This (%x) is no ICMP request.", icmp->type);
         return -1;
     }
 
@@ -223,6 +224,8 @@ int main(int argc, const char **argv)
               PARSE_CMD_SWITCH, 1, &recv_broadcast,
               'e', "exit", "exit after some pings",
               PARSE_CMD_SWITCH, 1, &exit_somewhen,
+			  'i', "interface", "interface to use",
+			  PARSE_CMD_STRING, "eth0", &interface_name,
               'o', "orename", "name of ORe instance to connect to",
               PARSE_CMD_STRING, "ORe", &ore_name,
 			  'p', "phys", "use physical MAC address if possible",
@@ -243,6 +246,13 @@ int main(int argc, const char **argv)
     }
     else
         LOG("connecting to 'ORe'");
+
+
+	if (interface_name)
+		LOG("interface: '%s'", interface_name);
+	else
+		interface_name = "eth0";
+
 
 	LOG("verbosity: %d", arping_verbose);
 
@@ -284,13 +294,13 @@ int main(int argc, const char **argv)
         LOG("sending with string ipc");
 
 
-    handle = l4ore_open("eth0", mac, &ore_conf);
-    LOG("opened eth0: %d for %02X:%02X:%02X:%02X:%02X:%02X", handle,
+    handle = l4ore_open(interface_name, mac, &ore_conf);
+    LOG("opened %s: %d for %02X:%02X:%02X:%02X:%02X:%02X", interface_name, handle,
         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
     if (handle < 0)
     {
-        LOG_Error("could not open eth0!");
+        LOG_Error("could not open %s!", interface_name);
         return 1;
     }
 

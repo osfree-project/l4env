@@ -1,0 +1,33 @@
+TARGET = liblinux.o.a
+INSTALL_TARGET =
+
+SRC_C = 
+
+PRIVATE_INCDIR = $(PKGDIR)/server/lib-linux/include \
+                 $(DDE_INCDIR) $(LINUX24_INCDIR)
+DEFINES = -D__KERNEL__ -DDDE_LINUX
+WARNINGS = -Wall -Wstrict-prototypes
+
+CFLAGS = -ffunction-sections
+
+include $(L4DIR)/mk/Makeconf
+
+vpath %.c $(PKGDIR)/server/lib-linux/contrib
+
+### Linux input / usb code
+INPUT_C += $(addprefix input/, input.c)
+USB_C += $(addprefix usb/, usb.c usb-debug.c hub.c hcd.c)
+USB_C += $(addprefix usb/host/, ehci-hcd.c usb-ohci.c)
+# there exist two alternative UHCI drivers
+ifeq (1,1)
+ USB_C += usb/host/usb-uhci.c
+else
+ USB_C += usb/host/uhci.c
+endif
+USB_C += $(addprefix usb/, hid-core.c hid-input.c)
+
+# XXX Apple Trackpad hack!
+#USB_C += usb/appletouch.c
+
+### Now put it all together
+SRC_C += $(INPUT_C) $(USB_C)

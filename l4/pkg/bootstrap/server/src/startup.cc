@@ -564,7 +564,11 @@ relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
              unsigned long* end)
 {
   l4util_mb_info_t *dst_mbi;
-  l4_addr_t x = find_free_ram(RAM_BASE + 0x2000, RAM_BASE + (4 << 20),
+  l4_addr_t x;
+
+  print_e820_map(src_mbi);
+
+  x = find_free_ram(RAM_BASE + 0x2000, RAM_BASE + (4 << 20),
       16 << 10, L4_LOG2_PAGESIZE);
   if (!x)
     panic("no memory for mbi found (below 4MB)");
@@ -575,8 +579,6 @@ relocate_mbi(l4util_mb_info_t *src_mbi, unsigned long* start,
   *start = x;
 
   dst_mbi = (l4util_mb_info_t*)lin_alloc(sizeof(l4util_mb_info_t), &p);
-
-  print_e820_map(src_mbi);
 
   /* copy (extended) multiboot info structure */
   memcpy(dst_mbi, src_mbi, sizeof(l4util_mb_info_t));
@@ -731,11 +733,12 @@ init_pc_serial(l4util_mb_info_t *mbi)
 void
 init_memory_map(l4util_mb_info_t *mbi)
 {
-  assert(mbi->flags & L4UTIL_MB_MEMORY);
-
   if (!(mbi->flags & L4UTIL_MB_MEM_MAP))
-    add_ram(mbi, Region::n(0, (mbi->mem_upper + 1024) << 10, ".ram",
-            Region::Ram));
+    {
+      assert(mbi->flags & L4UTIL_MB_MEMORY);
+      add_ram(mbi, Region::n(0, (mbi->mem_upper + 1024) << 10, ".ram",
+              Region::Ram));
+    }
   else
     {
       for (l4util_mb_addr_range_t *mmap

@@ -410,7 +410,7 @@ l4_io_request_region_component (CORBA_Object _dice_corba_obj,
       if (err || !dw1)
           Panic("sigma0 request for I/O ports [%04x,%04x) failed (err=%d dw1=%ld)\n",
                  regions[i].fpage.iofp.iopage,
-                 regions[i].fpage.iofp.iopage + regions[i].fpage.iofp.iosize,
+                 regions[i].fpage.iofp.iopage + (1 << regions[i].fpage.iofp.iosize),
                  err, dw1);
   }
 

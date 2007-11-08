@@ -188,15 +188,21 @@ void free_irq(unsigned int irq, void *dev_id)
 
 void disable_irq(unsigned int irq)
 {
-	WARN_UNIMPL;
+	ddekit_interrupt_disable(irq);
 }
 
 void disable_irq_nosync(unsigned int irq)
 {
-	WARN_UNIMPL;
+	/*
+	 * Note:
+	 * In contrast to the _nosync semantics, DDEKit's
+	 * disable definitely waits until a currently executed
+	 * IRQ handler terminates.
+	 */
+	ddekit_interrupt_disable(irq);
 }
 
 void enable_irq(unsigned int irq)
 {
-	WARN_UNIMPL;
+	ddekit_interrupt_enable(irq);
 }

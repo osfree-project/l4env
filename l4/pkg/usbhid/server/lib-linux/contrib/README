@@ -1,0 +1,6 @@
+Simple USB HID library implementation
+
+Files in this subtree were taken from Linux 2.4 sources (drivers/ directory)
+and slightly modified to permit easy integration into USBHID server.
+
+Current version: linux-2.4.31

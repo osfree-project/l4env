@@ -37,13 +37,12 @@ int quotePCRs(unsigned int    keyhandle,
               unsigned char * nouncehash,
               unsigned char * output,
               unsigned int  * outputlen,
+              unsigned char * pcrcomposite,
+              unsigned int  pcrlen,
               unsigned int maxPCRs)
 {
-  int i,j;
   unsigned char pcrselect[20];
   unsigned short select_count;
-  //struct tpm_pcr_composite pcrcomposite;
-  unsigned char pcrcomposite[1024];
   unsigned long size_composite;
   unsigned long value_count;
   int res;
@@ -62,7 +61,7 @@ int quotePCRs(unsigned int    keyhandle,
   size_composite = 2 + select_count + 4 + (maxPCRs * 20);
 
   // sanity check
-  if (size_composite > sizeof(pcrcomposite))
+  if (size_composite > pcrlen)
     return -3;
 
   // set the size/count to pcrselect (the first 2 bytes)
@@ -87,30 +86,6 @@ int quotePCRs(unsigned int    keyhandle,
   //sanity check
   if (value_count % 20 != 0)
     return -4;
-
-  value_count = value_count / 20; 
-
-  printf("\npcrcomposite select count %d, pcrs %lu:\n",
-         ntohs(*(unsigned short *)&pcrcomposite[0]) * 8,
-          value_count);
-  
-  for(i=0; i < value_count; i++)
-  {
-    printf("%8s%02d: ", "PCR-", i);
-    for(j=0;j<20;j++)
-      printf("%02x", pcrcomposite[2 + select_count + 4 + i * 20 + j]);
-    printf("\n");
-  }
-
-  printf("signature (%d Bytes):\n", *outputlen);
-  for(i=0; i < (*outputlen>>4); i++)
-  {
-    printf("    ");
-    for(j=0;j<16;j++)
-      printf("%02x",output[(i<<4)+j]);      
-    printf("\n");
-  }
-  printf("signature end\n");
 
   return 0;
 }

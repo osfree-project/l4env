@@ -14,7 +14,7 @@
 typedef void (*l4ddekit_initcall_t)(void);
 
 #define __l4ddekit_initcall(p) \
-	__attribute__ ((__section__ (".l4dde_ctors." l4str(p))))
+	__attribute__ ((__section__ (".l4dde_ctors." #p)))
 
 /** Define a function to be a DDEKit initcall. 
  *
