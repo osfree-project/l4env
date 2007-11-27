@@ -202,6 +202,7 @@ CL4V4BEWaitAnyFunction::WriteIPCErrorCheck(CBEFile& pFile)
 
 /** \brief initialize instance of class
  *  \param pFEInterface the front-end interface to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if successful
  */
 void

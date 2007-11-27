@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/be/l4/v2/L4FiascoBEMsgBuffer.cpp
+ *  \file    dice/src/be/l4/fiasco/L4FiascoBEMsgBuffer.cpp
  *  \brief   contains the implementation of the class CL4FiascoBEMsgBuffer
  *
  *  \date    08/24/2007
@@ -32,11 +32,16 @@
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BESrvLoopFunction.h"
+#include "be/BEMarshalFunction.h"
+#include "be/BEUnmarshalFunction.h"
+#include "be/BEReplyFunction.h"
+#include "be/BECallFunction.h"
+#include "be/BEClass.h"
 #include "be/BEStructType.h"
 #include "be/BEUserDefinedType.h"
 #include "be/BEAttribute.h"
 #include "be/BEDeclarator.h"
-#include "be/BERoot.h"
+#include "fe/FEOperation.h"
 #include "TypeSpec-Type.h"
 #include "Compiler.h"
 #include "Error.h"
@@ -117,7 +122,7 @@ int CL4FiascoBEMsgBuffer::GetPayloadOffset()
  * For non interface functions we test if the members for both directions are
  * sufficient for short IPC (2/3 word sized members at the begin). If not, we
  * add an extra struct to the union containing base elements and 2/3 word
- * sized members.
+ * sized members. Always add the struct if doing UTCB IPC.
  */
 void CL4FiascoBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation *pFEOperation)
 {
@@ -125,15 +130,9 @@ void CL4FiascoBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation
 	if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
 		return;
 
-	CMsgStructType nType(pFunction->GetSendDirection());
-	bool bWordMembers = HasWordMembers(pFunction, nType);
-	if (bWordMembers)
-	{
-		nType = pFunction->GetReceiveDirection();
-		bWordMembers = HasWordMembers(pFunction, nType);
-	}
-
-	if (bWordMembers)
+	if (HasWordMembers(pFunction, pFunction->GetSendDirection()) &&
+		HasWordMembers(pFunction, pFunction->GetReceiveDirection()) &&
+		!m_bIsUtcb)
 		return;
 
 	CL4BEMsgBuffer::AddGenericStruct(pFunction, pFEOperation);
@@ -162,11 +161,19 @@ void CL4FiascoBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation
  * For the first step we get the size of the maximum size of the message
  * buffer and compare it to the size of the UTCB area. Then we check for
  * members with ATTR_REF and with type FLEXPAGE.
+ *
+ * Then, because at the client side we can handle only either long IPC
+ * messages OR UTCB IPC messages for BOTH directions, but not long for one and
+ * UTCB for the other (yet), we have to make exceptions to the UTCB IPC
+ * message buffer if the function is a (un)marshal or reply function. Then we try
+ * to find the corresponding call function and check it's message buffer.
  */
 void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-		"CL4FiascoBEMsgBuffer::PostCreate called\n");
+		"CL4FiascoBEMsgBuffer::PostCreate(%s, %s) called\n",
+		pFunction ? pFunction->GetName().c_str() : "(none)",
+		pFEOperation ? pFEOperation->GetName().c_str() : "(none fe)");
 
 	CL4BEMsgBuffer::PostCreate(pFunction, pFEOperation);
 
@@ -194,10 +201,27 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 		if (pStruct && pStruct->FindMemberAttribute(ATTR_REF))
 			bRefFound = true;
 		m_bIsUtcb = !bRefFound;
-		m_bIsUtcb = false;
 		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 			"CL4FiascoBEMsgBuffer::PostCreate: m_bIsUtcb is now %s\n", m_bIsUtcb ? "true" : "false");
 	}
+
+	if (m_bIsUtcb &&
+		(dynamic_cast<CBEUnmarshalFunction*>(pFunction) ||
+		 dynamic_cast<CBEMarshalFunction*>(pFunction) ||
+		 dynamic_cast<CBEReplyFunction*>(pFunction)) &&
+		!pFunction->m_Attributes.Find(ATTR_OUT) &&
+		!pFunction->m_Attributes.Find(ATTR_IN))
+	{
+		CBEClass *pClass = GetSpecificParent<CBEClass>();
+		assert(pClass);
+		CBEFunction *pFunc = pClass->FindFunctionFor(pFunction, FUNCTION_CALL);
+		assert(pFunc);
+		CBEMsgBuffer *pMsgBuffer = pFunc->GetMessageBuffer();
+		if (pMsgBuffer && !pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_UTCB_IPC,
+				CMsgStructType::Generic))
+			m_bIsUtcb = false;
+	}
+
 
 	if (m_bIsUtcb)
 	{
@@ -225,6 +249,10 @@ void CL4FiascoBEMsgBuffer::PostCreate(CBEFunction *pFunction, CFEOperation *pFEO
 			pMember = FindMember(sName, pFunction, nType);
 			pStruct->m_Members.Remove(pMember);
 		}
+
+		// if we do not have a generic struct already, add it here.
+		if (!GetStruct(pFunction, CMsgStructType::Generic))
+			AddGenericStruct(pFunction, pFEOperation);
 	}
 }
 
@@ -373,12 +401,14 @@ void CL4FiascoBEMsgBuffer::WriteRefstringInitParameter(CBEFile& pFile, CBEFuncti
 
 /** \brief initializes the dopes to a value pair for short IPC
  *  \param pFile the file to write to
+ *  \param pFunction the function for which to write the initialization
  *  \param nType the member to initialize
  *  \param nStructType the type of the message buffer struct
  *
  * \todo This is not X.2 conform (have map,grant items as well).
  */
-void CL4FiascoBEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile, int nType, CMsgStructType nStructType)
+void CL4FiascoBEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile, CBEFunction *pFunction,
+	int nType, CMsgStructType nStructType)
 {
 	if ((nType != TYPE_MSGDOPE_SIZE) &&
 		(nType != TYPE_MSGDOPE_SEND))
@@ -387,17 +417,14 @@ void CL4FiascoBEMsgBuffer::WriteDopeShortInitialization(CBEFile& pFile, int nTyp
 	}
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CL4FiascoBEMsgBuffer::WriteDopeShortInitialization called\n");
-	if (IsUtcb())
-		return;
 
 	// get name of member
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sName = pNF->GetMessageBufferMember(nType);
 	// get member
-	CBETypedDeclarator *pMember = FindMember(sName, nStructType);
+	CBETypedDeclarator *pMember = FindMember(sName, pFunction, nStructType);
 	if (!pMember)
 		return;
-	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
 
 	pFile << "\t";
 	WriteAccess(pFile, pFunction, nStructType, pMember);
@@ -428,7 +455,7 @@ bool CL4FiascoBEMsgBuffer::HasProperty(int nProperty, CMsgStructType nType)
  *
  * We use a cached value here, because otherwise the IsUtcb call would be
  * recursive and cause an endless loop. Thus, do the detection once in
- * PostCreate and then stor it.
+ * PostCreate and then store it.
  */
 bool CL4FiascoBEMsgBuffer::IsUtcb()
 {
@@ -440,10 +467,8 @@ bool CL4FiascoBEMsgBuffer::IsUtcb()
 	CBEUserDefinedType *pUserType = dynamic_cast<CBEUserDefinedType*>(pBaseType);
 	if (pUserType)
 	{
-		CBERoot *pRoot = pUserType->GetSpecificParent<CBERoot>();
-		assert(pRoot);
 		CL4FiascoBEMsgBuffer *pMsgBuf = dynamic_cast<CL4FiascoBEMsgBuffer*>(
-			pRoot->FindTypedef(pUserType->GetName()));
+			FindTypedef(pUserType->GetName()));
 		if (pMsgBuf)
 			return pMsgBuf->IsUtcb();
 	}
@@ -508,7 +533,7 @@ void CL4FiascoBEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile, CMsgSt
  * array (_word). Because flexpage and send/size dope are not part of this
  * array we return -1 to indicate an error.
  */
-int CL4FiascoBEMsgBuffer::GetMemberPosition(string sName, CMsgStructType nType)
+int CL4FiascoBEMsgBuffer::GetMemberPosition(std::string sName, CMsgStructType nType)
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	if (sName == pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE))

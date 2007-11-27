@@ -51,15 +51,15 @@
 
 CBEUnionType::CBEUnionType()
 : m_sTag(),
-  m_UnionCases(0, this)
+	m_UnionCases(0, this)
 { }
 
 CBEUnionType::CBEUnionType(CBEUnionType* src)
 : CBEType(src),
-  m_UnionCases(src->m_UnionCases)
+	m_UnionCases(src->m_UnionCases)
 {
-    m_sTag = src->m_sTag;
-    m_UnionCases.Adopt(this);
+	m_sTag = src->m_sTag;
+	m_UnionCases.Adopt(this);
 }
 
 /** \brief destructor of this instance */
@@ -83,70 +83,103 @@ CBEUnionType* CBEUnionType::Clone()
 void
 CBEUnionType::CreateBackEnd(CFETypeSpec * pFEType)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBEUnionType::%s(fe) called\n", __func__);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEUnionType::%s(fe) called\n", __func__);
 
-    // sets m_sName to "union"
-    CBEType::CreateBackEnd(pFEType);
+	// sets m_sName to "union"
+	CBEType::CreateBackEnd(pFEType);
 
-    string exc = string(__func__);
+	string exc = string(__func__);
 
-    CFEUnionType *pFEUnion = dynamic_cast<CFEUnionType*>(pFEType);
-    assert (pFEUnion);
+	CFEUnionType *pFEUnion = dynamic_cast<CFEUnionType*>(pFEType);
+	assert (pFEUnion);
 
-    CBEClassFactory *pCF = CBEClassFactory::Instance();
-    vector<CFEUnionCase*>::iterator iterUC;
-    for (iterUC = pFEUnion->m_UnionCases.begin();
-	 iterUC != pFEUnion->m_UnionCases.end();
-	 iterUC++)
-    {
-        CBEUnionCase *pUnionCase = pCF->GetNewUnionCase();
-        m_UnionCases.Add(pUnionCase);
-	pUnionCase->CreateBackEnd(*iterUC);
-    }
-    // set tag
-    string sTag = pFEUnion->GetTag();
-    if (!sTag.empty())
-    {
-	CBENameFactory *pNF = CBENameFactory::Instance();
-        // see if we can find the original struct
-        CFEFile *pFERoot = pFEType->GetRoot();
-        assert(pFERoot);
-        CFEConstructedType *pFETaggedDecl = pFERoot->FindTaggedDecl(sTag);
-        if (pFETaggedDecl)
-            sTag = pNF->GetTypeName(pFETaggedDecl, sTag);
-    }
-    m_sTag = sTag;
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	vector<CFEUnionCase*>::iterator iterUC;
+	for (iterUC = pFEUnion->m_UnionCases.begin();
+		iterUC != pFEUnion->m_UnionCases.end();
+		iterUC++)
+	{
+		CBEUnionCase *pUnionCase = pCF->GetNewUnionCase();
+		m_UnionCases.Add(pUnionCase);
+		pUnionCase->CreateBackEnd(*iterUC);
+	}
+	// set tag
+	string sTag = pFEUnion->GetTag();
+	if (!sTag.empty())
+	{
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		// see if we can find the original struct
+		CFEFile *pFERoot = pFEType->GetRoot();
+		assert(pFERoot);
+		CFEConstructedType *pFETaggedDecl = pFERoot->FindTaggedDecl(sTag);
+		if (pFETaggedDecl)
+			sTag = pNF->GetTypeName(pFETaggedDecl, sTag);
+	}
+	m_sTag = sTag;
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"CBEUnionType::%s(fe) returns\n", __func__);
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBEUnionType::%s(fe) returns\n", __func__);
 }
 
 /** \brief creates a union
  *  \param sTag the tag of the union
  */
 void
-CBEUnionType::CreateBackEnd(string sTag)
+CBEUnionType::CreateBackEnd(std::string sTag)
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBEUnionType::%s(%s) called\n", __func__, sTag.c_str());
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEUnionType::%s(%s) called\n", __func__, sTag.c_str());
 
-    string exc = string(__func__);
+	string exc = string(__func__);
 
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    m_sName = pNF->GetTypeName(TYPE_UNION, false);
-    if (m_sName.empty())
-    {
-        // user defined type overloads this function -> m_sName.c_str()
-        // should always be set
-	exc += " failed, because no type name could be assigned";
-	throw new error::create_error(exc);
-    }
-    m_nFEType = TYPE_UNION;
-    m_sTag = sTag;
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	m_sName = pNF->GetTypeName(TYPE_UNION, false);
+	if (m_sName.empty())
+	{
+		// user defined type overloads this function -> m_sName.c_str()
+		// should always be set
+		exc += " failed, because no type name could be assigned";
+		throw new error::create_error(exc);
+	}
+	m_nFEType = TYPE_UNION;
+	m_sTag = sTag;
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	"CBEUnionType::%s(%s) returns\n", __func__, sTag.c_str());
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+		"CBEUnionType::%s(%s) returns\n", __func__, sTag.c_str());
+}
+
+/** \brief return the tag
+ *  \return the tag
+ */
+std::string CBEUnionType::GetTag()
+{
+	return m_sTag;
+}
+
+/** \brief tests if this union has the given tag
+ *  \param sTag the tag to test for
+ *  \return true if the given tag is the same as the member tag
+ */
+bool CBEUnionType::HasTag(std::string sTag)
+{
+	return (m_sTag == sTag);
+}
+
+/** \brief test if this is a simple type
+ *  \return false
+ */
+bool CBEUnionType::IsSimpleType()
+{
+	return false;
+}
+
+/** \brief checks if this is a constructed type
+ *  \return true, because a union is usually regarded a constructed type
+ */
+bool CBEUnionType::IsConstructedType()
+{
+	return true;
 }
 
 /** \brief writes the union to the target file
@@ -160,30 +193,30 @@ CBEUnionType::CreateBackEnd(string sTag)
  */
 void CBEUnionType::Write(CBEFile& pFile)
 {
-    // write union
-    pFile << m_sName;
-    if (!m_sTag.empty())
-	pFile << " " << m_sTag;
-    if (!m_UnionCases.empty())
-    {
-	pFile << "\n";
-	pFile << "\t{\n";
-        ++pFile;
-
-        // write members
-	vector<CBEUnionCase*>::iterator iterU;
-	for (iterU = m_UnionCases.begin();
-	    iterU != m_UnionCases.end();
-	    iterU++)
+	// write union
+	pFile << m_sName;
+	if (!m_sTag.empty())
+		pFile << " " << m_sTag;
+	if (!m_UnionCases.empty())
 	{
-	    pFile << "\t";
-	    (*iterU)->WriteDeclaration(pFile);
-	    pFile << ";\n";
-	}
+		pFile << "\n";
+		pFile << "\t{\n";
+		++pFile;
 
-        // close union
-	--pFile << "\t}";
-    }
+		// write members
+		vector<CBEUnionCase*>::iterator iterU;
+		for (iterU = m_UnionCases.begin();
+			iterU != m_UnionCases.end();
+			iterU++)
+		{
+			pFile << "\t";
+			(*iterU)->WriteDeclaration(pFile);
+			pFile << ";\n";
+		}
+
+		// close union
+		--pFile << "\t}";
+	}
 }
 
 /** \brief write the declaration of this type
@@ -193,9 +226,9 @@ void CBEUnionType::Write(CBEFile& pFile)
  */
 void CBEUnionType::WriteDeclaration(CBEFile& pFile)
 {
-    pFile << m_sName;
-    if (!m_sTag.empty())
-	pFile << " " << m_sTag;
+	pFile << m_sName;
+	if (!m_sTag.empty())
+		pFile << " " << m_sTag;
 }
 
 /** \brief calculates the size of this union type
@@ -207,65 +240,63 @@ void CBEUnionType::WriteDeclaration(CBEFile& pFile)
  */
 int CBEUnionType::GetSize()
 {
-    CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
-	"CBEUnionType::%s\n", __func__);
+	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
+		"CBEUnionType::%s\n", __func__);
 
-    int nSize = 0;
-    vector<CBEUnionCase*>::iterator iter;
-    for (iter = m_UnionCases.begin();
-	 iter != m_UnionCases.end();
-	 iter++)
-    {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "CBEUnionType::%s determining size of union case %s\n",
-	    __func__, (*iter)->m_Declarators.First()->GetName().c_str());
-
-        int nUnionSize = (*iter)->GetSize();
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	    "CBEUnionType::%s size of union case %s is %d\n", __func__,
-	    (*iter)->m_Declarators.First()->GetName().c_str(), nUnionSize);
-
-        // if we have one variable sized union member, the
-        // whole union is variable sized, because we cannot pinpoint
-        // its exact size to determine a message buffer size
-        if (nUnionSize < 0)
+	int nSize = 0;
+	vector<CBEUnionCase*>::iterator iter;
+	for (iter = m_UnionCases.begin();
+		iter != m_UnionCases.end();
+		iter++)
 	{
-	    nSize = nUnionSize;
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnionType::%s var sized, return -1\n", __func__);
-            return nUnionSize;
-	}
-        if (nSize < nUnionSize)
-            nSize = nUnionSize;
-    }
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEUnionType::%s determining size of union case %s\n",
+			__func__, (*iter)->m_Declarators.First()->GetName().c_str());
 
-    if (m_UnionCases.empty() && (nSize == 0))
-    {
-	// forward declared union -> find definition of union
-	if (m_sTag.empty())
-	{
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnionType::%s returns %d (empty)\n", __func__, nSize);
-	    return nSize;
+		int nUnionSize = (*iter)->GetSize();
+
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+			"CBEUnionType::%s size of union case %s is %d\n", __func__,
+			(*iter)->m_Declarators.First()->GetName().c_str(), nUnionSize);
+
+		// if we have one variable sized union member, the
+		// whole union is variable sized, because we cannot pinpoint
+		// its exact size to determine a message buffer size
+		if (nUnionSize < 0)
+		{
+			nSize = nUnionSize;
+			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+				"CBEUnionType::%s var sized, return -1\n", __func__);
+			return nUnionSize;
+		}
+		if (nSize < nUnionSize)
+			nSize = nUnionSize;
 	}
 
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	CBEType *pType = pRoot->FindTaggedType(TYPE_UNION, m_sTag);
-	if (!pType)
+	if (m_UnionCases.empty() && (nSize == 0))
 	{
-	    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-		"CBEUnionType::%s returns %d (no union %s found)\n",
-		__func__, nSize, m_sTag.c_str());
-	    return nSize;
-	}
-	nSize = pType->GetSize();
-    }
+		// forward declared union -> find definition of union
+		if (m_sTag.empty())
+		{
+			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+				"CBEUnionType::%s returns %d (empty)\n", __func__, nSize);
+			return nSize;
+		}
 
-    CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEUnionType::%s return %d\n",
-	__func__, nSize);
-    return nSize;
+		CBEType *pType = FindTaggedType(TYPE_UNION, m_sTag);
+		if (!pType)
+		{
+			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
+				"CBEUnionType::%s returns %d (no union %s found)\n",
+				__func__, nSize, m_sTag.c_str());
+			return nSize;
+		}
+		nSize = pType->GetSize();
+	}
+
+	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL, "CBEUnionType::%s return %d\n",
+		__func__, nSize);
+	return nSize;
 }
 
 /** \brief calculates the maximum size of this union type
@@ -279,51 +310,70 @@ int CBEUnionType::GetSize()
  */
 int CBEUnionType::GetMaxSize()
 {
-    int nMaxSize = GetSize();
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"CBEUnionType::%s called, GetSize = %d\n", __func__, nMaxSize);
-    if (nMaxSize > 0)
-	return nMaxSize;
+	CCompiler::VerboseI(PROGRAM_VERBOSE_DEBUG,
+		"CBEUnionType::GetMaxSize called, getting size.\n");
 
-    // reset nMaxSize, because it could have been negative before
-    nMaxSize = 0;
-    vector<CBEUnionCase*>::iterator iter;
-    for (iter = m_UnionCases.begin();
-	 iter != m_UnionCases.end();
-	 iter++)
-    {
-        int nUnionSize = 0;
-	(*iter)->GetMaxSize(nUnionSize);
-
-	// here we try to determine the maximum size. If there is a variable
-	// sized member, it has some fixed size or anything else replica
-	// somewhere that will fit its needs. Therefore we simply skip these
-	// members here.
-        if (nUnionSize < 0)
+	int nMaxSize = GetSize();
+	if (nMaxSize > 0)
 	{
-	    continue;
+		CCompiler::VerboseD(PROGRAM_VERBOSE_DEBUG,
+			"CBEUnionType::GetMaxSize: return size %d\n", nMaxSize);
+		return nMaxSize;
 	}
-        if (nMaxSize < nUnionSize)
-            nMaxSize = nUnionSize;
-    }
 
-    if (m_UnionCases.empty() && (nMaxSize == 0))
-    {
-	// forward declared union -> find definition of union
-	if (m_sTag.empty())
-	    return nMaxSize;
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBEUnionType::GetMaxSize: size is variable, check members\n");
+	// reset nMaxSize, because it could have been negative before
+	nMaxSize = 0;
+	vector<CBEUnionCase*>::iterator iter;
+	for (iter = m_UnionCases.begin();
+		iter != m_UnionCases.end();
+		iter++)
+	{
+		int nUnionSize = 0;
+		(*iter)->GetMaxSize(nUnionSize);
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"CBEUnionType::GetMaxSize: size of member %s is %d\n",
+			(*iter)->m_Declarators.First()->GetName().c_str(),
+			nUnionSize);
 
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	CBEType *pType = pRoot->FindTaggedType(TYPE_UNION, m_sTag);
-	if (!pType)
-	    return nMaxSize;
-	nMaxSize = pType->GetMaxSize();
-    }
+		// here we try to determine the maximum size. If there is a variable
+		// sized member, it has some fixed size or anything else replica
+		// somewhere that will fit its needs. Therefore we simply skip these
+		// members here.
+		if (nUnionSize < 0)
+		{
+			continue;
+		}
+		if (nMaxSize < nUnionSize)
+			nMaxSize = nUnionSize;
+	}
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-	"CBEUnionType::%s returns %d\n", __func__, nMaxSize);
-    return nMaxSize;
+	if (m_UnionCases.empty())
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"CBEUnionType::GetMaxSize: forward declared union\n");
+		// forward declared union -> find definition of union
+		if (m_sTag.empty())
+		{
+			CCompiler::VerboseD(PROGRAM_VERBOSE_DEBUG,
+				"CBEUnionType::GetMaxSize: without tag\n");
+			return 0;
+		}
+
+		CBEType *pType = FindTaggedType(TYPE_UNION, m_sTag);
+		if (!pType)
+		{
+			CCompiler::VerboseD(PROGRAM_VERBOSE_DEBUG,
+				"CBEUnionType::GetMaxSize: no tagged type found, return 0\n");
+			return 0;
+		}
+		nMaxSize = pType->GetMaxSize();
+	}
+
+	CCompiler::VerboseD(PROGRAM_VERBOSE_DEBUG,
+		"CBEUnionType::GetMaxSize returns %d\n", nMaxSize);
+	return nMaxSize;
 }
 
 /** \brief counts the union cases
@@ -331,7 +381,7 @@ int CBEUnionType::GetMaxSize()
  */
 int CBEUnionType::GetUnionCaseCount()
 {
-    return m_UnionCases.size();
+	return m_UnionCases.size();
 }
 
 /** \brief writes the cast for this type
@@ -379,29 +429,29 @@ void CBEUnionType::WriteCastToStr(std::string& str, bool bPointer)
  */
 void CBEUnionType::WriteZeroInit(CBEFile& pFile)
 {
-    pFile << "{ ";
-    ++pFile;
-    CBEUnionCase *pMember = m_UnionCases.First();
-    if (pMember)
-    {
-	// get type
-	CBEType *pType = pMember->GetType();
-	// get declarator
-	vector<CBEDeclarator*>::iterator iterD;
-	for (iterD = pMember->m_Declarators.begin();
-	     iterD != pMember->m_Declarators.end();
-	     iterD++)
+	pFile << "{ ";
+	++pFile;
+	CBEUnionCase *pMember = m_UnionCases.First();
+	if (pMember)
 	{
-	    // be C99 compliant:
-	    pFile << (*iterD)->GetName() << " : ";
-	    if ((*iterD)->IsArray())
-		WriteZeroInitArray(pFile, pType, (*iterD),
-		    (*iterD)->m_Bounds.begin());
-	    else if (pType)
-		pType->WriteZeroInit(pFile);
+		// get type
+		CBEType *pType = pMember->GetType();
+		// get declarator
+		vector<CBEDeclarator*>::iterator iterD;
+		for (iterD = pMember->m_Declarators.begin();
+			iterD != pMember->m_Declarators.end();
+			iterD++)
+		{
+			// be C99 compliant:
+			pFile << (*iterD)->GetName() << " : ";
+			if ((*iterD)->IsArray())
+				WriteZeroInitArray(pFile, pType, (*iterD),
+					(*iterD)->m_Bounds.begin());
+			else if (pType)
+				pType->WriteZeroInit(pFile);
+		}
 	}
-    }
-    --pFile << " }";
+	--pFile << " }";
 }
 
 /** \brief used to determine if this type writes a zero init string
@@ -409,7 +459,7 @@ void CBEUnionType::WriteZeroInit(CBEFile& pFile)
  */
 bool CBEUnionType::DoWriteZeroInit()
 {
-    return false;
+	return false;
 }
 
 /** \brief if struct is variable size, it has to write the size
@@ -426,33 +476,33 @@ bool CBEUnionType::DoWriteZeroInit()
  * \todo what if default case is variable sized?
  */
 void CBEUnionType::WriteGetSize(CBEFile& pFile,
-    CDeclStack* pStack,
-    CBEFunction *pUsingFunc)
+	CDeclStack* pStack,
+	CBEFunction *pUsingFunc)
 {
-    int nFixedSize = GetFixedSize();
+	int nFixedSize = GetFixedSize();
 
-    // build vector with var sized members
-    vector<CBEUnionCase*> vVarSizedUnionCase;
-    vVarSizedUnionCase.clear();
-    vector<CBEUnionCase*>::iterator iter;
-    for (iter = m_UnionCases.begin();
-	 iter != m_UnionCases.end();
-	 iter++)
-    {
-        if ((*iter)->IsVariableSized())
-            vVarSizedUnionCase.push_back(*iter);
-    }
-    // call recursive write
-    if (!vVarSizedUnionCase.empty())
-    {
-	pFile << "_dice_max(";
-        WriteGetMaxSize(pFile, &vVarSizedUnionCase, vVarSizedUnionCase.begin(), pStack, pUsingFunc);
-	pFile << ", " << nFixedSize << ")";
-    }
-    else
-	// should never get here, becaus WriteGetSize is only called if
-	// Var-Sized
-	pFile << nFixedSize;
+	// build vector with var sized members
+	vector<CBEUnionCase*> vVarSizedUnionCase;
+	vVarSizedUnionCase.clear();
+	vector<CBEUnionCase*>::iterator iter;
+	for (iter = m_UnionCases.begin();
+		iter != m_UnionCases.end();
+		iter++)
+	{
+		if ((*iter)->IsVariableSized())
+			vVarSizedUnionCase.push_back(*iter);
+	}
+	// call recursive write
+	if (!vVarSizedUnionCase.empty())
+	{
+		pFile << "_dice_max(";
+		WriteGetMaxSize(pFile, &vVarSizedUnionCase, vVarSizedUnionCase.begin(), pStack, pUsingFunc);
+		pFile << ", " << nFixedSize << ")";
+	}
+	else
+		// should never get here, becaus WriteGetSize is only called if
+		// Var-Sized
+		pFile << nFixedSize;
 }
 
 /** \brief calculates the maximum size of the fixed sized mebers
@@ -460,34 +510,32 @@ void CBEUnionType::WriteGetSize(CBEFile& pFile,
  */
 int CBEUnionType::GetFixedSize()
 {
-    int nSize = 0;
-    vector<CBEUnionCase*>::iterator iter;
-    for (iter = m_UnionCases.begin();
-	iter != m_UnionCases.end();
-	iter++)
-    {
-	int nUnionSize = (*iter)->GetSize();
-	// if this is negative size, then its variable sized
-	// and we skip it here (the max operation will simply ignore it)
-	if (nSize < nUnionSize)
-	    nSize = nUnionSize;
-    }
+	int nSize = 0;
+	vector<CBEUnionCase*>::iterator iter;
+	for (iter = m_UnionCases.begin();
+		iter != m_UnionCases.end();
+		iter++)
+	{
+		int nUnionSize = (*iter)->GetSize();
+		// if this is negative size, then its variable sized
+		// and we skip it here (the max operation will simply ignore it)
+		if (nSize < nUnionSize)
+			nSize = nUnionSize;
+	}
 
-    if (m_UnionCases.empty() && (nSize == 0))
-    {
-	// forward declared union -> find definition of union
-	if (m_sTag.empty())
-	    return nSize;
+	if (m_UnionCases.empty() && (nSize == 0))
+	{
+		// forward declared union -> find definition of union
+		if (m_sTag.empty())
+			return nSize;
 
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	CBEType *pType = pRoot->FindTaggedType(TYPE_UNION, m_sTag);
-	if (!pType)
-	    return nSize;
-	nSize = pType->GetSize();
-    }
+		CBEType *pType = FindTaggedType(TYPE_UNION, m_sTag);
+		if (!pType)
+			return nSize;
+		nSize = pType->GetSize();
+	}
 
-    return nSize;
+	return nSize;
 }
 
 /** \brief writes the maximum of the variable sized members
@@ -498,30 +546,30 @@ int CBEUnionType::GetFixedSize()
  *  \param pUsingFunc the function to use as reference for members
  */
 void CBEUnionType::WriteGetMaxSize(CBEFile& pFile,
-    const vector<CBEUnionCase*> *pMembers,
-    vector<CBEUnionCase*>::iterator iter,
-    CDeclStack* pStack,
-    CBEFunction *pUsingFunc)
+	const vector<CBEUnionCase*> *pMembers,
+	vector<CBEUnionCase*>::iterator iter,
+	CDeclStack* pStack,
+	CBEFunction *pUsingFunc)
 {
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: called for func %s\n", __func__,
-	pUsingFunc->GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: called for func %s\n", __func__,
+		pUsingFunc->GetName().c_str());
 
-    assert(pMembers);
-    assert(iter != pMembers->end());
-    CBEUnionCase *pMember = *iter++;
-    assert(pMember);
-    bool bNext = (iter != pMembers->end());
-    if (bNext)
-	pFile << "_dice_max(";
-    WriteGetMemberSize(pFile, pMember, pStack, pUsingFunc);
-    // if we have successor, add ':(<max(next)>)'
-    // otherwise nothing
-    if (bNext)
-    {
-	pFile << ", ";
-        WriteGetMaxSize(pFile, pMembers, iter, pStack, pUsingFunc);
-	pFile << ")";
-    }
+	assert(pMembers);
+	assert(iter != pMembers->end());
+	CBEUnionCase *pMember = *iter++;
+	assert(pMember);
+	bool bNext = (iter != pMembers->end());
+	if (bNext)
+		pFile << "_dice_max(";
+	WriteGetMemberSize(pFile, pMember, pStack, pUsingFunc);
+	// if we have successor, add ':(<max(next)>)'
+	// otherwise nothing
+	if (bNext)
+	{
+		pFile << ", ";
+		WriteGetMaxSize(pFile, pMembers, iter, pStack, pUsingFunc);
+		pFile << ")";
+	}
 }
 
 /** \brief writes the whole size string for a member
@@ -535,33 +583,33 @@ void CBEUnionType::WriteGetMaxSize(CBEFile& pFile,
  * working, check if something changed there as well.
  */
 void CBEUnionType::WriteGetMemberSize(CBEFile& pFile,
-    CBEUnionCase *pMember,
-    CDeclStack* pStack,
-    CBEFunction *pUsingFunc)
+	CBEUnionCase *pMember,
+	CDeclStack* pStack,
+	CBEFunction *pUsingFunc)
 {
-    assert(pMember);
+	assert(pMember);
 
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: called for %s\n", __func__,
-	pMember->m_Declarators.First()->GetName().c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: called for %s\n", __func__,
+		pMember->m_Declarators.First()->GetName().c_str());
 
-    pMember->WriteGetSize(pFile, pStack, pUsingFunc);
-    if ((pMember->GetType()->GetSize() > 1) && !(pMember->IsString()))
-    {
-	pFile << "*sizeof";
-        pMember->GetType()->WriteCast(pFile, false);
-    }
-    else if (pMember->IsString())
-    {
-        // add terminating zero
-	pFile << "+1";
-        bool bHasSizeAttr =
-	    pMember->m_Attributes.Find(ATTR_SIZE_IS) ||
-	    pMember->m_Attributes.Find(ATTR_LENGTH_IS) ||
-	    pMember->m_Attributes.Find(ATTR_MAX_IS);
-        if (!bHasSizeAttr)
-	    pFile << "+" <<
-		CCompiler::GetSizes()->GetSizeOfType(TYPE_INTEGER);
-    }
+	pMember->WriteGetSize(pFile, pStack, pUsingFunc);
+	if ((pMember->GetType()->GetSize() > 1) && !(pMember->IsString()))
+	{
+		pFile << "*sizeof";
+		pMember->GetType()->WriteCast(pFile, false);
+	}
+	else if (pMember->IsString())
+	{
+		// add terminating zero
+		pFile << "+1";
+		bool bHasSizeAttr =
+			pMember->m_Attributes.Find(ATTR_SIZE_IS) ||
+			pMember->m_Attributes.Find(ATTR_LENGTH_IS) ||
+			pMember->m_Attributes.Find(ATTR_MAX_IS);
+		if (!bHasSizeAttr)
+			pFile << "+" <<
+				CCompiler::GetSizes()->GetSizeOfType(TYPE_INTEGER);
+	}
 }
 
 /** \brief tries to find a member with a declarator stack
@@ -573,33 +621,33 @@ void CBEUnionType::WriteGetMemberSize(CBEFile& pFile,
  */
 CBETypedDeclarator*
 CBEUnionType::FindMember(CDeclStack* pStack,
-    CDeclStack::iterator iCurr)
+	CDeclStack::iterator iCurr)
 {
-    // if at end, return
-    if (iCurr == pStack->end())
+	// if at end, return
+	if (iCurr == pStack->end())
+		return 0;
+	// try to find member for current declarator
+	string sName = iCurr->pDeclarator->GetName();
+	CBETypedDeclarator *pMember = m_UnionCases.Find(sName);
+	if (!pMember)
+		return pMember;
+
+	// no more elements in stack, we are finished
+	if (++iCurr == pStack->end())
+		return pMember;
+
+	// check member types
+	CBEType *pType = pMember->GetType();
+	while (dynamic_cast<CBEUserDefinedType*>(pType))
+		pType = dynamic_cast<CBEUserDefinedType*>(pType);
+
+	CBEStructType *pStruct = dynamic_cast<CBEStructType*>(pType);
+	if (pStruct)
+		return pStruct->FindMember(pStack, iCurr);
+
+	CBEUnionType *pUnion = dynamic_cast<CBEUnionType*>(pType);
+	if (pUnion)
+		return pUnion->FindMember(pStack, iCurr);
+
 	return 0;
-    // try to find member for current declarator
-    string sName = iCurr->pDeclarator->GetName();
-    CBETypedDeclarator *pMember = m_UnionCases.Find(sName);
-    if (!pMember)
-	return pMember;
-
-    // no more elements in stack, we are finished
-    if (++iCurr == pStack->end())
-	return pMember;
-
-    // check member types
-    CBEType *pType = pMember->GetType();
-    while (dynamic_cast<CBEUserDefinedType*>(pType))
-	pType = dynamic_cast<CBEUserDefinedType*>(pType);
-
-    CBEStructType *pStruct = dynamic_cast<CBEStructType*>(pType);
-    if (pStruct)
-	return pStruct->FindMember(pStack, iCurr);
-
-    CBEUnionType *pUnion = dynamic_cast<CBEUnionType*>(pType);
-    if (pUnion)
-	return pUnion->FindMember(pStack, iCurr);
-
-    return 0;
 }

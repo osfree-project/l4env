@@ -34,9 +34,9 @@ task_set(unsigned begin, unsigned end, int state)
 
 /* XXX there are two cases were task_alloc can fail XXX */
 int
-task_alloc(unsigned taskno, owner_t owner)
+task_alloc(unsigned taskno, owner_t owner, int allow_realloc)
 {
-  if (__task[taskno] == owner)
+  if (__task[taskno] == owner && allow_realloc)
     return 1;
   if (__task[taskno] != O_FREE)
       return 0;

@@ -39,11 +39,11 @@ int vt100_getchar(termstate_t * term)
         c = term->keylist[term->keylist_next_read];
     } while (c == 0);
 
-    l4semaphore_down(&term->keybufsem);
 //    LOGd(_DEBUG, "c= (%d)", c);
+
+    l4semaphore_down(&term->keybufsem);
     term->keylist_next_read =
         (term->keylist_next_read + 1) % KEYLIST_SIZE;
-
     l4semaphore_up(&term->keybufsem);
 
     return c;

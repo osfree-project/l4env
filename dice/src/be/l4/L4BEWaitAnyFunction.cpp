@@ -56,6 +56,7 @@ CL4BEWaitAnyFunction::~CL4BEWaitAnyFunction()
 
 /** \brief initialize instance of this class
  *  \param pFEInterface the interface to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if successful
  */
 void

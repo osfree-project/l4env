@@ -87,6 +87,7 @@ void CBEWaitFunction::WriteInvocation(CBEFile& pFile)
 
 /** \brief creates the back-end wait function
  *  \param pFEOperation the corresponding front-end operation
+ *  \param bComponentSide true if this function is create at component side
  *  \return true if successful
  */
 void CBEWaitFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
@@ -324,18 +325,17 @@ void CBEWaitFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 		if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
 			pType = pAttr->GetAttrType();
 		CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
-		int nArrayDimensions = pDeclarator->GetArrayDimensionCount() -
-			pType->GetArrayDimensionCount();
-		if ((pDeclarator->GetStars() == 0) && (nArrayDimensions <= 0))
+		int nArrayDimensions = pDeclarator->GetArrayDimensionCount() + pType->GetArrayDimensionCount();
+		if (pDeclarator->GetStars() == 0 && !pType->IsPointerType() && nArrayDimensions <= 0)
 			bAdd = true;
-		if ((pParameter->m_Attributes.Find(ATTR_STRING)) &&
-			pType->IsOfType(TYPE_CHAR) &&
-			(pDeclarator->GetStars() < 2))
+		if (pParameter->m_Attributes.Find(ATTR_STRING) &&
+			((pType->IsOfType(TYPE_CHAR) && pDeclarator->GetStars() < 2) ||
+			 (pType->IsOfType(TYPE_CHAR_ASTERISK) && pDeclarator->GetStars() < 1)))
 			bAdd = true;
 		if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
 				pParameter->m_Attributes.Find(ATTR_LENGTH_IS) ||
 				pParameter->m_Attributes.Find(ATTR_MAX_IS)) &&
-			(nArrayDimensions <= 0))
+			nArrayDimensions <= 0)
 			bAdd = true;
 
 		if (bAdd)

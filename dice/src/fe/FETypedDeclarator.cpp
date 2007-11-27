@@ -134,7 +134,7 @@ CFETypeSpec* CFETypedDeclarator::GetType()
  *  \param sName the name to check against
  *  \return true if one of the delcarators matches
  */
-bool CFETypedDeclarator::Match(string sName)
+bool CFETypedDeclarator::Match(std::string sName)
 {
     return m_Declarators.Find(sName) != 0;
 }

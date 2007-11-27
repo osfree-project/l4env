@@ -49,7 +49,7 @@ CBEInterfaceFunction::~CBEInterfaceFunction()
 
 /** \brief creates the back-end function for the interface
  *  \param pFEInterface the respective front-end interface
- *  \return true if successful
+ *  \param bComponentSide true if the function is created at component side
  *
  * Create empty return variable.
  */

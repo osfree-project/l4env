@@ -16,6 +16,10 @@ ifeq ($(CONFIG_DDE26_BLOCK),y)
 TARGET += libdde_linux26_block.a
 endif
 
+#ifeq ($(CONFIG_DDE26_SOUND),y)
+#TARGET += libdde_linux26_sound.a
+#endif
+
 SYSTEMS = x86-l4v2
 
 ifeq ($(ARCH), x86)
@@ -33,10 +37,10 @@ PRIVATE_INCDIR += $(CONTRIB)/drivers/pci $(PKGDIR)/linux26/lib/src/arch/l4 \
 ##################################################################
 # Sources for libdde_linux.a                                     #
 ##################################################################
-SRC_DDE = cli_sti.c init_task.c init.c pci.c power.c process.c \
-          res.c sched.c signal.c smp.c softirq.c timer.c \
+SRC_DDE = cli_sti.c fs.c hw-helpers.c init_task.c init.c pci.c power.c \
+		  process.c res.c sched.c signal.c smp.c softirq.c timer.c \
           page_alloc.c kmem_cache.c kmalloc.c irq.c param.c \
-		  vmalloc.c
+		  vmalloc.c vmstat.c
 
 # our implementation
 SRC_C_libdde_linux26.a = $(addprefix arch/l4/, $(SRC_DDE))
@@ -68,13 +72,18 @@ SRC_C_libdde_linux26.a += \
                           lib/cpumask.c \
                           lib/iomap.c \
 						  lib/hweight.c \
+						  lib/kernel_lock.c \
                           lib/klist.c \
                           lib/kobject.c \
                           lib/kref.c \
+						  lib/radix-tree.c \
+						  lib/sha1.c \
                           lib/rwsem.c \
                           lib/semaphore-sleepers.c \
                           lib/string.c \
                           lib/vsprintf.c \
+						  mm/mempool.c \
+						  mm/swap.c \
                           mm/util.c \
                           drivers/base/attribute_container.c \
                           drivers/base/bus.c \
@@ -84,7 +93,9 @@ SRC_C_libdde_linux26.a += \
                           drivers/base/dd.c \
                           drivers/base/driver.c \
                           drivers/base/init.c \
+						  drivers/base/map.c \
                           drivers/base/sys.c \
+						  drivers/char/random.c \
                           drivers/pci/access.c \
                           drivers/pci/bus.c \
                           drivers/pci/pci.c \
@@ -113,14 +124,32 @@ SRC_C_libdde_linux26_net.a += \
                               net/ethernet/eth.c \
                               net/sched/sch_generic.c
 
+##################################################################
+# Sources for libdde_linux_sound.a                               #
+##################################################################
+SRC_C_libdde_linux26_sound.a += \
+								sound/sound_core.c \
+								arch/l4/sound.c
 
 ##################################################################
 # Sources for libdde_linux_block.a                               #
 ##################################################################
 #
-# (later...)
-#SRC_C_libdde_linux26_block.a += \
-#                              drivers/ide/ide.c
+SRC_C_libdde_linux26_block.a += \
+								arch/l4/mm-helper.c   \
+								arch/l4/inodes.c      \
+								block/elevator.c      \
+								block/genhd.c         \
+								block/ll_rw_blk.c     \
+								block/noop-iosched.c  \
+								block/ioctl.c         \
+								block/scsi_ioctl.c    \
+								fs/bio.c              \
+								fs/block_dev.c        \
+								fs/buffer.c           \
+								fs/partitions/check.c \
+								mm/backing-dev.c      \
+								mm/bounce.c
 
 all::
 lib/crc32.o : crc32table.h

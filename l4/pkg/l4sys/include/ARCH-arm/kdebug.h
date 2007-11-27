@@ -63,7 +63,7 @@ L4_INLINE void
 l4_sys_sti(void);
 
 L4_INLINE void
-l4_kdebug_imb(void);
+l4_kdebug_cache(unsigned long op, unsigned long start, unsigned long end);
 
 EXTERN_C long int
 l4_atomic_add(volatile long int* mem, long int offset) LONG_CALL;
@@ -133,6 +133,29 @@ l4_atomic_cmpxchg_res(volatile long int* mem, long int oldval, long int newval) 
        "i" (L4_SYSCALL_ENTER_KDEBUG),				\
        "0" (r0),						\
        "r" (r1)							\
+      );							\
+    r0;								\
+  })
+
+#define __KDEBUG_ARM_PARAM_3(nr, p1, p2, p3)			\
+  ({								\
+    register unsigned long r0 asm("r0") = (unsigned long)(p1);	\
+    register unsigned long r1 asm("r1") = (unsigned long)(p2);	\
+    register unsigned long r2 asm("r2") = (unsigned long)(p3);	\
+    __asm__ __volatile__					\
+      (								\
+       "stmdb sp!, {r3-r12,lr}	\n\t"				\
+       "mov	lr, pc		\n\t"				\
+       "mov	pc, %1		\n\t"				\
+       "cmp	lr, #" #nr "	\n\t"				\
+       "ldmia sp!, {r3-r12,lr}	\n\t"				\
+       :							\
+       "=r" (r0)						\
+       :							\
+       "i" (L4_SYSCALL_ENTER_KDEBUG),				\
+       "0" (r0),						\
+       "r" (r1),						\
+       "r" (r2)							\
       );							\
     r0;								\
   })
@@ -244,9 +267,9 @@ l4_sys_sti(void)
 }
 
 L4_INLINE void
-l4_kdebug_imb(void)
+l4_kdebug_cache(unsigned long op, unsigned long start, unsigned long end)
 {
-  __KDEBUG_ARM_PARAM_0(0x3f);
+  __KDEBUG_ARM_PARAM_3(0x3f, op, start, end);
 }
 
 #endif //__GNUC__

@@ -41,7 +41,7 @@
 #include <iostream>
 #include <stdexcept>
 
-CFELibrary::CFELibrary(string sName, vector<CFEAttribute*> * pAttributes, CFEBase* pParent)
+CFELibrary::CFELibrary(std::string sName, vector<CFEAttribute*> * pAttributes, CFEBase* pParent)
 : CFEFileComponent(static_cast<CObject*>(pParent)),
 	m_Attributes(pAttributes, this),
 	m_Constants(0, this),
@@ -134,7 +134,7 @@ string CFELibrary::GetName()
  *  \param sName the name to match
  *  \return true if matches
  */
-bool CFELibrary::Match(string sName)
+bool CFELibrary::Match(std::string sName)
 {
 	return GetName() == sName;
 }
@@ -152,7 +152,7 @@ void CFELibrary::Accept(CVisitor& v)
  *  \param sName the name of the type
  *  \return a reference to the type if successfule, 0 otherwise
  */
-CFETypedDeclarator *CFELibrary::FindUserDefinedType(string sName)
+CFETypedDeclarator *CFELibrary::FindUserDefinedType(std::string sName)
 {
 	// search own types
 	CFETypedDeclarator *pTypedef = m_Typedefs.Find(sName);
@@ -184,7 +184,7 @@ CFETypedDeclarator *CFELibrary::FindUserDefinedType(string sName)
  *  \param sName the name of the constant
  *  \return a reference to the constant if found, 0 if not found
  */
-CFEConstDeclarator *CFELibrary::FindConstant(string sName)
+CFEConstDeclarator *CFELibrary::FindConstant(std::string sName)
 {
 	if (sName.empty())
 		return 0;
@@ -218,7 +218,7 @@ CFEConstDeclarator *CFELibrary::FindConstant(string sName)
  *  \param sName the name of the lib to search for
  *  \return a reference to the library or 0 if not found
  */
-CFELibrary *CFELibrary::FindLibrary(string sName)
+CFELibrary *CFELibrary::FindLibrary(std::string sName)
 {
 	if (sName.empty())
 		return 0;
@@ -259,7 +259,7 @@ CFELibrary *CFELibrary::FindLibrary(string sName)
  *  \param pStart the start of the search through the same lib
  *  \return a reference to the found interface or 0 if nothing found
  */
-CFEInterface *CFELibrary::FindInterface(string sName, CFELibrary* pStart)
+CFEInterface *CFELibrary::FindInterface(std::string sName, CFELibrary* pStart)
 {
 	if (sName.empty())
 		return 0;
@@ -360,7 +360,7 @@ void CFELibrary::AddSameLibrary(CFELibrary* pLibrary)
  *  \param sName the tag (name) of the tagged decl
  *  \return a reference to the found tagged decl or NULL if none found
  */
-CFEConstructedType* CFELibrary::FindTaggedDecl(string sName)
+CFEConstructedType* CFELibrary::FindTaggedDecl(std::string sName)
 {
 	// own tagged decls
 	CFEConstructedType* pTaggedDecl = m_TaggedDeclarators.Find(sName);

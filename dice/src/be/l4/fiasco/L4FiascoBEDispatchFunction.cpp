@@ -48,17 +48,14 @@ void CL4FiascoBEDispatchFunction::AddBeforeParameters()
 {
 	CL4BEDispatchFunction::AddBeforeParameters();
 
-	if (!m_sDefaultFunction.empty())
-	{
-		CBENameFactory *pNF = CBENameFactory::Instance();
-		std::string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-		std::string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	std::string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	std::string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
 
-		CBEClassFactory *pCF = CBEClassFactory::Instance();
-		CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
-		m_Parameters.Add(pParameter);
-		pParameter->CreateBackEnd(sTagType, sTagVar, 1);
-	}
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
+	m_Parameters.Add(pParameter);
+	pParameter->CreateBackEnd(sTagType, sTagVar, 1);
 }
 
 /** \brief writes the default case if there is a default function
@@ -90,7 +87,7 @@ void CL4FiascoBEDispatchFunction::WriteSetWrongOpcodeException(CBEFile& pFile)
 	// set short IPC
 	CL4FiascoBEMsgBuffer *pMsgBuffer = dynamic_cast<CL4FiascoBEMsgBuffer*>(GetMessageBuffer());
 	assert(pMsgBuffer);
-	pMsgBuffer->WriteDopeShortInitialization(pFile, TYPE_MSGDOPE_SEND, CMsgStructType::Generic);
+	pMsgBuffer->WriteDopeShortInitialization(pFile, this, TYPE_MSGDOPE_SEND, CMsgStructType::Generic);
 }
 
 /** \brief writes the decalaration of the default function

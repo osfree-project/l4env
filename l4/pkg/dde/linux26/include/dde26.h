@@ -3,6 +3,8 @@
 
 #include <l4/dde/ddekit/thread.h>
 
+#define WARN_UNIMPL         printk("unimplemented: %s\n", __FUNCTION__)
+
 /** \defgroup dde26
  *
  * DDELinux2.6 subsystems

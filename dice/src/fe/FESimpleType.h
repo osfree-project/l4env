@@ -52,7 +52,7 @@ public:
 	CFESimpleType(unsigned int nType, bool bUnSigned = false,
 		bool bUnsignedFirst = true, int nSize = 0, bool bShowType = true);
     /** \brief CFESimpleType constructor
-     *  \param bType the type of the type
+     *  \param nType the type of the type
      *  \param nFirst first part of fixed precision
      *  \param nSecond the second part of the fixed precision
      */
@@ -82,8 +82,8 @@ public:
     /** \brief sets the signedness
      *  \param bUnsigned the new un-signess
      */
-    void SetUnsigned(bool bUnSigned)
-    { m_bUnSigned = bUnSigned; }
+    void SetUnsigned(bool bUnsigned)
+    { m_bUnSigned = bUnsigned; }
 	/** \brief sets the string representation
 	 *  \param strRep the new string representation
 	 */

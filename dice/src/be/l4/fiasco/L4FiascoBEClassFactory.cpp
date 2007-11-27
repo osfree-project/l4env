@@ -34,6 +34,11 @@
 #include "L4FiascoBECallFunction.h"
 #include "L4FiascoBESrvLoopFunction.h"
 #include "L4FiascoBEWaitAnyFunction.h"
+#include "L4FiascoBEUnmarshalFunction.h"
+#include "L4FiascoBEMarshalFunction.h"
+#include "L4FiascoBEWaitFunction.h"
+#include "L4FiascoBESndFunction.h"
+#include "L4FiascoBEReplyFunction.h"
 #include "L4FiascoBEClass.h"
 
 #include "Compiler.h"
@@ -143,3 +148,64 @@ CBEWaitAnyFunction * CL4FiascoBEClassFactory::GetNewRcvAnyFunction()
 		"CL4FiascoBEClassFactory: created class CL4FiascoBEWaitAnyFunction\n");
 	return new CL4FiascoBEWaitAnyFunction(false, false);
 }
+
+/** \brief creates a new unmarshal function
+ *  \return a reference to the new instance
+ */
+CBEUnmarshalFunction * CL4FiascoBEClassFactory::GetNewUnmarshalFunction()
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4FiascoBEClassFactory: created class CL4FiascoBEUnmarshalFunction\n");
+	return new CL4FiascoBEUnmarshalFunction();
+}
+
+/** \brief creates a new marshal function
+ *  \return a reference to the new instance
+ */
+CBEMarshalFunction * CL4FiascoBEClassFactory::GetNewMarshalFunction()
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4FiascoBEClassFactory: created class CL4FiascoBEMarshalFunction\n");
+	return new CL4FiascoBEMarshalFunction();
+}
+
+/** \brief creates a new receive function
+ *  \return a reference to the new receive function
+ */
+CBEWaitFunction * CL4FiascoBEClassFactory::GetNewRcvFunction()
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4FiascoBEClassFactory: created class CL4FiascoBEWaitFunction\n");
+	return new CL4FiascoBEWaitFunction(false);
+}
+
+/** \brief creates a new wait function
+ *  \return a reference to the new receive function
+ */
+CBEWaitFunction * CL4FiascoBEClassFactory::GetNewWaitFunction()
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4FiascoBEClassFactory: created class CL4FiascoBEWaitFunction\n");
+	return new CL4FiascoBEWaitFunction(true);
+}
+
+/** \brief creates a new send function
+ *  \return a reference to the new receive function
+ */
+CBESndFunction * CL4FiascoBEClassFactory::GetNewSndFunction()
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4FiascoBEClassFactory: created class CL4FiascoBESndFunction\n");
+	return new CL4FiascoBESndFunction();
+}
+
+/** \brief creates a new reply function
+ *  \return a reference to the new receive function
+ */
+CBEReplyFunction * CL4FiascoBEClassFactory::GetNewReplyFunction()
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CL4FiascoBEClassFactory: created class CL4FiascoBEReplyFunction\n");
+	return new CL4FiascoBEReplyFunction();
+}
+

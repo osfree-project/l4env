@@ -670,6 +670,58 @@ l4vfs_common_io_ioctl_component(CORBA_Object _dice_corba_obj,
     return -ENOTTY;
 }
 
+
+l4_int32_t
+l4vfs_common_io_fcntl_component(CORBA_Object _dice_corba_obj,
+                                object_handle_t fd,
+                                int cmd,
+                                long *arg,
+                                CORBA_Server_Environment *_dice_corba_env)
+{
+    l4semaphore_down(&(clients[fd].client_sem));
+    // no one may read from an invalid object
+    if (clients[fd].object_id < 0)
+    {
+        LOG("invalid file descriptor");
+        l4semaphore_up(&(clients[fd].client_sem));
+        return -EBADF;
+    }
+
+    // no one may read from the root object
+    if (clients[fd].object_id == 0)
+    {
+        LOG("no read to root allowed");
+        l4semaphore_up(&(clients[fd].client_sem));
+        return -EISDIR;
+    }
+
+    // only read from open objects
+    if (!clients[fd].open)
+    {
+        LOG("handle not open");
+        l4semaphore_up(&(clients[fd].client_sem));
+        return -EINVAL;
+    }
+
+	switch(cmd)
+	{
+		case F_GETFL:
+			l4semaphore_up(&(clients[fd].client_sem));
+			return clients[fd].rw_mode;
+			break;
+		case F_SETFL:
+			clients[fd].rw_mode = *arg;
+			break;
+		default:
+			LOG("unimplemented fcntl: 0x%x", cmd);
+			break;
+	}
+
+	l4semaphore_up(&(clients[fd].client_sem));
+	return 0;
+}
+
+
 l4_int32_t
 l4vfs_basic_io_stat_component(CORBA_Object _dice_corba_obj,
                               const object_id_t *object_id,
@@ -718,7 +770,7 @@ l4vfs_select_notify_clear_component(CORBA_Object _dice_corba_obj,
 
     l4semaphore_down(&clients[handle].client_sem);
     /* Select cancelled, erase all info. */
-    vt100_unset_select_info(terms[termno].terminal);
+    vt100_unset_select_info(terms[termno].terminal, handle, mode, notif_tid);
     l4semaphore_up(&clients[handle].client_sem);
 }
 

@@ -63,6 +63,7 @@ CBEUnmarshalFunction::~CBEUnmarshalFunction()
 
 /** \brief creates the back-end unmarshal function
  *  \param pFEOperation the corresponding front-end operation
+ *  \param bComponentSide true if this function is create at component side
  *  \return true if successful
  *
  * This function should only contain IN parameters if it is on the component's
@@ -203,8 +204,8 @@ CBEUnmarshalFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 		"CBEUnmarshalFunction::AddParameter: decl->stars %d, is ptr type %s, array dims diff %d\n",
 		pDeclarator->GetStars(), pType->IsPointerType() ? "yes" : "no", nArrayDimensions);
 	// if there are no array dimensions, then we need to add a pointer
-	if ((pDeclarator->GetStars() == 0) && !pType->IsPointerType() &&
-		(nArrayDimensions <= 0))
+	if (pDeclarator->GetStars() == 0 && !pType->IsPointerType() &&
+		nArrayDimensions <= 0)
 	{
 		pDeclarator->IncStars(1);
 		return;
@@ -325,7 +326,7 @@ bool CBEUnmarshalFunction::DoWriteFunction(CBEFile* pFile)
  *  \param sTypeName the name of the type
  *  \return a reference to the found parameter
  */
-CBETypedDeclarator* CBEUnmarshalFunction::FindParameterType(string sTypeName)
+CBETypedDeclarator* CBEUnmarshalFunction::FindParameterType(std::string sTypeName)
 {
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	if (pMsgBuffer && pMsgBuffer->HasType(sTypeName))
@@ -355,8 +356,7 @@ CMsgStructType CBEUnmarshalFunction::GetReceiveDirection()
 /** \brief adds parameters after all other parameters
  *  \return true if successful
  */
-void
-CBEUnmarshalFunction::AddAfterParameters()
+void CBEUnmarshalFunction::AddAfterParameters()
 {
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBENameFactory *pNF = CBENameFactory::Instance();

@@ -63,7 +63,6 @@ static MUTEX *pending_mutex;
 
 static l4_threadid_t worker_thread;
 static CORBA_Object  worker_tid = &worker_thread;
-static CORBA_Environment env = dice_default_environment;
 
 #define JOB_TYPE_EMPTY  0
 #define JOB_TYPE_NRT    1
@@ -97,6 +96,7 @@ static struct job *alloc_job_slot(void) {
 	struct job *result = NULL;
 	int i;
 	thread->mutex_down(job_queue_mutex);
+	CORBA_Environment env = dice_default_environment;
 
 	/* find empty job slot */
 	for (i=0; (jobs[i].type != JOB_TYPE_EMPTY) && (i<MAX_JOBS); i++);

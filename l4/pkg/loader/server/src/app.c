@@ -332,14 +332,12 @@ app_list_addr (app_t *app)
  * \param size		size of dataspace
  * \param type		type
  * \param rights	rights for the pager
- * \param attach	only used for MMIO emulation: if set to 1 this
- *			dataspace should be attached to our address space
  * \param dbg_name	name of application area for debugging purposes
  * \retval aa		application area */
 int
 app_attach_ds_to_pager(app_t *app, l4dm_dataspace_t *ds, l4_addr_t addr,
 		       l4_size_t size, l4_uint16_t type, l4_uint32_t rights,
-		       int attach, const char *dbg_name, app_area_t **aa)
+		       const char *dbg_name, app_area_t **aa)
 {
   int error;
   l4_addr_t sec_end;
@@ -366,25 +364,6 @@ app_attach_ds_to_pager(app_t *app, l4dm_dataspace_t *ds, l4_addr_t addr,
 	/* app areas overlap */
 	return error;
     }
-
-#ifdef EMULATE_MMIO
-  /* We have to attach all dataspaces for program sections and physical
-   * memory here to be able to modify the clients address space. We only
-   * need to attach a dataspace if the client is able to modify it */
-  if (attach && (rights & L4DM_WRITE))
-    {
-      l4_addr_t addr;
-
-      if ((error = l4rm_attach(ds, size, 0, rights, (void*)&addr)))
-	{
-	  app_msg(app, "Error %d attaching clients dataspace "
-		       "for virtualization", error);
-	  return error;
-	}
-      new_aa->beg.here = addr;
-      new_aa->flags |= APP_AREA_MMIO;
-    }
-#endif
 
   *aa = new_aa;
 
@@ -415,8 +394,7 @@ app_attach_section_to_pager(l4exec_section_t *l4exc_start,
       /* make section pageable */
       if ((error = app_attach_ds_to_pager(app, &l4exc->ds, l4exc->addr,
 					  l4exc->size, l4exc->info.type,
-					  rights, /*attach=*/1,
-					  "program section", &aa)))
+					  rights, "program section", &aa)))
 	return error;
 
       if (app->flags & APP_NOSUPER)
@@ -491,8 +469,7 @@ app_create_ds(app_t *app, l4_addr_t app_addr, l4_size_t size,
   /* make dataspace pageable */
   if ((error = app_attach_ds_to_pager(app, &ds, app_addr, size,
 				      L4_DSTYPE_READ | L4_DSTYPE_WRITE,
-				      L4DM_RW, /*attach=*/0, dbg_name,
-				      ret_aa)))
+				      L4DM_RW, dbg_name, ret_aa)))
     return error;
 
   (*ret_aa)->beg.here = here;
@@ -528,7 +505,7 @@ app_share_sections_with_client(app_t *app, l4_threadid_t client)
 static inline void
 app_publish_symbols(app_t *app)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   fiasco_register_symbols (app->tid, app->symbols, app->sz_symbols);
 #endif
 }
@@ -537,7 +514,7 @@ app_publish_symbols(app_t *app)
 static inline void
 app_publish_lines(app_t *app)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   fiasco_register_lines (app->tid, app->lines, app->sz_lines);
 #endif
 }
@@ -573,7 +550,7 @@ app_publish_lines_symbols(app_t *app)
 static inline void
 app_unpublish_symbols(app_t *app)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   if (app->symbols && !l4_is_invalid_id(app->tid))
     fiasco_register_symbols(app->tid, 0, 0);
 #endif
@@ -583,7 +560,7 @@ app_unpublish_symbols(app_t *app)
 static inline void
 app_unpublish_lines(app_t *app)
 {
-#ifdef ARCH_x86
+#if defined(ARCH_x86) || defined(ARCH_amd64)
   if (app->lines && !l4_is_invalid_id(app->tid))
     fiasco_register_lines(app->tid, 0, 0);
 #endif
@@ -837,8 +814,7 @@ load_modules(cfg_task_t *ct, app_t *app, l4_threadid_t fprov_id,
 	      if ((error =
 		    app_attach_ds_to_pager(app, &ds, mod->mod_start, mod_size,
 					   L4_DSTYPE_READ | L4_DSTYPE_WRITE,
-					   L4DM_RW, /*attach=*/0,
-					   "boot module", &aa)))
+					   L4DM_RW, "boot module", &aa)))
 		return error;
 	    }
 	  else
@@ -1125,8 +1101,7 @@ app_create_phys_memory(app_t *app, l4_size_t size, int cfg_flags, int pool)
   /* make physical memory accessible from application */
   if ((error = app_attach_ds_to_pager(app, &ds, addr, size,
 				      L4_DSTYPE_READ | L4_DSTYPE_WRITE,
-				      L4DM_RW, /*attach=*/1,
-				      "phys memory", &aa)))
+				      L4DM_RW, "phys memory", &aa)))
     return error;
 
   if (cfg_flags & CFG_M_NOSUPERPAGES)

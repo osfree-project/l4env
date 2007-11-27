@@ -26,6 +26,9 @@ FAQ
 * I'm starting my programs with the loader and they simply don't
   startup. Why?
 
-  The problem is, that the name_server must by started via RMGR, as
-  its client-lib uses RMGR functions to get the task_id.  Don't start
-  the name_server with loader.
+  [Old] The problem is, that the name_server must by started via RMGR,
+  as its client-lib uses RMGR functions to get the task_id.  Don't
+  start the name_server with loader.
+
+  [New] The client-lib now uses 'names' for finding the 'name_server'.
+  You should not have unusual problems.

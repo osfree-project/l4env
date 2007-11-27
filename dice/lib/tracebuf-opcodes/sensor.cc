@@ -44,9 +44,9 @@ void Sensor::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
 		del = "=";
 
 	pFile << "\t{\n";
-	++pFile << "\tunion {\n";
+	++pFile << "\tunion __attribute__((packed)) {\n";
 	++pFile << "\tchar msg[31];\n";
-	pFile << "\tstruct {\n";
+	pFile << "\tstruct __attribute__((packed)) {\n";
 	++pFile << "\tunsigned char _pad1;\n";
 	pFile << "\tunsigned long if_id;\n";
 	pFile << "\tunsigned long op;\n";
@@ -56,7 +56,7 @@ void Sensor::BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction)
 	--pFile << "\t} entry;\n";
 	--pFile << "\t} msg = { " << dot << "entry" << del << " { " << dot << "_pad1" << del << "0, " << dot <<
 		"if_id" << del << sOpcodeVar << " >> DICE_IID_BITS, " << dot << "op" << del << " " << sOpcodeVar <<
-		" & DICE_FID_MASK, " << dot << "tid" << del << " l4_myself(), " << dot << "from" << del << " *(" << 
+		" & DICE_FID_MASK, " << dot << "tid" << del << " l4_myself(), " << dot << "from" << del << " *(" <<
 		sObj <<	"), " << dot << "iname" << del << " \"" << pClass->GetName().substr(0,14) << "\"} };\n";
 	pFile << "\tfiasco_tbuf_log(msg.msg);\n";
 

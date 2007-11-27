@@ -57,7 +57,7 @@ int CL4FiascoBESizes::GetSizeOfType(int nFEType, int nFESize)
 	switch (nFEType)
 	{
 	case TYPE_UTCB:
-		return GetMaxSizeOfType(TYPE_MWORD);
+		return 32 * GetSizeOfType(TYPE_MWORD);
 		break;
 	default:
 		return CL4BESizes::GetSizeOfType(nFEType, nFESize);

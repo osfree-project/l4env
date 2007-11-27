@@ -89,6 +89,7 @@ void CSockBECallFunction::WriteVariableInitialization(CBEFile& pFile)
 
 /** \brief initialize the instance of this class
  *  \param pFEOperation the front-end operation to use as reference
+ *  \param bComponentSide true if this function is created at the component side
  *  \return true if successful
  */
 void CSockBECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)

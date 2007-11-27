@@ -2,7 +2,7 @@
 PKGDIR ?= ../..
 L4DIR  ?=  $(PKGDIR)/../../..
 
-SYSTEMS = x86-l4v2
+SYSTEMS = x86-l4v2 arm-l4v2 amd64-l4v2
 
 # source files
 SERVERIDL_libl4vfs_term_server_internal-server.a   = internal.idl

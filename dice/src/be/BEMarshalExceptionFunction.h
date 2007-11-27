@@ -48,7 +48,6 @@ public:
 public:
 	virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 	virtual bool DoWriteFunction(CBEFile* pFile);
-	virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 	virtual CMsgStructType GetSendDirection();
 	virtual CMsgStructType GetReceiveDirection();
 	virtual CBETypedDeclarator* GetExceptionVariable();

@@ -43,7 +43,7 @@
 #include <iostream>
 #include <cassert>
 
-CFEOperation::CFEOperation(CFETypeSpec * pReturnType, string sName,
+CFEOperation::CFEOperation(CFETypeSpec * pReturnType, std::string sName,
 	vector<CFETypedDeclarator*> * pParameters, vector<CFEAttribute*> * pAttributes,
 	vector<CFEIdentifier*> * pRaisesDeclarators)
 : CFEInterfaceComponent(static_cast<CObject*>(0)),
@@ -101,7 +101,7 @@ string CFEOperation::GetName()
  * This function searches the operation's parameters for a parameter with the
  * specified name.
  */
-CFETypedDeclarator *CFEOperation::FindParameter(string sName)
+CFETypedDeclarator *CFEOperation::FindParameter(std::string sName)
 {
     if (m_Parameters.empty())
         return 0;

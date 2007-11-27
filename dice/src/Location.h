@@ -41,10 +41,18 @@ namespace yy { class location; }
 class location
 {
 public:
+	/** \brief basic constructor
+	 */
 	location()
 		: begin_line(1), end_line(1), begin_column(0), end_column(0), filename()
 	{ }
+	/** \brief copy constructor for parser locations
+	 *  \param loc the source of the copy operation
+	 */
 	location(const yy::location& loc);
+	/** \brief copy constructor
+	 *  \param src the source of the copy operation
+	 */
 	location(const location& src)
 		: begin_line(src.begin_line),
 		end_line(src.end_line),
@@ -52,13 +60,21 @@ public:
 		end_column(src.end_column),
 		filename(src.filename)
 	{ }
+	/** \brief destructor
+	 */
 	~location()
 	{ }
 
 	location& operator= (const yy::location& src);
 	location& operator += (const yy::location& loc);
 
-	/** used for maximum determination (if different files, do nothing) */
+	/** \brief used for maximum determination (if different files, do nothing)
+	 *  \param loc the location to add to the current location
+	 *  \return this object
+	 *
+	 * The returned object is the transitive hull of the current object and \a
+	 * loc. If the file names are different the current object is returned.
+	 */
 	location& operator+= (const location& loc)
 	{
 		if (filename != loc.filename)
@@ -83,6 +99,15 @@ public:
 		return *this;
 	}
 
+	/** \brief comparison function for locations
+	 *  \param loc the location to compare to
+	 *  \return true if this location is "bigger" than \a loc
+	 *
+	 * First, an order is determined based on the begin line numbers. If the
+	 * begin line numbers are different, then the value of the expression
+	 * begin_line > loc.begin_line is the return value. If the begin lines are
+	 * the same, the order of the begin columns determines the return value.
+	 */
 	bool operator> (const location& loc)
 	{
 		if (begin_line > loc.begin_line)
@@ -95,16 +120,38 @@ public:
 
 	friend std::ostream& operator<< (std::ostream&, const location&);
 
+	/** \brief getter function for begin line
+	 *  \return value of begin_line
+	 */
 	unsigned int getBeginLine()
 	{ return begin_line; }
+	/** \brief setter function for begin line
+	 *  \param line the new line number
+	 */
 	void setBeginLine(unsigned int line)
 	{ begin_line = line; }
+	/** \brief getter function for end line
+	 *  \return value of end line
+	 */
 	unsigned int getEndLine()
 	{ return end_line; }
+	/** \brief setter function for end line
+	 *  \param line the new line number
+	 */
 	void setEndLine(unsigned int line)
 	{ end_line = line; }
+	/** \brief getter function for file name
+	 *  \return the file name
+	 */
 	std::string getFilename()
 	{ return filename; }
+	/** \brief setter function for whole location
+	 *  \param name the new file name
+	 *  \param bLine the new begin line
+	 *  \param bColumn the new begin column
+	 *  \param eLine the new end line
+	 *  \param eColumn the new end column
+	 */
 	void setLocation(std::string name, unsigned int bLine, unsigned int bColumn,
 		unsigned int eLine, unsigned int eColumn)
 	{
@@ -116,10 +163,25 @@ public:
 	}
 
 protected:
+	/** \var unsigned int begin_line
+	 *  \brief begin line of location
+	 */
 	unsigned int begin_line;
+	/** \var unsigned int end_line
+	 *  \brief end line of location
+	 */
 	unsigned int end_line;
+	/** \var unsigned int begin_column
+	 *  \brief egin column of location
+	 */
 	unsigned int begin_column;
+	/** \var unsigned int end_column
+	 *  \brief end column of location
+	 */
 	unsigned int end_column;
+	/** \var std::string filename
+	 *  \brief the filename of the location
+	 */
 	std::string filename;
 };
 

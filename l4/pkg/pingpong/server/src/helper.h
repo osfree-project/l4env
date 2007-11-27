@@ -6,6 +6,14 @@ extern void send(l4_threadid_t tid);
 extern void recv(l4_threadid_t tid);
 extern void recv_ping_timeout(l4_timeout_t timeout);
 
+#ifdef BENCH_GENERIC
+
+#undef PREFIX
+#define PREFIX(a) generic_ ## a
+#include "helper_if.h"
+
+#elif defined(ARCH_x86)
+
 #undef PREFIX
 #define PREFIX(a) int30_ ## a
 #include "helper_if.h"
@@ -18,5 +26,6 @@ extern void recv_ping_timeout(l4_timeout_t timeout);
 #define PREFIX(a) kipcalls_ ## a
 #include "helper_if.h"
 
-#endif
+#endif /* x86 */
 
+#endif

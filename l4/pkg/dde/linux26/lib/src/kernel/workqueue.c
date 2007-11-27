@@ -829,8 +829,6 @@ void init_workqueues(void)
 	BUG_ON(!keventd_wq);
 }
 
-//#if 0
 #ifdef DDE_LINUX
 subsys_initcall(init_workqueues);
 #endif
-//#endif

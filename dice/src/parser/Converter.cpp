@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/parser/Coverter.cpp
+ *  \file    dice/src/parser/Converter.cpp
  *  \brief   contains the definition of helper functions for the parsers
  *
  *  \date    06/14/2007
@@ -38,12 +38,11 @@
 #include <cmath>
 #include <string>
 
-extern int gLineNumber;
-
 using namespace dice::parser;
 
 /** \brief check which integer suffix is used
- *  \param s the string with the suffix
+ *  \ingroup parser
+ *  \param str the string with the suffix
  *  \return the integer type deducted
  */
 IntType dice::parser::int_type (char *str)
@@ -79,6 +78,7 @@ IntType dice::parser::int_type (char *str)
 }
 
 /** \brief convert octal coded characters to ASCII char
+ *  \ingroup parser
  *  \param s the string to extract the number from
  *  \return the ascii code
  */
@@ -93,6 +93,7 @@ int dice::parser::oct_to_char (char *s)
 }
 
 /** \brief convert hexadecimal coded characters to ASCII char
+ *  \ingroup parser
  *  \param s the string to extract the character from
  *  \return the ascii code of the character
  */
@@ -107,6 +108,7 @@ int dice::parser::hex_to_char (char *s)
 }
 
 /** \brief converts escape sequences to character
+ *  \ingroup parser
  *  \param s the string to extract the number from
  *  \return the character code of the escape sequence
  */
@@ -155,6 +157,7 @@ int dice::parser::escape_to_char (char *s)
 }
 
 /** \brief decode a decimal number from a string containing a hexadecimal number
+ *  \ingroup parser
  *  \param s the string containing the hexadecimal number
  *  \retval t the integer type to return
  *  \return the decoded decimal value
@@ -265,6 +268,7 @@ long dice::parser::hex_to_long (char *s, IntType& t)
 }
 
 /** \brief decode a decimal number from a string containing a octal number
+ *  \ingroup parser
  *  \param s the string containing the octal number
  *  \retval t the integer type to return
  *  \return the decoded decimal value
@@ -343,6 +347,7 @@ long dice::parser::oct_to_long (char *s, IntType& t)
 }
 
 /** \brief decode a decimal number from a string containing a integer number
+ *  \ingroup parser
  *  \param s the string containing the integer number
  *  \retval t the integer type to return
  *  \return the decoded decimal value

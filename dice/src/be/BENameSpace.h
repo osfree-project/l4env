@@ -84,10 +84,12 @@ public: // Public methods
 
     CBEConstant* FindConstant(std::string sConstantName);
     CBETypedef* FindTypedef(std::string sTypeName, CBETypedef* pPrev = 0);
-    CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = 0);
-    CBENameSpace* FindNameSpace(std::string sNameSpaceName);
+    CBEClass* FindClass(std::string sClassName);
     CBEType* FindTaggedType(int nType, std::string sTag);
     CBEEnumType* FindEnum(std::string sName);
+
+	CBENameSpace* SearchNamespace(std::string sNamespace);
+	CBEClass* SearchClass(std::string sClass);
 
     void AddOpcodesToFile(CBEHeaderFile* pFile);
 
@@ -96,8 +98,6 @@ public: // Public methods
     virtual void WriteElements(CBEImplementationFile& pFile);
     virtual void WriteElements(CBEHeaderFile& pFile);
 
-    virtual CBEFunction* FindFunction(std::string sFunctionName,
-	FUNCTION_TYPE nFunctionType);
     virtual bool IsTargetFile(CBEFile* pFile);
 
     virtual bool HasFunctionWithUserType(std::string sTypeName, CBEFile* pFile);
@@ -147,10 +147,10 @@ public:
      *  \brief contains the classes of this namespace
      */
     CSearchableCollection<CBEClass, std::string> m_Classes;
-    /** \var CCollection<CBENameSpace> m_NestedNamespaces
+    /** \var CSearchableCollection<CBENameSpace, std::string> m_NestedNamespaces
      *  \brief contains the nested namespaces
      */
-    CCollection<CBENameSpace> m_NestedNamespaces;
+    CSearchableCollection<CBENameSpace, std::string> m_NestedNamespaces;
     /** \var CCollection<CBEType> m_TypeDeclarations
      *  \brief contains the type declarations
      */

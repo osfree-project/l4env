@@ -22,6 +22,7 @@ static void yyerror(const char *s);
 
 int  __cfg_task               = -1; /* the task to configure */
 int  __cfg_mod                = -1; /* the module to configure */
+int  __cfg_taskno             =  0; /* a preconfigured task number */
 char __cfg_name[MOD_NAME_MAX] = ""; /* the name of the task we configue */
 
 quota_t     q; /* quota buffer for configured task */
@@ -58,7 +59,7 @@ static unsigned c_max = -1, c_low = 0, c_high = -1, c_mask = 0xffffffff;
 
 %token TASK MODNAME CHILD IRQ MAX IN MASK MEMORY HIMEM MEM_OFFSET ALLOW_CLI
 %token LOGMCP BOOTMCP BOOTPRIO BOOTWAIT RMGR SIGMA0 DEBUGFLAG VERBOSE LOG
-%token SMALLSIZE SMALL BOOTSMALL MODULE MODULES ATTACHED
+%token SMALLSIZE SMALL BOOTSMALL MODULE MODULES ATTACHED TASKNO
 %token TASK_PROTO TASK_ALLOC TASK_GET TASK_FREE
 %token TASK_CREATE TASK_DELETE TASK_SMALL
 %token TASK_GET_ID TASK_CREATE_WITH_PRIO
@@ -84,7 +85,7 @@ rules	: rule rules
 rule	: taskspec constraints modules
 		  {
 		    printf("  configured task 0x%02x (%s):\n",
-		      __cfg_task, __cfg_name);
+		      __cfg_taskno ? __cfg_taskno : __cfg_task, __cfg_name);
 		    if (!quota_is_default_mem(&q))
 		      printf("    memory:    [%lx,%lx,%lx]\n",
 			q.mem.low, q.mem.high, q.mem.max);
@@ -111,10 +112,11 @@ rule	: taskspec constraints modules
 		    else
 		      {
 		        const char *n;
-		        n = cfg_quota_set(__cfg_name, &q);
+		        n = cfg_quota_set(__cfg_name, __cfg_taskno, &q);
 		        cfg_bootquota_set(n, &b);
 		      }
 		    __cfg_mod = -1;
+                    __cfg_taskno = 0;
 		    strcpy(__cfg_name, "");
 		    quota_set_default(&q);
 		    bootquota_set_default(&b);
@@ -260,6 +262,7 @@ constraint : CHILD childconstraints	{
 					  c_high = -1; 
 					  c_max = -1; 
 					}
+        | TASKNO number                 { __cfg_taskno = $2; }
 	| LOGMCP number			{ q.log_mcp = $2; }
 	| BOOTMCP number		{ b.mcp = $2; }
 	| BOOTPRIO number		{ b.prio = $2; }

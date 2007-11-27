@@ -22,16 +22,36 @@
 #define timeout_10s	l4_ipc_timeout(0,0,610,14)
 #define timeout_20s	l4_ipc_timeout(0,0,610,15)
 #define timeout_50s	l4_ipc_timeout(0,0,762,16)
+#define timeout_2m	l4_ipc_timeout(0,0,458,18)
 
-#if defined(L4_API_L4X0) || defined(L4API_l4x0)
-#define REGISTER_DWORDS 3
-#else
 #define REGISTER_DWORDS 2
-#endif
 
 enum test_type { INTER, INTRA, SINGLE, };
 
 enum callmodes { INT30, SYSENTER, KIPCALL, NR_MODES };
+
+
+#include <l4/sys/kernel.h>
+
+extern l4_kernel_info_t *kip;
+
+#ifdef ARCH_x86
+#include <l4/util/rdtsc.h>
+static inline l4_cpu_time_t get_clocks(void) { return l4_rdtsc(); }
+static inline l4_uint64_t clocks_to_us(l4_cpu_time_t clocks)
+{ return l4_tsc_to_us(clocks); }
+#else
+static inline l4_cpu_time_t get_clocks(void) { return kip->clock; }
+static inline l4_uint64_t clocks_to_us(l4_cpu_time_t clocks)
+{ return clocks; }
+#endif
+
+#ifndef ARCH_x86
+static inline void fiasco_timer_enable(void) {}
+static inline void fiasco_timer_disable(void) {}
+static inline void fiasco_watchdog_enable(void) {}
+static inline void fiasco_watchdog_disable(void) {}
+#endif
 
 #define BENCH_END	                                    \
   do { if (fiasco_running) { if (!ux_running)               \
@@ -51,6 +71,7 @@ extern void test_instruction_cycles(int nr);
 extern void test_cache_tlb(int nr);
 extern void flooder(void);
 extern void test_flooder(void);
+extern void touch_pages(void);
 
 extern void exception6_handler(void);
 extern void exception6_c_handler(void);

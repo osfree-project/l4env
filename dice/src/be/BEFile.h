@@ -103,9 +103,8 @@ public:
 	unsigned int GetIndent() const
 	{ return m_nIndent; }
 
-	virtual CBEFunction* FindFunction(std::string sFunctionName,
-		FUNCTION_TYPE nFunctionType);
-	virtual CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = 0);
+	virtual CBEFunction* FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType);
+	virtual CBEClass* FindClass(std::string sClassName);
 	virtual CBENameSpace* FindNameSpace(std::string sNameSpaceName);
 
 	virtual void AddIncludedFileName(std::string sFileName, bool bIDLFile,

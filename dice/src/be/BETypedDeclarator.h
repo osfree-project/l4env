@@ -75,8 +75,8 @@ public:
 	virtual void CreateBackEnd(std::string sUserDefinedType, std::string sName, int nStars);
 	virtual void CreateBackEnd(CFETypedDeclarator * pFEParameter);
 
-	int GetSize();
-	int GetSize(std::string sName);
+	virtual int GetSize();
+	virtual int GetSize(std::string sName);
 	CBEType *GetType();
 	int GetBitfieldSize();
 	virtual bool GetMaxSize(int & nSize, std::string sName = std::string());

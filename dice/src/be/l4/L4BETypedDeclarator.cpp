@@ -101,7 +101,7 @@ bool CL4BETypedDeclarator::IsFixedSized()
  * If bGuessSize is false, then this is for message buffer size calculation
  * and we have to check for [ref] attribute.
  */
-bool CL4BETypedDeclarator::GetMaxSize(int & nSize, string sName)
+bool CL4BETypedDeclarator::GetMaxSize(int & nSize, std::string sName)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CL4BETypedDeclarator::%s called\n", __func__);

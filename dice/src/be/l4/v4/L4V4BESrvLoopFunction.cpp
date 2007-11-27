@@ -40,6 +40,7 @@ CL4V4BESrvLoopFunction::~CL4V4BESrvLoopFunction()
 
 /** \brief create this instance of a server loop function
  *  \param pFEInterface the interface to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if create was successful
  *
  * For the server side we have to add a temporary variable if this function

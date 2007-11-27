@@ -1,0 +1,6 @@
+/**
+\defgroup parser The Compiler's Parser
+\brief These files and classes contain the code to parse the IDL files and generate the \
+ in-memory representation of the IDL files.
+*/
+

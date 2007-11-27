@@ -84,14 +84,15 @@ AWKP		= gawk --posix
 CVS		= cvs -q
 SVN		= svn
 CP		= cp
-DICEDIR		?= $(L4DIR)/../dice
-DICE		= $(firstword $(wildcard $(DICEDIR)/src/dice \
+DICE_SRCDIR	?= $(L4DIR)/../dice
+DICE_OBJDIR	?= $(DICE_SRCDIR)
+DICE		= $(firstword $(wildcard $(DICE_OBJDIR)/src/dice \
 				$(DROPS_STDDIR)/tool/bin/dice \
 				 $(shell which dice 2>/dev/null) ) \
 				 did_not_find_dice___please_install_dice )
 DICE_CPP_NAME	= cpp0
 
-DICE_INCDIR	?= $(DICEDIR)/include
+DICE_INCDIR	?= $(DICE_SRCDIR)/include
 
 ECHO		= echo
 
@@ -335,9 +336,6 @@ else #arch != arm
 endif
 
 DEFINES         += -DRAM_BASE=$(RAM_BASE)
-
-default_reloc_base = $(firstword $(DEFAULT_RELOC_$(1)) $(DEFAULT_RELOC_$(ARCH)) $(DEFAULT_RELOC))
-default_reloc = $(if $(call default_reloc_base,$(1)), $(shell printf "0x%x" $$(($(RAM_BASE) + $(call default_reloc_base,$(1))))),)
 
 
 ifneq ($(filter linux l4linux host,$(MODE)),)

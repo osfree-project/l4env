@@ -202,9 +202,11 @@ Thread::handle_page_fault_pager(Thread* pager, Address pfa, Mword error_code,
       panic("page fault in locked operation");
     }
 
+  // For aliens, only allow long-IPC PFs and cap-faults
   if (EXPECT_FALSE((state() & Thread_alien)
                    && !(state() & (Thread_rcvlong_in_progress
-                                   | Thread_ipc_in_progress))))
+                                   | Thread_ipc_in_progress))
+                   && protocol != L4_msg_tag::Label_cap_fault))
     return Ipc_err(Ipc_err::Reaborted);
 
   if (! revalidate (pager))

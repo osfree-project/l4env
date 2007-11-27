@@ -422,6 +422,7 @@ libc/sysdeps/linux/common/bits/statfs.h
 libc/sysdeps/linux/common/bits/wchar.h
 libc/sysdeps/linux/common/bits/uClibc_stdio.h
 libc/sysdeps/linux/common/bits/uClibc_uwchar.h
+libc/termios/isatty.c
 libc/termios/kernel_termios.h
 libc/termios/tcgetattr.c
 libc/termios/tcsetattr.c

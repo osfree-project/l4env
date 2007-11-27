@@ -123,9 +123,28 @@ static void do_sti(Thread *, Entry_frame *r)
 { r->psr &= ~128; }
 
 /* Instruction Memory Barrier */
-static void imb(Thread *, Entry_frame *)
+static void imb(Thread *, Entry_frame *e)
 {
-  Mem_unit::clean_dcache();
+  // r0: op,  r1: start,  r2: end
+
+  // this also tells userland which area we really took
+  if (e->r[1] >= Mem_layout::User_max)
+    e->r[1] = Mem_layout::User_max - 1;
+  if (e->r[2] >= Mem_layout::User_max)
+    e->r[2] = Mem_layout::User_max - 1;
+
+  switch (e->r[0])
+    {
+    case 1: // clean
+      Mem_unit::clean_dcache((void *)e->r[1], (void *)e->r[2]);
+      break;
+    case 2: // flush
+      Mem_unit::flush_dcache((void *)e->r[1], (void *)e->r[2]);
+      break;
+    case 3: // inv
+      Mem_unit::inv_dcache((void *)e->r[1], (void *)e->r[2]);
+      break;
+    };
 }
 
 static void init_dbg_extensions()

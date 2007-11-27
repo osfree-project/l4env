@@ -10,21 +10,32 @@
  * This file is part of DROPS, which is distributed under the terms of the
  * GNU General Public License 2. Please see the COPYING file for details. */
 
+#if defined(ARCH_x86) || defined(ARCH_amd64)
+#define RTC_AVAIL
+#endif
+
+
 #include <l4/env/errno.h>
 #include <l4/log/l4log.h>
 #include <l4/names/libnames.h>
 #include <l4/rtc/rtc.h>
 #include <l4/sys/types.h>
+
+#ifdef RTC_AVAIL
 #include <l4/util/rdtsc.h>
+#endif
 
 #include "rtc-client.h"
 
-static l4_threadid_t server = L4_INVALID_ID;
 static l4_uint32_t s_offs_to_systime;
 static l4_uint32_t linux_scaler;
 
 /* We need to define this scaler here for use with l4_tsc_to_ns */
 // l4_uint32_t l4_scaler_tsc_to_ns;
+
+#ifdef RTC_AVAIL
+
+static l4_threadid_t server = L4_INVALID_ID;
 
 /**
  * A fast and cheap way to calculate without violate the 32-bit range */
@@ -74,6 +85,24 @@ init_done(void)
   return 0;
 }
 
+static inline void gettime(l4_uint32_t *s, l4_uint32_t *ns)
+{
+  l4_tsc_to_s_and_ns(l4_rdtsc(), s, ns);
+}
+
+#else
+static int
+init_done(void)
+{
+  return 0;
+}
+
+static inline void gettime(l4_uint32_t *s, l4_uint32_t *ns)
+{
+  *s = *ns = 0;
+}
+#endif
+
 /**
  * Deliver the numbers of seconds elapsed since 01.01.1970. This value is
  * needed by Linux. */
@@ -85,7 +114,7 @@ l4rtc_get_seconds_since_1970(l4_uint32_t *seconds)
   if (init_done())
     return -L4_EINVAL;
 
-  l4_tsc_to_s_and_ns(l4_rdtsc(), &s, &ns);
+  gettime(&s, &ns);
   *seconds = s + s_offs_to_systime;
   return 0;
 }

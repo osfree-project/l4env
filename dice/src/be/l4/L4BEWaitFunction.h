@@ -44,7 +44,7 @@ class CL4BEWaitFunction : public CBEWaitFunction
 public:
     /** creates a new object of this class */
     CL4BEWaitFunction(bool bOpenWait);
-    virtual ~CL4BEWaitFunction();
+    ~CL4BEWaitFunction();
 
 public: // Public methods
     virtual int GetFixedSize(DIRECTION_TYPE nDirection);

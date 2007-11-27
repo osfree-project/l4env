@@ -76,10 +76,6 @@ public:
 public:
     virtual void CreateBackEnd(CFEFile *pFEFile);
 
-    virtual CBEFunction* FindFunction(std::string sFunctionName,
-	FUNCTION_TYPE nFunctionType);
-    virtual CBETypedef* FindTypedef(std::string sTypeName);
-
     /** \brief generates the output files and code */
     virtual void Write() = 0;
     virtual void PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol);

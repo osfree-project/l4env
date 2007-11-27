@@ -10,6 +10,7 @@
 #define __STR(x) #x
 #define STR(x) __STR(x)
 
+#ifdef BENCH_x86
 #define cmpxchg8b_asm     "1:				\n\t" \
 			  "movl   (%%esi),%%eax		\n\t" \
                           "movl   4(%%esi),%%edx	\n\t" \
@@ -107,15 +108,19 @@ static inline int get_iopl(void)
   asm volatile("pushf; pop %0" : "=rm"(e));
   return (e & 0x3000) >> 12;
 }
+#endif
 
 long long atomic_ll __attribute__((aligned(512))) = 0;
 
 void
 test_instruction_cycles(int nr)
 {
+#ifdef BENCH_x86
   unsigned cycles;
+#endif
 
   printf(">> %c: Testing instruction cycles (CPU %dMhz):\n", nr, mhz);
+#ifdef BENCH_x86
   test(bts);
   test(btc);
   test(add);
@@ -138,4 +143,5 @@ test_instruction_cycles(int nr)
     }
   test(cpuid);
   test(rdtsc);
+#endif
 }

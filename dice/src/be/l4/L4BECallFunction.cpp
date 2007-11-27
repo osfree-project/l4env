@@ -54,6 +54,7 @@ CL4BECallFunction::~CL4BECallFunction()
 
 /** \brief creates the call function
  *  \param pFEOperation the front-end operation to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if successful
  *
  * The L4 implementation also includes the result variable for the IPC

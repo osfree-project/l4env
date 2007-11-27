@@ -60,7 +60,7 @@ l4semaphore_down_timed(l4semaphore_t * sem, unsigned timeout)
 
   /* a timeout of 0 ms mean try it prompt */
   if (timeout == 0)
-    return l4semaphore_try_down(sem);
+    return !l4semaphore_try_down(sem);
 
   /* decrement counter, check result */
   do

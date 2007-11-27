@@ -168,24 +168,12 @@ int CBEClass::GetFunctionCount()
 	return m_Functions.size();
 }
 
-class GetFunctionWriteCountPred
-{
-	CBEFile *f;
-public:
-	GetFunctionWriteCountPred(CBEFile *ff) : f(ff) { }
-	bool operator() (CBEFunction *fun)
-	{
-		return fun->DoWriteFunction(f);
-	}
-};
-
 /** \brief returns the number of functions in this class which are written
  *  \return the number of functions in this class which are written
  */
 int CBEClass::GetFunctionWriteCount(CBEFile& pFile)
 {
-	return std::count_if(m_Functions.begin(), m_Functions.end(),
-		GetFunctionWriteCountPred(&pFile));
+	return std::count_if(m_Functions.begin(), m_Functions.end(), WriteCount(&pFile));
 }
 
 /** \brief adds a new base class from a name
@@ -193,20 +181,12 @@ int CBEClass::GetFunctionWriteCount(CBEFile& pFile)
  *
  * search for the class and if found add it
  */
-void CBEClass::AddBaseClass(string sName)
+void CBEClass::AddBaseClass(std::string sName)
 {
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
 	// if we cannot find class it is not there, because this should be
 	// called way after all classes are created
-	CBEClass *pBaseClass = pRoot->FindClass(sName);
-	if (!pBaseClass)
-	{
-		CMessages::Warning("%s failed because base class \"%s\"" \
-			" cannot be found\n", __func__,
-			sName.c_str());
-		return;
-	}
+	CBEClass *pBaseClass = FindClass(sName);
+	assert(pBaseClass);
 	m_BaseClasses.push_back(pBaseClass);
 	// if we add a base class, we add us to that class' derived classes
 	pBaseClass->m_DerivedClasses.Add(this);
@@ -216,8 +196,7 @@ void CBEClass::AddBaseClass(string sName)
  *  \param pFEInterface the front-end interface to use as source
  *  \return true if successful
  */
-void
-CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
+void CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(interf: %s) called\n",
 		__func__, pFEInterface->GetName().c_str());
@@ -245,9 +224,9 @@ CBEClass::CreateBackEnd(CFEInterface * pFEInterface)
 	// we can resolve this if we only add the base names now, but when the
 	// base classes are first used, add the actual references.
 	// add references to base Classes
-	vector<CFEInterface*>::iterator iterBI;
-	for (iterBI = pFEInterface->m_BaseInterfaces.begin();
-		iterBI != pFEInterface->m_BaseInterfaces.end();
+	vector<CFEIdentifier*>::iterator iterBI;
+	for (iterBI = pFEInterface->m_BaseInterfaceNames.begin();
+		iterBI != pFEInterface->m_BaseInterfaceNames.end();
 		iterBI++)
 	{
 		// add base class
@@ -942,19 +921,169 @@ int CBEClass::GetSize(DIRECTION_TYPE nDirection)
 	return nSize;
 }
 
+/** \brief tries to find the function group for a specific function
+ *  \param pFunction the function to search for
+ *  \return a reference to the function group or 0
+ */
+CFunctionGroup* CBEClass::FindFunctionGroup(CBEFunction *pFunction)
+{
+	// iterate over function groups
+	vector<CFunctionGroup*>::iterator iter;
+	for (iter = m_FunctionGroups.begin();
+		iter != m_FunctionGroups.end();
+		iter++)
+	{
+		// iterate over its functions
+		if (find((*iter)->m_Functions.begin(), (*iter)->m_Functions.end(),
+				pFunction) != (*iter)->m_Functions.end())
+			return *iter;
+	}
+	return 0;
+}
+
+/** \brief find another back-end function for a given func from the same group
+ *  \param pFunction the given function
+ *  \param nFunctionType the type of the searched function
+ *  \return a reference to the found function or0 if not found
+ */
+CBEFunction* CBEClass::FindFunctionFor(CBEFunction *pFunction, FUNCTION_TYPE nFunctionType)
+{
+	CFunctionGroup *pFG = FindFunctionGroup(pFunction);
+	if (!pFG)
+		return 0;
+	vector<CBEFunction*>::iterator iter;
+	for (iter = pFG->m_Functions.begin(); iter != pFG->m_Functions.end(); iter++)
+	{
+		if ((*iter)->IsFunctionType(nFunctionType))
+			return *iter;
+	}
+	return 0;
+}
+
+/** \brief tries to find a type definition
+ *  \param sTypeName the name of the searched type
+ *  \param pPrev points to previously found typedef
+ *  \return a reference to the type definition
+ *
+ * We also have to check the message buffer type (if existent).
+ */
+CBETypedef* CBEClass::FindTypedef(std::string sTypeName, CBETypedef *pPrev)
+{
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEClass::%s(%s, %p) in %s called\n",
+		__func__, sTypeName.c_str(), pPrev, GetName().c_str());
+
+	vector<CBETypedef*>::iterator iter = m_Typedefs.begin();
+	if (pPrev)
+	{
+		iter = std::find(m_Typedefs.begin(), m_Typedefs.end(), pPrev);
+		if (iter != m_Typedefs.end())
+			++iter;
+		else
+			iter = m_Typedefs.begin();
+	}
+	for (; iter != m_Typedefs.end();
+		iter++)
+	{
+		if ((*iter)->m_Declarators.Find(sTypeName))
+			return *iter;
+		if ((*iter)->GetType() &&
+			(*iter)->GetType()->HasTag(sTypeName))
+			return *iter;
+	}
+	CBETypedef *pMsgBuf = GetMessageBuffer();
+	if (pMsgBuf)
+	{
+		if (pMsgBuf->m_Declarators.Find(sTypeName))
+			return pMsgBuf;
+		if (pMsgBuf->GetType() &&
+			pMsgBuf->GetType()->HasTag(sTypeName))
+			return pMsgBuf;
+	}
+	/* look in base classes */
+	CBETypedef *pTypedef;
+	vector<CBEClass*>::iterator iterC = m_BaseClasses.begin();
+	for (; iterC != m_BaseClasses.end(); iterC++)
+	{
+		if ((pTypedef = (*iterC)->FindTypedef(sTypeName, pPrev)))
+			return pTypedef;
+	}
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEClass::%s not found in class or base, try namespace\n",
+		__func__);
+	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
+	if (pNameSpace)
+		return pNameSpace->FindTypedef(sTypeName, pPrev);
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	return pRoot->FindTypedef(sTypeName, pPrev);
+}
+
+/** \brief searches for a constant
+ *  \param sConstantName the name of the constant to search
+ *  \return a reference to the found constat or 0 if not found
+ */
+CBEConstant* CBEClass::FindConstant(std::string sConstantName)
+{
+	CBEConstant *pConstant = m_Constants.Find(sConstantName);
+	if (pConstant)
+		return pConstant;
+	/* look in base classes */
+	vector<CBEClass*>::iterator iterC = m_BaseClasses.begin();
+	for (; iterC != m_BaseClasses.end(); iterC++)
+	{
+		if ((pConstant = (*iterC)->FindConstant(sConstantName)))
+			return pConstant;
+	}
+
+	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
+	if (pNameSpace)
+		return pNameSpace->FindConstant(sConstantName);
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	return pRoot->FindConstant(sConstantName);
+}
+
+/** \brief searches for a type using its tag
+ *  \param nType the type of the searched type
+ *  \param sTag the tag to search for
+ *  \return a reference to the type
+ */
+CBEType* CBEClass::FindTaggedType(int nType, std::string sTag)
+{
+	vector<CBEType*>::iterator iter;
+	for (iter = m_TypeDeclarations.begin();
+		iter != m_TypeDeclarations.end();
+		iter++)
+	{
+		int nFEType = (*iter)->GetFEType();
+		if (nType != nFEType)
+			continue;
+		if (nFEType == TYPE_STRUCT ||
+			nFEType == TYPE_UNION ||
+			nFEType == TYPE_ENUM)
+		{
+			if ((*iter)->HasTag(sTag))
+				return *iter;
+		}
+	}
+
+	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
+	if (pNameSpace)
+		return pNameSpace->FindTaggedType(nType, sTag);
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	return pRoot->FindTaggedType(nType, sTag);
+}
+
 /** \brief tries to find a function
  *  \param sFunctionName the name of the function to search for
  *  \param nFunctionType the type of function to find
  *  \return a reference to the searched class or 0
  */
-CBEFunction* CBEClass::FindFunction(string sFunctionName,
-	FUNCTION_TYPE nFunctionType)
+CBEFunction* CBEClass::FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%s) called\n", __func__,
-		sFunctionName.c_str());
-
-	if (sFunctionName.empty())
-		return 0;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s(%s, %d) called\n", __func__,
+		sFunctionName.c_str(), nFunctionType);
 
 	// simply scan the function for a match
 	vector<CBEFunction*>::iterator iter;
@@ -963,7 +1092,7 @@ CBEFunction* CBEClass::FindFunction(string sFunctionName,
 		iter++)
 	{
 		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"%s checking function %s (compare to %s)\n", __func__,
+			"CBEClass::%s checking function %s (compare to %s)\n", __func__,
 			(*iter)->GetName().c_str(), sFunctionName.c_str());
 
 		if ((*iter)->GetName() == sFunctionName &&
@@ -971,9 +1100,52 @@ CBEFunction* CBEClass::FindFunction(string sFunctionName,
 			return *iter;
 	}
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s function %s not found, return 0\n",
+	// checking base classes
+	vector<CBEClass*>::iterator iterC;
+	CBEFunction *pRet;
+	for (iterC = m_BaseClasses.begin(); iterC != m_BaseClasses.end(); iterC++)
+	{
+		if ((pRet = (*iterC)->FindFunction(sFunctionName, nFunctionType)))
+			return pRet;
+	}
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::%s function %s not found, return 0\n",
 		__func__, sFunctionName.c_str());
 	return 0;
+}
+
+/** \brief tries to find an enum type with the given enumerator
+ *  \param sName the name of the enumerator
+ *  \return reference to the enum if found
+ */
+CBEEnumType* CBEClass::FindEnum(std::string sName)
+{
+	CBEEnumType *pEnum;
+	vector<CBEType*>::iterator iter;
+	for (iter = m_TypeDeclarations.begin();
+		iter != m_TypeDeclarations.end();
+		iter++)
+	{
+		pEnum = dynamic_cast<CBEEnumType*>(*iter);
+		if (pEnum && pEnum->m_Members.Find(sName))
+			return pEnum;
+	}
+	vector<CBETypedef*>::iterator iterT;
+	for (iterT = m_Typedefs.begin();
+		iterT != m_Typedefs.end();
+		iterT++)
+	{
+		pEnum = dynamic_cast<CBEEnumType*>((*iterT)->GetType());
+		if (pEnum && pEnum->m_Members.Find(sName))
+			return pEnum;
+	}
+
+	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
+	if (pNameSpace)
+		return pNameSpace->FindEnum(sName);
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	return pRoot->FindEnum(sName);
 }
 
 /** \brief adds the opcodes of this class' functions to the header file
@@ -1051,7 +1223,8 @@ void CBEClass::AddOpcodesToFile(CBEHeaderFile* pFile)
  *  \param sName the name of the opcode
  *  \param pFile the file to add the opcode to
  */
-void CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, int nNumber, string sName, CBEHeaderFile* pFile)
+void CBEClass::AddOpcodesToFile(CFEOperation *pFEOperation, int nNumber, std::string sName,
+	CBEHeaderFile* pFile)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEClass::AddOpcodesToFile(operation: %s) called\n",
@@ -1793,9 +1966,7 @@ int CBEClass::GetOperationNumber(CFEOperation *pFEOperation)
  *  \param nNumber the number to test
  *  \return true if number is predefined
  */
-bool
-CBEClass::IsPredefinedID(map<unsigned int, string> *pFunctionIDs,
-	int nNumber)
+bool CBEClass::IsPredefinedID(map<unsigned int, std::string> *pFunctionIDs, int nNumber)
 {
 	return pFunctionIDs->find(nNumber) != pFunctionIDs->end();
 }
@@ -1943,9 +2114,8 @@ CBEClass::FindInterfaceWithNumber(CFEInterface *pFEInterface,
  * position (the array is ordered). If the number exists already, we print a
  * warning containing both function's names and the function ID.
  */
-int
-CBEClass::FindPredefinedNumbers(vector<CFEInterface*> *pCollection,
-	map<unsigned int, string> *pNumbers)
+int CBEClass::FindPredefinedNumbers(vector<CFEInterface*> *pCollection,
+	map<unsigned int, std::string> *pNumbers)
 {
 	assert (pCollection);
 	assert (pNumbers);
@@ -2134,73 +2304,6 @@ CBEClass::CheckOpcodeCollision(CFEInterface *pFEInterface,
 	return nBaseNumber;
 }
 
-/** \brief tries to find the function group for a specific function
- *  \param pFunction the function to search for
- *  \return a reference to the function group or 0
- */
-CFunctionGroup* CBEClass::FindFunctionGroup(CBEFunction *pFunction)
-{
-	// iterate over function groups
-	vector<CFunctionGroup*>::iterator iter;
-	for (iter = m_FunctionGroups.begin();
-		iter != m_FunctionGroups.end();
-		iter++)
-	{
-		// iterate over its functions
-		if (find((*iter)->m_Functions.begin(), (*iter)->m_Functions.end(),
-				pFunction) != (*iter)->m_Functions.end())
-			return *iter;
-	}
-	return 0;
-}
-
-/** \brief tries to find a type definition
- *  \param sTypeName the name of the searched type
- *  \return a reference to the type definition
- *
- * We also have to check the message buffer type (if existent).
- */
-CBETypedef* CBEClass::FindTypedef(string sTypeName, CBETypedef *pPrev)
-{
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEClass::%s(%s) called\n",
-		__func__, sTypeName.c_str());
-
-	vector<CBETypedef*>::iterator iter = m_Typedefs.begin();
-	if (pPrev)
-		iter = std::find(m_Typedefs.begin(), m_Typedefs.end(), pPrev);
-	for (; iter != m_Typedefs.end();
-		iter++)
-	{
-		if ((*iter)->m_Declarators.Find(sTypeName))
-			return *iter;
-		if ((*iter)->GetType() &&
-			(*iter)->GetType()->HasTag(sTypeName))
-			return *iter;
-	}
-	CBETypedef *pMsgBuf = GetMessageBuffer();
-	if (pMsgBuf)
-	{
-		if (pMsgBuf->m_Declarators.Find(sTypeName))
-			return pMsgBuf;
-		if (pMsgBuf->GetType() &&
-			pMsgBuf->GetType()->HasTag(sTypeName))
-			return pMsgBuf;
-	}
-	/* look in functions */
-	vector<CBEFunction*>::iterator iterF;
-	for (iterF = m_Functions.begin();
-		iterF != m_Functions.end();
-		iterF++)
-	{
-		if ((pMsgBuf = (*iterF)->FindTypedef(sTypeName, pPrev)) != 0)
-			return pMsgBuf;
-	}
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEClass::%s returns 0\n",
-		__func__);
-	return 0;
-}
-
 /** \brief test if this class belongs to the file
  *  \param pFile the file to test
  *  \return true if the given file is a target file for the class
@@ -2210,6 +2313,9 @@ CBETypedef* CBEClass::FindTypedef(string sTypeName, CBETypedef *pPrev)
  */
 bool CBEClass::IsTargetFile(CBEFile* pFile)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::IsTargetFile(%s) called\n",
+		pFile->GetFileName().c_str());
+
 	vector<CBEFunction*>::iterator iter;
 	for (iter = m_Functions.begin();
 		iter != m_Functions.end();
@@ -2218,33 +2324,9 @@ bool CBEClass::IsTargetFile(CBEFile* pFile)
 		if ((*iter)->IsTargetFile(pFile))
 			return true;
 	}
-	return false;
-}
 
-/** \brief searches for a type using its tag
- *  \param nType the type of the searched type
- *  \param sTag the tag to search for
- *  \return a reference to the type
- */
-CBEType* CBEClass::FindTaggedType(int nType, string sTag)
-{
-	vector<CBEType*>::iterator iter;
-	for (iter = m_TypeDeclarations.begin();
-		iter != m_TypeDeclarations.end();
-		iter++)
-	{
-		int nFEType = (*iter)->GetFEType();
-		if (nType != nFEType)
-			continue;
-		if (nFEType == TYPE_STRUCT ||
-			nFEType == TYPE_UNION ||
-			nFEType == TYPE_ENUM)
-		{
-			if ((*iter)->HasTag(sTag))
-				return *iter;
-		}
-	}
-	return 0;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEClass::IsTargetFile returns false\n");
+	return false;
 }
 
 /** \brief tries to create a new back-end representation of a tagged type declaration
@@ -2299,7 +2381,7 @@ void CBEClass::WriteTaggedType(CBEType *pType,
  *
  * Search functions for a parameter with that type.
  */
-bool CBEClass::HasFunctionWithUserType(string sTypeName, CBEFile* pFile)
+bool CBEClass::HasFunctionWithUserType(std::string sTypeName, CBEFile* pFile)
 {
 	vector<CBEFunction*>::iterator iter;
 	for (iter = m_Functions.begin();
@@ -2602,33 +2684,5 @@ CBEClass::CreateEnvironment()
 	m_pCorbaEnv = pCF->GetNewTypedDeclarator();
 	m_pCorbaEnv->SetParent(this);
 	m_pCorbaEnv->CreateBackEnd(sTypeName, sName, 1);
-}
-
-/** \brief tries to find an enum type with the given enumerator
- *  \param sName the name of the enumerator
- *  \return reference to the enum if found
- */
-CBEEnumType* CBEClass::FindEnum(std::string sName)
-{
-	CBEEnumType *pEnum;
-	vector<CBEType*>::iterator iter;
-	for (iter = m_TypeDeclarations.begin();
-		iter != m_TypeDeclarations.end();
-		iter++)
-	{
-		pEnum = dynamic_cast<CBEEnumType*>(*iter);
-		if (pEnum && pEnum->m_Members.Find(sName))
-			return pEnum;
-	}
-	vector<CBETypedef*>::iterator iterT;
-	for (iterT = m_Typedefs.begin();
-		iterT != m_Typedefs.end();
-		iterT++)
-	{
-		pEnum = dynamic_cast<CBEEnumType*>((*iterT)->GetType());
-		if (pEnum && pEnum->m_Members.Find(sName))
-			return pEnum;
-	}
-	return 0;
 }
 

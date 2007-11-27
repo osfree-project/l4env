@@ -37,7 +37,6 @@
 #include "BEUnionCase.h"
 #include "BEUserDefinedType.h"
 #include "BEDeclarator.h"
-#include "BERoot.h"
 #include "BEClient.h"
 #include "BEFunction.h"
 #include "BEComponentFunction.h"
@@ -697,17 +696,13 @@ CBETypedDeclarator::GetSizeVariable(CBEAttribute *pIsAttribute,
  *  \param pIsAttribute the attribute containing the name
  *  \return a reference to the constant if found
  */
-CBEConstant*
-CBETypedDeclarator::GetSizeConstant(CBEAttribute *pIsAttribute)
+CBEConstant* CBETypedDeclarator::GetSizeConstant(CBEAttribute *pIsAttribute)
 {
 	CBEDeclarator *pSizeName = pIsAttribute->m_Parameters.First();
 	assert(pSizeName);
 	string sSizeName = pSizeName->GetName();
 	// this might by a constant declarator
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	CBEConstant *pConstant = pRoot->FindConstant(sSizeName);
-	return pConstant;
+	return FindConstant(sSizeName);
 }
 
 /** \brief writes cleanup
@@ -947,10 +942,7 @@ CBETypedDeclarator::CreateBackEnd(CFETypedDeclarator * pFEParameter)
  *  \param nStars the number of stars for the declarator
  *  \return true if successful
  */
-void
-CBETypedDeclarator::CreateBackEnd(string sUserDefinedType,
-	string sName,
-	int nStars)
+void CBETypedDeclarator::CreateBackEnd(std::string sUserDefinedType, std::string sName, int nStars)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s(%s, %s, %d) called\n", __func__,
@@ -976,9 +968,7 @@ CBETypedDeclarator::CreateBackEnd(string sUserDefinedType,
  *  \param sName the name of the declarator
  *  \return true if successful
  */
-void
-CBETypedDeclarator::CreateBackEnd(CBEType * pType,
-	string sName)
+void CBETypedDeclarator::CreateBackEnd(CBEType * pType, std::string sName)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s(%p, %s) called\n", __func__, pType,
@@ -1027,7 +1017,7 @@ void CBETypedDeclarator::AddDeclarator(CFEDeclarator * pFEDeclarator)
  *  \param sName the name of the decl
  *  \param nStars the number of stars of this decl
  */
-void CBETypedDeclarator::AddDeclarator(string sName, int nStars)
+void CBETypedDeclarator::AddDeclarator(std::string sName, int nStars)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s(%s, %d) called\n", __func__,
@@ -1164,8 +1154,6 @@ bool CBETypedDeclarator::IsVariableSized()
 		pDeclarator ? pDeclarator->GetName().c_str() : "(anonym)");
 
 	// need the root
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
 	CBEConstant *pConstant = 0;
 	CBEAttribute *pAttr;
 	if ((pAttr = m_Attributes.Find(ATTR_SIZE_IS)) != 0)
@@ -1176,7 +1164,7 @@ bool CBETypedDeclarator::IsVariableSized()
 			CBEDeclarator *pSizeName = pAttr->m_Parameters.First();
 			assert(pSizeName);
 			// this might by a constant declarator
-			pConstant = pRoot->FindConstant(pSizeName->GetName());
+			pConstant = FindConstant(pSizeName->GetName());
 			// not a constant, return true
 			if (!pConstant)
 			{
@@ -1195,7 +1183,7 @@ bool CBETypedDeclarator::IsVariableSized()
 			CBEDeclarator *pSizeName = pAttr->m_Parameters.First();
 			assert(pSizeName);
 			// this might by a constant declarator
-			pConstant = pRoot->FindConstant(pSizeName->GetName());
+			pConstant = FindConstant(pSizeName->GetName());
 			// not a constant, return true
 			if (!pConstant)
 			{
@@ -1214,7 +1202,7 @@ bool CBETypedDeclarator::IsVariableSized()
 			CBEDeclarator *pSizeName = pAttr->m_Parameters.First();
 			assert(pSizeName);
 			// this might by a constant declarator
-			pConstant = pRoot->FindConstant(pSizeName->GetName());
+			pConstant = FindConstant(pSizeName->GetName());
 			// not a constant, return true
 			if (!pConstant)
 			{
@@ -1268,7 +1256,7 @@ bool CBETypedDeclarator::IsVariableSized()
 				pAttrName = pAttr->m_Parameters.First();
 			pConstant = (CBEConstant*)0;
 			if (pAttrName)
-				pConstant = pRoot->FindConstant(pAttrName->GetName());
+				pConstant = FindConstant(pAttrName->GetName());
 			if (!pConstant)
 			{
 				CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -1359,7 +1347,7 @@ int CBETypedDeclarator::GetSize()
  *
  * The size is calculated just as above, but only for one declarator.
  */
-int CBETypedDeclarator::GetSize(string sName)
+int CBETypedDeclarator::GetSize(std::string sName)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s(%s) called\n", __func__, sName.c_str());
@@ -1526,9 +1514,7 @@ bool CBETypedDeclarator::GetSizeOrDimensionOfAttr(ATTR_TYPE nAttr,
  *
  * Platform dependent size preceedes language dependent size.
  */
-bool
-CBETypedDeclarator::GetMaxSize(int & nSize,
-	string sName)
+bool CBETypedDeclarator::GetMaxSize(int & nSize, std::string sName)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s(%s) called.\n",
@@ -1648,10 +1634,7 @@ CBETypedDeclarator::GetMaxSize(int & nSize,
 				CBEDeclarator *pSizeName = pAttr->m_Parameters.First();
 				assert(pSizeName);
 				// this might by a constant declarator
-				CBERoot *pRoot = GetSpecificParent<CBERoot>();
-				assert(pRoot);
-				CBEConstant *pConstant =
-					pRoot->FindConstant(pSizeName->GetName());
+				CBEConstant *pConstant = FindConstant(pSizeName->GetName());
 				// set size to value of constant
 				if (pConstant && pConstant->GetValue())
 					nSize = pConstant->GetValue()->GetIntValue() * nTypeSize;
@@ -1676,8 +1659,7 @@ CBEType *CBETypedDeclarator::GetType()
  *  \param sName the name to match against
  *  \return true if match
  */
-bool
-CBETypedDeclarator::Match(string sName)
+bool CBETypedDeclarator::Match(std::string sName)
 {
 	return m_Declarators.Find(sName) != 0;
 }
@@ -1711,7 +1693,7 @@ void CBETypedDeclarator::ReplaceType(CBEType * pNewType)
  *
  * This implementation only tests user-defined types and constructed types.
  */
-bool CBETypedDeclarator::HasType(string sName)
+bool CBETypedDeclarator::HasType(std::string sName)
 {
 	CBEType *pType = GetType();
 	if (dynamic_cast<CBEUserDefinedType*>(pType))
@@ -1783,7 +1765,7 @@ bool CBETypedDeclarator::HasReference()
  * We can simply search the attributes parameters, because that list would be
  * empty if the attribute is not an IS attribute.
  */
-CBEAttribute* CBETypedDeclarator::FindIsAttribute(string sDeclName)
+CBEAttribute* CBETypedDeclarator::FindIsAttribute(std::string sDeclName)
 {
 	vector<CBEAttribute*>::iterator iter;
 	for (iter = m_Attributes.begin();
@@ -1801,9 +1783,7 @@ CBEAttribute* CBETypedDeclarator::FindIsAttribute(string sDeclName)
  *  \param sPropertyString some value for the property
  *  \return true if successful
  */
-bool
-CBETypedDeclarator::AddLanguageProperty(string sProperty,
-	string sPropertyString)
+bool CBETypedDeclarator::AddLanguageProperty(std::string sProperty, std::string sPropertyString)
 {
 	m_mProperties.insert(
 		map<string,string>::value_type(sProperty, sPropertyString));
@@ -1815,9 +1795,7 @@ CBETypedDeclarator::AddLanguageProperty(string sProperty,
  *  \param sPropertyString will be set to the property string if found
  *  \return true if property is found
  */
-bool
-CBETypedDeclarator::FindLanguageProperty(string sProperty,
-	string& sPropertyString)
+bool CBETypedDeclarator::FindLanguageProperty(std::string sProperty, std::string& sPropertyString)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s for %s (%s)\n", __func__,
 		m_Declarators.First()->GetName().c_str(), sProperty.c_str());
@@ -1838,8 +1816,7 @@ CBETypedDeclarator::FindLanguageProperty(string sProperty,
 /** \brief writes the declarators to the target file
  *  \param pFile the file to write to
  */
-void
-CBETypedDeclarator::WriteDeclarators(CBEFile& pFile)
+void CBETypedDeclarator::WriteDeclarators(CBEFile& pFile)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedDeclarator::%s called\n", __func__);

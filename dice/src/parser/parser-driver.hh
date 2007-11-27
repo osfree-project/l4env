@@ -43,11 +43,16 @@ class CFEFile;
 
 struct yy_buffer_state;
 
-// Conducting the whole scanning and parsing of Calc++.
+/** \class parser_driver
+ *  \ingroup parser
+ *  \brief base class for parser driver
+ */
 class parser_driver
 {
 public:
+	/** constructor */
 	parser_driver ();
+	/** destructor */
 	virtual ~parser_driver ();
 
 	// Handling file imports
@@ -67,7 +72,7 @@ public:
 		CFEBase* context, std::string file, unsigned int line, unsigned int column);
 
 	/** \brief accessor function to set next expected token
-	 *  \var expecting the new token to expect
+	 *  \param expecting the new token to expect
 	 */
 	void expecting_token(CSymbolTable::SymbolClass expecting)
 	{ expectingToken = expecting; }
@@ -102,7 +107,7 @@ public:
 			return contextStack.top();
 	}
 	/** \brief setter function for active context
-	 *  \var pContext the newly active context
+	 *  \param pContext the newly active context
 	 */
 	void setCurrentContext(CFEBase* pContext)
 	{
@@ -138,9 +143,9 @@ public:
 	/** \var string file
 	 *  \brief the name of the parsed file
 	 *
-	 * This is the file name initially used when calling \c parse. The parsed
+	 * This is the file name initially used when calling \a parse. The parsed
 	 * scan buffer may contain other (included) files. These names are only
-	 * updated in the location information, which reflects in \c current_file.
+	 * updated in the location information, which reflects in \a current_file.
 	 */
 	std::string file;
 	/** \var string current_file

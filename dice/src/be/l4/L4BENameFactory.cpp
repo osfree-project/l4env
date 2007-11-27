@@ -266,7 +266,7 @@ string CL4BENameFactory::GetMessageBufferMember(int nFEType)
  * side, but basically does it not matter, because the two implementation are
  * in different object-files and binaries)
  */
-string CL4BENameFactory::GetInitRcvStringFunction(string sFuncName)
+string CL4BENameFactory::GetInitRcvStringFunction(std::string sFuncName)
 {
 	if (sFuncName.empty())
 	{
@@ -318,7 +318,7 @@ string CL4BENameFactory::GetPaddingMember(int nPadType, int nPadToType)
  *  \param sName the string to strip
  *  \return the stripped string or the input if nothing stripped
  */
-string CL4BENameFactory::StripL4Fixes(string sName)
+string CL4BENameFactory::StripL4Fixes(std::string sName)
 {
 	if (sName.substr(0, 3) == "l4_")
 		sName = sName.substr(3);

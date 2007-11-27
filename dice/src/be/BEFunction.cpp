@@ -588,10 +588,7 @@ CBEFunction::WriteUnmarshalling(CBEFile& pFile)
  * without actually knowing the variable names. The return variable's name is
  * given to us. If it is 0 the caller wants no return value.
  */
-void
-CBEFunction::WriteCall(CBEFile& pFile,
-	string sReturnVar,
-	bool bCallFromSameClass)
+void CBEFunction::WriteCall(CBEFile& pFile, std::string sReturnVar, bool bCallFromSameClass)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEFunction::%s(%s) called\n",
 		__func__, GetName().c_str());
@@ -623,9 +620,7 @@ CBEFunction::WriteCall(CBEFile& pFile,
  *  \param pFile the file to write to
  *  \param bCallFromSameClass true if call is made from same class
  */
-void
-CBEFunction::WriteCallParameterList(CBEFile& pFile,
-	bool bCallFromSameClass)
+void CBEFunction::WriteCallParameterList(CBEFile& pFile, bool bCallFromSameClass)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called for %s\n", __func__,
 		GetName().c_str());
@@ -653,9 +648,7 @@ CBEFunction::WriteCallParameterList(CBEFile& pFile,
  *  \param pParameter the parameter to be written
  *  \param bCallFromSameClass true if called from same class
  */
-void
-CBEFunction::WriteCallParameter(CBEFile& pFile,
-	CBETypedDeclarator * pParameter,
+void CBEFunction::WriteCallParameter(CBEFile& pFile, CBETypedDeclarator * pParameter,
 	bool /*bCallFromSameClass*/)
 {
 	CBEDeclarator *pOriginalDecl = pParameter->m_Declarators.First();
@@ -687,9 +680,7 @@ CBEFunction::WriteCallParameter(CBEFile& pFile,
  *   '&' x -(stars external - stars internal)
  * # the stars of external == stars of internal we need nothing.
  */
-void
-CBEFunction::WriteCallParameterName(CBEFile& pFile,
-	CBEDeclarator * pInternalDecl,
+void CBEFunction::WriteCallParameterName(CBEFile& pFile, CBEDeclarator * pInternalDecl,
 	CBEDeclarator * pExternalDecl)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
@@ -730,10 +721,7 @@ CBEFunction::WriteCallParameterName(CBEFile& pFile,
  *
  * A string is every parameter, which's function IsString returns true.
  */
-int
-CBEFunction::GetStringParameterCount(
-	DIRECTION_TYPE nDirection,
-	ATTR_TYPE nMustAttrs,
+int CBEFunction::GetStringParameterCount(DIRECTION_TYPE nDirection, ATTR_TYPE nMustAttrs,
 	ATTR_TYPE nMustNotAttrs)
 {
 	int nCount = 0;
@@ -1341,7 +1329,7 @@ void CBEFunction::SetNoReturnVar()
  * The type and the name should not be initialized yet. This is all done by
  * this function.
  */
-void CBEFunction::SetReturnVar(CBEType * pType, string sName)
+void CBEFunction::SetReturnVar(CBEType * pType, std::string sName)
 {
 	assert(pType);
 	// delete old
@@ -1367,7 +1355,7 @@ void CBEFunction::SetReturnVar(CBEType * pType, string sName)
  *  \param pFEType the front-end type to use as reference for the new type
  *  \param sName the name of the variable
  */
-void CBEFunction::SetReturnVar(CFETypeSpec * pFEType, string sName)
+void CBEFunction::SetReturnVar(CFETypeSpec * pFEType, std::string sName)
 {
 	assert(pFEType);
 	// delete old
@@ -1433,8 +1421,7 @@ CBEFunction::SetReturnVarAttributes(CBETypedDeclarator *pReturn)
  *  \param bCall true if an call parameter is searched
  *  \return a reference to the parameter or 0 if not found
  */
-CBETypedDeclarator*
-CBEFunction::FindParameter(string sName, bool bCall)
+CBETypedDeclarator* CBEFunction::FindParameter(std::string sName, bool bCall)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEFunction::%s(%s, %s) called\n", __func__,
@@ -1458,13 +1445,11 @@ CBEFunction::FindParameter(string sName, bool bCall)
 }
 
 /** \brief searches for a parameter with the given name
- *  \param stack the declarator stack of the member of this parameter
+ *  \param pStack the declarator stack of the member of this parameter
  *  \param bCall true if an call parameter is searched
  *  \return a reference to the parameter or 0 if not found
  */
-CBETypedDeclarator*
-CBEFunction::FindParameter(CDeclStack* pStack,
-	bool bCall)
+CBETypedDeclarator* CBEFunction::FindParameter(CDeclStack* pStack, bool bCall)
 {
 	if (!pStack || pStack->empty())
 		return 0;
@@ -1493,13 +1478,11 @@ CBEFunction::FindParameter(CDeclStack* pStack,
 /** \brief searches for member in a constructed type
  *  \param pParameter the parameter to test
  *  \param iter the iterator pointing to the next element in the stack
- *  \param stack the stack with the declarators
+ *  \param pStack the stack with the declarators
  *  \return the member of the constructed parameter
  */
-CBETypedDeclarator*
-CBEFunction::FindParameterMember(CBETypedDeclarator *pParameter,
-	CDeclStack::iterator iter,
-	CDeclStack* pStack)
+CBETypedDeclarator* CBEFunction::FindParameterMember(CBETypedDeclarator *pParameter,
+	CDeclStack::iterator iter, CDeclStack* pStack)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s(%p (%s)) called\n", __func__,
 		pParameter,
@@ -1762,7 +1745,7 @@ bool CBEFunction::HasArrayParameters(DIRECTION_TYPE nDirection)
  *
  * We test the regular parameter and if it exists the message buffer.
  */
-CBETypedDeclarator* CBEFunction::FindParameterType(string sTypeName)
+CBETypedDeclarator* CBEFunction::FindParameterType(std::string sTypeName)
 {
 	vector<CBETypedDeclarator*>::iterator i = std::find_if(m_Parameters.begin(), m_Parameters.end(),
 		std::bind2nd(std::mem_fun(&CBETypedDeclarator::HasType), sTypeName));
@@ -1807,7 +1790,7 @@ CMsgStructType CBEFunction::GetReceiveDirection()
 
 /** \brief performs basic initializations
  *  \param pFEObject the front-end object to use as reference
- *  \return true if successful
+ *  \param bComponentSide true if the function is created at component side
  *
  * We need to create the CORBA object and environment variables.
  * we also create the communication and marshalling class. We do
@@ -1821,8 +1804,7 @@ CMsgStructType CBEFunction::GetReceiveDirection()
  * by calling sub-method, which can be overloaded. But currently
  * I cannot think of a reasonable split structure.
  */
-void
-CBEFunction::CreateBackEnd(CFEBase *pFEObject, bool bComponentSide)
+void CBEFunction::CreateBackEnd(CFEBase *pFEObject, bool bComponentSide)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 
@@ -1961,10 +1943,7 @@ void CBEFunction::SetEnvironment(CBETypedDeclarator* pEnv)
  * method. No other class, not even a derived one may call it. This way we
  * ensure that only parameters from the call parameter list are used.
  */
-void
-CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl,
-	string sNewDeclName,
-	int nStars)
+void CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl, std::string sNewDeclName, int nStars)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CBEFunction::%s(decl: %s, %s, %d) called\n", __func__,
@@ -2006,10 +1985,7 @@ CBEFunction::SetCallVariable(CBETypedDeclarator *pTypedDecl,
  * We do not have t check for CORBA Object and Environment explicetly, because
  * they are part of the parameter list.
  */
-void
-CBEFunction::SetCallVariable(string sOriginalName,
-	int nStars,
-	string sCallName)
+void CBEFunction::SetCallVariable(std::string sOriginalName, int nStars, std::string sCallName)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CBEFunction::%s(%s, %d, %s) called\n", __func__,
@@ -2044,8 +2020,7 @@ CBEFunction::SetCallVariable(string sOriginalName,
 /** \brief remove the call declarator set for a parameter
  *  \param sCallName the name of the call declarator to remove
  */
-void
-CBEFunction::RemoveCallVariable(string sCallName)
+void CBEFunction::RemoveCallVariable(std::string sCallName)
 {
 	CBETypedDeclarator *pCallParam = m_CallParameters.Find(sCallName);
 	if (!pCallParam)
@@ -2058,8 +2033,7 @@ CBEFunction::RemoveCallVariable(string sCallName)
  *  \param bCall true if this is used for a call to this function
  *  \return a reference to the parameter
  */
-CBETypedDeclarator*
-CBEFunction::GetParameter(CBEDeclarator *pDeclarator, bool bCall)
+CBETypedDeclarator* CBEFunction::GetParameter(CBEDeclarator *pDeclarator, bool bCall)
 {
 	assert(pDeclarator);
 	CBETypedDeclarator *pParameter =
@@ -2114,9 +2088,8 @@ CBEFunction::FindParameterAttribute(ATTR_TYPE nAttributeType)
  *  \param sAttributeParameter the name of the attributes parameter to look for
  *  \return the first parameter with the given attribute
  */
-CBETypedDeclarator*
-CBEFunction::FindParameterIsAttribute(ATTR_TYPE nAttributeType,
-	string sAttributeParameter)
+CBETypedDeclarator* CBEFunction::FindParameterIsAttribute(ATTR_TYPE nAttributeType,
+	std::string sAttributeParameter)
 {
 	vector<CBETypedDeclarator*>::iterator iter;
 	for (iter = m_Parameters.begin();
@@ -2137,9 +2110,18 @@ CBEFunction::FindParameterIsAttribute(ATTR_TYPE nAttributeType,
  */
 CBETypedef* CBEFunction::FindTypedef(std::string sTypeName, CBETypedef* pPrev)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s(%s, %p) in %s called\n",
+		__func__, sTypeName.c_str(), pPrev, GetName().c_str());
+
 	vector<CBETypedef*>::iterator iter = m_Typedefs.begin();
 	if (pPrev)
+	{
 		iter = std::find(m_Typedefs.begin(), m_Typedefs.end(), pPrev);
+		if (iter != m_Typedefs.end())
+			++iter;
+		else
+			iter = m_Typedefs.begin();
+	}
 	for (; iter != m_Typedefs.end();
 		iter++)
 	{
@@ -2149,7 +2131,11 @@ CBETypedef* CBEFunction::FindTypedef(std::string sTypeName, CBETypedef* pPrev)
 			(*iter)->GetType()->HasTag(sTypeName))
 			return *iter;
 	}
-	return 0;
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFunction::%s not found in func, try class\n", __func__);
+	CBEClass *pClass = GetSpecificParent<CBEClass>();
+	assert(pClass);
+	return pClass->FindTypedef(sTypeName, pPrev);
 }
 
 /** \brief constructs the string to initialize the exception variable
@@ -2296,11 +2282,7 @@ CBETypedDeclarator* CBEFunction::GetReturnVariable()
  * This method creates a user defined type and variable and
  * adds the created variable to the local variable vector.
  */
-void
-CBEFunction::AddLocalVariable(string sUserType,
-	string sName,
-	int nStars,
-	string sInit)
+void CBEFunction::AddLocalVariable(std::string sUserType, std::string sName, int nStars, std::string sInit)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CBEFunction::AddLocalVariable(%s, %s, %d, %s) called\n",
@@ -2326,13 +2308,8 @@ CBEFunction::AddLocalVariable(string sUserType,
  * This method creates a user defined type and variable and
  * adds the created variable to the local variable vector.
  */
-void
-CBEFunction::AddLocalVariable(int nFEType,
-	bool bUnsigned,
-	int nSize,
-	string sName,
-	int nStars,
-	string sInit)
+void CBEFunction::AddLocalVariable(int nFEType, bool bUnsigned, int nSize, std::string sName,
+	int nStars, std::string sInit)
 {
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(nFEType);
@@ -2379,7 +2356,7 @@ CBEFunction::SetFunctionName(CFEInterface *pFEInterface,
  *  \param sName the function name
  *  \param sOriginalName the original name
  */
-void CBEFunction::SetFunctionName(string sName, string sOriginalName)
+void CBEFunction::SetFunctionName(std::string sName, std::string sOriginalName)
 {
 	m_sName = sName;
 	m_sOriginalName = sOriginalName;

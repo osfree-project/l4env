@@ -1,5 +1,5 @@
 /**
- *    \file    dice/src/be/l4/fiasco/amd64/FiascoAMD64Sizes.h
+ *    \file    dice/src/be/l4/fiasco/amd64/L4FiascoAMD64Sizes.h
  *    \brief   contains the declaration of the class CL4FiascoAMD64BESizes
  *
  *    \date    08/24/2007

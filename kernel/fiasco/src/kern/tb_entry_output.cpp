@@ -488,13 +488,17 @@ formatter_unmap(Tb_entry *tb, const char *tidstr, unsigned tidlen,
 		char *buf, int maxlen)
 {
   Tb_entry_unmap *e = static_cast<Tb_entry_unmap*>(tb);
+  char reason[16] = "other";
 
-  my_snprintf(buf, maxlen, 
+  if (!(e->mask() & 0x80000000) && ((e->mask() & 0x7ff00) >> 8))
+    snprintf(reason, sizeof(reason), "#%02lx", (e->mask() & 0x7ff00) >> 8);
+
+  my_snprintf(buf, maxlen,
       "ump: %-*s: @ "L4_PTR_FMT" size %dKB, %s %s, @ "L4_PTR_FMT,
       tidlen, tidstr,
       e->fpage().page(), 1 << (e->fpage().size() - 10),
       e->mask() & 2 ? "flush" : "remap",
-      e->mask() & 0x80000000 ? "all" : "other", e->ip());
+      e->mask() & 0x80000000 ? "all" : reason, e->ip());
 
   return maxlen;
 }

@@ -32,8 +32,8 @@ l4_threadid_t id_fprov = L4_INVALID_ID;
 l4_threadid_t id_exec = L4_INVALID_ID;
 static CORBA_Object _dice_corba_obj_fprov = &id_fprov;
 static CORBA_Object _dice_corba_obj_exec = &id_exec;
-CORBA_Environment _dice_corba_env_fprov = dice_default_environment;
-CORBA_Environment _dice_corba_env_exec = dice_default_environment;
+// CORBA_Environment _dice_corba_env_fprov = dice_default_environment;
+// CORBA_Environment _dice_corba_env_exec = dice_default_environment;
 
 PRESENTER_ENCAPL4X {
         /* all methods of encapl4x */
@@ -69,6 +69,7 @@ static int calc_amount_of_pages(void) {
 	l4_threadid_t dm;
         l4dm_dataspace_t *ds;
 	char *content, *start_number, *end_number;
+	CORBA_Environment _dice_corba_env_fprov = dice_default_environment;
 
 	ds = (l4dm_dataspace_t *) malloc(sizeof(l4dm_dataspace_t));
 
@@ -122,6 +123,8 @@ static int put_into_encapl4x(PRESENTER_ENCAPL4X *encapl4x,char *fname, l4dm_data
 	char *complete_path, *argv;
 	argv="";
 	fd = - 1;
+	CORBA_Environment _dice_corba_env_fprov = dice_default_environment;
+	CORBA_Environment _dice_corba_env_exec = dice_default_environment;
 
 	complete_path = calc_complete_path(fname);
 
@@ -171,6 +174,8 @@ static int get_slide_from_encapl4x(PRESENTER_ENCAPL4X *encapl4x,int index, l4dm_
 	int fd;
 	l4_threadid_t dm;
         l4_size_t bytes_read;
+		CORBA_Environment _dice_corba_env_fprov = dice_default_environment;
+		CORBA_Environment _dice_corba_env_exec = dice_default_environment;
 
 	char *argv, *convert_argv;
 	argv="";

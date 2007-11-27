@@ -53,8 +53,7 @@ public:
     virtual int GetSize(DIRECTION_TYPE nDirection);
 
 protected:
-    virtual bool HasVariableSizedParameters(
-	DIRECTION_TYPE nDirection);
+    virtual bool HasVariableSizedParameters(DIRECTION_TYPE nDirection);
     virtual void WriteMarshalling(CBEFile& pFile);
 };
 

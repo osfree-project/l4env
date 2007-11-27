@@ -34,13 +34,6 @@ include $(L4DIR)/mk/prog.mk
 DEFINES_INTEGRITY-y = -DUSE_INTEGRITY
 DEFINES		+= $(DEFINES_INTEGRITY-$(WITH_INTEGRITY))
 
-# create Makeconf.local with EMULATE_MMIO = 1 to activate this
-ifeq ($(EMULATE_MMIO),1)
-SRC_C		+= emulate.c emu_tulip.c emu_ide.c emu_e1000.c
-DEFINES		+= -DEMULATE_MMIO
-LIBS		+= -lio
-endif
-
 LIBS		+= $(LIB_TASK-$(USE_TASKLIB))
 LIBS		+= $(LIB_INTEGRITY-$(WITH_INTEGRITY))
 

@@ -2,6 +2,8 @@
 PKGDIR       ?= ../..
 L4DIR        ?= $(PKGDIR)/../..
 
+SYSTEMS	      = x86-l4v2 arm-l4v2 amd64-l4v2
+
 # source files
 SRC_C         = main.c volumes.c dirs.c mount_table.c resolve.c pathnames.c \
                 clientstate.c

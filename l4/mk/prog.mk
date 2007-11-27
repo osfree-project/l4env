@@ -18,6 +18,7 @@ _L4DIR_MK_PROG_MK=y
 ROLE = prog.mk
 
 include $(L4DIR)/mk/Makeconf
+$(GENERAL_D_LOC): $(L4DIR)/mk/prog.mk
 
 # define INSTALLDIRs prior to including install.inc, where the install-
 # rules are defined.

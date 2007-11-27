@@ -10,6 +10,7 @@ IMPLEMENTATION:
 #include <cstdio>
 #include "l4_types.h"
 #include "config.h"
+#include "jdb.h"
 #include "jdb_module.h"
 #include "space_index.h"
 #include "space.h"
@@ -45,7 +46,9 @@ Utcb_m::action( int cmd, void *&, char const *&, int &)
     return NOTHING;
 
   Thread *t = Thread::id_to_tcb(threadid);
-  if(!t->is_valid())
+  if (!t->is_valid())
+    t = Jdb::get_current_active();
+  if (!t->is_valid())
     {
       printf(" Invalid thread\n");
       return NOTHING;
@@ -56,7 +59,8 @@ Utcb_m::action( int cmd, void *&, char const *&, int &)
          "utcbaddr:      "L4_PTR_FMT"\n",
          Mem_layout::user_utcb_ptr(),
          (Address)(Mem_layout::V2_utcb_addr + t->id().lthread() * sizeof(Utcb)));
-  t->utcb()->print();
+  if (t->utcb())
+    t->utcb()->print();
   return NOTHING;
 }
 

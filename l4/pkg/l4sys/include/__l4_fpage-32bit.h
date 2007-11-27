@@ -42,14 +42,28 @@ typedef struct {
 } l4_iofpage_struct_t;
 
 /**
+ * L4 Capability flexpage structure
+ * \ingroup api_types_fpage_32
+ */
+typedef struct {
+  unsigned grant:1;          ///< Grant I/O page (send I/O flexpage)
+  unsigned zero1:1;          ///< Unused (no write permissions, must be 0)
+  unsigned order:6;          ///< Number of tasks (log2)
+  unsigned one:4;            ///< Unused (must be =1!)
+  unsigned taskno:16;        ///< Task number
+  unsigned f: 4;             ///< Unused, must be 0xF
+} l4_capfpage_struct_t;
+
+/**
  * L4 flexpage type
  * \ingroup api_types_fpage_32
  */
 typedef union {
-  l4_umword_t fpage;         ///< Plain 32 bit value
-  l4_umword_t raw;           ///< Raw value
-  l4_fpage_struct_t fp;      ///< Flexpage structure
-  l4_iofpage_struct_t iofp;  ///< I/O Flexpage structure
+  l4_umword_t fpage;          ///< Plain 32 bit value
+  l4_umword_t raw;            ///< Raw value
+  l4_fpage_struct_t fp;       ///< Flexpage structure
+  l4_iofpage_struct_t iofp;   ///< I/O flexpage structure
+  l4_capfpage_struct_t capfp; ///< Capability flexpage structure
 } l4_fpage_t;
 
 /** Constants for flexpages
@@ -84,6 +98,14 @@ l4_iofpage(unsigned port, unsigned int size,
            unsigned char grant)
 {
   return ((l4_fpage_t){iofp:{grant, 0, size, 0, port, 0xf}});
+}
+
+
+L4_INLINE l4_fpage_t
+l4_capfpage(unsigned taskno, unsigned int order,
+            unsigned char grant)
+{
+  return ((l4_fpage_t){capfp:{grant, 0, order, 1, taskno, 0xf}});
 }
 
 #endif /* ! __L4_FPAGE_32BIT_H__ */

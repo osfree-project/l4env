@@ -65,6 +65,10 @@ CBESwitchCase::CBESwitchCase()
 CBESwitchCase::~CBESwitchCase()
 { }
 
+/** \brief check if parameter has ATTR_IN attribute
+ *  \param pParameter the parameter to test
+ *  \return true if parameter has IN attribute
+ */
 static bool checkForInAttr(CFETypedDeclarator *pParameter)
 {
 	return pParameter->m_Attributes.Find(ATTR_IN) != 0;
@@ -72,6 +76,7 @@ static bool checkForInAttr(CFETypedDeclarator *pParameter)
 
 /** \brief creates the back-end receive function
  *  \param pFEOperation the corresponding front-end operation
+ *  \param bComponentSide true if this function is create at component side
  *  \return true is successful
  *
  * This implementation calls the base class' implementation and then sets the
@@ -109,10 +114,7 @@ void CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 	else
 		m_bSameClass = false;
 
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
 	string sFunctionName;
-
 	// check if we need unmarshalling function
 	vector<CFETypedDeclarator*>::iterator iterP = find_if(pFEOperation->m_Parameters.begin(),
 		pFEOperation->m_Parameters.end(), checkForInAttr);
@@ -120,14 +122,9 @@ void CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 	{
 		// create references to unmarshal function
 		sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_UNMARSHAL, IsComponentSide());
-		m_pUnmarshalFunction = static_cast<CBEUnmarshalFunction *>(
-			pRoot->FindFunction(sFunctionName, FUNCTION_UNMARSHAL));
-		if (!m_pUnmarshalFunction)
-		{
-			exc +=" failed, because unmarshal function (" +
-				sFunctionName + ") could not be found.";
-			throw new error::create_error(exc);
-		}
+		m_pUnmarshalFunction = dynamic_cast<CBEUnmarshalFunction *>(
+			FindFunction(sFunctionName, FUNCTION_UNMARSHAL));
+		assert(m_pUnmarshalFunction);
 		// set the call parameters: this is simple, since we use the same
 		// names and reference counts
 		for_each(m_Parameters.begin(), m_Parameters.end(),
@@ -142,13 +139,8 @@ void CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 		// create reference to marshal function
 		sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_MARSHAL, IsComponentSide());
 		m_pMarshalFunction = static_cast<CBEMarshalFunction*>(
-			pRoot->FindFunction(sFunctionName, FUNCTION_MARSHAL));
-		if (!m_pMarshalFunction)
-		{
-			exc += " failed, because marshal function (" + sFunctionName +
-				") could not be found.";
-			throw new error::create_error(exc);
-		}
+			FindFunction(sFunctionName, FUNCTION_MARSHAL));
+		assert(m_pMarshalFunction);
 		// set call parameters
 		for_each(m_Parameters.begin(), m_Parameters.end(),
 			SetCallVariableCall(m_pMarshalFunction));
@@ -157,15 +149,8 @@ void CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 	{
 		sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_MARSHAL_EXCEPTION, IsComponentSide());
 		m_pMarshalExceptionFunction = static_cast<CBEMarshalExceptionFunction*>(
-			pRoot->FindFunction(sFunctionName, FUNCTION_MARSHAL_EXCEPTION));
-		// marshal_exc function has to be here, because we have raises
-		// declarators
-		if (!m_pMarshalExceptionFunction)
-		{
-			exc += " failed, because marshal_exc function (" + sFunctionName +
-				") could not be found.";
-			throw new error::create_error(exc);
-		}
+			FindFunction(sFunctionName, FUNCTION_MARSHAL_EXCEPTION));
+		assert(m_pMarshalExceptionFunction);
 		// set call parameters
 		for_each(m_Parameters.begin(), m_Parameters.end(),
 			SetCallVariableCall(m_pMarshalExceptionFunction));
@@ -173,13 +158,8 @@ void CBESwitchCase::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSi
 	// create reference to component function
 	sFunctionName = pNF->GetFunctionName(pFEOperation, FUNCTION_TEMPLATE, IsComponentSide());
 	m_pComponentFunction = static_cast<CBEComponentFunction *>(
-		pRoot->FindFunction(sFunctionName, FUNCTION_TEMPLATE));
-	if (!m_pComponentFunction)
-	{
-		exc += " failed, because component function (" + sFunctionName +
-			") could not be found.";
-		throw new error::create_error(exc);
-	}
+		FindFunction(sFunctionName, FUNCTION_TEMPLATE));
+	assert(m_pComponentFunction);
 	// set the call parameters: this is simple, since we use the same names
 	// and reference counts
 	for_each(m_Parameters.begin(), m_Parameters.end(),
@@ -495,7 +475,7 @@ void CBESwitchCase::SetMessageBufferType()
  * for other local variables of the dispatch function. Because we use the
  * nested functions, we have to propagate the invocation respectively.
  */
-void CBESwitchCase::SetCallVariable(string sOriginalName, int nStars, string sCallName)
+void CBESwitchCase::SetCallVariable(std::string sOriginalName, int nStars, std::string sCallName)
 {
 	if (m_pUnmarshalFunction)
 		m_pUnmarshalFunction->SetCallVariable(sOriginalName, nStars,
@@ -511,9 +491,12 @@ void CBESwitchCase::SetCallVariable(string sOriginalName, int nStars, string sCa
 			sCallName);
 }
 
+/** \brief operator called when iterating parameters
+ *  \param pParameter the parameter to st the call variable for
+ */
 void CBESwitchCase::SetCallVariableCall::operator() (CBETypedDeclarator *pParameter)
 {
-	/* instead of simply returning for one of the special parameters, we
+	/** instead of simply returning for one of the special parameters, we
 	 * set the prefix to empty, so the function's SetCallVariable method
 	 * gets called. Only if that happens the call-parameter list is
 	 * created. If we have no parameter to prefix we still need that

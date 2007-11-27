@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/be/l4/v2/L4FiascoBEMsgBuffer.h
+ *  \file    dice/src/be/l4/fiasco/L4FiascoBEMsgBuffer.h
  *  \brief   contains the declaration of the class CL4FiascoBEMsgBuffer
  *
  *  \date    08/24/2007
@@ -52,7 +52,8 @@ protected:
 public: // public methods
 	virtual int GetPayloadOffset();
 	virtual CL4FiascoBEMsgBuffer* Clone();
-	virtual void WriteDopeShortInitialization(CBEFile& pFile, int nType, CMsgStructType nStructType);
+	virtual void WriteDopeShortInitialization(CBEFile& pFile, CBEFunction *pFunction,
+		int nType, CMsgStructType nStructType);
 	virtual int GetMemberPosition(std::string sName, CMsgStructType nType);
 	virtual bool HasProperty(int nProperty, CMsgStructType nType);
 

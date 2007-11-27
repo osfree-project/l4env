@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/be/l4/L4FiascoBECallFunction.cpp
+ *  \file    dice/src/be/l4/fiasco/L4FiascoBECallFunction.cpp
  *  \brief   contains the implementation of the class CL4FiascoBECallFunction
  *
  *  \date    10/26/2007
@@ -27,6 +27,7 @@
  */
 
 #include "L4FiascoBECallFunction.h"
+#include "L4FiascoBENameFactory.h"
 #include "be/l4/L4BEMsgBuffer.h"
 #include <string>
 using std::string;
@@ -40,6 +41,7 @@ CL4FiascoBECallFunction::~CL4FiascoBECallFunction()
 
 /** \brief creates the call function
  *  \param pFEOperation the front-end operation to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if successful
  *
  * The L4.Fiasco implementation makes a pointer out of the message buffer
@@ -55,7 +57,9 @@ void CL4FiascoBECallFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bCo
 		pMsgBuffer->m_Declarators.First()->SetStars(1);
 		string sInit;
 		pMsgBuffer->GetType(this)->WriteCastToStr(sInit, true);
-		pMsgBuffer->SetDefaultInitString(sInit + "l4_utcb_get()");
+		CBENameFactory *pNF = CBENameFactory::Instance();
+		sInit += pNF->GetString(CL4FiascoBENameFactory::STR_UTCB_INITIALIZER, this);
+		pMsgBuffer->SetDefaultInitString(sInit);
 	}
 }
 

@@ -57,6 +57,7 @@ CL4BEWaitFunction::~CL4BEWaitFunction()
 
 /** \brief initialize instance of class
  *  \param pFEOperation the front-end function to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true on success
  */
 void CL4BEWaitFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)

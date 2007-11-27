@@ -170,7 +170,7 @@ void CBEType::Write(CBEFile& pFile)
 /** \brief write the type to the string
  *  \param str the string to write to
  */
-void CBEType::WriteToStr(string& str)
+void CBEType::WriteToStr(std::string& str)
 {
     str += m_sName;
 }
@@ -282,9 +282,17 @@ bool CBEType::IsConstructedType()
  *  \param sTag the tag to test
  *  \return true if the same
  */
-bool CBEType::HasTag(string /*sTag*/)
+bool CBEType::HasTag(std::string /*sTag*/)
 {
     return false;
+}
+
+/** \brief return the name of the tag
+ *  \return the tag
+ */
+string CBEType::GetTag()
+{
+	return string();
 }
 
 /** \brief writes a cast string for this type

@@ -13,7 +13,6 @@
 #include "pager.h"
 #include "dm-if.h"
 #include "app.h"
-#include "emulate.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -36,7 +35,6 @@
 
 #define dbg_pf(x...)		//app_msg(app, x)
 #define dbg_adap_pf(x...)	//app_msg(app, x)
-#define dbg_emu_pf(x...)	//app_msg(app, x)
 #define dbg_incoming(x...)	//printf(x)
 
 l4_threadid_t app_pager_id = L4_INVALID_ID;	/**< pager thread. */
@@ -341,9 +339,11 @@ handle_extended_sigma0_request(app_t *app, l4_umword_t *dw1,
     }
   if (error || !l4_ipc_fpage_received(result))
     {
-      app_msg(app, "Can't sigma0 request dw1=%08lx dw2=%08lx:", *dw1, *dw2);
-      rmgr_memmap_error("ROOT denies page at %08x "
+      app_msg(app, "Failed sigma0 request with dw1=%08lx dw2=%08lx:",
+                   *dw1, *dw2);
+      rmgr_memmap_error("ROOT (" l4util_idfmt ") denies page at %08x "
                         "(map=%08x, error=%02x result=%08x)",
+                        l4util_idstr(rmgr_pager_id),
                         *dw1, map_addr, error, result.msgdope);
       enter_kdebug("app_pager");
       *reply = L4_IPC_SHORT_MSG;
@@ -519,10 +519,6 @@ app_pager_thread(void *data)
       enter_kdebug("app_pager");
     }
 
-#ifdef EMULATE_MMIO
-  emulate_init();
-#endif
-
   /* shake hands with creator */
   l4thread_started(NULL);
 
@@ -576,40 +572,22 @@ app_pager_thread(void *data)
                         || l4_msgtag_is_io_page_fault(tag))
                        && (dw1 >= 0x40000000) && !(app->flags & APP_NOSIGMA0))
 		{
-#ifdef EMULATE_MMIO
-		  if (dw1 & 1)
-		    {
-		      dbg_emu_pf("Emulate mmio dw1=%08x dw2=%08x", dw1, dw2);
-		      /* emulate adapter space page */
-		      /* dw1 = emu_addr_t, dw2 = value */
-		      handle_mmio_emu(app, (emu_addr_t){ .raw=dw1 }, dw2,
-					    &dw1, &dw2, &reply);
-		    }
-		  else
-#endif
-		    {
-		      if (l4_is_io_page_fault(dw1))
-			{
-			  resolve_iopf_rmgr(app, &dw1, &dw2, &reply,
-					    &skip_reply);
-			}
-		      else
-			{
-			  /* sigma0 protocol: adapter space requested. */
-			  dbg_adap_pf("PF (%c) %08lx in adapter space. "
-				      "Forwarding to ROOT.",
-				      dw1 & 2 ? 'w' : 'r', dw1 & ~3);
+                    if (l4_is_io_page_fault(dw1))
+                      {
+                        resolve_iopf_rmgr(app, &dw1, &dw2, &reply,
+					  &skip_reply);
+                      }
+                    else
+                      {
+                        /* sigma0 protocol: adapter space requested. */
+                        dbg_adap_pf("PF (%c) %08lx in adapter space. "
+				    "Forwarding to ROOT.",
+                                    dw1 & 2 ? 'w' : 'r', dw1 & ~3);
 
-			  /* forward pf in adapter space to ROOT */
-			  forward_pf_rmgr(app, &dw1, &dw2, &reply,
-					  L4_LOG2_SUPERPAGESIZE);
-#ifdef EMULATE_MMIO
-			  /* check if page is under emulation. If yes,
-			   * we must not map the page writable */
-			  check_mmio_emu(app, dw1, &dw2, reply);
-#endif
-			}
-		    }
+                        /* forward pf in adapter space to ROOT */
+                        forward_pf_rmgr(app, &dw1, &dw2, &reply,
+					L4_LOG2_SUPERPAGESIZE);
+                      }
 		}
 #endif /* ARCH_x86 */
 	      else if (l4_msgtag_is_page_fault(tag)

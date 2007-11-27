@@ -5,7 +5,7 @@ L4DIR        ?=  $(PKGDIR)/../..
 SYSTEMS       = x86-l4v2
 
 # source files
-SERVERIDL     = rt_mon.idl
+SERVERIDL     = rt_mon.idl rt_mon_reg.idl
 
 SRC_C         = coord.c clients.c
 

@@ -77,10 +77,12 @@ public: // Public methods
     CBETypedef* FindTypedef(std::string sTypeName, CBETypedef *pPrev = 0);
     CBEConstant* FindConstant(std::string sConstantName);
     CBENameSpace* FindNameSpace(std::string sNameSpaceName);
-    CBEClass* FindClass(std::string sClassName, CBEClass *pPrev = 0);
+    CBEClass* FindClass(std::string sClassName);
     CBEType* FindTaggedType(unsigned int nType, std::string sTag);
-    CBEFunction* FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType);
     CBEEnumType* FindEnum(std::string sEnumerator);
+
+	CBENameSpace* SearchNamespace(std::string sNamespace);
+	CBEClass* SearchClass(std::string sClass);
 
     void AddToImpl(CBEImplementationFile* pImpl);
     void AddToHeader(CBEHeaderFile* pHeader);
@@ -114,10 +116,10 @@ public:
      *  \brief contains the constants of the back-end
      */
     CSearchableCollection<CBEConstant, std::string> m_Constants;
-    /** \var CCollection<CBENameSpace> m_Namespaces
+    /** \var CSearchableCollection<CBENameSpace, std::string> m_Namespaces
      *  \brief contains the namespaces of the back-end
      */
-    CCollection<CBENameSpace> m_Namespaces;
+    CSearchableCollection<CBENameSpace, std::string> m_Namespaces;
     /** \var CSearchableCollection<CBEClass, std::string> m_Classes
      *  \brief contains the classes of the back-end
      */
@@ -131,10 +133,6 @@ public:
      *         tagged)
      */
     CCollection<CBEType> m_TypeDeclarations;
-    /** \var CSearchableCollection<CBEFunction, std::string> m_GlobalFunctions
-     *  \brief contains global functions (outside of classes and name-spaces)
-     */
-    CSearchableCollection<CBEFunction, std::string> m_GlobalFunctions;
 };
 
 #endif // !__DICE_BEROOT_H__

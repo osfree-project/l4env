@@ -37,7 +37,7 @@ static pubkeydata    pubkey;            //temp storage for a pubkey
 static unsigned char pcrcomposite [1024];
 //#define _LOG_OUTPUT
 #ifdef _LOG_OUTPUT
-char log [1024];
+static char log [1024];
 #endif
 
 static void show_loaded_keys()
@@ -65,6 +65,7 @@ static void show_help_info()
   printf("c ... create a new RSA key for signing in tmp buffer\n");
   printf("e ... evict loaded key from TPM\n");
   printf("E ... evict loaded key from TPM, TCGA 1.2 \n");
+  printf("i ... general information about TPM\n");
   printf("k ... list loaded keys\n");
   printf("l ... load a key to TPM from tmp buffer\n");
   printf("L ... load a key to TPM from tmp buffer, TCGA 1.2\n");
@@ -73,7 +74,6 @@ static void show_help_info()
   printf("p ... print public key of loaded key\n");
   printf("r ... generate random numbers\n");
   printf("s ... selftest of TPM\n");
-  printf("v ... version information of the TPM\n");
   printf("w ... clear owner of TPM\n");    
 }
 
@@ -169,6 +169,19 @@ static void command_loop()
         printf("... TPM specification 1.1\n");
     else
       printf("... unknown TPM specification version\n");
+
+  }
+
+  printf("Detecting number of PCRs ...");
+
+  error = TPM_GetCapability_Pcrs(&foranything);
+
+  if (error)
+    printf(" failed (error=%d). Assume %lu PCR registers.\n", error, foranything);
+  else
+  {
+    printf(" success. %lu PCR registers reported by TPM.\n", foranything);
+    maxpcrs = foranything;
   }
 
   printf("\nWelcome ... press 'h' for a list of supported commands\n");
@@ -290,15 +303,53 @@ static void command_loop()
         show_help_info();
 
         break;
-      case 'v':
-        printf("Getting TPM version ...");
-	error = TPM_GetCapability_Version(&major,&minor,&version,&rev);
+      case 'i':
+        printf("p ... number of PCRs\n");
+        printf("t ... timeout values of function classes\n");
+        printf("v ... version of TPM\n");
 
-        if (error)
-          printf(" failed (error=%d)\n", error); 
-	else
-          printf(" success. TPM version: %d.%d.%d.%d\n", major, minor, version, rev);
+        do
+        {
+          c = getchar();
+        } while (c < 0x20 && c != 0xd);
 
+        switch(c)
+        {
+          case 'v':
+            printf("Getting version ...");
+            error = TPM_GetCapability_Version(&major,&minor,&version,&rev);
+
+            if (error)
+              printf(" failed (error=%d)\n", error); 
+            else
+              printf(" success. TPM version: %d.%d.%d.%d\n",
+                     major, minor, version, rev);
+
+            break;
+          case 't':
+            printf("Getting timout values ...");
+            
+            unsigned long timeout_a, timeout_b, timeout_c, timeout_d;
+
+            error = TPM_GetCapability_Timeouts(&timeout_a, &timeout_b, &timeout_c, &timeout_d);
+
+            if (error)
+              printf(" failed (error=%d)\n", error); 
+            else
+              printf(" success. Timeout of class A: %lums, B: %lums, C: %lums, D: %lums\n",
+                     timeout_a, timeout_b, timeout_c, timeout_d);
+            break;
+          case 'p':
+            printf("Detecting number of PCRs ...");
+
+            error = TPM_GetCapability_Pcrs(&foranything);
+
+            if (error)
+              printf(" failed (error=%d). Assume %lu PCR registers.\n", error, foranything);
+            else
+              printf(" success. %lu PCR registers.\n", foranything);
+            break;
+        }
         break;
       case 'k':
         show_loaded_keys();

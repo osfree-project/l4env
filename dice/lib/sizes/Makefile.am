@@ -5,4 +5,4 @@ AM_CPPFLAGS = -I$(top_srcdir)/include
 libdice_sizes_la_SOURCES = init.cc sensor.cc
 noinst_HEADERS = sensor.h
 
-libdice_sizes_la_LDFLAGS = -version-number 0:1:0
+libdice_sizes_la_LDFLAGS = -version-number 0:2:0

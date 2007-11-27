@@ -67,6 +67,26 @@ TPM_TRANSMIT_FUNC_GET_PROP(GetCapability_Slots,TPM_CAP_PROP_SLOTS);
 TPM_TRANSMIT_FUNC_GET_PROP(GetCapability_Pcrs,TPM_CAP_PROP_PCR);
 
 /**
+ * Get the timeout values of 4 function classes defined in TPM specification
+ */
+TPM_TRANSMIT_FUNC(GetCapability_Timeouts,
+                  (unsigned long *timeout_a, unsigned long *timeout_b,
+                   unsigned long *timeout_c, unsigned long *timeout_d),
+                      ,
+                      if (TPM_EXTRACT_LONG(0)!=16)
+                        return -2;
+
+                      *timeout_a=TPM_EXTRACT_LONG(4);
+                      *timeout_b=TPM_EXTRACT_LONG(8);
+                      *timeout_c=TPM_EXTRACT_LONG(12);
+                      *timeout_d=TPM_EXTRACT_LONG(16);
+                      ,
+                      "L L L",
+                      TPM_CAP_PROPERTY,
+                      TPM_SUBCAP,
+                      TPM_CAP_PROP_TIS_TIMEOUT);
+
+/**
  * Get all loaded keys.
  */
 TPM_TRANSMIT_FUNC(GetCapability_Key_Handle,

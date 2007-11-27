@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/be/DirectionType
+ *  \file    dice/src/be/DirectionType.h
  *  \brief   contains the declaration of the DIRECTION_TYPE
  *
  *  \date    10/18/2007

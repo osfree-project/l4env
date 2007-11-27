@@ -32,6 +32,7 @@
 
 #include "Object.h"
 #include <string>
+#include "FunctionType.h"
 
 class CBERoot;
 class CBETarget;
@@ -42,6 +43,12 @@ class CBEFile;
 class CFEBase;
 class CBEHeaderFile;
 class CBEImplementationFile;
+class CBETypedef;
+class CBEConstant;
+class CBENameSpace;
+class CBEClass;
+class CBEType;
+class CBEEnumType;
 
 /** \class CBEObject
  *    \ingroup backend
@@ -69,18 +76,42 @@ public:
 	virtual CBEObject* Clone();
 	virtual bool IsTargetFile(CBEFile* pFile);
 
+	virtual CBETypedef* FindTypedef(std::string sTypeName, CBETypedef *pPrev = 0);
+	virtual CBEConstant* FindConstant(std::string sConstantName);
+	virtual CBENameSpace* FindNameSpace(std::string sNameSpaceName);
+	virtual CBEClass* FindClass(std::string sClassName);
+	virtual CBEType* FindTaggedType(unsigned int nType, std::string sTag);
+	virtual CBEFunction* FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType);
+	virtual CBEEnumType* FindEnum(std::string sEnumerator);
+
 protected:
 	virtual void SetTargetFileName(CFEBase *pFEObject);
 	virtual void CreateBackEnd(CFEBase* pFEObject);
 
+	/** \class DoCall
+	 *  \brief functor to perform the same call for all elements of a collection
+	 */
 	template<class C, class A>
 	class DoCall
 	{
+		/** \var C* c
+		 *  \brief the class of the collection's members
+		 */
 		C* c;
+		/** \var std::mem_fun1_t<void, C, A*> f
+		 *  \brief function to invoke for elements of a collection
+		 */
 		std::mem_fun1_t<void, C, A*> f;
 	public:
+		/** \brief constructor
+		 *  \param cc the class of the member
+		 *  \param ff the function to call
+		 */
 		explicit DoCall(C* cc, void (C::*ff)(A* arg)) :
 			c(cc), f(ff) { }
+		/** \brief the operator to invoke
+		 *  \param arg the argument to pass to the function
+		 */
 		void operator() (A* arg) { f(c, arg); }
 	};
 

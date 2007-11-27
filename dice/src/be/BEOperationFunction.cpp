@@ -54,9 +54,9 @@ CBEOperationFunction::CBEOperationFunction(FUNCTION_TYPE nFunctionType)
 CBEOperationFunction::~CBEOperationFunction()
 { }
 
-/** \brief prepares this class for further deployment using the front-end \
- *         operation
+/** \brief prepares this class for further deployment using the front-end operation
  *  \param pFEOperation the respective front.end operation
+ *  \param bComponentSide true if this function is create at component side
  *  \return true if the code generation was succesful
  *
  * This implementation adds the attributes, types, parameters, exception, etc.

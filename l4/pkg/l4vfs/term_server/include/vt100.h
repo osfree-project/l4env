@@ -43,6 +43,14 @@
 //          terminal
 #define VT100_ORIGIN_GLOBAL     1
 
+struct term_select_info
+{
+    struct term_select_info *next, *prev; // queue info
+    l4_threadid_t   handler; // whom to call if new data arrives
+    int             mode;    // select mode
+    object_handle_t fd;      // fd used for select
+};
+
 /* There are three types of screens involved here:
  *
  *  phys is the screen we draw our text to. It is normally displayed.
@@ -143,9 +151,7 @@ typedef struct termstate_s
     /* 
      * Select info stuff.
      */
-    l4_threadid_t   select_handler; // whom to call if new data arrives
-    int             select_mode;    // select mode
-    object_handle_t select_fd;      // fd used for select
+    struct term_select_info *select_list; // stored select infos
 
     struct termstate_spec_s * spec; // pointer to specific data structure
 } termstate_t;
@@ -197,7 +203,8 @@ void vt100_set_keymap(char * keymap);
 /* Select stuff */
 void vt100_set_select_info(termstate_t *term, object_handle_t handle,
                            int mode, const l4_threadid_t *notify_handler);
-void vt100_unset_select_info(termstate_t *term);
+void vt100_unset_select_info(termstate_t *term, object_handle_t handle,
+                             int mode, const l4_threadid_t *handler);
 void vt100_select_notify(termstate_t *term);
 int vt100_data_avail(termstate_t *term);
 

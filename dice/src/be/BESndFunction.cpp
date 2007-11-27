@@ -91,6 +91,7 @@ void CBESndFunction::WriteReturn(CBEFile& pFile)
 
 /** \brief creates the back-end send function
  *  \param pFEOperation the corresponding front-end operation
+ *  \param bComponentSide true if this function is create at component side
  *  \return true if successful
  */
 void

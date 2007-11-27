@@ -68,7 +68,7 @@ CBEComponentFunction::~CBEComponentFunction()
 
 /** \brief creates the call function
  *  \param pFEOperation the front-end operation used as reference
- *  \return true if successful
+ *  \param bComponentSide true if function is created at component side
  *
  * This implementation only sets the name of the function. And it stores a
  * reference to the client side function in case this implementation is

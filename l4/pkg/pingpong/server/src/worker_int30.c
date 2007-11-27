@@ -24,7 +24,7 @@
 
 #undef PREFIX
 #define PREFIX(a) int30_ ## a
-#include "worker_inc.h"
+#include "worker_inc_x86.h"
 
 static unsigned long shared_data[1024] __attribute__((aligned(4096)));
 
@@ -60,9 +60,7 @@ exception_reflection_pong_handler(void)
   l4_threadid_t src_id;
   int err;
 
-  /* prevent page faults */
-  l4_touch_ro(&_stext, &_etext-&_stext);
-  l4_touch_rw(&_etext, &_end-&_etext);
+  touch_pages();
 
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
@@ -131,9 +129,7 @@ exception_IPC_pong_handler(void)
   l4_msgtag_t tag;
   l4_utcb_t *utcb = l4_utcb_get();
 
-  /* prevent page faults */
-  l4_touch_ro(&_stext, &_etext-&_stext);
-  l4_touch_rw(&_etext, &_end-&_etext);
+  touch_pages();
 
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
@@ -188,9 +184,7 @@ ping_exception_idt_thread(void *func)
       l4util_idt_desc_t   desc[0x20];
     } __attribute__((packed)) idt;
 
-  /* prevent page faults */
-  l4_touch_ro(&_stext, &_etext-&_stext);
-  l4_touch_rw(&_etext, &_end-&_etext);
+  touch_pages();
 
   l4util_idt_init (&idt.header, 0x20);
   l4util_idt_entry(&idt.header, 13, func);
@@ -251,9 +245,7 @@ ping_exception_IPC_thread(void)
   l4_threadid_t preempter = L4_INVALID_ID, pager = pong_id;
   l4_umword_t dummy;
 
-  /* prevent page faults */
-  l4_touch_ro(&_stext, &_etext-&_stext);
-  l4_touch_rw(&_etext, &_end-&_etext);
+  touch_pages();
 
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
@@ -302,9 +294,7 @@ pong_utcb_ipc_thread(void)
   int err;
   l4_msgtag_t tag;
 
-  /* prevent page faults */
-  l4_touch_ro(&_stext, &_etext-&_stext);
-  l4_touch_rw(&_etext, &_end-&_etext);
+  touch_pages();
 
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
@@ -348,9 +338,7 @@ ping_utcb_ipc_thread(void)
   l4_msgtag_t tag;
   l4_msgtag_t rtag;
 
-  /* prevent page faults */
-  l4_touch_ro(&_stext, &_etext-&_stext);
-  l4_touch_rw(&_etext, &_end-&_etext);
+  touch_pages();
 
   PREFIX(send)(main_id);
   PREFIX(recv)(main_id);
@@ -361,7 +349,7 @@ ping_utcb_ipc_thread(void)
       tag = l4_msgtag(0, utcb_data_size, 0, 0);
 
       in = l4_rdtsc();
-      for (i = 8 * global_rounds; i; i--)
+      for (i = global_rounds; i; i--)
         {
           l4_ipc_call_tag(pong_id,
                       L4_IPC_SHORT_MSG, d0, d1, tag,
@@ -372,8 +360,8 @@ ping_utcb_ipc_thread(void)
 
       printf("UTCB IPC (%02d)  :  %10u cycles / %5lu rounds >> %u <<\n",
              utcb_data_size,
-             (l4_uint32_t)(out-in), global_rounds*8,
-             (l4_uint32_t)((out-in)/(global_rounds*8)));
+             (l4_uint32_t)(out-in), global_rounds,
+             (l4_uint32_t)((out-in)/(global_rounds)));
     }
 
   /* tell main that we are finished */

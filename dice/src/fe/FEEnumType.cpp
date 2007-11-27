@@ -32,7 +32,7 @@
 #include "Compiler.h"
 #include "Visitor.h"
 
-CFEEnumType::CFEEnumType(string sTag,
+CFEEnumType::CFEEnumType(std::string sTag,
     vector<CFEIdentifier*> * pMembers)
 : CFEConstructedType(TYPE_ENUM),
     m_Members(pMembers, this)

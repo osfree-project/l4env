@@ -40,24 +40,24 @@ class CL4V4BENameFactory : public CL4BENameFactory
 {
 
 public:
-    /** \brief creates the instance of the name factory
-     */
-    CL4V4BENameFactory();
-    virtual ~CL4V4BENameFactory();
+	/** \brief creates the instance of the name factory
+	 */
+	CL4V4BENameFactory();
+	virtual ~CL4V4BENameFactory();
 
-    /** \brief contains the L4 V4 specific values for the GetString function
-     */
-    enum
-    {
-	STR_L4V4_BASE = STR_L4_MAX, /**< ensure disjunct values */
-	STR_INIT_RCVSTR_VARIABLE,   /**< variable to hold string length for init-rcvstr call */
-	STR_L4V4_MAX                /**< maximum L4V4 value */
-    };
+	/** \brief contains the L4 V4 specific values for the GetString function
+	 */
+	enum
+	{
+		STR_L4V4_BASE = STR_L4_MAX, /**< ensure disjunct values */
+		STR_INIT_RCVSTR_VARIABLE,   /**< variable to hold string length for init-rcvstr call */
+		STR_L4V4_MAX                /**< maximum L4V4 value */
+	};
 
-    virtual std::string GetString(int nStringCode, void *pParam);
-    virtual std::string GetMsgTagVariable();
-    virtual std::string GetInitRcvstrVariable();
-    virtual std::string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
+	virtual std::string GetString(int nStringCode, void *pParam = 0);
+	virtual std::string GetMsgTagVariable();
+	virtual std::string GetInitRcvstrVariable();
+	virtual std::string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
 
 };
 

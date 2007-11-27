@@ -16,6 +16,7 @@
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
 #include <l4/sys/memdesc.h>
+#include <l4/sys/cache.h>
 #include <l4/util/l4_macros.h>
 #include <l4/util/util.h>
 #include <l4/rmgr/proto.h>
@@ -301,9 +302,9 @@ set_prio(l4_threadid_t t, int num)
  * some task specific setup.
  */
 static void
-setup_task(l4_threadid_t t)
+setup_task(unsigned task_no, l4_threadid_t t)
 {
-  bootquota_t *b = bootquota_get(t.id.task);
+  bootquota_t *b = bootquota_get(task_no);
 
   if (b->small_space != 0xff)
     {
@@ -1445,24 +1446,37 @@ start_tasks(void)
   l4_addr_t task_entry, tramp_entry, tramp_page;
   int exec_ret;
   exec_task_t e;
-  unsigned task_no; // number of currently bootet task
+  unsigned first_task_no;
   unsigned mod_no;  // number of currently handled boot module
 
   printf("\nRoottask: Loading %d module%s.\n",
          mb_info->mods_count - first_task_module,
 	 (mb_info->mods_count - first_task_module) == 1 ? "" : "s");
 
-  t          = myself;
+  t                 = myself;
+  first_task_no     = myself.id.task+1;
 
-  for (mod_no = first_task_module, task_no = myself.id.task+1;
-       mod_no < mb_info->mods_count;
-       mod_no++, task_no++)
+  for (mod_no = first_task_module;
+       mod_no < mb_info->mods_count; mod_no++)
     {
-      t.id.task = task_no;
-      if (!task_alloc(task_no, myself.id.task))
-	boot_panic("can't allocate task");
-
       name = get_module_name(&mb_mod[mod_no], "");
+
+      unsigned task_no = cfg_quota_search_taskno(name);
+      if (!task_no)
+        {
+          // task number not configured, choose the first free one
+          for (task_no = first_task_no; task_no < RMGR_TASK_MAX; task_no++)
+            {
+              if (task_alloc(task_no, TASKNO_ROOT, 0))
+                break;
+            }
+          if (task_no >= RMGR_TASK_MAX)
+            boot_panic("can't allocate task");
+        }
+      else if (!task_alloc(task_no, TASKNO_ROOT, 0))
+          boot_panic("can't allocate task #%02x", task_no);
+
+      t.id.task = task_no;
 
       // set some resources configured for this task
       names_set(t, name);
@@ -1514,10 +1528,11 @@ start_tasks(void)
 	   * (don't use mod_no here, it's overwritten by copy_mbi!) */
 	  free_module_image(e.mod_no);
 
+	  l4_imb();
 	  t = l4_task_new(t, bootquota_get(task_no)->mcp,
 			  (l4_umword_t) sp, tramp_entry, myself);
 
-	  setup_task(t);
+	  setup_task(t.id.task, t);
 	}
     }
 
@@ -1548,8 +1563,8 @@ init(void)
   configure();
 
   setup_symbols_and_lines((l4_addr_t)mb_mod[2].mod_start, myself);
-  setup_task(myself);
-  setup_task(my_pager);
+  setup_task(TASKNO_ROOT, myself);
+  setup_task(TASKNO_SIGMA0, my_pager);
 
   /* start the tasks loaded as modules */
   start_tasks();

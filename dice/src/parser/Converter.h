@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/parser/Coverter.h
+ *  \file    dice/src/parser/Converter.h
  *  \brief   contains the declaration helper functions for the parsers
  *
  *  \date    06/14/2007
@@ -35,36 +35,40 @@
 #endif
 
 namespace dice {
-    namespace parser {
+	namespace parser {
 
-	enum IntType {
-	    INVALID = 0,
-	    INT_ULLONG,
-	    INT_LLONG,
-	    INT_ULONG,
-	    INT_LONG,
-	    INT_INT
-	};
+		/** \enum IntType
+		 *  \ingroup parser
+		 *  \brief the integer type of the parsed string
+		 */
+		enum IntType {
+			INVALID = 0,	/**< invalid integer */
+			INT_ULLONG,		/**< unsigned long long integer */
+			INT_LLONG,		/**< long long integer */
+			INT_ULONG,		/**< unsigned long integer */
+			INT_LONG,		/**< long integer */
+			INT_INT			/**< integer */
+		};
 
-	// number conversion
-	// character conversion
-	int oct_to_char (char *);
-	int hex_to_char (char *);
-	int escape_to_char (char *);
-	// check integer type
-	IntType int_type (char *);
-	// get decimal number from different strings
+		// number conversion
+		// character conversion
+		int oct_to_char (char *);
+		int hex_to_char (char *);
+		int escape_to_char (char *);
+		// check integer type
+		IntType int_type (char *);
+		// get decimal number from different strings
 #if HAVE_ATOLL
-	long long oct_to_long (char *, IntType&);
-	long long hex_to_long (char *, IntType&);
-	long long int_to_long (char *, IntType&);
+		long long oct_to_long (char *, IntType&);
+		long long hex_to_long (char *, IntType&);
+		long long int_to_long (char *, IntType&);
 #else
-	long oct_to_long (char *, IntType&);
-	long hex_to_long (char *, IntType&);
-	long int_to_long (char *, IntType&);
+		long oct_to_long (char *, IntType&);
+		long hex_to_long (char *, IntType&);
+		long int_to_long (char *, IntType&);
 #endif
 
-    };
+	};
 };
 
 #endif /* __DICE_PARSER_CONVERTER_H__ */

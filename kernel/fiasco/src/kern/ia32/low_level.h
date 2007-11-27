@@ -164,7 +164,7 @@
 #endif //CONFIG_SMALL_SPACES
 
 	.macro	RESET_THREAD_CANCEL_AT reg
-	andl	$~(Thread_cancel | Thread_dis_alien), KSEG OFS__THREAD__STATE (\reg)
+	andl	$~(Thread_cancel), KSEG OFS__THREAD__STATE (\reg)
 	.endm
 
 	.macro	RESET_THREAD_IPC_MASK_AT reg

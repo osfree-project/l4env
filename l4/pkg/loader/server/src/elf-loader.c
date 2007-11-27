@@ -253,7 +253,6 @@ restart:
 					  l4exc->info.type & L4_DSTYPE_WRITE
 						  ? L4DM_RW
 						  : L4DM_RO,
-					  /*attach=*/0,
 					  "program section", &aa)))
 	goto cleanup;
     }

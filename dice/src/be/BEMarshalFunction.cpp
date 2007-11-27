@@ -58,6 +58,7 @@ CBEMarshalFunction::~CBEMarshalFunction()
 
 /** \brief creates the back-end marshal function
  *  \param pFEOperation the corresponding front-end operation
+ *  \param bComponentSide true if the function is used at the component side
  *  \return true if successful
  *
  * This function should only contain OUT parameters if it is on the
@@ -289,7 +290,7 @@ bool CBEMarshalFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, boo
  *  \param sTypeName the name of the type
  *  \return a reference to the found parameter
  */
-CBETypedDeclarator * CBEMarshalFunction::FindParameterType(string sTypeName)
+CBETypedDeclarator * CBEMarshalFunction::FindParameterType(std::string sTypeName)
 {
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	if (pMsgBuffer && pMsgBuffer->HasType(sTypeName))

@@ -59,7 +59,7 @@
   BEGIN_LOG_EVENT(log_context_switch)                                   \
   Tb_entry_ctx_sw *tb =                                                 \
      static_cast<Tb_entry_ctx_sw*>(Jdb_tbuf::new_entry());              \
-  tb->set(this, space(), regs()->ip(), t, t_orig,	\
+  tb->set(this, space(), regs()->ip_syscall_page_user(), t, t_orig,	\
           t_orig->lock_cnt(), current_sched(cpu()),                     \
           current_sched(cpu()) ? current_sched(cpu())->prio() : 0,      \
           (Mword)__builtin_return_address(0));                          \
@@ -72,7 +72,7 @@
   Lock_guard <Cpu_lock> guard (&cpu_lock);                              \
   Tb_entry_ex_regs *tb =                                                \
      static_cast<Tb_entry_ex_regs*>(Jdb_tbuf::new_entry());             \
-  tb->set(this, ef->ip(), regs, dst->regs()->sp(),                      \
+  tb->set(this, ef->ip_syscall_page_user(), regs, dst->regs()->sp(),      \
                                 dst->regs()->ip(), 0);                  \
   Jdb_tbuf::commit_entry();                                             \
   END_LOG_EVENT
@@ -83,7 +83,7 @@
   Lock_guard <Cpu_lock> guard (&cpu_lock);                              \
   Tb_entry_ex_regs *tb =                                                \
      static_cast<Tb_entry_ex_regs*>(Jdb_tbuf::new_entry());             \
-  tb->set(this, ef->ip(), regs, 0, 0, 1);                               \
+  tb->set(this, ef->ip_syscall_page_user(), regs, 0, 0, 1);               \
   Jdb_tbuf::commit_entry();                                             \
   END_LOG_EVENT
 
@@ -110,7 +110,7 @@
   Entry_frame *ef = reinterpret_cast<Entry_frame*>(regs);               \
   Tb_entry_ipc_sfl *tb =                                                \
      static_cast<Tb_entry_ipc_sfl*>(Jdb_tbuf::new_entry());             \
-  tb->set(this, ef->ip(), regs->snd_desc(), regs->rcv_desc(),           \
+  tb->set(this, ef->ip_syscall_page_user(), regs->snd_desc(), regs->rcv_desc(),\
                 regs->timeout(), regs->snd_dst(),                       \
                 _irq!=0, sender_list()->head()!=0, 0, 0, 0);            \
   Jdb_tbuf::commit_entry();                                             \
@@ -121,7 +121,7 @@
   Entry_frame *ef = reinterpret_cast<Entry_frame*>(regs);               \
   Tb_entry_ipc_sfl *tb =                                                \
      static_cast<Tb_entry_ipc_sfl*>(Jdb_tbuf::new_entry());             \
-  tb->set(this, ef->ip(), regs->snd_desc(), regs->rcv_desc(),           \
+  tb->set(this, ef->ip_syscall_page_user(), regs->snd_desc(), regs->rcv_desc(),\
                 regs->timeout(), regs->snd_dst(), 0, 0,                 \
 		!dst->is_tcb_mapped() || !dst->sender_ok(this),         \
                 dst->is_tcb_mapped()?(dst->thread_lock()->test()):0,	\
@@ -134,7 +134,7 @@
   Entry_frame *ef           = reinterpret_cast<Entry_frame*>(regs);     \
   Tb_entry_ipc *tb =                                                    \
      static_cast<Tb_entry_ipc*>(Jdb_tbuf::new_entry());                 \
-  tb->set_sc(this, ef->ip(), regs, sched_context()->left());            \
+  tb->set_sc(this, ef->ip_syscall_page_user(), regs, sched_context()->left());\
   Jdb_tbuf::commit_entry();                                             \
   END_LOG_EVENT
 
@@ -162,7 +162,7 @@
   BEGIN_LOG_EVENT(log_pf_res)                                           \
   Tb_entry_pf_res *tb =                                                 \
      static_cast<Tb_entry_pf_res*>(Jdb_tbuf::new_entry());              \
-  tb->set(this, regs()->ip(), pfa, err, ret);                           \
+  tb->set(this, regs()->ip_syscall_page_user(), pfa, err, ret);           \
   Jdb_tbuf::commit_entry();                                             \
   END_LOG_EVENT
 
@@ -170,7 +170,7 @@
   BEGIN_LOG_EVENT(log_sched_save)					\
   Tb_entry_sched *tb =							\
      static_cast<Tb_entry_sched*>(Jdb_tbuf::new_entry());		\
-  tb->set (current(), current()->regs()->ip(), 0,			\
+  tb->set (current(), current()->regs()->ip_syscall_page_user(), 0,	\
            current_sched(cpu())->owner(),				\
            current_sched(cpu())->id(),					\
            current_sched(cpu())->prio(),				\
@@ -183,7 +183,7 @@
   BEGIN_LOG_EVENT(log_sched_load)					\
   Tb_entry_sched *tb =							\
      static_cast<Tb_entry_sched*>(Jdb_tbuf::new_entry());		\
-  tb->set (current(), current()->regs()->ip(), 1,			\
+  tb->set (current(), current()->regs()->ip_syscall_page_user(), 1,	\
            current_sched(cpu())->owner(),				\
            current_sched(cpu())->id(),					\
            current_sched(cpu())->prio(),				\
@@ -196,7 +196,7 @@
   BEGIN_LOG_EVENT(log_sched_invalidate)					\
   Tb_entry_sched *tb =							\
      static_cast<Tb_entry_sched*>(Jdb_tbuf::new_entry());		\
-  tb->set (current(), current()->regs()->ip(), 2,			\
+  tb->set (current(), current()->regs()->ip_syscall_page_user(), 2,	\
            current_sched(cpu())->owner(),				\
            current_sched(cpu())->id(),					\
            current_sched(cpu())->prio(),				\
@@ -210,7 +210,7 @@
   Lock_guard <Cpu_lock> guard (&cpu_lock);				\
   Tb_entry_preemption *tb = 						\
      static_cast<Tb_entry_preemption*>(Jdb_tbuf::new_entry());		\
-  tb->set (context_of(this), _receiver, current()->regs()->ip());	\
+  tb->set (context_of(this), _receiver, current()->regs()->ip_syscall_page_user());\
   Jdb_tbuf::commit_entry();						\
   END_LOG_EVENT
 
@@ -220,7 +220,7 @@
   Lock_guard <Cpu_lock> guard (&cpu_lock);				\
   Tb_entry_id_nearest *tb =						\
      static_cast<Tb_entry_id_nearest*>(Jdb_tbuf::new_entry());		\
-  tb->set (this, ef->ip(), dst_id_long);				\
+  tb->set (this, ef->ip_syscall_page_user(), dst_id_long);		\
   Jdb_tbuf::commit_entry();						\
   END_LOG_EVENT
 
@@ -230,7 +230,7 @@
   Lock_guard <Cpu_lock> guard (&cpu_lock);				\
   Tb_entry_task_new *tb =						\
      static_cast<Tb_entry_task_new*>(Jdb_tbuf::new_entry());		\
-  tb->set (this, ef->ip(), regs);					\
+  tb->set (this, ef->ip_syscall_page_user(), regs);			\
   Jdb_tbuf::commit_entry();						\
   END_LOG_EVENT
 

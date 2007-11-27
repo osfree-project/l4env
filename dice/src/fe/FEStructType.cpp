@@ -35,7 +35,7 @@
 #include "Visitor.h"
 #include <iostream>
 
-CFEStructType::CFEStructType(string sTag,
+CFEStructType::CFEStructType(std::string sTag,
 	vector<CFETypedDeclarator*> * pMembers,
 	vector<CFEIdentifier*>* pBaseStructs)
 : CFEConstructedType(TYPE_STRUCT),
@@ -92,7 +92,7 @@ void CFEStructType::AddMembers(vector<CFETypedDeclarator*> *pMembers)
  *  \param sName the name to look for
  *  \return the member if found, 0 if no such member
  */
-CFETypedDeclarator *CFEStructType::FindMember(string sName)
+CFETypedDeclarator *CFEStructType::FindMember(std::string sName)
 {
 	if (m_Members.empty())
 		return 0;

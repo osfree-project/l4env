@@ -54,6 +54,9 @@ const int MAX_INDEX_NUMBER = 10;
 
 class CDeclaratorStackLocation;
 
+/** \typedef std::vector<CDeclaratorStackLocation> CDeclStack
+ *  \brief alias for vector of declator stack locations
+ */
 typedef std::vector<CDeclaratorStackLocation> CDeclStack;
 
 /** \class CDeclaratorStackLocation

@@ -128,6 +128,7 @@ void CL4BESrvLoopFunction::WriteDefaultEnvAssignment(CBEFile& pFile)
 
 /** \brief create this instance of a server loop function
  *  \param pFEInterface the interface to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if create was successful
  *
  * We have to check whether the server loop might receive flexpages. If it

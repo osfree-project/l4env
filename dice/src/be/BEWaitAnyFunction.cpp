@@ -64,6 +64,7 @@ CBEWaitAnyFunction::~CBEWaitAnyFunction()
 
 /** \brief creates the wait-any function for the given interface
  *  \param pFEInterface the respective front-end interface
+ *  \param bComponentSide true if this function is create at component side
  *  \return true if successful
  *
  * A function which waits for any message from any sender, does return the
@@ -276,7 +277,7 @@ CBEWaitAnyFunction::WriteFunctionDefinition(CBEFile& pFile)
  *  \param sTypeName the name of the type
  *  \return a reference to the found parameter
  */
-CBETypedDeclarator * CBEWaitAnyFunction::FindParameterType(string sTypeName)
+CBETypedDeclarator * CBEWaitAnyFunction::FindParameterType(std::string sTypeName)
 {
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	if (pMsgBuffer && pMsgBuffer->HasType(sTypeName))

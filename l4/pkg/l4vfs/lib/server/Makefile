@@ -2,7 +2,7 @@
 PKGDIR ?= ../..
 L4DIR  ?=  $(PKGDIR)/../..
 
-SYSTEMS = x86-l4v2
+SYSTEMS = x86-l4v2 arm-l4v2 amd64-l4v2
 
 # source files
 SERVERIDL_libl4vfs_mmap_object_server-server.a = mmap_object_server.idl       \

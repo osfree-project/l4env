@@ -87,6 +87,45 @@ public:
 
     virtual CFEFile* FindFile(std::string sFileName);
 
+protected:
+	/** \class ConstantSum
+	 *  \brief used as function to sum the value of constants
+	 */
+	class ConstantSum
+	{
+		/** \var int res
+		 *  \brief the sum
+		 */
+		int res;
+		/** \var std::mem_fun1_t<int, CFEFile, bool> fun
+		 *  \brief the function to invoke and which's result to add
+		 */
+		std::mem_fun1_t<int, CFEFile, bool> fun;
+
+	public:
+		/** \brief constructor
+		 *  \param __pf the function to invoke
+		 *  \param i the initial value of the sum
+		 */
+		ConstantSum(int (CFEFile::*__pf)(bool), int i = 0) : res(i), fun(__pf)
+		{ }
+
+		/** \brief operator to be invoked for each file object
+		 *  \param f the file object to use
+		 */
+		void operator () (CFEFile *f)
+		{
+			res += fun(f, true);
+		}
+
+		/** \brief accessor function for result of addition
+		 *  \return sum
+		 */
+		int result() const
+		{ return res; }
+	};
+
+
 // Attributes
 protected:
     /** \var std::string m_sFilename

@@ -31,7 +31,8 @@
 # Clean-rules are defined here.
 #
 
-$(OBJ_DIR)/.general.d:	$(L4DIR)/mk/binary.inc
+$(GENERAL_D_LOC): $(L4DIR)/mk/binary.inc
+
 # our default Makefile-name in the OBJ-Subdirs
 BID_OBJ_Makefile ?= Makefile
 
@@ -253,17 +254,21 @@ else
 OPTS	+= $(CARCHFLAGS_$(ARCH)) $(CARCHFLAGS_$(ARCH)_$(CPU))
 endif
 
+# no link address if build a lib or we're compiling a host program and using
+# the host linker scripts
+ifeq ($(ROLE),lib.mk)
+NO_DEFAULT_RELOC := y
+endif
+ifneq ($(HOST_LINK),)
+NO_DEFAULT_RELOC := y
+endif
 
-#
-# These are some special defines for the X2 sources from Pistachio.
-# 
-DEFINES_x86-l4x2 += -DL4_ARCH_IA32 -D__L4_ARCH__=ia32
-DEFINES_arm-l4x2 += -DL4_ARCH_ARM -D__L4_ARCH__=arm
-DEFINES_amd64-l4x2 += -DL4_ARCH_AMD64 -D__L4_ARCH__=amd64
-DEFINES_ppc32-l4x2 += -DL4_ARCH_POWERPC -D__L4_ARCH__=powerpc
-DEFINES_ppc64-l4x2 += -DL4_ARCH_POWERPC64 -D__L4_ARCH__=powerpc64
-DEFINES_ia64-l4x2 += -DL4_ARCH_IA64 -D__L4_ARCH__=ia64
-DEFINES_alpha-l4x2 += -DL4_ARCH_ALPHA -D__L4_ARCH__=alpha
+default_reloc_base = $(firstword $(DEFAULT_RELOC_$(1)) \
+                                 $(DEFAULT_RELOC_$(ARCH)) \
+                                 $(DEFAULT_RELOC) \
+                                 $(if $(NO_DEFAULT_RELOC),,0x01000000))
+default_reloc = $(if $(call default_reloc_base,$(1)),\
+                     $(shell printf "0x%x" $$(($(RAM_BASE) + $(call default_reloc_base,$(1))))),)
 
 $(CLIENTIDL:.idl=-client.o): CFLAGS += -ffunction-sections
 CFLAGS	+= $(BID_CFLAGS_GSTAB) $(BID_CFLAGS_OMIT_FP)

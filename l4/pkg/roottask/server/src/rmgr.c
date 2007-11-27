@@ -115,7 +115,7 @@ rmgr_get_task_component(CORBA_Object _dice_corba_obj,
   if (num >= RMGR_TASK_MAX)
     return 1;
 
-  if (!task_alloc(num, _dice_corba_obj->id.task))
+  if (!task_alloc(num, _dice_corba_obj->id.task, 1))
     return 1;
 
   reset_pagefault(num);
@@ -220,7 +220,7 @@ rmgr_task_new_component(CORBA_Object _dice_corba_obj,
 
   if (task >= RMGR_TASK_MAX
       || l4_is_nil_id(*pager)
-      || !task_alloc(task, _dice_corba_obj->id.task))
+      || !task_alloc(task, _dice_corba_obj->id.task, 1))
     return 1;
 
   flags = mcp_or_chief & L4_TASK_NEW_FLAGS_MASK;

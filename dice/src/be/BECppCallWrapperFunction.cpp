@@ -46,7 +46,8 @@ CBECppCallWrapperFunction::~CBECppCallWrapperFunction()
 
 /** \brief creates the call function
  *  \param pFEOperation the front-end operation used as reference
- *  \return true if successful
+ *  \param bComponentSide true if the function is created at component side
+ *  \param nSkipParameter bitmap of which parameters to skip in wrapper
  *
  * This implementation only sets the name of the function.
  */

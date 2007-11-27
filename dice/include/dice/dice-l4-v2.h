@@ -4,6 +4,7 @@
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
 #include <l4/sys/kdebug.h>
+#include <l4/sys/utcb.h>
 
 #if defined(DICE_TRACE_SERVER) || defined(DICE_TRACE_CLIENT) || defined(DICE_TRACE_MSGBUF)
 #include <l4/log/l4log.h>
@@ -33,55 +34,57 @@ void free_warning(void* addr)
 #define dice_default_environment \
     { { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
 	{ param: 0 }, L4_IPC_NEVER_INITIALIZER, \
-	{ fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, \
+	{ fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, l4sys_utcb_get(), \
 	malloc_warning, free_warning }
 #define dice_default_server_environment \
     { { _corba: { major: CORBA_NO_EXCEPTION, repos_id: 0} }, \
 	{ param: 0 }, L4_IPC_SEND_TIMEOUT_0, \
-	{ fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, \
+	{ fp: { 1, 1, L4_WHOLE_ADDRESS_SPACE, 0, 0 } }, l4sys_utcb_get(), \
 	malloc_warning, free_warning, L4_INVALID_ID_INIT, \
 	    0, { 0,0,0,0,0, 0,0,0,0,0}, 0 }
 
 #ifdef __cplusplus
 namespace dice
 {
-    
-    DICE_EXTERN_INLINE
-    CORBA_Environment::CORBA_Environment()
-    : _exception(),
-      _p(),
-      timeout(),
-      rcv_fpage(),
-      malloc(malloc_warning),
-      free(free_warning)
-    {
-	_exception._corba.major = CORBA_NO_EXCEPTION;
-	_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
-	_p.param = 0;
-	timeout = L4_IPC_NEVER;
-	rcv_fpage = l4_fpage(0, L4_WHOLE_ADDRESS_SPACE, 1, 1);
-    }
-    
-    DICE_EXTERN_INLINE
-    CORBA_Server_Environment::CORBA_Server_Environment()
-    : _exception(),
-      _p(),
-      timeout(),
-      rcv_fpage(),
-      malloc(malloc_warning),
-      free(free_warning),
-      partner(L4_INVALID_ID),
-      user_data(0),
-      ptrs_cur(0)
-    {
-	_exception._corba.major = CORBA_NO_EXCEPTION;
-	_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
-	_p.param = 0;
-	timeout = L4_IPC_SEND_TIMEOUT_0;
-	rcv_fpage = l4_fpage(0, L4_WHOLE_ADDRESS_SPACE, 1, 1);
-	for (int i=0; i < DICE_PTRS_MAX; i++)
-	    ptrs[i] = 0;
-    }
+
+	DICE_EXTERN_INLINE
+		CORBA_Environment::CORBA_Environment()
+		: _exception(),
+		_p(),
+		timeout(),
+		rcv_fpage(),
+		malloc(malloc_warning),
+		free(free_warning)
+	{
+		_exception._corba.major = CORBA_NO_EXCEPTION;
+		_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
+		_p.param = 0;
+		timeout = L4_IPC_NEVER;
+		rcv_fpage = l4_fpage(0, L4_WHOLE_ADDRESS_SPACE, 1, 1);
+		utcb = l4sys_utcb_get();
+	}
+
+	DICE_EXTERN_INLINE
+		CORBA_Server_Environment::CORBA_Server_Environment()
+		: _exception(),
+		_p(),
+		timeout(),
+		rcv_fpage(),
+		malloc(malloc_warning),
+		free(free_warning),
+		partner(L4_INVALID_ID),
+		user_data(0),
+		ptrs_cur(0)
+	{
+		_exception._corba.major = CORBA_NO_EXCEPTION;
+		_exception._corba.repos_id = CORBA_DICE_EXCEPTION_NONE;
+		_p.param = 0;
+		timeout = L4_IPC_SEND_TIMEOUT_0;
+		rcv_fpage = l4_fpage(0, L4_WHOLE_ADDRESS_SPACE, 1, 1);
+		utcb = l4sys_utcb_get();
+		for (int i=0; i < DICE_PTRS_MAX; i++)
+			ptrs[i] = 0;
+	}
 }
 #endif
 

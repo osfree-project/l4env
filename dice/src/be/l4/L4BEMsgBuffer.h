@@ -31,6 +31,7 @@
 #define L4BEMSGBUFFER_H
 
 #include <be/BEMsgBuffer.h>
+#include "L4BEMarshaller.h"
 
 /** \class CL4BEMsgBuffer
  *  \ingroup backend

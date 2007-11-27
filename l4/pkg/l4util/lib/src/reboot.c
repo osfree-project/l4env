@@ -14,9 +14,7 @@ l4util_reboot(void)
   /* First try UX which always is "rebooted" via JDB */
   if ((kip = l4sigma0_kip_map(L4_INVALID_ID)))
     {
-      const char *vstr = l4sigma0_kip_version_string();
-
-      if (vstr && strstr(vstr, "(ux)"))
+      if (l4sigma0_kip_kernel_is_ux())
 	{
 	  enter_kdebug("*#^");          /* Always available */
 

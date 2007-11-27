@@ -26,7 +26,7 @@ extern CORBA_Object_base nit;              /* from nitscrdrv.c */
 
 int init_viewman(struct dope_services *d);
 
-static CORBA_Environment env = dice_default_environment;
+static CORBA_Environment env;
 
 
 /*************************
@@ -115,6 +115,7 @@ static struct viewman_services services = {
  **************************/
 
 int init_viewman(struct dope_services *d) {
+	env = (CORBA_Environment)dice_default_environment;
 	d->register_module("ViewManager 1.0", &services);
 	return 1;
 }

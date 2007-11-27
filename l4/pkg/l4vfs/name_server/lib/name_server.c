@@ -1,6 +1,6 @@
 /**
  * \file   l4vfs/name_server/lib/name_server.c
- * \brief  
+ * \brief  name_server client library
  *
  * \date   08/10/2004
  * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
@@ -15,15 +15,14 @@
 #include <l4/sys/ipc.h>
 #include <l4/util/util.h>
 #include <l4/util/l4_macros.h>
-#include <l4/rmgr/librmgr.h>
+#include <l4/names/libnames.h>
 
 #include <l4/log/l4log.h>
 
 static int initialized = 0;
 static l4_threadid_t name_server_thread_id;
 
-/* Shamelessly stolen from names' lib and extended.
- * This functions computes the name server's service thread id.
+/* This functions computes the name server's service thread id.
  * At the end of this function we check for the server thread's existence.
  * That is, this should be guaranteed after a successful return.
  */
@@ -31,22 +30,14 @@ l4_threadid_t l4vfs_get_name_server_threadid()
 {
     int error, i;
     l4_umword_t ignore;
-    l4_timeout_t l4s = L4_IPC_BOTH_TIMEOUT_0;  // don't wait to long
     l4_msgdope_t result;
     int leave = 0;
 
     if (! initialized)
     {
-        if (! rmgr_init())
+        if (!names_waitfor_name("name_server", &name_server_thread_id, 4000))
         {
-            LOG("RMGR not initialized, name_server not found!");
-            return L4_INVALID_ID;
-        }
-
-        error = rmgr_get_task_id("name_server", &name_server_thread_id);
-        if (error)
-        {
-            LOG("Error looking up 'name_server' at RMGR!");
+            LOG("Error looking up 'name_server'!");
             return L4_INVALID_ID;
         }
 
@@ -54,15 +45,10 @@ l4_threadid_t l4vfs_get_name_server_threadid()
             initialized = 1;
         else
         {
-            LOG("'name_server' not known at RMGR!");
+            LOG("'name_server' not known in system!");
             return name_server_thread_id;
         }
     }
-
-    // fast fix for l4env: running thread is 2
-    // fixme: Is there a better way to find the running thread?
-    //        This must probably be adapted forL4V4.
-    name_server_thread_id.id.lthread = 2;
 
     // here we check whether the computed thread exists by receiving a
     // (bogus) IPC with timeout 0 and checking the error code
@@ -70,7 +56,8 @@ l4_threadid_t l4vfs_get_name_server_threadid()
     do
     {
         error = l4_ipc_receive(name_server_thread_id, L4_IPC_SHORT_MSG,
-                               &ignore, &ignore, l4s, &result);
+                               &ignore, &ignore, L4_IPC_BOTH_TIMEOUT_0,
+                               &result);
         switch(error)
         {
         case 0:    // we received something, strange, we should not ... anyway

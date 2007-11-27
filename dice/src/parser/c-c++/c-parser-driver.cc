@@ -13,6 +13,10 @@ c_parser_driver::c_parser_driver ()
 c_parser_driver::~c_parser_driver ()
 { }
 
+/** \brief test if the file name looks like a header file
+ *  \param f the file name to test
+ *  \return true if it has the extension ".h" or ".hh"
+ */
 bool c_parser_driver::is_header (const std::string& f)
 {
 	string ext = f.substr(f.rfind(".")+1);
@@ -50,6 +54,36 @@ static std::string context_to_str(CFEBase *context)
 }
 #endif
 
+/** \brief setup of include next wrapper
+ *  \param f the file to include
+ *  \return the file name of the wrapper file
+ *
+ * The Gnu C and C++ Compiler know the feature include_next. This allows to
+ * have multiple versions of header files with the same name in different
+ * include directories. When include_next is used the file with the same name
+ * is searched not in the current directory but the search starts with the
+ * include directory after the include directory where the currently open file
+ * was found. Example: there are two header files test.h. One in the directory
+ * my_inc_dirs/ and the other in my_inc_dirs/special/. The special directory
+ * contains a specialized version of test.h. In this file the directive
+ * include_next "test.h" appears, which tells the compiler to search for the
+ * next test.h. When arranging the include directories such that the most
+ * specialized one comes first, the generic test.h will be included by the
+ * most specialized test.h.
+ *
+ * Because C header files can only be imported into IDL files (not included)
+ * and Dice calls the pre-processor on all imported files, it may happen that
+ * a file containing a include_next statement is directly fed into the
+ * pre-processor. The pre-processor will then issue a warning that it found an
+ * include_next statement in a top-level file.
+ *
+ * To avoid this situation we wrap imported header files into temporary files.
+ * We create a temporary file which only contains an include statement with
+ * the original file name. This wrapper file is then pre-processed.
+ *
+ * This approach requires some fixup later, as the parser adds a file object
+ * for the wrapper file in the AST.
+ */
 std::string c_parser_driver::include_next_fix_begin(const std::string& f)
 {
 	string name;
@@ -73,6 +107,12 @@ std::string c_parser_driver::include_next_fix_begin(const std::string& f)
 	return name;
 }
 
+/** \brief cleanup of include next wrapper
+ *  \param f the file name of the wrapper file
+ *
+ * Removes the wrapper file. For more info on the include next wrapper \see
+ * include_next_fix_begin.
+ */
 void c_parser_driver::include_next_fix_end(const std::string& f)
 {
 	std::string name = current_file;
@@ -94,6 +134,16 @@ void c_parser_driver::include_next_fix_end(const std::string& f)
 		std::remove( name.c_str() );
 }
 
+/** \brief fixup after leaving wrapper file
+ *  \param f the file name of the original file
+ *  \param pWrapper a reference to the file object of the wrapper file
+ *
+ * The pre-processor may omit line directives indicating that a wrapper file
+ * or included file is left. To fix this, we leave the current context until
+ * we reach the wrapper file.
+ *
+ * For more info on include next wrapper files \see include_next_fix_begin.
+ */
 void c_parser_driver::include_next_fix_after_parse(const std::string& f, CFEFile *pWrapper)
 {
 	if (current_file == f)
@@ -127,6 +177,12 @@ void c_parser_driver::include_next_fix_after_parse(const std::string& f, CFEFile
 			pCurrentFile << " with wrapper " << pWrapper->GetFileName() << " @ " << pWrapper << std::endl;
 }
 
+/** \brief the parse function
+ *  \param f the name of the file to parse
+ *  \param bPreOnly true if we stop after pre-processing
+ *  \param std_inc true if the file was included as standard include file
+ *  \return a reference to the created file object
+ */
 CFEFile* c_parser_driver::parse (const std::string &f, bool bPreOnly, bool std_inc)
 {
 	// if we start a new C-parser (pCurrentFile has different file-type) and

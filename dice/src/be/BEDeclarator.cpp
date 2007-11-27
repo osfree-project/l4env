@@ -57,9 +57,7 @@
  *  \param pStack the declarator stack to write
  *  \param bUsePointer true if one star should be ignored
  */
-void CDeclaratorStackLocation::Write(CBEFile& pFile,
-	CDeclStack* pStack,
-	bool bUsePointer)
+void CDeclaratorStackLocation::Write(CBEFile& pFile, CDeclStack* pStack, bool bUsePointer)
 {
 	string sOut;
 	CDeclaratorStackLocation::WriteToString(sOut, pStack, bUsePointer);
@@ -71,9 +69,7 @@ void CDeclaratorStackLocation::Write(CBEFile& pFile,
  *  \param pStack the declarator stack to write
  *  \param bUsePointer true if one star should be ignored
  */
-void CDeclaratorStackLocation::WriteToString(string &sResult,
-	CDeclStack* pStack,
-	bool bUsePointer)
+void CDeclaratorStackLocation::WriteToString(std::string &sResult, CDeclStack* pStack, bool bUsePointer)
 {
 	assert(pStack);
 
@@ -283,9 +279,7 @@ CBEDeclarator::CreateBackEnd(CFEIdentifier * pFEIdentifier)
  * Do not overwrite type, because this function might be called to
  * reinitialize (set new name) the declarator.
  */
-void
-CBEDeclarator::CreateBackEnd(string sName,
-	int nStars)
+void CBEDeclarator::CreateBackEnd(std::string sName, int nStars)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEDeclarator::%s(string: %s)\n", __func__, sName.c_str());
@@ -303,8 +297,7 @@ CBEDeclarator::CreateBackEnd(string sName,
  *  \param pFEEnumDeclarator the front-end declarator
  *  \return true if code generation was successful
  */
-void
-CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator)
+void CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s(enum)\n",
 		__func__);
@@ -325,8 +318,7 @@ CBEDeclarator::CreateBackEndEnum(CFEEnumDeclarator * pFEEnumDeclarator)
  *  \param pFEArrayDeclarator the respective front-end declarator
  *  \return true if code generation was successful
  */
-void
-CBEDeclarator::CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator)
+void CBEDeclarator::CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL, "CBEDeclarator::%s(array)\n",
 		__func__);
@@ -349,8 +341,7 @@ CBEDeclarator::CreateBackEndArray(CFEArrayDeclarator * pFEArrayDeclarator)
  * This implementation writes the declarator as is (all stars, bitfields,
  * etc.).
  */
-void
-CBEDeclarator::WriteDeclaration(CBEFile& pFile)
+void CBEDeclarator::WriteDeclaration(CBEFile& pFile)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEDeclarator::%s called for %s\n", __func__,
@@ -384,8 +375,7 @@ CBEDeclarator::WriteDeclaration(CBEFile& pFile)
  * This implementation has to write the array dimensions only. This is done by
  * iterating over them and writing them into brackets ('[]').
  */
-void
-CBEDeclarator::WriteArray(CBEFile& pFile)
+void CBEDeclarator::WriteArray(CBEFile& pFile)
 {
 	vector<CBEExpression*>::iterator iterB;
 	for (iterB = m_Bounds.begin();
@@ -405,8 +395,7 @@ CBEDeclarator::WriteArray(CBEFile& pFile)
  * We can determine an unbound array dimension by checking its integer value.
  * It it is 0 then its an unbound dimension.
  */
-void
-CBEDeclarator::WriteArrayIndirect(CBEFile& pFile)
+void CBEDeclarator::WriteArrayIndirect(CBEFile& pFile)
 {
 	vector<CBEExpression*>::iterator iterB;
 	for (iterB = m_Bounds.begin();
@@ -426,8 +415,7 @@ CBEDeclarator::WriteArrayIndirect(CBEFile& pFile)
  *
  *  An enum declarator is the name and if it has an init expression "= expr".
  */
-void
-CBEDeclarator::WriteEnum(CBEFile& pFile)
+void CBEDeclarator::WriteEnum(CBEFile& pFile)
 {
 	WriteName(pFile);
 	if (m_pInitialValue)
@@ -459,9 +447,7 @@ CBEDeclarator::WriteEnum(CBEFile& pFile)
  * For the latter case this implementation creates two primary expression,
  * which are the parenthesis and a binary expression used to subract them.
  */
-CBEExpression*
-	  CBEDeclarator::GetArrayDimension(CFEExpression * pLower,
-		  CFEExpression * pUpper)
+CBEExpression* CBEDeclarator::GetArrayDimension(CFEExpression * pLower, CFEExpression * pUpper)
 {
 	CFEExpression *pNew = 0;
 	// first get new front-end expression
@@ -511,8 +497,7 @@ CBEExpression*
  *
  * This implementation creates the vector if not existing
  */
-void
-CBEDeclarator::AddArrayBound(CBEExpression * pBound)
+void CBEDeclarator::AddArrayBound(CBEExpression * pBound)
 {
 	if (!pBound)
 		return;
@@ -527,8 +512,7 @@ CBEDeclarator::AddArrayBound(CBEExpression * pBound)
 /** \brief removes an array bound from the bounds vector
  *  \param pBound the bound to remove
  */
-void
-CBEDeclarator::RemoveArrayBound(CBEExpression *pBound)
+void CBEDeclarator::RemoveArrayBound(CBEExpression *pBound)
 {
 	m_Bounds.Remove(pBound);
 	if (m_Bounds.empty())
@@ -678,7 +662,7 @@ void CBEDeclarator::WriteName(CBEFile& pFile)
 /** \brief simply prints the name of the declarator
  *  \param str the string to write to
  */
-void CBEDeclarator::WriteNameToStr(string& str)
+void CBEDeclarator::WriteNameToStr(std::string& str)
 {
 	str += m_sName;
 }
@@ -696,10 +680,7 @@ void CBEDeclarator::WriteNameToStr(string& str)
  *
  * \todo indirect var by underscore hard coded => replace with configurable
  */
-void
-CBEDeclarator::WriteIndirect(CBEFile& pFile,
-	bool bUsePointer,
-	bool bHasPointerType)
+void CBEDeclarator::WriteIndirect(CBEFile& pFile, bool bUsePointer, bool bHasPointerType)
 {
 	if (m_nType == DECL_ENUM)
 	{
@@ -769,9 +750,7 @@ CBEDeclarator::WriteIndirect(CBEFile& pFile,
  *
  * \todo indirect var by underscore hard coded => replace with configurable
  */
-void
-CBEDeclarator::WriteIndirectInitialization(CBEFile& pFile,
-	bool bUsePointer)
+void CBEDeclarator::WriteIndirectInitialization(CBEFile& pFile, bool bUsePointer)
 {
 	// get function and parameter
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -808,9 +787,7 @@ CBEDeclarator::WriteIndirectInitialization(CBEFile& pFile,
  *
  * \todo indirect var by underscore hard coded => replace with configurable
  */
-void
-CBEDeclarator::WriteIndirectInitializationMemory(CBEFile& pFile,
-	bool bUsePointer)
+void CBEDeclarator::WriteIndirectInitializationMemory(CBEFile& pFile, bool bUsePointer)
 {
 	// get function and parameter
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -918,8 +895,7 @@ CBEDeclarator::WriteIndirectInitializationMemory(CBEFile& pFile,
  *  \param bUsePointer true if the variable uses a pointer
  *  \param bDeferred true if deferred cleanup is intended
  */
-void CBEDeclarator::WriteCleanup(CBEFile& pFile, bool bUsePointer,
-	bool bDeferred)
+void CBEDeclarator::WriteCleanup(CBEFile& pFile, bool bUsePointer, bool bDeferred)
 {
 	// get function and parameter
 	CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
@@ -1013,9 +989,7 @@ int CBEDeclarator::GetEmptyArrayDims()
  *  \param iter the iterator pointing to the next array bounds
  *  \return the number of array bounds from the iterator to the end of the vector
  */
-int
-CBEDeclarator::GetRemainingNumberOfArrayBounds(
-	vector<CBEExpression*>::iterator iter)
+int CBEDeclarator::GetRemainingNumberOfArrayBounds(vector<CBEExpression*>::iterator iter)
 {
 	int nCount;
 	for (nCount = 0; iter != m_Bounds.end(); iter++, nCount++) ;

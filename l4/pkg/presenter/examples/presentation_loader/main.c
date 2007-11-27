@@ -20,7 +20,7 @@
 
 l4_threadid_t id = L4_INVALID_ID;
 static CORBA_Object _dice_corba_obj = &id;
-CORBA_Environment _dice_corba_env = dice_default_environment;
+// CORBA_Environment _dice_corba_env = dice_default_environment;
 
 int main(int argc, char *argv[]) {
 	int key,n,len,choice;
@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
 	char presentation_path[PRESENTATION_PATH_MAX_LEN], cwd_buf[PRESENTATION_PATH_MAX_LEN]; 
         l4_threadid_t me;
         struct stat buf;
+		CORBA_Environment _dice_corba_env = dice_default_environment;
 
         if (stat("/proc/l4", &buf)) {
                 fprintf(stderr, "This binary requires L4Linux!\n");

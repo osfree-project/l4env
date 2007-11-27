@@ -18,6 +18,10 @@
 #include <linux/backing-dev.h>
 #include <linux/mm_types.h>
 
+#ifdef DDE_LINUX
+#include <l4/dde/linux26/dde26.h> 
+#endif
+
 struct mempolicy;
 struct anon_vma;
 
@@ -220,10 +224,8 @@ struct vm_operations_struct {
 struct mmu_gather;
 struct inode;
 
-#ifndef DDE_LINUX
 #define page_private(page)		((page)->private)
 #define set_page_private(page, v)	((page)->private = (v))
-#endif
 
 /*
  * FIXME: take this include out, include page-flags.h in
@@ -231,7 +233,6 @@ struct inode;
  */
 #include <linux/page-flags.h>
 
-#ifndef DDE_LINUX
 #ifdef CONFIG_DEBUG_VM
 #define VM_BUG_ON(cond) BUG_ON(cond)
 #else
@@ -298,17 +299,7 @@ void put_page(struct page *page);
 void put_pages_list(struct list_head *pages);
 
 void split_page(struct page *page, unsigned int order);
-#else /* DDE_LINUX */
-static inline int put_page_testzero(struct page *page) { return 1; }
-static inline int put_page_unless_zero(struct page *page) { return 0; }
-static inline int page_count(struct page *page) { return 1; }
-static inline void get_page(struct page *page) { }
-static inline void put_page(struct page *page) { }
-static inline void put_pages_list(struct page *page) { }
-extern int __vm_enough_memory(long pages, int cap_sys_admin);
-#endif /* DDE_LINUX */
 
-#ifndef DDE_LINUX
 /*
  * Compound pages have a destructor function.  Provide a
  * prototype for that function and accessor functions.
@@ -326,7 +317,6 @@ static inline compound_page_dtor *get_compound_page_dtor(struct page *page)
 {
 	return (compound_page_dtor *)page[1].lru.next;
 }
-#endif
 
 /*
  * Multiple processes may "see" the same page. E.g. for untouched
@@ -470,7 +460,6 @@ static inline compound_page_dtor *get_compound_page_dtor(struct page *page)
 #define SECTIONS_MASK		((1UL << SECTIONS_WIDTH) - 1)
 #define ZONEID_MASK		((1UL << ZONEID_SHIFT) - 1)
 
-#ifndef DDE_LINUX
 static inline enum zone_type page_zonenum(struct page *page)
 {
 	return (page->flags >> ZONES_PGSHIFT) & ZONES_MASK;
@@ -543,20 +532,12 @@ static inline void set_page_links(struct page *page, enum zone_type zone,
 	set_page_node(page, node);
 	set_page_section(page, pfn_to_section_nr(pfn));
 }
-#else
-static inline struct zone *page_zone(struct page *page)
-{
-	return 0;
-}
-
-#endif /* DDE_LINUX */
 
 /*
  * Some inline functions in vmstat.h depend on page_zone()
  */
 #include <linux/vmstat.h>
 
-#ifndef DDE_LINUX
 static __always_inline void *lowmem_page_address(struct page *page)
 {
 	return __va(page_to_pfn(page) << PAGE_SHIFT);
@@ -586,16 +567,6 @@ void page_address_init(void);
 #define set_page_address(page, address)  do { } while(0)
 #define page_address_init()  do { } while(0)
 #endif
-
-#else /* DDE_LINUX */
-
-#define page_address(page) ((page)->address)
-#define set_page_address(page, address) \
-	do { \
-		(page)->address = (address); \
-	} while(0)
-#define page_address_init()  do { } while(0)
-#endif /* DDE_LINUX */
 
 #ifndef DDE_LINUX
 /*
@@ -636,6 +607,26 @@ static inline pgoff_t page_index(struct page *page)
 		return page_private(page);
 	return page->index;
 }
+#else
+
+static inline struct address_space *page_mapping(struct page *page)
+{
+	WARN_UNIMPL;
+	return NULL;
+}
+
+static inline int PageAnon(struct page *page)
+{
+	WARN_UNIMPL;
+	return 0;
+}
+
+static inline pgoff_t page_index(struct page *page)
+{
+	WARN_UNIMPL;
+	return 0;
+}
+#endif /* DDE_LINUX */
 
 /*
  * The atomic page->_mapcount, like _count, starts from -1:
@@ -1200,7 +1191,6 @@ extern int randomize_va_space;
 #endif
 
 __attribute__((weak)) const char *arch_vma_name(struct vm_area_struct *vma);
-#endif /* DDE_LINUX */
 
 #endif /* __KERNEL__ */
 #endif /* _LINUX_MM_H */

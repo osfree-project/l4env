@@ -149,6 +149,7 @@ protected:
 
   // for trigger_exception
   Address _exc_ip;
+  Address _exc_flags;
   unsigned _irq;
 
   static Helping_lock tcb_area_lock;

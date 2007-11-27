@@ -53,27 +53,27 @@
 
 CBEAttribute::CBEAttribute()
 : m_pPtrDefault(0),
-  m_sString(),
-  m_pType(0),
-  m_Parameters(0, this)
+	m_sString(),
+	m_pType(0),
+	m_Parameters(0, this)
 {
-    m_nType = ATTR_NONE;
-    m_nAttrClass = ATTR_CLASS_NONE;
-    m_vPortSpecs.clear();
-    m_vExceptions.clear();
-    m_nIntValue = 0;
-    m_nMajorVersion = 0;
-    m_nMinorVersion = 0;
+	m_nType = ATTR_NONE;
+	m_nAttrClass = ATTR_CLASS_NONE;
+	m_vPortSpecs.clear();
+	m_vExceptions.clear();
+	m_nIntValue = 0;
+	m_nMajorVersion = 0;
+	m_nMinorVersion = 0;
 	m_nLowerInt = 0;
 	m_nUpperInt = 0;
 }
 
 CBEAttribute::CBEAttribute(CBEAttribute* src)
 : CBEObject(src),
-  m_pPtrDefault(0),
-  m_sString(),
-  m_pType(0),
-  m_Parameters(src->m_Parameters)
+	m_pPtrDefault(0),
+	m_sString(),
+	m_pType(0),
+	m_Parameters(src->m_Parameters)
 {
 	// init everything with default values
 	m_vPortSpecs.clear();
@@ -131,8 +131,8 @@ CBEAttribute::CBEAttribute(CBEAttribute* src)
 /** \brief destructor of this instance */
 CBEAttribute::~CBEAttribute()
 {
-    if (m_pType)
-        delete m_pType;
+	if (m_pType)
+		delete m_pType;
 }
 
 /** \brief create a copy of this object
@@ -153,120 +153,120 @@ CBEAttribute* CBEAttribute::Clone()
  */
 void CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute)
 {
-    // call CBEObject's CreateBackEnd method
-    CBEObject::CreateBackEnd(pFEAttribute);
+	// call CBEObject's CreateBackEnd method
+	CBEObject::CreateBackEnd(pFEAttribute);
 
-    m_nType = pFEAttribute->GetAttrType();
-    switch (m_nType)
-    {
-    case ATTR_VERSION:    // version
-        m_nAttrClass = ATTR_CLASS_VERSION;
-        CreateBackEndVersion((CFEVersionAttribute *) pFEAttribute);
-        break;
-    case ATTR_UUID:        // string or int
-        if (dynamic_cast<CFEIntAttribute*>(pFEAttribute))
-        {
-            m_nAttrClass = ATTR_CLASS_INT;
-            CreateBackEndInt((CFEIntAttribute*)pFEAttribute);
-        }
-        else
-        {
-            m_nAttrClass = ATTR_CLASS_STRING;
-            CreateBackEndString((CFEStringAttribute *) pFEAttribute);
-        }
-        break;
+	m_nType = pFEAttribute->GetAttrType();
+	switch (m_nType)
+	{
+	case ATTR_VERSION:    // version
+		m_nAttrClass = ATTR_CLASS_VERSION;
+		CreateBackEndVersion((CFEVersionAttribute *) pFEAttribute);
+		break;
+	case ATTR_UUID:        // string or int
+		if (dynamic_cast<CFEIntAttribute*>(pFEAttribute))
+		{
+			m_nAttrClass = ATTR_CLASS_INT;
+			CreateBackEndInt((CFEIntAttribute*)pFEAttribute);
+		}
+		else
+		{
+			m_nAttrClass = ATTR_CLASS_STRING;
+			CreateBackEndString((CFEStringAttribute *) pFEAttribute);
+		}
+		break;
 	case ATTR_UUID_RANGE:
 		m_nAttrClass = ATTR_CLASS_RANGE;
 		CreateBackEndRange((CFERangeAttribute *) pFEAttribute);
 		break;
-    case ATTR_HELPFILE:    // string
-    case ATTR_HELPSTRING:    // string
-    case ATTR_DEFAULT_FUNCTION: // string
-    case ATTR_ERROR_FUNCTION:
-    case ATTR_ERROR_FUNCTION_CLIENT:
-    case ATTR_ERROR_FUNCTION_SERVER:
-    case ATTR_INIT_RCVSTRING_CLIENT: // string
-    case ATTR_INIT_RCVSTRING_SERVER: // string
-        m_nAttrClass = ATTR_CLASS_STRING;
-        CreateBackEndString((CFEStringAttribute*)pFEAttribute);
-        break;
-    case ATTR_LCID:        // int
-    case ATTR_HELPCONTEXT:    // int
-        m_nAttrClass = ATTR_CLASS_INT;
-        CreateBackEndInt((CFEIntAttribute *) pFEAttribute);
-        break;
-    case ATTR_SWITCH_IS:    // Is
-    case ATTR_FIRST_IS:    // IS
-    case ATTR_LAST_IS:    // Is
-    case ATTR_LENGTH_IS:    // Is
-    case ATTR_MIN_IS:    // Is
-    case ATTR_MAX_IS:    // Is
-    case ATTR_SIZE_IS:    // Is
-    case ATTR_IID_IS:    // Is
-        // can be Is or Int attribute
-        if (dynamic_cast<CFEIntAttribute*>(pFEAttribute))
-        {
-            m_nAttrClass = ATTR_CLASS_INT;
-            CreateBackEndInt((CFEIntAttribute *) pFEAttribute);
-        }
-        else
-        {
-            m_nAttrClass = ATTR_CLASS_IS;
-            CreateBackEndIs((CFEIsAttribute *) pFEAttribute);
-        }
-        break;
-    case ATTR_TRANSMIT_AS:    // type
-    case ATTR_SWITCH_TYPE:    // type
-        m_nAttrClass = ATTR_CLASS_TYPE;
-        CreateBackEndType((CFETypeAttribute *) pFEAttribute);
-        break;
-    case ATTR_ABSTRACT:    // not supported
-    case ATTR_ENDPOINT:    // not supported
-    case ATTR_EXCEPTIONS:    // not supported
-    case ATTR_LOCAL:        // simple
-    case ATTR_POINTER_DEFAULT:    // not supported
-    case ATTR_OBJECT:    // simple
-    case ATTR_UUID_REP:    // not supported
-    case ATTR_CONTROL:    // simple
-    case ATTR_HIDDEN:    // simple
-    case ATTR_RESTRICTED:    // simple
-    case ATTR_IDEMPOTENT:    // simple
-    case ATTR_BROADCAST:    // simple
-    case ATTR_MAYBE:        // simple
-    case ATTR_REFLECT_DELETIONS:    // simple
-    case ATTR_HANDLE:    // simple
-    case ATTR_IGNORE:    // simple
-    case ATTR_IN:        // simple
-    case ATTR_OUT:        // simple
-    case ATTR_REF:        // simple
-    case ATTR_UNIQUE:    // simple
-    case ATTR_PTR:        // simple
-    case ATTR_STRING:    // simple
-    case ATTR_CONTEXT_HANDLE:    // simple
-    case ATTR_PREALLOC_CLIENT:     // simple
-    case ATTR_PREALLOC_SERVER:     // simple
-    case ATTR_ALLOW_REPLY_ONLY: // simple
-    case ATTR_SCHED_DONATE: // simple
-    case ATTR_DEDICATED_PARTNER:
-    case ATTR_DEFAULT_TIMEOUT:
-        m_nAttrClass = ATTR_CLASS_SIMPLE;
-        break;
-    case ATTR_INIT_RCVSTRING: // simple or string
-        if (dynamic_cast<CFEStringAttribute*>(pFEAttribute))
-        {
-            m_nAttrClass = ATTR_CLASS_STRING;
-            CreateBackEndString((CFEStringAttribute*)pFEAttribute);
-        }
-        else
-        {
-            m_nAttrClass = ATTR_CLASS_SIMPLE;
-        }
-        break;
-    default:
-        m_nAttrClass = ATTR_CLASS_NONE;
-        // nothing to be done
-        break;
-    }
+	case ATTR_HELPFILE:    // string
+	case ATTR_HELPSTRING:    // string
+	case ATTR_DEFAULT_FUNCTION: // string
+	case ATTR_ERROR_FUNCTION:
+	case ATTR_ERROR_FUNCTION_CLIENT:
+	case ATTR_ERROR_FUNCTION_SERVER:
+	case ATTR_INIT_RCVSTRING_CLIENT: // string
+	case ATTR_INIT_RCVSTRING_SERVER: // string
+		m_nAttrClass = ATTR_CLASS_STRING;
+		CreateBackEndString((CFEStringAttribute*)pFEAttribute);
+		break;
+	case ATTR_LCID:        // int
+	case ATTR_HELPCONTEXT:    // int
+		m_nAttrClass = ATTR_CLASS_INT;
+		CreateBackEndInt((CFEIntAttribute *) pFEAttribute);
+		break;
+	case ATTR_SWITCH_IS:    // Is
+	case ATTR_FIRST_IS:    // IS
+	case ATTR_LAST_IS:    // Is
+	case ATTR_LENGTH_IS:    // Is
+	case ATTR_MIN_IS:    // Is
+	case ATTR_MAX_IS:    // Is
+	case ATTR_SIZE_IS:    // Is
+	case ATTR_IID_IS:    // Is
+		// can be Is or Int attribute
+		if (dynamic_cast<CFEIntAttribute*>(pFEAttribute))
+		{
+			m_nAttrClass = ATTR_CLASS_INT;
+			CreateBackEndInt((CFEIntAttribute *) pFEAttribute);
+		}
+		else
+		{
+			m_nAttrClass = ATTR_CLASS_IS;
+			CreateBackEndIs((CFEIsAttribute *) pFEAttribute);
+		}
+		break;
+	case ATTR_TRANSMIT_AS:    // type
+	case ATTR_SWITCH_TYPE:    // type
+		m_nAttrClass = ATTR_CLASS_TYPE;
+		CreateBackEndType((CFETypeAttribute *) pFEAttribute);
+		break;
+	case ATTR_ABSTRACT:    // not supported
+	case ATTR_ENDPOINT:    // not supported
+	case ATTR_EXCEPTIONS:    // not supported
+	case ATTR_LOCAL:        // simple
+	case ATTR_POINTER_DEFAULT:    // not supported
+	case ATTR_OBJECT:    // simple
+	case ATTR_UUID_REP:    // not supported
+	case ATTR_CONTROL:    // simple
+	case ATTR_HIDDEN:    // simple
+	case ATTR_RESTRICTED:    // simple
+	case ATTR_IDEMPOTENT:    // simple
+	case ATTR_BROADCAST:    // simple
+	case ATTR_MAYBE:        // simple
+	case ATTR_REFLECT_DELETIONS:    // simple
+	case ATTR_HANDLE:    // simple
+	case ATTR_IGNORE:    // simple
+	case ATTR_IN:        // simple
+	case ATTR_OUT:        // simple
+	case ATTR_REF:        // simple
+	case ATTR_UNIQUE:    // simple
+	case ATTR_PTR:        // simple
+	case ATTR_STRING:    // simple
+	case ATTR_CONTEXT_HANDLE:    // simple
+	case ATTR_PREALLOC_CLIENT:     // simple
+	case ATTR_PREALLOC_SERVER:     // simple
+	case ATTR_ALLOW_REPLY_ONLY: // simple
+	case ATTR_SCHED_DONATE: // simple
+	case ATTR_DEDICATED_PARTNER:
+	case ATTR_DEFAULT_TIMEOUT:
+		m_nAttrClass = ATTR_CLASS_SIMPLE;
+		break;
+	case ATTR_INIT_RCVSTRING: // simple or string
+		if (dynamic_cast<CFEStringAttribute*>(pFEAttribute))
+		{
+			m_nAttrClass = ATTR_CLASS_STRING;
+			CreateBackEndString((CFEStringAttribute*)pFEAttribute);
+		}
+		else
+		{
+			m_nAttrClass = ATTR_CLASS_SIMPLE;
+		}
+		break;
+	default:
+		m_nAttrClass = ATTR_CLASS_NONE;
+		// nothing to be done
+		break;
+	}
 }
 
 /** \brief creates a simple attribute
@@ -276,52 +276,52 @@ void CBEAttribute::CreateBackEnd(CFEAttribute * pFEAttribute)
 void
 CBEAttribute::CreateBackEnd(ATTR_TYPE nType)
 {
-    m_nType = nType;
-    switch (m_nType)
-    {
-    case ATTR_ABSTRACT:    // not supported
-    case ATTR_ENDPOINT:    // not supported
-    case ATTR_EXCEPTIONS:    // not supported
-    case ATTR_LOCAL:        // simple
-    case ATTR_POINTER_DEFAULT:    // not supported
-    case ATTR_OBJECT:    // simple
-    case ATTR_UUID_REP:    // not supported
-    case ATTR_CONTROL:    // simple
-    case ATTR_HIDDEN:    // simple
-    case ATTR_RESTRICTED:    // simple
-    case ATTR_IDEMPOTENT:    // simple
-    case ATTR_BROADCAST:    // simple
-    case ATTR_MAYBE:        // simple
-    case ATTR_REFLECT_DELETIONS:    // simple
-    case ATTR_HANDLE:    // simple
-    case ATTR_IGNORE:    // simple
-    case ATTR_IN:        // simple
-    case ATTR_OUT:        // simple
-    case ATTR_REF:        // simple
-    case ATTR_UNIQUE:    // simple
-    case ATTR_PTR:        // simple
-    case ATTR_STRING:    // simple
-    case ATTR_CONTEXT_HANDLE:    // simple
-    case ATTR_PREALLOC_CLIENT:     // simple
-    case ATTR_PREALLOC_SERVER:     // simple
-    case ATTR_ALLOW_REPLY_ONLY: // simple
-    case ATTR_SCHED_DONATE: // simple
-    case ATTR_DEDICATED_PARTNER: // simple
-    case ATTR_DEFAULT_TIMEOUT: // simple
-    case ATTR_INIT_RCVSTRING: // simple or string
-        m_nAttrClass = ATTR_CLASS_SIMPLE;
-        break;
-    default:
+	m_nType = nType;
+	switch (m_nType)
 	{
-		std::ostringstream os;
-		os << m_nType;
+	case ATTR_ABSTRACT:    // not supported
+	case ATTR_ENDPOINT:    // not supported
+	case ATTR_EXCEPTIONS:    // not supported
+	case ATTR_LOCAL:        // simple
+	case ATTR_POINTER_DEFAULT:    // not supported
+	case ATTR_OBJECT:    // simple
+	case ATTR_UUID_REP:    // not supported
+	case ATTR_CONTROL:    // simple
+	case ATTR_HIDDEN:    // simple
+	case ATTR_RESTRICTED:    // simple
+	case ATTR_IDEMPOTENT:    // simple
+	case ATTR_BROADCAST:    // simple
+	case ATTR_MAYBE:        // simple
+	case ATTR_REFLECT_DELETIONS:    // simple
+	case ATTR_HANDLE:    // simple
+	case ATTR_IGNORE:    // simple
+	case ATTR_IN:        // simple
+	case ATTR_OUT:        // simple
+	case ATTR_REF:        // simple
+	case ATTR_UNIQUE:    // simple
+	case ATTR_PTR:        // simple
+	case ATTR_STRING:    // simple
+	case ATTR_CONTEXT_HANDLE:    // simple
+	case ATTR_PREALLOC_CLIENT:     // simple
+	case ATTR_PREALLOC_SERVER:     // simple
+	case ATTR_ALLOW_REPLY_ONLY: // simple
+	case ATTR_SCHED_DONATE: // simple
+	case ATTR_DEDICATED_PARTNER: // simple
+	case ATTR_DEFAULT_TIMEOUT: // simple
+	case ATTR_INIT_RCVSTRING: // simple or string
+		m_nAttrClass = ATTR_CLASS_SIMPLE;
+		break;
+	default:
+		{
+			std::ostringstream os;
+			os << m_nType;
 
-		string exc = string(__func__);
-		exc += "Attribute Type " + os.str() + " requires different CreateBackEnd method.";
-		throw new error::create_error(exc);
+			string exc = string(__func__);
+			exc += "Attribute Type " + os.str() + " requires different CreateBackEnd method.";
+			throw new error::create_error(exc);
+		}
+		break;
 	}
-	break;
-    }
 }
 
 /** \brief creates the back-end attribute for a type attribute
@@ -330,11 +330,11 @@ CBEAttribute::CreateBackEnd(ATTR_TYPE nType)
  */
 void CBEAttribute::CreateBackEndType(CFETypeAttribute * pFETypeAttribute)
 {
-    CFETypeSpec *pType = pFETypeAttribute->GetType();
-    CBEClassFactory *pCF = CBEClassFactory::Instance();
-    m_pType = pCF->GetNewType(pType->GetType());
-    m_pType->SetParent(this);
-    m_pType->CreateBackEnd(pType);
+	CFETypeSpec *pType = pFETypeAttribute->GetType();
+	CBEClassFactory *pCF = CBEClassFactory::Instance();
+	m_pType = pCF->GetNewType(pType->GetType());
+	m_pType->SetParent(this);
+	m_pType->CreateBackEnd(pType);
 }
 
 /** \brief creates the back-end attribute for a string attribute
@@ -343,7 +343,7 @@ void CBEAttribute::CreateBackEndType(CFETypeAttribute * pFETypeAttribute)
  */
 void CBEAttribute::CreateBackEndString(CFEStringAttribute * pFEstringAttribute)
 {
-    m_sString = pFEstringAttribute->GetString();
+	m_sString = pFEstringAttribute->GetString();
 }
 
 /** \brief creates the back-end attribute for an IS-attribute
@@ -553,7 +553,7 @@ void CBEAttribute::CreateBackEndRange(CFERangeAttribute * pFERangeAttribute)
 void
 CBEAttribute::CreateBackEndVersion(CFEVersionAttribute *pFEVersionAttribute)
 {
-    pFEVersionAttribute->GetVersion(m_nMajorVersion, m_nMinorVersion);
+	pFEVersionAttribute->GetVersion(m_nMajorVersion, m_nMinorVersion);
 }
 
 /** \brief adds a new parameter to the Is-parameter vector
@@ -565,26 +565,26 @@ CBEAttribute::CreateBackEndVersion(CFEVersionAttribute *pFEVersionAttribute)
  */
 void CBEAttribute::AddIsParameter(CBEDeclarator * pDecl)
 {
-    switch (m_nType)
-    {
-    case ATTR_SWITCH_IS:    // Is
-    case ATTR_FIRST_IS:    // IS
-    case ATTR_LAST_IS:    // Is
-    case ATTR_LENGTH_IS:    // Is
-    case ATTR_MIN_IS:    // Is
-    case ATTR_MAX_IS:    // Is
-    case ATTR_SIZE_IS:    // Is
-    case ATTR_IID_IS:    // Is
-        break;
-    default:
-        return;
-	break;
-    }
-    if (pDecl)
-    {
-        m_Parameters.Add(pDecl);
-        pDecl->SetParent(this);
-    }
+	switch (m_nType)
+	{
+	case ATTR_SWITCH_IS:    // Is
+	case ATTR_FIRST_IS:    // IS
+	case ATTR_LAST_IS:    // Is
+	case ATTR_LENGTH_IS:    // Is
+	case ATTR_MIN_IS:    // Is
+	case ATTR_MAX_IS:    // Is
+	case ATTR_SIZE_IS:    // Is
+	case ATTR_IID_IS:    // Is
+		break;
+	default:
+		return;
+		break;
+	}
+	if (pDecl)
+	{
+		m_Parameters.Add(pDecl);
+		pDecl->SetParent(this);
+	}
 }
 
 /** \brief delivers the number of is attributes from the given iterator to the end of the list
@@ -596,65 +596,61 @@ void CBEAttribute::AddIsParameter(CBEDeclarator * pDecl)
  * caller.  We simply count the number of times GetNextIsAttribute returns a
  * new IS attribute parameter.
  */
-int
-CBEAttribute::GetRemainingNumberOfIsAttributes(
-    vector<CBEDeclarator*>::iterator iter)
+int CBEAttribute::GetRemainingNumberOfIsAttributes(vector<CBEDeclarator*>::iterator iter)
 {
-    int nCount = 0;
-    for (; iter != m_Parameters.end(); iter++, nCount++) ;
-    return nCount;
+	int nCount = 0;
+	for (; iter != m_Parameters.end(); iter++, nCount++) ;
+	return nCount;
 }
 
 /** \brief writes the value of the parameter to a file
  *  \param pFile the file to write
  */
-void
-CBEAttribute::Write(CBEFile& pFile)
+void CBEAttribute::Write(CBEFile& pFile)
 {
-    string s;
-    WriteToStr(s);
-    pFile << s;
+	string s;
+	WriteToStr(s);
+	pFile << s;
 }
 
 /** \brief writes the attribute to the string
  *  \param str the string to write to
  */
-void
-CBEAttribute::WriteToStr(string& str)
+void CBEAttribute::WriteToStr(std::string& str)
 {
-    switch(m_nAttrClass)
-    {
-    case ATTR_CLASS_STRING:
-	str += m_sString;
-	break;
-    case ATTR_CLASS_INT:
+	switch(m_nAttrClass)
 	{
-	    std::ostringstream os;
-	    os << m_nIntValue;
-	    str += os.str();
+	case ATTR_CLASS_STRING:
+		str += m_sString;
+		break;
+	case ATTR_CLASS_INT:
+		{
+			std::ostringstream os;
+			os << m_nIntValue;
+			str += os.str();
+		}
+		break;
+	case ATTR_CLASS_IS:
+		{
+			bool bComma = false;
+			vector<CBEDeclarator*>::iterator i;
+			for (i = m_Parameters.begin();
+				i != m_Parameters.end();
+				i++)
+			{
+				if (bComma)
+					str += ", ";
+				(*i)->WriteNameToStr(str);
+				bComma = true;
+			}
+		}
+		break;
+	case ATTR_CLASS_TYPE:
+		m_pType->WriteToStr(str);
+		break;
+	default:
+		break;
 	}
-	break;
-    case ATTR_CLASS_IS:
-	{
-	    bool bComma = false;
-	    vector<CBEDeclarator*>::iterator i;
-	    for (i = m_Parameters.begin();
-		 i != m_Parameters.end();
-		 i++)
-	    {
-		if (bComma)
-		    str += ", ";
-		(*i)->WriteNameToStr(str);
-		bComma = true;
-	    }
-	}
-	break;
-    case ATTR_CLASS_TYPE:
-	m_pType->WriteToStr(str);
-	break;
-    default:
-	break;
-    }
-    CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: str = %s (class is %d)\n",
-	__func__, str.c_str(), m_nAttrClass);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s: str = %s (class is %d)\n",
+		__func__, str.c_str(), m_nAttrClass);
 }

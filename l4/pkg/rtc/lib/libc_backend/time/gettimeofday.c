@@ -1,6 +1,6 @@
 /**
  * \file   rtc/lib/libc_backends/time/gettimeofday.c
- * \brief  
+ * \brief  gettimeofday implementation
  *
  * \date   08/10/2004
  * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
@@ -11,8 +11,9 @@
  */
 #include <sys/time.h>
 
-#include <l4/util/rdtsc.h>
 #include <l4/sys/l4int.h>
+
+#include "gettime.h"
 
 extern unsigned int offset;
 
@@ -20,8 +21,8 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
 {
     l4_uint32_t s, ns;
 
-    // fixme: get KIP time or rdtsc or other time source
-    l4_tsc_to_s_and_ns(l4_rdtsc(), &s, &ns);
+    libc_backend_rtc_get_s_and_ns(&s, &ns);
+
     // add both and copy sum to struct
     if (tv)
     {

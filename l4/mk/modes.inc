@@ -286,7 +286,7 @@ LIBCLIBS_arm_tiny               = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -lmain -luc_c -luclibc_support            \
                                   -luc_be_l4_start_stop                     \
                                   -luc_be_minimal_io                        \
-                                  $(MMAP_BACKEND)                           \
+                                  $(MMAP_BACKEND) -ll4util                  \
                                   -lsigma0 $(GCCLIB) -luc_c
 L4LIBS_arm_tiny                 = -static -lmain -ll4util -ll4sys
 CRT0_arm_tiny                   = $(CRT0_DEFAULT)
@@ -314,17 +314,36 @@ CRTN_arm_sigma0                 =
 LDSCRIPT_arm_sigma0             = $(LDS_DEFAULT)
 
 #
-# arm_l4env_minimal -- just a copy of sigma0 mode, so that not so many
-# makefile changes are necessary
+# arm_l4env_minimal
 #
-BID_SUPPORTED_arm_l4env_minimal = $(BID_SUPPORTED_arm_sigma0)
-LIBCINCDIR_arm_l4env_minimal    = $(LIBCINCDIR_arm_sigma0)
-LIBCLIBDIR_arm_l4env_minimal    = $(LIBCLIBDIR_arm_sigma0)
-LIBCLIBS_arm_l4env_minimal      = $(LIBCLIBS_arm_sigma0)
-L4LIBS_arm_l4env_minimal        = $(L4LIBS_arm_sigma0)
-CRT0_arm_l4env_minimal          = $(CRT0_arm_sigma0)
-CRTN_arm_l4env_minimal          = $(CRTN_arm_sigma0)
-LDSCRIPT_arm_l4env_minimal      = $(LDSCRIPT_arm_sigma0)
+BID_SUPPORTED_arm_l4env_minimal = y
+LIBCINCDIR_arm_l4env_minimal    = $(LIBC_INCLUDE)
+LIBCLIBDIR_arm_l4env_minimal    =
+LIBCLIBS_arm_l4env_minimal      = -nostdlib $(GCCLDNOSTDLIB)              \
+                                  $(MALLOC_BACKEND)                         \
+                                  $(UCLIBC_IMPLEMENTATION)                  \
+                                  -lc_be_l4env_start_stop -lgeneric_ts      \
+                                  -lc_be_minimal_log_io -lc_be_mmap_util    \
+                                  $(MALLOC_BACKEND) -lc_be_mmap             \
+                                  -lc_be_mmap_util                          \
+                                  -ll4rm -ldm_mem -ldm_generic -lthread     \
+                                  -lsemaphore -ll4env -ll4env_err -lslab    \
+                                  -llogserver_capsule -ll4rm -lthread       \
+                                  -ldm_generic -lnames                      \
+                                  -ll4util_root -ll4util -lsigma0           \
+                                  $(UCLIBC_IMPLEMENTATION) $(GCCLIB)        \
+                                  $(UCLIBC_IMPLEMENTATION)                  \
+                                  -lc_be_l4env_start_stop -luclibc_support  \
+                                  -ll4sys
+L4LIBS_arm_l4env_minimal        = -static -ll4rm -ldm_mem                 \
+                                  -ldm_generic -lthread -lsemaphore -ll4env \
+                                  -ll4env_err -lslab -llogserver_capsule    \
+                                  -ll4rm -lthread -ldm_generic -lnames      \
+                                  -ll4util_root -ll4util -lsigma0           \
+                                  $(ROOTLIB) -ll4sys
+CRT0_arm_l4env_minimal          = $(CRT0_DEFAULT)
+CRTN_arm_l4env_minimal          =
+LDSCRIPT_arm_l4env_minimal      = $(LDS_DEFAULT)
 
 #
 # arm_l4env -- default mode
@@ -430,7 +449,7 @@ LIBCLIBS_amd64_tiny             = -nostdlib $(GCCLDNOSTDLIB)                \
                                   -luc_be_minimal_io                        \
                                   -luc_be_l4_start_stop                     \
                                   $(MMAP_BACKEND)                           \
-                                  -luc_c -luclibc_support -lsigma0          \
+                                  -luc_c -luclibc_support -ll4util -lsigma0 \
                                   -luc_c $(GCCLIB) -luc_c -ll4sys
 L4LIBS_amd64_tiny               = -static -lmain -ll4util -ll4sys
 CRT0_amd64_tiny                 = $(CRT0_DEFAULT)

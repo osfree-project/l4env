@@ -45,8 +45,21 @@ public:
     CL4FiascoBENameFactory();
     virtual ~CL4FiascoBENameFactory();
 
+	/** \brief contains the L4.Fiasco specific values for the GetString function
+	 */
+	enum
+	{
+		STR_L4FIASCO_BASE = STR_L4_MAX, /**< ensure disjunct values */
+		STR_UTCB_INITIALIZER,    /**< string with initializer for UTCB address */
+		STR_L4FIASCO_MAX                /**< maximum L4V4 value */
+	};
+
+	virtual std::string GetString(int nStringCode, void *pParam = 0);
     virtual std::string GetTypeName(int nType, bool bUnsigned, int nSize = 0);
     virtual std::string GetMsgTagVariable();
+	virtual std::string GetUtcbInitializer(CBEFunction *pFunction);
+    virtual std::string GetTimeoutServerVariable(CBEFunction *pFunction);
+    virtual std::string GetTimeoutClientVariable(CBEFunction *pFunction);
 };
 
 #endif

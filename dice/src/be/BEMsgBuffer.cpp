@@ -47,6 +47,7 @@
 #include "BENameFactory.h"
 #include "BEClassFactory.h"
 #include "BESizes.h"
+#include "BERoot.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "Messages.h"
@@ -108,6 +109,7 @@ bool CBEMsgBuffer::IsVariableSized(CMsgStructType nType)
 }
 
 /** \brief calculate the number of elements with a given type for a direction
+ *  \param pFunction the function to count for
  *  \param nFEType the type to look for
  *  \param nType the type of the message buffer struct
  *  \return the number of elements of this given type for this direction
@@ -241,7 +243,7 @@ CBEMsgBuffer::CreateBackEnd(CFEInterface *pFEInterface)
 }
 
 /** \brief creates the type of the message buffer
- *  \param pFEOperation the front-end operation to use as reference
+ *  \param pFEObject the front-end object to use as reference
  *  \return the new type of the message buffer
  */
 template<class T> CBEType*
@@ -575,7 +577,7 @@ void CBEMsgBuffer::AddExceptionMember(CBEFunction *pFunction, CBEStructType *pSt
  *  \param pFunction the funtion owning the message buffer
  *  \return true if Sort succeeded
  *
- *  This method propagates the call to invoke a \c Sort method on all
+ *  This method propagates the call to invoke a \a Sort method on all
  *  structs.
  */
 void CBEMsgBuffer::Sort(CBEFunction *pFunction)
@@ -1031,7 +1033,7 @@ void CBEMsgBuffer::WriteMemberAccess(CBEFile& pFile, CBEFunction *pFunction, CMs
  * with the member.
  */
 void CBEMsgBuffer::WriteMemberAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType,
-	int nFEType, string sIndex)
+	int nFEType, std::string sIndex)
 {
 	// get struct
 	CBEStructType *pStruct = GetStruct(pFunction, nType);
@@ -1196,7 +1198,7 @@ void CBEMsgBuffer::WriteInitialization(CBEFile& /*pFile*/, CBEFunction* /*pFunct
  *  \param nType the type of the message buffer struct
  *  \return a reference to the member if found, NULL if none
  */
-CBETypedDeclarator* CBEMsgBuffer::FindMember(string sName, CMsgStructType nType)
+CBETypedDeclarator* CBEMsgBuffer::FindMember(std::string sName, CMsgStructType nType)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s(%s, %d) called\n",
 		__func__, sName.c_str(), (int)nType);
@@ -1217,7 +1219,7 @@ CBETypedDeclarator* CBEMsgBuffer::FindMember(string sName, CMsgStructType nType)
  *  \param nType the type of the message buffer struct
  *  \return a reference to the member if found, NULL if none
  */
-CBETypedDeclarator* CBEMsgBuffer::FindMember(string sName, CBEFunction *pFunction, CMsgStructType nType)
+CBETypedDeclarator* CBEMsgBuffer::FindMember(std::string sName, CBEFunction *pFunction, CMsgStructType nType)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s(%s, %s, %d) called\n",
 		__func__, sName.c_str(), pFunction->GetName().c_str(), (int)nType);
@@ -1237,7 +1239,7 @@ CBETypedDeclarator* CBEMsgBuffer::FindMember(string sName, CBEFunction *pFunctio
  *  \param nType the type of the message buffer struct
  *  \return the position (index) of the member, -1 if not found
  */
-int CBEMsgBuffer::GetMemberPosition(string sName, CMsgStructType nType)
+int CBEMsgBuffer::GetMemberPosition(std::string sName, CMsgStructType nType)
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	// test opcode
@@ -1250,8 +1252,7 @@ int CBEMsgBuffer::GetMemberPosition(string sName, CMsgStructType nType)
 	// get struct
 	CBEStructType *pStruct = GetStruct(nType);
 	assert(pStruct);
-	// get word size
-	int nWordSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
+	CBESizes *pSizes = CCompiler::GetSizes();
 	int nPos = 0;
 	// iterate
 	vector<CBETypedDeclarator*>::iterator iter;
@@ -1264,11 +1265,39 @@ int CBEMsgBuffer::GetMemberPosition(string sName, CMsgStructType nType)
 
 		// by adding the number of positions the current member uses, we set
 		// the position to an index pointing just behind that current member
-		nPos += (*iter)->GetSize() / nWordSize;
+		nPos += pSizes->WordsFromBytes((*iter)->GetSize());
 	}
 
 	// not found
 	return -1;
+}
+
+/** \brief get the member of payload at a specific position
+ *  \param nType the type of the message buffer struct
+ *  \param nIndex the index to get the member at
+ *  \return a reference to the member or NULL
+ */
+CBETypedDeclarator* CBEMsgBuffer::GetMemberAt(CMsgStructType nType, int nIndex)
+{
+	CBESizes *pSizes = CCompiler::GetSizes();
+	int nCurSize = 0, nMemberSize, nPosSize = pSizes->GetSizeOfType(TYPE_MWORD);
+	// get struct
+	CBEStructType *pStruct = GetStruct(nType);
+	assert(pStruct);
+	// try to find the member for the position
+	vector<CBETypedDeclarator*>::iterator iter;
+	for (iter = GetStartOfPayload(pStruct);
+		iter != pStruct->m_Members.end();
+		iter++)
+	{
+		// direction fits, since this is the struct of our desired direction
+		nMemberSize = GetMemberSize(TYPE_MWORD, *iter, false);
+		// if we cross the border of the parameter position we want, stop
+		if (nIndex * nPosSize < (nCurSize + nMemberSize))
+			return *iter;
+		nCurSize += nMemberSize;
+	}
+	return 0;
 }
 
 /** \brief writes a dump of the message buffer
@@ -1431,7 +1460,7 @@ void CBEMsgBuffer::AddGenericStruct(CBEFunction *pFunction, CFEOperation *pFEOpe
  *  \param nArray the number of elements
  *  \return a reference to the newly created opcode member
  */
-CBETypedDeclarator* CBEMsgBuffer::GetMemberVariable(int nFEType, bool bUnsigned, string sName, int nArray)
+CBETypedDeclarator* CBEMsgBuffer::GetMemberVariable(int nFEType, bool bUnsigned, std::string sName, int nArray)
 {
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	CBEType *pType = pCF->GetNewType(nFEType);
@@ -1546,6 +1575,34 @@ void CBEMsgBuffer::AddGenericStructMembersFunction(CBEStructType *pStruct)
 		throw error::create_error("word member variable could not be created");
 	pStruct->m_Members.Add(pMember);
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBuffer::%s added word member\n", __func__);
+}
+
+/** \brief return the size of a specific struct
+ *  \param pFunction the function for which to get the size
+ *  \param nType the struct type to count
+ *  \return the size of the respective struct
+ */
+int CBEMsgBuffer::GetSize(CBEFunction *pFunction, CMsgStructType nType)
+{
+	CBEStructType *pStruct = GetStruct(pFunction, nType);
+	if (!pStruct)
+		return 0;
+	return pStruct->GetSize();
+}
+
+/** \brief returns the maximum size of a specific struct
+ *  \param pFunction the function for which to get the size
+ *  \param nType the type of the struct
+ *  \retval nSize the size of the struct
+ *  \return true if maximum could be evaluated
+ */
+bool CBEMsgBuffer::GetMaxSize(int& nSize, CBEFunction *pFunction, CMsgStructType nType)
+{
+	CBEStructType *pStruct = GetStruct(pFunction, nType);
+	if (!pStruct)
+		return false;
+	nSize = pStruct->GetMaxSize();
+	return nSize >= 0;
 }
 
 /** \brief gets the size of specific message buffer members
@@ -1686,7 +1743,7 @@ void CBEMsgBuffer::Pad()
  *  \return true if member sName1 comes before member sName2
  */
 bool CBEMsgBuffer::IsEarlier(CBEFunction *pFunction, CMsgStructType nType,
-	string sName1, string sName2)
+	std::string sName1, std::string sName2)
 {
 	CBEStructType *pStruct = GetStruct(pFunction, nType);
 	assert(pStruct);

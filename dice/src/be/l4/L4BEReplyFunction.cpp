@@ -52,6 +52,7 @@ CL4BEReplyFunction::~CL4BEReplyFunction()
 
 /** \brief initializes instance of this class
  *  \param pFEOperation the front-end operation to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if successful
  */
 void CL4BEReplyFunction::CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide)

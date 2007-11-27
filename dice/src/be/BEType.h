@@ -78,6 +78,7 @@ public:
 	virtual void Write(CBEFile& pFile);
 	virtual void WriteToStr(std::string &str);
 	virtual bool IsConstructedType();
+	virtual std::string GetTag();
 	virtual bool HasTag(std::string sTag);
 	virtual void WriteCast(CBEFile& pFile, bool bPointer);
 	virtual void WriteCastToStr(std::string &str, bool bPointer);

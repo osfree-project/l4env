@@ -152,5 +152,8 @@ l4events_send_recv_message(l4_umword_t w1, message_t* msg, l4_timeout_t timeout)
   if (ipc_error == L4_IPC_RETIMEOUT)
     return -L4EVENTS_ERROR_TIMEOUT;
 
+  if (ipc_error == L4_IPC_ENOT_EXISTENT)
+    return -L4EVENTS_ERROR_NOT_EXISTS;
+
   return -L4EVENTS_ERROR_IPC;
 }

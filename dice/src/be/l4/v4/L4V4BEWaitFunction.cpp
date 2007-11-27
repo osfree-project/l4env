@@ -50,6 +50,7 @@ CL4V4BEWaitFunction::~CL4V4BEWaitFunction()
 
 /** \brief initialize instance of class
  *  \param pFEOperation the front-end function to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if successful
  */
 void

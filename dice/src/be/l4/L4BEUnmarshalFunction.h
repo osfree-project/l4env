@@ -49,8 +49,7 @@ public:
 
 protected:
     virtual void AddParameter(CFETypedDeclarator *pFEParameter);
-    virtual bool HasVariableSizedParameters(
-	DIRECTION_TYPE nDirection);
+    virtual bool HasVariableSizedParameters(DIRECTION_TYPE nDirection);
 };
 
 #endif // !__DICE_L4BEUNMARSHALFUNCTION_H__

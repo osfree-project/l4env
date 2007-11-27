@@ -37,7 +37,7 @@ Thread::sys_ipc_log()
   if (Jdb_nextper_trace::log() && is_next_period)
     {
       Tb_entry_ipc *tb = static_cast<Tb_entry_ipc*>(Jdb_tbuf::new_entry());
-      tb->set(this, regs->ip(), ipc_regs, sched_context()->left());
+      tb->set(this, regs->ip_syscall_page_user(), ipc_regs, sched_context()->left());
       Jdb_tbuf::commit_entry();
       goto skip_ipc_log;
     }
@@ -47,7 +47,7 @@ Thread::sys_ipc_log()
       Tb_entry_ipc *tb = static_cast<Tb_entry_ipc*>
 	(EXPECT_TRUE(Jdb_ipc_trace::log_buf()) ? Jdb_tbuf::new_entry()
 					   : alloca(sizeof(Tb_entry_ipc)));
-      tb->set(this, regs->ip(), ipc_regs, sched_context()->left());
+      tb->set(this, regs->ip_syscall_page_user(), ipc_regs, sched_context()->left());
 
       entry_event_num = tb->number();
 
@@ -66,7 +66,7 @@ skip_ipc_log:
     {
       Tb_entry_ipc_res *tb =
 	    static_cast<Tb_entry_ipc_res*>(Jdb_tbuf::new_entry());
-      tb->set(this, regs->ip(), ipc_regs, ipc_regs->snd_desc().raw(),
+      tb->set(this, regs->ip_syscall_page_user(), ipc_regs, ipc_regs->snd_desc().raw(),
 	      entry_event_num, have_snd, is_next_period);
       Jdb_tbuf::commit_entry();
       goto skip_ipc_res_log;
@@ -77,7 +77,7 @@ skip_ipc_log:
       Tb_entry_ipc_res *tb = static_cast<Tb_entry_ipc_res*>
 	(EXPECT_TRUE(Jdb_ipc_trace::log_buf()) ? Jdb_tbuf::new_entry()
 					    : alloca(sizeof(Tb_entry_ipc_res)));
-      tb->set(this, regs->ip(), ipc_regs, ipc_regs->snd_desc().raw(),
+      tb->set(this, regs->ip_syscall_page_user(), ipc_regs, ipc_regs->snd_desc().raw(),
 	      entry_event_num, have_snd, is_next_period);
 
       if (EXPECT_TRUE(Jdb_ipc_trace::log_buf()))
@@ -112,7 +112,8 @@ Thread::sys_ipc_trace()
   Tb_entry_ipc_trace *tb =
     static_cast<Tb_entry_ipc_trace*>(Jdb_tbuf::new_entry());
 
-  tb->set(this, ef->ip(), orig_tsc, snd_dst, regs->rcv_src(), snd_desc.raw(),
+  tb->set(this, ef->ip_syscall_page_user(), orig_tsc, snd_dst,
+          regs->rcv_src(), snd_desc.raw(),
 	  ((!snd_desc.has_snd() || !snd_desc.msg())
 	      ?  static_cast<Unsigned8>(snd_desc.raw())
 	      : (static_cast<Unsigned8>(snd_desc.raw()) & 3) | 4),

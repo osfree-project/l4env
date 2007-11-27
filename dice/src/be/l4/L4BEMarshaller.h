@@ -109,9 +109,6 @@ private:
 		bool Marshal(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType,
 			int nPosition, bool bReference, bool bLValue);
 	private:
-		CBEMsgBufferType* GetMessageBufferType(CBEFunction *pFunction);
-		CBETypedDeclarator* GetMemberAt(CBEMsgBufferType *pType,
-			CBEStructType *pStruct, int nPosition);
 		int GetMemberSize(CBETypedDeclarator *pMember);
 		void WriteParameter(CBEFile& pFile, CBETypedDeclarator *pParameter,
 			bool bReference, bool bLValue);

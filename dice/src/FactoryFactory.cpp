@@ -56,59 +56,65 @@
 //#include "be/lang/cxx/LangCPPClassFactory.h"
 #include <cassert>
 
+/** \brief get the appropriate instance of the class factory
+ *  \return reference to class factory
+ */
 CBEClassFactory* CFactoryFactory::GetNewClassFactory()
 {
-    CBEClassFactory *pCF = 0;
-    if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V2))
-    {
-	if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
-	    pCF = new CL4V2AMD64BEClassFactory();
-	else if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_IA32))
-	    pCF = new CL4V2IA32BEClassFactory();
-	else
-	    pCF = new CL4V2BEClassFactory();
-    }
-    else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_FIASCO))
-    {
-	if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
-	    pCF = new CL4FiascoAMD64BEClassFactory();
-	else
-	    pCF = new CL4FiascoBEClassFactory();
-    }
-    else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V4))
-    {
-        if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_IA32))
-            pCF = new CL4V4IA32ClassFactory();
-        else
-            pCF = new CL4V4BEClassFactory();
-    }
-    else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_SOCKETS))
-        pCF = new CSockBEClassFactory();
-    assert(pCF);
+	CBEClassFactory *pCF = 0;
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V2))
+	{
+		if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
+			pCF = new CL4V2AMD64BEClassFactory();
+		else if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_IA32))
+			pCF = new CL4V2IA32BEClassFactory();
+		else
+			pCF = new CL4V2BEClassFactory();
+	}
+	else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_FIASCO))
+	{
+		if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
+			pCF = new CL4FiascoAMD64BEClassFactory();
+		else
+			pCF = new CL4FiascoBEClassFactory();
+	}
+	else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V4))
+	{
+		if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_IA32))
+			pCF = new CL4V4IA32ClassFactory();
+		else
+			pCF = new CL4V4BEClassFactory();
+	}
+	else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_SOCKETS))
+		pCF = new CSockBEClassFactory();
+	assert(pCF);
 	return pCF;
 }
 
+/** \brief get the appropriate instance of the name factory
+ *  \return reference to name factory
+ */
 CBENameFactory* CFactoryFactory::GetNewNameFactory()
 {
-    CBENameFactory *pNF = 0;
-    if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V2))
-    {
-	if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
-	    pNF = new CL4V2AMD64BENameFactory();
+	CBENameFactory *pNF = 0;
+	if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V2))
+	{
+		if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
+			pNF = new CL4V2AMD64BENameFactory();
+		else
+			pNF = new CL4V2BENameFactory();
+	}
+	else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_FIASCO))
+	{
+		if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
+			pNF = new CL4FiascoAMD64BENameFactory();
+		else
+			pNF = new CL4FiascoBENameFactory();
+	}
+	else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V4))
+		pNF = new CL4V4BENameFactory();
 	else
-	    pNF = new CL4V2BENameFactory();
-    }
-    else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_FIASCO))
-    {
-	if (CCompiler::IsBackEndPlatformSet(PROGRAM_BE_AMD64))
-	    pNF = new CL4FiascoAMD64BENameFactory();
-	else
-	    pNF = new CL4FiascoBENameFactory();
-    }
-    else if (CCompiler::IsBackEndInterfaceSet(PROGRAM_BE_V4))
-        pNF = new CL4V4BENameFactory();
-    else
-        pNF = new CBENameFactory();
-    assert(pNF);
+		pNF = new CBENameFactory();
+	assert(pNF);
 	return pNF;
 }

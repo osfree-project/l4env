@@ -117,7 +117,7 @@ extract_symbols(l4_addr_t elf_image, unsigned sh_num, unsigned sh_entsize,
 		continue;
 
 	      str += sprintf(str, l4_addr_fmt"   %.100s\n",
-		  	     (l4_addr_t)sym->st_value, s_name);
+		             (l4_addr_t)sym->st_value, s_name);
 
 	      if (d)
 		free((void*)d);

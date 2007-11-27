@@ -45,31 +45,30 @@ class CBEMarshalExceptionFunction;
  */
 class CBESwitchCase : public CBEOperationFunction
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBESwitchCase();
-    virtual ~CBESwitchCase();
+	/** \brief constructor
+	 */
+	CBESwitchCase();
+	virtual ~CBESwitchCase();
 
 public:
-    virtual void Write(CBEFile& pFile);
-    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
+	virtual void Write(CBEFile& pFile);
+	virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 
-    virtual void SetMessageBufferType();
-    virtual void SetCallVariable(std::string sOriginalName, int nStars,
-	std::string sCallName);
+	virtual void SetMessageBufferType();
+	virtual void SetCallVariable(std::string sOriginalName, int nStars, std::string sCallName);
 
-    virtual bool DoWriteFunction(CBEFile* pFile);
+	virtual bool DoWriteFunction(CBEFile* pFile);
 
 protected:
-    virtual void WriteVariableInitialization(CBEFile& pFile, DIRECTION_TYPE nDirection);
-    virtual void WriteVariableDeclaration(CBEFile& pFile);
-    virtual void WriteCleanup(CBEFile& pFile);
-    virtual bool DoWriteVariable(CBETypedDeclarator *pParameter);
+	virtual void WriteVariableInitialization(CBEFile& pFile, DIRECTION_TYPE nDirection);
+	virtual void WriteVariableDeclaration(CBEFile& pFile);
+	virtual void WriteCleanup(CBEFile& pFile);
+	virtual bool DoWriteVariable(CBETypedDeclarator *pParameter);
 
-    virtual void WriteVariableInitialization(CBEFile& pFile);
-    virtual void WriteInvocation(CBEFile& pFile);
+	virtual void WriteVariableInitialization(CBEFile& pFile);
+	virtual void WriteInvocation(CBEFile& pFile);
 
 	virtual void WriteCaseStart(CBEFile& pFile);
 	virtual void WriteCaseEnd(CBEFile& pFile);
@@ -79,8 +78,14 @@ protected:
 	 */
 	class SetCallVariableCall
 	{
+		/** \var CBEFunction *f
+		 *  \brief the function object to use in the call
+		 */
 		CBEFunction *f;
 	public:
+		/** \brief constructor
+		 *  \param ff the function object
+		 */
 		SetCallVariableCall(CBEFunction *ff) : f(ff)
 		{ }
 
@@ -88,34 +93,34 @@ protected:
 	};
 
 protected:
-    /** \var bool m_bSameClass
-     *  \brief true if switch case is from the same class as the dispatcher function
-     */
-    bool m_bSameClass;
-    /** \var std::string m_sOpcode
-     *  \brief the opcode constant
-     */
-    std::string m_sOpcode;
+	/** \var bool m_bSameClass
+	 *  \brief true if switch case is from the same class as the dispatcher function
+	 */
+	bool m_bSameClass;
+	/** \var std::string m_sOpcode
+	 *  \brief the opcode constant
+	 */
+	std::string m_sOpcode;
 	/** \var std::string m_sUpper;
 	 *  \brief if this is a switch-case for a uuid-range, then store upper bound here
 	 */
 	std::string m_sUpper;
-    /** \var CBEUnmarshalFunction *m_pUnmarshalFunction
-     *  \brief a reference to the corresponding unmarshal function
-     */
-    CBEUnmarshalFunction *m_pUnmarshalFunction;
-    /** \var CBEMarshalFunction *m_pMarshalFunction
-     *  \brief a reference to the corresponding marshal function
-     */
-    CBEMarshalFunction *m_pMarshalFunction;
-    /** \var CBEMarshalExceptionFunction *m_pMarshalExceptionFunction
-     *  \brief a reference to the corresponding marshal function for exceptions
-     */
-    CBEMarshalExceptionFunction *m_pMarshalExceptionFunction;
-    /** \var CBEComponentFunction *m_pComponentFunction
-     *  \brief a reference to the corresponding component function
-     */
-    CBEComponentFunction *m_pComponentFunction;
+	/** \var CBEUnmarshalFunction *m_pUnmarshalFunction
+	 *  \brief a reference to the corresponding unmarshal function
+	 */
+	CBEUnmarshalFunction *m_pUnmarshalFunction;
+	/** \var CBEMarshalFunction *m_pMarshalFunction
+	 *  \brief a reference to the corresponding marshal function
+	 */
+	CBEMarshalFunction *m_pMarshalFunction;
+	/** \var CBEMarshalExceptionFunction *m_pMarshalExceptionFunction
+	 *  \brief a reference to the corresponding marshal function for exceptions
+	 */
+	CBEMarshalExceptionFunction *m_pMarshalExceptionFunction;
+	/** \var CBEComponentFunction *m_pComponentFunction
+	 *  \brief a reference to the corresponding component function
+	 */
+	CBEComponentFunction *m_pComponentFunction;
 };
 
 #endif // !__DICE_BESWITCHCASE_H__

@@ -75,7 +75,7 @@ int CL4V4BESizes::GetSizeOfType(int nFEType, int nFESize)
  *
  * Only test L4V4 specific type names. Leave the rest to the base class.
  */
-int CL4V4BESizes::GetSizeOfType(string sUserType)
+int CL4V4BESizes::GetSizeOfType(std::string sUserType)
 {
 	if (sUserType == "L4_Fpage_t")
 		return GetSizeOfType(TYPE_FLEXPAGE, 0);

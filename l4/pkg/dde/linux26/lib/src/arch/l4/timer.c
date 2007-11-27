@@ -1,6 +1,7 @@
 #include "local.h"
 
 #include <linux/timer.h>
+#include <linux/fs.h>
 
 DECLARE_INITVAR(dde26_timer);
 
@@ -142,12 +143,6 @@ void __ndelay(unsigned long nsecs)
 }
 
 
-void get_random_bytes(void *buf, int nbytes)
-{
-	*(char *)buf = 0;
-}
-
-
 void l4dde26_init_timers(void)
 {
 	ddekit_init_timers();
@@ -155,4 +150,17 @@ void l4dde26_init_timers(void)
 	l4dde26_process_from_ddekit(ddekit_get_timer_thread());
 
 	INITIALIZE_INITVAR(dde26_timer);
+}
+
+
+void do_gettimeofday (struct timeval *tv)
+{
+	WARN_UNIMPL;
+}
+
+struct timespec current_fs_time(struct super_block *sb)
+{
+	struct timespec now;
+	WARN_UNIMPL;
+	return now;
 }

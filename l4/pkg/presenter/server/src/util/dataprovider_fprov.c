@@ -27,7 +27,7 @@
 
 l4_threadid_t id = L4_INVALID_ID;
 static CORBA_Object _dice_corba_obj = &id;
-CORBA_Environment _dice_corba_env = dice_default_environment;
+// CORBA_Environment _dice_corba_env = dice_default_environment;
 
 static struct arraylist_services *arraylist;
 
@@ -77,6 +77,7 @@ static ARRAYLIST * dataprovider_load_config(char *fname) {
     l4_int32_t result;
     l4dm_dataspace_t ds;
     ARRAYLIST *list;
+	CORBA_Environment _dice_corba_env = dice_default_environment;
 
     result = l4fprov_file_open_call(_dice_corba_obj, fname, &L4DM_DEFAULT_DSM, 0,
                                     &ds, &ds_size, &_dice_corba_env);
@@ -109,6 +110,7 @@ static ARRAYLIST * dataprovider_load_config(char *fname) {
 static int dataprovider_load_content (char *fname, l4dm_dataspace_t *ds) {
     l4_int32_t result;
     l4_size_t size;
+	CORBA_Environment _dice_corba_env = dice_default_environment;
 
     LOGd(_DEBUG,"try to open %s",fname);
 

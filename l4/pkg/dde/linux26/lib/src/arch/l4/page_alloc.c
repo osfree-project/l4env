@@ -20,6 +20,7 @@
 /* Linux */
 #include <linux/gfp.h>
 #include <linux/string.h>
+#include <linux/pagevec.h>
 #include <asm/page.h>
 
 /* DDEKit */
@@ -29,6 +30,9 @@
 
 #include "local.h"
 
+unsigned long max_low_pfn;
+unsigned long min_low_pfn;
+unsigned long max_pfn;
 
 /*******************
  ** Configuration **
@@ -68,11 +72,29 @@ fastcall unsigned long get_zeroed_page(gfp_t gfp_mask)
 }
 
 
+void fastcall free_hot_page(struct page *page)
+{
+	WARN_UNIMPL;
+}
+
+
 fastcall void __free_pages(struct page *page, unsigned int order)
 {
 	WARN_UNIMPL;
 }
 
+void __pagevec_free(struct pagevec *pvec)
+{
+	WARN_UNIMPL;
+}
+
+int get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
+                   unsigned long start, int len, int write, int force,
+                   struct page **pages, struct vm_area_struct **vmas)
+{
+	WARN_UNIMPL;
+	return 0;
+}
 
 /**
  * ...
@@ -98,4 +120,11 @@ void *__va(unsigned long addr)
 	printk("__va not implemented!\n");
 	BUG();
 	return NULL;
+}
+
+
+int set_page_dirty_lock(struct page *page)
+{
+	WARN_UNIMPL;
+	return 0;
 }

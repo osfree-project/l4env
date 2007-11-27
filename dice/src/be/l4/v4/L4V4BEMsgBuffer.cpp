@@ -126,7 +126,7 @@ void CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile, CBEFunction *pFunctio
 	if (nType == TYPE_MSGDOPE_SIZE)
 		return;
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s for func %s and dir %d\n",
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s for func %s and dir %d\n",
 		__func__, pFunction ? pFunction->GetName().c_str() : "(no func)", (int)nStructType);
 
 	// if direction is 0 we have to get maximum of IN and OUT
@@ -142,10 +142,10 @@ void CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile, CBEFunction *pFunctio
 		if (nWordsOut < 0)
 			nWordsOut = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction, CMsgStructType::Out, true);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words out: %d\n", __func__,
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words out: %d\n", __func__,
 			nWordsOut);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words in: %d words out: %d\n",
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words in: %d words out: %d\n",
 			__func__, nWordsIn, nWordsOut);
 
 		if (nWordsIn >= 0 && nWordsOut >= 0)
@@ -153,13 +153,13 @@ void CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile, CBEFunction *pFunctio
 		else
 			nWords = std::min(nWordsIn, nWordsOut);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words: %d\n", __func__, nWords);
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words: %d\n", __func__, nWords);
 	}
 	else
 	{
 		nWords = CBEMsgBuffer::GetMemberSize(TYPE_MWORD, pFunction, nStructType, false);
 
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words: %d\n", __func__, nWords);
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words: %d\n", __func__, nWords);
 
 	}
 	nStrings = GetCount(pFunction, TYPE_REFSTRING, CMsgStructType::Generic);
@@ -168,8 +168,7 @@ void CL4V4BEMsgBuffer::WriteInitialization(CBEFile& pFile, CBEFunction *pFunctio
 	if (nWords >= 0)
 		nWords = std::max(nWords, nMinWords);
 
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "%s words (min): %d\n", __func__,
-		nWords);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEStructType::%s words (min): %d\n", __func__, nWords);
 
 	// get name of member
 	CBENameFactory *pNF = CBENameFactory::Instance();
@@ -291,12 +290,8 @@ CBETypedDeclarator* CL4V4BEMsgBuffer::GetMsgTagVariable()
  *  \param nType the type of the message buffer struct
  *  \return true if we wrote something, false if not
  */
-bool
-CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile,
-	CBEFunction *pFunction,
-	CBEClass *pClass,
-	int nIndex,
-	CMsgStructType nType)
+bool CL4V4BEMsgBuffer::WriteRefstringInitFunction(CBEFile& pFile, CBEFunction *pFunction, CBEClass *pClass,
+	int nIndex, CMsgStructType nType)
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	// check if this is server side, and if so, check for

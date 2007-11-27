@@ -313,9 +313,9 @@ update: l4env_update update.log
 	    $(SVN) update $(sort $(patsubst %/.svn,%,$(wildcard $(addsuffix /.svn,$(filter-out $(L4ENV_SUBDIRS),$(ALL_SUBDIRS)))))) 2>&1 | tee -a $(UPDATE_LOG)
 
 dice_update: update.log
-	$(VERBOSE)if [ -d $(DICEDIR) ] ; then \
-		$(call UPDATE_MESSAGE,$(DICEDIR)); \
-		cd $(DICEDIR) && $(SVN) update 2>&1 | tee -a $(UPDATE_LOG); \
+	$(VERBOSE)if [ -d $(DICE_SRCDIR) ] ; then \
+		$(call UPDATE_MESSAGE,$(DICE_SRCDIR)); \
+		cd $(DICE_SRCDIR) && $(SVN) update 2>&1 | tee -a $(UPDATE_LOG); \
 	fi
 
 l4env_tools_update: update.log

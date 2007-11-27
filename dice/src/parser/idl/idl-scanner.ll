@@ -512,40 +512,38 @@ wstring         return token::WSTRING;
 
 %%
 
-void
-idl_parser_driver::scan_begin ()
+void idl_parser_driver::scan_begin ()
 {
-    using dice::parser::CPreprocessor;
+	using dice::parser::CPreprocessor;
 
-    // save currently used input buffer
-    previousBuffer = YY_CURRENT_BUFFER;
+	// save currently used input buffer
+	previousBuffer = YY_CURRENT_BUFFER;
 
-    yy_flex_debug = trace_scanning;
-    CPreprocessor *pre = CPreprocessor::GetPreprocessor();
-    if (!(yyin = pre->Preprocess(file, lastPath)))
-	error (std::string ("cannot open ") + file);
+	yy_flex_debug = trace_scanning;
+	CPreprocessor *pre = CPreprocessor::GetPreprocessor();
+	if (!(yyin = pre->Preprocess(file, lastPath)))
+		error (std::string ("cannot open ") + file);
 
-    // only if we already parsed something, we need to switch to a new input
-    // buffer
-    if (previousBuffer)
-    {
-	yy_switch_to_buffer( yy_create_buffer( yyin, YY_BUF_SIZE ) );
-	BEGIN(INITIAL);
-    }
+	// only if we already parsed something, we need to switch to a new input
+	// buffer
+	if (previousBuffer)
+	{
+		yy_switch_to_buffer( yy_create_buffer( yyin, YY_BUF_SIZE ) );
+		BEGIN(INITIAL);
+	}
 }
 
-void
-idl_parser_driver::scan_end ()
+void idl_parser_driver::scan_end ()
 {
-    if (yyin)
-	fclose (yyin);
+	if (yyin)
+		fclose (yyin);
 
-    // if we stored a previous buffer, restore it
-    if (previousBuffer)
-    {
-	if (YY_CURRENT_BUFFER)
-	    yy_delete_buffer(YY_CURRENT_BUFFER);
-	yy_switch_to_buffer(previousBuffer);
-	previousBuffer = 0;
-    }
+	// if we stored a previous buffer, restore it
+	if (previousBuffer)
+	{
+		if (YY_CURRENT_BUFFER)
+			yy_delete_buffer(YY_CURRENT_BUFFER);
+		yy_switch_to_buffer(previousBuffer);
+		previousBuffer = 0;
+	}
 }

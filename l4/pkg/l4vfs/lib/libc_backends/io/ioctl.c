@@ -52,6 +52,7 @@ int ioctl( int fd, int cmd, ... )
 
     if (! ft_is_open(fd))
     {
+		LOG_Error("fd %d not open", fd);
         errno = EBADF;
         return -1;
     }
@@ -60,6 +61,7 @@ int ioctl( int fd, int cmd, ... )
 
     if (l4_is_invalid_id(fdesc.server_id))
     { // should not happen
+		LOG_Error("invalid server for fd");
         errno = EBADF;
         return -1;
     }

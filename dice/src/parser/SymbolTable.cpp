@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/parser/SymbolTable.coo
+ *  \file    dice/src/parser/SymbolTable.cpp
  *  \brief   contains the definition of symbol table
  *
  *  \date    06/21/2007
@@ -103,13 +103,16 @@ static std::string class_to_str(CSymbolTable::SymbolClass sym)
 }
 #endif
 
-void
-CSymbolTable::add(std::string name,
-	SymbolClass type,
-	CFEBase* context,
-	std::string file,
-	unsigned int line,
-	unsigned int column)
+/** \brief adds a new symbol to the symbol table
+ *  \param name the name of the symbol
+ *  \param type the type of the symbol
+ *  \param context the context of the symbol
+ *  \param file the file where the symbol was declared
+ *  \param line the line where the symbol was declared
+ *  \param column the column where the symbol was declared
+ */
+void CSymbolTable::add(std::string name, SymbolClass type, CFEBase* context, std::string file,
+	unsigned int line, unsigned int column)
 {
 	CSymTabEntry t;
 	t.name = name;
@@ -122,9 +125,15 @@ CSymbolTable::add(std::string name,
 	symtab.insert(std::pair<std::string, CSymTabEntry>(name, t));
 }
 
-bool
-CSymbolTable::check_context(symrange_t range,
-	CFEBase* context, SymbolClass type)
+/** \brief check if a symbol in a range has the given context and type
+ *  \param range a range of symbol previously obtained using the name of the
+ *		symbol
+ *  \param context the context of the symbol
+ *  \param type the type of the symbol
+ *  \return true if one of the symbols in \a range matches \a context and \a
+ *		type
+ */
+bool CSymbolTable::check_context(symrange_t range, CFEBase* context, SymbolClass type)
 {
 	symtab_t::iterator it;
 	for (it = range.first; it != range.second; it++)
@@ -136,9 +145,17 @@ CSymbolTable::check_context(symrange_t range,
 	return false;
 }
 
-bool
-CSymbolTable::check_context_in_file(symrange_t range,
-	CFEFile *file, SymbolClass type)
+/** \brief check if symbol in a range matches file and type
+ *  \param range a range of symbols previously obtained using the name of the
+ *		symbol
+ *  \param file the file to use as context
+ *  \param type the type of the symbol
+ *  \return true if one of the symbols in \a range matches
+ *
+ * This fuctions checks if one of the included files in \a file is the context
+ * of a symbol in \a range using \a check_context .
+ */
+bool CSymbolTable::check_context_in_file(symrange_t range, CFEFile *file, SymbolClass type)
 {
 	if (!file)
 		return false;
@@ -156,9 +173,13 @@ CSymbolTable::check_context_in_file(symrange_t range,
 	return false;
 }
 
-bool
-CSymbolTable::check(CFEBase* pCurrentContext,
-	std::string name, SymbolClass type)
+/** \brief check if the given name and type matches a symbol in the table
+ *  \param pCurrentContext the current active context
+ *  \param name the name of the symbol to find
+ *  \param type the type of the symbol to find
+ *	\return true if symbol found
+ */
+bool CSymbolTable::check(CFEBase* pCurrentContext, std::string name, SymbolClass type)
 {
 	if (symtab.find(name) == symtab.end())
 		return false;
@@ -192,9 +213,11 @@ CSymbolTable::check(CFEBase* pCurrentContext,
 	return false;
 }
 
-void
-CSymbolTable::change_context(CFEBase *pOriginal,
-	CFEBase* pNew)
+/** \brief replace a given original context with a new context
+ *  \param pOriginal the context to replace
+ *  \param pNew the context to replace with
+ */
+void CSymbolTable::change_context(CFEBase *pOriginal, CFEBase* pNew)
 {
 	symtab_t::iterator it;
 	for (it = symtab.begin(); it != symtab.end(); it++)

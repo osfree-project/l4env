@@ -6,6 +6,8 @@
 #ifndef __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__IPC_H__
 #define __L4SYS__INCLUDE__ARCH_ARM__L4API_L4V2__IPC_H__
 
+#define L4_IPC_CAPMAPMSG_BASE 0xf0000100   ///< Capability mapmsg base
+
 #include_next <l4/sys/ipc.h>
 
 #ifdef __GNUC__

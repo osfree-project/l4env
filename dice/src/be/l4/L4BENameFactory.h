@@ -41,48 +41,47 @@ class CBETypedDeclarator;
 class CL4BENameFactory : public CBENameFactory
 {
 
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CL4BENameFactory();
-    virtual ~CL4BENameFactory();
+	/** \brief constructor
+	 */
+	CL4BENameFactory();
+	virtual ~CL4BENameFactory();
 
-    /** \brief defines the value for the GetString method
-     */
-    enum
-    {
-	STR_RESULT_VAR = 1,		/**< IPC result variable */
-	STR_THREAD_ID_VAR,		/**< name for l4thread_t variable */
-	STR_INIT_RCVSTRING_FUNC,	/**< init receive string */
-	STR_MSGBUF_SIZE_CONST,		/**< size dope initializer */
-	STR_ZERO_FPAGE,			/**< zero fpage member */
-	STR_MSGTAG_VARIABLE,		/**< variable name of the MsgTag return variable */
-	STR_L4_MAX			/**< maximum value for L4 */
-    };
+	/** \brief defines the value for the GetString method
+	 */
+	enum
+	{
+		STR_RESULT_VAR = 1,		/**< IPC result variable */
+		STR_THREAD_ID_VAR,		/**< name for l4thread_t variable */
+		STR_INIT_RCVSTRING_FUNC,	/**< init receive string */
+		STR_MSGBUF_SIZE_CONST,		/**< size dope initializer */
+		STR_ZERO_FPAGE,			/**< zero fpage member */
+		STR_MSGTAG_VARIABLE,		/**< variable name of the MsgTag return variable */
+		STR_L4_MAX			/**< maximum value for L4 */
+	};
 
 public:
-    virtual std::string GetTypeName(int nType, bool bUnsigned,
-	int nSize = 0);
-    virtual std::string GetThreadIdVariable();
-    virtual std::string GetComponentIDVariable();
-    virtual std::string GetTimeoutServerVariable(CBEFunction *pFunction);
-    virtual std::string GetTimeoutClientVariable(CBEFunction *pFunction);
-    virtual std::string GetScheduleClientVariable();
-    virtual std::string GetScheduleServerVariable();
-    virtual std::string GetPartnerVariable();
-    virtual std::string GetString(int nStringCode,
-	void *pParam);
-    virtual std::string GetResultName();
-    virtual std::string GetZeroFpage();
-    virtual std::string GetMessageBufferMember(int nFEType);
-    virtual std::string GetInitRcvStringFunction(std::string sFuncName);
-    virtual std::string GetMsgBufferSizeDopeConst(CBETypedDeclarator* pMsgBuffer);
-    virtual std::string GetPaddingMember(int nPadType, int nPadToType);
-    virtual std::string GetMsgTagVariable();
+	virtual std::string GetTypeName(int nType, bool bUnsigned,
+		int nSize = 0);
+	virtual std::string GetThreadIdVariable();
+	virtual std::string GetComponentIDVariable();
+	virtual std::string GetTimeoutServerVariable(CBEFunction *pFunction);
+	virtual std::string GetTimeoutClientVariable(CBEFunction *pFunction);
+	virtual std::string GetScheduleClientVariable();
+	virtual std::string GetScheduleServerVariable();
+	virtual std::string GetPartnerVariable();
+	virtual std::string GetString(int nStringCode, void *pParam = 0);
+	virtual std::string GetResultName();
+	virtual std::string GetZeroFpage();
+	virtual std::string GetMessageBufferMember(int nFEType);
+	virtual std::string GetInitRcvStringFunction(std::string sFuncName);
+	virtual std::string GetMsgBufferSizeDopeConst(CBETypedDeclarator* pMsgBuffer);
+	virtual std::string GetPaddingMember(int nPadType, int nPadToType);
+	virtual std::string GetMsgTagVariable();
 
 protected:
-    virtual std::string StripL4Fixes(std::string sName);
+	virtual std::string StripL4Fixes(std::string sName);
 };
 
 #endif // !__DICE_L4BENAMEFACTORY_H__

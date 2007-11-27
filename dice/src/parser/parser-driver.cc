@@ -45,12 +45,10 @@ parser_driver::parser_driver()
     : trace_scanning(false),
       expectingToken(CSymbolTable::NONE),
       previousBuffer(0)
-{
-}
+{ }
 
 parser_driver::~parser_driver()
-{
-}
+{ }
 
 /** \brief try to determine the file type to use
  *  \param f the file name
@@ -58,69 +56,66 @@ parser_driver::~parser_driver()
  * Currently, this function just checks for "idl" and returns USE_FILE_IDL if
  * so. In all other cases it returns USE_FILE_C.
  */
-int
-parser_driver::determine_filetype(std::string f)
+int parser_driver::determine_filetype(std::string f)
 {
-    string ext = f.substr(f.rfind(".")+1);
-    std::transform(ext.begin(), ext.end(), ext.begin(), _tolower);
+	string ext = f.substr(f.rfind(".")+1);
+	std::transform(ext.begin(), ext.end(), ext.begin(), _tolower);
 
-    if (ext == "idl")
-	return USE_FILE_IDL;
-    return USE_FILE_C;
+	if (ext == "idl")
+		return USE_FILE_IDL;
+	return USE_FILE_C;
 }
 
 /** \brief import a file given in an import statement
  *  \param f the filename to import
- *  \param std true if standard include "<>"
+ *  \param std_inc true if standard include "<>"
  *
  * This function checks the file extension, and depending on that creates a
  * new parser object and calls its parse function. This function does nothing
  * if there is an error.
  */
-void
-parser_driver::import (std::string f, bool std_inc)
+void parser_driver::import (std::string f, bool std_inc)
 {
-    if (f.empty())
-	return;
+	if (f.empty())
+		return;
 
-    CFEFile *pFEFile = 0;
-    switch (determine_filetype(f))
-    {
-    case USE_FILE_IDL:
+	CFEFile *pFEFile = 0;
+	switch (determine_filetype(f))
 	{
-	    idl_parser_driver p;
-	    pFEFile = p.parse(f, false, std_inc);
+	case USE_FILE_IDL:
+		{
+			idl_parser_driver p;
+			pFEFile = p.parse(f, false, std_inc);
+		}
+		break;
+	case USE_FILE_C:
+		{
+			c_parser_driver p;
+			pFEFile = p.parse(f, false, std_inc);
+		}
+		break;
+	default:
+		break;
 	}
-	break;
-    case USE_FILE_C:
-	{
-	    c_parser_driver p;
-	    pFEFile = p.parse(f, false, std_inc);
-	}
-	break;
-    default:
-	break;
-    }
-    if (!pFEFile)
-	return; // only preprocessing
+	if (!pFEFile)
+		return; // only preprocessing
 
-    import_symbols(pFEFile);
+	import_symbols(pFEFile);
 }
 
 /** \brief import the symbols of an imported file into the current scope
  *  \param pFEFile the imported file
  */
-void
-parser_driver::import_symbols (CFEFile *pFEFile)
+void parser_driver::import_symbols (CFEFile *pFEFile)
 {
-    // XXX fast hack:
-    // replace occurrences of pFEFile in symbol table with current context
-    // -> import parsed symbols into local context scheme
-    if (getSymbolTable() && pCurrentFile)
-	getSymbolTable()->change_context(pFEFile, pCurrentFile);
+	// XXX fast hack:
+	// replace occurrences of pFEFile in symbol table with current context
+	// -> import parsed symbols into local context scheme
+	if (getSymbolTable() && pCurrentFile)
+		getSymbolTable()->change_context(pFEFile, pCurrentFile);
 
-    // a clean solution is to iterate the symbols in the file and add them to
-    // the current context in the current file.
+	// a clean solution is to iterate the symbols in the file and add them to
+	// the current context in the current file.
 }
 
 /** \brief enter a new file
@@ -128,6 +123,8 @@ parser_driver::import_symbols (CFEFile *pFEFile)
  *  \param new_line the linenumber where we start in the file
  *  \param std_inc true if standard include
  *  \param on_line is the line number in the original file
+ *  \param check_filetype false if check of file type should be omitted
+ *  \param set_path true if the path of the file object should be set
  *
  * We simply create a new AST file object, add it to the current file and set
  * the new file object as current file. To ensure that we do not switch the
@@ -142,51 +139,51 @@ parser_driver::enter_file (std::string new_file,
     bool check_filetype,
     bool set_path)
 {
-    if (trace_scanning)
-	std::cerr << "parser_driver::enter_file (" << new_file << ", " << new_line <<
-	    ", " << (std_inc ? "true" : "false") << ", " << on_line << ", " <<
-	    (check_filetype ? "true" : "false") << ", " <<
-	    (set_path ? "true" : "false") << ") called" << std::endl;
-    if (pCurrentFile && check_filetype &&
-	(determine_filetype(new_file) != determine_filetype(pCurrentFile->GetFileName())) )
-    {
-	std::ostringstream os;
-	os << pCurrentFile->GetFileName() << ":" << on_line
-	    << ": error: Cannot include file \"" << new_file << "\" with different file type."
-	    << std::endl;
-	os << "Use \'import \"" << new_file << "\"\' instead.";
-	error(os.str());
-    }
+	if (trace_scanning)
+		std::cerr << "parser_driver::enter_file (" << new_file << ", " << new_line <<
+			", " << (std_inc ? "true" : "false") << ", " << on_line << ", " <<
+			(check_filetype ? "true" : "false") << ", " <<
+			(set_path ? "true" : "false") << ") called" << std::endl;
+	if (pCurrentFile && check_filetype &&
+		(determine_filetype(new_file) != determine_filetype(pCurrentFile->GetFileName())) )
+	{
+		std::ostringstream os;
+		os << pCurrentFile->GetFileName() << ":" << on_line
+			<< ": error: Cannot include file \"" << new_file << "\" with different file type."
+			<< std::endl;
+		os << "Use \'import \"" << new_file << "\"\' instead.";
+		error(os.str());
+	}
 
-    std::string path;
-    if (set_path)
-    {
-	/* first, try to find the path in the name of the file (doing it the
-	 * other way around would allow to set two paths, or the same path
-	 * twice) */
-	path = CPreprocessor::GetPreprocessor()->FindIncludePathInName(new_file);
-	/* if that didn't work, reuse last path used to include the file */
-	if (path.empty())
-	    path = lastPath;
-	if (!path.empty() && new_file.find(path) == 0)
-	    new_file = new_file.substr(path.length());
-    }
-    if (trace_scanning)
-	std::cerr << "parser_driver::enter_file: create CFEFile(" << new_file << ", " <<
-	    path << ", " << new_line << ", " << (std_inc ? "true" : "false") << ")" << std::endl;
-    CFEFile *pNewFile = new CFEFile(new_file, path, new_line, std_inc);
-    pNewFile->m_sourceLoc.setLocation(pCurrentFile ? pCurrentFile->GetFileName() : "(null)",
-	on_line, 0, on_line, 0);
-    if (pCurrentFile)
-	pCurrentFile->m_ChildFiles.Add(pNewFile);
-    pCurrentFile = pNewFile;
+	std::string path;
+	if (set_path)
+	{
+		/* first, try to find the path in the name of the file (doing it the
+		 * other way around would allow to set two paths, or the same path
+		 * twice) */
+		path = CPreprocessor::GetPreprocessor()->FindIncludePathInName(new_file);
+		/* if that didn't work, reuse last path used to include the file */
+		if (path.empty())
+			path = lastPath;
+		if (!path.empty() && new_file.find(path) == 0)
+			new_file = new_file.substr(path.length());
+	}
+	if (trace_scanning)
+		std::cerr << "parser_driver::enter_file: create CFEFile(" << new_file << ", " <<
+			path << ", " << new_line << ", " << (std_inc ? "true" : "false") << ")" << std::endl;
+	CFEFile *pNewFile = new CFEFile(new_file, path, new_line, std_inc);
+	pNewFile->m_sourceLoc.setLocation(pCurrentFile ? pCurrentFile->GetFileName() : "(null)",
+		on_line, 0, on_line, 0);
+	if (pCurrentFile)
+		pCurrentFile->m_ChildFiles.Add(pNewFile);
+	pCurrentFile = pNewFile;
 
-    // current file is current context now
-    setCurrentContext(pCurrentFile);
+	// current file is current context now
+	setCurrentContext(pCurrentFile);
 
-    if (trace_scanning)
-	std::cerr << "parser_driver::enter_file: " << pCurrentFile->GetFileName() <<
-	    " is current file" << std::endl;
+	if (trace_scanning)
+		std::cerr << "parser_driver::enter_file: " << pCurrentFile->GetFileName() <<
+			" is current file" << std::endl;
 }
 
 /** \brief leave current file

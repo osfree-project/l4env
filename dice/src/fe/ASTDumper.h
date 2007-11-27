@@ -33,12 +33,15 @@
 #include "Visitor.h"
 #include <fstream>
 
-/** \class CASTDumper
+/** \class ASTDumper
  *  \ingroup frontend
  *  \brief class to check the consistency of the AST after parsing
  */
 class ASTDumper : public CVisitor
 {
+	/** \var std::ofstream o
+	 *  \brief output stream
+	 */
     std::ofstream o;
 public:
     /** empty default constructor */

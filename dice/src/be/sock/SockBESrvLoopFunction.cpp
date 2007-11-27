@@ -47,6 +47,7 @@ CSockBESrvLoopFunction::~CSockBESrvLoopFunction()
 
 /** \brief creates the server loop function for the given interface
  *  \param pFEInterface the respective front-end interface
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if successful
  */
 void CSockBESrvLoopFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)

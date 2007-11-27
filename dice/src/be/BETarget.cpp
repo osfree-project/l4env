@@ -57,7 +57,7 @@
 
 CBETarget::CBETarget()
 : m_HeaderFiles(0, this),
-  m_ImplementationFiles(0, this)
+	m_ImplementationFiles(0, this)
 { }
 
 /** \brief destructor of target class */
@@ -242,9 +242,7 @@ bool CBETarget::AddConstantToFile(CBEFile& pFile, CFEConstDeclarator * pFEConsta
 	try
 	{
 		CBEHeaderFile& pF = dynamic_cast<CBEHeaderFile&>(pFile);
-		CBERoot *pRoot = GetSpecificParent<CBERoot>();
-		assert(pRoot);
-		CBEConstant *pConstant = pRoot->FindConstant(pFEConstant->GetName());
+		CBEConstant *pConstant = FindConstant(pFEConstant->GetName());
 		if (!pConstant)
 		{
 			pConstant = CBEClassFactory::Instance()->GetNewConstant();
@@ -398,7 +396,7 @@ bool CBETarget::AddTypedefToFile(CBEFile& pFile, CFETypedDeclarator * pFETypedDe
 		CBERoot *pRoot = GetSpecificParent<CBERoot>();
 		assert(pRoot);
 		CFEDeclarator *pDecl = pFETypedDeclarator->m_Declarators.First();
-		CBETypedef *pTypedef = pRoot->FindTypedef(pDecl->GetName());
+		CBETypedef *pTypedef = FindTypedef(pDecl->GetName());
 		assert(pTypedef);
 		pF.m_Typedefs.Add(pTypedef);
 	}
@@ -455,14 +453,14 @@ CBEHeaderFile* CBETarget::FindHeaderFile(CFELibrary * pFELibrary, FILE_TYPE nFil
  */
 CBEHeaderFile*
 CBETarget::FindHeaderFile(CFEInterface * pFEInterface,
-    FILE_TYPE nFileType)
+	FILE_TYPE nFileType)
 {
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    // get file name
-    CFEFile *pFEFile = pFEInterface->GetSpecificParent<CFEFile>(0);
-    string sFileName = pNF->GetFileName(pFEFile, nFileType);
-    // search file
-    return m_HeaderFiles.Find(sFileName);
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	// get file name
+	CFEFile *pFEFile = pFEInterface->GetSpecificParent<CFEFile>(0);
+	string sFileName = pNF->GetFileName(pFEFile, nFileType);
+	// search file
+	return m_HeaderFiles.Find(sFileName);
 }
 
 /** \brief finds a header file which belongs to a certain front-end operation
@@ -474,73 +472,14 @@ CBETarget::FindHeaderFile(CFEInterface * pFEInterface,
  * file-name based on the front-end operation and this name is used to find
  * the file.
  */
-CBEHeaderFile*
-CBETarget::FindHeaderFile(CFEOperation * pFEOperation,
-    FILE_TYPE nFileType)
+CBEHeaderFile* CBETarget::FindHeaderFile(CFEOperation * pFEOperation, FILE_TYPE nFileType)
 {
-    // get file name
-    CBENameFactory *pNF = CBENameFactory::Instance();
-    CFEFile *pFEFile = pFEOperation->GetSpecificParent<CFEFile>(0);
-    string sFileName = pNF->GetFileName(pFEFile, nFileType);
-    // search file
-    return m_HeaderFiles.Find(sFileName);
-}
-
-/** \brief tries to find the typedef with a type of the given name
- *  \param sTypeName the name to search for
- *  \return a reference to the searched typedef or 0
- *
- * To find a typedef, we iterate over the header files and check them.
- * (Implementation file cannot contain typedefs).
- */
-CBETypedef *CBETarget::FindTypedef(string sTypeName)
-{
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETarget::%s(%s) called\n",
-	__func__, sTypeName.c_str());
-
-    CBETypedef *pRet = 0;
-    vector<CBEHeaderFile*>::iterator iter;
-    for (iter = m_HeaderFiles.begin();
-	 iter != m_HeaderFiles.end();
-	 iter++)
-    {
-        pRet = (*iter)->m_Typedefs.Find(sTypeName);
-    }
-
-    CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBETarget::%s returns %p\n",
-	__func__, pRet);
-    return pRet;
-}
-
-/** \brief tries to find the function with the given function name
- *  \param sFunctionName the name to search for
- *  \param nFunctionType the type of the function to find
- *  \return a reference to the found function or 0 if not found
- *
- * To find a function, we iterate over the header files and the implementation
- * files.
- */
-CBEFunction *CBETarget::FindFunction(string sFunctionName,
-    FUNCTION_TYPE nFunctionType)
-{
-    CBEFunction *pRet = 0;
-    // search header files
-    vector<CBEHeaderFile*>::iterator iterH;
-    for (iterH = m_HeaderFiles.begin();
-	 iterH != m_HeaderFiles.end() && !pRet;
-	 iterH++)
-    {
-        pRet = (*iterH)->FindFunction(sFunctionName, nFunctionType);
-    }
-    // search implementation files
-    vector<CBEImplementationFile*>::iterator iterI;
-    for (iterI = m_ImplementationFiles.begin();
-	 iterI != m_ImplementationFiles.end() && !pRet;
-	 iterI++)
-    {
-        pRet = (*iterI)->FindFunction(sFunctionName, nFunctionType);
-    }
-    return pRet;
+	// get file name
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	CFEFile *pFEFile = pFEOperation->GetSpecificParent<CFEFile>(0);
+	string sFileName = pNF->GetFileName(pFEFile, nFileType);
+	// search file
+	return m_HeaderFiles.Find(sFileName);
 }
 
 /** \brief creates the back-end classes for this target
@@ -550,26 +489,26 @@ CBEFunction *CBETarget::FindFunction(string sFunctionName,
 void
 CBETarget::CreateBackEnd(CFEFile *pFEFile)
 {
-    // if argument is 0, we assume a mistaken include file
-    if (!pFEFile)
-    {
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s aborted because front-end file is 0\n",
-	    __func__);
-        return;
-    }
-    // if file is not IDL file we simply return "no error", because C files
-    // might also be included files
-    if (!pFEFile->IsIDLFile())
-    {
-        CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s aborted because front-end file (%s) is not IDL file\n",
-	    __func__, pFEFile->GetFileName().c_str());
-        return;
-    }
+	// if argument is 0, we assume a mistaken include file
+	if (!pFEFile)
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s aborted because front-end file is 0\n",
+			__func__);
+		return;
+	}
+	// if file is not IDL file we simply return "no error", because C files
+	// might also be included files
+	if (!pFEFile->IsIDLFile())
+	{
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s aborted because front-end file (%s) is not IDL file\n",
+			__func__, pFEFile->GetFileName().c_str());
+		return;
+	}
 
-    // create header file(s)
-    CreateBackEndHeader(pFEFile);
-    // create implementation file(s)
-    CreateBackEndImplementation(pFEFile);
+	// create header file(s)
+	CreateBackEndHeader(pFEFile);
+	// create implementation file(s)
+	CreateBackEndImplementation(pFEFile);
 }
 
 /** \brief prints all generated target file name to the given output
@@ -579,22 +518,22 @@ CBETarget::CreateBackEnd(CFEFile *pFEFile)
  */
 void CBETarget::PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol)
 {
-    // iterate over implementation files
-    vector<CBEHeaderFile*>::iterator iterH;
-    for (iterH = m_HeaderFiles.begin();
-	 iterH != m_HeaderFiles.end();
-	 iterH++)
-    {
-        PrintTargetFileName(output, (*iterH)->GetFileName(), nCurCol, nMaxCol);
-    }
-    // iterate over header files
-    vector<CBEImplementationFile*>::iterator iterI;
-    for (iterI = m_ImplementationFiles.begin();
-	 iterI != m_ImplementationFiles.end();
-	 iterI++)
-    {
-        PrintTargetFileName(output, (*iterI)->GetFileName(), nCurCol, nMaxCol);
-    }
+	// iterate over implementation files
+	vector<CBEHeaderFile*>::iterator iterH;
+	for (iterH = m_HeaderFiles.begin();
+		iterH != m_HeaderFiles.end();
+		iterH++)
+	{
+		PrintTargetFileName(output, (*iterH)->GetFileName(), nCurCol, nMaxCol);
+	}
+	// iterate over header files
+	vector<CBEImplementationFile*>::iterator iterI;
+	for (iterI = m_ImplementationFiles.begin();
+		iterI != m_ImplementationFiles.end();
+		iterI++)
+	{
+		PrintTargetFileName(output, (*iterI)->GetFileName(), nCurCol, nMaxCol);
+	}
 }
 
 /** \brief prints the current filename
@@ -603,16 +542,16 @@ void CBETarget::PrintTargetFiles(ostream& output, int &nCurCol, int nMaxCol)
  *  \param nCurCol the current output column
  *  \param nMaxCol the maximum output column
  */
-void CBETarget::PrintTargetFileName(ostream& output, string sFilename,
-    int &nCurCol, int nMaxCol)
+void CBETarget::PrintTargetFileName(ostream& output, std::string sFilename,
+	int &nCurCol, int nMaxCol)
 {
-    nCurCol += sFilename.length();
-    if (nCurCol > nMaxCol)
-    {
-	output << "\\\n ";
-        nCurCol = sFilename.length()+1;
-    }
-    output << sFilename << " ";
+	nCurCol += sFilename.length();
+	if (nCurCol > nMaxCol)
+	{
+		output << "\\\n ";
+		nCurCol = sFilename.length()+1;
+	}
+	output << sFilename << " ";
 }
 
 /** \brief tests if this target has a function with a given type
@@ -623,17 +562,17 @@ void CBETarget::PrintTargetFileName(ostream& output, string sFilename,
  * user defined type. Since all functions are declared in the header files,
  * we only need to search those.
  */
-bool CBETarget::HasFunctionWithUserType(string sTypeName)
+bool CBETarget::HasFunctionWithUserType(std::string sTypeName)
 {
-    vector<CBEHeaderFile*>::iterator iter;
-    for (iter = m_HeaderFiles.begin();
-	 iter != m_HeaderFiles.end();
-	 iter++)
-    {
-        if ((*iter)->HasFunctionWithUserType(sTypeName))
-            return true;
-    }
-    return false;
+	vector<CBEHeaderFile*>::iterator iter;
+	for (iter = m_HeaderFiles.begin();
+		iter != m_HeaderFiles.end();
+		iter++)
+	{
+		if ((*iter)->HasFunctionWithUserType(sTypeName))
+			return true;
+	}
+	return false;
 }
 
 /** \brief check if we add the object of the included files to this target
@@ -643,5 +582,5 @@ bool CBETarget::HasFunctionWithUserType(string sTypeName)
  */
 bool CBETarget::DoAddIncludedFiles()
 {
-    return CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL);
+	return CCompiler::IsFileOptionSet(PROGRAM_FILE_ALL);
 }

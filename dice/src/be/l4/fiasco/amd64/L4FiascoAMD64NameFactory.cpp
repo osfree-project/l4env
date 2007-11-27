@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/be/l4/fiasco/amd64/FiascoAMD64NameFactory.cpp
+ *  \file    dice/src/be/l4/fiasco/amd64/L4FiascoAMD64NameFactory.cpp
  *  \brief   contains the implementation of the class CL4FiascoAMD64BENameFactory
  *
  *  \date    08/24/2007

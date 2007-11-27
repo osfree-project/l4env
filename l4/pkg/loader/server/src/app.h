@@ -124,6 +124,6 @@ int  init_infopage(l4env_infopage_t *env);
 int  app_attach_ds_to_pager(app_t *app, l4dm_dataspace_t *ds, l4_addr_t addr,
                             l4_size_t size, l4_uint16_t type,
 			    l4_uint32_t rights,
-			    int attach, const char *dbg_name, app_area_t **aa);
+			    const char *dbg_name, app_area_t **aa);
 
 #endif

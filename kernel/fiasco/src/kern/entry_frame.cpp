@@ -17,6 +17,7 @@ class Return_frame
 {
 public:
   Mword ip() const;
+  Mword ip_syscall_page_user() const;
   void  ip(Mword _pc);
 
   Mword sp() const;

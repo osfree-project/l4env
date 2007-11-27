@@ -90,27 +90,10 @@ public:
 		CDeclStack* pStack, CBEFunction *pUsingFunc);
 	virtual void WriteDeclaration(CBEFile& pFile);
 
-	/** \brief return the tag
-	 *  \return the tag
-	 */
-	std::string GetTag()
-	{ return m_sTag; }
-	/** \brief tests if this union has the given tag
-	 *  \param sTag the tag to test for
-	 *  \return true if the given tag is the same as the member tag
-	 */
-	bool HasTag(std::string sTag)
-	{ return (m_sTag == sTag); }
-	/** \brief test if this is a simple type
-	 *  \return false
-	 */
-	virtual bool IsSimpleType()
-	{ return false; }
-	/** \brief checks if this is a constructed type
-	 *  \return true, because a union is usually regarded a constructed type
-	 */
-	virtual bool IsConstructedType()
-	{ return true; }
+	virtual std::string GetTag();
+	virtual bool HasTag(std::string sTag);
+	virtual bool IsSimpleType();
+	virtual bool IsConstructedType();
 
 protected:
 	/** \var std::string m_sTag

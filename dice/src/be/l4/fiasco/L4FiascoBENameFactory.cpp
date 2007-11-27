@@ -27,8 +27,11 @@
  */
 
 #include "L4FiascoBENameFactory.h"
+#include "be/BEClass.h"
+#include "be/BETypedDeclarator.h"
 #include "TypeSpec-Type.h"
 #include "Compiler.h"
+#include <cassert>
 
 CL4FiascoBENameFactory::CL4FiascoBENameFactory()
  : CL4BENameFactory()
@@ -44,10 +47,7 @@ CL4FiascoBENameFactory::~CL4FiascoBENameFactory()
  *  \param bUnsigned true if the type is unsigned
  *  \param nSize the size of the type
  */
-string
-CL4FiascoBENameFactory::GetTypeName(int nType,
-    bool bUnsigned,
-    int nSize)
+string CL4FiascoBENameFactory::GetTypeName(int nType, bool bUnsigned, int nSize)
 {
     string sReturn;
     switch (nType)
@@ -71,8 +71,78 @@ CL4FiascoBENameFactory::GetTypeName(int nType,
  *
  * The generic L4 name factory has no idea what a message tag variable is.
  */
-string
-CL4FiascoBENameFactory::GetMsgTagVariable()
+string CL4FiascoBENameFactory::GetMsgTagVariable()
 {
     return string("_dice_tag");
 }
+
+/** \brief generates the variable of the client side timeout
+ *  \param pFunction the function needing this variable
+ *  \return the name of the variable
+ *
+ * Check for the timeout attribute and use the environment's timeout if given.
+ * Otherwise construt the default client timeout.
+ */
+string CL4FiascoBENameFactory::GetTimeoutClientVariable(CBEFunction* pFunction)
+{
+	if (pFunction->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT))
+		return string("L4_IPC_NEVER");
+
+	return CL4BENameFactory::GetTimeoutClientVariable(pFunction);
+}
+
+/** \brief generates the variable of the component side timeout
+ *  \param pFunction the function needing this variable
+ *  \return the name of the variable
+ *
+ * Check for the timeout attribute and use the environment's timeout if given.
+ * Otherwise construt the default server timeout.
+ */
+string CL4FiascoBENameFactory::GetTimeoutServerVariable(CBEFunction* pFunction)
+{
+	CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
+	assert(pClass);
+
+	if (pClass->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT))
+		return string("L4_IPC_SEND_TIMEOUT_0");
+
+	return CL4BENameFactory::GetTimeoutServerVariable(pFunction);
+}
+
+/** \brief general access function to generate strings
+ *  \param nStringCode specifying the requested code
+ *  \param pParam additional untyped parameter
+ *  \return generated name
+ *
+ * This function multiplexes the request to the functions of this class'
+ * implementation.
+ */
+string CL4FiascoBENameFactory::GetString(int nStringCode, void *pParam)
+{
+	switch (nStringCode)
+	{
+	case STR_UTCB_INITIALIZER:
+		return GetUtcbInitializer(static_cast<CBEFunction*>(pParam));
+		break;
+	default:
+		break;
+	}
+	return CL4BENameFactory::GetString(nStringCode, pParam);
+}
+
+/** \brief return the string to get the UTCB address
+ *  \return string containing the getter
+ */
+string CL4FiascoBENameFactory::GetUtcbInitializer(CBEFunction *pFunction)
+{
+	CBETypedDeclarator *pEnv = pFunction->GetEnvironment();
+	CBEDeclarator *pEnvDecl = pEnv->m_Declarators.First();
+	string sRet = pEnvDecl->GetName();
+	if (pEnvDecl->GetStars())
+		sRet += "->";
+	else
+		sRet += ".";
+	sRet += "utcb->values";
+	return sRet;
+}
+

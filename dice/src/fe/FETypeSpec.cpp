@@ -86,7 +86,7 @@ bool CFETypeSpec::IsPointerType()
 /** \brief add attributes to a type
  *  \param pAttributes
  */
-void CFETypeSpec::AddAttributes(vector<CFEAttribute*> *pAttributes)
+void CFETypeSpec::AddAttributes(std::vector<CFEAttribute*> *pAttributes)
 {
 	m_Attributes.Add(pAttributes);
 }

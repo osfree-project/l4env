@@ -69,8 +69,7 @@ public: // public methods
 	virtual void PostCreate(CBEClass *pClass, CFEInterface *pFEInterface);
 	virtual void PostCreate(CBEFunction *pFunction, CFEOperation *pFEOperation);
 
-	void AddReturnVariable(CBEFunction *pFunction,
-		CBETypedDeclarator *pReturn = 0);
+	void AddReturnVariable(CBEFunction *pFunction, CBETypedDeclarator *pReturn = 0);
 	virtual void AddPlatformSpecificMembers(CBEFunction *pFunction);
 	virtual void AddPlatformSpecificMembers(CBEClass *pClass);
 
@@ -98,10 +97,15 @@ public: // public methods
 	virtual CBETypedDeclarator* FindMember(std::string sName,
 		CBEFunction *pFunction, CMsgStructType nType);
 	virtual int GetMemberPosition(std::string sName, CMsgStructType nType);
+	virtual CBETypedDeclarator* GetMemberAt(CMsgStructType nType, int nIndex);
 
 	virtual int GetMemberSize(int nType, CBEFunction *pFunction,
 		CMsgStructType nStructType, bool bMax);
 	virtual int GetMemberSize(int nType);
+	using CBETypedef::GetSize;
+	virtual int GetSize(CBEFunction *pFunction, CMsgStructType nType);
+	using CBETypedef::GetMaxSize;
+	virtual bool GetMaxSize(int & nSize, CBEFunction *pFunction, CMsgStructType nType);
 
 	virtual bool IsEarlier(CBEFunction *pFunction, CMsgStructType nType,
 		std::string sName1, std::string sName2);
@@ -137,8 +141,7 @@ protected: // protected methods
 
 	virtual void Pad();
 	virtual void SortPayload(CBEStructType *pStruct);
-	virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst,
-		CBETypedDeclarator *pSecond);
+	virtual bool DoExchangeMembers(CBETypedDeclarator *pFirst, CBETypedDeclarator *pSecond);
 
 	void WriteAccess(CBEFile& pFile, CBEFunction *pFunction, CMsgStructType nType,
 		CBETypedDeclarator *pMember);
@@ -152,11 +155,22 @@ protected: // protected methods
 	 */
 	class TypeCount
 	{
+		/** \var int t
+		 *  \brief the type to count
+		 */
 		int t;
 	public:
+		/** \brief constructor
+		 *  \param type the type to count
+		 */
 		TypeCount(int type) : t(type)
 		{ }
 
+		/** \brief operator that is invoked when iterating the members of
+		 *		message buffer
+		 *  \param pMember the member to check for type
+		 *  \return true if has type
+		 */
 		bool operator() (CBETypedDeclarator *pMember)
 		{
 			return pMember->GetType()->IsOfType(t) ||
@@ -169,11 +183,21 @@ protected: // protected methods
 	 */
 	class MemFind
 	{
+		/** \var std::string _s
+		 *  \brief the name to use for searching a member
+		 */
 		std::string _s;
 	public:
+		/** \brief constructor
+		 *  \param s the string used to compare the name of a member
+		 */
 		MemFind(std::string s) : _s(s)
 		{ }
 
+		/** \brief test if the given member has the stored name
+		 *  \param pMember the member to test
+		 *  \return true if member has declarator with name
+		 */
 		bool operator() (CBETypedDeclarator *pMember)
 		{
 			return pMember && pMember->m_Declarators.Find(_s);

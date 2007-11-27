@@ -39,11 +39,17 @@
 class CFEInterfaceComponent : public CFEFileComponent
 {
 protected:
+	/** copy constructor
+	 *  \param src the source to copy from
+	 */
 	CFEInterfaceComponent(CFEInterfaceComponent* src)
 		: CFEFileComponent(src)
 	{ }
 
 public:
+	/** constructor
+	 *  \param pParent the parent of the interface component
+	 */
 	CFEInterfaceComponent(CObject *pParent)
 		: CFEFileComponent(pParent)
 	{ }

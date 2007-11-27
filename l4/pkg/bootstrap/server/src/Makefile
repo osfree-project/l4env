@@ -1,10 +1,9 @@
 PKGDIR		?= ../..
 L4DIR		?= $(PKGDIR)/../..
 
-#DEFAULT_RELOC_arm := 0x02000000
-DEFAULT_RELOC_arm := 0x01400000
-
-LINK_ADDR	 = 0x002d0000
+DEFAULT_RELOC_arm   := 0x01400000
+DEFAULT_RELOC_x86   := 0x002d0000
+DEFAULT_RELOC_amd64 := 0x002d0000
 
 include $(L4DIR)/mk/Makeconf
 -include $(OBJ_DIR)/Makeconf.local
@@ -213,7 +212,7 @@ startup.o: $(STARTUP_C_dep)
 
 $(LDSCRIPT): $(LDSCRIPT).in $(SRC_DIR)/Makefile $(BOOTSTRAP_LD_dep)
 	@$(GEN_MESSAGE)
-	$(VERBOSE)cpp -P $(CPPFLAGS) -DLINKADDR=$(LINK_ADDR) $< $@;
+	$(VERBOSE)cpp -P $(CPPFLAGS) -DLINKADDR=$(DEFAULT_RELOC_$(ARCH)) $< $@;
 
 ifneq ($(SYSTEM),)
 

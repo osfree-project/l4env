@@ -67,8 +67,7 @@ CBEUserDefinedType* CBEUserDefinedType::Clone()
 /** \brief creates a user defined type
  *  \param sName the name of the type
  */
-void
-CBEUserDefinedType::CreateBackEnd(string sName)
+void CBEUserDefinedType::CreateBackEnd(std::string sName)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEUserDefinedType::%s(%s) called\n", __func__, sName.c_str());
@@ -168,14 +167,12 @@ CBEUserDefinedType::CreateBackEnd(CFETypeSpec * pFEType)
  * This implementation finds the root of the tree and then searches downward
  * for the type.
  */
-int CBEUserDefinedType::GetSizeOfTypedef(string sTypeName)
+int CBEUserDefinedType::GetSizeOfTypedef(std::string sTypeName)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEUserDefinedType::%s(%s) called\n", __func__, sTypeName.c_str());
 
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
+	CBETypedef *pTypedef = FindTypedef(sTypeName);
 	if (!pTypedef)
 	{
 		// try to find size at CBESizes
@@ -215,14 +212,12 @@ int CBEUserDefinedType::GetSizeOfTypedef(string sTypeName)
  * This implementation finds the root of the tree and then searches downward
  * for the type.
  */
-int CBEUserDefinedType::GetMaxSizeOfTypedef(string sTypeName)
+int CBEUserDefinedType::GetMaxSizeOfTypedef(std::string sTypeName)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEUserDefinedType::%s(%s) called\n", __func__, sTypeName.c_str());
 
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
+	CBETypedef *pTypedef = FindTypedef(sTypeName);
 	if (!pTypedef)
 	{
 		// try to find size at CBESizes
@@ -472,9 +467,7 @@ CBEType* CBEUserDefinedType::GetRealType()
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEUserDefinedType::%s called\n", __func__);
 
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
+	CBETypedef *pTypedef = FindTypedef(m_sName);
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBEUserDefinedType::%s found typedef for %s at %p\n",
 		__func__, m_sName.c_str(), pTypedef);
@@ -492,9 +485,7 @@ CBEType* CBEUserDefinedType::GetRealType()
  */
 CBEDeclarator* CBEUserDefinedType::GetRealName()
 {
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	CBETypedef *pTypedef = pRoot->FindTypedef(m_sName);
+	CBETypedef *pTypedef = FindTypedef(m_sName);
 	if (pTypedef)
 		return pTypedef->m_Declarators.First();
 	return 0;

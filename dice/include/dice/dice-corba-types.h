@@ -165,7 +165,7 @@ typedef struct CORBA_Environment
 {
     dice_CORBA_exception_type _exception;
     void *param;
-    
+
     in_port_t srv_port;
     int cur_socket;
     void* user_data;
@@ -177,7 +177,7 @@ typedef struct CORBA_Environment
     unsigned short ptrs_cur;
 
     struct timeval receive_timeout;
-    
+
 #ifdef __cplusplus
     CORBA_Environment();
     // effective C++ warnings
@@ -190,7 +190,9 @@ private:
 NAMESPACE_DICE_END
 
 #define CORBA_Server_Environment CORBA_Environment
-#elif defined(L4API_l4v2) || defined(L4API_l4x0) 
+#elif defined(L4API_l4v2) || defined(L4API_l4x0)
+
+#include <l4/sys/utcb.h>
 
 NAMESPACE_DICE_BEG
 
@@ -199,55 +201,57 @@ typedef void (*dice_free_func)(void*);
 
 typedef struct CORBA_Environment
 {
-    dice_CORBA_exception_type _exception;
-    union
-    {
-    	void *param;
-	l4_uint32_t ipc_error;
-	l4_uint32_t sched_bits;
-    } _p;
-  
-    l4_timeout_t timeout;
-    l4_fpage_t rcv_fpage;
-    dice_malloc_func malloc;
-    dice_free_func free;
+	dice_CORBA_exception_type _exception;
+	union
+	{
+		void *param;
+		l4_uint32_t ipc_error;
+		l4_uint32_t sched_bits;
+	} _p;
+
+	l4_timeout_t timeout;
+	l4_fpage_t rcv_fpage;
+	l4_utcb_t *utcb;
+	dice_malloc_func malloc;
+	dice_free_func free;
 
 #ifdef __cplusplus
-    CORBA_Environment();
-    // effective C++ warnings
+	CORBA_Environment();
+	// effective C++ warnings
 private:
-    CORBA_Environment(const CORBA_Environment &);
-    CORBA_Environment& operator=(const CORBA_Environment &);
+	CORBA_Environment(const CORBA_Environment &);
+	CORBA_Environment& operator=(const CORBA_Environment &);
 #endif
 } CORBA_Environment;
 
 typedef struct CORBA_Server_Environment
 {
-    dice_CORBA_exception_type _exception;
-    union
-    {
-      	void *param;
-	l4_uint32_t ipc_error;
-	l4_uint32_t sched_bits;
-    } _p;
-    
-    l4_timeout_t timeout;
-    l4_fpage_t rcv_fpage;
-    dice_malloc_func malloc;
-    dice_free_func free;
-  
-    // server specific
-    CORBA_Object_base partner;
-    void* user_data;
-    void* ptrs[DICE_PTRS_MAX];
-    unsigned short ptrs_cur;
+	dice_CORBA_exception_type _exception;
+	union
+	{
+		void *param;
+		l4_uint32_t ipc_error;
+		l4_uint32_t sched_bits;
+	} _p;
+
+	l4_timeout_t timeout;
+	l4_fpage_t rcv_fpage;
+	l4_utcb_t *utcb;
+	dice_malloc_func malloc;
+	dice_free_func free;
+
+	// server specific
+	CORBA_Object_base partner;
+	void* user_data;
+	void* ptrs[DICE_PTRS_MAX];
+	unsigned short ptrs_cur;
 
 #ifdef __cplusplus
-    CORBA_Server_Environment();
-    // effective C++ warnings
+	CORBA_Server_Environment();
+	// effective C++ warnings
 private:
-    CORBA_Server_Environment(const CORBA_Server_Environment &);
-    CORBA_Server_Environment& operator=(const CORBA_Server_Environment &);
+	CORBA_Server_Environment(const CORBA_Server_Environment &);
+	CORBA_Server_Environment& operator=(const CORBA_Server_Environment &);
 #endif
 } CORBA_Server_Environment;
 
@@ -262,55 +266,55 @@ typedef void (*dice_free_func)(void*);
 
 typedef struct CORBA_Environment
 {
-    dice_CORBA_exception_type _exception;
-    union
-    {
-      	void *param;
-	L4_Word32_t ipc_error;
-	L4_Word32_t sched_bits;
-    } _p;
-  
-    L4_Time_t timeout;
-    L4_Fpage_t rcv_fpage;
-    dice_malloc_func malloc;
-    dice_free_func free;
+	dice_CORBA_exception_type _exception;
+	union
+	{
+		void *param;
+		L4_Word32_t ipc_error;
+		L4_Word32_t sched_bits;
+	} _p;
+
+	L4_Time_t timeout;
+	L4_Fpage_t rcv_fpage;
+	dice_malloc_func malloc;
+	dice_free_func free;
 
 #ifdef __cplusplus
-    CORBA_Environment();
-    // effective C++ warnings
+	CORBA_Environment();
+	// effective C++ warnings
 private:
-    CORBA_Environment(const CORBA_Environment &);
-    CORBA_Environment& operator=(const CORBA_Environment &);
+	CORBA_Environment(const CORBA_Environment &);
+	CORBA_Environment& operator=(const CORBA_Environment &);
 #endif
 } CORBA_Environment;
 
 typedef struct CORBA_Server_Environment
 {
-    dice_CORBA_exception_type _exception;
-    union
-    {
-      	void *param;
-	L4_Word32_t ipc_error;
-	L4_Word32_t sched_bits;
-    } _p;
-    
-    L4_Time_t timeout;
-    L4_Fpage_t rcv_fpage;
-    dice_malloc_func malloc;
-    dice_free_func free;
-    
-    // server specific
-    CORBA_Object_base partner;
-    void* user_data;
-    void* ptrs[DICE_PTRS_MAX];
-    unsigned short ptrs_cur;
-    
+	dice_CORBA_exception_type _exception;
+	union
+	{
+		void *param;
+		L4_Word32_t ipc_error;
+		L4_Word32_t sched_bits;
+	} _p;
+
+	L4_Time_t timeout;
+	L4_Fpage_t rcv_fpage;
+	dice_malloc_func malloc;
+	dice_free_func free;
+
+	// server specific
+	CORBA_Object_base partner;
+	void* user_data;
+	void* ptrs[DICE_PTRS_MAX];
+	unsigned short ptrs_cur;
+
 #ifdef __cplusplus
-    CORBA_Server_Environment();
-    // effective C++ warnings
+	CORBA_Server_Environment();
+	// effective C++ warnings
 private:
-    CORBA_Server_Environment(const CORBA_Server_Environment &);
-    CORBA_Server_Environment& operator=(const CORBA_Server_Environment &);
+	CORBA_Server_Environment(const CORBA_Server_Environment &);
+	CORBA_Server_Environment& operator=(const CORBA_Server_Environment &);
 #endif
 } CORBA_Server_Environment;
 
@@ -332,7 +336,7 @@ NAMESPACE_DICE_END
 /** \def access exception ipc error member */
 #define DICE_IPC_ERROR(env) (env)->_p.ipc_error
 
-#else 
+#else
 
 /** \def access exception param member */
 #define DICE_EXCEPTION_PARAM(env) (env)->param
@@ -349,7 +353,7 @@ NAMESPACE_DICE_END
 /** \def check if there is exception at all */
 #define DICE_HAS_EXCEPTION(env) \
     (DICE_EXCEPTION_MAJOR(env) != CORBA_NO_EXCEPTION)
-    
+
 /** \def check if no exception occured */
 #define DICE_IS_NO_EXCEPTION(env) \
     DICE_IS_EXCEPTION(env, CORBA_NO_EXCEPTION)
@@ -391,7 +395,7 @@ NAMESPACE_DICE_BEG
  *
  * \return 1 if they are equal
 */
-DICE_INLINE int 
+DICE_INLINE int
 dice_is_obj_equal(CORBA_Object o1, CORBA_Object o2);
 
 #if defined(L4API_l4v2) || defined(L4API_l4x0) || defined(L4API_l4x2) || defined(L4API_l4v4)

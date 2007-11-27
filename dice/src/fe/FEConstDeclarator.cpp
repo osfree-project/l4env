@@ -37,7 +37,7 @@
 #include <cassert>
 
 CFEConstDeclarator::CFEConstDeclarator(CFETypeSpec * pConstType,
-	string sConstName,
+	std::string sConstName,
 	CFEExpression * pConstValue)
 : CFEInterfaceComponent(static_cast<CObject*>(0)),
 	m_pConstType(pConstType),
@@ -90,7 +90,7 @@ string CFEConstDeclarator::GetName()
  *  \param sName the name to match
  *  \return true if matches, false otherwise
  */
-bool CFEConstDeclarator::Match(string sName)
+bool CFEConstDeclarator::Match(std::string sName)
 {
 	return GetName() == sName;
 }

@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/be/l4/L4FiascoBEWaitAnyFunction.h
+ *  \file    dice/src/be/l4/fiasco/L4FiascoBEWaitAnyFunction.h
  *  \brief   contains the declaration of the class CL4FiascoBEWaitAnyFunction
  *
  *  \date    08/24/2007
@@ -50,6 +50,7 @@ public:
     virtual ~CL4FiascoBEWaitAnyFunction();
 
 protected:
+	virtual void WriteUnmarshalling(CBEFile& pFile);
     virtual void AddBeforeParameters();
 };
 

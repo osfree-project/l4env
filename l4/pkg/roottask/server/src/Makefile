@@ -34,15 +34,6 @@ WARNINGS_cfg-parse.o = -Wno-unused -Wno-parentheses \
 include $(L4DIR)/mk/prog.mk
 
 
-ifeq ($(USE_DIETLIBC),y)
-LIBCLIBS        = -nostdlib $(GCCLDNOSTDLIB)                    \
-		  -ldiet_c                                      \
-		  -ldietlibc_support                            \
-		  -ldiet_be_minimal_io                          \
-		  -ldiet_be_l4_start_stop                       \
-		  -ldiet_c -ll4util				\
-		  -ldiet_c $(GCCLIB) -ldiet_c -llist_alloc
-else
 LIBCLIBS        = -nostdlib $(GCCLDNOSTDLIB)                    \
 		  -luc_c                                        \
 		  -luclibc_support                              \
@@ -50,7 +41,7 @@ LIBCLIBS        = -nostdlib $(GCCLDNOSTDLIB)                    \
 		  -luc_be_l4_start_stop                         \
 		  -luc_c -ll4util				\
 		  -luc_c $(GCCLIB) -luc_c -llist_alloc
-endif
+
 L4LIBS          = -lsigma0 -ll4sys
 
 SERVERIDL	= rmgr.idl

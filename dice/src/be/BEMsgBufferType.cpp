@@ -32,6 +32,8 @@
 #include "BEStructType.h"
 #include "BEUnionCase.h"
 #include "BEFunction.h"
+#include "BEWaitFunction.h"
+#include "BEUnmarshalFunction.h"
 #include "BEDeclarator.h"
 #include "BEClass.h"
 #include "BEMsgBuffer.h"
@@ -41,7 +43,6 @@
 #include "BEExpression.h"
 #include "BENameFactory.h"
 #include "BESizes.h"
-#include "BERoot.h"
 #include "Compiler.h"
 #include "Error.h"
 #include "Messages.h"
@@ -117,8 +118,7 @@ CBEMsgBufferType::CreateBackEnd(CFEOperation *pFEOperation)
  * So message buffers are different for client and server and we therefore
  * have to create separate structs for the class.
  */
-void
-CBEMsgBufferType::CreateBackEnd(CFEInterface *pFEInterface)
+void CBEMsgBufferType::CreateBackEnd(CFEInterface *pFEInterface)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s(fe-if) called\n",	__func__);
@@ -140,8 +140,7 @@ CBEMsgBufferType::CreateBackEnd(CFEInterface *pFEInterface)
  * This function merely iterator the operations of an interface and the base
  * interfaces if any exist.
  */
-void
-CBEMsgBufferType::AddStruct(CFEInterface *pFEInterface)
+void CBEMsgBufferType::AddStruct(CFEInterface *pFEInterface)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s(fe-if) called\n", __func__);
@@ -196,9 +195,7 @@ void CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation)
  * # variable sized elements should be combined into word array
  *   (also regard maximum size of buffer)
  */
-void
-CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
-	CMsgStructType nType)
+void CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation, CMsgStructType nType)
 {
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	assert(pFEOperation);
@@ -240,9 +237,7 @@ CBEMsgBufferType::AddStruct(CFEOperation *pFEOperation,
  * client.  The parameter (the buffer) is OUT and we still need an IN size
  * element for it.
  */
-void
-CBEMsgBufferType::AddElements(CFEOperation *pFEOperation,
-	CMsgStructType nType)
+void CBEMsgBufferType::AddElements(CFEOperation *pFEOperation, CMsgStructType nType)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s called for %s\n", __func__,
@@ -296,9 +291,7 @@ CBEMsgBufferType::AddElements(CFEOperation *pFEOperation,
  * parameters. If this message belongs to a class, we create the parameters
  * anew and add them directly to the struct.
  */
-void
-CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
-	CMsgStructType nType)
+void CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter, CMsgStructType nType)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s(%s, %d) called\n", __func__,
@@ -365,9 +358,7 @@ CBEMsgBufferType::AddElement(CFETypedDeclarator *pFEParameter,
  *  \param pStruct the struct to add to
  *  \param pParameter the parameter to add
  */
-void
-CBEMsgBufferType::AddElement(CBEStructType *pStruct,
-	CBETypedDeclarator *pParameter)
+void CBEMsgBufferType::AddElement(CBEStructType *pStruct, CBETypedDeclarator *pParameter)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s for param %s called\n",
@@ -379,14 +370,11 @@ CBEMsgBufferType::AddElement(CBEStructType *pStruct,
 	// as well (the parameter's transmit-as overrides the one of the alias)
 	if (!pAttr)
 	{
-		CBERoot *pRoot = GetSpecificParent<CBERoot>();
-		assert(pRoot);
-
 		CBEType *pType = pParameter->GetType();
 		while (!pAttr && pType->IsOfType(TYPE_USER_DEFINED))
 		{
 			string sName = static_cast<CBEUserDefinedType*>(pType)->GetName();
-			CBETypedef *pTypedef = pRoot->FindTypedef(sName);
+			CBETypedef *pTypedef = FindTypedef(sName);
 			if (pTypedef)
 			{
 				pAttr = pTypedef->m_Attributes.Find(ATTR_TRANSMIT_AS);
@@ -453,8 +441,7 @@ CBEMsgBufferType::AddElement(CBEStructType *pStruct,
  *  \param pFERefObj the front-end reference object
  *  \return true if successful
  */
-bool
-CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
+bool CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
 {
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// struct type
@@ -486,7 +473,7 @@ CBEMsgBufferType::AddGenericStruct(CFEBase *pFERefObj)
  * We first try to find the struct including the function name. If it is not
  * found, we search for the name without the function name.
  */
-CBEStructType* CBEMsgBufferType::GetStruct(string sFuncName, string sClassName, CMsgStructType nType)
+CBEStructType* CBEMsgBufferType::GetStruct(std::string sFuncName, std::string sClassName, CMsgStructType nType)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s called for func %s, class %s and %d\n", __func__,
@@ -526,15 +513,12 @@ CBEStructType* CBEMsgBufferType::GetStruct(string sFuncName, string sClassName, 
  * Also, arrays with pointers, should have a maximum attribute. Use that as
  * array bounds. ([out] parameters have one additional pointer.)
  */
-void
-CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
-	CBEStructType *pStruct)
+void CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter, CBEStructType *pStruct)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMsgBufferType::%s(param: %s, struct: %p) called\n",
 		__func__, pParameter->m_Declarators.First()->GetName().c_str(),
 		pStruct);
-
 
 	CBEDeclarator *pDecl = pParameter->m_Declarators.First();
 
@@ -619,7 +603,6 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
 			pType->CreateBackEnd(false, 0, TYPE_CHAR);
 			pParameter->ReplaceType(pType);
 		}
-
 		// return here, because the following is not done concurrently with
 		// this branch
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -637,79 +620,6 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
 		if ((*iterB)->GetIntValue() == 0)
 			nEmptyBounds++;
 	}
-
-
-	// gcc extensions allow to use parameters as sizes of arrays
-	// declared on the function stack. For [in] arrays with size_is, we
-	// use the size_is value as array boundary.
-	//
-	// If no stars but array bounds, rely on those and get the hell outa
-	// here
-	//
-	//     \todo: variable sized arrays should be placed into a byte array and
-	//     be marshalled/unmarshalled with offset variables.
-	//     Because this is not done yet, the size_is size of the array cannot
-	//     be applied if two variable sized arrays are used: the second starts
-	//     at the sender's side right behind the size of the first, but on the
-	//     receiver's side, the max-is size is used for the first array.
-	//
-	// check out if the parent of the message buffer (a function) is at the
-	// client or server side. At the server side this message buffer is
-	// probably global (exceptions to this rule have to be handled when they
-	// arise).
-	//     CBEFunction *pFunc = GetSpecificParent<CBEFunction>();
-	//     bool bGlobal = (pFunc) ? pFunc->IsComponentSide() : true;
-	//     if ((pParameter->m_Attributes.Find(ATTR_SIZE_IS) ||
-	// 	 pParameter->m_Attributes.Find(ATTR_LENGTH_IS)) &&
-	// 	!pParameter->m_Attributes.Find(ATTR_OUT) &&
-	// 	!((pDecl->GetStars() == 0) &&
-	// 	  (pDecl->GetArrayDimensionCount() > nEmptyBounds)) &&
-	// 	!bGlobal)
-	//     {
-	// 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-	// 	    "CBEMsgBufferType::%s param has unbound array dimensions\n",
-	// 	    __func__);
-	// 	// check for stars that have to be removed
-	// 	if (pDecl->GetStars() > 0)
-	// 	    pDecl->IncStars(-1);
-	// 	// add size_is parameter as array bound
-	// 	CBEAttribute *pAttr = pParameter->m_Attributes.Find(ATTR_SIZE_IS);
-	// 	if (!pAttr)
-	// 	    pAttr = pParameter->m_Attributes.Find(ATTR_LENGTH_IS);
-	// 	CBEExpression *pExpr = pCF->GetNewExpression();
-	// 	if (pAttr->IsOfType(ATTR_CLASS_INT))
-	// 	{
-	// 	    pExpr->CreateBackEnd(pAttr->GetIntValue());
-	// 	}
-	// 	else if (pAttr->IsOfType(ATTR_CLASS_IS))
-	// 	{
-	// 	    CBEDeclarator *pIsDecl = pAttr->m_Parameters.First();
-	// 	    pExpr->CreateBackEnd(pIsDecl->GetName());
-	// 	}
-	// 	else
-	// 	    pExpr->CreateBackEnd(0);
-	// 	// look for empty bound and remove it (it will be replaced by new
-	// 	// boundary
-	// 	if (nEmptyBounds > 0)
-	// 	{
-	// 	    for (iterB = pDecl->m_Bounds.begin();
-	// 		 iterB != pDecl->m_Bounds.end();
-	// 		 iterB++)
-	// 	    {
-	// 		if ((*iterB)->GetIntValue() == 0)
-	// 		{
-	// 		    pDecl->RemoveArrayBound(*iterB);
-	// 		    break;
-	// 		}
-	// 	    }
-	// 	}
-	// 	pDecl->AddArrayBound(pExpr);
-	//
-	// 	// return here
-	// 	CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-	// 	    "CBEMsgBufferType::%s array fixed, returns\n", __func__);
-	// 	return;
-	//     }
 
 	// handle arrays: if we have a max_is and no array bounds, we add the
 	// max_is as array bound.
@@ -771,10 +681,28 @@ CBEMsgBufferType::FlattenElement(CBETypedDeclarator *pParameter,
 			pDecl->AddArrayBound(pExpr);
 		}
 
+		// CBEWaitFunction and CBEUnmarshalFunction add a star to the
+		// parameter depending on the absence of array dimensionsi and that it
+		// is an IN parameter. Now, that we added a array dimension, we can
+		// remove the star.
+		CBEFunction *pFunction = GetSpecificParent<CBEFunction>();
+		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s check func %s\n", __func__,
+			pFunction ? pFunction->GetName().c_str() : "(none)");
+		if (dynamic_cast<CBEWaitFunction*>(pFunction) ||
+			dynamic_cast<CBEUnmarshalFunction*>(pFunction))
+		{
+			ATTR_TYPE nAttribute = (pFunction->GetReceiveDirection() == CMsgStructType::In) ? ATTR_IN : ATTR_OUT;
+			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMsgBufferType::%s param has attribute %s? %s\n",
+				__func__, (nAttribute == ATTR_IN) ? "IN" : "OUT",
+				pParameter->m_Attributes.Find(nAttribute) ? "yes" : "no");
+			if (pParameter->m_Attributes.Find(nAttribute))
+				pDecl->IncStars(-1);
+		}
+
 		// return here
 		CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
-			"CBEMsgBufferType::%s empty array fixed, returns\n",
-			__func__);
+			"CBEMsgBufferType::%s empty array fixed (%d stars left for %s), returns\n",
+			__func__, pDecl->GetStars(), pDecl->GetName().c_str());
 		return;
 	}
 
@@ -995,11 +923,8 @@ CBEMsgBufferType::GetStartOfPayload(CBEStructType* pStruct)
  * Have to clone struct, so parent relationship and deletion works properly.
  * Otherwise we would have to introduce special case handling in CBEUnionCase.
  */
-void
-CBEMsgBufferType::AddStruct(CBEStructType *pStruct,
-	CMsgStructType nType,
-	string sFunctionName,
-	string sClassName)
+void CBEMsgBufferType::AddStruct(CBEStructType *pStruct, CMsgStructType nType, std::string sFunctionName,
+	std::string sClassName)
 {
 	CBEClassFactory *pCF = CBEClassFactory::Instance();
 	// clone struct type
@@ -1236,9 +1161,7 @@ CBEMsgBufferType::CheckElementForString(CBETypedDeclarator *pParameter,
  * switch variable. If one exists, we have to extend the string-size
  * evaluation by a test if the member is really used.
  */
-string
-CBEMsgBufferType::CreateInitStringForString(CBEFunction *pFunction,
-	CDeclStack* pStack)
+std::string CBEMsgBufferType::CreateInitStringForString(CBEFunction *pFunction, CDeclStack* pStack)
 {
 	string sUnionStrPre, sUnionStrSuf;
 	// if stack is longer than one element, then there might be a member of a
@@ -1313,11 +1236,16 @@ CBEMsgBufferType::CreateInitStringForString(CBEFunction *pFunction,
 	return sInitStr;
 }
 
-bool
-CBEMsgBufferType::CreateInitStringForStringIDLUnion(CBETypedDeclarator*& pParameter,
-	string& sUnionStrPre,
-	string& sUnionStrSuf,
-	CDeclStack::iterator& iter,
+/** \brief create an init string for a string in an IDL union
+ *  \param pParameter the parameter with the IDL union as type
+ *  \retval sUnionStrPre the init string prefix
+ *  \retval sUnionStrSuf the init string suffix
+ *  \param iter the iterator pointing to the current union member
+ *  \param vStack the declarator stack
+ *  \return true if we modified something
+ */
+bool CBEMsgBufferType::CreateInitStringForStringIDLUnion(CBETypedDeclarator*& pParameter,
+	std::string& sUnionStrPre, std::string& sUnionStrSuf, CDeclStack::iterator& iter,
 	CDeclStack& vStack)
 {
 	CBEType *pType = pParameter->GetType();

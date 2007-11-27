@@ -1,10 +1,11 @@
 
 #include <l4/sys/types.h>
 #include <l4/sys/ipc.h>
-#include <l4/util/rdtsc.h>
 #include <l4/util/util.h>
 #include <l4/util/rand.h>
+#ifdef BENCH_x86
 #include <l4/util/idt.h>
+#endif
 
 #include <stdio.h>
 #include <setjmp.h>
@@ -20,26 +21,82 @@ static jmp_buf memcpy_jmp_buf;
 
 
 static l4_cpu_time_t
-memcpy_standard_byte(char *dst, char const *src, l4_size_t size)
+memcpy_c_byte(char *dst, char const *src, l4_size_t size)
 {
   l4_cpu_time_t start, stop;
   register char *d=dst;
   register const char *s=src;
 
-  printf("   %-38s","memcpy_standard_byte:");
+  printf("   %-38s","memcpy_c_byte:");
 
-  start = l4_rdtsc();
+  start = get_clocks();
   ++size;
   while (--size)
     {
       *d = *s;
       ++d; ++s;
     }
-  stop = l4_rdtsc();
+  stop = get_clocks();
 
   return stop - start;
 }
 
+static l4_cpu_time_t
+memcpy_c_word(char *dst, char const *src, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+  register unsigned int *d = (unsigned int *)dst;
+  register const unsigned int *s = (unsigned int *)src;
+
+  printf("   %-38s","memcpy_c_word:");
+
+  start = get_clocks();
+  while (size > 4)
+    {
+      *d = *s;
+      ++d; ++s;
+      size -= 4;
+    }
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+static l4_cpu_time_t
+memcpy_c_word_unroll(char *dst, char const *src, l4_size_t size)
+{
+  l4_cpu_time_t start, stop;
+  register unsigned int *d = (unsigned int *)dst;
+  register const unsigned int *s = (unsigned int *)src;
+
+  printf("   %-38s","memcpy_c_word_unroll:");
+
+  start = get_clocks();
+  while (size > 16)
+    {
+      register unsigned int r1 = *(s + 0);
+      register unsigned int r2 = *(s + 1);
+      register unsigned int r3 = *(s + 2);
+      register unsigned int r4 = *(s + 3);
+      *(d + 0) = r1;
+      *(d + 1) = r2;
+      *(d + 2) = r3;
+      *(d + 3) = r4;
+      d += 4; s += 4;
+      size -= 16;
+    }
+  while (size > 4)
+    {
+      *d = *s;
+      ++d; ++s;
+      size -= 4;
+    }
+  stop = get_clocks();
+
+  return stop - start;
+}
+
+#ifdef BENCH_x86
 static l4_cpu_time_t
 memcpy_standard_rep_byte(char *dst, char const *src, l4_size_t size)
 {
@@ -341,6 +398,7 @@ fast_memcpy_sse(char *dst, char const *src, l4_size_t size)
 
   return stop - start;
 }
+#endif
 
 static void
 test_memcpy(memcpy_t memcpy)
@@ -364,8 +422,9 @@ test_memcpy(memcpy_t memcpy)
 	puts("Implementation error!");
       else
 	{
+#ifdef BENCH_x86
 	  unsigned mb_s     = (unsigned)(((l4_uint64_t)SCRATCH_MEM_SIZE/2) / 
-				         l4_tsc_to_us(time));
+				         clocks_to_us(time));
 	  unsigned cy1000_b = (unsigned)(1000*time/
 				         ((l4_uint64_t)SCRATCH_MEM_SIZE/2));
 	  unsigned cy_b     = cy1000_b / 1000;
@@ -373,12 +432,17 @@ test_memcpy(memcpy_t memcpy)
 	  cy1000_b -= 1000*cy_b;
 	  printf("Memory (copy): %4uMB/s (%u.%03ucy/B)\n", 
 	      mb_s, cy_b, cy1000_b);
+#else
+	  printf("Memory (copy): %4llukB/s\n",
+	      ((l4_uint64_t)SCRATCH_MEM_SIZE/2)*1024 / clocks_to_us(time));
+#endif
 	}
     }
   else
     puts("Not applicable (invalid opcode)");
 }
 
+#ifdef BENCH_x86
 void
 exception6_c_handler(void)
 {
@@ -391,10 +455,12 @@ asm ("exception6_handler:          \n\t"
      "call   exception6_c_handler  \n\t"
      "popa                         \n\t"
      "iret                         \n\t");
+#endif
 
 static void
 test_mem_bandwidth_thread(void)
 {
+#ifdef BENCH_x86
   static struct
     {
       l4util_idt_header_t header;
@@ -404,10 +470,14 @@ test_mem_bandwidth_thread(void)
   l4util_idt_init (&idt.header, 0x20);
   l4util_idt_entry(&idt.header, 6, exception6_handler);
   l4util_idt_load (&idt.header);
+#endif
 
   printf(">> m: Testing memory bandwidth (CPU %dMHz):\n", mhz);
 
-  test_memcpy(memcpy_standard_byte);
+  test_memcpy(memcpy_c_byte);
+  test_memcpy(memcpy_c_word);
+  test_memcpy(memcpy_c_word_unroll);
+#ifdef BENCH_x86
   test_memcpy(memcpy_standard_rep_byte);
   test_memcpy(memcpy_standard_rep_word);
   test_memcpy(memcpy_standard_rep_word_prefetch);
@@ -416,6 +486,7 @@ test_mem_bandwidth_thread(void)
   test_memcpy(fast_memcpy_mmx2_32);
   test_memcpy(fast_memcpy_mmx2_64);
   test_memcpy(fast_memcpy_sse);
+#endif
 
   call(main_id);
 

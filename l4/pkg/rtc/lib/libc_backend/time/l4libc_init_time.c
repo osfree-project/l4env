@@ -1,6 +1,6 @@
 /**
- * \file   dietlibc/lib/backends/time/l4libc_init_time.c
- * \brief  
+ * \file   rtc/lib/libc_backends/time/l4libc_init_time.c
+ * \brief  init function
  *
  * \date   08/10/2004
  * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
@@ -12,12 +12,11 @@
 #include <sys/time.h>
 #include <errno.h>
 
-#include <l4/util/rdtsc.h>
 #include <l4/rtc/rtc.h>
-
 #include <l4/crtx/ctor.h>
-
 #include <l4/log/l4log.h>
+
+#include "gettime.h"
 
 #ifdef DEBUG
 static int _DEBUG = 1;
@@ -32,7 +31,8 @@ void l4libc_init_time(void)
 {
     int ret;
     LOGd(_DEBUG, "Init. time backend ...");
-    l4_calibrate_tsc();
+
+    libc_backend_rtc_init();
 
     ret = l4rtc_get_offset_to_realtime(&offset);
 

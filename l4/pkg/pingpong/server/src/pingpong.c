@@ -20,16 +20,15 @@
 #include <l4/sigma0/kip.h>
 #include <l4/rmgr/librmgr.h>
 #include <l4/util/util.h>
-#include <l4/util/rdtsc.h>
 #include <l4/util/parse_cmd.h>
 #include <l4/util/bitops.h>
 #include <l4/util/reboot.h>
 #include <l4/util/l4_macros.h>
-#include <l4/util/port_io.h>
 #include <l4/util/irq.h>
 #include <l4/sigma0/sigma0.h>
-#ifdef USE_DIETLIBC
-#include <l4/env_support/getchar.h>
+
+#ifdef BENCH_x86
+#include <l4/util/port_io.h>
 #endif
 
 #include "global.h"
@@ -63,6 +62,7 @@ int cold;
 int pager_always_map_writable;
 int ux_running;
 int fiasco_running;
+int cross_cpu;
 
 static int dont_do_sysenter;
 static int dont_do_kipcalls;
@@ -80,6 +80,7 @@ static unsigned char ping_stack[STACKSIZE] __attribute__((aligned(4096)));
 static void
 test_timer_frequency(void)
 {
+#ifdef BENCH_x86
   asm volatile ("movl  (%%ebx), %%ecx	\n\t"
 		"1:			\n\t"
 		"cmpl  (%%ebx), %%ecx	\n\t"
@@ -98,6 +99,10 @@ test_timer_frequency(void)
 		:"=a"(timer_hz), "=c"(timer_resolution)
 		:"b" (&kip->clock)
 		:"edx");
+#else
+  timer_hz = 1;
+  timer_resolution = 1;
+#endif
 }
 
 /** Guess kernel by looking at kernel info page version number. */
@@ -110,7 +115,11 @@ detect_kernel(void)
       return;
     }
 
+#ifdef ARCH_amd64
+  printf("Kernel version %08llx: ", kip->version);
+#else
   printf("Kernel version %08x: ", kip->version);
+#endif
   switch (kip->version)
     {
     case 21000:
@@ -128,7 +137,7 @@ detect_kernel(void)
       dont_do_kipcalls = 1;
       break;
     case L4SIGMA0_KIP_VERSION_FIASCO:
-      if (strstr(l4sigma0_kip_version_string(), "(ux)"))
+      if (l4sigma0_kip_kernel_is_ux())
 	{
 	  puts("Fiasco-UX");
 	  ux_running = 1;
@@ -137,6 +146,9 @@ detect_kernel(void)
       else
 	puts("Fiasco");
       fiasco_running = 1;
+#ifndef BENCH_x86
+      dont_do_kipcalls = 1;
+#endif
       break;
     default:
       puts("Unknown");
@@ -157,6 +169,7 @@ detect_kernel(void)
 static void
 detect_sysenter(void)
 {
+#ifdef BENCH_x86
   if (!dont_do_sysenter)
     {
       asm volatile ("xorl  %%eax,%%eax	\n\t"
@@ -178,6 +191,9 @@ detect_sysenter(void)
 		    :
 		    : "eax","ebx","edx","memory");
     }
+#else
+  dont_do_sysenter = 1;
+#endif
 }
 
 /** Determine if kernel supports KIP calls. */
@@ -191,6 +207,7 @@ detect_kipcalls(void)
 void do_sleep(void);
 extern void asm_do_sleep(void);
 
+#ifdef BENCH_x86
 /** "shutdown" thread. */
 void __attribute__((noreturn))
 do_sleep(void)
@@ -209,6 +226,13 @@ do_sleep(void)
 	   : : : "memory");
     }
 }
+#else
+void asm_do_sleep(void)
+{
+  while (1)
+    l4_sleep_forever();
+}
+#endif
 
 /* keymap without shift */
 static const unsigned char keymap[] =
@@ -222,11 +246,14 @@ static const unsigned char keymap[] =
 static int getchar_multi(void)
 {
   int ch;
+#ifdef ARCH_x86
   unsigned long flags;
   l4util_flags_save(&flags);
+#endif
 
   while (1)
     {
+#ifdef ARCH_x86
       if (!ux_running && l4util_in8(0x64) & 0x01)
         {
           /* keyboard character available */
@@ -240,6 +267,7 @@ static int getchar_multi(void)
           ch = keymap[scancode];
           goto out;
         }
+#endif
 
       if ((ch = l4kd_inchar()) != -1)
         goto out;
@@ -248,7 +276,9 @@ static int getchar_multi(void)
     }
 
 out:
+#ifdef ARCH_x86
   l4util_flags_restore(&flags);
+#endif
   return ch;
 }
 
@@ -294,6 +324,15 @@ move_to_small_space(l4_threadid_t id, int nr)
   l4_thread_schedule(id, sched, &foo, &foo, &sched);
 }
 
+void
+touch_pages(void)
+{
+  /* prevent page faults */
+  l4_touch_ro(&_stext, &_etext-&_stext);
+  l4_touch_rw(&_etext, &_end-&_etext);
+
+  l4_touch_ro(kip, sizeof(*kip));
+}
 
 /** Create thread.
  * \param  id            Thread Id
@@ -314,8 +353,9 @@ create_thread(l4_threadid_t id, l4_umword_t eip, l4_umword_t esp,
 			  L4_THREAD_EX_REGS_NO_CANCEL);
 
   /* create thread */
-  l4_thread_ex_regs(id,eip,esp,&preempter,&new_pager,
-		    &dummy,&dummy,&dummy);
+  l4_thread_ex_regs_flags(id,eip,esp,&preempter,&new_pager,
+		    &dummy,&dummy,&dummy,
+                    ((cross_cpu && id.raw == pong_id.raw) ? (2 << 18) : 0));
 
 }
 
@@ -501,7 +541,8 @@ pager(void)
           int fn = pfa & SIGMA0_REQ_ID_MASK;
 
           if (l4_msgtag_label(tag) != 0
-              && !l4_msgtag_is_page_fault(tag))
+              && !l4_msgtag_is_page_fault(tag)
+	      && !l4_msgtag_is_sigma0(tag))
             {
               printf("pingpong pager: invalid message type: %ld\n",
                      l4_msgtag_label(tag));
@@ -544,8 +585,9 @@ pager(void)
             }
 
 	  /* sanity check */
-          if (   (pfa < (unsigned)&_start || pfa > (unsigned)&_end)
-	      && (pfa < scratch_mem || pfa > scratch_mem+SCRATCH_MEM_SIZE))
+          if (   (pfa < (unsigned long)&_start || pfa > (unsigned long)&_end)
+	      && (pfa < scratch_mem || pfa > scratch_mem+SCRATCH_MEM_SIZE)
+              && (pfa < (unsigned long)kip || pfa > (unsigned long)kip + sizeof(*kip)))
 		{
 		  printf("Pager: pfa=%08lx eip=%08lx from "
 			  l4util_idfmt" received\n",
@@ -591,6 +633,7 @@ bench_short_intraAS(int nr)
 
 	  BENCH_BEGIN;
 
+#ifdef BENCH_x86
 	  if (callmode == 0)
 	      create_pingpong_threads(cold ?
 		  int30_ping_short_cold_thread :
@@ -602,10 +645,14 @@ bench_short_intraAS(int nr)
 		  sysenter_ping_short_thread,
 		  sysenter_pong_short_thread);
 	  else if (callmode == 2)
-	      create_pingpong_threads(cold ? 
+	      create_pingpong_threads(cold ?
 		  kipcalls_ping_short_cold_thread :
-		  kipcalls_ping_short_thread, 
+		  kipcalls_ping_short_thread,
 		  kipcalls_pong_short_thread);
+#else
+	  create_pingpong_threads(generic_ping_short_thread,
+                                  generic_pong_short_thread);
+#endif
 
 	  move_to_small_space(ping_id, smas_pos[0]);
 
@@ -642,10 +689,11 @@ bench_short_intraAS(int nr)
 
 	  BENCH_BEGIN;
 
+#ifdef BENCH_x86
 	  if (callmode == 0)
-	      create_pingpong_threads(cold ? 
+	      create_pingpong_threads(cold ?
 		  int30_ping_short_to_cold_thread :
-		  int30_ping_short_to_thread, 
+		  int30_ping_short_to_thread,
 		  int30_pong_short_to_thread);
 	  else if (callmode == 1)
 	      create_pingpong_threads(cold ? 
@@ -657,6 +705,10 @@ bench_short_intraAS(int nr)
 		  kipcalls_ping_short_to_cold_thread :
 		  kipcalls_ping_short_to_thread, 
 		  kipcalls_pong_short_to_thread);
+#else
+          create_pingpong_threads(generic_ping_short_to_thread,
+                                  generic_pong_short_to_thread);
+#endif
 
 	  move_to_small_space(ping_id, smas_pos[0]);
 
@@ -699,6 +751,7 @@ bench_short_interAS(int nr)
 	      continue;
 
 	  BENCH_BEGIN;
+#ifdef BENCH_x86
 	  if (callmode == 0)
 	      create_pingpong_tasks(cold ? 
 		  int30_ping_short_cold_thread :
@@ -714,6 +767,10 @@ bench_short_interAS(int nr)
 		  kipcalls_ping_short_cold_thread :
 		  kipcalls_ping_short_thread, 
 		  kipcalls_pong_short_thread);
+#else
+	  create_pingpong_tasks(generic_ping_short_thread,
+		                generic_pong_short_thread);
+#endif
 	  recv_ping_timeout(timeout_50s);
 	  kill_pingpong_tasks();
 	  BENCH_END;
@@ -731,6 +788,7 @@ bench_short_interAS(int nr)
 	      continue;
 
 	  BENCH_BEGIN;
+#ifdef BENCH_x86
 	  if (callmode == 0)
 	      create_pingpong_tasks(cold ? 
 		  int30_ping_short_cold_thread :
@@ -746,6 +804,10 @@ bench_short_interAS(int nr)
 		  kipcalls_ping_short_cold_thread :
 		  kipcalls_ping_short_thread, 
 		  kipcalls_pong_short_thread);
+#else
+          create_pingpong_tasks(generic_ping_short_thread,
+                                generic_pong_short_thread);
+#endif
 	  recv_ping_timeout(timeout_50s);
 	  kill_pingpong_tasks();
 	  BENCH_END;
@@ -753,6 +815,7 @@ bench_short_interAS(int nr)
     }
 }
 
+#ifdef BENCH_x86
 /** IPC benchmark - short INTER-AS. */
 static void
 test_short_interAS_flood(int nr)
@@ -785,7 +848,9 @@ test_short_interAS_flood(int nr)
   kill_pingpong_tasks();
   BENCH_END;
 }
+#endif
 
+#ifdef BENCH_x86
 /** IPC benchmark - short INTER-AS. */
 static void
 bench_short_dc_interAS(int nr)
@@ -911,7 +976,9 @@ error:
 	}
     }
 }
+#endif
 
+#ifdef BENCH_x86
 /** IPC benchmark - long INTER-AS. */
 static void
 bench_long_interAS(int nr)
@@ -943,13 +1010,18 @@ bench_long_interAS(int nr)
 	  if (ux_running)
 	    rounds /= 10;
 
-	  create_pingpong_tasks(callmode 
+#ifdef BENCH_x86
+	  create_pingpong_tasks(callmode
 				   ? cold ? sysenter_ping_long_cold_thread
 					  : sysenter_ping_long_thread
 				   : cold ? int30_ping_long_cold_thread
 					  : int30_ping_long_thread,
 				callmode ? sysenter_pong_long_thread
 					 : int30_pong_long_thread);
+#else
+	  create_pingpong_tasks(generic_ping_long_thread,
+                                generic_pong_long_thread);
+#endif
 
     	  /* wait for measurement to be finished, then kill tasks */
 	  recv_ping_timeout(timeout_50s);
@@ -957,18 +1029,20 @@ bench_long_interAS(int nr)
 	}
     }
 }
+#endif
 
+#ifdef BENCH_x86
 /** IPC benchmark - long INTER-AS. */
 static void
 bench_indirect_interAS(int nr)
 {
-  static struct 
-    { 
+  static struct
+    {
       l4_umword_t sz;
       l4_umword_t num;
       l4_umword_t rounds;
-    } strsizes[] 
-  = 
+    } strsizes[]
+  =
     {
 	{.sz=   16,.num=4,.rounds=10000},{.sz=   64, .num=1,.rounds=10000},
 	{.sz=  256,.num=4,.rounds= 4000},{.sz= 1024, .num=1,.rounds= 4000},
@@ -993,7 +1067,7 @@ bench_indirect_interAS(int nr)
 	  if (ux_running)
 	    rounds /= 10;
 
-	  create_pingpong_tasks(callmode 
+	  create_pingpong_tasks(callmode
 				   ? cold ? sysenter_ping_indirect_cold_thread
 					  : sysenter_ping_indirect_thread
 				   : cold ? int30_ping_indirect_cold_thread
@@ -1006,7 +1080,9 @@ bench_indirect_interAS(int nr)
 	}
     }
 }
+#endif
 
+#ifdef BENCH_x86
 /** IPC benchmark - Mapping test. */
 static void
 bench_shortMap_test(void)
@@ -1036,7 +1112,9 @@ bench_shortMap_test(void)
       BENCH_END;
     }
 }
+#endif
 
+#ifdef BENCH_x86
 /** IPC benchmark - Mapping. */
 static void
 bench_shortMap_interAS(int nr)
@@ -1057,7 +1135,9 @@ bench_shortMap_interAS(int nr)
   else
     puts("INTER-AS-SHORT-FP disabled from 4M because Jochen LN detected");
 }
+#endif
 
+#ifdef BENCH_x86
 /** IPC benchmark - long fpages. */
 static void
 bench_longMap_interAS(int nr)
@@ -1084,6 +1164,7 @@ bench_longMap_interAS(int nr)
       kill_pingpong_tasks();
     }
 }
+#endif
 
 /** IPC benchmark - pagefault test. */
 static void
@@ -1093,10 +1174,15 @@ bench_pagefault_test(void)
   /* don't care about kip-calls, because sysenter directly is fastest */
   callmode = 1-dont_do_sysenter;
   BENCH_BEGIN;
+#ifdef BENCH_x86
   create_pingpong_tasks(callmode ? sysenter_ping_pagefault_thread
 				 : int30_ping_pagefault_thread,
 			callmode ? sysenter_pong_pagefault_thread
 				 : int30_pong_pagefault_thread);
+#else
+  create_pingpong_tasks(generic_ping_pagefault_thread,
+			generic_pong_pagefault_thread);
+#endif
   recv_ping_timeout(timeout_50s);
   kill_pingpong_tasks();
   BENCH_END;
@@ -1221,6 +1307,7 @@ bench_exceptions(int nr)
   BENCH_END;
 }
 
+#ifdef BENCH_x86
 /** IPC benchmark - short INTER-AS with c-bindings. */
 static void
 bench_short_casm_interAS(int nr)
@@ -1305,7 +1392,9 @@ bench_short_casm_interAS(int nr)
 	}
     }
 }
+#endif
 
+#ifdef BENCH_x86
 /** IPC benchmark - short INTER-AS with extern assembler functions. */
 static void
 bench_short_compare(int nr)
@@ -1354,6 +1443,7 @@ bench_short_compare(int nr)
   kill_pingpong_tasks();
   BENCH_END;
 }
+#endif
 
 /* Simple intra and inter IPC using different UTCB sizes,
  * should probably integrated into other IPC tests with sysenter/int30
@@ -1373,7 +1463,7 @@ bench_utcb_ipc(int nr)
   send(pong_id);
   recv(ping_id);
   send(ping_id);
-  recv_ping_timeout(timeout_50s);
+  recv_ping_timeout(timeout_2m);
 
   kill_pong_thread();
 
@@ -1403,15 +1493,21 @@ bench_syscalls(int nr)
 
   for (callmode=0; callmode<3; callmode += 2)
     {
+      if (callmode == 1 && dont_do_sysenter)
+        continue;
       if (callmode == 2 && dont_do_kipcalls)
 	continue;
 
       BENCH_BEGIN;
 
+#ifdef BENCH_x86
       if (callmode == 0)
         create_ping_thread(int30_syscall_id_nearest_thread);
       else
         create_ping_thread(kipcalls_syscall_id_nearest_thread);
+#else
+      create_ping_thread(generic_syscall_id_nearest_thread);
+#endif
 
       /* wait for measurement to be finished */
       recv_ping_timeout(timeout_50s);
@@ -1433,12 +1529,16 @@ bench_syscalls(int nr)
 
       BENCH_BEGIN;
 
+#ifdef BENCH_x86
       if (callmode == 0)
 	create_ping_thread(int30_syscall_task_new_thread);
       else if (callmode == 1)
 	create_ping_thread(sysenter_syscall_task_new_thread);
       else
 	create_ping_thread(kipcalls_syscall_task_new_thread);
+#else
+      create_ping_thread(generic_syscall_task_new_thread);
+#endif
 
       /* wait for measurement to be finished */
       recv_ping_timeout(timeout_50s);
@@ -1466,9 +1566,9 @@ test_rdtsc(void)
   BENCH_BEGIN;
   for (i = 0; i < TEST_RDTSC_NUM; i++)
     {
-      start = l4_rdtsc();
-      mid   = l4_rdtsc();
-      end   = l4_rdtsc();
+      start = get_clocks();
+      mid   = get_clocks();
+      end   = get_clocks();
       
       diff = (l4_uint32_t)(mid - start);
       total1 += diff;
@@ -1509,8 +1609,12 @@ test_cpu(void)
 {
   l4_uint32_t hz;
 
+#ifdef BENCH_x86
   l4_tsc_init(0);
   hz       = l4_get_hz();
+#else
+  hz = 100000000;
+#endif
   mhz      = hz / 1000000;
   if (!ux_running)
     timer_hz = hz / timer_hz;
@@ -1610,21 +1714,29 @@ main(int argc, const char **argv)
     {
       { "short IPC intra address space",    bench_short_intraAS,      1, '0' },
       { "short IPC inter address space",    bench_short_interAS,      1, '1' },
+#ifdef BENCH_x86
       { "long  IPC inter address space",    bench_long_interAS,       1, '2' },
       { "indrct IPC inter address space",   bench_indirect_interAS,   1, '3' },
       { "short fpage inter address space",  bench_shortMap_interAS,   1, '4' },
       { "long  fpage inter address space",  bench_longMap_interAS,    1, '5' },
+#endif
       { "pagefault inter address space",    bench_pagefault_interAS,  1, '6' },
       { "exception handling methods",       bench_exceptions,         1, '7' },
+#ifdef BENCH_x86
       { "short IPC inter c-inl-/asm-bind",  bench_short_casm_interAS, 1, '8' },
       { "compare fast sysenter IPC",        bench_short_compare,      1, '9' },
       { "short IPC inter / don't switch",   bench_short_dc_interAS,   1, 'd' },
+#endif
       { "IPC using UTCB",                   bench_utcb_ipc,           1, 'u' },
       { "syscalls",                         bench_syscalls,           1, 'l' },
+#ifdef BENCH_x86
       { "measure specific instructions",    test_instruction_cycles,  1, 'c' },
 //    { "measure costs of TLB/Cache",       test_cache_tlb,           1, 't' },
+#endif
       { "memory bandwidth (memcpy)",        test_memory_bandwidth,    1, 'm' },
+#ifdef BENCH_x86
       { "short IPC inter AS, flooder",      test_short_interAS_flood, 1, 'i' },
+#endif
     };
 
   const int mentries = sizeof(test)/sizeof(test[0]);
@@ -1721,6 +1833,21 @@ main(int argc, const char **argv)
   if (scratch_mem == -1)
     test[12].enabled = 0;
 
+#if !defined(ARCH_x86) && !defined(ARCH_amd64)
+  if (0)
+    {
+      printf("Human time check: this will take 5seconds when START appears\n");
+      l4_cpu_time_t t = kip->clock;
+      while (kip->clock < t + 1000000ULL)
+	;
+      t = kip->clock;
+      printf("START\n");
+      while (kip->clock < t + 5000000ULL)
+	;
+      printf("DONE (%lld - %lld (d: %lld)\n", t, kip->clock, kip->clock - t);
+    }
+#endif
+
   for (;;)
     {
       for (i=0, j=0; i<mentries; i++)
@@ -1732,6 +1859,7 @@ main(int argc, const char **argv)
 	      printf("   %c: %-32s", test[i].key, test[i].name);
 	    }
 	};
+#ifdef BENCH_x86
       if (!ux_running)
 	{
 	  if (j++ % 2 == 0)
@@ -1739,6 +1867,7 @@ main(int argc, const char **argv)
 	  printf("   s: change small spaces (now: %u-%u)  ",
 	      smas_pos[0], smas_pos[1] );
 	}
+#endif
       if (1)
 	{
 	  if (j++ % 2 == 0)
@@ -1757,10 +1886,12 @@ invalid_key:
 	}
       switch(c)
 	{
+#ifdef BENCH_x86
 	case 'x': 
 	  puts("\nRebooting...");
 	  l4util_reboot(); 
 	  break;
+#endif
 	case 'h': 
 	  help(); 
 	  break;
@@ -1776,12 +1907,21 @@ invalid_key:
 	  break;
 	case 'H':
 	  // undocumented ;-)
+#if defined(ARCH_x86) || defined(ARCH_amd64)
 	  asm volatile ("cli; 1: jmp 1b");
+#else
+	  l4_sys_cli(); while (1);
+#endif
 	  break;
 	case 'k':
 	  putchar('\n');
 	  enter_kdebug("stop");
 	  break;
+	case 'C':
+	  cross_cpu = !cross_cpu;
+	  printf("Cross CPU: %s\n", cross_cpu ? "yes" : "no");
+	  break;
+#ifdef BENCH_x86
 	case 's' :
 	  if (!ux_running)
 	    {
@@ -1799,6 +1939,7 @@ invalid_key:
 		     "   set to %u-%u\n", smas_pos[0], smas_pos[1]);
 	    }
 	  break;
+#endif
 	default:
 	  for (i=0; i<mentries; i++)
 	    {

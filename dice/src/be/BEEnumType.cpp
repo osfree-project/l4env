@@ -156,7 +156,7 @@ void CBEEnumType::WriteZeroInit(CBEFile& pFile)
  *  \param sTag the tag to test for
  *  \return true if the given tag is the same as the local tag
  */
-bool CBEEnumType::HasTag(string sTag)
+bool CBEEnumType::HasTag(std::string sTag)
 {
 	return (m_sTag == sTag);
 }

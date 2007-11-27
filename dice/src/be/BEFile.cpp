@@ -86,10 +86,7 @@ void CBEFile::WriteHelperFunctions()
  *         (using <>)
  *  \param pRefObj if not 0, it is used to set source file info
  */
-void
-CBEFile::AddIncludedFileName(string sFileName,
-	bool bIDLFile,
-	bool bIsStandardInclude,
+void CBEFile::AddIncludedFileName(std::string sFileName, bool bIDLFile, bool bIsStandardInclude,
 	CObject* pRefObj)
 {
 	if (sFileName.empty())
@@ -113,33 +110,8 @@ CBEFile::AddIncludedFileName(string sFileName,
  *
  * To find a function, we iterate over the classes and namespaces.
  */
-CBEFunction *CBEFile::FindFunction(string sFunctionName,
-	FUNCTION_TYPE nFunctionType)
+CBEFunction *CBEFile::FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType)
 {
-	if (sFunctionName.empty())
-		return 0;
-
-	// classes
-	CBEFunction *pFunction = 0;
-	vector<CBEClass*>::iterator iterC;
-	for (iterC = m_Classes.begin();
-		iterC != m_Classes.end();
-		iterC++)
-	{
-		if ((pFunction = (*iterC)->FindFunction(sFunctionName,
-					nFunctionType)) != 0)
-			return pFunction;
-	}
-	// namespaces
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NameSpaces.begin();
-		iterN != m_NameSpaces.end();
-		iterN++)
-	{
-		if ((pFunction = (*iterN)->FindFunction(sFunctionName,
-					nFunctionType)) != 0)
-			return pFunction;
-	}
 	// search own functions
 	vector<CBEFunction*>::iterator iterF;
 	for (iterF = m_Functions.begin();
@@ -190,50 +162,22 @@ void CBEFile::WriteInclude(CIncludeStatement *pInclude)
 
 /** \brief tries to find a class using its name
  *  \param sClassName the name of the searched class
- *  \param pPrev previously found class
  *  \return a reference to the found class or 0 if not found
  */
-CBEClass* CBEFile::FindClass(string sClassName, CBEClass *pPrev)
+CBEClass* CBEFile::FindClass(std::string sClassName)
 {
 	// first search classes
-	CBEClass *pClass = m_Classes.Find(sClassName, pPrev);
-	if (pClass)
-		return pClass;
-	// then search namespaces
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NameSpaces.begin();
-		iterN != m_NameSpaces.end();
-		iterN++)
-	{
-		if ((pClass = (*iterN)->FindClass(sClassName, pPrev)) != 0)
-			return pClass;
-	}
-	// not found
-	return 0;
+	return m_Classes.Find(sClassName);
 }
 
 /** \brief tries to find a namespace using a name
  *  \param sNameSpaceName the name of the searched namespace
  *  \return a reference to the found namespace or 0 if none found
  */
-CBENameSpace* CBEFile::FindNameSpace(string sNameSpaceName)
+CBENameSpace* CBEFile::FindNameSpace(std::string sNameSpaceName)
 {
 	// search the namespace
-	CBENameSpace *pNameSpace = m_NameSpaces.Find(sNameSpaceName);
-	if (pNameSpace)
-		return pNameSpace;
-	// search nested namespaces
-	CBENameSpace *pFoundNameSpace = 0;
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NameSpaces.begin();
-		iterN != m_NameSpaces.end();
-		iterN++)
-	{
-		if ((pFoundNameSpace = (*iterN)->FindNameSpace(sNameSpaceName)) != 0)
-			return pFoundNameSpace;
-	}
-	// nothing found
-	return 0;
+	return m_NameSpaces.Find(sNameSpaceName);
 }
 
 /** \brief returns the number of functions in the function vector
@@ -253,8 +197,8 @@ int CBEFile::GetFunctionCount()
  */
 bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFile::IsOfFileType(%d) called m_nFileType=%d\n",
-		nFileType, m_nFileType);
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFile::IsOfFileType(%d) called m_nFileType=%d for %s\n",
+		nFileType, m_nFileType, GetFileName().c_str());
 	if (m_nFileType == nFileType)
 		return true;
 	if ((nFileType == FILETYPE_CLIENT) &&
@@ -276,6 +220,7 @@ bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
 		 (m_nFileType == FILETYPE_COMPONENTIMPLEMENTATION) ||
 		 (m_nFileType == FILETYPE_TEMPLATE)))
 		return true;
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBEFile::IsOfFileType returns false\n");
 	return false;
 }
 
@@ -283,7 +228,7 @@ bool CBEFile::IsOfFileType(FILE_TYPE nFileType)
  *  \param sTypeName the name of the tye to search for
  *  \return true if a parameter of that type is found
  */
-bool CBEFile::HasFunctionWithUserType(string sTypeName)
+bool CBEFile::HasFunctionWithUserType(std::string sTypeName)
 {
 	vector<CBENameSpace*>::iterator iterN;
 	for (iterN = m_NameSpaces.begin();
@@ -434,7 +379,7 @@ void CBEFile::InsertOrderedElement(CObject *pObj)
  * Here we implement the special treatment for indentation. To make it right
  * we have to check if there are tabs after line-breaks.
  */
-std::ofstream& CBEFile::operator<<(string s)
+std::ofstream& CBEFile::operator<<(std::string s)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBEFile::%s(str:\"%s\") called\n", __func__, s.c_str());

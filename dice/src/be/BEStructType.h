@@ -71,9 +71,7 @@ public:
 	virtual void Write(CBEFile& pFile);
 	virtual bool IsConstructedType();
 	virtual int GetMemberCount();
-	virtual bool HasTag(std::string sTag);
 	virtual void WriteCastToStr(std::string &str, bool bPointer);
-	virtual std::string GetTag();
 	virtual void WriteDeclaration(CBEFile& pFile);
 	virtual void WriteGetSize(CBEFile& pFile,
 		CDeclStack* pStack, CBEFunction *pUsingFunc);
@@ -86,6 +84,9 @@ public:
 		std::string sAttributeParameter);
 	virtual void CreateBackEnd(CFETypeSpec *pFEType);
 	virtual void CreateBackEnd(std::string sTag, CFEBase *pRefObj);
+
+	virtual bool HasTag(std::string sTag);
+	virtual std::string GetTag();
 
 protected:
 	/** \var std::string m_sTag

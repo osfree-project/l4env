@@ -59,6 +59,7 @@ CBEDispatchFunction::~CBEDispatchFunction()
 
 /** \brief creates the dispatch function for the given interface
  *  \param pFEInterface the respective front-end interface
+ *  \param bComponentSide true if this function was constructed at component side
  *  \return true if successful
  *
  * The dispatch function return the reply code which determines if the server
@@ -79,8 +80,7 @@ CBEDispatchFunction::~CBEDispatchFunction()
  * other two parameters are added using AddBeforeParameters and
  * AddAfterParameters respectively.
  */
-void
-CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
+void CBEDispatchFunction::CreateBackEnd(CFEInterface * pFEInterface, bool bComponentSide)
 {
 	// set target file name
 	SetTargetFileName(pFEInterface);

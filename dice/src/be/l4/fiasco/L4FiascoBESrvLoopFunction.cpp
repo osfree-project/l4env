@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/be/l4/L4FiascoBESrvLoopFunction.cpp
+ *  \file    dice/src/be/l4/fiasco/L4FiascoBESrvLoopFunction.cpp
  *  \brief   contains the implementation of the class CL4FiascoBESrvLoopFunction
  *
  *  \date    02/10/2002
@@ -43,6 +43,7 @@ CL4FiascoBESrvLoopFunction::~CL4FiascoBESrvLoopFunction()
 
 /** \brief create this instance of a server loop function
  *  \param pFEInterface the interface to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if create was successful
  *
  * Create a message tag variable.

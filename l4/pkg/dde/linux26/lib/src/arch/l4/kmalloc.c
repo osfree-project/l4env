@@ -14,6 +14,8 @@
 /* Linux */
 #include <linux/slab.h>
 #include <linux/bootmem.h>
+#include <linux/module.h>
+#include <linux/mm.h>
 #include <asm/io.h>
 
 /* DDEKit */
@@ -28,6 +30,13 @@
 struct page* mem_map = NULL;
 static bootmem_data_t contig_bootmem_data;
 struct pglist_data contig_page_data = { .bdata = &contig_bootmem_data };
+
+int remap_pfn_range(struct vm_area_struct *vma, unsigned long addr,
+		    unsigned long pfn, unsigned long size, pgprot_t prot)
+{
+	return 0;
+}
+EXPORT_SYMBOL(remap_pfn_range);
 
 /*******************
  ** Configuration **

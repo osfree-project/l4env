@@ -183,7 +183,7 @@ const char *Jdb::toplevel_cmds = "jV_";
 
 // a short command must be included in this list to be enabled for non-
 // interactive execution
-const char *Jdb::non_interactive_cmds = "bEIJLMNOPS^Z";
+const char *Jdb::non_interactive_cmds = "bEIJLMNOPSU^Z";
 
 char Jdb::never_break;			// Never stop in Jdb if set
 

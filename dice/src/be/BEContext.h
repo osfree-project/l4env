@@ -32,29 +32,6 @@
 
 #include "be/BEObject.h"
 
-/** \enum FUNCTION_TYPE
- *  \brief defines the valid function types
- */
-enum FUNCTION_TYPE {
-    FUNCTION_NONE,
-    FUNCTION_SEND,        /**< the send function */
-    FUNCTION_RECV,        /**< the receive function */
-    FUNCTION_WAIT,        /**< the wait function */
-    FUNCTION_UNMARSHAL,   /**< the unmarshal function */
-    FUNCTION_MARSHAL,     /**< the marshal function */
-    FUNCTION_MARSHAL_EXCEPTION, /**< the marshal function for exceptions */
-    FUNCTION_REPLY_RECV,  /**< the reply-and-receive function */
-    FUNCTION_REPLY_WAIT,  /**< the reply-and-wait function */
-    FUNCTION_CALL,        /**< the call function */
-    FUNCTION_TEMPLATE,    /**< the server function template */
-    FUNCTION_WAIT_ANY,    /**< the wait any function */
-    FUNCTION_RECV_ANY,    /**< the receive any function */
-    FUNCTION_SRV_LOOP,    /**< the server loop function */
-    FUNCTION_DISPATCH,    /**< the dispatch function */
-    FUNCTION_SWITCH_CASE, /**< the switch case statement */
-    FUNCTION_REPLY        /**< the reply only function */
-};
-
 /** \enum FILE_TYPE
  *  \brief defines the valid file types
  */

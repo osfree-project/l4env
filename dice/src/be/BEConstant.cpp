@@ -115,10 +115,7 @@ CBEConstant::CreateBackEnd(CFEConstDeclarator * pFEConstDeclarator)
  *  \param bAlwaysDefine true if the const chould always appear as a define
  *  \return true if successful.
  */
-void
-CBEConstant::CreateBackEnd(CBEType * pType,
-	string sName,
-	CBEExpression * pValue,
+void CBEConstant::CreateBackEnd(CBEType * pType, std::string sName, CBEExpression * pValue,
 	bool bAlwaysDefine)
 {
 	string exc = string(__func__);

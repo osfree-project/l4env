@@ -69,7 +69,7 @@ public:
     virtual CFEFile* GetRoot();
 
     /** \brief setter function for parent context
-     *  \param pContext reference to the parent context
+     *  \param pParent reference to the parent context
      */
     void setParentContext(CFEBase* pParent)
     { m_pParentContext = pParent; }
@@ -80,8 +80,8 @@ public:
     { return m_pParentContext; }
 
 protected:
-    /** \brief CFEBase* m_pParentContext
-     *  \var reference to surrounding context
+    /** \var CFEBase* m_pParentContext
+     *  \brief reference to surrounding context
      */
     CFEBase* m_pParentContext;
 };

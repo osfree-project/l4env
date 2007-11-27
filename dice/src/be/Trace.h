@@ -1,5 +1,5 @@
 /**
- *    \file    dice/src/Trace.h
+ *    \file    dice/src/be/Trace.h
  *    \brief   contains the interface for tracing generated code
  *
  *    \date    05/30/2005
@@ -33,6 +33,9 @@
 class CBEFile;
 class CBEFunction;
 
+/** \class CTrace
+ *  \brief interface to tracing libraries
+ */
 class CTrace
 {
 public:
@@ -40,26 +43,104 @@ public:
     CTrace() {}
     virtual ~CTrace() {}
 
+	/** \brief write tracing code when wrinting default include files
+	 *  \param pFile the file to write to
+	 */
     virtual void DefaultIncludes(CBEFile& pFile) = 0;
+	/** \brief add local variables to function for tracing
+	 *  \param pFunction the function calling
+	 */
     virtual void AddLocalVariable(CBEFunction *pFunction) = 0;
+	/** \brief write tracing code when wrinting variable declaration
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void VariableDeclaration(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code before writing the call
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void BeforeCall(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code after writing the call
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void AfterCall(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code when initializing the server
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void InitServer(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code before writing the loop in the server
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void BeforeLoop(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code before writing the dipatch function
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void BeforeDispatch(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code after writing the dispatch function
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void AfterDispatch(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code before writing reply only code
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void BeforeReplyOnly(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code after writing reply only code
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void AfterReplyOnly(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code before reply and wait function
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void BeforeReplyWait(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code after reply and wait
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void AfterReplyWait(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code before writing invocation of component function
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void BeforeComponent(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code after writing invocation of component function
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void AfterComponent(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code before marshalling code
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void BeforeMarshalling(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code after marshalling code
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void AfterMarshalling(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code before unmarshalling code
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void BeforeUnmarshalling(CBEFile& pFile, CBEFunction *pFunction) = 0;
+	/** \brief write tracing code after unmarshalling code
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
     virtual void AfterUnmarshalling(CBEFile& pFile, CBEFunction *pFunction) = 0;
-    virtual void WaitCommError(CBEFile& , CBEFunction*) = 0;
+	/** \brief write tracing code in communication error code
+	 *  \param pFile the file to write to
+	 *  \param pFunction the function writing for
+	 */
+    virtual void WaitCommError(CBEFile& pFile, CBEFunction *pFunction) = 0;
 };
 
 #endif /* __DICE_TRACE_H__ */

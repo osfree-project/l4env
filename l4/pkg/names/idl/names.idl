@@ -11,7 +11,7 @@ interface names
     *
     * \return 0 on error, != 0 on success
     */
-   long register([in, string] char *name);
+   long register([in, string, max_is(NAMES_MAX_NAME_LEN)] char *name);
 
    /** Register arbitrary thread at names.
     *
@@ -20,7 +20,7 @@ interface names
     *
     * \return 0 on error, != 0 on success
     */
-   long register_thread([in, string] char *name,
+   long register_thread([in, string, max_is(NAMES_MAX_NAME_LEN)] char *name,
                         [in] l4_threadid_t id);
 
    /** Unregister arbitrary thread at names.
@@ -30,8 +30,8 @@ interface names
     *
     * \return 0 on error, != 0 on success
     */
-   long unregister_thread([in, string] char *name,
-                          [in] l4_threadid_t id);      
+   long unregister_thread([in, string, max_is(NAMES_MAX_NAME_LEN)] char *name,
+                          [in] l4_threadid_t id);
 
    /** Unregister all threads of a task at names.
     *
@@ -49,7 +49,7 @@ interface names
     *
     * \return 0 on error, != 0 on success
     */
-   long query_name([in, string] char *name,
+   long query_name([in, string, max_is(NAMES_MAX_NAME_LEN)] char *name,
                    [out] l4_threadid_t *id);
 
    /** Query names for a name by ID.
@@ -75,7 +75,7 @@ interface names
                  [out, string, prealloc_client, max_is(NAMES_MAX_NAME_LEN)]
 		 char **name,
                  [out] l4_threadid_t *id);
-                 
+
    /** Requests names to dump its internal database.
     */
    void dump();

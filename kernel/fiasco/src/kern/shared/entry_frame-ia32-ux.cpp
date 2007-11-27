@@ -34,10 +34,22 @@ IMPLEMENTATION[ia32,ux]:
 //---------------------------------------------------------------------------
 // basic Entry_frame methods for IA32
 // 
+#include "mem_layout.h"
+
 IMPLEMENT inline
 Address
 Return_frame::ip() const
 { return _eip; }
+
+IMPLEMENT inline NEEDS["mem_layout.h"]
+Address
+Return_frame::ip_syscall_page_user() const
+{
+  Address eip = ip();
+  if ((eip & Mem_layout::Syscalls) == Mem_layout::Syscalls)
+     eip = *(Mword*)sp();
+  return eip;
+}
 
 IMPLEMENT inline
 void

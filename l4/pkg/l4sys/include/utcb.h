@@ -10,6 +10,8 @@
 
 #include <l4/sys/types.h>
 
+EXTERN_C_BEGIN
+
 /**
  * UTCB.
  * \ingroup api_utcb
@@ -34,7 +36,7 @@ typedef struct
  */
 
 /**
- * Get the address to a thread's UTCB.
+ * Get the address to a thread's UTCB, kernel interface.
  * \ingroup api_utcb
  */
 L4_INLINE l4_utcb_t *l4_utcb_get(void);
@@ -73,6 +75,16 @@ L4_INLINE l4_addr_t l4_utcb_exc_pfa(l4_utcb_t *u);
  */
 L4_INLINE void l4_utcb_inherit_fpu(l4_utcb_t *u, int switch_on);
 
+/**
+ * Get the UTCB address. This functions should be used by libraries.
+ * \ingroup api_utcb
+ *
+ * This is a weak function which can be overwritten by applications.
+ *
+ * \returns UTCB
+ */
+l4_utcb_t *l4sys_utcb_get(void);
+
 /**************************************************************************
  * Implementations
  **************************************************************************/
@@ -84,5 +96,7 @@ L4_INLINE void l4_utcb_inherit_fpu(l4_utcb_t *u, int switch_on)
   else
     u->buffers[L4_UTCB_BUFFER_ACCEPTOR] &= ~L4_UTCB_INHERIT_FPU;
 }
+
+EXTERN_C_END
 
 #endif /* ! _L4_SYS_UTCB_H */

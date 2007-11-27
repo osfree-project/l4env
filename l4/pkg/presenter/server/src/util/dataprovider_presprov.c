@@ -39,7 +39,7 @@ static int dataprovider_online_check_fprov(void);
 
 l4_threadid_t id = L4_INVALID_ID;
 static CORBA_Object _dice_corba_obj = &id;
-CORBA_Environment _dice_corba_env = dice_default_environment;
+CORBA_Environment _dice_corba_env; // = dice_default_environment;
 
 ARRAYLIST * parse_config_ds(char *content);
 
@@ -97,6 +97,7 @@ static ARRAYLIST * dataprovider_load_config(char *fname) {
     l4_int32_t result, fd, count;
     l4dm_dataspace_t ds;
     ARRAYLIST *list;
+	_dice_corba_env = (CORBA_Environment)dice_default_environment;
 
     if (!dataprovider_online_check_fprov()) dataprovider_wait_for_fprov();
 
@@ -153,6 +154,7 @@ static ARRAYLIST * dataprovider_load_config(char *fname) {
 static int dataprovider_load_content (char *fname, l4dm_dataspace_t *ds) {
     l4_size_t bytes_read;
     l4_int32_t fd,count;
+	_dice_corba_env = (CORBA_Environment)dice_default_environment;
 
     LOGd(_DEBUG,"try to open %s",fname);
 

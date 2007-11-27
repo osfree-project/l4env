@@ -47,7 +47,7 @@ public:
      *  \param bReply true if reply is sent before wait
      */
     CL4BEWaitAnyFunction(bool bOpenWait, bool bReply);
-    virtual ~CL4BEWaitAnyFunction();
+    ~CL4BEWaitAnyFunction();
 
 protected:
     virtual void WriteIPCErrorCheck(CBEFile& pFile);

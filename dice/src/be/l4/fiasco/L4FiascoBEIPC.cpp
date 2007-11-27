@@ -82,11 +82,13 @@ CL4FiascoBEIPC::WriteCall(CBEFile& pFile,
 	assert(pMarshaller);
 
 	bool bFlexpage = pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
+	// we do not use the direction here, because for a call, both directions
+	// have to do utcb ipc
 	bool bUtcb = pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_UTCB_IPC, CMsgStructType::Generic);
 
 	pFile << "\tl4_ipc_call_tag(*" << sServerID << ",\n";
 	++pFile << "\t";
-	if (IsShortIPC(pFunction, nDirection))
+	if (IsShortIPC(pFunction, nDirection) || bUtcb)
 	{
 		if (bScheduling)
 			pFile << "(" << sMWord << "*)(";
@@ -116,28 +118,27 @@ CL4FiascoBEIPC::WriteCall(CBEFile& pFile,
 	pFile << ",\n";
 
 	pFile << "\t";
-	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0,
-			false, false))
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 0, false, false))
 		pFile << "0";
 	pFile << ",\n";
 	pFile << "\t";
-	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1,
-			false, false))
+	if (!pMarshaller->MarshalWordMember(pFile, pFunction, nDirection, 1, false, false))
 		pFile << "0";
 	pFile << ",\n";
 
 	if (bUtcb)
 	{
-		int nSize = pMsgBuffer->GetSize();
+		int nSize = 0;
+		pMsgBuffer->GetMaxSize(nSize, pFunction, nDirection);
 		CBESizes *pSizes = CCompiler::GetSizes();
 		nSize = pSizes->WordsFromBytes(nSize);
-		pFile << "\tl4_msgtag(0, " << nSize << ", 0, 0),\n";
+		pFile << "\tl4_msgtag(0, " << nSize << ", 0, 0), /* utcb */\n";
 	}
 	else
 		pFile << "\tl4_msgtag(0,0,0,0),\n";
 
 	nDirection = pFunction->GetReceiveDirection();
-	if (IsShortIPC(pFunction, nDirection))
+	if (IsShortIPC(pFunction, nDirection) || bUtcb)
 		pFile << "\tL4_IPC_SHORT_MSG,\n";
 	else
 	{
@@ -171,9 +172,7 @@ CL4FiascoBEIPC::WriteCall(CBEFile& pFile,
  *  \param pFile the file to write to
  *  \param pFunction the function to write it for
  */
-void
-CL4FiascoBEIPC::WriteReceive(CBEFile& pFile,
-	CBEFunction* pFunction)
+void CL4FiascoBEIPC::WriteReceive(CBEFile& pFile, CBEFunction* pFunction)
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sServerID = pNF->GetComponentIDVariable();
@@ -190,11 +189,12 @@ CL4FiascoBEIPC::WriteReceive(CBEFile& pFile,
 		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
 	assert(pMarshaller);
 	CMsgStructType nDirection(pFunction->GetReceiveDirection());
+	bool bUtcb = pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_UTCB_IPC, CMsgStructType::Generic);
 
 	pFile << "\t" << "l4_ipc_receive_tag(*(l4_threadid_t*)" << sServerID << ",\n";
 	++pFile;
 
-	if (IsShortIPC(pFunction, nDirection))
+	if (IsShortIPC(pFunction, nDirection) || bUtcb)
 		pFile << "\tL4_IPC_SHORT_MSG,\n";
 	else
 	{
@@ -246,10 +246,11 @@ CL4FiascoBEIPC::WriteWait(CBEFile& pFile,
 	CL4BEMarshaller *pMarshaller =
 		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
 	assert(pMarshaller);
+	bool bUtcb = pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_UTCB_IPC, CMsgStructType::Generic);
 
 	pFile << "\tl4_ipc_wait_tag( (l4_threadid_t*)" << sServerID << ",\n";
 	++pFile;
-	if (IsShortIPC(pFunction, nDirection))
+	if (IsShortIPC(pFunction, nDirection) || bUtcb)
 		pFile << "\tL4_IPC_SHORT_MSG,\n";
 	else
 	{
@@ -401,13 +402,14 @@ CL4FiascoBEIPC::WriteSend(CBEFile& pFile,
 	CL4BEMarshaller *pMarshaller =
 		dynamic_cast<CL4BEMarshaller*>(pFunction->GetMarshaller());
 	assert(pMarshaller);
+	bool bUtcb = pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_UTCB_IPC, CMsgStructType::Generic);
 
 	pFile << "\tl4_ipc_send_tag(*" << sServerID << ",\n";
 	++pFile << "\t";
 	bool bScheduling = pFunction->m_Attributes.Find(ATTR_SCHED_DONATE);
 	bool bFlexpage = pFunction->GetParameterCount(TYPE_FLEXPAGE, nDirection) > 0;
 
-	if (IsShortIPC(pFunction, nDirection))
+	if (IsShortIPC(pFunction, nDirection) || bUtcb)
 	{
 		if (bScheduling)
 			pFile << "(" << sMWord << "*)(";
@@ -447,7 +449,16 @@ CL4FiascoBEIPC::WriteSend(CBEFile& pFile,
 		pFile << "0";
 	pFile << ",\n";
 
-	pFile << "\tl4_msgtag(0,0,0,0),\n";
+	if (bUtcb)
+	{
+		int nSize = 0;
+		pMsgBuffer->GetMaxSize(nSize, pFunction, nDirection);
+		CBESizes *pSizes = CCompiler::GetSizes();
+		nSize = pSizes->WordsFromBytes(nSize);
+		pFile << "\tl4_msgtag(0, " << nSize << ", 0, 0), /* utcb */\n";
+	}
+	else
+		pFile << "\tl4_msgtag(0,0,0,0),\n";
 
 	pFile << "\t" << sTimeout << ", &" << sResult << ");\n";
 
@@ -463,9 +474,7 @@ CL4FiascoBEIPC::WriteSend(CBEFile& pFile,
  * since the parameters for reply (exception) are not the same as for send
  * (opcode).
  */
-void
-CL4FiascoBEIPC::WriteReply(CBEFile& pFile,
-	CBEFunction* pFunction)
+void CL4FiascoBEIPC::WriteReply(CBEFile& pFile, CBEFunction* pFunction)
 {
 	WriteSend(pFile, pFunction);
 }
@@ -477,8 +486,7 @@ CL4FiascoBEIPC::WriteReply(CBEFile& pFile,
  * This implementation currently always returns false, because assembler code
  * is always ABI specific.
  */
-bool
-CL4FiascoBEIPC::UseAssembler(CBEFunction *)
+bool CL4FiascoBEIPC::UseAssembler(CBEFunction *)
 {
 	return false;
 }
@@ -552,8 +560,7 @@ void CL4FiascoBEIPC::AddLocalVariable(CBEFunction *pFunction)
 	}
 
 	// dummy receive tag
-	if (dynamic_cast<CBEWaitAnyFunction*>(pFunction) ||
-		dynamic_cast<CBECallFunction*>(pFunction) ||
+	if (dynamic_cast<CBECallFunction*>(pFunction) ||
 		dynamic_cast<CBEWaitFunction*>(pFunction))
 	{
 		// if function already has a tag parameter, no need for a tag dummy...
@@ -570,27 +577,21 @@ void CL4FiascoBEIPC::AddLocalVariable(CBEFunction *pFunction)
  *  \param pFile the file to write to
  *  \param pFunction the funtion to write for
  */
-void
-CL4FiascoBEIPC::WriteInitialization(CBEFile& /*pFile*/,
-	CBEFunction* /*pFunction*/)
+void CL4FiascoBEIPC::WriteInitialization(CBEFile& /*pFile*/, CBEFunction* /*pFunction*/)
 {}
 
 /** \brief writes the assigning of a local name to a communication port
  *  \param pFile the file to write to
  *  \param pFunction the funtion to write for
  */
-void
-CL4FiascoBEIPC::WriteBind(CBEFile& /*pFile*/,
-	CBEFunction* /*pFunction*/)
+void CL4FiascoBEIPC::WriteBind(CBEFile& /*pFile*/, CBEFunction* /*pFunction*/)
 {}
 
 /** \brief writes the initialization
  *  \param pFile the file to write to
  *  \param pFunction the funtion to write for
  */
-void
-CL4FiascoBEIPC::WriteCleanup(CBEFile& /*pFile*/,
-	CBEFunction* /*pFunction*/)
+void CL4FiascoBEIPC::WriteCleanup(CBEFile& /*pFile*/, CBEFunction* /*pFunction*/)
 {}
 
 /** \brief write the message tag to the IPC invocation

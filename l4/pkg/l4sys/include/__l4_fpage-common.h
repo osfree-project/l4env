@@ -65,6 +65,19 @@ enum
 };
 
 
+/** Special constants for cap-flexpages 
+ * \ingroup api_types_fpage
+ */
+enum
+{
+  /** Whole I/O address space size */
+  L4_WHOLE_CAPADDRESS_SPACE  = 11,
+
+  /** Maximum I/O port address */
+  L4_CAP_MAX                 = (1L << L4_WHOLE_CAPADDRESS_SPACE)
+};
+
+
 /**
  * \brief   Build flexpage descriptor
  * \ingroup api_types_fpage
@@ -107,5 +120,21 @@ l4_iofpage(unsigned port, unsigned int size, unsigned char grant);
  */
 L4_INLINE int
 l4_is_io_page_fault(unsigned long address);
+
+
+/**
+ * \brief   Build I/O flexpage descriptor
+ * \ingroup api_types_fpage
+ *
+ * \param   taskno       Capability task number
+ * \param   order        Capability number of task, #L4_WHOLE_CAPADDRESS_SPACE
+ *                       to specify the whole capability address space (with
+ *                       \a taskno 0)
+ * \param   grant        Grant flexpage (#L4_FPAGE_GRANT) or map flexpage
+ *                       (#L4_FPAGE_MAP)
+ * \return  I/O flexpage descriptor
+ */
+L4_INLINE l4_fpage_t
+l4_capfpage(unsigned taskno, unsigned int order, unsigned char grant);
 
 #endif /* ! __L4_FPAGE_COMMON_H__ */

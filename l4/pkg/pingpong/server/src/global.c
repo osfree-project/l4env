@@ -4,7 +4,7 @@
 #include "global.h"
 
 void*
-memchr(const void *s, int c, unsigned n) 
+memchr(const void *s, int c, size_t n) 
 {
   register const char* t=s;
   int i;

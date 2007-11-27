@@ -225,6 +225,11 @@ int l4dde26_process_add_worker(void)
 	attach_pid(LX_TASK(cur), 0,
                ddekit_thread_get_id(cur->_ddekit_thread));
 
+	/* Linux' default is to have this set to 1 initially and let the
+	 * scheduler set this to 0 later on.
+	 */
+	current_thread_info()->preempt_count = 0;
+
 	return 0;
 }
 

@@ -1,10 +1,4 @@
-/* $Id$ */
-
 /**
 \defgroup backend The Compiler's Back-End
 \brief This group contains the classes needed for the generation of the target code
-
-A more elaborate description of the back-end can be found in the
-<a href="http://os.inf.tu-dresden.de/dice/devnotes.xml">Developer Notes</a>
-to Dice.
 */

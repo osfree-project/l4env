@@ -21,15 +21,7 @@ public:
 public:
 
   enum {
-    Utcb_addr_mask	= 0xfffffffc,
+    Utcb_addr_mask	= 0xfffffffffffffffc,
   };
 
 };
-
-// ----------------------------------------------------------------------------
-IMPLEMENTATION[amd64-debug]:
-
-PUBLIC
-void
-Utcb::print() const
-{}

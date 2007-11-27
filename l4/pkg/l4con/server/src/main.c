@@ -691,9 +691,13 @@ test_periodic(void)
   static l4_umword_t last_active_fast;
   static l4_umword_t last_active_slow;
   l4_umword_t clock = l4sigma0_kip()->clock;
+  l4_umword_t _utcb[L4_UTCB_GENERIC_DATA_SIZE];
+  l4_utcb_t *utcb = l4_utcb_get();
 
   if (clock - last_active_fast >= 25000)
     {
+	  // save UTCB
+	  memcpy(_utcb, utcb->values, L4_UTCB_GENERIC_DATA_SIZE * sizeof(l4_umword_t));
       // switch to another console?
       l4lock_lock(&want_vc_lock);
       if (want_vc != fg_vc)
@@ -720,10 +724,15 @@ test_periodic(void)
 	}
 
       last_active_fast = clock;
+	  // restore UTCB
+	  memcpy(utcb->values, _utcb, L4_UTCB_GENERIC_DATA_SIZE * sizeof(l4_umword_t));
     }
 
   if (clock - last_active_slow >= 1000000)
     {
+	  // save UTCB
+	  memcpy(_utcb, utcb->values, L4_UTCB_GENERIC_DATA_SIZE * sizeof(l4_umword_t));
+
       l4lock_lock(&vc[fg_vc]->fb_lock);
 
       // update memory information
@@ -735,6 +744,8 @@ test_periodic(void)
 
       l4lock_unlock(&vc[fg_vc]->fb_lock);
       last_active_slow = clock;
+	  // restore UTCB
+	  memcpy(utcb->values, _utcb, L4_UTCB_GENERIC_DATA_SIZE * sizeof(l4_umword_t));
     }
 }
 
@@ -772,7 +783,7 @@ server_loop(void)
       opcode = con_if_srv_wait_any(&corba_obj, &tag, &msg_buffer, &corba_env);
       for (;;)
 	{
-	  reply = con_if_dispatch(&corba_obj, opcode, &msg_buffer, &corba_env);
+	  reply = con_if_dispatch(&corba_obj, opcode, &tag, &msg_buffer, &corba_env);
 	  /* Make sure we call this function even if the receive timeout is
 	   * never triggered. */
 	  test_periodic();

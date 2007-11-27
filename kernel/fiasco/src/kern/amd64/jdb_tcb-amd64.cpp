@@ -482,6 +482,9 @@ whole_screen:
   putstr("\tcap: ");
   t->_cap_handler->print_uid(3);
 
+  putstr("\tutcb: ");
+  printf("%16lx", (Mword)t->utcb());
+
   putstr("\npreemptr: ");
   Thread::lookup(context_of(t->preemption()->receiver()))->print_uid(3);
 

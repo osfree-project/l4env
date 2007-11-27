@@ -371,7 +371,7 @@ void CBEExpression::Write(CBEFile& pFile)
 /** \brief write the content of the expression to the string
  *  \param sStr the string to write to
  */
-void CBEExpression::WriteToStr(string& sStr)
+void CBEExpression::WriteToStr(std::string& sStr)
 {
 	std::ostringstream os;
 	switch (m_nType)
@@ -431,7 +431,7 @@ void CBEExpression::WriteToStr(string& sStr)
 /** \brief writes a conditional expression to the string
  *  \param sStr the string to write to
  */
-void CBEExpression::WriteConditionalToStr(string &sStr)
+void CBEExpression::WriteConditionalToStr(std::string &sStr)
 {
 	sStr += "(";
 	m_pCondition->WriteToStr(sStr);
@@ -445,7 +445,7 @@ void CBEExpression::WriteConditionalToStr(string &sStr)
 /** \brief writes a binary expression to the string
  *  \param sStr the string to write to
  */
-void CBEExpression::WriteBinaryToStr(string &sStr)
+void CBEExpression::WriteBinaryToStr(std::string &sStr)
 {
 	// write first operand
 	m_pOperand1->WriteToStr(sStr);
@@ -517,7 +517,7 @@ void CBEExpression::WriteBinaryToStr(string &sStr)
 /** \brief writes a unary expression to the string
  *  \param sStr the string to write to
  */
-void CBEExpression::WriteUnaryToStr(string &sStr)
+void CBEExpression::WriteUnaryToStr(std::string &sStr)
 {
 	switch (m_nOperator)
 	{
@@ -557,8 +557,7 @@ void CBEExpression::CreateBackEnd(int nValue)
  *  \param sValue the string value
  *  \return true if successful
  */
-void
-CBEExpression::CreateBackEnd(string sValue)
+void CBEExpression::CreateBackEnd(std::string sValue)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBEExpression::CreateBackEnd(string)\n");
@@ -572,9 +571,7 @@ CBEExpression::CreateBackEnd(string sValue)
  *  \param pOperand2 the second operand
  *  \return true if successful
  */
-void
-CBEExpression::CreateBackEndBinary(CBEExpression * pOperand1,
-	int nOperator,
+void CBEExpression::CreateBackEndBinary(CBEExpression * pOperand1, int nOperator,
 	CBEExpression * pOperand2)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -603,14 +600,12 @@ int CBEExpression::GetIntValue()
 		break;
 	case EXPR_USER_DEFINED:
 		{
-			CBERoot *pRoot = GetSpecificParent<CBERoot>();
-			assert(pRoot);
 			CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 				"CBEExpression::GetIntValue() test for constant or enum %s\n",
 				m_sStringValue.c_str());
 			// might be constant
 			CBEConstant *pConst;
-			if ((pConst = pRoot->FindConstant(m_sStringValue)) != 0)
+			if ((pConst = FindConstant(m_sStringValue)))
 			{
 				CBEExpression *pValue = pConst->GetValue();
 				nValue = pValue ? pValue->GetIntValue() : 0;
@@ -620,7 +615,7 @@ int CBEExpression::GetIntValue()
 			}
 			// might be an enum
 			CBEEnumType *pEnum;
-			if ((pEnum = pRoot->FindEnum(m_sStringValue)) != 0)
+			if ((pEnum = FindEnum(m_sStringValue)) != 0)
 			{
 				// get the integer value of the enumerator from the enum
 				nValue = pEnum->GetIntValue(m_sStringValue);
@@ -672,9 +667,7 @@ int CBEExpression::GetIntValue()
 		else
 		{
 			// check for user defined type
-			CBERoot *pRoot = GetSpecificParent<CBERoot>();
-			assert(pRoot);
-			CBETypedef *pUserDefined = pRoot->FindTypedef(m_sStringValue);
+			CBETypedef *pUserDefined = FindTypedef(m_sStringValue);
 			assert(pUserDefined);
 			nValue = pUserDefined->GetSize();
 		}
@@ -811,10 +804,8 @@ string CBEExpression::GetStringValue()
 	case EXPR_USER_DEFINED:
 		// might be constant
 		{
-			CBERoot *pRoot = GetSpecificParent<CBERoot>();
-			assert(pRoot);
 			CBEConstant *pConst;
-			if ((pConst = pRoot->FindConstant(m_sStringValue)) != 0)
+			if ((pConst = FindConstant(m_sStringValue)))
 			{
 				CBEExpression *pValue = pConst->GetValue();
 				if (pValue)

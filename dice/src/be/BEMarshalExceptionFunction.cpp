@@ -51,6 +51,7 @@ CBEMarshalExceptionFunction::~CBEMarshalExceptionFunction()
 
 /** \brief creates the back-end marshal function for exceptions
  *  \param pFEOperation the corresponding front-end operation
+ *  \param bComponentSide true if the function is created at component side
  */
 void CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation, bool bComponentSide)
 {
@@ -75,22 +76,6 @@ void CBEMarshalExceptionFunction::CreateBackEnd(CFEOperation * pFEOperation, boo
 	CreateMarshaller();
 	CreateCommunication();
 	CreateTrace();
-}
-
-/** \brief manipulate the message buffer
- *  \param pMsgBuffer the message buffer to initialize
- *  \return true on success
- *
- * Make the message buffer variable a reference
- */
-void CBEMarshalExceptionFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
-{
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
-	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
-	// in marshal function, the message buffer is a pointer to the server's
-	// message buffer
-	pMsgBuffer->m_Declarators.First()->SetStars(1);
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s returns true\n", __func__);
 }
 
 /** \brief adds the parameters of a front-end function to this class
@@ -253,7 +238,7 @@ CBETypedDeclarator* CBEMarshalExceptionFunction::GetExceptionVariable()
  *  \param sTypeName the name of the type
  *  \return a reference to the found parameter
  */
-CBETypedDeclarator* CBEMarshalExceptionFunction::FindParameterType(string sTypeName)
+CBETypedDeclarator* CBEMarshalExceptionFunction::FindParameterType(std::string sTypeName)
 {
 	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
 	if (pMsgBuffer && pMsgBuffer->HasType(sTypeName))

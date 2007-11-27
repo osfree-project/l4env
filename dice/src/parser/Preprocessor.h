@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/parser/Preprocess.h
+ *  \file    dice/src/parser/Preprocessor.h
  *  \brief   contains the declaration of the preprocessor class
  *
  *  \date    06/19/2007

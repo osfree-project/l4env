@@ -238,9 +238,9 @@ programs.
 
 warnlevels		'Runtime warning level'
 
-WARN_NONE		'(NONE)  Do not show show any kernel warning'
-
-WARN_ANY		'(ANY)   Show any kernel warning'
+WARN_NONE		'(NONE)    Do not show show any kernel warning'
+WARN_WARNING		'(WARNING) Show messages of warning level'
+WARN_ANY		'(ANY)     Show all kernel messages'
 
 INLINE			'Generate inline code'				text
 Inlining specifies that it is desirable for the compiler to integrate
@@ -536,7 +536,7 @@ default HOST_CXX			from 'g++'
 default VERBOSE				from n
 default ABI_V2				from y
 default SCHED_PIT			from y
-default WARN_ANY			from y
+default WARN_WARNING			from y
 default INLINE				from y
 default NDEBUG				from n
 default ASSEMBLER_IPC_SHORTCUT		from n
@@ -582,7 +582,7 @@ derive PERF_CNT		from (JDB and (IA32 or AMD64))
 derive BIT32		from (IA32 or ARM)
 derive BIT64		from AMD64
 
-derive WARN_LEVEL	from WARN_NONE ? 0 : 2
+derive WARN_LEVEL	from WARN_NONE ? 0 : (WARN_WARNING ? 2 : 3)
 
 choices platform		# Platform selection
 	PF_PC
@@ -637,8 +637,9 @@ choices timer			# Timer source selection
 
 choices warnlevels		# Debug Warning levels
 	WARN_NONE
+	WARN_WARNING
 	WARN_ANY
-	default WARN_ANY
+	default WARN_WARNING
 
 menu target_system
 	platform

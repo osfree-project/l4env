@@ -75,12 +75,11 @@ __unknown_pf(l4_addr_t addr, l4_addr_t ip, CORBA_Object src_id)
   else
     {
       LOG_printf("L4RM: [PF] %s at 0x"l4_addr_fmt", ip "l4_addr_fmt
-	     ", src "l4util_idfmt"\n", (addr & 2) ? "write" : "read",
-	     addr & ~3, ip, l4util_idstr(*src_id));
+                 ", src "l4util_idfmt"\n", (addr & 2) ? "write" : "read",
+                 addr & ~3, ip, l4util_idstr(*src_id));
 #if PANIC_ON_UNHANDLED_PF
       Panic("unhandled page fault");
 #endif
-
       return L4RM_REPLY_NO_REPLY;
     }
 }
@@ -200,6 +199,13 @@ __call_dm(l4_addr_t addr, l4_addr_t ip, l4rm_region_desc_t * region,
   l4_snd_fpage_t snd_fpage;
   l4_offs_t offset;
   int ret;
+
+  if (EXPECT_FALSE(!(region->data.ds.rights & L4DM_WRITE)
+                   && (addr & 2)))
+    {
+      LOG_printf("L4RM: write page fault in read-only region\n");
+      return __unknown_pf(addr, ip, src_id);
+    }
 
   LOGdL(DEBUG_PAGEFAULT, "dataspace %d at "l4util_idfmt,
         region->data.ds.ds.id, l4util_idstr(region->data.ds.ds.manager));

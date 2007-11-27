@@ -44,12 +44,13 @@ public:
     CL4BESndFunction();
     ~CL4BESndFunction();
 
+    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
+
 protected: // Protected methods
     virtual void WriteInvocation(CBEFile& pFile);
     virtual void WriteIPCErrorCheck(CBEFile& pFile);
     virtual void WriteVariableInitialization(CBEFile& pFile);
     virtual void WriteIPC(CBEFile& pFile);
-    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
 };
 
 #endif

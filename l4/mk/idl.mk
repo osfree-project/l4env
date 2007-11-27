@@ -42,9 +42,9 @@ MODE			?= l4env
 IDL_EXPORT_STUB ?= %
 IDL_EXPORT_IDL	?= %
 
-.general.d: $(L4DIR)/mk/idl.mk
 include $(L4DIR)/mk/Makeconf
 include $(L4DIR)/mk/binary.inc
+$(GENERAL_D_LOC): $(L4DIR)/mk/idl.mk
 
 ifneq ($(SYSTEM),) # if we have a system, really build
 #######################################################

@@ -194,6 +194,8 @@ Thread::do_trigger_exception(Entry_frame *r)
       register Address xip = r->ip();
       user_ip(reinterpret_cast<Address>(&leave_by_trigger_exception));
       _exc_ip = xip;
+      _exc_flags = r->flags();
+      r->flags (r->flags() & ~EFLAGS_TF); // do not singlestep inkernel code
       r->cs (Gdt::gdt_code_kernel | Gdt::Selector_kernel);
       return 1;
     }
@@ -214,6 +216,7 @@ Thread::restore_exc_state()
   r->cs (exception_cs());
 #endif
   r->ip (_exc_ip);
+  r->flags (_exc_flags);
   _exc_ip = ~0UL;
 }
 

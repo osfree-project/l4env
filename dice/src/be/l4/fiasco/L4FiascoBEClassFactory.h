@@ -60,6 +60,12 @@ public:
     virtual CBEWaitAnyFunction* GetNewWaitAnyFunction();
     virtual CBEWaitAnyFunction* GetNewRcvAnyFunction();
     virtual CBEWaitAnyFunction* GetNewReplyAnyWaitAnyFunction();
+    virtual CBEWaitFunction * GetNewRcvFunction();
+    virtual CBEWaitFunction * GetNewWaitFunction();
+	virtual CBEUnmarshalFunction* GetNewUnmarshalFunction();
+	virtual CBEMarshalFunction* GetNewMarshalFunction();
+	virtual CBESndFunction* GetNewSndFunction();
+	virtual CBEReplyFunction* GetNewReplyFunction();
 };
 
 #endif // !__DICE_L4FIASCOBECLASSFACTORY_H__

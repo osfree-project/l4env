@@ -26,3 +26,7 @@ STANDARD_PARAM_DEF(uint, unsigned int, "%u", unsigned long, simple_strtoul);
 STANDARD_PARAM_DEF(long, long, "%li", long, simple_strtol);
 STANDARD_PARAM_DEF(ulong, unsigned long, "%lu", unsigned long, simple_strtoul);
 
+int printk_ratelimit(void)
+{
+	return 0;
+}

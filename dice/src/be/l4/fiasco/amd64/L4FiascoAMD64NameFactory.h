@@ -1,5 +1,5 @@
 /**
- *    \file    dice/src/be/l4/fiasco/amd64/FiascoAMD64NameFactory.h
+ *    \file    dice/src/be/l4/fiasco/amd64/L4FiascoAMD64NameFactory.h
  *    \brief   contains the declaration of the class CL4FiascoAMD64BENameFactory
  *
  *    \date    12/15/2005

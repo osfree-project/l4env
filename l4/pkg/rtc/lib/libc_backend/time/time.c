@@ -1,6 +1,6 @@
 /**
- * \file   dietlibc/lib/backends/time/time.c
- * \brief  
+ * \file   rtc/lib/libc_backends/time/time.c
+ * \brief  time implementation
  *
  * \date   08/10/2004
  * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>
@@ -11,7 +11,8 @@
  */
 #include <time.h>
 
-#include <l4/util/rdtsc.h>
+#include "gettime.h"
+
 #include <l4/sys/l4int.h>
 
 extern unsigned int offset;
@@ -21,9 +22,8 @@ time_t time(time_t *t)
     time_t t_temp;
     l4_uint32_t s, ns;
 
-    // fixme:
-    // get KIP time or rdtsc or other time source
-    l4_tsc_to_s_and_ns(l4_rdtsc(), &s, &ns);
+    libc_backend_rtc_get_s_and_ns(&s, &ns);
+
     // get (cached) system time offset, make sum
     t_temp = s + offset;
     if (t)

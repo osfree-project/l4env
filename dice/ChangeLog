@@ -1,9 +1,11 @@
 $Log, ChangeLog,v $
 
-x.x.x
+3.3.0
+ - [feature] use UTCB IPC
  - [feature] allow to specify absolute [uuid] attributes for operations
    (without interface ID)
  - [feature] allow to specify ranges in [uuid] attribute for operations
+ - [fix] lookup of types to respect scope of definition
  - [fix] compilation for Socket Back-End (C/C++ parser choked on some Linux
    headers)
  - [fix] memory allocation for [out, ref] parameters at server side is not

@@ -30,11 +30,11 @@
 #include "L4BESizes.h"
 #include "L4BENameFactory.h"
 #include "L4BEIPC.h"
+#include "L4BEMsgBuffer.h"
 #include "be/BEContext.h"
 #include "be/BEFile.h"
 #include "be/BEStructType.h"
 #include "be/BETypedDeclarator.h"
-#include "be/BEMsgBuffer.h"
 #include "be/BEMsgBufferType.h"
 #include "be/BEFunction.h"
 #include "be/BECallFunction.h"
@@ -97,16 +97,14 @@ CL4BEMarshaller::MarshalFunction(CBEFile& pFile,
  * - We have to be aware that members reaching beyond that boundary have to be
  * marshalled, so the part beyond the boundary is in the message buffer.
  */
-bool
-CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
-	CBETypedDeclarator *pParameter,
+bool CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction, CBETypedDeclarator *pParameter,
 	CMsgStructType nType)
 {
 	// first test base class
 	if (CBEMarshaller::DoSkipParameter(pFunction, pParameter, nType))
 	{
 		// because this parameter is skipped, we have to add its size to the
-		// m_nSkipSize member. Otherwise we ignore some members of struct.
+		// m_nSkipSize member. Otherwise we'd ignore some members of struct.
 		m_nSkipSize += pParameter->GetSize();
 		return true;
 	}
@@ -114,10 +112,16 @@ CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
 	// skip members used in IPC binding only if we do marshaling, unmarshaling
 	// in same function (call, send, reply, wait) Otherwise we have to store
 	// the values in the message struct
-	if ((dynamic_cast<CBECallFunction*>(pFunction) == 0) &&
-		(dynamic_cast<CBESndFunction*>(pFunction) == 0) &&
-		(dynamic_cast<CBEReplyFunction*>(pFunction) == 0) &&
-		(dynamic_cast<CBEWaitFunction*>(pFunction) == 0))
+	if (!dynamic_cast<CBECallFunction*>(pFunction) &&
+		!dynamic_cast<CBESndFunction*>(pFunction) &&
+		!dynamic_cast<CBEReplyFunction*>(pFunction) &&
+		!dynamic_cast<CBEWaitFunction*>(pFunction))
+		return false;
+
+	// check if the message buffer uses UTCB to transmit data. If so, always
+	// marshal everything into UTCB, i.e., do not skip any parameter.
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(pFunction);
+	if (pMsgBuffer->HasProperty(CL4BEMsgBuffer::MSGBUF_PROP_UTCB_IPC, CMsgStructType::Generic))
 		return false;
 
 	// get supposed size of members to skip
@@ -153,6 +157,7 @@ CL4BEMarshaller::DoSkipParameter(CBEFunction *pFunction,
 }
 
 /** \brief marshals platform specific members of the message buffer
+ *  \param pFile the file to write to
  *  \param pMember the member to test for marshalling
  *  \return true if the member has been marshaled
  */
@@ -330,8 +335,9 @@ CL4BEMarshaller::MarshalParameter(CBEFile& pFile,
 }
 
 /** \brief internal method to marshal a parameter
+ *  \param pFile the file to write to
  *  \param pParameter the parameter to marshal
- *  \param stack the declarator stack
+ *  \param pStack the declarator stack
  *
  * This method decides which strategy should be used to marshal the given
  * parameter. It also checks if there is a special treatment necessary.
@@ -347,8 +353,9 @@ CL4BEMarshaller::MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pPar
 }
 
 /** \brief marshal an indirect string parameter
+ *  \param pFile the file to write to
  *  \param pParameter the member to test for refstring marshalling
- *  \param stack the declarator stack so far
+ *  \param pStack the declarator stack so far
  *  \return true if we marshalled a refstring
  *
  * A refstring parameter can be identified by its ATTR_REF attribute. A
@@ -475,6 +482,7 @@ CL4BEMarshaller::MarshalRefstring(CBEFile& pFile,
 }
 
 /** \brief internal marshalling function for arrays
+ *  \param pFile to file to write to
  *  \param pParameter the parameter to marshal
  *  \param pType the type to marshal with
  *  \param pStack the currently active declarator stack
@@ -539,6 +547,7 @@ void CL4BEMarshaller::MarshalArrayIntern(CBEFile& pFile,
 }
 
 /** \brief test if zero flexpage and marshal if so
+ *  \param pFile the file to write to
  *  \param pMember the parameter to marshal
  *  \return true if zero flexpage marshalled
  */
@@ -571,10 +580,11 @@ bool CL4BEMarshaller::MarshalZeroFlexpage(CBEFile& pFile, CBETypedDeclarator *pM
 }
 
 /** \brief writes the access to a specific member in the message buffer
+ *  \param pFile the file to write to
  *  \param nType the direction of the parameter
  *  \param pMsgBuffer the message buffer containing the members
  *  \param pMember the member to access
- *  \param stack set if a stack is to be used
+ *  \param pStack set if a stack is to be used
  *
  * For derived interfaces the offset into the message buffer where indirect
  * strings may start can vary greatly. For marshalling we cannot directly use
@@ -601,6 +611,7 @@ void CL4BEMarshaller::WriteMember(CBEFile& pFile, CMsgStructType nType, CBEMsgBu
 }
 
 /** \brief writes the access to a refstring member in the message buffer
+ *  \param pFile the file to write to
  *  \param nType the direction of the parameter
  *  \param pMsgBuffer the message buffer containing the members
  *  \param pMember the member to access

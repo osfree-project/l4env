@@ -65,6 +65,7 @@ void CSockBEWaitAnyFunction::WriteInvocation(CBEFile& pFile)
 
 /** \brief initializes this instance of the class
  *  \param pFEInterface the front-end interface to use as reference
+ *  \param bComponentSide true if this function is created at component side
  *  \return true if successful
  */
 void CSockBEWaitAnyFunction::CreateBackEnd(CFEInterface *pFEInterface, bool bComponentSide)

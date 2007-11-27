@@ -42,7 +42,7 @@ int ipcmon_pagefault(CORBA_Object obj,
 	int val;
 
 	fp.raw = DICE_GET_DWORD(msgbuf, 0);
-	LOGd(verbose, l4util_idfmt" trying to do IPC to %lX", 
+	LOGd(verbose, l4util_idfmt" trying to do IPC to %X", 
 	    l4util_idstr(*obj), fp.iofp.iopage);
 
 	val = theManager->check(obj->id.task, fp.iofp.iopage);
@@ -63,7 +63,7 @@ int ipcmon_pagefault(CORBA_Object obj,
 #endif
 	else
 	{
-		LOG("\033[31;1mipc %X -> %lX DENIED!\033[0m", (*obj).id.task, fp.iofp.iopage);
+		LOG("\033[31;1mipc %X -> %X DENIED!\033[0m", (*obj).id.task, fp.iofp.iopage);
 		sfp.fpage = l4_iofpage(0, 0, 0);
 		sfp.snd_base  = 0;
 	}

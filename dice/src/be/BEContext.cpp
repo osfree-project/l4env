@@ -36,13 +36,11 @@
 #include <string.h>
 
 CBEContext::CBEContext()
-{
-}
+{ }
 
 /** CBEContext destructor */
 CBEContext::~CBEContext()
-{
-}
+{ }
 
 /** \brief writes the actually used malloc function
  *  \param pFile the file to write to
@@ -57,7 +55,7 @@ CBEContext::~CBEContext()
  */
 void CBEContext::WriteMalloc(CBEFile& pFile, CBEFunction* pFunction)
 {
-    WriteMemory(pFile, pFunction, string("malloc"), string("CORBA_alloc"));
+	WriteMemory(pFile, pFunction, string("malloc"), string("CORBA_alloc"));
 }
 
 /** \brief writes the actual used free function
@@ -66,7 +64,7 @@ void CBEContext::WriteMalloc(CBEFile& pFile, CBEFunction* pFunction)
  */
 void CBEContext::WriteFree(CBEFile& pFile, CBEFunction* pFunction)
 {
-    WriteMemory(pFile, pFunction, string("free"), string("CORBA_free"));
+	WriteMemory(pFile, pFunction, string("free"), string("CORBA_free"));
 }
 
 /** \brief writes memory access function
@@ -75,48 +73,46 @@ void CBEContext::WriteFree(CBEFile& pFile, CBEFunction* pFunction)
  *  \param sEnv the environment function
  *  \param sCorba the CORBA function
  */
-void CBEContext::WriteMemory(CBEFile& pFile,
-    CBEFunction *pFunction,
-    string sEnv,
-    string sCorba)
+void CBEContext::WriteMemory(CBEFile& pFile, CBEFunction *pFunction, std::string sEnv,
+	std::string sCorba)
 {
-    bool bUseEnv = !CCompiler::IsOptionSet(PROGRAM_FORCE_CORBA_ALLOC) ||
-	CCompiler::IsOptionSet(PROGRAM_FORCE_ENV_MALLOC);
-    string sFuncName = pFunction->GetName();
-    if (bUseEnv)
-    {
-        CBETypedDeclarator* pEnv = pFunction->GetEnvironment();
-        CBEDeclarator *pDecl = (pEnv) ? pEnv->m_Declarators.First() : 0;
-        if (pDecl)
-        {
-	    string sFree = "(" + pDecl->GetName();
-            if (pDecl->GetStars())
-		sFree += "->";
-            else
-		sFree += ".";
-	    sFree += sEnv + ")";
-	    pFile << sFree;
-            if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
-                CMessages::Warning("CORBA_Environment.%s is used to set receive buffer in %s.",
-		    sEnv.c_str(), sFuncName.c_str());
-        }
-        else
-        {
-            if (CCompiler::IsOptionSet(PROGRAM_FORCE_ENV_MALLOC))
-                CMessages::Warning("Using %s because function %s has no environment.",
-		    sCorba.c_str(), sFuncName.c_str());
-            if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
-                CMessages::Warning("%s is used to set receive buffer in %s.",
-		    sCorba.c_str(), sFuncName.c_str());
-            pFile << sCorba;
-        }
-    }
-    else
-    {
-        if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
-            CMessages::Warning("%s is used to set receive buffer in %s.",
-		sCorba.c_str(), sFuncName.c_str());
-        pFile << sCorba;
-    }
+	bool bUseEnv = !CCompiler::IsOptionSet(PROGRAM_FORCE_CORBA_ALLOC) ||
+		CCompiler::IsOptionSet(PROGRAM_FORCE_ENV_MALLOC);
+	string sFuncName = pFunction->GetName();
+	if (bUseEnv)
+	{
+		CBETypedDeclarator* pEnv = pFunction->GetEnvironment();
+		CBEDeclarator *pDecl = (pEnv) ? pEnv->m_Declarators.First() : 0;
+		if (pDecl)
+		{
+			string sFree = "(" + pDecl->GetName();
+			if (pDecl->GetStars())
+				sFree += "->";
+			else
+				sFree += ".";
+			sFree += sEnv + ")";
+			pFile << sFree;
+			if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
+				CMessages::Warning("CORBA_Environment.%s is used to set receive buffer in %s.",
+					sEnv.c_str(), sFuncName.c_str());
+		}
+		else
+		{
+			if (CCompiler::IsOptionSet(PROGRAM_FORCE_ENV_MALLOC))
+				CMessages::Warning("Using %s because function %s has no environment.",
+					sCorba.c_str(), sFuncName.c_str());
+			if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
+				CMessages::Warning("%s is used to set receive buffer in %s.",
+					sCorba.c_str(), sFuncName.c_str());
+			pFile << sCorba;
+		}
+	}
+	else
+	{
+		if (CCompiler::IsWarningSet(PROGRAM_WARNING_PREALLOC))
+			CMessages::Warning("%s is used to set receive buffer in %s.",
+				sCorba.c_str(), sFuncName.c_str());
+		pFile << sCorba;
+	}
 }
 

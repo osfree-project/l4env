@@ -22,5 +22,5 @@
 
 #undef PREFIX
 #define PREFIX(a) sysenter_ ## a
-#include "worker_inc.h"
+#include "worker_inc_x86.h"
 

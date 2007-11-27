@@ -347,6 +347,8 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       if (EXPECT_FALSE(invalid_ipc_buffer(snd_descr)))
 	{
 	  _recover_jmpbuf = 0;
+          WARNX(Info, "long-IPC: invalid IPC buffer at "L4_PTR_FMT,
+                      (Address)snd_descr);
           return ipc_finish (partner, Ipc_err::Remsgcut);
 	}
 
@@ -394,6 +396,7 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       if (EXPECT_FALSE (snd_fpages && !rcv_fpage.is_valid()))
         {
           _recover_jmpbuf = 0;
+          WARNX(Info, "long-IPC: receiver does not expect fpages");
           return ipc_finish (partner, Ipc_err::Remsgcut);
         }
 
@@ -463,7 +466,10 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  _recover_jmpbuf = 0;
 	  if (snd_words > (int)Sys_ipc_frame::num_reg_words() ||
 	      snd_snddope.strings() != 0)
-	    result_err.error (Ipc_err::Remsgcut);
+            {
+              WARNX(Info, "long-IPC: receiver expects short message");
+              result_err.error (Ipc_err::Remsgcut);
+            }
 
 	  partner->rcv_regs()->msg_dope (result_dope);
 	  return ipc_finish (partner, result_err);
@@ -538,6 +544,8 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 	  _recover_jmpbuf = 0;
 	  result_err.combine (Ipc_err (Ipc_err::Remsgcut));
 	  partner->rcv_regs()->msg_dope (result_dope);
+          WARNX(Info, "long-IPC: snd_words (%d) > rcv_words (%d)",
+                      snd_words, rcv_words);
 	  return ipc_finish(partner, result_err);
 	}
 
@@ -566,6 +574,8 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
 			   partner->invalid_ipc_buffer(to)))
 	    {
 	      _recover_jmpbuf = 0;
+              WARNX(Info, "long-IPC: invalid string address ("L4_PTR_FMT" or "
+                          L4_PTR_FMT, (Address)from, Address(to));
 	      return ipc_finish (partner, Ipc_err::Remsgcut);
 	    }
 
@@ -610,7 +620,10 @@ Thread::do_send_long (Thread *partner, Sys_ipc_frame *i_regs)
       _recover_jmpbuf = 0;
 
       if (EXPECT_FALSE(snd_strings))
-	result_err.combine (Ipc_err (Ipc_err::Remsgcut));
+        {
+          WARNX(Info, "long-IPC: %d snd_strings left", snd_strings);
+	  result_err.combine (Ipc_err (Ipc_err::Remsgcut));
+        }
 
       partner->rcv_regs()->msg_dope (result_dope);
       return ipc_finish (partner, result_err);

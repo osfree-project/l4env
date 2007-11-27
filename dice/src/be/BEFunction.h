@@ -31,7 +31,6 @@
 #define __DICE_BEFUNCTION_H__
 
 #include "BEObject.h"
-#include "BEContext.h" // FUNCTION_TYPE
 #include "BEAttribute.h"
 #include "BEDeclarator.h"
 #include "DirectionType.h"

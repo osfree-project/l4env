@@ -42,41 +42,42 @@
 class CFEStructType : public CFEConstructedType
 {
 
-// standard constructor/destructor
+	// standard constructor/destructor
 public:
-    /** \brief constructs a struct object
-     *  \param sTag the tag of the struct
-     *  \param pMembers the members of the struct object
-     */
-    CFEStructType(std::string sTag, vector<CFETypedDeclarator*> *pMembers,
-	vector<CFEIdentifier*>* pBaseStructs = 0);
-    virtual ~CFEStructType();
+	/** \brief constructs a struct object
+	 *  \param sTag the tag of the struct
+	 *  \param pMembers the members of the struct object
+	 *  \param pBaseStructs the list of names identifying base structs (C++)
+	 */
+	CFEStructType(std::string sTag, vector<CFETypedDeclarator*> *pMembers,
+		vector<CFEIdentifier*>* pBaseStructs = 0);
+	virtual ~CFEStructType();
 
 protected:
-    /** \brief copy constructor
-     *  \param src the source to copy from
-     */
-    CFEStructType(CFEStructType* src);
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
+	CFEStructType(CFEStructType* src);
 
-// Operations
+	// Operations
 public:
 	virtual CFEStructType* Clone();
-    virtual void Accept(CVisitor&);
-    virtual bool IsConstructedType();
+	virtual void Accept(CVisitor&);
+	virtual bool IsConstructedType();
 
-    CFETypedDeclarator* FindMember(std::string sName);
-    void AddMembers(vector<CFETypedDeclarator*> *pMembers);
+	CFETypedDeclarator* FindMember(std::string sName);
+	void AddMembers(vector<CFETypedDeclarator*> *pMembers);
 
-// Attributes
+	// Attributes
 public:
-    /** \var CCollection<CFETypedDeclarator> m_Members
-     *  \brief the members of the structure
-     */
-    CCollection<CFETypedDeclarator> m_Members;
-    /** \var CCollection<CFEIdentifier> m_BaseStructs
-     *  \brief list of base structs (classes)
-     */
-    CCollection<CFEIdentifier> m_BaseStructs;
+	/** \var CCollection<CFETypedDeclarator> m_Members
+	 *  \brief the members of the structure
+	 */
+	CCollection<CFETypedDeclarator> m_Members;
+	/** \var CCollection<CFEIdentifier> m_BaseStructs
+	 *  \brief list of base structs (classes)
+	 */
+	CCollection<CFEIdentifier> m_BaseStructs;
 };
 
 #endif /* __DICE_FE_FESTRUCTTYPE_H__ */

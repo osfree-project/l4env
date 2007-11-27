@@ -398,8 +398,7 @@ CBENameFactory::GetIncludeFileName(CFEBase * pFEBase,
  * We treat the file as non-IDL file. Otherwise there would have been a FE
  * class to use as reference.
  */
-string
-CBENameFactory::GetIncludeFileName(string sBaseName)
+std::string CBENameFactory::GetIncludeFileName(std::string sBaseName)
 {
 	// get file-name
 	string sReturn;
@@ -672,6 +671,7 @@ CBENameFactory::GetTypeName(int nType,
 /** \brief creates the name of a function
  *  \param pFEOperation the function to create a name for
  *  \param nFunctionType the type of the function
+ *  \param bComponentSide true if the function is used at the component side
  *  \return the name of the back-end function
  *
  * The name has to be unique, therefore it is build using parent interfaces
@@ -787,6 +787,7 @@ CBENameFactory::GetFunctionName(CFEOperation * pFEOperation,
 /** \brief creates the name of a function
  *  \param pFEInterface the interface to create a name for
  *  \param nFunctionType the type of the function
+ *  \param bComponentSide true if function is used at component side
  *  \return the name of the interface's function
  *
  * This implementation creates function names for interface functions. The
@@ -867,8 +868,7 @@ CBENameFactory::GetFunctionName(CFEInterface * pFEInterface,
  * characters" with underscores. Because define labale commonly are uppercase,
  * we do that as well
  */
-string
-CBENameFactory::GetHeaderDefine(string sFilename)
+string CBENameFactory::GetHeaderDefine(std::string sFilename)
 {
 	if (sFilename.empty())
 		return string();
@@ -894,7 +894,7 @@ CBENameFactory::GetHeaderDefine(string sFilename)
  * string. Then remove "nonconforming characters" and make the string
  * uppercase.
  */
-string CBENameFactory::GetTypeDefine(string sTypedefName)
+string CBENameFactory::GetTypeDefine(std::string sTypedefName)
 {
 	if (sTypedefName.empty())
 		return string();
@@ -1140,7 +1140,7 @@ string CBENameFactory::GetMessageBufferTypeName(CFEOperation * pFEOperation)
  *  \param sInterfaceName the name of the interface this message buffer is for
  *  \return the name of the type;
  */
-string CBENameFactory::GetMessageBufferTypeName(string sInterfaceName)
+string CBENameFactory::GetMessageBufferTypeName(std::string sInterfaceName)
 {
 	string sBase = GetMessageBufferTypeName();
 	if (sInterfaceName.empty())
@@ -1325,7 +1325,7 @@ string CBENameFactory::GetServerVariable()
  * This function is used to generate a suitable name for a tagged decl,
  * typedef or type declaration with a flat namespace.
  */
-string CBENameFactory::GetTypeName(CFEBase *pFERefType, string sName)
+string CBENameFactory::GetTypeName(CFEBase *pFERefType, std::string sName)
 {
 	string sReturn;
 	// check for parent interface
@@ -1379,9 +1379,9 @@ string CBENameFactory::GetConstantName(CFEConstDeclarator* pFEConstant)
  * invocation of this function, but then we could not connect the usage of a
  * dummy variable to the declaration.
  */
-string CBENameFactory::GetDummyVariable(string sPrefix)
+string CBENameFactory::GetDummyVariable(std::string sPrefix)
 {
-	return sPrefix + string("dummy");
+	return sPrefix + string("_dummy");
 }
 
 /** \brief returns the variable name of a exception word variable
@@ -1396,7 +1396,7 @@ string CBENameFactory::GetExceptionWordVariable()
  *  \param sTypeName the name of the exception time
  *  \return the name of the variable
  */
-string CBENameFactory::GetUserExceptionVariable(string sTypeName)
+string CBENameFactory::GetUserExceptionVariable(std::string sTypeName)
 {
 	return string("_exc_") + sTypeName;
 }
@@ -1408,7 +1408,7 @@ string CBENameFactory::GetUserExceptionVariable(string sTypeName)
  *  \return the name of the union member
  */
 string CBENameFactory::GetMessageBufferStructName(CMsgStructType nType,
-	string sFuncName, string sClassName)
+	std::string sFuncName, std::string sClassName)
 {
 	string sReturn;
 	assert((sFuncName.empty() && sClassName.empty()) ||

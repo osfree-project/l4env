@@ -10,7 +10,8 @@
 
 #include <l4/sys/types.h>
 
-#define L4_IPC_IOMAPMSG_BASE 0xf0000000   ///< I/O mapmsg base
+#define L4_IPC_IOMAPMSG_BASE  0xf0000000   ///< I/O mapmsg base
+#define L4_IPC_CAPMAPMSG_BASE 0xf0000100   ///< Capability mapmsg base
 
 #include_next <l4/sys/ipc.h>
 

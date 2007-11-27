@@ -106,10 +106,7 @@ CBETypedef::CreateBackEnd(CFETypedDeclarator * pFETypedef)
  *         created type
  *  \return true if successful
  */
-void
-CBETypedef::CreateBackEnd(CBEType * pType,
-	string sName,
-	CFEBase *pFERefObject)
+void CBETypedef::CreateBackEnd(CBEType * pType, std::string sName, CFEBase *pFERefObject)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBETypedef::%s(%p, %s) called\n", __func__, pType, sName.c_str());

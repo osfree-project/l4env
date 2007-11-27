@@ -6,12 +6,12 @@ BUILD_PIC	= $(TARGET)
 
 ifeq ($(ARCH),arm)
 
-SRC_C		=
+SRC_C		= utcb.c
 SRC_S		:= ARCH-arm/atomic_ops_s.S
 
 else
 
-SRC_C		= ipc.c syscalls.c syscalls_indirect.c
+SRC_C		= ipc.c syscalls.c syscalls_indirect.c utcb.c
 SRC_S_libl4sys.a +=   syscalls_direct.S
 vpath syscalls_direct.S $(SRC_DIR)/ARCH-$(ARCH)
 

@@ -115,7 +115,7 @@ CBECallFunction::WriteUnmarshalling(CBEFile& pFile)
 
 /** \brief creates the call function
  *  \param pFEOperation the front-end operation used as reference
- *  \return true if successful
+ *  \param bComponentSide true if function is created at compnent side
  *
  * This implementation only sets the name of the function.
  */

@@ -49,7 +49,6 @@ my %modules =
 		    l4/pkg/log
 		    l4/pkg/lxfuxlibc
 		    l4/pkg/names
-		    l4/pkg/pci
 		    l4/pkg/semaphore
 		    l4/pkg/serial
 		    l4/pkg/simple_ts
@@ -197,6 +196,7 @@ my %modules =
                       l4/pkg/socket_linux
 		      l4/pkg/stpm
 		      l4/pkg/tftp
+                      l4/pkg/usbhid
                       l4/pkg/verner
                      ) ],
    },

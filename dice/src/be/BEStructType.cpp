@@ -32,7 +32,6 @@
 #include "BEFile.h"
 #include "BETypedef.h"
 #include "BEDeclarator.h"
-#include "BERoot.h"
 #include "BEAttribute.h"
 #include "BEStructType.h"
 #include "BEClassFactory.h"
@@ -176,9 +175,7 @@ CBEStructType::CreateBackEnd(CFETypeSpec * pFEType)
  *
  * The members are added later using AddMember.
  */
-void
-CBEStructType::CreateBackEnd(string sTag,
-	CFEBase *pRefObj)
+void CBEStructType::CreateBackEnd(std::string sTag, CFEBase *pRefObj)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEStructType::%s(%s, %p) called\n", __func__,
@@ -388,10 +385,7 @@ int CBEStructType::GetSize()
 			GetTag().c_str(), this);
 
 		// search for tag
-		CBERoot *pRoot = GetSpecificParent<CBERoot>();
-		assert(pRoot);
-		CBEStructType *pTaggedType =
-			(CBEStructType*)pRoot->FindTaggedType(TYPE_STRUCT, GetTag());
+		CBEStructType *pTaggedType = static_cast<CBEStructType*>(FindTaggedType(TYPE_STRUCT, GetTag()));
 		// if found, get size from it
 		if ((pTaggedType) && (pTaggedType != this))
 		{
@@ -406,7 +400,7 @@ int CBEStructType::GetSize()
 		// get the size from there
 		if (!pTaggedType)
 		{
-			CBETypedef *pTypedef = pRoot->FindTypedef(m_sTag);
+			CBETypedef *pTypedef = FindTypedef(m_sTag);
 			CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 				"CBEStructType::%s found typedef @ %p\n", __func__, pTypedef);
 			if (pTypedef && pTypedef->GetTransmitType() == this)
@@ -414,7 +408,7 @@ int CBEStructType::GetSize()
 				CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 					"CBEStructType::%s typedef's type %p is this %p\n", __func__,
 					pTypedef->GetTransmitType(), this);
-				pTypedef = pRoot->FindTypedef(m_sTag, pTypedef);
+				pTypedef = FindTypedef(m_sTag, pTypedef);
 				CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 					"CBEStructType::%s next typedef @ %p\n", __func__, pTypedef);
 			}
@@ -599,10 +593,7 @@ int CBEStructType::GetMaxSize()
 	if (m_bForwardDeclaration)
 	{
 		// search for tag
-		CBERoot *pRoot = GetSpecificParent<CBERoot>();
-		assert(pRoot);
-		CBEStructType *pTaggedType =
-			(CBEStructType*)pRoot->FindTaggedType(TYPE_STRUCT, GetTag());
+		CBEStructType *pTaggedType = static_cast<CBEStructType*>(FindTaggedType(TYPE_STRUCT, GetTag()));
 		// if found, marshal this instead
 		if ((pTaggedType) && (pTaggedType != this))
 		{
@@ -672,9 +663,12 @@ int CBEStructType::GetMaxSize()
 			"CBEStructType::%s member %s has real type %d\n",
 			__func__, pDecl ? pDecl->GetName().c_str() : "(anonym)",
 			pMemberType->GetFEType());
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"CBEStructType::%s checking for struct and tag \"%s\"\n", __func__,
+			m_sTag.c_str());
 
 		if ((dynamic_cast<CBEStructType*>(pMemberType)) &&
-			pMemberType->HasTag(m_sTag))
+			!m_sTag.empty() && pMemberType->HasTag(m_sTag))
 		{
 			nMaxSize = pSizes->GetSizeOfType(TYPE_VOID_ASTERISK);
 			CCompiler::VerboseD(PROGRAM_VERBOSE_NORMAL,
@@ -798,9 +792,17 @@ int CBEStructType::GetMemberCount()
  *  \param sTag the tag to check
  *  \return true if the same
  */
-bool CBEStructType::HasTag(string sTag)
+bool CBEStructType::HasTag(std::string sTag)
 {
 	return (m_sTag == sTag);
+}
+
+/** \brief return the name of the tag
+ *  \return the tag
+ */
+string CBEStructType::GetTag()
+{
+	return m_sTag;
 }
 
 /** \brief writes a cast of this type
@@ -839,14 +841,6 @@ void CBEStructType::WriteCastToStr(std::string& str, bool bPointer)
 			str += "*";
 	}
 	str += ")";
-}
-
-/** \brief allows to access tag member
- *  \return a copy of the tag
- */
-string CBEStructType::GetTag()
-{
-	return m_sTag;
 }
 
 /** \brief write the declaration of this type
@@ -928,10 +922,7 @@ int CBEStructType::GetFixedSize()
 	if (m_bForwardDeclaration)
 	{
 		// search for tag
-		CBERoot *pRoot = GetSpecificParent<CBERoot>();
-		assert(pRoot);
-		CBEStructType *pTaggedType =
-			(CBEStructType*)pRoot->FindTaggedType(TYPE_STRUCT, GetTag());
+		CBEStructType *pTaggedType = static_cast<CBEStructType*>(FindTaggedType(TYPE_STRUCT, GetTag()));
 		// if found, marshal this instead
 		if ((pTaggedType) && (pTaggedType != this))
 		{
@@ -1124,9 +1115,8 @@ CBETypedDeclarator* CBEStructType::FindMemberAttribute(ATTR_TYPE nAttributeType)
  *  \param sAttributeParameter the name of the attributes parameter to look for
  *  \return the first member with the given attribute
  */
-CBETypedDeclarator*
-CBEStructType::FindMemberIsAttribute(ATTR_TYPE nAttributeType,
-	string sAttributeParameter)
+CBETypedDeclarator* CBEStructType::FindMemberIsAttribute(ATTR_TYPE nAttributeType,
+	std::string sAttributeParameter)
 {
 	vector<CBETypedDeclarator*>::iterator iter;
 	for (iter = m_Members.begin();

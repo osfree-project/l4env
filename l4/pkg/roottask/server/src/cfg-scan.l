@@ -65,6 +65,7 @@ high_memory	{ col += 11; return HIMEM; }
 mem_offset	{ col += 10; return MEM_OFFSET; }
 allow_cli	{ col +=  9; return ALLOW_CLI; }
 log_mcp		{ col +=  7; return LOGMCP; }
+taskno          { col +=  6; return TASKNO; }
 boot_mcp	{ col +=  8; return BOOTMCP; }
 boot_priority	{ col += 13; return BOOTPRIO; }
 small		{ col +=  5; return SMALL; }

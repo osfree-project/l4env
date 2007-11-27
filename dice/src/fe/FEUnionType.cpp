@@ -34,7 +34,7 @@
 #include "Visitor.h"
 #include <iostream>
 
-CFEUnionType::CFEUnionType(string sTag,
+CFEUnionType::CFEUnionType(std::string sTag,
     vector<CFEUnionCase*> * pUnionBody,
     vector<CFEIdentifier*> * pBaseUnions)
 : CFEConstructedType(TYPE_UNION),

@@ -1,6 +1,6 @@
 /**
- * \file   dietlibc/lib/backends/time/settimeofday.c
- * \brief  
+ * \file   rtc/lib/libc_backends/time/settimeofday.c
+ * \brief  settimeofday implementation
  *
  * \date   08/10/2004
  * \author Martin Pohlack  <mp26@os.inf.tu-dresden.de>

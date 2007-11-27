@@ -14,7 +14,7 @@
 
 void    task_init(void);
 void    task_set(unsigned begin, unsigned end, int state);
-int     task_alloc(unsigned taskno, owner_t owner);
+int     task_alloc(unsigned taskno, owner_t owner, int allow_realloc);
 int     task_free(unsigned taskno, owner_t owner);
 owner_t task_owner(unsigned taskno);
 void    task_dump(void);

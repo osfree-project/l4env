@@ -40,11 +40,17 @@
 class CFEFileComponent : public CFEBase
 {
 protected:
+	/** \brief copy constructor
+	 *  \param src the source to copy from
+	 */
 	CFEFileComponent(CFEFileComponent* src)
 		: CFEBase(static_cast<CFEBase*>(src))
 	{ }
 
 public:
+	/** \brief constructor
+	 *  \param pParent the parent of the file component
+	 */
 	CFEFileComponent(CObject* pParent)
 		: CFEBase(pParent)
 	{ }

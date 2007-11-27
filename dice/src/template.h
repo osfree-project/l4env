@@ -35,6 +35,9 @@ using std::vector;
 #include <algorithm>
 #include <iostream>
 
+/** \class CCollection
+ *  \brief extends the vector class with some convenience functions
+ */
 template<class T>
 class CCollection : public std::vector<T*>
 {
@@ -60,13 +63,25 @@ protected:
 		pNew->SetParent(m_pParent);
 	}
 
+	/** \class SetParentCall
+	 *  \brief functor to set the parent of a collection
+	 */
 	class SetParentCall
 	{
+		/** \var CCollection *c
+		 *  \brief the collection to modify
+		 */
 		CCollection *c;
 	public:
+		/** \brief constructor
+		 *  \param cc the collection to modify
+		 */
 		SetParentCall(CCollection *cc) : c(cc)
 		{ }
 
+		/** \brief operator invoked by iteration function
+		 *  \param mem the member of collection to set the parent
+		 */
 		void operator() (T* mem)
 		{ c->SetParent(mem); }
 	};
@@ -178,6 +193,9 @@ public:
 };
 
 
+/** \class CSearchableCollection
+ *  \brief extends the Collection class by a searchable argument
+ */
 template<class T, typename KeyT>
 class CSearchableCollection : public CCollection<T>
 {

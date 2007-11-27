@@ -89,7 +89,6 @@ bool operator!= (const CMsgStructType& l, const CMsgStructType::Type& r)
 }
 
 /** \brief assignment operator
- *  \param l the message buffer struct to assign a value
  *  \param r the direction value to assign
  *  \return the original message buffer struct type
  */

@@ -39,6 +39,7 @@ enum tpm_ords {
 	TPM_ORD_GetCapability_Keys=101,
 	TPM_ORD_GetCapability_Pcrs=101,
 	TPM_ORD_GetCapability_Slots=101,
+	TPM_ORD_GetCapability_Timeouts=101,
 	TPM_ORD_GetCapability_Version=101,
 	TPM_ORD_PhysicalEnable = 111,
 	TPM_ORD_ReadPubek=124,
@@ -67,6 +68,7 @@ enum tpm_caps {
 enum tpm_subcaps {
 	TPM_CAP_PROP_PCR   = 257,
 	TPM_CAP_PROP_SLOTS = 260,
+        TPM_CAP_PROP_TIS_TIMEOUT = 0x115,
 };
 
 enum tpm_subcaps_size {

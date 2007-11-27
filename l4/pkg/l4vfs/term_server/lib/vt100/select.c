@@ -21,36 +21,72 @@
 
 extern int _DEBUG;
 
-void vt100_set_select_info(termstate_t *term, object_handle_t handle,
-                          int mode, const l4_threadid_t *notify_handler)
+static void select_list_enqueue(termstate_t *term, struct term_select_info *t)
 {
-    if (!l4_is_invalid_id(term->select_handler))
-    {
-        LOG("Cannot overwrite existing select handler "l4util_idfmt" with "
-            l4util_idfmt, l4util_idstr(term->select_handler), l4util_idstr(*notify_handler)
-        );
-    }
-
-    term->select_handler    = *notify_handler;
-    term->select_mode       = mode;
-    term->select_fd         = handle;
+    l4semaphore_down(&term->termsem);
+    t->prev       = NULL;
+    t->next       = term->select_list;
+    term->select_list = t;
+    l4semaphore_up(&term->termsem);
 }
 
 
-void vt100_unset_select_info(termstate_t *term)
+static void select_list_dequeue(termstate_t *term, struct term_select_info *t)
 {
-    term->select_handler    = L4_INVALID_ID;
-    term->select_mode       = 0;
-    term->select_fd         = -1;
+    if (t)
+    {
+        l4semaphore_down(&term->termsem);
+        if (t == term->select_list)
+            term->select_list = t->next;
+        else
+            t->prev->next = t->next;
+        l4semaphore_up(&term->termsem);
+    }
+}
+
+
+void vt100_set_select_info(termstate_t *term, object_handle_t handle,
+                          int mode, const l4_threadid_t *notify_handler)
+{
+    struct term_select_info *t = malloc(sizeof(struct term_select_info));
+    t->handler    = *notify_handler;
+    t->mode       = mode;
+    t->fd         = handle;
+
+    select_list_enqueue(term, t);
+}
+
+
+void vt100_unset_select_info(termstate_t *term, object_handle_t handle,
+                             int mode, const l4_threadid_t *handler)
+{
+    struct term_select_info *n = term->select_list;
+
+    while (n)
+    {
+        if (l4_thread_equal(n->handler, *handler) &&
+            (n->mode == mode) && (n->fd == handle))
+            break;
+        n = n->next;
+    }
+
+    select_list_dequeue(term, n);
+    free(n);
 }
 
 
 void vt100_select_notify(termstate_t *term)
 {
-    if (!l4_is_invalid_id(term->select_handler))
-        l4vfs_select_listener_send_notification(term->select_handler,
-                                                term->select_fd,
-                                                term->select_mode);
+    struct term_select_info *n = term->select_list;
+
+    select_list_dequeue(term, n);
+
+    if (n)
+    {
+        l4vfs_select_listener_send_notification(n->handler,
+                                                n->fd, n->mode);
+        free(n);
+    }
 }
 
 

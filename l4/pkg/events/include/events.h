@@ -146,6 +146,10 @@ EXTERN_C_BEGIN
  */
 #define L4EVENTS_RECV_OTHER			0xfd
 
+/*! \brief thread does not exists or we are not allowed to communicate
+ */
+#define L4EVENTS_ERROR_NOT_EXISTS               0xfe
+
 #define L4EVENTS_ERRSTRINGS_DEFINE					\
   { L4EVENTS_WARNING_TASK_REGISTERED,					\
     "EVENTS: Task is already registered" },				\

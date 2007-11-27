@@ -12,13 +12,3 @@ public:
   Mword buffers[31];
   L4_timeout_pair xfer;
 };
-
-
-// ----------------------------------------------------------------------------
-IMPLEMENTATION[debug]:
-
-PUBLIC
-void
-Utcb::print() const
-{}
-

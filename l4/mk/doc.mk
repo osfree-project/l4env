@@ -10,9 +10,9 @@ ifeq ($(origin _L4DIR_MK_DOC_MK),undefined)
 _L4DIR_MK_DOC_MK=y
 
 ROLE = doc.mk
-.general.d:	$(L4DIR)/mk/doc.mk
 
 include $(L4DIR)/mk/Makeconf
+$(GENERAL_D_LO): $(L4DIR)/mk/doc.mk
 
 ifeq ($(IN_OBJ_DIR),)
 ##################################################################

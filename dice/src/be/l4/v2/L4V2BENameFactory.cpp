@@ -51,13 +51,12 @@ CL4V2BENameFactory::~CL4V2BENameFactory()
  * Check for the timeout attribute and use the environment's timeout if given.
  * Otherwise construt the default client timeout.
  */
-string
-CL4V2BENameFactory::GetTimeoutClientVariable(CBEFunction* pFunction)
+string CL4V2BENameFactory::GetTimeoutClientVariable(CBEFunction* pFunction)
 {
-    if (pFunction->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT))
-	return string("L4_IPC_NEVER");
+	if (pFunction->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT))
+		return string("L4_IPC_NEVER");
 
-    return CL4BENameFactory::GetTimeoutClientVariable(pFunction);
+	return CL4BENameFactory::GetTimeoutClientVariable(pFunction);
 }
 
 /** \brief generates the variable of the component side timeout
@@ -67,15 +66,14 @@ CL4V2BENameFactory::GetTimeoutClientVariable(CBEFunction* pFunction)
  * Check for the timeout attribute and use the environment's timeout if given.
  * Otherwise construt the default server timeout.
  */
-string
-CL4V2BENameFactory::GetTimeoutServerVariable(CBEFunction* pFunction)
+string CL4V2BENameFactory::GetTimeoutServerVariable(CBEFunction* pFunction)
 {
-    CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
-    assert(pClass);
+	CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
+	assert(pClass);
 
-    if (pClass->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT))
-	return string("L4_IPC_SEND_TIMEOUT_0");
+	if (pClass->m_Attributes.Find(ATTR_DEFAULT_TIMEOUT))
+		return string("L4_IPC_SEND_TIMEOUT_0");
 
-    return CL4BENameFactory::GetTimeoutServerVariable(pFunction);
+	return CL4BENameFactory::GetTimeoutServerVariable(pFunction);
 }
 

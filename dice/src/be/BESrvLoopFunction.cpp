@@ -65,6 +65,7 @@ CBESrvLoopFunction::~CBESrvLoopFunction()
 
 /** \brief creates the server loop function for the given interface
  *  \param pFEInterface the respective front-end interface
+ *  \param bComponentSide true if this function is create at component side
  *  \return true if successful
  *
  * A server loop function does usually not return anything. However, it might
@@ -147,9 +148,7 @@ CBEFunction* CBESrvLoopFunction::FindGlobalFunction(CFEInterface *pFEInterface, 
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	string sFuncName = pNF->GetFunctionName(pFEInterface, nFunctionType, IsComponentSide());
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	CBEFunction *pFunction = pRoot->FindFunction(sFuncName, nFunctionType);
+	CBEFunction *pFunction = FindFunction(sFuncName, nFunctionType);
 	return pFunction;
 }
 
@@ -174,7 +173,8 @@ void CBESrvLoopFunction::SetCallVariables(CBEFunction *pFunction)
 	if (GetMessageBuffer())
 	{
 		CBEDeclarator *pDecl = GetMessageBuffer()->m_Declarators.First();
-		pFunction->SetCallVariable(pDecl->GetName(), pDecl->GetStars(),
+		CBEDeclarator *pFuncDecl = pFunction->GetMessageBuffer()->m_Declarators.First();
+		pFunction->SetCallVariable(pFuncDecl->GetName(), pDecl->GetStars(),
 			pDecl->GetName());
 	}
 }

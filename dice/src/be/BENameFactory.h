@@ -97,8 +97,7 @@ public:
 	virtual std::string GetMessageBufferVariable();
 	virtual std::string GetCorbaEnvironmentVariable();
 	virtual std::string GetCorbaObjectVariable();
-	virtual std::string GetString(int nStringCode,
-		void *pParam = 0);
+	virtual std::string GetString(int nStringCode, void *pParam = 0);
 	virtual std::string GetInlinePrefix();
 	virtual std::string GetOpcodeConst(CBEClass * pClass);
 	virtual std::string GetOpcodeConst(CBEFunction * pFunction);

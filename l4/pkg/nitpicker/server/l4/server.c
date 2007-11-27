@@ -72,6 +72,7 @@ static void custom_nitpicker_server_loop(void* dice_server_param) {
 	while (1) {
 		_dice_reply = nitpicker_dispatch(_dice_corba_obj,
 		                                 _dice_opcode,
+		                                 &_dice_tag,
 		                                 &_dice_msg_buffer,
 		                                 _dice_corba_env);
 		if (_dice_reply == DICE_REPLY)

@@ -37,7 +37,6 @@
 #include "be/BEContext.h"
 #include "be/BEStructType.h"
 #include "be/BEDeclarator.h"
-#include "be/BERoot.h"
 #include "be/BESizes.h"
 #include "be/BEAttribute.h"
 #include "be/BEUserDefinedType.h"
@@ -53,7 +52,7 @@ CL4BEMarshaller::PositionMarshaller::PositionMarshaller(
 	CL4BEMarshaller *pParent)
 {
 	m_pParent = pParent;
-	m_nPosSize = 0;
+	m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
 	m_bReference = false;
 }
 
@@ -97,47 +96,20 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 		(int)nType, nPosition, bReference ? "true" : "false",
 		bLValue ? "true" : "false");
 
-	m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
 	m_bReference = bReference;
 
 	// get the message buffer type
-	CBEMsgBufferType *pMsgType = GetMessageBufferType(pFunction);
-
-	// get the respective struct from the function
-	string sFuncName = pFunction->GetOriginalName();
-	string sClassName = pFunction->GetSpecificParent<CBEClass>()->GetName();
-	// if name is empty, get generic struct
-	if (sFuncName.empty())
-	{
-		nType = CMsgStructType::Generic;
-		sClassName = string();
-	}
-	CBEStructType *pStruct = pMsgType->GetStruct(sFuncName, sClassName,
-		nType);
-	if (!pStruct)
-	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
-			"PositionMarshaller::%s failed, because no struct could be found for func %s\n",
-			__func__, pFunction->GetName().c_str());
-		return false;
-	}
-	assert(pStruct);
-
-	CBETypedDeclarator *pMember =
-		GetMemberAt(pMsgType, pStruct, nPosition);
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
+	assert(pMsgBuffer);
+	CBETypedDeclarator *pMember = pMsgBuffer->GetMemberAt(nType, nPosition);
 	if (!pMember)
 	{
 		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 			"PositionMarshaller::%s: could not find a member at pos %d in struct\n",
 			__func__, nPosition);
-		// struct too small, nothing to put there
 		return false;
 	}
 
-	// do not get message buffer as parent of type, but instead get it from
-	// function to obtain the correct declarator of the function's scope
-	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
-	assert(pMsgBuffer);
 	// Now we test if member if of word size. If not, get the struct with the
 	// word sized members. We also have to test if its type is simple, since
 	// constructed types cannot be put directly into positions.
@@ -177,14 +149,11 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 			CBEType *pParamType = pParameter->GetType();
 			if (!pAttr)
 			{
-				CBERoot *pRoot = pParameter->GetSpecificParent<CBERoot>();
-				assert(pRoot);
-
 				while (!pAttr && pParamType->IsOfType(TYPE_USER_DEFINED))
 				{
 					string sTypeName =
 						static_cast<CBEUserDefinedType*>(pParamType)->GetName();
-					CBETypedef *pTypedef = pRoot->FindTypedef(sTypeName);
+					CBETypedef *pTypedef = pFunction->FindTypedef(sTypeName);
 					if (pTypedef)
 					{
 						pAttr = pTypedef->m_Attributes.Find(ATTR_TRANSMIT_AS);
@@ -277,65 +246,6 @@ CL4BEMarshaller::PositionMarshaller::Marshal(CBEFile& pFile,
 
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "PositionMarshaller::%s returns true\n", __func__);
 	return true;
-}
-
-/** \brief retrieve the type of the message buffer
- *  \param pFunction the function to get the type for
- *  \return a reference to the message buffer type
- *
- * This implementation returns the type with the structs, not some alias (as
- * in user defined type).
- */
-CBEMsgBufferType*
-CL4BEMarshaller::PositionMarshaller::GetMessageBufferType(
-	CBEFunction *pFunction)
-{
-	CBEMsgBuffer *pMsgBuffer;
-	if (dynamic_cast<CBEInterfaceFunction*>(pFunction))
-	{
-		CBEClass *pClass = pFunction->GetSpecificParent<CBEClass>();
-		assert(pClass);
-		pMsgBuffer = pClass->GetMessageBuffer();
-	}
-	else
-		pMsgBuffer = pFunction->GetMessageBuffer();
-	assert(pMsgBuffer);
-	CBEMsgBufferType *pType = pMsgBuffer->GetType(pFunction);
-	return pType;
-}
-
-/** \brief retrieve the member at a given position
- *  \param pType the message buffer type
- *  \param pStruct the struct to search
- *  \param nPosition the position to get the member from
- *  \return a reference to the member (if there is any)
- */
-CBETypedDeclarator*
-CL4BEMarshaller::PositionMarshaller::GetMemberAt(CBEMsgBufferType *pType,
-	CBEStructType *pStruct,
-	int nPosition)
-{
-	int nCurSize = 0, nMemberSize;
-	// set position size if not set yet
-	if (m_nPosSize == 0)
-		m_nPosSize = CCompiler::GetSizes()->GetSizeOfType(TYPE_MWORD);
-	// try to find the member for the position
-	vector<CBETypedDeclarator*>::iterator iter;
-	for (iter =	pType->GetStartOfPayload(pStruct);
-		iter != pStruct->m_Members.end();
-		iter++)
-	{
-		// direction fits, since this is the struct of our desired direction
-		nMemberSize = GetMemberSize(*iter);
-		// if we cross the border of the parameter position we want to write,
-		// stop
-		if (nPosition*m_nPosSize < (nCurSize + nMemberSize))
-			break;
-		nCurSize += nMemberSize;
-	}
-	if (iter == pStruct->m_Members.end())
-		return (CBETypedDeclarator*)0;
-	return *iter;
 }
 
 /** \brief get the size of a member

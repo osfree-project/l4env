@@ -36,10 +36,12 @@ Thread::do_trigger_exception(Entry_frame *r)
       _exc_sp = r->sp();
       _exc_ss = r->ss();
       _exc_ip = r->ip();
+      _exc_flags = r->flags();
       r->cs (Gdt::gdt_code_kernel | Gdt::Selector_kernel);
       r->ip (reinterpret_cast<Address>(&leave_by_trigger_exception));
       r->sp ((Address)r+ sizeof(*r));
       r->ss (Gdt::gdt_data_kernel | Gdt::Selector_kernel);
+      r->flags (r->flags() & ~EFLAGS_TF); // do not singlestep inkernel code
 
       return 1;
     }
@@ -57,6 +59,7 @@ Thread::restore_exc_state()
   r->ip (_exc_ip);
   r->sp (_exc_sp);
   r->ss (_exc_ss);
+  r->flags (_exc_flags);
   _exc_ip = ~0UL;
 }
 

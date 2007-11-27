@@ -43,8 +43,8 @@
 #include <algorithm>
 #include <cassert>
 
-CFEFile::CFEFile(string sFileName,
-	string sPath,
+CFEFile::CFEFile(std::string sFileName,
+	std::string sPath,
 	int nIncludedOnLine,
 	int nStdInclude)
 : m_Constants(0, this),
@@ -165,7 +165,7 @@ void CFEFile::SetPath(std::string sPath)
  *  \param sName the name of the type to search for
  *  \return a reference to the user defined type, or 0 if it does not exist
  */
-CFETypedDeclarator *CFEFile::FindUserDefinedType(string sName)
+CFETypedDeclarator *CFEFile::FindUserDefinedType(std::string sName)
 {
 	if (sName.empty())
 		return 0;
@@ -208,7 +208,7 @@ CFETypedDeclarator *CFEFile::FindUserDefinedType(string sName)
  *  \param sName the tag (name) of the tagged decl
  *  \return a reference to the tagged declarator or NULL if none found
  */
-CFEConstructedType* CFEFile::FindTaggedDecl(string sName)
+CFEConstructedType* CFEFile::FindTaggedDecl(std::string sName)
 {
 	// own tagged decls
 	CFEConstructedType* pTaggedDecl = m_TaggedDeclarators.Find(sName);
@@ -262,7 +262,7 @@ CFETypedDeclarator* CFEFile::FindUserDefinedType(const char *sName)
  * use it to find the library for it. And then use the library to find
  * the rest of the name.
  */
-CFEInterface *CFEFile::FindInterface(string sName)
+CFEInterface *CFEFile::FindInterface(std::string sName)
 {
 	if (sName.empty())
 		return 0;
@@ -337,7 +337,7 @@ CFEInterface* CFEFile::FindInterface(const char* sName)
  *  \param sName the name to search for
  *  \return a reference to the found lib or 0 if not found
  */
-CFELibrary *CFEFile::FindLibrary(string sName)
+CFELibrary *CFEFile::FindLibrary(std::string sName)
 {
 	if (sName.empty())
 		return 0;
@@ -373,7 +373,7 @@ CFELibrary* CFEFile::FindLibrary(const char* sName)
  *  \param sName the name of the constant declarator to search for
  *  \return a reference to the found constant declarator, or 0 if not found
  */
-CFEConstDeclarator *CFEFile::FindConstDeclarator(string sName)
+CFEConstDeclarator *CFEFile::FindConstDeclarator(std::string sName)
 {
 	if (sName.empty())
 		return 0;
@@ -418,7 +418,7 @@ CFEConstDeclarator *CFEFile::FindConstDeclarator(string sName)
  *
  * This function is case insensitive.
  */
-bool CFEFile::HasExtension(string sExtension)
+bool CFEFile::HasExtension(std::string sExtension)
 {
 	// make sExtension lower case
 	transform(sExtension.begin(), sExtension.end(), sExtension.begin(), _tolower);
@@ -467,15 +467,6 @@ void CFEFile::Accept(CVisitor &v)
 	// call visitor
 	v.Visit(*this);
 }
-
-class ConstantSum {
-	int res;
-	std::mem_fun1_t<int, CFEFile, bool> fun;
-public:
-	ConstantSum(int (CFEFile::*__pf)(bool), int i = 0) : res(i), fun(__pf) { }
-	void operator () (CFEFile *f) { res += fun(f, true); }
-	int result() const { return res; }
-};
 
 /** \brief counts the constants of the file
  *  \param bCountIncludes true if included files should be countedt as well
@@ -545,7 +536,7 @@ int CFEFile::GetIncludedOnLine()
  *  \param sFileName the name of the file to find
  *  \return a reference to the found file
  */
-CFEFile* CFEFile::FindFile(string sFileName)
+CFEFile* CFEFile::FindFile(std::string sFileName)
 {
 	if (m_sFilename == sFileName)
 		return this;

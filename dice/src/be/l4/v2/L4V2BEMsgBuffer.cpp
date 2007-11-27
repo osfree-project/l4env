@@ -363,9 +363,7 @@ CL4V2BEMsgBuffer::WriteRcvFlexpageInitialization(CBEFile& pFile,
  * array (_word). Because flexpage and send/size dope are not part of this
  * array we return -1 to indicate an error.
  */
-int
-CL4V2BEMsgBuffer::GetMemberPosition(string sName,
-	CMsgStructType nType)
+int CL4V2BEMsgBuffer::GetMemberPosition(std::string sName, CMsgStructType nType)
 {
 	CBENameFactory *pNF = CBENameFactory::Instance();
 	if (sName == pNF->GetMessageBufferMember(TYPE_RCV_FLEXPAGE))

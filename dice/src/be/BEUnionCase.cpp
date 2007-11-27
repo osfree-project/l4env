@@ -100,9 +100,7 @@ CBEUnionCase::CreateBackEnd(CFEUnionCase * pFEUnionCase)
  * If neither pCaseLabel nor bDefault is set, then this is the member of a C
  * style union.
  */
-void CBEUnionCase::CreateBackEnd(CBEType *pType,
-	string sName,
-	CBEExpression *pCaseLabel,
+void CBEUnionCase::CreateBackEnd(CBEType *pType, std::string sName, CBEExpression *pCaseLabel,
 	bool bDefault)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,

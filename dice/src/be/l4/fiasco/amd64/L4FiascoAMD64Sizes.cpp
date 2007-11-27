@@ -1,5 +1,5 @@
 /**
- *    \file    dice/src/be/l4/fiasco/amd64/FiascoAMD64Sizes.cpp
+ *    \file    dice/src/be/l4/fiasco/amd64/L4FiascoAMD64Sizes.cpp
  *    \brief   contains the implementation of the class CL4FiascoAMD64BESizes
  *
  *    \date    08/24/2007

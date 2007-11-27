@@ -27,11 +27,15 @@
  */
 
 #include "L4FiascoBEWaitAnyFunction.h"
-#include "be/l4/L4BENameFactory.h"
+#include "L4FiascoBENameFactory.h"
 #include "be/BEClassFactory.h"
 #include "be/BETypedDeclarator.h"
 #include "be/BEClassFactory.h"
+#include "be/BEFile.h"
+#include "be/BEMsgBuffer.h"
 #include "TypeSpec-Type.h"
+#include <string>
+using std::string;
 
 CL4FiascoBEWaitAnyFunction::CL4FiascoBEWaitAnyFunction(bool bOpenWait, bool bReply)
 : CL4BEWaitAnyFunction(bOpenWait, bReply)
@@ -47,11 +51,44 @@ CL4FiascoBEWaitAnyFunction::AddBeforeParameters()
     CL4BEWaitAnyFunction::AddBeforeParameters();
 
     CBENameFactory *pNF = CBENameFactory::Instance();
-	std::string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
-	std::string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
+	string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	string sTagType = pNF->GetTypeName(TYPE_MSGTAG, 0);
 
     CBEClassFactory *pCF = CBEClassFactory::Instance();
     CBETypedDeclarator *pParameter = pCF->GetNewTypedDeclarator();
     m_Parameters.Add(pParameter);
     pParameter->CreateBackEnd(sTagType, sTagVar, 1);
+}
+
+/** \brief writes the unmarshalling code for this function
+ *  \param pFile the file to write to
+ *
+ * Someody could have sent us a short IPC without putting the values into the
+ * UTCB. But unmarshalling depends on the values located in the UTCB. Thus
+ * copy the first two words from the regular message buffer (where the
+ * registers of the short IPC were received to) into the first two values of
+ * the UTCB. Do this only if result dope indicates short IPC and received
+ * message tag is 0.
+ */
+void CL4FiascoBEWaitAnyFunction::WriteUnmarshalling(CBEFile& pFile)
+{
+	CL4BEWaitAnyFunction::WriteUnmarshalling(pFile);
+
+	CBENameFactory *pNF = CBENameFactory::Instance();
+	string sResult = pNF->GetString(CL4BENameFactory::STR_RESULT_VAR);
+	string sTagVar = pNF->GetString(CL4BENameFactory::STR_MSGTAG_VARIABLE, 0);
+	pFile << "\tif (" << sResult << ".msgdope == 2 && " << sTagVar << "->raw == 0)\n";
+	pFile << "\t{\n";
+	++pFile << "\tl4_umword_t *_dice_utcb_values = ";
+	pFile << pNF->GetString(CL4FiascoBENameFactory::STR_UTCB_INITIALIZER, this);
+	pFile << ";\n";
+
+	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer();
+	pFile << "\t_dice_utcb_values[0] = ";
+	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 0);
+	pFile << ";\n";
+	pFile << "\t_dice_utcb_values[1] = ";
+	pMsgBuffer->WriteMemberAccess(pFile, this, CMsgStructType::Generic, TYPE_MWORD, 1);
+	pFile << ";\n";
+	--pFile << "\t}\n";
 }

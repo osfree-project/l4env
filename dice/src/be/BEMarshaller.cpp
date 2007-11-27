@@ -46,7 +46,6 @@
 #include "BEIDLUnionType.h"
 #include "BEExpression.h"
 #include "BEUserDefinedType.h"
-#include "BERoot.h"
 #include "TypeSpec-Type.h"
 #include "Attribute-Type.h"
 #include "Compiler.h"
@@ -106,7 +105,7 @@ CBEMarshaller::GetStruct(CBEFunction *pFunction,
 		sClassName = string();
 	}
 	// get the message buffer type
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(pFunction);
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
 	// get type and convert it to message buffer type
 	CBEMsgBufferType *pType = pMsgBuffer->GetType(pFunction);
@@ -202,7 +201,7 @@ CBEMarshaller::MarshalFunction(CBEFile& pFile,
 	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
 		"CBEMarshaller::%s get message buffer for function %s\n", __func__,
 		pFunction->GetName().c_str());
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(pFunction);
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
 	CBEMsgBufferType *pType = pMsgBuffer->GetType(pFunction);
 	// get start of payload
@@ -314,7 +313,7 @@ CBEMarshaller::MarshalParameter(CBEFile& pFile,
 		bMarshal ? "marshalling" : "unmarshalling");
 
 	// get the message buffer type
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(pFunction);
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
 
 	// set member variables
@@ -376,7 +375,7 @@ CBEMarshaller::MarshalValue(CBEFile& pFile,
 	int nValue)
 {
 	// get the message buffer type
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(pFunction);
+	CBEMsgBuffer *pMsgBuffer = pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
 
 	// set member variables
@@ -414,6 +413,7 @@ CBEMarshaller::MarshalValue(CBEFile& pFile,
 }
 
 /** \brief internal method to marshal a parameter
+ *  \param pFile the file to write to
  *  \param pParameter the parameter to marshal
  *  \param pStack the declarator stack
  *
@@ -452,6 +452,7 @@ CBEMarshaller::MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pParam
 }
 
 /** \brief marshals a member in the generic struct
+ *  \param pFile the file to write to
  *  \param nPosition the position in the generic struct to marshal
  *  \param pParameter the parameter to marshal to this position
  *  \param pStack the declarator stack
@@ -464,10 +465,7 @@ CBEMarshaller::MarshalParameterIntern(CBEFile& pFile, CBETypedDeclarator *pParam
  * We do not adapt this method to handle arrays and structs, since the generic
  * struct should only contain an array of word sized members.
  */
-void
-CBEMarshaller::MarshalGenericMember(CBEFile& pFile,
-	int nPosition,
-	CBETypedDeclarator *pParameter,
+void CBEMarshaller::MarshalGenericMember(CBEFile& pFile, int nPosition, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack)
 {
 	CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
@@ -497,13 +495,11 @@ CBEMarshaller::MarshalGenericMember(CBEFile& pFile,
 }
 
 /** \brief marshals a value in the generic struct
+ *  \param pFile the file to write to
  *  \param nPosition the position in the generic struct to marshal
  *  \param nValue the value to marshal to this position
  */
-void
-CBEMarshaller::MarshalGenericValue(CBEFile& pFile,
-	int nPosition,
-	int nValue)
+void CBEMarshaller::MarshalGenericValue(CBEFile& pFile, int nPosition, int nValue)
 {
 	if (!m_bMarshal)
 		return;
@@ -517,13 +513,13 @@ CBEMarshaller::MarshalGenericValue(CBEFile& pFile,
 }
 
 /** \brief test for and marshal special members, such as opcode or exception
+ *  \param pFile the file to write to
  *  \param pMember the member to marshal
  *  \return true if this was an special parameter
  *
  * This implementation checks for opcode and exception member.
  */
-bool
-CBEMarshaller::MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMember)
+bool CBEMarshaller::MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
 	assert(pMember);
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
@@ -544,11 +540,11 @@ CBEMarshaller::MarshalSpecialMember(CBEFile& pFile, CBETypedDeclarator *pMember)
 }
 
 /** \brief test for and marshal opcode
+ *  \param pFile the file to write to
  *  \param pMember the member to marshal
  *  \return true if this was an special parameter
  */
-bool
-CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
+bool CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 		__func__, pMember->m_Declarators.First()->GetName().c_str());
@@ -560,7 +556,7 @@ CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
 		return false;
 
 	// get message buffer
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+	CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
 	assert(pMsgBuffer);
 
 	if (m_bMarshal)
@@ -587,6 +583,7 @@ CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
 }
 
 /** \brief test for and marshal exception
+ *  \param pFile the file to write to
  *  \param pMember the member to marshal
  *  \return true if this was an special parameter
  *
@@ -594,8 +591,7 @@ CBEMarshaller::MarshalOpcode(CBEFile& pFile, CBETypedDeclarator *pMember)
  * exception. Only then, store this exception in the environment.  This saves
  * us an indirect access in the nominal case.
  */
-bool
-CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember)
+bool CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 		__func__, pMember->m_Declarators.First()->GetName().c_str());
@@ -606,7 +602,7 @@ CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember)
 		return false;
 
 	// get message buffer
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+	CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
 
 	CBEDeclarator *pEnv = m_pFunction->GetEnvironment()->m_Declarators.First();
 	string sEnvPtr;
@@ -688,11 +684,11 @@ CBEMarshaller::MarshalException(CBEFile& pFile, CBETypedDeclarator *pMember)
 }
 
 /** \brief marshal the return value of the function
+ *  \param pFile the file to write to
  *  \param pMember the member to marshal
  *  \return true if this was an special parameter
  */
-bool
-CBEMarshaller::MarshalReturn(CBEFile& pFile, CBETypedDeclarator *pMember)
+bool CBEMarshaller::MarshalReturn(CBEFile& pFile, CBETypedDeclarator *pMember)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n",
 		__func__, pMember->m_Declarators.First()->GetName().c_str());
@@ -761,15 +757,13 @@ CBEMarshaller::MarshalReturn(CBEFile& pFile, CBETypedDeclarator *pMember)
 }
 
 /** \brief writes the complete assigning, respecting the stack
+ *  \param pFile the file to write to
  *  \param pParameter the parameter
  *  \param pStack the declarator stack
  */
-void
-CBEMarshaller::WriteAssignment(CBEFile& pFile,
-	CBETypedDeclarator *pParameter,
-	CDeclStack* pStack)
+void CBEMarshaller::WriteAssignment(CBEFile& pFile, CBETypedDeclarator *pParameter, CDeclStack* pStack)
 {
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+	CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
 	CBETypedDeclarator *pMember = FindMarshalMember(pStack);
 	if (!pMember)
 	{
@@ -798,6 +792,7 @@ CBEMarshaller::WriteAssignment(CBEFile& pFile,
 }
 
 /** \brief writes the access to a specific member in the message buffer
+ *  \param pFile the file to write to
  *  \param nType the type of the message buffer type
  *  \param pMsgBuffer the message buffer containing the members
  *  \param pMember the member to access
@@ -849,6 +844,7 @@ void CBEMarshaller::WriteMember(CBEFile& pFile, CMsgStructType nType, CBEMsgBuff
 }
 
 /** \brief writes the access to a parameter
+ *  \param pFile the file to write to
  *  \param pParameter the parameter to access
  *  \param pStack the declarator stack
  *  \param bPointer true if parameter should be used as pointer
@@ -859,10 +855,7 @@ void CBEMarshaller::WriteMember(CBEFile& pFile, CMsgStructType nType, CBEMsgBuff
  * this type. If the parameter's type is a constructed type, we have to cast
  * pointers.
  */
-void
-CBEMarshaller::WriteParameter(CBEFile& pFile,
-	CBETypedDeclarator *pParameter,
-	CDeclStack* pStack,
+void CBEMarshaller::WriteParameter(CBEFile& pFile, CBETypedDeclarator *pParameter, CDeclStack* pStack,
 	bool bPointer)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
@@ -939,6 +932,7 @@ CBEMarshaller::WriteParameter(CBEFile& pFile,
 }
 
 /** \brief marshal a member, which is an string
+ *  \param pFile the file to write to
  *  \param pParameter the parameter to marshal
  *  \param pStack the declarator stack
  *  \return true if it marshalled something
@@ -948,10 +942,7 @@ CBEMarshaller::WriteParameter(CBEFile& pFile,
  * member to the struct. We only set the SIZE_IS attribute, so testing this
  * for our size member is sufficient.
  */
-bool
-CBEMarshaller::MarshalString(CBEFile& pFile,
-	CBETypedDeclarator *pParameter,
-	CDeclStack* pStack)
+bool CBEMarshaller::MarshalString(CBEFile& pFile, CBETypedDeclarator *pParameter, CDeclStack* pStack)
 {
 	if (!pParameter->IsString())
 		return false;
@@ -1069,7 +1060,7 @@ CBEMarshaller::MarshalString(CBEFile& pFile,
 	}
 
 	// now memcpy string
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+	CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
 		"CBEMarshaller::%s message buffer at %p\n", __func__, pMsgBuffer);
 
@@ -1214,6 +1205,7 @@ CBEMarshaller::MarshalString(CBEFile& pFile,
 }
 
 /** \brief marshal a member, which is an array
+ *  \param pFile the file to write to
  *  \param pParameter the parameter to marshal
  *  \param pStack the declarator stack
  *  \return true if it marshalled something
@@ -1231,10 +1223,7 @@ CBEMarshaller::MarshalString(CBEFile& pFile,
  * array dimensions AND size or length attribute set. If so, the internal
  * array marshalling function is called.
  */
-bool
-CBEMarshaller::MarshalArray(CBEFile& pFile,
-	CBETypedDeclarator *pParameter,
-	CDeclStack* pStack)
+bool CBEMarshaller::MarshalArray(CBEFile& pFile, CBETypedDeclarator *pParameter, CDeclStack* pStack)
 {
 	// get array dimensions from user defined types
 	vector<CBEExpression*> vBounds;
@@ -1243,15 +1232,13 @@ CBEMarshaller::MarshalArray(CBEFile& pFile,
 	if ((pAttr = pParameter->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
 		pType = pAttr->GetAttrType();
 
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
 	vector<CBEExpression*>::iterator iter;
 	CBEUserDefinedType *pUserType = dynamic_cast<CBEUserDefinedType*>(pType);
 	while (pUserType)
 	{
 		// we get the original type the old fashioned way, because we need the
 		// typedef
-		CBETypedef *pTypedef = pRoot->FindTypedef(pUserType->GetName());
+		CBETypedef *pTypedef = FindTypedef(pUserType->GetName());
 		assert(pTypedef);
 		pType = pTypedef->GetType();
 		if ((pAttr = pTypedef->m_Attributes.Find(ATTR_TRANSMIT_AS)) != 0)
@@ -1300,13 +1287,12 @@ CBEMarshaller::MarshalArray(CBEFile& pFile,
 }
 
 /** \brief internal marshalling function for arrays
+ *  \param pFile the file to write to
  *  \param pParameter the parameter to marshal
  *  \param pType the type to marshal with
  *  \param pStack the currently active declarator stack
  */
-void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
-	CBETypedDeclarator *pParameter,
-	CBEType *pType,
+void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile, CBETypedDeclarator *pParameter, CBEType *pType,
 	CDeclStack* pStack)
 {
 	CBEDeclarator *pDeclarator = pParameter->m_Declarators.First();
@@ -1354,7 +1340,7 @@ void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
 		{
 			// check if decl is before parameter in struct (then it will be
 			// unmarshalled before array)
-			CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+			CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
 			assert(pMsgBuffer);
 
 			if (pMsgBuffer->IsEarlier(m_pFunction, m_pFunction->GetReceiveDirection(),
@@ -1440,7 +1426,7 @@ void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
 		pFile << ");\n";
 	}
 
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+	CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
 	CBETypedDeclarator *pMember = FindMarshalMember(pStack);
 
 	pFile << "\t_dice_memcpy (";
@@ -1509,6 +1495,7 @@ void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
 }
 
 /** \brief unmarshals an array by referencing directly into the message buffer
+ *  \param pFile the file to write to
  *  \param pParameter the parameter to unmarshal
  *  \param pStack the declarator stack used so far for the message buffer
  *         memeber
@@ -1520,21 +1507,20 @@ void CBEMarshaller::MarshalArrayIntern(CBEFile& pFile,
  *   parameter has only stars to mark its variable size
  * - unmarshalling
  */
-void
-CBEMarshaller::MarshalArrayInternRef(CBEFile& pFile,
-	CBETypedDeclarator *pParameter,
+void CBEMarshaller::MarshalArrayInternRef(CBEFile& pFile, CBETypedDeclarator *pParameter,
 	CDeclStack* pStack)
 {
 	pFile << "\t";
 	WriteParameter(pFile, pParameter, pStack, true);
 	pFile << " = ";
-	CBEMsgBuffer *pMsgBuffer = GetMessageBuffer(m_pFunction);
+	CBEMsgBuffer *pMsgBuffer = m_pFunction->GetMessageBuffer();
 	CBETypedDeclarator *pMember = FindMarshalMember(pStack);
 	WriteMember(pFile, m_pFunction->GetReceiveDirection(), pMsgBuffer, pMember, pStack);
 	pFile << ";\n";
 }
 
 /** \brief marshal struct members (or parameters)
+ *  \param pFile the file to write to
  *  \param pParameter the parameter to marshal from/to
  *  \param pStack the declarator stack
  *
@@ -1545,10 +1531,7 @@ CBEMarshaller::MarshalArrayInternRef(CBEFile& pFile,
  * cast it to a pointer of the target type and then dereference it. This
  * casting is done in the WriteParameter method.
  */
-bool
-CBEMarshaller::MarshalStruct(CBEFile& pFile,
-	CBETypedDeclarator *pParameter,
-	CDeclStack* pStack)
+bool CBEMarshaller::MarshalStruct(CBEFile& pFile, CBETypedDeclarator *pParameter, CDeclStack* pStack)
 {
 	CCompiler::VerboseI(PROGRAM_VERBOSE_NORMAL,
 		"CBEMarshaller::%s(%s) called\n", __func__,
@@ -1594,6 +1577,7 @@ CBEMarshaller::MarshalStruct(CBEFile& pFile,
 }
 
 /** \brief marshal union members (or parameters)
+ *  \param pFile the file to write to
  *  \param pParameter the parameter to marshal from/to
  *  \param pStack the declarator stack
  *
@@ -1606,10 +1590,7 @@ CBEMarshaller::MarshalStruct(CBEFile& pFile,
  * target type and then dereference it.  This is done in the WriteParameter
  * method/
  */
-bool
-CBEMarshaller::MarshalUnion(CBEFile& pFile,
-	CBETypedDeclarator *pParameter,
-	CDeclStack* pStack)
+bool CBEMarshaller::MarshalUnion(CBEFile& pFile, CBETypedDeclarator *pParameter, CDeclStack* pStack)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBEMarshaller::%s(%s) called\n", __func__,
 		pParameter->m_Declarators.First()->GetName().c_str());

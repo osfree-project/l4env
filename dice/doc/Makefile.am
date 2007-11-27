@@ -1,3 +1,3 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS=	manual user-man
+SUBDIRS=	manpage user-man

@@ -5,7 +5,7 @@ include $(L4DIR)/mk/Makeconf
 -include $(PKGDIR_OBJ)/Makeconf
 
 ifeq ($(CONFIG_DDE26),y)
-TARGET = dde26_test ne2k sound
+TARGET = dde26_test ne2k
 endif
 
 include $(L4DIR)/mk/subdir.mk

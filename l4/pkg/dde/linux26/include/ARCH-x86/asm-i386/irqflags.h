@@ -28,11 +28,7 @@ static inline unsigned long __raw_local_save_flags(void)
 
 	return flags;
 }
-#else /* DDE_LINUX */
-unsigned long __raw_local_save_flags(void);
-#endif /* DDE_LINUX */
 
-#ifndef DDE_LINUX
 static inline void raw_local_irq_restore(unsigned long flags)
 {
 	__asm__ __volatile__(
@@ -71,6 +67,8 @@ static inline void halt(void)
 	__asm__ __volatile__("hlt": : :"memory");
 }
 #else /* DDE_LINUX */
+unsigned long __raw_local_save_flags(void);
+void raw_local_irq_restore(unsigned long flags);
 void raw_local_irq_restore(unsigned long flags);
 void raw_local_irq_disable(void);
 void raw_local_irq_enable(void);
@@ -106,10 +104,14 @@ static inline unsigned long __raw_local_irq_save(void)
 #define raw_local_irq_save(flags) \
 		do { (flags) = __raw_local_irq_save(); } while (0)
 
+#ifndef DDE_LINUX
 static inline int raw_irqs_disabled_flags(unsigned long flags)
 {
 	return !(flags & (1 << 9));
 }
+#else
+int raw_irqs_disabled_flags(unsigned long flags);
+#endif /* DDE_LINUX */
 
 static inline int raw_irqs_disabled(void)
 {

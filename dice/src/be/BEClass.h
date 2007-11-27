@@ -32,7 +32,6 @@
 #define BECLASS_H
 
 #include "BEObject.h"
-#include "BEContext.h" /* for FUNCTION_TYPE */
 #include "BEFunction.h"
 #include "Attribute-Type.h" /* for ATTR_TYPE */
 #include "template.h"
@@ -131,11 +130,13 @@ public: // Public methods
 	int GetClassNumber();
 
 	CFunctionGroup* FindFunctionGroup(CBEFunction *pFunction);
+	CBEFunction* FindFunctionFor(CBEFunction *pFunction, FUNCTION_TYPE nFunctionType);
 	CBESrvLoopFunction* GetSrvLoopFunction();
 	CBEType* FindTaggedType(int nType, std::string sTag);
 	CBETypedef* FindTypedef(std::string sTypeName, CBETypedef* pPrev = 0);
 	CBEFunction* FindFunction(std::string sFunctionName, FUNCTION_TYPE nFunctionType);
 	CBEEnumType* FindEnum(std::string sName);
+	CBEConstant* FindConstant(std::string sConstantName);
 
 	bool IsTargetFile(CBEFile* pFile);
 
@@ -220,6 +221,34 @@ protected:
 	void WriteExternCStart(CBEFile& pFile);
 	void WriteExternCEnd(CBEFile& pFile);
 	void WriteLineDirective(CBEFile& pFile, CObject *pObj);
+
+protected:
+	/** \class WriteCount
+	 *  \brief used as function to count the number of writable functions
+	 */
+	class WriteCount
+	{
+		/** \var CBEFile *f
+		 *  \brief file object to use when checking if writing
+		 */
+		CBEFile *f;
+	public:
+		/** \brief constructor
+		 *  \param ff the file object
+		 */
+		WriteCount(CBEFile *ff) : f(ff)
+		{ }
+
+		/** \brief operator called when iterating functions
+		 *  \param fun the function object to check for writing
+		 *  \return true if \a fun can be be written to \a f
+		 */
+		bool operator() (CBEFunction *fun)
+		{
+			return fun->DoWriteFunction(f);
+		}
+	};
+
 
 protected: // Protected members
 	/** \var std::string m_sName

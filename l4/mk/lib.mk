@@ -35,6 +35,7 @@ MODE			?= l4env
 # include all Makeconf.locals, define common rules/variables
 include $(L4DIR)/mk/Makeconf
 include $(L4DIR)/mk/binary.inc
+$(GENERAL_D_LOC): $(L4DIR)/mk/lib.mk
 
 ifneq ($(SYSTEM),) # if we a system, really build
 

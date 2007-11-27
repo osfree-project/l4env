@@ -32,6 +32,7 @@ static quota_t quota[RMGR_TASK_MAX];
 typedef struct
 {
   char       name[MOD_NAME_MAX];
+  unsigned   taskno;
   quota_t    quota;
 } cfg_quota_t;
 
@@ -139,13 +140,14 @@ quota_set(unsigned i, const quota_t * const q)
 
 
 const char*
-cfg_quota_set(const char *cfg_name, const quota_t * const q)
+cfg_quota_set(const char *cfg_name, unsigned taskno, const quota_t * const q)
 {
   if (max_cfg_quota < RMGR_CFG_MAX)
     {
       snprintf(cfg_quota[max_cfg_quota].name, sizeof(cfg_quota[0].name),
 	       "%s", cfg_name);
       cfg_quota[max_cfg_quota].quota = *q;
+      cfg_quota[max_cfg_quota].taskno = taskno;
       return cfg_quota[max_cfg_quota++].name;
     }
 
@@ -165,6 +167,18 @@ cfg_quota_copy(unsigned i, const char *name)
       }
 
   return -1;
+}
+
+int
+cfg_quota_search_taskno(const char *name)
+{
+  int i;
+
+  for (i = 0; i < max_cfg_quota; i++)
+    if (is_program_in_cmdline(name, cfg_quota[i].name))
+      return cfg_quota[i].taskno;
+
+  return 0;
 }
 
 void

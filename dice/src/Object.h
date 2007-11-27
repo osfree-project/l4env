@@ -57,12 +57,15 @@ public:
     virtual void Accept(CVisitor&);
 	virtual CObject* Clone();
 
-    /** \var location sourceLoc
+    /** \var location m_sourceLoc
      *  \brief contains the begin and end position of this object
      */
     location m_sourceLoc;
 
 protected:
+	/** \brief copy constructor
+	 *  \param src the source of the copy operation
+	 */
 	CObject(const CObject&);
 
 protected:

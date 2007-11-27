@@ -1,5 +1,5 @@
 /**
- *  \file    dice/src/be/MsgBufferType.h
+ *  \file    dice/src/be/MsgStructType.h
  *  \brief   contains the declaration of the class CMsgStructType
  *
  *  \date    05/08/2007

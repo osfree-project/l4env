@@ -43,34 +43,33 @@ class CFEInterface;
  */
 class CBEUnmarshalFunction : public CBEOperationFunction
 {
-// Constructor
+	// Constructor
 public:
-    /** \brief constructor
-     */
-    CBEUnmarshalFunction();
-    virtual ~CBEUnmarshalFunction();
+	/** \brief constructor
+	 */
+	CBEUnmarshalFunction();
+	virtual ~CBEUnmarshalFunction();
 
 public:
-    virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
-    virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter,
-	    bool bMarshal);
-    virtual bool DoWriteFunction(CBEFile* pFile);
-    virtual CBETypedDeclarator * FindParameterType(std::string sTypeName);
-    virtual CMsgStructType GetReceiveDirection();
-    virtual CMsgStructType GetSendDirection();
-    virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
+	virtual void CreateBackEnd(CFEOperation *pFEOperation, bool bComponentSide);
+	virtual bool DoMarshalParameter(CBETypedDeclarator * pParameter, bool bMarshal);
+	virtual bool DoWriteFunction(CBEFile* pFile);
+	virtual CBETypedDeclarator * FindParameterType(std::string sTypeName);
+	virtual CMsgStructType GetReceiveDirection();
+	virtual CMsgStructType GetSendDirection();
+	virtual void MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer);
 
-    virtual CBETypedDeclarator* GetExceptionVariable();
+	virtual CBETypedDeclarator* GetExceptionVariable();
 
 protected:
-    virtual void AddParameter(CFETypedDeclarator *pFEParameter);
-    virtual void WriteInvocation(CBEFile& pFile);
-    virtual void WriteVariableInitialization(CBEFile& pFile);
-    virtual void WriteCallParameter(CBEFile& pFile,
-	CBETypedDeclarator *pParameter, bool bCallFromSameClass);
-    virtual void WriteFunctionDefinition(CBEFile& pFile);
-    virtual void AddAfterParameters();
-    virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
+	virtual void AddParameter(CFETypedDeclarator *pFEParameter);
+	virtual void WriteInvocation(CBEFile& pFile);
+	virtual void WriteVariableInitialization(CBEFile& pFile);
+	virtual void WriteCallParameter(CBEFile& pFile, CBETypedDeclarator *pParameter,
+		bool bCallFromSameClass);
+	virtual void WriteFunctionDefinition(CBEFile& pFile);
+	virtual void AddAfterParameters();
+	virtual void WriteAccessSpecifier(CBEHeaderFile& pFile);
 };
 
 #endif // !__DICE_BEUNMARSHALFUNCTION_H__

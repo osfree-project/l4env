@@ -45,6 +45,11 @@ Return_frame::ip() const
 { return Return_frame::pc; }
 
 IMPLEMENT inline
+Mword
+Return_frame::ip_syscall_page_user() const
+{ return Return_frame::pc; }
+
+IMPLEMENT inline
 void
 Return_frame::ip(Mword _pc)
 { Return_frame::pc = _pc; }

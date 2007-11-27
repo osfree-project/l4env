@@ -40,6 +40,10 @@ location::location(const yy::location& loc)
     filename(*loc.begin.filename)
 { }
 
+/** \brief assignment operator
+ *  \param src the source to copy from
+ *  \return a reference to this object
+ */
 location& location::operator= (const yy::location& src)
 {
     begin_line = src.begin.line;
@@ -50,12 +54,21 @@ location& location::operator= (const yy::location& src)
     return *this;
 }
 
+/** \brief cummulation operator for parser locations
+ *  \param loc the parser location to add
+ *  \return a reference to the cumulated object
+ */
 location& location::operator += (const yy::location& loc)
 {
     location t(loc);
     return operator+= (t);
 }
 
+/** \brief output operator for location
+ *  \param os the output stream
+ *  \param loc the location to output
+ *  \return a reference to the resulting stream
+ */
 std::ostream& operator<< (std::ostream& os, const location& loc)
 {
     os << loc.filename << ":" << loc.begin_line << "." << loc.begin_column;
@@ -65,3 +78,4 @@ std::ostream& operator<< (std::ostream& os, const location& loc)
 	os << "-" << loc.end_column;
     return os;
 }
+

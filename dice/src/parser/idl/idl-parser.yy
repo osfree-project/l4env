@@ -886,63 +886,63 @@ attr_var:
 interface :
 	  if_or_lib_attributes INTERFACE scoped_name inheritance_spec LBRACE
 	{
-	    if (driver.trace_scanning)
-		std::cerr << "C-Parser: INTERFACE checking " << *$3 << "\n";
-	    // check if identifier is already used as class id (structs are
-	    // classes)
-	    if (driver.check_token(*$3, dice::parser::CSymbolTable::CLASS))
-		driver.error(@3, "Interface ID \"" + *$3 + "\" already defined.");
-	    // add aliases to symbol table
-	    driver.add_token(*$3, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
-		*@3.begin.filename, @3.begin.line, @3.begin.column);
+		if (driver.trace_scanning)
+			std::cerr << "C-Parser: INTERFACE checking " << *$3 << "\n";
+		// check if identifier is already used as class id (structs are
+		// classes)
+		if (driver.check_token(*$3, dice::parser::CSymbolTable::CLASS))
+			driver.error(@3, "Interface ID \"" + *$3 + "\" already defined.");
+		// add aliases to symbol table
+		driver.add_token(*$3, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
+			*@3.begin.filename, @3.begin.line, @3.begin.column);
 
-	    $<iface>$ = new CFEInterface($1, *$3, $4,
-		driver.getCurrentContext());
-	    driver.setCurrentContext($<iface>$);
+		$<iface>$ = new CFEInterface($1, *$3, $4,
+			driver.getCurrentContext());
+		driver.setCurrentContext($<iface>$);
 	} interface_component_list RBRACE
 	{
-	    $$ = $<iface>6;
-	    $$->AddComponents($7);
-	    $$->m_sourceLoc = @$;
-	    driver.leaveCurrentContext();
+		$$ = $<iface>6;
+		$$->AddComponents($7);
+		$$->m_sourceLoc = @$;
+		driver.leaveCurrentContext();
 	}
 	| INTERFACE scoped_name inheritance_spec LBRACE
 	{
-	    if (driver.trace_scanning)
-		std::cerr << "C-Parser: INTERFACE checking " << *$2 << "\n";
-	    // check if identifier is already used as class id (structs are
-	    // classes)
-	    if (driver.check_token(*$2, dice::parser::CSymbolTable::CLASS))
-		driver.error(@2, "Interface ID \"" + *$2 + "\" already defined.");
-	    // add aliases to symbol table
-	    driver.add_token(*$2, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
-		*@2.begin.filename, @2.begin.line, @2.begin.column);
+		if (driver.trace_scanning)
+			std::cerr << "C-Parser: INTERFACE checking " << *$2 << "\n";
+		// check if identifier is already used as class id (structs are
+		// classes)
+		if (driver.check_token(*$2, dice::parser::CSymbolTable::CLASS))
+			driver.error(@2, "Interface ID \"" + *$2 + "\" already defined.");
+		// add aliases to symbol table
+		driver.add_token(*$2, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
+			*@2.begin.filename, @2.begin.line, @2.begin.column);
 
-	    $<iface>$ = new CFEInterface(NULL, *$2, $3,
-		driver.getCurrentContext());
-	    driver.setCurrentContext($<iface>$);
+		$<iface>$ = new CFEInterface(NULL, *$2, $3,
+			driver.getCurrentContext());
+		driver.setCurrentContext($<iface>$);
 	} interface_component_list RBRACE
 	{
-	    $$ = $<iface>5;
-	    $$->AddComponents($6);
-	    $$->m_sourceLoc = @$;
-	    driver.leaveCurrentContext();
+		$$ = $<iface>5;
+		$$->AddComponents($6);
+		$$->m_sourceLoc = @$;
+		driver.leaveCurrentContext();
 	}
 	| INTERFACE scoped_name
 	{
-	    // declaration of an not yet defined or external or following
-	    // interface.  we simply define the name of the interface in the
-	    // current scope.
-	    if (driver.trace_scanning)
-		std::cerr << "C-Parser: INTERFACE checking " << *$2 << "\n";
-	    // check if identifier is already used as class id
-	    if (driver.check_token(*$2, dice::parser::CSymbolTable::CLASS))
-		driver.error(@2, "Interface ID \"" + *$2 + "\" already defined.");
-	    // add aliases to symbol table
-	    driver.add_token(*$2, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
-		*@2.begin.filename, @2.begin.line, @2.begin.column);
+		// declaration of an not yet defined or external or following
+		// interface.  we simply define the name of the interface in the
+		// current scope.
+		if (driver.trace_scanning)
+			std::cerr << "C-Parser: INTERFACE checking " << *$2 << "\n";
+		// check if identifier is already used as class id
+		if (driver.check_token(*$2, dice::parser::CSymbolTable::CLASS))
+			driver.error(@2, "Interface ID \"" + *$2 + "\" already defined.");
+		// add aliases to symbol table
+		driver.add_token(*$2, dice::parser::CSymbolTable::CLASS, (CFEBase*)0,
+			*@2.begin.filename, @2.begin.line, @2.begin.column);
 
-	    $$ = NULL;
+		$$ = NULL;
 	}
 	;
 
@@ -1067,23 +1067,23 @@ inheritance_spec :
 base_interface_list :
 	  base_interface_list COMMA base_interface
 	{
-	    $$ = $1;
-	    if ($3)
-	    {
-		CFEIdentifier *tId = new CFEIdentifier(*$3);
-		tId->m_sourceLoc = @3;
-		$$->push_back(tId);
-	    }
+		$$ = $1;
+		if ($3)
+		{
+			CFEIdentifier *tId = new CFEIdentifier(*$3);
+			tId->m_sourceLoc = @3;
+			$$->push_back(tId);
+		}
 	}
 	| base_interface
 	{
-	    $$ = new vector<CFEIdentifier*>();
-	    if ($1)
-	    {
-		CFEIdentifier *tId = new CFEIdentifier(*$1);
-		tId->m_sourceLoc = @1;
-		$$->push_back(tId);
-	    }
+		$$ = new vector<CFEIdentifier*>();
+		if ($1)
+		{
+			CFEIdentifier *tId = new CFEIdentifier(*$1);
+			tId->m_sourceLoc = @1;
+			$$->push_back(tId);
+		}
 	}
 	;
 

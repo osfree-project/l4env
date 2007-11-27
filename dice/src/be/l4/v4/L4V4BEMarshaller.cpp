@@ -68,6 +68,7 @@ bool CL4V4BEMarshaller::DoSkipParameter(CBEFunction *pFunction, CBETypedDeclarat
 }
 
 /** \brief marshal an indirect string parameter
+ *  \param pFile the file to write to
  *  \param pParameter the member to test for refstring marshalling
  *  \param pStack the declarator stack so far
  *  \return true if we marshalled a refstring
@@ -202,6 +203,7 @@ bool CL4V4BEMarshaller::MarshalRefstring(CBEFile& pFile, CBETypedDeclarator *pPa
 }
 
 /** \brief writes the access to a refstring member in the message buffer
+ *  \param pFile the file to write to
  *  \param nType the direction of the parameter
  *  \param pMsgBuffer the message buffer containing the members
  *  \param pMember the member to access
@@ -271,6 +273,7 @@ void CL4V4BEMarshaller::WriteRefstringCastMember(CBEFile& pFile, CMsgStructType 
 }
 
 /** \brief test if zero flexpage and marshal if so
+ *  \param pFile the file to write to
  *  \param pMember the parameter to marshal
  *  \return true if zero flexpage marshalled
  */

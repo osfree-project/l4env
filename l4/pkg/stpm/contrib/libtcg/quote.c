@@ -61,18 +61,22 @@ int quote_stdout(int argc, unsigned char *argv[])
 		return(-1);
 	}
 
-	if (TPM_Reset()){
-		printf("TPM reset failed\n");	
-		return(-2);
-	}
-	else
-		printf("TPM successfully reset\n");
-
 	if (TPM_GetCapability_Version(&major,&minor,&version,&rev)){
 		printf("TPM version failed\n");	
 		return(-3);
 	} else
 		printf("TPM version: %d.%d.%d.%d\n",major,minor,version,rev);
+
+        //1.2 TPMs don't like resets	
+        if (!(major == 1 && minor == 1 && version == 0 && rev == 0))
+        {
+           if ( TPM_Reset()) {
+		printf("TPM reset failed\n");	
+		return(-2);
+           }
+	   else
+		printf("TPM successfully reset\n");
+        }
 
 	{
 		struct tpm_pcr_selection2 pcrselect;

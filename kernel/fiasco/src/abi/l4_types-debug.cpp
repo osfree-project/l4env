@@ -34,6 +34,19 @@ PUBLIC void L4_uid::print (int task_format = 0) const
     printf("%*x.%02x", task_format, task(), lthread());
 }
 
+PUBLIC void L4_timeout::print() const
+{
+  printf("m=%ld e=%ld", man(), exp());
+}
+
+PUBLIC void L4_timeout_pair::print() const
+{
+  printf("snd: ");
+  snd.print();
+  printf(" rcv: ");
+  rcv.print();
+}
+
 // If compiling w/o JDB, these methods should be available but do nothing.
 IMPLEMENTATION [!debug]:
 

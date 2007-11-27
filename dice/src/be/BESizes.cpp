@@ -151,8 +151,7 @@ int CBESizes::GetSizeOfType(int nFEType, int nFESize)
  * We iterate the types, try to get a typename fromt the name factory and
  * compare it with the given one.
  */
-int
-CBESizes::GetSizeOfType(string sUserType)
+int CBESizes::GetSizeOfType(std::string sUserType)
 {
     CBENameFactory *pNF = CBENameFactory::Instance();
     int nType;
@@ -220,7 +219,7 @@ int CBESizes::WordRoundUp(int nSize)
  *  \param value the string to round
  *  \return the string rounding the value
  */
-string CBESizes::WordRoundUpStr(string const &value)
+string CBESizes::WordRoundUpStr(std::string const &value)
 {
     std::ostringstream os;
     int nWordSize = GetSizeOfType(TYPE_MWORD);
@@ -243,7 +242,7 @@ int CBESizes::WordsFromBytes(int nSize)
  *  \param value the value string to make a dwords from
  *  \return the string with the conversion
  */
-string CBESizes::WordsFromBytesStr(string const &value)
+string CBESizes::WordsFromBytesStr(std::string const &value)
 {
     std::ostringstream os;
     int nWordSize = GetSizeOfType(TYPE_MWORD);

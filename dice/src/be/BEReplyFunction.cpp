@@ -89,6 +89,7 @@ void CBEReplyFunction::WriteCleanup(CBEFile& /*pFile*/)
 
 /** \brief creates the back-end reply only function
  *  \param pFEOperation the corresponding front-end operation
+ *  \param bComponentSide true if this function is create at component side
  *  \return true if successful
  *
  * The base class has to be called first, because:
@@ -100,8 +101,7 @@ void CBEReplyFunction::WriteCleanup(CBEFile& /*pFile*/)
  * The return type of a reply-receive function is void, because we don't
  * expect a new message or a reply from the client.
  */
-void
-CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation, bool bComponentSide)
+void CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation, bool bComponentSide)
 {
 	// set target file name
 	SetTargetFileName(pFEOperation);
@@ -126,8 +126,7 @@ CBEReplyFunction::CreateBackEnd(CFEOperation* pFEOperation, bool bComponentSide)
  *  \param pMsgBuffer the message buffer to initialize
  *  \return true on success
  */
-void
-CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
+void CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
 {
 	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s called\n", __func__);
 	CBEOperationFunction::MsgBufferInitialization(pMsgBuffer);
@@ -149,9 +148,7 @@ CBEReplyFunction::MsgBufferInitialization(CBEMsgBuffer *pMsgBuffer)
  *
  * Only OUT parameters are marshalled by this function
  */
-bool
-CBEReplyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
-	bool bMarshal)
+bool CBEReplyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter, bool bMarshal)
 {
 	if (!CBEOperationFunction::DoMarshalParameter(pParameter, bMarshal))
 		return false;
@@ -168,8 +165,7 @@ CBEReplyFunction::DoMarshalParameter(CBETypedDeclarator * pParameter,
  *
  * A reply-only function is written at the component's side only.
  */
-bool
-CBEReplyFunction::DoWriteFunction(CBEFile* pFile)
+bool CBEReplyFunction::DoWriteFunction(CBEFile* pFile)
 {
 	if (!IsTargetFile(pFile))
 		return false;
@@ -203,8 +199,7 @@ CMsgStructType CBEReplyFunction::GetReceiveDirection()
  * This implementation adds the return value to the parameter list. The return
  * value is the value returned by the component-function.
  */
-void
-CBEReplyFunction::AddBeforeParameters()
+void CBEReplyFunction::AddBeforeParameters()
 {
 	// call base class to add object
 	CBEOperationFunction::AddBeforeParameters();
@@ -220,8 +215,7 @@ CBEReplyFunction::AddBeforeParameters()
 /** \brief get exception variable
  *  \return a reference to the exception variable
  */
-CBETypedDeclarator*
-CBEReplyFunction::GetExceptionVariable()
+CBETypedDeclarator* CBEReplyFunction::GetExceptionVariable()
 {
 	CBETypedDeclarator *pRet = CBEOperationFunction::GetExceptionVariable();
 	if (pRet)
@@ -277,8 +271,7 @@ int CBEReplyFunction::GetSize(DIRECTION_TYPE nDirection)
  * This function decides, which parameters to add and which not. The
  * parameters to reply are for component-to-client reply the OUT parameters.
  */
-void
-CBEReplyFunction::AddParameter(CFETypedDeclarator * pFEParameter)
+void CBEReplyFunction::AddParameter(CFETypedDeclarator * pFEParameter)
 {
 	if (!(pFEParameter->m_Attributes.Find(ATTR_OUT)))
 		// skip adding a parameter if it has no OUT

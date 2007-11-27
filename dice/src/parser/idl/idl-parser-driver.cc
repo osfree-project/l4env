@@ -90,37 +90,50 @@ static std::string context_to_str(CFEBase *context)
 }
 #endif
 
-CFEFile*
-idl_parser_driver::parse (const std::string &f, bool bPreOnly, bool std_inc)
+/** \brief the original parsing function
+ *  \param f the name of the file to parse
+ *  \param bPreOnly true if the file should only be preprocessed
+ *  \param std_inc true if this is a standard include file
+ *  \return a reference to a file object that contains all tokens parsed from
+ *		this file
+ *
+ * This function will perform pre-processing of the file, set up the context
+ * for this file and call the actual parser's parse method.
+ */
+CFEFile* idl_parser_driver::parse (const std::string &f, bool bPreOnly, bool std_inc)
 {
-    file = current_file = f;
-    std::string surrounding_file = pCurrentFile ? pCurrentFile->GetFileName() : "";
-    trace_scanning = CCompiler::IsVerboseLevel(PROGRAM_VERBOSE_SCANNER);
-    scan_begin ();
-    if (bPreOnly)
-    {
-	scan_end();
-	return (CFEFile*)0;
-    }
-    enter_file(f, 1, std_inc, 0, false, true); // sets pCurrentFile makes it child
-    yy::idl_parser parser (*this); // this is the bison generated parser class
-    parser.set_debug_level (CCompiler::IsVerboseLevel(PROGRAM_VERBOSE_PARSER));
-    parser.parse ();
-    // previous file is current context
-    CFEFile *ret = pCurrentFile;
-    assert(getCurrentContext() == pCurrentFile);
-    // leave file (does not leave if no parent file)
-    leave_file(surrounding_file);
-    scan_end ();
-    return ret;
+	file = current_file = f;
+	std::string surrounding_file = pCurrentFile ? pCurrentFile->GetFileName() : "";
+	trace_scanning = CCompiler::IsVerboseLevel(PROGRAM_VERBOSE_SCANNER);
+	scan_begin ();
+	if (bPreOnly)
+	{
+		scan_end();
+		return (CFEFile*)0;
+	}
+	enter_file(f, 1, std_inc, 0, false, true); // sets pCurrentFile makes it child
+	yy::idl_parser parser (*this); // this is the bison generated parser class
+	parser.set_debug_level (CCompiler::IsVerboseLevel(PROGRAM_VERBOSE_PARSER));
+	parser.parse ();
+	// previous file is current context
+	CFEFile *ret = pCurrentFile;
+	assert(getCurrentContext() == pCurrentFile);
+	// leave file (does not leave if no parent file)
+	leave_file(surrounding_file);
+	scan_end ();
+	return ret;
 }
 
+/** \brief check if we know the attribute
+ *  \param s the name to check for attribute
+ *  \return the token type of the attribute
+ */
 idl_parser_driver::tokentype
 idl_parser_driver::find_attribute (const std::string& s)
 {
-    if (!expect_attr)
-	return yy::idl_parser::token::INVALID;
-    if (attr_table.find(s) == attr_table.end())
-	return yy::idl_parser::token::INVALID;
-    return attr_table[s];
+	if (!expect_attr)
+		return yy::idl_parser::token::INVALID;
+	if (attr_table.find(s) == attr_table.end())
+		return yy::idl_parser::token::INVALID;
+	return attr_table[s];
 }

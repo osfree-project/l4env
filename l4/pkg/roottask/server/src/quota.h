@@ -47,8 +47,9 @@ typedef struct
   l4_int32_t	offset;
 } __attribute__((packed)) quota_t;
 
-const char * cfg_quota_set(const char *name, const quota_t * const q);
+const char * cfg_quota_set(const char *name, unsigned taskno, const quota_t * const q);
 int      cfg_quota_copy(unsigned i, const char *name);
+int      cfg_quota_search_taskno(const char *name);
 void     quota_init(void);
 void     quota_init_log_mcp(int log_mcp);
 void     quota_init_mcp(int mcp);

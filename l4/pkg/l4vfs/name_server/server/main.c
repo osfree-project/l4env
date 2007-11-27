@@ -22,6 +22,7 @@
 #include <l4/log/l4log.h>
 #include <l4/sys/syscalls.h>
 #include <l4/util/l4_macros.h>
+#include <l4/names/libnames.h>
 
 #include "volumes.h"
 #include "dirs.h"
@@ -452,6 +453,12 @@ int main(int argc, char *argv[])
             }
         } while (option != -1);
 
+    }
+
+    if (! names_register("name_server"))
+    {
+        LOG("Error registering at names!");
+        abort();
     }
 
     LOGd(_DEBUG, "start ...");

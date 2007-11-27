@@ -8,6 +8,7 @@ enum Warn_level
 {
   Error   = 0,
   Warning = 1,
+  Info    = 2,
 };
 
 // We should use something like printf here to take care of the Fiasco-UX

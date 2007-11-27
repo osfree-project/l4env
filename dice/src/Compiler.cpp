@@ -89,15 +89,6 @@ extern const char* dice_user;
 extern const char* dice_svnrev;
 //@}
 
-/////////////////////////////////////////////////////////////////////////////////
-// error handling
-//@{
-/** globale variables used by the parsers to count errors and warnings */
-int errcount = 0;
-int erroccured = 0;
-int warningcount = 0;
-//@}
-
 //@{
 /** global variables for argument parsing */
 extern char *optarg;
@@ -118,6 +109,8 @@ bitset<PROGRAM_WARNING_MAX> CCompiler::m_WarningLevel;
 int CCompiler::m_nDumpMsgBufDwords = 0;
 CBESizes *CCompiler::m_pSizes = 0;
 map<string, string> CCompiler::m_mBackEndOptions;
+int CCompiler::errcount = 0;
+int CCompiler::warningcount = 0;
 //@}
 
 CCompiler::CCompiler()
@@ -1458,15 +1451,12 @@ void CCompiler::Parse()
 		CMessages::Error("Post-Parse Processing failed.\n");
 	}
 	// if errors, print them and abort
-	if (erroccured)
-	{
-		if (errcount > 0)
-			CMessages::Error("%d Error(s) and %d Warning(s) occured.\n", errcount,
-				warningcount);
-		else
-			CMessages::Warning("%s: warning: %d Warning(s) occured while parsing.\n",
-				m_sInFileName.c_str(), warningcount);
-	}
+	if (errcount)
+		CMessages::Error("%d Error(s) and %d Warning(s) occured.\n", errcount,
+			warningcount);
+	else if (warningcount)
+		CMessages::Warning("%s: warning: %d Warning(s) occured while parsing.\n",
+			m_sInFileName.c_str(), warningcount);
 
 #if 0
 	ASTDumper d(m_sInFileName.substr(0, m_sInFileName.rfind(".idl")).append(".ast"));
@@ -1710,6 +1700,20 @@ void CCompiler::CheckRequire(const char *str)
 		CMessages::Error("Version check \"require\" received malformed version \"%s\".\n",
 			sVersion.c_str());
 	}
+}
+
+/** \brief increment error counter
+ */
+void CCompiler::Error()
+{
+	errcount++;
+}
+
+/** \brief increment warnings counter
+ */
+void CCompiler::Warning()
+{
+	warningcount++;
 }
 
 CCompiler::Version::Version(string s) :

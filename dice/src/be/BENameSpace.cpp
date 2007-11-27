@@ -61,46 +61,27 @@ CBENameSpace::CBENameSpace()
 
 /** \brief searches for a specific Class
  *  \param sClassName the name of the Class
- *  \param pPrev previously found class
  *  \return a reference to the Class or 0 if not found
  */
-CBEClass* CBENameSpace::FindClass(string sClassName, CBEClass *pPrev)
+CBEClass* CBENameSpace::FindClass(std::string sClassName)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+		"CBENameSpace::FindClass(%s) called\n", sClassName.c_str());
 	// first search own Classes
-	CBEClass *pClass = m_Classes.Find(sClassName, pPrev);
-	if (pClass)
-		return pClass;
-	// then check nested libs
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NestedNamespaces.begin();
-		iterN != m_NestedNamespaces.end();
-		iterN++)
+	CBEClass *pRet = m_Classes.Find(sClassName);
+	if (pRet)
 	{
-		if ((pClass = (*iterN)->FindClass(sClassName, pPrev)) != 0)
-			return pClass;
+		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
+			"CBENameSpace::FindClass: return own class\n");
+		return pRet;
 	}
-	return 0 ;
-}
 
-/** \brief tries to find a NameSpace
- *  \param sNameSpaceName the name of the NameSpace
- *  \return a reference to the NameSpace
- */
-CBENameSpace* CBENameSpace::FindNameSpace(string sNameSpaceName)
-{
-	// then check nested libs
-	vector<CBENameSpace*>::iterator iter;
-	for (iter = m_NestedNamespaces.begin();
-		iter != m_NestedNamespaces.end();
-		iter++)
-	{
-		CBENameSpace *pFoundNameSpace;
-		if ((*iter)->GetName() == sNameSpaceName)
-			return *iter;
-		if ((pFoundNameSpace = (*iter)->FindNameSpace(sNameSpaceName)) != 0)
-			return pFoundNameSpace;
-	}
-	return 0;
+	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
+	if (pNameSpace)
+		return pNameSpace->FindClass(sClassName);
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	return pRoot->FindClass(sClassName);
 }
 
 /** \brief creates the back-end NameSpace
@@ -249,14 +230,10 @@ void CBENameSpace::CreateBackEnd(CFELibrary *pFELibrary)
  *  \param pFEInterface the respective front-end interface
  *  \return true if successful
  */
-void
-CBENameSpace::CreateBackEnd(CFEInterface *pFEInterface)
+void CBENameSpace::CreateBackEnd(CFEInterface *pFEInterface)
 {
-	CBEClass *pClass = 0;
 	// check if class already exists
-	CBERoot *pRoot = GetSpecificParent<CBERoot>();
-	assert(pRoot);
-	pClass = pRoot->FindClass(pFEInterface->GetName());
+	CBEClass *pClass = CBEObject::FindClass(pFEInterface->GetName());
 	if (!pClass)
 	{
 		pClass = CBEClassFactory::Instance()->GetNewClass();
@@ -309,34 +286,19 @@ CBENameSpace::CreateBackEnd(CFEAttribute *pFEAttribute)
  *  \param sConstantName the name of the constants
  *  \return a reference to the constant if found, zero otherwise
  */
-CBEConstant* CBENameSpace::FindConstant(string sConstantName)
+CBEConstant* CBENameSpace::FindConstant(std::string sConstantName)
 {
-	if (sConstantName.empty())
-		return 0;
 	// simply scan the namespace for a match
-	CBEConstant *pConstant = m_Constants.Find(sConstantName);
-	if (pConstant)
-		return pConstant;
-	// check classes
-	vector<CBEClass*>::iterator iterCl;
-	for (iterCl = m_Classes.begin();
-		iterCl != m_Classes.end();
-		iterCl++)
-	{
-		if ((pConstant = (*iterCl)->m_Constants.Find(sConstantName)) != 0)
-			return pConstant;
-	}
-	// check namespaces
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NestedNamespaces.begin();
-		iterN != m_NestedNamespaces.end();
-		iterN++)
-	{
-		if ((pConstant = (*iterN)->FindConstant(sConstantName)) != 0)
-			return pConstant;
-	}
-	// nothing found
-	return 0;
+	CBEConstant *pRet = m_Constants.Find(sConstantName);
+	if (pRet)
+		return pRet;
+
+	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
+	if (pNameSpace)
+		return pNameSpace->FindConstant(sConstantName);
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	return pRoot->FindConstant(sConstantName);
 }
 
 /** \brief adds this NameSpace to the target file
@@ -624,92 +586,44 @@ void CBENameSpace::WriteTaggedType(CBEType *pType, CBEHeaderFile& pFile)
 	pFile << "#endif /* !" << sTag << " */\n\n";
 }
 
-/** \brief tries to find a function
- *  \param sFunctionName the name of the function to find
- *  \param nFunctionType the type of the function to find
- *  \return a reference to the found function (or 0 if not found)
- *
- * Because the namespace does not have functions itself, it searches its
- * classes and netsed namespaces.
- */
-CBEFunction* CBENameSpace::FindFunction(string sFunctionName, FUNCTION_TYPE nFunctionType)
-{
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s (sFunctionName: %s) called\n",
-		__func__, sFunctionName.c_str());
-
-	CBEFunction *pFunction;
-	vector<CBEClass*>::iterator iterC;
-	for (iterC = m_Classes.begin();
-		iterC != m_Classes.end();
-		iterC++)
-	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s checking class %s\n", __func__,
-			(*iterC)->GetName().c_str());
-		if ((pFunction = (*iterC)->FindFunction(sFunctionName,
-					nFunctionType)) != 0)
-			return pFunction;
-	}
-
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NestedNamespaces.begin();
-		iterN != m_NestedNamespaces.end();
-		iterN++)
-	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "%s checking nested namespace %s\n",
-			__func__, (*iterN)->GetName().c_str());
-		if ((pFunction = (*iterN)->FindFunction(sFunctionName,
-					nFunctionType)) != 0)
-			return  pFunction;
-	}
-
-	return 0;
-}
-
 /** \brief tries to find a type definition
  *  \param sTypeName the name of the searched typedef
+ *  \param pPrev previously found typedef
  *  \return a reference to the found type definition
  */
-CBETypedef* CBENameSpace::FindTypedef(string sTypeName, CBETypedef* pPrev)
+CBETypedef* CBENameSpace::FindTypedef(std::string sTypeName, CBETypedef* pPrev)
 {
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::%s(%s) called\n", __func__,
-		sTypeName.c_str());
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::%s(%s, %p) called\n", __func__,
+		sTypeName.c_str(), pPrev);
 
-	CBETypedef *pTypedef = m_Typedefs.Find(sTypeName, pPrev);
-	if (pTypedef)
+	vector<CBETypedef*>::iterator iter = m_Typedefs.begin();
+	if (pPrev)
 	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG,
-			"CBENameSpace::%s: typedef found in namespace, return %p\n", __func__,
-			pTypedef);
-		return pTypedef;
+		iter = std::find(m_Typedefs.begin(), m_Typedefs.end(), pPrev);
+		if (iter != m_Typedefs.end())
+			++iter;
+	}
+	for (; iter != m_Typedefs.end();
+		iter++)
+	{
+		if ((*iter)->m_Declarators.Find(sTypeName))
+			return *iter;
+		if ((*iter)->GetType() &&
+			(*iter)->GetType()->HasTag(sTypeName))
+			return *iter;
 	}
 
-	CBETypedDeclarator *pTypedDecl;
-	vector<CBEClass*>::iterator iterC;
-	for (iterC = m_Classes.begin();
-		iterC != m_Classes.end();
-		iterC++)
-	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBENameSpace::%s: checking class %s\n",
-			__func__, (*iterC)->GetName().c_str());
-		if ((pTypedDecl = (*iterC)->FindTypedef(sTypeName, pPrev)) != 0)
-			if (dynamic_cast<CBETypedef*>(pTypedDecl))
-				return (CBETypedef*)pTypedDecl;
-	}
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBENameSpace::%s not found in namespace, try parent namespace\n", __func__);
+	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
+	if (pNameSpace)
+		return pNameSpace->FindTypedef(sTypeName, pPrev);
 
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NestedNamespaces.begin();
-		iterN != m_NestedNamespaces.end();
-		iterN++)
-	{
-		CCompiler::Verbose(PROGRAM_VERBOSE_DEBUG, "CBENameSpace::%s: checking namespace %s\n",
-			__func__, (*iterN)->GetName().c_str());
-		if ((pTypedef = (*iterN)->FindTypedef(sTypeName, pPrev)) != 0)
-			return pTypedef;
-	}
-
-	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::%s: no typedef found, return 0\n",
-		__func__);
-	return 0;
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL,
+		"CBENameSpace:%s not parent namespace, try root\n", __func__);
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	return pRoot->FindTypedef(sTypeName, pPrev);
 }
 
 /** \brief test if the given file is a target file for the namespace
@@ -721,6 +635,9 @@ CBETypedef* CBENameSpace::FindTypedef(string sTypeName, CBETypedef* pPrev)
  */
 bool CBENameSpace::IsTargetFile(CBEFile* pFile)
 {
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::IsTargetFile(%s) called\n",
+		pFile->GetFileName().c_str());
+
 	vector<CBEClass*>::iterator iterC;
 	for (iterC = m_Classes.begin();
 		iterC != m_Classes.end();
@@ -738,6 +655,8 @@ bool CBENameSpace::IsTargetFile(CBEFile* pFile)
 		if ((*iterN)->IsTargetFile(pFile))
 			return true;
 	}
+
+	CCompiler::Verbose(PROGRAM_VERBOSE_NORMAL, "CBENameSpace::IsTargetFile returns false\n");
 	return false;
 }
 
@@ -746,7 +665,7 @@ bool CBENameSpace::IsTargetFile(CBEFile* pFile)
  *  \param sTag the tag of the type
  *  \return a reference to the found type or 0
  */
-CBEType* CBENameSpace::FindTaggedType(int nType, string sTag)
+CBEType* CBENameSpace::FindTaggedType(int nType, std::string sTag)
 {
 	// search own types
 	vector<CBEType*>::iterator iterT;
@@ -765,26 +684,13 @@ CBEType* CBENameSpace::FindTaggedType(int nType, string sTag)
 				return *iterT;
 		}
 	}
-	// search classes
-	CBEType *pType;
-	vector<CBEClass*>::iterator iterC;
-	for (iterC = m_Classes.begin();
-		iterC != m_Classes.end();
-		iterC++)
-	{
-		if ((pType = (*iterC)->FindTaggedType(nType, sTag)) != 0)
-			return pType;
-	}
-	// search nested namespaces
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NestedNamespaces.begin();
-		iterN != m_NestedNamespaces.end();
-		iterN++)
-	{
-		if ((pType = (*iterN)->FindTaggedType(nType, sTag)) != 0)
-			return pType;
-	}
-	return 0;
+
+	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
+	if (pNameSpace)
+		return pNameSpace->FindTaggedType(nType, sTag);
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	return pRoot->FindTaggedType(nType, sTag);
 }
 
 /** \brief tries to create the back-end presentation of a type declaration
@@ -808,7 +714,7 @@ void CBENameSpace::CreateBackEnd(CFEConstructedType *pFEType)
  * search own classe, namespaces and function for a function, which has
  * a parameter of that type
  */
-bool CBENameSpace::HasFunctionWithUserType(string sTypeName, CBEFile* pFile)
+bool CBENameSpace::HasFunctionWithUserType(std::string sTypeName, CBEFile* pFile)
 {
 	vector<CBENameSpace*>::iterator iterN;
 	for (iterN = m_NestedNamespaces.begin();
@@ -948,23 +854,71 @@ CBEEnumType* CBENameSpace::FindEnum(std::string sName)
 		if (pEnum && pEnum->m_Members.Find(sName))
 			return pEnum;
 	}
-	// search classes
-	vector<CBEClass*>::iterator iterC;
-	for (iterC = m_Classes.begin();
-		iterC != m_Classes.end();
-		iterC++)
+
+	CBENameSpace *pNameSpace = GetSpecificParent<CBENameSpace>();
+	if (pNameSpace)
+		return pNameSpace->FindEnum(sName);
+	CBERoot *pRoot = GetSpecificParent<CBERoot>();
+	assert(pRoot);
+	return pRoot->FindEnum(sName);
+}
+
+/** \brief top down search for namespace
+ *  \param sNamespace the name of the namespace to search
+ *  \return reference to the namespace or 0 if not found
+ */
+CBENameSpace* CBENameSpace::SearchNamespace(std::string sNamespace)
+{
+	CBENameSpace *pRet = m_NestedNamespaces.Find(sNamespace);
+	if (pRet)
+		return pRet;
+
+	vector<CBENameSpace*>::iterator iter;
+	for (iter = m_NestedNamespaces.begin(); iter != m_NestedNamespaces.end(); iter++)
 	{
-		if ((pEnum = (*iterC)->FindEnum(sName)) != 0)
-			return pEnum;
+		if ((pRet = (*iter)->SearchNamespace(sNamespace)))
+			return pRet;
 	}
-	// search namespaces
-	vector<CBENameSpace*>::iterator iterN;
-	for (iterN = m_NestedNamespaces.begin();
-		iterN != m_NestedNamespaces.end();
-		iterN++)
+	return 0;
+}
+
+/** \brief top down search for class
+ *  \param sClass the name of the class to search
+ *  \return reference to found class or 0 if not found
+ */
+CBEClass* CBENameSpace::SearchClass(std::string sClass)
+{
+	// if there is a scope at the begin of the name, remove it and return the
+	// result of the search at root. Recursive calls from root will have the
+	// leading scope removed.
+	if (sClass.find("::") == 0)
 	{
-		if ((pEnum = (*iterN)->FindEnum(sName)) != 0)
-			return pEnum;
+		CBERoot *pRoot = GetSpecificParent<CBERoot>();
+		assert(pRoot);
+		return pRoot->SearchClass(sClass);
+	}
+	// seperate any namespaces from fully qualified name
+	string::size_type pos = sClass.find("::");
+	if (pos != string::npos)
+	{
+		string sNamespace = sClass.substr(0, pos);
+		sClass = sClass.substr(pos+2);
+		CBENameSpace *pNameSpace = m_NestedNamespaces.Find(sNamespace);
+		if (!pNameSpace)
+			return 0;
+		pNameSpace->SearchClass(sClass);
+	}
+
+	// non-scoped names
+	CBEClass *pRet = m_Classes.Find(sClass);
+	if (pRet)
+		return pRet;
+
+	vector<CBENameSpace*>::iterator iter;
+	for (iter = m_NestedNamespaces.begin(); iter != m_NestedNamespaces.end(); iter++)
+	{
+		if ((pRet = (*iter)->SearchClass(sClass)))
+			return pRet;
 	}
 	return 0;
 }

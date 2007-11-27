@@ -35,157 +35,157 @@
 
 namespace error
 {
-    /** \class invalid_operator
-     *  \ingroup error
-     *  \brief exception class for usage of invalid operator
-     */
-    class invalid_operator : public std::exception
-    {
-    public:
-	/** \brief the constructor of the invalid_operator exceptions */
-	explicit invalid_operator() throw()
-	{ }
-
-	/** \brief returns the string specification of the exceptions */
-	virtual const char* what() const throw()
-	{
-	    return "Invalid operator used.";
-	}
-    };
-
-    /** \class preprocess_error
-     *  \ingroup error
-     *  \brief exception class for preprocessor
-     */
-    class preprocess_error : public std::exception
-    {
-    public:
-	/** \brief the constructor taking a reason */
-	explicit preprocess_error(const char* str) throw()
-	    : m_reason(str)
-	{ }
-
-	/** \brief required to have rigid throw specification */
-	virtual ~preprocess_error() throw()
-	{ }
-
-	/** \brief returns the string of the exception */
-	virtual const char* what() const throw()
-	{
-	    return m_reason.c_str();
-	}
-
-    private:
-	/** \var string m_reason
-	 *  \brief contains the reason string
+	/** \class invalid_operator
+	 *  \ingroup error
+	 *  \brief exception class for usage of invalid operator
 	 */
-	std::string m_reason;
-    };
-
-    /** \class parse_error
-     *  \ingroup error
-     *  \brief exception class for parsing
-     */
-    class parse_error : public std::exception
-    {
-    public:
-	/** \brief the constructor for the class */
-	explicit parse_error() throw()
-	{ }
-
-	/** \brief returns the string of the exception */
-	virtual const char* what() const throw()
+	class invalid_operator : public std::exception
 	{
-	    return "Parse exception.";
-	}
-    };
+	public:
+		/** \brief the constructor of the invalid_operator exceptions */
+		explicit invalid_operator() throw()
+		{ }
 
-    /** \class postparse_error
-     *  \ingroup error
-     *  \brief exception class for preprocessing
-     */
-    class postparse_error : public std::exception
-    {
-    public:
-	/** \brief the constructor for the class */
-	explicit postparse_error() throw()
-	{ }
+		/** \brief returns the string specification of the exceptions */
+		virtual const char* what() const throw()
+		{
+			return "Invalid operator used.";
+		}
+	};
 
-	/** \brief returns the string of the exception */
-	virtual const char* what() const throw()
-	{
-	    return "PostParse exception.";
-	}
-    };
-
-    /** \class consistency_error
-     *  \ingroup error
-     *  \brief exception class for consistency check errors
-     */
-    class consistency_error : public std::exception
-    {
-    public:
-	/** \brief the constructor of the class */
-	explicit consistency_error() throw()
-	{ }
-
-	/** \brief returns the string of the exception */
-	virtual const char* what() const throw()
-	{
-	    return "Check Consistency error.";
-	}
-    };
-
-    /** \class create_error
-     *  \ingroup error
-     *  \brief exception class for back-end creation errors
-     */
-    class create_error : public std::exception
-    {
-	/** \var string reason
-	 *  \brief the reason for the excpetion
+	/** \class preprocess_error
+	 *  \ingroup error
+	 *  \brief exception class for preprocessor
 	 */
-	string reason;
-
-    public:
-	/** \brief constructs exception class
-	 *  \param a detailed reason
-	 */
-	explicit create_error(string r) : reason(r)
-	{ }
-
-	/** \brief destructor
-	 *
-	 * Because the string() constructor can throw exceptions we have to
-	 * catch them here.
-	 */
-	~create_error() throw()
-	try { } catch (...) { }
-
-	/** \brief return the string of the exception */
-	virtual const char* what() const throw()
+	class preprocess_error : public std::exception
 	{
-	    return reason.c_str();
-	}
-    };
+	public:
+		/** \brief the constructor taking a reason */
+		explicit preprocess_error(const char* str) throw()
+			: m_reason(str)
+		{ }
 
-    /** \class bad_versin
-     *  \ingroup error
-     *  \brief exception class for version checking
-     */
-    class bad_version : public std::exception
-    {
-    public:
-	/** \brief constructs the exception object */
-	explicit bad_version() throw()
-	{ }
+		/** \brief required to have rigid throw specification */
+		virtual ~preprocess_error() throw()
+		{ }
 
-	/** \brief returns the reason this exception was thrown */
-	virtual const char* what() const throw()
+		/** \brief returns the string of the exception */
+		virtual const char* what() const throw()
+		{
+			return m_reason.c_str();
+		}
+
+	private:
+		/** \var string m_reason
+		 *  \brief contains the reason string
+		 */
+		std::string m_reason;
+	};
+
+	/** \class parse_error
+	 *  \ingroup error
+	 *  \brief exception class for parsing
+	 */
+	class parse_error : public std::exception
 	{
-	    return "Specified version string was invalid.";
-	}
-    };
+	public:
+		/** \brief the constructor for the class */
+		explicit parse_error() throw()
+		{ }
+
+		/** \brief returns the string of the exception */
+		virtual const char* what() const throw()
+		{
+			return "Parse exception.";
+		}
+	};
+
+	/** \class postparse_error
+	 *  \ingroup error
+	 *  \brief exception class for preprocessing
+	 */
+	class postparse_error : public std::exception
+	{
+	public:
+		/** \brief the constructor for the class */
+		explicit postparse_error() throw()
+		{ }
+
+		/** \brief returns the string of the exception */
+		virtual const char* what() const throw()
+		{
+			return "PostParse exception.";
+		}
+	};
+
+	/** \class consistency_error
+	 *  \ingroup error
+	 *  \brief exception class for consistency check errors
+	 */
+	class consistency_error : public std::exception
+	{
+	public:
+		/** \brief the constructor of the class */
+		explicit consistency_error() throw()
+		{ }
+
+		/** \brief returns the string of the exception */
+		virtual const char* what() const throw()
+		{
+			return "Check Consistency error.";
+		}
+	};
+
+	/** \class create_error
+	 *  \ingroup error
+	 *  \brief exception class for back-end creation errors
+	 */
+	class create_error : public std::exception
+	{
+		/** \var string reason
+		 *  \brief the reason for the excpetion
+		 */
+		string reason;
+
+	public:
+		/** \brief constructs exception class
+		 *  \param r detailed reason
+		 */
+		explicit create_error(string r) : reason(r)
+		{ }
+
+		/** \brief destructor
+		 *
+		 * Because the string() constructor can throw exceptions we have to
+		 * catch them here.
+		 */
+		~create_error() throw()
+			try { } catch (...) { }
+
+		/** \brief return the string of the exception */
+		virtual const char* what() const throw()
+		{
+			return reason.c_str();
+		}
+	};
+
+	/** \class bad_version
+	 *  \ingroup error
+	 *  \brief exception class for version checking
+	 */
+	class bad_version : public std::exception
+	{
+	public:
+		/** \brief constructs the exception object */
+		explicit bad_version() throw()
+		{ }
+
+		/** \brief returns the reason this exception was thrown */
+		virtual const char* what() const throw()
+		{
+			return "Specified version string was invalid.";
+		}
+	};
 
 }; /* namespace error */
 
