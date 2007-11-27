@@ -1,5 +1,0 @@
-L4 port of the Linux PCI subsystem.
-
-This package provides some functionality to access PCI services from L4
-programs. Before using this library please have a look at l4io (the L4
-I/O-server) which includes handling of the PCI stuff.
